@@ -723,7 +723,6 @@ nsStyleContext::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint)
     // REFLOW Structs: Font, Margin, Padding, Border, List, Position, Text, TextReset,
     // Visibility, Quotes, Table, TableBorder
     if (aHint < maxHint) {
-      const nsStyleContext* other = (const nsStyleContext*)aOther;
       const nsStyleFont* font = (const nsStyleFont*)PeekStyleData(eStyleStruct_Font);
       if (font) {
         const nsStyleFont* otherFont = (const nsStyleFont*)aOther->GetStyleData(eStyleStruct_Font);
@@ -899,12 +898,14 @@ nsStyleContext::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint)
     }
     
     if (aHint < maxHint) {
-      const nsStyleOutline* outline = (const nsStyleOutline*)GetStyleData(eStyleStruct_Outline);
-      const nsStyleOutline* otherOutline = (const nsStyleOutline*)aOther->GetStyleData(eStyleStruct_Outline);
-      if (outline != otherOutline) {
-        hint = outline->CalcDifference(*otherOutline);
-        if (aHint < hint)
-          aHint = hint;
+      const nsStyleOutline* outline = (const nsStyleOutline*)PeekStyleData(eStyleStruct_Outline);
+      if (outline) {
+        const nsStyleOutline* otherOutline = (const nsStyleOutline*)aOther->GetStyleData(eStyleStruct_Outline);
+        if (outline != otherOutline) {
+          hint = outline->CalcDifference(*otherOutline);
+          if (aHint < hint)
+            aHint = hint;
+        }
       }
     }
     
