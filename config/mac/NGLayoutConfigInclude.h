@@ -31,11 +31,11 @@
 	Order below does matter.
 */
 
-/* Read compiler options */
-#include "IDE_Options.h"
-
 /* Read generated build options. */
 #include "DefinesOptions.h"		// written at build time
+
+/* Read compiler options */
+#include "IDE_Options.h"
 
 /* Read file of defines global to the Mac build */
 #include "DefinesMac.h"

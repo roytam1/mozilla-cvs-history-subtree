@@ -550,6 +550,23 @@ nsSHistory::SetSessionHistory(nsISHistory* aSessionHistory)
    return NS_OK;
 }
 
+NS_IMETHODIMP
+nsSHistory::GetPostData(nsIInputStream** aPostStream)
+{
+  nsresult rv;
+  nsCOMPtr<nsISHEntry> currentEntry;
+
+  NS_ENSURE_ARG_POINTER(aPostStream);
+  *aPostStream = nsnull;
+  rv = GetEntryAtIndex(mIndex, PR_FALSE, getter_AddRefs(currentEntry));
+  
+  if (currentEntry) {
+    rv = currentEntry->GetPostData(aPostStream);
+  }
+
+  return rv;
+}
+
 	
 NS_IMETHODIMP
 nsSHistory::GetSessionHistory(nsISHistory** aSessionHistory)

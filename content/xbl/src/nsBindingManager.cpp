@@ -101,7 +101,8 @@ public:
   // nsIScriptGlobalObject methods
   NS_IMETHOD SetContext(nsIScriptContext *aContext);
   NS_IMETHOD GetContext(nsIScriptContext **aContext);
-  NS_IMETHOD SetNewDocument(nsIDOMDocument *aDocument);
+  NS_IMETHOD SetNewDocument(nsIDOMDocument *aDocument,
+                            PRBool removeEventListeners);
   NS_IMETHOD SetDocShell(nsIDocShell *aDocShell);
   NS_IMETHOD GetDocShell(nsIDocShell **aDocShell);
   NS_IMETHOD SetOpenerWindow(nsIDOMWindowInternal *aOpener);
@@ -223,7 +224,8 @@ nsXBLDocGlobalObject::GetContext(nsIScriptContext **aContext)
 
 
 NS_IMETHODIMP
-nsXBLDocGlobalObject::SetNewDocument(nsIDOMDocument *aDocument)
+nsXBLDocGlobalObject::SetNewDocument(nsIDOMDocument *aDocument,
+                                     PRBool removeEventListeners)
 {
   NS_NOTREACHED("waaah!");
   return NS_ERROR_UNEXPECTED;

@@ -497,6 +497,22 @@ LaunchApplicationWithArgs(const char *commandLineArg,
     do_GetService("@mozilla.org/appshell/commandLineService;1",&rv);
   if (NS_FAILED(rv)) return rv;
 
+  if (!nsCRT::strcasecmp(aParam, "MAPIStartUp"))
+  {
+    // put us in server mode...
+    nsCOMPtr<nsIAppShellService> appShell = do_GetService( "@mozilla.org/appshell/appShellService;1", &rv );
+    if ( NS_SUCCEEDED( rv ) ) 
+    {
+       nsCOMPtr<nsINativeAppSupport> native;
+       rv = appShell->GetNativeAppSupport( getter_AddRefs( native ) );
+       if ( NS_SUCCEEDED( rv ) )
+       {
+         native->SetShouldShowUI(PR_FALSE);
+         return NS_OK;
+       }
+    }
+             
+  }
   nsCOMPtr <nsICmdLineHandler> handler;
   rv = cmdLine->GetHandlerForParam(aParam, getter_AddRefs(handler));
   if (NS_FAILED(rv)) return rv;

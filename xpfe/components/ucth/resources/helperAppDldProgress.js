@@ -431,8 +431,7 @@ function setupPostProgressUI()
 
   dialog.pause.disabled = true; // setAttribute("disabled", true);
   dialog.resume.disabled = true;
-  keepProgressWindowUpBox.disabled = true;
-  
+ 
 }
 
 // when we receive a stop notification we are done reporting progress on the download

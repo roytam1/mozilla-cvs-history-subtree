@@ -225,7 +225,7 @@ var defaultController =
       case "cmd_sendButton":
       case "cmd_sendNow":
       case "cmd_sendLater":
-//      case "cmd_printSetup":
+      case "cmd_printSetup":
       case "cmd_print":
       case "cmd_quit":
 
@@ -333,7 +333,7 @@ var defaultController =
       case "cmd_saveAsTemplate":
       case "cmd_sendButton":
       case "cmd_sendLater":
-//      case "cmd_printSetup":
+      case "cmd_printSetup":
       case "cmd_print":
         return !windowLocked;
       case "cmd_sendNow":
@@ -462,7 +462,7 @@ var defaultController =
         break;
       case "cmd_sendNow"            : if (defaultController.isCommandEnabled(command)) SendMessage();          break;
       case "cmd_sendLater"          : if (defaultController.isCommandEnabled(command)) SendMessageLater();     break;
-//      case "cmd_printSetup"         : dump("PRINT SETUP\n");                                                   break;
+      case "cmd_printSetup"         : goPageSetup();                                                           break;
       case "cmd_print"              : DoCommandPrint();                                                        break;
 
       //Edit Menu
@@ -698,11 +698,21 @@ function setupLdapAutocompleteSession()
             }
             LDAPSession.serverURL = serverURL;
 
-            // don't search on strings shorter than this
+            // don't search on non-CJK strings shorter than this
             //
             try { 
                 LDAPSession.minStringLength = prefs.GetIntPref(
                     autocompleteDirectory + ".autoComplete.minStringLength");
+            } catch (ex) {
+                // if this pref isn't there, no big deal.  just let
+                // nsLDAPAutoCompleteSession use its default.
+            }
+
+            // don't search on CJK strings shorter than this
+            //
+            try { 
+                LDAPSession.cjkMinStringLength = prefs.GetIntPref(
+                  autocompleteDirectory + ".autoComplete.cjkMinStringLength");
             } catch (ex) {
                 // if this pref isn't there, no big deal.  just let
                 // nsLDAPAutoCompleteSession use its default.

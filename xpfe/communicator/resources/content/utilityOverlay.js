@@ -112,6 +112,13 @@ function getBrowserURL() {
 
 function goPageSetup()
 {
+  // This code brings up the native page setup dialog (for platforms that
+  // implement nsIPrintOptions.ShowNativeDialog()).  
+  var printOptionsService = Components.classes["@mozilla.org/gfx/printoptions;1"]
+                                           .getService(Components.interfaces.nsIPrintOptions);
+  printOptionsService.ReadPrefs();
+  printOptionsService.ShowNativeDialog();
+  printOptionsService.WritePrefs();
 }
 
 function goEditCardDialog(abURI, card, okCallback, abCardURI)
@@ -328,6 +335,12 @@ function editPage(url, launchWindow, delay)
       return;
     }
   }
+
+  var webNav = null;
+  if (launchWindow && "getWebNavigation" in launchWindow)
+    webNav = launchWindow.getWebNavigation();
+  if (webNav && webNav.postData)
+    return;
 
   // if the current window is a browser window, then extract the current charset menu setting from the current 
   // document and use it to initialize the new composer window...

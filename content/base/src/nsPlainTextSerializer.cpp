@@ -209,6 +209,12 @@ nsPlainTextSerializer::AppendText(nsIDOMText* aText,
                                   PRInt32 aEndOffset, 
                                   nsAWritableString& aStr)
 {
+  if (mTagStackIndex > 0 &&
+      mTagStack[mTagStackIndex-1] == eHTMLTag_noscript &&
+      !(mFlags & nsIDocumentEncoder::OutputNoScriptContent)) {
+    return NS_OK;
+  }
+
   NS_ENSURE_ARG(aText);
 
   nsresult rv = NS_OK;
@@ -371,6 +377,12 @@ nsPlainTextSerializer::CloseContainer(const nsIParserNode& aNode)
 NS_IMETHODIMP 
 nsPlainTextSerializer::AddLeaf(const nsIParserNode& aNode)
 {
+  if (mTagStackIndex > 0 &&
+      mTagStack[mTagStackIndex-1] == eHTMLTag_noscript &&
+      !(mFlags & nsIDocumentEncoder::OutputNoScriptContent)) {
+    return NS_OK;
+  }
+
   eHTMLTags type = (eHTMLTags)aNode.GetNodeType();
   const nsAReadableString& text = aNode.GetText();
 
@@ -476,6 +488,12 @@ nsresult
 nsPlainTextSerializer::DoOpenContainer(PRInt32 aTag)
 {
   eHTMLTags type = (eHTMLTags)aTag;
+
+  if (mTagStackIndex > 0 &&
+      mTagStack[mTagStackIndex-1] == eHTMLTag_noscript &&
+      !(mFlags & nsIDocumentEncoder::OutputNoScriptContent)) {
+    return NS_OK;
+  }
 
   if (mTagStackIndex < TagStackSize) {
     mTagStack[mTagStackIndex++] = type;
@@ -704,6 +722,13 @@ nsresult
 nsPlainTextSerializer::DoCloseContainer(PRInt32 aTag)
 {
   eHTMLTags type = (eHTMLTags)aTag;
+
+  if (mTagStackIndex > 0 &&
+      mTagStack[mTagStackIndex-1] == eHTMLTag_noscript &&
+      !(mFlags & nsIDocumentEncoder::OutputNoScriptContent) &&
+      type != eHTMLTag_noscript) {
+    return NS_OK;
+  }
 
   if (mTagStackIndex > 0) {
     --mTagStackIndex;

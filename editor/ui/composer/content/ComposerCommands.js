@@ -157,6 +157,8 @@ function SetupComposerWindowCommands()
   commandManager.registerCommand("cmd_openRemote",     nsOpenRemoteCommand);
   commandManager.registerCommand("cmd_preview",        nsPreviewCommand);
   commandManager.registerCommand("cmd_editSendPage",   nsSendPageCommand);
+  commandManager.registerCommand("cmd_print",          nsPrintCommand);
+  commandManager.registerCommand("cmd_printSetup",     nsPrintSetupCommand);
   commandManager.registerCommand("cmd_quit",           nsQuitCommand);
   commandManager.registerCommand("cmd_close",          nsCloseCommand);
   commandManager.registerCommand("cmd_preferences",    nsPreferencesCommand);
@@ -550,6 +552,38 @@ var nsSendPageCommand =
                          "attachment='" + pageUrl.replace(/\,/g, "%2C") + "',body='" + pageUrl +
                          "',subject='" + pageTitle + "',bodyislink=true");
     }
+  }
+};
+
+//-----------------------------------------------------------------------------------
+var nsPrintCommand =
+{
+  isCommandEnabled: function(aCommand, dummy)
+  {
+    return true;    // we can always do this
+  },
+
+  doCommand: function(aCommand)
+  {
+    // In editor.js
+    FinishHTMLSource();
+    window.editorShell.Print();
+  }
+};
+
+//-----------------------------------------------------------------------------------
+var nsPrintSetupCommand =
+{
+  isCommandEnabled: function(aCommand, dummy)
+  {
+    return true;    // we can always do this
+  },
+
+  doCommand: function(aCommand)
+  {
+    // In editor.js
+    FinishHTMLSource();
+    goPageSetup();
   }
 };
 
@@ -1587,7 +1621,7 @@ var nsSplitTableCellCommand =
            IsSelectionInOneCell() )
       {
         var colSpan = cell.getAttribute("colspan");
-        var rowSpan = cell.getAttribute("colspan");
+        var rowSpan = cell.getAttribute("rowspan");
         if (!colSpan) colSpan = 1;
         if (!rowSpan) rowSpan = 1;
         return (colSpan > 1  || rowSpan > 1 ||

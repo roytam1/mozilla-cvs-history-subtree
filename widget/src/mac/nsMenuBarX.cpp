@@ -63,7 +63,8 @@ static NS_DEFINE_CID(kMenuItemCID, NS_MENUITEM_CID);
 
 NS_IMPL_ISUPPORTS5(nsMenuBarX, nsIMenuBar, nsIMenuListener, nsIDocumentObserver, nsIChangeManager, nsISupportsWeakReference)
 
-static MenuRef gDefaultRootMenu = nsnull;
+MenuRef nsMenuBarX::sAppleMenu;
+
 
 //
 // nsMenuBarX constructor
@@ -78,11 +79,6 @@ nsMenuBarX::nsMenuBarX()
 
   OSStatus status = ::CreateNewMenu(0, 0, &mRootMenu);
   NS_ASSERTION(status == noErr, "nsMenuBarX::nsMenuBarX:  creation of root menu failed.");
-
-  if (gDefaultRootMenu == nsnull) {
-    gDefaultRootMenu = ::AcquireRootMenu();
-    NS_ASSERTION(gDefaultRootMenu != nsnull, "nsMenuBarX::nsMenuBarX:  no default root menu!.");
-  }
 }
 
 //
@@ -90,19 +86,16 @@ nsMenuBarX::nsMenuBarX()
 //
 nsMenuBarX::~nsMenuBarX()
 {
-    mMenusArray.Clear();    // release all menus
+  mMenusArray.Clear();    // release all menus
 
-    // make sure we unregister ourselves as a document observer
-    if ( mDocument ) {
-        nsCOMPtr<nsIDocumentObserver> observer ( do_QueryInterface(NS_STATIC_CAST(nsIMenuBar*,this)) );
-        mDocument->RemoveObserver(observer);
-    }
+  // make sure we unregister ourselves as a document observer
+  if ( mDocument ) {
+    nsCOMPtr<nsIDocumentObserver> observer ( do_QueryInterface(NS_STATIC_CAST(nsIMenuBar*,this)) );
+    mDocument->RemoveObserver(observer);
+  }
 
-    if (mRootMenu != NULL) {
-        NS_ASSERTION(gDefaultRootMenu != nsnull, "nsMenuBarX::~nsMenuBarX:  no default root menu!.");
-        ::SetRootMenu(gDefaultRootMenu);
-        ::ReleaseMenu(mRootMenu);
-    }
+  if ( mRootMenu )
+    ::ReleaseMenu(mRootMenu);
 }
 
 nsEventStatus 
@@ -240,7 +233,10 @@ nsMenuBarX::MenuConstruct( const nsMenuEvent & aMenuEvent, nsIWidget* aParentWin
   mWebShellWeakRef = getter_AddRefs(NS_GetWeakReference(NS_STATIC_CAST(nsIWebShell*, aWebShell)));
   nsIDOMNode* aDOMNode  = NS_STATIC_CAST(nsIDOMNode*, menubarNode);
   mMenuBarContent = do_QueryInterface(aDOMNode);           // strong ref
-
+  NS_ASSERTION ( mMenuBarContent, "No content specified for this menubar" );
+  if ( !mMenuBarContent )
+    return nsEventStatus_eIgnore;
+    
   Create(aParentWindow);
 
   nsCOMPtr<nsIWebShell> webShell = do_QueryReferent(mWebShellWeakRef);
@@ -339,45 +335,21 @@ NS_METHOD nsMenuBarX::AddMenu(nsIMenu * aMenu)
   // keep track of all added menus.
   mMenusArray.AppendElement(aMenu);    // owner
 
-  if (mNumMenus == 0)
-  {
-    Str32 menuStr = { 1, kMenuAppleLogoFilledGlyph };
-    MenuHandle appleMenu;
-    OSStatus s = ::CreateNewMenu(kAppleMenuID, 0, &appleMenu);
-    ::SetMenuTitle(appleMenu, menuStr);
-
-    if (appleMenu)
-    {
-      // this code reads the "label" attribute from the <menuitem/> with
-      // id="aboutName" and puts its label in the Apple Menu
-      nsAutoString label;
-      nsCOMPtr<nsIContent> menu;
-      aMenu->GetMenuContent(getter_AddRefs(menu));
-      if (menu) {
-        nsCOMPtr<nsIDocument> doc;
-        menu->GetDocument(*getter_AddRefs(doc));
-        if (doc) {
-          nsCOMPtr<nsIDOMDocument> domdoc ( do_QueryInterface(doc) );
-          if ( domdoc ) {
-            nsCOMPtr<nsIDOMElement> aboutMenuItem;
-            domdoc->GetElementById(NS_LITERAL_STRING("aboutName"), getter_AddRefs(aboutMenuItem));
-            if (aboutMenuItem)
-              aboutMenuItem->GetAttribute(NS_LITERAL_STRING("label"), label);
-          }
-        }
-      }
-
-      CFStringRef labelRef = ::CFStringCreateWithCharacters(kCFAllocatorDefault, (UniChar*)label.get(), label.Length());
-      ::InsertMenuItemTextWithCFString(appleMenu, labelRef, 1, 0, 0);
-      ::CFRelease(labelRef);
-
+  if (mNumMenus == 0) {
+    // if apple menu hasn't been created, create it.
+    if ( !sAppleMenu ) {
+      nsresult rv = CreateAppleMenu(aMenu);
+      NS_ASSERTION ( NS_SUCCEEDED(rv), "Can't create Apple menu" );
+    }
+    
+    // add shared Apple menu to our menubar
+    if ( sAppleMenu ) {
       // InsertMenuItem() is 1-based, so the apple/application menu needs to
       // be at index 1. |mNumMenus| will be incremented below, so the following menu (File)
       // won't overwrite the apple menu by reusing the ID.
       mNumMenus = 1;
-      ::AppendMenu(appleMenu, "\p-");
-      ::InsertMenuItem(mRootMenu, menuStr, mNumMenus);
-      OSStatus status = ::SetMenuItemHierarchicalMenu(mRootMenu, mNumMenus, appleMenu);
+      ::InsertMenuItem(mRootMenu, "\pA", mNumMenus);
+      OSStatus status = ::SetMenuItemHierarchicalMenu(mRootMenu, 1, sAppleMenu);
     }
   }
 
@@ -396,8 +368,7 @@ NS_METHOD nsMenuBarX::AddMenu(nsIMenu * aMenu)
     	// we use it as an index of where to insert the next menu.
       mNumMenus++;
       
-      Str255 title;
-      ::InsertMenuItem(mRootMenu, ::GetMenuTitle(menuRef, title), mNumMenus);
+      ::InsertMenuItem(mRootMenu, "\pPlaceholder", mNumMenus);
       OSStatus status = ::SetMenuItemHierarchicalMenu(mRootMenu, mNumMenus, menuRef);
       NS_ASSERTION(status == noErr, "nsMenuBarX::AddMenu: SetMenuItemHierarchicalMenu failed.");
     }
@@ -406,7 +377,50 @@ NS_METHOD nsMenuBarX::AddMenu(nsIMenu * aMenu)
   return NS_OK;
 }
 
-                                
+
+//
+// CreateAppleMenu
+//
+// build the Apple menu shared by all menu bars.
+//
+nsresult
+nsMenuBarX :: CreateAppleMenu ( nsIMenu* inMenu )
+{
+  Str32 menuStr = { 1, kMenuAppleLogoFilledGlyph };
+  OSStatus s = ::CreateNewMenu(kAppleMenuID, 0, &sAppleMenu);
+  ::SetMenuTitle(sAppleMenu, menuStr);
+
+  if ( sAppleMenu )  {
+    // this code reads the "label" attribute from the <menuitem/> with
+    // id="aboutName" and puts its label in the Apple Menu
+    nsAutoString label;
+    nsCOMPtr<nsIContent> menu;
+    inMenu->GetMenuContent(getter_AddRefs(menu));
+    if (menu) {
+      nsCOMPtr<nsIDocument> doc;
+      menu->GetDocument(*getter_AddRefs(doc));
+      if (doc) {
+        nsCOMPtr<nsIDOMDocument> domdoc ( do_QueryInterface(doc) );
+        if ( domdoc ) {
+          nsCOMPtr<nsIDOMElement> aboutMenuItem;
+          domdoc->GetElementById(NS_LITERAL_STRING("aboutName"), getter_AddRefs(aboutMenuItem));
+          if (aboutMenuItem)
+            aboutMenuItem->GetAttribute(NS_LITERAL_STRING("label"), label);
+        }
+      }
+    }
+
+    CFStringRef labelRef = ::CFStringCreateWithCharacters(kCFAllocatorDefault, (UniChar*)label.get(), label.Length());
+    ::InsertMenuItemTextWithCFString(sAppleMenu, labelRef, 1, 0, 0);
+    ::CFRelease(labelRef);
+
+    ::AppendMenu(sAppleMenu, "\p-");
+  }
+
+  return sAppleMenu ? NS_OK : NS_ERROR_FAILURE;
+}
+
+        
 //-------------------------------------------------------------------------
 NS_METHOD nsMenuBarX::GetMenuCount(PRUint32 &aCount)
 {
@@ -434,6 +448,7 @@ NS_METHOD nsMenuBarX::InsertMenuAt(const PRUint32 aCount, nsIMenu *& aMenu)
 NS_METHOD nsMenuBarX::RemoveMenu(const PRUint32 aCount)
 {
   mMenusArray.RemoveElementAt(aCount);
+  ::DeleteMenuItem(mRootMenu, aCount + 1);    // MenuManager is 1-based
   ::DrawMenuBar();
   return NS_OK;
 }

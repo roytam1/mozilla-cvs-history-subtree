@@ -154,6 +154,9 @@ protected:
     void GetDocument ( nsIWebShell* inWebShell, nsIDocument** outDocument ) ;
     void RegisterAsDocumentObserver ( nsIWebShell* inWebShell ) ;
     
+      // build the Apple menu shared by all menu bars.
+    nsresult CreateAppleMenu ( nsIMenu* inMenu ) ;
+
     nsHashtable             mObserverTable;     // stores observers for content change notification
 
     PRUint32                mNumMenus;
@@ -167,6 +170,8 @@ protected:
     nsIDocument*            mDocument;          // pointer to document
 
     MenuRef                 mRootMenu;          // root menu, representing entire menu bar.
+    
+    static MenuRef          sAppleMenu;         // AppleMenu shared by all menubars
 };
 
 #endif // nsMenuBarX_h__

@@ -926,7 +926,7 @@ DocumentViewerImpl::Init(nsIWidget* aParentWidget,
         mDocument->SetScriptGlobalObject(global);
         nsCOMPtr<nsIDOMDocument> domdoc(do_QueryInterface(mDocument));
         if (nsnull != domdoc) {
-          global->SetNewDocument(domdoc);
+          global->SetNewDocument(domdoc, PR_TRUE);
         }
       }
     }
@@ -1144,7 +1144,7 @@ DocumentViewerImpl::Close()
     nsCOMPtr<nsIScriptGlobalObject> globalObject;
     mDocument->GetScriptGlobalObject(getter_AddRefs(globalObject));
     if (globalObject) {
-      globalObject->SetNewDocument(nsnull);
+      globalObject->SetNewDocument(nsnull, PR_TRUE);
     }
     // out of band cleanup of webshell
     mDocument->SetScriptGlobalObject(nsnull);
@@ -1262,7 +1262,7 @@ DocumentViewerImpl::SetDOMDocument(nsIDOMDocument *aDocument)
       rv = owner->GetScriptGlobalObject(getter_AddRefs(global));
       if (NS_SUCCEEDED(rv) && (nsnull != global)) {
         mDocument->SetScriptGlobalObject(global);
-        global->SetNewDocument(aDocument);
+        global->SetNewDocument(aDocument, PR_TRUE);
       }
     }
   }  
@@ -2108,7 +2108,7 @@ PRBool
 DocumentViewerImpl::DonePrintingPages(PrintObject* aPO)
 {
   //NS_ASSERTION(aPO, "Pointer is null!");
-  PRINT_DEBUG_MSG3("****** In DV::DonePrintingPages PO: %p (%s)\n", aPO, gFrameTypesStr[aPO->mFrameType]);
+  PRINT_DEBUG_MSG3("****** In DV::DonePrintingPages PO: %p (%s)\n", aPO, aPO?gFrameTypesStr[aPO->mFrameType]:"");
 
   if (aPO != nsnull) {
     aPO->mHasBeenPrinted = PR_TRUE;
@@ -2245,7 +2245,12 @@ DocumentViewerImpl::PrintPage(nsIPresContext*  aPresContext,
   }
 
   // Print the Page
-  mPageSeqFrame->PrintNextPage(aPresContext, aPrintOptions);
+  // if a print job was cancelled externally, an EndPage or BeginPage may
+  // fail and the failure is passed back here.
+  // Returning PR_TRUE means we are done printing.
+  if (NS_FAILED(mPageSeqFrame->PrintNextPage(aPresContext, aPrintOptions))) {
+    return PR_TRUE;
+  }                
 
   // Now see if any of the SubDocs are on this page
   if (aPO->mPrintAsIs) {
@@ -3256,7 +3261,8 @@ DocumentViewerImpl::SetupToPrintContent(nsIWebShell*          aParent,
   // BeginDocument may pass back a FAILURE code
   // i.e. On Windows, if you are printing to a file and hit "Cancel" 
   //      to the "File Name" dialog, this comes back as an error
-  nsresult rv = mPrt->mPrintDC->BeginDocument(docTitleStr);
+  // Don't start printing when regression test are executed  
+  nsresult rv = (mPrt->mFilePointer)? NS_OK:mPrt->mPrintDC->BeginDocument(docTitleStr);  
   PRINT_DEBUG_MSG1("****************** Begin Document ************************\n");
 
   if (docTitleStr != nsnull) {

@@ -622,6 +622,14 @@ NS_IMETHODIMP nsWebBrowser::GetDocument(nsIDOMDocument** aDocument)
    return mDocShellAsNav->GetDocument(aDocument);
 }
 
+NS_IMETHODIMP
+nsWebBrowser::GetPostData(nsIInputStream** aPostStream)
+{
+  NS_ENSURE_ARG_POINTER(aPostStream);
+  NS_ENSURE_STATE(mDocShell);
+
+  return mDocShellAsNav->GetPostData(aPostStream);
+}
 
 //*****************************************************************************
 // nsWebBrowser::nsIWebBrowserSetup

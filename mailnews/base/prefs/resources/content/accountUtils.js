@@ -94,7 +94,7 @@ function showMailIntegrationDialog() {
         }
         catch (ex) {}
         if (!prefLocked && !mapiRegistry.isDefaultMailClient)
-            mapiRegistry.showMailIntegrationDialog();
+            mapiRegistry.showMailIntegrationDialog(window /* parent window */);
     }
 }
 
@@ -143,7 +143,9 @@ function verifyAccounts(wizardcallback) {
             MsgAccountWizard(prefillAccount);
 		        ret = false;
         }
-        showMailIntegrationDialog();
+
+        // hack, set a time out to do this, so that the window can load first
+        setTimeout("showMailIntegrationDialog();",0);
         return ret;
     }
     catch (ex) {

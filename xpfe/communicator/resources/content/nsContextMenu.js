@@ -33,6 +33,7 @@
 |   Currently, this code is relatively useless for any other purpose.  In the  |
 |   longer term, this code will be restructured to make it more reusable.      |
 ------------------------------------------------------------------------------*/
+var gBrowserElt = -1;
 function nsContextMenu( xulMenu ) {
     this.target         = null;
     this.menu           = null;
@@ -129,7 +130,25 @@ nsContextMenu.prototype = {
     },
     initViewItems : function () {
         // View source is always OK, unless in directory listing.
+        var isPostData = false;
+        if ( gBrowserElt == -1 )
+          gBrowserElt = document.getElementById( "content" );
+        if ( gBrowserElt )
+          isPostData = gBrowserElt.webNavigation.postData;
+
         this.showItem( "context-viewsource", !( this.inDirList || this.onImage ) );
+        if ( !this.inDirList && !this.onImage ) {
+          try {
+            var viewSourceElt = document.getElementById( "context-viewsource" );
+            if ( isPostData )
+              viewSourceElt.setAttribute( "disabled", "true" );
+            else if ( viewSourceElt.getAttribute( "disabled" ) )
+              viewSourceElt.removeAttribute( "disabled" );
+          }
+          catch(ex) {
+          }
+        } 
+
 
         // View frame source depends on whether we're in a frame.
         this.showItem( "context-viewframesource", this.inFrame );

@@ -437,6 +437,10 @@ function OnLoadMessenger()
 	  var timeToLoad = (afterLoadMessenger.getTime() - beforeLoadMessenger.getTime())/1000;
 	  dump("Time in OnLoadMessger is " +  timeToLoad + " seconds\n");
 	}
+
+  // hack for #100952, remove when #73953 gets fixed
+  var getMsgButton = document.getElementById("button-getmsg");
+  getMsgButton.setAttribute("ref", "msgaccounts:/");
 }
 
 function OnUnloadMessenger()
@@ -664,6 +668,12 @@ function OnLoadFolderPane()
     database.AddDataSource(accountManagerDataSource);
     database.AddDataSource(folderDataSource);
     var folderOutliner = GetFolderOutliner();
+    folderOutliner.outlinerBoxObject.outlinerBody.setAttribute("ref", "msgaccounts:/");
+    // hack for #98418, remove when #73953 gets fixed
+    // (when that gets fixed, the plan is to set the ref and datasources
+    // in the .xul
+    //
+    // setting the ref attribute on the outliner causes us to rebuild it
     folderOutliner.outlinerBoxObject.outlinerBody.setAttribute("ref", "msgaccounts:/");
 
     var folderOutlinerBuilder = folderOutliner.outlinerBoxObject.outlinerBody.builder.QueryInterface(Components.interfaces.nsIXULOutlinerBuilder);

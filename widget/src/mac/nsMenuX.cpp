@@ -47,19 +47,15 @@
 #include "nsIServiceManager.h"
 
 #include <Appearance.h>
-#include <TextUtils.h>
 #include <ToolUtils.h>
-#include <Devices.h>
 #include <UnicodeConverter.h>
-#include <Fonts.h>
-#include <Sound.h>
-#include <Balloons.h>
-#include <CarbonEvents.h>
 
 #include "nsGUIEvent.h"
 
 #include "nsDynamicMDEF.h"
 
+
+static OSStatus InstallMyMenuEventHandler(MenuRef menuRef, void* userData, EventHandlerRef* outHandler) ;
 
 // keep track of the menuID of the menu the mouse is currently over. Yes, this is ugly,
 // but necessary to work around bugs in Carbon with ::MenuSelect() sometimes returning
@@ -105,7 +101,7 @@ nsMenuX::nsMenuX()
     :   mNumMenuItems(0), mParent(nsnull), mManager(nsnull),
         mMacMenuID(0), mMacMenuHandle(nsnull), mHelpMenuOSItemsCount(0),
         mIsHelpMenu(PR_FALSE), mIsEnabled(PR_TRUE), mDestroyHandlerCalled(PR_FALSE),
-        mNeedsRebuild(PR_TRUE), mConstructed(PR_FALSE), mVisible(PR_TRUE)
+        mNeedsRebuild(PR_TRUE), mConstructed(PR_FALSE), mVisible(PR_TRUE), mHandler(nsnull)
 {
   NS_INIT_REFCNT();
 
@@ -122,9 +118,12 @@ nsMenuX::~nsMenuX()
 {
   RemoveAll();
 
-  if (mMacMenuHandle != NULL)
+  if ( mMacMenuHandle ) {
+    if ( mHandler )
+      ::RemoveEventHandler(mHandler);
     ::ReleaseMenu(mMacMenuHandle);
-
+  }
+  
   // alert the change notifier we don't care no more
   mManager->Unregister(mMenuContent);
 
@@ -189,7 +188,6 @@ NS_METHOD nsMenuX::GetLabel(nsString &aText)
   return NS_OK;
 }
 
-static OSStatus InstallMyMenuEventHandler(MenuRef menuRef, void* userData);
 
 //-------------------------------------------------------------------------
 NS_METHOD nsMenuX::SetLabel(const nsAReadableString &aText)
@@ -248,9 +246,7 @@ NS_METHOD nsMenuX::AddMenuItem(nsIMenuItem * aMenuItem)
 
   nsAutoString label;
   aMenuItem->GetLabel(label);
-  CFStringRef labelRef = ::CFStringCreateWithCharacters(kCFAllocatorDefault, (UniChar*)label.get(), label.Length());
-  ::InsertMenuItemTextWithCFString(mMacMenuHandle, labelRef, currItemIndex, 0, 0);
-  ::CFRelease(labelRef);
+  InsertMenuItemWithTruncation ( label, currItemIndex );
   
   // I want to be internationalized too!
   nsAutoString keyEquivalent(NS_LITERAL_STRING(" "));
@@ -316,12 +312,8 @@ NS_METHOD nsMenuX::AddMenu(nsIMenu * aMenu)
   // We have to add it as a menu item and then associate it with the item
   nsAutoString label;
   aMenu->GetLabel(label);
-  //printf("AddMenu %s \n", label.ToNewCString());
-
-  CFStringRef labelRef = ::CFStringCreateWithCharacters(kCFAllocatorDefault, (UniChar*)label.get(), label.Length());
-  ::InsertMenuItemTextWithCFString(mMacMenuHandle, labelRef, currItemIndex, 0, 0);
-  ::CFRelease(labelRef);
-
+  InsertMenuItemWithTruncation ( label, currItemIndex );
+  
   PRBool isEnabled;
   aMenu->GetEnabled(&isEnabled);
   if (isEnabled)
@@ -335,6 +327,31 @@ NS_METHOD nsMenuX::AddMenu(nsIMenu * aMenu)
   
   return NS_OK;
 }
+
+
+//
+// InsertMenuItemWithTruncation
+//
+// Insert a new item in this menu with index |inItemIndex| with the text |inItemLabel|,
+// middle-truncated to a certain pixel width with an elipsis.
+//
+void
+nsMenuX :: InsertMenuItemWithTruncation ( nsAutoString & inItemLabel, PRUint32 inItemIndex )
+{
+  // ::TruncateThemeText() doesn't take the number of characters to truncate to, it takes a pixel with
+  // to fit the string in. Ugh. I talked it over with sfraser and we couldn't come up with an 
+  // easy way to compute what this should be given the system font, etc, so we're just going
+  // to hard code it to something reasonable and bigger fonts will just have to deal.
+  const short kMaxItemPixelWidth = 300;
+
+  CFMutableStringRef labelRef = ::CFStringCreateMutable ( kCFAllocatorDefault, inItemLabel.Length() );
+  ::CFStringAppendCharacters ( labelRef, (UniChar*)inItemLabel.get(), inItemLabel.Length() );
+  ::TruncateThemeText(labelRef, kThemeMenuItemFont, kThemeStateActive, kMaxItemPixelWidth, truncMiddle, NULL);
+  ::InsertMenuItemTextWithCFString(mMacMenuHandle, labelRef, inItemIndex, 0, 0);
+  ::CFRelease(labelRef);
+
+} // InsertMenuItemWithTruncation
+
 
 //-------------------------------------------------------------------------
 NS_METHOD nsMenuX::AddSeparator() 
@@ -833,7 +850,7 @@ static pascal OSStatus MyMenuEventHandler(EventHandlerCallRef myHandler, EventRe
   return result;
 }
 
-static OSStatus InstallMyMenuEventHandler(MenuRef menuRef, void* userData)
+static OSStatus InstallMyMenuEventHandler(MenuRef menuRef, void* userData, EventHandlerRef* outHandler)
 {
   // install the event handler for the various carbon menu events.
   static EventTypeSpec eventList[] = {
@@ -849,7 +866,7 @@ static OSStatus InstallMyMenuEventHandler(MenuRef menuRef, void* userData)
   static EventHandlerUPP gMyMenuEventHandlerUPP = NewEventHandlerUPP(&MyMenuEventHandler);
   return ::InstallMenuEventHandler(menuRef, gMyMenuEventHandlerUPP,
                                    sizeof(eventList) / sizeof(EventTypeSpec), eventList,
-                                   userData, NULL);
+                                   userData, outHandler);
 }
 
 //-------------------------------------------------------------------------
@@ -865,7 +882,7 @@ MenuHandle nsMenuX::NSStringNewMenu(short menuID, nsString& menuTitle)
     ::CFRelease(titleRef);
   }
   
-  status = ::InstallMyMenuEventHandler(menuRef, this);
+  status = InstallMyMenuEventHandler(menuRef, this, &mHandler);
   NS_ASSERTION(status == noErr,"nsMenuX::NSStringNewMenu: InstallMyMenuEventHandler failed.");
 
   return menuRef;

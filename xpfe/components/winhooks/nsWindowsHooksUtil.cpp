@@ -332,7 +332,7 @@ static void setWindowsXP() {
             RegistryEntry( HKEY_LOCAL_MACHINE, 
                            subkey,
                            "", 
-                           "Netscape 6" ).set(); // XXX - Get from somewhere?
+                           "Netscape 6.2" ).set(); // XXX - Get from somewhere?
             // Default icon (from .exe resource).
             RegistryEntry( HKEY_LOCAL_MACHINE, 
                            nsCAutoString( subkey + NS_LITERAL_CSTRING( "\\DefaultIcon" ) ),

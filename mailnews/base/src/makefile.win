@@ -53,6 +53,7 @@ EXPORTS=						\
 	nsMsgRDFUtils.h		\
 	nsStatusBarBiffManager.h \
 	nsMsgProgress.h \
+	nsMessengerWinIntegration.h \
 	$(NULL)
 
 
@@ -93,8 +94,8 @@ CPP_OBJS=									\
 	.\$(OBJDIR)\nsMsgSearchDBView.obj \
 	.\$(OBJDIR)\nsMsgOfflineManager.obj \
 	.\$(OBJDIR)\nsMsgProgress.obj \
+	.\$(OBJDIR)\nsMessengerWinIntegration.obj \
 	$(NULL)
-
 
 include <$(DEPTH)\config\rules.mak>
 

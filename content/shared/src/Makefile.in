@@ -28,13 +28,14 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE		= layout
 LIBRARY_NAME	= gkconshared_s
-REQUIRES	= xpcom string widget locale dom webshell pref necko htmlparser unicharutil
+REQUIRES	= xpcom string widget locale dom webshell pref necko htmlparser unicharutil uconv
 
 CPPSRCS		= \
 		nsCSSAtoms.cpp \
 		nsCSSKeywords.cpp \
 		nsCSSProps.cpp \
 		nsHTMLAtoms.cpp \
+		nsHTMLUtils.cpp \
 		nsHTMLValue.cpp \
 		nsImageMapUtils.cpp \
 		nsLayoutAtoms.cpp \

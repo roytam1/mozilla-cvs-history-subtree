@@ -577,8 +577,6 @@ nsHttpChannel::OpenCacheEntry(PRBool *delayed)
     }
     else if (mLoadFlags & LOAD_BYPASS_CACHE)
         accessRequested = nsICache::ACCESS_WRITE; // replace cache entry
-    else if (mFromCacheOnly)
-        accessRequested = nsICache::ACCESS_READ; // read from cache
     else
         accessRequested = nsICache::ACCESS_READ_WRITE; // normal browsing
 

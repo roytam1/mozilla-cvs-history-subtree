@@ -124,6 +124,7 @@ Rights Reserved.
        <hbox align="center">
          <image class="showMoreAddressesButton" id="expandedtoToggleIcon" 
              onclick="ToggleLongShortAddresses('expandedtoToggleIcon','expandedtoValue', 'expandedtoValueLong');"/>
+          <spring flex="1"/>
           <text class="headerdisplayname" value="&toField.label;"/>
         </hbox>
       </hbox>       
@@ -136,6 +137,7 @@ Rights Reserved.
         <hbox align="center">
           <image class="showMoreAddressesButton" id="expandedccToggleIcon"
               onclick="ToggleLongShortAddresses('expandedccToggleIcon', 'expandedccValue', 'expandedccValueLong');"/>
+          <spring flex="1"/>
           <text class="headerdisplayname" value="&ccField.label;"/>
         </hbox>
       </hbox>

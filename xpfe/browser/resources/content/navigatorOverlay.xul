@@ -103,12 +103,12 @@
     <!-- NOT IMPLEMENTED
     <command id="cmd_newEditorTemplate"/>
     <command id="cmd_newEditorDraft"/>
-    <command id="Browser:PrintSetup"  disabled ="true" oncommand=""/>
     <command id="Browser:PrintPreview" disabled="true"  oncommand=""/> -->
     <command id="Browser:OpenFile"  oncommand="BrowserOpenFileWindow();"/>
     <command id="Browser:SavePage" oncommand="savePage();"/>
     <command id="Browser:EditPage" oncommand="editPage(window._content.location.href,window, false);"/>
     <command id="Browser:Open" oncommand="BrowserOpenWindow();"/>
+    <command id="cmd_printSetup" oncommand="goPageSetup();"/>
     <command id="Browser:Print" oncommand="BrowserPrint();"/>
     <command id="cmd_quit"/>
     <command id="cmd_close" oncommand="BrowserClose()"/>
@@ -164,7 +164,7 @@
   <!-- Menu -->
   <menubar id="main-menubar" class="chromeclass-menubar">
     <menu id="menu_File">
-      <menupopup id="menu_FilePopup">
+      <menupopup id="menu_FilePopup" onpopupshowing="UpdateNecessaryItems('cmd_sendPage'); UpdateNecessaryItems('Browser:EditPage');">
         <menuitem label="&browserCmd.label;" accesskey="&browserCmd.accesskey;" key="key_newNavigator" command="cmd_newNavigator"/>
         <menu id="menu_New">
           <menupopup id="menu_NewPopup">
@@ -182,6 +182,7 @@
         <menuseparator/>
         <menuitem label="&editPageCmd.label;" accesskey="&editPageCmd.accesskey;" key="key_editPage" command="Browser:EditPage" />
         <menuseparator/>
+        <!-- Page setup gets inserted here on some platforms -->
         <menuitem id="printMenuItem" label="&printCmd.label;" accesskey="&printCmd.accesskey;" key="printKb" command="Browser:Print"/>
         <menuseparator />
         <menuitem id="offlineGoOfflineCmd"/>
@@ -206,7 +207,7 @@
     </menu>
 
     <menu id="menu_View" accesskey="&viewMenu.accesskey;" label="&viewMenu.label;">
-      <menupopup id="menu_View_Popup">
+      <menupopup id="menu_View_Popup" onpopupshowing="UpdateNecessaryItems('View:PageSource');">
         <menu label="&toolbarsCmd.label;" accesskey="&toolbarsCmd.accesskey;" id="view_toolbars">
           <menupopup id="view_toolbars_popup" onpopupshowing="updateToolbarStates(this);"> 
             <menuitem label="&navbarCmd.label;" accesskey="&navbarCmd.accesskey;" class="menuitem-iconic" type="checkbox" observes="cmd_viewnavbar"  />

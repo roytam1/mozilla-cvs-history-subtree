@@ -548,8 +548,6 @@ Overwrite Name=TRUE
 Timing=post archive
 OS=NT51
 
-
-
 [Component Uninstaller]
 Description Short=$CompanyName$ Uninstaller
 ;*** LOCALIZE ME BABY ***

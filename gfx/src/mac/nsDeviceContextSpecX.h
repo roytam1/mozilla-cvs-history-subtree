@@ -17,7 +17,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *  Patrick C. Beard <beard@netscape.com>
  */
 
@@ -27,9 +27,11 @@
 #include "nsIDeviceContextSpec.h"
 #include "nsIPrintingContext.h"
 #include "nsDeviceContextMac.h"
+
 #include <PMApplication.h>
 
-class nsDeviceContextSpecX : public nsIDeviceContextSpec, public nsIPrintingContext {
+class nsDeviceContextSpecX : public nsIDeviceContextSpec, public nsIPrintingContext
+{
 public:
     /**
      * Construct a nsDeviceContextSpecMac, which is an object which contains and manages a mac printrecord
@@ -85,10 +87,12 @@ protected:
   virtual ~nsDeviceContextSpecX();
 
 protected:
-    PMPrintSession mPrintSession;               // printing session.
-    PMPageFormat mPageFormat;                   // page format.
-    PMPrintSettings mPrintSettings;             // print settings.
-    CGrafPtr mSavedPort;                        // saved graphics port.
+
+    PMPrintContext    mPrintingContext;           // printing context (non-session APIs)
+    PMPageFormat      mPageFormat;                // page format.
+    PMPrintSettings   mPrintSettings;             // print settings.
+    CGrafPtr          mSavedPort;                 // saved graphics port.
+    PRBool            mBeganPrinting;
 };
 
 #endif

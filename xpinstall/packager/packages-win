@@ -337,6 +337,11 @@ bin\components\impText.dll
 bin\components\absyncsv.dll
 bin\components\absync.xpt
 bin\components\nsLDAPPrefsService.js
+bin\MapiProxy.dll
+bin\mozMapi32.dll
+bin\msgMapi.dll
+bin\components\nsMapiRegistry.dll
+bin\components\mapiregistry.xpt
 bin\chrome\messenger.jar
 bin\chrome\messenger\*
 

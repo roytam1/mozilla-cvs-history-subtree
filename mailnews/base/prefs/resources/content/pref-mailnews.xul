@@ -30,7 +30,7 @@ Contributor(s):
 <window xmlns:html="http://www.w3.org/1999/xhtml"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         class="color-dialog"
-        onload="Init();"
+        onload="parent.initPanel('chrome://messenger/content/pref-mailnews.xul');"
         orient="vertical">
 
   <script type="application/x-javascript">

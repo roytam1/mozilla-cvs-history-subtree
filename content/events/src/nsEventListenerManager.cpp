@@ -967,7 +967,7 @@ nsEventListenerManager::RegisterScriptEventListener(nsIScriptContext *aContext,
 
   nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID()));
   rv = xpc->WrapNative(current_cx, ::JS_GetGlobalObject(current_cx), aObject,
-                       NS_GET_IID(nsISupports), getter_AddRefs(holder));
+      NS_GET_IID(nsISupports), getter_AddRefs(holder));
   NS_ENSURE_SUCCESS(rv, rv);
 
   JSObject *jsobj = nsnull;
