@@ -72,17 +72,9 @@ include $(CORE_DEPTH)/coreconf/rules.mk
 
 include ../platrules.mk
 
-ifeq ($(OS_ARCH), WINNT)
-installparse.c:  installparse.y FORCE
-	yacc -d installparse.y
-	mv ytab.c installparse.c
-	mv ytab.h installparse.h
+#
+# Cancel the built-in implicit yacc and lex rules.
+#
 
-FORCE:
-
-else
-installparse.c:  installparse.y
-	yacc -d installparse.y
-	mv y.tab.c installparse.c
-	mv y.tab.h installparse.h
-endif
+%.c: %.y
+%.c: %.l

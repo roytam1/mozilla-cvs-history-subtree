@@ -1,4 +1,5 @@
-#
+#!/bin/sh
+
 # The contents of this file are subject to the Mozilla Public
 # License Version 1.1 (the "License"); you may not use this file
 # except in compliance with the License. You may obtain a copy of
@@ -31,50 +32,8 @@
 # GPL.
 #
 
-DEPTH	= ../..
-# MODULE	= seccmd
-
-REQUIRES = security nspr libdbm
-
-DIRS = lib  \
- zlib \
- atob  \
- btoa  \
- certcgi \
- certutil  \
- checkcert  \
- crlutil  \
- derdump  \
- digest  \
- makepqg  \
- ocspclnt  \
- oidcalc  \
- p7content  \
- p7env  \
- p7sign  \
- p7verify  \
- pp  \
- rngtest \
- selfserv  \
- ssltap  \
- strsclnt \
- swfort  \
- tstclnt  \
- modutil \
- $(NULL)
-
-TEMPORARILY_DONT_BUILD = \
- SSLsample \
- $(NULL)
-
-# rsaperf  \
-#
-#       needs to look at what needs to happen to make jar build in
-# the binary release environment.
-#
-# perror requires lib/strerror.c which requires the client code installed 
-# to build (requires allxpstr.h)
-#
-DONT_BULD = jar \
- perror \
-$(NULL)
+LD_LIBRARY_PATH=.:${LD_LIBRARY_PATH}
+MOZILLA_FIVE_HOME=`pwd`
+export LD_LIBRARY_PATH
+export MOZILLA_FIVE_HOME
+exec ./regxpcom

@@ -1,7 +1,0 @@
-
-<!-- LOCALIZATION NOTE (messengerCmd.label): DONT_TRANSLATE -->
-<!ENTITY messengerCmd.label					"Mail">
-<!ENTITY messengerCmd.accesskey					"m">
-
-<!ENTITY taskMessenger.tooltip  "Mail">
-

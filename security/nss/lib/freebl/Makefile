@@ -56,75 +56,6 @@ include $(CORE_DEPTH)/coreconf/config.mk
 
 -include config.mk
 
-ifdef USE_64
-	DEFINES += -DNSS_USE_64
-endif
-
-# des.c wants _X86_ defined for intel CPUs.  
-# coreconf does this for windows, but not for Linux, FreeBSD, etc.
-ifeq ($(CPU_ARCH),x86)
-ifneq ($(OS_ARCH),WINNT)
-	OS_REL_CFLAGS += -D_X86_
-endif
-endif
-
-ifeq ($(OS_ARCH),WINNT)
-ifneq ($(OS_TARGET),WIN16)
-    ASFILES  = mpi_x86.asm
-    DEFINES += -DMP_ASSEMBLY_MULTIPLY -DMP_ASSEMBLY_SQUARE -DMP_ASSEMBLY_DIV_2DX1D
-endif
-endif
-
-
-ifeq ($(OS_ARCH),IRIX)
-ifeq ($(USE_N32),1)
-    ASFILES  = mpi_mips.s
-    ASFLAGS = -O -OPT:Olimit=4000 -dollar -fullwarn -xansi -n32 -mips3 -exceptions 
-    DEFINES += -DMP_ASSEMBLY_MULTIPLY -DMP_ASSEMBLY_SQUARE
-else
-endif
-endif
-
-ifeq ($(OS_TARGET),Linux)
-ifeq ($(CPU_ARCH),x86)
-    ASFILES  = mpi_x86.s
-    DEFINES += -DMP_ASSEMBLY_MULTIPLY -DMP_ASSEMBLY_SQUARE -DMP_ASSEMBLY_DIV_2DX1D
-endif
-endif
-
-ifeq ($(OS_ARCH), HP-UX)
-ifdef USE_64
-else
-    DEFINES += -DMP_NO_MP_WORD
-endif
-endif
-
-# Note: -xarch=v8 or v9 is now done in coreconf
-ifeq ($(OS_TARGET),SunOS)
-ifeq ($(CPU_ARCH),sparc)
-    OS_CFLAGS += -xchip=ultra2
-ifeq ($(OS_RELEASE),5.5.1)
-    SYSV_SPARC = 1
-endif
-ifeq ($(OS_RELEASE),5.6)
-    SYSV_SPARC = 1
-endif
-ifeq ($(OS_RELEASE),5.7)
-    SYSV_SPARC = 1
-endif
-ifeq ($(OS_RELEASE),5.8)
-    SYSV_SPARC = 1
-endif
-ifeq ($(SYSV_SPARC),1)
-ifdef USE_64
-else
-    DEFINES += -DMP_NO_MP_WORD
-endif
-endif
-endif
-endif
-
-
 #######################################################################
 # (5) Execute "global" rules. (OPTIONAL)                              #
 #######################################################################
@@ -147,41 +78,10 @@ ifdef MOZILLA_BSAFE_BUILD
 ifeq ($(OS_ARCH),WINNT)
 libbsafe=bsafe41.lib
 else
-libbsafe=libbsafe.a
+libbsafe=libbsafe.$(LIB_SUFFIX)
 endif
 
 private_export::
 	$(NSINSTALL) -m 777 $(libbsafe) $(DIST)/lib; \
 
 endif
-
-mp%.h : mpi/mp%.h
-	cd mpi; cp $@ ..
-
-mp%.c : mpi/mp%.c
-	cd mpi; cp $@ ..
-
-mp%.s : mpi/mp%.s
-	cd mpi; cp $@ ..
-
-mp%.asm : mpi/mp%.asm
-	cd mpi; cp $@ ..
-
-logtab.h : mpi/logtab.h
-	cd mpi; cp $@ ..
-
-primes.c : mpi/primes.c
-	cd mpi; cp $@ ..
-
-.PRECIOUS : $(MPI_SRCS) $(MPI_HDRS) $(ASFILES)
-
-ALL_TRASH += $(MPI_SRCS) $(MPI_HDRS) $(ASFILES) primes.c
-
-DEFINES += -DMP_API_COMPATIBLE
-
-MPI_OBJS = $(addprefix $(OBJDIR)/$(PROG_PREFIX), $(MPI_SRCS:.c=$(OBJ_SUFFIX)))
-#MPI_OBJS += $(addprefix $(OBJDIR)/$(PROG_PREFIX), $(DH_SRCS:.c=$(OBJ_SUFFIX)))
-
-$(MPI_OBJS): $(MPI_HDRS) primes.c
-
-
