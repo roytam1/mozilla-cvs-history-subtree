@@ -36,6 +36,10 @@ public:
     // connection.  It fails if there is already an existing transaction.
     nsresult SetTransaction(nsHttpTransaction *);
 
+    // called by the transaction to inform the connection that all of the
+    // headers are available.
+    nsresult OnHeadersAvailable();
+
     // called by the transaction to inform the connection that it is done.
     nsresult OnTransactionComplete(nsresult status);
 

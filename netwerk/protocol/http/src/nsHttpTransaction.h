@@ -12,6 +12,7 @@ class nsHttpConnection;
 class nsHttpConnectionInfo;
 class nsHttpRequestHead;
 class nsHttpResponseHead;
+class nsAHttpTransactionHandler;
 class nsHTTPChunkConvContext;
 
 //-----------------------------------------------------------------------------
@@ -62,16 +63,16 @@ private:
 private:
     nsCOMPtr<nsIStreamListener> mListener;
 
-    nsHttpConnection           *mConnection; // hard reference
+    nsHttpConnection           *mConnection;  // hard ref
 
-    nsCString                   mRequestBuf;          // flattened request headers
-    nsCOMPtr<nsIInputStream>    mRequestHeaderStream; // header data stream
-    nsCOMPtr<nsIInputStream>    mRequestUploadStream; // upload data stream
+    nsCString                   mReqHeaderBuf;    // flattened request headers
+    nsCOMPtr<nsIInputStream>    mReqHeaderStream; // header data stream
+    nsCOMPtr<nsIInputStream>    mReqUploadStream; // upload data stream
 
     nsHttpResponseHead         *mResponseHead;
 
     char                       *mReadBuf; // read ahead buffer
-    nsCommonCString             mLineBuf; // may contain a partial line
+    nsCString                   mLineBuf; // may contain a partial line
 
     PRInt32                     mContentLength; // equals -1 if unknown
     PRUint32                    mContentRead;   // count of consumed content bytes

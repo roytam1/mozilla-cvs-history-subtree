@@ -37,6 +37,7 @@ CPPSRCS	= \
         nsHttpTransaction.cpp \
         nsHttpChannel.cpp \
         nsHttpRequestHead.cpp \
+        nsHttpResponseHead.cpp \
         $(NULL)
 
 LOCAL_INCLUDES=-I$(srcdir)/../../../streamconv/converters

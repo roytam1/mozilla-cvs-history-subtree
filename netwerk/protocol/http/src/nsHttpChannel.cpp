@@ -20,6 +20,7 @@ nsHttpChannel::nsHttpChannel()
     , mConnectionInfo(0)
     , mLoadFlags(LOAD_NORMAL)
     , mCapabilities(0)
+    , mStatus(NS_OK)
     , mIsPending(PR_FALSE)
 {
     NS_INIT_ISUPPORTS();
@@ -189,14 +190,17 @@ nsHttpChannel::IsPending(PRBool *value)
 NS_IMETHODIMP
 nsHttpChannel::GetStatus(nsresult *aStatus)
 {
-    *aStatus = NS_OK;
+    NS_ENSURE_ARG_POINTER(aStatus);
+    *aStatus = mStatus;
     return NS_OK;
 }
 
 NS_IMETHODIMP
 nsHttpChannel::Cancel(nsresult status)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    if (mTransaction)
+        mTransaction->Cancel(status);
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -513,6 +517,7 @@ nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult st
         this, status));
 
     mIsPending = PR_FALSE;
+    mStatus = status;
 
     mListener->OnStopRequest(this, mListenerContext, status);
 

@@ -57,6 +57,7 @@ private:
 
     PRUint32                    mLoadFlags;
     PRUint32                    mCapabilities;
+    PRUint32                    mStatus;
 
     PRPackedBool                mIsPending;
 };

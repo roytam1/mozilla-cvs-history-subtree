@@ -43,9 +43,7 @@ public:
                              const nsReadingIterator<char> &end);
 
 private:
-    nsresult ParseVersion(const nsReadingIterator<char> &begin,
-                          const nsReadingIterator<char> &end);
-
+    nsresult ParseVersion(const char *str);
     nsresult ParseContentType(const nsACString &);
 
 private:

@@ -183,7 +183,7 @@ nsHttpHandler::AddStandardRequestHeaders(nsHttpHeaderArray *request,
     LOG(("nsHttpHandler::AddStandardRequestHeaders\n"));
 
     // Add the User-Agent header:
-    rv = request->SetHeader(nsHttp::User_Agent, UserAgent());
+    rv = request->SetHeader(nsHttp::User_Agent, nsLocalCString(UserAgent()));
     if (NS_FAILED(rv)) return rv;
 
     // Add the Accept header:
@@ -194,27 +194,27 @@ nsHttpHandler::AddStandardRequestHeaders(nsHttpHeaderArray *request,
     if (NS_FAILED(rv)) return rv;
 
     // Add the Accept-Language header:
-    rv = request->SetHeader(nsHttp::Accept_Language, AcceptLanguages());
+    rv = request->SetHeader(nsHttp::Accept_Language, mAcceptLanguages);
     if (NS_FAILED(rv)) return rv;
 
     // Add the Accept-Encoding header:
-    rv = request->SetHeader(nsHttp::Accept_Encoding, AcceptEncodings());
+    rv = request->SetHeader(nsHttp::Accept_Encoding, mAcceptEncodings);
     if (NS_FAILED(rv)) return rv;
 
     // Add the Accept-Charset header:
-    rv = request->SetHeader(nsHttp::Accept_Charset, AcceptCharsets());
+    rv = request->SetHeader(nsHttp::Accept_Charset, mAcceptCharsets);
     if (NS_FAILED(rv)) return rv;
 
     // Add the Connection header:
-    nsLocalCString connectionType("close");
+    const char *connectionType = "close";
     if (caps && ALLOW_KEEPALIVE) {
         rv = request->SetHeader(nsHttp::Keep_Alive,
                 nsPrintfCString("%d", mKeepAliveTimeout));
         if (NS_FAILED(rv)) return rv;
         
-        connectionType.Assign("keep-alive");
+        connectionType = "keep-alive";
     }
-    return request->SetHeader(nsHttp::Connection, connectionType);
+    return request->SetHeader(nsHttp::Connection, nsLocalCString(connectionType));
 }
 
 nsresult
@@ -298,14 +298,14 @@ nsHttpHandler::RecycleConnection(nsHttpConnection *connection)
     return NS_OK;
 }
 
-nsCommonCString
+const char *
 nsHttpHandler::UserAgent()
 {
     if (mUserAgentIsDirty) {
         BuildUserAgent();
         mUserAgentIsDirty = PR_FALSE;
     }
-    return mUserAgent;
+    return mUserAgent.get();
 }
 
 void
@@ -797,9 +797,10 @@ nsHttpHandler::CreateServicesFromCategory(const char *category)
  */
 
 static nsresult
-PrepareAcceptLanguages(nsACString &acceptLanguages)
+PrepareAcceptLanguages(const nsACString &i_AcceptLanguages,
+                             nsACString &o_AcceptLanguages)
 {
-    if (acceptLanguages.IsEmpty())
+    if (i_AcceptLanguages.IsEmpty())
         return NS_OK;
 
     PRUint32 n, size, wrote;
@@ -809,7 +810,7 @@ PrepareAcceptLanguages(nsACString &acceptLanguages)
     PRInt32 available;
 
 
-    o_Accept = nsCRT::strdup(PromiseFlatCString(acceptLanguages).get());
+    o_Accept = nsCRT::strdup(PromiseFlatCString(i_AcceptLanguages).get());
     if (nsnull == o_Accept)
         return NS_ERROR_OUT_OF_MEMORY;
     for (p = o_Accept, n = size = 0; '\0' != *p; p++) {
@@ -850,8 +851,7 @@ PrepareAcceptLanguages(nsACString &acceptLanguages)
     }
     nsCRT::free(o_Accept);
 
-    // change alloc from C++ new/delete to nsCRT::strdup's way
-    acceptLanguages = q_Accept;
+    o_AcceptLanguages.Assign((const char *) q_Accept);
     delete [] q_Accept;
 
     return NS_OK;
@@ -860,8 +860,11 @@ PrepareAcceptLanguages(nsACString &acceptLanguages)
 nsresult
 nsHttpHandler::SetAcceptLanguages(const nsACString &aAcceptLanguages) 
 {
-    mAcceptLanguages = aAcceptLanguages;
-    return PrepareAcceptLanguages(mAcceptLanguages);
+    nsCString buf;
+    nsresult rv = PrepareAcceptLanguages(aAcceptLanguages, buf);
+    if (NS_SUCCEEDED(rv))
+        mAcceptLanguages.Assign(buf.get());
+    return rv;
 }
 
 /**
@@ -880,7 +883,8 @@ nsHttpHandler::SetAcceptLanguages(const nsACString &aAcceptLanguages)
  */
 
 static nsresult
-PrepareAcceptCharsets(nsACString &acceptCharset)
+PrepareAcceptCharsets(const nsACString &i_AcceptCharset,
+                            nsACString &o_AcceptCharset)
 {
     PRUint32 n, size, wrote;
     PRInt32 available;
@@ -890,10 +894,10 @@ PrepareAcceptCharsets(nsACString &acceptCharset)
     PRBool add_utf = PR_FALSE;
     PRBool add_asterick = PR_FALSE;
 
-    if (acceptCharset.IsEmpty())
+    if (i_AcceptCharset.IsEmpty())
         acceptable = "";
     else
-        acceptable = PromiseFlatCString(acceptCharset).get();
+        acceptable = PromiseFlatCString(i_AcceptCharset).get();
     o_Accept = nsCRT::strdup(acceptable);
     if (nsnull == o_Accept)
         return NS_ERROR_OUT_OF_MEMORY;
@@ -975,7 +979,7 @@ PrepareAcceptCharsets(nsACString &acceptCharset)
     nsCRT::free(o_Accept);
 
     // change alloc from C++ new/delete to nsCRT::strdup's way
-    acceptCharset = q_Accept;
+    o_AcceptCharset.Assign((const char *) q_Accept);
 #if defined DEBUG_havill
     printf("Accept-Charset: %s\n", q_Accept);
 #endif
@@ -986,8 +990,11 @@ PrepareAcceptCharsets(nsACString &acceptCharset)
 nsresult
 nsHttpHandler::SetAcceptCharsets(const nsACString &aAcceptCharsets) 
 {
-    mAcceptCharsets = aAcceptCharsets;
-    return PrepareAcceptCharsets(mAcceptCharsets);
+    nsCString buf;
+    nsresult rv = PrepareAcceptCharsets(aAcceptCharsets, buf);
+    if (NS_SUCCEEDED(rv))
+        mAcceptCharsets.Assign(buf.get());
+    return rv;
 }
 
 nsresult
@@ -1103,7 +1110,7 @@ nsHttpHandler::NewProxyChannel(nsIURI *uri,
 NS_IMETHODIMP
 nsHttpHandler::GetUserAgent(char **aUserAgent)
 {
-    return DupString(UserAgent().get(), aUserAgent);
+    return DupString(UserAgent(), aUserAgent);
 }
 
 NS_IMETHODIMP

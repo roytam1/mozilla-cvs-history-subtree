@@ -48,30 +48,30 @@ nsHttpTransaction::SetRequestInfo(nsHttpRequestHead *requestHead,
 
     NS_ENSURE_ARG_POINTER(requestHead);
 
-    mRequestBuf.SetLength(0);
+    mReqHeaderBuf.SetLength(0);
 
-    rv = requestHead->Flatten(mRequestBuf);
+    rv = requestHead->Flatten(mReqHeaderBuf);
     if (NS_FAILED(rv)) return rv;
 
-    mRequestUploadStream = requestStream;
-    if (!mRequestUploadStream)
+    mReqUploadStream = requestStream;
+    if (!mReqUploadStream)
         // Write out end-of-headers sequence if NOT uploading data:
-        mRequestBuf.Append("\r\n");
+        mReqHeaderBuf.Append("\r\n");
 
     // Create a string stream for the request header buf
     nsCOMPtr<nsISupports> sup;
-    rv = NS_NewCStringInputStream(getter_AddRefs(sup), mRequestBuf);
+    rv = NS_NewCStringInputStream(getter_AddRefs(sup), mReqHeaderBuf);
     if (NS_FAILED(rv)) return rv;
-    mRequestHeaderStream = do_QueryInterface(sup, &rv);
+    mReqHeaderStream = do_QueryInterface(sup, &rv);
 
     return rv;
 }
 
 void
-nsHttpTransaction::SetConnection(nsHttpConnection *connection)
+nsHttpTransaction::SetConnection(nsHttpConnection *conn)
 {
     NS_IF_RELEASE(mConnection);
-    mConnection = connection;
+    mConnection = conn;
     NS_IF_ADDREF(mConnection);
 }
 
@@ -84,14 +84,14 @@ nsHttpTransaction::OnDataWritable(nsIOutputStream *os, PRUint32 count)
     LOG(("nsHttpTransaction::OnDataWritable [this=%x]\n", this));
 
     // check if we're done writing the headers
-    nsresult rv = mRequestHeaderStream->Available(&n);
+    nsresult rv = mReqHeaderStream->Available(&n);
     if (NS_FAILED(rv)) return rv;
     
     if (n != 0)
-        return os->WriteFrom(mRequestHeaderStream, count, &n);
+        return os->WriteFrom(mReqHeaderStream, count, &n);
 
-    if (mRequestUploadStream)
-        return os->WriteFrom(mRequestUploadStream, count, &n);
+    if (mReqUploadStream)
+        return os->WriteFrom(mReqUploadStream, count, &n);
 
     return NS_BASE_STREAM_CLOSED;
 }
@@ -110,6 +110,13 @@ nsHttpTransaction::OnDataAvailable(nsIInputStream *is, PRUint32 count)
     //
     // need to parse status line and headers
     //
+    
+    // allocate the response head object if necessary
+    if (!mResponseHead) {
+        mResponseHead = new nsHttpResponseHead();
+        if (!mResponseHead)
+            return NS_ERROR_OUT_OF_MEMORY;
+    }
     
     // allocate the read ahead buffer if necessary
     if (!mReadBuf) {
@@ -202,6 +209,8 @@ nsHttpTransaction::ParseLine(const char *line)
 
     NS_PRECONDITION(mResponseHead, "null response head");
     NS_PRECONDITION(!mHaveAllHeaders, "already have all headers");
+
+    LOG(("nsHttpTransaction::ParseLine [%s]\n", line));
 
     // wrap a funky string thang around our line buf and grab iterators
     nsLocalCString s(line);
@@ -320,7 +329,7 @@ nsHttpTransaction::HandleContent(nsIInputStream *stream,
     else
         after = count;
 
-    NS_ASSERTION(after >= before, "bytes read NOT monotonically increasing!");
+    NS_ASSERTION(after >= before, "unexpected stream offset!");
 
     // update count of content bytes read..
     mContentRead += (after - before);
@@ -329,7 +338,7 @@ nsHttpTransaction::HandleContent(nsIInputStream *stream,
         this, mContentRead, mContentLength));
 
     // check for end-of-file
-    if ((PRInt32(mContentRead) == mContentLength) ||
+    if ((PRInt32(mContentRead) >= mContentLength) ||
             (mChunkConvCtx && mChunkConvCtx->GetEOF())) {
         // let the connection know that we are done with it; this should
         // result in OnStopTransaction being fired.
@@ -433,7 +442,11 @@ nsHttpTransaction::GetStatus(nsresult *aStatus)
 NS_IMETHODIMP
 nsHttpTransaction::Cancel(nsresult status)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    if (mConnection)
+        mConnection->OnTransactionComplete(status);
+    //else
+    //    nsHttpHandler::get()->CancelTransaction(this, status);
+    return NS_OK;
 }
 
 NS_IMETHODIMP

@@ -46,10 +46,10 @@ nsHttpResponseHead::ParseStatusLine(const nsReadingIterator<char> &begin,
     nsReadingIterator<char> p = begin;
  
     // HTTP-Version
-    rv = ParseVersion(begin, p);
+    rv = ParseVersion(p.get());
     if (NS_FAILED(rv)) return rv;
     
-    if (mVersion == HTTP_VERSION_0_9) {
+    if ((mVersion == HTTP_VERSION_0_9) || !FindCharInReadable(' ', p, end)) {
         mStatus = 200;
         mStatusText = NS_LITERAL_CSTRING("OK");
         goto end;
@@ -68,7 +68,7 @@ nsHttpResponseHead::ParseStatusLine(const nsReadingIterator<char> &begin,
         mStatusText = NS_LITERAL_CSTRING("OK");
     }
     else
-        mStatusText.Assign((++p).get(), Distance(p, end));
+        mStatusText = Substring(++p, end);
 
 end:
     LOG(("Have status line [version=%d status=%d statusText=%s]\n",
@@ -114,20 +114,19 @@ nsHttpResponseHead::ParseHeaderLine(const nsReadingIterator<char> &begin,
 }
 
 nsresult
-nsHttpResponseHead::ParseVersion(const nsReadingIterator<char> &begin,
-                                 const nsReadingIterator<char> &end)
+nsHttpResponseHead::ParseVersion(const char *str)
 {
     // Parse HTTP-Version:: "HTTP" "/" 1*DIGIT "." 1*DIGIT
-    nsReadingIterator<char> a = begin, b = end;
 
     // make sure we have HTTP at the beginning
-    if (!FindInReadable(NS_LITERAL_CSTRING("HTTP"), a, b) || (a != begin)) {
+    if (PL_strncmp(str, "HTTP", 4) != 0) {
         LOG(("looks like a HTTP/0.9 response\n"));
         mVersion = HTTP_VERSION_0_9;
         return NS_OK;
     }
+    str += 4;
 
-    if (*b != '/') {
+    if (*str != '/') {
         LOG(("server did not send a version number; assuming HTTP/1.0\n"));
         // NCSA/1.5.2 has a bug in which it fails to send a version number
         // if the request version is HTTP/1.1, so we fall back on HTTP/1.0
@@ -135,17 +134,17 @@ nsHttpResponseHead::ParseVersion(const nsReadingIterator<char> &begin,
         return NS_OK;
     }
 
-    a = ++b;
-    if (!FindCharInReadable('.', b, end)) {
+    char *p = PL_strchr(str, '.');
+    if (p == nsnull) {
         LOG(("mal-formed server version; assuming HTTP/1.0\n"));
         mVersion = HTTP_VERSION_1_0;
         return NS_OK;
     }
 
-    ++b; // let b point to the minor version
+    ++p; // let b point to the minor version
 
-    int major = atoi(a.get());
-    int minor = atoi(b.get());
+    int major = atoi(str + 1);
+    int minor = atoi(p);
 
     if ((major > 1) || ((major == 1) && (minor >= 1)))
         // at least HTTP/1.1
@@ -168,7 +167,7 @@ nsHttpResponseHead::ParseContentType(const nsACString &type)
         // we don't care about comments
         b = a;
         type.BeginReading(a);
-        // trim any whitespace
+        // trim any trailing whitespace
         while (*b == ' ') --b;
     }
 

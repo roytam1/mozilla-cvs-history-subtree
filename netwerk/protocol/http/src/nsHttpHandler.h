@@ -95,10 +95,10 @@ private:
     nsresult SetAcceptEncodings(const nsACString &);
     nsresult SetAcceptCharsets(const nsACString &);
 
-    nsCommonCString AcceptLanguages() { return mAcceptLanguages; }
-    nsCommonCString AcceptEncodings() { return mAcceptEncodings; }
-    nsCommonCString AcceptCharsets() { return mAcceptCharsets; }
-    nsCommonCString UserAgent();
+    const char *AcceptLanguages() { return mAcceptLanguages; }
+    const char *AcceptEncodings() { return mAcceptEncodings; }
+    const char *AcceptCharsets() { return mAcceptCharsets; }
+    const char *UserAgent();
 
     static PRInt32 PR_CALLBACK PrefsCallback(const char *, void *);
 
@@ -124,9 +124,9 @@ private:
     PRInt32  mMaxAllowedKeepAlives;
     PRInt32  mMaxAllowedKeepAlivesPerServer;
 
-    nsCommonCString mAcceptLanguages;
-    nsCommonCString mAcceptEncodings;
-    nsCommonCString mAcceptCharsets;
+    nsCString mAcceptLanguages;
+    nsCString mAcceptEncodings;
+    nsCString mAcceptCharsets;
 
     // connection management
     PRCList  mIdleConnections;     // list of nsHttpConnection objects
@@ -149,9 +149,9 @@ private:
     nsXPIDLCString mProductSub;
     nsXPIDLCString mProductComment;
 
-    nsCommonCString mUserAgent;
-    nsXPIDLCString  mUserAgentOverride;
-    PRPackedBool    mUserAgentIsDirty; // true if mUserAgent should be rebuilt
+    nsCString      mUserAgent;
+    nsXPIDLCString mUserAgentOverride;
+    PRPackedBool   mUserAgentIsDirty; // true if mUserAgent should be rebuilt
 };
 
 #endif // nsHttpHandler_h__
