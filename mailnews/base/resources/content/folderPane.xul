@@ -25,6 +25,7 @@
 -->
 
 <?xml-stylesheet href="chrome://messenger/skin/folderPane.css" type="text/css"?>
+<?xml-stylesheet href="chrome://messenger/skin/folderPaneExtras.css" type="text/css"?>
 <?xml-stylesheet href="chrome://messenger/skin/fakeAccount.css" type="text/css"?>
 
 <!DOCTYPE window SYSTEM "chrome://messenger/locale/folderpane.dtd">
