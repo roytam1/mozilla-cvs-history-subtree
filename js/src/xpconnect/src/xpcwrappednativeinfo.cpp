@@ -202,15 +202,10 @@ XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
     else
     {
         if(IsWritableAttribute())
-        {
             flags = JSFUN_GETTER | JSFUN_SETTER;
-            argc = 1;
-        }
         else
-        {
             flags = JSFUN_GETTER;
-            argc = 0;
-        }
+        argc = 0;
         callback = XPC_WN_GetterSetter;
     }
 

@@ -1160,11 +1160,11 @@ XPC_WN_GetterSetter(JSContext *cx, JSObject *obj,
         return Throw(NS_ERROR_XPC_CANT_GET_METHOD_INFO, cx);
 
     ccx.SetArgsAndResultPtr(argc, argv, vp);
-    if(JS_IsAssigning(cx))
+    if(argc)
     {
         ccx.SetCallInfo(iface, member, JS_TRUE);
         JSBool retval = XPCWrappedNative::SetAttribute(ccx);
-        if(retval && vp && argc)
+        if(retval && vp)
             *vp = argv[0];
         return retval;
     }
