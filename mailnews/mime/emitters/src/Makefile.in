@@ -31,6 +31,7 @@ LIBRARY_NAME	= emitterutil_s
 META_COMPONENT = mail
 REQUIRES	= xpcom \
 		  string \
+		  mozreg \
 		  mime \
 		  msgbase \
 		  msgbaseutil \

@@ -40,6 +40,11 @@
 #include "nsIModule.h"
 #include "nsIGenericFactory.h"
 
+#include "nsIRegistry.h"
+#include "nsRegistry.h"
+
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsRegistry)
+
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsProfile, Init);
 
 static const nsModuleComponentInfo components[] =
@@ -48,7 +53,13 @@ static const nsModuleComponentInfo components[] =
       NS_PROFILE_CID,
       NS_PROFILE_CONTRACTID, 
       nsProfileConstructor,
-     }
+    },
+    {
+      NS_REGISTRY_CLASSNAME, 
+      NS_REGISTRY_CID, 
+      NS_REGISTRY_CONTRACTID, 
+      nsRegistryConstructor,
+    }
 };
 
 NS_IMPL_NSGETMODULE(nsProfileModule, components);

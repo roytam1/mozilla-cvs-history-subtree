@@ -29,7 +29,8 @@ include $(DEPTH)/config/autoconf.mk
 MODULE		= profile
 LIBRARY_NAME	= profile_s
 REQUIRES	= xpcom \
-		  string \
+		  mozreg \
+	          string \
 		  chrome \
 		  docshell \
 		  webbrwsr \

@@ -41,6 +41,7 @@ RESFILE		= testembed.res
 MODULE = testEmbed
 
 REQUIRES = \
+	mozreg \
 	xpcom \
 	string \
 	necko \

@@ -34,7 +34,8 @@ LIBRARY_NAME	= ctl
 EXPORT_LIBRARY = 1
 IS_COMPONENT	= 1
 
-REQUIRES	= xpcom \
+REQUIRES	= mozreg \
+		  xpcom \
 		  string \
 		  uconv \
 		  locale \

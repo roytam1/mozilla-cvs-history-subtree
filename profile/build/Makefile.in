@@ -50,6 +50,8 @@ GRE_MODULE	= 1
 
 REQUIRES	= xpcom \
 		  string \
+		  libreg \
+		  mozreg \
 		  chrome \
 		  docshell \
 		  webbrwsr \
@@ -68,10 +70,10 @@ REQUIRES	= xpcom \
 CPPSRCS		= \
 			nsProfileFactory.cpp	\
 			$(NULL)
-
 SHARED_LIBRARY_LIBS = \
 		$(DIST)/lib/$(LIB_PREFIX)profile_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)profdirserviceprovider_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)mozreg_s.$(LIB_SUFFIX) \
 		$(NULL)
 
 EXTRA_DSO_LDOPTS = \

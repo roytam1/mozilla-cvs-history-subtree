@@ -128,6 +128,7 @@ tier_2_dirs	+= \
 		modules/libreg \
 		string \
 		xpcom \
+		modules/libreg/xpcom \
 		$(NULL)
 
 ifdef NS_TRACE_MALLOC
@@ -206,7 +207,11 @@ ifdef MOZ_JPROF
 tier_9_dirs        += tools/jprof
 endif
 
-tier_9_dirs	+= xpfe xpinstall
+tier_9_dirs	+= xpfe
+
+ifdef MOZ_XPINSTALL
+tier_9_dirs     +=  xpinstall
+endif
 
 ifdef MOZ_LEAKY
 tier_9_dirs        += tools/leaky
@@ -253,7 +258,8 @@ endif
 ifdef MOZ_PHOENIX
 tier_99_dirs	+= browser
 else
-tier_99_dirs	+= xpfe/bootstrap
+# We need be able to disable this in cleaner way:
+# tier_99_dirs	+= xpfe/bootstrap
 endif
 
 ifdef MOZ_ENABLE_GTK

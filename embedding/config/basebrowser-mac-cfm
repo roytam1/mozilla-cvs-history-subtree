@@ -146,6 +146,8 @@ Components:oji.xpt
 ; profile
 Components:profile.shlb
 Components:profileservices.xpt
+Components:mozreg.shlb
+Components:mozreg.xpt
 
 ; wallet
 ; Optional - only if you need password persistence

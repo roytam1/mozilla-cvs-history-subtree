@@ -37,7 +37,8 @@ ifneq ($(OS_ARCH),WINNT)
 # To avoid conflict with OS/2 system uconv.dll
 SHORT_LIBNAME  = mozuconv
 endif
-REQUIRES	= xpcom \
+REQUIRES	= mozreg \
+		  xpcom \
 		  string \
 		  intl \
 		  locale \

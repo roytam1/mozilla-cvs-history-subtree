@@ -3404,6 +3404,28 @@ if test "$ACCESSIBILITY"; then
 fi
 
 dnl ========================================================
+dnl xpinstall support on by default
+dnl ========================================================
+MOZ_XPINSTALL=1
+MOZ_ARG_DISABLE_BOOL(xpinstall,
+[  --disable-xpinstall Disable xpinstall support],
+    MOZ_XPINSTALL= )
+if test "$MOZ_XPINSTALL"; then
+    AC_DEFINE(MOZ_XPINSTALL)
+fi
+
+dnl ========================================================
+dnl xpcom js loader support on by default
+dnl ========================================================
+MOZ_JSLOADER=1
+MOZ_ARG_DISABLE_BOOL(jsloader,
+[  --disable-jsloader Disable xpcom js loader support],
+    MOZ_JSLOADER= )
+if test "$MOZ_JSLOADER"; then
+    AC_DEFINE(MOZ_JSLOADER)
+fi
+
+dnl ========================================================
 dnl Libeditor can be build as plaintext-only,
 dnl or as a full html and text editing component.
 dnl We build both by default.
@@ -4710,6 +4732,7 @@ AC_SUBST(MOZ_LOG_REFCNT)
 AC_SUBST(MOZ_LEAKY)
 AC_SUBST(MOZ_JPROF)
 AC_SUBST(MOZ_XPCTOOLS)
+AC_SUBST(MOZ_JSLOADER)
 AC_SUBST(MOZ_INSURE)
 AC_SUBST(MOZ_INSURE_DIRS)
 AC_SUBST(MOZ_INSURE_EXCLUDE_DIRS)
@@ -4739,6 +4762,7 @@ AC_SUBST(ENABLE_TESTS)
 AC_SUBST(IBMBIDI)
 AC_SUBST(SUNCTL)
 AC_SUBST(ACCESSIBILITY)
+AC_SUBST(MOZ_XPINSTALL)
 AC_SUBST(MOZ_USER_DIR)
 
 AC_SUBST(ENABLE_STRIP)

@@ -40,7 +40,6 @@
 #define PL_ARENA_CONST_ALIGN_MASK 7
 #define NS_CM_BLOCK_SIZE (1024)
 
-#include "NSReg.h"
 #include "nsAutoLock.h"
 #include "nsCOMPtr.h"
 #include "nsComponentManager.h"
@@ -60,7 +59,6 @@
 #include "nsISupportsPrimitives.h"
 #include "nsLocalFile.h"
 #include "nsNativeComponentLoader.h"
-#include "nsRegistry.h"
 #include "nsXPIDLString.h"
 #include "prcmon.h"
 #include "xptinfo.h" // this after nsISupports, to pick up IID so that xpt stuff doesn't try to define it itself...
@@ -810,7 +808,6 @@ nsresult nsComponentManagerImpl::Init(void)
 
     mComponentsOffset = componentDescriptor.Length();
 
-    NR_StartupRegistry();
     PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
            ("nsComponentManager: Initialized."));
 
@@ -880,8 +877,6 @@ nsresult nsComponentManagerImpl::Shutdown(void)
 #ifdef ENABLE_STATIC_COMPONENT_LOADER
     NS_IF_RELEASE(mStaticComponentLoader);
 #endif
-
-    NR_ShutdownRegistry();
 
     mShuttingDown = NS_SHUTDOWN_COMPLETE;
 

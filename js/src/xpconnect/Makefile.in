@@ -38,7 +38,7 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS		= public idl loader src shell
+DIRS		= public idl src shell
 
 ifdef ENABLE_TESTS
 DIRS		+= tests
@@ -46,6 +46,10 @@ endif
 
 ifdef MOZ_XPCTOOLS
 DIRS         +=  tools 
+endif
+
+ifdef MOZ_JSLOADER
+DIRS         +=  loader
 endif
 
 include $(topsrcdir)/config/rules.mk

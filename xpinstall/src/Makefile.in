@@ -111,6 +111,7 @@ endif
 LOCAL_INCLUDES	= -I$(srcdir)/../public
 
 EXTRA_DSO_LDOPTS = \
+		$(DIST)/lib/$(LIB_PREFIX)mozreg_s.$(LIB_SUFFIX) \
 		$(LIBS_DIR) \
 		$(EXTRA_DSO_LIBS) \
 		$(MOZ_JS_LIBS) \

@@ -142,6 +142,8 @@ components/libpref.dylib
 ; profile
 components/libprofile.dylib                  
 components/profile.xpt
+components/mozreg.dylib
+components/mozreg.xpt
 
 ; wallet
 ; Optional - only if you need password persistence

@@ -27,14 +27,20 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE		= xpcom
-CPPSRCS		= regExport.cpp regxpcom.cpp
+CPPSRCS		= regxpcom.cpp
+
 REQUIRES	= string \
-          $(NULL)
+		  embedstring \
+	          $(NULL)
+
+DEFINES		+= -DXPCOM_GLUE 
+
 
 SIMPLE_PROGRAMS	= $(CPPSRCS:.cpp=$(BIN_SUFFIX))
 
-LIBS		= \
-		$(XPCOM_LIBS) \
+LIBS            = \
+		$(DIST)/lib/$(LIB_PREFIX)xpcomglue.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)embedstring.$(LIB_SUFFIX) \
 		$(NSPR_LIBS) \
 		$(NULL)
 

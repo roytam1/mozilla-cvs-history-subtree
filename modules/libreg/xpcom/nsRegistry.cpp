@@ -39,6 +39,8 @@
 #define FORCE_PR_LOG /* Allow logging in the release build */
 #endif
 
+#include "nsIGenericFactory.h"
+
 #include "nsRegistry.h"
 #include "nsIEnumerator.h"
 #include "nsDirectoryService.h"
@@ -56,8 +58,6 @@
 #include "nsILocalFile.h"
 #include "nsIServiceManager.h"
 #include "nsTextFormatter.h"
-
-#include "nsComponentManager.h"
 
 #ifdef XP_BEOS
 #include <FindDirectory.h>
@@ -89,6 +89,31 @@ PRUnichar widestrFormat[] = { PRUnichar('%'),PRUnichar('s'),PRUnichar(0)};
 ------------------------------------------------------------------------------*/
 
 
+#if defined(XP_UNIX) && !defined(XP_MACOSX)
+/* The default registry on the unix system is $HOME/.mozilla/registry per
+ * vr_findGlobalRegName(). vr_findRegFile() will create the registry file
+ * if it doesn't exist. But it wont create directories.
+ *
+ * Hence we need to create the directory if it doesn't exist already.
+ *
+ * Why create it here as opposed to the app ?
+ * ------------------------------------------
+ * The app cannot create the directory in main() as most of the registry
+ * and initialization happens due to use of static variables.
+ * And we dont want to be dependent on the order in which
+ * these static stuff happen.
+ *
+ * Permission for the $HOME/.mozilla will be Read,Write,Execute
+ * for user only. Nothing to group and others.
+ */
+#define NS_MOZILLA_DIR_NAME		".mozilla"
+#define NS_MOZILLA_DIR_PERMISSION	00700
+#endif /* XP_UNIX */
+
+#ifdef XP_BEOS
+#define NS_MOZILLA_DIR_NAME		"Mozilla"
+#define NS_MOZILLA_DIR_PERMISSION	00700
+#endif /* XP_BEOS */
 
 #include "nsRegistry.h"
 /*
@@ -371,6 +396,7 @@ nsRegistry::nsRegistry()
 #ifdef EXTRA_THREADSAFE
     mregLock = PR_NewLock();
 #endif
+    NR_StartupRegistry();
     return;
 }
 
@@ -386,6 +412,7 @@ nsRegistry::~nsRegistry() {
         PR_DestroyLock(mregLock);
     }
 #endif
+    NR_ShutdownRegistry();
     return;
 }
 
@@ -532,15 +559,11 @@ NS_IMETHODIMP nsRegistry::OpenWellKnownRegistry( nsWellKnownRegistry regid )
         break;
       case ApplicationRegistry:
         {
-            // can't use NS_GetSpecialDirectory here.  Called before service manager is initialized.
             EnsureDefaultRegistryDirectory();
-            nsCOMPtr<nsIProperties> directoryService;
-            rv = nsDirectoryService::Create(nsnull, 
-                                            NS_GET_IID(nsIProperties), 
-                                            getter_AddRefs(directoryService));
+            nsCOMPtr<nsIProperties> directoryService = do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
             if (NS_FAILED(rv)) return rv;
             directoryService->Get(NS_APP_APPLICATION_REGISTRY_FILE, NS_GET_IID(nsIFile), 
-                                          getter_AddRefs(registryLocation));
+                                  getter_AddRefs(registryLocation));
 
             if (registryLocation)
             {

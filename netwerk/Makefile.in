@@ -36,9 +36,11 @@ DIRS		= \
 		cache \
 		protocol \
 		build \
-		build2 \
 		resources \
 		$(NULL)
+
+
+DIRS            += build2
 
 ifdef ENABLE_TESTS
 DIRS		+= test
