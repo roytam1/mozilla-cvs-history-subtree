@@ -98,6 +98,7 @@ typedef struct MochaDecoder {
     JSObject	    *url_prototype;
 #ifdef DOM
 	JSObject		*span_prototype;
+	JSObject		*transclusion_prototype;
 #endif
 
     /*
@@ -160,6 +161,7 @@ typedef enum {
 	LM_LAYERS
 #ifdef DOM
 	, LM_SPANS
+	, LM_TRANSCLUSIONS
 #endif
 } ReflectedObject;
 
@@ -508,6 +510,9 @@ LM_ReflectImage(MWContext *context, LO_ImageStruct *image_data,
 extern JSObject *
 LM_ReflectSpan(MWContext *context, struct lo_NameList_struct *name_rec,
 	       PA_Tag *tag, int32 layer_id, uint index);
+
+extern JSObject *
+LM_ReflectTransclusion(MWContext *context, void *ele, int32 layer_id, uint index);
 #endif
 
 extern JSBool

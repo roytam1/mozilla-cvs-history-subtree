@@ -111,6 +111,10 @@ extern void LO_SetLayerBbox(CL_Layer *layer, XP_Rect *bbox);
 /* Setters for span contents */
 extern void LO_SetSpanColor(MWContext *context, void *span, LO_Color *color);
 extern void LO_SetSpanBackground(MWContext *context, void *span, LO_Color *color);
+extern void LO_SetSpanFontFamily(MWContext* context, void *span, char *family);
+extern void LO_SetSpanFontWeight(MWContext* context, void *span, char *weight);
+extern void LO_SetSpanFontSize(MWContext* context, void *span, int32 size);
+extern void LO_SetSpanFontSlant(MWContext* context, void *span, char *slant);
 #endif
 
 extern void LO_SetLayerBgColor(CL_Layer *layer, LO_Color *color);
