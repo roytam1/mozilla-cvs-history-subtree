@@ -48,11 +48,15 @@ DIST_GARBAGE	=
 
 include $(topsrcdir)/config/config.mk
 
-CSRCS	= nsinstall.c now.c
+ifndef MOZILLA_CLIENT
+CSRCS	= nsinstall.c 
+endif
+
+CSRCS	+= now.c
 
 PLSRCS	= nfspwd.pl
 
-ifneq (,$(filter WINNT OS2,$(OS_ARCH)))
+ifneq (,$(CROSS_COMPILE)$(filter WINNT OS2,$(OS_ARCH)))
 PROG_SUFFIX = .exe
 else
 PROG_SUFFIX =
