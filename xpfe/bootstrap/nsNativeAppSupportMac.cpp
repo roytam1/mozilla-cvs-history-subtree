@@ -181,8 +181,8 @@ PRBool NS_CanRun()
 {
   long response = 0;
   OSErr err = ::Gestalt (gestaltSystemVersion, &response);
-  // check for at least MacOS 8.6
-  if ( err || response < 0x860)
+  // check for at least MacOS 8.5
+  if ( err || response < 0x850)
   {
     ::StopAlert (5000, NULL);
     return PR_FALSE;
