@@ -45,8 +45,8 @@ MOZ_DIST           =  $(ldaptopsrcdir)/../../../dist
 
 # NSPR now uses autoconf by default.
 #
+include $(DEPTH)/directory/c-sdk/ldap/build/nspr-autoconf.mk
 MOD_DEPTH	= $(DEPTH)
-include $(DEPTH)/nsprpub/config/autoconf.mk
 VPATH		= $(srcdir)
 DIST		= $(DEPTH)/dist
 

@@ -832,7 +832,6 @@
     "nsrange.createcontextualfragment", \
     "nsrange.intersectsnode", \
     "nsrange.ispointinrange", \
-    "nsrange.isvalidfragment", \
     "nsrange.nsdetach", \
     "nsuievent.cancelbubble", \
     "nsuievent.getpreventdefault", \
@@ -1033,11 +1032,14 @@
     "xmlhttprequest.open", \
     "xulcommanddispatcher.active", \
     "xulcommanddispatcher.addcommandupdater", \
+    "xulcommanddispatcher.advancefocus", \
+    "xulcommanddispatcher.advancefocusintosubtree", \
     "xulcommanddispatcher.focusedelement", \
     "xulcommanddispatcher.focusedwindow", \
     "xulcommanddispatcher.getcontrollerforcommand", \
     "xulcommanddispatcher.getcontrollers", \
     "xulcommanddispatcher.removecommandupdater", \
+    "xulcommanddispatcher.rewindfocus", \
     "xulcommanddispatcher.suppressfocus", \
     "xulcommanddispatcher.suppressfocusscroll", \
     "xulcommanddispatcher.updatecommands", \

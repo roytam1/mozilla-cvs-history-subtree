@@ -29,7 +29,7 @@ IS_COMPONENT = 1
 include $(DEPTH)/config/autoconf.mk
 
 LIBRARY_NAME	= docshell
-REQUIRES	= xpcom string dom shistory necko layout uriloader timer webshell widget pref locale view intl htmlparser chardet appcomps
+REQUIRES	= xpcom string dom shistory necko layout uriloader timer webshell widget pref locale view intl htmlparser chardet appcomps gfx2
 
 CPPSRCS		= \
 		nsDocShellModule.cpp		\

@@ -782,3 +782,5 @@ chmod +x $CONFIG_STATUS
 rm -fr confdefs* $ac_clean_files
 test "$no_create" = yes || ${CONFIG_SHELL-/bin/sh} $CONFIG_STATUS || exit 1
 
+
+cp ../../../nsprpub/config/autoconf.mk build/nspr-autoconf.mk

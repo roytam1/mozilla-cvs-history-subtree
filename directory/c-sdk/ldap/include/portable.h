@@ -137,7 +137,7 @@
  * for select()
  */
 #if !defined(WINSOCK) && !defined(_WINDOWS) && !defined(macintosh) && !defined(XP_OS2)
-#if defined(hpux) || defined(LINUX) || defined(SUNOS4)
+#if defined(hpux) || defined(LINUX) || defined(SUNOS4) || defined(XP_BEOS)
 #include <sys/time.h>
 #else
 #include <sys/select.h>
@@ -238,10 +238,15 @@ int strncasecmp(const char *, const char *, size_t);
 #define GETHOSTBYNAME( n, r, b, l, e )  gethostbyname( n )
 #define CTIME( c, b, l )		ctime( c )
 #define STRTOK( s1, s2, l )		strtok( s1, s2 )
+#elif defined(XP_BEOS)
+#define GETHOSTBYNAME( n, r, b, l, e )  gethostbyname( n )
+#define CTIME( c, b, l )                ctime_r( c, b )
+#define STRTOK( s1, s2, l )		strtok_r( s1, s2, l )
+#define HAVE_STRTOK_R
 #else /* UNIX */
 #if defined(sgi) || defined(HPUX9) || defined(LINUX1_2) || defined(SCOOS) || \
     defined(UNIXWARE) || defined(SUNOS4) || defined(SNI) || defined(BSDI) || \
-    defined(NCR) || defined(OSF1) || defined(NEC) || \
+    defined(NCR) || defined(OSF1) || defined(NEC) || defined(VMS) || \
     ( defined(HPUX10) && !defined(_REENTRANT)) || defined(HPUX11) || \
     defined(UnixWare) || defined(LINUX) || defined(NETBSD) || \
     (defined(AIX) && !defined(USE_REENTRANT_LIBC))
@@ -274,7 +279,9 @@ typedef char GETHOSTBYNAME_buf_t [BUFSIZ /* XXX might be too small */];
 #elif defined(HPUX10) && defined(_REENTRANT) && !defined(HPUX11)
 #define CTIME( c, b, l )		nsldapi_compat_ctime_r( c, b, l )
 #elif defined( IRIX6_2 ) || defined( IRIX6_3 ) || defined(UNIXWARE) \
-	|| defined(OSF1V4) || defined(AIX) || defined(UnixWare) || defined(hpux) || defined(HPUX11) || defined(NETBSD)
+	|| defined(OSF1V4) || defined(AIX) || defined(UnixWare) \
+        || defined(hpux) || defined(HPUX11) || defined(NETBSD) \
+        || defined(IRIX6) || defined(FREEBSD) || defined(VMS)
 #define CTIME( c, b, l )                ctime_r( c, b )
 #elif defined( OSF1V3 )
 #define CTIME( c, b, l )		(ctime_r( c, b, l ) ? NULL : b)
@@ -282,7 +289,7 @@ typedef char GETHOSTBYNAME_buf_t [BUFSIZ /* XXX might be too small */];
 #define CTIME( c, b, l )		ctime_r( c, b, l )
 #endif
 #if defined(hpux9) || defined(LINUX1_2) || defined(SUNOS4) || defined(SNI) || \
-    defined(SCOOS) || defined(BSDI) || defined(NCR) || \
+    defined(SCOOS) || defined(BSDI) || defined(NCR) || defined(VMS) || \
     defined(NEC) || defined(LINUX) || (defined(AIX) && !defined(USE_REENTRANT_LIBC))
 #define STRTOK( s1, s2, l )		strtok( s1, s2 )
 #else
@@ -302,7 +309,9 @@ extern char *strdup();
 
 #if !defined(_WINDOWS) && !defined(macintosh) && !defined(XP_OS2)
 #include <netinet/in.h>
+#if !defined(XP_BEOS)
 #include <arpa/inet.h>	/* for inet_addr() */
+#endif
 #endif
 
 /*

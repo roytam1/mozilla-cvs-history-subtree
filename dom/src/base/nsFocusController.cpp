@@ -18,6 +18,7 @@
  * 
  * Contributor(s):
  *   David W. Hyatt <hyatt@netscape.com> (Original Author)
+ *   Dan Rosen <dr@netscape.com>
  */
 
 #include "nsIContent.h"
@@ -37,6 +38,7 @@
 #include "nsFocusController.h"
 #include "prlog.h"
 #include "nsIDOMEventTarget.h"
+#include "nsIEventStateManager.h"
 
 #ifdef INCLUDE_XUL
 #include "nsIDOMXULDocument.h"
@@ -165,6 +167,56 @@ nsFocusController::GetControllers(nsIControllers** aResult)
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsFocusController::MoveFocus(PRBool aForward, nsIDOMElement* aElt)
+{
+  // Obtain the doc that we'll be shifting focus inside.
+  nsCOMPtr<nsIDocument> doc;
+  nsCOMPtr<nsIContent> content;
+  if (aElt) {
+    content = do_QueryInterface(aElt);
+    content->GetDocument(*getter_AddRefs(doc));
+  }
+  else {
+    if (mCurrentElement) {
+      content = do_QueryInterface(mCurrentElement);
+      content->GetDocument(*getter_AddRefs(doc));
+      content = nsnull;
+    }
+    else if (mCurrentWindow) {
+      nsCOMPtr<nsIDOMDocument> domDoc;
+      mCurrentWindow->GetDocument(getter_AddRefs(domDoc));
+      doc = do_QueryInterface(domDoc);
+    }
+  }
+
+  if (!doc)
+    // No way to obtain an event state manager.  Give up.
+    return NS_OK;
+
+
+  // Obtain a presentation context
+  PRInt32 count = doc->GetNumberOfShells();
+  if (count == 0)
+    return NS_OK;
+
+  nsCOMPtr<nsIPresShell> shell(getter_AddRefs(doc->GetShellAt(0)));
+  if (!shell)
+    return NS_OK;
+
+  // Retrieve the context
+  nsCOMPtr<nsIPresContext> presContext;
+  shell->GetPresContext(getter_AddRefs(presContext));
+
+  nsCOMPtr<nsIEventStateManager> esm;
+  presContext->GetEventStateManager(getter_AddRefs(esm));
+  if (esm)
+    // Make this ESM shift the focus per our instructions.
+    esm->MoveFocus(aForward, content); 
+
+  return NS_OK;
+}
+
 /////
 // nsIDOMFocusListener
 /////
@@ -249,6 +301,8 @@ nsFocusController::Blur(nsIDOMEvent* aEvent)
 nsresult
 nsFocusController::GetParentWindowFromDocument(nsIDOMDocument* aDocument, nsIDOMWindowInternal** aWindow)
 {
+	NS_ENSURE_ARG_POINTER(aWindow);
+
   nsCOMPtr<nsIDocument> objectOwner = do_QueryInterface(aDocument);
   if(!objectOwner) return NS_OK;
 
@@ -265,15 +319,14 @@ nsFocusController::GetParentWindowFromDocument(nsIDOMDocument* aDocument, nsIDOM
 NS_IMETHODIMP
 nsFocusController::GetControllerForCommand(const nsAReadableString& aCommand, nsIController** _retval)
 {
-  nsPromiseFlatString flatCommand(aCommand);
-  const PRUnichar *command = flatCommand.get();
+  NS_ENSURE_ARG_POINTER(_retval);	
   *_retval = nsnull;
 
   nsCOMPtr<nsIControllers> controllers;
   GetControllers(getter_AddRefs(controllers));
   if(controllers) {
     nsCOMPtr<nsIController> controller;
-    controllers->GetControllerForCommand(command, getter_AddRefs(controller));
+    controllers->GetControllerForCommand(aCommand, getter_AddRefs(controller));
     if(controller) {
       *_retval = controller;
       NS_ADDREF(*_retval);
@@ -303,7 +356,7 @@ nsFocusController::GetControllerForCommand(const nsAReadableString& aCommand, ns
       domWindow->GetControllers(getter_AddRefs(controllers2));
       if(controllers2) {
         nsCOMPtr<nsIController> controller;
-        controllers2->GetControllerForCommand(command, getter_AddRefs(controller));
+        controllers2->GetControllerForCommand(aCommand, getter_AddRefs(controller));
         if(controller) {
           *_retval = controller;
           NS_ADDREF(*_retval);
@@ -340,12 +393,22 @@ nsFocusController::GetSuppressFocus(PRBool* aSuppressFocus)
 }
 
 NS_IMETHODIMP
-nsFocusController::SetSuppressFocus(PRBool aSuppressFocus)
+nsFocusController::SetSuppressFocus(PRBool aSuppressFocus, char* aReason)
 {
-  if(aSuppressFocus)
+  if(aSuppressFocus) {
     ++mSuppressFocus;
-  else if(mSuppressFocus > 0)
+#ifdef DEBUG_hyatt
+    printf("[%d] SuppressFocus incremented to %d. The reason is %s.\n", this, mSuppressFocus, aReason);
+#endif
+  }
+  else if(mSuppressFocus > 0) {
     --mSuppressFocus;
+#ifdef DEBUG_hyatt
+    printf("[%d] SuppressFocus decremented to %d. The reason is %s.\n", this, mSuppressFocus, aReason);
+#endif
+  }
+  else 
+    NS_ASSERTION(PR_FALSE, "Attempt to decrement focus controller's suppression when no suppression active!\n");
 
   // we are unsuppressing after activating, so update focus-related commands
   // we need this to update commands in the case where an element is focused.
@@ -369,3 +432,27 @@ nsFocusController::SetActive(PRBool aActive)
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsFocusController::GetPopupNode(nsIDOMNode** aNode)
+{
+#ifdef DEBUG_dr
+  printf("dr :: nsFocusController::GetPopupNode\n");
+#endif
+
+  *aNode = mPopupNode;
+  NS_IF_ADDREF(*aNode);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFocusController::SetPopupNode(nsIDOMNode* aNode)
+{
+#ifdef DEBUG_dr
+  printf("dr :: nsFocusController::SetPopupNode\n");
+#endif
+
+  mPopupNode = aNode;
+  return NS_OK;
+}
+
+  

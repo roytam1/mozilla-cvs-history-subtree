@@ -3,33 +3,23 @@ srcdir	= @srcdir@
 ldaptopsrcdir = @top_srcdir@
 
 SRCDIRS	= build include libraries
+DIRS	= $(SRCDIRS)
+
+DIST_GARBAGE = config.cache config.log config.status
 
 include build/autoconf.mk
+
+all:: export install
+
+install::
+	+$(LOOP_OVER_DIRS)
+
 include $(NSPR_TREE)/config/rules.mk
 
-all export::	FORCE
-	@for i in $(SRCDIRS); do \
-	    echo "  cd $$i; $(MAKE) $(MFLAGS) export"; \
-	    ( cd $$i; $(MAKE) $(MFLAGS) export ); \
-	done
 
-libs install::	FORCE
-	@for i in $(SRCDIRS); do \
-	    echo "cd $$i; $(MAKE) $(MFLAGS) install"; \
-	    ( cd $$i; $(MAKE) $(MFLAGS) install ); \
-	done
-
-clean clobber::	FORCE
-	@for i in $(SRCDIRS); do \
-	    echo "cd $$i; $(MAKE) $(MFLAGS) clean"; \
-	    ( cd $$i; $(MAKE) $(MFLAGS) clean ); \
-	done
-
-realclean clobber_all::	FORCE
-	@for i in $(SRCDIRS); do \
-	    echo "cd $$i; $(MAKE) $(MFLAGS) realclean"; \
-	    ( cd $$i; $(MAKE) $(MFLAGS) realclean ); \
-	done
+# Delete config/autoconf.mk last because it is included by every makefile.
+distclean::
+	$(RM) -f build/autoconf.mk build/nspr-autoconf.mk
 
 # dummy target to allow platforms without a compiler-based depend (like GCC 
 # has) to call "make depend" here and not fail, at the cost of actual

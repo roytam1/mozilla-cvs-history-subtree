@@ -102,6 +102,7 @@ typedef unsigned long HMTX;
 #include "nsPIDOMWindow.h"
 #include "nsIController.h"
 #include "nsIFocusController.h"
+#include "nsIFileStream.h"
 
 #include "nsIHTTPChannel.h" // add this to the ick include list...we need it to QI for post data interface
 #include "nsHTTPEnums.h"
@@ -113,6 +114,7 @@ typedef unsigned long HMTX;
 #include "nsIIOService.h"
 #include "nsIURL.h"
 #include "nsIProtocolHandler.h"
+#include "nsICachingChannel.h"
 
 //XXX for nsIPostData; this is wrong; we shouldn't see the nsIDocument type
 #include "nsIDocument.h"
@@ -851,8 +853,6 @@ nsWebShell::GetLinkState(const char* aLinkURI, nsLinkState& aState)
                           NS_ERROR_FAILURE);
         if (isVisited)
           aState = eLinkState_Visited;
-
-      // XXX how to tell if eLinkState_OutOfDate?
       }
 
    return NS_OK;
@@ -1162,6 +1162,57 @@ nsresult nsWebShell::EndPageLoad(nsIWebProgress *aProgress,
       prompter->Alert(nsnull, msg);
       nsTextFormatter::smprintf_free(msg);
     } // end NS_ERROR_NET_TIMEOUT
+    else if (aStatus == NS_ERROR_DOCUMENT_NOT_CACHED) {
+      /* A document that was requested to be fetched *only* from
+       * the cache is not in cache. May be this is one of those 
+       * postdata results. Throw a  dialog to the user,
+       * saying that the page has expired from cache and ask if 
+       * they wish to refetch the page from the net.
+       */
+      nsCOMPtr<nsIPrompt> prompter;
+      PRBool repost;
+      nsCOMPtr<nsIStringBundle> stringBundle;
+      GetPromptAndStringBundle(getter_AddRefs(prompter), 
+                                getter_AddRefs(stringBundle));
+ 
+      if (stringBundle && prompter) {
+        nsXPIDLString messageStr;
+        nsresult rv = stringBundle->GetStringFromName(NS_ConvertASCIItoUCS2("repost").GetUnicode(), 
+                                                      getter_Copies(messageStr));
+          
+        if (NS_SUCCEEDED(rv) && messageStr) {
+          prompter->Confirm(nsnull, messageStr, &repost);
+          /* If the user pressed cancel in the dialog, 
+           * return failure. Don't try to load the page with out 
+           * the post data. 
+           */
+          if (!repost)
+            return NS_OK;                
+          /* The user does want to repost the data to the server.
+           * Initiate a new load again.
+           */
+          /* Get the postdata if any from the channel */
+          nsCOMPtr<nsIInputStream> inputStream;
+          nsCOMPtr<nsIURI> referrer;
+          if (channel) {
+            nsCOMPtr<nsIHTTPChannel> httpChannel(do_QueryInterface(channel));
+ 
+            if(httpChannel) {
+              httpChannel->GetUploadStream(getter_AddRefs(inputStream));
+              httpChannel->GetReferrer(getter_AddRefs(referrer));
+            }
+          }
+          nsCOMPtr<nsIRandomAccessStore> postDataRandomAccess(do_QueryInterface(inputStream));
+          if (postDataRandomAccess)
+          {
+             postDataRandomAccess->Seek(PR_SEEK_SET, 0);
+          }
+          InternalLoad(url, referrer, nsnull, PR_TRUE, PR_FALSE, nsnull, inputStream, 
+                    nsnull, LOAD_RELOAD_BYPASS_PROXY_AND_CACHE, nsnull); 
+            
+          }
+        }
+    }
   } // if we have a host
 
   return NS_OK;
@@ -1176,8 +1227,11 @@ nsresult nsWebShell::EndPageLoad(nsIWebProgress *aProgress,
 #endif
 
 nsresult
-nsWebShell :: GetControllerForCommand ( const nsAReadableString & inCommand, nsIController** outController )
+nsWebShell::GetControllerForCommand ( const nsAReadableString & inCommand, nsIController** outController )
 {
+  NS_ENSURE_ARG_POINTER(outController);
+  *outController = nsnull;
+  
   nsresult rv = NS_ERROR_FAILURE;
   
   nsCOMPtr<nsPIDOMWindow> window ( do_QueryInterface(mScriptGlobal) );
@@ -1185,7 +1239,7 @@ nsWebShell :: GetControllerForCommand ( const nsAReadableString & inCommand, nsI
     nsCOMPtr<nsIFocusController> focusController;
     rv = window->GetRootFocusController ( getter_AddRefs(focusController) );
     if ( focusController )
-      rv = focusController->GetControllerForCommand ( inCommand, getter_AddRefs(outController) ) ;
+      rv = focusController->GetControllerForCommand ( inCommand, getter_AddRefs(outController) );
   } // if window
 
   return rv;
@@ -1194,28 +1248,31 @@ nsWebShell :: GetControllerForCommand ( const nsAReadableString & inCommand, nsI
 
 
 nsresult
-nsWebShell :: IsCommandEnabled ( const nsAReadableString & inCommand, PRBool* outEnabled )
+nsWebShell::IsCommandEnabled ( const nsAReadableString & inCommand, PRBool* outEnabled )
 {
+  NS_ENSURE_ARG_POINTER(outEnabled);
+  *outEnabled = PR_FALSE;
+
   nsresult rv = NS_ERROR_FAILURE;
   
   nsCOMPtr<nsIController> controller;
   rv = GetControllerForCommand ( inCommand, getter_AddRefs(controller) );
   if ( controller )
-    rv = controller->IsCommandEnabled(nsPromiseFlatString(inCommand).get(), outEnabled);
+    rv = controller->IsCommandEnabled(inCommand, outEnabled);
   
   return rv;
 }
 
 
 nsresult
-nsWebShell :: DoCommand ( const nsAReadableString & inCommand )
+nsWebShell::DoCommand ( const nsAReadableString & inCommand )
 {
   nsresult rv = NS_ERROR_FAILURE;
   
   nsCOMPtr<nsIController> controller;
   rv = GetControllerForCommand ( inCommand, getter_AddRefs(controller) );
   if ( controller )
-    rv = controller->DoCommand(nsPromiseFlatString(inCommand).get());
+    rv = controller->DoCommand(inCommand);
   
   return rv;
 }

@@ -80,6 +80,8 @@
 #include "nsIPluginInstance.h"
 #include "nsIObjectFrame.h"
 #include "nsIScriptablePlugin.h"
+#include "nsIPluginHost.h"
+#include "nsPIPluginHost.h"
 
 // HTMLOptionCollection includes
 #include "nsIDOMHTMLOptionElement.h"
@@ -104,6 +106,10 @@
 #include "nsIDOMElement.h"
 #include "nsIDOMCSSStyleDeclaration.h"
 #include "nsIScriptGlobalObject.h"
+
+
+static NS_DEFINE_IID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
+
 
 // ClassInfo data helper macros
 #define NS_DEFINE_CLASSINFO_DATA_HEAD                                         \
@@ -2174,6 +2180,18 @@ nsHTMLPluginObjElementSH::NewResolve(nsIXPConnectWrappedNative *wrapper,
       GetPluginInstance(wrapper, getter_AddRefs(pi));
 
       if (pi) {
+        // notify the PluginManager that this one is scriptable -- 
+        // it will need some special treatment later
+
+        nsCOMPtr<nsIPluginHost> pluginManager =
+          do_GetService(kCPluginManagerCID);
+
+        nsCOMPtr<nsPIPluginHost> pluginHost(do_QueryInterface(pluginManager));
+
+        if(pluginHost) {
+          pluginHost->SetIsScriptableInstance(pi, PR_TRUE);
+        }
+
         nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
         rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx), pi, *iid,
                                     getter_AddRefs(holder));
@@ -2284,7 +2302,7 @@ nsHTMLPluginObjElementSH::PostCreate(nsIXPConnectWrappedNative *wrapper,
 
   // default to nsISupports's IID
   nsIID scriptableIID = NS_GET_IID(nsISupports);
-  nsCOMPtr<nsISupports> scriptablePeer;
+  nsCOMPtr<nsISupports> scriptable_peer;
 
   nsCOMPtr<nsIScriptablePlugin> spi(do_QueryInterface(pi));
 
@@ -2293,7 +2311,7 @@ nsHTMLPluginObjElementSH::PostCreate(nsIXPConnectWrappedNative *wrapper,
     spi->GetScriptableInterface(&scriptableInterfacePtr);
 
     if (scriptableInterfacePtr) {
-      spi->GetScriptablePeer(getter_AddRefs(scriptablePeer));
+      spi->GetScriptablePeer(getter_AddRefs(scriptable_peer));
 
       scriptableIID = *scriptableInterfacePtr;
 
@@ -2303,7 +2321,7 @@ nsHTMLPluginObjElementSH::PostCreate(nsIXPConnectWrappedNative *wrapper,
 
   nsCOMPtr<nsIClassInfo> ci(do_QueryInterface(pi));
 
-  if (!scriptablePeer) {
+  if (!scriptable_peer) {
     if (!ci) {
       // This plugin doesn't support nsIScriptablePlugin, nor does it
       // have classinfo, this plugin doesn't wanto be scriptable.
@@ -2313,7 +2331,7 @@ nsHTMLPluginObjElementSH::PostCreate(nsIXPConnectWrappedNative *wrapper,
 
     // The plugin instance has classinfo, use it as the scriptable
     // plugin
-    scriptablePeer = pi;
+    scriptable_peer = pi;
   }
 
   // Check if the plugin can be safely scriptable, the plugin wrapper
@@ -2338,10 +2356,21 @@ nsHTMLPluginObjElementSH::PostCreate(nsIXPConnectWrappedNative *wrapper,
 #endif
   }
 
+  // notify the PluginManager that this one is scriptable -- 
+  // it will need some special treatment later
+  nsCOMPtr<nsIPluginHost> pluginManager =
+    do_GetService(kCPluginManagerCID);
+
+  nsCOMPtr<nsPIPluginHost> pluginHost(do_QueryInterface(pluginManager));
+
+  if(pluginHost) {
+    pluginHost->SetIsScriptableInstance(pi, PR_TRUE);
+  }
+
   // Wrap it.
 
   nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-  rv = sXPConnect->WrapNative(cx, ::JS_GetParent(cx, obj), scriptablePeer,
+  rv = sXPConnect->WrapNative(cx, ::JS_GetParent(cx, obj), scriptable_peer,
                               scriptableIID, getter_AddRefs(holder));
   NS_ENSURE_SUCCESS(rv, rv);
 

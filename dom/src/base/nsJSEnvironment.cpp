@@ -477,7 +477,7 @@ nsJSContext::EvaluateStringWithValue(const nsAReadableString& aScript,
       ok = ::JS_EvaluateUCScriptForPrincipals(mContext,
                                               (JSObject *)aScopeObject,
                                               jsprin,
-                                              (jschar*)(const PRUnichar*)nsPromiseFlatString(aScript).get(),
+                                              (jschar*)(const PRUnichar*)PromiseFlatString(aScript).get(),
                                               aScript.Length(),
                                               aURL,
                                               aLineNo,
@@ -593,7 +593,7 @@ nsJSContext::EvaluateString(const nsAReadableString& aScript,
       ok = ::JS_EvaluateUCScriptForPrincipals(mContext,
                                               (JSObject *)aScopeObject,
                                               jsprin,
-                                              (jschar*)(const PRUnichar*)nsPromiseFlatString(aScript).get(),
+                                              (jschar*)(const PRUnichar*)PromiseFlatString(aScript).get(),
                                               aScript.Length(),
                                               aURL,
                                               aLineNo,
@@ -825,7 +825,7 @@ nsJSContext::CompileEventHandler(void *aTarget, nsIAtom *aName,
   JSFunction* fun =
       ::JS_CompileUCFunctionForPrincipals(mContext, target, jsprin,
                                           charName, 1, gEventArgv,
-                                          (jschar*)(const PRUnichar*)nsPromiseFlatString(aBody).get(),
+                                          (jschar*)(const PRUnichar*)PromiseFlatString(aBody).get(),
                                           aBody.Length(),
                                           //XXXbe filename, lineno:
                                           nsnull, 0);
@@ -875,7 +875,7 @@ nsJSContext::CompileFunction(void* aTarget,
   JSFunction* fun =
       ::JS_CompileUCFunctionForPrincipals(mContext, target, jsprin,
                                           aName, aArgCount, aArgArray,
-                                          (jschar*)(const PRUnichar*)nsPromiseFlatString(aBody).get(),
+                                          (jschar*)(const PRUnichar*)PromiseFlatString(aBody).get(),
                                           aBody.Length(),
                                           aURL, aLineNo);
 
@@ -1084,7 +1084,7 @@ nsJSContext::InitializeLiveConnectClasses()
   NS_WITH_SERVICE(nsIJVMManager, jvmManager, nsIJVMManager::GetCID(), &rv);
   if (NS_SUCCEEDED(rv) && jvmManager != nsnull) {
     PRBool javaEnabled = PR_FALSE;
-    if (NS_SUCCEEDED(jvmManager->IsJavaEnabled(&javaEnabled)) && javaEnabled) {
+    if (NS_SUCCEEDED(jvmManager->GetJavaEnabled(&javaEnabled)) && javaEnabled) {
       nsCOMPtr<nsILiveConnectManager> liveConnectManager = do_QueryInterface(jvmManager);
       if (liveConnectManager) {
         rv = liveConnectManager->InitLiveConnectClasses(mContext, ::JS_GetGlobalObject(mContext));

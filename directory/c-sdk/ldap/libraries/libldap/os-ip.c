@@ -222,6 +222,7 @@ nsldapi_connect_to_host( LDAP *ld, Sockbuf *sb, char *host,
 
 		if ( async && ld->ld_options & LDAP_BITOPT_ASYNC ) {
             iostatus = 1;
+#ifdef FIONBIO
 			if ( ld->ld_ioctl_fn == NULL ) {
 #ifdef _WINDOWS
 				err = ioctlsocket( s, FIONBIO, &iostatus );
@@ -243,6 +244,7 @@ nsldapi_connect_to_host( LDAP *ld, Sockbuf *sb, char *host,
 				LDAPDebug( LDAP_DEBUG_ANY,
 				    "FIONBIO ioctl failed on %d\n", s, 0, 0 );
 			}
+#endif
 		}
 
 		(void)memset( (char *)&sin, 0, sizeof( struct sockaddr_in ));

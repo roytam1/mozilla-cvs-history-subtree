@@ -18,6 +18,7 @@
  * 
  * Contributor(s):
  *   David W. Hyatt <hyatt@netscape.com> (Original Author)
+ *   Dan Rosen <dr@netscape.com>
  */
 
 #ifndef nsFocusController_h__
@@ -54,7 +55,7 @@ public:
   NS_IMETHOD SetFocusedWindow(nsIDOMWindowInternal* aResult);
 
   NS_IMETHOD GetSuppressFocus(PRBool* aSuppressFlag);
-  NS_IMETHOD SetSuppressFocus(PRBool aSuppressFlag);
+  NS_IMETHOD SetSuppressFocus(PRBool aSuppressFlag, char* aReason);
 
   NS_IMETHOD GetSuppressFocusScroll(PRBool* aSuppressFlag);
   NS_IMETHOD SetSuppressFocusScroll(PRBool aSuppressFlag);
@@ -62,8 +63,13 @@ public:
   NS_IMETHOD GetActive(PRBool* aActive);
   NS_IMETHOD SetActive(PRBool aActive);
 
+  NS_IMETHOD GetPopupNode(nsIDOMNode** aNode);
+  NS_IMETHOD SetPopupNode(nsIDOMNode* aNode);
+
   NS_IMETHOD GetControllerForCommand(const nsAReadableString& aCommand, nsIController** aResult);
   NS_IMETHOD GetControllers(nsIControllers** aResult);
+
+  NS_IMETHOD MoveFocus(PRBool aForward, nsIDOMElement* aElt);
 
   // nsIDOMFocusListener
   NS_IMETHOD Focus(nsIDOMEvent* aEvent);
@@ -82,6 +88,7 @@ public:
 protected:
   nsCOMPtr<nsIDOMElement> mCurrentElement; // [OWNER]
   nsCOMPtr<nsIDOMWindowInternal> mCurrentWindow; // [OWNER]
+  nsCOMPtr<nsIDOMNode> mPopupNode; // [OWNER]
 
   PRUint32 mSuppressFocus;
   PRBool mSuppressFocusScroll;
