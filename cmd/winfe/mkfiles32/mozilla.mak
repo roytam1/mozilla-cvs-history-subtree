@@ -377,7 +377,7 @@ LINK_LIBS= \
     $(DIST)\lib\winfont.lib \
 !ifdef MOZ_LDAP
 !ifdef MOZ_JAVA
-    $(DIST)\lib\nsldap32.lib \
+    $(DIST)\lib\nsldap32v30.lib \
 !endif
 !endif
     $(DIST)\lib\unicvt32.lib \
@@ -1520,8 +1520,8 @@ install:    \
 	    $(OUTDIR)\dynfonts\nstdfp32.dll    \
 !ENDIF
 !ifdef MOZ_LDAP
-!IF EXIST($(DIST)\bin\nsldap32.dll)
-	    $(OUTDIR)\nsldap32.dll    \
+!IF EXIST($(DIST)\bin\nsldap32v30.dll)
+	    $(OUTDIR)\nsldap32v30.dll    \
 !ENDIF
 !endif
 !IF EXIST($(DIST)\bin\unicvt32.dll)
@@ -1750,9 +1750,9 @@ $(OUTDIR)\dynfonts\nstdfp32.dll:   $(DEPTH)\cmd\winfe\nstdfp32.dll
     @IF NOT EXIST "$(OUTDIR)\dynfonts/$(NULL)" mkdir "$(OUTDIR)\dynfonts"
     @IF EXIST $(DEPTH)\cmd\winfe\nstdfp32.dll copy $(DEPTH)\cmd\winfe\nstdfp32.dll $(OUTDIR)\dynfonts\nstdfp32.dll
 
-!if !defined(MOZ_NO_LDAP)
-$(OUTDIR)\nsldap32.dll:   $(DIST)\bin\nsldap32.dll
-    @IF EXIST $(DIST)\bin\nsldap32.dll copy $(DIST)\bin\nsldap32.dll $(OUTDIR)\nsldap32.dll
+!if defined(MOZ_LDAP)
+$(OUTDIR)\nsldap32v30.dll:   $(DIST)\bin\nsldap32v30.dll
+    @IF EXIST $(DIST)\bin\nsldap32v30.dll copy $(DIST)\bin\nsldap32v30.dll $(OUTDIR)\nsldap32v30.dll
 !endif
 
 $(OUTDIR)\java\bin\awt32$(VERSION_NUMBER).dll:   $(DIST)\bin\awt32$(VERSION_NUMBER).dll
@@ -1819,7 +1819,7 @@ $(OUTDIR)\dynfonts\nstdfp16.dll:   $(DEPTH)\cmd\winfe\nstdfp16.dll
     @IF NOT EXIST "$(OUTDIR)\dynfonts/$(NULL)" mkdir "$(OUTDIR)\dynfonts"
     @IF EXIST $(DEPTH)\cmd\winfe\nstdfp16.dll copy $(DEPTH)\cmd\winfe\nstdfp16.dll $(OUTDIR)\dynfonts\nstdfp16.dll
 
-!if !defined(MOZ_NO_LDAP)
+!if defined(MOZ_LDAP)
 $(OUTDIR)\nsldap.dll:   $(DIST)\bin\nsldap.dll
     @IF EXIST $(DIST)\bin\nsldap.dll copy $(DIST)\bin\nsldap.dll $(OUTDIR)\nsldap.dll
 !endif
@@ -2506,7 +2506,7 @@ ns.zip:
 		resdll.dll		\
 		prefui32.dll		\
 		pr3240.dll		\
-		nsldap32.dll		\
+		nsldap32v30.dll		\
 		nsdlg32.dll		\
 		mnpref32.dll		\
 		mnrc32.dll		\
