@@ -16,14 +16,6 @@
  * Reserved.
  */
 
-/*======================================================================================
-	AUTHOR:			Ted Morris <tmorris@netscape.com> - 12 DEC 96
-
-	MODIFICATIONS:
-
-	Date			Person			Description
-	----			------			-----------
-======================================================================================*/
 
 
 /*====================================================================================*/
@@ -427,8 +419,8 @@ void CMailFolderMixin::RegisterMailFolderMixin(CMailFolderMixin *inMailFolderMix
 
 	Assert_(inMailFolderMixin != nil);
 
-	if ( sMailFolderMixinRegisterList.FetchIndexOf(&inMailFolderMixin) == LArray::index_Bad ) {
-		sMailFolderMixinRegisterList.InsertItemsAt(1, LArray::index_Last, &inMailFolderMixin);
+	if ( sMailFolderMixinRegisterList.FetchIndexOf(&inMailFolderMixin) == arrayIndex_Bad ) {
+		sMailFolderMixinRegisterList.InsertItemsAt(1, arrayIndex_Last, &inMailFolderMixin);
 	}
 }
 
@@ -485,11 +477,13 @@ Boolean CMailFolderMixin::FolderFilter(const CMessageFolder& folder)
 	if (folder.GetLevel() > 1)
 	{
 		UInt32	folderFlags = folder.GetFolderFlags();
-		Boolean	isPOP, isIMAP, isNews;
+		Boolean	isPOP, isIMAP, isNews, isInbox, isPublicFolder;
 
 		isNews = folderFlags & MSG_FOLDER_FLAG_NEWSGROUP ? true: false;
 		isIMAP = folderFlags & MSG_FOLDER_FLAG_IMAPBOX ? true: false;
 		isPOP = (!isIMAP && (folderFlags & MSG_FOLDER_FLAG_MAIL)) ? true: false;
+		isInbox = folderFlags& MSG_FOLDER_FLAG_INBOX ? true : false;
+		isPublicFolder = ( isIMAP&& ( folderFlags& MSG_GROUPNAME_FLAG_IMAP_PUBLIC ) ) ? true : false;
 
 		if (isPOP && (mDesiredFolderFlags & eWantPOP))
 		{
@@ -500,6 +494,14 @@ Boolean CMailFolderMixin::FolderFilter(const CMessageFolder& folder)
 			result = true;
 		}
 		else if (isNews && (mDesiredFolderFlags & eWantNews))
+		{
+			result = true;
+		}
+		else if ( isInbox &&  (mDesiredFolderFlags & eWantInbox) )
+		{
+			result = true;
+		}
+		else if ( isPublicFolder &&  (mDesiredFolderFlags & eWantPublicFolder) )
 		{
 			result = true;
 		}
@@ -624,7 +626,7 @@ pascal void MyMercutioCallback(
 		itemData.iconType = 'suit';
 		if (::LMGetSysFontFam() != systemFont) // no bold for Chicago - it sucketh
 		{
-			if (currentFolder.HasNewMessages())
+			if (currentFolder.CountUnseen() > 0 )
 				itemData.textStyle.s |= bold;
 			else
 				itemData.textStyle.s &= ~bold;

@@ -50,14 +50,14 @@ class UPrefControls
 // on updates its corresponding pref to the value of its  mOrdinal field. 
 //
 // Future directions might include a popup menu control associated with an int 
-// value, an RGAColor pref control, etc. 
+// value, an RGAColor pref control, etc. Well, the future is here.  It's done.
 //======================================
 {
 public:
 	static void		RegisterPrefControlViews();
 #ifdef MOZ_MAIL_NEWS
 	static void		NoteSpecialFolderChanged(
-								LControl* inControl,
+								LPane* inDescriptionPane,
 								int inKind, /* actually UFolderDialogs::FolderKind */
 								const CMessageFolder& inFolder);
 #endif // MOZ_MAIL_NEWS
