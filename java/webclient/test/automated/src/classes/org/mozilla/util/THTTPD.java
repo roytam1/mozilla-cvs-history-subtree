@@ -136,13 +136,7 @@ public class THTTPD extends Object {
 		   
 		    switch (getRequestMethod(requestLine)) {
 		    case REQUEST_POST:
-			while (null != (curLine = requestReader.readLine())) {
-			    requestData.append(curLine);
-			    if (socketInputStream.available() <= 0 ||
-				curLine.trim().length() == 0) {
-				break;
-			    }
-			}
+			System.out.println("THTTPD: POST");
 			// intentional fall through!
 		    case REQUEST_GET:
 			responseWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
