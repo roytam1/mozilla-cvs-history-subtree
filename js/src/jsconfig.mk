@@ -57,12 +57,18 @@ SHIP_DIST  = $(MOZ_DEPTH)/dist/$(OBJDIR)
 SHIP_DIR   = $(SHIP_DIST)/SHIP
 
 SHIP_LIBS  = jsj.so libjs.so libnspr21.so
+ifeq ($(OS_ARCH), WINNT)
+ SHIP_LIBS = jsj.dll js32.dll libnspr21.dll
+endif
 SHIP_LIBS := $(addprefix $(SHIP_DIST)/lib/, $(SHIP_LIBS))
 
 SHIP_INCS  = js*.h
 SHIP_INCS := $(addprefix $(SHIP_DIST)/include/, $(SHIP_INCS))
 
 SHIP_BINS  = js jsj
+ifeq ($(OS_ARCH), WINNT)
+ SHIP_BINS = js.exe jsj.exe
+endif
 SHIP_BINS := $(addprefix $(SHIP_DIST)/bin/, $(SHIP_BINS))
 
 ifdef BUILD_OPT
