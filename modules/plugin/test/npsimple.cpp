@@ -39,7 +39,7 @@
 #include <string.h>
 #include "nsplugin.h"
 #include "nsIJRILiveConnectPlugin.h"
-#include "nsIJRILiveConnectPluginInstancePeer.h"
+#include "nsIJRILiveConnectPlugInstPeer.h"
 /*------------------------------------------------------------------------------
  * Define IMPLEMENT_Simple before including Simple.h to state that we're
  * implementing the native methods of this plug-in here, and consequently
@@ -320,9 +320,8 @@ public:
      *  @param errorResult the error code if an error occurs
      *  @return number of bytes read or -1 if error
      */   
-    NS_IMETHOD_(PRInt32)
-    Write(const char* aBuf, PRInt32 aOffset, PRInt32 aCount,
-          nsresult *errorResult);
+    NS_IMETHOD
+    Write(const char* aBuf, PRInt32 aOffset, PRInt32 aCount); 
 
     ////////////////////////////////////////////////////////////////////////////
     // from nsIPluginStream:
@@ -801,22 +800,6 @@ NS_IMPL_QUERY_INTERFACE(SimplePluginStream, kIPluginStreamIID);
 NS_IMPL_ADDREF(SimplePluginStream);
 NS_IMPL_RELEASE(SimplePluginStream);
 
-/* PLUGIN DEVELOPERS:
- *	These next 2 functions are directly relevant in a plug-in which
- *	handles the data in a streaming manner. If you want zero bytes
- *	because no buffer space is YET available, return 0. As long as
- *	the stream has not been written to the plugin, Navigator will
- *	continue trying to send bytes.  If the plugin doesn't want them,
- *	just return some large number from NPP_WriteReady(), and
- *	ignore them in NPP_Write().  For a NP_ASFILE stream, they are
- *	still called but can safely be ignored using this strategy.
- */
-
-PRInt32 STREAMBUFSIZE = 0X0FFFFFFF; /* If we are reading from a file in NPAsFile
-                                   * mode so we can take any size stream in our
-                                   * write call (since we ignore it) */
-
-
 NS_METHOD
 SimplePluginStream::Close(void)
 {
@@ -845,13 +828,12 @@ SimplePluginStream::Close(void)
  * is not persistent. 
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-NS_METHOD_(PRInt32)
-SimplePluginStream::Write(const char* buffer, PRInt32 len, PRInt32 aCount,
-                          nsresult *errorResult)
+NS_METHOD
+SimplePluginStream::Write(const char* aBuf, PRInt32 aOffset, PRInt32 aCount)
 {
-    fInst->DisplayJavaMessage((char*)buffer, len); 
-    *errorResult = NS_OK;
-    return len;		/* The number of bytes accepted */
+    PR_ASSERT(aOffset == 0);    // XXX need to handle the non-sequential write case
+    fInst->DisplayJavaMessage((char*)aBuf, aCount); 
+    return aCount;		/* The number of bytes accepted */
 }
 
 /*******************************************************************************/

@@ -850,13 +850,13 @@ nsPluginManagerStream::Close(void)
     return (nsresult)err;
 }
 
-NS_METHOD_(PRInt32)
-nsPluginManagerStream::Write(const char* aBuf, PRInt32 aOffset, PRInt32 aCount,
-                             nsresult *errorResult)
+NS_METHOD
+nsPluginManagerStream::Write(const char* aBuf, PRInt32 aOffset, PRInt32 aCount)
 {
-    PRInt32 rslt = npn_write(npp, pstream, aCount, (void*)(aBuf + aOffset));
+    PR_ASSERT(aOffset == 0);    // XXX need to handle the non-sequential write case
+    PRInt32 rslt = npn_write(npp, pstream, aCount, (void*)aBuf);
     if (rslt == -1) 
-        *errorResult = NS_ERROR_FAILURE;       // XXX what should this be?
+        return NS_ERROR_FAILURE;       // XXX what should this be?
     return rslt;
 }
 

@@ -133,12 +133,15 @@ public:
     // Taken from nsIStream
     //
     
-    // The Release function in nsISupport will take care of destroying the stream.
-
-    NS_IMETHOD_(PRInt32)
-    Write (const char* buffer, PRInt32 offset, PRInt32 len, nsresult* error);
-    // XXX - Hmm?  Why is there an extra parameter offset?
-    // (NPP instance, NPStream *stream, int32 offset, int32 len, void *buffer);
+    /** Write data into the stream.
+     *  @param aBuf the buffer into which the data is read
+     *  @param aOffset the start offset of the data
+     *  @param aCount the maximum number of bytes to read
+     *  @param errorResult the error code if an error occurs
+     *  @return number of bytes read or -1 if error
+     */   
+    NS_IMETHOD
+    Write(const char* aBuf, PRInt32 aOffset, PRInt32 aCount); 
 
     //////////////////////////////////////////////////////////////////////////
     //
@@ -698,8 +701,7 @@ NPP_Write(NPP instance, NPStream *stream, int32 offset, int32 len, void *buffer)
     if( theStream == 0 )
 	return -1;
 		
-    nsresult result;
-    return theStream->Write((const char* )buffer, offset, len, &result);
+    return theStream->Write((const char* )buffer, offset, len);
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1205,12 +1207,13 @@ CPluginManagerStream::~CPluginManagerStream(void)
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // Write:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-PRInt32 NP_LOADDS 
-CPluginManagerStream::Write(const char* buffer, PRInt32 offset, PRInt32 len, nsresult* error)
+NS_METHOD
+CPluginManagerStream::Write(const char* buffer, PRInt32 offset, PRInt32 len)
 {
     assert( npp != NULL );
     assert( pstream != NULL );
 
+    assert(offset == 0);    // XXX need to handle the non-sequential write case
     return NPN_Write(npp, pstream, len, (void* )buffer);
 }
 

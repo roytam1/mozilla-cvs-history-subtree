@@ -33,12 +33,10 @@ public:
      *  @param aBuf the buffer into which the data is read
      *  @param aOffset the start offset of the data
      *  @param aCount the maximum number of bytes to read
-     *  @param errorResult the error code if an error occurs
-     *  @return number of bytes read or -1 if error
+     *  @return number of bytes read or an error if < 0
      */   
-    NS_IMETHOD_(PRInt32)
-    Write(const char* aBuf, PRInt32 aOffset, PRInt32 aCount,
-          nsresult *errorResult) = 0;
+    NS_IMETHOD
+    Write(const char* aBuf, PRInt32 aOffset, PRInt32 aCount) = 0; 
 
 };
 

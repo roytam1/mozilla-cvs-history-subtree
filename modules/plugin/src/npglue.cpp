@@ -537,9 +537,8 @@ NPL_Write(NET_StreamClass *stream, const unsigned char *str, int32 len)
     if (newstream->handle->userPlugin) {
         nsPluginStreamPeer* peerStream = (nsPluginStreamPeer*)newstream->pstream->pdata;
         nsIPluginStream* userStream = peerStream->GetUserStream();
-        nsresult err;
-        ret = userStream->Write((const char*)str, 0, len, &err);
-        PR_ASSERT(err == NS_OK);        // XXX this should go somewhere
+        nsresult err = userStream->Write((const char*)str, 0, len);
+        PR_ASSERT(err == len);        // XXX this error should go somewhere
     }
     else if (ISFUNCPTR(newstream->handle->f->write)) {
         ret = CallNPP_WriteProc(newstream->handle->f->write, newstream->instance->npp, newstream->pstream, 
