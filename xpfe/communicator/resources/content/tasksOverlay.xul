@@ -56,9 +56,6 @@
           </rule>
         </template>
         <menupopup id="windowPopup">
-
-          <!-- Overlays get stuffed in here. -->
-          <menuseparator id="sep-window-list"/>
         </menupopup>
       </menu>
 
