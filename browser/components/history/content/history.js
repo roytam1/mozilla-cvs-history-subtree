@@ -95,7 +95,7 @@ function collapseExpand()
     gHistoryTree.treeBoxObject.view.toggleOpenState(currentIndex);
 }
 
-function OpenURLIn(where)
+function openURLIn(where)
 {
   var count = gHistoryTree.view.selection.count;
   if (count != 1)
@@ -114,9 +114,22 @@ function OpenURLIn(where)
   openUILinkIn(url, where);
 }
 
-function OpenURL(event)
+function openURL(aEvent)
 {
-  OpenURLIn(whereToOpenLink(event));
+  openURLIn(whereToOpenLink(aEvent));
+}
+
+function handleHistoryClick(aEvent)
+{
+  if (aEvent.originalTarget.localName == 'treechildren' && (aEvent.button == 0 || aEvent.button == 1)) {
+    var row = {};
+    var col = {};
+    var obj = {};
+    gHistoryTree.treeBoxObject.getCellAt(aEvent.clientX, aEvent.clientY, row, col, obj);
+  
+    if (obj.value != "twisty" && row.value == gHistoryTree.currentIndex)
+      openURL(aEvent);
+  }
 }
 
 function checkURLSecurity(aURL)
@@ -242,9 +255,15 @@ function historyCopyLink()
   clipboard.copyString(url);
 }
 
-function buildContextMenu()
+function buildContextMenu(aEvent)
 {
+  // if nothing is selected, bail and don't show a context menu
   var count = gHistoryTree.treeBoxObject.view.selection.count;
+  if (count != 1) {
+    aEvent.preventDefault();
+    return;
+  }
+
   var openItem = document.getElementById("miOpen");
   var openItemInNewWindow = document.getElementById("miOpenInNewWindow");
   var openItemInNewTab = document.getElementById("miOpenInNewTab");
@@ -254,47 +273,35 @@ function buildContextMenu()
   var sep2 = document.getElementById("post-bookmarks-separator");
   var expandItem = document.getElementById("miExpand");
   var collapseItem = document.getElementById("miCollapse");
-  if (count > 1) {
+
+  var currentIndex = gHistoryTree.currentIndex;
+  if ((gHistoryGrouping == "day" || gHistoryGrouping == "dayandsite")
+      && isContainer(gHistoryTree, currentIndex)) {
     openItem.hidden = true;
     openItemInNewWindow.hidden = true;
     openItemInNewTab.hidden = true;
     bookmarkItem.hidden = true;
     copyLocationItem.hidden = true;
     sep1.hidden = true;
-    sep2.hidden = true;
-    expandItem.hidden = true;    
-    collapseItem.hidden = true;    
-  }
-  else {
-    var currentIndex = gHistoryTree.currentIndex;
-    if ((gHistoryGrouping == "day" || gHistoryGrouping == "dayandsite")
-        && isContainer(gHistoryTree, currentIndex)) {
-      openItem.hidden = true;
-      openItemInNewWindow.hidden = true;
-      openItemInNewTab.hidden = true;
-      bookmarkItem.hidden = true;
-      copyLocationItem.hidden = true;
-      sep1.hidden = true;
-      sep2.hidden = false;
-      if (isContainerOpen(gHistoryTree, currentIndex)) {
-        expandItem.hidden = true;
-        collapseItem.hidden = false;
-      } else {
-        expandItem.hidden = false;
-        collapseItem.hidden = true;
-      }
-    }
-    else {
-      openItem.hidden = false;
-      openItemInNewWindow.hidden = false;
-      openItemInNewTab.hidden = false;
-      bookmarkItem.hidden = false;
-      copyLocationItem.hidden = false;
-      sep1.hidden = false;
-      sep2.hidden = false;
+    sep2.hidden = false;
+    if (isContainerOpen(gHistoryTree, currentIndex)) {
       expandItem.hidden = true;
+      collapseItem.hidden = false;
+    } else {
+      expandItem.hidden = false;
       collapseItem.hidden = true;
     }
+  }
+  else {
+    openItem.hidden = false;
+    openItemInNewWindow.hidden = false;
+    openItemInNewTab.hidden = false;
+    bookmarkItem.hidden = false;
+    copyLocationItem.hidden = false;
+    sep1.hidden = false;
+    sep2.hidden = false;
+    expandItem.hidden = true;
+    collapseItem.hidden = true;
   }
 }
 
