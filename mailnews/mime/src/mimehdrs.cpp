@@ -23,7 +23,6 @@
 #include "modmime.h"
 #include "prmem.h"
 #include "plstr.h"
-#include "imap.h"
 #include "prefapi.h"
 #include "mimebuf.h"
 #include "mimemoz2.h"
