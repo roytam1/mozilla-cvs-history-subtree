@@ -699,6 +699,7 @@ nsFontCache::GetMetricsFor(const nsFont& aFont, nsIAtom* aLangGroup,
     return NS_OK;
   }
 
+  NS_POSTCONDITION(NS_SUCCEEDED(rv), "font metrics should not be null - bug 136248");
   return rv;
 }
 
