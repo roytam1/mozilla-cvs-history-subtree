@@ -53,7 +53,7 @@ PLATFORM_FLAGS		= -ansi -Wall -pipe -DLINUX -Dlinux
 PORT_FLAGS		= -D_POSIX_SOURCE -D_BSD_SOURCE -DHAVE_STRERROR
 
 ifdef USE_AUTOCONF
-OS_CFLAGS		= $(DSO_CFLAGS) -include $(MOD_DEPTH)/include/config.h
+OS_CFLAGS		= $(DSO_CFLAGS) #-include $(MOD_DEPTH)/include/config.h
 else
 OS_CFLAGS		= $(DSO_CFLAGS) $(PLATFORM_FLAGS) $(PORT_FLAGS)
 endif

@@ -52,7 +52,7 @@ PORT_FLAGS		= -D_POSIX_SOURCE -D_BSD_SOURCE -DSW_THREADS -DNEED_ENDIAN_H -DNEED_
 PDJAVA_FLAGS		= -mx128m
 
 ifdef USE_AUTOCONF
-OS_CFLAGS		= -include $(DEPTH)/include/config.h
+OS_CFLAGS		= #-include $(DEPTH)/include/config.h
 else
 OS_CFLAGS		= $(PLATFORM_FLAGS) $(PORT_FLAGS) $(MOVEMAIL_FLAGS)
 endif

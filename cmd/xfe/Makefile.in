@@ -984,6 +984,13 @@ endif
 
 #######################################################################
 
+ifdef USE_AUTOCONF
+OTHER_LIBS      	= $(FE_X_LIBS) $(ACLFLAGS) $(ACLIBS)
+OTHER_DYN_MOTIF_LIBS	= $(FE_X_LIBS) $(ACLFLAGS) $(ACLIBS)
+endif
+
+#######################################################################
+
 $(MICROLINE_LIB):
 	cd Microline3.0/XmL; $(MAKE)
 
