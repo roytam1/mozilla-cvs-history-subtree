@@ -609,6 +609,9 @@ JS_SetVersion(JSContext *cx, JSVersion version)
 
     CHECK_REQUEST(cx);
     oldVersion = cx->version;
+    if (version == oldVersion)
+        return oldVersion;
+
     cx->version = version;
 
 #if !JS_BUG_FALLIBLE_EQOPS
