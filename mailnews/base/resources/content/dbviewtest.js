@@ -16,8 +16,9 @@ function openView()
     var folder = resource.QueryInterface(Components.interfaces.nsIMsgFolder);
     
     dump(folder + "\n");
-    var count;
+    var count = new Object;
     dbview.open(folder, nsMsgViewSortType.bySubject, count);
+    dump("count = " + count.value + "\n");
 }
 
 function sortDateAscending()
