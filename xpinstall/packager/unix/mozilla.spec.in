@@ -4,7 +4,7 @@ Version:   5.0
 Release:   M12
 Serial:    0
 Copyright: MPL/NPL
-Source0:   mozilla-m12.tar.gz
+Source0:   ftp://ftp.mozilla.org/pub/mozilla/releases/m12/src/mozilla-source-M12.tar.gz
 Source1:   mozilla.sh
 Buildroot: /var/tmp/mozilla-root
 Prefix:    /usr
@@ -20,7 +20,7 @@ PACKAGE_LISTING
 %prep
 
 %setup -n mozilla
-./configure
+./configure --enable-optimize --disable-debug
 
 %install
 export NSDISTMODE=copy
@@ -34,7 +34,9 @@ else
     NRPROC=1
 fi
 
-sh -c '( make export ; make libs MAKE="make -j $NRPROC" ; make install )'
+make export
+make libs MAKE="make -j $NRPROC"
+make install
 
 PACKAGE_INSTALL
 
