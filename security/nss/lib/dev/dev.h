@@ -741,6 +741,7 @@ nssCryptokiTrust_GetAttributes
 (
   nssCryptokiObject *trustObject,
   nssSession *sessionOpt,
+  NSSItem *sha1_hash,
   nssTrustLevel *serverAuth,
   nssTrustLevel *clientAuth,
   nssTrustLevel *codeSigning,
@@ -754,6 +755,8 @@ nssCryptokiCRL_GetAttributes
   nssSession *sessionOpt,
   NSSArena *arenaOpt,
   NSSItem *encodingOpt,
+  NSSItem * subjectOpt,
+  CK_ULONG * crl_class,
   NSSUTF8 **urlOpt,
   PRBool *isKRLOpt
 );
@@ -948,7 +951,7 @@ nssToken_GetTrustOrder
 );
 
 NSS_EXTERN PRStatus
-nssToken_NofifyCertsNotVisible
+nssToken_NotifyCertsNotVisible
 (
   NSSToken *tok
 );
@@ -962,6 +965,15 @@ nssToken_TraverseCertificates
   PRStatus (* callback)(nssCryptokiObject *instance, void *arg),
   void *arg
 );
+
+NSS_EXTERN PRBool
+nssToken_IsPrivateKeyAvailable
+(
+  NSSToken *token,
+  NSSCertificate *c,
+  nssCryptokiObject *instance
+);
+
 
 #endif
 

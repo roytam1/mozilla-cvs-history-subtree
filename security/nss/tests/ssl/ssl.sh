@@ -152,7 +152,13 @@ kill_selfserv()
   if [ ${fileout} -eq 1 ]; then
       cat ${SERVEROUTFILE}
   fi
-  ${SLEEP}  #FIXME linux waits 30 seconds - find a shorter way (sockets free)
+  # On Linux selfserv needs up to 30 seconds to fully die and free
+  # the port.  Wait until the port is free. (Bug 129701)
+  if [ "${OS_ARCH}" = "Linux" ]; then
+      until selfserv -b -p ${PORT} 2>/dev/null; do
+          sleep 1
+      done
+  fi
   rm ${SERVERPID}
 }
 
@@ -189,7 +195,7 @@ ssl_cov()
   html_head "SSL Cipher Coverage $NORM_EXT"
 
   testname=""
-  sparam="-c ABCDEFabcdefghijklmnvy"
+  sparam="-c ABCDEFabcdefghijklmnvyz"
   start_selfserv # Launch the server
                
   p=""
@@ -205,10 +211,6 @@ ssl_cov()
           TLS_FLAG=-T
           if [ $tls = "TLS" ]; then
               TLS_FLAG=""
-          fi
-          sparam=""
-          if [ ${param} = "i" ]; then
-              sparam='-c i'
           fi
 
           is_selfserv_alive

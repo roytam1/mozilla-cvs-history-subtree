@@ -389,6 +389,35 @@ CERT_DecodeDERCertificate (SECItem *derSignedCert, PRBool copyDER, char *nicknam
 extern CERTSignedCrl *
 CERT_DecodeDERCrl (PRArenaPool *arena, SECItem *derSignedCrl,int type);
 
+/*
+ * same as CERT_DecodeDERCrl, plus allow options to be passed in
+ */
+
+extern CERTSignedCrl *
+CERT_DecodeDERCrlWithFlags(PRArenaPool *narena, SECItem *derSignedCrl,
+                          int type, PRInt32 options);
+
+/* CRL options to pass */
+
+#define CRL_DECODE_DEFAULT_OPTIONS          0x00000000
+
+/* when CRL_DECODE_DONT_COPY_DER is set, the DER is not copied . The
+   application must then keep derSignedCrl until it destroys the
+   CRL . Ideally, it should allocate derSignedCrl in an arena
+   and pass that arena in as the first argument to
+   CERT_DecodeDERCrlWithFlags */
+
+#define CRL_DECODE_DONT_COPY_DER            0x00000001
+#define CRL_DECODE_SKIP_ENTRIES             0x00000002
+#define CRL_DECODE_KEEP_BAD_CRL             0x00000004
+
+/* complete the decoding of a partially decoded CRL, ie. decode the
+   entries. Note that entries is an optional field in a CRL, so the
+   "entries" pointer in CERTCrlStr may still be NULL even after
+   function returns SECSuccess */
+
+extern SECStatus CERT_CompleteCRLDecodeEntries(CERTSignedCrl* crl);
+
 /* Validate CRL then import it to the dbase.  If there is already a CRL with the
  * same CA in the dbase, it will be replaced if derCRL is more up to date.  
  * If the process successes, a CRL will be returned.  Otherwise, a NULL will 
@@ -532,6 +561,37 @@ extern SECStatus CERT_VerifySignedData(CERTSignedData *sd,
 				       void *wincx);
 
 /*
+** NEW FUNCTIONS with new bit-field-FIELD SECCertificateUsage - please use
+** verify a certificate by checking validity times against a certain time,
+** that we trust the issuer, and that the signature on the certificate is
+** valid.
+**	"cert" the certificate to verify
+**	"checkSig" only check signatures if true
+*/
+extern SECStatus
+CERT_VerifyCertificate(CERTCertDBHandle *handle, CERTCertificate *cert,
+		PRBool checkSig, SECCertificateUsage requiredUsages,
+                int64 t, void *wincx, CERTVerifyLog *log,
+                SECCertificateUsage* returnedUsages);
+
+/* same as above, but uses current time */
+extern SECStatus
+CERT_VerifyCertificateNow(CERTCertDBHandle *handle, CERTCertificate *cert,
+		   PRBool checkSig, SECCertificateUsage requiredUsages,
+                   void *wincx, SECCertificateUsage* returnedUsages);
+
+/*
+** Verify that a CA cert can certify some (unspecified) leaf cert for a given
+** purpose. This is used by UI code to help identify where a chain may be
+** broken and why. This takes identical parameters to CERT_VerifyCert
+*/
+extern SECStatus
+CERT_VerifyCACertForUsage(CERTCertDBHandle *handle, CERTCertificate *cert,
+		PRBool checkSig, SECCertUsage certUsage, int64 t,
+		void *wincx, CERTVerifyLog *log);
+
+/*
+** OLD OBSOLETE FUNCTIONS with enum SECCertUsage - DO NOT USE FOR NEW CODE
 ** verify a certificate by checking validity times against a certain time,
 ** that we trust the issuer, and that the signature on the certificate is
 ** valid.
@@ -547,6 +607,11 @@ CERT_VerifyCert(CERTCertDBHandle *handle, CERTCertificate *cert,
 extern SECStatus
 CERT_VerifyCertNow(CERTCertDBHandle *handle, CERTCertificate *cert,
 		   PRBool checkSig, SECCertUsage certUsage, void *wincx);
+
+SECStatus
+CERT_VerifyCertChain(CERTCertDBHandle *handle, CERTCertificate *cert,
+		     PRBool checkSig, SECCertUsage certUsage, int64 t,
+		     void *wincx, CERTVerifyLog *log);
 
 /*
 ** This must only be called on a cert that is known to have an issuer
@@ -903,6 +968,12 @@ CERT_DupCertList(CERTCertificateList * oldList);
 
 extern void CERT_DestroyCertificateList(CERTCertificateList *list);
 
+/*
+** is cert a user cert? i.e. does it have CERTDB_USER trust,
+** i.e. a private key?
+*/
+PRBool CERT_IsUserCert(CERTCertificate* cert);
+
 /* is cert a newer than cert b? */
 PRBool CERT_IsNewer(CERTCertificate *certa, CERTCertificate *certb);
 
@@ -1177,6 +1248,12 @@ CERT_FilterCertListByCANames(CERTCertList *certList, int nCANames,
 			     char **caNames, SECCertUsage usage);
 
 /*
+ * Filter a list of certificates, removing those certs that aren't user certs
+ */
+SECStatus
+CERT_FilterCertListForUserCerts(CERTCertList *certList);
+
+/*
  * Collect the nicknames from all certs in a CertList.  If the cert is not
  * valid, append a string to that nickname.
  *
@@ -1365,6 +1442,11 @@ CERT_SPKDigestValueForCert(PRArenaPool *arena, CERTCertificate *cert,
  * fill in nsCertType field of the cert based on the cert extension
  */
 extern SECStatus CERT_GetCertType(CERTCertificate *cert);
+
+
+SECStatus CERT_CheckCRL(CERTCertificate* cert, CERTCertificate* issuer,
+                        SECItem* dp, int64 t, void* wincx);
+
 
 SEC_END_PROTOS
 

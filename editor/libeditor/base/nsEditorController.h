@@ -61,6 +61,7 @@ class nsIEditor;
 // commands in composer. The refCon that gets passed to its commands is an nsIEditor.
 
 class nsEditorController :  public nsIController,
+                            public nsICommandController,
                             public nsIEditorController,
                             public nsIInterfaceRequestor
 {
@@ -85,6 +86,9 @@ public:
   // nsIInterfaceRequestor
   NS_DECL_NSIINTERFACEREQUESTOR
   
+  //nsICommandController
+  NS_DECL_NSICOMMANDCONTROLLER
+
 protected:
 
    //if editor is null then look to mContent. this is for dual use of window and content
