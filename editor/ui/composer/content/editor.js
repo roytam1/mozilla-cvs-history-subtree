@@ -668,6 +668,7 @@ function EditorSharedStartup()
 function EditorResetFontAndColorAttributes()
 {
   try {  
+    var editor = GetCurrentEditor();
     document.getElementById("cmd_fontFace").setAttribute("state", "");
     EditorRemoveTextProperty("font", "color");
     EditorRemoveTextProperty("font", "bgcolor");
@@ -677,12 +678,17 @@ function EditorResetFontAndColorAttributes()
     var bodyelement = GetBodyElement();
     if (bodyelement)
     {
-      var editor = GetCurrentEditor();
       // remove all the existing attributes on the body element
       // by creating a dummy body element and cloning the attributes
       // see bug #249882 for more details
       editor.cloneAttributes(bodyelement, editor.document.createElement("body"));
     }
+
+    // remove the head attribute if there is one.
+    var headnodelist = editor.document.getElementsByTagName("head");
+    if (headnodelist && headnodelist.length)
+      headnodelist.item(0).parentNode.removeChild(headnodelist.item(0));
+
     gColorObj.LastTextColor = "";
     gColorObj.LastBackgroundColor = "";
     gColorObj.LastHighlightColor = "";
