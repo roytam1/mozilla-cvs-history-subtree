@@ -100,7 +100,7 @@ nsSVGElementFactory::~nsSVGElementFactory()
 }
 
 
-NS_IMPL_ISUPPORTS1(nsSVGElementFactory, nsIElementFactory);
+NS_IMPL_ISUPPORTS1(nsSVGElementFactory, nsIElementFactory)
 
 
 nsresult
