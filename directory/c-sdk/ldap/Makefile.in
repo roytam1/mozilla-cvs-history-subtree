@@ -31,5 +31,12 @@ realclean clobber_all::	FORCE
 	    ( cd $$i; $(MAKE) $(MFLAGS) realclean ); \
 	done
 
+# dummy target to allow platforms without a compiler-based depend (like GCC 
+# has) to call "make depend" here and not fail, at the cost of actual
+# dependencies on such builds possibly being incorrect.  A nasty hack, but 
+# this build system is going away soon.
+#
+depend:
+
 FORCE:
 
