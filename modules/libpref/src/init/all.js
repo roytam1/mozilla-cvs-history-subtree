@@ -886,3 +886,7 @@ pref("xslt.enabled", true);
 // Help Windows NT, 2000, and XP dialup a RAS connection
 // when a network address is unreachable.
 pref("network.autodial-helper.enabled", false);
+
+// which files will be selected for roaming by default.
+// See sroaming/content/prefs/all.js
+pref("roaming.default.files", "bookmarks.html,abook.mab,cookies.txt");

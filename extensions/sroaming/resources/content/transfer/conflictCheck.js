@@ -188,13 +188,13 @@ function checkAndTransfer(transfer, listingProgress)
                                      filesListing,
                                      function(success)
   {
-    /* in case we had to ask for the password,
+    /* In case we had to ask for the password,
        save it for the main transfer as well */
     transfer.username = listingTransfer.username;
     transfer.password = listingTransfer.password;
     transfer.savePassword = listingTransfer.savePassword;
-
     ddump("loading remote listing file");
+
     var remoteListingResult = loadAndReadListingFile(success
                                                      ? kListingTransferFilename
                                                      : null,
@@ -528,17 +528,19 @@ function findEntry(filename, files)
 function loadAndReadListingFile(filename, loadedCallback)
 {
   var result = new Object();
-  result.value = new Array(); /* passing back just the array seems to pass
+/*result.value = new Array(); /* passing back just the array seems to pass
                                  by value, while the property value seems
                                  to be passed by reference. We need to pass
                                  by reference, because it will be filled,
                                  as described above. */
   var domdoc = document.implementation.createDocument("", filename, null);
-
+  ddump("loading and reading " + filename);
+  
   var loaded = function()
   {
-      // XXX works? (reference)
-      result.value = readListingFile(domdoc);
+  ddump("loaded:");
+    // XXX works? (reference)
+    result.value = readListingFile(domdoc);
     loadedCallback();
   }
 
@@ -546,17 +548,19 @@ function loadAndReadListingFile(filename, loadedCallback)
   {
     try
     {
-      domdoc.async = true;
+      //      domdoc.async = true;
       domdoc.load(gLocalDir + filename);
       domdoc.addEventListener("load", loaded, false);
     }
     catch(e)
     {
+   ddump("error during load: " + e);
       setTimeout(loaded, 0); // see below
     }
   }
   else
   {
+   ddump("no filename");
     setTimeout(loaded, 0);
       /* using timeout, so that we first return (to deliver domdoc to the
          caller) before we invoke loadedCallback, so that loadedCallback
@@ -586,6 +590,7 @@ function readListingFile(listingFileDOM)
 
   try
   {
+    printtree(listingFileDOM);
     var root = listingFileDOM.childNodes; // document's children
     var listing; // <listing>'s children
 
@@ -594,16 +599,13 @@ function readListingFile(listingFileDOM)
     for (var i = 0, l = root.length; i < l; i++)
     {
       var curNode = root.item(i);
-      ddump("  " + curNode.nodeName);
-      if (curNode.nodeType == Node.ELEMENT_NODE // XXX
-          && curNode.tagName == "html")
-        alert(curNode);
       if (curNode.nodeType == Node.ELEMENT_NODE
           && curNode.tagName == "listing")
         listing = curNode.childNodes;
     }
     if (listing == undefined)
     {
+      alert("malformed listing file");
       dumpError("malformed listing file");
       return;
     }
@@ -631,6 +633,24 @@ function readListingFile(listingFileDOM)
 
   dumpObject(files, "files");
   return files;
+}
+
+function printtree(domnode, indent)
+{
+  if (!indent)
+    indent = 1;
+  for (var i = 0; i < indent; i++)
+    ddumpCont("  ");
+  ddumpCont(domnode.nodeName);
+  if (domnode.nodeType == Node.ELEMENT_NODE)
+    ddump(" (Tag)");
+  else
+    ddump("");
+    
+
+  var root = domnode.childNodes;
+  for (var i = 0, l = root.length; i < l; i++)
+    printtree(root.item(i), indent + 1);
 }
 
 /* Creates an XML file on the filesystem from a files array.

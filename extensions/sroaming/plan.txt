@@ -1,11 +1,13 @@
 - conflict
   - listing transfer
+    - HTTP: downloaded listing.xml cannot be read (gives HTML doc)
     - FTP: downloaded file is empty
     - save login from listing transfer for main transfer v
     - progress feedback and error reporting
   - reading of listing file works only half v?
   - some files failed (see XXX)
-  - pressing cancel uploads
+  - pressing x activates OK, not cancel
+  - pressing cancel uploads/downloads
   - fix dialog
   - resize for listing.xml
 - Bugs
@@ -13,7 +15,6 @@
     - ftp: offline
     - http: not initialized
   - overwriting local files, if login is incorrect?
-  - no upload at switch profile
 - error handling
   - files deleted on server / server changed. listing-uploaded no longer true
   - (local profile) files missing
@@ -38,10 +39,11 @@ Later:
 
 Enhance
 - protocols
-  - HTTPS
+  - HTTPSvague
   - LDAP
   - IMAP
 - password encrypt
+- no upload at switch profile
 
 roaming urls
  <ftp://user@ftp-server//path/to/dir/>
