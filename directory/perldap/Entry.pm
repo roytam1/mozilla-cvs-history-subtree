@@ -28,9 +28,28 @@
 
 package Mozilla::LDAP::Entry;
 
-use Mozilla::LDAP::Utils qw(normalizeDN);
-require Tie::Hash;
-@ISA = (Tie::StdHash);
+use Mozilla::LDAP::Utils 1.3 qw(normalizeDN);
+use Tie::Hash;
+
+use strict;
+use vars qw($VERSION @ISA);
+
+@ISA = ('Tie::StdHash');
+$VERSION = "1.3";
+
+
+#############################################################################
+# Initializer, this should be called only once.
+#
+BEGIN
+{
+  use vars qw($_no_LDIF_module);
+
+  print "Initializing the ::Entry module\n" if $main::LDAP_DEBUG;
+  undef $_no_LDIF_module;
+  eval "use Mozilla::LDAP::LDIF 0.07 ()";
+  $_no_LDIF_module = 1 if ($@);
+}
 
 
 #############################################################################
@@ -86,14 +105,19 @@ sub STORE
   return unless (defined($val) && ($val ne ""));
   return unless (defined($attr) && ($attr ne ""));
 
+  if ($attr =~ /^_.+_$/)        # Don't track "internal" values
+    {
+      $self->{$attr} = $val;
+      return;
+    }
+
   if (defined($self->{$attr}))
     {
       @{$self->{"_${attr}_save_"}} = @{$self->{$attr}}
         unless defined($self->{"_${attr}_save_"});
     }
-  $self->{$attr} = $val;
-  return if ($attr =~ /^_.+_$/);        # Don't track "internal" values
 
+  $self->{$attr} = $val;
   $self->{"_${attr}_modified_"} = 1;
   delete $self->{"_self_obj_"}->{"_${attr}_deleted_"}
     if defined($self->{"_${attr}_deleted_"});
@@ -199,6 +223,7 @@ sub NEXTKEY
     }
   $self->{"_oc_keyidx_"} = $idx;
 
+  return unless (defined($key) && ($key ne ""));
   return if ($key =~ /^_.+_$/);
   return if defined($self->{"_${key}_deleted_"});
   return $key;
@@ -682,18 +707,11 @@ sub getLDIFrecords # called from LDIF.pm (at least)
 #############################################################################
 # Print an entry, in LDIF format.
 #
-use vars qw($_no_LDIF_module); $_no_LDIF_module = undef;
-
 sub printLDIF
 {
   my ($self) = @_;
 
-  if (not defined $_no_LDIF_module)
-    {
-      eval {require Mozilla::LDAP::LDIF};
-      $_no_LDIF_module = $@;
-    }
-  if ($_no_LDIF_module) { # Bad.  Well, do something half-assed:
+  if (defined($_no_LDIF_module)) { # Bad.  Well, do something half-assed:
     my $record = $self->getLDIFrecords();
     my ($attr, $values);
 
@@ -705,7 +723,7 @@ sub printLDIF
   }
   else
     {
-      (new Mozilla::LDAP::LDIF (select()))->writeOneEntry ($self);
+      (new Mozilla::LDAP::LDIF(select()))->writeOneEntry ($self);
     }
 }
 
