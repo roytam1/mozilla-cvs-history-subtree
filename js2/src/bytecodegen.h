@@ -166,8 +166,8 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
         ByteCodeModule(ByteCodeGen *bcg);
 
 #ifdef DEBUG
-        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("ByteCodeModule", s, t); return t; }
-        void operator delete(void* t)   { trace_release("ByteCodeModule", t); free(t); }
+        void* operator new(size_t s)    { void *t = STD::malloc(s); trace_alloc("ByteCodeModule", s, t); return t; }
+        void operator delete(void* t)   { trace_release("ByteCodeModule", t); STD::free(t); }
 #endif
 
         uint32 getLong(int index) const             { return *((uint32 *)&mCodeBase[index]); }
@@ -240,8 +240,8 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
         { }
 
 #ifdef DEBUG
-        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("ByteCodeGen", s, t); return t; }
-        void operator delete(void* t)   { trace_release("ByteCodeGen", t); free(t); }
+        void* operator new(size_t s)    { void *t = STD::malloc(s); trace_alloc("ByteCodeGen", s, t); return t; }
+        void operator delete(void* t)   { trace_release("ByteCodeGen", t); STD::free(t); }
 #endif
 
         ByteCodeModule *genCodeForScript(StmtNode *p);

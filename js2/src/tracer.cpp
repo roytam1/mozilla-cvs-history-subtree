@@ -50,7 +50,7 @@ struct PointerData {
 struct AllocData {
     AllocData(char *owner)
     {
-        mOwner = (char *)malloc(strlen(owner) + 1);
+        mOwner = (char *)STD::malloc(strlen(owner) + 1);
         strcpy(mOwner, owner);
         mData = NULL;
         mTotalAllocatedCount = 0;
@@ -69,13 +69,13 @@ struct AllocData {
 AllocData **gAllocations = NULL;
 uint32 gAllocationsCount = 0;
 
-AllocData *findOwner(char *owner)
+static AllocData *findOwner(char *owner)
 {
     for (uint32 i = 0; i < gAllocationsCount; i++) {
-        if (strcmp(gAllocations[i]->mOwner, owner) == 0)
+        if (STD::strcmp(gAllocations[i]->mOwner, owner) == 0)
             return gAllocations[i];
     }
-    gAllocations = (AllocData **)realloc(gAllocations, (gAllocationsCount + 1) * sizeof(AllocData));
+    gAllocations = (AllocData **)STD::realloc(gAllocations, (gAllocationsCount + 1) * sizeof(AllocData));
     gAllocations[gAllocationsCount] = new AllocData(owner);
     return gAllocations[gAllocationsCount++];
 }

@@ -144,8 +144,8 @@ static const double two31 = 2147483648.0;
         Tag tag;
         
 #ifdef DEBUG
-        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("JSValue", s, t); return t; }
-        void operator delete(void* t) { trace_release("JSValue", t); free(t); }
+        void* operator new(size_t s)    { void *t = STD::malloc(s); trace_alloc("JSValue", s, t); return t; }
+        void operator delete(void* t) { trace_release("JSValue", t); STD::free(t); }
 #endif
 
         JSValue() : f64(0.0), tag(undefined_tag) {}
@@ -266,8 +266,8 @@ static const double two31 = 2147483648.0;
         JSType *mType;
 
 #ifdef DEBUG
-        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("Reference", s, t); return t; }
-        void operator delete(void* t)   { trace_release("Reference", t); free(t); }
+        void* operator new(size_t s)    { void *t = STD::malloc(s); trace_alloc("Reference", s, t); return t; }
+        void operator delete(void* t)   { trace_release("Reference", t); STD::free(t); }
 #endif
 
         // used by the invocation sequence to calculate
@@ -498,8 +498,8 @@ static const double two31 = 2147483648.0;
         virtual ~JSObject() { } // keeping gcc happy
         
 #ifdef DEBUG
-        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("JSObject", s, t); return t; }
-        void operator delete(void* t)   { trace_release("JSObject", t); free(t); }
+        void* operator new(size_t s)    { void *t = STD::malloc(s); trace_alloc("JSObject", s, t); return t; }
+        void operator delete(void* t)   { trace_release("JSObject", t); STD::free(t); }
 #endif
 
         // every object has a type
@@ -639,8 +639,8 @@ static const double two31 = 2147483648.0;
         virtual ~JSInstance() { } // keeping gcc happy
 
 #ifdef DEBUG
-        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("JSInstance", s, t); return t; }
-        void operator delete(void* t)   { trace_release("JSInstance", t); free(t); }
+        void* operator new(size_t s)    { void *t = STD::malloc(s); trace_alloc("JSInstance", s, t); return t; }
+        void operator delete(void* t)   { trace_release("JSInstance", t); STD::free(t); }
 #endif
 
         void initInstance(Context *cx, JSType *type);
@@ -703,8 +703,8 @@ static const double two31 = 2147483648.0;
         virtual ~JSType() { } // keeping gcc happy
 
 #ifdef DEBUG
-        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("JSType", s, t); return t; }
-        void operator delete(void* t)   { trace_release("JSType", t); free(t); }
+        void* operator new(size_t s)    { void *t = STD::malloc(s); trace_alloc("JSType", s, t); return t; }
+        void operator delete(void* t)   { trace_release("JSType", t); STD::free(t); }
 #endif
 
         void setStaticInitializer(Context *cx, JSFunction *f);
@@ -862,8 +862,8 @@ static const double two31 = 2147483648.0;
         virtual ~JSArrayInstance() { } // keeping gcc happy
 
 #ifdef DEBUG
-        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("JSArrayInstance", s, t); return t; }
-        void operator delete(void* t)   { trace_release("JSArrayInstance", t); free(t); }
+        void* operator new(size_t s)    { void *t = STD::malloc(s); trace_alloc("JSArrayInstance", s, t); return t; }
+        void operator delete(void* t)   { trace_release("JSArrayInstance", t); STD::free(t); }
 #endif
 
         // XXX maybe could have implemented length as a getter/setter pair?
@@ -884,8 +884,8 @@ static const double two31 = 2147483648.0;
         virtual ~JSArrayType() { } // keeping gcc happy
 
 #ifdef DEBUG
-        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("JSArrayType", s, t); return t; }
-        void operator delete(void* t)   { trace_release("JSArrayType", t); free(t); }
+        void* operator new(size_t s)    { void *t = STD::malloc(s); trace_alloc("JSArrayType", s, t); return t; }
+        void operator delete(void* t)   { trace_release("JSArrayType", t); STD::free(t); }
 #endif
 
         JSInstance *newInstance(Context *cx);
@@ -898,8 +898,8 @@ static const double two31 = 2147483648.0;
         virtual ~JSStringInstance() { } // keeping gcc happy
 
 #ifdef DEBUG
-        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("JSStringInstance", s, t); return t; }
-        void operator delete(void* t)   { trace_release("JSStringInstance", t); free(t); }
+        void* operator new(size_t s)    { void *t = STD::malloc(s); trace_alloc("JSStringInstance", s, t); return t; }
+        void operator delete(void* t)   { trace_release("JSStringInstance", t); STD::free(t); }
 #endif
 
         void getProperty(Context *cx, const String &name, AttributeList *attr);
@@ -918,8 +918,8 @@ static const double two31 = 2147483648.0;
         virtual ~JSStringType() { } // keeping gcc happy
 
 #ifdef DEBUG
-        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("JSStringType", s, t); return t; }
-        void operator delete(void* t)   { trace_release("JSStringType", t); free(t); }
+        void* operator new(size_t s)    { void *t = STD::malloc(s); trace_alloc("JSStringType", s, t); return t; }
+        void operator delete(void* t)   { trace_release("JSStringType", t); STD::free(t); }
 #endif
 
         JSInstance *newInstance(Context *cx);
@@ -940,8 +940,8 @@ static const double two31 = 2147483648.0;
         virtual ~ParameterBarrel() { } // keeping gcc happy
 
 #ifdef DEBUG
-        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("ParameterBarrel", s, t); return t; }
-        void operator delete(void* t)   { trace_release("ParameterBarrel", t); free(t); }
+        void* operator new(size_t s)    { void *t = STD::malloc(s); trace_alloc("ParameterBarrel", s, t); return t; }
+        void operator delete(void* t)   { trace_release("ParameterBarrel", t); STD::free(t); }
 #endif
 
         Reference *genReference(const String& name, AttributeList *attr, Access acc, uint32 /*depth*/)
@@ -1003,8 +1003,8 @@ static const double two31 = 2147483648.0;
         virtual ~Activation() { } // keeping gcc happy
 
 #ifdef DEBUG
-        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("Activation", s, t); return t; }
-        void operator delete(void* t)   { trace_release("Activation", t); free(t); }
+        void* operator new(size_t s)    { void *t = STD::malloc(s); trace_alloc("Activation", s, t); return t; }
+        void operator delete(void* t)   { trace_release("Activation", t); STD::free(t); }
 #endif
 
         
@@ -1040,8 +1040,8 @@ static const double two31 = 2147483648.0;
         }
 
 #ifdef DEBUG
-        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("ScopeChain", s, t); return t; }
-        void operator delete(void* t)   { trace_release("ScopeChain", t); free(t); }
+        void* operator new(size_t s)    { void *t = STD::malloc(s); trace_alloc("ScopeChain", s, t); return t; }
+        void operator delete(void* t)   { trace_release("ScopeChain", t); STD::free(t); }
 #endif
 
         Context *m_cx;
@@ -1275,8 +1275,8 @@ static const double two31 = 2147483648.0;
         ~JSFunction() { }  // keeping gcc happy
         
 #ifdef DEBUG
-        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("JSFunction", s, t); return t; }
-        void operator delete(void* t)   { trace_release("JSFunction", t); free(t); }
+        void* operator new(size_t s)    { void *t = STD::malloc(s); trace_alloc("JSFunction", s, t); return t; }
+        void operator delete(void* t)   { trace_release("JSFunction", t); STD::free(t); }
 #endif
 
         void setByteCode(ByteCodeModule *b)     { ASSERT(!isNative()); mByteCode = b; }
@@ -1412,8 +1412,8 @@ static const double two31 = 2147483648.0;
         Context(JSObject **global, World &world, Arena &a);
 
 #ifdef DEBUG
-        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("Context", s, t); return t; }
-        void operator delete(void* t)   { trace_release("Context", t); free(t); }
+        void* operator new(size_t s)    { void *t = STD::malloc(s); trace_alloc("Context", s, t); return t; }
+        void operator delete(void* t)   { trace_release("Context", t); STD::free(t); }
 #endif
 
         StringAtom& VirtualKeyWord; 
