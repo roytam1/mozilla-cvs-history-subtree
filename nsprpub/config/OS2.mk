@@ -117,7 +117,7 @@ endif
 
 OS_LIBS     		= -lsocket -lemxio
 
-DEFINES += -DXP_OS2_EMX
+DEFINES += -DXP_OS2 -DXP_OS2_EMX
 
 OS_CFLAGS     		= $(OMF_FLAG) -Wall -Wno-unused -Zmt
 OS_EXE_CFLAGS 		= $(OMF_FLAG) -Wall -Wno-unused -Zmt
