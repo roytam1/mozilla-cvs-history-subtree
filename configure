@@ -15195,6 +15195,7 @@ mingw*|cygwin*|msvc*|mks*)
     if test -z "${_CYGWIN_PERL}"; then
         PERL="\$(CYGWIN_WRAPPER) $PERL"
     fi
+    CYGDRIVE_MOUNT=`mount -p | awk '{ if (/^\//) { print $1; exit } }'`
     ;;
 esac
 
@@ -15207,6 +15208,8 @@ msvc*|mks*|cygwin*|mingw*)
     my_perl=$PERL
     ;;
 esac
+
+
 
 MOZILLA_VERSION=`$my_perl $my_srcdir/config/milestone.pl -topsrcdir $my_srcdir`
 cat >> confdefs.h <<EOF
@@ -15761,6 +15764,7 @@ s%@CC_VERSION@%$CC_VERSION%g
 s%@CXX_VERSION@%$CXX_VERSION%g
 s%@MOZ_MOVEMAIL@%$MOZ_MOVEMAIL%g
 s%@LIBS_PATH@%$LIBS_PATH%g
+s%@CYGDRIVE_MOUNT@%$CYGDRIVE_MOUNT%g
 s%@MOZILLA_VERSION@%$MOZILLA_VERSION%g
 s%@ac_configure_args@%$ac_configure_args%g
 s%@MOZ_DEFINES@%$MOZ_DEFINES%g

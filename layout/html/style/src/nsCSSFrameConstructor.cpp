@@ -4323,8 +4323,10 @@ nsCSSFrameConstructor::InitializeSelectFrame(nsIPresShell*        aPresShell,
   // Process children
   nsFrameConstructorSaveState absoluteSaveState;
   nsFrameItems                childItems;
-  PRBool                      isPositionedContainingBlock = aIsAbsolutelyPositioned ||
-    aIsFixedPositioned;
+  const nsStyleDisplay*       display = aStyleContext->GetStyleDisplay();
+  PRBool isPositionedContainingBlock = aIsAbsolutelyPositioned ||
+                                       aIsFixedPositioned ||
+                                       display->mPosition == NS_STYLE_POSITION_RELATIVE;
 
   if (isPositionedContainingBlock) {
     // The area frame becomes a container for child frames that are
@@ -4430,8 +4432,10 @@ nsCSSFrameConstructor::ConstructFieldSetFrame(nsIPresShell*            aPresShel
   // Process children
   nsFrameConstructorSaveState absoluteSaveState;
   nsFrameItems                childItems;
-  PRBool                      isPositionedContainingBlock = aIsAbsolutelyPositioned ||
-    aIsFixedPositioned;
+  const nsStyleDisplay*       display = aStyleContext->GetStyleDisplay();
+  PRBool isPositionedContainingBlock = aIsAbsolutelyPositioned ||
+                                       aIsFixedPositioned ||
+                                       display->mPosition == NS_STYLE_POSITION_RELATIVE;
 
   if (isPositionedContainingBlock) {
     // The area frame becomes a container for child frames that are
@@ -6214,8 +6218,9 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
     // Process children
     nsFrameConstructorSaveState absoluteSaveState;
     nsFrameItems                childItems;
-    PRBool                      isPositionedContainingBlock = isAbsolutelyPositioned ||
-                                                              isFixedPositioned;
+    PRBool isPositionedContainingBlock = isAbsolutelyPositioned ||
+                                         isFixedPositioned ||
+                                         aDisplay->mPosition == NS_STYLE_POSITION_RELATIVE;
 
     if (isPositionedContainingBlock) {
       // The area frame becomes a container for child frames that are
@@ -7496,7 +7501,16 @@ nsCSSFrameConstructor::GetAbsoluteContainingBlock(nsIPresContext* aPresContext,
                  (nsLayoutAtoms::positionedInlineFrame == frameType)) {
         containingBlock = frame;
         break;
+      } else if (nsLayoutAtoms::fieldSetFrame == frameType) {
+        // If the positioned frame is a fieldset, use the area frame inside it
+        frame->FirstChild(aPresContext, nsnull, &containingBlock);
+        break;
       }
+#ifdef DEBUG
+      else {
+        NS_WARNING("Positioned frame that does not handle positioned kids; looking further up the parent chain");
+      }
+#endif
     }
   }
 
