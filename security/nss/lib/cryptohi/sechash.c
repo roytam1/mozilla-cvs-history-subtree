@@ -32,7 +32,6 @@
  */
 #include "sechash.h"
 #include "secoidt.h"
-#include "secerr.h"
 #include "blapi.h"
 #include "pk11func.h"	/* for the PK11_ calls below. */
 
@@ -88,21 +87,6 @@ sha1_NewContext(void) {
 	return (void *) PK11_CreateDigestContext(SEC_OID_SHA1);
 }
 
-static void *
-sha256_NewContext(void) {
-	return (void *) PK11_CreateDigestContext(SEC_OID_SHA256);
-}
-
-static void *
-sha384_NewContext(void) {
-	return (void *) PK11_CreateDigestContext(SEC_OID_SHA384);
-}
-
-static void *
-sha512_NewContext(void) {
-	return (void *) PK11_CreateDigestContext(SEC_OID_SHA512);
-}
-
 const SECHashObject SECHashObjects[] = {
   { 0,
     (void * (*)(void)) null_hash_new_context,
@@ -140,33 +124,6 @@ const SECHashObject SECHashObjects[] = {
     (void (*)(void *, unsigned char *, unsigned int *, unsigned int)) 
 							PK11_DigestFinal
   },
-  { SHA256_LENGTH,
-    (void * (*)(void)) sha256_NewContext,
-    (void * (*)(void *)) PK11_CloneContext,
-    (void (*)(void *, PRBool)) PK11_DestroyContext,
-    (void (*)(void *)) PK11_DigestBegin,
-    (void (*)(void *, const unsigned char *, unsigned int)) PK11_DigestOp,
-    (void (*)(void *, unsigned char *, unsigned int *, unsigned int)) 
-							PK11_DigestFinal
-  },
-  { SHA384_LENGTH,
-    (void * (*)(void)) sha384_NewContext,
-    (void * (*)(void *)) PK11_CloneContext,
-    (void (*)(void *, PRBool)) PK11_DestroyContext,
-    (void (*)(void *)) PK11_DigestBegin,
-    (void (*)(void *, const unsigned char *, unsigned int)) PK11_DigestOp,
-    (void (*)(void *, unsigned char *, unsigned int *, unsigned int)) 
-							PK11_DigestFinal
-  },
-  { SHA512_LENGTH,
-    (void * (*)(void)) sha512_NewContext,
-    (void * (*)(void *)) PK11_CloneContext,
-    (void (*)(void *, PRBool)) PK11_DestroyContext,
-    (void (*)(void *)) PK11_DigestBegin,
-    (void (*)(void *, const unsigned char *, unsigned int)) PK11_DigestOp,
-    (void (*)(void *, unsigned char *, unsigned int *, unsigned int)) 
-							PK11_DigestFinal
-  },
 };
 
 const SECHashObject * 
@@ -175,51 +132,11 @@ HASH_GetHashObject(HASH_HashType type)
     return &SECHashObjects[type];
 }
 
-HASH_HashType
-HASH_GetHashTypeByOidTag(SECOidTag hashOid)
-{
-    HASH_HashType ht	= HASH_AlgNULL;
 
-    switch(hashOid) {
-    case SEC_OID_MD2:	 ht = HASH_AlgMD2;    break;
-    case SEC_OID_MD5:	 ht = HASH_AlgMD5;    break;
-    case SEC_OID_SHA1:	 ht = HASH_AlgSHA1;   break;
-    case SEC_OID_SHA256: ht = HASH_AlgSHA256; break;
-    case SEC_OID_SHA384: ht = HASH_AlgSHA384; break;
-    case SEC_OID_SHA512: ht = HASH_AlgSHA512; break;
-    default:             ht = HASH_AlgNULL;   
-	PORT_SetError(SEC_ERROR_INVALID_ALGORITHM);
-	break;
-    }
-    return ht;
-}
-
-const SECHashObject * 
-HASH_GetHashObjectByOidTag(SECOidTag hashOid)
-{
-    HASH_HashType ht	= HASH_GetHashTypeByOidTag(hashOid);
-
-    return (ht == HASH_AlgNULL) ? NULL : &SECHashObjects[ht];
-}
-
-/* returns zero for unknown hash OID */
-unsigned int
-HASH_ResultLenByOidTag(SECOidTag hashOid)
-{
-    const SECHashObject * hashObject = HASH_GetHashObjectByOidTag(hashOid);
-    unsigned int          resultLen = 0;
-
-    if (hashObject)
-    	resultLen = hashObject->length;
-    return resultLen;
-}
-
-/* returns zero if hash type invalid. */
 unsigned int
 HASH_ResultLen(HASH_HashType type)
 {
     if ( ( type < HASH_AlgNULL ) || ( type >= HASH_AlgTOTAL ) ) {
-	PORT_SetError(SEC_ERROR_INVALID_ALGORITHM);
 	return(0);
     }
     

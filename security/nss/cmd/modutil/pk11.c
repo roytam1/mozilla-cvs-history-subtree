@@ -32,11 +32,13 @@
  */
 
 #include "modutil.h"
-/* #include "secmodti.h"  */
+#include "secmodti.h"
 #include "pk11func.h"
 
-static PK11DefaultArrayEntry *pk11_DefaultArray = NULL;
-static int pk11_DefaultArraySize = 0;
+extern PK11DefaultArrayEntry PK11_DefaultArray[];
+extern int num_pk11_default_mechanisms;
+extern SECStatus PK11_UpdateSlotAttribute(PK11SlotInfo*, PK11DefaultArrayEntry*,
+	PRBool);
 
 /*************************************************************************
  *
@@ -492,8 +494,7 @@ ListModule(char *moduleName)
 	PR_fprintf(PR_STDOUT, "Cipher Enable Flags: %s\n", ciphers);
 	mechanisms = NULL;
 	if(module->slotCount > 0) {
-		mechanisms = getStringFromFlags(
-			PK11_GetDefaultFlags(module->slots[0]),
+		mechanisms = getStringFromFlags(module->slots[0]->defaultFlags,
 			mechanismStrings, numMechanismStrings);
 	}
 	if(mechanisms[0] =='\0') {
@@ -515,7 +516,7 @@ ListModule(char *moduleName)
 
 		/* Slot Info */
 		PR_fprintf(PR_STDOUT, "\n"PAD"Slot: %s\n", PK11_GetSlotName(slot));
-		mechanisms = getStringFromFlags(PK11_GetDefaultFlags(slot),
+		mechanisms = getStringFromFlags(slot->defaultFlags,
 			mechanismStrings, numMechanismStrings);
 		if(mechanisms[0] =='\0') {
 		     mechanisms = "None";
@@ -523,7 +524,7 @@ ListModule(char *moduleName)
 		PR_fprintf(PR_STDOUT, PAD"Slot Mechanism Flags: %s\n", mechanisms);
 		PR_fprintf(PR_STDOUT, PAD"Manufacturer: %.32s\n",
 			slotinfo.manufacturerID);
-		if (PK11_IsHW(slot)) {
+		if(slot->isHW) {
 			PR_fprintf(PR_STDOUT, PAD"Type: Hardware\n");
 		} else {
 			PR_fprintf(PR_STDOUT, PAD"Type: Software\n");
@@ -532,7 +533,7 @@ ListModule(char *moduleName)
 			slotinfo.hardwareVersion.major, slotinfo.hardwareVersion.minor);
 		PR_fprintf(PR_STDOUT, PAD"Firmware Version: %d.%d\n",
 			slotinfo.firmwareVersion.major, slotinfo.firmwareVersion.minor);
-		if (PK11_IsDisabled(slot)) {
+		if(slot->disabled) {
 			reason  = PK11_GetDisabledReason(slot);
 			if(reason < numDisableReasonStr) {
 				PR_fprintf(PR_STDOUT, PAD"Status: DISABLED (%s)\n",
@@ -546,7 +547,7 @@ ListModule(char *moduleName)
 
 		if(PK11_GetTokenInfo(slot, &tokeninfo) != SECSuccess) {
 			PR_fprintf(PR_STDERR, errStrings[TOKEN_INFO_ERR],
-			  PK11_GetTokenName(slot));
+			  slot->token_name);
 			rv = TOKEN_INFO_ERR;
 			continue;
 		}
@@ -757,14 +758,6 @@ SetDefaultModule(char *moduleName, char *slotName, char *mechanisms)
 	PRBool found = PR_FALSE;
 	Error errcode = UNSPECIFIED_ERR;
 
-	if (pk11_DefaultArray == NULL) {
-	    pk11_DefaultArray = PK11_GetDefaultArray(&pk11_DefaultArraySize);
-	    if (pk11_DefaultArray == NULL) {
-		/* should assert. This shouldn't happen */
-		goto loser;
-	    }
-	}
-
 	mechFlags =  SECMOD_PubMechFlagstoInternal(mechFlags);
 
 	module = SECMOD_FindModule(moduleName);
@@ -788,10 +781,10 @@ SetDefaultModule(char *moduleName, char *slotName, char *mechanisms)
 		found = PR_TRUE;
 
 		/* Go through each mechanism */
-		for(i=0; i < pk11_DefaultArraySize; i++) {
-			if(pk11_DefaultArray[i].flag & mechFlags) {
+		for(i=0; i < num_pk11_default_mechanisms; i++) {
+			if(PK11_DefaultArray[i].flag & mechFlags) {
 				/* Enable this default mechanism */
-				PK11_UpdateSlotAttribute(slot, &(pk11_DefaultArray[i]),
+				PK11_UpdateSlotAttribute(slot, &(PK11_DefaultArray[i]),
 					PR_TRUE);
 			}
 		}
@@ -831,14 +824,6 @@ UnsetDefaultModule(char *moduleName, char *slotName, char *mechanisms)
 		mechanismStrings, numMechanismStrings);
 	PRBool found = PR_FALSE;
 
-	if (pk11_DefaultArray == NULL) {
-	    pk11_DefaultArray = PK11_GetDefaultArray(&pk11_DefaultArraySize);
-	    if (pk11_DefaultArray == NULL) {
-		/* should assert. This shouldn't happen */
-		return UNSPECIFIED_ERR;
-	    }
-	}
-
 	mechFlags =  SECMOD_PubMechFlagstoInternal(mechFlags);
 
 	module = SECMOD_FindModule(moduleName);
@@ -855,9 +840,9 @@ UnsetDefaultModule(char *moduleName, char *slotName, char *mechanisms)
 		    /* we are only interested in changing the one slot */
 		    continue;
 		}
-		for(i=0; i < pk11_DefaultArraySize ; i++) {
-			if(pk11_DefaultArray[i].flag & mechFlags) {
-				PK11_UpdateSlotAttribute(slot, &(pk11_DefaultArray[i]),
+		for(i=0; i <num_pk11_default_mechanisms; i++) {
+			if(PK11_DefaultArray[i].flag & mechFlags) {
+				PK11_UpdateSlotAttribute(slot, &(PK11_DefaultArray[i]),
 					PR_FALSE);
 			}
 		}

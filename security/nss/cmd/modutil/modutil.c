@@ -912,10 +912,7 @@ main(int argc, char *argv[])
 		break;
 	}
 
-        if (NSS_Shutdown() != SECSuccess) {
-            exit(1);
-        }
-
+        NSS_Shutdown();
 loser:
 	PR_Cleanup();
 	return errcode;

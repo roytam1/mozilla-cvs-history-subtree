@@ -297,8 +297,8 @@ typedef enum {
 
 
 #define PK11_MAX_BLOCK_SIZE 16
-/* currently SHA512 is the biggest hash length */
-#define PK11_MAX_MAC_LENGTH 64
+/* currently SHA1 is the biggest hash length */
+#define PK11_MAX_MAC_LENGTH 20
 #define PK11_INVALID_MAC_SIZE 0xffffffff
 
 struct PK11SessionContextStr {
@@ -622,8 +622,6 @@ extern SECStatus secmod_AddPermDB(const char *domain, const char *filename,
 			const char *dbname, char *module, PRBool rw);
 extern SECStatus secmod_ReleasePermDBData(const char *domain, 
 	const char *filename, const char *dbname, char **specList, PRBool rw);
-/* mechanism allows this operation */
-extern CK_RV pk11_MechAllowsOperation(CK_MECHANISM_TYPE type, CK_ATTRIBUTE_TYPE op);
 /*
  * OK there are now lots of options here, lets go through them all:
  *

@@ -1,4 +1,4 @@
-# 
+#
 # The contents of this file are subject to the Mozilla Public
 # License Version 1.1 (the "License"); you may not use this file
 # except in compliance with the License. You may obtain a copy of
@@ -31,19 +31,8 @@
 # GPL.
 #
 
-CORE_DEPTH = ../../..
+#######################################################################
+# Master "Core Components" <platform> tag                             #
+#######################################################################
 
-# MODULE public and private header  directories are implicitly REQUIRED.
-MODULE = nss
-
-#CSRCS = testname.c \
-
-# The MODULE is always implicitly required.
-# Listing it here in REQUIRES makes it appear twice in the cc command line.
-REQUIRES = dbm seccmd
-
-PROGRAMS = $(CSRCS:.c=)
-
-TARGETS = $(PROGRAMS)
-
-NO_MD_RELEASE = 1
+PLATFORM = $(OBJDIR_NAME)

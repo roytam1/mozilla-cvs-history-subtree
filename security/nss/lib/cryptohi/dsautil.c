@@ -66,9 +66,10 @@ DSAU_ConvertUnsignedToSigned(SECItem *dest, SECItem *src)
     unsigned char *pSrc = src->data;
     unsigned char *pDst = dest->data;
     unsigned int   cntSrc = src->len;
+    unsigned char  c;
 
     /* skip any leading zeros. */
-    while (cntSrc && !(*pSrc)) { 
+    while (cntSrc && !(c = *pSrc)) { 
     	pSrc++; 
 	cntSrc--;
     }
@@ -78,7 +79,7 @@ DSAU_ConvertUnsignedToSigned(SECItem *dest, SECItem *src)
 	return; 
     }
 
-    if (*pSrc & 0x80)
+    if (c & 0x80)
     	*pDst++ = 0;
 
     PORT_Memcpy(pDst, pSrc, cntSrc);

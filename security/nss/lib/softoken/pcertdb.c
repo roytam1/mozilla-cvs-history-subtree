@@ -3486,6 +3486,7 @@ UpdateV7DB(NSSLOWCERTCertDBHandle *handle, DB *updatedb)
 	case certDBEntryTypeSubject:
 	case certDBEntryTypeContentVersion:
 	case certDBEntryTypeNickname:
+	/*default: */
 	    break;
 
 	case certDBEntryTypeCert:
@@ -3545,8 +3546,6 @@ UpdateV7DB(NSSLOWCERTCertDBHandle *handle, DB *updatedb)
 						 &smimeEntry.optionsDate);
 	    PORT_FreeArena(smimeEntry.common.arena, PR_FALSE);
 	    smimeEntry.common.arena = NULL;
-	    break;
-	default:
 	    break;
 	}
     } while ( (* updatedb->seq)(updatedb, &key, &data, R_NEXT) == 0 );

@@ -690,26 +690,16 @@ PK11_GetWindow(PK11SymKey *key)
 SECStatus
 PK11_ExtractKeyValue(PK11SymKey *symKey)
 {
-    SECStatus rv;
 
-    if (symKey->data.data != NULL) {
-	if (symKey->size == 0) {
-	   symKey->size = symKey->data.len;
-	}
-	return SECSuccess;
-    }
+    if (symKey->data.data != NULL) return SECSuccess;
 
     if (symKey->slot == NULL) {
 	PORT_SetError( SEC_ERROR_INVALID_KEY );
 	return SECFailure;
     }
 
-    rv = PK11_ReadAttribute(symKey->slot,symKey->objectID,CKA_VALUE,NULL,
+    return PK11_ReadAttribute(symKey->slot,symKey->objectID,CKA_VALUE,NULL,
 				&symKey->data);
-    if (rv == SECSuccess) {
-	symKey->size = symKey->data.len;
-    }
-    return rv;
 }
 
 SECStatus
@@ -3825,11 +3815,13 @@ PK11_HashBuf(SECOidTag hashAlg, unsigned char *out, unsigned char *in,
 	return rv;
     }
 
-    /* XXX This really should have been an argument to this function! */
-    max_length = HASH_ResultLenByOidTag(hashAlg);
-    PORT_Assert(max_length);
-    if (!max_length)
-    	max_length = HASH_LENGTH_MAX;
+    /* we need the output length ... maybe this should be table driven...*/
+    switch (hashAlg) {
+    case  SEC_OID_SHA1: max_length = SHA1_LENGTH; break;
+    case  SEC_OID_MD2: max_length = MD2_LENGTH; break;
+    case  SEC_OID_MD5: max_length = MD5_LENGTH; break;
+    default: max_length = 16; break;
+    }
 
     rv = PK11_DigestFinal(context,out,&out_length,max_length);
     PK11_DestroyContext(context, PR_TRUE);
@@ -5023,23 +5015,8 @@ finish:
 PK11SymKey*
 PK11_CopySymKeyForSigning(PK11SymKey *originalKey, CK_MECHANISM_TYPE mech)
 {
-    CK_RV crv;
-    CK_ATTRIBUTE setTemplate;
-    CK_BBOOL ckTrue = CK_TRUE; 
-    PK11SlotInfo *slot = originalKey->slot;
-
-    /* first just try to set this key up for signing */
-    PK11_SETATTRS(&setTemplate, CKA_SIGN, &ckTrue, sizeof(ckTrue));
-    pk11_EnterKeyMonitor(originalKey);
-    crv = PK11_GETTAB(slot)-> C_SetAttributeValue(originalKey->session, 
-				originalKey->objectID, &setTemplate, 1);
-    pk11_ExitKeyMonitor(originalKey);
-    if (crv == CKR_OK) {
-	return PK11_ReferenceSymKey(originalKey);
-    }
-
-    /* nope, doesn't like it, use the pk11 copy object command */
-    return pk11_CopyToSlot(slot, mech, CKA_SIGN, originalKey);
+    return pk11_CopyToSlot(PK11_GetSlotFromKey(originalKey), mech, CKA_SIGN,
+			originalKey);
 }
 
 char *

@@ -135,8 +135,6 @@ struct PK11SlotInfoStr {
     unsigned int lastState;
     /* for Stan */
     NSSToken *nssToken;
-    /* fast mechanism lookup */
-    char mechanismBits[256];
 };
 
 /* Symetric Key structure. Reference Counted */

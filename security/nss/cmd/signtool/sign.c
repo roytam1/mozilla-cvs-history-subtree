@@ -675,7 +675,7 @@ static int generate_SF_file (char *manifile, char *who)
   long r1, r2, r3;
 
   char whofile [FNSIZE];
-  char *buf, *name = NULL;
+  char *buf, *name;
 
   JAR_Digest dig;
 

@@ -2261,7 +2261,7 @@ pk11_AllFindCertObjectByRecipient(PK11SlotInfo **slotPtr,
 							void *wincx) {
     PK11SlotList *list;
     PK11SlotListElement *le;
-    CERTCertificate * cert = NULL;
+    CERTCertificate * cert;
     PK11SlotInfo *slot = NULL;
     SECStatus rv;
 
@@ -2297,7 +2297,6 @@ pk11_AllFindCertObjectByRecipient(PK11SlotInfo **slotPtr,
 	return NULL;
     }
     *slotPtr = slot;
-    PORT_Assert(cert != NULL);
     return cert;
 }
 
@@ -3751,10 +3750,7 @@ loser:
     } else {
 	crls = nssTrustDomain_FindCRLsBySubject(td, &subject);
     }
-    if ((!crls) || (*crls == NULL)) {
-	if (crls) {
-	    nssCRLArray_Destroy(crls);
-	}
+    if (!crls) {
 	if (NSS_GetError() == NSS_ERROR_NOT_FOUND) {
 	    PORT_SetError(SEC_ERROR_CRL_NOT_FOUND);
 	}
@@ -4173,7 +4169,7 @@ void SECMOD_InitCallOnce(void) {
     PORT_Assert(NULL != mod_init.cv);
 }
 
-void SECMOD_CleanupCallOnce(void)
+void SECMOD_CleanupCallOnce()
 {
     if (mod_init.ml) {
 	PR_DestroyLock(mod_init.ml);
