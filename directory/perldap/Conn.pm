@@ -505,7 +505,7 @@ sub update
       if (defined($entry->{"_${key}_modified_"}))
 	{
 	  undef @vals;
-	  @vals = @{$entry->{$key}} if (defined($entry->{$key});
+	  @vals = @{$entry->{$key}} if (defined($entry->{$key}));
 	  if ($#vals == $[)
 	    {
 	      $mod{$key} = { "rb", [$vals[$[]] };
