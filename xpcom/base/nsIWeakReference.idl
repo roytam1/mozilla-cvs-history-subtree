@@ -1,0 +1,37 @@
+// nsIWeakReference.idl
+
+#include "nsISupports.idl"
+
+[scriptable, uuid(9188bc85-f92e-11d2-81ef-0060083a0bcf)]
+interface nsIWeakReference : nsISupports
+	{
+		void QueryReferent( in nsIIDRef uuid, [iid_is(uuid), retval] out nsQIResult result );
+	};
+
+[scriptable, uuid(9188bc86-f92e-11d2-81ef-0060083a0bcf)]
+interface nsISupportsWeakReference : nsISupports
+	{
+		void GetWeakReference( [retval] out nsIWeakReference result );
+	};
+
+%{C++
+
+// typedef nsCOMPtr<nsIWeakReference> nsWeakPtr;
+	// ...this definition had to be moved to nsWeakPtr.h to avoid circular includes, sorry
+
+extern NS_COM nsIWeakReference*
+NS_GetWeakReference( nsISupports* , nsresult* aResult = 0);
+	// ...convenience.  Get a weak reference (if possible) without doing the query yourself
+
+template <class T>
+inline
+nsresult
+CallQueryReferent( nsIWeakReference* aSource, T** aDestination )
+	{
+		NS_PRECONDITION(aSource, "null parameter");
+    NS_PRECONDITION(aDestination, "null parameter");
+
+		return aSource->QueryReferent(nsCOMTypeInfo<T>::GetIID(), (void**)aDestination);
+	}
+
+%}

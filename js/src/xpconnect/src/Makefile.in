@@ -1,0 +1,87 @@
+#!gmake
+#
+# The contents of this file are subject to the Netscape Public License
+# Version 1.0 (the "NPL"); you may not use this file except in
+# compliance with the NPL.  You may obtain a copy of the NPL at
+# http://www.mozilla.org/NPL/
+#
+# Software distributed under the NPL is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+# for the specific language governing rights and limitations under the
+# NPL.
+#
+# The Initial Developer of this code under the NPL is Netscape
+# Communications Corporation.  Portions created by Netscape are
+# Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+# Reserved.
+#
+
+DEPTH=../../../..
+
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(DEPTH)/config/autoconf.mk
+
+include $(topsrcdir)/config/config.mk
+
+LIBRARY_NAME=xpconnect
+MODULE=xpconnect
+
+# XXX hackage!
+# only copy the .so to components dir on platforms where xptcall is supported
+
+# Unixish x86
+#ifneq (,$(filter SunOS Linux FreeBSD NetBSD BSD_OS,$(OS_ARCH)))
+ifneq (,$(filter solaris2 linux-gnu ,$(OS_ARCH)))
+ifeq (86,$(findstring 86,$(OS_TEST)))
+IS_COMPONENT =  1
+endif
+endif
+
+# Solaris/sparc
+ifneq (,$(filter solaris2,$(OS_ARCH)))
+ifneq (86,$(findstring 86,$(OS_TEST)))
+IS_COMPONENT =  1
+endif
+endif
+
+# NetBSD/m68k
+ifneq (,$(filter NetBSD,$(OS_ARCH)))
+ifneq (,$(filter amiga atari hp300 mac68k mvme68k next68k sun3 sun3x x68k,$(OS_TEST)))
+IS_COMPONENT =  1
+endif
+endif
+
+DEFINES	+= -DJSFILE -DJS_THREADSAFE -DWIN32_LEAN_AND_MEAN -DEXPORT_XPTC_API
+
+CPPSRCS=		\
+	nsXPConnect.cpp		\
+	xpcarbitrary.cpp	\
+	xpccomponents.cpp	\
+	xpccontext.cpp		\
+	xpcconvert.cpp		\
+	xpcjsid.cpp	\
+	xpclog.cpp			\
+	xpcmaps.cpp			\
+	xpcmodule.cpp	\
+	xpcthrower.cpp		\
+	xpcwrappedjs.cpp	\
+	xpcwrappedjsclass.cpp	\
+	xpcwrappednative.cpp	\
+	xpcwrappednativeclass.cpp	\
+	$(NULL)
+
+ifneq (,$(filter-out mingw32, $(OS_ARCH))))
+EXTRA_DSO_LDOPTS = \
+	-L$(DIST)/bin \
+	-l$(MOZ_LIB_JS_PREFIX)js \
+	-lxpcom \
+	-lreg \
+	$(NSPR_LIBS) \
+	$(NULL)
+endif
+
+include $(topsrcdir)/config/rules.mk
+

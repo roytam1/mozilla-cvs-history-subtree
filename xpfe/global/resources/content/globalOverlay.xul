@@ -1,0 +1,42 @@
+<?xml version="1.0"?> 
+
+<!DOCTYPE window SYSTEM "chrome://global/locale/globalOverlay.dtd">
+
+
+<overlay id="globalOverlay"
+		 xmlns:html="http://www.w3.org/TR/REC-html40"
+		 xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+<html:script language="JavaScript" src="chrome://global/content/globalOverlay.js"/>
+
+	<!-- File Menu (Exit) -->
+	<menupopup id="fileMenu">
+		<menuitem value="&quitApplicationCmd.label;" onaction="goQuitApplication()"/>
+	</menupopup>
+	
+	<!-- Page Setup menu item -->
+	<menuitem id="pageSetup" value="&pageSetupCmd.label;" onaction="goPageSetup()"/>
+
+	<!-- Help Menu -->
+	<menu id="helpMenu" value="&helpMenu.label;">
+	  <menupopup>
+		<menuitem value="&helpContentCmd.label;" onaction="goHelp()"/>
+		<menuitem value="&referenceLibraryCmd.label;" onaction="goHelp()"/>
+		<menuitem value="&releaseNotesCmd.label;" onaction="goHelp()"/>
+		<menuitem value="&productInfoCmd.label;" onaction="goHelp()"/>
+		<menuseparator/>
+		<menuitem value="&softwareUpdatesCmd.label;" onaction="goHelp()"/>
+		<menuitem value="&registerCmd.label;" onaction="goHelp()"/>
+		<menuitem value="&memberServicesCmd.label;" onaction="goHelp()"/>
+		<menuseparator/>
+		<menuitem value="&internationalCmd.label;" onaction="goHelp()"/>
+		<menuitem value="&securityCmd.label;" onaction="goHelp()"/>
+		<menuitem value="&netwatchCmd.label;" onaction="goHelp()"/>
+		<menuseparator/>
+		<menuitem value="&aboutPluginsCmd.label;" onaction="goHelp()"/>
+		<menuitem value="&aboutFontCmd.label;" onaction="goHelp()"/>
+		<menuitem value="&aboutCmd.label;" onaction="goHelp()"/>
+	  </menupopup>
+	</menu>
+	
+</overlay>		

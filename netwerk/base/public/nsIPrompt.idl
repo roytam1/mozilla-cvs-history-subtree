@@ -1,0 +1,81 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ *
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.0 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
+ *
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
+ */
+
+#include "nsISupports.idl"
+
+[scriptable, uuid(a63f70c0-148b-11d3-9333-00104ba0fd40)]
+interface nsIPrompt : nsISupports
+{
+    /**
+     * Puts up an alert dialog with an OK button.
+     */
+    void Alert(in wstring text);
+
+    /**
+     * Puts up a dialog with OK and Cancel buttons.
+     * @return true for OK, false for Cancel
+     */
+    boolean Confirm(in wstring text);
+
+    /**
+     * Puts up a dialog with OK and Cancel buttons, and
+     * a message with a single checkbox.
+     * @return true for OK, false for Cancel
+     */
+    boolean ConfirmCheck(in wstring text,
+                         in wstring checkMsg,
+                         out boolean checkValue);
+
+    /**
+     * Puts up a dialog with Yes and No buttons.
+     * @return true for OK, false for Cancel
+     */
+    boolean ConfirmYN(in wstring text);
+
+    /**
+     * Puts up a dialog with Yes and No buttons, and
+     * a message with a single checkbox.
+     * @return true for OK, false for Cancel
+     */
+    boolean ConfirmCheckYN(in wstring text,
+                         in wstring checkMsg,
+                         out boolean checkValue);
+
+    /**
+     * Puts up a text input dialog with OK and Cancel buttons.
+     * @return true for OK, false for Cancel
+     */
+    boolean Prompt(in wstring text,
+                   in wstring defaultText, 
+                   out wstring result);
+
+    /**
+     * Puts up a username/password dialog with OK and Cancel buttons.
+     * @return true for OK, false for Cancel
+     */
+    boolean PromptUsernameAndPassword(in wstring text,
+                                      out wstring user, 
+                                      out wstring pwd);
+
+    /**
+     * Puts up a password dialog with OK and Cancel buttons.
+     * @return true for OK, false for Cancel
+     */
+    boolean PromptPassword(in wstring text, 
+                           out wstring pwd);
+};

@@ -1,0 +1,117 @@
+<?xml version="1.0"?> 
+<?xml-stylesheet href="chrome://global/skin/" type="text/css"?> 
+<?xml-stylesheet href="chrome://global/skin/tasksOverlay.css" type="text/css"?> 
+
+
+
+<!DOCTYPE  window SYSTEM "chrome://global/locale/tasksOverlay.dtd">
+
+
+<overlay id="tasksOverlay"
+		 xmlns:html="http://www.w3.org/TR/REC-html40"
+		 xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+<html:script language="JavaScript" src="chrome://global/content/tasksOverlay.js"/>
+
+	<!-- Tasks Menu -->
+	<menu id="tasksMenu" value="&tasksMenu.label;" onaction="ShowWindowFromResource(event.target)" datasources="rdf:window-mediator" ref="NC:WindowMediatorRoot">
+        <template>
+          <rule iscontainer="true" isempty="false">
+		    <menupopup>
+              <menu uri="..." value="rdf:http://home.netscape.com/NC-rdf#Name"/>
+			</menupopup>
+          </rule>
+          <rule rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator">
+            <menupopup>
+			  <menuseparator uri="..." />
+			</menupopup>
+          </rule>
+          <rule>
+		    <menupopup>
+              <menuitem uri="..." value="rdf:http://home.netscape.com/NC-rdf#Name"/>
+			</menupopup>
+          </rule>
+        </template>
+
+       <menupopup>
+		<menuitem value="&navigatorCmd.label;" onaction="toNavigator()"/>
+		<menuitem value="&messengerCmd.label;" onaction="toMessengerWindow()"/>
+		<menuitem value="&editorCmd.label;"    onaction="toEditor();" />
+        <menuitem value="&textEditorCmd.label;"    onaction="toNewTextEditorWindow();" />
+		<menuseparator/>
+		<menuitem value="&addressBookCmd.label;" onaction="toAddressBook()"/>
+		<menuitem value="&newsgroupsCmd.label;" onaction="toNewsgroups()"/>
+		<menuseparator/>
+		<menu value="&toolsMenu.label;">
+		  <menupopup>
+			<menuitem value="&historyCmd.label;" onaction="toHistory()"/>
+			<menuitem value="&securityInfoCmd.label;" onaction="toSecurityInfo()"/>
+			<menuitem value="&messageCenterCmd.label;" onaction="toMessengerCenter()"/>
+			<menuitem value="&importUtilCmd.label;" onaction="toImport()"/>
+			<menuitem value="&javaConsoleCmd.label;" onaction="toJavaConsole()"/>
+		  </menupopup>
+		</menu>
+		<menuseparator/>
+	  </menupopup>
+	</menu>
+
+	 <toolbox id="taskbox">
+		 <toolbar id="taskbar" chromeclass="status">
+
+			  <popup id="mozillaPopup">
+			    <menu>
+			    	<menuitem value="&bonsai.label;" onaction="OpenTaskURL('http://cvs-mirror.mozilla.org/webtools/bonsai/toplevel.cgi?treeid=SeaMonkey');"/>
+			    	<menuitem value="&bugzillaButton.label;" onaction="OpenTaskURL('http://bugzilla.mozilla.org');"/>
+			    </menu>
+			  </popup>
+			  
+			  <popup id="shoppingPopup">
+			    <menu>
+			    	<menuitem value="&booksButton.label;" onaction="OpenTaskURL('http://www.fatbrain.com' );"/>
+			    	<menuitem value="&cdButton.label;" onaction="OpenTaskURL('http://www.cdnow.com');" />
+			    	<menuitem value="&lifeButton.label;" onaction="OpenTaskURL('http://www.match.com');"/>
+			    </menu>
+			  </popup>
+			  
+			   <popup id="windowPopup" >
+			    <menu onaction="ShowWindowFromResource(event.target)" datasources="rdf:window-mediator" ref="NC:WindowMediatorRoot" >
+                  <template>
+                    <rule iscontainer="true" isempty="false">
+                      <menu uri="..." value="rdf:http://home.netscape.com/NC-rdf#Name"/>
+                    </rule>
+                    <rule rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator">
+                      <menuseparator uri="..." />
+                    </rule>
+                    <rule>
+                      <menuitem uri="..." value="rdf:http://home.netscape.com/NC-rdf#Name"/>
+                    </rule>
+                  </template>
+			    </menu>
+			  </popup>
+			
+			  
+		  	 <box align="horizontal">
+	  			
+	  	 		<titledbutton align="left" id="mini-nav" value="" onclick="toNavigator();"/>
+	  	 		<titledbutton align="left" id="mini-mail" value="" onclick="toMessengerWindow()"/>
+	  	 		<titledbutton align="left" id="mini-addr" value="" onclick="toAddressBook()"/>
+	  	 		<titledbutton align="left" id="mini-comp" value="" onclick="toEditor();" />
+		      </box>
+			  <spring flex="100%"/>
+		 	  <box align="horizontal">
+	  	 		<titledbutton align="left"  class="popup" popup="mozillaPopup" tooltip="aTooltip" tooltiptext="Mozilla development info"
+				   popupanchor="bottomright" value="&mozillaButton.label;" />
+	  	 		
+	  	 		<titledbutton align="left"  class="popup" popup="shoppingPopup"
+				   popupanchor="topleft" popupalign="bottomleft" value="&shoppingButton.label;" />
+	  	 
+				   
+				<titledbutton align="left" class="popup" value="&openWinButton.label;" popup="windowPopup"
+				 popupanchor="topleft" popupalign="bottomleft"  />
+	          </box>
+			  <spring flex="100%"/>
+		   	 
+		  </toolbar>
+	</toolbox>
+	
+</overlay>		
