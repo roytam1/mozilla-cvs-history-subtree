@@ -744,7 +744,7 @@ RDFElementImpl::InsertBefore(nsIDOMNode* aNewChild, nsIDOMNode* aRefChild, nsIDO
     // It's possible that mDocument will be null for an element that's
     // not in the content model (e.g., somebody is working on a
     // "scratch" element that has been removed from the content tree).
-    if (ElementIsInDocument()) {
+    if (mDocument) {
         nsIDOMNodeObserver* obs;
         if (NS_SUCCEEDED(mDocument->QueryInterface(nsIDOMNodeObserver::GetIID(), (void**) &obs))) {
             obs->OnInsertBefore(this, aNewChild, aRefChild);
@@ -768,7 +768,7 @@ RDFElementImpl::ReplaceChild(nsIDOMNode* aNewChild, nsIDOMNode* aOldChild, nsIDO
     // It's possible that mDocument will be null for an element that's
     // not in the content model (e.g., somebody is working on a
     // "scratch" element that has been removed from the content tree).
-    if (ElementIsInDocument()) {
+    if (mDocument) {
         nsIDOMNodeObserver* obs;
         if (NS_SUCCEEDED(mDocument->QueryInterface(nsIDOMNodeObserver::GetIID(), (void**) &obs))) {
             obs->OnReplaceChild(this, aNewChild, aOldChild);
@@ -792,7 +792,7 @@ RDFElementImpl::RemoveChild(nsIDOMNode* aOldChild, nsIDOMNode** aReturn)
     // It's possible that mDocument will be null for an element that's
     // not in the content model (e.g., somebody is working on a
     // "scratch" element that has been removed from the content tree).
-    if (ElementIsInDocument()) {
+    if (mDocument) {
         nsIDOMNodeObserver* obs;
         if (NS_SUCCEEDED(mDocument->QueryInterface(nsIDOMNodeObserver::GetIID(), (void**) &obs))) {
             obs->OnRemoveChild(this, aOldChild);
@@ -816,7 +816,7 @@ RDFElementImpl::AppendChild(nsIDOMNode* aNewChild, nsIDOMNode** aReturn)
     // It's possible that mDocument will be null for an element that's
     // not in the content model (e.g., somebody is working on a
     // "scratch" element that has been removed from the content tree).
-    if (ElementIsInDocument()) {
+    if (mDocument) {
         nsIDOMNodeObserver* obs;
         if (NS_SUCCEEDED(mDocument->QueryInterface(nsIDOMNodeObserver::GetIID(), (void**) &obs))) {
             obs->OnAppendChild(this, aNewChild);
