@@ -2075,8 +2075,7 @@ NS_IMETHODIMP nsAddrDatabase::GetCardValue(nsIAbCard *card, const char *name, PR
   nsAutoString tempString;
   rv = GetStringColumn(cardRow, token, tempString);
   if (NS_FAILED(rv)) {
-    // if you migrated from older versions, or switched between
-    // a mozilla build and a commercial build, which have different columns.
+    // not all cards are going this column
     *value = nsnull;
     return NS_OK;
   }

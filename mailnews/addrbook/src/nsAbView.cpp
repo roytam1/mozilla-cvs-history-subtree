@@ -234,6 +234,9 @@ NS_IMETHODIMP nsAbView::Init(const char *aURI, nsIAbViewListener *abViewListener
   if (nsCRT::strcmp(colID, NS_LITERAL_STRING(GENERATED_NAME_COLUMN_ID).get()) && mCards.Count()) {
     nsIAbCard *card = ((AbCard *)(mCards.ElementAt(0)))->card;
     nsXPIDLString value;
+    // XXX need to check if _Generic is valid.  GetCardValue() will always return NS_OK for _Generic
+    // we're going to have to ask mDirectory if it is.
+    // it might not be.  example:  _ScreenName is valid in Netscape, but not Mozilla.
     rv = GetCardValue(card, colID, getter_Copies(value));
     if (NS_FAILED(rv))
       actualSortColumn = NS_LITERAL_STRING(GENERATED_NAME_COLUMN_ID).get();
@@ -426,10 +429,8 @@ nsresult nsAbView::GetCardValue(nsIAbCard *card, const PRUnichar *colID, PRUnich
     nsCAutoString column;
     column.AssignWithConversion(colID);
 
-    if (colID[0] == '_') {
-      // needs to fail if illegal value (think, running mozilla & ns)
+    if (colID[0] == '_')
       rv = mDirectory->GetValueForCard(card, column.get(), _retval);
-    }
     else 
       rv = card->GetCardUnicharValue(column.get(), _retval);
   }
