@@ -44,6 +44,7 @@
 #include "nsIClassInfo.h"
 #include "nsPIDOMWindow.h"
 #include "nsIInterfaceRequestorUtils.h"
+#include "nsIDocument.h"
 //XXX get rid of this:
 #include "nsSVGAtoms.h"
 
