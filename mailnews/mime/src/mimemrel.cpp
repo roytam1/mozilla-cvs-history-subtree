@@ -112,6 +112,7 @@
  */
 #include "nsCOMPtr.h"
 #include "mimemrel.h"
+#include "mimemapl.h"
 #include "prmem.h"
 #include "prprf.h"
 #include "prlog.h"
@@ -464,10 +465,21 @@ MimeMultipartRelated_output_child_p(MimeObject *obj, MimeObject* child)
 			PR_FREEIF(base_url);
 			PR_Free(location);
 			if (absolute) {
-				char* partnum = mime_part_address(child);
-				if (partnum) {
+        nsCAutoString partnum;
+        char * partNumStr = mime_part_address(child);
+        partnum.Assign(partNumStr); 
+        PR_FREEIF(partNumStr); 
+        if (!partnum.IsEmpty()) {
+          /*
+            AppleDouble part need special care: we need to output only the data fork part of it.
+            The problem at this point is that we haven't yet decoded the children of the AppleDouble
+            part therfore we will have to hope the datafork is the second one!
+          */
+          if (mime_typep(child, (MimeObjectClass *) &mimeMultipartAppleDoubleClass))
+            partnum.Append(".2");
+
 					char* part;
-					part = mime_set_url_part(obj->options->url, partnum,
+          part = mime_set_url_part(obj->options->url, (char *) partnum.get(),
 											 PR_FALSE);
 					if (part) {
 					    /* If there's a space in the url, escape the url.
@@ -513,7 +525,6 @@ MimeMultipartRelated_output_child_p(MimeObject *obj, MimeObject* child)
 						   part URL that was given to us. */
 						if (temp != part) PR_Free(part);
 					}
-					PR_Free(partnum);
 				}
 			}
 		}
@@ -539,7 +550,6 @@ MimeMultipartRelated_output_child_p(MimeObject *obj, MimeObject* child)
 			PR_FREEIF(relobj->base_url);
 			relobj->base_url = base_url;
 		}
-
 	}
 	if (obj->options && !obj->options->write_html_p
 #ifdef MIME_DRAFTS
