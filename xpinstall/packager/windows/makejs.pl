@@ -80,7 +80,7 @@ $foundLongFiles   = 0;
 print "copy \"$topsrcdir/xpinstall/packager/common/share.t\" $outTempFile\n";
 copy("$topsrcdir/xpinstall/packager/common/share.t", "$outTempFile");
 print "\ntype $inJstFile >> $outTempFile";
-system("type $inJstFile >> $outTempFile");
+system("cat $inJstFile >> $outTempFile");
 
 # Open the input .template file
 open(fpInTemplate, $outTempFile) || die "\ncould not open $outTempFile: $!\n";
