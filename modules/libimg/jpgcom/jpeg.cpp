@@ -64,6 +64,9 @@ PR_END_EXTERN_C
 /* Normal JFIF markers can't have more bytes than this. */
 #define MAX_JPEG_MARKER_LENGTH  (((PRUint32)1 << 16) - 1)
 
+int il_debug;
+PRLogModuleInfo *il_log_module = NULL;
+
 /*
  * States that the jpeg decoder might be in
  */
