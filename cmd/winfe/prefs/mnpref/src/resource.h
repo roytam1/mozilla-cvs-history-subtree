@@ -139,6 +139,7 @@
 #define IDC_OFFLINE_MODE                1001
 #define IDC_AUTO_SELECT                 1001
 #define IDC_DOWNLOAD_BY_MSG             1001
+#define IDC_PREVIOUS_STATE              1001
 #define IDC_GENERAL                     1002
 #define IDC_ASK_ME                      1002
 #define IDC_DOWNLOAD_BY_DATE            1003
@@ -221,6 +222,10 @@
 #define IDC_RADIO_ALWAYS                1052
 #define IDC_COMBO_FORWARD               1052
 #define IDC_COMBO_REPLY                 1053
+#define IDC_ONLINE_RADIO1               1054
+#define IDC_ONLINE_RADIO2               1055
+#define IDC_CHECK_DOWNLOAD              1055
+#define IDC_ONLINE_RADIO3               1056
 #define IDC_SHOW_IN_THREAD              1201
 #define IDC_REUSE_THREAD_WINDOW         1380
 #define IDC_EDIT_ORGANIZATION           1383
