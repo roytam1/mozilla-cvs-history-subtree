@@ -2034,6 +2034,32 @@ function SetUpJunkBar(aMsgHdr)
   goUpdateCommand('button_junk');
 }
 
+function MarkCurrentMessageAsRead()
+{
+  var msgURI = GetLoadedMessage();
+  
+  if (msgURI)
+  {
+    var msgService = messenger.messageServiceFromURI(msgURI);
+    if (msgService)
+    {
+      var msgHdr = msgService.messageURIToMsgHdr(msgURI);
+
+      if (msgHdr)
+      {    
+        var headers = Components.classes["@mozilla.org/supports-array;1"].createInstance( Components.interfaces.nsISupportsArray );
+        headers.AppendElement( msgHdr );
+        msgHdr.folder.markMessagesRead(headers, true);
+      }
+    }
+  }
+}
+
+function ClearPendingReadTimer()
+{
+  return; // do nothing in seamonkey for now. 
+}
+
 function OnMsgLoaded(aUrl)
 {
     if (!aUrl)
@@ -2051,6 +2077,9 @@ function OnMsgLoaded(aUrl)
       var msgHdr = messenger.messageServiceFromURI(msgURI).messageURIToMsgHdr(msgURI);
       SetUpJunkBar(msgHdr);
     }
+
+    // we just finished loading a message. Mark the message as read.
+    MarkCurrentMessageAsRead();
     
     // See if MDN was requested but has not been sent.
     HandleMDNResponse(aUrl);

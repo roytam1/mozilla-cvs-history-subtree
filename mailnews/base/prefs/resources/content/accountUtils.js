@@ -99,10 +99,15 @@ function showMailIntegrationDialog() {
         mapiRegistry = null;
     }
 
+    var prefLocked = false;
+    if (mapiRegistry) { 
+
+      mapiRegistry.registerMailAndNewsClient(); // when verifying the accounts, make sure we have registered our app
+                                                // as a mail and news reader with the OS.
+
     // showDialog is TRUE only if we did not bring up this dialog already
     // and we are not the default mail client
-    var prefLocked = false;
-    if (mapiRegistry && mapiRegistry.showDialog) {
+      if (mapiRegistry.showDialog) {
         const prefbase = "system.windows.lock_ui.";
         try {
             var prefService = Components.classes["@mozilla.org/preferences-service;1"]
@@ -123,6 +128,7 @@ function showMailIntegrationDialog() {
         catch (ex) {
           dump("mapi code failed:  " + ex + "\n");
         }
+      }
     }
 }
 

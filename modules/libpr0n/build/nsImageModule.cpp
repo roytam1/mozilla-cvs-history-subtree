@@ -60,6 +60,7 @@
 
 #ifdef IMG_BUILD_jpeg
 // jpeg
+#include "nsJPEGEncoder.h"
 #include "nsJPEGDecoder.h"
 #endif
 
@@ -84,6 +85,8 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsGIFDecoder2)
 #ifdef IMG_BUILD_jpeg
 // jpeg
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsJPEGDecoder)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsJPEGEncoder)
+
 #endif
 
 #ifdef IMG_BUILD_bmp
@@ -204,6 +207,10 @@ static const nsModuleComponentInfo components[] =
     NS_JPEGDECODER_CID,
     "@mozilla.org/image/decoder;2?type=image/jpg",
     nsJPEGDecoderConstructor, },
+  { "JPEG encoder",
+    NS_JPEGENCODER_CID, 
+    "@mozilla.org/image/encoder;2?type=image/jpeg",
+    nsJPEGEncoderConstructor, },
 #endif
 
 #ifdef IMG_BUILD_bmp

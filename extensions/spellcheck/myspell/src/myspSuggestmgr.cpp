@@ -104,8 +104,13 @@ nsresult myspSuggestMgr::suggest(char ***slst,const nsAFlatCString &word, PRUint
     nsug=*num;
   }
 
+  // perhaps we made a typical fault of spelling
+  res = replchars(wlst, word, &nsug);
+
   // did we forget to add a char
+  if ((nsug < maxSug) && NS_SUCCEEDED(res)){
   res = forgotchar(wlst, word, &nsug);
+  }
 
   // did we swap the order of chars by mistake
   if ((nsug < maxSug) && NS_SUCCEEDED(res)){
@@ -140,6 +145,55 @@ nsresult myspSuggestMgr::suggest(char ***slst,const nsAFlatCString &word, PRUint
   return res;
 }
 
+
+// suggestions for a typical fault of spelling, that
+// differs with more, than 1 letter from the right form.
+nsresult myspSuggestMgr::replchars(char ** wlst,const nsAFlatCString &word, PRUint32 *ns)
+{
+  nsCString candidate;
+  PRBool cwrd;
+  PRUint32 i,k;
+  PRUint32 startOffset, findOffset;
+
+  if (word.Length() < 2 || ! pAMgr) return NS_OK;
+
+  PRUint32 numReplaceTable = pAMgr->getNumReplaceTable();
+  struct mozReplaceTable *replaceTable = pAMgr->getReplaceTable();
+
+  if (replaceTable == nsnull) return NS_OK;
+
+  for (i=0; i < numReplaceTable; i++ ) {
+    startOffset = 0;
+
+    candidate.Assign(word);
+
+    while ((findOffset = candidate.Find(replaceTable[i].pattern, true, startOffset)) != -1) {
+      candidate.Assign(word);
+      candidate.Replace(findOffset, replaceTable[i].pattern.Length(), replaceTable[i].replacement);
+
+      cwrd = PR_TRUE;
+      for(k=0;k < *ns;k++){
+        if (candidate.Equals(wlst[k]) ){ 
+          cwrd = PR_FALSE;
+          break;
+        }
+      }
+
+      if (cwrd && pAMgr->check(candidate)) {
+        if (*ns < maxSug) {
+          wlst[*ns] = ToNewCString(candidate);
+          if(!wlst[*ns])
+            return NS_ERROR_OUT_OF_MEMORY;
+          (*ns)++;
+        } else return NS_OK;
+      }
+
+      startOffset = findOffset + replaceTable[i].pattern.Length();
+    }
+  }
+
+  return NS_OK;
+}
 
 
 // error is wrong char in place of correct one

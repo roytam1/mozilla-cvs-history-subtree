@@ -80,6 +80,7 @@ public:
   nsresult suggest(char ***slst, const nsAFlatCString &word, PRUint32 *num);
 
 protected:
+   nsresult replchars(char **wlst,const  nsAFlatCString &word, PRUint32 *num);
    nsresult forgotchar(char **wlst,const  nsAFlatCString &word, PRUint32 *num);
    nsresult swapchar(char **wlst,const nsAFlatCString &word, PRUint32 *num);
    nsresult extrachar(char **wlst,const nsAFlatCString &word, PRUint32 *num);

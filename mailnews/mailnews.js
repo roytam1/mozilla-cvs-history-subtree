@@ -553,4 +553,8 @@ pref("mail.password_protect_local_cache", false);
 // overridden by stand alone mail
 pref("mail.standalone", false);
 
+// set to true if viewing a message should mark it as read only if the msg is viewed for a specified time interval in seconds
+pref("mailnews.mark_message_read.delay", true); 
+pref("mailnews.mark_message_read.delay.interval", 5); // measured in seconds
+
 pref("mailnews.view.last",0); // 0 == "all" view

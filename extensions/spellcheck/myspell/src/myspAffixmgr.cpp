@@ -67,12 +67,18 @@ static void doubleReverseHack(nsACString &s);
 
 myspAffixMgr::myspAffixMgr() 
 {
+	replaceTable = NULL;
 }
 
 
 myspAffixMgr::~myspAffixMgr() 
 {
   mPersonalDictionary = nsnull;
+
+  if(replaceTable != NULL)
+  {
+   delete[] replaceTable;
+  }
 }
 
 nsresult myspAffixMgr::GetPersonalDictionary(mozIPersonalDictionary * *aPersonalDictionary)
@@ -160,7 +166,7 @@ myspAffixMgr::Load(const nsString& aDictionary)
 // read in aff file and build up prefix and suffix data structures
 nsresult  myspAffixMgr::parse_file(nsIInputStream *strm)
 {
-  PRInt32 j;
+  PRInt32 j, i;
   PRInt32 numents;
   nsLineBuffer *lineBuffer;
   nsresult res;
@@ -175,6 +181,7 @@ nsresult  myspAffixMgr::parse_file(nsIInputStream *strm)
   suffixes.clear();
   
   numents = 0;      // number of affentry structures to parse
+
   char flag='\0';   // affix char identifier
   {  
     PRInt16 ff=0;
@@ -203,6 +210,33 @@ nsresult  myspAffixMgr::parse_file(nsIInputStream *strm)
           cencoding.Assign(Substring(line,pos+1,line.Length()-pos-1));
           cencoding.CompressWhitespace(PR_TRUE,PR_TRUE);
           mEncoding.AssignWithConversion(cencoding.get());
+        } 
+      }
+
+      /* parse in the typical fault correcting table */
+      if (Substring(line,0,3).Equals("REP")) {
+        PRInt32 numFields=SplitString(line,cmds,3);
+
+        if (numFields == 2) numents = atoi(cmds[1].get());
+
+        replaceTable = new mozReplaceTable[numents];
+        numReplaceTable = numents;
+
+        i = 0;
+
+        for (j=0; (j < numents) && moreData; j++) {
+          NS_ReadLine(strm,lineBuffer,line,&moreData);
+          PRInt32 numFields=SplitString(line,cmds,3);
+
+          if(!cmds[0].Equals("REP")){ //consistency check
+            //complain loudly
+            continue;
+          }
+
+          replaceTable[i].pattern = cmds[1].get();
+          replaceTable[i].replacement = cmds[2].get();
+          
+          i++;
         } 
       }
 
@@ -506,4 +540,13 @@ static void doubleReverseHack(nsACString &s)
     if(start == end)break;
     end--;
   }
+}
+
+mozReplaceTable *myspAffixMgr::getReplaceTable() {
+  if (!replaceTable) return nsnull;
+  return replaceTable;
+}
+
+PRUint32 myspAffixMgr::getNumReplaceTable() {
+  return numReplaceTable;
 }

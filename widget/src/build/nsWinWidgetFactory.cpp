@@ -73,6 +73,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsSound)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsTransferable)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsHTMLFormatConverter)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsClipboard)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsClipboardImage)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsClipboardHelper)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDragService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFullScreen)
@@ -123,6 +124,10 @@ static const nsModuleComponentInfo components[] =
     //    "@mozilla.org/widget/clipboard/win;1",
     "@mozilla.org/widget/clipboard;1",
     nsClipboardConstructor },
+  { "nsClipboardImage",
+    NS_CLIPBOARDIMAGE_CID,
+    "@mozilla.org/widget/clipboardimage;1",
+    nsClipboardImageConstructor },
   { "Clipboard Helper",
     NS_CLIPBOARDHELPER_CID,
     "@mozilla.org/widget/clipboardhelper;1",

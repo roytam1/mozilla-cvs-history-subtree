@@ -77,6 +77,10 @@
 
 #define XPRODUCT        1
 
+struct mozReplaceTable {
+  nsCString pattern;
+  nsCString replacement;
+};
 
 class myspPrefix;
 class myspSuffix;
@@ -93,6 +97,8 @@ public:
   nsString get_encoding();
   nsCString get_try_string();
   nsresult Load(const nsString& aDictionary);
+  mozReplaceTable *getReplaceTable();
+  PRUint32 getNumReplaceTable();
 
 protected:
 
@@ -104,6 +110,9 @@ protected:
 
   mozAffixState prefixes;
   mozAffixState suffixes;
+
+  mozReplaceTable *replaceTable;
+  PRUint32 numReplaceTable;
 
   nsCString               trystring;
   nsString                mEncoding;
