@@ -21,16 +21,20 @@
  */
 
 #include "nsISupports.idl"
+
 interface nsIStreamListener;
 interface nsIStreamProvider;
 interface nsIInputStream;
 interface nsIOutputStream;
 interface nsIRequest;
+interface nsIProgressEventSink;
 
 [scriptable, uuid(fd01f9a4-d492-4cf8-b76e-160ffc8c01e8)]
 interface nsITransport : nsISupports
 {
     readonly attribute nsISupports securityInfo;
+
+    attribute nsIProgressEventSink progressEventSink;
 
     nsIInputStream openInputStream(in unsigned long offset,
                                    in unsigned long count,

@@ -829,8 +829,8 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
         }
 
         // Notify the nsIProgressEventSink of the progress...
-        //if (!(nsIChannel::LOAD_BACKGROUND & mLoadAttributes))
-        //    fireStatus(mCurrentState);
+        if (mProgress)
+            fireStatus(mCurrentState);
 
         //
         // If the current state has successfully completed, then move to the
@@ -1310,12 +1310,10 @@ nsresult nsSocketTransport::doReadAsync(PRInt16 aSelectFlags)
             rv = NS_BASE_STREAM_WOULD_BLOCK;
         }
 
-#if 0
-        if (total && !(nsIChannel::LOAD_BACKGROUND & mLoadAttributes) && mEventSink)
+        if (total && mProgress)
             // we don't have content length info at the socket level
             // just pass 0 through.
-            mEventSink->OnProgress(this, mReadContext, mReadOffset, 0);
-#endif
+            mProgress->OnProgress(this, mReadContext, mReadOffset, 0);
     }
     return rv;
 }
@@ -1403,12 +1401,10 @@ nsresult nsSocketTransport::doRead(PRInt16 aSelectFlags)
         "Total bytes read: %d\n\n",
         mHostName, mPort, this, rv, totalBytesWritten));
 
-#if 0
-    if (!(nsIChannel::LOAD_BACKGROUND & mLoadAttributes) && mEventSink)
+    if (mProgress)
         // we don't have content length info at the socket level
         // just pass 0 through.
-        (void)mEventSink->OnProgress(this, mReadContext, mReadOffset, 0);
-#endif
+        mProgress->OnProgress(this, mReadContext, mReadOffset, 0);
 
     return rv;
 }
@@ -1497,12 +1493,10 @@ nsresult nsSocketTransport::doWriteAsync(PRInt16 aSelectFlags)
             rv = NS_BASE_STREAM_WOULD_BLOCK;
         }
 
-#if 0
-        if (total && !(nsIChannel::LOAD_BACKGROUND & mLoadAttributes) && mEventSink)
+        if (total && mProgress)
             // we don't have content length info at the socket level
             // just pass 0 through.
-            mEventSink->OnProgress(this, mWriteContext, mWriteOffset, 0);
-#endif
+            mProgress->OnProgress(this, mWriteContext, mWriteOffset, 0);
     }
     return rv;
 }
@@ -1588,12 +1582,10 @@ nsresult nsSocketTransport::doWrite(PRInt16 aSelectFlags)
         "Total bytes written: %d\n\n",
         mHostName, mPort, this, rv, totalBytesWritten));
 
-#if 0
-    if (!(nsIChannel::LOAD_BACKGROUND & mLoadAttributes) && mEventSink)
+    if (mProgress)
         // we don't have content length info at the socket level
         // just pass 0 through.
-        mEventSink->OnProgress(this, mWriteContext, mWriteOffset, 0);
-#endif
+        mProgress->OnProgress(this, mWriteContext, mWriteOffset, 0);
 
     return rv;
 }
@@ -1763,6 +1755,34 @@ nsSocketTransport::GetSecurityInfo(nsISupports **info)
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsSocketTransport::GetProgressEventSink(nsIProgressEventSink **aResult)
+{
+    NS_ENSURE_ARG_POINTER(aResult);
+    NS_ADDREF(*aResult = mProgress);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSocketTransport::SetProgressEventSink(nsIProgressEventSink *aProgress)
+{
+    mProgress = nsnull;
+  
+    if (aProgress) {
+        nsresult rv;
+        // Now generate a proxied event sink-
+        NS_WITH_SERVICE(nsIProxyObjectManager, 
+                        proxyMgr, kProxyObjectManagerCID, &rv);
+        if (NS_SUCCEEDED(rv)) {
+            rv = proxyMgr->GetProxyForObject(NS_UI_THREAD_EVENTQ, // primordial thread - should change?
+                                             NS_GET_IID(nsIProgressEventSink),
+                                             aProgress,
+                                             PROXY_ASYNC | PROXY_ALWAYS,
+                                             getter_AddRefs(mProgress));
+        }
+    }
+    return NS_OK;
+}
 
 //
 // --------------------------------------------------------------------------
@@ -2533,8 +2553,7 @@ nsSocketTransport::SetSocketConnectTimeout (PRUint32   a_Seconds)
 nsresult
 nsSocketTransport::fireStatus(PRUint32 aCode)
 {
-    if (!mEventSink)
-        return NS_ERROR_FAILURE;
+    NS_ENSURE_TRUE(mProgress, NS_ERROR_FAILURE);
 
     nsresult status;
     switch (aCode) {
@@ -2564,5 +2583,5 @@ nsSocketTransport::fireStatus(PRUint32 aCode)
     }
 
     nsAutoString host; host.AssignWithConversion(mHostName);
-    return mEventSink->OnStatus(this, mReadContext, status, host.GetUnicode());
+    return mProgress->OnStatus(this, mReadContext, status, host.GetUnicode());
 }

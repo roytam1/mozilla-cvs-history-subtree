@@ -34,7 +34,7 @@ interface nsIRequest;
 interface nsIProgressEventSink : nsISupports
 {
     /**
-     * Notify the EventSink that progress as occurred for the URL load.<BR>
+     * Notify the EventSink that progress has occurred for the URL load.<BR>
      */
     void onProgress(in nsIRequest request,
                     in nsISupports ctxt,

@@ -217,8 +217,7 @@ protected:
     PRBool                          mCloseConnectionOnceDone;
     nsSocketState                   mCurrentState;
     nsCOMPtr<nsIRequest>            mDNSRequest;
-    nsCOMPtr<nsIInterfaceRequestor> mCallbacks;
-    nsCOMPtr<nsIProgressEventSink>  mEventSink;
+    nsCOMPtr<nsIProgressEventSink>  mProgress;
     char*                           mHostName;
     PRInt32                         mPort;
     PRIntervalTime                  mLastActiveTime;
