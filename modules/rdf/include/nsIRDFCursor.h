@@ -44,7 +44,9 @@
 class nsIRDFCursor : public nsISupports {
 public:
 
-    NS_IMETHOD Next(RDF_Node next /* in/out */);
+  NS_IMETHOD HasElements(PRBool& hasElements) = 0;
+
+  NS_IMETHOD Next(RDF_NodeStruct& next /* in/out */) = 0;
 
 };
 

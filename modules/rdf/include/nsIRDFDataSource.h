@@ -45,11 +45,13 @@ class nsIRDFDataBase;
 class nsIRDFDataSource : public nsISupports {
 public:
 
+#ifdef RDF_NOT_IMPLEMENTED
   /**
    * Initialize this data source
    */
   NS_IMETHOD Initialize(RDF_String url,
                         nsIRDFResourceManager* m);
+#endif
 
   /**
    * Get the name of this data source.
@@ -93,13 +95,13 @@ public:
   NS_IMETHOD GetTarget(RDF_Resource source,
                        RDF_Resource arcLabel,
                        RDF_ValueType targetType,
-                       RDF_Node* target /* in/out */) = 0;
+                       RDF_NodeStruct& target /* in/out */) = 0;
 
   NS_IMETHOD GetTarget(RDF_Resource source,
                        RDF_Resource arcLabel,
                        RDF_ValueType targetType,
                        PRBool tv,
-                       RDF_Node* target /* in/out */) = 0;
+                       RDF_NodeStruct& target /* in/out */) = 0;
 
   /**
    * Find all children of that are related to the source by the given arc
@@ -153,10 +155,12 @@ public:
 
   /**
    * Query whether an assertion exists in this graph.
+   *
    */
   NS_IMETHOD HasAssertion(RDF_Resource source,
                           RDF_Resource arcLabel,
                           RDF_Node target,
+                          PRBool truthValue /* in/out */,
                           PRBool* hasAssertion /* out */) = 0;
 
   /**

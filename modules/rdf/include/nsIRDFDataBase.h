@@ -43,7 +43,9 @@
 class nsIRDFDataBase : public nsIRDFDataSource {
 public:
 
+#ifdef RDF_NOT_IMPLEMENTED
   NS_IMETHOD Initialize(nsIRDFResourceManager* r) = 0;
+#endif
 
   /*
     Add a data source for the specified URL to the database.
@@ -61,7 +63,7 @@ public:
                            nsIRDFDataSource **source /* out */ ) = 0;
 
   // XXX move these to datasource?
-  NS_IMETHOD DeletaAllArcs(RDF_Resource resource) = 0;
+  NS_IMETHOD DeleteAllArcs(RDF_Resource resource) = 0;
 
 };
 
