@@ -939,7 +939,7 @@ sub run_all_tests {
 	  # unlink("Inbox.msf");
 
 	  $test_result = BloatTest($binary, $build_dir, " -mail", "mail",
-							   $Settings::BloatTestTimeout);
+							   $Settings::MailBloatTestTimeout);
 
 	  # back to build_dir
 	  chdir($build_dir);
