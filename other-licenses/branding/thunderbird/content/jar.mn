@@ -4,4 +4,4 @@ messenger.jar:
 + content/messenger/thunderbird-wizard-badge.png  (thunderbird-wizard-badge.png)
   
 en-US.jar:
-+ locale/en-US/messenger/thunderbird-watermark.png (thunderbird-watermark.png)
++ locale/messenger/thunderbird-watermark.png      (thunderbird-watermark.png)
