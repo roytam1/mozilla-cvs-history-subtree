@@ -110,6 +110,7 @@ nsMathMLmactionFrame::Init(nsIPresContext*  aPresContext,
                            nsIStyleContext* aContext,
                            nsIFrame*        aPrevInFlow)
 {
+  nsresult rv;
   nsAutoString value, prefix;
 
   // Init our local attributes
@@ -179,7 +180,13 @@ nsMathMLmactionFrame::Init(nsIPresContext*  aPresContext,
   }
 
   // Let the base class do the rest
-  return nsMathMLContainerFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
+  rv = nsMathMLContainerFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
+
+#if defined(NS_DEBUG) && defined(SHOW_BOUNDING_BOX)
+  mPresentationData.flags |= NS_MATHML_SHOW_BOUNDING_METRICS;
+#endif
+
+  return rv;
 }
 
 // return the frame whose number is given by the attribute selection="number"
@@ -296,7 +303,7 @@ nsMathMLmactionFrame::Paint(nsIPresContext*      aPresContext,
 {
   const nsStyleDisplay* disp = 
     (const nsStyleDisplay*)mStyleContext->GetStyleData(eStyleStruct_Display);
-  if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer) {
+  if (0 && NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer) {
     if (disp->IsVisible() && mRect.width && mRect.height) {
       // Paint our background and border
       PRIntn skipSides = GetSkipSides();
@@ -319,6 +326,21 @@ nsMathMLmactionFrame::Paint(nsIPresContext*      aPresContext,
   if (childFrame)
     PaintChild(aPresContext, aRenderingContext, aDirtyRect, childFrame, aWhichLayer);
 
+#if defined(NS_DEBUG) && defined(SHOW_BOUNDING_BOX)
+  // visual debug
+  if (NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer &&
+      NS_MATHML_PAINT_BOUNDING_METRICS(mPresentationData.flags))
+  {
+    aRenderingContext.SetColor(NS_RGB(0,0,255));
+
+    nscoord x = mReference.x + mBoundingMetrics.leftBearing;
+    nscoord y = mReference.y - mBoundingMetrics.ascent;
+    nscoord w = mBoundingMetrics.rightBearing - mBoundingMetrics.leftBearing;
+    nscoord h = mBoundingMetrics.ascent + mBoundingMetrics.descent;
+
+    aRenderingContext.DrawRect(x,y,w,h);
+  }
+#endif
   return NS_OK;
 }
 
