@@ -48,6 +48,7 @@
 #include "nsIDOMRange.h"
 #include "nsRange.h"
 #include "nsICharsetConverterManager.h"
+#include "nsHTMLAtoms.h"
 
 static NS_DEFINE_CID(kCharsetConverterManagerCID,
                      NS_ICHARSETCONVERTERMANAGER_CID);
@@ -95,8 +96,14 @@ protected:
                                nsIDOMNode* aEnd,
                                PRInt32 aEndOffset,
                                nsAWritableString& aString);
+  nsresult SerializeRangeContextStart(const nsVoidArray& aAncestorArray,
+                                      nsAWritableString& aString);
+  nsresult SerializeRangeContextEnd(const nsVoidArray& aAncestorArray,
+                                    nsAWritableString& aString);
 
   nsresult FlushText(nsAWritableString& aString, PRBool aForce);
+
+  static PRBool IncludeInContext_HTML(nsIDOMNode *aNode);
 
   nsCOMPtr<nsIDocument>          mDocument;
   nsCOMPtr<nsIDOMSelection>      mSelection;
@@ -109,8 +116,36 @@ protected:
   nsString          mCharset;
   PRUint32          mFlags;
   PRUint32          mWrapColumn;
+
+  PRBool (* mIncludeInContextFP)(nsIDOMNode *aNode);
 };
 
+PRBool
+nsDocumentEncoder::IncludeInContext_HTML(nsIDOMNode *aNode)
+{
+  nsCOMPtr<nsIContent> content(do_QueryInterface(aNode));
+
+  if (!content)
+    return PR_FALSE;
+
+  nsCOMPtr<nsIAtom> tag;
+
+  content->GetTag(*getter_AddRefs(tag));
+
+  if (tag.get() == nsHTMLAtoms::b ||
+      tag.get() == nsHTMLAtoms::i ||
+      tag.get() == nsHTMLAtoms::u ||
+      tag.get() == nsHTMLAtoms::h1 ||
+      tag.get() == nsHTMLAtoms::h2 ||
+      tag.get() == nsHTMLAtoms::h3 ||
+      tag.get() == nsHTMLAtoms::h4 ||
+      tag.get() == nsHTMLAtoms::h5 ||
+      tag.get() == nsHTMLAtoms::h6) {
+    return PR_TRUE;
+  }
+
+  return PR_FALSE;
+}
 
 NS_IMPL_ADDREF(nsDocumentEncoder)
 NS_IMPL_RELEASE(nsDocumentEncoder)
@@ -145,6 +180,12 @@ nsDocumentEncoder::Init(nsIDocument* aDocument,
   mDocument = aDocument;
 
   mMimeType = aMimeType;
+
+  if (mMimeType.Equals(NS_LITERAL_STRING("text/html"))) {
+    mIncludeInContextFP = IncludeInContext_HTML;
+  } else {
+    mIncludeInContextFP = nsnull;
+  }
 
   mFlags = aFlags;
 
@@ -543,10 +584,61 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
     tmpNode->GetParentNode(getter_AddRefs(node));
   }
 
-  nsCAutoString tmpStr; tmpStr.AssignWithConversion(aOutputString);
-  printf ("range = '%s'\n", (const char *)tmpStr);
-
   return NS_OK;
+}
+
+nsresult
+nsDocumentEncoder::SerializeRangeContextStart(const nsVoidArray& aAncestorArray,
+                                              nsAWritableString& aString)
+{
+  if (!mIncludeInContextFP)
+    return NS_OK;
+
+  PRInt32 i = 0;
+  nsresult rv = NS_OK;
+
+  while (1) {
+    nsIDOMNode *node = (nsIDOMNode *)aAncestorArray.ElementAt(i++);
+
+    if (!node)
+      break;
+
+    if (mIncludeInContextFP(node)) {
+      rv = SerializeNodeStart(node, 0, -1, aString);
+
+      if (NS_FAILED(rv))
+        break;
+    }
+  }
+
+  return rv;
+}
+
+nsresult
+nsDocumentEncoder::SerializeRangeContextEnd(const nsVoidArray& aAncestorArray,
+                                            nsAWritableString& aString)
+{
+  if (!mIncludeInContextFP)
+    return NS_OK;
+
+  PRInt32 i = aAncestorArray.Count();
+  nsresult rv = NS_OK;
+
+  while (i) {
+    nsIDOMNode *node = (nsIDOMNode *)aAncestorArray.ElementAt(--i);
+
+    if (!node)
+      break;
+
+    if (mIncludeInContextFP(node)) {
+      rv = SerializeNodeEnd(node, aString);
+
+      if (NS_FAILED(rv))
+        break;
+    }
+  }
+
+  return rv;
 }
 
 nsresult
@@ -581,24 +673,41 @@ nsDocumentEncoder::SerializeRangeToString(nsIDOMRange *aRange,
   if (!commonParent)
     return NS_OK;
 
-  nsVoidArray ancestors;
+  nsVoidArray startAncestors;
 
-  nsRange::FillArrayWithAncestors(&ancestors, start);
-  ancestors.RemoveElementAt(0); // Remove 'start'
+  nsRange::FillArrayWithAncestors(&startAncestors, start);
+  startAncestors.RemoveElementAt(0); // Remove 'start'
 
-  PRInt32 i = ancestors.Count();
+  PRInt32 i = startAncestors.Count();
+
+  nsVoidArray commonAncestors;
+  commonAncestors = startAncestors;
+
+  nsresult rv = NS_OK;
+
+  rv = SerializeRangeContextStart(commonAncestors, aOutputString);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   while (i--) {
-    nsIDOMNode *node = NS_STATIC_CAST(nsIDOMNode *, ancestors.ElementAt(i));
+    nsIDOMNode *node = NS_STATIC_CAST(nsIDOMNode *, startAncestors.ElementAt(i));
 
-    ancestors.RemoveElementAt(i);
+    startAncestors.RemoveElementAt(i);
 
     if (!node || node == commonParent.get())
       break;
   }
 
-  return SerializeRangeNodes(ancestors, commonParent, start, startOffset,
+  rv = SerializeRangeNodes(startAncestors, commonParent, start, startOffset,
                              end, endOffset, aOutputString);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = SerializeRangeContextEnd(commonAncestors, aOutputString);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCAutoString tmpStr; tmpStr.AssignWithConversion(aOutputString);
+  printf ("range = '%s'\n", (const char *)tmpStr);
+
+  return rv;
 }
 
 NS_IMETHODIMP
