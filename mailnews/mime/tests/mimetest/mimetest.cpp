@@ -24,7 +24,6 @@
 #include "nsCOMPtr.h"
 #include "nsIURL.h"
 #include "nsIEventQueueService.h"
-#include "nsINetService.h"
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
 #include "nsIGenericFactory.h"
@@ -39,6 +38,8 @@
 #include "prprf.h"
 #include "nsIAllocator.h" // for the CID
 #include "msgCore.h"
+#include "nsIIOService.h"
+#include "nsMimeEmitterCID.h"
 
 ////////////////////////////////////////////////////////////////////////////////////
 // THIS IS THE STUFF TO GET THE TEST HARNESS OFF THE GROUND
@@ -49,18 +50,21 @@
 #define MIME_DLL  "mime.dll"
 #define PREF_DLL  "xppref32.dll"
 #define UNICHAR_DLL  "uconv.dll"
+#define EMITTER_DLL  "mimeemitter.dll"    // Hack..but it works???
 #elif defined(XP_UNIX) || defined(XP_BEOS)
 #define NETLIB_DLL "libnetlib"MOZ_DLL_SUFFIX
 #define XPCOM_DLL  "libxpcom"MOZ_DLL_SUFFIX
 #define MIME_DLL  "libmime"MOZ_DLL_SUFFIX
 #define PREF_DLL  "libpref"MOZ_DLL_SUFFIX
 #define UNICHAR_DLL  "libunicharutil"MOZ_DLL_SUFFIX
+#define EMITTER_DLL  "libmimeemitter"MOZ_DLL_SUFFIX
 #elif defined(XP_MAC)
 #define NETLIB_DLL "NETLIB_DLL"
 #define XPCOM_DLL  "XPCOM_DLL"
 #define MIME_DLL   "MIME_DLL"
 #define PREF_DLL  "XPPREF32_DLL"
 #define UNICHAR_DLL  "UNICHARUTIL_DLL"
+#define EMITTER_DLL  "MIMEEMITTER_DLL"
 #endif
 
 // {588595CB-2012-11d3-8EF0-00A024A7D144}
@@ -81,16 +85,25 @@ static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kGenericFactoryCID,    NS_GENERICFACTORY_CID);
 
 // netlib definitions....
-static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID);
+static NS_DEFINE_CID(kIOServiceCID,              NS_IOSERVICE_CID);
 
 // Stream converter
 static NS_DEFINE_CID(kStreamConverterCID,    NS_STREAM_CONVERTER_CID);
+
+// Emitters converter
+static NS_DEFINE_CID(kHtmlEmitterCID, NS_HTML_MIME_EMITTER_CID);
+static NS_DEFINE_CID(kXmlEmitterCID, NS_XML_MIME_EMITTER_CID);
+static NS_DEFINE_CID(kRawEmitterCID, NS_RAW_MIME_EMITTER_CID);
 
 nsICharsetConverterManager *ccMan = nsnull;
 
 static nsresult
 SetupRegistry(void)
 {
+  // This line should handle all of the registry setup, but just to be paranoid, I am
+  // leaving all of the rest of the registrations here as well.
+  nsComponentManager::AutoRegister(nsIComponentManager::NS_Startup, NULL /* default */);
+
   // i18n
   nsComponentManager::RegisterComponent(charsetCID, NULL, NULL, UNICHAR_DLL,  PR_FALSE, PR_FALSE);
   nsresult res = nsServiceManager::GetService(charsetCID, kConvMeIID, (nsISupports **)&ccMan);
@@ -101,7 +114,7 @@ SetupRegistry(void)
   }
 
   // netlib
-  nsComponentManager::RegisterComponent(kNetServiceCID,     NULL, NULL, NETLIB_DLL,  PR_FALSE, PR_FALSE);
+  // RICHIE nsComponentManager::RegisterComponent(kNetServiceCID,     NULL, NULL, NETLIB_DLL,  PR_FALSE, PR_FALSE);
   
   // xpcom
   static NS_DEFINE_CID(kAllocatorCID,  NS_ALLOCATOR_CID);
@@ -117,6 +130,9 @@ SetupRegistry(void)
   // mime
   nsComponentManager::RegisterComponent(kStreamConverterCID,   NULL, NULL, MIME_DLL,  PR_FALSE, PR_FALSE);
 
+  nsComponentManager::RegisterComponent(kHtmlEmitterCID, "RFC822 Parser", "component://netscape/messenger/mimeemitter;type=text/html", EMITTER_DLL,  PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponent(kXmlEmitterCID,  "RFC822 Parser", "component://netscape/messenger/mimeemitter;type=raw", EMITTER_DLL,  PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponent(kRawEmitterCID,  "RFC822 Parser", "component://netscape/messenger/mimeemitter;type=text/xml", EMITTER_DLL,  PR_FALSE, PR_FALSE);
   return NS_OK;
 }
 
@@ -137,6 +153,7 @@ public:
       NS_INIT_REFCNT(); 
       mIndentCount = 0;
       mInClosingTag = PR_FALSE;
+      mOutFormat = nsMimeMessageRaw;
     }
 
     virtual ~ConsoleOutputStreamImpl(void) {}
@@ -147,8 +164,13 @@ public:
     // nsIBaseStream interface
     NS_IMETHOD Close(void) 
     {
-      char *note = "<center><hr WIDTH=\"90%\"><br><b>Anything after the above horizontal line is diagnostic output<br>and is not part of the HTML stream!</b></center>";
-      PR_Write(PR_GetSpecialFD(PR_StandardOutput), note, PL_strlen(note));
+      if ((mOutFormat == nsMimeMessageSplitDisplay) ||
+          (mOutFormat == nsMimeMessageBodyDisplay) ||
+          (mOutFormat == nsMimeMessageQuoting))
+      {
+        char *note = "\n<center><hr WIDTH=\"90%\"><br><b>Anything after the above horizontal line is diagnostic output<br>and is not part of the HTML stream!</b></center><pre>\n";
+       PR_Write(PR_GetSpecialFD(PR_StandardOutput), note, PL_strlen(note));
+      }
 
       return NS_OK;
     }
@@ -161,15 +183,24 @@ public:
         return NS_OK;
     }
 
-    nsresult  DoIndent();
+    nsresult    DoIndent();
+    NS_IMETHOD  SetFormat(nsMimeOutputType  aFormat);
 
 private:
-  PRInt32   mIndentCount;
-  PRBool    mInClosingTag;
+  PRInt32             mIndentCount;
+  PRBool              mInClosingTag;
+  nsMimeOutputType    mOutFormat;
 };
 NS_IMPL_ISUPPORTS(ConsoleOutputStreamImpl, nsIOutputStream::GetIID());
 
 #define TAB_SPACES    2
+
+nsresult
+ConsoleOutputStreamImpl::SetFormat(nsMimeOutputType  aFormat)
+{
+  mOutFormat = aFormat;
+  return NS_OK;
+}
 
 // make the html pretty :-)
 nsresult
@@ -188,6 +219,14 @@ nsresult
 ConsoleOutputStreamImpl::Write(const char* aBuf, PRUint32 aCount, PRUint32 *aWriteCount)
 {
   PRUint32 i=0;
+
+  // If raw, don't postprocess...
+  if (mOutFormat == nsMimeMessageRaw)
+  {
+    PR_Write(PR_GetSpecialFD(PR_StandardOutput), aBuf, aCount);
+    *aWriteCount = aCount;
+    return NS_OK;
+  }
 
   for (i=0; i<aCount; i++)
   {
@@ -330,20 +369,19 @@ FixURL(char *url)
 
 // Utility to create a nsIURL object...
 nsresult 
-NewURL(nsIURI** aInstancePtrResult, const nsString& aSpec)
+NewURI(nsIURI** aInstancePtrResult, const char *aSpec)
 {  
-  if (nsnull == aInstancePtrResult) 
-    return NS_ERROR_NULL_POINTER;
-  
-  nsINetService *inet = nsnull;
-  nsresult rv = nsServiceManager::GetService(kNetServiceCID, nsCOMTypeInfo<nsINetService>::GetIID(),
-                                             (nsISupports **)&inet);
-  if (rv != NS_OK) 
-    return rv;
+  nsresult res;
 
-  rv = inet->CreateURL(aInstancePtrResult, aSpec, nsnull, nsnull, nsnull);
-  nsServiceManager::ReleaseService(kNetServiceCID, inet);
-  return rv;
+  NS_WITH_SERVICE(nsIIOService, pService, kIOServiceCID, &res);
+  if (NS_FAILED(res)) 
+    return NS_ERROR_FAILURE;
+
+  res = pService->NewURI(aSpec, nsnull, aInstancePtrResult);
+  if (NS_FAILED(res))
+    return NS_ERROR_FAILURE;
+  else
+    return NS_OK;
 }
 
 int
@@ -373,24 +411,38 @@ main(int argc, char** argv)
   DoRFC822toHTMLConversion(argv[1]);
 
   // Cleanup stuff necessary...
-  NS_RELEASE(ccMan);
+  NS_IF_RELEASE(ccMan);
   return NS_OK;
 }
 
 nsresult
 DoRFC822toHTMLConversion(char *filename)
 {
+  nsresult          rv;
+  char              newURL[1024] = ""; // URL for filename
+  nsIURI            *theURI = nsnull;
+  nsMimeOutputType  outFormat;
+  char              *contentType = nsnull;
+
+  char *opts = PL_strchr(filename, '?');
+  char save;
+  if (opts)
+  {
+    save = *opts;
+    *opts = '\0';
+  }
+
   nsFilePath      inFilePath(filename, PR_TRUE); // relative path.
   nsFileSpec      mySpec(inFilePath);
-  nsresult        rv;
-  char            newURL[1024] = ""; // URL for filename
-  nsIURI          *aURL = nsnull;
 
   if (!mySpec.Exists())
   {
     printf("Unable to open input file %s\n", filename);
     return NS_ERROR_FAILURE;
   }
+
+  if (opts)
+    *opts = save;
 
   // Create a mime parser (nsIStreamConverter)!
   nsCOMPtr<nsIStreamConverter> mimeParser;
@@ -404,7 +456,7 @@ DoRFC822toHTMLConversion(char *filename)
   }
   
   // Create the consumer output stream.. this will receive all the HTML from libmime
-  nsCOMPtr<nsIOutputStream> out = do_QueryInterface(new ConsoleOutputStreamImpl());
+  nsCOMPtr<ConsoleOutputStreamImpl> out = do_QueryInterface(new ConsoleOutputStreamImpl());
   if (!out)
   {
     printf("Failed to create nsIOutputStream\n");
@@ -428,31 +480,39 @@ DoRFC822toHTMLConversion(char *filename)
   // Create an nsIURI object needed for stream IO...
   PR_snprintf(newURL, sizeof(newURL), "file://%s", filename);
   FixURL(newURL);
-  if (NS_FAILED(NewURL(&aURL, nsString(newURL))))
+  if (NS_FAILED(NewURI(&theURI, newURL)))
   {
     printf("Unable to open input file\n");
     return NS_ERROR_FAILURE;
   }
 
   // Set us as the output stream for HTML data from libmime...
-  if (NS_FAILED(mimeParser->SetOutputStream(out, newURL)))
+  if (NS_FAILED(mimeParser->SetOutputStream(out, theURI, nsMimeUnknown, &outFormat, &contentType)))
   {
     printf("Unable to set the output stream for the mime parser...\ncould be failure to create internal libmime data\n");
     return NS_ERROR_FAILURE;
   }
 
-  // Assuming this is an RFC822 message...
-  mimeParser->OnStartBinding(aURL, (const char *) MESSAGE_RFC822);
+  if (contentType)
+  {
+    printf("Content type for output = %s\n", contentType);
+    PR_FREEIF(contentType);
+  }
 
+  out->SetFormat(outFormat);
+
+  // Assuming this is an RFC822 message...
+  mimeParser->OnStartRequest(theURI);
   // Just pump all of the data from the file into libmime...
   while (NS_SUCCEEDED(in->PumpFileStream()))
   {
     PRUint32    len;
     in->GetLength(&len);
-    mimeParser->OnDataAvailable(aURL, in, len);
+    if (mimeParser->OnDataAvailable(theURI, in, 0, len) != NS_OK)
+      break;
   }
 
-  mimeParser->OnStopBinding(aURL, NS_OK, nsnull);
-  NS_RELEASE(aURL);
+  mimeParser->OnStopRequest(theURI, NS_OK, nsnull);
+  NS_RELEASE(theURI);
   return NS_OK;
 }
