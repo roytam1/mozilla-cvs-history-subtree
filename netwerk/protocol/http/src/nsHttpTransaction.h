@@ -36,6 +36,7 @@ class nsHttpRequestHead;
 class nsHttpResponseHead;
 class nsHttpConnection;
 class nsHttpChunkedDecoder;
+class nsIEventQueue;
 
 //-----------------------------------------------------------------------------
 // nsHttpTransaction represents a single HTTP transaction.  It is thread-safe,
@@ -84,9 +85,11 @@ public:
     nsresult OnStopTransaction(nsresult);
 
 private:
-    nsresult ParseLine(char *line);
+    void     ParseLine(char *line);
+    void     ParseLineSegment(char *seg, PRUint32 len);
     nsresult ParseHead(char *, PRUint32 count, PRUint32 *countRead);
     nsresult HandleContent(char *, PRUint32 count, PRUint32 *countRead);
+    nsresult ProxyRestartTransaction(nsIEventQueue *);
 
 private:
     nsCOMPtr<nsIStreamListener>     mListener;
@@ -115,6 +118,7 @@ private:
     PRPackedBool                    mHaveAllHeaders;
     PRPackedBool                    mFiredOnStart;
     PRPackedBool                    mNoContent;       // true if we're expecting an empty entity body
+    PRPackedBool                    mPrematureEOF;
 };
 
 #endif // nsHttpTransaction_h__

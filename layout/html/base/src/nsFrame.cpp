@@ -2825,9 +2825,9 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
       for (;lineFrameCount > 1;lineFrameCount --){
         //result = lastFrame->GetNextSibling(&lastFrame, searchingLine);
         result = it->GetNextSiblingOnLine(lastFrame, searchingLine);
-        if (NS_FAILED(result)){
+        if (NS_FAILED(result) || !lastFrame){
           NS_ASSERTION(0,"should not be reached nsFrame\n");
-          continue;
+          return NS_ERROR_FAILURE;
         }
       }
       GetLastLeaf(aPresContext, &lastFrame);
@@ -3340,8 +3340,13 @@ nsFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
           return ((result) ? result : NS_ERROR_FAILURE);
         }
         result = iter->FindLineContaining(thisBlock, &thisLine);
-        if (NS_FAILED(result) || thisLine <0)
-          return result;
+
+        if (NS_FAILED(result))
+           return result;
+
+        if (thisLine < 0) 
+          return  NS_ERROR_FAILURE;
+
         int edgeCase = 0;//no edge case. this should look at thisLine
         PRBool doneLooping = PR_FALSE;//tells us when no more block frames hit.
         //this part will find a frame or a block frame. if its a block frame
@@ -3592,8 +3597,8 @@ nsFrame::GetFrameFromDirection(nsIPresContext* aPresContext, nsPeekOffsetStruct 
 
     lastFrame = firstFrame;
     for (;lineFrameCount > 1;lineFrameCount --){
-      result = lastFrame->GetNextSibling(&lastFrame);
-      if (NS_FAILED(result)){
+      result = it->GetNextSiblingOnLine(lastFrame, thisLine);
+      if (NS_FAILED(result) || !lastFrame){
         NS_ASSERTION(0,"should not be reached nsFrame\n");
         return NS_ERROR_FAILURE;
       }
@@ -3730,8 +3735,8 @@ nsFrame::GetFrameFromDirection(nsIPresContext* aPresContext, nsPeekOffsetStruct 
 
       lastFrame = firstFrame;
       for (;lineFrameCount > 1;lineFrameCount --){
-        result = lastFrame->GetNextSibling(&lastFrame);
-        if (NS_FAILED(result)){
+        result = it->GetNextSiblingOnLine(lastFrame, thisLine);
+        if (NS_FAILED(result) || !lastFrame){
           NS_ASSERTION(0,"should not be reached nsFrame\n");
           return NS_ERROR_FAILURE;
         }
@@ -4034,21 +4039,22 @@ nsFrame::IsMouseCaptured(nsIPresContext* aPresContext)
 void
 nsFrame::SetDefaultBackgroundColor(nsIPresContext* aPresContext)
 {
-  nsCOMPtr<nsIPresShell> shell;
-  aPresContext->GetShell(getter_AddRefs(shell));
+  nsStyleColor color;
+  mStyleContext->GetStyle(eStyleStruct_Color, color);
 
-  if (shell) {
-    nsCOMPtr<nsIViewManager> vm;
-    shell->GetViewManager(getter_AddRefs(vm));
+  if ((color.mBackgroundFlags & NS_STYLE_BG_COLOR_TRANSPARENT) != 0) {
+    NS_WARNING("Frame setting default background color but it has transparent background!");
+  } else {
+    nsCOMPtr<nsIPresShell> shell;
+    aPresContext->GetShell(getter_AddRefs(shell));
 
-    if (vm) {
-      nsStyleColor color;
-      mStyleContext->GetStyle(eStyleStruct_Color, color);
+    if (shell) {
+      nsCOMPtr<nsIViewManager> vm;
+      shell->GetViewManager(getter_AddRefs(vm));
 
-      vm->SetDefaultBackgroundColor(
-          (color.mBackgroundFlags & NS_STYLE_BG_COLOR_TRANSPARENT) == 0
-             ? color.mBackgroundColor
-             : NS_RGBA(0, 0, 0, 0));
+      if (vm) {
+        vm->SetDefaultBackgroundColor(color.mBackgroundColor);
+      }
     }
   }
 }

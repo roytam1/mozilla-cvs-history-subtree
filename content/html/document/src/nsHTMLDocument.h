@@ -36,6 +36,12 @@
 #include "nsRDFCID.h"
 #include "nsIRDFService.h"
 
+// Doc write dummy request
+#include "nsIChannel.h"
+#include "nsILoadGroup.h"
+#include "nsNetUtil.h"
+
+
 class nsBaseContentList;
 class nsContentList;
 class nsIHTMLStyleSheet;
@@ -187,6 +193,9 @@ protected:
   nsresult ScriptWriteCommon(PRBool aNewlineTerminate);
   nsresult OpenCommon(nsIURI* aUrl);
 
+  nsresult AddDocWriteDummyRequest(void);
+  nsresult RemoveDocWriteDummyRequest(void);
+
   nsIHTMLStyleSheet*    mAttrStyleSheet;
   nsIHTMLCSSStyleSheet* mStyleAttrStyleSheet;
   nsIURI*     mBaseURL;
@@ -194,7 +203,7 @@ protected:
   nsString*   mLastModified;
   nsString*   mReferrer;
   nsDTDMode mDTDMode;
-  nsVoidArray mImageMaps;
+  nsSupportsArray mImageMaps;
 
   nsContentList *mImages;
   nsContentList *mApplets;
@@ -226,6 +235,7 @@ protected:
 
   nsHashtable mNameHashTable;
   nsHashtable mIdHashTable;
+  nsCOMPtr<nsIRequest> mDocWriteDummyRequest;
 };
 
 #endif /* nsHTMLDocument_h___ */
