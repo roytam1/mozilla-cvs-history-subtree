@@ -82,7 +82,6 @@
 #include "nsRegistry.h"
 
 // Logging of debug output
-#define FORCE_PR_LOG /* Allow logging in the release build */
 #include "prlog.h"
 PRLogModuleInfo* nsComponentManagerLog = NULL;
 

@@ -125,7 +125,7 @@
 #include "nsIServiceManager.h"
 #include <stdio.h>
 
-#if (defined(DEBUG) || defined(NS_DEBUG) || defined(FORCE_PR_LOG)) && !defined(WIN16)
+#if (defined(DEBUG) || defined(NS_DEBUG)) && !defined(WIN16)
 // enable logging by default
 #define NS_ENABLE_LOGGING
 #endif

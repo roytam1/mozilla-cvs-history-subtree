@@ -21,8 +21,6 @@
  *   Pierre Phaneuf <pp@ludusdesign.com>
  */
 
-#define FORCE_PR_LOG
-
 #if defined(WIN32)
 #include <strstrea.h>
 #else

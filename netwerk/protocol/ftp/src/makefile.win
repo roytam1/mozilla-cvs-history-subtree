@@ -25,10 +25,6 @@ LIBRARY_NAME=nkftp_s
 
 LCFLAGS = -DWIN32_LEAN_AND_MEAN -D_IMPL_NS_NET
 
-!ifndef MOZ_DEBUG
-LCFLAGS = $(LCFLAGS) -DFORCE_PR_LOG
-!endif
-
 CPP_OBJS =                                        \
         .\$(OBJDIR)\nsFtpProtocolHandler.obj      \
         .\$(OBJDIR)\nsFTPChannel.obj              \

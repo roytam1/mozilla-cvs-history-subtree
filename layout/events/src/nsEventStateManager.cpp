@@ -19,7 +19,6 @@
  *
  * Contributor(s): 
  */
-#define FORCE_PR_LOG
 
 #include "nsCOMPtr.h"
 #include "nsIEventStateManager.h"

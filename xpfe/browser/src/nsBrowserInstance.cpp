@@ -135,9 +135,9 @@ static NS_DEFINE_IID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
 #include "nsIFindComponent.h"
 #ifdef DEBUG_warren
 #include "prlog.h"
-#if defined(DEBUG) || defined(FORCE_PR_LOG)
+#if defined(DEBUG)
 static PRLogModuleInfo* gTimerLog = nsnull;
-#endif /* DEBUG || FORCE_PR_LOG */
+#endif /* DEBUG */
 #endif
 
 // if DEBUG or MOZ_PERF_METRICS are defined, enable the PageCycler
