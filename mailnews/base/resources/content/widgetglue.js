@@ -143,7 +143,7 @@ function MsgEmptyTrash()
                         dump ('found trash folder\n');
                         trashElement.setAttribute('open','');
                     }
-                    var trashSelected = IsSpecialFolderSelected('Trash');
+                    var trashSelected = IsSpecialFolderSelected(MSG_FOLDER_FLAG_TRASH);
                     if(trashSelected)
                     {
                         tree.clearItemSelection();

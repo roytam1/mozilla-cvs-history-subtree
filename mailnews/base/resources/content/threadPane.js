@@ -121,16 +121,21 @@ function MsgComposeDraftMessage()
     ComposeMessage(msgComposeType.Draft, msgComposeFormat.Default, loadedFolder, messageArray);
 }
 
+/* keep in sync with nsMsgFolderFlags.h */
+var MSG_FOLDER_FLAG_TRASH = 0x0100;
+var MSG_FOLDER_FLAG_DRAFTS = 0x0400;
+var MSG_FOLDER_FLAG_TEMPLATES = 0x400000;
+
 function ThreadPaneDoubleClick()
 {
 	var loadedFolder;
 	var messageArray;
 	var messageUri;
 
-	if (IsSpecialFolderSelected("Drafts")) {
+	if (IsSpecialFolderSelected(MSG_FOLDER_FLAG_DRAFTS)) {
 		MsgComposeDraftMessage();
 	}
-	else if(IsSpecialFolderSelected("Templates")) {
+	else if(IsSpecialFolderSelected(MSG_FOLDER_FLAG_TEMPLATES)) {
 		loadedFolder = GetLoadedMsgFolder();
 		messageArray = GetSelectedMessages();
 		ComposeMessage(msgComposeType.Template, msgComposeFormat.Default, loadedFolder, messageArray);
@@ -220,30 +225,17 @@ function MsgSortThreadPane(sortType)
     PersistViewAttributesOnFolder();
 }
 
-function IsSpecialFolderSelected(folderName)
+function IsSpecialFolderSelected(flags)
 {
 	var selectedFolder = GetThreadPaneFolder();
     if (!selectedFolder) return false;
 
-    dump("fix this, we don't need to use RDF for this.\n");
-
-	var id = selectedFolder.URI;
-	var folderResource = RDF.GetResource(id);
-	if(!folderResource) return false;
-
-    var db = GetFolderDatasource();
-
-	var property =
-        RDF.GetResource('http://home.netscape.com/NC-rdf#SpecialFolder');
-    if (!property) return false;
-	var result = db.GetTarget(folderResource, property , true);
-    if (!result) return false;
-	result = result.QueryInterface(Components.interfaces.nsIRDFLiteral);
-    if (!result) return false;
-	if(result.Value == folderName)
-		return true;
-
-	return false;
+    if ((selectedFolder.flags & flags) == 0) {
+        return false;
+    }
+    else {
+        return true;
+    }
 }
 
 function GetThreadOutliner()
