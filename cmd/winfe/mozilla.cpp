@@ -1212,7 +1212,8 @@ BOOL CNetscapeApp::InitInstance()
 	RDF_Init(&initStruct);	// TODO: Can this fail? Want to bail if so.
 	
 	// Initialize the command map used by RDF configurable UI.
-	m_pBrowserCommandMap = CIsomorphicCommandMap::InitializeCommandMap();
+	m_pBrowserCommandMap = CIsomorphicCommandMap::InitializeCommandMap("Browser Commands");
+	m_pCommandToolbarIndices = CIsomorphicCommandMap::InitializeCommandMap("Command Toolbar Bitmap Indices");
 
 // RDF INITIALIZATION ENDS HERE
 

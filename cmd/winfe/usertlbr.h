@@ -91,7 +91,7 @@ public:
     virtual CSize GetMaximalButtonSize();
 
 	virtual BOOL UseLargeIcons() { return FALSE; }
-	virtual void UpdateIconInfo() { DetermineIconType(m_Node, UseLargeIcons()); }
+	virtual void UpdateIconInfo();
 
 	virtual void DrawButtonBitmap(HDC hDC, CRect rcImg);
 
@@ -191,7 +191,7 @@ private:
 
 	static int m_nMinToolbarButtonChars;
 	static int m_nMaxToolbarButtonChars;
-
+	
 public:
 	CRDFToolbar(HT_View theView, int nMaxButtons, int nToolbarStyle, int nPicturesAndTextHeight, int nPicturesHeight,
 				 int nTextHeight);
@@ -222,6 +222,7 @@ public:
 	void FillInToolbar(); // Called to create and place the buttons on the toolbar
 
 	HT_View GetHTView() { return m_ToolbarView; }  // Returns the HT-View for this toolbar.
+	void SetHTView(HT_View v) { m_ToolbarView = v; }
 
 	void SetDragFraction(int i) { m_iDragFraction = i; }
 	int GetDragFraction() { return m_iDragFraction; }
@@ -254,6 +255,8 @@ protected:
 
 public:
 	CRDFToolbarHolder(int maxToolbars, CFrameWnd* pParent);
+	virtual ~CRDFToolbarHolder();
+
 	HT_Pane GetHTPane() { return m_ToolbarPane; }
 	void SetHTPane(HT_Pane p) { m_ToolbarPane = p; }
 	CFrameWnd* GetCachedParentWindow() { return m_pCachedParentWindow; }

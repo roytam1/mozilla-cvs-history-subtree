@@ -28,10 +28,9 @@ private:
 	CMapStringToString mapFromFEToXP;
 
 public:
-	static CIsomorphicCommandMap* InitializeCommandMap();
+	static CIsomorphicCommandMap* InitializeCommandMap(const CString& initType);
 	// This function builds the command map and prepopulates it with the set of commands
-	// that can be responded to.  TODO: Make INIT take an argument indicating which command set
-	// e.g., mail, browser, editor to use.  For now, we're just worrying about the browser.
+	// that can be responded to.  
 
 	void AddItem(CString xpItem, UINT feResource);
 		// Adds an isomorphic entry into the two maps.

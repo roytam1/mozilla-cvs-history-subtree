@@ -138,8 +138,6 @@ int CRDFToolbarButton::Create(CWnd *pParent, int nToolbarStyle, CSize noviceButt
 {
 	m_bookmark = bookmark;
 
-	char *protocol = NULL;
-
 	BOOL bResult = CToolbarButton::Create(pParent, nToolbarStyle, noviceButtonSize, advancedButtonSize,
 		pButtonText, pToolTipText, pStatusText, 0, 0,
 		bitmapSize, TRUE, 0, nMaxTextChars, nMinTextChars, dwButtonStyle);
@@ -147,25 +145,33 @@ int CRDFToolbarButton::Create(CWnd *pParent, int nToolbarStyle, CSize noviceButt
 	if(bResult)
 	{
 		SetNode(pNode);
-		m_nIconType = DetermineIconType(pNode, UseLargeIcons());
-
-		m_nBitmapID = GetBitmapID();
-		m_nBitmapIndex = GetBitmapIndex();
-
-		HDC hDC = ::GetDC(m_hWnd);
-
-		HPALETTE hPalette = WFE_GetUIPalette(GetParentFrame());
-		HBITMAP hBitmap = WFE_LookupLoadAndEnterBitmap(hDC, m_nBitmapID, TRUE, hPalette,
-													   sysInfo.m_clrBtnFace, RGB(255, 0, 255));
-		::ReleaseDC(m_hWnd, hDC);
-
-		SetBitmap(hBitmap, TRUE);
-		
+		UpdateIconInfo();		
 		if (m_menu.m_hMenu == NULL || (m_menu.m_hMenu != NULL && !IsMenu(m_menu.m_hMenu)))
           m_menu.CreatePopupMenu();
 	}
 
 	return bResult;
+}
+
+void CRDFToolbarButton::UpdateIconInfo()
+{
+	m_nIconType = DetermineIconType(m_Node, UseLargeIcons());
+	UINT oldBitmapID = m_nBitmapID;
+	m_nBitmapID = GetBitmapID();
+	if (m_nBitmapID != oldBitmapID)
+	{
+		HDC hDC = ::GetDC(m_hWnd);
+		HPALETTE hPalette = WFE_GetUIPalette(GetParentFrame());
+		HBITMAP hBitmap = WFE_LookupLoadAndEnterBitmap(hDC, m_nBitmapID, TRUE, hPalette,
+													   sysInfo.m_clrBtnFace, RGB(255, 0, 255));
+		::ReleaseDC(m_hWnd, hDC);
+		SetBitmap(hBitmap, TRUE);
+		if (m_nBitmapID == IDB_PICTURES)
+			SetBitmapSize(CSize(23,21));	// Command buttons
+		else SetBitmapSize(CSize(23,17)); // Personal toolbar buttons
+	}
+
+	m_nBitmapIndex = GetBitmapIndex(); 
 }
 
 CSize CRDFToolbarButton::GetMinimalButtonSize(void)
@@ -730,16 +736,31 @@ void CRDFToolbarButton::FillInMenu(HT_Resource theNode)
 
 UINT CRDFToolbarButton::GetBitmapID(void)
 {
-	if (m_nBitmapID != 0)
-		return m_nBitmapID;
+	if (m_Node)
+	{
+		if (strncmp(HT_GetNodeURL(m_Node), "command:", 8) == 0)
+		{
+			// We're an internal command.
+			return IDB_PICTURES;
+		}
+		else if (HT_IsContainer(m_Node))
+			return IDB_BUTTON_FOLDER;
+		else return IDB_USERBTN;
+	}
 
-	if (m_Node && HT_IsContainer(m_Node))
-		return IDB_BUTTON_FOLDER;
-	else return IDB_USERBTN;
+	return IDB_USERBTN;
 }
 
 UINT CRDFToolbarButton::GetBitmapIndex(void)
 {
+	if (m_Node)
+	{
+		if (strncmp(HT_GetNodeURL(m_Node), "command:", 8) == 0)
+		{
+			// We're an internal command.  Access the command bitmap strip.
+			return theApp.m_pCommandToolbarIndices->GetFEResource(HT_GetNodeURL(m_Node));
+		}
+	}
 	return 0;
 }
 
@@ -805,52 +826,59 @@ void CRDFToolbarButton::DrawLocalIcon(HDC hDC, int x, int y)
 
 void CRDFToolbarButton::DrawButtonBitmap(HDC hDC, CRect rcImg)
 {
+	BTN_STATE eState = m_eState;
+
+	if(m_eState == eBUTTON_CHECKED)
+		// A checked button has same bitmap as the normal state with no mouse-over
+		eState = eNORMAL;
+	else if(m_eState == eBUTTON_UP && m_nChecked == 2)
+		// if we are in the mouse over mode, but indeterminate we want our bitmap to have a disabled look
+		eState = eDISABLED;
+
 	UpdateIconInfo();
 	if(m_hBmpImg != NULL)
 	{
 		// Create a scratch DC and select our bitmap into it.
 		HDC pBmpDC  = ::CreateCompatibleDC(hDC);
 		HPALETTE hPalette = WFE_GetUIPalette(GetParentFrame());
-
 		CBitmap BmpImg;
-
 		CPoint ptDst;
-
 		HINSTANCE hInst = AfxGetResourceHandle();
-
-
 		HBITMAP hBmpImg;
-
 		hBmpImg = m_hBmpImg;
-
 		HBITMAP hOldBmp = (HBITMAP)::SelectObject(pBmpDC, hBmpImg);
 		HPALETTE hOldPal = ::SelectPalette(pBmpDC, WFE_GetUIPalette(NULL), TRUE);
 		::RealizePalette(pBmpDC);
 		// Get the image dimensions
 		CSize sizeImg;
 		BITMAP bmp;
-
 		::GetObject(hBmpImg, sizeof(bmp), &bmp);
 		sizeImg.cx = bmp.bmWidth;
 		sizeImg.cy = bmp.bmHeight;
 
-		// Center the image within the button	
-		ptDst.x = (rcImg.Width() >= m_bitmapSize.cx) ?
-			rcImg.left + (((rcImg.Width() - m_bitmapSize.cx) + 1) / 2) : 0;
-		
 		int realBitmapHeight;
 		if(m_nIconType == LOCAL_FILE)
 		{
 			realBitmapHeight = 16;
+			m_bitmapSize.cx = 16;
 		}
 		else if (m_nIconType == ARBITRARY_URL)
 		{
 			realBitmapHeight = m_bitmapSize.cy;
 		}
-		else realBitmapHeight = 17; // Height of personal toolbar button bitmaps.
+		else 
+		{
+			if (m_nBitmapID == IDB_PICTURES)
+				realBitmapHeight = 21;	// Height of command buttons
+			else realBitmapHeight = 17; // Height of personal toolbar button bitmaps.
+		}
 
+		// Center the image within the button	
+		ptDst.x = (rcImg.Width() >= m_bitmapSize.cx) ?
+			rcImg.left + (((rcImg.Width() - m_bitmapSize.cx) + 1) / 2) : rcImg.left;
+		
 		ptDst.y = (rcImg.Height() >= realBitmapHeight) ?
-			rcImg.top + (((rcImg.Height() - realBitmapHeight) + 1) / 2) : 0;
+			rcImg.top + (((rcImg.Height() - realBitmapHeight) + 1) / 2) : rcImg.top;
 
 		// If we're in the checked state, shift the image one pixel
 		if (m_eState == eBUTTON_CHECKED || (m_eState == eBUTTON_UP && m_nChecked == 1))
@@ -863,15 +891,6 @@ void CRDFToolbarButton::DrawButtonBitmap(HDC hDC, CRect rcImg)
 		// whatever colors exist.
 		
 		CPoint bitmapStart;
-
-		BTN_STATE eState = m_eState;
-
-		if(m_eState == eBUTTON_CHECKED)
-			// A checked button has same bitmap as the normal state with no mouse-over
-			eState = eNORMAL;
-		else if(m_eState == eBUTTON_UP && m_nChecked == 2)
-			// if we are in the mouse over mode, but indeterminate we want our bitmap to have a disabled look
-			eState = eDISABLED;
 
         if(m_bIsResourceID)
 			bitmapStart = CPoint(m_nBitmapIndex * m_bitmapSize.cx, m_bEnabled ? realBitmapHeight * eState : realBitmapHeight);
@@ -1043,7 +1062,9 @@ static void toolbarNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event 
 	else if (whatHappened == HT_EVENT_VIEW_DELETED)
 	{
 		CRDFToolbar* pToolbar = (CRDFToolbar*)HT_GetViewFEData(theView);
+		pToolbar->SetHTView(NULL);
 		delete pToolbar;
+		HT_SetViewFEData(theView, NULL);
 	}
 	else if (whatHappened == HT_EVENT_NODE_VPROP_CHANGED && HT_TopNode(theView) == n)
 	{
@@ -1059,8 +1080,8 @@ static void toolbarNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event 
 	else 
 	{
 		CRDFToolbar* pToolbar = (CRDFToolbar*)HT_GetViewFEData(theView);
-	
-		pToolbar->HandleEvent(ns, n, whatHappened);
+		if (pToolbar != NULL)
+			pToolbar->HandleEvent(ns, n, whatHappened);
 	}
 }
 
@@ -1144,8 +1165,6 @@ CRDFToolbar* CRDFToolbar::CreateUserToolbar(HT_View theView, CWnd* pParent)
 
 	if (pToolbar->Create(pParent))
 	{
-		pToolbar->SetButtonsSameWidth(FALSE);
-
 		// Top node is already open.  Fill it in.
 		PRBool openState;
 		HT_Resource topNode = HT_TopNode(theView);
@@ -1160,11 +1179,7 @@ CRDFToolbar* CRDFToolbar::CreateUserToolbar(HT_View theView, CWnd* pParent)
 
 CRDFToolbar::~CRDFToolbar()
 {
-	if (m_ToolbarView)
-	{
-		HT_DeleteView(m_ToolbarView);
-		m_ToolbarView = NULL;
-	}
+	m_ToolbarView = NULL;
 }
 
 int CRDFToolbar::Create(CWnd *pParent)
@@ -1179,6 +1194,19 @@ int CRDFToolbar::Create(CWnd *pParent)
 	m_DropTarget.Toolbar(this);
 
 	DragAcceptFiles(FALSE);
+
+	HT_Resource topNode = HT_TopNode(GetHTView());
+	BOOL fixedSize = FALSE;
+
+	void* data;
+	HT_GetNodeData(topNode, gNavCenter->toolbarButtonsFixedSize, HT_COLUMN_STRING, &data);
+	if (data)
+	{
+		CString answer((char*)data);
+		if (answer.GetLength() > 0 && (answer.GetAt(0) == 'y' || answer.GetAt(0) == 'Y'))
+			fixedSize = TRUE;
+	}
+	SetButtonsSameWidth(fixedSize);
 
 	return result;
 }
@@ -1231,7 +1259,7 @@ void CRDFToolbar::AddHTButton(HT_Resource item)
 	
 	if (buttonSize.cy > m_nRowHeight)
 		m_nRowHeight = buttonSize.cy;
-
+	
 	AddButtonAtIndex(pButton); // Have to put the button in the array, since the toolbar base class depends on it.
 }
 
@@ -1296,7 +1324,9 @@ void CRDFToolbar::ComputeLayoutInfo(CRDFToolbarButton* pButton, int numChars, in
    }
    
    pButton->SetTextWithoutResize(strTxt);
-   pButton->SetButtonSize(pButton->GetButtonSizeFromChars(strTxt, numChars));
+
+   if (!m_bButtonsSameWidth)
+	  pButton->SetButtonSize(pButton->GetButtonSizeFromChars(strTxt, numChars));
 
 // Determine how much additional padding we'll use to fill out a row if this button doesn't fit.
     int rowUsage = usedSpace % rowWidth;
@@ -1645,6 +1675,16 @@ CRDFToolbarHolder::CRDFToolbarHolder(int maxToolbars, CFrameWnd* pParentWindow)
 	m_pCachedParentWindow = pParentWindow;
 }
 
+CRDFToolbarHolder::~CRDFToolbarHolder()
+{
+	if (m_ToolbarPane)
+	{
+		HT_Pane oldPane = m_ToolbarPane;
+		m_ToolbarPane = NULL;
+		HT_DeletePane(oldPane);
+	}
+}
+
 void CRDFToolbarHolder::InitializeRDFData()
 {
 	HT_Notification ns = new HT_NotificationStruct;
@@ -1660,17 +1700,29 @@ void CRDFToolbarHolder::InitializeRDFData()
 	}
 }
 	
-CIsomorphicCommandMap* CIsomorphicCommandMap::InitializeCommandMap() 
+CIsomorphicCommandMap* CIsomorphicCommandMap::InitializeCommandMap(const CString& initType) 
 {
 	CIsomorphicCommandMap* result = new CIsomorphicCommandMap();
 
-	// Enter the builtin browser commands into the map.
-	result->AddItem("command:back", ID_NAVIGATE_BACK);
-	result->AddItem("command:forward", ID_NAVIGATE_FORWARD);
-	result->AddItem("command:reload", ID_NAVIGATE_RELOAD);
-	result->AddItem("command:print", ID_FILE_PRINT);
-	result->AddItem("command:stop", ID_NAVIGATE_INTERRUPT);
-
+	if (initType == "Browser Commands")
+	{
+		// Enter the builtin browser commands into the map.
+		result->AddItem("command:back", ID_NAVIGATE_BACK);
+		result->AddItem("command:forward", ID_NAVIGATE_FORWARD);
+		result->AddItem("command:reload", ID_NAVIGATE_RELOAD);
+		result->AddItem("command:home", ID_GO_HOME);
+		result->AddItem("command:print", ID_FILE_PRINT);
+		result->AddItem("command:stop", ID_NAVIGATE_INTERRUPT);
+	}
+	else if (initType == "Command Toolbar Bitmap Indices")
+	{
+		result->AddItem("command:back", 0);
+		result->AddItem("command:forward", 1);
+		result->AddItem("command:reload", 2);
+		result->AddItem("command:home", 3);
+		result->AddItem("command:print", 7);
+		result->AddItem("command:stop", 8);
+	}
 	return result;
 }
 
