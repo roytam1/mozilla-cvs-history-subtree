@@ -30,7 +30,6 @@ MODULE		= plugin
 
 DIRS		= base/public
 
-ifndef MOZ_THUNDERBIRD
 DIRS		+= base/src 
 
 # These subdirs rely on GTK libraries and header files, it is not
@@ -68,8 +67,6 @@ ifdef ENABLE_TESTS
 ifneq (,$(filter WINNT Darwin Linux,$(OS_ARCH)))
 DIRS		+= tools/sdk
 endif
-endif
-
 endif
 
 include $(topsrcdir)/config/rules.mk
