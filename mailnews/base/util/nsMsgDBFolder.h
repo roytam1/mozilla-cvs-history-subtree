@@ -117,6 +117,8 @@ public:
   NS_IMETHOD GetOfflineStoreInputStream(nsIInputStream **outputStream);
   NS_IMETHOD IsCommandEnabled(const char *command, PRBool *result);
   NS_IMETHOD MatchOrChangeFilterDestination(nsIMsgFolder *oldFolder, PRBool caseInsensitive, PRBool *changed);
+  NS_IMETHOD GetStringProperty(const char *propertyName, char **propertyValue);
+  NS_IMETHOD SetStringProperty(const char *propertyName, const char *propertyValue);
 
 protected:
   virtual nsresult ReadDBFolderInfo(PRBool force);
