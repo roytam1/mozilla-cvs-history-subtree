@@ -289,7 +289,14 @@ GetFileNameForPrintSettings(nsIPrintSettings* aPS)
   rv = bundle->GetStringFromName(NS_LITERAL_STRING("PrintToFile").get(), getter_Copies(title));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = filePicker->Init(nsnull, title.get(), nsIFilePicker::modeSave);
+  nsICOMPtr<nsIWindowWatcher> wwatch =
+    do_GetService(NS_WINDOWWATCHER_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIDOMWindow> window;
+  wwatch->GetActiveWindow(getter_AddRefs(window));
+
+  rv = filePicker->Init(window, title, nsIFilePicker::modeSave);
   NS_ENSURE_SUCCESS(rv, rv);
  
   rv = filePicker->AppendFilters(nsIFilePicker::filterAll);
@@ -310,7 +317,7 @@ GetFileNameForPrintSettings(nsIPrintSettings* aPS)
         }
       }
       if (!leafName.IsEmpty()) {
-        rv = filePicker->SetDefaultString(leafName.get());
+        rv = filePicker->SetDefaultString(leafName);
       }
       NS_ENSURE_SUCCESS(rv, rv);
     }
