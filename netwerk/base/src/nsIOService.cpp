@@ -232,6 +232,7 @@ nsIOService::Init()
     if (observerService) {
         observerService->AddObserver(this, kProfileChangeNetTeardownTopic, PR_TRUE);
         observerService->AddObserver(this, kProfileChangeNetRestoreTopic, PR_TRUE);
+        observerService->AddObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, PR_TRUE);
     }
     
     return NS_OK;
@@ -247,9 +248,6 @@ nsIOService::~nsIOService()
         temp = NS_STATIC_CAST(nsISupports*, mURLParsers[i]);
         NS_IF_RELEASE(temp);
     }
-    (void)SetOffline(PR_TRUE);
-    if (mFileTransportService)
-        (void)mFileTransportService->Shutdown();
 }   
 
 NS_METHOD
@@ -1009,22 +1007,27 @@ nsIOService::Observe(nsISupports *subject,
                      const char *topic,
                      const PRUnichar *data)
 {
-    if (!nsCRT::strcmp(topic, NS_PREFBRANCH_PREFCHANGE_TOPIC_ID)) {
+    if (!strcmp(topic, NS_PREFBRANCH_PREFCHANGE_TOPIC_ID)) {
         nsCOMPtr<nsIPrefBranch> prefBranch = do_QueryInterface(subject);
         if (prefBranch)
             PrefsChanged(prefBranch, NS_ConvertUCS2toUTF8(data).get());
     }
-    else if (!nsCRT::strcmp(topic, kProfileChangeNetTeardownTopic)) {
+    else if (!strcmp(topic, kProfileChangeNetTeardownTopic)) {
         if (!mOffline) {
             SetOffline(PR_TRUE);
             mOfflineForProfileChange = PR_TRUE;
         }
     }
-    else if (!nsCRT::strcmp(topic, kProfileChangeNetRestoreTopic)) {
+    else if (!strcmp(topic, kProfileChangeNetRestoreTopic)) {
         if (mOfflineForProfileChange) {
             SetOffline(PR_FALSE);
             mOfflineForProfileChange = PR_FALSE;
         }    
+    }
+    else if (!strcmp(topic, NS_XPCOM_SHUTDOWN_OBSERVER_ID)) {
+        (void)SetOffline(PR_TRUE);
+        if (mFileTransportService)
+            (void)mFileTransportService->Shutdown();
     }
     return NS_OK;
 }
