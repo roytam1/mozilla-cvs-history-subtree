@@ -22,14 +22,18 @@
 #include "nscore.h"
 #include "nsISupports.h"
 
-// the UI will interact with the mail data source via the 
-// nsIRDFDataSource interfaces. The following methods are mostly
-// for netlib to talk to the database. It needs to be able to
-// add/delete an account, folder or message. 
+/*
+  Interfaces for the mail data source.
+
+  The UI will interact with the mail data source via the
+  nsIRDFDataSource interface. The following methods are mostly for
+  netlib to talk to the database. It needs to be able to add/delete an
+  account, folder or message.
+ */
 
 // {669F3361-9EAF-11d2-80B4-006097B76B8E}
 #define NS_IRDFMAILDATAOURCE_IID \
-{ 0x669f3361, 0x9eaf, 0x11d2, { 0x80, 0xb4, 0x0, 0x60, 0x97, 0xb7, 0x6b, 0x8e } };
+{ 0x669f3361, 0x9eaf, 0x11d2, { 0x80, 0xb4, 0x0, 0x60, 0x97, 0xb7, 0x6b, 0x8e } }
 
 class nsIRDFMailAccount;
 class nsIRDFMailFolder;
@@ -37,18 +41,24 @@ class nsIRDFMailMessage;
 
 class nsIRDFMailDataSource : public nsIRDFDataSource {
 public:
-
-  NS_IMETHOD AddAccount (nsIRDFMailAccount* folder) = 0;
+    /**
+     * Add the specified mail account to the data source.
+     */
+    NS_IMETHOD AddAccount (nsIRDFMailAccount* folder) = 0;
   
-  NS_IMETHOD RemoveAccount (nsIRDFMailAccount* folder) = 0;
-
+    /**
+     * Remove the specified mail account from the data source.
+     */
+    NS_IMETHOD RemoveAccount (nsIRDFMailAccount* folder) = 0;
 };
 
 // {9D2792E0-9EAE-11d2-80B4-006097B76B8E}
 #define NS_IMAILACCOUNT_IID \
-{ 0x9d2792e0, 0x9eae, 0x11d2, { 0x80, 0xb4, 0x0, 0x60, 0x97, 0xb7, 0x6b, 0x8e } };
+{ 0x9d2792e0, 0x9eae, 0x11d2, { 0x80, 0xb4, 0x0, 0x60, 0x97, 0xb7, 0x6b, 0x8e } }
 
-
+/**
+ * A resource specialization for mail accounts.
+ */
 class nsIRDFMailAccount : public nsIRDFResource {
 public:
 
@@ -65,8 +75,11 @@ public:
 
 // {9D2792E1-9EAE-11d2-80B4-006097B76B8E}
 #define NS_IMAILFOLDER_IID \
-{ 0x9d2792e1, 0x9eae, 0x11d2, { 0x80, 0xb4, 0x0, 0x60, 0x97, 0xb7, 0x6b, 0x8e } };
+{ 0x9d2792e1, 0x9eae, 0x11d2, { 0x80, 0xb4, 0x0, 0x60, 0x97, 0xb7, 0x6b, 0x8e } }
 
+/**
+ * A resource specialization for mail folders.
+ */
 class nsIRDFMailFolder : public nsIRDFResource {
 public:
 
@@ -83,8 +96,11 @@ public:
 
 // {9D2792E2-9EAE-11d2-80B4-006097B76B8E}
 #define NS_IMAILMESSAGE_IID \
-{ 0x9d2792e2, 0x9eae, 0x11d2, { 0x80, 0xb4, 0x0, 0x60, 0x97, 0xb7, 0x6b, 0x8e } };
+{ 0x9d2792e2, 0x9eae, 0x11d2, { 0x80, 0xb4, 0x0, 0x60, 0x97, 0xb7, 0x6b, 0x8e } }
 
+/**
+ * A resource specialization for mail messages.
+ */
 class nsIRDFMailMessage : public nsIRDFResource {
 public:
    
@@ -96,7 +112,7 @@ public:
 
     NS_IMETHOD GetDate(nsIRDFLiteral**  result) = 0;
 
-    NS_IMETHOD GetContent(char** result) = 0; 
+    NS_IMETHOD GetContent(const char* result) = 0; 
 
     NS_IMETHOD GetMessageID(nsIRDFLiteral** id) = 0;
 

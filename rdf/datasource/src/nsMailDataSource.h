@@ -16,73 +16,35 @@
  * Reserved.
  */
 
-#include <ctype.h> // for toupper()
-#include <stdio.h>
-#include "nscore.h"
-#include "nsIRDFCursor.h"
-#include "nsIRDFDataSource.h"
-#include "nsIRDFNode.h"
-#include "nsIRDFObserver.h"
-#include "nsIRDFResourceFactory.h"
-#include "nsIServiceManager.h"
-#include "nsString.h"
-#include "nsVoidArray.h"  // XXX introduces dependency on raptorbase
-#include "nsRDFCID.h"
-#include "rdfutil.h"
-#include "nsIRDFMail.h"
-#include "nsIRDFService.h"
-#include "plhash.h"
-#include "plstr.h"
-#include "prmem.h"
-#include "prio.h"
 
-static NS_DEFINE_IID(kIRDFArcsInCursorIID,     NS_IRDFARCSINCURSOR_IID);
-static NS_DEFINE_IID(kIRDFArcsOutCursorIID,    NS_IRDFARCSOUTCURSOR_IID);
-static NS_DEFINE_IID(kIRDFAssertionCursorIID,  NS_IRDFASSERTIONCURSOR_IID);
-static NS_DEFINE_IID(kIRDFCursorIID,           NS_IRDFCURSOR_IID);
-static NS_DEFINE_IID(kIRDFDataSourceIID,       NS_IRDFDATASOURCE_IID);
-static NS_DEFINE_IID(kIRDFLiteralIID,          NS_IRDFLITERAL_IID);
-static NS_DEFINE_IID(kIRDFMailAccountIID,      NS_IMAILACCOUNT_IID);
-static NS_DEFINE_IID(kIRDFMailDataSourceIID,   NS_IRDFMAILDATAOURCE_IID);
-static NS_DEFINE_IID(kIRDFMailFolderIID,       NS_IMAILFOLDER_IID);
-static NS_DEFINE_IID(kIRDFMailMessageIID,      NS_IMAILMESSAGE_IID);
-static NS_DEFINE_IID(kIRDFNodeIID,             NS_IRDFNODE_IID);
-static NS_DEFINE_IID(kIRDFResourceIID,         NS_IRDFRESOURCE_IID);
-static NS_DEFINE_IID(kIRDFResourceFactoryIID,  NS_IRDFRESOURCEFACTORY_IID);
-static NS_DEFINE_IID(kIRDFServiceIID,          NS_IRDFSERVICE_IID);
-static NS_DEFINE_IID(kISupportsIID,            NS_ISUPPORTS_IID);
-static NS_DEFINE_CID(kRDFServiceCID,           NS_RDFSERVICE_CID);
-static NS_DEFINE_CID(kRDFInMemoryDataSourceCID, NS_RDFINMEMORYDATASOURCE_CID);
+/*
 
-static const char kMailRoot[]  = "MailRoot";
+  Class declarations for mail data source resource types.
 
-#define NC_NAMESPACE_URI "http://home.netscape.com/NC-rdf#"
-DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, child);
-DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, subject);
-DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, from);
-DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, date);
-DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, Name);
-DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, Folder);
-DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, Column);
-DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, Columns);
-DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, Title);
-DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, user);
-DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, account);
-DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, host);
+  XXX Should these be factored out into their own implementation files, etc.?
 
-#define BUFF_SIZE 4096
-#define getMem(x) PR_Calloc(1,(x))
+*/
+
+#ifndef nsMailDataSource_h__
+#define nsMailDataSource_h__
+
+////////////////////////////////////////////////////////////////////////
+// NS_DECL_IRDFRESOURCE, NS_IMPL_IRDFRESOURCE
+//
+//   Convenience macros for implementing the RDF resource interface.
+//
+//   XXX It might make sense to move these macros to nsIRDFResource.h?
+
+#define NS_DECL_IRDFRESOURCE \
+    NS_IMETHOD EqualsNode(nsIRDFNode* node, PRBool* result) const;\
+    NS_IMETHOD GetValue(const char* *uri) const;\
+    NS_IMETHOD EqualsResource(const nsIRDFResource* resource, PRBool* result) const;\
+    NS_IMETHOD EqualsString(const char* uri, PRBool* result) const;
 
 
-
-// The RDF service manager. Cached in the mail data source's
-// constructor
-static nsIRDFService* gRDFService = nsnull;
-
-
-#define RDF_RESOURCE_METHODS \
+#define NS_IMPL_IRDFRESOURCE(__class) \
 NS_IMETHODIMP \
-EqualsNode(nsIRDFNode* node, PRBool* result) const {\
+__class::EqualsNode(nsIRDFNode* node, PRBool* result) const {\
     nsresult rv;\
     nsIRDFResource* resource;\
     if (NS_SUCCEEDED(node->QueryInterface(kIRDFResourceIID, (void**) &resource))) {\
@@ -96,73 +58,102 @@ EqualsNode(nsIRDFNode* node, PRBool* result) const {\
     return rv;\
 }\
 NS_IMETHODIMP \
-GetValue(const char* *uri) const{\
+__class::GetValue(const char* *uri) const{\
     if (!uri)\
         return NS_ERROR_NULL_POINTER;\
     *uri = mURI;\
     return NS_OK;\
 }\
 NS_IMETHODIMP \
-EqualsResource(const nsIRDFResource* resource, PRBool* result) const {\
+__class::EqualsResource(const nsIRDFResource* resource, PRBool* result) const {\
     if (!resource || !result)  return NS_ERROR_NULL_POINTER;\
     *result = (resource == (nsIRDFResource*) this);\
     return NS_OK;\
 }\
 NS_IMETHODIMP \
-EqualsString(const char* uri, PRBool* result) const {\
+__class::EqualsString(const char* uri, PRBool* result) const {\
     if (!uri || !result)  return NS_ERROR_NULL_POINTER;\
     *result = (PL_strcmp(uri, mURI) == 0);\
     return NS_OK;\
 }
 
-class MailDataSource :  public nsIRDFMailDataSource 
+
+
+/**
+ * The mail data source.
+ */
+class MailDataSource : public nsIRDFMailDataSource 
 {
 private:
-    char*       mURI;
-    nsVoidArray* mObservers;
-    nsIRDFService* mSrv;
+    char*          mURI;
+    nsVoidArray*   mObservers;
 
     // internal methods
-    nsresult InitAccountList (void) ;
+    nsresult InitAccountList (void);
     nsresult AddColumns (void);
-    PRBool peq (nsIRDFResource* r1, nsIRDFResource* r2) ;
 
 public:
   
     NS_DECL_ISUPPORTS
 
-    MailDataSource(void) ;
-    virtual ~MailDataSource (void) ;
+    MailDataSource(void);
+    virtual ~MailDataSource (void);
 
     // nsIRDFMailDataSource  methods
-    NS_IMETHOD AddAccount (nsIRDFMailAccount* folder) ;
+    NS_IMETHOD AddAccount (nsIRDFMailAccount* folder);
     NS_IMETHOD RemoveAccount (nsIRDFMailAccount* folder);
-    NS_IMETHOD Init(const char* uri) ;
-    NS_IMETHOD GetURI(const char* *uri) const ;
 
-    //nsIRDFDataSource methods
-    NS_IMETHOD GetSource(nsIRDFResource* property, nsIRDFNode* target,
-                         PRBool tv,  nsIRDFResource** source /* out */);
+    // nsIRDFDataSource methods
+    NS_IMETHOD Init(const char* uri);
+
+    NS_IMETHOD GetURI(const char* *uri) const;
+
+    NS_IMETHOD GetSource(nsIRDFResource* property,
+                         nsIRDFNode* target,
+                         PRBool tv,
+                         nsIRDFResource** source /* out */);
+
     NS_IMETHOD GetTarget(nsIRDFResource* source,
-                         nsIRDFResource* property,   PRBool tv,  nsIRDFNode** target) ;
+                         nsIRDFResource* property,
+                         PRBool tv,
+                         nsIRDFNode** target);
+
     NS_IMETHOD GetSources(nsIRDFResource* property,
-                          nsIRDFNode* target, PRBool tv, nsIRDFAssertionCursor** sources) ;
-    NS_IMETHOD GetTargets(nsIRDFResource* source,  nsIRDFResource* property,    
-                          PRBool tv,   nsIRDFAssertionCursor** targets) ;
-    NS_IMETHOD Assert(nsIRDFResource* source, nsIRDFResource* property, 
-                      nsIRDFNode* target,  PRBool tv) ;
+                          nsIRDFNode* target,
+                          PRBool tv,
+                          nsIRDFAssertionCursor** sources);
+
+    NS_IMETHOD GetTargets(nsIRDFResource* source,
+                          nsIRDFResource* property,    
+                          PRBool tv,
+                          nsIRDFAssertionCursor** targets);
+
+    NS_IMETHOD Assert(nsIRDFResource* source,
+                      nsIRDFResource* property, 
+                      nsIRDFNode* target,
+                      PRBool tv);
+
     NS_IMETHOD Unassert(nsIRDFResource* source,
-                        nsIRDFResource* property, nsIRDFNode* target) ;
+                        nsIRDFResource* property,
+                        nsIRDFNode* target);
+
     NS_IMETHOD HasAssertion(nsIRDFResource* source,
-                            nsIRDFResource* property, nsIRDFNode* target,
-                            PRBool tv,    PRBool* hasAssertion) ;
-    NS_IMETHOD AddObserver(nsIRDFObserver* n) ;
-    NS_IMETHOD RemoveObserver(nsIRDFObserver* n) ;
+                            nsIRDFResource* property,
+                            nsIRDFNode* target,
+                            PRBool tv,
+                            PRBool* hasAssertion);
+
+    NS_IMETHOD AddObserver(nsIRDFObserver* n);
+
+    NS_IMETHOD RemoveObserver(nsIRDFObserver* n);
+
     NS_IMETHOD ArcLabelsIn(nsIRDFNode* node,
-                           nsIRDFArcsInCursor** labels) ;
+                           nsIRDFArcsInCursor** labels);
+
     NS_IMETHOD ArcLabelsOut(nsIRDFResource* source,
                             nsIRDFArcsOutCursor** labels); 
-    NS_IMETHOD Flush() ;
+
+    NS_IMETHOD Flush();
 
     // caching frequently used resources
     nsIRDFResource* mResourceChild;
@@ -178,72 +169,78 @@ public:
     nsIRDFResource* mResourceColumns;
 
     nsIRDFDataSource* mMiscMailData;
-
 };
 
-
-// THE mail data source.
-static MailDataSource* gMailDataSource = nsnull;
 
 class MailAccount : public nsIRDFMailAccount 
 {
 private:
-    char*                mURI ;        
+    char*                mURI;        
     nsresult InitMailAccount (const char* uri);
 
 public:
+    MailAccount (const char* uri);
+    MailAccount (char* uri,  nsIRDFLiteral* user,  nsIRDFLiteral* host);
+    virtual ~MailAccount (void);
     
     NS_DECL_ISUPPORTS
-
-    RDF_RESOURCE_METHODS
+    NS_DECL_IRDFRESOURCE
 
     NS_IMETHOD GetUser(nsIRDFLiteral**  result) const;
-    NS_IMETHOD GetName(nsIRDFLiteral**  result) const ;
-    NS_IMETHOD GetHost(nsIRDFLiteral**  result) const ;
-    NS_IMETHOD AddFolder (nsIRDFMailFolder* folder) ;
-    NS_IMETHOD RemoveFolder (nsIRDFMailFolder* folder) ;
-
-    MailAccount (const char* uri) ;
-    MailAccount (char* uri,  nsIRDFLiteral* user,  nsIRDFLiteral* host) ;
-    virtual ~MailAccount (void) ;
+    NS_IMETHOD GetName(nsIRDFLiteral**  result) const;
+    NS_IMETHOD GetHost(nsIRDFLiteral**  result) const;
+    NS_IMETHOD AddFolder (nsIRDFMailFolder* folder);
+    NS_IMETHOD RemoveFolder (nsIRDFMailFolder* folder);
 };
-
-typedef enum {
-    UNINITIALIZED,
-    INIT_IN_PROGRESS,
-    WRITE_IN_PROGRESS,
-    OK
-} MailFolderStatus;
 
 
 class MailFolder : public nsIRDFMailFolder 
 {
 private:
-    nsVoidArray    mMessages;
-    FILE*          mSummaryFile;
-    MailFolderStatus   mStatus;
-    char*                             mURI ;
+    enum MailFolderStatus {
+        eMailFolder_Uninitialized,
+        eMailFolder_InitInProgress,
+        eMailFolder_WriteInProgress,
+        eMailFolder_OK
+    };
+
+    nsVoidArray      mMessages;
+    FILE*            mSummaryFile;
+    MailFolderStatus mStatus;
+    char*            mURI;
 
 public:
+    MailFolder (const char* uri);
+    virtual ~MailFolder (void);
 
     NS_DECL_ISUPPORTS
+    NS_DECL_IRDFRESOURCE
 
-    RDF_RESOURCE_METHODS
+    NS_IMETHOD GetAccount(nsIRDFMailAccount** account);
+    NS_IMETHOD GetName(nsIRDFLiteral**  result) const;
+    NS_IMETHOD GetMessageList (nsVoidArray** result);
+    NS_IMETHOD AddMessage (nsIRDFMailMessage* msg);
+    NS_IMETHOD RemoveMessage (nsIRDFMailMessage* msg);
 
-    NS_IMETHOD GetAccount(nsIRDFMailAccount** account) ;
-    NS_IMETHOD GetName(nsIRDFLiteral**  result) const ;
-    NS_IMETHOD GetMessageList (nsVoidArray** result) ;
-    NS_IMETHOD AddMessage (nsIRDFMailMessage* msg) ;
-    NS_IMETHOD RemoveMessage (nsIRDFMailMessage* msg) ;
-    MailFolder (const char* uri) ;
-    virtual ~MailFolder (void) ;
-    nsresult  AddMessage(PRUnichar* uri, MailFolder* folder,
-                         nsIRDFResource* from, nsIRDFLiteral* subject, nsIRDFLiteral* date,
-                         int summaryFileOffset, int mailFileOffset, char* flags, 
-                         nsIRDFLiteral* messageID) ;
-    nsresult AddMessage(PRUnichar* uri, MailFolder* folder,
-                        nsIRDFResource* from, nsIRDFLiteral* subject, nsIRDFLiteral* date,
-                        int mailFileOffset, char* flags, nsIRDFLiteral* messageID) ;    
+    nsresult  AddMessage(PRUnichar* uri,
+                         MailFolder* folder,
+                         nsIRDFResource* from,
+                         nsIRDFLiteral* subject,
+                         nsIRDFLiteral* date,
+                         int summaryFileOffset,
+                         int mailFileOffset,
+                         char* flags, 
+                         nsIRDFLiteral* messageID);
+
+    nsresult AddMessage(PRUnichar* uri,
+                        MailFolder* folder,
+                        nsIRDFResource* from,
+                        nsIRDFLiteral* subject,
+                        nsIRDFLiteral* date,
+                        int mailFileOffset,
+                        char* flags,
+                        nsIRDFLiteral* messageID);    
+
     nsresult ReadSummaryFile(char* uri);
 };
 
@@ -260,27 +257,32 @@ private:
     nsIRDFLiteral*  mDate;
     nsIRDFLiteral*  mMessageID;
     char            mFlags[4];
-    char*           mURI ;
+    char*           mURI;
     
 public:
+    MailMessage (const char* uri);
+    virtual ~MailMessage (void);
+
     NS_DECL_ISUPPORTS
+    NS_DECL_IRDFRESOURCE
     
-    RDF_RESOURCE_METHODS
-    
-    NS_IMETHOD GetFolder(nsIRDFMailFolder**  result) ;
-    NS_IMETHOD GetSubject(nsIRDFLiteral**  result) ;
-    NS_IMETHOD GetSender(nsIRDFResource**  result) ;
-    NS_IMETHOD GetDate(nsIRDFLiteral**  result) ;
-    NS_IMETHOD GetContent(char** result) ;
-    NS_IMETHOD GetMessageID(nsIRDFLiteral** id) ;
-    NS_IMETHOD GetFlags(char** result) ;
-    NS_IMETHOD SetFlags(const char* result) ;
+    NS_IMETHOD GetFolder(nsIRDFMailFolder**  result);
+    NS_IMETHOD GetSubject(nsIRDFLiteral**  result);
+    NS_IMETHOD GetSender(nsIRDFResource**  result);
+    NS_IMETHOD GetDate(nsIRDFLiteral**  result);
+    NS_IMETHOD GetContent(const char* result);
+    NS_IMETHOD GetMessageID(nsIRDFLiteral** id);
+    NS_IMETHOD GetFlags(char** result);
+    NS_IMETHOD SetFlags(const char* result);
+
     nsresult SetupMessage (MailFolder* folder,
-                           nsIRDFResource* from, nsIRDFLiteral* subject, nsIRDFLiteral* date,
-                           int summaryFileOffset, int mailFileOffset, char* flags, 
-                           nsIRDFLiteral* messageID) ;
-    MailMessage (const char* uri) ;
-    virtual ~MailMessage (void) ;
+                           nsIRDFResource* from,
+                           nsIRDFLiteral* subject,
+                           nsIRDFLiteral* date,
+                           int summaryFileOffset,
+                           int mailFileOffset,
+                           char* flags, 
+                           nsIRDFLiteral* messageID);
 };
 
 class SingletonMailCursor : public nsIRDFAssertionCursor 
@@ -296,22 +298,22 @@ private:
 public:
     SingletonMailCursor(nsIRDFNode* u,
                         nsIRDFResource* s,
-                        PRBool inversep) ;
-    virtual ~SingletonMailCursor(void) ;
+                        PRBool inversep);
+    virtual ~SingletonMailCursor(void);
 
     // nsISupports interface
     NS_DECL_ISUPPORTS
    
     // nsIRDFCursor interface
-    NS_IMETHOD Advance(void) ;
-    NS_IMETHOD GetValue(nsIRDFNode** aValue) ;
+    NS_IMETHOD Advance(void);
+    NS_IMETHOD GetValue(nsIRDFNode** aValue);
 
     // nsIRDFAssertionCursor interface
-    NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource) ;
-    NS_IMETHOD GetSubject(nsIRDFResource** aResource) ;
-    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate) ;
-    NS_IMETHOD GetObject(nsIRDFNode** aObject) ;
-    NS_IMETHOD GetTruthValue(PRBool* aTruthValue) ;
+    NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource);
+    NS_IMETHOD GetSubject(nsIRDFResource** aResource);
+    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate);
+    NS_IMETHOD GetObject(nsIRDFNode** aObject);
+    NS_IMETHOD GetTruthValue(PRBool* aTruthValue);
 };
 
 
@@ -327,20 +329,21 @@ private:
     nsVoidArray*    mArray;
 
 public:
-    ArrayMailCursor(nsIRDFResource* u, nsIRDFResource* s, nsVoidArray* array) ;
-    virtual ~ArrayMailCursor(void) ;
+    ArrayMailCursor(nsIRDFResource* u, nsIRDFResource* s, nsVoidArray* array);
+    virtual ~ArrayMailCursor(void);
     // nsISupports interface
     NS_DECL_ISUPPORTS
    
     // nsIRDFCursor interface
-    NS_IMETHOD Advance(void) ;
-    NS_IMETHOD GetValue(nsIRDFNode** aValue) ;
+    NS_IMETHOD Advance(void);
+    NS_IMETHOD GetValue(nsIRDFNode** aValue);
     // nsIRDFAssertionCursor interface
-    NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource) ;
-    NS_IMETHOD GetSubject(nsIRDFResource** aResource) ;
-    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate) ;
-    NS_IMETHOD GetObject(nsIRDFNode** aObject) ;
-    NS_IMETHOD GetTruthValue(PRBool* aTruthValue) ;
+    NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource);
+    NS_IMETHOD GetSubject(nsIRDFResource** aResource);
+    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate);
+    NS_IMETHOD GetObject(nsIRDFNode** aObject);
+    NS_IMETHOD GetTruthValue(PRBool* aTruthValue);
 };
 
 
+#endif // nsMailDataSource_h__
