@@ -264,6 +264,18 @@ ifneq (,$(MOZ_STATIC_COMPONENTS)$(MOZ_META_COMPONENTS))
 tier_99_dirs   += modules/staticmod
 endif
 
+ifdef BUILD_STATIC_LIBS
+ifneq (,$(ENABLE_TESTS)$(MOZILLA_OFFICIAL))
+tier_99_dirs += webshell/tests/viewer
+ifeq ($(OS_ARCH),WINNT)
+tier_99_dirs += embedding/tests/winEmbed
+ifndef NO_MFC
+tier_99_dirs += embedding/tests/mfcembed/components embedding/tests/mfcembed
+endif # NO_MFC
+endif # WINNT
+endif # ENABLE_TESTS
+endif # BUILD_STATIC_LIBS
+
 tier_99_dirs	+= xpfe/bootstrap
 
 ifdef MOZ_ENABLE_GTK

@@ -178,7 +178,9 @@ include $(topsrcdir)/config/static-config.mk
 
 EXTRA_DEPS	+= $(STATIC_EXTRA_DEPS)
 EXTRA_DSO_LIBS	+= $(STATIC_EXTRA_DSO_LIBS)
+ifneq ($(OS_ARCH),WINNT)
 EXTRA_LIBS	+= -L$(DEPTH)/dist/lib/components
+endif
 EXTRA_LIBS	+= $(EXTRA_DSO_LIBS) $(STATIC_EXTRA_LIBS)
 DEFINES		+= $(STATIC_DEFINES)
 CPPSRCS		+= $(STATIC_CPPSRCS)

@@ -24,10 +24,19 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+ifndef BUILD_STATIC_LIBS
+
 DIRS = winEmbed
 
 ifndef NO_MFC
 DIRS += mfcembed/components mfcembed
 endif
+
+else # BUILD_STATIC_LIBS
+
+# Tests handled by top level makefile to avoid ordering problem when static.
+DIRS = $(NULL)
+
+endif # BUILD_STATIC_LIBS
 
 include $(topsrcdir)/config/rules.mk
