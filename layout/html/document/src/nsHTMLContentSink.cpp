@@ -314,6 +314,7 @@ public:
   nsIHTMLContent* mFrameset;
   nsIHTMLContent* mHead;
   nsString* mTitle;
+  nsString  mUnicodeXferBuf;
 
   PRBool mLayoutStarted;
   PRInt32 mInScript;
@@ -4170,18 +4171,18 @@ HTMLContentSink::OnStreamComplete(nsIStreamLoader* aLoader,
                                   const char* string)
 {
   
-  static nsString unicodeXferBuf;
-  PRUnichar *unicodeString; 
+  PRUnichar *unicodeString;
   nsAutoString characterSet;
   nsICharsetConverterManager  *charsetConv = nsnull;
   nsresult rv = NS_OK;
 
   nsCOMPtr<nsIUnicodeDecoder> unicodeDecoder;
-  //PRUnichar *unicodeString = nsnull;
   PRInt32 unicodeLength;
 
   // charset from document default
   rv = mDocument->GetDocumentCharacterSet(characterSet);
+
+  NS_ASSERTION(NS_SUCCEEDED(rv), "Could not get document charset!");
 
   rv = nsServiceManager::GetService(kCharsetConverterManagerCID, 
                  NS_GET_IID(nsICharsetConverterManager), 
@@ -4198,25 +4199,24 @@ HTMLContentSink::OnStreamComplete(nsIStreamLoader* aLoader,
   if (NS_SUCCEEDED(rv)) {
     rv = unicodeDecoder->GetMaxLength(string, stringLen, &unicodeLength);
     if (NS_SUCCEEDED(rv)) {
-        unicodeXferBuf.SetCapacity(unicodeLength+32);
-        unicodeString = (PRUnichar *) unicodeXferBuf.GetUnicode();
-        //since we are not using the nsString interface to fill the string, we need to set 
-        //nsString.mLength somehow to be able to use the string later at all, SetLength unfortunately just truncates... 
-        nsStr::Initialize(unicodeXferBuf,(char*) unicodeString, unicodeLength+32, unicodeLength+32, eTwoByte, 1);
+        mUnicodeXferBuf.SetCapacity(unicodeLength);
+        unicodeString = (PRUnichar *) mUnicodeXferBuf.GetUnicode();
         rv = unicodeDecoder->Convert(string, (PRInt32 *) &stringLen, unicodeString, &unicodeLength);
         if (NS_SUCCEEDED(rv)) {
-        unicodeString[unicodeLength] = 0; //add this since the unicode converters can't be trusted to do so.    
-        unicodeXferBuf.SetLength(unicodeLength); 
-      }
+          mUnicodeXferBuf.SetLength(unicodeLength);
+        } else {
+          mUnicodeXferBuf.SetLength(0); 
+        }
     }
   }
 
   NS_ASSERTION(NS_SUCCEEDED(rv), "Could not convert Script input to Unicode!");
+  nsAutoString jsUnicodeBuffer(CBufDescriptor(unicodeString, PR_TRUE, unicodeLength+1, unicodeLength));
 
   if (NS_OK == aStatus) {
     PRBool bodyPresent = PreEvaluateScript();
 
-    rv = EvaluateScript(unicodeXferBuf, mScriptURI, 1, mScriptLanguageVersion);
+    rv = EvaluateScript(jsUnicodeBuffer, mScriptURI, 1, mScriptLanguageVersion);
     if (NS_FAILED(rv)) return rv;
 
     PostEvaluateScript(bodyPresent);
@@ -4228,6 +4228,8 @@ HTMLContentSink::OnStreamComplete(nsIStreamLoader* aLoader,
   // We added a reference when the loader was created. This
   // release should destroy it.
   NS_RELEASE(aLoader);
+  //invalidate Xfer buffer content
+  mUnicodeXferBuf.SetLength(0); 
 
   return rv;
 }
