@@ -15,6 +15,66 @@
  * Reserved.
  */
 
+#define HG87729
+#define HG92192 FALSE
+#define HG21872
+#define HG12021 FALSE
+#define HG92725
+#define HG83738
+#define HG29292
+#define HG28926
+#define HG29822
+#define HG29832
+#define HG83734
+#define HG73252
+#define HG93733
+#define HG29828
+#define HG38276
+#define HG36527 xpNewsRC
+#define HG98333 FALSE
+#define HG73267 FALSE
+#define HG87366 if (!port) port = NEWS_PORT;
+#define HG83765
+#define HG37630
+#define HG83178
+#define HG78636
+#define HG72688 FALSE
+#define HG83737
+#define HG71654
+#define HG93663
+#define HG73622
+#define HG87355
+#define HG25525
+#define HG26477
+#define HG78365
+#define HG89732
+#define HG87535
+#define HG87963
+#define HG91476
+#define HG78271
+#define HG25167 return 0;
+#define HG98726
+#define HG82798
+#define HG87266
+#define HG19826
+#define HG82266
+#define HG18262
+#define HG12765
+#define HG16236
+#define HG16215
+#define HG28366
+#define HG18763
+#define HG28736
+#define HG28361
+#define HG23837
+#define HG65276 TRUE
+#define HG38467 "Sorry, no can do."
+#define HG84636
+#define HG48362
+#define HG72626
+#define HG38376
+#define HG38262
+#define HG37252
 #define HG93634
 #define HG56817
 #define HG43241
@@ -352,15 +412,12 @@
 #define HG73678
 #define HG84378
 #define HG84772
-
 #define HG99875 XP_STRDUP
 #define HG99876 XP_STRDUP
 #define HG99879 XP_STRDUP
 #define HG99880
 #define HG99881
 #define HG99882
-
-
 #define HG53784
 #define HG78478
 #define HG89984
@@ -370,3 +427,81 @@
 #define HG75442
 #define HG59731
 #define HG56898
+
+/* WINDOWS FRONT END */
+
+
+#define HG37279
+#define HG83788
+#define HG82387
+#define HG89327
+#define HG27635
+#define HG83722
+#define HG32564
+#define HG73537
+#define HG21675
+#define HG72866 FALSE;
+#define HG27861
+#define HG73221 FALSE
+#define HG73723
+#define HG28751 FALSE;
+#define HG28972
+#define HG29172
+#define HG98271
+#define HG27851
+#define HG98261
+#define HG28768
+#define HG28728
+#define HG26723
+#define HG29792
+#define HG38729
+#define HG81325
+#define HG87322
+#define HG28218
+#define HG76528
+#define HG27625
+#define HG72521
+#define HG87282
+#define HG28762
+#define HG92611
+#define HG11173
+#define HG21215
+#define HG21326
+#define HG22121
+#define HG28363
+#define HG26545
+#define HG12421
+#define HG17231
+#define HG26576
+#define HG26522
+#define HG87236
+#define HG17236
+#define HG87211
+#define HG26722
+#define HG27811
+#define HG27129
+#define HG21198 FALSE, FALSE
+#define HG26726
+#define HG21892
+#define HG28118
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
