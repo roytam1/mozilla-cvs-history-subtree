@@ -516,7 +516,8 @@ js_ReportCompileErrorNumber(JSContext *cx, JSTokenStream *ts, uintN flags,
 
     va_start(ap, errorNumber);
     if (!js_ExpandErrorArguments(cx, js_GetErrorMessage, NULL,
-				errorNumber, &message, &report, ap))
+				errorNumber, &message, &report,
+                                JS_TRUE, ap))
 	return;
     va_end(ap);
 
