@@ -153,7 +153,7 @@ public:
 private:
 #ifdef TX_EXE
     UNICODE_CHAR* toUnicode() const;
-    PRUint32 String::unicodeLength(const UNICODE_CHAR* aData)
+    PRUint32 unicodeLength(const UNICODE_CHAR* aData)
     //Translate UNICODE_CHARs to Chars and output to the provided stream
     friend ostream& operator<<(ostream& output, const String& source);
 #endif
