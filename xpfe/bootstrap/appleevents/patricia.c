@@ -60,9 +60,6 @@
 
 #include "nsAEDefs.h"       // for AE_ASSERT
 
-/* Uncomment to print verbose logging on tree activity */
-//#define VERBOSE
-
 /* Data structures */
 
 typedef struct TNodeTag {
@@ -229,9 +226,7 @@ static int InternalTraverse(TPatriciaTree *tree, TNode *x, NodeTraverseFunction 
 	AE_ASSERT(x, "No node");
 	AE_ASSERT(x->left && x->right, "Left or right child missing");
 
-#ifdef VERBOSE
-	printf("Visiting node %ld with left %ld and right %ld\n", x->nodeID, x->left->nodeID, x->right->nodeID);
-#endif
+	//printf("Visiting node %ld with left %ld and right %ld\n", x->nodeID, x->left->nodeID, x->right->nodeID);
 
 	if (x != tree->headNode) {
 		err = (*traverseFunc)(x->data, x->key, arg1, arg2);
@@ -293,9 +288,7 @@ static int TraverseAndFree(TPatriciaTree *tree, TNode *x, NodeFreeFunction freeF
 
 	err = (*freeFunc)(x->data, x->key, refCon);
 	
-#ifdef VERBOSE
-	printf("Freeing node %ld\n", x->nodeID);
-#endif
+	//printf("Freeing node %ld\n", x->nodeID);
 
 	free(x->key);
 	free(x);
@@ -467,9 +460,7 @@ int PatriciaInsert(PatriciaTreeRef treeRef, NodeReplaceFunction replaceFunc, con
 	else
 		p->left = t;
 	
-#ifdef VERBOSE
-	printf("Inserted node %ld with left %ld and right %ld\n", t->nodeID, t->left->nodeID, t->right->nodeID);
-#endif
+	//printf("Inserted node %ld with left %ld and right %ld\n", t->nodeID, t->left->nodeID, t->right->nodeID);
 
 	tree->numNodes ++;
 	

@@ -29,6 +29,7 @@
 #include "nsIMenu.h"
 
 #include <Menus.h>
+#include "nslog.h"
 
 pascal void nsDynamicMDEFMain(
   short message,
@@ -54,7 +55,7 @@ public:
         
         ~nsInstanceCounter()
         {
-          printf("%s %ld\n", mDescription, mInstanceCount);
+          //PRINTF("%s %ld\n", mDescription, mInstanceCount);
         }
 
         nsInstanceCounter& operator ++()          // prefix
