@@ -679,7 +679,7 @@ NS_IMETHODIMP nsImportGenericAddressBooks::GetProgress(PRInt32 *_retval)
 			sz = 0;
 	}
 	
-	if (m_totalSize)
+  if (m_totalSize)
 		*_retval = ((m_pThreadData->currentTotal + sz) * 100) / m_totalSize;
 	else
 		*_retval = 0;
