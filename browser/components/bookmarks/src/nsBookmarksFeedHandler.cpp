@@ -285,9 +285,17 @@ nsFeedLoadListener::OnStopRequest(nsIRequest *aRequest,
                     PRUint32 expiresTime;
                     
                     if (NS_SUCCEEDED(entryInfo->GetExpirationTime(&expiresTime))) {
-                        expiresTime -= PRInt32(nsInt64(PR_Now()) / nsInt64((PRUint32)PR_USEC_PER_SEC));
-                        if (ttl < expiresTime)
-                            ttl = expiresTime;
+                        PRInt64 temp64, nowtime = PR_Now();
+                        PRUint32 nowsec;
+                        LL_I2L(temp64, PR_USEC_PER_SEC);
+                        LL_DIV(temp64, nowtime, temp64);
+                        LL_L2UI(nowsec, temp64);
+
+                        if (nowsec >= expiresTime) {
+                            expiresTime -= nowsec;
+                            if (ttl < (PRInt32) expiresTime)
+                                ttl = (PRInt32) expiresTime;
+                        }
                     }
                 }
             }
@@ -817,7 +825,7 @@ nsBookmarksService::UpdateLivemarkChildren(nsIRDFResource* aSource)
         PRTime exprTime, nowTime = PR_Now();
         expirationTime->GetValue(&exprTime);
 
-        if (exprTime > nowTime) {
+        if (LL_CMP(exprTime, >, nowTime)) {
             // no need to refresh yet
             rv = Unassert (aSource, kNC_LivemarkLock, kTrueLiteral);
             if (NS_FAILED(rv)) return rv;
