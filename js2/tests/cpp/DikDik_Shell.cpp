@@ -92,7 +92,7 @@ const String ConsoleName = widenCString("<console>");
 const bool showTokens = false;
 
 #define INTERPRET_INPUT 1
-#define SHOW_ICODE 1
+//#define SHOW_ICODE 1
 
 
 JSValue load(Context *cx, JSValue *argv, uint32 argc)
@@ -109,6 +109,11 @@ JSValue print(Context *cx, JSValue *argv, uint32 argc)
     for (uint32 i = 0; i < argc; i++) {
         stdOut << argv[i] << "\n";
     }
+    return kUndefinedValue;
+}
+JSValue debug(Context *cx, JSValue *argv, uint32 argc)
+{
+    cx->mDebugFlag = !cx->mDebugFlag;
     return kUndefinedValue;
 }
 
@@ -140,35 +145,41 @@ static void readEvalPrint(FILE *in, World &world)
 	            stdOut << '\n';
             } else {
                 StmtNode *parsedStatements = p.parseProgram();
-				ASSERT(p.lexer.peek(true).hasKind(Token::end));
+		ASSERT(p.lexer.peek(true).hasKind(Token::end));
+#ifdef DUMP_PROGRAM                    
                 {
-                	PrettyPrinter f(stdOut, 30);
-                	{
-                		PrettyPrinter::Block b(f, 2);
-	                	f << "Program =";
-	                	f.linearBreak(1);
-	                	StmtNode::printStatements(f, parsedStatements);
-                	}
-                	f.end();
+                    PrettyPrinter f(stdOut, 30);
+                    {
+                	    PrettyPrinter::Block b(f, 2);
+	                    f << "Program =";
+	                    f.linearBreak(1);
+	                    StmtNode::printStatements(f, parsedStatements);
+                    }
+                    f.end();
+
                 }
-        	    stdOut << '\n';
+        	stdOut << '\n';
+#endif
 #ifdef INTERPRET_INPUT
-				// Generate code for parsedStatements, which is a linked 
+		// Generate code for parsedStatements, which is a linked 
                 // list of zero or more statements
                 globalObject.defineVariable(widenCString("load"), NULL, JSValue(new JSFunction(load, NULL)));
                 globalObject.defineVariable(widenCString("print"), NULL, JSValue(new JSFunction(print, NULL)));
+                globalObject.defineVariable(widenCString("debug"), NULL, JSValue(new JSFunction(debug, NULL)));
 
                 cx.buildRuntime(parsedStatements);
-                stdOut << globalObject;
+//                stdOut << globalObject;
                 JS2Runtime::ByteCodeModule* bcm = cx.genCode(parsedStatements, ConsoleName);
                 if (bcm) {
 #ifdef SHOW_ICODE
                     stdOut << *bcm;
 #endif
                     JSValue result = cx.interpret(bcm, JSValueList());
-                    stdOut << "result = " << result << "\n";
+//                    stdOut << "result = " << result << "\n";
+                    if (!result.isUndefined())
+                        stdOut << result << "\n";
                     delete bcm;
-                    stdOut << globalObject;
+//                    stdOut << globalObject;
                 }
 #endif
             }
