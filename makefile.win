@@ -54,6 +54,7 @@ DIRS =                         \
   db                           \
   dbm                          \
   modules\libutil              \
+  security                     \
   netwerk                      \
   widget\timer                 \
   js                           \
@@ -65,7 +66,6 @@ DIRS =                         \
   modules\oji                  \
   caps                         \
   intl                         \
-  security                     \
 !endif
 !if defined(LAYOUT_DIRS)
 # the following are associated with the layout engine
