@@ -338,7 +338,18 @@ typedef enum {
 
   /* 12 and over are available on Mozilla builds starting with 0.9.9 */
   NPPVjavascriptPushCallerBool = 12,
-  NPPVpluginKeepLibraryInMemory = 13   /* available in Mozilla 1.0 */
+  NPPVpluginKeepLibraryInMemory = 13,   /* available in Mozilla 1.0 */
+
+  /* 
+   * Mac OSX developers:
+   * There are two executable formats on OSX, CFM and Mach-O.
+   * The ABI of the scriptable interface you hand back to
+   * the browser MUST match the ABI of the browser.
+   * A CFM browser will ask for the variables 10 and 11 above.
+   * A Mach-O browser will ask for these variables:
+   */
+  NPPVpluginScriptableInstanceMachO = 14,
+  NPPVpluginScriptableIIDMachO = 15
 } NPPVariable;
 
 /*

@@ -218,7 +218,9 @@ enum nsPluginInstanceVariable {
     nsPluginInstanceVariable_DoCacheBool             = 5,
     nsPluginInstanceVariable_CallSetWindowAfterDestroyBool = 6,
     nsPluginInstanceVariable_ScriptableInstance      = 10,
-    nsPluginInstanceVariable_ScriptableIID           = 11
+    nsPluginInstanceVariable_ScriptableIID           = 11,
+    nsPluginInstanceVariable_ScriptableInstanceMachO = 14,
+    nsPluginInstanceVariable_ScriptableIIDMachO      = 15
 };
 
 ////////////////////////////////////////////////////////////////////////////////

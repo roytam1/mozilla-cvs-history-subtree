@@ -1274,7 +1274,11 @@ NS_IMETHODIMP ns4xPluginInstance :: GetScriptablePeer(void * *aScriptablePeer)
     return NS_ERROR_NULL_POINTER;
 
   *aScriptablePeer = nsnull;
+#if defined(TARGET_RT_MAC_MACHO)
+  return GetValue(nsPluginInstanceVariable_ScriptableInstanceMachO, aScriptablePeer);
+#else
   return GetValue(nsPluginInstanceVariable_ScriptableInstance, aScriptablePeer);
+#endif
 }
 
 
@@ -1286,5 +1290,9 @@ NS_IMETHODIMP ns4xPluginInstance :: GetScriptableInterface(nsIID * *aScriptableI
     return NS_ERROR_NULL_POINTER;
 
   *aScriptableInterface = nsnull;
+#if defined(TARGET_RT_MAC_MACHO)
+  return GetValue(nsPluginInstanceVariable_ScriptableIIDMachO, (void*)aScriptableInterface);
+#else
   return GetValue(nsPluginInstanceVariable_ScriptableIID, (void*)aScriptableInterface);
+#endif
 }
