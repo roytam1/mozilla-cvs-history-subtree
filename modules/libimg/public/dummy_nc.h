@@ -26,9 +26,6 @@
 #include "prtypes.h"
 #include "net.h"
 
-#include "ilINetContext.h"
-#include "ilIURL.h"
-
 typedef void* IL_NetContext;
 
 PR_BEGIN_EXTERN_C
@@ -39,9 +36,6 @@ IL_NewDummyNetContext(MWContext *context,
 
 extern void
 IL_DestroyDummyNetContext(IL_NetContext *net_cx);
-
-extern ilIURL *
-IL_CreateIURL(URL_Struct *urls);
 
 PR_END_EXTERN_C
 

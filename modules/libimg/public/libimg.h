@@ -28,6 +28,8 @@
 #include "prtypes.h"
 #include "il_types.h"
 
+#include "dummy_nc.h"
+
 #ifdef STANDALONE_IMAGE_LIB
 #include "ilISystemServices.h"
 #include "ilIImageRenderer.h"
@@ -61,10 +63,11 @@ PR_BEGIN_EXTERN_C
    - Initialize internal state.
    - Scan image plug-in directory.
    - Register individual image decoders with the netlib. */
-IL_EXTERN(int)
 #ifdef STANDALONE_IMAGE_LIB
+IL_EXTERN(int)
 IL_Init(ilISystemServices *ss);
 #else
+IL_EXTERN(int)
 IL_Init(void);
 #endif /* STANDALONE_IMAGE_LIB */
 
@@ -87,11 +90,13 @@ IL_Shutdown(void);
 
    The display_context argument is opaque to the image library and is
    passed back to all of the callbacks in IMGCBIF interface. */
+#ifdef STANDALONE_IMAGE_LIB
 IL_EXTERN(IL_GroupContext *)
 IL_NewGroupContext(void *display_context, 
-#ifdef STANDALONE_IMAGE_LIB
                    ilIImageRenderer *image_render);
 #else
+IL_EXTERN(IL_GroupContext *)
+IL_NewGroupContext(void *display_context, 
                    IMGCBIF *image_callbacks);
 #endif /* STANDALONE_IMAGE_LIB */
 
@@ -312,12 +317,12 @@ IL_GetCacheSize(void);
 IL_EXTERN(char *)
 IL_HTMLImageInfo(char *url_address);
 
-#ifndef STANDALONE_IMAGE_LIB
+#ifndef STANDALONE_IMAGE_LIB 
 /* Wacky netlib callback designed to give precedence to streams that block
    layout. */
 IL_EXTERN(PRBool)
 IL_PreferredStream(URL_Struct *urls);
-#endif /* STANDALONE_IMAGE_LIB */
+#endif
 
 /* This is a legacy "safety-valve" routine, called each time a new HTML page
    is loaded.  It causes remaining references to images in the given group

@@ -860,7 +860,7 @@ IL_HTMLImageInfo(char *url_address)
  * the image cache.  Use "about:memory-cache" URL to acess.
  */
 int 
-IL_DisplayMemCacheInfoAsHTML(FO_Present_Types format_out, IL_URL *urls,
+IL_DisplayMemCacheInfoAsHTML(FO_Present_Types format_out, URL_Struct *urls,
                              OPAQUE_CONTEXT *cx)
 {
 	char buffer[2048];

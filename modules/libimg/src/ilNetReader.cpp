@@ -44,6 +44,9 @@ public:
   virtual PRBool StreamCreated(ilIURL *urls, int type);
   
   virtual PRBool IsMulti();
+
+  il_container *GetContainer() {return mContainer;}
+
 private:
   il_container *mContainer;
 };
@@ -149,4 +152,15 @@ IL_NewNetReader(il_container *ic)
     }
 
     return reader;
+}
+
+il_container *
+IL_GetNetReaderContainer(ilINetReader *reader)
+{
+    if (reader != NULL) {
+        return ((NetReaderImpl *)reader)->GetContainer();
+    }
+    else {
+        return NULL;
+    }
 }

@@ -21,7 +21,7 @@
 #include "dummy_nc.h"
 
 extern PRBool
-il_load_image(void *cx, char *image_url, NET_ReloadMethod cache_reload_policy);
+il_load_image(MWContext *cx, char *image_url, NET_ReloadMethod cache_reload_policy);
 
 #include "merrors.h"
 #ifdef STANDALONE_IMAGE_LIB
@@ -32,6 +32,15 @@ il_load_image(void *cx, char *image_url, NET_ReloadMethod cache_reload_policy);
 #endif
 
 #include "il_strm.h"            /* Stream converters. */
+
+/* 
+ * XXX Temporary inclusion of this prototype. It was originally in
+ * libimg.h but needed to be removed since it required C++ compilation.
+ * It should eventually return to libimg.h and may be remove when
+ * a modularized netlib comes around.
+ */
+extern ilIURL *
+IL_CreateIURL(URL_Struct *urls);
 
 static unsigned int
 il_view_write_ready(NET_StreamClass *stream)
@@ -255,7 +264,7 @@ IL_ViewStream(FO_Present_Types format_out, void *newshack, URL_Struct *urls,
         return NULL;
     }
     XP_SPRINTF(image_url, "internal-external-reconnect:%s", urls->address);
-    if (!il_load_image(cx, image_url, urls->force_reload)) {
+    if (!il_load_image((MWContext *)cx, image_url, urls->force_reload)) {
         PR_FREEIF(stream);
         PR_FREEIF(viewstream);
         return NULL;
@@ -307,12 +316,12 @@ IL_NewStream (FO_Present_Types format_out,
 	    return NULL;
 	}
 
- 	NS_RELEASE(reader);
 
 	/* Create stream object */
 	if (!(stream = PR_NEWZAP(NET_StreamClass))) 
 	{
 		ILTRACE(0,("il: MEM il_newstream"));
+   	NS_RELEASE(reader);
 		return 0;
 	}
 
@@ -323,6 +332,9 @@ IL_NewStream (FO_Present_Types format_out,
 	stream->data_object	   = (void *)reader;
 	stream->window_id	   = (MWContext *)cx;
 	stream->put_block	   = (MKStreamWriteFunc) il_first_write;
+
+  // Careful not to call NS_RELEASE until the end, because it sets reader=NULL.
+ 	NS_RELEASE(reader);
 
 	return stream;
 }

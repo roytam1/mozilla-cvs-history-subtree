@@ -44,9 +44,7 @@ LCFLAGS		= $(LCFLAGS)  -DMOZILLA_CLIENT
 LCFLAGS		= $(LCFLAGS) -DDEBUG_GC
 !endif
 
-!ifdef STANDALONE_IMAGE_LIB
 LCFLAGS		= $(LCFLAGS) /TP
-!endif
 
 !ifdef STANDALONE_IMAGE_LIB
 LLIBS=$(DIST)\lib\png.lib \
@@ -116,7 +114,7 @@ LOCAL_INCLUDES=-I../png -I. -I$(DEPTH)/dist/public/zlib
 LIBRARY_NAME=img 
 EXTRA_LIBS=$(DIST)/lib/libzlib.a $(DIST)/lib/libpng.a 
 !ifdef STANDALONE_IMAGE_LIB
-CSRCS=color.c colormap.c dither.c gif.c	if.c ilclient.c il_util.c \
+CSRCS=color.c colormap.c dither.c dummy_nc.c gif.c if.c ilclient.c il_util.c \
     ilNetReader.cpp jpeg.c scale.c xbm.c ipng.c	png_png.c xpcompat.cpp
 REQUIRES=zlib nspr jpeg util img png xpcom
 C_OBJS=.\$(OBJDIR)\color.obj .\$(OBJDIR)\colormap.obj \
@@ -124,16 +122,17 @@ C_OBJS=.\$(OBJDIR)\color.obj .\$(OBJDIR)\colormap.obj \
     .\$(OBJDIR)\ilclient.obj .\$(OBJDIR)\il_util.obj \
     .\$(OBJDIR)\ilNetReader.obj .\$(OBJDIR)\jpeg.obj \
     .\$(OBJDIR)\scale.obj .\$(OBJDIR)\xbm.obj \
-    .\$(OBJDIR)\ipng.obj .\$(OBJDIR)\png_png.obj .\$(OBJDIR)\xpcompat.obj
+    .\$(OBJDIR)\ipng.obj .\$(OBJDIR)\png_png.obj .\$(OBJDIR)\xpcompat.obj \
+	
 !if "$(MOZ_BITS)" != "16"
 LINCS=-I$(XPDIST)\public\zlib -I$(XPDIST)\public\nspr \
     -I$(XPDIST)\public\jpeg -I$(XPDIST)\public\util -I$(XPDIST)\public\img \
     -I$(XPDIST)\public\png -I$(XPDIST)\public\xpcom 
 !endif
 !else
-CSRCS=color.c colormap.c dither.c dummy_nc.c external.c gif.c if.c \
+CSRCS=color.c colormap.c dither.c external.c gif.c if.c \
    ilclient.c il_util.c ilNetReader.cpp jpeg.c scale.c xbm.c ipng.c png_png.c
-REQUIRES=jtools java zlib nspr dbm jpeg util img png layer js 
+REQUIRES=jtools java zlib nspr dbm jpeg util img png layer js xpcom
 EXPORTS=PIMGCB.h PPSIMGCB.h 
 JMC_HEADERS=$(JMC_GEN_DIR)\MIMGCB.h $(JMC_GEN_DIR)\MPSIMGCB.h 
 JMC_STUBS=$(JMC_GEN_DIR)\MIMGCB.c $(JMC_GEN_DIR)\MPSIMGCB.c 
@@ -145,14 +144,14 @@ C_OBJS=.\$(OBJDIR)\color.obj .\$(OBJDIR)\colormap.obj \
     .\$(OBJDIR)\external.obj .\$(OBJDIR)\gif.obj .\$(OBJDIR)\if.obj \
     .\$(OBJDIR)\ilclient.obj .\$(OBJDIR)\il_util.obj \
     .\$(OBJDIR)\jpeg.obj .\$(OBJDIR)\scale.obj .\$(OBJDIR)\xbm.obj \
-    .\$(OBJDIR)\ipng.obj .\$(OBJDIR)\png_png.obj 
+    .\$(OBJDIR)\ipng.obj .\$(OBJDIR)\png_png.obj .\$(OBJDIR)\ilNetReader.obj
 !if "$(MOZ_BITS)" != "16"
 LINCS=-I$(XPDIST)\public\jtools -I$(XPDIST)\public\java \
     -I$(XPDIST)\public\zlib -I$(XPDIST)\public\nspr \
     -I$(XPDIST)\public\dbm -I$(XPDIST)\public\jpeg \
     -I$(XPDIST)\public\util -I$(XPDIST)\public\img \
     -I$(XPDIST)\public\png -I$(XPDIST)\public\layer \
-    -I$(XPDIST)\public\js 
+    -I$(XPDIST)\public\js -I$(XPDIST)\public\xpcom
 !endif
 !endif
 

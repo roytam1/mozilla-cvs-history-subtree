@@ -28,6 +28,15 @@ PR_BEGIN_EXTERN_C
 extern int MK_OUT_OF_MEMORY;
 PR_END_EXTERN_C
 
+/* 
+ * XXX Temporary inclusion of this prototype. It was originally in
+ * libimg.h but needed to be removed since it required C++ compilation.
+ * It should eventually return to libimg.h and may be remove when
+ * a modularized netlib comes around.
+ */
+extern ilIURL *
+IL_CreateIURL(URL_Struct *urls);
+
 typedef struct dum_TitleObsClosure {
     MWContext *context;
     XP_ObserverList obs_list;
@@ -100,12 +109,13 @@ private:
     URL_Struct *mURLS;
 };
 
-
+PR_BEGIN_EXTERN_C
 extern void
 lo_view_title( MWContext *context, char *title_str );
+PR_END_EXTERN_C
 
 extern PRBool
-il_load_image(OPAQUE_CONTEXT *cx, char *image_url, NET_ReloadMethod cache_reload_policy);
+il_load_image(MWContext *cx, char *image_url, NET_ReloadMethod cache_reload_policy);
 
 NetContextImpl::NetContextImpl(MWContext *aContext, 
 			       NET_ReloadMethod aReloadPolicy)
@@ -370,9 +380,9 @@ il_netgeturldone(URL_Struct *URL_s, int status, OPAQUE_CONTEXT *cx)
     if (iurl != NULL) {
         reader = iurl->GetReader();
         if (reader != NULL) {
-	    NS_RELEASE(reader);
-	    reader->NetRequestDone(iurl, status);
-	}
+            reader->NetRequestDone(iurl, status);
+            NS_RELEASE(reader);
+        }
     }
 
     /* for mac */

@@ -67,6 +67,7 @@ typedef struct il_container_struct il_container;
 
 /*****************************XXXM12N Get rid of this. ***********************/
 
+PR_BEGIN_EXTERN_C
 typedef void
 (*TimeoutCallbackFunction) (void * closure);
 
@@ -74,6 +75,7 @@ extern void *
 FE_SetTimeout(TimeoutCallbackFunction func, void * closure, uint32 msecs);
 extern void
 FE_ClearTimeout(void *timer_id);
+PR_END_EXTERN_C
 
 /*********************************XXXM12N*************************************/
 
