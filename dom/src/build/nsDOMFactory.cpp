@@ -746,30 +746,3 @@ void XXXDomNeverCalled()
   }
 }
 
-#ifdef DEBUG
-/* These are here to be callable from a debugger */
-#include "nsIServiceManager.h"
-#include "nsIXPConnect.h"
-JS_BEGIN_EXTERN_C
-void DumpJSStack()
-{
-    nsresult rv;
-    NS_WITH_SERVICE(nsIXPConnect, xpc, nsIXPConnect::GetCID(), &rv);
-    if(NS_SUCCEEDED(rv))
-        xpc->DebugDumpJSStack(PR_TRUE, PR_TRUE, PR_FALSE);
-    else    
-        printf("failed to get XPConnect service!\n");
-}
-
-void DumpJSEval(PRUint32 frame, const char* text)
-{
-    nsresult rv;
-    NS_WITH_SERVICE(nsIXPConnect, xpc, nsIXPConnect::GetCID(), &rv);
-    if(NS_SUCCEEDED(rv))
-        xpc->DebugDumpEvalInJSStackFrame(frame, text);
-    else    
-        printf("failed to get XPConnect service!\n");
-}
-JS_END_EXTERN_C
-#endif
-
