@@ -57,27 +57,22 @@ NS_IMETHODIMP nsSOAPResponse::SetRespondingTo(nsISOAPMessage * aRespondingTo)
   return NS_OK;
 }
 
-/* readonly attribute boolean generatedFault; */
-NS_IMETHODIMP nsSOAPResponse::GetGeneratedFault(PRBool *aGeneratedFault)
-{
-  nsCOMPtr<nsISOAPFault> fault;
-  GetFault(getter_AddRefs(fault));
-  *aGeneratedFault = fault != 0;
-  return NS_OK;
-}
-
 /* readonly attribute nsISOAPFault fault; */
 NS_IMETHODIMP nsSOAPResponse::GetFault(nsISOAPFault * *aFault)
 {
   nsCOMPtr<nsIDOMElement> body;
+
+  *aFault = nsnull;
   GetBody(getter_AddRefs(body));
-  nsSOAPUtils::GetSpecificChildElement(body, 
-    nsSOAPUtils::kSOAPEnvURI, nsSOAPUtils::kFaultTagName, 
-    getter_AddRefs(body));
   if (body) {
-    *aFault = new nsSOAPFault(body);
-    if (!*aFault)
-      return NS_ERROR_OUT_OF_MEMORY;
+    nsSOAPUtils::GetSpecificChildElement(body, 
+      nsSOAPUtils::kSOAPEnvURI, nsSOAPUtils::kFaultTagName, 
+      getter_AddRefs(body));
+    if (body) {
+      *aFault = new nsSOAPFault(body);
+      if (!*aFault)
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
   }
   else {
     *aFault = nsnull;
