@@ -20,6 +20,7 @@
    Created: Jamie Zawinski <jwz@netscape.com>, 15-May-96.
  */
 
+#include "mime.h"
 #include "mimeobj.h"	/*  MimeObject (abstract)							*/
 #include "mimecont.h"	/*   |--- MimeContainer (abstract)					*/
 #include "mimemult.h"	/*   |     |--- MimeMultipart (abstract)			*/
@@ -41,6 +42,7 @@
 #include "mimetenr.h"	/*   |     |     |     |--- MimeInlineTextEnriched	*/
 #ifndef MOZILLA_30
 #include "mimevcrd.h"   /*   |     |     |--------- MimeInlineTextVCard		*/
+#include "mimecal.h"    /*   |     |     |--------- MimeInlineTextCalendar  */
 #include "prefapi.h"
 #endif /* !MOZILLA_30 */
 #include "mimeiimg.h"	/*   |     |--- MimeInlineImage						*/
@@ -150,6 +152,8 @@ mime_find_class (const char *content_type, MimeHeaders *hdrs,
 #ifndef MOZILLA_30
 	  else if (!strcasecomp(content_type+5,		"x-vcard"))
 		class = (MimeObjectClass *)&mimeInlineTextVCardClass;
+	  else if (!strcasecomp(content_type+5,		"calendar"))
+		class = (MimeObjectClass *)&mimeInlineTextCalendarClass;
 #endif /* !MOZILLA_30 */
 	  else if (!exact_match_p)
 		class = (MimeObjectClass *)&mimeInlineTextPlainClass;
@@ -554,6 +558,25 @@ mime_part_address(MimeObject *obj)
 }
 
 
+/* Returns a string describing the location of the *IMAP* part (like "2.5.3").
+   This is not a full URL, just a part-number.
+   This part is explicitly passed in the X-Mozilla-IMAP-Part header.
+   Return value must be freed by the caller.
+ */
+char *
+mime_imap_part_address(MimeObject *obj)
+{
+	char *imap_part = 0;
+	if (!obj || !obj->headers)
+		return 0;
+	
+	imap_part = MimeHeaders_get(obj->headers,
+		IMAP_EXTERNAL_CONTENT_HEADER, FALSE, FALSE);
+
+	return imap_part;
+}
+
+
 /* Asks whether the given object is one of the cryptographically signed
    or encrypted objects that we know about.  (MimeMessageClass uses this
    to decide if the headers need to be presented differently.)
@@ -712,6 +735,26 @@ mime_set_url_part(const char *url, char *part, XP_Bool append_p)
 		!XP_STRCMP("part=0", result + L - 6))
 	  result[L-7] = 0;
   }
+
+  return result;
+}
+
+
+
+/* Puts an *IMAP* part-number into a URL.
+ */
+char *
+mime_set_url_imap_part(const char *url, char *imappart, char *libmimepart)
+{
+  char *result = (char *) XP_ALLOC(XP_STRLEN(url) + XP_STRLEN(imappart) + XP_STRLEN(libmimepart) + 17);
+  if (!result) return 0;
+
+  XP_STRCPY(result, url);
+  XP_STRCAT(result, "/;section=");
+  XP_STRCAT(result, imappart);
+  XP_STRCAT(result, "&part=");
+  XP_STRCAT(result, libmimepart);
+  result[XP_STRLEN(result)] = 0;
 
   return result;
 }
@@ -1132,10 +1175,10 @@ MimeObject_output_init(MimeObject *obj, const char *content_type)
 							   FALSE, FALSE);
 		  if (ct)
 			{
-			  x_mac_type   = MimeHeaders_get_parameter(ct,PARAM_X_MAC_TYPE);
-			  x_mac_creator= MimeHeaders_get_parameter(ct,PARAM_X_MAC_CREATOR);
+			  x_mac_type   = MimeHeaders_get_parameter(ct,PARAM_X_MAC_TYPE, NULL, NULL);
+			  x_mac_creator= MimeHeaders_get_parameter(ct,PARAM_X_MAC_CREATOR, NULL, NULL);
 			  FREEIF(obj->options->default_charset);
-			  obj->options->default_charset = MimeHeaders_get_parameter(ct, "charset");
+			  obj->options->default_charset = MimeHeaders_get_parameter(ct, "charset", NULL, NULL);
 			  XP_FREE(ct);
 			}
 		}
