@@ -68,8 +68,8 @@ do
       shift 2
       ;;
     *)
-      moreargs=$1
-      shift
+      moreargs="$moreargs $1"
+      shift 1
       ;;
   esac
 done
