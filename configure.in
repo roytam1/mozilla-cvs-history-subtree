@@ -40,8 +40,6 @@ AC_CANONICAL_SYSTEM
 TARGET_CPU="${target_cpu}"
 TARGET_VENDOR="${target_vendor}"
 TARGET_OS="${target_os}"
-MOZILLA_VERSION='1.2b'
-AC_SUBST(MOZILLA_VERSION)
 
 dnl ========================================================
 dnl =
@@ -3364,10 +3362,8 @@ dnl ========================================================
 SUNCTL=
 MOZ_ARG_ENABLE_BOOL(ctl,
 [  --enable-ctl            Enable Thai Complex Script support],
-    SUNCTL=1 )
-if test "$SUNCTL"; then
-  AC_DEFINE(SUNCTL)
-fi
+    SUNCTL=1,
+    SUNCTL= )
 
 dnl ========================================================
 dnl accessibility support on by default
@@ -4588,6 +4584,20 @@ AC_DEFINE(NS_MT_SUPPORTED)
 dnl libpr0n on by default
 AC_DEFINE(USE_IMG2)
 
+if test "$SUNCTL"; then
+    dnl older versions of glib do not seem to have gmodule which ctl needs
+    _SAVE_CFLAGS=$CFLAGS
+    CFLAGS="$CFLAGS $GLIB_CFLAGS"
+    AC_LANG_SAVE
+    AC_LANG_C
+    AC_TRY_COMPILE([#include <gmodule.h>],
+        [ int x = 1; x++; ],,
+        [AC_MSG_ERROR([Cannot build ctl without gmodule support in glib.])])
+    AC_LANG_RESTORE
+    CFLAGS=$_SAVE_CFLAGS
+    AC_DEFINE(SUNCTL)
+fi
+
 dnl ========================================================
 dnl =
 dnl = Maintainer debug option (no --enable equivalent)
@@ -4960,6 +4970,11 @@ msvc*|mksnt*|cygwin*|mingw*)
     my_perl=$PERL
     ;;
 esac
+
+dnl Get mozilla version from central milestone file
+MOZILLA_VERSION=`$my_perl $my_srcdir/config/milestone.pl -topsrcdir $my_srcdir`
+AC_SUBST(MOZILLA_VERSION)
+
 echo $MAKEFILES | $my_perl $my_srcdir/build/autoconf/acoutput-fast.pl > conftest.sh
 . ./conftest.sh
 rm conftest.sh
