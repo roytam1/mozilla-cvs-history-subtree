@@ -355,6 +355,11 @@ InstallVersionCompareTo(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
 
   if(argc >= 4)
   {
+    //  public int CompareTo(int    major,
+    //                       int    minor,
+    //                       int    release,
+    //                       int    build);
+
     if(!JSVAL_IS_INT(argv[0]))
     {
         JS_ReportError(cx, "1st parameter must be a number");
@@ -390,6 +395,8 @@ InstallVersionCompareTo(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
   }
   else if(argc >= 1)
   {
+     //   public int AddDirectory(String version);  --OR--  VersionInfo version
+
     if(JSVAL_IS_OBJECT(argv[0]))
     {
         if(JS_FALSE == nsCvrtJSValToObj((nsISupports **)&versionObj,

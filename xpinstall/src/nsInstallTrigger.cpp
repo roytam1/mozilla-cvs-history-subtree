@@ -160,6 +160,12 @@ nsInstallTrigger::ConditionalSoftwareUpdate(const nsString& aURL, const nsString
 }
 
 NS_IMETHODIMP    
+nsInstallTrigger::ConditionalSoftwareUpdate(const nsString& aURL, const nsString& aRegName, PRInt32 aDiffLevel, nsIDOMInstallVersion* aVersion, PRInt32 aMode, PRInt32* aReturn)
+{
+    return NS_OK;
+}
+
+NS_IMETHODIMP    
 nsInstallTrigger::ConditionalSoftwareUpdate(const nsString& aURL, const nsString& aRegName, nsIDOMInstallVersion* aVersion, PRInt32 aMode, PRInt32* aReturn)
 {
     return NS_OK;
@@ -173,6 +179,12 @@ nsInstallTrigger::ConditionalSoftwareUpdate(const nsString& aURL, const nsString
 
 NS_IMETHODIMP    
 nsInstallTrigger::ConditionalSoftwareUpdate(const nsString& aURL, const nsString& aRegName, const nsString& aVersion, PRInt32* aReturn)
+{
+    return NS_OK;
+}
+
+NS_IMETHODIMP    
+nsInstallTrigger::ConditionalSoftwareUpdate(const nsString& aURL, const nsString& aRegName, nsIDOMInstallVersion* aVersion, PRInt32* aReturn)
 {
     return NS_OK;
 }
