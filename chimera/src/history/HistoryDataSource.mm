@@ -36,6 +36,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #import "NSString+Utils.h"
+#import "NSPasteboard+Utils.h"
 
 #import "BrowserWindowController.h"
 #import "HistoryDataSource.h"
@@ -71,7 +72,7 @@ public:
   
   NS_DECL_ISUPPORTS
 
-  NS_IMETHODIMP OnAssert(nsIRDFDataSource*, nsIRDFResource*, nsIRDFResource*, nsIRDFNode*) { return NS_OK; }
+  NS_IMETHODIMP OnAssert(nsIRDFDataSource*, nsIRDFResource*, nsIRDFResource*, nsIRDFNode*) ;
   NS_IMETHODIMP OnUnassert(nsIRDFDataSource*, nsIRDFResource*, nsIRDFResource*, nsIRDFNode*) { return NS_OK; }
 
   NS_IMETHODIMP OnMove(nsIRDFDataSource*, nsIRDFResource*, nsIRDFResource*, nsIRDFResource*, nsIRDFNode*) 
@@ -93,6 +94,33 @@ private:
 
 NS_IMPL_ISUPPORTS1(HistoryDataSourceObserver, nsIRDFObserver)
 
+
+//
+// OnAssert
+//
+// Catches newly added items to the history, for surfing while the drawer is
+// open.
+//
+NS_IMETHODIMP
+HistoryDataSourceObserver::OnAssert(nsIRDFDataSource*, nsIRDFResource*, 
+                                      nsIRDFResource* aProperty, nsIRDFNode*)
+{
+  if(mEnabled) {
+    const char* p;
+    aProperty->GetValueConst(&p);
+    if (strcmp("http://home.netscape.com/NC-rdf#Date", p) == 0)
+      [mOutlineView reloadData];
+  }
+  return NS_OK;
+}
+
+
+//
+// OnChange
+//
+// Catches items that are already in history, but need to be moved because you're
+// visiting them and they change date
+//
 NS_IMETHODIMP
 HistoryDataSourceObserver::OnChange(nsIRDFDataSource*, nsIRDFResource*, 
                                       nsIRDFResource* aProperty, nsIRDFNode*, nsIRDFNode*)
@@ -216,6 +244,39 @@ HistoryDataSourceObserver::OnChange(nsIRDFDataSource*, nsIRDFResource*,
   }
 
   return cellValue;
+}
+
+
+- (BOOL)outlineView:(NSOutlineView *)ov writeItems:(NSArray*)items toPasteboard:(NSPasteboard*)pboard 
+{
+  //Need to filter out folders from the list, only allow the urls to be dragged
+  //NSArray *toDrag = [self filterDragItems:items];
+
+  int count = [items count];
+  if (count > 0) {    
+    if (count == 1) {
+      id item = [items objectAtIndex: 0];
+      
+      // if we have just one item, we add some more flavours
+      nsXPIDLString urlLiteral, nameLiteral;
+      [self getPropertyString:@"http://home.netscape.com/NC-rdf#URL" forItem:item result:getter_Copies(urlLiteral)];
+      [self getPropertyString:@"http://home.netscape.com/NC-rdf#Name" forItem:item result:getter_Copies(nameLiteral)];
+      NSString* url = [NSString stringWith_nsAString: urlLiteral];
+      NSString* title = [NSString stringWith_nsAString: nameLiteral];      
+      NSString *cleanedTitle = [title stringByReplacingCharactersInSet:[NSCharacterSet controlCharacterSet] withString:@" "];
+
+      [pboard declareURLPasteboardWithAdditionalTypes:[NSArray array] owner:self];
+      [pboard setDataForURL:url title:cleanedTitle];
+    }
+    else {
+      // not sure what to do here. canceling the drag for now.
+      return NO;
+    }
+
+    return YES;
+  }
+
+  return NO;
 }
 
 
