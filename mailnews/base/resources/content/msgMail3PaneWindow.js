@@ -350,9 +350,15 @@ function HandleDeleteOrMoveMsgCompleted(folder)
         if (treeView)
           treeView.selectionChanged();
 
-
         EnsureRowInThreadTreeIsVisible(gNextMessageViewIndexAfterDelete); 
         gDBView.suppressCommandUpdating = false;
+
+        // hook for extra toolbar items
+        // XXX I think there is a bug in the suppression code above.
+        // what if I have two rows selected, and I hit delete, and so we load the next row.
+        // what if I have commands that only enable where exactly one row is selected?
+        var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+        observerService.notifyObservers(window, "mail:updateToolbarItems", null);
       }
     }
       gNextMessageViewIndexAfterDelete = -2;  

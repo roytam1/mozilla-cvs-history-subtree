@@ -318,7 +318,12 @@ function RerootFolder(uri, newFolder, viewType, viewFlags, sortType, sortOrder)
   }
 
   SetUpToolbarButtons(uri);
+
   UpdateStatusMessageCounts(newFolder);
+  
+  // hook for extra toolbar items
+  var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+  observerService.notifyObservers(window, "mail:updateToolbarItems", null);
 }
 
 function SwitchView(command)
