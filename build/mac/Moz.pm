@@ -37,7 +37,7 @@ use Mac::Processes;
 use File::Copy;
 
 @ISA				= qw(Exporter);
-@EXPORT			= qw(BuildProject BuildProjectClean GetFileModDate OpenErrorLog MakeAlias StopForErrors DontStopForErrors InstallFromManifest InstallResources SetBuildNumber SetAgentString SetTimeBomb Delay ActivateApplication);
+@EXPORT			= qw(BuildProject LaunchCodeWarrior BuildProjectClean GetFileModDate OpenErrorLog MakeAlias StopForErrors DontStopForErrors InstallFromManifest InstallResources SetBuildNumber SetAgentString SetTimeBomb Delay ActivateApplication);
 @EXPORT_OK	= qw(CloseErrorLog UseCodeWarriorLib QUIET);
 
 	use Cwd;
@@ -84,6 +84,12 @@ sub UseCodeWarriorLib($)
 #		($CodeWarriorLib) = @_;
 #		$CodeWarriorLib = full_path_to($CodeWarriorLib);
 	}
+
+sub LaunchCodeWarrior()
+{
+  CodeWarriorLib::activate();
+}
+
 
 sub activate_CodeWarrior()
 	{

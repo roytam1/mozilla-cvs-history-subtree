@@ -334,6 +334,9 @@ sub ConfigureBuildSystem()
     #// In the future, we may want to do configurations based on the actual build system itself.
     #// _genBuildSystemInfo();
 
+    # Ensure CodeWarrior is running. This also generates idepath.txt
+    LaunchCodeWarrior();
+    
     #// For now, if we discover a newer header file than existed in Universal Interfaces 3.2,
     #// we'll assume that 3.3 or later is in use.
     my($universal_interfaces) = getCodeWarriorPath("MacOS Support:Universal:Interfaces:CIncludes:");
@@ -370,7 +373,7 @@ sub ConfigureBuildSystem()
     my $config_headerfile = current_directory() . ":mozilla:config:mac:DefinesOptions.h";
     if (-e $config_headerfile)
     {
-        open(CONFIG_HEADER, "< $config_headerfile") || die "Can't open configuration header, check the file path.\n";
+        open(CONFIG_HEADER, "< $config_headerfile") || die "Can't open configuration header '$config_headerfile', check the file path.\n";
         while ($line = <CONFIG_HEADER>)
         {
             $oldconfig .= $line;
@@ -399,7 +402,7 @@ sub ConfigureBuildSystem()
     if (($config ne $oldconfig) || (!-e $config_headerfile))
     {
         printf("Writing new DefinesOptions.h\n");
-        open(CONFIG_HEADER, "> $config_headerfile") || die "Can't open configuration header, check the file path.\n";
+        open(CONFIG_HEADER, "> $config_headerfile") || die "Can't open configuration header '$config_headerfile', check the file path.\n";
         MacPerl::SetFileInfo("CWIE", "TEXT", $config_headerfile);
         print CONFIG_HEADER ($config);
         close(CONFIG_HEADER);
@@ -448,8 +451,8 @@ sub Checkout()
         # we need this jar.mn file on the jar branch
         $session->checkout("mozilla/security/base/res/jar.mn", $jars_branch_tag) || print "checkout of jar.mn failed\n";
 
-       # $session->checkout("SeaMonkeyAll", $jars_branch_tag)           || 
-       #     print "MacCVS reported some errors checking out SeaMonkeyAll, but these are probably not serious.\n";
+        $session->checkout("SeaMonkeyAll", $jars_branch_tag)           || 
+             print "MacCVS reported some errors checking out SeaMonkeyAll, but these are probably not serious.\n";
     }
     elsif ($main::pull{runtime})
     {
