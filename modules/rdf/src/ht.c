@@ -8245,6 +8245,123 @@ HT_GetPane (HT_View view)
 
 
 HT_DropAction
+dropOnSmartNode(HT_Resource dropTarget, HT_Resource dropObject, PRBool justAction)
+{
+	HT_DropAction		dropAction = DROP_NOT_ALLOWED;
+	MWContext		*context;
+	RDF_BT			targetType;
+	RDF_BT			objType;
+	RDF_Resource		postR;
+	URL_Struct		*urls;
+	char			*data, *value, *url, *methodType = NULL, *resultType = NULL;
+	char			*postData = NULL, *postStr, *temp;
+	uint32			postIndex = 0;
+
+	targetType  = resourceType(dropTarget->node);
+	objType     = resourceType(dropObject->node);
+	HT_GetNodeData (dropTarget, gNavCenter->RDF_resultType, HT_COLUMN_STRING, &resultType);
+	HT_GetNodeData (dropTarget, gNavCenter->RDF_methodType, HT_COLUMN_STRING, &methodType);
+	if (justAction)
+	{
+		if ((targetType == RDF_RT) && (objType == RDF_RT))
+		{
+			if (resultType != NULL)
+			{
+				dropAction = COPY_MOVE_LINK;
+			}
+		}
+	}
+	else
+	{
+		if ((targetType == RDF_RT) && (objType == RDF_RT))
+		{
+			if (resultType != NULL)
+			{
+				context = XP_GetNavCenterContext(dropTarget->view->pane);
+				if (!strcasecmp(resultType, "TEXT/HTML"))
+				{
+					if ((methodType != NULL) && (!strcasecmp(methodType, "POST")))
+					{
+						if ((url = getBaseURL(HT_GetNodeURL(dropObject))) != NULL)
+						{
+							temp = NET_Escape(url, URL_XPALPHAS);
+							freeMem(url);
+							url = temp;
+						}
+						do
+						{
+							/* retrieve "post[x]data" */
+							if ((postStr = PR_smprintf("post%ludata", postIndex)) == NULL)	break;
+							postR = RDF_GetResource(NULL, postStr, PR_TRUE);
+							XP_FREE(postStr);
+							if (postR == NULL)	break;
+							data = NULL;
+							HT_GetNodeData (dropTarget, postR, HT_COLUMN_STRING, &data);
+							if (data == NULL)	break;
+
+							/* retrieve "post[x]value" */
+							if ((postStr = PR_smprintf("post%luvalue", postIndex)) == NULL)	break;
+							postR = RDF_GetResource(NULL, postStr, PR_TRUE);
+							XP_FREE(postStr);
+							if (postR == NULL)	break;
+							value = NULL;
+							HT_GetNodeData (dropTarget, postR, HT_COLUMN_STRING, &value);
+
+							++postIndex;
+							
+							temp = PR_smprintf("%s%s%s=%s",
+								((postData != NULL) ? postData : ""),
+								((postData != NULL) ? "&" : ""), data,
+								((value != NULL) ? value : ((url != NULL) ? url:"")));
+							if (postData != NULL)	XP_FREE(postData);
+							postData = temp;
+						} while (true);
+						if ((urls = NET_CreateURLStruct(HT_GetNodeURL(dropTarget),
+							NET_NORMAL_RELOAD)) != NULL)
+						{
+							urls->post_data = postData;
+							urls->post_data_size = (postData != NULL) ? strlen(postData) : 0;
+							urls->post_headers = PR_smprintf("Content-type: application/x-www-form-urlencoded\r\nContent-length: %lu\r\n",
+								urls->post_data_size);
+							urls->method = URL_POST_METHOD;
+							NET_GetURL(urls, FO_CACHE_AND_PRESENT, context, NULL);
+						}
+						if (url != NULL)
+						{
+							XP_FREE(url);
+						}
+					}
+					else if ((methodType == NULL) || (!strcasecmp(methodType, "GET")))
+					{
+						url = PR_smprintf("%s%s", HT_GetNodeURL(dropTarget),
+								HT_GetNodeURL(dropObject));
+						if (url != NULL)
+						{
+							if ((urls = NET_CreateURLStruct(url, NET_NORMAL_RELOAD)) != NULL)
+							{
+								NET_GetURL(urls, FO_CACHE_AND_PRESENT, context, NULL);
+							}
+							else
+							{
+								freeMem(url);
+							}
+						}
+					}
+				}
+				else if (!strcasecmp(resultType, "TEXT/RDF"))
+				{
+					/* XXX finish this */
+				}
+				dropAction = COPY_MOVE_LINK;
+			}
+		}
+	}
+	return(dropAction);
+}
+
+
+
+HT_DropAction
 dropOn (HT_Resource dropTarget, HT_Resource dropObject, PRBool justAction)
 {
 	HT_Resource		elders;
@@ -8260,7 +8377,10 @@ dropOn (HT_Resource dropTarget, HT_Resource dropObject, PRBool justAction)
 	targetType  = resourceType(dropTarget->node);
 	objType     = resourceType(dropObject->node);
 
-	if (!containerp(dropTarget->node))	return DROP_NOT_ALLOWED;
+	if (!containerp(dropTarget->node))
+	{
+		return dropOnSmartNode(dropTarget, dropObject, justAction);
+	}
 	if (objType == HISTORY_RT)		return DROP_NOT_ALLOWED;
 
 	/* disallow dropping a parent folder into itself or a child folder */

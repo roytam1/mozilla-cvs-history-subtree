@@ -172,6 +172,7 @@ createNavCenterVocab () {
   gNavCenter->RDF_DefaultSelectedView = RDF_GetResource(gCoreDB, "selectedView", true);
   gNavCenter->RDF_AutoOpen = RDF_GetResource(gCoreDB, "autoOpen", true);
   gNavCenter->RDF_resultType = RDF_GetResource (gCoreDB, "resultType", true);
+  gNavCenter->RDF_methodType = RDF_GetResource (gCoreDB, "methodType", true);
   gNavCenter->RDF_HTMLType = RDF_GetResource (gCoreDB, "HTMLPage", true);
   gNavCenter->RDF_URLShortcut = RDF_GetResource(gCoreDB, "URLShortcut", true);
   gNavCenter->RDF_Cookies = createContainer("NC:Cookies");

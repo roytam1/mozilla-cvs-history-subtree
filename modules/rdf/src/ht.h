@@ -32,6 +32,7 @@
 #include "xpassert.h"
 #include "nspr.h"
 #include "prefapi.h"
+#include "fe_proto.h"
 
 #ifdef	XP_MAC
 #include "stdlib.h"
@@ -321,6 +322,7 @@ PRBool				htRemoveChild(HT_Resource parent, HT_Resource child, PRBool moveToTras
 void				ht_SetPassword(HT_Resource node, char *password);
 PRBool				ht_hasPassword(HT_Resource node);
 PRBool				ht_checkPassword(HT_Resource node, PRBool alwaysCheck);
+HT_DropAction			dropOnSmartNode(HT_Resource dropTarget, HT_Resource dropObject, PRBool justAction);
 HT_DropAction			dropOn (HT_Resource dropTarget, HT_Resource dropObject, PRBool justAction);
 void				Win32FileCopyMove(HT_Resource dropTarget, HT_Resource dropObject);
 HT_DropAction			copyMoveRDFLink (HT_Resource dropTarget, HT_Resource dropObject);
