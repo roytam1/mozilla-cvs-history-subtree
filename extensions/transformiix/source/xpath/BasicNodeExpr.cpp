@@ -34,25 +34,12 @@
 //- Constructors -/
 
 /**
- * Creates a new BasicNodeExpr, which matchs any Node
-**/
-BasicNodeExpr::BasicNodeExpr() {
-    this->type = NodeExpr::NODE_EXPR;
-    nodeNameSet = MB_FALSE;
-} //-- BasicNodeExpr
-
-/**
  * Creates a new BasicNodeExpr of the given type
 **/
 BasicNodeExpr::BasicNodeExpr(NodeExpr::NodeExprType nodeExprType) {
     this->type = nodeExprType;
     nodeNameSet = MB_FALSE;
 } //-- BasicNodeExpr
-
-/**
- * Destroys this NodeExpr
-**/
-BasicNodeExpr::~BasicNodeExpr() {};
 
   //------------------/
  //- Public Methods -/
@@ -97,14 +84,6 @@ double BasicNodeExpr::getDefaultPriority(Node* node, Node* context,
         return 0;
     return -0.5;
 } //-- getDefaultPriority
-
-/**
- * Returns the type of this NodeExpr
- * @return the type of this NodeExpr
-**/
-short BasicNodeExpr::getType() {
-    return type;
-} //-- getType
 
 /**
  * Determines whether this NodeExpr matches the given node within

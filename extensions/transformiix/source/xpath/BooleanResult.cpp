@@ -37,10 +37,6 @@ BooleanResult::BooleanResult() {
     value = MB_FALSE;
 } //-- BooleanResult
 
-BooleanResult::BooleanResult(const BooleanResult& boolResult) {
-    this->value = boolResult.getValue();
-} //-- BooleanResult
-
 /**
  * Creates a new BooleanResult with the value of the given MBool parameter
  * @param boolean the MBool to use for initialization of this BooleanResult's value
@@ -48,14 +44,6 @@ BooleanResult::BooleanResult(const BooleanResult& boolResult) {
 BooleanResult::BooleanResult(MBool boolean) {
     this->value = boolean;
 } //-- BooleanResult
-
-/**
- * Returns the value of this BooleanResult
- * @return the value of this BooleanResult
-**/
-MBool BooleanResult::getValue() const {
-    return this->value;
-} //-- getValue
 
 /*
  * Virtual Methods from ExprResult

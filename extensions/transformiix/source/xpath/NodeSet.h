@@ -105,17 +105,6 @@ public:
     void copyInto(NodeSet& dest) const;
 
     /**
-     * Compares the specified object with this NodeSet for equality.
-     * Returns true if and only if the specified Object is a NodeSet
-     * that is the same size as this NodeSet and all of its associated
-     * Nodes are contained within this NodeSet.
-     * @return true if and only if the specified Object is a NodeSet
-     * that is the same size as this NodeSet and all of its associated
-     * Nodes are contained within this NodeSet.
-    **/
-    MBool equals(NodeSet* nodeSet);
-
-    /**
      * Returns the Node at the specified position in this NodeSet.
      * @param index the position of the Node to return
      * @exception IndexOutOfBoundsException
@@ -155,7 +144,6 @@ public:
      * @return true if the Node was removed from the list
     **/
     MBool remove(Node* node);
-
 
     /**
      * Enables or disables checking for duplicates.  By default

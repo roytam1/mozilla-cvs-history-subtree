@@ -88,9 +88,6 @@ public:
 
     BooleanResult();
     BooleanResult(MBool boolean);
-    BooleanResult(const BooleanResult& boolResult);
-
-    MBool getValue() const;
 
     virtual short  getResultType();
     virtual void   stringValue(String& str);
@@ -107,10 +104,6 @@ public:
 
     NumberResult();
     NumberResult(double dbl);
-    NumberResult(const NumberResult& nbrResult);
-
-    double getValue() const;
-    MBool isNaN() const;
 
     virtual short  getResultType();
     virtual void   stringValue(String& str);
@@ -128,12 +121,8 @@ class StringResult : public ExprResult {
 public:
 
     StringResult();
-    StringResult(String& str);
     StringResult(const String& str);
-    StringResult(const StringResult& strResult);
     StringResult(const char* str);
-
-    String& getValue();
 
     virtual short  getResultType();
     virtual void   stringValue(String& str);

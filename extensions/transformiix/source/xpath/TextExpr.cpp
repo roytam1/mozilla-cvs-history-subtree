@@ -60,14 +60,6 @@ double TextExpr::getDefaultPriority(Node* node, Node* context, ContextState* cs)
 } //-- getDefaultPriority
 
 /**
- * Returns the type of this NodeExpr
- * @return the type of this NodeExpr
-**/
-short TextExpr::getType() {
-    return NodeExpr::TEXT_EXPR;
-} //-- getType
-
-/**
  * Determines whether this NodeExpr matches the given node within
  * the given context
 **/

@@ -36,10 +36,6 @@
 //-- Implementation of FilterExpr --/
 
 
-FilterExpr::FilterExpr() : PredicateList() {
-    expr = 0;
-}
-
 /**
  * Creates a new FilterExpr using the given Expr
  * @param expr the Expr to use for evaluation
@@ -54,15 +50,6 @@ FilterExpr::FilterExpr(Expr* expr) : PredicateList() {
 FilterExpr::~FilterExpr() {
     delete expr;
 } //-- ~FilterExpr
-
-/**
- * Sets the Expr of this FilterExpr for use during evaluation
- * @param expr the Expr to use for evaluation
-**/
-void FilterExpr::setExpr(Expr* expr) {
-    this->expr = expr;
-} //-- setExpr
-
 
   //------------------------------------/
  //- Virtual methods from PatternExpr -/

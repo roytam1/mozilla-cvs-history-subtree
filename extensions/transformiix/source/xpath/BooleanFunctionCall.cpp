@@ -35,30 +35,23 @@
  * @author <A HREF="mailto:kvisco@ziplink.net">Keith Visco</A>
  * @version $Revision$ $Date$
 **/
-BooleanFunctionCall::BooleanFunctionCall() : FunctionCall(XPathNames::FALSE_FN) {
-    this->type = TX_FALSE;
-} //-- BooleanFunctionCall
-
-/**
- * Creates a BooleanFunctionCall of the given type
-**/
 BooleanFunctionCall::BooleanFunctionCall(short type) : FunctionCall()
 {
     switch ( type ) {
         case TX_BOOLEAN :
-            FunctionCall::setName(XPathNames::BOOLEAN_FN);
+            name = XPathNames::BOOLEAN_FN;
             break;
         case TX_LANG:
-            FunctionCall::setName(XPathNames::LANG_FN);
+            name = XPathNames::LANG_FN;
             break;
         case TX_NOT :
-            FunctionCall::setName(XPathNames::NOT_FN);
+            name = XPathNames::NOT_FN;
             break;
         case TX_TRUE :
-            FunctionCall::setName(XPathNames::TRUE_FN);
+            name = XPathNames::TRUE_FN;
             break;
         default:
-            FunctionCall::setName(XPathNames::FALSE_FN);
+            name = XPathNames::FALSE_FN;
             break;
     }
     this->type = type;

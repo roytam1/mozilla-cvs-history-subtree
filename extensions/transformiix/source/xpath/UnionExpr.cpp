@@ -59,15 +59,6 @@ void UnionExpr::addExpr(Expr* expr) {
       expressions.add(expr);
 } //-- addExpr
 
-/**
- * Adds the Expr to this UnionExpr
- * @param expr the Expr to add to this UnionExpr
-**/
-void UnionExpr::addExpr(int index, Expr* expr) {
-    if (expr)
-      expressions.insert(index, expr);
-} //-- addExpr
-
     //------------------------------------/
   //- Virtual methods from Expr -/
 //------------------------------------/

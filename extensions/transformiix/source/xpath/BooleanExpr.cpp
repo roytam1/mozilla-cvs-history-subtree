@@ -40,15 +40,6 @@
 #include "Expr.h"
 
 /**
- * Creates a new BooleanExpr using the default operator (AND)
-**/
-BooleanExpr::BooleanExpr() {
-    this->op = AND;
-    this->leftExpr  = 0;
-    this->rightExpr = 0;
-} //-- BooleanExpr
-
-/**
  * Creates a new BooleanExpr using the given operator
 **/
 BooleanExpr::BooleanExpr(Expr* leftExpr, Expr* rightExpr, short op) {
@@ -61,20 +52,6 @@ BooleanExpr::~BooleanExpr() {
     delete leftExpr;
     delete rightExpr;
 } //-- ~BooleanExpr
-
-/**
- * Sets the left side of this AdditiveExpr
-**/
-void BooleanExpr::setLeftExpr(Expr* leftExpr) {
-    this->leftExpr = leftExpr;
-} //-- setLeftExpr
-
-/**
- * Sets the right side of this AdditiveExpr
-**/
-void BooleanExpr::setRightExpr(Expr* rightExpr) {
-    this->rightExpr = rightExpr;
-} //-- setRightExpr
 
 /**
  * Evaluates this Expr based on the given context node and processor state

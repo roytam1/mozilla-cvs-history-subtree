@@ -30,16 +30,9 @@
  //- NumberExpr -/
 //--------------/
 
-NumberExpr::NumberExpr() {
-    _value = 0.0;
-} //-- NumberExpr
-
 NumberExpr::NumberExpr(double dbl) {
     _value = dbl;
 } //-- NumberExpr
-
-NumberExpr::~NumberExpr() {
-} //-- ~NumberExpr
 
 /**
  * Evaluates this Expr based on the given context node and processor state

@@ -35,27 +35,10 @@
 /**
  * Creates a new StringExpr
 **/
-StringExpr::StringExpr() {};
-
-StringExpr::StringExpr(String& value) {
-    //-- copy value
-    this->value = value;
-} //-- StringExpr
-
 StringExpr::StringExpr(const String& value) {
     //-- copy value
     this->value.append(value);
 } //-- StringExpr
-
-StringExpr::StringExpr(const char* value) {
-    //-- copy value
-    this->value.append(value);
-} //-- StringExpr
-
-/**
- * Default Destructor
-**/
-StringExpr::~StringExpr() {};
 
 /**
  * Evaluates this Expr based on the given context node and processor state

@@ -168,25 +168,6 @@ void NodeSet::copyInto(NodeSet& dest) const {
 } //-- copyInto
 
 /**
- * Compares the specified object with this NodeSet for equality.
- * Returns true if and only if the specified Object is a NodeSet
- * that is the same size as this NodeSet and all of its associated
- * Nodes are contained within this NodeSet.
- * @return true if and only if the specified Object is a NodeSet
- * that is the same size as this NodeSet and all of its associated
- * Nodes are contained within this NodeSet.
-**/
-MBool NodeSet::equals(NodeSet* nodeSet) {
-    if (!nodeSet) return MB_FALSE;
-    if (nodeSet->size() != size()) return MB_FALSE;
-
-    for (int i = 0; i < size(); i++) {
-        if (!nodeSet->contains(get(i))) return MB_FALSE;
-    }
-    return MB_TRUE;
-} //-- equals
-
-/**
  * Returns the Node at the specified position in this NodeSet.
  * @param index the position of the Node to return
 **/
@@ -253,7 +234,6 @@ MBool NodeSet::remove(Node* node) {
 
     return MB_TRUE;
 } //-- remove
-
 
 /**
  * Enables or disables checking for duplicates.  By default

@@ -123,14 +123,6 @@ MBool PredicateList::isEmpty() {
     return (MBool)(predicates.getLength() == 0);
 } //-- isEmpty
 
-/**
- * Removes the given Expr from the list
- * @param expr the Expr to remove from the list
-**/
-Expr* PredicateList::remove(Expr* expr) {
-    return (Expr*)predicates.remove(expr);
-} //-- remove
-
 void PredicateList::toString(String& dest) {
 
     ListIterator* iter = predicates.iterator();
