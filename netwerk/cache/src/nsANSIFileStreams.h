@@ -41,7 +41,7 @@ public:
 };
 
 class nsANSIOutputStream : public nsIOutputStream, public nsISeekableStream {
-    FILE* mFile;
+    FILE*       mFile;
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIOUTPUTSTREAM
@@ -49,6 +49,34 @@ public:
     
     nsANSIOutputStream(FILE* file);
     virtual ~nsANSIOutputStream();
+};
+
+class nsANSIFileStream : public nsIInputStream, public nsIOutputStream, public nsISeekableStream {
+    FILE*       mFile;
+    PRUint32    mSize;
+public:
+    NS_DECL_ISUPPORTS
+    
+    NS_IMETHOD Close(void);
+    NS_IMETHOD Available(PRUint32 *_retval); \
+    NS_IMETHOD Read(char * buf, PRUint32 count, PRUint32 *_retval);
+    NS_IMETHOD ReadSegments(nsWriteSegmentFun writer, void * closure, PRUint32 count, PRUint32 *_retval);
+    NS_IMETHOD GetNonBlocking(PRBool *aNonBlocking);
+    NS_IMETHOD GetObserver(nsIInputStreamObserver * *aObserver);
+    NS_IMETHOD SetObserver(nsIInputStreamObserver * aObserver); 
+
+    NS_IMETHOD Flush(void);
+    NS_IMETHOD Write(const char *buf, PRUint32 count, PRUint32 *_retval);
+    NS_IMETHOD WriteFrom(nsIInputStream *inStr, PRUint32 count, PRUint32 *_retval);
+    NS_IMETHOD WriteSegments(nsReadSegmentFun reader, void * closure, PRUint32 count, PRUint32 *_retval);
+    NS_IMETHOD SetNonBlocking(PRBool aNonBlocking);
+    NS_IMETHOD GetObserver(nsIOutputStreamObserver * *aObserver);
+    NS_IMETHOD SetObserver(nsIOutputStreamObserver * aObserver);
+
+    NS_DECL_NSISEEKABLESTREAM
+
+    nsANSIFileStream(FILE* file);
+    virtual ~nsANSIFileStream();
 };
 
 #endif // _nsANSIFileStreams_h_

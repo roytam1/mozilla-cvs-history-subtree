@@ -204,3 +204,143 @@ NS_IMETHODIMP nsANSIOutputStream::Tell(PRUint32 * result)
     }
     return NS_BASE_STREAM_CLOSED;
 }
+
+///////
+
+NS_IMPL_ISUPPORTS3(nsANSIFileStream, nsIInputStream, nsIOutputStream, nsISeekableStream);
+
+nsANSIFileStream::nsANSIFileStream(FILE* file) : mFile(file), mSize(0)
+{
+    NS_INIT_ISUPPORTS();
+    if (file) {
+        ::fseek(file, 0, SEEK_END);
+        mSize = ::ftell(file);
+        ::fseek(file, 0, SEEK_SET);
+    }
+}
+
+nsANSIFileStream::~nsANSIFileStream()
+{
+    Close();
+}
+
+NS_IMETHODIMP nsANSIFileStream::Close()
+{
+    if (mFile) {
+        ::fclose(mFile);
+        mFile = nsnull;
+        return NS_OK;
+    }
+    return NS_BASE_STREAM_CLOSED;
+}
+
+NS_IMETHODIMP nsANSIFileStream::Available(PRUint32 * result)
+{
+    if (mFile) {
+        *result = (mSize - ::ftell(mFile));
+        return NS_OK;
+    }
+    return NS_BASE_STREAM_CLOSED;
+}
+
+NS_IMETHODIMP nsANSIFileStream::Read(char * buf, PRUint32 count, PRUint32 *result)
+{
+    if (mFile) {
+        *result = ::fread(buf, 1, count, mFile);
+        return NS_OK;
+    }
+    return NS_BASE_STREAM_CLOSED;
+}
+
+NS_IMETHODIMP nsANSIFileStream::ReadSegments(nsWriteSegmentFun writer, void * closure, PRUint32 count, PRUint32 *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsANSIFileStream::GetNonBlocking(PRBool *aNonBlocking)
+{
+    *aNonBlocking = PR_FALSE;
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsANSIFileStream::GetObserver(nsIInputStreamObserver * *aObserver)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsANSIFileStream::SetObserver(nsIInputStreamObserver * aObserver)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsANSIFileStream::Flush()
+{
+    if (mFile) {
+        ::fflush(mFile);
+        return NS_OK;
+    }
+    return NS_BASE_STREAM_CLOSED;
+}
+
+NS_IMETHODIMP nsANSIFileStream::Write(const char *buffer, PRUint32 count, PRUint32 *result)
+{
+    if (mFile) {
+        *result = ::fwrite(buffer, 1, count, mFile);
+        return NS_OK;
+    }
+    return NS_BASE_STREAM_CLOSED;
+}
+
+NS_IMETHODIMP nsANSIFileStream::WriteFrom(nsIInputStream *input, PRUint32 count, PRUint32 *actualCount)
+{
+    char buffer[BUFSIZ];
+    PRUint32 totalCount = count;
+    *actualCount = 0;
+    while (totalCount > 0) {
+        count = (totalCount < BUFSIZ ? totalCount : BUFSIZ);
+        nsresult rv = input->Read(buffer, count, &count);
+        if (NS_FAILED(rv)) return rv;
+        rv = Write(buffer, count, &count);
+        totalCount -= count;
+        *actualCount += count;
+    }
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsANSIFileStream::WriteSegments(nsReadSegmentFun reader, void * closure, PRUint32 count, PRUint32 *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsANSIFileStream::SetNonBlocking(PRBool aNonBlocking)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsANSIFileStream::GetObserver(nsIOutputStreamObserver * *aObserver)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsANSIFileStream::SetObserver(nsIOutputStreamObserver * aObserver)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsANSIFileStream::Seek(PRInt32 whence, PRInt32 offset)
+{
+    if (mFile) {
+        ::fseek(mFile, offset, whence);
+        return NS_OK;
+    }
+    return NS_BASE_STREAM_CLOSED;
+}
+
+NS_IMETHODIMP nsANSIFileStream::Tell(PRUint32 * result)
+{
+    if (mFile) {
+        *result = ::ftell(mFile);
+        return NS_OK;
+    }
+    return NS_BASE_STREAM_CLOSED;
+}
