@@ -795,7 +795,7 @@ time_t icalcomponent_convert_time(icalproperty *p)
 	maybe it can be changed to something better? */
 	
 	{
-#ifdef __sgi
+#ifdef __sgi || defined(__sun)
 		tzset();
 		offset = daylight ? altzone : timezone;
 #else
