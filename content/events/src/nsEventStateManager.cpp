@@ -5104,8 +5104,10 @@ nsEventStateManager::IsIFrameDoc(nsIDocShell* aDocShell)
     return PR_FALSE;
   }
 
-  nsCOMPtr<nsIContent> docContent =
-    do_QueryInterface(domWindow->GetFrameElementInternal());
+  nsCOMPtr<nsIContent> docContent;
+  nsCOMPtr<nsIDOMElement> docElement;
+  domWindow->GetFrameElementInternal(getter_AddRefs(docElement));
+  docContent = do_QueryInterface(docElement);
   
   if (!docContent) {
     return PR_FALSE;
