@@ -1,6 +1,8 @@
 1999-08-06  Leif Hedstrom  <leif@netscape.com> and Kevin McCarthy 
 
-	* API.xs: Added some more tests around free() statements.
+	* API.xs: Added some more tests around free() statements. These
+	are most likely never triggered, but better safe than sorrow (and
+	the overhead of testing this is insignificant).
 
 	* Conn.pm (browse): Added this function, to make it easy to browse
 	an entry.
