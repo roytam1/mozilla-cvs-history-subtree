@@ -51,7 +51,6 @@
 #include "nsWeakReference.h" //for service and presshell pointers
 #include "nsIScrollableViewProvider.h"
 #include "nsIPhonetic.h"
-#include "plevent.h"
 
 class nsIPresState;
 class nsISupportsArray;
@@ -230,20 +229,12 @@ protected:
    * @return whether this control is scrollable
    */
   PRBool IsScrollable() const;
-
   /**
    * Initialize mEditor with the proper flags and the default value.
-   */
-  void ReallyInitEditor();
-
-  friend void * HandleEditorInitEvent(PLEvent *evt);
-
-  /**
-   * Schedule the asynchronous initialization of mEditor.
-   * @throws event-queue management errors on failure
+   * @throws NS_ERROR_NOT_INITIALIZED if mEditor has not been created
+   * @throws various and sundry other things
    */
   nsresult InitEditor();
-
   /**
    * Strip all \n, \r and nulls from the given string
    * @param aString the string to remove newlines from [in/out]

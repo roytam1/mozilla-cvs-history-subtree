@@ -130,8 +130,6 @@
 #include "nsWidgetsCID.h"
 #endif // IBMBIDI
 
-#include "nsEventQueueUtils.h"
-
 #define DEFAULT_COLUMN_WIDTH 20
 
 #include "nsContentCID.h"
@@ -1465,11 +1463,6 @@ nsTextControlFrame::Destroy(nsIPresContext* aPresContext)
   if (!mDidPreDestroy) {
     PreDestroy(aPresContext);
   }
-
-  nsCOMPtr<nsIEventQueue> eventQ;
-  nsresult rv = NS_GetMainEventQ(getter_AddRefs(eventQ));
-  if (NS_SUCCEEDED(rv))
-    eventQ->RevokeEvents(this);
   return nsBoxFrame::Destroy(aPresContext);
 }
 
@@ -1685,58 +1678,30 @@ nsTextControlFrame::CreateFrameFor(nsIPresContext*   aPresContext,
   return NS_ERROR_FAILURE;
 }
 
-PR_CALLBACK void *
-HandleEditorInitEvent(PLEvent *aEvent)
-{
-  nsTextControlFrame *frame = NS_STATIC_CAST(nsTextControlFrame *,
-                                             PL_GetEventOwner(aEvent));
-  frame->ReallyInitEditor();
-  return nsnull;
-}
-
-PR_CALLBACK void
-DestroyEditorInitEvent(PLEvent *aEvent)
-{
-  delete aEvent;
-}
-
 nsresult
 nsTextControlFrame::InitEditor()
 {
-  nsCOMPtr<nsIEventQueue> eventQ;
-  nsresult rv = NS_GetMainEventQ(getter_AddRefs(eventQ));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  PLEvent *evt = new PLEvent();
-  NS_ENSURE_TRUE(evt, NS_ERROR_OUT_OF_MEMORY);
-
-  PL_InitEvent(evt, this, ::HandleEditorInitEvent, ::DestroyEditorInitEvent);
-  
-  rv = eventQ->PostEvent(evt);
-  if (NS_FAILED(rv))
-    PL_DestroyEvent(evt);
-
-  return rv;
-}
-
-void
-nsTextControlFrame::ReallyInitEditor()
-{
-  // This method is called asynchronously after the initial reflow
-  // to avoid re-entering frame construction.
+  // This method must be called during/after the text
+  // control frame's initial reflow to avoid any unintened
+  // forced reflows that might result when the editor
+  // calls into DOM/layout code while trying to set the
+  // initial string.
   //
-  // XXX We can get rid of the deferred-initialization code now
-  // XXX that we put it off on an event.
+  // This code used to be called from CreateAnonymousContent(),
+  // but when the editor set the initial string, it would trigger
+  // a PresShell listener which called FlushPendingNotifications()
+  // during frame construction. This was causing other form controls
+  // to display wrong values.
 
   // Check if this method has been called already.
   // If so, just return early.
 
   if (mUseEditor)
-    return;
+    return NS_OK;
 
   // If the editor is not here, then we can't use it, now can we?
   if (!mEditor)
-    return;
+    return NS_ERROR_NOT_INITIALIZED;
 
   // Get the current value of the textfield from the content.
   nsAutoString defaultValue;
@@ -1751,43 +1716,47 @@ nsTextControlFrame::ReallyInitEditor()
   // displayed for password fields, etc. SetValue() will call the
   // editor for us.
 
-  if (defaultValue.IsEmpty())
-    return;
+  if (!defaultValue.IsEmpty()) {
+    PRUint32 editorFlags = 0;
 
-  PRUint32 editorFlags = 0;
-  
-  nsresult rv = mEditor->GetFlags(&editorFlags);
-  
-  if (NS_FAILED(rv))
-    return;
-  
-  // Avoid causing reentrant painting and reflowing by telling the editor
-  // that we don't want it to force immediate view refreshes or force
-  // immediate reflows during any editor calls.
-  
-  rv = mEditor->SetFlags(editorFlags |
-                         nsIPlaintextEditor::eEditorUseAsyncUpdatesMask);
-  
-  if (NS_FAILED(rv))
-    return;
-  
-  // Now call SetValue() which will make the neccessary editor calls to set
-  // the default value.  Make sure to turn off undo before setting the default
-  // value, and turn it back on afterwards. This will make sure we can't undo
-  // past the default value.
-  
-  rv = mEditor->EnableUndo(PR_FALSE);
-  
-  if (NS_FAILED(rv))
-    return;
-  
-  SetValue(defaultValue);
-  
-  rv = mEditor->EnableUndo(PR_TRUE);
-  NS_ASSERTION(NS_SUCCEEDED(rv),"Transaction Manager must have failed");
-  
-  // Now restore the original editor flags.
-  mEditor->SetFlags(editorFlags);
+    nsresult rv = mEditor->GetFlags(&editorFlags);
+
+    if (NS_FAILED(rv))
+      return rv;
+
+    // Avoid causing reentrant painting and reflowing by telling the editor
+    // that we don't want it to force immediate view refreshes or force
+    // immediate reflows during any editor calls.
+
+    rv = mEditor->SetFlags(editorFlags |
+                           nsIPlaintextEditor::eEditorUseAsyncUpdatesMask);
+
+    if (NS_FAILED(rv))
+      return rv;
+
+    // Now call SetValue() which will make the neccessary editor calls to set
+    // the default value.  Make sure to turn off undo before setting the default
+    // value, and turn it back on afterwards. This will make sure we can't undo
+    // past the default value.
+
+    rv = mEditor->EnableUndo(PR_FALSE);
+
+    if (NS_FAILED(rv))
+      return rv;
+
+    SetValue(defaultValue);
+
+    rv = mEditor->EnableUndo(PR_TRUE);
+    NS_ASSERTION(NS_SUCCEEDED(rv),"Transaction Manager must have failed");
+    // Now restore the original editor flags.
+
+    rv = mEditor->SetFlags(editorFlags);
+
+    if (NS_FAILED(rv))
+      return rv;
+  }
+
+  return NS_OK;
 }
 
 // XXXldb I'm not sure if we really want the 'text-decoration: inherit',
@@ -2511,8 +2480,6 @@ nsTextControlFrame::SelectAllContents()
   if (!mEditor)
     return NS_OK;
 
-  ReallyInitEditor();  // Ensure that editor is initialized fully
-
   nsCOMPtr<nsIDOMElement> rootElement;
   nsresult rv = mEditor->GetRootElement(getter_AddRefs(rootElement));
   NS_ENSURE_SUCCESS(rv, rv);
@@ -2542,8 +2509,6 @@ nsTextControlFrame::SetSelectionEndPoints(PRInt32 aSelStart, PRInt32 aSelEnd)
 
   if (aSelStart > aSelEnd)
     return NS_ERROR_FAILURE;
-
-  ReallyInitEditor();  // Ensure that editor is initialized fully
 
   nsCOMPtr<nsIDOMNode> startNode, endNode;
   PRInt32 startOffset, endOffset;
@@ -2802,8 +2767,6 @@ nsTextControlFrame::GetSelectionRange(PRInt32* aSelectionStart, PRInt32* aSelect
 {
   // make sure we have an editor
   NS_ENSURE_TRUE(mEditor, NS_ERROR_NOT_INITIALIZED);
-
-  ReallyInitEditor();  // Ensure that editor is initialized fully
 
   *aSelectionStart = 0;
   *aSelectionEnd = 0;
