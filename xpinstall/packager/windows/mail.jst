@@ -230,6 +230,16 @@ if(verifyDiskSpace(fProgram, srDest))
                    getFolder("Chrome","messenger.jar"),
                    "content/messenger-region/");
 
+    // log comments for uninstalling the registry keys created by mail for setting
+    // itself up in WinXP's Start menu
+    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\StartMenuInternet\\Mozilla []");
+    logComment("Store Registry Value: HKEY_LOCAL_MACHINE\\Software\\Clients\\StartMenuInternet\\Mozilla []");
+    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\StartMenuInternet\\Mozilla\\DefaultIcon []");
+    logComment("Store Registry Value: HKEY_LOCAL_MACHINE\\Software\\Clients\\StartMenuInternet\\Mozilla\\DefaultIcon []");
+    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\StartMenuInternet\\Mozilla\\shell []");
+    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\StartMenuInternet\\Mozilla\\shell\\open []");
+    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\StartMenuInternet\\Mozilla\\shell\\open\\command []");
+
     // check return value
     err = getLastError();
     if(err == SUCCESS)
