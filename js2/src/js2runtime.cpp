@@ -221,8 +221,12 @@ Property *JSObject::defineVariable(Context *cx, const String &name, AttributeStm
     NamespaceList *names = (attr) ? attr->attributeValue->mNamespaceList : NULL;
     PropertyAttribute attrFlags = (attr) ? attr->attributeValue->mTrueFlags : 0;
     PropertyIterator it;
-    if (hasOwnProperty(name, names, Read, &it))
-        cx->reportError(Exception::typeError, "Duplicate definition '{0}'", attr->pos, name);
+    if (hasOwnProperty(name, names, Read, &it)) {
+        if (attr)
+            cx->reportError(Exception::typeError, "Duplicate definition '{0}'", attr->pos, name);
+        else
+            cx->reportError(Exception::typeError, "Duplicate definition '{0}'", name);
+    }
 
     Property *prop = new Property(new JSValue(), type, attrFlags);
     const PropertyMap::value_type e(name, new NamespacedProperty(prop, names));
@@ -246,8 +250,12 @@ Property *JSObject::defineVariable(Context *cx, const String &name, AttributeStm
 {
     NamespaceList *names = (attr) ? attr->attributeValue->mNamespaceList : NULL;
     PropertyIterator it;
-    if (hasOwnProperty(name, names, Read, &it))
-        cx->reportError(Exception::typeError, "Duplicate definition '{0}'", attr->pos, name);
+    if (hasOwnProperty(name, names, Read, &it)) {
+        if (attr)
+            cx->reportError(Exception::typeError, "Duplicate definition '{0}'", attr->pos, name);
+        else
+            cx->reportError(Exception::typeError, "Duplicate definition '{0}'", name);
+    }
 
     PropertyAttribute attrFlags = (attr) ? attr->attributeValue->mTrueFlags : 0;
     Property *prop = new Property(new JSValue(v), type, attrFlags);
@@ -269,14 +277,17 @@ Property *JSObject::defineVariable(Context *cx, const String &name, NamespaceLis
 
 
 
-Reference *JSObject::genReference(const String& name, NamespaceList *names, Access acc, uint32 /*depth*/)
+Reference *JSObject::genReference(bool hasBase, const String& name, NamespaceList *names, Access acc, uint32 /*depth*/)
 {
     PropertyIterator i;
     if (hasProperty(name, names, acc, &i)) {
         Property *prop = PROPERTY(i);
         switch (prop->mFlag) {
         case ValuePointer:
-            return new PropertyReference(name, acc, prop->mType);
+            if (hasBase)
+                return new PropertyReference(name, acc, prop->mType);
+            else
+                return new NameReference(name, acc);
         case FunctionPair:
             if (acc == Read)
                 return new GetterFunctionReference(prop->mData.fPair.getterF);
@@ -382,7 +393,7 @@ void JSObject::setProperty(Context *cx, const String &name, NamespaceList *names
         case FunctionPair:
             {
                 JSValue argv = v;
-                cx->pushValue(cx->invokeFunction(prop->mData.fPair.setterF, JSValue(this), &argv, 1));
+                cx->invokeFunction(prop->mData.fPair.setterF, JSValue(this), &argv, 1);
             }
             break;
         default:
@@ -421,13 +432,13 @@ void JSInstance::setProperty(Context *cx, const String &name, NamespaceList *nam
         case FunctionPair: 
             {
                 JSValue argv = v;
-                cx->pushValue(cx->invokeFunction(prop->mData.fPair.setterF, JSValue(this), &argv, 1));
+                cx->invokeFunction(prop->mData.fPair.setterF, JSValue(this), &argv, 1);
             }
             break;
         case IndexPair: 
             {
                 JSValue argv = v;
-                cx->pushValue(cx->invokeFunction(mType->mMethods[prop->mData.iPair.setterI], JSValue(this), &argv, 1));
+                cx->invokeFunction(mType->mMethods[prop->mData.iPair.setterI], JSValue(this), &argv, 1);
             }
             break;
         default:
@@ -515,6 +526,8 @@ void JSInstance::initInstance(Context *cx, JSType *type)
             const PropertyMap::value_type e(PROPERTY_NAME(i), NAMESPACED_PROPERTY(i));
             mProperties.insert(e);            
         }
+        if (t->mInstanceInitializer)
+            cx->invokeFunction(t->mInstanceInitializer, JSValue(this), NULL, 0);
         t = t->mSuperType;
     }
 
@@ -575,9 +588,10 @@ JSInstance *JSStringType::newInstance(Context *cx)
 void ScopeChain::setNameValue(Context *cx, const String& name, AttributeStmtNode *attr)
 {
     NamespaceList *names = (attr) ? attr->attributeValue->mNamespaceList : NULL;
-    PropertyIterator i;
-    JSObject *top = *mScopeStack.rbegin();
+    ScopeScanner scopeTop = mScopeStack.rbegin();
+    JSObject *top = *scopeTop;
     JSValue v = cx->topValue();
+    PropertyIterator i;
     if (top->hasProperty(name, names, Write, &i)) {
         if (PROPERTY_KIND(i) == ValuePointer) {
             *PROPERTY_VALUEPOINTER(i) = v;
@@ -586,7 +600,14 @@ void ScopeChain::setNameValue(Context *cx, const String& name, AttributeStmtNode
             ASSERT(false);      // what else needs to be implemented ?
     }
     else {
-        cx->getGlobalObject()->defineVariable(cx, name, attr, Object_Type, v);
+        // don't add to instances etc., climb all the way down (likely to the global object)
+        // and add the property there.
+        while (top->mType != Object_Type) {
+            scopeTop++;
+            top = *scopeTop;
+        }
+        ASSERT(top);
+        top->defineVariable(cx, name, attr, Object_Type, v);
     }
 }
 
@@ -600,22 +621,65 @@ void ScopeChain::getNameValue(Context *cx, const String& name, AttributeStmtNode
     {
         PropertyIterator i;
         if ((*s)->hasProperty(name, names, Read, &i)) {
-            if (PROPERTY_KIND(i) == ValuePointer) {
+            PropertyFlag flag = PROPERTY_KIND(i);
+            switch (flag) {
+            case ValuePointer:
                 cx->pushValue(*PROPERTY_VALUEPOINTER(i));
-            }
-            else
+                break;
+            default:
                 ASSERT(false);      // what else needs to be implemented ?
+            }
             return;
         }
     }    
     m_cx->reportError(Exception::referenceError, "'{0}' not defined", name );
 }
 
+Reference *ScopeChain::getName(const String& name, NamespaceList *names, Access acc)
+{
+    uint32 depth = 0;
+    for (ScopeScanner s = mScopeStack.rbegin(), end = mScopeStack.rend(); (s != end); s++, depth++)
+    {
+        PropertyIterator i;
+        if ((*s)->hasProperty(name, names, acc, &i))
+            return (*s)->genReference(false, name, names, acc, depth);
+        else
+            if ((*s)->isDynamic())
+                return NULL;
+
+    }
+    return NULL;
+}
+
+bool ScopeChain::hasNameValue(const String& name, NamespaceList *names)
+{
+    uint32 depth = 0;
+    for (ScopeScanner s = mScopeStack.rbegin(), end = mScopeStack.rend(); (s != end); s++, depth++)
+    {
+        PropertyIterator i;
+        if ((*s)->hasProperty(name, names, Read, &i))
+            return true;
+    }
+    return false;
+}
+
+// a compile time request to get the value for a name
+// (i.e. we're accessing a constant value)
+JSValue ScopeChain::getCompileTimeValue(const String& name, NamespaceList *names)
+{
+    uint32 depth = 0;
+    for (ScopeScanner s = mScopeStack.rbegin(), end = mScopeStack.rend(); (s != end); s++, depth++)
+    {
+        PropertyIterator i;
+        if ((*s)->hasProperty(name, names, Read, &i)) 
+            return (*s)->getPropertyValue(i);
+    }
+    return kUndefinedValue;
+}
 
 
 
-
-Reference *ParameterBarrel::genReference(const String& name, NamespaceList *names, Access acc, uint32 /*depth*/)
+Reference *ParameterBarrel::genReference(bool hasBase, const String& name, NamespaceList *names, Access acc, uint32 /*depth*/)
 {
     PropertyIterator i;
     if (hasProperty(name, names, acc, &i)) {
@@ -637,8 +701,6 @@ Reference *ParameterBarrel::genReference(const String& name, NamespaceList *name
 
 
 
-
-
 JSType *ScopeChain::findType(const StringAtom& typeName, size_t pos) 
 {
     JSValue v = getCompileTimeValue(typeName, NULL);
@@ -647,8 +709,8 @@ JSType *ScopeChain::findType(const StringAtom& typeName, size_t pos)
     else {
         // Allow finding a function that has the same name as it's containing class
         // i.e. the default constructor.
-        if (v.isFunction() && 
-                (v.function->getClass() && (v.function->getClass()->mClassName.compare(v.function->getFunctionName()) == 0)))
+        if (v.isFunction() && v.function->getClass() 
+                    && (v.function->getClass()->mClassName.compare(v.function->getFunctionName()) == 0))
             return v.function->getClass();
         m_cx->reportError(Exception::semanticError, "Unknown type", pos);
         return NULL;
@@ -821,22 +883,37 @@ void ScopeChain::collectNames(StmtNode *p)
             bool isOperator = (f->attributeValue->mTrueFlags & Property::Operator) == Property::Operator;
             bool isPrototype = (f->attributeValue->mTrueFlags & Property::Prototype) == Property::Prototype;
             
-            JSFunction *fnc = new JSFunction(NULL, this);
-            fnc->setIsPrototype(isPrototype);
-            fnc->setIsConstructor(isConstructor);
-            f->mFunction = fnc;
-
-            /* XXX determine whether a function is unchecked, which is the case if -
-                 
-                 strict mode is disabled at the point of the function definition; 
+            /* Determine whether a function is unchecked, which is the case if -
+                 XXX strict mode is disabled at the point of the function definition; 
                  the function is not a class or interface member; 
                  the function has no optional, named, or rest parameters; 
                  none of the function's parameters has a declared type; 
                  the function does not have a declared return type; 
                  the function is not a getter or setter. 
-
             */
-            
+            if (!isPrototype
+                    && (!isOperator)
+                    && (f->function.resultType == NULL)
+                    && (f->function.restParameter == NULL)
+                    && (f->function.optParameters == NULL)
+                    && (f->function.prefix == FunctionName::normal)
+                    && (topClass() == NULL)) {
+                isPrototype = true;
+                VariableBinding *b = f->function.parameters;
+                while (b) {
+                    if (b->type != NULL) {
+                        isPrototype = false;
+                        break;
+                    }
+                    b = b->next;
+                }
+            }
+
+            JSFunction *fnc = new JSFunction(NULL, this);
+            fnc->setIsPrototype(isPrototype);
+            fnc->setIsConstructor(isConstructor);
+            f->mFunction = fnc;
+
             uint32 reqArgCount = 0;
             uint32 optArgCount = 0;
 
@@ -866,8 +943,10 @@ void ScopeChain::collectNames(StmtNode *p)
                 
                     // sort of want to fall into the code below, but use 'extendedClass' instead
                     // of whatever the topClass will turn out to be.
-                    if (extendedClass->mClassName.compare(name) == 0)
+                    if (extendedClass->mClassName.compare(name) == 0) {
                         isConstructor = true;       // can you add constructors?
+                        fnc->setIsConstructor(true);
+                    }
                     if (isConstructor)
                         extendedClass->defineConstructor(m_cx, name, f, fnc);
                     else {
@@ -897,33 +976,37 @@ void ScopeChain::collectNames(StmtNode *p)
                     }                    
                 }
                 else {
-                    if (topClass() && (topClass()->mClassName.compare(name) == 0))
+                    if (topClass() && (topClass()->mClassName.compare(name) == 0)) {
                         isConstructor = true;
-                    if (isConstructor)
-                        defineConstructor(m_cx, name, f, fnc);
-                    else {
-                        switch (f->function.prefix) {
-                        case FunctionName::Get:
-                            if (isStatic)
-                                defineStaticGetterMethod(m_cx, name, f, fnc);
-                            else
-                                defineGetterMethod(m_cx, name, f, fnc);
-                            break;
-                        case FunctionName::Set:
-                            if (isStatic)
-                                defineStaticSetterMethod(m_cx, name, f, fnc);
-                            else
-                                defineSetterMethod(m_cx, name, f, fnc);
-                            break;
-                        case FunctionName::normal:
-                            if (isStatic)
-                                defineStaticMethod(m_cx, name, f, fnc);
-                            else
-                                defineMethod(m_cx, name, f, fnc);
-                            break;
-                        default:
-                            NOT_REACHED("***** implement me -- throw an error because the user passed a quoted function name");
-                            break;
+                        fnc->setIsConstructor(true);
+                    }
+                    if (!isNestedFunction()) {
+                        if (isConstructor)
+                            defineConstructor(m_cx, name, f, fnc);
+                        else {
+                            switch (f->function.prefix) {
+                            case FunctionName::Get:
+                                if (isStatic)
+                                    defineStaticGetterMethod(m_cx, name, f, fnc);
+                                else
+                                    defineGetterMethod(m_cx, name, f, fnc);
+                                break;
+                            case FunctionName::Set:
+                                if (isStatic)
+                                    defineStaticSetterMethod(m_cx, name, f, fnc);
+                                else
+                                    defineSetterMethod(m_cx, name, f, fnc);
+                                break;
+                            case FunctionName::normal:
+                                if (isStatic)
+                                    defineStaticMethod(m_cx, name, f, fnc);
+                                else
+                                    defineMethod(m_cx, name, f, fnc);
+                                break;
+                            default:
+                                NOT_REACHED("***** implement me -- throw an error because the user passed a quoted function name");
+                                break;
+                            }
                         }
                     }
                 }
@@ -949,6 +1032,10 @@ void JSType::completeClass(Context *cx, ScopeChain *scopeChain)
     // if none exists, build a default constructor that calls 'super()'
     if (getDefaultConstructor() == NULL) {
         JSFunction *fnc = new JSFunction(Object_Type, scopeChain);
+        fnc->setIsConstructor(true);
+        fnc->setFunctionName(mClassName);
+        fnc->setClass(this);
+
         ByteCodeGen bcg(cx, scopeChain);
 
         if (mSuperType && mSuperType->getDefaultConstructor()) {
@@ -966,7 +1053,10 @@ void JSType::completeClass(Context *cx, ScopeChain *scopeChain)
         bcg.addOp(LoadThisOp);
         ASSERT(bcg.mStackTop == 1);
         bcg.addOpSetDepth(ReturnOp, 0);
-        fnc->setByteCode(new JS2Runtime::ByteCodeModule(&bcg));        
+        ByteCodeModule *bcm = new JS2Runtime::ByteCodeModule(&bcg);
+        if (cx->mReader)
+            bcm->setSource(cx->mReader->source, cx->mReader->sourceLocation);
+        fnc->setByteCode(bcm);        
 
         scopeChain->defineConstructor(cx, mClassName, NULL, fnc);   // XXX attributes?
     }
@@ -1081,10 +1171,22 @@ JSValue JSType::getPropertyValue(PropertyIterator &i)
 
 bool JSType::hasProperty(const String &name, NamespaceList *names, Access acc, PropertyIterator *p)
 {
-    return hasOwnProperty(name, names, acc, p);
+    if (hasOwnProperty(name, names, acc, p))
+        return true;
+    else
+    
+//        XXX with this change we get unknown type failure for 
+
+        if (mSuperType)
+            return mSuperType->hasProperty(name, names, acc, p);
+        else
+
+
+
+            return false;
 }
 
-Reference *JSType::genReference(const String& name, NamespaceList *names, Access acc, uint32 depth)
+Reference *JSType::genReference(bool hasBase, const String& name, NamespaceList *names, Access acc, uint32 depth)
 {
     PropertyIterator i;
     if (hasOwnProperty(name, names, acc, &i)) {
@@ -1118,7 +1220,7 @@ Reference *JSType::genReference(const String& name, NamespaceList *names, Access
     }
     // walk the supertype chain
     if (mSuperType)
-        return mSuperType->genReference(name, names, acc, depth);
+        return mSuperType->genReference(hasBase, name, names, acc, depth);
     return NULL;
 }
 
@@ -1191,21 +1293,30 @@ void Activation::defineTempVariable(Reference *&readRef, Reference *&writeRef, J
     mVariableCount++;
 }
 
-Reference *Activation::genReference(const String& name, NamespaceList *names, Access acc, uint32 depth)
+Reference *Activation::genReference(bool hasBase, const String& name, NamespaceList *names, Access acc, uint32 depth)
 {
     PropertyIterator i;
     if (hasProperty(name, names, acc, &i)) {
         Property *prop = PROPERTY(i);
-        ASSERT((prop->mFlag == Slot) || (prop->mFlag == FunctionPair)); 
+        ASSERT((prop->mFlag == ValuePointer) || (prop->mFlag == Slot) || (prop->mFlag == FunctionPair)); 
 
-        if (prop->mFlag == FunctionPair) 
+        switch (prop->mFlag) {
+        case FunctionPair:
             return (acc == Read) ? new AccessorReference(prop->mData.fPair.getterF)
                                  : new AccessorReference(prop->mData.fPair.setterF);
+        case Slot:
+            if (depth)
+                return new ClosureVarReference(depth, prop->mData.index, acc, prop->mType);
+            else
+                return new LocalVarReference(prop->mData.index, acc, prop->mType);
 
-        if (depth)
-            return new ClosureVarReference(depth, prop->mData.index, acc, prop->mType);
+        case ValuePointer:
+            return new NameReference(name, acc);
 
-        return new LocalVarReference(prop->mData.index, acc, prop->mType);
+        default:            
+            NOT_REACHED("bad genRef call");
+            break;
+        }
     }
     NOT_REACHED("bad genRef call");
     return NULL;
@@ -1863,6 +1974,8 @@ Context::Context(JSObject **global, World &world, Arena &a, Pragma::Flags flags)
 
 void Context::reportError(Exception::Kind kind, char *message, size_t pos, const char *arg)
 {
+    const char16 *lineBegin;
+    const char16 *lineEnd;
     String x = widenCString(message);
     if (arg) {
         uint32 a = x.find(widenCString("{0}"));
@@ -1870,17 +1983,26 @@ void Context::reportError(Exception::Kind kind, char *message, size_t pos, const
     }
     if (mReader) {
         uint32 lineNum = mReader->posToLineNum(pos);
-        const char16 *lineBegin;
-        const char16 *lineEnd;
         size_t linePos = mReader->getLine(lineNum, lineBegin, lineEnd);
         ASSERT(lineBegin && lineEnd && linePos <= pos);
-
         throw Exception(kind, x, 
                             mReader->sourceLocation, 
                             lineNum, pos - linePos, pos, lineBegin, lineEnd);
     }
-    else 
-        throw Exception(kind, x); 
+    else {
+        if (mCurModule) {
+            Reader reader(mCurModule->mSource, mCurModule->mSourceLocation);
+            reader.fillLineStartsTable();
+            uint32 lineNum = reader.posToLineNum(pos);
+            size_t linePos = reader.getLine(lineNum, lineBegin, lineEnd);
+            ASSERT(lineBegin && lineEnd && linePos <= pos);
+            throw Exception(kind, x, 
+                                reader.sourceLocation, 
+                                lineNum, pos - linePos, pos, lineBegin, lineEnd);
+        }
+    }
+    
+    throw Exception(kind, x); 
 }
 
 // assumes mPC has been set inside the interpreter loop prior 

@@ -556,12 +556,14 @@ void ByteCodeGen::genCodeForFunction(FunctionDefinition &f, size_t pos, JSFuncti
     //                            IdentifierExprNode *i = checked_cast<IdentifierExprNode *>(b->op2);
                                 // XXX verify that i->name is a constructor in the superclass
                                 foundSuperCall = true;
+                                i->isSuperInvoke = true;
                             }
                         }
                         else {
                             // look for calls to 'this()'
                             if (i->op->getKind() == ExprNode::This) {
                                 foundSuperCall = true;
+                                i->isSuperInvoke = true;
                             }
                             else {
                                 // otherwise, look for calls to the superclass by name
@@ -569,6 +571,7 @@ void ByteCodeGen::genCodeForFunction(FunctionDefinition &f, size_t pos, JSFuncti
                                     const StringAtom &name = checked_cast<IdentifierExprNode *>(i->op)->name;
                                     if (name == superClass->mClassName)
                                         foundSuperCall = true;
+                                    i->isSuperInvoke = true;
                                 }                            
                             }
                         }
@@ -637,8 +640,10 @@ void ByteCodeGen::genCodeForFunction(FunctionDefinition &f, size_t pos, JSFuncti
         v = v->next;
     }
 
-
-    fnc->setByteCode(new ByteCodeModule(this));        
+    ByteCodeModule *bcm = new ByteCodeModule(this);
+    if (m_cx->mReader)
+        bcm->setSource(m_cx->mReader->source, m_cx->mReader->sourceLocation);
+    fnc->setByteCode(bcm);        
 
     mScopeChain->popScope();
     mScopeChain->popScope();
@@ -688,14 +693,20 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg, uint3
                     // build a function to be invoked 
                     // when the class is loaded
                     f = new JSFunction(Void_Type, mScopeChain);
-                    f->setByteCode(new ByteCodeModule(&static_cg));
+                    ByteCodeModule *bcm = new ByteCodeModule(&static_cg);
+                    if (m_cx->mReader)
+                        bcm->setSource(m_cx->mReader->source, m_cx->mReader->sourceLocation);
+                    f->setByteCode(bcm);
                 }
                 thisClass->setStaticInitializer(m_cx, f);
                 f = NULL;
                 if (bcg.hasContent()) {
                     // execute this function now to form the initial instance
                     f = new JSFunction(Void_Type, mScopeChain);
-                    f->setByteCode(new ByteCodeModule(&bcg));
+                    ByteCodeModule *bcm = new ByteCodeModule(&bcg);
+                    if (m_cx->mReader)
+                        bcm->setSource(m_cx->mReader->source, m_cx->mReader->sourceLocation);
+                    f->setByteCode(bcm);
                 }
                 thisClass->setInstanceInitializer(m_cx, f);
             }
@@ -760,6 +771,16 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg, uint3
                 isConstructor = true;
             ByteCodeGen bcg(m_cx, mScopeChain);
             bcg.genCodeForFunction(f->function, f->pos, fnc, isConstructor, mScopeChain->topClass());
+
+            if (mScopeChain->isNestedFunction()) {
+                addOp(LoadFunctionOp);
+                addPointer(fnc);
+                addOp(NewClosureOp);
+                addOp(SetNameOp);
+                addStringRef(*f->function.name);
+                addOp(PopOp);
+            }
+        
         }
         break;
     case StmtNode::While:
@@ -1362,7 +1383,7 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
                 NamespaceList *oldNS = mNamespaceList;
                 mNamespaceList = new NamespaceList(&qualifierName, mNamespaceList);
 
-                Reference *ref = lType->genReference(fieldName, mNamespaceList, acc, 0);
+                Reference *ref = lType->genReference(true, fieldName, mNamespaceList, acc, 0);
                 if (ref == NULL)
                     ref = new PropertyReference(fieldName, acc, Object_Type);
 
@@ -1374,7 +1395,7 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
             else {
                 ASSERT(b->op2->getKind() == ExprNode::identifier);
                 const StringAtom &fieldName = checked_cast<IdentifierExprNode *>(b->op2)->name;
-                Reference *ref = lType->genReference(fieldName, CURRENT_ATTR, acc, 0);
+                Reference *ref = lType->genReference(true, fieldName, CURRENT_ATTR, acc, 0);
                 if (ref == NULL)
                     ref = new PropertyReference(fieldName, acc, Object_Type);
                 return ref;
@@ -1441,10 +1462,10 @@ void ByteCodeGen::genReferencePair(ExprNode *p, Reference *&readRef, Reference *
             }
             else {
                 const StringAtom &fieldName = checked_cast<IdentifierExprNode *>(b->op2)->name;
-                readRef = lType->genReference(fieldName, CURRENT_ATTR, Read, 0);
+                readRef = lType->genReference(true, fieldName, CURRENT_ATTR, Read, 0);
                 if (readRef == NULL)
                     readRef = new PropertyReference(fieldName, Read, Object_Type);
-                writeRef = lType->genReference(fieldName, CURRENT_ATTR, Write, 0);
+                writeRef = lType->genReference(true, fieldName, CURRENT_ATTR, Write, 0);
                 if (writeRef == NULL)
                     writeRef = new PropertyReference(fieldName, Write, Object_Type);
             }
@@ -2023,16 +2044,6 @@ BinaryOpEquals:
             InvokeExprNode *i = checked_cast<InvokeExprNode *>(p);
             Reference *ref = genReference(i->op, Read);
 
-            // if the reference is the name of a type, then this
-            // is a cast of the argument to that type. [is this right??]
-            //if (ref->isTypeName()) {
-            //    addByte(LoadTypeOp);
-            //    addPointer(ref->getType());
-            //    ASSERT(i->pairs);
-            //    genExpr(i->pairs);
-            //    ASSERT(i->pairs->next == NULL);
-            //    addByte(CastOp);
-            //}
             ref->emitInvokeSequence(this);
 
             uint8 callFlags = 0;
@@ -2060,6 +2071,8 @@ BinaryOpEquals:
                 addLong(toUInt32(argCount));
                 callFlags |= NoThis;
             }
+            if (i->isSuperInvoke)
+                callFlags |= SuperInvoke;
             addByte(callFlags);
             JSType *type = ref->mType;
             delete ref;
@@ -2232,7 +2245,7 @@ BinaryOpEquals:
 
             addOpAdjustDepth(InvokeOp, -argCount);
             addLong(toUInt32(argCount));
-            addByte(Explicit);
+            addByte(Explicit | SuperInvoke);
             return currentClass;
         }
         break;

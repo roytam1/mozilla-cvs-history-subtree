@@ -85,6 +85,7 @@ namespace JavaScript {
             ASSERT(p[-1] == ch); return !ch && p == end+1;
         }
         void beginLine();
+        void fillLineStartsTable();
         uint32 posToLineNum(size_t pos) const;
         size_t getLine(uint32 lineNum, const char16 *&lineBegin, const char16 *&lineEnd) const;
         void beginRecording(String &recordString);

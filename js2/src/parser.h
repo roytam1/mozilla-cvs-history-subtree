@@ -382,9 +382,10 @@ namespace JavaScript {
 
     struct InvokeExprNode: PairListExprNode {
         ExprNode *op;                   // The called function, called constructor, or indexed object; nil only for superStmt
+        bool isSuperInvoke;             // used by backend to handle super constructor call in a constructor
 
         InvokeExprNode(size_t pos, Kind kind, ExprNode *op, ExprPairList *pairs):
-                PairListExprNode(pos, kind, pairs), op(op) {ASSERT(op || kind == superStmt);}
+                PairListExprNode(pos, kind, pairs), op(op), isSuperInvoke(false) {ASSERT(op || kind == superStmt);}
 
         void print(PrettyPrinter &f) const;
     };

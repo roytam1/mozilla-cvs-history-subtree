@@ -62,6 +62,16 @@ void JS::Reader::beginLine()
     linePositions.push_back(p);
 }
 
+// Fully process the source in order to fill in the line start table.
+void JS::Reader::fillLineStartsTable()
+{
+    char16 ch;
+    do {
+        ch = get();
+        if (isLineBreak(ch))
+            beginLine();        
+    } while (!getEof(ch));
+}
 
 // Return the number of the line containing the given character position.
 // The line starts should have been recorded by calling beginLine.

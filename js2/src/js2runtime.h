@@ -566,8 +566,11 @@ XXX ...couldn't get this to work...
         virtual Property *defineVariable(Context *cx, const String &name, AttributeStmtNode *attr, JSType *type, JSValue v);
         virtual Property *defineVariable(Context *cx, const String &name, NamespaceList *names, JSType *type, JSValue v);
         
-        virtual Reference *genReference(const String& name, NamespaceList *names, Access acc, uint32 depth);
+        virtual Reference *genReference(bool hasBase, const String& name, NamespaceList *names, Access acc, uint32 depth);
 
+        virtual JSType *topClass()      { return NULL; }
+        virtual bool isNestedFunction() { return false; }
+        
         virtual bool hasLocalVars()     { return false; }
         virtual uint32 localVarCount()  { return 0; }
 
@@ -646,6 +649,7 @@ XXX ...couldn't get this to work...
 
         virtual bool isDynamic();
 
+
         JSValue         *mInstanceValues;
     };
     Formatter& operator<<(Formatter& f, const JSInstance& obj);
@@ -683,6 +687,7 @@ XXX ...couldn't get this to work...
         void setStaticInitializer(Context *cx, JSFunction *f);
         void setInstanceInitializer(Context *cx, JSFunction *f);
 
+        virtual JSType *topClass()      { return this; }
 
 
         // construct a new (empty) instance of this class
@@ -737,7 +742,7 @@ XXX ...couldn't get this to work...
 
         virtual bool hasProperty(const String &name, NamespaceList *names, Access acc, PropertyIterator *p);
 
-        virtual Reference *genReference(const String& name, NamespaceList *names, Access acc, uint32 depth);
+        virtual Reference *genReference(bool hasBase, const String& name, NamespaceList *names, Access acc, uint32 depth);
 
         JSFunction *getDefaultConstructor();
 
@@ -858,7 +863,7 @@ XXX ...couldn't get this to work...
         void operator delete(void* t)   { trace_release("ParameterBarrel", t); STD::free(t); }
 #endif
 
-        Reference *genReference(const String& name, NamespaceList *names, Access acc, uint32 depth);
+        Reference *genReference(bool hasBase, const String& name, NamespaceList *names, Access acc, uint32 depth);
 
     };
 
@@ -870,7 +875,7 @@ XXX ...couldn't get this to work...
 
 
     // an Activation has two jobs:
-    // 1. At compile time it represents the function/method being compiled and collects
+    // 1. At compile time it handles the function/method being compiled and collects
     //      the local vars/consts being defined in that function. 
     // 2. At runtime it is the container for the values of those local vars
     //      (although it's only constructed as such when the function 
@@ -886,7 +891,7 @@ XXX ...couldn't get this to work...
                         mStack(NULL),
                         mStackTop(0),
                         mPC(0), 
-                        mModule(NULL)  { }
+                        mModule(NULL) { }
 
         Activation(JSValue *locals, 
                         JSValue *stack, uint32 stackTop,
@@ -902,7 +907,7 @@ XXX ...couldn't get this to work...
                         mArgumentBase(argBase), 
                         mThis(curThis), 
                         mPC(pc), 
-                        mModule(module)  { }
+                        mModule(module) { }
 
         virtual ~Activation() { } // keeping gcc happy
 
@@ -911,6 +916,12 @@ XXX ...couldn't get this to work...
         void operator delete(void* t)   { trace_release("Activation", t); STD::free(t); }
 #endif
 
+        virtual bool isNestedFunction() { return true; }
+
+        void defineMethod(Context *cx, const String& name, AttributeStmtNode *attr, JSFunction *f)
+        {
+            JSObject::defineMethod(cx, name, attr, f);
+        }
         
         // saved values from a previous execution
         JSValue *mLocals;
@@ -928,7 +939,7 @@ XXX ...couldn't get this to work...
 
         void defineTempVariable(Reference *&readRef, Reference *&writeRef, JSType *type);
 
-        Reference *genReference(const String& name, NamespaceList *names, Access acc, uint32 depth);
+        Reference *genReference(bool hasBase, const String& name, NamespaceList *names, Access acc, uint32 depth);
 
     };
 
@@ -1036,43 +1047,27 @@ XXX ...couldn't get this to work...
         }
 
         // generate a reference to the given name
-        Reference *getName(const String& name, NamespaceList *names, Access acc)
-        {
-            uint32 depth = 0;
-            for (ScopeScanner s = mScopeStack.rbegin(), end = mScopeStack.rend(); (s != end); s++, depth++)
-            {
-                PropertyIterator i;
-                if ((*s)->hasProperty(name, names, acc, &i))
-                    return (*s)->genReference(name, names, acc, depth);
-                else
-                    if ((*s)->isDynamic())
-                        return NULL;
+        Reference *getName(const String& name, NamespaceList *names, Access acc);
 
-            }
-            return NULL;
-        }
-
-        bool hasNameValue(const String& name, NamespaceList *names)
-        {
-            uint32 depth = 0;
-            for (ScopeScanner s = mScopeStack.rbegin(), end = mScopeStack.rend(); (s != end); s++, depth++)
-            {
-                PropertyIterator i;
-                if ((*s)->hasProperty(name, names, Read, &i))
-                    return true;
-            }
-            return false;
-        }
+        bool hasNameValue(const String& name, NamespaceList *names);
 
         void getNameValue(Context *cx, const String& name, AttributeStmtNode *attr);
 
         // return the class on the top of the stack (or NULL if there
         // isn't one there).
-        // XXX would it be better to have addScopeClass() and track when the
-        // top scope is a class rather than require RTTI just for this.
         JSType *topClass()
         {
-            return dynamic_cast<JSType *>(mScopeStack.back());
+            JSObject *obj = mScopeStack.back();
+            return obj->topClass();
+        }
+        
+        // return 'true' if the current top of scope stack is an
+        // activation - which would make any function declarations
+        // be local declarations.
+        bool isNestedFunction()
+        {
+            JSObject *obj = mScopeStack.back();
+            return obj->isNestedFunction();
         }
 
         void defineTempVariable(Reference *&readRef, Reference *&writeRef, JSType *type)
@@ -1083,17 +1078,7 @@ XXX ...couldn't get this to work...
 
         // a compile time request to get the value for a name
         // (i.e. we're accessing a constant value)
-        JSValue getCompileTimeValue(const String& name, NamespaceList *names)
-        {
-            uint32 depth = 0;
-            for (ScopeScanner s = mScopeStack.rbegin(), end = mScopeStack.rend(); (s != end); s++, depth++)
-            {
-                PropertyIterator i;
-                if ((*s)->hasProperty(name, names, Read, &i)) 
-                    return (*s)->getPropertyValue(i);
-            }
-            return kUndefinedValue;
-        }
+        JSValue getCompileTimeValue(const String& name, NamespaceList *names);
 
 
 
@@ -1413,6 +1398,7 @@ XXX ...couldn't get this to work...
             mOperatorTable[which].push_back(op);
         }
 
+        JSValue *buildArgumentBlock(JSFunction *target, uint32 &argCount);
 
         
         // compiles attribute expression into an attribute object
@@ -1565,9 +1551,10 @@ XXX ...couldn't get this to work...
         // Get the number of parameters.
         uint32 getParameterCount(FunctionDefinition &function);
 
+        Reader *mReader;
+
     private:
         JSObject **mGlobal;
-        Reader *mReader;
 
 
     };

@@ -57,6 +57,7 @@ class Extended extends BaseClass {
 
 }
 
+
 var ex:Extended = new Extended;
 test++; //4
 if (ex.t != 49200) badTest += test + " ";
@@ -75,6 +76,7 @@ function loopy(a)
         
     return x;
 }
+
 
 test++; //6
 if (loopy(17) != 3) badTest += test + " ";
@@ -167,7 +169,6 @@ if (B.x != 2) badTest += test + " ";
 test++; //19
 if (B.i != 4) badTest += test + " ";
 
-
 var sNAME_UNINITIALIZED:String = '(NO NAME HAS BEEN ASSIGNED)';
 var sNAME_MOTHER:String = 'Bessie';
 var sNAME_FATHER:String = 'Red';
@@ -218,4 +219,5 @@ function f1(a,b,...c) { return a - (b + c["e"]); }
 test++; //23
 if (f1(2, "a":13, "e":5) != 6)  badTest += test + " ";
 
-if (badTest == 0) print("still sane") else print("gone off the deep end at test #" + badTest);
+
+if (badTest == 0) print("still sane (after " + test + " tests)") else print("gone off the deep end at test #" + badTest);

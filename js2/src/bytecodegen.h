@@ -59,7 +59,11 @@ namespace JS2Runtime {
         ThisFlags = 0x03,
 
         // bit #3 indicates presence of named arguments
-        NamedArguments = 0x04
+        NamedArguments = 0x04,
+
+        // but #4 is set for the invocation of the super constructor
+        // from inside a constructor
+        SuperInvoke = 0x08
 
     } CallFlag;
 
@@ -178,6 +182,14 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
         const String *getString(uint32 index) const { return &mStringPoolContents[index]; }
         float64 getNumber(uint32 index) const       { return mNumberPoolContents[index]; }
 
+        void setSource(const String &source, const String &sourceLocation)
+        {
+            mSource = source;
+            mSourceLocation = sourceLocation;
+        }
+
+        String mSource;
+        String mSourceLocation;
 
         uint32 mLocalsCount;        // number of local vars to allocate space for
         uint32 mStackDepth;         // max. depth of execution stack
