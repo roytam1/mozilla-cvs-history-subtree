@@ -33,6 +33,7 @@ DIRS		= \
 	schedulr \
     zlib \
     li \
+    plugin \
     progress \
 	$(NULL)
 
