@@ -5392,7 +5392,7 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
           {
             char* uriSpec;
             uri->GetSpec(&uriSpec);
-            PRINTF("Failed to load %s\n", uriSpec ? uriSpec : "");
+            PRINTF(("Failed to load %s\n", uriSpec ? uriSpec : ""));
             nsCRT::free(uriSpec);
           }
         }
@@ -6461,7 +6461,7 @@ nsXULDocument::ParserObserver::OnStopRequest(nsIChannel* aChannel,
         nsXPIDLCString spec;
         uri->GetSpec(getter_Copies(spec));
 
-        PRINTF("*** Failed to load overlay %s\n", (const char*) spec);
+        PRINTF(("*** Failed to load overlay %s\n", (const char*) spec));
 #endif
 
         rv = mDocument->ResumeWalk();
