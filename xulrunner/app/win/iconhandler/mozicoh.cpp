@@ -246,11 +246,17 @@ nsIconHandler::GetIconLocation(UINT uFlags, LPSTR szIconFile, UINT cchMax, int *
                                              suffix, sizeof(suffix), fname);
 
   // make sure we have enough room in the destination buffer
-  if (cchMax < baseLen + suffixLen + 1)
+  if (cchMax < baseLen + suffixLen + 5)
     return E_FAIL;
 
+  // convert forward slashes to backslashes
+  for (char *p = suffix; *p; ++p)
+    if (*p == '/')
+      *p = '\\'; 
+
   memcpy(szIconFile, fname, baseLen);
-  memcpy(szIconFile + baseLen, suffix, suffixLen + 1);
+  memcpy(szIconFile + baseLen, suffix, suffixLen);
+  memcpy(szIconFile + baseLen + suffixLen, ".ico", 5);
   return S_OK;
 }
 
@@ -285,11 +291,17 @@ nsIconHandler::GetIconLocation(UINT uFlags, LPWSTR szIconFile, UINT cchMax, int 
                                              suffix, sizeof(suffix), mFileName);
 
   // make sure we have enough room in the destination buffer
-  if (cchMax < baseLen + suffixLen + 1)
+  if (cchMax < baseLen + suffixLen + 5)
     return E_FAIL;
 
+  // convert forward slashes to backslashes
+  for (WCHAR *p = suffix; *p; ++p)
+    if (*p == '/')
+      *p = '\\'; 
+
   memcpy(szIconFile, mFileName, baseLen * sizeof(WCHAR));
-  memcpy(szIconFile + baseLen, suffix, (suffixLen + 1) * sizeof(WCHAR));
+  memcpy(szIconFile + baseLen, suffix, suffixLen * sizeof(WCHAR));
+  memcpy(szIconFile + baseLen + suffixLen, L".ico", 5 * sizeof(WCHAR));
   return S_OK;
 }
 
