@@ -104,7 +104,7 @@ function ChangeFolderByDOMNode(folderNode)
   var viewFlags = folderNode.getAttribute('viewFlags');
   var viewType = folderNode.getAttribute('viewType');
 
-	ChangeFolderByURI(uri, viewType, viewFlags, sortType, sortOrder);
+  ChangeFolderByURI(uri, viewType, viewFlags, sortType, sortOrder);
 }
 
 function setTitleFromFolder(msgfolder, subject)
@@ -527,9 +527,10 @@ function CreateDBView(msgFolder, viewType, viewFlags, sortType, sortOrder)
     dump("XXX creating " + dbviewContractId + " with: " + viewType + "," + sortType + "," + sortOrder + "\n");
     gDBView = Components.classes[dbviewContractId].createInstance(Components.interfaces.nsIMsgDBView);
 
+    var isNews = isNewsURI(msgFolder.URI);
     if (!viewFlags) {
-      if (isNewsURI(msgFolder.URI)) { 
-        // news is threaded by default
+      if (isNews) {
+        // news defaults to threaded mode
         viewFlags = nsMsgViewFlagsType.kThreadedDisplay;
       }
       else {
@@ -538,7 +539,13 @@ function CreateDBView(msgFolder, viewType, viewFlags, sortType, sortOrder)
     }
 
     if (!sortType) {
-      sortType = nsMsgViewSortType.byDate;
+      if (isNews) { 
+        // news defaults to threaded mode
+        sortType = nsMsgViewSortType.byThread;
+      }
+      else {
+        sortType = nsMsgViewSortType.byDate;
+      }
     }
 
     if (!sortOrder) {
