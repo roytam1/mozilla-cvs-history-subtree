@@ -560,6 +560,7 @@ NS_IMETHODIMP nsMsgDBView::CycleCell(PRInt32 row, const PRUnichar *colID)
   {
   case 'u': // unread column
     ToggleReadByIndex(row);
+    mOutliner->InvalidateRow(row);
    break;
 
   default:
