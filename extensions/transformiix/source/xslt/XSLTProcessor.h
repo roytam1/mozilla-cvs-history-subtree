@@ -392,7 +392,7 @@ public:
         WHEN,
         WITH_PARAM,
         MESSAGE,
-        EXPR_DEBUG,  // temporary, used for debugging
+        EXPR_DEBUG  // temporary, used for debugging
     };
 
     XSLType(const XSLType& xslType);
