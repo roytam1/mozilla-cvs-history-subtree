@@ -31,7 +31,7 @@ nsDll::nsDll(const char *libFullPath) : m_fullpath(NULL), m_instance(NULL),
 	m_status(DLL_OK)
 {
 	m_lastModTime = LL_ZERO;
-	m_size = LL_ZERO;
+	m_size = 0;
 	
 	if (libFullPath == NULL)
 	{
@@ -46,8 +46,8 @@ nsDll::nsDll(const char *libFullPath) : m_fullpath(NULL), m_instance(NULL),
 		return;
 	}
 
-	PRFileInfo64 statinfo;
-	if (PR_GetFileInfo64(m_fullpath, &statinfo) != PR_SUCCESS)
+	PRFileInfo statinfo;
+	if (PR_GetFileInfo(m_fullpath, &statinfo) != PR_SUCCESS)
 	{
 		// The stat things works only if people pass in the full pathname.
 		// Even if our stat fails, we could be able to load it because of
@@ -71,7 +71,7 @@ nsDll::nsDll(const char *libFullPath) : m_fullpath(NULL), m_instance(NULL),
 }
 
 
-nsDll::nsDll(const char *libFullPath, PRTime lastModTime, PRUint64 fileSize)
+nsDll::nsDll(const char *libFullPath, PRTime lastModTime, PRUint32 fileSize)
 :  m_fullpath(NULL), m_instance(NULL), m_status(DLL_OK)
 {
 	m_lastModTime = lastModTime;
@@ -101,8 +101,17 @@ nsDll::~nsDll(void)
 	m_fullpath = NULL;
 }
 
+
 PRBool nsDll::Load(void)
 {
+    // Of course, this is all buggy, because it uses paths instead of nsFileSpec.
+    // Also, instead of writing yet another converter for path separators, for
+    // pete's sake use the converters in nsFileSpec.h.  Thank you.
+#ifdef	XP_MAC
+	char		*macFileName = NULL;
+	int		loop;
+#endif
+
 	if (m_status != DLL_OK)
 	{
 		return (PR_FALSE);
@@ -112,7 +121,38 @@ PRBool nsDll::Load(void)
 		// Already loaded
 		return (PR_TRUE);
 	}
-	m_instance = PR_LoadLibrary(m_fullpath);
+#ifdef	XP_MAC
+	// err = ConvertUnixPathToMacPath(m_fullpath, &macFileName);
+	if ((macFileName = PL_strdup(m_fullpath)) != NULL)
+	{
+		if (macFileName[0] == '/')
+		{
+			for (loop=0; loop<PL_strlen(macFileName); loop++)
+			{
+				if (macFileName[loop] == '/')	macFileName[loop] = ':';
+			}
+			m_instance = PR_LoadLibrary(&macFileName[1]);		// skip over initial slash
+		}
+		else
+		{
+			m_instance = PR_LoadLibrary(macFileName);
+		}
+	}
+	
+#else
+#ifdef XP_UNIX
+    // On linux we seem to load multiple copies of the same dll but with different path
+    // like libraptorhtml.so and ./libraptorhtml.so
+    // Until this get fixed right, for now for ./libraptorhtml.so remove the "./"
+    if (m_fullpath[0] == '.' && m_fullpath[1] == '/')
+    	m_instance = PR_LoadLibrary( &(m_fullpath[2]) );
+    else
+#endif /* XP_UNIX */
+      {
+        // This is the only right way of doing this...
+        m_instance = PR_LoadLibrary(m_fullpath);
+      }
+#endif /* XP_MAC */
 	return ((m_instance == NULL) ? PR_FALSE : PR_TRUE);
 	
 }

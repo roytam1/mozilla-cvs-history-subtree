@@ -234,7 +234,7 @@ static nsDll *platformCreateDll(const char *fullname)
 	}
 
 	PRTime lastModTime = LL_ZERO;
-	PRUint64 fileSize = LL_ZERO;
+	PRUint32 fileSize = 0;
 	uint32 n = sizeof(lastModTime);
 	NR_RegGetEntry(hreg, key, "LastModTimeStamp", &lastModTime, &n);
 	n = sizeof(fileSize);
@@ -282,7 +282,7 @@ static nsresult platformMarkNoComponents(nsDll *dll)
 	}
 	
 	PRTime lastModTime = dll->GetLastModifiedTime();
-	PRUint64 fileSize = dll->GetSize();
+	PRUint32 fileSize = dll->GetSize();
 	NR_RegSetEntry(hreg, key, "LastModTimeStamp", REGTYPE_ENTRY_BYTES,
 		&lastModTime, sizeof(lastModTime));
 	NR_RegSetEntry(hreg, key, "FileSize",  REGTYPE_ENTRY_BYTES,
@@ -352,7 +352,7 @@ static nsresult platformRegister(NSQuickRegisterData regd, nsDll *dll)
 	NR_RegAddKey(hreg, xpcomKey, (char *)dll->GetFullPath(), &key);
 
 	PRTime lastModTime = dll->GetLastModifiedTime();
-	PRUint64 fileSize = dll->GetSize();
+	PRUint32 fileSize = dll->GetSize();
 
 	NR_RegSetEntry(hreg, key, "LastModTimeStamp", REGTYPE_ENTRY_BYTES,
 		&lastModTime, sizeof(lastModTime));
@@ -477,7 +477,7 @@ static FactoryEntry *platformFind(const nsCID &aCID)
 
 	// Get the library name, modifiedtime and size
 	PRTime lastModTime = LL_ZERO;
-	PRUint64 fileSize = LL_ZERO;
+	PRUint32 fileSize = 0;
 
 	char buf[MAXREGNAMELEN];
 	uint32 len = sizeof(buf);
@@ -1186,7 +1186,7 @@ nsresult nsRepository::AutoRegister(NSRegistrationInstant when,
 	ProcessSerialNumber	psn;
 	ProcessInfoRec		pInfo;
 	FSSpec			appFSSpec;
-	long			theDirID, oldLen, newLen;
+	long			theDirID;
 	Str255			name;
 #endif
 
