@@ -256,6 +256,7 @@
 				F6BD639001B30F5301A962F7,
 				F6BD64B701B3167601A962F7,
 				F6BD650A01B3184301A962F7,
+				F5949A4A030D58F5014E8430,
 				F6BD651901B3184301A962F7,
 				F6BD651F01B3184301A962F7,
 				F507BA520213C22C01D93544,
@@ -560,6 +561,7 @@
 				F5F190BF02D217C201026D5D,
 				F5CA1A1B02D3957001F34900,
 				F5EB9377030C92450100010C,
+				F5949A48030D58A2014E8430,
 			);
 			isa = PBXResourcesBuildPhase;
 			name = "Bundle Resources";
@@ -4888,6 +4890,64 @@
 			settings = {
 			};
 		};
+		F5949A46030D58A1014E8430 = {
+			children = (
+				F5949A47030D58A1014E8430,
+			);
+			isa = PBXGroup;
+			name = dtd;
+			path = ../dist/Embed/res/dtd;
+			refType = 2;
+		};
+		F5949A47030D58A1014E8430 = {
+			isa = PBXFileReference;
+			path = xhtml11.dtd;
+			refType = 4;
+		};
+		F5949A48030D58A2014E8430 = {
+			fileRef = F5949A47030D58A1014E8430;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5949A49030D58A2014E8430 = {
+			fileRef = F5949A47030D58A1014E8430;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5949A4A030D58F5014E8430 = {
+			buildActionMask = 2147483647;
+			dstPath = res/dtd;
+			dstSubfolderSpec = 6;
+			files = (
+				F5949A4B030D5919014E8430,
+			);
+			isa = PBXCopyFilesBuildPhase;
+			name = "Copy Files";
+		};
+		F5949A4B030D5919014E8430 = {
+			fileRef = F5949A47030D58A1014E8430;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5949A4C030D595B014E8430 = {
+			buildActionMask = 2147483647;
+			dstPath = res/dtd;
+			dstSubfolderSpec = 6;
+			files = (
+				F5949A4D030D595B014E8430,
+			);
+			isa = PBXCopyFilesBuildPhase;
+			name = "Copy Files";
+		};
+		F5949A4D030D595B014E8430 = {
+			fileRef = F5949A47030D58A1014E8430;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 		F5960E9C02BA686001000103 = {
 			fileRef = F5FEDBCB02AD8DD101A967F3;
 			isa = PBXBuildFile;
@@ -5404,6 +5464,7 @@
 				F5BAABA302AC693C01A967F3,
 				F5BAAC0A02AC69DA01A967F3,
 				F5BAAC1602AC69DA01A967F3,
+				F5949A4C030D595B014E8430,
 				F5BAAC1902AC69DA01A967F3,
 				F5BAAC1F02AC69DA01A967F3,
 				F5BAAC2202AC69DA01A967F3,
@@ -5707,6 +5768,7 @@
 				F5F190C002D217C201026D5D,
 				F5CA1A1C02D3957001F34900,
 				F5EB9378030C92450100010C,
+				F5949A49030D58A2014E8430,
 			);
 			isa = PBXResourcesBuildPhase;
 			name = "Bundle Resources";
@@ -8963,6 +9025,7 @@
 				F6BD64BC01B316DA01A962F7,
 				F6BD64C701B3172601A962F7,
 				F52CE65F02BFBC7101026D5D,
+				F5949A46030D58A1014E8430,
 				F6BD64C801B3172601A962F7,
 				F6BD64D701B3172601A962F7,
 				F6BD64DD01B3172601A962F7,
