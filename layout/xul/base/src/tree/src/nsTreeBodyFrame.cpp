@@ -979,7 +979,7 @@ NS_IMETHODIMP nsOutlinerBodyFrame::EnsureRowIsVisible(PRInt32 aRow)
     ScrollToRow(aRow);
   else {
     // Bring it just on-screen.
-    PRInt32 distance = aRow - (mTopRowIndex+mPageCount)-1;
+    PRInt32 distance = aRow - (mTopRowIndex+mPageCount)+1;
     ScrollToRow(mTopRowIndex+distance);
   }
 
