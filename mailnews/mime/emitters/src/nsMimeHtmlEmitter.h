@@ -24,6 +24,7 @@
 #include "nsMimeRebuffer.h"
 #include "nsIStreamListener.h"
 #include "nsIOutputStream.h"
+#include "nsIInputStream.h"
 #include "nsIURI.h"
 #include "nsIPref.h"
 
@@ -40,7 +41,7 @@ public:
     NS_IMETHOD    Complete();
 
     // Set the output stream/listener for processed data.
-    NS_IMETHOD    SetOutputStream(nsIOutputStream *outStream);
+    NS_IMETHOD    SetPipe(nsIInputStream * aInputStream, nsIOutputStream *outStream);
     NS_IMETHOD    SetOutputListener(nsIStreamListener *listener);
 
     // Header handling routines.
@@ -72,8 +73,12 @@ protected:
     MimeRebuffer        *mBufferMgr;
 
     // For the output stream
+	// mscott - dont ref count the streams....the emitter is owned by the converter
+	// which owns these streams...
     nsIOutputStream     *mOutStream;
+	nsIInputStream	    *mInputStream;
     nsIStreamListener   *mOutListener;
+
     PRUint32            mTotalWritten;
     PRUint32            mTotalRead;
 

@@ -55,8 +55,7 @@ NS_IMPL_QUERY_INTERFACE(nsMimeXmlEmitter, nsIMimeEmitter::GetIID()); /* we need 
 nsMimeXmlEmitter::nsMimeXmlEmitter()
 {
   NS_INIT_REFCNT(); 
-  
-  mOutStream = NULL;
+
   mBufferMgr = NULL;
   mTotalWritten = 0;
   mTotalRead = 0;
@@ -64,6 +63,7 @@ nsMimeXmlEmitter::nsMimeXmlEmitter()
   mAttachContentType = NULL;
   mAttachCount = 0;
 
+  mInputStream = nsnull;
   mOutStream = nsnull;
   mOutListener = nsnull;
   mURL = nsnull;
@@ -94,9 +94,10 @@ nsMimeXmlEmitter::~nsMimeXmlEmitter(void)
 }
 
 // Set the output stream for processed data.
-nsresult
-nsMimeXmlEmitter::SetOutputStream(nsIOutputStream *outStream)
+NS_IMETHODIMP
+nsMimeXmlEmitter::SetPipe(nsIInputStream * aInputStream, nsIOutputStream *outStream)
 {
+  mInputStream = aInputStream;
   mOutStream = outStream;
   return NS_OK;
 }
@@ -405,11 +406,8 @@ nsMimeXmlEmitter::Write(const char *buf, PRUint32 size, PRUint32 *amountWritten)
                             mBufferMgr->GetSize(), &written);
     mTotalWritten += written;
     mBufferMgr->ReduceBuffer(written);
-    nsCOMPtr<nsIInputStream> inputStream = do_QueryInterface(mOutStream); 
-    if (inputStream)
-    {
-      mOutListener->OnDataAvailable(nsnull, mURL, inputStream, 0, written);
-    }
+    mOutListener->OnDataAvailable(nsnull, mURL, mInputStream, 0, written);
+
     *amountWritten = written;
 
     // if we couldn't write all the old data, buffer the new data
@@ -431,9 +429,8 @@ nsMimeXmlEmitter::Write(const char *buf, PRUint32 size, PRUint32 *amountWritten)
   if (written < size)
     mBufferMgr->IncreaseBuffer(buf+written, (size-written));
 
-  nsCOMPtr<nsIInputStream> inputStream = do_QueryInterface(mOutStream); 
   if (mOutListener)
-    mOutListener->OnDataAvailable(nsnull, mURL, inputStream, 0, written);
+    mOutListener->OnDataAvailable(nsnull, mURL, mInputStream, 0, written);
 
   return rc;
 }

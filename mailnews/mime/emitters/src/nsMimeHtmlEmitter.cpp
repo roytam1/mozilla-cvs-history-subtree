@@ -54,14 +54,13 @@ NS_IMPL_QUERY_INTERFACE(nsMimeHtmlEmitter, nsIMimeEmitter::GetIID()); /* we need
 nsMimeHtmlEmitter::nsMimeHtmlEmitter()
 {
   NS_INIT_REFCNT(); 
-  
-  mOutStream = NULL;
   mBufferMgr = NULL;
   mTotalWritten = 0;
   mTotalRead = 0;
   mDocHeader = PR_FALSE;
   mAttachContentType = NULL;
 
+  mInputStream = nsnull;
   mOutStream = nsnull;
   mOutListener = nsnull;
   mURL = nsnull;
@@ -92,8 +91,9 @@ nsMimeHtmlEmitter::~nsMimeHtmlEmitter(void)
 
 // Set the output stream for processed data.
 nsresult
-nsMimeHtmlEmitter::SetOutputStream(nsIOutputStream *outStream)
+nsMimeHtmlEmitter::SetPipe(nsIInputStream * aInputStream, nsIOutputStream *outStream)
 {
+  mInputStream = aInputStream;
   mOutStream = outStream;
   return NS_OK;
 }
@@ -471,11 +471,7 @@ nsMimeHtmlEmitter::Write(const char *buf, PRUint32 size, PRUint32 *amountWritten
                             mBufferMgr->GetSize(), &written);
     mTotalWritten += written;
     mBufferMgr->ReduceBuffer(written);
-    nsCOMPtr<nsIInputStream> inputStream = do_QueryInterface(mOutStream); 
-    if (inputStream)
-    {
-      mOutListener->OnDataAvailable(nsnull, mURL, inputStream, 0, written);
-    }
+    mOutListener->OnDataAvailable(nsnull, mURL, mInputStream, 0, written);
     *amountWritten = written;
 
     // if we couldn't write all the old data, buffer the new data
@@ -497,9 +493,8 @@ nsMimeHtmlEmitter::Write(const char *buf, PRUint32 size, PRUint32 *amountWritten
   if (written < size)
     mBufferMgr->IncreaseBuffer(buf+written, (size-written));
 
-  nsCOMPtr<nsIInputStream> inputStream = do_QueryInterface(mOutStream); 
   if (mOutListener)
-    mOutListener->OnDataAvailable(nsnull, mURL, inputStream, 0, written);
+    mOutListener->OnDataAvailable(nsnull, mURL, mInputStream, 0, written);
 
   return rc;
 }
