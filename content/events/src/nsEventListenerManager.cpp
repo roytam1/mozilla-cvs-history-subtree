@@ -1138,6 +1138,8 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
   NS_ENSURE_ARG_POINTER(aEventStatus);
   nsresult ret = NS_OK;
 
+  mListenersRemoved = PR_FALSE;
+
   if (aFlags & NS_EVENT_FLAG_INIT) {
     aFlags |= (NS_EVENT_FLAG_BUBBLE | NS_EVENT_FLAG_CAPTURE);
   }
@@ -2205,6 +2207,8 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
     (aEvent->flags & NS_EVENT_FLAG_NO_DEFAULT)) {
     *aEventStatus = nsEventStatus_eConsumeNoDefault;
   }
+
+  mListenersRemoved = PR_FALSE;
 
   return NS_OK;
 }
