@@ -441,20 +441,18 @@ function onFindCmd()
 
 function onFindAgainCmd()
 {
-  if (openFindBar()) {
-    selectFindBar();
+  if (openFindBar())
     focusFindBar();
-  }
+ 
   changeSelectionColor(true);
   findNext();
 }
 
 function onFindPreviousCmd()
 {
-  if (openFindBar()) {
+  if (openFindBar())
     selectFindBar();
-    focusFindBar();
-  }
+  
   changeSelectionColor(true);
   findPrevious();
 }
