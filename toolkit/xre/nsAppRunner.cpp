@@ -391,95 +391,6 @@ CheckArg(const char* aArg, const char **aParam = nsnull)
   return ARG_NONE;
 }
 
-static void DumpArbitraryHelp()
-{
-  nsresult rv;
-
-  nsCOMPtr<nsICommandLineRunner> cmdline
-    (do_CreateInstance("@mozilla.org/toolkit/command-line;1"));
-
-  nsCString text;
-  rv = cmdline->GetHelpText(text);
-  if (NS_SUCCEEDED(rv))
-    printf("%s", text.get());
-}
-
-// English text needs to go into a dtd file.
-// But when this is called we have no components etc. These strings must either be
-// here, or in a native resource file.
-static void
-DumpHelp()
-{
-  printf("Usage: %s [ options ... ] [URL]\n", gArgv[0]);
-  printf("       where options include:\n");
-  printf("\n");
-
-#ifdef MOZ_WIDGET_GTK
-  /* insert gtk options above moz options, like any other gtk app
-   *
-   * note: this isn't a very cool way to do things -- i'd rather get
-   * these straight from a user's gtk version -- but it seems to be
-   * what most gtk apps do. -dr
-   */
-
-  printf("GTK options\n");
-  printf("%s--gdk-debug=FLAGS%sGdk debugging flags to set\n", HELP_SPACER_1, HELP_SPACER_2);
-  printf("%s--gdk-no-debug=FLAGS%sGdk debugging flags to unset\n", HELP_SPACER_1, HELP_SPACER_2);
-  printf("%s--gtk-debug=FLAGS%sGtk+ debugging flags to set\n", HELP_SPACER_1, HELP_SPACER_2);
-  printf("%s--gtk-no-debug=FLAGS%sGtk+ debugging flags to unset\n", HELP_SPACER_1, HELP_SPACER_2);
-  printf("%s--gtk-module=MODULE%sLoad an additional Gtk module\n", HELP_SPACER_1, HELP_SPACER_2);
-  printf("%s-install%sInstall a private colormap\n", HELP_SPACER_1, HELP_SPACER_2);
-
-  /* end gtk toolkit options */
-#endif /* MOZ_WIDGET_GTK */
-#if MOZ_WIDGET_XLIB
-  printf("Xlib options\n");
-  printf("%s-display=DISPLAY%sX display to use\n", HELP_SPACER_1, HELP_SPACER_2);
-  printf("%s-visual=VISUALID%sX visual to use\n", HELP_SPACER_1, HELP_SPACER_2);
-  printf("%s-install_colormap%sInstall own colormap\n", HELP_SPACER_1, HELP_SPACER_2);
-  printf("%s-sync%sMake X calls synchronous\n", HELP_SPACER_1, HELP_SPACER_2);
-  printf("%s-no-xshm%sDon't use X shared memory extension\n", HELP_SPACER_1, HELP_SPACER_2);
-
-  /* end xlib toolkit options */
-#endif /* MOZ_WIDGET_XLIB */
-#ifdef MOZ_X11
-  printf("X11 options\n");
-  printf("%s--display=DISPLAY%sX display to use\n", HELP_SPACER_1, HELP_SPACER_2);
-  printf("%s--sync%sMake X calls synchronous\n", HELP_SPACER_1, HELP_SPACER_2);
-  printf("%s--no-xshm%sDon't use X shared memory extension\n", HELP_SPACER_1, HELP_SPACER_2);
-  printf("%s--xim-preedit=STYLE\n", HELP_SPACER_1);
-  printf("%s--xim-status=STYLE\n", HELP_SPACER_1);
-#endif
-#ifdef XP_UNIX
-  printf("%s--g-fatal-warnings%sMake all warnings fatal\n", HELP_SPACER_1, HELP_SPACER_2);
-
-  printf("\nMozilla options\n");
-#endif
-
-  printf("%s-height <value>%sSet height of startup window to <value>.\n",HELP_SPACER_1,HELP_SPACER_2);
-  printf("%s-h or -help%sPrint this message.\n",HELP_SPACER_1,HELP_SPACER_2);
-  printf("%s-width <value>%sSet width of startup window to <value>.\n",HELP_SPACER_1,HELP_SPACER_2);
-  printf("%s-v or -version%sPrint %s version.\n",HELP_SPACER_1,HELP_SPACER_2, gAppData->appName);
-  printf("%s-P <profile>%sStart with <profile>.\n",HELP_SPACER_1,HELP_SPACER_2);
-  printf("%s-ProfileManager%sStart with profile manager.\n",HELP_SPACER_1,HELP_SPACER_2);
-  printf("%s-UILocale <locale>%sStart with <locale> resources as UI Locale.\n",HELP_SPACER_1,HELP_SPACER_2);
-  printf("%s-contentLocale <locale>%sStart with <locale> resources as content Locale.\n",HELP_SPACER_1,HELP_SPACER_2);
-#ifdef XP_WIN
-  printf("%s-console%sStart Mozilla with a debugging console.\n",HELP_SPACER_1,HELP_SPACER_2);
-#endif
-#ifdef MOZ_ENABLE_XREMOTE
-  printf("%s-remote <command>%sExecute <command> in an already running\n"
-         "%sMozilla process.  For more info, see:\n"
-         "\n%shttp://www.mozilla.org/unix/remote.html\n\n",
-         HELP_SPACER_1,HELP_SPACER_1,HELP_SPACER_4,HELP_SPACER_2);
-#endif
-
-  // this works, but only after the components have registered.  so if you drop in a new command line handler, -help
-  // won't not until the second run.
-  // out of the bug, because we ship a component.reg file, it works correctly.
-  DumpArbitraryHelp();
-}
-
 /**
  * The nsXULAppInfo object implements nsIFactory so that it can be its own
  * singleton.
@@ -769,6 +680,104 @@ ScopedXPCOMStartup::SetWindowCreator(nsINativeAppSupport* native)
   NS_ENSURE_SUCCESS(rv, rv);
 
   return wwatch->SetWindowCreator(creator);
+}
+
+static void DumpArbitraryHelp()
+{
+  nsresult rv;
+
+  nsXREDirProvider dirProvider;
+  dirProvider.Initialize(nsnull);
+
+  ScopedXPCOMStartup xpcom;
+  xpcom.Initialize();
+  xpcom.DoAutoreg();
+
+  nsCOMPtr<nsICommandLineRunner> cmdline
+    (do_CreateInstance("@mozilla.org/toolkit/command-line;1"));
+  if (!cmdline)
+    return;
+
+  nsCString text;
+  rv = cmdline->GetHelpText(text);
+  if (NS_SUCCEEDED(rv))
+    printf("%s", text.get());
+}
+
+// English text needs to go into a dtd file.
+// But when this is called we have no components etc. These strings must either be
+// here, or in a native resource file.
+static void
+DumpHelp()
+{
+  printf("Usage: %s [ options ... ] [URL]\n", gArgv[0]);
+  printf("       where options include:\n");
+  printf("\n");
+
+#ifdef MOZ_WIDGET_GTK
+  /* insert gtk options above moz options, like any other gtk app
+   *
+   * note: this isn't a very cool way to do things -- i'd rather get
+   * these straight from a user's gtk version -- but it seems to be
+   * what most gtk apps do. -dr
+   */
+
+  printf("GTK options\n");
+  printf("%s--gdk-debug=FLAGS%sGdk debugging flags to set\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s--gdk-no-debug=FLAGS%sGdk debugging flags to unset\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s--gtk-debug=FLAGS%sGtk+ debugging flags to set\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s--gtk-no-debug=FLAGS%sGtk+ debugging flags to unset\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s--gtk-module=MODULE%sLoad an additional Gtk module\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s-install%sInstall a private colormap\n", HELP_SPACER_1, HELP_SPACER_2);
+
+  /* end gtk toolkit options */
+#endif /* MOZ_WIDGET_GTK */
+#if MOZ_WIDGET_XLIB
+  printf("Xlib options\n");
+  printf("%s-display=DISPLAY%sX display to use\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s-visual=VISUALID%sX visual to use\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s-install_colormap%sInstall own colormap\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s-sync%sMake X calls synchronous\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s-no-xshm%sDon't use X shared memory extension\n", HELP_SPACER_1, HELP_SPACER_2);
+
+  /* end xlib toolkit options */
+#endif /* MOZ_WIDGET_XLIB */
+#ifdef MOZ_X11
+  printf("X11 options\n");
+  printf("%s--display=DISPLAY%sX display to use\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s--sync%sMake X calls synchronous\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s--no-xshm%sDon't use X shared memory extension\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s--xim-preedit=STYLE\n", HELP_SPACER_1);
+  printf("%s--xim-status=STYLE\n", HELP_SPACER_1);
+#endif
+#ifdef XP_UNIX
+  printf("%s--g-fatal-warnings%sMake all warnings fatal\n", HELP_SPACER_1, HELP_SPACER_2);
+
+  printf("\nMozilla options\n");
+#endif
+
+  printf("%s-height <value>%sSet height of startup window to <value>.\n",HELP_SPACER_1,HELP_SPACER_2);
+  printf("%s-h or -help%sPrint this message.\n",HELP_SPACER_1,HELP_SPACER_2);
+  printf("%s-width <value>%sSet width of startup window to <value>.\n",HELP_SPACER_1,HELP_SPACER_2);
+  printf("%s-v or -version%sPrint %s version.\n",HELP_SPACER_1,HELP_SPACER_2, gAppData->appName);
+  printf("%s-P <profile>%sStart with <profile>.\n",HELP_SPACER_1,HELP_SPACER_2);
+  printf("%s-ProfileManager%sStart with profile manager.\n",HELP_SPACER_1,HELP_SPACER_2);
+  printf("%s-UILocale <locale>%sStart with <locale> resources as UI Locale.\n",HELP_SPACER_1,HELP_SPACER_2);
+  printf("%s-contentLocale <locale>%sStart with <locale> resources as content Locale.\n",HELP_SPACER_1,HELP_SPACER_2);
+#ifdef XP_WIN
+  printf("%s-console%sStart Mozilla with a debugging console.\n",HELP_SPACER_1,HELP_SPACER_2);
+#endif
+#ifdef MOZ_ENABLE_XREMOTE
+  printf("%s-remote <command>%sExecute <command> in an already running\n"
+         "%sMozilla process.  For more info, see:\n"
+         "\n%shttp://www.mozilla.org/unix/remote.html\n\n",
+         HELP_SPACER_1,HELP_SPACER_1,HELP_SPACER_4,HELP_SPACER_2);
+#endif
+
+  // this works, but only after the components have registered.  so if you drop in a new command line handler, -help
+  // won't not until the second run.
+  // out of the bug, because we ship a component.reg file, it works correctly.
+  DumpArbitraryHelp();
 }
 
 // don't modify aAppDir directly... clone it first

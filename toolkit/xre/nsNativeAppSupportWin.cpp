@@ -589,7 +589,7 @@ struct MessageWindow {
             if (cmdLine &&
                 NS_SUCCEEDED(cmdLine->Init(1, argv, nsnull,
                                            nsICommandLine::STATE_REMOTE_AUTO))) {
-                return cmdLine->Run != NS_ERROR_ABORT;
+                return cmdLine->Run() != NS_ERROR_ABORT;
             }
         }
         return DefWindowProc( msgWindow, msg, wp, lp );
