@@ -231,7 +231,17 @@ NS_IMETHODIMP nsCacheService::VisitEntries(nsICacheVisitor *visitor)
 
 NS_IMETHODIMP nsCacheService::EvictEntries(nsCacheStoragePolicy storagePolicy)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsresult rv = NS_ERROR_NOT_IMPLEMENTED;
+    
+    if (storagePolicy == nsICache::STORE_ON_DISK) {
+        if (!mDiskDevice) {
+            rv = CreateDiskDevice();
+            if (NS_FAILED(rv)) return rv;
+        }
+        rv = mDiskDevice->EvictEntries(nsnull);
+    }
+    
+    return rv;
 }
 
 
