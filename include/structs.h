@@ -144,6 +144,11 @@ class TImapServerState;
 #endif
 #endif
 
+
+#if defined(SMOOTH_PROGRESS) && defined(__cplusplus)
+class nsITransferObserver;
+#endif
+
 struct MWContext_ {
     MWContextType type;
 
@@ -335,6 +340,14 @@ struct MWContext_ {
 #ifdef MODULAR_NETLIB
     URL_Struct*   modular_data;
 #endif
+
+#if defined(SMOOTH_PROGRESS)
+#if defined(__cplusplus)
+    nsITransferObserver* progressManager;
+#else
+    void* progressManager;
+#endif /* __cplusplus */
+#endif /* SMOOTH_PROGRESS */
 };
 
 
