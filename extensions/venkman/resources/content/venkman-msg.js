@@ -36,7 +36,8 @@
 function initMsgs ()
 {
     console.bundleList = new Array();
-    initStringBundle("chrome://venkman/locale/venkman.properties");
+    console.defaultBundle = 
+        initStringBundle("chrome://venkman/locale/venkman.properties");
 }
 
 function initStringBundle (bundlePath)
@@ -75,12 +76,24 @@ function initStringBundle (bundlePath)
 
 function getMsg (msgName, params, deflt)
 {
-    var bundle;
-    var ary = msgName.match (/(\d+):(.+)/);
-    if (ary)
-        return (getMsgFrom(console.bundleList[ary[1]], ary[2], params, deflt));
-    else
+    try
+    {    
+        var bundle;
+        var ary = msgName.match (/(\d+):(.+)/);
+        if (ary)
+        {
+            return (getMsgFrom(console.bundleList[ary[1]], ary[2], params,
+                               deflt));
+        }
+        
         return (getMsgFrom(console.bundleList[0], msgName, params, deflt));
+    }
+    catch (ex)
+    {
+        ASSERT (0, "Caught exception getting message: " + msgName + "/" +
+                params);
+        return deflt ? deflt : msgName;
+    }
 }
 
 function getMsgFrom (bundle, msgName, params, deflt)

@@ -44,6 +44,16 @@ const jsdIScript          = Components.interfaces.jsdIScript;
 const jsdIStackFrame      = Components.interfaces.jsdIStackFrame;
 const jsdIFilter          = Components.interfaces.jsdIFilter;
 
+const PROP_ENUMERATE = jsdIProperty.FLAG_ENUMERATE;
+const PROP_READONLY  = jsdIProperty.FLAG_READONLY;
+const PROP_PERMANENT = jsdIProperty.FLAG_PERMANENT;
+const PROP_ALIAS     = jsdIProperty.FLAG_ALIAS;
+const PROP_ARGUMENT  = jsdIProperty.FLAG_ARGUMENT;
+const PROP_VARIABLE  = jsdIProperty.FLAG_VARIABLE;
+const PROP_EXCEPTION = jsdIProperty.FLAG_EXCEPTION;
+const PROP_ERROR     = jsdIProperty.FLAG_ERROR;
+const PROP_HINTED    = jsdIProperty.FLAG_HINTED;
+
 const COLLECT_PROFILE_DATA  = jsdIDebuggerService.COLLECT_PROFILE_DATA;
 
 const PCMAP_SOURCETEXT    = jsdIScript.PCMAP_SOURCETEXT;
@@ -69,16 +79,9 @@ function initDebugger()
                                               /* recent debugTrap().          */
     console.scriptWrappers = new Object();
     console.scriptManagers = new Object();
-    console.breaks = new Object();
+    console.breaks  = new Object();
     console.fbreaks = new Object();
     console.sbreaks = new Object();
-    
-    var cm = console.commandManager;
-    console.coManagerCreated    = cm.commands["hook-script-manager-created"];
-    console.coManagerDestroyed  = cm.commands["hook-script-manager-destroyed"];
-    console.coInstanceCreated   = cm.commands["hook-script-instance-created"];
-    console.coInstanceSealed    = cm.commands["hook-script-instance-sealed"];
-    console.coInstanceDestroyed = cm.commands["hook-script-instance-destroyed"];
     
     /* create the debugger instance */
     if (!Components.classes[JSD_CTRID])
@@ -86,15 +89,16 @@ function initDebugger()
     
     console.jsds = Components.classes[JSD_CTRID].getService(jsdIDebuggerService);
     console.jsds.on();
+
     console.executionHook = { onExecute: jsdExecutionHook };
-    console.errorHook = { onError: jsdErrorHook };
-    console.callHook = { onCall: jsdCallHook };
+    console.errorHook     = { onError: jsdErrorHook };
+    console.callHook      = { onCall: jsdCallHook };
     
     console.jsds.breakpointHook = console.executionHook;
-    console.jsds.debuggerHook = console.executionHook;
-    console.jsds.debugHook = console.executionHook;
-    console.jsds.errorHook = console.errorHook;
-    console.jsds.flags = jsdIDebuggerService.ENABLE_NATIVE_FRAMES;
+    console.jsds.debuggerHook   = console.executionHook;
+    console.jsds.debugHook      = console.executionHook;
+    console.jsds.errorHook      = console.errorHook;
+    console.jsds.flags          = jsdIDebuggerService.ENABLE_NATIVE_FRAMES;
 
     console.chromeFilter = {
         globalObject: null,
@@ -119,6 +123,8 @@ function initDebugger()
         startLine: 0,
         endLine: 0
     };
+    console.jsds.appendFilter (venkmanFilter1);
+
     var venkmanFilter2 = {  /* url based filter for XPCOM callbacks that may  */
         globalObject: null, /* not happen under our glob.                     */
         flags: FILTER_SYSTEM | FILTER_ENABLED,
@@ -126,7 +132,6 @@ function initDebugger()
         startLine: 0,
         endLine: 0
     };
-    console.jsds.appendFilter (venkmanFilter1);
     console.jsds.appendFilter (venkmanFilter2);
 
     console.throwMode = TMODE_IGNORE;
@@ -918,6 +923,9 @@ function sw_addmap (lineMap)
 
 function getScriptWrapper(jsdScript)
 {
+    if (!ASSERT(jsdScript, "getScriptWrapper: null jsdScript"))
+        return null;
+    
     var tag = jsdScript.tag;
     if (tag in console.scriptWrappers)
         return console.scriptWrappers[tag];
@@ -996,15 +1004,16 @@ function debugTrap (frame, type, rv)
             tn = MSG_VAL_DEBUGGER;
             break;
         case jsdIExecutionHook.TYPE_THROW:
-            display (getMsg(MSN_EXCP_TRACE, [formatValue(rv.value),
-                                             formatFrame(frame)]), MT_ETRACE);
+            display (getMsg(MSN_EXCEPTION_TRACE,
+                            [rv.value.stringValue, formatFrame(frame)]),
+                     MT_ETRACE);
             if (rv.value.jsClassName == "Error")
                 display (formatProperty(rv.value.getProperty("message")));
 
             if (console.throwMode != TMODE_BREAK)
                 return jsdIExecutionHook.RETURN_CONTINUE_THROW;
 
-            $[0] = rv.value;
+            console.currentException = rv.value;
             retcode = jsdIExecutionHook.RETURN_CONTINUE_THROW;
             tn = MSG_VAL_THROW;
             break;
@@ -1030,9 +1039,6 @@ function debugTrap (frame, type, rv)
 
     if (tn)
         display (getMsg(MSN_STOP, tn), MT_STOP);
-    if (0 in $)
-        display (getMsg(MSN_FMT_TMP_ASSIGN, [0, formatValue ($[0])]),
-                 MT_FEVAL_OUT);
     
     /* build an array of frames */
     console.frames = new Array(frame);
@@ -1057,9 +1063,11 @@ function debugTrap (frame, type, rv)
     /* execution pauses here until someone calls exitNestedEventLoop() */
 
     clearCurrentFrame();
+    rv.value = ("currentException" in console) ? console.currentException : null;
+
     delete console.frames;
     delete console.trapType;
-    rv.value = (0 in $) ? $[0] : null;
+    delete console.currentException;
     $ = new Array();
     
     dispatch ("hook-debug-continue");
@@ -1154,19 +1162,23 @@ function formatFlags (flags)
 {
     var s = "";
     
-    if (flags & jsdIProperty.FLAG_ENUMERATE)
+    if (flags & PROP_ENUMERATE)
         s += MSG_VF_ENUMERABLE;
-    if (flags & jsdIProperty.FLAG_READONLY)
+    if (flags & PROP_READONLY)
         s += MSG_VF_READONLY;        
-    if (flags & jsdIProperty.FLAG_PERMANENT)
+    if (flags & PROP_PERMANENT)
         s += MSG_VF_PERMANENT;
-    if (flags & jsdIProperty.FLAG_ALIAS)
+    if (flags & PROP_ALIAS)
         s += MSG_VF_ALIAS;
-    if (flags & jsdIProperty.FLAG_ARGUMENT)
+    if (flags & PROP_ARGUMENT)
         s += MSG_VF_ARGUMENT;
-    if (flags & jsdIProperty.FLAG_VARIABLE)
+    if (flags & PROP_VARIABLE)
         s += MSG_VF_VARIABLE;
-    if (flags & jsdIProperty.FLAG_HINTED)
+    if (flags & PROP_ERROR)
+        s += MSG_VF_ERROR;
+    if (flags & PROP_EXCEPTION)
+        s += MSG_VF_EXCEPTION;
+    if (flags & PROP_HINTED)
         s += MSG_VF_HINTED;
 
     return s;

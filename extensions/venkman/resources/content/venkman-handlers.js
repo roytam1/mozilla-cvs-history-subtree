@@ -130,7 +130,10 @@ function con_load (e)
     }
     catch (ex)
     {
-        window.alert (getMsg (MSN_ERR_STARTUP, formatException(ex)));
+        if ("bundleList" in console)
+            window.alert (getMsg (MSN_ERR_STARTUP, formatException(ex)));
+        else
+            window.alert (formatException(ex));
         console.startupException = ex;
     }
 }

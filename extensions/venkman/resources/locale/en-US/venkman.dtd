@@ -45,9 +45,6 @@
 <!ENTITY DebugBar.tooltip "Debugging Toolbar">
 <!ENTITY MenuBar.tooltip  "Menu Bar">
 
-<!-- status bar -->
-<!ENTITY StatusText.label "Welcome to the JavaScript Debugger">
-
 <!-- breakpoint view -->
 <!ENTITY Break.label        "Breakpoints">
 <!ENTITY BreakCol0.label    "Name">

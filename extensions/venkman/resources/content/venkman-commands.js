@@ -99,9 +99,6 @@ function initCommands()
          ["stop",           cmdStop,               CMD_CONSOLE | CMD_NO_STACK],
          ["tmode",          cmdTMode,              CMD_CONSOLE],
          ["version",        cmdVersion,            CMD_CONSOLE],
-         ["watch-expr",     cmdWatchExpr,          CMD_CONSOLE | CMD_NEED_STACK],
-         ["watch-exprd",    cmdWatchExpr,          CMD_CONSOLE],
-         ["watch-property", cmdWatchProperty,      0],         
          ["where",          cmdWhere,              CMD_CONSOLE | CMD_NEED_STACK],
          
          /* aliases */
@@ -135,8 +132,9 @@ function initCommands()
          ["hook-debug-continue",           cmdHook, 0],
          ["hook-display-sourcetext",       cmdHook, 0],
          ["hook-display-sourcetext-soft",  cmdHook, 0],
-         ["hook-fbreak-set",               cmdHook, 0],
+         ["hook-eval-done",                cmdHook, 0],
          ["hook-fbreak-clear",             cmdHook, 0],
+         ["hook-fbreak-set",               cmdHook, 0],
          ["hook-guess-complete",           cmdHook, 0],
          ["hook-transient-script",         cmdHook, 0],
          ["hook-script-manager-created",   cmdHook, 0],
@@ -173,12 +171,19 @@ function defineVenkmanCommands (cmdary)
 {
     var cm = console.commandManager;
     var len = cmdary.length;
+    var bundle;
+    
+    if ("stringBundle" in cmdary)
+        bundle = cmdary.stringBundle;
+    else
+        bundle = console.defaultBundle;
+    
     for (var i = 0; i < len; ++i)
     {
         var name  = cmdary[i][0];
         var func  = cmdary[i][1];
         var flags = cmdary[i][2];
-        var usage = getMsg("cmd." + name + ".params", null, "");
+        var usage = getMsgFrom(bundle, "cmd." + name + ".params", null, "");
 
         var helpDefault;
         var labelDefault = name;
@@ -192,15 +197,18 @@ function defineVenkmanCommands (cmdary)
             if (ary)
                 aliasFor = ary[1];
             helpDefault = getMsg (MSN_DEFAULT_ALIAS_HELP, func); 
-            labelDefault = getMsg ("cmd." + aliasFor + ".label", null, name);
+            labelDefault = getMsgFrom (bundle,
+                                       "cmd." + aliasFor + ".label", null, name);
         }
 
-        var label = getMsg("cmd." + name + ".label", null, labelDefault);
-        var help  = getMsg("cmd." + name + ".help", null, helpDefault);
+        var label = getMsgFrom(bundle,
+                               "cmd." + name + ".label", null, labelDefault);
+        var help  = getMsgFrom(bundle,
+                               "cmd." + name + ".help", null, helpDefault);
         var command = new CommandRecord (name, func, usage, help, label, flags);
         cm.addCommand(command);
 
-        var key = getMsg ("cmd." + name + ".key", null, "");
+        var key = getMsgFrom (bundle, "cmd." + name + ".key", null, "");
         if (key)
             cm.setKey("dynamic-keys", command, key);
     }
@@ -545,7 +553,6 @@ function cmdEval (e)
     {
         if (rv != null)
         {
-            refreshValues();
             var l = $.length;
             $[l] = rv;
             
@@ -556,6 +563,7 @@ function cmdEval (e)
             dd ("evalInTargetScope returned null");
     }
 
+    dispatch ("hook-eval-done");
     return true;
 }
 
@@ -565,6 +573,8 @@ function cmdEvald (e)
     var rv = evalInDebuggerScope (e.scriptText);
     if (typeof rv != "undefined")
         display (String(rv), MT_EVAL_OUT);
+
+    dispatch ("hook-eval-done");
     return true;
 }
 
@@ -795,7 +805,7 @@ function cmdFindURL (e)
     }
     else
     {
-        sourceText = console.files[e.url] = new SourceText (null, e.url);
+        sourceText = console.files[e.url] = new SourceText (e.url);
     }
 
     var params = {
@@ -1095,7 +1105,7 @@ function cmdOpenURL (e)
 {
     var url = prompt (MSG_OPEN_URL);
     if (url)
-        return dispatch ("find-url",{url: url});
+        return dispatch ("find-url", { url: url });
 
     return null;
 }    
@@ -1262,88 +1272,90 @@ function cmdSaveSource (e)
 
 function cmdSaveProfile (e)
 {
-    function writeHeaderCSV(file)
+    function onComplete (i)
     {
-        file.write ("# path, file, function, start-line, end-line, " +
-                    "call-count, recurse-depth, total-time, min-time, " +
-                    "max-time, avg-time\n");
-    };
-    
-    function writeSummaryCSV(file, summary)
-    {
-        for (var i = 0; i < summary.length; ++i)
-        {
-            var r = summary[i];
-            file.write (r.path + ", " + r.file + ", " + r.fun + ", " + r.base +
-                        ", " + r.end + ", " + r.ccount + ", " + r.recurse +
-                        ", " + r.total + ", " + r.min + ", " + r.max +
-                        ", " + r.avg +"\n");
-        }
+        var msg = getMsg(MSN_PROFILE_SAVED, getURLSpecFromFile(file.localFile));
+        display (msg);
+        console.status = msg;
+        file.close();
     };
         
-    function writeSummaryText(file, summary, fileName)
-    {
-        file.write ((fileName ? fileName : "** all files **") + "\n");
-        for (var i = 0; i < summary.length; ++i)
-            file.write ("\t" + summary[i].str + "\n");
-    };
+    var templatePfx = "profile.template.";
+    var i;
+    var ext;
     
     if (!e.targetFile || e.targetFile == "?")
     {
-        var rv = pickSaveAs(MSG_SAVE_PROFILE, "$html *.csv $text $all");
+        var list = console.listPrefs(templatePfx);
+        var extList = "";
+        for (i = 0; i < list.length; ++i)
+        {
+            ext = list[i].substr(templatePfx.length);
+            if (list[i].search(/html|htm|xml|txt/i) == -1)
+                extList += "*." + ext + " ";
+        }
+        var rv = pickSaveAs(MSG_SAVE_PROFILE, "$html $xml $txt " + 
+                            extList + "$all");
         if (rv.reason == PICK_CANCEL)
             return null;
         e.targetFile = rv.file;
     }
     
     var file = fopen (e.targetFile, MODE_WRONLY | MODE_CREATE | MODE_TRUNCATE);
-    var ary = file.localFile.path.match(/(csv|html?)$/i);
-    var writeHeader = null;
-    var writeSummary = writeSummaryText;
-    var writeFooter = null;
+
+    var templateName;
+    var ary = file.localFile.path.match(/\.([^.]+)$/);
+
     if (ary)
-    {
-        var ext = ary[1].toLowerCase();
-        if (ext == "csv")
-        {
-            writeHeader = writeHeaderCSV;
-            writeSummary = writeSummaryCSV;
-        }
-        else
-        {
-            writeHeader = writeHeaderHTML;
-            writeSummary = writeSummaryHTML;
-            writeFooter = writeFooterHTML;
-        }
-    }
-    
-    if (writeHeader)
-        writeHeader(file);
-
-    var i;
-    
-    if ("urlList" in e && e.urlList.length > 0 ||
-        "url" in e && e.url && (e.urlList = [e.url]))
-    {
-        for (i = 0; i < e.urlList.length; ++i)
-            writeSummary(file, console.getProfileSummary(e.urlList[i]),
-                         e.urlList[i]);
-    }
+        ext = ary[1].toLowerCase();
     else
+        ext = "txt";
+
+    templateName = templatePfx + ext;
+    var templateFile;
+    if (templateName in console.prefs)
+        templateFile = console.prefs[templateName];
+    else
+        templateFile = console.prefs[templatePfx + "txt"];
+    
+    var reportTemplate = console.profiler.loadTemplate(templateFile);
+
+    var scriptInstanceList = new Array();
+    
+    var j;
+
+    if (!("urlList" in e) || e.urlList.length == 0)
     {
-        var scriptURLs = keys(console.scripts).sort();
-        for (i = 0; i < scriptURLs.length; ++i)
-        {
-            var fileName = console.scripts[scriptURLs[i]].fileName;
-            writeSummary(file, console.getProfileSummary(fileName), fileName);
-        }
+        if ("url" in e && e.url)
+            e.urlList = [e.url];
+        else
+            e.urlList = keys(console.scriptManagers);
+    }
+    
+    e.urlList = e.urlList.sort();
+    
+    for (i = 0; i < e.urlList.length; ++i)
+    {
+        var url = e.urlList[i];
+        if (!ASSERT (url in console.scriptManagers, "url not loaded"))
+            continue;
+        var manager = console.scriptManagers[url];
+        for (j in manager.instances)
+            scriptInstanceList.push (manager.instances[j]);
     }
 
-    if (writeFooter)
-        writeFooter(file);
+    var rangeList;
+    if (("profile.ranges." + ext) in console.prefs)
+        rangeList = console.prefs["profile.ranges." + ext].split(",");
+    else
+        rangeList = console.prefs["profile.ranges.default"].split(",");
+    
+    var profileReport = new ProfileReport (reportTemplate, file, rangeList,
+                                           scriptInstanceList);
+    profileReport.onComplete = onComplete;
+    
+    console.profiler.generateReport (profileReport);
 
-    display (getMsg(MSN_PROFILE_SAVED, getURLSpecFromFile(file.localFile)));
-    file.close();
     return file.localFile;
 }
 
@@ -1458,6 +1470,17 @@ function cmdTMode (e)
     return true;
 }
 
+function cmdToggleFloat (e)
+{
+    if (!e.viewId in console.views || typeof console.views[e.viewId] != "object")
+    {
+        display (getMsg(MSN_ERR_NO_SUCH_VIEW, e.viewId), MT_ERROR);
+        return;
+    }
+
+
+}
+
 function cmdToggleView (e)
 {
     if (!e.viewId in console.views || typeof console.views[e.viewId] != "object")
@@ -1481,10 +1504,12 @@ function cmdToggleView (e)
         throw new Failure();
         
     if (!e.containerId)
+    {
         e.containerId = viewContent.getAttribute("default-container");
     
-    if (!e.containerId)
-        e.containerId = "view-container-1";
+        if (!e.containerId)
+            e.containerId = "view-container-1";
+    }
     
     var viewContainer = document.getElementById(e.containerId);
     if (!viewContainer)
@@ -1501,57 +1526,6 @@ function cmdVersion ()
 {
     display(MSG_HELLO, MT_HELLO);
     display(getMsg(MSN_VERSION, __vnk_version + __vnk_versionSuffix), MT_HELLO);
-}
-
-function cmdWatchExpr (e)
-{
-    if (!e.expression)
-    {
-        var watches = console.views.watches.childData;
-        var len = watches.length;
-        display (getMsg(MSN_WATCH_HEADER, len));
-        for (var i = 0; i < len; ++i)
-        {
-            display (getMsg(MSN_FMT_WATCH_ITEM, [i, watches[i].displayName,
-                                                 watches[i].displayValue]));
-        }
-        return null;
-    }
-    
-    var refresher;
-    if (e.command.name == "watch-expr")
-    {
-        refresher = function () { 
-                        this.value = evalInTargetScope(e.expression); 
-                    };
-    }
-    else
-    {
-        refresher = function () {
-                        var rv = evalInDebuggerScope(e.expression);
-                        dd ("refreshing: '" + e.expression + "' = " + rv);
-                        this.value = console.jsds.wrapValue(rv);
-                    };
-    }
-    
-    var rec = new ValueRecord(console.jsds.wrapValue(null), e.expression,
-                              0);
-    rec.onPreRefresh = refresher;
-    rec.refresh();
-    console.views.watches.childData.appendChild(rec);
-    return rec;
-}
-
-function cmdWatchProperty (e)
-{
-    var rec = new ValueRecord(console.jsds.wrapValue(null),
-                              e.propertyName, 0);
-    rec.onPreRefresh = function () {
-                           this.value = e.jsdValue.getProperty(e.propertyName);
-                       };
-    rec.onPreRefresh();
-    console.views.watches.childData.appendChild(rec);
-    return rec;
 }
 
 function cmdWhere ()

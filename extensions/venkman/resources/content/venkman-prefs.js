@@ -48,27 +48,41 @@ function initPrefs()
     console.prefs.prefBranch = 
         console.prefs.prefService.getBranch("extensions.venkman.");
     console.prefs.prefNames = new Array();
+    console.prefs.prefNameMap = new Object();
     
     //    console.addPref ("input.commandchar", "/");    
+    console.addPref ("startupCount", 0);
     console.addPref ("enableChromeFilter", false);
     console.addPref ("tabWidth", 4);
-    console.addPref ("profile.template.html",
-                     "chrome://venkman/content/profile.html.tpl");
-    console.addPref ("profile.ranges",
-                     "1000000, 5000, 2500, 1000, 750, 500, 250, 100, 75, 50, " +
-                     "25, 10, 7.5, 5, 2.5, 1, 0.75, 0.5, 0.25");
     console.addPref ("initialScripts", "");
     console.addPref ("prettyprint", false);
     console.addPref ("guessContext", 5);
     console.addPref ("guessPattern", "(\\w+)\\s*[:=]\\s*$");
-    
-    var list = console.prefs.prefBranch.getChildList("extensions.venkman.", {});
+    console.addPref ("permitStartupHit", true);
+    console.addPref ("statusDuration", 10 * 1000);
+    var list = console.prefs.prefBranch.getChildList("", {});
     for (var p in list)
     {
-        dd ("pref list " + list[p]);
         if (!(list[p] in console.prefs))
+        {
+            dd ("pref list " + list[p]);
             console.addPref(list[p]);
+        }
     }                                                 
+}
+
+console.listPrefs =
+function con_listprefs (prefix)
+{
+    var list = new Array();
+    var names = console.prefs.prefNames;
+    for (var i = 0; i < names.length; ++i)
+    {
+        if (names[i].indexOf(prefix) == 0)
+            list.push (names[i]);
+    }
+
+    return list;
 }
 
 console.addPref =
@@ -147,7 +161,7 @@ function con_addpref (prefName, defaultValue)
     if (prefName in console.prefs)
         return;
 
-    console.prefs.prefNames.push(prefName);    
+    console.prefs.prefNames.push(prefName);
     console.prefs.prefNames.sort();
     console.prefs.__defineGetter__(prefName, prefGetter);
     console.prefs.__defineSetter__(prefName, prefSetter);

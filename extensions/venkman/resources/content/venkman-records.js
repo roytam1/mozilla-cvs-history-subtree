@@ -46,14 +46,16 @@ function initRecords()
     FrameRecord.prototype.property    = atomsvc.getAtom("item-frame");
     FrameRecord.prototype.atomCurrent = atomsvc.getAtom("current-frame-flag");
 
-    ValueRecord.prototype.atomVoid     = atomsvc.getAtom("item-void");
-    ValueRecord.prototype.atomNull     = atomsvc.getAtom("item-null");
-    ValueRecord.prototype.atomBool     = atomsvc.getAtom("item-bool");
-    ValueRecord.prototype.atomInt      = atomsvc.getAtom("item-int");
-    ValueRecord.prototype.atomDouble   = atomsvc.getAtom("item-double");
-    ValueRecord.prototype.atomString   = atomsvc.getAtom("item-string");
-    ValueRecord.prototype.atomFunction = atomsvc.getAtom("item-function");
-    ValueRecord.prototype.atomObject   = atomsvc.getAtom("item-object");
+    ValueRecord.prototype.atomVoid      = atomsvc.getAtom("item-void");
+    ValueRecord.prototype.atomNull      = atomsvc.getAtom("item-null");
+    ValueRecord.prototype.atomBool      = atomsvc.getAtom("item-bool");
+    ValueRecord.prototype.atomInt       = atomsvc.getAtom("item-int");
+    ValueRecord.prototype.atomDouble    = atomsvc.getAtom("item-double");
+    ValueRecord.prototype.atomString    = atomsvc.getAtom("item-string");
+    ValueRecord.prototype.atomFunction  = atomsvc.getAtom("item-function");
+    ValueRecord.prototype.atomObject    = atomsvc.getAtom("item-object");
+    ValueRecord.prototype.atomError     = atomsvc.getAtom("item-error");
+    ValueRecord.prototype.atomException = atomsvc.getAtom("item-exception");
 }
 
 /*******************************************************************************
@@ -103,10 +105,9 @@ function FrameRecord (jsdFrame)
     this.setColumnPropertyName ("col-1", "location");
 
     this.functionName = jsdFrame.functionName;
-    this.scriptWrapper = getScriptWrapper(jsdFrame.script);
-
     if (!jsdFrame.isNative)
     {
+        this.scriptWrapper = getScriptWrapper(jsdFrame.script);
         this.location = getMsg(MSN_FMT_FRAME_LOCATION,
                                [getFileFromPath(jsdFrame.script.fileName),
                                 jsdFrame.line, jsdFrame.pc]);
@@ -114,6 +115,7 @@ function FrameRecord (jsdFrame)
     }
     else
     {
+        this.scriptWrapper = null;
         this.location = MSG_URL_NATIVE;
     }
     
@@ -414,7 +416,8 @@ function ValueRecord (value, name, flags)
     this.setColumnPropertyName ("col-2", "displayValue");
     this.setColumnPropertyName ("col-3", "displayFlags");    
     this.displayName = name;
-    this.displayFlags = flags;
+    this.displayFlags = formatFlags(flags);
+    this.flags = flags;
     this.value = value;
     this.jsType = null;
     this.refresh();
@@ -447,11 +450,37 @@ function cr_resort()
      */
 }
 
+ValueRecord.prototype.getProperties =
+function vr_getprops (properties)
+{
+    if ("valueIsException" in this || this.flags & PROP_EXCEPTION)
+        properties.AppendElement (this.atomException);
+
+    if (this.flags & PROP_ERROR)
+        properties.AppendElement (this.atomError);
+
+    properties.AppendElement (this.property);
+}
+
 ValueRecord.prototype.refresh =
 function vr_refresh ()
 {
     if ("onPreRefresh" in this)
-        this.onPreRefresh();    
+    {
+        try
+        {
+            this.onPreRefresh();
+            delete this.valueIsException;
+        }
+        catch (ex)
+        {
+            if (!(ex instanceof jsdIValue))
+                ex = console.jsds.wrapValue(ex);
+            
+            this.value = ex;
+            this.valueIsException = true;
+        }
+    }
 
     var sizeDelta = 0;
     var lastType = this.jsType;
@@ -520,7 +549,7 @@ function vr_refresh ()
             break;
         case jsdIValue.TYPE_FUNCTION:
             this.displayType  = MSG_TYPE_FUNCTION;
-            this.displayValue = (this.value.isNative) ? MSG_WORD_NATIVE :
+            this.displayValue = (this.value.isNative) ? MSG_VAL_NATIVE :
                 MSG_WORD_SCRIPT;
             this.property = this.atomFunction;
             break;
@@ -714,7 +743,7 @@ function vr_create()
         {
             this.childData.push(new ValueRecord(prop.value,
                                                 prop.name.stringValue,
-                                                formatFlags(prop.flags)));
+                                                prop.flags));
         }
         else
         {

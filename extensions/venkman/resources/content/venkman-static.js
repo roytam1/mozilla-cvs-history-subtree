@@ -33,8 +33,11 @@
  *
  */
 
-const __vnk_version = "0.9.1";
+const __vnk_version = "0.9.5";
 var   __vnk_versionSuffix = "";
+
+const __vnk_counter_url = 
+"http://www.hacksrus.com/~ginda/venkman/launch-counter/next-sequence.cgi"
 
 /* dd is declared first in venkman-utils.js */
 var warn;
@@ -74,7 +77,7 @@ var console = new Object();
 
 function setStopState(state)
 {
-    var tb = document.getElementById("maintoolbar:stop");
+    var tb = console.ui["stop-button"];
     if (state)
     {
         console.jsds.interruptHook = console.executionHook;
@@ -89,15 +92,15 @@ function setStopState(state)
 
 function setProfileState(state)
 {
-    var tb = document.getElementById("maintoolbar:profile-tb");
+    var tb = console.ui["profile-button"];
     if (state)
     {
-        console.jsds.flags |= COLLECT_PROFILE_DATA;
+        console.profiler.enabled = true;
         tb.setAttribute("profile", "true");
     }
     else
     {
-        console.jsds.flags &= ~COLLECT_PROFILE_DATA;
+        console.profiler.enabled = false;
         tb.removeAttribute("profile");
     }
 }
@@ -193,7 +196,8 @@ function dispatch (text, e, flags)
                 display (getMsg(MSN_ERR_INTERNAL_DISPATCH, ary[0].name),
                          MT_ERROR);
                 display (formatException(ex), MT_ERROR);
-                dd (ex.stack);
+                if ("stack" in ex)
+                    dd (ex.stack);
             }
             break;
             
@@ -343,7 +347,7 @@ function display(message, msgtype)
                     { message: message, msgtype: msgtype });
 }
 
-function evalInDebuggerScope (script)
+function evalInDebuggerScope (script, rethrow)
 {
     try
     {
@@ -351,12 +355,15 @@ function evalInDebuggerScope (script)
     }
     catch (ex)
     {
+        if (rethrow)
+            throw ex;
+
         display (formatEvalException(ex), MT_ERROR);
         return null;
     }
 }
 
-function evalInTargetScope (script)
+function evalInTargetScope (script, rethrow)
 {
     if (!console.frames)
     {
@@ -368,6 +375,9 @@ function evalInTargetScope (script)
     
     if (!getCurrentFrame().eval (script, MSG_VAL_CONSOLE, 1, rval))
     {
+        if (rethrow)
+            throw rval.value;
+        
         //dd ("exception: " + dumpObjectTree(rval.value));
         display (formatEvalException (rval.value), MT_ERROR);
         return null;
@@ -409,27 +419,27 @@ function init()
         Components.classes[WW_CTRID].getService(nsIWindowWatcher);
 
     console.debuggerWindow = getBaseWindowFromWindow(window);
-    console.floatingWindows = new Array();    
 
     console.files = new Object();
-
-    console._lastStackDepth = -1;
-
-    console.ui = new Object();
-    console.ui["status-text"] = document.getElementById ("status-text");
-    console._statusStack = new Array();
     console.pluginState = new Object();
+
+    console.floatingWindows = new Array();    
+    console._statusStack = new Array();
+    console._lastStackDepth = -1;
 
     initMsgs();
     initPrefs();
-    initHandlers();
     initCommands();
 
-    /* save a reference to this to make calls to display() slightly faster. */
-    console.coDisplayHook = 
-        console.commandManager.commands["hook-session-display"];
-    console.coFindScript = 
-        console.commandManager.commands["find-script"];
+    /* Some commonly used commands, cached now, for use with dispatchCommand. */
+    var cm = console.commandManager;
+    console.coManagerCreated    = cm.commands["hook-script-manager-created"];
+    console.coManagerDestroyed  = cm.commands["hook-script-manager-destroyed"];
+    console.coInstanceCreated   = cm.commands["hook-script-instance-created"];
+    console.coInstanceSealed    = cm.commands["hook-script-instance-sealed"];
+    console.coInstanceDestroyed = cm.commands["hook-script-instance-destroyed"];
+    console.coDisplayHook       = cm.commands["hook-session-display"];
+    console.coFindScript        = cm.commands["find-script"];
 
     console.commandManager.addHooks (console.hooks);
 
@@ -447,14 +457,25 @@ function init()
 
     initViews();
     initRecords();
+    initHandlers(); // handlers may notice windows, which need views and records
     createMainMenu(document);
     createMainToolbar(document);
+    console.ui = {
+        "status-text": document.getElementById ("status-text"),
+        "profile-button": document.getElementById ("maintoolbar:profile-tb"),
+        "stop-button": document.getElementById ("maintoolbar:stop")
+    };    
 
     disableDebugCommands();
     
     initDebugger();
+    initProfiler();
 
+    fetchLaunchCount();
+    
     console.sourceText = new HelpText();
+
+    console.pushStatus(MSG_STATUS_DEFAULT);
 
     dispatch ("version");
     dispatch ("commands");
@@ -483,6 +504,29 @@ function destroy ()
     detachDebugger();
 }
 
+function fetchLaunchCount()
+{
+    ++console.prefs["startupCount"];
+
+    if (!toBool(console.prefs["permitStartupHit"]))
+        return;
+
+    function onLoad ()
+    {
+        var ary = String(r.responseText).match(/(\d+)/);
+        if (ary)
+            display (getMsg(MSN_LAUNCH_COUNT,
+                            [console.prefs["startupCount"], ary[1]]));
+    };
+    
+    var r = new XMLHttpRequest();
+    r.onload = onLoad;
+    r.open ("GET",
+            __vnk_counter_url + "?local=" +  console.prefs["startupCount"] +
+            "&version=" + __vnk_version);
+    r.send (null);
+}
+    
 console.__defineGetter__ ("userAgent", con_ua);
 function con_ua ()
 {
@@ -591,12 +635,16 @@ function bm_tostring ()
     return formatException (this);
 }
 
-function Failure ()
+function Failure (reason)
 {
-    var obj = new BadMojo(ERR_FAILURE);
+    if (typeof reason == "undefined")
+        reason = MSG_ERR_DEFAULT_REASON;
+
+    var obj = new BadMojo(ERR_FAILURE, [reason]);
     obj.fileName = Components.stack.caller.filename;
     obj.lineNumber = Components.stack.caller.lineNumber;
     obj.functionName = Components.stack.caller.name;
+    
     return obj;
 }
 
@@ -633,9 +681,27 @@ function con_getstatus ()
 console.__defineSetter__ ("status", con_setstatus);
 function con_setstatus (msg)
 {
-    if (!msg)
-        msg = console._statusStack[console._statusStack.length - 1];
-    
+    var topMsg = console._statusStack[console._statusStack.length - 1];
+
+    if (msg)
+    {        
+        if ("_statusTimeout" in console)
+        {
+            clearTimeout (console._statusTimeout);
+            delete console._statusTimeout;
+        }
+        if (msg != topMsg)
+        {
+            console._statusTimeout = setTimeout (con_setstatus,
+                                                 console.prefs["statusDuration"],
+                                                 null);
+        }
+    }
+    else
+    {
+        msg = topMsg;
+    }
+
     console.ui["status-text"].setAttribute ("label", msg);
 }
 
@@ -653,261 +719,18 @@ function con_getppline ()
     return this._pp_stopLine;
 }
 
-console.getProfileSummary =
-function con_getProfileSummary (fileName, key)
-{
-    if (typeof key == "undefined")
-        key = "max";
-    
-    function compare (a, b)
-    {
-        if (a.key > b.key)
-            return 1;
-        if (a.key < b.key)
-            return -1;
-        return 0;
-    };
-    
-    function addScriptRec(s)
-    {
-        var ex;
-        
-        try
-        {
-            var ccount = s.script.callCount;
-            var tot_ms = roundTo(s.script.totalExecutionTime, 2);
-            var min_ms = roundTo(s.script.minExecutionTime, 2);
-            var max_ms = roundTo(s.script.maxExecutionTime, 2);
-            var avg_ms = roundTo(s.script.totalExecutionTime / ccount, 2);
-            var recurse = s.script.maxRecurseDepth;
-
-            var obj = new Object();
-            obj.total = tot_ms;
-            obj.ccount = ccount;
-            obj.avg = avg_ms;
-            obj.min = min_ms;
-            obj.max = max_ms;
-            obj.recurse = recurse;
-            obj.path = s.script.fileName;
-            obj.file = getFileFromPath(obj.path);
-            obj.base = s.script.baseLineNumber;
-            obj.end = obj.base + s.script.lineExtent;
-            obj.fun = s.functionName;
-            obj.str = obj.fun  + ":" + obj.base + "-" + obj.end +
-                ", calls " + ccount +
-                (obj.recurse ? " (depth " + recurse +")" : "") +
-                ", total " + tot_ms + 
-                "ms, min " + min_ms +
-                "ms, max " + max_ms +
-                "ms, avg " + avg_ms + "ms.";
-            obj.key = obj[key];
-            list.push (obj);
-        }
-        catch (ex)
-        {
-            /* This function is called under duress, and the script representd
-             * by |s| may get collected at any point.  When that happens,
-             * attempting to access to the profile data will throw this
-             * exception.
-             */
-            if (ex == Components.results.NS_ERROR_NOT_AVAILABLE)
-            {
-                display (getMsg(MSG_PROFILE_LOST, formatScript(s)), MT_WARN);
-            }
-            else
-            {
-                throw ex;
-            }
-            
-        }
-        
-    };
-
-    function addScriptContainer (container)
-    {
-        for (var i = 0; i < container.childData.length; ++i)
-        {
-            if (container.childData[i].script.callCount)
-                addScriptRec(container.childData[i]);
-        }
-    };
-    
-    var list = new Array();
-    list.key = key;
-    
-    if (!fileName)
-    {
-        for (var c in console.scripts)
-            addScriptContainer (console.scripts[c]);
-    } else {
-        if (!(fileName in console.scripts))
-            return null;
-        addScriptContainer (console.scripts[fileName]);
-    }
-    
-    list.sort(compare);
-    return list;
-}
-        
-function loadTemplate(url)
-{
-    var lines = loadURLNow(url);
-    if (!lines)
-        return null;
-
-    var obj = new Object();
-    var i;
-
-    var sections = {
-         "fileHeader"    : /<!--@section-start-->/m,
-         "sectionHeader" : /<!--@range-start-->/m,
-         "rangeHeader"   : /<!--@item-start-->/m,
-         "itemBody"      : /<!--@item-end-->/m,
-         "rangeFooter"   : /<!--@range-end-->/m,
-         "sectionFooter" : /<!--@section-end-->/m,
-         "fileFooter"    : 0
-    };
-
-    for (var s in sections)
-    {
-        if (sections[s])
-        {
-            i = lines.search(sections[s]);
-            if (i == -1)
-                throw "Cant match " + String(sections[s]);
-            obj[s] = lines.substr(0, i - 1);
-            lines = lines.substr(RegExp.rightContext);
-        }
-        else
-        {
-            obj[s] = lines;
-            lines = "";
-        }
-    }
-
-    return obj;
-}
-    
-function writeHeaderHTML(file, tpl)
-{
-    file.tpl = loadTemplate(console.prefs["profile.template.html"]);
-    file.fileData = {
-        "\\$full-date"    : String(Date()),
-        "\\$user-agent"   : navigator.userAgent,
-        "\\$venkman-agent": console.userAgent
-    };
-    file.write(replaceStrings(file.tpl.fileHeader, file.fileData));
-};
-
-function writeSummaryHTML(file, summary, fileName)
-{
-    function scale(x) { return roundTo(K * x, 2); };
-
-    function writeSummaryEntry()
-    {
-        var entryData = {
-            "\\$item-number-next": summary.length - i + 1,
-            "\\$item-number-prev": summary.length - i - 1,
-            "\\$item-number"     : summary.length - i,
-            "\\$item-name"       : r.path,
-            "\\$item-summary"    : r.str,
-            "\\$item-min-pct"    : scale(r.min),
-            "\\$item-below-pct"  : scale(r.avg - r.min),
-            "\\$item-above-pct"  : scale(r.max - r.avg),
-            "\\$time-max"        : r.max,
-            "\\$time-min"        : r.min,
-            "\\$time-avg"        : r.avg,
-            "\\$time-tot"        : r.total,
-            "\\$call-count"      : r.ccount,
-            "\\$funcion-name"    : r.fun,
-            "\\$file-name"       : r.file,
-            "\\$full-url"        : r.path,
-            "\\$line-start"      : r.base,
-            "\\$line-end"        : r.end,
-            "__proto__": rangeData
-        };
-    
-        file.write(replaceStrings(file.tpl.itemBody, entryData));
-    };
-    
-    if (!summary || summary.length < 1)
-        return;
-
-    if ("sumNo" in file)
-        ++file.sumNo;
-    else
-        file.sumNo = 1;
-
-    var headerData = {
-        "\\$section-number-prev": file.sumNo - 1,
-        "\\$section-number-next": file.sumNo + 1,
-        "\\$section-number"     : file.sumNo,
-        "\\$section-link"       : fileName ? "<a class='section-link' href='" +
-                                  fileName + "'>" + fileName + "</a>" :
-                                  "** All Files **",
-        "__proto__"             : file.fileData
-    };
-
-    file.write(replaceStrings(file.tpl.sectionHeader, headerData));
-
-    const MAX_WIDTH = 90;
-    var ranges = console.prefs["profile.ranges"].split(",");
-    if (!ranges.length)
-        throw "Bad value for pref profile.ranges";
-    for (i = 0; i < ranges.length; ++i)
-        ranges[i] = Number(ranges[i]);
-    ranges.push(0); // push two 0's to the end of the list so the user doesn't
-    ranges.push(0); // have to.
-    var rangeIndex = 1;
-    var lastRangeIndex = 0;
-    var K = 1;
-    var rangeIter = 0;
-    for (var i = summary.length - 1; i >= 0; --i)
-    {
-        var r = summary[i];
-        while (r.key && r.key <= ranges[rangeIndex])
-            ++rangeIndex;
-
-        if (lastRangeIndex != rangeIndex)
-        {
-            ++rangeIter;
-            K = MAX_WIDTH / ranges[rangeIndex - 1];
-            var rangeData = {
-                "\\$range-min"        : ranges[rangeIndex],
-                "\\$range-max"        : ranges[rangeIndex - 1],
-                "\\$range-number-prev": rangeIter - 1,
-                "\\$range-number-next": rangeIter + 1,
-                "\\$range-number"     : rangeIter,
-                "__proto__"           : headerData
-            };
-            if (rangeIndex > 0)
-                file.write(replaceStrings(file.tpl.rangeFooter, rangeData));
-            file.write(replaceStrings(file.tpl.rangeHeader, rangeData));
-            lastRangeIndex = rangeIndex;
-        }
-        writeSummaryEntry();
-    }
-
-    file.write(replaceStrings(file.tpl.rangeFooter, rangeData));
-    file.write(replaceStrings(file.tpl.sectionFooter, headerData));
-}
-
-function writeFooterHTML(file)
-{
-    file.write(replaceStrings(file.tpl.fileFooter, file.fileData));
-}
-
 console.pushStatus =
 function con_pushstatus (msg)
 {
-    console._statusStack.push (console.status);
+    console._statusStack.push (msg);
     console.status = msg;
 }
 
 console.popStatus =
 function con_popstatus ()
 {
-    console.status = console._statusStack.pop();
+    console._statusStack.pop();
+    console.status = console._statusStack[console._statusStack.length - 1];
 }
 
 function SourceText (scriptInstance)

@@ -75,6 +75,8 @@ function con_realizeview (view, key)
 {
     console.views[key] = view;
     console.views[key].init();
+    if ("commands" in console.views[key])
+        defineVenkmanCommands(console.views[key].commands);
     if ("hooks" in console.views[key])
         console.commandManager.addHooks (console.views[key].hooks, key);
 }
@@ -577,6 +579,12 @@ function lv_hookDebugStop (e)
     console.views.locals.changeFrame(console.frames[0]);
 }
 
+console.views.locals.hooks["hook-eval-done"] =
+function lv_hookEvalDone (e)
+{
+    console.views.locals.refresh();
+}
+
 console.views.locals.hooks["find-frame"] =
 function lv_hookDebugStop (e)
 {
@@ -631,56 +639,42 @@ function lv_cellprops (index, colID, properties)
 console.views.locals.getContext =
 function lv_getcx(cx)
 {
-    var view = console.views.locals;
-    var selection = view.tree.selection;
-    var row = selection.currentIndex;
-    var rec = view.childData.locateChildByVisualRow (row);
+    cx.jsdValueList = new Array();
     
-    if (!rec)
+    function recordContextGetter (cx, rec, i)
     {
-        dd ("no record at currentIndex " + row);
-        return cx;
-    }
-    
-    cx.target = rec;
-    
-    if (rec instanceof ValueRecord)
-    {
-        cx.jsdValue = rec.value;
-        cx.jsdValueList = [rec.value];
-    }
-
-    var rangeCount = selection.getRangeCount();
-
-
-    for (var range = 0; range < rangeCount; ++range)
-    {
-        var min = new Object();
-        var max = new Object();
-        selection.getRangeAt(range, min, max);
-        min = min.value;
-        max = max.value;
-
-        for (row = min; row <= max; ++row)
+        if (i == 0)
         {
-            rec = this.childData.locateChildByVisualRow(row);
-            if (rec instanceof ValueRecord)
-                cx.jsdValueList.push(rec.value);
+            cx.jsdValue = rec.value;
+            cx.jsdValueList = [rec.value];
         }
-    }
-
-    return cx;
+        else
+        {
+            cx.jsdValueList.push(rec.value);
+        }
+        return cx;
+    };
+    
+    return getTreeContext (console.views.locals, cx, recordContextGetter);
 }
 
 console.views.locals.refresh =
 function lv_refresh()
 {
+    if (!this.tree)
+        return;
+
+    var rootRecord = this.childData;
+    
+    if (!"childData" in rootRecord)
+        return;
+    
     var delta = 0;
     var thisDelta;
     
-    for (var i = 0; i < this.childData.length; ++i)
+    for (var i = 0; i < rootRecord.childData.length; ++i)
     {
-        var item = this.childData[i];
+        var item = rootRecord.childData[i];
         thisDelta = item.refresh();
         /* if the container isn't open, we still have to update the children,
          * but we don't care about any visual footprint changes */
@@ -688,9 +682,10 @@ function lv_refresh()
             delta += thisDelta;
     }
 
-    this.visualFootprint += delta;
-    this.invalidateCache();
-    this.syncTreeView();
+    rootRecord.visualFootprint += delta;
+    rootRecord.invalidateCache();
+    this.tree.rowCountChanged (0, rootRecord.visualFootprint);
+    this.tree.invalidate();
 }
 
 /*******************************************************************************
@@ -968,9 +963,6 @@ function scv_getcprops (index, colID, properties)
             {
                 properties.AppendElement (row.fileType);
 
-                if ("isGuessedName" in row)
-                    properties.AppendElement (this.atomGuessed);
-
                 if (row.scriptInstance.breakpointCount)
                     properties.AppendElement (this.atomBreakpoint);
             }
@@ -1075,7 +1067,8 @@ function ss_init ()
 {
     console.addPref ("sessionView.commandHistory", 20);
     console.addPref ("sessionView.dtabTime", 500);
-
+    console.addPref ("sessionView.maxHistory", 500);
+    
     console.menuSpecs["context:session"] = {
         items:
         [
@@ -1099,6 +1092,8 @@ function ss_init ()
 
     /* tab complete */
     this.lastTabUp = new Date();
+
+    this.messageCount = 0;
 
     this.outputTBody = new htmlTBody({ id: "session-output-tbody" })
     this.outputTable = null;
@@ -1159,6 +1154,9 @@ function ss_hookDisplay (e)
     msgRow.appendChild(msgData);
 
     var sessionView = console.views.session;
+    if (sessionView.messageCount == console.prefs["sessionView.maxHistory"])
+        sessionView.outputTBody.removeChild(sessionView.outputTBody.firstChild);
+    
     sessionView.outputTBody.appendChild(msgRow);
     sessionView.scrollDown();
 }
@@ -2087,6 +2085,15 @@ console.views.watches.viewId = "watches";
 console.views.watches.init =
 function wv_init()
 {
+    this.commands =
+        [
+         ["watch-expr",     cmdWatchExpr,          CMD_CONSOLE | CMD_NEED_STACK],
+         ["watch-exprd",    cmdWatchExpr,          CMD_CONSOLE],
+         ["watch-property", cmdWatchProperty,      0]
+        ];
+
+    this.commands.stringBundle = console.defaultBundle;
+    
     console.menuSpecs["context:watches"] = {
         getContext: this.getContext,
         items:
@@ -2102,6 +2109,16 @@ function wv_init()
         ]
     };
 }
+
+console.views.watches.hooks = new Object();
+
+console.views.watches.hooks["hook-debug-stop"] =
+console.views.watches.hooks["hook-eval-done"] =
+function lv_hookEvalDone (e)
+{
+    console.views.watches.refresh();
+}
+
 
 console.views.watches.onShow =
 function wv_show()
@@ -2157,34 +2174,89 @@ function wv_getcx(cx)
 console.views.watches.refresh =
 function wv_refresh()
 {
-    var delta = 0;
+    if (!this.tree)
+        return;
     
-    for (var i = 0; i < this.childData.length; ++i)
+    var rootRecord = this.childData;
+    
+    if (!"childData" in rootRecord)
+        return;
+    
+    var delta = 0;
+    var thisDelta;
+    
+    for (var i = 0; i < rootRecord.childData.length; ++i)
     {
-        var item = this.childData[i];
-        var thisDelta = 0;
-        for (var j = 0; j < item.childData.length; ++j)
-            thisDelta += item.childData[j].refresh();
+        var item = rootRecord.childData[i];
+        thisDelta = item.refresh();
         /* if the container isn't open, we still have to update the children,
          * but we don't care about any visual footprint changes */
         if (item.isContainerOpen)
-        {
-            item.visualFootprint += thisDelta;
             delta += thisDelta;
-        }
     }
 
-    this.childData.visualFootprint += delta;
-    this.childData.invalidateCache();
-    this.tree.rowCountChanged (0, this.visualFootprint);
+    rootRecord.visualFootprint += delta;
+    rootRecord.invalidateCache();
+    this.tree.rowCountChanged (0, rootRecord.visualFootprint);
     this.tree.invalidate();
 }
 
 console.views.watches.onDblClick =
 function wv_dblclick ()
 {
-    dd ("locals double click");
+    dd ("watches double click");
 }
+
+function cmdWatchExpr (e)
+{
+    if (!e.expression)
+    {
+        var watches = console.views.watches.childData;
+        var len = watches.length;
+        display (getMsg(MSN_WATCH_HEADER, len));
+        for (var i = 0; i < len; ++i)
+        {
+            display (getMsg(MSN_FMT_WATCH_ITEM, [i, watches[i].displayName,
+                                                 watches[i].displayValue]));
+        }
+        return null;
+    }
+    
+    var refresher;
+    if (e.command.name == "watch-expr")
+    {
+        refresher = function () {
+                        this.value = evalInTargetScope(e.expression, true);
+                    };
+    }
+    else
+    {
+        refresher = function () {
+                        var rv = evalInDebuggerScope(e.expression, true);
+                        dd ("refreshing: '" + e.expression + "' = " + rv);
+                        this.value = console.jsds.wrapValue(rv);
+                    };
+    }
+    
+    var rec = new ValueRecord(console.jsds.wrapValue(null), e.expression, 0);
+    rec.onPreRefresh = refresher;
+    rec.refresh();
+    console.views.watches.childData.appendChild(rec);
+    return rec;
+}
+
+function cmdWatchProperty (e)
+{
+    var rec = new ValueRecord(console.jsds.wrapValue(null),
+                              e.propertyName, 0);
+    rec.onPreRefresh = function () {
+                           this.value = e.jsdValue.getProperty(e.propertyName);
+                       };
+    rec.onPreRefresh();
+    console.views.watches.childData.appendChild(rec);
+    return rec;
+}
+
 
 /*******************************************************************************
  * Windows View

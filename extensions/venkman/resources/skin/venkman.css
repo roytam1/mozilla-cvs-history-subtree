@@ -310,11 +310,6 @@ treechildren:-moz-tree-image(current-frame-flag){
     list-style-image: url("chrome://venkman/skin/images/current-frame.gif");
 }
 
-treechildren:-moz-tree-cell(script-name, fn-guessed) {
-    color: red;
-    font-style: italic;
-}
-
 treechildren:-moz-tree-image(windows\:col-0, item-window) {
     list-style-image: url("chrome://venkman/skin/images/window.png");
 }
@@ -341,6 +336,18 @@ treechildren:-moz-tree-image(scripts\:col-0, file-function) {
 
 treechildren:-moz-tree-image(scripts\:col-0, file-function, item-has-bp) {
     list-style-image: url("chrome://venkman/skin/images/file-function-bp.png");
+}
+
+treechildren:-moz-tree-cell-text(watches\:col-0, item-error) {
+    font-weight: bold;
+    font-style: italic;
+    color: darkred;
+}
+
+
+treechildren:-moz-tree-cell-text(item-exception) {
+    font-weight: bold;
+    color: darkred;
 }
 
 treechildren:-moz-tree-image(item-unk) {

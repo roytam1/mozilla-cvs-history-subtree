@@ -241,6 +241,27 @@ function insertLink (matchText, containerTag)
     containerTag.appendChild (anchor);    
 }
 
+function toBool (val)
+{
+    switch (typeof val)
+    {
+        case "boolean":
+            return val;
+    
+        case "number":
+            return val != 0;
+            
+        default:
+            val = String(val);
+            /* fall through */
+
+        case "string":
+            return (val.search(/true|on|yes|1/i) != -1);
+    }
+
+    return null;
+}
+
 /* some of the drag and drop code has an annoying appetite for exceptions.  any
  * exception raised during a dnd operation causes the operation to fail silently.
  * passing the function through one of these adapters lets you use "return

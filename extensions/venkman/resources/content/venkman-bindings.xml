@@ -37,14 +37,16 @@
    -->
 
 <bindings xmlns="http://www.mozilla.org/xbl"
-  xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+          xmlns:xul=
+          "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
   <binding id="floatingview">
     <content>
       <xul:vbox id="view-frame-p" flex="1">
         <xul:vbox id="view-outer">
           <xul:hbox id="view-title">
-            <xul:toolbarbutton class="view-title-pop" inherits="parentid=id"/>
+            <xul:toolbarbutton class="view-title-pop" inherits="parentid=id"
+                               oncommand="console.dispatch('float', { viewId: this.getAttribute('parentid')});"/>
             <xul:hbox class="view-title-grippy" flex="1">
               <xul:hbox flex="1" class="view-title-margin-left"/>
               <xul:label id="view-title-text" inherits="value=title"/>

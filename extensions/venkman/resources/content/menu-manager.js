@@ -43,9 +43,9 @@ function MenuManager (commandManager, menuSpecs, contextFunction, commandStr)
     this.commandStr = commandStr;
 
     this.onPopupShowing =
-        function mmgr_onshow (event) { menuManager.showPopup (event); };
+        function mmgr_onshow (event) { return menuManager.showPopup (event); };
     this.onPopupHiding =
-        function mmgr_onhide (event) { menuManager.hidePopup (event); };
+        function mmgr_onhide (event) { return menuManager.hidePopup (event); };
 }
 
 /**
@@ -203,6 +203,7 @@ MenuManager.prototype.hidePopup =
 function mmgr_hidepop (id)
 {
     delete this.cx;
+    return true;
 }
 
 /**

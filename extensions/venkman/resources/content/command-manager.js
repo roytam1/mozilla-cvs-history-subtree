@@ -643,7 +643,7 @@ function parse_state (e, name)
         e.unparsedData.match (/(true|on|yes|1|false|off|no|0)(?:\s+(.*))?$/i);
     if (!ary)
         return false;
-    if (ary[1].toLowerCase().search(/true|on|yes|1/i) != -1)
+    if (ary[1].search(/true|on|yes|1/i) != -1)
         e[name] = true;
     else
         e[name] = false;
