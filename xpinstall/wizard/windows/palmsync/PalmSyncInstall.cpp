@@ -160,21 +160,15 @@ int APIENTRY WinMain(HINSTANCE hInstance,
                 res = IDS_SUCCESS_UNINSTALL;
         }
         else
-          return TRUE;;
+          return 0;
     }
     else if (!strcmpi(lpCmdLine,"/us")) // silent un-install
     {
-        res = UninstallConduit();
-        if(!res)
-            return TRUE; // success
-        return res;
+        return UninstallConduit();
     }
     else if (!strcmpi(lpCmdLine,"/s")) // silent install
     {
-        res = InstallConduit(hInstance, installDir);
-        if(!res)
-            return TRUE; // success
-        return res;
+        return InstallConduit(hInstance, installDir);
     }
     else // install
     {
@@ -194,57 +188,42 @@ int APIENTRY WinMain(HINSTANCE hInstance,
     ConstructMessage(hInstance, res, msgStr);
     MessageBox(NULL, msgStr, appTitle, MB_OK);
 
-    return TRUE;
+    return 0;
 }
 
-// this function gets the install dirs for installation
-int GetPalmDesktopInstallDirectories(TCHAR *pPDDesktopDirectory, unsigned long *pDesktopDirSize, 
-                                     TCHAR *szPalmHotSyncInstallDir, unsigned long *pInstallDirSize)
+// this function gets the install dir for installation
+int GetPalmDesktopInstallDirectory(TCHAR *pPDInstallDirectory, unsigned long *pSize)
 {
     HKEY   key;
     // open the key
     LONG rc = ::RegOpenKey(HKEY_CURRENT_USER, "Software\\U.S. Robotics\\Pilot Desktop\\Core", &key);
-    if (rc == ERROR_SUCCESS) 
-    {
+    if (rc == ERROR_SUCCESS) {
         // get key value
         rc = ::RegQueryValueEx(key, "Path", NULL, NULL, 
-                               (LPBYTE)pPDDesktopDirectory, pDesktopDirSize);
-        if (rc == ERROR_SUCCESS) 
-        {
-            *pDesktopDirSize = _tcslen(pPDDesktopDirectory); // windows only
-            rc=0; // 0 is success for us
-        }
-
-        // get key value
-        rc = ::RegQueryValueEx(key, "HotSyncPath", NULL, NULL, 
-                               (LPBYTE)szPalmHotSyncInstallDir, pInstallDirSize);
-        if (rc == ERROR_SUCCESS) 
-        {
-            *pInstallDirSize = _tcslen(szPalmHotSyncInstallDir); // windows only
+                               (LPBYTE)pPDInstallDirectory, pSize);
+        if (rc == ERROR_SUCCESS) {
+            *pSize = _tcslen(pPDInstallDirectory); // windows only
             rc=0; // 0 is success for us
         }
         // close the key
         ::RegCloseKey(key);
     }
 
-    if(rc)
-    {
+    if(rc) {
         HKEY   key2;
         // open the key
         rc = ::RegOpenKey(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\palm.exe", &key2);
-        if (rc == ERROR_SUCCESS) 
-        {
+        if (rc == ERROR_SUCCESS) {
             // get the default key value
             rc = ::RegQueryValueEx(key2, "", NULL, NULL, 
-                                   (LPBYTE)pPDDesktopDirectory, pDesktopDirSize);
+                                   (LPBYTE)pPDInstallDirectory, pSize);
             // get only the path (ie, strip out the exe name). note that we don't use string match
             // for the exe name here since it's possilbe that the exe name in the default setting
             // is different from the exe name in RegOpenKey() call. For example, the exe name in
             // the default setting for "Software\\...\\App Paths\\pbrush.exe" is mspaint.exe.
-            if (rc == ERROR_SUCCESS) 
-            {
-              TCHAR *end = pPDDesktopDirectory + _tcslen(pPDDesktopDirectory);
-              while ((*end != '\\') && (end != pPDDesktopDirectory))
+            if (rc == ERROR_SUCCESS) {
+              TCHAR *end = pPDInstallDirectory + _tcslen(pPDInstallDirectory);
+              while ((*end != '\\') && (end != pPDInstallDirectory))
                 end--;
               *end = '\0';
               rc=0; // 0 is success for us
@@ -444,6 +423,7 @@ char *mystrsep(char **stringp, char delim)
 }
 
 char oldSettingsStr[500];
+static char             gSavedCwd[_MAX_PATH];
 
 // installs our Conduit
 int InstallConduit(HINSTANCE hInstance, TCHAR *installDir)
@@ -476,7 +456,8 @@ int InstallConduit(HINSTANCE hInstance, TCHAR *installDir)
     // might already have conduit filename in szConduitPath if we're called recursively
     if (!strstr(szConduitPath, CONDUIT_FILENAME)) 
     {
-      strcat(szConduitPath, DIRECTORY_SEPARATOR_STR);
+      if (szConduitPath[strlen(szConduitPath) - 1] != DIRECTORY_SEPARATOR)
+        strcat(szConduitPath, DIRECTORY_SEPARATOR_STR);
       strcat(szConduitPath, CONDUIT_FILENAME);
     }
     // Make sure the conduit dll exists
@@ -492,8 +473,6 @@ int InstallConduit(HINSTANCE hInstance, TCHAR *installDir)
     // Get the Palm Desktop Installation directory
     TCHAR   szPalmDesktopDir[_MAX_PATH];
     unsigned long desktopSize=_MAX_PATH;
-    TCHAR   szPalmInstallDir[_MAX_PATH];
-    unsigned long installSize=_MAX_PATH;
     
     // old conduit settings - MAX_PATH is arbitrarily long...
     TCHAR szOldCreatorName[_MAX_PATH];
@@ -507,9 +486,14 @@ int InstallConduit(HINSTANCE hInstance, TCHAR *installDir)
 
     // Load the Conduit Manager DLL.
     HINSTANCE hConduitManagerDLL;
-    if( (dwReturnCode=GetPalmDesktopInstallDirectories(szPalmDesktopDir, &desktopSize,
-      szPalmInstallDir, &installSize)) == 0 ) 
+    if( (dwReturnCode=GetPalmDesktopInstallDirectory(szPalmDesktopDir, &desktopSize)) == 0 ) 
     {
+        // need to switch current working directory to directory with palm dlls
+        // because of a bug in Palm Desktop 6.01
+
+        GetCurrentDirectory(sizeof(gSavedCwd), gSavedCwd);
+        SetCurrentDirectory(szPalmDesktopDir);
+
         if( (dwReturnCode = LoadConduitManagerDll(&hConduitManagerDLL, szPalmDesktopDir)) != 0 )
             // load it from local dir if present by any chance
             if( (dwReturnCode = LoadConduitManagerDll(&hConduitManagerDLL, ".")) != 0 )
@@ -561,6 +545,12 @@ int InstallConduit(HINSTANCE hInstance, TCHAR *installDir)
         return(IDS_ERR_LOADING_CONDMGR);
     }
  
+    szOldCreatorTitle[0] = '\0';
+    szOldCreatorName[0] = '\0';
+    szOldRemote[0] = '\0';
+    szOldCreatorTitle[0] = '\0';
+    szOldCreatorFile[0] = '\0';
+    szOldCreatorDirectory[0] = '\0';
     // get settings for old conduit
     int remoteBufSize = sizeof(szOldRemote);
     (*lpfnCmGetCreatorRemote) (CREATOR, szOldRemote, &remoteBufSize);
@@ -633,7 +623,11 @@ int InstallConduit(HINSTANCE hInstance, TCHAR *installDir)
     // Re-start HotSync if it was running before
     if( gWasHotSyncRunning )
         StartHotSync(hHsapiDLL);
-        
+
+    // restore cwd, if we changed it.        
+    if (gSavedCwd[0])
+      SetCurrentDirectory(gSavedCwd);
+
     return(dwReturnCode);
 }
 
@@ -646,11 +640,9 @@ int UninstallConduit()
     // Get the Palm Desktop Installation directory
     TCHAR   szPalmDesktopDir[_MAX_PATH];
     unsigned long desktopSize=_MAX_PATH;
-    TCHAR   szPalmHotSyncInstallDir[_MAX_PATH];
-    unsigned long installSize=_MAX_PATH;
     // Load the Conduit Manager DLL.
     HINSTANCE hConduitManagerDLL;
-    if( (dwReturnCode=GetPalmDesktopInstallDirectories(szPalmDesktopDir, &desktopSize, szPalmHotSyncInstallDir, &installSize)) == 0 )
+    if( (dwReturnCode=GetPalmDesktopInstallDirectory(szPalmDesktopDir, &desktopSize)) == 0 )
     {
         if( (dwReturnCode = LoadConduitManagerDll(&hConduitManagerDLL, szPalmDesktopDir)) != 0 )
             // load it from local dir if present by any chance
@@ -661,6 +653,12 @@ int UninstallConduit()
     else if( (dwReturnCode = LoadConduitManagerDll(&hConduitManagerDLL, ".")) != 0 )
           return(dwReturnCode);
     
+    // need to switch current working directory to directory with palm dlls
+    // because of a bug in Palm Desktop 6.01
+
+    GetCurrentDirectory(sizeof(gSavedCwd), gSavedCwd);
+    SetCurrentDirectory(szPalmDesktopDir);
+
     // Prepare to uninstall the conduit using Conduit Manager functions
     CmRemoveConduitByCreatorIDPtr   lpfnCmRemoveConduitByCreatorID;
     lpfnCmRemoveConduitByCreatorID = (CmRemoveConduitByCreatorIDPtr) GetProcAddress(hConduitManagerDLL, "CmRemoveConduitByCreatorID");
@@ -786,6 +784,10 @@ int UninstallConduit()
     if( bHotSyncRunning )
         StartHotSync(hHsapiDLL);
         
+    // restore cwd, if we changed it.        
+    if (gSavedCwd[0])
+      SetCurrentDirectory(gSavedCwd);
+
     if( dwReturnCode < 0 ) 
         return dwReturnCode;
     else 
