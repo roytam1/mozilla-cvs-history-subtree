@@ -23,6 +23,7 @@
 <!ENTITY openFileCmd.commandkey "o">
 <!ENTITY editPageCmd.label					"Edit Page">
 <!ENTITY editPageCmd.accesskey				"d">
+<!ENTITY editPageCmd.commandkey				"e">
 <!ENTITY editFrameCmd.label					"Edit Frame">
 <!ENTITY editFrameCmd.accesskey				"m">
 <!ENTITY editFrameSetCmd.label		  "Edit Frameset">
