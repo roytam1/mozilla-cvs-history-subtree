@@ -229,7 +229,8 @@
 				HEADER_SEARCH_PATHS = "../../../dist/include/string ../../../dist/include/nspr ../../../dist/include/xpcom ../../../dist/sdk/xpcom/include ../../../dist/include/embed_base ../../../embedding/browser/cocoa/src/build/CHBrowserView.framework/Headers";
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = ../../../dist/bin;
-				OTHER_CFLAGS = "-fno-rtti -DOSTYPE=\\\"Darwin1.4\\\" -DOSARCH=\\\"Darwin\\\" -DIBMBIDI";
+				OPTIMIZATION_CFLAGS = "-O2";
+				OTHER_CFLAGS = "-fno-rtti -DOSTYPE=\\\"Darwin1.4\\\" -DOSARCH=\\\"Darwin\\\"";
 				OTHER_LDFLAGS = "-lxpcom -lplds4 -lplc4 -lnspr4 -lpthread -lm";
 				PREBINDING = NO;
 				PRODUCT_NAME = CocoaEmbed;
@@ -283,8 +284,6 @@
 			files = (
 				080E96DCFE201CFB7F000001,
 				089C165EFE840E0CC02AAC07,
-				F5685946033F8D5C01026D5D,
-				F5685947033F8D5C01026D5D,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -315,6 +314,8 @@
 				F6BD652801B3194901A962F7,
 				F6BD652901B3194901A962F7,
 				F6C4515E01B5A8A701A962F7,
+				F52978AA0371A46C01026DCE,
+				F52978AB0371A46C01026DCE,
 			);
 			isa = PBXFrameworksBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -359,13 +360,39 @@
 //F52
 //F53
 //F54
-		F5685946033F8D5C01026D5D = {
+		F52978A80371A46C01026DCE = {
+			includeInIndex = 1;
+			isa = PBXZipArchiveReference;
+			name = pipnss.jar;
+			path = ../../../dist/bin/chrome/pipnss.jar;
+			refType = 2;
+		};
+		F52978A90371A46C01026DCE = {
+			includeInIndex = 1;
+			isa = PBXZipArchiveReference;
+			name = pippki.jar;
+			path = ../../../dist/bin/chrome/pippki.jar;
+			refType = 2;
+		};
+		F52978AA0371A46C01026DCE = {
+			fileRef = F52978A80371A46C01026DCE;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F52978AB0371A46C01026DCE = {
+			fileRef = F52978A90371A46C01026DCE;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F52978AC0371A74D01026DCE = {
 			fileRef = F6BD64D301B3172601A962F7;
 			isa = PBXBuildFile;
 			settings = {
 			};
 		};
-		F5685947033F8D5C01026D5D = {
+		F52978AD0371A74D01026DCE = {
 			fileRef = F6BD64D501B3172601A962F7;
 			isa = PBXBuildFile;
 			settings = {
@@ -577,7 +604,6 @@
 				F6BD642101B3156701A962F7,
 				F6BD642201B3156701A962F7,
 				F6BD642301B3156701A962F7,
-				F6BD642401B3156701A962F7,
 				F6BD642501B3156701A962F7,
 				F6BD642601B3156701A962F7,
 				F6BD642701B3156701A962F7,
@@ -1240,12 +1266,6 @@
 			isa = PBXFileReference;
 			name = uriloader.xpt;
 			path = ../../../uriloader/base/_xpidlgen/uriloader.xpt;
-			refType = 2;
-		};
-		F6BD642401B3156701A962F7 = {
-			isa = PBXFileReference;
-			name = widget.xpt;
-			path = ../../../widget/src/cocoa/_xpidlgen/widget.xpt;
 			refType = 2;
 		};
 		F6BD642501B3156701A962F7 = {
@@ -1957,8 +1977,8 @@
 		};
 		F6BD64BC01B316DA01A962F7 = {
 			isa = PBXFileReference;
-			name = unixcharset.properties;
-			path = ../../../intl/uconv/src/unixcharset.properties;
+			name = maccharset.properties;
+			path = ../../../intl/uconv/src/maccharset.properties;
 			refType = 2;
 		};
 		F6BD64C201B316DA01A962F7 = {
@@ -2117,14 +2137,16 @@
 		};
 		F6BD64FE01B3184301A962F7 = {
 			isa = PBXFileReference;
-			name = unix.js;
-			path = ../../../modules/libpref/src/unix/unix.js;
+			name = macprefs.js;
+			path = ../../../modules/libpref/src/mac/macprefs.js;
 			refType = 2;
 		};
 		F6BD64FF01B3184301A962F7 = {
 			children = (
 				F6BD650001B3184301A962F7,
 				F6901D3F01B70DB301A962F7,
+				F52978A80371A46C01026DCE,
+				F52978A90371A46C01026DCE,
 			);
 			isa = PBXGroup;
 			name = "Gecko Chrome";
@@ -2177,6 +2199,8 @@
 			dstPath = res/builtin;
 			dstSubfolderSpec = 6;
 			files = (
+				F52978AC0371A74D01026DCE,
+				F52978AD0371A74D01026DCE,
 			);
 			isa = PBXCopyFilesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
