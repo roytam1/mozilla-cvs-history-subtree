@@ -80,7 +80,7 @@ use_merged_upsample (j_decompress_ptr cinfo)
  * Also note that it may be called before the master module is initialized!
  */
 
-GLOBAL JRI_PUBLIC_API(void)
+GLOBAL PR_PUBLIC_API(void)
 jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
 /* Do computations that are needed before master selection phase */
 {

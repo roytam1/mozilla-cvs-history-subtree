@@ -964,7 +964,7 @@ read_restart_marker (j_decompress_ptr cinfo)
  * any other marker would have to be bogus data in that case.
  */
 
-GLOBAL JRI_PUBLIC_API(boolean)
+GLOBAL PR_PUBLIC_API(boolean)
 jpeg_resync_to_restart (j_decompress_ptr cinfo, int desired)
 {
   int marker = cinfo->unread_marker;

@@ -27,7 +27,7 @@
  * The error manager must already be set up (in case memory manager fails).
  */
 
-GLOBAL JRI_PUBLIC_API(void)
+GLOBAL PR_PUBLIC_API(void)
 jpeg_create_compress (j_compress_ptr cinfo)
 {
   int16 i;
@@ -70,7 +70,7 @@ jpeg_create_compress (j_compress_ptr cinfo)
  * Destruction of a JPEG compression object
  */
 
-GLOBAL JRI_PUBLIC_API(void)
+GLOBAL PR_PUBLIC_API(void)
 jpeg_destroy_compress (j_compress_ptr cinfo)
 {
   jpeg_destroy((j_common_ptr) cinfo); /* use common routine */
@@ -129,7 +129,7 @@ jpeg_suppress_tables (j_compress_ptr cinfo, boolean suppress)
  * work including most of the actual output.
  */
 
-GLOBAL JRI_PUBLIC_API(void)
+GLOBAL PR_PUBLIC_API(void)
 jpeg_finish_compress (j_compress_ptr cinfo)
 {
   JDIMENSION iMCU_row;

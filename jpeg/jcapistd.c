@@ -35,7 +35,7 @@
  * wrong thing.
  */
 
-GLOBAL JRI_PUBLIC_API(void)
+GLOBAL PR_PUBLIC_API(void)
 jpeg_start_compress (j_compress_ptr cinfo, boolean write_all_tables)
 {
   if (cinfo->global_state != CSTATE_START)
@@ -74,7 +74,7 @@ jpeg_start_compress (j_compress_ptr cinfo, boolean write_all_tables)
  * when using a multiple-scanline buffer.
  */
 
-GLOBAL JRI_PUBLIC_API(JDIMENSION)
+GLOBAL PR_PUBLIC_API(JDIMENSION)
 jpeg_write_scanlines (j_compress_ptr cinfo, JSAMPARRAY scanlines,
 		      JDIMENSION num_lines)
 {

@@ -92,9 +92,9 @@ jpeg_set_linear_quality (j_compress_ptr cinfo, int scale_factor,
     };
 
   /* Set up two quantization tables using the specified scaling */
-  jpeg_add_quant_table(cinfo, 0, std_luminance_quant_tbl,
+  jpeg_add_quant_table(cinfo, 0, (const unsigned int *)std_luminance_quant_tbl,
 		       scale_factor, force_baseline);
-  jpeg_add_quant_table(cinfo, 1, std_chrominance_quant_tbl,
+  jpeg_add_quant_table(cinfo, 1, (const unsigned int *)std_chrominance_quant_tbl,
 		       scale_factor, force_baseline);
 }
 
@@ -125,7 +125,7 @@ jpeg_quality_scaling (int quality)
 }
 
 
-GLOBAL JRI_PUBLIC_API(void)
+GLOBAL PR_PUBLIC_API(void)
 jpeg_set_quality (j_compress_ptr cinfo, int quality, boolean force_baseline)
 /* Set or change the 'quality' (quantization) setting, using default tables.
  * This is the standard quality-adjusting entry point for typical user
@@ -247,7 +247,7 @@ std_huff_tables (j_compress_ptr cinfo)
  * your code will still work (they'll be set to reasonable defaults).
  */
 
-GLOBAL JRI_PUBLIC_API(void)
+GLOBAL PR_PUBLIC_API(void)
 jpeg_set_defaults (j_compress_ptr cinfo)
 {
   int16 i;

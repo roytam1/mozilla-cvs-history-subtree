@@ -126,7 +126,7 @@ term_destination (j_compress_ptr cinfo)
  * for closing it after finishing compression.
  */
 
-GLOBAL JRI_PUBLIC_API(void)
+GLOBAL PR_PUBLIC_API(void)
 jpeg_stdio_dest (j_compress_ptr cinfo, FILE * outfile)
 {
   my_dest_ptr dest;
@@ -192,7 +192,7 @@ term_destination_file_close(j_compress_ptr cinfo)
  * for closing it after finishing compression.
  */
 
-GLOBAL JRI_PUBLIC_API(void)
+GLOBAL PR_PUBLIC_API(void)
 jpeg_file_dest (j_compress_ptr cinfo, char * outfile)
 {
   my_dest_ptr dest;
@@ -222,7 +222,7 @@ jpeg_file_dest (j_compress_ptr cinfo, char * outfile)
 API to close file in case of error. needed for win16. DLL that opens file must also close it.
 */
 
-GLOBAL JRI_PUBLIC_API(void)
+GLOBAL PR_PUBLIC_API(void)
 jpeg_close_file(j_compress_ptr cinfo)
 {
   my_dest_ptr dest = (my_dest_ptr) cinfo->dest;

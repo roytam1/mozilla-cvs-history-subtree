@@ -51,7 +51,7 @@
 #endif /*_IMAGE_CONVERT*/
 
 #include "jmorecfg.h"		/* seldom changed options */
-#include "jri.h"
+#include "prtypes.h"
 
 /* Version ID for the JPEG library.
  * Might be useful for tests like "#if JPEG_LIB_VERSION >= 60".
@@ -917,29 +917,32 @@ typedef JMETHOD(boolean, jpeg_marker_parser_method, (j_decompress_ptr cinfo));
 #define jpeg_close_file jCloseFile
 #endif /* NEED_SHORT_EXTERNAL_NAMES */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* Default error-management setup */
-JRI_PUBLIC_API(struct jpeg_error_mgr *)jpeg_std_error JPP((struct jpeg_error_mgr *err));
+PR_PUBLIC_API(struct jpeg_error_mgr *)jpeg_std_error JPP((struct jpeg_error_mgr *err));
 
 /* Initialization and destruction of JPEG compression objects */
 /* NB: you must set up the error-manager BEFORE calling jpeg_create_xxx */
-JRI_PUBLIC_API(void) jpeg_create_compress JPP((j_compress_ptr cinfo));
-JRI_PUBLIC_API(void) jpeg_create_decompress JPP((j_decompress_ptr cinfo));
-JRI_PUBLIC_API(void) jpeg_destroy_compress JPP((j_compress_ptr cinfo));
-JRI_PUBLIC_API(void) jpeg_destroy_decompress JPP((j_decompress_ptr cinfo));
+PR_PUBLIC_API(void) jpeg_create_compress JPP((j_compress_ptr cinfo));
+PR_PUBLIC_API(void) jpeg_create_decompress JPP((j_decompress_ptr cinfo));
+PR_PUBLIC_API(void) jpeg_destroy_compress JPP((j_compress_ptr cinfo));
+PR_PUBLIC_API(void) jpeg_destroy_decompress JPP((j_decompress_ptr cinfo));
 
 /* Standard data source and destination managers: stdio streams. */
 /* Caller is responsible for opening the file before and closing after. */
-JRI_PUBLIC_API(void) jpeg_stdio_dest JPP((j_compress_ptr cinfo, FILE * outfile));
+PR_PUBLIC_API(void) jpeg_stdio_dest JPP((j_compress_ptr cinfo, FILE * outfile));
 EXTERN void jpeg_stdio_src JPP((j_decompress_ptr cinfo, FILE * infile));
 
 /* Default parameter setup for compression */
-JRI_PUBLIC_API(void) jpeg_set_defaults JPP((j_compress_ptr cinfo));
+PR_PUBLIC_API(void) jpeg_set_defaults JPP((j_compress_ptr cinfo));
 /* Compression parameter setup aids */
 EXTERN void jpeg_set_colorspace JPP((j_compress_ptr cinfo,
 				     J_COLOR_SPACE colorspace));
 EXTERN void jpeg_default_colorspace JPP((j_compress_ptr cinfo));
-JRI_PUBLIC_API(void) jpeg_set_quality JPP((j_compress_ptr cinfo, int quality,
+PR_PUBLIC_API(void) jpeg_set_quality JPP((j_compress_ptr cinfo, int quality,
 				  boolean force_baseline));
 EXTERN void jpeg_set_linear_quality JPP((j_compress_ptr cinfo,
 					 int scale_factor,
@@ -956,18 +959,18 @@ EXTERN JQUANT_TBL * jpeg_alloc_quant_table JPP((j_common_ptr cinfo));
 EXTERN JHUFF_TBL * jpeg_alloc_huff_table JPP((j_common_ptr cinfo));
 
 /* new destination initializer to open  file in DLL (win16)*/
-JRI_PUBLIC_API(void) jpeg_file_dest JPP( (j_compress_ptr cinfo, char * outfile));
+PR_PUBLIC_API(void) jpeg_file_dest JPP( (j_compress_ptr cinfo, char * outfile));
 
 /* in case of error app must close file with DLL that opened it. (win16)*/
-JRI_PUBLIC_API(void) jpeg_close_file JPP( (j_compress_ptr cinfo));
+PR_PUBLIC_API(void) jpeg_close_file JPP( (j_compress_ptr cinfo));
 
 /* Main entry points for compression */
-JRI_PUBLIC_API(void) jpeg_start_compress JPP((j_compress_ptr cinfo,
+PR_PUBLIC_API(void) jpeg_start_compress JPP((j_compress_ptr cinfo,
 				     boolean write_all_tables));
-JRI_PUBLIC_API(JDIMENSION) jpeg_write_scanlines JPP((j_compress_ptr cinfo,
+PR_PUBLIC_API(JDIMENSION) jpeg_write_scanlines JPP((j_compress_ptr cinfo,
 					    JSAMPARRAY scanlines,
 					    JDIMENSION num_lines));
-JRI_PUBLIC_API(void) jpeg_finish_compress JPP((j_compress_ptr cinfo));
+PR_PUBLIC_API(void) jpeg_finish_compress JPP((j_compress_ptr cinfo));
 
 /* Replaces jpeg_write_scanlines when writing raw downsampled data. */
 EXTERN JDIMENSION jpeg_write_raw_data JPP((j_compress_ptr cinfo,
@@ -982,7 +985,7 @@ EXTERN void jpeg_write_marker JPP((j_compress_ptr cinfo, int marker,
 EXTERN void jpeg_write_tables JPP((j_compress_ptr cinfo));
 
 /* Decompression startup: read start of JPEG datastream to see what's there */
-JRI_PUBLIC_API(int) jpeg_read_header JPP((j_decompress_ptr cinfo,
+PR_PUBLIC_API(int) jpeg_read_header JPP((j_decompress_ptr cinfo,
 				 boolean require_image));
 /* Return value is one of: */
 #define JPEG_SUSPENDED		0 /* Suspended due to lack of input data */
@@ -995,11 +998,11 @@ JRI_PUBLIC_API(int) jpeg_read_header JPP((j_decompress_ptr cinfo,
  */
 
 /* Main entry points for decompression */
-JRI_PUBLIC_API(boolean) jpeg_start_decompress JPP((j_decompress_ptr cinfo));
-JRI_PUBLIC_API(JDIMENSION) jpeg_read_scanlines JPP((j_decompress_ptr cinfo,
+PR_PUBLIC_API(boolean) jpeg_start_decompress JPP((j_decompress_ptr cinfo));
+PR_PUBLIC_API(JDIMENSION) jpeg_read_scanlines JPP((j_decompress_ptr cinfo,
 					   JSAMPARRAY scanlines,
 					   JDIMENSION max_lines));
-JRI_PUBLIC_API(boolean) jpeg_finish_decompress JPP((j_decompress_ptr cinfo));
+PR_PUBLIC_API(boolean) jpeg_finish_decompress JPP((j_decompress_ptr cinfo));
 
 /* Replaces jpeg_read_scanlines when reading raw downsampled data. */
 EXTERN JDIMENSION jpeg_read_raw_data JPP((j_decompress_ptr cinfo,
@@ -1007,13 +1010,13 @@ EXTERN JDIMENSION jpeg_read_raw_data JPP((j_decompress_ptr cinfo,
 					  JDIMENSION max_lines));
 
 /* Additional entry points for buffered-image mode. */
-JRI_PUBLIC_API(boolean) jpeg_has_multiple_scans JPP((j_decompress_ptr cinfo));
-JRI_PUBLIC_API(boolean) jpeg_start_output JPP((j_decompress_ptr cinfo,
+PR_PUBLIC_API(boolean) jpeg_has_multiple_scans JPP((j_decompress_ptr cinfo));
+PR_PUBLIC_API(boolean) jpeg_start_output JPP((j_decompress_ptr cinfo,
 				      int scan_number));
-JRI_PUBLIC_API(boolean) jpeg_finish_output JPP((j_decompress_ptr cinfo));
+PR_PUBLIC_API(boolean) jpeg_finish_output JPP((j_decompress_ptr cinfo));
 EXTERN boolean jpeg_input_complete JPP((j_decompress_ptr cinfo));
 EXTERN void jpeg_new_colormap JPP((j_decompress_ptr cinfo));
-JRI_PUBLIC_API(int) jpeg_consume_input JPP((j_decompress_ptr cinfo));
+PR_PUBLIC_API(int) jpeg_consume_input JPP((j_decompress_ptr cinfo));
 /* Return value is one of: */
 /* #define JPEG_SUSPENDED	0    Suspended due to lack of input data */
 #define JPEG_REACHED_SOS	1 /* Reached start of new scan */
@@ -1022,10 +1025,10 @@ JRI_PUBLIC_API(int) jpeg_consume_input JPP((j_decompress_ptr cinfo));
 #define JPEG_SCAN_COMPLETED	4 /* Completed last iMCU row of a scan */
 
 /* Precalculate output dimensions for current decompression parameters. */
-JRI_PUBLIC_API(void) jpeg_calc_output_dimensions JPP((j_decompress_ptr cinfo));
+PR_PUBLIC_API(void) jpeg_calc_output_dimensions JPP((j_decompress_ptr cinfo));
 
 /* Install a special processing method for COM or APPn markers. */
-JRI_PUBLIC_API(void) jpeg_set_marker_processor JPP((j_decompress_ptr cinfo,
+PR_PUBLIC_API(void) jpeg_set_marker_processor JPP((j_decompress_ptr cinfo,
 					   int marker_code,
 					   jpeg_marker_parser_method routine));
 
@@ -1052,9 +1055,12 @@ EXTERN void jpeg_abort JPP((j_common_ptr cinfo));
 EXTERN void jpeg_destroy JPP((j_common_ptr cinfo));
 
 /* Default restart-marker-resync procedure for use by data source modules */
-JRI_PUBLIC_API(boolean) jpeg_resync_to_restart JPP((j_decompress_ptr cinfo,
+PR_PUBLIC_API(boolean) jpeg_resync_to_restart JPP((j_decompress_ptr cinfo,
 					   int desired));
 
+#ifdef __cplusplus
+} /* extern "C" */
+#endif /* __cplusplus */
 
 /* These marker codes are exported since applications and data source modules
  * are likely to want to use them.

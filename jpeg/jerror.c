@@ -224,7 +224,7 @@ reset_error_mgr (j_common_ptr cinfo)
  * after which the application may override some of the methods.
  */
 
-GLOBAL JRI_PUBLIC_API(struct jpeg_error_mgr *)
+GLOBAL PR_PUBLIC_API(struct jpeg_error_mgr *)
 jpeg_std_error (struct jpeg_error_mgr * err)
 {
   err->error_exit = error_exit;

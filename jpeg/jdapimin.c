@@ -31,7 +31,7 @@ int mmxsupport();
  * The error manager must already be set up (in case memory manager fails).
  */
 
-GLOBAL JRI_PUBLIC_API(void)
+GLOBAL PR_PUBLIC_API(void)
 jpeg_create_decompress (j_decompress_ptr cinfo)
 {
   int i;
@@ -88,7 +88,7 @@ jpeg_create_decompress (j_decompress_ptr cinfo)
  * Destruction of a JPEG decompression object
  */
 
-GLOBAL JRI_PUBLIC_API(void)
+GLOBAL PR_PUBLIC_API(void)
 jpeg_destroy_decompress (j_decompress_ptr cinfo)
 {
   jpeg_destroy((j_common_ptr) cinfo); /* use common routine */
@@ -111,7 +111,7 @@ jpeg_abort_decompress (j_decompress_ptr cinfo)
  * Install a special processing method for COM or APPn markers.
  */
 
-GLOBAL JRI_PUBLIC_API(void)
+GLOBAL PR_PUBLIC_API(void)
 jpeg_set_marker_processor (j_decompress_ptr cinfo, int marker_code,
 			   jpeg_marker_parser_method routine)
 {
@@ -255,7 +255,7 @@ default_decompress_parms (j_decompress_ptr cinfo)
  * extra error checking.
  */
 
-GLOBAL JRI_PUBLIC_API(int)
+GLOBAL PR_PUBLIC_API(int)
 jpeg_read_header (j_decompress_ptr cinfo, boolean require_image)
 {
   int retcode;
@@ -301,7 +301,7 @@ jpeg_read_header (j_decompress_ptr cinfo, boolean require_image)
  * method.
  */
 
-GLOBAL JRI_PUBLIC_API(int)
+GLOBAL PR_PUBLIC_API(int)
 jpeg_consume_input (j_decompress_ptr cinfo)
 {
   int retcode = JPEG_SUSPENDED;
@@ -363,7 +363,7 @@ jpeg_input_complete (j_decompress_ptr cinfo)
  * Is there more than one scan?
  */
 
-GLOBAL JRI_PUBLIC_API(boolean)
+GLOBAL PR_PUBLIC_API(boolean)
 jpeg_has_multiple_scans (j_decompress_ptr cinfo)
 {
   /* Only valid after jpeg_read_header completes */
@@ -383,7 +383,7 @@ jpeg_has_multiple_scans (j_decompress_ptr cinfo)
  * a suspending data source is used.
  */
 
-GLOBAL JRI_PUBLIC_API(boolean)
+GLOBAL PR_PUBLIC_API(boolean)
 jpeg_finish_decompress (j_decompress_ptr cinfo)
 {
   if ((cinfo->global_state == DSTATE_SCANNING ||
