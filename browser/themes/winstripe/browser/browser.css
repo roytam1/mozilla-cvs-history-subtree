@@ -825,3 +825,19 @@ toolbar[mode="text"] > #window-controls > toolbarbutton > .toolbarbutton-text {
   list-style-image: url(chrome://global/skin/icons/Loading.gif);
 }
 
+#urlbar[level="high"] > .autocomplete-textbox-container,
+#urlbar[level="low"] > .autocomplete-textbox-container,
+#urlbar[level="broken"] > .autocomplete-textbox-container {
+  background-color: #F5F6BE; /* #F7F898; */
+}
+
+#urlbar[level="high"] > .autocomplete-textbox-container > .info-icon {
+  list-style-image: url("chrome://browser/skin/Secure.png");
+}
+#urlbar[level="low"] > .autocomplete-textbox-container > .info-icon {
+  list-style-image: url("chrome://browser/skin/Secure.png");
+}
+#urlbar[level="broken"] > .autocomplete-textbox-container > .info-icon {
+  list-style-image: url("chrome://browser/skin/Security-broken.png");
+}
+
