@@ -80,6 +80,8 @@ private:
     nsresult ProcessNotModified();
     nsresult ProcessRedirection(PRUint32 httpStatus);
     nsresult ProcessAuthentication(PRUint32 httpStatus);
+    nsresult GetCredentials(const char *challenge, PRBool proxyAuth, nsACString &creds);
+    nsresult AddAuthorizationHeaders();
 
 private:
     nsCOMPtr<nsIURI>                mOriginalURI;

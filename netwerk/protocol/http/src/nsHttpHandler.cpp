@@ -27,6 +27,7 @@
 #include "nsHttpConnection.h"
 #include "nsHttpResponseHead.h"
 #include "nsHttpTransaction.h"
+#include "nsHttpAuthCache.h"
 #include "nsIHttpChannel.h"
 #include "nsIHttpNotify.h"
 #include "nsIURL.h"
@@ -70,7 +71,8 @@ static NS_DEFINE_CID(kNetModuleMgrCID, NS_NETMODULEMGR_CID);
 nsHttpHandler *nsHttpHandler::mGlobalInstance = 0;
 
 nsHttpHandler::nsHttpHandler()
-    : mHttpVersion(HTTP_VERSION_1_1)
+    : mAuthCache(nsnull)
+    , mHttpVersion(HTTP_VERSION_1_1)
     , mSendReferrer(0)
     , mCapabilities(ALLOW_KEEPALIVE)
     , mProxyCapabilities(ALLOW_KEEPALIVE)
@@ -188,37 +190,18 @@ nsHttpHandler::Init()
 
     //mSessionStartTime = NowInSeconds();
 
-
-    /*
-    rv = NS_NewISupportsArray(getter_AddRefs(mConnections));
-    if (NS_FAILED(rv)) return rv;
-
-    rv = NS_NewISupportsArray(getter_AddRefs(mPendingChannelList));
-    if (NS_FAILED(rv)) return rv;
-
-    rv = NS_NewISupportsArray(getter_AddRefs(mTransportList));
-    if (NS_FAILED(rv)) return rv;
-    
-    // At some later stage we could merge this with the transport
-    // list and add a field to each transport to determine its 
-    // state. 
-    rv = NS_NewISupportsArray(getter_AddRefs(mIdleTransports));
-    if (NS_FAILED(rv)) return rv;
-
-    rv = NS_NewISupportsArray(getter_AddRefs(mPipelinedRequests));
-    if (NS_FAILED(rv)) return rv;
-    */
+    mAuthCache = new nsHttpAuthCache();
+    if (!mAuthCache)
+        return NS_ERROR_OUT_OF_MEMORY;
 
     // Startup the http category
     // Bring alive the objects in the http-protocol-startup category
     CreateServicesFromCategory(NS_HTTP_STARTUP_CATEGORY);
     
-    /*
     nsCOMPtr<nsIObserverService> observerSvc =
         do_GetService(NS_OBSERVERSERVICE_CONTRACTID, &rv);
     if (observerSvc)
         observerSvc->AddObserver(this, NS_LITERAL_STRING("profile-before-change").get());
-     */
 
     return NS_OK;
 }
@@ -466,7 +449,7 @@ nsHttpHandler::OnModifyRequest(nsIHttpChannel *chan)
 }
 
 nsresult
-nsHttpHandler::OnAsyncExamineResponse(nsIHttpChannel *chan)
+nsHttpHandler::OnExamineResponse(nsIHttpChannel *chan)
 {
     nsresult rv;
 
@@ -1560,14 +1543,10 @@ nsHttpHandler::Observe(nsISupports *subject,
                        const PRUnichar *topic,
                        const PRUnichar *data)
 {
-    /*
-    if (!nsCRT::strcmp(aTopic, NS_LITERAL_STRING("profile-before-change").get())) {
-        nsAuthEngine *authEngine;
-        nsresult rv = GetAuthEngine(&authEngine);
-        if (NS_SUCCEEDED(rv) && authEngine)
-            authEngine->Logout();
+    if (!nsCRT::strcmp(topic, NS_LITERAL_STRING("profile-before-change").get())) {
+        if (mAuthCache)
+            mAuthCache->ClearAll();
     }
-    */
     return NS_OK;
 }
 

@@ -46,6 +46,7 @@ CPP_OBJS=		\
     .\$(OBJDIR)\nsHttpResponseHead.obj \
     .\$(OBJDIR)\nsHttpConnection.obj \
     .\$(OBJDIR)\nsHttpChunkedDecoder.obj \
+    .\$(OBJDIR)\nsHttpAuthCache.obj \
 	$(NULL)
 
 include <$(DEPTH)\config\rules.mak> 

@@ -41,6 +41,7 @@ class nsHttpConnection;
 class nsHttpConnectionInfo;
 class nsHttpHeaderArray;
 class nsHttpTransaction;
+class nsHttpAuthCache;
 class nsIHttpChannel;
 
 //-----------------------------------------------------------------------------
@@ -77,6 +78,8 @@ public:
                                        PRUint32 capabilities);
 
     PRBool SendReferrer() { return mSendReferrer; }
+
+    nsHttpAuthCache *AuthCache() { return mAuthCache; }
 
     //
     // Connection management methods:
@@ -116,7 +119,7 @@ public:
     nsresult OnModifyRequest(nsIHttpChannel *);
 
     // Called by the channel once headers are available
-    nsresult OnAsyncExamineResponse(nsIHttpChannel *);
+    nsresult OnExamineResponse(nsIHttpChannel *);
 
 private:
     // 
@@ -195,6 +198,9 @@ private:
     nsCOMPtr<nsIProtocolProxyService> mProxySvc;
     nsCOMPtr<nsIProxyObjectManager>   mProxyMgr;
     nsCOMPtr<nsINetModuleMgr>         mNetModuleMgr;
+
+    // the authentication credentials cache
+    nsHttpAuthCache                  *mAuthCache;
 
     //
     // prefs

@@ -128,6 +128,10 @@ nsHttpChannel::Init(nsIURI *uri,
     rv = nsHttpHandler::get()->AddStandardRequestHeaders(&mRequestHead.Headers(), caps);
     if (NS_FAILED(rv)) return rv;
 
+    // check to see if authorization headers should be included
+    rv = AddAuthorizationHeaders();
+    if (NS_FAILED(rv)) return rv;
+
     // Notify nsIHttpNotify implementations
     return nsHttpHandler::get()->OnModifyRequest(this);
 }
@@ -363,8 +367,59 @@ nsHttpChannel::ProcessRedirection(PRUint32 redirectType)
 nsresult
 nsHttpChannel::ProcessAuthentication(PRUint32 httpStatus)
 {
-    NS_NOTREACHED("not implemented");
-    return ProcessNormal();
+    LOG(("nsHttpChannel::ProcessAuthentication [this=%x code=%u]\n",
+        this, httpStatus));
+
+    const char *challenge;
+    PRBool proxyAuth = (httpStatus == 407);
+
+    if (proxyAuth)
+        challenge = mResponseHead->PeekHeader(nsHttp::Proxy_Authenticate);
+    else
+        challenge = mResponseHead->PeekHeader(nsHttp::WWW_Authenticate);
+
+    if (!challenge) {
+        LOG(("null challenge!\n"));
+        return NS_ERROR_UNEXPECTED;
+    }
+
+    LOG(("challenge=%s\n", challenge));
+
+    nsCAutoString creds;
+    nsresult rv = GetCredentials(challenge, proxyAuth, creds);
+    if (NS_FAILED(rv)) return rv;
+
+    // set the authentication credentials
+    if (proxyAuth)
+        mRequestHead.SetHeader(nsHttp::Proxy_Authorization, creds);
+    else
+        mRequestHead.SetHeader(nsHttp::Authorization, creds);
+
+    // kill off the current transaction
+    mTransaction->Cancel(NS_BINDING_REDIRECTED);
+    NS_RELEASE(mTransaction);
+    mTransaction = 0;
+
+    // and create a new one...
+    rv = SetupTransaction();
+    if (NS_FAILED(rv)) return rv;
+
+    return nsHttpHandler::get()->
+            InitiateTransaction(mTransaction, mConnectionInfo);
+}
+
+nsresult
+nsHttpChannel::GetCredentials(const char *challenge,
+                              PRBool proxyAuth,
+                              nsACString &creds)
+{
+    return NS_OK;
+}
+
+nsresult
+nsHttpChannel::AddAuthorizationHeaders()
+{
+    return NS_OK;
 }
 
 //-----------------------------------------------------------------------------
@@ -813,19 +868,19 @@ nsHttpChannel::SetProxyType(const char *aProxyType)
 NS_IMETHODIMP
 nsHttpChannel::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
 {
-    LOG(("nsHttpChannel::OnStartRequest [this=%x]\n", this));
+    // if we no longer reference the transaction, then simply drop this event.
+    if (request != mTransaction)
+        return NS_OK;
 
-    NS_PRECONDITION(mListener, "null listener");
-    NS_PRECONDITION(mTransaction, "null transaction");
+    LOG(("nsHttpChannel::OnStartRequest [this=%x]\n", this));
 
     // All of the response headers have been acquired, so we can take ownership
     // of them from the transaction.
     mResponseHead = mTransaction->TakeResponseHead();
 
-    if (mResponseHead) {
-        // Notify nsIHttpNotify implementations
-        nsHttpHandler::get()->OnAsyncExamineResponse(this);
-    }
+    // Notify nsIHttpNotify implementations
+    if (mResponseHead)
+        nsHttpHandler::get()->OnExamineResponse(this);
 
     return ProcessResponse();
 }
@@ -833,10 +888,12 @@ nsHttpChannel::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
 NS_IMETHODIMP
 nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult status)
 {
+    // if we no longer reference the transaction, then simply drop this event.
+    if (request != mTransaction)
+        return NS_OK;
+
     LOG(("nsHttpChannel::OnStopRequest [this=%x status=%x]\n",
         this, status));
-
-    NS_PRECONDITION(mTransaction, "null transaction");
 
     mIsPending = PR_FALSE;
     mStatus = status;
@@ -867,6 +924,10 @@ nsHttpChannel::OnDataAvailable(nsIRequest *request, nsISupports *ctxt,
                                nsIInputStream *input,
                                PRUint32 offset, PRUint32 count)
 {
+    // if we no longer reference the transaction, then simply drop this event.
+    if (request != mTransaction)
+        return NS_OK;
+
     LOG(("nsHttpChannel::OnDataAvailable [this=%x offset=%u count=%u]\n",
         this, offset, count));
 
