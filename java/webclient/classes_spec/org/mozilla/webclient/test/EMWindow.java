@@ -174,17 +174,26 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
         stopButton.setEnabled(false);
 		refreshButton = makeItem(buttonsPanel, "Refresh", 3, 0, 1, 1, 0.0, 0.0);
         refreshButton.setEnabled(false);
-        makeItem(buttonsPanel, "Bookmarks",    4, 0, 1, 1, 0.0, 0.0);
-        makeItem(buttonsPanel, "Stream With Len", 5, 0, 1, 1, 0.0, 0.0);
-        makeItem(buttonsPanel, "Stream No Len",   6, 0, 1, 1, 0.0, 0.0);
-	//	makeItem(buttonsPanel, "DOMViewer",    7, 0, 1, 1, 0.0, 0.0);
+        makeItem(buttonsPanel, "Bookmarks",    0, 1, 1, 1, 0.0, 0.0);
+        makeItem(buttonsPanel, "Stream With Len", 1, 1, 1, 1, 0.0, 0.0);
+        makeItem(buttonsPanel, "Stream No Len",   2, 1, 1, 1, 0.0, 0.0);
+        makeItem(buttonsPanel, " ",    3, 1, 1, 1, 0.0, 0.0);
+        //makeItem(buttonsPanel, "DOMViewer",    3, 1, 1, 1, 0.0, 0.0);
 
 		// Create the control panel
 		controlPanel = new Panel();
         controlPanel.setLayout(new BorderLayout());
         
         // Add the URL field, and the buttons panel
-		controlPanel.add(urlField,     BorderLayout.CENTER);
+        Panel centerPanel = new Panel();
+        Button spacerButton = new Button(" ");
+        spacerButton.setEnabled(false);
+        centerPanel.setLayout(new BorderLayout());
+        centerPanel.add(urlField, BorderLayout.NORTH);
+        centerPanel.add(spacerButton, BorderLayout.SOUTH);
+
+        //		controlPanel.add(urlField,     BorderLayout.CENTER);
+		controlPanel.add(centerPanel,     BorderLayout.CENTER);
 		controlPanel.add(buttonsPanel, BorderLayout.WEST);
 
         // create the status panel
@@ -466,6 +475,8 @@ public void actionPerformed (ActionEvent evt)
                 history.forward();
             }
         }
+        else if (command.equals(" ")) {
+        }
         else {
             navigation.loadURL(urlField.getText());
         }
@@ -540,6 +551,10 @@ private Component makeItem (Panel p, Object arg, int x, int y, int w, int h, dou
          
          p.add(comp);
          gbl.setConstraints(comp, c);
+
+         if (((String)arg).equals(" ")) {
+             b.setEnabled(false);
+         }
      }
      return comp;
 } // makeItem()
