@@ -3531,6 +3531,7 @@ PresShell::AlreadyInQueue(nsHTMLReflowCommand* aReflowCommand,
       nsHTMLReflowCommand* rc = (nsHTMLReflowCommand*) aQueue.ElementAt(i);
       if (rc) {
         nsIFrame* targetOfQueuedRC;
+        // XXX we could probably do this more efficiently now with the target hash
         if (NS_SUCCEEDED(rc->GetTarget(targetOfQueuedRC))) {
           nsReflowType RCType;
           nsReflowType queuedRCType;
@@ -6338,11 +6339,13 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
       void *curr_root = curr_path->SafeElementAt(curr_path->Count()-1);
       nsReflowTree::Node *n = tree.MergeCommand(curr);
       int i;
-#ifdef 0
+#if 0
       fprintf(stderr, "Initial path dump:\n");
       DumpPath(curr_path,0);
 #endif
 
+#define MERGE_REFLOWS 1
+#if MERGE_REFLOWS
       // now see how many reflows we can merge with the tree.
       for (i = 1; i < mReflowCommands.Count(); i++) {
         nsHTMLReflowCommand *command = 
@@ -6353,7 +6356,7 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
         if (!n)
           continue;         // can't be merged...try next?
         
-#ifdef 0
+#if 0
         fprintf(stderr, "Path dump (merged):\n");
         DumpPath(command->GetPath(),0);
 #endif
@@ -6363,6 +6366,8 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
         delete command;
         i--;  // account for the element removal and ensuing shift
       }
+#endif
+
       curr->SetReflowTree(&tree);
       curr->SetCurrentReflowNode(tree.Root());
       tree.Dump();
