@@ -374,10 +374,12 @@
         ]]></body>
       </method>
 
-      # This function saves the current selection state before the tree is rebuilt
-      # following a command execution. This allows us to remember which item(s)
-      # was/were selected so that the user does not need to constantly refocus the 
-      # tree to perform a sequence of commands. 
+      <!--
+        This function saves the current selection state before the tree is rebuilt
+        following a command execution. This allows us to remember which item(s)
+        was/were selected so that the user does not need to constantly refocus the 
+        tree to perform a sequence of commands.
+      -->
       <field name="_savedSelection">[]</field>
       <method name="saveSelection">
         <body><![CDATA[
@@ -393,22 +395,24 @@
         ]]></body>
       </method>
       
-      # This function restores the selection appropriately after a command executes. 
-      # This is necessary because most commands trigger a rebuild of the tree which
-      # destroys the selection. The restoration of selection is handled in three 
-      # different ways depending on the type of command that has been executed:
-      #  1) Commands that remove rows:
-      #       The row immediately after the first range in the selection is selected, 
-      #       if there is no row immediately after the first range the item before it
-      #       is selected
-      #  2) Commands that insert rows:
-      #       The newly inserted rows are selected
-      #  3) Commands that do not change the row count 
-      #       The row(s) that was/were operated on remain selected.
-      # 
-      # The calls to save/restore are placed in the doCommand method and thus all
-      # commands must pass through this gate. The result is that this method becomes
-      # the POLICY CENTER FOR POST-VIEW/EDIT SELECTION CHANGES.
+      <!--
+        This function restores the selection appropriately after a command executes. 
+        This is necessary because most commands trigger a rebuild of the tree which
+        destroys the selection. The restoration of selection is handled in three 
+        different ways depending on the type of command that has been executed:
+         1) Commands that remove rows:
+              The row immediately after the first range in the selection is selected, 
+              if there is no row immediately after the first range the item before it
+              is selected
+         2) Commands that insert rows:
+              The newly inserted rows are selected
+         3) Commands that do not change the row count 
+              The row(s) that was/were operated on remain selected.
+
+        The calls to save/restore are placed in the doCommand method and thus all
+        commands must pass through this gate. The result is that this method becomes
+        the POLICY CENTER FOR POST-VIEW/EDIT SELECTION CHANGES.
+      -->
       <method name="restoreSelection">
         <parameter name="aCommand"/>
         <body><![CDATA[ 
@@ -542,7 +546,6 @@
       <method name="openItemKey">
         <body><![CDATA[
           if (this._selection.length != 1) {
-            SOUND.beep();
             return;
           }
           if (!this._selection.isContainer[0])
@@ -568,8 +571,8 @@
       </method>
 
       <!-- observer -->
-      <field name="DNDObserver" readonly="true"><![CDATA[(
-      {
+      <field name="DNDObserver" readonly="true"><![CDATA[
+      ({
         mOuter: this,
         onDragStart: function (aEvent, aXferData, aDragAction)
         {
@@ -581,8 +584,8 @@
           if (aEvent.ctrlKey || !selection.containsMutable)
             aDragAction.action = kDSIID.DRAGDROP_ACTION_COPY;
         }
-      }
-     )]]></field>      
+      })
+      ]]></field>      
         
       <!-- nsIController -->
       <field name="controller" readonly="true"><![CDATA[
@@ -670,7 +673,6 @@
           var dragSession = dragService.getCurrentSession();
           if (!dragSession)
             return;
-          var date = Date.now();
           var selection = BookmarksUtils.getSelectionFromXferData(dragSession);
           var rItem     = this.mOuter.getRowResource(row);
           var rParent   = this.mOuter.getParentResource(row);
@@ -689,7 +691,6 @@
             BookmarksUtils.insertSelection("drag", selection, target, true);
           else
             BookmarksUtils.moveSelection  ("drag", selection, target);
-          dump("6:"+(Date.now()-date)+"\n")
         },
 
         onToggleOpenState: function (aRow)
@@ -721,7 +722,6 @@
     
         onSelectionChanged: function ()
         {
-          dump("ONSELECTION CHANGED\n")
           var selection = this.mOuter.getTreeSelection();
           this.mOuter._selection = selection;
           this.mOuter._target    = this.mOuter.getTreeTarget(selection.item[0], selection.parent[0], BookmarksUtils.DROP_BEFORE);

@@ -262,6 +262,9 @@ var BookmarksMenu = {
 
   loadBookmark: function (aTarget, aDS)
   {
+    // Check for empty id (most likely a normal menu item like "Manage Bookmarks")
+    if (!aTarget.id)
+      return;
     var rSource   = RDF.GetResource(aTarget.id);
     var selection = BookmarksUtils.getSelectionFromResource(rSource);
     BookmarksCommand.openBookmark(selection, "current", aDS)

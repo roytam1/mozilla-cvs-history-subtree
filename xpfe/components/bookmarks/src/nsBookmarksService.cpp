@@ -3649,11 +3649,7 @@ nsBookmarksService::Unassert(nsIRDFResource* aSource,
 {
     nsresult rv = NS_RDF_ASSERTION_REJECTED;
 
-    if (aProperty == kNC_URL) {
-        // We can't accept somebody trying to remove a URL. Sorry!
-    }
-    else if (CanAccept(aSource, aProperty, aTarget))
-    {
+    if (CanAccept(aSource, aProperty, aTarget)) {
         rv = mInner->Unassert(aSource, aProperty, aTarget);
         if (NS_FAILED(rv))
             return rv;

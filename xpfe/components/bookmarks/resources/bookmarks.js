@@ -328,15 +328,17 @@ var BookmarksCommand = {
   getCommandName: function (aCommand) 
   {
     var cmdName = aCommand.substring(NC_NS_CMD.length);
-    //try {
+    return BookmarksUtils.getLocaleString ("cmd_" + cmdName);
+    /*
+    try {
       // Note: this will succeed only if there's a string in the bookmarks
       //       string bundle for this command name. Otherwise, <xul:stringbundle/>
       //       will throw, we'll catch & stifle the error, and look up the command
       //       name in the datasource. 
       return BookmarksUtils.getLocaleString ("cmd_" + cmdName);
-    //}
-    //catch (e) {
-    //}   
+    }
+    catch (e) {
+    }   
     // XXX - WORK TO DO HERE! (rjc will cry if we don't fix this) 
     // need to ask the ds for the commands for this node, however we don't
     // have the right params. This is kind of a problem. 
@@ -344,6 +346,7 @@ var BookmarksCommand = {
     const rName = RDF.GetResource(NC_NS + "Name");
     const rSource = RDF.GetResource(aNodeID);
     return BMDS.GetTarget(rSource, rName, true).Value;
+    */
   },
     
   ///////////////////////////////////////////////////////////////////////////
@@ -998,7 +1001,6 @@ var BookmarksUtils = {
       else
         bundle = this._bundle.formatStringFromName(aStringKey, aReplaceString, aReplaceString.length);
     } catch (e) {
-      SOUND.beep();
       dump("Bookmark bundle "+aStringKey+" not found!\n")
       bundle = "";
     }
@@ -1107,7 +1109,7 @@ var BookmarksUtils = {
     var rName = this.getProperty(aFolder, NC_NS+"Name");    
     var newFolder;
     if (this.isFolderGroup(aFolder))
-      newFolder = BMSVC.createGroup (rName)
+      newFolder = BMSVC.createGroup(rName)
     else
       newFolder = BMSVC.createFolder(rName);
     
@@ -1464,7 +1466,7 @@ var BookmarksUtils = {
   flushDataSource: function ()
   {
     var remoteDS = BMDS.QueryInterface(Components.interfaces.nsIRDFRemoteDataSource);
-    setTimeout(function () {dump("Flushing Bookmark Datasource...\n"); remoteDS.Flush()}, 100);
+    setTimeout(function () {remoteDS.Flush()}, 100);
   },
 
   getTransactionManager: function ()
@@ -1477,10 +1479,8 @@ var BookmarksUtils = {
     }
 
     // Create a TransactionManager object:
-    dump("creating transaction manager...\n")
-    gBMtxmgr = Components.classes["@mozilla.org/transactionmanager;1"].createInstance();
-    // Now get the nsITransactionManager interface from the object:
-    gBMtxmgr = gBMtxmgr.QueryInterface(Components.interfaces.nsITransactionManager);
+    gBMtxmgr = Components.classes["@mozilla.org/transactionmanager;1"]
+               .createInstance(Components.interfaces.nsITransactionManager);
     if (!gBMtxmgr) {
       dump("Failed to create the Bookmark Transaction Manager!\n");
       return null;
