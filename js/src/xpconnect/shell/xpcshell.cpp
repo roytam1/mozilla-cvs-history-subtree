@@ -680,7 +680,7 @@ FullTrustSecMan::FullTrustSecMan()
 }
 
 NS_IMETHODIMP
-FullTrustSecMan::CanCreateWrapper(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, void * *aPolicy)
+FullTrustSecMan::CanCreateWrapper(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIClassInfo *aClassInfo, void * *aPolicy)
 {
     return NS_OK;
 }

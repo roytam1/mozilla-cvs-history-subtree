@@ -229,7 +229,7 @@ MySecMan::MySecMan()
 }
 
 NS_IMETHODIMP
-MySecMan::CanCreateWrapper(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, void * *aPolicy)
+MySecMan::CanCreateWrapper(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIClassInfo *aClassInfo, void * *aPolicy)
 {
     switch(mMode)
     {
