@@ -385,28 +385,19 @@ NS_NewLoadGroup(nsILoadGroup* *result, nsIRequestObserver* obs)
 
 
 inline nsresult
-NS_NewDownloader(nsIDownloader* *result,
-                   nsIURI* uri,
-                   nsIDownloadObserver* observer,
-                   nsISupports* context = nsnull,
-                   PRBool synchronous = PR_FALSE,
-                   nsILoadGroup* loadGroup = nsnull,
-                   nsIInterfaceRequestor* notificationCallbacks = nsnull,
-                   nsLoadFlags loadAttributes = NS_STATIC_CAST(nsLoadFlags, nsIRequest::LOAD_NORMAL))
+NS_NewDownloader(nsIStreamListener   **result,
+                 nsIDownloadObserver  *observer,
+                 nsIFile              *downloadLocation = nsnull)
 {
     nsresult rv;
-    nsCOMPtr<nsIDownloader> downloader;
     static NS_DEFINE_CID(kDownloaderCID, NS_DOWNLOADER_CID);
-    rv = nsComponentManager::CreateInstance(kDownloaderCID,
-                                            nsnull,
-                                            NS_GET_IID(nsIDownloader),
-                                            getter_AddRefs(downloader));
-    if (NS_FAILED(rv)) return rv;
-    rv = downloader->Init(uri, observer, context, synchronous, loadGroup,
-                          notificationCallbacks, loadAttributes);
-    if (NS_FAILED(rv)) return rv;
-    *result = downloader;
-    NS_ADDREF(*result);
+    nsCOMPtr<nsIDownloader> downloader =
+        do_CreateInstance(kDownloaderCID, &rv);
+    if (NS_SUCCEEDED(rv)) {
+        rv = downloader->Init(observer, downloadLocation);
+        if (NS_SUCCEEDED(rv))
+            NS_ADDREF(*result = downloader);
+    }
     return rv;
 }
 
