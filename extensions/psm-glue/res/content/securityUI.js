@@ -32,7 +32,7 @@ function SetSecurityButton()
     securityUI = ui.QueryInterface(Components.interfaces.nsSecureBrowserUI);
 
     var button  = document.getElementById('security-button');
-    var certAuth = document.getElementById('security-button');
+    var certAuth = document.getElementById('cert-auth');
 	if (button && window._content)
 		securityUI.init(window._content, button, certAuth);
 }
