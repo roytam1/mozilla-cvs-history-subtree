@@ -1,13 +1,14 @@
 #include "nsHttp.h"
 #include "nsHttpHandler.h"
 #include "nsHttpChannel.h"
-#include "nsHttpHeaderArray.h"
 #include "nsHttpConnection.h"
+#include "nsHttpResponseHead.h"
 #include "nsIURL.h"
 #include "nsICacheService.h"
 #include "nsICategoryManager.h"
 #include "nsIObserverService.h"
 #include "nsISupportsPrimitives.h"
+#include "nsPrintfCString.h"
 #include "nsCOMPtr.h"
 #include "nsNetCID.h"
 #include "prprf.h"
@@ -189,7 +190,7 @@ nsHttpHandler::AddStandardRequestHeaders(nsHttpHeaderArray *request,
     //
     // Send */*. We're no longer chopping MIME-types for acceptance.
     // MIME based content negotiation has died.
-    rv = request->SetHeader(nsHttp::Accept, "*/*");
+    rv = request->SetHeader(nsHttp::Accept, NS_LITERAL_CSTRING("*/*"));
     if (NS_FAILED(rv)) return rv;
 
     // Add the Accept-Language header:
@@ -205,15 +206,13 @@ nsHttpHandler::AddStandardRequestHeaders(nsHttpHeaderArray *request,
     if (NS_FAILED(rv)) return rv;
 
     // Add the Connection header:
-    const char *connectionType = "close";
+    nsLocalCString connectionType("close");
     if (caps && ALLOW_KEEPALIVE) {
-        char buf[32];
-        PR_snprintf(buf, sizeof(buf), "%d", mKeepAliveTimeout);
-
-        rv = request->SetHeader(nsHttp::Keep_Alive, buf);
+        rv = request->SetHeader(nsHttp::Keep_Alive,
+                nsPrintfCString("%d", mKeepAliveTimeout));
         if (NS_FAILED(rv)) return rv;
         
-        connectionType = "keep-alive";
+        connectionType.Assign("keep-alive");
     }
     return request->SetHeader(nsHttp::Connection, connectionType);
 }
@@ -227,9 +226,11 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *transaction,
     NS_ENSURE_ARG_POINTER(transaction);
     NS_ENSURE_ARG_POINTER(connectionInfo);
 
+    /*
     if (mNumActiveConnections == PRUint32(mMaxConnections))
         // unable to perform this transaction at this time
         return EnqueueTransaction(transaction, connectionInfo);
+    */
 
     nsHttpConnection *conn = nsnull;
 
@@ -288,26 +289,29 @@ nsHttpHandler::RecycleConnection(nsHttpConnection *connection)
         mNumIdleConnections++;
     }
 
+    /*
     mNumActiveConnections--;
     if (!PR_CLIST_IS_EMPTY(&mTransactionQ))
         ProcessTransactionQ();
+    */
 
     return NS_OK;
 }
 
-const char *
+nsCommonCString
 nsHttpHandler::UserAgent()
 {
     if (mUserAgentIsDirty) {
         BuildUserAgent();
         mUserAgentIsDirty = PR_FALSE;
     }
-    return mUserAgent.get();
+    return mUserAgent;
 }
 
 void
 nsHttpHandler::ProcessTransactionQ()
 {
+    /*
     LOG(("nsHttpHandler::ProcessTransactionQ\n"));
     nsPendingTransaction *pt = nsnull;
     PRCList *node = PR_LIST_HEAD(&mTransactionQ);
@@ -321,12 +325,14 @@ nsHttpHandler::ProcessTransactionQ()
         NS_RELEASE(pt->connectionInfo);
         delete pt;
     }
+    */
 }
 
 nsresult
 nsHttpHandler::EnqueueTransaction(nsHttpTransaction *transaction,
                                   nsHttpConnectionInfo *connectionInfo)
 {
+    /*
     nsPendingTransaction pt = new nsPendingTransaction;
     if (!pt)
         return NS_ERROR_OUT_OF_MEMORY;
@@ -341,6 +347,8 @@ nsHttpHandler::EnqueueTransaction(nsHttpTransaction *transaction,
 
     PR_APPEND_LINK(pt, &mPendingTransactionQ);
     return NS_OK;
+    */
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 void
@@ -356,7 +364,7 @@ nsHttpHandler::BuildUserAgent()
                  "HTTP cannot send practical requests without this much");
 
     // Application portion
-    mUserAgent = mAppName;
+    mUserAgent.Assign(mAppName);
     mUserAgent += '/';
     mUserAgent += mAppVersion;
     mUserAgent += ' ';
@@ -394,7 +402,7 @@ nsHttpHandler::BuildUserAgent()
     }
 
     // Vendor portion
-    if (!mVendor) {
+    if (mVendor) {
         mUserAgent += ' ';
         mUserAgent += mVendor;
         if (mVendorSub) {
@@ -648,7 +656,7 @@ nsHttpHandler::PrefsChanged(const char *pref)
         rv = mPrefs->GetLocalizedUnicharPref(INTL_ACCEPT_LANGUAGES, 
                 getter_Copies(acceptLanguages));
         if (NS_SUCCEEDED(rv))
-            SetAcceptLanguages(NS_ConvertUCS2toUTF8(acceptLanguages).get());
+            SetAcceptLanguages(NS_ConvertUCS2toUTF8(acceptLanguages));
     }
 
     if (bChangedAll || PL_strcmp(pref, INTL_ACCEPT_CHARSET) == 0) {
@@ -656,7 +664,7 @@ nsHttpHandler::PrefsChanged(const char *pref)
         rv = mPrefs->GetLocalizedUnicharPref(INTL_ACCEPT_CHARSET, 
                 getter_Copies(acceptCharset));
         if (NS_SUCCEEDED(rv))
-            SetAcceptCharsets(NS_ConvertUCS2toUTF8(acceptCharset).get());
+            SetAcceptCharsets(NS_ConvertUCS2toUTF8(acceptCharset));
     }
 
     // general.useragent.override
@@ -697,7 +705,7 @@ nsHttpHandler::PrefsChanged(const char *pref)
         rv = mPrefs->CopyCharPref("network.http.accept-encoding",
                                   getter_Copies(acceptEncodings));
         if (NS_SUCCEEDED(rv))
-            SetAcceptEncodings(acceptEncodings);
+            SetAcceptEncodings(nsLocalCString(acceptEncodings));
     }
 }
 
@@ -788,84 +796,72 @@ nsHttpHandler::CreateServicesFromCategory(const char *category)
  *      returns: "en, ja; q=0.667, fr_CA; q=0.333"
  */
 
-static char *
-PrepareAcceptLanguages(const char *i_AcceptLanguages)
+static nsresult
+PrepareAcceptLanguages(nsACString &acceptLanguages)
 {
-  if (i_AcceptLanguages)
-  {
+    if (acceptLanguages.IsEmpty())
+        return NS_OK;
+
     PRUint32 n, size, wrote;
     double q, dec;
-    char *p, *p2, *token, *q_Accept;
+    char *p, *p2, *token, *q_Accept, *o_Accept;
     const char *comma;
-    char *o_AcceptLanguages;
     PRInt32 available;
 
 
-    o_AcceptLanguages = nsCRT::strdup(i_AcceptLanguages);
-    if (nsnull == o_AcceptLanguages)
-      return nsnull;
-    for (p = o_AcceptLanguages, n = size = 0; '\0' != *p; p++)
-    {
-      if (*p == ',') n++;
-        size++;
+    o_Accept = nsCRT::strdup(PromiseFlatCString(acceptLanguages).get());
+    if (nsnull == o_Accept)
+        return NS_ERROR_OUT_OF_MEMORY;
+    for (p = o_Accept, n = size = 0; '\0' != *p; p++) {
+        if (*p == ',') n++;
+            size++;
     }
 
     available = size + ++n * 11 + 1;
     q_Accept = new char[available];
     if ((char *) 0 == q_Accept)
-      return nsnull;
+        return nsnull;
     *q_Accept = '\0';
     q = 1.0;
     dec = q / (double) n;
     n = 0;
     p2 = q_Accept;
-    for (token = nsCRT::strtok(o_AcceptLanguages, ",", &p);
+    for (token = nsCRT::strtok(o_Accept, ",", &p);
          token != (char *) 0;
          token = nsCRT::strtok(p, ",", &p))
     {
-      while (*token == ' ' || *token == '\x9') token++;
-      char* trim;
-      trim = PL_strpbrk(token, "; \x9");
-      if (trim != (char*)0)  // remove "; q=..." if present
-      *trim = '\0';
+        while (*token == ' ' || *token == '\x9') token++;
+        char* trim;
+        trim = PL_strpbrk(token, "; \x9");
+        if (trim != (char*)0)  // remove "; q=..." if present
+            *trim = '\0';
 
-      if (*token != '\0')
-      {
-        comma = n++ != 0 ? ", " : ""; // delimiter if not first item
-        if (q < 0.9995)
-          wrote = PR_snprintf(p2, available, "%s%s; q=%1.3f", comma, token, q);
-        else
-          wrote = PR_snprintf(p2, available, "%s%s", comma, token);
-        q -= dec;
-        p2 += wrote;
-        available -= wrote;
-        NS_ASSERTION(available > 0, "allocated string not long enough");
-
-      }
+        if (*token != '\0') {
+            comma = n++ != 0 ? ", " : ""; // delimiter if not first item
+            if (q < 0.9995)
+                wrote = PR_snprintf(p2, available, "%s%s; q=%1.3f", comma, token, q);
+            else
+                wrote = PR_snprintf(p2, available, "%s%s", comma, token);
+            q -= dec;
+            p2 += wrote;
+            available -= wrote;
+            NS_ASSERTION(available > 0, "allocated string not long enough");
+        }
     }
-    nsCRT::free(o_AcceptLanguages);
+    nsCRT::free(o_Accept);
 
     // change alloc from C++ new/delete to nsCRT::strdup's way
-    o_AcceptLanguages = nsCRT::strdup(q_Accept);
-    if (nsnull == o_AcceptLanguages)
-      return nsnull;
+    acceptLanguages = q_Accept;
     delete [] q_Accept;
-    return o_AcceptLanguages;
-  }
-  else
-    return nsnull;
+
+    return NS_OK;
 }
 
-NS_IMETHODIMP
-nsHttpHandler::SetAcceptLanguages(const char *aAcceptLanguages) 
+nsresult
+nsHttpHandler::SetAcceptLanguages(const nsACString &aAcceptLanguages) 
 {
-    mAcceptLanguages = 0;
-    if (aAcceptLanguages) {
-        mAcceptLanguages = PrepareAcceptLanguages(aAcceptLanguages);
-        if (!mAcceptLanguages)
-            return NS_ERROR_OUT_OF_MEMORY;
-    }
-    return NS_OK;
+    mAcceptLanguages = aAcceptLanguages;
+    return PrepareAcceptLanguages(mAcceptLanguages);
 }
 
 /**
@@ -883,26 +879,25 @@ nsHttpHandler::SetAcceptLanguages(const char *aAcceptLanguages)
  *      returns: "UTF-8, *"
  */
 
-static char *
-PrepareAcceptCharsets(const char *i_AcceptCharset)
+static nsresult
+PrepareAcceptCharsets(nsACString &acceptCharset)
 {
     PRUint32 n, size, wrote;
     PRInt32 available;
     double q, dec;
-    char *p, *p2, *token, *q_Accept;
-    char *o_AcceptCharset;
+    char *p, *p2, *token, *q_Accept, *o_Accept;
     const char *acceptable, *comma;
     PRBool add_utf = PR_FALSE;
     PRBool add_asterick = PR_FALSE;
 
-    if (i_AcceptCharset == nsnull)
+    if (acceptCharset.IsEmpty())
         acceptable = "";
     else
-        acceptable = i_AcceptCharset;
-    o_AcceptCharset = nsCRT::strdup(acceptable);
-    if (nsnull == o_AcceptCharset)
-        return nsnull;
-    for (p = o_AcceptCharset, n = size = 0; '\0' != *p; p++) {
+        acceptable = PromiseFlatCString(acceptCharset).get();
+    o_Accept = nsCRT::strdup(acceptable);
+    if (nsnull == o_Accept)
+        return NS_ERROR_OUT_OF_MEMORY;
+    for (p = o_Accept, n = size = 0; '\0' != *p; p++) {
         if (*p == ',') n++;
             size++;
     }
@@ -922,13 +917,13 @@ PrepareAcceptCharsets(const char *i_AcceptCharset)
     available = size + ++n * 11 + 1;
     q_Accept = new char[available];
     if ((char *) 0 == q_Accept)
-        return nsnull;
+        return NS_ERROR_OUT_OF_MEMORY;
     *q_Accept = '\0';
     q = 1.0;
     dec = q / (double) n;
     n = 0;
     p2 = q_Accept;
-    for (token = nsCRT::strtok(o_AcceptCharset, ",", &p);
+    for (token = nsCRT::strtok(o_Accept, ",", &p);
          token != (char *) 0;
          token = nsCRT::strtok(p, ",", &p)) {
         while (*token == ' ' || *token == '\x9') token++;
@@ -977,40 +972,28 @@ PrepareAcceptCharsets(const char *i_AcceptCharset)
         p2 += wrote;
         NS_ASSERTION(available > 0, "allocated string not long enough");
     }
-    nsCRT::free(o_AcceptCharset);
+    nsCRT::free(o_Accept);
 
     // change alloc from C++ new/delete to nsCRT::strdup's way
-    o_AcceptCharset = nsCRT::strdup(q_Accept);
+    acceptCharset = q_Accept;
 #if defined DEBUG_havill
     printf("Accept-Charset: %s\n", q_Accept);
 #endif
-    if (nsnull == o_AcceptCharset)
-        return nsnull;
     delete [] q_Accept;
-    return o_AcceptCharset;
-}
-
-NS_IMETHODIMP
-nsHttpHandler::SetAcceptCharsets(const char *aAcceptCharsets) 
-{
-    mAcceptCharsets = 0;
-    if (aAcceptCharsets) {
-        mAcceptCharsets = PrepareAcceptCharsets(aAcceptCharsets);
-        if (!mAcceptCharsets)
-            return NS_ERROR_OUT_OF_MEMORY;
-    }
     return NS_OK;
 }
 
-NS_IMETHODIMP
-nsHttpHandler::SetAcceptEncodings(const char *aAcceptEncodings) 
+nsresult
+nsHttpHandler::SetAcceptCharsets(const nsACString &aAcceptCharsets) 
 {
-    mAcceptEncodings = 0;
-    if (aAcceptEncodings) {
-        mAcceptEncodings = aAcceptEncodings;
-        if (!mAcceptEncodings)
-            return NS_ERROR_OUT_OF_MEMORY;
-    }
+    mAcceptCharsets = aAcceptCharsets;
+    return PrepareAcceptCharsets(mAcceptCharsets);
+}
+
+nsresult
+nsHttpHandler::SetAcceptEncodings(const nsACString &aAcceptEncodings) 
+{
+    mAcceptEncodings = aAcceptEncodings;
     return NS_OK;
 }
 
@@ -1120,7 +1103,7 @@ nsHttpHandler::NewProxyChannel(nsIURI *uri,
 NS_IMETHODIMP
 nsHttpHandler::GetUserAgent(char **aUserAgent)
 {
-    return DupString(UserAgent(), aUserAgent);
+    return DupString(UserAgent().get(), aUserAgent);
 }
 
 NS_IMETHODIMP

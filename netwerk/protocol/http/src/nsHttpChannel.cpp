@@ -2,6 +2,7 @@
 #include "nsHttpTransaction.h"
 #include "nsHttpConnection.h"
 #include "nsHttpHandler.h"
+#include "nsHttpResponseHead.h"
 #include "nsHttp.h"
 #include "netCore.h"
 #include "nsNetCID.h"
@@ -83,11 +84,11 @@ nsHttpChannel::Init(nsIURI *uri,
         hostLine.Append(':');
         hostLine.AppendInt(port);
     }
-    rv = mRequestHeaders.SetHeader(nsHttp::Host, hostLine.get());
+    rv = mRequestHead.SetHeader(nsHttp::Host, hostLine);
     if (NS_FAILED(rv)) return rv;
 
     rv = nsHttpHandler::get()->
-            AddStandardRequestHeaders(&mRequestHeaders, caps);
+            AddStandardRequestHeaders(&mRequestHead.Headers(), caps);
     if (NS_FAILED(rv)) return rv;
 
     return NS_OK;
@@ -132,10 +133,11 @@ nsHttpChannel::SetupTransaction()
         if (NS_FAILED(rv)) return rv;
     }
 
-    return mTransaction->SetRequestInfo(nsHttp::GET,
-                                        HTTP_VERSION_1_1,
-                                        path ? path.get() : mSpec.get(),
-                                        &mRequestHeaders); 
+    mRequestHead.SetMethod(nsHttp::GET);
+    mRequestHead.SetVersion(HTTP_VERSION_1_1);
+    mRequestHead.SetRequestURI(nsLocalCString(path ? path.get() : mSpec.get()));
+
+    return mTransaction->SetRequestInfo(&mRequestHead, nsnull);
 }
 
 nsresult
@@ -297,11 +299,11 @@ nsHttpChannel::GetContentType(char **aContentType)
 {
     NS_ENSURE_ARG_POINTER(aContentType);
 
-    if (mTransaction && mTransaction->ContentType())
-        *aContentType = PL_strdup(mTransaction->ContentType());
-    else
-        *aContentType = nsnull;
-    return NS_OK;
+    if (!mResponseHead)
+        return NS_ERROR_NOT_AVAILABLE;
+
+    *aContentType = PL_strdup(mResponseHead->ContentType().get());
+    return *aContentType ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 NS_IMETHODIMP
 nsHttpChannel::SetContentType(const char *aContentType)
@@ -313,10 +315,11 @@ NS_IMETHODIMP
 nsHttpChannel::GetContentLength(PRInt32 *aContentLength)
 {
     NS_ENSURE_ARG_POINTER(aContentLength);
-    if (mTransaction)
-        *aContentLength = mTransaction->ContentLength();
-    else
-        *aContentLength = -1;
+
+    if (!mResponseHead)
+        return NS_ERROR_NOT_AVAILABLE;
+
+    *aContentLength = mResponseHead->ContentLength();
     return NS_OK;
 }
 NS_IMETHODIMP

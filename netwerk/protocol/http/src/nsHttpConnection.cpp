@@ -1,5 +1,6 @@
 #include "nsHttpConnection.h"
 #include "nsHttpTransaction.h"
+#include "nsHttpResponseHead.h"
 #include "nsISocketTransportService.h"
 #include "nsISocketTransport.h"
 #include "nsIServiceManager.h"
@@ -83,12 +84,12 @@ nsHttpConnection::OnTransactionComplete(nsresult status)
     // transaction completed successfully.
     if (NS_SUCCEEDED(status)) {
         const char *val =
-                mTransaction->ResponseHeaders().PeekHeader(nsHttp::Connection);
+                mTransaction->ResponseHead()->PeekHeader(nsHttp::Connection);
         if (val) {
             if (PL_strcmp(val, "keep-alive") == 0) {
                 closeConnection = PR_FALSE;
 
-                val = mTransaction->ResponseHeaders().PeekHeader(nsHttp::Keep_Alive);
+                val = mTransaction->ResponseHead()->PeekHeader(nsHttp::Keep_Alive);
 
                 const char *cp = PL_strstr(val, "max=");
                 if (cp)

@@ -5,31 +5,15 @@
 // nsHttpHeaderArray
 //-----------------------------------------------------------------------------
 
-nsHttpHeaderArray::nsHttpHeaderArray()
-{
-}
-
-nsHttpHeaderArray::~nsHttpHeaderArray()
-{
-}
-
-const char *
-nsHttpHeaderArray::PeekHeader(nsHttpAtom header)
-{
-    nsEntry *entry = nsnull;
-    LookupEntry(header, &entry);
-    return entry ? entry->value.get() : nsnull;
-}
-
 nsresult
-nsHttpHeaderArray::SetHeader(nsHttpAtom header, const char *value)
+nsHttpHeaderArray::SetHeader(nsHttpAtom header, const nsACString &value)
 {
     nsEntry *entry = nsnull;
     PRInt32 index;
 
     // If a NULL value is passed in, then delete the header entry...
     index = LookupEntry(header, &entry);
-    if (!value) {
+    if (value.IsEmpty()) {
         if (entry) {
             mHeaders.RemoveElementAt(index);
             delete entry;
@@ -68,14 +52,24 @@ nsHttpHeaderArray::SetHeader(nsHttpAtom header, const char *value)
     return NS_OK;
 }
 
-nsresult
-nsHttpHeaderArray::GetHeader(nsHttpAtom header, char **result)
+const char *
+nsHttpHeaderArray::PeekHeader(nsHttpAtom header)
 {
-    const char *value = PeekHeader(header);
-    if (!value) return NS_ERROR_NOT_AVAILABLE;
+    nsEntry *entry = nsnull;
+    LookupEntry(header, &entry);
+    return entry ? entry->value.get() : nsnull;
+}
 
-    *result = nsCRT::strdup(value);
-    return *result ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+nsresult
+nsHttpHeaderArray::GetHeader(nsHttpAtom header, nsACString &result)
+{
+    nsEntry *entry = nsnull;
+
+    LookupEntry(header, &entry);
+    if (!entry) return NS_ERROR_NOT_AVAILABLE;
+
+    result = entry->value;
+    return NS_OK;
 }
 
 nsresult
@@ -87,6 +81,20 @@ nsHttpHeaderArray::VisitHeaders(nsIHttpHeaderVisitor *visitor)
         nsEntry *entry = (nsEntry *) mHeaders[i];
         if (NS_FAILED(visitor->VisitHeader(entry->header, entry->value.get())))
             break;
+    }
+    return NS_OK;
+}
+
+nsresult
+nsHttpHeaderArray::Flatten(nsACString &buf)
+{
+    PRInt32 i, count = mHeaders.Count();
+    for (i=0; i<count; ++i) {
+        nsEntry *entry = (nsEntry *) mHeaders[i];
+        buf.Append(entry->header);
+        buf.Append(": ");
+        buf.Append(entry->value);
+        buf.Append("\r\n");
     }
     return NS_OK;
 }

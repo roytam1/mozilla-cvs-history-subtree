@@ -77,11 +77,13 @@ public:
     nsresult RecycleConnection(nsHttpConnection *);
 
 private:
+    /*
     struct nsPendingTransaction : public PRCList
     {
         nsHttpTransaction    *transaction;
         nsHttpConnectionInfo *connectionInfo;
     };
+    */
 
     void     ProcessTransactionQ();
     nsresult EnqueueTransaction(nsHttpTransaction *, nsHttpConnectionInfo *);
@@ -89,14 +91,14 @@ private:
     void     InitUserAgentComponents();
     void     PrefsChanged(const char *pref = nsnull);
 
-    nsresult SetAcceptLanguages(const char *);
-    nsresult SetAcceptEncodings(const char *);
-    nsresult SetAcceptCharsets(const char *);
+    nsresult SetAcceptLanguages(const nsACString &);
+    nsresult SetAcceptEncodings(const nsACString &);
+    nsresult SetAcceptCharsets(const nsACString &);
 
-    const char *AcceptLanguages() { return mAcceptLanguages.get(); }
-    const char *AcceptEncodings() { return mAcceptEncodings.get(); }
-    const char *AcceptCharsets() { return mAcceptCharsets.get(); }
-    const char *UserAgent();
+    nsCommonCString AcceptLanguages() { return mAcceptLanguages; }
+    nsCommonCString AcceptEncodings() { return mAcceptEncodings; }
+    nsCommonCString AcceptCharsets() { return mAcceptCharsets; }
+    nsCommonCString UserAgent();
 
     static PRInt32 PR_CALLBACK PrefsCallback(const char *, void *);
 
@@ -122,9 +124,9 @@ private:
     PRInt32  mMaxAllowedKeepAlives;
     PRInt32  mMaxAllowedKeepAlivesPerServer;
 
-    nsXPIDLCString mAcceptLanguages;
-    nsXPIDLCString mAcceptEncodings;
-    nsXPIDLCString mAcceptCharsets;
+    nsCommonCString mAcceptLanguages;
+    nsCommonCString mAcceptEncodings;
+    nsCommonCString mAcceptCharsets;
 
     // connection management
     PRCList  mIdleConnections;     // list of nsHttpConnection objects
@@ -147,9 +149,9 @@ private:
     nsXPIDLCString mProductSub;
     nsXPIDLCString mProductComment;
 
-    nsCString      mUserAgent;
-    nsXPIDLCString mUserAgentOverride;
-    PRPackedBool   mUserAgentIsDirty; // true if mUserAgent should be rebuilt
+    nsCommonCString mUserAgent;
+    nsXPIDLCString  mUserAgentOverride;
+    PRPackedBool    mUserAgentIsDirty; // true if mUserAgent should be rebuilt
 };
 
 #endif // nsHttpHandler_h__

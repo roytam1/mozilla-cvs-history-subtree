@@ -10,6 +10,8 @@
 
 class nsHttpConnection;
 class nsHttpConnectionInfo;
+class nsHttpRequestHead;
+class nsHttpResponseHead;
 class nsHTTPChunkConvContext;
 
 //-----------------------------------------------------------------------------
@@ -18,12 +20,10 @@ class nsHTTPChunkConvContext;
 //-----------------------------------------------------------------------------
 
 class nsHttpTransaction : public nsIRequest
-                        , public nsIHttpHeaderVisitor
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIREQUEST
-    NS_DECL_NSIHTTPHEADERVISITOR
 
     // A transaction is constructed from request headers.
     nsHttpTransaction(nsIStreamListener *);
@@ -33,21 +33,16 @@ public:
     void SetConnection(nsHttpConnection *);
 
     // Called to initialize the transaction
-    nsresult SetRequestInfo(nsHttpAtom method,
-                            nsHttpVersion version,
-                            const char *requestURI,
-                            nsHttpHeaderArray *headers);
+    nsresult SetRequestInfo(nsHttpRequestHead *, nsIInputStream *);
 
     nsIStreamListener    *Listener()           { return mListener; }
     nsHttpConnection     *Connection()         { return mConnection; }
 
-    nsHttpHeaderArray    &ResponseHeaders()    { return mResponseHeaders; }
-    nsHttpVersion         ResponseVersion()    { return mResponseVersion; }
-    PRUint32              ResponseStatus()     { return mResponseStatus; }
-    const char           *ResponseStatusText() { return mResponseStatusText; }
-    PRInt32               ContentLength()      { return mContentLength; }
-    const char           *ContentType()        { return mContentType; }
-    const char           *ContentCharset()     { return mContentCharset; }
+    nsHttpResponseHead   *ResponseHead()       { return mResponseHead; }
+
+    // Called to take ownership of the response headers; the transaction
+    // will drop any reference to the response headers after this call.
+    nsHttpResponseHead   *TakeResponseHead();
 
     // Called to write data to the socket until return NS_BASE_STREAM_CLOSED
     nsresult OnDataWritable(nsIOutputStream *, PRUint32 count);
@@ -59,13 +54,9 @@ public:
     nsresult OnStopTransaction(nsresult);
 
 private:
-    nsresult ParseVersion(const char *version);
-    nsresult ParseStatusLine(const char *line);
-    nsresult ParseHeaderLine(const char *line);
     nsresult ParseLine(const char *line);
     nsresult HandleSegment(const char *segment, PRUint32 count, PRUint32 *countRead);
     nsresult HandleContent(nsIInputStream *, PRUint32 count, PRBool fromSocket);
-    nsresult DecodeContentType(const char *);
     nsresult InstallChunkedDecoder();
 
 private:
@@ -73,19 +64,14 @@ private:
 
     nsHttpConnection           *mConnection; // hard reference
 
-    nsCString                   mRequestBuf;   // flattened request headers
-    nsCOMPtr<nsIInputStream>    mRequestHeaderStream;
+    nsCString                   mRequestBuf;          // flattened request headers
+    nsCOMPtr<nsIInputStream>    mRequestHeaderStream; // header data stream
+    nsCOMPtr<nsIInputStream>    mRequestUploadStream; // upload data stream
 
-    nsHttpHeaderArray           mResponseHeaders;
-    nsHttpVersion               mResponseVersion;
-    PRUint32                    mResponseStatus;
-    nsXPIDLCString              mResponseStatusText;
-
-    nsXPIDLCString              mContentType;
-    nsXPIDLCString              mContentCharset;
+    nsHttpResponseHead         *mResponseHead;
 
     char                       *mReadBuf; // read ahead buffer
-    nsCString                   mLineBuf; // may contain a partial line
+    nsCommonCString             mLineBuf; // may contain a partial line
 
     PRInt32                     mContentLength; // equals -1 if unknown
     PRUint32                    mContentRead;   // count of consumed content bytes

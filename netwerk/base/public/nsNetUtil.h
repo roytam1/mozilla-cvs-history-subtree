@@ -45,6 +45,7 @@
 #include "nsIStreamLoader.h"
 #include "nsIStreamIO.h"
 #include "nsIPipe.h"
+#include "nsIProtocolHandler.h"
 #include "nsXPIDLString.h"
 #include "prio.h"       // for read/write flags, permissions, etc.
 

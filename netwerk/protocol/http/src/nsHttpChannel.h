@@ -1,7 +1,7 @@
 #ifndef nsHttpChannel_h__
 #define nsHttpChannel_h__
 
-#include "nsHttpHeaderArray.h"
+#include "nsHttpRequestHead.h"
 #include "nsIHttpChannel.h"
 #include "nsIStreamListener.h"
 #include "nsIURI.h"
@@ -11,6 +11,7 @@
 
 class nsHttpTransaction;
 class nsHttpConnectionInfo;
+class nsHttpResponseHead;
 
 //-----------------------------------------------------------------------------
 // nsHttpChannel
@@ -46,7 +47,9 @@ private:
     nsCOMPtr<nsISupports>       mListenerContext;
     nsCOMPtr<nsILoadGroup>      mLoadGroup;
 
-    nsHttpHeaderArray           mRequestHeaders;
+    nsHttpRequestHead           mRequestHead;
+    nsHttpResponseHead         *mResponseHead;
+
     nsHttpTransaction          *mTransaction;    // hard ref
     nsHttpConnectionInfo       *mConnectionInfo; // hard ref
 

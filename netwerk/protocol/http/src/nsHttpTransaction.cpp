@@ -1,6 +1,8 @@
 #include <stdlib.h> // atoi
 #include "nsHttpTransaction.h"
 #include "nsHttpConnection.h"
+#include "nsHttpRequestHead.h"
+#include "nsHttpResponseHead.h"
 #include "nsIStringStream.h"
 #include "nsIStreamConverterService.h"
 #include "nsISupportsPrimitives.h"
@@ -19,8 +21,7 @@ static NS_DEFINE_CID(kSupportsVoidCID, NS_SUPPORTS_VOID_CID);
 nsHttpTransaction::nsHttpTransaction(nsIStreamListener *listener)
     : mListener(listener)
     , mConnection(nsnull)
-    , mResponseVersion(HTTP_VERSION_UNKNOWN)
-    , mResponseStatus(0)
+    , mResponseHead(nsnull)
     , mReadBuf(0)
     , mContentLength(-1)
     , mContentRead(0)
@@ -40,40 +41,29 @@ nsHttpTransaction::~nsHttpTransaction()
 }
 
 nsresult
-nsHttpTransaction::SetRequestInfo(nsHttpAtom method,
-                                  nsHttpVersion version,
-                                  const char *requestURI,
-                                  nsHttpHeaderArray *requestHeaders)
+nsHttpTransaction::SetRequestInfo(nsHttpRequestHead *requestHead,
+                                  nsIInputStream *requestStream)
 {
-    // Write out request line:
-    mRequestBuf.Assign(method.get());
-    mRequestBuf.Append(' ');
-    mRequestBuf.Append(requestURI);
-    mRequestBuf.Append(" HTTP/");
-    switch (version) {
-    case HTTP_VERSION_1_1:
-        mRequestBuf.Append("1.1");
-        break;
-    case HTTP_VERSION_0_9:
-        mRequestBuf.Append("0.9");
-        break;
-    default:
-        mRequestBuf.Append("1.0");
-    }
-    mRequestBuf.Append("\r\n");
+    nsresult rv;
 
-    // Write out request headers:
-    nsresult rv = requestHeaders->VisitHeaders(this);
+    NS_ENSURE_ARG_POINTER(requestHead);
+
+    mRequestBuf.SetLength(0);
+
+    rv = requestHead->Flatten(mRequestBuf);
     if (NS_FAILED(rv)) return rv;
 
-    // Write out end-of-headers sequence:
-    mRequestBuf.Append("\r\n");
+    mRequestUploadStream = requestStream;
+    if (!mRequestUploadStream)
+        // Write out end-of-headers sequence if NOT uploading data:
+        mRequestBuf.Append("\r\n");
 
     // Create a string stream for the request header buf
     nsCOMPtr<nsISupports> sup;
     rv = NS_NewCStringInputStream(getter_AddRefs(sup), mRequestBuf);
     if (NS_FAILED(rv)) return rv;
     mRequestHeaderStream = do_QueryInterface(sup, &rv);
+
     return rv;
 }
 
@@ -89,10 +79,21 @@ nsHttpTransaction::SetConnection(nsHttpConnection *connection)
 nsresult
 nsHttpTransaction::OnDataWritable(nsIOutputStream *os, PRUint32 count)
 {
-    // Write out the request
-    PRUint32 writeCount = 0;
+    PRUint32 n = 0;
+
     LOG(("nsHttpTransaction::OnDataWritable [this=%x]\n", this));
-    return os->WriteFrom(mRequestHeaderStream, count, &writeCount);
+
+    // check if we're done writing the headers
+    nsresult rv = mRequestHeaderStream->Available(&n);
+    if (NS_FAILED(rv)) return rv;
+    
+    if (n != 0)
+        return os->WriteFrom(mRequestHeaderStream, count, &n);
+
+    if (mRequestUploadStream)
+        return os->WriteFrom(mRequestUploadStream, count, &n);
+
+    return NS_BASE_STREAM_CLOSED;
 }
 
 // called on the socket transport thread
@@ -195,135 +196,32 @@ nsHttpTransaction::OnStopTransaction(nsresult status)
 }
 
 nsresult
-nsHttpTransaction::ParseVersion(const char *ver)
-{
-    // Parse HTTP-Version:: "HTTP" "/" 1*DIGIT "." 1*DIGIT
-    char *p = PL_strstr(ver, "HTTP");
-    if (p != ver)
-        return NS_ERROR_UNEXPECTED;
-    p += 4;
-    if (*p != '/') {
-        LOG(("server did not send a version number; assuming HTTP/1.0\n"));
-        // NCSA/1.5.2 has a bug in which it fails to send a version number
-        // if the request version is HTTP/1.1, so we fall back on HTTP/1.0
-        mResponseVersion = HTTP_VERSION_1_0;
-        return NS_OK;
-    }
-
-    ver = p + 1; // let ver point to the major version
-    if ((p = PL_strchr(ver, '.')) == nsnull) {
-        LOG(("mal-formed server version; assuming HTTP/1.0\n"));
-        mResponseVersion = HTTP_VERSION_1_0;
-        return NS_OK;
-    }
-    *p = 0;
-
-    p++; // let p point to the minor version
-
-    int major = atoi(ver);
-    int minor = atoi(p);
-
-    if ((major > 1) || ((major == 1) && (minor >= 1)))
-        // at least HTTP/1.1
-        mResponseVersion = HTTP_VERSION_1_1;
-    else
-        // treat anything else as version 1.0
-        mResponseVersion = HTTP_VERSION_1_0;
-
-    return NS_OK;
-}
-
-nsresult
-nsHttpTransaction::ParseStatusLine(const char *line)
-{
-    LOG(("nsHttpTransaction::ParseStatusLine [%s]\n", line));
-
-    NS_PRECONDITION(!mHaveStatusLine, "should not be called");
-
-    //
-    // Parse Status-Line:: HTTP-Version SP Status-Code SP Reason-Phrase CRLF
-    //
-    nsresult rv;
-    char *p;
- 
-    // HTTP-Version
-    if ((p = PL_strchr(line, ' ')) == nsnull) {
-        // 0.9 servers do not send a status line
-        LOG(("looks like a HTTP/0.9 response\n"));
-        mResponseVersion = HTTP_VERSION_0_9;
-        mResponseStatus = 200;
-        mResponseStatusText = "OK";
-        goto end;
-    }
-    *p = 0;
-    rv = ParseVersion(line);
-    if (NS_FAILED(rv)) return rv;
-    line = p + 1;
-    
-    // Status-Code
-    if ((p = PL_strchr(line, ' ')) == nsnull) {
-        LOG(("mal-formed response line; assuming status = 200\n"));
-        mResponseStatus = 200;
-        mResponseStatusText = "OK";
-        goto end;
-    }
-    *p = 0;
-    mResponseStatus = atoi(line);
-    if (mResponseStatus == 0) {
-        LOG(("mal-formed response status; assuming status = 200\n"));
-        mResponseStatus = 200;
-    }
-    line = p + 1;
-
-    // Reason-Phrase is whatever is remaining of the line
-    mResponseStatusText = line;
-
-end:
-    mHaveStatusLine = PR_TRUE;
-    LOG(("Have status line [version=%d status=%d statusText=%s]\n",
-        mResponseVersion, mResponseStatus, mResponseStatusText.get()));
-    return NS_OK;
-}
-
-nsresult
-nsHttpTransaction::ParseHeaderLine(const char *line)
-{
-    LOG(("nsHttpTransaction::ParseHeaderLine [%s]\n", line));
-
-    NS_PRECONDITION(!mHaveAllHeaders, "should not be called");
-
-    char *p;
-    if (*line == '\0')
-        mHaveAllHeaders = PR_TRUE;
-    else if ((p = PL_strchr(line, ':')) != nsnull) {
-        *p = 0;
-        nsHttpAtom atom = nsHttp::ResolveAtom(line);
-        if (atom) {
-            // skip over whitespace
-            do {
-                p++;
-            } while (*p == ' ');
-            // assign response header
-            mResponseHeaders.SetHeader(atom, p);
-        }
-        else
-            LOG(("unknown header; skipping\n"));
-    }
-    else
-        LOG(("mal-formed header\n"));
-
-    // We ignore mal-formed headers in the hope that we'll still be able
-    // to do something useful with the response.
-    return NS_OK;
-}
-
-nsresult
 nsHttpTransaction::ParseLine(const char *line)
 {
-    if (!mHaveStatusLine)
-        return ParseStatusLine(line);
+    nsresult rv;
 
-    return ParseHeaderLine(line);
+    NS_PRECONDITION(mResponseHead, "null response head");
+    NS_PRECONDITION(!mHaveAllHeaders, "already have all headers");
+
+    // wrap a funky string thang around our line buf and grab iterators
+    nsLocalCString s(line);
+    nsReadingIterator<char> begin, end;
+    s.BeginReading(begin);
+    s.EndReading(end);
+
+    if (!mHaveStatusLine) {
+        rv = mResponseHead->ParseStatusLine(begin, end);
+        if (NS_SUCCEEDED(rv))
+            mHaveStatusLine = PR_TRUE;
+        return rv;
+    }
+
+    if (*line == '\0') {
+        mHaveAllHeaders = PR_TRUE;
+        return NS_OK;
+    }
+
+    return mResponseHead->ParseHeaderLine(begin, end);
 }
 
 nsresult
@@ -388,23 +286,15 @@ nsHttpTransaction::HandleContent(nsIInputStream *stream,
         rv = mListener->OnStartRequest(this, nsnull);
         if (NS_FAILED(rv)) return rv;
 
-        const char *val;
-
-        // decode the content-length header if given
-        val = mResponseHeaders.PeekHeader(nsHttp::Content_Length);
-        if (val)
-            mContentLength = atoi(val);
-
-        // decode the content-type header if given
-        val = mResponseHeaders.PeekHeader(nsHttp::Content_Type);
-        if (val)
-            DecodeContentType(val);
+        // grab the content-length from the response headers
+        mContentLength = mResponseHead->ContentLength();
 
         // handle chunked encoding here, so we'll know immediately when
         // we're done with the socket.  please note that _all_ other
         // decoding is done when the channel receives the content data
         // so as not to block the socket transport thread too much.
-        val = mResponseHeaders.PeekHeader(nsHttp::Transfer_Encoding);
+        const char *val =
+            mResponseHead->PeekHeader(nsHttp::Transfer_Encoding);
         if (val) {
             // we only support the "chunked" transfer encoding right now.
             rv = InstallChunkedDecoder();
@@ -451,41 +341,6 @@ nsHttpTransaction::HandleContent(nsIInputStream *stream,
 }
 
 nsresult
-nsHttpTransaction::DecodeContentType(const char *val)
-{
-    nsCAutoString type(val);
-
-    // we don't care about comments
-    PRInt32 i = type.FindChar('(');
-    if (i != kNotFound) {
-        type.Truncate(i);
-        type.Trim(" ", PR_FALSE);
-    }
-
-    if (!type.IsEmpty()) {
-        i = type.FindChar(';');
-        if (i == kNotFound)
-            mContentType = type.get();
-        else {
-            // the content-type value has additional fields
-            nsCAutoString buf;
-            type.Left(buf, i);
-            mContentType = buf.get();
-
-            // does the content-type value contain a charset?
-            type.Mid(buf, i+1, PRUint32(-1));
-            buf.Trim(" ");
-            if (buf.Find("charset=", PR_TRUE) == 0) {
-                // set the charset
-                buf.Cut(0, sizeof("charset=") - 1);
-                mContentCharset = buf.get();
-            }
-        }
-    }
-    return NS_OK;
-}
-
-nsresult
 nsHttpTransaction::InstallChunkedDecoder()
 {
     nsresult rv;
@@ -521,7 +376,7 @@ nsHttpTransaction::InstallChunkedDecoder()
     // tell it about any expected trailer headers, so it can consume
     // them for us.  if we don't do this, then we won't properly detect
     // the end of the data stream.
-    const char *val = mResponseHeaders.PeekHeader(nsHttp::Trailer);
+    const char *val = mResponseHead->PeekHeader(nsHttp::Trailer);
     if (val) {
         nsCString ts(val);
         ts.StripWhitespace();
@@ -550,9 +405,7 @@ nsHttpTransaction::InstallChunkedDecoder()
 // nsHttpTransaction::nsISupports
 //-----------------------------------------------------------------------------
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsHttpTransaction,
-                              nsIRequest,
-                              nsIHttpHeaderVisitor)
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsHttpTransaction, nsIRequest)
 
 //-----------------------------------------------------------------------------
 // nsHttpTransaction::nsIRequest
@@ -615,18 +468,4 @@ NS_IMETHODIMP
 nsHttpTransaction::SetLoadFlags(nsLoadFlags aLoadFlags)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-//-----------------------------------------------------------------------------
-// nsHttpTransaction::nsIHttpHeaderVisitor
-//-----------------------------------------------------------------------------
-
-NS_IMETHODIMP
-nsHttpTransaction::VisitHeader(const char *header, const char *value)
-{
-    mRequestBuf.Append(header);
-    mRequestBuf.Append(": ");
-    mRequestBuf.Append(value);
-    mRequestBuf.Append("\r\n");
-    return NS_OK;
 }
