@@ -41,6 +41,13 @@ include $(MOD_DEPTH)/config/config.mk
 ifeq ($(OS_ARCH),SunOS)
 ifeq ($(OS_RELEASE),4.1.3_U1)
 OPTIMIZER =
+else
+OS_LIBS += -lc
+ifeq ($(BUILD_SUN_PKG),1)
+MAPFILE = $(OBJDIR)/plcmap.sun
+ALL_TRASH += $(MAPFILE)
+MKSHLIB += -M $(MAPFILE)
+endif
 endif
 endif
 
