@@ -136,7 +136,7 @@ function CompFields2Recipients(msgCompFields, msgType)
 		var msgComposeType = Components.interfaces.nsIMsgCompType;
 		if (msgType == msgComposeType.New || top.MAX_RECIPIENTS == 0)
 		    _awSetInputAndPopup("", "addr_to", newTreeChildrenNode, templateNode);
-		dump("replacing child in comp fields 2 recips \n");
+		dump("replacing child in CompFields2Recipients \n");
 	    var parent = treeChildren.parentNode;
 	    parent.replaceChild(newTreeChildrenNode, treeChildren);
         setTimeout("awFinishCopyNodes();", 0);
@@ -205,7 +205,7 @@ function awRemoveRecipients(msgCompFields, recipientType, recipientsList)
   var recipientArray = msgCompFields.SplitRecipients(recipientsList, false);
   if (! recipientArray)
     return;
-  
+
   for ( var index = 0; index < recipientArray.count; index++ )
     for (var row = 1; row <= top.MAX_RECIPIENTS; row ++)
     {
@@ -724,7 +724,10 @@ function awRecipientKeyDown(event, element)
   switch(event.keyCode) {
   case 46:
   case 8:
-    if (!element.value)
+    /* do not query directly the value of the text field else the autocomplete widget could potentially
+       alter it value while doing some internal cleanup, instead, query the value through the first child
+    */
+    if (!document.getAnonymousNodes(element)[0].firstChild.value)
       awDeleteHit(element);
     event.preventBubble();  //We need to stop the event else the tree will receive it and the function
                             //awKeyDown will be executed!
