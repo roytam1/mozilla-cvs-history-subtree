@@ -2733,7 +2733,7 @@ et_HandleEvent_HandlePref(MozillaEvent_HandlePref* e)
 	{
 		int iType = PREF_GetPrefType((const char *)cstr);
 		int32 iRet;
-		XP_Bool bRet;
+		PRBool bRet;
 		char * pRet;
 
 		switch (iType) {

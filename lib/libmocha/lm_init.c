@@ -585,11 +585,11 @@ lm_new_decoder(JSRuntime *rt, JSClass *clasp)
 /*
  * Enable or disable local JS decoding.
  */
-static XP_Bool lm_enabled = TRUE;
-static XP_Bool lm_enabledMailNews = TRUE;
-static XP_Bool lm_enabledSigning = TRUE;
-static XP_Bool lm_enabledCrossOrigin = TRUE;
-static XP_Bool lm_enabledUnsignedExecution = TRUE;
+static PRBool lm_enabled = TRUE;
+static PRBool lm_enabledMailNews = TRUE;
+static PRBool lm_enabledSigning = TRUE;
+static PRBool lm_enabledCrossOrigin = TRUE;
+static PRBool lm_enabledUnsignedExecution = TRUE;
 
 /*
  * Is this window enbled to do JS?
