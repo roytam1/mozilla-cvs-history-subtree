@@ -396,6 +396,7 @@ LINK_LIBS= \
     $(DIST)\lib\remoturl.lib \
     $(DIST)\lib\netcache.lib \
     $(DIST)\lib\netcnvts.lib \
+    $(DIST)\lib\cstream.lib \
     $(DIST)\lib\network.lib \
     $(DIST)\lib\cnetinit.lib \
 !ifdef MOZ_LDAP
@@ -571,8 +572,8 @@ CDISTINCLUDES2= \
     /I$(XPDIST)\public\httpurl \
     /I$(XPDIST)\public\netcache \
     /I$(XPDIST)\public\network \
-    /I$(XPDIST)\public\netcnvts\
-    /I$(XPDIST)\public\util
+    /I$(XPDIST)\public\netcnvts \
+    /I$(XPDIST)\public\cstream
 !endif
 
 CDISTINCLUDES3= \
