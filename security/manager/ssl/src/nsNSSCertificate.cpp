@@ -3199,6 +3199,13 @@ PRBool nsOCSPResponder::IncludeCert(CERTCertificate *aCert)
   trust = aCert->trust;
   nickname = aCert->nickname;
 
+  PR_ASSERT(trust != nsnull);
+
+  // Check that trust is non-null //
+  if (trust == nsnull) {
+    return PR_FALSE;
+  }
+
   if ( ( ( trust->sslFlags & CERTDB_INVISIBLE_CA ) ||
          (trust->emailFlags & CERTDB_INVISIBLE_CA ) ||
          (trust->objectSigningFlags & CERTDB_INVISIBLE_CA ) ) ||
