@@ -1285,7 +1285,9 @@ CUserProfile::ReflectToPreferences(const CStr31& profileName,
 	
 	PREF_SetDefaultCharPref( "profile.name", profileName );
 	
+#ifdef MOZ_MAIL_NEWS
 	MSG_WriteNewProfileAge();
+#endif // MOZ_MAIL_NEWS
 	
 	if (numProfiles > -1)
 		PREF_SetDefaultIntPref( "profile.numprofiles", numProfiles );
