@@ -41,6 +41,7 @@
 #define nsXPathExpression_h__
 
 #include "nsIDOMXPathExpression.h"
+#include "txIXPathContext.h"
 
 class Expr;
 
@@ -61,6 +62,29 @@ public:
 
 private:
     Expr* mExpression;
+
+    class evalContextImpl : public txIEvalContext
+    {
+    public:
+        evalContextImpl(Node* aContextNode)
+            :mNode(aContextNode), mLastError(NS_OK)
+        {
+        }
+
+        ~evalContextImpl()
+        {
+        }
+
+        nsresult getError()
+        {
+            return mLastError;
+        }
+
+        TX_DECL_EVAL_CONTEXT;
+    private:
+        Node* mNode;
+        nsresult mLastError;
+    };
 };
 
 #endif

@@ -42,6 +42,8 @@
 
 #include "nsIDOMXPathEvaluator.h"
 #include "ExprParser.h"
+#include "txIXPathContext.h"
+#include "nsINameSpaceManager.h"
 
 /**
  * A class for evaluating an XPath expression string
@@ -60,6 +62,35 @@ public:
 
 private:
     ExprParser mParser;
+
+    // txIParseContext implementation
+    class parseContextImpl : public txIParseContext
+    {
+    public:
+        parseContextImpl(nsIDOMXPathNSResolver* aResolver)
+            : mResolver(aResolver), mLastError(NS_OK)
+        {
+        }
+
+        ~parseContextImpl()
+        {
+        }
+
+        nsresult getError()
+        {
+            return mLastError;
+        }
+
+        nsresult resolveNamespacePrefix(txAtom* aPrefix, PRInt32& aID);
+        nsresult resolveFunctionCall(txAtom* aName, PRInt32 aID,
+                                     FunctionCall*& aFunction);
+        void receiveError(const String& aMsg, nsresult aRes);
+
+    private:
+        nsIDOMXPathNSResolver* mResolver;
+        nsresult mLastError;
+        nsCOMPtr<nsINameSpaceManager> mNSMan;
+    };
 };
 
 /* d0a75e02-b5e7-11d5-a7f2-df109fb8a1fc */
