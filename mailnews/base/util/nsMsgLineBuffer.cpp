@@ -324,7 +324,7 @@ nsresult nsMsgLineStreamBuffer::GrowBuffer(PRInt32 desiredSize)
 // Note to people wishing to modify this function: Be *VERY CAREFUL* this is a critical function used by all of
 // our mail protocols including imap, nntp, and pop. If you screw it up, you could break a lot of stuff.....
 
-char * nsMsgLineStreamBuffer::ReadNextLine(nsIInputStream * aInputStream, PRUint32 &aNumBytesInLine, PRBool &aPauseForMoreData)
+char * nsMsgLineStreamBuffer::ReadNextLine(nsIInputStream * aInputStream, PRUint32 &aNumBytesInLine, PRBool &aPauseForMoreData, nsresult *prv)
 {
 	// try to extract a line from m_inputBuffer. If we don't have an entire line, 
 	// then read more bytes out from the stream. If the stream is empty then wait
@@ -347,7 +347,13 @@ char * nsMsgLineStreamBuffer::ReadNextLine(nsIInputStream * aInputStream, PRUint
 	{
 		PRUint32 numBytesInStream = 0;
 		PRUint32 numBytesCopied = 0;
-		aInputStream->Available(&numBytesInStream);
+    nsresult rv = aInputStream->Available(&numBytesInStream);
+    if (NS_FAILED(rv))
+    {
+      if (prv)
+        *prv = rv;
+      return nsnull;
+    }
 		// if the number of bytes we want to read from the stream, is greater than the number
 		// of bytes left in our buffer, then we need to shift the start pos and its contents
 		// down to the beginning of m_dataBuffer...
@@ -383,8 +389,10 @@ char * nsMsgLineStreamBuffer::ReadNextLine(nsIInputStream * aInputStream, PRUint
 		// read the data into the end of our data buffer
 		if (numBytesToCopy > 0)
 		{
-			aInputStream->Read(startOfLine + m_numBytesInBuffer,
-                               numBytesToCopy, &numBytesCopied);
+      rv = aInputStream->Read(startOfLine + m_numBytesInBuffer, numBytesToCopy,
+                              &numBytesCopied);
+      if (prv)
+        *prv = rv;
       PRUint32 i;
       for (i=m_numBytesInBuffer;i <numBytesCopied;i++)  //replace nulls with spaces
       {

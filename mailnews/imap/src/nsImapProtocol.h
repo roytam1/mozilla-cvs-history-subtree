@@ -156,7 +156,6 @@ public:
 	NS_DECL_ISUPPORTS
 
 	nsImapProtocol();
-	
 	virtual ~nsImapProtocol();
 
     // nsIRunnable method
@@ -170,7 +169,6 @@ public:
 	NS_IMETHOD CanHandleUrl(nsIImapUrl * aImapUrl, PRBool * aCanRunUrl,
                             PRBool * hasToWait);
 	NS_IMETHOD Initialize(nsIImapHostSessionList * aHostSessionList, nsIEventQueue * aSinkEventQueue);
-    NS_IMETHOD GetThreadEventQueue(nsIEventQueue **aEventQueue);
     // Notify FE Event has been completed
     NS_IMETHOD NotifyFEEventCompletion();
 
@@ -179,12 +177,6 @@ public:
 	// we suppport the nsIStreamListener interface 
 	////////////////////////////////////////////////////////////////////////////////////////
 	
-	// Whenever data arrives from the connection, core netlib notifies the protocol by calling
-	// OnDataAvailable. We then read and process the incoming data from the input stream. 
-	// stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-    NS_DECL_NSIREQUESTOBSERVER
-    NS_DECL_NSISTREAMLISTENER
-
 
 	// This is evil, I guess, but this is used by libmsg to tell a running imap url
 	// about headers it should download to update a local database.
@@ -397,8 +389,6 @@ private:
 	nsCOMPtr<nsISocketTransport> m_transport; 
 	nsCOMPtr<nsIOutputStream>	   m_outputStream;   // this will be obtained from the transport interface
 	nsCOMPtr<nsIInputStream>     m_inputStream;
-  nsCOMPtr<nsIInputStreamPump> m_pump;
-  PRBool                       m_pumpSuspended;
 
   nsCOMPtr<nsIInputStream>  m_channelInputStream;
 	nsCOMPtr<nsIOutputStream> m_channelOutputStream;
@@ -408,18 +398,8 @@ private:
   //nsCOMPtr<nsIRequest> mAsyncReadRequest; // we're going to cancel this when we're done with the conn.
 
 
-	// this is a method designed to buffer data coming from the input stream and efficiently extract out 
-	// a line on each call. We read out as much of the stream as we can and store the extra that doesn't
-	// for the next line in aDataBuffer. We always check the buffer for a complete line first, 
-	// if it doesn't have a line, we read in data from the stream and try again. If we still don't have
-	// a complete line, we WAIT for more data to arrive by waiting onthe m_dataAvailable monitor. So this function
-	// BLOCKS until we get a new line. Eventually I'd like to move this method out into a utiliity method
-	// so I can resuse it for the other mail protocols...
-	char * ReadNextLineFromInput(char * aDataBuffer,char *& aStartPos, PRUint32 aDataBufferSize, nsIInputStream * aInputStream);
-
   // ******* Thread support *******
   nsCOMPtr<nsIEventQueue>		m_sinkEventQueue;
-  nsCOMPtr<nsIEventQueue>		m_eventQueue;
 	nsCOMPtr<nsIThread>			m_iThread;
   PRThread     *m_thread;
   PRMonitor    *m_dataAvailableMonitor;   // used to notify the arrival of data from the server
@@ -442,7 +422,6 @@ private:
 
   nsCOMPtr<nsIImapMailFolderSink> m_imapMailFolderSink;
   nsCOMPtr<nsIImapMessageSink>	m_imapMessageSink;
-
   nsCOMPtr<nsIImapExtensionSink>		m_imapExtensionSink;
   nsCOMPtr<nsIImapMiscellaneousSink>	m_imapMiscellaneousSink;
   nsCOMPtr<nsIImapServerSink>				m_imapServerSink;
