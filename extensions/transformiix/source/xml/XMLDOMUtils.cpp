@@ -147,6 +147,11 @@ void XMLDOMUtils::getNodeValue(Node* node, String* target) {
         case Node::TEXT_NODE :
             target->append ( ((Text*)node)->getData() );
             break;
+        case Node::COMMENT_NODE :
+        case Node::PROCESSING_INSTRUCTION_NODE :
+            target->append ( node->getNodeValue() );
+            break;
+
     } //-- switch
 
 } //-- getNodeValue
