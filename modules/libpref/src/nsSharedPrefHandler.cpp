@@ -300,7 +300,7 @@ nsresult nsSharedPrefHandler::OnSessionBegin()
   NS_ENSURE_SUCCESS(rv, rv);
 
   // Attach. When we receive the reply, we'll read the prefs.
-  rv = mTransService->Attach(kPrefsTSQueueName, this);
+  rv = mTransService->Attach(kPrefsTSQueueName, this, PR_TRUE);
   NS_ASSERTION(NS_SUCCEEDED(rv), "tmITransactionService::Attach() failed");
   
   return rv;
@@ -325,7 +325,7 @@ nsresult nsSharedPrefHandler::OnSavePrefs()
   // When the reply to this comes (synchronously), we'll actually
   // write out our data. The transaction service holds a lock on
   // our data file during our reply.
-  rv = mTransService->Flush(kPrefsTSQueueName);
+  rv = mTransService->Flush(kPrefsTSQueueName, PR_TRUE);
   NS_ASSERTION(NS_SUCCEEDED(rv), "tmITransactionService::Flush() failed");
 
   return NS_OK;
