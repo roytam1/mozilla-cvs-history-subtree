@@ -77,7 +77,8 @@ function StartUp()
   Registry.open(regFile);
 
   loadElements();
-  highlightCurrentProfile();
+  setTimeout(highlightCurrentProfile, 0);
+  setTimeout(highlightCurrentProfile, 500);
 
   var offlineState = document.getElementById("offlineState");
   if (gStartupMode) {
@@ -115,8 +116,8 @@ function highlightCurrentProfile()
     var currentProfileItem = document.getElementById( ( "profileName_" + currentProfile ) );
     var profileList = document.getElementById( "profiles" );
     if( currentProfileItem ) {
-      profileList.selectItem( currentProfileItem );
       profileList.ensureElementIsVisible( currentProfileItem );
+      profileList.selectItem( currentProfileItem );
     }
   }
   catch(e) {
