@@ -121,7 +121,11 @@ nsContextMenu.prototype = {
 
         this.showItem( "context-sep-properties", !( this.inDirList || this.isTextSelected || this.onTextInput ) );
         // Set As Wallpaper depends on whether an image was clicked on, and only works on Windows.
-        this.showItem( "context-setWallpaper", this.onImage && navigator.appVersion.indexOf("Windows") != -1);
+        var isWin = navigator.appVersion.indexOf("Windows") != -1;
+        this.showItem( "context-setWallpaper", isWin && this.onImage );
+
+        if( isWin && this.onImage )
+          this.setItemAttr( "context-setWallpaper", "disabled", (("complete" in this.target) && !this.target.complete) ? "true" : null );
         
         this.showItem( "context-sep-setWallpaper", this.onImage && navigator.appVersion.indexOf("Windows") != -1);
 
@@ -131,12 +135,8 @@ nsContextMenu.prototype = {
         // View background image depends on whether there is one.
         this.showItem( "context-viewbgimage", !( this.inDirList || this.onImage || this.isTextSelected || this.onLink || this.onTextInput ) );
         this.showItem( "context-sep-viewbgimage", !( this.inDirList || this.onImage || this.isTextSelected || this.onLink || this.onTextInput ) );
-        var menuitem = document.getElementById("context-viewbgimage");
 
-        if (this.hasBGImage)
-          menuitem.removeAttribute("disabled");
-        else
-          menuitem.setAttribute("disabled", "true");
+        this.setItemAttr( "context-viewbgimage", "disabled", this.hasBGImage ? null : "true");
     },
     initMiscItems : function () {
         // Use "Bookmark This Link" if on a link.
@@ -638,7 +638,6 @@ nsContextMenu.prototype = {
     isTextSelection : function() {
         var result = false;
         var selection = this.searchSelected();
-        var searchSelect = document.getElementById('context-searchselect');
 
         var bundle = srGetStrBundle("chrome://communicator/locale/contentAreaCommands.properties");
 
@@ -652,7 +651,7 @@ nsContextMenu.prototype = {
           // format "Search for <selection>" string to show in menu
           searchSelectText = bundle.formatStringFromName("searchText",
                                                          [searchSelectText], 1);
-          searchSelect.setAttribute("label", searchSelectText);
+          this.setItemAttr("context-searchselect", "label", searchSelectText);
         } 
         return result;
     },
