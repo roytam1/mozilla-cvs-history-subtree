@@ -234,9 +234,6 @@
                 label="&releaseCmd.label;"
                 id="releaseUrl"
                 oncommand="openTopWin('&releaseURL;');"/>
-
-      <menuseparator/>
-
       <menuitem class="about"
                 accesskey="&aboutCommPluginsCmd.accesskey;"
                 label="&aboutCommPluginsCmd.label;"
