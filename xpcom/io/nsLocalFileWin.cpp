@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
  * The contents of this file are subject to the Netscape Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -177,7 +177,7 @@ class nsDirEnumerator : public nsISimpleEnumerator
 
                 nsCOMPtr<nsIFile> file;
                 rv = mParent->Clone(getter_AddRefs(file));
-                if (NS_FAILED(rv)) 
+				if (NS_FAILED(rv)) 
                     return rv;
                 
                 rv = file->Append(entry->name);
@@ -824,9 +824,10 @@ nsLocalFile::CopySingleFile(nsIFile *sourceFile, nsIFile *destParent, const char
 
 
 nsresult
-nsLocalFile::CopyMove(nsIFile *aParentDir, const char *newName, PRBool followSymlinks, PRBool move)
+nsLocalFile::CopyMove(nsIFile *newParentDir, const char *newName, PRBool followSymlinks, PRBool move)
 {
-    nsCOMPtr<nsIFile> newParentDir = aParentDir;
+    NS_ENSURE_ARG(newParentDir);
+
     // check to see if this exists, otherwise return an error.
     // we will check this by resolving.  If the user wants us
     // to follow links, then we are talking about the target,
@@ -835,23 +836,6 @@ nsLocalFile::CopyMove(nsIFile *aParentDir, const char *newName, PRBool followSym
     if (NS_FAILED(rv))
         return rv;
 
-    if (!newParentDir)
-    {
-        // no parent was specified.  We must rename.
-        
-        if (!newName)
-            return NS_ERROR_INVALID_ARG;
-
-        move = PR_TRUE;
-        
-        rv = GetParent(getter_AddRefs(newParentDir));
-        if (NS_FAILED(rv))
-            return rv;
-    }
-
-    if (!newParentDir)
-        return NS_ERROR_FILE_DESTINATION_NOT_DIR;
-    
     // make sure it exists and is a directory.  Create it if not there.
     PRBool exists;
     newParentDir->Exists(&exists);
@@ -894,7 +878,7 @@ nsLocalFile::CopyMove(nsIFile *aParentDir, const char *newName, PRBool followSym
             {                
                 return NS_ERROR_FILE_DESTINATION_NOT_DIR;
             }
-        }
+        }        
     }
 
     // check to see if we are a directory, if so enumerate it.
@@ -1005,20 +989,19 @@ nsLocalFile::CopyMove(nsIFile *aParentDir, const char *newName, PRBool followSym
         if (newParentPath == nsnull)
             return NS_ERROR_FAILURE;
 
+        InitWithPath(newParentPath);
+
         if (newName == nsnull)
         {
             char *aFileName;
             GetLeafName(&aFileName);
             
-            InitWithPath(newParentPath);
             Append(aFileName); 
-
             nsAllocator::Free(aFileName);
         }
         else
         {
-            InitWithPath(newParentPath);
-            Append(newName);
+            SetLeafName(newName);
         }
         
         nsAllocator::Free(newParentPath);
@@ -1225,38 +1208,20 @@ nsLocalFile::SetModDate(PRInt64 aLastModificationDate, PRBool resolveTerminal)
         return ConvertWinError(GetLastError());
     }
 
-    FILETIME lft, ft;
-    SYSTEMTIME st;
-    PRExplodedTime pret;
+    FILETIME time;
+    PRInt64 windowsTime = (aLastModificationDate * 10000000) + 116444736000000000;
+    time.dwLowDateTime  = (DWORD)windowsTime;
+    time.dwHighDateTime = (DWORD)(windowsTime >> 32);
 
-    PR_ExplodeTime(aLastModificationDate, PR_LocalTimeParameters, &pret);
-    st.wYear            = pret.tm_year;    
-    st.wMonth           = pret.tm_month + 1; // Convert start offset -- Win32: Jan=1; NSPR: Jan=0
-    st.wDayOfWeek       = pret.tm_wday;    
-    st.wDay             = pret.tm_mday;    
-    st.wHour            = pret.tm_hour;
-    st.wMinute          = pret.tm_min;    
-    st.wSecond          = pret.tm_sec;
-    st.wMilliseconds    = pret.tm_usec/1000;
-
-    if ( 0 == SystemTimeToFileTime(&st, &lft) )
-    {
-        rv = ConvertWinError(GetLastError());
-    }
-    else if ( 0 == LocalFileTimeToFileTime(&lft, &ft) )
-    {
-        rv = ConvertWinError(GetLastError());
-    }
-    else if ( 0 == SetFileTime(file, NULL, &ft, &ft) )
+    if ( 0 == SetFileTime(file, NULL, NULL, &time) )
     {
         // could not set time
         rv = ConvertWinError(GetLastError());
     }
-
     CloseHandle( file );
     return rv;
-}
 
+}
 NS_IMETHODIMP  
 nsLocalFile::GetPermissions(PRUint32 *aPermissions)
 {
