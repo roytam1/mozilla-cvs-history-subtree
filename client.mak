@@ -44,7 +44,11 @@ MOZ_OBJDIR = WIN32_O.OBJ
 # pull the svg mini-branch:
 MOZ_BRANCH=SVG_20010721_BRANCH
 # we pull the head revision if a file is not tagged: 
-CVS_CO_FLAGS=-f
+!ifndef MOZ_CO_FLAGS
+MOZ_CO_FLAGS=-f
+!else
+MOZ_CO_FLAGS= $(MOZ_CO_FLAGS) -f
+!endif
 
 #NSPR_CO_TAG=SeaMonkey_M17_BRANCH
 #PSM_CO_TAG=SeaMonkey_M17_BRANCH
