@@ -3293,6 +3293,17 @@ dnl ========================================================
 MOZ_ARG_HEADER(Components and Features)
 
 dnl =========================================================
+dnl = Localization
+dnl =========================================================
+
+MOZ_ARG_ENABLE_STRING(ui-locale,
+[  --enable-ui-locale=ab-CD
+                          Select the default UI locale],
+    MOZ_UI_LOCALE=$enableval,
+    MOZ_UI_LOCALE=en-US)
+AC_SUBST(MOZ_UI_LOCALE)
+
+dnl =========================================================
 dnl = Calendar client
 dnl =========================================================
 MOZ_ARG_ENABLE_BOOL(calendar,
