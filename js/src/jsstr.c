@@ -1439,9 +1439,14 @@ str_split(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 	} else
 #endif
 	{
-	    sep = (JSSubString *)js_ValueToString(cx, argv[0]);
-	    if (!sep)
+	    JSString *str2 = js_ValueToString(cx, argv[0]);       
+	    if (!str2)
 		return JS_FALSE;
+	    /* have sep point to a local copy since find_split will 
+	     * modify sep */
+	    tmp.length = str2->length;
+	    tmp.chars = str2->chars;
+	    sep = &tmp;
 	    argv[0] = STRING_TO_JSVAL(sep);
 	    reobj = NULL;
 	    re = NULL;
