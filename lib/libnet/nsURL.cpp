@@ -18,6 +18,7 @@
 #include "nsIURL.h"
 #include "nsIInputStream.h"
 #include "nsINetService.h"
+#include "nsIHttpUrl.h"     /* NS_NewHttpUrl(...) */
 #include "nsString.h"
 #include <stdlib.h>
 
@@ -40,10 +41,12 @@ public:
 
   NS_DECL_ISUPPORTS
 
-  virtual PRBool operator==(const nsIURL& aURL) const;
   virtual nsIInputStream* Open(PRInt32* aErrorCode);
   virtual nsresult Open(nsIStreamListener *aListener);
+
+  virtual PRBool operator==(const nsIURL& aURL) const;
   virtual nsresult Set(const char *aNewSpec);
+
   virtual const char* GetProtocol() const;
   virtual const char* GetHost() const;
   virtual const char* GetFile() const;
@@ -61,27 +64,63 @@ public:
   PRInt32 mPort;
   PRBool mOK;
 
+  nsISupports* mProtocolUrl;
+
   nsresult ParseURL(const nsIURL* aURL, const nsString& aSpec);
+  void CreateProtocolURL();
 };
 
 URLImpl::URLImpl(const nsString& aSpec)
 {
   NS_INIT_REFCNT();
+  mProtocolUrl = nsnull;
+
   ParseURL(nsnull, aSpec);
 }
 
 URLImpl::URLImpl(const nsIURL* aURL, const nsString& aSpec)
 {
   NS_INIT_REFCNT();
+  mProtocolUrl = nsnull;
+
   ParseURL(aURL, aSpec);
 }
 
+NS_IMPL_ADDREF(URLImpl)
+NS_IMPL_RELEASE(URLImpl)
+
 NS_DEFINE_IID(kURLIID, NS_IURL_IID);
 
-NS_IMPL_ISUPPORTS(URLImpl, kURLIID)
+nsresult URLImpl::QueryInterface(REFNSIID aIID, void** aInstancePtr)
+{
+    if (NULL == aInstancePtr) {
+        return NS_ERROR_NULL_POINTER;
+    }
+    static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
+    if (aIID.Equals(kURLIID)) {
+        *aInstancePtr = (void*) ((nsIURL*)this);
+        AddRef();
+        return NS_OK;
+    }
+    if (aIID.Equals(kISupportsIID)) {
+        *aInstancePtr = (void*) ((nsISupports *)this);
+        AddRef();
+        return NS_OK;
+    }
+    if (nsnull == mProtocolUrl) {
+        CreateProtocolURL();
+    }
+    if (nsnull != mProtocolUrl) {
+        return mProtocolUrl->QueryInterface(aIID, aInstancePtr);
+    }
+    return NS_NOINTERFACE;
+}
+
 
 URLImpl::~URLImpl()
 {
+  NS_IF_RELEASE(mProtocolUrl);
+
   free(mSpec);
   free(mProtocol);
   free(mHost);
@@ -158,8 +197,6 @@ void URLImpl::ToString(nsString& aString) const
 // XXX don't bother with port numbers
 // XXX don't bother with ref's
 // XXX null pointer checks are incomplete
-extern "C" char *NET_MakeAbsoluteURL(char *, char *);
-
 nsresult URLImpl::ParseURL(const nsIURL* aURL, const nsString& aSpec)
 {
   // XXX hack!
@@ -318,6 +355,7 @@ nsIInputStream* URLImpl::Open(PRInt32* aErrorCode)
   if (NS_OK == rv) {
     rv = inet->OpenBlockingStream(this, NULL, &in);
   }
+  // XXX:  The INetService should be released...
 
   *aErrorCode = rv;
   return in;
@@ -341,7 +379,16 @@ nsresult URLImpl::Open(nsIStreamListener *aListener)
   if (NS_OK == rv) {
     rv = inet->OpenStream(this, aListener);
   }
+  // XXX:  The INetService should be released...
   return rv;
+}
+
+
+void URLImpl::CreateProtocolURL()
+{
+    nsresult result;
+
+    result = NS_NewHttpUrl(&mProtocolUrl, this);
 }
 
 
