@@ -716,7 +716,6 @@ NS_IMETHODIMP
 nsNSSCertificate::GetChain(nsISupportsArray **_rvChain)
 {
   nsresult rv;
-  CERTCertListNode *node;
   /* Get the cert chain from NSS */
   CERTCertList *nssChain = NULL;
   PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("Getting chain for \"%s\"\n", mCert->nickname));
@@ -2269,7 +2268,8 @@ nsNSSCertificateDB::GetCertsByType(PRUint32           aType,
   nsCOMPtr<nsISupportsArray> certarray;
   nsresult rv = NS_NewISupportsArray(getter_AddRefs(certarray));
   if (NS_FAILED(rv)) return PR_FALSE;
-  certList = PK11_ListCerts(PK11CertListUnique, NULL);
+  nsCOMPtr<nsIInterfaceRequestor> cxt = new PipUIContext();
+  certList = PK11_ListCerts(PK11CertListUnique, cxt);
   CERTCertListNode *node;
   int i, count = 0;
   for (node = CERT_LIST_HEAD(certList);
