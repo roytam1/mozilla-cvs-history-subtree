@@ -525,26 +525,72 @@ nsProfile::LoadDefaultProfileDir(nsCString & profileURLStr, PRBool canInteract)
     rv = prefs->GetBranch(nsnull, getter_AddRefs(prefBranch));
     if (NS_FAILED(rv)) return rv;
     
-    if (!canInteract) return NS_ERROR_PROFILE_REQUIRES_INTERACTION;
+    GetProfileCount(&numProfiles);
 
-    nsCOMPtr<nsIWindowWatcher> windowWatcher(do_GetService(kWindowWatcherContractID, &rv));
-    if (NS_FAILED(rv)) return rv;
+    if (profileURLStr.Length() == 0)
+    {
+        // This means that there was no command-line argument to force
+        // profile UI to come up. But we need the UI anyway if there
+        // are no profiles yet, or if there is more than one.
+        if (numProfiles == 0)
+        {
+            rv = CreateDefaultProfile();
+            if (NS_FAILED(rv)) return rv;
+            // Will get set in call to SetCurrentProfile() below
+        }
+        else if (numProfiles == 1)
+        {
+            // If we get here and the 1 profile is the current profile,
+            // which can happen with QuickLaunch, there's no need to do
+            // any futher work.
+            if (mCurrentProfileAvailable)
+               return NS_OK;
+
+            // Make sure the profile dir exists. If not, we need the UI
+            nsCOMPtr<nsIFile> curProfileDir;
+            PRBool exists = PR_FALSE;
+            
+            rv = GetCurrentProfileDir(getter_AddRefs(curProfileDir));
+            if (NS_SUCCEEDED(rv))
+                rv = curProfileDir->Exists(&exists);
+            if (NS_FAILED(rv) || !exists)
+                profileURLStr = PROFILE_MANAGER_URL; 
+            if (exists)
+            {
+                // If the profile is locked, we need the UI
+                nsCOMPtr<nsILocalFile> localFile(do_QueryInterface(curProfileDir));
+                nsProfileLock tempLock;
+                rv = tempLock.Lock(localFile);
+                if (NS_FAILED(rv))
+                    profileURLStr = PROFILE_MANAGER_URL;
+            } 
+        }
+        else
+            profileURLStr = PROFILE_SELECTION_URL;
+    }
+
+    if (profileURLStr.Length() != 0)
+    {
+        if (!canInteract) return NS_ERROR_PROFILE_REQUIRES_INTERACTION;
+
+        nsCOMPtr<nsIWindowWatcher> windowWatcher(do_GetService(kWindowWatcherContractID, &rv));
+        if (NS_FAILED(rv)) return rv;
  
-    // We need to send a param to OpenWindow if the window is to be considered
-    // a dialog. It needs to be for script security reasons. This param block
-    // will be made use of soon. See bug 66833.
-    nsCOMPtr<nsIDialogParamBlock> ioParamBlock(do_CreateInstance("@mozilla.org/embedcomp/dialogparam;1", &rv));
-    if (NS_FAILED(rv)) return rv;
-    
-    nsCOMPtr<nsIDOMWindow> newWindow;
-    rv = windowWatcher->OpenWindow(nsnull,
-                                   PROFILE_SELECTION_URL,
-                                   "_blank",
-                                   kDefaultOpenWindowParams,
-                                   ioParamBlock,
-                                   getter_AddRefs(newWindow));
-    if (NS_FAILED(rv)) return rv;
-    
+        // We need to send a param to OpenWindow if the window is to be considered
+        // a dialog. It needs to be for script security reasons. This param block
+        // will be made use of soon. See bug 66833.
+        nsCOMPtr<nsIDialogParamBlock> ioParamBlock(do_CreateInstance("@mozilla.org/embedcomp/dialogparam;1", &rv));
+        if (NS_FAILED(rv)) return rv;
+       
+        nsCOMPtr<nsIDOMWindow> newWindow;
+        rv = windowWatcher->OpenWindow(nsnull,
+                                       profileURLStr.get(),
+                                       "_blank",
+                                       kDefaultOpenWindowParams,
+                                       ioParamBlock,
+                                       getter_AddRefs(newWindow));
+        if (NS_FAILED(rv)) return rv;
+    }
 
     // if we get here, and we don't have a current profile, 
     // return a failure so we will exit
