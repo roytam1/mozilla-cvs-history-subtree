@@ -171,7 +171,7 @@ static PRUintn gToolkitTLSIndex = 0;
 //#define DEBUG_EVENT_TIMING
 
 #define TIMED_EVENT_PROCESSING
-#define MAX_PLEVENT_TIME_MILLISECONDS  200
+#define MAX_PLEVENT_TIME_MILLISECONDS  500
 
 - (void)eventTimer:(NSTimer *)theTimer
 {
