@@ -70,6 +70,13 @@
 #include "nsIAuthPrompt.h"
 #include "nsIWindowWatcher.h"
 #include "nsIDOMWindow.h"
+#include "nsAutoLock.h"
+#include "nsIProxyObjectManager.h"
+#include "prprf.h"
+#include "nsIComponentManager.h"
+#include "nsIServiceManager.h"
+#include "nsICategoryManager.h"
+#include "nsCategoryManagerUtils.h"
 
 
 
