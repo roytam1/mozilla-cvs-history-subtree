@@ -1591,8 +1591,6 @@ js_Interpret(JSContext *cx, jsval *result)
             withobj = js_NewObject(cx, &js_WithClass, obj, fp->scopeChain);
             if (!withobj)
                 goto out;
-            OBJ_SET_SLOT(cx, withobj, JSSLOT_PRIVATE,
-                         INT_TO_JSVAL(sp - fp->spbase));
             fp->scopeChain = withobj;
             STORE_OPND(-1, OBJECT_TO_JSVAL(withobj));
             break;
