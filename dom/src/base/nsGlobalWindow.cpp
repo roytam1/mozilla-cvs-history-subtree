@@ -2773,13 +2773,15 @@ GlobalWindowImpl::GetWindowRoot(nsIDOMEventTarget **aWindowRoot)
 {
   *aWindowRoot = nsnull;
 
-  nsIDOMWindowInternal *rootWindow = GlobalWindowImpl::GetPrivateRoot();
+  nsCOMPtr<nsIDOMWindowInternal> rootWindow;
+  GlobalWindowImpl::GetPrivateRoot(getter_AddRefs(rootWindow));
   nsCOMPtr<nsPIDOMWindow> piWin(do_QueryInterface(rootWindow));
   if (!piWin) {
     return NS_OK;
   }
 
-  nsIChromeEventHandler *chromeHandler = piWin->GetChromeEventHandler();
+  nsCOMPtr<nsIChromeEventHandler> chromeHandler;
+  piWin->GetChromeEventHandler(getter_AddRefs(chromeHandler));
   if (!chromeHandler) {
     return NS_OK;
   }
