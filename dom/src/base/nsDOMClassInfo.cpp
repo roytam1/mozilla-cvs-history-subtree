@@ -338,6 +338,9 @@
 
 #include "nsIImageDocument.h"
 
+#include "nsIWebFormsOutputElement.h"
+
+
 static NS_DEFINE_CID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
 static NS_DEFINE_CID(kDOMSOF_CID, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
 
@@ -880,6 +883,9 @@ static nsDOMClassInfoData sClassInfoData[] = {
   NS_DEFINE_CLASSINFO_DATA(SVGStyleElement, nsElementSH,
                            ELEMENT_SCRIPTABLE_FLAGS)  
 #endif  
+
+  NS_DEFINE_CLASSINFO_DATA(HTMLOutputElement, nsHTMLElementSH,
+                           ELEMENT_SCRIPTABLE_FLAGS)
 };
 
 nsIXPConnect *nsDOMClassInfo::sXPConnect = nsnull;
@@ -2353,6 +2359,11 @@ nsDOMClassInfo::Init()
   DOM_CLASSINFO_MAP_END
     
 #endif //MOZ_SVG
+
+  DOM_CLASSINFO_MAP_BEGIN(HTMLOutputElement, nsIWebFormsOutputElement)
+    DOM_CLASSINFO_MAP_ENTRY(nsIWebFormsOutputElement)
+    DOM_CLASSINFO_GENERIC_HTML_MAP_ENTRIES
+  DOM_CLASSINFO_MAP_END
 
 #ifdef NS_DEBUG
   {
