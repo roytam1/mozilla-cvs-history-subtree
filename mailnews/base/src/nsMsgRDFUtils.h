@@ -78,6 +78,10 @@ typedef struct _nsMsgRDFNotification {
 #define NC_RDF_MARKFLAGGED			NC_NAMESPACE_URI "MarkFlagged"
 #define NC_RDF_MARKUNFLAGGED		NC_NAMESPACE_URI "MarkUnflagged"
 
+// global RDF roots
+#define NC_RDF_MSGSERVERROOT "NC:msgservers"
+#define NC_RDF_MSGIDENTITYROOT "NC:msgidentities"
+
 
 //Returns PR_TRUE if r1 is equal to r2 and r2 is the sort property.
 PRBool

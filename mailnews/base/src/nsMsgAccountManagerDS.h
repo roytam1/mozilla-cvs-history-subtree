@@ -65,7 +65,9 @@ protected:
   static nsIRDFResource* kNC_NameSort;
   static nsIRDFResource* kNC_PageTag;
   static nsIRDFResource* kNC_Child;
-  static nsIRDFResource* kNC_AccountRoot;
+  static nsIRDFResource* kNC_UniqueChild;
+  static nsIRDFResource* kNC_ServerRoot;
+  static nsIRDFResource* kNC_IdentityRoot;
   
   static nsIRDFResource* kNC_Account;
   static nsIRDFResource* kNC_Server;
@@ -84,7 +86,17 @@ private:
   // enumeration function to convert each server (element)
   // to an nsIRDFResource and append it to the array (in data)
   static PRBool createServerResources(nsISupports *element, void *data);
-  
+
+    
+  static PRBool createIdentityResources(nsISupports *element, void *data);
+    
+  static PRBool getUniqueIdentities(nsISupports *element, void *data);
+  static PRBool findSimilarIdentity(nsISupports *element, void *data);
+
+
+  static PRBool similarIdentities(const char *fullName,
+                                  const char *email,
+                                  nsIMsgIdentity* id);
   nsCOMPtr<nsIMsgAccountManager> mAccountManager;
 
 };
