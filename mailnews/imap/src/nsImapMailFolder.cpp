@@ -2172,22 +2172,24 @@ nsImapMailFolder::NormalEndMsgWriteStream(nsIImapProtocol* aProtocol)
 	{
         nsCOMPtr<nsISupports> aSupport;
 		m_tempMessageStream->Close();
+
 		res = aProtocol->GetStreamConsumer(getter_AddRefs(aSupport));
         if (NS_SUCCEEDED(res))
         {
             nsCOMPtr<nsIWebShell> webShell;
             nsFilePath filePath(MESSAGE_PATH);
-
-            webShell = do_QueryInterface(aSupport, &res);
-            if (NS_SUCCEEDED(res) && webShell)
-            {
-                nsFileURL  fileURL(filePath);
-                char * message_path_url = PL_strdup(fileURL.GetAsString());
-                
-                res = webShell->LoadURL(nsAutoString(message_path_url).GetUnicode(), nsnull, PR_TRUE, nsURLReloadBypassCache, 0);
-                
+			webShell = do_QueryInterface(aSupport, &res);
+			if (NS_SUCCEEDED(res) && webShell)
+			{
+				nsFileURL  fileURL(filePath);
+				char * message_path_url = PL_strdup(fileURL.GetAsString());
+				// mscott -- we don't have converters yet..comment out the load code
+				// until we are done!
+#ifdef NECKO_CONVERTERS                
+				res = webShell->LoadURL(nsAutoString(message_path_url).GetUnicode(), nsnull, PR_TRUE, nsURLReloadBypassCache, 0);
+#endif                
                 PR_FREEIF(message_path_url);
-            }
+			}
             else
             {
                 nsCOMPtr<nsIStreamListener> streamListener;
