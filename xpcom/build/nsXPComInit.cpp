@@ -458,6 +458,14 @@ nsresult NS_COM NS_InitXPCOM2(nsIServiceManager* *result,
     nsIInterfaceInfoManager* iim = XPTI_GetInterfaceInfoManager();
     NS_IF_RELEASE(iim);
 
+    nsCOMPtr<nsIEventQueueService> eventQService(do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv));
+    if ( NS_FAILED(rv) )
+        return rv;
+
+    rv = eventQService->CreateThreadEventQueue();
+    if ( NS_FAILED(rv) )
+        return rv;
+    
     return rv;
 }
 
@@ -507,6 +515,7 @@ NS_UnregisterXPCOMExitRoutine(XPCOMExitRoutine exitRoutine)
 //
 nsresult NS_COM NS_ShutdownXPCOM(nsIServiceManager* servMgr)
 {
+
     // Notify observers of xpcom shutting down
     nsresult rv = NS_OK;
     {
