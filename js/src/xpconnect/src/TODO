@@ -1,8 +1,6 @@
 /* jband - 03/06/01 - Stuff to do soon */
 
 - FIX these things:
-    !!! BAD nesting in DefinePropertyIfFound. 
-        Need XPC_HIDE_INTERFACE_NAMES.
     ! FIX resolve in setProperty brendan bug 72354
     - FIX nested enumerate with scriptable helper
     - FIX xpccomponets.cpp use of scriptable to deal better with prototype use
