@@ -133,7 +133,7 @@ NS_INTERFACE_MAP_END_INHERITING(nsBoxFrame)
 //
 nsMenuPopupFrame::nsMenuPopupFrame(nsIPresShell* aShell)
   :nsBoxFrame(aShell), mCurrentMenu(nsnull), mTimerMenu(nsnull), mCloseTimer(nsnull),
-    mMenuCanOverlapOSBar(PR_FALSE), mShouldAutoPosition(PR_TRUE), mShouldRollup(PR_TRUE)
+    mMenuCanOverlapOSBar(PR_FALSE)
 {
   SetIsContextMenu(PR_FALSE);   // we're not a context menu by default
   // Don't allow container frames to automatically position
@@ -215,8 +215,6 @@ nsMenuPopupFrame::Init(nsIPresContext*  aPresContext,
   static NS_DEFINE_IID(kCChildCID,  NS_CHILD_CID);
   ourView->CreateWidget(kCChildCID, &widgetData, nsnull);
 #endif   
-
-  MoveToAttributePosition();
 
   return rv;
 }
@@ -531,7 +529,7 @@ void GetWidgetForView(nsIView *aView, nsIWidget *&aWidget)
 // this document.
 //
 void
-nsMenuPopupFrame::AdjustClientXYForNestedDocuments ( nsIDOMXULDocument* inPopupDoc, nsIPresShell* inPopupShell, 
+nsMenuPopupFrame :: AdjustClientXYForNestedDocuments ( nsIDOMXULDocument* inPopupDoc, nsIPresShell* inPopupShell, 
                                                          PRInt32 inClientX, PRInt32 inClientY, 
                                                          PRInt32* outAdjX, PRInt32* outAdjY )
 {
@@ -609,7 +607,7 @@ nsMenuPopupFrame::AdjustClientXYForNestedDocuments ( nsIDOMXULDocument* inPopupD
 // the parent.
 // 
 void
-nsMenuPopupFrame::AdjustPositionForAnchorAlign ( PRInt32* ioXPos, PRInt32* ioYPos, const nsRect & inParentRect,
+nsMenuPopupFrame :: AdjustPositionForAnchorAlign ( PRInt32* ioXPos, PRInt32* ioYPos, const nsRect & inParentRect,
                                                     const nsString& aPopupAnchor, const nsString& aPopupAlign,
                                                     PRBool* outFlushWithTopBottom )
 {
@@ -686,7 +684,7 @@ nsMenuPopupFrame::AdjustPositionForAnchorAlign ( PRInt32* ioXPos, PRInt32* ioYPo
 // flush against the bottom, is there more room if its bottom edge were flush against the top)
 //
 PRBool
-nsMenuPopupFrame::IsMoreRoomOnOtherSideOfParent ( PRBool inFlushAboveBelow, PRInt32 inScreenViewLocX, PRInt32 inScreenViewLocY,
+nsMenuPopupFrame :: IsMoreRoomOnOtherSideOfParent ( PRBool inFlushAboveBelow, PRInt32 inScreenViewLocX, PRInt32 inScreenViewLocY,
                                                      const nsRect & inScreenParentFrameRect, PRInt32 inScreenTopTwips, PRInt32 inScreenLeftTwips,
                                                      PRInt32 inScreenBottomTwips, PRInt32 inScreenRightTwips )
 {
@@ -724,10 +722,10 @@ nsMenuPopupFrame::IsMoreRoomOnOtherSideOfParent ( PRBool inFlushAboveBelow, PRIn
 //       have the side effect of touching |mRect|.
 //
 void
-nsMenuPopupFrame::MovePopupToOtherSideOfParent ( PRBool inFlushAboveBelow, PRInt32* ioXPos, PRInt32* ioYPos, 
-                                                 PRInt32* ioScreenViewLocX, PRInt32* ioScreenViewLocY,
-                                                 const nsRect & inScreenParentFrameRect, PRInt32 inScreenTopTwips, PRInt32 inScreenLeftTwips,
-                                                 PRInt32 inScreenBottomTwips, PRInt32 inScreenRightTwips )
+nsMenuPopupFrame :: MovePopupToOtherSideOfParent ( PRBool inFlushAboveBelow, PRInt32* ioXPos, PRInt32* ioYPos, 
+                                                     PRInt32* ioScreenViewLocX, PRInt32* ioScreenViewLocY,
+                                                     const nsRect & inScreenParentFrameRect, PRInt32 inScreenTopTwips, PRInt32 inScreenLeftTwips,
+                                                     PRInt32 inScreenBottomTwips, PRInt32 inScreenRightTwips )
 {
   if ( inFlushAboveBelow ) {
     if ( *ioScreenViewLocY > inScreenParentFrameRect.y ) {     // view is currently below parent
@@ -785,9 +783,6 @@ nsMenuPopupFrame::SyncViewWithFrame(nsIPresContext* aPresContext,
 {
   NS_ENSURE_ARG(aPresContext);
   NS_ENSURE_ARG(aFrame);
-
-  if (!mShouldAutoPosition) 
-    return NS_OK;
 
   // |containingView|
   //   The view that contains the frame that is invoking this popup. This is 
@@ -1099,12 +1094,12 @@ nsMenuPopupFrame::SyncViewWithFrame(nsIPresContext* aPresContext,
 static void GetInsertionPoint(nsIPresShell* aShell, nsIFrame* aFrame, nsIFrame* aChild,
                               nsIFrame** aResult)
 {
-  nsCOMPtr<nsIStyleSet> styleSet;
-  aShell->GetStyleSet(getter_AddRefs(styleSet));
+  nsCOMPtr<nsIFrameManager> frameManager;
+  aShell->GetFrameManager(getter_AddRefs(frameManager));
   nsCOMPtr<nsIContent> child;
   if (aChild)
     aChild->GetContent(getter_AddRefs(child));
-  styleSet->GetInsertionPoint(aShell, aFrame, child, aResult);
+  frameManager->GetInsertionPoint(aShell, aFrame, child, aResult);
 }
 
 NS_IMETHODIMP
@@ -1546,9 +1541,6 @@ nsMenuPopupFrame::GetParentPopup(nsIMenuParent** aMenuParent)
 NS_IMETHODIMP
 nsMenuPopupFrame::HideChain()
 {
-  if (!mShouldRollup)
-    return NS_OK;
-
   // Stop capturing rollups
   // (must do this during Hide, which happens before the menu item is executed,
   // since this reinstates normal event handling.)
@@ -1583,9 +1575,6 @@ nsMenuPopupFrame::HideChain()
 NS_IMETHODIMP
 nsMenuPopupFrame::DismissChain()
 {
-  if (!mShouldRollup)
-    return NS_OK;
-
   // Stop capturing rollups
   if (nsMenuFrame::mDismissalListener)
     nsMenuFrame::mDismissalListener->Unregister();
@@ -1699,43 +1688,6 @@ nsMenuPopupFrame::IsDisabled(nsIContent* aContent)
 }
 
 NS_IMETHODIMP 
-nsMenuPopupFrame::AttributeChanged(nsIPresContext* aPresContext,
-                                   nsIContent* aChild,
-                                   PRInt32 aNameSpaceID,
-                                   nsIAtom* aAttribute,
-                                   PRInt32 aModType, 
-                                   PRInt32 aHint)
-
-{
-  nsresult rv = nsBoxFrame::AttributeChanged(aPresContext, aChild,
-                                             aNameSpaceID, aAttribute, aModType, aHint);
-  
-  if (aAttribute == nsXULAtoms::left || aAttribute == nsXULAtoms::top)
-    MoveToAttributePosition();
-  
-  return NS_OK;
-}
-
-void 
-nsMenuPopupFrame::MoveToAttributePosition()
-{
-  // Move the widget around when the user sets the |left| and |top| attributes. 
-  // Note that this is not the best way to move the widget, as it results in lots
-  // of FE notifications and is likely to be slow as molasses. Use |moveTo| on
-  // nsIPopupBoxObject if possible. 
-  nsAutoString left, top;
-  mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::left, left);
-  mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::top, top);
-  PRInt32 err1, err2, xPos, yPos;
-  xPos = left.ToInteger(&err1);
-  yPos = top.ToInteger(&err2);
-
-  if (NS_SUCCEEDED(err1) && NS_SUCCEEDED(err2))
-    MoveTo(xPos, yPos);
-}
-
-
-NS_IMETHODIMP 
 nsMenuPopupFrame::HandleEvent(nsIPresContext* aPresContext, 
                               nsGUIEvent*     aEvent,
                               nsEventStatus*  aEventStatus)
@@ -1746,6 +1698,8 @@ nsMenuPopupFrame::HandleEvent(nsIPresContext* aPresContext,
 NS_IMETHODIMP
 nsMenuPopupFrame::Destroy(nsIPresContext* aPresContext)
 {
+  //nsCOMPtr<nsIDOMEventReceiver> target = do_QueryInterface(mContent);
+  //target->RemoveEventListener("mousemove", mMenuPopupEntryListener, PR_TRUE);
   return nsBoxFrame::Destroy(aPresContext);
 }
 
@@ -1875,92 +1829,9 @@ nsMenuPopupFrame::KillCloseTimer()
 
 
 NS_IMETHODIMP
-nsMenuPopupFrame::KillPendingTimers ( )
+nsMenuPopupFrame :: KillPendingTimers ( )
 {
   return KillCloseTimer();
 
 } // KillPendingTimers
-
-void
-nsMenuPopupFrame::MoveTo(PRInt32 aLeft, PRInt32 aTop)
-{
-  // Set the 'left' and 'top' attributes
-  nsAutoString left, top;
-  left.AppendInt(aLeft);
-  top.AppendInt(aTop);
-
-  mContent->SetAttr(kNameSpaceID_None, nsXULAtoms::left, left, PR_FALSE);
-  mContent->SetAttr(kNameSpaceID_None, nsXULAtoms::top, top, PR_FALSE);
-
-  nsIView* view = nsnull;
-  GetView(mPresContext, &view);   
-  
-  // Retrieve screen position of parent view
-  nsIView* parentView = nsnull;
-  view->GetParent(parentView);
-  nsPoint screenPos;
-  GetScreenPosition(parentView, screenPos);
-
-  // Move the widget
-  nsCOMPtr<nsIWidget> widget;
-  view->GetWidget(*getter_AddRefs(widget));
-  widget->Move(aLeft - screenPos.x, aTop - screenPos.y);
-}
-
-void
-nsMenuPopupFrame::GetScreenPosition(nsIView* aView, nsPoint& aScreenPosition)
-{
-  nsPoint screenPos(0,0);
-  nscoord x, y;
-
-  nsIView* currView = aView;
-  nsIView* nextView = nsnull;
-  
-  while (1) {
-    currView->GetPosition(&x, &y);
-    screenPos.x += x;
-    screenPos.y += y;
-
-    currView->GetParent(nextView);
-    if (!nextView) 
-      break;
-    else 
-      currView = nextView;
-  }
-
-  nsCOMPtr<nsIWidget> rootWidget;
-  currView->GetWidget(*getter_AddRefs(rootWidget));
-  nsRect bounds, screenBounds;
-  rootWidget->GetScreenBounds(bounds);
-  rootWidget->WidgetToScreen(bounds, screenBounds);
-
-  float t2p;
-  mPresContext->GetTwipsToPixels(&t2p);
-
-  aScreenPosition.x = NSTwipsToIntPixels(screenPos.x, t2p) + screenBounds.x;
-  aScreenPosition.y = NSTwipsToIntPixels(screenPos.y, t2p) + screenBounds.y;
-}
-
-void 
-nsMenuPopupFrame::GetAutoPosition(PRBool* aShouldAutoPosition)
-{
-  *aShouldAutoPosition = mShouldAutoPosition;
-}
-
-void
-nsMenuPopupFrame::SetAutoPosition(PRBool aShouldAutoPosition)
-{
-  mShouldAutoPosition = aShouldAutoPosition;
-}
-
-void
-nsMenuPopupFrame::EnableRollup(PRBool aShouldRollup)
-{
-  if (!aShouldRollup) {
-    if (nsMenuFrame::mDismissalListener)
-      nsMenuFrame::mDismissalListener->Unregister();
-  }
-  else
-    CreateDismissalListener();
-}
 
