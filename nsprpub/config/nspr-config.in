@@ -1,6 +1,8 @@
 #!/bin/sh
 
 prefix=@prefix@
+exec_prefix=@exec_prefix@
+exec_prefix_set=no
 
 major_version=@MOD_MAJOR_VERSION@
 minor_version=@MOD_MINOR_VERSION@
