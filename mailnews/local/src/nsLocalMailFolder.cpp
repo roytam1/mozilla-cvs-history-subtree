@@ -378,7 +378,8 @@ nsLocalMailCopyState::~nsLocalMailCopyState()
 {
   if (m_fileStream)
   {
-    m_fileStream->close();
+    if (m_fileStream->GetIStream())
+      m_fileStream->close();
     delete m_fileStream;
   }
   if (m_messageService)
