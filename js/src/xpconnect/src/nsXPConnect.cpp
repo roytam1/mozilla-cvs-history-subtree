@@ -362,7 +362,6 @@ nsXPConnect::InitClasses(JSContext * aJSContext, JSObject * aGlobalJSObj)
     return NS_OK;
 }        
 
-
 JS_STATIC_DLL_CALLBACK(JSBool)
 TempGlobalResolve(JSContext *cx, JSObject *obj, jsval id)
 {

@@ -158,7 +158,7 @@ GetISupportsFromJSObject(JSContext* cx, JSObject* obj, nsISupports** iface)
 
 /***************************************************************************/
 // These are copied from nsJSUtils.cpp in DOMLand
-#ifndef XPCONNECT_STANDALONE
+#ifdef XPC_OLD_DOM_SUPPORT
 static nsresult
 GetStaticScriptGlobal(JSContext* aContext,
                       JSObject* aObj,
@@ -209,22 +209,7 @@ GetDynamicScriptContext(JSContext *aContext,
                                   (void**)aScriptContext);
 }
 
-#if 0
-// never called.
-static nsresult
-GetDynamicScriptGlobal(JSContext* aContext,
-                       nsIScriptGlobalObject** aNativeGlobal)
-{
-  nsIScriptGlobalObject* nativeGlobal = nsnull;
-  nsCOMPtr<nsIScriptContext> scriptCX;
-  GetDynamicScriptContext(aContext, getter_AddRefs(scriptCX));
-  if (scriptCX) {
-    *aNativeGlobal = nativeGlobal = scriptCX->GetGlobalObject();
-  }
-  return nativeGlobal ? NS_OK : NS_ERROR_FAILURE;
-}
-#endif
-#endif
+#endif /* XPC_OLD_DOM_SUPPORT */
 /***************************************************************************/
 /***************************************************************************/
 
@@ -854,7 +839,7 @@ XPCConvert::NativeInterface2JSObject(XPCCallContext& ccx,
 #endif /* XPC_DO_DOUBLE_WRAP */
 
     {
-#ifndef XPCONNECT_STANDALONE
+#ifdef XPC_OLD_DOM_SUPPORT
         // is this a DOM wrapped native object?
         nsCOMPtr<nsIScriptObjectOwner> owner = do_QueryInterface(src);
         if(owner)
@@ -886,7 +871,7 @@ XPCConvert::NativeInterface2JSObject(XPCCallContext& ccx,
                 *pErr = NS_ERROR_XPC_CANT_GET_JSOBJECT_OF_DOM_OBJECT;
         }
         else
-#endif /* XPCONNECT_STANDALONE */
+#endif /* XPC_OLD_DOM_SUPPORT */
         {
             // not a DOM object. Just try to build a wrapper
             XPCWrappedNativeScope* xpcscope =
@@ -899,9 +884,8 @@ XPCConvert::NativeInterface2JSObject(XPCCallContext& ccx,
             if(!iface)
                 return JS_FALSE;
 
-            // XXX we used to be able to pass an pErr!!!
             XPCWrappedNative* wrapper =
-                XPCWrappedNative::GetNewOrUsed(ccx, src, xpcscope, iface);
+                XPCWrappedNative::GetNewOrUsed(ccx, src, xpcscope, iface, pErr);
             if(wrapper)
             {
                 *dest = wrapper;

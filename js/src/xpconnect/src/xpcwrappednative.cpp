@@ -37,14 +37,20 @@
 
 #include "xpcprivate.h"
 
+// braindead local helper
+#define SET_ERROR_CODE(_y) if(pErr) *pErr = _y
+
 // static
 XPCWrappedNative*
 XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
                                nsISupports* Object,
                                XPCWrappedNativeScope* Scope,
-                               XPCNativeInterface* Interface)
+                               XPCNativeInterface* Interface,
+                               nsresult* pErr)
 {
     // XXX should support null Interface IFF the object has an nsIClassInfo?
+
+    SET_ERROR_CODE(NS_ERROR_FAILURE);
 
     nsCOMPtr<nsISupports> identity(do_QueryInterface(Object));
     if(!identity)
@@ -59,8 +65,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     {   // scoped lock
         nsAutoLock lock(Scope->GetRuntime()->GetMapLock());  
         wrapper = map->Find(identity);
-        if(wrapper)
-            NS_ADDREF(wrapper);
+        NS_IF_ADDREF(wrapper);
     }
 
     if(wrapper)
@@ -68,8 +73,10 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         if(!wrapper->FindTearOff(ccx, Interface))
         {
             NS_RELEASE(wrapper);
+            SET_ERROR_CODE(NS_ERROR_NO_INTERFACE);
             return nsnull;
         }
+        SET_ERROR_CODE(NS_OK);
         return wrapper;
     }
 
@@ -114,7 +121,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
             XPCWrappedNativeScope* betterScope = 
                 XPCWrappedNativeScope::FindInJSObjectScope(ccx, parent);
             if(betterScope != Scope)
-                return GetNewOrUsed(ccx, Object, betterScope, Interface);
+                return GetNewOrUsed(ccx, Object, betterScope, Interface, pErr);
         }
     }
 
@@ -146,9 +153,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
                                  identity, proto->GetSecurityInfoAddr())))
     {
         // the security manager vetoed. It should have set an exception.
-        
-        // XXX we need to get pErr back into the picture!
-        //SET_ERROR_CODE(NS_ERROR_XPC_SECURITY_MANAGER_VETO);
+        SET_ERROR_CODE(NS_ERROR_XPC_SECURITY_MANAGER_VETO);
         return nsnull;
     }
 
@@ -205,6 +210,8 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         wrapperToKill->Release();
     }
 
+    if(wrapper)
+        SET_ERROR_CODE(NS_OK);
     return wrapper;
 }
 

@@ -41,6 +41,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <math.h>
 #include "nscore.h"
 #include "nsISupports.h"
 #include "nsIServiceManager.h"
@@ -76,21 +77,20 @@
 #include "prlong.h"
 #include "prmem.h"
 #include "prenv.h"
+#include "nsString.h"
 #include "nsReadableUtils.h"
+#include "nsXPIDLString.h"
 
 #include "nsIJSContextStack.h"
 #include "prthread.h"
 #include "nsDeque.h"
-#include "nsXPIDLString.h"
 #include "nsVoidArray.h"
 
-#ifdef XPCONNECT_STANDALONE
-#include <math.h>
-#include "nsString.h"
-#else
-#include "nsIScriptObjectOwner.h"   // for DOM hack in xpcconvert.cpp
+#include "nsIConsoleService.h"
+#include "nsIScriptError.h"
+
+#ifndef XPCONNECT_STANDALONE
 #include "nsIScriptContext.h"
-#include "nsIScriptGlobalObject.h"
 #define XPC_USE_SECURITY_CHECKED_COMPONENT
 #endif
 
@@ -98,8 +98,10 @@
 #include "nsISecurityCheckedComponent.h"
 #endif
 
-#include "nsIConsoleService.h"
-#include "nsIScriptError.h"
+#ifdef XPC_OLD_DOM_SUPPORT
+#include "nsIScriptObjectOwner.h"   // for DOM hack in xpcconvert.cpp
+#include "nsIScriptGlobalObject.h"
+#endif
 
 #ifdef XPC_TOOLS_SUPPORT
 #include "nsIXPCToolsProfiler.h"
@@ -2007,7 +2009,8 @@ public:
     GetNewOrUsed(XPCCallContext& ccx,
                  nsISupports* Object,
                  XPCWrappedNativeScope* Scope,
-                 XPCNativeInterface* Interface);
+                 XPCNativeInterface* Interface,
+                 nsresult* pErr);
 
     static XPCWrappedNative*
     GetUsedOnly(XPCCallContext& ccx,
