@@ -46,6 +46,8 @@ protected:
                            PRUint32 aSpace,
                            PRUint32 aMinorInterval);
 
+private:
+  nscolor mComponentColor;
 
 };
 

@@ -20,7 +20,6 @@ MODULE = trex
 CPPSRCS = \
 	nsCalDurationCommand.cpp \
 	nsCalDayListCommand.cpp \
-	nsCalNewModelCommand.cpp \
 	$(NULL)
 
 REQUIRES = xpcom raptor trex julian nls xpfc

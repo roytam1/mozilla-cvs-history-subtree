@@ -24,7 +24,6 @@
 #include "nsXPFCCanvas.h"
 #include "nsICalTimeContext.h"
 #include "nsCalCanvas.h"
-#include "nsDateTime.h"
 
 class nsCalTimebarCanvas : public nsCalCanvas
 
@@ -44,13 +43,6 @@ public:
   NS_IMETHOD_(nsEventStatus) PaintBackground(nsIRenderingContext& aRenderingContext,
                                              const nsRect& aDirtyRect);
   NS_IMETHOD SetParameter(nsString& aKey, nsString& aValue) ;
-
-  NS_IMETHOD SetChildTimeContext(nsCalTimebarCanvas * aCanvas,
-                                 nsICalTimeContext * aContext,
-                                 PRUint32 increment);
-  NS_IMETHOD ChangeChildDateTime(nsCalTimebarCanvas * aCanvas,
-                                 nsDateTime * aDateTime);
-  NS_IMETHOD ChangeChildDateTime(PRUint32 aIndex, nsDateTime * aDateTime);
 
 
 protected:

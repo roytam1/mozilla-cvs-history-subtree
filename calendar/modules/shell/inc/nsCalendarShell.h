@@ -41,6 +41,7 @@
 #include "nsCalUserList.h"
 #include "nsCalSessionMgr.h"
 #include "capi.h"
+#include "nsCalScheduler.h"
 
 /*
  * CalendarShell Class Declaration
@@ -74,10 +75,13 @@ public:
   NS_IMETHOD SetCAPIPassword(char * aPassword) ;
   NS_IMETHOD_(char *) GetCAPIPassword() ;
 
+  NS_IMETHOD SetNSCalendar(NSCalendar * aCalendar) ;
+  NS_IMETHOD_(NSCalendar *) GetNSCalendar() ;
+
   // nsIAppShell interfaces
-  NS_IMETHOD Create(int* argc, char ** argv) ;
-  NS_IMETHOD SetDispatchListener(nsDispatchListener* aDispatchListener) ;
-  NS_IMETHOD Exit();
+  virtual void Create(int* argc, char ** argv) ;
+  virtual void SetDispatchListener(nsDispatchListener* aDispatchListener) ;
+  virtual void Exit();
   virtual nsresult Run();
   virtual void* GetNativeData(PRUint32 aDataType) ;
 
@@ -102,6 +106,7 @@ public:
 
   CAPISession mCAPISession;
   CAPIHandle mCAPIHandle;
+  NSCalendar * mpCalendar;
   nsICalendarUser* mpLoggedInUser;
 
   JulianString msCalURL;  /* the calendar associated with this user */
@@ -110,6 +115,7 @@ public:
   nsCalUserList mUserList;
   nsCalList mCalList;
   nsCalSessionMgr mSessionMgr;
+  nsCalScheduler mScheduler;
   nsICommandServer * mCommandServer;
 
 };

@@ -129,19 +129,11 @@ nsresult nsCalCommandCanvas :: Init()
   
   ctx->GetMetricsFor(font, fm);
 
+  NS_RELEASE(ctx);
 
   nscoord width ;
   
-  nsIRenderingContext * aRC;
-
-  ctx->CreateRenderingContext(mStaticTextField, aRC);
-
-  aRC->SetFont(font);
-
-  aRC->GetWidth(text,width);
-
-  NS_RELEASE(aRC);
-  NS_RELEASE(ctx);
+  fm->GetWidth(text,width);
 
   rect.width = width ;
 
@@ -239,22 +231,15 @@ nsresult nsCalCommandCanvas :: SetBounds(const nsRect &aBounds)
     
     ctx->GetMetricsFor(font,fm);
 
-    nsIRenderingContext * aRC;
-
-    ctx->CreateRenderingContext(mStaticTextField, aRC);
-
-    aRC->SetFont(font);
-
-    aRC->GetWidth(text,width);
-
-    NS_RELEASE(aRC);
     NS_RELEASE(ctx);
+
+    fm->GetWidth(text,width);
 
     rect.width = width ;
 
     gXPFCToolkit->GetViewManager()->MoveViewTo(mStaticTextField, rect.x, rect.y);
     gXPFCToolkit->GetViewManager()->ResizeView(mStaticTextField, rect.width, rect.height);
-    gXPFCToolkit->GetViewManager()->UpdateView(mStaticTextField, rect, NS_VMREFRESH_AUTO_DOUBLE_BUFFER | NS_VMREFRESH_NO_SYNC) ;
+    gXPFCToolkit->GetViewManager()->UpdateView(mStaticTextField, rect, NS_VMREFRESH_AUTO_DOUBLE_BUFFER) ;
 
   }
 
@@ -267,7 +252,7 @@ nsresult nsCalCommandCanvas :: SetBounds(const nsRect &aBounds)
 
     gXPFCToolkit->GetViewManager()->MoveViewTo(mTextField, rect.x, rect.y);
     gXPFCToolkit->GetViewManager()->ResizeView(mTextField, rect.width, rect.height);
-    gXPFCToolkit->GetViewManager()->UpdateView(mTextField, rect, NS_VMREFRESH_AUTO_DOUBLE_BUFFER | NS_VMREFRESH_NO_SYNC) ;
+    gXPFCToolkit->GetViewManager()->UpdateView(mTextField, rect, NS_VMREFRESH_AUTO_DOUBLE_BUFFER) ;
 
   }
 

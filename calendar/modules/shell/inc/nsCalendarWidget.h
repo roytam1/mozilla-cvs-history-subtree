@@ -68,7 +68,6 @@ public:
 
   NS_IMETHOD LoadURL(const nsString& aURLSpec,
                      nsIStreamObserver* aListener,
-                     nsIXPFCCanvas * aParentCanvas = 0,
                      nsIPostData* aPostData = 0);
 
   virtual nsIWidget* GetWWWindow();

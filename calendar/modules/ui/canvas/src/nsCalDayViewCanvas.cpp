@@ -50,6 +50,7 @@ static NS_DEFINE_IID(kICalendarModelIID,    NS_ICALENDAR_MODEL_IID);
 nsCalDayViewCanvas :: nsCalDayViewCanvas(nsISupports* outer) : nsCalTimebarComponentCanvas(outer)
 {
   NS_INIT_REFCNT();
+  mComponentColor = NS_RGB(68,141,192);
 }
 
 nsCalDayViewCanvas :: ~nsCalDayViewCanvas()
@@ -237,7 +238,15 @@ nsEventStatus nsCalDayViewCanvas :: PaintForeground(nsIRenderingContext& aRender
 
   user->GetLayer(layer);
 
-  layer->FetchEventsByRange(dStart, dEnd, evtVctr); 
+  NSCalendar * nscal;
+
+  layer->GetCal(nscal); 
+
+  if (0)
+  {
+    gCalToolkit->GetNSCalendar()->getEventsByRange(evtVctr, *dStart, *dEnd);
+  }
+  nscal->getEventsByRange(evtVctr, *dStart, *dEnd); 
 
   PRUint32 vis_start_min = GetTimeContext()->GetFirstVisibleTime(nsCalPeriodFormat_kHour) * 60 + GetTimeContext()->GetFirstVisibleTime(nsCalPeriodFormat_kMinute);
   PRUint32 vis_end_min   = GetTimeContext()->GetLastVisibleTime(nsCalPeriodFormat_kHour) * 60 + GetTimeContext()->GetLastVisibleTime(nsCalPeriodFormat_kMinute);

@@ -283,13 +283,13 @@ nsresult nsTrexTestShell::Init()
 }
 
 
-nsresult nsTrexTestShell::Create(int* argc, char ** argv)
+void nsTrexTestShell::Create(int* argc, char ** argv)
 {
-  return NS_OK;
+  return;
 }
-nsresult nsTrexTestShell::Exit()
+void nsTrexTestShell::Exit()
 {
-  return NS_OK;
+  return;
 }
 
 nsresult nsTrexTestShell::Run()
@@ -298,9 +298,9 @@ nsresult nsTrexTestShell::Run()
   return NS_OK;
 }
 
-nsresult nsTrexTestShell::SetDispatchListener(nsDispatchListener* aDispatchListener)
+void nsTrexTestShell::SetDispatchListener(nsDispatchListener* aDispatchListener)
 {
-  return NS_OK;
+  return ;
 }
 
 void* nsTrexTestShell::GetNativeData(PRUint32 aDataType)

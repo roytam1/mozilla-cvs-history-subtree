@@ -19,12 +19,11 @@
 #ifndef nsCalMultiDayViewCanvas_h___
 #define nsCalMultiDayViewCanvas_h___
 
-#include "nsCalMultiViewCanvas.h"
 #include "nsCalTimebarComponentCanvas.h"
 #include "nsCalTimebarCanvas.h"
 #include "nsDateTime.h"
 
-class nsCalMultiDayViewCanvas : public nsCalMultiViewCanvas
+class nsCalMultiDayViewCanvas : public nsCalTimebarComponentCanvas
 {
 
 public:
@@ -40,17 +39,36 @@ public:
   NS_IMETHOD_(PRUint32) GetNumberViewableDays();
   NS_IMETHOD SetNumberViewableDays(PRUint32 aNumberViewableDays);
 
-  NS_IMETHOD SetParameter(nsString& aKey, nsString& aValue) ;
+  NS_IMETHOD SetShowHeaders(PRBool aShowHeaders);
+  NS_IMETHOD SetShowStatus(PRBool aShowHeaders);
+  NS_IMETHOD_(PRBool) GetShowHeaders();
+  NS_IMETHOD_(PRBool) GetShowStatus();
   NS_IMETHOD SetTimeContext(nsICalTimeContext * aContext);
+
+  NS_IMETHOD SetParameter(nsString& aKey, nsString& aValue) ;
 
   // nsIXPFCCommandReceiver methods
   NS_IMETHOD Action(nsIXPFCCommand * aCommand);
+
+
+private:
+  NS_IMETHOD SetChildTimeContext(nsCalTimebarCanvas * aCanvas,
+                                 nsICalTimeContext * aContext,
+                                 PRUint32 increment);
+  NS_IMETHOD ChangeChildDateTime(nsCalTimebarCanvas * aCanvas,
+                                 nsDateTime * aDateTime);
+  NS_IMETHOD ChangeChildDateTime(PRUint32 aIndex, nsDateTime * aDateTime);
+
+
+
 
 protected:
   ~nsCalMultiDayViewCanvas();
 
 private:
   PRUint32 mNumberViewableDays;
+  PRBool mShowHeaders;
+  PRBool mShowStatus;
   PRUint32 mMaxRepeat;
   PRUint32 mMinRepeat;
 

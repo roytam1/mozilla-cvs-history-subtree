@@ -50,7 +50,6 @@
 
 #include "nsCoreCIID.h"
 #include "nsLayer.h"
-#include "nsLayerCollection.h"
 #include "nsCalUser.h"
 #include "nsCalendarUser.h"
 #include "nsCalendarModel.h"
@@ -96,7 +95,6 @@ static NS_DEFINE_IID(kCCapiCSTCID,          NS_CAPI_CST_CID);
 static NS_DEFINE_IID(kCLayerCID,            NS_LAYER_CID);
 static NS_DEFINE_IID(kILayerIID,            NS_ILAYER_IID);
 static NS_DEFINE_IID(kCLayerCollectionCID,  NS_LAYER_COLLECTION_CID);
-static NS_DEFINE_IID(kILayerCollectionIID,  NS_ILAYER_COLLECTION_IID);
 static NS_DEFINE_IID(kCCalendarModelCID,    NS_CALENDAR_MODEL_CID);
 static NS_DEFINE_IID(kICalendarUserIID,     NS_ICALENDAR_USER_IID); 
 static NS_DEFINE_IID(kCCalendarUserCID,     NS_CALENDAR_USER_CID);
@@ -126,6 +124,7 @@ nsCalendarShell::nsCalendarShell()
   mDocumentContainer = nsnull ;
   mObserverManager = nsnull;
   mCAPIPassword = nsnull;
+  mpCalendar = nsnull;
   mpLoggedInUser = nsnull;
   mCommandServer = nsnull;
   mCAPISession = nsnull;
@@ -141,6 +140,8 @@ nsCalendarShell::~nsCalendarShell()
 
   if (mCAPIPassword)
     PR_Free(mCAPIPassword);
+  if (mpCalendar)
+    delete mpCalendar;
   if (mpLoggedInUser)
     delete mpLoggedInUser;
 
@@ -180,6 +181,7 @@ NS_IMPL_RELEASE(nsCalendarShell)
 
 nsresult nsCalendarShell::Init()
 {
+  mScheduler.SetShell(this);
   /*
    * Register class factrories needed for application
    */
@@ -242,13 +244,6 @@ nsresult nsCalendarShell::Logon()
   if (NS_OK != (res = mpLoggedInUser->QueryInterface(kIUserIID,(void**)&pUser)))
     return res ;
 
-
-  /*
-   * THIS WHOLE AREA NEEDS TO BE MOVED INTO USERMGR. Have it 
-   * create the user, etc based on a curl or curllist.
-   */
-
-
   /*
    *  Getting the first calendar by user name should be reviewed.
    */
@@ -295,6 +290,8 @@ nsresult nsCalendarShell::Logon()
   /*
    * Begin a calendar for the logged in user...
    */
+  mpCalendar = new NSCalendar(0);
+  SetNSCalendar(mpCalendar);
 
  switch(theURL.GetProtocol())
   {
@@ -307,19 +304,13 @@ nsresult nsCalendarShell::Logon()
       nsILayer *pLayer;
       d.prevDay(14);
       d1.nextDay(14);
+      //mScheduler.InitialLoadData();
       mpLoggedInUser->GetLayer(pLayer);
       NS_ASSERTION(0 != pLayer,"null pLayer");
-      {
-        char sBuf[2048];
-        int iBufSize = sizeof(sBuf);
-        JulianString sTmp;
-        mShellInstance->GetPreferences()->GetCharPref(CAL_STRING_PREF_PREFERRED_ADDR,sBuf, &iBufSize );
-        sTmp = sBuf;
-        EnvVarsToValues(sTmp);
-      pLayer->SetCurl(sTmp);
-      }
       pLayer->SetShell(this);
       pLayer->FetchEventsByRange(&d,&d1,&EventList);
+      pLayer->SetCal(mpCalendar);
+      mpCalendar->addEventList(&EventList);
     }
     break;
 
@@ -530,9 +521,9 @@ nsresult nsCalendarShell::LoadPreferences()
    */
   nsILayer* pLayer;
   if (NS_OK != (res = nsRepository::CreateInstance(
-          kCLayerCollectionCID,  // class id that we want to create
-          nsnull,                // not aggregating anything  (this is the aggregatable interface)
-          kILayerIID,            // interface id of the object we want to get back
+          kCLayerCID,         // class id that we want to create
+          nsnull,             // not aggregating anything  (this is the aggregatable interface)
+          kILayerIID,         // interface id of the object we want to get back
           (void**)&pLayer)))
     return 1;  // XXX fix this
   pLayer->Init();
@@ -617,6 +608,7 @@ nsresult nsCalendarShell::LoadUI()
     return res ;
 
   mDocumentContainer->SetApplicationShell((nsIApplicationShell*)this);
+  //((nsCalendarContainer *)mDocumentContainer)->mpCalendarShell = this;
 
   mDocumentContainer->SetToolbarManager(mShellInstance->GetToolbarManager());
 
@@ -633,9 +625,15 @@ nsresult nsCalendarShell::LoadUI()
   /*
    * Now Load the Canvas UI
    */
-
+#ifdef XP_UNIX
   mShellInstance->GetPreferences()->GetCharPref(CAL_STRING_PREF_JULIAN_UI_XML_CALENDAR,pUI,&i);
   res = mDocumentContainer->LoadURL(pUI,nsnull);
+#else
+  mShellInstance->GetPreferences()->GetCharPref(CAL_STRING_PREF_JULIAN_UI_XML_MENUBAR,pUI,&i);
+  res = mDocumentContainer->LoadURL(pUI,nsnull);
+  mShellInstance->GetPreferences()->GetCharPref(CAL_STRING_PREF_JULIAN_UI_XML_CALENDAR,pUI,&i);
+  res = mDocumentContainer->LoadURL(pUI,nsnull);
+#endif
 
   mShellInstance->ShowApplicationWindow(PR_TRUE) ;
 
@@ -694,17 +692,29 @@ CAPISession nsCalendarShell::GetCAPISession()
   return (mCAPISession);
 }
 
-nsresult nsCalendarShell::Create(int* argc, char ** argv)
+nsresult nsCalendarShell::SetNSCalendar(NSCalendar * aNSCalendar)
 {
+  mpCalendar = aNSCalendar;
   return NS_OK;
 }
-nsresult nsCalendarShell::Exit()
+
+NSCalendar * nsCalendarShell::GetNSCalendar()
+{
+  return (mpCalendar);
+}
+
+
+void nsCalendarShell::Create(int* argc, char ** argv)
+{
+  return;
+}
+void nsCalendarShell::Exit()
 {
   NS_IF_RELEASE(mDocumentContainer);
 
   NLS_Terminate();
 
-  return NS_OK;
+  return;
 }
 
 nsresult nsCalendarShell::Run()
@@ -713,9 +723,9 @@ nsresult nsCalendarShell::Run()
   return NS_OK;
 }
 
-nsresult nsCalendarShell::SetDispatchListener(nsDispatchListener* aDispatchListener)
+void nsCalendarShell::SetDispatchListener(nsDispatchListener* aDispatchListener)
 {
-  return NS_OK;
+  return ;
 }
 void* nsCalendarShell::GetNativeData(PRUint32 aDataType)
 {
