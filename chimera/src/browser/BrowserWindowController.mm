@@ -909,16 +909,7 @@ static NSArray* sToolbarDefaults = nil;
 
 - (IBAction)performSearch:(id)aSender
 {
-  NSString *searchEngine = NSLocalizedStringFromTable(@"SearchPageDefault", @"WebsiteDefaults", nil);
-
-  // Get the users preferred search engine from IC
-  if (!searchEngine || [searchEngine isEqualToString:@"SearchPageDefault"]) {
-    searchEngine = [[PreferenceManager sharedInstance] getICStringPref:kICWebSearchPagePrefs];
-      if (!searchEngine || ([searchEngine length] == 0))
-        searchEngine = @"http://dmoz.org/";
-  }
-
-  [mBrowserView loadURI:searchEngine  referrer: nil flags:NSLoadFlagsNone activate:NO];
+  [mBrowserView loadURI:[[PreferenceManager sharedInstance] searchPage] referrer: nil flags:NSLoadFlagsNone activate:NO];
 }
 
 

@@ -57,6 +57,7 @@ class nsIPref;
 
 - (NSString *) getICStringPref:(ConstStr255Param) prefKey;
 - (NSString *) homePage:(BOOL) checkStartupPagePref;
+- (NSString *) searchPage;
 
 - (NSString*)getStringPref: (const char*)prefName withSuccess:(BOOL*)outSuccess;
 - (NSColor*)getColorPref: (const char*)prefName withSuccess:(BOOL*)outSuccess;
