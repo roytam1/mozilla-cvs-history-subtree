@@ -333,7 +333,7 @@ gc_dump_thing(JSGCThing *thing, uint8 flags, GCMarkNode *prev, FILE *fp)
 	prev = prev->prev;
     }
     while (next) {
-	path = PR_sprintf_append(path, "%s.", next->name);
+	path = JS_sprintf_append(path, "%s.", next->name);
 	next = next->next;
     }
     if (!path)
@@ -411,10 +411,10 @@ gc_mark_atom(JSRuntime *rt, JSAtom *atom
 	char name[32];
 
 	if (JSVAL_IS_STRING(key)) {
-	    PR_snprintf(name, sizeof name, "'%s'",
+	    JS_snprintf(name, sizeof name, "'%s'",
 			JS_GetStringBytes(JSVAL_TO_STRING(key)));
 	} else {
-	    PR_snprintf(name, sizeof name, "<%x>", key);
+	    JS_snprintf(name, sizeof name, "<%x>", key);
 	}
 #endif
 	GC_MARK(rt, JSVAL_TO_GCTHING(key), name, prev);
@@ -549,7 +549,7 @@ gc_mark(JSRuntime *rt, void *thing)
 				    strcpy(name, "__private__");
 				    break;
 				  default:
-				    PR_snprintf(name, sizeof name,
+				    JS_snprintf(name, sizeof name,
 						"**UNKNOWN SLOT %ld**",
 						(long)slot);
 				    break;
@@ -561,10 +561,10 @@ gc_mark(JSRuntime *rt, void *thing)
 				       ? js_IdToValue(sym_id(sprop->symbols))
 				       : sprop->id;
 				if (JSVAL_IS_INT(nval)) {
-				    PR_snprintf(name, sizeof name, "%ld",
+				    JS_snprintf(name, sizeof name, "%ld",
 						(long)JSVAL_TO_INT(nval));
 				} else if (JSVAL_IS_STRING(nval)) {
-				    PR_snprintf(name, sizeof name, "%s",
+				    JS_snprintf(name, sizeof name, "%s",
 				      JS_GetStringBytes(JSVAL_TO_STRING(nval)));
 				} else {
 				    strcpy(name, "**FINALIZED ATOM KEY**");
