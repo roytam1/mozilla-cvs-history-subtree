@@ -616,10 +616,12 @@ nsXPConnect::GetSecurityManagerForJSContext(JSContext * aJSContext, nsIXPCSecuri
 NS_IMETHODIMP
 nsXPConnect::SetDefaultSecurityManager(nsIXPCSecurityManager *aManager, PRUint16 flags)
 {
+#if 0
     NS_IF_ADDREF(aManager);
     NS_IF_RELEASE(mDefaultSecurityManager);
     mDefaultSecurityManager = aManager;
     mDefaultSecurityManagerFlags = flags;
+#endif
     return NS_OK;
 }        
 
