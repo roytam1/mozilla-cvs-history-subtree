@@ -55,7 +55,7 @@ class basic_nsAWritableString
           CharT* mEnd;
 
           basic_nsAWritableString<CharT>* mOwningString;
-          void*                           mFragmentIdentifier;
+          PRUint32                        mFragmentIdentifier;
 
           explicit
           Fragment( basic_nsAWritableString<CharT>* aOwner = 0 )
@@ -179,6 +179,8 @@ class basic_nsAWritableString
           return Iterator(fragment, startPos);
         }
 
+      // virtual void Splice( ... );
+
       virtual void SetCapacity( PRUint32 ) = 0;
       virtual void SetLength( PRUint32 ) = 0;
 
@@ -205,14 +207,53 @@ class basic_nsAWritableString
       // void CompressSet( ... );
       // void CompareWhitespace( ... );
 
+      virtual void Assign( const basic_nsAReadableString<CharT>& rhs );
+
       // Assign
       // Append( ... )
       // Insert
 
       // SetString
-      // operator=( ... )
-      // operator+=( ... )
+
+      basic_nsAWritableString<CharT>&
+      operator+=( const basic_nsAReadableString<CharT>& rhs )
+        {
+          Append(rhs);
+          return *this;
+        }
+
+      basic_nsAWritableString<CharT>&
+      operator+=( const basic_nsLiteralString<CharT>& rhs )
+        {
+          Append(rhs);
+          return *this;
+        }
+
+      basic_nsAWritableString<CharT>&
+      operator=( const basic_nsAReadableString<CharT>& rhs )
+        {
+          Assign(rhs);
+          return *this;
+        }
+
+      basic_nsAWritableString<CharT>&
+      operator=( const basic_nsLiteralString<CharT>& rhs )
+        {
+          Assign(rhs);
+          return *this;
+        }
   };
+
+NS_DEF_STRING_COMPARISONS(basic_nsAWritableString<CharT>)
+
+template <class CharT>
+void
+basic_nsAWritableString<CharT>::Assign( const basic_nsAReadableString<CharT>& rhs )
+  {
+    SetLength(rhs.Length());
+    std::copy(rhs.Begin(), rhs.End(), Begin());
+  }
+
 
 // operator>>
 // getline (maybe)

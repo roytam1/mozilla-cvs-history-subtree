@@ -1947,6 +1947,8 @@ SinkContext::UpdateChildCounts()
     }
     stackPos--;
   }
+
+  mNotifyLevel = mStackPos-1;
 }
 
 /**
@@ -4325,7 +4327,8 @@ HTMLContentSink::ProcessSCRIPTTag(const nsIParserNode& aNode)
       nsIStreamLoader* loader;
 
       mDocument->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
-      rv = NS_NewStreamLoader(&loader, mScriptURI, this, nsnull, loadGroup);
+      rv = NS_NewStreamLoader(&loader, mScriptURI, this, nsnull, loadGroup,
+                              nsnull, nsIChannel::FORCE_RELOAD);
       if (NS_OK == rv) {
         rv = NS_ERROR_HTMLPARSER_BLOCK;
       }

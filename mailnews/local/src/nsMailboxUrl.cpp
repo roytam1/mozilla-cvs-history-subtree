@@ -102,7 +102,14 @@ static char *nsMailboxGetURI(const char *nativepath)
             const char *relpath = nativepath + len;
             // skip past leading / if any
             while (*relpath == '/') relpath++;
-            uri = PR_smprintf("%s/%s", (const char*)serverURI, relpath);
+			nsCAutoString pathStr(relpath);
+			PRInt32 sbdIndex;
+			while((sbdIndex = pathStr.Find(".sbd", PR_TRUE)) != -1)
+			{
+				pathStr.Cut(sbdIndex, 4);
+			}
+
+            uri = PR_smprintf("%s/%s", (const char*)serverURI, pathStr.GetBuffer());
 
             break;
         }
@@ -312,6 +319,29 @@ NS_IMETHODIMP nsMailboxUrl::GetMessageFile(nsIFileSpec ** aFileSpec)
 		NS_IF_ADDREF(*aFileSpec);
 	}
 	return NS_OK;
+}
+
+NS_IMETHODIMP nsMailboxUrl::IsUrlType(PRUint32 type, PRBool *isType)
+{
+	NS_ENSURE_ARG(isType);
+
+	switch(type)
+	{
+		case nsIMsgMailNewsUrl::eCopy:
+			*isType = (m_mailboxAction == nsIMailboxUrl::ActionCopyMessage);
+			break;
+		case nsIMsgMailNewsUrl::eMove:
+			*isType = (m_mailboxAction == nsIMailboxUrl::ActionMoveMessage);
+			break;
+		case nsIMsgMailNewsUrl::eDisplay:
+			*isType = (m_mailboxAction == nsIMailboxUrl::ActionDisplayMessage);
+			break;
+		default:
+			*isType = PR_FALSE;
+	};				
+
+	return NS_OK;
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
