@@ -815,6 +815,8 @@ nsCacheService::ActivateEntry(nsCacheRequest * request,
     if (result) *result = nsnull;
     if ((!request) || (!result))  return NS_ERROR_NULL_POINTER;
 
+    if (!mEnableMemoryDevice && (!mEnableDiskDevice || !request->IsStreamBased() ))
+        return NS_ERROR_FAILURE;
 
     // search active entries (including those not bound to device)
     nsCacheEntry *entry = mActiveEntries.GetEntry(request->mKey);
