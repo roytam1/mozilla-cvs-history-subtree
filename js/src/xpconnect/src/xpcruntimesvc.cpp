@@ -50,11 +50,12 @@ nsJSRuntimeServiceImpl::nsJSRuntimeServiceImpl() :
 }
 
 nsJSRuntimeServiceImpl::~nsJSRuntimeServiceImpl() {
-    if (mRuntime) {
+    if(mRuntime) 
+    {
         JS_DestroyRuntime(mRuntime);
         JS_ShutDown();
 #ifdef DEBUG_shaver
-    fprintf(stderr, "nJRSI: destroyed runtime %p\n", (void *)mRuntime);
+        fprintf(stderr, "nJRSI: destroyed runtime %p\n", (void *)mRuntime);
 #endif
     }
 }
@@ -91,12 +92,13 @@ const uint32 gGCSize = 4L * 1024L * 1024L; /* pref? */
 NS_IMETHODIMP
 nsJSRuntimeServiceImpl::GetRuntime(JSRuntime **runtime)
 {
-    if (!runtime)
+    if(!runtime)
         return NS_ERROR_NULL_POINTER;
 
-    if (!mRuntime) {
+    if(!mRuntime) 
+    {
         mRuntime = JS_NewRuntime(gGCSize);
-        if (!mRuntime)
+        if(!mRuntime)
             return NS_ERROR_OUT_OF_MEMORY;
     }
     *runtime = mRuntime;

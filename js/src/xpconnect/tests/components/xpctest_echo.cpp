@@ -264,11 +264,11 @@ xpctestEcho::ReturnInterface(nsISupports *obj, nsISupports **_retval)
     return NS_OK;
 }
 
-/* nsIJSStackFrameLocation GetStack (); */
+/* nsIStackFrame GetStack (); */
 NS_IMETHODIMP
-xpctestEcho::GetStack(nsIJSStackFrameLocation **_retval)
+xpctestEcho::GetStack(nsIStackFrame **_retval)
 {
-    nsIJSStackFrameLocation* stack = nsnull;
+    nsIStackFrame* stack = nsnull;
     if(!_retval)
         return NS_ERROR_NULL_POINTER;
 
@@ -276,10 +276,10 @@ xpctestEcho::GetStack(nsIJSStackFrameLocation **_retval)
     NS_WITH_SERVICE(nsIXPConnect, xpc, nsIXPConnect::GetCID(), &rv);
     if(NS_SUCCEEDED(rv))
     {
-        nsIJSStackFrameLocation* jsstack;
+        nsIStackFrame* jsstack;
         if(NS_SUCCEEDED(xpc->GetCurrentJSStack(&jsstack)) && jsstack)
         {
-            xpc->CreateStackFrameLocation(JS_FALSE,
+            xpc->CreateStackFrameLocation(nsIProgrammingLanguage::CPLUSPLUS,
                                           __FILE__,
                                           "xpctestEcho::GetStack",
                                           __LINE__,

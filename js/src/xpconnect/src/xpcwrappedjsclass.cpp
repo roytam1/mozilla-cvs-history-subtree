@@ -417,7 +417,7 @@ xpcWrappedJSErrorReporter(JSContext *cx, const char *message,
     if(!ccx.IsValid())
         return;
 
-    nsCOMPtr<nsIXPCException> e;
+    nsCOMPtr<nsIException> e;
     XPCConvert::JSErrorToXPCException(ccx, message, nsnull, nsnull, report,
                                       getter_AddRefs(e));
     if(e)
@@ -572,7 +572,7 @@ nsXPCWrappedJSClass::CallMethod(nsXPCWrappedJS* wrapper, uint16 methodIndex,
     JSObject* obj;
     const char* name = info->GetName();
     jsval fval;
-    nsCOMPtr<nsIXPCException> xpc_exception;
+    nsCOMPtr<nsIException> xpc_exception;
     jsval js_exception;
     void* mark;
     JSBool foundDependentParam;
@@ -978,7 +978,7 @@ pre_call_clean_up:
             if(nsXPCException::NameAndFormatForNSResult(code, nsnull, &msg) && msg)
                 sz = JS_smprintf(format, msg, name);
 
-            nsCOMPtr<nsIXPCException> e;
+            nsCOMPtr<nsIException> e;
 
             XPCConvert::ConstructException(code, sz, GetInterfaceName(), name,
                                            nsnull, getter_AddRefs(e));
@@ -1079,7 +1079,7 @@ pre_call_clean_up:
                                 PRUnichar* sourceNameUni = nsnull;
                                 PRInt32 lineNumber = 0;
 
-                                nsCOMPtr<nsIJSStackFrameLocation> location;
+                                nsCOMPtr<nsIStackFrame> location;
                                 xpc_exception->
                                     GetLocation(getter_AddRefs(location));
                                 if(location)
@@ -1388,10 +1388,8 @@ static JSClass WrappedJSOutArg_class = {
 JSBool
 nsXPCWrappedJSClass::InitClasses(XPCCallContext& ccx, JSObject* aGlobalJSObj)
 {
-    if (!JS_InitClass(ccx.GetJSContext(), aGlobalJSObj,
-        0, &WrappedJSOutArg_class, 0, 0,
-        0, 0,
-        0, 0))
+    if(!JS_InitClass(ccx, aGlobalJSObj,
+                     0, &WrappedJSOutArg_class, 0, 0, 0, 0, 0, 0))
         return JS_FALSE;
     return JS_TRUE;
 }

@@ -8,3 +8,4 @@ nsIConsoleListener.idl
 nsIWeakReference.idl
 nsIException.idl
 nsIExceptionService.idl
+nsIProgrammingLanguage.idl

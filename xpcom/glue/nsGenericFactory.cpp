@@ -118,7 +118,7 @@ NS_IMETHODIMP nsGenericFactory::GetClassID(nsCID **aClassID)
 
 NS_IMETHODIMP nsGenericFactory::GetImplementationLanguage(PRUint32 *langp)
 {
-    *langp = nsIClassInfo::LANGUAGE_CPP;
+    *langp = nsIProgrammingLanguage::CPLUSPLUS;
     return NS_OK;
 }
 

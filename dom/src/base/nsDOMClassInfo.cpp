@@ -706,7 +706,7 @@ nsDOMClassInfo::GetInterfaces(PRUint32 *aCount, nsIID ***aArray)
 NS_IMETHODIMP
 nsDOMClassInfo::GetHelperForLanguage(PRUint32 language, nsISupports **_retval)
 {
-  if (language == LANGUAGE_JAVASCRIPT) {
+  if (language == nsIProgrammingLanguage::JAVASCRIPT) {
     *_retval = NS_STATIC_CAST(nsIXPCScriptable *, this);
 
     NS_ADDREF(*_retval);
@@ -742,7 +742,7 @@ nsDOMClassInfo::GetClassID(nsCID **aClassID)
 NS_IMETHODIMP
 nsDOMClassInfo::GetImplementationLanguage(PRUint32 *aImplLanguage)
 {
-  *aImplLanguage = LANGUAGE_CPP;
+  *aImplLanguage = nsIProgrammingLanguage::CPLUSPLUS;
 
   return NS_OK;
 }

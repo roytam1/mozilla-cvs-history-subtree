@@ -99,6 +99,7 @@ XPIDLSRCS	= \
 		nsIConsoleListener.idl \
 		nsIException.idl \
 		nsIExceptionService.idl \
+		nsIProgrammingLanguage.idl \
 		$(NULL)
 
 ifdef GC_LEAK_DETECTOR

@@ -124,7 +124,7 @@ interface nsIEcho : nsISupports {
 
     nsISupports ReturnInterface(in nsISupports obj);
 
-    nsIJSStackFrameLocation GetStack();
+    nsIStackFrame GetStack();
     void SetReceiverReturnOldReceiver(inout nsIEcho aReceiver);
 
     void MethodWithForwardDeclaredParam(in nsITestXPCSomeUselessThing sut);

@@ -89,6 +89,7 @@
 
 #include "nsIConsoleService.h"
 #include "nsIScriptError.h"
+#include "nsIExceptionService.h"
 
 #ifndef XPCONNECT_STANDALONE
 #include "nsIScriptContext.h"  // used to notify: ScriptEvaluated
@@ -595,13 +596,13 @@ public:
     JSBool CallerTypeIsNative() const {return LANG_NATIVE == mCallingLangType;}
     JSBool CallerTypeIsKnown() const {return LANG_UNKNOWN != mCallingLangType;}
 
-    nsresult GetException(nsIXPCException** e)
+    nsresult GetException(nsIException** e)
         {
             NS_IF_ADDREF(mException);
             *e = mException;
             return NS_OK;
         }
-    void SetException(nsIXPCException* e)
+    void SetException(nsIException* e)
         {
             NS_IF_ADDREF(e);
             NS_IF_RELEASE(mException);
@@ -660,7 +661,7 @@ private:
     nsresult mPendingResult;
     nsIXPCSecurityManager* mSecurityManager;
     PRUint16 mSecurityManagerFlags;
-    nsIXPCException* mException;
+    nsIException* mException;
     LangType mCallingLangType;
 };
 
@@ -1004,8 +1005,8 @@ public:
         {NS_ASSERTION(mFlags == GETTER,"bad"); mFlags = GETTER | SETTER_TOO;}
 
     /* default ctor - leave random contents */
-    XPCNativeMember() {}
-    ~XPCNativeMember() {}
+    XPCNativeMember()  {MOZ_COUNT_CTOR(XPCNativeMember);}
+    ~XPCNativeMember() {MOZ_COUNT_DTOR(XPCNativeMember);}
 
     void DealWithDyingGCThings(JSContext* cx, XPCJSRuntime* rt)
         {if(IsResolved() && JSVAL_IS_GCTHING(mVal) &&
@@ -1086,8 +1087,9 @@ protected:
 
     XPCNativeInterface();   // not implemented
     XPCNativeInterface(nsIInterfaceInfo* aInfo, jsval aName)
-        : mInfo(aInfo), mName(aName), mMemberCount(0) {}
-    ~XPCNativeInterface() {}
+        : mInfo(aInfo), mName(aName), mMemberCount(0) 
+                          {MOZ_COUNT_CTOR(XPCNativeInterface);}
+    ~XPCNativeInterface() {MOZ_COUNT_DTOR(XPCNativeInterface);}
 
     void* operator new(size_t, void* p) {return p;}
 
@@ -1220,8 +1222,8 @@ protected:
     static XPCNativeSet* NewInstanceMutate(XPCNativeSet*       otherSet,
                                            XPCNativeInterface* newInterface,
                                            PRUint16            position);
-    XPCNativeSet() {}
-    ~XPCNativeSet() {}
+    XPCNativeSet()  {MOZ_COUNT_CTOR(XPCNativeSet);}
+    ~XPCNativeSet() {MOZ_COUNT_DTOR(XPCNativeSet);}
     void* operator new(size_t, void* p) {return p;}
 
 private:
@@ -1319,10 +1321,12 @@ public:
     XPCNativeScriptableShared(JSUint32 aFlags = 0, char* aName = nsnull)
         : mFlags(aFlags) 
         {memset(&mJSClass, 0, sizeof(JSClass));
-         mJSClass.name = aName;} // take ownership
+         mJSClass.name = aName;  // take ownership
+         MOZ_COUNT_CTOR(XPCNativeScriptableShared);}
 
     ~XPCNativeScriptableShared()
-        {if(mJSClass.name)nsMemory::Free((void*)mJSClass.name);}
+        {if(mJSClass.name)nsMemory::Free((void*)mJSClass.name);
+         MOZ_COUNT_DTOR(XPCNativeScriptableShared);}
 
     char* TransferNameOwnership()
         {char* name=(char*)mJSClass.name; mJSClass.name = nsnull; return name;}
@@ -1366,12 +1370,14 @@ public:
     void
     GetScriptableShared(XPCNativeScriptableShared* shared) {mShared = shared;}
 
-    ~XPCNativeScriptableInfo() {}
-
 private:
     XPCNativeScriptableInfo(nsIXPCScriptable* scriptable = nsnull,
                             XPCNativeScriptableShared* shared = nsnull)
-        : mCallback(scriptable), mShared(shared) {}
+        : mCallback(scriptable), mShared(shared) 
+                               {MOZ_COUNT_CTOR(XPCNativeScriptableInfo);}
+public:
+    ~XPCNativeScriptableInfo() {MOZ_COUNT_DTOR(XPCNativeScriptableInfo);}
+private:
 
     // disable copy ctor and assignment
     XPCNativeScriptableInfo(const XPCNativeScriptableInfo& r); // not implemented
@@ -1379,7 +1385,7 @@ private:
 
 private:
     nsCOMPtr<nsIXPCScriptable>  mCallback;
-    XPCNativeScriptableShared*        mShared;
+    XPCNativeScriptableShared*  mShared;
 };
 
 /***************************************************************************/
@@ -2098,20 +2104,20 @@ public:
                                         jsval s,
                                         const char* ifaceName,
                                         const char* methodName,
-                                        nsIXPCException** exception);
+                                        nsIException** exception);
 
     static nsresult JSErrorToXPCException(XPCCallContext& ccx,
                                           const char* message,
                                           const char* ifaceName,
                                           const char* methodName,
                                           const JSErrorReport* report,
-                                          nsIXPCException** exception);
+                                          nsIException** exception);
 
     static nsresult ConstructException(nsresult rv, const char* message,
                                        const char* ifaceName,
                                        const char* methodName,
                                        nsISupports* data,
-                                       nsIXPCException** exception);
+                                       nsIException** exception);
 
 private:
     XPCConvert(); // not implemented
@@ -2221,7 +2227,7 @@ private:
                           char** psz, PRBool own);
 
     static void BuildAndThrowException(JSContext* cx, nsresult rv, const char* sz);
-    static JSBool ThrowExceptionObject(JSContext* cx, nsIXPCException* e);
+    static JSBool ThrowExceptionObject(JSContext* cx, nsIException* e);
 
 private:
     static JSBool sVerbose;
@@ -2234,15 +2240,15 @@ class XPCJSStack
 {
 public:
     static nsresult
-    CreateStack(JSContext* cx, nsIJSStackFrameLocation** stack);
+    CreateStack(JSContext* cx, nsIStackFrame** stack);
 
     static nsresult
-    CreateStackFrameLocation(JSBool isJSFrame,
+    CreateStackFrameLocation(PRUint32 aLanguage,
                              const char* aFilename,
                              const char* aFunctionName,
                              PRInt32 aLineNumber,
-                             nsIJSStackFrameLocation* aCaller,
-                             nsIJSStackFrameLocation** stack);
+                             nsIStackFrame* aCaller,
+                             nsIStackFrame** stack);
 private:
     XPCJSStack();   // not implemented
 };
@@ -2250,7 +2256,7 @@ private:
 /***************************************************************************/
 
 class nsXPCException :
-            public nsIXPCException
+            public nsIXPCDOMException
 #ifdef XPC_USE_SECURITY_CHECKED_COMPONENT
           , public nsISecurityCheckedComponent
 #endif
@@ -2259,16 +2265,18 @@ public:
     NS_DEFINE_STATIC_CID_ACCESSOR(NS_XPCEXCEPTION_CID)
 
     NS_DECL_ISUPPORTS
+    NS_DECL_NSIEXCEPTION
     NS_DECL_NSIXPCEXCEPTION
+    NS_DECL_NSIXPCDOMEXCEPTION
 #ifdef XPC_USE_SECURITY_CHECKED_COMPONENT
     NS_DECL_NSISECURITYCHECKEDCOMPONENT
 #endif
 
     static nsresult NewException(const char *aMessage,
                                  nsresult aResult,
-                                 nsIJSStackFrameLocation *aLocation,
+                                 nsIStackFrame *aLocation,
                                  nsISupports *aData,
-                                 nsIXPCException** exception);
+                                 nsIException** exception);
 
     static JSBool NameAndFormatForNSResult(nsresult rv,
                                            const char** name,
@@ -2287,12 +2295,16 @@ public:
 protected:
     void Reset();
 private:
-    char*                       mMessage;
-    nsresult                    mResult;
-    char*                       mName;
-    nsIJSStackFrameLocation*    mLocation;
-    nsISupports*                mData;
-    PRBool                      mInitialized;
+    char*           mMessage;
+    nsresult        mResult;
+    char*           mName;
+    nsIStackFrame*  mLocation;
+    nsISupports*    mData;
+    char*           mFilename;
+    int             mLineNumber;
+    int             mColumnNumber;
+    nsIException*   mInner;
+    PRBool          mInitialized;
 };
 
 /***************************************************************************/
@@ -2429,18 +2441,51 @@ public:
 
     ~XPCPerThreadData();
 
-    nsresult GetException(nsIXPCException** aException)
+    nsresult GetException(nsIException** aException)
     {
+        if(EnsureExceptionManager())
+            return mExceptionManager->GetCurrentException(aException);
+        
         NS_IF_ADDREF(mException);
         *aException = mException;
         return NS_OK;
     }
 
-    void SetException(nsIXPCException* aException)
+    nsresult SetException(nsIException* aException)
     {
+        if(EnsureExceptionManager())
+            return mExceptionManager->SetCurrentException(aException);
+
         NS_IF_ADDREF(aException);
         NS_IF_RELEASE(mException);
         mException = aException;
+        return NS_OK;
+    }
+
+    nsIExceptionManager* GetExceptionManager()
+    {
+        if(EnsureExceptionManager())
+            return mExceptionManager;
+        return nsnull;
+    }
+
+    JSBool EnsureExceptionManager()
+    {
+        if(mExceptionManager)
+            return JS_TRUE;
+
+        if(mExceptionManagerNotAvailable)
+            return JS_FALSE;
+
+        nsCOMPtr<nsIExceptionService> xs = 
+            do_GetService(NS_EXCEPTIONSERVICE_CONTRACTID);
+        if(xs)
+            xs->GetCurrentExceptionManager(&mExceptionManager);
+        if(mExceptionManager)
+            return JS_TRUE;
+
+        mExceptionManagerNotAvailable = JS_TRUE;
+        return JS_FALSE;
     }
 
     XPCJSContextStack* GetJSContextStack() {return mJSContextStack;}
@@ -2479,15 +2524,18 @@ private:
     XPCPerThreadData();
 
 private:
-    nsIXPCException*    mException;
-    XPCJSContextStack*  mJSContextStack;
-    XPCPerThreadData*   mNextThread;
-    XPCCallContext*     mCallContext;
-    jsval               mResolveName;
-    XPCWrappedNative*   mResolvingWrapper;
+    XPCJSContextStack*   mJSContextStack;
+    XPCPerThreadData*    mNextThread;
+    XPCCallContext*      mCallContext;
+    jsval                mResolveName;
+    XPCWrappedNative*    mResolvingWrapper;
 
-    JSContext*          mMostRecentJSContext;
-    XPCContext*         mMostRecentXPCContext;
+    JSContext*           mMostRecentJSContext;
+    XPCContext*          mMostRecentXPCContext;
+
+    nsIExceptionManager* mExceptionManager;
+    nsIException*        mException;
+    JSBool               mExceptionManagerNotAvailable;
 
     static PRLock*           gLock;
     static XPCPerThreadData* gThreads;

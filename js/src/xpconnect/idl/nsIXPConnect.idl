@@ -42,6 +42,7 @@
 #include "xpcexception.idl"
 #include "nsIInterfaceInfo.idl"
 #include "nsIInterfaceInfoManager.idl"
+#include "nsIExceptionService.idl"
 
 %{ C++
 #include "jspubtd.h"
@@ -480,12 +481,12 @@ interface nsIXPConnect : nsISupports
     void getDefaultSecurityManager(out nsIXPCSecurityManager aManager,
                                    out PRUint16 flags);
 
-    nsIJSStackFrameLocation
-    createStackFrameLocation(in PRBool                   isJSFrame,
-                             in string                   aFilename,
-                             in string                   aFunctionName,
-                             in PRInt32                  aLineNumber,
-                             in nsIJSStackFrameLocation  aCaller);
+    nsIStackFrame
+    createStackFrameLocation(in PRUint32       aLanguage,
+                             in string         aFilename,
+                             in string         aFunctionName,
+                             in PRInt32        aLineNumber,
+                             in nsIStackFrame  aCaller);
 
     /**
     * XPConnect builds internal objects that parallel, and are one-to-one with,
@@ -496,10 +497,10 @@ interface nsIXPConnect : nsISupports
     */
     void syncJSContexts();
 
-    readonly attribute nsIJSStackFrameLocation      CurrentJSStack;
+    readonly attribute nsIStackFrame                CurrentJSStack;
     readonly attribute nsIXPCNativeCallContext      CurrentNativeCallContext;
     /* pass nsnull to clear pending exception */
-             attribute nsIXPCException              PendingException;
+             attribute nsIException                 PendingException;
 
     void debugDump(in short depth);
     void debugDumpObject(in nsISupports aCOMObj, in short depth);

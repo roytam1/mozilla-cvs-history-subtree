@@ -853,13 +853,13 @@ XPCJSRuntime::DebugDump(PRInt16 depth)
                          mClassInfo2NativeSetMap, mClassInfo2NativeSetMap ? \
                                     mClassInfo2NativeSetMap->Count() : 0));
 
-        XPC_LOG_ALWAYS(("mNativeSetMap @ %x with %d sets(s)", \
-                         mNativeSetMap, mNativeSetMap ? \
-                                    mNativeSetMap->Count() : 0));
-
         XPC_LOG_ALWAYS(("mThisTranslatorMap @ %x with %d translator(s)", \
                          mThisTranslatorMap, mThisTranslatorMap ? \
                                     mThisTranslatorMap->Count() : 0));
+
+        XPC_LOG_ALWAYS(("mNativeSetMap @ %x with %d sets(s)", \
+                         mNativeSetMap, mNativeSetMap ? \
+                                    mNativeSetMap->Count() : 0));
 
         // iterate sets...
         if(depth && mNativeSetMap && mNativeSetMap->Count())

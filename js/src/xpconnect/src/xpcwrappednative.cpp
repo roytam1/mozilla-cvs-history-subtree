@@ -513,7 +513,7 @@ XPCWrappedNative::GatherScriptableInfo(
     {
         nsCOMPtr<nsISupports> possibleHelper;
         nsresult rv = classInfo->GetHelperForLanguage(
-                                        nsIClassInfo::LANGUAGE_JAVASCRIPT,
+                                        nsIProgrammingLanguage::JAVASCRIPT,
                                         getter_AddRefs(possibleHelper));
         if(NS_SUCCEEDED(rv) && possibleHelper)
         {
@@ -1886,7 +1886,7 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
                 goto done;
             }
         }
-        else if (isSizedString)
+        else if(isSizedString)
         {
             if(!XPCConvert::NativeStringWithSize2JS(ccx, &v,
                                            (const void*)&dp->val,
@@ -2241,22 +2241,16 @@ XPCWrappedNative::HandlePossibleNameCaseError(XPCCallContext& ccx,
             const char* badName = JS_GetStringBytes(oldJSStr);
             char* locationStr = nsnull;
 
-            nsIXPCException* xpc_exp = nsnull;
-            nsXPCException::NewException("", NS_OK, nsnull, nsnull, &xpc_exp);
+            nsIException* e = nsnull;
+            nsXPCException::NewException("", NS_OK, nsnull, nsnull, &e);
 
-            nsCOMPtr<nsIXPCException> e =
-                dont_AddRef(NS_STATIC_CAST(nsIXPCException*, xpc_exp));
-
-            nsCOMPtr<nsIJSStackFrameLocation> loc = nsnull;
             if(e)
             {
                 nsresult rv;
+                nsCOMPtr<nsIStackFrame> loc = nsnull;
                 rv = e->GetLocation(getter_AddRefs(loc));
-                if(NS_SUCCEEDED(rv) && loc)
-                {
-                    rv = loc->ToString(&locationStr);
-                    if(NS_FAILED(rv))
-                        locationStr = nsnull;
+                if(NS_SUCCEEDED(rv) && loc) {
+                    loc->ToString(&locationStr); // failure here leaves it nsnull.
                 }
             }
 

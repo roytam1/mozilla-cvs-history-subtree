@@ -65,9 +65,10 @@ XPIDLSRCS =               \
         .\nsISupports.idl \
 #        .\nsISystemInfo.idl \
         .\nsIWeakReference.idl \
-	.\nsIConsoleService.idl \
-	.\nsIConsoleMessage.idl \
-	.\nsIConsoleListener.idl \
+        .\nsIConsoleService.idl \
+        .\nsIConsoleMessage.idl \
+        .\nsIConsoleListener.idl \
+        .\nsIProgrammingLanguage.idl \
         $(NULL)
 
 ################################################################################

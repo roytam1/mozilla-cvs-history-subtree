@@ -567,7 +567,7 @@ static void ShowXPCException()
     NS_WITH_SERVICE(nsIXPConnect, xpc, nsIXPConnect::GetCID(), &rv);
     if(NS_SUCCEEDED(rv) && xpc)
     {
-        nsCOMPtr<nsIXPCException> e;
+        nsCOMPtr<nsIException> e;
         xpc->GetPendingException(getter_AddRefs(e));
         if(e)
         {

@@ -163,13 +163,13 @@ GetStaticScriptGlobal(JSContext* aContext,
   JSObject* parent;
   JSObject* glob = aObj; // starting point for search
 
-  if (!glob)
+  if(!glob)
     return NS_ERROR_FAILURE;
 
-  while (nsnull != (parent = JS_GetParent(aContext, glob)))
+  while(nsnull != (parent = JS_GetParent(aContext, glob)))
     glob = parent;
 
-  if (!GetISupportsFromJSObject(aContext, glob, &supports) || !supports)
+  if(!GetISupportsFromJSObject(aContext, glob, &supports) || !supports)
     return NS_ERROR_FAILURE;
 
   return supports->QueryInterface(NS_GET_IID(nsIScriptGlobalObject),
@@ -183,7 +183,7 @@ GetStaticScriptContext(JSContext* aContext,
 {
   nsCOMPtr<nsIScriptGlobalObject> nativeGlobal;
   GetStaticScriptGlobal(aContext, aObj, getter_AddRefs(nativeGlobal));
-  if (!nativeGlobal)
+  if(!nativeGlobal)
     return NS_ERROR_FAILURE;
   nsIScriptContext* scriptContext = nsnull;
   nativeGlobal->GetContext(&scriptContext);
@@ -198,7 +198,7 @@ GetDynamicScriptContext(JSContext *aContext,
   // Note: We rely on the rule that if any JSContext in our JSRuntime has a
   // private set then that private *must* be a pointer to an nsISupports.
   nsISupports *supports = (nsIScriptContext*) JS_GetContextPrivate(aContext);
-  if (!supports)
+  if(!supports)
       return NS_ERROR_FAILURE;
   return supports->QueryInterface(NS_GET_IID(nsIScriptContext),
                                   (void**)aScriptContext);
@@ -345,7 +345,7 @@ XPCConvert::NativeData2JS(XPCCallContext& ccx, jsval* d, const void* s,
                     break;
 
                 JSString *str = XPCStringConvert::ReadableToJSString(cx, *p);
-                if (!str)
+                if(!str)
                     return JS_FALSE;
 
                 *d = STRING_TO_JSVAL(str);
@@ -635,16 +635,16 @@ XPCConvert::JSData2Native(XPCCallContext& ccx, void* d, jsval s,
 
             if(useAllocator)
             {
-                if (str)
+                if(str)
                 {
                     XPCReadableJSStringWrapper *wrapper =
                         XPCStringConvert::JSStringToReadable(str);
-                    if (!wrapper)
+                    if(!wrapper)
                         return JS_FALSE;
 
                     // Ask for the shared buffer handle, which will root the
                     // string.
-                    if (isNewString && ! wrapper->GetSharedBufferHandle())
+                    if(isNewString && ! wrapper->GetSharedBufferHandle())
                             return JS_FALSE;
 
                     *((nsAReadableString**)d) = wrapper;
@@ -652,7 +652,7 @@ XPCConvert::JSData2Native(XPCCallContext& ccx, void* d, jsval s,
                 else
                 {
                     nsAReadableString *rs = new nsString(chars, length);
-                    if (!rs)
+                    if(!rs)
                         return JS_FALSE;
                     *((nsAReadableString**)d) = rs;
                 }
@@ -973,7 +973,7 @@ nsresult
 XPCConvert::ConstructException(nsresult rv, const char* message,
                                const char* ifaceName, const char* methodName,
                                nsISupports* data,
-                               nsIXPCException** exceptn)
+                               nsIException** exceptn)
 {
     static const char format[] = "%s [%s::%s]";
     const char * msg = message;
@@ -1003,7 +1003,7 @@ XPCConvert::JSValToXPCException(XPCCallContext& ccx,
                                 jsval s,
                                 const char* ifaceName,
                                 const char* methodName,
-                                nsIXPCException** exceptn)
+                                nsIException** exceptn)
 {
     JSContext* cx = ccx.GetJSContext();
 
@@ -1184,7 +1184,7 @@ XPCConvert::JSErrorToXPCException(XPCCallContext& ccx,
                                   const char* ifaceName,
                                   const char* methodName,
                                   const JSErrorReport* report,
-                                  nsIXPCException** exceptn)
+                                  nsIException** exceptn)
 {
     nsresult rv = NS_ERROR_FAILURE;
     nsScriptError* data;

@@ -1516,7 +1516,7 @@ nsObjectFrame::NotifyContentObjectWrapper()
   NS_ENSURE_TRUE(ci, NS_ERROR_UNEXPECTED);
 
   nsCOMPtr<nsISupports> s;
-  ci->GetHelperForLanguage(nsIClassInfo::LANGUAGE_JAVASCRIPT,
+  ci->GetHelperForLanguage(nsIProgrammingLanguage::JAVASCRIPT,
                            getter_AddRefs(s));
 
   nsCOMPtr<nsIXPCScriptable> helper(do_QueryInterface(s));

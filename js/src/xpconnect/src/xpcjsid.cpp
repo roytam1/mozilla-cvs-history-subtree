@@ -276,7 +276,7 @@ static nsIXPCScriptable* gSharedScriptableHelperForJSIID;
 NS_METHOD GetSharedScriptableHelperForJSIID(PRUint32 language,
                                             nsISupports **helper)
 {
-    if(language == nsIClassInfo::LANGUAGE_JAVASCRIPT)
+    if(language == nsIProgrammingLanguage::JAVASCRIPT)
     {
         NS_IF_ADDREF(gSharedScriptableHelperForJSIID);
         *helper = gSharedScriptableHelperForJSIID;

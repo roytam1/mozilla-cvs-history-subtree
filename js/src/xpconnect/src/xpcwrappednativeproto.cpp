@@ -41,6 +41,8 @@
 PRInt32 XPCWrappedNativeProto::gDEBUG_LiveProtoCount = 0;
 #endif
 
+MOZ_DECL_CTOR_COUNTER(XPCWrappedNativeProto)
+
 XPCWrappedNativeProto::XPCWrappedNativeProto(XPCWrappedNativeScope* Scope,
                                              nsIClassInfo* ClassInfo,
                                              PRUint32 ClassInfoFlags,
@@ -56,6 +58,8 @@ XPCWrappedNativeProto::XPCWrappedNativeProto(XPCWrappedNativeScope* Scope,
     // This native object lives as long as its associated JSObject - killed
     // by finalization of the JSObject (or explicitly if Init fails).
 
+    MOZ_COUNT_CTOR(XPCWrappedNativeProto);
+
 #ifdef DEBUG
     PR_AtomicIncrement(&gDEBUG_LiveProtoCount);
 #endif
@@ -64,6 +68,9 @@ XPCWrappedNativeProto::XPCWrappedNativeProto(XPCWrappedNativeScope* Scope,
 XPCWrappedNativeProto::~XPCWrappedNativeProto()
 {
     NS_ASSERTION(!mJSProtoObject, "JSProtoObject still alive");
+
+    MOZ_COUNT_DTOR(XPCWrappedNativeProto);
+
 #ifdef DEBUG
     PR_AtomicDecrement(&gDEBUG_LiveProtoCount);
 #endif

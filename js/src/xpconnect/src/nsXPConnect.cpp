@@ -195,7 +195,8 @@ void
 nsXPConnect::ReleaseXPConnectSingleton()
 {
     nsXPConnect* xpc = gSelf;
-    if (xpc) {
+    if(xpc)
+    {
 
 #ifdef XPC_TOOLS_SUPPORT
         if(xpc->mProfiler)
@@ -224,11 +225,10 @@ nsXPConnect::ReleaseXPConnectSingleton()
         nsrefcnt cnt;
         NS_RELEASE2(xpc, cnt);
 #ifdef XPC_DUMP_AT_SHUTDOWN
-        if (0 != cnt) {
+        if(0 != cnt) 
             printf("*** dangling reference to nsXPConnect: refcnt=%d\n", cnt);
-        } else {
+        else 
             printf("+++ XPConnect had no dangling references.\n");
-        }
 #endif
     }
 }
@@ -690,18 +690,18 @@ nsXPConnect::GetDefaultSecurityManager(nsIXPCSecurityManager **aManager,
     return NS_OK;
 }
 
-/* nsIJSStackFrameLocation createStackFrameLocation (in PRBool isJSFrame, in string aFilename, in string aFunctionName, in PRInt32 aLineNumber, in nsIJSStackFrameLocation aCaller); */
+/* nsIStackFrame createStackFrameLocation (in PRUint32 aLanguage, in string aFilename, in string aFunctionName, in PRInt32 aLineNumber, in nsIStackFrame aCaller); */
 NS_IMETHODIMP
-nsXPConnect::CreateStackFrameLocation(PRBool isJSFrame, 
+nsXPConnect::CreateStackFrameLocation(PRUint32 aLanguage, 
                                       const char *aFilename, 
                                       const char *aFunctionName, 
                                       PRInt32 aLineNumber, 
-                                      nsIJSStackFrameLocation *aCaller, 
-                                      nsIJSStackFrameLocation **_retval)
+                                      nsIStackFrame *aCaller, 
+                                      nsIStackFrame **_retval)
 {
     NS_ENSURE_ARG_POINTER(_retval);
 
-    return XPCJSStack::CreateStackFrameLocation(isJSFrame,
+    return XPCJSStack::CreateStackFrameLocation(aLanguage,
                                                 aFilename,
                                                 aFunctionName,
                                                 aLineNumber,
@@ -709,9 +709,9 @@ nsXPConnect::CreateStackFrameLocation(PRBool isJSFrame,
                                                 _retval);
 }
 
-/* readonly attribute nsIJSStackFrameLocation CurrentJSStack; */
+/* readonly attribute nsIStackFrame CurrentJSStack; */
 NS_IMETHODIMP
-nsXPConnect::GetCurrentJSStack(nsIJSStackFrameLocation * *aCurrentJSStack)
+nsXPConnect::GetCurrentJSStack(nsIStackFrame * *aCurrentJSStack)
 {
     NS_ENSURE_ARG_POINTER(aCurrentJSStack);
     *aCurrentJSStack = nsnull;
@@ -720,21 +720,22 @@ nsXPConnect::GetCurrentJSStack(nsIJSStackFrameLocation * *aCurrentJSStack)
     // is there a current context available?
     if(mContextStack && NS_SUCCEEDED(mContextStack->Peek(&cx)) && cx)
     {
-        nsCOMPtr<nsIJSStackFrameLocation> stack;
+        nsCOMPtr<nsIStackFrame> stack;
         XPCJSStack::CreateStack(cx, getter_AddRefs(stack));
         if(stack)
         {
             // peel off native frames...
-            PRBool isJSFrame;
-            nsCOMPtr<nsIJSStackFrameLocation> caller;
-            while(NS_SUCCEEDED(stack->GetIsJSFrame(&isJSFrame)) &&
-                  !isJSFrame &&
+            PRUint32 language;
+            nsCOMPtr<nsIStackFrame> caller;
+            while(stack &&
+                  NS_SUCCEEDED(stack->GetLanguage(&language)) &&
+                  language != nsIProgrammingLanguage::JAVASCRIPT &&
                   NS_SUCCEEDED(stack->GetCaller(getter_AddRefs(caller))) &&
                   caller)
             {
                 stack = caller;
             }
-            NS_ADDREF(*aCurrentJSStack = stack);
+            NS_IF_ADDREF(*aCurrentJSStack = stack);
         }
     }
     return NS_OK;
@@ -759,9 +760,9 @@ nsXPConnect::GetCurrentNativeCallContext(nsIXPCNativeCallContext * *aCurrentNati
     return UnexpectedFailure(NS_ERROR_FAILURE);
 }
 
-/* attribute nsIXPCException PendingException; */
+/* attribute nsIException PendingException; */
 NS_IMETHODIMP
-nsXPConnect::GetPendingException(nsIXPCException * *aPendingException)
+nsXPConnect::GetPendingException(nsIException * *aPendingException)
 {
     NS_ENSURE_ARG_POINTER(aPendingException);
 
@@ -776,7 +777,7 @@ nsXPConnect::GetPendingException(nsIXPCException * *aPendingException)
 }
 
 NS_IMETHODIMP
-nsXPConnect::SetPendingException(nsIXPCException * aPendingException)
+nsXPConnect::SetPendingException(nsIException * aPendingException)
 {
     XPCPerThreadData* data = XPCPerThreadData::GetData();
     if(!data)

@@ -122,7 +122,7 @@ interface nsIXPCComponents : nsISupports
     readonly attribute nsIXPCComponents_Interfaces  interfaces;
     readonly attribute nsIXPCComponents_Classes     classes;
     readonly attribute nsIXPCComponents_ClassesByID classesByID;
-    readonly attribute nsIJSStackFrameLocation      stack;
+    readonly attribute nsIStackFrame                stack;
     readonly attribute nsIXPCComponents_Results     results;
     readonly attribute nsIComponentManager          manager;
 

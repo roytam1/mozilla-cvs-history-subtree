@@ -39,7 +39,6 @@
 
 - DOCS
     - update typelib spec ([astring] and [function])
-    - add isSuccessCode to Components doc
     - xpconnect api docs
     - discussion of flattening and implications
     - add to the faqs

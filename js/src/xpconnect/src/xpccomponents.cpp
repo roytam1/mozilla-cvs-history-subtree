@@ -979,10 +979,10 @@ nsXPCComponents_Exception::CallOrConstruct(nsIXPConnectWrappedNative *wrapper,
     }
 
     // initialization params for the exception object we will create
-    const char*                       eMsg = "exception";
-    nsresult                          eResult = NS_ERROR_FAILURE;
-    nsCOMPtr<nsIJSStackFrameLocation> eStack;
-    nsCOMPtr<nsISupports>             eData;
+    const char*             eMsg = "exception";
+    nsresult                eResult = NS_ERROR_FAILURE;
+    nsCOMPtr<nsIStackFrame> eStack;
+    nsCOMPtr<nsISupports>   eData;
 
     // all params are optional - grab any passed in
     switch(argc)
@@ -1012,7 +1012,7 @@ nsXPCComponents_Exception::CallOrConstruct(nsIXPConnectWrappedNative *wrapper,
             {
                 if(JSVAL_IS_PRIMITIVE(argv[2]) ||
                    NS_FAILED(xpc->WrapJS(cx, JSVAL_TO_OBJECT(argv[2]),
-                                         NS_GET_IID(nsIJSStackFrameLocation),
+                                         NS_GET_IID(nsIStackFrame),
                                          (void**)getter_AddRefs(eStack))))
                     return ThrowAndFail(NS_ERROR_XPC_BAD_CONVERT_JS, cx, _retval);
             }
@@ -1032,7 +1032,7 @@ nsXPCComponents_Exception::CallOrConstruct(nsIXPConnectWrappedNative *wrapper,
             ;   // -- do nothing --
     }
 
-    nsCOMPtr<nsIXPCException> e;
+    nsCOMPtr<nsIException> e;
     nsXPCException::NewException(eMsg, eResult, eStack, eData, getter_AddRefs(e));
     if(!e)
         return ThrowAndFail(NS_ERROR_XPC_UNEXPECTED, cx, _retval);
@@ -1575,7 +1575,7 @@ nsXPCComponents::IsSuccessCode(nsresult result, PRBool *out)
 }
 
 NS_IMETHODIMP
-nsXPCComponents::GetStack(nsIJSStackFrameLocation * *aStack)
+nsXPCComponents::GetStack(nsIStackFrame * *aStack)
 {
     nsresult rv;
     nsXPConnect* xpc = nsXPConnect::GetXPConnect();
@@ -1770,10 +1770,11 @@ NS_IMETHODIMP
 nsXPCComponents::CanGetProperty(const nsIID * iid, const PRUnichar *propertyName, char **_retval)
 {
     static const NS_NAMED_LITERAL_STRING(s_interfaces, "interfaces");
+    static const NS_NAMED_LITERAL_STRING(s_results, "results");
 
     const nsLiteralString name(propertyName);
 
-    if(name.Equals(s_interfaces))
+    if(name.Equals(s_interfaces) || name.Equals(s_results))
         *_retval = CloneAllAccess();
     else
         *_retval = nsnull;

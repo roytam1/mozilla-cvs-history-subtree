@@ -115,6 +115,8 @@ XPCWrappedNativeScope::GetNewOrUsed(XPCCallContext& ccx, JSObject* aGlobal)
     return scope;
 }
 
+MOZ_DECL_CTOR_COUNTER(XPCWrappedNativeScope)
+
 XPCWrappedNativeScope::XPCWrappedNativeScope(XPCCallContext& ccx,
                                              JSObject* aGlobal)
     :   mRuntime(ccx.GetRuntime()),
@@ -142,6 +144,7 @@ XPCWrappedNativeScope::XPCWrappedNativeScope(XPCCallContext& ccx,
         SetGlobal(ccx, aGlobal);
     
     DEBUG_TrackNewScope(this);
+    MOZ_COUNT_CTOR(XPCWrappedNativeScope);
 }
 
 void
@@ -187,6 +190,7 @@ XPCWrappedNativeScope::SetGlobal(XPCCallContext& ccx, JSObject* aGlobal)
 
 XPCWrappedNativeScope::~XPCWrappedNativeScope()
 {
+    MOZ_COUNT_DTOR(XPCWrappedNativeScope);
     DEBUG_TrackDeleteScope(this);
 
     // We can do additional cleanup assertions here...

@@ -89,7 +89,7 @@ XPCThrower::ThrowBadResult(nsresult rv, nsresult result, XPCCallContext& ccx)
     nsXPConnect* xpc = nsXPConnect::GetXPConnect();
     if(xpc)
     {
-        nsCOMPtr<nsIXPCException> e;
+        nsCOMPtr<nsIException> e;
         xpc->GetPendingException(getter_AddRefs(e));
         if(e)
         {
@@ -180,7 +180,7 @@ XPCThrower::BuildAndThrowException(JSContext* cx, nsresult rv, const char* sz)
     if(rv == NS_ERROR_XPC_SECURITY_MANAGER_VETO && JS_IsExceptionPending(cx))
         return;
 
-    nsCOMPtr<nsIXPCException> e;
+    nsCOMPtr<nsIException> e;
     nsXPCException::NewException(sz, rv, nsnull, nsnull, getter_AddRefs(e));
 
     if(e)
@@ -191,7 +191,7 @@ XPCThrower::BuildAndThrowException(JSContext* cx, nsresult rv, const char* sz)
 
 // static
 JSBool
-XPCThrower::ThrowExceptionObject(JSContext* cx, nsIXPCException* e)
+XPCThrower::ThrowExceptionObject(JSContext* cx, nsIException* e)
 {
     JSBool success = JS_FALSE;
     if(e)
@@ -204,7 +204,7 @@ XPCThrower::ThrowExceptionObject(JSContext* cx, nsIXPCException* e)
 
             nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
             nsresult rv = xpc->WrapNative(cx, glob, e,
-                                          NS_GET_IID(nsIXPCException),
+                                          NS_GET_IID(nsIException),
                                           getter_AddRefs(holder));
             if(NS_SUCCEEDED(rv) && holder)
             {

@@ -226,13 +226,13 @@ void
 nsXPCThreadJSContextStackImpl::FreeSingleton()
 {
     nsXPCThreadJSContextStackImpl* tcs = gXPCThreadJSContextStack;
-    if (tcs) {
+    if(tcs) 
+    {
         nsrefcnt cnt;
         NS_RELEASE2(tcs, cnt);
 #ifdef XPC_DUMP_AT_SHUTDOWN
-        if (0 != cnt) {
+        if(0 != cnt)
             printf("*** dangling reference to nsXPCThreadJSContextStackImpl: refcnt=%d\n", cnt);
-        }
 #endif
     }
 }
@@ -339,14 +339,17 @@ PRLock*           XPCPerThreadData::gLock     = nsnull;
 XPCPerThreadData* XPCPerThreadData::gThreads  = nsnull;
 
 XPCPerThreadData::XPCPerThreadData()
-    :   mException(nsnull),
-        mJSContextStack(new XPCJSContextStack()),
+    :   mJSContextStack(new XPCJSContextStack()),
         mNextThread(nsnull),
         mCallContext(nsnull),
         mResolveName(0),
         mResolvingWrapper(nsnull),
         mMostRecentJSContext(nsnull),
-        mMostRecentXPCContext(nsnull)
+        mMostRecentXPCContext(nsnull),
+        mExceptionManager(nsnull),
+        mException(nsnull),
+        mExceptionManagerNotAvailable(JS_FALSE)
+        
 {
     if(gLock)
     {
@@ -359,6 +362,7 @@ XPCPerThreadData::XPCPerThreadData()
 void
 XPCPerThreadData::Cleanup()
 {
+    NS_IF_RELEASE(mExceptionManager);
     NS_IF_RELEASE(mException);
     delete mJSContextStack;
     mJSContextStack = nsnull;
