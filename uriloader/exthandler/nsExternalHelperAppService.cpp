@@ -79,6 +79,8 @@
 
 #include "nsIStringBundle.h"
 
+#include "nsITextToSubURI.h"
+
 const char *FORCE_ALWAYS_ASK_PREF = "browser.helperApps.alwaysAsk.force";
 
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
@@ -905,8 +907,12 @@ void nsExternalAppHandler::ExtractSuggestedFileNameFromChannel(nsIChannel* aChan
 
         if (iter != start) { // not empty
           // ONLY if we got here, will we remember the suggested file name...
-          // The filename must be ASCII, see RFC 2183, section 2.3
-          CopyASCIItoUCS2(Substring(start, iter), mSuggestedFileName);
+          // The filename must be ASCII, see RFC 2231
+          // We ignore the filename in the header if the filename contains raw 8bit.
+          // (and keep the URI filename instead).
+          const nsACString& newFileName = Substring(start, iter);
+          if (IsASCII(newFileName))
+            CopyASCIItoUCS2(newFileName, mSuggestedFileName);
 
 #ifdef XP_WIN
           // Make sure extension is still correct.
@@ -1045,8 +1051,21 @@ nsresult nsExternalAppHandler::SetUpTempFile(nsIChannel * aChannel)
     url->GetFileName(leafName);
     if (!leafName.IsEmpty())
     {
-      NS_UnescapeURL(leafName);
-      mSuggestedFileName = NS_ConvertUTF8toUCS2(leafName); // XXX leafName may not be UTF-8
+
+      nsCOMPtr<nsITextToSubURI> textToSubURI = do_GetService(NS_ITEXTTOSUBURI_CONTRACTID, &rv);
+      if (NS_SUCCEEDED(rv))
+      {
+        nsCAutoString originCharset;
+        url->GetOriginCharset(originCharset);
+        rv = textToSubURI->UnEscapeURIForUI(originCharset, leafName, 
+                                            mSuggestedFileName);
+      }
+
+      if (NS_FAILED(rv))
+      {
+        mSuggestedFileName = NS_ConvertUTF8toUCS2(leafName); // use escaped name
+        rv = NS_OK;
+      }
 
 #ifdef XP_WIN
       // Make sure extension is still correct.
