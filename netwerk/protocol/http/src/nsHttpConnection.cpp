@@ -82,6 +82,9 @@ nsHttpConnection::OnHeadersAvailable(nsHttpTransaction *trans)
     // be pesimistic
     mKeepAlive = PR_FALSE;
 
+    if (!trans || !trans->ResponseHead())
+        return NS_OK;
+
     // inspect the connection headers for keep-alive info provided the
     // transaction completed successfully.
     const char *val = trans->ResponseHead()->PeekHeader(nsHttp::Connection);

@@ -169,7 +169,7 @@ nsHttpChannel::BuildStreamListenerProxy(nsIStreamListener **result)
 nsresult
 nsHttpChannel::ProcessResponse()
 {
-    NS_PRECONDITION(mResponseHead, "null response head");
+    NS_ENSURE_TRUE(mResponseHead, NS_ERROR_NOT_INITIALIZED);
 
     nsresult rv = NS_OK;
     PRUint32 httpStatus = mResponseHead->Status();

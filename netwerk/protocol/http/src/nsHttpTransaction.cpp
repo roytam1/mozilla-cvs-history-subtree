@@ -242,20 +242,22 @@ nsHttpTransaction::HandleContent(char *buf,
             return rv;
         }
 
-        // grab the content-length from the response headers
-        mContentLength = mResponseHead->ContentLength();
+        if (mResponseHead) {
+            // grab the content-length from the response headers
+            mContentLength = mResponseHead->ContentLength();
 
-        // handle chunked encoding here, so we'll know immediately when
-        // we're done with the socket.  please note that _all_ other
-        // decoding is done when the channel receives the content data
-        // so as not to block the socket transport thread too much.
-        const char *val =
-            mResponseHead->PeekHeader(nsHttp::Transfer_Encoding);
-        if (val) {
-            // we only support the "chunked" transfer encoding right now.
-            mChunkedDecoder = new nsHttpChunkedDecoder();
-            if (!mChunkedDecoder)
-                return NS_ERROR_OUT_OF_MEMORY;
+            // handle chunked encoding here, so we'll know immediately when
+            // we're done with the socket.  please note that _all_ other
+            // decoding is done when the channel receives the content data
+            // so as not to block the socket transport thread too much.
+            const char *val =
+                mResponseHead->PeekHeader(nsHttp::Transfer_Encoding);
+            if (val) {
+                // we only support the "chunked" transfer encoding right now.
+                mChunkedDecoder = new nsHttpChunkedDecoder();
+                if (!mChunkedDecoder)
+                    return NS_ERROR_OUT_OF_MEMORY;
+            }
         }
     }
 
