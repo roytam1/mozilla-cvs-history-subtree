@@ -33,7 +33,6 @@
 #include "prprf.h"
 #include "prmem.h"      // for PR_Malloc
 #include "prsystem.h"   // for PR_GetSystemInfo
-#include "nsIFileProtocolHandler.h"     // for NewChannelFromNativePath
 #include "nsLoadGroup.h"
 #include "nsInputStreamChannel.h"
 #include "nsXPIDLString.h" 
