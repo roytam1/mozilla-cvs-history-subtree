@@ -1055,7 +1055,7 @@ nsresult nsAddrDatabase::InitMDBInfo()
             GetStore()->StringToToken(GetEnv(),  kPriEmailColumn, &m_PriEmailColumnToken);
             GetStore()->StringToToken(GetEnv(),  kLowerPriEmailColumn, &m_LowerPriEmailColumnToken);
             GetStore()->StringToToken(GetEnv(),  k2ndEmailColumn, &m_2ndEmailColumnToken);
-            GetStore()->StringToToken(GetEnv(),  k2ndEmailColumn, &m_PrimaryColumnToken);
+            GetStore()->StringToToken(GetEnv(),  kPrimaryColumn, &m_PrimaryColumnToken);
             GetStore()->StringToToken(GetEnv(),  kPreferMailFormatColumn, &m_MailFormatColumnToken);
             GetStore()->StringToToken(GetEnv(),  kWorkPhoneColumn, &m_WorkPhoneColumnToken);
             GetStore()->StringToToken(GetEnv(),  kHomePhoneColumn, &m_HomePhoneColumnToken);
