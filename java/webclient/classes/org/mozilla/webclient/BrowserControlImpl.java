@@ -37,7 +37,7 @@ import java.awt.Rectangle;
  *
  */
 
-public class BrowserControlImpl extends Object implements BrowserControl
+public class BrowserControlImpl extends Object implements BrowserControl, EventRegistration
 {
 //
 // Protected Constants
@@ -69,8 +69,7 @@ public class BrowserControlImpl extends Object implements BrowserControl
 
 public BrowserControlImpl(int windowPtr, Rectangle bounds) throws Exception 
 {
-	nativeWebShell = BrowserControlMozillaShim.webShellCreate(windowPtr, 
-                                                              bounds);
+	nativeWebShell = BrowserControlMozillaShim.webShellCreate(windowPtr, bounds);
 }
 
 //
@@ -209,6 +208,21 @@ public String getURL (int historyIndex) throws Exception
 public boolean refresh() throws Exception
 {
     return BrowserControlMozillaShim.webShellRefresh(nativeWebShell);
+}
+
+/**
+ * get EventRegistration object
+ */
+
+public EventRegistration getEventRegistration() {
+    return this;
+}
+
+/**
+ * add document load event listener
+ */
+public boolean addDocumentLoadListener(DocumentLoadListener dll) throws Exception {
+    return BrowserControlMozillaShim.webShellAddDocListener(nativeWebShell, dll);
 }
 
 /**

@@ -299,6 +299,17 @@ public static void webShellDelete (int webShellPtr) throws Exception
 	}
 }
 
+public static boolean webShellAddDocListener(int webShellPtr, DocumentLoadListener dl) throws Exception 
+{
+    synchronized(lock) {
+        if (initialized) {
+            return instance.nativeWebShellAddDocListener(webShellPtr, dl);
+        } else {
+            throw new Exception ("instance is not initialized");
+        }
+    }
+}
+
 public static void webShellLoadURL (int webShellPtr, 
 									String urlString) throws Exception 
 {
@@ -527,6 +538,7 @@ private native void nativeUpdateEvent (int windowPtr, int eventTime);
 
 private native int  nativeWidgetCreate (int windowPtr, int x, int y, int width, int height) throws Exception;
 private native void nativeWidgetDelete (int widgetPtr) throws Exception;
+private native boolean nativeWebShellAddDocListener(int windowPtr, DocumentLoadListener dl);
 private native void nativeWidgetResize (int widgetPtr, int x, int y, int width, int height, boolean repaint);
 
 /*

@@ -36,4 +36,6 @@ package org.mozilla.webclient;
 public interface BrowserControl extends BrowserControlCore, BrowserControlExtended
 {
 
+public EventRegistration getEventRegistration();
+
 } // end of interface BrowserControl
