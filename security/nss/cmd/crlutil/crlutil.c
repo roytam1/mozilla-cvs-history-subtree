@@ -1,38 +1,35 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
+/*
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
  * The Original Code is the Netscape security libraries.
- *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1994-2000
- * the Initial Developer. All Rights Reserved.
- *
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are 
+ * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
+ * Rights Reserved.
+ * 
  * Contributor(s):
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+ * 
+ * Alternatively, the contents of this file may be used under the
+ * terms of the GNU General Public License Version 2 or later (the
+ * "GPL"), in which case the provisions of the GPL are applicable 
+ * instead of those above.  If you wish to allow use of your 
+ * version of this file only under the terms of the GPL and not to
+ * allow others to use your version of this file under the MPL,
+ * indicate your decision by deleting the provisions above and
+ * replace them with the notice and other provisions required by
+ * the GPL.  If you do not delete the provisions above, a recipient
+ * may use your version of this file under either the MPL or the
+ * GPL.
+ */
 
 /*
 ** certutil.c
@@ -199,16 +196,14 @@ SECStatus ImportCRL (CERTCertDBHandle *certHandle, char *url, int type,
     SECItem crlDER;
     PK11SlotInfo* slot = NULL;
     int rv;
-#if defined(DEBUG_jpierre)
     PRIntervalTime starttime, endtime, elapsed;
     PRUint32 mins, secs, msecs;
-#endif
 
     crlDER.data = NULL;
 
 
     /* Read in the entire file specified with the -f argument */
-    rv = SECU_ReadDERFromFile(&crlDER, inFile, PR_FALSE);
+	rv = SECU_ReadDERFromFile(&crlDER, inFile, PR_FALSE);
     if (rv != SECSuccess) {
 	SECU_PrintError(progName, "unable to read input file");
 	return (SECFailure);
@@ -218,32 +213,27 @@ SECStatus ImportCRL (CERTCertDBHandle *certHandle, char *url, int type,
 
     slot = PK11_GetInternalKeySlot();
  
-#if defined(DEBUG_jpierre)
     starttime = PR_IntervalNow();
-#endif
     crl = PK11_ImportCRL(slot, &crlDER, url, type,
           NULL, importOptions, NULL, decodeOptions);
-#if defined(DEBUG_jpierre)
     endtime = PR_IntervalNow();
     elapsed = endtime - starttime;
     mins = PR_IntervalToSeconds(elapsed) / 60;
     secs = PR_IntervalToSeconds(elapsed) % 60;
     msecs = PR_IntervalToMilliseconds(elapsed) % 1000;
     printf("Elapsed : %2d:%2d.%3d\n", mins, secs, msecs);
-#endif
     if (!crl) {
 	const char *errString;
 
-	rv = SECFailure;
 	errString = SECU_Strerror(PORT_GetError());
 	if ( errString && PORT_Strlen (errString) == 0)
-	    SECU_PrintError (progName, 
-	        "CRL is not imported (error: input CRL is not up to date.)");
+	    SECU_PrintError
+		    (progName, "CRL is not imported (error: input CRL is not up to date.)");
 	else    
-	    SECU_PrintError (progName, "unable to import CRL");
-    } else {
-	SEC_DestroyCrl (crl);
+	    SECU_PrintError
+		    (progName, "unable to import CRL");
     }
+    SEC_DestroyCrl (crl);
     if (slot) {
         PK11_FreeSlot(slot);
     }
@@ -444,7 +434,6 @@ int main(int argc, char **argv)
 	SECU_PrintPRandOSError(progName);
 	return -1;
     }
-    SECU_RegisterDynamicOids();
 
     certHandle = CERT_GetDefaultCertDB();
     if (certHandle == NULL) {
@@ -484,8 +473,8 @@ int main(int argc, char **argv)
 #endif    
     }
     if (NSS_Shutdown() != SECSuccess) {
-        rv = SECFailure;
+        exit(1);
     }
 
-    return (rv != SECSuccess);
+    return (rv);
 }
