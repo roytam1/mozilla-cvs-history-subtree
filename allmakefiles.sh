@@ -895,7 +895,6 @@ chrome/tools/chromereg/Makefile
 toolkit/Makefile
 toolkit/content/Makefile
 toolkit/content/buildconfig.html
-toolkit/locale/Makefile
 toolkit/obsolete/Makefile
 toolkit/components/autocomplete/Makefile
 toolkit/components/autocomplete/public/Makefile
@@ -926,7 +925,6 @@ toolkit/mozapps/installer/windows/wizard/setup/Makefile
 toolkit/mozapps/installer/windows/wizard/setuprsc/Makefile
 toolkit/mozapps/installer/windows/wizard/uninstall/Makefile
 toolkit/xre/Makefile
-toolkit/locale/contents-platform.rdf
 toolkit/components/passwordmgr/resources/content/contents.rdf
 toolkit/components/passwordmgr/resources/locale/contents.rdf
 toolkit/mozapps/contents-content.rdf

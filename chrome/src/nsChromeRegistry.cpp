@@ -129,6 +129,7 @@ DEFINE_RDF_VOCAB(CHROME_URI, CHROME, skinVersion);
 DEFINE_RDF_VOCAB(CHROME_URI, CHROME, localeVersion);
 DEFINE_RDF_VOCAB(CHROME_URI, CHROME, packageVersion);
 DEFINE_RDF_VOCAB(CHROME_URI, CHROME, disabled);
+DEFINE_RDF_VOCAB(CHROME_URI, CHROME, platformPackage);
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -298,6 +299,10 @@ nsChromeRegistry::Init()
 
   rv = mRDFService->GetResource(nsDependentCString(kURICHROME_disabled),
                                 getter_AddRefs(mDisabled));
+  NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
+
+  rv = mRDFService->GetResource(nsDependentCString(kURICHROME_platformPackage),
+                                getter_AddRefs(mPlatformPackage));
   NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
 
   nsCOMPtr<nsIObserverService> observerService =
@@ -615,7 +620,21 @@ nsChromeRegistry::GetBaseURL(const nsACString& aPackage,
   }
 
   // From this resource, follow the "baseURL" arc.
-  return FollowArc(mChromeDataSource, aBaseURL, resource, mBaseURL);
+  rv = FollowArc(mChromeDataSource, aBaseURL, resource, mBaseURL);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCAutoString isPlatformPackage;
+  rv = FollowArc(mChromeDataSource, isPlatformPackage, packageResource, mPlatformPackage);
+  if (NS_FAILED(rv) || !isPlatformPackage.Equals("true")) return NS_OK;
+
+#if defined(XP_WIN) || defined(XP_OS2)
+  aBaseURL.Append("win/");
+#elif defined(XP_MACOSX)
+  aBaseURL.Append("mac/");
+#else
+  aBaseURL.Append("unix/");
+#endif
+  return NS_OK;
 }
 
 nsresult
