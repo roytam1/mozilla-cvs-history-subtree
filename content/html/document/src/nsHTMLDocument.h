@@ -236,7 +236,7 @@ protected:
   static PRBool MatchNameAttribute(nsIContent* aContent, nsString* aData);
   static PRBool MatchFormControls(nsIContent* aContent, nsString* aData);
 
-  static nsresult GetSourceDocumentURI(nsIURI** sourceURI);
+  static nsresult GetSourceCodebaseURI(nsIURI** sourceURI);
 
   static void DocumentWriteTerminationFunc(nsISupports *aRef);
 
