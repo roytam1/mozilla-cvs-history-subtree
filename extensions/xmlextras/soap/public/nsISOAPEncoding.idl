@@ -181,4 +181,6 @@ interface nsISOAPEncoding : nsISupports {
 "@mozilla.org/xmlextras/soap/encoding;1"
 #define NS_SOAPENCODING_CONTRACTID_PREFIX \
 "@mozilla.org/xmlextras/soap/encoding;1?uri="
+#define NS_DEFAULTSOAPENCODER_CONTRACTID \
+NS_SOAPENCODING_CONTRACTID_PREFIX "http://schemas.xmlsoap.org/soap/encoding/"
 %}
