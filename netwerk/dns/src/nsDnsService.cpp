@@ -908,7 +908,7 @@ nsDNSService::nsDNSService()
 #if defined(XP_MAC)
     , mServiceRef(nsnull)
 #endif
-#if defined(XP_WIN)
+#if defined(XP_WIN) && !defined(WINCE)
     , mDNSWindow(nsnull)
 #endif
 #ifdef DNS_TIMING
@@ -1024,7 +1024,7 @@ nsDNSService::Init()
     NS_ASSERTION(NS_SUCCEEDED(rv), "NS_NewThread failed.");
     if (NS_FAILED(rv))  goto error_exit;
 
-#if defined(XP_WIN)
+#if defined(XP_WIN) && !defined(WINCE)
     // sync with DNS thread to allow it to create the DNS window
     while (!mDNSWindow) {
         status = PR_WaitCondVar(mDNSCondVar, PR_INTERVAL_NO_TIMEOUT);
