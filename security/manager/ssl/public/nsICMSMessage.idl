@@ -29,7 +29,7 @@ interface nsIX509Cert;
  *  Interface to access users certificate store
  */
 [scriptable, uuid(14b4394a-1dd2-11b2-b4fd-ba4a194fe97e)]
-interface nsICMSManager : nsISupports
+interface nsICMSSecureMessage : nsISupports
 {
   /**
    * encryptionCert - a BASE64 string representing the user's encryption
@@ -59,5 +59,5 @@ interface nsICMSManager : nsISupports
  *   implements nsICMSMessage
  */
 %{C++
-#define NS_CMSMANAGER_CONTRACTID "@mozilla.org/nsCMSManager;1"
+#define NS_CMSSECUREMESSAGE_CONTRACTID "@mozilla.org/nsCMSManager;1"
 %}
