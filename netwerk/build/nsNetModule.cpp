@@ -168,7 +168,6 @@ UnregisterBasicAuth(nsIComponentManager *aCompMgr, nsIFile *aPath,
 #include "mozTXTToHTMLConv.h"
 #include "nsUnknownDecoder.h"
 #include "nsTXTToHTMLConv.h"
-#include "nsIndexedToHTMLConv.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsUnknownDecoder);
 NS_GENERIC_FACTORY_CONSTRUCTOR(mozTXTToHTMLConv);
@@ -306,12 +305,6 @@ static nsModuleComponentInfo gNetModuleInfo[] = {
       nsFTPDirListingConv::Create
     },
     
-    { "NSIndexedToHTMLConvert",
-      NS_INDEXEDTOHTMLCONVERTER_CID,
-      NS_ISTREAMCONVERTER_KEY "?from=application/http-index-format&to=text/html",
-      nsIndexedToHTMLConv::Create
-    },
-
     { "MultiMixedConverter", 
       NS_MULTIMIXEDCONVERTER_CID,
       NS_ISTREAMCONVERTER_KEY "?from=multipart/x-mixed-replace&to=*/*", 
