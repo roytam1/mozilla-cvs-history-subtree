@@ -300,6 +300,7 @@ SVG_BRANCH_NEW_FILES = \
 	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusRegion.cpp \
 	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusRegion.h  \
 	layout/svg/renderer/src/gdiplus/nsSVGRendererGDIPlus.cpp \
+	layout/svg/renderer/src/libart/Makefile.in \
 	layout/svg/renderer/src/libart/libart-incs.h \
 	layout/svg/renderer/src/libart/nsISVGLibartCanvas.h \
 	layout/svg/renderer/src/libart/nsISVGLibartRegion.h \
