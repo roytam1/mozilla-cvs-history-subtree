@@ -25,12 +25,10 @@
 #include <string.h>
 #ifdef XP_MAC
 #include <extras.h> /* for malloc */
-#include <stdlib.h> /* for free */
-#elif defined(XP_MACOSX)
-#include <stdlib.h>
-#else
+#elif defined(HAVE_MALLOC_H)
 #include <malloc.h>
 #endif
+#include <stdlib.h> /* for free */
 
 #ifdef WIN32
 #define snprintf      _snprintf
