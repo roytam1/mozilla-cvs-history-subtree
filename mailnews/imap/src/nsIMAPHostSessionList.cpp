@@ -94,7 +94,7 @@ NS_IMPL_THREADSAFE_ISUPPORTS3(nsIMAPHostSessionList,
 
 nsIMAPHostSessionList::nsIMAPHostSessionList()
 {
-    NS_INIT_REFCNT ();
+    NS_INIT_ISUPPORTS ();
 	gCachedHostInfoMonitor = PR_NewMonitor(/* "accessing-hostlist-monitor"*/);
 	fHostInfoList = nsnull;
 }
