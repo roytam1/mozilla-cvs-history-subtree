@@ -2028,74 +2028,25 @@ file_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval
     return JS_TRUE;
 }
 
-
-/*
-static JSBool
-str_unescape(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
-{
-    JSString *str;
-    size_t i, ni;
-    const jschar *chars;
-    jschar *newchars;
-    jschar ch;
-
-    str = js_ValueToString(cx, argv[0]);
-    if (!str)
-	return JS_FALSE;
-    argv[0] = STRING_TO_JSVAL(str);
-
-    chars = str->chars;
-
-    newchars = (jschar *) JS_malloc(cx, (str->length + 1) * sizeof(jschar));
-    ni = i = 0;
-    while (i < str->length) {
-	ch = chars[i++];
-	if (ch == '%') {
-	    if (i + 1 < str->length &&
-		JS7_ISHEX(chars[i]) && JS7_ISHEX(chars[i + 1]))
-	    {
-		ch = JS7_UNHEX(chars[i]) * 16 + JS7_UNHEX(chars[i + 1]);
-		i += 2;
-	    } else if (i + 4 < str->length && chars[i] == 'u' &&
-		       JS7_ISHEX(chars[i + 1]) && JS7_ISHEX(chars[i + 2]) &&
-		       JS7_ISHEX(chars[i + 3]) && JS7_ISHEX(chars[i + 4]))
-	    {
-		ch = (((((JS7_UNHEX(chars[i + 1]) << 4)
-			+ JS7_UNHEX(chars[i + 2])) << 4)
-		      + JS7_UNHEX(chars[i + 3])) << 4)
-		    + JS7_UNHEX(chars[i + 4]);
-		i += 5;
-	    }
-	}
-	newchars[ni++] = ch;
-    }
-    newchars[ni] = 0;
-
-    str = js_NewString(cx, newchars, ni, 0);
-    if (!str) {
-	JS_free(cx, newchars);
-	return JS_FALSE;
-    }
-    *rval = STRING_TO_JSVAL(str);
-    return JS_TRUE;
-}
-*/
-
 static JSBool
 file_toURL(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSFile *file;
     jsval vals[1];
-
     char url[MAX_PATH_LENGTH];
 
     /* TODO: unescape */
     file = JS_GetInstancePrivate(cx, obj, &file_class, NULL);
+
+	JSFILE_CHECK_NATIVE("toURL");
+
     /* SECURITY ? */
     sprintf(url, "file://%s", file->path);
-    vals[1] = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, file->path));
-    JS_CallFunctionName(cx, obj, "unescape", 1, vals, rval);
+    *rval = JS_NewStringCopyZ(cx, js_escape(cx, obj, url));
     return JS_TRUE;
+out:
+    *rval = JSVAL_VOID;
+    return JS_FALSE;
 }
 
 
@@ -2214,7 +2165,6 @@ out:
 
 /* ------------------------- File methods and properties -------------------------------- */
 static JSFunctionSpec file_functions[] = {
-    { "toString",       file_toString, 0},
     { "open",           file_open, 0},
     { "close",          file_close, 0},
     { "remove",         file_remove, 0},
@@ -2230,6 +2180,8 @@ static JSFunctionSpec file_functions[] = {
     { "writeAll",       file_writeAll, 0},
     { "list",           file_list, 0},
     { "mkdir",          file_mkdir, 0},
+	{ "toString",       file_toString, 0},
+    { "toURL",			file_toURL, 0},
     {0}
 };
 

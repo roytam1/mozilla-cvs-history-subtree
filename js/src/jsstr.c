@@ -3670,6 +3670,16 @@ const uint32 js_A[] = {
 0x00000012   /*  123   Co */
 };
 
+char*
+js_escape(JSContext *cx, JSObject *obj, char *str){
+    jsval vp;
+    jsval args[1];
+
+    args[0] = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, str));
+    str_escape(cx, obj, 1, args, &vp);
+    return JS_GetStringBytes(JSVAL_TO_STRING(vp));
+}
+
 #ifndef __GNUC__
 jschar
 js_ToUpper(jschar c)
