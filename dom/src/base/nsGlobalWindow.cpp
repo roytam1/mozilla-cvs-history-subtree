@@ -2107,9 +2107,6 @@ GlobalWindowImpl::Alert(const nsAString& aString)
 {
   NS_ENSURE_STATE(mDocShell);
 
-  if (CheckForAbusePoint())
-    return NS_OK;
-
   nsAutoString str;
 
   str.Assign(aString);
@@ -2141,9 +2138,6 @@ NS_IMETHODIMP
 GlobalWindowImpl::Confirm(const nsAString& aString, PRBool* aReturn)
 {
   NS_ENSURE_STATE(mDocShell);
-
-  if (CheckForAbusePoint())
-    return NS_OK;
 
   nsAutoString str;
 
@@ -2182,9 +2176,6 @@ GlobalWindowImpl::Prompt(const nsAString& aMessage,
                          nsAString& aReturn)
 {
   NS_ENSURE_STATE(mDocShell);
-
-  if (CheckForAbusePoint())
-    return NS_OK;
 
   aReturn.Truncate(); // XXX Null string!!!
 
