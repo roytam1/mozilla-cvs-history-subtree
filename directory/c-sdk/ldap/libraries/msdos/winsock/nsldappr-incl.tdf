@@ -1,3 +1,0 @@
-; These are additional exports from nsldap.dll when it includes libprldap.
-; Tack this to the end of nsldap.def.
-$EXPORTS
