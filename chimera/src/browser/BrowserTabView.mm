@@ -366,13 +366,15 @@ const float kTabsInvisibleTopGap  = -7.0;		// space removed to push tab content 
     NSArray* contentIds = [[sender draggingPasteboard] propertyListForType: @"MozBookmarkType"];
     if (contentIds)
     {
+      BookmarksManager* bmManager = [BookmarksManager sharedBookmarksManager];
+      
       // drag type is chimera bookmarks
       for (unsigned int i = 0; i < [contentIds count]; ++i)
       {
-        BookmarkItem* item = [BookmarksService::gDictionary objectForKey: [contentIds objectAtIndex:i]];
+        BookmarkItem* item = [bmManager getWrapperForNumber:[contentIds objectAtIndex:i]];
         if ([item isGroup])
         {
-          NSArray* groupURLs = [[BookmarksManager sharedBookmarksManager] getBookmarkGroupURIs:item];
+          NSArray* groupURLs = [bmManager getBookmarkGroupURIs:item];
           [[[self window] windowController] openTabGroup:groupURLs replaceExistingTabs:YES];
         }
         else

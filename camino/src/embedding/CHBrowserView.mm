@@ -166,7 +166,7 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 - (void)destroyWebBrowser
 {
   NS_IF_RELEASE(mPrintSettings);
-  
+
   nsCOMPtr<nsIBaseWindow> baseWin = do_QueryInterface(_webBrowser);
   if ( baseWin ) {
     // clean up here rather than in the dtor so that if anyone tries to get our

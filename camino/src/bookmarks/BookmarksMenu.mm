@@ -237,8 +237,9 @@
   [menuItem setTitle: bookmarkTitle];
   
   // and reset the image
-  BookmarkItem* item = [[BookmarksManager sharedBookmarksManager] getWrapperForContent:bookmark];
-  [menuItem setImage: [item siteIcon]];
+  nsCOMPtr<nsIDOMElement> elt = do_QueryInterface(bookmark);
+  NSImage* menuItemImage = BookmarksService::CreateIconForBookmark(elt);
+  [menuItem setImage:menuItemImage];
 }
 
 - (void)specialFolder:(EBookmarksFolderType)folderType changedTo:(nsIContent*)newFolderContent

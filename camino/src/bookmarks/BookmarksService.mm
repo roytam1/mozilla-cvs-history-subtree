@@ -158,9 +158,15 @@ static bool SearchChildrenForMatchingFolder(nsIDOMElement* inCurElt, const nsASt
 
 #pragma mark -
 
-nsIDocument* BookmarksService::gBookmarks = nsnull;
+static nsIDocument* gBookmarksDocument = nsnull;
 
-NSMutableDictionary* BookmarksService::gDictionary = nil;
+// A dictionary that maps from content IDs (which uniquely identify content nodes)
+// to Obj-C bookmarkItem objects.  These objects are handed back to UI elements like
+// the outline view.
+static NSMutableDictionary* gBookmarkItemDictionary = nil;          // maps content IDs to items
+static NSMutableDictionary* gBookmarkFaviconURLDictionary = nil;    // maps favicon urls to dicts of items
+
+static NSMutableArray* gBookmarkClientsArray = nsnull;
 
 nsIDOMElement* BookmarksService::gToolbarRoot = nsnull;
 nsIDOMElement* BookmarksService::gDockMenuRoot = nsnull;
@@ -174,7 +180,6 @@ nsIAtom* BookmarksService::gKeywordAtom = nsnull;
 nsIAtom* BookmarksService::gNameAtom = nsnull;
 nsIAtom* BookmarksService::gOpenAtom = nsnull;
 
-NSMutableArray* BookmarksService::gClientsArray = nsnull;
 
 BOOL BookmarksService::gBookmarksFileReadOK = NO;
 
@@ -208,11 +213,11 @@ BookmarksService::Init()
 void
 BookmarksService::Shutdown()
 {
-  [gClientsArray release];
-  gClientsArray = nil;
+  [gBookmarkClientsArray release];
+  gBookmarkClientsArray = nil;
   
   // we should have already written bookmarks in response to a shutdown notification
-  NS_IF_RELEASE(gBookmarks);
+  NS_IF_RELEASE(gBookmarksDocument);
 
   NS_RELEASE(gBookmarkAtom);
   NS_RELEASE(gFolderAtom);
@@ -223,8 +228,11 @@ BookmarksService::Shutdown()
   NS_RELEASE(gDescriptionAtom);
   NS_RELEASE(gGroupAtom);
   
-  [gDictionary release];
-  gDictionary = nil;
+  [gBookmarkItemDictionary release];
+  gBookmarkItemDictionary = nil;
+
+  [gBookmarkFaviconURLDictionary release];
+  gBookmarkFaviconURLDictionary = nil;
 }
 
 #pragma mark -
@@ -233,8 +241,8 @@ void
 BookmarksService::GetRootContent(nsIContent** aResult)
 {
   *aResult = nsnull;
-  if (gBookmarks) {
-    nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(gBookmarks));
+  if (gBookmarksDocument) {
+    nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(gBookmarksDocument));
     if (!domDoc) return;
 
     nsCOMPtr<nsIDOMElement> elt;
@@ -259,8 +267,8 @@ BookmarksService::GetWrapperFor(nsIContent* aContent)
   if ( !aContent )
     return nil;
     
-  if (!gDictionary)
-    gDictionary = [[NSMutableDictionary alloc] initWithCapacity: 30];
+  if (!gBookmarkItemDictionary)
+    gBookmarkItemDictionary = [[NSMutableDictionary alloc] initWithCapacity: 30];
 
   PRUint32 contentID = 0;
   aContent->GetContentID(&contentID);
@@ -272,7 +280,7 @@ BookmarksService::GetWrapperFor(nsIContent* aContent)
   // Create an item.
   item = [[BookmarkItem alloc] init]; // The dictionary retains us.
   [item setContentNode: aContent];
-  [gDictionary setObject: item forKey: [NSNumber numberWithInt: contentID]];
+  [gBookmarkItemDictionary setObject: item forKey: [NSNumber numberWithInt: contentID]];
   [item release];
   return item;
 }
@@ -280,19 +288,19 @@ BookmarksService::GetWrapperFor(nsIContent* aContent)
 BookmarkItem*
 BookmarksService::GetWrapperFor(PRUint32 contentID)
 {
-  return [gDictionary objectForKey: [NSNumber numberWithUnsignedInt: contentID]];
+  return [gBookmarkItemDictionary objectForKey: [NSNumber numberWithUnsignedInt: contentID]];
 }
 
 void
 BookmarksService::BookmarkAdded(nsIContent* aContainer, nsIContent* aChild, bool shouldFlush)
 {
-  if (!gDictionary)
+  if (!gBookmarkItemDictionary)
     return;
 
-  unsigned int numClients = [gClientsArray count];
+  unsigned int numClients = [gBookmarkClientsArray count];
   for (unsigned int i = 0; i < numClients; i ++)
   {
-    id<BookmarksClient> client = [gClientsArray objectAtIndex:i];
+    id<BookmarksClient> client = [gBookmarkClientsArray objectAtIndex:i];
     [client bookmarkAdded:aChild inContainer:aContainer];
   }
   
@@ -303,13 +311,13 @@ BookmarksService::BookmarkAdded(nsIContent* aContainer, nsIContent* aChild, bool
 void
 BookmarksService::BookmarkChanged(nsIContent* aItem, bool shouldFlush)
 {
-  if (!gDictionary)
+  if (!gBookmarkItemDictionary)
     return;
 
-  unsigned int numClients = [gClientsArray count];
+  unsigned int numClients = [gBookmarkClientsArray count];
   for (unsigned int i = 0; i < numClients; i ++)
   {
-    id<BookmarksClient> client = [gClientsArray objectAtIndex:i];
+    id<BookmarksClient> client = [gBookmarkClientsArray objectAtIndex:i];
     [client bookmarkChanged:aItem];
   }
 
@@ -320,10 +328,10 @@ BookmarksService::BookmarkChanged(nsIContent* aItem, bool shouldFlush)
 void
 BookmarksService::BookmarkRemoved(nsIContent* aContainer, nsIContent* aChild, bool shouldFlush)
 {
-  unsigned int numClients = [gClientsArray count];
+  unsigned int numClients = [gBookmarkClientsArray count];
   for (unsigned int i = 0; i < numClients; i ++)
   {
-    id<BookmarksClient> client = [gClientsArray objectAtIndex:i];
+    id<BookmarksClient> client = [gBookmarkClientsArray objectAtIndex:i];
     [client bookmarkRemoved:aChild inContainer:aContainer];
   }
 
@@ -334,10 +342,10 @@ BookmarksService::BookmarkRemoved(nsIContent* aContainer, nsIContent* aChild, bo
 void
 BookmarksService::SpecialBookmarkChanged(EBookmarksFolderType aFolderType, nsIContent* aNewContent)
 {
-  unsigned int numClients = [gClientsArray count];
+  unsigned int numClients = [gBookmarkClientsArray count];
   for (unsigned int i = 0; i < numClients; i ++)
   {
-    id<BookmarksClient> client = [gClientsArray objectAtIndex:i];
+    id<BookmarksClient> client = [gBookmarkClientsArray objectAtIndex:i];
     [client specialFolder:aFolderType changedTo:aNewContent];
   }
 }
@@ -348,7 +356,7 @@ BookmarksService::AddBookmarkToFolder(const nsString& aURL, const nsString& aTit
   // XXX if no folder provided, default to root folder
   if (!aFolder) return;
   
-  nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(gBookmarks));
+  nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(gBookmarksDocument));
   if (!domDoc) return;
   
   nsCOMPtr<nsIDOMElement> elt;
@@ -512,11 +520,11 @@ BookmarksService::ReadBookmarks()
   // Actually, we do. We check for a root <parsererror> node. This relies on the XMLContentSink
   // behaviour.
   nsCOMPtr<nsIXBLService> xblService(do_GetService("@mozilla.org/xbl;1"));    
-  xblService->FetchSyncXMLDocument(uri, &gBookmarks);   // addref here
+  xblService->FetchSyncXMLDocument(uri, &gBookmarksDocument);   // addref here
     
   // test for a parser error. The XML parser replaces the document with one
   // that has a <parsererror> node as the root.
-  nsCOMPtr<nsIDOMDocument> bookmarksDOMDoc = do_QueryInterface(gBookmarks);
+  nsCOMPtr<nsIDOMDocument> bookmarksDOMDoc = do_QueryInterface(gBookmarksDocument);
   BOOL validBookmarksFile = CheckXMLDocumentParseSuccessful(bookmarksDOMDoc);
   
   if (!validBookmarksFile) {
@@ -563,7 +571,7 @@ BookmarksService::SaveBookmarksToFile(const nsAString& inFileName)
   NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(bookmarksFile));
   bookmarksFile->Append(inFileName);
   
-  nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(gBookmarks));
+  nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(gBookmarksDocument));
   if (!domDoc) {
     NSLog(@"No bookmarks document to save!");
     return;
@@ -578,7 +586,7 @@ BookmarksService::SaveBookmarksToFile(const nsAString& inFileName)
 }
 
 NSImage*
-BookmarksService::CreateIconForBookmark(nsIDOMElement* aElement)
+BookmarksService::CreateIconForBookmark(nsIDOMElement* aElement, PRBool useSiteIcon)
 {
   nsCOMPtr<nsIContent> content = do_QueryInterface(aElement);
   if (content)
@@ -595,7 +603,7 @@ BookmarksService::CreateIconForBookmark(nsIDOMElement* aElement)
       return [NSImage imageNamed:@"folder"];
     
     // fire off a site icon load
-    if ([[PreferenceManager sharedInstance] getBooleanPref:"browser.chrome.favicons" withSuccess:NULL])
+    if (useSiteIcon && [[PreferenceManager sharedInstance] getBooleanPref:"browser.chrome.favicons" withSuccess:NULL])
     {
       nsAutoString href;
       content->GetAttr(kNameSpaceID_None, gHrefAtom, href);
@@ -636,7 +644,7 @@ static bool AttributeStringContainsValue(const nsAString& inAttribute, const nsA
 
 bool BookmarksService::FindFolderWithAttribute(const nsAString& inAttribute, const nsAString& inValue, nsIDOMElement** foundElt)
 {
-  nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(gBookmarks));
+  nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(gBookmarksDocument));
   if (!domDoc) return false;
   
   nsCOMPtr<nsIDOMElement> rootElt;
@@ -647,7 +655,7 @@ bool BookmarksService::FindFolderWithAttribute(const nsAString& inAttribute, con
 
 void BookmarksService::EnsureToolbarRoot()
 {
-  if (!gBookmarks) return;
+  if (!gBookmarksDocument) return;
   
   if (!gToolbarRoot)
   {
@@ -659,7 +667,7 @@ void BookmarksService::EnsureToolbarRoot()
     if (!gToolbarRoot)
     {
       NSLog(@"Repairing personal toolbar");
-      nsCOMPtr<nsIDOMDocument> domDoc = do_QueryInterface(gBookmarks);
+      nsCOMPtr<nsIDOMDocument> domDoc = do_QueryInterface(gBookmarksDocument);
 
       nsCOMPtr<nsIDOMElement> rootElt;
       domDoc->GetDocumentElement(getter_AddRefs(rootElt));
@@ -927,7 +935,7 @@ BookmarksService::ImportBookmarks(nsIDOMHTMLDocument* aHTMLDoc)
   aHTMLDoc->GetDocumentElement(getter_AddRefs(htmlDocRoot));
 
   nsCOMPtr<nsIDOMElement>  bookmarksRoot;
-  nsCOMPtr<nsIDOMDocument> bookmarksDOMDoc(do_QueryInterface(gBookmarks));
+  nsCOMPtr<nsIDOMDocument> bookmarksDOMDoc(do_QueryInterface(gBookmarksDocument));
   if (!bookmarksDOMDoc) return;
   
   bookmarksDOMDoc->GetDocumentElement(getter_AddRefs(bookmarksRoot));
@@ -974,8 +982,8 @@ BookmarksService::ImportBookmarks(nsIDOMHTMLDocument* aHTMLDoc)
   
 #if 0
   // XXX testing
-  if (gDictionary)
-    [gDictionary removeAllObjects];
+  if (gBookmarkItemDictionary)
+    [gBookmarkItemDictionary removeAllObjects];
 #endif
 
   // this will save the file
@@ -995,7 +1003,7 @@ BookmarksService::ResolveKeyword(NSString* aKeyword)
   NSLog(@"str = %s", keyword.get());
 #endif
   
-  nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(gBookmarks));
+  nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(gBookmarksDocument));
   if (!domDoc) return @"";
   
   nsCOMPtr<nsIDOMElement> elt;
@@ -1322,7 +1330,6 @@ BookmarksService::PerformURLDrop(BookmarkItem* parentItem, BookmarkItem* beforeI
 
 - (void)setSiteIcon:(NSImage*)image
 {
-  //NSLog(@"Setting site icon for %@", [self url]);
   [mSiteIcon autorelease];
   mSiteIcon = [image retain];
 }
@@ -1413,6 +1420,13 @@ BookmarksService::PerformURLDrop(BookmarkItem* parentItem, BookmarkItem* beforeI
 
 @implementation BookmarksManager
 
+enum
+{
+  eSiteLoadingStateNone    = 0,
+  eSiteLoadingStateQueued  = 1,
+  eSiteLoadingStatePending = 2,
+  eSiteLoadingStateLoaded  = 3
+};
 
 static BookmarksManager* gBookmarksManager = nil;
 
@@ -1449,18 +1463,89 @@ static BookmarksManager* gBookmarksManager = nil;
 }
 
 - (void)loadProxyImageFor:(id)requestor withURI:(NSString*)inURIString
-{
-  [[SiteIconProvider sharedFavoriteIconProvider] loadFavoriteIcon:self
-      forURI:inURIString withUserData:requestor allowNetwork:NO];
+{	
+  NSString* faviconURL = [SiteIconProvider faviconLocationStringFromURI:inURIString];
+
+  // to avoid redundant loads, we keep a hash table which maps favicons urls
+  // to NSDictionaries, which in turn contain a state flag, and an array of
+  // UI items that use that url for their favicon.
+  if (!gBookmarkFaviconURLDictionary)
+    gBookmarkFaviconURLDictionary = [[NSMutableDictionary alloc] initWithCapacity:30];
+  
+  int loadingState = eSiteLoadingStateNone;
+
+  // each item is an array of bookmark items
+  NSMutableDictionary* siteDict = [gBookmarkFaviconURLDictionary objectForKey:faviconURL];
+  if (siteDict)
+  {
+    NSMutableArray* siteBookmarks = [siteDict objectForKey:@"sites"];
+    if (![siteBookmarks containsObject:requestor])
+      [siteBookmarks addObject:requestor];
+    
+    loadingState = [[siteDict objectForKey:@"state"] intValue];
+  }
+  else
+  {
+    NSMutableArray* siteBookmarks = [[NSMutableArray alloc] initWithObjects:requestor, nil];
+
+    siteDict = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+                                                   siteBookmarks, @"sites",
+                  [NSNumber numberWithInt:eSiteLoadingStateNone], @"state",
+                                                                  nil];
+
+    [gBookmarkFaviconURLDictionary setObject:siteDict forKey:faviconURL];
+  }
+  
+  if (loadingState == eSiteLoadingStateNone)
+  {
+    BOOL startedLoad = [[SiteIconProvider sharedFavoriteIconProvider] loadFavoriteIcon:self
+                              forURI:inURIString
+                              withUserData:faviconURL
+                              allowNetwork:NO];
+
+    if (startedLoad)
+    {
+      loadingState = eSiteLoadingStatePending;
+      [faviconURL retain]; 		// keep alive while the load is active
+    }
+    else
+      loadingState = eSiteLoadingStateLoaded;
+      
+    [siteDict setObject:[NSNumber numberWithInt:loadingState] forKey:@"state"];
+  }
+
 }
 
+- (void)updateProxyImage:(NSImage*)image forSiteIcon:(NSString*)inSiteIconURI
+{
+  if (gBookmarkFaviconURLDictionary)
+  {
+    NSMutableDictionary* siteDict      = [gBookmarkFaviconURLDictionary objectForKey:inSiteIconURI];
+    NSArray*             siteBookmarks = [siteDict objectForKey:@"sites"];
+    if (siteBookmarks)
+    {
+      for (unsigned int i = 0; i < [siteBookmarks count]; i ++)
+      {
+        BookmarkItem* foundItem = [siteBookmarks objectAtIndex:i];
+        if (foundItem)
+        {
+          [foundItem setSiteIcon:image];
+          BookmarksService::BookmarkChanged([foundItem contentNode], FALSE);
+        }
+      }
+    }
+
+    // set the state
+    [siteDict setObject:[NSNumber numberWithInt: eSiteLoadingStateLoaded] forKey:@"state"];
+  }
+}
 
 - (void)registerNotificationListener
 {
-  [[NSNotificationCenter defaultCenter] addObserver:	self
+  [[NSNotificationCenter defaultCenter] addObserver:  self
                                         selector:     @selector(imageLoadedNotification:)
                                         name:         SiteIconLoadNotificationName
-                                        object:				self];
+                                        object:       self];
 
   [[NSNotificationCenter defaultCenter] addObserver:  self
                                         selector:     @selector(shutdown:)
@@ -1478,34 +1563,31 @@ static BookmarksManager* gBookmarksManager = nil;
 // callback for [[SiteIconProvider sharedFavoriteIconProvider] loadFavoriteIcon]
 - (void)imageLoadedNotification:(NSNotification*)notification
 {
-  //NSLog(@"BookmarksManager imageLoadedNotification");
   NSDictionary* userInfo = [notification userInfo];
   if (userInfo)
   {
-    id       requestor = [userInfo objectForKey:SiteIconLoadUserDataKey];		// requestor is a BookmarkItem
-  	NSImage* iconImage = [userInfo objectForKey:SiteIconLoadImageKey];
+    NSString* faviconURL = [userInfo objectForKey:SiteIconLoadUserDataKey];
+  	NSImage*  iconImage  = [userInfo objectForKey:SiteIconLoadImageKey];
       
-    if (iconImage && [requestor isMemberOfClass:[BookmarkItem class]])
-    {
-      [requestor setSiteIcon:iconImage];
-      BookmarksService::BookmarkChanged([requestor contentNode], FALSE);
-    }
+    if (iconImage)
+      [self updateProxyImage:iconImage forSiteIcon:faviconURL];
     
+    [faviconURL release]; 		// match retain in loadProxyImageFor
   }
 }
 
 - (void)addBookmarksClient:(id<BookmarksClient>)client
 {
-  if (!BookmarksService::gClientsArray)
-    BookmarksService::gClientsArray = [[NSMutableArray alloc] initWithCapacity:4];
+  if (!gBookmarkClientsArray)
+    gBookmarkClientsArray = [[NSMutableArray alloc] initWithCapacity:4];
 
-  if (![BookmarksService::gClientsArray containsObject:client])
-    [BookmarksService::gClientsArray addObject:client];
+  if (![gBookmarkClientsArray containsObject:client])
+    [gBookmarkClientsArray addObject:client];
 }
 
 - (void)removeBookmarksClient:(id<BookmarksClient>)client
 {
-  [BookmarksService::gClientsArray removeObject:client];
+  [gBookmarkClientsArray removeObject:client];
 }
 
 - (BookmarkItem*)getWrapperForContent:(nsIContent*)item
@@ -1516,6 +1598,11 @@ static BookmarksManager* gBookmarksManager = nil;
 - (BookmarkItem*)getWrapperForID:(int)contentID
 {
   return BookmarksService::GetWrapperFor((PRUint32)contentID);
+}
+
+- (BookmarkItem*)getWrapperForNumber:(NSNumber*)contentIDNum
+{
+  return [gBookmarkItemDictionary objectForKey: contentIDNum];
 }
 
 - (nsIContent*)getRootContent
@@ -1547,8 +1634,8 @@ static BookmarksManager* gBookmarksManager = nil;
 {
   nsIDOMDocument* domDoc = NULL;
 
-  if (BookmarksService::gBookmarks)
-    BookmarksService::gBookmarks->QueryInterface(nsIDOMDocument::GetIID(), (void**)&domDoc);
+  if (gBookmarksDocument)
+    gBookmarksDocument->QueryInterface(nsIDOMDocument::GetIID(), (void**)&domDoc);
     
   return domDoc;
 }

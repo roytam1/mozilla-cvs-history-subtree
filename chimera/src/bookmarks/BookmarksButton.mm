@@ -39,7 +39,9 @@
 
 #import "BookmarkInfoController.h"
 #import "BookmarksService.h"
+#import "BookmarksDataSource.h"
 #import "BookmarksMenu.h"
+
 #import "BrowserWindowController.h"
 #import "MainController.h"
 
@@ -230,8 +232,8 @@
   nsAutoString tag;
   mElement->GetLocalName(tag);
 
-  NSImage* bookmarkImage = BookmarksService::CreateIconForBookmark(aElt);
-
+  NSImage* bookmarkImage = BookmarksService::CreateIconForBookmark(aElt, PR_TRUE);
+  
   nsAutoString group;
   mElement->GetAttribute(NS_LITERAL_STRING("group"), group);
   

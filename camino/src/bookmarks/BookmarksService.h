@@ -97,7 +97,7 @@ public:
   static void SetDockMenuRoot(nsIContent* inDockRootContent);
   static void SetToolbarRoot(nsIContent* inToolbarRootContent);
     
-  static NSImage* CreateIconForBookmark(nsIDOMElement* aElement);
+  static NSImage* CreateIconForBookmark(nsIDOMElement* aElement, PRBool useSiteIcon = PR_FALSE);
 
   static void ImportBookmarks(nsIDOMHTMLDocument* aHTMLDoc);
   
@@ -126,12 +126,6 @@ protected:
 
 public:
 
-  // A dictionary that maps from content IDs (which uniquely identify content nodes)
-  // to Obj-C bookmarkItem objects.  These objects are handed back to UI elements like
-  // the outline view.
-  static NSMutableDictionary* gDictionary;
-  static nsIDocument* gBookmarks;
-
   static nsIDOMElement* gToolbarRoot;
   static nsIDOMElement* gDockMenuRoot;
 
@@ -143,8 +137,6 @@ public:
   static nsIAtom* gBookmarkAtom;
   static nsIAtom* gOpenAtom;
   static nsIAtom* gGroupAtom;
-
-  static NSMutableArray* gClientsArray;
   
   static const int kBookmarksDividerTag;
 
@@ -202,6 +194,7 @@ protected:
 
 - (BookmarkItem*)getWrapperForContent:(nsIContent*)item;
 - (BookmarkItem*)getWrapperForID:(int)contentID;
+- (BookmarkItem*)getWrapperForNumber:(NSNumber*)contentIDNum;
 
 - (nsIContent*)getRootContent;		// addrefs return value
 - (nsIContent*)getToolbarRoot;		// addrefs return value
@@ -212,6 +205,7 @@ protected:
 - (NSArray*)getBookmarkGroupURIs:(BookmarkItem*)item;
 
 - (void)loadProxyImageFor:(id)requestor withURI:(NSString*)inURIString;
+- (void)updateProxyImage:(NSImage*)image forSiteIcon:(NSString*)inSiteIconURI;
 
 - (void)buildFlatFolderList:(NSMenu*)menu fromRoot:(nsIContent*)rootContent;
 

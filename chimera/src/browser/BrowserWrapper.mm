@@ -740,6 +740,8 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
       [tabItem setTabIcon:mSiteIconImage isDraggable:tabIconDraggable];
   }
   
+  // make sure any bookmarks at this site are updated
+  [[BookmarksManager sharedBookmarksManager] updateProxyImage:inSiteIcon forSiteIcon:inSiteIconURI];
 }
 
 - (void)registerNotificationListener

@@ -45,6 +45,7 @@
 #include "nsICacheSession.h"
 #include "nsICacheService.h"
 #include "nsICacheEntryDescriptor.h"
+#include "nsICachingChannel.h"
 
 NSString* RemoteDataLoadRequestNotificationName = @"remoteload_notification_name";
 NSString* RemoteDataLoadRequestURIKey           = @"remoteload_uri_key";
@@ -172,27 +173,15 @@ nsresult RemoteURILoadManager::RequestURILoad(const nsAString& inURI, id<RemoteL
 {
   nsresult rv;
   
-#if 0
-  // if no networking is allowed, make sure it's in the cache
-  if (!allowNetworking)
-  {
-    if (!mCacheSession)
-      return NS_ERROR_FAILURE;
-    
-    nsCOMPtr<nsICacheEntryDescriptor> entryDesc;
-    rv = mCacheSession->OpenCacheEntry(NS_ConvertUCS2toUTF8(inURI).get(), nsICache::ACCESS_READ, nsICache::NON_BLOCKING, getter_AddRefs(entryDesc));
-    if (NS_FAILED(rv) || !entryDesc)
-      return NS_ERROR_FAILURE;
-  }
-#endif
-
   nsStringKey	uriKey(inURI);
 
   // first make sure that there isn't another entry in the hash for this
   nsCOMPtr<nsISupports> foundStreamSupports = mStreamLoaderHash.Get(&uriKey);
   if (foundStreamSupports)
+  {
     return NS_OK;
-  
+  }
+
   nsCOMPtr<nsIURI> uri;
   rv = NS_NewURI(getter_AddRefs(uri), inURI);
   if (NS_FAILED(rv))
@@ -201,13 +190,32 @@ nsresult RemoteURILoadManager::RequestURILoad(const nsAString& inURI, id<RemoteL
   // create a load group, that we can use to cancel all the requests on quit
   if (!mLoadGroup)
     mLoadGroup = do_CreateInstance(NS_LOADGROUP_CONTRACTID);
-  
+    
   nsCOMPtr<nsISupports> loaderContext = new StreamLoaderContext(loadListener, userData, target, inURI);
    
   nsLoadFlags loadFlags = (allowNetworking) ? nsIRequest::LOAD_NORMAL : nsIRequest::LOAD_FROM_CACHE;
   loadFlags |= nsIRequest::LOAD_BACKGROUND;		// don't show progress or cookie dialogs
+
+  // we have to make a channel ourselves for the streamloader, so that we can 
+  // do the nsICachingChannel stuff.
+  nsCOMPtr<nsIChannel> channel;
+  rv = NS_NewChannel(getter_AddRefs(channel), uri, nsnull, mLoadGroup,
+                     nsnull, loadFlags);
+  if (NS_FAILED(rv)) return rv;
+
+  if (!allowNetworking)
+  {
+    nsCOMPtr<nsICachingChannel> cachingChannel = do_QueryInterface(channel);
+    if (cachingChannel)
+    {
+      rv = cachingChannel->SetCacheKey(nsnull, PR_TRUE);
+      if (NS_FAILED(rv))
+        return rv;
+    }
+  }
+  
   nsCOMPtr<nsIStreamLoader> streamLoader;
-  rv = NS_NewStreamLoader(getter_AddRefs(streamLoader), uri, this, loaderContext, mLoadGroup, nsnull, loadFlags);
+  rv = NS_NewStreamLoader(getter_AddRefs(streamLoader), channel, this, loaderContext) ; // , mLoadGroup, nsnull, loadFlags);
   if (NS_FAILED(rv))
   {
 #if DEBUG
@@ -219,7 +227,7 @@ nsresult RemoteURILoadManager::RequestURILoad(const nsAString& inURI, id<RemoteL
   // put the stream loader into the hash table
   nsCOMPtr<nsISupports> streamLoaderAsSupports = do_QueryInterface(streamLoader);
   mStreamLoaderHash.Put(&uriKey, streamLoaderAsSupports);
-  
+
   return NS_OK;
 }
 
@@ -257,6 +265,12 @@ nsresult RemoteURILoadManager::CancelAllRequests()
   {
     mLoadManager = new RemoteURILoadManager;
     NS_ADDREF(mLoadManager);
+    nsresult rv = mLoadManager->Init();
+    if (NS_FAILED(rv))
+    {
+      NS_RELEASE(mLoadManager);
+      mLoadManager = nil;
+    }
   }
   
   return self;
@@ -275,7 +289,7 @@ nsresult RemoteURILoadManager::CancelAllRequests()
   {
     nsAutoString uriString;
     [inURI assignTo_nsAString:uriString];
-
+    
     nsresult rv = mLoadManager->RequestURILoad(uriString, inListener, userData, target, (PRBool)inNetworkOK);
     if (NS_FAILED(rv))
       return NO;

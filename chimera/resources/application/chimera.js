@@ -66,3 +66,4 @@ pref("general.useragent.vendor", "Chimera");
 pref("general.useragent.vendorSub", "0.6+");
 
 pref("network.dir.generate_html", true);
+pref("browser.chrome.favicons", true);

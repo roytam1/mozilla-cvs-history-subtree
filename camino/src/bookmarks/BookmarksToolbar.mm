@@ -28,6 +28,7 @@
 #import "CHBrowserService.h"
 #import "BookmarksButton.h"
 #import "BrowserWindowController.h"
+#import "BookmarksDataSource.h"
 
 #include "nsIDOMElement.h"
 #include "nsIContent.h"
@@ -210,6 +211,7 @@
 #define kMaxBookmarkButtonWidth         150.0
 #define kBookmarkButtonHorizPadding       2.0
 #define kBookmarkButtonVerticalPadding    1.0
+#define kBookmarkToolbarBottomPadding     1.0
 
 -(void)reflowButtonsStartingAtIndex: (int)aIndex
 {
@@ -256,7 +258,7 @@
     }
   }
   
-  float computedHeight = curRowYOrigin + (kBookmarkButtonHeight + 2 * kBookmarkButtonVerticalPadding);
+  float computedHeight = curRowYOrigin + (kBookmarkButtonHeight + 2 * kBookmarkButtonVerticalPadding + kBookmarkToolbarBottomPadding);
     
   // our size has changed, readjust our view's frame and the content area
   if (computedHeight != oldHeight)
