@@ -58,7 +58,7 @@ CPP_OBJS=		\
     .\$(OBJDIR)\nsAuthEngine.obj    \
 	$(NULL)
 
-LOCAL_INCLUDES=-I.	
+LOCAL_INCLUDES=-I. -I..\..\..\base\src
 
 INCLUDES = $(LOCAL_INCLUDES)
 
@@ -67,6 +67,7 @@ REQUIRES= necko
 INCS = $(INCS)                  \
         -I$(DEPTH)\dist\include \
         -I..\public \
+	-I..\..\..\base\src \
         $(NULL)
 
 include <$(DEPTH)\config\rules.mak> 

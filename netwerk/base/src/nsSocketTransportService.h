@@ -83,6 +83,7 @@ public:
   nsresult AddToSelectList(nsSocketTransport* aTransport);
   nsresult RemoveFromSelectList(nsSocketTransport* aTransport);
 
+  nsresult wakeup (nsSocketTransport* transport);
 protected:
   nsIThread*            mThread;
 #ifdef USE_POLLABLE_EVENT

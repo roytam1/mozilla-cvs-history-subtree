@@ -137,7 +137,8 @@ nsSocketTransport::nsSocketTransport():
     mWriteCount(0),
     mWriteBuffer(nsnull),
     mWriteBufferIndex(0),
-    mWriteBufferLength(0)
+    mWriteBufferLength(0),
+	mBytesAllowed(-1)
 {
   NS_INIT_REFCNT();
 
@@ -446,13 +447,17 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
         // Fall into the Done state...
         //
       case eSocketState_Done:
+        printf ("eSocketState_Done\n");
+
         PR_LOG(gSocketLog, PR_LOG_DEBUG, 
                ("Transport [%s:%d %x] is in done state.\n", 
                 mHostName, mPort, this));
 
+        mBytesAllowed = -1;
         if (GetFlag(eSocketRead_Done)) {
           // Fire a notification that the read has finished...
           if (mReadListener) {
+            printf ("eSocketState_Done: firing OnStopRequest ()\n");
             mReadListener->OnStopRequest(this, mReadContext, mStatus, nsnull);
             mReadListener = null_nsCOMPtr();
             mReadContext  = null_nsCOMPtr();
@@ -526,12 +531,22 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
 
       case eSocketState_WaitReadWrite:
         // Process the read request...
-        if (GetReadType() != eSocketRead_None) {
-          mStatus = doRead(aSelectFlags);
-          if (NS_SUCCEEDED(mStatus)) {
-            SetFlag(eSocketRead_Done);
-            break;
-          }
+        printf ("eSocketState_WaitReadWrite: mBytesAllowed=%d\n", mBytesAllowed);
+        if (GetReadType() != eSocketRead_None)
+        {
+            if (mBytesAllowed == 0)
+            {
+                mStatus = NS_OK;
+                mSelectFlags &= (~PR_POLL_READ);
+            }
+            else
+                mStatus = doRead (aSelectFlags);
+
+            if (NS_SUCCEEDED(mStatus)) 
+            {
+                SetFlag(eSocketRead_Done);
+                break;
+            }
         }
         // Process the write request...
         if ((NS_SUCCEEDED(mStatus) || mStatus == NS_BASE_STREAM_WOULD_BLOCK)
@@ -837,11 +852,14 @@ nsReadFromSocket(void* closure,
 
   info->bEOF = PR_FALSE;
   *readCount = 0;
-  if (count > 0) {
-    len = PR_Read(info->fd, toRawSegment, count);
-    if (len >= 0) {
+  if (count > 0)
+  {
+        len = PR_Read (info -> fd, toRawSegment, count);
+
+    if (len >= 0)
+    {
       *readCount = (PRUint32)len;
-      info->bEOF = (0 == len);
+      info -> bEOF = (0 == len);
     } 
     //
     // Error...
@@ -947,7 +965,7 @@ nsresult nsSocketTransport::doRead(PRInt16 aSelectFlags)
   //
   totalBytesWritten = 0;
   info.fd = mSocketFD;
-  //
+
   // Release the transport lock...  WriteSegments(...) aquires the nsBuffer
   // lock which could cause a deadlock by blocking the socket transport 
   // thread
@@ -962,37 +980,52 @@ nsresult nsSocketTransport::doRead(PRInt16 aSelectFlags)
          mSocketFD, rv, totalBytesWritten));
 
   //
+  // Fire a single OnDataAvaliable(...) notification once as much data has
+  // been filled into the stream as possible...
+  //
+  if (totalBytesWritten)
+  {
+    if (mReadListener)
+    {
+      nsresult rv1;
+
+      printf ("doRead (): calling OnDataAvailable, offset=%d, totalBytes=%d, mBytesAllowed=%d\n", mReadOffset, totalBytesWritten, mBytesAllowed);
+
+      if (mBytesAllowed != -1 && mBytesAllowed != 0)
+            mBytesAllowed -= totalBytesWritten;
+
+      rv1 = mReadListener->OnDataAvailable(this, mReadContext, mReadPipeIn, 
+                                           mReadOffset, 
+                                           totalBytesWritten);
+
+      printf ("doRead (): OnDataAvailable complete, mBytesAllowed=%d\n", mBytesAllowed);
+
+      //
+      // If the consumer returns failure, then cancel the operation...
+      //
+      if (NS_FAILED(rv1))
+            rv = rv1;
+
+    }
+    mReadOffset += totalBytesWritten;
+  }
+
+  //
   // Deal with the possible return values...
   //
   if (NS_SUCCEEDED(rv)) {
-    if (info.bEOF) {       // EOF condition
+    if (info.bEOF || mBytesAllowed == 0)
+    {
+
+      printf ("doRead (): EOF condition detected, mBytesAllowed=%d\n", mBytesAllowed);
+
+      // EOF condition
       mSelectFlags &= (~PR_POLL_READ);
       rv = NS_OK;
     } 
     else {    // continue to return WOULD_BLOCK until we've completely finished this read
       rv = NS_BASE_STREAM_WOULD_BLOCK;
     }
-  }
-
-  //
-  // Fire a single OnDataAvaliable(...) notification once as much data has
-  // been filled into the stream as possible...
-  //
-  if (totalBytesWritten) {
-    if (mReadListener) {
-      nsresult rv1;
-
-      rv1 = mReadListener->OnDataAvailable(this, mReadContext, mReadPipeIn, 
-                                           mReadOffset, 
-                                           totalBytesWritten);
-      //
-      // If the consumer returns failure, then cancel the operation...
-      //
-      if (NS_FAILED(rv1)) {
-        rv = rv1;
-      }
-    }
-    mReadOffset += totalBytesWritten;
   }
 
   PR_LOG(gSocketLog, PR_LOG_DEBUG, 
@@ -1251,6 +1284,33 @@ NS_IMETHODIMP
 nsSocketTransport::SetReuseConnection(PRBool aReuse)
 {
     mCloseConnectionOnceDone = !aReuse;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSocketTransport::GetBytesAllowed (PRInt32 * bytes)
+{
+	if (bytes != NULL)
+	{
+		*bytes = mBytesAllowed;
+		return NS_OK;
+	}
+	return NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP
+nsSocketTransport::SetBytesAllowed (PRInt32 bytes)
+{
+	mBytesAllowed = bytes;
+
+    printf ("nsSocketTransport::SetBytesAllowed (): bytes = %d\n", bytes);
+
+    if (bytes == 0)
+    {
+        // XXX/ruslan: potential raise cond. here?
+        mService -> wakeup (this);
+    }
+
     return NS_OK;
 }
 

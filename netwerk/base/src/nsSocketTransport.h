@@ -226,6 +226,7 @@ protected:
   PRInt32                           mSuspendCount;
   PRInt32                           mWriteCount;
   nsCOMPtr<nsISupports>             mWriteContext;
+  PRInt32							mBytesAllowed;
 
   // The following four members are used when AsyncWrite(...) is called
   // with an nsIInputStream which does not also support the

@@ -791,7 +791,7 @@ nsresult nsHTTPHandler::RequestTransport(nsIURI* i_Uri,
     {
         mIdleTransports->Count(&count);
 
-        for (index=count-1; index >= 0; --index) 
+        for (index=count-1; index >= 0; --index, trans = nsnull)
         {
             nsCOMPtr<nsIURI> uri;
             trans = (nsIChannel*) mIdleTransports->ElementAt(index);

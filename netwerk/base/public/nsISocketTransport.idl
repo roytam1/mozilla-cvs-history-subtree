@@ -26,4 +26,5 @@
 interface nsISocketTransport : nsISupports 
 {
 	attribute boolean reuseConnection;
+	attribute long bytesAllowed;
 };

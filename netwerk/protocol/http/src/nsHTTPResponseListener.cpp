@@ -32,6 +32,7 @@
 #include "nsCRT.h"
 #include "nsIStreamConverterService.h"
 #include "nsIStreamConverter.h"
+#include "nsSocketTransport.h"
 
 #include "nsHTTPAtoms.h"
 #include "nsIHttpNotify.h"
@@ -223,6 +224,7 @@ nsHTTPServerListener::nsHTTPServerListener(nsHTTPChannel* aChannel)
            ("Creating nsHTTPServerListener [this=%x].\n", this));
 
 	mChunkConverterPushed = PR_FALSE;
+    mContentLengthDone = PR_FALSE;
 }
 
 nsHTTPServerListener::~nsHTTPServerListener()
@@ -336,6 +338,24 @@ nsHTTPServerListener::OnDataAvailable(nsIChannel* channel,
 
         if (NS_SUCCEEDED(rv)) {
             if (i_Length) {
+
+				if (!mContentLengthDone)
+				{
+					PRInt32 cl = -1;
+					mResponse -> GetContentLength (&cl);
+
+					if (cl != -1 && cl - i_Length >= 0)
+					{
+						nsSocketTransport* trans = NS_STATIC_CAST (nsSocketTransport*, channel);
+						if (trans != NULL)
+						{
+							trans -> SetBytesAllowed (cl - i_Length);
+							mContentLengthDone = PR_TRUE;
+
+                            PR_LOG (gHTTPLog, PR_LOG_DEBUG, ("nsHTTPServerListener::OnDataAvailable: bytesAllowed adjusted = %d\n", cl - i_Length));
+						}
+					}
+				}
 
 				if (!mChunkConverterPushed && mResponse -> isChunkedResponse ())
 				{
