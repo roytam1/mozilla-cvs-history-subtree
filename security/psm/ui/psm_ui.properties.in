@@ -1053,11 +1053,11 @@ prefs_list_js:
 {get_pref_list}
 
 var prefix = '<input type=hidden name="';
-var suffix = '">\\n';
+var suffix = '">';
 
 function writePrefInput(d, s)
 {
-    d.write(prefix + s + suffix);
+    d.writeln(prefix + s + suffix);
 }
 
 // creates the hidden buttons that are used to submit pref changes
