@@ -32,7 +32,7 @@
 
 class nsImapOfflineSync : public nsIUrlListener {
 public:												// set to one folder to playback one folder only
-	nsImapOfflineSync(nsIMsgWindow *window, nsIMsgFolder *singleFolderOnly = nsnull);
+	nsImapOfflineSync(nsIMsgWindow *window, nsIUrlListener *listener, nsIMsgFolder *singleFolderOnly = nsnull);
 	virtual ~nsImapOfflineSync();
 
   NS_DECL_ISUPPORTS
@@ -72,6 +72,7 @@ private:
 	nsMsgKeyArray				m_CurrentKeys;
 	PRUint32					m_KeyIndex;
 	nsCOMPtr <nsIMsgDatabase>				m_currentDB;
+  nsCOMPtr <nsIUrlListener> m_listener;
 	PRInt32				mCurrentUIDValidity;
 	PRInt32				mCurrentPlaybackOpType;	// kFlagsChanged -> kMsgCopy -> kMsgMoved
 	PRBool				m_mailboxupdatesStarted;

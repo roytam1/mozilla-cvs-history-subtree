@@ -581,7 +581,7 @@ nsImapMailFolder::UpdateFolder(nsIMsgWindow *msgWindow)
 
   if (hasOfflineEvents && !WeAreOffline())
   {
-    nsImapOfflineSync *goOnline = new nsImapOfflineSync(msgWindow, this);
+    nsImapOfflineSync *goOnline = new nsImapOfflineSync(msgWindow, this, this);
     if (goOnline)
     {
     	return goOnline->ProcessNextOperation();

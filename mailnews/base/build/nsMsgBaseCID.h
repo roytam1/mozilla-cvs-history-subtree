@@ -472,4 +472,16 @@
   {0xaeac118c, 0x0823, 0x11d5, \
     {0xa5, 0xbf, 0x00, 0x60, 0xb0, 0xfc, 0x04, 0xb7}}
 
+//
+// nsMsgAccountManager
+// 
+#define NS_MSGOFFLINEMANAGER_CONTRACTID \
+  "@mozilla.org/messenger/offline-manager;1"
+
+#define NS_MSGOFFLINEMANAGER_CID									\
+{ /* ac6c518a-09b2-11d5-a5bf-0060b0fc04b7 */			\
+ 0xac6c518a, 0x09b2, 0x11d5,											\
+ {0xa5, 0xbf, 0x0, 0x60, 0xb0, 0xfc, 0x04, 0xb7 }}
+
+
 #endif // nsMessageBaseCID_h__

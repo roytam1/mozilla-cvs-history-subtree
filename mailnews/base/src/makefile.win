@@ -98,6 +98,7 @@ CPP_OBJS=									\
 	.\$(OBJDIR)\nsMsgThreadedDBView.obj \
 	.\$(OBJDIR)\nsMsgSpecialViews.obj \
 	.\$(OBJDIR)\nsMsgSearchDBView.obj \
+	.\$(OBJDIR)\nsMsgOfflineManager.obj \
 	$(NULL)
 
 

@@ -125,7 +125,7 @@ Rights Reserved.
 	<broadcaster id="cmd_file" disabled="true"/>
 	<broadcaster id="cmd_emptyTrash" oncommand="goDoCommand('cmd_emptyTrash')" disabled="true"/>
 	<broadcaster id="cmd_compactFolder" oncommand="goDoCommand('cmd_compactFolder')" disabled="true"/>
-	<broadcaster id="cmd_workOffline" oncommand="goDoCommand('cmd_workOffline')" disabled="true"/>
+	<broadcaster id="cmd_workOffline" oncommand="goDoCommand('cmd_toggleWorkOffline')" />
 	<broadcaster id="cmd_synchronizeOffline" oncommand="goDoCommand('cmd_synchronizeOffline')" disabled="true"/>
 	<broadcaster id="cmd_downloadFlagged" oncommand="goDoCommand('cmd_downloadFlagged')" disabled="true"/>
 	<broadcaster id="cmd_downloadSelected" oncommand="goDoCommand('cmd_downloadSelected')" disabled="true"/>

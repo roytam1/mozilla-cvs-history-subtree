@@ -373,6 +373,7 @@ var MessageWindowController =
 			case "cmd_markAsFlagged":
 			case "cmd_file":
       case "cmd_downloadFlagged":
+      case "cmd_toggleWorkOffline":
 				return true;
 			default:
 				return false;
@@ -433,6 +434,8 @@ var MessageWindowController =
 				return IsGetNewMessagesEnabled();
 			case "cmd_getNextNMessages":
 				return IsGetNextNMessagesEnabled();
+      case "cmd_toggleWorkOffline":
+        return true;
 			default:
 				return false;
 		}
@@ -525,6 +528,9 @@ var MessageWindowController =
         return;
       case "cmd_downloadSelected":
         MsgDownloadSelected();
+        return;
+      case "cmd_toggleWorkOffline":
+        MsgToggleWorkOffline();
         return;
 		}
 	},

@@ -36,7 +36,7 @@ static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 
 NS_IMPL_ISUPPORTS1(nsImapOfflineSync, nsIUrlListener)
 
-nsImapOfflineSync::nsImapOfflineSync(nsIMsgWindow *window, nsIMsgFolder *singleFolderOnly)
+nsImapOfflineSync::nsImapOfflineSync(nsIMsgWindow *window, nsIUrlListener *listener, nsIMsgFolder *singleFolderOnly)
 {
   NS_INIT_REFCNT();
   m_singleFolderToUpdate = singleFolderOnly;
@@ -47,6 +47,7 @@ nsImapOfflineSync::nsImapOfflineSync(nsIMsgWindow *window, nsIMsgFolder *singleF
   m_pseudoOffline = PR_FALSE;
   m_KeyIndex = 0;
   mCurrentUIDValidity = nsMsgKey_None;
+  m_listener = listener;
 }
 
 nsImapOfflineSync::~nsImapOfflineSync()
@@ -69,6 +70,9 @@ nsImapOfflineSync::OnStopRunningUrl(nsIURI* url, nsresult exitCode)
   nsresult rv = exitCode;
   if (NS_SUCCEEDED(exitCode))
     rv = ProcessNextOperation();
+  else if (m_listener)  // notify main observer.
+    m_listener->OnStopRunningUrl(url, exitCode);
+   
 
   return rv;
 }
@@ -764,6 +768,13 @@ nsresult nsImapOfflineSync::ProcessNextOperation()
 //				folder= m_singleFolderToUpdate ? (MSG_FolderInfo *)nsnull : updateFolderIterator->Next();
 //       }
 	}
+  // if we get here, then I *think* we're done. Not sure, though.
+#ifdef DEBUG_bienvenu
+  printf("done with offline imap sync\n");
+#endif
+  if (m_listener)
+    m_listener->OnStopRunningUrl(nsnull /* don't know url */, rv);
+  m_listener = nsnull;
   return rv;
 }
 

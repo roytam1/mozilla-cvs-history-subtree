@@ -1055,3 +1055,19 @@ function Redo()
     messenger.Redo(msgWindow);
 }
 
+function MsgToggleWorkOffline()
+{
+  var ioService = nsJSComponentManager.getServiceByID("{9ac9e770-18bc-11d3-9337-00104ba0fd40}", "nsIIOService");
+  var broadcaster = document.getElementById("Communicator:WorkMode");
+  // this is just code for my testing purposes, and doesn't have the proper UI, as in the offline spec.
+  // we could use the account manager, or add a new service, the offline manager.
+  // what the heck, might as well bite the bullet and add a new service.
+  if (ioService.offline)
+  {
+    // if we were offline, then we're going online and should playback offline operations
+    accountManager = Components.classes["@mozilla.org/messenger/account-manager;1"].getService(Components.interfaces.nsIMsgAccountManager);
+  }
+  else // we were online, so we're going offline and should download everything for offline use
+  {
+  } 
+}

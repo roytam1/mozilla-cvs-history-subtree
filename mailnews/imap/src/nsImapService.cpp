@@ -57,6 +57,7 @@
 #include "nsIWebNavigation.h"
 #include "nsImapStringBundle.h"
 #include "plbase64.h"
+#include "nsImapOfflineSync.h"
 
 #define PREF_MAIL_ROOT_IMAP "mail.root.imap"
 
@@ -3308,3 +3309,15 @@ nsImapService::MessageURIToMsgHdr(const char *uri, nsIMsgDBHdr **_retval)
   NS_ENSURE_SUCCESS(rv,rv);
   return NS_OK;
 }
+
+NS_IMETHODIMP
+nsImapService::PlaybackAllOfflineOperations(nsIMsgWindow *aMsgWindow, nsIUrlListener *aListener)
+{
+  nsImapOfflineSync *goOnline = new nsImapOfflineSync(aMsgWindow, aListener, nsnull);
+  if (goOnline)
+  {
+    return goOnline->ProcessNextOperation();
+  }
+  return NS_ERROR_OUT_OF_MEMORY;
+}
+
