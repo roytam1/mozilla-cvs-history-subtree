@@ -212,16 +212,14 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
     jobject java_obj;
     jclass java_class;
     JavaClassDescriptor *class_descriptor;
-    char *error_msg, *js_error_msg;
-    const char *java_stack_trace;
-    const char *java_error_msg;
     jthrowable java_exception;
     JSType wrapped_exception_type;
     jsval js_exception;
        
-    /* Get the exception out of the java environment. */
     java_obj = NULL;
-    java_error_msg = error_msg = NULL;
+    class_descriptor = NULL;
+
+    /* Get the exception out of the java environment. */
     java_exception = (*jEnv)->ExceptionOccurred(jEnv);
 
     if (java_exception) {
@@ -246,7 +244,9 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
                     js_exception = JSVAL_NULL;
                 } else { 
                     java_class = (*jEnv)->GetObjectClass(jEnv, java_obj); 
-                    class_descriptor = jsj_GetJavaClassDescriptor(cx, jEnv, java_class); 
+                    class_descriptor = jsj_GetJavaClassDescriptor(cx, jEnv, java_class);
+                    /* OK to delete ref, since above call adds global ref */
+                    (*jEnv)->DeleteLocalRef(jEnv, java_class);  
                     
                     /* Convert native JS values back to native types. */
                     switch(wrapped_exception_type) {
@@ -306,21 +306,14 @@ do_report:
     
     JS_ASSERT(0);
     jsj_LogError("Out of memory while attempting to throw JSException\n");
-    goto done;
     
 done:
-
-    (*jEnv)->ExceptionClear(jEnv);
-    if (java_class)
-        (*jEnv)->DeleteLocalRef(jEnv, java_class);         
     if (class_descriptor)
         jsj_ReleaseJavaClassDescriptor(cx, jEnv, class_descriptor);
     if (java_obj)
         (*jEnv)->DeleteLocalRef(jEnv, java_obj);
     if (java_exception)
         (*jEnv)->DeleteLocalRef(jEnv, java_exception);
-    if (error_msg)
-	free(error_msg);
 }
 
 void

@@ -101,7 +101,7 @@ $(OBJDIR)/$(PROG_FILE)_lc.obj: ../$(PROG_FILE).c
 	$(CC) -Fo$@ -c $(CFLAGS) -DLIVECONNECT ../$(PROG_FILE).c
 
 $(PROGRAM): $(OBJDIR)/$(PROG_FILE)_lc.obj $(LIBRARY)
-	link.exe -out:"$@" $(EXE_LINK_FLAGS) ../$(OBJDIR)/js32.lib $?
+	link.exe -out:"$@" /pdb:"$(OBJDIR)/$(@F:.exe=.pdb)" $(EXE_LINK_FLAGS) ../$(OBJDIR)/js32.lib $?
 else
 $(OBJDIR)/$(PROG_FILE).o: ../$(PROG_FILE).c
 	@$(MAKE_OBJDIR)
