@@ -2025,7 +2025,7 @@ nsXULContentBuilder::OpenContainer(nsIContent* aElement)
     return NS_OK;
 }
 
-NS_IMETHODIMP
+nsresult
 nsXULContentBuilder::CloseContainer(nsIContent* aElement)
 {
     NS_PRECONDITION(aElement != nsnull, "null ptr");
