@@ -1,4 +1,5 @@
-/******************************************************************************
+/*  -*- Mode: C; eval: (c-set-style "GNU") -*-
+ ******************************************************************************
  * $Id$
  *
  * The contents of this file are subject to the Mozilla Public License
@@ -17,7 +18,8 @@
  * Corp., portions created by Clayton Donley are Copyright (C) Clayton
  * Donley. All Rights Reserved.
  *
- * Contributor(s):
+ * Contributor(s):	Leif Hedstrom <leif@perldap.org>
+ *			Kevin McCarthy <kevin@perldap.org>
  *
  * DESCRIPTION
  *    This is the XSUB interface for the API.
@@ -184,8 +186,9 @@ avref2charptrptr(SV *avref)
    SV **current_val;
    char **tmp_cpp;
 
-   if (SvTYPE(SvRV(avref)) != SVt_PVAV ||
-        (avref_arraylen = av_len((AV *)SvRV(avref))) < 0)
+   if ((! SvROK(avref)) ||
+       (SvTYPE(SvRV(avref)) != SVt_PVAV) ||
+       ((avref_arraylen = av_len((AV *)SvRV(avref))) < 0))
    {
       return NULL;
    }
@@ -212,8 +215,9 @@ avref2berptrptr(SV *avref)
    char *tmp_char,*tmp2;
    struct berval **tmp_ber;
 
-   if (SvTYPE(SvRV(avref)) != SVt_PVAV || 
-        (avref_arraylen = av_len((AV *)SvRV(avref))) < 0)
+   if ((! SvROK(avref)) ||
+       (SvTYPE(SvRV(avref)) != SVt_PVAV) || 
+       ((avref_arraylen = av_len((AV *)SvRV(avref))) < 0))
    {
       return NULL;
    }
