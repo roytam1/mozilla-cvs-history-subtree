@@ -17,7 +17,7 @@
  */
 /* 
  *
- *  cplusplus.cc --- C++ main for compilers/linkers/link formats that require it.
+ *  cplusplusmain.cc --- C++ main for compilers/linkers/link formats that require it.
  *
  *  This file is required when you are linking in C++ code. Some older C++
  *  linkers (HP, COFF I think, etc) require main() to be in a C++ file for
