@@ -150,7 +150,7 @@ menulist > menupopup > menuitem,
 .menulist-menupopup > menu,
 menulist > menupopup > menu {
   border: 1px solid transparent;
-  padding: 1px 30px 1px 5px;
+  padding: 1px 5px 1px 5px;
   max-width: none;
   font: message-box;
   color: #000000;
