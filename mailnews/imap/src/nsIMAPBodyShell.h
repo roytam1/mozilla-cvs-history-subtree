@@ -79,6 +79,7 @@ public:
 
 	virtual PRBool ShouldExplicitlyFetchInline();
 	virtual PRBool ShouldExplicitlyNotFetchInline();
+        virtual PRBool IsLastTextPart(const char *partNumberString) {return PR_TRUE;}
 
 protected:																// If stream is PR_FALSE, simply returns the content length that will be generated
 	virtual PRInt32	GeneratePart(PRBool stream, PRBool prefetch);					// the body of the part itself
@@ -173,6 +174,7 @@ public:
 	virtual PRBool	PreflightCheckAllInline();
 	virtual PRInt32	Generate(PRBool stream, PRBool prefetch);		// Generates an HTML representation of this part.  Returns content length generated, -1 if failed.
 	virtual nsIMAPBodypart	*FindPartWithNumber(const char *partNum);	// Returns the part object with the given number
+        virtual PRBool IsLastTextPart(const char *partNumberString);
 
 protected:
 	virtual PRBool ParseIntoObjects();

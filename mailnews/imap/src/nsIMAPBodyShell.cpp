@@ -129,7 +129,7 @@ nsIMAPBodyShell::~nsIMAPBodyShell()
 {
 	delete m_message;
 	delete m_prefetchQueue;
-	PR_FREEIF(m_folderName);
+  PR_Free(m_folderName);
 }
 
 void nsIMAPBodyShell::SetIsValid(PRBool valid)
@@ -943,11 +943,19 @@ PRBool	nsIMAPBodypartLeaf::ShouldFetchInline()
 		// View Attachments As Links is on.
 		if (!(m_shell->GetContentModified() == IMAP_CONTENT_MODIFIED_VIEW_INLINE))
 		{
-			// The first text part is still displayed inline,
+      // The last text part is still displayed inline,
 			// even if View Attachments As Links is on.
-			if (!PL_strcmp(m_partNumberString, "1") &&
+      nsCOMPtr<nsIPrefBranch> prefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID));
+      PRBool preferPlainText = PR_FALSE;
+      if (prefBranch)
+        prefBranch->GetBoolPref("mailnews.display.prefer_plaintext", &preferPlainText);
+
+      if ((preferPlainText && !PL_strcmp(m_partNumberString, "1") &&
 				!PL_strcasecmp(m_bodyType, "text"))
+          || m_parentPart->IsLastTextPart(m_partNumberString))
+      {
 				return PR_TRUE;	// we're downloading it inline
+      }
 			else
 			{
 				// This is the first text part of a top-level multipart.
@@ -993,6 +1001,21 @@ PRBool	nsIMAPBodypartLeaf::ShouldFetchInline()
 		// any other parts that we know we can't display inline.
 		return PR_TRUE;	// we're downloading it inline
 	}
+}
+
+
+
+PRBool nsIMAPBodypartMultipart::IsLastTextPart(const char *partNumberString)
+{
+ // iterate backwards over the parent's part list and if the part is
+  // text, compare it to the part number string
+  for (int i = m_partList->Count() - 1; i >= 0; i--)
+  {
+      nsIMAPBodypart *part = (nsIMAPBodypart *)(m_partList->ElementAt(i));
+      if (!PL_strcasecmp(part->GetBodyType(), "text"))
+        return !PL_strcasecmp(part->GetPartNumberString(), partNumberString);
+  }
+  return PR_FALSE;
 }
 
 PRBool	nsIMAPBodypartLeaf::PreflightCheckAllInline()
