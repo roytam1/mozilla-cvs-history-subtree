@@ -321,6 +321,10 @@ nsMsgNewsFolder::GetSubFolders(nsIEnumerator* *result)
 	nsresult rv;
 
   if (!mInitialized) {
+    // do this first, so we make sure to do it, even on failure.
+    // see bug #70494
+    mInitialized = PR_TRUE;
+
 	nsCOMPtr<nsIFileSpec> pathSpec;
 	rv = GetPath(getter_AddRefs(pathSpec));
 	if (NS_FAILED(rv)) return rv;
@@ -335,8 +339,6 @@ nsMsgNewsFolder::GetSubFolders(nsIEnumerator* *result)
 	// force ourselves to get initialized from cache
     rv = UpdateSummaryTotals(PR_FALSE); 
     if (NS_FAILED(rv)) return rv;
-
-    mInitialized = PR_TRUE;      // XXX do this on failure too?
   }
   rv = mSubFolders->Enumerate(result);
   return rv;
@@ -544,8 +546,11 @@ NS_IMETHODIMP nsMsgNewsFolder::CreateSubfolder(const PRUnichar *uninewsgroupname
 
 	//Now we have a valid directory or we have returned.
 	//Make sure the new folder name is valid
-	// do we need to hash newsgroup name if it is too big?
-	path += (const char *) newsgroupname;
+
+    // remember, some file systems (like mac) can't handle long file names
+    nsCAutoString hashedName = newsgroupname;
+    rv = NS_MsgHashIfNecessary(hashedName);
+	path += (const char *) hashedName;
 	
 	rv = nsComponentManager::CreateInstance(kCNewsDB, nsnull, NS_GET_IID(nsIMsgDatabase), getter_AddRefs(newsDBFactory));
 	if (NS_SUCCEEDED(rv) && newsDBFactory) {
