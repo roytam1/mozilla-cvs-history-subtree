@@ -1236,7 +1236,7 @@ _PR_MD_MKDIR(const char *name, PRIntn mode)
 #if !defined(WINCE)
         CreateDirectory(name, NULL)
 #else
-        CreateDirectoryA(name, NULL)
+        _MD_CreateDirectoryA(name, NULL)
 #endif
         ) {
         return 0;
@@ -1265,7 +1265,7 @@ _PR_MD_MAKE_DIR(const char *name, PRIntn mode)
 #if !defined(WINCE)
     rv = CreateDirectory(name, lpSA);
 #else
-    rv = CreateDirectoryA(name, lpSA);
+    rv = _MD_CreateDirectoryA(name, lpSA);
 #endif
     if (lpSA != NULL) {
         _PR_NT_FreeSecurityDescriptorACL(pSD, pACL);

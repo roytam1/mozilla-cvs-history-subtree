@@ -100,6 +100,13 @@ _MD_GetFileAttributesA(
     LPCSTR lpFileName
     );
 
+BOOL
+WINAPI
+_MD_CreateDirectoryA(
+    LPCSTR lpPathName,
+    LPSECURITY_ATTRIBUTES lpSecurityAttributes
+    );
+
 #endif /* WINCE */
 
 #endif /* nspr_win32_unicode_h___ */

@@ -354,4 +354,31 @@ _MD_GetFileAttributesA(
     return retval;
 }
 
+BOOL
+WINAPI
+_MD_CreateDirectoryA(
+    LPCSTR lpPathName,
+    LPSECURITY_ATTRIBUTES lpSecurityAttributes
+    )
+{
+    BOOL retval = FALSE;
+    LPWSTR wideStr = NULL;
+    WCHAR widePath[MAX_PATH + 1];
+
+    wideStr = _PR_MD_A2W(lpPathName, widePath, sizeof(widePath) / sizeof(WCHAR));
+    if(NULL != wideStr)
+    {
+        retval = CreateDirectoryW(
+            wideStr,
+            lpSecurityAttributes
+            );
+    }
+    else
+    {
+        PR_SetError(PR_NAME_TOO_LONG_ERROR, 0);
+    }
+
+    return retval;
+}
+
 #endif /* WINCE */
