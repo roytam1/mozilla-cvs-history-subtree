@@ -22,8 +22,7 @@ outlinerbody {
 outlinerbody:-moz-outliner-row
 {
   height: 17px;
-  border-right: 1px solid transparent;
-  border-left: 1px solid transparent;
+  border: 1px solid transparent;
 }
 
 outlinerbody:-moz-outliner-row(current)
