@@ -184,7 +184,7 @@ void DEBUG_CheckWrapperThreadSafety(const XPCWrappedNative* wrapper);
 
 #define XPC_CONTEXT_MAP_SIZE             16
 #define XPC_JS_MAP_SIZE                  64
-#define XPC_JS_CLASS_MAP_SIZE           128
+#define XPC_JS_CLASS_MAP_SIZE            64
 
 #define XPC_NATIVE_MAP_SIZE              64
 #define XPC_NATIVE_PROTO_MAP_SIZE        16
@@ -203,7 +203,6 @@ extern const char XPC_CONSOLE_CONTRACTID[];
 extern const char XPC_SCRIPT_ERROR_CONTRACTID[];
 extern const char XPC_ID_CONTRACTID[];
 extern const char XPC_XPCONNECT_CONTRACTID[];
-
 
 /***************************************************************************/
 // useful macros...
@@ -1220,6 +1219,11 @@ private:
 };
 
 /***************************************************************************/
+// XPCNativeScriptableFlags is a wrapper class that holds the flags returned
+// from calls to nsIXPCScriptable::GetScriptableFlags(). It has convenience
+// methods to check for particular bitflags. Since we also use this class as
+// a member of the gc'd class XPCNativeScriptableShared, this class holds the 
+// bit and exposes the inlined methods to support marking.
 
 #define XPC_WN_SJSFLAGS_MARK_FLAG 0x80000000 // only high bit of 32 is set
 
@@ -1590,21 +1594,37 @@ public:
     JSBool
     IsValid() const {return nsnull != mFlatJSObject;}
 
+#define XPC_SCOPE_TAG     ((jsword)0x1)
+#define XPC_SCOPE_WORD(s) ((jsword)(s))
+
+    static inline JSBool
+    IsTaggedScope(XPCWrappedNativeScope* s) 
+        {return (XPC_SCOPE_WORD(s) & XPC_SCOPE_TAG);}
+
+    static inline XPCWrappedNativeScope*
+    TagScope(XPCWrappedNativeScope* s) 
+        {NS_ASSERTION(!IsTaggedScope(s), "bad pointer!");
+         return (XPCWrappedNativeScope*)(XPC_SCOPE_WORD(s) | XPC_SCOPE_TAG);}
+
+    static inline XPCWrappedNativeScope*
+    UnTagScope(XPCWrappedNativeScope* s) 
+        {return (XPCWrappedNativeScope*)(XPC_SCOPE_WORD(s) & ~XPC_SCOPE_TAG);}
+
     JSBool
-    HasProto()          const {return !mScopeOrHasProtoIfNull;}
+    HasProto() const {return !IsTaggedScope(mMaybeScope);}
 
     XPCWrappedNativeProto*
-    GetProto()          const {return HasProto() ? mMaybeProto : nsnull;}
+    GetProto() const {return HasProto() ? mMaybeProto : nsnull;}
+
+    XPCWrappedNativeScope*
+    GetScope() const { return HasProto() ? 
+                           mMaybeProto->GetScope() : UnTagScope(mMaybeScope);}
 
     nsISupports*
     GetIdentityObject() const {return mIdentity;}
 
     JSObject*
     GetFlatJSObject()   const {return mFlatJSObject;}
-
-    XPCWrappedNativeScope*
-    GetScope() const { return HasProto() ?
-                              mMaybeProto->GetScope() : mScopeOrHasProtoIfNull;}
 
     XPCLock*
     GetLock() const {return IsValid() && HasProto() ?
@@ -1626,8 +1646,7 @@ public:
 
     void**
     GetSecurityInfoAddr() {return HasProto() ?
-                                    mMaybeProto->GetSecurityInfoAddr() :
-                                    &mMaybeSecurityInfo;}
+                                   mMaybeProto->GetSecurityInfoAddr() : nsnull;}
 
     nsIClassInfo*
     GetClassInfo() const {return IsValid() && HasProto() ?
@@ -1776,11 +1795,10 @@ private:
                         XPCNativeScriptableCreateInfo* sciWrapper);
 
 private:
-    XPCWrappedNativeScope*       mScopeOrHasProtoIfNull;
     union
     {
+        XPCWrappedNativeScope*   mMaybeScope;
         XPCWrappedNativeProto*   mMaybeProto;
-        void*                    mMaybeSecurityInfo;
     };
     XPCNativeSet*                mSet;
     nsISupports*                 mIdentity;

@@ -441,8 +441,7 @@ XPCWrappedNative::GetUsedOnly(XPCCallContext& ccx,
 // This ctor is used if this object will have a proto.
 XPCWrappedNative::XPCWrappedNative(nsISupports* aIdentity,
                                    XPCWrappedNativeProto* aProto)
-    : mScopeOrHasProtoIfNull(nsnull),
-      mMaybeProto(aProto),
+    : mMaybeProto(aProto),
       mSet(aProto->GetSet()),
       mIdentity(aIdentity),
       mFlatJSObject((JSObject*)JSVAL_ONE), // non-null to pass IsValid() test
@@ -462,8 +461,7 @@ XPCWrappedNative::XPCWrappedNative(nsISupports* aIdentity,
                                    XPCWrappedNativeScope* aScope,
                                    XPCNativeSet* aSet)
 
-    : mScopeOrHasProtoIfNull(aScope),
-      mMaybeSecurityInfo(nsnull),
+    : mMaybeScope(TagScope(aScope)),
       mSet(aSet),
       mIdentity(aIdentity),
       mFlatJSObject((JSObject*)JSVAL_ONE), // non-null to pass IsValid() test
@@ -472,8 +470,8 @@ XPCWrappedNative::XPCWrappedNative(nsISupports* aIdentity,
     NS_INIT_ISUPPORTS();
     NS_ADDREF(mIdentity);
 
-    NS_ASSERTION(mScopeOrHasProtoIfNull, "bad ctor param");
-    NS_ASSERTION(mSet, "bad ctor param");
+    NS_ASSERTION(aScope, "bad ctor param");
+    NS_ASSERTION(aSet, "bad ctor param");
 
     DEBUG_TrackNewWrapper(this);
 }
@@ -2107,7 +2105,7 @@ NS_IMETHODIMP XPCWrappedNative::DebugDump(PRInt16 depth)
                 XPC_LOG_ALWAYS(("mMaybeProto @ %x", mMaybeProto));
         }
         else
-            XPC_LOG_ALWAYS(("mScopeOrHasProtoIfNull @ %x", mScopeOrHasProtoIfNull));
+            XPC_LOG_ALWAYS(("Scope @ %x", UnTagScope(mMaybeScope)));
 
         if(depth && mSet)
             mSet->DebugDump(depth);
