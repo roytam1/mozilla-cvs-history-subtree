@@ -108,6 +108,7 @@ INSTALL_FILE_LIST= protocol.h \
    rsrcids.h \
    messages.h \
    newproto.h \
+   obscure.h \
    $(NULL)
 
 #//------------------------------------------------------------------------

@@ -54,7 +54,6 @@ CSRCS = cmtinit.c  \
         cmtpasswd.c \
 	cmtadvisor.c \
 	cmtrng.c \
-	cmtsdr.c \
 	$(NULL)
 
 REQUIRES = nspr security

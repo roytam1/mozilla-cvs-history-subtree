@@ -273,7 +273,7 @@ static PRIOMethods _pr_fileMethods = {
     (PRGetsocketoptionFN)_PR_InvalidStatus,	
     (PRSetsocketoptionFN)_PR_InvalidStatus,
     (PRSendfileFN)_PR_InvalidInt, 
-    (PRConnectcontinueFN)_PR_InvalidStatus, 
+    (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
@@ -317,7 +317,7 @@ static PRIOMethods _pr_pipeMethods = {
     (PRGetsocketoptionFN)_PR_InvalidStatus,	
     (PRSetsocketoptionFN)_PR_InvalidStatus,
     (PRSendfileFN)_PR_InvalidInt, 
-    (PRConnectcontinueFN)_PR_InvalidStatus, 
+    (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
@@ -507,23 +507,6 @@ PR_IMPLEMENT(PRFileDesc*) PR_ImportFile(PRInt32 osfd)
     if (!_pr_initialized) _PR_ImplicitInitialization();
 
     fd = PR_AllocFileDesc(osfd, &_pr_fileMethods);
-    if( !fd ) {
-        (void) _PR_MD_CLOSE_FILE(osfd);
-    }
-
-    return fd;
-}
-
-/*
-** Import an existing OS pipe to NSPR 
-*/
-PR_IMPLEMENT(PRFileDesc*) PR_ImportPipe(PRInt32 osfd)
-{
-    PRFileDesc *fd = NULL;
-
-    if (!_pr_initialized) _PR_ImplicitInitialization();
-
-    fd = PR_AllocFileDesc(osfd, &_pr_pipeMethods);
     if( !fd ) {
         (void) _PR_MD_CLOSE_FILE(osfd);
     }

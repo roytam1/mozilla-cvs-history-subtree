@@ -132,10 +132,6 @@ static PRInt32 udp_datagram_size = UDP_DGRAM_SIZE;
 static PRInt32 thread_count;
 PRUint16 server_domain = PR_AF_INET, client_domain = PR_AF_INET;
 
-/* an I/O layer that uses the emulated senfile method */
-static PRDescIdentity emuSendFileIdentity;
-static PRIOMethods emuSendFileMethods;
-
 int failed_already=0;
 typedef struct buffer {
     char    data[BUF_DATA_SIZE];
@@ -163,31 +159,6 @@ typedef struct Client_Param {
     PRInt32    datalen;
     PRInt32    udp_connect;    /* if set clients connect udp sockets */
 } Client_Param;
-
-/* the sendfile method in emuSendFileMethods */
-static PRInt32 PR_CALLBACK
-emu_SendFile(PRFileDesc *sd, PRSendFileData *sfd,
-    PRTransmitFileFlags flags, PRIntervalTime timeout)
-{
-    return PR_EmulateSendFile(sd, sfd, flags, timeout);
-}
-
-/* the transmitfile method in emuSendFileMethods */
-static PRInt32 PR_CALLBACK
-emu_TransmitFile(PRFileDesc *sd, PRFileDesc *fd, const void *headers,
-    PRInt32 hlen, PRTransmitFileFlags flags, PRIntervalTime timeout)
-{
-    PRSendFileData sfd;
-
-    sfd.fd = fd;
-    sfd.file_offset = 0;
-    sfd.file_nbytes = 0;
-    sfd.header = headers;
-    sfd.hlen = hlen;
-    sfd.trailer = NULL;
-    sfd.tlen = 0;
-    return emu_SendFile(sd, &sfd, flags, timeout);
-}
 
 /*
  * readn
@@ -452,11 +423,9 @@ TCP_Server(void *arg)
     PR_PostSem(sp->addr_sem);
 
     for (i = 0; i < (num_tcp_clients * num_tcp_connections_per_client); i++) {
-        /* test both null and non-null 'addr' argument to PR_Accept */
-        PRNetAddr *addrp = (i%2 ? &netaddr: NULL);
 
     DPRINTF(("TCP_Server: Accepting connection\n"));
-        if ((newsockfd = PR_Accept(sockfd, addrp,
+        if ((newsockfd = PR_Accept(sockfd, &netaddr,
             PR_INTERVAL_NO_TIMEOUT)) == NULL) {
             fprintf(stderr,"prsocket_test: ERROR - PR_Accept failed\n");
             goto exit;
@@ -1781,33 +1750,13 @@ TransmitFile_Server(void *arg)
     PR_PostSem(sp->addr_sem);
 
     for (i = 0; i < num_transmitfile_clients ; i++) {
-        /* test both null and non-null 'addr' argument to PR_Accept */
-        PRNetAddr *addrp = (i%2 ? &netaddr: NULL);
 
-        if ((newsockfd = PR_Accept(sockfd, addrp,
+        if ((newsockfd = PR_Accept(sockfd, &netaddr,
             PR_INTERVAL_NO_TIMEOUT)) == NULL) {
             fprintf(stderr,
                 "prsocket_test: ERROR - PR_Accept failed\n");
             failed_already=1;
             goto exit;
-        }
-        /* test both regular and emulated PR_SendFile */
-        if (i%2) {
-            PRFileDesc *layer = PR_CreateIOLayerStub(
-                emuSendFileIdentity, &emuSendFileMethods);
-            if (layer == NULL) {
-                fprintf(stderr,
-                    "prsocket_test: ERROR - PR_CreateIOLayerStub failed\n");
-                failed_already=1;
-                goto exit;
-            }
-            if (PR_PushIOLayer(newsockfd, PR_TOP_IO_LAYER, layer)
-                    == PR_FAILURE) {
-                fprintf(stderr,
-                    "prsocket_test: ERROR - PR_PushIOLayer failed\n");
-                failed_already=1;
-                goto exit;
-            }
         }
         scp = PR_NEW(Serve_Client_Param);
         if (scp == NULL) {
@@ -2208,12 +2157,6 @@ main(int argc, char **argv)
     SetupMacPrintfLog("socket.log");
 #endif
     PR_SetConcurrency(4);
-
-    emuSendFileIdentity = PR_GetUniqueIdentity("Emulated SendFile");
-    emuSendFileMethods = *PR_GetDefaultIOMethods();
-    emuSendFileMethods.transmitfile = emu_TransmitFile;
-    emuSendFileMethods.sendfile = emu_SendFile;
-
     /*
      * run client-server test with TCP, Ipv4-Ipv4
      */

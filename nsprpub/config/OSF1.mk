@@ -86,15 +86,8 @@ else
 OS_CFLAGS		+= -DHAVE_POINTER_LOCALTIME_R
 endif
 
-ifeq (,$(filter-out V4.0%,$(OS_RELEASE)))
-OS_CFLAGS		+= -DOSF1V4_MAP_PRIVATE_BUG
-endif
-
 ifeq ($(USE_PTHREADS),1)
 OS_CFLAGS		+= -pthread
-ifneq (,$(filter-out V2.0 V3.2,$(OS_RELEASE)))
-OS_CFLAGS		+= -D_PR_HAVE_THREADSAFE_GETHOST
-endif
 endif
 
 # The command to build a shared library on OSF1.

@@ -55,7 +55,7 @@ OS_CFLAGS	 = -Wc,-Wall -Wc,-Wno-parentheses -DNTO  \
 			   -D_QNX_SOURCE -DHAVE_POINTER_LOCALTIME_R -shared
 
 COMPILER_TAG = _qcc
-MKSHLIB		 = qcc -Vgcc_ntox86 -shared -Wl,-h$(@:$(OBJDIR)/%.so=%.so) -M
+MKSHLIB		 = qcc -Vgcc_ntox86 -shared -Wl,-h$(@:$(OBJDIR)/%.so=%.so) -g2 -M
 
 RANLIB		 = ranlib
 G++INCLUDES	 =
@@ -63,9 +63,9 @@ OS_LIBS		 =
 EXTRA_LIBS  = -lsocket
 
 ifdef BUILD_OPT
-OPTIMIZER = -O1
+OPTIMIZER = -O2
 else
-OPTIMIZER = -O1 -gstabs
+OPTIMIZER = -O2 -gdwarf-2
 endif
 
 NOSUCHFILE	= /no-such-file

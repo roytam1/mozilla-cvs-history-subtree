@@ -96,7 +96,7 @@ PRInt32 IsFileLocal(HANDLE hFile);
 static PRInt32 _md_MakeNonblock(HANDLE);
 
 PRInt32 _nt_nonblock_accept(PRFileDesc *fd, struct sockaddr_in *addr, int *len, PRIntervalTime);
-PRInt32 _nt_nonblock_recv(PRFileDesc *fd, char *buf, int len, int flags, PRIntervalTime);
+PRInt32 _nt_nonblock_recv(PRFileDesc *fd, char *buf, int len, PRIntervalTime);
 PRInt32 _nt_nonblock_send(PRFileDesc *fd, char *buf, int len, PRIntervalTime);
 PRInt32 _nt_nonblock_writev(PRFileDesc *fd, const PRIOVec *iov, int size, PRIntervalTime);
 PRInt32 _nt_nonblock_sendto(PRFileDesc *, const char *, int, const struct sockaddr *, int, PRIntervalTime);
@@ -238,13 +238,8 @@ _PR_MD_PAUSE_CPU(PRIntervalTime ticks)
 #if 0
         timeout = INFINITE;
 #else
-    /*
-     * temporary hack to poll the runq every 5 seconds because of bug in
+    /* temporary hack to poll the runq every 5 seconds because of bug in
      * native threads creating user threads and not poking the right cpu.
-     *
-     * A local thread that was interrupted is bound to its current
-     * cpu but there is no easy way for the interrupter to poke the
-     * right cpu.  This is a hack to poll the runq every 5 seconds.
      */
         timeout = 5000;
 #endif
@@ -1734,7 +1729,7 @@ _PR_MD_RECV(PRFileDesc *fd, void *buf, PRInt32 amount, PRIntn flags,
             PR_ASSERT(0 != rv);
             fd->secret->md.io_model_committed = PR_TRUE;
         }
-        return _nt_nonblock_recv(fd, buf, amount, flags, timeout);
+        return _nt_nonblock_recv(fd, buf, amount, timeout);
     }
 
     if (me->io_suspended) {
@@ -2514,26 +2509,9 @@ _PR_MD_PIPEAVAILABLE(PRFileDesc *fd)
 PROffset32
 _PR_MD_LSEEK(PRFileDesc *fd, PROffset32 offset, int whence)
 {
-    DWORD moveMethod;
     PROffset32 rv;
 
-    switch (whence) {
-        case PR_SEEK_SET:
-            moveMethod = FILE_BEGIN;
-            break;
-        case PR_SEEK_CUR:
-            moveMethod = FILE_CURRENT;
-            break;
-        case PR_SEEK_END:
-            moveMethod = FILE_END;
-            break;
-        default:
-            PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
-            return -1;
-    }
-
-    rv = SetFilePointer((HANDLE)fd->secret->md.osfd, offset, NULL, moveMethod);
-
+    rv = SetFilePointer((HANDLE)fd->secret->md.osfd, offset, NULL, whence);
     /*
      * If the lpDistanceToMoveHigh argument (third argument) is
      * NULL, SetFilePointer returns 0xffffffff on failure.
@@ -2547,34 +2525,44 @@ _PR_MD_LSEEK(PRFileDesc *fd, PROffset32 offset, int whence)
 PROffset64
 _PR_MD_LSEEK64(PRFileDesc *fd, PROffset64 offset, int whence)
 {
-    DWORD moveMethod;
-    LARGE_INTEGER li;
-    DWORD err;
+    PRUint64 result;
+    PRUint32 position, uhi;
+    PRInt32 low = (PRInt32)offset, hi = (PRInt32)(offset >> 32);
 
-    switch (whence) {
-        case PR_SEEK_SET:
-            moveMethod = FILE_BEGIN;
-            break;
-        case PR_SEEK_CUR:
-            moveMethod = FILE_CURRENT;
-            break;
-        case PR_SEEK_END:
-            moveMethod = FILE_END;
-            break;
-        default:
-            PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
+    position = SetFilePointer((HANDLE)fd->secret->md.osfd, low, &hi, whence);
+
+	/*
+	 * The lpDistanceToMoveHigh argument (third argument) is not
+	 * NULL. Therefore, a -1 (unsigned) result is ambiguious. If
+	 * the result just happens to be -1, also test to see if the
+	 * last error is non-zero. If it is, the operation failed.
+	 * Otherwise, the -1 is just the low half of the 64 bit position.
+	 */
+	if (0xffffffff == position)
+    {
+        PRInt32 oserr = GetLastError();
+        if (0 != oserr)
+        {
+		    _PR_MD_MAP_LSEEK_ERROR(oserr);
             return -1;
+        }
     }
 
-    li.QuadPart = offset;
-    li.LowPart = SetFilePointer((HANDLE)fd->secret->md.osfd,
-            li.LowPart, &li.HighPart, moveMethod);
-
-    if (0xffffffff == li.LowPart && (err = GetLastError()) != NO_ERROR) {
-        _PR_MD_MAP_LSEEK_ERROR(err);
-        li.QuadPart = -1;
-    }
-    return li.QuadPart;
+    /*
+    ** All this 'cause we keep extending the sign of rv into
+    ** the high bits of the result. We just know that the final
+    ** position of the file must be positive and probably nowhere
+    ** close to the maximum value of a PRUint64.
+    */
+    uhi = (PRUint32)hi;
+    PR_ASSERT((PRInt32)uhi >= 0);
+    result = uhi;
+    PR_ASSERT((PRInt64)result >= 0);
+    result = (result << 32);
+    PR_ASSERT((PRInt64)result >= 0);
+    result += position;
+    PR_ASSERT((PRInt64)result >= 0);
+    return (PROffset64)result;
 }
 
 /*
@@ -3823,21 +3811,14 @@ retry:
     return(rv);
 }
 
-PRInt32 _nt_nonblock_recv(PRFileDesc *fd, char *buf, int len, int flags, PRIntervalTime timeout)
+PRInt32 _nt_nonblock_recv(PRFileDesc *fd, char *buf, int len, PRIntervalTime timeout)
 {
     PRInt32 osfd = fd->secret->md.osfd;
     PRInt32 rv, err;
     struct timeval tv, *tvp;
     fd_set rd;
-    int osflags;
 
-    if (0 == flags) {
-        osflags = 0;
-    } else {
-        PR_ASSERT(PR_MSG_PEEK == flags);
-        osflags = MSG_PEEK;
-    }
-    while ((rv = recv(osfd,buf,len,osflags)) == -1) {
+    while ((rv = recv(osfd,buf,len,0)) == -1) {
         if (((err = WSAGetLastError()) == WSAEWOULDBLOCK)
                 && (!fd->secret->nonblocking)) {
             FD_ZERO(&rd);

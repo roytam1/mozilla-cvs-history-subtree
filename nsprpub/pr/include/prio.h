@@ -345,8 +345,6 @@ typedef PRStatus (PR_CALLBACK *PRSetsocketoptionFN)(
 typedef PRInt32 (PR_CALLBACK *PRSendfileFN)(
 	PRFileDesc *networkSocket, PRSendFileData *sendData,
 	PRTransmitFileFlags flags, PRIntervalTime timeout);
-typedef PRStatus (PR_CALLBACK *PRConnectcontinueFN)(
-    PRFileDesc *fd, PRInt16 out_flags);
 typedef PRIntn (PR_CALLBACK *PRReservedFN)(PRFileDesc *fd);
 
 struct PRIOMethods {
@@ -383,8 +381,7 @@ struct PRIOMethods {
     PRSetsocketoptionFN setsocketoption;
                                     /* Set value of specified option            */
     PRSendfileFN sendfile;			/* Send a (partial) file with header/trailer*/
-    PRConnectcontinueFN connectcontinue;
-                                    /* Continue a nonblocking connect */
+    PRReservedFN reserved_fn_4;		/* reserved for future use */
     PRReservedFN reserved_fn_3;		/* reserved for future use */
     PRReservedFN reserved_fn_2;		/* reserved for future use */
     PRReservedFN reserved_fn_1;		/* reserved for future use */
@@ -452,7 +449,6 @@ NSPR_API(PRFileDesc*) PR_GetSpecialFD(PRSpecialFD id);
  **************************************************************************
  */
 
-#define PR_IO_LAYER_HEAD (PRDescIdentity)-3
 #define PR_INVALID_IO_LAYER (PRDescIdentity)-1
 #define PR_TOP_IO_LAYER (PRDescIdentity)-2
 #define PR_NSPR_IO_LAYER (PRDescIdentity)0
@@ -483,22 +479,6 @@ NSPR_API(const PRIOMethods *) PR_GetDefaultIOMethods(void);
  */
 NSPR_API(PRFileDesc*) PR_CreateIOLayerStub(
     PRDescIdentity ident, const PRIOMethods *methods);
-
-/*
- **************************************************************************
- * Creating a layer
- *
- * A new stack may be created by calling PR_CreateIOLayer(). The
- * file descriptor returned will point to the top of the stack, which has
- * the layer 'fd' as the topmost layer.
- * 
- * NOTE: This function creates a new style stack, which has a fixed, dummy
- * header. The old style stack, created by a call to PR_PushIOLayer,
- * results in modifying contents of the top layer of the stack, when
- * pushing and popping layers of the stack.
- **************************************************************************
- */
-NSPR_API(PRFileDesc*) PR_CreateIOLayer(PRFileDesc* fd);
 
 /*
  **************************************************************************
@@ -1205,42 +1185,6 @@ NSPR_API(PRStatus) PR_Connect(
 
 /*
  *************************************************************************
- * FUNCTION: PR_ConnectContinue
- * DESCRIPTION:
- *     Continue a nonblocking connect.  After a nonblocking connect
- *     is initiated with PR_Connect() (which fails with
- *     PR_IN_PROGRESS_ERROR), one should call PR_Poll() on the socket,
- *     with the in_flags PR_POLL_WRITE | PR_POLL_EXCEPT.  When
- *     PR_Poll() returns, one calls PR_ConnectContinue() on the
- *     socket to determine whether the nonblocking connect has
- *     completed or is still in progress.  Repeat the PR_Poll(),
- *     PR_ConnectContinue() sequence until the nonblocking connect
- *     has completed.
- * INPUTS:
- *     PRFileDesc *fd
- *         the file descriptor representing a socket
- *     PRInt16 out_flags
- *         the out_flags field of the poll descriptor returned by
- *         PR_Poll()
- * RETURN: PRStatus
- *     If the nonblocking connect has successfully completed,
- *     PR_GetConnectStatus returns PR_SUCCESS.  If PR_GetConnectStatus()
- *     returns PR_FAILURE, call PR_GetError():
- *     - PR_IN_PROGRESS_ERROR: the nonblocking connect is still in
- *       progress and has not completed yet.  The caller should poll
- *       on the file descriptor for the in_flags
- *       PR_POLL_WRITE|PR_POLL_EXCEPT and retry PR_ConnectContinue
- *       later when PR_Poll() returns.
- *     - Other errors: the nonblocking connect has failed with this
- *       error code.
- */
-
-NSPR_API(PRStatus)    PR_ConnectContinue(PRFileDesc *fd, PRInt16 out_flags);
-
-/*
- *************************************************************************
- * THIS FUNCTION IS DEPRECATED.  USE PR_ConnectContinue INSTEAD.
- *
  * FUNCTION: PR_GetConnectStatus
  * DESCRIPTION:
  *     Get the completion status of a nonblocking connect.  After
@@ -1382,7 +1326,7 @@ NSPR_API(PRStatus)    PR_Shutdown(PRFileDesc *fd, PRShutdownHow how);
  *     PRInt32 amount
  *       the size of 'buf' (in bytes)
  *     PRIntn flags
- *       must be zero or PR_MSG_PEEK.
+ *        (OBSOLETE - must always be zero)
  *     PRIntervalTime timeout
  *       Time limit for completion of the receive operation.
  * OUTPUTS:
@@ -1394,8 +1338,6 @@ NSPR_API(PRStatus)    PR_Shutdown(PRFileDesc *fd, PRShutdownHow how);
  *         by calling PR_GetError().
  **************************************************************************
  */
-
-#define PR_MSG_PEEK 0x2
 
 NSPR_API(PRInt32)    PR_Recv(PRFileDesc *fd, void *buf, PRInt32 amount,
                 PRIntn flags, PRIntervalTime timeout);
@@ -1789,15 +1731,9 @@ NSPR_API(PRFileMap *) PR_CreateFileMap(
     PRInt64 size,
     PRFileMapProtect prot);
 
-/*
- * return the alignment (in bytes) of the offset argument to PR_MemMap
- */
-NSPR_API(PRInt32) PR_GetMemMapAlignment(void);
-
 NSPR_API(void *) PR_MemMap(
     PRFileMap *fmap,
-    PROffset64 offset,  /* must be aligned and sized according to the
-                         * return value of PR_GetMemMapAlignment() */
+    PROffset64 offset,  /* must be aligned and sized to whole pages */
     PRUint32 len);
 
 NSPR_API(PRStatus) PR_MemUnmap(void *addr, PRUint32 len);

@@ -78,9 +78,8 @@ LOGFILE=${NSPR_TEST_LOGFILE:-$NULL_DEVICE}
 #
 
 TESTS="
-accept
 acceptread
-acceptreademu
+accept
 affinity
 alarm
 anonfm
@@ -106,7 +105,6 @@ i2l
 initclk
 inrval
 instrumt
-intrio
 intrupt
 io_timeout
 ioconthr
@@ -134,16 +132,13 @@ op_filnf
 op_filok
 op_nofil
 parent
-peek
 perf
 pipeping
-pipeping2
 pipeself
 poll_nm
 poll_to
 pollable
 prftest
-primblok
 priotest
 provider
 ranfile
@@ -153,7 +148,6 @@ sel_spd
 selct_er
 selct_nm
 selct_to
-selintr
 sema
 semaerr
 semaping

@@ -52,7 +52,6 @@ NSPR_API(void)         PR_FreeFileDesc(PRFileDesc *fd);
 ** Import an existing OS file to NSPR. 
 */
 NSPR_API(PRFileDesc*)  PR_ImportFile(PRInt32 osfd);
-NSPR_API(PRFileDesc*)  PR_ImportPipe(PRInt32 osfd);
 NSPR_API(PRFileDesc*)  PR_ImportTCPSocket(PRInt32 osfd);
 NSPR_API(PRFileDesc*)  PR_ImportUDPSocket(PRInt32 osfd);
 
@@ -147,20 +146,6 @@ NSPR_API(PRStatus) PR_TLockFile(PRFileDesc *fd);
 **    PR_FAILURE otherwise
 */
 NSPR_API(PRStatus) PR_UnlockFile(PRFileDesc *fd);
-
-/*
-** Emulate acceptread by accept and recv.
-*/
-NSPR_API(PRInt32) PR_EmulateAcceptRead(PRFileDesc *sd, PRFileDesc **nd,
-    PRNetAddr **raddr, void *buf, PRInt32 amount, PRIntervalTime timeout);
-
-/*
-** Emulate sendfile by reading from the file and writing to the socket.
-** The file is memory-mapped if memory-mapped files are supported.
-*/
-NSPR_API(PRInt32) PR_EmulateSendFile(
-    PRFileDesc *networkSocket, PRSendFileData *sendData,
-    PRTransmitFileFlags flags, PRIntervalTime timeout);
 
 #ifdef WIN32
 /* FUNCTION: PR_NTFast_AcceptRead

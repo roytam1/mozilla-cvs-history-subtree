@@ -276,9 +276,6 @@ extern void		_MD_MakeNonblock(PRFileDesc *fd);
 
 /************************************************************************/
 
-#if !defined(_PR_PTHREADS)
-
-extern void		_MD_InitSegs(void);
 extern PRStatus	_MD_AllocSegment(PRSegment *seg, PRUint32 size,
 				void *vaddr);
 extern void		_MD_FreeSegment(PRSegment *seg);
@@ -286,8 +283,6 @@ extern void		_MD_FreeSegment(PRSegment *seg);
 #define _MD_INIT_SEGS			_MD_InitSegs
 #define _MD_ALLOC_SEGMENT		_MD_AllocSegment
 #define _MD_FREE_SEGMENT		_MD_FreeSegment
-
-#endif /* !defined(_PR_PTHREADS) */
 
 /************************************************************************/
 
@@ -306,6 +301,7 @@ extern void		_MD_FreeSegment(PRSegment *seg);
 
 extern PRInt32 _MD_AvailableSocket(PRInt32 osfd);
 
+extern void _MD_InitSegs(void);
 extern void _MD_StartInterrupts(void);
 extern void _MD_StopInterrupts(void);
 extern void _MD_DisableClockInterrupts(void);
@@ -458,8 +454,6 @@ struct _MDFileMap {
 
 extern PRStatus _MD_CreateFileMap(struct PRFileMap *fmap, PRInt64 size);
 #define _MD_CREATE_FILE_MAP _MD_CreateFileMap
-
-#define _MD_GET_MEM_MAP_ALIGNMENT() PR_GetPageSize()
 
 extern void * _MD_MemMap(struct PRFileMap *fmap, PRInt64 offset,
         PRUint32 len);

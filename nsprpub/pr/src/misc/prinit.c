@@ -229,16 +229,6 @@ static void _PR_InitStuff(void)
 #endif
 	
     _PR_MD_FINAL_INIT();
-
-#ifdef WINNT
-    /*
-     * Create an additional CPU thread so that if the primordial
-     * thread (a fiber) calls a native blocking function and blocks
-     * the primordial CPU thread, there is still a CPU thread that
-     * can read the I/O completion port.
-     */
-    PR_SetConcurrency(2);
-#endif
 }
 
 void _PR_ImplicitInitialization()
@@ -654,9 +644,6 @@ PR_IMPLEMENT(PRFileDesc *) PR_GetInheritedFD(
             switch ((PRDescType)fileType) {
                 case PR_DESC_FILE:
                     fd = PR_ImportFile(osfd);
-                    break;
-                case PR_DESC_PIPE:
-                    fd = PR_ImportPipe(osfd);
                     break;
                 case PR_DESC_SOCKET_TCP:
                     fd = PR_ImportTCPSocket(osfd);

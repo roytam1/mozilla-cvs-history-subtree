@@ -45,8 +45,6 @@
 #define NEED_STRFTIME_LOCK
 
 /*
- * Intel x86 has atomic instructions.
- *
  * Sparc v8 does not have instructions to efficiently implement
  * atomic increment/decrement operations.  In the local threads
  * only and pthreads versions, we use the default atomic routine
@@ -55,7 +53,7 @@
  * in solaris.c, which is actually equivalent to the default
  * implementation.
  */
-#if defined(i386) || defined(_PR_GLOBAL_THREADS_ONLY)
+#ifdef _PR_GLOBAL_THREADS_ONLY
 #define _PR_HAVE_ATOMIC_OPS
 #endif
 
@@ -88,10 +86,6 @@
 #define AI_V4MAPPED 0x0001 
 #define AI_ALL      0x0002
 #define AI_ADDRCONFIG   0x0004
-#endif
-#if defined(_PR_GLOBAL_THREADS_ONLY) || defined(_PR_PTHREADS)
-#define _PR_HAVE_GETHOST_R
-#define _PR_HAVE_GETHOST_R_POINTER
 #endif
 
 #include "prinrval.h"

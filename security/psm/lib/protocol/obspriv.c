@@ -32,7 +32,6 @@
  */
 #include "obspriv.h"
 #include "newproto.h"
-#include <string.h>
 #include <assert.h>
 #include <time.h>
 

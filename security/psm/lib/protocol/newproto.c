@@ -39,15 +39,8 @@
 #ifdef XP_MAC
 #include "macsocket.h"
 #endif
-#ifdef XP_UNIX
-#include "sys/types.h"
-#include "netinet/in.h" /* for ntohl & htonl */
-#endif
-#ifdef XP_OS2_EMX
-#include <sys/param.h>
-#endif
-#ifdef XP_OS2_VACPP
-#include <utils.h>
+#ifdef XP_BEOS
+#include "ByteOrder.h"
 #endif
 
 #include "newproto.h"
@@ -75,7 +68,6 @@ char* SSM_GetVersionString(void)
     }
     return newString;
 }
-
 
 /*************************************************************
  *
