@@ -131,6 +131,8 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
   
   [mSplashScreen close];
 
+  // make sure we have a bookmarks manager
+  [BookmarksManager sharedBookmarksManager];
   [mBookmarksMenu setAutoenablesItems: NO];
   mMenuBookmarks = new BookmarksService((BookmarksDataSource*)nil);
   mMenuBookmarks->AddObserver();
