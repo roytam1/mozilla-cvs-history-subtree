@@ -36,7 +36,6 @@
 static void Help(void)
 {
     fprintf(stderr, "Usage: gethost [-6h] [hostname]\n");
-    fprintf(stderr, "\t-6          IPv6 mode       (default: FALSE)\n");
     fprintf(stderr, "\t-h          help\n");
     fprintf(stderr, "\thostname    Name of host    (default: %s)\n",
             DEFAULT_HOST_NAME);
@@ -75,17 +74,11 @@ int main(int argc, char **argv)
     PRIntn idx;
     PRNetAddr addr;
     PLOptStatus os;
-    PLOptState *opt = PL_CreateOptState(argc, argv, "6h");
+    PLOptState *opt = PL_CreateOptState(argc, argv, "h");
 
     while (PL_OPT_EOL != (os = PL_GetNextOpt(opt))) {
         if (PL_OPT_BAD == os) continue;
         switch (opt->option) {
-            case '6':  /* Enable IPv6 */
-                if (PR_SetIPv6Enable(PR_TRUE) == PR_FAILURE) {
-                    fprintf(stderr, "PR_SetIPv6Enable failed\n");
-                    exit(1);
-                }
-                break;
             case 0:  /* naked */
                 hostName = opt->value;
                 break;
@@ -126,7 +119,6 @@ int main(int argc, char **argv)
         exit(1);
     }
     PrintHostent(&he);
-#ifdef _PR_INET6
     printf("PR_GetIPNodeByName with PR_AF_INET6\n");
     if (PR_GetIPNodeByName(hostName, PR_AF_INET6, PR_AI_DEFAULT,
             buf, sizeof(buf), &he) == PR_FAILURE) {
@@ -134,7 +126,6 @@ int main(int argc, char **argv)
         exit(1);
     }
     PrintHostent(&he);
-#endif
 
     PR_StringToNetAddr("::1", &addr);
     PR_StringToNetAddr("127.0.0.1", &addr);
@@ -180,6 +171,11 @@ int main(int argc, char **argv)
         fprintf(stderr, "addr should be unspecified address\n");
         exit(1);
     }
+	{
+		char buf[256];
+		PR_NetAddrToString(&addr, buf, 256);
+		printf("IPv4 INADDRANY: %s\n", buf);
+	}
     addr.inet.family = PR_AF_INET;
     addr.inet.port = 0;
     addr.inet.ip = PR_htonl(PR_INADDR_LOOPBACK);
@@ -187,8 +183,12 @@ int main(int argc, char **argv)
         fprintf(stderr, "addr should be loopback address\n");
         exit(1);
     }
+	{
+		char buf[256];
+		PR_NetAddrToString(&addr, buf, 256);
+		printf("IPv4 LOOPBACK: %s\n", buf);
+	}
 
-#if defined(_PR_INET6)
     if (PR_SetNetAddr(PR_IpAddrAny, PR_AF_INET6, 0, &addr) == PR_FAILURE) {
         fprintf(stderr, "PR_SetNetAddr failed\n");
         exit(1);
@@ -197,6 +197,11 @@ int main(int argc, char **argv)
         fprintf(stderr, "addr should be unspecified address\n");
         exit(1);
     }
+	{
+		char buf[256];
+		PR_NetAddrToString(&addr, buf, 256);
+		printf("IPv6 INADDRANY: %s\n", buf);
+	}
     if (PR_SetNetAddr(PR_IpAddrLoopback, PR_AF_INET6, 0, &addr) == PR_FAILURE) {
         fprintf(stderr, "PR_SetNetAddr failed\n");
         exit(1);
@@ -205,22 +210,11 @@ int main(int argc, char **argv)
         fprintf(stderr, "addr should be loopback address\n");
         exit(1);
     }
-
-    addr.ipv6.family = PR_AF_INET6;
-    addr.ipv6.port = 0;
-    addr.ipv6.ip = in6addr_any;
-    if (PR_IsNetAddrType(&addr, PR_IpAddrAny) == PR_FALSE) {
-        fprintf(stderr, "addr should be unspecified address\n");
-        exit(1);
-    }
-    addr.ipv6.family = PR_AF_INET6;
-    addr.ipv6.port = 0;
-    addr.ipv6.ip = in6addr_loopback;
-    if (PR_IsNetAddrType(&addr, PR_IpAddrLoopback) == PR_FALSE) {
-        fprintf(stderr, "addr should be loopback address\n");
-        exit(1);
-    }
-#endif /* _PR_INET6 */
+	{
+		char buf[256];
+		PR_NetAddrToString(&addr, buf, 256);
+		printf("IPv6 LOOPBACK: %s\n", buf);
+	}
 
     printf("PASS\n");
     return 0;

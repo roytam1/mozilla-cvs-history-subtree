@@ -154,13 +154,11 @@ static PRLock *_pr_rename_lock;  /* For PR_Rename() */
 /* These two functions are only used in assertions. */
 #if defined(DEBUG)
 
-static PRBool IsValidNetAddr(const PRNetAddr *addr)
+PRBool IsValidNetAddr(const PRNetAddr *addr)
 {
     if ((addr != NULL)
             && (addr->raw.family != AF_UNIX)
-#ifdef _PR_INET6
-            && (addr->raw.family != AF_INET6)
-#endif
+            && (addr->raw.family != PR_AF_INET6)
             && (addr->raw.family != AF_INET)) {
         return PR_FALSE;
     }
@@ -775,6 +773,7 @@ void _PR_InitIO()
     _pr_stdout = pt_SetMethods(1, PR_DESC_FILE, PR_FALSE);
     _pr_stderr = pt_SetMethods(2, PR_DESC_FILE, PR_FALSE);
     PR_ASSERT(_pr_stdin && _pr_stdout && _pr_stderr);
+
 }  /* _PR_InitIO */
 
 PR_IMPLEMENT(PRFileDesc*) PR_GetSpecialFD(PRSpecialFD osfd)
@@ -1110,7 +1109,9 @@ static PRStatus pt_Connect(
 {
     PRIntn rv = -1, syserrno;
     pt_SockLen addr_len;
-#ifdef _PR_HAVE_SOCKADDR_LEN
+	const PRNetAddr *addrp = addr;
+	PRUint16 md_af = addr->raw.family;
+#if defined(_PR_HAVE_SOCKADDR_LEN) || defined(_PR_INET6)
     PRNetAddr addrCopy;
 #endif
 
@@ -1118,13 +1119,24 @@ static PRStatus pt_Connect(
 
     PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);
     addr_len = PR_NETADDR_SIZE(addr);
+#if defined(_PR_INET6)
+	if (addr->raw.family == PR_AF_INET6) {
+		md_af = AF_INET6;
+#ifndef _PR_HAVE_SOCKADDR_LEN
+		addrCopy = *addr;
+		addrCopy.raw.family = AF_INET6;
+		addrp = &addrCopy;
+#endif
+	}
+#endif
+
 #ifdef _PR_HAVE_SOCKADDR_LEN
     addrCopy = *addr;
     ((struct sockaddr*)&addrCopy)->sa_len = addr_len;
-    ((struct sockaddr*)&addrCopy)->sa_family = addr->raw.family;
+    ((struct sockaddr*)&addrCopy)->sa_family = md_af;
     rv = connect(fd->secret->md.osfd, (struct sockaddr*)&addrCopy, addr_len);
 #else
-    rv = connect(fd->secret->md.osfd, (struct sockaddr*)addr, addr_len);
+    rv = connect(fd->secret->md.osfd, (struct sockaddr*)addrp, addr_len);
 #endif
     syserrno = errno;
     if ((-1 == rv) && (EINPROGRESS == syserrno) && (!fd->secret->nonblocking))
@@ -1226,6 +1238,10 @@ static PRFileDesc* pt_Accept(
         addr->raw.family = ((struct sockaddr*)addr)->sa_family;
     }
 #endif /* _PR_HAVE_SOCKADDR_LEN */
+#ifdef _PR_INET6
+	if (AF_INET6 == addr->raw.family)
+        addr->raw.family = PR_AF_INET6;
+#endif
     newfd = pt_SetMethods(osfd, PR_DESC_SOCKET_TCP, PR_TRUE);
     if (newfd == NULL) close(osfd);  /* $$$ whoops! this doesn't work $$$ */
     else
@@ -1244,14 +1260,15 @@ static PRStatus pt_Bind(PRFileDesc *fd, const PRNetAddr *addr)
 {
     PRIntn rv;
     pt_SockLen addr_len;
-#ifdef _PR_HAVE_SOCKADDR_LEN
+	const PRNetAddr *addrp = addr;
+	PRUint16 md_af = addr->raw.family;
+#if defined(_PR_HAVE_SOCKADDR_LEN) || defined(_PR_INET6)
     PRNetAddr addrCopy;
 #endif
 
     if (pt_TestAbort()) return PR_FAILURE;
 
     PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);
-
     if (addr->raw.family == AF_UNIX)
     {
         /* Disallow relative pathnames */
@@ -1262,14 +1279,25 @@ static PRStatus pt_Bind(PRFileDesc *fd, const PRNetAddr *addr)
         }
     }
 
+#if defined(_PR_INET6)
+	if (addr->raw.family == PR_AF_INET6) {
+		md_af = AF_INET6;
+#ifndef _PR_HAVE_SOCKADDR_LEN
+		addrCopy = *addr;
+		addrCopy.raw.family = AF_INET6;
+		addrp = &addrCopy;
+#endif
+	}
+#endif
+
     addr_len = PR_NETADDR_SIZE(addr);
 #ifdef _PR_HAVE_SOCKADDR_LEN
     addrCopy = *addr;
     ((struct sockaddr*)&addrCopy)->sa_len = addr_len;
-    ((struct sockaddr*)&addrCopy)->sa_family = addr->raw.family;
+    ((struct sockaddr*)&addrCopy)->sa_family = md_af;
     rv = bind(fd->secret->md.osfd, (struct sockaddr*)&addrCopy, addr_len);
 #else
-    rv = bind(fd->secret->md.osfd, (struct sockaddr*)addr, addr_len);
+    rv = bind(fd->secret->md.osfd, (struct sockaddr*)addrp, addr_len);
 #endif
 
     if (rv == -1) {
@@ -1450,25 +1478,38 @@ static PRInt32 pt_SendTo(
     PRInt32 syserrno, bytes = -1;
     PRBool fNeedContinue = PR_FALSE;
     pt_SockLen addr_len;
-#ifdef _PR_HAVE_SOCKADDR_LEN
+	const PRNetAddr *addrp = addr;
+	PRUint16 md_af = addr->raw.family;
+#if defined(_PR_HAVE_SOCKADDR_LEN) || defined(_PR_INET6)
     PRNetAddr addrCopy;
 #endif
 
     if (pt_TestAbort()) return bytes;
 
     PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);
+#if defined(_PR_INET6)
+	if (addr->raw.family == PR_AF_INET6) {
+		md_af = AF_INET6;
+#ifndef _PR_HAVE_SOCKADDR_LEN
+		addrCopy = *addr;
+		addrCopy.raw.family = AF_INET6;
+		addrp = &addrCopy;
+#endif
+	}
+#endif
+
     addr_len = PR_NETADDR_SIZE(addr);
 #ifdef _PR_HAVE_SOCKADDR_LEN
     addrCopy = *addr;
     ((struct sockaddr*)&addrCopy)->sa_len = addr_len;
-    ((struct sockaddr*)&addrCopy)->sa_family = addr->raw.family;
+    ((struct sockaddr*)&addrCopy)->sa_family = md_af;
     bytes = sendto(
         fd->secret->md.osfd, buf, amount, flags,
         (struct sockaddr*)&addrCopy, addr_len);
 #else
     bytes = sendto(
         fd->secret->md.osfd, buf, amount, flags,
-        (struct sockaddr*)addr, addr_len);
+        (struct sockaddr*)addrp, addr_len);
 #endif
     syserrno = errno;
     if ( (bytes == -1) && (syserrno == EWOULDBLOCK || syserrno == EAGAIN)
@@ -1546,6 +1587,10 @@ static PRInt32 pt_RecvFrom(PRFileDesc *fd, void *buf, PRInt32 amount,
         }
     }
 #endif /* _PR_HAVE_SOCKADDR_LEN */
+#ifdef _PR_INET6
+	if (AF_INET6 == addr->raw.family)
+        addr->raw.family = PR_AF_INET6;
+#endif
     if (bytes < 0)
         pt_MapError(_PR_MD_MAP_RECVFROM_ERROR, syserrno);
     return bytes;
@@ -1915,6 +1960,10 @@ static PRStatus pt_GetSockName(PRFileDesc *fd, PRNetAddr *addr)
             addr->raw.family = ((struct sockaddr*)addr)->sa_family;
         }
 #endif /* _PR_HAVE_SOCKADDR_LEN */
+#ifdef _PR_INET6
+		if (AF_INET6 == addr->raw.family)
+			addr->raw.family = PR_AF_INET6;
+#endif
         PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);
         PR_ASSERT(IsValidNetAddrLen(addr, addr_len) == PR_TRUE);
         return PR_SUCCESS;
@@ -1942,6 +1991,10 @@ static PRStatus pt_GetPeerName(PRFileDesc *fd, PRNetAddr *addr)
             addr->raw.family = ((struct sockaddr*)addr)->sa_family;
         }
 #endif /* _PR_HAVE_SOCKADDR_LEN */
+#ifdef _PR_INET6
+		if (AF_INET6 == addr->raw.family)
+        	addr->raw.family = PR_AF_INET6;
+#endif
         PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);
         PR_ASSERT(IsValidNetAddrLen(addr, addr_len) == PR_TRUE);
         return PR_SUCCESS;
@@ -2437,7 +2490,6 @@ static PRIOMethods _pr_udp_methods = {
     (PRReservedFN)_PR_InvalidInt
 };
 
-
 static PRIOMethods _pr_socketpollfd_methods = {
     (PRDescType) 0,
     (PRCloseFN)_PR_InvalidStatus,
@@ -2636,32 +2688,40 @@ failed:
     return fd;
 }  /* PR_AllocFileDesc */
 
+extern PRStatus _pr_push_ipv6toipv4_layer(PRFileDesc *fd);
+
 PR_IMPLEMENT(PRFileDesc*) PR_Socket(PRInt32 domain, PRInt32 type, PRInt32 proto)
 {
     PRIntn osfd;
     PRDescType ftype;
     PRFileDesc *fd = NULL;
+	PRInt32 tmp_domain = domain;
 
     if (!_pr_initialized) _PR_ImplicitInitialization();
 
     if (pt_TestAbort()) return NULL;
 
     if (PF_INET != domain
-#if defined(_PR_INET6)
-        && PF_INET6 != domain
-#endif
+        && PR_AF_INET6 != domain
         && PF_UNIX != domain)
     {
         PR_SetError(PR_ADDRESS_NOT_SUPPORTED_ERROR, 0);
         return fd;
     }
-    if (type == SOCK_STREAM) ftype = PR_DESC_SOCKET_TCP;
-    else if (type == SOCK_DGRAM) ftype = PR_DESC_SOCKET_UDP;
-    else
-    {
-        (void)PR_SetError(PR_ADDRESS_NOT_SUPPORTED_ERROR, 0);
-        return fd;
-    }
+	if (type == SOCK_STREAM) ftype = PR_DESC_SOCKET_TCP;
+	else if (type == SOCK_DGRAM) ftype = PR_DESC_SOCKET_UDP;
+	else
+	{
+		(void)PR_SetError(PR_ADDRESS_NOT_SUPPORTED_ERROR, 0);
+		return fd;
+	}
+#if defined(_PR_INET6)
+	if (PR_AF_INET6 == domain)
+		domain = AF_INET6;
+#else
+	if (PR_AF_INET6 == domain)
+		domain = AF_INET;
+#endif
 
     osfd = socket(domain, type, proto);
     if (osfd == -1) pt_MapError(_PR_MD_MAP_SOCKET_ERROR, errno);
@@ -2670,6 +2730,20 @@ PR_IMPLEMENT(PRFileDesc*) PR_Socket(PRInt32 domain, PRInt32 type, PRInt32 proto)
         fd = pt_SetMethods(osfd, ftype, PR_FALSE);
         if (fd == NULL) close(osfd);
     }
+#if !defined(_PR_INET6)
+	if (fd != NULL) {
+		/*
+		 * For platforms with no support for IPv6 
+		 * create layered socket for IPv4-mapped IPv6 addresses
+		 */
+		if (PR_AF_INET6 == tmp_domain) {
+			if (PR_FAILURE == _pr_push_ipv6toipv4_layer(fd)) {
+				PR_Close(fd);
+				fd = NULL;
+			}
+		}
+	}
+#endif
     return fd;
 }  /* PR_Socket */
 

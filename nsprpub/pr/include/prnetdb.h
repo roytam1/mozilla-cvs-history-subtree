@@ -217,7 +217,8 @@ typedef enum PRNetAddrValue
 {
     PR_IpAddrNull,      /* do NOT overwrite the IP address */
     PR_IpAddrAny,       /* assign logical INADDR_ANY to IP address */
-    PR_IpAddrLoopback   /* assign logical INADDR_LOOPBACK */
+    PR_IpAddrLoopback,  /* assign logical INADDR_LOOPBACK  */
+    PR_IpAddrV4Mapped   /* IPv4 mapped address */
 } PRNetAddrValue;
 
 NSPR_API(PRStatus) PR_InitializeNetAddr(

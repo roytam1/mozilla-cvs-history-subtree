@@ -25,16 +25,14 @@
 /* These two functions are only used in assertions. */
 #if defined(DEBUG)
 
-static PRBool IsValidNetAddr(const PRNetAddr *addr)
+PRBool IsValidNetAddr(const PRNetAddr *addr)
 {
     if ((addr != NULL)
 #ifdef XP_UNIX
-	    && (addr->raw.family != AF_UNIX)
+	    && (addr->raw.family != PR_AF_LOCAL)
 #endif
-#ifdef _PR_INET6
-	    && (addr->raw.family != AF_INET6)
-#endif
-	    && (addr->raw.family != AF_INET)) {
+	    && (addr->raw.family != PR_AF_INET6)
+	    && (addr->raw.family != PR_AF_INET)) {
         return PR_FALSE;
     }
     return PR_TRUE;
@@ -228,6 +226,7 @@ static PRStatus PR_CALLBACK SocketConnect(
     PRFileDesc *fd, const PRNetAddr *addr, PRIntervalTime timeout)
 {
 	PRInt32 rv;    /* Return value of _PR_MD_CONNECT */
+    const PRNetAddr *addrp = addr;
 	PRThread *me = _PR_MD_CURRENT_THREAD();
 
 	if (_PR_PENDING_INTERRUPT(me)) {
@@ -235,8 +234,15 @@ static PRStatus PR_CALLBACK SocketConnect(
 		PR_SetError(PR_PENDING_INTERRUPT_ERROR, 0);
 		return PR_FAILURE;
 	}
+#if defined(_PR_INET6)
+	if (addr->raw.family == PR_AF_INET6) {
+		addrCopy = *addr;
+		addrCopy.raw.family = AF_INET6;
+		addrp = &addrCopy;
+	}
+#endif
 
-	rv = _PR_MD_CONNECT(fd, addr, PR_NETADDR_SIZE(addr), timeout);
+	rv = _PR_MD_CONNECT(fd, addrp, PR_NETADDR_SIZE(addr), timeout);
 	PR_LOG(_pr_io_lm, PR_LOG_MAX, ("connect -> %d", rv));
 	if (rv == 0)
 		return PR_SUCCESS;
@@ -414,6 +420,10 @@ PRIntervalTime timeout)
 	_PR_MD_MAKE_NONBLOCK(fd2);
 #endif
 
+#ifdef _PR_INET6
+	if (AF_INET6 == addr->raw.family)
+        addr->raw.family = PR_AF_INET6;
+#endif
 	PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);
 	PR_ASSERT(IsValidNetAddrLen(addr, al) == PR_TRUE);
 
@@ -467,6 +477,7 @@ PRIntervalTime timeout)
 static PRStatus PR_CALLBACK SocketBind(PRFileDesc *fd, const PRNetAddr *addr)
 {
 	PRInt32 result;
+    const PRNetAddr *addrp = addr;
 
 	PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);
 
@@ -480,7 +491,14 @@ static PRStatus PR_CALLBACK SocketBind(PRFileDesc *fd, const PRNetAddr *addr)
 	}
 #endif /* XP_UNIX */
 
-	result = _PR_MD_BIND(fd, addr, PR_NETADDR_SIZE(addr));
+#if defined(_PR_INET6)
+	if (addr->raw.family == PR_AF_INET6) {
+		addrCopy = *addr;
+		addrCopy.raw.family = AF_INET6;
+		addrp = &addrCopy;
+	}
+#endif
+	result = _PR_MD_BIND(fd, addrp, PR_NETADDR_SIZE(addr));
 	if (result < 0) {
 		return PR_FAILURE;
 	}
@@ -630,6 +648,7 @@ static PRInt32 PR_CALLBACK SocketSendTo(
     PRIntn flags, const PRNetAddr *addr, PRIntervalTime timeout)
 {
 	PRInt32 temp, count;
+    const PRNetAddr *addrp = addr;
 	PRThread *me = _PR_MD_CURRENT_THREAD();
 
 	if (_PR_PENDING_INTERRUPT(me)) {
@@ -643,11 +662,18 @@ static PRInt32 PR_CALLBACK SocketSendTo(
 	}
 
 	PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);
+#if defined(_PR_INET6)
+	if (addr->raw.family == PR_AF_INET6) {
+		addrCopy = *addr;
+		addrCopy.raw.family = AF_INET6;
+		addrp = &addrCopy;
+	}
+#endif
 
 	count = 0;
 	while (amount > 0) {
 		temp = _PR_MD_SENDTO(fd, buf, amount, flags,
-		    addr, PR_NETADDR_SIZE(addr), timeout);
+		    addrp, PR_NETADDR_SIZE(addr), timeout);
 		if (temp < 0) {
 					count = -1;
 					break;
@@ -681,6 +707,10 @@ PRIntn flags, PRNetAddr *addr, PRIntervalTime timeout)
 
 	al = sizeof(PRNetAddr);
 	rv = _PR_MD_RECVFROM(fd, buf, amount, flags, addr, &al, timeout);
+#ifdef _PR_INET6
+	if (AF_INET6 == addr->raw.family)
+        addr->raw.family = PR_AF_INET6;
+#endif
 	return rv;
 }
 
@@ -733,6 +763,10 @@ PRIntervalTime timeout)
 		}
 	}
 	}
+#ifdef _PR_INET6
+	if (AF_INET6 == *raddr->raw.family)
+        *raddr->raw.family = PR_AF_INET6;
+#endif
 #else
 	rv = _PR_EmulateAcceptRead(sd, nd, raddr, buf, amount, timeout);
 #endif
@@ -910,6 +944,10 @@ static PRStatus PR_CALLBACK SocketGetName(PRFileDesc *fd, PRNetAddr *addr)
 	if (result < 0) {
 		return PR_FAILURE;
 	}
+#ifdef _PR_INET6
+	if (AF_INET6 == addr->raw.family)
+        addr->raw.family = PR_AF_INET6;
+#endif
 	PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);
 	PR_ASSERT(IsValidNetAddrLen(addr, addrlen) == PR_TRUE);
 	return PR_SUCCESS;
@@ -925,6 +963,10 @@ static PRStatus PR_CALLBACK SocketGetPeerName(PRFileDesc *fd, PRNetAddr *addr)
 	if (result < 0) {
 		return PR_FAILURE;
 	}
+#ifdef _PR_INET6
+	if (AF_INET6 == addr->raw.family)
+        addr->raw.family = PR_AF_INET6;
+#endif
 	PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);
 	PR_ASSERT(IsValidNetAddrLen(addr, addrlen) == PR_TRUE);
 	return PR_SUCCESS;
@@ -1183,24 +1225,32 @@ static const PRIOMethods* PR_GetSocketPollFdMethods()
     return &socketpollfdMethods;
 }  /* PR_GetSocketPollFdMethods */
 
+PR_EXTERN(PRStatus) _pr_push_ipv6toipv4_layer(PRFileDesc *fd);
 
 PR_IMPLEMENT(PRFileDesc*) PR_Socket(PRInt32 domain, PRInt32 type, PRInt32 proto)
 {
 	PRInt32 osfd;
 	PRFileDesc *fd;
+	PRInt32 tmp_domain = domain;
 
 	if (!_pr_initialized) _PR_ImplicitInitialization();
-	if (AF_INET != domain
-#if defined(_PR_INET6)
-			&& AF_INET6 != domain
-#endif
+	if (PR_AF_INET != domain
+			&& PR_AF_INET6 != domain
 #if defined(XP_UNIX)
-			&& AF_UNIX != domain
+			&& PR_AF_LOCAL != domain
 #endif
 			) {
 		PR_SetError(PR_ADDRESS_NOT_SUPPORTED_ERROR, 0);
 		return NULL;
 	}
+
+#if defined(_PR_INET6)
+	if (PR_AF_INET6 == domain)
+		domain = AF_INET6;
+#else
+	if (PR_AF_INET6 == domain)
+		domain = AF_INET;
+#endif
 	osfd = _PR_MD_SOCKET(domain, type, proto);
 	if (osfd == -1) {
 		return 0;
@@ -1212,10 +1262,23 @@ PR_IMPLEMENT(PRFileDesc*) PR_Socket(PRInt32 domain, PRInt32 type, PRInt32 proto)
 	/*
 	 * Make the sockets non-blocking
 	 */
-	if (fd != NULL)
+	if (fd != NULL) {
 		_PR_MD_MAKE_NONBLOCK(fd);
-	else
+#if !defined(_PR_INET6)
+		/*
+		 * For platforms with no support for IPv6 
+		 * create layered socket for IPv4-mapped IPv6 addresses
+		 */
+		if (PR_AF_INET6 == tmp_domain) {
+			if (PR_FAILURE == _pr_push_ipv6toipv4_layer(fd)) {
+				PR_Close(fd);
+				fd = NULL;
+			}
+		}
+#endif
+	} else
 		_PR_MD_CLOSE_SOCKET(osfd);
+
 	return fd;
 }
 

@@ -104,15 +104,13 @@ typedef enum PRTransmitFileFlags {
 
 #define PR_AF_INET AF_INET
 #define PR_AF_LOCAL AF_UNIX
-#ifdef AF_INET6
-#define PR_AF_INET6 AF_INET6
-#endif
 #define PR_INADDR_ANY INADDR_ANY
 #define PR_INADDR_LOOPBACK INADDR_LOOPBACK
 #define PR_INADDR_BROADCAST INADDR_BROADCAST
 
 #endif /* WIN32 */
 
+#define PR_AF_INET6 100
 /*
 **************************************************************************
 ** A network address
@@ -129,6 +127,30 @@ typedef enum PRTransmitFileFlags {
 #endif
 
 typedef struct in6_addr PRIPv6Addr;
+typedef struct sockaddr_in6 _pr_sockaddr_in6_t;
+
+#else
+
+struct _pr_in6_addr {
+	union {
+		PRUint8  _S6_u8[16];
+		PRUint32 _S6_u32[4];
+		PRUint64 _S6_u64[2];
+	} _S6_un;
+};
+#define s6_addr		_S6_un._S6_u8
+#define s6_addr32	_S6_un._S6_u32
+#define s6_addr64 	_S6_un._S6_addr64
+
+typedef struct _pr_in6_addr PRIPv6Addr;
+struct _pr_sockaddr_in6 {
+    PRUint16     		sin6_family;    /* AF_INET6 */
+    PRUint16       		sin6_port;      /* transport layer port # */
+    PRUint32        	sin6_flowinfo;  /* IPv6 traffic class & flow info */
+    struct _pr_in6_addr sin6_addr;      /* IPv6 address */
+    PRUint32        	sin6_scope_id;  /* set of interfaces for a scope */
+};
+typedef struct _pr_sockaddr_in6 _pr_sockaddr_in6_t;
 
 #endif /* defined(_PR_INET6) */
 
@@ -151,7 +173,6 @@ union PRNetAddr {
         char pad[8];
 #endif
     } inet;
-#if defined(_PR_INET6)
     struct {
         PRUint16 family;                /* address family (AF_INET6) */
         PRUint16 port;                  /* port number */
@@ -159,7 +180,6 @@ union PRNetAddr {
         PRIPv6Addr ip;                  /* the actual 128 bits of address */
         PRUint32 scope_id;              /* set of interfaces for a scope */
     } ipv6;
-#endif /* defined(_PR_INET6) */
 #if defined(XP_UNIX)
     struct {                            /* Unix domain socket address */
         PRUint16 family;                /* address family (AF_UNIX) */
@@ -181,12 +201,17 @@ union PRNetAddr {
 #else
 
 #if defined(XP_UNIX)
-#define PR_NETADDR_SIZE(_addr) \
-        ((_addr)->raw.family == AF_UNIX \
-        ? sizeof((_addr)->local) \
-        : sizeof((_addr)->inet))
+#define PR_NETADDR_SIZE(_addr) 					\
+        ((_addr)->raw.family == PR_AF_INET		\
+        ? sizeof((_addr)->inet)					\
+        : ((_addr)->raw.family == PR_AF_INET6	\
+        ? sizeof((_addr)->ipv6)					\
+        : sizeof((_addr)->local)))
 #else
-#define PR_NETADDR_SIZE(_addr) sizeof((_addr)->inet)
+#define PR_NETADDR_SIZE(_addr) 					\
+        ((_addr)->raw.family == PR_AF_INET		\
+        ? sizeof((_addr)->inet)					\
+        : sizeof((_addr)->ipv6))
 #endif /* defined(XP_UNIX) */
 
 #endif /* defined(_PR_INET6) */
