@@ -53,7 +53,7 @@ extern "C" {
 #include "layers.h"
 #endif /* LAYERS */
 
-#include "nsplugin.h"
+#include "nsILCPlg.h"
 #include "nsAgg.h"      /* nsPluginManager aggregates nsJVMManager */
 #ifdef OJI
 #include "nsjvm.h"
@@ -444,10 +444,8 @@ public:
     NS_IMETHOD_(void)
     UnregisterWindow(void* window);	
 
-#ifdef XP_MAC
     NS_IMETHOD_(PRInt16)
 	AllocateMenuID(PRBool isSubmenu);
-#endif // XP_MAC
 
     ////////////////////////////////////////////////////////////////////////////
     // Methods specific to NPILiveConnectPluginInstancePeer:

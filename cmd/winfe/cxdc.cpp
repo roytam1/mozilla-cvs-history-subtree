@@ -3798,7 +3798,6 @@ BOOL CDCCX::ResolveTextExtent(int16 wincsid, HDC pDC, LPCTSTR pString, int iLeng
 #endif
 }
 
-
 #ifdef TRANSPARENT_APPLET
 // 
 // This function is called only when applet are windowless and force a

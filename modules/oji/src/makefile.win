@@ -12,7 +12,7 @@ IGNORE_MANIFEST=1
 #// root of NS
 #//
 #//------------------------------------------------------------------------
-NS_DEPTH= ..\..\..
+DEPTH= ..\..\..
 
 !ifndef MAKE_OBJ_TYPE
 MAKE_OBJ_TYPE=EXE
@@ -67,10 +67,10 @@ LINCS= $(LINCS) -I_jri -I$(DEPTH)/lib/plugin \
 		-I$(PUBLIC)/pref     \
 		-I$(PUBLIC)/xpcom    \
 !endif
-		-I$(NSTOMOZ_DEPTH)/lib/layout   \
-		-I$(NSTOMOZ_DEPTH)/lib/libstyle \
-		-I$(NSTOMOZ_DEPTH)/lib/libjar   \
-		-I$(NSTOMOZ_DEPTH)/lib/plugin   \
+		-I$(DEPTH)/lib/layout   \
+		-I$(DEPTH)/lib/libstyle \
+		-I$(DEPTH)/lib/libjar   \
+		-I$(DEPTH)/lib/plugin   \
 		$(NULL)
 
 MODULE = oji
@@ -86,7 +86,7 @@ EXPORTS = nsjvm.h jvmmgr.h nsscd.h
 #// Include the common makefile rules
 #//
 #//------------------------------------------------------------------------
-include <$(NS_DEPTH)/sun-java/config/rules.mak>
+include <$(DEPTH)/config/rules.mak>
 
 LCFLAGS=$(LCFLAGS) ^
 	$(JAVA_DEFINES) 

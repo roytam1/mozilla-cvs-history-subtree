@@ -337,6 +337,7 @@ LINK_LIBS= \
     $(DIST)\lib\libnspr21.lib \
     $(DIST)\lib\libplds21.lib \
     $(DIST)\lib\libplc21.lib \
+    $(DIST)\lib\libmsgc21.lib \
 !endif
 !if defined(MOZ_OJI)
 !elseif defined(MOZ_JAVA)
@@ -357,7 +358,6 @@ LINK_LIBS= \
     $(DIST)\lib\libreg32.lib \
 !ifdef MOZ_JAVA
     $(DIST)\lib\libapplet32.lib \
-    $(DIST)\lib\libmsgc21.lib \
 !endif
 !ifdef MOZ_OJI
     $(DIST)\lib\oji32.lib \
@@ -537,6 +537,9 @@ CINCLUDES= \
     /I$(DEPTH)\lib\layout \
     /I$(DEPTH)\lib\libstyle \
     /I$(DEPTH)\lib\liblayer\include \
+!ifndef NO_SECURITY
+    /I$(DEPTH)\lib\libjar \
+!endif
     /I$(DEPTH)\lib\libcnv \
     /I$(DEPTH)\lib\libi18n \
     /I$(DEPTH)\lib\libparse \
@@ -571,7 +574,6 @@ CDISTINCLUDES1= \
     /I$(XPDIST)\public\applet \
     /I$(XPDIST)\public\softupdt \
 !endif
-    /I$(XPDIST)\public\oji \
     /I$(XPDIST)\public\libreg \
     /I$(XPDIST)\public\hook \
     /I$(XPDIST)\public\pref
@@ -615,6 +617,7 @@ CDISTINCLUDES3= \
     /I$(DIST)\include \
     /I$(XPDIST)\public\img \
     /I$(XPDIST)\public\jtools \
+!else
 !endif
     /I$(XPDIST)\public \
     /I$(XPDIST)\public\coreincl \
@@ -831,6 +834,13 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libi18n\kinsokuf.c
 	$(DEPTH)\lib\libi18n\net_junk.c 
 	$(DEPTH)\lib\libi18n\katakana.c 
+!ifndef NO_SECURITY
+	$(DEPTH)\lib\libjar\zig.c
+	$(DEPTH)\lib\libjar\zigsign.c
+	$(DEPTH)\lib\libjar\zigver.c
+	$(DEPTH)\lib\libjar\zig-ds.c
+	$(DEPTH)\lib\libjar\zigevil.c
+!endif
 	$(DEPTH)\lib\libcnv\libcnv.c 
 	$(DEPTH)\lib\libcnv\writejpg.c 
 	$(DEPTH)\lib\libcnv\colorqnt.c 
@@ -888,6 +898,9 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libmocha\lm_applt.c
 	$(DEPTH)\lib\libmocha\lm_bars.c
 	$(DEPTH)\lib\libmocha\lm_cmpnt.c
+!ifndef NO_SECURITY
+	$(DEPTH)\lib\libmocha\lm_crypt.c
+!endif
 	$(DEPTH)\lib\libmocha\lm_doc.c
 	$(DEPTH)\lib\libmocha\lm_embed.c
 	$(DEPTH)\lib\libmocha\lm_event.c
@@ -907,6 +920,9 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libmocha\lm_trggr.c  
 	$(DEPTH)\lib\libmocha\lm_url.c
 	$(DEPTH)\lib\libmocha\lm_win.c
+!ifndef NO_SECURITY
+	$(DEPTH)\lib\libmocha\lm_pk11.c
+!endif
 !if "$(MOZ_BITS)" == "32"
 !ifdef MOZ_JAVA
 	$(DEPTH)\lib\libmocha\lm_jsd.c
@@ -1632,7 +1648,7 @@ install:    \
 	    $(OUTDIR)\libplc21.dll    \
 !ENDIF
 !IF EXIST($(DIST)\bin\libmsgc21.dll)
-	    $(JAVABIN_DIR)\libmsgc21.dll    \
+	    $(OUTDIR)\libmsgc21.dll    \
 !ENDIF
 !endif
 !IF EXIST($(DIST)\bin\js32$(VERSION_NUMBER).dll)
@@ -1655,6 +1671,9 @@ install:    \
 !ENDIF
 !IF EXIST($(DIST)\bin\xpcom32.dll)
 	    $(OUTDIR)\xpcom32.dll    \
+!ENDIF
+!IF EXIST($(DIST)\bin\jrt32$(VERSION_NUMBER).dll)
+	    $(OUTDIR)\jrt32$(VERSION_NUMBER).dll    \
 !ENDIF
 !IF EXIST($(DIST)\bin\uni3200.dll)
 	    $(OUTDIR)\uni3200.dll    \
@@ -1754,7 +1773,7 @@ install:    \
 	    $(OUTDIR)\plc21.dll    \
 !ENDIF
 !IF EXIST($(DIST)\lib\msgc21.dll)
-	    $(JAVABIN_DIR)\msgc21.dll    \
+	    $(OUTDIR)\msgc21.dll    \
 !ENDIF
 !endif
 !IF EXIST($(DIST)\bin\js16$(VERSION_NUMBER).dll)
@@ -1907,10 +1926,8 @@ $(OUTDIR)\libplds21.dll:   $(DIST)\bin\libplds21.dll
     @IF EXIST $(DIST)\bin\libplds21.dll copy $(DIST)\bin\libplds21.dll $(OUTDIR)\libplds21.dll
 $(OUTDIR)\libplc21.dll:   $(DIST)\bin\libplc21.dll
     @IF EXIST $(DIST)\bin\libplc21.dll copy $(DIST)\bin\libplc21.dll $(OUTDIR)\libplc21.dll
-$(JAVABIN_DIR)\libmsgc21.dll:   $(DIST)\bin\libmsgc21.dll
-    @IF NOT EXIST "$(JAVAPARENT_DIR)/$(NULL)" mkdir "$(JAVAPARENT_DIR)"
-    @IF NOT EXIST "$(JAVABIN_DIR)/$(NULL)" mkdir "$(JAVABIN_DIR)"
-    @IF EXIST $(DIST)\bin\libmsgc21.dll copy $(DIST)\bin\libmsgc21.dll $(JAVABIN_DIR)\libmsgc21.dll
+$(OUTDIR)\libmsgc21.dll:   $(DIST)\bin\libmsgc21.dll
+    @IF EXIST $(DIST)\bin\libmsgc21.dll copy $(DIST)\bin\libmsgc21.dll $(OUTDIR)\libmsgc21.dll
 !endif
 
 $(OUTDIR)\js32$(VERSION_NUMBER).dll:   $(DIST)\bin\js32$(VERSION_NUMBER).dll
@@ -2000,10 +2017,8 @@ $(OUTDIR)\plds21.dll:   $(DIST)\lib\plds21.dll
     @IF EXIST $(DIST)\bin\plds21.dll copy $(DIST)\bin\plds21.dll $(OUTDIR)\plds21.dll
 $(OUTDIR)\plc21.dll:   $(DIST)\lib\plc21.dll
     @IF EXIST $(DIST)\bin\plc21.dll copy $(DIST)\bin\plc21.dll $(OUTDIR)\plc21.dll
-$(JAVABIN_DIR)\msgc21.dll:   $(DIST)\lib\msgc21.dll
-    @IF NOT EXIST "$(JAVAPARENT_DIR)/$(NULL)" mkdir "$(JAVAPARENT_DIR)"
-    @IF NOT EXIST "$(JAVABIN_DIR)/$(NULL)" mkdir "$(JAVABIN_DIR)"
-    @IF EXIST $(DIST)\bin\msgc21.dll copy $(DIST)\bin\msgc21.dll $(JAVABIN_DIR)\msgc21.dll
+$(OUTDIR)\msgc21.dll:   $(DIST)\lib\msgc21.dll
+    @IF EXIST $(DIST)\bin\msgc21.dll copy $(DIST)\bin\msgc21.dll $(OUTDIR)\msgc21.dll
 !endif
 
 $(OUTDIR)\js16$(VERSION_NUMBER).dll:   $(DIST)\bin\js16$(VERSION_NUMBER).dll
@@ -2035,9 +2050,6 @@ $(OUTDIR)\dynfonts\nstdfp16.dll:   $(DEPTH)\cmd\winfe\nstdfp16.dll
 $(OUTDIR)\nsldap.dll:   $(DIST)\bin\nsldap.dll
     @IF EXIST $(DIST)\bin\nsldap.dll copy $(DIST)\bin\nsldap.dll $(OUTDIR)\nsldap.dll
 !endif
-
-$(OUTDIR)\jrt16$(VERSION_NUMBER).dll:   $(DIST)\bin\jrt16$(VERSION_NUMBER).dll
-    @IF EXIST $(DIST)\bin\jrt16$(VERSION_NUMBER).dll copy $(DIST)\bin\jrt16$(VERSION_NUMBER).dll $(OUTDIR)\jrt16$(VERSION_NUMBER).dll
 
 $(JAVABIN_DIR)\npj16$(VERSION_NUMBER).dll:   $(DIST)\bin\npj16$(VERSION_NUMBER).dll
     @IF NOT EXIST "$(JAVAPARENT_DIR)/$(NULL)" mkdir "$(JAVAPARENT_DIR)"
@@ -2073,6 +2085,7 @@ $(OUTDIR)\nsinit.exe: $(DIST)\bin\nsinit.exe
     @IF EXIST $(DIST)\bin\nsinit.exe copy $(DIST)\bin\nsinit.exe $(OUTDIR)\nsinit.exe
 
 !ENDIF
+
 
 # XXX this will copy them all, we really only want the ones that changed
 $(JAVACLS_DIR)\$(JAR_NAME): $(JAVA_DESTPATH)\$(JAR_NAME)

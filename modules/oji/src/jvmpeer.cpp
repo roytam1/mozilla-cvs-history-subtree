@@ -32,7 +32,7 @@ JVMInstancePeer::JVMInstancePeer(nsISupports* outer,
     NS_INIT_AGGREGATED(outer);
 }
 
-JVMInstancePeer::~JVMInstancePeer()
+JVMInstancePeer::~JVMInstancePeer(void)
 {
 }
 
@@ -125,13 +125,13 @@ JVMInstancePeer::GetParameter(const char* name)
 }
 
 NS_METHOD_(NPTagType)
-JVMInstancePeer::GetTagType()
+JVMInstancePeer::GetTagType(void)
 {
     return fPluginInstancePeer->GetTagType();
 }
 
 NS_METHOD_(const char *)
-JVMInstancePeer::GetTagText()
+JVMInstancePeer::GetTagText(void)
 {
     return fPluginInstancePeer->GetTagText();
 }
@@ -224,13 +224,11 @@ JVMInstancePeer::UnregisterWindow(void* window)
     fPluginInstancePeer->UnregisterWindow(window);
 }
 
-#ifdef XP_MAC
 NS_METHOD_(PRInt16)
 JVMInstancePeer::AllocateMenuID(PRBool isSubmenu)
 {
     return fPluginInstancePeer->AllocateMenuID(isSubmenu);
 }
-#endif // XP_MAC
 
 ////////////////////////////////////////////////////////////////////////////////
 // Non-delegated methods:

@@ -180,13 +180,13 @@ public:
     // Get the complete text of the HTML tag that was
     // used to instantiate this plugin
     NS_IMETHOD_(const char*)
-    GetTagText();
+    GetTagText(void);
 
     // Get the type of the HTML tag that was used ot instantiate this
     // plugin.  Currently supported tags are EMBED, OBJECT and APPLET.
     // 
     NS_IMETHOD_(NPTagType) 
-    GetTagType();
+    GetTagType(void);
 
     NS_IMETHOD_(NPIPluginManager*)
     GetPluginManager(void);
@@ -267,10 +267,8 @@ public:
     UnregisterWindow(void* window);
 
 	// Menu ID allocation calls for Mac:
-#ifdef XP_MAC
     NS_IMETHOD_(PRInt16)
 	AllocateMenuID(PRBool isSubmenu);
-#endif //XP_MAC
 
     ////////////////////////////////////////////////////////////////////////////
     // Methods specific to NPIJVMPluginInstancePeer:
@@ -288,7 +286,7 @@ public:
     GetMayScript(void);
 
     NS_IMETHOD_(const char *)
-    GetID();
+    GetID(void);
 
     // XXX reload method?
 
@@ -333,7 +331,7 @@ public:
 protected:
 
     JVMInstancePeer(nsISupports* outer, MWContext* cx, LO_CommonPluginStruct* lo);
-    virtual ~JVMInstancePeer();
+    virtual ~JVMInstancePeer(void);
 
     // Instance Variables:
     NPIPluginInstancePeer*      fPluginInstancePeer;

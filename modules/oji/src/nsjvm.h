@@ -29,7 +29,7 @@
 #ifndef nsjvm_h___
 #define nsjvm_h___
 
-#include "nsplugin.h"
+#include "nsIPlug.h"
 #include "jri.h"        // XXX for now
 #include "jni.h"
 #include "prthread.h"
