@@ -3536,6 +3536,9 @@ nsTableFrame::DistributeHeightToRows(nsIPresContext*          aPresContext,
   PRUint32 numRowGroups;
   OrderRowGroups(rowGroups, numRowGroups, nsnull);
 
+#ifdef XP_OS2
+  volatile
+#endif
   nscoord amountUsed = 0;
   // distribute space to each pct height row whose row group doesn't have a computed 
   // height, and base the pct on the table height. If the row group had a computed 
