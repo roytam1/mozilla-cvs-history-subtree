@@ -222,6 +222,7 @@ nsRenderingContextOS2::nsRenderingContextOS2()
    mFontMetrics = nsnull;
    mCurrFontMetrics = nsnull;
    mCurrDrawingColor = NS_RGB( 0, 0, 0);
+   mAlreadySetDrawingColor = PR_FALSE;
    mCurrTextColor = NS_RGB( 0, 0, 0);
    mLineStyle = nsLineStyle_kSolid;
    mCurrLineStyle = nsLineStyle_kSolid;
@@ -321,15 +322,15 @@ nsresult nsRenderingContextOS2::CommonInit()
     ::GpiSelectPalette(mSurface->mPS, (HPAL)palInfo.palette);
     ::WinRealizePalette((HWND)mDCOwner->GetNativeData(NS_NATIVE_WINDOW),mSurface->mPS, &cclr);
   } else if (!palInfo.isPaletteDevice && palInfo.palette) {
-    GpiCreateLogColorTable( mSurface->mPS, LCOL_RESET | LCOL_PURECOLOR,
+//    GpiCreateLogColorTable( mSurface->mPS, LCOL_RESET | LCOL_PURECOLOR,
+    GpiCreateLogColorTable( mSurface->mPS, LCOL_RESET,
                             LCOLF_CONSECRGB, 0,
                             palInfo.sizePalette, (PLONG) palInfo.palette);
-    free(palInfo.palette);
-    palInfo.palette = nsnull;
   }
   else
   {
-    GpiCreateLogColorTable( mSurface->mPS, LCOL_PURECOLOR,
+//    GpiCreateLogColorTable( mSurface->mPS, LCOL_PURECOLOR,
+    GpiCreateLogColorTable( mSurface->mPS, 0,
                             LCOLF_RGB, 0, 0, 0);
   }
   return NS_OK;
@@ -356,15 +357,15 @@ nsresult nsRenderingContextOS2::SelectOffScreenDrawingSurface( nsDrawingSurface 
         ::GpiSelectPalette(mSurface->mPS, (HPAL)palInfo.palette);
         ::WinRealizePalette((HWND)mDCOwner->GetNativeData(NS_NATIVE_WINDOW),mSurface->mPS, &cclr);
       } else if (!palInfo.isPaletteDevice && palInfo.palette) {
-        GpiCreateLogColorTable( mSurface->mPS, LCOL_RESET | LCOL_PURECOLOR,
+//        GpiCreateLogColorTable( mSurface->mPS, LCOL_RESET | LCOL_PURECOLOR,
+        GpiCreateLogColorTable( mSurface->mPS, LCOL_RESET,
                                 LCOLF_CONSECRGB, 0,
                                 palInfo.sizePalette, (PLONG) palInfo.palette);
-        free(palInfo.palette);
-        palInfo.palette = nsnull;
       }
       else
       {
-        GpiCreateLogColorTable( mSurface->mPS, LCOL_PURECOLOR,
+//        GpiCreateLogColorTable( mSurface->mPS, LCOL_PURECOLOR,
+        GpiCreateLogColorTable( mSurface->mPS, 0,
                                 LCOLF_RGB, 0, 0, 0);
       }
    }
@@ -864,7 +865,7 @@ nsresult nsRenderingContextOS2::GetCurrentTransform( nsTransform2D *&aTransform)
 // !! this method could do with a rename...
 void nsRenderingContextOS2::SetupDrawingColor( BOOL bForce)
 {
-   if( bForce || mColor != mCurrDrawingColor)
+   if( bForce || mColor != mCurrDrawingColor || !mAlreadySetDrawingColor)
    {
 
       AREABUNDLE areaBundle;
@@ -888,8 +889,10 @@ void nsRenderingContextOS2::SetupDrawingColor( BOOL bForce)
          areaBundle.lBackColor = 0x00FFFFFF;   //OS2TODO
          lineBundle.lBackColor = 0x00FFFFFF;
 
-         areaBundle.usMixMode     = FM_LEAVEALONE;
-         areaBundle.usBackMixMode = BM_LEAVEALONE;
+//         areaBundle.usMixMode     = FM_LEAVEALONE;
+//         areaBundle.usBackMixMode = BM_LEAVEALONE;
+         areaBundle.usMixMode     = FM_OVERPAINT;
+         areaBundle.usBackMixMode = BM_OVERPAINT;
 
 
          lLineFlags = lLineFlags | LBB_BACK_COLOR ;
@@ -903,6 +906,7 @@ void nsRenderingContextOS2::SetupDrawingColor( BOOL bForce)
 
 
       mCurrDrawingColor = mColor;
+      mAlreadySetDrawingColor = PR_TRUE;
    }
 
    if( bForce || mLineStyle != mCurrLineStyle)
@@ -966,6 +970,16 @@ nsresult nsRenderingContextOS2::DrawLine( nscoord aX0, nscoord aY0, nscoord aX1,
                      { (long) aX1, (long) aY1 } };
    NS2PM( ptls, 2);
 
+   if (ptls[0].x > ptls[1].x)
+      ptls[0].x--;
+   else if (ptls[1].x > ptls[0].x)
+      ptls[1].x--;
+
+   if (ptls[0].y < ptls[1].y)
+      ptls[0].y++;
+   else if (ptls[1].y < ptls[0].y)
+      ptls[1].y++;
+
    SetupDrawingColor();
 
    GpiMove( mSurface->mPS, ptls);
@@ -1026,8 +1040,11 @@ void nsRenderingContextOS2::PMDrawPoly( const nsPoint aPoints[], PRInt32 aNumPoi
       if( bFilled == PR_TRUE)
       {
          POLYGON pgon = { aNumPoints - 1, pts + 1 };
+         //IBM-AKR changed from boundary and inclusive to be noboundary and 
+         //        exclusive to fix bug with text fields, buttons, etc. borders 
+         //        being 1 pel too thick.  Bug 56853
          GpiPolygons( mSurface->mPS, 1, &pgon,
-                      POLYGON_BOUNDARY, POLYGON_INCL);
+                      POLYGON_NOBOUNDARY, POLYGON_EXCL);
       }
       else
       {
@@ -1094,12 +1111,20 @@ void nsRenderingContextOS2::PMDrawRect( nsRect &rect, BOOL fill)
 
    SetupDrawingColor();
 
-   long lOps = DRO_OUTLINE;
-   if( fill)
-      lOps |= DRO_FILL;
-
    GpiMove( mSurface->mPS, (PPOINTL) &rcl);
-   GpiBox( mSurface->mPS, lOps, ((PPOINTL)&rcl) + 1, 0, 0);
+   if (rcl.xLeft == rcl.xRight ||
+       rcl.yTop == rcl.yBottom )
+   {
+      GpiLine( mSurface->mPS, ((PPOINTL)&rcl) + 1);
+   }
+   else 
+   {
+      long lOps = DRO_OUTLINE;
+      if( fill)
+         lOps |= DRO_FILL;
+   
+      GpiBox( mSurface->mPS, lOps, ((PPOINTL)&rcl) + 1, 0, 0);
+   }
 }
 
 // Arc-drawing methods, all proxy on to PMDrawArc
@@ -1226,8 +1251,11 @@ void nsRenderingContextOS2::PMDrawArc( nsRect &rect, PRBool bFilled,
 
 NS_IMETHODIMP nsRenderingContextOS2::GetHints(PRUint32& aResult)
 {
-   aResult = gModuleData.renderingHints;
-   return NS_OK;
+  PRUint32 result = 0;
+
+  aResult = result;
+
+  return NS_OK;
 }
 
 nsresult nsRenderingContextOS2::DrawString( const char *aString,
@@ -1259,16 +1287,18 @@ nsresult nsRenderingContextOS2::DrawString( const char *aString,
 
    GpiMove( mSurface->mPS, &ptl);
 
+   PRUint32 lLength = aLength;
+   const char *aStringTemp = aString;
    // GpiCharString has a max length of 512 chars at a time...
-   while( aLength)
+   while( lLength)
    {
-      ULONG thislen = min( aLength, 512);
+      ULONG thislen = min( lLength, 512);
       GpiCharStringPos( mSurface->mPS, nsnull,
                         aSpacing == nsnull ? 0 : CHS_VECTOR,
-                        thislen, (PCH)aString,
+                        thislen, (PCH)aStringTemp,
                         aSpacing == nsnull ? nsnull : (PLONG) dx0);
-      aLength -= thislen;
-      aString += thislen;
+      lLength -= thislen;
+      aStringTemp += thislen;
       dx0 += thislen;
    }
 
@@ -1280,9 +1310,11 @@ nsresult nsRenderingContextOS2::DrawString( const PRUnichar *aString, PRUint32 a
                                             PRInt32 aFontID,
                                             const nscoord* aSpacing)
 {
-   // XXX unicode hack XXX
-   return DrawString( gModuleData.ConvertFromUcs( aString, aLength),
-                      aLength, aX, aY, aSpacing);
+  char buf[1024];
+
+  int newLength = WideCharToMultiByte( ((nsFontMetricsOS2*)mFontMetrics)->mCodePage, aString, aLength, buf, sizeof(buf));
+
+  return DrawString( buf, newLength, aX, aY, aSpacing);
 }
 
 nsresult nsRenderingContextOS2::DrawString( const nsString& aString,
@@ -1341,18 +1373,21 @@ NS_IMETHODIMP nsRenderingContextOS2::GetWidth( const char* aString,
                                                nscoord &aWidth)
 {
    PRUint32 sum = 0;
+   PRUint32 lLength = aLength;
 
    SetupFontAndColor(); // select font
 
-   POINTL ptls[ 4];
+   POINTL ptls[ 5];
 
-   while( aLength) // max data to gpi function is 512 chars.
+   const char* aStringTemp = aString;
+
+   while( lLength) // max data to gpi function is 512 chars.
    {
-      ULONG thislen = min( aLength, 512);
-      GpiQueryTextBox( mSurface->mPS, thislen, (PCH) aString, 4, ptls);
-      sum += ptls[ TXTBOX_TOPRIGHT].x;
-      aLength -= thislen;
-      aString += thislen;
+      ULONG thislen = min( lLength, 512);
+      GpiQueryTextBox( mSurface->mPS, thislen, (PCH) aStringTemp, 5, ptls);
+      sum += ptls[ TXTBOX_CONCAT].x;
+      lLength -= thislen;
+      aStringTemp += thislen;
    }
 
    aWidth = NSToCoordRound(float(sum) * mP2T);
@@ -1365,9 +1400,12 @@ NS_IMETHODIMP nsRenderingContextOS2::GetWidth( const PRUnichar *aString,
                                                nscoord &aWidth,
                                                PRInt32 *aFontID)
 {
-   // XXX unicode hack XXX
-   return GetWidth( gModuleData.ConvertFromUcs( aString, aLength),
-                    aLength, aWidth);
+  nsresult temp;
+  char buf[1024];
+
+  int newLength = WideCharToMultiByte( ((nsFontMetricsOS2*)mFontMetrics)->mCodePage, aString, aLength, buf, sizeof(buf));
+  temp = GetWidth( buf, newLength, aWidth);
+  return temp;
 }
 
 // Image drawing: just proxy on to the image object, so no worries yet.

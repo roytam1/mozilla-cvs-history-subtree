@@ -43,6 +43,7 @@
 #include <os2.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "prenv.h"
 #elif defined(XP_UNIX)
 #include <unistd.h>
 #include <stdlib.h>
@@ -838,6 +839,18 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
 #ifdef DEBUG
             printf( "Got OS2_OS2Directory: %s\n", buffer);
 #endif
+            break;
+        }
+
+     case OS2_HomeDirectory:
+        {
+            char *tPath = PR_GetEnv("MOZILLA_HOME");
+            /* If MOZILLA_HOME is not set, use GetCurrentProcessDirectory */
+            /* To ensure we get a long filename system */
+            if (!tPath || PL_strlen(tPath) == 0)
+              GetCurrentProcessDirectory(*this);
+            else
+              *this = tPath;
             break;
         }
 

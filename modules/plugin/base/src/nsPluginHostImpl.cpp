@@ -2841,7 +2841,7 @@ NS_IMETHODIMP nsPluginHostImpl::GetPluginFactory(const char *aMimeType, nsIPlugi
 	if((rv = FindPluginEnabledForType(aMimeType, pluginTag)) == NS_OK)
 	{
 
-#ifdef XP_WIN // actually load a dll on Windows
+#if defined(XP_WIN) || defined(XP_OS2) // actually load a dll on Windows and OS/2
 
 #ifdef NS_DEBUG
   printf("For %s found plugin %s\n", aMimeType, pluginTag->mFileName);
@@ -2978,8 +2978,8 @@ nsresult nsPluginHostImpl::ScanPluginsDirectory(nsPluginsDir& pluginsDir,
 			nsPluginFile pluginFile(file);
 			PRLibrary* pluginLibrary = nsnull;
 
-      // load the plugin's library so we can ask it some questions, but not for Windows
-#ifndef XP_WIN
+      // load the plugin's library so we can ask it some questions, but not for Windows and OS/2
+#if !defined(XP_WIN) && !defined(XP_OS2)
       if (pluginFile.LoadPlugin(pluginLibrary) != NS_OK || pluginLibrary == nsnull)
         continue;
 #endif
