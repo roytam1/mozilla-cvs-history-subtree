@@ -24,6 +24,7 @@
 <!ENTITY OptionsCmd.label    "Options">
 <!ENTITY MungerCmd.label     "Munger">
 <!ENTITY DisableMunger.label "Disable All">
+<!ENTITY EnableColors.label  "Color Codes">
 
 <!ENTITY DebugMsgCmd.label      "Debug Mode">
 <!ENTITY DebugMsgCmd.aKey       "D">
