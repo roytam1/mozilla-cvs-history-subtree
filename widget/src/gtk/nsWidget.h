@@ -36,6 +36,8 @@ class nsIToolkit;
 #include <gdk/gdkprivate.h>
 #endif
 
+#include "gtkmozbox.h"
+
 #define NSRECT_TO_GDKRECT(ns,gdk) \
   PR_BEGIN_MACRO \
   gdk.x = ns.x; \
@@ -95,8 +97,7 @@ public:
   NS_IMETHOD Enable(PRBool aState);
   NS_IMETHOD SetFocus(void);
 
-  PRBool OnResize(nsSizeEvent event);
-  virtual PRBool OnResize(nsRect &aRect);
+  virtual PRBool OnResize(nsSizeEvent event);
   virtual PRBool OnMove(PRInt32 aX, PRInt32 aY);
 
   nsIFontMetrics *GetFont(void);
@@ -143,7 +144,7 @@ public:
   void InitEvent(nsGUIEvent& event, PRUint32 aEventType, nsPoint* aPoint = nsnull);
     
   // Utility functions
-
+  void       HandleEvent(GdkEvent *event);
   PRBool     ConvertStatus(nsEventStatus aStatus);
   PRBool     DispatchMouseEvent(nsMouseEvent& aEvent);
   PRBool     DispatchStandardEvent(PRUint32 aMsg);
@@ -157,14 +158,14 @@ public:
 #endif
 
   // Return the Gdk window used for rendering
-  virtual GdkWindow * GetRenderWindow(GtkWidget * aGtkWidget);
+  virtual GdkWindow * GetRenderWindow(GtkObject * aGtkObject);
 
 protected:
 
   virtual void InitCallbacks(char * aName = nsnull);
   virtual void OnDestroy();
 
-  NS_IMETHOD CreateNative(GtkWidget *parentWindow) { return NS_OK; }
+  NS_IMETHOD CreateNative(GtkObject *parentWindow) { return NS_OK; }
 
   nsresult CreateWidget(nsIWidget *aParent,
                         const nsRect &aRect,
@@ -352,11 +353,12 @@ protected:
                       PRUint32         aEventType);
 
 #ifdef DEBUG
-  nsCAutoString  debug_GetName(GtkWidget * aGtkWidget);
-  PRInt32       debug_GetRenderXID(GtkWidget * aGtkWidget);
+  nsCAutoString  debug_GetName(GtkObject * aGtkWidget);
+  PRInt32       debug_GetRenderXID(GtkObject * aGtkWidget);
 #endif
 
   guint32 mGrabTime;
+  GtkWidget *mMozBox;
   GtkWidget *mWidget;
   nsIWidget *mParent;
 
@@ -374,13 +376,10 @@ protected:
   void SetXIC(GdkICPrivate *aIC);
   void GetXYFromPosition(unsigned long *aX, unsigned long *aY);
 #endif /* USE_XIM */
-
-
-
-private:
-  PRBool mIsDragDest;
-  static nsILookAndFeel *sLookAndFeel;
-  static PRUint32 sWidgetCount;
+  
+  static nsIRollupListener *gRollupListener;
+  static nsIWidget         *gRollupWidget;
+  static PRBool             gRollupConsumeRollupEvent;
 
   //
   // Keep track of the last widget being "dragged"
@@ -390,6 +389,12 @@ private:
   static gint sButtonMotionRootY;
   static gint sButtonMotionWidgetX;
   static gint sButtonMotionWidgetY;
+
+private:
+  PRBool mIsDragDest;
+  static nsILookAndFeel *sLookAndFeel;
+  static PRUint32 sWidgetCount;
+
 };
 
 #endif /* nsWidget_h__ */
