@@ -31,7 +31,7 @@ PR_CLIENT_BUILD = 1
 PR_CLIENT_BUILD_UNIX = 1
 endif
 
-DIST_GARBAGE = config.cache config.log config.status dist
+DIST_GARBAGE = config.cache config.log config.status
 
 include $(topsrcdir)/config/rules.mk
 
