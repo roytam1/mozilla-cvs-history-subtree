@@ -23,12 +23,13 @@
 
 #include "nsString.h"
 #include "nsInstall.h"
-#include "nsWinReg.h"
-#include "nsJSWinReg.h"
 
 #include "nsIDOMInstallVersion.h"
 
 #ifdef WIN32
+#include "nsWinReg.h"
+#include "nsJSWinReg.h"
+
 extern JSClass WinRegClass;
 #endif
 
