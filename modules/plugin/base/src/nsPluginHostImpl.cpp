@@ -96,6 +96,8 @@
 #include "nsILocalFile.h"
 #include "nsIFileChannel.h"
 
+#include "nsIJVMPlugin.h"
+
 #ifdef XP_UNIX
 #if defined(MOZ_WIDGET_GTK)
 #include <gdk/gdkx.h> // for GDK_DISPLAY()
@@ -756,7 +758,7 @@ nsPluginTag::nsPluginTag(const char* aName,
 
 nsPluginTag::~nsPluginTag()
 {
-  TryUnloadPlugin();
+  TryUnloadPlugin(PR_TRUE);
 
   if (nsnull != mName) {
     delete[] (mName);
@@ -799,8 +801,13 @@ nsPluginTag::~nsPluginTag()
   }
 }
 
-void nsPluginTag::TryUnloadPlugin()
+void nsPluginTag::TryUnloadPlugin(PRBool aForceShutdown)
 {
+  // XXX This is a hack to keep Java around, see bug 76936
+  nsCOMPtr<nsIJVMPlugin> isJava = do_QueryInterface(mEntryPoint);
+
+  if (isJava && !aForceShutdown) return;
+
   if (mEntryPoint)
   {
     mEntryPoint->Shutdown();
