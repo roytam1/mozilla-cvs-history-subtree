@@ -50,6 +50,8 @@ class nsIFile;
 class nsCString;
 class nsString;
 
+class SubmissionAttachmentArray;
+
 class nsXFormsSubmissionElement : public nsXFormsElement,
                                   public nsIXTFGenericElement,
                                   public nsIDOMEventListener
@@ -70,9 +72,9 @@ public:
   NS_HIDDEN_(void)     GetDefaultInstanceData(nsIDOMNode **result);
   NS_HIDDEN_(nsresult) GetSelectedInstanceData(nsIDOMNode **result);
   NS_HIDDEN_(nsresult) SerializeData(nsIDOMNode *data, PRUint32 format, nsCString &uri, nsIInputStream **, nsCString &contentType);
-  NS_HIDDEN_(nsresult) SerializeDataXML(nsIDOMNode *data, PRUint32 format, nsIInputStream **, nsCString &contentType);
-  NS_HIDDEN_(nsresult) CreateSubmissionDoc(nsIDOMDocument *source, const nsString &encoding, nsIDOMDocument **result);
-  NS_HIDDEN_(nsresult) CopyChildren(nsIDOMNode *source, nsIDOMNode *dest, nsIDOMDocument *destDoc, const nsString &cdataElements, PRBool indent, PRUint32 depth);
+  NS_HIDDEN_(nsresult) SerializeDataXML(nsIDOMNode *data, PRUint32 format, nsIInputStream **, nsCString &contentType, SubmissionAttachmentArray *);
+  NS_HIDDEN_(nsresult) CreateSubmissionDoc(nsIDOMDocument *source, const nsString &encoding, SubmissionAttachmentArray *, nsIDOMDocument **result);
+  NS_HIDDEN_(nsresult) CopyChildren(nsIDOMNode *source, nsIDOMNode *dest, nsIDOMDocument *destDoc, SubmissionAttachmentArray *, const nsString &cdataElements, PRBool indent, PRUint32 depth);
   NS_HIDDEN_(nsresult) SerializeDataURLEncoded(nsIDOMNode *data, PRUint32 format, nsCString &uri, nsIInputStream **, nsCString &contentType);
   NS_HIDDEN_(void)     AppendURLEncodedData(nsIDOMNode *data, const nsCString &sep, nsCString &buf);
   NS_HIDDEN_(nsresult) SerializeDataMultipartRelated(nsIDOMNode *data, PRUint32 format, nsIInputStream **, nsCString &contentType);

@@ -51,6 +51,7 @@
 #include "nsIXTFGenericElementWrapper.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMElement.h"
+#include "nsIDOMText.h"
 #include "nsIDOMEventListener.h"
 #include "nsIDOMEventGroup.h"
 #include "nsIDOMEventReceiver.h"
@@ -195,6 +196,44 @@ GetMimeTypeFromFile(nsIFile *file, nsCString &result)
   if (result.IsEmpty())
     result.Assign("application/octet-stream");
 }
+
+// structure used to store information needed to generate attachments
+// for multipart/related submission.
+struct SubmissionAttachment
+{
+  nsString  uri;
+  nsCString cid;
+};
+
+// an array of SubmissionAttachment objects
+class SubmissionAttachmentArray : nsVoidArray
+{
+public:
+  SubmissionAttachmentArray() {}
+ ~SubmissionAttachmentArray()
+  {
+    for (PRUint32 i=0; i<Count(); ++i)
+      delete (SubmissionAttachment *) ElementAt(i);
+  }
+  nsresult Append(const nsString &uri, const nsCString &cid)
+  {
+    SubmissionAttachment *a = new SubmissionAttachment;
+    if (!a)
+      return NS_ERROR_OUT_OF_MEMORY;
+    a->uri = uri;
+    a->cid = cid;
+    AppendElement(a);
+    return NS_OK;
+  }
+  PRUint32 Count() const
+  {
+    return (PRUint32) nsVoidArray::Count();
+  }
+  SubmissionAttachment *Item(PRUint32 index)
+  {
+    return (SubmissionAttachment *) ElementAt(index);
+  }
+};
 
 // nsISupports
 
@@ -593,7 +632,7 @@ nsXFormsSubmissionElement::SerializeData(nsIDOMNode *data,
   //  o The serialized form data is appended to the URI.
 
   if (format & ENCODING_XML)
-    return SerializeDataXML(data, format, stream, contentType);
+    return SerializeDataXML(data, format, stream, contentType, nsnull);
 
   if (format & ENCODING_URL)
     return SerializeDataURLEncoded(data, format, uri, stream, contentType);
@@ -612,7 +651,8 @@ nsresult
 nsXFormsSubmissionElement::SerializeDataXML(nsIDOMNode *data,
                                             PRUint32 format,
                                             nsIInputStream **stream,
-                                            nsCString &contentType)
+                                            nsCString &contentType,
+                                            SubmissionAttachmentArray *attachments)
 {
   nsAutoString mediaType;
   mContent->GetAttr(kNameSpaceID_None, nsXFormsAtoms::mediaType, mediaType);
@@ -643,12 +683,13 @@ nsXFormsSubmissionElement::SerializeDataXML(nsIDOMNode *data,
   NS_ENSURE_TRUE(doc, NS_ERROR_UNEXPECTED);
 
   // clone and possibly modify the document for submission
-  nsCOMPtr<nsIDOMDocument> modifiedDoc;
-  CreateSubmissionDoc(doc, encoding, getter_AddRefs(modifiedDoc));
-  NS_ENSURE_TRUE(modifiedDoc, NS_ERROR_UNEXPECTED);
+  nsCOMPtr<nsIDOMDocument> newDoc;
+  CreateSubmissionDoc(doc, encoding, attachments, getter_AddRefs(newDoc));
+  NS_ENSURE_TRUE(newDoc, NS_ERROR_UNEXPECTED);
   
-  nsresult rv = serializer->SerializeToStream(modifiedDoc, sink,
-                                  NS_LossyConvertUTF16toASCII(encoding));
+  nsresult rv =
+      serializer->SerializeToStream(newDoc, sink,
+                                    NS_LossyConvertUTF16toASCII(encoding));
   NS_ENSURE_SUCCESS(rv, rv);
 
   // close the output stream, so that the input stream will not return
@@ -661,6 +702,7 @@ nsXFormsSubmissionElement::SerializeDataXML(nsIDOMNode *data,
 nsresult
 nsXFormsSubmissionElement::CreateSubmissionDoc(nsIDOMDocument *source,
                                                const nsString &encoding,
+                                               SubmissionAttachmentArray *attachments,
                                                nsIDOMDocument **result)
 {
   PRBool indent = GetBooleanAttr(nsXFormsAtoms::indent, PR_FALSE);
@@ -700,7 +742,7 @@ nsXFormsSubmissionElement::CreateSubmissionDoc(nsIDOMDocument *source,
   
   // recursively walk the source document, copying nodes as appropriate
 
-  CopyChildren(source, doc, doc, cdataElements, indent, 0);
+  CopyChildren(source, doc, doc, attachments, cdataElements, indent, 0);
 
   NS_ADDREF(*result = doc);
   return NS_OK;
@@ -709,6 +751,7 @@ nsXFormsSubmissionElement::CreateSubmissionDoc(nsIDOMDocument *source,
 nsresult
 nsXFormsSubmissionElement::CopyChildren(nsIDOMNode *source, nsIDOMNode *dest,
                                         nsIDOMDocument *destDoc,
+                                        SubmissionAttachmentArray *attachments,
                                         const nsString &cdataElements,
                                         PRBool indent, PRUint32 depth)
 {
@@ -717,6 +760,10 @@ nsXFormsSubmissionElement::CopyChildren(nsIDOMNode *source, nsIDOMNode *dest,
   while (sourceChild)
   {
     // if not indenting, then strip all unnecessary whitespace
+
+    // XXX importing the entire node is not quite right here... we also have
+    // to iterate over the attributes since the attributes could somehow
+    // (remains to be determined) reference external entities.
 
     destDoc->ImportNode(sourceChild, PR_FALSE, getter_AddRefs(destChild));
     NS_ENSURE_TRUE(destChild, NS_ERROR_UNEXPECTED);
@@ -742,11 +789,51 @@ nsXFormsSubmissionElement::CopyChildren(nsIDOMNode *source, nsIDOMNode *dest,
     }
     else
     {
-      dest->AppendChild(destChild, getter_AddRefs(node));
+      // if |destChild| is an element node of type 'xsd:anyURI', and if we have
+      // an attachments array, then we need to perform multipart/related
+      // processing (i.e., generate a ContentID for the child of this element,
+      // and append a new attachment to the attachments array).
 
-      if (NS_FAILED(CopyChildren(sourceChild, destChild, destDoc,
-                                 cdataElements, indent, depth + 1)))
-        return NS_ERROR_UNEXPECTED;
+      PRUint32 encType;
+      if (attachments &&
+          NS_SUCCEEDED(GetElementEncodingType(destChild, &encType)) &&
+          encType == ELEMENT_ENCTYPE_URI)
+      {
+        // ok, looks like we have a URI to process
+        sourceChild->GetFirstChild(getter_AddRefs(node));
+        NS_ENSURE_TRUE(node, NS_ERROR_UNEXPECTED);
+
+        node->GetNodeType(&type);
+        NS_ENSURE_TRUE(type == nsIDOMNode::TEXT_NODE, NS_ERROR_UNEXPECTED);
+
+        nsString value;
+        node->GetNodeValue(value);
+
+        nsCString cid;
+        MakeMultipartContentID(cid);
+
+        nsAutoString cidURI;
+        cidURI.AssignLiteral("cid:");
+        AppendASCIItoUTF16(cid, cidURI);
+
+        nsCOMPtr<nsIDOMText> text;
+        destDoc->CreateTextNode(cidURI, getter_AddRefs(text));
+        NS_ENSURE_TRUE(text, NS_ERROR_UNEXPECTED);
+
+        destChild->AppendChild(text, getter_AddRefs(node));
+        dest->AppendChild(destChild, getter_AddRefs(node));
+
+        attachments->Append(value, cid);
+      }
+      else
+      {
+        dest->AppendChild(destChild, getter_AddRefs(node));
+
+        // recurse
+        nsresult rv = CopyChildren(sourceChild, destChild, destDoc, attachments,
+                                   cdataElements, indent, depth + 1);
+        NS_ENSURE_SUCCESS(rv, rv);
+      }
     }
 
     sourceChild->GetNextSibling(getter_AddRefs(node));
@@ -902,7 +989,9 @@ nsXFormsSubmissionElement::SerializeDataMultipartRelated(nsIDOMNode *data,
   //     list of ContentID <-> URI mappings.
 
   nsCOMPtr<nsIInputStream> xml;
-  SerializeDataXML(data, ENCODING_XML | METHOD_POST, getter_AddRefs(xml), type);
+  SubmissionAttachmentArray attachments;
+  SerializeDataXML(data, ENCODING_XML | METHOD_POST, getter_AddRefs(xml), type,
+                   &attachments);
 
   // XXX we should output a 'charset=' with the 'Content-Type' header
 
@@ -916,6 +1005,32 @@ nsXFormsSubmissionElement::SerializeDataMultipartRelated(nsIDOMNode *data,
 
   multiStream->AppendStream(xml);
 
+  for (PRUint32 i=0; i<attachments.Count(); ++i)
+  {
+    SubmissionAttachment *a = attachments.Item(i);
+
+    nsCOMPtr<nsIFile> file;
+    nsCOMPtr<nsIInputStream> fileStream;
+    rv = CreateFileStream(a->uri,
+                          getter_AddRefs(file),
+                          getter_AddRefs(fileStream));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsCAutoString type;
+    GetMimeTypeFromFile(file, type);
+
+    postDataChunk += NS_LITERAL_CSTRING("\r\n--") + boundary
+                  +  NS_LITERAL_CSTRING("\r\nContent-Type: ") + type
+                  +  NS_LITERAL_CSTRING("\r\nContent-Transfer-Encoding: binary")
+                  +  NS_LITERAL_CSTRING("\r\nContent-ID: <") + a->cid
+                  +  NS_LITERAL_CSTRING(">\r\n");
+    rv = AppendPostDataChunk(postDataChunk, multiStream);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    multiStream->AppendStream(fileStream);
+  }
+
+  // final boundary
   postDataChunk += NS_LITERAL_CSTRING("\r\n--") + boundary
                 +  NS_LITERAL_CSTRING("--\r\n");
   rv = AppendPostDataChunk(postDataChunk, multiStream);
@@ -1135,7 +1250,10 @@ nsXFormsSubmissionElement::GetElementEncodingType(nsIDOMNode *node, PRUint32 *en
     dom3Node->LookupPrefix(NAMESPACE_XML_SCHEMA, prefix);
 
     if (prefix.IsEmpty())
-      NS_WARNING("namespace prefix not found!");
+    {
+      NS_WARNING("namespace prefix not found! -- assuming 'xsd'");
+      prefix.AssignLiteral("xsd"); // XXX HACK HACK HACK
+    }
 
     if (type.Length() > prefix.Length() &&
         prefix.Equals(StringHead(type, prefix.Length())) &&
@@ -1159,6 +1277,9 @@ nsXFormsSubmissionElement::CreateFileStream(const nsString &absURI,
                                             nsIFile **resultFile,
                                             nsIInputStream **resultStream)
 {
+  LOG(("nsXFormsSubmissionElement::CreateFileStream [%s]\n",
+      NS_ConvertUTF16toUTF8(absURI).get()));
+
   nsCOMPtr<nsIURI> uri;
   NS_NewURI(getter_AddRefs(uri), absURI);
   NS_ENSURE_TRUE(uri, NS_ERROR_UNEXPECTED);
