@@ -294,8 +294,7 @@ nsJSSecurityManager::NewJSPrincipals(nsIURI *aURL, nsString* aName, nsString* aC
 
 
 NS_IMETHODIMP
-nsJSSecurityManager::CheckScriptAccess(nsIScriptContext* aContext, void* aObj, 
-                                       const char* aProp, PRBool* aResult)
+nsJSSecurityManager::CheckScriptAccess(nsIScriptContext* aContext, void* aObj, const char* aProp, PRBool* aResult)
 {
   *aResult = PR_FALSE;
   JSContext* cx = (JSContext*)aContext->GetNativeContext();
@@ -534,7 +533,6 @@ nsJSSecurityManager::GetSitePolicy(const char *org)
     /* Check whether this is long enough. */
     if (match != 0 && matlen >= splen) continue;			/* Nope.  New shorter than old. */
     /* Check which case, URL or hostname, we're dealing with. */
-    prot = ParseURL(sp, GET_PROTOCOL_PART);
     rv = url->SetSpec(sp);
     if (!NS_SUCCEEDED(rv)) return nsnull;
     url->GetScheme(& prot);
@@ -551,7 +549,6 @@ nsJSSecurityManager::GetSitePolicy(const char *org)
     else {
       /* Host-only case. */
       PR_FREEIF(prot);
-      orghost = ParseURL(org, GET_HOST_PART);
       rv = url->SetSpec((char *)org);
       if (!NS_SUCCEEDED(rv)) return nsnull;
       url->GetHost(& orghost);
@@ -696,224 +693,6 @@ nsJSSecurityManager::GetCanonicalizedOrigin(JSContext* aCx, const char * aUrlStr
 #define PMAXHOSTNAMELEN 64
 
 //XXX This is only here until I have a new Netlib equivalent!!!
-char * 
-nsJSSecurityManager::ParseURL (const char *url, int parts_requested)
-{
-    char *rv=0,*colon, *slash, *ques_mark, *hash_mark;
-    char *atSign, *host, *passwordColon, *gtThan;
-    
-    if(!url) {
-        return(SACat(rv, ""));
-    }
-    colon = PL_strchr(url, ':'); /* returns a const char */
-    
-    /* Get the protocol part, not including anything beyond the colon */
-    if (parts_requested & GET_PROTOCOL_PART) {
-        if(colon) {
-            char val = *(colon+1);
-            *(colon+1) = '\0';
-            rv = SACopy(rv, url);
-            *(colon+1) = val;
-            
-            /* If the user wants more url info, tack on extra slashes. */
-            if ((parts_requested & GET_HOST_PART) || 
-                (parts_requested & GET_USERNAME_PART) || 
-                (parts_requested & GET_PASSWORD_PART)) {
-                if( *(colon+1) == '/' && *(colon+2) == '/') {
-                    rv = SACat(rv, "//");
-                }
-                /* If there's a third slash consider it file:/// and tack on the last slash. */
-                if ( *(colon+3) == '/' ) {
-                    rv = SACat(rv, "/");
-                }
-            }
-        }
-    }
-    
-    /* Get the username if one exists */
-    if (parts_requested & GET_USERNAME_PART) {
-        if (colon && 
-            (*(colon+1) == '/') && 
-            (*(colon+2) == '/') && 
-            (*(colon+3) != '\0')) {
-            
-            if ( (slash = PL_strchr(colon+3, '/')) != NULL) {
-                *slash = '\0';
-            }
-            if ( (atSign = PL_strchr(colon+3, '@')) != NULL) {
-                *atSign = '\0';
-                if ( (passwordColon = PL_strchr(colon+3, ':')) != NULL) {
-                    *passwordColon = '\0';
-                }
-                rv = SACat(rv, colon+3);
-                
-                /* Get the password if one exists */
-                if (parts_requested & GET_PASSWORD_PART) {
-                    if (passwordColon) {
-                        rv = SACat(rv, ":");
-                        rv = SACat(rv, passwordColon+1);
-                    }
-                }
-                if (parts_requested & GET_HOST_PART) {
-                    rv = SACat(rv, "@");
-                }
-                if (passwordColon) {
-                    *passwordColon = ':';
-                }
-                *atSign = '@';
-            }
-            if (slash) {
-                *slash = '/';
-            }
-        }
-    }
-    
-    /* Get the host part */
-    if (parts_requested & GET_HOST_PART) {
-        if(colon) {
-            if(*(colon+1) == '/' && *(colon+2) == '/') {
-                slash = PL_strchr(colon+3, '/');
-                
-                if(slash) {
-                    *slash = '\0';
-                }
-                
-                if( (atSign = PL_strchr(colon+3, '@')) != NULL) {
-                    host = atSign+1;
-                }
-                else {
-                    host = colon+3;
-                }
-                
-                ques_mark = PL_strchr(host, '?');
-                
-                if(ques_mark) {
-                    *ques_mark = '\0';
-                }
-                
-                gtThan = PL_strchr(host, '>');
-                
-                if (gtThan) {
-                    *gtThan = '\0';
-                }
-                
-                /* limit hostnames to within PMAXHOSTNAMELEN characters to keep
-                * from crashing
-                */
-                if(PL_strlen(host) > PMAXHOSTNAMELEN) {
-                    char * cp;
-                    char old_char;
-                    
-                    cp = host + PMAXHOSTNAMELEN;
-                    old_char = *cp;
-                    
-                    *cp = '\0';
-                    
-                    rv = SACat(rv, host);
-                    
-                    *cp = old_char;
-                }
-                else {
-                    rv = SACat(rv, host);
-                }
-                
-                if(slash) {
-                    *slash = '/';
-                }
-                
-                if(ques_mark) {
-                    *ques_mark = '?';
-                }
-                
-                if (gtThan) {
-                    *gtThan = '>';
-                }
-            }
-        }
-    }
-    
-    /* Get the path part */
-    if (parts_requested & GET_PATH_PART) {
-        if(colon) {
-            if(*(colon+1) == '/' && *(colon+2) == '/') {
-                /* skip host part */
-                slash = PL_strchr(colon+3, '/');
-            }
-            else {
-            /* path is right after the colon
-                */
-                slash = colon+1;
-            }
-            
-            if(slash) {
-                ques_mark = PL_strchr(slash, '?');
-                hash_mark = PL_strchr(slash, '#');
-                
-                if(ques_mark) {
-                    *ques_mark = '\0';
-                }
-                
-                if(hash_mark) {
-                    *hash_mark = '\0';
-                }
-                
-                rv = SACat(rv, slash);
-                
-                if(ques_mark) {
-                    *ques_mark = '?';
-                }
-                
-                if(hash_mark) {
-                    *hash_mark = '#';
-                }
-            }
-        }
-    }
-    
-    if(parts_requested & GET_HASH_PART) {
-        hash_mark = PL_strchr(url, '#'); /* returns a const char * */
-        
-        if(hash_mark) {
-            ques_mark = PL_strchr(hash_mark, '?');
-            
-            if(ques_mark) {
-                *ques_mark = '\0';
-            }
-            
-            rv = SACat(rv, hash_mark);
-            
-            if(ques_mark) {
-                *ques_mark = '?';
-            }
-        }
-    }
-    
-    if(parts_requested & GET_SEARCH_PART) {
-        ques_mark = PL_strchr(url, '?'); /* returns a const char * */
-        
-        if(ques_mark) {
-            hash_mark = PL_strchr(ques_mark, '#');
-            
-            if(hash_mark) {
-                *hash_mark = '\0';
-            }
-            
-            rv = SACat(rv, ques_mark);
-            
-            if(hash_mark) {
-                *hash_mark = '#';
-            }
-        }
-    }
-    
-    /* copy in a null string if nothing was copied in
-    */
-    if(!rv) {
-        rv = SACopy(rv, "");
-    }
-    
-    return rv;
-}
 
 NS_IMETHODIMP
 nsJSSecurityManager::GetPrincipalsFromStackFrame(JSContext *aCx, JSPrincipals** aPrincipals)
@@ -956,52 +735,6 @@ nsJSSecurityManager::GetPrincipalsFromStackFrame(JSContext *aCx, JSPrincipals** 
   return NS_OK;
 }
 
-char * 
-nsJSSecurityManager::SACopy (char *destination, const char *source)
-{
-	if(destination) {
-	  PR_Free(destination);
-		destination = 0;
-	}
-  if (!source)	{
-    destination = NULL;
-	}
-  else {
-    destination = (char *) PR_Malloc (PL_strlen(source) + 1);
-    if (destination == NULL) 
- 	    return(NULL);
-
-    PL_strcpy (destination, source);
-  }
-  return destination;
-}
-
-
-char *
-nsJSSecurityManager::SACat (char *destination, const char *source)
-{
-    if (source && *source)
-      {
-        if (destination)
-          {
-            int length = PL_strlen (destination);
-            destination = (char *) PR_Realloc (destination, length + PL_strlen(source) + 1);
-            if (destination == NULL)
-            return(NULL);
-
-            PL_strcpy (destination + length, source);
-          }
-        else
-          {
-            destination = (char *) PR_Malloc (PL_strlen(source) + 1);
-            if (destination == NULL)
-                return(NULL);
-
-             PL_strcpy (destination, source);
-          }
-      }
-    return destination;
-}
 NS_IMETHODIMP
 nsJSSecurityManager::GetOriginFromSourceURL(char * aSourceURL, char * * result)
 {
