@@ -377,7 +377,7 @@ nsInstallLogWriter.prototype = {
     const MODE_WRONLY   = 0x02;
     const MODE_CREATE   = 0x08;
     const MODE_TRUNCATE = 0x20;
-    this._fos.init(this._uninstallLog, MODE_WRONLY | MODE_CREATE | MODE_TRUNCATE, 0664, 0);
+    this._fos.init(this._uninstallLog, MODE_WRONLY | MODE_CREATE | MODE_TRUNCATE, 0644, 0);
   },
   
   close: function ()
@@ -1547,7 +1547,7 @@ nsExtensionManager.prototype = {
     const MODE_WRONLY   = 0x02;
     const MODE_CREATE   = 0x08;
     const MODE_TRUNCATE = 0x20;
-    fos.init(aFile, MODE_WRONLY | MODE_CREATE | MODE_TRUNCATE, 0664, 0);
+    fos.init(aFile, MODE_WRONLY | MODE_CREATE | MODE_TRUNCATE, 0644, 0);
 
     var extensions = this.getItemList(null, nsIUpdateItem.TYPE_EXTENSION, { });
     var validExtensions = [];
@@ -1619,7 +1619,7 @@ nsExtensionManager.prototype = {
     // assumption that you can never have extensions prior to profile
     // startup.
     var compat = getFile(KEY_PROFILEDIR, [FILE_COMPAT_MANIFEST]);
-    fos.init(compat, MODE_WRONLY | MODE_CREATE | MODE_TRUNCATE, 0664, 0);
+    fos.init(compat, MODE_WRONLY | MODE_CREATE | MODE_TRUNCATE, 0644, 0);
 
     var pref = Components.classes["@mozilla.org/preferences-service;1"]
                          .getService(Components.interfaces.nsIPrefBranch);
