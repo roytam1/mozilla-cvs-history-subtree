@@ -30,7 +30,7 @@ MODULE		= layout
 LIBRARY_NAME	= gfx_photon
 EXPORT_LIBRARY = 1
 IS_COMPONENT	= 1
-
+COMPONENT_NAME	= nsGfxPhModule
 
 CPPSRCS		= \
 		nsDeviceContextPh.cpp \
