@@ -143,8 +143,8 @@ MACROS FOR FUNCTION DECLARATIONS
 
  */
 /* --- BEGIN removed by mharmsen@netscape.com on 7/9/97 --- */
-/* #define PUBLIC                  /* Accessible outside this module     */
-/* #define PRIVATE static          /* Accessible only within this module */
+/* #define PUBLIC                */  /* Accessible outside this module     */
+/* #define PRIVATE static        */  /* Accessible only within this module */
 /* --- END removed by mharmsen@netscape.com on 7/9/97 --- */
 /*
 
@@ -244,8 +244,8 @@ THE LOCAL EQUIVALENTS OF CR AND LF
    
  */
 /* --- BEGIN removed by mharmsen@netscape.com on 7/9/97 --- */
-/* #define LF   FROMASCII('\012')  /* ASCII line feed LOCAL EQUIVALENT */
-/* #define CR   FROMASCII('\015')  /* Will be converted to ^M for transmission */
+/* #define LF   FROMASCII('\012')  */ /* ASCII line feed LOCAL EQUIVALENT */
+/* #define CR   FROMASCII('\015')  */ /* Will be converted to ^M for transmission */
 /* --- END removed by mharmsen@netscape.com on 7/9/97 --- */
 /*
 
