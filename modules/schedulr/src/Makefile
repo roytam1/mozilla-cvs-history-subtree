@@ -18,7 +18,7 @@
 DEPTH		= ../../..
 
 MODULE		= schedulr 
-LIBRARY_NAME	= sched 
+LIBRARY_NAME	= sched
 
 REQUIRES	= nspr util
 
