@@ -1071,6 +1071,9 @@ protected:
   // This method should be called after a reflow commands have been
   // removed from the queue, but after the state in the presshell is
   // such that it's safe to flush (i.e. mIsReflowing == PR_FALSE)
+  // If we are not reflowing and ther are no load-crated reflow commands, then
+  // the dummyLayoutRequest is removed
+
   void DoneRemovingReflowCommands();
 
   nsresult AddDummyLayoutRequest(void);
@@ -6054,7 +6057,7 @@ PresShell::ReflowCommandRemoved(nsIReflowCommand* aRC)
 void
 PresShell::DoneRemovingReflowCommands()
 {
-  if (mRCCreatedDuringLoad == 0 && mDummyLayoutRequest) {
+  if (mRCCreatedDuringLoad == 0 && mDummyLayoutRequest && !mIsReflowing) {
     RemoveDummyLayoutRequest();
   }
 }
