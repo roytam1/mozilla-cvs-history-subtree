@@ -546,6 +546,7 @@ nsresult nsMapiHook::HandleAttachments (nsIMsgCompFields * aCompFields, PRInt32 
 
             PRBool bExist ;
             rv = pFile->Exists(&bExist) ;
+            PR_LOG(MAPI, PR_LOG_DEBUG, ("nsMapiHook::HandleAttachments: filename: %s path: %s exists = %s \n", (const char*)aFiles[i].lpszFileName, (const char*)aFiles[i].lpszPathName, bExist ? "true" : "false"));
             if (NS_FAILED(rv) || (!bExist) ) return NS_ERROR_FILE_TARGET_DOES_NOT_EXIST ;
 
             //Temp Directory
@@ -555,30 +556,45 @@ nsresult nsMapiHook::HandleAttachments (nsIMsgCompFields * aCompFields, PRInt32 
 
             // create a new sub directory called moz_mapi underneath the temp directory
             pTempDir->AppendRelativePath(NS_LITERAL_STRING("moz_mapi"));
-                    pTempDir->Exists (&bExist) ;
-                    if (!bExist)
-                    {
-                        rv = pTempDir->Create(nsIFile::DIRECTORY_TYPE, 777) ;
-                        if (NS_FAILED(rv)) return rv ;
-                    }
+            pTempDir->Exists (&bExist) ;
+            if (!bExist)
+            {
+              rv = pTempDir->Create(nsIFile::DIRECTORY_TYPE, 777) ;
+              if (NS_FAILED(rv)) return rv ;
+            }
 
-                    // rename or copy the existing temp file with the real file name
+            // rename or copy the existing temp file with the real file name
+
 
             nsAutoString leafName ;
-                        // convert to Unicode using Platform charset
+            // convert to Unicode using Platform charset
             // leafName already contains a unicode leafName from lpszPathName. If we were given
             // a value for lpszFileName, use it. Otherwise stick with leafName
-                if (aFiles[i].lpszFileName) 
-                {
-                if (aIsUnicode)
-                    leafName.Assign(aFiles[i].lpszFileName);
-                        else
-                    ConvertToUnicode(nsMsgI18NFileSystemCharset(), (char *) aFiles[i].lpszFileName, leafName);
-                        }
+            if (aFiles[i].lpszFileName) 
+            {
+              if (aIsUnicode)
+                leafName.Assign(aFiles[i].lpszFileName);
+              else
+                ConvertToUnicode(nsMsgI18NFileSystemCharset(), (char *) aFiles[i].lpszFileName, leafName);
+            }
             else 
               pFile->GetLeafName (leafName);
 
-            // copy the file to it's new location and file name
+            nsCOMPtr <nsIFile> pTempFile;
+            rv = pTempDir->Clone(getter_AddRefs(pTempFile));
+            if (NS_FAILED(rv) || (!pTempFile) ) 
+              return rv;
+
+            pTempFile->Append(leafName);
+            pTempFile->Exists(&bExist);
+            if (bExist)
+            {
+              rv = pTempFile->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 0777);
+              NS_ENSURE_SUCCESS(rv, rv);
+              pTempFile->GetLeafName(leafName);
+              pTempFile->Remove(PR_FALSE); // remove so we can copy over it.
+            }
+            // copy the file to its new location and file name
             pFile->CopyTo(pTempDir, leafName);
             // point pFile to the new location of the attachment
             pFile->InitWithFile(pTempDir); 
@@ -596,6 +612,8 @@ nsresult nsMapiHook::HandleAttachments (nsIMsgCompFields * aCompFields, PRInt32 
 
             // add the attachment
             rv = aCompFields->AddAttachment (attachment);
+            if (NS_FAILED(rv))
+              PR_LOG(MAPI, PR_LOG_DEBUG, ("nsMapiHook::HandleAttachments: AddAttachment rv =  %lx\n", rv));
         }
     }
     return rv ;
