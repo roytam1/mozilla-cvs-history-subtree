@@ -1186,9 +1186,7 @@ nsBlockFrame::ComputeFinalSize(const nsHTMLReflowState& aReflowState,
         // When no-wrap is true the max-element-size.width is the
         // width of the widest line plus the right border. Note that
         // aState.mKidXMost already has the left border factored in
-        //maxWidth = aState.mKidXMost + borderPadding.right;
-        maxWidth = aState.mMaxElementSize.width +
-          borderPadding.left + borderPadding.right;
+        maxWidth = aState.mKidXMost + borderPadding.right;
       }
       else {
         // Add in border and padding dimensions to already computed
@@ -4115,7 +4113,17 @@ nsBlockFrame::PostPlaceLine(nsBlockReflowState& aState,
   }
 
   // Update xmost
-  nscoord xmost = aLine->mBounds.XMost();
+  nscoord xmost;
+  if(aLine->IsBlock() && aState.GetFlag(BRS_NOWRAP)) {
+    // since the nowrap blocks tend to be as wide as their widest element or
+    // sequel of elements that can't be wrapped anymore (see patch for bug 80817)
+    // let them set xmost to be the width of the widest element of the reflowed line
+    // (patches bug 93363 and other NOWRAP dups)
+    xmost = aMaxElementSize.width;
+  } else {
+    xmost = aLine->mBounds.XMost();
+  }
+
 #ifdef DEBUG
   if (CRAZY_WIDTH(xmost)) {
     ListTag(stdout);
