@@ -19,8 +19,9 @@
 #
 # Contributor(s): 
 #
-		    
+
 NS_DEPTH        = ../../../..
+DEPTH		= ../../../../..
 LDAP_SRC	= ../..
 NSCP_DISTDIR	= ../../../../../dist
 NSPR_TREE = ../../..
@@ -32,7 +33,7 @@ include		../../../build.mk
 INSTALLDIR     = $(NSCP_DISTDIR)/$(OBJDIR_NAME)/bin
 HEADERDIR      = $(DEPTH)/dist/$(OBJDIR_NAME)
 
-INCLUDES	+= -I../../../../..$(HEADERDIR)/include \
+INCLUDES	+= -I$(HEADERDIR)/include \
 		-I../../../../../dist/include/obsolete \
 		-I../../../../../dist/include \
 		-I../../../../../dist/public/security \
@@ -278,7 +279,7 @@ endif
 endif
 
 linklibnls: FORCE
-ifneq ($(OS_ARCH), WINNT)
+ifneq ($(COMPONENT_PULL_METHOD), FTP)
 ifeq ($(HAVE_LIBNLS), 1)
 	$(RM) -f $(LIBNLS_INCLUDES)
 	$(RM) -f $(LIBNLS_LIBDIR)
@@ -292,10 +293,10 @@ ifeq ($(HAVE_LIBNLS), 1)
 # $(NLS_VERSION_FILE)
 	sh ../../build/compver.sh $(LIBNLS_DIR) $(LIBNLS_RELDATE) \
 	$(OBJDIR_NAME) ../../../../dist ldapsdk \
-	/share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME) \
+	/share/builds/components/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME) \
 	libnls$(NLS_LIBVERSION) \
 	"include lib conv$(NLS_LIBVERSION) locale$(NLS_LIBVERSION)" \
-	../../../../../dist/libnls31/$(OBJDIR_NAME)/locale$(NLS_LIBVERSION)/index.txt
+	../../../../../dist/libnls$(NLS_LIBVERSION)/$(OBJDIR_NAME)/locale$(NLS_LIBVERSION)/index.txt
 endif
 endif
 

@@ -17,7 +17,7 @@ TMPFILE=tmp.foo
 
 SRC=$1
 DEST=$2
-if [ -z $3 ]; then 
+if [ -z "$3" ]; then 
   FILENAME=*
 else
   FILENAME=$3

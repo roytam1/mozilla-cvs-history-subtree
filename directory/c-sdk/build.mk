@@ -20,6 +20,8 @@
 # Contributor(s): 
 #
 
+COMPVERSIONDIR	= $(DEPTH)/directory/c-sdk
+
 DEFAULT_VENDOR_NAME=mozilla.org
 DEFAULT_VENDOR_VERSION=500
 
@@ -34,33 +36,10 @@ endif
 
 ifdef HAVE_CCONF
 # component tags for internal build only
-NSPR_RELEASE_TAG=v4.1.2
-NSS_RELEASE_TAG	=NSS_3_3_1_RTM
-SVRCORE_RELEASE_TAG=SVRCORE_3_3_RTM
-# NSPR, NSS, and SVRCORE already had existing Solaris 5.8 symbolic
-# link to a Solaris 5.6 version.  Hence, the new respun components
-# were put in in a forte6 directory in each of the component 
-# respectively.  For Solaris 5.8 only we have to pick up the components
-# from the forte6 directory.  As we move forward with new components,
-# we can take the mess below out        
-# Michael.....
-ifeq ($(OS_ARCH), SunOS)
-ifneq ($(USE_64), 1)
-OS_VERS         := $(shell uname -r)
-ifeq ($(OS_VERS),5.8)
-ifneq ($(OS_TEST),i86pc)
-NSPR_RELEASE_TAG=v4.1.2/forte6
-NSS_RELEASE_TAG	=NSS_3_3_1_RTM/forte6
-SVRCORE_RELEASE_TAG=SVRCORE_3_3_RTM/forte6
-endif
-endif
-endif
-endif
+include	$(COMPVERSIONDIR)/component_versions.mk
 endif
 
 # Ldap library
-LDAPVERS	= 50
-LDAPVERS_SUFFIX = 5.0
 ifeq ($(OS_ARCH), WINNT)
 LDAP_LIBNAME	= nsldap32v$(LDAPVERS)
 else
@@ -70,8 +49,6 @@ DIR_VERSION     = $(LDAPVERS_SUFFIX)
 DIRSDK_VERSION  = $(LDAPVERS_SUFFIX)
 
 # PrLdap library
-PRLDAPVERS      = 50
-PRLDAPVERS_SUFFIX= 5.0
 ifeq ($(OS_ARCH), WINNT)
 PRLDAP_LIBNAME	= nsldappr32v$(PRLDAPVERS)
 else
@@ -79,8 +56,6 @@ PRLDAP_LIBNAME	= prldap$(PRLDAPVERS)
 endif
 
 # lber library
-LBERVERS	= 50
-LBERVERS_SUFFIX = 5.0
 ifeq ($(OS_ARCH), WINNT)
 LBER_LIBNAME	= nslber32v$(LBERVERS)
 else
@@ -88,8 +63,6 @@ LBER_LIBNAME	= lber$(LBERVERS)
 endif
 
 # ldif library
-LDIFVERS	= 50
-LDIFVERS_SUFFIX = 5.0
 ifeq ($(OS_ARCH), WINNT)
 LDIF_LIBNAME	= nsldif32v$(LDIFVERS)
 else
@@ -97,8 +70,6 @@ LDIF_LIBNAME	= ldif$(LDIFVERS)
 endif
 
 # iutil library
-IUTILVERS	= 50
-IUTILVERS_SUFFIX = 5.0
 ifeq ($(OS_ARCH), WINNT)
 IUTIL_LIBNAME	= nsiutil32v$(IUTILVERS)
 else
@@ -106,8 +77,6 @@ IUTIL_LIBNAME	= iutil$(IUTILVERS)
 endif
 
 # util library
-UTILVERS	= 50
-UTILVERS_SUFFIX = 5.0
 ifeq ($(OS_ARCH), WINNT)
 UTIL_LIBNAME	= nsutil32v$(UTILVERS)
 else
@@ -115,8 +84,6 @@ UTIL_LIBNAME	= util$(UTILVERS)
 endif
 
 # ssl library
-SSLDAPVERS	= 50
-SSLDAPVERS_SUFFIX = 5.0
 ifeq ($(OS_ARCH), WINNT)
 SSLDAP_LIBNAME	= nsldapssl32v$(SSLDAPVERS)
 else
@@ -124,7 +91,6 @@ SSLDAP_LIBNAME	= ssldap$(SSLDAPVERS)
 endif
 
 # nss library
-NSSVERS		= 3
 NSS_LIBNAME	= nss$(NSSVERS)
 SSL_LIBNAME	= ssl$(NSSVERS)
 HYBRID_LIBNAME	= freebl_hybrid_$(NSSVERS)
@@ -150,7 +116,6 @@ SVRCORE_LIBNAME	= svrcore$(SVRCOREVERS)
 # NSPR library
 #
 
-NSPR_LIBVERSION=4
 ifeq ($(OS_TARGET), WIN95)
 PLC_BASENAME=plc$(NSPR_LIBVERSION)
 PLDS_BASENAME=plds$(NSPR_LIBVERSION)
@@ -174,8 +139,6 @@ NSPR_LIBNAME=nspr$(NSPR_LIBVERSION)
 #
 # NLS library
 #
-NLS_LIBVERSION	=31
-LIBNLS_RELDATE=v3.2
 ifeq ($(OS_ARCH), WINNT)
 NSCNV_LIBNAME	=nscnv32$(NLS_LIBVERSION).$(LIB_SUFFIX)
 NSJPN_LIBNAME	=nsjpn32$(NLS_LIBVERSION).$(LIB_SUFFIX)
@@ -189,27 +152,15 @@ NSSB_LIBNAME	=libnssb$(NLS_LIBVERSION).$(LIB_SUFFIX)
 endif
 
 ifdef RELEASE_TREE
-LIBNLS_INCLUDES_LOC = $(RELEASE_TREE)/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/include
-LIBNLS_LIB_LOC	    = $(RELEASE_TREE)/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/lib
+LIBNLS_INCLUDES_LOC = $(RELEASE_TREE)/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/include
+LIBNLS_LIB_LOC	    = $(RELEASE_TREE)/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/lib
 else
-LIBNLS_INCLUDES_LOC = /share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/include
-LIBNLS_LIB_LOC	    = /share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/lib
-
-ifeq ($(OS_ARCH), SunOS)
-ifneq ($(USE_64), 1)
-OS_VERS         := $(shell uname -r)
-ifeq ($(OS_VERS),5.8)
-ifneq ($(OS_TEST),i86pc)
-LIBNLS_INCLUDES_LOC = /share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/forte6/$(OBJDIR_NAME)/include
-LIBNLS_LIB_LOC	    = /share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/forte6/$(OBJDIR_NAME)/lib
-endif
-endif
-endif
-endif
+LIBNLS_INCLUDES_LOC = /share/builds/components/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/include
+LIBNLS_LIB_LOC	    = /share/builds/components/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/lib
 
 endif
 LIBNLS_DIR	    = ../../../../../dist/libnls$(NLS_LIBVERSION)
-ifeq ($(OS_ARCH), WINNT)
+ifeq ($(COMPONENT_PULL_METHOD), FTP)
 LIBNLS_INCLUDES =../../../../../dist/libnls$(NLS_LIBVERSION)/$(OBJDIR_NAME)/include
 LIBNLS_LIBDIR	=../../../../../dist/libnls$(NLS_LIBVERSION)/$(OBJDIR_NAME)/lib
 else
