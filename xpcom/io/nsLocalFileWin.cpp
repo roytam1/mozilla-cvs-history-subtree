@@ -1093,8 +1093,8 @@ nsLocalFile::GetLastModificationDate(PRInt64 *aLastModificationDate)
     if (NS_FAILED(rv))
         return rv;
     
-    PRUint32 high = mFileAttrData.ftLastAccessTime.dwHighDateTime;
-    PRUint32 low  = mFileAttrData.ftLastAccessTime.dwLowDateTime;
+    PRUint32 high = mFileAttrData.ftLastWriteTime.dwHighDateTime;
+    PRUint32 low  = mFileAttrData.ftLastWriteTime.dwLowDateTime;
 
     myLL_II2L(high, low, aLastModificationDate);
 
@@ -1109,7 +1109,7 @@ nsLocalFile::SetLastModificationDate(PRInt64 aLastModificationDate)
     if (NS_FAILED(rv))
         return rv;
     
-    FILETIME time = mFileAttrData.ftLastAccessTime;
+    FILETIME time = mFileAttrData.ftLastWriteTime;
     
     PRInt32 hi, lo;
     myLL_L2II(aLastModificationDate, &hi, &lo );
@@ -1160,7 +1160,7 @@ nsLocalFile::GetLastModificationDateOfLink(PRInt64 *aLastModificationDate)
     if (NS_FAILED(rv))
         return rv;
     
-    FILETIME time = mFileAttrData.ftLastAccessTime;
+    FILETIME time = mFileAttrData.ftLastWriteTime;
 
     myLL_II2L(time.dwHighDateTime,  time.dwLowDateTime, aLastModificationDate);
 
@@ -1178,7 +1178,7 @@ nsLocalFile::SetLastModificationDateOfLink(PRInt64 aLastModificationDate)
     PRInt32 hi, lo;
     myLL_L2II(aLastModificationDate, &hi, &lo );
  
-    FILETIME time = mFileAttrData.ftLastAccessTime;
+    FILETIME time = mFileAttrData.ftLastWriteTime;
     
     time.dwHighDateTime  = hi;
     time.dwLowDateTime   = lo;
