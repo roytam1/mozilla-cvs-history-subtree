@@ -57,11 +57,12 @@ var nsNewsBlogFeedDownloader =
       if (feedUrlArray[url])
       {
         id = rdf.GetResource(feedUrlArray[url]);
-    feed = new Feed(id);
-    feed.urlListener = aUrlListener;
-    feed.folder = aFolder;
-    feed.msgWindow = aMsgWindow;
-    feed.download();
+        feed = new Feed(id);
+        feed.urlListener = aUrlListener;
+        feed.folder = aFolder;
+        feed.server = aFolder.server;
+        feed.msgWindow = aMsgWindow;
+        feed.download();
       }
     }
   },
