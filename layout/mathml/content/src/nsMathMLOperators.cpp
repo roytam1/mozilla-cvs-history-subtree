@@ -50,7 +50,8 @@ struct OperatorData {
   { // point to the incomming buffer
     // note that the incomming buffer may really be 2 byte
     nsStr::Initialize(mStr, aStringValue.mStr, aStringValue.mCapacity,
-                      aStringValue.mLength, aStringValue.mCharSize, PR_FALSE);
+                      aStringValue.mLength, eCharSize(aStringValue.mCharSize),
+                      PR_FALSE);
   }
 
   // member data
