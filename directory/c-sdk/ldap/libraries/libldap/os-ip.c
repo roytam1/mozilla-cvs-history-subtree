@@ -316,10 +316,12 @@ nsldapi_os_connect_with_to(LBER_SOCKET sockfd, struct sockaddr *saptr,
 		msec = LDAP_X_IO_TIMEOUT_NO_TIMEOUT;
 #ifndef NSLDAPI_HAVE_POLL
 	} else {
-		if (msec != 0)
+		if (msec != 0) {
 			tval.tv_sec = msec / 1000;
-		else
+			tval.tv_usec = 1000 * ( msec % 1000 );
+		} else {
 			tval.tv_sec = 0;
+		}
 		tval.tv_usec = 0;
 #endif /* NSLDAPI_HAVE_POLL */
 	}
