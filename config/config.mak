@@ -178,6 +178,11 @@ CFLAGS=$(CFLAGS) -DCookieManagement -DSingleSignon
 
 !endif
 
+# TODO Remove later - Gagan
+!ifdef NU_CACHE 
+CFLAGS=$(CFLAGS) -DNU_CACHE
+!endif
+
 # always need these:
 CFLAGS = $(CFLAGS) -DNETSCAPE
 
