@@ -33,19 +33,39 @@ There are a few .bat files for convenience to build the targets I often build.
 and ASSUMEs that you want Rhino support and that you have already built Rhino
 in the 'correct' relative directory.
 
-The directory structure assumption for Rhino is:
+The directory structure used at Netscape for Rhino is:
 
-someroot/ns/js/rhino
-someroot/mozilla/js/src
-someroot/mozilla/js/jsd
-someroot/mozilla/js/jsdj
+    someroot/ns/js/rhino
+    someroot/mozilla/js/src
+    someroot/mozilla/js/jsd
+    someroot/mozilla/js/jsdj
 
 where 'someroot' can be anything. The salient point is that from the jsdj/build
 directory the relative path to the rhino classes is: 
 
 .\..\..\..\..\ns\js\rhino
 
-This can be adjusted by hacking the var near the top of jsdj.mak
+This can be adjusted by hacking the 'RHINO_CLASSES' var near the top of 
+jsdj.mak.
 
+------------------------
+FOR THE JS 1.4 RELEASE:
 
+Rhino (JavaScript for Java) is packaged as 'jsjava.jar'. It unzips so that the 
+root directory is named 'jsjava'. 
 
+To simplify building js/jsdj for this release jsdj.mak has been modified to 
+include:
+
+    RHINO_CLASSROOT = $(BUILD_DIR)\..\..\jsjava
+    RHINO_CLASSES = $(RHINO_CLASSROOT)\js.jar;$(RHINO_CLASSROOT)\jsdebug.jar
+
+This supports unzipping jsjava.jar into mozilla/js for a directory tree like:
+
+    someroot/mozilla/js/jsjava
+    someroot/mozilla/js/src
+    someroot/mozilla/js/jsd
+    someroot/mozilla/js/jsdj
+
+mk_ifcui_std_with_rhino.bat can then be run from mozilla/js/jsdj/build to build
+all of js/jsdj including Rhino support.
