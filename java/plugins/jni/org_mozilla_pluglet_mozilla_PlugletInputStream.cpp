@@ -103,7 +103,7 @@ JNIEXPORT jint JNICALL Java_org_mozilla_pluglet_mozilla_PlugletInputStream_nativ
 
     env->SetByteArrayRegion(b,off,retval,bufElems);
     free(bufElems);
-    return retval;
+    return (len > 0 && actualLen <= 0) ? -1 : retval;
 }
 
 /*
