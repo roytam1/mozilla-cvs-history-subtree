@@ -1460,7 +1460,9 @@ nsMsgComposeAndSend::GetBodyFromEditor()
         bodyTextPtr++;
       }
       PR_FREEIF(outCString);
-      rv = nsMsgI18NSaveAsCharset(TEXT_PLAIN, aCharset, bodyText, &outCString);
+      
+      nsXPIDLCString fallbackCharset;
+      rv = nsMsgI18NSaveAsCharset(TEXT_PLAIN, aCharset, bodyText, &outCString, getter_Copies(fallbackCharset));
 
       if (NS_ERROR_UENC_NOMAPPING == rv) {
         PRBool proceedTheSend;
@@ -1474,6 +1476,9 @@ nsMsgComposeAndSend::GetBodyFromEditor()
           return NS_ERROR_MSG_MULTILINGUAL_SEND;
         }
       }
+      // re-label to the fallback charset
+      else if (fallbackCharset)
+        mCompFields->SetCharacterSet(fallbackCharset.get());
     }
 
     if (NS_SUCCEEDED(rv)) 
