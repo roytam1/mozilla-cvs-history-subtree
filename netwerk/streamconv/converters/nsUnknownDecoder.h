@@ -53,7 +53,6 @@ public:
   // nsIStreamObserver methods
   NS_DECL_NSISTREAMOBSERVER
 
-
   nsUnknownDecoder();
 
 protected:

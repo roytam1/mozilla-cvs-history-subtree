@@ -94,7 +94,7 @@ public:
     PRBool          mSupressSize;       // supress the size info from display
 };
 
-class nsFTPDirListingConv : public nsIStreamConverter, public nsIRequest {
+class nsFTPDirListingConv : public nsIStreamConverter {
 public:
     // nsISupports methods
     NS_DECL_ISUPPORTS
@@ -107,9 +107,6 @@ public:
 
     // nsIStreamObserver methods
     NS_DECL_NSISTREAMOBSERVER
-
-    // nsIRequest
-    NS_DECL_NSIREQUEST
 
     // nsFTPDirListingConv methods
     nsFTPDirListingConv();

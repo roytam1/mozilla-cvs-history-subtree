@@ -30,13 +30,14 @@
 #include "nsNetUtil.h"
 #include "nsMimeTypes.h"
 #include "nsIByteArrayInputStream.h"
-#include "nsIStreamContentInfo.h"
 
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 // nsISupports implementation
-NS_IMPL_THREADSAFE_ISUPPORTS3(nsMultiMixedConv, nsIStreamConverter, 
-							  nsIStreamListener, nsIStreamObserver);
+NS_IMPL_THREADSAFE_ISUPPORTS3(nsMultiMixedConv,
+                              nsIStreamConverter, 
+							  nsIStreamListener,
+                              nsIStreamObserver);
 
 
 // nsIStreamConverter implementation
@@ -78,9 +79,8 @@ nsMultiMixedConv::OnDataAvailable(nsIRequest *request, nsISupports *context,
 
     NS_ASSERTION(request, "multimixed converter needs a request");
 
-    nsCOMPtr<nsIChannel> channel;
-    (void) request->GetParent(getter_AddRefs(channel));
-    if (!channel) return NS_ERROR_NULL_POINTER;
+    nsCOMPtr<nsIChannel> channel = do_QueryInterface(request, &rv);
+    if (NS_FAILED(rv)) return rv;
     
     buffer = (char*)nsMemory::Alloc(bufLen);
     if (!buffer) ERR_OUT
@@ -217,23 +217,19 @@ nsMultiMixedConv::OnStartRequest(nsIRequest *request, nsISupports *ctxt) {
     nsresult rv = NS_OK;
     mContext = ctxt;
 
-    nsCOMPtr<nsIChannel> channel;
-    (void) request->GetParent(getter_AddRefs(channel));
-    if (!channel) return NS_ERROR_NULL_POINTER;
+    nsCOMPtr<nsIChannel> channel = do_QueryInterface(request, &rv);
+    if (NS_FAILED(rv)) return rv;
     
     // ask the HTTP channel for the content-type and extract the boundary from it.
-    nsCOMPtr<nsIHTTPChannel> httpChannel;
-    rv = channel->QueryInterface(NS_GET_IID(nsIHTTPChannel), getter_AddRefs(httpChannel));
+    nsCOMPtr<nsIHTTPChannel> httpChannel = do_QueryInterface(channel, &rv);
     if (NS_SUCCEEDED(rv)) {
         nsCOMPtr<nsIAtom> header = NS_NewAtom("content-type");
         if (!header) return NS_ERROR_OUT_OF_MEMORY;
         rv = httpChannel->GetResponseHeader(header, getter_Copies(delimiter));
         if (NS_FAILED(rv)) return rv;
     } else {
-        // try asking the request directly
-        nsCOMPtr<nsIStreamContentInfo> cr(do_QueryInterface(request));
-        if (cr)
-            rv = cr->GetContentType(getter_Copies(delimiter));
+        // try asking the channel directly
+        rv = channel->GetContentType(getter_Copies(delimiter));
         if (!delimiter || NS_FAILED(rv)) return NS_ERROR_FAILURE;
     }
 
@@ -277,7 +273,7 @@ nsMultiMixedConv::OnStopRequest(nsIRequest *request, nsISupports *ctxt,
                 mBuffer = nsnull;
                 mBufLen = 0;
             }
-            rv = mFinalListener->OnStopRequest(this, mContext, aStatus, aStatusArg);
+            rv = mFinalListener->OnStopRequest(mPartChannel, mContext, aStatus, aStatusArg);
         } else {
             rv = mFinalListener->OnStartRequest(request, ctxt);
             if (NS_FAILED(rv)) return rv;
@@ -343,7 +339,7 @@ nsMultiMixedConv::SendStart(nsIChannel *aChannel) {
 
     // First build up a dummy uri.
     nsCOMPtr<nsIURI> partURI;
-    rv = aChannel->GetURI(getter_AddRefs (partURI));
+    rv = aChannel->GetURI(getter_AddRefs(partURI));
     if (NS_FAILED(rv)) return rv;
 
     if (mContentType.IsEmpty())
@@ -357,29 +353,29 @@ nsMultiMixedConv::SendStart(nsIChannel *aChannel) {
     if (NS_FAILED(rv)) return rv;
 
     nsLoadFlags loadFlags = 0;
-    mPartChannel->GetLoadAttributes (&loadFlags);
+    mPartChannel->GetLoadAttributes(&loadFlags);
     loadFlags |= nsIChannel::LOAD_REPLACE;
-    mPartChannel->SetLoadAttributes ( loadFlags);
+    mPartChannel->SetLoadAttributes(loadFlags);
 
 	nsCOMPtr<nsILoadGroup> loadGroup;
     (void)aChannel->GetLoadGroup(getter_AddRefs(loadGroup));
     // Add the new channel to the load group (if any)
     if (loadGroup) {
-        rv = aChannel->SetLoadGroup(loadGroup);
+        rv = mPartChannel->SetLoadGroup(loadGroup);
         if (NS_FAILED(rv)) return rv;
-        rv = loadGroup->AddRequest(this, nsnull);
+        rv = loadGroup->AddRequest(mPartChannel, nsnull);
         if (NS_FAILED(rv)) return rv;
     }
 
     // Let's start off the load. NOTE: we don't forward on the channel passed
     // into our OnDataAvailable() as it's the root channel for the raw stream.
-    return mFinalListener->OnStartRequest(this, mContext);
+    return mFinalListener->OnStartRequest(mPartChannel, mContext);
 }
 
 
 nsresult
 nsMultiMixedConv::SendStop() {
-    nsresult rv = mFinalListener->OnStopRequest(this, mContext, NS_OK, nsnull);
+    nsresult rv = mFinalListener->OnStopRequest(mPartChannel, mContext, NS_OK, nsnull);
     if (NS_FAILED(rv)) return rv;
 
     // Remove the channel from its load group (if any)
@@ -387,7 +383,7 @@ nsMultiMixedConv::SendStop() {
 
     (void) mPartChannel->GetLoadGroup(getter_AddRefs(loadGroup));
     if (loadGroup) {
-        loadGroup->RemoveRequest(this, mContext, NS_OK, nsnull);
+        loadGroup->RemoveRequest(mPartChannel, mContext, NS_OK, nsnull);
     }
 
     mPartChannel = 0;
@@ -422,7 +418,7 @@ nsMultiMixedConv::SendData(char *aBuffer, PRUint32 aLen) {
     rv = inStream->Available(&len);
     if (NS_FAILED(rv)) return rv;
 
-    return mFinalListener->OnDataAvailable(this, mContext, inStream, 0, len);
+    return mFinalListener->OnDataAvailable(mPartChannel, mContext, inStream, 0, len);
 }
 
 PRInt8 
@@ -543,55 +539,4 @@ nsMultiMixedConv::FindToken(char *aCursor, PRUint32 aLen) {
             }
 
     return nsnull;
-}
-
-
-// dummy request
-
-/* readonly attribute wstring name; */
-NS_IMETHODIMP nsMultiMixedConv::GetName(PRUnichar * *aName)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* boolean isPending (); */
-NS_IMETHODIMP nsMultiMixedConv::IsPending(PRBool *_retval)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* readonly attribute nsresult status; */
-NS_IMETHODIMP nsMultiMixedConv::GetStatus(nsresult *aStatus)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* void cancel (in nsresult status); */
-NS_IMETHODIMP nsMultiMixedConv::Cancel(nsresult status)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* void suspend (); */
-NS_IMETHODIMP nsMultiMixedConv::Suspend()
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* void resume (); */
-NS_IMETHODIMP nsMultiMixedConv::Resume()
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-
-/* attribute nsISupports parent; */
-NS_IMETHODIMP nsMultiMixedConv::GetParent(nsISupports * *aParent)
-{
-    NS_IF_ADDREF(*aParent = mPartChannel);
-    return NS_OK;
-}
-NS_IMETHODIMP nsMultiMixedConv::SetParent(nsISupports * aParent)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
 }

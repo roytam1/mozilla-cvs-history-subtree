@@ -60,8 +60,10 @@ PRLogModuleInfo* gFTPDirListConvLog = nsnull;
 #endif /* PR_LOGGING */
 
 // nsISupports implementation
-NS_IMPL_THREADSAFE_ISUPPORTS4(nsFTPDirListingConv, nsIStreamConverter, nsIStreamListener, 
-                                                   nsIStreamObserver, nsIRequest);
+NS_IMPL_THREADSAFE_ISUPPORTS3(nsFTPDirListingConv,
+                              nsIStreamConverter,
+                              nsIStreamListener, 
+                              nsIStreamObserver);
 
 // nsIStreamConverter implementation
 
@@ -250,11 +252,11 @@ nsFTPDirListingConv::OnDataAvailable(nsIRequest* request, nsISupports *ctxt,
                                   nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 count) {
     NS_ASSERTION(request, "FTP dir listing stream converter needs a request");
     
-    nsCOMPtr<nsIChannel> channel;
-    (void) request->GetParent(getter_AddRefs(channel));
-    if (!channel) return NS_ERROR_NULL_POINTER;
-    
     nsresult rv;
+
+    nsCOMPtr<nsIChannel> channel = do_QueryInterface(request, &rv);
+    if (NS_FAILED(rv)) return rv;
+    
     PRUint32 read, streamLen;
     nsCAutoString indexFormat;
     indexFormat.SetCapacity(72); // quick guess 
@@ -343,7 +345,7 @@ nsFTPDirListingConv::OnDataAvailable(nsIRequest* request, nsISupports *ctxt,
     inputData = do_QueryInterface(inputDataSup, &rv);
     if (NS_FAILED(rv)) return rv;
 
-    rv = mFinalListener->OnDataAvailable(this, ctxt, inputData, 0, indexFormat.Length());
+    rv = mFinalListener->OnDataAvailable(mPartChannel, ctxt, inputData, 0, indexFormat.Length());
     if (NS_FAILED(rv)) return rv;
 
     return NS_OK;
@@ -355,7 +357,7 @@ NS_IMETHODIMP
 nsFTPDirListingConv::OnStartRequest(nsIRequest* request, nsISupports *ctxt) {
     // we don't care about start. move along... but start masqeurading 
     // as the http-index channel now.
-    return mFinalListener->OnStartRequest(this, ctxt);
+    return mFinalListener->OnStartRequest(mPartChannel, ctxt);
 }
 
 NS_IMETHODIMP
@@ -363,19 +365,20 @@ nsFTPDirListingConv::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
                                    nsresult aStatus, const PRUnichar* aStatusArg) {
     // we don't care about stop. move along...
 
-    nsCOMPtr<nsIChannel> channel;
-    (void) request->GetParent(getter_AddRefs(channel));
-    if (!channel) return NS_ERROR_NULL_POINTER;
+    nsresult rv;
+
+    nsCOMPtr<nsIChannel> channel = do_QueryInterface(request, &rv);
+    if (NS_FAILED(rv)) return rv;
 
 
     nsCOMPtr<nsILoadGroup> loadgroup;
-    nsresult rv = channel->GetLoadGroup(getter_AddRefs(loadgroup));
+    rv = channel->GetLoadGroup(getter_AddRefs(loadgroup));
     if (NS_FAILED(rv)) return rv;
 
     if (loadgroup)
-        (void)loadgroup->RemoveRequest(this, nsnull, aStatus, aStatusArg);
+        (void)loadgroup->RemoveRequest(mPartChannel, nsnull, aStatus, aStatusArg);
 
-    return mFinalListener->OnStopRequest(this, ctxt, aStatus, aStatusArg);
+    return mFinalListener->OnStopRequest(mPartChannel, ctxt, aStatus, aStatusArg);
 }
 
 
@@ -978,54 +981,4 @@ nsFTPDirListingConv::DigestBufferLines(char *aBuffer, nsCAutoString &aString) {
     } // end while(eol)
 
     return line;
-}
-
-
-// dummy request
-
-/* readonly attribute wstring name; */
-NS_IMETHODIMP nsFTPDirListingConv::GetName(PRUnichar * *aName)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* boolean isPending (); */
-NS_IMETHODIMP nsFTPDirListingConv::IsPending(PRBool *_retval)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* readonly attribute nsresult status; */
-NS_IMETHODIMP nsFTPDirListingConv::GetStatus(nsresult *aStatus)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* void cancel (in nsresult status); */
-NS_IMETHODIMP nsFTPDirListingConv::Cancel(nsresult status)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* void suspend (); */
-NS_IMETHODIMP nsFTPDirListingConv::Suspend()
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* void resume (); */
-NS_IMETHODIMP nsFTPDirListingConv::Resume()
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* attribute nsISupports parent; */
-NS_IMETHODIMP nsFTPDirListingConv::GetParent(nsISupports * *aParent)
-{
-    NS_IF_ADDREF(*aParent = mPartChannel);
-    return NS_OK;
-}
-NS_IMETHODIMP nsFTPDirListingConv::SetParent(nsISupports * aParent)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
 }

@@ -21,7 +21,6 @@
  */
 
 #include "nsUnknownDecoder.h"
-#include "nsIStreamContentInfo.h"
 #include "nsIServiceManager.h"
 #include "nsIStreamConverterService.h"
 
@@ -277,9 +276,8 @@ void nsUnknownDecoder::DetermineContentType(nsIRequest* request)
 
     PRBool isLocalFile = PR_FALSE;
     if (request) {
-      nsCOMPtr<nsIChannel> aChannel;
-      (void) request->GetParent(getter_AddRefs(aChannel));
-      if (!aChannel) return;
+      nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
+      if (!request) { NS_WARNING("QI failed"); return; }
 
       nsCOMPtr<nsIURI> pURL;
       nsresult rv = aChannel->GetURI(getter_AddRefs(pURL));
@@ -345,10 +343,11 @@ nsresult nsUnknownDecoder::FireListenerNotifications(nsIRequest* request,
 
   if (!mBuffer) return NS_ERROR_OUT_OF_MEMORY;
 
-  nsCOMPtr<nsIStreamContentInfo> cr = do_QueryInterface(request);
+  nsCOMPtr<nsIChannel> channel = do_QueryInterface(request, &rv);
+  if (NS_FAILED(rv)) return rv;
 
   // Set the new content type on the channel...
-  cr->SetContentType(mContentType);
+  channel->SetContentType(mContentType);
 
   // Fire the OnStartRequest(...)
   rv = mNextListener->OnStartRequest(request, aCtxt);
