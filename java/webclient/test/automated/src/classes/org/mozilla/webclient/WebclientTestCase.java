@@ -134,13 +134,13 @@ protected void verifyLogModuleValueIsAtLeastN(String logModuleName, int n)
 	
 }
 
-protected void verifyBinDirSet()
+protected static void verifyBinDirSet()
 {
     assertTrue("BROWSER_BIN_DIR is not set",
 	       null != System.getProperty("BROWSER_BIN_DIR"));
 }
 
-protected String getBrowserBinDir() {
+protected static String getBrowserBinDir() {
     return System.getProperty("BROWSER_BIN_DIR");
 }
 

@@ -123,11 +123,17 @@ public void refresh(long loadFlags)
 {
     ParameterCheck.noLessThan(loadFlags, 0);
     getWrapperFactory().verifyInitialized();
+
+    final long finalLoadFlags = loadFlags;
     Assert.assert_it(-1 != getNativeBrowserControl());
     
-    synchronized(getBrowserControl()) {
-        nativeRefresh(getNativeBrowserControl(), loadFlags);
-    }
+    NativeEventThread.instance.pushBlockingWCRunnable(new WCRunnable() {
+	    public Object run() {
+		nativeRefresh(NavigationImpl.this.getNativeBrowserControl(), 
+			      finalLoadFlags);
+		return null;
+	    }
+	});
 }
 
 public void stop()
