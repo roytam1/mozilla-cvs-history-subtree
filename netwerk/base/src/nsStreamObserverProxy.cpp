@@ -115,7 +115,7 @@ nsOnStartRequestEvent::HandleEvent()
 {
     PRINTF("HandleEvent -- OnStartRequest [event=%x]\n", this);
 
-    nsIStreamObserver *observer = mProxy->GetReceiver();
+    nsCOMPtr<nsIStreamObserver> observer = mProxy->GetReceiver();
     if (!observer) {
         PRINTF("Already called OnStopRequest (observer is NULL)\n");
         return NS_ERROR_FAILURE;

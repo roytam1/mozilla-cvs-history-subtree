@@ -57,7 +57,7 @@ nsOnProvideDataEvent::HandleEvent()
     nsStreamProviderProxy *providerProxy = 
         NS_STATIC_CAST(nsStreamProviderProxy *, mProxy);
 
-    nsIStreamProvider *provider = providerProxy->GetProvider();
+    nsCOMPtr<nsIStreamProvider> provider = providerProxy->GetProvider();
     if (!provider) {
         PRINTF("Already called OnStopRequest (provider is NULL)\n");
         return NS_ERROR_FAILURE;

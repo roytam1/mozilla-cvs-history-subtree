@@ -151,7 +151,7 @@ nsOnDataAvailableEvent::HandleEvent()
     nsStreamListenerProxy *listenerProxy =
         NS_STATIC_CAST(nsStreamListenerProxy *, mProxy);
 
-    nsIStreamListener *listener = listenerProxy->GetListener();
+    nsCOMPtr<nsIStreamListener> listener = listenerProxy->GetListener();
     if (!listener) {
         PRINTF("Already called OnStopRequest (listener is NULL)\n");
         return NS_ERROR_FAILURE;
