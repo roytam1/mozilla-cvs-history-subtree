@@ -908,15 +908,20 @@ if [ "$MOZ_MAIL_NEWS" ]; then
     fi
 fi
 
-MAKEFILES_ipc="
-modules/ipc/Makefile
-modules/ipc/daemon/Makefile
-modules/ipc/common/Makefile
-modules/ipc/public/Makefile
-modules/ipc/src/Makefile
-modules/ipc/build/Makefile
-modules/ipc/test/Makefile
-modules/ipc/testmodule/Makefile
+MAKEFILES_ipcd="
+ipc/ipcd/Makefile
+ipc/ipcd/daemon/public/Makefile
+ipc/ipcd/daemon/src/Makefile
+ipc/ipcd/client/public/Makefile
+ipc/ipcd/client/src/Makefile
+ipc/ipcd/shared/src/Makefile
+ipc/ipcd/test/Makefile
+ipc/ipcd/test/module/Makefile
+ipc/ipcd/extensions/Makefile
+ipc/ipcd/extensions/lock/Makefile
+ipc/ipcd/extensions/lock/public/Makefile
+ipc/ipcd/extensions/lock/src/Makefile
+ipc/ipcd/extensions/lock/src/module/Makefile
 "
 
 MAKEFILES_transactionmngr="
@@ -1317,8 +1322,8 @@ if test -n "$MOZ_MINOTAUR"; then
     add_makefiles "$MAKEFILES_minotaur"
 fi
 
-if test -n "$MOZ_IPC"; then
-    add_makefiles "$MAKEFILES_ipc"
+if test -n "$MOZ_IPCD"; then
+    add_makefiles "$MAKEFILES_ipcd"
 fi
 
 if test -n "$MOZ_PROFILESHARING"; then

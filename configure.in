@@ -4609,6 +4609,19 @@ fi
 AC_SUBST(MOZ_XUL)
 
 dnl ========================================================
+dnl enable profile sharing
+dnl ========================================================
+MOZ_PROFILESHARING=0
+MOZ_IPCD=0
+MOZ_ARG_ENABLE_BOOL(profilesharing,
+[  --enable-profilesharing Enable profile sharing],
+    MOZ_PROFILESHARING=1)
+if test "$MOZ_PROFILESHARING"; then
+  MOZ_IPCD=1
+  AC_DEFINE(MOZ_PROFILESHARING)
+fi
+
+dnl ========================================================
 dnl =
 dnl = Cleanup section for misc ordering snafus
 dnl =
@@ -4717,6 +4730,9 @@ AC_SUBST(MOZ_LDAP_XPCOM_EXPERIMENTAL)
 AC_SUBST(LDAP_CFLAGS)
 AC_SUBST(LDAP_LIBS)
 AC_SUBST(LIBICONV)
+
+AC_SUBST(MOZ_PROFILESHARING)
+AC_SUBST(MOZ_IPCD)
 
 AC_SUBST(HAVE_XIE)
 AC_SUBST(MOZ_XIE_LIBS)
