@@ -667,23 +667,6 @@ cookie_IsInDomain(char* domain, char* host, int hostLength) {
   return PR_FALSE;
 }
 
-static PRBool
-cookie_pathOK(const char* cookiePath, const char* currentPath) {
-  if (!cookiePath || !currentPath) {
-    return PR_FALSE;
-  }
-
-  // determine length of each, excluding anything past last slash
-  char * pos = PL_strrchr(cookiePath, '/');
-  int cookiePathLen = pos ? pos+1-cookiePath : 0;
-  pos = PL_strrchr(currentPath, '/');
-  int currentPathLen = pos ? pos+1-currentPath : 0;
-
-  // test for subpath
-  return (currentPathLen >= cookiePathLen &&
-          !PL_strncmp(currentPath, cookiePath, cookiePathLen));
-}
-
 /* returns PR_TRUE if authorization is required
 ** 
 **
@@ -771,8 +754,8 @@ COOKIE_GetCookie(char * address, nsIIOService* ioService) {
       continue;
     }
 
-    /* shorter path strings always come last so there can be no ambiquity */
-    if(cookie_pathOK(cookie_s->path, path.get())) {
+    /* shorter strings always come last so there can be no ambiquity */
+    if(cookie_s->path && !PL_strncmp(path.get(), cookie_s->path, PL_strlen(cookie_s->path))) {
 
       /* if the cookie is secure and the path isn't, dont send it */
       if (cookie_s->isSecure & !isSecure) {
@@ -1326,6 +1309,10 @@ cookie_SetCookieString(char * curURL, nsIPrompt *aPrompter, const char * setCook
      * ignore slashes in the query string part.
      */
     char * iter = PL_strchr(cur_path.get(), '?');
+    if(iter) {
+      *iter = '\0';
+    }
+    iter = PL_strrchr(cur_path.get(), '/');
     if(iter) {
       *iter = '\0';
     }
