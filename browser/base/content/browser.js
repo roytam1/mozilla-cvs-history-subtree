@@ -1445,10 +1445,16 @@ var urlbarObserver = {
 
       // The URL bar automatically handles inputs with newline characters, 
       // so we can get away with treating text/x-moz-url flavours as text/unicode.
-      if (url)  {
-        // XXXBlake Workaround caret crash when you try to set the textbox's value on dropping
-        setTimeout(function(u) { gURLBar.value = u; handleURLBarCommand(); }, 0, url);
-      }
+
+      // valid urls don't contain spaces ' '; if we have a space it
+      // isn't a valid url, or if it's a javascript: or data: url,
+      // bail out
+      if (!url || !url.length || url.indexOf(" ", 0) != -1 ||
+          /^\s*(javascript|data):/.test(url))
+        return;
+
+      // XXXBlake Workaround caret crash when you try to set the textbox's value on dropping
+      setTimeout(function(u) { gURLBar.value = u; handleURLBarCommand(); }, 0, url);
     },
   getSupportedFlavours: function ()
     {
