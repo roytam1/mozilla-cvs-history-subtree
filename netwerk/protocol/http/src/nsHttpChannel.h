@@ -8,6 +8,8 @@
 #include "nsILoadGroup.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIInputStream.h"
+#include "nsIProgressEventSink.h"
+#include "nsICachingChannel.h"
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
 
@@ -21,6 +23,9 @@ class nsHttpResponseHead;
 
 class nsHttpChannel : public nsIHttpChannel
                     , public nsIStreamListener
+                    , public nsIInterfaceRequestor
+                    , public nsIProgressEventSink
+                    , public nsICachingChannel
 {
 public:
     NS_DECL_ISUPPORTS
@@ -29,6 +34,9 @@ public:
     NS_DECL_NSIHTTPCHANNEL
     NS_DECL_NSIREQUESTOBSERVER
     NS_DECL_NSISTREAMLISTENER
+    NS_DECL_NSIINTERFACEREQUESTOR
+    NS_DECL_NSIPROGRESSEVENTSINK
+    NS_DECL_NSICACHINGCHANNEL
 
     nsHttpChannel();
     virtual ~nsHttpChannel();
@@ -57,6 +65,7 @@ private:
     nsCOMPtr<nsILoadGroup>          mLoadGroup;
     nsCOMPtr<nsISupports>           mOwner;
     nsCOMPtr<nsIInterfaceRequestor> mCallbacks;
+    nsCOMPtr<nsIProgressEventSink>  mProgressSink;
     nsCOMPtr<nsIURI>                mReferrer;
     nsCOMPtr<nsIInputStream>        mUploadStream;
 

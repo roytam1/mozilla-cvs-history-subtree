@@ -1,6 +1,8 @@
 #include "nsNetUtil.h"
 #include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"
+#include "nsIInterfaceRequestor.h"
+#include "nsIProgressEventSink.h"
 
 #define RETURN_IF_FAILED(rv, step) \
     PR_BEGIN_MACRO \
@@ -13,6 +15,10 @@
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static nsIEventQueue* gEventQ = nsnull;
 static PRBool gKeepRunning = PR_TRUE;
+
+//-----------------------------------------------------------------------------
+// nsIStreamListener implementation
+//-----------------------------------------------------------------------------
 
 class MyListener : public nsIStreamListener
 {
@@ -71,6 +77,52 @@ MyListener::OnDataAvailable(nsIRequest *req, nsISupports *ctxt,
     return NS_OK;
 }
 
+//-----------------------------------------------------------------------------
+// NotificationCallbacks implementation
+//-----------------------------------------------------------------------------
+
+class MyNotifications : public nsIInterfaceRequestor
+                      , public nsIProgressEventSink
+{
+public:
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSIINTERFACEREQUESTOR
+    NS_DECL_NSIPROGRESSEVENTSINK
+
+    MyNotifications() { NS_INIT_ISUPPORTS(); }
+    virtual ~MyNotifications() {}
+};
+
+NS_IMPL_ISUPPORTS2(MyNotifications,
+                   nsIInterfaceRequestor,
+                   nsIProgressEventSink)
+
+NS_IMETHODIMP
+MyNotifications::GetInterface(const nsIID &iid, void **result)
+{
+    return QueryInterface(iid, result);
+}
+
+NS_IMETHODIMP
+MyNotifications::OnStatus(nsIRequest *req, nsISupports *ctx,
+                          nsresult status, const PRUnichar *statusText)
+{
+    printf("status: %x\n", status);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+MyNotifications::OnProgress(nsIRequest *req, nsISupports *ctx,
+                            PRUint32 progress, PRUint32 progressMax)
+{
+    printf("progress: %u/%u\n", progress, progressMax);
+    return NS_OK;
+}
+
+//-----------------------------------------------------------------------------
+// main, etc..
+//-----------------------------------------------------------------------------
+
 nsresult NS_AutoregisterComponents()
 {
   nsresult rv = nsComponentManager::AutoRegister(nsIComponentManager::NS_Startup, NULL /* default */);
@@ -101,11 +153,12 @@ int main(int argc, char **argv)
 
     nsCOMPtr<nsIURI> uri;
     MyListener *listener = new MyListener();
+    MyNotifications *callbacks = new MyNotifications();
 
     rv = NS_NewURI(getter_AddRefs(uri), argv[1]);
     RETURN_IF_FAILED(rv, "NS_NewURI");
 
-    rv = NS_OpenURI(listener, nsnull, uri);
+    rv = NS_OpenURI(listener, nsnull, uri, nsnull, nsnull, callbacks);
     RETURN_IF_FAILED(rv, "NS_OpenURI");
 
     while (gKeepRunning)

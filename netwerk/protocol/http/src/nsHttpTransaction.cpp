@@ -11,8 +11,10 @@
 // nsHttpTransaction
 //-----------------------------------------------------------------------------
 
-nsHttpTransaction::nsHttpTransaction(nsIStreamListener *listener)
+nsHttpTransaction::nsHttpTransaction(nsIStreamListener *listener,
+                                     nsIInterfaceRequestor *callbacks)
     : mListener(listener)
+    , mCallbacks(callbacks)
     , mConnection(nsnull)
     , mResponseHead(nsnull)
     , mContentLength(-1)
@@ -257,8 +259,7 @@ nsHttpTransaction::HandleContent(char *buf,
                 mChunkedDecoder = new nsHttpChunkedDecoder();
                 if (!mChunkedDecoder)
                     return NS_ERROR_OUT_OF_MEMORY;
-                printf(">>> chunked decoder created\n");
-                //NS_BREAK();
+                LOG(("chunked decoder created\n"));
             }
         }
     }
@@ -272,8 +273,12 @@ nsHttpTransaction::HandleContent(char *buf,
     else
         *countRead = PR_MIN(count, mContentLength - mContentRead);
 
-    // update count of content bytes read..
-    mContentRead += *countRead;
+    if (*countRead) {
+        // update count of content bytes read..
+        mContentRead += *countRead;
+        // and report progress
+        mConnection->ReportProgress(mContentRead, mContentLength);
+    }
 
     LOG(("nsHttpTransaction [this=%x count=%u read=%u mContentRead=%u mContentLength=%d]\n",
         this, count, *countRead, mContentRead, mContentLength));

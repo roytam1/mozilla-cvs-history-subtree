@@ -64,6 +64,13 @@ nsHttpConnection::SetTransaction(nsHttpTransaction *transaction)
     mTransaction = transaction;
     NS_ADDREF(mTransaction); // XXX may want to make this weak
 
+    // use this transactions notification callbacks
+    mCallbacks = transaction->Callbacks();
+
+    mProgressSink = 0;
+    if (mCallbacks)
+        mProgressSink = do_GetInterface(mCallbacks);
+
     // assign ourselves to the transaction
     mTransaction->SetConnection(this);
 
@@ -167,6 +174,14 @@ nsHttpConnection::IsAlive()
     return isAlive;
 }
 
+void
+nsHttpConnection::ReportProgress(PRUint32 progress, PRInt32 progressMax)
+{
+    if (mProgressSink)
+        mProgressSink->OnProgress(nsnull, nsnull, progress,
+                                  progressMax < 0 ? 0 : PRUint32(progressMax));
+}
+
 //-----------------------------------------------------------------------------
 // nsHttpConnection <private>
 //-----------------------------------------------------------------------------
@@ -223,6 +238,11 @@ nsHttpConnection::CreateTransport()
                               getter_AddRefs(transport));
     if (NS_FAILED(rv)) return rv;
 
+    // allow the socket transport to call us directly on progress
+    rv = transport->SetNotificationCallbacks(this,
+                                             nsITransport::DONT_PROXY_PROGRESS);
+    if (NS_FAILED(rv)) return rv;
+
     // QI for the nsISocketTransport iface
     mSocketTransport = do_QueryInterface(transport, &rv);
     return rv;
@@ -239,6 +259,8 @@ NS_INTERFACE_MAP_BEGIN(nsHttpConnection)
     NS_INTERFACE_MAP_ENTRY(nsIStreamListener)
     NS_INTERFACE_MAP_ENTRY(nsIStreamProvider)
     NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsIRequestObserver, nsIStreamListener)
+    NS_INTERFACE_MAP_ENTRY(nsIInterfaceRequestor)
+    NS_INTERFACE_MAP_ENTRY(nsIProgressEventSink)
 NS_INTERFACE_MAP_END_THREADSAFE
 
 //-----------------------------------------------------------------------------
@@ -323,6 +345,44 @@ nsHttpConnection::OnDataAvailable(nsIRequest *request, nsISupports *context,
         this, mState));
 
     return mTransaction->OnDataReadable(inputStream);
+}
+
+//-----------------------------------------------------------------------------
+// nsHttpConnection::nsIInterfaceRequestor
+//-----------------------------------------------------------------------------
+
+// not called on the socket transport thread
+NS_IMETHODIMP
+nsHttpConnection::GetInterface(const nsIID &iid, void **result)
+{
+    if (iid.Equals(NS_GET_IID(nsIProgressEventSink)))
+        return QueryInterface(iid, result);
+
+    return mCallbacks->GetInterface(iid, result);
+}
+
+//-----------------------------------------------------------------------------
+// nsHttpConnection::nsIProgressEventSink
+//-----------------------------------------------------------------------------
+
+// called on the socket transport thread
+NS_IMETHODIMP
+nsHttpConnection::OnStatus(nsIRequest *req, nsISupports *ctx, nsresult status,
+                           const PRUnichar *statusText)
+{
+    if (mProgressSink)
+        mProgressSink->OnStatus(nsnull, nsnull, status, statusText);
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHttpConnection::OnProgress(nsIRequest *req, nsISupports *ctx,
+                             PRUint32 progress, PRUint32 progressMax)
+{
+    // we ignore progress notifications from the socket transport.
+    // we'll generate these ourselves from OnDataAvailable
+    return NS_OK;
 }
 
 //-----------------------------------------------------------------------------

@@ -5,15 +5,19 @@
 #include "nsIProtocolProxyService.h"
 #include "nsIPref.h"
 #include "nsIObserver.h"
+#include "nsIProxyObjectManager.h"
+#include "nsINetModuleMgr.h"
 #include "nsXPIDLString.h"
 #include "nsString.h"
 #include "nsCOMPtr.h"
+#include "nsWeakReference.h"
 #include "prclist.h"
 
 class nsHttpConnection;
 class nsHttpConnectionInfo;
 class nsHttpHeaderArray;
 class nsHttpTransaction;
+class nsIHttpChannel;
 
 //-----------------------------------------------------------------------------
 // nsHttpHandler - protocol handler for HTTP and HTTPS
@@ -21,6 +25,7 @@ class nsHttpTransaction;
 
 class nsHttpHandler : public nsIHttpProtocolHandler
                     , public nsIObserver
+                    , public nsSupportsWeakReference
 {
 public:
     NS_DECL_ISUPPORTS
@@ -69,6 +74,22 @@ public:
     // Called when a transaction, which is not assigned to a connection,
     // is canceled.
     nsresult CancelPendingTransaction(nsHttpTransaction *, nsresult status);
+
+    //
+    // The HTTP handler caches pointers to specific XPCOM services, and
+    // provides the following helper routines for accessing those services:
+    //
+    nsresult GetProxyForObject(nsIEventQueue *queue,
+                               const nsIID &iid,
+                               nsISupports *object, 
+                               PRInt32 proxyType,
+                               void **result);
+
+    // Called by the channel before writing a request
+    nsresult OnModifyRequest(nsIHttpChannel *);
+
+    // Called by the channel once headers are available
+    nsresult OnAsyncExamineResponse(nsIHttpChannel *);
 
 private:
     //
@@ -119,6 +140,8 @@ private:
     // cached services
     nsCOMPtr<nsIPref>                 mPrefs;
     nsCOMPtr<nsIProtocolProxyService> mProxySvc;
+    nsCOMPtr<nsIProxyObjectManager>   mProxyMgr;
+    nsCOMPtr<nsINetModuleMgr>         mNetModuleMgr;
 
     // prefs
     PRInt32  mKeepAliveTimeout;

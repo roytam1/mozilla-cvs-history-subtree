@@ -4,6 +4,8 @@
 #include "nsIStreamListener.h"
 #include "nsIStreamProvider.h"
 #include "nsISocketTransport.h"
+#include "nsIProgressEventSink.h"
+#include "nsIInterfaceRequestor.h"
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
 #include "plstr.h"
@@ -19,6 +21,8 @@ class nsHttpTransaction;
 
 class nsHttpConnection : public nsIStreamListener
                        , public nsIStreamProvider
+                       , public nsIProgressEventSink
+                       , public nsIInterfaceRequestor
                        , public PRCList
 {
 public:
@@ -26,6 +30,8 @@ public:
     NS_DECL_NSISTREAMLISTENER
     NS_DECL_NSISTREAMPROVIDER
     NS_DECL_NSIREQUESTOBSERVER
+    NS_DECL_NSIINTERFACEREQUESTOR
+    NS_DECL_NSIPROGRESSEVENTSINK
 
     nsHttpConnection();
     virtual ~nsHttpConnection();
@@ -52,7 +58,8 @@ public:
     PRUint32 MaxReuseCount() { return mMaxReuseCount; }
     PRUint32 IdleTimeout()   { return mIdleTimeout; }
 
-    //nsISocketTransport   *SocketTransport() { return mTransport.get(); }
+    void ReportProgress(PRUint32 progress, PRInt32 progressMax);
+
     nsHttpTransaction    *Transaction()     { return mTransaction; }
     nsHttpConnectionInfo *ConnectionInfo()  { return mConnectionInfo; }
 
@@ -69,19 +76,22 @@ private:
     nsresult CreateTransport();
 
 private:
-    nsCOMPtr<nsISocketTransport> mSocketTransport;
-    nsCOMPtr<nsIRequest>         mWriteRequest;
-    nsCOMPtr<nsIRequest>         mReadRequest;
+    nsCOMPtr<nsISocketTransport>    mSocketTransport;
+    nsCOMPtr<nsIRequest>            mWriteRequest;
+    nsCOMPtr<nsIRequest>            mReadRequest;
 
-    nsHttpTransaction           *mTransaction;    // hard ref
-    nsHttpConnectionInfo        *mConnectionInfo; // hard ref
+    nsCOMPtr<nsIInterfaceRequestor> mCallbacks;
+    nsCOMPtr<nsIProgressEventSink>  mProgressSink;
 
-    PRUint32                     mState;
-    PRUint32                     mReuseCount;
-    PRUint32                     mMaxReuseCount; // value of keep-alive: max=
-    PRUint32                     mIdleTimeout;   // value of keep-alive: timeout=
+    nsHttpTransaction              *mTransaction;    // hard ref
+    nsHttpConnectionInfo           *mConnectionInfo; // hard ref
 
-    PRPackedBool                 mKeepAlive;
+    PRUint32                        mState;
+    PRUint32                        mReuseCount;
+    PRUint32                        mMaxReuseCount; // value of keep-alive: max=
+    PRUint32                        mIdleTimeout;   // value of keep-alive: timeout=
+
+    PRPackedBool                    mKeepAlive;
 };
 
 //-----------------------------------------------------------------------------

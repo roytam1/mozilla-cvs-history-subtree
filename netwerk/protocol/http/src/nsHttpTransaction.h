@@ -5,6 +5,7 @@
 #include "nsHttpHeaderArray.h"
 #include "nsIStreamListener.h"
 #include "nsIInputStream.h"
+#include "nsIInterfaceRequestor.h"
 #include "nsXPIDLString.h"
 #include "nsCOMPtr.h"
 
@@ -27,7 +28,7 @@ public:
     NS_DECL_NSIINPUTSTREAM
 
     // A transaction is constructed from request headers.
-    nsHttpTransaction(nsIStreamListener *);
+    nsHttpTransaction(nsIStreamListener *, nsIInterfaceRequestor *);
     virtual ~nsHttpTransaction();
 
     // Called when assigned to a connection
@@ -36,9 +37,10 @@ public:
     // Called to initialize the transaction
     nsresult SetupRequest(nsHttpRequestHead *, nsIInputStream *);
 
-    nsIStreamListener  *Listener()     { return mListener; }
-    nsHttpConnection   *Connection()   { return mConnection; }
-    nsHttpResponseHead *ResponseHead() { return mResponseHead; }
+    nsIStreamListener     *Listener()     { return mListener; }
+    nsHttpConnection      *Connection()   { return mConnection; }
+    nsHttpResponseHead    *ResponseHead() { return mResponseHead; }
+    nsIInterfaceRequestor *Callbacks()    { return mCallbacks; } 
 
     // Called to take ownership of the response headers; the transaction
     // will drop any reference to the response headers after this call.
@@ -57,33 +59,32 @@ private:
     nsresult ParseLine(char *line);
     nsresult ParseHeaders(char *, PRUint32 count, PRUint32 *countRead);
     nsresult HandleContent(char *, PRUint32 count, PRUint32 *countRead);
-    //nsresult InstallChunkedDecoder();
 
 private:
-    nsCOMPtr<nsIStreamListener> mListener;
+    nsCOMPtr<nsIStreamListener>     mListener;
+    nsCOMPtr<nsIInterfaceRequestor> mCallbacks;
 
-    nsHttpConnection           *mConnection; // hard ref
+    nsHttpConnection               *mConnection;      // hard ref
 
-    nsCString                   mReqHeaderBuf;    // flattened request headers
-    nsCOMPtr<nsIInputStream>    mReqHeaderStream; // header data stream
-    nsCOMPtr<nsIInputStream>    mReqUploadStream; // upload data stream
+    nsCString                       mReqHeaderBuf;    // flattened request headers
+    nsCOMPtr<nsIInputStream>        mReqHeaderStream; // header data stream
+    nsCOMPtr<nsIInputStream>        mReqUploadStream; // upload data stream
 
-    nsCOMPtr<nsIInputStream>    mSource;
-    nsHttpResponseHead         *mResponseHead;
+    nsCOMPtr<nsIInputStream>        mSource;
+    nsHttpResponseHead             *mResponseHead;
 
-    //char                       *mReadBuf;         // read ahead buffer
-    nsCString                   mLineBuf;         // may contain a partial line
+    nsCString                       mLineBuf;         // may contain a partial line
 
-    PRInt32                     mContentLength;   // equals -1 if unknown
-    PRUint32                    mContentRead;     // count of consumed content bytes
+    PRInt32                         mContentLength;   // equals -1 if unknown
+    PRUint32                        mContentRead;     // count of consumed content bytes
 
-    nsHttpChunkedDecoder       *mChunkedDecoder;
+    nsHttpChunkedDecoder           *mChunkedDecoder;
 
-    PRInt32                     mTransactionDone; // atomically {in,de}cremented
+    PRInt32                         mTransactionDone; // set atomically
 
-    PRPackedBool                mHaveStatusLine;
-    PRPackedBool                mHaveAllHeaders;
-    PRPackedBool                mFiredOnStart;
+    PRPackedBool                    mHaveStatusLine;
+    PRPackedBool                    mHaveAllHeaders;
+    PRPackedBool                    mFiredOnStart;
 };
 
 #if 0

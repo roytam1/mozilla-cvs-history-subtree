@@ -46,6 +46,9 @@
 #include "nsIStreamIO.h"
 #include "nsIPipe.h"
 #include "nsIProtocolHandler.h"
+#include "nsIStringStream.h"
+#include "nsILocalFile.h"
+#include "nsIFileStreams.h"
 #include "nsXPIDLString.h"
 #include "prio.h"       // for read/write flags, permissions, etc.
 
@@ -220,26 +223,23 @@ NS_NewPostDataStream(nsIInputStream **result,
                      PRUint32 encodeFlags,
                      nsIIOService* ioService = nsnull)     // pass in nsIIOService to optimize callers
 {
-#if 0
     nsresult rv;
-    nsCOMPtr<nsIIOService> serv;
 
-    if (ioService == nsnull) {
-        serv = do_GetIOService(&rv);
+    if (isFile) {
+        nsCOMPtr<nsILocalFile> file;
+
+        rv = NS_NewLocalFile(data, PR_FALSE, getter_AddRefs(file));
         if (NS_FAILED(rv)) return rv;
-        ioService = serv.get();
+
+        return NS_NewLocalFileInputStream(result, file);
     }
 
-    nsCOMPtr<nsIProtocolHandler> handler;
-    rv = ioService->GetProtocolHandler("http", getter_AddRefs(handler));
+    // otherwise, create a string stream for the data
+    nsCOMPtr<nsISupports> sup;
+    rv = NS_NewCStringInputStream(getter_AddRefs(sup), nsCAutoString(data));
     if (NS_FAILED(rv)) return rv;
 
-    nsCOMPtr<nsIHTTPProtocolHandler> http = do_QueryInterface(handler, &rv);
-    if (NS_FAILED(rv)) return rv;
-    
-    return http->NewPostDataStream(isFile, data, encodeFlags, result);
-#endif
-    return NS_ERROR_NOT_IMPLEMENTED;
+    return CallQueryInterface(sup, result);
 }
 
 inline nsresult

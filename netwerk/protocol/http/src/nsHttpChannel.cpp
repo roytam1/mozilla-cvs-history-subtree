@@ -95,11 +95,11 @@ nsHttpChannel::Init(nsIURI *uri,
     rv = mRequestHead.SetHeader(nsHttp::Host, hostLine);
     if (NS_FAILED(rv)) return rv;
 
-    rv = nsHttpHandler::get()->
-            AddStandardRequestHeaders(&mRequestHead.Headers(), caps);
+    rv = nsHttpHandler::get()->AddStandardRequestHeaders(&mRequestHead.Headers(), caps);
     if (NS_FAILED(rv)) return rv;
 
-    return NS_OK;
+    // Notify nsIHttpNotify implementations
+    return nsHttpHandler::get()->OnModifyRequest(this);
 }
 
 //-----------------------------------------------------------------------------
@@ -133,7 +133,7 @@ nsHttpChannel::SetupTransaction()
     if (NS_FAILED(rv)) return rv;
 
     // Create the transaction object
-    mTransaction = new nsHttpTransaction(listenerProxy);
+    mTransaction = new nsHttpTransaction(listenerProxy, this);
     if (!mTransaction)
         return NS_ERROR_OUT_OF_MEMORY;
     NS_ADDREF(mTransaction);
@@ -241,12 +241,15 @@ nsHttpChannel::ProcessAuthentication(PRUint32 httpStatus)
 // nsHttpChannel::nsISupports
 //-----------------------------------------------------------------------------
 
-NS_IMPL_ISUPPORTS5(nsHttpChannel,
-                   nsIRequest,
-                   nsIChannel,
-                   nsIRequestObserver,
-                   nsIStreamListener,
-                   nsIHttpChannel)
+NS_IMPL_THREADSAFE_ISUPPORTS8(nsHttpChannel,
+                              nsIRequest,
+                              nsIChannel,
+                              nsIRequestObserver,
+                              nsIStreamListener,
+                              nsIHttpChannel,
+                              nsIInterfaceRequestor,
+                              nsIProgressEventSink,
+                              nsICachingChannel)
 
 //-----------------------------------------------------------------------------
 // nsHttpChannel::nsIRequest
@@ -374,6 +377,17 @@ NS_IMETHODIMP
 nsHttpChannel::SetNotificationCallbacks(nsIInterfaceRequestor *callbacks)
 {
     mCallbacks = callbacks;
+
+    mProgressSink = do_GetInterface(mCallbacks);
+    if (mProgressSink) {
+        nsCOMPtr<nsIProgressEventSink> temp = mProgressSink;
+        return nsHttpHandler::get()->GetProxyForObject(NS_CURRENT_EVENTQ,
+                                                       NS_GET_IID(nsIProgressEventSink),
+                                                       temp,
+                                                       PROXY_ASYNC | PROXY_ALWAYS,
+                                                       getter_AddRefs(mProgressSink));
+    }
+
     return NS_OK;
 }
 
@@ -668,6 +682,9 @@ nsHttpChannel::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
     // of them from the transaction.
     mResponseHead = mTransaction->TakeResponseHead();
 
+    // Notify nsIHttpNotify implementations
+    nsHttpHandler::get()->OnAsyncExamineResponse(this);
+
     //return ProcessResponse();
     return mListener->OnStartRequest(this, mListenerContext);
 }
@@ -709,4 +726,160 @@ nsHttpChannel::OnDataAvailable(nsIRequest *request, nsISupports *ctxt,
     LOG(("nsHttpChannel::OnDataAvailable [this=%x offset=%u count=%u]\n",
         this, offset, count));
     return mListener->OnDataAvailable(this, mListenerContext, input, offset, count);
+}
+
+//-----------------------------------------------------------------------------
+// nsHttpChannel::nsIInterfaceRequestor
+//-----------------------------------------------------------------------------
+
+NS_IMETHODIMP
+nsHttpChannel::GetInterface(const nsIID &iid, void **result)
+{
+    if (iid.Equals(NS_GET_IID(nsIProgressEventSink))) {
+        //
+        // we return ourselves as the progress event sink so we can intercept
+        // notifications and set the correct request and context parameters.
+        // but, if we don't have a progress sink to forward those messages
+        // to, then there's no point in handing out a reference to ourselves.
+        //
+        if (!mProgressSink)
+            return NS_ERROR_NO_INTERFACE;
+
+        return QueryInterface(iid, result);
+    }
+
+    if (mCallbacks)
+        return mCallbacks->GetInterface(iid, result);
+
+    return NS_ERROR_NO_INTERFACE;
+}
+
+//-----------------------------------------------------------------------------
+// nsHttpChannel::nsIProgressEventSink
+//-----------------------------------------------------------------------------
+
+// called on the socket thread
+NS_IMETHODIMP
+nsHttpChannel::OnStatus(nsIRequest *req, nsISupports *ctx, nsresult status,
+                        const PRUnichar *statusText)
+{
+    if (mProgressSink)
+        mProgressSink->OnStatus(this, mListenerContext, status, statusText);
+
+    return NS_OK;
+}
+
+// called on the socket thread
+NS_IMETHODIMP
+nsHttpChannel::OnProgress(nsIRequest *req, nsISupports *ctx,
+                          PRUint32 progress, PRUint32 progressMax)
+{
+    if (mProgressSink)
+        mProgressSink->OnProgress(this, mListenerContext, progress, progressMax);
+
+    return NS_OK;
+}
+
+//-----------------------------------------------------------------------------
+// nsHttpChannel::nsICachingChannel
+//-----------------------------------------------------------------------------
+
+NS_IMETHODIMP
+nsHttpChannel::GetCacheToken(nsISupports **token)
+{
+    NS_ENSURE_ARG_POINTER(token);
+    /*
+    if (!mCacheEntry)
+        return NS_ERROR_NOT_AVAILABLE;
+    return CallQueryInterface(mCacheEntry, token);
+    */
+    *token = nsnull;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::SetCacheToken(nsISupports *token)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetCacheKey(nsISupports **key)
+{
+    //nsresult rv;
+    NS_ENSURE_ARG_POINTER(key);
+
+    *key = nsnull;
+    return NS_OK;
+
+    /*
+    nsCOMPtr<nsISupportsPRUint32> container =
+        do_CreateInstance(NS_SUPPORTS_PRUINT32_CONTRACTID, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = container->SetData(mPostID);
+    if (NS_FAILED(rv)) return rv;
+
+    return CallQueryInterface(container, key);
+    */
+}
+
+NS_IMETHODIMP
+nsHttpChannel::SetCacheKey(nsISupports *key, PRBool fromCacheOnly)
+{
+    /*
+    nsresult rv;
+    NS_ENSURE_ARG_POINTER(key);
+
+    nsCOMPtr<nsISupportsPRUint32> container = do_QueryInterface(key, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = container->GetData(&mPostID);
+    if (NS_FAILED(rv)) return rv;
+
+    mFromCacheOnly = fromCacheOnly;
+    */
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetCacheAsFile(PRBool *value)
+{
+    NS_ENSURE_ARG_POINTER(value);
+    /*
+    if (!mCacheEntry)
+        return NS_ERROR_NOT_AVAILABLE;
+    nsCacheStoragePolicy storagePolicy;
+    mCacheEntry->GetStoragePolicy(&storagePolicy);
+    *value = (storagePolicy == nsICache::STORE_ON_DISK_AS_FILE);
+    */
+    *value = PR_FALSE;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::SetCacheAsFile(PRBool value)
+{
+    /*
+    if (!mCacheEntry)
+        return NS_ERROR_NOT_AVAILABLE;
+    nsCacheStoragePolicy policy;
+    if (value)
+        policy = nsICache::STORE_ON_DISK_AS_FILE;
+    else
+        policy = nsICache::STORE_ANYWHERE;
+    return mCacheEntry->SetStoragePolicy(policy);
+    */
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetCacheFile(nsIFile **cacheFile)
+{
+    /*
+    if (!mCacheEntry)
+        return NS_ERROR_NOT_AVAILABLE;
+    return mCacheEntry->GetFile(cacheFile);
+    */
+    return NS_OK;
 }

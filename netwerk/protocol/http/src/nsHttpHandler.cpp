@@ -4,11 +4,14 @@
 #include "nsHttpConnection.h"
 #include "nsHttpResponseHead.h"
 #include "nsHttpTransaction.h"
+#include "nsIHttpChannel.h"
+#include "nsIHttpNotify.h"
 #include "nsIURL.h"
 #include "nsICacheService.h"
 #include "nsICategoryManager.h"
 #include "nsIObserverService.h"
 #include "nsISupportsPrimitives.h"
+#include "nsINetModRegEntry.h"
 #include "nsPrintfCString.h"
 #include "nsCOMPtr.h"
 #include "nsNetCID.h"
@@ -30,6 +33,7 @@ static NS_DEFINE_CID(kStandardURLCID, NS_STANDARDURL_CID);
 static NS_DEFINE_CID(kProtocolProxyServiceCID, NS_PROTOCOLPROXYSERVICE_CID);
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 static NS_DEFINE_CID(kCategoryManagerCID, NS_CATEGORYMANAGER_CID);
+static NS_DEFINE_CID(kNetModuleMgrCID, NS_NETMODULEMGR_CID);
 
 #define UA_PREF_PREFIX "general.useragent."
 #define UA_APPNAME "Mozilla"
@@ -109,13 +113,16 @@ nsHttpHandler::Create(nsISupports *outer, REFNSIID iid, void **result)
         NS_NEWXPCOM(handler, nsHttpHandler);
         if (!handler)
             return NS_ERROR_OUT_OF_MEMORY;
+        NS_ADDREF(handler);
         rv = handler->Init();
         if (NS_FAILED(rv)) {
-            NS_DELETEXPCOM(handler);
+            LOG(("nsHttpHandler::Init failed [rv=%x]\n", rv));
+            NS_RELEASE(handler);
             return rv;
         }
     }
-    NS_ADDREF(handler);
+    else
+        NS_ADDREF(handler);
     rv = handler->QueryInterface(iid, result);
     NS_RELEASE(handler);
     return rv;
@@ -125,6 +132,8 @@ nsresult
 nsHttpHandler::Init()
 {
     nsresult rv = NS_OK;
+
+    LOG(("nsHttpHandler::Init\n"));
 
     /*
     mProxySvc = do_GetService(kProtocolProxyServiceCID, &rv);
@@ -180,12 +189,14 @@ nsHttpHandler::Init()
 
     // Startup the http category
     // Bring alive the objects in the http-protocol-startup category
-    //CreateServicesFromCategory(NS_HTTP_STARTUP_CATEGORY);
+    CreateServicesFromCategory(NS_HTTP_STARTUP_CATEGORY);
     
+    /*
     nsCOMPtr<nsIObserverService> observerSvc =
         do_GetService(NS_OBSERVERSERVICE_CONTRACTID, &rv);
     if (observerSvc)
         observerSvc->AddObserver(this, NS_LITERAL_STRING("profile-before-change").get());
+     */
 
     return NS_OK;
 }
@@ -342,6 +353,102 @@ nsHttpHandler::CancelPendingTransaction(nsHttpTransaction *trans,
 
     LOG(("CancelPendingTransaction failed: transaction not in pending queue\n"));
     return NS_ERROR_NOT_AVAILABLE;
+}
+
+nsresult
+nsHttpHandler::GetProxyForObject(nsIEventQueue *queue, const nsIID &iid,
+                                 nsISupports *object, PRInt32 proxyType,
+                                 void **result)
+{
+    if (!mProxyMgr) {
+        nsresult rv;
+        mProxyMgr = do_GetService("@mozilla.org/xpcomproxy;1", &rv);
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    return mProxyMgr->GetProxyForObject(queue, iid, object, proxyType, result);
+}
+
+nsresult
+nsHttpHandler::OnModifyRequest(nsIHttpChannel *chan)
+{
+    nsresult rv;
+
+    if (!mNetModuleMgr) {
+        mNetModuleMgr = do_GetService(kNetModuleMgrCID, &rv);
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    nsCOMPtr<nsISimpleEnumerator> modules;
+    rv = mNetModuleMgr->EnumerateModules(
+            NS_NETWORK_MODULE_MANAGER_HTTP_REQUEST_CONTRACTID,
+            getter_AddRefs(modules));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsISupports> sup;
+    nsCOMPtr<nsINetModRegEntry> entry;
+    nsCOMPtr<nsINetNotify> netNotify;
+    nsCOMPtr<nsIHttpNotify> httpNotify;
+
+    // notify each module...
+    while (NS_SUCCEEDED(modules->GetNext(getter_AddRefs(sup)))) {
+        entry = do_QueryInterface(sup, &rv);
+        if (NS_FAILED(rv)) return rv;
+
+        rv = entry->GetSyncProxy(getter_AddRefs(netNotify));
+        if (NS_FAILED(rv)) return rv;
+
+        httpNotify = do_QueryInterface(netNotify, &rv);
+        if (NS_FAILED(rv)) return rv;
+
+        // fire off the notification, ignore the return code.
+        httpNotify->OnModifyRequest(chan);
+    }
+    
+    return NS_OK;
+}
+
+nsresult
+nsHttpHandler::OnAsyncExamineResponse(nsIHttpChannel *chan)
+{
+    nsresult rv;
+
+    // XXX would need to be made thread safe
+
+    if (!mNetModuleMgr) {
+        mNetModuleMgr = do_GetService(kNetModuleMgrCID, &rv);
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    nsCOMPtr<nsISimpleEnumerator> modules;
+    rv = mNetModuleMgr->EnumerateModules(
+            NS_NETWORK_MODULE_MANAGER_HTTP_RESPONSE_CONTRACTID,
+            getter_AddRefs(modules));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsISupports> sup;
+    nsCOMPtr<nsINetModRegEntry> entry;
+    nsCOMPtr<nsINetNotify> netNotify;
+    nsCOMPtr<nsIHttpNotify> httpNotify;
+
+    // notify each module...
+    while (NS_SUCCEEDED(modules->GetNext(getter_AddRefs(sup)))) {
+        entry = do_QueryInterface(sup, &rv);
+        if (NS_FAILED(rv)) return rv;
+
+        // XXX this may need to be synchronous to ensure that cookies
+        // get set before redirecting.
+        rv = entry->GetSyncProxy(getter_AddRefs(netNotify));
+        if (NS_FAILED(rv)) return rv;
+
+        httpNotify = do_QueryInterface(netNotify, &rv);
+        if (NS_FAILED(rv)) return rv;
+
+        // fire off the notification, ignore the return code.
+        httpNotify->OnAsyncExamineResponse(chan);
+    }
+    
+    return NS_OK;
 }
 
 //-----------------------------------------------------------------------------
@@ -1049,10 +1156,11 @@ nsHttpHandler::SetAcceptEncodings(const char *aAcceptEncodings)
 // nsHttpHandler::nsISupports
 //-----------------------------------------------------------------------------
 
-NS_IMPL_THREADSAFE_ISUPPORTS3(nsHttpHandler,
+NS_IMPL_THREADSAFE_ISUPPORTS4(nsHttpHandler,
                               nsIHttpProtocolHandler,
                               nsIProtocolHandler,
-                              nsIObserver)
+                              nsIObserver,
+                              nsISupportsWeakReference)
 
 //-----------------------------------------------------------------------------
 // nsHttpHandler::nsIProtocolHandler
@@ -1127,7 +1235,7 @@ nsHttpHandler::NewChannel(nsIURI *aURI, nsIChannel **aChannel)
         }
     }
     */
-    return CallQueryInterface((nsIHttpChannel *) httpChannel, aChannel);
+    return httpChannel->QueryInterface(NS_GET_IID(nsIChannel), (void **) aChannel);
 
 failed:
     delete httpChannel;
@@ -1291,6 +1399,14 @@ nsHttpHandler::Observe(nsISupports *subject,
                        const PRUnichar *topic,
                        const PRUnichar *data)
 {
+    /*
+    if (!nsCRT::strcmp(aTopic, NS_LITERAL_STRING("profile-before-change").get())) {
+        nsAuthEngine *authEngine;
+        nsresult rv = GetAuthEngine(&authEngine);
+        if (NS_SUCCEEDED(rv) && authEngine)
+            authEngine->Logout();
+    }
+    */
     return NS_OK;
 }
 
