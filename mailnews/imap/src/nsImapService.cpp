@@ -19,10 +19,6 @@
 #include "msgCore.h"    // precompiled header...
 #include "nsMsgImapCID.h"
 
-#ifdef XP_PC
-#include <windows.h>    // for InterlockedIncrement
-#endif
-
 #include "nsIServiceManager.h"
 #include "nsIComponentManager.h"
 
@@ -38,6 +34,7 @@
 #include "nsIRDFService.h"
 #include "nsIEventQueueService.h"
 #include "nsRDFCID.h"
+
 // we need this because of an egcs 1.0 (and possibly gcc) compiler bug
 // that doesn't allow you to call ::nsISupports::GetIID() inside of a class
 // that multiply inherits from nsISupports
@@ -71,15 +68,21 @@ nsresult nsImapService::QueryInterface(const nsIID &aIID, void** aInstancePtr)
     if (aIID.Equals(nsIImapService::GetIID()) || aIID.Equals(kISupportsIID)) 
 	{
         *aInstancePtr = (void*) ((nsIImapService*)this);
-        AddRef();
+        NS_ADDREF_THIS();
         return NS_OK;
     }
     if (aIID.Equals(nsIMsgMessageService::GetIID())) 
 	{
         *aInstancePtr = (void*) ((nsIMsgMessageService*)this);
-        AddRef();
+        NS_ADDREF_THIS();
         return NS_OK;
     }
+	if (aIID.Equals(nsIProtocolHandler::GetIID()))
+	{
+        *aInstancePtr = (void*) ((nsIProtocolHandler*)this);
+        NS_ADDREF_THIS();
+        return NS_OK;
+	}
 
 #if defined(NS_DEBUG)
     /*
@@ -149,7 +152,10 @@ nsImapService::SelectFolder(nsIEventQueue * aClientEventQueue,
             urlSpec.Append(folderName.GetBuffer());
 			nsCOMPtr <nsIURI> url = do_QueryInterface(imapUrl, &rv);
 			if (NS_SUCCEEDED(rv) && url)
-				rv = url->SetSpec(urlSpec.GetBuffer());
+				// mscott - this cast to a char * is okay...there's a bug in the XPIDL
+				// compiler that is preventing in string parameters from showing up as
+				// const char *. hopefully they will fix it soon.
+				rv = url->SetSpec((char *) urlSpec.GetBuffer());
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue,
                                                  imapUrl,
@@ -202,7 +208,10 @@ nsImapService::LiteSelectFolder(nsIEventQueue * aClientEventQueue,
 			urlSpec.Append(folderName.GetBuffer());
 			nsCOMPtr <nsIURI> url = do_QueryInterface(imapUrl, &rv);
 			if (NS_SUCCEEDED(rv) && url)
-				rv = url->SetSpec(urlSpec.GetBuffer());
+				// mscott - this cast to a char * is okay...there's a bug in the XPIDL
+				// compiler that is preventing in string parameters from showing up as
+				// const char *. hopefully they will fix it soon.
+				rv = url->SetSpec((char *) urlSpec.GetBuffer());
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
                                                  aUrlListener, nsnull, aURL);
@@ -322,7 +331,10 @@ nsImapService::FetchMessage(nsIEventQueue * aClientEventQueue,
 			urlSpec.Append(messageIdentifierList);
 			nsCOMPtr <nsIURI> url = do_QueryInterface(imapUrl, &rv);
 			if (NS_SUCCEEDED(rv) && url)
-				rv = url->SetSpec(urlSpec.GetBuffer());
+				// mscott - this cast to a char * is okay...there's a bug in the XPIDL
+				// compiler that is preventing in string parameters from showing up as
+				// const char *. hopefully they will fix it soon.
+				rv = url->SetSpec((char *) urlSpec.GetBuffer());
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
                                                  aUrlListener,
@@ -372,7 +384,10 @@ nsImapService::CreateStartOfImapUrl(nsIImapUrl * &imapUrl,
         // the correct incoming server
         nsCOMPtr <nsIURI> url = do_QueryInterface(imapUrl, &rv);
 		if (NS_SUCCEEDED(rv) && url)
-			rv = url->SetSpec(urlSpec.GetBuffer());
+			// mscott - this cast to a char * is okay...there's a bug in the XPIDL
+			// compiler that is preventing in string parameters from showing up as
+			// const char *. hopefully they will fix it soon.
+			rv = url->SetSpec((char *) urlSpec.GetBuffer());
 
     }
 
@@ -428,7 +443,10 @@ nsImapService::GetHeaders(nsIEventQueue * aClientEventQueue,
 			urlSpec.Append(messageIdentifierList);
 			nsCOMPtr <nsIURI> url = do_QueryInterface(imapUrl, &rv);
 			if (NS_SUCCEEDED(rv) && url)
-				rv = url->SetSpec(urlSpec.GetBuffer());
+				// mscott - this cast to a char * is okay...there's a bug in the XPIDL
+				// compiler that is preventing in string parameters from showing up as
+				// const char *. hopefully they will fix it soon.
+				rv = url->SetSpec((char *) urlSpec.GetBuffer());
 
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
@@ -477,7 +495,10 @@ nsImapService::Noop(nsIEventQueue * aClientEventQueue,
 			urlSpec.Append(folderName.GetBuffer());
 			nsCOMPtr <nsIURI> url = do_QueryInterface(imapUrl, &rv);
 			if (NS_SUCCEEDED(rv) && url)
-				rv = url->SetSpec(urlSpec.GetBuffer());
+				// mscott - this cast to a char * is okay...there's a bug in the XPIDL
+				// compiler that is preventing in string parameters from showing up as
+				// const char *. hopefully they will fix it soon.
+				rv = url->SetSpec((char *) urlSpec.GetBuffer());
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
                                                  aUrlListener, nsnull, aURL);
@@ -522,7 +543,10 @@ nsImapService::Expunge(nsIEventQueue * aClientEventQueue,
 			urlSpec.Append(folderName.GetBuffer());
 			nsCOMPtr <nsIURI> url = do_QueryInterface(imapUrl, &rv);
 			if (NS_SUCCEEDED(rv) && url)
-				rv = url->SetSpec(urlSpec.GetBuffer());
+				// mscott - this cast to a char * is okay...there's a bug in the XPIDL
+				// compiler that is preventing in string parameters from showing up as
+				// const char *. hopefully they will fix it soon.
+				rv = url->SetSpec((char *) urlSpec.GetBuffer());
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
                                                  aUrlListener, nsnull, aURL);
@@ -572,7 +596,10 @@ nsImapService::Biff(nsIEventQueue * aClientEventQueue,
 			urlSpec.Append(uidHighWater, 10);
 			nsCOMPtr <nsIURI> url = do_QueryInterface(imapUrl, &rv);
 			if (NS_SUCCEEDED(rv) && url)
-				rv = url->SetSpec(urlSpec.GetBuffer());
+				// mscott - this cast to a char * is okay...there's a bug in the XPIDL
+				// compiler that is preventing in string parameters from showing up as
+				// const char *. hopefully they will fix it soon.
+				rv = url->SetSpec((char *) urlSpec.GetBuffer());
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
                                                  aUrlListener, nsnull, aURL);
@@ -625,7 +652,10 @@ nsImapService::DeleteMessages(nsIEventQueue * aClientEventQueue,
 			urlSpec.Append(messageIdentifierList);
 			nsCOMPtr <nsIURI> url = do_QueryInterface(imapUrl, &rv);
 			if (NS_SUCCEEDED(rv) && url)
-				rv = url->SetSpec(urlSpec.GetBuffer());
+				// mscott - this cast to a char * is okay...there's a bug in the XPIDL
+				// compiler that is preventing in string parameters from showing up as
+				// const char *. hopefully they will fix it soon.
+				rv = url->SetSpec((char *) urlSpec.GetBuffer());
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
                                                  aUrlListener, nsnull, aURL);
@@ -671,7 +701,10 @@ nsImapService::DeleteAllMessages(nsIEventQueue * aClientEventQueue,
 			urlSpec.Append(folderName.GetBuffer());
 			nsCOMPtr <nsIURI> url = do_QueryInterface(imapUrl, &rv);
 			if (NS_SUCCEEDED(rv) && url)
-				rv = url->SetSpec(urlSpec.GetBuffer());
+				// mscott - this cast to a char * is okay...there's a bug in the XPIDL
+				// compiler that is preventing in string parameters from showing up as
+				// const char *. hopefully they will fix it soon.
+				rv = url->SetSpec((char *) urlSpec.GetBuffer());
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
                                                  aUrlListener, nsnull, aURL);
@@ -772,7 +805,10 @@ nsresult nsImapService::DiddleFlags(nsIEventQueue * aClientEventQueue,
 			urlSpec.Append(flags, 10);
 			nsCOMPtr <nsIURI> url = do_QueryInterface(imapUrl, &rv);
 			if (NS_SUCCEEDED(rv) && url)
-				rv = url->SetSpec(urlSpec.GetBuffer());
+				// mscott - this cast to a char * is okay...there's a bug in the XPIDL
+				// compiler that is preventing in string parameters from showing up as
+				// const char *. hopefully they will fix it soon.
+				rv = url->SetSpec((char *) urlSpec.GetBuffer());
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
                                                  aUrlListener, nsnull, aURL);
@@ -856,7 +892,10 @@ nsImapService::DiscoverAllFolders(nsIEventQueue* aClientEventQueue,
             urlSpec.Append("/discoverallboxes");
 			nsCOMPtr <nsIURI> url = do_QueryInterface(aImapUrl, &rv);
 			if (NS_SUCCEEDED(rv) && url)
-				rv = url->SetSpec(urlSpec.GetBuffer());
+				// mscott - this cast to a char * is okay...there's a bug in the XPIDL
+				// compiler that is preventing in string parameters from showing up as
+				// const char *. hopefully they will fix it soon.
+				rv = url->SetSpec((char *) urlSpec.GetBuffer());
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue, aImapUrl,
                                                  aUrlListener, nsnull, aURL);
@@ -892,7 +931,10 @@ nsImapService::DiscoverAllAndSubscribedFolders(nsIEventQueue* aClientEventQueue,
             urlSpec.Append("/discoverallandsubscribedboxes");
 			nsCOMPtr <nsIURI> url = do_QueryInterface(aImapUrl, &rv);
 			if (NS_SUCCEEDED(rv) && url)
-				rv = url->SetSpec(urlSpec.GetBuffer());
+				// mscott - this cast to a char * is okay...there's a bug in the XPIDL
+				// compiler that is preventing in string parameters from showing up as
+				// const char *. hopefully they will fix it soon.
+				rv = url->SetSpec((char *) urlSpec.GetBuffer());
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue, aImapUrl,
                                                  aUrlListener, nsnull, aURL);
@@ -934,7 +976,10 @@ nsImapService::DiscoverChildren(nsIEventQueue* aClientEventQueue,
                 urlSpec.Append(folderName.GetBuffer());
 				nsCOMPtr <nsIURI> url = do_QueryInterface(aImapUrl, &rv);
 				if (NS_SUCCEEDED(rv) && url)
-					rv = url->SetSpec(urlSpec.GetBuffer());
+					// mscott - this cast to a char * is okay...there's a bug in the XPIDL
+					// compiler that is preventing in string parameters from showing up as
+					// const char *. hopefully they will fix it soon.
+					rv = url->SetSpec((char *) urlSpec.GetBuffer());
                 if (NS_SUCCEEDED(rv))
                     rv = GetImapConnectionAndLoadUrl(aClientEventQueue,
                                                      aImapUrl,
@@ -985,7 +1030,10 @@ nsImapService::DiscoverLevelChildren(nsIEventQueue* aClientEventQueue,
                 urlSpec.Append(folderName.GetBuffer());
 				nsCOMPtr <nsIURI> url = do_QueryInterface(aImapUrl, &rv);
 				if (NS_SUCCEEDED(rv) && url)
-					rv = url->SetSpec(urlSpec.GetBuffer());
+					// mscott - this cast to a char * is okay...there's a bug in the XPIDL
+					// compiler that is preventing in string parameters from showing up as
+					// const char *. hopefully they will fix it soon.
+					rv = url->SetSpec((char *) urlSpec.GetBuffer());
                 if (NS_SUCCEEDED(rv))
                     rv = GetImapConnectionAndLoadUrl(aClientEventQueue,
                                                      aImapUrl,
@@ -1092,7 +1140,10 @@ nsImapService::OnlineMessageCopy(nsIEventQueue* aClientEventQueue,
 
 		nsCOMPtr <nsIURI> url = do_QueryInterface(imapUrl, &rv);
 		if (NS_SUCCEEDED(rv) && url)
-			rv = url->SetSpec(urlSpec.GetBuffer());
+			// mscott - this cast to a char * is okay...there's a bug in the XPIDL
+			// compiler that is preventing in string parameters from showing up as
+			// const char *. hopefully they will fix it soon.
+			rv = url->SetSpec((char *) urlSpec.GetBuffer());
         if (NS_SUCCEEDED(rv))
             rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
                                              aUrlListener, nsnull, aURL);
@@ -1738,3 +1789,47 @@ char *CreateIMAPListFolderURL(const char *imapHost, const char *mailboxName, cha
 	return returnString;
 }
 #endif
+
+
+NS_IMETHODIMP nsImapService::GetScheme(char * *aScheme)
+{
+	nsresult rv = NS_OK;
+	if (aScheme)
+		*aScheme = PL_strdup("imap");
+	else
+		rv = NS_ERROR_NULL_POINTER;
+	return rv; 
+}
+
+NS_IMETHODIMP nsImapService::GetDefaultPort(PRInt32 *aDefaultPort)
+{
+	nsresult rv = NS_OK;
+	if (aDefaultPort)
+		*aDefaultPort = IMAP_PORT;
+	else
+		rv = NS_ERROR_NULL_POINTER;
+	return rv; 	
+}
+
+NS_IMETHODIMP nsImapService::MakeAbsolute(const char *aRelativeSpec, nsIURI *aBaseURI, char **_retval)
+{
+	// no such thing as relative urls for smtp.....
+	NS_ASSERTION(0, "unimplemented");
+	return NS_OK;
+}
+
+NS_IMETHODIMP nsImapService::NewURI(const char *aSpec, nsIURI *aBaseURI, nsIURI **_retval)
+{
+	// i just haven't implemented this yet...I will be though....
+	NS_ASSERTION(0, "unimplemented");
+	return NS_OK;
+}
+
+NS_IMETHODIMP nsImapService::NewChannel(const char *verb, nsIURI *aURI, nsIEventSinkGetter *eventSinkGetter, nsIEventQueue *eventQueue, nsIChannel **_retval)
+{
+	// mscott - right now, I don't like the idea of returning channels to the caller. They just want us
+	// to run the url, they don't want a channel back...I'm going to be addressing this issue with
+	// the necko team in more detail later on.
+	NS_ASSERTION(0, "unimplemented");
+	return NS_OK;
+}
