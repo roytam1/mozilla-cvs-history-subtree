@@ -210,8 +210,46 @@ NS_IMETHODIMP
 nsSOAPHeaderBlock::Initialize(JSContext *cx, JSObject *obj, 
                             PRUint32 argc, jsval *argv)
 {
-// unimplemented, waiting for support for AStrings and variants in JSConvertArguments
-  return NS_ERROR_NOT_IMPLEMENTED;
+
+//  Get the arguments.
+
+  nsCOMPtr<nsIVariant>  value;
+  nsAutoString          name;
+  nsAutoString          namespaceURI;
+  nsAutoString          actorURI;
+  nsCOMPtr<nsISupports> schemaType;
+  nsCOMPtr<nsISupports> encoding;
+
+  if (!JS_ConvertArguments(cx, argc, argv, "/%iv %is %is %is %ip %ip", 
+    getter_AddRefs(value), 
+    NS_STATIC_CAST(nsAString*, &name), 
+    NS_STATIC_CAST(nsAString*, &namespaceURI), 
+    NS_STATIC_CAST(nsAString*, &actorURI), 
+    getter_AddRefs(schemaType),
+    getter_AddRefs(encoding))) return NS_ERROR_ILLEGAL_VALUE;
+
+  nsresult rc = SetValue(value);
+  if (NS_FAILED(rc)) return rc;
+  rc = SetName(name);
+  if (NS_FAILED(rc)) return rc;
+  rc = SetNamespaceURI(namespaceURI);
+  if (NS_FAILED(rc)) return rc;
+  rc = SetActorURI(actorURI);
+  if (NS_FAILED(rc)) return rc;
+  if (schemaType) {
+    nsCOMPtr<nsISchemaType> v = do_QueryInterface(schemaType, &rc);
+    if (NS_FAILED(rc)) return rc;
+    rc = SetSchemaType(v);
+    if (NS_FAILED(rc)) return rc;
+  }
+  if (encoding) {
+    nsCOMPtr<nsISOAPEncoding> v = do_QueryInterface(encoding, &rc);
+    if (NS_FAILED(rc)) return rc;
+    rc = SetEncoding(v);
+    if (NS_FAILED(rc)) return rc;
+  }
+
+  return NS_OK;
 }
 
 static const char* kAllAccess = "AllAccess";
