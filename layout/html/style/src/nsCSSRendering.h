@@ -154,7 +154,7 @@ protected:
                           PRBool aIsOutline=PR_FALSE);
 
 
-  static void RenderSide(nsFloatPoint aPoints[],nsIDrawable* aDrawable,
+  static void RenderSide(nsPoint aPoints[],nsIDrawable* aDrawable,
                         const nsStyleSpacing& aBorderStyle,nsIStyleContext* aStyleContext,
                         PRUint8 aSide,nsMargin  &aBorThick,nscoord aTwipsPerPixel,
                         PRBool aIsOutline=PR_FALSE);
@@ -216,12 +216,12 @@ class QBCurve
 {
 
 public:
-	nsFloatPoint	mAnc1;
-	nsFloatPoint	mCon;
-	nsFloatPoint mAnc2;
+  nsPoint mAnc1;
+  nsPoint mCon;
+  nsPoint mAnc2;
 
   QBCurve() {mAnc1.x=0;mAnc1.y=0;mCon=mAnc2=mAnc1;}
-  void SetControls(nsFloatPoint &aAnc1,nsFloatPoint &aCon,nsFloatPoint &aAnc2) { mAnc1 = aAnc1; mCon = aCon; mAnc2 = aAnc2;}
+  void SetControls(nsPoint &aAnc1,nsPoint &aCon,nsPoint &aAnc2) { mAnc1 = aAnc1; mCon = aCon; mAnc2 = aAnc2;}
   void SetPoints(float a1x,float a1y,float acx,float acy,float a2x,float a2y) {mAnc1.MoveTo(a1x,a1y),mCon.MoveTo(acx,acy),mAnc2.MoveTo(a2x,a2y);}
 
 /** ---------------------------------------------------

@@ -941,9 +941,9 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsIPresContext* aPresContext,
   // See if none of 'left', 'width', and 'right', is 'auto'
   if (!leftIsAuto && !widthIsAuto && !rightIsAuto) {
     // See whether we're over-constrained
-    PRInt32 availBoxSpace = containingBlockWidth - mComputedOffsets.left - mComputedOffsets.right;
-    PRInt32 availContentSpace = availBoxSpace - mComputedBorderPadding.left -
-                                mComputedBorderPadding.right;
+    gfx_coord availBoxSpace = containingBlockWidth - mComputedOffsets.left - mComputedOffsets.right;
+    gfx_coord availContentSpace = availBoxSpace - mComputedBorderPadding.left -
+                                    mComputedBorderPadding.right;
 
     if (availContentSpace < mComputedWidth) {
       // We're over-constrained so use 'direction' to dictate which value to
@@ -962,7 +962,7 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsIPresContext* aPresContext,
       // Calculate any 'auto' margin values
       PRBool  marginLeftIsAuto = (eStyleUnit_Auto == mStyleSpacing->mMargin.GetLeftUnit());
       PRBool  marginRightIsAuto = (eStyleUnit_Auto == mStyleSpacing->mMargin.GetRightUnit());
-      PRInt32 availMarginSpace = availContentSpace - mComputedWidth;
+      gfx_coord availMarginSpace = availContentSpace - mComputedWidth;
 
       if (marginLeftIsAuto) {
         if (marginRightIsAuto) {
@@ -1019,7 +1019,7 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsIPresContext* aPresContext,
           // The width is shrink-to-fit but constrained by the containing block width
           mComputedWidth = NS_SHRINKWRAPWIDTH;
           
-          PRInt32 maxWidth = containingBlockWidth - mComputedOffsets.left -
+          gfx_coord maxWidth = containingBlockWidth - mComputedOffsets.left -
                              mComputedMargin.left - mComputedBorderPadding.left -
                              mComputedBorderPadding.right - mComputedMargin.right -
                              mComputedOffsets.right;
@@ -1152,8 +1152,8 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsIPresContext* aPresContext,
   // See if none of 'top', 'height', and 'bottom', is 'auto'
   if (!topIsAuto && !heightIsAuto && !bottomIsAuto) {
     // See whether we're over-constrained
-    PRInt32 availBoxSpace = containingBlockHeight - mComputedOffsets.top - mComputedOffsets.bottom;
-    PRInt32 availContentSpace = availBoxSpace - mComputedBorderPadding.top -
+    gfx_coord availBoxSpace = containingBlockHeight - mComputedOffsets.top - mComputedOffsets.bottom;
+    gfx_coord availContentSpace = availBoxSpace - mComputedBorderPadding.top -
                                 mComputedBorderPadding.bottom;
 
     if (availContentSpace < mComputedHeight) {
@@ -1165,7 +1165,7 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsIPresContext* aPresContext,
       // Calculate any 'auto' margin values
       PRBool  marginTopIsAuto = (eStyleUnit_Auto == mStyleSpacing->mMargin.GetTopUnit());
       PRBool  marginBottomIsAuto = (eStyleUnit_Auto == mStyleSpacing->mMargin.GetBottomUnit());
-      PRInt32 availMarginSpace = availContentSpace - mComputedHeight;
+      gfx_coord availMarginSpace = availContentSpace - mComputedHeight;
 
       if (marginTopIsAuto) {
         if (marginBottomIsAuto) {
@@ -2184,7 +2184,7 @@ ComputeLineHeight(nsIDrawable* aDrawable,
       emHeight = font->mFont.size;
     }
 
-    lineHeight = NSToCoordRound(factor * emHeight);
+    lineHeight = GFXCoordRound(factor * emHeight);
   }
 
   return lineHeight;
@@ -2237,7 +2237,7 @@ nsHTMLReflowState::ComputeHorizontalValue(nscoord aContainingBlockWidth,
       aResult = 0;
     } else {
       float pct = aCoord.GetPercentValue();
-      aResult = NSToCoordFloor(aContainingBlockWidth * pct);
+      aResult = GFXCoordFloor(aContainingBlockWidth * pct);
     }
   
   } else if (eStyleUnit_Coord == aUnit) {
@@ -2279,7 +2279,7 @@ nsHTMLReflowState::ComputeVerticalValue(nscoord aContainingBlockHeight,
     if (NS_AUTOHEIGHT!=aContainingBlockHeight)
     {
       float pct = aCoord.GetPercentValue();
-      aResult = NSToCoordFloor(aContainingBlockHeight * pct);
+      aResult = GFXCoordFloor(aContainingBlockHeight * pct);
     }
     else {  // safest thing to do for an undefined height is to make it 0
       aResult = 0;

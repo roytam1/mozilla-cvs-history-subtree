@@ -23,7 +23,7 @@
 #define nsStyleUtil_h___
 
 #include "nslayout.h"
-#include "nsCoord.h"
+#include "gfxtypes.h"
 #include "nsIPresContext.h"
 #include "nsILinkHandler.h" // for nsLinkState
 

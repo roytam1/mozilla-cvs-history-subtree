@@ -413,7 +413,7 @@ private:
   nsIFocusTracker *mTracker;
   PRBool mMouseDownState;   //for drag purposes
   PRInt16 mDisplaySelection; //for visual display purposes.
-  PRInt32 mDesiredX;
+  gfx_coord mDesiredX;
   PRBool mDesiredXSet;
   nsIScrollableView *mScrollView;
 
@@ -486,13 +486,14 @@ public:
     if (!mTimer)
     {
       nsresult result;
-      mTimer = do_CreateInstance("@mozilla.org/timer;1", &result);
+      mTimer = do_CreateInstance("@mozilla.org/gfx/timer;2", &result);
 
       if (NS_FAILED(result))
         return result;
     }
 
-    return mTimer->Init(this, mDelay);
+    return mTimer->Init(this, mDelay,
+                        nsITimer::NS_PRIORITY_NORMAL, nsITimer::NS_TYPE_ONE_SHOT);
   }
 
   nsresult Stop()
@@ -521,7 +522,7 @@ public:
     return NS_OK;
   }
 
-  NS_IMETHOD_(void) Notify(nsITimer *timer)
+  NS_IMETHODIMP Notify(nsITimer *timer)
   {
     if (mSelection && mPresContext && mView)
     {
@@ -530,7 +531,7 @@ public:
       nsIFrame *frame = (nsIFrame *)clientData;
 
       if (!frame)
-        return;
+        return NS_ERROR_FAILURE;
 
       //the frame passed in here will be a root frame for the view. there is no need to call the constrain
       //method here. the root frame has NO content now unfortunately...
@@ -547,7 +548,9 @@ public:
 
       //mFrameSelection->HandleDrag(mPresContext, mFrame, mPoint);
       mSelection->DoAutoScrollView(mPresContext, mView, mPoint, PR_TRUE);
+      return result;
     }
+    return NS_ERROR_FAILURE;
   }
 private:
   nsSelection    *mFrameSelection;
@@ -977,7 +980,7 @@ nsSelection::InvalidateDesiredX() //do not listen to mDesiredX you must get anot
 
 
 void
-nsSelection::SetDesiredX(nscoord aX) //set the mDesiredX
+nsSelection::SetDesiredX(gfx_coord aX) //set the mDesiredX
 {
   mDesiredX = aX;
   mDesiredXSet = PR_TRUE;
@@ -5847,7 +5850,7 @@ nsDOMSelection::GetPointFromOffset(nsIFrame *aFrame, PRInt32 aContentOffset, nsP
 
   while (!window && closestView)
   {
-    rv = closestView->GetWidget(*getter_AddRefs(window));
+    rv = closestView->GetWidget(getter_AddRefs(window));
 
     if (NS_FAILED(rv))
       return rv;
@@ -6081,7 +6084,8 @@ nsDOMSelection::GetSelectionRegionRectAndScrollableView(SelectionRegion aRegion,
     // region, we will scroll it into view with a padding
     // equal to a quarter of the clip's width.
 
-    PRInt32 pad = clipRect.width >> 2;
+    // XXX pav -- round?
+    PRInt32 pad = GFXCoordToIntRound(clipRect.width) >> 2;
 
     if (pad <= 0)
       pad = 3; // Arbitrary

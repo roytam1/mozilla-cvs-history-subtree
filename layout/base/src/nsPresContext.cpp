@@ -42,13 +42,12 @@
 #include "nsIFrameManager.h"
 #include "nsIImageGroup.h"
 #include "nsIFrame.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsEventStateManager.h"
 #include "nsIURL.h"
 #include "nsIDocument.h"
 #include "nsIStyleContext.h"
 #include "nsLayoutAtoms.h"
-#include "nsILookAndFeel.h"
 #include "nsIComponentManager.h"
 #include "nsIURIContentListener.h"
 #include "nsIInterfaceRequestor.h"
@@ -81,12 +80,12 @@ nsPresContext::nsPresContext()
                  NS_FONT_VARIANT_NORMAL,
                  NS_FONT_WEIGHT_NORMAL,
                  0,
-                 NSIntPointsToTwips(12)),
-    mDefaultFixedFont("monospace", NS_FONT_STYLE_NORMAL,
-                      NS_FONT_VARIANT_NORMAL,
-                      NS_FONT_WEIGHT_NORMAL,
-                      0,
-                      NSIntPointsToTwips(10))
+                 12), // XXX pav -- points, not pixels
+  mDefaultFixedFont("monospace", NS_FONT_STYLE_NORMAL,
+                    NS_FONT_VARIANT_NORMAL,
+                    NS_FONT_WEIGHT_NORMAL,
+                    0,
+                    10) // XXX pav -- points, not pixels
 {
   NS_INIT_REFCNT();
   mCompatibilityMode = eCompatibility_Standard;
@@ -191,20 +190,17 @@ nsPresContext::GetFontPreferences()
         unit = defaultUnit;
       }
       if (!PL_strcmp(unit, "px")) {
-        float p2t;
-        GetScaledPixelsToTwips(&p2t);
-        mDefaultFont.size = NSFloatPixelsToTwips((float) variableSize, p2t);
-        mDefaultFixedFont.size = NSFloatPixelsToTwips((float) fixedSize, p2t);
+        mDefaultFont.size = variableSize;
+        mDefaultFixedFont.size = fixedSize;
       }
       else if (!PL_strcmp(unit, "pt")) {
-        mDefaultFont.size = NSIntPointsToTwips(variableSize);
-        mDefaultFixedFont.size = NSIntPointsToTwips(fixedSize);
+        // XXX pav -- need a way to convert points to pixels
+        //        mDefaultFont.size = NSIntPointsToTwips(variableSize);
+        //        mDefaultFixedFont.size = NSIntPointsToTwips(fixedSize);
       }
       else {
-        float p2t;
-        GetScaledPixelsToTwips(&p2t);
-        mDefaultFont.size = NSFloatPixelsToTwips((float) variableSize, p2t);
-        mDefaultFixedFont.size = NSFloatPixelsToTwips((float) fixedSize, p2t);
+        mDefaultFont.size = variableSize;
+        mDefaultFixedFont.size = fixedSize;
       }
       if (unit != defaultUnit) {
         nsMemory::Free(unit);
@@ -378,10 +374,8 @@ nsPresContext::Init(nsIOutputDevice *aOutputDevice)
 {
   NS_ASSERTION(!(mInitialized == PR_TRUE), "attempt to reinit pres context");
 
-  mLangService = do_GetService(NS_LANGUAGEATOMSERVICE_PROGID);
-  mPrefs = do_GetService(NS_PREF_PROGID);
-
 // XXX pav
+#if 0
   mDeviceContext = dont_QueryInterface(aDeviceContext);
 
   mLangService = do_GetService(NS_LANGUAGEATOMSERVICE_CONTRACTID);
@@ -398,6 +392,7 @@ nsPresContext::Init(nsIOutputDevice *aOutputDevice)
     // Initialize our state from the user preferences
     GetUserPreferences();
   }
+#endif
 
 #ifdef DEBUG
   mInitialized = PR_TRUE;
@@ -891,64 +886,6 @@ nsPresContext::SetVisibleArea(const nsRect& r)
 }
 
 NS_IMETHODIMP
-nsPresContext::GetPixelsToTwips(float* aResult) const
-{
-  NS_PRECONDITION(nsnull != aResult, "null ptr");
-  if (nsnull == aResult) {
-    return NS_ERROR_NULL_POINTER;
-  }
-
-  float p2t = 1.0f;
-#if 0 // XXX pav
-  if (mDeviceContext) {
-    mDeviceContext->GetDevUnitsToAppUnits(p2t);
-  }
-#endif
-  *aResult = p2t;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsPresContext::GetTwipsToPixels(float* aResult) const
-{
-  NS_PRECONDITION(nsnull != aResult, "null ptr");
-  if (nsnull == aResult) {
-    return NS_ERROR_NULL_POINTER;
-  }
-
-  float app2dev = 1.0f;
-#if 0 // XXX pav
-  if (mDeviceContext) {
-    mDeviceContext->GetAppUnitsToDevUnits(app2dev);
-  }
-#endif
-  *aResult = app2dev;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsPresContext::GetScaledPixelsToTwips(float* aResult) const
-{
-  NS_PRECONDITION(nsnull != aResult, "null ptr");
-  if (nsnull == aResult) {
-    return NS_ERROR_NULL_POINTER;
-  }
-
-  float scale = 1.0f;
-#if 0 // XXX pav
-  if (mDeviceContext)
-  {
-    float p2t;
-    mDeviceContext->GetDevUnitsToAppUnits(p2t);
-    mDeviceContext->GetCanonicalPixelScale(scale);
-    scale = p2t * scale;
-  }
-#endif
-  *aResult = scale;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
 nsPresContext::GetImageGroup(nsIImageGroup** aResult)
 {
   NS_PRECONDITION(nsnull != aResult, "null ptr");
@@ -969,7 +906,7 @@ nsPresContext::GetImageGroup(nsIImageGroup** aResult)
     {
       nsCOMPtr<nsISupports> loadContext;
       loadHandler->GetLoadCookie(getter_AddRefs(loadContext));
-      rv = mImageGroup->Init(loadContext);
+      rv = mImageGroup->Init(mOutputDevice, loadContext);
     }
 
     if (NS_OK != rv) {

@@ -651,13 +651,9 @@ void StyleSpacingImpl::ResetFrom(const nsStyleSpacing* aParent, nsIPresContext* 
 {
   // XXX support kBorderWidhts until deprecated methods are removed
   if (! kWidthsInitialized) {
-    float pixelsToTwips = 20.0f;
-    if (aPresContext) {
-      aPresContext->GetPixelsToTwips(&pixelsToTwips);
-    }
-    kBorderWidths[NS_STYLE_BORDER_WIDTH_THIN] = NSIntPixelsToTwips(1, pixelsToTwips);
-    kBorderWidths[NS_STYLE_BORDER_WIDTH_MEDIUM] = NSIntPixelsToTwips(3, pixelsToTwips);
-    kBorderWidths[NS_STYLE_BORDER_WIDTH_THICK] = NSIntPixelsToTwips(5, pixelsToTwips);
+    kBorderWidths[NS_STYLE_BORDER_WIDTH_THIN] = 1;
+    kBorderWidths[NS_STYLE_BORDER_WIDTH_MEDIUM] = 3;
+    kBorderWidths[NS_STYLE_BORDER_WIDTH_THICK] = 5;
     kWidthsInitialized = PR_TRUE;
   }
 
@@ -748,14 +744,11 @@ PRBool StyleSpacingImpl::IsBorderSideVisible(PRUint8 aSide) const
 
 void StyleSpacingImpl::RecalcData(nsIPresContext* aPresContext, nscolor aColor)
 {
-  nscoord borderWidths[3];
-  float pixelsToTwips = 20.0f;
-  if (aPresContext) {
-    aPresContext->GetPixelsToTwips(&pixelsToTwips);
-  }
-  borderWidths[NS_STYLE_BORDER_WIDTH_THIN] = NSIntPixelsToTwips(1, pixelsToTwips);
-  borderWidths[NS_STYLE_BORDER_WIDTH_MEDIUM] = NSIntPixelsToTwips(3, pixelsToTwips);
-  borderWidths[NS_STYLE_BORDER_WIDTH_THICK] = NSIntPixelsToTwips(5, pixelsToTwips);
+  gfx_coord borderWidths[3];
+
+  borderWidths[NS_STYLE_BORDER_WIDTH_THIN] = 1;
+  borderWidths[NS_STYLE_BORDER_WIDTH_MEDIUM] = 3;
+  borderWidths[NS_STYLE_BORDER_WIDTH_THICK] = 5;
 
   if (IsFixedData(mMargin, PR_FALSE)) {
     nsStyleCoord  coord;

@@ -97,7 +97,7 @@ public:
   NS_IMETHOD RegisterAccessKey(nsIFrame * aFrame, nsIContent* aContent, PRUint32 aKey);
   NS_IMETHOD UnregisterAccessKey(nsIFrame * aFrame, nsIContent* aContent, PRUint32 aKey);
 
-  NS_IMETHOD SetCursor(PRInt32 aCursor, nsIWidget* aWidget, PRBool aLockCursor);
+  NS_IMETHOD SetCursor(PRInt32 aCursor, nsIWindow* aWindow, PRBool aLockCursor);
 
   //Method for centralized distribution of new DOM events
   NS_IMETHOD DispatchNewEvent(nsISupports* aTarget, nsIDOMEvent* aEvent);
@@ -154,7 +154,7 @@ protected:
   nsIContent* mDragOverContent;
   nsIContent* mCurrentFocus;
   PRInt32 mCurrentTabIndex;
-  nsIWidget * mLastWindowToHaveFocus; // last native window to get focus via the evs
+  nsIWindow * mLastWindowToHaveFocus; // last native window to get focus via the evs
   PRBool      mConsumeFocusEvents;
   PRInt32     mLockCursor;
 

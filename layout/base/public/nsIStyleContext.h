@@ -64,13 +64,13 @@ struct nsStyleColor : public nsStyleStruct {
   nsStyleColor(void);
   ~nsStyleColor(void);
 
-  nscolor mColor;                 // [inherited]
+  gfx_color mColor;                 // [inherited]
  
   PRUint8 mBackgroundAttachment;  // [reset] See nsStyleConsts.h
   PRUint8 mBackgroundFlags;       // [reset] See nsStyleConsts.h
   PRUint8 mBackgroundRepeat;      // [reset] See nsStyleConsts.h
 
-  nscolor mBackgroundColor;       // [reset]
+  gfx_color mBackgroundColor;       // [reset]
   gfx_coord mBackgroundXPosition;   // [reset]
   gfx_coord mBackgroundYPosition;   // [reset]
   nsString mBackgroundImage;      // [reset] absolute url string
@@ -106,16 +106,16 @@ struct nsStyleSpacing: public nsStyleStruct {
 
   PRUint8 GetBorderStyle(PRUint8 aSide) const; 
   void    SetBorderStyle(PRUint8 aSide, PRUint8 aStyle); 
-  PRBool  GetBorderColor(PRUint8 aSide, nscolor& aColor) const;   // PR_FALSE means TRANSPARENT
-  void    SetBorderColor(PRUint8 aSide, nscolor aColor); 
+  PRBool  GetBorderColor(PRUint8 aSide, gfx_color& aColor) const;   // PR_FALSE means TRANSPARENT
+  void    SetBorderColor(PRUint8 aSide, gfx_color aColor); 
   void    SetBorderTransparent(PRUint8 aSide); 
   void    UnsetBorderColor(PRUint8 aSide);
 
   PRBool  GetOutlineWidth(gfx_coord& aWidth) const; // PR_TRUE if pre-computed
   PRUint8 GetOutlineStyle(void) const;
   void    SetOutlineStyle(PRUint8 aStyle);
-  PRBool  GetOutlineColor(nscolor& aColor) const; // PR_FALSE means INVERT
-  void    SetOutlineColor(nscolor aColor); 
+  PRBool  GetOutlineColor(gfx_color& aColor) const; // PR_FALSE means INVERT
+  void    SetOutlineColor(gfx_color aColor); 
   void    SetOutlineInvert(void); 
 
 // XXX these are deprecated methods
@@ -136,9 +136,9 @@ protected:
   gfx_coord   mCachedOutlineWidth;
 
   PRUint8   mBorderStyle[4];  // [reset] See nsStyleConsts.h
-  nscolor   mBorderColor[4];  // [reset] 
+  gfx_color   mBorderColor[4];  // [reset] 
   PRUint8   mOutlineStyle;    // [reset] See nsStyleConsts.h
-  nscolor   mOutlineColor;    // [reset] 
+  gfx_color   mOutlineColor;    // [reset] 
 };
 
 struct nsStyleList : public nsStyleStruct {
@@ -353,7 +353,7 @@ struct nsBorderEdge
   /** the length of the edge */
   gfx_coord mLength;
   PRUint8 mStyle;  
-  nscolor mColor;
+  gfx_color mColor;
   /** which side does this edge represent? */
   PRUint8 mSide;
   /** if this edge is an outside edge, the border infor for the adjacent inside object */

@@ -28,6 +28,7 @@
 #include "nsITimerCallback.h"
 
 #include "nsIComponentManager.h"
+#include "nsIServiceManager.h"
 #include "nsIFrameSelection.h"
 #include "nsIFrame.h"
 #include "nsIDOMNode.h"
@@ -42,8 +43,7 @@
 #include "nsIScrollableView.h"
 #include "nsIViewManager.h"
 #include "nsIPresContext.h"
-#include "nsILookAndFeel.h"
-#include "nsWidgetsCID.h"     // for NS_LOOKANDFEEL_CID
+#include "nsISystemLook.h"
 #include "nsBlockFrame.h"
 #include "nsISelectionController.h"
 
@@ -55,15 +55,12 @@
 // with form elements.
 #define DONT_REUSE_RENDERING_CONTEXT
 
-static NS_DEFINE_IID(kLookAndFeelCID,  NS_LOOKANDFEEL_CID);
-
 //-----------------------------------------------------------------------------
 
 nsCaret::nsCaret()
 : mPresShell(nsnull)
 , mBlinkRate(500)
-, mCaretTwipsWidth(-1)
-, mCaretPixelsWidth(1)
+, mCaretWidth(-1.0)
 , mVisible(PR_FALSE)
 , mReadOnly(PR_TRUE)
 , mDrawn(PR_FALSE)
@@ -89,17 +86,18 @@ NS_IMETHODIMP nsCaret::Init(nsIPresShell *inPresShell)
   
   mPresShell = getter_AddRefs(NS_GetWeakReference(inPresShell));    // the presshell owns us, so no addref
 
-  nsILookAndFeel* touchyFeely;
-  if (NS_SUCCEEDED(nsComponentManager::CreateInstance(kLookAndFeelCID, nsnull, NS_GET_IID(nsILookAndFeel), (void**)&touchyFeely)))
+  nsresult rv;
+  nsCOMPtr<nsISystemLook> touchyFeely;
+  touchyFeely = do_GetService("@mozilla.org/gfx/systemlook;2", &rv);
+  if (NS_SUCCEEDED(rv))
   {
-    PRInt32 tempInt;
+    PRUint32 tempInt;
     
-    if (NS_SUCCEEDED(touchyFeely->GetMetric(nsILookAndFeel::eMetric_SingleLineCaretWidth, tempInt)))
-      mCaretTwipsWidth = (nscoord)tempInt;
-    if (NS_SUCCEEDED(touchyFeely->GetMetric(nsILookAndFeel::eMetric_CaretBlinkTime, tempInt)))
+    touchyFeely->GetDimension(nsISystemLook::dimension_SingleLineCaretWidth, &mCaretWidth);
+
+    if (NS_SUCCEEDED(touchyFeely->GetDelay(nsISystemLook::delay_CaretBlink, &tempInt)))
       mBlinkRate = (PRUint32)tempInt;
     
-    NS_RELEASE(touchyFeely);
   }
   
   // get the selection from the pres shell, and set ourselves up as a selection
@@ -408,7 +406,7 @@ nsresult nsCaret::PrimeTimer()
     if (NS_FAILED(err))
       return err;
     
-    mBlinkTimer->Init(CaretBlinkCallback, this, mBlinkRate, NS_PRIORITY_HIGH, NS_TYPE_REPEATING_PRECISE);
+    mBlinkTimer->InitOld(CaretBlinkCallback, this, mBlinkRate, nsITimer::NS_PRIORITY_HIGH, nsITimer::NS_TYPE_REPEATING_PRECISE);
   }
 
   return NS_OK;
@@ -549,7 +547,7 @@ void nsCaret::GetViewForRendering(nsIFrame *caretFrame, EViewCoordinates coordTy
   
   nsIView*    returnView = nsnull;    // views are not refcounted
   
-  nscoord   x, y;
+  gfx_coord   x, y;
   
   // coorinates relative to the view we are going to use for drawing
   if (coordType == eViewCoordinates)
@@ -745,11 +743,7 @@ void nsCaret::DrawCaret()
     caretRect += framePos;
     
     //printf("Content offset %ld, frame offset %ld\n", focusOffset, framePos.x);
-    if(mCaretTwipsWidth < 0)
-    {// need to re-compute the pixel width
-      mCaretTwipsWidth  = 15 * mCaretPixelsWidth;//uhhhh...
-    }
-    caretRect.width = mCaretTwipsWidth;
+    caretRect.width = mCaretWidth;
 
     // Avoid view redraw problems by making sure the
     // caret doesn't hang outside the right edge of
@@ -757,8 +751,8 @@ void nsCaret::DrawCaret()
     // erased properly if the frame's right edge gets
     // invalidated.
 
-    nscoord cX = caretRect.x + caretRect.width;
-    nscoord fX = frameRect.x + frameRect.width;
+    gfx_coord cX = caretRect.x + caretRect.width;
+    gfx_coord fX = frameRect.x + frameRect.width;
 
     if (caretRect.x <= fX && cX > fX)
     {
@@ -820,14 +814,13 @@ nsresult NS_NewCaret(nsICaret** aInstancePtrResult)
   return caret->QueryInterface(NS_GET_IID(nsICaret), (void**) aInstancePtrResult);
 }
 
-NS_IMETHODIMP nsCaret::SetCaretWidth(nscoord aPixels)
+NS_IMETHODIMP nsCaret::SetCaretWidth(gfx_dimension aPixels)
 {
   if(!aPixels)
     return NS_ERROR_FAILURE;
   else
   { //no need to optimize this, but if it gets too slow, we can check for case aPixels==mCaretPixelsWidth
-    mCaretPixelsWidth = aPixels;
-    mCaretTwipsWidth = -1;
+    mCaretWidth = aPixels;
   }
   return NS_OK;
 }

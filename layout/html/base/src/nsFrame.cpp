@@ -1547,8 +1547,8 @@ nsresult nsFrame::GetContentAndOffsetsFromPoint(nsIPresContext* aCX,
   if (NS_SUCCEEDED(result) && nsnull != kid) {
 #define HUGE_DISTANCE 999999 //some HUGE number that will always fail first comparison
 
-    PRInt32 closestXDistance = HUGE_DISTANCE;
-    PRInt32 closestYDistance = HUGE_DISTANCE;
+    gfx_coord closestXDistance = HUGE_DISTANCE;
+    gfx_coord closestYDistance = HUGE_DISTANCE;
 
     while (nsnull != kid) {
 
@@ -1624,7 +1624,7 @@ nsresult nsFrame::GetContentAndOffsetsFromPoint(nsIPresContext* aCX,
       nscoord ya = rect.y;
       nscoord yb = rect.y + rect.height;
 
-      PRInt32 yDistance = PR_MIN(abs(ya - aPoint.y),abs(yb - aPoint.y));
+      gfx_coord yDistance = PR_MIN(GFXCoordAbs(ya - aPoint.y), GFXCoordAbs(yb - aPoint.y));
 
       if (yDistance <= closestYDistance && rect.width > 0 && rect.height > 0)
       {
@@ -1640,7 +1640,7 @@ nsresult nsFrame::GetContentAndOffsetsFromPoint(nsIPresContext* aCX,
           break;
         }
 
-        PRInt32 xDistance = PR_MIN(abs(xa - aPoint.x),abs(xb - aPoint.x));
+        gfx_coord xDistance = PR_MIN(GFXCoordAbs(xa - aPoint.x), GFXCoordAbs(xb - aPoint.x));
 
         if (xDistance < closestXDistance || (xDistance == closestXDistance && rect.x <= aPoint.x))
         {
@@ -2020,22 +2020,23 @@ NS_IMETHODIMP nsFrame::GetWindow(nsIPresContext* aPresContext,
                                  nsIWindow**     aWindow) const
 {
   NS_PRECONDITION(nsnull != aWindow, "null OUT parameter pointer");
-  
+
+  *aWindow = nsnull;
+
   nsIFrame*  frame;
-  nsIWindow* window = nsnull;
   for (frame = (nsIFrame*)this; nsnull != frame; frame->GetParentWithView(aPresContext, &frame)) {
     nsIView* view;
      
     frame->GetView(aPresContext, &view);
     if (nsnull != view) {
-      view->GetWidget(window);
-      if (nsnull != window) {
+      view->GetWidget(aWindow);
+      if (*aWindow) {
         break;
       }
     }
   }
 
-  if (nsnull == window) {
+  if (!*aWindow) {
     // Ask the view manager for the widget
 
     // First we have to get to a frame with a view
@@ -2051,12 +2052,11 @@ NS_IMETHODIMP nsFrame::GetWindow(nsIPresContext* aPresContext,
     if (nsnull != view) {
       nsCOMPtr<nsIViewManager> vm;
       view->GetViewManager(*getter_AddRefs(vm));
-      vm->GetWidget(&window);
+      vm->GetWidget(aWindow);
     }    
   }
 
-  NS_POSTCONDITION(nsnull != window, "no window in frame tree");
-  *aWindow = window;
+  NS_POSTCONDITION(nsnull != *aWindow, "no window in frame tree");
   return NS_OK;
 }
 

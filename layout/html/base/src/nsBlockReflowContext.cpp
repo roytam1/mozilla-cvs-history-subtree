@@ -379,11 +379,11 @@ ComputeShrinkwrapMargins(const nsStyleSpacing* aStyleSpacing, nscoord aWidth, ns
     double shrinkWrapWidth = float(boxWidth) / (1.0 - marginPct);
     
     if (eStyleUnit_Percent == aStyleSpacing->mMargin.GetLeftUnit()) {
-      aMargin.left = NSToCoordFloor((float)(shrinkWrapWidth * leftPct));
+      aMargin.left = GFXCoordFloor(shrinkWrapWidth * leftPct);
       aXToUpdate += aMargin.left;
     }
     if (eStyleUnit_Percent == aStyleSpacing->mMargin.GetRightUnit()) {
-      aMargin.right = NSToCoordFloor((float)(shrinkWrapWidth * rightPct));
+      aMargin.right = GFXCoordFloor(shrinkWrapWidth * rightPct);
     }
   }
 }

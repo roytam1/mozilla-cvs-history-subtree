@@ -133,7 +133,8 @@ nsBulletFrame::Paint(nsIPresContext*      aCX,
                            mRect.width - (mPadding.left + mPadding.right),
                            mRect.height - (mPadding.top + mPadding.bottom));
           // XXX pav
-          aDrawable->DrawImage(image, nsnull, &innerArea, &innerArea);
+          nsPoint pt(innerArea.x, innerArea.y);
+          aDrawable->DrawImage(image, &innerArea, &pt);
           return NS_OK;
         }
       }
@@ -979,8 +980,6 @@ nsBulletFrame::GetDesiredSize(nsIPresContext*  aCX,
   nsCOMPtr<nsIFontMetrics> fm;
   aCX->GetMetricsFor(myFont->mFont, getter_AddRefs(fm));
   nscoord bulletSize;
-  float p2t;
-  float t2p;
 
   nsAutoString text;
   switch (myList->mListStyleType) {
@@ -995,15 +994,12 @@ nsBulletFrame::GetDesiredSize(nsIPresContext*  aCX,
     case NS_STYLE_LIST_STYLE_CIRCLE:
     case NS_STYLE_LIST_STYLE_BASIC:
     case NS_STYLE_LIST_STYLE_SQUARE:
-      aCX->GetTwipsToPixels(&t2p);
+      // XXX pav -- make sure this is right
       fm->GetMaxAscent(&ascent);
-      bulletSize = NSTwipsToIntPixels(
-        (nscoord)NSToIntRound(0.8f * (float(ascent) / 2.0f)), t2p);
+      bulletSize = 0.8f * (ascent / 2.0f);
       if (bulletSize < 1) {
         bulletSize = MIN_BULLET_SIZE;
       }
-      aCX->GetPixelsToTwips(&p2t);
-      bulletSize = NSIntPixelsToTwips(bulletSize, p2t);
       mPadding.bottom = ascent / 8;
       aMetrics.width = mPadding.right + bulletSize;
       aMetrics.height = mPadding.bottom + bulletSize;

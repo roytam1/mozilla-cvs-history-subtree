@@ -78,8 +78,8 @@ public:
   nsresult Reflow(nsIFrame*                aDelegatingFrame,
                   nsIPresContext*          aPresContext,
                   const nsHTMLReflowState& aReflowState,
-                  nscoord                  aContainingBlockWidth,
-                  nscoord                  aContainingBlockHeight,
+                  gfx_coord                  aContainingBlockWidth,
+                  gfx_coord                  aContainingBlockHeight,
                   nsRect&                  aChildBounds);
 
   // Called only for a reflow reason of eReflowReason_Incremental. The
@@ -92,8 +92,8 @@ public:
   nsresult IncrementalReflow(nsIFrame*                aDelegatingFrame,
                              nsIPresContext*          aPresContext,
                              const nsHTMLReflowState& aReflowState,
-                             nscoord                  aContainingBlockWidth,
-                             nscoord                  aContainingBlockHeight,
+                             gfx_coord                  aContainingBlockWidth,
+                             gfx_coord                  aContainingBlockHeight,
                              PRBool&                  aWasHandled,
                              nsRect&                  aChildBounds);
 
@@ -106,8 +106,8 @@ protected:
   nsresult ReflowAbsoluteFrame(nsIFrame*                aDelegatingFrame,
                                nsIPresContext*          aPresContext,
                                const nsHTMLReflowState& aReflowState,
-                               nscoord                  aContainingBlockWidth,
-                               nscoord                  aContainingBlockHeight,
+                               gfx_coord                  aContainingBlockWidth,
+                               gfx_coord                  aContainingBlockHeight,
                                nsIFrame*                aKidFrame,
                                nsReflowReason           aReason,
                                nsReflowStatus&          aStatus);

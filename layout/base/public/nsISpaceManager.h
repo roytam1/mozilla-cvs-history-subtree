@@ -23,7 +23,7 @@
 #define nsISpaceManager_h___
 
 #include "nsISupports.h"
-#include "nsCoord.h"
+#include "gfxtypes.h"
 #include "nsRect.h"
 
 class nsIFrame;
@@ -48,9 +48,9 @@ struct nsSize;
 struct nsBandTrapezoid {
   enum State {Available, Occupied, OccupiedMultiple};
 
-  nscoord   mTopY, mBottomY;            // top and bottom y-coordinates
-  nscoord   mTopLeftX, mBottomLeftX;    // left edge x-coordinates
-  nscoord   mTopRightX, mBottomRightX;  // right edge x-coordinates
+  gfx_coord   mTopY, mBottomY;            // top and bottom y-coordinates
+  gfx_coord   mTopLeftX, mBottomLeftX;    // left edge x-coordinates
+  gfx_coord   mTopRightX, mBottomRightX;  // right edge x-coordinates
   State     mState;                     // state of the space
   union {
     nsIFrame*          mFrame;  // single frame occupying the space
@@ -58,7 +58,7 @@ struct nsBandTrapezoid {
   };
 
   // Get the height of the trapezoid
-  nscoord GetHeight() const {return mBottomY - mTopY;}
+  gfx_coord GetHeight() const {return mBottomY - mTopY;}
 
   // Get the bouding rect of the trapezoid
   void    GetRect(nsRect& aRect) const;
@@ -110,13 +110,13 @@ public:
    * Translate the current origin by the specified (dx, dy). This creates a new
    * local coordinate space relative to the current coordinate space.
    */
-  NS_IMETHOD Translate(nscoord aDx, nscoord aDy) = 0;
+  NS_IMETHOD Translate(gfx_coord aDx, gfx_coord aDy) = 0;
 
   /**
    * Returns the current translation from local coordinate space to world
    * coordinate space. This represents the accumulated calls to Translate().
    */
-  NS_IMETHOD GetTranslation(nscoord& aX, nscoord& aY) const = 0;
+  NS_IMETHOD GetTranslation(gfx_coord& aX, gfx_coord& aY) const = 0;
 
   /**
    * Returns the y-most of the bottommost band or 0 if there are no bands.
@@ -124,7 +124,7 @@ public:
    * @return  NS_OK if there are bands and NS_ERROR_ABORT if there are
    *          no bands
    */
-  NS_IMETHOD YMost(nscoord& aYMost) const = 0;
+  NS_IMETHOD YMost(gfx_coord& aYMost) const = 0;
 
   /**
    * Returns a band starting at the specified y-offset. The band data indicates
@@ -146,7 +146,7 @@ public:
    *            not large enough. The 'count' member of the band data struct
    *            indicates how large the array of trapezoids needs to be
    */
-  NS_IMETHOD GetBandData(nscoord       aYOffset,
+  NS_IMETHOD GetBandData(gfx_coord       aYOffset,
                          const nsSize& aMaxSize,
                          nsBandData&   aBandData) const = 0;
 
@@ -174,8 +174,8 @@ public:
    */
   enum AffectedEdge {LeftEdge, RightEdge};
   NS_IMETHOD ResizeRectRegion(nsIFrame*    aFrame,
-                              nscoord      aDeltaWidth,
-                              nscoord      aDeltaHeight,
+                              gfx_coord      aDeltaWidth,
+                              gfx_coord      aDeltaHeight,
                               AffectedEdge aEdge = RightEdge) = 0;
 
   /**
@@ -184,7 +184,7 @@ public:
    * Returns NS_OK if successful, NS_ERROR_INVALID_ARG if there is no region
    * tagged with aFrame
    */
-  NS_IMETHOD OffsetRegion(nsIFrame* aFrame, nscoord dx, nscoord dy) = 0;
+  NS_IMETHOD OffsetRegion(nsIFrame* aFrame, gfx_coord dx, gfx_coord dy) = 0;
 
   /**
    * Remove the region associated with aFrane.

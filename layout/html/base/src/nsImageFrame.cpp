@@ -527,10 +527,7 @@ nsImageFrame::DisplayAltFeedback(nsIPresContext*      aPresContext,
   GetInnerArea(aPresContext, inner);
 
   // Display a recessed one pixel border
-  float   p2t;
-  gfx_coord borderEdgeWidth;
-  aPresContext->GetScaledPixelsToTwips(&p2t);
-  borderEdgeWidth = NSIntPixelsToTwips(1, p2t);
+  gfx_coord borderEdgeWidth = 1.0;
 
   // Make sure we have enough room to actually render the border within
   // our frame bounds
@@ -545,7 +542,8 @@ nsImageFrame::DisplayAltFeedback(nsIPresContext*      aPresContext,
 
   // Adjust the inner rect to account for the one pixel recessed border,
   // and a six pixel padding on each edge
-  inner.Deflate(NSIntPixelsToTwips(7, p2t), NSIntPixelsToTwips(7, p2t));
+  // XXX pav -- six or seven?
+  inner.Deflate(7, 7);
   if (inner.IsEmpty()) {
     return;
   }
@@ -565,7 +563,7 @@ nsImageFrame::DisplayAltFeedback(nsIPresContext*      aPresContext,
 
     // Reduce the inner rect by the width of the icon, and leave an
     // additional six pixels padding
-    PRInt32 iconWidth = NSIntPixelsToTwips(icon->GetWidth() + 6, p2t);
+    PRInt32 iconWidth = icon->GetWidth() + 6;
     inner.x += iconWidth;
     inner.width -= iconWidth;
 
@@ -635,22 +633,12 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
         nsRect inner;
         GetInnerArea(aPresContext, inner);
         if (mImageLoader.GetLoadImageFailed()) {
-          float p2t;
-          aPresContext->GetScaledPixelsToTwips(&p2t);
           if (image != nsnull) {
-            gfx_width width;
-            gfx_height height;
-            image->GetWidth(&width);
-            image->GetWidth(&height);
-            inner.width  = NSIntPixelsToTwips(width, p2t);
-            inner.height = NSIntPixelsToTwips(height, p2t);
+            image->GetWidth(&inner.width);
+            image->GetWidth(&inner.height);
           } else if (lowImage != nsnull) {
-            gfx_width width;
-            gfx_height height;
-            lowImage->GetWidth(&width);
-            lowImage->GetWidth(&height);
-            inner.width  = NSIntPixelsToTwips(width, p2t);
-            inner.height = NSIntPixelsToTwips(height, p2t);
+            lowImage->GetWidth(&inner.width);
+            lowImage->GetWidth(&inner.height);
           }
         }
 
@@ -858,10 +846,8 @@ nsImageFrame::TranslateEventCoords(nsIPresContext* aPresContext,
   y -= inner.y;
 
   // Translate the coordinates from twips to pixels
-  float t2p;
-  aPresContext->GetTwipsToPixels(&t2p);
-  aResult.x = NSTwipsToIntPixels(x, t2p);
-  aResult.y = NSTwipsToIntPixels(y, t2p);
+  aResult.x = x;
+  aResult.y = y;
 }
 
 PRBool

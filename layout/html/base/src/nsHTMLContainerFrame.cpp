@@ -597,11 +597,11 @@ nsHTMLContainerFrame::CreateViewForFrame(nsIPresContext* aPresContext,
         }
         else if (NS_STYLE_VISIBILITY_HIDDEN == display->mVisible) {
           // If it has a widget, hide the view because the widget can't deal with it
-          nsIWindow* window = nsnull;
-          view->GetWidget(window);
+          nsCOMPtr<nsIWindow> window;
+          view->GetWidget(getter_AddRefs(window));
           if (window) {
             viewIsVisible = PR_FALSE;
-            NS_RELEASE(window);
+            window = nsnull;
           }
           else {
             // If it's a container element, then leave the view visible, but

@@ -27,7 +27,7 @@
 #include "nsCOMPtr.h"
 #include "nsIPresShell.h"
 
-class nsIRenderingContext;
+class nsIDrawable;;
 class nsIFrame;
 class nsIView;
 struct nsRect;

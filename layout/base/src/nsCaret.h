@@ -21,7 +21,7 @@
  */
 
 
-#include "nsCoord.h"
+#include "gfxtypes.h"
 #include "nsISelectionListener.h"
 #include "nsIDrawable.h"
 #include "nsITimer.h"
@@ -61,7 +61,7 @@ class nsCaret : public nsICaret,
 		NS_IMETHOD 		ClearFrameRefs(nsIFrame* aFrame);
 		NS_IMETHOD 		EraseCaret();
 
-    NS_IMETHOD    SetCaretWidth(nscoord aPixels);
+    NS_IMETHOD    SetCaretWidth(gfx_coord aPixels);
 
     //nsISelectionListener interface
     NS_IMETHOD    NotifySelectionChanged(nsIDOMDocument *aDoc, nsISelection *aSel, short aReason);
@@ -96,8 +96,7 @@ protected:
     nsCOMPtr<nsIDrawable>   mDrawable;
 
     PRUint32              mBlinkRate;         // time for one cyle (off then on), in milliseconds
-    nscoord               mCaretTwipsWidth;   // caret width in twips
-    nscoord               mCaretPixelsWidth;  // caret width in pixels
+    gfx_dimension         mCaretWidth;   // caret width in twips
     
     PRPackedBool          mVisible;           // is the caret blinking
     PRPackedBool          mDrawn;             // this should be mutable

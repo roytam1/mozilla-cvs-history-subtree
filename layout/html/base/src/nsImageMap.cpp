@@ -46,7 +46,7 @@
 #include "nsIFrame.h"
 #include "nsIFrameManager.h"
 #include "nsIViewManager.h"
-#include "nsCoord.h"
+#include "gfxtypes.h"
 
 class Area {
 public:

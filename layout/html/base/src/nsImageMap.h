@@ -24,7 +24,7 @@
 
 #include "nslayout.h"
 #include "nsISupports.h"
-#include "nsCoord.h"
+#include "gfxtypes.h"
 #include "nsVoidArray.h"
 #include "nsIDocumentObserver.h"
 #include "nsIDOMFocusListener.h"

@@ -92,11 +92,8 @@ BRFrame::Paint(nsIPresContext* aPresContext,
                nsFramePaintLayer aWhichLayer)
 {
   if ((NS_FRAME_PAINT_LAYER_DEBUG == aWhichLayer) && GetShowFrameBorders()) {
-    float p2t;
-    aPresContext->GetPixelsToTwips(&p2t);
-    nscoord five = NSIntPixelsToTwips(5, p2t);
     aDrawable->SetForegroundColor(NS_RGB(0, 255, 255));
-    aDrawable->FillRectangle(0, 0, five, five*2);
+    aDrawable->FillRectangle(0, 0, 5, 10 /*(5*2)*/);
   }
   return NS_OK;
 }

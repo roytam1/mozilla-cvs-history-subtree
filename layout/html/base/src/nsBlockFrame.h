@@ -138,7 +138,7 @@ public:
                          nsEventStatus*  aEventStatus);
 
   nsIFrame * FindHitFrame(nsBlockFrame * aBlockFrame, 
-                          const nscoord aX, const nscoord aY,
+                          const gfx_coord aX, const gfx_coord aY,
                           const nsPoint & aPoint);
 
 #endif
@@ -165,7 +165,7 @@ public:
 
   // return our ascent (i.e., ascent of our first line)
   // to support 'vertical-align: baseline' in table-cells
-  nscoord GetAscent() const;
+  gfx_coord GetAscent() const;
 
 protected:
   nsBlockFrame();
@@ -191,7 +191,7 @@ protected:
     * if aLine is a block, it's child floaters are added to the state manager
     */
   void SlideLine(nsBlockReflowState& aState,
-                 nsLineBox* aLine, nscoord aDY);
+                 nsLineBox* aLine, gfx_coord aDY);
 
   /** grab overflow lines from this block's prevInFlow, and make them
     * part of this block's mLines list.
@@ -252,7 +252,7 @@ protected:
   /** set aState to what it would be if we had done a full reflow to this point. */
   void RecoverStateFrom(nsBlockReflowState& aState,
                         nsLineBox* aLine,
-                        nscoord aDeltaY,
+                        gfx_coord aDeltaY,
                         nsRect* aDamageRect);
 
   //----------------------------------------
@@ -388,7 +388,7 @@ protected:
   void PropogateReflowDamage(nsBlockReflowState& aState,
                              nsLineBox* aLine,
                              const nsRect& aOldCombinedArea,
-                             nscoord aDeltaY);
+                             gfx_coord aDeltaY);
 
   void BuildFloaterList();
 
@@ -434,7 +434,7 @@ protected:
 #endif
 
   // Ascent of our first line to support 'vertical-align: baseline' in table-cells
-  nscoord mAscent;
+  gfx_coord mAscent;
 
   nsLineBox* mLines;
 

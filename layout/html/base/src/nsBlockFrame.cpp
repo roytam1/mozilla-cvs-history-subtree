@@ -4689,7 +4689,7 @@ nsBlockFrame::PlaceLine(nsBlockReflowState& aState,
 		static nscoord lastHeight = 0;
 	  if (CRAZY_HEIGHT(aLine->mBounds.y)) {
 	  	lastHeight = aLine->mBounds.y;
-	  	if (abs(aLine->mBounds.y - lastHeight) > CRAZY_H/10) {
+	  	if (GFXCoordAbs(aLine->mBounds.y - lastHeight) > CRAZY_H/10) {
 		    nsFrame::ListTag(stdout);
 		    printf(": line=%p y=%d line.bounds.height=%d\n",
 		           aLine, aLine->mBounds.y, aLine->mBounds.height);
@@ -6534,7 +6534,7 @@ nsBlockFrame::HandleEvent(nsIPresContext* aPresContext,
         }
         else
         {
-          PRInt32 distance = PR_MIN(abs(rect.y - aEvent->point.y),abs((rect.y + rect.height) - aEvent->point.y));
+          PRInt32 distance = PR_MIN(GFXCoordAbs(rect.y - aEvent->point.y),GFXCoordAbs((rect.y + rect.height) - aEvent->point.y));
           if (distance < closestDistance)
           {
             closestDistance = distance;

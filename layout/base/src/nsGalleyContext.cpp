@@ -20,7 +20,7 @@
  * Contributor(s): 
  */
 #include "nsPresContext.h"
-#include "nsGfxCIID.h"
+#include "gfxtypes.h"
 #include "nsLayoutAtoms.h"
 
 static NS_DEFINE_IID(kIPresContextIID, NS_IPRESCONTEXT_IID);

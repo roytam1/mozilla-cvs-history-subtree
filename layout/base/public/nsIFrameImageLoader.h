@@ -66,7 +66,7 @@ public:
   NS_IMETHOD Init(nsIPresContext* aPresContext,
                   nsIImageGroup* aGroup,
                   const nsString& aURL,
-                  const nscolor* aBackgroundColor,
+                  const gfx_color* aBackgroundColor,
                   const nsSize* aDesiredSize,
                   nsIFrame* aFrame,
                   nsImageAnimation aAnimationMode,
@@ -78,7 +78,7 @@ public:
   NS_IMETHOD AbortImageLoad() = 0;
 
   NS_IMETHOD IsSameImageRequest(const nsString& aURL,
-                                const nscolor* aBackgroundColor,
+                                const gfx_color* aBackgroundColor,
                                 const nsSize* aDesiredSize,
                                 PRBool* aResult) = 0;
 

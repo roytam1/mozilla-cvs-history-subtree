@@ -23,6 +23,7 @@
 #ifndef nsFrame_h___
 #define nsFrame_h___
 
+#include "gfxtypes.h"
 #include "nsIFrame.h"
 #include "nsRect.h"
 #include "nsString.h"
@@ -30,6 +31,7 @@
 #ifdef NS_DEBUG
 #include "nsIFrameDebug.h"
 #endif
+
 
 #include "nsIPresShell.h"
 #include "nsIReflowCommand.h"
@@ -183,8 +185,8 @@ public:
   NS_IMETHOD  GetOrigin(nsPoint& aPoint) const;
   NS_IMETHOD  GetSize(nsSize& aSize) const;
   NS_IMETHOD  SetRect(nsIPresContext* aPresContext, const nsRect& aRect);
-  NS_IMETHOD  MoveTo(nsIPresContext* aPresContext, nscoord aX, nscoord aY);
-  NS_IMETHOD  SizeTo(nsIPresContext* aPresContext, nscoord aWidth, nscoord aHeight);
+  NS_IMETHOD  MoveTo(nsIPresContext* aPresContext, gfx_coord aX, gfx_coord aY);
+  NS_IMETHOD  SizeTo(nsIPresContext* aPresContext, gfx_dimension aWidth, gfx_dimension aHeight);
   NS_IMETHOD  GetAdditionalChildListName(PRInt32 aIndex, nsIAtom** aListName) const;
   NS_IMETHOD  FirstChild(nsIPresContext* aPresContext,
                          nsIAtom*        aListName,
@@ -287,10 +289,10 @@ public:
   NS_IMETHOD  DidReflow(nsIPresContext* aPresContext,
                         nsDidReflowStatus aStatus);
   NS_IMETHOD CanContinueTextRun(PRBool& aContinueTextRun) const;
-  NS_IMETHOD AdjustFrameSize(nscoord aExtraSpace, nscoord& aUsedSpace);
+  NS_IMETHOD AdjustFrameSize(gfx_coord aExtraSpace, gfx_coord& aUsedSpace);
   NS_IMETHOD TrimTrailingWhiteSpace(nsIPresContext* aPresContext,
                                     nsIDrawable*    aDrawable,
-                                    nscoord& aDeltaWidth);
+                                    gfx_coord& aDeltaWidth);
 
   // Selection Methods
   // XXX Doc me... (in nsIFrame.h puhleeze)

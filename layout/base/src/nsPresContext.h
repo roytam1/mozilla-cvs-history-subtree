@@ -42,6 +42,7 @@
 #include "nsCRT.h"
 #include "nsCOMPtr.h"
 #include "nsIImageGroup.h"
+#include "nsIOutputDevice.h"
 #include "nsIPref.h"
 #include "nsICharsetConverterManager.h"
 #include "nsILanguageAtomService.h"
@@ -136,9 +137,6 @@ public:
   NS_IMETHOD IsPaginated(PRBool* aResult) = 0;
   NS_IMETHOD GetPageWidth(nscoord* aResult) = 0;
   NS_IMETHOD GetPageHeight(nscoord* aResult) = 0;
-  NS_IMETHOD GetPixelsToTwips(float* aResult) const;
-  NS_IMETHOD GetTwipsToPixels(float* aResult) const;
-  NS_IMETHOD GetScaledPixelsToTwips(float* aScale) const;
   NS_IMETHOD GetEventStateManager(nsIEventStateManager** aManager);
   NS_IMETHOD GetDefaultDirection(PRUint8* aDirection);
   NS_IMETHOD SetDefaultDirection(PRUint8 aDirection);
@@ -198,7 +196,9 @@ protected:
   PRPackedBool          mStopped;                 // loading stopped
   PRPackedBool          mStopChrome;              // should we stop chrome?
   PRUint8               mDefaultDirection;
-  
+  nsCOMPtr<nsIOutputDevice> mOutputDevice;
+
+
 #ifdef DEBUG
   PRBool                mInitialized;
 #endif

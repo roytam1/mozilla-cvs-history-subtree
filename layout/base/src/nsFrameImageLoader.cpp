@@ -152,17 +152,22 @@ nsFrameImageLoader::Init(nsIPresContext* aPresContext,
     mHaveDesiredSize = PR_TRUE;
     mDesiredSize = *aDesiredSize;
 
-    float t2p,devScale;
+
 #if 0 // XXX pav
+    float t2p,devScale;
     nsIDeviceContext  *theDC;
 
     aPresContext->GetTwipsToPixels(&t2p);
     aPresContext->GetDeviceContext(&theDC);
     theDC->GetCanonicalPixelScale(devScale);
     NS_RELEASE(theDC);
-#endif
     desiredWidth = NSToCoordRound((mDesiredSize.width * t2p)/devScale);
     desiredHeight = NSToCoordRound((mDesiredSize.height * t2p)/devScale);
+#else
+    desiredWidth = mDesiredSize.width;
+    desiredHeight = mDesiredSize.height;
+#endif
+
   }
 
   if (aTargetFrame || aCallBack) {
@@ -413,6 +418,8 @@ nsFrameImageLoader::GetImageLoadStatus(PRUint32* aResult)
 NS_IMETHODIMP
 nsFrameImageLoader::GetIntrinsicSize(nsSize& aResult)
 {
+  // XXX pav doesn't this always return a uh.. "scaled" 0?:)
+#if 0
   if (mImageRequest) {
     PRUint32  width = 0, height = 0;
     float     p2t;
@@ -420,9 +427,13 @@ nsFrameImageLoader::GetIntrinsicSize(nsSize& aResult)
     mPresContext->GetScaledPixelsToTwips(&p2t);
     aResult.width = NSIntPixelsToTwips(width, p2t);
     aResult.height = NSIntPixelsToTwips(height, p2t);
+
   } else {
+#endif
     aResult.SizeTo(0, 0);
+#if 0
   }
+#endif
   return NS_OK;
 }
 
@@ -470,9 +481,8 @@ nsFrameImageLoader::Notify(nsIImageRequest *aImageRequest,
 #endif
   switch (aNotificationType) {
   case nsImageNotification_kDimensions:
-    mPresContext->GetScaledPixelsToTwips(&p2t);
-    mDesiredSize.width = NSIntPixelsToTwips(aParam1, p2t);
-    mDesiredSize.height = NSIntPixelsToTwips(aParam2, p2t);
+    mDesiredSize.width = aParam1;
+    mDesiredSize.height = aParam2;
     mImageLoadStatus |= NS_IMAGE_LOAD_STATUS_SIZE_AVAILABLE;
     NotifyFrames(PR_TRUE);
     break;
@@ -485,12 +495,7 @@ nsFrameImageLoader::Notify(nsIImageRequest *aImageRequest,
     mImageLoadStatus |= NS_IMAGE_LOAD_STATUS_IMAGE_READY;
 
     // Convert the rect from pixels to twips
-    mPresContext->GetScaledPixelsToTwips(&p2t);
     changeRect = (const nsRect*) aParam3;
-    damageRect.x = NSIntPixelsToTwips(changeRect->x, p2t);
-    damageRect.y = NSIntPixelsToTwips(changeRect->y, p2t);
-    damageRect.width = NSIntPixelsToTwips(changeRect->width, p2t);
-    damageRect.height = NSIntPixelsToTwips(changeRect->height, p2t);
     DamageRepairFrames(&damageRect);
     break;
 

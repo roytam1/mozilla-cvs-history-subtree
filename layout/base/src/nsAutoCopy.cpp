@@ -28,13 +28,14 @@
 #include "nsISelection.h"
 #include "nsISelectionPrivate.h"
 #include "nsISelectionListener.h"
-#include "nsWidgetsCID.h"
 #include "nsIClipboard.h"
 #include "nsIDOMDocument.h"
 #include "nsIDocumentEncoder.h"
 
 #include "nsIDocument.h"
 #include "nsSupportsPrimitives.h"
+
+#include "nsITransferable.h"
 
 // private clipboard data flavors for html copy, used by editor when pasting
 #define kHTMLContext   "text/_moz_htmlcontext"
@@ -126,8 +127,7 @@ nsAutoCopyService::NotifySelectionChanged(nsIDOMDocument *aDoc, nsISelection *aS
   nsresult rv;
 
   if (!mClipboard) {
-    static NS_DEFINE_CID(kCClipboardCID,           NS_CLIPBOARD_CID);
-    mClipboard = do_GetService(kCClipboardCID, &rv);
+    mClipboard = do_GetService("@mozilla.org/widget/clipboard;1", &rv);
     if (NS_FAILED(rv))
       return rv;
   } 
@@ -158,15 +158,13 @@ nsAutoCopyService::NotifySelectionChanged(nsIDOMDocument *aDoc, nsISelection *aS
   NS_ENSURE_SUCCESS(rv, rv);
 
   /* create a transferable */
-  static NS_DEFINE_CID(kCTransferableCID, NS_TRANSFERABLE_CID);
   nsCOMPtr<nsITransferable> trans;
-  trans = do_CreateInstance(kCTransferableCID);
+  trans = do_CreateInstance("@mozilla.org/widget/transferable;1");
   if (!trans)
     return NS_ERROR_FAILURE;
 
   if (!mConverter) {
-    static NS_DEFINE_CID(kHTMLConverterCID, NS_HTMLFORMATCONVERTER_CID);
-    mConverter = do_CreateInstance(kHTMLConverterCID);
+    mConverter = do_CreateInstance("@mozilla.org/widget/htmlformatconverter;1");
     if (!mConverter)
       return NS_ERROR_FAILURE;
   }

@@ -102,8 +102,6 @@ HRuleFrame::Paint(nsIPresContext*      aPresContext,
     return NS_OK;
   }
 
-  float p2t;
-  aPresContext->GetScaledPixelsToTwips(&p2t);
   nscoord thickness = mThickness;
 
   // Get style data
@@ -154,7 +152,7 @@ HRuleFrame::Paint(nsIPresContext*      aPresContext,
     // draw half-circles on the end points.
     aDrawable->SetForegroundColor (colors[0]);
     nscoord diameter = height;
-    if ((diameter > width) || (diameter < NSIntPixelsToTwips(3, p2t))) {
+    if ((diameter > width) || (diameter < 3)) {
       // The half-circles on the ends of the rule aren't going to
       // look right so don't bother drawing them.
       aDrawable->FillRectangle(x0, y0, width, height);
@@ -186,10 +184,9 @@ HRuleFrame::Reflow(nsIPresContext*          aPresContext,
   aPresContext->GetCompatibilityMode(&mode);
 
   // Compute the width
-  float p2t;
-  aPresContext->GetScaledPixelsToTwips(&p2t);
-  nscoord onePixel = NSIntPixelsToTwips(1, p2t);  // get the rounding right
-  nscoord twoPixels= NSIntPixelsToTwips(2, p2t);  // get the rounding right
+  // XXX pav -- ?
+  nscoord onePixel = 1;  // get the rounding right
+  nscoord twoPixels= 2;  // get the rounding right
   if (NS_UNCONSTRAINEDSIZE != aReflowState.mComputedWidth) {
     aDesiredSize.width = aReflowState.mComputedWidth;
   }
@@ -225,7 +222,7 @@ HRuleFrame::Reflow(nsIPresContext*          aPresContext,
     }
   }
   else {
-    thickness = NSIntPixelsToTwips(DEFAULT_THICKNESS, p2t);
+    thickness = DEFAULT_THICKNESS;
   }
 
   // remember the computed thickness

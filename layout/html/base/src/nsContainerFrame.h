@@ -115,8 +115,8 @@ public:
                        nsIPresContext*          aPresContext,
                        nsHTMLReflowMetrics&     aDesiredSize,
                        const nsHTMLReflowState& aReflowState,
-                       nscoord                  aX,
-                       nscoord                  aY,
+                       gfx_coord                  aX,
+                       gfx_coord                  aY,
                        PRUint32                 aFlags,
                        nsReflowStatus&          aStatus);
 
@@ -144,8 +144,8 @@ public:
   static nsresult FinishReflowChild(nsIFrame*            aKidFrame,
                                     nsIPresContext*      aPresContext,
                                     nsHTMLReflowMetrics& aDesiredSize,
-                                    nscoord              aX,
-                                    nscoord              aY,
+                                    gfx_coord              aX,
+                                    gfx_coord              aY,
                                     PRUint32             aFlags);
   
   static void PositionChildViews(nsIPresContext* aPresContext,

@@ -492,7 +492,7 @@ nsContainerFrame::SyncFrameViewAfterReflow(nsIPresContext* aPresContext,
     else if (NS_STYLE_VISIBILITY_HIDDEN == display->mVisible) {
       // If it has a widget, hide the view because the widget can't deal with it
       nsCOMPtr<nsIWindow> window;
-      aView->GetWidget(*getter_AddRefs(window));
+      aView->GetWidget(getter_AddRefs(window));
       if (window) {
         viewIsVisible = PR_FALSE;
         window = nsnull;
