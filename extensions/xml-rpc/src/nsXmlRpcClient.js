@@ -478,7 +478,7 @@ nsXmlRpcClient.prototype = {
                 break;
 
             case 'Char':
-            case 'String':
+            case 'CString':
                 obj=obj.QueryInterface(Components.interfaces['nsISupports' +
                     sType]);
                 writer.startElement('string');
@@ -588,7 +588,7 @@ nsXmlRpcClient.prototype = {
         
         try {
             obj.QueryInterface(Components.interfaces.nsISupportsCString);
-            return 'String';
+            return 'CString';
         } catch(e) {}
         
         try {
