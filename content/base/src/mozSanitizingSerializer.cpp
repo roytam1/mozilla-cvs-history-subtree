@@ -386,8 +386,7 @@ NS_IMETHODIMP
 mozSanitizingHTMLSerializer::SetDocumentCharset(nsAString& aCharset)
 {
   // No idea, if this works - it isn't invoked by |TestOutput|.
-  Write(NS_LITERAL_STRING("\n<meta http-equiv=\"Context-Type\" "
-                          "content=\"text/html; charset=")
+  Write(NS_LITERAL_STRING("\n<meta http-equiv=\"Context-Type\" content=\"text/html; charset=")
         + aCharset + NS_LITERAL_STRING("\">\n"));
   return NS_OK;
 }
