@@ -2035,7 +2035,6 @@ JSBool PR_CALLBACK pref_NativeGetLDAPAttr
 			MAKEINTRESOURCE(1)
 #endif
 			);
-#endif /* NSPR20 */
 	}
 	if (get_ldap_attributes == NULL) {
 		/* This indicates the AutoAdmin dll was not found. */
