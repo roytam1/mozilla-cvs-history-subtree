@@ -48,6 +48,13 @@ class nsMapiHook
                         PRUnichar **aPassword);
         static PRBool VerifyUserName(const PRUnichar *aUsername, char **aIdKey);
 
+        static nsresult BlindSendMail (unsigned long aSession, nsIMsgCompFields * aCompFields) ;
+        static nsresult ShowComposerWindow (unsigned long aSession, nsIMsgCompFields * aCompFields) ;
+        static nsresult PopulateCompFields(lpnsMapiMessage aMessage, nsIMsgCompFields * aCompFields) ;
+        static nsresult PopulateCompFieldsWithConversion(lpnsMapiMessage aMessage, 
+                                        nsIMsgCompFields * aCompFields) ;
+        static nsresult PopulateCompFieldsForSendDocs(nsIMsgCompFields * aCompFields, 
+                                        ULONG aFlags, LPTSTR aDelimChar, LPTSTR aFilePaths) ;
         static void CleanUp();
 
         static PRBool isMapiService;

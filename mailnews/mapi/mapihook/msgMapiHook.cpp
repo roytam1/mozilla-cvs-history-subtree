@@ -19,6 +19,8 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s): Krishna Mohan Khandrika (kkhandrika@netscape.com)
+ * Contributor(s): Srilatha Moturi (srilatha@netscape.com)
+ * Contributor(s): Rajiv Dayal (rdayal@netscape.com)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,14 +38,18 @@
 
 #define MAPI_STARTUP_ARG       "/MAPIStartUp"
 
+#define MAPI_STARTUP_ARG       "/MAPIStartUp"
+
 #include <mapidefs.h>
 #include <mapi.h>
+
 #include "nsCOMPtr.h"
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
 #include "nsISupports.h"
 #include "nsIPromptService.h"
 #include "nsAppShellCIDs.h"
+#include "nsIDOMWindowInternal.h"
 #include "nsIAppShellService.h"
 #include "nsINativeAppSupport.h"
 #include "nsICmdLineService.h"
@@ -65,6 +71,7 @@
 #include "nsIMsgComposeService.h"
 #include "nsProxiedService.h"
 #include "nsEscape.h"
+
 #include "msgMapi.h"
 #include "msgMapiHook.h"
 #include "msgMapiSupport.h"
@@ -73,12 +80,67 @@
 
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 static NS_DEFINE_CID(kCmdLineServiceCID, NS_COMMANDLINE_SERVICE_CID);
-static NS_DEFINE_CID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID);
-static NS_DEFINE_CID(kAccountMgrServiceCID, NS_MSGACCOUNTMANAGER_CID);
-static NS_DEFINE_CID(kMsgSendCID, NS_MSGSEND_CID);
-static NS_DEFINE_CID(kCompServiceCID, NS_MSGCOMPOSESERVICE_CID);
 
 #define MAPI_PROPERTIES_CHROME  "chrome://messenger/locale/mapi.properties"
+
+class nsMAPISendListener : public nsIMsgSendListener
+{
+public:
+
+    virtual ~nsMAPISendListener() { }
+
+    // nsISupports interface
+    NS_DECL_ISUPPORTS
+
+    /* void OnStartSending (in string aMsgID, in PRUint32 aMsgSize); */
+    NS_IMETHOD OnStartSending(const char *aMsgID, PRUint32 aMsgSize) { return NS_OK; }
+
+    /* void OnProgress (in string aMsgID, in PRUint32 aProgress, in PRUint32 aProgressMax); */
+    NS_IMETHOD OnProgress(const char *aMsgID, PRUint32 aProgress, PRUint32 aProgressMax) { return NS_OK;}
+
+    /* void OnStatus (in string aMsgID, in wstring aMsg); */
+    NS_IMETHOD OnStatus(const char *aMsgID, const PRUnichar *aMsg) { return NS_OK;}
+
+    /* void OnStopSending (in string aMsgID, in nsresult aStatus, in wstring aMsg, in nsIFileSpec returnFileSpec); */
+    NS_IMETHOD OnStopSending(const char *aMsgID, nsresult aStatus, const PRUnichar *aMsg, 
+                           nsIFileSpec *returnFileSpec) {
+#ifdef RAJIV_DEBUG 
+        printf("Sending Done - OnStopSending \n");
+#endif
+        m_done = PR_TRUE;
+        return NS_OK ;
+    }
+
+    /* void OnGetDraftFolderURI (); */
+    NS_IMETHOD OnGetDraftFolderURI(const char *aFolderURI) {return NS_OK;}
+
+    static nsresult CreateMAPISendListener( nsIMsgSendListener **ppListener);
+
+    PRBool IsDone() { return m_done ; }
+
+protected :
+    nsMAPISendListener() {
+        NS_INIT_REFCNT(); 
+        m_done = PR_FALSE;
+    }
+
+    PRBool          m_done;
+};
+
+
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsMAPISendListener, nsIMsgSendListener)
+
+nsresult nsMAPISendListener::CreateMAPISendListener( nsIMsgSendListener **ppListener)
+{
+    NS_ENSURE_ARG_POINTER(ppListener) ;
+
+    *ppListener = new nsMAPISendListener();
+    if (! *ppListener)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    NS_ADDREF(*ppListener);
+    return NS_OK;
+}
 
 PRBool nsMapiHook::isMapiService = PR_FALSE;
 
@@ -223,3 +285,441 @@ if (nsDependentString(aUsername) == NS_ConvertASCIItoUCS2(aEmail))  // == overlo
 }
 
 
+// this is used for Send without UI
+nsresult nsMapiHook::BlindSendMail (unsigned long aSession, nsIMsgCompFields * aCompFields) 
+{
+    nsresult rv = NS_OK ;
+
+    /** create nsIMsgComposeParams obj and other fields to populate it **/    
+
+    // get parent window
+    nsCOMPtr<nsIAppShellService> appService = do_GetService( "@mozilla.org/appshell/appShellService;1", &rv);
+    if (NS_FAILED(rv)|| (!appService) ) return rv ;
+
+    nsCOMPtr<nsIDOMWindowInternal>  hiddenWindow;
+    rv = appService->GetHiddenDOMWindow(getter_AddRefs(hiddenWindow));
+
+    if ( NS_FAILED(rv) ) return rv ;
+
+    // smtp password and Logged in used IdKey from MapiConfig (session obj)
+    nsMAPIConfiguration * pMapiConfig = nsMAPIConfiguration::GetMAPIConfiguration() ;
+    if (!pMapiConfig) return NS_ERROR_FAILURE ;  // get the singelton obj
+    PRUnichar * password = pMapiConfig->GetPassWord(aSession) ;
+    // password
+    nsCAutoString smtpPassword ;
+    smtpPassword.AssignWithConversion (password) ;
+    // Id key
+    char * MsgIdKey = pMapiConfig->GetIdKey(aSession) ;
+
+    // get the MsgIdentity for the above key using AccountManager
+    nsCOMPtr <nsIMsgAccountManager> accountManager = do_GetService (NS_MSGACCOUNTMANAGER_CONTRACTID) ;
+    if (NS_FAILED(rv) || (!accountManager) ) return rv ;
+
+    nsCOMPtr <nsIMsgIdentity> pMsgId ;
+    rv = accountManager->GetIdentity (MsgIdKey, getter_AddRefs(pMsgId)) ;
+    if (NS_FAILED(rv) || (!pMsgId) ) return rv ;
+
+    // create a send listener to get back the send status
+    nsCOMPtr <nsIMsgSendListener> sendListener ;
+    rv = nsMAPISendListener::CreateMAPISendListener(getter_AddRefs(sendListener)) ; 
+    if (NS_FAILED(rv) || (!sendListener) ) return rv;
+
+    // create the compose params object 
+    nsCOMPtr<nsIMsgComposeParams> pMsgComposeParams (do_CreateInstance(NS_MSGCOMPOSEPARAMS_CONTRACTID, &rv));
+    if (NS_FAILED(rv) || (!pMsgComposeParams) ) return rv ;
+
+    // populate the compose params
+    pMsgComposeParams->SetType(nsIMsgCompType::New);
+    pMsgComposeParams->SetFormat(nsIMsgCompFormat::Default);
+    pMsgComposeParams->SetIdentity(pMsgId);
+    pMsgComposeParams->SetComposeFields(aCompFields); 
+    pMsgComposeParams->SetSendListener(sendListener) ;
+    pMsgComposeParams->SetSmtpPassword(smtpPassword);
+
+    // create the nsIMsgCompose object to send the object
+    nsCOMPtr<nsIMsgCompose> pMsgCompose (do_CreateInstance(NS_MSGCOMPOSE_CONTRACTID, &rv));
+    if (NS_FAILED(rv) || (!pMsgCompose) ) return rv ;
+
+    /** initialize nsIMsgCompose, Send the message, wait for send completion response **/
+
+    rv = pMsgCompose->Initialize(hiddenWindow, pMsgComposeParams) ;
+    if (NS_FAILED(rv)) return rv ;
+
+    pMsgCompose->SendMsg(nsIMsgSend::nsMsgDeliverNow, pMsgId, nsnull) ;
+    if (NS_FAILED(rv)) return rv ;
+
+    // assign to interface pointer from nsCOMPtr to facilitate typecast below
+    nsIMsgSendListener * pSendListener = sendListener ;  
+
+    // we need to wait here to make sure that we return only after send is completed
+    // so we will have a event loop here which will process the events till the Send IsDone.
+    nsCOMPtr<nsIEventQueueService> pEventQService = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
+    nsCOMPtr<nsIEventQueue> eventQueue;
+    pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD,getter_AddRefs(eventQueue));
+    while ( !((nsMAPISendListener *) pSendListener)->IsDone() )
+        eventQueue->ProcessPendingEvents();
+
+    return rv ;
+}
+
+// this is used to populate comp fields with Unicode data
+nsresult nsMapiHook::PopulateCompFields(lpnsMapiMessage aMessage, 
+                                    nsIMsgCompFields * aCompFields)
+{
+    nsresult rv = NS_OK ;
+
+    if (aMessage->lpOriginator)
+    {
+        PRUnichar * From = aMessage->lpOriginator->lpszAddress ;
+        aCompFields->SetFrom (From) ;
+    }
+
+    nsAutoString To ;
+    nsAutoString Cc ; 
+    nsAutoString Bcc ;
+
+    nsAutoString Comma ;
+    Comma.AssignWithConversion(",");
+
+    if (aMessage->lpRecips)
+    {
+        for (int i=0 ; i < (int) aMessage->nRecipCount ; i++)
+        {
+            if (aMessage->lpRecips[i].lpszAddress)
+            {
+                switch (aMessage->lpRecips[i].ulRecipClass)
+                {
+                case MAPI_TO :
+                    if (To.Length() > 0)
+                        To += Comma ;
+                    To += (PRUnichar *) aMessage->lpRecips[i].lpszAddress ;
+                    break ;
+
+                case MAPI_CC :
+                    if (Cc.Length() > 0)
+                        Cc += Comma ;
+                    Cc += (PRUnichar *) aMessage->lpRecips[i].lpszAddress ; 
+                    break ;
+
+                case MAPI_BCC :
+                    if (Bcc.Length() > 0)
+                        Bcc += Comma ;
+                    Bcc += (PRUnichar *) aMessage->lpRecips[i].lpszAddress ; 
+                    break ;
+                }
+            }
+        }
+    }
+
+    aCompFields->SetTo (To.get()) ;
+    aCompFields->SetCc (Cc.get()) ;
+    aCompFields->SetBcc (Bcc.get()) ;
+
+    if (aMessage->lpszSubject)
+    {
+        PRUnichar * Subject = aMessage->lpszSubject ;
+        aCompFields->SetSubject(Subject) ;
+    }
+
+    // handle attachments as File URL
+    nsCAutoString aAttachments ;
+    nsCOMPtr <nsILocalFile> pFile = do_CreateInstance (NS_LOCAL_FILE_CONTRACTID, &rv) ;
+    if (NS_FAILED(rv) || (!pFile) ) return rv ;        
+    for (int i=0 ; i < (int) aMessage->nFileCount ; i++)
+    {
+        if (aMessage->lpFiles[i].lpszPathName)
+        {
+            pFile->InitWithUnicodePath ((PRUnichar *) aMessage->lpFiles[i].lpszPathName) ; 
+            PRBool bExist ;
+            rv = pFile->Exists(&bExist) ;
+            if (NS_FAILED(rv) || (!bExist) ) return NS_ERROR_FILE_TARGET_DOES_NOT_EXIST ;
+
+            nsXPIDLCString pURL ;
+            pFile->GetURL (getter_Copies(pURL)) ;
+            if (pURL)
+            {
+				if (aAttachments.Length() > 0)
+					aAttachments.Append(",") ;
+				aAttachments.Append(pURL) ;
+            }
+        }
+    }
+
+    rv = aCompFields->SetAttachments (aAttachments.get());
+
+    // set body
+    if (aMessage->lpszNoteText)
+    {
+        PRUnichar * Body = aMessage->lpszNoteText ;
+        rv = aCompFields->SetBody(Body) ;
+    }
+
+#ifdef RAJIV_DEBUG
+    // testing what all was set in CompFields
+    printf ("To : %S \n", To.get()) ;
+    printf ("CC : %S \n", Cc.get() ) ;
+    printf ("BCC : %S \n", Bcc.get() ) ;
+    printf ("Attachments : %s", aAttachments.get()) ;
+#endif
+
+    return rv ;
+
+}
+
+// this is used to convert non Unicode data and then populate comp fields
+nsresult nsMapiHook::PopulateCompFieldsWithConversion(lpnsMapiMessage aMessage, 
+                                    nsIMsgCompFields * aCompFields)
+{
+    nsresult rv = NS_OK ;
+
+    if (aMessage->lpOriginator)
+    {
+        nsAutoString From ;
+        From.AssignWithConversion((char *) aMessage->lpOriginator->lpszAddress);
+        aCompFields->SetFrom (From.get()) ;
+    }
+
+    nsAutoString To ;
+    nsAutoString Cc ; 
+    nsAutoString Bcc ;
+
+    nsAutoString Comma ;
+    Comma.AssignWithConversion(",");
+
+    if (aMessage->lpRecips)
+    {
+        for (int i=0 ; i < (int) aMessage->nRecipCount ; i++)
+        {
+            if (aMessage->lpRecips[i].lpszAddress)
+            {
+                switch (aMessage->lpRecips[i].ulRecipClass)
+                {
+                case MAPI_TO :
+                    if (To.Length() > 0)
+                        To += Comma ;
+                    To.AppendWithConversion ((char *) aMessage->lpRecips[i].lpszAddress);
+                    break ;
+
+                case MAPI_CC :
+                    if (Cc.Length() > 0)
+                        Cc += Comma ;
+                    Cc.AppendWithConversion ((char *) aMessage->lpRecips[i].lpszAddress); 
+                    break ;
+
+                case MAPI_BCC :
+                    if (Bcc.Length() > 0)
+                        Bcc += Comma ;
+                    Bcc.AppendWithConversion ((char *) aMessage->lpRecips[i].lpszAddress) ; 
+                    break ;
+                }
+            }
+        }
+    }
+
+    aCompFields->SetTo (To.get()) ;
+    aCompFields->SetCc (Cc.get()) ;
+    aCompFields->SetBcc (Bcc.get()) ;
+
+    if (aMessage->lpszSubject)
+    {
+        nsAutoString Subject ;
+        Subject.AssignWithConversion ((char *) aMessage->lpszSubject) ;
+        aCompFields->SetSubject(Subject.get()) ;
+    }
+
+    // handle attachments as File URL
+    nsCAutoString aAttachments ;
+    nsCOMPtr <nsILocalFile> pFile = do_CreateInstance (NS_LOCAL_FILE_CONTRACTID, &rv) ;
+    if (NS_FAILED(rv) || (!pFile) ) return rv ;        
+
+    for (int i=0 ; i < (int) aMessage->nFileCount ; i++)
+    {
+        if (aMessage->lpFiles[i].lpszPathName)
+        {
+            // check if file attachment exists
+            pFile->InitWithPath ((char *) aMessage->lpFiles[i].lpszPathName) ; 
+            PRBool bExist ;
+            rv = pFile->Exists(&bExist) ;
+            if (NS_FAILED(rv) || (!bExist) ) return NS_ERROR_FILE_TARGET_DOES_NOT_EXIST ;
+
+            // URL for the file attachment
+            nsXPIDLCString pURL ;
+            pFile->GetURL (getter_Copies(pURL)) ;
+            if (pURL)
+            {
+				if (aAttachments.Length() > 0)
+					aAttachments.Append(",") ;
+                aAttachments.Append(pURL) ;
+            }
+        }
+    }
+
+    rv = aCompFields->SetAttachments (aAttachments.get());
+
+    // set body
+    if (aMessage->lpszNoteText)
+    {
+        nsAutoString Body ;
+        Body.AssignWithConversion ((char *) aMessage->lpszNoteText) ;
+        rv = aCompFields->SetBody(Body.get()) ;
+    }
+
+#ifdef RAJIV_DEBUG
+    // testing what all was set in CompFields
+    printf ("To : %S \n", To.get()) ;
+    printf ("CC : %S \n", Cc.get() ) ;
+    printf ("BCC : %S \n", Bcc.get() ) ;
+    printf ("Attachments : %s", aAttachments.get()) ;
+#endif
+
+    return rv ;
+}
+
+// this is used to populate the docs as attachments in the Comp fields for Send Documents
+nsresult nsMapiHook::PopulateCompFieldsForSendDocs(nsIMsgCompFields * aCompFields, ULONG aFlags, 
+                            PRUnichar * aDelimChar, PRUnichar * aFilePaths)
+{
+    nsAutoString strDelimChars ;
+    nsString strFilePaths;
+    nsresult rv = NS_OK ;
+
+    if (aFlags & MAPI_UNICODE)
+    {
+        if (aDelimChar)
+            strDelimChars.Assign (aDelimChar) ;
+        if (aFilePaths)
+            strFilePaths.Assign (aFilePaths) ;
+    }
+	else
+    {
+        if (aDelimChar)
+            strDelimChars.AssignWithConversion ((char*) aDelimChar) ;
+        if (aFilePaths)
+            strFilePaths.AssignWithConversion ((char *) aFilePaths) ;
+    }
+
+    // check for comma in filename 
+    if (strDelimChars.Find (",") == kNotFound)  // if comma is not in the delimiter specified by user
+    {
+        if (strFilePaths.Find(",") != kNotFound) // if comma found in filenames return error
+            return NS_ERROR_FILE_INVALID_PATH ;
+    }
+
+    nsCString Attachments ;
+
+    // only 1 file is to be sent, no delim specified
+    if ((!strDelimChars.Length()) && (strFilePaths.Length()>0))
+    {
+        nsCOMPtr <nsILocalFile> pFile = do_CreateInstance (NS_LOCAL_FILE_CONTRACTID, &rv) ;
+        if (NS_FAILED(rv) || (!pFile) ) return rv ;        
+        pFile->InitWithUnicodePath (strFilePaths.get()) ;
+
+        PRBool bExist ;
+        rv = pFile->Exists(&bExist) ;
+        if (NS_FAILED(rv) || (!bExist) ) return NS_ERROR_FILE_TARGET_DOES_NOT_EXIST ;
+
+        nsXPIDLCString pURL ;
+        pFile->GetURL (getter_Copies(pURL)) ;
+        if (pURL)
+            Attachments.Assign(pURL) ;
+
+        // set attachments for comp field and return
+        rv = aCompFields->SetAttachments (Attachments.get());
+        return rv ;
+    }
+
+    // multiple files to be sent, delim specified
+    nsCOMPtr <nsILocalFile> pFile = do_CreateInstance (NS_LOCAL_FILE_CONTRACTID, &rv) ;
+    if (NS_FAILED(rv) || (!pFile) ) return rv ;        
+    PRInt32 offset = 0 ;
+    PRInt32 FilePathsLen = strFilePaths.Length() ;
+    if (FilePathsLen)
+    {
+        PRUnichar * newFilePaths = (PRUnichar *) strFilePaths.get() ;
+        while (offset != kNotFound)
+        {
+            nsString RemainingPaths ;
+            RemainingPaths.Assign(newFilePaths) ;
+            offset = RemainingPaths.Find (strDelimChars) ;
+            if (offset != kNotFound)
+            {
+                RemainingPaths.SetLength (offset) ;
+                if ((offset + strDelimChars.Length()) < FilePathsLen)
+                    newFilePaths += offset + strDelimChars.Length() ;
+            }
+
+            pFile->InitWithUnicodePath (RemainingPaths.get()) ;
+
+    #ifdef RAJIV_DEBUG
+            printf ("File : %S \n", RemainingPaths.get()) ; 
+    #endif 
+            PRBool bExist ;
+            rv = pFile->Exists(&bExist) ;
+            if (NS_FAILED(rv) || (!bExist) ) return NS_ERROR_FILE_TARGET_DOES_NOT_EXIST ;
+
+            nsXPIDLCString pURL ;
+            pFile->GetURL (getter_Copies(pURL)) ;
+            if (pURL)
+            {
+				if (Attachments.Length() > 0)
+					Attachments.Append(",") ;
+                Attachments.Append(pURL) ;
+            }
+        }
+        rv = aCompFields->SetAttachments (Attachments.get());
+    }
+
+    return rv ;
+}
+
+// this used for Send with UI
+nsresult nsMapiHook::ShowComposerWindow (unsigned long aSession, nsIMsgCompFields * aCompFields) 
+{
+    nsresult rv = NS_OK ;
+
+    /** create nsIMsgComposeParams obj and other fields to populate it **/    
+
+    // smtp password and Logged in used IdKey from MapiConfig (session obj)
+    nsMAPIConfiguration * pMapiConfig = nsMAPIConfiguration::GetMAPIConfiguration() ;
+    if (!pMapiConfig) return NS_ERROR_FAILURE ;  // get the singelton obj
+    PRUnichar * password = pMapiConfig->GetPassWord(aSession) ;
+    // password
+    nsCAutoString smtpPassword ;
+    smtpPassword.AssignWithConversion (password) ;
+    // Id key
+    char * MsgIdKey = pMapiConfig->GetIdKey(aSession) ;
+
+    // get the MsgIdentity for the above key using AccountManager
+    nsCOMPtr <nsIMsgAccountManager> accountManager = do_GetService (NS_MSGACCOUNTMANAGER_CONTRACTID) ;
+    if (NS_FAILED(rv) || (!accountManager) ) return rv ;
+
+    nsCOMPtr <nsIMsgIdentity> pMsgId ;
+    rv = accountManager->GetIdentity (MsgIdKey, getter_AddRefs(pMsgId)) ;
+    if (NS_FAILED(rv) || (!pMsgId) ) return rv ;
+
+    // create a send listener to get back the send status
+    nsCOMPtr <nsIMsgSendListener> sendListener ;
+    rv = nsMAPISendListener::CreateMAPISendListener(getter_AddRefs(sendListener)) ; 
+    if (NS_FAILED(rv) || (!sendListener) ) return rv ;
+
+    // create the compose params object 
+    nsCOMPtr<nsIMsgComposeParams> pMsgComposeParams (do_CreateInstance(NS_MSGCOMPOSEPARAMS_CONTRACTID, &rv));
+    if (NS_FAILED(rv) || (!pMsgComposeParams) ) return rv ;
+
+    // populate the compose params
+    pMsgComposeParams->SetType(nsIMsgCompType::New);
+    pMsgComposeParams->SetFormat(nsIMsgCompFormat::Default);
+    pMsgComposeParams->SetIdentity(pMsgId);
+    pMsgComposeParams->SetComposeFields(aCompFields); 
+    pMsgComposeParams->SetSendListener(sendListener) ;
+    pMsgComposeParams->SetSmtpPassword(smtpPassword);
+
+    /** get the nsIMsgComposeService object to open the compose window **/
+    nsCOMPtr <nsIMsgComposeService> compService = do_GetService (NS_MSGCOMPOSESERVICE_CONTRACTID) ;
+    if (NS_FAILED(rv)|| (!compService) ) return rv ;
+
+    rv = compService->OpenComposeWindowWithParams(nsnull, pMsgComposeParams) ;
+    if (NS_FAILED(rv)) return rv ;
+
+    return rv ;
+}
