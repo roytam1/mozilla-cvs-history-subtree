@@ -1,9 +1,11 @@
 Summary: Netscape Portable Runtime
 Name: %{name}
-Vendor: Sun Microsystems
+Vendor: Sun Microsystems, Inc.
 Version: %{version}
 Release: %{release}
 Copyright: MPL/GPL
+Distribution: Sun Java(TM) Enterprise System
+URL: http://www.sun.com
 Group: System Environment/Base
 Source: %{name}-%{version}.tar.gz
 ExclusiveOS: Linux

@@ -8,7 +8,7 @@
 MOD_DEPTH = ../..
 
 NAME	= sun-nspr
-RELEASE	= 1
+RELEASE	= 2
 VERSION	= `grep PR_VERSION \
 	    $(MOD_DEPTH)/../dist/$(OBJDIR_NAME)/include/prinit.h \
 		| sed -e 's/"$$//' -e 's/.*"//' -e 's/ .*//'`
