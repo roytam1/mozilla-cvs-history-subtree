@@ -2944,99 +2944,10 @@ static PRBool SelectorMatches(SelectorMatchesData &data,
   }
 
   if ((nsnull == aSelector->mTag) || (aSelector->mTag == data.mContentTag)) {
-
     result = PR_TRUE;
     // namespace/tag match
-    if (nsnull != aSelector->mAttrList) { // test for attribute match
-      // if no attributes on the content, no match
-      if(!data.mHasAttributes) {
-        result = PR_FALSE;
-      } else {
-        nsAttrSelector* attr = aSelector->mAttrList;
-        do {
-          nsAutoString  value, partValue;
-          nsresult  attrState = data.mContent->GetAttribute(attr->mNameSpace, attr->mAttr, value);
-          if (NS_FAILED(attrState) || (NS_CONTENT_ATTR_NOT_THERE == attrState)) {
-            result = PR_FALSE;
-          }
-          else {
-            PRBool isCaseSensitive = (attr->mCaseSensitive && !data.mIsHTMLContent); // Bug 24390: html attributes should not be case-sensitive
-            switch (attr->mFunction) {
-              case NS_ATTR_FUNC_SET:    break;
-              case NS_ATTR_FUNC_EQUALS: 
-                if (isCaseSensitive) {
-                  result = value.Equals(attr->mValue);
-                }
-                else {
-                  result = value.EqualsIgnoreCase(attr->mValue);
-                }
-                break;
-              case NS_ATTR_FUNC_INCLUDES: 
-                result = ValueIncludes(value, attr->mValue, isCaseSensitive);
-                break;
-              case NS_ATTR_FUNC_DASHMATCH: 
-                result = ValueDashMatch(value, attr->mValue, isCaseSensitive);
-                break;
-              case NS_ATTR_FUNC_ENDSMATCH:
-                value.Right(partValue, attr->mValue.Length());
-                if (isCaseSensitive) {
-                  result = partValue.Equals(attr->mValue);
-                }
-                else {
-                  result = partValue.EqualsIgnoreCase(attr->mValue);
-                }
-                break;
-              case NS_ATTR_FUNC_BEGINSMATCH:
-                value.Left(partValue, attr->mValue.Length());
-                if (isCaseSensitive) {
-                  result = partValue.Equals(attr->mValue);
-                }
-                else {
-                  result = partValue.EqualsIgnoreCase(attr->mValue);
-                }
-                break;
-              case NS_ATTR_FUNC_CONTAINSMATCH:
-                result = (-1 != value.Find(attr->mValue, isCaseSensitive));
-                break;
-            }
-          }
-          attr = attr->mNext;
-        } while ((PR_TRUE == result) && (nsnull != attr));
-      }
-    }
-    if ((PR_TRUE == result) &&
-        ((nsnull != aSelector->mIDList) || (nsnull != aSelector->mClassList))) {  // test for ID & class match
-      result = PR_FALSE;
-      if (data.mStyledContent) {
-        nsAtomList* IDList = aSelector->mIDList;
-        if (nsnull == IDList) {
-          result = PR_TRUE;
-        }
-        else if (nsnull != data.mContentID) {
-          result = PR_TRUE;
-          while (nsnull != IDList) {
-            if (IDList->mAtom != data.mContentID) {
-              result = PR_FALSE;
-              break;
-            }
-            IDList = IDList->mNext;
-          }
-        }
-        
-        if (PR_TRUE == result) {
-          nsAtomList* classList = aSelector->mClassList;
-          while (nsnull != classList) {
-            if (NS_COMFALSE == data.mStyledContent->HasClass(classList->mAtom)) {
-              result = PR_FALSE;
-              break;
-            }
-            classList = classList->mNext;
-          }
-        }
-      }
-    }
-    if ((PR_TRUE == result) &&
-        (nsnull != aSelector->mPseudoClassList)) {  // test for pseudo class match
+
+    if (nsnull != aSelector->mPseudoClassList) {  // test for pseudo class match
       // first-child, root, lang, active, focus, hover, link, outOfDate, visited
       // XXX disabled, enabled, selected, selection
       nsAtomList* pseudoClass = aSelector->mPseudoClassList;
@@ -3162,7 +3073,97 @@ static PRBool SelectorMatches(SelectorMatchesData &data,
         pseudoClass = pseudoClass->mNext;
       }
     }
+
+    if (result == PR_TRUE && nsnull != aSelector->mAttrList) { // test for attribute match
+      // if no attributes on the content, no match
+      if(!data.mHasAttributes) {
+        result = PR_FALSE;
+      } else {
+        nsAttrSelector* attr = aSelector->mAttrList;
+        do {
+          nsAutoString  value, partValue;
+          nsresult  attrState = data.mContent->GetAttribute(attr->mNameSpace, attr->mAttr, value);
+          if (NS_FAILED(attrState) || (NS_CONTENT_ATTR_NOT_THERE == attrState)) {
+            result = PR_FALSE;
+          }
+          else {
+            PRBool isCaseSensitive = (attr->mCaseSensitive && !data.mIsHTMLContent); // Bug 24390: html attributes should not be case-sensitive
+            switch (attr->mFunction) {
+              case NS_ATTR_FUNC_SET:    break;
+              case NS_ATTR_FUNC_EQUALS: 
+                if (isCaseSensitive) {
+                  result = value.Equals(attr->mValue);
+                }
+                else {
+                  result = value.EqualsIgnoreCase(attr->mValue);
+                }
+                break;
+              case NS_ATTR_FUNC_INCLUDES: 
+                result = ValueIncludes(value, attr->mValue, isCaseSensitive);
+                break;
+              case NS_ATTR_FUNC_DASHMATCH: 
+                result = ValueDashMatch(value, attr->mValue, isCaseSensitive);
+                break;
+              case NS_ATTR_FUNC_ENDSMATCH:
+                value.Right(partValue, attr->mValue.Length());
+                if (isCaseSensitive) {
+                  result = partValue.Equals(attr->mValue);
+                }
+                else {
+                  result = partValue.EqualsIgnoreCase(attr->mValue);
+                }
+                break;
+              case NS_ATTR_FUNC_BEGINSMATCH:
+                value.Left(partValue, attr->mValue.Length());
+                if (isCaseSensitive) {
+                  result = partValue.Equals(attr->mValue);
+                }
+                else {
+                  result = partValue.EqualsIgnoreCase(attr->mValue);
+                }
+                break;
+              case NS_ATTR_FUNC_CONTAINSMATCH:
+                result = (-1 != value.Find(attr->mValue, isCaseSensitive));
+                break;
+            }
+          }
+          attr = attr->mNext;
+        } while ((PR_TRUE == result) && (nsnull != attr));
+      }
+    }
+    if ((PR_TRUE == result) &&
+        ((nsnull != aSelector->mIDList) || (nsnull != aSelector->mClassList))) {  // test for ID & class match
+      result = PR_FALSE;
+      if (data.mStyledContent) {
+        nsAtomList* IDList = aSelector->mIDList;
+        if (nsnull == IDList) {
+          result = PR_TRUE;
+        }
+        else if (nsnull != data.mContentID) {
+          result = PR_TRUE;
+          while (nsnull != IDList) {
+            if (IDList->mAtom != data.mContentID) {
+              result = PR_FALSE;
+              break;
+            }
+            IDList = IDList->mNext;
+          }
+        }
+        
+        if (PR_TRUE == result) {
+          nsAtomList* classList = aSelector->mClassList;
+          while (nsnull != classList) {
+            if (NS_COMFALSE == data.mStyledContent->HasClass(classList->mAtom)) {
+              result = PR_FALSE;
+              break;
+            }
+            classList = classList->mNext;
+          }
+        }
+      }
+    }
   }
+
   return result;
 }
 
