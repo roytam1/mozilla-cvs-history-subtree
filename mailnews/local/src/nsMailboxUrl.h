@@ -28,8 +28,8 @@
 class nsMailboxUrl : public nsIMailboxUrl, public nsMsgMailNewsUrl, public nsIMsgUriUrl
 {
 public:
-	// overrides for nsIURI
-	NS_IMETHOD SetURLInfo(URL_Struct *URL_s);
+	// nsIURI over-ride...
+	NS_IMETHOD SetSpec(char * aSpec);
 
 	// from nsIMailboxUrl:
 	NS_IMETHOD GetMessageHeader(nsIMsgDBHdr ** aMsgHdr);
@@ -42,6 +42,7 @@ public:
 	NS_IMETHOD GetMessageKey(nsMsgKey* aMessageKey);
     NS_IMETHOD GetMessageSize(PRUint32 *aMessageSize);
 	NS_IMETHOD SetMessageSize(PRUint32 aMessageSize);
+	NS_IMETHOD GetMessageSize(PRUint32 * aMessageSize);
 	NS_IMPL_CLASS_GETSET(MailboxAction, nsMailboxAction, m_mailboxAction);
 
 	// used by save message to disk....
@@ -57,10 +58,10 @@ public:
 
     NS_DECL_ISUPPORTS_INHERITED
 
-	// protocol specific code to parse a url...
-    virtual nsresult ParseUrl(const nsString& aSpec);
 
 protected:
+	// protocol specific code to parse a url...
+    virtual nsresult ParseUrl(const nsString& aSpec);
 
 	// mailboxurl specific state
 	nsCOMPtr<nsIStreamListener> m_mailboxParser;
@@ -74,8 +75,6 @@ protected:
 
 	// used by save message to disk
 	nsCOMPtr<nsIFileSpec> m_messageFileSpec;
-
-	virtual void ReconstructSpec(void);
 	nsresult ParseSearchPart();
 };
 
