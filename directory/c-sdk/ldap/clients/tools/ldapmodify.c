@@ -784,9 +784,6 @@ addmodifyop( LDAPMod ***pmodsp, int modop, char *attr, char *value, int vlen )
 	}
 	pmods[ i ]->mod_bvalues[ j ] = bvp;
 
-	if (ldaptool_verbose) {
-		printf("%s: value: %s vlen: %d\n", "ldapmodify", value, vlen);
-	}
 	rc = ldaptool_berval_from_ldif_value( value, vlen, bvp,
 		    ( ldif_version >= LDIF_VERSION_ONE ), valsfromfiles,
 			1 /* report errors */ );

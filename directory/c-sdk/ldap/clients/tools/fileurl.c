@@ -224,11 +224,6 @@ ldaptool_berval_from_ldif_value( const char *value, int vlen,
 
     /* recognize "attr :< url" syntax if LDIF version is >= 1 */
 
-    if ( ldaptool_verbose ) {
-	fprintf( stderr, "%s: ldaptool_berval_from_ldif_value: value: %s\n",
-	    ldaptool_progname, value);
-    }
-
     if ( recognize_url_syntax && *value == '<' ) {
         const char	*url;
         char		*path;
