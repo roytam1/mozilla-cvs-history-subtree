@@ -21,47 +21,47 @@
 /*
  * JS public API typedefs.
  */
-#include "prtypes.h"
+#include "jstypes.h"
 #define NETSCAPE_INTERNAL 1
 #include "jscompat.h"
 
-#ifndef PR_INLINE
+#ifndef JS_INLINE
 #  ifdef _WIN32
-#       define PR_INLINE __inline
+#       define JS_INLINE __inline
 #  elif defined(__GNUC__)
-#       define PR_INLINE inline
+#       define JS_INLINE inline
 #  else
-#       define PR_INLINE
+#       define JS_INLINE
 #  endif
-#endif /* PR_INLINE */
+#endif /* JS_INLINE */
 
 /*
- * Downrev NSPR versions of prtypes.h do not define these linkage-related
+ * Downrev NSPR versions of jstypes.h do not define these linkage-related
  * PR_* macros, so we define them if necessary.  Eventually, we should be
- * able to remove these local definitions (move them to js/ref/prtypes.h,
- * and get them from an uprev NSPR's prtypes.h for js/src).
+ * able to remove these local definitions (move them to js/ref/jstypes.h,
+ * and get them from an uprev NSPR's jstypes.h for js/src).
  */
-#ifndef PR_IMPORT_API
+#ifndef IMPORT_API
 #    ifdef _WIN32
-#        define PR_IMPORT_API(__x)      _declspec(dllimport) __x
+#        define IMPORT_API(__x)      _declspec(dllimport) __x
 #    else
-#        define PR_IMPORT_API(__x)      PR_IMPLEMENT(__x)
+#        define IMPORT_API(__x)      IMPLEMENT(__x)
 #    endif
-#endif /* PR_IMPORT_API */
-#ifndef PR_IMPORT_DATA
+#endif /* IMPORT_API */
+#ifndef IMPORT_DATA
 #    ifdef _WIN32
-#        define PR_IMPORT_DATA(__x)      _declspec(dllimport) __x
+#        define IMPORT_DATA(__x)      _declspec(dllimport) __x
 #    else
-#        define PR_IMPORT_DATA(__x)      __x
+#        define IMPORT_DATA(__x)      __x
 #    endif
-#endif /* PR_IMPORT_DATA */
-#ifndef PR_PUBLIC_DATA
+#endif /* IMPORT_DATA */
+#ifndef PUBLIC_DATA
 #    ifdef _WIN32
-#        define PR_PUBLIC_DATA(__x)      _declspec(dllexport) __x
+#        define PUBLIC_DATA(__x)      _declspec(dllexport) __x
 #    else
-#        define PR_PUBLIC_DATA(__x)      __x
+#        define PUBLIC_DATA(__x)      __x
 #    endif
-#endif /* PR_PUBLIC_DATA */
+#endif /* PUBLIC_DATA */
 
 /*
  * The linkage of JS API functions differs depending on whether the file is
@@ -70,11 +70,11 @@
  * should not.
  */
 #ifdef EXPORT_JS_API
-#define JS_PUBLIC_API(t)    PR_IMPLEMENT(t)
-#define JS_PUBLIC_DATA(t)   PR_PUBLIC_DATA(t)
+#define JS_PUBLIC_API(t)    IMPLEMENT(t)
+#define JS_PUBLIC_DATA(t)   PUBLIC_DATA(t)
 #else
-#define JS_PUBLIC_API(t)    PR_IMPORT_API(t)
-#define JS_PUBLIC_DATA(t)   PR_IMPORT_DATA(t)
+#define JS_PUBLIC_API(t)    IMPORT_API(t)
+#define JS_PUBLIC_DATA(t)   IMPORT_DATA(t)
 #endif
 
 #define JS_FRIEND_API(t)    JS_PUBLIC_API(t)
@@ -85,16 +85,9 @@ typedef uint16    jschar;
 typedef int32     jsint;
 typedef uint32    jsuint;
 typedef float64   jsdouble;
-typedef prword    jsval;
-typedef prword    jsid;
-typedef prword    jsrefcount;
-
-/* Boolean enum and packed int types. */
-typedef PRBool       JSBool;
-typedef PRPackedBool JSPackedBool;
-
-#define JS_FALSE     PR_FALSE
-#define JS_TRUE      PR_TRUE
+typedef jsword    jsval;
+typedef jsword    jsid;
+typedef jsword    jsrefcount;
 
 typedef enum JSVersion {
     JSVERSION_1_0     = 100,
@@ -195,8 +188,8 @@ typedef JSBool
  */
 typedef JSBool
 (* CRT_CALL JSNewEnumerateOp)(JSContext *cx, JSObject *obj,
-                              JSIterateOp enum_op,
-                              jsval *statep, jsid *idp);
+			      JSIterateOp enum_op,
+			      jsval *statep, jsid *idp);
 
 typedef JSBool
 (* CRT_CALL JSEnumerateOp)(JSContext *cx, JSObject *obj);
@@ -290,5 +283,14 @@ typedef JSBool
 typedef void
 (* CRT_CALL JSErrorReporter)(JSContext *cx, const char *message,
 			     JSErrorReport *report);
+
+typedef struct JSErrorFormatString {
+    const char *format;
+    const uintN argCount;
+} JSErrorFormatString;
+
+typedef const JSErrorFormatString *
+(* CRT_CALL JSErrorCallback)(void *userRef, const char *locale,
+			     const uintN errorNumber);
 
 #endif /* jspubtd_h___ */

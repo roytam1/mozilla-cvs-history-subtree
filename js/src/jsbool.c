@@ -20,8 +20,9 @@
  * JS boolean implementation.
  */
 #include "jsstddef.h"
-#include "prtypes.h"
-#include "prlog.h"
+#include "jstypes.h"
+/* Removed by JSIFY: #include "prlog.h" */
+#include "jsutil.h" /* Added by JSIFY */
 #include "jsapi.h"
 #include "jsatom.h"
 #include "jsbool.h"
@@ -41,7 +42,7 @@ static JSClass boolean_class = {
 };
 
 #if JS_HAS_TOSOURCE
-#include "prprf.h"
+#include "jsprf.h"
 
 static JSBool
 bool_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
@@ -182,7 +183,7 @@ js_ValueToBoolean(JSContext *cx, jsval v, JSBool *bp)
 	return JS_TRUE;
     }
     if (JSVAL_IS_OBJECT(v)) {
-	if (cx->version == JSVERSION_1_2) {
+	if (!JSVERSION_IS_ECMA(cx->version)) {
 	    if (!OBJ_DEFAULT_VALUE(cx, JSVAL_TO_OBJECT(v), JSTYPE_BOOLEAN, &v))
 		return JS_FALSE;
 	    if (!JSVAL_IS_BOOLEAN(v))

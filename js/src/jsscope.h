@@ -21,11 +21,13 @@
 /*
  * JS symbol tables.
  */
-#include "prtypes.h"
+#include "jstypes.h"
 #ifndef NSPR20
-#include "prhash.h"
+#include "jshash.h"
 #else
-#include "plhash.h"
+/* Removed by JSIFY: #include "JShash.h"
+ */
+#include "jshash.h" /* Added by JSIFY */
 #endif
 #include "jsobj.h"
 #include "jsprvtd.h"
@@ -33,7 +35,7 @@
 
 struct JSScopeOps {
     JSSymbol *      (*lookup)(JSContext *cx, JSScope *scope, jsid id,
-			      PRHashNumber hash);
+			      JSHashNumber hash);
     JSSymbol *      (*add)(JSContext *cx, JSScope *scope, jsid id,
 			   JSScopeProperty *sprop);
     JSBool          (*remove)(JSContext *cx, JSScope *scope, jsid id);
@@ -58,7 +60,7 @@ struct JSScope {
 };
 
 struct JSSymbol {
-    PRHashEntry     entry;              /* base class state */
+    JSHashEntry     entry;              /* base class state */
     JSScope         *scope;             /* pointer to owning scope */
     JSSymbol        *next;              /* next in type-specific list */
 };
@@ -104,7 +106,7 @@ js_NewScope(JSContext *cx, jsrefcount nrefs, JSObjectOps *ops, JSClass *clasp,
 extern void
 js_DestroyScope(JSContext *cx, JSScope *scope);
 
-extern PRHashNumber
+extern JSHashNumber
 js_HashValue(jsval v);
 
 extern jsval

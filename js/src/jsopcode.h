@@ -25,7 +25,7 @@
 #include "jsprvtd.h"
 #include "jspubtd.h"
 
-PR_BEGIN_EXTERN_C
+JS_BEGIN_EXTERN_C
 
 /*
  * JS operation bytecodes.
@@ -183,6 +183,6 @@ js_DecompileFunction(JSPrinter *jp, JSFunction *fun, JSBool newlines);
 extern JSString *
 js_DecompileValueGenerator(JSContext *cx, jsval v, JSString *fallback);
 
-PR_END_EXTERN_C
+JS_END_EXTERN_C
 
 #endif /* jsopcode_h___ */

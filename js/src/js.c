@@ -24,14 +24,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "prtypes.h"
+#include "jstypes.h"
 #ifndef NSPR20
-#include "prarena.h"
+#include "jsarena.h"
 #else
-#include "plarena.h"
+/* Removed by JSIFY: #include "plarena.h"
+ */
+#include "jsarena.h" /* Added by JSIFY */
 #endif
-#include "prlog.h"
-#include "prprf.h"
+/* Removed by JSIFY: #include "prlog.h" */
+#include "jsutil.h" /* Added by JSIFY */
+#include "jsprf.h"
 #include "jsapi.h"
 #include "jsatom.h"
 #include "jscntxt.h"
@@ -108,6 +111,17 @@ static JSDJContext *_jsdjc;
 #endif /* JSDEBUGGER_JAVA_UI */
 #endif /* JSDEBUGGER */
 
+static int reportWarnings;
+
+typedef enum JSShellErrNum {
+#define MSG_DEF(name, number, count, exception, format) \
+    name = number,
+#include "jsshell.msg"
+#undef MSG_DEF
+    JSShellErr_Limit
+#undef MSGDEF
+} JSShellErrNum;
+
 static void
 Process(JSContext *cx, JSObject *obj, char *filename)
 {
@@ -128,19 +142,19 @@ Process(JSContext *cx, JSObject *obj, char *filename)
     if (isatty(fileno(ts->file))) {
 	ts->flags |= TSF_INTERACTIVE;
     } else {
-        /* Support the UNIX #! shell hack; gobble the first line if it starts
-         * with '#'.  TODO - this isn't quite compatible with sharp variables,
-         * as a legal js program (using sharp variables) might start with '#'.
-         * But that would require multi-character lookahead.
-         */
-        char ch = fgetc(ts->file);
-        if (ch == '#') {
-            while((ch = fgetc(ts->file)) != EOF) {
-                if(ch == '\n' || ch == '\r')
-                    break;
-            }
-        }
-        ungetc(ch, ts->file);
+	/* Support the UNIX #! shell hack; gobble the first line if it starts
+	 * with '#'.  TODO - this isn't quite compatible with sharp variables,
+	 * as a legal js program (using sharp variables) might start with '#'.
+	 * But that would require multi-character lookahead.
+	 */
+	char ch = fgetc(ts->file);
+	if (ch == '#') {
+	    while((ch = fgetc(ts->file)) != EOF) {
+		if(ch == '\n' || ch == '\r')
+		    break;
+	    }
+	}
+	ungetc(ch, ts->file);
     }
 
     do {
@@ -156,6 +170,12 @@ Process(JSContext *cx, JSObject *obj, char *filename)
 	    }
 	} while (ok && !(ts->flags & TSF_EOF) && CG_OFFSET(&cg) == 0);
 	if (ok) {
+	    /*
+	     * Clear any pending exception, either from previous failed
+	     * compiles, or from the last round of execution.
+	     */
+	    JS_ClearPendingException(cx);
+
 	    script = js_NewScriptFromCG(cx, &cg, NULL);
 	    if (script) {
 		if (JS_ExecuteScript(cx, obj, script, &result) &&
@@ -164,6 +184,30 @@ Process(JSContext *cx, JSObject *obj, char *filename)
 		    str = JS_ValueToString(cx, result);
 		    if (str)
 			printf("%s\n", JS_GetStringBytes(str));
+		}
+
+		if (JS_IsExceptionPending(cx) &&
+		    JS_GetPendingException(cx, &result))
+		{
+		    /*
+		     * Calling JS_ValueToString could cause another error (and
+		     * throw an associated exception) - so we disable the error
+		     * reporter so nothing gets reported, and we always clear
+		     * the pending exception... which might be different than
+		     * the one we just got in &result.
+		     */
+		    JSErrorReporter older;
+		    older = JS_SetErrorReporter(cx, NULL);
+		    str = JS_ValueToString(cx, result);
+		    JS_SetErrorReporter(cx, older);
+
+		    /* XXX non-i18nized strings... */
+		    if (str) {
+			fprintf(stderr, "Uncaught JavaScript exception:\n%s\n",
+			       JS_GetStringBytes(str));
+		    } else {
+			fprintf(stderr, "Uncaught JavaScript exception\n");
+		    }
 		}
 		JS_DestroyScript(cx, script);
 	    }
@@ -176,15 +220,15 @@ Process(JSContext *cx, JSObject *obj, char *filename)
 out:
     if (ts)
 	(void) js_CloseTokenStream(cx, ts);
-    PR_FreeArenaPool(&cx->codePool);
-    PR_FreeArenaPool(&cx->tempPool);
+    JS_FreeArenaPool(&cx->codePool);
+    JS_FreeArenaPool(&cx->tempPool);
 }
 
 static int
 usage(void)
 {
     fprintf(stderr, "%s\n", JS_GetImplementationVersion());
-    fprintf(stderr, "usage: js [-v version] [-f scriptfile] [scriptfile] [scriptarg...]\n");
+    fprintf(stderr, "usage: js [-w] [-v version] [-f scriptfile] [scriptfile] [scriptarg...]\n");
     return 2;
 }
 
@@ -199,34 +243,37 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
     JSObject *argsObj;
 
     for (i=0; i < argc; i++) {
-        if (argv[i][0] == '-') {
-            switch (argv[i][1]) {
-            case 'v':
-                if (i+1 == argc) {
-                    return usage();
-                }
-                JS_SetVersion(cx, atoi(argv[i+1]));
-                i++;
-                break;
+	if (argv[i][0] == '-') {
+	    switch (argv[i][1]) {
+	    case 'v':
+		if (i+1 == argc) {
+		    return usage();
+		}
+		JS_SetVersion(cx, atoi(argv[i+1]));
+		i++;
+		break;
+	    case 'w':
+		reportWarnings++;
+		break;
 
-            case 'f':
-                if (i+1 == argc) {
-                    return usage();
-                }
-                filename = argv[i+1];
-                /* "-f -" means read from stdin */
-                if (filename[0] == '-' && filename[1] == '\0')
-                    filename = NULL;
-                Process(cx, obj, filename);
-                i++;
-                break;
-            default:
-                return usage();
-            }
-        } else {
-            filename = argv[i++];
-            break;
-        }
+	    case 'f':
+		if (i+1 == argc) {
+		    return usage();
+		}
+		filename = argv[i+1];
+		/* "-f -" means read from stdin */
+		if (filename[0] == '-' && filename[1] == '\0')
+		    filename = NULL;
+		Process(cx, obj, filename);
+		i++;
+		break;
+	    default:
+		return usage();
+	    }
+	} else {
+	    filename = argv[i++];
+	    break;
+	}
     }
 
     length = argc - i;
@@ -234,22 +281,23 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
     p = vector;
 
     if (vector == NULL)
-        return 1;
+	return 1;
 
     while (i < argc) {
-        JSString *str = JS_NewStringCopyZ(cx, argv[i]);
-        if (str == NULL)
-            return 1;
-        *p++ = STRING_TO_JSVAL(str);
-        i++;
+	JSString *str = JS_NewStringCopyZ(cx, argv[i]);
+	if (str == NULL)
+	    return 1;
+	*p++ = STRING_TO_JSVAL(str);
+	i++;
     }
     argsObj = JS_NewArrayObject(cx, length, vector);
+    JS_free(cx, vector);
     if (argsObj == NULL)
-        return 1;
+	return 1;
 
     if (!JS_DefineProperty(cx, obj, "arguments",
-                           OBJECT_TO_JSVAL(argsObj), NULL, NULL, 0))
-        return 1;
+			   OBJECT_TO_JSVAL(argsObj), NULL, NULL, 0))
+	return 1;
 
     Process(cx, obj, filename);
     return 0;
@@ -268,6 +316,9 @@ Version(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
 static void
 my_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report);
+
+static const JSErrorFormatString *
+my_GetErrorMessage(void *userRef, const char *locale, const uintN errorNumber);
 
 static JSBool
 Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
@@ -342,13 +393,13 @@ GC(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     preBytes = rt->gcBytes;
 #ifdef GC_MARK_DEBUG
     if (argc && JSVAL_IS_STRING(argv[0])) {
-    	char *name = JS_GetStringBytes(JSVAL_TO_STRING(argv[0]));
-    	FILE *file = fopen(name, "w");
-    	if (!file) {
+	char *name = JS_GetStringBytes(JSVAL_TO_STRING(argv[0]));
+	FILE *file = fopen(name, "w");
+	if (!file) {
 	    fprintf(stderr, "gc: can't open %s: %s\n", strerror(errno));
 	    return JS_FALSE;
-    	}
-    	js_DumpGCHeap = file;
+	}
+	js_DumpGCHeap = file;
     } else {
 	js_DumpGCHeap = stdout;
     }
@@ -356,7 +407,7 @@ GC(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     js_ForceGC(cx);
 #ifdef GC_MARK_DEBUG
     if (js_DumpGCHeap != stdout)
-    	fclose(js_DumpGCHeap);
+	fclose(js_DumpGCHeap);
     js_DumpGCHeap = NULL;
 #endif
     printf("before %lu, after %lu, break %08lx\n",
@@ -427,7 +478,7 @@ Trap(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     int32 i;
 
     if (argc == 0) {
-	JS_ReportError(cx, "usage: trap [fun] [pc] expr");
+	JS_ReportErrorNumber(cx, my_GetErrorMessage, NULL, JSSMSG_TRAP_USAGE);
 	return JS_FALSE;
     }
     argc--;
@@ -461,7 +512,7 @@ LineToPC(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     jsbytecode *pc;
 
     if (argc == 0) {
-	JS_ReportError(cx, "usage: line2pc [fun] line");
+	JS_ReportErrorNumber(cx, my_GetErrorMessage, NULL, JSSMSG_LINE2PC_USAGE);
 	return JS_FALSE;
     }
     script = cx->fp->down->script;
@@ -496,7 +547,7 @@ PCToLine(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 static void
 SrcNotes(JSContext *cx, JSFunction *fun )
 {
-    uintN offset, delta;
+    uintN offset, delta, caseOff;
     jssrcnote *notes, *sn;
     JSSrcNoteType type;
     jsatomid atomIndex;
@@ -522,8 +573,8 @@ SrcNotes(JSContext *cx, JSFunction *fun )
 		       (uintN) js_GetSrcNoteOffset(sn, 1),
 		       (uintN) js_GetSrcNoteOffset(sn, 2));
 		break;
-	      case SRC_COMMA:
 	      case SRC_PCBASE:
+	      case SRC_PCDELTA:
 		printf(" offset %u", (uintN) js_GetSrcNoteOffset(sn, 0));
 		break;
 	      case SRC_LABEL:
@@ -534,6 +585,12 @@ SrcNotes(JSContext *cx, JSFunction *fun )
 		atomIndex = (jsatomid) js_GetSrcNoteOffset(sn, 0);
 		atom = js_GetAtom(cx, &fun->script->atomMap, atomIndex);
 		printf(" atom %u (%s)", (uintN)atomIndex, ATOM_BYTES(atom));
+		break;
+	      case SRC_SWITCH:
+		printf(" length %u", (uintN) js_GetSrcNoteOffset(sn, 0));
+		caseOff = (uintN) js_GetSrcNoteOffset(sn, 1);
+		if (caseOff)
+		    printf(" first case offset %u", caseOff);
 		break;
 	      case SRC_CATCH:
 		delta = (uintN) js_GetSrcNoteOffset(sn, 0);
@@ -623,13 +680,16 @@ DisassWithSrc(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval
 	    return JS_FALSE;
 
 	if (!fun->script || !fun->script->filename) {
-	    JS_ReportError(cx, "only works on JS scripts read from files");
+	    JS_ReportErrorNumber(cx, my_GetErrorMessage, NULL,
+					    JSSMSG_FILE_SCRIPTS_ONLY);
 	    return JS_FALSE;
 	}
 
 	file = fopen(fun->script->filename, "r");
 	if (!file) {
-	    JS_ReportError(cx, "can't open %s: %s", fun->script->filename, strerror(errno));
+	    JS_ReportErrorNumber(cx, my_GetErrorMessage, NULL,
+			    JSSMSG_CANT_OPEN,
+			    fun->script->filename, strerror(errno));
 	    return JS_FALSE;
 	}
 
@@ -656,9 +716,10 @@ DisassWithSrc(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval
 		bupline = 0;
 		while (line1 < line2) {
 		    if (!fgets(linebuf, LINE_BUF_LEN, file)) {
-			JS_ReportError(cx, "unexpected EOF in %s",
+			JS_ReportErrorNumber(cx, my_GetErrorMessage, NULL,
+				       JSSMSG_UNEXPECTED_EOF,
 				       fun->script->filename);
-		    	goto bail;
+			goto bail;
 		    }
 		    line1++;
 		    printf("%s %3u: %s", sep, line1, linebuf);
@@ -676,6 +737,7 @@ DisassWithSrc(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval
 	fclose(file);
     }
     return JS_TRUE;
+#undef LINE_BUF_LEN
 }
 
 static JSBool
@@ -711,7 +773,7 @@ Tracing(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 }
 
 int
-DumpAtom(PRHashEntry *he, int i, void *arg)
+DumpAtom(JSHashEntry *he, int i, void *arg)
 {
     FILE *fp = arg;
     JSAtom *atom = (JSAtom *)he;
@@ -728,7 +790,7 @@ DumpAtom(PRHashEntry *he, int i, void *arg)
 }
 
 int
-DumpSymbol(PRHashEntry *he, int i, void *arg)
+DumpSymbol(JSHashEntry *he, int i, void *arg)
 {
     FILE *fp = arg;
     JSSymbol *sym = (JSSymbol *)he;
@@ -744,7 +806,7 @@ DumpSymbol(PRHashEntry *he, int i, void *arg)
 extern JS_FRIEND_DATA(JSScopeOps) js_list_scope_ops;
 
 void
-DumpScope(JSContext *cx, JSObject *obj, PRHashEnumerator dump, FILE *fp)
+DumpScope(JSContext *cx, JSObject *obj, JSHashEnumerator dump, FILE *fp)
 {
     JSScope *scope;
     JSSymbol *sym;
@@ -753,14 +815,14 @@ DumpScope(JSContext *cx, JSObject *obj, PRHashEnumerator dump, FILE *fp)
     fprintf(fp, "\n%s scope contents:\n", OBJ_GET_CLASS(cx, obj)->name);
     scope = (JSScope *)obj->map;
     if (!MAP_IS_NATIVE(&scope->map))
-    	return;
+	return;
     if (scope->ops == &js_list_scope_ops) {
 	for (sym = (JSSymbol *)scope->data, i = 0; sym;
 	     sym = (JSSymbol *)sym->entry.next, i++) {
 	    DumpSymbol(&sym->entry, i, fp);
 	}
     } else {
-	PR_HashTableDump(scope->data, dump, fp);
+	JS_HashTableDump(scope->data, dump, fp);
     }
 }
 
@@ -786,11 +848,11 @@ DumpStats(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 	bytes = JS_GetStringBytes(str);
 	if (strcmp(bytes, "arena") == 0) {
 #ifdef ARENAMETER
-	    PR_DumpArenaStats(stdout);
+	    JS_DumpArenaStats(stdout);
 #endif
 	} else if (strcmp(bytes, "atom") == 0) {
 	    printf("\natom table contents:\n");
-	    PR_HashTableDump(cx->runtime->atomState.table, DumpAtom, stdout);
+	    JS_HashTableDump(cx->runtime->atomState.table, DumpAtom, stdout);
 	} else if (strcmp(bytes, "global") == 0) {
 	    DumpScope(cx, cx->globalObject, DumpSymbol, stdout);
 	} else {
@@ -807,7 +869,7 @@ DumpStats(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 	    if (!prop || !JSVAL_IS_OBJECT(value)) {
 		fprintf(stderr, "js: invalid stats argument %s\n",
 			bytes);
-	    	continue;
+		continue;
 	    }
 	    obj = JSVAL_TO_OBJECT(value);
 	    if (obj)
@@ -830,7 +892,7 @@ DoExport(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     uintN attrs;
 
     if (argc != 2) {
-	JS_ReportError(cx, "usage: doexp obj id");
+	JS_ReportErrorNumber(cx, my_GetErrorMessage, NULL, JSSMSG_DOEXP_USAGE);
 	return JS_FALSE;
     }
     if (!JS_ValueToObject(cx, argv[0], &obj))
@@ -878,10 +940,10 @@ ConvertArgs(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     }
     printf("b %u, c %x (%c), i %ld, u %lu, j %ld\n", b, c, (char)c, i, u, j);
     printf("d %g, I %g, s %s, S %s, obj %s, fun %s, v %s\n",
-    	   d, I, s, JS_GetStringBytes(str),
-    	   JS_GetStringBytes(JS_ValueToString(cx, OBJECT_TO_JSVAL(obj))),
-    	   JS_GetStringBytes(JS_DecompileFunction(cx, fun, 4)),
-    	   JS_GetStringBytes(JS_ValueToString(cx, v)));
+	   d, I, s, JS_GetStringBytes(str),
+	   JS_GetStringBytes(JS_ValueToString(cx, OBJECT_TO_JSVAL(obj))),
+	   JS_GetStringBytes(JS_DecompileFunction(cx, fun, 4)),
+	   JS_GetStringBytes(JS_ValueToString(cx, v)));
     return JS_TRUE;
 }
 #endif
@@ -1027,6 +1089,63 @@ static JSPropertySpec its_props[] = {
     {0}
 };
 
+#ifdef JSD_LOWLEVEL_SOURCE
+/* 
+ * This facilitates sending source to JSD (the debugger system) in the shell 
+ * where the source is loaded using the JSFILE hack in jsscan. The function 
+ * below is used as a callback for the jsdbgapi JS_SetSourceHandler hook. 
+ * A more normal embedding (e.g. mozilla) loads source itself and can send 
+ * source directly to JSD without using this hook scheme.
+ *
+ * XXX At some future point JSD will understand Unicode source and the
+ * *very* ugly conversion below will be unnecessary.
+ */
+static void
+SendSourceToJSDebugger(const char *filename, uintN lineno,
+                       jschar *str, size_t length, 
+                       void **listenerTSData, JSDContext* jsdc)
+{
+    JSDSourceText *jsdsrc = (JSDSourceText *) *listenerTSData;
+
+    if (!jsdsrc) {
+        if (!filename)
+            filename = "typein";
+	if (1 == lineno) {
+	    jsdsrc = JSD_NewSourceText(jsdc, filename);
+	} else {
+	    jsdsrc = JSD_FindSourceForURL(jsdc, filename);
+	    if (jsdsrc && JSD_SOURCE_PARTIAL !=
+		JSD_GetSourceStatus(jsdc, jsdsrc)) {
+		jsdsrc = NULL;
+	    }
+	}
+    }
+    if (jsdsrc) {
+	/* here we convert our Unicode into a C string to pass to JSD */
+#define JSD_BUF_SIZE 1024
+	static char* buf = NULL;
+	int remaining = length;
+
+	if (!buf)
+	    buf = malloc(JSD_BUF_SIZE);
+	if (buf)
+	{
+	    while (remaining && jsdsrc) {
+		int bytes = JS_MIN(remaining, JSD_BUF_SIZE);
+		int i;
+		for (i = 0; i < bytes; i++)
+		    buf[i] = (const char) *(str++);
+		jsdsrc = JSD_AppendSourceText(jsdc,jsdsrc,
+					      buf, bytes,
+					      JSD_SOURCE_PARTIAL);
+		remaining -= bytes;
+	    }
+	}
+    }
+    *listenerTSData = jsdsrc;
+}
+#endif /* JSD_LOWLEVEL_SOURCE */
+
 static JSBool its_noisy;    /* whether to be noisy when finalizing it */
 
 static JSBool
@@ -1120,28 +1239,78 @@ static JSClass its_class = {
     its_enumerate,    its_resolve,      its_convert,      its_finalize
 };
 
+JSErrorFormatString jsShell_ErrorFormatString[JSErr_Limit] = {
+#if JS_HAS_DFLT_MSG_STRINGS
+#define MSG_DEF(name, number, count, exception, format) \
+    { format, count } ,
+#else
+#define MSG_DEF(name, number, count, exception, format) \
+    { NULL, count } ,
+#endif
+#include "jsshell.msg"
+#undef MSG_DEF
+};
+
+static const JSErrorFormatString *
+my_GetErrorMessage(void *userRef, const char *locale, const uintN errorNumber)
+{
+    if ((errorNumber > 0) && (errorNumber < JSShellErr_Limit))
+	    return &jsShell_ErrorFormatString[errorNumber];
+	else
+	    return NULL;
+}
+
 static void
 my_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
 {
     int i, j, k, n;
+    char *prefix = NULL, *tmp;
 
-    fputs("js: ", stderr);
     if (!report) {
 	fprintf(stderr, "%s\n", message);
 	return;
     }
 
-    if (report->filename)
-	fprintf(stderr, "%s, ", report->filename);
-    if (report->lineno)
-	fprintf(stderr, "line %u: ", report->lineno);
-    fputs(message, stderr);
-    if (!report->linebuf) {
-	putc('\n', stderr);
+    /*
+     * Conditionally ignore reported warnings, and ignore error reports for
+     * which a JavaScript exception has been thrown, except when we're in
+     * a toplevel compile.
+     */
+    if ((JSREPORT_IS_WARNING(report->flags) && !reportWarnings) ||
+	(JSREPORT_IS_EXCEPTION(report->flags) && cx->interpLevel > 0)) {
 	return;
     }
 
-    fprintf(stderr, ":\n%s\n", report->linebuf);
+    if (report->filename)
+	prefix = PR_smprintf("%s:", report->filename);
+    if (report->lineno) {
+	tmp = prefix;
+	prefix = PR_smprintf("%s%u: ", tmp ? tmp : "", report->lineno);
+	JS_free(cx, tmp);
+    }
+    if (JSREPORT_IS_WARNING(report->flags)) {
+	tmp = prefix;
+	prefix = PR_smprintf("%swarning: ", tmp ? tmp : "");
+	JS_free(cx, tmp);
+    }
+
+    /* embedded newlines -- argh! */
+    while ((tmp = strchr(message, '\n'))) {
+	tmp++;
+	if (prefix) fputs(prefix, stderr);
+	fwrite(message, 1, tmp - message, stderr);
+	message = tmp;
+    }
+    /* If there were no filename or lineno, the prefix might be empty */
+    if (prefix) fputs(prefix, stderr);
+    fputs(message, stderr);
+
+    if (!report->linebuf) {
+	putc('\n', stderr);
+	goto out;
+    }
+
+    fprintf(stderr, ":\n%s%s\n%s", prefix, report->linebuf, prefix);
     n = report->tokenptr - report->linebuf;
     for (i = j = 0; i < n; i++) {
 	if (report->linebuf[i] == '\t') {
@@ -1153,6 +1322,8 @@ my_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
 	j++;
     }
     fputs("^\n", stderr);
+ out:
+    JS_free(cx, prefix);
 }
 
 #if defined(SHELL_HACK) && defined(DEBUG) && defined(XP_UNIX)
@@ -1269,6 +1440,12 @@ main(int argc, char **argv)
     JSContext *cx;
     JSObject *glob, *it;
     int result;
+#ifdef LIVECONNECT
+    JavaVM *java_vm = NULL;
+#endif
+#ifdef JSDEBUGGER_JAVA_UI
+    JNIEnv *java_env;
+#endif
 
 #ifdef XP_OS2
    /* these streams are normally line buffered on OS/2 and need a \n, *
@@ -1282,10 +1459,10 @@ main(int argc, char **argv)
 #endif
 
     version = JSVERSION_DEFAULT;
-#ifndef LIVECONNECT
+
     argc--;
     argv++;
-#endif
+
     rt = JS_NewRuntime(8L * 1024L * 1024L);
     if (!rt)
 	return 1;
@@ -1313,13 +1490,8 @@ main(int argc, char **argv)
 	return 1;
 
 #ifdef PERLCONNECT
-    if (!js_InitPerlClass(cx, glob))
-        return 1;
-#endif
-
-#ifdef LIVECONNECT
-	if (!JSJ_SimpleInit(cx, glob, NULL, getenv("CLASSPATH")))
-            return 1;
+    if (!JS_InitPerlClass(cx, glob))
+	return 1;
 #endif
 
 #ifdef JSDEBUGGER
@@ -1330,13 +1502,19 @@ main(int argc, char **argv)
     if (!_jsdc)
 	return 1;
     JSD_JSContextInUse(_jsdc, cx);
-
+#ifdef JSD_LOWLEVEL_SOURCE
+    JS_SetSourceHandler(rt, SendSourceToJSDebugger, _jsdc);
+#endif /* JSD_LOWLEVEL_SOURCE */
 #ifdef JSDEBUGGER_JAVA_UI
     _jsdjc = JSDJ_CreateContext();
     if (! _jsdjc)
 	return 1;
     JSDJ_SetJSDContext(_jsdjc, _jsdc);
-    JSDJ_CreateJavaVMAndStartDebugger(_jsdjc);
+    java_env = JSDJ_CreateJavaVMAndStartDebugger(_jsdjc);
+#ifdef LIVECONNECT
+    if (java_env)
+	(*java_env)->GetJavaVM(java_env, &java_vm);
+#endif
     /*
     * XXX This would be the place to wait for the debugger to start.
     * Waiting would be nice in general, but especially when a js file
@@ -1347,6 +1525,11 @@ main(int argc, char **argv)
     JSDB_InitDebugger(rt, _jsdc, 0);
 #endif /* JSDEBUGGER_C_UI */
 #endif /* JSDEBUGGER */
+
+#ifdef LIVECONNECT
+	if (!JSJ_SimpleInit(cx, glob, java_vm, getenv("CLASSPATH")))
+	    return 1;
+#endif
 
     result = ProcessArgs(cx, glob, argv, argc);
 
