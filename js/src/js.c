@@ -327,6 +327,7 @@ Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JSScript *script;
     JSBool ok;
     jsval result;
+    JSErrorReporter older;
 
     for (i = 0; i < argc; i++) {
 	str = JS_ValueToString(cx, argv[i]);
@@ -335,6 +336,7 @@ Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 	argv[i] = STRING_TO_JSVAL(str);
 	filename = JS_GetStringBytes(str);
 	errno = 0;
+        older = JS_SetErrorReporter(cx, NULL);
 	script = JS_CompileFile(cx, obj, filename);
 	if (!script)
             ok = JS_FALSE;
@@ -342,6 +344,7 @@ Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
             ok = JS_ExecuteScript(cx, obj, script, &result);
 	    JS_DestroyScript(cx, script);
         }
+        JS_SetErrorReporter(cx, older);
 	if (!ok)
 	    return JS_FALSE;
     }
