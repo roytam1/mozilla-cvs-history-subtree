@@ -39,7 +39,7 @@
 #include "comi18n.h"
 #include "nsIMsgCompFields.h"
 #include "nsMsgCompCID.h"
-#include "nsIStreamConverter.h"
+#include "nsIStreamConverter2.h"
 #include "nsIMsgComposeService.h"
 
 //
