@@ -34,6 +34,7 @@
  */
 
 const PREF_RELOAD = true;
+const PREF_WRITETHROUGH = true;
 
 function PrefManager (branchName)
 {
@@ -152,6 +153,30 @@ function pm_addprefs(prefSpecs)
         this.addPref(prefSpecs[i][0], prefSpecs[i][1]);
 }
 
+PrefManager.prototype.addDeferredPrefs =
+function pm_addprefsd(targetManager, writeThrough)
+{
+    function deferGet(prefName)
+    {
+        return targetManager.getPref(prefName);
+    };
+
+    function deferSet(prefName, value)
+    {
+        return targetManager.setPref(prefName, value);
+    };
+
+    var setter = null;
+    
+    if (writeThrough)
+        setter = deferSet;
+    
+    var prefs = targetManager.prefs;
+    
+    for (var i = 0; i < prefs.length; ++i)
+        this.addPref(prefs[i], deferGet, setter);
+}
+
 PrefManager.prototype.updateArrayPref =
 function pm_arrayupdate(prefName)
 {
@@ -175,7 +200,7 @@ function pm_s2a(string)
     if (string.search(/\S/) == -1)
         return [];
     
-    var ary = string.split(/s*;\s*/);
+    var ary = string.split(/\s*;\s*/);
     for (var i = 0; i < ary.length; ++i)
         ary[i] = unescape(ary[i]);
 
@@ -203,12 +228,23 @@ function pm_getpref(prefName, reload)
     if (!ASSERT(record, "Unknown pref: " + prefName))
         return null;
     
-    if (!reload && record.realValue != null)
-        return record.realValue;
+    var defaultValue;
 
-    var realValue = null;
-    var defaultValue = record.defaultValue;
+    if (typeof record.defaultValue == "function")
+    {
+        // deferred pref, call the getter, and don't cache the result.
+        defaultValue = record.defaultValue(prefName);
+    }
+    else
+    {
+        if (!reload && record.realValue != null)
+            return record.realValue;
+
+        defaultValue = record.defaultValue;
+    }
     
+    var realValue = null;
+
     try
     {
         if (typeof defaultValue == "boolean")
@@ -237,7 +273,7 @@ function pm_getpref(prefName, reload)
     }
 
     if (!realValue)
-        return record.defaultValue;
+        return defaultValue;
 
     record.realValue = realValue;
     return realValue;
@@ -254,12 +290,20 @@ function pm_setpref(prefName, value)
     if (!ASSERT(record, "Unknown pref: " + prefName))
         return null;
     
-    if (record.realValue == null && value == record.defaultValue ||
+    if ((record.realValue == null && value == record.defaultValue) ||
         record.realValue == value)
     {
+        // no realvalue, and value is the same as default value ... OR ...
+        // no change at all.  just bail.
         return record.realValue;
     }
 
+    if (value == record.defaultValue)
+    {
+        this.clearPref(prefName);
+        return value;
+    }
+    
     var defaultValue = record.defaultValue;
     
     if (typeof defaultValue == "boolean")
@@ -287,7 +331,7 @@ function pm_setpref(prefName, value)
     return value;
 }
 
-PrefManager.prototype.resetPref =
+PrefManager.prototype.clearPref =
 function pm_reset(prefName)
 {
     this.prefRecords[prefName].realValue = null;
@@ -296,7 +340,7 @@ function pm_reset(prefName)
 }
 
 PrefManager.prototype.addPref =
-function pm_addpref(prefName, defaultValue)
+function pm_addpref(prefName, defaultValue, setter)
 {
     var prefManager = this;
 
@@ -310,6 +354,9 @@ function pm_addpref(prefName, defaultValue)
         return;
     }
     
+    if (!setter)
+        setter = prefSetter;
+    
     if (defaultValue instanceof Array)
         defaultValue.update = updateArrayPref;
 
@@ -319,5 +366,5 @@ function pm_addpref(prefName, defaultValue)
     this.prefNames.sort();
 
     this.prefs.__defineGetter__(prefName, prefGetter);
-    this.prefs.__defineSetter__(prefName, prefSetter);
+    this.prefs.__defineSetter__(prefName, setter);
 }

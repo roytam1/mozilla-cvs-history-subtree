@@ -357,6 +357,23 @@ function getCommonPfx (list)
 
 }
 
+function openTopWin (url)
+{
+    return openDialog (getBrowserURL(), "_blank", "chrome,all,dialog=no", url);
+}
+    
+function getWindowByType (windowType)
+{
+    const MEDIATOR_CONTRACTID =
+        "@mozilla.org/appshell/window-mediator;1";
+    const nsIWindowMediator  = Components.interfaces.nsIWindowMediator;
+
+    var windowManager =
+        Components.classes[MEDIATOR_CONTRACTID].getService(nsIWindowMediator);
+
+    return windowManager.getMostRecentWindow(windowType);
+}
+
 function renameProperty (obj, oldname, newname)
 {
 

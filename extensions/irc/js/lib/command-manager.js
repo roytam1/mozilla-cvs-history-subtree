@@ -637,6 +637,8 @@ function cmgr_isok (e, command)
 {
     if (typeof command == "undefined")
         command = e.command;
+    else if (typeof command == "string")
+        command = this.commands[command];
     
     if (!command.enabled)
         return false;

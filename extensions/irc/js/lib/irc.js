@@ -88,6 +88,7 @@ function CIRCNetwork (name, serverList, eventPump)
     this.name = name;
     this.servers = new Object();
     this.serverList = new Array();
+    this.connecting = false;
     
     for (var i = 0; i < serverList.length; ++i)
     {
@@ -115,16 +116,25 @@ CIRCNetwork.prototype.stayingPower = false;
 CIRCNetwork.prototype.TYPE = "IRCNetwork";
 
 CIRCNetwork.prototype.getURL =
-function net_geturl ()
+function net_geturl (target)
 {
     if (this.serverList.length == 1 &&
         this.serverList[0].name == this.name &&
         this.serverList[0].port != 6667)
     {
-        return this.serverList[0].getURL();
+        return this.serverList[0].getURL(target);
     }
     
-    return "irc://" + escape(this.name) + "/";
+    if (!target)
+        target = "";
+    
+    return "irc://" + escape(this.name) + "/" + target;
+}
+
+CIRCNetwork.prototype.addServer =
+function net_addsrv(host, port, password)
+{
+    this.serverList.push(new CIRCServer(this, host, port, password));
 }
 
 CIRCNetwork.prototype.connect =
@@ -256,9 +266,13 @@ CIRCServer.prototype.DEFAULT_REASON = "no reason";
 CIRCServer.prototype.TYPE = "IRCServer";
 
 CIRCServer.prototype.getURL =
-function serv_geturl ()
+function serv_geturl (target)
 {
-    var url = "irc://" + this.name + ":" + this.port + "/,isserver";
+    if (!target)
+        target = "";
+    
+    var url = "irc://" + this.hostname + ":" + this.port + "/" + target +
+        ",isserver";
     if (this.password)
         url += ",needpass";
 
@@ -525,7 +539,7 @@ function serv_whois (target)
 CIRCServer.prototype.onDisconnect = 
 function serv_disconnect(e)
 {
-    if (("connecting" in this.parent) ||
+    if ((this.parent.connecting) ||
         /* fell off while connecting, try again */
         (this.parent.primServ == this) &&
         (!("quitting" in this) && this.parent.stayingPower))
@@ -793,7 +807,7 @@ CIRCServer.prototype.on001 =
 function serv_001 (e)
 {
     this.parent.connectAttempt = 0;
-    delete this.parent.connecting;
+    this.parent.connecting = false;
 
     /* servers wont send a nick change notification if user was forced
      * to change nick while logging in (eg. nick already in use.)  We need
@@ -1645,7 +1659,7 @@ function chan_geturl ()
         target = escape(this.encodedName.substr(1));
     else
         target = escape(this.encodedName);
-    return this.parent.parent.getURL() + target;
+    return this.parent.parent.getURL(target);
 }
 
 CIRCChannel.prototype.addUser = 
@@ -1978,7 +1992,7 @@ CIRCUser.prototype.TYPE = "IRCUser";
 CIRCUser.prototype.getURL =
 function usr_geturl ()
 {
-    return this.parent.getURL() + this.nick + ",isnick";
+    return this.parent.getURL(this.nick) + ",isnick";
 }
 
 CIRCUser.prototype.changeNick =
@@ -2078,7 +2092,7 @@ function CIRCChanUser (parent, nick, isOp, isVoice)
 
 function cusr_geturl ()
 {
-    return this.parent.parent.getURL() + escape(this.nick) + ",isnick";
+    return this.parent.parent.getURL(escape(this.nick)) + ",isnick";
 }
 
 function cusr_setop (f)

@@ -140,20 +140,38 @@ function onUnload()
 
 function onNotImplemented()
 {
-
     alert (getMsg("onNotImplementedMsg"));
-    
 }
 
 /* tab click */
 function onTabClick (id)
 {
-    
     var tbi = document.getElementById (id);
     var view = client.viewsArray[tbi.getAttribute("viewKey")];
 
     setCurrentObject (view.source);
+}
+
+function onMessageViewClick(e)
+{
+    if (e.which != 1)
+        return;
     
+    var cx = getMessagesContext(null, e.target);
+    var command;
+    
+    if (e.metaKey || e.altKey)
+        command = client.prefs["messages.metaClick"];
+    else if (e.ctrlKey)
+        command = client.prefs["messages.ctrlClick"];
+    else
+        command = client.prefs["messages.click"];
+    
+    if (client.commandManager.isCommandSatisfied(cx, command))
+    {
+        dispatch(command, cx);
+        e.preventDefault();
+    }
 }
 
 function onMouseOver (e)
@@ -1187,15 +1205,15 @@ function my_cnick (e)
     if (userIsMe (e.user))
     {
         if (client.currentObject == this)
-            this.displayHere (getMsg("my_cnickMsg", e.user.properNick),
-                              "NICK", "ME!", e.user, this);
+            this.displayHere(getMsg(MSG_NEWNICK_YOU, e.user.properNick),
+                             "NICK", "ME!", e.user, this);
         updateNetwork();
         updateStalkExpression(this);
     }
     else
     {
-        this.display (getMsg("my_cnickMsg2", [e.oldNick, e.user.properNick]),
-                      "NICK", e.user, this);
+        this.display(getMsg(MSG_NEWNICK_NOTYOU, [e.oldNick, e.user.properNick]),
+                     "NICK", e.user, this);
     }
 }
 
@@ -1473,26 +1491,21 @@ function my_cmode (e)
     
 }
 
-    
-
 CIRCChannel.prototype.onNick =
 function my_cnick (e)
 {
-
     if (userIsMe (e.user))
     {
-        this.display (getMsg("my_cnickMsg", e.user.properNick), "NICK",
-                      "ME!", e.user, this);
+        if (client.currentObject == this)
+            this.displayHere(getMsg(MSG_NEWNICK_YOU, e.user.properNick),
+                             "NICK", "ME!", e.user, this);
         updateNetwork();
     }
     else
-        this.display (getMsg("my_cnickMsg2", e.oldNick, e.user.properNick),
-                      "NICK", e.user, this);
-
-    /*
-      dd ("updating resource " + e.user.getGraphResource().Value +
-        " to new nickname " + e.user.properNick);
-    */
+    {
+        this.display(getMsg(MSG_NEWNICK_NOTYOU, [e.oldNick, e.user.properNick]),
+                     "NICK", e.user, this);
+    }
 
     e.user.updateGraphResource();
     updateUserList();

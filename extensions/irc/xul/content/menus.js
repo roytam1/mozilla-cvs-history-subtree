@@ -166,16 +166,26 @@ function initMenus()
          ["-"],
          ["kick",       {enabledif: "cx.channel.iAmOp()"}],
          ["whois"],
-         ["query"]
+         ["query"],
+         ["version"],
         ]
     };
 
+    var urlenabled = "has('url') && cx.url.search(/^irc:/i) == -1";
+    
     client.menuSpecs["context:messages"] = {
         getContext: getMessagesContext,
         items:
         [
+         ["goto-url", {enabledif: urlenabled}],
+         ["goto-url-newwin", {enabledif: urlenabled}],
+         ["goto-url-newtab", {enabledif: urlenabled}],
+         ["-"],
          ["leave", 
                  {enabledif: "cx.TYPE == 'IRCChannel'"}],
+         ["delete-view", {enabledif: "client.viewsArray.length > 1"}],
+         ["disconnect"],
+         ["-"],
          ["op",
                  {enabledif: "cx.TYPE == 'IRCChannel' && " +
                   "cx.channel.iAmOp() && !cx.user.isOp"}],
@@ -188,15 +198,32 @@ function initMenus()
          ["devoice",
                  {enabledif: "cx.TYPE == 'IRCChannel' && " +
                   "cx.channel.iAmOp() && cx.user.isVoice"}],
+         ["-"],
          ["kick",       
                  {enabledif: "cx.TYPE == 'IRCChannel' && " +
                   "cx.channel.iAmOp()"}],
-         ["-"],
          ["whois"],
          ["query"],
          ["version"],
          ["-"],
-         ["disconnect"]
+         ["toggle-oas",
+                 {type: "checkbox",
+                  checkedif: "isStartupURL(cx.sourceObject.getURL())"}],
+        ]
+    };
+
+    client.menuSpecs["context:tab"] = {
+        getContext: getTabContext,
+        items:
+        [
+         ["leave", 
+                 {enabledif: "cx.TYPE == 'IRCChannel'"}],
+         ["delete-view", {enabledif: "client.viewsArray.length > 1"}],
+         ["disconnect"],
+         ["-"],
+         ["toggle-oas",
+                 {type: "checkbox",
+                  checkedif: "isStartupURL(cx.sourceObject.getURL())"}],
         ]
     };
 

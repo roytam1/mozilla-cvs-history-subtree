@@ -51,14 +51,18 @@ function initPrefs()
          ["collapseMsgs",    false],
          ["copyMessages",    true],
          ["log",             false],
-         ["initialURLs",      []],
+         ["initialURLs",     []],
+         ["initialScripts",  []],
          ["stalkWholeWords", true],
          ["stalkWords",      []],
+         ["messages.click",     "goto-url"],
+         ["messages.ctrlClick", "goto-url-newwin"],
+         ["messages.metaClick", "goto-url-newtab"],
          ["motif.dark",      "chrome://chatzilla/skin/output-dark.css"],
          ["motif.light",     "chrome://chatzilla/skin/output-light.css"],
          ["motif.default",   "chrome://chatzilla/skin/output-default.css"],
          ["motif.current",   "chrome://chatzilla/skin/output-default.css"],
-         ["outputWindowURL", "chrome://chatzilla/content/outputwindow.html?%s"]
+         ["outputWindowURL", "chrome://chatzilla/content/output-window.html"]
         ];
 
     client.prefManager.addPrefs(prefs);
@@ -69,6 +73,11 @@ function initPrefs()
 
 function getNetworkPrefManager(network)
 {
+    function defer(prefName)
+    {
+        return client.prefs[prefName];
+    };
+
     function onPrefChanged(prefName, newValue, oldValue)
     {
         onNetworkPrefChanged (network, prefName, newValue, oldValue);
@@ -76,14 +85,76 @@ function getNetworkPrefManager(network)
     
     var prefs =
         [
-         ["nickname",        client.prefs["nickname"]],
-         ["username",        client.prefs["username"]],
-         ["desc",            client.prefs["desc"]],
-         ["log",             false]
+         ["nickname",        defer],
+         ["username",        defer],
+         ["desc",            defer],
+         ["log",             false],
+         ["outputWindowURL", defer],
+         ["motif.current",   defer]
+        ];
+
+    var branch = "extensions.irc.networks." + escape(network.name) + ".";
+    var prefManager = new PrefManager(branch);
+    prefManager.addPrefs(prefs);
+    prefManager.onPrefChanged = onPrefChanged;
+    
+    return prefManager;
+}
+
+function getChannelPrefManager(channel)
+{
+    var network = channel.parent.parent;
+
+    function defer(prefName)
+    {
+        return network.prefs[prefName];
+    };
+    
+    function onPrefChanged(prefName, newValue, oldValue)
+    {
+        onChannelPrefChanged (channel, prefName, newValue, oldValue);
+    };
+    
+    var prefs =
+        [
+         ["log",              false],
+         ["outputWindowURL",  defer],
+         ["motif.current",    defer]
         ];
     
-    var branch = "extensions.irc.networks." + escape(network.name) + ".";
-    prefManager = new PrefManager(branch);
+    var branch = "extensions.irc.networks." + escape(network.name) +
+        ".channels." + escape(channel.unicodeName);
+    var prefManager = new PrefManager(branch);
+    prefManager.addPrefs(prefs);
+    prefManager.onPrefChanged = onPrefChanged;
+    
+    return prefManager;
+}
+
+function getUserPrefManager(user)
+{
+    var network = user.parent.parent;
+
+    function defer(prefName)
+    {
+        return network.prefs[prefName];
+    };
+    
+    function onPrefChanged(prefName, newValue, oldValue)
+    {
+        onUserPrefChanged (user, prefName, newValue, oldValue);
+    };
+    
+    var prefs =
+        [
+         ["motif.current",    defer],
+         ["outputWindowURL",  defer],
+         ["log",              false]
+        ];
+    
+    var branch = "extensions.irc.networks." + escape(network.name) +
+        ".users." + escape(user.unicodeName);
+    var prefManager = new PrefManager(branch);
     prefManager.addPrefs(prefs);
     prefManager.onPrefChanged = onPrefChanged;
     
@@ -94,26 +165,6 @@ function destroyPrefs()
 {
     if ("prefManager" in client)
         client.prefManager.destroy();
-}
-
-function onNetworkPrefChanged(network, prefName, newValue, oldValue)
-{
-    dd("network pref changed: " + network.name + ", " + prefName);
-    
-    switch (prefName)
-    {
-        case "nickname":
-            network.INITIAL_NICK = newValue;
-            break;
-
-        case "username":
-            network.INITIAL_NAME = newValue;
-            break;
-
-        case "desc":
-            network.INITIAL_DESC = newValue;
-            break;
-    }
 }
 
 function onPrefChanged(prefName, newValue, oldValue)
@@ -139,6 +190,42 @@ function onPrefChanged(prefName, newValue, oldValue)
             
         case "motif.current":
             dispatch("sync-css");
+            break;
     }
+}
+
+function onNetworkPrefChanged(network, prefName, newValue, oldValue)
+{
+    switch (prefName)
+    {
+        case "nickname":
+            network.INITIAL_NICK = newValue;
+            break;
+
+        case "username":
+            network.INITIAL_NAME = newValue;
+            break;
+
+        case "desc":
+            network.INITIAL_DESC = newValue;
+            break;
+
+        case "motif.current":
+            dispatch("sync-css");
+            break;
+    }
+}
+
+function onChannelPrefChanged(channel, prefName, newValue, oldValue)
+{
+    switch (prefName)
+    {
+        case "motif.current":
+            dispatch("sync-css");
+    }
+}
+
+function onUserPrefChanged(channel, prefName, newValue, oldValue)
+{
 }
 

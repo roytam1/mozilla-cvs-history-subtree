@@ -107,7 +107,7 @@ function initReadPrefs()
         "defaultNet":        ["client.DEFAULT_NETWORK",               "moznet"],
         //"charset":           ["client.CHARSET",                           ""],
         //"initialURLs":       ["client.INITIAL_URLS",                  "irc://"],
-        "initialScripts":    ["client.INITIAL_SCRIPTS",                     ""],
+        //"initialScripts":    ["client.INITIAL_SCRIPTS",                     ""],
         "newTabLimit":       ["client.NEW_TAB_LIMIT",                       15],
         "raiseNewTab":       ["client.RAISE_NEW_TAB",                    false],
         "nickCompleteStr":   ["client.ADDRESSED_NICK_SEP",                ", "],

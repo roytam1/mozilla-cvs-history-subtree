@@ -46,7 +46,7 @@ else
 
 var client = new Object();
 
-client.version = "0.9.0";
+client.version = "0.9.5";
 
 client.TYPE = "IRCClient";
 client.COMMAND_CHAR = "/";
@@ -239,13 +239,14 @@ function init()
     initStatic();
     initHandlers();
     processStartupScripts();
-    processStartupURLs();
 
     client.commandManager.installKeys(document);
     createMenus();
     
     dispatch("networks")
     dispatch("commands");
+    
+    processStartupURLs();
 }
 
 function initStatic()
@@ -344,14 +345,11 @@ function initNetworks()
 function processStartupScripts()
 {
     client.userScripts = new Array();
-    if (client.INITIAL_SCRIPTS)
+    var urls = client.prefs["initialScripts"];
+    for (var i = 0; i < urls.length; ++i)
     {
-        var urls = client.INITIAL_SCRIPTS.split (";");
-        for (var i = 0; i < urls.length; ++i)
-        {
-            client.userScripts[i] = new Object();
-            client.load(stringTrim(urls[i]), client.userScripts[i]);
-        }
+        client.userScripts[i] = new Object();
+        client.load(urls[i], client.userScripts[i]);
     }
 }
 
@@ -786,10 +784,11 @@ function getDefaultContext(cx)
     return getObjectDetails(client.currentObject, cx);
 }
 
-function getMessagesContext(cx)
+function getMessagesContext(cx, element)
 {
     cx = getObjectDetails(client.currentObject, cx);
-    var element = document.popupNode;
+    if (!element)
+        element = document.popupNode;
 
     while (element)
     {
@@ -816,11 +815,29 @@ function getMessagesContext(cx)
                     cx.user = cx.channel.users[nickname];
                 else
                     cx.user = cx.network.users[nickname];
-                cx.nickname = cx.user.properNick;
-                cx.canonNick = cx.user.nick;
+                if (cx.user)
+                {
+                    cx.nickname = cx.user.properNick;
+                    cx.canonNick = cx.user.nick;
+                }
                 break;
         }
 
+        element = element.parentNode;
+    }
+
+    return cx;
+}
+
+function getTabContext(cx, element)
+{
+    if (!element)
+        element = document.popupNode;
+
+    while (element)
+    {
+        if (element.localName == "tab")
+            return getObjectDetails(element.view);
         element = element.parentNode;
     }
 
@@ -1686,7 +1703,7 @@ function gotoIRCURL (url)
                 "server " + url.host + " trying to connect...");
             */
             dispatch("server", {hostname: url.host, port: url.port,
-                                password: e.password});
+                                password: pass});
             network = client.networks[url.host];
             if (!("pendingURLs" in network))
                 network.pendingURLs = new Array();
@@ -2199,8 +2216,8 @@ function updateUserList()
     for (var i = 0; i < colArray.length; i++)
     {
         node = document.getElementById(colArray[i]);
-	    if (!node)
-		    return;
+        if (!node)
+            return;
         sortDirection = node.getAttribute("sortDirection");
         if (sortDirection != "")
             break;
@@ -2258,7 +2275,8 @@ function qi(iid)
 client.progressListener.onStateChange = 
 function client_statechange (webProgress, request, stateFlags, status)
 {
-    const nsIWebProgressListener = Components.interfaces.nsIWebProgressListener;    const START = nsIWebProgressListener.STATE_START;
+    const nsIWebProgressListener = Components.interfaces.nsIWebProgressListener;
+    const START = nsIWebProgressListener.STATE_START;
     const STOP = nsIWebProgressListener.STATE_STOP;
 
     var frame;
@@ -2268,7 +2286,7 @@ function client_statechange (webProgress, request, stateFlags, status)
         if (!frame)
         {
             dd("can't find frame for window")
-            webProgress.removeProgressListener (this);
+            webProgress.removeProgressListener(this);
             return;
         }
     }
@@ -2278,9 +2296,16 @@ function client_statechange (webProgress, request, stateFlags, status)
         if (!frame)
         {
             dd("can't find frame for window")
-            webProgress.removeProgressListener (this);
+            webProgress.removeProgressListener(this);
             return;
         }
+
+        if (frame.contentWindow && "initOutputWindow" in frame.contentWindow)
+        {
+            var url = frame.source.prefs["motif.current"];
+            frame.contentWindow.initOutputWindow(client, frame.source, url);
+        }
+
         frame.contentDocument.body.appendChild(frame.source.messages);
     }
 }
@@ -2306,26 +2331,27 @@ function client_securitychange (webProgress, request, state)
 {
 }
 
-function syncOutputFrame(iframe)
+function syncOutputFrame(obj)
 {
     const nsIWebProgress = Components.interfaces.nsIWebProgress;
     const ALL = nsIWebProgress.NOTIFY_ALL;
     const DOCUMENT = nsIWebProgress.NOTIFY_STATE_DOCUMENT;
     const WINDOW = nsIWebProgress.NOTIFY_STATE_WINDOW;
  
+    var iframe = obj.frame;
+    
     function tryAgain ()
     {
-        syncOutputFrame(iframe);
+        syncOutputFrame(obj);
     };
  
     try
     {
         if ("contentDocument" in iframe && "webProgress" in iframe)
         {
-            var base = client.prefs["outputWindowURL"];
-            var uri = base.replace("%s", client.prefs["motif.current"]);
-            iframe.addProgressListener (client.progressListener, WINDOW);
-            iframe.loadURI(uri);
+            var url = obj.prefs["outputWindowURL"];
+            iframe.addProgressListener(client.progressListener, WINDOW);
+            iframe.loadURI(url);
         }
         else
         {
@@ -2334,8 +2360,8 @@ function syncOutputFrame(iframe)
     }
     catch (ex)
     {
-        dd ("caught exception showing session view, will try again later.");
-        dd (dumpObjectTree(ex)+"\n");
+        dd("caught exception showing session view, will try again later.");
+        dd(dumpObjectTree(ex) + "\n");
         setTimeout (tryAgain, 500);
     }
 }
@@ -2411,6 +2437,7 @@ function getTabForObject (source, create)
         tb.setAttribute ("name", source.name);
         tb.setAttribute ("onclick", "onTabClick(" + id.quote() + ");");
         tb.setAttribute ("crop", "right");
+        tb.setAttribute ("context", "context:tab");
         
         tb.setAttribute ("class", "tab-bottom view-button");
         tb.setAttribute ("id", id);
@@ -2418,29 +2445,36 @@ function getTabForObject (source, create)
 
         client.viewsArray.push ({source: source, tb: tb});
         tb.setAttribute ("viewKey", client.viewsArray.length - 1);
+        tb.view = source;
+
         if (matches > 1)
             tb.setAttribute("label", name + "<" + matches + ">");
         else
             tb.setAttribute("label", name);
 
-        views.appendChild (tb);        
+        views.appendChild(tb);        
 
         var browser = document.createElement ("browser");
-        browser.setAttribute ("class", "output-container");
-        browser.setAttribute ("type", "content");
-        browser.setAttribute ("flex", "1");
-        browser.setAttribute ("tooltip", "aHTMLTooltip");
-        browser.setAttribute ("context", "context:messages");
+        browser.setAttribute("class", "output-container");
+        browser.setAttribute("type", "content");
+        browser.setAttribute("flex", "1");
+        browser.setAttribute("tooltip", "aHTMLTooltip");
+        browser.setAttribute("context", "context:messages");
         //browser.setAttribute ("onload", "scrollDown(true);");
-        if (client.NO_BROWSER_FOCUS)
-            browser.setAttribute ("onclick", "dispatch('focus-input')");
-        browser.setAttribute ("ondragover", "nsDragAndDrop.dragOver(event, contentDropObserver);");
-        browser.setAttribute ("ondragdrop", "nsDragAndDrop.drop(event, contentDropObserver);");
-        browser.setAttribute ("ondraggesture", "nsDragAndDrop.startDrag(event, contentAreaDNDObserver);");
+        browser.setAttribute("onclick",
+                             "return onMessageViewClick(event)");
+        browser.setAttribute("ondragover",
+                             "nsDragAndDrop.dragOver(event, " +
+                             "contentDropObserver);");
+        browser.setAttribute("ondragdrop",
+                             "nsDragAndDrop.drop(event, contentDropObserver);");
+        browser.setAttribute("ondraggesture",
+                             "nsDragAndDrop.startDrag(event, " +
+                             "contentAreaDNDObserver);");
         browser.source = source;
         source.frame = browser;
         client.deck.appendChild (browser);
-        syncOutputFrame (browser);
+        syncOutputFrame (source);
     }
 
     return tb;
@@ -2470,13 +2504,9 @@ function tabdnd_drop (aEvent, aXferData, aDragSession)
         return;
     
     if (url.search(/\.css$/i) != -1  && confirm (getMsg("tabdnd_drop", url)))
-    {
-        onSimulateCommand("/css " + url);
-    }
+        dispatch("motif", {"motif": url});
     else if (url.search(/^irc:\/\//i) != -1)
-    {
-        gotoIRCURL (url);
-    }
+        dispatch("goto-url", {"url": url});
 }
 
 contentDropObserver.getSupportedFlavours =
@@ -2580,6 +2610,9 @@ function cli_connect(name)
         netobj.display(getMsg(MSG_ALREADY_CONNECTED, name));
         return true;
     }
+
+    if (network.connecting)
+        return true;
     
     if (network.prefs["log"])
        client.startLogging(network);
@@ -2666,7 +2699,7 @@ function cli_say(msg)
 CIRCNetwork.prototype.__defineGetter__("prefs", net_getprefs);
 function net_getprefs()
 {
-    if (!this._prefs)
+    if (!("_prefs" in this))
     {
         this._prefManager = getNetworkPrefManager(this);
         this._prefs = this._prefManager.prefs;
@@ -2678,9 +2711,57 @@ function net_getprefs()
 CIRCNetwork.prototype.__defineGetter__("prefManager", net_getprefmgr);
 function net_getprefmgr()
 {
-    if (!this._prefManager)
+    if (!("_prefManager" in this))
     {
         this._prefManager = getNetworkPrefManager(this);
+        this._prefs = this._prefManager.prefs;
+    }
+    
+    return this._prefManager;
+}
+
+CIRCChannel.prototype.__defineGetter__("prefs", chan_getprefs);
+function chan_getprefs()
+{
+    if (!("_prefs" in this))
+    {
+        this._prefManager = getChannelPrefManager(this);
+        this._prefs = this._prefManager.prefs;
+    }
+    
+    return this._prefs;
+}
+
+CIRCChannel.prototype.__defineGetter__("prefManager", chan_getprefmgr);
+function chan_getprefmgr()
+{
+    if (!("_prefManager" in this))
+    {
+        this._prefManager = getChannelPrefManager(this);
+        this._prefs = this._prefManager.prefs;
+    }
+    
+    return this._prefManager;
+}
+
+CIRCUser.prototype.__defineGetter__("prefs", usr_getprefs);
+function usr_getprefs()
+{
+    if (!("_prefs" in this))
+    {
+        this._prefManager = getUserPrefManager(this);
+        this._prefs = this._prefManager.prefs;
+    }
+    
+    return this._prefs;
+}
+
+CIRCUser.prototype.__defineGetter__("prefManager", usr_getprefmgr);
+function usr_getprefmgr()
+{
+    if (!("_prefManager" in this))
+    {
+        this._prefManager = getUserPrefManager(this);
         this._prefs = this._prefManager.prefs;
     }
     
@@ -3059,7 +3140,7 @@ function __display(message, msgtype, sourceObj, destObj)
                                   sourceObj, destObj);
     }
 
-    if (("logging" in this) && this.logging)
+    if (this.prefs["log"])
     {
         try
         {
@@ -3067,11 +3148,16 @@ function __display(message, msgtype, sourceObj, destObj)
         }
         catch (ex)
         {
-            this.logging = false;
-            this.localPrefs.clearUserPref("logging");
             this.displayHere(getMsg("cli_ilogMsg7", this.logFile.path),
                              "ERROR");
-            this.logFile.close();
+            try
+            {
+                this.logFile.close();
+            }
+            catch(ex)
+            {
+                // can't do much here.
+            }
         }
     }
 }
