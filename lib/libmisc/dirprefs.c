@@ -142,9 +142,6 @@ typedef struct DIR_Filter
 
 #define kLdapServersPrefName "network.hosts.ldap_servers"
 
-#define kDefaultPABColumnHeaders "cn, mail,o,title,telephonenumber, l"  /* default column headers for the address book window */
-#define kDefaultLDAPColumnHeaders "mail,cn,o,givenname,telephonenumber, l"
-
 const char *DIR_GetAttributeName (DIR_Server *server, DIR_AttributeId id);
 static DIR_DefaultAttribute *DIR_GetDefaultAttribute (DIR_AttributeId id);
 void DIR_SetFileName(char** filename, const char* leafName);
@@ -220,7 +217,6 @@ int DIR_InitServer (DIR_Server *server)
 		server->maxHits = kDefaultMaxHits;
 		server->isOffline = kDefaultIsOffline;
 		server->refCount = 1;
-		server->columnAttributes = XP_STRDUP(kDefaultLDAPColumnHeaders);
 	}
 	return 0;
 }
@@ -346,13 +342,6 @@ int DIR_CopyServer (DIR_Server *in, DIR_Server **out)
 			{
 				(*out)->prefId = XP_STRDUP(in->prefId);
 				if (!(*out)->prefId)
-					err = MK_OUT_OF_MEMORY;
-			}
-
-			if (in->columnAttributes)
-			{
-				(*out)->columnAttributes = XP_STRDUP(in->columnAttributes);
-				if (!(*out)->columnAttributes)
 					err = MK_OUT_OF_MEMORY;
 			}
 
@@ -615,15 +604,6 @@ int DIR_DeleteServer (DIR_Server *server)
 	{
 		int i;
 
-		/* when destroying the server check its clear flag to see if things need cleared */
-		if (DIR_TestFlag(server, DIR_CLEAR_SERVER))
-		{
-			if (server->fileName)
-				XP_FileRemove (server->fileName, xpAddrBookNew);
-			if (server->replInfo && server->replInfo->fileName)
-				XP_FileRemove (server->replInfo->fileName, xpAddrBookNew);
-		}
-
 		XP_FREEIF (server->description);
 		XP_FREEIF (server->serverName);
 		XP_FREEIF (server->searchBase);
@@ -633,7 +613,6 @@ int DIR_DeleteServer (DIR_Server *server)
 		XP_FREEIF (server->authDn);
 		XP_FREEIF (server->password);
 		XP_FREEIF (server->prefId);
-		XP_FREEIF (server->columnAttributes);
 
 		if (server->customFilters)
 		{
@@ -880,17 +859,10 @@ int DIR_AttributeNameToId(const char *attrName, DIR_AttributeId *id)
 		else
 			status = -1;
 		break;
-	case 'b':
-		if (!XP_STRCASECMP(attrName, "businesscategory"))
-			*id = businesscategory;
-		else
-			status = -1;
-		break;
+
 	case 'c' :
 		if (!XP_STRCASECMP(attrName, "cn"))
 			*id = cn;
-		else if (!XP_STRCASECMP(attrName, "carlicense"))
-			*id = carlicense;
 		else if (!XP_STRNCASECMP(attrName, "custom", 6))
 		{
 			switch (attrName[6])
@@ -903,27 +875,6 @@ int DIR_AttributeNameToId(const char *attrName, DIR_AttributeId *id)
 			default: status = -1; 
 			}
 		}
-		else
-			status = -1;
-		break;
-	case 'd':
-		if (!XP_STRCASECMP(attrName, "departmentnumber"))
-			*id = departmentnumber;
-		else
-			if (!XP_STRCASECMP(attrName, "description"))
-				*id = description;
-		else
-			status = -1;
-		break;
-	case 'e':
-		if (!XP_STRCASECMP(attrName, "employeetype"))
-			*id = employeetype;
-		else
-			status = -1;
-		break;
-	case 'f':
-		if (!XP_STRCASECMP(attrName, "facsimiletelephonenumber"))
-			*id = facsimiletelephonenumber;
 		else
 			status = -1;
 		break;
@@ -942,8 +893,6 @@ int DIR_AttributeNameToId(const char *attrName, DIR_AttributeId *id)
 	case 'm':
 		if (!XP_STRCASECMP(attrName, "mail"))
 			*id = mail;
-		else if (!XP_STRCASECMP(attrName, "manager"))
-			*id = manager;
 		else
 			status = -1;
 		break;
@@ -952,16 +901,6 @@ int DIR_AttributeNameToId(const char *attrName, DIR_AttributeId *id)
 			*id = o;
 		else if (!XP_STRCASECMP(attrName, "ou"))
 			*id = ou;
-		else if (!XP_STRCASECMP(attrName, "objectclass"))
-			*id = objectclass;
-		else
-			status = -1;
-		break;
-	case 'p':
-		if (!XP_STRCASECMP(attrName, "postalcode"))
-			*id = postalcode;
-		else if (!XP_STRCASECMP(attrName, "postaladdress"))
-			*id = postaladdress;
 		else
 			status = -1;
 		break;
@@ -970,16 +909,12 @@ int DIR_AttributeNameToId(const char *attrName, DIR_AttributeId *id)
 			*id = street;
 		else if (!XP_STRCASECMP(attrName, "sn"))
 			*id = sn;
-		else if (!XP_STRCASECMP(attrName, "secretary"))
-			*id = secretary;
 		else
 			status = -1;
 		break;
 	case 't':
 		if (!XP_STRCASECMP(attrName, "telephonenumber"))
 			*id = telephonenumber;
-		else if (!XP_STRCASECMP(attrName, "title"))
-			*id = title;
 		else
 			status = -1;
 		break;
@@ -1064,79 +999,6 @@ static int DIR_AddCustomAttribute(DIR_Server *server, const char *attrName, char
 
 	if (jsCompleteAttr)
 		XP_FREE(jsCompleteAttr);
-
-	return status;
-}
-
-int DIR_GetNumAttributeIDsForColumns(DIR_Server * server)
-{
-	int count = 0;
-	char * buffer = NULL;
-	char * marker = NULL;
-	if (server && server->columnAttributes)
-	{
-		buffer = XP_STRDUP(server->columnAttributes);
-		if (buffer)
-		{
-			marker = buffer;
-			while (XP_STRTOK_R(nil, ", ", &buffer))
-				count++;
-			XP_FREEIF(marker);
-		}
-	}
-
-	return count;
-}
-
-int DIR_GetAttributeIDsForColumns(DIR_Server *server, DIR_AttributeId ** ids /* caller must free */, int * numIds)
-{
-	DIR_AttributeId * idArray = NULL;
-	int status = 0; 
-	int numAdded = 0;  /* number of ids we actually added to the array...*/
-	int index = 0;
-	int numItems = 0; 
-	char * idName = NULL;
-	char * marker = NULL;
-	char * columnIDs = NULL;
-
-	if (server && numIds && ids)
-	{
-		if (server->columnAttributes) 
-		{
-			columnIDs = XP_STRDUP(server->columnAttributes);
-			numItems = DIR_GetNumAttributeIDsForColumns(server);
-		}
-
-		if (columnIDs && numItems)
-		{
-			marker = columnIDs;
-			idArray = (DIR_AttributeId *) XP_ALLOC(sizeof(DIR_AttributeId) * numItems);
-			if (idArray)
-			{
-				for (index; index < numItems; index++)
-				{
-					idName = XP_STRTOK_R(nil,", ",&marker);
-					if (idName)
-					{
-						if (DIR_AttributeNameToId(idName, &idArray[numAdded]) >= 0)
-							numAdded++;
-					}
-					else
-						break;
-				}
-
-			}
-			else
-				status = MK_OUT_OF_MEMORY;
-		}
-
-		XP_FREEIF(columnIDs); 
-	}
-
-	if (ids)
-		*ids = idArray;
-	if (numIds)
-		*numIds = numAdded;
 
 	return status;
 }
@@ -1522,12 +1384,6 @@ static int DIR_GetPrefsFromBranch(XP_List **list, const char *pabFile, const cha
 						pNewServer->isOffline = FALSE;
 					pNewServer->saveResults = TRUE; /* never let someone delete their PAB this way */
 				}
-
-				/* load in the column attributes */
-				if (pNewServer->dirType == PABDirectory)
-					pNewServer->columnAttributes = DIR_GetStringPref(prefstring, "columns", tempString, kDefaultPABColumnHeaders);
-				else
-					pNewServer->columnAttributes = DIR_GetStringPref(prefstring, "columns", tempString, kDefaultLDAPColumnHeaders);
 
 				pNewServer->fileName = DIR_GetStringPref (prefstring, "filename", tempString, "");
 				if (!pNewServer->fileName || !*(pNewServer->fileName)) 
@@ -2082,12 +1938,6 @@ int DIR_SaveServerPreferences (XP_List *wholeList)
 					DIR_SetIntPref (prefstring, "dirType", tempString, s->dirType, (int) LDAPDirectory);
 					DIR_SetBoolPref (prefstring, "isOffline", tempString, s->isOffline, kDefaultIsOffline);
 
-					/* save the column attributes */
-					if (s->dirType == PABDirectory)
-						DIR_SetStringPref(prefstring, "columns", tempString, s->columnAttributes, kDefaultPABColumnHeaders);
-					else
-						DIR_SetStringPref(prefstring, "columns", tempString, s->columnAttributes, kDefaultLDAPColumnHeaders);
-
 					DIR_SetBoolPref (prefstring, "autoComplete.enabled", tempString, DIR_TestFlag(s, DIR_AUTO_COMPLETE_ENABLED), kDefaultAutoCompleteEnabled);
 					DIR_SetIntPref (prefstring, "autoComplete.style", tempString, (int32) s->autoCompleteStyle, kDefaultAutoCompleteStyle);
 
@@ -2127,7 +1977,7 @@ static DIR_DefaultAttribute *DIR_GetDefaultAttribute (DIR_AttributeId id)
 {
 	int i = 0;
 
-	static DIR_DefaultAttribute defaults[28];
+	static DIR_DefaultAttribute defaults[16];
 
 	if (defaults[0].name == NULL)
 	{
@@ -2191,58 +2041,9 @@ static DIR_DefaultAttribute *DIR_GetDefaultAttribute (DIR_AttributeId id)
 		defaults[14].resourceId = MK_LDAP_EMAIL_ADDRESS;
 		defaults[14].name = "mail";
 
-		/* these extra attribute ids were added by mscott */
-		defaults[15].id = carlicense;
-		defaults[15].resourceId = MK_LDAP_CAR_LICENSE;
-		defaults[15].name = "carlicense";
-
-		defaults[16].id = businesscategory;
-		defaults[16].resourceId = MK_LDAP_BUSINESS_CAT;
-		defaults[16].name = "businesscategory";
-
-		defaults[17].id = departmentnumber;
-		defaults[17].resourceId = MK_LDAP_DEPT_NUMBER;
-		defaults[17].name = "businesscategory";
-
-		defaults[18].id = description;
-		defaults[18].resourceId = MK_LDAP_DESCRIPTION;
-		defaults[18].name = "description";
-
-		defaults[19].id = employeetype;
-		defaults[19].resourceId = MK_LDAP_EMPLOYEE_TYPE;
-		defaults[19].name = "employeetype";
-
-		defaults[20].id = facsimiletelephonenumber;
-		defaults[20].resourceId = MK_LDAP_FAX_NUMBER;
-		defaults[20].name = "facsimiletelephonenumber";
-
-		defaults[21].id = manager;
-		defaults[21].resourceId = MK_LDAP_MANAGER;
-		defaults[21].name = "manager";
-
-		defaults[22].id = objectclass;
-		defaults[22].resourceId = MK_LDAP_OBJECT_CLASS;
-		defaults[22].name = "objectclass";
-
-		defaults[23].id = postaladdress;
-		defaults[23].resourceId = MK_LDAP_POSTAL_ADDRESS;
-		defaults[23].name = "postaladdress";
-
-		defaults[24].id = postalcode;
-		defaults[24].resourceId = MK_LDAP_POSTAL_CODE;
-		defaults[24].name = "postalcode";
-
-		defaults[25].id = secretary;
-		defaults[25].resourceId = MK_LDAP_SECRETARY;
-		defaults[25].name = "secretary";
-
-		defaults[26].id = title;
-		defaults[26].resourceId = MK_LDAP_TITLE;
-		defaults[26].name = "title";
-
-		defaults[27].id = cn;
-		defaults[27].resourceId = 0;
-		defaults[27].name = NULL;
+		defaults[15].id = cn;
+		defaults[15].resourceId = 0;
+		defaults[15].name = NULL;
 	}
 
 	while (defaults[i].name)
