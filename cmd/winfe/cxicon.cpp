@@ -33,16 +33,18 @@ NSNavCenterImage::NSNavCenterImage(const char * url)
 	m_bCompletelyLoaded = FALSE;
 	bits = 0;
 	maskbits = 0;
+	
 	m_BadImage = FALSE;
 	NSNavCenterImage::refCount++;
 	iconContext = NULL;
+	pairCount = 0;
 }
 
 NSNavCenterImage::~NSNavCenterImage()
 {
-	XP_FREE( bmpInfo);
-	CDCCX::HugeFree(bits);
-	CDCCX::HugeFree(maskbits);
+//	XP_FREE( bmpInfo);
+//	CDCCX::HugeFree(bits);
+//	CDCCX::HugeFree(maskbits);
 	free(pUrl);
 	
 	NSNavCenterImage::refCount--;
@@ -131,9 +133,10 @@ void Icon_GetUrlExitRoutine(URL_Struct *pUrl, int iStatus, MWContext *pContext)
 
 		if (theImage) 
 		{  // Since we cannot load this url, replace it with a bad image.
-			theImage->maskbits = 0;
-			theImage->bits = 0;
 			theImage->m_BadImage = TRUE;
+			theImage->bits = 0;
+			theImage->maskbits = 0;
+			theImage->bmpInfo = 0;
 			if (!NSNavCenterImage::m_hBadImageBitmap)
 				NSNavCenterImage::m_hBadImageBitmap = ::LoadBitmap(AfxGetResourceHandle(), MAKEINTRESOURCE(IDB_IMAGE_BAD));
 			theImage->CompleteCallback();
@@ -241,6 +244,19 @@ void NSNavCenterImage::CompleteCallback()
 	DestroyContext();
 }
 
+void NSNavCenterImage::CompleteCallbackWithoutDeletion()
+{
+	m_bCompletelyLoaded = TRUE;
+	for (POSITION pos = resourceList.GetHeadPosition(); pos != NULL; )
+	{
+		CIconCallbackInfo* callback = (CIconCallbackInfo*)(resourceList.GetNext(pos));
+		if (callback->pObject)
+		{
+			callback->pObject->LoadComplete(callback->pResource);
+		}
+	}
+}
+
 CXIcon::CXIcon(NSNavCenterImage* theImage)
 {
     MWContext *pContext = GetContext();
@@ -263,59 +279,40 @@ BITMAPINFO * CXIcon::NewPixmap(NI_Pixmap *pImage, BOOL isMask)
 	if (isMask)
 		m_mask = pImage;
 	else m_image = pImage;
-	
+
 	return CDCCX::NewPixmap(pImage, isMask);
 }
 
+int CXIcon::DisplayPixmap(NI_Pixmap* image, NI_Pixmap* mask, int32 x, int32 y, int32 x_offset, int32 y_offset, int32 width, int32 height, LTRB& Rect)
+{
+	m_image = image;
+	m_mask = mask;
+
+	m_icon->bmpInfo = FillBitmapInfoHeader(image);
+	m_icon->bits = image->bits;
+	if (mask)
+		m_icon->maskbits = mask->bits;
+
+	m_icon->CompleteCallbackWithoutDeletion();
+	return 1;
+}
 
 void CXIcon::ImageComplete(NI_Pixmap* image)
 {
-	FEBitmapInfo *imageInfo;
-	imageInfo = (FEBitmapInfo*) image->client_data;
-	BITMAPINFOHEADER* header = (BITMAPINFOHEADER*)imageInfo->bmpInfo;
-	if (image == m_image)
+	// Will get a call for both the mask and for the image.  
+	if (m_image && m_mask)
 	{
-		int nColorTable;
-		if (GetBitsPerPixel() == 16 || GetBitsPerPixel() == 32)
-			nColorTable = 3;
-		else if (GetBitsPerPixel() < 16)
-			nColorTable = 1 << GetBitsPerPixel();
-		else {
-			ASSERT(GetBitsPerPixel() == 24);
-			nColorTable = 0;
-		}
-
-		m_icon->bmpInfo = FillBitmapInfoHeader(image);
-		m_icon->bits = HugeAlloc(header->biSizeImage, 1);
-		memcpy( m_icon->bits, image->bits, header->biSizeImage );
-	}
-	else 
-	{
-		m_icon->maskbits = HugeAlloc(header->biSizeImage, 1);
-		memcpy( m_icon->maskbits, image->bits, header->biSizeImage );
-	}
-
-	delete imageInfo;
-	image->client_data = 0;
-	if (m_image && m_mask) 
-	{
-		if (m_icon->maskbits && m_icon->bits) 
-		{
-			CDCCX::HugeFree(m_image->bits);
-			m_image->bits = 0;
-			CDCCX::HugeFree(m_mask->bits);
-			m_mask->bits = 0;
+		if (m_icon->pairCount == 2)
 			m_icon->CompleteCallback();
-		}
+		else m_icon->pairCount++;
 	}
-	else 
+	else
 	{
-		// We do not have mask, so we don't need to wait for mask.
-		CDCCX::HugeFree(m_image->bits);
-		m_image->bits = 0;
+		// We have no mask.
 		m_icon->CompleteCallback();
 	}
 }
+
 	//	Don't display partial images.
 void CXIcon::AllConnectionsComplete(MWContext *pContext)
 {

@@ -67,12 +67,15 @@ public:
 	HT_Resource m_HTResource;
 	
 	int m_nRefCount;
+	int pairCount;
 
 	NSNavCenterImage(const char * pUrl);
 	virtual ~NSNavCenterImage();
 	
 	void ProcessIcon();
 	void CompleteCallback();
+	void CompleteCallbackWithoutDeletion();
+
 	BOOL CompletelyLoaded();
 	BOOL SuccessfullyLoaded();
 	void DestroyContext();
@@ -108,5 +111,7 @@ public:
 	//	Don't display partial images.
 	virtual void AllConnectionsComplete(MWContext *pContext);
 	void NiceDestruction();
+	virtual int DisplayPixmap(NI_Pixmap* image, NI_Pixmap* mask, int32 x, int32 y, int32 x_offset, int32 y_offset, int32 width, int32 height, LTRB& Rect);
 };
+
 #endif
