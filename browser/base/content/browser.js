@@ -884,7 +884,7 @@ function Startup()
   var sidebarSplitter;
   if (window.opener) {
     var openerFindBar = window.opener.document.getElementById("FindToolbar");
-    if (!openerFindBar.hidden)
+    if (openerFindBar && !openerFindBar.hidden)
       openFindBar();
       
     var openerSidebarBox = window.opener.document.getElementById("sidebar-box");
