@@ -659,13 +659,29 @@ NS_IMETHODIMP
 nsXPConnect::GetCurrentJSStack(nsIJSStackFrameLocation * *aCurrentJSStack)
 {
     NS_ENSURE_ARG_POINTER(aCurrentJSStack);    
+    *aCurrentJSStack = nsnull;
 
     JSContext* cx;
     // is there a current context available?
     if(mContextStack && NS_SUCCEEDED(mContextStack->Peek(&cx)) && cx)
-        *aCurrentJSStack = XPCJSStack::CreateStack(cx);
-    else
-        *aCurrentJSStack = nsnull;
+    {
+        nsCOMPtr<nsIJSStackFrameLocation> 
+            stack(dont_AddRef(XPCJSStack::CreateStack(cx)));
+        if(stack)
+        {
+            // peel off native frames...
+            PRBool isJSFrame;
+            nsCOMPtr<nsIJSStackFrameLocation> caller;
+            while(NS_SUCCEEDED(stack->GetIsJSFrame(&isJSFrame)) && 
+                  !isJSFrame &&
+                  NS_SUCCEEDED(stack->GetCaller(getter_AddRefs(caller))) && 
+                  caller)
+            {
+                stack = caller;
+            }
+            NS_ADDREF(*aCurrentJSStack = stack);
+        }
+    }       
     return NS_OK;
 }        
 
@@ -768,9 +784,8 @@ nsXPConnect::DebugDumpObject(nsISupports *p, PRInt16 depth)
     }
 
     nsIXPConnect* xpc;
-  //  nsIXPCWrappedNativeClass* wnc;
     nsIXPCWrappedJSClass* wjsc;
-//    nsIXPConnectWrappedNative* wn;
+    nsIXPConnectWrappedNative* wn;
     nsIXPConnectWrappedJS* wjs;
 
     if(NS_SUCCEEDED(p->QueryInterface(NS_GET_IID(nsIXPConnect),
@@ -780,15 +795,6 @@ nsXPConnect::DebugDumpObject(nsISupports *p, PRInt16 depth)
         xpc->DebugDump(depth);
         NS_RELEASE(xpc);
     }
-/*
-    else if(NS_SUCCEEDED(p->QueryInterface(NS_GET_IID(nsIXPCWrappedNativeClass),
-                        (void**)&wnc)))
-    {
-        XPC_LOG_ALWAYS(("Dumping a nsIXPCWrappedNativeClass..."));
-        wnc->DebugDump(depth);
-        NS_RELEASE(wnc);
-    }
-*/
     else if(NS_SUCCEEDED(p->QueryInterface(NS_GET_IID(nsIXPCWrappedJSClass),
                         (void**)&wjsc)))
     {
@@ -796,7 +802,6 @@ nsXPConnect::DebugDumpObject(nsISupports *p, PRInt16 depth)
         wjsc->DebugDump(depth);
         NS_RELEASE(wjsc);
     }
-/*
     else if(NS_SUCCEEDED(p->QueryInterface(NS_GET_IID(nsIXPConnectWrappedNative),
                         (void**)&wn)))
     {
@@ -804,7 +809,6 @@ nsXPConnect::DebugDumpObject(nsISupports *p, PRInt16 depth)
         wn->DebugDump(depth);
         NS_RELEASE(wn);
     }
-*/
     else if(NS_SUCCEEDED(p->QueryInterface(NS_GET_IID(nsIXPConnectWrappedJS),
                         (void**)&wjs)))
     {

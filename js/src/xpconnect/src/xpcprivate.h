@@ -113,7 +113,7 @@
 // compile time switches for instrumentation and stuff....
 
 #ifdef DEBUG
-#define XPC_DETECT_LEADING_UPPERCASE_ACCESS_ERRORS 1
+#define XPC_DETECT_LEADING_UPPERCASE_ACCESS_ERRORS
 #endif
 
 #ifdef DEBUG
@@ -128,9 +128,10 @@
 #endif
 
 #if defined(DEBUG_jband)
-#define XPC_DUMP_AT_SHUTDOWN 1
-#define XPC_CHECK_WRAPPERS_AT_SHUTDOWN 1
+#define XPC_DUMP_AT_SHUTDOWN
+#define XPC_CHECK_WRAPPERS_AT_SHUTDOWN
 //#define DEBUG_stats_jband 1
+#define XPC_REPORT_NATIVE_INTERFACE_AND_SET_FLUSHING
 #endif
 
 /***************************************************************************/
@@ -1674,6 +1675,7 @@ public:
                                             nsIInterfaceInfo* info);
     static XPCNativeInterface* GetNewOrUsed(XPCCallContext& ccx,
                                             const char* name);
+    static XPCNativeInterface* GetISupports(XPCCallContext& ccx);
 
     // inherited from public class
     // inline nsIInterfaceInfo* GetInterfaceInfo() const {return mInfo;}
@@ -1802,6 +1804,8 @@ public:
     XPCNativeInterface* GetInterfaceAt(PRUint16 i)
         {NS_ASSERTION(i < mInterfaceCount, "bad index"); return mInterfaces[i];}
 
+    inline JSBool MatchesSetUpToInterface(XPCNativeSet* other, 
+                                          XPCNativeInterface* iface) const;
 
     inline void Mark();
 private:
@@ -1819,7 +1823,9 @@ public:
     static void DestroyInstance(XPCNativeSet* inst);
 
 private:
-    static XPCNativeSet* NewInstance(XPCNativeInterface** array, PRUint16 count);
+    static XPCNativeSet* NewInstance(XPCCallContext& ccx, 
+                                     XPCNativeInterface** array, 
+                                     PRUint16 count);
     static XPCNativeSet* NewInstanceMutate(XPCNativeSet*       otherSet,
                                            XPCNativeInterface* newInterface,
                                            PRUint16            position);

@@ -112,6 +112,11 @@ NativeInterfaceSweeper(JSHashEntry *he, intN i, void *arg)
         return HT_ENUMERATE_NEXT;
     }
 
+#ifdef XPC_REPORT_NATIVE_INTERFACE_AND_SET_FLUSHING
+    printf("- Destroying XPCNativeInterface for %s\n", 
+            JS_GetStringBytes(JSVAL_TO_STRING(iface->GetName())));
+#endif
+
     XPCNativeInterface::DestroyInstance(data->cx, data->rt, iface);
     return HT_ENUMERATE_REMOVE;
 }
@@ -139,6 +144,16 @@ NativeSetSweeper(JSHashEntry *he, intN i, void *arg)
         set->Unmark();
         return HT_ENUMERATE_NEXT;
     }
+
+#ifdef XPC_REPORT_NATIVE_INTERFACE_AND_SET_FLUSHING
+    printf("- Destroying XPCNativeSet for:\n");
+    PRUint16 count = set->GetInterfaceCount();
+    for(PRUint16 k = 0; k < count; k++)
+    {
+        XPCNativeInterface* iface = set->GetInterfaceAt(k);
+        printf("    %s\n",JS_GetStringBytes(JSVAL_TO_STRING(iface->GetName())));
+    }
+#endif
 
     XPCNativeSet::DestroyInstance(set);
     return HT_ENUMERATE_REMOVE;
@@ -188,6 +203,13 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
             }        
             case JSGC_FINALIZE_END:
             {
+
+#ifdef XPC_REPORT_NATIVE_INTERFACE_AND_SET_FLUSHING
+                printf("--------------------------------------------------------------\n");
+                int setsBefore = (int) self->mNativeSetMap->Count();
+                int ifacesBefore = (int) self->mIID2NativeInterfaceMap->Count();
+#endif
+
                 // We use this occasion to mark and sweep NativeInterfaces
                 // and NativeSets...
 
@@ -208,6 +230,18 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
 
 #ifdef DEBUG
                 XPCWrappedNativeScope::ASSERT_NoInterfaceSetsAreMarked();
+#endif
+
+#ifdef XPC_REPORT_NATIVE_INTERFACE_AND_SET_FLUSHING
+                int setsAfter = (int) self->mNativeSetMap->Count();
+                int ifacesAfter = (int) self->mIID2NativeInterfaceMap->Count();
+
+                printf("\n");
+                printf("XPCNativeSets:        before: %d  after: %d  collected: %d\n",
+                       setsBefore, setsAfter, setsBefore - setsAfter);  
+                printf("XPCNativeInterfaces:  before: %d  after: %d  collected: %d\n",
+                       ifacesBefore, ifacesAfter, ifacesBefore - ifacesAfter);  
+                printf("--------------------------------------------------------------\n");
 #endif
 
                 // Sweep scopes needing cleanup

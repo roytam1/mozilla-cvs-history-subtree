@@ -72,7 +72,17 @@ XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
 
     if(!mJSContext)
     {
-        if(NS_FAILED(stack->GetSafeJSContext(&mJSContext)) || !mJSContext)
+        // This is slightly questionable. If called without an explicit 
+        // JSContext (generally a call to a wrappedJS) we will use the JSContext
+        // on the top of the JSContext stack - if there is one - *before* 
+        // falling back on the safe JSContext.
+        // This is good AND bad because it makes calls from JS -> native -> JS
+        // have JS stack 'continuity' for purposes of stack traces etc.
+        // Note: this *is* what the pre-XPCCallContext xpconnect did too.
+         
+        if(topJSContext)
+            mJSContext = topJSContext;
+        else if(NS_FAILED(stack->GetSafeJSContext(&mJSContext)) || !mJSContext)
             return;
     }
 
@@ -165,6 +175,7 @@ XPCCallContext::SetName(jsval name)
             mStaticMemberIsLocal =
                     !mMember ||
                      (protoSet != mSet &&
+                      !protoSet->MatchesSetUpToInterface(mSet, mInterface) &&
                       (!protoSet->FindMember(name, &protoMember, 
                                              (PRUint16*)nsnull) ||
                        protoMember != mMember));

@@ -152,8 +152,20 @@ compare_NativeKeyToSet(const void *v1, const void *v2)
     
     if(!Set)
     {
-        return SetInTable->GetInterfaceCount() == 1 &&
-               *SetInTable->GetInterfaceArray() == Addition;
+        // This is a special case to deal with the invariant that says:
+        // "All sets have exactly one nsISupports interface and it comes first."
+        // See XPCNativeSet::NewInstance for details.
+        //
+        // Though we might have a key that represents only one interface, we
+        // know that if that one interface were contructed into a set then
+        // it would end up really being a set with two interfaces (except for
+        // the case where the one interface happened to be nsISupports).
+
+        return (intN) 
+               ((SetInTable->GetInterfaceCount() == 1 &&
+                 SetInTable->GetInterfaceAt(0) == Addition) ||
+                (SetInTable->GetInterfaceCount() == 2 &&
+                 SetInTable->GetInterfaceAt(1) == Addition));
     }
 
     if(!Addition && Set == SetInTable)

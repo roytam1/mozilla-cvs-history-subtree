@@ -306,6 +306,14 @@ XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, const char* name)
     return GetNewOrUsed(ccx, info);
 }
 
+// static 
+XPCNativeInterface* 
+XPCNativeInterface::GetISupports(XPCCallContext& ccx)
+{
+    // XXX We should optimize this to cache this common XPCNativeInterface.
+    return GetNewOrUsed(ccx, &NS_GET_IID(nsISupports));
+}
+
 XPCNativeInterface::XPCNativeInterface(nsIInterfaceInfo* aInfo, jsval aName)
     : nsIXPCNativeInterface(aInfo, aName)
 {
@@ -364,7 +372,7 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
         members = local_members;
     }
 
-    // XXX since getters and setters share a member, we might not use all
+    // NOTE: since getters and setters share a member, we might not use all
     // of the member objects.
 
     for(i = 0; i < methodCount; i++)
@@ -546,7 +554,7 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx, const nsIID* iid)
     if(set)
         return set;
 
-    set = NewInstance(&iface, 1);
+    set = NewInstance(ccx, &iface, 1);
     if(!set)
         return nsnull;
 
@@ -628,7 +636,7 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx, nsIClassInfo* classInfo)
 
         if(interfaceCount)
         {
-            set = NewInstance(interfaceArray, interfaceCount);
+            set = NewInstance(ccx, interfaceArray, interfaceCount);
             if(set)
             {
                 NativeSetMap* map2 = rt->GetNativeSetMap();
@@ -704,7 +712,7 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx,
     if(otherSet)
         set = NewInstanceMutate(otherSet, newInterface, position);
     else
-        set = NewInstance(&newInterface, 1);
+        set = NewInstance(ccx, &newInterface, 1);
 
     if(!set)
         return nsnull;
@@ -730,29 +738,57 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx,
 
 // static
 XPCNativeSet*
-XPCNativeSet::NewInstance(XPCNativeInterface** array, PRUint16 count)
+XPCNativeSet::NewInstance(XPCCallContext& ccx, 
+                          XPCNativeInterface** array, 
+                          PRUint16 count)
 {
     XPCNativeSet* obj = nsnull;
 
     if(!array || !count)
         return nsnull;
 
+    // We impose the invariant:
+    // "All sets have exactly one nsISupports interface and it comes first."
+    // This is the place where we impose that rule - even if given inputs
+    // that don't exactly follow the rule.
+
+    XPCNativeInterface* isup = XPCNativeInterface::GetISupports(ccx);
+    PRUint16 slots = count+1;
+
+    PRUint16 i;
+    XPCNativeInterface* cur;
+
+    for(i = 0, cur = *array; i < count; i++, cur++)
+        if(cur == isup)
+            slots--;       
+
     // Use placement new to create an object with the right amount of space
     // to hold the members array
     int size = sizeof(XPCNativeSet);
-    if(count > 1)
-        size += (count - 1) * sizeof(XPCNativeInterface*);
+    if(slots > 1)
+        size += (slots - 1) * sizeof(XPCNativeInterface*);
     void* place = new char[size];
     if(place)
         obj = new(place) XPCNativeSet();
 
     if(obj)
     {
-        obj->mMemberCount = 0;
-        for(PRUint16 i = 0; i < count; i++)
-            obj->mMemberCount += array[i]->GetMemberCount();
-        obj->mInterfaceCount = count;
-        memcpy(obj->mInterfaces, array, count * sizeof(XPCNativeInterface*));
+        // Stick the nsISupports in front and skip additional nsISupport(s)
+        XPCNativeInterface** inp = array;
+        XPCNativeInterface** outp = (XPCNativeInterface**) &obj->mInterfaces;
+        PRUint16 memberCount = 1;   // for the one member in nsISupports
+        
+        *(outp++) = isup;
+
+        for(i = 0; i < count; i++)
+        {
+            if(isup == (cur = *(inp++)))
+                continue;
+            *(outp++) = cur;
+            memberCount += cur->GetMemberCount();
+        }
+        obj->mMemberCount = memberCount;
+        obj->mInterfaceCount = slots;
     }
 
     return obj;

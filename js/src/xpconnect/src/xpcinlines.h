@@ -414,6 +414,22 @@ XPCNativeSet::HasInterface(XPCNativeInterface* aInterface) const
     return JS_FALSE;
 }
 
+inline JSBool 
+XPCNativeSet::MatchesSetUpToInterface(XPCNativeSet* other, 
+                                      XPCNativeInterface* iface) const
+{
+    int count = JS_MAX((int)mInterfaceCount, (int)other->mInterfaceCount);
+    for(int i = 0; i < count; i++)
+    {
+        XPCNativeInterface* cur = other->mInterfaces[i];
+        if(cur != mInterfaces[i])
+            return JS_FALSE;
+        if(cur == iface)
+            return JS_TRUE;
+    }
+    return JS_FALSE;
+}
+
 inline void XPCNativeSet::Mark()
 {
     if(IsMarked())

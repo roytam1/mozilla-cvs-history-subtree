@@ -1682,6 +1682,8 @@ static void DEBUG_PrintShadowObjectInfo(const char* header,
     if(header)
         printf("%s\n", header);
 
+    printf("   XPCNativeSet @ 0x%p for the class:\n", set);
+
     nsIClassInfo* clsInfo = proto->GetClassInfo();
     if(clsInfo)
     {
@@ -1797,12 +1799,16 @@ void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
 
     // a quicky hack to avoid reporting info for the same set too often 
     static int nextSeenSet = 0;
-    static const int MAX_SEEN_SETS = 20;
+    static const int MAX_SEEN_SETS = 128;
     static XPCNativeSet* SeenSets[MAX_SEEN_SETS];
     for(int seen = 0; seen < MAX_SEEN_SETS; seen++)
         if(set == SeenSets[seen])
             return;
     SeenSets[nextSeenSet] = set;
+#ifdef off_DEBUG_jband
+    printf("--- adding SeenSets[%d] = 0x%p\n", nextSeenSet, set);
+    DEBUG_PrintShadowObjectInfo(nsnull, set, proto);
+#endif
     int localNext = nextSeenSet+1;
     nextSeenSet = localNext < MAX_SEEN_SETS ? localNext : 0;
 
