@@ -69,7 +69,8 @@ CPPSRCS += txHTMLOutput.cpp	\
            txTextOutput.cpp \
            txXMLOutput.cpp
 else
-CPPSRCS += txMozillaTextOutput.cpp \
+CPPSRCS += txMozillaStylesheetCompiler.cpp \
+           txMozillaTextOutput.cpp \
            txMozillaXMLOutput.cpp \
            txMozillaXSLTProcessor.cpp
 endif
