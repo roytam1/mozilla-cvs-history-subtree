@@ -39,19 +39,32 @@ print "modinit  - ok\n";
 ######################### End of black magic.
 
 
-$attrs = ["cn","telephoneNumber","mail"];
-print "\nEnter LDAP Server: ";
-chomp($ldap_host = <>);
-print "Enter Search Filter (ex. uid=abc123): ";
-chomp($filter = <>);
-print "Enter LDAP Search Base (ex. o=Org, c=US): ";
-chomp($BASEDN = <>);
-print "\n";
+$attrs = [];
+
+$ldap_host = $ENV{"LDAPHOST"};
+$filter = $ENV{"TESTFILTER"};
+$BASEDN = $ENV{"LDAPBASE"};
 
 if (!$ldap_host)
 {
-   die "Please edit \$BASEDN, \$filter and \$ldap_host in test.pl.\n";
+   print "\nEnter LDAP Server: ";
+   chomp($ldap_host = <>);
 }
+
+if (!$filter)
+{
+   print "Enter Search Filter (ex. uid=abc123): ";
+   chomp($filter = <>);
+}
+
+if (!$BASEDN)
+{
+   print "Enter LDAP Search Base (ex. o=Org, c=US): ";
+   chomp($BASEDN = <>);
+}
+
+print "\n";
+
 
 ##
 ##  Initialize LDAP Connection
