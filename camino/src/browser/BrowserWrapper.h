@@ -40,10 +40,11 @@
 
 @class BrowserWindowController;
 @class ToolTip;
+@class AutoCompleteTextField;
 
 @interface BrowserWrapper : NSView <CHBrowserListener, CHBrowserContainer>
 {
-  NSTextField*              mUrlbar;
+  AutoCompleteTextField*    mUrlbar;
   NSTextField*              mStatus;
   BrowserWindowController*  mWindowController;
   NSTabViewItem*            mTabItem;

@@ -222,15 +222,6 @@ CHBrowserListener::SetChromeFlags(PRUint32 aChromeFlags)
 NS_IMETHODIMP 
 CHBrowserListener::DestroyBrowserWindow()
 {
-#if 0
-  // XXX Could send this up to the container, but for now,
-  // we just destroy the enclosing window.
-  NSWindow* window = [mView window];
-
-  if (window) {
-    [window close];
-  }
-#endif
   // tell the container we want to close the window and let it do the
   // right thing.
   [mContainer closeBrowserWindow];
