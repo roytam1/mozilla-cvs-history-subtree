@@ -669,16 +669,21 @@ NS_IMETHODIMP
 nsMsgProtocol::OnTransportStatus(nsITransport *transport, nsresult status,
                                  PRUint32 progress, PRUint32 progressMax)
 {
-  if (mProgressEventSink && !(mLoadFlags & LOAD_BACKGROUND)) {
+  if (mProgressEventSink && !(mLoadFlags & LOAD_BACKGROUND))
+  {
+    // these transport events should not generate any status messages
+    if (status == nsISocketTransport::STATUS_RECEIVING_FROM ||
+        status == nsISocketTransport::STATUS_SENDING_TO)
+    {
+      mProgressEventSink->OnProgress(this, nsnull, progress, progressMax);
+    }
+    else
+    {
     nsCAutoString host;
     if (m_url)
       m_url->GetHost(host);
     mProgressEventSink->OnStatus(this, nsnull, status, NS_ConvertUTF8toUCS2(host).get()); 
-    if (status == nsISocketTransport::STATUS_RECEIVING_FROM ||
-        status == nsISocketTransport::STATUS_SENDING_TO ||
-        status == nsITransport::STATUS_READING ||
-        status == nsITransport::STATUS_WRITING)
-      mProgressEventSink->OnProgress(this, nsnull, progress, progressMax);
+    }
   } 
   return NS_OK;
 }
