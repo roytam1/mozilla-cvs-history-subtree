@@ -248,7 +248,8 @@
 
     <outlinerbody id="bookmarks-outlinerbody" datasources="rdf:bookmarks rdf:internetsearch rdf:files" flex="1"
                   ref="NC:BookmarksRoot"
-                  onselect="this.parentNode.outlinerBoxObject.view.selectionChanged();">
+                  onselect="this.parentNode.outlinerBoxObject.view.selectionChanged();"
+                  onclick="gBookmarksShell.bodyClicked(event);">
       <template>
         <outlinerrow uri="rdf:*" properties="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type rdf:http://home.netscape.com/NC-rdf#loading">
           <outlinercell ref="Name"

@@ -21,6 +21,8 @@
  *   Ben Goodger <ben@netscape.com> (Original Author, v3.0)
  */
 
+var gBookmarksShell = null; 
+ 
 ////////////////////////////////////////////////////////////////////////////////
 // Initialize the command controllers, set focus, outliner root, 
 // window title state, etc. 
@@ -30,8 +32,7 @@ function Startup()
   var bookmarksBody = document.getElementById("bookmarks-outlinerbody");
   
   // Set up the outliner controller
-  var bookmarksController = new nsBookmarksOutlinerController("bookmarks-outliner");
-  bookmarksView.controllers.appendController(bookmarksController);
+  gBookmarksShell = new nsBookmarksShell("bookmarks-outliner", "bookmarks-outlinerbody");
   var rdflinerObserver = new nsBookmarksRDFLinerObserver();
   var builder = bookmarksBody.builder.QueryInterface(Components.interfaces.nsIXULOutlinerBuilder);
   builder.addObserver(rdflinerObserver);
