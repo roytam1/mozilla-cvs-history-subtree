@@ -35,38 +35,15 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsEnumeratorUtils_h__
-#define nsEnumeratorUtils_h__
+#ifndef nsAdapterEnumerator_h__
+#define nsAdapterEnumerator_h__
 
+#include "msgCore.h"
+
+#include "nsISimpleEnumerator.h"
 #include "nsIEnumerator.h"
-#include "nsISupportsArray.h"
 
-class NS_COM nsArrayEnumerator : public nsISimpleEnumerator
-{
-public:
-    // nsISupports interface
-    NS_DECL_ISUPPORTS
-
-    // nsISimpleEnumerator interface
-    NS_IMETHOD HasMoreElements(PRBool* aResult);
-    NS_IMETHOD GetNext(nsISupports** aResult);
-
-    // nsArrayEnumerator methods
-    nsArrayEnumerator(nsISupportsArray* aValueArray);
-    virtual ~nsArrayEnumerator(void);
-
-protected:
-    nsISupportsArray* mValueArray;
-    PRInt32 mIndex;
-};
-
-extern NS_COM nsresult
-NS_NewArrayEnumerator(nsISimpleEnumerator* *result,
-                      nsISupportsArray* array);
-
-////////////////////////////////////////////////////////////////////////////////
-
-class NS_COM nsSingletonEnumerator : public nsISimpleEnumerator
+class NS_MSG_BASE nsAdapterEnumerator : public nsISimpleEnumerator
 {
 public:
     NS_DECL_ISUPPORTS
@@ -75,18 +52,13 @@ public:
     NS_IMETHOD HasMoreElements(PRBool* aResult);
     NS_IMETHOD GetNext(nsISupports** aResult);
 
-    nsSingletonEnumerator(nsISupports* aValue);
-    virtual ~nsSingletonEnumerator();
+    nsAdapterEnumerator(nsIEnumerator* aEnum);
+    virtual ~nsAdapterEnumerator();
 
 protected:
-    nsISupports* mValue;
-    PRBool mConsumed;
+    nsIEnumerator* mEnum;
+    nsISupports*   mCurrent;
+    PRBool mStarted;
 };
 
-extern "C" NS_COM nsresult
-NS_NewSingletonEnumerator(nsISimpleEnumerator* *result,
-                          nsISupports* singleton);
-
-////////////////////////////////////////////////////////////////////////
-
-#endif /* nsEnumeratorUtils_h__ */
+#endif
