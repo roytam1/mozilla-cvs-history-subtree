@@ -733,18 +733,16 @@ nsDiskCacheDevice::FindEntry(nsCString * key)
 nsresult
 nsDiskCacheDevice::DeactivateEntry(nsCacheEntry * entry)
 {
-    if (!entry->IsDoomed()) {
-        nsDiskCacheEntry * diskEntry = mBoundEntries.GetEntry(entry->Key()->get());
-        NS_ASSERTION(diskEntry, "DeactivateEntry called for an entry we don't have!");
-        if (!diskEntry)
-            return NS_ERROR_INVALID_POINTER;
-
-        // commit any changes about this entry to disk.
-        updateDiskCacheEntry(diskEntry);
-
+    nsDiskCacheEntry* diskEntry = ensureDiskCacheEntry(entry);
+    if (mBoundEntries.GetEntry(diskEntry->getHashNumber()) == diskEntry) {
         // XXX eventually, as a performance enhancement, keep entries around for a while before deleting them.
         // XXX right now, to prove correctness, destroy the entries eagerly.
         mBoundEntries.RemoveEntry(diskEntry);
+    }
+    
+    if (!entry->IsDoomed()) {
+        // commit any changes about this entry to disk.
+        updateDiskCacheEntry(diskEntry);
 
         // XXX if this entry collided with other concurrently bound entries, then its
         // generation count will be non-zero. The other entries that came before it
@@ -757,10 +755,8 @@ nsDiskCacheDevice::DeactivateEntry(nsCacheEntry * entry)
             delete entry;
     } else {
         // obliterate all knowledge of this entry on disk.
-        nsDiskCacheEntry* diskEntry = ensureDiskCacheEntry(entry);
-        NS_ASSERTION(diskEntry, "nsDiskCacheDevice::DeactivateEntry");
         deleteDiskCacheEntry(diskEntry);
-        
+
         // XXX if this entry resides on a list, then there must have been a collision
         // during the entry's lifetime. use this deactivation as a trigger to scavenge
         // generation numbers, and reset the live entry's generation to zero.
@@ -788,11 +784,12 @@ nsDiskCacheDevice::BindEntry(nsCacheEntry * newEntry)
     
     // XXX check for cache collision. if an entry exists on disk that has the same
     // hash code as this newly bound entry, AND there is already a bound entry for
-    // that key, we need to ask the Cache service to doom that entry, since two
+    // that key, we need to ask the cache service to doom that entry, since two
     // simultaneous entries that have the same hash code aren't allowed until
     // some sort of chaining mechanism is implemented.
     nsDiskCacheEntry* oldDiskEntry = mBoundEntries.GetEntry(newEntry->Key()->get());
     if (oldDiskEntry) {
+        // XXX Hacky liveness test, remove when we've figured this all out.
         if (oldDiskEntry->getRefCount() > 1) {
             // set the generation count on the newly bound entry,
             // so that files created will be unique and won't conflict
@@ -802,10 +799,15 @@ nsDiskCacheDevice::BindEntry(nsCacheEntry * newEntry)
             
             // XXX Whom do we tell about this impending doom?
             nsCacheEntry* oldEntry = oldDiskEntry->getCacheEntry();
-            NS_ASSERTION(!oldEntry->IsDoomed(), "a bound entry is doomed!");
-            nsCacheService::GlobalInstance()->DoomEntry_Locked(oldEntry);
+            // XXX Yes Virginia, a doomed entry can be bound.
+            // NS_ASSERTION(!oldEntry->IsDoomed(), "a bound entry is doomed!");
+            if (!oldEntry->IsDoomed())
+                nsCacheService::GlobalInstance()->DoomEntry_Locked(oldEntry);
+            else
+                mBoundEntries.RemoveEntry(oldDiskEntry);
         } else {
             // XXX somehow we didn't hear about the entry going away. Ask gordon.
+            NS_NOTREACHED("bound disk cache entry with no corresponding cache entry.");
             mBoundEntries.RemoveEntry(oldDiskEntry);
         }
     }
@@ -1159,6 +1161,10 @@ nsresult nsDiskCacheDevice::visitEntries(nsICacheVisitor * visitor)
 {
     nsresult rv;
     
+    // XXX make sure meta data is up to date.
+    rv = updateDiskCacheEntries();
+    if (NS_FAILED(rv)) return rv;
+
     nsDiskCacheEntryInfo* entryInfo = new nsDiskCacheEntryInfo();
     if (!entryInfo) return NS_ERROR_OUT_OF_MEMORY;
     nsCOMPtr<nsICacheEntryInfo> ref(entryInfo);
@@ -1561,6 +1567,10 @@ nsresult nsDiskCacheDevice::evictDiskCacheEntries()
     nsresult rv;
 
     if (mCacheMap->DataSize() < mCacheCapacity) return NS_OK;
+
+    // XXX make sure meta data is up to date.
+    rv = updateDiskCacheEntries();
+    if (NS_FAILED(rv)) return rv;
     
     // 1. gather all records into an array, sorted by eviction rank. keep deleting them until we recover enough space.
     PRUint32 count = 0;
