@@ -245,7 +245,7 @@ NameSetInitCallback(nsHashKey *aKey, void *aData, void* closure)
   nsCOMPtr<nsIScriptExternalNameSet> ns(do_CreateInstance(s->mCID, &rv));
   NS_ENSURE_SUCCESS(rv, PR_TRUE);
 
-  rv = ns->InitializeClasses((nsIScriptContext *)closure);
+  rv = ns->InitializeNameSet((nsIScriptContext *)closure);
   NS_WARN_IF_FALSE(NS_SUCCEEDED(rv),
                    "Initing external script classes failed!");
 

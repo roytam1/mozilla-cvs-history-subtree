@@ -555,7 +555,7 @@ NS_IMPL_ISUPPORTS(nsSoftwareUpdateNameSet,
 
 
 NS_IMETHODIMP
-nsSoftwareUpdateNameSet::InitializeClasses(nsIScriptContext* aScriptContext)
+nsSoftwareUpdateNameSet::InitializeNameSet(nsIScriptContext* aScriptContext)
 {
     nsresult result = NS_OK;
 

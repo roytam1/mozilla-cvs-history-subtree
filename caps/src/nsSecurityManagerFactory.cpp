@@ -52,7 +52,7 @@ public:
     
     NS_DECL_ISUPPORTS
 
-    NS_IMETHOD InitializeClasses(nsIScriptContext* aScriptContext);
+    NS_IMETHOD InitializeNameSet(nsIScriptContext* aScriptContext);
 };
 
 nsSecurityNameSet::nsSecurityNameSet()
@@ -263,7 +263,7 @@ static JSFunctionSpec PrivilegeManager_static_methods[] = {
  * et. al. so that code that worked with 4.0 can still work.
  */
 NS_IMETHODIMP 
-nsSecurityNameSet::InitializeClasses(nsIScriptContext* aScriptContext)
+nsSecurityNameSet::InitializeNameSet(nsIScriptContext* aScriptContext)
 {
     JSContext *cx = (JSContext *) aScriptContext->GetNativeContext();
     JSObject *global = JS_GetGlobalObject(cx);

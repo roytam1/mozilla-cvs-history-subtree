@@ -1371,7 +1371,7 @@ nsWindowSH::GlobalResolve(nsISupports *native, JSContext *cx, JSObject *obj,
     sgo->GetContext(getter_AddRefs(context));
     NS_ENSURE_TRUE(context, NS_ERROR_UNEXPECTED);
 
-    rv = nameset->InitializeClasses(context);
+    rv = nameset->InitializeNameSet(context);
 
     *did_resolve = PR_TRUE;
   }
@@ -2977,5 +2977,3 @@ nsEventListenerThisTranslator::TranslateThis(nsISupports *aInitialThis,
 
   return NS_OK;
 }
-
-

@@ -83,7 +83,6 @@
 #include "nsIServiceManager.h"
 #include "nsIScriptGlobalObjectOwner.h"
 #include "nsIScriptSecurityManager.h"
-#include "nsIScriptExternalNameSet.h"
 #include "nsIScrollableView.h"
 #include "nsISelectionController.h"
 #include "nsISelection.h"
