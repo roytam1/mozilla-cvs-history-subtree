@@ -123,7 +123,7 @@ namespace JavaScript {
 
                 // the sematics/codegen passes stuff their
                 // data in here.
-                JS2Runtime::PropertyIterator prop;
+                JS2Runtime::Property *prop;
 
                 void print(PrettyPrinter &f, bool printConst) const;
 	};
@@ -580,7 +580,7 @@ namespace JavaScript {
 
                 // the sematics/codegen passes stuff their
                 // data in here.
-                JS2Runtime::PropertyIterator prop;
+                JS2Runtime::Property *prop;
 	};
 
 	struct TryStmtNode: StmtNode {

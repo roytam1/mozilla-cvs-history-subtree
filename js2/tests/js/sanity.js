@@ -26,15 +26,18 @@ class BaseClass {
 
 }
 
-var result = true;
+var badTest = "";
+var test = 1;
 
 var bc:BaseClass = BaseClass.makeBC();
 
-if (BaseClass.gBC != 12) result = false;
+if (BaseClass.gBC != 12) badTest += test + " ";
 BaseClass.gBC = 0;
 
-if ((bc + 3) != 20) result = false;
-if (BaseClass.gBC != 1) result = false;
+test++;
+if ((bc + 3) != 20) badTest += test + " ";
+test++;
+if (BaseClass.gBC != 1) badTest += test + " ";
 
 class Extended extends BaseClass {
 
@@ -55,8 +58,10 @@ class Extended extends BaseClass {
 }
 
 var ex:Extended = new Extended;
-if (ex.t != 49200) result = false;
-if ((ex + bc) != 19) result = false;
+test++;
+if (ex.t != 49200) badTest += test + " ";
+test++;
+if ((ex + bc) != 19) badTest += test + " ";
 
 function loopy(a)
 {
@@ -71,28 +76,35 @@ function loopy(a)
     return x;
 }
 
-if (loopy(17) != 3) result = false;
+test++;
+if (loopy(17) != 3) badTest += test + " ";
 
 BaseClass.gBC *= ex.mEx;
-if (BaseClass.gBC != 2) result = false;
+test++;
+if (BaseClass.gBC != 2) badTest += test + " ";
 
 var a = 3, b = 2;
 a &&= b;
-if (a != 2) result = false;
+test++;
+if (a != 2) badTest += test + " ";
 
-if (bc.Q != 13) result = false;
+test++;
+if (bc.Q != 13) badTest += test + " ";
 bc.Q = 1;
-if (BaseClass.gBC != 100) result = false;
+test++;
+if (BaseClass.gBC != 100) badTest += test + " ";
 
 
 var cnX = 'X'
 var s = '';
 function f(n) { var ret = ''; for (var i = 0; i < n; i++) { ret += cnX; } return ret; }
 s = f(5);
-if (s != 'XXXXX') result = false;
+test++;
+if (s != 'XXXXX') badTest += test + " ";
 
 var t = "abcdeXXXXXghij";
-if (t.split('XXXXX').length != 2) result = false;
+test++;
+if (t.split('XXXXX').length != 2) badTest += test + " ";
 
 
 function x()
@@ -107,12 +119,16 @@ function ZZ(b)
     var c = b * 5;
     try {
         x();
-        result = false;
+        test++;
+        badTest += test + " ";
     }
     catch (e) {
-        if (a != 12) result = false;
-        if (b != c / 5) result = false;
-        if (e != "frisbee") result = false;
+        test++;
+        if (a != 12) badTest += test + " ";
+        test++;
+        if (b != c / 5) badTest += test + " ";
+        test++;
+        if (e != "frisbee") badTest += test + " ";
     }
 }
 ZZ(6);
@@ -135,7 +151,8 @@ function sw(t)
     }
     return result;
 }
-if (sw(2) != "02d") result = false;
+test++;
+if (sw(2) != "02d") badTest += test + " ";
 
 
-if (result) print("still sane") else print("gone off the deep end");
+if (badTest == 0) print("still sane") else print("gone off the deep end at test #" + badTest);

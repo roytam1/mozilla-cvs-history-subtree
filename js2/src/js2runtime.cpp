@@ -66,6 +66,7 @@ namespace JS2Runtime {
 //
 JSType *Object_Type = NULL;
 JSType *Number_Type;
+JSType *Function_Type;
 JSStringType *String_Type;
 JSType *Boolean_Type;
 JSType *Type_Type;
@@ -1178,6 +1179,17 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     pushValue(JSValue(classP->mStatics->mMethods[index]));
                 }
                 break;
+            case GetStaticMethodRefOp:
+                {
+                    JSValue base = popValue();
+                    ASSERT(dynamic_cast<JSType *>(base.object));
+                    uint32 index = *((uint32 *)pc);
+                    pc += sizeof(uint32);
+                    JSType *classP = (JSType *)(base.object);
+                    ASSERT(classP->mStatics);
+                    pushValue(JSValue(new JSBoundFunction(classP->mStatics->mMethods[index], base.object)));
+                }
+                break;
             case GetFieldOp:
                 {
                     JSValue base = popValue();
@@ -1200,9 +1212,15 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 break;
             case GetStaticFieldOp:
                 {
+                    JSType *classP;
                     JSValue base = popValue();
-                    ASSERT(dynamic_cast<JSType *>(base.object));
-                    JSType *classP = (JSType *)(base.object);
+                    // the base is either an instance object OR a type object
+                    if (base.isType())
+                        classP = base.type;
+                    else {
+                        ASSERT(base.isObject());
+                        classP = base.object->mType;
+                    }
                     ASSERT(classP->mStatics);
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
@@ -1211,10 +1229,15 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 break;
             case SetStaticFieldOp:
                 {
+                    JSType *classP;
                     JSValue v = popValue();
                     JSValue base = popValue();
-                    ASSERT(dynamic_cast<JSType *>(base.object));
-                    JSType *classP = (JSType *)(base.object);
+                    if (base.isType())
+                        classP = base.type;
+                    else {
+                        ASSERT(base.isObject());
+                        classP = base.object->mType;
+                    }
                     ASSERT(classP->mStatics);
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
@@ -1630,10 +1653,8 @@ void Context::buildRuntimeForStmt(StmtNode *p)
             if (t->catches) {
                 CatchClause *c = t->catches;
                 while (c) {
-                    if (c->type) {
-                        Property &prop = PROPERTY(c->prop);
-                        prop.mType = mScopeChain->extractType(c->type);
-                    }
+                    if (c->type)
+                        c->prop->mType = mScopeChain->extractType(c->type);
                     c = c->next;
                 }
             }
@@ -1669,10 +1690,9 @@ void Context::buildRuntimeForStmt(StmtNode *p)
             VariableBinding *v = vs->bindings;
 //            bool isStatic = hasAttribute(vs->attributes, Token::Static);
             while (v)  {
-                Property &prop = PROPERTY(v->prop);
                 if (v->name && (v->name->getKind() == ExprNode::identifier)) {
                     JSType *type = mScopeChain->extractType(v->type);
-                    prop.mType = type;
+                    v->prop->mType = type;
                 }
                 v = v->next;
             }
@@ -2046,10 +2066,32 @@ JSValue Object_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv,
 
 JSValue Object_toString(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    ASSERT(thisValue.isObject());
-    return JSValue(new String(widenCString("[object") + /* [[class]] */ widenCString("]")));
+    if (thisValue.isObject())
+        return JSValue(new String(widenCString("[object ") + widenCString("Object") + widenCString("]")));
+    else
+        if (thisValue.isType())
+            return JSValue(new String(widenCString("[object ") + widenCString("Type") + widenCString("]")));
+        else {
+            NOT_REACHED("Object.prototype.toString on non-object");
+            return kUndefinedValue;
+        }
 }
 
+JSValue Function_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+{
+    JSValue thatValue = thisValue;
+    if (thatValue.isNull())
+        thatValue = Function_Type->newInstance(cx);
+    // XXX use the arguments to compile a string into a function
+    ASSERT(thatValue.isObject());
+    return thatValue;
+}
+
+JSValue Function_toString(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+{
+    ASSERT(thisValue.isFunction());
+    return JSValue(new String(widenCString("function () { }")));
+}
 
 JSValue Number_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
@@ -2533,28 +2575,29 @@ void Context::initBuiltins()
 {
     ClassDef builtInClasses[] =
     {
-        { "Object",     Object_Constructor  },
-        { "Type",       NULL  },
-        { "Number",     Number_Constructor  },
-        { "String",     String_Constructor  },
-        { "Array",      Array_Constructor   },
-        { "Boolean",    Boolean_Constructor },
-        { "Void",       NULL                },
-        { "Unit",       NULL                },
+        { "Object",     Object_Constructor    },
+        { "Type",       NULL                  },
+        { "Function",   Function_Constructor  },
+        { "Number",     Number_Constructor    },
+        { "String",     String_Constructor    },
+        { "Array",      Array_Constructor     },
+        { "Boolean",    Boolean_Constructor   },
+        { "Void",       NULL                  },
+        { "Unit",       NULL                  },
     };
 
     Object_Type  = new JSType(this, widenCString(builtInClasses[0].name), NULL);
     Object_Type->mIsDynamic = true;
     // XXX aren't all the built-ins thus?
 
-    Type_Type = new JSType(this, widenCString(builtInClasses[1].name), Object_Type);
-
-    Number_Type  = new JSType(this, widenCString(builtInClasses[2].name), Object_Type);
-    String_Type  = new JSStringType(this, widenCString(builtInClasses[3].name), Object_Type);
-    Array_Type   = new JSArrayType(this, widenCString(builtInClasses[4].name), Object_Type);
-    Boolean_Type = new JSType(this, widenCString(builtInClasses[5].name), Object_Type);
-    Void_Type    = new JSType(this, widenCString(builtInClasses[6].name), Object_Type);
-    Unit_Type    = new JSType(this, widenCString(builtInClasses[7].name), Object_Type);
+    Type_Type     = new JSType(this, widenCString(builtInClasses[1].name), Object_Type);
+    Function_Type = new JSType(this, widenCString(builtInClasses[2].name), Object_Type);
+    Number_Type   = new JSType(this, widenCString(builtInClasses[3].name), Object_Type);
+    String_Type   = new JSStringType(this, widenCString(builtInClasses[4].name), Object_Type);
+    Array_Type    = new JSArrayType(this, widenCString(builtInClasses[5].name), Object_Type);
+    Boolean_Type  = new JSType(this, widenCString(builtInClasses[6].name), Object_Type);
+    Void_Type     = new JSType(this, widenCString(builtInClasses[7].name), Object_Type);
+    Unit_Type     = new JSType(this, widenCString(builtInClasses[8].name), Object_Type);
 
 
     String_Type->defineVariable(widenCString("fromCharCode"), NULL, String_Type, JSValue(new JSFunction(this, String_fromCharCode, String_Type)));
@@ -2564,6 +2607,12 @@ void Context::initBuiltins()
     {
         { "toString", String_Type, 0, Object_toString },
         { "toSource", String_Type, 0, Object_toString },
+        { NULL }
+    };
+    ProtoFunDef functionProtos[] = 
+    {
+        { "toString", String_Type, 0, Function_toString },
+        { "toSource", String_Type, 0, Function_toString },
         { NULL }
     };
     ProtoFunDef numberProtos[] = 
@@ -2587,13 +2636,14 @@ void Context::initBuiltins()
     // pull up them bootstraps 
     (*mGlobal)->mPrototype = Object_Type->mPrototype;
 
-    initClass(Number_Type,  Object_Type,  &builtInClasses[1], new PrototypeFunctions(&numberProtos[0]) );
-    initClass(Type_Type,    Object_Type,  &builtInClasses[2], NULL );
-    initClass(String_Type,  Object_Type,  &builtInClasses[3], getStringProtos() );
-    initClass(Array_Type,   Object_Type,  &builtInClasses[4], getArrayProtos() );
-    initClass(Boolean_Type, Object_Type,  &builtInClasses[5], new PrototypeFunctions(&booleanProtos[0]) );
-    initClass(Void_Type,    Object_Type,  &builtInClasses[6], NULL);
-    initClass(Unit_Type,    Object_Type,  &builtInClasses[7], NULL);
+    initClass(Type_Type,     Object_Type,  &builtInClasses[1], NULL );
+    initClass(Function_Type, Object_Type,  &builtInClasses[2], new PrototypeFunctions(&functionProtos[0]) );
+    initClass(Number_Type,   Object_Type,  &builtInClasses[3], new PrototypeFunctions(&numberProtos[0]) );
+    initClass(String_Type,   Object_Type,  &builtInClasses[4], getStringProtos() );
+    initClass(Array_Type,    Object_Type,  &builtInClasses[5], getArrayProtos() );
+    initClass(Boolean_Type,  Object_Type,  &builtInClasses[6], new PrototypeFunctions(&booleanProtos[0]) );
+    initClass(Void_Type,     Object_Type,  &builtInClasses[7], NULL);
+    initClass(Unit_Type,     Object_Type,  &builtInClasses[8], NULL);
 }
 
 Context::Context(JSObject **global, World &world, Arena &a) 
@@ -2735,16 +2785,16 @@ Formatter& operator<<(Formatter& f, const Property& prop)
 Formatter& operator<<(Formatter& f, const JSInstance& obj)
 {
     for (PropertyMap::const_iterator i = obj.mProperties.begin(), end = obj.mProperties.end(); (i != end); i++) {
-        const Property& prop = PROPERTY(i);
+        const Property *prop = PROPERTY(i);
         f << "[" << PROPERTY_NAME(i) << "] ";
-        switch (prop.mFlag) {
-        case ValuePointer : f << "ValuePointer --> " << *prop.mData.vp; break;
+        switch (prop->mFlag) {
+        case ValuePointer : f << "ValuePointer --> " << *prop->mData.vp; break;
         case FunctionPair : f << "FunctionPair\n"; break;
         case IndexPair : f << "IndexPair\n"; break;
-        case Slot : f << "Slot #" << prop.mData.index 
-                         << " --> " << obj.mInstanceValues[prop.mData.index] << "\n"; break;
-        case Method : f << "Method #" << prop.mData.index << "\n"; break;
-        case Constructor : f << "Constructor #" << prop.mData.index << "\n"; break;
+        case Slot : f << "Slot #" << prop->mData.index 
+                         << " --> " << obj.mInstanceValues[prop->mData.index] << "\n"; break;
+        case Method : f << "Method #" << prop->mData.index << "\n"; break;
+        case Constructor : f << "Constructor #" << prop->mData.index << "\n"; break;
         }
     }
     return f;

@@ -2017,6 +2017,7 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
     case GetMethodOp:
     case GetMethodRefOp:
     case GetStaticMethodOp:
+    case GetStaticMethodRefOp:
     case GetFieldOp:
     case SetFieldOp:
     case GetStaticFieldOp:
