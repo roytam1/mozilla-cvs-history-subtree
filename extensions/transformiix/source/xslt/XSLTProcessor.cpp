@@ -689,7 +689,6 @@ txXSLTProcessor::processAction(Node* aAction,
 
             while (evalContext.hasNext()) {
                 evalContext.next();
-                Node* currNode = evalContext.getContextNode();
                 processChildren(actionElement, aPs);
             }
 

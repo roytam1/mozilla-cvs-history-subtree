@@ -121,7 +121,7 @@ txStandaloneXSLTProcessor::transform(Document* aXMLDoc, ostream& aOut,
     nsresult rv = transform(aXMLDoc, xslDoc, aOut, aErr);
 
     delete xslDoc;
-    return NS_OK;
+    return rv;
 }
 
 /**
