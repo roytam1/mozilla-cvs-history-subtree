@@ -18,6 +18,9 @@ else
 OS_RELEASE      := $(shell uname -r)
 endif
 endif
+ifeq ($(OS_ARCH),IRIX64)
+OS_ARCH         := IRIX
+endif
 
 # Virtually all Linux versions are identical.
 # Any distinctions are handled in linux.h

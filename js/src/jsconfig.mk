@@ -22,6 +22,9 @@ endif
 ifeq ($(OS_ARCH), AIX)
   NSPR_OBJDIR   := $(subst 4.1,4.2,$(NSPR_OBJDIR))
 endif
+ifeq ($(OS_CONFIG), IRIX6.5)
+  NSPR_OBJDIR   := $(subst 6.5,6.5_n32_PTH,$(NSPR_OBJDIR))
+endif
 ifeq ($(OS_ARCH), WINNT)
   NSPR_OBJDIR   := $(subst WINNT,WIN95,$(NSPR_OBJDIR))
   ifeq ($(OBJDIR), WIN32_D.OBJ)
