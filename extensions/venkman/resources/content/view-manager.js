@@ -286,7 +286,14 @@ function vmgr_parselocation (locationURL)
     }
     
     if (parseResult.windowId == VMGR_NEW)
-        parseResult.windowId = "floater-" + this.floaterSequence++;
+    {
+        var id = "floater-" + this.floaterSequence++;
+
+        while (id in this.windows)
+            id = "floater-" + this.floaterSequence++;
+
+        parseResult.windowId = id;
+    }
 
     //dd (dumpObjectTree(parseResult));
     return parseResult;
@@ -973,7 +980,8 @@ function vmgr_dewdropinn (sourceView, targetView, direction)
         
         var childLocation = viewManager.computeLocation(child);
         var id = "vm-container-" + ++viewManager.containerSequence;
-        
+        while (child.ownerDocument.getElementById(id))
+            id = "vm-container-" + ++viewManager.containerSequence;
         var container = viewManager.createContainer (childLocation, id, type);
         var newLocation = { windowId: parsedTarget.windowId, containerId: id };
         viewManager.moveView (newLocation, childLocation.id);

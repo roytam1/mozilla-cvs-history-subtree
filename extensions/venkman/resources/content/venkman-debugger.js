@@ -204,7 +204,7 @@ function jsdScriptCreated (jsdScript)
     {
         manager = console.scriptManagers[url];
     }
-
+    
     manager.onScriptCreated(jsdScript);
 }
 
@@ -357,8 +357,8 @@ function smgr_created (jsdScript)
 {
     var instance;
 
-    if (!jsdScript.isValid)
-        dd ("************************* invalid script created!");
+    if (!ASSERT(jsdScript.isValid, "invalid script created!"))
+        return;
     
     if (this.instances.length != 0)
         instance = this.instances[this.instances.length - 1];
@@ -372,7 +372,19 @@ function smgr_created (jsdScript)
                          { scriptInstance: instance });
     }
 
+    if ("_lastScriptWrapper" in console)
+    {
+        if ((console._lastScriptWrapper.scriptManager != this ||
+             console._lastScriptWrapper.scriptInstance != instance) &&
+            console._lastScriptWrapper.scriptInstance.scriptCount &&
+            !console._lastScriptWrapper.scriptInstance.isSealed)
+        {
+            console._lastScriptWrapper.scriptInstance.seal();
+        }
+    }
+            
     var scriptWrapper = new ScriptWrapper(jsdScript);
+    console._lastScriptWrapper = scriptWrapper;
     scriptWrapper.scriptManager = this;
     console.scriptWrappers[jsdScript.tag] = scriptWrapper;
     scriptWrapper.scriptInstance = instance;
@@ -526,6 +538,14 @@ function ScriptInstance (manager)
     this._lineMapInited = false;
 }
 
+ScriptInstance.prototype.seal =
+function si_seal ()
+{
+    this.sealDate = new Date();
+    this.isSealed = true;
+    dispatch ("hook-script-instance-sealed", { scriptInstance: this });
+}
+
 ScriptInstance.prototype.onScriptCreated =
 function si_created (scriptWrapper)
 {
@@ -537,13 +557,11 @@ function si_created (scriptWrapper)
     }
     else
     {
-        this.sealDate = new Date();
         this.topLevel = scriptWrapper;
         scriptWrapper.functionName = MSG_VAL_TLSCRIPT;
-        this.isSealed = true;
         scriptWrapper.addToLineMap(this._lineMap);
         //var dummy = scriptWrapper.sourceText;
-        dispatch ("hook-script-instance-sealed", { scriptInstance: this });
+        this.seal();
     }
 
     ++this.scriptCount;

@@ -161,7 +161,6 @@ function initCommands(mainWindow)
 
     console.commandManager.installKeys(mainWindow.document,
                                        console.commandManager.commands);
-
 }
 
 /**
@@ -287,7 +286,7 @@ function cmdBreak (e)
                 {
                     dispatch ("fbreak", { isInteractive: e.isInteractive,
                                           urlPattern: url,
-                                          lineNumber: e.lineNumber});
+                                          lineNumber: e.lineNumber });
                     fbreak = getFutureBreakpoint(url, e.lineNumber);
                 }
 
@@ -467,7 +466,6 @@ function cmdClearScript (e)
             cmdClearScript ({scriptWrapper: e.scriptWrapperList[i]});
         return true;
     }
-
     
     return true;
 }
@@ -1433,23 +1431,7 @@ function cmdToggleFloat (e)
         return;
     }
 
-    var view = console.views[e.viewId];
-    var url;
-    
-    if (!view.currentContent ||
-        view.currentContent.ownerWindow == console.viewManager.mainWindow)
-    {
-        url = VMGR_VURL_NEW;
-    }
-    else
-    {
-        if ("previousLocation" in view)
-            url = view.previousLocation;
-        else
-            url = VMGR_VURL_MAINWINDOW;
-    }
-
-    dispatch ("move-view", { viewId: e.viewId, locationUrl: url });
+    dispatch ("move-view", { viewId: e.viewId, locationUrl: VMGR_VURL_NEW });
 }
 
 function cmdToggleSaveLayout (e)
@@ -1471,19 +1453,11 @@ function cmdToggleView (e)
     var url;
     
     if ("currentContent" in view)
-    {
         url = VMGR_VURL_HIDDEN;
-    }
     else
-    {
-        if ("previousLocation" in view)
-            url = view.previousLocation;
-        else
-            url = VMGR_VURL_MAINWINDOW;
-    }
+        url = VMGR_VURL_NEW;
     
     console.viewManager.moveViewURL (url, e.viewId);
-
 }    
 
 function cmdVersion ()

@@ -642,7 +642,7 @@ function parse_parseargsraw (e)
  * Returns true if |e| has the properties required to call the command |command|.
  * If |command| is not provided, |e.command| is used instead.
  * @param e        Event object to test against the command.
- * @param command  Command to text.
+ * @param command  Command to test.
  */
 CommandManager.prototype.isCommandSatisfied =
 function cmgr_isok (e, command)
@@ -671,7 +671,7 @@ function cmgr_isok (e, command)
 }
 
 /**
- * Internally use only.
+ * Internal use only.
  * See parseArguments above and the |argTypes| object below.
  *
  * Parses the next argument by calling an appropriate parser function, or the

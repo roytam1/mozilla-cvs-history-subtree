@@ -341,12 +341,17 @@ function scr_preopen ()
     
     if (this.lastScriptCount != this.scriptInstance.scriptCount)
     {
+        var sr;
+
         console.views.scripts.freeze();
         this.childData = new Array();
         var scriptWrapper = this.scriptInstance.topLevel;
-        var sr = new ScriptRecord(scriptWrapper);
-        scriptWrapper.scriptRecord = sr;
-        this.appendChild(sr);
+        if (scriptWrapper)
+        {
+            sr = new ScriptRecord(scriptWrapper);
+            scriptWrapper.scriptRecord = sr;
+            this.appendChild(sr);
+        }
 
         var functions = this.scriptInstance.functions;
         for (var f in functions)

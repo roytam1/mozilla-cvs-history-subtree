@@ -69,7 +69,7 @@
     <viewcontainer id="initial-container" type="vertical" flex="1"/>
   </viewcontainer>
 
-  <overlaytarget id="statusbar-overlay-target" flex="1"/>
+  <overlaytarget id="statusbar-overlay-target"/>
 
 </window>
 

@@ -869,6 +869,11 @@ function sch_hookGuessComplete(e)
 console.views.scripts.hooks["hook-script-instance-sealed"] =
 function scv_hookScriptInstanceSealed (e)
 {
+    if (!e.scriptInstance.url ||
+        e.scriptInstance.url.search (/^x-jsd/) == 0)
+    {
+        return;
+    }
     //dd ("instance sealed: " + e.scriptInstance.url);
     
     var scr = new ScriptInstanceRecord (e.scriptInstance);
