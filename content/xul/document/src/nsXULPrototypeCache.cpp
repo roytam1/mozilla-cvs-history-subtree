@@ -60,6 +60,7 @@
 #include "nsIXBLDocumentInfo.h"
 #include "nsIPref.h"
 #include "nsIServiceManager.h"
+#include "nsITimelineService.h"
 #include "nsXULDocument.h"
 
 #include "nsIFastLoadService.h"
@@ -237,6 +238,7 @@ NS_NewXULPrototypeCache(nsISupports* aOuter, REFNSIID aIID, void** aResult)
 NS_IMETHODIMP
 nsXULPrototypeCache::GetPrototype(nsIURI* aURI, nsIXULPrototypeDocument** _result)
 {
+    NS_TIMELINE_MARK_FUNCTION("XUL PD Cache GetPrototype");
     nsresult rv = NS_OK;
 
     nsIURIKey key(aURI);
@@ -789,6 +791,7 @@ nsXULFastLoadFileIO::GetOutputStream(nsIOutputStream** aResult)
 nsresult
 nsXULPrototypeCache::StartFastLoad(nsIURI* aURI)
 {
+    NS_TIMELINE_MARK_FUNCTION("XUL PD Cache StartFastLoad");
     nsresult rv;
 
     PRBool isChrome = PR_FALSE;
