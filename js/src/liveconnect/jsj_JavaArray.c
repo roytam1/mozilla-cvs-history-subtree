@@ -247,9 +247,13 @@ JavaArray_defineProperty(JSContext *cx, JSObject *obj, jsid id, jsval value,
                          JSPropertyOp getter, JSPropertyOp setter,
                          uintN attrs, JSProperty **propp)
 {
-    JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL,
-                                        JSJMSG_JARRAY_PROP_DEFINE);
-    return JS_FALSE;
+    jsval *vp = &value;
+    if (propp)
+        return JS_FALSE;
+    if (attrs & ~(JSPROP_PERMANENT|JSPROP_ENUMERATE))
+        return JS_FALSE;
+
+    return JavaArray_setPropertyById(cx, obj, id, vp);
 }
 
 static JSBool
