@@ -115,7 +115,8 @@ public:
     PRUint32 GetBytesTransfered() {return mBytesTransfered;} ;
     void Uploading(PRBool value);
     void SetRetrying(PRBool retry);
-
+    PRBool HaveFiredNotification() { return mFired; };
+    
 protected:
 
     nsCOMPtr<nsIRequest>              mRequest;
@@ -129,7 +130,7 @@ protected:
     PRPackedBool   mDelayedOnStartFired;
     PRPackedBool   mUploading;
     PRPackedBool   mRetrying;
-    
+    PRPackedBool   mFired;
     nsresult DelayedOnStartRequest(nsIRequest *request, nsISupports *ctxt);
 };
 
@@ -153,6 +154,7 @@ DataRequestForwarder::DataRequestForwarder()
 {
     PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) DataRequestForwarder CREATED\n", this));
         
+    mFired = PR_FALSE;
     mBytesTransfered = 0;
     mRetrying = mUploading = mDelayedOnStartFired = PR_FALSE;
     NS_INIT_ISUPPORTS();
@@ -276,6 +278,7 @@ nsresult
 DataRequestForwarder::DelayedOnStartRequest(nsIRequest *request, nsISupports *ctxt)
 {
     PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) DataRequestForwarder DelayedOnStartRequest \n", this)); 
+    mFired = PR_TRUE;
     return mListener->OnStartRequest(this, ctxt); 
 }
 
@@ -406,7 +409,7 @@ nsFtpState::nsFtpState() {
     // bool init
     mRETRFailed = PR_FALSE;
     mWaitingForDConn = mTryingCachedControl = mRetryPass = PR_FALSE;
-    mFireCallbacks = mKeepRunning = mAnonymous = PR_TRUE;
+    mKeepRunning = mAnonymous = PR_TRUE;
 
     mAction = GET;
     mState = FTP_COMMAND_CONNECT;
@@ -1495,8 +1498,6 @@ nsFtpState::R_list() {
         mNextState = FTP_COMPLETE;
         return FTP_COMPLETE;
     }
-
-    mFireCallbacks = PR_TRUE;
     return FTP_ERROR;
 }
 
@@ -1911,14 +1912,19 @@ nsFtpState::Cancel(nsresult status)
     if (NS_SUCCEEDED(mControlStatus))
         mControlStatus = status;
 
-    // kill the data connection immediately. 
-    NS_IF_RELEASE(mDRequestForwarder);
+    // kill the data connection immediately. But first, save it's
+    // notification-firing state
+    PRBool fired = PR_FALSE;
+    if (mDRequestForwarder) {
+        fired = mDRequestForwarder->HaveFiredNotification();
+        NS_RELEASE(mDRequestForwarder);
+    }
     if (mDPipeRequest) {
         mDPipeRequest->Cancel(status);
         mDPipeRequest = 0;
     }
 
-    (void) StopProcessing();   
+    (void) StopProcessing(fired);   
     return NS_OK;
 }
 
@@ -2317,7 +2323,7 @@ nsFtpState::KillControlConnection() {
 }
 
 nsresult
-nsFtpState::StopProcessing() {
+nsFtpState::StopProcessing(PRBool aPreventNotification) {
     PR_LOG(gFTPLog, PR_LOG_ALWAYS, ("(%x) nsFtpState stopping", this));
 
 #ifdef DEBUG_dougt
@@ -2338,7 +2344,9 @@ nsFtpState::StopProcessing() {
     if ( NS_SUCCEEDED(broadcastErrorCode))
         broadcastErrorCode = mInternalError;
 
-    if (mFireCallbacks && mChannel) {
+    if (mChannel && !aPreventNotification &&
+        ( (!mDRequestForwarder) || 
+          ( mDRequestForwarder && !mDRequestForwarder->HaveFiredNotification() ))) {
         nsCOMPtr<nsIStreamListener> channelListener = do_QueryInterface(mChannel);
         NS_ASSERTION(channelListener, "ftp channel should be a stream listener");
         nsCOMPtr<nsIStreamListener> asyncListener;
@@ -2454,7 +2462,6 @@ nsFtpState::DataConnectionEstablished()
 {
     PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) Data Connection established.", this));
     
-    mFireCallbacks  = PR_FALSE; // observer callbacks will be handled by the transport.
     mWaitingForDConn= PR_FALSE;
 
     // sending empty string with (mWaitingForDConn == PR_FALSE) will cause the 
