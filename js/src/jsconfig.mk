@@ -73,7 +73,7 @@ ifeq ($(OS_ARCH), WINNT)
     SHIP_LIBS += jsj.dll
   endif
   ifdef JS_THREADSAFE
-    SHIP_LIBS += libnspr3.dll
+    SHIP_LIBS += nspr3.dll
   endif
 endif
 SHIP_LIBS     := $(addprefix $(SHIP_DIST)/lib/, $(SHIP_LIBS))
