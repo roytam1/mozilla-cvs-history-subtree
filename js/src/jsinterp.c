@@ -289,6 +289,13 @@ static JSClass prop_iterator_class = {
         }                                                                     \
     JS_END_MACRO
 
+#define FETCH_OBJECT(cx, n, v, obj)                                           \
+    JS_BEGIN_MACRO                                                            \
+        v = FETCH_OPND(n);                                                    \
+        VALUE_TO_OBJECT(cx, v, obj);                                          \
+        STORE_OPND(n, OBJECT_TO_JSVAL(obj));                                  \
+    JS_END_MACRO
+
 #if JS_BUG_VOID_TOSTRING
 #define CHECK_VOID_TOSTRING(cx, v)                                            \
     if (JSVAL_IS_VOID(v)) {                                                   \
@@ -1580,11 +1587,12 @@ js_Interpret(JSContext *cx, jsval *result)
             break;
 
           case JSOP_ENTERWITH:
-            rval = FETCH_OPND(-1);
-            VALUE_TO_OBJECT(cx, rval, obj);
+            FETCH_OBJECT(cx, -1, rval, obj);
             withobj = js_NewObject(cx, &js_WithClass, obj, fp->scopeChain);
             if (!withobj)
                 goto out;
+            OBJ_SET_SLOT(cx, withobj, JSSLOT_PRIVATE,
+                         INT_TO_JSVAL(sp - fp->spbase));
             fp->scopeChain = withobj;
             STORE_OPND(-1, OBJECT_TO_JSVAL(withobj));
             break;
@@ -2025,6 +2033,8 @@ js_Interpret(JSContext *cx, jsval *result)
               default:
                 /* Convert lval to a non-null object containing id. */
                 VALUE_TO_OBJECT(cx, lval, obj);
+                if (i + 1 < 0)
+                    STORE_OPND(i + 1, OBJECT_TO_JSVAL(obj));
 
                 /* Set the variable obj[id] to refer to rval. */
                 fp->flags |= JSFRAME_ASSIGNING;
@@ -2059,9 +2069,8 @@ js_Interpret(JSContext *cx, jsval *result)
 
 #define PROPERTY_OP(n, call)                                                  \
     JS_BEGIN_MACRO                                                            \
-        /* Pop the left part and resolve it to a non-null object. */          \
-        lval = FETCH_OPND(n);                                                 \
-        VALUE_TO_OBJECT(cx, lval, obj);                                       \
+        /* Fetch the left part and resolve it to a non-null object. */        \
+        FETCH_OBJECT(cx, n, lval, obj);                                       \
                                                                               \
         /* Get or set the property, set ok false if error, true if success. */\
         SAVE_SP(fp);                                                          \
@@ -2699,6 +2708,8 @@ js_Interpret(JSContext *cx, jsval *result)
 
           do_incop:
             VALUE_TO_OBJECT(cx, lval, obj);
+            if (i < 0)
+                STORE_OPND(i, OBJECT_TO_JSVAL(obj));
 
             /* The operand must contain a number. */
             SAVE_SP(fp);
@@ -2836,8 +2847,7 @@ js_Interpret(JSContext *cx, jsval *result)
           case JSOP_ENUMELEM:
             /* Funky: the value to set is under the [obj, id] pair. */
             FETCH_ELEMENT_ID(-1, id);
-            lval = FETCH_OPND(-2);
-            VALUE_TO_OBJECT(cx, lval, obj);
+            FETCH_OBJECT(cx, -2, lval, obj);
             rval = FETCH_OPND(-3);
             SAVE_SP(fp);
             ok = OBJ_SET_PROPERTY(cx, obj, id, &rval);
@@ -3887,8 +3897,7 @@ js_Interpret(JSContext *cx, jsval *result)
                 i = -2;
                 FETCH_ELEMENT_ID(i, id);
               gs_pop_lval:
-                lval = FETCH_OPND(i-1);
-                VALUE_TO_OBJECT(cx, lval, obj);
+                FETCH_OBJECT(cx, -2, lval, obj);
                 break;
 
 #if JS_HAS_INITIALIZERS
@@ -4077,6 +4086,17 @@ js_Interpret(JSContext *cx, jsval *result)
             i = (jsint) GET_ATOM_INDEX(pc);
             JS_ASSERT(i >= 0);
             sp = fp->spbase + i;
+            /*
+             * Pop any with objects pushed onto the scope chain after the
+             * scope-depth checkpoint saved in this SETSP.
+             */
+            while (OBJ_GET_CLASS(cx, fp->scopeChain) == &js_WithClass &&
+                   JSVAL_TO_INT(OBJ_GET_SLOT(cx, fp->scopeChain,
+                                             JSSLOT_PRIVATE)) > i) {
+                rval = OBJ_GET_SLOT(cx, fp->scopeChain, JSSLOT_PARENT);
+                JS_ASSERT(JSVAL_IS_OBJECT(rval));
+                fp->scopeChain = JSVAL_TO_OBJECT(rval);
+            }
             break;
 
           case JSOP_GOSUB:
