@@ -213,6 +213,40 @@ nsCodebasePrincipal::Equals(nsIPrincipal *other, PRBool *result)
     return NS_OK;
 }
 
+//////////////////////////////////////////
+// Methods implementing nsISerializable //
+//////////////////////////////////////////
+
+NS_IMETHODIMP
+nsCodebasePrincipal::Read(nsIObjectInputStream* aStream)
+{
+    nsresult rv;
+
+    rv = nsBasePrincipal::Read(aStream);
+    if (NS_FAILED(rv)) return rv;
+
+    return aStream->ReadObject(PR_TRUE, getter_AddRefs(mURI));
+}
+
+NS_IMETHODIMP
+nsCodebasePrincipal::Write(nsIObjectOutputStream* aStream)
+{
+    nsresult rv;
+
+    rv = nsBasePrincipal::Write(aStream);
+    if (NS_FAILED(rv)) return rv;
+
+    return aStream->WriteObject(mURI, PR_TRUE);
+}
+
+NS_IMETHODIMP
+nsCodebasePrincipal::GetCID(nsCID *aResult)
+{
+    nsCID myCID = NS_CODEBASEPRINCIPAL_CID;
+
+    *aResult = myCID;
+    return NS_OK;
+}
 
 /////////////////////////////////////////////
 // Constructor, Destructor, initialization //

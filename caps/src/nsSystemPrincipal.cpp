@@ -125,6 +125,31 @@ nsSystemPrincipal::DisableCapability(const char *capability, void **annotation)
     return NS_ERROR_FAILURE;
 }
 
+//////////////////////////////////////////
+// Methods implementing nsISerializable //
+//////////////////////////////////////////
+
+NS_IMETHODIMP
+nsSystemPrincipal::Read(nsIObjectInputStream* aStream)
+{
+    return nsBasePrincipal::Read(aStream);
+}
+
+NS_IMETHODIMP
+nsSystemPrincipal::Write(nsIObjectOutputStream* aStream)
+{
+    return nsBasePrincipal::Write(aStream);
+}
+
+NS_IMETHODIMP
+nsSystemPrincipal::GetCID(nsCID *aResult)
+{
+    nsCID myCID = NS_SYSTEMPRINCIPAL_CID;
+
+    *aResult = myCID;
+    return NS_OK;
+}
+
 /////////////////////////////////////////////
 // Constructor, Destructor, initialization //
 /////////////////////////////////////////////

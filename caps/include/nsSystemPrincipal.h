@@ -37,6 +37,7 @@ class nsSystemPrincipal : public nsBasePrincipal {
 public:
     
     NS_DECL_ISUPPORTS
+    NS_DECL_NSISERIALIZABLE
     
     NS_IMETHOD ToString(char **result);
 
