@@ -196,6 +196,7 @@ function checkAndTransfer(transfer, listingProgress)
   filesListing[0].filename = kListingTransferFilename;
   filesListing[0].mimetype = kListingMimetype;
   filesListing[0].size = undefined;
+  SetListingTransfer(true);
   var listingTransfer = new Transfer(true, // download
                                      transfer.serial,
                                      transfer.localDir, transfer.remoteDir,
@@ -203,6 +204,9 @@ function checkAndTransfer(transfer, listingProgress)
                                      filesListing,
                                      function(success)
   {
+    SetListingTransfer(false);
+    addFileStatus(listingTransfer.files[0]);
+
     /* In case we had to ask for the password,
        save it for the main transfer as well */
     transfer.username = listingTransfer.username;
@@ -311,9 +315,7 @@ function download(transfer, remoteListing)
 
       ddump("transfer done");
 
-      CloseIfPossible();
-            /* in case there were no files to be transferred and
-               the progress callback in progressDialog.js thus didn't fire. */
+      CheckDone(true); // progress dialog - close it, if possible
     });
     transfer.transfer();
   }, false);
@@ -406,6 +408,7 @@ function uploadStep4(transfer, localFiles, remoteFiles, keepServerVersionFiles)
     filesListing[0].filename = kListingTransferFilename;
     filesListing[0].mimetype = kListingMimetype;
     filesListing[0].size = undefined;
+    SetListingTransfer(true);
     var listingTransfer = new Transfer(false, // upload
                                        transfer.serial,
                                        transfer.localDir, transfer.remoteDir,
@@ -414,6 +417,9 @@ function uploadStep4(transfer, localFiles, remoteFiles, keepServerVersionFiles)
                                        filesListing,
                                        function(success)
     {
+      addFileStatus(listingTransfer.files[0]);
+      SetListingTransfer(false);
+
       ddump("Step 7: Generate listing-uploaded");
       remove(kListingTransferFilename);
       createListingFile(substractFiles(localFiles, keepServerVersionFiles),
@@ -421,9 +427,7 @@ function uploadStep4(transfer, localFiles, remoteFiles, keepServerVersionFiles)
 
       ddump("transfer done");
 
-      CloseIfPossible();
-            /* in case there were no files to be transferred and
-               the progress callback in progressDialog.js thus didn't fire. */
+      CheckDone(true);
     }, function()
     {
       // XXX progress

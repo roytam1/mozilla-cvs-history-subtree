@@ -24,7 +24,7 @@
 <!ENTITY defaultTitle          "Roaming Transfer">
 <!ENTITY siteUrl.label         "Site URL:">
 
-<!ENTITY status.label          "Transfering...">
+<!ENTITY status.label          "">
 <!ENTITY fileList.label        "Transfering Status">
 <!ENTITY statusHeader.label    "Status">
 <!ENTITY filenameHeader.label  "Filename">

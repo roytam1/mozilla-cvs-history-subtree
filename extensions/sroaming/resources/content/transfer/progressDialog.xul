@@ -64,18 +64,18 @@
   <groupbox>
     <caption><label value="&fileList.label;"/></caption>
     <vbox align="center" style="max-width:30em" id="aboxingbox">
-      <label id="FinalStatusMessage" class="bold" value="&status.label;"/>
+      <hbox>
+        <progressmeter id="ListingProgress"
+                       mode="undetermined" value="50"
+                       hidden="true" />
+        <label id="FinalStatusMessage" class="bold" value="&status.label;" />
+      </hbox>
     </vbox>
     <description id="StatusMessage"
                  class="wrap" style="max-width:30em; min-height: 1em"/>
     <vbox flex="1">
       <listbox id="FileList" rows="1"/>
     </vbox>
-    <button id="errors"
-            label="&troubleshooting.label;"
-            accesskey="&troubleshooting.accessKey;"
-            oncommand="showErrors();"
-            hidden="true" />
     <hbox align="center" id="failureBox" hidden="true">
       <image class="progressitem" progress="done"/>
       <label value="&succeeded.label;"/>
@@ -84,7 +84,7 @@
       <label value="&failed.label;"/>
       <button label="&troubleshooting.label;"
               accesskey="&troubleshooting.accessKey;"
-              oncommand="doTroubleshooting();" />
+              oncommand="showErrors();" />
     </hbox>
   </groupbox>
 </dialog>

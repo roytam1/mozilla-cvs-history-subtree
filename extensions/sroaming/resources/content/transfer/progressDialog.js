@@ -25,6 +25,8 @@
    HTTP/FTP server.
    It also initiates the actual transfer, using transfer.js,
    see mozSRoamingStream.cpp for the reasons.
+
+   The Set*() part of this file needs a serious shakeout.
 */
 
 var gTransfer; // main |Transfer| object, for the main files to be tranferred
@@ -40,17 +42,24 @@ var gFinished = false;
 var gTransferingFailed = false;
 var gFileNotFound = false;
 var gStatusMessage="";
-
+var gResults = ""; /* stores the transfer result messages (in human language)
+                      to be later displayed to the user on his request. */
+var gRanFinishedAll = false; // gee, what a hack. this is all a big shit here.
 var gTimerID;
 var gTimeout = 1000;
 var gAllowEnterKey = false;
 
 const XUL_NS ="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 
-
 function Startup()
 {
   ddump("In sroaming/transfer/progressDialog::Startup()");
+
+  gDialog.FileList           = document.getElementById("FileList");
+  gDialog.FinalStatusMessage = document.getElementById("FinalStatusMessage");
+  gDialog.StatusMessage      = document.getElementById("StatusMessage");
+  gDialog.ListingProgress    = document.getElementById("ListingProgress");
+  gDialog.Close              = document.documentElement.getButton("cancel");
 
   try
   {
@@ -65,11 +74,6 @@ function Startup()
     SetGlobalStatusMessage(ErrorMessageForException(e));
     return;
   }
-
-  gDialog.FileList           = document.getElementById("FileList");
-  gDialog.FinalStatusMessage = document.getElementById("FinalStatusMessage");
-  gDialog.StatusMessage      = document.getElementById("StatusMessage");
-  gDialog.Close              = document.documentElement.getButton("cancel");
 
   SetWindowLocation();
   window.title = GetString("TransferProgressCaption");
@@ -218,18 +222,19 @@ function SetProgressStatus(filei)
   if (!filename)
     return false;
 
-  // Output error msg, if apppropriate
-  if (status == "failed")
-  {
+  if (status == "busy" &&
+      gDialog.FinalStatusMessage.value == "")
+    gDialog.FinalStatusMessage.value = GetString("Transfering");
+  else if (status == "failed")
+    // Output error msg, if apppropriate
     SetFileStatusMessage(filei, ErrorMessageForFile(gTransfer.files[filei]));
-  }
 
   // Just set attribute for status icon 
   // if we already have this filename 
   var listitems = document.getElementsByTagName("listitem");
   for (var i = 0; i < listitems.length; i++)
   {
-  	var li = listitems[i];
+    var li = listitems[i];
     if (li.getAttribute("label") == filename)
     {
       if (li.getAttribute("progress") != status)
@@ -237,7 +242,7 @@ function SetProgressStatus(filei)
         var oldstat = li.getAttribute("progress");
         ddump("  Setting "+filename+" from "+oldstat+" to "+status); 
         li.setAttribute("progress", status);
-        //CloseIfPossible(); -- called by controller (conflictCheck.js)
+        CheckDone(false);
       }
       return true;
     }
@@ -286,6 +291,10 @@ function SetProgressFinished(filei)
 
 function SetProgressFinishedAll()
 {
+  if (gRanFinishedAll)
+    return;
+  gRanFinishedAll = true;
+
     gDialog.Close.setAttribute("label", GetString("Close"));
     if (!gStatusMessage)
       gStatusMessage = GetString(gTransferingFailed
@@ -300,7 +309,21 @@ function SetProgressFinishedAll()
       // Show "Troubleshooting" button to help solving problems
       //  and key for successful / failed files
       document.getElementById("failureBox").hidden = false;
+      window.sizeToContent();
     }
+
+  for (var i = 0, l = gTransfer.files.length; i < l; i++)
+  {
+    addFileStatus(gTransfer.files[i]);
+  }
+}
+
+// set to on, if a listing.xml file is being transferred (and off afterwards)
+function SetListingTransfer(on)
+{
+  gDialog.ListingProgress.setAttribute("hidden", on ? "false" : "true");
+  //gDialog.ListingProgress.setAttribute("value", on ? "1" : "0");
+  gDialog.FinalStatusMessage.value = on ? GetString("TransferingListing") : "";
 }
 
 // this function is to be used when we cancel persist's saving,
@@ -308,8 +331,7 @@ function SetProgressFinishedAll()
 // this function changes status for all non-done/non-failure to failure.
 function SetProgressStatusCancel()
 {
-  var listitems = document.getElementsByTagName("listitem");
-  if (!listitems)
+  var listitems = document.getElementsByTagName("listitem");  if (!listitems)
     return;
 
   for (var i=0; i < listitems.length; i++)
@@ -320,17 +342,24 @@ function SetProgressStatusCancel()
   }
 }
 
-function CloseIfPossible()
+/*
+  checks, if all fines finished (failed or success) and change dialog, if so
+  @param close  bool  If all files finished successfully, also close dialog
+ */
+function CheckDone(close)
 {
-  ddump("CloseIfPossible()");
+  ddump("CheckDone()");
   for (var i = 0; i < gTransfer.files.length; i++)
   {
-    ddumpCont("  Checking " + i + ", " + gTransfer.files[i].filename + ", ");
-    ddump(gTransfer.files[i].status);
-    if (gTransfer.files[i].status != "done")  // do not close, if failed
+    var file = gTransfer.files[i];
+    ddumpCont("  Checking " + i + ", " + file.filename + ", ");
+    ddump(file.status);
+    if (file.status == "failed")
+      gTransferingFailed = true;
+    else if (file.status != "done")
       return;
   }
-  ddump("  Closing");
+  ddump("  Yes, we're done");
 
   // Finish progress messages, settings buttons etc.
   SetProgressFinishedAll();
@@ -350,6 +379,10 @@ function CloseIfPossible()
       SetGlobalStatusMessage(gStatusMessage);
     }
   }
+
+  if (!close || gTransferingFailed)
+    return;
+  ddump("  Closing");
 
   if (gTimeout > 0)
     // Leave window open a minimum amount of time 
@@ -426,7 +459,8 @@ function SetFileStatusMessage(filei, message)
 {
   if (gTransfer.files[filei].status == "failed")
   {
-    document.getElementById("errors").hidden = false;
+    gTransferingFailed = true;
+    gDialog.FinalStatusMessage.value = GetString("TransferFailed");
     window.sizeToContent();
   }
   return;//XXX
@@ -451,14 +485,18 @@ function SetFileStatusMessage(filei, message)
   window.sizeToContent();
 }
 
+/*
+  Records the transfer result of a file, to be alter displayed to the user
+  on request.
+  @param file  TransferFile
+ */
+function addFileStatus(file)
+{
+  gResults += ErrorMessageForFile(file) + "\n";
+}
+
 //XXX hack
 function showErrors()
 {
-  var text = "";
-  for (var i = 0, l = gTransfer.files.length; i < l; i++)
-  {
-    var file = gTransfer.files[i];
-    text += ErrorMessageForFile(file) + "\n";
-  }
-  alert(text);
+  alert(gResults);
 }
