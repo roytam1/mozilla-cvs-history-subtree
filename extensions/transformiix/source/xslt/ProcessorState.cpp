@@ -410,12 +410,14 @@ void ProcessorState::getNameSpaceURI(const String& name, String& nameSpaceURI) {
 
     XMLUtils::getNameSpace(name, prefix);
     if (prefix.length() == 0) {
+        nameSpaceURI.clear();
         nameSpaceURI.append(*(String*)defaultNameSpaceURIStack.peek());
     }
     else {
         String* result = (String*)nameSpaceMap.get(prefix);
         if (result) {
-            nameSpaceURI.append(*result);        
+            nameSpaceURI.clear();
+            nameSpaceURI.append(*result);
         }
     }
 } //-- getNameSpaceURI
