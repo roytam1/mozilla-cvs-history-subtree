@@ -160,6 +160,11 @@ EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LBER_LIBNAME)
 EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib
 endif
 
+ifeq ($(OS_ARCH), Linux)
+EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LBER_LIBNAME)
+EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib
+endif
+
 ifeq ($(OS_ARCH), WINNT)
 EXTRA_LIBS =wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib \
             comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib \
@@ -231,7 +236,11 @@ endif
 ifeq ($(OS_ARCH), AIX)
 	$(LINK_LIB) ../liblber/$(OBJDIR_NAME)/*.a
 else
+ifeq ($(OS_ARCH), Linux)
+	$(LINK_LIB) ../liblber/$(OBJDIR_NAME)/*.a
+else
 	$(LINK_LIB) $(EXTRA_LIBS)
+endif
 endif
 
 veryclean:: clean
