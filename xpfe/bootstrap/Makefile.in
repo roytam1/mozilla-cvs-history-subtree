@@ -81,6 +81,12 @@ XP_LIBS		+= \
 		$(NULL)
 endif
 
+ifdef MOZ_LDAP_XPCOM
+XP_LIBS		+= \
+		-lldap40 -llber40 \
+		$(NULL)
+endif
+
 ifdef MOZ_ENABLE_GTK
 XP_LIBS		+= $(XLDFLAGS) -lXt
 endif
