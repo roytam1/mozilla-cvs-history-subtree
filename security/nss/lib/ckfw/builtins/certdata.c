@@ -39,15 +39,15 @@ static const char CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$ $Name$""; @(#) $R
 #include "builtins.h"
 #endif /* BUILTINS_H */
 
-static const CK_OBJECT_CLASS cko_certificate = CKO_CERTIFICATE;
-static const CK_CERTIFICATE_TYPE ckc_x_509 = CKC_X_509;
-static const CK_BBOOL ck_false = CK_FALSE;
-static const CK_TRUST ckt_netscape_valid = CKT_NETSCAPE_VALID;
-static const CK_TRUST ckt_netscape_trusted_delegator = CKT_NETSCAPE_TRUSTED_DELEGATOR;
-static const CK_OBJECT_CLASS cko_data = CKO_DATA;
-static const CK_BBOOL ck_true = CK_TRUE;
-static const CK_OBJECT_CLASS cko_netscape_builtin_root_list = CKO_NETSCAPE_BUILTIN_ROOT_LIST;
 static const CK_OBJECT_CLASS cko_netscape_trust = CKO_NETSCAPE_TRUST;
+static const CK_TRUST ckt_netscape_valid = CKT_NETSCAPE_VALID;
+static const CK_OBJECT_CLASS cko_netscape_builtin_root_list = CKO_NETSCAPE_BUILTIN_ROOT_LIST;
+static const CK_TRUST ckt_netscape_trusted_delegator = CKT_NETSCAPE_TRUSTED_DELEGATOR;
+static const CK_CERTIFICATE_TYPE ckc_x_509 = CKC_X_509;
+static const CK_OBJECT_CLASS cko_data = CKO_DATA;
+static const CK_BBOOL ck_false = CK_FALSE;
+static const CK_BBOOL ck_true = CK_TRUE;
+static const CK_OBJECT_CLASS cko_certificate = CKO_CERTIFICATE;
 #ifdef DEBUG
 static const CK_ATTRIBUTE_TYPE nss_builtins_types_0 [] = {
  CKA_CLASS,  CKA_TOKEN,  CKA_PRIVATE,  CKA_MODIFIABLE,  CKA_LABEL,  CKA_APPLICATION,  CKA_VALUE
@@ -466,7 +466,7 @@ static const NSSItem nss_builtins_items_0 [] = {
   { (void *)&ck_false, (PRUint32)sizeof(CK_BBOOL) },
   { (void *)"CVS ID", (PRUint32)7 },
   { (void *)"NSS", (PRUint32)4 },
-  { (void *)"@(#) $RCSfile$ $Revision$ $Date$ $Name$""; @(#) $RCSfile$ $Revision$ $Date$ $Name$", (PRUint32)197 }
+  { (void *)"@(#) $RCSfile$ $Revision$ $Date$ $Name$""; @(#) $RCSfile$ $Revision$ $Date$ $Name$", (PRUint32)179 }
 };
 #endif /* DEBUG */
 static const NSSItem nss_builtins_items_1 [] = {
@@ -5583,8 +5583,8 @@ static const NSSItem nss_builtins_items_90 [] = {
 "\144\144\124\162\165\163\164\040\121\165\141\154\151\146\151\145"
 "\144\040\103\101\040\122\157\157\164"
 , (PRUint32)105 },
-  { (void *)"\002\001\001"
-, (PRUint32)3 },
+  { (void *)"\001"
+, (PRUint32)1 },
   { (void *)"\060\202\004\036\060\202\003\006\240\003\002\001\002\002\001\001"
 "\060\015\006\011\052\206\110\206\367\015\001\001\005\005\000\060"
 "\147\061\013\060\011\006\003\125\004\006\023\002\123\105\061\024"
