@@ -42,9 +42,43 @@
 #include "xpcom-private.h"
 
 //-----------------------------------------------------------------------------
+// XP_MACOSX or XP_BEOS
+//-----------------------------------------------------------------------------
+#if defined(XP_BEOS) || defined(XP_MACOSX)
+
+#include "nsAString.h"
+#include "nsReadableUtils.h"
+#include "nsString.h"
+
+NS_COM nsresult
+NS_CopyNativeToUnicode(const nsACString &input, nsAString  &output)
+{
+    CopyUTF8toUTF16(input, output);
+    return NS_OK;
+}
+
+NS_COM nsresult
+NS_CopyUnicodeToNative(const nsAString  &input, nsACString &output)
+{
+    CopyUTF16toUTF8(input, output);
+    return NS_OK;
+}
+
+void
+NS_StartupNativeCharsetUtils()
+{
+}
+
+void
+NS_ShutdownNativeCharsetUtils()
+{
+}
+
+
+//-----------------------------------------------------------------------------
 // XP_UNIX
 //-----------------------------------------------------------------------------
-#if defined(XP_UNIX)
+#elif defined(XP_UNIX)
 
 #include <stdlib.h>   // mbtowc, wctomb
 #include <locale.h>   // setlocale
@@ -822,39 +856,6 @@ void
 NS_ShutdownNativeCharsetUtils()
 {
     nsNativeCharsetConverter::GlobalShutdown();
-}
-
-//-----------------------------------------------------------------------------
-// XP_BEOS
-//-----------------------------------------------------------------------------
-#elif defined(XP_BEOS)
-
-#include "nsAString.h"
-#include "nsReadableUtils.h"
-#include "nsString.h"
-
-NS_COM nsresult
-NS_CopyNativeToUnicode(const nsACString &input, nsAString  &output)
-{
-    CopyUTF8toUTF16(input, output);
-    return NS_OK;
-}
-
-NS_COM nsresult
-NS_CopyUnicodeToNative(const nsAString  &input, nsACString &output)
-{
-    CopyUTF16toUTF8(input, output);
-    return NS_OK;
-}
-
-void
-NS_StartupNativeCharsetUtils()
-{
-}
-
-void
-NS_ShutdownNativeCharsetUtils()
-{
 }
 
 //-----------------------------------------------------------------------------
