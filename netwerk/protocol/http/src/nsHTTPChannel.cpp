@@ -347,7 +347,7 @@ NS_IMETHODIMP
 nsHTTPChannel::AsyncWrite(nsIStreamProvider *provider,
                           nsISupports *ctxt)
 {
-    nsresult rv = NS_OK;
+    nsresult rv = NS_ERROR_NOT_IMPLEMENTED;
 
 #if 0
 
