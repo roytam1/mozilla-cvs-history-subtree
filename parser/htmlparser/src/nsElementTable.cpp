@@ -1961,7 +1961,7 @@ eHTMLTags nsHTMLElement::GetCloseTargetForEndTag(nsDTDContext& aContext,PRInt32 
     }
   }
 
-  else if(ContainsSet(kFormControl|kExtensions|kPreformatted)){  //bug54834...
+  else if(IsMemberOf(kFormControl|kExtensions|kPreformatted)){  //bug54834...
 
     while((--theIndex>=anIndex) && (eHTMLTag_unknown==result)){
       eHTMLTags theTag=aContext.TagAt(theIndex);
