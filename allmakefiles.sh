@@ -147,6 +147,7 @@ MAKEFILES_htmlparser="
 htmlparser/Makefile
 htmlparser/robot/Makefile
 htmlparser/robot/test/Makefile
+htmlparser/public/Makefile
 htmlparser/src/Makefile
 htmlparser/tests/Makefile
 htmlparser/tests/grabpage/Makefile
@@ -544,9 +545,6 @@ widget/src/qt/Makefile
 widget/src/xlib/window_service/Makefile
 widget/src/xpwidgets/Makefile
 widget/src/support/Makefile
-widget/tests/Makefile
-widget/tests/scribble/Makefile
-widget/tests/widget/Makefile
 widget/timer/Makefile
 widget/timer/public/Makefile
 widget/timer/src/Makefile
