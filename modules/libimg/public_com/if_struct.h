@@ -89,10 +89,10 @@ PR_END_EXTERN_C
 #define _USD 1              /* scanlines upside-down */ 
 #endif
 
-//extern PRLogModuleInfo *il_log_module;
+/* extern PRLogModuleInfo *il_log_module; */
 
 #ifdef DEBUG
-//#define ILTRACE(l,t) { if(il_debug>l) {PR_LOG(il_log_module, 1, t);} }
+/* #define ILTRACE(l,t) { if(il_debug>l) {PR_LOG(il_log_module, 1, t);} } */
 #else
 #define ILTRACE(l,t) {}
 #endif
