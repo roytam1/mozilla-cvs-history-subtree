@@ -2501,7 +2501,11 @@ XP_Bool NPL_IsLiveConnected(LO_EmbedStruct *embed)
 
 	ndata = (np_data*) app->np_data;
 	XP_ASSERT(ndata);
-    return np_IsLiveConnected(ndata->instance->handle);
+    if(ndata->instance != NULL)
+    {
+      return np_IsLiveConnected(ndata->instance->handle);
+    }
+    return FALSE;
 #else
     return FALSE;
 #endif
