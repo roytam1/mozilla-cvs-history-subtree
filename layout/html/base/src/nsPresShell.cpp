@@ -2909,14 +2909,11 @@ PresShell::DoCopy()
 #ifdef IBMBIDI_NOT
   rv = NS_OK;
   NS_WITH_SERVICE(nsIUBidiUtils, BidiEngine, kUBiDiUtilCID, &rv);
-
-  PRUint8 value;
-  mPresContext->GetDocumentBiDi(IBMBIDI_CLIPBOARDTEXTMODE,&value);
-  if (value == IBMBIDI_CLIPBOARDTEXTMODE_LOGICAL)
-  {
-    nsString NewBuffer;
+   nsBidiOptions mBidioptions;
+    mPresContext->GetBidi(&mBidioptions);
+    if (mBidioptions.mclipboardtextmode == IBMBIDI_CLIPBOARDTEXTMODE_LOGICAL){
+		nsString NewBuffer;
     PRUint32 txtSizeChange = 0;
-
     BidiEngine->Conv_FE_06 (buffer, NewBuffer);
     buffer = NewBuffer;
   }

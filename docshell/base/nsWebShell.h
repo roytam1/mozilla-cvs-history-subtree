@@ -51,8 +51,6 @@ public:
   NS_IMETHOD GetReferrer(nsIURI **aReferrer);
 
 #ifdef IBMBIDI
-  NS_IMETHOD SetDocumentBidi(const PRUint8 member, const PRUint8 value);
-  NS_IMETHOD GetDocumentBidi(const PRUint8 member, PRUint8 * value);
   NS_IMETHOD SetBidi(nsBidiOptions Source);
   NS_IMETHOD GetBidi(nsBidiOptions * Dist);
 #endif // IBMBIDI

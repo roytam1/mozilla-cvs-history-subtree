@@ -672,20 +672,21 @@ nsBidiPresUtils::FormatUnicodeText(nsIPresContext* aPresContext,
     }
     mUnicodeUtils = bidiUtils;
   }
-  PRUint8 value;
-  aPresContext->GetDocumentBidi(IBMBIDI_NUMERAL, &value);
-
-  if ( (U_EUROPEAN_NUMBER == aTextClass) && (IBMBIDI_NUMERAL_HINDI == value) ) {
-    mUnicodeUtils->HandleNumbers(aText, aTextLength, IBMBIDI_NUMERAL_HINDI);
-  }
-  else if (U_ARABIC_NUMBER == aTextClass) {
-    if (IBMBIDI_NUMERAL_ARABIC == value) {
-      mUnicodeUtils->HandleNumbers(aText, aTextLength, IBMBIDI_NUMERAL_ARABIC);
-    }
-    else {
-      mUnicodeUtils->HandleNumbers(aText, aTextLength, IBMBIDI_NUMERAL_HINDI);
-    }
-  }
+// ahmed 
+      //adjusted for correct numeral shaping	
+    nsBidiOptions mBidioptions;
+  	aPresContext->GetBidi(&mBidioptions);
+		if (IBMBIDI_NUMERAL_HINDI == mBidioptions.mnumeral)
+			mUnicodeUtils->HandleNumbers(aText,aTextLength,IBMBIDI_NUMERAL_HINDI);
+  	else if (IBMBIDI_NUMERAL_ARABIC == mBidioptions.mnumeral)
+   	  mUnicodeUtils->HandleNumbers(aText,aTextLength,IBMBIDI_NUMERAL_ARABIC);
+  	else if ( (IBMBIDI_NUMERAL_REGULAR == mBidioptions.mnumeral) || (IBMBIDI_NUMERAL_HINDICONTEXT == mBidioptions.mnumeral) ) {
+	  	if (U_EUROPEAN_NUMBER == aTextClass)
+				mUnicodeUtils->HandleNumbers(aText,aTextLength,IBMBIDI_NUMERAL_ARABIC);
+		 	else if (U_ARABIC_NUMBER == aTextClass)
+				mUnicodeUtils->HandleNumbers(aText,aTextLength,IBMBIDI_NUMERAL_HINDI);
+     }
+	
   PRInt32 newLen;
   PRUnichar* buffer = (PRUnichar*) mBuffer.GetUnicode();
   // buffer can't be shorter than aText, since it was created from entire block

@@ -805,17 +805,10 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
 
 #ifdef IBMBIDI
   // Check if 864 but in Implicit mode !
-  PRUint8 TextType = 0;
-  //	------------------
-  // 	Text Type
-  //	------------------
-  //	bidi.texttype
-  // 	1 = charsettexttypeBidi *
-  //	2 = logicaltexttypeBidi
-  //	3 = visualtexttypeBidi
-  this->GetDocumentBidi(IBMBIDI_TEXTTYPE,	&TextType);
-  if (TextType == IBMBIDI_TEXTTYPE_LOGICAL)
-	 if (charset.RFind("864", PR_TRUE ))
+  	nsBidiOptions mBidioptions;
+	  this->GetBidi(&mBidioptions);
+  if (mBidioptions.mtexttype == IBMBIDI_TEXTTYPE_LOGICAL)
+		if (charset.RFind("864", PR_TRUE ))
 		//charset = "IBM864i";
 		//nsAutoString ibm8641str("IBM864i");
 		charset.AssignWithConversion("IBM864i");

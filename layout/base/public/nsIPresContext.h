@@ -329,8 +329,6 @@ public:
   NS_IMETHOD IsVisualMode(PRBool& aIsVisual) const = 0;
   NS_IMETHOD SetVisualMode(PRBool aIsVisual) = 0;
   NS_IMETHOD GetBidiUtils(nsBidiPresUtils** aBidiUtils) = 0;
-  NS_IMETHOD SetDocumentBidi(const PRUint8 member, const PRUint8 value) = 0;
-  NS_IMETHOD GetDocumentBidi(const PRUint8 member, PRUint8 * value) = 0;
   NS_IMETHOD SetBidi(nsBidiOptions Source) = 0;
   NS_IMETHOD GetBidi(nsBidiOptions * Dist) = 0;
 #endif // IBMBIDI

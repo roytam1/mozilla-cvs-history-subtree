@@ -153,8 +153,6 @@ public:
   NS_IMETHOD RemoveCharSetObserver(nsIObserver* aObserver) = 0;
 
 #ifdef IBMBIDI
-  NS_IMETHOD   SetDocumentBidi(const PRUint8 member, const PRUint8 value) = 0;
-  NS_IMETHOD   GetDocumentBidi(const PRUint8 member, PRUint8 * value) = 0;
   NS_IMETHOD   SetBidi(nsBidiOptions Source) = 0;
   NS_IMETHOD   GetBidi(nsBidiOptions * Dist) = 0;
 

@@ -1211,17 +1211,10 @@ void StyleDisplayImpl::ResetFrom(const nsStyleDisplay* aParent, nsIPresContext* 
   }
   else {
 #ifdef IBMBIDI
-    // ------------------------------
-    // IBM Bidi prefs
-    // ------------------------------
-    // IBMBIDI_TEXTDIRECTION
-    // -------- Valid Valus -------
-    // IBMBIDI_TEXTDIRECTION_LTR
-    // IBMBIDI_TEXTDIRECTION_RTL
-    //
-    PRUint8 value;
-    aPresContext->GetDocumentBidi(IBMBIDI_TEXTDIRECTION, &value);
-    if (value == IBMBIDI_TEXTDIRECTION_RTL) mDirection = NS_STYLE_DIRECTION_RTL;
+    nsBidiOptions mBidioptions;
+    aPresContext->GetBidi(&mBidioptions);
+    if (mBidioptions.mdirection == IBMBIDI_TEXTDIRECTION_RTL)
+			mDirection = NS_STYLE_DIRECTION_RTL;
     else mDirection = NS_STYLE_DIRECTION_LTR;
 #else // ifndef IBMBIDI
     aPresContext->GetDefaultDirection(&mDirection);

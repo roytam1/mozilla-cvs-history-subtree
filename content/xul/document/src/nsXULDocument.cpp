@@ -878,18 +878,6 @@ nsXULDocument::SetDocumentCharacterSet(const nsString& aCharSetID)
 #ifdef IBMBIDI
 //In nsWebShell doc->SetBidi() is once casted as nsXULDocument, and nsDocument
 //looking into removing these....
-NS_IMETHODIMP
-nsXULDocument::SetDocumentBidi(const PRUint8 member, const PRUint8 value)
-{
-  return NS_OK; 
-}
-
-NS_IMETHODIMP    
-nsXULDocument::GetDocumentBidi(const PRUint8 member, PRUint8 * value)
-{
-  return NS_OK;
-}
-
 NS_IMETHODIMP   nsXULDocument::SetBidi(nsBidiOptions Source)
 {
 	return NS_OK;

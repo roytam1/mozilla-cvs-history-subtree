@@ -186,6 +186,8 @@ public:
 #ifdef IBMBIDI
   NS_IMETHOD IsBidiSystem(PRBool& aIsBidi);
   NS_IMETHOD SetRTLReading(PRBool aIsRTL);
+	//ahmed
+	NS_IMETHOD_(PRBool) IsNeedShaping(void);
 #endif // IBMBIDI
 
   // nsIRenderingContextWin

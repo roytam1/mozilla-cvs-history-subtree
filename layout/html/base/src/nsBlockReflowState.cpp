@@ -1635,7 +1635,6 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
                            NS_BLOCK_MARGIN_ROOT & mState);
 
   if (eReflowReason_Resize != aReflowState.reason) {
-    RenumberLists(aPresContext);
 #ifdef IBMBIDI
     PRBool bidiEnabled;
     aPresContext->BidiEnabled(bidiEnabled);
@@ -1652,6 +1651,7 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
       }
     }
 #endif // IBMBIDI
+    RenumberLists(aPresContext);
   }
 
   nsresult rv = NS_OK;
