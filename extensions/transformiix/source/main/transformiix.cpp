@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
         cerr << xsltProcessor.getAppVersion() << endl;
         cerr << copyright << endl;
         //-- print banner line
-        PRInt32 fillSize = copyright.length() + 1;
+        PRUint32 fillSize = copyright.length() + 1;
         String fill;
         fill.setLength(fillSize, '-');
         cerr << fill << endl << endl;
@@ -101,8 +101,8 @@ int main(int argc, char** argv) {
     //-- open XML file
     istream* xmlInput = &cin;
     if (xmlFilename && ! xmlFilename->isEqual("-")) {
-      char* chars = new char[xmlFilename->length()+1];
-      xmlInput = new ifstream(xmlFilename->toCharArray(chars), ios::in);
+      char* chars = xmlFilename->toCharArray();
+      xmlInput = new ifstream(chars, ios::in);
       delete chars;
     }
 
@@ -110,8 +110,8 @@ int main(int argc, char** argv) {
     ostream* resultOutput = &cout;
     ofstream resultFileStream;
     if ( outFilename && ! outFilename->isEqual("-")) {
-        char* chars = new char[outFilename->length()+1];
-        resultFileStream.open(outFilename->toCharArray(chars), ios::out);
+        char* chars = outFilename->toCharArray();
+        resultFileStream.open(chars, ios::out);
         delete chars;
         if ( !resultFileStream ) {
             cerr << "error opening output file: " << *xmlFilename << endl;
@@ -132,8 +132,8 @@ int main(int argc, char** argv) {
     }
     else {
         //-- open XSLT file
-        char* chars = new char[xsltFilename->length()+1];
-        ifstream xsltInput(xsltFilename->toCharArray(chars), ios::in);
+        char* chars = xsltFilename->toCharArray();
+        ifstream xsltInput(chars, ios::in);
         delete chars;
         xsltProcessor.process(*xmlInput, *xmlFilename, xsltInput, *xsltFilename, *resultOutput);
     }
