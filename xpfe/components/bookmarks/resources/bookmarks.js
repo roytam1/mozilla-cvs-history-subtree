@@ -280,28 +280,28 @@ var BookmarksCommand = {
     case "Bookmark":
       commands = ["bm_open", "bm_openinnewwindow", "bm_openinnewtab", "bm_separator",
                   "bm_newfolder", "bm_separator",
-                  "bm_cut", "bm_copy", "bm_paste", "bm_separator",
-                  "bm_delete", "bm_separator",
+                  "bm_cut", "bm_copy", "bm_paste", "bm_movebookmark", "bm_separator",
+                  "bm_rename", "bm_delete", "bm_separator",
                   "bm_properties"];
       break;
     case "Folder":
       commands = ["bm_expandfolder", "bm_managefolder", "bm_separator", 
                   "bm_newfolder", "bm_separator",
-                  "bm_cut", "bm_copy", "bm_paste", "bm_separator",
-                  "bm_delete", "bm_separator",
+                  "bm_cut", "bm_copy", "bm_paste", "bm_movebookmark", "bm_separator",
+                  "bm_rename", "bm_delete", "bm_separator",
                   "bm_properties"];
       break;
     case "FolderGroup":
       commands = ["bm_open", "bm_expandfolder", "bm_separator",
                   "bm_newfolder", "bm_separator",
-                  "bm_cut", "bm_copy", "bm_paste", "bm_separator",
-                  "bm_delete", "bm_separator",
+                  "bm_cut", "bm_copy", "bm_paste", "bm_movebookmark", "bm_separator",
+                  "bm_rename", "bm_delete", "bm_separator",
                   "bm_properties"];
       break;
     case "PersonalToolbarFolder":
       commands = ["bm_newfolder", "bm_separator",
-                  "bm_cut", "bm_copy", "bm_paste", "bm_separator",
-                  "bm_delete", "bm_separator",
+                  "bm_cut", "bm_copy", "bm_paste", "bm_movebookmark", "bm_separator",
+                  "bm_rename", "bm_delete", "bm_separator",
                   "bm_properties"];
       break;
     case "IEFavoriteFolder":
