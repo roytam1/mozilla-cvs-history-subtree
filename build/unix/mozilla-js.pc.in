@@ -6,6 +6,6 @@ includedir=%includedir%
 Name: JavaScript
 Description: The Mozilla JavaScript Library
 Version: %MOZILLA_VERSION%
-Requires: nspr = %MOZILLA_VERSION%
+Requires: mozilla-nspr = %MOZILLA_VERSION%
 Libs: -L${libdir} -js
 Cflags: -I${includedir}/js
