@@ -66,18 +66,12 @@ REQUIRES = \
 
 CPPSRCS = nsMailApp.cpp
 
-# This code removes the console from release builds
-# (unless you've set MOZ_WINCONSOLE=1).
-
-ifndef MOZ_WINCONSOLE
-ifdef MOZ_DEBUG
-MOZ_WINCONSOLE = 1
-else
-MOZ_WINCONSOLE = 0
-endif
+ifdef BUILD_STATIC_LIBS
+STATIC_COMPONENTS_LINKER_PATH = -L$(DIST)/lib/components
 endif
 
 LIBS = \
+  $(STATIC_COMPONENTS_LINKER_PATH) \
 	$(DIST)/lib/$(LIB_PREFIX)xulapp_s.$(LIB_SUFFIX) \
 	$(MOZ_JS_LIBS) \
 	$(MOZ_COMPONENT_LIBS) \
@@ -90,9 +84,36 @@ ifneq (,$(filter gtk gtk2 xlib,$(MOZ_WIDGET_TOOLKIT)))
 LIBS += $(XLDFLAGS) $(XLIBS)
 endif
 
+ifndef MOZ_WINCONSOLE
+ifdef MOZ_DEBUG
+MOZ_WINCONSOLE = 1
+else
+MOZ_WINCONSOLE = 0
+endif
+endif
+
 NSDISTMODE = copy
 
 include $(topsrcdir)/config/config.mk
+
+ifndef BUILD_STATIC_LIBS
+
+ifdef NS_TRACE_MALLOC
+EXTRA_DSO_LIBS += tracemalloc
+endif
+
+else
+include $(topsrcdir)/config/static-config.mk
+
+EXTRA_DEPS	+= \
+	$(STATIC_EXTRA_DEPS) \
+	$(NULL)
+DEFINES		+= $(STATIC_DEFINES)
+CPPSRCS		+= $(STATIC_CPPSRCS)
+EXTRA_DSO_LIBS	+= $(STATIC_EXTRA_DSO_LIBS)
+REQUIRES	+= $(STATIC_REQUIRES)
+EXTRA_LIBS	+= $(STATIC_EXTRA_LIBS)
+endif
 
 ifeq ($(OS_ARCH),WINNT)
 OS_LIBS += $(call EXPAND_LIBNAME,comctl32 comdlg32 uuid shell32 ole32 oleaut32 version winspool gdi32)
@@ -102,17 +123,20 @@ RCFLAGS += -DMOZ_THUNDERBIRD -I$(srcdir)
 else
 RCFLAGS += -DMOZ_THUNDERBIRD --include-dir $(srcdir)
 endif
+ifdef BUILD_STATIC_LIBS
+RCFLAGS += -DMOZ_STATIC_BUILD
+endif
 endif
 
 ifeq ($(OS_ARCH),OS2)
 RESFILE=splashos2.res
 endif
 
-ifdef NS_TRACE_MALLOC
-EXTRA_DSO_LIBS += tracemalloc
-endif
-
 include $(topsrcdir)/config/rules.mk
+
+ifdef BUILD_STATIC_LIBS
+include $(topsrcdir)/config/static-rules.mk
+endif
 
 APP_VERSION = $(shell cat $(srcdir)/../config/version.txt)
 DEFINES += -DAPP_VERSION=\"$(APP_VERSION)\"
