@@ -24,6 +24,7 @@
 #include "jsjava.h"
 #include "nsVector.h"
 
+class nsIPluginTagInfo2;
 class nsSymantecDebugManager;
 
 enum nsJVMStatus {
