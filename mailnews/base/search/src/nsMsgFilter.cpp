@@ -38,6 +38,8 @@
 #include "nsMsgSearchValue.h"
 #include "nsReadableUtils.h"
 #include "nsEscape.h"
+#include "nsMsgUtf7Utils.h"
+#include "nsIImportService.h"
 
 static const char *kImapPrefix = "//imap:";
 
@@ -380,6 +382,8 @@ nsresult nsMsgFilter::ConvertMoveToFolderValue(nsCString &moveValue)
       m_filterList->GetVersion(&filterVersion);
   if (filterVersion <= k60Beta1Version)
   {
+    nsCOMPtr <nsIImportService> impSvc = do_GetService(NS_IMPORTSERVICE_CONTRACTID);
+    NS_ASSERTION(impSvc, "cannot get importService");
     nsCOMPtr <nsIMsgFolder> rootFolder;
     nsXPIDLCString folderUri;
 
@@ -390,6 +394,14 @@ nsresult nsMsgFilter::ConvertMoveToFolderValue(nsCString &moveValue)
 	  {
 		  PRInt32 prefixLen = PL_strlen(kImapPrefix);
 		  moveValue.Mid(m_action.m_originalServerPath, prefixLen, moveValue.Length() - prefixLen);
+          if ( filterVersion == k45Version && impSvc)
+          {
+            nsAutoString unicodeStr;
+            impSvc->SystemStringToUnicode(m_action.m_originalServerPath.get(), unicodeStr);
+            char *utfNewName = CreateUtf7ConvertedStringFromUnicode(unicodeStr.get());
+            m_action.m_originalServerPath.Assign(utfNewName);
+            nsCRT::free(utfNewName);
+          }
 
       nsCOMPtr <nsIFolder> destIFolder;
       if (rootFolder)
@@ -451,6 +463,15 @@ nsresult nsMsgFilter::ConvertMoveToFolderValue(nsCString &moveValue)
         nsCRT::free(unescapedMoveValue);
 #endif
         destFolderUri.Append('/');
+        if ( filterVersion == k45Version && impSvc)
+        {
+          nsAutoString unicodeStr;
+          impSvc->SystemStringToUnicode(moveValue.get(), unicodeStr);
+          nsXPIDLCString escapedName;
+          rv =NS_MsgEscapeEncodeURLPath(unicodeStr.get(), getter_Copies(escapedName));
+          if (NS_SUCCEEDED(rv) && escapedName)
+            moveValue.Assign(escapedName.get());
+        }
         destFolderUri.Append(moveValue);
         localMailRootMsgFolder->GetChildWithURI (destFolderUri, PR_TRUE, PR_FALSE /*caseInsensitive*/, getter_AddRefs(destIMsgFolder));
 

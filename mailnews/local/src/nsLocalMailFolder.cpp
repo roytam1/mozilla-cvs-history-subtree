@@ -1970,8 +1970,8 @@ nsMsgLocalMailFolder::CopyFolderLocal( nsIMsgFolder *destFolder, nsIMsgFolder *s
   PRUint32 flags;
   srcFolder->GetFlags(&flags);
   newMsgFolder->SetFlags(flags);
-
-  rv = srcFolder->ChangeFilterDestination(newMsgFolder, PR_TRUE, nsnull);
+  PRBool changed = PR_FALSE;
+  rv = srcFolder->ChangeFilterDestination(newMsgFolder, PR_TRUE, &changed);
 
   if (newMsgFolder) 
   {
