@@ -574,6 +574,7 @@ nsWebShell::OnLinkClickSync(nsIContent *aContent,
   static const char kSnewsURI[] = "snews";                                      
   static const char kNntpURI[] = "nntp";                                        
   static const char kImapURI[] = "imap"; 
+  static const char kAddbookURI[] = "addbook";
 
   if (scheme.EqualsIgnoreCase(kMailToURI)) 
   {
@@ -593,6 +594,9 @@ nsWebShell::OnLinkClickSync(nsIContent *aContent,
   } else if (scheme.EqualsIgnoreCase(kImapURI)) 
   {
     // the scheme is imap, we can handle it
+  } else if (scheme.EqualsIgnoreCase(kAddbookURI))
+  {
+    // the scheme is addrbook, we can handle it
   } else 
   {
     // we don't handle this type, the the registered handler take it 
