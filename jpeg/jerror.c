@@ -96,7 +96,7 @@ output_message (j_common_ptr cinfo)
 #if defined(_WINDOWS) && !defined(_WIN32)
   printf("%s\n", buffer); 
 #elif __MWERKS__ 
-  XP_TRACE(("%s\n", buffer)); 
+	FE_Trace(buffer);
 #else
   fprintf(stderr, "%s\n", buffer); 
 #endif 
