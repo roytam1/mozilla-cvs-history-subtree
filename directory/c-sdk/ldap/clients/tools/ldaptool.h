@@ -53,18 +53,10 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 extern int getopt (int argc, char *const *argv, const char *optstring);
-#include <io.h>	/* for _mktemp() */
-#define LDAPTOOL_MKTEMP( p )	_mktemp( p )
 #else
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#define LDAPTOOL_MKTEMP( p )	mktemp( p )
-#endif
-
-#ifdef LINUX
-#include <getopt.h>	/* not always included from unistd.h */
 #endif
 
 #include <ctype.h>
@@ -111,7 +103,6 @@ extern "C" {
 
 #define LDAPTOOL_DEFSEP		"="	/* used by ldapcmp and ldapsearch */
 #define LDAPTOOL_DEFHOST	"localhost"
-#define LDAPTOOL_DEFSSLSTRENGTH	LDAPSSL_AUTH_CERT
 #define LDAPTOOL_DEFCERTDBPATH	"."
 #define LDAPTOOL_DEFKEYDBPATH	"."
 #define LDAPTOOL_DEFREFHOPLIMIT		5
@@ -157,7 +148,7 @@ LDAPControl *ldaptool_create_proxyauth_control( LDAP *ld );
 void ldaptool_add_control_to_array( LDAPControl *ctrl, LDAPControl **array);
 void ldaptool_reset_control_array( LDAPControl **array );
 char *ldaptool_get_tmp_dir( void );
-char *ldaptool_local2UTF8( const char *s, const char *desc );
+char *ldaptool_local2UTF8( const char * );
 int ldaptool_berval_is_ascii( const struct berval *bvp );
 int ldaptool_sasl_bind_s( LDAP *ld, const char *dn, const char *mechanism,
         const struct berval *cred, LDAPControl **serverctrls,
@@ -179,7 +170,6 @@ int ldaptool_compare_ext_s( LDAP *ld, const char *dn, const char *attrtype,
 int ldaptool_boolean_str2value ( const char *s, int strict );
 int ldaptool_parse_ctrl_arg ( char *ctrl_arg, char sep, char **ctrl_oid, 
 	    int *ctrl_criticality, char **ctrl_value, int *vlen);
-FILE *ldaptool_open_file ( const char *filename, const char * mode);
 
 
 #ifdef __cplusplus

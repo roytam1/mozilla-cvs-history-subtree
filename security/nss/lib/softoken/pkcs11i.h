@@ -353,7 +353,7 @@ struct PK11SessionStr {
  * (head[]->refCount),  objectLock protects all elements of the token
  * object hash table (tokObjects[], tokenIDCount, and tokenHashTable),
  * and slotLock protects the remaining protected elements:
- * password, isLoggedIn, ssoLoggedIn, and sessionCount
+ * password, isLoggedIn, ssoLoggedIn, sessionCount, and rwSessionCount.
  */
 struct PK11SlotStr {
     CK_SLOT_ID		slotID;
@@ -376,7 +376,7 @@ struct PK11SlotStr {
     PRInt32		sessionIDCount;  /* atomically incremented */
     int			sessionIDConflict;  /* not protected by a lock */
     int			sessionCount;
-    PRInt32             rwSessionCount; /* set by atomic operations */
+    int			rwSessionCount;
     int			tokenIDCount;
     int			index;
     PLHashTable		*tokenHashTable;
@@ -447,12 +447,8 @@ struct PK11SSLMACInfoStr {
 #define pk11_SlotFromSession(sp) ((sp)->slot)
 #define pk11_isToken(id) (((id) & PK11_TOKEN_MASK) == PK11_TOKEN_MAGIC)
 
-/* the session hash multiplier (see bug 201081) */
-#define SHMULTIPLIER 1791398085
-
 /* queueing helper macros */
-#define pk11_hash(value,size) \
-	((PRUint32)((value) * SHMULTIPLIER) & (size-1))
+#define pk11_hash(value,size) ((value) & (size-1))/*size must be a power of 2*/
 #define pk11queue_add(element,id,head,hash_size) \
 	{ int tmp = pk11_hash(id,hash_size); \
 	(element)->next = (head)[tmp]; \

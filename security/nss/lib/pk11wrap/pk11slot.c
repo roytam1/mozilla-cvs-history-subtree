@@ -398,7 +398,7 @@ PK11_FindSlotElement(PK11SlotList *list,PK11SlotInfo *slot)
  * Create a new slot structure
  */
 PK11SlotInfo *
-PK11_NewSlotInfo(SECMODModule *mod)
+PK11_NewSlotInfo(void)
 {
     PK11SlotInfo *slot;
 
@@ -406,22 +406,27 @@ PK11_NewSlotInfo(SECMODModule *mod)
     if (slot == NULL) return slot;
 
 #ifdef PKCS11_USE_THREADS
-    slot->sessionLock = mod->isThreadSafe ?
-	PZ_NewLock(nssILockSession) : (PZLock *)mod->refLock;
+    slot->refLock = PZ_NewLock(nssILockSlot);
+    if (slot->refLock == NULL) {
+	PORT_Free(slot);
+	return slot;
+    }
+    slot->sessionLock = PZ_NewLock(nssILockSession);
     if (slot->sessionLock == NULL) {
+	PZ_DestroyLock(slot->refLock);
 	PORT_Free(slot);
 	return slot;
     }
     slot->freeListLock = PZ_NewLock(nssILockFreelist);
     if (slot->freeListLock == NULL) {
-	if (mod->isThreadSafe) {
-	    PZ_DestroyLock(slot->sessionLock);
-	}
+	PZ_DestroyLock(slot->sessionLock);
+	PZ_DestroyLock(slot->refLock);
 	PORT_Free(slot);
 	return slot;
     }
 #else
     slot->sessionLock = NULL;
+    slot->refLock = NULL;
     slot->freeListLock = NULL;
 #endif
     slot->freeSymKeysHead = NULL;
@@ -472,7 +477,9 @@ PK11_NewSlotInfo(SECMODModule *mod)
 PK11SlotInfo *
 PK11_ReferenceSlot(PK11SlotInfo *slot)
 {
-    PR_AtomicIncrement(&slot->refCount);
+    PK11_USE_THREADS(PZ_Lock(slot->refLock);)
+    slot->refCount++;
+    PK11_USE_THREADS(PZ_Unlock(slot->refLock);)
     return slot;
 }
 
@@ -491,21 +498,25 @@ PK11_DestroySlot(PK11SlotInfo *slot)
    if (slot->mechanismList) {
 	PORT_Free(slot->mechanismList);
    }
-#ifdef PKCS11_USE_THREADS
-   if (slot->isThreadSafe && slot->sessionLock) {
-	PZ_DestroyLock(slot->sessionLock);
-   }
-   slot->sessionLock = NULL;
-   if (slot->freeListLock) {
-	PZ_DestroyLock(slot->freeListLock);
-	slot->freeListLock = NULL;
-   }
-#endif
 
    /* finally Tell our parent module that we've gone away so it can unload */
    if (slot->module) {
 	SECMOD_SlotDestroyModule(slot->module,PR_TRUE);
    }
+#ifdef PKCS11_USE_THREADS
+   if (slot->refLock) {
+	PZ_DestroyLock(slot->refLock);
+	slot->refLock = NULL;
+   }
+   if (slot->sessionLock) {
+	PZ_DestroyLock(slot->sessionLock);
+	slot->sessionLock = NULL;
+   }
+   if (slot->freeListLock) {
+	PZ_DestroyLock(slot->freeListLock);
+	slot->freeListLock = NULL;
+   }
+#endif
 
    /* ok, well not quit finally... now we free the memory */
    PORT_Free(slot);
@@ -516,9 +527,13 @@ PK11_DestroySlot(PK11SlotInfo *slot)
 void
 PK11_FreeSlot(PK11SlotInfo *slot)
 {
-    if (PR_AtomicDecrement(&slot->refCount) == 0) {
-	PK11_DestroySlot(slot);
-    }
+    PRBool freeit = PR_FALSE;
+
+    PK11_USE_THREADS(PZ_Lock(slot->refLock);)
+    if (slot->refCount-- == 1) freeit = PR_TRUE;
+    PK11_USE_THREADS(PZ_Unlock(slot->refLock);)
+
+    if (freeit) PK11_DestroySlot(slot);
 }
 
 void
@@ -4741,7 +4756,7 @@ PK11_WaitForTokenEvent(PK11SlotInfo *slot, PK11TokenEvent event,
 	if (waitForRemoval && series != PK11_GetSlotSeries(slot)) {
 	    return PK11TokenChanged;
 	}
-	if (timeout == PR_INTERVAL_NO_WAIT) {
+	if (timeout != PR_INTERVAL_NO_WAIT) {
 	    return waitForRemoval ? PK11TokenPresent : PK11TokenRemoved;
 	}
 	if (timeout != PR_INTERVAL_NO_TIMEOUT ) {

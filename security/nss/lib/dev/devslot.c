@@ -76,7 +76,6 @@ struct NSSSlotStr
   CK_FLAGS ckFlags; /* from CK_SLOT_INFO.flags */
   struct nssSlotAuthInfoStr authInfo;
   PRIntervalTime lastTokenPing;
-  PZLock *lock;
 #ifdef NSS_3_4_CODE
   PK11SlotInfo *pk11slot;
 #endif
@@ -152,9 +151,6 @@ nssSlot_Create
     if (!rvSlot->base.lock) {
 	goto loser;
     }
-    if (!nssModule_IsThreadSafe(parent)) {
-	rvSlot->lock = nssModule_GetLock(parent);
-    }
     rvSlot->module = parent; /* refs go from module to slots */
     rvSlot->slotID = slotID;
     rvSlot->ckFlags = slotInfo.flags;
@@ -192,22 +188,6 @@ nssSlot_Destroy
 	}
     }
     return PR_SUCCESS;
-}
-
-void
-nssSlot_EnterMonitor(NSSSlot *slot)
-{
-    if (slot->lock) {
-	PZ_Lock(slot->lock);
-    }
-}
-
-void
-nssSlot_ExitMonitor(NSSSlot *slot)
-{
-    if (slot->lock) {
-	PZ_Unlock(slot->lock);
-    }
 }
 
 NSS_IMPLEMENT void
@@ -294,9 +274,7 @@ nssSlot_IsTokenPresent
     if (!epv) {
 	return PR_FALSE;
     }
-    nssSlot_EnterMonitor(slot);
     ckrv = CKAPI(epv)->C_GetSlotInfo(slot->slotID, &slotInfo);
-    nssSlot_ExitMonitor(slot);
     if (ckrv != CKR_OK) {
 	slot->token->base.name[0] = 0; /* XXX */
 	return PR_FALSE;
@@ -794,9 +772,9 @@ nssSlot_CreateSession
     if (!rvSession) {
 	return (nssSession *)NULL;
     }
-    if (nssModule_IsThreadSafe(slot->module)) {
-	/* If the parent module is threadsafe, 
-         * create lock to protect just this session.
+    if (!nssModule_IsThreadSafe(slot->module)) {
+	/* If the parent module is not threadsafe, create lock to manage 
+	 * session within threads.
 	 */
 	rvSession->lock = PZ_NewLock(nssILockOther);
 	if (!rvSession->lock) {
@@ -807,12 +785,7 @@ nssSlot_CreateSession
 	    }
 	    return (nssSession *)NULL;
 	}
-        rvSession->ownLock = PR_TRUE;
-    } else {
-        rvSession->lock = slot->lock;
-        rvSession->ownLock = PR_FALSE;
     }
-	
     rvSession->handle = handle;
     rvSession->slot = slot;
     rvSession->isRW = readWrite;
@@ -829,7 +802,7 @@ nssSession_Destroy
     if (s) {
 	void *epv = s->slot->epv;
 	ckrv = CKAPI(epv)->C_CloseSession(s->handle);
-	if (s->ownLock && s->lock) {
+	if (s->lock) {
 	    PZ_DestroyLock(s->lock);
 	}
 	nss_ZFreeIf(s);
