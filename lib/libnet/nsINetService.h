@@ -33,23 +33,46 @@
   {0xbe, 0xa2, 0x00, 0x80, 0x5f, 0x8a, 0x66, 0xdc} }
 
 
+/**
+ * The nsINetService interface provides an API to the networking service.
+ * This is a preliminary interface which <B>will</B> change over time!
+ * 
+ */
 struct nsINetService : public nsISupports 
 {
+    /**
+     * Initiate an asynchronous URL load.<BR><BR>
+     *
+     * @param aUrl      The URL to load.
+     * @param aConsumer An object that will receive notifications during the 
+     *                  URL loading.  This parameter cannot be NULL.
+     * @return Returns NS_OK if successful, or NS_FALSE if an error occurred.
+     */ 
     NS_IMETHOD OpenStream(const char *aUrl, 
                           nsIStreamNotification *aConsumer) = 0;
+
+    /**
+     * Initiate a synchronous URL load.<BR><BR>
+     * 
+     * @param aUrl      The URL to load.
+     * @param aConsumer An object that will receive notifications during the 
+     *                  URL loading.  This parameter can be NULL if 
+     *                  notifications are not required.
+     * @param aNewStream    An output parameter to recieve the blocking stream
+     *                      created for this URL load.
+     * @return Returns NS_OK if successful, or NS_FALSE if an error occurred.
+     */
     NS_IMETHOD OpenBlockingStream(const char *aUrl, 
                                   nsIStreamNotification *aConsumer,
                                   nsIInputStream **aNewStream) = 0;
 };
 
 
-/* 
+/**
  * Create an instance of the INetService
  *
- * XXX: Add NS_BASE when nscore.h can be included...
- */ 
+ */
 extern "C" /* NS_BASE */ nsresult NS_NewINetService(nsINetService** aInstancePtrResult,
                                                     nsISupports* aOuter);
-
 
 #endif /* nsINetService_h___ */
