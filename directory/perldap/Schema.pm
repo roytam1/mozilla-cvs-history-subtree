@@ -46,14 +46,24 @@ sub new
   
   my $initialReturn = $conn->search($base, "base", "objectclass=*");
   my @attributeArray = $initialReturn->getValues("attributetypes");
-  my %allAttributes;
+  my (%schema, $obj);
+
   foreach (@attributeArray)  {
     my $attr = new Mozilla::LDAP::Schema::Attribute($_);
-    $allAttributes{$attr->name} = $attr;
+    $schema{"attributes"}{$attr->name()} = $attr;
  }
+  $obj = bless \%schema;
   #$objclass = new Mozilla::LDAP::Schema::ObjectClass();
-return  %allAttributes;    
+return $obj;    
 }
+
+sub attributes
+{
+  my ($self, $attr) = (shift, lc shift);
+  return 0 unless (defined($attr) && ($attr ne ""));
+  return $self->{"attributes"}{$attr};
+}
+
 1;
 
 package Mozilla::LDAP::Schema::Attribute;
@@ -75,8 +85,8 @@ sub _initialize
   my @tempArray = quotewords(" ", 0, $attrString);
 
   $self->{"oid"} = $tempArray[1];
-  $self->{"name"} = $tempArray[3];
-  $self->{"description"} = $tempArray[5];
+  $self->{"name"} = lc $tempArray[3];
+  $self->{"description"} = lc $tempArray[5];
   $self->{"syntax"} = $tempArray[7];
 }
 
@@ -106,7 +116,7 @@ sub name
 {
   my $self = shift; 
   if(@_) {
-    $self->{'name'} = shift;
+    $self->{'name'} = lc shift;
   }
   $self->{'name'}; 
 }
