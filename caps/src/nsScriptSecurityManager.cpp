@@ -1569,16 +1569,23 @@ nsScriptSecurityManager::CanAccess(PRUint32 aAction,
     //-- Look up the policy for this property/method
     PRInt32 secLevel;
     nsCAutoString capability;
-    if (*aPolicy)
+
+    if(aPolicy)
     {
+        if (*aPolicy)
+        {
 #ifdef DEBUG_mstoltz
-        printf("Cached ");
+            printf("Cached ");
 #endif
-        secLevel = (PRInt32)*aPolicy;
+            secLevel = (PRInt32)*aPolicy;
     }
-    else
-        secLevel = GetSecurityLevel(aJSContext, subjectPrincipal, aClassInfo, aName,
-                                    aAction, capability, aPolicy);
+        else
+            secLevel = GetSecurityLevel(aJSContext, subjectPrincipal, aClassInfo, aName,
+                                        aAction, capability, aPolicy);
+    } else {
+        secLevel = SCRIPT_SECURITY_NO_ACCESS;
+    }
+    
     nsresult rv;
     switch (secLevel)
     {
