@@ -83,7 +83,7 @@ function Recipients2CompFields(msgCompFields)
     var inputField;
 	    while ((inputField = awGetInputElement(i)))
 	    {
-	    	var fieldValue = inputField.value;
+	    	var fieldValue = inputField.input.value;
 	    	if (fieldValue == null)
 	    	  fieldValue = inputField.getAttribute("value");
 
