@@ -484,7 +484,7 @@ nsLayoutUtils::MarkIntrinsicWidthsDirty(nsIFrame* aFrame)
 
   while (stack.Count() != 0) {
     nsIFrame *f =
-      NS_STATIC_CAST(nsIFrame*, stack.FastElementAt[stack.Count() - 1]);
+      NS_STATIC_CAST(nsIFrame*, stack.FastElementAt(stack.Count() - 1));
     stack.RemoveElementAt(stack.Count() - 1);
 
     PRInt32 childListIndex = 0;
@@ -500,9 +500,9 @@ nsLayoutUtils::MarkIntrinsicWidthsDirty(nsIFrame* aFrame)
   }
 }
 
-static nscoord GetCoord(nsStyleCoord& aCoord, nscoord aIfNotCoord)
+static nscoord GetCoord(const nsStyleCoord& aCoord, nscoord aIfNotCoord)
 {
-  return aCoord.GetUnit() == eStyleUnitCoord
+  return aCoord.GetUnit() == eStyleUnit_Coord
            ? aCoord.GetCoordValue()
            : aIfNotCoord;
 }
