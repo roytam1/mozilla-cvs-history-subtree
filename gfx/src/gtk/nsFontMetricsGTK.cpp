@@ -56,6 +56,7 @@
 #include "nsPrintfCString.h"
 #include "nspr.h"
 #include "nsHashtable.h"
+#include "nsStringMap.h"
 #include "nsReadableUtils.h"
 #include "nsAString.h"
 #include "nsXPIDLString.h"
@@ -165,17 +166,17 @@ static PRBool gScaleBitmapFontsWithDevScale = PR_FALSE;
 static nsICharsetConverterManager2* gCharSetManager = nsnull;
 static nsIUnicodeEncoder* gUserDefinedConverter = nsnull;
 
-static nsHashtable* gAliases = nsnull;
-static nsHashtable* gCharSetMaps = nsnull;
-static nsHashtable* gFamilies = nsnull;
+static nsStringMap* gAliases = nsnull;
+static nsStringMap* gCharSetMaps = nsnull;
+static nsStringMap* gFamilies = nsnull;
 static nsHashtable* gFFRENodes = nsnull;
 static nsHashtable* gAFRENodes = nsnull;
 // gCachedFFRESearches holds the "already looked up"
 // FFRE (Foundry Family Registry Encoding) font searches
-static nsHashtable* gCachedFFRESearches = nsnull;
-static nsHashtable* gSpecialCharSets = nsnull;
-static nsHashtable* gStretches = nsnull;
-static nsHashtable* gWeights = nsnull;
+static nsStringMap* gCachedFFRESearches = nsnull;
+static nsStringMap* gSpecialCharSets = nsnull;
+static nsStringMap* gStretches = nsnull;
+static nsStringMap* gWeights = nsnull;
 nsISaveAsCharset* gFontSubConverter = nsnull;
 
 static nsFontNodeArray* gGlobalList = nsnull;
@@ -625,7 +626,7 @@ static PRUnichar gDoubleByteSpecialChars[] = {
 
 
 static PRBool
-FreeCharSetMap(nsHashKey* aKey, void* aData, void* aClosure)
+FreeCharSetMap(const char*, void* aData, void* aClosure)
 {
   nsFontCharSetMap* charsetMap = (nsFontCharSetMap*) aData;
   NS_IF_RELEASE(charsetMap->mInfo->mConverter);
@@ -636,7 +637,7 @@ FreeCharSetMap(nsHashKey* aKey, void* aData, void* aClosure)
 }
 
 static PRBool
-FreeFamily(nsHashKey* aKey, void* aData, void* aClosure)
+FreeFamily(const char*, void* aData, void* aClosure)
 {
   delete (nsFontFamily*) aData;
 
@@ -713,7 +714,7 @@ FreeNode(nsHashKey* aKey, void* aData, void* aClosure)
 }
 
 static PRBool
-FreeNodeArray(nsHashKey* aKey, void* aData, void* aClosure)
+FreeNodeArray(const char*, void* aData, void*)
 {
   nsFontNodeArray* nodes = (nsFontNodeArray*) aData;
   delete nodes;
@@ -1027,69 +1028,64 @@ InitGlobals(nsIDeviceContext *aDevice)
     FreeGlobals();
     return NS_ERROR_OUT_OF_MEMORY;
   }
-  gCachedFFRESearches = new nsHashtable();
+  gCachedFFRESearches = new nsStringMap;
   if (!gCachedFFRESearches) {
     FreeGlobals();
     return NS_ERROR_OUT_OF_MEMORY;
   }
-  gFamilies = new nsHashtable();
+  gFamilies = new nsStringMap;
   if (!gFamilies) {
     FreeGlobals();
     return NS_ERROR_OUT_OF_MEMORY;
   }
-  gAliases = new nsHashtable();
+  gAliases = new nsStringMap;
   if (!gAliases) {
     FreeGlobals();
     return NS_ERROR_OUT_OF_MEMORY;
   }
   nsFontFamilyName* f = gFamilyNameTable;
   while (f->mName) {
-    nsCStringKey key(f->mName);
-    gAliases->Put(&key, f->mXName);
+    gAliases->Put(f->mName, f->mXName);
     f++;
   }
-  gWeights = new nsHashtable();
+  gWeights = new nsStringMap;
   if (!gWeights) {
     FreeGlobals();
     return NS_ERROR_OUT_OF_MEMORY;
   }
   nsFontPropertyName* p = gWeightNames;
   while (p->mName) {
-    nsCStringKey key(p->mName);
-    gWeights->Put(&key, (void*) p->mValue);
+    gWeights->Put(p->mName, (void*) p->mValue);
     p++;
   }
-  gStretches = new nsHashtable();
+  gStretches = new nsStringMap;
   if (!gStretches) {
     FreeGlobals();
     return NS_ERROR_OUT_OF_MEMORY;
   }
   p = gStretchNames;
   while (p->mName) {
-    nsCStringKey key(p->mName);
-    gStretches->Put(&key, (void*) p->mValue);
+    gStretches->Put(p->mName, (void*) p->mValue);
     p++;
   }
-  gCharSetMaps = new nsHashtable();
+  gCharSetMaps = new nsStringMap;
   if (!gCharSetMaps) {
     FreeGlobals();
     return NS_ERROR_OUT_OF_MEMORY;
   }
   nsFontCharSetMap* charSetMap = gCharSetMap;
   while (charSetMap->mName) {
-    nsCStringKey key(charSetMap->mName);
-    gCharSetMaps->Put(&key, charSetMap);
+    gCharSetMaps->Put(charSetMap->mName, charSetMap);
     charSetMap++;
   }
-  gSpecialCharSets = new nsHashtable();
+  gSpecialCharSets = new nsStringMap;
   if (!gSpecialCharSets) {
     FreeGlobals();
     return NS_ERROR_OUT_OF_MEMORY;
   }
   nsFontCharSetMap* specialCharSetMap = gSpecialCharSetMap;
   while (specialCharSetMap->mName) {
-    nsCStringKey key(specialCharSetMap->mName);
-    gSpecialCharSets->Put(&key, specialCharSetMap);
+    gSpecialCharSets->Put(specialCharSetMap->mName, specialCharSetMap);
     specialCharSetMap++;
   }
 
@@ -3968,8 +3964,7 @@ GetFontNames(const char* aPattern, PRBool aAnyFoundry, PRBool aOnlyOutlineScaled
       nsCAutoString familyCharSetName(familyName);
       familyCharSetName.Append('-');
       familyCharSetName.Append(charSetName);
-      nsCStringKey familyCharSetKey(familyCharSetName);
-      charSetMap = NS_STATIC_CAST(nsFontCharSetMap*, gSpecialCharSets->Get(&familyCharSetKey));
+      charSetMap = NS_STATIC_CAST(nsFontCharSetMap*, gSpecialCharSets->Get(familyCharSetName.get()));
       if (!charSetMap)
         charSetMap = gNoneCharSetMap;
       charSetInfo = charSetMap->mInfo;
@@ -4034,8 +4029,7 @@ GetFontNames(const char* aPattern, PRBool aAnyFoundry, PRBool aOnlyOutlineScaled
     if (!style)
       continue;
 
-    nsCStringKey weightKey(weightName);
-    int weightNumber = NS_PTR_TO_INT32(gWeights->Get(&weightKey));
+    int weightNumber = NS_PTR_TO_INT32(gWeights->Get(weightName));
     if (!weightNumber) {
 #ifdef NOISY_FONTS
       printf("cannot find weight %s\n", weightName);
@@ -4047,8 +4041,7 @@ GetFontNames(const char* aPattern, PRBool aAnyFoundry, PRBool aOnlyOutlineScaled
     if (!weight)
       continue;
   
-    nsCStringKey setWidthKey(setWidth);
-    int stretchIndex = NS_PTR_TO_INT32(gStretches->Get(&setWidthKey));
+    int stretchIndex = NS_PTR_TO_INT32(gStretches->Get(setWidth));
     if (!stretchIndex) {
 #ifdef NOISY_FONTS
       printf("cannot find stretch %s\n", setWidth);
@@ -4113,8 +4106,7 @@ GetAllFontNames(void)
 static nsFontFamily*
 FindFamily(nsCString* aName)
 {
-  nsCStringKey key(*aName);
-  nsFontFamily* family = (nsFontFamily*) gFamilies->Get(&key);
+  nsFontFamily* family = (nsFontFamily*) gFamilies->Get(aName->get());
   if (!family) {
     family = new nsFontFamily();
     if (family) {
@@ -4122,7 +4114,7 @@ FindFamily(nsCString* aName)
       PR_snprintf(pattern, sizeof(pattern), "-*-%s-*-*-*-*-*-*-*-*-*-*-*-*",
         aName->get());
       GetFontNames(pattern, PR_TRUE, gForceOutlineScaledFonts, &family->mNodes);
-      gFamilies->Put(&key, family);
+      gFamilies->Put(aName->get(), family);
     }
   }
 
@@ -4205,9 +4197,8 @@ nsFontMetricsGTK::TryNodes(nsACString &aFFREName, PRUnichar aChar)
   FIND_FONT_PRINTF(("        TryNodes aFFREName = %s", 
                         PromiseFlatCString(aFFREName).get()));
   const char *FFREName = PromiseFlatCString(aFFREName).get();
-  nsCStringKey key(FFREName);
   PRBool anyFoundry = (FFREName[0] == '*');
-  nsFontNodeArray* nodes = (nsFontNodeArray*) gCachedFFRESearches->Get(&key);
+  nsFontNodeArray* nodes = (nsFontNodeArray*) gCachedFFRESearches->Get(FFREName);
   if (!nodes) {
     nsCAutoString pattern;
     FFREToXLFDPattern(aFFREName, pattern);
@@ -4215,7 +4206,10 @@ nsFontMetricsGTK::TryNodes(nsACString &aFFREName, PRUnichar aChar)
     if (!nodes)
       return nsnull;
     GetFontNames(pattern.get(), anyFoundry, gForceOutlineScaledFonts, nodes);
-    gCachedFFRESearches->Put(&key, nodes);
+    // The PR_TRUE argument to the Put method causes the nsStringMap to copy
+    // the string internally.  We do this because we dont know if FFREName
+    // is persistant.
+    gCachedFFRESearches->Put(FFREName, nodes, PR_TRUE);
   }
   int i, cnt = nodes->Count();
   for (i=0; i<cnt; i++) {
@@ -4343,8 +4337,7 @@ nsFontMetricsGTK::TryFamily(nsCString* aName, PRUnichar aChar)
 nsFontGTK*
 nsFontMetricsGTK::TryAliases(nsCString* aAlias, PRUnichar aChar)
 {
-  nsCStringKey key(*aAlias);
-  char* name = (char*) gAliases->Get(&key);
+  char* name = (char*) gAliases->Get(aAlias->get());
   if (name) {
     nsCAutoString str(name);
     return TryFamily(&str, aChar);
@@ -5033,7 +5026,7 @@ GetCharSetMap(const char *aCharSetName)
 {
     nsCStringKey charSetKey(aCharSetName);
     nsFontCharSetMap* charSetMap =
-      (nsFontCharSetMap*) gCharSetMaps->Get(&charSetKey);
+      (nsFontCharSetMap*) gCharSetMaps->Get(aCharSetName);
     if (!charSetMap)
       charSetMap = gNoneCharSetMap;
   return charSetMap;
