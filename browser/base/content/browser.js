@@ -2518,9 +2518,12 @@ function toggleAffectedChrome(aHide)
   //   (*) bookmarks toolbar
   //   (*) sidebar
   //   (*) find bar
+  //   (*) statusbar
 
   var navToolbox = document.getElementById("navigator-toolbox");
   navToolbox.hidden = aHide;
+  var statusbar = document.getElementById("status-bar");
+  statusbar.hidden = aHide;
   if (aHide)
   {
     gChromeState = {};
