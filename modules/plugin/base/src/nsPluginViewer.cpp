@@ -53,6 +53,7 @@
 #include "nsIContentViewerEdit.h"
 #include "nsIWebBrowserPrint.h"
 #include "nsIWidget.h"
+#include "nsIPluginWidget.h"
 #include "nsIContent.h"
 #include "nsIDocument.h"
 #include "nsIInterfaceRequestor.h"
@@ -650,6 +651,7 @@ PluginViewerImpl::SetBounds(const nsRect& aBounds)
 #if defined(XP_MAC) || defined(XP_MACOSX)
         // On Mac we also need to add in the widget offset to the plugin window
         mOwner->FixUpPluginWindow();
+        mWindow->Invalidate(PR_FALSE);
 #endif        
         inst->SetWindow(win);
       }
@@ -679,6 +681,7 @@ PluginViewerImpl::Move(PRInt32 aX, PRInt32 aY)
 #if defined(XP_MAC) || defined(XP_MACOSX)
         // On Mac we also need to add in the widget offset to the plugin window
         mOwner->FixUpPluginWindow();
+        mWindow->Invalidate(PR_FALSE);
 #endif
         inst->SetWindow(win);
       }
@@ -1038,7 +1041,30 @@ PluginListener::OnDataAvailable(nsIRequest *request, nsISupports *ctxt,
   if (nsnull == mNextStream) {
     return NS_ERROR_FAILURE;
   }
-  return mNextStream->OnDataAvailable(request, ctxt, inStr, sourceOffset, count);
+
+  nsresult rv = NS_OK;
+  
+#if defined (XP_MAC) || defined(XP_MACOSX)
+  NS_ASSERTION(mViewer, "Need plugin viewer");
+  nsCOMPtr<nsIPluginWidget> pluginWidget = do_QueryInterface(mViewer->mWindow);
+  PRBool startDrawCalled = PR_FALSE;
+
+  if (pluginWidget)
+  {
+    rv = pluginWidget->StartDrawPlugin();
+    NS_ASSERTION(NS_SUCCEEDED(rv), "StartDrawPlugin failed in OnDataAvailable!");
+    startDrawCalled = NS_SUCCEEDED(rv);
+  }
+#endif
+
+  rv = mNextStream->OnDataAvailable(request, ctxt, inStr, sourceOffset, count);
+
+#if defined (XP_MAC) || defined(XP_MACOSX)  
+ if (pluginWidget && startDrawCalled)
+    pluginWidget->EndDrawPlugin();
+#endif 
+
+ return rv;
 }
 
 //----------------------------------------------------------------------
@@ -1291,38 +1317,48 @@ nsEventStatus pluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
     return rv;
 
 #if defined(XP_MAC) || defined(XP_MACOSX)
-    //if (mWidget != NULL) {  // check for null mWidget
-        EventRecord* event = (EventRecord*)anEvent.nativeMsg;
-        if (event == NULL || event->what == nullEvent ||
-            anEvent.message == NS_CONTEXTMENU_MESSAGE_START) {
-            EventRecord macEvent;
-            GUItoMacEvent(anEvent, macEvent);
-            event = &macEvent;
-            if (event->what == updateEvt) {
-                // Add in child windows absolute position to get make the dirty rect
-                // relative to the top-level window.
-                nsPluginPort* pluginPort = FixUpPluginWindow();
-                if (pluginPort) {
-                    EventRecord updateEvent;
-                    InitializeEventRecord(&updateEvent);
-                    updateEvent.what = updateEvt;
-                    updateEvent.message = UInt32(pluginPort->port);
-    
-                    nsPluginEvent pluginEvent = { &updateEvent, nsPluginPlatformWindowRef(pluginPort->port) };
-                    PRBool eventHandled = PR_FALSE;
-                    mInstance->HandleEvent(&pluginEvent, &eventHandled);
+
+    nsCOMPtr<nsIPluginWidget> pluginWidget = do_QueryInterface(mWindow);
+    if (pluginWidget && NS_SUCCEEDED(pluginWidget->StartDrawPlugin()))
+    {
+        //if (mWidget != NULL) {  // check for null mWidget
+            EventRecord* event = (EventRecord*)anEvent.nativeMsg;
+            if (event == NULL || event->what == nullEvent ||
+                anEvent.message == NS_CONTEXTMENU_MESSAGE_START) {
+                EventRecord macEvent;
+                GUItoMacEvent(anEvent, macEvent);
+                event = &macEvent;
+                if (event->what == updateEvt) {
+                    // Add in child windows absolute position to get make the dirty rect
+                    // relative to the top-level window.
+                    nsPluginPort* pluginPort = FixUpPluginWindow();
+                    if (pluginPort) {
+                        EventRecord updateEvent;
+                        InitializeEventRecord(&updateEvent);
+                        updateEvent.what = updateEvt;
+                        updateEvent.message = UInt32(pluginPort->port);
+        
+                        nsPluginEvent pluginEvent = { &updateEvent, nsPluginPlatformWindowRef(pluginPort->port) };
+                        PRBool eventHandled = PR_FALSE;
+                        mInstance->HandleEvent(&pluginEvent, &eventHandled);
+                    }
                 }
+                rv = nsEventStatus_eConsumeNoDefault;
             }
-            return nsEventStatus_eConsumeNoDefault;
-            
-        }
-        nsPluginPort* port = (nsPluginPort*)mWindow->GetNativeData(NS_NATIVE_PLUGIN_PORT);
-        nsPluginEvent pluginEvent = { event, nsPluginPlatformWindowRef(port->port) };
-        PRBool eventHandled = PR_FALSE;
-        mInstance->HandleEvent(&pluginEvent, &eventHandled);
-        if (eventHandled && anEvent.message != NS_MOUSE_LEFT_BUTTON_DOWN)
-            rv = nsEventStatus_eConsumeNoDefault;
-   // }
+            else
+            {
+                nsPluginPort* port = (nsPluginPort*)mWindow->GetNativeData(NS_NATIVE_PLUGIN_PORT);
+                nsPluginEvent pluginEvent = { event, nsPluginPlatformWindowRef(port->port) };
+                PRBool eventHandled = PR_FALSE;
+                mInstance->HandleEvent(&pluginEvent, &eventHandled);
+                if (eventHandled && anEvent.message != NS_MOUSE_LEFT_BUTTON_DOWN)
+                    rv = nsEventStatus_eConsumeNoDefault;
+            }
+       // }
+    
+        pluginWidget->EndDrawPlugin();
+    }
+    
 #endif
 
 //~~~
@@ -1348,33 +1384,31 @@ NS_IMETHODIMP_(void) pluginInstanceOwner::Notify(nsITimer* /* timer */)
     // validate the plugin clipping information by syncing the plugin window info to
     // reflect the current widget location. This makes sure that everything is updated
     // correctly in the event of scrolling in the window.
-    if (mInstance != NULL) {
-        nsPluginPort* pluginPort = FixUpPluginWindow();
-        if (pluginPort) {
-            EventRecord idleEvent;
-            InitializeEventRecord(&idleEvent);
-            idleEvent.what = nullEvent;
-
-            // give a bogus 'where' field of our null event when hidden, so Flash
-            // won't respond to mouse moves in other tabs, see bug 120875
-            if (!mWidgetVisible)
-              idleEvent.where.h = idleEvent.where.v = 20000;
-
-            nsPluginEvent pluginEvent = { &idleEvent, nsPluginPlatformWindowRef(pluginPort->port) };
-
-            PRBool eventHandled = PR_FALSE;
-            mInstance->HandleEvent(&pluginEvent, &eventHandled);
+    if (mInstance != NULL)
+    {
+        nsCOMPtr<nsIPluginWidget> pluginWidget = do_QueryInterface(mWindow);
+        if (pluginWidget && NS_SUCCEEDED(pluginWidget->StartDrawPlugin()))
+        {
+            nsPluginPort* pluginPort = FixUpPluginWindow();
+            if (pluginPort) {
+                EventRecord idleEvent;
+                InitializeEventRecord(&idleEvent);
+                idleEvent.what = nullEvent;
+    
+                // give a bogus 'where' field of our null event when hidden, so Flash
+                // won't respond to mouse moves in other tabs, see bug 120875
+                if (!mWidgetVisible)
+                  idleEvent.where.h = idleEvent.where.v = 20000;
+    
+                nsPluginEvent pluginEvent = { &idleEvent, nsPluginPlatformWindowRef(pluginPort->port) };
+    
+                PRBool eventHandled = PR_FALSE;
+                mInstance->HandleEvent(&pluginEvent, &eventHandled);
+            }
+    
+            pluginWidget->EndDrawPlugin();
         }
     }
-
-#ifndef REPEATING_TIMERS
-  // reprime the timer? currently have to create a new timer for each call, which is
-  // kind of wasteful. need to get periodic timers working on all platforms.
-  nsresult rv;
-  mPluginTimer = do_CreateInstance("@mozilla.org/timer;1", &rv);
-  if (NS_SUCCEEDED(rv))
-    mPluginTimer->Init(this, 1020 / 60);
-#endif  // REPEATING_TIMERS
 #endif // XP_MAC
 }
 
@@ -1473,31 +1507,49 @@ nsPluginPort* pluginInstanceOwner::FixUpPluginWindow()
 {
   if (mWindow) {
     nsPluginPort* pluginPort = GetPluginPort();
-    nscoord absWidgetX = 0;
-    nscoord absWidgetY = 0;
+    
     nsRect widgetClip(0, 0, 0, 0);
     PRBool isVisible = PR_TRUE;
 
-    GetWidgetPosClipAndVis(mWindow, absWidgetX, absWidgetY, widgetClip, isVisible);
 #if defined(MOZ_WIDGET_COCOA)
+    nsPoint pluginOrigin;
+    nsCOMPtr<nsIPluginWidget> pluginWidget = do_QueryInterface(mWindow);
+    pluginWidget->GetPluginClipRect(widgetClip, pluginOrigin);
+    
+    // check widget visibility (do we really have to do this here?)
+    nsCOMPtr<nsIWidget> widget = mWindow;
+    while (widget)
+    {
+      PRBool widgetVisible;
+      widget->IsVisible(widgetVisible);
+      isVisible &= widgetVisible;
+      
+      widget = getter_AddRefs(widget->GetParent());
+    }
+
+    if (!isVisible)
+      widgetClip.Empty();
+
     // set the port coordinates
     mPluginWindow.x = -pluginPort->portx;
     mPluginWindow.y = -pluginPort->porty;
-    widgetClip.x += mPluginWindow.x - absWidgetX;
-    widgetClip.y += mPluginWindow.y - absWidgetY;
 #else
+    nscoord absWidgetX = 0;
+    nscoord absWidgetY = 0;
+    GetWidgetPosClipAndVis(mWindow, absWidgetX, absWidgetY, widgetClip, isVisible);
     // set the port coordinates
     mPluginWindow.x = absWidgetX;
     mPluginWindow.y = absWidgetY;
 #endif
 
     // fix up the clipping region
-    mPluginWindow.clipRect.top = widgetClip.y;
-    mPluginWindow.clipRect.left = widgetClip.x;
-    mPluginWindow.clipRect.bottom =  mPluginWindow.clipRect.top + widgetClip.height;
-    mPluginWindow.clipRect.right =  mPluginWindow.clipRect.left + widgetClip.width; 
+    mPluginWindow.clipRect.top    = widgetClip.y;
+    mPluginWindow.clipRect.left   = widgetClip.x;
+    mPluginWindow.clipRect.bottom =  mPluginWindow.clipRect.top  + widgetClip.height;
+    mPluginWindow.clipRect.right  =  mPluginWindow.clipRect.left + widgetClip.width; 
 
-    if (mWidgetVisible != isVisible) {
+    if (mWidgetVisible != isVisible)
+    {
       mWidgetVisible = isVisible;
       // must do this to disable async Java Applet drawing
       if (isVisible) {

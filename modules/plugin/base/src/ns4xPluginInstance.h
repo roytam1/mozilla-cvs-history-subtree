@@ -153,6 +153,11 @@ public:
     // cache this 4.x plugin like an XPCOM plugin
     nsresult SetCached(PRBool aCache) { mCached = aCache; return NS_OK; };
     
+    // only used on Mac; called to ensure that the plugin can draw whenever
+    // we call into it
+    nsresult SetupForPluginDrawing();
+    nsresult DonePluginDrawing();
+
 protected:
 
     nsresult InitializePlugin(nsIPluginInstancePeer* peer);

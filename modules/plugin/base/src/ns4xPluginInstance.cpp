@@ -49,6 +49,7 @@
 #include "nsPluginSafety.h"
 #include "nsIPref.h" // needed for NS_TRY_SAFE_CALL_*
 #include "nsPluginLogging.h"
+#include "nsIPluginWidget.h"
 
 #if defined(MOZ_WIDGET_GTK)
 #include <gdk/gdk.h>
@@ -363,6 +364,10 @@ ns4xPluginStreamListener::OnDataAvailable(nsIPluginStreamInfo* pluginInfo,
     // do not read more that supplier wants us to read
     bytesToRead = length;
   }
+   
+#if defined(XP_MAC) || defined(XP_MACOSX)
+  mInst->SetupForPluginDrawing();
+#endif
 
   do 
   {
@@ -462,6 +467,11 @@ ns4xPluginStreamListener::OnDataAvailable(nsIPluginStreamInfo* pluginInfo,
       }  
     } // end of for(;;)
   } while ((PRInt32)(length) > 0);
+
+
+#if defined(XP_MAC) || defined(XP_MACOSX)
+  mInst->DonePluginDrawing();
+#endif
 
   return rv;
 }
@@ -615,6 +625,27 @@ PRBool
 ns4xPluginInstance :: IsStarted(void)
 {
   return mStarted;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+nsresult
+ns4xPluginInstance::SetupForPluginDrawing()
+{
+#if defined(XP_MAC) || defined(XP_MACOSX)
+  ::SetPort(mWindow->window->port);
+#endif
+  return NS_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+nsresult
+ns4xPluginInstance::DonePluginDrawing()
+{
+#if defined(XP_MAC) || defined(XP_MACOSX)
+
+#endif
+  return NS_OK;
 }
 
 
@@ -1012,8 +1043,8 @@ NS_IMETHODIMP ns4xPluginInstance::SetWindow(nsPluginWindow* window)
 
 
     NPP_PLUGIN_LOG(PLUGIN_LOG_NORMAL,
-    ("NPP SetWindow called: this=%p, [x=%d,y=%d,w=%d,h=%d], clip[t=%d,b=%d,l=%d,r=%d], return=%d\n",
-    this, window->x, window->y, window->width, window->height,
+    ("NPP SetWindow called: this=%p, window=%p, [x=%d,y=%d,w=%d,h=%d], clip[t=%d,b=%d,l=%d,r=%d], return=%d\n",
+    this, *window->window, window->x, window->y, window->width, window->height,
     window->clipRect.top, window->clipRect.bottom, window->clipRect.left, window->clipRect.right, error));
       
     // XXX In the old code, we'd just ignore any errors coming
@@ -1122,25 +1153,12 @@ NS_IMETHODIMP ns4xPluginInstance::HandleEvent(nsPluginEvent* event, PRBool* hand
   
   if (fCallbacks->event) {
 #if defined(XP_MAC) || defined(XP_MACOSX)
-#if 0
-    switch(event->event->what) {
-    case updateEvt:
-        if (mWindow) {
-            GrafPtr port;
-            GetPort(&port);
-            if (port != mWindow->window->port) printf("[!!! port isn't set correctly !!!!]\n");
-            RGBColor oldColor;
-            RGBColor green = { 0, 0xFFFF, 0 };
-            GetForeColor(&oldColor);
-            RGBForeColor(&green);
-            PaintRect((Rect*)&mWindow->clipRect);
-            // ::QDFlushPortBuffer(port, NULL);
-            RGBForeColor(&oldColor);
-            // printf("[portx = %d, porty = %d]\n", mWindow->window->portx, mWindow->window->porty);
-        }
-        break;
-    }
-#endif
+
+    NPP_PLUGIN_LOG(PLUGIN_LOG_NORMAL,
+    ("CallNPP_HandleEventProc called: this=%p, [x=%d,y=%d,w=%d,h=%d], clip[t=%d,b=%d,l=%d,r=%d]\n",
+    this, mWindow->x, mWindow->y, mWindow->width, mWindow->height,
+    mWindow->clipRect.top, mWindow->clipRect.bottom, mWindow->clipRect.left, mWindow->clipRect.right));
+
     result = CallNPP_HandleEventProc(fCallbacks->event,
                                      &fNPP,
                                      (void*) event->event);
