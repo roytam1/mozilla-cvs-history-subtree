@@ -22,6 +22,7 @@
 #include "dropmenu.h"
 #include "prefapi.h"
 #include "rdfliner.h"
+#include "urlbar.h"
 
 extern "C" {
 #include "xpgetstr.h"
@@ -1434,12 +1435,10 @@ void CRDFToolbar::AddHTButton(HT_Resource item)
 	if (HT_IsSeparator(item))
 		return;
 
-	CRDFToolbarButton* pButton = new CRDFToolbarButton;
 	BOOKMARKITEM bookmark;
-
 	XP_STRCPY(bookmark.szText, HT_GetNodeName(item));
 	XP_STRCPY(bookmark.szAnchor, HT_GetNodeURL(item));
-
+	CString csAmpersandString = FEU_EscapeAmpersand(CString(bookmark.szText));
 	CString tooltipText(bookmark.szText);  // Default is to use the name for the tooltip
 	CString statusBarText(bookmark.szAnchor); // and the URL for the status bar text.
 
@@ -1452,7 +1451,11 @@ void CRDFToolbar::AddHTButton(HT_Resource item)
 	if (data)
 		statusBarText = (char*)data;
 
-	CString csAmpersandString = FEU_EscapeAmpersand(CString(bookmark.szText));
+	CRDFToolbarButton* pButton = NULL;
+	if (HT_IsURLBar(item))
+		pButton = new CURLBarButton;
+	else pButton = new CRDFToolbarButton;
+
 	pButton->Create(this, theApp.m_pToolbarStyle, CSize(60,42), CSize(85, 25), csAmpersandString,
 					tooltipText, statusBarText, CSize(23,17), 
 					m_nMaxToolbarButtonChars, m_nMinToolbarButtonChars, bookmark,
@@ -1596,7 +1599,7 @@ void CRDFToolbar::LayoutButtons(int nIndex)
     if (rowWidth <= 0 && m_nWidth > 0)
         rowWidth = m_nWidth - RIGHT_TOOLBAR_MARGIN - LEFT_TOOLBAR_MARGIN;
 
-    SetMinimumRows(rowWidth);
+    SetMinimumRows(width);
 
     int newRows = GetRows();
 
@@ -1721,7 +1724,7 @@ void CRDFToolbar::WidthChanged(int animWidth)
     if (rowWidth <= 0 && m_nWidth > 0)
         rowWidth = m_nWidth - RIGHT_TOOLBAR_MARGIN - LEFT_TOOLBAR_MARGIN;
 
-    SetMinimumRows(rowWidth);
+    SetMinimumRows(width);
 
     int newRows = GetRows();
 
@@ -1822,6 +1825,11 @@ void CRDFToolbar::WidthChanged(int animWidth)
 
     if (oldRows != newRows)
         GetParentFrame()->RecalcLayout();
+}
+
+int CRDFToolbar::GetRowWidth()
+{
+	return m_nWidth - RIGHT_TOOLBAR_MARGIN - LEFT_TOOLBAR_MARGIN - SPACE_BETWEEN_BUTTONS;
 }
 
 void CRDFToolbar::OnPaint(void)

@@ -72,7 +72,7 @@ public:
 	CRDFToolbarButton();
 	~CRDFToolbarButton();
 
-	int Create(CWnd *pParent, int nToolbarStyle, CSize noviceButtonSize, CSize advancedButtonSize,
+	virtual int Create(CWnd *pParent, int nToolbarStyle, CSize noviceButtonSize, CSize advancedButtonSize,
 			   LPCTSTR pButtonText, LPCTSTR pToolTipText, 
 			   LPCTSTR pStatusText,
 			   CSize bitmapSize, int nMaxTextChars, int nMinTextChars, BOOKMARKITEM bookmark, 
@@ -213,7 +213,8 @@ public:
 
 	int Create(CWnd *pParent);
 	virtual int GetHeight(void);
-    
+    virtual int GetRowWidth();
+
     // Override layout scheme to dynamically resize buttons.
     void LayoutButtons(int nIndex); // Index will be ignored by this version of the function
                                     // since adding/deleting buttons may cause all buttons to resize

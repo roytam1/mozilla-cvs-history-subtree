@@ -103,7 +103,6 @@
 #define IDS_LDAP_SERVER_PROPERTY        125
 #define IDI_MAIL                        126
 #define IDS_ADD_NEWS_SERVER             126
-#define IDC_URLTEXT                     127
 #define IDD_DIALOG1                     127
 #define IDR_MAINFRAME2                  127
 #define IDD_ADDRESS_USER                127

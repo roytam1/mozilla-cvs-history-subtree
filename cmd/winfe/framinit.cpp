@@ -330,7 +330,7 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 int CMainFrame::CreateLocationBar()
 {
 
-
+/*
 	m_barLocation=new CURLBar(); 
 
 	if (!m_barLocation->Create(this, CURLBar::IDD, CBRS_TOP,CURLBar::IDD)) {
@@ -358,8 +358,9 @@ int CMainFrame::CreateLocationBar()
     m_barLocation->SetContext((LPUNKNOWN)GetMainContext());
 
 	RecalcLayout();
-
+*/
 	return TRUE;
+
 }
 
 int CMainFrame::CreateLinkBar(void)
