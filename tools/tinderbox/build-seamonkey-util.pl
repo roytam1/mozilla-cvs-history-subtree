@@ -248,7 +248,18 @@ sub GetSystemInfo {
 
 sub LoadConfig {
     if (-r 'tinder-config.pl') {
-        { package Settings; do 'tinder-config.pl'; }
+	no strict 'vars';
+
+	open CONFIG, 'tinder-config.pl' or 
+	    print "can't open tinder-config.pl, $?\n";
+	
+	while (<CONFIG>) {
+	    package Settings;
+	    #warn "config:$_";
+	    eval;
+	}
+	
+	close CONFIG;
     } else {
         warn "Error: Need tinderbox config file, tinder-config.pl\n";
         warn "       To get started, run the following,\n";
