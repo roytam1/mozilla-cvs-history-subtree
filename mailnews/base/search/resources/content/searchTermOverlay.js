@@ -28,6 +28,7 @@ var gSearchRemovedTerms = new Array;
 var gSearchScope;
 var gSearchLessButton;
 var gSearchBooleanRadiogroup;
+var gSearchTermTree;
 
 //
 function searchTermContainer() {}
@@ -146,6 +147,7 @@ var nsIMsgSearchTerm = Components.interfaces.nsIMsgSearchTerm;
 function initializeSearchWidgets() {
     gSearchBooleanRadiogroup = document.getElementById("booleanAndGroup");
     gSearchRowContainer = document.getElementById("searchTermList");
+    gSearchTermTree = document.getElementById("searchTermTree");
     gSearchLessButton = document.getElementById("less");
     if (!gSearchLessButton)
         dump("I couldn't find less button!");
@@ -160,10 +162,10 @@ function initializeBooleanWidgets() {
         booleanAnd = firstTerm.booleanAnd;
 
     // target radio items have value="and" or value="or"
-    targetValue = "or";
+    var targetValue = "or";
     if (booleanAnd) targetValue = "and";
 
-    targetElement = gSearchBooleanRadiogroup.getElementsByAttribute("value", targetValue)[0];
+    var targetElement = gSearchBooleanRadiogroup.getElementsByAttribute("value", targetValue)[0];
 
     gSearchBooleanRadiogroup.selectedItem = targetElement;
 }
@@ -176,6 +178,11 @@ function initializeSearchRows(scope, searchTerms)
         createSearchRow(i, scope, searchTerm);
     }
     initializeBooleanWidgets();
+
+    // hack for bug #40480
+    // createSearchRow() will scroll to the end
+    // come back to the top
+    scrollToFirstSearchTerm();
 }
 
 function onMore(event)
@@ -183,6 +190,8 @@ function onMore(event)
     if(gTotalSearchTerms==1)
   gSearchLessButton .removeAttribute("disabled", "false");
     createSearchRow(gTotalSearchTerms++, gSearchScope, null);
+    // they just added a term, so scroll to it
+    scrollToLastSearchTerm(gTotalSearchTerms);
 }
 
 function onLess(event)
@@ -213,9 +222,23 @@ function booleanChanged(event) {
     }
 }
 
+function scrollToFirstSearchTerm()
+{
+    gSearchTermTree.ensureIndexIsVisible(0);
+}
+
+function scrollToLastSearchTerm(index)
+{
+    if (index > 0)
+      gSearchTermTree.ensureIndexIsVisible(index-1);
+}
 
 function createSearchRow(index, scope, searchTerm)
 {
+    // hack for bug #40480
+    // make sure the new row we're adding is on screen
+    scrollToLastSearchTerm(index);
+
     var searchAttr = document.createElement("searchattribute");
     var searchOp = document.createElement("searchoperator");
     var searchVal = document.createElement("searchvalue");
