@@ -52,6 +52,7 @@
 #include "Tokenizer.h"
 #include "URIUtils.h"
 #include "txAtoms.h"
+#include "TxLog.h"
 #include "txRtfHandler.h"
 #include "txNodeSetContext.h"
 #ifndef TX_EXE
@@ -66,7 +67,6 @@
 #include "nsIConsoleService.h"
 #include "nsIScriptLoader.h"
 #else
-#include "TxLog.h"
 #include "txHTMLOutput.h"
 #include "txTextOutput.h"
 #include "txXMLOutput.h"
@@ -1276,7 +1276,16 @@ void XSLTProcessor::processAction(Node* aNode,
                 if (actionElement->getAttr(txXSLTAtoms::name,
                                            kNameSpaceID_None, templateName)) {
                     Element* xslTemplate = aPs->getNamedTemplate(templateName);
-                    if ( xslTemplate ) {
+                    if (xslTemplate) {
+                        #ifdef PR_LOGGING
+                        char *nameBuf = 0, *uriBuf = 0;
+                        PR_LOG(txLog::xslt, PR_LOG_DEBUG,
+                               ("CallTemplate, Name %s, Stylesheet %s\n",
+                                (nameBuf = templateName.toCharArray()),
+                                (uriBuf = xslTemplate->getBaseURI().toCharArray())));
+                        delete nameBuf;
+                        delete uriBuf;
+                        #endif
                         NamedMap* actualParams = processParameters(actionElement, aNode, aPs);
                         processTemplate(aNode, xslTemplate, aPs, actualParams);
                         delete actualParams;
@@ -2357,6 +2366,8 @@ XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
     }
     mDocument->Reset(channel, loadGroup);
 
+    nsCOMPtr<nsIContent> root;
+
     // Start of block to ensure the destruction of the ProcessorState
     // before the destruction of the documents.
     {
@@ -2415,6 +2426,11 @@ XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
     }
     // End of block to ensure the destruction of the ProcessorState
     // before the destruction of the documents.
+
+    mOutputHandler->getRootContent(getter_AddRefs(root));
+    if (root) {
+        mDocument->ContentInserted(nsnull, root, 0);
+    }
 
     mObserver = aObserver;
     SignalTransformEnd();
