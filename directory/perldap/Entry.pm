@@ -805,8 +805,10 @@ sub printLDIF
 
       while (($attr, $values) = splice @$record, 0, 2)
 	{
-	  grep((print "$attr: $_\n"), @$values);
+	  grep((print "$attr: $_\n"), 
+	       ((ref($values) eq "ARRAY") ? @$values : $values));
 	}
+
       print "\n";
     }
   else

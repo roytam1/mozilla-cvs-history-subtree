@@ -161,6 +161,7 @@ sub pack_LDIF
     my $str = "";
     foreach my $record ((_to_LDIF_records \@_) ? \@_ : @_) {
 	my @record = @$record;
+	undef $record; # to avoid creating garbage (workaround Perl).
 	$str .= "\n" if length $str; # blank line between records
 	while (@record) {
 	    my ($attr, $val) = splice @record, 0, 2;
@@ -226,6 +227,7 @@ sub put_LDIF
     foreach my $record ((_to_LDIF_records \@_) ? \@_ : @_) {
 	no strict qw(refs); # $fh might be a string
 	print $fh (pack_LDIF ($options, $record), "\n");
+	undef $record; # to avoid creating garbage (workaround Perl).
     }
 }
 
@@ -384,6 +386,7 @@ sub references
 		push @refs, $vref;
 	    }
 	}
+	undef $record; # to avoid creating garbage (workaround Perl).
     }
     return @refs;
 }
@@ -445,6 +448,7 @@ sub enlist_values
 	    my $v = $$$r; $$r = \$v; # return a reference to a copy of the scalar
 	}
 	push @results, \@result;
+	undef $record; # to avoid creating garbage (workaround Perl).
     }
     return $single ? @{$results[$[]} : @results;
 }
@@ -483,6 +487,7 @@ sub delist_values
 	    my $v = $$$r; $$r = \$v; # return a reference to a copy of the scalar
 	}
 	push @results, \@result;
+	undef $record; # to avoid creating garbage (workaround Perl).
     }
     return $single ? @{$results[$[]} : @results;
 }
@@ -526,6 +531,7 @@ sub sort_attributes
     foreach my $record ($single ? \@_ : @_) {
 	@result = @{(delist_values ($record))[$[]};
 	@preamble = ();
+	undef $record; # to avoid creating garbage (workaround Perl).
 	if (@result > 1 and not defined $result[$[+1]) { # initial comments
 	    push @preamble, @{_shiftAttr \@result};
 	}
@@ -570,6 +576,7 @@ sub get_DN
 	my $i = next_attribute ($record);
 	push @DNs, (((defined $i) and ("dn" eq lc $record->[$[+$i])) ?
 		$record->[$[+$i+1] : undef);
+	undef $record; # to avoid creating garbage (workaround Perl).
     }
     return $single ? $DNs[$[] : @DNs;
 }
