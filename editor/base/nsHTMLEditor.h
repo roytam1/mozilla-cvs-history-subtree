@@ -167,7 +167,7 @@ public:
 
   /* ------------ Overrides of nsEditor interface methods -------------- */
 
-  NS_IMETHOD Init(nsIDOMDocument *aDoc, nsIPresShell *aPresShell);
+  NS_IMETHOD Init(nsIDOMDocument *aDoc, nsIPresShell *aPresShell, PRUint32 aFlags);
 
   NS_IMETHOD GetFlags(PRUint32 *aFlags);
   NS_IMETHOD SetFlags(PRUint32 aFlags);

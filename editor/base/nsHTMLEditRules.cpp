@@ -58,7 +58,8 @@ enum
  *  Constructor/Destructor 
  ********************************************************/
 
-nsHTMLEditRules::nsHTMLEditRules()
+nsHTMLEditRules::nsHTMLEditRules(PRUint32 aFlags)
+: nsTextEditRules(aFlags)
 {
 }
 

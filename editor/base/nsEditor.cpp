@@ -246,12 +246,13 @@ nsEditor::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 #endif
 
 NS_IMETHODIMP
-nsEditor::Init(nsIDOMDocument *aDoc, nsIPresShell* aPresShell)
+nsEditor::Init(nsIDOMDocument *aDoc, nsIPresShell* aPresShell, PRUint32 aFlags)
 {
   NS_PRECONDITION(nsnull!=aDoc && nsnull!=aPresShell, "bad arg");
   if ((nsnull==aDoc) || (nsnull==aPresShell))
     return NS_ERROR_NULL_POINTER;
 
+  mFlags = aFlags;
   mDoc = aDoc;
   mPresShell = aPresShell;		// we don't addref the pres shell
   
@@ -315,29 +316,9 @@ nsEditor::Init(nsIDOMDocument *aDoc, nsIPresShell* aPresShell)
 
   if (NS_SUCCEEDED(result) && service)
   {
-#if 1
     nsILocale* locale = nsnull;
     result = service->CreateBundle(EDITOR_BUNDLE_URL, locale, 
                                    getter_AddRefs(mStringBundle));
-#else
-    nsCOMPtr<nsIURI> url;
-#ifndef NECKO
-    result = NS_NewURL(getter_AddRefs(url), nsString(EDITOR_BUNDLE_URL));
-#else
-    result = NS_NewURI(getter_AddRefs(url), nsString(EDITOR_BUNDLE_URL));
-#endif // NECKO
-
-    if (NS_SUCCEEDED(result) && url)
-    {
-      nsILocale* locale = nsnull;
-      result = service->CreateBundle(url, locale, getter_AddRefs(mStringBundle));
-      if (NS_FAILED(result))
-        printf("ERROR: Failed to get Create StringBundle\n");
-
-    } else {
-      printf("ERROR: Failed to get create URL for StringBundle\n");
-    }
-#endif
     // We don't need to keep service around once we created the bundle
     nsServiceManager::ReleaseService(kStringBundleServiceCID, service);
   } else {

@@ -241,7 +241,7 @@ NS_IMETHODIMP nsHTMLEditor::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 
 
 NS_IMETHODIMP nsHTMLEditor::Init(nsIDOMDocument *aDoc, 
-                                 nsIPresShell   *aPresShell)
+                                 nsIPresShell   *aPresShell, PRUint32 aFlags)
 {
   NS_PRECONDITION(aDoc && aPresShell, "bad arg");
   if (!aDoc || !aPresShell)
@@ -249,7 +249,7 @@ NS_IMETHODIMP nsHTMLEditor::Init(nsIDOMDocument *aDoc,
 
   nsresult result = NS_ERROR_NULL_POINTER;
   // Init the base editor
-  result = nsEditor::Init(aDoc, aPresShell);
+  result = nsEditor::Init(aDoc, aPresShell, aFlags);
   if (NS_OK != result) { return result; }
 
   // init the type-in state
@@ -380,11 +380,10 @@ void nsHTMLEditor::InitRules()
 {
 // instantiate the rules for this text editor
 // XXX: we should be told which set of rules to instantiate
-#warning fix me.
-  if (1)
-	  mRules =  new nsHTMLEditRules();
+  if (mFlags & eEditorPlaintextMask)
+	  mRules =  new nsTextEditRules(mFlags);
 	else
-	  mRules =  new nsTextEditRules();
+	  mRules =  new nsHTMLEditRules(mFlags);
 
   mRules->Init(this);
 }

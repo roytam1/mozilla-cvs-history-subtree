@@ -112,7 +112,7 @@ public:
   NS_DECL_ISUPPORTS
 
   /* ------------ nsIEditor methods -------------- */
-  NS_IMETHOD Init(nsIDOMDocument *aDoc, nsIPresShell *aPresShell);
+  NS_IMETHOD Init(nsIDOMDocument *aDoc, nsIPresShell *aPresShell, PRUint32 aFlags);
   NS_IMETHOD PostCreate();
   NS_IMETHOD GetFlags(PRUint32 *aFlags) = 0;
   NS_IMETHOD SetFlags(PRUint32 aFlags) = 0;
@@ -592,6 +592,9 @@ public:
 
 
 protected:
+
+  PRUint32        mFlags;		// behavior flags. See nsIHighLevelHTMLEditor.h for the flags we use.
+  
   nsIPresShell   *mPresShell;
   nsIViewManager *mViewManager;
   PRUint32        mUpdateCount;

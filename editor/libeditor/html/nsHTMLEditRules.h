@@ -30,8 +30,8 @@ class nsHTMLEditRules : public nsTextEditRules
 {
 public:
 
-  nsHTMLEditRules();
-  virtual ~nsHTMLEditRules();
+            nsHTMLEditRules(PRUint32 aFlags);
+  virtual   ~nsHTMLEditRules();
 
   // nsEditRules methods
   NS_IMETHOD WillDoAction(nsIDOMSelection *aSelection, nsRulesInfo *aInfo, PRBool *aCancel);

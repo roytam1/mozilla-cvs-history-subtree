@@ -326,13 +326,14 @@ nsEditorShell::InstantiateEditor(nsIDOMDocument *aDoc, nsIPresShell *aPresShell)
     
   if (NS_SUCCEEDED(err))
   {
-    err = editor->Init(aDoc, aPresShell);
-
-#warning fix me
     if (mEditorTypeString == "text")
-      ;			// call init with flags
+    {
+      err = editor->Init(aDoc, aPresShell, nsIHighLevelHTMLEditor::eEditorPlaintextMask);
+		}
 		else if (mEditorTypeString == "html" || mEditorTypeString == "")  // empty string default to HTML editor
-      ;			// call init with flags
+    {
+      err = editor->Init(aDoc, aPresShell, 0);
+		}
 		else
 	  {
 	    err = NS_ERROR_INVALID_ARG;    // this is not an editor we know about
