@@ -32,8 +32,13 @@
 #include "nsIServiceManager.h"
 #include "nsIXPConnect.h"
 #include "nsISupportsPrimitives.h"
+#include "nsIDOMParser.h"
+#include "nsSOAPUtils.h"
+#include "nsISOAPTypeRegistry.h"
 #include "prprf.h"
 #include "nsReadableUtils.h"
+
+static NS_DEFINE_CID(kDOMParserCID, NS_DOMPARSER_CID);
 
 nsDefaultSOAPEncoder::nsDefaultSOAPEncoder()
 {
@@ -60,13 +65,104 @@ NS_NAMED_LITERAL_STRING(kArrayElementName,"Array");
 /* nsISupports marshall (in nsISOAPMessage aMessage, in nsISupports aSource, in DOMString aEncodingStyleURI, in DOMString aTypeID, in DOMString aSchemaID, in nsISupports aConfiguration); */
 NS_IMETHODIMP nsDefaultSOAPEncoder::Marshall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, const nsAReadableString & aSchemaID, nsISupports *aConfiguration, nsISupports **_retval)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  if (aTypeID.Equals(nsSOAPUtils::kSOAPCallType))
+    return MarshallCall(aMessage,aSource,aEncodingStyleURI,aTypeID,aSchemaID,aConfiguration, _retval);
+  
+
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* nsISupports unmarshall (in nsISOAPMessage aMessage, in nsISupports aSource, in DOMString aEncodingStyleURI, in DOMString aSchemaID, in DOMString aTypeID, in nsISupports aConfiguration); */
 NS_IMETHODIMP nsDefaultSOAPEncoder::Unmarshall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaID, const nsAReadableString & aTypeID, nsISupports *aConfiguration, nsISupports **_retval)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_NAMED_LITERAL_STRING(kEmptySOAPDocStr, "<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"http://schemas.xmlsoap.org/soap/envelope/\" SOAP-ENV:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\" xmlns:SOAP-ENC=\"http://schemas.xmlsoap.org/soap/encoding/\" xmlns:xsi=\"http://www.w3.org/1999/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/1999/XMLSchema\">"
+"<SOAP-ENV:Header>"
+"</SOAP-ENV:Header>"
+"<SOAP-ENV:Body>"
+"</SOAP-ENV:Body>"
+"</SOAP-ENV:Envelope>");
+ 
+/* nsISupports marshall (in nsISOAPMessage aMessage, in nsISupports aSource, in DOMString aEncodingStyleURI, in DOMString aTypeID, in DOMString aSchemaID, in nsISupports aConfiguration); */
+NS_IMETHODIMP nsDefaultSOAPEncoder::MarshallCall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, const nsAReadableString & aSchemaID, nsISupports *aConfiguration, nsISupports **_retval)
+{
+  nsresult rv;
+  
+  nsCOMPtr<nsISOAPTypeRegistry> types;
+  rv = aMessage->GetTypes(getter_AddRefs(types));
+  if (NS_FAILED(rv)) return rv;
+
+  nsCOMPtr<nsISupportsArray> parameters = do_QueryInterface(aSource);
+  if (parameters == nsnull)
+    return NS_ERROR_FAILURE;
+
+  nsAutoString method;
+  nsAutoString targetObjectURI;
+  nsAutoString encodingStyleURI;
+  nsCOMPtr<nsIDOMNode> ignored;
+
+  rv = aMessage->GetMethodName(method);
+  if (NS_FAILED(rv)) return rv;
+
+  rv = aMessage->GetTargetObjectURI(targetObjectURI);
+  if (NS_FAILED(rv)) return rv;
+
+  rv = aMessage->GetEncodingStyleURI(encodingStyleURI);
+  if (NS_FAILED(rv)) return rv;
+
+  nsCOMPtr<nsIDOMDocument> document;
+  nsCOMPtr<nsIDOMParser> parser = do_CreateInstance(kDOMParserCID, &rv);
+  if (NS_FAILED(rv)) return rv;
+
+  nsAutoString docstr;
+  rv = parser->ParseFromString(kEmptySOAPDocStr.get(), "text/xml", getter_AddRefs(document));
+  if (NS_FAILED(rv)) return rv;
+
+  rv = aMessage->SetMessage(document);
+  if (NS_FAILED(rv)) return rv;
+
+  nsCOMPtr<nsIDOMElement> body;
+  rv = aMessage->GetBody(getter_AddRefs(body));
+  if (NS_FAILED(rv)) return rv;
+
+  if (!method.IsEmpty()) {  //  Only produce a call element if method was non-empty
+    nsCOMPtr<nsIDOMElement> call;
+    rv = document->CreateElementNS(targetObjectURI, method, getter_AddRefs(call));
+    if (NS_FAILED(rv)) return rv;
+    rv = body->AppendChild(call, getter_AddRefs(ignored));
+    if (NS_FAILED(rv)) return rv;
+    body = call;
+  }
+
+  PRUint32 count;
+  rv = parameters->Count(&count);
+  if (NS_FAILED(rv)) return rv;
+
+  nsCOMPtr<nsISupports> next;
+  nsCOMPtr<nsISOAPParameter> param;
+  nsCOMPtr<nsISupports> result;
+  nsCOMPtr<nsIDOMElement> element;
+  for (PRUint32 i = 0; i < count; i++) {
+    next = dont_AddRef(parameters->ElementAt(i));
+    param = do_QueryInterface(next);
+    nsAutoString type;
+    rv = param->GetType(type);
+    if (NS_FAILED(rv)) return rv;
+    rv = types->Marshall(aMessage, next, encodingStyleURI, type, getter_AddRefs(result));
+    if (NS_FAILED(rv)) return rv;
+    if (result == nsnull) return NS_ERROR_FAILURE;
+    element = do_QueryInterface(result);
+    if (element == nsnull) return NS_ERROR_FAILURE;
+    rv = body->AppendChild(element, getter_AddRefs(ignored));
+    if (NS_FAILED(rv)) return rv;
+  }
+
+  *_retval = document;
+  NS_IF_ADDREF(*_retval);
+
+  return NS_OK;
 }
 
 static void
