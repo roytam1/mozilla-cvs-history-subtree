@@ -224,6 +224,10 @@ struct nsIRegistry : public nsISupports {
     |                                                                          |
     | RemoveSubtree        - Removes the specified registry subtree or         |
     |                        value at the specified location.                  |
+    | RemoveSubtreeRaw     - Removes the specified registry subtree or         |
+    |                        value at the specified location.                  |
+    |                        Does not interpret special chars in key names.    |
+    |                                                                          |
     | GetSubtree           - Returns a nsIRegistry::Key that can be used       |
     |                        to refer to the specified registry location.      |
 	| GetSubtreeRaw        - Returns a nsIRegistry::Key that can be used       |
@@ -251,10 +255,12 @@ struct nsIRegistry : public nsISupports {
     |                        a specified location.                             |
     --------------------------------------------------------------------------*/
     NS_IMETHOD AddSubtree( Key baseKey, const char *path, Key *result ) = 0;
-	NS_IMETHOD AddSubtreeRaw( Key baseKey, const char *path, Key *result ) = 0;
     NS_IMETHOD RemoveSubtree( Key baseKey, const char *path ) = 0;
     NS_IMETHOD GetSubtree( Key baseKey, const char *path, Key *result ) = 0;
-	NS_IMETHOD GetSubtreeRaw( Key baseKey, const char *path, Key *result ) = 0;
+
+	NS_IMETHOD AddSubtreeRaw( Key baseKey, const char *keyname, Key *result ) = 0;
+    NS_IMETHOD RemoveSubtreeRaw( Key baseKey, const char *keyname ) = 0;
+	NS_IMETHOD GetSubtreeRaw( Key baseKey, const char *keyname, Key *result ) = 0;
 
     NS_IMETHOD EnumerateSubtrees( Key baseKey, nsIEnumerator **result ) = 0;
     NS_IMETHOD EnumerateAllSubtrees( Key baseKey, nsIEnumerator **result ) = 0;
