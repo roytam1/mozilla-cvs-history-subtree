@@ -458,10 +458,10 @@ txFnStartApplyTemplates(PRInt32 aNamespaceID,
         NS_ENSURE_SUCCESS(rv, rv);
     }
 
-    txInstruction* applyTempl = new txApplyTemplates(name);
-    NS_ENSURE_TRUE(applyTempl, NS_ERROR_OUT_OF_MEMORY);
+    txInstruction* instr = new txApplyTemplates(name);
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
-    rv = aState.pushObject(applyTempl);
+    rv = aState.pushObject(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     Expr* select = 0;
@@ -478,10 +478,10 @@ txFnStartApplyTemplates(PRInt32 aNamespaceID,
         NS_ENSURE_TRUE(select, NS_ERROR_OUT_OF_MEMORY);
     }
 
-    txPushNewContext* newContextInstr = new txPushNewContext(select);
-    NS_ENSURE_TRUE(newContextInstr, NS_ERROR_OUT_OF_MEMORY);
+    instr = new txPushNewContext(select);
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
-    rv = aState.pushObject(newContextInstr);
+    rv = aState.pushObject(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return aState.pushHandlerTable(gTxApplyTemplatesHandler);
@@ -493,7 +493,7 @@ txFnEndApplyTemplates(txStylesheetCompilerState& aState)
     aState.popHandlerTable();
 
     // txPushNewContext
-    nsresult rv = aState.addInstruction((txPushNewContext*)aState.popObject());
+    nsresult rv = aState.addInstruction((txInstruction*)aState.popObject());
     NS_ENSURE_SUCCESS(rv, rv);
 
     // txApplyTemplates
@@ -543,6 +543,60 @@ txFnEndCallTemplate(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
+// xsl:for-each
+nsresult
+txFnStartForEach(PRInt32 aNamespaceID,
+                 nsIAtom* aLocalName,
+                 nsIAtom* aPrefix,
+                 txStylesheetAttr* aAttributes,
+                 PRInt32 aAttrCount,
+                 txStylesheetCompilerState& aState)
+{
+    txStylesheetAttr* attr = 0;
+
+    attr = getStyleAttr(aAttributes, aAttrCount, txXSLTAtoms::select);
+
+    Expr* select = 0;
+    nsresult rv = aState.parseExpr(attr->mValue, &select);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txInstruction* instr = new txPushNewContext(select);
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txForEach* forEach = new txForEach();
+    NS_ENSURE_TRUE(forEach, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.pushPtr(forEach);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = aState.addInstruction(forEach);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    instr = new txGoTo(forEach);
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.pushObject(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
+nsresult
+txFnEndForEach(txStylesheetCompilerState& aState)
+{
+    // txGoTo
+    nsresult rv = aState.addInstruction((txInstruction*)aState.popObject());
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txForEach* forEach = (txForEach*)aState.popPtr();
+    aState.addGotoTarget(&forEach->mEndTarget);
+
+    return NS_OK;
+}
+
 // xsl:if
 nsresult
 txFnStartIf(PRInt32 aNamespaceID,
@@ -561,7 +615,7 @@ txFnStartIf(PRInt32 aNamespaceID,
     nsresult rv = aState.parseExpr(attr->mValue, &test);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txConditionalGoto* condGoto = new txConditionalGoto(test);
+    txConditionalGoto* condGoto = new txConditionalGoto(test, nsnull);
     if (!condGoto) {
         delete test;
         return NS_ERROR_OUT_OF_MEMORY;
@@ -728,6 +782,7 @@ txHandlerTableData gTxTemplateTableData = {
     { kNameSpaceID_XSLT, "if", txFnStartIf, txFnEndIf },
     { kNameSpaceID_XSLT, "apply-templates", txFnStartApplyTemplates, txFnEndApplyTemplates },
     { kNameSpaceID_XSLT, "call-template", txFnStartCallTemplate, txFnEndCallTemplate },
+    { kNameSpaceID_XSLT, "for-each", txFnStartForEach, txFnEndForEach },
     { 0, 0, 0, 0 } },
   // Other
   { 0, 0, txFnStartElementIgnore, txFnEndElementIgnore },

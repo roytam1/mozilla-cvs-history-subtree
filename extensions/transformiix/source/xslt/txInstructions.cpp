@@ -209,9 +209,9 @@ txRecursionCheckpointEnd::execute(txExecutionState& aEs)
     return NS_OK;
 }
 
-txConditionalGoto::txConditionalGoto(Expr* aCondition)
+txConditionalGoto::txConditionalGoto(Expr* aCondition, txInstruction* aTarget)
     : mCondition(aCondition),
-      mTarget(nsnull)
+      mTarget(aTarget)
 {
 }
 
@@ -230,6 +230,19 @@ txConditionalGoto::execute(txExecutionState& aEs)
         aEs.gotoInstruction(mTarget);
     }
     delete exprRes;
+
+    return NS_OK;
+}
+
+txGoTo::txGoTo(txInstruction* aTarget)
+    : mTarget(aTarget)
+{
+}
+
+nsresult
+txGoTo::execute(txExecutionState& aEs)
+{
+    aEs.gotoInstruction(mTarget);
 
     return NS_OK;
 }
@@ -321,6 +334,27 @@ txCallTemplate::execute(txExecutionState& aEs)
 
     nsresult rv = aEs.runTemplate(instr);
     NS_ENSURE_SUCCESS(rv, rv);
+    
+    return NS_OK;
+}
+
+txForEach::txForEach()
+    : mEndTarget(nsnull)
+{
+}
+
+nsresult
+txForEach::execute(txExecutionState& aEs)
+{
+    txNodeSetContext* context = (txNodeSetContext*)aEs.getEvalContext();
+    if (!context->hasNext()) {
+        delete aEs.popEvalContext();
+        aEs.gotoInstruction(mEndTarget);
+
+        return NS_OK;
+    }
+
+    context->next();
     
     return NS_OK;
 }

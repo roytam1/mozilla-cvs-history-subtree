@@ -155,12 +155,22 @@ public:
 class txConditionalGoto : public txInstruction
 {
 public:
-    txConditionalGoto(Expr* aCondition);
+    txConditionalGoto(Expr* aCondition, txInstruction* aTarget);
     ~txConditionalGoto();
 
     TX_DECL_TXINSTRUCTION
     
     Expr* mCondition;
+    txInstruction* mTarget;
+};
+
+class txGoTo : public txInstruction
+{
+public:
+    txGoTo(txInstruction* aTarget);
+
+    TX_DECL_TXINSTRUCTION
+    
     txInstruction* mTarget;
 };
 
@@ -202,6 +212,16 @@ public:
     TX_DECL_TXINSTRUCTION
 
     txExpandedName mName;
+};
+
+class txForEach : public txInstruction
+{
+public:
+    txForEach();
+
+    TX_DECL_TXINSTRUCTION
+
+    txInstruction* mEndTarget;
 };
 
 #endif //TRANSFRMX_TXINSTRUCTIONS_H
