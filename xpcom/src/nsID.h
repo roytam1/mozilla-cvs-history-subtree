@@ -21,6 +21,7 @@
 
 #include "prtypes.h"
 #include "string.h"
+#include "nsCom.h"
 
 /**
  * A "unique identifier". This is modeled after OSF DCE UUIDs.
@@ -60,13 +61,13 @@ struct nsID {
    * nsID Parsing method. Turns a {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}
    * string into an nsID
    */
-  PRBool Parse(char *aIDStr);
+  NS_COM PRBool Parse(char *aIDStr);
 
   /**
    * nsID string encoder. Returns an allocated string in 
    * {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx} format. Caller should free string.
    */
-  char* ToString() const;
+  NS_COM char* ToString() const;
   //@}
 };
 
