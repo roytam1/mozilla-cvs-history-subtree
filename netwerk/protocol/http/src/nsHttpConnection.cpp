@@ -64,7 +64,7 @@ nsHttpConnection::SetTransaction(nsHttpTransaction *transaction)
     NS_ADDREF(mTransaction); // XXX may want to make this weak
 
     // assign ourselves to the transaction
-    mTransaction->SetTransactionSink(this);
+    mTransaction->SetConnection(this);
 
     return ActivateConnection();
 }

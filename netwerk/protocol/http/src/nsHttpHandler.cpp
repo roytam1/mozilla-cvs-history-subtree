@@ -36,12 +36,26 @@ static NS_DEFINE_CID(kCategoryManagerCID, NS_CATEGORYMANAGER_CID);
 #define UA_APPSECURITY_FALLBACK "N"
 
 //-----------------------------------------------------------------------------
-// nsHttpHandler
+// nsHttpHandler <public>
 //-----------------------------------------------------------------------------
 
 nsHttpHandler *nsHttpHandler::mGlobalInstance = 0;
 
 nsHttpHandler::nsHttpHandler()
+    : mKeepAliveTimeout(10)
+    , mMaxConnections(10)
+    , mBrowseAnonymously(0)
+    , mHttpVersion(HTTP_VERSION_1_1)
+    , mCapabilities(ALLOW_KEEPALIVE)
+    , mProxyCapabilities(ALLOW_KEEPALIVE)
+    , mProxySSLConnectAllowed(PR_TRUE)
+    , mConnectTimeout(30)
+    , mRequestTimeout(30)
+    , mMaxAllowedKeepAlives(10)
+    , mMaxAllowedKeepAlivesPerServer(5)
+    , mNumActiveConnections(0)
+    , mNumIdleConnections(0)
+    , mUserAgentIsDirty(PR_TRUE)
 {
     NS_INIT_ISUPPORTS();
 
@@ -55,6 +69,7 @@ nsHttpHandler::nsHttpHandler()
     mGlobalInstance = this;
 
     PR_INIT_CLIST(&mIdleConnections);
+    PR_INIT_CLIST(&mTransactionQ);
 }
 
 nsHttpHandler::~nsHttpHandler()
@@ -183,7 +198,7 @@ nsHttpHandler::AddStandardRequestHeaders(nsHttpHeaderArray *request,
     LOG(("nsHttpHandler::AddStandardRequestHeaders\n"));
 
     // Add the User-Agent header:
-    rv = request->SetHeader(nsHttp::User_Agent, nsLocalCString(UserAgent()));
+    rv = request->SetHeader(nsHttp::User_Agent, UserAgent());
     if (NS_FAILED(rv)) return rv;
 
     // Add the Accept header:
@@ -226,11 +241,9 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *transaction,
     NS_ENSURE_ARG_POINTER(transaction);
     NS_ENSURE_ARG_POINTER(connectionInfo);
 
-    /*
     if (mNumActiveConnections == PRUint32(mMaxConnections))
         // unable to perform this transaction at this time
         return EnqueueTransaction(transaction, connectionInfo);
-    */
 
     nsHttpConnection *conn = nsnull;
 
@@ -243,6 +256,8 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *transaction,
         if (conn->ConnectionInfo()->Equals(connectionInfo)) {
             // found a matching connection; remove from list
             PR_REMOVE_LINK(conn);
+
+            mNumIdleConnections--;
 
             if (conn->CanReuse()) {
                 LOG(("reusing connection [conn=%x]\n", conn));
@@ -257,8 +272,6 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *transaction,
     }
 
     if (!conn) {
-        // XXX need to make sure we aren't exceeding max-connections
-
         LOG(("creating new connection...\n"));
         NS_NEWXPCOM(conn, nsHttpConnection);
         if (!conn)
@@ -272,6 +285,7 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *transaction,
     rv = conn->SetTransaction(transaction);
     if (NS_FAILED(rv)) goto failed;
 
+    mNumActiveConnections++;
     return NS_OK;
 
 failed:
@@ -280,75 +294,102 @@ failed:
 }
 
 nsresult
-nsHttpHandler::RecycleConnection(nsHttpConnection *connection)
+nsHttpHandler::ReleaseConnection(nsHttpConnection *conn)
 {
-    NS_ENSURE_ARG_POINTER(connection);
+    NS_ENSURE_ARG_POINTER(conn);
 
-    if (connection->CanReuse()) {
-        PR_INSERT_AFTER(connection, &mIdleConnections);
+    if (conn->CanReuse()) {
+        PR_INSERT_AFTER(conn, &mIdleConnections);
         mNumIdleConnections++;
     }
 
-    /*
     mNumActiveConnections--;
     if (!PR_CLIST_IS_EMPTY(&mTransactionQ))
         ProcessTransactionQ();
-    */
 
     return NS_OK;
 }
 
-const char *
+nsresult
+nsHttpHandler::CancelPendingTransaction(nsHttpTransaction *trans,
+                                        nsresult status)
+{
+    LOG(("nsHttpHandler::CancelPendingTransaction [trans=%x status=%x]\n",
+        trans, status));
+
+    NS_ENSURE_ARG_POINTER(trans);
+
+    nsPendingTransaction *pt = nsnull;
+
+    PRCList *node = PR_LIST_HEAD(&mTransactionQ);
+    while (node != &mTransactionQ) {
+        pt = (nsPendingTransaction *) node;
+        node = PR_NEXT_LINK(node);
+
+        if (pt->Transaction() == trans) {
+            trans->OnStopTransaction(status);
+
+            PR_REMOVE_LINK(pt);
+            delete pt;
+
+            return NS_OK;
+        }
+    }
+
+    LOG(("CancelPendingTransaction failed: transaction not in pending queue\n"));
+    return NS_ERROR_NOT_AVAILABLE;
+}
+
+//-----------------------------------------------------------------------------
+// nsHttpHandler <private>
+//-----------------------------------------------------------------------------
+
+const nsCString &
 nsHttpHandler::UserAgent()
 {
     if (mUserAgentIsDirty) {
         BuildUserAgent();
         mUserAgentIsDirty = PR_FALSE;
     }
-    return mUserAgent.get();
+    return mUserAgent;
 }
 
 void
 nsHttpHandler::ProcessTransactionQ()
 {
-    /*
     LOG(("nsHttpHandler::ProcessTransactionQ\n"));
+
     nsPendingTransaction *pt = nsnull;
+
     PRCList *node = PR_LIST_HEAD(&mTransactionQ);
-    while ((node != &mTransactionQ) && (mNumActiveConnections < mMaxConnections)) {
+    while ((node != &mTransactionQ) &&
+           (mNumActiveConnections < PRUint32(mMaxConnections))) {
         pt = (nsPendingTransaction *) node;
         node = PR_NEXT_LINK(node);
-        nsresult rv = InitiateTransaction(pt->transaction, pt->connectionInfo);
-        if (NS_FAILED(rv)) break;
+
+        nsresult rv = InitiateTransaction(pt->Transaction(),
+                                          pt->ConnectionInfo());
+        if (NS_FAILED(rv)) {
+            LOG(("InitiateTransaction failed [rv=%x]\n", rv));
+            NS_NOTREACHED("InitiateTransaction failed!!");
+            break;
+        }
+
         PR_REMOVE_LINK(pt);
-        NS_RELEASE(pt->transaction);
-        NS_RELEASE(pt->connectionInfo);
         delete pt;
     }
-    */
 }
 
 nsresult
-nsHttpHandler::EnqueueTransaction(nsHttpTransaction *transaction,
-                                  nsHttpConnectionInfo *connectionInfo)
+nsHttpHandler::EnqueueTransaction(nsHttpTransaction *trans,
+                                  nsHttpConnectionInfo *ci)
 {
-    /*
-    nsPendingTransaction pt = new nsPendingTransaction;
+    nsPendingTransaction *pt = new nsPendingTransaction(trans, ci);
     if (!pt)
         return NS_ERROR_OUT_OF_MEMORY;
 
-    PR_INIT_CLIST(pt);
-
-    pt->transaction = transaction;
-    pt->connectionInfo = connectionInfo;
-
-    NS_ADDREF(pt->transaction);
-    NS_ADDREF(pt->connectionInfo);
-
-    PR_APPEND_LINK(pt, &mPendingTransactionQ);
+    PR_APPEND_LINK(pt, &mTransactionQ);
     return NS_OK;
-    */
-    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 void
@@ -795,7 +836,6 @@ nsHttpHandler::CreateServicesFromCategory(const char *category)
  *      passing: "en, ja, fr_CA"
  *      returns: "en, ja; q=0.667, fr_CA; q=0.333"
  */
-
 static nsresult
 PrepareAcceptLanguages(const nsACString &i_AcceptLanguages,
                              nsACString &o_AcceptLanguages)
@@ -881,7 +921,6 @@ nsHttpHandler::SetAcceptLanguages(const nsACString &aAcceptLanguages)
  *      passing: "UTF-8"
  *      returns: "UTF-8, *"
  */
-
 static nsresult
 PrepareAcceptCharsets(const nsACString &i_AcceptCharset,
                             nsACString &o_AcceptCharset)
@@ -1110,7 +1149,7 @@ nsHttpHandler::NewProxyChannel(nsIURI *uri,
 NS_IMETHODIMP
 nsHttpHandler::GetUserAgent(char **aUserAgent)
 {
-    return DupString(UserAgent(), aUserAgent);
+    return DupString(UserAgent().get(), aUserAgent);
 }
 
 NS_IMETHODIMP
@@ -1252,3 +1291,51 @@ nsHttpHandler::Observe(nsISupports *subject,
 {
     return NS_OK;
 }
+
+//-----------------------------------------------------------------------------
+// nsHttpHandler::nsPendingTransaction
+//-----------------------------------------------------------------------------
+
+nsHttpHandler::
+nsPendingTransaction::nsPendingTransaction(nsHttpTransaction *trans,
+                                           nsHttpConnectionInfo *ci)
+    : mTransaction(trans)
+    , mConnectionInfo(ci)
+{
+    PR_INIT_CLIST(this);
+
+    NS_PRECONDITION(mTransaction, "null transaction");
+    NS_PRECONDITION(mConnectionInfo, "null connection info");
+
+    NS_ADDREF(mTransaction);
+    NS_ADDREF(mConnectionInfo);
+}
+
+nsHttpHandler::
+nsPendingTransaction::~nsPendingTransaction()
+{
+    NS_RELEASE(mTransaction);
+    NS_RELEASE(mConnectionInfo);
+}
+
+#if 0
+nsresult nsHttpHandler::
+nsPendingTransaction::OnTransactionComplete(nsHttpTransaction *trans,
+                                            nsresult status)
+{
+    LOG(("nsPendingTransaction::OnTransactionComplete [this=%x trans=%x status=%x]\n",
+        this, trans, status));
+
+    if (trans)
+        trans->OnStopTransaction(status);
+
+    // remove ourselves from the pending transaction queue.
+    PR_REMOVE_AND_INIT_LINK(this);
+
+    // drop our reference count (most likely destroying this); the
+    // handler no longer references this object.
+    NS_RELEASE(this);
+
+    return NS_OK;
+}
+#endif

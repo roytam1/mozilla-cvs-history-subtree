@@ -1,7 +1,6 @@
 #ifndef nsHttpConnection_h__
 #define nsHttpConnection_h__
 
-#include "nsHttpTransaction.h"
 #include "nsIStreamListener.h"
 #include "nsIStreamProvider.h"
 #include "nsISocketTransport.h"
@@ -12,6 +11,7 @@
 
 class nsHttpHandler;
 class nsHttpConnectionInfo;
+class nsHttpTransaction;
 
 //-----------------------------------------------------------------------------
 // nsHttpConnection - represents a connection to a HTTP server (or proxy)
@@ -20,7 +20,6 @@ class nsHttpConnectionInfo;
 class nsHttpConnection : public nsIStreamListener
                        , public nsIStreamProvider
                        , public PRCList
-                       , public nsAHttpTransactionSink
 {
 public:
     NS_DECL_ISUPPORTS

@@ -1,6 +1,7 @@
 #ifndef nsHttpHandler_h__
 #define nsHttpHandler_h__
 
+#include "nsHttpTransaction.h"
 #include "nsIHttpProtocolHandler.h"
 #include "nsIProtocolProxyService.h"
 #include "nsIPref.h"
@@ -12,7 +13,6 @@
 
 class nsHttpConnection;
 class nsHttpConnectionInfo;
-class nsHttpTransaction;
 class nsHttpHeaderArray;
 
 //-----------------------------------------------------------------------------
@@ -61,32 +61,42 @@ public:
     nsresult InitiateTransaction(nsHttpTransaction *,
                                  nsHttpConnectionInfo *);
 
-    // The connection count indicates the number of http sockets currently
-    // in existence.
-    void     IncrementConnectionCount();
-    void     DecrementConnectionCount();
-    PRUint32 ConnectionCount();
+    // Called when a connection is done processing a transaction
+    nsresult ReleaseConnection(nsHttpConnection *);
 
-    // The active connection count indicates the number of http sockets
-    // currently processing a transaction.
-    void     IncrementActiveConnectionCount();
-    void     DecrementActiveConnectionCount();
-    PRUint32 ActiveConnectionCount();
-
-    // Connection recycling is explicit
-    nsresult RecycleConnection(nsHttpConnection *);
+    // Called when a transaction, which is not assigned to a connection,
+    // is canceled.
+    nsresult CancelPendingTransaction(nsHttpTransaction *, nsresult status);
 
 private:
-    /*
-    struct nsPendingTransaction : public PRCList
+    //
+    // Transactions that have not yet been assigned to a connection are kept
+    // in a queue of nsPendingTransaction objects.  nsPendingTransaction 
+    // implements nsAHttpTransactionSink to handle transaction Cancellation.
+    //
+    class nsPendingTransaction : public PRCList
     {
-        nsHttpTransaction    *transaction;
-        nsHttpConnectionInfo *connectionInfo;
-    };
-    */
+    public:
+        nsPendingTransaction(nsHttpTransaction *, nsHttpConnectionInfo *);
+       ~nsPendingTransaction();
+        
+        nsHttpTransaction    *Transaction()    { return mTransaction; }
+        nsHttpConnectionInfo *ConnectionInfo() { return mConnectionInfo; }
 
+    private:
+        nsHttpTransaction    *mTransaction;
+        nsHttpConnectionInfo *mConnectionInfo;
+    };
+
+    //
+    // Transaction queue helper methods
+    //
     void     ProcessTransactionQ();
     nsresult EnqueueTransaction(nsHttpTransaction *, nsHttpConnectionInfo *);
+
+    //
+    // Useragent/prefs helper methods
+    //
     void     BuildUserAgent();
     void     InitUserAgentComponents();
     void     PrefsChanged(const char *pref = nsnull);
@@ -95,10 +105,7 @@ private:
     nsresult SetAcceptEncodings(const nsACString &);
     nsresult SetAcceptCharsets(const nsACString &);
 
-    const char *AcceptLanguages() { return mAcceptLanguages; }
-    const char *AcceptEncodings() { return mAcceptEncodings; }
-    const char *AcceptCharsets() { return mAcceptCharsets; }
-    const char *UserAgent();
+    const nsCString &UserAgent();
 
     static PRInt32 PR_CALLBACK PrefsCallback(const char *, void *);
 
@@ -129,8 +136,8 @@ private:
     nsCString mAcceptCharsets;
 
     // connection management
-    PRCList  mIdleConnections;     // list of nsHttpConnection objects
-    PRCList  mPendingTransactionQ; // list of nsPendingTransaction objects
+    PRCList  mIdleConnections; // list of nsHttpConnection objects
+    PRCList  mTransactionQ;    // list of nsPendingTransaction objects
     PRUint32 mNumActiveConnections;
     PRUint32 mNumIdleConnections;
 

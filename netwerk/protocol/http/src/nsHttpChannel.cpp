@@ -16,8 +16,9 @@ static NS_DEFINE_CID(kStreamListenerProxyCID, NS_STREAMLISTENERPROXY_CID);
 //-----------------------------------------------------------------------------
 
 nsHttpChannel::nsHttpChannel()
-    : mTransaction(0)
-    , mConnectionInfo(0)
+    : mResponseHead(nsnull)
+    , mTransaction(nsnull)
+    , mConnectionInfo(nsnull)
     , mLoadFlags(LOAD_NORMAL)
     , mCapabilities(0)
     , mStatus(NS_OK)
@@ -503,8 +504,17 @@ nsHttpChannel::SetProxyType(const char *aProxyType)
 NS_IMETHODIMP
 nsHttpChannel::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
 {
-    NS_ENSURE_TRUE(mListener, NS_ERROR_NULL_POINTER);
     LOG(("nsHttpChannel::OnStartRequest [this=%x]\n", this));
+
+    NS_PRECONDITION(mListener, "null listener");
+    NS_PRECONDITION(mTransaction, "null transaction");
+
+    // All of the response headers have been acquired, so we can take ownership
+    // of them from the transaction.
+    mResponseHead = mTransaction->TakeResponseHead();
+
+    NS_POSTCONDITION(mResponseHead, "null response head");
+ 
     return mListener->OnStartRequest(this, mListenerContext);
 }
 

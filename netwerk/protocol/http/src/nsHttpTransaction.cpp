@@ -1,4 +1,5 @@
 #include <stdlib.h> // atoi
+#include "nsHttpHandler.h"
 #include "nsHttpTransaction.h"
 #include "nsHttpConnection.h"
 #include "nsHttpRequestHead.h"
@@ -22,7 +23,7 @@ static NS_DEFINE_CID(kSupportsVoidCID, NS_SUPPORTS_VOID_CID);
 
 nsHttpTransaction::nsHttpTransaction(nsIStreamListener *listener)
     : mListener(listener)
-    , mTransactionSink(nsnull)
+    , mConnection(nsnull)
     , mResponseHead(nsnull)
     , mReadBuf(0)
     , mContentLength(-1)
@@ -40,7 +41,10 @@ nsHttpTransaction::nsHttpTransaction(nsIStreamListener *listener)
 
 nsHttpTransaction::~nsHttpTransaction()
 {
-    NS_IF_RELEASE(mTransactionSink);
+    if (mConnection) {
+        nsHttpHandler::get()->ReleaseConnection(mConnection);
+        NS_RELEASE(mConnection);
+    }
 }
 
 nsresult
@@ -71,11 +75,19 @@ nsHttpTransaction::SetupRequest(nsHttpRequestHead *requestHead,
 }
 
 void
-nsHttpTransaction::SetTransactionSink(nsAHttpTransactionSink *sink)
+nsHttpTransaction::SetConnection(nsHttpConnection *conn)
 {
-    NS_IF_RELEASE(mTransactionSink);
-    mTransactionSink = sink;
-    NS_IF_ADDREF(mTransactionSink);
+    NS_IF_RELEASE(mConnection);
+    mConnection = conn;
+    NS_IF_ADDREF(mConnection);
+}
+
+nsHttpResponseHead *
+nsHttpTransaction::TakeResponseHead()
+{
+    nsHttpResponseHead *head = mResponseHead;
+    mResponseHead = nsnull;
+    return head;
 }
 
 // called on the socket transport thread
@@ -292,12 +304,12 @@ nsHttpTransaction::HandleContent(nsIInputStream *stream,
     if (mTransactionDone)
         return NS_OK;
 
-    NS_PRECONDITION(mTransactionSink, "no transaction sink");
+    NS_PRECONDITION(mConnection, "no connection");
 
     if (!mFiredOnStart) {
         // notify the transaction sink first
-        if (mTransactionSink)
-            mTransactionSink->OnHeadersAvailable(this);
+        if (mConnection)
+            mConnection->OnHeadersAvailable(this);
 
         LOG(("nsHttpTransaction [this=%x] sending OnStartRequest\n", this));
 
@@ -356,10 +368,10 @@ nsHttpTransaction::HandleContent(nsIInputStream *stream,
         (mChunkConvCtx && mChunkConvCtx->GetEOF())) {
 
         PRInt32 priorVal = PR_AtomicSet(&mTransactionDone, 1);
-        if (priorVal == 0) {
+        if (priorVal == 0 && mConnection) {
             // let the connection know that we are done with it; this should
             // result in OnStopTransaction being fired.
-            return mTransactionSink->OnTransactionComplete(this, NS_OK);
+            return mConnection->OnTransactionComplete(this, NS_OK);
         }
     }
 
@@ -460,11 +472,19 @@ nsHttpTransaction::GetStatus(nsresult *aStatus)
 NS_IMETHODIMP
 nsHttpTransaction::Cancel(nsresult status)
 {
-    if (!mTransactionSink) return NS_ERROR_NOT_INITIALIZED;
+    if (!mConnection) {
+        // the connection is not assigned to a connection yet, so we must
+        // notify the HTTP handler, so it can process the cancelation. 
+        return nsHttpHandler::get()->CancelPendingTransaction(this, status);
+    }
+
+    // atomically cancel the connection.  it's important to consider that
+    // the socket thread could already be in the middle of processing
+    // completion, in which case we should ignore this cancelation request.
 
     PRInt32 priorVal = PR_AtomicSet(&mTransactionDone, 1);
     if (priorVal == 0)
-        mTransactionSink->OnTransactionComplete(this, status);
+        mConnection->OnTransactionComplete(this, status);
 
     return NS_OK;
 }

@@ -10,7 +10,7 @@
 
 class nsHttpRequestHead;
 class nsHttpResponseHead;
-class nsAHttpTransactionSink;
+class nsHttpConnection;
 class nsHTTPChunkConvContext;
 
 //-----------------------------------------------------------------------------
@@ -28,19 +28,19 @@ public:
     nsHttpTransaction(nsIStreamListener *);
     virtual ~nsHttpTransaction();
 
-    // Called when added to a connection
-    void SetTransactionSink(nsAHttpTransactionSink *);
+    // Called when assigned to a connection
+    void SetConnection(nsHttpConnection *);
 
     // Called to initialize the transaction
     nsresult SetupRequest(nsHttpRequestHead *, nsIInputStream *);
 
-    nsIStreamListener      *Listener()        { return mListener; }
-    nsAHttpTransactionSink *TransactionSink() { return mTransactionSink; }
-    nsHttpResponseHead     *ResponseHead()    { return mResponseHead; }
+    nsIStreamListener  *Listener()     { return mListener; }
+    nsHttpConnection   *Connection()   { return mConnection; }
+    nsHttpResponseHead *ResponseHead() { return mResponseHead; }
 
     // Called to take ownership of the response headers; the transaction
     // will drop any reference to the response headers after this call.
-    nsHttpResponseHead   *TakeResponseHead();
+    nsHttpResponseHead *TakeResponseHead();
 
     // Called to write data to the socket until return NS_BASE_STREAM_CLOSED
     nsresult OnDataWritable(nsIOutputStream *, PRUint32 count);
@@ -60,7 +60,7 @@ private:
 private:
     nsCOMPtr<nsIStreamListener> mListener;
 
-    nsAHttpTransactionSink     *mTransactionSink; // hard ref
+    nsHttpConnection           *mConnection; // hard ref
 
     nsCString                   mReqHeaderBuf;    // flattened request headers
     nsCOMPtr<nsIInputStream>    mReqHeaderStream; // header data stream
@@ -84,6 +84,7 @@ private:
     PRPackedBool                mFiredOnStart;
 };
 
+#if 0
 //-----------------------------------------------------------------------------
 // nsAHttpTransactionSink recieves notifications from the transaction.  This
 // is, for example, implemented by nsHttpConnection.
@@ -95,5 +96,6 @@ public:
     virtual nsresult OnHeadersAvailable(nsHttpTransaction *) = 0;
     virtual nsresult OnTransactionComplete(nsHttpTransaction *, nsresult) = 0;
 };
+#endif
 
 #endif
