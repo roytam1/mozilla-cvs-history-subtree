@@ -249,9 +249,9 @@ nsresult nsImapUrl::ParseUrl()
 
 	char * imapPartOfUrl = nsnull;
 	rv = GetPath(&imapPartOfUrl);
-	if (NS_SUCCEEDED(rv) && imapPartOfUrl)
+	if (NS_SUCCEEDED(rv) && imapPartOfUrl && imapPartOfUrl+1)
 	{
-		ParseImapPart(imapPartOfUrl);
+		ParseImapPart(imapPartOfUrl+1);  // GetPath leaves leading '/' in the path!!!
 		nsCRT::free(imapPartOfUrl);
 	}
 	nsXPIDLCString host;
