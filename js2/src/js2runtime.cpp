@@ -1937,7 +1937,7 @@ JSValue Boolean_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 
     ASSERT(thisValue->isObject());
     JSObject *thisObj = thisValue->object;
 
-    if ((bool)(thisObj->mPrivate))
+    if (thisObj->mPrivate != 0)
         return JSValue(new String(widenCString("true")));
     else
         return JSValue(new String(widenCString("false")));

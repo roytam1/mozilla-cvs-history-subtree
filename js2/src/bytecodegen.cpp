@@ -735,6 +735,88 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                 addFixup(getTopLabel(Label::ContinueLabel));
         }
         break;
+    case StmtNode::Switch:
+        {
+/*
+            <swexpr>        
+            SetVarOp    <switchTemp>
+            Pop
+
+        // test sequence in source order EXCEPT 
+        // default is moved to end.
+
+            GetVarOp    <switchTemp>
+            <case1expr>
+            Equal
+            JumpTrue --> case1StmtLabel
+            GetVarOp    <switchTemp>
+            <case2expr>
+            Equal
+            JumpTrue --> case2StmtLabel
+            Jump --> default, if there is one, or break label
+
+    case1StmtLabel:
+            <stmt>
+    case2StmtLabel:
+            <stmt>
+    defaultLabel:
+            <stmt>
+    case3StmtLabel:
+            <stmt>
+            ..etc..     // all in source order
+    
+    breakLabel:
+*/
+            uint32 breakLabel = getLabel(Label::BreakLabel);
+            uint32 defaultLabel = (uint32)(-1);
+
+            Reference *switchTempReadRef, *switchTempWriteRef;
+            mScopeChain->defineTempVariable(switchTempReadRef, switchTempWriteRef, Object_Type);
+
+            SwitchStmtNode *sw = static_cast<SwitchStmtNode *>(p);
+            genExpr(sw->expr);
+            switchTempWriteRef->emitCodeSequence(this);
+            addByte(PopOp);
+
+            StmtNode *s = sw->statements;
+            while (s) {
+                if (s->getKind() == StmtNode::Case) {
+                    ExprStmtNode *c = static_cast<ExprStmtNode *>(s);
+                    c->label = getLabel();
+                    if (c->expr) {
+                        switchTempReadRef->emitCodeSequence(this);
+                        genExpr(c->expr);
+                        addByte(DoOperatorOp);
+                        addByte(Equal);
+                        addByte(JumpTrueOp);
+                        addFixup(c->label);
+                    }
+                    else
+                        defaultLabel = c->label;
+                }
+                s = s->next;
+            }
+            addByte(JumpOp);
+            if (defaultLabel != -1)
+                addFixup(defaultLabel);
+            else
+                addFixup(breakLabel);          
+            
+            s = sw->statements;
+            mLabelStack.push_back(breakLabel);
+            while (s) {
+                if (s->getKind() == StmtNode::Case) {
+                    ExprStmtNode *c = static_cast<ExprStmtNode *>(s);
+                    setLabel(c->label);
+                }
+                else
+                    genCodeForStatement(s, static_cg);
+                s = s->next;
+            }
+            mLabelStack.pop_back();
+            setLabel(breakLabel);
+        }
+        break;
     case StmtNode::If:
         {
             UnaryStmtNode *i = static_cast<UnaryStmtNode *>(p);
@@ -1642,6 +1724,7 @@ BinaryOpEquals:
 
 int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
 {
+    int32 offset;
     switch (bcm.mCodeBase[i]) {
     case SwapOp:
         f << "Swap\n";
@@ -1680,15 +1763,18 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
         i++;
         break;
     case JumpFalseOp:
-        f << "JumpFalse " << bcm.getOffset(i + 1) << "\n";
+        offset = bcm.getOffset(i + 1);
+        f << "JumpFalse " << offset << " --> " << (i + 1) + offset << "\n";
         i += 5;
         break;
     case JumpTrueOp:
-        f << "JumpTrue " << bcm.getOffset(i + 1) << "\n";
+        offset = bcm.getOffset(i + 1);
+        f << "JumpTrue " << offset << " --> " << (i + 1) + offset << "\n";
         i += 5;
         break;
     case JumpOp:
-        f << "Jump " << bcm.getOffset(i + 1) << "\n";
+        offset = bcm.getOffset(i + 1);
+        f << "Jump " << offset << " --> " << (i + 1) + offset << "\n";
         i += 5;
         break;
     case ReturnOp:
@@ -1852,7 +1938,8 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
         i++;
         break;
     case JsrOp:
-        f << "Jsr " << bcm.getOffset(i + 1) << "\n";
+        offset = bcm.getOffset(i + 1);
+        f << "Jsr " << offset << " --> " << (i + 1) + offset << "\n";
         i += 5;
         break;
     case RtsOp:
@@ -1860,8 +1947,12 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
         i++;
         break;
     case TryOp:
-        f << "Try " << bcm.getOffset(i + 1) << " " << bcm.getOffset(i + 5) << "\n";
-        i += 9;
+        offset = bcm.getOffset(i + 1);
+        f << "Try " << offset << " --> " << (i + 1) + offset;
+        i += 5;
+        offset = bcm.getOffset(i);
+        f << " " << offset << " --> " << i + offset << "\n";
+        i += 4;
         break;
     case HandlerOp:
         f << "Handler\n";

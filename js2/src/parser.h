@@ -532,6 +532,7 @@ namespace JavaScript {
         ExprNode *expr;    // The expression statement's expression.
                            // May be nil for default: or
                            // return-with-no-expression statements.
+        uint32 label;   // (only used for case statements)
 
         ExprStmtNode(uint32 pos, Kind kind, ExprNode *expr) :
                 StmtNode(pos, kind), expr(expr) {}
