@@ -195,6 +195,7 @@ protected:
 }
 
 + (BookmarksManager*)sharedBookmarksManager;
++ (BookmarksManager*)sharedBookmarksManagerDontAlloc;
 
 - (void)addBookmarksClient:(id<BookmarksClient>)client;
 - (void)removeBookmarksClient:(id<BookmarksClient>)client;

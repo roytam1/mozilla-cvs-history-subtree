@@ -189,9 +189,12 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
   // Cancel outstanding site icon loads
   [[RemoteDataProvider sharedRemoteDataProvider] cancelOutstandingRequests];
   
-  BookmarksManager* bmManager = [BookmarksManager sharedBookmarksManager];
-  [bmManager removeBookmarksClient:mMenuBookmarks];
-  [bmManager removeBookmarksClient:mDockBookmarks];
+  BookmarksManager* bmManager = [BookmarksManager sharedBookmarksManagerDontAlloc];
+  if (bmManager)
+  {
+    [bmManager removeBookmarksClient:mMenuBookmarks];
+    [bmManager removeBookmarksClient:mDockBookmarks];
+  }
   
   // Release before calling TermEmbedding since we need to access XPCOM
   // to save preferences

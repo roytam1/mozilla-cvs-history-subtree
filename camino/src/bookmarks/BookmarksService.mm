@@ -349,6 +349,8 @@ BookmarksService::AddBookmarkToFolder(const nsString& aURL, const nsString& aTit
   if (!aFolder) return;
   
   nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(gBookmarks));
+  if (!domDoc) return;
+  
   nsCOMPtr<nsIDOMElement> elt;
   domDoc->CreateElementNS(NS_LITERAL_STRING("http://chimera.mozdev.org/bookmarks/"),
                           NS_LITERAL_STRING("bookmark"),
@@ -470,6 +472,8 @@ BookmarksService::ReadBookmarks()
 {
   nsCOMPtr<nsIFile> profileDirBookmarks;
   NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(profileDirBookmarks));
+  if (!profileDirBookmarks) return;
+  
   profileDirBookmarks->Append(NS_LITERAL_STRING("bookmarks.xml"));
   
   PRBool fileExists = PR_FALSE;
@@ -633,6 +637,8 @@ static bool AttributeStringContainsValue(const nsAString& inAttribute, const nsA
 bool BookmarksService::FindFolderWithAttribute(const nsAString& inAttribute, const nsAString& inValue, nsIDOMElement** foundElt)
 {
   nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(gBookmarks));
+  if (!domDoc) return false;
+  
   nsCOMPtr<nsIDOMElement> rootElt;
   domDoc->GetDocumentElement(getter_AddRefs(rootElt));
 
@@ -641,6 +647,8 @@ bool BookmarksService::FindFolderWithAttribute(const nsAString& inAttribute, con
 
 void BookmarksService::EnsureToolbarRoot()
 {
+  if (!gBookmarks) return;
+  
   if (!gToolbarRoot)
   {
     nsCOMPtr<nsIDOMElement> foundElt;
@@ -920,6 +928,8 @@ BookmarksService::ImportBookmarks(nsIDOMHTMLDocument* aHTMLDoc)
 
   nsCOMPtr<nsIDOMElement>  bookmarksRoot;
   nsCOMPtr<nsIDOMDocument> bookmarksDOMDoc(do_QueryInterface(gBookmarks));
+  if (!bookmarksDOMDoc) return;
+  
   bookmarksDOMDoc->GetDocumentElement(getter_AddRefs(bookmarksRoot));
 
   nsCOMPtr<nsIDOMNode> dummy;
@@ -986,6 +996,8 @@ BookmarksService::ResolveKeyword(NSString* aKeyword)
 #endif
   
   nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(gBookmarks));
+  if (!domDoc) return;
+  
   nsCOMPtr<nsIDOMElement> elt;
   domDoc->GetElementById(keyword, getter_AddRefs(elt));
 
@@ -1401,14 +1413,20 @@ BookmarksService::PerformURLDrop(BookmarkItem* parentItem, BookmarkItem* beforeI
 
 @implementation BookmarksManager
 
+
+static BookmarksManager* gBookmarksManager = nil;
+
 + (BookmarksManager*)sharedBookmarksManager;
 {
-  static BookmarksManager* sBookmarksManager = nil;
+  if (!gBookmarksManager)
+    gBookmarksManager = [[BookmarksManager alloc] init];
   
-  if (!sBookmarksManager)
-    sBookmarksManager = [[BookmarksManager alloc] init];
-  
-  return sBookmarksManager;
+  return gBookmarksManager;
+}
+
++ (BookmarksManager*)sharedBookmarksManagerDontAlloc;
+{
+  return gBookmarksManager;
 }
 
 - (id)init
@@ -1424,7 +1442,9 @@ BookmarksService::PerformURLDrop(BookmarkItem* parentItem, BookmarkItem* beforeI
 - (void)dealloc
 {
   [[NSNotificationCenter defaultCenter] removeObserver:self];
-  BookmarksService::Shutdown();
+
+  if (self == gBookmarksManager)
+    gBookmarksManager = nil;
   [super dealloc];
 }
 
@@ -1451,6 +1471,8 @@ BookmarksService::PerformURLDrop(BookmarkItem* parentItem, BookmarkItem* beforeI
 - (void)shutdown: (NSNotification*)aNotification
 {
   BookmarksService::FlushBookmarks();
+  BookmarksService::Shutdown();		// need to do this before XPCOM shuts down
+  [gBookmarksManager release];
 }
 
 // callback for [[SiteIconProvider sharedFavoriteIconProvider] loadFavoriteIcon]
