@@ -24,6 +24,7 @@
 #include <assert.h>
 #include "prefapi.h"
 #include "prlink.h"
+#include "prlog.h"
 #include "jsapi.h"
 #include "jsbuffer.h"
 

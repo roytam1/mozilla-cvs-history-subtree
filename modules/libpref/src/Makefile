@@ -45,6 +45,8 @@ include $(DEPTH)/config/rules.mk
 
 INCLUDES	+= -I$(DEPTH)/cmd/xfe/icons -Iunix
 
+DEFINES		+= -DB1M
+
 GARBAGE		+= unix/jsbuffer.h
 
 CONFIG_FILES	= initpref.js \

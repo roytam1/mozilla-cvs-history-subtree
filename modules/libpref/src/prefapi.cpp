@@ -2083,7 +2083,7 @@ pref_LoadAutoAdminLib()
 	PR_SetLibraryPath( "/usr/local/netscape/" );
 #endif
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) && !defined(B1M)
 	{
 		char aalib[MAXPATHLEN];
 
