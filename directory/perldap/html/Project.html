@@ -123,12 +123,13 @@ important that a module or method doesn't work without it). The oustanding
   <LI><FONT size=+1>Bugs and problems</FONT>
   <UL>
     <LI>Memory usage is very high, for some reason it's more memory
-    intensive than my old code (why?).
+    intensive than my old code (why?). <B><I>[leif]</I></B>
 
     <LI><B>Makefile.PL</B>: We must to support both DevEdge and
-    mozilla.org SDK libraries. I'm suggesting we'll merge (and adapt) the
-    old code from my original Makefile.PL script, which tries to find the
-    libldap files more "intelligently".
+    mozilla.org SDK libraries. I think the library "find" function should
+    be version independant, i.e. it should find the "best" libraries
+    available. The more that's hardcoded, the more problems in the
+    future.<B><I>[clayton]</I></B>
 
     <LI><B>Conn.pm</B>: The delete() method does not work as documented,
     it should handle taking an Entry:: object as argument. Reported by 
@@ -155,22 +156,22 @@ important that a module or method doesn't work without it). The oustanding
     <LI>Strange 'Out of Memory' bug in PerLDAP, as reported by
     richard_jones@my-dejanews.com. Could this be a problem in API.xs, as
     suggested by Clayton (in string conversion code)?
+    <B><I>[clayton]</I></B>
 
     <LI><B>Makefile.PL</B>: The version "check" isn't done properly, it
     needs to do string compare (using eq) instead of numerical. Reported
-    by david d zuhn <dzuhn@netscape.com>.
-
-    <LI><B>Conn.pm</B>: Apparently ldap_explode_dn() can fail, as used in
-    the modifyRDN() method. This is reported by LHOIR Sébastien"
-    <lhoir@smd.ucl.ac.be>. <B><I>[leif]</I></B>
+    by david d zuhn <dzuhn@netscape.com>. <B><I>[clayton]</I></B>
 
     <LI><B>Makefile.PL</B>: Include/merge patch from ActiveState, to fix
     problems with Perl-5.005 and Win/NT. We need to verify that this
     builds and runs with both the ActiveState port, and a native Perl/NT
-    build.
+    build. <B><I>[clayton]</I></B>
 
     <LI>Remove all error print statements in the library modules
     (*.pm). [leif]
+
+    <LI>Problems reported using SSL on NT, giving a Dr Watson. Could this
+    be related to the bug in API.xs? [clayton???]
 
   </UL>
 
@@ -186,7 +187,7 @@ important that a module or method doesn't work without it). The oustanding
     <LI><B>Makefile.PL</B>: Add build targets for creating HTML docs, and
     to produce binary distributions. We already have the source
     distribution target, but we need one that can prepare a CVS compatible
-    source dist as well.
+    source dist as well. <B><I>[clayton]</I></B>
 
     <LI><B>LDIF.pm</B>: Add documentation! [leif]
   </UL>
@@ -238,6 +239,14 @@ a followup on new features etc.
 <UL>
   <LI><FONT size=+1>Bugs and problems</FONT>
   <UL>
+    <LI><B>Conn.pm</B>: Apparently ldap_explode_dn() can fail, as used in
+    the modifyRDN() method. This is reported by LHOIR Sébastien"
+    <lhoir@smd.ucl.ac.be>. Update: This is not a bug in the PerLDAP
+    module, except that the error codes are perhaps
+    confusing. If anything, we should understand why it behaves so weird
+    when the user changes both the RDN, and the sub-tree of the
+    entry. <B><I>[leif]</I></B>
+
   </UL>
 
   <LI><FONT size=+1>Additional methods, changes to methods, or new
