@@ -359,7 +359,7 @@ BASIC_LIBS	+= \
 		  $(DIST)/lib/libjbn.a \
 		  $(NULL)
 
-ifndef NO_SECURITY
+ifdef MOZ_SECURITY
 BASIC_LIBS	+= $(DIST)/lib/libjsl.a
 endif
 
