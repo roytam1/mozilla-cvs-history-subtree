@@ -182,6 +182,8 @@ protected:
                                    PRUint32 aStatus);
 #endif
 
+  PRBool CanLoadImage(nsIURI *aURI);
+
   void GetBaseURI(nsIURI **uri);
   void GetLoadGroup(nsIPresContext *aPresContext, nsILoadGroup **aLoadGroup);
 

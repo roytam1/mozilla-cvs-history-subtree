@@ -69,6 +69,8 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #include "nsIDOMNode.h"
 
 
+#include "nsContentPolicyUtils.h"
+
 
 #ifdef DEBUG
 #undef NOISY_IMAGE_LOADING
@@ -272,7 +274,9 @@ nsImageFrame::Init(nsIPresContext*  aPresContext,
     nsCOMPtr<nsIURI> lowURI;
     NS_NewURI(getter_AddRefs(lowURI), src, baseURL);
 
-    il->LoadImage(lowURI, loadGroup, mListener, aPresContext, getter_AddRefs(mLowImageRequest));
+    if (CanLoadImage(lowURI)) {
+      il->LoadImage(lowURI, loadGroup, mListener, aPresContext, getter_AddRefs(mLowImageRequest));
+    }
 #else
     mLowSrcImageLoader = new nsHTMLImageLoader;
     if (mLowSrcImageLoader) {
@@ -288,8 +292,10 @@ nsImageFrame::Init(nsIPresContext*  aPresContext,
 
   nsCOMPtr<nsIURI> srcURI;
   NS_NewURI(getter_AddRefs(srcURI), src, baseURL);
-  il->LoadImage(srcURI, loadGroup, mListener, aPresContext, getter_AddRefs(mImageRequest));
-  // if the image was found in the cache, it is possible that LoadImage will result in a call to OnStartContainer()
+  if (CanLoadImage(srcURI)) {
+    il->LoadImage(srcURI, loadGroup, mListener, aPresContext, getter_AddRefs(mImageRequest));
+    // if the image was found in the cache, it is possible that LoadImage will result in a call to OnStartContainer()
+  }
 #else
   mImageLoader.Init(this, UpdateImageFrame, (void*)&mImageLoader, baseURL, src);
 
@@ -356,17 +362,6 @@ NS_IMETHODIMP nsImageFrame::OnStartContainer(imgIRequest *aRequest, nsIPresConte
     }
   }
 
-  if (mCanSendLoadEvent && presShell) {
-    // Send load event
-    mCanSendLoadEvent = PR_FALSE;
-
-    nsEventStatus status = nsEventStatus_eIgnore;
-    nsEvent event;
-    event.eventStructType = NS_EVENT;
-    event.message = NS_IMAGE_LOAD;
-    presShell->HandleEventWithTarget(&event,this,mContent,NS_EVENT_FLAG_INIT | NS_EVENT_FLAG_CANT_BUBBLE,&status);
-  }
-
   return NS_OK;
 }
 
@@ -421,6 +416,71 @@ NS_IMETHODIMP nsImageFrame::OnStopContainer(imgIRequest *aRequest, nsIPresContex
 
 NS_IMETHODIMP nsImageFrame::OnStopDecode(imgIRequest *aRequest, nsIPresContext *aPresContext, nsresult aStatus, const PRUnichar *aStatusArg)
 {
+  nsCOMPtr<nsIPresShell> presShell;
+  aPresContext->GetShell(getter_AddRefs(presShell));
+
+  // check to see if an image error occurred
+  PRBool imageFailedToLoad = PR_FALSE;
+
+  if (NS_FAILED(aStatus)) { // We failed to load the image. Notify the pres shell
+    PRBool lowFailed = PR_FALSE;
+    PRBool imageFailed = PR_FALSE;
+
+    // One of the two images didn't load, which one?
+    if (mLowImageRequest == aRequest || !mLowImageRequest) {
+      lowFailed = PR_TRUE;
+    } else if (mImageRequest == aRequest || !mImageRequest) {
+      imageFailed = PR_TRUE;
+    }
+
+    if (imageFailed && lowFailed)
+      imageFailedToLoad = PR_TRUE;
+  }
+
+  // if src failed and there is no lowsrc
+  // or both failed to load, then notify the PresShell
+  if (imageFailedToLoad) {    
+    if (presShell) {
+      nsAutoString usemap;
+      mContent->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::usemap, usemap);    
+      // We failed to load the image. Notify the pres shell if we aren't an image map
+      if (usemap.Length() == 0) {
+        presShell->CantRenderReplacedElement(aPresContext, this);      
+      }
+    }
+  } else if (!mSizeConstrained) {
+    // see if the image is ready in this notification as well, and if the size is not needed
+    // check if we have a constrained size: if so, no need to reflow since we cannot change our size
+    if (mParent) {
+      mState |= NS_FRAME_IS_DIRTY;
+	    mParent->ReflowDirtyChild(presShell, (nsIFrame*) this);
+    } else {
+      NS_ASSERTION(0, "No parent to pass the reflow request up to.");
+    }
+  }
+
+  //After these DOM events are fired its possible that this frame may be deleted.  As a result
+  //the code should not attempt to access any of the frames internal data after this point.
+  if (presShell) {
+    if (imageFailedToLoad) {
+      // Send error event
+      nsEventStatus status = nsEventStatus_eIgnore;
+      nsEvent event;
+      event.eventStructType = NS_EVENT;
+      event.message = NS_IMAGE_ERROR;
+      presShell->HandleEventWithTarget(&event,this,mContent,NS_EVENT_FLAG_INIT,&status);
+    } else if (mCanSendLoadEvent) {
+      // Send load event
+      mCanSendLoadEvent = PR_FALSE;
+
+      nsEventStatus status = nsEventStatus_eIgnore;
+      nsEvent event;
+      event.eventStructType = NS_EVENT;
+      event.message = NS_IMAGE_LOAD;
+      presShell->HandleEventWithTarget(&event,this,mContent,NS_EVENT_FLAG_INIT | NS_EVENT_FLAG_CANT_BUBBLE,&status);
+    }
+  }
+
   return NS_OK;
 }
 
@@ -972,12 +1032,12 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
     PRInt32 imgSrcLinesLoaded = -1;
 #ifdef USE_IMG2
 
-    NS_ASSERTION(mImageRequest, "no image request!  this is bad");
-
     nsCOMPtr<imgIContainer> imgCon;
     nsCOMPtr<imgIContainer> lowImgCon;
 
-    mImageRequest->GetImage(getter_AddRefs(imgCon));
+    if (mImageRequest) {
+      mImageRequest->GetImage(getter_AddRefs(imgCon));
+    }
 #else
     nsIImage * lowImage = nsnull;
     nsIImage * image    = nsnull;
@@ -996,8 +1056,10 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
 #endif
 
 #ifdef USE_IMG2
-    PRUint32 loadStatus;
-    mImageRequest->GetImageStatus(&loadStatus);
+    PRUint32 loadStatus = imgIRequest::STATUS_NONE;
+    if (mImageRequest) {
+      mImageRequest->GetImageStatus(&loadStatus);
+    }
     if (!(loadStatus & imgIRequest::STATUS_SIZE_AVAILABLE) || (!imgCon && !lowImgCon)) {
 #else
     image = mImageLoader.GetImage();
@@ -1655,6 +1717,36 @@ nsImageFrame::GetLoadGroup(nsIPresContext *aPresContext, nsILoadGroup **aLoadGro
 
   doc->GetDocumentLoadGroup(aLoadGroup);
 }
+
+
+// Check with the content-policy things to make sure this load is permitted.
+PRBool
+nsImageFrame::CanLoadImage(nsIURI *aURI)
+{
+  PRBool shouldLoad = PR_TRUE; // default permit
+
+  nsresult rv;
+  nsCOMPtr<nsIDOMElement> element(do_QueryInterface(mContent));
+
+  if (!element) // this would seem bad(tm)
+    return PR_FALSE;
+
+  nsXPIDLCString uric;
+  aURI->GetSpec(getter_Copies(uric));
+
+  nsString uri = NS_ConvertUTF8toUCS2(uric);
+
+  rv = NS_CheckContentLoadPolicy(nsIContentPolicy::CONTENT_IMAGE,
+                                 uri, element, &shouldLoad);
+  if (NS_SUCCEEDED(rv) && !shouldLoad)
+    return PR_FALSE;
+
+
+  /* ... additional checks ? */
+
+  return shouldLoad;
+}
+
 
 
 #ifdef DEBUG
