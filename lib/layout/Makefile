@@ -51,7 +51,8 @@ CSRCS		= bullet.c \
 		  laytrav.c \
 		  $(NULL)
 
-REQUIRES	= parse style js layer applet nspr security dbm img util jtools edtplug java hook pref libfont lay rdf cstream
+REQUIRES	= parse style js layer applet nspr security dbm img util \
+	jtools edtplug java hook pref libfont lay rdf network cstream
 
 include $(DEPTH)/config/config.mk
 
