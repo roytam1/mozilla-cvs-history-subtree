@@ -22,7 +22,8 @@
  *  Hakan Waara (hwaara@chello.se)
  */
 
-/* basic mail folders */
+/* Basic mail folders */
+
 outlinerbody:-moz-outliner-image(folderNameCol) {
   list-style-image: url("chrome://messenger/skin/folder-closed.gif");
 }
@@ -31,8 +32,9 @@ outlinerbody:-moz-outliner-image(folderNameCol, open) {
   list-style-image: url("chrome://messenger/skin/folder-open.gif");
 }
 
-/* special folder */
-/** Inbox **/
+/* Special folders */
+/* ..... Inbox ..... */
+
 outlinerbody:-moz-outliner-image(folderNameCol, specialFolder-Inbox) {
   list-style-image: url("chrome://messenger/skin/folder-inbox.gif");
 }
@@ -55,8 +57,6 @@ outlinerbody:-moz-outliner-image(folderNameCol, specialFolder-Drafts) {
   list-style-image: url("chrome://messenger/skin/folder-draft.gif");
 }
 
-
-
 /* ..... Templates ..... */
 
 outlinerbody:-moz-outliner-image(folderNameCol, specialFolder-Templates) {
@@ -64,11 +64,8 @@ outlinerbody:-moz-outliner-image(folderNameCol, specialFolder-Templates) {
 }
 
 
+/* ..... Trash ..... */
 
-
-
-
-/** Trash **/
 outlinerbody:-moz-outliner-image(folderNameCol, specialFolder-Trash) {
   list-style-image: url("chrome://messenger/skin/folder-trash.gif");
 }
@@ -180,28 +177,23 @@ outlinerbody:-moz-outliner-cell-text(folderNameCol, noSelect-true) {
   font-style: italic;
 }
 
-#folder-panel 
-  {
-	  min-width             : 10px;
-  }
+#folder-panel {
+  min-width: 10px;
+}
 
-
-#folderTree
-  {
-    border: none;
-  }
+#folderTree {
+  border: none;
+}
   
 /* using tree-cell-folderpane-icon to isolate this rule to the folderpane
    and prevent such crawls on the threadpane */   
-treeitem[empty="true"] > treerow > .tree-cell-folderpane-icon > .tree-cell-twisty 
-  {               
-    visibility            : hidden;
-  }      
+treeitem[empty="true"] > treerow > .tree-cell-folderpane-icon > .tree-cell-twisty {               
+  visibility: hidden;
+}      
 
-.tree-folder-checkbox
-  {
-    list-style-image: none;
-  }
+.tree-folder-checkbox {
+  list-style-image: none;
+}
 
 #folderNameCol {
   min-height: 0px;
