@@ -311,7 +311,7 @@ JNIEXPORT jobject JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentPage
 
     wsGetDOMEvent * actionEvent = new wsGetDOMEvent(env, clazz, mid, documentLong);
     PLEvent			* event       = (PLEvent*) *actionEvent;      
-    result = ::util_PostSynchronousEvent(initContext, event);
+    result = (jobject) ::util_PostSynchronousEvent(initContext, event);
 
     
     return result;
