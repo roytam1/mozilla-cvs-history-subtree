@@ -86,10 +86,7 @@ public:
      * @return Returns true if the conversion succeeded
      */
     static
-    JSBool JSToCOM(XPCCallContext& ccx,
-                   jsval src,
-                   VARIANT & dest,
-                   uintN & err);
+    JSBool JSToCOM(XPCCallContext& ccx, jsval src, VARIANT & dest, uintN & err);
 
     /**
      * Converts a COM variant to a jsval
@@ -100,17 +97,21 @@ public:
      * @return Returns true if the conversion succeeded
      */
     static
-    JSBool COMToJS(XPCCallContext& ccx,
-                   VARIANT const & src,
-                   jsval & dest,
+    JSBool COMToJS(XPCCallContext& ccx, const VARIANT & src, jsval & dest,
                    uintN & err);
 private:
     /**
      * Converts a JS Array to a safe array
      */
     static
-    JSBool ConvertJSArray(XPCCallContext& ccx, JSObject *obj, VARIANT & var,
+    JSBool JSArrayToCOMArray(XPCCallContext& ccx, JSObject *obj, VARIANT & var,
                           uintN & err);
+    /**
+     * Converts a COM Array to a JS Array
+     */
+    static
+    JSBool COMArrayToJSArray(XPCCallContext& ccx, const VARIANT & src,
+                             jsval & dest,uintN& err);
 };
 
 /**

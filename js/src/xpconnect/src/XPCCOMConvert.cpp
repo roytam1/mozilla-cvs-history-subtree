@@ -81,7 +81,8 @@ VARTYPE XPCCOMConvert::JSTypeToCOMType(XPCCallContext& ccx, jsval val)
     }
 }
 
-JSBool XPCCOMConvert::ConvertJSArray(XPCCallContext& ccx, JSObject *obj, VARIANT & var, uintN& err)
+JSBool XPCCOMConvert::JSArrayToCOMArray(XPCCallContext& ccx, JSObject *obj, 
+                                        VARIANT & var, uintN& err)
 {
     err = NS_OK;
     jsuint len;
@@ -158,7 +159,7 @@ JSBool XPCCOMConvert::JSToCOM(XPCCallContext& ccx,
         JSObject * obj = JSVAL_TO_OBJECT(src);
         if (JS_IsArrayObject(ccx, obj))
         {
-            return ConvertJSArray(ccx, obj, dest, err);
+            return JSArrayToCOMArray(ccx, obj, dest, err);
         }
         else
         {
@@ -196,17 +197,71 @@ JSBool XPCCOMConvert::JSToCOM(XPCCallContext& ccx,
     return JS_TRUE;
 }
 
-JSBool XPCCOMConvert::COMToJS(XPCCallContext& ccx,
-                              VARIANT const & src,
-                              jsval & dest,
-                              uintN& err)
+JSBool XPCCOMConvert::COMArrayToJSArray(XPCCallContext& ccx, const VARIANT & src,
+                                        jsval & dest,uintN& err)
+{
+    // We only support one dimensional arrays for now
+    if (SafeArrayGetDim(src.parray) != 1)
+    {
+        err = NS_ERROR_FAILURE;
+        return JS_FALSE;
+    }
+    long size;
+    HRESULT hr = SafeArrayGetUBound(src.parray, 1, &size);
+    if (FAILED(hr))
+    {
+        err = NS_ERROR_FAILURE;
+        return JS_FALSE;
+    }
+    JSObject * array = JS_NewArrayObject(ccx, size, nsnull);
+    if (!array)
+    {
+        err = NS_ERROR_OUT_OF_MEMORY;
+    }
+    // Devine the type of our array
+    VARIANT var;
+    if ((src.vt & VT_ARRAY) != 0)
+    {
+        var.vt = src.vt & ~VT_ARRAY;
+    }
+    else // This was maybe a VT_SAFEARRAY
+    {
+        SafeArrayGetVartype(src.parray, &var.vt);
+    }
+    jsval val;
+    for (long index = 0; index <= size; ++index)
+    {
+        hr = SafeArrayGetElement(src.parray, &index, &var.byref);
+        if (SUCCEEDED(hr))
+        {
+            if (COMToJS(ccx, var, val, err))
+            {
+                JS_SetElement(ccx, array, index, &val);
+            }
+            else
+                return JS_FALSE;
+        }
+        else
+        {
+            err = NS_ERROR_FAILURE;
+            return JS_FALSE;
+        }
+    }
+    dest = OBJECT_TO_JSVAL(array);
+    return JS_TRUE;
+}
+
+JSBool XPCCOMConvert::COMToJS(XPCCallContext& ccx, const VARIANT & src,
+                              jsval & dest,uintN& err)
 {
     err = NS_ERROR_XPC_BAD_CONVERT_JS;
     int x = VT_BSTR;
     int y = VT_BYREF;
-    int test = src.vt;
-    int test2 = src.vt & ~VT_BYREF;
-    switch (src.vt & ~VT_BYREF)
+    if (src.vt & VT_ARRAY || src.vt == VT_SAFEARRAY)
+    {
+        return COMArrayToJSArray(ccx, src, dest, err);
+    }
+    switch (src.vt & ~(VT_BYREF))
     {
         case VT_BSTR:
         {
