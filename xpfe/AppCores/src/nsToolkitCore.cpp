@@ -21,6 +21,7 @@
 #include "nsAppCoresManager.h"
 #include "nsAppShellCIDs.h"
 #include "nsIAppShellService.h"
+#include "nsIEventQueueService.h"
 #include "nsIDOMBaseAppCore.h"
 #include "nsIDOMWindow.h"
 #include "nsIScriptGlobalObject.h"
@@ -37,11 +38,15 @@
 #include "nsIDOMXULDocument.h"
 #include "nsIDocument.h"
 #include "nsIDOMElement.h"
+#include "nsXPComCIID.h"
 
 class nsIScriptContext;
 
 static NS_DEFINE_IID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID);
 static NS_DEFINE_IID(kIAppShellServiceIID, NS_IAPPSHELL_SERVICE_IID);
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
+static NS_DEFINE_IID(kIEventQueueServiceIID, NS_IEVENTQUEUESERVICE_IID);
+
 static NS_DEFINE_IID(kIDOMBaseAppCoreIID, NS_IDOMBASEAPPCORE_IID);
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIToolkitCoreIID, NS_IDOMTOOLKITCORE_IID);
@@ -327,6 +332,25 @@ nsToolkitCore::ShowModalDialog(const nsString& aUrl, nsIDOMWindow* aParent) {
   if (NS_FAILED(rv))
     return rv;
 
+	// First push a nested event queue for event processing from netlib
+	// onto our UI thread queue stack.
+	nsIEventQueueService *eQueueService;
+	nsCOMPtr<nsIEventQueue> innerQueue;
+  if (NS_FAILED(rv = nsServiceManager::GetService(kEventQueueServiceCID,
+                                    kIEventQueueServiceIID,
+                                    (nsISupports **)&eQueueService))) {
+		NS_ERROR("Unable to obtain queue service.");
+		return rv;
+	}
+	
+	eQueueService->PushThreadEventQueue();
+
+	if (NS_FAILED(rv = eQueueService->GetThreadEventQueue(PR_GetCurrentThread(), 
+		getter_AddRefs(innerQueue)))) {
+		NS_ERROR("Unable to obtain the inner event queue.");
+		return rv;
+	}
+
   nsCOMPtr<nsIWebShellWindow> parent;
   DOMWindowToWebShellWindow(aParent, &parent);
   appShell->CreateDialogWindow(parent, urlObj, PR_TRUE, window,
@@ -342,10 +366,14 @@ nsToolkitCore::ShowModalDialog(const nsString& aUrl, nsIDOMWindow* aParent) {
     // arguably this should be done by the new window, within ShowModal...
     if (NS_SUCCEEDED(gotParent))
       parentWindowWidgetThing->Enable(PR_FALSE);
-    window->ShowModal();
+    window->ShowModal(); // XXX This method pops the queue itself. Ugh. There should really be one
+												 // call for all of this.
     if (NS_SUCCEEDED(gotParent))
       parentWindowWidgetThing->Enable(PR_TRUE);
   }
+
+	// Release the event queue 
+	nsServiceManager::ReleaseService(kEventQueueServiceCID, eQueueService);
 
   return rv;
 }

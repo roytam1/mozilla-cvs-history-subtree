@@ -61,8 +61,8 @@ class nsAppShell : public nsIAppShell
   
     NS_IMETHOD              Create(int* argc, char ** argv);
     virtual nsresult        Run();
-    NS_IMETHOD              Spinup();
-    NS_IMETHOD              Spindown();
+    NS_IMETHOD              Spinup(nsIEventQueue* anEventQueue);
+    NS_IMETHOD              Spindown(nsIEventQueue* anEventQueue);
     NS_IMETHOD              Exit();
     NS_IMETHOD            	SetDispatchListener(nsDispatchListener* aDispatchListener);
 

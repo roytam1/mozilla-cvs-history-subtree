@@ -19,6 +19,7 @@
 #define nsIAppShell_h__
 
 #include "nsString.h"
+#include "nsIEventQueue.h"
 
 /**
  * Flags for the getNativeData function.
@@ -67,16 +68,19 @@ public:
   virtual nsresult Run() = 0;
 
  /**
-  * Prepare to process events
+  * Prepare to process events. The queue is used to notify those platforms
+	* that were caching their NSPR event queue of the new nested queue.
   */
   
-  NS_IMETHOD Spinup() = 0;
+  NS_IMETHOD Spinup(nsIEventQueue* anEventQueue) = 0;
 
  /**
-  * Prepare to stop processing events
+  * Prepare to stop processing events.  The queue passed in is the old 
+	* queue.  The platforms that cache their event queues should set their queue
+	* back to the queue passed in as the argument.
   */
   
-  NS_IMETHOD Spindown() = 0;
+  NS_IMETHOD Spindown(nsIEventQueue* anEventQueue) = 0;
 
  /**
   * After event dispatch execute app specific code

@@ -138,7 +138,7 @@ NS_METHOD nsAppShell::Create(int *argc, char **argv)
 // Spinup - do any preparation necessary for running a message loop
 //
 //-------------------------------------------------------------------------
-NS_METHOD nsAppShell::Spinup()
+NS_METHOD nsAppShell::Spinup(nsIEventQueue* anEventQueue)
 {
   return NS_OK;
 }
@@ -148,7 +148,7 @@ NS_METHOD nsAppShell::Spinup()
 // Spindown - do any cleanup necessary for finishing a message loop
 //
 //-------------------------------------------------------------------------
-NS_METHOD nsAppShell::Spindown()
+NS_METHOD nsAppShell::Spindown(nsIEventQueue* anEventQueue)
 {
   return NS_OK;
 }
