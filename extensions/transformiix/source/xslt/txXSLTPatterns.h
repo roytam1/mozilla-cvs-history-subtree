@@ -151,7 +151,7 @@ public:
 
     TX_DECL_PATTERN;
 private:
-    // If txRootPattern is used in a txLocPathPattern, it mustn't be serialized
+    // Don't serialize txRootPattern if it's used in a txLocPathPattern
     MBool mSerialize;
 };
 

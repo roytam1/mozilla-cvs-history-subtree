@@ -277,10 +277,8 @@ nsresult txPatternParser::createStepPattern(ExprLexer& aLexer,
         if (ATTRIBUTE_AXIS.isEqual(tok->value)) {
             isAttr = MB_TRUE;
         }
-        else if (CHILD_AXIS.isEqual(tok->value)) {
-            // all done already, this is the default
-        }
-        else {
+        else if (!CHILD_AXIS.isEqual(tok->value)) {
+            // all done already for CHILD_AXIS, for all others
             // XXX report unexpected axis error
             return NS_ERROR_XPATH_PARSE_FAILED;
         }

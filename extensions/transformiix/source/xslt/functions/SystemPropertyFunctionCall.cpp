@@ -43,14 +43,15 @@ ExprResult* SystemPropertyFunctionCall::evaluate(txIEvalContext* aContext)
             exprResult->stringValue(property);
             if (XMLUtils::isValidQName(property)) {
                 String prefix;
-                PRInt32 aNSID = kNameSpaceID_None;
+                PRInt32 namespaceID = kNameSpaceID_None;
                 XMLUtils::getPrefix(property, prefix);
                 if (!prefix.isEmpty()) {
                     txAtom* prefixAtom = TX_GET_ATOM(prefix);
-                    aNSID = mStylesheetNode->lookupNamespaceID(prefixAtom);
+                    namespaceID =
+                        mStylesheetNode->lookupNamespaceID(prefixAtom);
                     TX_IF_RELEASE_ATOM(prefixAtom);
                 }
-                if (aNSID == kNameSpaceID_XSLT) {
+                if (namespaceID == kNameSpaceID_XSLT) {
                     String localName;
                     XMLUtils::getLocalPart(property, localName);
                     if (localName.isEqual(XSL_VERSION_PROPERTY))

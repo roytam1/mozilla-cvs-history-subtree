@@ -222,7 +222,7 @@ MBool txLocPathPattern::matches(Node* aNode, txIMatchContext* aContext)
     while ((step = (Step*)iter.previous())) {
         if (!node)
             return MB_FALSE; // There are more steps in the current block 
-                             // then ancestors of the tested node
+                             // than ancestors of the tested node
 
         if (!step->pattern->matches(node, aContext)) {
             // Didn't match. We restart at beginning of block using a new
@@ -246,7 +246,7 @@ MBool txLocPathPattern::matches(Node* aNode, txIMatchContext* aContext)
 
 double txLocPathPattern::getDefaultPriority()
 {
-    if (mSteps.getLength()>1) {
+    if (mSteps.getLength() > 1) {
         return 0.5;
     }
 
@@ -574,15 +574,8 @@ MBool txStepPattern::matches(Node* aNode, txIMatchContext* aContext)
         // Move new NodeSet to the current one
         nodes.clear();
         nodes.append(&newNodes);
-        if (mIsAttr) {
-            // XXX if attribute nodes were unique, we didn't need this
-            if (!nodes.contains(aNode))
-                return MB_FALSE;
-        }
-        else {
-            if (!contextIsInPredicate) {
-                return MB_FALSE;
-            }
+        if (!contextIsInPredicate) {
+            return MB_FALSE;
         }
         predicate = (Expr*)iter.next();
     }
