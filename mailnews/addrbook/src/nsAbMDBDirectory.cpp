@@ -141,8 +141,8 @@ nsresult nsAbMDBDirectory::RemoveCardFromAddressList(const nsIAbCard* card)
 		nsCOMPtr<nsIAbDirectory> listDir(do_QueryInterface(pSupport, &rv));
 		if (listDir)
 		{
-			nsISupportsArray* pAddressLists;
-			listDir->GetAddressLists(&pAddressLists);
+			nsCOMPtr <nsISupportsArray> pAddressLists;
+			listDir->GetAddressLists(getter_AddRefs(pAddressLists));
 			if (pAddressLists)
 			{	
 				PRUint32 total;

@@ -1716,9 +1716,8 @@ nsresult nsAddrDatabase::AddListAttributeColumnsToRow(nsIAbDirectory *list, nsIM
 			}
 		}
 
-		nsISupportsArray* pAddressLists;
-		list->GetAddressLists(&pAddressLists);
-		NS_IF_ADDREF(pAddressLists);
+		nsCOMPtr <nsISupportsArray> pAddressLists;
+		list->GetAddressLists(getter_AddRefs(pAddressLists));
 		PRUint32 count;
 		pAddressLists->Count(&count);
 

@@ -219,11 +219,9 @@ NS_IMETHODIMP nsAbDirProperty::CopyMailList(nsIAbDirectory* srcList)
 
 	SetIsMailList(PR_TRUE);
 
-	nsISupportsArray* pAddressLists;
-	srcList->GetAddressLists(&pAddressLists);
-	NS_IF_ADDREF(pAddressLists);
+	nsCOMPtr <nsISupportsArray> pAddressLists;
+	srcList->GetAddressLists(getter_AddRefs(pAddressLists));
 	SetAddressLists(pAddressLists);
-
 	return NS_OK;
 }
 
