@@ -681,12 +681,19 @@ protected:
     nsCOMPtr<nsIXULPrototypeDocument> mCurrentPrototype;
 
     /**
-     *
+     * Owning references to all of the prototype documents that were
+     * used to construct this document.
+     */
+    nsCOMPtr<nsISupportsArray> mPrototypes;
+
+    /**
+     * Prepare to walk the current prototype.
      */
     nsresult PrepareToWalk();
 
     /**
-     *
+     * Resume (or initiate) an interrupted (or newly prepared)
+     * prototype walk.
      */
     nsresult ResumeWalk();
 };

@@ -30,6 +30,7 @@
 #include "nsIURI.h"
 #include "nsString2.h"
 #include "nsVoidArray.h"
+#include "nsXULElement.h"
 
 class nsXULPrototypeDocument : public nsIXULPrototypeDocument
 {
@@ -97,7 +98,7 @@ nsXULPrototypeDocument::Init()
 
 nsXULPrototypeDocument::~nsXULPrototypeDocument()
 {
-    // destroy XULPrototype elements, etc.
+    delete mRoot;
 }
 
 

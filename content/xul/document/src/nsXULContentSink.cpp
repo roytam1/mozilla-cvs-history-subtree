@@ -460,7 +460,12 @@ XULContentSinkImpl::~XULContentSinkImpl()
         State state;
         mContextStack.Pop(&node, &children, &state);
 
-        // XXX delete stuff here.
+        for (PRInt32 i = children.Count() - 1; i >= 0; --i) {
+            nsXULPrototypeNode* child = NS_REINTERPRET_CAST(nsXULPrototypeNode*, children[i]);
+            delete child;
+        }
+
+        delete node;
     }
 
     PR_FREEIF(mText);

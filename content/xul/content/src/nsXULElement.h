@@ -102,11 +102,17 @@ public:
     PRInt32                  mLineNo;
     nsXULPrototypeElement*   mParent;             // [WEAK]
 
+    virtual ~nsXULPrototypeNode()
+    {
+        MOZ_COUNT_CTOR(nsXULPrototypeNode);
+    }
+
 protected:
     nsXULPrototypeNode(Type aType, PRInt32 aLineNo)
-        : mType(aType), mLineNo(aLineNo), mParent(nsnull) {}
-
-    virtual ~nsXULPrototypeNode() {}
+        : mType(aType), mLineNo(aLineNo), mParent(nsnull)
+    {
+        MOZ_COUNT_DTOR(nsXULPrototypeNode);
+    }
 };
 
 class nsXULPrototypeElement : public nsXULPrototypeNode
@@ -120,12 +126,21 @@ public:
           mNumAttributes(0),
           mAttributes(nsnull),
           mClassList(nsnull)
-    {}
+    {
+        MOZ_COUNT_CTOR(nsXULPrototypeElement);
+    }
 
-    virtual ~nsXULPrototypeElement() {
+    virtual ~nsXULPrototypeElement()
+    {
+        MOZ_COUNT_DTOR(nsXULPrototypeElement);
+
         delete[] mAttributes;
         delete mClassList;
-        delete[] mChildren; // XXX
+
+        for (PRInt32 i = mNumChildren - 1; i >= 0; --i)
+            delete mChildren[i];
+
+        delete[] mChildren;
     }
 
 
@@ -151,7 +166,15 @@ class nsXULPrototypeScript : public nsXULPrototypeNode
 {
 public:
     nsXULPrototypeScript(PRInt32 aLineNo)
-        : nsXULPrototypeNode(eType_Script, aLineNo) {}
+        : nsXULPrototypeNode(eType_Script, aLineNo)
+    {
+        MOZ_COUNT_CTOR(nsXULPrototypeScript);
+    }
+
+    virtual ~nsXULPrototypeScript()
+    {
+        MOZ_COUNT_DTOR(nsXULPrototypeScript);
+    }
 
     nsCOMPtr<nsIURI>         mSrcURI;
     nsString                 mInlineScript;
@@ -161,7 +184,15 @@ class nsXULPrototypeText : public nsXULPrototypeNode
 {
 public:
     nsXULPrototypeText(PRInt32 aLineNo)
-        : nsXULPrototypeNode(eType_Text, aLineNo) {}
+        : nsXULPrototypeNode(eType_Text, aLineNo)
+    {
+        MOZ_COUNT_CTOR(nsXULPrototypeText);
+    }
+
+    virtual ~nsXULPrototypeText()
+    {
+        MOZ_COUNT_DTOR(nsXULPrototypeText);
+    }
 
     nsString                 mValue;
 };

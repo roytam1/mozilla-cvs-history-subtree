@@ -3014,6 +3014,13 @@ nsXULDocument::Init()
     rv = NS_NewISupportsArray(getter_AddRefs(mOverlays));
     if (NS_FAILED(rv)) return rv;
 
+    // Create a new nsISupportsArray that will hold owning references
+    // to each of the prototype documents used to construct this
+    // document. That will ensure that prototype elements will remain
+    // alive.
+    rv = NS_NewISupportsArray(getter_AddRefs(mPrototypes));
+    if (NS_FAILED(rv)) return rv;
+
 #if 0
     // construct a selection object
     if (NS_FAILED(rv = nsComponentManager::CreateInstance(kRangeListCID,
@@ -3096,9 +3103,16 @@ static const char kXULNameSpaceURI[] = XUL_NAMESPACE_URI;
 nsresult
 nsXULDocument::StartLayout(void)
 {
-    NS_PRECONDITION(mRootContent != nsnull, "Error in XUL file. Love to tell ya where if only I knew.");
-    if (!mRootContent)
-      return NS_ERROR_UNEXPECTED;
+    if (! mRootContent) {
+#ifdef PR_LOGGING
+        nsXPIDLCString urlspec;
+        mDocumentURL->GetSpec(getter_Copies(urlspec));
+
+        PR_LOG(gXULLog, PR_LOG_ALWAYS,
+               ("xul: unable to layout '%s'; no root content", (const char*) urlspec));
+#endif
+        return NS_OK;
+    }
     
     PRInt32 count = GetNumberOfShells();
     for (PRInt32 i = 0; i < count; i++) {
@@ -4076,6 +4090,10 @@ nsXULDocument::PrepareToWalk()
 {
     nsresult rv;
 
+    // Keep an owning reference to the prototype document so that its
+    // elements aren't yanked from beneath us.
+    mPrototypes->AppendElement(mCurrentPrototype);
+
     // Push the overlay references onto our overlay processing stack.
     nsVoidArray overlays;
     rv = mCurrentPrototype->GetOverlayReferences(overlays);
@@ -4090,6 +4108,24 @@ nsXULDocument::PrepareToWalk()
     nsXULPrototypeElement* proto;
     rv = mCurrentPrototype->GetRootElement(&proto);
     if (NS_FAILED(rv)) return rv;
+
+    
+    if (! proto) {
+#ifdef PR_LOGGING
+        nsCOMPtr<nsIURI> url;
+        rv = mCurrentPrototype->GetURI(getter_AddRefs(url));
+        if (NS_FAILED(rv)) return rv;
+
+        nsXPIDLCString urlspec;
+        rv = url->GetSpec(getter_Copies(urlspec));
+        if (NS_FAILED(rv)) return rv;
+
+        PR_LOG(gXULLog, PR_LOG_ALWAYS,
+               ("xul: error parsing '%s'", (const char*) urlspec));
+#endif
+
+        return NS_OK;
+    }
 
     nsCOMPtr<nsIContent> root;
     rv = CreateElement(proto, getter_AddRefs(root));
