@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 2000 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 #include "primpl.h"
@@ -67,8 +51,7 @@ static struct {
 void _PR_NT_InitSids(void)
 {
     SID_IDENTIFIER_AUTHORITY SIDAuthWorld = SECURITY_WORLD_SID_AUTHORITY;
-    HANDLE hToken = NULL; /* initialized to an arbitrary value to
-                           * silence a Purify UMR warning */
+    HANDLE hToken;
     UCHAR infoBuffer[1024];
     PTOKEN_OWNER pTokenOwner = (PTOKEN_OWNER) infoBuffer;
     PTOKEN_PRIMARY_GROUP pTokenPrimaryGroup
@@ -76,26 +59,26 @@ void _PR_NT_InitSids(void)
     DWORD dwLength;
     BOOL rv;
 
+    /* Create a well-known SID for the Everyone group. */
+    if (!AllocateAndInitializeSid(&SIDAuthWorld, 1,
+            SECURITY_WORLD_RID,
+            0, 0, 0, 0, 0, 0, 0,
+            &_pr_nt_sids.everyone)) {
+        /*
+         * On non-NT systems, this function is not implemented,
+         * and neither are the other security functions. There
+         * is no point in going further.
+         */
+        PR_ASSERT(GetLastError() == ERROR_CALL_NOT_IMPLEMENTED);
+        return;
+    }
+
     /*
      * Look up and make a copy of the owner and primary group
      * SIDs in the access token of the calling process.
      */
     rv = OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken);
-    if (rv == 0) {
-        /*
-         * On non-NT systems, this function is not implemented
-         * (error code ERROR_CALL_NOT_IMPLEMENTED), and neither are
-         * the other security functions.  There is no point in
-         * going further.
-         *
-         * A process with insufficient access permissions may fail
-         * with the error code ERROR_ACCESS_DENIED.
-         */
-        PR_LOG(_pr_io_lm, PR_LOG_DEBUG,
-                ("_PR_NT_InitSids: OpenProcessToken() failed. Error: %d",
-                GetLastError()));
-        return;
-    }
+    PR_ASSERT(rv != 0);
 
     rv = GetTokenInformation(hToken, TokenOwner, infoBuffer,
             sizeof(infoBuffer), &dwLength);
@@ -117,13 +100,6 @@ void _PR_NT_InitSids(void)
     PR_ASSERT(rv != 0);
 
     rv = CloseHandle(hToken);
-    PR_ASSERT(rv != 0);
-
-    /* Create a well-known SID for the Everyone group. */
-    rv = AllocateAndInitializeSid(&SIDAuthWorld, 1,
-            SECURITY_WORLD_RID,
-            0, 0, 0, 0, 0, 0, 0,
-            &_pr_nt_sids.everyone);
     PR_ASSERT(rv != 0);
 }
 
