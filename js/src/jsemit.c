@@ -3932,7 +3932,10 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
         break;
 
       case TOK_DELETE:
-        /* Under ECMA 3, deleting a non-reference returns true. */
+        /*
+         * Under ECMA 3, deleting a non-reference returns true -- but alas we
+         * must evaluate the operand if it appears it might have side effects.
+         */
         pn2 = pn->pn_kid;
         switch (pn2->pn_type) {
           case TOK_NAME:
@@ -3957,6 +3960,15 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                 return JS_FALSE;
             break;
           default:
+            useful = JS_FALSE;
+            if (!CheckSideEffects(cx, &cg->treeContext, pn2, &useful))
+                return JS_FALSE;
+            if (useful) {
+                if (!js_EmitTree(cx, cg, pn2))
+                    return JS_FALSE;
+                if (js_Emit1(cx, cg, JSOP_POP) < 0)
+                    return JS_FALSE;
+            }
             if (js_Emit1(cx, cg, JSOP_TRUE) < 0)
                 return JS_FALSE;
         }
