@@ -69,6 +69,7 @@
 #endif // XP_MAC
 
 #include "nsIPluginHost.h"
+#include "nsEscape.h"
 
 const char *FORCE_ALWAYS_ASK_PREF = "browser.helperApps.alwaysAsk.force";
 
@@ -726,7 +727,8 @@ void nsExternalAppHandler::ExtractSuggestedFileNameFromChannel(nsIChannel* aChan
       {
         // extract everything after the filename= part and treat that as the file name...
         nsCAutoString dispFileName;
-        dispositionValue.Mid(dispFileName, pos + nsCRT::strlen("filename="), -1);
+        dispositionValue.Right(dispFileName, dispositionValue.Length() -
+                                             (pos + nsCRT::strlen("filename=")));
         if (!dispFileName.IsEmpty()) // if we got a file name back..
         {
           pos = dispFileName.FindChar(';', PR_TRUE);
@@ -839,15 +841,12 @@ nsresult nsExternalAppHandler::SetUpTempFile(nsIChannel * aChannel)
     url->GetFileName(getter_Copies(leafName));
     if (leafName.get())
     {
-      nsCOMPtr<nsIIOService> ioService (do_GetService(kIOServiceCID, &rv));
+      nsXPIDLCString unescapedFileName; 
+      rv = nsStdUnescape((char*)leafName.get(), getter_Copies(unescapedFileName));
       if (NS_SUCCEEDED(rv))
-      {
-        nsXPIDLCString unescapedFileName; 
-        rv = ioService->Unescape(leafName.get(), getter_Copies(unescapedFileName));
         mSuggestedFileName.Assign(NS_ConvertUTF8toUCS2(unescapedFileName));
-      }
       else
-      mSuggestedFileName.AssignWithConversion(leafName);
+        mSuggestedFileName.AssignWithConversion(leafName);
     }
   }
 
@@ -1159,7 +1158,7 @@ NS_IMETHODIMP nsExternalAppHandler::SaveToDisk(nsIFile * aNewFileLocation, PRBoo
       nsAutoString fileExt;
       PRInt32 pos = mSuggestedFileName.RFindChar(PRUnichar('.'));
       if (pos >= 0)
-        mSuggestedFileName.Mid(fileExt, pos, -1);
+        mSuggestedFileName.Right(fileExt, mSuggestedFileName.Length() - pos);
       if (fileExt.IsEmpty())
         fileExt = NS_ConvertASCIItoUCS2(mTempFileExtension).get();
 
