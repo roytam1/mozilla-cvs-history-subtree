@@ -24,9 +24,6 @@
 #include "nsIWidget.h"
 #include "nsVoidArray.h"
 #include "nsITimer.h"
-#include "nsIImageGroup.h"
-#include "nsIImageObserver.h"
-#include "nsIImageRequest.h"
 #include "nsFont.h"
 #include "nsIRenderingContext.h"
 #include "nsIFontMetrics.h"
@@ -104,6 +101,8 @@ nsThrobber::HandleThrobberEvent(nsGUIEvent *aEvent)
   {
     case NS_PAINT:
     {
+#if 0
+
       nsPaintEvent *pe = (nsPaintEvent *)aEvent;
       nsIRenderingContext *cx = pe->renderingContext;
       nsRect bounds;
@@ -154,7 +153,7 @@ nsThrobber::HandleThrobberEvent(nsGUIEvent *aEvent)
         cx->DrawImage(img, 1, 1);
         NS_RELEASE(img);
       }
-
+#endif
       break;
     }
 
@@ -211,7 +210,7 @@ nsThrobber::Destroy()
   }
 }
 
-NS_IMPL_ISUPPORTS1(nsThrobber, nsIImageRequestObserver)
+NS_IMPL_ISUPPORTS0(nsThrobber)
 
 nsresult
 nsThrobber::Init(nsIWidget* aParent, const nsRect& aBounds, const nsString& aFileNameMask, PRInt32 aNumImages)
@@ -267,6 +266,7 @@ nsThrobber::Stop()
   return NS_OK;
 }
 
+#if 0
 void  
 nsThrobber::Notify(nsIImageRequest *aImageRequest,
                       nsIImage *aImage,
@@ -290,6 +290,7 @@ nsThrobber::NotifyError(nsIImageRequest *aImageRequest,
                         nsImageError aErrorType)
 {
 }
+#endif
 
 void
 nsThrobber::ThrobTimerCallback(nsITimer *aTimer, void *aClosure)
@@ -324,6 +325,7 @@ nsThrobber::Tick()
 nsresult
 nsThrobber::LoadThrobberImages(const nsString& aFileNameMask, PRInt32 aNumImages)
 {
+#if 0
   nsresult rv;
   char url[2000];
 
@@ -365,6 +367,9 @@ nsThrobber::LoadThrobberImages(const nsString& aFileNameMask, PRInt32 aNumImages
   mWidget->Invalidate(PR_TRUE);
 
   return rv;
+#endif
+
+return NS_OK;
 }
 
 void
@@ -374,6 +379,7 @@ nsThrobber::DestroyThrobberImages()
     mTimer->Cancel();
   }
 
+#if 0
   if (mImageGroup) {
     mImageGroup->Interrupt();
     for (PRInt32 cnt = 0; cnt < mNumImages; cnt++) {
@@ -387,4 +393,5 @@ nsThrobber::DestroyThrobberImages()
     delete mImages;
     mImages = nsnull;
   }
+#endif
 }

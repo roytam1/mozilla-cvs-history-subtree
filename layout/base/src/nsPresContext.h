@@ -29,7 +29,6 @@
 #include "nsFont.h"
 #include "nsCRT.h"
 #include "nsCOMPtr.h"
-#include "nsIImageGroup.h"
 #include "nsIPref.h"
 #include "nsICharsetConverterManager.h"
 #include "nsILanguageAtomService.h"
@@ -122,15 +121,10 @@ public:
   NS_IMETHOD SetDefaultLinkColor(nscolor aColor);
   NS_IMETHOD SetDefaultVisitedLinkColor(nscolor aColor);
 
-  NS_IMETHOD GetImageGroup(nsIImageGroup** aGroupResult);
-  NS_IMETHOD StartLoadImage(const nsString& aURL,
-                            const nscolor* aBackgroundColor,
-                            const nsSize* aDesiredSize,
-                            nsIFrame* aTargetFrame,
-                            nsIFrameImageLoaderCB aCallBack,
-                            void* aClosure,
-                            void* aKey,
-                            nsIFrameImageLoader** aResult);
+  NS_IMETHOD LoadImage(const nsString& aURL,
+                       nsIFrame* aTargetFrame,
+                       imgIRequest **aRequest);
+
   NS_IMETHOD StopLoadImage(void* aKey, nsIFrameImageLoader* aLoader);
   NS_IMETHOD StopAllLoadImagesFor(nsIFrame* aTargetFrame, void* aKey);
   NS_IMETHOD SetContainer(nsISupports* aContainer);
@@ -199,7 +193,6 @@ protected:
   nsCOMPtr<nsILanguageAtomService> mLangService;
   nsCOMPtr<nsILanguageAtom> mLanguage;
   nsLanguageSpecificTransformType mLanguageSpecificTransformType;
-  nsCOMPtr<nsIImageGroup> mImageGroup;
   nsILinkHandler*       mLinkHandler;   // [WEAK]
   nsISupports*          mContainer;     // [WEAK]
   nsCOMPtr<nsILookAndFeel> mLookAndFeel;
@@ -223,7 +216,9 @@ protected:
   nscoord               mDefaultBackgroundImageOffsetX;
   nscoord               mDefaultBackgroundImageOffsetY;
   PRUint8               mDefaultBackgroundImageAttachment;
-  nsVoidArray           mImageLoaders;
+
+  nsSupportsHashtable   mImageLoaders;
+
   nsCOMPtr<nsIEventStateManager> mEventManager;
   nsCOMPtr<nsIURI>      mBaseURL;
   nsCompatibility       mCompatibilityMode;

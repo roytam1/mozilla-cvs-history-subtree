@@ -446,7 +446,6 @@ nsWindow::nsWindow() : nsBaseWidget(), mRootAccessible(NULL)
     mBackground         = ::GetSysColor(COLOR_BTNFACE);
     mBrush              = ::CreateSolidBrush(NSRGB_2_COLOREF(mBackground));
     mForeground         = ::GetSysColor(COLOR_WINDOWTEXT);
-    mPalette            = NULL;
     mIsShiftDown        = PR_FALSE;
     mIsControlDown      = PR_FALSE;
     mIsAltDown          = PR_FALSE;
@@ -2154,6 +2153,7 @@ void nsWindow::FreeNativeData(void * data, PRUint32 aDataType)
 //-------------------------------------------------------------------------
 NS_METHOD nsWindow::SetColorMap(nsColorMap *aColorMap)
 {
+#if 0
     if (mPalette != NULL) {
         ::DeleteObject(mPalette);
     }
@@ -2161,17 +2161,17 @@ NS_METHOD nsWindow::SetColorMap(nsColorMap *aColorMap)
     PRUint8 *map = aColorMap->Index;
     LPLOGPALETTE pLogPal = (LPLOGPALETTE) new char[2 * sizeof(WORD) +
                                               aColorMap->NumColors * sizeof(PALETTEENTRY)];
-	pLogPal->palVersion = 0x300;
-	pLogPal->palNumEntries = aColorMap->NumColors;
-	for(int i = 0; i < aColorMap->NumColors; i++) 
+    pLogPal->palVersion = 0x300;
+    pLogPal->palNumEntries = aColorMap->NumColors;
+    for(int i = 0; i < aColorMap->NumColors; i++) 
     {
-		pLogPal->palPalEntry[i].peRed = *map++;
-		pLogPal->palPalEntry[i].peGreen = *map++;
-		pLogPal->palPalEntry[i].peBlue = *map++;
-		pLogPal->palPalEntry[i].peFlags = 0;
-	}
-	mPalette = ::CreatePalette(pLogPal);
-	delete pLogPal;
+    pLogPal->palPalEntry[i].peRed = *map++;
+    pLogPal->palPalEntry[i].peGreen = *map++;
+    pLogPal->palPalEntry[i].peBlue = *map++;
+    pLogPal->palPalEntry[i].peFlags = 0;
+    }
+    mPalette = ::CreatePalette(pLogPal);
+    delete pLogPal;
 
     NS_ASSERTION(mPalette != NULL, "Null palette");
     if (mPalette != NULL) {
@@ -2181,6 +2181,7 @@ NS_METHOD nsWindow::SetColorMap(nsColorMap *aColorMap)
         ::SelectPalette(hDC, hOldPalette, TRUE);
         ::ReleaseDC(mWnd, hDC);
     }
+#endif
     return NS_OK;
 }
 
@@ -2910,7 +2911,6 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
     static UINT vkKeyCached = 0;              // caches VK code fon WM_KEYDOWN
     PRBool        result = PR_FALSE; // call the default nsWindow proc
     static PRBool getWheelInfo = PR_TRUE;
-    nsPaletteInfo palInfo;
     *aRetValue = 0;
     PRBool isMozWindowTakingFocus = PR_TRUE;
 
@@ -3457,6 +3457,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             // fall thru...
 
         case WM_QUERYNEWPALETTE:      // this window is about to become active
+#if 0
             mContext->GetPaletteInfo(palInfo);
             if (palInfo.isPaletteDevice && palInfo.palette) {
                 HDC hDC = ::GetDC(mWnd);
@@ -3474,6 +3475,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
                 *aRetValue = TRUE;
             }
             result = PR_TRUE;
+#endif
             break;
 
 				case WM_INPUTLANGCHANGEREQUEST:
@@ -3916,10 +3918,13 @@ void nsWindow::OnDestroy()
       VERIFY(::DeleteObject(mBrush));
       mBrush = NULL;
     }
+
+#if 0
     if (mPalette) {
       VERIFY(::DeleteObject(mPalette));
       mPalette = NULL;
     }
+#endif
 
     // if we were in the middle of deferred window positioning then
     // free the memory for the multiple-window position structure

@@ -36,6 +36,8 @@ class nsBidiPresUtils;
 
 struct nsFont;
 
+class imgIRequest;
+
 class nsIContent;
 class nsIDocument;
 class nsIDeviceContext;
@@ -273,31 +275,16 @@ public:
   NS_IMETHOD SetDefaultLinkColor(nscolor aColor) = 0;
   NS_IMETHOD SetDefaultVisitedLinkColor(nscolor aColor) = 0;
 
-  NS_IMETHOD GetImageGroup(nsIImageGroup** aGroupResult) = 0;
-
   /**
    * Load an image for the target frame. This call can be made
-   * repeated with only a single image ever being loaded. If
-   * aNeedSizeUpdate is PR_TRUE, then when the image's size is
-   * determined the target frame will be reflowed (via a
-   * ContentChanged notification on the presentation shell). When the
+   * repeated with only a single image ever being loaded. When the
    * image's data is ready for rendering the target frame's Paint()
    * method will be invoked (via the ViewManager) so that the
    * appropriate damage repair is done.
-   *
-   * @param aBackgroundColor - If the background color is NULL, a mask
-   *      will be generated for transparent images. If the background
-   *      color is non-NULL, it indicates the RGB value to be folded
-   *      into the transparent areas of the image and no mask is created.
    */
-  NS_IMETHOD StartLoadImage(const nsString& aURL,
-                            const nscolor* aBackgroundColor,
-                            const nsSize* aDesiredSize,
-                            nsIFrame* aTargetFrame,
-                            nsIFrameImageLoaderCB aCallBack,
-                            void* aClosure,
-                            void* aKey,
-                            nsIFrameImageLoader** aResult) = 0;
+  NS_IMETHOD LoadImage(const nsString& aURL,
+                       nsIFrame* aTargetFrame,
+                       imgIRequest **aRequest) = 0;
 
   /**
    * Stop a specific image load being done on behalf of the argument frame.
