@@ -3794,6 +3794,36 @@ nsRenderingContextWin::ConditionRect(nsRect& aSrcRect, RECT& aDestRect)
 #include "nsIImageContainer.h"
 #include "nsIImageFrame.h"
 
+struct MONOBITMAPINFO {
+  BITMAPINFOHEADER  bmiHeader;
+  RGBQUAD           bmiColors[2];
+
+  MONOBITMAPINFO(LONG aWidth, LONG aHeight)
+  {
+    memset(&bmiHeader, 0, sizeof(bmiHeader));
+    bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmiHeader.biWidth = aWidth;
+    bmiHeader.biHeight = aHeight;
+    bmiHeader.biPlanes = 1;
+    bmiHeader.biBitCount = 1;
+
+    // Note that the palette is being set up so the DIB and the DDB have white and
+    // black reversed. This is because we need the mask to have 0 for the opaque
+    // pixels of the image, and 1 for the transparent pixels. This way the SRCAND
+    // operation sets the opaque pixels to 0, and leaves the transparent pixels
+    // undisturbed
+    bmiColors[0].rgbBlue = 255;
+    bmiColors[0].rgbGreen = 255;
+    bmiColors[0].rgbRed = 255;
+    bmiColors[0].rgbReserved = 0;
+    bmiColors[1].rgbBlue = 0;
+    bmiColors[1].rgbGreen = 0;
+    bmiColors[1].rgbRed = 0;
+    bmiColors[1].rgbReserved = 0;
+  }
+};
+
+
 /* [noscript] void drawImage (in nsIImageContainer aImage, [const] in nsRect2 aSrcRect, [const] in nsPoint2 aDestPoint); */
 NS_IMETHODIMP nsRenderingContextWin::DrawImage(nsIImageContainer *aImage, const nsRect2 * aSrcRect, const nsPoint2 * aDestPoint)
 {
@@ -3822,12 +3852,27 @@ NS_IMETHODIMP nsRenderingContextWin::DrawImage(nsIImageContainer *aImage, const 
 
   PRUint32 len;
   PRUint8 *bits;
-  rv = img->GetBits(&bits, &len);
+  rv = img->GetImageData(&bits, &len);
   if (NS_FAILED(rv))
     return rv;
 
+  gfx_format format;
+  img->GetFormat(&format);
+
+
+  PRUint32 alen;
+  PRUint8 *abits = nsnull;
+
+  if (format == nsIGFXFormat::RGB_A1 || nsIGFXFormat::BGR_A1) {
+    rv = img->GetAlphaData(&abits, &alen);
+  }
+
+
   PRUint32 bpr;
-  img->GetBytesPerRow(&bpr);
+  img->GetImageBytesPerRow(&bpr);
+
+  PRUint32 abpr;
+  img->GetAlphaBytesPerRow(&abpr);
 
   LPBITMAPINFOHEADER mBHead = (LPBITMAPINFOHEADER)new char[sizeof(BITMAPINFO)];
 
@@ -3864,11 +3909,21 @@ NS_IMETHODIMP nsRenderingContextWin::DrawImage(nsIImageContainer *aImage, const 
 //  void* oldThing = ::SelectObject(mDC, memBM);
 
 //	mBHead->biHeight = -mBHead->biHeight;
+  int rop = SRCCOPY;
+  if (abits) {
+    MONOBITMAPINFO bmi(width, -height);
+    bmi.bmiHeader.biSizeImage = alen;
+    ::StretchDIBits(mDC, PRInt32(pt.x + sr.x), PRInt32(pt.y + sr.y), width, height,
+                    GFXCoordToIntFloor(sr.x), 0, width, height,
+                    abits + (GFXCoordToIntFloor(sr.y) * abpr), 
+                    (LPBITMAPINFO)&bmi, DIB_RGB_COLORS, SRCAND);
+    rop = SRCPAINT;
+  }
 
   ::StretchDIBits(mDC, PRInt32(pt.x + sr.x), PRInt32(pt.y + sr.y), width, height,
                   GFXCoordToIntFloor(sr.x), 0, width, height,
                   bits + (GFXCoordToIntFloor(sr.y) * bpr), 
-                  (LPBITMAPINFO)mBHead, DIB_RGB_COLORS, SRCAND);
+                  (LPBITMAPINFO)mBHead, DIB_RGB_COLORS, rop);
 
 
 //  ::SelectObject(mDC, oldThing);
