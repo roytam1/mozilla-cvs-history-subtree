@@ -34,9 +34,11 @@ DIRS		= public nglsrc
 ifdef MOZ_ENABLE_GTK
 DIRS		+= default/unix
 
-ifdef ENABLE_TESTS
-DIRS		+= test
-endif
+
+# XXX pav
+#ifdef ENABLE_TESTS
+#DIRS		+= test
+#endif
 
 endif
  

@@ -94,10 +94,6 @@
 #include "nsIMIMEService.h"
 #include "nsCExternalHandlerService.h"
 
-#ifdef XP_UNIX
-#include <gdk/gdkx.h> // for GDK_DISPLAY()
-#endif
-
 // We need this hackery so that we can dynamically register doc
 // loaders for the 4.x plugins that we discover.
 #if defined(XP_PC)
@@ -1517,6 +1513,9 @@ NS_IMETHODIMP nsPluginHostImpl::GetValue(nsPluginManagerVariable aVariable, void
   NS_ENSURE_ARG_POINTER(aValue);
 
 #ifdef XP_UNIX
+
+// XXX pav
+#if 0
   if (nsPluginManagerVariable_XDisplay == aVariable) {
     Display** value = NS_REINTERPRET_CAST(Display**, aValue);
       *value = GDK_DISPLAY();
@@ -1524,6 +1523,8 @@ NS_IMETHODIMP nsPluginHostImpl::GetValue(nsPluginManagerVariable aVariable, void
         return NS_ERROR_FAILURE;
       }
     }
+#endif
+
 #endif
   return rv;
 }

@@ -47,7 +47,6 @@
 #include "nsIDOMDocument.h"
 #include "nsPluginViewer.h"
 
-
 #include <stdio.h>
 
 
@@ -338,7 +337,7 @@ PluginViewerImpl::StartLoad(nsIChannel* channel, nsIStreamListener*& aResult)
   if(host) 
   {
     nsRect r;
-    mWindow->GetClientBounds(r);
+    mWindow->GetBounds(&r.x, &r.y, &r.width, &r.height);
     rv = CreatePlugin(host, nsRect(0, 0, r.width, r.height), aResult);
   }
 
@@ -424,7 +423,8 @@ NS_IMETHODIMP
 PluginViewerImpl::ProcessEvent(const nsGUIEvent *aEvent)
 {
   if( aEvent->message == NS_PLUGIN_ACTIVATE) {
-    aEvent->widget->SetFocus();
+    nsCOMPtr<nsIChildWindow> cw = do_QueryInterface(aEvent->window);
+    cw->TakeFocus();
   }
   return nsEventStatus_eIgnore;
 }
@@ -665,7 +665,7 @@ PluginViewerImpl::GetSaveable(PRBool *aSaveable)
 }
 
 NS_IMETHODIMP
-PluginViewerImpl::Print(PRBool aSilent,FILE *aFile, nsIPrintListener *aPrintListener)
+PluginViewerImpl::PrintWith(PRBool aSilent,FILE *aFile, nsIPrintListener *aPrintListener)
 {
   return NS_OK;      // XXX: hey, plug in guys!  implement me!
 }
@@ -832,7 +832,11 @@ NS_IMETHODIMP pluginInstanceOwner :: CreateWidget(void)
     }
     else if (nsnull != mWindow)
     {
+
+#if 0
+      // XXX pav
       mPluginWindow.window = (nsPluginPort *)mWindow->GetNativeData(NS_NATIVE_PLUGIN_PORT);
+#endif
       mPluginWindow.type = nsPluginWindowType_Window;
     }
     else
@@ -931,8 +935,12 @@ NS_IMETHODIMP pluginInstanceOwner :: GetDocument(nsIDocument* *aDocument)
 
 NS_IMETHODIMP pluginInstanceOwner :: Init(PluginViewerImpl *aViewer, nsIChildWindow *aWindow)
 {
+
+  // XXX pav -- look at this reference counting stuff
+
   //do not addref
-  mWindow = aWindow;
+  aWindow->QueryInterface(NS_GET_IID(nsIChildWindow), (void**)&mWindow);
+  NS_RELEASE(mWindow); // un-addref from the QI
   mViewer = aViewer;
 
   return NS_OK;

@@ -26,6 +26,9 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+
+# XXX pav
+
 #MODULE		= plugin
 LIBRARY_NAME	= nullplugin
 #IS_COMPONENT    = 1
@@ -38,11 +41,11 @@ CSRCS		= \
 
 DEFINES		+= -D_IMPL_NS_PLUGIN
 
-#CFLAGS += `gtk-config --cflags`
-#
-#LIBS		= \
-#		`gtk-config --libs`\
-#		$(NULL)
+CFLAGS += `gtk-config --cflags`
+
+LIBS		= \
+		`gtk-config --libs`\
+		$(NULL)
 
 
 include $(topsrcdir)/config/rules.mk
@@ -50,15 +53,9 @@ include $(topsrcdir)/config/rules.mk
 EXTRA_DSO_LDOPTS += $(MOZ_COMPONENT_LIBS) \
 		$(NULL)
 
-ifndef MOZ_MONOLITHIC_TOOLKIT
-EXTRA_DSO_LDOPTS += $(MOZ_GTK_LDFLAGS)
-CXXFLAGS	+= $(MOZ_GTK_CFLAGS)
-CFLAGS		+= $(MOZ_GTK_CFLAGS)
-else
 EXTRA_DSO_LDOPTS += $(TK_LIBS)
-CXXFLAGS	+= $(TK_CFLAGS)
-CFLAGS		+= $(TK_CFLAGS)
-endif
+CXXFLAGS	+= $(TK_CFLAGS) `gtk-config --cflags`
+CFLAGS		+= $(TK_CFLAGS) `gtk-config --cflags`
 
 install-plugin: $(SHARED_LIBRARY)
 	$(INSTALL) $(SHARED_LIBRARY) $(DIST)/bin/plugins
