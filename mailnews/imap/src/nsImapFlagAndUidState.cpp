@@ -364,18 +364,20 @@ NS_IMETHODIMP nsImapFlagAndUidState::AddUidCustomFlagPair(PRUint32 uid, const ch
   char *oldValue = (char *) m_customFlagsHash->Get(&hashKey);
   if (oldValue)
   {
-    ourCustomFlags = (char *) PR_Malloc(strlen(oldValue) + strlen(customFlag) + 3);
+  // we'll store multiple keys as space-delimited since space is not
+  // a valid character in a keyword
+    ourCustomFlags = (char *) PR_Malloc(strlen(oldValue) + strlen(customFlag) + 2);
     strcpy(ourCustomFlags, oldValue);
-    strcpy(ourCustomFlags + strlen(oldValue) + 1, customFlag);
+    strcat(ourCustomFlags, " ");
+    strcat(ourCustomFlags, customFlag);
     PR_Free(oldValue);
     m_customFlagsHash->Remove(&hashKey);
   }
   else
   {
-    ourCustomFlags = (char *) PR_Calloc(strlen(customFlag) + 2, 1);
+    ourCustomFlags = nsCRT::strdup(customFlag);
     if (!ourCustomFlags)
       return NS_ERROR_OUT_OF_MEMORY;
-    strcpy(ourCustomFlags, customFlag);;
   }
   return (m_customFlagsHash->Put(&hashKey, ourCustomFlags) == 0) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }

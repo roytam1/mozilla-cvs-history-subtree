@@ -47,7 +47,7 @@ interface nsIImapFlagAndUidState : nsISupports
 	void ExpungeByIndex(in unsigned long zeroBasedIndex);
 	void AddUidFlagPair(in unsigned long uid, in unsigned short flags);
         void addUidCustomFlagPair(in unsigned long uid, in string customFlag);
-        string getCustomFlags(in unsigned long uid); // returns null terminated strings followed by double null
+        string getCustomFlags(in unsigned long uid); // returns space-separated keywords
 	void Reset(in unsigned long howManyLeft);
 	void SetSupportedUserFlags(in unsigned short flags);
 };
