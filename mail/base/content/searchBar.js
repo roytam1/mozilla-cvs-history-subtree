@@ -207,9 +207,9 @@ function onEnterInSearchBar()
        var addTerms = gDefaultSearchViewTerms || gVirtualFolderTerms || gXFVirtualFolderTerms;
        if (addTerms)
        {
-           viewDebug ("addTerms = " + addTerms + " count = " + addTerms.Count() + "\n");
-           initializeSearchBar();
-           onSearch(addTerms);
+         viewDebug ("addTerms = " + addTerms + " count = " + addTerms.Count() + "\n");
+         initializeSearchBar();
+         onSearch(addTerms);
        }
        else
           restorePreSearchView();
@@ -340,23 +340,23 @@ function restorePreSearchView()
 
 function onSearch(aSearchTerms)
 {
-    viewDebug("in OnSearch, searchTerms = " + aSearchTerms + "\n");
-    RerootThreadPane();
+  viewDebug("in OnSearch, searchTerms = " + aSearchTerms + "\n");
+  RerootThreadPane();
 
-    if (aSearchTerms)
-      createSearchTermsWithList(aSearchTerms);
-    else
-      createSearchTerms();
+  if (aSearchTerms)
+    createSearchTermsWithList(aSearchTerms);
+  else
+    createSearchTerms();
 
-    gDBView.searchSession = gSearchSession;
-    try
-    {
-      gSearchSession.search(msgWindow);
-    }
-    catch(ex)
-    {
-      dump("Search Exception\n");
-    }
+  gDBView.searchSession = gSearchSession;
+  try
+  {
+    gSearchSession.search(msgWindow);
+  }
+  catch(ex)
+  {
+    dump("Search Exception\n");
+  }
 }
 
 function createSearchTermsWithList(aTermsArray)
@@ -606,7 +606,6 @@ function ClearQSIfNecessary()
 function Search(str)
 {
   viewDebug("in Search str = " + str + "gSearchInput.showingSearchCriteria = " + gSearchInput.showingSearchCriteria + "\n");
-  if (gSearchInput.showingSearchCriteria)
   if (gSearchInput.showingSearchCriteria && str != "")
     return;
 
@@ -620,6 +619,14 @@ function Search(str)
 
   gSearchInput.value = str;  //on input does not get fired for some reason
   onSearchInput(true);
+}
+
+// When the front end has finished loading a virtual folder, it calls openVirtualFolder
+// to actually perform the folder search. We use this method instead of calling Search("") directly
+// from FolderLoaded in order to avoid moving focus into the search bar.
+function loadVirtualFolder()
+{
+  onEnterInSearchBar();
 }
 
 // this notification gets generated from layout when it finishes laying out a message

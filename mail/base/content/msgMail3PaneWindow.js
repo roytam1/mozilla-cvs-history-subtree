@@ -270,7 +270,7 @@ var folderListener = {
              {
                 gDefaultSearchViewTerms = null;
                 viewDebug("searching gVirtualFolderTerms\n");
-                onClearSearch(); // clear quick search bar
+                loadVirtualFolder(); 
              }
              else if (gMsgFolderSelected.flags & MSG_FOLDER_FLAG_VIRTUAL)
              {
@@ -279,12 +279,12 @@ var folderListener = {
              }
              else if (gDefaultSearchViewTerms)
              {
-                viewDebug("searching gDefaultSearchViewTerms and rerootingFolder\n");
-               onClearSearch();
+               viewDebug("searching gDefaultSearchViewTerms and rerootingFolder\n");
+               Search("");
              }
              else
              {
-              viewDebug("changing view by value\n");
+               viewDebug("changing view by value\n");
                ViewChangeByValue(pref.getIntPref("mailnews.view.last"));
              }
            }
