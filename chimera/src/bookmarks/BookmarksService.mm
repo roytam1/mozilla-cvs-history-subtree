@@ -568,9 +568,9 @@ BookmarksService::ReadBookmarks()
   // test for a parser error. The XML parser replaces the document with one
   // that has a <parsererror> node as the root.
   nsCOMPtr<nsIDOMDocument> bookmarksDOMDoc = do_QueryInterface(gBookmarks);
-  BOOL validPrefsFile = CheckXMLDocumentParseSuccessful(bookmarksDOMDoc);
+  BOOL validBookmarksFile = CheckXMLDocumentParseSuccessful(bookmarksDOMDoc);
   
-  if (!validPrefsFile) {
+  if (!validBookmarksFile) {
     // uh oh, parser error. Throw some UI
     NSString *alert     = NSLocalizedString(@"CorruptedBookmarksAlert",@"");
     NSString *message   = NSLocalizedString(@"CorruptedBookmarksMsg",@"");
