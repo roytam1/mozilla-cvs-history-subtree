@@ -66,10 +66,8 @@ public:
     TX_DECL_MATCH_CONTEXT;
 
     // Stack functions
-    //nsresult pushEvalContext(txIEvalContext* aContext);
-    //void popEvalContext();
-    //nsresult pushExprResult(ExprResult* aExprResult);
-    //ExprResult* popExprResult();
+    nsresult pushEvalContext(txIEvalContext* aContext);
+    txIEvalContext* popEvalContext();
     nsresult pushString(const nsAString& aStr);
     void popString(nsAString& aStr);
     nsresult pushInt(PRInt32 aInt);

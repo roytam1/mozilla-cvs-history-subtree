@@ -40,10 +40,12 @@
 #include "txNodeSorter.h"
 #include <string.h>
 #include "Names.h"
-#include "ProcessorState.h"
+#include "txExecutionState.h"
 #include "txXPathResultComparator.h"
 #include "txAtoms.h"
 #include "txForwardContext.h"
+#include "ExprResult.h"
+#include "Expr.h"
 
 /*
  * Sorts Nodes as specified by the W3C XSLT 1.0 Recommendation
@@ -51,9 +53,7 @@
 
 #define DEFAULT_LANG "en"
 
-txNodeSorter::txNodeSorter(ProcessorState* aPs) : mPs(aPs),
-                                                  mNKeys(0),
-                                                  mDefaultExpr(0)
+txNodeSorter::txNodeSorter() : mNKeys(0)
 {
 }
 
@@ -65,103 +65,113 @@ txNodeSorter::~txNodeSorter()
         delete key->mComparator;
         delete key;
     }
-    delete mDefaultExpr;
 }
 
-MBool txNodeSorter::addSortElement(Element* aSortElement)
+nsresult
+txNodeSorter::addSortElement(Expr* aSelectExpr, Expr* aLangExpr,
+                             Expr* aDataTypeExpr, Expr* aOrderExpr,
+                             Expr* aCaseOrderExpr, txIEvalContext* aContext)
 {
     SortKey* key = new SortKey;
-    if (!key) {
-        // XXX ErrorReport: out of memory
-        return MB_FALSE;
-    }
-
-    // Get common attributes
-    String attrValue;
+    NS_ENSURE_TRUE(key, NS_ERROR_OUT_OF_MEMORY);
 
     // Select
-    if (aSortElement->hasAttr(txXSLTAtoms::select, kNameSpaceID_None))
-        key->mExpr = mPs->getExpr(aSortElement, ProcessorState::SelectAttr);
-    else {
-        if (!mDefaultExpr) {
-            txNodeTest* test = new txNodeTypeTest(txNodeTypeTest::NODE_TYPE);
-            mDefaultExpr = new LocationStep(test, LocationStep::SELF_AXIS);
-        }
-        key->mExpr = mDefaultExpr;
-    }
-    
-    if (!key->mExpr) {
-        // XXX ErrorReport: Out of memory
-        delete key;
-        return MB_FALSE;
-    }
+    key->mExpr = aSelectExpr;
 
     // Order
-    MBool ascending;
-    MBool hasAttr = getAttrAsAVT(aSortElement, txXSLTAtoms::order, attrValue);
-    if (!hasAttr || attrValue.isEqual(ASCENDING_VALUE)) {
-        ascending = MB_TRUE;
-    }
-    else if (attrValue.isEqual(DESCENDING_VALUE)) {
-        ascending = MB_FALSE;
-    }
-    else {
-        delete key;
-        // XXX ErrorReport: unknown value for order attribute
-        return MB_FALSE;
+    MBool ascending = MB_TRUE;
+    if (aOrderExpr) {
+        ExprResult* exprRes = aOrderExpr->evaluate(aContext);
+        NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
+
+        String attrValue;
+        exprRes->stringValue(attrValue);
+        delete exprRes;
+        
+        if (attrValue.isEqual(DESCENDING_VALUE)) {
+            ascending = MB_FALSE;
+        }
+        else if (!attrValue.isEqual(ASCENDING_VALUE)) {
+            delete key;
+            // XXX ErrorReport: unknown value for order attribute
+            return NS_ERROR_XSLT_BAD_VALUE;
+        }
     }
 
 
     // Create comparator depending on datatype
     String dataType;
-    hasAttr = getAttrAsAVT(aSortElement, txXSLTAtoms::dataType, dataType);
-    if (!hasAttr || dataType.isEqual(TEXT_VALUE)) {
+    if (aDataTypeExpr) {
+        ExprResult* exprRes = aOrderExpr->evaluate(aContext);
+        NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
+
+        exprRes->stringValue(dataType);
+        delete exprRes;
+    }
+
+    if (!aDataTypeExpr || dataType.isEqual(TEXT_VALUE)) {
         // Text comparator
         
         // Language
         String lang;
-        if (!getAttrAsAVT(aSortElement, txXSLTAtoms::lang, lang))
-            lang.append(DEFAULT_LANG);
+        if (aLangExpr) {
+            ExprResult* exprRes = aLangExpr->evaluate(aContext);
+            NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
 
-        // Case-order 
-        MBool upperFirst;
-        hasAttr = getAttrAsAVT(aSortElement, txXSLTAtoms::caseOrder, attrValue);
-        if (!hasAttr || attrValue.isEqual(UPPER_FIRST_VALUE)) {
-            upperFirst = MB_TRUE;
-        }
-        else if (attrValue.isEqual(LOWER_FIRST_VALUE)) {
-            upperFirst = MB_FALSE;
+            exprRes->stringValue(lang);
+            delete exprRes;
         }
         else {
-            // XXX ErrorReport: unknown value for case-order attribute
-            delete key;
-            return MB_FALSE;
+            lang.append(DEFAULT_LANG);
+        }
+
+        // Case-order 
+
+
+        MBool upperFirst = MB_TRUE;
+        if (aCaseOrderExpr) {
+            ExprResult* exprRes = aCaseOrderExpr->evaluate(aContext);
+            NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
+
+            String attrValue;
+            exprRes->stringValue(attrValue);
+            delete exprRes;
+
+            if (attrValue.isEqual(LOWER_FIRST_VALUE)) {
+                upperFirst = MB_FALSE;
+            }
+            else if (!attrValue.isEqual(UPPER_FIRST_VALUE)) {
+                delete key;
+                // XXX ErrorReport: unknown value for case-order attribute
+                return NS_ERROR_XSLT_BAD_VALUE;
+            }
         }
 
         key->mComparator = new txResultStringComparator(ascending,
                                                         upperFirst,
                                                         lang);
+        NS_ENSURE_TRUE(key->mComparator, NS_ERROR_OUT_OF_MEMORY);
     }
     else if (dataType.isEqual(NUMBER_VALUE)) {
         // Number comparator
         key->mComparator = new txResultNumberComparator(ascending);
+        NS_ENSURE_TRUE(key->mComparator, NS_ERROR_OUT_OF_MEMORY);
     }
     else {
         // XXX ErrorReport: unknown data-type
-        return MB_FALSE;
-    }
+        delete key;
 
-    if (!key->mComparator) {
-        // XXX ErrorReport: out of memory
-        return MB_FALSE;
+        return NS_ERROR_XSLT_BAD_VALUE;
     }
 
     mSortKeys.add(key);
     mNKeys++;
-    return MB_TRUE;
+
+    return NS_OK;
 }
 
-MBool txNodeSorter::sortNodeSet(NodeSet* aNodes)
+#if 0
+MBool txNodeSorter::sortNodeSet(NodeSet* aNodes, txExecutionState* aEs)
 {
     if (mNKeys == 0)
         return MB_TRUE;
@@ -187,7 +197,7 @@ MBool txNodeSorter::sortNodeSet(NodeSet* aNodes)
         }
         iter.reset();
         SortableNode* compNode = (SortableNode*)iter.next();
-        while (compNode && (compareNodes(currNode, compNode, aNodes) > 0)) {
+        while (compNode && (compareNodes(currNode, compNode, aNodes, aEs) > 0)) {
             compNode = (SortableNode*)iter.next();
         }
         // ... and insert in sorted list
@@ -211,7 +221,8 @@ MBool txNodeSorter::sortNodeSet(NodeSet* aNodes)
 
 int txNodeSorter::compareNodes(SortableNode* aSNode1,
                                SortableNode* aSNode2,
-                               NodeSet* aNodes)
+                               NodeSet* aNodes,
+                               txExecutionState* aEs)
 {
     txListIterator iter(&mSortKeys);
     int i;
@@ -221,10 +232,10 @@ int txNodeSorter::compareNodes(SortableNode* aSNode1,
         SortKey* key = (SortKey*)iter.next();
         // Lazy create sort values
         if (!aSNode1->mSortValues[i]) {
-            txForwardContext evalContext(mPs, aSNode1->mNode, aNodes);
-            txIEvalContext* priorEC = mPs->setEvalContext(&evalContext);
+            txForwardContext evalContext(aEs->getEvalContext(), aSNode1->mNode, aNodes);
+            aEs->pushEvalContext(&evalContext);
             ExprResult* res = key->mExpr->evaluate(&evalContext);
-            mPs->setEvalContext(priorEC);
+            aEs->popEvalContext();
             if (!res) {
                 // XXX ErrorReport
                 return -1;
@@ -237,10 +248,10 @@ int txNodeSorter::compareNodes(SortableNode* aSNode1,
             delete res;
         }
         if (!aSNode2->mSortValues[i]) {
-            txForwardContext evalContext(mPs, aSNode2->mNode, aNodes);
-            txIEvalContext* priorEC = mPs->setEvalContext(&evalContext);
+            txForwardContext evalContext(aEs->getEvalContext(), aSNode2->mNode, aNodes);
+            aEs->pushEvalContext(&evalContext);
             ExprResult* res = key->mExpr->evaluate(&evalContext);
-            mPs->setEvalContext(priorEC);
+            aEs->popEvalContext();
             if (!res) {
                 // XXX ErrorReport
                 return -1;
@@ -263,20 +274,6 @@ int txNodeSorter::compareNodes(SortableNode* aSNode1,
     return 0;
 }
 
-MBool txNodeSorter::getAttrAsAVT(Element* aSortElement,
-                                 txAtom* aAttrName,
-                                 String& aResult)
-{
-    aResult.clear();
-
-    String attValue;
-    if (!aSortElement->getAttr(aAttrName, kNameSpaceID_None, attValue))
-        return MB_FALSE;
-
-    mPs->processAttrValueTemplate(attValue, aSortElement, aResult);
-    return MB_TRUE;
-}
-
 txNodeSorter::SortableNode::SortableNode(Node* aNode, int aNValues)
 {
     mNode = aNode;
@@ -297,3 +294,4 @@ void txNodeSorter::SortableNode::clear(int aNValues)
 
     delete [] mSortValues;
 }
+#endif

@@ -43,7 +43,6 @@
 #include "TxString.h"
 #include "List.h"
 
-class txExecutionState;
 class Expr;
 class Node;
 class txPattern;
