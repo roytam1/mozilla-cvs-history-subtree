@@ -43,6 +43,7 @@
 #include "nsIJSEventListener.h"
 #include "nsIScriptContext.h"
 #include "nsDOMClassInfo.h"
+#include "nsGlobalWindow.h"
 
 extern nsresult NS_CreateScriptContext(nsIScriptGlobalObject *aGlobal,
                                        nsIScriptContext **aContext);
@@ -139,7 +140,14 @@ static nsModuleComponentInfo gDOMModuleInfo[] = {
     }
 };
 
-NS_IMPL_NSGETMODULE("DOM components", gDOMModuleInfo)
+void PR_CALLBACK
+DOMModuleDestructor(nsIModule *self)
+{
+  GlobalWindowImpl::ShutDown();
+}
+
+NS_IMPL_NSGETMODULE_WITH_DTOR("DOM components", gDOMModuleInfo,
+                              DOMModuleDestructor)
 
 
 #ifdef DEBUG

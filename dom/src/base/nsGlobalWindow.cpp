@@ -170,6 +170,13 @@ GlobalWindowImpl::~GlobalWindowImpl()
   CleanUp();
 }
 
+// static
+void
+GlobalWindowImpl::ShutDown()
+{
+  NS_IF_RELEASE(sXPConnect);
+}
+
 void GlobalWindowImpl::CleanUp()
 {
   if (mContext)

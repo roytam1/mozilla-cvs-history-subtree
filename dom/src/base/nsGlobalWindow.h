@@ -183,9 +183,10 @@ public:
   // nsIDOMAbstractView
   NS_DECL_NSIDOMABSTRACTVIEW
 
-public:
   // Object Management
   GlobalWindowImpl();
+
+  static void ShutDown();
 
 protected:
   // Object Management
