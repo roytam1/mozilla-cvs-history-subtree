@@ -73,6 +73,8 @@ PUBLIC=$(XPDIST)\public
 
 !ifdef MOZ_NAV_BUILD_PREFIX
 DIST_PREFIX=NAV
+!elseif defined(RAPTOR)
+DIST_PREFIX=RAP
 !else
 DIST_PREFIX=WIN
 !endif
