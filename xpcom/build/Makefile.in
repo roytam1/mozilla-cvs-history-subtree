@@ -34,7 +34,6 @@ CPPSRCS =			\
 	$(NULL)
 
 EXPORTS =			\
-	nsIXPComService.h	\
 	$(NULL)
 
 EXPORTS := $(addprefix $(srcdir)/, $(EXPORTS))
