@@ -89,7 +89,7 @@ else
 $entry = $conn->search($ld{root}, "ONE", "$search");
 while ($entry)
 {
-  print $entry->{targetdn}[0], "\n";
+  print "dn: ", $entry->{targetdn}[0], "\n";
   $type = $entry->{changetype}[0];
   print "changetype: $type\n";
   if (!($type =~ /delete/i))
