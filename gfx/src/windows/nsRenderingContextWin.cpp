@@ -1751,7 +1751,7 @@ NS_IMETHODIMP nsRenderingContextWin :: GetWidth(const PRUnichar *aString,
       nsFontWin* currFont = nsnull;
       nsFontWin** font = metrics->mLoadedFonts;
       nsFontWin** end = &metrics->mLoadedFonts[metrics->mLoadedFontsCount];
-      while (font < end) {
+      while (font < end && font && *font) {
         if (FONT_HAS_GLYPH((*font)->mMap, c)) {
           currFont = *font;
           goto FoundFont; // for speed -- avoid "if" statement
@@ -1857,7 +1857,7 @@ nsRenderingContextWin::GetWidth(const PRUnichar *aString,
       // First search the fonts we already have loaded
       nsFontWin** font = metrics->mLoadedFonts;
       nsFontWin** end = &metrics->mLoadedFonts[metrics->mLoadedFontsCount];
-      while (font < end) {
+      while (font < end && font && *font) {
         if (FONT_HAS_GLYPH((*font)->mMap, pstr[i])) {
           currFont = *font;
           goto FoundFont;
@@ -2184,7 +2184,7 @@ NS_IMETHODIMP nsRenderingContextWin :: DrawString(const PRUnichar *aString, PRUi
       nsFontWin* currFont = nsnull;
       nsFontWin** font = metrics->mLoadedFonts;
       nsFontWin** end = &metrics->mLoadedFonts[metrics->mLoadedFontsCount];
-      while (font < end) {
+      while (font < end && font && *font) {
         if (FONT_HAS_GLYPH((*font)->mMap, c)) {
           currFont = *font;
           goto FoundFont; // for speed -- avoid "if" statement
@@ -2411,7 +2411,7 @@ nsRenderingContextWin::GetBoundingMetrics(const PRUnichar*   aString,
       nsFontWin* currFont = nsnull;
       nsFontWin** font = metrics->mLoadedFonts;
       nsFontWin** end = &metrics->mLoadedFonts[metrics->mLoadedFontsCount];
-      while (font < end) {
+      while (font < end && font && *font) {
         if (FONT_HAS_GLYPH((*font)->mMap, c)) {
           currFont = *font;
           goto FoundFont; // for speed -- avoid "if" statement
@@ -2968,7 +2968,7 @@ NS_IMETHODIMP nsRenderingContextWinA :: GetWidth(const PRUnichar *aString,
       nsFontSubset* currFont = nsnull;
       nsFontWinA** font = (nsFontWinA**) metrics->mLoadedFonts;
       nsFontWinA** end = (nsFontWinA**) &metrics->mLoadedFonts[metrics->mLoadedFontsCount];
-      while (font < end) {
+      while (font < end && font && *font) {
         if (FONT_HAS_GLYPH((*font)->mMap, c)) {
           nsFontSubset** subset = (*font)->mSubsets;
           nsFontSubset** endSubsets = &((*font)->mSubsets[(*font)->mSubsetsCount]);
@@ -3073,7 +3073,7 @@ nsRenderingContextWinA::GetWidth(const PRUnichar *aString,
       // First search the fonts we already have loaded
       nsFontWinA** font = (nsFontWinA**) metrics->mLoadedFonts;
       nsFontWinA** end = (nsFontWinA**) &metrics->mLoadedFonts[metrics->mLoadedFontsCount];
-      while (font < end) {
+      while (font < end && font && *font) {
         if (FONT_HAS_GLYPH((*font)->mMap, pstr[i])) {
           nsFontSubset** subset = (*font)->mSubsets;
           nsFontSubset** endSubsets = &((*font)->mSubsets[(*font)->mSubsetsCount]);
@@ -3359,7 +3359,7 @@ NS_IMETHODIMP nsRenderingContextWinA :: DrawString(const PRUnichar *aString, PRU
       nsFontSubset* currFont = nsnull;
       nsFontWinA** font = (nsFontWinA**) metrics->mLoadedFonts;
       nsFontWinA** end = (nsFontWinA**) &metrics->mLoadedFonts[metrics->mLoadedFontsCount];
-      while (font < end) {
+      while (font < end && font && *font) {
         if (FONT_HAS_GLYPH((*font)->mMap, c)) {
           nsFontSubset** subset = (*font)->mSubsets;
           nsFontSubset** endSubsets = &((*font)->mSubsets[(*font)->mSubsetsCount]);
