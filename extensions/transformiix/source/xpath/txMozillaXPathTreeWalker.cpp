@@ -75,8 +75,7 @@ txXPathTreeWalker::moveToElementById(const nsAString& aID)
         document = do_QueryInterface(mPosition.mDocument);
     }
     else {
-        nsCOMPtr<nsIDocument> doc;
-        mPosition.mContent->GetDocument(getter_AddRefs(doc));
+        nsCOMPtr<nsIDocument> doc = mPosition.mContent->GetDocument();
         document = do_QueryInterface(doc);
     }
 
@@ -198,8 +197,7 @@ txXPathTreeWalker::moveToFirstFollowing()
         }
     }
 
-    nsCOMPtr<nsIContent> parent, child;
-    content->GetParent(getter_AddRefs(parent));
+    nsCOMPtr<nsIContent> child, parent = content->GetParent();
 
 // XXXX Use mCurrentIndex?
 
@@ -223,11 +221,10 @@ txXPathTreeWalker::moveToFirstFollowing()
         }
 
         content = parent;
-        content->GetParent(getter_AddRefs(parent));
+        parent = content->GetParent();
     }
 
-    nsCOMPtr<nsIDocument> document;
-    content->GetDocument(getter_AddRefs(document));
+    nsCOMPtr<nsIDocument> document = content->GetDocument();
 
     document->GetChildCount(total);
     if (total <= 1) {
@@ -269,14 +266,13 @@ txXPathTreeWalker::moveToFirstPreceding()
     // or one of its ancestors.
     // Attributes behave just like their ownerElement, as the element is
     // part of the ancestor axis.
-    nsCOMPtr<nsIContent> parent;
     nsCOMPtr<nsIDocument> document;
     PRInt32 index;
-    mPosition.mContent->GetParent(getter_AddRefs(parent));
+    nsCOMPtr<nsIContent> parent = mPosition.mContent->GetParent();
     if (mCurrentIndex > 0) {
         index = mCurrentIndex;
         if (!parent) {
-            mPosition.mContent->GetDocument(getter_AddRefs(document));
+            document = mPosition.mContent->GetDocument();
         }
     }
     else {
@@ -288,11 +284,11 @@ txXPathTreeWalker::moveToFirstPreceding()
             }
 
             content = parent;
-            content->GetParent(getter_AddRefs(parent));
+            parent = content->GetParent();
         }
 
         if (!parent) {
-            content->GetDocument(getter_AddRefs(document));
+            document = content->GetDocument();
             document->IndexOf(content, index);
             if (index <= 0) {
                 return PR_FALSE;
@@ -346,7 +342,7 @@ txXPathTreeWalker::moveToFirstPrecedingInDocOrder()
     nsCOMPtr<nsIDocument> document;
     PRInt32 index = mCurrentIndex;
     if (mPosition.isContent()) {
-        mPosition.mContent->GetParent(getter_AddRefs(parent));
+        parent = mPosition.mContent->GetParent();
         if (parent && index == kUnknownIndex) {
             parent->IndexOf(mPosition.mContent, index);
         }
@@ -376,7 +372,7 @@ txXPathTreeWalker::moveToFirstPrecedingInDocOrder()
         parent->ChildAt(--index, getter_AddRefs(descendant));
     }
     else {
-        mPosition.mContent->GetDocument(getter_AddRefs(document));
+        document = mPosition.mContent->GetDocument();
         if (index == kUnknownIndex) {
             document->IndexOf(mPosition.mContent, index);
         }
@@ -449,8 +445,7 @@ txXPathTreeWalker::moveToNextDescendant()
     }
 
     PRInt32 index = mCurrentIndex;
-    nsCOMPtr<nsIContent> parent;
-    mPosition.mContent->GetParent(getter_AddRefs(parent));
+    nsCOMPtr<nsIContent> parent = mPosition.mContent->GetParent();
     if (parent) {
         parent->ChildCount(total);
         if (index + 1 < total) {
@@ -470,7 +465,7 @@ txXPathTreeWalker::moveToNextDescendant()
         }
 
         nsCOMPtr<nsIContent> content = parent;
-        content->GetParent(getter_AddRefs(parent));
+        parent = content->GetParent();
         while (parent) {
             index = mDescendants->ValueAt(--currentIndex);
             parent->ChildCount(total);
@@ -489,7 +484,7 @@ txXPathTreeWalker::moveToNextDescendant()
             }
 
             content = parent;
-            content->GetParent(getter_AddRefs(parent));
+            parent = content->GetParent();
         }
 
         NS_ASSERTION(currentIndex == 1, "HUH?");
@@ -497,8 +492,7 @@ txXPathTreeWalker::moveToNextDescendant()
         index = mDescendants->ValueAt(0);
     }
 
-    nsCOMPtr<nsIDocument> document;
-    mPosition.mContent->GetDocument(getter_AddRefs(document));
+    nsCOMPtr<nsIDocument> document = mPosition.mContent->GetDocument();
     document->GetChildCount(total);
     if (index + 1 >= total) {
         return PR_FALSE;
@@ -535,7 +529,7 @@ txXPathTreeWalker::moveToNextFollowing()
 
     nsCOMPtr<nsIContent> parent, child, content;
     // Look at next siblings of the current content.
-    mPosition.mContent->GetParent(getter_AddRefs(parent));
+    parent = mPosition.mContent->GetParent();
     if (parent) {
         parent->ChildCount(total);
         if (mCurrentIndex + 1 < total) {
@@ -546,7 +540,7 @@ txXPathTreeWalker::moveToNextFollowing()
         }
 
         content = parent;
-        content->GetParent(getter_AddRefs(parent));
+        parent = content->GetParent();
 
         // Now walk up the parent chain to find the first ancestor that has a
         // following sibling.
@@ -567,12 +561,11 @@ txXPathTreeWalker::moveToNextFollowing()
             }
 
             content = parent;
-            content->GetParent(getter_AddRefs(parent));
+            parent = content->GetParent();
         }
     }
 
-    nsCOMPtr<nsIDocument> document;
-    mPosition.mContent->GetDocument(getter_AddRefs(document));
+    nsCOMPtr<nsIDocument> document = mPosition.mContent->GetDocument();
     document->GetChildCount(total);
     if (total <= 1) {
         return PR_FALSE;
@@ -601,17 +594,17 @@ txXPathTreeWalker::moveToNextPreceding()
     nsCOMPtr<nsIDocument> document;
     PRInt32 index = mCurrentIndex;
     if (index > 0) {
-        mPosition.mContent->GetParent(getter_AddRefs(parent));
+        parent = mPosition.mContent->GetParent();
         if (parent) {
             parent->ChildAt(--index, getter_AddRefs(descendant));
         }
         else {
-            mPosition.mContent->GetDocument(getter_AddRefs(document));
+            document = mPosition.mContent->GetDocument();
             document->ChildAt(--index, getter_AddRefs(descendant));
         }
     }
     else {
-        mPosition.mContent->GetParent(getter_AddRefs(parent));
+        parent = mPosition.mContent->GetParent();
 
         PRInt32 count = mDescendants ? mDescendants->Count() : 0;
         if (count > 0) {
@@ -624,7 +617,7 @@ txXPathTreeWalker::moveToNextPreceding()
                 return PR_TRUE;
             }
 
-            mPosition.mContent->GetDocument(getter_AddRefs(document));
+            document = mPosition.mContent->GetDocument();
             NS_RELEASE(mPosition.mContent);
             mCurrentIndex = mDescendants->ValueAt(--count);
             mDescendants->RemoveValueAt(count);
@@ -638,7 +631,7 @@ txXPathTreeWalker::moveToNextPreceding()
         }
 
         descendant = parent;
-        descendant->GetParent(getter_AddRefs(parent));
+        parent = descendant->GetParent();
         while (parent) {
             parent->IndexOf(descendant, index);
             if (index > 0) {
@@ -647,11 +640,11 @@ txXPathTreeWalker::moveToNextPreceding()
             }
 
             descendant = parent;
-            descendant->GetParent(getter_AddRefs(parent));
+            parent = descendant->GetParent();
         }
 
         if (!parent) {
-            descendant->GetDocument(getter_AddRefs(document));
+            document = descendant->GetDocument();
             document->IndexOf(descendant, index);
             if (index == 0) {
                 return PR_FALSE;
@@ -700,7 +693,7 @@ txXPathTreeWalker::moveToNextPrecedingInDocOrder()
     nsCOMPtr<nsIDocument> document;
     PRInt32 index = mCurrentIndex;
     if (mPosition.isContent()) {
-        mPosition.mContent->GetParent(getter_AddRefs(parent));
+        parent = mPosition.mContent->GetParent();
         if (parent && index == kUnknownIndex) {
             parent->IndexOf(mPosition.mContent, index);
         }
@@ -738,7 +731,7 @@ txXPathTreeWalker::moveToNextPrecedingInDocOrder()
         parent->ChildAt(--index, getter_AddRefs(descendant));
     }
     else {
-        mPosition.mContent->GetDocument(getter_AddRefs(document));
+        document = mPosition.mContent->GetDocument();
         if (index == kUnknownIndex) {
             document->IndexOf(mPosition.mContent, index);
         }
@@ -811,8 +804,7 @@ txXPathTreeWalker::moveToParent()
         return PR_TRUE;
     }
 
-    nsCOMPtr<nsIContent> parent;
-    mPosition.mContent->GetParent(getter_AddRefs(parent));
+    nsCOMPtr<nsIContent> parent = mPosition.mContent->GetParent();
     if (parent) {
         NS_RELEASE(mPosition.mContent);
         parent.swap(mPosition.mContent);
@@ -821,8 +813,7 @@ txXPathTreeWalker::moveToParent()
         return PR_TRUE;
     }
 
-    nsCOMPtr<nsIDocument> document;
-    mPosition.mContent->GetDocument(getter_AddRefs(document));
+    nsCOMPtr<nsIDocument> document = mPosition.mContent->GetDocument();
     if (!document) {
         return PR_FALSE;
     }
@@ -839,11 +830,10 @@ PRBool
 txXPathTreeWalker::moveToSibling(PRBool aForward)
 {
     if  (mPosition.isContent()) {
-        nsCOMPtr<nsIContent> parent;
         nsCOMPtr<nsIDocument> document;
-        mPosition.mContent->GetParent(getter_AddRefs(parent));
+        nsCOMPtr<nsIContent> parent = mPosition.mContent->GetParent();
         if (!parent) {
-            mPosition.mContent->GetDocument(getter_AddRefs(document));
+            document = mPosition.mContent->GetDocument();
             if (!document) {
                 return PR_FALSE;
             }
@@ -1262,8 +1252,7 @@ txXPathNodeUtils::getOwnerDocument(const txXPathNode& aNode)
         return new txXPathNode(aNode);
     }
 
-    nsCOMPtr<nsIDocument> document;
-    aNode.mContent->GetDocument(getter_AddRefs(document));
+    nsCOMPtr<nsIDocument> document = aNode.mContent->GetDocument();
     txXPathNode* node = new txXPathNode(document);
 
     return node;
@@ -1360,7 +1349,7 @@ txXPathNodeUtils::comparePosition(const txXPathNode& aNode,
         document = aNode.mDocument;
     }
     else {
-        aNode.mContent->GetDocument(getter_AddRefs(document));
+        document = aNode.mContent->GetDocument();
     }
 
     nsCOMPtr<nsIDocument> otherDocument;
@@ -1368,7 +1357,7 @@ txXPathNodeUtils::comparePosition(const txXPathNode& aNode,
         otherDocument = aOtherNode.mDocument;
     }
     else {
-        aOtherNode.mContent->GetDocument(getter_AddRefs(otherDocument));
+        otherDocument = aOtherNode.mContent->GetDocument();
     }
 
     // If the nodes have different ownerdocuments, compare the document
@@ -1389,7 +1378,7 @@ txXPathNodeUtils::comparePosition(const txXPathNode& aNode,
     nsCOMPtr<nsIContent> parent;
     PRInt32 index;
     if (aNode.isContent()) {
-        aNode.mContent->GetParent(getter_AddRefs(parent));
+        parent = aNode.mContent->GetParent();
         if (parent) {
             parent->IndexOf(aNode.mContent, index);
         }
@@ -1408,7 +1397,7 @@ txXPathNodeUtils::comparePosition(const txXPathNode& aNode,
     nsCOMPtr<nsIContent> otherParent;
     PRInt32 otherIndex;
     if (aOtherNode.isContent()) {
-        aOtherNode.mContent->GetParent(getter_AddRefs(otherParent));
+        otherParent = aOtherNode.mContent->GetParent();
         if (otherParent) {
             otherParent->IndexOf(aOtherNode.mContent, otherIndex);
         }
@@ -1443,7 +1432,7 @@ txXPathNodeUtils::comparePosition(const txXPathNode& aNode,
     while (parent) {
         parentChain.AppendValue(index);
         content = parent;
-        content->GetParent(getter_AddRefs(parent));
+        parent = content->GetParent();
         if (parent) {
             parent->IndexOf(content, index);
         }
@@ -1455,7 +1444,7 @@ txXPathNodeUtils::comparePosition(const txXPathNode& aNode,
     while (otherParent) {
         otherParentChain.AppendValue(otherIndex);
         content = otherParent;
-        content->GetParent(getter_AddRefs(otherParent));
+        otherParent = content->GetParent();
         if (otherParent) {
             otherParent->IndexOf(content, otherIndex);
         }
