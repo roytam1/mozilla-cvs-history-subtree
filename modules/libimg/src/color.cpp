@@ -823,7 +823,7 @@ il_setup_color_space_converter(il_container *ic)
 
 
 #ifndef M12N                    /* XXXM12N Fix me. */
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(MACOSX)
     if ((ic->type == IL_GIF) && (ic->image->depth != 1)) {
         ic->converter = NULL;
 

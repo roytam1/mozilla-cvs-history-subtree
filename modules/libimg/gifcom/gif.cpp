@@ -1051,7 +1051,7 @@ il_gif_write(il_container *ic, const PRUint8 *buf, int32 len)
             gs->global_colormap = map;
 
 #ifndef M12N                    /* Fix me. */
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(MACOSX)
             im->hasUniqueColormap = 1;
 #endif
 #endif /* M12N */
@@ -1460,7 +1460,7 @@ il_gif_write(il_container *ic, const PRUint8 *buf, int32 len)
             }
 
 #ifndef M12N                    /* Fix me */
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(MACOSX)
             im->hasUniqueColormap = 1;
 #endif
 #endif /* M12N */

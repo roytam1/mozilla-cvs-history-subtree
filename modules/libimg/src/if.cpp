@@ -1722,7 +1722,7 @@ IL_StreamCreated(il_container *ic,
     ic->state = IC_STREAM;
 
 #ifndef M12N                    /* XXXM12N Fix me. */
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(MACOSX)
     ic->image->hasUniqueColormap = PR_FALSE;
 #endif
 #endif /* M12N */

@@ -223,7 +223,7 @@ info_callback(png_structp png_ptr, png_infop info_ptr)
      * using educated guesses for display-system exponents; do preferences
      * later */
 
-#if defined(XP_MAC)
+#if defined(XP_MAC) || defined(MACOSX)
     LUT_exponent = 1.8 / 2.61;
 #elif defined(XP_UNIX)
 # if defined(__sgi)

@@ -60,7 +60,7 @@ void info_callback(png_structp png_ptr, png_infop info)
 
 
     /* implement scr gamma for mac & unix. (do preferences later.) */
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(MACOSX)
     screen_gamma = 1.7;  /*Mac : 1.7 */
 #else
     screen_gamma = 2.2;  /*good for PC.*/
