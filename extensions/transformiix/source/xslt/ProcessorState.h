@@ -38,6 +38,7 @@
 #include "StringList.h"
 #include "txOutputFormat.h"
 #include "Map.h"
+#include "txIXPathContext.h"
 
 class txXSLKey;
 class txDecimalFormat;
@@ -45,7 +46,7 @@ class txDecimalFormat;
 /**
  * Class used for keeping the current state of the XSL Processor
 **/
-class ProcessorState : public ContextState {
+class ProcessorState : public txIMatchContext {
 
 public:
     /**
@@ -176,7 +177,7 @@ public:
     };
 
     Expr* getExpr(Element* aElem, ExprAttr aAttr);
-    Pattern* getPattern(Element* aElem, PatternAttr aAttr);
+    txPattern* getPattern(Element* aElem, PatternAttr aAttr);
 
     /**
      * Returns a pointer to the result document
@@ -270,7 +271,7 @@ public:
     Node* popCurrentNode();
 
     void processAttrValueTemplate(const String& aAttValue,
-                                  Node* aContext,
+                                  Element* aContext,
                                   String& aResult);
 
     /**
@@ -283,8 +284,9 @@ public:
      * Adds the set of names to the Whitespace stripping handling list.
      * xsl:strip-space calls this with MB_TRUE, xsl:preserve-space 
      * with MB_FALSE
+     * aElement is used to resolve QNames
      */
-    void shouldStripSpace(String& aNames,
+    void shouldStripSpace(String& aNames, Element* aElement,
                           MBool aShouldStrip,
                           ImportFrame* aImportFrame);
 
@@ -310,61 +312,59 @@ public:
     **/
     txDecimalFormat* getDecimalFormat(String& name);
 
-    //-------------------------------------/
-    //- Virtual Methods from ContextState -/
-    //-------------------------------------/
+    /*
+     * Virtual methods from txIMatchContext
+     */
+
+    nsresult getVariable(PRInt32 aNamespace, txAtom* aLName,
+                         ExprResult*& aResult);
+
+    MBool isStripSpaceAllowed(Node* node);
+
+    void receiveError(const String& errorMessage, nsresult aRes);
+
+    /*
+     * More other functions
+     */
+    void receiveError(String& errorMessage)
+    {
+        receiveError(errorMessage, NS_ERROR_FAILURE);
+    }
 
     /**
-     * Returns the value of a given variable binding within the current scope
-     * @param the name to which the desired variable value has been bound
-     * @return the ExprResult which has been bound to the variable with
-     *  the given name
-    **/
-    virtual ExprResult* getVariable(String& name);
-
-    /**
-     * Returns the Stack of context NodeSets
-     * @return the Stack of context NodeSets
-    **/
-    virtual Stack* getNodeSetStack();
-
-    /**
-     * Determines if the given XML node allows Whitespace stripping
-    **/
-    virtual MBool isStripSpaceAllowed(Node* node);
-
-    /**
-     *  Notifies this Error observer of a new error, with default
-     *  level of NORMAL
-    **/
-    virtual void recieveError(String& errorMessage);
-
-    /**
-     *  Notifies this Error observer of a new error using the given error level
-    **/
-    virtual void recieveError(String& errorMessage, ErrorLevel level);
-
-    /**
-     * Returns a call to the function that has the given name.
-     * This method is used for XPath Extension Functions.
+     * Returns a FunctionCall which has the given name.
      * @return the FunctionCall for the function with the given name.
     **/
-    virtual FunctionCall* resolveFunctionCall(const String& name);
+    nsresult resolveFunctionCall(txAtom* aName, PRInt32 aID,
+                                 FunctionCall*& aFunction);
 
     /**
      * Returns the namespace URI for the given namespace prefix. This method
      * should only be called to get a namespace declared within the
      * context (ie. the stylesheet).
     **/
-    void getNameSpaceURIFromPrefix(const String& aPrefix, String& aNamespaceURI);
+    void getNameSpaceURIFromPrefix(const String& aPrefix,
+                                   String& aNamespaceURI);
+
+    /*
+     * XXX Die.
+     */
+    Stack* getNodeSetStack();
 
 private:
 
     enum XMLSpaceMode {STRIP = 0, DEFAULT, PRESERVE};
 
-    struct MatchableTemplate {
+    class MatchableTemplate {
+    public:
+        MatchableTemplate(Node* aTemplate, txPattern* aPattern,
+                          double aPriority)
+            : mTemplate(aTemplate), mMatch(aPattern), mPriority(aPriority)
+        {
+        }
         Node* mTemplate;
-        Pattern* mMatch;
+        txPattern* mMatch;
+        double mPriority;
     };
 
     NodeStack currentNodeStack;
@@ -454,11 +454,15 @@ private:
 **/
 class txNameTestItem {
 public:
-    txNameTestItem(String& aName, MBool stripSpace):
-        mNameTest(aName),mStrips(stripSpace) {}
+    txNameTestItem(String& aPrefix, String& aLocalName, PRUint32 aNSID,
+                   MBool stripSpace)
+        : mNameTest(aPrefix, aLocalName, aNSID, Node::ELEMENT_NODE),
+          mStrips(stripSpace)
+    {
+    }
 
-    MBool matches(Node* aNode, ContextState* aCS) {
-        return mNameTest.matches(aNode, 0, aCS);
+    MBool matches(Node* aNode, txIMatchContext* aContext) {
+        return mNameTest.matches(aNode, aContext);
     }
 
     MBool stripsSpace() {
@@ -466,12 +470,38 @@ public:
     }
 
     double getDefaultPriority() {
-        return mNameTest.getDefaultPriority(0, 0, 0);
+        return mNameTest.getDefaultPriority();
     }
 
 protected:
-    ElementExpr mNameTest;
+    txNameTest mNameTest;
     MBool mStrips;
+};
+
+/*
+ * txPSParseContext
+ * a txIParseContext forwarding all but resolveNamespacePrefix
+ * to a ProcessorState
+ */
+class txPSParseContext : public txIParseContext {
+public:
+    txPSParseContext(ProcessorState* aPS, Element* aStyleNode)
+        : mPS(aPS), mStyle(aStyleNode)
+    {
+    }
+
+    ~txPSParseContext()
+    {
+    }
+
+    nsresult resolveNamespacePrefix(txAtom* aPrefix, PRInt32& aID);
+    nsresult resolveFunctionCall(txAtom* aName, PRInt32 aID,
+                                 FunctionCall*& aFunction);
+    void receiveError(const String& aMsg, nsresult aRes);
+
+protected:
+    ProcessorState* mPS;
+    Element* mStyle;
 };
 
 #endif

@@ -44,6 +44,7 @@
 #include "Names.h"
 #include "XMLParser.h"
 #include "txAtoms.h"
+#include "txNodeSetContext.h"
 
 /**
  * Creates a new ProcessorState
@@ -110,7 +111,7 @@ void ProcessorState::addAttributeSet(Element* aAttributeSet,
     const String& name = aAttributeSet->getAttribute(NAME_ATTR);
     if (name.isEmpty()) {
         String err("missing required name attribute for xsl:attribute-set");
-        recieveError(err);
+        receiveError(err);
         return;
     }
     // Get attribute set, if already exists, then merge
@@ -155,50 +156,87 @@ void ProcessorState::addTemplate(Element* aXslTemplate,
 {
     NS_ASSERTION(aXslTemplate, "missing template");
     
-    const String& name = aXslTemplate->getAttribute(NAME_ATTR);
-    if (!name.isEmpty()) {
+    String name;
+    if (aXslTemplate->getAttr(txXSLTAtoms::name, kNameSpaceID_None, name)) {
         // check for duplicates
         Element* tmp = (Element*)aImportFrame->mNamedTemplates.get(name);
         if (tmp) {
             String err("Duplicate template name: ");
             err.append(name);
-            recieveError(err);
+            receiveError(err);
             return;
         }
         aImportFrame->mNamedTemplates.put(name, aXslTemplate);
     }
 
-    const String& match = aXslTemplate->getAttribute(MATCH_ATTR);
-    if (!match.isEmpty()) {
-        // get the txList for the right mode
-        const String& mode = aXslTemplate->getAttribute(MODE_ATTR);
-        txList* templates =
-            (txList*)aImportFrame->mMatchableTemplates.get(mode);
+    String match;
+    if (!aXslTemplate->getAttr(txXSLTAtoms::match, kNameSpaceID_None, match)) {
+        // This is no error, see section 6 Named Templates
+        return;
+    }
+    // get the txList for the right mode
+    String mode;
+    aXslTemplate->getAttr(txXSLTAtoms::mode, kNameSpaceID_None, mode);
+    txList* templates =
+        (txList*)aImportFrame->mMatchableTemplates.get(mode);
 
+    if (!templates) {
+        templates = new txList;
         if (!templates) {
-            templates = new txList;
-            if (!templates) {
-                NS_ASSERTION(0, "out of memory");
-                return;
-            }
-            aImportFrame->mMatchableTemplates.put(mode, templates);
-        }
-
-        // Add the template to the list of templates
-        MatchableTemplate* templ = new MatchableTemplate;
-        if (!templ) {
             NS_ASSERTION(0, "out of memory");
             return;
         }
-        templ->mTemplate = aXslTemplate;
-        Element* oldContext = mXPathParseContext;
-        mXPathParseContext = aXslTemplate;
-        templ->mMatch = exprParser.createPattern(match);
-        mXPathParseContext = oldContext;
-        if (templ->mMatch)
-            templates->add(templ);
-        else
-            delete templ;
+        aImportFrame->mMatchableTemplates.put(mode, templates);
+    }
+
+    // Check for explicit default priority
+    MBool hasPriority;
+    double priority;
+    String prio;
+    if ((hasPriority =
+         aXslTemplate->getAttr(txXSLTAtoms::mode, kNameSpaceID_None, prio))) {
+        priority = Double::toDouble(prio);
+    }
+
+    // Get the pattern
+    Element* oldContext = mXPathParseContext;
+    mXPathParseContext = aXslTemplate;
+    txPSParseContext context(this, aXslTemplate);
+    txPattern* pattern = exprParser.createPattern(match, &context);
+    mXPathParseContext = oldContext;
+    if (!pattern) {
+        return;
+    }
+
+    // Add the simple patterns to the list of matchable templates, according
+    // to default priority
+    txList simpleMatches;
+    pattern->getSimplePatterns(simpleMatches);
+    txListIterator simples(&simpleMatches);
+    while (simples.hasNext()) {
+        txPattern* simple = (txPattern*)simples.next();
+        if (!hasPriority) {
+            priority = simple->getDefaultPriority();
+        }
+        MatchableTemplate* nt = new MatchableTemplate(aXslTemplate,
+                                                      simple,
+                                                      priority);
+        if (!nt) {
+            NS_ASSERTION(0, "out of mem");
+            return;
+        }
+        txListIterator templ(templates);
+        MBool isLast = MB_TRUE;
+        while (templ.hasNext() && isLast) {
+            MatchableTemplate* mt = (MatchableTemplate*)templ.next();
+            if (priority < mt->mPriority) {
+                continue;
+            }
+            templ.addBefore(nt);
+            isLast = MB_FALSE;
+        }
+        if (isLast)
+            templates->add(nt);
     }
 }
 
@@ -226,19 +264,15 @@ void ProcessorState::addLREStylesheet(Document* aStylesheet,
     }
 
     // Add the template to the list of templates
-    MatchableTemplate* templ = new MatchableTemplate;
+    txPattern* root = new RootExpr(MB_TRUE);
+    MatchableTemplate* templ = new MatchableTemplate(aStylesheet,
+                                                     root,
+                                                     Double::NaN);
     if (!templ) {
         // XXX ErrorReport: out of memory
         return;
     }
-
-    templ->mTemplate = aStylesheet;
-    String match("/");
-    templ->mMatch = exprParser.createPattern(match);
-    if (templ->mMatch)
-        templates->add(templ);
-    else
-        delete templ;
+    templates->add(templ);
 }
 
 /*
@@ -274,7 +308,7 @@ Node* ProcessorState::retrieveDocument(const String& uri, const String& baseUri)
             err.append(docUrl);
             err.append("': ");
             err.append(errMsg);
-            recieveError(err, ErrorObserver::WARNING);
+            receiveError(err, NS_ERROR_XSLT_INVALID_URL);
             return NULL;
         }
         // add to list of documents
@@ -369,30 +403,9 @@ Node* ProcessorState::findTemplate(Node* aNode,
             // Find template with highest priority
             MatchableTemplate* templ;
             while ((templ = (MatchableTemplate*)templateIter.next())) {
-                String priorityAttr;
-
-                if (templ->mTemplate->getNodeType() == Node::ELEMENT_NODE) {
-                    Element* elem = (Element*)templ->mTemplate;
-                    elem->getAttr(txXSLTAtoms::priority, kNameSpaceID_None,
-                                  priorityAttr);
-                }
-
-                double tmpPriority;
-                if (!priorityAttr.isEmpty()) {
-                    tmpPriority = Double::toDouble(priorityAttr);
-                }
-                else {
-                    tmpPriority = templ->mMatch->getDefaultPriority(aNode,
-                                                                    0,
-                                                                    this);
-                }
-
-                if (tmpPriority >= currentPriority &&
-                    templ->mMatch->matches(aNode, 0, this)) {
-
+                if (templ->mMatch->matches(aNode, this)) {
                     matchTemplate = templ->mTemplate;
                     *aImportFrame = frame;
-                    currentPriority = tmpPriority;
                 }
             }
         }
@@ -454,76 +467,81 @@ Expr* ProcessorState::getExpr(Element* aElem, ExprAttr aAttr)
     mXPathParseContext = aElem;
 
     Expr* expr = (Expr*)mExprHashes[aAttr].get(aElem);
+    if (expr) {
+        return expr;
+    }
+    String attr;
+    MBool hasAttr;
+    switch (aAttr) {
+        case SelectAttr:
+            hasAttr = aElem->getAttr(txXSLTAtoms::select, kNameSpaceID_None,
+                                     attr);
+            break;
+        case TestAttr:
+            hasAttr = aElem->getAttr(txXSLTAtoms::test, kNameSpaceID_None,
+                                     attr);
+            break;
+        case ValueAttr:
+            hasAttr = aElem->getAttr(txXSLTAtoms::value, kNameSpaceID_None,
+                                     attr);
+            break;
+    }
+
+    if (!hasAttr)
+        return 0;
+
+    txPSParseContext pContext(this, aElem);
+    expr = exprParser.createExpr(attr, &pContext);
+
     if (!expr) {
-        String attr;
-        switch (aAttr) {
-            case SelectAttr:
-                aElem->getAttr(txXSLTAtoms::select, kNameSpaceID_None,
-                               attr);
-                break;
-            case TestAttr:
-                aElem->getAttr(txXSLTAtoms::test, kNameSpaceID_None,
-                               attr);
-                break;
-            case ValueAttr:
-                aElem->getAttr(txXSLTAtoms::value, kNameSpaceID_None,
-                               attr);
-                break;
-        }
-
-        // This is how we should do it once we namespaceresolve during parsing
-        //Element* oldContext = mXPathParseContext;
-        //mXPathParseContext = aElem;
-        expr = exprParser.createExpr(attr);
-        //mXPathParseContext = oldContext;
-
-        if (!expr) {
-            String err = "Error in parsing XPath expression: ";
-            err.append(attr);
-            recieveError(err);
-        }
-        else {
-            mExprHashes[aAttr].put(aElem, expr);
-        }
+        String err = "Error in parsing XPath expression: ";
+        err.append(attr);
+        receiveError(err, NS_ERROR_XPATH_PARSE_FAILED);
+    }
+    else {
+        mExprHashes[aAttr].put(aElem, expr);
     }
     return expr;
 }
 
-PatternExpr* ProcessorState::getPattern(Element* aElem, PatternAttr aAttr)
+txPattern* ProcessorState::getPattern(Element* aElem, PatternAttr aAttr)
 {
     NS_ASSERTION(aElem, "missing element while getting pattern");
 
     // This is how we'll have to do it for now
     mXPathParseContext = aElem;
 
-    Pattern* pattern = (Pattern*)mExprHashes[aAttr].get(aElem);
+    txPattern* pattern = (txPattern*)mExprHashes[aAttr].get(aElem);
+    if (pattern) {
+        return pattern;
+    }
+    String attr;
+    MBool hasAttr;
+    switch (aAttr) {
+        case CountAttr:
+            hasAttr = aElem->getAttr(txXSLTAtoms::count, kNameSpaceID_None,
+                                     attr);
+            break;
+        case FromAttr:
+            hasAttr = aElem->getAttr(txXSLTAtoms::from, kNameSpaceID_None,
+                                     attr);
+            break;
+    }
+
+    if (!hasAttr)
+        return 0;
+
+    
+    txPSParseContext pContext(this, aElem);
+    pattern = exprParser.createPattern(attr, &pContext);
+
     if (!pattern) {
-        String attr;
-        switch (aAttr) {
-            case CountAttr:
-                aElem->getAttr(txXSLTAtoms::count, kNameSpaceID_None,
-                               attr);
-                break;
-            case FromAttr:
-                aElem->getAttr(txXSLTAtoms::from, kNameSpaceID_None,
-                               attr);
-                break;
-        }
-
-        // This is how we should do it once we namespaceresolve during parsing
-        //Element* oldContext = mXPathParseContext;
-        //mXPathParseContext = aElem;
-        pattern = exprParser.createPattern(attr);
-        //mXPathParseContext = oldContext;
-
-        if (!pattern) {
-            String err = "Error in parsing pattern: ";
-            err.append(attr);
-            recieveError(err);
-        }
-        else {
-            mPatternHashes[aAttr].put(aElem, pattern);
-        }
+        String err = "Error in parsing pattern: ";
+        err.append(attr);
+        receiveError(err, NS_ERROR_XPATH_PARSE_FAILED);
+    }
+    else {
+        mPatternHashes[aAttr].put(aElem, pattern);
     }
     return pattern;
 }
@@ -588,18 +606,26 @@ Node* ProcessorState::popCurrentNode() {
 } //-- popCurrentNode
 
 void ProcessorState::processAttrValueTemplate(const String& aAttValue,
-                                              Node* aContext,
+                                              Element* aContext,
                                               String& aResult)
 {
     aResult.clear();
+    txPSParseContext pContext(this, aContext);
+    Element* oldXPath = mXPathParseContext;
+    mXPathParseContext = aContext;
     AttributeValueTemplate* avt =
-                    exprParser.createAttributeValueTemplate(aAttValue);
+        exprParser.createAttributeValueTemplate(aAttValue, &pContext);
+    mXPathParseContext = oldXPath;
+
     if (!avt) {
-        // XXX ErrorReport: out of memory
+        // shortcut, this is just a regular string
+        aResult.append(aAttValue);
         return;
     }
 
-    ExprResult* exprResult = avt->evaluate(aContext, this);
+    NodeSet contextset(aContext);
+    txNodeSetContext eContext(&contextset, this);
+    ExprResult* exprResult = avt->evaluate(&eContext);
     delete avt;
     if (!exprResult) {
         // XXX ErrorReport: out of memory
@@ -623,7 +649,7 @@ void ProcessorState::pushCurrentNode(Node* node) {
  * xsl:strip-space calls this with MB_TRUE, xsl:preserve-space 
  * with MB_FALSE
  */
-void ProcessorState::shouldStripSpace(String& aNames,
+void ProcessorState::shouldStripSpace(String& aNames, Element* aElement,
                                       MBool aShouldStrip,
                                       ImportFrame* aImportFrame)
 {
@@ -632,7 +658,17 @@ void ProcessorState::shouldStripSpace(String& aNames,
     String name;
     while (tokenizer.hasMoreTokens()) {
         tokenizer.nextToken(name);
-        txNameTestItem* nti = new txNameTestItem(name, aShouldStrip);
+        String prefix, lname;
+        PRInt32 aNSID = kNameSpaceID_None;
+        XMLUtils::getPrefix(name, prefix);
+        if (!prefix.isEmpty()) {
+            txAtom* prefixAtom = TX_GET_ATOM(prefix);
+            aNSID = aElement->lookupNamespaceID(prefixAtom);
+            TX_IF_RELEASE_ATOM(nameAtom);
+        }
+        XMLUtils::getLocalPart(name, lname);
+        txNameTestItem* nti = new txNameTestItem(prefix, lname, aNSID,
+                                                 aShouldStrip);
         if (!nti) {
             // XXX error report, parsing error or out of mem
             break;
@@ -661,16 +697,24 @@ MBool ProcessorState::addKey(Element* aKeyElem)
         return MB_FALSE;
     txXSLKey* xslKey = (txXSLKey*)xslKeys.get(keyName);
     if (!xslKey) {
-        xslKey = new txXSLKey(this);
+        xslKey = new txXSLKey();
         if (!xslKey)
             return MB_FALSE;
         xslKeys.put(keyName, xslKey);
     }
     Element* oldContext = mXPathParseContext;
     mXPathParseContext = aKeyElem;
-    Pattern* match;
-    match = exprParser.createPattern(aKeyElem->getAttribute(MATCH_ATTR));
-    Expr* use = exprParser.createExpr(aKeyElem->getAttribute(USE_ATTR));
+    txPattern* match = 0;
+    txPSParseContext pContext(this, aKeyElem);
+    String attrVal;
+    if (aKeyElem->getAttr(txXSLTAtoms::match, kNameSpaceID_None, attrVal)) {
+        match = exprParser.createPattern(attrVal, &pContext);
+    }
+    Expr* use = 0;
+    attrVal.clear();
+    if (aKeyElem->getAttr(txXSLTAtoms::use, kNameSpaceID_None, attrVal)) {
+        use = exprParser.createExpr(attrVal, &pContext);
+    }
     mXPathParseContext = oldContext;
     if (!match || !use || !xslKey->addKey(match, use)) {
         delete match;
@@ -833,8 +877,12 @@ Stack* ProcessorState::getNodeSetStack() {
  * @return the ExprResult which has been bound to the variable with the given
  * name
 **/
-ExprResult* ProcessorState::getVariable(String& name) {
-
+nsresult ProcessorState::getVariable(PRInt32 aNamespace, txAtom* aLName,
+                                     ExprResult*& aResult)
+{
+    String name;
+    // XXX TODO, bug 117658
+    TX_GET_ATOM_STRING(aLName, name);
     StackIterator* iter = variableSets.iterator();
     ExprResult* exprResult = 0;
     while (iter->hasNext()) {
@@ -845,7 +893,8 @@ ExprResult* ProcessorState::getVariable(String& name) {
         }
     }
     delete iter;
-    return exprResult;
+    aResult = exprResult;
+    return aResult ? NS_OK : NS_ERROR_INVALID_ARG;
 } //-- getVariable
 
 /**
@@ -899,68 +948,71 @@ MBool ProcessorState::isStripSpaceAllowed(Node* node)
 }
 
 /**
- *  Notifies this Error observer of a new error, with default
- *  level of NORMAL
-**/
-void ProcessorState::recieveError(String& errorMessage) {
-    recieveError(errorMessage, ErrorObserver::NORMAL);
-} //-- recieveError
-
-/**
  *  Notifies this Error observer of a new error using the given error level
 **/
-void ProcessorState::recieveError(String& errorMessage, ErrorLevel level) {
-    ListIterator* iter = errorObservers.iterator();
-    while (iter->hasNext()) {
-        ErrorObserver* observer = (ErrorObserver*)iter->next();
-        observer->recieveError(errorMessage, level);
+void ProcessorState::receiveError(const String& errorMessage, nsresult aRes)
+{
+    ListIterator iter(&errorObservers);
+    while (iter.hasNext()) {
+        ErrorObserver* observer = (ErrorObserver*)iter.next();
+        observer->receiveError(errorMessage, aRes);
     }
-    delete iter;
-} //-- recieveError
+}
 
 /**
  * Returns a call to the function that has the given name.
  * This method is used for XPath Extension Functions.
  * @return the FunctionCall for the function with the given name.
 **/
-FunctionCall* ProcessorState::resolveFunctionCall(const String& name) {
+#define CHECK_FN(_name) txXSLTAtoms::##_name == aName
+
+nsresult ProcessorState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
+                                                  FunctionCall*& aFunction)
+{
    String err;
 
-   if (DOCUMENT_FN.isEqual(name)) {
-       return new DocumentFunctionCall(this, mXPathParseContext);
+   if (kNameSpaceID_None != aID) {
+       return NS_OK;
    }
-   else if (KEY_FN.isEqual(name)) {
-       return new txKeyFunctionCall(this);
+   if (CHECK_FN(document)) {
+       aFunction = new DocumentFunctionCall(this, mXPathParseContext);
+       return NS_OK;
    }
-   else if (FORMAT_NUMBER_FN.isEqual(name)) {
-       return new txFormatNumberFunctionCall(this);
+   if (CHECK_FN(key)) {
+       aFunction = new txKeyFunctionCall(this);
+       return NS_OK;
    }
-   else if (CURRENT_FN.isEqual(name)) {
-       return new CurrentFunctionCall(this);
+   if (CHECK_FN(formatNumber)) {
+       aFunction = new txFormatNumberFunctionCall(this);
+       return NS_OK;
    }
-   else if (UNPARSED_ENTITY_URI_FN.isEqual(name)) {
-       err = "function not yet implemented: ";
-       err.append(name);
+   if (CHECK_FN(current)) {
+       aFunction = new CurrentFunctionCall();
+       return NS_OK;
    }
-   else if (GENERATE_ID_FN.isEqual(name)) {
-       return new GenerateIdFunctionCall();
+   if (CHECK_FN(unparsedEntityUri)) {
+       err = "unparsed-entity-uri function not yet implemented";
+       aFunction = new ErrorFunctionCall(err);
+       return NS_ERROR_NOT_IMPLEMENTED;
    }
-   else if (SYSTEM_PROPERTY_FN.isEqual(name)) {
-       return new SystemPropertyFunctionCall();
+   if (CHECK_FN(generateId)) {
+       aFunction = new GenerateIdFunctionCall();
+       return NS_OK;
    }
-   else if (ELEMENT_AVAILABLE_FN.isEqual(name)) {
-       return new ElementAvailableFunctionCall();
+   if (CHECK_FN(systemProperty)) {
+       aFunction = new SystemPropertyFunctionCall(mXPathParseContext);
+       return NS_OK;
    }
-   else if (FUNCTION_AVAILABLE_FN.isEqual(name)) {
-       return new FunctionAvailableFunctionCall();
+   if (CHECK_FN(elementAvailable)) {
+       aFunction = new ElementAvailableFunctionCall(mXPathParseContext);
+       return NS_OK;
    }
-   else {
-       err = "invalid function call: ";
-       err.append(name);
+   if (CHECK_FN(functionAvailable)) {
+       aFunction = new FunctionAvailableFunctionCall();
+       return NS_OK;
    }
 
-   return new ErrorFunctionCall(err);
-
+   return NS_OK;
 } //-- resolveFunctionCall
 
   //-------------------/
@@ -1073,4 +1125,27 @@ ProcessorState::ImportFrame::~ImportFrame()
         }
     }
     delete templKeys;
+}
+
+/*
+ * txPSParseContext
+ * txIParseContext used by ProcessorState internally
+ */
+
+nsresult txPSParseContext::resolveNamespacePrefix(txAtom* aPrefix,
+                                                  PRInt32& aID)
+{
+    aID = mStyle->lookupNamespaceID(aPrefix);
+    return (kNameSpaceID_Unknown != aID) ? NS_OK : NS_ERROR_FAILURE;
+}
+
+nsresult txPSParseContext::resolveFunctionCall(txAtom* aName, PRInt32 aID,
+                                               FunctionCall*& aFunction)
+{
+    return mPS->resolveFunctionCall(aName, aID, aFunction);
+}
+
+void txPSParseContext::receiveError(const String& aMsg, nsresult aRes)
+{
+    mPS->receiveError(aMsg, aRes);
 }
