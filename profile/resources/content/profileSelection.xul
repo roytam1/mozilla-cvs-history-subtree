@@ -98,7 +98,7 @@
       <description class="label">&screenname.label;</description>
       <hbox>
         <menulist flex="1" id="profiles">
-          <menupopup id="profilesPopup"/>
+          <menupopup id="profilesPopup" />
         </menulist>
 
         <button id="newbutton" label="&newButton.label;" oncommand="CreateProfileWizard();"/>

@@ -156,6 +156,19 @@ function loadElements()
 // purpose  : sets the current profile to the selected profile (user choice: "Start Mozilla")
 function onStart()
 {
+  var profileList = document.getElementById( "profiles" );
+  var item = profileList.selectedItem
+  if (!item)
+  {
+    try {
+      profileList.getElementsByTagName("menuitem")[0];
+    }
+    catch (ex) {
+      CreateProfileWizard();
+      return false;
+    } 
+  }
+
   var profileList = document.getElementById("profiles");
   var selected = profileList.selectedItem;
   var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].

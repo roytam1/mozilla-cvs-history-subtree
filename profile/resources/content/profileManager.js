@@ -262,32 +262,6 @@ function ChangeCaption( aCaption )
 // do button enabling based on listbox selection
 function DoEnabling()
 {
-/*
-  var renbutton = document.getElementById( "renbutton" );
-  var delbutton = document.getElementById( "delbutton" );
-*/
-  var start     = document.getElementById( "start" );
-  
-  var profileList = document.getElementById( "profiles" );
-  var item = profileList.selectedItem
-  if (!item)
-  {
-/*
-    renbutton.setAttribute( "disabled", "true" );
-    delbutton.setAttribute( "disabled", "true" );
-*/
-    start.setAttribute( "disabled", "true" );
-  }
-  else {
-/*
-    if( renbutton.getAttribute( "disabled" ) == "true" )
-      renbutton.removeAttribute( "disabled", "true" );
-    if( delbutton.getAttribute( "disabled" ) == "true" )
-      delbutton.removeAttribute( "disabled", "true" );
-*/
-    if( start.getAttribute( "disabled" ) == "true" )
-      start.removeAttribute( "disabled", "true" );
-  }
 }
 
 // handle key event on listboxes
