@@ -301,16 +301,20 @@ function viewCookies()
                     "chrome,resizable=yes", "cookieManager");
 }
 
-function cookieExceptions()
+function viewCookieExceptions()
 {
-  window.openDialog("chrome://browser/content/cookieviewer/CookieExceptions.xul","_blank",
-                    "chrome,resizable=yes", "cookieExceptions");
+  var params = { blockVisible   : true,
+                 allowVisible   : true,
+                 prefilledHost  : "",
+                 permissionType : "cookie" };
+  window.openDialog("chrome://browser/content/cookieviewer/CookieExceptions.xul?permission=cookie",
+                    "_blank", "chrome,modal,resizable=yes", params);
 }
 
 function viewSignons() 
 {
-    window.openDialog("chrome://passwordmgr/content/passwordManager.xul","_blank",
-                      "chrome,resizable=yes", "8");
+  window.openDialog("chrome://passwordmgr/content/passwordManager.xul","_blank",
+                    "chrome,resizable=yes", "8");
 }
 
 function updateCookieBehavior()
@@ -333,30 +337,6 @@ function updateCookieBroadcaster()
   else {
     broadcaster.removeAttribute("disabled");
     radiogroup.removeAttribute("disabled");
-  }
-}
-
-function onPrefsOK()
-{
-  var permissionmanager = Components.classes["@mozilla.org/permissionmanager;1"].getService();
-  permissionmanager = permissionmanager.QueryInterface(Components.interfaces.nsIPermissionManager);
-
-  var dataObject = parent.hPrefWindow.wsm.dataManager.pageData["chrome://browser/content/cookieviewer/CookieExceptions.xul"].userData;
-  if ('deletedPermissions' in dataObject) {
-    for (var p = 0; p < dataObject.deletedPermissions.length; ++p) {
-      permissionmanager.remove(dataObject.deletedPermissions[p].host, dataObject.deletedPermissions[p].type);
-    }
-  }
-  
-  if ('permissions' in dataObject) {
-    var uri = Components.classes["@mozilla.org/network/standard-url;1"]
-                        .createInstance(Components.interfaces.nsIURI);    
-
-    for (p = 0; p < dataObject.permissions.length; ++p) {
-      uri.spec = dataObject.permissions[p].host;
-      if (permissionmanager.testPermission(uri, "cookie") != dataObject.permissions[p].perm)
-        permissionmanager.add(uri, "cookie", dataObject.permissions[p].perm);
-    }
   }
 }
 

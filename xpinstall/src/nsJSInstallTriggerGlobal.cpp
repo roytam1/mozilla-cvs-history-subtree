@@ -44,6 +44,8 @@
 #include "nsString.h"
 #include "nsIDOMInstallVersion.h"
 #include "nsIDOMInstallTriggerGlobal.h"
+#include "nsIDocShell.h"
+#include "nsIObserverService.h"
 #include "nsInstallTrigger.h"
 #include "nsXPITriggerInfo.h"
 
@@ -175,8 +177,15 @@ InstallTriggerGlobalInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
 
   PRBool enabled = PR_FALSE;
   nativeThis->UpdateEnabled(globalObject, &enabled);
-  if (!enabled || !globalObject)
+  if (!enabled || !globalObject) {
+      nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
+      if (os) {
+          os->NotifyObservers(globalObject->GetDocShell(),
+                              "xpinstall-install-blocked", 
+                              NS_LITERAL_STRING("install").get());
+      }
       return JS_TRUE;
+  }
 
 
   // get window.location to construct relative URLs
@@ -331,8 +340,15 @@ InstallTriggerGlobalInstallChrome(JSContext *cx, JSObject *obj, uintN argc, jsva
 
   PRBool enabled = PR_FALSE;
   nativeThis->UpdateEnabled(globalObject, &enabled);
-  if (!enabled || !globalObject)
+  if (!enabled || !globalObject) {
+      nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
+      if (os) {
+          os->NotifyObservers(globalObject->GetDocShell(), 
+                              "xpinstall-install-blocked", 
+                              NS_LITERAL_STRING("install-chrome").get());
+      }
       return JS_TRUE;
+  }
 
 
   // get window.location to construct relative URLs

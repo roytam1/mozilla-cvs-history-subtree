@@ -25,4 +25,3 @@ browser.jar:
 *   content/browser/pref/pref-themes.js                    (content/pref-themes.js)
 *   content/browser/pref/plugins.xul                       (content/plugins.xul)
 *   content/browser/pref/plugins.js                        (content/plugins.js)
-*   content/browser/pref/permissions.js                    (content/permissions.js)

@@ -99,7 +99,11 @@
           </xul:tabs>
         </xul:hbox>
         <xul:tabpanels flex="1" class="plain">
-          <xul:browser type="content-primary" disablehistory="true" xbl:inherits="tooltip=contenttooltip,contextmenu=contentcontextmenu,autocompletepopup"/>
+          <xul:vbox flex="1">
+            <xul:browsermessage hidden="true" type="top"/>
+            <xul:browser flex="1" type="content-primary" message="true" disablehistory="true" xbl:inherits="tooltip=contenttooltip,contextmenu=contentcontextmenu,autocompletepopup"/>
+            <xul:browsermessage hidden="true" type="bottom"/>
+          </xul:vbox>
         </xul:tabpanels>
       </xul:tabbox>
       <children/>
@@ -152,6 +156,66 @@
       <field name="mContextTab">
         null
       </field>
+      
+      <method name="getBrowserAtIndex">
+        <parameter name="aIndex"/>
+        <body>
+          <![CDATA[
+            return this.mPanelContainer.childNodes[aIndex].firstChild.nextSibling;
+          ]]>
+        </body>
+      </method>
+
+      <method name="getMessageAtIndex">
+        <parameter name="aIndex"/>
+        <body>
+          <![CDATA[
+            return this.mPanelContainer.childNodes[aIndex].firstChild;
+          ]]>
+        </body>
+      </method>
+      
+      <method name="getMessageForBrowser">
+        <parameter name="aBrowser"/>
+        <body>
+          <![CDATA[
+            return aBrowser.previousSibling;
+          ]]>
+        </body>
+      </method>
+      
+      <method name="showMessage">
+        <parameter name="aIndex"/>
+        <parameter name="aIconURL"/>
+        <parameter name="aMessage"/>
+        <parameter name="aButtonLabel"/>
+        <parameter name="aURI"/>
+        <parameter name="aSource"/>
+        <body>
+          <![CDATA[
+            var message = this.getMessageAtIndex(aIndex);
+            message.image = aIconURL;
+            message.text = aMessage;
+            message.buttonText = aButtonLabel;
+            message.hidden = false;
+            message.source = aSource;
+            message.uri = aURI;
+            
+            var browser = this.getBrowserAtIndex(aIndex);
+            browser.isShowingMessage = true;
+          ]]>
+        </body>
+      </method>
+      
+      <method name="hideMessageForBrowser">
+        <parameter name="aBrowser"/>
+        <body>
+          <![CDATA[
+            var message = this.getMessageForBrowser(aBrowser);
+            message.hidden = true;
+          ]]>
+        </body>
+      </method>
 
       <!-- A web progress listener object definition for a given tab. -->
       <method name="mTabProgressListener">
@@ -247,6 +311,8 @@
                   var p = this.mTabBrowser.mProgressListeners[i];
                   if (p)
                     p.onLocationChange(aWebProgress, aRequest, aLocation);
+                  if (this.mBrowser.isShowingMessage)
+                    this.mTabBrowser.hideMessageForBrowser(this.mBrowser);
                 }
               }
             },
@@ -288,7 +354,7 @@
         ]]>
         </body>
       </method>
-
+      
       <method name="buildFavIconString">
         <parameter name="aURI"/>
         <body>
@@ -418,7 +484,7 @@
       <method name="updateCurrentBrowser">
         <body>
           <![CDATA[
-            var newBrowser = this.mPanelContainer.childNodes[this.mPanelContainer.selectedIndex];
+            var newBrowser = this.getBrowserAtIndex(this.mPanelContainer.selectedIndex);
             if (this.mCurrentBrowser == newBrowser)
               return;
 
@@ -635,7 +701,7 @@
                 break;
             }
 
-            var tabBrowser = this.parentNode.parentNode.parentNode;
+            var tabBrowser = this.parentNode.parentNode.parentNode.parentNode;
             var tab = tabBrowser.mTabContainer.childNodes[i];
 
             tabBrowser.setTabTitle(tab);
@@ -739,6 +805,19 @@
           ]]>
         </body>
       </method>
+      
+      <method name="_createMessage">
+        <parameter name="aType"/>
+        <body>
+          <![CDATA[
+            var message = document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
+                                                   "browsermessage"); 
+            message.hidden = true;
+            message.type = aType;
+            return message;
+          ]]>
+        </body>
+      </method>
 
       <method name="addTab">
         <parameter name="aURI"/>
@@ -772,6 +851,7 @@
             this.mTabContainer.appendChild(t);
 
             b.setAttribute("type", "content");
+            b.setAttribute("message", "true");
             b.setAttribute("contextmenu", this.getAttribute("contentcontextmenu"));
             b.setAttribute("tooltip", this.getAttribute("contenttooltip"));
             b.setAttribute("autocompletepopup", this.getAttribute("autocompletepopup"));
@@ -781,8 +861,16 @@
             // just test with |hasAttribute| in <browser>'s load handler. 
             if (this.getAttribute("autocompleteenabled") == "true")
               b.setAttribute("autocompleteenabled", "true");
-            
-            this.mPanelContainer.appendChild(b);
+
+            // Add the Message and the Browser to the box            
+            var vbox = document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
+                                                "vbox"); 
+            vbox.setAttribute("flex", "1");
+            vbox.appendChild(this._createMessage("top"));
+            vbox.appendChild(b);
+            vbox.appendChild(this._createMessage("bottom"));
+            b.setAttribute("flex", "1");
+            this.mPanelContainer.appendChild(vbox);
 
             b.addEventListener("DOMTitleChanged", this.onTitleChanged, false);
 
@@ -877,7 +965,7 @@
 
             // Remove the tab's filter and progress listener.
             const filter = this.mTabFilters[index];
-            var oldBrowser = this.mPanelContainer.childNodes[index];
+            var oldBrowser = this.getBrowserAtIndex(index);
             oldBrowser.webProgress.removeProgressListener(filter);
             filter.removeProgressListener(this.mTabListeners[index]);
             this.mTabFilters.splice(index, 1);
@@ -911,7 +999,7 @@
             oldBrowser.destroy();
             
             this.mTabContainer.removeChild(oldTab);
-            this.mPanelContainer.removeChild(oldBrowser);
+            this.mPanelContainer.removeChild(this.mPanelContainer.childNodes[index]);
 
             this.selectedTab = this.mTabContainer.childNodes[newIndex];
             this.mPanelContainer.selectedIndex = newIndex;
@@ -928,7 +1016,7 @@
             var l = this.mPanelContainer.childNodes.length;
             for (var i = 0; i < l; i++) {
               try {
-                this.mPanelContainer.childNodes[i].reload();
+                this.getBrowserAtIndex(i).reload();
               } catch (e) {
                 // ignore failure to reload so others will be reloaded
               }
@@ -1021,7 +1109,7 @@
 
           for (var i = 0; i < this.mTabContainer.childNodes.length; i++) {
             if (this.mTabContainer.childNodes[i] == aTab) {
-              return this.mPanelContainer.childNodes[i];
+              return this.getBrowserAtIndex(i);
             }
           }
 
@@ -1055,7 +1143,7 @@
 
 
       <property name="browsers"
-                onget="return this.mPanelContainer.childNodes;"
+                onget="return this.mPanelContainer.getElementsByTagName('browser');"
                 readonly="true"/>
 
       <!-- Drag and drop observer API -->
@@ -1228,9 +1316,8 @@
       
       <method name="attachFormFill">
         <body><![CDATA[
-          var browsers = this.mPanelContainer.childNodes;
-          for (var i = 0; i < browsers.length; ++i) {
-            var cb = browsers[i];
+          for (var i = 0; i < this.mPanelContainer.childNodes.length; ++i) {
+            var cb = this.getBrowserAtIndex(i);
             // We can do stuff like this here because we aren't called on every
             // page load, like <browser>'s |attachFormFill| method is. 
             cb.setAttribute("autocompleteenabled", "true");
@@ -1241,9 +1328,8 @@
 
       <method name="detachFormFill">
         <body><![CDATA[
-          var browsers = this.mPanelContainer.childNodes;
-          for (var i = 0; i < browsers.length; ++i) {
-            var cb = browsers[i];
+          for (var i = 0; i < this.mPanelContainer.childNodes.length; ++i) {
+            var cb = this.getBrowserAtIndex(i);
             cb.removeAttribute("autocompleteenabled");
             cb.detachFormFill();
           }
@@ -1348,7 +1434,7 @@
 
       <constructor>
         <![CDATA[
-          this.mCurrentBrowser = this.mPanelContainer.firstChild;
+          this.mCurrentBrowser = this.getBrowserAtIndex(0);
           this.mCurrentTab = this.mTabContainer.firstChild;
         ]]>
       </constructor>
@@ -1356,11 +1442,11 @@
       <destructor>
         <![CDATA[
           for (var i = 0; i < this.mTabListeners.length; ++i) {
-            this.mPanelContainer.childNodes[i].webProgress.removeProgressListener(this.mTabFilters[i]);
+            this.getBrowserAtIndex(i).webProgress.removeProgressListener(this.mTabFilters[i]);
             this.mTabFilters[i].removeProgressListener(this.mTabListeners[i]);
             this.mTabFilters[i] = null;
             this.mTabListeners[i] = null;
-            this.mPanelContainer.childNodes[i].removeEventListener("DOMTitleChanged", this.onTitleChanged, false);
+            this.getBrowserAtIndex(i).removeEventListener("DOMTitleChanged", this.onTitleChanged, false);
           }
           this.mPanelContainer.removeEventListener("DOMLinkAdded", this.onLinkAdded, false);
         ]]>
@@ -1377,12 +1463,12 @@
 
       <handler event="DOMWindowClose">
         <![CDATA[
-          const browsers = this.browsers;
+          const browsers = this.mPanelContainer.childNodes;
           if (browsers.length == 1)
             return;
           var i = 0;
           for (; i < browsers.length; ++i) {
-            if (browsers[i].contentWindow == event.target)
+            if (this.getBrowserAtIndex(i).contentWindow == event.target)
               break;
           }
           this.removeTab(this.mTabContainer.childNodes[i]);

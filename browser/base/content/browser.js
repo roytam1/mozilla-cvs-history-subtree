@@ -493,6 +493,75 @@ const gSessionHistoryObserver = {
   }
 };
 
+const gXPInstallObserver = {
+  _findChildShell: function (aDocShell, aSoughtShell)
+  {
+    if (aDocShell == aSoughtShell)
+      return aDocShell;
+      
+    var node = aDocShell.QueryInterface(Components.interfaces.nsIDocShellTreeNode);
+    for (var i = 0; i < node.childCount; ++i) {
+      var docShell = node.getChildAt(i);
+      docShell = this._findChildShell(docShell, aSoughtShell);
+      if (docShell == aSoughtShell)
+        return docShell;
+    }
+    return null;
+  },
+
+  observe: function (aSubject, aTopic, aData)
+  {
+    var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
+                        .getService(Components.interfaces.nsIStringBundleService);
+    var brandBundle = sbs.createBundle("chrome://global/locale/brand.properties");
+    var browserBundle = sbs.createBundle("chrome://browser/locale/browser.properties");
+    switch (aTopic) {
+    case "xpinstall-install-blocked":
+      var tabbrowser = getBrowser();
+      for (var i = 0; i < tabbrowser.browsers.length; ++i) {
+        var browser = tabbrowser.getBrowserAtIndex(i);
+        var soughtShell = aSubject.QueryInterface(Components.interfaces.nsIDocShell);
+        var shell = this._findChildShell(browser.docShell, soughtShell);
+        if (shell) {
+          var host = browser.docShell.QueryInterface(Components.interfaces.nsIWebNavigation).currentURI.host;
+          var brandShortName = brandBundle.GetStringFromName("brandShortName");
+          var iconURL, messageKey, buttonKey;
+          if (aData == "install-chrome") {
+            iconURL = "chrome://mozapps/skin/extensions/themeGeneric.png";
+            messageKey = "themeWarning";
+            buttonKey = "themeWarningButton";
+          }
+          else {
+            iconURL = "chrome://mozapps/skin/xpinstall/xpinstallItemGeneric.png";
+            messageKey = "xpinstallWarning";
+            buttonKey = "xpinstallWarningButton";
+          }
+
+          var params = [brandShortName, host];
+          var messageString = browserBundle.formatStringFromName(messageKey, params, params.length);
+          var buttonString = browserBundle.GetStringFromName(buttonKey);
+          var webNav = shell.QueryInterface(Components.interfaces.nsIWebNavigation);
+          tabbrowser.showMessage(i, iconURL, messageString, buttonString, 
+                                 webNav.currentURI, "xpinstall-install-edit-permissions");
+        }
+      }
+      break;
+    case "xpinstall-install-edit-permissions":
+      var uri = aSubject.QueryInterface(Components.interfaces.nsIURI);
+      var params = { blockVisible:    false,
+                     allowVisible:    true,
+                     prefilledHost:   uri.host,
+                     permissionType:  "install" };
+      window.openDialog("chrome://browser/content/cookieviewer/CookieExceptions.xul?permission=install",
+                        "_blank", "chrome,modal,resizable=yes", params);
+      
+      var tabbrowser = getBrowser();
+      tabbrowser.hideMessageForBrowser(tabbrowser.selectedBrowser);
+      break;
+    }
+  }
+};
+
 function Startup()
 {
   gBrowser = document.getElementById("content");
@@ -665,6 +734,8 @@ function delayedStartup()
   
   // We have to do this because we manually hook up history for the first browser in prepareForStartup
   os.addObserver(gBrowser.browsers[0], "browser:purge-session-history", false);
+  os.addObserver(gXPInstallObserver, "xpinstall-install-blocked", false);
+  os.addObserver(gXPInstallObserver, "xpinstall-install-edit-permissions", false);
 
   gPrefService = Components.classes["@mozilla.org/preferences-service;1"]
                               .getService(Components.interfaces.nsIPrefService);
@@ -2733,6 +2804,14 @@ nsBrowserStatusHandler.prototype =
 
   onLocationChange : function(aWebProgress, aRequest, aLocation)
   {
+    // If we're *in* tabbrowsing mode, tabbrowser's status handler does this. 
+    // If we have not entered tabbrowsing mode, this is the only location change
+    // method that gets called. 
+    if (!getBrowser().mTabbedMode) {
+      var tabbrowser = getBrowser();
+      tabbrowser.hideMessageForBrowser(tabbrowser.selectedBrowser);
+    }
+
     this.setOverLink("", null);
 
     var location = aLocation.spec;

@@ -451,7 +451,11 @@
 
       <field name="focusedElement">
         null
-      </field>      
+      </field>     
+      
+      <field name="isShowingMessage">
+        false
+      </field> 
 
       <constructor>
         <![CDATA[
@@ -803,6 +807,91 @@
       </handler>
     </handlers>
 
+  </binding>
+  
+  <binding id="browsermessage" extends="xul:hbox">
+    <content align="center">
+      <xul:image        anonid="messageImage"   class="messageImage"/>
+      <xul:description  anonid="messageText"    class="messageText" flex="1"/>
+      <xul:button       anonid="messageButton"  class="messageButton"/>
+    </content>
+    <implementation>
+      <property name="type" onget="return this.getAttribute('type');"
+                            onset="this.setAttribute('type', val); return val;"/>
+
+      <field name="_imageElement">
+        document.getAnonymousElementByAttribute(this, "anonid", "messageImage");
+      </field>
+      <property name="image">
+        <getter>
+          <![CDATA[
+            return this._imageElement.getAttribute("src");
+          ]]>
+        </getter>
+        <setter>
+          <![CDATA[
+            this._imageElement.setAttribute("src", val);
+            return val;
+          ]]>        
+        </setter>
+      </property>
+      
+      <field name="uri">
+        null;
+      </field>
+      <field name="source">
+        "";
+      </field>
+
+      <field name="_textElement">
+        document.getAnonymousElementByAttribute(this, "anonid", "messageText");
+      </field>
+      <field name="_text">
+        "";
+      </field>
+      <property name="text">
+        <getter>
+          <![CDATA[
+            return this._text;
+          ]]>
+        </getter>
+        <setter>
+          <![CDATA[
+            this._text = val;
+            while (this._textElement.hasChildNodes())
+              this._textElement.removeChild(this._textElement.firstChild);
+            this._textElement.appendChild(document.createTextNode(val));
+            return val;
+          ]]>        
+        </setter>
+      </property>
+      
+      <field name="_buttonElement">
+        document.getAnonymousElementByAttribute(this, "anonid", "messageButton");
+      </field>
+      <property name="buttonText">
+        <getter>
+          <![CDATA[
+            return this._buttonElement.getAttribute("label");
+          ]]>
+        </getter>
+        <setter>
+          <![CDATA[
+            this._buttonElement.setAttribute("label", val);
+            return val;
+          ]]>        
+        </setter>
+      </property>
+    </implementation>
+    <handlers>
+      <handler event="click">
+        if (event.originalTarget.getAttribute("anonid") == "messageButton") {
+          var os = Components.classes["@mozilla.org/observer-service;1"]
+                             .getService(Components.interfaces.nsIObserverService);
+          os.notifyObservers(this.uri, this.source, "");
+        }
+      </handler>
+    </handlers>
   </binding>
 
 </bindings>

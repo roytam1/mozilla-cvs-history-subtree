@@ -1,2 +1,2 @@
 pref("xpinstall.enabled",       true);
-pref("xpinstall.whitelist.required", false);
+pref("xpinstall.whitelist.required", true);

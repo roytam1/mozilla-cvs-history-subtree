@@ -88,8 +88,6 @@
 <!-- Software Update -->
 <!ENTITY browsing.label                   "Browsing">
 <!ENTITY softwareupdate.label             "Software Update">
-<!ENTITY enableSoftwareUpdate.label       "Allow web sites to install software">
-<!ENTITY enableSoftwareUpdate.accesskey   "i">
 <!ENTITY softwareupdateinfo.label         "Periodically check for updates to:">
 <!ENTITY enableSmartUpdate.label          "&brandShortName;">
 <!ENTITY enableSmartUpdate.accesskey      "F">
@@ -100,3 +98,5 @@
 <!ENTITY checkNow.label                   "Check Now">
 <!ENTITY checkNow.accesskey               "N">
 
+<!ENTITY xpinstall.allowedSites.label     "Allowed Sites">
+<!ENTITY xpinstall.allowedSites.accesskey "S">

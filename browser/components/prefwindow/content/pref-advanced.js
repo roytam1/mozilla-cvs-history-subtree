@@ -44,7 +44,7 @@ var _elementIDs = ["moveSystemCaret", "hideTabBar",
                     "certSelection", "securityOCSPEnabled", "serviceURL", "signingCA",
 #endif
                     "enableSoftwareInstall", "enableSmartUpdate", 
-                    "enableExtensionUpdate", "enableAutoInstall"];
+                    "enableExtensionUpdate"];
 
 #ifdef PROVISIONAL_SECURITY_UI
 const nsIX509CertDB = Components.interfaces.nsIX509CertDB;

@@ -56,6 +56,7 @@
 #include "nsIDOMDocument.h"
 #include "nsIDocument.h"
 #include "nsIPrincipal.h"
+#include "nsIObserverService.h"
 
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
@@ -270,7 +271,12 @@ nsInstallTrigger::HandleContent(const char * aContentType,
     }
     else
     {
-        // TODO: fire event signaling blocked Install attempt
+        nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
+        if (os) {
+            os->NotifyObservers(globalObject->GetDocShell(), 
+                                "xpinstall-install-blocked", 
+                                NS_LITERAL_STRING("install-chrome").get());
+        }
         rv = NS_ERROR_ABORT;
     }
     
