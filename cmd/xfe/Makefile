@@ -269,7 +269,6 @@ BASIC_LIBS_2	= $(DIST)/lib/lib$(LITE_PREFIX)xp.a $(DIST)/lib/libdbm.a
 
 ifdef MOZ_MAIL_NEWS
 BASIC_LIBS	+= \
-		  $(DIST)/lib/libmsg.a \
 		  $(DIST)/lib/libnet.a \
 		  $(DIST)/lib/libns_mime.a \
 		  $(NULL)
@@ -288,20 +287,20 @@ endif
 
 ifdef MOZ_MAIL_NEWS
 BASIC_LIBS	+= \
-		  $(DIST)/lib/libneo.a \
+		  $(DIST)/lib/libmime.a \
+		  $(DIST)/lib/libnet.a \
+		  $(DIST)/lib/libmozmsg.a \
+		  $(DIST)/lib/libmsg.a \
+		  $(DIST)/lib/libjulian.a \
+		  $(DIST)/lib/libnscnv30.a \
+		  $(DIST)/lib/libnsuni30.a \
+		  $(DIST)/lib/libnsfmt30.a \
 		  $(NULL)
 endif
 
 ifdef MOZ_MAIL_NEWS
 BASIC_LIBS	+= \
-		  $(DIST)/lib/libmime.a \
-		  $(DIST)/lib/libnet.a \
-		  $(DIST)/lib/libmsg.a \
-		  $(DIST)/lib/libmozmsg.a \
-		  $(DIST)/lib/libjulian.a \
-		  $(DIST)/lib/libnscnv30.a \
-		  $(DIST)/lib/libnsuni30.a \
-		  $(DIST)/lib/libnsfmt30.a \
+		  $(DIST)/lib/libneo.a \
 		  $(NULL)
 endif
 
