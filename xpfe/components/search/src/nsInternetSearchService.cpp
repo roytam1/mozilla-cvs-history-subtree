@@ -4701,7 +4701,6 @@ InternetSearchDataSource::GetInputs(const PRUnichar *dataUni, nsString &engineNa
 		}
 	}
 
-
   // Now add the default vs. non-default parameters, which come from 
   // preferences and are part of the pre-configuration.
   nsCOMPtr<nsIPrefService> pserv(do_QueryInterface(prefs));
@@ -4731,7 +4730,8 @@ InternetSearchDataSource::GetInputs(const PRUnichar *dataUni, nsString &engineNa
       rv = rootBranch->GetComplexValue("browser.search.selectedEngine", 
                                        NS_GET_IID(nsIPrefLocalizedString),
                                        getter_AddRefs(selectedEngineName));
-      selectedEngineName->GetData(getter_Copies(selectedEngineNameStr));
+      if (selectedEngineName)
+        selectedEngineName->GetData(getter_Copies(selectedEngineNameStr));
 
       engineIsNotDefault = !defaultEngineNameStr.Equals(selectedEngineNameStr);
     }
