@@ -309,7 +309,7 @@ function MsgGetNextNMessages()
 
 function MsgDeleteMessage(reallyDelete, fromToolbar)
 {
-
+    dump("fix this or remove this\n");
     if(reallyDelete)
         dump("reallyDelete\n");
     var srcFolder = GetLoadedMsgFolder();
@@ -337,6 +337,7 @@ function MsgDeleteMessage(reallyDelete, fromToolbar)
 
 function MsgCopyMessage(destFolder)
 {
+    dump("fix this or remove this\n");
     // Get the id for the folder we're copying into
     destUri = destFolder.getAttribute('id');
     destResource = RDF.GetResource(destUri);
@@ -354,6 +355,7 @@ function MsgCopyMessage(destFolder)
 
 function MsgMoveMessage(destFolder)
 {
+    dump("fix this or remove this\n");
     // Get the id for the folder we're copying into
     destUri = destFolder.getAttribute('id');
     destResource = RDF.GetResource(destUri);
@@ -393,14 +395,12 @@ function MsgNewMessage(event)
 function MsgReplyMessage(event)
 {
   var loadedFolder = GetLoadedMsgFolder();
-
   var server = loadedFolder.server;
 
   if(server && server.type == "nntp")
     MsgReplyGroup(event);
   else 
     MsgReplySender(event);
-
 }
 
 function MsgReplySender(event)
@@ -412,7 +412,6 @@ function MsgReplySender(event)
     ComposeMessage(msgComposeType.ReplyToSender, msgComposeFormat.OppositeOfDefault, loadedFolder, messageArray);
   else
     ComposeMessage(msgComposeType.ReplyToSender, msgComposeFormat.Default, loadedFolder, messageArray);
-
 }
 
 function MsgReplyGroup(event)
@@ -440,7 +439,6 @@ function MsgReplyToAllMessage(event)
 
 function MsgForwardMessage(event)
 {
-
   dump("\nMsgForwardMessage from XUL\n");
   var forwardType = 0;
   try {

@@ -227,11 +227,11 @@ function EnsureRowInThreadOutlinerIsVisible(index)
 
 function GetThreadTree()
 {
-    dump("GetThreadTree, fix this\n");
+    dump("GetThreadTree, fix (or remove?) this\n");
 }
 
 function GetThreadTreeFolder() 
 {
-    dump("GetThreadTreeFolder, fix this\n");
+    dump("GetThreadTreeFolder, fix (or remove?) this\n");
 }
 

@@ -903,22 +903,6 @@ function SetNextMessageAfterDelete()
     var selection = outlinerView.selection;
     dump("setting next msg view index after delete to " + selection.currentIndex + "\n");
     gNextMessageViewIndexAfterDelete = selection.currentIndex;
-/*
-	var tree = GetThreadTree();
-
-	var nextMessage = GetNextMessageAfterDelete(tree.selectedItems);
-	if(nextMessage)
-        gNextMessageAfterDelete = nextMessage.getAttribute('id');
-	else
-		gNextMessageAfterDelete = null;
-
-   // use the magic number of 3 to determine if we want to batch or not.
-   if (!gBatching && (GetNumSelectedMessages() > 3)) {
-     gBatching = true;
-     //tree.treeBoxObject.beginBatch();
-     //dump("XXX begin tree batch\n");
-   }
-*/
 }
 
 function SelectFolder(folderUri)
@@ -931,6 +915,7 @@ function SelectFolder(folderUri)
 
 function SelectMessage(messageUri)
 {
+  dump("fix this or remove this\n");
   // this isn't going to work anymore
 }
 
@@ -941,7 +926,6 @@ function ReloadMessage()
 	gCurrentDisplayedMessage = null;
 	LoadMessageByUri(msgToLoad);
 }
-
 
 function SetBusyCursor(window, enable)
 {

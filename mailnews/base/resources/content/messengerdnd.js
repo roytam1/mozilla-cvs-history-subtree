@@ -270,9 +270,10 @@ function BeginDragFolderTree(event)
 }
 
 
-function BeginDragThreadTree(event)
+function BeginDragThreadPane(event)
 {
-	debugDump("BeginDragThreadTree\n");
+	debugDump("BeginDragThreadPane\n");
+    debugDump("event = " + event + "\n");
         if (event.target.localName != "treecell" &&
             event.target.localName != "treeitem")
              return false;
