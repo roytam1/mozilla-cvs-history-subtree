@@ -39,7 +39,7 @@
 #include "nsIDocument.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMNSDocument.h"
-#include "nsLayoutAtoms.h"
+#include "nsIDOMEventListener.h"
 
 // Window scriptable helper includes
 #include "nsIDocShell.h"
@@ -288,9 +288,20 @@ nsDOMClassInfo::nsDOMClassInfo(nsDOMClassInfoID aID) : mID(aID)
   sInstanceCount++;
 
   if (!sXPConnect) {
+    // Hmm, all this should be moved into an Init() method...
+
     nsServiceManager::GetService(nsIXPConnect::GetCID(),
                                  nsIXPConnect::GetIID(),
                                  (nsISupports **)&sXPConnect);
+
+    if (sXPConnect) {
+      nsCOMPtr<nsIXPCFunctionThisTranslator> old;
+
+      nsEventListenerThisTranslator *elt = new nsEventListenerThisTranslator();
+
+      sXPConnect->SetFunctionThisTranslator(NS_GET_IID(nsIDOMEventListener),
+                                            elt, getter_AddRefs(old));
+    }
   }
 }
 
@@ -2145,4 +2156,44 @@ nsMimeTypeArraySH::GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
 
   return rv;
 }
+
+
+// nsIDOMEventListener::HandleEvent() 'this' converter helper
+
+NS_INTERFACE_MAP_BEGIN(nsEventListenerThisTranslator)
+  NS_INTERFACE_MAP_ENTRY(nsIXPCFunctionThisTranslator)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+NS_INTERFACE_MAP_END
+
+
+NS_IMPL_ADDREF(nsEventListenerThisTranslator)
+NS_IMPL_RELEASE(nsEventListenerThisTranslator)
+
+
+NS_IMETHODIMP
+nsEventListenerThisTranslator::TranslateThis(nsISupports *aInitialThis,
+                                             nsIInterfaceInfo *aInterfaceInfo,
+                                             PRUint16 aMethodIndex,
+                                             PRBool *aHideFirstParamFromJS,
+                                             nsIID * *aIIDOfResult,
+                                             nsISupports **_retval)
+{
+  *aHideFirstParamFromJS = PR_FALSE;
+  *aIIDOfResult = nsnull;
+
+  nsCOMPtr<nsIDOMEvent> event(do_QueryInterface(aInitialThis));
+  NS_ENSURE_TRUE(event, NS_ERROR_UNEXPECTED);
+
+  nsCOMPtr<nsIDOMEventTarget> target;
+
+  event->GetCurrentTarget(getter_AddRefs(target));
+
+  NS_WARN_IF_FALSE(target, "Hmm, null target, weird.");
+
+  *_retval = target;
+  NS_IF_ADDREF(*_retval);
+
+  return NS_OK;
+}
+
 

@@ -497,6 +497,32 @@ public:
 };
 
 
+// Event handler 'this' translator class, this is called by XPConnect
+// when a "function interface" (nsIDOMEventListener) is called, this
+// class extracts 'this' fomr the first argument to the called
+// function (nsIDOMEventListener::HandleEvent(in nsIDOMEvent)), this
+// class will pass back nsIDOMEvent::currentTarget to be used as
+// 'this'.
+
+class nsEventListenerThisTranslator : public nsIXPCFunctionThisTranslator
+{
+public:
+  nsEventListenerThisTranslator()
+  {
+    NS_INIT_ISUPPORTS();
+  }
+
+  virtual ~nsEventListenerThisTranslator()
+  {
+  }
+
+  // nsISupports
+  NS_DECL_ISUPPORTS
+
+  // nsIXPCFunctionThisTranslator
+  NS_DECL_NSIXPCFUNCTIONTHISTRANSLATOR
+};
+
 
 /**
  * nsIClassInfo helper macros
