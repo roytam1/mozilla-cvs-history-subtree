@@ -28,7 +28,8 @@ GetOptions("objdir|o=s"           => \$objdir,
            "command-handlers|c=s" => \@handlers,
            "xpt-merge-file|x=s"   => \$xptMergeFile,
            "stage-directory|s=s"  => \$stageDir,
-           "mapping|m=s"          => \%mappings);
+           "mapping|m=s"          => \%mappingsm,
+           "force-copy|f"         => \$MozStage::forceCopy);
 
 @handlers = split(/,/,join(',',@handlers));
 

@@ -1,74 +1,146 @@
+# ***** BEGIN LICENSE BLOCK *****
+# Version: MPL 1.1/GPL 2.0/LGPL 2.1
+#
+# The contents of this file are subject to the Mozilla Public License Version
+# 1.1 (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+# http://www.mozilla.org/MPL/
+#
+# Software distributed under the License is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+# for the specific language governing rights and limitations under the
+# License.
+#
+# The Original Code is Mozilla packaging code.
+#
+# The Initial Developer of the Original Code is
+# Benjamin Smedberg <bsmedberg@covad.net>
+# Portions created by the Initial Developer are Copyright (C) 2003
+# the Initial Developer. All Rights Reserved.
+#
+# Contributor(s):
+#
+# Alternatively, the contents of this file may be used under the terms of
+# either the GNU General Public License Version 2 or later (the "GPL"), or
+# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+# in which case the provisions of the GPL or the LGPL are applicable instead
+# of those above. If you wish to allow use of your version of this file only
+# under the terms of either the GPL or the LGPL, and not to allow others to
+# use your version of this file under the terms of the MPL, indicate your
+# decision by deleting the provisions above and replace them with the notice
+# and other provisions required by the GPL or the LGPL. If you do not delete
+# the provisions above, a recipient may use your version of this file under
+# the terms of any one of the MPL, the GPL or the LGPL.
+#
+# ***** END LICENSE BLOCK *****
+
 # Master List of Packages
 #
 # This file lists package dependencies, and is
-# parsed by MozParser.pm (MozPackages::getPackagesFor)
+# parsed by MozParser.pm (MozPackages::*)
 #
 # DO NOT ALTER THIS FILE WITHOUT APPROVAL FROM
 # Benjamin Smedberg <bsmedberg@covad.net>
 
+# Since the packaging system obeys most configuration options, you normally
+# don't need to alter package files to build special configurations. Instead,
+# use the correct configure options to enable-disable features/extensions
+
 nspr                   :
 nspr-devel             :
 
-# xpcom does not depend on NSPR automatically because
+# xpcom does not depend on NSPR because
 # they are separate RPMs
 xpcom                  :
 
 # these are core files needed to bootstrap the xpi stub installer
 xpi-bootstrap          : nspr xpcom
 
-# this target builds minimo, embedding, GRE
-# don't alter it without permission from dougt
+# The 'gecko' target builds minimo, embedding, GRE, and everything else. Don't
+# alter it without approval from dougt.
 gecko                  : nspr xpcom
 
 # This package should eventually disappear. It includes prefs and
 # extras that *ought* to be in the gecko package, but can't be yet for
 # technical reasons). Don't even think about adding more to it.
 gecko-support          :
+# gecko-devel in the future (the SDK)
 
 nss                    :
-nss-devel              :
+# nss-devel in the future
 
 # psm doesn't depend on nss because they are separate RPMs
-# although this might change if a GRE RPM comes into the picture
+# although this might change if a GRE RPM comes to fruition
 psm                    :
-psm-devel              :
 psm-support            :
+# psm-devel in the future
 
+# This package is locked down. Any significant changes must be approved by
+# dougt.
 gre                    : gecko nss psm
-gre-xpi                : gre
 
-# This package will disappear as well. It is used for embed.jar
+# This package will disappear as well. It contains embed.jar
 gre-support            : gecko-support psm-support
 
-# This is a bizarre catch-all for each platform's embedding package.
-# xxxbsmedberg: this still needs work, what about the mfcembed
-# which uses the GRE?
-embed                  : gecko nss psm psm-support
+# wallet itself is part of gecko, but the viewers are not needed by FB, etc
+walletviewers          :
 
-xpfe-browser           : gecko-support psm-support
-xpfe-browser-xpi       : xpfe-browser
+xpfe-browser           : gecko-support psm-support walletviewers
 xpfe-lang-enUS         :
 xpfe-locale-US         :
 xpfe-default-US        :
 xpfe-mailnews          :
 xpfe-editor            :
 
+# the XPIs of the above packages contain install.js
+gre-xpi                : gre 
+xpfe-browser-xpi       : xpfe-browser
+xpfe-lang-enUS-xpi     : xpfe-lang-enUS
+xpfe-locale-US-xpi     : xpfe-locale-US
+xpfe-default-US-xpi    : xpfe-default-US
+xpfe-mailnews-xpi      : xpfe-mailnews
+xpfe-editor-xpi        : xpfe-editor
+
+#
+# various embedding targets
+#
+
+# some use a separately-installed GRE
+mfcembed               : gre-support walletviewers
+
+# some don't use a GRE (yet, maybe ever)
+minimo                 : gecko nss psm psm-support
+winembed               : gecko nss psm psm-support walletviewers
+gtkembed               : gecko nss psm psm-support walletviewers
+
 # this currently has fb/tb ifdefs that make it impossible to package
-# independently of the particular app, which sucks... see bug 
+# independently of the particular app, which sucks... see bug 211849
 toolkit                : gecko-support
 
-# THE NEXT TWO ARE NOT NEARLY COMPLETE, DON'T EXPECT THAT THEY WORK
-# CORRECTLY
+# THE NEXT TWO ARE NOT COMPLETE, DON'T EXPECT THEM TO WORK CORRECTLY
 
 # firebird (using separate GRE)
 browser                : toolkit
 # thunderbird (using separate GRE)
 mail                   : toolkit
 
-# I think that we build the same XPI for both seamonkey and firebird
+# Most extensions uild the same files/XPI for both seamonkey and firebird
 venkman                :
+venkman-xpi            : venkman
 inspector              :
+inspector-xpi          : inspector
 chatzilla              :
+chatzilla-xpi          : chatzilla
+calendar               :
+calendar-xpi           : calendar
 
-# these targets creates the nightly tarballs (incorporating the GRE)
-seamonkeyall-enUS     : gre xpfe-browser xpfe-lang-enUS xpfe-locale-US xpfe-default-US xpfe-mailnews xpfe-editor venkman inspector chatzilla
+# the core spellcheck engine is split from the dictionaries
+spellcheck             :
+spellcheck-enUS        :
+
+spellcheck-enUS-xpi    : spellcheck spellcheck-enUS
+
+# seamonkey separate from the GRE
+seamonkeygre-enUS      : xpfe-browser xpfe-lang-enUS xpfe-locale-US xpfe-default-US xpfe-mailnews xpfe-editor venkman inspector chatzilla
+# seamonkey with the GRE (nightly tarball)
+seamonkeyall-enUS      : seamonkeygre-enUS gre

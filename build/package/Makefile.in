@@ -52,18 +52,24 @@ PACKAGE_LIST = $(srcdir)/packages.list
 PACKAGE_FLAGS = 
 HANDLERS = xptmerge,touch
 MAPPINGS = dist/bin=bin
-VERBOSE = -v
 
 dump-packages:
 	cd $(DEPTH);
-	$(PERL) -I $(srcdir) $(srcdir)/dump-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST)
+	$(PERL) -I $(srcdir) $(srcdir)/dump-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) $(PACKAGE_FLAGS)
+
+# This rule will stage any one package. If you need to stage multiple packages or
+# do ^packages (subtraction packages) use the stage-packages rule and set PACKAGES
+# on the command line
+stage-%:
+	$(PERL) -I $(srcdir) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(addprefix -c ,$(HANDLERS)) $(PACKAGE_FLAGS) $*
 
 ifndef PACKAGES
 stage-packages:
 	@echo "Please set PACKAGES on the makefile command line or environment."
 
-else #PACKAGE
+else #PACKAGES
 stage-packages:
-	$(PERL) -I $(srcdir) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m , $(MAPPINGS)) -c $(HANDLERS) -v $(PACKAGES)
+	$(PERL) -I $(srcdir) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(apprefix -c ,$(HANDLERS)) $(PACKAGE_FLAGS) $(PACKAGES)
 
 endif
+

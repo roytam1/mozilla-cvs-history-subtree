@@ -1,8 +1,6 @@
 # since the chrome service has been forked, it is
-# part of the new toolkit, the gecko core
-# But it is still included in the embedding package if
-# MOZ_XUL_APP is set
-[toolkit embed]
+# part of the new toolkit, it is not part of the gecko core
+[toolkit]
 #if SHARED_LIBRARY
 dist/bin/components/@SHARED_LIBRARY@
 #endif
