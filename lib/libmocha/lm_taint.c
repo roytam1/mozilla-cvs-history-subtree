@@ -599,9 +599,7 @@ lm_GetPrincipalsFromStackFrame(JSContext *cx)
             return JS_GetScriptPrincipals(cx, script);
         }
     }
-#ifdef OJI
         return JVM_GetJavaPrincipalsFromStack(pFrameToStartLooking);
-#endif
 
     return NULL;
 }
@@ -616,9 +614,9 @@ lm_GetSubjectOriginURL(JSContext *cx)
     JSStackFrame *fp;
     JSScript *script;
     MochaDecoder *running;
-#ifdef JAVA
-    JRIEnv *env;
-    char *str;
+#ifdef OJI
+    JSStackFrame *pFrameToStartLooking = JVM_GetStartJSFrameFromParallelStack();
+    JSStackFrame *pFrameToEndLooking   = JVM_GetEndJSFrameFromParallelStack(pFrameToStartLooking);
 #endif
 
     fp = NULL;
@@ -631,20 +629,11 @@ lm_GetSubjectOriginURL(JSContext *cx)
                 : JS_GetScriptFilename(cx, script);
         }
     }
-
-#ifdef JAVA
-    /* fell off the js stack, look to see if there's a java
-     * classloader above us that has MAYSCRIPT set on it */
-    if (JSJ_IsCalledFromJava(cx)) {
-        env = LJ_JSJ_CurrentEnv(cx);
-        if (!env) {
-            return NULL;
-        }
-
-        str = LJ_GetAppletScriptOrigin(env);
-        if (!str)
-            return NULL;
-        return str;
+#ifdef OJI
+    principals = JVM_GetJavaPrincipalsFromStack(pFrameToStartLooking);
+    if( principals != NULL )
+    {
+       return principals->codebase;
     }
 #endif
 

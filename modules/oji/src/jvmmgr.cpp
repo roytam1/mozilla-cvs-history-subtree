@@ -402,7 +402,6 @@ map_java_object_to_js_object_impl(JNIEnv *env, void *pNSIPluginInstanceIn, char 
                     }
                     pJVMPIT->Release();
                 }
-                // pPIT->Release();	// pNSIPluginInstanceIn is passed-in.
             }
             // pJVMPI->Release(); // GetJVMPlugin no longer calls AddRef
         }
@@ -467,7 +466,7 @@ static JSPrincipals* PR_CALLBACK
 get_JSPrincipals_from_java_caller_impl(JNIEnv *pJNIEnv, JSContext *pJSContext, void  **ppNSIPrincipalArrayIN, int numPrincipals, void *pNSISecurityContext)
 {
     nsIPrincipal  **ppNSIPrincipalArray = (nsIPrincipal  **)ppNSIPrincipalArrayIN;
-    PRInt32        length = 0;
+    PRInt32        length = numPrincipals;
     nsresult       err    = NS_OK;
     nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
     void          *pNSPrincipalArray = NULL;
