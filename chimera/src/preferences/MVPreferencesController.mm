@@ -245,7 +245,7 @@ NSString *MVPreferencesWindowNotification = @"MVPreferencesWindowNotification";
 {
   NSToolbarItem *toolbarItem = [[[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier] autorelease];
   if ( [itemIdentifier isEqualToString:MVToolbarShowAllItemIdentifier] ) {
-    [toolbarItem setLabel:NSLocalizedString( @"Show All", nil )];
+    [toolbarItem setLabel:NSLocalizedString( @"ShowAllPrefItems", @"" )];
     [toolbarItem setImage:[NSImage imageNamed:@"NSApplicationIcon"]];
     [toolbarItem setTarget:self];
     [toolbarItem setAction:@selector( showAll: )];

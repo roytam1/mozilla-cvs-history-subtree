@@ -813,9 +813,9 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
           if (sidebar) {
               int sidebarState = [sidebar state]; 
               if (sidebarState == NSDrawerOpenState)
-                  [mToggleSidebarMenuItem setTitle: NSLocalizedString(@"Hide Sidebar",@"")];
+                  [mToggleSidebarMenuItem setTitle: NSLocalizedString(@"HideSidebarMenuItem",@"")];
               else
-                  [mToggleSidebarMenuItem setTitle: NSLocalizedString(@"Show Sidebar",@"")];
+                  [mToggleSidebarMenuItem setTitle: NSLocalizedString(@"ShowSidebarMenuItem",@"")];
               return YES;
           }
           else
