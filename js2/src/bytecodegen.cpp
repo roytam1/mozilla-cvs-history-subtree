@@ -42,6 +42,8 @@
 #include "bytecodegen.h"
 #include "numerics.h"
 
+#include <string.h>
+
 namespace JavaScript {    
 namespace JS2Runtime {
 
