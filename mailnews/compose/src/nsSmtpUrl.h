@@ -77,7 +77,6 @@ public:
 
 protected:
     virtual ~nsSmtpUrl();
-	virtual void ReconstructSpec(void);
 
 	// data retrieved from parsing the url: (Note the url could be a post from file or it could be inthe url)
     char		*m_toPart;
