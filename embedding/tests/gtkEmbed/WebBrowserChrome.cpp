@@ -291,6 +291,11 @@ NS_IMETHODIMP WebBrowserChrome::SetFocus()
    return mBaseWindow->SetFocus();
 }
 
+NS_IMETHODIMP WebBrowserChrome::Blur()
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 NS_IMETHODIMP WebBrowserChrome::GetVisibility(PRBool *aVisibility)
 {
    return NS_ERROR_NOT_IMPLEMENTED;
