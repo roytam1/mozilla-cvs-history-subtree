@@ -27,15 +27,10 @@ include <$(DEPTH)/config/config.mak>
 XPIDL_MODULE = necko_http
 
 XPIDLSRCS =                          \
-        .\nsIHTTPHeader.idl          \
-        .\nsIHTTPChannel.idl         \
+        .\nsIHttpChannel.idl         \
         .\nsIHttpNotify.idl          \
-        .\nsIHTTPProtocolHandler.idl \
-        .\nsIHTTPEventSink.idl       \
-        $(NULL)
-
-EXPORTS =                   \
-        nsHTTPEnums.h       \
+        .\nsIHttpProtocolHandler.idl \
+        .\nsIHttpEventSink.idl       \
         $(NULL)
 
 include <$(DEPTH)/config/rules.mak>

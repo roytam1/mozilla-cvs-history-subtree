@@ -1,0 +1,70 @@
+#include "nsIChannel.idl"
+
+interface nsIHttpHeaderVisitor;
+
+[scriptable, uuid(d78b53c8-d03f-4fd8-b2ee-7b36fcd150d1)]
+interface nsIHttpChannel : nsIChannel
+{
+    /**************************************************************************
+     * Request info...
+     */
+
+    /**
+     * The request method is case insensitive
+     */
+    attribute string requestMethod;
+
+    /**
+     * Get/set the Request-URI portion of the HTTP Request-Line (see RFC2616
+     * section 5.1).  This is typically the absolute path of the channel's
+     * URL.
+     */
+    attribute string requestURI;
+
+    /**
+     * Get/set the referrer URI on the request.  This is the address (URI) of
+     * the resource from which the Request-URI was obtained (see RFC2616
+     * section 14.36).  The user pref 'network.http.anonymous' may cause the
+     * referrer not to be sent.
+     */
+    attribute nsIURI referrer;
+
+    /**
+     * Header strings are case insensitive
+     */
+    string getRequestHeader(in string header);
+    void   setRequestHeader(in string header, in string value);
+    void   visitRequestHeaders(in nsIHttpHeaderVisitor visitor);
+
+
+    /**************************************************************************
+     * Response info...
+     */
+
+    readonly attribute unsigned long responseStatus;
+    readonly attribute string responseStatusText;
+
+    /**
+     * Header strings are case insensitive
+     */
+    string getResponseHeader(in string header);
+    void   setResponseHeader(in string header, in string value);
+    void   visitResponseHeaders(in nsIHttpHeaderVisitor visitor);
+
+    /**
+     * Get the charset for the response, which may be NULL if not specified
+     * by the server (ie. the Content-Type header may not specify a charset).
+     */
+    readonly attribute string charset;
+};
+
+/**
+ * Implement this interface to visit http headers.  A basic implementation
+ * which just prints the header:value pairs to stdout can be constructed
+ * from the contractid "@mozilla.org/network/http/stdout-header-visitor;1"
+ */
+[scriptable, uuid(0cf40717-d7c1-4a94-8c1e-d6c9734101bb)]
+interface nsIHttpHeaderVisitor : nsISupports
+{
+    void visitHeader(in string header, in string value);
+};
