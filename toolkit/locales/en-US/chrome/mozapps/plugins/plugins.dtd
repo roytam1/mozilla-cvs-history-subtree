@@ -7,6 +7,7 @@
 <!ENTITY pluginWizard.availablePluginsPage.continueMsg.label "Press Next to install these plugins.">
 <!ENTITY pluginWizard.availablePluginsPage.installerUI       "Some plugins may require additional information from you during installation.">
 
+<!ENTITY pluginWizard.licensePage.title                      "Plugin Licenses">
 <!ENTITY pluginWizard.licensePage.accept.label               "I agree.">
 <!ENTITY pluginWizard.licensePage.deny.label                 "I do not agree (plugin will not be installed).">
 

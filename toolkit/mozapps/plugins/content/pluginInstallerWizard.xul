@@ -92,7 +92,7 @@
     <description value="&pluginWizard.availablePluginsPage.continueMsg.label;"/>
   </wizardpage>
 
-  <wizardpage label="Plugin Licenses" 
+  <wizardpage label="&pluginWizard.licensePage.title;" 
               onpageshow="gPluginInstaller.showLicenses()"
               onpageadvanced="return gPluginInstaller.showNextLicense();"
               onpagerewound="return gPluginInstaller.showPreviousLicense();">
