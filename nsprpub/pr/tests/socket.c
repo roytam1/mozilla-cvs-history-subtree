@@ -414,7 +414,7 @@ TCP_Server(void *arg)
 	}
 	if ((client_domain == PR_AF_INET6) && (server_domain == PR_AF_INET))
 		PR_ConvertIPv4AddrToIPv6(INADDR_LOOPBACK,
-								tcp_server_addr.ipv6.ip._pr_s6_addr);
+								&tcp_server_addr.ipv6.ip);
 		
 
     /*
@@ -546,7 +546,7 @@ UDP_Server(void *arg)
 	}
 	if ((client_domain == PR_AF_INET6) && (server_domain == PR_AF_INET))
 		PR_ConvertIPv4AddrToIPv6(INADDR_LOOPBACK,
-								udp_server_addr.ipv6.ip._pr_s6_addr);
+								&udp_server_addr.ipv6.ip);
 		
     /*
      * Wake up parent thread because server address is bound and made
