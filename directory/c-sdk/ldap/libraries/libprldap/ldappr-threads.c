@@ -1,39 +1,24 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- * 
- * The contents of this file are subject to the Mozilla Public License Version 
- * 1.1 (the "License"); you may not use this file except in compliance with 
- * the License. You may obtain a copy of the License at 
- * http://www.mozilla.org/MPL/
- * 
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- * 
+/*
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
- * 
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998-1999
- * the Initial Developer. All Rights Reserved.
- * 
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
  * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- * 
- * ***** END LICENSE BLOCK ***** */
+ */
 
 /*
  * Thread callback functions for libldap that use the NSPR (Netscape
@@ -58,14 +43,10 @@
  * Structure used by libldap thread callbacks to maintain error information.
  */
 typedef struct prldap_errorinfo {
-    int		plei_magic;	/* must be first in the structure */
     int		plei_lderrno;
     char	*plei_matched;
     char	*plei_errmsg;
 } PRLDAP_ErrorInfo;
-
-#define PRLDAP_ERRORINFO_MAGIC	0x4D4F5A45	/* 'MOZE' */
-
 
 /*
  * Structure used to maintain thread-private data. At the present time,
@@ -303,41 +284,18 @@ prldap_set_ld_error( int err, char *matched, char *errmsg, void *errorarg )
 	    if ( eip == NULL ) {
 		return;	/* punt */
 	    }
-	    eip->plei_magic = PRLDAP_ERRORINFO_MAGIC;
 	    (void)prldap_set_thread_private( map->prtm_index, eip );
 	}
 
 	eip->plei_lderrno = err;
-
 	if ( eip->plei_matched != NULL ) {
 	    ldap_memfree( eip->plei_matched );
 	}
 	eip->plei_matched = matched;
-
 	if ( eip->plei_errmsg != NULL ) {
 	    ldap_memfree( eip->plei_errmsg );
 	}
 	eip->plei_errmsg = errmsg;
-    }
-}
-
-
-/*
- * Utility function to free a PRLDAP_ErrorInfo structure and everything
- * it contains.
- */
-static void
-prldap_free_errorinfo( PRLDAP_ErrorInfo *eip )
-{
-    if ( NULL != eip && PRLDAP_ERRORINFO_MAGIC == eip->plei_magic ) {
-	if ( eip->plei_matched != NULL ) {
-	    ldap_memfree( eip->plei_matched );
-	}
-	if ( eip->plei_errmsg != NULL ) {
-	    ldap_memfree( eip->plei_errmsg );
-	}
-
-	PR_Free( eip );
     }
 }
 
@@ -426,7 +384,7 @@ prldap_allocate_map( LDAP *ld )
     }
 
     /*
-     * if none was found (map == NULL), try to allocate a new one and add it
+     * if none we found (map == NULL), try to allocate a new one and add it
      * to the end of our global list.
      */
     if ( map == NULL ) {
@@ -447,15 +405,9 @@ prldap_allocate_map( LDAP *ld )
 
     if ( map != NULL ) {
 	map->prtm_ld = ld;	/* now marked as "in use" */
-
-	/*
-	 * If old thread-private error information exists, reset it. It may
-	 * have been left behind by an old LDAP session that was used by
-	 * this thread but disposed of by a different thread.
-	 */
-	if ( NULL != prldap_get_thread_private( map->prtm_index )) {
-	    prldap_set_ld_error( LDAP_SUCCESS, NULL, NULL, map );
-	}
+				/* since we are reusing...reset */
+				/* to initial state */
+	(void)prldap_set_thread_private( map->prtm_index, NULL );
     }
 
     PR_Unlock( prldap_map_mutex );
@@ -484,7 +436,14 @@ prldap_return_map( PRLDAP_TPDMap *map )
     if (( eip = (PRLDAP_ErrorInfo *)prldap_get_thread_private(
 		map->prtm_index )) != NULL &&
 		prldap_set_thread_private( map->prtm_index, NULL ) == 0 ) {
-	prldap_free_errorinfo( eip );
+	if ( eip->plei_matched != NULL ) {
+	    ldap_memfree( eip->plei_matched );
+	}
+	if ( eip->plei_errmsg != NULL ) {
+	    ldap_memfree( eip->plei_errmsg );
+	}
+
+	PR_Free( eip );
     }
 
     /* mark map as available for re-use */
@@ -613,12 +572,13 @@ prldap_tsd_realloc( PRLDAP_TPDHeader *tsdhdr, int maxindex )
  * Description: Free a thread-private data array. Installed as an NSPR TPD
  *	destructor function
  * Returns: nothing.
+ * Note: this function assumes that each TPD item installed at the PRLDAP
+ *	level can be freed with a call to PR_Free().
  */
 static void
 prldap_tsd_destroy( void *priv )
 {
     PRLDAP_TPDHeader	*tsdhdr;
-    PRLDAP_ErrorInfo	*eip;
     int			i;
 
     tsdhdr = (PRLDAP_TPDHeader *)priv;
@@ -626,12 +586,7 @@ prldap_tsd_destroy( void *priv )
 	if ( tsdhdr->ptpdh_dataitems != NULL ) {
 	    for ( i = 0; i < tsdhdr->ptpdh_tpd_count; ++i ) {
 		if ( tsdhdr->ptpdh_dataitems[ i ] != NULL ) {
-		    eip = (PRLDAP_ErrorInfo *)tsdhdr->ptpdh_dataitems[ i ];
-		    if ( PRLDAP_ERRORINFO_MAGIC == eip->plei_magic ) {
-			prldap_free_errorinfo( eip );
-		    } else {
-			PR_Free( tsdhdr->ptpdh_dataitems[ i ] );
-		    }
+		    PR_Free( tsdhdr->ptpdh_dataitems[ i ] );
 		    tsdhdr->ptpdh_dataitems[ i ] = NULL;
 		}
 	    }

@@ -1,39 +1,39 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
+/*
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
  * The Original Code is the Netscape security libraries.
- *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1994-2000
- * the Initial Developer. All Rights Reserved.
- *
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are 
+ * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
+ * Rights Reserved.
+ * 
+ * Portions created by Sun Microsystems, Inc. are Copyright (C) 2003
+ * Sun Microsystems, Inc. All Rights Reserved.
+ * 
  * Contributor(s):
- *   Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+ *	Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
+ * 
+ * Alternatively, the contents of this file may be used under the
+ * terms of the GNU General Public License Version 2 or later (the
+ * "GPL"), in which case the provisions of the GPL are applicable 
+ * instead of those above.  If you wish to allow use of your 
+ * version of this file only under the terms of the GPL and not to
+ * allow others to use your version of this file under the MPL,
+ * indicate your decision by deleting the provisions above and
+ * replace them with the notice and other provisions required by
+ * the GPL.  If you do not delete the provisions above, a recipient
+ * may use your version of this file under either the MPL or the
+ * GPL.
+ */
 /*
  * Internal PKCS #11 functions. Should only be called by pkcs11.c
  */
@@ -742,7 +742,7 @@ pk11_FindSecretKeyAttribute(PK11TokenObject *object, CK_ATTRIBUTE_TYPE type)
 
 
 	/*
- 	 * Because of various endian and word lengths The database may have
+ 	 * Because of various endian and word lengths, the database may have
 	 * stored the keyType value in one of the following formats:
 	 *   (kt) <= 0x1f 
 	 *                                   length data
@@ -756,9 +756,9 @@ pk11_FindSecretKeyAttribute(PK11TokenObject *object, CK_ATTRIBUTE_TYPE type)
 	 * where (a) is 0 or >= 0x80. currently (a) can only be 0.
 	 */
 	/*
- 	 * this key was written on a 64 bit platform with a using NSS 3.9
-	 * or earlier. Reduce the 64 bit possibilities above. We were are
-	 * through, we will only have:
+ 	 * This key was written on a 64 bit platform with a using NSS 3.9
+	 * or earlier. Reduce the 64 bit possibilities above. When  through,
+	 * we will only have:
 	 * 
 	 * Big Endian,     pre-3.9, all lengths: 1  (kt)
 	 * Little Endian,  pre-3.9, all lengths: 4  (kt) 0  0  0
@@ -1065,7 +1065,6 @@ pk11_FindTrustAttribute(PK11TokenObject *object, CK_ATTRIBUTE_TYPE type)
     case CKA_TRUST_SERVER_AUTH:
     case CKA_TRUST_EMAIL_PROTECTION:
     case CKA_TRUST_CODE_SIGNING:
-    case CKA_TRUST_STEP_UP_APPROVED:
 	break;
     default:
 	return NULL;
@@ -1113,12 +1112,6 @@ trust:
 	    return (PK11Attribute *)&pk11_StaticValidPeerAttr;
 	}
 	return (PK11Attribute *)&pk11_StaticMustVerifyAttr;
-    case CKA_TRUST_STEP_UP_APPROVED:
-	if (trust->trust->sslFlags & CERTDB_GOVT_APPROVED_CA) {
-	    return (PK11Attribute *)&pk11_StaticTrueAttr;
-	} else {
-	    return (PK11Attribute *)&pk11_StaticFalseAttr;
-	}
     default:
 	break;
     }
