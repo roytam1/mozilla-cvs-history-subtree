@@ -603,9 +603,8 @@ fi
 # Jump through hoops to make x86 and X86 equivalent.
 #
 if test "$OSVERSION" = "WCE300"; then
-    OS_ARCH=WINCE
+    OS_ARCH=WINNT
     OS_TARGET=WINCE
-    OS_RELEASE=3.00
     if test "$TARGETCPU" = "X86"; then
         CPU_ARCH=x86
     else
@@ -676,13 +675,11 @@ fi
 fi
 
 if test -n "$MOZILLA_CLIENT" && test "$OS_ARCH" = "WINNT"; then
-    OS_TARGET=WIN95
-    if test -n "$MOZ_DEBUG"; then
-        USE_DEBUG_RTL=1
+    if test "$OSVERSION" = "WCE300"; then
+        OS_TARGET=WINCE
+    else
+        OS_TARGET=WIN95
     fi
-fi
-if test -n "$MOZILLA_CLIENT" && test "$OS_ARCH" = "WINCE"; then
-    OS_TARGET=WINCE
     if test -n "$MOZ_DEBUG"; then
         USE_DEBUG_RTL=1
     fi
@@ -695,6 +692,9 @@ if test "$OS_TARGET" = "WIN95"; then
 fi
 if test "$OS_TARGET" = "WIN16"; then
     OS_RELEASE=
+fi
+if test "$OS_TARGET" = "WINCE"; then
+    OS_RELEASE="3.00"
 fi
 OS_CONFIG="${OS_TARGET}${OS_RELEASE}"
 

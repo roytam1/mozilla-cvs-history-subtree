@@ -80,7 +80,7 @@ SRCS		= abandon.c \
 		  utf8.c \
 		  vlistctrl.c
 
-ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
+ifeq (,$(filter-out WINNT,$(OS_ARCH)))
 SRCS		+= dllmain.c \
                    mozock.c
 endif
@@ -109,7 +109,7 @@ ifdef USE_PTHREADS
 DEFINES   += -DUSE_PTHREADS
 endif
 
-ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
+ifeq (,$(filter-out WINNT,$(OS_ARCH)))
 PLATFORMCFLAGS	= -DNEEDPROTOS
 else
 PLATFORMCFLAGS	= -DUSE_WAITPID -DNEEDPROTOS
@@ -137,14 +137,14 @@ RUNTIMEETCDIR	= $(ETCDIR)
 # shared library symbol export definitions
 #
 ifeq ($(USE_DLL_EXPORTS_FILE), 1)
-ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
+ifeq (,$(filter-out WINNT,$(OS_ARCH)))
 GENEXPORTS=cmd /c  $(PERL) $(topsrcdir)/ldap/build/genexports.pl
 else
 GENEXPORTS=$(PERL) $(topsrcdir)/ldap/build/genexports.pl
 endif
 
 # variable definitions for exported symbols
-ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
+ifeq (,$(filter-out WINNT,$(OS_ARCH)))
         LDAP_EXPORT_DEFS= $(srcdir)/../msdos/winsock/nsldap32.def
 else
         LDAP_EXPORT_DEFS= $(OBJDIR_NAME)/libldap.exp
@@ -175,8 +175,8 @@ EXTRA_LIBS += $(dist_libdir)/$(LDIF_LIBNAME).lib
 EXTRA_LIBS += $(dist_libdir)/$(LBER_LIBNAME).lib
 endif
 
-ifeq (,$(filter-out WINCE,$(OS_ARCH)))
-EXTRA_LIBS =corelibc.lib coredll.lib winsock.lib wince_console.lib wince_missing.lib
+ifeq (,$(filter-out WINCE,$(OS_TARGET)))
+EXTRA_LIBS =corelibc.lib coredll.lib wince_console.lib wince_missing.lib
 EXTRA_LIBS += $(dist_libdir)/$(LDIF_LIBNAME).lib
 EXTRA_LIBS += $(dist_libdir)/$(LBER_LIBNAME).lib
 endif
@@ -228,7 +228,7 @@ endif
 ifeq ($(USE_DLL_EXPORTS_FILE), 1)
 # recursive gmake rule to create exported symbols file
 $(LDAP_EXPORT_DEFS):: $(srcdir)/../libldap.ex
-ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
+ifeq (,$(filter-out WINNT,$(OS_ARCH)))
 	$(GENEXPORTS) Win32 Standard $< $(GENEXPARGS) > $@
 else
 	$(GENEXPORTS) $(OS_ARCH) Standard $< $(GENEXPARGS) > $@
@@ -306,7 +306,7 @@ ifdef MKSHLIB
 	$(INSTALL) -m 444 $(DLLLDAP) $(dist_libdir)
 	$(INSTALL) -m 444 $(DLLLDAP) $(dist_bindir)
 endif
-ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
+ifeq (,$(filter-out WINNT,$(OS_ARCH)))
 	$(INSTALL) -m 444 $(LIBLDAP) $(dist_libdir)
 	$(INSTALL) -m 444 $(DLLLDAP) $(dist_libdir)
 endif

@@ -99,7 +99,7 @@ endif
 #
 
 ifdef LIBRARY_NAME
-ifeq (,$(filter-out WINCE WINNT OS2,$(OS_ARCH)))
+ifeq (,$(filter-out WINNT OS2,$(OS_ARCH)))
 
 #
 # Win95, Win16, and OS/2 require library names conforming to the 8.3 rule.
@@ -130,7 +130,7 @@ endif
 endif
 
 ifndef TARGETS
-ifeq (,$(filter-out WINCE WINNT OS2,$(OS_ARCH)))
+ifeq (,$(filter-out WINNT OS2,$(OS_ARCH)))
 TARGETS		= $(LIBRARY) $(SHARED_LIBRARY) $(IMPORT_LIBRARY)
 else
 TARGETS		= $(LIBRARY) $(SHARED_LIBRARY)
@@ -148,7 +148,7 @@ OBJS		= $(addprefix $(OBJDIR)/,$(CSRCS:.c=.$(OBJ_SUFFIX))) \
 		  $(addprefix $(OBJDIR)/,$(ASFILES:.$(ASM_SUFFIX)=.$(OBJ_SUFFIX)))
 endif
 
-ifeq (,$(filter-out WINCE WINNT,$(OS_ARCH)))
+ifeq (,$(filter-out WINNT,$(OS_ARCH)))
 OBJS += $(RES)
 endif
 
@@ -274,7 +274,7 @@ $(NFSPWD):
 
 $(PROGRAM): $(OBJS)
 	@$(MAKE_OBJDIR)
-ifeq (,$(filter-out WINCE WINNT,$(OS_ARCH)))
+ifeq (,$(filter-out WINNT,$(OS_ARCH)))
 	$(CC) $(OBJS) -Fe$@ -link $(LDFLAGS) $(OS_LIBS) $(EXTRA_LIBS)
 else
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
@@ -314,7 +314,7 @@ ifeq ($(OS_ARCH)$(OS_RELEASE), AIX4.1)
 	$(LD) $(XCFLAGS) -o $@ $(OBJS) -bE:$(OBJDIR)/lib$(LIBRARY_NAME)_syms \
 		-bM:SRE -bnoentry $(OS_LIBS) $(EXTRA_LIBS)
 else	# AIX 4.1
-ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
+ifeq (,$(filter-out WINNT,$(OS_ARCH)))
 	$(LINK_DLL) -MAP $(DLLBASE) $(EXTRA_LIBS) $(OBJS) $(DLL_LIBS)
 else
 ifeq ($(OS_ARCH),OS2)
@@ -343,7 +343,7 @@ ifdef ENABLE_STRIP
 	$(STRIP) $@
 endif
 
-ifeq (,$(filter-out WINCE WINNT OS2,$(OS_ARCH)))
+ifeq (,$(filter-out WINNT OS2,$(OS_ARCH)))
 $(RES): $(RESNAME)
 	@$(MAKE_OBJDIR)
 ifeq ($(OS_TARGET),OS2)
@@ -357,7 +357,7 @@ endif
 
 $(OBJDIR)/%.$(OBJ_SUFFIX): %.cpp
 	@$(MAKE_OBJDIR)
-ifeq (,$(filter-out WINCE WINNT,$(OS_ARCH)))
+ifeq (,$(filter-out WINNT,$(OS_ARCH)))
 	$(CCC) -Fo$@ -c $(CCCFLAGS) $<
 else
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
@@ -372,7 +372,7 @@ WCCFLAGS2 = $(subst -I,-i=,$(WCCFLAGS1))
 WCCFLAGS3 = $(subst -D,-d,$(WCCFLAGS2))
 $(OBJDIR)/%.$(OBJ_SUFFIX): %.c
 	@$(MAKE_OBJDIR)
-ifeq (,$(filter-out WINCE WINNT,$(OS_ARCH)))
+ifeq (,$(filter-out WINNT,$(OS_ARCH)))
 	$(CC) -Fo$@ -c $(CFLAGS) $<
 else
 ifeq ($(MOZ_OS2_TOOLS),VACPP)

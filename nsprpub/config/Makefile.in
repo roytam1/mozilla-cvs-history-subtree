@@ -50,7 +50,7 @@ RELEASE_BINS	= nspr-config
 
 include $(topsrcdir)/config/config.mk
 
-ifneq ($(OS_ARCH),WINCE)
+ifneq ($(OS_TARGET),WINCE)
 CSRCS	= now.c
 endif
 
@@ -61,7 +61,7 @@ CSRCS  += nsinstall.c
 PLSRCS	= nfspwd.pl
 endif
 
-ifeq (,$(filter-out WINNT WINCE OS2,$(OS_ARCH)))
+ifeq (,$(filter-out WINNT OS2,$(OS_ARCH)))
 PROG_SUFFIX = .exe
 else
 PROG_SUFFIX =
@@ -110,11 +110,11 @@ endif
 
 include $(topsrcdir)/config/rules.mk
 
-ifneq ($(OS_ARCH),WINCE)
+ifneq ($(OS_TARGET),WINCE)
 PROGS	= $(OBJDIR)/now$(PROG_SUFFIX)
 endif
 
-ifeq (,$(filter-out OS2 WINNT WINCE,$(OS_ARCH)))
+ifeq (,$(filter-out OS2 WINNT,$(OS_ARCH)))
 TARGETS = $(PROGS)
 else
 PROGS	+= $(OBJDIR)/nsinstall$(PROG_SUFFIX)

@@ -27,7 +27,7 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 ifneq ($(OS_ARCH),WINNT)
-ifneq ($(OS_ARCH),WINCE)
+ifneq ($(OS_TARGET),WINCE)
 ifdef CROSS_COMPILE
 HOST_PROGRAM	= nsinstall$(BIN_SUFFIX)
 else

@@ -48,7 +48,7 @@ DIST_GARBAGE	=
 
 include $(topsrcdir)/config/config.mk
 
-ifneq ($(OS_ARCH),WINCE)
+ifneq ($(OS_TARGET),WINCE)
 CSRCS	= nsinstall.c now.c
 else
 CSRCS	=
@@ -56,7 +56,7 @@ endif
 
 PLSRCS	= nfspwd.pl
 
-ifneq (,$(filter WINCE WINNT OS2,$(OS_ARCH)))
+ifneq (,$(filter WINNT OS2,$(OS_ARCH)))
 PROG_SUFFIX = .exe
 else
 PROG_SUFFIX =
@@ -103,13 +103,13 @@ endif
 
 include $(topsrcdir)/config/rules.mk
 
-ifneq ($(OS_ARCH),WINCE)
+ifneq ($(OS_TARGET),WINCE)
 PROGS	= $(OBJDIR)/now$(PROG_SUFFIX)
 else
 PROGS	=
 endif
 
-ifneq (,$(filter WINCE WINNT OS2,$(OS_ARCH)))
+ifneq (,$(filter WINNT OS2,$(OS_ARCH)))
 TARGETS = $(PROGS)
 else
 PROGS	+= $(OBJDIR)/nsinstall$(PROG_SUFFIX)
@@ -117,7 +117,7 @@ TARGETS = $(PROGS) $(PLSRCS:.pl=)
 endif
 
 OUTOPTION = -o # end of the line
-ifeq (,$(filter-out WINCE WINNT OS2,$(OS_ARCH)))
+ifeq (,$(filter-out WINNT OS2,$(OS_ARCH)))
 OUTOPTION = /Fe
 endif
 

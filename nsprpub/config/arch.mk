@@ -207,7 +207,7 @@ endif
 # Jump through hoops to make X86 look like x86 for the build system.
 #
 ifeq ($(OSVERSION),WCE300)
-	OS_ARCH := WINCE
+	OS_ARCH := WINNT
 	OS_TARGET := WINCE
 	OS_RELEASE := 3.00
 	ifeq ($(TARGETCPU),X86)

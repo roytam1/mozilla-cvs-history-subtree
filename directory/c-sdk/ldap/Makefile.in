@@ -4,7 +4,7 @@ srcdir	= @srcdir@
 
 include $(MOD_DEPTH)/config/autoconf.mk
 
-ifneq ($(OS_ARCH),WINCE)
+ifneq ($(OS_TARGET),WINCE)
 SRCDIRS	= build include libraries
 else
 SRCDIRS	= include libraries
