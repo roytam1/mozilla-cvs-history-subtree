@@ -461,6 +461,14 @@ _ENABLE_PIC=1
 endif
 
 #
+# Force PIC if we're generating the mozcomps meta module
+#
+
+ifneq (,$(findstring mozcomps, $(MOZ_META_COMPONENTS)))
+_ENABLE_PIC=1
+endif
+
+#
 # Disable PIC if necessary
 #
 
@@ -688,6 +696,19 @@ BIN_FLAGS	:= -Zlinker /PM:PM -Zlinker /Stack:0x30000
 endif
 ifeq ($(OS_ARCH),WINNT)
 WIN32_EXE_LDFLAGS	+= /SUBSYSTEM:WINDOWS
+endif
+endif
+endif
+
+# Flags needed to link against the component library
+ifdef MOZ_COMPONENTLIB
+MOZ_COMPONENTLIB_EXTRA_DSO_LIBS = mozcomps xpcom_compat
+
+# Tell the linker where NSS and LDAP libs are
+ifeq ($(OS_ARCH),Darwin)
+MOZ_COMPONENTLIB_EXTRA_LIBS = $(foreach library, $(patsubst -l%, $(LIB_PREFIX)%$(DLL_SUFFIX), $(filter -l%, $(LDAP_LIBS))), -dylib_file @executable_path/$(library):$(DIST)/bin/$(library))
+ifeq (,$(findstring crypto,$(MOZ_META_COMPONENTS)))
+MOZ_COMPONENTLIB_EXTRA_LIBS += $(foreach library, $(patsubst -l%, $(LIB_PREFIX)%$(DLL_SUFFIX), $(filter -l%, $(NSS_LIBS))), -dylib_file @executable_path/$(library):$(DIST)/bin/$(library))
 endif
 endif
 endif
