@@ -22,13 +22,16 @@
 #include "layout.h"
 #include "laylayer.h"
 #include "glhist.h"
+#ifdef JAVA
 #include "java.h"
+#endif
 #include "libi18n.h"
 #include "edt.h"
 #include "laystyle.h"
 #include "prefapi.h"
 #include "xp_ncent.h"
 #include "prefetch.h"
+#include "np.h"
 
 /* style sheet tag stack and style struct */
 #include "stystack.h"
@@ -75,6 +78,11 @@
 
 /* Added to encapsulate code that was previously in six different places in LO_LayoutTag()! */
 static void lo_ProcessFontTag( lo_DocState *state, PA_Tag *tag, int32 fontSpecifier, int32 attrSpecifier );
+
+#ifdef OJI
+#define JAVA_PLUGIN_MIMETYPE "application/x-java-vm"
+static void lo_AddParam(PA_Tag* tag, char* aName, char* aValue);
+#endif
 
 /*************************************
  * Function: LO_ChangeFontSize
@@ -276,9 +284,15 @@ lo_FilterTag(MWContext *context, lo_DocState *state, PA_Tag *tag)
 	 * To determine if we're in a known object, we need to
 	 * look up the whole object stack for a known object at
 	 * any level.
+	 * 
+	 * Also adding P_JAVA_APPLET to the list - support for applet redirect to obj tag
 	 */
 	if (top_state->object_stack != NULL &&
-	    tag->type != P_PARAM && tag->type != P_OBJECT)
+	    tag->type != P_PARAM && tag->type != P_OBJECT
+#ifdef OJI
+	    && tag->type != P_JAVA_APPLET
+#endif
+	    )
 	{
 		/* Check for a known object anywhere on the stack */
 		lo_ObjectStack* top = top_state->object_stack;
@@ -4139,6 +4153,9 @@ lo_LayoutTag(MWContext *context, lo_DocState *state, PA_Tag *tag)
 {
 	char *tptr;
 	char *tptr2;
+#ifdef OJI
+	char* javaPlugin;
+#endif
 	LO_TextAttr tmp_attr;
 	StyleStruct *style_struct=NULL;
 	XP_Bool has_ss_bottom_margin=FALSE;
@@ -6679,7 +6696,44 @@ XP_TRACE(("lo_LayoutTag(%d)\n", tag->type));
 		 * This is the NEW HTML-WG approved embedded JAVA
 		 * application.
 		 */
-#ifdef JAVA
+#if defined(OJI)
+		case P_JAVA_APPLET:
+			javaPlugin = NPL_FindPluginEnabledForType(JAVA_PLUGIN_MIMETYPE);
+
+			/* If there is a JVM installed as a plugin, redirect to the object tag */
+			if(javaPlugin && !state->hide_content)
+			{
+				if(tag->is_end == FALSE)
+				{
+					PA_Block buff;
+					char* str;
+
+					buff = lo_FetchParamValue(context, tag, PARAM_CODE);
+					if(buff)
+					{
+						PA_LOCK(str, char *, buff);
+						lo_AddParam(tag, "DATA", str);
+						lo_AddParam(tag, "TYPE", JAVA_PLUGIN_MIMETYPE);
+
+						PA_UNLOCK(buff);
+						XP_FREE(buff);
+
+						tag->type = P_OBJECT;
+						lo_ProcessObjectTag(context, state, tag, FALSE);
+					}
+				}
+				else
+				{
+					tag->type = P_OBJECT;
+					lo_ProcessObjectTag(context, state, tag, FALSE);
+				}
+				
+				XP_FREE(javaPlugin);	
+
+			}
+			break;
+
+#elif defined(JAVA)
 		case P_JAVA_APPLET:
 		    /*
 		     * If the user has disabled Java, act like it we don't
@@ -7379,3 +7433,32 @@ void lo_PostLayoutTag(MWContext * context, lo_DocState *state, PA_Tag *tag, XP_B
     }
 #endif /* PICS_SUPPORT */
 }
+
+#ifdef OJI
+static void lo_AddParam(PA_Tag* tag, char* aName, char* aValue)
+{
+	uint32 nameLen, valueLen, oldTagLen, newTagLen;
+	char* tagData;
+
+	nameLen = XP_STRLEN(aName);
+	valueLen = XP_STRLEN(aValue);
+	oldTagLen = XP_STRLEN((char*)(tag->data));
+	newTagLen = oldTagLen + nameLen + valueLen + 2;
+
+	tag->data = XP_REALLOC(tag->data, newTagLen+1);
+
+	/* Remove the '>' character */
+	tagData = (char*)(tag->data);
+	tagData[oldTagLen-1] = 0;
+
+	/* Add "aName=aValue" */
+	XP_STRCAT(tagData, " ");
+	XP_STRCAT(tagData, aName);
+	XP_STRCAT(tagData, "=");
+	XP_STRCAT(tagData, aValue);
+	XP_STRCAT(tagData, ">");
+
+	tag->data_len = newTagLen;
+}
+#endif /* OJI */
+

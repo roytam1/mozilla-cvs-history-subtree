@@ -24,7 +24,7 @@ CSRCS		= npassoc.c
 
 CPPSRCS		= nsplugin.cpp
 
-EXPORTS		= nppg.h npupp.h nsplugin.h nsjvm.h npglue.h nppriv.h
+EXPORTS		= nppg.h npupp.h nsplugin.h npglue.h nppriv.h
 
 REQUIRES	= lay layer js style applet nspr dbm img util java pref xpcom
 

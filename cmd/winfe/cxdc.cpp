@@ -33,7 +33,9 @@
 #include "prefinfo.h"
 #include "cxprint.h"
 
-#ifdef JAVA
+#if defined(OJI)
+#include "jvmmgr.h"
+#elif defined(JAVA)
 #include "java.h"
 #endif
 
@@ -3759,14 +3761,14 @@ BOOL CDCCX::ResolveTextExtent(int16 wincsid, HDC pDC, LPCTSTR pString, int iLeng
 #endif
 }
 
-
+#ifdef TRANSPARENT_APPLET
 // 
 // This function is called only when applet are windowless and force a
 // paint on the java side
 //
 void CDCCX::DrawJavaApp(MWContext *pContext, int iLocation, LO_JavaAppStruct *pJava)
 {
-#ifdef JAVA
+#if defined(OJI) || defined(JAVA)
 
     RECT        rect;
     HDC         hDC = GetContextDC();
@@ -3790,10 +3792,15 @@ void CDCCX::DrawJavaApp(MWContext *pContext, int iLocation, LO_JavaAppStruct *pJ
     event.event = WM_PAINT;
     event.wParam = (uint32)hDC;
     event.lParam = (uint32)&rect;
-    
+
+#if defined(OJI)
+    // XXX help
+#elif defined(JAVA) 
     LJ_HandleEvent(pContext, pJava, (void *)&event);
+#endif
 
     ReleaseContextDC(hDC);
 #endif
 }
 
+#endif

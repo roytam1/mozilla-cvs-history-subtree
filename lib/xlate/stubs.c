@@ -111,10 +111,12 @@ void PSFE_FreeJavaAppElement(){}
 void TXFE_HideJavaAppElement(){}
 void PSFE_HideJavaAppElement(){}
 void TXFE_DisplayJavaApp(){}
+#ifdef TRANSPARENT_APPLET
 void TXFE_DrawJavaApp(){}
 void PSFE_DrawJavaApp(){}
 void TXFE_HandleClippingView(){}
 void PSFE_HandleClippingView(){}
+#endif
 void TXFE_FreeEdgeElement(){}
 void PSFE_FreeEdgeElement(){}
 void TXFE_DisplayCell(){}

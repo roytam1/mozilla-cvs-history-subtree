@@ -392,6 +392,7 @@ lo_FormatEmbedInternal(MWContext *context, lo_DocState *state, PA_Tag *tag,
 	embed->border_horiz_space = EMBED_DEF_HORIZONTAL_SPACE;
 	embed->tag = tag;
 	embed->ele_attrmask = 0;
+	embed->base_url = NULL;
 
 	if (streamStarted)
 		embed->ele_attrmask |= LO_ELE_STREAM_STARTED;
@@ -454,6 +455,24 @@ lo_FormatEmbedInternal(MWContext *context, lo_DocState *state, PA_Tag *tag,
         }
 	}
 	
+	/*
+	 * Save away the base of the document
+	 */
+	buff = PA_ALLOC(XP_STRLEN(state->top_state->base_url) + 1);
+	if (buff != NULL)
+	{
+		char *cp;
+		PA_LOCK(cp, char*, buff);
+		XP_STRCPY(cp, state->top_state->base_url);
+		PA_UNLOCK(buff);
+		embed->base_url = buff;
+	}
+	else
+	{
+		state->top_state->out_of_memory = TRUE;
+		return;
+	}
+
 	/*
 	 * Check for an align parameter
 	 */

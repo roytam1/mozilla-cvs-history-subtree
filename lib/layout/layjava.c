@@ -21,9 +21,12 @@
 #include "pa_parse.h"
 #include "layout.h"
 #include "laylayer.h"
+#ifdef JAVA
 #include "java.h"
+#endif
 #include "laystyle.h"
 #include "layers.h"
+#include "np.h"
 
 #define JAVA_DEF_DIM			50
 #define JAVA_DEF_BORDER		0
@@ -36,6 +39,7 @@ static void lo_FormatJavaAppInternal(MWContext *context,
 									 PA_Tag *tag,
 									 LO_JavaAppStruct *java_app);
 
+#if 0   // not used
 void
 LO_ClearJavaAppBlock(MWContext *context, LO_JavaAppStruct *java_app)
 {
@@ -73,7 +77,7 @@ LO_ClearJavaAppBlock(MWContext *context, LO_JavaAppStruct *java_app)
 		lo_FlushBlockage(context, state, main_doc_state);
 	}
 }
-
+#endif
 
 void
 lo_FormatJavaObject(MWContext *context, lo_DocState *state, PA_Tag *tag, LO_JavaAppStruct *java_app)
@@ -136,6 +140,7 @@ lo_FormatJavaObject(MWContext *context, lo_DocState *state, PA_Tag *tag, LO_Java
     lo_FormatJavaAppInternal(context, state, tag, java_app);
 }
 
+#define JAVA_PLUGIN_MIMETYPE "application/x-java-vm"
 
 void
 lo_FormatJavaApp(MWContext *context, lo_DocState *state, PA_Tag *tag)
@@ -1001,3 +1006,4 @@ lo_UpdateStateAfterJavaAppLayout(lo_DocState *state,
   /* Move layer to new position */
   CL_MoveLayer(java_app->layer, x, y);
 }
+

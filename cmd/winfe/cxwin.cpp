@@ -51,14 +51,23 @@ extern char * EDT_NEW_DOC_NAME;
 
 #define EDT_IS_SIZING   ( EDT_IS_EDITOR(GetContext()) && EDT_IsSizing(GetContext()) )
 
-#ifdef JAVA
-#include "np.h"
+#if defined(OJI)
+#include "jvmmgr.h"
+#elif defined(JAVA)
 #include "java.h"
+#endif
+
+#if defined(JAVA) || defined(OJI)
+
+#include "np.h"
 #include "prlog.h"
+
 #ifdef DDRAW
 static DDSURFACEDESC ddsd;
 #endif
+
 extern "C" {
+
 #ifndef NSPR20
 PR_LOG_DEFINE(APPLET);
 #else
@@ -87,7 +96,8 @@ PR_PUBLIC_API(HPALETTE) GET_APPLICATION_PALETTE(void)
     }
     return hPal;
 }
-};
+
+};      /* extern "C" */
 #endif  /* JAVA */
 
 // older versions of MFC don't have this #define
@@ -605,7 +615,9 @@ void CWinCX::DestroyContext()   {
 		#endif
             ReleaseContextDC(hdc);
 		}
-#ifdef JAVA
+#if defined(OJI)
+                // XXX help
+#elif defined(JAVA)
 		//
 		// Discard the events pending for the context...
 		//
@@ -4131,13 +4143,11 @@ void CWinCX::DestroyEmbedWindow(MWContext *pContext, NPEmbeddedApp *pApp)
 }
 
 
-
-
 ////////////////////////////////////////////////////////////////////////////////
 // Java Stuff
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifdef JAVA
+#if defined(JAVA) && !defined(OJI)
 
 void PR_CALLBACK 
 FE_DisplayNoJavaIcon(MWContext *pContext, LO_JavaAppStruct *java_struct)
@@ -4323,7 +4333,7 @@ FE_FreeJavaWindow(MWContext *context, struct LJAppletData *appletData,
 
 void CWinCX::DisplayJavaApp(MWContext *pContext, int iLocation, LO_JavaAppStruct *java_struct)
 {
-#ifdef JAVA
+#if defined(JAVA) && !defined(OJI)
     LJ_DisplayJavaApp(pContext, java_struct,
 		      FE_DisplayNoJavaIcon,
 		      FE_GetFullWindowSize,
@@ -4337,14 +4347,14 @@ void CWinCX::DisplayJavaApp(MWContext *pContext, int iLocation, LO_JavaAppStruct
 
 void CWinCX::HideJavaAppElement(MWContext *pContext, LJAppletData * session_data)
 {
-#ifdef JAVA
+#if defined(JAVA) && !defined(OJI)
     LJ_HideJavaAppElement(pContext, session_data, FE_SaveJavaWindow);
 #endif /* JAVA */
 }
 
 void CWinCX::FreeJavaAppElement(MWContext *pContext, LJAppletData *ad)
 {
-#ifdef JAVA
+#if defined(JAVA) && !defined(OJI)
     LJ_FreeJavaAppElement(pContext, ad,
 			  FE_SaveJavaWindow,
 			  FE_FreeJavaWindow);
@@ -4354,7 +4364,7 @@ void CWinCX::FreeJavaAppElement(MWContext *pContext, LJAppletData *ad)
 void CWinCX::GetJavaAppSize(MWContext *pContext, LO_JavaAppStruct *java_struct,
                             NET_ReloadMethod reloadMethod)
 {
-#ifdef JAVA
+#if defined(JAVA) && !defined(OJI)
     LJ_GetJavaAppSize(pContext, java_struct, reloadMethod);
 #else
 // jevering: should this be inside ifdef JAVA?
@@ -4364,13 +4374,15 @@ void CWinCX::GetJavaAppSize(MWContext *pContext, LO_JavaAppStruct *java_struct,
 #endif  /* ! JAVA */
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// End of Java Stuff
-////////////////////////////////////////////////////////////////////////////////
-
+#ifdef TRANSPARENT_APPLET
 void CWinCX::HandleClippingView(MWContext *pContext, LJAppletData *appletD, int x, int y, int width, int height)
 {
 }
+#endif
+
+////////////////////////////////////////////////////////////////////////////////
+// End of Java Stuff
+////////////////////////////////////////////////////////////////////////////////
 
 void CWinCX::LayoutNewDocument(MWContext *pContext, URL_Struct *pURL, int32 *pWidth, int32 *pHeight, int32 *pmWidth, int32 *pmHeight)
 {
