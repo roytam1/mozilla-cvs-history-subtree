@@ -44,9 +44,13 @@
 #include <time.h>
 #include <windows.h>
 #include "nsTridentPreferences.h"
+#include "nsVoidArray.h"
 
 class nsIFile;
 class nsICookieManager2;
+
+#import "c:\windows\system32\pstorec.dll"
+using namespace PSTORECLib;
 
 class nsTridentPreferencesWin : public nsTridentPreferences {
 public:
@@ -62,9 +66,18 @@ private:
   nsresult CopyStyleSheet(PRBool aReplace);
   nsresult CopyCookies(PRBool aReplace);
   nsresult CopyHistory(PRBool aReplace);
-  nsresult CopyFormData(PRBool aReplace);
-  nsresult CopyPasswords(PRBool aReplace);
   nsresult CopyFavorites(PRBool aReplace);
+
+  PRBool   KeyIsURI(const nsAString& aKey, char* aHost);
+
+  nsresult CopyPasswords(PRBool aReplace);
+  nsresult GetSignonsListFromPStore(IPStore* aPStore, nsVoidArray* aSignonsFound);
+  nsresult ResolveAndMigrateSignons(IPStore* aPStore, nsVoidArray* aSignonsFound);
+  void     EnumerateUsernames(const nsAString& aKey, PRUnichar* aData, unsigned long aCount, nsVoidArray* aSignonsFound);
+  void     GetUserNameAndPass(unsigned char* data, unsigned long len, unsigned char** username, unsigned char** pass);
+
+  nsresult CopyFormData(PRBool aReplace);
+  nsresult AddDataToFormHistory(const nsAString& aKey, PRUnichar* data, unsigned long len);
 
   nsresult CopyCookiesFromBuffer(char *aBuffer, PRUint32 aBufferLength,
                                  nsICookieManager2 *aCookieManager);

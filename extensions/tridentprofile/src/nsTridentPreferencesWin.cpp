@@ -72,6 +72,8 @@
 #include "nsIGlobalHistory.h"
 #include "nsIRDFRemoteDataSource.h"
 #include "nsIURI.h"
+#include "nsIPasswordManager.h"
+#include "nsCRT.h"
 #endif
 
 #define MIGRATION_ITEMBEFOREMIGRATE "Migration:ItemBeforeMigrate"
@@ -458,7 +460,7 @@ nsTridentPreferencesWin::CopyHistory(PRBool aReplace) {
           ::FileTimeToSystemTime(&(statURL.ftLastVisited), &st);
           PRExplodedTime prt;
           prt.tm_year = st.wYear;
-          prt.tm_month = st.wMonth;
+          prt.tm_month = st.wMonth - 1; // SYSTEMTIME's day-of-month parameter is 1-based, PRExplodedTime's is 0-based.
           prt.tm_mday = st.wDay;
           prt.tm_hour = st.wHour;
           prt.tm_min = st.wMinute;
@@ -532,89 +534,198 @@ nsTridentPreferencesWin::CopyHistory(PRBool aReplace) {
   return NS_OK;
 }
 
-nsresult
-nsTridentPreferencesWin::CopyFormData(PRBool aReplace) {
-  printf("*** copyformdata\n");
-  return NS_OK;
-}
+typedef HRESULT (WINAPI *PStoreCreateInstancePtr)(IPStore**, DWORD, DWORD, DWORD);
+
+typedef struct {
+  PRUnichar* user;
+  PRUnichar* pass;
+  char*      host;
+} SIGNONDATA;
+
+// The IEPStore GUID is the registry key under which IE Protected Store data lives. 
+// {e161255a-37c3-11d2-bcaa-00c04fd929db}
+static GUID IEPStoreGUID = { 0xe161255a, 0x37c3, 0x11d2, { 0xbc, 0xaa, 0x00, 0xc0, 0x4f, 0xd9, 0x29, 0xdb } };
 
 nsresult
-nsTridentPreferencesWin::CopyPasswords(PRBool aReplace) {
-  printf("*** copypasswords\n");
-
-#if 0
-#import "c:\windows\system32\pstorec.dll"
-using namespace PSTORECLib;
-
-typedef HRESULT (WINAPI *PStoreCreateInstancePtr)(IPStore **, DWORD, DWORD, DWORD);
-
-void DecryptData(unsigned long pcbData, unsigned char* ppbData);
-
-int checkunicode (unsigned char *data, unsigned long length)
+nsTridentPreferencesWin::CopyPasswords(PRBool aReplace)
 {
-  for (unsigned int i=0; i < length; ++i) {
-    if(data[i] == 0) 
-      return 1;
+  HRESULT hr;
+  nsresult rv;
+  nsVoidArray signonsFound;
+
+  HMODULE pstoreDLL = ::LoadLibrary("pstorec.dll");
+  if (!pstoreDLL) {
+    // XXXben TODO
+    // Need to figure out what to do here on Windows 98 etc... it may be that the key is universal read
+    // and we can just blunder into the registry and use CryptUnprotect to get the data out. 
+    return NS_ERROR_FAILURE;
   }
-  return 0;
+
+  PStoreCreateInstancePtr PStoreCreateInstance = (PStoreCreateInstancePtr)::GetProcAddress(pstoreDLL, "PStoreCreateInstance");
+  IPStorePtr PStore;
+  hr = PStoreCreateInstance(&PStore, 0, 0, 0);
+
+  rv = GetSignonsListFromPStore(PStore, &signonsFound);
+  if (NS_SUCCEEDED(rv))
+    ResolveAndMigrateSignons(PStore, &signonsFound);
 }
 
-void GetUserNameAndPass(unsigned char* data, unsigned long len, unsigned char** username, unsigned char** pass);
-
-int main (int argc, char **argv)
+nsresult
+nsTridentPreferencesWin::GetSignonsListFromPStore(IPStore* aPStore, nsVoidArray* aSignonsFound)
 {
-  HRESULT hRes;
+  HRESULT hr;
 
-  HMODULE hPstoreDLL = LoadLibrary("pstorec.dll");
-  PStoreCreateInstancePtr PStoreCreateInstance = (PStoreCreateInstancePtr)GetProcAddress(hPstoreDLL, "PStoreCreateInstance");
+  IEnumPStoreItemsPtr enumItems;
+  hr = aPStore->EnumItems(0, &IEPStoreGUID, &IEPStoreGUID, 0, &enumItems);
+  if (SUCCEEDED(hr)) {
+    LPWSTR itemName;
+    while (enumItems->raw_Next(1, &itemName, 0) == S_OK) {
+      unsigned long count = 0;
+      unsigned char* data = NULL;
 
-  IPStorePtr spPStore;
-  hRes = PStoreCreateInstance(&spPStore, 0, 0, 0);
+      // We are responsible for freeing |data| using |CoTaskMemFree|!!
+      // But we don't do it here... 
+      hr = aPStore->ReadItem(0, &IEPStoreGUID, &IEPStoreGUID, itemName, &count, &data, NULL, 0);
+      if (SUCCEEDED(hr)) {
+        nsAutoString itemNameString(itemName);
+        nsAutoString suffix;
+        itemNameString.Right(suffix, 11);
+        if (suffix.EqualsIgnoreCase(":StringData")) {
+          // :StringData contains the saved data
+          const nsAString& key = Substring(itemNameString, 0, itemNameString.Length() - 11);
+          char* host = nsnull;
+          if (KeyIsURI(key, host)) {
+            // This looks like a URL and could be a password. If it has username and password data, then we'll treat
+            // it as one and add it to the password manager
+            unsigned char* username = NULL;
+            unsigned char* pass = NULL;
+            GetUserNameAndPass(data, count, &username, &pass);
 
-  IEnumPStoreTypesPtr spEnumTypes;
-  hRes = spPStore->EnumTypes(0, 0, &spEnumTypes);
-
-  GUID typeGUID;
-
-  while (spEnumTypes->raw_Next(1,&typeGUID,0) == S_OK) {
-    printf("typeGUID = %.8x\n",typeGUID);
-
-    IEnumPStoreTypesPtr spEnumSubTypes;
-    hRes = spPStore->EnumSubtypes(0, &typeGUID, 0, &spEnumSubTypes);
-
-    GUID subtypeGUID;
-    while (spEnumSubTypes->raw_Next(1,&subtypeGUID,0) == S_OK) {
-      printf("\tsubtypeGUID = %.8x\n",subtypeGUID);
-
-      IEnumPStoreItemsPtr spEnumItems;
-      HRESULT hRes = spPStore->EnumItems(0, &typeGUID, &subtypeGUID, 0, &spEnumItems);
-
-      LPWSTR itemName;
-      while (spEnumItems->raw_Next(1,&itemName,0) == S_OK) {
-        printf("\t\titemName = %ws\n",itemName);
-        unsigned long pcbData = 0;
-        unsigned char *ppbData = NULL;
-        _PST_PROMPTINFO *pi = NULL;
-        hRes = spPStore->ReadItem(0,&typeGUID,&subtypeGUID,itemName,&pcbData,&ppbData,pi,0);
-
-        if(checkunicode(ppbData,pcbData)) {
-          unsigned char* username = NULL;
-          unsigned char* pass = NULL;
-          GetUserNameAndPass(ppbData, pcbData, &username, &pass);
-          printf("\t\tusername = %ws\n",username);
-          if (pass) 
-            printf("\t\tpass = %ws\n",pass);
+            if (username && pass) {
+              // username and pass are pointers into the data buffer allocated by IPStore's ReadItem
+              // method, and we own that buffer. We don't free it here, since we're going to be using 
+              // it after the password harvesting stage to locate the username field. Only after the second
+              // phase is complete do we free the buffer. 
+              SIGNONDATA* d = new SIGNONDATA;
+              d->user = (PRUnichar*)username;
+              d->pass = (PRUnichar*)pass;
+              d->host = host;
+              aSignonsFound->AppendElement(d);
+            }
+          }
         }
-        else
-          printf("\t\titemData = %s\n",ppbData);
       }
     }
   }
-
-  return 0;
+  return NS_OK;
 }
 
-void GetUserNameAndPass(unsigned char* data, unsigned long len, unsigned char** username, unsigned char** pass)
+PRBool
+nsTridentPreferencesWin::KeyIsURI(const nsAString& aKey, char* aHost)
+{
+  *aHost = nsnull;
+
+  nsCOMPtr<nsIURI> uri(do_CreateInstance("@mozilla.org/network/standard-url;1"));
+  nsCAutoString keyCStr; keyCStr.AssignWithConversion(aKey);
+  uri->SetSpec(keyCStr);
+
+  PRBool validScheme = PR_FALSE;
+  const char* schemes[] = { "http", "https" };
+  for (int i = 0; i < 2; ++i) {
+    uri->SchemeIs(schemes[i], &validScheme);
+    if (validScheme) {
+      nsCAutoString host;
+      uri->GetHost(host);
+      aHost = nsCRT::strdup(host.get());
+      return validScheme;
+    }
+  }
+  return PR_FALSE;
+}
+
+nsresult
+nsTridentPreferencesWin::ResolveAndMigrateSignons(IPStore* aPStore, nsVoidArray* aSignonsFound)
+{
+  HRESULT hr;
+
+  IEnumPStoreItemsPtr enumItems;
+  hr = aPStore->EnumItems(0, &IEPStoreGUID, &IEPStoreGUID, 0, &enumItems);
+  if (SUCCEEDED(hr)) {
+    LPWSTR itemName;
+    while (enumItems->raw_Next(1, &itemName, 0) == S_OK) {
+      unsigned long count = 0;
+      unsigned char* data = NULL;
+
+      hr = aPStore->ReadItem(0, &IEPStoreGUID, &IEPStoreGUID, itemName, &count, &data, NULL, 0);
+      if (SUCCEEDED(hr)) {
+        nsAutoString itemNameString(itemName);
+        nsAutoString suffix;
+        itemNameString.Right(suffix, 11);
+        if (suffix.EqualsIgnoreCase(":StringData")) {
+          // :StringData contains the saved data
+          const nsAString& key = Substring(itemNameString, 0, itemNameString.Length() - 11);
+          
+          // Assume all keys that are valid URIs are signons, not saved form data, and that 
+          // all keys that aren't valid URIs are form field names (containing form data).
+          char* host = nsnull;
+          if (!KeyIsURI(key, host)) {
+            // Search the data for a username that matches one of the found signons. 
+            EnumerateUsernames(key, (PRUnichar*)data, (count/sizeof(PRUnichar)), aSignonsFound);
+          }
+        }
+
+        ::CoTaskMemFree(data);
+      }
+    }
+  }
+  return NS_OK;
+}
+
+void
+nsTridentPreferencesWin::EnumerateUsernames(const nsAString& aKey, PRUnichar* aData, unsigned long aCount, nsVoidArray* aSignonsFound)
+{
+  nsCOMPtr<nsIPasswordManager> pwmgr(do_GetService("@mozilla.org/passwordmanager;1"));
+  if (!pwmgr)
+    return;
+
+  PRUnichar* cursor = aData;
+  PRInt32 offset = 0;
+  PRInt32 signonCount = aSignonsFound->Count();
+
+  while (offset < aCount) {
+    nsAutoString curr; curr = cursor;
+
+    // Compare the value at the current cursor position with the collected list of signons
+    for (PRInt32 i = 0; i < signonCount; ++i) {
+      SIGNONDATA* sd = (SIGNONDATA*)aSignonsFound->ElementAt(i);
+      if (curr.Equals(sd->user)) {
+        // Bingo! Found a username in the saved data for this item. Now, add a Signon.
+        nsDependentString usernameStr(sd->user), passStr(sd->pass);
+        nsDependentCString host(sd->host);
+        pwmgr->AddUserFull(host, usernameStr, passStr, aKey, NS_LITERAL_STRING(""));
+      }
+    }
+
+    // Advance the cursor
+    PRInt32 advance = curr.Length() + 1;
+    cursor += advance; // Advance to next string (length of curr string + 1 PRUnichar for null separator)
+    offset += advance;
+  } 
+
+  // Now that we've done resolving signons, we need to walk the signons list, freeing the data buffers 
+  // for each SIGNONDATA entry, since these buffers were allocated by the system back in |GetSignonListFromPStore|
+  // but never freed. 
+
+  for (PRInt32 i = 0; i < signonCount; ++i) {
+    SIGNONDATA* sd = (SIGNONDATA*)aSignonsFound->ElementAt(i);
+    ::CoTaskMemFree(sd->user);  // |sd->user| is a pointer to the start of a buffer that also contains sd->pass
+    nsCRT::free(sd->host);
+    delete sd;
+  }
+}
+
+void 
+nsTridentPreferencesWin::GetUserNameAndPass(unsigned char* data, unsigned long len, unsigned char** username, unsigned char** pass)
 {
   *username = data;
   *pass = NULL;
@@ -629,9 +740,220 @@ void GetUserNameAndPass(unsigned char* data, unsigned long len, unsigned char** 
   }
 }
 
-#endif
+nsresult
+nsTridentPreferencesWin::CopyFormData(PRBool aReplace)
+{
+  HRESULT hr;
+
+  HMODULE pstoreDLL = ::LoadLibrary("pstorec.dll");
+  if (!pstoreDLL) {
+    // XXXben TODO
+    // Need to figure out what to do here on Windows 98 etc... it may be that the key is universal read
+    // and we can just blunder into the registry and use CryptUnprotect to get the data out. 
+    return NS_ERROR_FAILURE;
+  }
+
+  PStoreCreateInstancePtr PStoreCreateInstance = (PStoreCreateInstancePtr)::GetProcAddress(pstoreDLL, "PStoreCreateInstance");
+  IPStorePtr PStore;
+  hr = PStoreCreateInstance(&PStore, 0, 0, 0);
+
+  IEnumPStoreItemsPtr enumItems;
+  hr = PStore->EnumItems(0, &IEPStoreGUID, &IEPStoreGUID, 0, &enumItems);
+  if (SUCCEEDED(hr)) {
+    LPWSTR itemName;
+    while (enumItems->raw_Next(1, &itemName, 0) == S_OK) {
+      unsigned long count = 0;
+      unsigned char* data = NULL;
+
+      // We are responsible for freeing |data| using |CoTaskMemFree|!!
+      hr = PStore->ReadItem(0, &IEPStoreGUID, &IEPStoreGUID, itemName, &count, &data, NULL, 0);
+      if (SUCCEEDED(hr)) {
+        nsAutoString itemNameString(itemName);
+        nsAutoString suffix;
+        itemNameString.Right(suffix, 11);
+        if (suffix.EqualsIgnoreCase(":StringData")) {
+          // :StringData contains the saved data
+          const nsAString& key = Substring(itemNameString, 0, itemNameString.Length() - 11);
+          char* host = nsnull;
+          if (!KeyIsURI(key, host))
+            AddDataToFormHistory(key, (PRUnichar*)data, count);
+        }
+      }
+    }
+  }
   return NS_OK;
 }
+
+nsresult
+nsTridentPreferencesWin::AddDataToFormHistory(const nsAString& aKey, PRUnichar* aData, unsigned long aCount)
+{
+  printf("*** add to form history\n");
+  return NS_OK;
+}
+
+
+#if 0
+nsresult
+nsTridentPreferencesWin::CopyPasswordsAndFormData(PRBool aReplace, IEPStoreData aWhichData) {
+  printf("*** copypasswords\n");
+
+  HRESULT hr;
+  nsVoidArray signonsFound;
+  
+  HMODULE pstoreDLL = ::LoadLibrary("pstorec.dll");
+  if (!pstoreDLL) {
+    // XXXben TODO
+    // Need to figure out what to do here on Windows 98 etc... it may be that the key is universal read
+    // and we can just blunder into the registry and use CryptUnprotect to get the data out. 
+    return NS_OK;
+  }
+
+  PStoreCreateInstancePtr PStoreCreateInstance = (PStoreCreateInstancePtr)::GetProcAddress(pstoreDLL, "PStoreCreateInstance");
+  IPStorePtr PStore;
+  hr = PStoreCreateInstance(&PStore, 0, 0, 0);
+
+  for (IEDataEnumPhase phase = eIEDataEnumPhase_HarvestData; 
+        phase != eIEDataEnumPhase_EnumComplete;
+        ++phase) {
+    switch (phase) {
+    case eIEDataEnumPhase_HarvestData:
+      hr = HarvestDataFromPStore(&typeGUID, &subTypeGUID);
+      if (!aPasswordsOrForms)
+        phase = eIEDataEnumPhase_EnumComplete;
+      break;
+    case eIEDataEnumPhase_AddPasswords:
+      break;
+    }
+  }
+}
+
+void
+nsTridentProfileWin::HarvestDataFromPStore()
+{
+            IEnumPStoreItemsPtr enumItems;
+            hr = PStore->EnumItems(0, &typeGUID, &subTypeGUID, 0, &enumItems);
+            if (SUCCEEDED(hr)) {
+              LPWSTR itemName;
+              while (enumItems->raw_Next(1, &itemName, 0) == S_OK) {
+                unsigned long count = 0;
+                unsigned char* data = NULL;
+
+                // We are responsible for freeing |data| using |CoTaskMemFree|!!
+                // But we don't do it here... 
+                hr = PStore->ReadItem(0, &typeGUID, &subTypeGUID, itemName, &count, &data, NULL, 0);
+                if (SUCCEEDED(hr)) {
+                  nsAutoString itemNameString(itemName);
+                  nsAutoString suffix;
+                  itemNameString.Right(suffix, 11);
+                  if (suffix.EqualsIgnoreCase(":StringData")) {
+                    // :StringData contains the saved data
+                    const nsAString& key = Substring(itemNameString, 0, itemNameString.Length() - 11);
+                    nsCOMPtr<nsIURI> uri(do_CreateInstance("@mozilla.org/network/standard-url;1"));
+                    nsCAutoString keyCStr; keyCStr.AssignWithConversion(key);
+                    uri->SetSpec(keyCStr);
+
+                    PRBool validScheme = PR_FALSE;
+                    const char* schemes[] = { "http", "https" };
+                    for (int i = 0; i < 2; ++i) {
+                      uri->SchemeIs(schemes[i], &validScheme);
+                      if (validScheme)
+                        break;
+                    }
+                    if (validScheme) {
+                      // This looks like a URL and could be a password. If it has username and password data, then we'll treat
+                      // it as one and add it to the password manager
+                      unsigned char* username = NULL;
+                      unsigned char* pass = NULL;
+                      GetUserNameAndPass(data, count, &username, &pass);
+
+                      if (aPasswordsOrForms && username && pass) {
+                        // username and pass are pointers into the data buffer allocated by IPStore's ReadItem
+                        // method, and we own that buffer. We don't free it here, since we're going to be using 
+                        // it after the password harvesting stage to locate the username field. Only after the second
+                        // phase is complete do we free the buffer. 
+                        SIGONDATA* d = new SIGNONDATA;
+                        d->user = (PRUnichar*)username;
+                        d->pass = (PRUnichar*)pass;
+                        signonsFound.AppendElement(d);
+                      }
+                      else if (!aPasswordsOrForms) {
+                        // Guess it's a Form History item then, add it to the Form History.
+                        // (Only if we're adding Form Data, instead of passwords)
+                        printf("*** treating entry (%ws)/(%ws) as form history item\n", keyCStr.get(), username);
+                        AddDataToFormHistory(data, count);
+                      }
+                    }
+                    else if (!aPasswordsOrForms) {
+                      // (Only if we're adding Form Data, instead of passwords)
+                      printf("*** entry (%ws)/(%ws) is form history item\n", keyCStr.get(), data);
+                      AddDataToFormHistory(data, count);
+                    }
+                  }
+
+              }
+            }
+          }
+
+          
+          // Looks to be a password, add it to the Password Manager 
+          // (Only if we're adding Passwords, instead of Form Data)
+          nsCOMPtr<nsIPasswordManager> pwmgr(do_GetService("@mozilla.org/passwordmanager;1"));
+          if (pwmgr) {
+            nsDependentString usernameStr((PRUnichar*)username), passStr((PRUnichar*)pass);
+            nsCAutoString host;
+            uri->GetHost(host);
+            pwmgr->AddUser(host, usernameStr, passStr);
+          }
+
+        }
+      }
+    }
+  }
+
+  return NS_OK;
+}
+
+#include "plstr.h"
+
+void
+nsTridentProfileWin::GetIEPStore(GUID* aTypeGUID, GUID* aSubTypeGUID)
+{
+  char typeGUIDString[10], subTypeGUIDString[10];
+
+  // These are smart pointers, we don't need to release. 
+  IEnumPStoreTypesPtr enumTypes;
+  hr = PStore->EnumTypes(0, 0, &enumTypes);
+  if (SUCCEEDED(hr)) {
+    GUID typeGUID;
+    while (enumTypes->raw_Next(1, &typeGUID, 0) == S_OK) {
+      sprintf(typeGUIDString, "%.8x", typeGUID);
+
+      // IE data store lives under {e161255a-37c3-11d2-bcaa-00c04fd929db}
+      if (PL_strcasecmp(typeGUIDString, "e161255a"))
+        continue;
+
+      *aTypeGUID = typeGUID;
+
+      IEnumPStoreTypesPtr enumSubTypes;
+      hr = PStore->EnumSubtypes(0, &typeGUID, 0, &enumSubTypes);
+      if (SUCCEEDED(hr)) {
+        GUID subTypeGUID;
+
+        while (enumSubTypes->raw_Next(1, &subTypeGUID, 0) == S_OK) {
+          sprintf(subTypeGUIDString, "%.8x", subTypeGUID);
+          if (!PL_strcasecmp(subTypeGUIDString, "e161255a")) {
+            *aSubTypeGUID = subTypeGUID;
+
+            // We're done here.
+            return;
+          }
+        }
+      }
+    }
+  }
+}
+
+#endif
 
 nsresult
 nsTridentPreferencesWin::CopyFavorites(PRBool aReplace) {
