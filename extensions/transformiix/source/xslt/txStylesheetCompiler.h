@@ -68,13 +68,6 @@ public:
     nsresult pushPtr(void* aPtr);
     void* popPtr();
 
-    // parsing functions
-    nsresult parsePattern(const nsAFlatString& aPattern, txPattern** aResult);
-    nsresult parseExpr(const nsAFlatString& aExpr, Expr** aResult);
-    nsresult parseAVT(const nsAFlatString& aExpr, Expr** aResult);
-    nsresult parseQName(const nsAString& aQName, txExpandedName& aExName,
-                        MBool aUseDefault);
-
     // State-checking functions
     MBool fcp();
     

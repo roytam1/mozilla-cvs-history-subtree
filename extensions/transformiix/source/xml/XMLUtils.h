@@ -62,6 +62,12 @@ public:
     nsresult init(const nsAString& aQName, txNamespaceMap& aResolver,
                   MBool aUseDefault);
 
+    void reset()
+    {
+        mNamespaceID = kNameSpaceID_None;
+        mLocalName = nsnull;
+    }
+
     MBool isNull()
     {
         return mNamespaceID == kNameSpaceID_None && !mLocalName;

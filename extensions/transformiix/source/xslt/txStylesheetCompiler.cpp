@@ -448,45 +448,6 @@ txStylesheetCompilerState::addGotoTarget(txInstruction** aTargetPointer)
     return NS_OK;
 }
 
-
-nsresult
-txStylesheetCompilerState::parsePattern(const nsAFlatString& aPattern,
-                                        txPattern** aResult)
-{
-    *aResult = txPatternParser::createPattern(aPattern, this);
-    NS_ENSURE_TRUE(*aResult, NS_ERROR_XPATH_PARSE_FAILURE);
-
-    return NS_OK;
-}
-
-nsresult
-txStylesheetCompilerState::parseExpr(const nsAFlatString& aExpr,
-                                     Expr** aResult)
-{
-    *aResult = ExprParser::createExpr(aExpr, this);
-    NS_ENSURE_TRUE(*aResult, NS_ERROR_XPATH_PARSE_FAILURE);
-
-    return NS_OK;
-}
-
-nsresult
-txStylesheetCompilerState::parseAVT(const nsAFlatString& aExpr, Expr** aResult)
-{
-    *aResult = ExprParser::createAttributeValueTemplate(aExpr, this);
-    NS_ENSURE_TRUE(*aResult, NS_ERROR_XPATH_PARSE_FAILURE);
-
-    return NS_OK;
-}
-
-nsresult
-txStylesheetCompilerState::parseQName(const nsAString& aQName,
-                                      txExpandedName& aExName,
-                                      MBool aUseDefault)
-{
-    return aExName.init(aQName, mElementContext->mMappings, aUseDefault);
-}
-
-
 nsresult
 txStylesheetCompilerState::resolveNamespacePrefix(nsIAtom* aPrefix,
                                                   PRInt32& aID)
