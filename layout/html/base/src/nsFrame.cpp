@@ -3716,7 +3716,7 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
               aPos->mContentOffset = newOffset+1;
             aPos->mContentOffsetEnd = aPos->mContentOffset;
             aPos->mInlineFrameStop = PR_TRUE;//success
-            aPos->mResultFrame = parentFrame;
+            //aPos->mResultFrame = parentFrame; leave the result frame where it was or else you may get infinate loops
             return NS_OK;
 
           }
