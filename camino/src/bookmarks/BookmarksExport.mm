@@ -45,6 +45,7 @@
 #include "nsCOMPtr.h"
 #include "nsIFileStreams.h"
 #include "nsILocalFile.h"
+#include "nsILocalFileMac.h"
 #include "nsIOutputStream.h"
 
 #include "nsIDOMElement.h"
@@ -105,7 +106,15 @@ BookmarksExport::SetupOutputStream(const nsAString& inFilePath)
   nsresult rv = NS_NewLocalFile(inFilePath, PR_FALSE, getter_AddRefs(destFile));
   if (NS_FAILED(rv)) return rv;
 
-	return NS_NewLocalFileOutputStream(getter_AddRefs(mOutputStream), destFile);
+  rv = NS_NewLocalFileOutputStream(getter_AddRefs(mOutputStream), destFile);
+  if (NS_FAILED(rv)) return rv;
+
+  // we have to give the file a 'TEXT' type for IE to import it correctly
+  nsCOMPtr<nsILocalFileMac> macDestFile = do_QueryInterface(destFile);
+  if (macDestFile)
+    rv = macDestFile->SetFileType('TEXT');
+  
+  return rv;
 }
 
 void
