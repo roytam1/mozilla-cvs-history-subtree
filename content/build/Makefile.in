@@ -32,7 +32,7 @@ MODULE		= layout
 LIBRARY_NAME	= gkcontent
 SHORT_LIBNAME	= gkcontnt
 IS_COMPONENT	= 1
-EXTRA_DSO_LIBS	= jsdom gkgfx
+EXTRA_DSO_LIBS	= gkgfx
 REQUIRES	= xpcom string widget necko rdf docshell dom htmlparser uriloader webshell locale unicharutil lwbrk js pref caps xul xuldoc xultmpl
 
 CPPSRCS		= \
