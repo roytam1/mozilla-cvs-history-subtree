@@ -603,8 +603,8 @@ nsresult nsMsgCompose::CreateMessage(const PRUnichar * originalMsgURI, MSG_Compo
       nsString encodedCharset;  // we don't use this
       char *aCString;
       
-      message->GetCharSet(aCharset);
-      message->GetSubject(aString);
+      message->GetCharSet(&aCharset);
+      message->GetSubject(&aString);
       switch (type)
       {
       default: break;        
@@ -623,7 +623,7 @@ nsresult nsMsgCompose::CreateMessage(const PRUnichar * originalMsgURI, MSG_Compo
           else
           	m_compFields->SetSubject(bString.GetUnicode());
 
-            message->GetAuthor(aString);		
+            message->GetAuthor(&aString);		
             m_compFields->SetTo(nsAutoCString(aString));
             if (NS_SUCCEEDED(rv = nsMsgI18NDecodeMimePartIIStr(aString, encodedCharset, decodedString)))
               if (NS_SUCCEEDED(rv = ConvertFromUnicode(msgCompHeaderInternalCharset(), decodedString, &aCString)))
@@ -635,9 +635,9 @@ nsresult nsMsgCompose::CreateMessage(const PRUnichar * originalMsgURI, MSG_Compo
               if (type == MSGCOMP_TYPE_ReplyAll)
               {
                 nsString cString, dString;
-                message->GetRecipients(cString);
+                message->GetRecipients(&cString);
                 CleanUpRecipients(cString);
-                message->GetCCList(dString);
+                message->GetCCList(&dString);
                 CleanUpRecipients(dString);
                 if (cString.Length() > 0 && dString.Length() > 0)
                   cString = cString + ", ";
