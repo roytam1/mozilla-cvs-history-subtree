@@ -20,6 +20,7 @@
  * Contributor(s): 
  */
 
+#include "nsReadableUtils.h"
 #include "nsSOAPParameter.h"
 #include "nsSOAPUtils.h"
 #include "nsIXPConnect.h"
@@ -94,13 +95,7 @@ NS_IMETHODIMP nsSOAPParameter::SetAsWString(const nsAReadableString & aValue)
 {
     mType.Assign(nsSOAPUtils::kWStringType);
     nsCOMPtr<nsISupportsWString> value = do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID);
-    PRInt32 len = aValue.Length();
-    PRUnichar* sval = new PRUnichar[len + 1];
-    for (int i = 0; i < len; i++) {  // There has got to be a better way...
-      sval[i] = aValue.CharAt(i);
-    }
-    sval[len] = 0;
-    value->SetData(sval);
+    value->SetData(ToNewUnicode(aValue));
     mValue = value;
     return NS_OK;
 }
