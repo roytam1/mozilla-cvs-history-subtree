@@ -3780,7 +3780,7 @@ void nsPluginInstanceOwner::StartTimer()
     if (!mPluginTimer) {
           mPluginTimer = do_CreateInstance("@mozilla.org/timer;1", &rv);
           if (rv == NS_OK)
-            rv = mPluginTimer->Init(this, /* 1020 / 60 */ 2000, NS_PRIORITY_NORMAL, NS_TYPE_REPEATING_SLACK);
+            rv = mPluginTimer->Init(this, 1020 / 60, NS_PRIORITY_NORMAL, NS_TYPE_REPEATING_SLACK);
     }
 #endif
 }
