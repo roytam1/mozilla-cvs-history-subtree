@@ -741,6 +741,7 @@ nsresult nsMsgThreadedDBView::RemoveByIndex(nsMsgViewIndex index)
         flag |= MSG_FLAG_ELIDED;
       }
       m_flags[index] = flag;
+      mIndicesToNoteChange.RemoveElement(index);
     }
     else
       NS_ASSERTION(PR_FALSE, "couldn't find thread child");	

@@ -65,7 +65,7 @@ public:
 	void               RemoveAll();
 	void               RemoveAt(PRUint32 nIndex, PRUint32 nCount = 1);
 	void               SetAtGrow(PRUint32 nIndex, PRUint32 newElement);
-
+        PRBool             RemoveElement(PRUint32 element);
 	// Sorting member functions
 	void               QuickSort(int (* PR_CALLBACK compare) (const void *elem1, const void *elem2, void *) = NULL);
 

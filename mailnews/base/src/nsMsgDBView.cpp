@@ -4570,6 +4570,7 @@ NS_IMETHODIMP nsMsgDBView::OnAnnouncerGoingAway(nsIDBChangeAnnouncer *instigator
     m_db = nsnull;
   }
 
+  PRInt32 saveSize = GetSize();
   ClearHdrCache();
 
   // this is important, because the tree will ask us for our
@@ -4579,15 +4580,9 @@ NS_IMETHODIMP nsMsgDBView::OnAnnouncerGoingAway(nsIDBChangeAnnouncer *instigator
   m_flags.RemoveAll();
   m_levels.RemoveAll();
 
-  // clear the existing selection.
-  if (mTreeSelection) {
-    mTreeSelection->ClearSelection(); 
-  }
-
-  // this will force the tree to ask for the cell values
-  // since we don't have a db and we don't have any keys, 
-  // the thread pane goes blank
-  if (mTree) mTree->Invalidate();
+  // tell the tree all the rows have gone away
+  if (mTree) 
+    mTree->RowCountChanged(0, -saveSize);
 
   return NS_OK;
 }
@@ -5513,14 +5508,20 @@ nsMsgDBView::OnDeleteCompleted(PRBool aSucceeded)
       PRUint32 numIndices = mIndicesToNoteChange.GetSize();
       if (numIndices) 
       {
-        if (numIndices > 1)
-          mIndicesToNoteChange.QuickSort(CompareViewIndices);
+        if (mTree)
+        {
+          if (numIndices > 1)
+            mIndicesToNoteChange.QuickSort(CompareViewIndices);
 
-        // the call to NoteChange() has to happen after we are done removing the keys
-        // as NoteChange() will call RowCountChanged() which will call our GetRowCount()
-        for (PRUint32 i=0;i<numIndices;i++)
-          NoteChange(mIndicesToNoteChange[i], -1, nsMsgViewNotificationCode::insertOrDelete);
-        
+          // the call to NoteChange() has to happen after we are done removing the keys
+          // as NoteChange() will call RowCountChanged() which will call our GetRowCount()
+          if (numIndices > 1)
+            mTree->BeginUpdateBatch();
+          for (PRUint32 i=0;i<numIndices;i++)
+            NoteChange(mIndicesToNoteChange[i], -1, nsMsgViewNotificationCode::insertOrDelete);
+          if (numIndices > 1)
+            mTree->EndUpdateBatch(); 
+        }
         mIndicesToNoteChange.RemoveAll();
       }
     }
