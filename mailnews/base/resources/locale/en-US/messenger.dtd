@@ -432,7 +432,7 @@ Rights Reserved.
 <!ENTITY replyButton.label "Reply">
 <!ENTITY replyAllButton.label "Reply All">
 <!ENTITY forwardButton.label "Forward">
-<!ENTITY fileButton.label "File">
+<!ENTITY fileButton.label "Save">
 <!ENTITY nextButton.label "Next">
 <!ENTITY deleteButton.label "Delete">
 <!ENTITY markButton.label "Mark">
