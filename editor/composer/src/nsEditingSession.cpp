@@ -78,7 +78,7 @@
 
 ----------------------------------------------------------------------------*/
 nsEditingSession::nsEditingSession()
-: mDoneSetup(PR_FALSE), mEditorClassString(nsnull)
+: mDoneSetup(PR_FALSE), mStateMaintainer(nsnull), mEditorClassString(nsnull)
 {
   NS_INIT_ISUPPORTS();
 }
