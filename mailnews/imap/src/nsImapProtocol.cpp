@@ -1227,7 +1227,7 @@ PRBool nsImapProtocol::ProcessCurrentURL()
 #ifdef DEBUG_bienvenu   
   NS_ASSERTION(m_imapMiscellaneousSink, "null sink");
 #endif
-  if (!m_imapMiscellaneousSink)
+  if (!m_imapMiscellaneousSink || !m_imapMailFolderSink)
     SetupSinkProxy(); // try this again. Evil, but I'm desperate.
 
   // Reinitialize the parser
