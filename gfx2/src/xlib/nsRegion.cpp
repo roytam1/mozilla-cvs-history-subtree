@@ -21,7 +21,7 @@
  */
 
 #include "nsRegion.h"
-#include "nsRect.h"
+#include "nsRect2.h"
 #include "xregion.h"
 #include "prmem.h"
 
@@ -254,14 +254,14 @@ NS_IMETHODIMP nsRegion::ContainsRect(gfx_coord aX, gfx_coord aY, gfx_dimension a
   return NS_OK;
 }
 
-NS_IMETHODIMP nsRegion::GetRects(nsRect ***aRects, PRUint32 *npoints)
+NS_IMETHODIMP nsRegion::GetRects(nsRect2 ***aRects, PRUint32 *npoints)
 {
   if (!mRegion)
     return NS_OK;
 
   // XXX untested code :-)
 
-  nsRect *rects = new nsRect[mRegion->numRects];
+  nsRect2 *rects = new nsRect2[mRegion->numRects];
 
   BOX *pbox = mRegion->rects;
   int nbox = mRegion->numRects;

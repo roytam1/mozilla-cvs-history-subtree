@@ -206,7 +206,7 @@ NS_IMETHODIMP nsWindow::SetCursor(nsICursor * aCursor)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsWindow::WidgetToScreen(const nsRect & aOldRect, nsRect & aNewRect)
+NS_IMETHODIMP nsWindow::WidgetToScreen(const nsRect2 & aOldRect, nsRect2 & aNewRect)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -216,8 +216,8 @@ NS_IMETHODIMP nsWindow::CaptureRollupEvents(nsIRollupListener *aListener, PRBool
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* [noscript] void invalidateRect ([const] in nsRect aRect, in boolean aIsSynchronous); */
-NS_IMETHODIMP nsWindow::InvalidateRect(const nsRect * aRect, PRBool aIsSynchronous)
+/* [noscript] void invalidateRect ([const] in nsRect2 aRect, in boolean aIsSynchronous); */
+NS_IMETHODIMP nsWindow::InvalidateRect(const nsRect2 * aRect, PRBool aIsSynchronous)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }

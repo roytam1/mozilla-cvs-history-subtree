@@ -193,28 +193,28 @@ NS_IMETHODIMP nsDrawable::FillArc(gfx_coord x, gfx_coord y,
   return NS_OK;
 }
 
-NS_IMETHODIMP nsDrawable::DrawPolygon(const nsPoint **points,
+NS_IMETHODIMP nsDrawable::DrawPolygon(const nsPoint2 **points,
                                       const PRUint32 npoints)
 {
   UpdateGC();
 
   ::XDrawLines(mDisplay, mDrawable,
                *mGC,
-               NS_REINTERPRET_CAST(XPoint*, NS_CONST_CAST(nsPoint*,*points)),
+               NS_REINTERPRET_CAST(XPoint*, NS_CONST_CAST(nsPoint2*,*points)),
                npoints,
                CoordModeOrigin);
 
   return NS_OK;
 }
 
-NS_IMETHODIMP nsDrawable::FillPolygon(const nsPoint **points,
+NS_IMETHODIMP nsDrawable::FillPolygon(const nsPoint2 **points,
                                       const PRUint32 npoints)
 {
   UpdateGC();
 
   ::XFillPolygon(mDisplay, mDrawable,
                  *mGC,
-                 NS_REINTERPRET_CAST(XPoint*, NS_CONST_CAST(nsPoint*,*points)),
+                 NS_REINTERPRET_CAST(XPoint*, NS_CONST_CAST(nsPoint2*,*points)),
                  npoints,
                  Complex, CoordModeOrigin);
 
@@ -278,26 +278,26 @@ NS_IMETHODIMP nsDrawable::Clear()
   return NS_OK;
 }
 
-/* [noscript] void drawImage (in nsIImage aImage, [const] in nsRect2 aSrcRect, [const] in nsPoint aDestPoint); */
-NS_IMETHODIMP nsDrawable::DrawImage(nsIImage *aImage, const nsRect2 * aSrcRect, const nsPoint * aDestPoint)
+/* [noscript] void drawImage (in nsIImage aImage, [const] in nsRect2 aSrcRect, [const] in nsPoint2 aDestPoint); */
+NS_IMETHODIMP nsDrawable::DrawImage(nsIImage *aImage, const nsRect2 * aSrcRect, const nsPoint2 * aDestPoint)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* [noscript] void drawScaledImage (in nsIImage aImage, [const] in nsRect2 aSrcRect, [const] in nsRect aDestRect); */
-NS_IMETHODIMP nsDrawable::DrawScaledImage(nsIImage *aImage, const nsRect * aSrcRect, const nsRect * aDestRect)
+/* [noscript] void drawScaledImage (in nsIImage aImage, [const] in nsRect2 aSrcRect, [const] in nsRect2 aDestRect); */
+NS_IMETHODIMP nsDrawable::DrawScaledImage(nsIImage *aImage, const nsRect2 * aSrcRect, const nsRect2 * aDestRect)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* [noscript] void drawTile (in nsIImage aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, [const] in nsRect aTargetRect); */
-NS_IMETHODIMP nsDrawable::DrawTile(nsIImage *aImage, gfx_coord aXOffset, gfx_coord aYOffset, const nsRect * aTargetRect)
+/* [noscript] void drawTile (in nsIImage aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, [const] in nsRect2 aTargetRect); */
+NS_IMETHODIMP nsDrawable::DrawTile(nsIImage *aImage, gfx_coord aXOffset, gfx_coord aYOffset, const nsRect2 * aTargetRect)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* [noscript] void drawScaledTile (in nsIImage aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, in gfx_dimension aTileWidth, in gfx_dimension aTileHeight, [const] in nsRect aTargetRect); */
-NS_IMETHODIMP nsDrawable::DrawScaledTile(nsIImage *aImage, gfx_coord aXOffset, gfx_coord aYOffset, gfx_dimension aTileWidth, gfx_dimension aTileHeight, const nsRect * aTargetRect)
+/* [noscript] void drawScaledTile (in nsIImage aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, in gfx_dimension aTileWidth, in gfx_dimension aTileHeight, [const] in nsRect2 aTargetRect); */
+NS_IMETHODIMP nsDrawable::DrawScaledTile(nsIImage *aImage, gfx_coord aXOffset, gfx_coord aYOffset, gfx_dimension aTileWidth, gfx_dimension aTileHeight, const nsRect2 * aTargetRect)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -416,8 +416,8 @@ NS_IMETHODIMP nsDrawable::SetClipRegion(nsIRegion * aClipRegion)
   return mClipRegion->SetToRegion(aClipRegion);
 }
 
-/* [noscript] void changeClipRectangle ([const] in nsRect rect, in short clipOperation); */
-NS_IMETHODIMP nsDrawable::ChangeClipRectangle(const nsRect * rect, PRInt16 clipOperation)
+/* [noscript] void changeClipRectangle ([const] in nsRect2 rect, in short clipOperation); */
+NS_IMETHODIMP nsDrawable::ChangeClipRectangle(const nsRect2 * rect, PRInt16 clipOperation)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }

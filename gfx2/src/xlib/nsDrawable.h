@@ -61,7 +61,7 @@ protected:
   Display  *mDisplay;
   xGC      *mGC;
 
-  nsRect mBounds;
+  nsRect2 mBounds;
 
   gfx_depth mDepth;
 
@@ -78,7 +78,7 @@ private:
   gfx_color mForegroundColor;
   gfx_color mBackgroundColor;
 
-  nsPoint mClipOrigin;
+  nsPoint2 mClipOrigin;
   nsCOMPtr<nsIRegion> mClipRegion;
 
   nsCOMPtr<nsIFontMetrics> mFontMetrics;

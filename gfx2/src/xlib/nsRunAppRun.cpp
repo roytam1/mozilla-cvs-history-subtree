@@ -13,8 +13,8 @@
 
 #include "nsGUIEvent.h"
 
-#include "nsRect.h"
-#include "nsPoint.h"
+#include "nsRect2.h"
+#include "nsPoint2.h"
 
 #include "nsKeyCode.h"
 
@@ -389,7 +389,7 @@ nsRunAppRun::HandleExposeEvent(const XEvent *event, nsWindow *aWindow)
 
   //  aWindow->SetBackgroundColor(255);
 
-  nsRect r;
+  nsRect2 r;
   region->GetBoundingBox(&r.x, &r.y, &r.width, &r.height);
   aWindow->FillRectangle(r.x, r.y, r.width, r.height);
 
@@ -432,7 +432,7 @@ nsRunAppRun::HandleConfigureNotifyEvent(const XEvent *aEvent, nsWindow *aWindow)
   sevent.message = NS_SIZE;
   sevent.window = aWindow;
   sevent.eventStructType = NS_SIZE_EVENT;
-  sevent.windowSize = new nsRect (event->xconfigure.x, event->xconfigure.y,
+  sevent.windowSize = new nsRect2 (event->xconfigure.x, event->xconfigure.y,
                                   event->xconfigure.width, event->xconfigure.height);
   sevent.point.x = event->xconfigure.x;
   sevent.point.y = event->xconfigure.y;

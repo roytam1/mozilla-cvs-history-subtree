@@ -31,8 +31,8 @@
  * @version 1.1
  */
 
-#include "nsRect.h"
-#include "nsPoint.h"
+#include "nsRect2.h"
+#include "nsPoint2.h"
 
 // nsIDOMEvent contains a long enum which includes a member called ERROR,
 // which conflicts with something that Windows defines somewhere.
@@ -100,10 +100,10 @@ struct nsEvent {
   PRUint32    message;
 
   /// in widget relative coordinates, modified to be relative to current view in layout.
-  nsPoint     point;
+  nsPoint2     point;
 
   /// in widget relative coordinates, not modified by layout code.
-  nsPoint     refPoint;
+  nsPoint2     refPoint;
 
   /**
    * elapsed time, in milliseconds, from the time the
@@ -137,7 +137,7 @@ struct nsGUIEvent : public nsEvent {
  */
 struct nsSizeEvent : public nsGUIEvent {
   /// x,y width, height in pixels (client area)
-  nsRect          *windowSize;
+  nsRect2          *windowSize;
 
   /// width of entire window (in pixels)
   PRInt32         mWinWidth;
@@ -193,7 +193,7 @@ struct nsPaintEvent : public nsGUIEvent {
    * x,y, width, height in pixels of area to paint
    * @deprecated use region
    */
-  nsRect      *rect;
+  nsRect2      *rect;
 };
 
 /**
@@ -332,7 +332,7 @@ typedef nsTextRange* nsTextRangeArray;
  * @attention why do we need this?????
  */
 struct nsTextEventReply {
-  nsRect    mCursorPosition;
+  nsRect2    mCursorPosition;
   PRBool    mCursorIsCollapsed;
 };
 

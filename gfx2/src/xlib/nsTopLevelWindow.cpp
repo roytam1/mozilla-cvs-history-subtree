@@ -25,7 +25,6 @@
 #include "nsWindowHelper.h"
 
 #include "nsICursor.h"
-#include "nsPICursorXlib.h"
 
 #include "nsCOMPtr.h"
 #include "nsIComponentManager.h"
