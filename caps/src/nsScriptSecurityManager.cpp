@@ -457,6 +457,8 @@ nsScriptSecurityManager::CheckJSFunctionCallerAccess(JSContext *cx, JSObject *ob
     JSObject* target = JSVAL_TO_OBJECT(*vp);
 
     // Do the same-origin check - this sets a JS exception if the check fails
+    if (sCallerID == JSVAL_VOID)
+        sCallerID = STRING_TO_JSVAL(::JS_InternString(cx, "caller"));
     nsresult rv =
         ssm->CheckPropertyAccess(cx, target, "Function", sCallerID,
                                  nsIXPCSecurityManager::ACCESS_GET_PROPERTY);
@@ -1579,6 +1581,8 @@ nsScriptSecurityManager::CanExecuteScripts(JSContext* cx,
 
     if (NS_SUCCEEDED(rv))
     {
+        if (sEnabledID == JSVAL_VOID)
+            sEnabledID = STRING_TO_JSVAL(::JS_InternString(cx, "enabled"));
         secLevel = GetPropertyPolicy(sEnabledID, cpolicy,
                                      nsIXPCSecurityManager::ACCESS_GET_PROPERTY);
     }
@@ -2530,12 +2534,6 @@ nsScriptSecurityManager::nsScriptSecurityManager(void)
 {
     NS_ASSERTION(sizeof(long) == sizeof(void*), "long and void* have different lengths on this platform. This may cause a security failure.");
     NS_INIT_ISUPPORTS();
-
-    JSContext* cx = GetSafeJSContext();
-    if (sCallerID == JSVAL_VOID)
-        sCallerID = STRING_TO_JSVAL(::JS_InternString(cx, "caller"));
-    if (sEnabledID == JSVAL_VOID)
-        sEnabledID = STRING_TO_JSVAL(::JS_InternString(cx, "enabled"));
 
     InitPrefs();
 
