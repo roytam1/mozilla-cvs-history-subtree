@@ -349,6 +349,11 @@ NS_IMETHODIMP nsHTTPSOAPTransport::SyncCall(nsISOAPCall * aCall, nsISOAPResponse
   if (NS_FAILED(rv))
     return rv;
 
+  rv = request->SetRequestHeader(NS_LITERAL_CSTRING("Content-Type"),
+                                 NS_LITERAL_CSTRING("text/xml; charset=UTF-8"));
+  if (NS_FAILED(rv))
+    return rv;
+
   nsAutoString action;
   rv = aCall->GetActionURI(action);
   if (NS_FAILED(rv))
@@ -561,6 +566,11 @@ NS_IMETHODIMP
 
   nsAutoString action;
   rv = aCall->GetActionURI(action);
+  if (NS_FAILED(rv))
+    return rv;
+
+  rv = request->SetRequestHeader(NS_LITERAL_CSTRING("Content-Type"),
+                                 NS_LITERAL_CSTRING("text/xml; charset=UTF-8"));
   if (NS_FAILED(rv))
     return rv;
 
