@@ -431,7 +431,8 @@ sub Checkout()
     my($nss_tab) = "NSS_30_BRANCH";
     my($psm_tag) = "SECURITY_MAC_BRANCH";
     my($secbase_tag) = "SECURITY_CLIENT_BRANCH";
-    my($ldapsdk_tag) = "LDAPCSDK_40_BRANCH"; 
+    my($ldapsdk_tag) = "LDAPCSDK_40_BRANCH";
+    my($jars_branch_tag) = "jar_restructuring_branch";
     
     #//
     #// Checkout commands
@@ -443,7 +444,7 @@ sub Checkout()
         $session->checkout("mozilla/security/psm", $psm_tag)           || print "checkout of security/psm failed\n";
         $session->checkout("mozilla/security/base", $secbase_tag)      || print "checkout of security/base failed\n";
         $session->checkout("DirectorySDKSourceC", $ldapsdk_tag)        || print "checkout of LDAP C SDK failed\n";
-        $session->checkout("SeaMonkeyAll")                             || 
+        $session->checkout("SeaMonkeyAll", $jars_branch_tag)           || 
             print "MacCVS reported some errors checking out SeaMonkeyAll, but these are probably not serious.\n";
     }
     elsif ($main::pull{runtime})
