@@ -87,11 +87,6 @@ static PRBool is_vk_down(int vk)
 #define IS_VK_DOWN(a) (PRBool)(((GetKeyState(a) & 0x80)) ? (PR_TRUE) : (PR_FALSE))
 #endif
 
-// The following two line is needed to handle AltGR (right Alt) correctly
-// somehow, when AltGR got pressed, both GetKeyState said both 
-// left control and right alt are pressed.
-#define IS_CONTROL_DOWN (IS_VK_DOWN(NS_VK_CONTROL) && (! IS_VK_DOWN(VK_RMENU)))
-#define IS_ALT_DOWN IS_VK_DOWN(VK_LMENU)
 
 // Global variable 
 //     g_hinst - handle of the application instance 
@@ -2451,11 +2446,24 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 	case WM_SYSCHAR:
 	case WM_CHAR: 
         {
-            unsigned char    ch = (unsigned char)wParam;
-            UINT            char_result;
 #ifdef KE_DEBUG
             printf("%s\tchar=%c\twp=%4x\tlp=%8x\n", (msg == WM_SYSCHAR) ? "WM_SYSCHAR" : "WM_CHAR" , ch, wParam, lParam);
 #endif
+            mIsShiftDown   = IS_VK_DOWN(NS_VK_SHIFT);
+            if(WM_SYSCHAR==msg)
+            {
+                mIsControlDown = IS_VK_DOWN(NS_VK_CONTROL);
+                mIsAltDown     = IS_VK_DOWN(NS_VK_ALT);
+            } else { // WM_KEYUP
+                // If the Context Code bit is down and we got a WM_KEY
+                // it is a key press for character, not accelerator
+                // see p246 of Programming Windows 95 [Charles Petzold] for details
+                mIsControlDown = (0 == (KF_ALTDOWN & HIWORD(lParam)))&& IS_VK_DOWN(NS_VK_CONTROL);
+                mIsAltDown     = (0 == (KF_ALTDOWN & HIWORD(lParam)))&& IS_VK_DOWN(NS_VK_ALT);
+            }
+
+            unsigned char    ch = (unsigned char)wParam;
+            UINT            char_result;
   
             //
             // check first for backspace or return, handle them specially 
@@ -2503,9 +2511,6 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
         }
         // Let ths fall through if it isn't a key pad
         case WM_SYSKEYUP:
-#ifdef KE_DEBUG
-            printf("%s\t\twp=%4x\tlp=%8x\n",  "WM_SYSKEYUP" , wParam, lParam);
-#endif
             // if it's a keypad key don't process a WM_CHAR will come or...oh well...
             if (IsKeypadKey(wParam, lParam & 0x01000000)) {
                 result = PR_TRUE;
@@ -2513,13 +2518,23 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             }
         case WM_KEYUP: 
 #ifdef KE_DEBUG
-            printf("%s\t\twp=%x\tlp=%x\n",  "WM_KEYUP" , wParam, lParam);
+            printf("%s\t\twp=%x\tlp=%x\n",  
+                   (WM_KEYUP==msg)?"WM_KEYUP":"WM_SYSKEYUP" , wParam, lParam);
 #endif
             mIsShiftDown   = IS_VK_DOWN(NS_VK_SHIFT);
-            mIsControlDown = IS_CONTROL_DOWN;
-            mIsAltDown     = IS_ALT_DOWN;
+            if(WM_SYSKEYUP==msg)
+            {
+                mIsControlDown = IS_VK_DOWN(NS_VK_CONTROL);
+                mIsAltDown     = IS_VK_DOWN(NS_VK_ALT);
+            } else { // WM_KEYUP
+                // If the Context Code bit is down and we got a WM_KEY
+                // it is a key press for character, not accelerator
+                // see p246 of Programming Windows 95 [Charles Petzold] for details
+                mIsControlDown = (0 == (KF_ALTDOWN & HIWORD(lParam)))&& IS_VK_DOWN(NS_VK_CONTROL);
+                mIsAltDown     = (0 == (KF_ALTDOWN & HIWORD(lParam)))&& IS_VK_DOWN(NS_VK_ALT);
+            }
 
-			      if (!mIMEIsComposing)
+            if (!mIMEIsComposing)
               result = OnKeyUp(wParam, (HIWORD(lParam) & 0xFF));
 			      else
 				      result = PR_FALSE;
@@ -2539,9 +2554,6 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 
         // Let ths fall through if it isn't a key pad
         case WM_SYSKEYDOWN:
-#ifdef KE_DEBUG
-            printf("%s\t\twp=%4x\tlp=%8x\n","WM_SYSKEYDOWN" , wParam, lParam);
-#endif
             // if it's a keypad key don't process a WM_CHAR will come or...oh well...
             if (IsKeypadKey(wParam, lParam & 0x01000000)) {
 				      result = PR_TRUE;
@@ -2549,16 +2561,26 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             }
         case WM_KEYDOWN: {
 #ifdef KE_DEBUG
-            printf("%s\t\twp=%4x\tlp=%8x\n",  "WM_KEYDOWN" , wParam, lParam);
+            printf("%s\t\twp=%4x\tlp=%8x\n",  
+                   (WM_KEYDOWN==msg)?"WM_KEYDOWN":"WM_SYSKEYDOWN" , wParam, lParam);
 #endif
             mIsShiftDown   = IS_VK_DOWN(NS_VK_SHIFT);
-            mIsControlDown = IS_CONTROL_DOWN;
-            mIsAltDown     = IS_ALT_DOWN;
-
-			      if (!mIMEIsComposing)
-			        result = OnKeyDown(wParam, (HIWORD(lParam) & 0xFF));
-			      else
-				      result = PR_FALSE;
+            if(WM_SYSKEYDOWN==msg)
+            {
+                mIsControlDown = IS_VK_DOWN(NS_VK_CONTROL);
+                mIsAltDown     = IS_VK_DOWN(NS_VK_ALT);
+            } else { // WM_KEYUP
+                // If the Context Code bit is down and we got a WM_KEY
+                // If the Context Code bit is down and we got a WM_KEY
+                // it is a key press for character, not accelerator
+                // see p246 of Programming Windows 95 [Charles Petzold] for details
+                mIsControlDown = (0 == (KF_ALTDOWN & HIWORD(lParam)))&& IS_VK_DOWN(NS_VK_CONTROL);
+                mIsAltDown     = (0 == (KF_ALTDOWN & HIWORD(lParam)))&& IS_VK_DOWN(NS_VK_ALT);
+            }
+            if (!mIMEIsComposing)
+               result = OnKeyDown(wParam, (HIWORD(lParam) & 0xFF));
+	    else
+	       result = PR_FALSE;
             }
             break;
 
@@ -3288,9 +3310,9 @@ PRBool nsWindow::DispatchMouseEvent(PRUint32 aEventType, nsPoint* aPoint)
   InitEvent(event, aEventType, aPoint);
 
   event.isShift   = IS_VK_DOWN(NS_VK_SHIFT);
-  event.isControl = IS_CONTROL_DOWN;
+  event.isControl = IS_VK_DOWN(NS_VK_CONTROL);
   event.isMeta    = event.isControl; // PR_FALSE; // temporary make it equal to isControl
-  event.isAlt     = IS_ALT_DOWN;
+  event.isAlt     = IS_VK_DOWN(NS_VK_ALT);
   event.eventStructType = NS_MOUSE_EVENT;
 
   //Dblclicks are used to set the click count, then changed to mousedowns
