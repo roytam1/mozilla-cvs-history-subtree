@@ -487,6 +487,7 @@ nsresult nsMsgThreadedDBView::RemoveByIndex(nsMsgViewIndex index)
   NS_ENSURE_SUCCESS(rv, rv);
   PRUint32 numThreadChildren;
   threadHdr->GetNumChildren(&numThreadChildren);
+  // check if we're the top level msg in the thread, and we're not collapsed.
   if ((flags & MSG_VIEW_FLAG_ISTHREAD) && !(flags & MSG_FLAG_ELIDED) && (flags & MSG_VIEW_FLAG_HASCHILDREN))
 	{
 		// fix flags on thread header...Newly promoted message 
@@ -495,11 +496,7 @@ nsresult nsMsgThreadedDBView::RemoveByIndex(nsMsgViewIndex index)
 		{
 			nsMsgDBView::RemoveByIndex(index);
 			nsCOMPtr <nsIMsgThread> nextThreadHdr;
-      if  (index < GetSize()) 
-        GetThreadContainingIndex(index, getter_AddRefs(nextThreadHdr));
-			// make sure id of next message is really in the same thread
-			// it might have been deleted from the view but not the db yet.
-			if (threadHdr == nextThreadHdr && numThreadChildren > 0)
+			if (numThreadChildren > 0)
 			{
 				// unreadOnly
 				nsCOMPtr <nsIMsgDBHdr> msgHdr;
