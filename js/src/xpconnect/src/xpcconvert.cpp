@@ -250,7 +250,7 @@ JAM_DOUBLE(JSContext *cx, double v, jsdouble *dbl)
 #define FIT_32(cx,i,d) (INT_FITS_IN_JSVAL(i)?INT_TO_JSVAL(i):JAM_DOUBLE(cx,i,d))
 
 // XXX will this break backwards compatability???
-#define FIT_U32(cx,i,d) ((!(i & ~0x80000000) && INT_FITS_IN_JSVAL(i))? \
+#define FIT_U32(cx,i,d) ((!((i) & 0x80000000) && INT_FITS_IN_JSVAL(i))? \
                         INT_TO_JSVAL(i):JAM_DOUBLE(cx,i,d))
 
 // static
