@@ -2145,7 +2145,7 @@ public class ScriptRuntime {
         return Class.forName(className);                
     }
 
-    private static boolean hasProp(Scriptable start, String name) {
+    static boolean hasProp(Scriptable start, String name) {
         Scriptable m = start;
         do {
             if (m.has(name, start))
