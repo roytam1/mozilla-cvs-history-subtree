@@ -41,8 +41,8 @@ class nsFormFrame;
 #define CSS_NOTSET -1
 #define ATTR_NOTSET -1
 
-#define NS_STRING_TRUE   "1"
-#define NS_STRING_FALSE  "0"
+#define NS_STRING_TRUE   NS_LITERAL_STRING("1")
+#define NS_STRING_FALSE  NS_LITERAL_STRING("0")
 
 /**
   * Enumeration of possible mouse states used to detect mouse clicks

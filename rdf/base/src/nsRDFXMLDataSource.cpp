@@ -1662,7 +1662,7 @@ static const char kXMLNS[]    = "\n     xmlns";
 nsresult
 RDFXMLDataSourceImpl::SerializeEpilogue(nsIOutputStream* aStream)
 {
-    rdf_BlockingWrite(aStream, NS_LITERAL_STRING("</RDF:RDF>\n"));
+    rdf_BlockingWrite(aStream, "</RDF:RDF>\n", 11);
     return NS_OK;
 }
 

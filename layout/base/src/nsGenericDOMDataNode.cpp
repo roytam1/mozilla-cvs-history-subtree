@@ -680,7 +680,7 @@ nsGenericDOMDataNode::ToCString(nsAWritableString& aBuf, PRInt32 aOffset,
       } else if ((ch < ' ') || (ch >= 127)) {
         char buf[10];
         PR_snprintf(buf, sizeof(buf), "\\u%04x", ch);
-        aBuf.Append(NS_LITERAL_STRING(buf));
+        aBuf.Append(NS_ConvertASCIItoUCS2(buf));
       } else {
         aBuf.Append(ch);
       }

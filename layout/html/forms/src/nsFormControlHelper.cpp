@@ -134,14 +134,14 @@ void nsFormControlHelper::PlatformToDOMLineBreaks(nsString &aString)
 
 PRBool nsFormControlHelper::GetBool(const nsAReadableString& aValue)
 {
-  return aValue.Equals(NS_LITERAL_STRING(NS_STRING_TRUE));
+  return aValue.Equals(NS_STRING_TRUE);
 }
 
 void nsFormControlHelper::GetBoolString(const PRBool aValue,
                                         nsAWritableString& aResult)
 {
-  aResult.Assign( aValue ? NS_LITERAL_STRING(NS_STRING_TRUE) :
-                  NS_LITERAL_STRING(NS_STRING_FALSE) );
+  aResult.Assign( aValue ? NS_STRING_TRUE :
+                  NS_STRING_FALSE );
 }
 
 

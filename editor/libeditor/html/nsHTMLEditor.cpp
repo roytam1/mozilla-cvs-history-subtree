@@ -488,7 +488,7 @@ nsHTMLEditor::SetDocumentCharacterSet(const PRUnichar* characterSet)
               currentValue.Left(newMetaString, offset); // copy current value before "charset=" (e.g. text/html) 
               newMetaString.Append(content); 
               newMetaString.Append(characterSet); 
-              result = nsEditor::SetAttribute(metaElement, NS_LITERAL_STRING("content"), newMetaString); 
+              result = nsEditor::SetAttribute(metaElement, NS_ConvertASCIItoUCS2("content"), newMetaString); 
               if (NS_SUCCEEDED(result)) 
                 newMetaCharset = PR_FALSE; 
               break; 
@@ -507,7 +507,7 @@ nsHTMLEditor::SetDocumentCharacterSet(const PRUnichar* characterSet)
           headList->Item(0, getter_AddRefs(headNode)); 
           if (headNode) { 
             // Create a new meta charset tag 
-            result = CreateNode(NS_LITERAL_STRING("meta"), headNode, 0, getter_AddRefs(resultNode)); 
+            result = CreateNode(NS_ConvertASCIItoUCS2("meta"), headNode, 0, getter_AddRefs(resultNode)); 
             if (NS_FAILED(result)) 
               return NS_ERROR_FAILURE; 
 
@@ -811,7 +811,7 @@ NS_IMETHODIMP nsHTMLEditor::TabInTable(PRBool inIsShift, PRBool *outHandled)
 
   // Find enclosing table cell from the selection (cell may be the selected element)
   nsCOMPtr<nsIDOMElement> cellElement;
-  nsresult res = GetElementOrParentByTagName(NS_LITERAL_STRING("td"), nsnull, getter_AddRefs(cellElement));
+  nsresult res = GetElementOrParentByTagName(NS_ConvertASCIItoUCS2("td"), nsnull, getter_AddRefs(cellElement));
   if (NS_FAILED(res)) return res;
   // Do nothing -- we didn't find a table cell
   if (!cellElement) return NS_OK;
@@ -2573,7 +2573,7 @@ nsHTMLEditor::RebuildDocumentFromSource(const nsString& aSourceString)
   
   // Parse the string to rebuild the document
   // Last 2 params: enableVerify and "this is the last chunk to parse"
-  return theParser->Parse(sourceString, (void*)document.get(), NS_LITERAL_STRING("text/html"), PR_TRUE, PR_TRUE); 
+  return theParser->Parse(sourceString, (void*)document.get(), NS_ConvertASCIItoUCS2("text/html"), PR_TRUE, PR_TRUE); 
 }
 
 NS_IMETHODIMP nsHTMLEditor::InsertBreak()
@@ -2928,7 +2928,7 @@ nsHTMLEditor::GetParentBlockTags(nsStringArray *aTagList, PRBool aGetLists)
     if (aGetLists)
     {
       // Get the "ol", "ul", or "dl" parent element
-      res = GetElementOrParentByTagName(NS_LITERAL_STRING("list"), node, getter_AddRefs(blockParentElem));
+      res = GetElementOrParentByTagName(NS_ConvertASCIItoUCS2("list"), node, getter_AddRefs(blockParentElem));
       if (NS_FAILED(res)) return res;
     } 
     else 
@@ -2982,7 +2982,7 @@ nsHTMLEditor::GetParentBlockTags(nsStringArray *aTagList, PRBool aGetLists)
           if (aGetLists)
           {
             // Get the "ol", "ul", or "dl" parent element
-            res = GetElementOrParentByTagName(NS_LITERAL_STRING("list"), startParent, getter_AddRefs(blockParent));
+            res = GetElementOrParentByTagName(NS_ConvertASCIItoUCS2("list"), startParent, getter_AddRefs(blockParent));
           } 
           else 
           {
@@ -3641,7 +3641,7 @@ nsHTMLEditor::GetSelectedElement(const nsString& aTagName, nsIDOMElement** aRetu
         }
   #endif
         nsCOMPtr<nsIDOMElement> parentLinkOfAnchor;
-        res = GetElementOrParentByTagName(NS_LITERAL_STRING("href"), anchorNode, getter_AddRefs(parentLinkOfAnchor));
+        res = GetElementOrParentByTagName(NS_ConvertASCIItoUCS2("href"), anchorNode, getter_AddRefs(parentLinkOfAnchor));
         // XXX: ERROR_HANDLING  can parentLinkOfAnchor be null?
         if (NS_SUCCEEDED(res) && parentLinkOfAnchor)
         {
@@ -3652,7 +3652,7 @@ nsHTMLEditor::GetSelectedElement(const nsString& aTagName, nsIDOMElement** aRetu
           } else if(focusNode) 
           {  // Link node must be the same for both ends of selection
             nsCOMPtr<nsIDOMElement> parentLinkOfFocus;
-            res = GetElementOrParentByTagName(NS_LITERAL_STRING("href"), focusNode, getter_AddRefs(parentLinkOfFocus));
+            res = GetElementOrParentByTagName(NS_ConvertASCIItoUCS2("href"), focusNode, getter_AddRefs(parentLinkOfFocus));
             if (NS_SUCCEEDED(res) && parentLinkOfFocus == parentLinkOfAnchor)
               bNodeFound = PR_TRUE;
           }
@@ -3923,9 +3923,9 @@ nsHTMLEditor::SetBackgroundColor(const nsString& aColor)
         while(cell)
         {
           if (setColor)
-            res = SetAttribute(cell, NS_LITERAL_STRING("bgcolor"), aColor);
+            res = SetAttribute(cell, NS_ConvertASCIItoUCS2("bgcolor"), aColor);
           else
-            res = RemoveAttribute(cell, NS_LITERAL_STRING("bgcolor"));
+            res = RemoveAttribute(cell, NS_ConvertASCIItoUCS2("bgcolor"));
           if (NS_FAILED(res)) break;
 
           GetNextSelectedCell(getter_AddRefs(cell), nsnull);
@@ -3942,9 +3942,9 @@ nsHTMLEditor::SetBackgroundColor(const nsString& aColor)
   }
   // Use the editor method that goes through the transaction system
   if (setColor)
-    res = SetAttribute(element, NS_LITERAL_STRING("bgcolor"), aColor);
+    res = SetAttribute(element, NS_ConvertASCIItoUCS2("bgcolor"), aColor);
   else
-    res = RemoveAttribute(element, NS_LITERAL_STRING("bgcolor"));
+    res = RemoveAttribute(element, NS_ConvertASCIItoUCS2("bgcolor"));
 
   return res;
 }
@@ -6869,7 +6869,7 @@ nsHTMLEditor::RelativeFontChangeOnTextNode( PRInt32 aSizeChange,
   }
   
   // reparent the node inside font node with appropriate relative size
-  res = InsertContainerAbove(node, &tmp, aSizeChange==1 ? NS_LITERAL_STRING("big") : NS_LITERAL_STRING("small"));
+  res = InsertContainerAbove(node, &tmp, aSizeChange==1 ? NS_ConvertASCIItoUCS2("big") : NS_ConvertASCIItoUCS2("small"));
   return res;
 }
 

@@ -1303,7 +1303,7 @@ nsEditorShell::SetDisplayMode(PRInt32 aDisplayMode)
       {
     
         //Load the editmode style sheet
-        res = styleSheets->ApplyOverrideStyleSheet(NS_LITERAL_STRING("chrome://editor/content/EditorContent.css"),
+        res = styleSheets->ApplyOverrideStyleSheet(NS_ConvertASCIItoUCS2("chrome://editor/content/EditorContent.css"),
                                                    getter_AddRefs(mEditModeStyleSheet));
       }
       if (NS_FAILED(res)) return res;
@@ -1327,7 +1327,7 @@ nsEditorShell::SetDisplayMode(PRInt32 aDisplayMode)
     else
     {
       // else load it
-      res = styleSheets->ApplyOverrideStyleSheet(NS_LITERAL_STRING("chrome://editor/content/EditorAllTags.css"),
+      res = styleSheets->ApplyOverrideStyleSheet(NS_ConvertASCIItoUCS2("chrome://editor/content/EditorAllTags.css"),
                                                  getter_AddRefs(mAllTagsModeStyleSheet));
     }     
     if (NS_FAILED(res)) return res;
@@ -1342,7 +1342,7 @@ nsEditorShell::SetDisplayMode(PRInt32 aDisplayMode)
       }
       else
       {
-        res = styleSheets->ApplyOverrideStyleSheet(NS_LITERAL_STRING("chrome://editor/content/EditorContent.css"),
+        res = styleSheets->ApplyOverrideStyleSheet(NS_ConvertASCIItoUCS2("chrome://editor/content/EditorContent.css"),
                                                    getter_AddRefs(mEditModeStyleSheet));
       }
     }
@@ -1403,8 +1403,8 @@ nsEditorShell::DisplayParagraphMarks(PRBool aShowMarks)
     }
     //First time used -- load the style sheet
     nsCOMPtr<nsICSSStyleSheet> styleSheet;
-    res = styleSheets->ApplyOverrideStyleSheet(NS_LITERAL_STRING("chrome://editor/content/EditorParagraphMarks.css"),
-                                                getter_AddRefs(mParagraphMarksStyleSheet));
+    res = styleSheets->ApplyOverrideStyleSheet(NS_ConvertASCIItoUCS2("chrome://editor/content/EditorParagraphMarks.css"),
+                                               getter_AddRefs(mParagraphMarksStyleSheet));
   }
   else if (mParagraphMarksStyleSheet)
   {
