@@ -320,7 +320,6 @@ private:
     static DWORD mInstance;
     static char *mAppName;
     static PRBool mCanHandleRequests;
-    static PRBool mSupportingDDEExec;
     static char mMutexName[];
     friend struct MessageWindow;
 }; // nsNativeAppSupportWin
@@ -421,7 +420,6 @@ HSZ   nsNativeAppSupportWin::mApplication   = 0;
 HSZ   nsNativeAppSupportWin::mTopics[nsNativeAppSupportWin::topicCount] = { 0 };
 DWORD nsNativeAppSupportWin::mInstance      = 0;
 PRBool nsNativeAppSupportWin::mCanHandleRequests   = PR_FALSE;
-PRBool nsNativeAppSupportWin::mSupportingDDEExec   = PR_FALSE;
 
 char nsNativeAppSupportWin::mMutexName[ 128 ] = { 0 };
 
@@ -793,15 +791,6 @@ nsNativeAppSupportWin::Quit() {
     mw.Destroy();
 
     if ( mInstance ) {
-        // Undo registry setting if we need to.
-        if ( mSupportingDDEExec && isDefaultBrowser() ) {
-            mSupportingDDEExec = PR_FALSE;
-#if MOZ_DEBUG_DDE
-            printf( "Deleting ddexec subkey on exit\n" );
-#endif
-            deleteKey( HKEY_CLASSES_ROOT, "http\\shell\\open\\ddeexec" );
-        }
-
         // Unregister application name.
         DdeNameService( mInstance, mApplication, 0, DNS_UNREGISTER );
         // Clean up strings.
@@ -916,7 +905,6 @@ nsNativeAppSupportWin::HandleDDENotification( UINT uType,       // transaction t
         return 0;
 
 
-#if MOZ_DEBUG_DDE
     printf( "DDE: uType  =%s\n",      uTypeDesc( uType ).get() );
     printf( "     uFmt   =%u\n",      (unsigned)uFmt );
     printf( "     hconv  =%08x\n",    (int)hconv );
@@ -925,7 +913,6 @@ nsNativeAppSupportWin::HandleDDENotification( UINT uType,       // transaction t
     printf( "     hdata  =%08x\n",    (int)hdata );
     printf( "     dwData1=%08x\n",    (int)dwData1 );
     printf( "     dwData2=%08x\n",    (int)dwData2 );
-#endif
 
     HDDEDATA result = 0;
     if ( uType & XCLASS_BOOL ) {
@@ -946,6 +933,12 @@ nsNativeAppSupportWin::HandleDDENotification( UINT uType,       // transaction t
         if ( uType == XTYP_REQUEST ) {
             switch ( FindTopic( hsz1 ) ) {
                 case topicOpenURL: {
+                  MessageBox(NULL, "test", "hello", MB_OK);
+                    nsCAutoString start;
+                    ParseDDEArg(hsz2, 0, start);
+                    if (start.Equals("StartDDE"))
+                      break;
+
                     // Open a given URL...
 
                     // Default is to open in current window.
