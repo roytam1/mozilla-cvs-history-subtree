@@ -842,6 +842,17 @@ loser:
     return PR_FAILURE;
 }
 
+static void
+nssPKIObjectCollection_RemoveNode
+(
+   nssPKIObjectCollection *collection,
+   pkiObjectCollectionNode *node
+)
+{
+    PR_REMOVE_LINK(&node->link); 
+    collection->size--;
+}
+
 static PRStatus
 nssPKIObjectCollection_GetObjects
 (
@@ -853,13 +864,16 @@ nssPKIObjectCollection_GetObjects
     PRUint32 i = 0;
     PRCList *link = PR_NEXT_LINK(&collection->head);
     pkiObjectCollectionNode *node;
-    while (link != &collection->head) {
+    while ((i < rvSize) && (link != &collection->head)) {
 	node = (pkiObjectCollectionNode *)link;
 	if (!node->haveObject) {
 	    /* Convert the proto-object to an object */
 	    node->object = (*collection->createObject)(node->object);
 	    if (!node->object) {
-		return PR_FAILURE;
+		link = PR_NEXT_LINK(link);
+		/*remove bogus object from list*/
+		nssPKIObjectCollection_RemoveNode(collection,node);
+		continue;
 	    }
 	    node->haveObject = PR_TRUE;
 	}
@@ -884,7 +898,10 @@ nssPKIObjectCollection_Traverse
 	if (!node->haveObject) {
 	    node->object = (*collection->createObject)(node->object);
 	    if (!node->object) {
-		return PR_FAILURE;
+		link = PR_NEXT_LINK(link);
+		/*remove bogus object from list*/
+		nssPKIObjectCollection_RemoveNode(collection,node);
+		continue;
 	    }
 	    node->haveObject = PR_TRUE;
 	}
@@ -926,6 +943,8 @@ nssPKIObjectCollection_AddInstanceAsObject
     if (!node->haveObject) {
 	node->object = (*collection->createObject)(node->object);
 	if (!node->object) {
+	    /*remove bogus object from list*/
+	    nssPKIObjectCollection_RemoveNode(collection,node);
 	    return PR_FAILURE;
 	}
 	node->haveObject = PR_TRUE;
@@ -974,8 +993,11 @@ cert_getUIDFromObject(nssPKIObject *o, NSSItem *uid)
      */
     NSSDER *derCert;
     derCert = nssCertificate_GetEncoding(c);
-    uid[0] = *derCert;
+    uid[0].data = NULL; uid[0].size = 0;
     uid[1].data = NULL; uid[1].size = 0;
+    if (derCert != NULL) {
+	uid[0] = *derCert;
+    }
 #else
     NSSDER *issuer, *serial;
     issuer = nssCertificate_GetIssuer(c);
@@ -1026,10 +1048,10 @@ cert_createObject(nssPKIObject *o)
     NSSCertificate *cert;
     cert = nssCertificate_Create(o);
 #ifdef NSS_3_4_CODE
-    if (STAN_GetCERTCertificate(cert) == NULL) {
+/*    if (STAN_GetCERTCertificate(cert) == NULL) {
 	nssCertificate_Destroy(cert);
 	return (nssPKIObject *)NULL;
-    }
+    } */
     /* In 3.4, have to maintain uniqueness of cert pointers by caching all
      * certs.  Cache the cert here, before returning.  If it is already
      * cached, take the cached entry.

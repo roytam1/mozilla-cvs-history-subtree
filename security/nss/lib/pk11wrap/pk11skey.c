@@ -298,17 +298,6 @@ PK11_SymKeyFromHandle(PK11SlotInfo *slot, PK11SymKey *parent, PK11Origin origin,
     symKey->origin = origin;
     symKey->owner = owner;
 
-    /* adopt the parent's session */
-    /* This is only used by SSL. What we really want here is a session
-     * structure with a ref count so  the session goes away only after all the
-     * keys do. */
-    if (owner && parent) {
-	pk11_CloseSession(symKey->slot, symKey->session,symKey->sessionOwner);
-	symKey->sessionOwner = parent->sessionOwner;
-	symKey->session = parent->session;
-	parent->sessionOwner = PR_FALSE;
-    }
-
     return symKey;
 }
 
@@ -2756,6 +2745,7 @@ pk11_HandUnwrap(PK11SlotInfo *slot, CK_OBJECT_HANDLE wrappingKey,
     }
 
     outKey.len = (key_size == 0) ? len : key_size;
+    outKey.type = siBuffer;
 
     if (PK11_DoesMechanism(slot,target)) {
 	symKey = pk11_ImportSymKeyWithTempl(slot, target, PK11_OriginUnwrap, 
@@ -2961,6 +2951,26 @@ PK11_PubUnwrapSymKey(SECKEYPrivateKey *wrappingKey, SECItem *wrappedKey,
     return pk11_AnyUnwrapKey(wrappingKey->pkcs11Slot, wrappingKey->pkcs11ID,
 	wrapType, NULL, wrappedKey, target, operation, keySize, 
 	wrappingKey->wincx, NULL, 0);
+}
+
+/* unwrap a symetric key with a private key. */
+PK11SymKey *
+PK11_PubUnwrapSymKeyWithFlags(SECKEYPrivateKey *wrappingKey, 
+	  SECItem *wrappedKey, CK_MECHANISM_TYPE target, 
+	  CK_ATTRIBUTE_TYPE operation, int keySize, CK_FLAGS flags)
+{
+    CK_MECHANISM_TYPE wrapType = pk11_mapWrapKeyType(wrappingKey->keyType);
+    CK_BBOOL        ckTrue	= CK_TRUE; 
+    CK_ATTRIBUTE    keyTemplate[MAX_TEMPL_ATTRS];
+    unsigned int    templateCount;
+
+    templateCount = pk11_FlagsToAttributes(flags, keyTemplate, &ckTrue);
+
+    PK11_HandlePasswordCheck(wrappingKey->pkcs11Slot,wrappingKey->wincx);
+    
+    return pk11_AnyUnwrapKey(wrappingKey->pkcs11Slot, wrappingKey->pkcs11ID,
+	wrapType, NULL, wrappedKey, target, operation, keySize, 
+	wrappingKey->wincx, keyTemplate, templateCount);
 }
 
 /*
@@ -3243,7 +3253,20 @@ PK11_ExitContextMonitor(PK11Context *cx) {
 void
 PK11_DestroyContext(PK11Context *context, PRBool freeit)
 {
-    pk11_CloseSession(context->slot,context->session,context->ownSession);
+    SECStatus rv = SECFailure;
+    if (context->ownSession && context->key && /* context owns session & key */
+        context->key->session == context->session && /* sharing session */
+        !context->key->sessionOwner)              /* sanity check */
+    {
+	/* session still valid, let the key free it as necessary */
+        rv = PK11_Finalize(context); /* end any ongoing activity */
+	if (rv == SECSuccess) {
+	    context->key->sessionOwner = PR_TRUE;
+	} /* else couldn't finalize the session, close it */
+    }
+    if (rv == SECFailure) {
+	pk11_CloseSession(context->slot,context->session,context->ownSession);
+    }
     /* initialize the critical fields of the context */
     if (context->savedData != NULL ) PORT_Free(context->savedData);
     if (context->key) PK11_FreeSymKey(context->key);
@@ -3256,46 +3279,46 @@ PK11_DestroyContext(PK11Context *context, PRBool freeit)
 /*
  * save the current context. Allocate Space if necessary.
  */
-static void *
-pk11_saveContextHelper(PK11Context *context, void *space, 
-	unsigned long *savedLength, PRBool staticBuffer, PRBool recurse)
+static unsigned char *
+pk11_saveContextHelper(PK11Context *context, unsigned char *buffer, 
+                       unsigned long *savedLength)
 {
-    CK_ULONG length;
     CK_RV crv;
 
-    if (staticBuffer) PORT_Assert(space != NULL);
-
-    if (space == NULL) {
-	crv =PK11_GETTAB(context->slot)->C_GetOperationState(context->session,
-				NULL,&length);
-	if (crv != CKR_OK) {
-	    PORT_SetError( PK11_MapError(crv) );
-	    return NULL;
-	}
-	space = PORT_Alloc(length);
-	if (space == NULL) return NULL;
-	*savedLength = length;
-    }
+    /* If buffer is NULL, this will get the length */
     crv = PK11_GETTAB(context->slot)->C_GetOperationState(context->session,
-					(CK_BYTE_PTR)space,savedLength);
-    if (!staticBuffer && !recurse && (crv == CKR_BUFFER_TOO_SMALL)) {
-	if (!staticBuffer) PORT_Free(space);
-	return pk11_saveContextHelper(context, NULL, 
-					savedLength, PR_FALSE, PR_TRUE);
+                                                          (CK_BYTE_PTR)buffer,
+                                                          savedLength);
+    if (!buffer || (crv == CKR_BUFFER_TOO_SMALL)) {
+	/* the given buffer wasn't big enough (or was NULL), but we 
+	 * have the length, so try again with a new buffer and the 
+	 * correct length
+	 */
+	unsigned long bufLen = *savedLength;
+	buffer = PORT_Alloc(bufLen);
+	if (buffer == NULL) {
+	    return (unsigned char *)NULL;
+	}
+	crv = PK11_GETTAB(context->slot)->C_GetOperationState(
+	                                                  context->session,
+                                                          (CK_BYTE_PTR)buffer,
+                                                          savedLength);
+	if (crv != CKR_OK) {
+	    PORT_ZFree(buffer, bufLen);
+	}
     }
     if (crv != CKR_OK) {
-	if (!staticBuffer) PORT_Free(space);
 	PORT_SetError( PK11_MapError(crv) );
-	return NULL;
+	return (unsigned char *)NULL;
     }
-    return space;
+    return buffer;
 }
 
 void *
 pk11_saveContext(PK11Context *context, void *space, unsigned long *savedLength)
 {
-	return pk11_saveContextHelper(context, space, 
-					savedLength, PR_FALSE, PR_FALSE);
+    return pk11_saveContextHelper(context, 
+                                  (unsigned char *)space, savedLength);
 }
 
 /*
@@ -3427,7 +3450,14 @@ static PK11Context *pk11_CreateNewContextInSlot(CK_MECHANISM_TYPE type,
     context->operation = operation;
     context->key = symKey ? PK11_ReferenceSymKey(symKey) : NULL;
     context->slot = PK11_ReferenceSlot(slot);
-    context->session = pk11_GetNewSession(slot,&context->ownSession);
+    if (symKey && symKey->sessionOwner) {
+	/* The symkey owns a session.  Adopt that session. */
+	context->session = symKey->session;
+	context->ownSession = symKey->sessionOwner;
+	symKey->sessionOwner = PR_FALSE;
+    } else {
+	context->session = pk11_GetNewSession(slot, &context->ownSession);
+    }
     context->cx = symKey ? symKey->cx : NULL;
     /* get our session */
     context->savedData = NULL;
@@ -3554,6 +3584,7 @@ PK11_CreateDigestContext(SECOidTag hashAlg)
     /* maybe should really be PK11_GenerateNewParam?? */
     param.data = NULL;
     param.len = 0;
+    param.type = 0;
 
     context = pk11_CreateNewContextInSlot(type, slot, CKA_DIGEST, NULL, &param);
     PK11_FreeSlot(slot);
@@ -3633,8 +3664,7 @@ PK11_SaveContext(PK11Context *cx,unsigned char *save,int *len, int saveLength)
 
     if (cx->ownSession) {
         PK11_EnterContextMonitor(cx);
-	data = (unsigned char*)pk11_saveContextHelper(cx,save,&length,
-							PR_FALSE,PR_FALSE);
+	data = pk11_saveContextHelper(cx, save, &length);
         PK11_ExitContextMonitor(cx);
 	if (data) *len = length;
     } else if ((unsigned) saveLength >= cx->savedLength) {
@@ -3644,7 +3674,45 @@ PK11_SaveContext(PK11Context *cx,unsigned char *save,int *len, int saveLength)
 	}
 	*len = cx->savedLength;
     }
-    return (data != NULL) ? SECSuccess : SECFailure;
+    if (data != NULL) {
+	if (cx->ownSession) {
+	    PORT_ZFree(data, length);
+	}
+	return SECSuccess;
+    } else {
+	return SECFailure;
+    }
+}
+
+/* same as above, but may allocate the return buffer. */
+unsigned char *
+PK11_SaveContextAlloc(PK11Context *cx,
+                      unsigned char *preAllocBuf, unsigned int pabLen,
+                      unsigned int *stateLen)
+{
+    unsigned char *stateBuf = NULL;
+    unsigned long length = (unsigned long)pabLen;
+
+    if (cx->ownSession) {
+        PK11_EnterContextMonitor(cx);
+	stateBuf = pk11_saveContextHelper(cx, preAllocBuf, &length);
+        PK11_ExitContextMonitor(cx);
+	*stateLen = (stateBuf != NULL) ? length : 0;
+    } else {
+	if (pabLen < cx->savedLength) {
+	    stateBuf = (unsigned char *)PORT_Alloc(cx->savedLength);
+	    if (!stateBuf) {
+		return (unsigned char *)NULL;
+	    }
+	} else {
+	    stateBuf = preAllocBuf;
+	}
+	if (cx->savedData) {
+	    PORT_Memcpy(stateBuf, cx->savedData, cx->savedLength);
+	}
+	*stateLen = cx->savedLength;
+    }
+    return stateBuf;
 }
 
 /*
@@ -4020,31 +4088,34 @@ pk11_Finalize(PK11Context *context)
 {
     CK_ULONG count = 0;
     CK_RV crv;
+    unsigned char stackBuf[256];
+    unsigned char *buffer = NULL;
 
     if (!context->ownSession) {
 	return SECSuccess;
     }
 
+finalize:
     switch (context->operation) {
     case CKA_ENCRYPT:
 	crv=PK11_GETTAB(context->slot)->C_EncryptFinal(context->session,
-				NULL,&count);
+	                                               buffer, &count);
 	break;
     case CKA_DECRYPT:
 	crv = PK11_GETTAB(context->slot)->C_DecryptFinal(context->session,
-				NULL,&count);
+	                                                 buffer, &count);
 	break;
     case CKA_SIGN:
 	crv=PK11_GETTAB(context->slot)->C_SignFinal(context->session,
-				NULL,&count);
+	                                            buffer, &count);
 	break;
     case CKA_VERIFY:
 	crv=PK11_GETTAB(context->slot)->C_VerifyFinal(context->session,
-				NULL,count);
+	                                              buffer, count);
 	break;
     case CKA_DIGEST:
 	crv=PK11_GETTAB(context->slot)->C_DigestFinal(context->session,
-				NULL,&count);
+	                                              buffer, &count);
 	break;
     default:
 	crv = CKR_OPERATION_NOT_INITIALIZED;
@@ -4052,8 +4123,22 @@ pk11_Finalize(PK11Context *context)
     }
 
     if (crv != CKR_OK) {
+	if (crv == CKR_OPERATION_NOT_INITIALIZED) {
+	    /* if there's no operation, it is finalized */
+	    return SECSuccess;
+	}
         PORT_SetError( PK11_MapError(crv) );
         return SECFailure;
+    }
+
+    /* try to finalize the session with a buffer */
+    if (buffer == NULL && count > 0) { 
+	if (count < sizeof stackBuf) {
+	    buffer = stackBuf;
+	    goto finalize;
+	} else {
+	    return SECFailure;
+	}
     }
     return SECSuccess;
 }
@@ -4237,13 +4322,50 @@ PK11_PBEKeyGen(PK11SlotInfo *slot, SECAlgorithmID *algid, SECItem *pwitem,
     return symKey;
 }
 
+SECItem *
+PK11_GetPBEIV(SECAlgorithmID *algid, SECItem *pwitem)
+{
+    /* pbe stuff */
+    CK_MECHANISM_TYPE type;
+    SECItem *mech;
+    PK11SymKey *symKey;
+    PK11SlotInfo *slot = PK11_GetInternalSlot();
+    int iv_len = 0;
+    CK_PBE_PARAMS_PTR pPBEparams;
+    SECItem src;
+    SECItem *iv;
+
+
+    mech = PK11_ParamFromAlgid(algid);
+    type = PK11_AlgtagToMechanism(SECOID_FindOIDTag(&algid->algorithm));
+    if(mech == NULL) {
+	return NULL;
+    }
+    symKey = PK11_RawPBEKeyGen(slot, type, mech, pwitem, PR_FALSE, NULL);
+    PK11_FreeSlot(slot);
+    if (symKey == NULL) {
+	SECITEM_ZfreeItem(mech, PR_TRUE);
+	return NULL;
+    }
+    PK11_FreeSymKey(symKey);
+    pPBEparams = (CK_PBE_PARAMS_PTR)mech->data;
+    iv_len = PK11_GetIVLength(type);
+
+    src.data = (unsigned char *)pPBEparams->pInitVector;
+    src.len = iv_len;
+    iv = SECITEM_DupItem(&src);
+
+    SECITEM_ZfreeItem(mech, PR_TRUE);
+    return iv;
+}
+
 
 SECStatus 
 PK11_ImportEncryptedPrivateKeyInfo(PK11SlotInfo *slot,
 			SECKEYEncryptedPrivateKeyInfo *epki, SECItem *pwitem,
 			SECItem *nickname, SECItem *publicValue, PRBool isPerm,
-			PRBool isPrivate, KeyType keyType, unsigned int keyUsage,
-			void *wincx)
+			PRBool isPrivate, KeyType keyType, 
+			unsigned int keyUsage, void *wincx)
 {
     CK_MECHANISM_TYPE mechanism;
     SECItem *pbe_param, crypto_param;
@@ -4472,6 +4594,18 @@ PK11_ExportEncryptedPrivateKeyInfo(PK11SlotInfo *slot, SECOidTag algTag,
 	goto loser;
     }
     epki->arena = arena;
+
+    pk = PK11_FindKeyByAnyCert(cert, wincx);
+    if(pk == NULL) {
+	rv = SECFailure;
+	goto loser;
+    }
+
+    /* if we didn't specify a slot, use the slot the private key was in */
+    if (!slot) {
+	slot = pk->pkcs11Slot;
+    }
+
     algid = SEC_PKCS5CreateAlgorithmID(algTag, NULL, iteration);
     if(algid == NULL) {
 	rv = SECFailure;
@@ -4483,6 +4617,15 @@ PK11_ExportEncryptedPrivateKeyInfo(PK11SlotInfo *slot, SECOidTag algTag,
     pbeMech.mechanism = mechanism;
     pbeMech.pParameter = pbe_param->data;
     pbeMech.ulParameterLen = pbe_param->len;
+
+    /* if we specified a different slot, and the private key slot can do the
+     * pbe key gen, generate the key in the private key slot so we don't have 
+     * to move it later */
+    if (slot != pk->pkcs11Slot) {
+	if (PK11_DoesMechanism(pk->pkcs11Slot,mechanism)) {
+	    slot = pk->pkcs11Slot;
+	}
+    }
     key = PK11_RawPBEKeyGen(slot, mechanism, pbe_param, pwitem, 
 							PR_FALSE, wincx);
 
@@ -4501,11 +4644,6 @@ PK11_ExportEncryptedPrivateKeyInfo(PK11SlotInfo *slot, SECOidTag algTag,
     crypto_param.data = (unsigned char *)cryptoMech.pParameter;
     crypto_param.len = cryptoMech.ulParameterLen;
 
-    pk = PK11_FindKeyByAnyCert(cert, wincx);
-    if(pk == NULL) {
-	rv = SECFailure;
-	goto loser;
-    }
 
     encryptBufLen = pk11_private_key_encrypt_buffer_length(pk); 
     if(encryptBufLen == -1) {
@@ -4518,6 +4656,20 @@ PK11_ExportEncryptedPrivateKeyInfo(PK11SlotInfo *slot, SECOidTag algTag,
     if(!encryptedKey.data) {
 	rv = SECFailure;
 	goto loser;
+    }
+
+    /* If the key isn't in the private key slot, move it */
+    if (key->slot != pk->pkcs11Slot) {
+	PK11SymKey *newkey = pk11_CopyToSlot(pk->pkcs11Slot,
+						key->type, CKA_WRAP, key);
+	if (newkey == NULL) {
+	    rv= SECFailure;
+	    goto loser;
+	}
+
+	/* free the old key and use the new key */
+	PK11_FreeSymKey(key);
+	key = newkey;
     }
 	
     /* we are extracting an encrypted privateKey structure.

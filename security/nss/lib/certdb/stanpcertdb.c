@@ -747,7 +747,27 @@ CERT_SaveSMimeProfile(CERTCertificate *cert, SECItem *emailProfile,
     NSSCryptoContext *cc;
     nssSMIMEProfile *stanProfile = NULL;
     PRBool freeOldProfile = PR_FALSE;
-    
+
+    if (!cert) {
+        return SECFailure;
+    }
+
+    if (cert->slot &&  !PK11_IsInternal(cert->slot)) {
+        /* this cert comes from an external source, we need to add it
+        to the cert db before creating an S/MIME profile */
+        PK11SlotInfo* internalslot = PK11_GetInternalKeySlot();
+        if (!internalslot) {
+            return SECFailure;
+        }
+        rv = PK11_ImportCert(internalslot, cert,
+            CK_INVALID_HANDLE, NULL, PR_FALSE);
+
+        PK11_FreeSlot(internalslot);
+        if (rv != SECSuccess ) {
+            return SECFailure;
+        }
+    }
+
     emailAddr = cert->emailAddr;
     
     if ( emailAddr == NULL ) {

@@ -71,7 +71,8 @@ nss_mktemp(char *path)
 #endif
 
 #define NSS_MAX_FLAG_SIZE  sizeof("readOnly")+sizeof("noCertDB")+ \
-	sizeof("noModDB")+sizeof("forceOpen")+sizeof("passwordRequired")
+	sizeof("noModDB")+sizeof("forceOpen")+sizeof("passwordRequired")+ \
+	sizeof ("optimizeSpace")
 #define NSS_DEFAULT_MOD_NAME "NSS Internal Module"
 #ifdef macintosh
 #define SECMOD_DB "Security Modules"
@@ -81,7 +82,8 @@ nss_mktemp(char *path)
 
 static char *
 nss_makeFlags(PRBool readOnly, PRBool noCertDB, 
-		PRBool noModDB, PRBool forceOpen, PRBool passwordRequired) 
+				PRBool noModDB, PRBool forceOpen, 
+				PRBool passwordRequired, PRBool optimizeSpace) 
 {
     char *flags = (char *)PORT_Alloc(NSS_MAX_FLAG_SIZE);
     PRBool first = PR_TRUE;
@@ -109,6 +111,11 @@ nss_makeFlags(PRBool readOnly, PRBool noCertDB,
     if (passwordRequired) {
         if (!first) PORT_Strcat(flags,",");
         PORT_Strcat(flags,"passwordRequired");
+        first = PR_FALSE;
+    }
+    if (optimizeSpace) {
+        if (!first) PORT_Strcat(flags,",");
+        PORT_Strcat(flags,"optimizeSpace");
         first = PR_FALSE;
     }
     return flags;
@@ -389,7 +396,8 @@ static PRBool nss_IsInitted = PR_FALSE;
 static SECStatus
 nss_Init(const char *configdir, const char *certPrefix, const char *keyPrefix,
 		 const char *secmodName, PRBool readOnly, PRBool noCertDB, 
-			PRBool noModDB, PRBool forceOpen, PRBool noRootInit)
+			PRBool noModDB, PRBool forceOpen, PRBool noRootInit,
+			PRBool optimizeSpace)
 {
     char *moduleSpec = NULL;
     char *flags = NULL;
@@ -404,7 +412,7 @@ nss_Init(const char *configdir, const char *certPrefix, const char *keyPrefix,
     }
 
     flags = nss_makeFlags(readOnly,noCertDB,noModDB,forceOpen,
-						pk11_password_required);
+					pk11_password_required, optimizeSpace);
     if (flags == NULL) return rv;
 
     /*
@@ -472,14 +480,14 @@ SECStatus
 NSS_Init(const char *configdir)
 {
     return nss_Init(configdir, "", "", SECMOD_DB, PR_TRUE, 
-		PR_FALSE, PR_FALSE, PR_FALSE, PR_TRUE);
+		PR_FALSE, PR_FALSE, PR_FALSE, PR_FALSE, PR_TRUE);
 }
 
 SECStatus
 NSS_InitReadWrite(const char *configdir)
 {
     return nss_Init(configdir, "", "", SECMOD_DB, PR_FALSE, 
-		PR_FALSE, PR_FALSE, PR_FALSE, PR_FALSE);
+		PR_FALSE, PR_FALSE, PR_FALSE, PR_FALSE, PR_TRUE);
 }
 
 /*
@@ -509,7 +517,8 @@ NSS_Initialize(const char *configdir, const char *certPrefix,
 	((flags & NSS_INIT_NOCERTDB) == NSS_INIT_NOCERTDB),
 	((flags & NSS_INIT_NOMODDB) == NSS_INIT_NOMODDB),
 	((flags & NSS_INIT_FORCEOPEN) == NSS_INIT_FORCEOPEN),
-	((flags & NSS_INIT_NOROOTINIT) == NSS_INIT_NOROOTINIT));
+	((flags & NSS_INIT_NOROOTINIT) == NSS_INIT_NOROOTINIT),
+	((flags & NSS_INIT_OPTIMIZESPACE) == NSS_INIT_OPTIMIZESPACE));
 }
 
 /*
@@ -518,8 +527,8 @@ NSS_Initialize(const char *configdir, const char *certPrefix,
 SECStatus
 NSS_NoDB_Init(const char * configdir)
 {
-      return nss_Init(configdir?configdir:"","","",SECMOD_DB,
-				PR_TRUE,PR_TRUE,PR_TRUE,PR_TRUE,PR_TRUE);
+      return nss_Init("","","","",
+			PR_TRUE,PR_TRUE,PR_TRUE,PR_TRUE,PR_TRUE,PR_TRUE);
 }
 
 SECStatus

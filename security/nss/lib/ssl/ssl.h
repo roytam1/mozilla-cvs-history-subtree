@@ -95,7 +95,7 @@ SSL_IMPORT PRFileDesc *SSL_ImportFD(PRFileDesc *model, PRFileDesc *fd);
 #define SSL_REQUIRE_CERTIFICATE        10
 #define SSL_ENABLE_FDX                 11 /* permit simultaneous read/write */
 #define SSL_V2_COMPATIBLE_HELLO        12 /* send v3 client hello in v2 fmt */
-#define SSL_ENABLE_TLS		       13 /* enable TLS (off by default) */
+#define SSL_ENABLE_TLS		       13 /* enable TLS (on by default) */
 #define SSL_ROLLBACK_DETECTION         14 /* for compatibility, default: on */
 
 #ifdef SSL_DEPRECATED_FUNCTION 
@@ -137,6 +137,12 @@ SSL_IMPORT SECStatus SSL_CipherPolicyGet(PRInt32 cipher, PRInt32 *policy);
 #define SSL_NOT_ALLOWED		 0	      /* or invalid or unimplemented */
 #define SSL_ALLOWED		 1
 #define SSL_RESTRICTED		 2	      /* only with "Step-Up" certs. */
+
+/* Values for "on" with SSL_REQUIRE_CERTIFICATE. */
+#define SSL_REQUIRE_NEVER           ((PRBool)0)
+#define SSL_REQUIRE_ALWAYS          ((PRBool)1)
+#define SSL_REQUIRE_FIRST_HANDSHAKE ((PRBool)2)
+#define SSL_REQUIRE_NO_ERROR        ((PRBool)3)
 
 /*
 ** Reset the handshake state for fd. This will make the complete SSL
