@@ -54,6 +54,7 @@ txExecutionState::txExecutionState(txStylesheet* aStylesheet)
     : mStylesheet(aStylesheet),
       mNextInstruction(nsnull),
       mLocalVariables(nsnull),
+      mTemplateParams(nsnull),
       mEvalContext(nsnull),
       mInitialEvalContext(nsnull),
       mRTFDocument(nsnull)
@@ -64,6 +65,7 @@ txExecutionState::~txExecutionState()
 {
     delete mEvalContext;
     delete mRTFDocument;
+    delete mTemplateParams;
     
     // XXX ToDo: delete stack of resulthandlers. This is messy since the 
     // the top resulthandler is the outputhandler, which is refcounted
@@ -73,6 +75,11 @@ txExecutionState::~txExecutionState()
     // XXX ToDo: delete evalcontext-stack. mind the initial evalcontext, it
     // can occur more then once in the evalcontext-stack. If we refcount them
     // this won't be a problem.
+    
+    txStackIterator paramIter(&mParamStack);
+    while (paramIter.hasNext()) {
+        delete (txExpandedNameMap*)paramIter.next();
+    }
 }
 
 nsresult
@@ -308,6 +315,12 @@ txExecutionState::getRTFDocument(Document** aDocument)
     return NS_OK;
 }
 
+txExpandedNameMap*
+txExecutionState::getParamMap()
+{
+    return mTemplateParams;
+}
+
 txInstruction*
 txExecutionState::getNextInstruction()
 {
@@ -370,6 +383,24 @@ void
 txExecutionState::removeVariable(const txExpandedName& aName)
 {
     mLocalVariables->removeVariable(aName);
+}
+
+nsresult
+txExecutionState::pushParamMap()
+{
+    nsresult rv = mParamStack.push(mTemplateParams);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    mTemplateParams = nsnull;
+    
+    return NS_OK;
+}
+
+void
+txExecutionState::popParamMap()
+{
+    delete mTemplateParams;
+    mTemplateParams = (txExpandedNameMap*)mParamStack.pop();
 }
 
 nsresult

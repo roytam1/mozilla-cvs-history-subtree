@@ -104,6 +104,17 @@ public:
     txExpandedName mName;
 };
 
+class txCheckParam : public txInstruction
+{
+public:
+    txCheckParam(const txExpandedName& aName);
+
+    TX_DECL_TXINSTRUCTION
+
+    txExpandedName mName;
+    txInstruction* mBailTarget;
+};
+
 class txConditionalGoto : public txInstruction
 {
 public:
@@ -210,6 +221,12 @@ public:
     PRBool mTerminate;
 };
 
+class txPopParams : public txInstruction
+{
+public:
+    TX_DECL_TXINSTRUCTION
+};
+
 class txProcessingInstruction : public txInstruction
 {
 public:
@@ -247,6 +264,12 @@ public:
     };
     
     nsVoidArray mSortKeys;
+};
+
+class txPushParams : public txInstruction
+{
+public:
+    TX_DECL_TXINSTRUCTION
 };
 
 class txPushRTFHandler : public txInstruction
@@ -295,6 +318,18 @@ class txReturn : public txInstruction
 {
 public:
     TX_DECL_TXINSTRUCTION
+};
+
+class txSetParam : public txInstruction
+{
+public:
+    txSetParam(const txExpandedName& aName, Expr* aValue);
+    ~txSetParam();
+
+    TX_DECL_TXINSTRUCTION
+
+    txExpandedName mName;
+    Expr* mValue;
 };
 
 class txSetVariable : public txInstruction

@@ -63,21 +63,32 @@ txStylesheet::init()
     
     // Create default templates
     // element/root template
+    txInstruction** instrp = &mContainerTemplate;
+    *instrp = new txPushParams;
+    NS_ENSURE_TRUE(*instrp, NS_ERROR_OUT_OF_MEMORY);
+
     txNodeTest* nt = new txNodeTypeTest(txNodeTypeTest::NODE_TYPE);
     NS_ENSURE_TRUE(nt, NS_ERROR_OUT_OF_MEMORY);
 
     Expr* nodeExpr = new LocationStep(nt, LocationStep::CHILD_AXIS);
     NS_ENSURE_TRUE(nodeExpr, NS_ERROR_OUT_OF_MEMORY);
 
-    mContainerTemplate = new txPushNewContext(nodeExpr);
-    NS_ENSURE_TRUE(mContainerTemplate, NS_ERROR_OUT_OF_MEMORY);
+    instrp = &(*instrp)->mNext;
+    *instrp = new txPushNewContext(nodeExpr);
+    NS_ENSURE_TRUE(*instrp, NS_ERROR_OUT_OF_MEMORY);
 
     // XXX ToDo: need special instruction that gets the correct mode
-    mContainerTemplate->mNext = new txApplyTemplates(txExpandedName());
-    NS_ENSURE_TRUE(mContainerTemplate->mNext, NS_ERROR_OUT_OF_MEMORY);
+    instrp = &(*instrp)->mNext;
+    *instrp = new txApplyTemplates(txExpandedName());
+    NS_ENSURE_TRUE(*instrp, NS_ERROR_OUT_OF_MEMORY);
 
-    mContainerTemplate->mNext->mNext = new txReturn();
-    NS_ENSURE_TRUE(mContainerTemplate->mNext->mNext, NS_ERROR_OUT_OF_MEMORY);
+    instrp = &(*instrp)->mNext;
+    *instrp = new txPopParams;
+    NS_ENSURE_TRUE(*instrp, NS_ERROR_OUT_OF_MEMORY);
+
+    instrp = &(*instrp)->mNext;
+    *instrp = new txReturn();
+    NS_ENSURE_TRUE(*instrp, NS_ERROR_OUT_OF_MEMORY);
 
     // attribute/textnode template
     nt = new txNodeTypeTest(txNodeTypeTest::NODE_TYPE);
@@ -89,7 +100,6 @@ txStylesheet::init()
     mCharactersTemplate = new txValueOf(nodeExpr, PR_FALSE);
     NS_ENSURE_TRUE(mContainerTemplate, NS_ERROR_OUT_OF_MEMORY);
 
-    // XXX ToDo: need special instruction that gets the correct mode
     mCharactersTemplate->mNext = new txReturn();
     NS_ENSURE_TRUE(mContainerTemplate->mNext, NS_ERROR_OUT_OF_MEMORY);
 

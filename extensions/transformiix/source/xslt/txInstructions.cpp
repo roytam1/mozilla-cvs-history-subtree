@@ -171,6 +171,26 @@ txCallTemplate::execute(txExecutionState& aEs)
     return NS_OK;
 }
 
+txCheckParam::txCheckParam(const txExpandedName& aName)
+    : mName(aName), mBailTarget(nsnull)
+{
+}
+
+nsresult
+txCheckParam::execute(txExecutionState& aEs)
+{
+    nsresult rv = NS_OK;
+    ExprResult* exprRes = (ExprResult*)aEs.mTemplateParams->get(mName);
+    if (exprRes) {
+        rv = aEs.bindVariable(mName, exprRes, MB_FALSE);
+        NS_ENSURE_SUCCESS(rv, rv);
+        
+        aEs.gotoInstruction(mBailTarget);
+    }
+    
+    return NS_OK;
+}
+
 txConditionalGoto::txConditionalGoto(Expr* aCondition, txInstruction* aTarget)
     : mCondition(aCondition),
       mTarget(aTarget)
@@ -529,6 +549,14 @@ txMessage::execute(txExecutionState& aEs)
     return mTerminate ? NS_ERROR_XSLT_ABORTED : NS_OK;
 }
 
+nsresult
+txPopParams::execute(txExecutionState& aEs)
+{
+    aEs.popParamMap();
+
+    return NS_OK;
+}
+
 txProcessingInstruction::txProcessingInstruction(Expr* aName)
     : mName(aName)
 {
@@ -657,6 +685,12 @@ txPushNewContext::SortKey::~SortKey()
 }
 
 nsresult
+txPushParams::execute(txExecutionState& aEs)
+{
+    return aEs.pushParamMap();;
+}
+
+nsresult
 txPushRTFHandler::execute(txExecutionState& aEs)
 {
     Document* rtfdoc;
@@ -732,6 +766,45 @@ txReturn::execute(txExecutionState& aEs)
 {
     aEs.returnFromTemplate();
 
+    return NS_OK;
+}
+
+txSetParam::txSetParam(const txExpandedName& aName, Expr* aValue)
+    : mName(aName), mValue(aValue)
+{
+}
+
+txSetParam::~txSetParam()
+{
+    delete mValue;
+}
+
+nsresult
+txSetParam::execute(txExecutionState& aEs)
+{
+    if (!aEs.mTemplateParams) {
+        aEs.mTemplateParams = new txExpandedNameMap(PR_TRUE);
+        NS_ENSURE_TRUE(aEs.mTemplateParams, NS_ERROR_OUT_OF_MEMORY);
+    }
+
+    ExprResult* exprRes;
+    if (mValue) {
+        exprRes = mValue->evaluate(aEs.getEvalContext());
+        NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
+    }
+    else {
+        txRtfHandler* handler = (txRtfHandler*)aEs.popResultHandler();
+        exprRes = handler->mResultTreeFragment;
+        handler->mResultTreeFragment = nsnull;
+        delete handler;
+    }
+    
+    nsresult rv = aEs.mTemplateParams->add(mName, exprRes);
+    if (NS_FAILED(rv)) {
+        delete exprRes;
+        return rv;
+    }
+    
     return NS_OK;
 }
 

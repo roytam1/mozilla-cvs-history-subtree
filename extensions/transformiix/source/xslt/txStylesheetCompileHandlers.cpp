@@ -58,6 +58,7 @@ txHandlerTable* gTxVariableHandler = 0;
 txHandlerTable* gTxForEachHandler = 0;
 txHandlerTable* gTxTopVariableHandler = 0;
 txHandlerTable* gTxChooseHandler = 0;
+txHandlerTable* gTxParamHandler = 0;
 
 nsresult
 txFnStartLRE(PRInt32 aNamespaceID,
@@ -487,7 +488,7 @@ txFnStartTemplate(PRInt32 aNamespaceID,
                   PRInt32 aAttrCount,
                   txStylesheetCompilerState& aState)
 {
-    nsresult rv = aState.pushHandlerTable(gTxTemplateHandler);
+    nsresult rv = aState.pushHandlerTable(gTxParamHandler);
     NS_ENSURE_SUCCESS(rv, rv);
     
     txExpandedName name;
@@ -749,8 +750,11 @@ txFnText(const nsAString& aStr, txStylesheetCompilerState& aState)
 /*
   xsl:apply-templates
 
+  txPushParams
+  [params]
   txPushNewContext  (holds <xsl:sort>s)
   txApplyTemplates
+  txPopParams
 */
 nsresult
 txFnStartApplyTemplates(PRInt32 aNamespaceID,
@@ -762,12 +766,18 @@ txFnStartApplyTemplates(PRInt32 aNamespaceID,
 {
     nsresult rv = NS_OK;
 
+    txInstruction* instr = new txPushParams;
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
     txExpandedName mode;
     rv = getQNameAttr(aAttributes, aAttrCount, txXSLTAtoms::mode, PR_FALSE,
                       aState, mode);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txInstruction* instr = new txApplyTemplates(mode);
+    instr = new txApplyTemplates(mode);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.pushObject(instr);
@@ -811,6 +821,12 @@ txFnEndApplyTemplates(txStylesheetCompilerState& aState)
 
     // txApplyTemplates
     rv = aState.addInstruction((txInstruction*)aState.popObject());
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txInstruction* instr = new txPopParams;
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return NS_OK;
@@ -862,7 +878,14 @@ txFnEndAttribute(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
-// xsl:call-template
+/*
+  xsl:call-template
+
+  txPushParams
+  [params]
+  txCallTemplate
+  txPopParams
+*/
 nsresult
 txFnStartCallTemplate(PRInt32 aNamespaceID,
                       nsIAtom* aLocalName,
@@ -872,6 +895,12 @@ txFnStartCallTemplate(PRInt32 aNamespaceID,
                       txStylesheetCompilerState& aState)
 {
     nsresult rv = NS_OK;
+
+    txInstruction* instr = new txPushParams;
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
 
     txExpandedName name;
     rv = getQNameAttr(aAttributes, aAttrCount, txXSLTAtoms::name, PR_TRUE,
@@ -894,6 +923,12 @@ txFnEndCallTemplate(txStylesheetCompilerState& aState)
 
     // txCallTemplate
     nsresult rv = aState.addInstruction((txInstruction*)aState.popObject());
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txInstruction* instr = new txPopParams;
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return NS_OK;
@@ -1305,6 +1340,88 @@ txFnEndOtherwise(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
+/*
+    xsl:param
+    
+    txCheckParam    --+
+    txPushRTFHandler  |   (for RTF-parameters)
+    txSetVariable     |
+                    <-+
+*/
+nsresult
+txFnStartParam(PRInt32 aNamespaceID,
+               nsIAtom* aLocalName,
+               nsIAtom* aPrefix,
+               txStylesheetAttr* aAttributes,
+               PRInt32 aAttrCount,
+               txStylesheetCompilerState& aState)
+{
+    nsresult rv = NS_OK;
+
+    txExpandedName name;
+    rv = getQNameAttr(aAttributes, aAttrCount, txXSLTAtoms::name, PR_TRUE,
+                      aState, name);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txCheckParam* checkParam = new txCheckParam(name);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    rv = aState.pushPtr(checkParam);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = aState.addInstruction(checkParam);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    Expr* select = nsnull;
+    rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::select, PR_FALSE,
+                     aState, select);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txSetVariable* var = new txSetVariable(name, select);
+    NS_ENSURE_TRUE(var, NS_ERROR_OUT_OF_MEMORY);
+
+    if (var->mValue) {
+        // XXX should be gTxErrorHandler?
+        rv = aState.pushHandlerTable(gTxIgnoreHandler);
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+    else {
+        rv = aState.pushHandlerTable(gTxVariableHandler);
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+
+    rv = aState.pushObject(var);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
+nsresult
+txFnEndParam(txStylesheetCompilerState& aState)
+{
+    txSetVariable* var = (txSetVariable*)aState.popObject();
+    txHandlerTable* prev = aState.mHandlerTable;
+    aState.popHandlerTable();
+
+    if (prev == gTxVariableHandler) {
+        // No children were found.
+        NS_ASSERTION(!var->mValue, "There shouldn't be a select-expression here");
+        var->mValue = new StringExpr(NS_LITERAL_STRING(""));
+        NS_ENSURE_TRUE(var->mValue, NS_ERROR_OUT_OF_MEMORY);
+    }
+
+    nsresult rv = aState.addVariable(var->mName);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = aState.addInstruction(var);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txCheckParam* checkParam = (txCheckParam*)aState.popPtr();
+    aState.addGotoTarget(&checkParam->mBailTarget);
+
+    return NS_OK;
+}
+
 // xsl:processing-instruction
 nsresult
 txFnStartPI(PRInt32 aNamespaceID,
@@ -1653,6 +1770,74 @@ txFnEndWhen(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
+/*
+    xsl:with-param
+    
+    txPushRTFHandler (for RTF-parameters)
+    txSetParam
+*/
+nsresult
+txFnStartWithParam(PRInt32 aNamespaceID,
+                   nsIAtom* aLocalName,
+                   nsIAtom* aPrefix,
+                   txStylesheetAttr* aAttributes,
+                   PRInt32 aAttrCount,
+                   txStylesheetCompilerState& aState)
+{
+    nsresult rv = NS_OK;
+
+    txExpandedName name;
+    rv = getQNameAttr(aAttributes, aAttrCount, txXSLTAtoms::name, PR_TRUE,
+                      aState, name);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    Expr* select = nsnull;
+    rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::select, PR_FALSE,
+                     aState, select);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txSetParam* var = new txSetParam(name, select);
+    NS_ENSURE_TRUE(var, NS_ERROR_OUT_OF_MEMORY);
+
+    if (var->mValue) {
+        // XXX should be gTxErrorHandler?
+        rv = aState.pushHandlerTable(gTxIgnoreHandler);
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+    else {
+        rv = aState.pushHandlerTable(gTxVariableHandler);
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+
+    rv = aState.pushObject(var);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
+nsresult
+txFnEndWithParam(txStylesheetCompilerState& aState)
+{
+    txSetParam* var = (txSetParam*)aState.popObject();
+    txHandlerTable* prev = aState.mHandlerTable;
+    aState.popHandlerTable();
+
+    if (prev == gTxVariableHandler) {
+        // No children were found.
+        NS_ASSERTION(!var->mValue, "There shouldn't be a select-expression here");
+        var->mValue = new StringExpr(NS_LITERAL_STRING(""));
+        NS_ENSURE_TRUE(var->mValue, NS_ERROR_OUT_OF_MEMORY);
+    }
+
+    nsresult rv = aState.addVariable(var->mName);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = aState.addInstruction(var);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
 /**
  * Table Datas
  */
@@ -1736,6 +1921,7 @@ txHandlerTableData gTxTextTableData = {
 txHandlerTableData gTxApplyTemplatesTableData = {
   // Handlers
   { { kNameSpaceID_XSLT, "sort", txFnStartSort, txFnEndSort },
+    { kNameSpaceID_XSLT, "with-param", txFnStartWithParam, txFnEndWithParam },
     { 0, 0, 0, 0 } },
   // Other
   { 0, 0, txFnStartElementSetIgnore, txFnEndElementSetIgnore }, // should this be error?
@@ -1747,7 +1933,8 @@ txHandlerTableData gTxApplyTemplatesTableData = {
 
 txHandlerTableData gTxCallTemplateTableData = {
   // Handlers
-  { { 0, 0, 0, 0 } },
+  { { kNameSpaceID_XSLT, "with-param", txFnStartWithParam, txFnEndWithParam },
+    { 0, 0, 0, 0 } },
   // Other
   { 0, 0, txFnStartElementSetIgnore, txFnEndElementSetIgnore }, // should this be error?
   // LRE
@@ -1801,6 +1988,18 @@ txHandlerTableData gTxChooseTableData = {
   { 0, 0, txFnStartElementError, 0 },
   // Text
   txFnTextError
+};
+
+txHandlerTableData gTxParamTableData = {
+  // Handlers
+  { { kNameSpaceID_XSLT, "param", txFnStartParam, txFnEndParam },
+    { 0, 0, 0, 0 } },
+  // Other
+  { 0, 0, txFnStartElementConinueTemplate, 0 },
+  // LRE
+  { 0, 0, txFnStartElementConinueTemplate, 0 },
+  // Text
+  txFnTextConinueTemplate
 };
 
 
@@ -1875,6 +2074,7 @@ txHandlerTable::init()
     INIT_HANDLER(ForEach);
     INIT_HANDLER(TopVariable);
     INIT_HANDLER(Choose);
+    INIT_HANDLER(Param);
 
     return MB_TRUE;
 }
@@ -1894,4 +2094,5 @@ txHandlerTable::shutdown()
     SHUTDOWN_HANDLER(ForEach);
     SHUTDOWN_HANDLER(TopVariable);
     SHUTDOWN_HANDLER(Choose);
+    SHUTDOWN_HANDLER(Param);
 }

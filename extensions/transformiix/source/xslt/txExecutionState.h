@@ -79,6 +79,7 @@ public:
     // state-getting functions
     txIEvalContext* getEvalContext();
     nsresult getRTFDocument(Document** aDocument);
+    txExpandedNameMap* getParamMap();
 
     // state-modification functions
     txInstruction* getNextInstruction();
@@ -90,6 +91,8 @@ public:
     nsresult bindVariable(const txExpandedName& aName,
                           ExprResult* aValue, MBool aOwned);
     void removeVariable(const txExpandedName& aName);
+    nsresult pushParamMap();
+    void popParamMap();
 
     // Other
     nsresult enterRecursionCheckpoint(txRecursionCheckpointStart* aChk,
@@ -103,6 +106,7 @@ public:
 #endif
     txXMLEventHandler* mResultHandler;
     txIOutputHandlerFactory* mOutputHandlerFactory;
+    txExpandedNameMap* mTemplateParams;
 
     txStylesheet* mStylesheet;
 
@@ -112,6 +116,7 @@ private:
     txStack mEvalContextStack;
     txStack mIntStack;
     txStack mResultHandlerStack;
+    txStack mParamStack;
     nsStringArray mStringStack;
     txInstruction* mNextInstruction;
     txVariableMap* mLocalVariables;
