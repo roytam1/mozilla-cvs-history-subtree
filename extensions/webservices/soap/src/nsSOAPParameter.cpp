@@ -184,8 +184,7 @@ NS_IMETHODIMP nsSOAPParameter::SetAsArray(nsISupportsArray *aValue)
 NS_IMETHODIMP nsSOAPParameter::SetAsInterface(const nsIID & aIID, nsISupports *aValue)
 {
     nsAutoString iid = NS_ConvertASCIItoUCS2(aIID.ToString());
-    mType.Assign(nsSOAPUtils::kIIDObjectType);
-    mType.Append(nsSOAPUtils::kTypeSeparator);
+    mType.Assign(nsSOAPUtils::kIIDObjectTypePrefix);
     mType.Append(iid);
     mValue = aValue;
     return NS_OK;

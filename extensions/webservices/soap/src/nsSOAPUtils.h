@@ -52,14 +52,12 @@ public:
   static JSContext* GetCurrentContext();
   static nsresult ConvertValueToJSVal(JSContext* aContext, 
                                       nsISupports* aValue, 
-                                      JSObject* aJSValue, 
-                                      PRInt32 aType,
+                                      nsAReadableString & aType,
                                       jsval* vp);
   static nsresult ConvertJSValToValue(JSContext* aContext,
                                       jsval val, 
                                       nsISupports** aValue,
-                                      JSObject** aJSValue,
-                                      PRInt32* aType);
+                                      nsAWritableString & aType);
 
   static const nsString kSOAPEnvURI;
   static const nsString kSOAPEncodingURI;
@@ -89,9 +87,10 @@ public:
   static const nsString kPRInt16Type;
   static const nsString kCharType;
   static const nsString kArrayType;
-  static const nsString kJSObjectType;
-  static const nsString kIIDObjectType;
-  static const nsString kTypeSeparator;
+  static const nsString kJSObjectTypePrefix;
+  static const nsString kIIDObjectTypePrefix;
+  static const nsString kNullType;
+  static const nsString kVoidType;
 };
 
 #endif

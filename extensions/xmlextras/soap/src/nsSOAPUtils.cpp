@@ -25,11 +25,14 @@
 #include "nsCOMPtr.h"
 #include "nsIJSContextStack.h"
 #include "nsISOAPParameter.h"
+#include "nsSOAPParameter.h"
 #include "nsISupportsPrimitives.h"
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
 #include "nsXPIDLString.h"
 #include "nsISupportsArray.h"
+#include "nsISOAPJSValue.h"
+#include "nsIXPConnect.h"
 
 const nsString nsSOAPUtils::kSOAPEnvURI(NS_LITERAL_STRING("http://schemas.xmlsoap.org/soap/envelope/"));
 const nsString nsSOAPUtils::kSOAPEncodingURI(NS_LITERAL_STRING("http://schemas.xmlsoap.org/soap/encoding/"));
@@ -61,9 +64,10 @@ const nsString nsSOAPUtils::kPRInt32Type(NS_LITERAL_STRING("#int"));
 const nsString nsSOAPUtils::kPRInt16Type(NS_LITERAL_STRING("#short"));
 const nsString nsSOAPUtils::kCharType(NS_LITERAL_STRING("#byte"));
 const nsString nsSOAPUtils::kArrayType(NS_LITERAL_STRING("#array"));
-const nsString nsSOAPUtils::kJSObjectType(NS_LITERAL_STRING("#js"));
-const nsString nsSOAPUtils::kIIDObjectType(NS_LITERAL_STRING("#iid"));
-const nsString nsSOAPUtils::kTypeSeparator(NS_LITERAL_STRING("#"));
+const nsString nsSOAPUtils::kJSObjectTypePrefix(NS_LITERAL_STRING("#js#"));
+const nsString nsSOAPUtils::kIIDObjectTypePrefix(NS_LITERAL_STRING("#iid#"));
+const nsString nsSOAPUtils::kNullType(NS_LITERAL_STRING("#null"));
+const nsString nsSOAPUtils::kVoidType(NS_LITERAL_STRING("#void"));
 
 void 
 nsSOAPUtils::GetSpecificChildElement(
@@ -285,23 +289,21 @@ nsSOAPUtils::GetCurrentContext()
   return cx;
 }
 
-#if 0
-
 nsresult 
 nsSOAPUtils::ConvertValueToJSVal(JSContext* aContext, 
                                  nsISupports* aValue, 
-                                 JSObject* aJSValue, 
-                                 PRInt32 aType,
+                                 nsAReadableString & aType,
                                  jsval* vp)
 {
-  *vp = JSVAL_NULL;
-  switch(aType) {
-    case nsISOAPParameter::PARAMETER_TYPE_VOID:
-      *vp = JSVAL_VOID;
-      break;
 
-    case nsISOAPParameter::PARAMETER_TYPE_STRING:
-    {
+  *vp = JSVAL_NULL;
+
+  if (aType.Equals(kVoidType)) {
+
+      *vp = JSVAL_VOID;
+
+  } else if (aType.Equals(kWStringType)) {
+
       nsCOMPtr<nsISupportsWString> wstr = do_QueryInterface(aValue);
       if (!wstr) return NS_ERROR_FAILURE;
       
@@ -315,11 +317,9 @@ nsSOAPUtils::ConvertValueToJSVal(JSContext* aContext,
           *vp = STRING_TO_JSVAL(jsstr);
         }
       }
-      break;
-    }
 
-    case nsISOAPParameter::PARAMETER_TYPE_BOOLEAN:
-    {
+  } else if (aType.Equals(kPRBoolType)) {
+
       nsCOMPtr<nsISupportsPRBool> prb = do_QueryInterface(aValue);
       if (!prb) return NS_ERROR_FAILURE;
 
@@ -332,11 +332,9 @@ nsSOAPUtils::ConvertValueToJSVal(JSContext* aContext,
       else {
         *vp = JSVAL_FALSE;
       }
-      break;
-    }
 
-    case nsISOAPParameter::PARAMETER_TYPE_DOUBLE:
-    {
+  } else if (aType.Equals(kDoubleType)) {
+
       nsCOMPtr<nsISupportsDouble> dub = do_QueryInterface(aValue);
       if (!dub) return NS_ERROR_FAILURE;
 
@@ -346,11 +344,8 @@ nsSOAPUtils::ConvertValueToJSVal(JSContext* aContext,
       double* dataPtr = JS_NewDouble(aContext, (jsdouble)data); 
       *vp = DOUBLE_TO_JSVAL(dataPtr);
 
-      break;
-    }
+  } else if (aType.Equals(kFloatType)) {
 
-    case nsISOAPParameter::PARAMETER_TYPE_FLOAT:
-    {
       nsCOMPtr<nsISupportsFloat> flt = do_QueryInterface(aValue);
       if (!flt) return NS_ERROR_FAILURE;
 
@@ -359,18 +354,14 @@ nsSOAPUtils::ConvertValueToJSVal(JSContext* aContext,
 
       double* dataPtr = JS_NewDouble(aContext, (jsdouble)data); 
       *vp = DOUBLE_TO_JSVAL(dataPtr);
-      
-      break;
-    }
 
-    case nsISOAPParameter::PARAMETER_TYPE_LONG:
-    {
+  } else if (aType.Equals(kPRInt64Type)) {
+
       // XXX How to express 64-bit values in JavaScript?
       return NS_ERROR_NOT_IMPLEMENTED;
-    }
 
-    case nsISOAPParameter::PARAMETER_TYPE_INT:
-    {
+  } else if (aType.Equals(kPRInt32Type)) {
+
       nsCOMPtr<nsISupportsPRInt32> isupint32 = do_QueryInterface(aValue);
       if (!isupint32) return NS_ERROR_FAILURE;
 
@@ -379,11 +370,8 @@ nsSOAPUtils::ConvertValueToJSVal(JSContext* aContext,
       
       *vp = INT_TO_JSVAL(data);
       
-      break;
-    }
+  } else if (aType.Equals(kPRInt16Type)) {
 
-    case nsISOAPParameter::PARAMETER_TYPE_SHORT:
-    {
       nsCOMPtr<nsISupportsPRInt16> isupint16 = do_QueryInterface(aValue);
       if (!isupint16) return NS_ERROR_FAILURE;
 
@@ -392,11 +380,8 @@ nsSOAPUtils::ConvertValueToJSVal(JSContext* aContext,
       
       *vp = INT_TO_JSVAL((PRInt32)data);
       
-      break;
-    }
-    
-    case nsISOAPParameter::PARAMETER_TYPE_BYTE:
-    {
+  } else if (aType.Equals(kCharType)) {
+
       nsCOMPtr<nsISupportsChar> isupchar = do_QueryInterface(aValue);
       if (!isupchar) return NS_ERROR_FAILURE;
 
@@ -405,11 +390,8 @@ nsSOAPUtils::ConvertValueToJSVal(JSContext* aContext,
       
       *vp = INT_TO_JSVAL((PRInt32)data);
 
-      break;
-    }
+  } else if (aType.Equals(kArrayType)) {
 
-    case nsISOAPParameter::PARAMETER_TYPE_ARRAY:
-    {
       nsCOMPtr<nsISupportsArray> array = do_QueryInterface(aValue);
       if (!array) return NS_ERROR_FAILURE;
 
@@ -425,14 +407,12 @@ nsSOAPUtils::ConvertValueToJSVal(JSContext* aContext,
         if (!param) return NS_ERROR_FAILURE;
 
         nsCOMPtr<nsISupports> paramVal;
-        JSObject* paramObj;
-        PRInt32 paramType;
+        nsAutoString paramType;
 
-        param->GetValueAndType(getter_AddRefs(paramVal), &paramType);
-        param->GetJSValue(&paramObj);
-
+        param->GetType(paramType);
+        param->GetValue(getter_AddRefs(paramVal));
         jsval val;
-        nsresult rv = ConvertValueToJSVal(aContext, paramVal, paramObj,
+        nsresult rv = ConvertValueToJSVal(aContext, paramVal,
                                           paramType, &val);
         if (NS_FAILED(rv)) return rv;
 
@@ -440,17 +420,17 @@ nsSOAPUtils::ConvertValueToJSVal(JSContext* aContext,
       }
 
       *vp = OBJECT_TO_JSVAL(arrayobj);
-      break;
-    }
 
-    case nsISOAPParameter::PARAMETER_TYPE_JAVASCRIPT_ARRAY:
-    case nsISOAPParameter::PARAMETER_TYPE_JAVASCRIPT_OBJECT:
-    {
-      *vp = OBJECT_TO_JSVAL(aJSValue);
-      break;
-    }
+  } else if (nsAutoString(aType).RFind(kJSObjectTypePrefix, false, 0) >= 0) {
+      
+      nsCOMPtr<nsISOAPJSValue> jsvalue = do_QueryInterface(aValue);
+      if (!jsvalue) return NS_ERROR_FAILURE;
+
+      JSObject* data;
+      jsvalue->GetValue(&data);
+      
+      *vp = OBJECT_TO_JSVAL(data);
   }
-
   return NS_OK;
 }
 
@@ -458,21 +438,18 @@ nsresult
 nsSOAPUtils::ConvertJSValToValue(JSContext* aContext,
                                  jsval val, 
                                  nsISupports** aValue,
-                                 JSObject** aJSValue,
-                                 PRInt32* aType)
+                                 nsAWritableString & aType)
 {
-        nsCOMPtr<nsISOAPJSValue> value = do_CreateInstance(NS_SOAPJSVALUE_CONTRACTID, &rc);
   *aValue = nsnull;
-  *aJSValue = nsnull;
   if (JSVAL_IS_NULL(val)) {
-    *aType = nsISOAPParameter::PARAMETER_TYPE_NULL;
+    aType = kNullType;
   }
   else if (JSVAL_IS_VOID(val)) {
-    *aType = nsISOAPParameter::PARAMETER_TYPE_VOID;
+    aType = kVoidType;
   }
   else if (JSVAL_IS_STRING(val)) {
     JSString* jsstr;
-    *aType = nsISOAPParameter::PARAMETER_TYPE_STRING;
+    aType = kWStringType;
     
     jsstr = JSVAL_TO_STRING(val);
     if (jsstr) {
@@ -489,7 +466,7 @@ nsSOAPUtils::ConvertJSValToValue(JSContext* aContext,
     }
   }
   else if (JSVAL_IS_DOUBLE(val)) {
-    *aType = nsISOAPParameter::PARAMETER_TYPE_DOUBLE;
+    aType = kDoubleType;
     
     nsCOMPtr<nsISupportsDouble> dub = do_CreateInstance(NS_SUPPORTS_DOUBLE_CONTRACTID);
     if (!dub) return NS_ERROR_FAILURE;
@@ -499,7 +476,7 @@ nsSOAPUtils::ConvertJSValToValue(JSContext* aContext,
     NS_ADDREF(*aValue);
   }
   else if (JSVAL_IS_INT(val)) {
-    *aType = nsISOAPParameter::PARAMETER_TYPE_INT;
+    aType = kPRInt32Type;
     
     nsCOMPtr<nsISupportsPRInt32> isupint = do_CreateInstance(NS_SUPPORTS_PRINT32_CONTRACTID);
     if (!isupint) return NS_ERROR_FAILURE;
@@ -509,7 +486,7 @@ nsSOAPUtils::ConvertJSValToValue(JSContext* aContext,
     NS_ADDREF(*aValue);
   }
   else if (JSVAL_IS_BOOLEAN(val)) {
-    *aType = nsISOAPParameter::PARAMETER_TYPE_BOOLEAN;
+    aType = kPRBoolType;
     
     nsCOMPtr<nsISupportsPRBool> isupbool = do_CreateInstance(NS_SUPPORTS_PRBOOL_CONTRACTID);
     if (!isupbool) return NS_ERROR_FAILURE;
@@ -520,13 +497,76 @@ nsSOAPUtils::ConvertJSValToValue(JSContext* aContext,
   }
   else if (JSVAL_IS_OBJECT(val)) {
     JSObject* jsobj = JSVAL_TO_OBJECT(val);
+    nsresult rc;
     if (JS_IsArrayObject(aContext, jsobj)) {
-      *aType = nsISOAPParameter::PARAMETER_TYPE_JAVASCRIPT_ARRAY;
+      aType = kArrayType;
+
+      NS_WITH_SERVICE(nsIXPConnect, xpc, nsIXPConnect::GetCID(), &rc);
+      if (NS_FAILED(rc)) return NS_ERROR_FAILURE;
+
+      PRUint32 count, index;
+      count = JS_GetArrayLength(aContext, jsobj, &count);
+
+  //  Is there a way to preallocate the size?
+      nsCOMPtr<nsISupportsArray> value = do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID, &rc);
+      if (!value) return NS_ERROR_FAILURE;
+
+      for (index = 0; index < count; index++) {
+
+        nsCOMPtr<nsISOAPParameter> param;
+        param = nsnull;
+        jsval val;
+        if (!JS_GetElement(aContext, jsobj, (jsint)index, &val))
+          return NS_ERROR_FAILURE;
+
+        // First check if it's a parameter
+        if (JSVAL_IS_OBJECT(val)) {
+          JSObject* paramobj;
+          paramobj = JSVAL_TO_OBJECT(val);
+    
+          // Check if it's a wrapped native
+          nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
+          xpc->GetWrappedNativeOfJSObject(aContext, paramobj, getter_AddRefs(wrapper));
+          
+          if (wrapper) {
+            // Get the native and see if it's a SOAPParameter
+            nsCOMPtr<nsISupports> native;
+            wrapper->GetNative(getter_AddRefs(native));
+            if (native) {
+              param = do_QueryInterface(native);
+            }
+          }
+        }
+    
+        // Otherwise create a new parameter with the value
+        if (!param) {
+          param = new nsSOAPParameter();
+          if (!param) return NS_ERROR_OUT_OF_MEMORY;
+          nsCOMPtr<nsISupports> xpcval;
+          nsAutoString type;
+          
+          rc = ConvertJSValToValue(aContext, val, getter_AddRefs(xpcval), type);
+          if (NS_FAILED(rc)) 
+            return rc;
+
+          param->SetAsInterface(NS_GET_IID(nsISOAPJSValue), xpcval);
+          param->SetType(type);
+        }
+        value->InsertElementAt(param, index);
+      }
+
+      *aValue = value;
+      NS_ADDREF(*aValue);
     }
     else {
-      *aType = nsISOAPParameter::PARAMETER_TYPE_JAVASCRIPT_OBJECT;
+      aType = kJSObjectTypePrefix;
+      nsCOMPtr<nsISOAPJSValue> value = do_CreateInstance(NS_SOAPJSVALUE_CONTRACTID, &rc);
+      if (NS_FAILED(rc)) return rc;
+
+      value->SetValue(jsobj);
+      *aValue = value;
+      NS_ADDREF(*aValue);
     }
-    *aJSValue = jsobj;
   }
   else {
     return NS_ERROR_INVALID_ARG;
@@ -535,4 +575,3 @@ nsSOAPUtils::ConvertJSValToValue(JSContext* aContext,
   return NS_OK;
 }
 
-#endif
