@@ -67,7 +67,7 @@ enum {
     IPC_TRANSPORT_EVENT_SENDMSG
 };
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
 struct ipcEvent : PLEvent
 {
     ipcEvent(ipcTransport *transport, PRUint32 type, void *param)
