@@ -73,6 +73,10 @@
 #include "nsIStyleContext.h"
 #include "nsBoxLayoutState.h"
 
+#include "nsIServiceManager.h"
+#include "nsIURI.h"
+#include "nsNetUtil.h"
+
 #include "nsFormControlHelper.h"
 
 #define ONLOAD_CALLED_TOO_EARLY 1
@@ -158,7 +162,11 @@ NS_METHOD
 nsImageBoxFrame::Destroy(nsIPresContext* aPresContext)
 {
   // Release image loader first so that it's refcnt can go to zero
+#ifndef USE_IMG2
+  mImageRequest->Cancel(NS_ERROR_FAILURE);
+#else
   mImageLoader.StopAllLoadImages(aPresContext);
+#endif
 
   return nsLeafBoxFrame::Destroy(aPresContext);
 }
@@ -199,6 +207,24 @@ nsImageBoxFrame::Init(nsIPresContext*  aPresContext,
   if (!src.IsEmpty()) {
     mHasImage = PR_TRUE;
   }
+
+#ifdef USE_IMG2
+  nsImgListener *listener;
+  NS_NEWXPCOM(listener, nsImgListener);
+  NS_ADDREF(listener);
+  listener->SetFrame(this);
+  listener->QueryInterface(NS_GET_IID(nsIImageDecoderObserver), getter_AddRefs(mListener));
+  NS_RELEASE(listener);
+
+  nsCOMPtr<nsIImageLoader> il(do_GetService("@mozilla.org/image/loader;1", &rv));
+  if (NS_FAILED(rv))
+    return rv;
+
+  nsCOMPtr<nsIURI> srcURI;
+  NS_NewURI(getter_AddRefs(srcURI), src, baseURL);
+  il->LoadImage(srcURI, mListener, aPresContext, getter_AddRefs(mImageRequest));
+#endif
+
   mImageLoader.Init(this, UpdateImageFrame, nsnull, baseURL, src);
   NS_IF_RELEASE(baseURL);
 
@@ -254,17 +280,17 @@ nsImageBoxFrame::UpdateImage(nsIPresContext*  aPresContext, PRBool& aResize)
    // see if the images are different
   if (!oldSrc.Equals(src)) {      
 
-        if (!src.IsEmpty()) {
-          mSizeFrozen = PR_FALSE;
-          mHasImage = PR_TRUE;
-        } else {
-          mSizeFrozen = PR_TRUE;
-          mHasImage = PR_FALSE;
-        }
+    if (!src.IsEmpty()) {
+      mSizeFrozen = PR_FALSE;
+      mHasImage = PR_TRUE;
+    } else {
+      mSizeFrozen = PR_TRUE;
+      mHasImage = PR_FALSE;
+    }
 
-        mImageLoader.UpdateURLSpec(aPresContext, src);  
+    mImageLoader.UpdateURLSpec(aPresContext, src);  
 
-        aResize = PR_TRUE;
+    aResize = PR_TRUE;
   }
 }
 
@@ -310,6 +336,16 @@ nsImageBoxFrame::PaintImage(nsIPresContext* aPresContext,
   if (NS_FRAME_PAINT_LAYER_FOREGROUND != aWhichLayer)
     return NS_OK;
 
+#ifdef USE_IMG2
+  nsCOMPtr<nsIImageContainer> imgCon;
+  mImageRequest->GetImage(getter_AddRefs(imgCon));
+
+  if (imgCon) {
+    nsPoint p(rect.x, rect.y);
+    aRenderingContext.DrawImage(imgCon, &rect, &p);
+  }
+
+#else
   nsCOMPtr<nsIImage> image ( dont_AddRef(mImageLoader.GetImage()) );
   if ( !image ) {
   }
@@ -318,7 +354,8 @@ nsImageBoxFrame::PaintImage(nsIPresContext* aPresContext,
     // borders and padding)
     aRenderingContext.DrawImage(image, rect);
   }
-  
+#endif
+
   return NS_OK;
 }
 
@@ -444,3 +481,150 @@ nsImageBoxFrame::GetFrameName(nsString& aResult) const
   aResult.AssignWithConversion("ImageBox");
   return NS_OK;
 }
+
+
+
+#ifdef USE_IMG2
+
+NS_IMETHODIMP nsImageBoxFrame::OnStartDecode(nsIImageRequest *request, nsIPresContext *aPresContext)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsImageBoxFrame::OnStartContainer(nsIImageRequest *request, nsIPresContext *aPresContext, nsIImageContainer *image)
+{
+  
+  nsCOMPtr<nsIPresShell> presShell;
+  aPresContext->GetShell(getter_AddRefs(presShell));
+
+  mHasImage = PR_TRUE;
+
+  nscoord w, h;
+  image->GetWidth(&w);
+  image->GetHeight(&h);
+
+  float p2t;
+  aPresContext->GetPixelsToTwips(&p2t);
+
+  mImageSize.SizeTo(NSIntPixelsToTwips(w, p2t), NSIntPixelsToTwips(h, p2t));
+
+  nsBoxLayoutState state(aPresContext);
+  this->MarkDirty(state);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsImageBoxFrame::OnStartFrame(nsIImageRequest *request, nsIPresContext *aPresContext, nsIImageFrame *frame)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsImageBoxFrame::OnDataAvailable(nsIImageRequest *request, nsIPresContext *aPresContext, nsIImageFrame *frame, const nsRect * rect)
+{
+  nsCOMPtr<nsIPresShell> presShell;
+  aPresContext->GetShell(getter_AddRefs(presShell));
+
+  nsBoxLayoutState state(aPresContext);
+  this->MarkDirty(state);
+
+#if 0
+
+  // XXX we need to make sure that the reflow from the OnContainerStart has been
+  // processed before we start calling invalidate
+
+  float p2t;
+  aPresContext->GetPixelsToTwips(&p2t);
+  nsRect r(*rect);
+  r *= p2t; // convert to twips
+
+  Invalidate(aPresContext, nsRect(r.x, r.y, r.width, r.height), PR_FALSE);
+#endif
+
+#if 0
+  if (mParent) {
+    mState |= NS_FRAME_IS_DIRTY;
+	  mParent->ReflowDirtyChild(presShell, (nsIFrame*) this);
+  }
+  else {
+    NS_ASSERTION(0, "No parent to pass the reflow request up to.");
+  }
+#endif
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsImageBoxFrame::OnStopFrame(nsIImageRequest *request, nsIPresContext *aPresContext, nsIImageFrame *frame)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsImageBoxFrame::OnStopContainer(nsIImageRequest *request, nsIPresContext *aPresContext, nsIImageContainer *image)
+{
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsImageBoxFrame::OnStopDecode(nsIImageRequest *request, nsIPresContext *aPresContext, nsresult status, const PRUnichar *statusArg)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+#endif
+
+
+
+#ifdef USE_IMG2
+NS_IMPL_ISUPPORTS1(nsImgListener, nsIImageDecoderObserver)
+
+nsImgListener::nsImgListener()
+{
+  NS_INIT_ISUPPORTS();
+}
+
+nsImgListener::~nsImgListener()
+{
+}
+
+NS_IMETHODIMP nsImgListener::OnStartDecode(nsIImageRequest *request, nsISupports *cx)
+{
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnStartDecode(request, pc);
+}
+
+NS_IMETHODIMP nsImgListener::OnStartContainer(nsIImageRequest *request, nsISupports *cx, nsIImageContainer *image)
+{
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnStartContainer(request, pc, image);
+}
+
+NS_IMETHODIMP nsImgListener::OnStartFrame(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame)
+{
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnStartFrame(request, pc, frame);
+}
+
+NS_IMETHODIMP nsImgListener::OnDataAvailable(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame, const nsRect * rect)
+{
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnDataAvailable(request, pc, frame, rect);
+}
+
+NS_IMETHODIMP nsImgListener::OnStopFrame(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame)
+{
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnStopFrame(request, pc, frame);
+}
+
+NS_IMETHODIMP nsImgListener::OnStopContainer(nsIImageRequest *request, nsISupports *cx, nsIImageContainer *image)
+{
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnStopContainer(request, pc, image);
+}
+
+NS_IMETHODIMP nsImgListener::OnStopDecode(nsIImageRequest *request, nsISupports *cx, nsresult status, const PRUnichar *statusArg)
+{
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnStopDecode(request, pc, status, statusArg);
+}
+
+#endif
+
+

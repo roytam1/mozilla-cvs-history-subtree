@@ -25,6 +25,33 @@
 #include "nsHTMLImageLoader.h"
 #include "nsLeafBoxFrame.h"
 
+
+#define USE_IMG2 1
+
+#ifdef USE_IMG2
+#include "nsIImageLoader.h"
+#include "nsIImageRequest2.h"
+#include "nsIImageContainer.h"
+#include "nsIImageDecoderObserver.h"
+
+class nsImageBoxFrame;
+
+class nsImgListener : nsIImageDecoderObserver
+{
+public:
+  nsImgListener();
+  virtual ~nsImgListener();
+
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIIMAGEDECODEROBSERVER
+
+  void SetFrame(nsImageBoxFrame *frame) { mFrame = frame; }
+
+private:
+  nsImageBoxFrame *mFrame;
+};
+#endif
+
 class nsImageBoxFrame : public nsLeafBoxFrame
 {
 public:
@@ -67,6 +94,19 @@ public:
                     const nsRect& aDirtyRect,
                     nsFramePaintLayer aWhichLayer);
 
+
+#ifdef USE_IMG2
+  NS_IMETHOD OnStartDecode(nsIImageRequest *request, nsIPresContext *cx);
+  NS_IMETHOD OnStartContainer(nsIImageRequest *request, nsIPresContext *cx, nsIImageContainer *image);
+  NS_IMETHOD OnStartFrame(nsIImageRequest *request, nsIPresContext *cx, nsIImageFrame *frame);
+  NS_IMETHOD OnDataAvailable(nsIImageRequest *request, nsIPresContext *cx, nsIImageFrame *frame, const nsRect * rect);
+  NS_IMETHOD OnStopFrame(nsIImageRequest *request, nsIPresContext *cx, nsIImageFrame *frame);
+  NS_IMETHOD OnStopContainer(nsIImageRequest *request, nsIPresContext *cx, nsIImageContainer *image);
+  NS_IMETHOD OnStopDecode(nsIImageRequest *request, nsIPresContext *cx, nsresult status, const PRUnichar *statusArg);
+#endif
+
+
+
   virtual ~nsImageBoxFrame();
 protected:
 
@@ -91,6 +131,11 @@ protected:
   virtual void GetImageSize(nsIPresContext* aPresContext);
 
 private:
+
+#ifdef USE_IMG2
+  nsCOMPtr<nsIImageRequest> mImageRequest;
+  nsCOMPtr<nsIImageDecoderObserver> mListener;
+#endif
 
   nsHTMLImageLoader mImageLoader;
   PRBool mSizeFrozen;
