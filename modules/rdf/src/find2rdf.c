@@ -219,7 +219,7 @@ FindGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s,
 
 	if ((startsWith("find:", resourceID(u))) && (s == gCoreVocab->RDF_name))
 	{
-		DebugStr("\p FindGetSlotValue on name");
+          /*		DebugStr("\p FindGetSlotValue on name"); */
 	}
 
 	if (passThru == PR_TRUE)

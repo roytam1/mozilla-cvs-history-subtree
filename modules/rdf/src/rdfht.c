@@ -60,6 +60,15 @@ newNavCenterDB()
 
 
 
+void walkThroughAllBookmarks (RDF_Resource u) {
+  RDF_Cursor c = RDF_GetSources(gNCDB, u, gCoreVocab->RDF_parent, RDF_RESOURCE_TYPE, true);
+  RDF_Resource next;
+  while (next = RDF_NextValue(c)) {
+    if (resourceType(next) == RDF_RT) walkThroughAllBookmarks(next);
+  }
+}
+        
+
 PR_PUBLIC_API(RDF_Error)
 RDF_Init(RDF_InitParams params)
 {
@@ -86,6 +95,8 @@ RDF_Init(RDF_InitParams params)
 
   resourceHash = PL_NewHashTable(500, PL_HashString, PL_CompareStrings, PL_CompareValues,  
 				 NULL, NULL);
+  dataSourceHash = PL_NewHashTable(100, PL_HashString, PL_CompareStrings, PL_CompareValues,  
+				 NULL, NULL);
   RDFglueInitialize();
   MakeRemoteStore("rdf:remoteStore");
   createVocabs();
@@ -104,8 +115,11 @@ RDF_Init(RDF_InitParams params)
   freeMem(navCenterURL);
 
   HT_Startup();
+#ifdef XP_WIN
+  GuessIEBookmarks();
+#endif  
 #endif
-
+  walkThroughAllBookmarks(RDF_GetResource(NULL, "NC:Bookmarks", true));
   return 0;
 }
 

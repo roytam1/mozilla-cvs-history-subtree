@@ -38,15 +38,16 @@ struct RDF_NotificationStruct {
 
 
 #define ntr(r, n) (*((RDFT*)r->translators + n))
-#define callAssert(n, r, u, s, v,type,tv) (ntr(r, n)->assert == NULL ? 0 : (*(ntr(r, n)->assert))(ntr(r, n), u, s, v, type, tv))
-#define callUnassert(n, r, u, s, v,type) (ntr(r, n)->unassert == NULL ? 0 : (*(ntr(r, n)->unassert))(ntr(r, n), u, s, v, type))
-#define callGetSlotValue(n, r, u, s, type, invp, tv) (ntr(r, n)->getSlotValue == NULL ? 0 : (*(ntr(r, n)->getSlotValue))(ntr(r, n), u, s,  type, invp, tv))
-#define callGetSlotValues(n, r, u, s, type,invp, tv) (ntr(r, n)->getSlotValues == NULL ? 0 : (*(ntr(r, n)->getSlotValues))(ntr(r, n), u, s,  type,invp, tv))
-#define callHasAssertions(n, r, u, s, v,type,tv) (ntr(r, n)->hasAssertion == NULL ? 0 : (*(ntr(r, n)->hasAssertion))(ntr(r, n), u, s, v, type, tv))
-#define callArcLabelsOut(n, r, u) (ntr(r, n)->arcLabelsOut == NULL ? 0 : (*(ntr(r, n)->arcLabelsOut))(ntr(r, n), u))
-#define callArcLabelsIn(n, r, u) (ntr(r, n)->arcLabelsIn == NULL ? 0 : (*(ntr(r, n)->arcLabelsIn))(ntr(r, n), u))
-#define callDisposeResource(n, r, u) ((ntr(r, n)->disposeResource == NULL) ? 1 : (*(ntr(r, n)->disposeResource))(ntr(r, n), u))
-#define callExitRoutine(n, r) ((ntr(r, n)->destroy == NULL) ? 0 : (*(ntr(r, n)->destroy))(ntr(r, n)))
+#define ntrn(r, n) (*((RDFT*)r->translators + n) == NULL)
+#define callAssert(n, r, u, s, v,type,tv) (ntrn(r, n) || (ntr(r, n)->assert == NULL) ? 0 : (*(ntr(r, n)->assert))(ntr(r, n), u, s, v, type, tv))
+#define callUnassert(n, r, u, s, v,type) (ntrn(r, n) || (ntr(r, n)->unassert == NULL) ? 0 : (*(ntr(r, n)->unassert))(ntr(r, n), u, s, v, type))
+#define callGetSlotValue(n, r, u, s, type, invp, tv) (ntrn(r, n) || (ntr(r, n)->getSlotValue == NULL) ? 0 : (*(ntr(r, n)->getSlotValue))(ntr(r, n), u, s,  type, invp, tv))
+#define callGetSlotValues(n, r, u, s, type,invp, tv) (ntrn(r, n) || (ntr(r, n)->getSlotValues == NULL) ? 0 : (*(ntr(r, n)->getSlotValues))(ntr(r, n), u, s,  type,invp, tv))
+#define callHasAssertions(n, r, u, s, v,type,tv) (ntrn(r, n) || (ntr(r, n)->hasAssertion == NULL) ? 0 : (*(ntr(r, n)->hasAssertion))(ntr(r, n), u, s, v, type, tv))
+#define callArcLabelsOut(n, r, u) (ntrn(r, n) || (ntr(r, n)->arcLabelsOut == NULL) ? 0 : (*(ntr(r, n)->arcLabelsOut))(ntr(r, n), u))
+#define callArcLabelsIn(n, r, u) (ntrn(r, n) || (ntr(r, n)->arcLabelsIn == NULL) ? 0 : (*(ntr(r, n)->arcLabelsIn))(ntr(r, n), u))
+#define callDisposeResource(n, r, u) (ntrn(r, n) || (ntr(r, n)->disposeResource == NULL) ? 1 : (*(ntr(r, n)->disposeResource))(ntr(r, n), u))
+#define callExitRoutine(n, r) (ntrn(r, n) || (ntr(r, n)->destroy == NULL) ? 0 : (*(ntr(r, n)->destroy))(ntr(r, n)))
 
 #define ID_BUF_SIZE	20
 

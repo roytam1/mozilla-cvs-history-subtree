@@ -47,8 +47,7 @@ MakeRemoteStore (char* url)
       ntr->getSlotValues = remoteStoreGetSlotValues;
       ntr->hasAssertion = remoteStoreHasAssertion;
       ntr->nextValue = remoteStoreNextValue;
-      ntr->disposeCursor = remoteStoreDisposeCursor;
-     /* ntr->possiblyAccessFile = RDFFilePossiblyAccessFile ; */
+      ntr->disposeCursor = remoteStoreDisposeCursor;     
       gRemoteStore = ntr;
       ntr->url = copyString(url);
       return ntr;
@@ -71,7 +70,7 @@ existingRDFFileDB (char* url)
 RDFT
 MakeFileDB (char* url)
 {
-  if (endsWith(".rdf", url) || endsWith(".mcf", url)) {
+  if (strchr(url, ':')) {
     RDFT ntr = existingRDFFileDB(url);
     if (ntr) return ntr;    
     ntr = (RDFT)getMem(sizeof(struct RDF_TranslatorStruct));
@@ -85,7 +84,9 @@ MakeFileDB (char* url)
     ntr->possiblyAccessFile = RDFFilePossiblyAccessFile ;
     ntr->url = copyString(url);
     PL_HashTableAdd(RDFFileDBHash, url, ntr);
-    readRDFFile(url, NULL, 1, ntr);
+    ntr->possiblyAccessFile = RDFFilePossiblyAccessFile ; 
+    if (endsWith("navcntr.rdf", url)) 
+      readRDFFile(url, RDF_GetResource(NULL, url, 1), 0, ntr); 
     return ntr;
   } else return NULL;
 }
@@ -277,7 +278,8 @@ fileReadp (RDFT rdf, char* url, PRBool mark)
 static void
 possiblyAccessFile (RDFT mcf, RDF_Resource u, RDF_Resource s, PRBool inversep)
 {
-  if (mcf->possiblyAccessFile) (*(mcf->possiblyAccessFile))(mcf, u, s, inversep);
+    if (mcf->possiblyAccessFile) 
+    (*(mcf->possiblyAccessFile))(mcf, u, s, inversep); 
 }
 
 
@@ -286,8 +288,8 @@ void
 RDFFilePossiblyAccessFile (RDFT rdf, RDF_Resource u, RDF_Resource s, PRBool inversep)
 {
   if ((resourceType(u) == RDF_RT) && 
-       (strstr(rdf->url, ".rdf") || strstr(rdf->url, ".mcf")) &&
-	  (strstr(resourceID(u), ".rdf") || strstr(resourceID(u), ".mcf")) && 
+      (startsWith(rdf->url, resourceID(u))) &&
+	 
       (s == gCoreVocab->RDF_parent) && (containerp(u))) {
     RDFFile newFile = readRDFFile( resourceID(u), u, false, rdf);
     /*    if(newFile) newFile->lastReadTime = PR_Now(); */
@@ -387,8 +389,10 @@ remoteStoreNextValue (RDFT mcf, RDF_Cursor c)
       c->pdata = (c->inversep ? as->invNext : as->next);
       if (c->type == RDF_RESOURCE_TYPE) {
 #ifdef MOZILLA_CLIENT
+#ifdef DEBUG
         FE_Trace(resourceID(c->value));
         FE_Trace("\n");
+#endif
 #endif
       }
       return c->value;
@@ -499,6 +503,15 @@ readRDFFile (char* url, RDF_Resource top, PRBool localp, RDFT db)
     return NULL;
   } else {
     RDFFile newFile = makeRDFFile(url, top, localp);  
+#ifdef DEBUG
+#ifdef XP_WIN
+    char* traceLine = getMem(500);
+    sprintf(traceLine, "\nAccessing %s (%s)\n", url, db->url);
+    FE_Trace(traceLine);
+    freeMem(traceLine);
+#endif
+#endif
+  
     if (db->pdata) {  
       newFile->next = (RDFFile) db->pdata;
       db->pdata = newFile;
@@ -554,13 +567,12 @@ possiblyRefreshRDFFiles ()
 void
 SCookPossiblyAccessFile (RDFT rdf, RDF_Resource u, RDF_Resource s, PRBool inversep)
 {
-	if ((resourceType(u) == RDF_RT) && (strcmp(rdf->url, "rdf:ht") ==0) &&
-        /*  (strstr(resourceID(u), ".rdf") || strstr(resourceID(u), ".mcf")) && */
+  /*if ((resourceType(u) == RDF_RT) && (startsWith("rdf:ht", rdf->url)) &&      
 	     (s == gCoreVocab->RDF_parent) && 
         (containerp(u))) {
     RDFFile newFile = readRDFFile( resourceID(u), u, false, rdf);
     if(newFile) newFile->lastReadTime = PR_Now();
-  }
+  } */
 }
 
 

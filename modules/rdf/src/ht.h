@@ -111,6 +111,8 @@ typedef struct _HT_PaneStruct {
 	PRBool				bookmarkmenu;
 	PRBool				special;
 	char				*windowURL;
+    char*               htdburl;
+    RDFT                htdb;
 } HT_PaneStruct;
 
 typedef	struct HT_ColumnStruct {
@@ -137,6 +139,7 @@ typedef struct _HT_ViewStruct {
 	PRBool				descendingFlag;
 	PRBool				refreshingItemListp;
 	PRBool				inited;
+    RDF_Resource        treeRel;
 } HT_ViewStruct;
 
 typedef	struct _HT_ValueStruct {

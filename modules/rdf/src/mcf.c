@@ -44,42 +44,53 @@ RDFL		gAllDBs = 0;
 RDFT
 getTranslator (char* url)
 {
+  RDFT ans = PL_HashTableLookup(dataSourceHash, url);
+  if (ans) return ans;
 #ifdef MOZILLA_CLIENT
   if (startsWith(url, "rdf:localStore")) {
-    return MakeLocalStore(url);
+    ans = MakeLocalStore(url);
   } else
 #endif
   if (startsWith(url, "rdf:remoteStore")) {
-    return MakeRemoteStore(url);
+    ans =  MakeRemoteStore(url);
   } 
 #ifdef MOZILLA_CLIENT  
   else if (startsWith(url, "rdf:history")) {
-    return MakeHistoryStore(url);
+    ans = MakeHistoryStore(url);
   } else if (startsWith(url, "rdf:esftp")) {
-    return MakeESFTPStore(url);
+    ans = MakeESFTPStore(url);
     /*  } else if (startsWith(url, "rdf:mail")) {
-    return MakeMailStore(url); */
+    ans = MakeMailStore(url); */
   } else if (startsWith(url, "rdf:lfs")) {
-    return MakeLFSStore(url);
+    ans = MakeLFSStore(url);
 
 #ifdef	XP_MAC
   } else if (startsWith(url, "rdf:appletalk")) {
-    return MakeAtalkStore(url);
+    ans = MakeAtalkStore(url);
 #endif
 
-  } else if (endsWith(".rdf", url) || (endsWith(".mcf", url))) {
-    return MakeFileDB(url);
+  } else if (strstr(url, ".rdf") || strstr(url, ".RDF") || 
+		     strstr(url, ".mcf") || strstr(url, ".MCF")) {
+    ans = MakeFileDB(url);
   } else if (startsWith("rdf:columns", url)) {
-    return MakeColumnStore (url);
+    ans = MakeColumnStore (url);
   } else if (startsWith("rdf:ht", url) || startsWith("rdf:scook", url)) {
-    return MakeSCookDB(url);
+    ans = MakeSCookDB(url);
   } else if (startsWith("rdf:CookieStore", url)) {
+    ans = MakeCookieStore(url);
     return MakeCookieStore(url);
   } else if (startsWith("rdf:find", url)) {
     return MakeFindStore(url);
   } 
 #endif
-  else return NULL;
+  if (ans) {
+    PL_HashTableAdd(dataSourceHash, url, ans);
+    return ans;
+  } else if (startsWith("http://", url)) {
+	  ans = MakeFileDB(url);
+  } else
+    return NULL;
+  
 }
 
 
@@ -122,6 +133,11 @@ PR_PUBLIC_API(RDFT)
 RDF_AddDataSource(RDF rdf, char* dataSource)
 {
   RDFT newDB;
+  int16 n = 0;
+  RDFT next;
+  while ((next = rdf->translators[n++]) && (n < rdf->numTranslators)) {
+    if (strcmp(next->url, dataSource) == 0) return next;
+  }
   if (rdf->numTranslators == rdf->translatorArraySize) {
     RDFT* tmp = (RDFT*)getMem((rdf->numTranslators+5)*(sizeof(RDFT)));
     memcpy(tmp, rdf->translators, (rdf->numTranslators * sizeof(RDFT)));
@@ -134,9 +150,11 @@ RDF_AddDataSource(RDF rdf, char* dataSource)
     return NULL;  
   } else {
     RDFL rl = (RDFL)getMem(sizeof(struct RDF_ListStruct));
+    RDFT tr = rdf->translators[rdf->numTranslators];
     rl->rdf = rdf;
     rl->next = newDB->rdf;
     newDB->rdf = rl;
+    rdf->translators[rdf->numTranslators] = newDB;
     rdf->numTranslators++;
     return newDB;
   }	
@@ -496,6 +514,7 @@ RDF_GetSlotValue (RDF rdf, RDF_Resource u, RDF_Resource s,
   if ((s == gWebData->RDF_URL) && (tv) && (!inversep) && (type == RDF_STRING_TYPE))
     return  copyString(resourceID(u));         
   while (n < size) {
+	RDFT translator = rdf->translators[n];
     void*  ans = callGetSlotValue(n, rdf, u, s, type, inversep, tv);
     if ((ans != NULL) && ((n == 0)||(!callHasAssertions(0, rdf, u, s, ans, type, !tv))))
     if (type == RDF_RESOURCE_TYPE) {
@@ -670,12 +689,12 @@ RDF_NextValue (RDF_Cursor c)
       else				 return ans;
       }
     if (((!c->inversep) && 
-	(!(callHasAssertions(0, rdf, c->u, c->s, ans, c->type, !c->tv)))) ||
-	((c->inversep) && 
-	 (!(callHasAssertions(0, rdf, (RDF_Resource)ans, c->s, c->u, 
-			      c->type, !c->tv))))) {
+         (!(callHasAssertions(0, rdf, c->u, c->s, ans, c->type, !c->tv)))) ||
+        ((c->inversep) && 
+         (!(callHasAssertions(0, rdf, (RDF_Resource)ans, c->s, c->u, 
+                              c->type, !c->tv))))) {
       if (c->type == RDF_RESOURCE_TYPE) {
-	return addDep(c->rdf, (RDF_Resource)ans);
+        return addDep(c->rdf, (RDF_Resource)ans);
       } else return ans;
     }
     ans = (*rdf->translators[c->count]->nextValue)(rdf->translators[c->count], c->current);

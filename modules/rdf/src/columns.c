@@ -70,7 +70,6 @@ ColumnsGetSlotValue(RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type
 		else if (u == gWebData->RDF_lastModifiedDate)	val = copyString(XP_GetString(RDF_LAST_MOD_STR));
 		else if (u == gWebData->RDF_size)		val = copyString(XP_GetString(RDF_SIZE_STR));
 		else if (u == gNavCenter->RDF_bookmarkAddDate)	val = copyString(XP_GetString(RDF_ADDED_ON_STR));
-		else val = copyString(resourceID(u));
 	}
 	else if ((s == gNavCenter->RDF_ColumnDataType) &&
 		(type == RDF_INT_TYPE) && (!inversep) && (tv))

@@ -185,6 +185,7 @@ struct RDF_TranslatorStruct {
 
 
 extern     PLHashTable*  resourceHash;  
+extern     PLHashTable*  dataSourceHash;  
 struct RDF_DBStruct {
   int16 numTranslators;
   int16 translatorArraySize;
@@ -285,6 +286,7 @@ PRBool		asEqual(RDFT r, Assertion as, RDF_Resource u, RDF_Resource s, void* v, R
 Assertion	makeNewAssertion (RDFT r, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type, PRBool tv);
 
 RDFT MakeRemoteStore (char* url);
+PRDir * OpenDir(char *name);
 
 void readResourceFile(RDF rdf, RDF_Resource u);
 void possiblyGCResource(RDF_Resource u);
@@ -321,6 +323,7 @@ RDF_Resource resolveReference (char *tok, RDFFile f) ;
 RDF_Resource resolveGenlPosReference(char* tok,  RDFFile f);
 void beginReadingRDFFile(RDFFile f);
 void gcRDFFile (RDFFile f);
+void GuessIEBookmarks (void) ;
 #ifdef XP_MAC
 char* unescapeURL(char* inURL);
 #endif

@@ -1111,7 +1111,7 @@ htSetBookmarkAddDateToNow(RDF_Resource r)
 	}
 	else
 	{
-		time((time_t *)&now);
+          /* time((time_t *)&now); */
 		if ((time = localtime((time_t *) &now)) != NULL)
 		{
 #ifdef	XP_MAC
@@ -1151,10 +1151,10 @@ gNavCenterDataSources1[15] =
 	"rdf:columns", "rdf:CookieStore", "rdf:find", NULL
 };
 
-
+static int32 htCounter = 0;
 
 RDF
-HTRDF_GetDB()
+HTRDF_GetDB(HT_Pane pane)
 {
 	RDF		ans;
 	char		*navCenterURL;
@@ -1170,7 +1170,22 @@ HTRDF_GetDB()
 		copyString(navCenterURL);
 	}
 	*(gNavCenterDataSources1 + 1) = copyString(navCenterURL);
+        {
+          int32 n = 0;
+          while (*(gNavCenterDataSources1 + n)) {
+            char* dburl = *(gNavCenterDataSources1 + n);
+            if (startsWith("rdf:ht", dburl)) {
+              char* ndburl = getMem(10);
+              sprintf(ndburl, "rdf:ht%i", htCounter++);
+              pane->htdburl = ndburl; 
+              *(gNavCenterDataSources1 + n) = ndburl;
+              break;
+            }
+            n++;
+          }
+        }
 	ans = RDF_GetDB(gNavCenterDataSources1);
+        pane->htdb =  RDFTNamed(ans, pane->htdburl);
 	freeMem(navCenterURL);
 	return(ans);
 }
@@ -1201,7 +1216,7 @@ HT_NewPane (HT_Notification notify)
 			break;
 		}
 		ev->eventType = HT_EVENT_DEFAULT_NOTIFICATION_MASK;
-		pane->db = HTRDF_GetDB();
+		pane->db = HTRDF_GetDB(pane);
 		pane->rns = RDF_AddNotifiable(pane->db, htrdfNotifFunc, ev, pane);
 		freeMem(ev);
 
@@ -7562,7 +7577,7 @@ copyMoveRDFLink (HT_Resource dropTarget, HT_Resource dropObject)
 	if ((dropTarget == NULL) || (dropObject == NULL))	return(DROP_NOT_ALLOWED);
 
 	origin = dropObject->parent;
-	db = dropTarget->view->pane->db;
+	db = dropObject->view->pane->db;
 	moveAction = ((origin != NULL) && 
 			(origin->view->top->node == dropTarget->view->top->node));
 	old = (origin == NULL ? NULL : origin->node);
@@ -7626,7 +7641,7 @@ copyMoveRDFLinkAtPos (HT_Resource dropx, HT_Resource dropObject, PRBool before)
 
 	origin = dropObject->parent;
 	dropTarget = dropx->parent;
-	db = dropTarget->view->pane->db;
+	db = dropObject->view->pane->db;
 	moveAction = ((origin != NULL) && 
 			(origin->view->top->node == dropTarget->view->top->node));
 	old = (origin == NULL ? NULL : origin->node);
@@ -7906,8 +7921,14 @@ RDF_GetNavCenterDB()
 #define RDF_RELATED_LINKS 2
 #define FROM_PAGE 1
 #define GUESS_FROM_PREVIOUS_PAGE 2
-#define HTADD remoteStoreAdd
 #define HTDEL remoteStoreRemove
+
+void HTADD (HT_Pane pane, RDF_Resource u, RDF_Resource s, void* v) {
+  remoteStoreAdd(pane->htdb, u, s, v, 
+                 (s == gCoreVocab->RDF_parent ? RDF_RESOURCE_TYPE : RDF_STRING_TYPE), 1);
+  if ((s == gCoreVocab->RDF_parent) && (containerp(u)))
+    RDF_AddDataSource(pane->db, resourceID(u));
+}
 
 HT_URLSiteMapAssoc *
 makeNewSMP (HT_Pane htPane, char* pUrl, char* sitemapUrl)
@@ -7939,7 +7960,7 @@ HT_AddSitemapFor(HT_Pane htPane, char *pUrl, char *pSitemapUrl, char* name)
 	char				*nm;
 
 	
-	sp = RDFTNamed(htPane->db, "rdf:ht");
+	sp = htPane->htdb;
 	if (sp == NULL) return;
 	nu = RDF_GetResource(htPane->db, pSitemapUrl, 1);
 	nsmp = makeNewSMP(htPane, pUrl, pSitemapUrl);
@@ -7960,9 +7981,8 @@ HT_AddSitemapFor(HT_Pane htPane, char *pUrl, char *pSitemapUrl, char* name)
     
     nsmp->origin =  FROM_PAGE;
     nsmp->onDisplayp = 1;
-	HTADD(sp, nu, gCoreVocab->RDF_name, nm,  RDF_STRING_TYPE, 1);
-	HTADD(sp, nu, gCoreVocab->RDF_parent, gNavCenter->RDF_Top, 
-                     RDF_RESOURCE_TYPE, 1);
+    HTADD(htPane, nu, gCoreVocab->RDF_name, nm);
+    HTADD(htPane, nu, gCoreVocab->RDF_parent, gNavCenter->RDF_Top);
 	 
 
 }
@@ -7975,7 +7995,7 @@ RetainOldSitemaps (HT_Pane htPane, char *pUrl)
   HT_URLSiteMapAssoc	*nsmp;
   RDFT			sp;
   
-  sp = RDFTNamed(htPane->db, "rdf:ht");
+  sp = htPane->htdb;
   if (sp == NULL) return;
   nsmp = htPane->smp;
   while (nsmp != NULL) {
@@ -7988,10 +8008,8 @@ RetainOldSitemaps (HT_Pane htPane, char *pUrl)
             nsmp->sitemap = nu;
             nsmp->origin =  GUESS_FROM_PREVIOUS_PAGE;
             nsmp->onDisplayp = 1;
-            HTADD(sp, nu, gCoreVocab->RDF_name, copyString(nsmp->name),  
-                         RDF_STRING_TYPE, 1);
-            HTADD(sp, nu, gCoreVocab->RDF_parent, 
-                         gNavCenter->RDF_Top, RDF_RESOURCE_TYPE, 1);
+            HTADD(htPane, nu, gCoreVocab->RDF_name, copyString(nsmp->name));
+            HTADD(htPane, nu, gCoreVocab->RDF_parent, gNavCenter->RDF_Top);
           }
         } else if (nsmp->onDisplayp) {
           HTDEL(sp, nsmp->sitemap, gCoreVocab->RDF_parent,
@@ -8011,7 +8029,7 @@ HT_ExitPage(HT_Pane htPane, char *pUrl)
   HT_URLSiteMapAssoc	*nsmp;
   RDFT			sp;
   
-  sp = RDFTNamed(htPane->db, "rdf:ht");
+  sp = htPane->htdb;
   nsmp = htPane->sbp;
   while (nsmp != NULL) {    
     HT_URLSiteMapAssoc *next;
@@ -8211,7 +8229,7 @@ HT_AddRelatedLinksFor(HT_Pane htPane, char *pUrl)
 	char			*buffer;
 
 
-	sp = RDFTNamed(htPane->db, "rdf:ht");
+	sp = htPane->htdb;
 	if (!htPane->smartBrowsingProviders) populateSBProviders(htPane);
 	if (!relatedLinksEnabledURL(pUrl)) return;
 	prov = htPane->smartBrowsingProviders;
@@ -8227,8 +8245,8 @@ HT_AddRelatedLinksFor(HT_Pane htPane, char *pUrl)
                 nsmp->next = htPane->sbp;
                 htPane->sbp = nsmp;
 		nsmp->siteToolType = RDF_RELATED_LINKS;
-		HTADD(sp, nu, gCoreVocab->RDF_name, copyString(prov->name), RDF_STRING_TYPE, 1);
-		HTADD(sp, nu, gCoreVocab->RDF_parent, gNavCenter->RDF_Sitemaps, RDF_RESOURCE_TYPE, 1);
+		HTADD(htPane, nu, gCoreVocab->RDF_name, copyString(prov->name));
+		HTADD(htPane, nu, gCoreVocab->RDF_parent, gNavCenter->RDF_Sitemaps);
 		prov = prov->next;
 		freeMem(buffer);
 	}

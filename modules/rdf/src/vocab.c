@@ -221,14 +221,18 @@ newResource(char *id, int optionalNameStrID)
 	if ((r = RDF_GetResource(gCoreDB, id, true)) != NULL)
 	{
 #ifdef MOZILLA_CLIENT
-		if ((optionalNameStr = XP_GetString(optionalNameStrID)) != NULL)
+	/* 
+
+   This is not a good idea --- the XP strings should come in the file.
+	
+	  if ((optionalNameStr = XP_GetString(optionalNameStrID)) != NULL)
 		{
-			/* need to have our own private "name" resource */
+			 
 			RDF_name = RDF_GetResource(gCoreDB, "name", 1);
 
 			remoteStoreAdd(gRemoteStore, r, RDF_name, copyString(optionalNameStr),
 					RDF_STRING_TYPE, PR_TRUE);
-		}
+		} */
 #endif
 	}
 	return(r);

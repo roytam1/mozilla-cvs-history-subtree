@@ -29,6 +29,7 @@
 	/* globals */
 PRBool rdfDBInited = 0;
 PLHashTable*  resourceHash = 0;
+PLHashTable*  dataSourceHash = 0;
 RDFT gRemoteStore = 0;
 RDFT gSessionDB = 0;
 
@@ -280,7 +281,7 @@ startsWith (const char* pattern, const char* uuid)
   short l1 = strlen(pattern);
   short l2 = strlen(uuid);
   if (l2 < l1) return false;
-  return strncasecmp(pattern, uuid, l1)  == 0;
+  return (strncasecomp(pattern, uuid, l1)  == 0);
 }
 
 

@@ -30,6 +30,35 @@
 extern	int	RDF_UNABLETODELETEFILE, RDF_UNABLETODELETEFOLDER;
 
 
+void GuessIEBookmarks (void) {
+#ifdef XP_WIN
+  RDF_Resource bmk = RDF_GetResource(NULL, "NC:Bookmarks", true);
+  PRDir* ProfilesDir = OpenDir("file:///c|/winnt/profiles/");
+  if (!ProfilesDir) { 
+    RDF_Resource bmkdir = RDF_GetResource(NULL,"file:///c|/windows/favorites/", 1);
+    remoteStoreAdd(gRemoteStore, bmkdir, gCoreVocab->RDF_parent, bmk, RDF_RESOURCE_TYPE, 1);    
+  } else {
+    int32 n = PR_SKIP_BOTH;
+    PRDirEntry	*de;
+    while (de = PR_ReadDir(ProfilesDir, n++)) {
+      char* pn = getMem(400);
+      sprintf(pn, "file:///c|/winnt/profiles/%s/favorites/", de->name);
+      if (strcmp(de->name, "Administrator") && strcmp(de->name, "Default User") && 
+          strcmp(de->name, "All Users")) {
+        RDF_Resource bmkdir = RDF_GetResource(NULL,pn, 1);
+        char* name = getMem(300);
+        sprintf(name, "%s's imported Favorites", de->name);
+        remoteStoreAdd(gRemoteStore, bmkdir, gCoreVocab->RDF_name, copyString(name), 
+                       RDF_STRING_TYPE, 1);
+        remoteStoreAdd(gRemoteStore, bmkdir, gCoreVocab->RDF_parent, bmk, RDF_RESOURCE_TYPE, 1);   
+        freeMem(name);
+      }
+      freeMem(pn);
+    }
+  }
+#endif
+}
+
 
 char *
 getVolume(int16 volNum, PRBool afpVols)

@@ -121,7 +121,6 @@ readInBookmarksOnInit(RDFFile f)
 }
 
 
-
 void
 DBM_OpenDBMStore (DBMRDF store, char* directory)
 {
@@ -165,21 +164,24 @@ DBM_OpenDBMStore (DBMRDF store, char* directory)
   freeMem(dbPathname);
   CHECK_VAR1(store->invPropDB);
   
-  if (createp && (strcmp(directory, "NavCen") == 0)) {
-    PRBool nlocalStoreAssert1 (RDFFile f, RDFT rdf, RDF_Resource u, RDF_Resource s, void* v, 
-			 RDF_ValueType type, PRBool tv) ;
-    RDFFile newFile;
-    doingFirstTimeInitp = 1;
-    newFile = makeRDFFile(gBookmarkURL, RDF_GetResource(NULL, "NC:Bookmarks", true), true);
-    newFile->fileType = RDF_BOOKMARKS;
-    newFile->db = gLocalStore;
-    newFile->assert = nlocalStoreAssert1;
-    readInBookmarksOnInit(newFile);
-    doingFirstTimeInitp = 0;
-    (*store->propDB->sync)(store->propDB, 0);
-    (*store->invPropDB->sync)(store->invPropDB, 0);
-    (*store->nameDB->sync)(store->nameDB, 0);
-    (*store->childrenDB->sync)(store->childrenDB, 0); 
+  if (strcmp(directory, "NavCen") == 0) {
+    RDF_Resource bmk = RDF_GetResource(NULL, "NC:Bookmarks", true);
+    if (createp) {
+      PRBool nlocalStoreAssert1 (RDFFile f, RDFT rdf, RDF_Resource u, RDF_Resource s, void* v, 
+                                 RDF_ValueType type, PRBool tv) ;
+      RDFFile newFile;
+      doingFirstTimeInitp = 1;
+      newFile = makeRDFFile(gBookmarkURL, bmk, true);
+      newFile->fileType = RDF_BOOKMARKS;
+      newFile->db = gLocalStore;
+      newFile->assert = nlocalStoreAssert1;
+      readInBookmarksOnInit(newFile);
+      doingFirstTimeInitp = 0;
+      (*store->propDB->sync)(store->propDB, 0);
+      (*store->invPropDB->sync)(store->invPropDB, 0);
+      (*store->nameDB->sync)(store->nameDB, 0);
+      (*store->childrenDB->sync)(store->childrenDB, 0); 
+    } 
   }
 }
 
@@ -379,8 +381,10 @@ nlocalStoreGetSlotValues (RDFT rdf, RDF_Resource u, RDF_Resource s,
   RDF_Cursor c;
   void* val;
   size_t size;
+  if (resourceType(u) == LFS_RT) return NULL;
+  if (!tv && (s != gCoreVocab->RDF_parent)) return NULL;
   val = DBM_GetSlotValue(rdf, u, s, inversep, &size);
-  if (val == NULL) return NULL;
+  if (val == NULL) return NULL;  
   c = (RDF_Cursor) getMem(sizeof(struct RDF_CursorStruct));
   if (c == NULL) {
     freeMem(val);
@@ -411,7 +415,17 @@ nlocalStoreNextValue (RDFT rdf, RDF_Cursor c)
     if (nas == NULL) break;
     if ((c->tv == tvOfAs(nas)) && (c->type == valueTypeOfAs(nas))) {
       if (c->type == RDF_RESOURCE_TYPE) {
-	RDF_Resource nu = RDF_GetResource(NULL, dataOfDBMAs(nas), 1);
+        RDF_Resource nu = RDF_GetResource(NULL, dataOfDBMAs(nas), 1);
+        if (nu && 0 && strstr(resourceID(nu), ".rdf")) {
+          RDFL rl = rdf->rdf;
+          char* dburl = getBaseURL(resourceID(nu));
+          while (rl) {
+            RDF_AddDataSource(rl->rdf, dburl);
+            rl = rl->next;
+          }
+          freeMem(dburl);
+        }
+
 	ans = nu;
 	c->count =  dbmasSize(nas) + c->count;
 	return nu;
