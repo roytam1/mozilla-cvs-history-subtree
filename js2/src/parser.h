@@ -39,9 +39,12 @@
 #include "reader.h"
 #include "lexer.h"
 #include <vector>
+#include <map>
+
+
+#include "property.h"
 
 namespace JavaScript {
-
 //
 // Language Selectors
 //
@@ -72,6 +75,8 @@ namespace JavaScript {
 
     struct ParseNode: ArenaObject {
         uint32 pos;               // Position of this statement or expression
+
+        JS2Runtime::PropertyIterator prop;
         
         explicit ParseNode(uint32 pos): pos(pos) {}
     };

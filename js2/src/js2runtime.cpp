@@ -37,6 +37,8 @@
 #pragma warning(disable: 4786)
 #endif
 
+#include <algorithm>
+
 #include "parser.h"
 #include "numerics.h"
 #include "js2runtime.h"
@@ -75,9 +77,13 @@ static bool hasAttribute(const IdentifierList* identifiers, StringAtom &name)
 
 JSType *ScopeChain::findType(const StringAtom& typeName) 
 {
-    const JSValue type = getValue(typeName);
-    if (type.isType())
-        return type.type;
+    Reference *ref = getName(typeName, Read);
+    if (ref) {
+        const JSValue type = ref->getValue();
+        delete ref;
+        if (type.isType())
+            return type.type;
+    }
     return Object_Type;
 }
 
@@ -247,11 +253,70 @@ uint32 Context::getParameterCount(FunctionDefinition &function)
     return count;
 }
 
+inline char narrow(char16 ch) { return char(ch); }
+
+JSValue Context::readEvalFile(const String& fileName)
+{
+    String buffer;
+    int ch;
+
+    JSValue result = kUndefinedValue;
+
+    std::string str(fileName.length(), char());
+    std::transform(fileName.begin(), fileName.end(), str.begin(), narrow);
+    FILE* f = fopen(str.c_str(), "r");
+    if (f) {
+        while ((ch = getc(f)) != EOF)
+	        buffer += static_cast<char>(ch);
+        fclose(f);
+    
+        
+        try {
+            Arena a;
+            Parser p(mWorld, a, buffer, fileName);
+            StmtNode *parsedStatements = p.parseProgram();
+
+    /*******/
+	    ASSERT(p.lexer.peek(true).hasKind(Token::end));
+            {
+                PrettyPrinter f(stdOut, 30);
+                {
+            	    PrettyPrinter::Block b(f, 2);
+                    f << "Program =";
+                    f.linearBreak(1);
+                    StmtNode::printStatements(f, parsedStatements);
+                }
+                f.end();
+            }
+    	    stdOut << '\n';
+    /*******/
+            Context cx(mGlobal, mWorld);        // the file is compiled into
+                                                // the current global object, not
+                                                // the current scope.
+
+            cx.buildRuntime(parsedStatements);
+            JS2Runtime::ByteCodeModule* bcm = cx.genCode(parsedStatements, fileName);
+            if (bcm) {
+                result = cx.interpret(bcm, JSValueList());
+                delete bcm;
+            }
+        
+        } catch (Exception &e) {
+            throw e;
+        }
+    }
+    return result;
+}
+
+
 void Context::buildRuntime(StmtNode *p)
 {
     mScopeChain.addScope(mGlobal);
-    mScopeChain.processDeclarations(p);         // adds declarations for each top-level entity in p
-    buildRuntimeForStmt(p);                     // adds definitions as they exist for ditto
+    while (p) {
+        mScopeChain.processDeclarations(p);         // adds declarations for each top-level entity in p
+        buildRuntimeForStmt(p);                     // adds definitions as they exist for ditto
+        p = p->next;
+    }
     mScopeChain.popScope();
 }
 
@@ -325,18 +390,25 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     JSValue *targetValue = &mStack.at(mStack.size() - (argCount + 1));
                     ASSERT(targetValue->isFunction());
                     JSFunction *target = targetValue->function;
+                    JSValue *argBase = NULL;
 
-                    mActivationStack.push(new Activation(mLocals, mArgumentBase, pc, mCurModule));
-                    mCurModule = target->mByteCode;
-                    pc = mCurModule->mCodeBase;
-                    endPC = mCurModule->mCodeBase + mCurModule->mLength;
                     if (mStack.size() > argCount)
-                        mArgumentBase = &mStack.at(mStack.size() - (argCount + 1));
-                    else
-                        mArgumentBase = NULL;
+                        argBase = targetValue + 1;
 
-                    delete mLocals;
-                    mLocals = new JSValue[mCurModule->mLocalsCount];
+                    if (target->mByteCode) {
+                        mActivationStack.push(new Activation(mLocals, mArgumentBase, pc, mCurModule));
+                        mCurModule = target->mByteCode;
+                        pc = mCurModule->mCodeBase;
+                        endPC = mCurModule->mCodeBase + mCurModule->mLength;
+                        mArgumentBase = argBase;
+                        delete mLocals;
+                        mLocals = new JSValue[mCurModule->mLocalsCount];
+                    }
+                    else {
+                        JSValue result = (target->mCode)(this, argBase, argCount);
+                        mStack.erase(argBase, mStack.end());
+                        mStack.push_back(result);
+                    }
 
                 }
                 break;
@@ -480,7 +552,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 {
                     JSValue base = mStack.back();
                     mStack.pop_back();
-                    ASSERT(base.isObject());
+                    ASSERT(base.isObject() || base.isType());
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     mStack.push_back(JSValue(base.object->mType->mMethods[index]));
@@ -544,7 +616,8 @@ void ScopeChain::processDeclarations(StmtNode *p)
             ClassStmtNode *classStmt = static_cast<ClassStmtNode *>(p);
             ASSERT(classStmt->name->getKind() == ExprNode::identifier);     // XXX need to handle qualified names!!!
             IdentifierExprNode *className = static_cast<IdentifierExprNode*>(classStmt->name);
-            defineVariable(className->name, Type_Type);
+            JSType *thisClass = new JSType(NULL);
+            p->prop = defineVariable(className->name, Type_Type, JSValue(thisClass));
         }
         break;
     case StmtNode::block:
@@ -568,9 +641,9 @@ void ScopeChain::processDeclarations(StmtNode *p)
                 if (v->name && (v->name->getKind() == ExprNode::identifier)) {
                     IdentifierExprNode *i = static_cast<IdentifierExprNode *>(v->name);
                     if (isStatic)
-                        defineStaticVariable(i->name, NULL);
+                        v->prop = defineStaticVariable(i->name, NULL);
                     else
-                        defineVariable(i->name, NULL);
+                        v->prop = defineVariable(i->name, NULL);
                 }
                 v = v->next;
             }
@@ -589,9 +662,9 @@ void ScopeChain::processDeclarations(StmtNode *p)
                 if (f->function.name->getKind() == ExprNode::identifier) {
                     const StringAtom& name = (static_cast<IdentifierExprNode *>(f->function.name))->name;
                     if (isStatic)
-                        defineStaticMethod(name, NULL);
+                        p->prop = defineStaticMethod(name, NULL);
                     else
-                        defineMethod(name, NULL);
+                        p->prop = defineMethod(name, NULL);
                 }
             }
         }
@@ -610,13 +683,10 @@ void Context::buildRuntimeForStmt(StmtNode *p)
             VariableBinding *v = vs->bindings;
             bool isStatic = hasAttribute(vs->attributes, Token::Static);
             while (v)  {
+                Property &prop = PROPERTY(v->prop);
                 if (v->name && (v->name->getKind() == ExprNode::identifier)) {
-                    IdentifierExprNode *i = static_cast<IdentifierExprNode *>(v->name);
                     JSType *type = mScopeChain.extractType(v->type);
-                    if (isStatic)
-                        mScopeChain.setStaticType(i->name, type);
-                    else
-                        mScopeChain.setType(i->name, type);
+                    prop.mType = type;
                 }
                 v = v->next;
             }
@@ -630,6 +700,9 @@ void Context::buildRuntimeForStmt(StmtNode *p)
             bool isOperator = hasAttribute(f->attributes, mScopeChain.OperatorKeyWord);
             JSType *resultType = mScopeChain.extractType(f->function.resultType);
             JSFunction *fnc = new JSFunction(resultType);
+ 
+            Property &prop = PROPERTY(p->prop);
+            prop.mType = resultType;
 
             if (isOperator) {
                 ASSERT(f->function.name->getKind() == ExprNode::string);
@@ -644,14 +717,10 @@ void Context::buildRuntimeForStmt(StmtNode *p)
             else {
                 if (f->function.name->getKind() == ExprNode::identifier) {
                     const StringAtom& name = (static_cast<IdentifierExprNode *>(f->function.name))->name;
-                    if (isStatic) {
-                        mScopeChain.setStaticType(name, resultType);
-                        mScopeChain.setStaticValue(name, JSValue(fnc));
-                    }
-                    else {
-                        mScopeChain.setType(name, resultType);
-                        mScopeChain.setValue(name, JSValue(fnc));
-                    }
+                    if (isStatic)
+                        mScopeChain.setStaticValue(prop, JSValue(fnc));
+                    else
+                        mScopeChain.setValue(prop, JSValue(fnc));
                 }
                 else
                     ASSERT(false);
@@ -679,17 +748,16 @@ void Context::buildRuntimeForStmt(StmtNode *p)
     case StmtNode::Class:
         {     
             ClassStmtNode *classStmt = static_cast<ClassStmtNode *>(p);
-            ASSERT(classStmt->name->getKind() == ExprNode::identifier);     // XXX need to handle qualified names!!!
-            IdentifierExprNode *className = static_cast<IdentifierExprNode*>(classStmt->name);
-
-            JSType *superclass = Object_Type;
+            JSType *superClass = Object_Type;
             if (classStmt->superclass) {
                 ASSERT(classStmt->superclass->getKind() == ExprNode::identifier);   // XXX
-                IdentifierExprNode *superclassExpr = static_cast<IdentifierExprNode*>(classStmt->superclass);
-                superclass = mScopeChain.findType(superclassExpr->name);
+                IdentifierExprNode *superClassExpr = static_cast<IdentifierExprNode*>(classStmt->superclass);
+                superClass = mScopeChain.findType(superClassExpr->name);
             }
-            JSType *thisClass = new JSType(superclass);
-            mScopeChain.setValue(className->name, JSValue(thisClass));
+            ASSERT(PROPERTY_KIND(p->prop) == ValuePointer);
+            ASSERT(PROPERTY_VALUEPOINTER(p->prop)->isType());
+            JSType *thisClass = (JSType *)(PROPERTY_VALUEPOINTER(p->prop)->type);
+            thisClass->mSuperType = superClass;
             thisClass->createStaticComponent();
             mScopeChain.addScope(thisClass->mStatics);
             mScopeChain.addScope(thisClass);
@@ -707,6 +775,7 @@ void Context::buildRuntimeForStmt(StmtNode *p)
             }
             mScopeChain.popScope();
             mScopeChain.popScope();
+            thisClass->completeClass(superClass);
             thisClass->createStaticInstance();      // XXX should be a part of the class initialization code
         }        
         break;
@@ -1104,11 +1173,42 @@ Formatter& operator<<(Formatter& f, const Access& slot)
 Formatter& operator<<(Formatter& f, const Property& prop)
 {
     switch (prop.mFlag) {
-    case ValuePointer : f << "ValuePointer --> " << *prop.mData.vp; break;
+    case ValuePointer : 
+        {
+            JSValue v = *prop.mData.vp;
+            f << "ValuePointer --> "; 
+            if (v.isObject())
+                printFormat(f, "Object @ 0x%08X\n", v.object);
+            else
+            if (v.isType())
+                printFormat(f, "Type @ 0x%08X\n", v.type);
+            else
+            if (v.isFunction())
+                printFormat(f, "Function @ 0x%08X\n", v.function);
+            else
+                f << v << "\n";
+        }
+        break;
     case FunctionPair : f << "FunctionPair\n"; break;
     case IndexPair : f << "IndexPair\n"; break;
     case Slot : f << "Slot\n"; break;
     case Method : f << "Method\n"; break;
+    }
+    return f;
+}
+Formatter& operator<<(Formatter& f, const JSInstance& obj)
+{
+    for (PropertyMap::const_iterator i = obj.mProperties.begin(), end = obj.mProperties.end(); (i != end); i++) {
+        const Property& prop = PROPERTY(i);
+        f << "[" << PROPERTY_NAME(i) << "] ";
+        switch (prop.mFlag) {
+        case ValuePointer : f << "ValuePointer --> " << *prop.mData.vp; break;
+        case FunctionPair : f << "FunctionPair\n"; break;
+        case IndexPair : f << "IndexPair\n"; break;
+        case Slot : f << "Slot #" << prop.mData.index 
+                         << " --> " << obj.mInstanceValues[prop.mData.index] << "\n"; break;
+        case Method : f << "Method #" << prop.mData.index << "\n"; break;
+        }
     }
     return f;
 }

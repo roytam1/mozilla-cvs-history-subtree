@@ -203,32 +203,27 @@ void ByteCodeGen::genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc)
 }
 
 
-// the distinction is that top-level functions don't have to
-// be closures - (they really are since the global/package scope is
-// on the scope chain anyway). The code for the function has
-// already been generated (it's a compile time constant)
 ByteCodeModule *ByteCodeGen::genCodeForScript(StmtNode *p)
 {
-    if (p->getKind() == StmtNode::Function) {
-        return NULL;
+    while (p) {
+        genCodeForStatement(p, NULL);
+        p = p->next;
     }
-    else
-        return genCodeForStatement(p, NULL);
+    return new ByteCodeModule(this);
 }
 
 
-ByteCodeModule *ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
+void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
 {
     switch (p->getKind()) {
     case StmtNode::Class:
         {
             ClassStmtNode *classStmt = static_cast<ClassStmtNode *>(p);
-            ASSERT(classStmt->name->getKind() == ExprNode::identifier);     // XXX need to handle qualified names!!!
-            IdentifierExprNode *className = static_cast<IdentifierExprNode*>(classStmt->name);
 
-            JSValue v = mScopeChain->getValue(className->name);
-            ASSERT(v.isType());
-            JSType *thisClass = v.type;
+            ASSERT(PROPERTY_KIND(p->prop) == ValuePointer);
+            ASSERT(PROPERTY_VALUEPOINTER(p->prop)->isType());
+            JSType *thisClass = (JSType *)(PROPERTY_VALUEPOINTER(p->prop)->type);
+
             mScopeChain->addScope(thisClass->mStatics);
             mScopeChain->addScope(thisClass);
             ByteCodeGen bcg(mScopeChain);       // this will capture the initializations
@@ -272,12 +267,16 @@ ByteCodeModule *ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *stati
     case StmtNode::Function:
         {
             FunctionStmtNode *f = static_cast<FunctionStmtNode *>(p);
-            ASSERT(f->function.name->getKind() == ExprNode::identifier);
-            const StringAtom& name = (static_cast<IdentifierExprNode *>(f->function.name))->name;
+            bool isStatic = hasAttribute(f->attributes, Token::Static);
 
-            JSValue v = mScopeChain->getValue(name);
+            JSValue v;    
+            if (isStatic)
+                v = mScopeChain->getStaticValue(PROPERTY(p->prop));
+            else
+                v = mScopeChain->getValue(PROPERTY(p->prop));
             ASSERT(v.isFunction());
             JSFunction *fnc = v.function;
+
             ByteCodeGen bcg(mScopeChain);
             bcg.genCodeForFunction(f, fnc);
         }
@@ -307,7 +306,6 @@ ByteCodeModule *ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *stati
         }
         break;
     }
-    return new ByteCodeModule(this);
 }
 
 Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)

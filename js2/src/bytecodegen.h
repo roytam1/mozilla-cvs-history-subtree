@@ -153,7 +153,7 @@ namespace ByteCode {
             : mBuffer(new CodeBuffer), mScopeChain(scopeChain) { }
 
         ByteCodeModule *genCodeForScript(StmtNode *p);
-        ByteCodeModule *genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg);
+        void genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg);
         void genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc);
         JSType *genExpr(ExprNode *p);
         Reference *genReference(ExprNode *p, Access acc);
