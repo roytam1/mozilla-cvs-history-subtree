@@ -5676,13 +5676,6 @@ PRBool nsImapProtocol::FolderIsSelected(const char *mailboxName)
 
 void nsImapProtocol::OnStatusForFolder(const char *mailboxName)
 {
-  // don't run status on selected folder, just do a noop.
-  if (FolderIsSelected(mailboxName))
-  {
-    Noop();
-  }
-  else
-  {
   IncrementCommandTagNumber();
 
   nsCAutoString command(GetServerCommandTag());
@@ -5698,7 +5691,6 @@ void nsImapProtocol::OnStatusForFolder(const char *mailboxName)
   if (NS_SUCCEEDED(rv))
       ParseIMAPandCheckForNewMail();
 
-  }
   if (GetServerStateParser().LastCommandSuccessful())
   {
     nsImapMailboxSpec *new_spec = GetServerStateParser().CreateCurrentMailboxSpec(mailboxName);
