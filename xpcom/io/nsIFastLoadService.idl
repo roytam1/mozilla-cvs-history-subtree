@@ -41,6 +41,8 @@ interface nsIFastLoadService : nsISupports
     attribute nsIObjectInputStream  currentInputStream;
     attribute nsIObjectOutputStream currentOutputStream;
 
+    void   selectMuxedDocument(in string aURISpec);
+
     void   appendDependency(in string aFileName);
     PRTime maxDependencyModifiedTime();
 

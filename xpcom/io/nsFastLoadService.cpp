@@ -40,6 +40,14 @@
 #include "nsISeekableStream.h"
 #include "nsISupports.h"
 
+inline nsFastLoadFileReader* GetReader(nsIObjectInputStream* aStream) {
+    return NS_STATIC_CAST(nsFastLoadFileReader*, aStream);
+}
+
+inline nsFastLoadFileWriter* GetWriter(nsIObjectOutputStream* aStream) {
+    return NS_STATIC_CAST(nsFastLoadFileWriter*, aStream);
+}
+
 PR_IMPLEMENT_DATA(nsIFastLoadService*) gFastLoadService_ = nsnull;
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsFastLoadService, nsIFastLoadService)
@@ -92,11 +100,25 @@ nsFastLoadService::Create(nsISupports *aOuter, REFNSIID aIID, void **aResult)
 }
 
 #if defined XP_MAC
-# define PLATFORM_FASL_SUFFIX    " FastLoad File"
+
+// Mac format: "<Basename> FastLoad File" with <basename> capitalized.
+# include "nsCRT.h"
+
+# define MASSAGE_BASENAME(bn)   (bn.SetCharAt(nsCRT::ToUpper(bn.CharAt(0)), 0))
+# define PLATFORM_FASL_SUFFIX   " FastLoad File"
+
 #elif defined XP_UNIX
-# define PLATFORM_FASL_SUFFIX    ".mfasl"
+
+// Unix format: "<basename>.mfasl".
+# define MASSAGE_BASENAME(bn)   /* nothing */
+# define PLATFORM_FASL_SUFFIX   ".mfasl"
+
 #elif defined XP_WIN
-# define PLATFORM_FASL_SUFFIX    ".mfl"
+
+// Windows format: "<basename>.mfl".
+# define MASSAGE_BASENAME(bn)   /* nothing */
+# define PLATFORM_FASL_SUFFIX   ".mfl"
+
 #endif
 
 nsresult
@@ -110,6 +132,7 @@ nsFastLoadService::NewFastLoadFile(const char* aBaseName, nsIFile* *aResult)
     if (NS_FAILED(rv)) return rv;
 
     nsCAutoString name(aBaseName);
+    MASSAGE_BASENAME(name);
     name += PLATFORM_FASL_SUFFIX;
     rv = file->Append(name);
     if (NS_FAILED(rv)) return rv;
@@ -179,16 +202,26 @@ nsFastLoadService::SetCurrentOutputStream(nsIObjectOutputStream* aStream)
 }
 
 NS_IMETHODIMP
+nsFastLoadService::SelectMuxedDocument(const char* aURISpec)
+{
+    nsresult rv;
+    nsAutoLock lock(mLock);
+
+    if (mObjectOutputStream)
+        rv = GetWriter(mObjectOutputStream)->SelectMuxedDocument(aURISpec);
+    else if (mObjectInputStream)
+        rv = GetReader(mObjectInputStream)->SelectMuxedDocument(aURISpec);
+    return rv;
+}
+
+NS_IMETHODIMP
 nsFastLoadService::AppendDependency(const char* aFileName)
 {
     nsAutoLock lock(mLock);
     if (!mObjectOutputStream)
         return NS_OK;
 
-    nsIObjectOutputStream* rawptr = mObjectOutputStream.get();
-    nsFastLoadFileWriter* writer = NS_STATIC_CAST(nsFastLoadFileWriter*,
-                                                  rawptr);
-    if (!writer->AppendDependency(aFileName))
+    if (!GetWriter(mObjectOutputStream)->AppendDependency(aFileName))
         return NS_ERROR_OUT_OF_MEMORY;
     return NS_OK;
 }
@@ -202,9 +235,7 @@ nsFastLoadService::MaxDependencyModifiedTime(PRTime *aTime)
     if (!mObjectOutputStream)
         return NS_OK;
 
-    nsIObjectOutputStream* rawptr = mObjectOutputStream.get();
-    nsFastLoadFileWriter* writer = NS_STATIC_CAST(nsFastLoadFileWriter*,
-                                                  rawptr);
+    nsFastLoadFileWriter* writer = GetWriter(mObjectOutputStream);
 
     for (PRUint32 i = 0, n = writer->GetDependencyCount(); i < n; i++) {
         PRFileInfo info;

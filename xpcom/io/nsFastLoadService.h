@@ -26,6 +26,9 @@
 #include "nsIObjectInputStream.h"
 #include "nsIObjectOutputStream.h"
 
+class nsFastLoadFileReader;
+class nsFastLoadFileWriter;
+
 class NS_COM nsFastLoadService : public nsIFastLoadService
 {
   public:

@@ -121,7 +121,7 @@ typedef PRUint32 NSFastLoadOID;         // nsFastLoadFooter::mSharpObjectMap ind
 
 #define MFL_FILE_VERSION_0      0
 #define MFL_FILE_VERSION_1      1000
-#define MFL_FILE_VERSION        1       // experimental
+#define MFL_FILE_VERSION        2       // experimental, muxed doc support
 
 /**
  * Compute Fletcher's 16-bit checksum over aLength bytes starting at aBuffer,
@@ -150,6 +150,7 @@ struct nsFastLoadHeader {
 struct nsFastLoadFooterPrefix {
     PRUint32    mNumIDs;
     PRUint32    mNumSharpObjects;
+    PRUint32    mNumMuxedDocuments;
     PRUint32    mNumDependencies;
 };
 
@@ -157,6 +158,11 @@ struct nsFastLoadSharpObjectInfo {
     PRUint32    mCIDOffset;     // offset of object's NSFastLoadID and data
     PRUint16    mStrongRefCnt;
     PRUint16    mWeakRefCnt;
+};
+
+struct nsFastLoadMuxedDocumentInfo {
+    const char* mURISpec;
+    PRUint32    mInitialSegmentOffset;
 };
 
 // Specialize nsVoidArray to avoid gratuitous string copying, yet not leak.
@@ -174,8 +180,7 @@ class NS_COM nsFastLoadDependencyArray : public nsVoidArray {
     PRBool AppendDependency(const char* aFileName, PRBool aCopy = PR_TRUE) {
         char* s = NS_CONST_CAST(char*, aFileName);
         if (aCopy) {
-            s = NS_REINTERPRET_CAST(char*,
-                                    nsMemory::Clone(s, strlen(s)+1));
+            s = NS_REINTERPRET_CAST(char*, nsMemory::Clone(s, strlen(s) + 1));
             if (!s) return PR_FALSE;
         }
         PRBool ok = AppendElement(s);
@@ -184,6 +189,10 @@ class NS_COM nsFastLoadDependencyArray : public nsVoidArray {
         return ok;
     }
 };
+
+// forward declarations of opaque types defined in nsFastLoadFile.cpp
+struct nsDocumentMapReadEntry;
+struct nsDocumentMapWriteEntry;
 
 /**
  * Inherit from the concrete class nsBinaryInputStream, which inherits from
@@ -197,13 +206,16 @@ class NS_COM nsFastLoadFileReader
 {
   public:
     nsFastLoadFileReader(nsIInputStream *aStream)
-      : nsBinaryInputStream(aStream) {
+      : nsBinaryInputStream(aStream),
+        mCurrentDocumentMapEntry(nsnull) {
         NS_INIT_REFCNT();
     }
 
     virtual ~nsFastLoadFileReader() { }
 
     PRUint32 GetChecksum() { return mHeader.mChecksum; }
+
+    nsresult SelectMuxedDocument(const char* aURISpec);
 
   private:
     // nsISupports methods
@@ -215,6 +227,9 @@ class NS_COM nsFastLoadFileReader
 
     // nsISeekableStream methods
     NS_DECL_NSISEEKABLESTREAM
+
+    // Override Read so we can demultiplex a document interleaved with others.
+    NS_IMETHOD Read(char* aBuffer, PRUint32 aCount, PRUint32 *aBytesRead);
 
     nsresult ReadHeader(nsFastLoadHeader *aHeader);
 
@@ -232,11 +247,14 @@ class NS_COM nsFastLoadFileReader
         nsFastLoadFooter()
           : mIDMap(nsnull),
             mSharpObjectMap(nsnull) {
+            mMuxedDocumentMap.ops = nsnull;
         }
 
         ~nsFastLoadFooter() {
             delete[] mIDMap;
             delete[] mSharpObjectMap;
+            if (mMuxedDocumentMap.ops)
+                PL_DHashTableFinish(&mMuxedDocumentMap);
         }
 
         const nsID& GetID(NSFastLoadID aFastId) const {
@@ -279,6 +297,11 @@ class NS_COM nsFastLoadFileReader
         // object offset and refcnt information.
         nsFastLoadSharpObjectEntry* mSharpObjectMap;
 
+        // Map from URI spec string to nsDocumentMapReadEntry, which helps us
+        // demultiplex a document's objects from among the interleaved object
+        // stream segments in the FastLoad file.
+        PLDHashTable mMuxedDocumentMap;
+
         // List of source filename dependencies that should trigger regeneration
         // of the FastLoad file.
         nsFastLoadDependencyArray mDependencies;
@@ -289,6 +312,7 @@ class NS_COM nsFastLoadFileReader
     nsresult ReadSlowID(nsID *aID);
     nsresult ReadFastID(NSFastLoadID *aID);
     nsresult ReadSharpObjectInfo(nsFastLoadSharpObjectInfo *aInfo);
+    nsresult ReadMuxedDocumentInfo(nsFastLoadMuxedDocumentInfo *aInfo);
     nsresult DeserializeObject(nsISupports* *aObject);
 
     nsresult   Open();
@@ -297,6 +321,8 @@ class NS_COM nsFastLoadFileReader
   protected:
     nsFastLoadHeader mHeader;
     nsFastLoadFooter mFooter;
+
+    nsDocumentMapReadEntry* mCurrentDocumentMapEntry;
 };
 
 NS_COM nsresult
@@ -315,7 +341,8 @@ class NS_COM nsFastLoadFileWriter
 {
   public:
     nsFastLoadFileWriter(nsIOutputStream *aStream)
-      : nsBinaryOutputStream(aStream) {
+      : nsBinaryOutputStream(aStream),
+        mCurrentDocumentMapEntry(nsnull) {
         NS_INIT_REFCNT();
         mIDMap.ops = mObjectMap.ops = nsnull;
     }
@@ -326,6 +353,8 @@ class NS_COM nsFastLoadFileWriter
         if (mObjectMap.ops)
             PL_DHashTableFinish(&mObjectMap);
     }
+
+    nsresult SelectMuxedDocument(const char* aURISpec);
 
     PRUint32 GetDependencyCount() { return PRUint32(mDependencies.Count()); }
 
@@ -356,10 +385,12 @@ class NS_COM nsFastLoadFileWriter
     nsresult MapID(const nsID& aSlowID, NSFastLoadID *aResult);
 
     nsresult WriteHeader(nsFastLoadHeader *aHeader);
+    nsresult WriteFooter();
+    nsresult WriteFooterPrefix(const nsFastLoadFooterPrefix& aFooterPrefix);
     nsresult WriteSlowID(const nsID& aID);
     nsresult WriteFastID(NSFastLoadID aID);
     nsresult WriteSharpObjectInfo(const nsFastLoadSharpObjectInfo& aInfo);
-    nsresult WriteFooter();
+    nsresult WriteMuxedDocumentInfo(const nsFastLoadMuxedDocumentInfo& aInfo);
 
     nsresult   Open();
     NS_IMETHOD Close(void);
@@ -380,9 +411,18 @@ class NS_COM nsFastLoadFileWriter
                        PRUint32 aNumber,
                        void *aData);
 
+    static PLDHashOperator PR_CALLBACK
+    DocumentMapEnumerate(PLDHashTable *aTable,
+                         PLDHashEntryHdr *aHdr,
+                         PRUint32 aNumber,
+                         void *aData);
+
   protected:
     PLDHashTable mIDMap;
     PLDHashTable mObjectMap;
+    PLDHashTable mDocumentMap;
+
+    nsDocumentMapWriteEntry* mCurrentDocumentMapEntry;
 
     nsFastLoadDependencyArray mDependencies;
 };
