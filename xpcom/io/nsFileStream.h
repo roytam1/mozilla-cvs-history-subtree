@@ -279,6 +279,10 @@ public:
                                       {
                                           return NS_FAILED(mResult);
                                       }
+    nsresult                          error() const
+                                      {
+                                          return mResult;
+                                      }
 
 // DATA
 protected:
@@ -571,6 +575,13 @@ public:
 	enum  { kDefaultMode = (PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE) };
 
                                       nsOutputFileStream() {}
+                                      nsOutputFileStream(nsIOutputStream* inStream)
+                                      {
+                                          mFile = nsQueryInterface(inStream);
+                                          mOutputStream = nsQueryInterface(inStream);
+                                          mStore = nsQueryInterface(inStream);
+                                          mFileOutputStream = nsQueryInterface(inStream);
+                                      }
                                       nsOutputFileStream(
                                            const nsFileSpec& inFile,
                                            int nsprMode = kDefaultMode,
@@ -589,6 +600,7 @@ public:
                                       }
  
     virtual void                      flush();
+    virtual void					  abort();
 
     // Output streamers.  Unfortunately, they don't inherit!
     nsOutputStream&                   operator << (const char* buf)
@@ -739,5 +751,45 @@ protected:
 
 NS_BASE nsOutputStream&     nsEndl(nsOutputStream& os); // outputs and FLUSHES.
 
+//========================================================================================
+class nsSaveViaTempStream
+// The interface looks like a stream class, but in fact it streams to a temp file, and
+// finally renames if the output succeeded.
+//========================================================================================
+ : public nsOutputFileStream
+{
+private:
 
+	typedef nsOutputFileStream Inherited;
+
+public:
+									nsSaveViaTempStream(const nsFileSpec& inFileToSave);
+									~nsSaveViaTempStream();
+	virtual void					close();
+
+     // Output streamers.  Unfortunately, they don't inherit!
+    nsOutputStream&                   operator << (const char* buf)
+                                        { return nsOutputStream::operator << (buf); }
+    nsOutputStream&                   operator << (char ch)
+                                        { return nsOutputStream::operator << (ch); }
+    nsOutputStream&                   operator << (short val)
+                                        { return nsOutputStream::operator << (val); }
+    nsOutputStream&                   operator << (unsigned short val)
+                                        { return nsOutputStream::operator << (val); }
+    nsOutputStream&                   operator << (long val)
+                                        { return nsOutputStream::operator << (val); }
+    nsOutputStream&                   operator << (unsigned long val)
+                                        { return nsOutputStream::operator << (val); }
+    nsOutputStream&                   operator << (int val)
+                                        { return nsOutputStream::operator << (val); }
+    nsOutputStream&                   operator << (unsigned int val)
+                                        { return nsOutputStream::operator << (val); }
+    nsOutputStream&                   operator << (nsOutputStream& (*pf)(nsOutputStream&))
+                                        { return nsOutputStream::operator << (pf); }
+protected:
+
+	const nsFileSpec&					mFileToSave;
+	nsFileSpec*							mTempFileSpec;
+}; // class nsSaveViaTempStream
+ 
 #endif /* _FILESTREAM_H_ */
