@@ -1244,14 +1244,17 @@ JSValIDToString(JSContext *aJSContext, const jsval idval) {
     return NS_REINTERPRET_CAST(PRUnichar*, JS_GetStringChars(str));
 }
 
-NS_IMETHODIMP
-nsScriptSecurityManager::CanCallMethod(JSContext *aJSContext, 
-                                       const nsIID &aIID, 
-                                       nsISupports *aObj, 
-                                       nsIInterfaceInfo *aInterfaceInfo, 
-                                       PRUint16 aMethodIndex, 
-                                       jsval aName,
-                                       void **aPolicy)
+
+/* void CanAccess (in PRUint32 aAction, in nsIXPCNativeCallContext aCallContext, in JSContextPtr aJSContext, in JSObjectPtr aJSObject, in nsISupports aObj, in nsIClassInfo aClassInfo, in JSVal aName, inout voidPtr aPolicy); */
+NS_IMETHODIMP 
+nsScriptSecurityManager::CanAccess(PRUint32 aAction, 
+                                   nsIXPCNativeCallContext *aCallContext, 
+                                   JSContext * aJSContext, 
+                                   JSObject * aJSObject, 
+                                   nsISupports *aObj, 
+                                   nsIClassInfo *aClassInfo, 
+                                   jsval aName, 
+                                   void * *aPolicy)
 {
     nsresult rv;
     rv = CheckXPCPermissions(aJSContext, aObj);
@@ -1260,72 +1263,36 @@ nsScriptSecurityManager::CanCallMethod(JSContext *aJSContext,
 
     // If check fails, QI to interface that lets scomponents advertise
     // their own security requirements.
+    
     nsCOMPtr<nsISecurityCheckedComponent> checkedComponent =
         do_QueryInterface(aObj, &rv);
 
     nsXPIDLCString capability;
     if (NS_SUCCEEDED(rv) && checkedComponent) {
-        checkedComponent->CanCallMethod((const nsIID *)&aIID,
-                                             JSValIDToString(aJSContext, aName),
-                                             getter_Copies(capability));
-    }
-
-    return CheckXPCCapability(aJSContext, capability);
-}
-
-NS_IMETHODIMP
-nsScriptSecurityManager::CanGetProperty(JSContext *aJSContext, 
-                                        const nsIID &aIID, 
-                                        nsISupports *aObj, 
-                                        nsIInterfaceInfo *aInterfaceInfo, 
-                                        PRUint16 aMethodIndex, 
-                                        jsval aName,
-                                        void **aPolicy)
-{
-    nsresult rv;
-    rv = CheckXPCPermissions(aJSContext, aObj);
-    if (NS_SUCCEEDED(rv))
-        return rv;
-
-    // If check fails, QI to interface that lets scomponents advertise
-    // their own security requirements.
-    nsCOMPtr<nsISecurityCheckedComponent> checkedComponent =
-        do_QueryInterface(aObj, &rv);
-
-    nsXPIDLCString capability;
-    if (NS_SUCCEEDED(rv) && checkedComponent) {
-        checkedComponent->CanGetProperty((const nsIID *)&aIID,
-                                         JSValIDToString(aJSContext, aName),
-                                         getter_Copies(capability));
-    }
-
-    return CheckXPCCapability(aJSContext, capability);
-}
-
-NS_IMETHODIMP
-nsScriptSecurityManager::CanSetProperty(JSContext *aJSContext, 
-                                        const nsIID &aIID, 
-                                        nsISupports *aObj, 
-                                        nsIInterfaceInfo *aInterfaceInfo, 
-                                        PRUint16 aMethodIndex, 
-                                        jsval aName,
-                                        void **aPolicy)
-{
-    nsresult rv;
-    rv = CheckXPCPermissions(aJSContext, aObj);
-    if (NS_SUCCEEDED(rv))
-        return rv;
-
-    // If check fails, QI to interface that lets scomponents advertise
-    // their own security requirements.
-    nsCOMPtr<nsISecurityCheckedComponent> checkedComponent =
-        do_QueryInterface(aObj, &rv);
-
-    nsXPIDLCString capability;
-    if (NS_SUCCEEDED(rv) && checkedComponent) {
-        checkedComponent->CanSetProperty((const nsIID *)&aIID,
-                                         JSValIDToString(aJSContext, aName),
-                                         getter_Copies(capability));
+        const PRUnichar *name = JSValIDToString(aJSContext, aName);
+        nsCOMPtr<nsIInterfaceInfo> ii;
+        aCallContext->GetCalleeInterface(getter_AddRefs(ii));
+        if (ii) {
+            const nsIID *iid;
+            if (NS_SUCCEEDED(ii->GetIIDShared(&iid)) && iid) {
+                switch(aAction) {
+                    case nsIXPCSecurityManager::ACCESS_CALL_METHOD:
+                        checkedComponent->
+                          CanCallMethod(iid, name, getter_Copies(capability));
+                        break;
+                    case nsIXPCSecurityManager::ACCESS_GET_PROPERTY:
+                        checkedComponent->
+                          CanGetProperty(iid, name, getter_Copies(capability));
+                        break;
+                    case nsIXPCSecurityManager::ACCESS_SET_PROPERTY:
+                        checkedComponent->
+                          CanSetProperty(iid, name, getter_Copies(capability));
+                        break;
+                    default:
+                        NS_ERROR("bad case!");
+                }
+            }
+        }
     }
 
     return CheckXPCCapability(aJSContext, capability);
