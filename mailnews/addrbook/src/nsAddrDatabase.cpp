@@ -106,6 +106,7 @@ nsAddrDatabase::nsAddrDatabase()
       m_NickNameColumnToken(0),
       m_PriEmailColumnToken(0),
       m_2ndEmailColumnToken(0),
+      m_PrimaryColumnToken(0),
       m_WorkPhoneColumnToken(0),
       m_HomePhoneColumnToken(0),
       m_FaxColumnToken(0),
@@ -1054,6 +1055,7 @@ nsresult nsAddrDatabase::InitMDBInfo()
             GetStore()->StringToToken(GetEnv(),  kPriEmailColumn, &m_PriEmailColumnToken);
             GetStore()->StringToToken(GetEnv(),  kLowerPriEmailColumn, &m_LowerPriEmailColumnToken);
             GetStore()->StringToToken(GetEnv(),  k2ndEmailColumn, &m_2ndEmailColumnToken);
+            GetStore()->StringToToken(GetEnv(),  k2ndEmailColumn, &m_PrimaryColumnToken);
             GetStore()->StringToToken(GetEnv(),  kPreferMailFormatColumn, &m_MailFormatColumnToken);
             GetStore()->StringToToken(GetEnv(),  kWorkPhoneColumn, &m_WorkPhoneColumnToken);
             GetStore()->StringToToken(GetEnv(),  kHomePhoneColumn, &m_HomePhoneColumnToken);
@@ -1158,6 +1160,10 @@ nsresult nsAddrDatabase::AddAttributeColumnsToRow(nsIAbCard *card, nsIMdbRow *ca
     
     card->GetSecondEmail(getter_Copies(unicodeStr));
     Add2ndEmail(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
+
+    PRUint16 primary = 0;
+    card->GetPrimary(&primary);
+    AddPrimary(cardRow, primary);
     
     PRUint32 format = nsIAbPreferMailFormat::unknown;
     card->GetPreferMailFormat(&format);
@@ -2342,6 +2348,11 @@ nsresult nsAddrDatabase::GetCardFromDB(nsIAbCard *newCard, nsIMdbRow* cardRow)
     {
         newCard->SetSecondEmail(tempString.get());
     }
+
+    PRUint32 primary = 0;
+    err = GetIntColumn(cardRow, m_PrimaryColumnToken, &primary, 0);
+    if (NS_SUCCEEDED(err))
+        newCard->SetPrimary(primary);
 
     PRUint32 format = nsIAbPreferMailFormat::unknown;
     err = GetIntColumn(cardRow, m_MailFormatColumnToken, &format, 0);

@@ -65,6 +65,7 @@
 #define kNicknameColumn           "NickName"
 #define kPriEmailColumn           "PrimaryEmail"
 #define k2ndEmailColumn           "SecondEmail"
+#define kPrimaryColumn            "Primary"
 #define kPreferMailFormatColumn   "PreferMailFormat"
 #define kWorkPhoneColumn          "WorkPhone"
 #define kHomePhoneColumn          "HomePhone"

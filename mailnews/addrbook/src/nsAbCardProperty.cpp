@@ -348,7 +348,7 @@ NS_IMETHODIMP nsAbCardProperty::GetCardValue(const char *attrname, PRUnichar **v
     case 'P':
       switch (attrname[2]) { 
         case 'e':
-	  PRUint32 format;
+	        PRUint32 format;
           rv = GetPreferMailFormat(&format);
           const PRUnichar *formatStr;
 
@@ -370,7 +370,10 @@ NS_IMETHODIMP nsAbCardProperty::GetCardValue(const char *attrname, PRUnichar **v
           rv = GetPagerNumber(value);
           break;
         case 'i':
-          rv = GetPrimaryEmail(value);
+          if (attrname[7] == 'E')
+            rv = GetPrimaryEmail(value);
+          else 
+            rv = GetPrimary(*value);
           break;
         default:
           rv = NS_ERROR_UNEXPECTED;
@@ -571,7 +574,10 @@ NS_IMETHODIMP nsAbCardProperty::SetCardValue(const char *attrname, const PRUnich
           rv = SetPagerNumber(value);
           break;
         case 'i':
-          rv = SetPrimaryEmail(value);
+          if (attrname[7] == 'E')
+            rv = SetPrimaryEmail(value);
+          else
+            rv = SetPrimary(*value);
           break;
         default:
           rv = NS_ERROR_UNEXPECTED;
