@@ -62,8 +62,45 @@ function initMessages()
             "315": "---", /* end of WHO */
             "318": "---", /* end of WHOIS */
             "366": "---", /* end of NAMES */
-            "376": "---" /* end of MOTD */
+            "376": "---"  /* end of MOTD */
         };
+}
+
+function checkCharset(charset)
+{
+    return client.messageManager.checkCharset(charset);
+}
+
+function toUnicode (msg, charsetOrView)
+{
+    if (!msg)
+        return msg;
+
+    var charset;
+    if (typeof charsetOrView == "object")
+        charset = charsetOrView.prefs["charset"];
+    else if (typeof charsetOrView == "string")
+        charset = charsetOrView;
+    else
+        charset = client.currentObject.prefs["charset"];
+
+    return client.messageManager.toUnicode(msg, charset);
+}
+
+function fromUnicode (msg, charsetOrView)
+{
+    if (!msg)
+        return msg;
+
+    var charset;
+    if (typeof charsetOrView == "object")
+        charset = charsetOrView.prefs["charset"];
+    else if (typeof charsetOrView == "string")
+        charset = charsetOrView;
+    else
+        charset = client.currentObject.prefs["charset"];
+
+    return client.messageManager.fromUnicode(msg, charset);
 }
 
 function getMsg(msgName, params, deflt)
@@ -81,6 +118,7 @@ const MT_ATTENTION = "ATTENTION";
 const MT_ERROR     = "ERROR";
 const MT_HELLO     = "HELLO";
 const MT_HELP      = "HELP";
+const MT_MODE      = "MODE";
 const MT_WARN      = "WARN";
 const MT_INFO      = "INFO";
 const MT_USAGE     = "USAGE";

@@ -48,6 +48,13 @@ function MenuManager (commandManager, menuSpecs, contextFunction, commandStr)
         function mmgr_onhide (event) { return menuManager.hidePopup (event); };
 }
 
+MenuManager.prototype.appendMenuItems =
+function mmgr_append(menuId, items)
+{
+    for (var i = 0; i < items.length; ++i)
+        client.menuSpecs[menuId].items.push(items[i]);
+}
+
 MenuManager.prototype.createContextMenus =
 function mmgr_initcxs (document)
 {

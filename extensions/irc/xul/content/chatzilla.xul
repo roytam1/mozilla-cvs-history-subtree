@@ -42,7 +42,6 @@
 
   <overlaytarget id="scripts-overlay-target"/>
   <overlaytarget id="menu-overlay-target"/>
-  <overlaytarget id="popup-overlay-target"/>
 
   <vbox id="outer-box" flex="1">
     <vbox id="upper-box" flex="1">
@@ -105,44 +104,6 @@
         </splitter>
   
         <vbox flex="1">
-          <toolbox id="header-bar-tbox" crop="right" persist="collapsed">
-            <toolbar class="chromeclass-toolbar" id="header-bar-tbar"
-              grippytooltiptext="&header.tooltip;" crop="right">
-              <hbox flex="1" class="header-box">
-                <vbox flex="1%">
-                  <label class="header-label" value="&url.label;"/>
-                  <label class="header-label" value="&topic.label;"/>
-                </vbox>
-                <vbox flex="99%">
-                  <hbox flex="1">
-                    <hbox flex="1">
-                      <label class="header-data" id="header-url"
-                        ondraggesture="nsDragAndDrop.startDrag(event, tabDNDObserver);"
-                        crop="right"/>
-                    </hbox>
-                    <hbox flex="1">
-                      <label class="header-label" value="&mode.label;"/>
-                      <label class="header-data" id="channel-mode"
-                        crop="right"/>
-                    </hbox>
-                    <hbox flex="1">
-                      <label class="header-label" value="&users.label;"/>
-                      <label class="header-data" id="channel-users"/>
-                    </hbox>
-                  </hbox>
-                  <hbox flex="1">
-                    <hbox flex="1">
-                      <label class="header-data" id="channel-topic" flex="1"
-                        crop="right" onclick="onTopicEditStart()">text</label>
-                      <textbox flex="1" id="channel-topicedit" collapsed="true"/>
-                    </hbox>
-                  </hbox>
-                </vbox>
-              </hbox>
-  
-            </toolbar>
-          </toolbox>
-  
           <deck id="output-deck" flex="1"/>
         </vbox>
   

@@ -255,6 +255,20 @@ function Clone (obj)
     
 }
 
+function Copy(source, dest, overwrite)
+{
+    if (!dest)
+        dest = new Object();
+    
+    for (var p in source)
+    {
+        if (overwrite || !(p in dest))
+            dest[p] = source[p];
+    }
+    
+    return dest;
+}
+
 /*
  * matches a real object against one or more pattern objects.
  * if you pass an array of pattern objects, |negate| controls wether to check
@@ -329,6 +343,16 @@ function matchEntry (partialName, list)
 
     return ary;
     
+}
+
+function encodeChar(ch)
+{
+   return "%" + ch.charCodeAt(0).toString(16);
+}
+
+function escapeFileName(fileName)
+{
+    return fileName.replace(/[^\w\d.,#-_]/g, encodeChar);
 }
 
 function getCommonPfx (list)
@@ -412,6 +436,22 @@ function newObject(contractID, iface)
     
 }
 
+function getContentWindow(frame)
+{
+    try
+    {
+        if (!frame || !("contentWindow" in frame))
+            return false;
+
+        return frame.contentWindow;
+    }
+    catch (ex)
+    {
+        // throws exception is contentWindow is gone
+        return null;
+    }
+}
+
 function getPriv (priv)
 {
     if (!jsenv.HAS_SECURITYMANAGER)
@@ -431,6 +471,16 @@ function getPriv (priv)
     
     return rv;
     
+}
+
+function len(o)
+{
+    var l = 0;
+    
+    for (var p in o)
+        ++l;
+    
+    return l;
 }
 
 function keys (o)
@@ -728,7 +778,43 @@ function getSpecialDirectory(name)
     return utils.directoryService.get(name, Components.interfaces.nsIFile);
 }
 
-function encodeChar(ch)
+function getFileFromURLSpec(url)
 {
-   return "%" + ch.charCodeAt(0).toString(16);
+    const FILE_CTRID = "@mozilla.org/network/protocol;1?name=file";
+    const nsIFileProtocolHandler = Components.interfaces.nsIFileProtocolHandler;
+    
+    var handler = Components.classes[FILE_CTRID].createInstance();
+    handler = handler.QueryInterface(nsIFileProtocolHandler);
+    return handler.getFileFromURLSpec(url);
+}
+
+function getURLSpecFromFile (file)
+{
+    if (!file)
+        return null;
+
+    const IOS_CTRID = "@mozilla.org/network/io-service;1";
+    const LOCALFILE_CTRID = "@mozilla.org/file/local;1";
+
+    const nsIIOService = Components.interfaces.nsIIOService;
+    const nsILocalFile = Components.interfaces.nsILocalFile;
+    
+    if (typeof file == "string")
+    {
+        var fileObj =
+            Components.classes[LOCALFILE_CTRID].createInstance(nsILocalFile);
+        fileObj.initWithPath(file);
+        file = fileObj;
+    }
+    
+    var service = Components.classes[IOS_CTRID].getService(nsIIOService);
+    /* In sept 2002, bug 166792 moved this method to the nsIFileProtocolHandler
+     * interface, but we need to support older versions too. */
+    if ("getURLSpecFromFile" in service)
+        return service.getURLSpecFromFile(file);
+
+    var nsIFileProtocolHandler = Components.interfaces.nsIFileProtocolHandler;
+    var fileHandler = service.getProtocolHandler("file");
+    fileHandler = fileHandler.QueryInterface(nsIFileProtocolHandler);
+    return fileHandler.getURLSpecFromFile(file);
 }

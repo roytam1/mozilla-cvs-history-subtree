@@ -45,9 +45,9 @@
         "czReconnect", "czColorCodes", "czNickCompleteStr", "czCharset"];
 
     const OSBS_CTRID = "@mozilla.org/observer-service;1";
-    const Components.interfaces.nsIObserverService = nsIObserverService;
+    const nsIObserverService = Components.interfaces.nsIObserverService;
     var observerService =
-       Components.classes[OBS_CTRID].getService(nsIObserverService);
+       Components.classes[OSBS_CTRID].getService(nsIObserverService);
     observerService.notifyObservers(null, "charsetmenu-selected", "other");
 
   ]]>

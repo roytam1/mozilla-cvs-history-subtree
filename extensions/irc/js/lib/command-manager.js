@@ -158,57 +158,78 @@ function CommandManager (defaultBundle)
     this.defaultBundle = defaultBundle;
 }
 
+CommandManager.prototype.defaultFlags = 0;
+
 CommandManager.prototype.defineCommands =
 function cmgr_defcmds (cmdary)
 {
     var len = cmdary.length;
     var commands = new Object();
-    var bundle =  ("stringBundle" in cmdary ?
-                   cmdary.stringBundle : 
-                   this.defaultBundle);
+    var bundle = "stringBundle" in cmdary ? cmdary.stringBundle : null;
     
     for (var i = 0; i < len; ++i)
     {
         var name  = cmdary[i][0];
         var func  = cmdary[i][1];
         var flags = cmdary[i][2];
-        var usage = getMsgFrom(bundle, "cmd." + name + ".params", null, "");
-
-        var helpDefault;
-        var labelDefault = name;
-        var aliasFor;
-        if (flags & CMD_NO_HELP)
-            helpDefault = MSG_NO_HELP;
-
-        if (typeof func == "string")
-        {
-            var ary = func.match(/(\S+)/);
-            if (ary)
-                aliasFor = ary[1];
-            else
-                aliasFor = null;
-            helpDefault = getMsg (MSG_DEFAULT_ALIAS_HELP, func); 
-            if (aliasFor)
-                labelDefault = getMsgFrom (bundle, "cmd." + aliasFor + ".label",
-                                           null, name);
-        }
-
-        var label = getMsgFrom(bundle, "cmd." + name + ".label", null,
-                               labelDefault);
-        var help  = getMsgFrom(bundle, "cmd." + name + ".help", null,
-                               helpDefault);
-        var keystr = getMsgFrom (bundle, "cmd." + name + ".key", null, "");
-        var format = getMsgFrom (bundle, "cmd." + name + ".format", null, null);
-        var tip = getMsgFrom (bundle, "cmd." + name + ".tip", null, "");
-        var command = new CommandRecord (name, func, usage, help, label, flags,
-                                         keystr, tip, format);
-        if (aliasFor)
-            command.aliasFor = aliasFor;
-        this.addCommand(command);
+        var usage;
+        if (3 in cmdary[i])
+            usage = cmdary[i][3];
+        
+        var command = this.defineCommand(name, func, flags, usage, bundle);
         commands[name] = command;
+
     }
 
     return commands;
+}
+
+CommandManager.prototype.defineCommand =
+function cmdmgr_defcmd (name, func, flags, usage, bundle)
+{
+    if (!bundle)
+        bundle = this.defaultBundle;
+
+    var helpDefault;
+    var labelDefault = name;
+    var aliasFor;
+
+    if (typeof flags != "number")
+        flags = this.defaultFlags;
+    
+    if (flags & CMD_NO_HELP)
+        helpDefault = MSG_NO_HELP;
+    
+    if (typeof usage != "string")
+        usage = getMsgFrom(bundle, "cmd." + name + ".params", null, "");
+
+    if (typeof func == "string")
+    {
+        var ary = func.match(/(\S+)/);
+        if (ary)
+            aliasFor = ary[1];
+        else
+            aliasFor = null;
+        helpDefault = getMsg (MSG_DEFAULT_ALIAS_HELP, func); 
+        if (aliasFor)
+            labelDefault = getMsgFrom (bundle, "cmd." + aliasFor + ".label",
+                                       null, name);
+    }
+    
+    var label = getMsgFrom(bundle, "cmd." + name + ".label", null,
+                           labelDefault);
+    var help  = getMsgFrom(bundle, "cmd." + name + ".help", null,
+                           helpDefault);
+    var keystr = getMsgFrom (bundle, "cmd." + name + ".key", null, "");
+    var format = getMsgFrom (bundle, "cmd." + name + ".format", null, null);
+    var tip = getMsgFrom (bundle, "cmd." + name + ".tip", null, "");
+    var command = new CommandRecord (name, func, usage, help, label, flags,
+                                     keystr, tip, format);
+    this.addCommand(command);
+    if (aliasFor)
+        command.aliasFor = aliasFor;
+
+    return command;
 }
 
 CommandManager.prototype.installKeys =
@@ -553,7 +574,7 @@ function parse_parseargsraw (e)
                     paramName = e.command.argNames[i - 2];
                 var listName = paramName + "List";
                 if (!(listName in e))
-                    e[listName] = [e[paramName]];
+                    e[listName] = [ e[paramName] ];
             }
         }
     }
@@ -602,25 +623,12 @@ function parse_parseargsraw (e)
              * extra data... */
             display (getMsg(MSG_EXTRA_PARAMS, e.unparsedData), MT_WARN);
         }
-        else 
-        {
-            /* we've got no unparsed data, and we're not missing a required
-             * argument, go back and fill in |null| for any optional arguments
-             * not present on the comand line. */
-            initOptionals();
-        }
-    }
-    else
-    {
-        /* if no data was provided, check to see if the event is good enough
-         * on its own. */
-        var rv = this.isCommandSatisfied(e);
-        if (rv)
-            initOptionals();
-        return rv;
     }
 
-    return true;
+    var rv = this.isCommandSatisfied(e);
+    if (rv)
+        initOptionals();
+    return rv;
 }
 
 /**
@@ -820,7 +828,7 @@ function parse_repeat (e, name, cm)
         lastArg = e.command.argNames[e.currentArgIndex - 2];
 
     var listName = lastArg + "List";
-    e[listName] = [e[lastArg]];
+    e[listName] = [ e[lastArg] ];
     
     while (e.unparsedData)
     {

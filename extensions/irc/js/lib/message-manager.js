@@ -35,23 +35,44 @@
 
 function MessageManager()
 {
+    const UC_CTRID = "@mozilla.org/intl/scriptableunicodeconverter";
+    const nsIUnicodeConverter = 
+        Components.interfaces.nsIScriptableUnicodeConverter;
+
+    this.ucConverter =
+        Components.classes[UC_CTRID].getService(nsIUnicodeConverter);
     this.defaultBundle = null;
     this.bundleList = new Array();
 }
 
 MessageManager.prototype.addBundle = 
-function mm_addbundle (bundlePath)
+function mm_addbundle(bundlePath, targetWindow)
+{
+    var bundle = srGetStrBundle(bundlePath);
+    this.bundleList.push(bundle);
+
+    this.importBundle(bundle, targetWindow, this.bundleList.length - 1);
+
+    return bundle;
+}
+
+MessageManager.prototype.importBundle =
+function mm_importbundle(bundle, targetWindow, index)
 {
     const nsIPropertyElement = Components.interfaces.nsIPropertyElement;
 
+    if (!targetWindow)
+        targetWindow = window;
+
+    if (typeof index == "undefined")
+        index = arrayIndexOf(this.bundleList, bundle);
+    
     var pfx;
-    if (this.bundleList.length == 0)
+    if (index == 0)
         pfx = "";
     else
-        pfx = this.bundleList.length + ":";
+        pfx = index + ":";
 
-    var bundle = srGetStrBundle(bundlePath);
-    this.bundleList.push(bundle);
     var enumer = bundle.getSimpleEnumeration();
 
     while (enumer.hasMoreElements())
@@ -67,16 +88,73 @@ function mm_addbundle (bundlePath)
             else
                 constValue = prop.value.replace (/^\"/, "").replace (/\"$/, "");
 
-            window[constName] = constValue;
+            targetWindow[constName] = constValue;
         }
     }
 
     if (this.bundleList.length == 1)
         this.defaultBundle = bundle;
-    
-    return bundle;
 }
 
+MessageManager.prototype.checkCharset =
+function mm_checkset(charset)
+{
+    try
+    {
+        this.ucConverter.charset = charset;
+    }
+    catch (ex)
+    {
+        return false;
+    }
+    
+    return true;
+}
+
+MessageManager.prototype.toUnicode =
+function mm_tounicode(msg, charset)
+{
+    try
+    {
+        this.ucConverter.charset = charset;
+        msg = this.ucConverter.ConvertToUnicode(msg);
+    }
+    catch (ex)
+    {
+        dd ("caught exception " + ex + " converting " + msg + " to charset " +
+            charset);
+    }
+
+    return msg;
+}
+
+MessageManager.prototype.fromUnicode =
+function mm_fromunicode(msg, charset)
+{
+    if (charset != this.ucConverter.charset)
+        this.ucConverter.charset = charset;
+
+    try
+    {
+        if ("Finish" in this.ucConverter)
+        {
+            msg = this.ucConverter.ConvertFromUnicode(msg);
+            this.ucConverter.Finish();
+        }
+        else
+        {
+            msg = this.ucConverter.ConvertFromUnicode(msg + " ");
+            msg = msg.substr(0, msg.length - 1);
+        }
+    }
+    catch (ex)
+    {
+        dd ("caught exception " + ex + " converting " + msg + " to charset " +
+            charset);
+    }
+    
+    return msg;
+}
 
 MessageManager.prototype.getMsg = 
 function mm_getmsg (msgName, params, deflt)

@@ -49,6 +49,10 @@
     <keyset id="dynamic-keys"/>
     <popupset id="dynamic-popups"/>
 
+    <!-- tooltip thingy -->
+    <tooltip id="html-tooltip-node" onpopupshowing="return onTooltip(event);"/>
+    <tooltip id="xul-tooltip-node" onpopupshowing="return onTooltip(event);"/>
+
     <!-- Commands -->
     <commandset id="chatzilla-commands">
 

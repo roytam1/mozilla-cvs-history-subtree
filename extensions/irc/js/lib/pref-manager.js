@@ -46,7 +46,7 @@ function PrefManager (branchName)
         if (!r)
             return;
         
-        var oldValue = r.realValue ? r.realValue : r.defaultValue;
+        var oldValue = (r.realValue != null) ? r.realValue : r.defaultValue;
         r.realValue = prefManager.getPref(prefName, PREF_RELOAD);
         prefManager.onPrefChanged(prefName, r.realValue, oldValue);
     };
@@ -68,12 +68,18 @@ function PrefManager (branchName)
     this.prefBranchInternal =
         this.prefBranch.QueryInterface(nsIPrefBranchInternal);
     this.prefBranchInternal.addObserver("", this.observer, false);
+
+    this.valid = true;
 }
 
 PrefManager.prototype.destroy =
 function pm_destroy()
 {
-    this.prefBranchInternal.removeObserver("", this.observer);
+    if (this.valid)
+    {
+        this.prefBranchInternal.removeObserver("", this.observer);
+        this.valid = false;
+    }
 }
 
 PrefManager.prototype.getBranch =
@@ -150,7 +156,10 @@ PrefManager.prototype.addPrefs =
 function pm_addprefs(prefSpecs)
 {
     for (var i = 0; i < prefSpecs.length; ++i)
-        this.addPref(prefSpecs[i][0], prefSpecs[i][1]);
+    {
+        this.addPref(prefSpecs[i][0], prefSpecs[i][1],
+                     2 in prefSpecs[i] ? prefSpecs[i][2] : null);
+    }
 }
 
 PrefManager.prototype.addDeferredPrefs =
@@ -184,7 +193,7 @@ function pm_arrayupdate(prefName)
     if (!ASSERT(record, "Unknown pref: " + prefName))
         return;
 
-    if (!record.realValue)
+    if (record.realValue == null)
         record.realValue = record.defaultValue;
     
     if (!ASSERT(record.realValue instanceof Array, "Pref is not an array"))
@@ -272,7 +281,7 @@ function pm_getpref(prefName, reload)
         // if the pref doesn't exist, ignore the exception.
     }
 
-    if (!realValue)
+    if (realValue == null)
         return defaultValue;
 
     record.realValue = realValue;
@@ -305,6 +314,9 @@ function pm_setpref(prefName, value)
     }
     
     var defaultValue = record.defaultValue;
+
+    if (typeof defaultValue == "function")
+        defaultValue = defaultValue(prefName);
     
     if (typeof defaultValue == "boolean")
     {
@@ -326,8 +338,9 @@ function pm_setpref(prefName, value)
     }
     
     this.prefService.savePrefFile(null);
-    
+
     record.realValue = value;
+    
     return value;
 }
 

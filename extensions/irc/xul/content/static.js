@@ -1,27 +1,41 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/ 
+ * 
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License. 
  *
  * The Original Code is ChatZilla
+ * 
+ * The Initial Developer of the Original Code is
+ * Netscape Communications Corporation
+ * Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.
  *
- * The Initial Developer of the Original Code is New Dimensions Consulting,
- * Inc. Portions created by New Dimensions Consulting, Inc. are
- * Copyright (C) 1999 New Dimenstions Consulting, Inc. All
- * Rights Reserved.
+ * Alternatively, the contents of this file may be used under the
+ * terms of the GNU Public License (the "GPL"), in which case the
+ * provisions of the GPL are applicable instead of those above.
+ * If you wish to allow use of your version of this file only
+ * under the terms of the GPL and not to allow others to use your
+ * version of this file under the MPL, indicate your decision by
+ * deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL.  If you do not delete
+ * the provisions above, a recipient may use your version of this
+ * file under either the MPL or the GPL.
  *
  * Contributor(s):
- *  Robert Ginda, rginda@netscape.com, original author
+ *  Robert Ginda, <rginda@netscape.com>, original author
  *  Chiaki Koufugata chiaki@mozilla.gr.jp UI i18n 
  *  Samuel Sieb, samuel@sieb.net, MIRC color codes, munger menu, and various
  */
+
+const __cz_version   = "0.9.14";
+const __cz_condition = "red";
 
 var warn;
 var ASSERT;
@@ -40,13 +54,11 @@ if (DEBUG)
                      return true;
                  }
              }
-}    
+}
 else
     dd = warn = TEST = ASSERT = function (){};
 
 var client = new Object();
-
-client.version = "0.9.5";
 
 client.TYPE = "IRCClient";
 client.COMMAND_CHAR = "/";
@@ -102,116 +114,6 @@ CIRCChannel.prototype.MAX_MESSAGES = 300;
 
 CIRCChanUser.prototype.MAX_MESSAGES = 200;
 
-function toUnicode (msg, charset)
-{
-    if (!("ucConverter" in client))
-        return msg;
-    
-    if (charset)
-        client.ucConverter.charset = charset;
-    else
-        client.ucConverter.charset = client.prefs["charset"];
-
-    try
-    {
-        return client.ucConverter.ConvertToUnicode(msg);
-    }
-    catch (ex)
-    {
-        dd ("caught exception " + ex + " converting " + msg + " to charset " +
-            charset);
-    }
-
-    return msg;
-}
-
-function fromUnicode (msg, charset)
-{
-    if (!("ucConverter" in client))
-        return msg;
-    
-    if (charset)
-        client.ucConverter.charset = charset;
-    else
-        client.ucConverter.charset = client.prefs["charset"];
-
-    if ("Finish" in client.ucConverter)
-    {
-        msg = client.ucConverter.ConvertFromUnicode(msg);
-        client.ucConverter.Finish();
-    }
-    else
-    {
-        msg = client.ucConverter.ConvertFromUnicode(msg + " ");
-        msg = msg.substr(0, msg.length - 1);
-    }
-    
-    return msg;
-}
-
-function checkCharset (charset)
-{
-    var ex;
-    var converter;
-    
-    try
-    {
-        const UC_CTRID = "@mozilla.org/intl/scriptableunicodeconverter";
-        const nsIUnicodeConverter = 
-            Components.interfaces.nsIScriptableUnicodeConverter;
-        converter =
-            Components.classes[UC_CTRID].getService(nsIUnicodeConverter);
-
-        converter.charset = charset;
-    }
-    catch (ex)
-    {
-        dd ("Caught exception setting charset to " + charset + "\n" + ex);
-        return false;
-    }
-
-    return true;
-}
-function setCharset (charset)
-{
-    client.prefs["charset"] = charset;
-    
-    if (!charset)
-    {
-        delete client.ucConverter;
-        client.eventPump.removeHookByName("uc-hook");
-        return true;
-    }
-    
-    var ex;
-    
-    try
-    {
-        
-        if (!("ucConverter" in client))
-        {
-            const UC_CTRID = "@mozilla.org/intl/scriptableunicodeconverter";
-            const nsIUnicodeConverter = 
-                Components.interfaces.nsIScriptableUnicodeConverter;
-            client.ucConverter =
-                Components.classes[UC_CTRID].getService(nsIUnicodeConverter);
-        }
-        
-        client.ucConverter.charset = charset;
-        
-    }
-    catch (ex)
-    {
-        dd ("Caught exception setting charset to " + charset + "\n" + ex);
-        delete client.ucConverter;
-        client.prefs["charset"] = "";
-        client.eventPump.removeHookByName("uc-hook");
-        return false;
-    }
-
-    return true;
-}
-
 function init()
 {
     client.networks = new Object();
@@ -235,9 +137,20 @@ function init()
     initPrefs();
     initNetworks();
     initMenus();
-    setClientOutput();
     initStatic();
     initHandlers();
+
+    // start logging.  nothing should call display() before this point.
+    if (client.prefs["log"])
+       client.openLogFile(client);
+
+    client.display(getMsg("welcome"), "HELLO");
+    setCurrentObject(client);
+
+    importFromFrame("updateHeader");
+    importFromFrame("setHeaderState");
+    importFromFrame("changeCSS");
+
     processStartupScripts();
 
     client.commandManager.installKeys(document);
@@ -251,106 +164,166 @@ function init()
 
 function initStatic()
 {
-    CIRCNetwork.prototype.INITIAL_NICK = client.prefs["nickname"];
-    CIRCNetwork.prototype.INITIAL_NAME = client.prefs["username"];
-    CIRCNetwork.prototype.INITIAL_DESC = client.prefs["desc"];
-    CIRCServer.prototype.VERSION_RPLY  = getMsg(MSG_VERSION_REPLY,
-                                                [client.version,
-                                                 navigator.userAgent]);
+    CIRCServer.prototype.VERSION_RPLY =
+        getMsg(MSG_VERSION_REPLY, [__cz_version, navigator.userAgent]);
+
+    client.mainWindow = window;
 
     const nsISound = Components.interfaces.nsISound;
     client.sound =
         Components.classes["@mozilla.org/sound;1"].createInstance(nsISound);
 
-    if (client.prefs["charset"])
-        setCharset(client.prefs["charset"]);
-
     multilineInputMode(client.MULTILINE);
     
     var ary = navigator.userAgent.match (/;\s*([^;\s]+\s*)\).*\/(\d+)/);
     if (ary)
-        client.userAgent = "ChatZilla " + client.version + " [Mozilla " + 
+    {
+        client.userAgent = "ChatZilla " + __cz_version + " [Mozilla " + 
             ary[1] + "/" + ary[2] + "]";
+    }
     else
-        client.userAgent = "ChatZilla " + client.version + " [" + 
+    {
+        client.userAgent = "ChatZilla " + __cz_version + " [" + 
             navigator.userAgent + "]";
+    }
 
     client.statusBar = new Object();
     
-    client.statusBar["header-url"] =
-        document.getElementById ("header-url");
-    client.statusBar["server-nick"] =
-        document.getElementById ("server-nick");
-    client.statusBar["channel-mode"] =
-        document.getElementById ("channel-mode");
-    client.statusBar["channel-users"] =
-        document.getElementById ("channel-users");
-    client.statusBar["channel-topic"] =
-        document.getElementById ("channel-topic");
-    client.statusBar["channel-topicedit"] =
-        document.getElementById ("channel-topicedit");
+    client.statusBar["server-nick"] = document.getElementById ("server-nick");
 
     client.statusElement = document.getElementById ("status-text");
     client.defaultStatus = getMsg ("defaultStatus");
 
-    client.display (getMsg("welcome"), "HELLO");
-    setCurrentObject (client);
-    setInterval ("onNotifyTimeout()", client.NOTIFY_TIMEOUT);
+    client.logFile = null;
+    setInterval("onNotifyTimeout()", client.NOTIFY_TIMEOUT);
     
-    if (client.prefs["log"])
-       client.startLogging(client);
-
-    client.localPrefs = client.prefManager.getBranch("viewList.client.");
     client.defaultCompletion = client.COMMAND_CHAR + "help ";
+
+    client.deck = document.getElementById('output-deck');
 }
 
 function initNetworks()
 {
-    client.networks["efnet"] =
-        new CIRCNetwork ("efnet",
-                         [{name: "irc.mcs.net", port: 6667},
-                          {name: "irc.prison.net", port: 6667},
-                          {name: "irc.freei.net", port: 6667},
-                          {name: "irc.magic.ca", port: 6667}],
-                         client.eventPump);
-    client.networks["moznet"] =
-        new CIRCNetwork ("moznet", [{name: "irc.mozilla.org", port: 6667}],
-                         client.eventPump);
-    client.networks["hybridnet"] =
-        new CIRCNetwork ("hybridnet", [{name: "irc.ssc.net", port: 6667}],
-                         client.eventPump);
-    client.networks["slashnet"] =
-        new CIRCNetwork ("slashnet", [{name: "irc.slashnet.org", port:6667}],
-                         client.eventPump);
-    client.networks["dalnet"] =
-        new CIRCNetwork ("dalnet", [{name: "irc.dal.net", port:6667}],
-                         client.eventPump);
-    client.networks["undernet"] =
-        new CIRCNetwork ("undernet", [{name: "irc.undernet.org", port:6667}],
-                         client.eventPump);
-    client.networks["webbnet"] =
-        new CIRCNetwork ("webbnet", [{name: "irc.webbnet.org", port:6667}],
-                         client.eventPump);
-    client.networks["quakenet"] =
-        new CIRCNetwork ("quakenet", [{name: "irc.quakenet.org", port:6667}],
-                         client.eventPump);
-    client.networks["freenode"] =
-        new CIRCNetwork ("freenode",         
-                         [{name: "irc.freenode.net", port:6667}],
-                         client.eventPump);
+    client.addNetwork("moznet",[{name: "irc.mozilla.org", port: 6667}]);
+    client.addNetwork("hybridnet", [{name: "irc.ssc.net", port: 6667}]);
+    client.addNetwork("slashnet", [{name: "irc.slashnet.org", port:6667}]);
+    client.addNetwork("dalnet", [{name: "irc.dal.net", port:6667}]);
+    client.addNetwork("undernet", [{name: "irc.undernet.org", port:6667}]);
+    client.addNetwork("webbnet", [{name: "irc.webbnet.org", port:6667}]);
+    client.addNetwork("quakenet", [{name: "irc.quakenet.org", port:6667}]);
+    client.addNetwork("freenode", [{name: "irc.freenode.net", port:6667}]);
+    client.addNetwork("efnet",
+                      [{name: "irc.mcs.net", port: 6667},
+                       {name: "irc.prison.net", port: 6667},
+                       {name: "irc.freei.net", port: 6667},
+                       {name: "irc.magic.ca", port: 6667}]);
+}
 
-    client.primNet = client.networks["efnet"];
+function importFromFrame(method)
+{
+    client.__defineGetter__(method, import_wrapper);
+    CIRCNetwork.prototype.__defineGetter__(method, import_wrapper);
+    CIRCChannel.prototype.__defineGetter__(method, import_wrapper);
+    CIRCUser.prototype.__defineGetter__(method, import_wrapper);
+
+    function import_wrapper()
+    {
+        var dummy = function(){};
+
+        if (!("frame" in this))
+            return dummy;
+            
+        try
+        {
+            var window = getContentWindow(this.frame)
+            if (window && "initialized" in window && window.initialized &&
+                method in window)
+            {
+                return window[method];
+            }
+        }
+        catch (ex)
+        {
+            ASSERT(0, "Caught exception calling: " + method + "\n" + ex);
+        }
+
+        return dummy;
+    };
 }
 
 function processStartupScripts()
 {
-    client.userScripts = new Array();
-    var urls = client.prefs["initialScripts"];
-    for (var i = 0; i < urls.length; ++i)
+    client.plugins = new Array();
+    var scripts = client.prefs["initialScripts"];
+    for (var i = 0; i < scripts.length; ++i)
     {
-        client.userScripts[i] = new Object();
-        client.load(urls[i], client.userScripts[i]);
+        if (scripts[i].search(/^file:|chrome:/i) != 0)
+        {
+            display(getMsg(MSG_ERR_INVALID_SCHEME, scripts[i]), MT_ERROR);
+            continue;
+        }
+
+        var path = getFileFromURLSpec(scripts[i]);
+
+        if (path.isDirectory())
+            loadPluginDirectory(path);
+        else
+            loadLocalFile(path);
     }
+}
+
+function loadPluginDirectory(localPath, recurse)
+{
+    if (typeof recurse == "undefined")
+        recurse = 1;
+
+    var initPath = localPath.clone();
+    initPath.append("init.js");
+    if (initPath.exists())
+        loadLocalFile(initPath);
+
+    if (recurse < 1)
+        return;
+
+    var enumer = localPath.directoryEntries;
+    while (enumer.hasMoreElements())
+    {
+        var entry = enumer.getNext();
+        entry = entry.QueryInterface(Components.interfaces.nsILocalFile);
+        if (entry.isDirectory())
+            loadPluginDirectory(entry, recurse - 1);
+    }
+}
+
+function loadLocalFile(localFile)
+{
+    var url = getURLSpecFromFile(localFile);
+    var glob = new Object();
+    dispatch("load", {url: url, scope: glob});
+}
+
+function getPluginById(id)
+{
+    for (var i = 0; i < client.plugins.length; ++i)
+    {
+        if (client.plugins[i].id == id)
+            return client.plugins[i];
+        
+    }
+
+    return null;
+}
+
+function getPluginIndexById(id)
+{
+    for (var i = 0; i < client.plugins.length; ++i)
+    {
+        if (client.plugins[i].id == id)
+            return i;
+        
+    }
+
+    return -1;
 }
 
 function processStartupURLs()
@@ -503,31 +476,27 @@ function insertMailToLink (matchText, containerTag)
 
 function insertChannelLink (matchText, containerTag, eventData)
 {
-    var encodedMatchText = fromUnicode(matchText);
+    var bogusChannels =
+        /^#(include|error|define|if|ifdef|else|elsif|endif|\d+)$/i;
 
-    if (!("network" in eventData) || 
-        matchText.search
-            (/^#(include|error|define|if|ifdef|else|elsif|endif|\d+)$/i) != -1)
-
+    if (!eventData.network || matchText.search(bogusChannels) != -1)
     {
-        containerTag.appendChild (document.createTextNode(matchText));
+        containerTag.appendChild(document.createTextNode(matchText));
         return;
     }
     
+    var encodedMatchText = fromUnicode(matchText, eventData.sourceObject);
     var anchor = document.createElementNS ("http://www.w3.org/1999/xhtml",
                                            "html:a");
     anchor.setAttribute ("href", eventData.network.getURL() +
-                         escape (encodedMatchText));
+                         escape(encodedMatchText));
     anchor.setAttribute ("class", "chatzilla-link");
-    //anchor.setAttribute ("target", "_content");
     insertHyphenatedWord (matchText, anchor);
     containerTag.appendChild (anchor);
-    
 }
 
 function insertBugzillaLink (matchText, containerTag)
 {
-
     var number = matchText.match (/(\d+)/)[1];
     
     var anchor = document.createElementNS ("http://www.w3.org/1999/xhtml",
@@ -608,8 +577,8 @@ function insertSmiley (emoticon, containerTag)
      * after it with a chatzilla-emote:after css rule. using
      * chatzilla-emote-txt:after is not good enough because it does not allow us
      * to turn off the emoticon text, but keep the image.  ie.
-     * chatzilla-emote-txt { display: none; } turns off chatzilla-emote-txt:after
-     * as well.*/
+     * chatzilla-emote-txt { display: none; } turns off
+     * chatzilla-emote-txt:after as well.*/
     span = document.createElementNS ("http://www.w3.org/1999/xhtml",
                                      "html:span");
     span.setAttribute ("class", "chatzilla-emote");
@@ -880,7 +849,7 @@ function getUserlistContext(cx)
 
 function msgIsImportant (msg, sourceNick, network)
 {
-    re = network.stalkExpression;
+    var re = network.stalkExpression;
     if (msg.search(re) != -1 || sourceNick && sourceNick.search(re) == 0)
         return true;
 
@@ -944,37 +913,6 @@ function playSound (file)
     }
 }
 
-function fillInTooltip(tipElement, id)
-{
-  const XLinkNS = "http://www.w3.org/1999/xlink";
-
-  var retVal = false;
-
-  var titleText = null;
-  var XLinkTitleText = null;
-  
-  while (!titleText && !XLinkTitleText && tipElement) {
-    if (tipElement.nodeType == Node.ELEMENT_NODE) {
-      titleText = tipElement.getAttribute("title");
-      XLinkTitleText = tipElement.getAttributeNS(XLinkNS, "title");
-    }
-    tipElement = tipElement.parentNode;
-  }
-
-  var texts = [titleText, XLinkTitleText];
-  var tipNode = document.getElementById(id);
-
-  for (var i = 0; i < texts.length; ++i) {
-    var t = texts[i];
-    if (t && t.search(/\S/) >= 0) {
-      tipNode.setAttribute("label", t);
-      retVal = true;
-    }
-  }
-
-  return retVal;
-}
-
 /* timer-based mainloop */
 function mainStep()
 {
@@ -997,8 +935,11 @@ function dispatch(text, e, isInteractive, flags)
     if (typeof isInteractive == "undefined")
         isInteractive = false;
     
-    if (!e || !("sourceObject" in e))
-        e = getObjectDetails(client.currentObject, e);
+    if (!e)
+        e = new Object();
+
+    if (!("sourceObject" in e))
+        e.__proto__ = getObjectDetails(client.currentObject);
     
     if (!("isInteractive" in e))
         e.isInteractive = isInteractive;
@@ -1009,7 +950,8 @@ function dispatch(text, e, isInteractive, flags)
     /* split command from arguments */
     var ary = text.match(/(\S+) ?(.*)/);
     e.commandText = ary[1];
-    e.inputData =  ary[2] ? stringTrim(ary[2]) : "";
+    if (ary[2])
+        e.inputData = stringTrim(ary[2]);
     
     /* list matching commands */
     ary = client.commandManager.list(e.commandText, flags);
@@ -1020,6 +962,13 @@ function dispatch(text, e, isInteractive, flags)
     {            
         case 0:
             /* no match, try again */
+            if (e.server && e.server.isConnected &&
+                client.prefs["guessCommands"])
+            {
+                return dispatch("quote", {inputData: e.commandText + " " +
+                                                     e.inputData});
+            }
+
             display(getMsg(MSG_NO_CMDMATCH, e.commandText), MT_ERROR);
             break;
             
@@ -1070,9 +1019,9 @@ function displayUsageError (e, details)
     {
         display (details, MT_ERROR);
     }
-    
-    display (getMsg(MSG_FMT_USAGE, [e.command.name, e.command.usage]),
-             MT_USAGE);
+
+    //display (getMsg(MSG_FMT_USAGE, [e.command.name, e.command.usage]),
+    //         MT_USAGE);
 }
 
 function dispatchCommand (command, e, flags)
@@ -1122,31 +1071,6 @@ function dispatchCommand (command, e, flags)
     
     e.command = command;
 
-    if (e.command.flags & CMD_NEED_NET)
-    {
-        if (!e.network)
-        {
-            display(getMsg(MSG_ERR_IMPROPER_VIEW, e.command.name),
-                    MT_ERROR);
-            return null;
-        }
-
-        if (!e.network.isConnected())
-        {
-            display(MSG_ERR_NOT_CONNECTED, MT_ERROR);
-            return null;
-        }
-    }
-    
-    if (e.command.flags & CMD_NEED_CHAN)
-    {
-        if (!e.channel)
-        {
-            display(getMsg(MSG_ERR_IMPROPER_VIEW, e.command.name), MT_ERROR);
-            return null;
-        }
-    }
-    
     if (!e.command.enabled)
     {
         /* disabled command */
@@ -1156,9 +1080,6 @@ function dispatchCommand (command, e, flags)
     }
     
     var h, i;
-    
-    if ("beforeHooks" in e.command)
-        callHooks (e.command, true);
     
     if (typeof e.command.func == "function")
     {
@@ -1171,6 +1092,9 @@ function dispatchCommand (command, e, flags)
         }
         else
         {
+            if ("beforeHooks" in e.command)
+                callHooks (e.command, true);
+    
             if ("dbgDispatch" in client && client.dbgDispatch)
             {
                 var str = "";
@@ -1198,6 +1122,9 @@ function dispatchCommand (command, e, flags)
     else if (typeof e.command.func == "string")
     {
         /* dispatch an alias (semicolon delimited list of subcommands) */
+        if ("beforeHooks" in e.command)
+            callHooks (e.command, true);
+
         var commandList = e.command.func.split(";");
         for (i = 0; i < commandList.length; ++i)
         {
@@ -1216,57 +1143,19 @@ function dispatchCommand (command, e, flags)
                  MT_ERROR);
         return null;
     }
-
+    
     if ("afterHooks" in e.command)
         callHooks (e.command, false);
-
+    
     return ("returnValue" in e) ? e.returnValue : null;
 }
 
-/*
-function getMsg (msgName)
-{
-    var restCount = arguments.length - 1;
-
-    if (!("bundle" in client))
-    {       
-        client.bundle = 
-            srGetStrBundle("chrome://chatzilla/locale/chatzilla.properties");
-    }
-    
-    try 
-    {
-        if (restCount == 1 && arguments[1] instanceof Array)
-        {
-            return client.bundle.formatStringFromName (msgName, arguments[1], 
-                                                       arguments[1].length);
-        }
-        else if (restCount > 0)
-        {
-            var subPhrases = new Array();
-            for (var i = 1; i < arguments.length; ++i)
-                subPhrases.push(arguments[i]);
-            return client.bundle.formatStringFromName (msgName, subPhrases,
-                                                         subPhrases.length);
-        }
-
-        return client.bundle.GetStringFromName (msgName);
-    }
-    catch (ex)
-    {
-        dd ("caught exception getting value for ``" + msgName + "''\n" + ex +
-            "\n" + getStackTrace());
-        return msgName;
-    }
-}
-*/
-
 function openQueryTab (server, nick)
-{    
+{
     var user = server.addUser(nick);
     if (!("messages" in user))
         user.displayHere (getMsg(MSG_QUERY_OPENED, user.properNick));
-    server.sendData ("WHO " + nick + "\n");
+    server.sendData ("WHOIS " + nick + "\n");
     return user;
 }
 
@@ -1305,17 +1194,6 @@ function arraySpeak (ary, single, plural)
     
 }
 
-function quicklistCallback (element, ndx, ary) 
-{   
-    /* Check whether the selected attribute == true */
-    if (element.getAttribute("selected") == "true")
-    {
-        /* extract the nick data from the element */
-        /* Hmmm, nice walk ... */
-        ary.push(element.childNodes[0].childNodes[2].childNodes[0].nodeValue);
-    }    
-}
-
 function getObjectDetails (obj, rv)
 {
     if (!rv)
@@ -1330,7 +1208,6 @@ function getObjectDetails (obj, rv)
     rv.sourceObject = obj;
     rv.TYPE = obj.TYPE;
     rv.parent = ("parent" in obj) ? obj.parent : null;
-    rv.charset = client.prefs["charset"];
     rv.user = null;
     rv.channel = null;
     rv.server = null;
@@ -1344,7 +1221,6 @@ function getObjectDetails (obj, rv)
             rv.channelName = obj.unicodeName;
             rv.server = rv.channel.parent;
             rv.network = rv.server.parent;
-            rv.charset = rv.channel.charset;
             break;
 
         case "IRCUser":
@@ -1415,12 +1291,6 @@ function addDynamicRule (rule)
 
     var pos = rules.cssRules.length;
     rules.insertRule (rule, pos);
-}
-
-function setClientOutput(doc) 
-{
-    client.deck = document.getElementById('output-deck');
-    //XXXcreateHighlightMenu();
 }
 
 function createHighlightMenu()
@@ -1783,7 +1653,7 @@ function gotoIRCURL (url)
                 targetObject.display(msg, "PRIVMSG", "ME!",
                                      client.currentObject);
             }
-            targetObject.say(fromUnicode(msg));
+            targetObject.say(fromUnicode(msg, targetObject));
             setCurrentObject(targetObject);
         }
     }
@@ -1806,7 +1676,7 @@ function setTopicText (text)
     topic.appendChild(span);
 }
     
-function updateNetwork(obj)
+function updateNetwork()
 {
     var o = getObjectDetails (client.currentObject);
 
@@ -1824,7 +1694,6 @@ function updateNetwork(obj)
                                                  client.currentObject.getURL());
     client.statusBar["header-url"].setAttribute("name", 
                                                  client.currentObject.name);
-    client.statusBar["server-nick"].setAttribute("value", nick);
 }
 
 function updateChannel (obj)
@@ -1910,12 +1779,11 @@ function updateTitle (obj)
             var source = "";
             if (client.currentObject.name)
             {
-                source = client.currentObject.name + "@" +
-                    client.currentObject.host;
+                source = "<" + client.currentObject.name + "@" +
+                    client.currentObject.host +">";
             }
             tstring = getMsg(MSG_TITLE_USER, [nick, source]);
-            //client.statusBar["channel-topic"].setAttribute("value", tstring);
-            client.statusBar["channel-topic"].firstChild.data = tstring;
+            nick = "me" in o.parent ? o.parent.me.properNick : MSG_TITLE_NONICK;
             break;
 
         default:
@@ -1935,7 +1803,7 @@ function updateTitle (obj)
     }
 
     document.title = tstring;
-
+    client.statusBar["server-nick"].setAttribute("value", nick);
 }
 
 function multilineInputMode (state)
@@ -2045,7 +1913,7 @@ function getFrame()
     if (client.deck.childNodes.length == 0)
         return undefined;
     var panel = client.deck.selectedPanel;
-    return ("contentWindow" in panel ? panel.contentWindow : undefined);
+    return getContentWindow(panel);
 }
 
 client.__defineGetter__ ("currentFrame", getFrame);
@@ -2097,39 +1965,27 @@ function setCurrentObject (obj)
     delete client.activityList[vk];
     client.deck.selectedIndex = vk;
 
-    updateNetwork();
-    updateChannel();
-    updateTitle ();
+    updateTitle();
 
     if (client.PRINT_DIRECTION == 1)
-        scrollDown(obj.frame, false);
-    
-    onTopicEditEnd();
-
-    if (client.currentObject.TYPE == "IRCChannel")
-        client.statusBar["channel-topic"].setAttribute ("editable", "true");
-    else
-        client.statusBar["channel-topic"].removeAttribute ("editable");
+        scrollDown(obj.frame, false);    
 }
 
 function checkScroll(frame)
 {
-    if (!frame || !("contentWindow" in frame))
+    var window = getContentWindow(frame);
+    if (!window)
         return false;
 
-    var w = frame.contentWindow;
-    return ((w.document.height - (w.innerHeight + w.pageYOffset)) < 160);
+    return (window.document.height - window.innerHeight -
+            window.pageYOffset) < 160;
 }
 
 function scrollDown(frame, force)
 {
-    if (!frame || !("contentWindow" in frame))
-        return;
-
-    var w = frame.contentWindow;
-
-    if (force || checkScroll(frame))
-        w.scrollTo(0, w.document.height);
+    var window = getContentWindow(frame);
+    if (window && (force || checkScroll(frame)))
+        window.scrollTo(0, window.document.height);
 }
 
 /* valid values for |what| are "superfluous", "activity", and "attention".
@@ -2258,7 +2114,7 @@ function getFrameForDOMWindow(window)
     for (var i = 0; i < client.deck.childNodes.length; i++)
     {
         frame = client.deck.childNodes[i];
-        if (frame.contentWindow == window)
+        if (getContentWindow(frame) == window)
             return frame;
     }
     return undefined;
@@ -2295,18 +2151,19 @@ function client_statechange (webProgress, request, stateFlags, status)
         frame = getFrameForDOMWindow(webProgress.DOMWindow);
         if (!frame)
         {
-            dd("can't find frame for window")
+            dd("can't find frame for window");
             webProgress.removeProgressListener(this);
             return;
         }
 
-        if (frame.contentWindow && "initOutputWindow" in frame.contentWindow)
+        var cwin = getContentWindow(frame);
+        if (cwin && "initOutputWindow" in cwin)
         {
-            var url = frame.source.prefs["motif.current"];
-            frame.contentWindow.initOutputWindow(client, frame.source, url);
+            cwin.getMsg = getMsg;
+            cwin.initOutputWindow(client, frame.source);
+            scrollDown(frame, true);
+            webProgress.removeProgressListener(this);
         }
-
-        frame.contentDocument.body.appendChild(frame.source.messages);
     }
 }
 
@@ -2438,6 +2295,7 @@ function getTabForObject (source, create)
         tb.setAttribute ("onclick", "onTabClick(" + id.quote() + ");");
         tb.setAttribute ("crop", "right");
         tb.setAttribute ("context", "context:tab");
+        tb.setAttribute ("tooltip", "xul-tooltip-mode");
         
         tb.setAttribute ("class", "tab-bottom view-button");
         tb.setAttribute ("id", id);
@@ -2458,7 +2316,7 @@ function getTabForObject (source, create)
         browser.setAttribute("class", "output-container");
         browser.setAttribute("type", "content");
         browser.setAttribute("flex", "1");
-        browser.setAttribute("tooltip", "aHTMLTooltip");
+        browser.setAttribute("tooltip", "html-tooltip-node");
         browser.setAttribute("context", "context:messages");
         //browser.setAttribute ("onload", "scrollDown(true);");
         browser.setAttribute("onclick",
@@ -2473,6 +2331,7 @@ function getTabForObject (source, create)
                              "contentAreaDNDObserver);");
         browser.source = source;
         source.frame = browser;
+        ASSERT(client.deck, "no deck?");
         client.deck.appendChild (browser);
         syncOutputFrame (source);
     }
@@ -2499,7 +2358,8 @@ function tabdnd_dover (aEvent, aFlavour, aDragSession)
 contentDropObserver.onDrop =
 function tabdnd_drop (aEvent, aXferData, aDragSession)
 {
-    var url = transferUtils.retrieveURLFromData(aXferData.data, aXferData.flavour.contentType);
+    var url = transferUtils.retrieveURLFromData(aXferData.data,
+                                                aXferData.flavour.contentType);
     if (!url || url.search(client.linkRE) == -1)
         return;
     
@@ -2607,27 +2467,25 @@ function cli_connect(name)
 
     if (network.isConnected())
     {
-        netobj.display(getMsg(MSG_ALREADY_CONNECTED, name));
+        network.display(getMsg(MSG_ALREADY_CONNECTED, name));
         return true;
     }
 
     if (network.connecting)
         return true;
     
-    if (network.prefs["log"])
-       client.startLogging(network);
-
     if (network.prefs["nickname"] == DEFAULT_NICK)
         network.prefs["nickname"] = prompt(MSG_ENTER_NICK, DEFAULT_NICK);
     
     if (!("connecting" in network))
         network.display(getMsg(MSG_NETWORK_CONNECTING, name));
 
-    network.INITIAL_NICK = network.prefs["nickname"];
-    network.INITIAL_NAME = network.prefs["username"];
-    network.INITIAL_DESC = network.prefs["desc"];
     network.connecting = true;
     network.connect();
+
+    network.updateHeader();
+    client.updateHeader();
+    updateTitle();
 
     return true;
 }
@@ -2673,14 +2531,8 @@ function cli_say(msg)
         case "IRCUser":
         case "IRCChanUser":
             msg = filterOutput (msg, "PRIVMSG");
-            client.currentObject.display (msg, "PRIVMSG", "ME!",
-                                          client.currentObject);
-            if (client.currentObject.TYPE == "IRCChannel") {
-                var charset = client.currentObject.charset;
-                client.currentObject.say (fromUnicode(msg, charset));
-            } else {
-                client.currentObject.say (fromUnicode(msg));
-            }
+            display (msg, "PRIVMSG", "ME!", client.currentObject);
+            client.currentObject.say(fromUnicode(msg));
             break;
 
         case "IRCClient":
@@ -2689,11 +2541,12 @@ function cli_say(msg)
 
         default:
             if (msg != "")
-                client.currentObject.display 
-                    (getMsg("cli_sayMsg", client.currentObject.TYPE), "ERROR");
+            {
+                display(getMsg("cli_sayMsg", client.currentObject.TYPE),
+                        MT_ERROR);
+            }
             break;
     }
-
 }
 
 CIRCNetwork.prototype.__defineGetter__("prefs", net_getprefs);
@@ -2827,7 +2680,7 @@ CIRCChannel.prototype.display =
 CIRCChannel.prototype.displayHere =
 CIRCUser.prototype.displayHere =
 function __display(message, msgtype, sourceObj, destObj)
-{            
+{
     var canMergeData = false;
     var logText = "";
 
@@ -2850,15 +2703,17 @@ function __display(message, msgtype, sourceObj, destObj)
                 obj.setAttribute ("msg-source", fromAttr);
    }
 
+    if (!msgtype)
+        msgtype = MT_INFO;
+
     var blockLevel = false; /* true if this row should be rendered at block
                              * level, (like, if it has a really long nickname
                              * that might disturb the rest of the layout)     */
     var o = getObjectDetails (this);          /* get the skinny on |this|     */
     var me;
     if (o.server && "me" in o.server)
-    {
         me = o.server.me;    /* get the object representing the user          */
-    }
+
     if (sourceObj == "ME!") sourceObj = me;   /* if the caller passes "ME!"   */
     if (destObj == "ME!") destObj = me;       /* substitute the actual object */
 
@@ -3033,7 +2888,7 @@ function __display(message, msgtype, sourceObj, destObj)
             msgSource.appendChild (newInlineText (nick));
         }
         msgRow.appendChild (msgSource);
-        canMergeData = client.prefs["collapseMsgs"];
+        canMergeData = this.prefs["collapseMsgs"];
     }
     else
     {
@@ -3142,13 +2997,16 @@ function __display(message, msgtype, sourceObj, destObj)
 
     if (this.prefs["log"])
     {
+        if (!this.logFile)
+            client.openLogFile(this);
+        
         try
         {
             this.logFile.write(logText + "\n");
         }
         catch (ex)
         {
-            this.displayHere(getMsg("cli_ilogMsg7", this.logFile.path),
+            this.displayHere(getMsg(MSG_LOGFILE_WRITE_ERROR, this.logFile.path),
                              "ERROR");
             try
             {
@@ -3218,13 +3076,15 @@ function addHistory (source, obj, mergeData)
         }
         
         if ("frame" in source)
-            needScroll = checkScroll (source.frame);
+            needScroll = checkScroll(source.frame);
         if (obj)
             tbody.appendChild (obj);
     }
     else
+    {
         tbody.insertBefore (obj, source.messages.firstChild);
-    
+    }
+
     if (source.MAX_MESSAGES)
     {
         if (typeof source.messageCount != "number")
@@ -3236,8 +3096,9 @@ function addHistory (source, obj, mergeData)
             if (client.PRINT_DIRECTION == 1)
             {
                 var height = tbody.firstChild.scrollHeight;
-                var x = source.frame.contentWindow.pageXOffset;
-                var y = source.frame.contentWindow.pageYOffset;
+                var window = getContentWindow(source.frame);
+                var x = window.pageXOffset;
+                var y = window.pageYOffset;
                 tbody.removeChild (tbody.firstChild);
                 --source.messageCount;
                 while (tbody.firstChild &&
@@ -3248,7 +3109,7 @@ function addHistory (source, obj, mergeData)
                     tbody.removeChild (tbody.firstChild);
                 }
                 if (!checkScroll(source.frame) && (y > height))
-                    source.frame.contentWindow.scrollTo(x, y - height);
+                    window.scrollTo(x, y - height);
             }
             else
             {
@@ -3316,16 +3177,18 @@ function cli_gccount ()
 
 client.quit =
 function cli_quit (reason)
-{    
+{
     for (var n in client.networks)
-        if ("primServ" in client.networks[n])
-            client.networks[n].quit (reason);   
+    {
+        if (client.networks[n].isConnected())
+            client.networks[n].quit(reason);
+    }
 }
 
-/* gets a tab-complete match for the line of text specified by |line|.  wordStart
- * is the position within |line| that starts the word being matched, wordEnd
- * marks the end position.  |cursorPos| marks the position of the caret in the
- * textbox.
+/* gets a tab-complete match for the line of text specified by |line|.
+ * wordStart is the position within |line| that starts the word being matched,
+ * wordEnd marks the end position.  |cursorPos| marks the position of the caret
+ * in the textbox.
  */
 client.performTabMatch =
 function gettabmatch_usr (line, wordStart, wordEnd, word, cursorPos)
@@ -3347,69 +3210,35 @@ function gettabmatch_usr (line, wordStart, wordEnd, word, cursorPos)
     return matches;
 }
 
-client.startLogging =
+client.openLogFile =
 function cli_startlog (view)
 {
-    var dir = getSpecialDirectory("ProfD");
-    switch (view.TYPE)
-    {
-        case "IRCNetwork":
-            view.logFile = view.name.replace(/:/, ".") + ".log";
-            break;
-        case "IRCChannel":
-        case "IRCUser":
-            view.logFile = view.parent.parent.name.replace(/:/, ".") +
-                           "," + view.name + ".log";
-            break;
-        case "IRCClient":
-            view.logFile = "client.log";
-            break;
-        default:
-            view.displayHere(getMsg("cli_ilogMsg4"), "ERROR");
-            return;
-    }
-
-    view.logFile = view.logFile.replace(/[^\w\d.,#-_]/g, encodeChar);
-    dir.append(view.logFile);
-    view.logFile = dir.path;
-
     try
     {
-        view.logFile = fopen(view.logFile, ">>");
+        view.logFile = fopen(view.prefs["logFileName"], ">>");
     }
     catch (ex)
     {
-        view.displayHere(getMsg("cli_ilogMsg5", view.logFile), "ERROR");
+        view.displayHere(getMsg(MSG_LOGFILE_ERROR, view.logFile), MT_ERROR);
+        view.logFile = null;
+        view.prefs["log"] = false;
         return;
     }
 
-    view.displayHere(getMsg("cli_ilogMsg6", view.logFile.path));
-    try
-    {
-        view.logFile.write("Logging started at " + new Date() + "\n");
-    }
-    catch (ex)
-    {
-        view.displayHere(getMsg("cli_ilogMsg7", view.logFile.path),
-                         "ERROR");
-        view.logFile.close();
-        return;
-    }
-
-    view.logging = true;
-    view.localPrefs.setBoolPref("logging", true);
+    view.displayHere(getMsg(MSG_LOGFILE_OPENED,
+                            getURLSpecFromFile(view.logFile.path)));
 }
 
-client.stopLogging =
+client.closeLogFile =
 function cli_stoplog (view)
 {
-    if (view.logging)
+    view.displayHere(MSG_LOGFILE_CLOSING);
+
+    if (view.logFile)
     {
-        view.localPrefs.clearUserPref("logging");
         view.logFile.close();
-        view.logging = false;
+        view.logFile = null;
     }
-    view.displayHere(getMsg("cli_ilogMsg3"));
 }
 
 CIRCChannel.prototype.performTabMatch =
@@ -3429,9 +3258,10 @@ function gettabmatch_other (line, wordStart, wordEnd, word, cursorpos)
 
     var details = getObjectDetails(this);
 
-    if ("channel" in details && word == details.channel.name[0])
+    if (details.channel && word == details.channel.name[0])
     {
-        /* When we have #<tab>, we just want the current channel, if possible. */
+        /* When we have #<tab>, we just want the current channel, 
+           if possible. */
         matchList.push (details.channel.unicodeName);
     }
     else
@@ -3445,7 +3275,7 @@ function gettabmatch_other (line, wordStart, wordEnd, word, cursorpos)
                 matchList.push (users[n].nick);
         }
         
-        if ("server" in details)
+        if (details.server)
         {
             channels = details.server.channels;
             for (var c in channels)
@@ -3540,8 +3370,8 @@ function usr_graphres()
 CIRCUser.prototype.updateGraphResource =
 function usr_updres()
 {
-    if (!ASSERT(this.TYPE == "IRCChanUser"),
-        "cuser.updateGraphResource called on wrong object")
+    if (!ASSERT(this.TYPE == "IRCChanUser",
+                "cuser.updateGraphResource called on wrong object"))
     {
         return;
     }

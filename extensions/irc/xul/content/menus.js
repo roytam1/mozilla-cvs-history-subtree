@@ -83,9 +83,27 @@ function initMenus()
         items:
         [
          ["delete-view", {enabledif: "client.viewsArray.length > 1"}],
+         ["quit"],
          ["disconnect"],
          ["-"],
-         [navigator.platform.search(/win/i) == -1 ? "quit" : "exit"]
+         [navigator.platform.search(/win/i) == -1 ? 
+          "quit-mozilla" : "exit-mozilla"]
+        ]
+    };
+
+    client.menuSpecs["popup:motifs"] = {
+        label: MSG_MNU_MOTIFS,
+        items:
+        [
+         ["motif-default",
+                 {type: "checkbox",
+                  checkedif: isMotif("default")}],
+         ["motif-dark",
+                 {type: "checkbox",
+                  checkedif: isMotif("dark")}],
+         ["motif-light",
+                 {type: "checkbox",
+                  checkedif: isMotif("light")}],
         ]
     };
 
@@ -96,16 +114,6 @@ function initMenus()
         [
          [">popup:showhide"],
          ["-"],
-         ["motif-default",
-                 {type: "checkbox",
-                  checkedif: isMotif("default")}],
-         ["motif-dark",
-                 {type: "checkbox",
-                  checkedif: isMotif("dark")}],
-         ["motif-light",
-                 {type: "checkbox",
-                  checkedif: isMotif("light")}],
-         ["-"],
          ["toggle-oas",
                  {type: "checkbox",
                   checkedif: "isStartupURL(cx.sourceObject.getURL())"}],
@@ -115,6 +123,7 @@ function initMenus()
                   enabledif: "client.viewsArray.length > 1"}],
          ["leave",       {visibleif: "cx.channel && cx.channel.active"}],
          ["-"],
+         [">popup:motifs"],
          ["toggle-ccm",
                  {type: "checkbox",
                   checkedif: "client.prefs['collapseMsgs']"}],
@@ -144,7 +153,7 @@ function initMenus()
                   checkedif: "isVisible('view-tabs')"}],
          ["header",
                  {type: "checkbox",
-                  checkedif: "isVisible('header-bar-tbox')"}],
+                  checkedif: "cx.sourceObject.prefs['displayHeader']"}],
          ["userlist",
                  {type: "checkbox",
                   checkedif: "isVisible('user-list-box')"}],
@@ -155,8 +164,8 @@ function initMenus()
         ]
     };
 
-    client.menuSpecs["context:userlist"] = {
-        getContext: getUserlistContext,
+    client.menuSpecs["popup:opcommands"] = {
+        label: MSG_MNU_OPCOMMANDS,
         items:
         [
          ["op",         {enabledif: "cx.channel.iAmOp() && !cx.user.isOp"}],
@@ -165,6 +174,16 @@ function initMenus()
          ["devoice",    {enabledif: "cx.channel.iAmOp() && cx.user.isVoice"}],
          ["-"],
          ["kick",       {enabledif: "cx.channel.iAmOp()"}],
+         ["kick-ban",       {enabledif: "cx.channel.iAmOp()"}]
+        ]
+    };
+
+
+    client.menuSpecs["context:userlist"] = {
+        getContext: getUserlistContext,
+        items:
+        [
+         [">popup:opcommands"],
          ["whois"],
          ["query"],
          ["version"],
@@ -186,26 +205,12 @@ function initMenus()
          ["delete-view", {enabledif: "client.viewsArray.length > 1"}],
          ["disconnect"],
          ["-"],
-         ["op",
-                 {enabledif: "cx.TYPE == 'IRCChannel' && " +
-                  "cx.channel.iAmOp() && !cx.user.isOp"}],
-         ["deop",
-                 {enabledif: "cx.TYPE == 'IRCChannel' && " +
-                  "cx.channel.iAmOp() && cx.user.isOp"}],
-         ["voice",
-                 {enabledif: "cx.TYPE == 'IRCChannel' && " +
-                  "cx.channel.iAmOp() && !cx.user.isVoice"}],
-         ["devoice",
-                 {enabledif: "cx.TYPE == 'IRCChannel' && " +
-                  "cx.channel.iAmOp() && cx.user.isVoice"}],
-         ["-"],
-         ["kick",       
-                 {enabledif: "cx.TYPE == 'IRCChannel' && " +
-                  "cx.channel.iAmOp()"}],
+         [">popup:opcommands"],
          ["whois"],
          ["query"],
          ["version"],
          ["-"],
+         [">popup:motifs"],
          ["toggle-oas",
                  {type: "checkbox",
                   checkedif: "isStartupURL(cx.sourceObject.getURL())"}],

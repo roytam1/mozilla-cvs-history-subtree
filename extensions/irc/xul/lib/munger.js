@@ -89,6 +89,7 @@ function CMungerEntry (name, regex, className, enable, tagName)
 function CMunger () 
 {
     this.entries = new Object();
+    this.tagName = "html:span";
 }
 
 CMunger.prototype.enabled = true;
@@ -113,9 +114,11 @@ function mng_munge (text, containerTag, data)
     var wbr, newClass;
     
     if (!containerTag)
+    {
         containerTag =
             document.createElementNS ("http://www.w3.org/1999/xhtml",
                                       this.tagName);
+    }
 
     if (this.enabled)
     {

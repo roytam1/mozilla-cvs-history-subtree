@@ -101,7 +101,7 @@ function initReadPrefs()
         //"nickname": ["CIRCNetwork.prototype.INITIAL_NICK",     "IRCMonkey"],
         //"username": ["CIRCNetwork.prototype.INITIAL_NAME",       "chatzilla"],
         //"desc":     ["CIRCNetwork.prototype.INITIAL_DESC","New Now Know How"],
-        "reconnect": ["CIRCNetwork.prototype.stayingPower",               true],
+        //"reconnect": ["CIRCNetwork.prototype.stayingPower",               true],
         "multiline":         ["client.MULTILINE",                        false],
         "colorCodes":        ["client.COLORCODES",                       false],
         "defaultNet":        ["client.DEFAULT_NETWORK",               "moznet"],
