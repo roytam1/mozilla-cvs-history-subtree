@@ -1983,7 +1983,10 @@ void nsImapProtocol::ProcessSelectedStateURL()
                   mailurl->SetAddToMemoryCache(PR_FALSE);
                   // need to proxy this over to the ui thread
                   if (m_imapMessageSink)
+                  {
+                    m_imapMessageSink->SetNotifyDownloadedLines(PR_FALSE);
                     m_imapMessageSink->SetImageCacheSessionForUrl(mailurl);
+                  }
                   
                 }
                 SetContentModified(modType);  // This will be looked at by the cache
