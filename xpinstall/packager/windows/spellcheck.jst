@@ -1,0 +1,14 @@
+var err = initInstall("Spellchecker", "Spellcheck", "$Version$"); 
+logComment("initInstall: " + err);
+
+var fProgram = getFolder("Program");
+logComment("fProgram: " + fProgram);
+
+err = addDirectory("", "$Version$", "bin", fProgram, "", true);
+logComment("addDirectory: " + err);
+
+err = getLastError();
+if (err==SUCCESS)
+    performInstall(); 
+else
+    cancelInstall(err);
