@@ -147,6 +147,16 @@ static NS_METHOD ReadDataOut(nsIInputStream* in,
                              PRUint32 *writeCount)
 {
   nsPNGDecoder *decoder = NS_STATIC_CAST(nsPNGDecoder*, closure);
+
+  if (setjmp(decoder->mPNG->jmpbuf)) {
+    png_destroy_read_struct(&decoder->mPNG, &decoder->mInfo, NULL);
+    // is this NS_ERROR_FAILURE enough?
+
+    decoder->mRequest->Cancel(NS_BINDING_ABORTED); // XXX is this the correct error ?
+
+    return NS_ERROR_FAILURE;
+  }
+
   *writeCount = decoder->ProcessData((unsigned char*)fromRawSegment, count);
   return NS_OK;
 }
@@ -162,15 +172,6 @@ PRUint32 nsPNGDecoder::ProcessData(unsigned char *data, PRUint32 count)
 NS_IMETHODIMP nsPNGDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PRUint32 *_retval)
 {
 //  PRUint32 sourceOffset = *_retval;
-
-  if (setjmp(mPNG->jmpbuf)) {
-    png_destroy_read_struct(&mPNG, &mInfo, NULL);
-    // is this NS_ERROR_FAILURE enough?
-
-    mRequest->Cancel(NS_BINDING_ABORTED); // XXX is this the correct error ?
-
-    return NS_ERROR_FAILURE;
-  }
 
   inStr->ReadSegments(ReadDataOut, this, count, _retval);
 

@@ -66,7 +66,7 @@ end_callback(png_structp png_ptr, png_infop info_ptr);
   inline PRUint32 ProcessData(unsigned char *data, PRUint32 count);
 
 
-private:
+public:
   nsCOMPtr<nsIImageContainer> mImage;
   nsCOMPtr<nsIImageFrame> mFrame;
   nsCOMPtr<nsIImageRequest> mRequest;
