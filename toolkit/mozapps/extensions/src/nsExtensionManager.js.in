@@ -271,8 +271,12 @@ function ensureExtensionsFiles(aIsProfile)
       // mechanism for global items.
       if (aIsProfile) {
         try {      
-          (getFile(getDirKey(aIsProfile), [DIR_CR_CHROME, FILE_CR_CHROMEDS])).remove(false);
-          (getDir(getDirKey(aIsProfile), [DIR_CR_CHROME, DIR_CR_OVERLAYINFO])).remove(true);
+          var chromedsFile = getFile(getDirKey(aIsProfile), [DIR_CR_CHROME, FILE_CR_CHROMEDS]);
+          if (chromedsFile.exists())
+            chromedsFile.remove(false);
+          var overlayinfoDir = getDir(getDirKey(aIsProfile), [DIR_CR_CHROME, DIR_CR_OVERLAYINFO]);
+          if (overlayinfoDir.exists())
+            overlayinfoDir.remove(true);
         }
         catch (e) { 
           dump("Extension System Warning: failed to remove chrome.rdf/overlay info because: " + e + "\n"); 
