@@ -28,16 +28,20 @@ LIBRARY_NAME		= netlib
 CPPSRCS			= \
 			  nsNetService.cpp    \
 			  nsNetThread.cpp     \
-			  nsRelatedLinks.cpp  \
 			  nsNetStream.cpp     \
 			  nsNetStreamLoader.cpp \
+			  nsRelatedLinks.cpp  \
 			  nsHttpUrl.cpp       \
 			  nsStubContext.cpp   \
 			  nsNetStubs.cpp      \
 			  nsNetIDs.cpp        \
+			  nsNetFile.cpp       \
 			  nsLoadAttribs.cpp   \
 			  nsNetFactory.cpp    \
 			  nsHttpURLFactory.cpp    \
+			  nsURL.cpp           \
+			  nsHTTPHandler.cpp   \
+			  nsHTTPInstance.cpp  \
 			  $(NULL)
 
 REQUIRES		= raptor js dbm nspr security pref xpcom util img \
@@ -45,20 +49,20 @@ REQUIRES		= raptor js dbm nspr security pref xpcom util img \
 			  httpurl gophurl remoturl netcnvts netlib
 
 EXPORTS = nsINetService.h       \
-          nsINetSupport.h		\
+          nsINetSupport.h	\
           nsIRelatedLinks.h     \
           nsIRefreshUrl.h       \
           nsIConnectionInfo.h   \
           nsIURLGroup.h         \
           nsINetlibURL.h        \
           nsIProtocol.h         \
-          nsIProtocolURLFactory.h   \
+          nsIProtocolURLFactory.h	\
           nsIUnicharStreamLoader.h	\
           $(NULL)
 
-ifdef ENABLE_TESTS
-DIRS += tests
-endif
+#ifdef ENABLE_TESTS
+# DIRS += tests
+#endif
 
 EXPORTS := $(addprefix $(srcdir)/, $(EXPORTS))
 
