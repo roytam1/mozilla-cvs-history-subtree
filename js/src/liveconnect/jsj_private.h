@@ -44,7 +44,7 @@
 #endif
 
 #ifdef XP_MAC
-#    include "prosdep.h"
+extern char *strdup(const char *source);  /* defined in NSPR */
 #endif
 
 #include "jsj_hash.h"        /* Hash tables */

@@ -261,6 +261,21 @@ typedef enum XP_FileType {
 	xpJSConfig                  /* Javascript 'jsc' config cache file */
 } XP_FileType;
 
+#if defined(XP_UNIX) || defined(XP_MAC)
+#define XP_NATIVE_DIRECTORY_SEPARATOR   '/'
+#define XP_NATIVE_PATH_SEPARATOR        ':'
+#elif defined(XP_WIN) || defined(XP_OS2)
+#define XP_NATIVE_DIRECTORY_SEPARATOR   '\\'
+#define XP_NATIVE_PATH_SEPARATOR        ';'
+#else
+#error
+#endif
+
+/*
+ * For backward compatibility.  The XP_NATIVE_ versions are preferred.
+ */
+#define PR_DIRECTORY_SEPARATOR   XP_NATIVE_DIRECTORY_SEPARATOR
+#define PR_PATH_SEPARATOR        XP_NATIVE_PATH_SEPARATOR
 
 #define XP_FILE_READ             "r"
 #define XP_FILE_READ_BIN         "rb"
