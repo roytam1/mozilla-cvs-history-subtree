@@ -429,7 +429,7 @@ PRBool nsWidget::OnResize(nsSizeEvent event)
   return DispatchWindowEvent(&event);
 }
 
-
+#if 0
 PRBool nsWidget::OnResize(nsRect &aRect)
 {
   nsSizeEvent event;
@@ -451,7 +451,7 @@ PRBool nsWidget::OnResize(nsRect &aRect)
 
   return result;
 }
-
+#endif
 
 //------
 // Move
