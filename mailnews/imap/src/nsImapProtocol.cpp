@@ -20,10 +20,11 @@
 #define FORCE_PR_LOG /* Allow logging in the release build */
 // as does this
 #define NS_IMPL_IDS
+#include "msgCore.h"  // for pre-compiled headers
+
 #include "nsIServiceManager.h"
 #include "nsICharsetConverterManager.h"
 
-#include "msgCore.h"  // for pre-compiled headers
 #include "nsMsgImapCID.h"
 #include "nsIEventQueueService.h"
 
@@ -39,6 +40,7 @@
 #include "nsIWebShell.h"
 #include "nsIImapService.h"
 #include "nsISocketTransportService.h"
+#include "nsXPIDLString.h"
 
 PRLogModuleInfo *IMAP;
 
@@ -272,6 +274,7 @@ nsresult nsImapProtocol::Initialize(nsIImapHostSessionList * aHostSessionList, n
 nsImapProtocol::~nsImapProtocol()
 {
 	PR_FREEIF(m_userName);
+
 	nsCRT::free(m_hostName);
 
 	PR_FREEIF(m_dataOutputBuf);
@@ -447,18 +450,17 @@ nsresult nsImapProtocol::SetupWithUrl(nsIURI * aURL, nsISupports* aConsumer)
 		{
 			// extract the file name and create a file transport...
 			PRInt32 port = IMAP_PORT;
-			char * hostName = nsnull;
+			nsXPIDLCString hostName;
 
 			NS_WITH_SERVICE(nsISocketTransportService, socketService, kSocketTransportServiceCID, &rv);
 
 			if (NS_SUCCEEDED(rv) && aURL)
 			{
 				aURL->GetPort(&port);
-				aURL->GetHost(&hostName);
+				aURL->GetHost(getter_Copies(hostName));
 
 				ClearFlag(IMAP_CONNECTION_IS_OPEN); 
 				rv = socketService->CreateTransport(hostName, port, getter_AddRefs(m_channel));
-				nsCRT::free(hostName);
 				
 				if (NS_SUCCEEDED(rv))
 					rv = m_channel->OpenOutputStream(0 /* start position */, getter_AddRefs(m_outputStream));
