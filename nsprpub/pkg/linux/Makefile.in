@@ -11,7 +11,7 @@ srcdir	    = @srcdir@
 VPATH	    = @srcdir@
 
 NAME        = sun-nspr
-RELEASE     = 1
+RELEASE     = 2
 TOPDIR      = /usr/src/redhat
 VERSION     = `grep PR_VERSION $(dist_includedir)/prinit.h \
                   | sed -e 's/"$$//' -e 's/.*"//' -e 's/ .*//'`
