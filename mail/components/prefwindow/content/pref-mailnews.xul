@@ -48,7 +48,7 @@
 #endif
 
 #ifdef XP_MACOSX
-    _elementIDs.push("mailnewsEnableNews");
+    _elementIDs.push("newMailNotificationBounce");
 #endif
 
   ]]>
