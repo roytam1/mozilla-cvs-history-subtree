@@ -2378,6 +2378,10 @@ GlobalWindowImpl::Alert(const nsAString& aString)
   // pending reflows.
   EnsureReflowFlushAndPaint();
 
+  // Reset popup state while opening a window to prevent the current
+  // state from being active the whole time a modal dialog is open.
+  nsAutoPopupStatePusher popupStatePusher(openAbused, PR_TRUE);
+
   return prompter->Alert(title, PromiseFlatString(*str).get());
 }
 
@@ -2413,6 +2417,10 @@ GlobalWindowImpl::Confirm(const nsAString& aString, PRBool* aReturn)
   // Before bringing up the window, unsuppress painting and flush
   // pending reflows.
   EnsureReflowFlushAndPaint();
+
+  // Reset popup state while opening a window to prevent the current
+  // state from being active the whole time a modal dialog is open.
+  nsAutoPopupStatePusher popupStatePusher(openAbused, PR_TRUE);
 
   return prompter->Confirm(title, str.get(), aReturn);
 }
@@ -2452,11 +2460,18 @@ GlobalWindowImpl::Prompt(const nsAString& aMessage,
   }
   NS_WARN_IF_FALSE(!isChrome, "chrome shouldn't be calling prompt(), use the prompt service");
 
-  rv = prompter->Prompt(title.get(),
-                        PromiseFlatString(aMessage).get(), nsnull,
-                        aSavePassword,
-                        PromiseFlatString(aInitial).get(),
-                        getter_Copies(uniResult), &b);
+  {
+    // Reset popup state while opening a window to prevent the current
+    // state from being active the whole time a modal dialog is open.
+    nsAutoPopupStatePusher popupStatePusher(openAbused, PR_TRUE);
+
+    rv = prompter->Prompt(title.get(),
+                          PromiseFlatString(aMessage).get(), nsnull,
+                          aSavePassword,
+                          PromiseFlatString(aInitial).get(),
+                          getter_Copies(uniResult), &b);
+  }
+
   NS_ENSURE_SUCCESS(rv, rv);
 
   if (uniResult && b) {
