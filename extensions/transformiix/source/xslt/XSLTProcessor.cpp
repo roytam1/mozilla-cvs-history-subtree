@@ -581,8 +581,8 @@ Document* XSLTProcessor::process
 
     NodeSet nodeSet;
     nodeSet.add(&xmlDocument);
-    ps->pushCurrentNode(&xmlDocument);
-    ps->getNodeSetStack()->push(&nodeSet);
+    ps.pushCurrentNode(&xmlDocument);
+    ps.getNodeSetStack()->push(&nodeSet);
 
       //-------------------------------------------------------/
      //- index templates and process top level xsl elements -/
