@@ -122,23 +122,32 @@ function openURL(aEvent)
 function handleHistoryClick(aEvent)
 {
   var tbo = gHistoryTree.treeBoxObject;
-  
+
   var row = { }, col = { }, obj = { };
   tbo.getCellAt(aEvent.clientX, aEvent.clientY, row, col, obj);
   
+  var x = { }, y = { }, w = { }, h = { };
+  tbo.getCoordsForCellItem(row.value, col.value, "image",
+                           x, y, w, h);
+  var mouseInGutter = aEvent.clientX < x.value;
+
   if (row.value == -1 || obj.value == "twisty")
     return;
   var modifKey = aEvent.shiftKey || aEvent.ctrlKey || aEvent.altKey || 
                  aEvent.metaKey  || aEvent.button == 1;
-  if (!modifKey) {
-    
-    if (tbo.view.isContainer(row.value)) {
-      tbo.view.toggleOpenState(row.value);
-      return;
-    }
-    if (aEvent.originalTarget.localName == "treechildren" && 
-        (aEvent.button == 0 || aEvent.button == 1))
-      openURL(aEvent);
+  if (!modifKey && tbo.view.isContainer(row.value)) {
+    tbo.view.toggleOpenState(row.value);
+    return;
+  }
+  if (!mouseInGutter && 
+      aEvent.originalTarget.localName == "treechildren" && 
+      (aEvent.button == 0 || aEvent.button == 1)) {
+    // Clear all other selection since we're loading a link now. We must
+    // do this *before* attempting to load the link since openURL uses
+    // selection as an indication of which link to load. 
+    tbo.selection.select(row.value);
+
+    openURL(aEvent);
   }
 }
 
