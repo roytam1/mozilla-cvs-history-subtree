@@ -53,7 +53,7 @@ const int kButtonMaxWidth = 200;
 const int kButtonHeight = 32;
 const int kButtonRightMargin = 14;		//  space between right edge of button and window
 const int kButtonBottomMargin = 12;		//  space between bottom edge of button and window
-const int kGeneralViewSpace = 9;			//  space between one view and another (vertially)
+const int kGeneralViewSpace = 9;			//  space between one view and another (vertically)
 const int kViewButtonSpace = 16;			//  space between the bottom view and the buttons
 const int kMaxFieldHeight = 100;
 const int kCheckBoxWidth = 20;
@@ -63,6 +63,30 @@ const int kStaticTextFieldHeight = 14;	//  height of non-editable non-bordered t
 const int kFieldLabelSpacer = 4;				//  space between a static label and an editabe text field (horizontal)
 const int kOtherAltButtonSpace = 25;		//  minimum space between the 'other' and 'alternate' buttons
 const int kButtonEndCapWidth = 14;
+const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed down to line up with checkbox
+
+
+//
+// QDCoordsView
+//
+// A view that uses the QD coordinate space (top left is (0,0))
+//
+
+@interface QDCoordsView : NSView
+{
+}
+@end
+
+@implementation QDCoordsView
+
+- (BOOL) isFlipped
+{
+  return YES;
+}
+
+@end
+
+#pragma mark -
 
 @interface nsAlertController (nsAlertControllerPrivateMethods)
 
@@ -658,7 +682,6 @@ const int kButtonEndCapWidth = 14;
 
 - (NSView*)getCheckboxView:(NSButton**)checkBoxPtr withLabel:(NSString*)label andWidth:(float)width
 {
-  // XXX to do: need to make it so that clicking on the label toggles the checkbox
   NSTextField* textField = [self getLabelView: label withWidth: width - kCheckBoxWidth];
   float height = NSHeight([textField frame]);
   
@@ -666,17 +689,26 @@ const int kButtonEndCapWidth = 14;
   if (height < kCheckBoxHeight)
     height = kCheckBoxHeight;
   
-  NSView* view = [[[NSView alloc] initWithFrame: NSMakeRect(0, 0, width, height)] autorelease];
+  // use a flipped view so we can more easily align everything at the top/left.
+  NSView* view = [[[QDCoordsView alloc] initWithFrame: NSMakeRect(0, 0, width, height)] autorelease];
   
-  [textField setFrameOrigin: NSMakePoint(kCheckBoxWidth, 0)];
   [view addSubview: textField];
+  [textField setFrameOrigin: NSMakePoint(kCheckBoxWidth, kLabelCheckboxAdjustment)];
   
-  NSButton* checkBox = [[[NSButton alloc] initWithFrame: NSMakeRect(0, height - kCheckBoxHeight, kCheckBoxWidth, kCheckBoxHeight)] autorelease];
+  NSButton* checkBox = [[[NSButton alloc] initWithFrame: NSMakeRect(0, 0, kCheckBoxWidth, kCheckBoxHeight)] autorelease];
   *checkBoxPtr = checkBox;
   [checkBox setButtonType: NSSwitchButton];
   [[checkBox cell] setControlSize: NSSmallControlSize];
   [view addSubview: checkBox];
   
+  // overlay the label with a transparent button that will push the checkbox
+  // when clicked on
+  NSButton* labelOverlay = [[[NSButton alloc] initWithFrame:[textField frame]] autorelease];
+  [labelOverlay setTransparent:YES];
+  [labelOverlay setTarget:[checkBox cell]];
+  [labelOverlay setAction:@selector(performClick:)];
+  [view addSubview:labelOverlay positioned:NSWindowAbove relativeTo:checkBox];
+
   return view;
 }
 
