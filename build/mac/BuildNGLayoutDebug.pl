@@ -39,7 +39,7 @@ $pull{all} 				= 0;
 $pull{moz}				= 0;
 $pull{runtime} 			= 0;
 
-$build{all} 			= 0;	# Turn off to do individual builds, or to do "most"
+$build{all} 			= 1;	# Turn off to do individual builds, or to do "most"
 $build{most} 			= 0;	# Turn off to do individual builds
 $build{dist} 			= 0;
 $build{dist_runtime}	= 0;	# Implied by $build{dist}
