@@ -740,6 +740,69 @@ obj_unwatch(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
 #endif /* JS_HAS_OBJ_WATCHPOINT */
 
+#if JS_HAS_NEW_OBJ_METHODS
+/*
+ * Prototype and property query methods, to complement the 'in' and
+ * 'instanceof' operators.
+ */
+
+/* Proposed ECMA 15.2.4.5. */
+static JSBool
+obj_hasOwnProperty(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
+                   jsval *rval)
+{
+    JSObject *obj2;
+    JSProperty *prop;
+    JSAtom *atom;
+    
+    atom = js_ValueToStringAtom(cx, *argv);
+    if (atom == NULL || !OBJ_LOOKUP_PROPERTY(cx, obj, (jsid)atom, &obj2, &prop))
+        return JS_FALSE;
+    *rval = (!prop || obj2 != obj) ? JSVAL_FALSE : JSVAL_TRUE;
+    if (prop)
+        OBJ_DROP_PROPERTY(cx, obj2, prop);
+    return JS_TRUE;
+}
+
+/* Proposed ECMA 15.2.4.6. */
+static JSBool
+obj_isPrototypeOf(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
+                  jsval *rval)
+{
+    JSBool b;
+
+    if (!js_IsDelegate(cx, obj, *argv, &b))
+        return JS_FALSE;
+    *rval = b ? JSVAL_TRUE : JSVAL_FALSE;
+    return JS_TRUE;
+}
+
+/* Proposed ECMA 15.2.4.7. */
+static JSBool
+obj_propertyIsEnumerable(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
+                         jsval *rval)
+{
+    JSObject *obj2;
+    JSProperty *prop;
+    JSAtom *atom;
+    uintN attrs;
+    JSBool ok;
+    
+    atom = js_ValueToStringAtom(cx, *argv);
+    if (atom == NULL || !OBJ_LOOKUP_PROPERTY(cx, obj, (jsid)atom, &obj2, &prop))
+        return JS_FALSE;
+    if (!prop) {
+        *rval = JSVAL_FALSE;
+        return JS_TRUE;
+    }
+    ok = OBJ_GET_ATTRIBUTES(cx, obj2, (jsid)atom, prop, &attrs);
+    if (ok)
+        *rval = (attrs & JSPROP_ENUMERATE) != 0 ? JSVAL_TRUE : JSVAL_FALSE;
+    OBJ_DROP_PROPERTY(cx, obj2, prop);
+    return ok;
+}
+#endif /* JS_HAS_NEW_OBJ_METHODS */
+
 static JSFunctionSpec object_methods[] = {
 #if JS_HAS_TOSOURCE
     {js_toSource_str,   js_obj_toSource,        0, 0, OBJ_TOSTRING_EXTRA},
@@ -750,6 +813,11 @@ static JSFunctionSpec object_methods[] = {
 #if JS_HAS_OBJ_WATCHPOINT
     {"watch",           obj_watch,              2},
     {"unwatch",         obj_unwatch,            1},
+#endif
+#if JS_HAS_NEW_OBJ_METHODS
+    {"hasOwnProperty",  obj_hasOwnProperty,     1},
+    {"isPrototypeOf",   obj_isPrototypeOf,      1},
+    {"propertyIsEnumerable", obj_propertyIsEnumerable, 1},
 #endif
     {0}
 };

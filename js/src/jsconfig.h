@@ -70,6 +70,7 @@
 #define JS_HAS_DEBUGGER_KEYWORD 0       /* has hook for debugger keyword */
 #define JS_HAS_ERROR_EXCEPTIONS 0       /* has error object hierarchy */
 #define JS_HAS_CATCH_GUARD      0       /* has exception handling catch guard */
+#define JS_HAS_NEW_OBJ_METHODS  0       /* has Object.prototype query methods */
 
 #elif JS_VERSION == 110
 
@@ -118,6 +119,7 @@
 #define JS_HAS_DEBUGGER_KEYWORD 0       /* has hook for debugger keyword */
 #define JS_HAS_ERROR_EXCEPTIONS 0       /* has error object hierarchy */
 #define JS_HAS_CATCH_GUARD      0       /* has exception handling catch guard */
+#define JS_HAS_NEW_OBJ_METHODS  0       /* has Object.prototype query methods */
 
 #elif JS_VERSION == 120
 
@@ -166,6 +168,7 @@
 #define JS_HAS_DEBUGGER_KEYWORD 0       /* has hook for debugger keyword */
 #define JS_HAS_ERROR_EXCEPTIONS 0       /* has error object hierarchy */
 #define JS_HAS_CATCH_GUARD      0       /* has exception handling catch guard */
+#define JS_HAS_NEW_OBJ_METHODS  0       /* has Object.prototype query methods */
 
 #elif JS_VERSION == 130
 
@@ -214,6 +217,7 @@
 #define JS_HAS_DEBUGGER_KEYWORD 1       /* has hook for debugger keyword */
 #define JS_HAS_ERROR_EXCEPTIONS 0       /* has error object hierarchy */
 #define JS_HAS_CATCH_GUARD      0       /* has exception handling catch guard */
+#define JS_HAS_NEW_OBJ_METHODS  0       /* has Object.prototype query methods */
 
 #elif JS_VERSION == 140
 
@@ -262,6 +266,7 @@
 #define JS_HAS_DEBUGGER_KEYWORD 1       /* has hook for debugger keyword */
 #define JS_HAS_ERROR_EXCEPTIONS 0       /* rt errors reflected as exceptions */
 #define JS_HAS_CATCH_GUARD      0       /* has exception handling catch guard */
+#define JS_HAS_NEW_OBJ_METHODS  0       /* has Object.prototype query methods */
 
 #define JS_HAS_DFLT_MSG_STRINGS 1       /* provides English error messages */
 
