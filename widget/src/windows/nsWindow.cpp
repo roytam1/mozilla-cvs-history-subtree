@@ -4919,15 +4919,18 @@ BOOL nsWindow::OnInputLangChange(HKL aHKL, LRESULT *oRetValue)
 	printf("OnInputLanguageChange\n");
 #endif
 
+  if(gKeyboardLayout != aHKL) {
+    gKeyboardLayout = aHKL;
+    *oRetValue = LangIDToCP((WORD)((DWORD)gKeyboardLayout & 0x0FFFF),
+                    gCurrentKeyboardCP);
+  }
+  ResetInputState();
 
-        if(gKeyboardLayout != aHKL) 
-        {
-          gKeyboardLayout = aHKL;
-	  *oRetValue = LangIDToCP((WORD)((DWORD)gKeyboardLayout & 0x0FFFF),
-                                  gCurrentKeyboardCP);
-        }
-	ResetInputState();
-	return PR_FALSE;   // always pass to child window
+  if (mIMEIsComposing)  {
+    HandleEndComposition();
+  }
+
+  return PR_FALSE;   // always pass to child window
 }
 //==========================================================================
 BOOL nsWindow::OnIMEChar(BYTE aByte1, BYTE aByte2, LPARAM aKeyState)
