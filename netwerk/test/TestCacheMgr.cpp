@@ -165,6 +165,7 @@ protected:
 
 static int gNumReaders = 0;
 static PRUint32 gTotalBytesRead = 0;
+static PRUint32 gTotalBytesWritten = 0;
 static PRUint32 gTotalDuration = 0;
 
 class nsReader : public nsIStreamListener {
@@ -184,9 +185,7 @@ public:
     }
 
     nsresult 
-    Init(nsIChannel *aChannel, nsITestDataStream* aRandomStream,
-         PRUint32 aExpectedStreamLength) {
-        mChannel = aChannel;
+    Init(nsITestDataStream* aRandomStream, PRUint32 aExpectedStreamLength) {
         mTestDataStream = aRandomStream;
         mExpectedStreamLength = aExpectedStreamLength;
         mRefCnt = 1;
@@ -237,8 +236,6 @@ public:
         gTotalBytesRead += mBytesRead;
         gTotalDuration += duration;
 
-        // Release channel
-        mChannel = 0;
         return NS_OK;
     }
 
@@ -247,7 +244,6 @@ protected:
     PRUint32             mBytesRead;
     nsITestDataStream*   mTestDataStream;
     PRUint32             mExpectedStreamLength;
-    nsCOMPtr<nsIChannel> mChannel;
 };
 
 NS_IMPL_ISUPPORTS2(nsReader, nsIStreamListener, nsIStreamObserver)
@@ -300,7 +296,7 @@ TestReadStream(nsICachedNetData *cacheEntry, nsITestDataStream *testDataStream,
     
     nsReader *reader = new nsReader;
     reader->AddRef();
-    rv = reader->Init(channel, testDataStream, expectedStreamLength);
+    rv = reader->Init(testDataStream, expectedStreamLength);
     NS_ASSERTION(NS_SUCCEEDED(rv), " ");
     
     rv = channel->AsyncRead(0, -1, 0, reader);
@@ -343,6 +339,8 @@ TestRead(nsINetDataCacheManager *aCache, PRUint32 aFlags)
     char *storedUriKey;
     PRUint32 testNum;
 
+    gTotalBytesRead = 0;
+    gTotalDuration = 0;
     for (testNum = 0; testNum < NUM_CACHE_ENTRIES; testNum++) {
         randomStream = new RandomStream(testNum);
         randomStream->ReadString(uriCacheKey, sizeof uriCacheKey - 1);
@@ -380,8 +378,9 @@ TestRead(nsINetDataCacheManager *aCache, PRUint32 aFlags)
         // Compare against stored protocol data
         char *storedProtocolData;
         PRUint32 storedProtocolDataLength;
-        rv = cacheEntry->GetProtocolPrivate(&storedProtocolDataLength, &storedProtocolData);
-        NS_ASSERTION(NS_SUCCEEDED(rv),
+        rv = cacheEntry->GetProtocolPrivate("test data", &storedProtocolDataLength, &storedProtocolData);
+        NS_ASSERTION(NS_SUCCEEDED(rv) &&
+                     storedProtocolDataLength == CACHE_PROTOCOL_PRIVATE_LENGTH,
                      "nsICachedNetData::GetProtocolPrivate() failed");
         randomStream->Match(storedProtocolData, storedProtocolDataLength);
 
@@ -412,7 +411,7 @@ TestRead(nsINetDataCacheManager *aCache, PRUint32 aFlags)
     rate *= NUM_CACHE_ENTRIES;
     rate *= 1000;
     rate /= (1024 * 1024);
-    printf("Read %d bytes at a rate of %5.1f MB per second \n",
+    printf("Read  %7d bytes at a rate of %5.1f MB per second \n",
            gTotalBytesRead, rate);
 
     return NS_OK;
@@ -436,6 +435,7 @@ FillCache(nsINetDataCacheManager *aCache, PRUint32 aFlags)
     PRUint32 testNum;
     RandomStream *randomStream;
 
+    gTotalBytesWritten = 0;
     PRIntervalTime startTime = PR_IntervalNow();
     
     for (testNum = 0; testNum < NUM_CACHE_ENTRIES; testNum++) {
@@ -464,14 +464,14 @@ FillCache(nsINetDataCacheManager *aCache, PRUint32 aFlags)
 
         // Record meta-data should be initially empty
         char *protocolDatap;
-        rv = cacheEntry->GetProtocolPrivate(&protocolDataLength, &protocolDatap);
+        rv = cacheEntry->GetProtocolPrivate("test data", &protocolDataLength, &protocolDatap);
         NS_ASSERTION(NS_SUCCEEDED(rv), " ");
         if ((protocolDataLength != 0) || (protocolDatap != 0))
             return NS_ERROR_FAILURE;
 
         // Store random data as meta-data
         randomStream->Read(protocolData, sizeof protocolData);
-        cacheEntry->SetProtocolPrivate(sizeof protocolData, protocolData);
+        cacheEntry->SetProtocolPrivate("test data", sizeof protocolData, protocolData);
 
         PRBool allowPartial = randomStream->Next() & 1;
         rv = cacheEntry->SetAllowPartial(allowPartial);
@@ -506,6 +506,7 @@ FillCache(nsINetDataCacheManager *aCache, PRUint32 aFlags)
             remaining -= amount;
         }
         outStream->Close();
+        gTotalBytesWritten += streamLength;
 
         // *Now* there should be an entry in the cache
         rv = aCache->Contains(cacheKey,
@@ -518,6 +519,13 @@ FillCache(nsINetDataCacheManager *aCache, PRUint32 aFlags)
     }
 
     PRIntervalTime endTime = PR_IntervalNow();
+
+    // Compute rate in MB/s
+    double rate = gTotalBytesWritten / PR_IntervalToMilliseconds(endTime - startTime);
+    rate *= 1000;
+    rate /= (1024 * 1024);
+    printf("Wrote %7d bytes at a rate of %5.1f MB per second \n",
+           gTotalBytesWritten, rate);
 
     return NS_OK;
 }

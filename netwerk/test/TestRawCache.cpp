@@ -196,8 +196,7 @@ public:
     }
 
     nsresult 
-    Init(nsIChannel *aChannel, nsITestDataStream* aRandomStream, PRUint32 aExpectedStreamLength) {
-        mChannel = aChannel;
+    Init(nsITestDataStream* aRandomStream, PRUint32 aExpectedStreamLength) {
         mTestDataStream = aRandomStream;
         mExpectedStreamLength = aExpectedStreamLength;
         mRefCnt = 1;
@@ -248,8 +247,6 @@ public:
         gTotalBytesRead += mBytesRead;
         gTotalDuration += duration;
 
-        // Release channel
-        mChannel = 0;
         return NS_OK;
     }
 
@@ -258,7 +255,6 @@ protected:
     PRUint32             mBytesRead;
     nsITestDataStream*   mTestDataStream;
     PRUint32             mExpectedStreamLength;
-    nsCOMPtr<nsIChannel> mChannel;
 };
 
 NS_IMPL_ISUPPORTS2(nsReader, nsIStreamListener, nsIStreamObserver)
@@ -308,8 +304,7 @@ TestReadStream(nsINetDataCacheRecord *record, nsITestDataStream *testDataStream,
                  "nsINetDataCacheRecord::GetContentLength() busted ?");
     
     nsReader *reader = new nsReader;
-    reader->AddRef();
-    rv = reader->Init(channel, testDataStream, expectedStreamLength);
+    rv = reader->Init(testDataStream, expectedStreamLength);
     NS_ASSERTION(NS_SUCCEEDED(rv), " ");
     
     rv = channel->AsyncRead(0, -1, 0, reader);
@@ -597,6 +592,7 @@ FillCache(nsINetDataCache *cache)
     PRUint32 testNum;
     char *data;
     RandomStream *randomStream;
+    PRUint32 totalBytesWritten = 0;
 
     PRIntervalTime startTime = PR_IntervalNow();
     
@@ -656,6 +652,7 @@ FillCache(nsINetDataCache *cache)
             remaining -= amount;
         }
         outStream->Close();
+        totalBytesWritten += streamLength;
 
         PRUint32 afterOccupancy;
         rv = cache->GetStorageInUse(&afterOccupancy);
@@ -674,6 +671,13 @@ FillCache(nsINetDataCache *cache)
     }
 
     PRIntervalTime endTime = PR_IntervalNow();
+
+    // Compute rate in MB/s
+    double rate = totalBytesWritten / PR_IntervalToMilliseconds(endTime - startTime);
+    rate *= 1000;
+    rate /= (1024 * 1024);
+    printf("Wrote %7d bytes at a rate of %5.1f MB per second \n",
+           totalBytesWritten, rate);
 
     return NS_OK;
 }
