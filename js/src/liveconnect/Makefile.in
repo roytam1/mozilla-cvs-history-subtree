@@ -30,12 +30,13 @@ ifdef NSJVM
 DIRS		= classes
 endif
 
-
 MODULE		= java
 LIBRARY_NAME	= jsj
 
-REQUIRES	= java js applet nspr img util layer xpcom caps oji plugin
-
+REQUIRES	= java js applet img util layer
+ifdef MOZ_OJI
+REQUIRES	+= xpcom
+endif
 CSRCS = jsj.c		  \
 	jsj_JSObject.c	  \
 	jsj_JavaArray.c	  \
@@ -50,8 +51,18 @@ CSRCS = jsj.c		  \
 	jsj_hash.c	  \
 	jsj_method.c	  \
 	jsj_utils.c
- nsCLiveconnect.c  \
-	nsCLiveconnectFactory.c
+
+ifdef MOZ_OJI
+CPPSRCS		=	        \
+ nsCLiveconnect.cpp  \
+	nsCLiveconnectFactory.cpp
+endif
+
+LLIBS=$(NSPR_LIBS) $(DIST)/lib/js$(MOZ_BITS)$(VERSION_NUMBER).lib
+ifdef MOZ_OJI
+LLIBS += $(DIST)/lib/xpcom32.lib	
+endif
+ 
 
 
 ifdef NSJVM
@@ -62,6 +73,12 @@ EXPORTS		= $(srcdir)/jsjava.h \
 		  $(srcdir)/$(JNI_GEN_DIR)/netscape_javascript_JSObject.h \
 		  $(srcdir)/$(JNI_GEN_DIR)/netscape_javascript_JSException.h \
 		  $(NULL)
+ifdef MOZ_OJI
+EXPORTS		+=  $(srcdir)/nsILiveconnect.h \
+    $(srcdir)/nsISecureLiveconnect.h \
+    $(srcdir)/nsISecurityContext.h \
+		  $(NULL)
+endif
 
 
 
@@ -73,16 +90,16 @@ include $(topsrcdir)/config/rules.mk
 # These make rules only works on IRIX...sigh
 
 ifeq ($(OS_ARCH),IRIX)
-jsj_nodl.c: $(OBJDIR)/stubs.o Makefile $(topsrcdir)/config/nodl.pl
+jsj_nodl.c: $(OBJDIR)/stubs.o Makefile $(DEPTH)/config/nodl.pl
 	rm -f $@
-	$(PERL) $(topsrcdir)/config/nodl.pl "jsj_nodl_tab" \
+	$(PERL) $(DEPTH)/config/nodl.pl "jsj_nodl_tab" \
 	    `nm -Bn $(OBJDIR)/stubs.o | egrep Java_.*_stub | awk '{print $$3;}'` > $@
 endif
 
 ifdef JAVA_OR_OJI
 $(OBJDIR)/stubs.o:					 \
-	$(JRI_GEN_DIR)/netscape_javascript_JSObject.c	 \
-	$(JRI_GEN_DIR)/netscape_javascript_JSException.c \
+	$(JNI_GEN_DIR)/netscape_javascript_JSObject.c	 \
+	$(JNI_GEN_DIR)/netscape_javascript_JSException.c \
 	$(NULL)
 else
 $(OBJDIR)/stubs.o:
