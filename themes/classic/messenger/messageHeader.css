@@ -56,14 +56,14 @@
 /* ::::: msg header captions ::::: */
 
 #msgHeaderView {
-  background: #3398cc;
+  background: #F7F7CE;
   border-right: 1px solid ThreeDShadow;
   border-left: 1px solid ThreeDShadow;
 }
 
 #collapsedHeaderView,
 #expandedHeaderView {
-  background: #3398cc;
+  background: #F7F7CE;
   border-bottom: 1px solid ThreeDDarkShadow;
   min-width: 1px;
 }
