@@ -1014,6 +1014,7 @@ MakeContentObject(nsHTMLTag aNodeType,
     rv = NS_NewHTMLDelElement(aResult, aNodeInfo);
     break;
   case eHTMLTag_div:
+  case eHTMLTag_marquee:
   case eHTMLTag_noembed:
   case eHTMLTag_noframes:
   case eHTMLTag_noscript:
