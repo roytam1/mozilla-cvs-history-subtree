@@ -191,28 +191,51 @@ nsBlockReflowState::~nsBlockReflowState()
   }
 }
 
+// merge into nsBlockReflowState.cpp
+PRBool NodeEnclosesTextControls (nsReflowTree::Node *node)
+{
+  nsReflowTree::Node::Iterator reflowIterator(node);
+  PRBool amTarget = reflowIterator.IsTarget();
+  nsIFrame *childFrame;
+
+  // if we're a target, then we're not enclosed in a text control, so
+  // one of the reflows would have been unconstrained.
+  if (amTarget)
+    return PR_FALSE;
+
+  while (reflowIterator.NextChild(&childFrame))
+  {
+    nsCOMPtr<nsIAtom> frameType;
+    childFrame->GetFrameType(getter_AddRefs(frameType));
+    if (frameType)
+    {
+      if (nsLayoutAtoms::textInputFrame != frameType.get())
+      {
+        if (!NodeEnclosesTextControls(reflowIterator.CurrentChild()))
+          return PR_FALSE;
+      }
+      // else it's a text control, keep searching.
+    }
+  }
+  // all of the branches ended in a text control
+  return PR_TRUE; // damage is constrained to the text control innards
+}
+
 PRBool 
 nsBlockReflowState::IsIncrementalDamageConstrained(nsIFrame* aBlockFrame) const
 {
-  // see if the reflow will go through a text control. if so, we can optimize 
+  // see if the reflow will go through a text control.  if so, we can optimize 
   // because we know the text control won't change size.
   if ((eReflowReason_Incremental == mReflowState.reason) && (mReflowState.reflowCommand)) {
-    nsIFrame* target;
-    mReflowState.reflowCommand->GetTarget(target);
-    while (target) { 
-      // starting with the target's parent, scan for a text control
-      nsIFrame* parent;
-      target->GetParent(&parent);
-      if ((aBlockFrame == parent) || !parent)  // the null check is paranoia, it should never happen
-        break;  // we found the block, so we know there's no text control between the block and target
-      nsCOMPtr<nsIAtom> frameType;
-      parent->GetFrameType(getter_AddRefs(frameType));
-      if (frameType) {
-        if (nsLayoutAtoms::textInputFrame == frameType.get())
-          return PR_TRUE; // damage is constrained to the text control innards
-      }
-      target = parent;  // advance the loop up the frame tree
-    }
+    nsReflowTree::Node::Iterator reflowIterator(mReflowState.GetCurrentReflowNode());
+    // We need to determine if there are any text controls between this
+    // node and _all_ of the targets below us (not including the targets
+    // themselves).  We need to walk the tree, skipping over text controls
+    // and their children, and stopping if we hit a parent of a target.
+    nsReflowTree::Node *node = reflowIterator.CurrentNode();
+    if (node) {
+      return NodeEnclosesTextControls(node);
+    }      
   }
   return PR_FALSE;  // default case, damage is not constrained (or unknown)
 }
