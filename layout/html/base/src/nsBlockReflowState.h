@@ -5657,12 +5657,10 @@ nsBlockFrame::DeleteChildsNextInFlow(nsIPresContext* aPresContext,
   PRBool bidiEnabled;
   aPresContext->BidiEnabled(bidiEnabled);
   if (bidiEnabled) {
-    PRUint8 level, nextLevel;
-    aChild->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel,
-                            (void**) &level);
-    nextInFlow->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel,
-                                (void**) &nextLevel);
-    bidiEnabled = (level ^ nextLevel);
+    void *level, *nextLevel;
+    aChild->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &level);
+    nextInFlow->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &nextLevel);
+    bidiEnabled = ((PRUint8)level ^ (PRUint8)nextLevel);
   }
   if (!bidiEnabled) {
 #endif // IBMBIDI

@@ -3382,12 +3382,12 @@ nsFrame::GetFrameFromDirection(nsIPresContext* aPresContext, nsPeekOffsetStruct 
 #ifdef IBMBIDI // Simon
   if (aPos->mAmount != eSelectNoAmount)
   {
-    PRUint8 level;
-    newFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) &level);
+    void *level;
+    newFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &level);
     if (aPos->mDirection == eDirNext)
-      aPos->mStartOffset = (level & 1) ? -1 : 0;
+      aPos->mStartOffset = ((PRUint8)level & 1) ? -1 : 0;
     else
-      aPos->mStartOffset = (level & 1) ? 0 : -1;
+      aPos->mStartOffset = ((PRUint8)level & 1) ? 0 : -1;
   }
   else
 #endif

@@ -191,7 +191,7 @@ nsBidiPresUtils::Resolve(nsIPresContext* aPresContext,
       runLength = logicalLimit - lineOffset;
     } // if (runLength <= 0)
 
-    if (nsLayoutAtoms::directionalFrame == frameType) {
+    if (nsLayoutAtoms::directionalFrame == frameType.get()) {
       delete frame;
     }
     else {
@@ -367,7 +367,7 @@ nsBidiPresUtils::CreateBlockBuffer(nsIPresContext* aPresContext)
       if ( (NS_FAILED(mSuccess) ) || (!content) ) {
         break;
       }
-      if (content == prevContent) {
+      if (content.get() == prevContent) {
         continue;
       }
       prevContent = content;
@@ -458,13 +458,13 @@ nsBidiPresUtils::Reorder(nsIPresContext* aPresContext,
 
   nsIFrame* frame;
   PRInt32 i;
-  PRUint8 level;
+  void *level;
 
   for (i = 0; i < count; i++) {
     frame = (nsIFrame*) (mLogicalFrames[i]);
     frame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel,
-                           (void**) &level); // don't want to pass &mLevels[i] itself
-    mLevels[i] = level;
+                           &level); // don't want to pass &mLevels[i] itself
+    mLevels[i] = (PRUint8)level;
   }
   if (!mIndexMap) {
     mIndexMap = new PRInt32[mArraySize];
@@ -771,12 +771,12 @@ nsBidiPresUtils::AdjustEmbeddingLevel(nsIFrame* aFrame,
 {
   const nsStyleText* text;
   aFrame->GetStyleData(eStyleStruct_Text, (const nsStyleStruct*&) text);
-  
+
   if (NS_STYLE_UNICODE_BIDI_OVERRIDE == text->mUnicodeBidi) {
     const nsStyleDisplay* display;
 
     aFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
-          
+
     if (NS_STYLE_DIRECTION_RTL == display->mDirection) {
       // ensure embedding level is odd
       aEmbeddingLevel = (aEmbeddingLevel - 1) | 0x01;

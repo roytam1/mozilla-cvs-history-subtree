@@ -1492,7 +1492,7 @@ nsSelection::MoveCaret(PRUint32 aKeycode, PRBool aContinue, nsSelectionAmount aA
 #ifdef IBMBIDI
     nsIFrame *theFrame;
     PRInt32 currentOffset, frameStart, frameEnd;
-    PRUint8 level;
+    void *level;
 
     // XXX - I expected to be able to use pos.mResultFrame, but when we move from frame to frame
     //       and |PeekOffset| is called recursively, pos.mResultFrame on exit is sometimes set to the original
@@ -1519,15 +1519,15 @@ nsSelection::MoveCaret(PRUint32 aKeycode, PRBool aContinue, nsSelectionAmount aA
             pos.mContentOffset = frameEnd;
 
         // set the cursor Bidi level to the paragraph embedding level
-          theFrame->GetBidiProperty(context, nsLayoutAtoms::baseLevel, (void**) &level);
-          selCon->SetCursorBidiLevel(level);
+          theFrame->GetBidiProperty(context, nsLayoutAtoms::baseLevel, &level);
+          selCon->SetCursorBidiLevel((PRUint8)level);
           break;
 
       default:
         // If the current position is not a frame boundary, it's enough just to take the Bidi level of the current frame
         if (pos.mContentOffset != frameStart && pos.mContentOffset != frameEnd) {
-          theFrame->GetBidiProperty(context, nsLayoutAtoms::embeddingLevel, (void**) &level);
-          selCon->SetCursorBidiLevel(level);
+          theFrame->GetBidiProperty(context, nsLayoutAtoms::embeddingLevel, &level);
+          selCon->SetCursorBidiLevel((PRUint8)level);
         }
         else
           BidiLevelFromMove(context, selCon, pos.mResultContent, pos.mContentOffset, aKeycode);
@@ -1695,6 +1695,7 @@ NS_IMETHODIMP
   PRInt32     currentOffset;
   PRInt32     frameStart, frameEnd;
   nsDirection direction;
+  void        *level;
 
   GetFrameForNodeOffset(aNode, aContentOffset, mHint, &currentFrame, &currentOffset);
   currentFrame->GetOffsets(frameStart, frameEnd);
@@ -1706,7 +1707,8 @@ NS_IMETHODIMP
   else {
     // we are neither at the beginning nor at the end of the frame, so we have no worries
     *aPrevFrame = *aNextFrame = currentFrame;
-    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) aNextLevel);
+    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &level);
+    *aNextLevel = (PRUint8)level;
     *aPrevLevel = *aNextLevel;
     return NS_OK;
   }
@@ -1789,8 +1791,10 @@ NS_IMETHODIMP
                                                             //              set aNextFrame to null
                                                             //              set aNextLevel to the paragraph embedding level
     *aPrevFrame = currentFrame;
-    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) aPrevLevel);
-    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::baseLevel, (void**) aNextLevel);
+    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &level);
+    *aPrevLevel = (PRUint8)level;
+    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::baseLevel, &level);
+    *aNextLevel = (PRUint8)level;
     *aNextFrame = nsnull;
     return NS_OK;
   }
@@ -1800,8 +1804,10 @@ NS_IMETHODIMP
                                                                  //                    set aNextFrame to the current frame
                                                                  //                    set aNextLevel to the embedding level of the current frame
     *aNextFrame = currentFrame;
-    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) aNextLevel);
-    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::baseLevel, (void**) aPrevLevel);
+    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &level);
+    *aNextLevel = (PRUint8)level;
+    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::baseLevel, &level);
+    *aPrevLevel = (PRUint8)level;
     *aPrevFrame = nsnull;
     return NS_OK;
   }
@@ -1831,15 +1837,19 @@ NS_IMETHODIMP
 
   if (direction == eDirNext) {
     *aPrevFrame = currentFrame;
-    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) aPrevLevel);
+    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &level);
+    *aPrevLevel = (PRUint8)level;
     *aNextFrame = newFrame;
-    newFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) aNextLevel);
+    newFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &level);
+    *aNextLevel = (PRUint8)level;
   }
   else {
     *aNextFrame = currentFrame;
-    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) aNextLevel);
+    currentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &level);
+    *aNextLevel = (PRUint8)level;
     *aPrevFrame = newFrame;
-    newFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) aPrevLevel);
+    newFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &level);
+    *aPrevLevel = (PRUint8)level;
   }
 
   return NS_OK;
@@ -1918,12 +1928,12 @@ void nsSelection::BidiLevelFromClick(nsIContent *aNode, PRUint32 aContentOffset)
     return;
 
   nsIFrame* clickInFrame=nsnull;
-  PRUint8 frameLevel;
+  void *frameLevel;
   PRInt32 OffsetNotUsed;
 
   GetFrameForNodeOffset(aNode, aContentOffset, mHint, &clickInFrame, &OffsetNotUsed);
-  clickInFrame->GetBidiProperty(context, nsLayoutAtoms::embeddingLevel, (void**) &frameLevel);
-  selCon->SetCursorBidiLevel(frameLevel);
+  clickInFrame->GetBidiProperty(context, nsLayoutAtoms::embeddingLevel, &frameLevel);
+  selCon->SetCursorBidiLevel((PRUint8)frameLevel);
 }
 #endif IBMBIDI
 

@@ -67,8 +67,6 @@
 #include "nsIServiceManager.h"
 
 #ifdef IBMBIDI
-//ahmed
-static NS_DEFINE_CID(kBidiCID, NS_BIDI_CID);
 // {2DC80A03-66EF-11d4-BA58-006008CD3717}
 #define NS_TEXT_FRAME_CID \
 { 0x2dc80a03, 0x66ef, 0x11d4, { 0xba, 0x58, 0x00, 0x60, 0x08, 0xcd, 0x37, 0x17 } }
@@ -1909,8 +1907,11 @@ nsTextFrame::PaintUnicodeText(nsIPresContext* aPresContext,
     if (bidiEnabled) {
       UCharDirection textClass;
       PRUint8 level;
-      GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) &level);
-      GetBidiProperty(aPresContext, nsLayoutAtoms::textClass, (void **) &textClass);
+      void *value;
+      GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &value);
+      level = (PRUint8)value;
+      GetBidiProperty(aPresContext, nsLayoutAtoms::textClass,
+                      (void**) &textClass);
       if (CLASS_IS_RTL(textClass) && isBidiSystem) {
         isRTL = PR_TRUE;
         // indicate the text requires RTL reading
@@ -1923,25 +1924,7 @@ nsTextFrame::PaintUnicodeText(nsIPresContext* aPresContext,
                                      level & 1,  isBidiSystem);
       }
     }
-//ahmed for visual rtl
-    nsBidiOptions mBidiop;
-    PRBool mIsvisual;
-    aPresContext->IsVisualMode(mIsvisual);
-    aPresContext->GetBidi(&mBidiop);
-    nsAutoString charset;
-    if((mIsvisual)&&(mBidiop.mdirection==IBMBIDI_TEXTDIRECTION_RTL)){
-      PRUnichar buffer[8192];
-      PRInt32 newLen;
-      nsresult rv;
-      NS_WITH_SERVICE(nsIBidi, bidiEngine, kBidiCID, &rv);
-      bidiEngine->writeReverse(text,textLength, buffer,
-                               UBIDI_REMOVE_BIDI_CONTROLS | UBIDI_DO_MIRRORING,
-                               &newLen);
-      for (PRInt32 i = 0; i < newLen; i++) {
-        text[i] = buffer[i];
-      }
-    }
-
+	
     if (0 != textLength) { // textLength might change due to the bidi formattimg
 #endif // IBMBIDI
     if (!displaySelection || !isSelected ) //draw text normally
@@ -2495,8 +2478,11 @@ nsTextFrame::PaintTextSlowly(nsIPresContext* aPresContext,
       if (bidiUtils) {
         UCharDirection textClass;
         PRUint8 level;
-        GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) &level);
-        GetBidiProperty(aPresContext, nsLayoutAtoms::textClass, (void **) &textClass);
+        void *value;
+        GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &value);
+        level = (PRUint8)value;
+        GetBidiProperty(aPresContext, nsLayoutAtoms::textClass,
+                        (void**) &textClass);
         // Since we paint char by char, handle the text like on non-bidi platform
         bidiUtils->FormatUnicodeText(aPresContext, text, textLength, textClass,
                                      level & 1, PR_FALSE);
@@ -2961,9 +2947,9 @@ nsTextFrame::GetPosition(nsIPresContext* aCX,
         PRUnichar* text = paintBuffer.mBuffer;
 
 #ifdef IBMBIDI // Simon -- reverse RTL text here
-        PRUint8 level;
-        GetBidiProperty(aCX, nsLayoutAtoms::embeddingLevel, (void**) &level);
-        PRBool isOddLevel = (level & 1);
+        void* level;
+        GetBidiProperty(aCX, nsLayoutAtoms::embeddingLevel, &level);
+        PRBool isOddLevel = ((PRUint8)level & 1);
         if (isOddLevel) {
           PRUnichar *tStart, *tEnd;
           PRUnichar tSwap;
@@ -3245,7 +3231,6 @@ nsTextFrame::GetPointFromOffset(nsIPresContext* aPresContext,
 
   ComputeExtraJustificationSpacing(*inRendContext, ts, paintBuffer.mBuffer, textLength, numSpaces);
 
-
   PRInt32* ip = indexBuffer.mBuffer;
   if (inOffset > mContentLength){
     NS_ASSERTION(0, "invalid offset passed to GetPointFromOffset");
@@ -3264,9 +3249,9 @@ nsTextFrame::GetPointFromOffset(nsIPresContext* aPresContext,
   else
   {
 #ifdef IBMBIDI
-    PRUint8 level;
-    GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) &level);
-    if ((level & 1) && (inOffset <= textLength))
+    void *level;
+    GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &level);
+    if (((PRUint8)level & 1) && (inOffset <= textLength))
       // if inOffset > textLength, no need for Bidi processing: who cares in which direction we measure the whole content?
     {
       PRInt32 bidiOffset = textLength - inOffset;
@@ -3377,9 +3362,9 @@ NS_IMETHODIMP
 nsTextFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos) 
 {
 #ifdef IBMBIDI
-  PRUint8 level;
-  GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) &level);
-  PRBool isOddLevel = (level & 1);
+  void *level;
+  GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &level);
+  PRBool isOddLevel = ((PRUint8)level & 1);
   if ((eSelectCharacter == aPos->mAmount)
       || (eSelectWord == aPos->mAmount)
      // || (eSelectNoAmount == aPos->mAmount)

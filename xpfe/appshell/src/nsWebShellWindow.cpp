@@ -350,7 +350,7 @@ nsresult nsWebShellWindow::Initialize(nsIXULWindow* aParent,
     NS_ENSURE_SUCCESS(webNav->LoadURI(urlString.GetUnicode()), NS_ERROR_FAILURE);
   }
 	#ifdef IBMBIDI
-	 PRInt8 prefInt;
+   PRInt32 prefInt;
   nsIPref *prefs;
 
   rv = nsServiceManager::GetService(kPrefCID, 
@@ -358,20 +358,20 @@ nsresult nsWebShellWindow::Initialize(nsIXULWindow* aParent,
                                     (nsISupports **)&prefs);
 	//ahmed
   if (NS_SUCCEEDED(rv)) {
-      NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_TEXTDIRECTION_STR, ((PRInt32*)&prefInt)));
-			this->mBidi.mdirection= prefInt;
-		  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_TEXTTYPE_STR, ((PRInt32*)&prefInt)));
-			this->mBidi.mtexttype= prefInt;
-		  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_CONTROLSTEXTMODE_STR, ((PRInt32*)&prefInt)));
-			this->mBidi.mcontrolstextmode= prefInt;
-		  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_CLIPBOARDTEXTMODE_STR, ((PRInt32*)&prefInt)));
-			this->mBidi.mclipboardtextmode= prefInt;
-			NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_NUMERAL_STR, ((PRInt32*)&prefInt)));
-			this->mBidi.mnumeral= prefInt;
-		  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_SUPPORTMODE_STR, ((PRInt32*)&prefInt)));
-			this->mBidi.msupport= prefInt;
-      NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_CHARSET_STR, ((PRInt32*)&prefInt)));
-			this->mBidi.mcharacterset= prefInt;
+      NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_TEXTDIRECTION_STR, &prefInt));
+			this->mBidi.mdirection= (PRInt8)prefInt;
+		  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_TEXTTYPE_STR, &prefInt));
+			this->mBidi.mtexttype= (PRInt8)prefInt;
+		  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_CONTROLSTEXTMODE_STR, &prefInt));
+			this->mBidi.mcontrolstextmode= (PRInt8)prefInt;
+		  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_CLIPBOARDTEXTMODE_STR, &prefInt));
+			this->mBidi.mclipboardtextmode= (PRInt8)prefInt;
+			NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_NUMERAL_STR, &prefInt));
+			this->mBidi.mnumeral= (PRInt8)prefInt;
+		  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_SUPPORTMODE_STR, &prefInt));
+			this->mBidi.msupport= (PRInt8)prefInt;
+      NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_CHARSET_STR, &prefInt));
+			this->mBidi.mcharacterset= (PRInt8)prefInt;
 			if (mWebShell != nsnull)
        mWebShell->SetBidi(mBidi);
 
