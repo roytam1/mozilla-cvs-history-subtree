@@ -260,13 +260,18 @@ lm_ReallyReflectEmbed(MWContext *context, LO_EmbedStruct *lo_embed,
 
 #ifdef OJI
         {
+#if 0
           JNIEnv *jniEnv = NULL;
-
           jniEnv = NPL_EnsureJNIExecEnv(NULL);
           obj = JSJ_WrapJavaObject(decoder->js_context,
                                    jniEnv,
                                    jembed,
                                    (*jniEnv)->GetObjectClass(jniEnv, jembed));
+#else
+          jsval val;
+          if (JSJ_ConvertJavaObjectToJSValue(decoder->js_context, jembed, &val))
+              obj = JSVAL_TO_OBJECT(val);
+#endif
         }
 #else
         obj = js_ReflectJObjectToJSObject(decoder->js_context,

@@ -255,15 +255,22 @@ lm_ReallyReflectApplet(MWContext *context, LO_JavaAppStruct *lo_applet,
       if (embed) {
           struct nsIPluginInstance *pNPI = NULL;
           JNIEnv *jniEnv = NULL;
+          jsval val;
+          
           pNPI = NPL_GetOJIPluginInstance(embed);
           javaobject = NPL_GetJavaObject(pNPI);
           NPL_Release((struct nsISupports *)pNPI);
-          jniEnv = NPL_EnsureJNIExecEnv(NULL);
 
+#if 0
+          jniEnv = NPL_EnsureJNIExecEnv(NULL);
           obj = JSJ_WrapJavaObject(decoder->js_context,
                                    jniEnv,
                                    javaobject,
                                    (*jniEnv)->GetObjectClass(jniEnv, javaobject));
+#else
+          if (JSJ_ConvertJavaObjectToJSValue(decoder->js_context, javaobject, &val))
+              obj = JSVAL_TO_OBJECT(val);
+#endif
       }
     }
 #else
