@@ -578,8 +578,8 @@ NS_IMETHODIMP nsMsgProtocol::GetContentType(nsACString &aContentType)
 
 NS_IMETHODIMP nsMsgProtocol::SetContentType(const nsACString &aContentType)
 {
-    m_ContentType = aContentType;
-    return NS_OK;
+    nsCAutoString charset;
+    return NS_ParseContentType(aContentType, m_ContentType, charset);
 }
 
 NS_IMETHODIMP nsMsgProtocol::GetContentCharset(nsACString &aContentCharset)
