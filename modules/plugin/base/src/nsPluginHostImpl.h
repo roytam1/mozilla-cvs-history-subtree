@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Netscape Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -35,7 +35,6 @@
 
 class ns4xPlugin;
 class nsFileSpec;
-class nsIServiceManager;
 
 class nsPluginTag
 {
@@ -106,8 +105,11 @@ class nsPluginHostImpl : public nsIPluginManager2,
                          public nsICookieStorage
 {
 public:
-  nsPluginHostImpl(nsIServiceManager *serviceMgr);
+  nsPluginHostImpl();
   virtual ~nsPluginHostImpl();
+
+  static NS_METHOD
+  Create(nsISupports* aOuter, REFNSIID aIID, void** aResult);
 
   NS_DECL_AND_IMPL_ZEROING_OPERATOR_NEW
 
@@ -217,8 +219,8 @@ public:
   NS_IMETHOD
   ProcessNextEvent(PRBool *bEventHandled);
 
-  //nsIFactory interface - used to create new Plugin instances
-
+  // nsIFactory interface, from nsIPlugin.
+  // XXX not currently used?
   NS_IMETHOD CreateInstance(nsISupports *aOuter,
                             REFNSIID aIID,
                             void **aResult);
@@ -289,7 +291,6 @@ private:
   char        *mPluginPath;
   nsPluginTag *mPlugins;
   PRBool      mPluginsLoaded;
-  nsIServiceManager *mServiceMgr;
 
   nsActivePluginList mActivePluginList;
 };

@@ -42,6 +42,7 @@
 #include "nsIDocShellTreeOwner.h"
 #include "nsIWebBrowserChrome.h"
 #include "nsIDOMDocument.h"
+#include "nsPluginViewer.h"
 
 // Class IDs
 static NS_DEFINE_IID(kChildWindowCID, NS_CHILD_CID);

@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Netscape Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -71,22 +71,26 @@
 #include "nsSpecialSystemDirectory.h"
 #include "nsFileSpec.h"
 
+#include "nsPluginDocLoaderFactory.h"
 #include "nsIDocumentLoaderFactory.h"
-#include "nsLayoutCID.h"
 
+// We need this hackery so that we can dynamically register doc
+// loaders for the 4.x plugins that we discover.
 #if defined(XP_PC)
-#define LAYOUT_DLL "gkhtml.dll"
+#define PLUGIN_DLL "gkplugin.dll"
 #elif defined(XP_UNIX) || defined(XP_BEOS)
-#define LAYOUT_DLL "libgklayout"MOZ_DLL_SUFFIX
+#define PLUGIN_DLL "libgkplugin" MOZ_DLL_SUFFIX
 #elif defined(XP_MAC)
-#define LAYOUT_DLL "LAYOUT_DLL"
+#define PLUGIN_DLL "PLUGIN_DLL"
 #endif
 
 #ifdef XP_MAC
-#define REL_LAYOUT_DLL LAYOUT_DLL
+#define REL_PLUGIN_DLL PLUGIN_DLL
 #else
-#define REL_LAYOUT_DLL "rel:"LAYOUT_DLL
+#define REL_PLUGIN_DLL "rel:" PLUGIN_DLL
 #endif
+
+
 
 //uncomment this to use netlib to determine what the
 //user agent string is. we really *want* to do this,
@@ -117,7 +121,6 @@ static NS_DEFINE_CID(kNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID);
 static NS_DEFINE_IID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
-static NS_DEFINE_IID(kDocumentFactoryImplCID, NS_LAYOUT_DOCUMENT_LOADER_FACTORY_CID);
 
 #define PLUGIN_PROPERTIES_URL "chrome://global/locale/downloadProgress.properties"
 void DisplayNoDefaultPluginDialog(void);
@@ -1245,11 +1248,10 @@ nsPluginStreamListenerPeer::GetLoadGroup()
 
 /////////////////////////////////////////////////////////////////////////
 
-nsPluginHostImpl::nsPluginHostImpl(nsIServiceManager *serviceMgr)
+nsPluginHostImpl::nsPluginHostImpl()
 {
   NS_INIT_REFCNT();
   mPluginsLoaded = PR_FALSE;
-  mServiceMgr = serviceMgr;
 }
 
 nsPluginHostImpl::~nsPluginHostImpl()
@@ -1272,67 +1274,30 @@ printf("killing plugin host\n");
   }
 }
 
-NS_IMPL_ADDREF(nsPluginHostImpl)
-NS_IMPL_RELEASE(nsPluginHostImpl)
-
-nsresult nsPluginHostImpl::QueryInterface(const nsIID& aIID,
-                                            void** aInstancePtrResult)
+NS_METHOD
+nsPluginHostImpl::Create(nsISupports* aOuter, REFNSIID aIID, void** aResult)
 {
-  NS_PRECONDITION(nsnull != aInstancePtrResult, "null pointer");
+  NS_PRECONDITION(aOuter == nsnull, "no aggregation");
+  if (aOuter)
+    return NS_ERROR_NO_AGGREGATION;
 
-  if (nsnull == aInstancePtrResult)
-    return NS_ERROR_NULL_POINTER;
+  nsPluginHostImpl* host = new nsPluginHostImpl();
+  if (! host)
+    return NS_ERROR_OUT_OF_MEMORY;
 
-  if (aIID.Equals(nsIPluginManager::GetIID()))
-  {
-    *aInstancePtrResult = (void *)((nsIPluginManager *)this);
-    AddRef();
-    return NS_OK;
-  }
-
-  if (aIID.Equals(nsIPluginManager2::GetIID()))
-  {
-    *aInstancePtrResult = (void *)((nsIPluginManager2 *)this);
-    AddRef();
-    return NS_OK;
-  }
-
-  if (aIID.Equals(nsIPluginHost::GetIID()))
-  {
-    *aInstancePtrResult = (void *)((nsIPluginHost *)this);
-    AddRef();
-    return NS_OK;
-  }
-
-  if (aIID.Equals(nsIFactory::GetIID()))
-  {
-    *aInstancePtrResult = (void *)((nsIFactory *)this);
-    AddRef();
-    return NS_OK;
-  }
-
-  if (aIID.Equals(nsIFileUtilities::GetIID()))
-  {
-    *aInstancePtrResult = (void*)(nsIFileUtilities*)this;
-    AddRef();
-    return NS_OK;
-  }
-
-  if (aIID.Equals(nsICookieStorage::GetIID())) {
-    *aInstancePtrResult = (void*)(nsICookieStorage*)this;
-    AddRef();
-    return NS_OK;
-  }
-
-  if (aIID.Equals(kISupportsIID))
-  {
-    *aInstancePtrResult = (void *)((nsISupports *)((nsIPluginHost *)this));
-    AddRef();
-    return NS_OK;
-  }
-
-  return NS_NOINTERFACE;
+  nsresult rv;
+  NS_ADDREF(host);
+  rv = host->QueryInterface(aIID, aResult);
+  NS_RELEASE(host);
+  return rv;
 }
+
+NS_IMPL_ISUPPORTS5(nsPluginHostImpl,
+                   nsIPluginManager,
+                   nsIPluginManager2,
+                   nsIPluginHost,
+                   nsIFileUtilities,
+                   nsICookieStorage);
 
 NS_IMETHODIMP nsPluginHostImpl::GetValue(nsPluginManagerVariable variable, void *value)
 {
@@ -1630,6 +1595,20 @@ NS_IMETHODIMP nsPluginHostImpl::HasAllocatedMenuID(nsIEventHandler* handler, PRI
 NS_IMETHODIMP nsPluginHostImpl::ProcessNextEvent(PRBool *bEventHandled)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsPluginHostImpl::CreateInstance(nsISupports *aOuter,
+                                               REFNSIID aIID,
+                                               void **aResult)
+{
+  NS_NOTREACHED("how'd I get here?");
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP nsPluginHostImpl::LockFactory(PRBool aLock)
+{
+  NS_NOTREACHED("how'd I get here?");
+  return NS_ERROR_UNEXPECTED;
 }
 
 NS_IMETHODIMP nsPluginHostImpl::Init(void)
@@ -1949,7 +1928,7 @@ void nsPluginHostImpl::AddInstanceToActiveList(nsIPluginInstance* aInstance,
 
 nsresult nsPluginHostImpl::RegisterPluginMimeTypesWithLayout(nsPluginTag * pluginTag, 
                                                              nsIComponentManager * compManager, 
-                                                             nsIFile * layoutPath)
+                                                             nsIFile * path)
 {
   NS_ENSURE_ARG_POINTER(pluginTag);
   NS_ENSURE_ARG_POINTER(pluginTag->mMimeTypeArray);
@@ -1959,10 +1938,19 @@ nsresult nsPluginHostImpl::RegisterPluginMimeTypesWithLayout(nsPluginTag * plugi
 
   for(int i = 0; i < pluginTag->mVariants; i++)
   {
+    static NS_DEFINE_CID(kPluginDocLoaderFactoryCID, NS_PLUGINDOCLOADERFACTORY_CID);
     char progid[512];
-    char * contentType = pluginTag->mMimeTypeArray[i];
-    PR_snprintf(progid, sizeof(progid), NS_DOCUMENT_LOADER_FACTORY_PROGID_PREFIX "%s/%s", "view", contentType);
-    rv = compManager->RegisterComponentSpec(kDocumentFactoryImplCID, "Layout", progid, layoutPath, PR_TRUE, PR_TRUE);
+
+    PR_snprintf(progid, sizeof(progid),
+                NS_DOCUMENT_LOADER_FACTORY_PROGID_PREFIX "view/%s",
+                pluginTag->mMimeTypeArray[i]);
+
+    rv = compManager->RegisterComponentSpec(kPluginDocLoaderFactoryCID,
+                                            "Plugin Loader Stub",
+                                            progid,
+                                            path,
+                                            PR_TRUE,
+                                            PR_FALSE);
   }
 
   return rv;
@@ -2449,12 +2437,17 @@ NS_IMETHODIMP nsPluginHostImpl::GetPluginFactory(const char *aMimeType, nsIPlugi
 		nsIPlugin* plugin = pluginTag->mEntryPoint;
 		if(plugin == NULL)
 		{
+      // No, this is not a leak. GetGlobalServiceManager() doesn't
+      // addref the pointer on the way out. It probably should.
+      nsIServiceManager* serviceManager;
+      nsServiceManager::GetGlobalServiceManager(&serviceManager);
+
 			// need to get the plugin factory from this plugin.
 			nsFactoryProc nsGetFactory = nsnull;
 			nsGetFactory = (nsFactoryProc) PR_FindSymbol(pluginTag->mLibrary, "NSGetFactory");
 			if(nsGetFactory != nsnull)
 			{
-			    rv = nsGetFactory(mServiceMgr, kPluginCID, nsnull, nsnull,    // XXX fix ClassName/ProgID
+			    rv = nsGetFactory(serviceManager, kPluginCID, nsnull, nsnull,    // XXX fix ClassName/ProgID
                             (nsIFactory**)&pluginTag->mEntryPoint);
 			    plugin = pluginTag->mEntryPoint;
 			    if (plugin != NULL)
@@ -2462,7 +2455,7 @@ NS_IMETHODIMP nsPluginHostImpl::GetPluginFactory(const char *aMimeType, nsIPlugi
 			}
 			else
 			{
-				rv = ns4xPlugin::CreatePlugin(pluginTag, mServiceMgr);
+				rv = ns4xPlugin::CreatePlugin(pluginTag, serviceManager);
 				plugin = pluginTag->mEntryPoint;
                 pluginTag->mFlags |= NS_PLUGIN_FLAG_OLDSCHOOL;
 
@@ -2494,7 +2487,7 @@ NS_IMETHODIMP nsPluginHostImpl::LoadPlugins()
     // retrieve a path for layout module. Needed for plugin mime types registration
     nsCOMPtr<nsIComponentManager> compManager = do_GetService(kComponentManagerCID);
     nsCOMPtr<nsIFile> path;
-    nsresult rvIsLayoutPath = compManager->SpecForRegistryLocation(REL_LAYOUT_DLL, getter_AddRefs(path));
+    nsresult rvIsLayoutPath = compManager->SpecForRegistryLocation(REL_PLUGIN_DLL, getter_AddRefs(path));
 
     for (nsDirectoryIterator iter(pluginsDir, PR_TRUE); iter.Exists(); iter++) {
 			const nsFileSpec& file = iter;
@@ -2617,7 +2610,7 @@ NS_IMETHODIMP nsPluginHostImpl::LoadPlugins()
   // retrieve a path for layout module. Needed for plugin mime types registration
   nsCOMPtr<nsIComponentManager> compManager = do_GetService(kComponentManagerCID);
   nsCOMPtr<nsIFile> path;
-  nsresult rvIsLayoutPath = compManager->SpecForRegistryLocation(REL_LAYOUT_DLL, getter_AddRefs(path));
+  nsresult rvIsLayoutPath = compManager->SpecForRegistryLocation(REL_PLUGIN_DLL, getter_AddRefs(path));
 
   // first, make a list from MOZ_LOCAL installation
   for (nsDirectoryIterator iter(pluginsDirMoz, PR_TRUE); iter.Exists(); iter++) 
@@ -2888,37 +2881,6 @@ nsresult nsPluginHostImpl::NewFullPagePluginStream(nsIStreamListener *&aStreamLi
   NS_IF_ADDREF(listener);
 
   return rv;
-}
-
-// nsIFactory interface
-
-nsresult nsPluginHostImpl::CreateInstance(nsISupports *aOuter,  
-                                            const nsIID &aIID,  
-                                            void **aResult)  
-{  
-  if (aResult == NULL)
-    return NS_ERROR_NULL_POINTER;  
-
-  nsISupports *inst = nsnull;
-
-  if (inst == NULL)
-    return NS_ERROR_OUT_OF_MEMORY;  
-
-  // XXX Doh, we never get here... what is going on???
-
-  NS_ADDREF(inst);  // Stabilize
-  
-  nsresult res = inst->QueryInterface(aIID, aResult);
-
-  NS_RELEASE(inst); // Destabilize and avoid leaks. Avoid calling delete <interface pointer>  
-
-  return res;  
-}  
-
-nsresult nsPluginHostImpl::LockFactory(PRBool aLock)  
-{  
-  // Not implemented in simplest case.  
-  return NS_OK;
 }
 
 // nsIFileUtilities interface
