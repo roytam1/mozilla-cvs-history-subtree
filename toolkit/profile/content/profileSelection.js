@@ -67,7 +67,6 @@ function startup()
       listitem.profile = profile;
       try {
         if (profile === gProfileService.selectedProfile) {
-          dump("*****Found default profile: " + profile.name + "\n");
           profilesElement.selectedItem = listitem;
         }
       }
@@ -164,8 +163,6 @@ function CreateProfile(aProfile)
   listitem.setAttribute("tooltiptext", tooltiptext);
   listitem.setAttribute("class", "listitem-iconic");
   listitem.profile = aProfile;
-
-  dump("# of listitems: " + profilesElement.getRowCount());
 
   profilesElement.ensureElementIsVisible(listitem);
   profilesElement.selectItem(listitem);
