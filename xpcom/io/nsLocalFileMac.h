@@ -62,6 +62,7 @@ public:
 
 	NS_IMETHOD GetFSSpec(FSSpec *fileSpec);
 
+	NS_IMETHOD SetAppendedPath(const char *aPath);
 	NS_IMETHOD GetAppendedPath(char * *aPath);
 
 	NS_IMETHOD GetFileTypeAndCreator(OSType *type, OSType *creator);
@@ -70,25 +71,25 @@ public:
 private:
 
     // this is the flag which indicates if I can used cached information about the file
-    PRBool mStatDirty;
+    PRBool		mStatDirty;
 
     // If we're inited with a path then we store it here
-    nsCString mWorkingPath;
+    nsCString	mWorkingPath;
     
     // Any nodes added with AppendPath if we were initialized with an FSSpec are stored here
-    nsCString mAppendedPath;
+    nsCString	mAppendedPath;
 
     // this will be the resolved path which will *NEVER* be returned to the user
-    nsCString mResolvedPath;
+    nsCString	mResolvedPath;
     
     // The Mac data structure for a file system object
-    FSSpec    mSpec;			// This is the raw spec from InitWIthPath or InitWithFSSpec
-    FSSpec    mResolvedSpec;	// This is the spec we've called ResolveAlias on
+    FSSpec		mSpec;			// This is the raw spec from InitWIthPath or InitWithFSSpec
+    FSSpec		mResolvedSpec;	// This is the spec we've called ResolveAlias on
     
     // Is the mResolvedSpec member valid?  Only after we resolve the mSpec or mWorkingPath
-    PRBool	mHaveValidSpec;
+    PRBool		mHaveValidSpec;
     
-    // 
+    // It's important we keep track of how we were initialized
     nsLocalFileMacInitType	mInitType;
     
     // Do we have to create the path hierarchy before the spec is usable?
@@ -96,9 +97,6 @@ private:
     
     void MakeDirty();
     nsresult ResolveAndStat(PRBool resolveTerminal);
-    
-    // Routine to walk a path constructing directory nodes as it goes
-    nsresult ConstructDirectoryTree();
 };
 
 #endif
