@@ -1017,3 +1017,18 @@ NS_IMETHODIMP nsMsgMailNewsUrl::GetFolder(nsIMsgFolder ** /* aFolder */)
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+NS_IMETHODIMP nsMsgMailNewsUrl::GetMsgHeaderSink(nsIMsgHeaderSink * *aMsgHdrSink)
+{
+	if(!aMsgHdrSink)
+		return NS_ERROR_NULL_POINTER;
+
+	*aMsgHdrSink = mMsgHeaderSink;
+	NS_IF_ADDREF(*aMsgHdrSink);
+	return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgMailNewsUrl::SetMsgHeaderSink(nsIMsgHeaderSink * aMsgHdrSink)
+{
+	mMsgHeaderSink = aMsgHdrSink;
+	return NS_OK;
+}

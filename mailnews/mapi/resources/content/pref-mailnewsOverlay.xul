@@ -32,13 +32,17 @@ Contributor(s):
 <script type="application/x-javascript">
   <![CDATA[
       _elementIDs.push("mailnewsEnableMapi");
+      _elementIDs.push("mailnewsEnableNews");
   ]]>
 </script>         
 <script type="application/x-javascript" src="chrome://messenger-mapi/content/pref-mailnewsOverlay.js"/>
-<hbox autostretch="never" id="mapi">
+<vbox autostretch="never" id="mapi">
   <checkbox id="mailnewsEnableMapi" label="&enableMapi.label;"
             accesskey="&enableMapi.accesskey;" 
             oncommand="onEnableMapi();"
             startupFunc="registerCallback();"/>
-</hbox>
+  <checkbox id="mailnewsEnableNews" label="&enableNews.label;"
+            accesskey="&enableNews.accesskey;" 
+            oncommand="onEnableNews();"/>
+</vbox>
 </overlay> 

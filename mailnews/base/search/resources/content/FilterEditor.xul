@@ -136,10 +136,10 @@ Contributor(s):
 
           <listitem allowevents="true">
             <listcell>
-              <checkbox id="setJunkScore" label="&setJunkScore.label;"/>
+              <checkbox id="setJunkScore" enablefornews="false" label="&setJunkScore.label;"/>
             </listcell>
             <listcell> 
-              <menulist id="actionValueJunkScore" flex="1">
+              <menulist enablefornews="false" id="actionValueJunkScore" flex="1">
                 <menupopup>
                   <!-- see MailNewsTypes2.idl -->
                   <menuitem value="100" label="&junk.label;"/>

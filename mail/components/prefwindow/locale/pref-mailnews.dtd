@@ -31,6 +31,11 @@
 <!ENTITY reuseExpRadio2.label             "A tab in an existing message window">
 <!ENTITY reuseExpRadio2.accesskey         "t">
 
+<!ENTITY setDefaultMailClient.label             "Use &brandShortName; as the default mail application">
+<!ENTITY setDefaultMailClient.accesskey         "u">
+<!ENTITY setDefaultNewsClient.label             "Use &brandShortName; as the default news application">
+<!ENTITY setDefaultNewsClient.accesskey         "n">
+
 <!-- General -->
 <!ENTITY bounceSystemDockIcon.label "Animate the dock icon">
 <!ENTITY bounceSystemDockIcon.accesskey "A">

@@ -286,6 +286,7 @@
 // mailnews base factories
 ////////////////////////////////////////////////////////////////////////////////
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMessengerBootstrap)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgOptionsCmdLineHandler)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsUrlListenerManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMsgMailSession, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMessenger)
@@ -380,6 +381,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbLDAPProcessChangeLogData)
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbDirectoryQueryProxy)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbView)
+
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgVCardService) 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -585,6 +587,12 @@ static const nsModuleComponentInfo gComponents[] = {
       nsMessengerBootstrapConstructor,
       nsMessengerBootstrap::RegisterProc,
       nsMessengerBootstrap::UnregisterProc
+    },
+    { "Options Startup Handler", NS_MESSENGEROPTIONSSTARTUP_CID,
+      NS_MAILOPTIONSTARTUPHANDLER_CONTRACTID,
+      nsMsgOptionsCmdLineHandlerConstructor,
+      nsMsgOptionsCmdLineHandler::RegisterProc,
+      nsMsgOptionsCmdLineHandler::UnregisterProc
     },
     { "UrlListenerManager", NS_URLLISTENERMANAGER_CID,
       NS_URLLISTENERMANAGER_CONTRACTID,

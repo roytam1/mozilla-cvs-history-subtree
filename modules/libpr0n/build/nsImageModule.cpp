@@ -58,6 +58,10 @@
 #include "nsPNGDecoder.h"
 #endif
 
+#if defined(XP_WIN32) && defined(IMG_BUILD_jpeg)
+#include "nsJPEGEncoder.h"
+#endif
+
 #ifdef IMG_BUILD_jpeg
 // jpeg
 #include "nsJPEGDecoder.h"
@@ -84,6 +88,10 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsGIFDecoder2)
 #ifdef IMG_BUILD_jpeg
 // jpeg
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsJPEGDecoder)
+#endif
+
+#if defined(XP_WIN32) && defined(IMG_BUILD_jpeg)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsJPEGEncoder)
 #endif
 
 #ifdef IMG_BUILD_bmp
@@ -204,6 +212,13 @@ static const nsModuleComponentInfo components[] =
     NS_JPEGDECODER_CID,
     "@mozilla.org/image/decoder;2?type=image/jpg",
     nsJPEGDecoderConstructor, },
+#endif
+
+#if defined(XP_WIN32) && defined(IMG_BUILD_jpeg)
+  { "JPEG encoder",
+    NS_JPEGENCODER_CID, 
+    "@mozilla.org/image/encoder;2?type=image/jpeg",
+    nsJPEGEncoderConstructor, },
 #endif
 
 #ifdef IMG_BUILD_bmp
