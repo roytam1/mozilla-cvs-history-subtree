@@ -344,8 +344,9 @@ sub run_tests {
         print_log "Running MailNewsTest ...\n";
         my $cmd = "$binary_basename "
                   ."http://www.mozilla.org/quality/mailnews/APITest.html";
-        $test_result = FileBasedTest("MailNewsTest", $binary_dir, $cmd, 
-                                      90, "MAILNEWS TEST: Passed", 1);
+        $test_result = FileBasedTest("MailNewsTest", $build_dir, $binary_dir, 
+									 $cmd,  90, 
+									 "MAILNEWS TEST: Passed", 1);
     }
     
     # Editor test
@@ -354,7 +355,8 @@ sub run_tests {
         print_log "Running  DomToTextConversionTest ...\n";
         $test_result =
           FileBasedTest("DomToTextConversionTest", $build_dir, $binary_dir,
-                        "TestOutSinks", 45, "FAILED", 0);
+                        "TestOutSinks", 45,
+						"FAILED", 0);
     }
     return $test_result;
 }
