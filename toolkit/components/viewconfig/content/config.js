@@ -549,6 +549,9 @@ function ModifyPref(entry)
       gPrefBranch.setComplexValue(entry.prefCol, nsISupportsString, supportsString);
     }
   }
+  
+  gPrefService.savePrefFile(null);
+  
   return true;
 }
 
