@@ -31,6 +31,7 @@
 #include "nsIMsgMailSession.h"
 
 #include "nsCOMPtr.h"
+#include "nsXPIDLString.h"
 #include "plstr.h"
 #include "nsMsgBaseCID.h"
 
@@ -46,7 +47,7 @@ public:
 
   // RDF datasource methods
   
-  /* void Init (in string uri); */
+  NS_IMETHOD GetURI(char* *aURI);
     
   /* nsIRDFNode GetTarget (in nsIRDFResource source, in nsIRDFResource property, in boolean aTruthValue); */
   NS_IMETHOD GetTarget(nsIRDFResource *source,
@@ -106,6 +107,16 @@ nsMsgIdentityDataSource::Init()
     return NS_OK;
 }
 
+
+NS_IMETHODIMP
+nsMsgIdentityDataSource::GetURI(char* *aURI)
+{
+    *aURI = nsXPIDLCString::Copy("rdf:msgidentities");
+    if (! *aURI)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    return NS_OK;
+}
 
 /* nsIRDFNode GetTarget (in nsIRDFResource source, in nsIRDFResource property, in boolean aTruthValue); */
 NS_IMETHODIMP

@@ -24,6 +24,7 @@
 #include "rdf.h"
 
 #include "nsCOMPtr.h"
+#include "nsXPIDLString.h"
 
 class nsMsgServerDataSource : public nsMsgRDFDataSource
 {
@@ -31,6 +32,8 @@ public:
   virtual nsresult Init();
     
   // RDF datasource methods
+
+  NS_IMETHOD GetURI(char* *aURI);
   
   /* nsIRDFNode GetTarget (in nsIRDFResource source, in nsIRDFResource property, in boolean aTruthValue); */
   NS_IMETHOD GetTarget(nsIRDFResource *source,
@@ -87,6 +90,16 @@ nsMsgServerDataSource::Init()
         getRDFService()->GetResource(kURINC_child, &kNC_Child);
         getRDFService()->GetResource(kURINC_Server, &kNC_Server);
     }
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMsgServerDataSource::GetURI(char* *aURI)
+{
+    *aURI = nsXPIDLCString::Copy("rdf:msgservers");
+    if (! *aURI)
+        return NS_ERROR_OUT_OF_MEMORY;
+
     return NS_OK;
 }
 
