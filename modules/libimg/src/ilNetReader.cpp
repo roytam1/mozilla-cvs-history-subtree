@@ -17,6 +17,9 @@
  */
 
 #include "if.h"
+/*	ebb - begin */
+#include "icc_profile.h"
+/*	ebb - end */
 #include "ilINetReader.h"
 
 static NS_DEFINE_IID(kINetReaderIID, IL_INETREADER_IID);
@@ -24,7 +27,7 @@ static NS_DEFINE_IID(kINetReaderIID, IL_INETREADER_IID);
 class NetReaderImpl : public ilINetReader {
 public:
 
-  NetReaderImpl(il_container *aContainer);
+  NetReaderImpl(il_container *aContainer, ip_container *iccContainer);
   ~NetReaderImpl();
 
   NS_DECL_ISUPPORTS
@@ -44,17 +47,24 @@ public:
   virtual PRBool StreamCreated(ilIURL *urls, int type);
   
   virtual PRBool IsMulti();
-
-  il_container *GetContainer() {return mContainer;}
+/*	ebb - begin */
+  void	 *GetContainer();
+/*
+	Lots of changes in this file.
+	Not annotated with "ebb"  
+*/
+/*	ebb - end */
 
 private:
   il_container *mContainer;
+  ip_container *mICCContainer;
 };
 
-NetReaderImpl::NetReaderImpl(il_container *aContainer)
+NetReaderImpl::NetReaderImpl(il_container *aContainer, ip_container *iccContainer)
 {
     NS_INIT_REFCNT();
-    mContainer = aContainer;
+    mContainer		= aContainer;
+    mICCContainer	= iccContainer;
 }
 
 NetReaderImpl::~NetReaderImpl()
@@ -69,9 +79,19 @@ NetReaderImpl::WriteReady()
     if (mContainer != NULL) {
         return IL_StreamWriteReady(mContainer);
     }
-    else {
-        return 0;
+    else if (mICCContainer != NULL) {
+	/*
+		Profile stream doesn't have custom function.
+		Just return a std size.  We don't want this to
+		be small, because we're going to allocate
+		a pointer the first time through, and we
+		don't want to have to do alot of reallocs.
+	*/
+		#define	kProfileChunkSize	8192
+		return kProfileChunkSize;
     }
+    
+	return 0;
 }
   
 int 
@@ -80,9 +100,11 @@ NetReaderImpl::FirstWrite(const unsigned char *str, int32 len)
     if (mContainer != NULL) {
         return IL_StreamFirstWrite(mContainer, str, len);
     }
-    else {
-        return 0;
-    }
+	else if (mICCContainer != NULL) {
+		return IL_ProfileStreamFirstWrite(mICCContainer, str, len);
+	}
+	
+	return 0;
 }
 
 int 
@@ -91,9 +113,11 @@ NetReaderImpl::Write(const unsigned char *str, int32 len)
     if (mContainer != NULL) {
         return IL_StreamWrite(mContainer, str, len);
     }
-    else {
-        return 0;
+    else if (mICCContainer != NULL) {
+        return IL_ProfileStreamWrite(mICCContainer, str, len);
     }
+
+	return 0;
 }
 
 void 
@@ -101,6 +125,9 @@ NetReaderImpl::StreamAbort(int status)
 {
     if (mContainer != NULL) {
         IL_StreamAbort(mContainer, status);
+    }
+    else if (mICCContainer != NULL) {
+        IL_ProfileStreamAbort(mICCContainer, status);
     }
 }
 
@@ -110,6 +137,9 @@ NetReaderImpl::StreamComplete(PRBool is_multipart)
     if (mContainer != NULL) {
         IL_StreamComplete(mContainer, is_multipart);
     }
+    else if (mICCContainer != NULL) {
+        IL_ProfileStreamComplete(mICCContainer);
+    }
 }
 
 void 
@@ -117,6 +147,9 @@ NetReaderImpl::NetRequestDone(ilIURL *urls, int status)
 {
     if (mContainer != NULL) {
         IL_NetRequestDone(mContainer, urls, status);
+    }
+    else if (mICCContainer != NULL) {
+        IL_NetProfileRequestDone(mICCContainer, urls, status);
     }
 }
   
@@ -126,9 +159,11 @@ NetReaderImpl::StreamCreated(ilIURL *urls, int type)
     if (mContainer != NULL) {
         return IL_StreamCreated(mContainer, urls, type);
     }
-    else {
-        return PR_FALSE;
+    else if (mICCContainer != NULL) {
+        return IL_ProfileStreamCreated(mICCContainer, urls, type);
     }
+
+	return PR_FALSE;
 }
   
 PRBool 
@@ -142,10 +177,23 @@ NetReaderImpl::IsMulti()
     }
 }
 
-ilINetReader *
-IL_NewNetReader(il_container *ic)
+void*
+NetReaderImpl::GetContainer()
 {
-    ilINetReader *reader = new NetReaderImpl(ic);
+	void*	container = NULL;
+	
+	if (mContainer != NULL)
+		container = (void*) mContainer;
+	else if (mICCContainer != NULL)
+		container = (void*) mICCContainer;
+
+	return container;
+}
+
+ilINetReader *
+IL_NewNetReader(il_container *ic, ip_container *ip)
+{
+    ilINetReader *reader = new NetReaderImpl(ic,ip);
 
     if (reader != NULL) {
         NS_ADDREF(reader);
@@ -154,7 +202,7 @@ IL_NewNetReader(il_container *ic)
     return reader;
 }
 
-il_container *
+void *
 IL_GetNetReaderContainer(ilINetReader *reader)
 {
     if (reader != NULL) {
