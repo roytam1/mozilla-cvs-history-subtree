@@ -341,7 +341,10 @@ PRBool nsSOAPUtils::StartsWith(nsAReadableString& aSuper,
   nsReadingIterator<PRUnichar> i2;
   aSuper.BeginReading(i1);
   aSub.BeginReading(i2);
-  while (c2--)
+  while (c2--) {
     if (*i1 != *i2) return PR_FALSE;
+    i1++;
+    i2++;
+  }
   return PR_TRUE;
 }
