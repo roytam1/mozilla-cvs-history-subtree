@@ -1,19 +1,23 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
- *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
- *
- * The Initial Developer of this code under the NPL is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+/*
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
+ * The Original Code is Mozilla Communicator.
+ * 
+ * The Initial Developer of the Original Code is Intel Corp.
+ * Portions created by Intel Corp. are
+ * Copyright (C) 1999, 1999 Intel Corp.  All
+ * Rights Reserved.
+ * 
+ * Contributor(s): Yixiong Zou <yixiong.zou@intel.com>
+ *                 Carl Wong <carl.wong@intel.com>
  */
 
 #include "nsDiskCacheRecord.h"
@@ -214,57 +218,8 @@ nsDiskCacheRecord::SetStoredContentLength(PRUint32 aStoredContentLength)
     NS_ERROR("Error: can not set filesize to something bigger than itself.\n") ;
     return NS_ERROR_FAILURE ;
   }
-  else {
-    nsCOMPtr<nsIFileSpec> newfile;
-    NS_NewFileSpec(getter_AddRefs(newfile)) ;
-
-    char *newname, *oldname=nsnull ;
-    rv = mFile->GetLeafName(&oldname) ; // save the old file name 
-    if(!oldname)
-      return NS_ERROR_FAILURE ;
-
-    newfile->FromFileSpec(mFile) ;
-    newfile->MakeUnique() ; // generate a unique new file name
-    newfile->GetLeafName(&newname) ;
-
-    mFile->Rename(newname) ; // rename the old file 
-    mFile->SetLeafName(oldname) ;  // get the old name back
-
-    newfile->OpenStreamForReading() ;
-    mFile->OpenStreamForWriting() ;
-
-    PRUint32 buffer_size = 1024 ;
-    char buffer[1024], *p_buf ;
-    PRInt32 result ;
-    PRUint32 size_left = aStoredContentLength, size_written = 0 ;
-    p_buf = buffer ;
-
-    do {
-      if(size_left > buffer_size) 
-        size_written = buffer_size ;
-      else
-        size_written = size_left ;
-
-      rv = newfile->Read(&p_buf, size_written, &result) ;
-      if(NS_FAILED(rv) || result != NS_STATIC_CAST(PRInt32, size_written)) 
-        return NS_ERROR_FAILURE ;
-
-      rv = mFile->Write(buffer, size_written, &result) ;
-      if(NS_FAILED(rv) || result != NS_STATIC_CAST(PRInt32, size_written))
-        return NS_ERROR_FAILURE ;
-
-      size_left -= size_written ;
-    } while(size_left) ;
-
-    mFile->CloseStream() ;
-    newfile->CloseStream() ;
-
-    nsFileSpec extra_file ;
-    newfile->GetFileSpec(&extra_file) ;
-    extra_file.Delete(PR_TRUE) ;
-
-    return NS_OK ;
-  }
+  else 
+    return mFile->Truncate(aStoredContentLength) ;
 }
 
 NS_IMETHODIMP
