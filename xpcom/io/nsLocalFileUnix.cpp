@@ -838,3 +838,15 @@ nsLocalFile::Load(PRLibrary **_retval)
         return NS_ERROR_FAILURE;
     return NS_OK;
 }
+
+
+
+NS_COM nsresult NS_NewLocalFile(nsILocalFile** result)
+{
+    *result = new nsLocalFile();
+    if (*result)
+        return NS_OK;
+    return NS_FAILURE;
+}
+
+

@@ -1123,3 +1123,10 @@ nsLocalFile::GetDirectoryEntries(nsISimpleEnumerator * *entries)
 
 
 
+NS_COM nsresult NS_NewLocalFile(nsILocalFile** result)
+{
+    *result = new nsLocalFile();
+    if (*result)
+        return NS_OK;
+    return NS_FAILURE;
+}
