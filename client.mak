@@ -100,6 +100,20 @@ NSPR_CO_FLAGS=-r SeaMonkey_M14_BRANCH
 
 CVSCO_NSPR = cvs -q $(CVS_FLAGS) co $(NSPR_CO_FLAGS) -P
 
+#//------------------------------------------------------------------------
+#// Figure out how to pull PSM client libs.
+#// If no PSM_CO_TAG is specified, use the default static tag
+#//------------------------------------------------------------------------
+
+
+!if "$(PSM_CO_TAG)" != ""
+PSM_CO_FLAGS=-r $(PSM_CO_TAG)
+!else
+PSM_CO_FLAGS=-r SeaMonkey_M14_BRANCH
+!endif
+
+CVSCO_PSM = cvs -q $(CVS_FLAGS) co $(PSM_CO_FLAGS) -P
+
 ## The master target
 ############################################################
 
@@ -111,11 +125,15 @@ pull_and_build_all: pull_all depend build_all
 
 pull_clobber_and_build_all: pull_all clobber_all build_all
 
-pull_all: pull_nspr pull_seamonkey
+pull_all: pull_nspr pull_psm pull_seamonkey
 
 pull_nspr:
       cd $(MOZ_SRC)\.
       $(CVSCO_NSPR) mozilla/nsprpub
+
+pull_psm:
+      cd $(MOZ_SRC)\.
+      $(CVSCO_PSM) mozilla/security
 
 # pull either layout only or seamonkey the browser
 pull_layout:
@@ -131,12 +149,16 @@ pull_seamonkey:
 # nmake has to be hardcoded, or we have to depend on mozilla/config
 # being pulled already to figure out what $(NMAKE) should be.
 
-clobber_all: clobber_nspr clobber_seamonkey
+clobber_all: clobber_nspr clobber_psm clobber_seamonkey
 
-build_all: build_nspr build_seamonkey
+build_all: build_nspr build_psm build_seamonkey
 
 clobber_nspr:
 	@cd $(MOZ_SRC)\$(MOZ_TOP)\nsprpub
+	nmake -f makefile.win clobber_all
+
+clobber_psm:
+	@cd $(MOZ_SRC)\$(MOZ_TOP)\security
 	nmake -f makefile.win clobber_all
 
 clobber_seamonkey:
@@ -156,6 +178,10 @@ depend:
 
 build_nspr:
 	@cd $(MOZ_SRC)\$(MOZ_TOP)\nsprpub
+	nmake -f makefile.win export
+
+build_psm:
+	@cd $(MOZ_SRC)\$(MOZ_TOP)\security
 	nmake -f makefile.win export
 
 build_seamonkey:
@@ -189,6 +215,8 @@ install:
 
 export:
 	@cd $(MOZ_SRC)\$(MOZ_TOP)\nsprpub
+	nmake -f makefile.win export
+	@cd $(MOZ_SRC)\$(MOZ_TOP)\security
 	nmake -f makefile.win export
 	@cd $(MOZ_SRC)\$(MOZ_TOP)\.
 	set DIST_DIRS=1
