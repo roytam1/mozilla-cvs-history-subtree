@@ -43,6 +43,7 @@
 #include "nsSVGAtoms.h"
 #include "nsIXMLContent.h"
 
+
 nsresult
 NS_NewSVGPolylineElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
 nsresult
@@ -67,6 +68,8 @@ nsresult
 NS_NewSVGTextElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
 nsresult
 NS_NewSVGTSpanElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
+nsresult
+NS_NewSVGImageElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
 
 
 class nsSVGElementFactory : public nsIElementFactory
@@ -149,7 +152,9 @@ nsSVGElementFactory::CreateInstanceByTag(nsINodeInfo *aNodeInfo,
     return NS_NewSVGTextElement(aResult, aNodeInfo);
   else if (name == nsSVGAtoms::tspan)
     return NS_NewSVGTSpanElement(aResult, aNodeInfo);
-
+  else if (name == nsSVGAtoms::image)
+    return NS_NewSVGImageElement(aResult, aNodeInfo);
+  
   // if we don't know what to create, just create a standard xml element:
   nsCOMPtr<nsIContent> xmlContent;
   nsresult rv;

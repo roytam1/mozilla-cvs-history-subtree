@@ -51,6 +51,7 @@
 #include "nsISVGValueObserver.h"
 #include "nsWeakReference.h"
 #include "nsICSSStyleRule.h"
+#include "nsINameSpaceManager.h"
 
 class nsIStyledContent;
 class nsSVGAttributes;
@@ -178,7 +179,8 @@ public:
                          PRInt32& aNameSpaceID, 
                          nsIAtom*& aName,
                          nsIAtom*& aPrefix);
-  nsresult AddMappedSVGValue(nsIAtom* name, nsISupports* value);
+  nsresult AddMappedSVGValue(nsIAtom* name, nsISupports* value,
+                             PRInt32 namespaceID=kNameSpaceID_None);
   nsresult CopyAttributes(nsSVGAttributes* dest);
   void GetContentStyleRule(nsIStyleRule** rule);
   

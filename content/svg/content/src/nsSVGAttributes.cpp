@@ -467,7 +467,7 @@ nsSVGAttributes::GetMappedAttribute(nsINodeInfo* aNodeInfo, nsSVGAttribute** att
   PRInt32 index;
   for (index = 0; index < count; index++) {
     *attrib = (nsSVGAttribute*)mMappedAttributes.ElementAt(index);
-    if ((*attrib)->GetNodeInfo()->Equals(aNodeInfo)) { // XXX is this the right test? (don't want to compare prefixes!)
+    if ((*attrib)->GetNodeInfo()->NameAndNamespaceEquals(aNodeInfo)) { 
       NS_ADDREF(*attrib);
       return PR_TRUE;
     }
@@ -679,9 +679,14 @@ nsSVGAttributes::SetAttr(nsINodeInfo* aNodeInfo,
   count = Count();
   for (index = 0; index < count; index++) {
     attr = ElementAt(index);
-    if (attr->GetNodeInfo() == aNodeInfo) {
+    if (attr->GetNodeInfo()->NameAndNamespaceEquals(aNodeInfo)) {
       attr->GetValue()->GetValueString(oldValue);
       modification = PR_TRUE;
+      if (attr->GetNodeInfo()!=aNodeInfo) {
+        // XXX can this ever happen??
+        NS_ERROR("svg attribute's prefix changed");
+        attr->mNodeInfo = aNodeInfo;
+      }
       attr->GetValue()->SetValueString(aValue);
       rv = NS_OK;
       break;
@@ -691,6 +696,9 @@ nsSVGAttributes::SetAttr(nsINodeInfo* aNodeInfo,
   if (index >= count) { // didn't find it
 
     if (GetMappedAttribute(aNodeInfo, &attr)) {
+      if (attr->GetNodeInfo()!=aNodeInfo) {
+        attr->mNodeInfo = aNodeInfo;
+      }
       AppendElement(attr);
       attr->GetValue()->SetValueString(aValue);
     }
@@ -900,7 +908,8 @@ nsSVGAttributes::GetAttrNameAt(PRInt32 aIndex,
 }
 
 nsresult
-nsSVGAttributes::AddMappedSVGValue(nsIAtom* name, nsISupports* value)
+nsSVGAttributes::AddMappedSVGValue(nsIAtom* name, nsISupports* value,
+                                   PRInt32 namespaceID)
 {
   nsCOMPtr<nsISVGValue> svg_value = do_QueryInterface(value);
   NS_ENSURE_TRUE(svg_value, NS_ERROR_FAILURE);
@@ -916,7 +925,7 @@ nsSVGAttributes::AddMappedSVGValue(nsIAtom* name, nsISupports* value)
   NS_ENSURE_TRUE(nimgr, NS_ERROR_FAILURE);
 
   nsCOMPtr<nsINodeInfo> ni;
-  nimgr->GetNodeInfo(name, nsnull, kNameSpaceID_None, *getter_AddRefs(ni));
+  nimgr->GetNodeInfo(name, nsnull, namespaceID, *getter_AddRefs(ni));
   NS_ENSURE_TRUE(ni, NS_ERROR_FAILURE);
 
   nsSVGAttribute* attrib = nsnull;

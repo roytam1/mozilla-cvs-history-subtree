@@ -252,6 +252,9 @@ SVG_BRANCH_NEW_FILES = \
 	content/svg/content/src/nsISVGViewportRect.h          \
 	content/svg/content/src/nsSVGAnimatedLengthList.cpp   \
 	content/svg/content/src/nsSVGAnimatedLengthList.h     \
+	content/svg/content/src/nsSVGAnimatedString.cpp       \
+	content/svg/content/src/nsSVGAnimatedString.h         \
+	content/svg/content/src/nsSVGImageElement.cpp         \
 	content/svg/content/src/nsSVGLengthList.cpp           \
 	content/svg/content/src/nsSVGLengthList.h             \
 	content/svg/content/src/nsSVGNumber.cpp               \
@@ -260,6 +263,9 @@ SVG_BRANCH_NEW_FILES = \
 	content/svg/content/src/nsSVGTSpanElement.cpp         \
 	content/svg/content/src/nsSVGTypeCIDs.h               \
 	content/svg/content/src/nsSVGViewportRect.cpp         \
+	dom/public/idl/svg/nsIDOMSVGAnimatedString.idl        \
+	dom/public/idl/svg/nsIDOMSVGImageElement.idl          \
+	dom/public/idl/svg/nsIDOMSVGURIReference.idl          \
 	layout/svg/base/src/nsISVGChildFrame.h                \
 	layout/svg/base/src/nsISVGContainerFrame.h            \
 	layout/svg/base/src/nsISVGGlyphFragmentLeaf.h         \
