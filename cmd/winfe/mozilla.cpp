@@ -254,6 +254,7 @@ BOOL CNetscapeApp::InitApplication()
 static void InitializeNGLayout() {
   NS_DEFINE_IID(kCWindowIID, NS_WINDOW_CID);
   NS_DEFINE_IID(kCScrollbarIID, NS_VERTSCROLLBAR_CID);
+  NS_DEFINE_IID(kCHScrollbarIID, NS_HORZSCROLLBAR_CID);
   NS_DEFINE_IID(kCButtonIID, NS_BUTTON_CID);
   NS_DEFINE_IID(kCComboBoxCID, NS_COMBOBOX_CID);
   NS_DEFINE_IID(kCFileWidgetCID, NS_FILEWIDGET_CID);
@@ -266,6 +267,7 @@ static void InitializeNGLayout() {
 
   NSRepository::RegisterFactory(kCWindowIID, WIDGET_DLL, PR_FALSE, PR_FALSE);
   NSRepository::RegisterFactory(kCScrollbarIID, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  NSRepository::RegisterFactory(kCHScrollbarIID, WIDGET_DLL, PR_FALSE, PR_FALSE);
   NSRepository::RegisterFactory(kCButtonIID, WIDGET_DLL, PR_FALSE, PR_FALSE);
   NSRepository::RegisterFactory(kCComboBoxCID, WIDGET_DLL, PR_FALSE, PR_FALSE);
   NSRepository::RegisterFactory(kCFileWidgetCID, WIDGET_DLL, PR_FALSE, PR_FALSE);
@@ -280,11 +282,13 @@ static void InitializeNGLayout() {
   NS_DEFINE_IID(kCDeviceContextIID, NS_DEVICE_CONTEXT_CID);
   NS_DEFINE_IID(kCFontMetricsIID, NS_FONT_METRICS_CID);
   NS_DEFINE_IID(kCImageIID, NS_IMAGE_CID);
+  NS_DEFINE_IID(kCRegionIID, NS_REGION_CID);
 
   NSRepository::RegisterFactory(kCRenderingContextIID, GFXWIN_DLL, PR_FALSE, PR_FALSE);
   NSRepository::RegisterFactory(kCDeviceContextIID, GFXWIN_DLL, PR_FALSE, PR_FALSE);
   NSRepository::RegisterFactory(kCFontMetricsIID, GFXWIN_DLL, PR_FALSE, PR_FALSE);
   NSRepository::RegisterFactory(kCImageIID, GFXWIN_DLL, PR_FALSE, PR_FALSE);
+  NSRepository::RegisterFactory(kCRegionIID, GFXWIN_DLL, PR_FALSE, PR_FALSE);
 
   NS_DEFINE_IID(kCViewManagerCID, NS_VIEW_MANAGER_CID);
   NS_DEFINE_IID(kCViewCID, NS_VIEW_CID);
