@@ -27,10 +27,10 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 
-DIRS		= download-manager filepicker find   xfer prefwindow  timebomb console autocomplete updates intl resetPref killAll
+DIRS		= filepicker find xfer prefwindow  timebomb console autocomplete intl 
 
 ifndef MOZ_MINOTAUR
-DIRS		+= bookmarks directory history search sidebar related regviewer shistory urlbarhistory
+DIRS		+= download-manager bookmarks directory history search sidebar related regviewer shistory urlbarhistory killAll updates resetPref
 else
 DIRS += history/public shistory/public sidebar/public
 endif

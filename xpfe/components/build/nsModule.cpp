@@ -46,10 +46,10 @@
 #include "nsInternetSearchService.h"
 #include "nsRelatedLinksHandlerImpl.h"
 #include "nsUrlbarHistory.h"
-#endif
-
 #include "nsDownloadManager.h"
 #include "nsDownloadProxy.h"
+#endif
+
 #include "rdf.h"
 #include "nsTimeBomb.h"
 #include "nsXPIDLString.h"
@@ -77,10 +77,10 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(LocalSearchDataSource, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(InternetSearchDataSource, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(RelatedLinksHandlerImpl, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsUrlbarHistory)
-#endif
-
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsDownloadManager, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDownloadProxy)
+#endif
+
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsTimeBomb)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFontPackageHandler)
 #if defined(XP_WIN)
@@ -100,13 +100,13 @@ RegisterProc(nsIComponentManager *aCompMgr,
              const nsModuleComponentInfo *info)
 {
     nsresult rv = NS_OK;
+#ifndef MOZ_MINOTAUR
     nsCOMPtr<nsICategoryManager> catman = do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
     if (NS_FAILED(rv)) return rv;
 
     // add the MIME types layotu can handle to the handlers category.
     // this allows users of layout's viewers (the docshell for example)
     // to query the types of viewers layout can create.
-#ifndef MOZ_MINOTAUR
     nsXPIDLCString previous;
     rv = catman->AddCategoryEntry("Gecko-Content-Viewers", "application/http-index-format",
                                    NS_DOCUMENT_LOADER_FACTORY_CONTRACTID_PREFIX "view;1?type=application/http-index-format",
@@ -130,7 +130,8 @@ UnregisterProc(nsIComponentManager *aCompMgr,
                const char *registryLocation,
                const nsModuleComponentInfo *info)
 {
-    nsresult rv;
+    nsresult rv = NS_OK;
+#ifndef MOZ_MINOTAUR
     nsCOMPtr<nsICategoryManager> catman = do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
     if (NS_FAILED(rv)) return rv;
 
@@ -140,7 +141,7 @@ UnregisterProc(nsIComponentManager *aCompMgr,
 
     rv = catman->DeleteCategoryEntry("Gecko-Content-Viewers",
                                      "application/http-index-format; x-view-type=view-source", PR_TRUE);
-
+#endif
     return rv;
 }
 
@@ -184,11 +185,11 @@ static const nsModuleComponentInfo components[] = {
       NS_URLBARHISTORY_CONTRACTID, nsUrlbarHistoryConstructor },
     { "nsUrlbarHistory", NS_URLBARHISTORY_CID,
       NS_URLBARAUTOCOMPLETE_CONTRACTID, nsUrlbarHistoryConstructor },
-#endif
     { "Download Manager", NS_DOWNLOADMANAGER_CID, NS_DOWNLOADMANAGER_CONTRACTID,
       nsDownloadManagerConstructor },
     { "Download", NS_DOWNLOAD_CID, NS_DOWNLOAD_CONTRACTID,
       nsDownloadProxyConstructor },
+#endif
     { "Netscape TimeBomb", NS_TIMEBOMB_CID, NS_TIMEBOMB_CONTRACTID, nsTimeBombConstructor},
     { "nsCharsetMenu", NS_CHARSETMENU_CID,
       NS_RDF_DATASOURCE_CONTRACTID_PREFIX NS_CHARSETMENU_PID,
