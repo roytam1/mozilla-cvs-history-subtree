@@ -769,7 +769,7 @@ sub run_all_tests {
 	  $test_result = AliveTest("LayoutAliveTest", $build_dir,
 							   $binary, 
 							   "\"http://jrgm.mcom.com/page-loader/loader.pl?delay=1000&nocache=0&maxcycle=0\"",
-							   1800);
+							   900);
     }
 	# "http://jrgm.mcom.com/page-loader/loader.pl?delay=1000&nocache=0&maxcycle=0", 
     return $test_result;
@@ -1034,9 +1034,7 @@ sub AliveTest {
 
 	# Build up command string, if we have arguments
 	if($args) {
-	  print "\$args = $args\n";
 	  $cmd .= " " . $args;
-	  print "\$cmd = $cmd\n";
 	}
 
 	# Print out testname
