@@ -347,6 +347,7 @@ interface nsIHTMLEditor : nsISupports
                                        in AString aContextStr,
                                        in AString aInfoStr,
                                        in AString aFlavor,
+                                       in nsIDOMDocument aSourceDoc,
                                        in nsIDOMNode aDestinationNode,
                                        in long aDestinationOffset,
                                        in boolean aDeleteSelection,
