@@ -29,6 +29,10 @@
 #include "nsXPIDLString.h"
 #include "nsIAccessibleEventReceiver.h"
 
+/* For documentation of the accessibility architecture, 
+ * see http://lxr.mozilla.org/seamonkey/source/accessible/accessible-docs.html
+ */
+
 //#define DEBUG_LEAKS
 
 #ifdef DEBUG_LEAKS
@@ -49,11 +53,15 @@ EXTERN_C GUID CDECL CLSID_Accessible =
 //-----------------------------------------------------
 Accessible::Accessible(nsIAccessible* aAcc, HWND aWnd)
 {
-  mAccessible = aAcc;
-  mWnd = aWnd;
-  m_cRef = 0;
+  mAccessible = aAcc;  // The nsIAccessible we're proxying from
+
+  mWnd = aWnd;  // The window handle, for NotifyWinEvent, or getting the accessible parent thru the window parent
+  m_cRef = 0;   // for reference counting, so we know when to delete ourselves
+
+  // mCachedIndex and mCachedChild allows fast order(N) indexing of children when moving forward through the 
+  // list 1 at a time,rather than going back to the first child each time, it can just get the next sibling
   mCachedIndex = 0;
-  mCachedChild = NULL;
+  mCachedChild = NULL;   
 
 #ifdef DEBUG_LEAKS
   printf("Accessibles=%d\n", ++gAccessibles);
@@ -147,7 +155,6 @@ STDMETHODIMP Accessible::get_accChildCount( long __RPC_FAR *pcountChildren)
 {
   PRInt32 count = 0;
   mAccessible->GetAccChildCount(&count);
-  //printf("Count=%d\n",count);
   *pcountChildren = count;
   return S_OK;
 }
@@ -282,10 +289,6 @@ STDMETHODIMP Accessible::get_accState(
    return S_OK;
 }
 
-PRBool Accessible::InState(const nsString& aStates, const char* aState)
-{
-  return (aStates.Find(aState) == 0);
-}
 
 STDMETHODIMP Accessible::get_accHelp( 
       /* [optional][in] */ VARIANT varChild,
@@ -489,10 +492,7 @@ STDMETHODIMP Accessible::accHitTest(
 STDMETHODIMP Accessible::accDoDefaultAction( 
       /* [optional][in] */ VARIANT varChild)
 {
-    if (NS_SUCCEEDED(mAccessible->AccDoAction(0)))
-      return S_OK;
-    else
-      return DISP_E_MEMBERNOTFOUND;
+  return NS_SUCCEEDED(mAccessible->AccDoAction(0))? NS_OK: DISP_E_MEMBERNOTFOUND;
 }
 
 STDMETHODIMP Accessible::put_accName( 
@@ -509,6 +509,7 @@ STDMETHODIMP Accessible::put_accValue(
   return S_FALSE;
 }
 
+// For IDispatch support
 STDMETHODIMP 
 Accessible::GetTypeInfoCount(UINT *p)
 {
@@ -516,12 +517,14 @@ Accessible::GetTypeInfoCount(UINT *p)
   return E_NOTIMPL;
 }
 
+// For IDispatch support
 STDMETHODIMP Accessible::GetTypeInfo(UINT i, LCID lcid, ITypeInfo **ppti)
 {
   *ppti = 0;
   return E_NOTIMPL;
 }
 
+// For IDispatch support
 STDMETHODIMP 
 Accessible::GetIDsOfNames(REFIID riid, LPOLESTR *rgszNames,
                            UINT cNames, LCID lcid, DISPID *rgDispId)
@@ -529,6 +532,7 @@ Accessible::GetIDsOfNames(REFIID riid, LPOLESTR *rgszNames,
   return E_NOTIMPL;
 }
 
+// For IDispatch support
 STDMETHODIMP Accessible::Invoke(DISPID dispIdMember, REFIID riid,
     LCID lcid, WORD wFlags, DISPPARAMS *pDispParams,
     VARIANT *pVarResult, EXCEPINFO *pExcepInfo, UINT *puArgErr)
@@ -636,8 +640,8 @@ void RootAccessible::GetNSAccessibleFor(VARIANT varChild, nsCOMPtr<nsIAccessible
 
 NS_IMETHODIMP RootAccessible::HandleEvent(PRUint32 aEvent, nsIAccessible* aAccessible)
 {
-  // print focus event!!
 #ifdef DEBUG
+  // print focus event!!
   printf("Focus Changed!!!\n");
 #endif
 

@@ -20,6 +20,10 @@
  * Contributor(s): 
  */
 
+/* For documentation of the accessibility architecture, 
+ * see http://lxr.mozilla.org/seamonkey/source/accessible/accessible-docs.html
+ */
+
 #ifndef _Accessible_H_
 #define _Accessible_H_
 

@@ -391,9 +391,9 @@ PRBool nsDOMTreeWalker::GetParent()
       if (NS_SUCCEEDED(nsAccessible::GetParentPresShellAndContent(presShell,
                                                     getter_AddRefs(parentPresShell),
                                                     getter_AddRefs(content)))) {
-       nsIFrame* frame;
-       parentPresShell->GetPrimaryFrameFor(content, &frame);
-       nsCOMPtr<nsIAccessible> accessible(do_QueryInterface(frame));
+        nsIFrame* frame;
+        parentPresShell->GetPrimaryFrameFor(content, &frame);
+        nsCOMPtr<nsIAccessible> accessible(do_QueryInterface(frame));
         if (!accessible)
           accessible = do_QueryInterface(content);
         if (accessible) {
@@ -1229,103 +1229,6 @@ NS_IMETHODIMP nsAccessible::AccTakeFocus(void)
 }
 
 
-// Calculate a frame's position in screen coordinates
-static nsresult
-GetAbsoluteFramePosition(nsIPresContext* aPresContext,
-                         nsIFrame *aFrame, 
-                         nsRect& aAbsoluteTwipsRect, 
-                         nsRect& aAbsolutePixelRect)
-{
-  //XXX: This code needs to take the view's offset into account when calculating
-  //the absolute coordinate of the frame.
-  nsresult rv = NS_OK;
- 
-  aFrame->GetRect(aAbsoluteTwipsRect);
-  // zero these out, 
-  // because the GetOffsetFromView figures them out
-  aAbsoluteTwipsRect.x = 0;
-  aAbsoluteTwipsRect.y = 0;
-
-    // Get conversions between twips and pixels
-  float t2p;
-  float p2t;
-  aPresContext->GetTwipsToPixels(&t2p);
-  aPresContext->GetPixelsToTwips(&p2t);
-  
-   // Add in frame's offset from it it's containing view
-  nsIView *containingView = nsnull;
-  nsPoint offset;
-  rv = aFrame->GetOffsetFromView(aPresContext, offset, &containingView);
-  if (NS_SUCCEEDED(rv) && (nsnull != containingView)) {
-    aAbsoluteTwipsRect.x += offset.x;
-    aAbsoluteTwipsRect.y += offset.y;
-
-    nsPoint viewOffset;
-    containingView->GetPosition(&viewOffset.x, &viewOffset.y);
-    nsIView * parent;
-    containingView->GetParent(parent);
-
-    // if we don't have a parent view then 
-    // check to see if we have a widget and adjust our offset for the widget
-    if (parent == nsnull) {
-      nsIWidget * widget;
-      containingView->GetWidget(widget);
-      if (nsnull != widget) {
-        // Add in the absolute offset of the widget.
-        nsRect absBounds;
-        nsRect lc;
-        widget->WidgetToScreen(lc, absBounds);
-        // Convert widget coordinates to twips   
-        //aAbsoluteTwipsRect.x += NSIntPixelsToTwips(absBounds.x, p2t);
-        //aAbsoluteTwipsRect.y += NSIntPixelsToTwips(absBounds.y, p2t);   
-        NS_RELEASE(widget);
-      }
-      rv = NS_OK;
-    } else {
-
-      while (nsnull != parent) {
-        nsPoint po;
-        parent->GetPosition(&po.x, &po.y);
-        viewOffset.x += po.x;
-        viewOffset.y += po.y;
-        nsIScrollableView * scrollView;
-        if (NS_OK == containingView->QueryInterface(NS_GET_IID(nsIScrollableView), (void **)&scrollView)) {
-          nscoord x;
-          nscoord y;
-          scrollView->GetScrollPosition(x, y);
-          viewOffset.x -= x;
-          viewOffset.y -= y;
-        }
-        nsIWidget * widget;
-        parent->GetWidget(widget);
-        if (nsnull != widget) {
-          // Add in the absolute offset of the widget.
-          nsRect absBounds;
-          nsRect lc;
-          widget->WidgetToScreen(lc, absBounds);
-          // Convert widget coordinates to twips   
-          aAbsoluteTwipsRect.x += NSIntPixelsToTwips(absBounds.x, p2t);
-          aAbsoluteTwipsRect.y += NSIntPixelsToTwips(absBounds.y, p2t);   
-          NS_RELEASE(widget);
-          break;
-        }
-        parent->GetParent(parent);
-      }
-      aAbsoluteTwipsRect.x += viewOffset.x;
-      aAbsoluteTwipsRect.y += viewOffset.y;
-    }
-  }
-
-   // convert to pixel coordinates
-  if (NS_SUCCEEDED(rv)) {
-   aAbsolutePixelRect.x = NSTwipsToIntPixels(aAbsoluteTwipsRect.x, t2p);
-   aAbsolutePixelRect.y = NSTwipsToIntPixels(aAbsoluteTwipsRect.y, t2p);
-   aAbsolutePixelRect.width = NSTwipsToIntPixels(aAbsoluteTwipsRect.width, t2p);
-   aAbsolutePixelRect.height = NSTwipsToIntPixels(aAbsoluteTwipsRect.height, t2p);
-  }
-
-  return rv;
-}
 
 nsresult nsAccessible::GetDocShellFromPS(nsIPresShell* aPresShell, nsIDocShell** aDocShell)
 {
@@ -1522,6 +1425,7 @@ nsAccessible::GetAbsoluteFramePosition(nsIPresContext* aPresContext,
   aFrame->GetRect(aAbsoluteTwipsRect);
   // zero these out, 
   // because the GetOffsetFromView figures them out
+  // We're only keeping the height and width in aAbsoluteTwipsRect
   aAbsoluteTwipsRect.x = 0;
   aAbsoluteTwipsRect.y = 0;
 
@@ -1614,101 +1518,6 @@ nsAccessible::GetAbsoluteFramePosition(nsIPresContext* aPresContext,
 }
 
 
-nsresult  
-nsAccessible::GetAbsPosition(nsIPresShell* aPresShell, nsPoint& aPoint)
-{
-  NS_ENSURE_ARG_POINTER(aPresShell);
-
-  nsCOMPtr<nsIPresShell> parentPresShell;
-  nsCOMPtr<nsIContent> content;
-  if (NS_FAILED(GetParentPresShellAndContent(aPresShell,
-                                             getter_AddRefs(parentPresShell),
-                                             getter_AddRefs(content)))) {
-    return NS_ERROR_FAILURE;
-  }
-
-  nsIFrame* frame;
-  parentPresShell->GetPrimaryFrameFor(content, &frame);
-  if (frame == nsnull) {
-    return NS_ERROR_FAILURE;
-  }
-
-  nsCOMPtr<nsIPresContext> parentPresContext;
-  parentPresShell->GetPresContext(getter_AddRefs(parentPresContext));
-  nsRect rect;
-  if (!parentPresContext || NS_FAILED(CalcOffset(frame, parentPresContext, rect))) {
-    return NS_ERROR_FAILURE;
-  }
-
-#ifdef NS_DEBUG
-  printf("Frame: %p  Offset: %d,%d\n", frame, rect.x, rect.y);
-#endif
-
-  aPoint.x += rect.x;
-  aPoint.y += rect.y;
-
-  // return code here doesn't matter
-  // because the last call to this will always fail 
-  // when you are at the root.
-  GetAbsPosition(parentPresShell, aPoint);
-
-  return NS_OK;
-}
-
-nsresult 
-nsAccessible::CalcOffset(nsIFrame* aFrame,
-                         nsIPresContext * aPresContext,
-                         nsRect& aRect)
-{
-  NS_ENSURE_ARG_POINTER(aFrame);
-  NS_ENSURE_ARG_POINTER(aPresContext);
-
-  aRect.SetRect(0,0,0,0);
-
-   // sum up all rects of frames with the same content node
-  nsIFrame* start = aFrame;
-
-  nsRect r;
-  GetBounds(r);
-
-  nsPoint offset(r.x, r.y);
-
-  nsIFrame* parent;
-  aFrame->GetParent(&parent);
-
-  nsPoint pos(0,0);
-  while (parent) {
-    // XXX hack
-    nsIView* view;
-    parent->GetView(aPresContext, &view);
-    if (view) {
-      nsIScrollableView* scrollingView;
-      nsresult result = view->QueryInterface(NS_GET_IID(nsIScrollableView), (void**)&scrollingView);
-      if (NS_SUCCEEDED(result)) {
-        nscoord xoff = 0;
-        nscoord yoff = 0;
-        scrollingView->GetScrollPosition(xoff, yoff);
-        offset.x -= xoff;
-        offset.y -= yoff;
-      }
-    }
-
-    parent->GetOrigin(pos);
-    offset += pos;
-    parent->GetParent(&parent);
-  }
-
-  float t2p;
-  aPresContext->GetTwipsToPixels(&t2p);
-
-  aRect.x      = PRInt32(offset.x*t2p);
-  aRect.y      = PRInt32(offset.y*t2p);
-  aRect.width  = PRInt32(r.width*t2p);
-  aRect.height = PRInt32(r.height*t2p);
-
-  return NS_OK;
-}
-
 void nsAccessible::GetBounds(nsRect& aBounds)
 {
   nsCOMPtr<nsIPresContext> presContext;
@@ -1718,10 +1527,11 @@ void nsAccessible::GetBounds(nsRect& aBounds)
   finder.GetBounds(aBounds);
 }
 
-  /* void accGetBounds (out long x, out long y, out long width, out long height); */
+
+/* void accGetBounds (out long x, out long y, out long width, out long height); */
 NS_IMETHODIMP nsAccessible::AccGetBounds(PRInt32 *x, PRInt32 *y, PRInt32 *width, PRInt32 *height)
 {
-    // delegate
+  // delegate
   if (mAccessible) {
     nsresult rv = mAccessible->AccGetBounds(x,y,width,height);
     if (NS_SUCCEEDED(rv))
@@ -1744,8 +1554,8 @@ NS_IMETHODIMP nsAccessible::AccGetBounds(PRInt32 *x, PRInt32 *y, PRInt32 *width,
   nsRect orgRectPixels;
   nsRect frameRectTwips;
 
-  GetBounds(orgRectTwips);
-  frame->GetRect(frameRectTwips);
+  GetBounds(orgRectTwips);   // This unions up all the  primary frames for this node and all of the sibling nodes after it
+  frame->GetRect(frameRectTwips);   // Usually just the primary frame, but can be the choice list frame for an nsSelectAccessible
 
   nscoord xdiff = frameRectTwips.x - orgRectTwips.x;
   nscoord ydiff = frameRectTwips.y - orgRectTwips.y;
@@ -1835,7 +1645,6 @@ nsIAccessible* nsAccessible::CreateNewAccessible(nsIAccessible* aAccessible, nsI
 
 nsHTMLBlockAccessible::nsHTMLBlockAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWeakReference* aShell):nsAccessible(aAccessible, aNode, aShell)
 {
-
 }
 
 nsIAccessible* nsHTMLBlockAccessible::CreateNewAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWeakReference* aShell)
@@ -1847,16 +1656,18 @@ nsIAccessible* nsHTMLBlockAccessible::CreateNewAccessible(nsIAccessible* aAccess
 /* nsIAccessible accGetAt (in long x, in long y); */
 NS_IMETHODIMP nsHTMLBlockAccessible::AccGetAt(PRInt32 tx, PRInt32 ty, nsIAccessible **_retval)
 {
+  // We're going to find the child that contains coordinates (tx,ty)
   PRInt32 x,y,w,h;
-  AccGetBounds(&x,&y,&w,&h);
+  AccGetBounds(&x,&y,&w,&h);  // Get bounds for this accessible
   if (tx > x && tx < x + w && ty > y && ty < y + h)
   {
+    // It's within this nsIAccessible, let's drill down
     nsCOMPtr<nsIAccessible> child;
     nsCOMPtr<nsIAccessible> smallestChild;
     PRInt32 smallestArea = -1;
     nsCOMPtr<nsIAccessible> next;
     GetAccFirstChild(getter_AddRefs(child));
-    PRInt32 cx,cy,cw,ch;
+    PRInt32 cx,cy,cw,ch;  // Child bounds
 
     while(child) {
       child->AccGetBounds(&cx,&cy,&cw,&ch);
@@ -1864,6 +1675,12 @@ NS_IMETHODIMP nsHTMLBlockAccessible::AccGetAt(PRInt32 tx, PRInt32 ty, nsIAccessi
       // ok if there are multiple frames the contain the point 
       // and they overlap then pick the smallest. We need to do this
       // for text frames.
+      
+      // For example, A point that's in block #2 is also in block #1, but we want to return #2:
+      //
+      // [[block #1 is long wrapped text that continues to
+      // another line]]  [[here is a shorter block #2]]
+\
       if (tx > cx && tx < cx + cw && ty > cy && ty < cy + ch) 
       {
         if (smallestArea == -1 || cw*ch < smallestArea) {

@@ -102,18 +102,18 @@ nsIAccessible* nsRootAccessible::CreateNewAccessible(nsIAccessible* aAccessible,
   return new nsHTMLBlockAccessible(aAccessible, aNode, aShell);
 }
 
-  /* readonly attribute nsIAccessible accParent; */
+/* readonly attribute nsIAccessible accParent; */
 NS_IMETHODIMP nsRootAccessible::GetAccParent(nsIAccessible * *aAccParent) 
 { 
   *aAccParent = nsnull;
   return NS_OK;
 }
 
-  /* readonly attribute unsigned long accRole; */
+/* readonly attribute unsigned long accRole; */
 NS_IMETHODIMP nsRootAccessible::GetAccRole(PRUint32 *aAccRole) 
 { 
   nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
-  nsCOMPtr<nsIPresContext> context; //(do_QueryInterface(shell));
+  nsCOMPtr<nsIPresContext> context; 
   shell->GetPresContext(getter_AddRefs(context));
   nsCOMPtr<nsISupports> container;
   context->GetContainer(getter_AddRefs(container));
@@ -121,6 +121,7 @@ NS_IMETHODIMP nsRootAccessible::GetAccRole(PRUint32 *aAccRole)
     nsCOMPtr<nsIDocShellTreeItem> parentTreeItem, docTreeItem(do_QueryInterface(container));
     if (docTreeItem) {
       docTreeItem->GetSameTypeParent(getter_AddRefs(parentTreeItem));
+      // Basically, if this docshell has a parent of the same type, it's a frame
       if (parentTreeItem) {
         *aAccRole = ROLE_PANE;
         return NS_OK;
@@ -146,46 +147,45 @@ NS_IMETHODIMP nsRootAccessible::AddAccessibleEventListener(nsIAccessibleEventLis
 {
   if (!mListener)
   {
-     // add an event listener to the document
-     nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
-     nsCOMPtr<nsIDocument> document;
-     shell->GetDocument(getter_AddRefs(document));
+    // add an event listener to the document
+    nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
+    nsCOMPtr<nsIDocument> document;
+    shell->GetDocument(getter_AddRefs(document));
 
-   // use AddEventListenerByIID from the nsIDOMEventReceiver interface
-     nsCOMPtr<nsIDOMEventReceiver> receiver;
-     if (NS_SUCCEEDED(document->QueryInterface(NS_GET_IID(nsIDOMEventReceiver), getter_AddRefs(receiver))) && receiver)
-     {
-    nsresult rv = NS_OK;
-        // add this as a FocusListener to the document
-    rv = receiver->AddEventListenerByIID(NS_STATIC_CAST(nsIDOMFocusListener *, this), NS_GET_IID(nsIDOMFocusListener));
-        NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register listener");
-        // add this as a FormListener to the document
-        rv = receiver->AddEventListenerByIID(NS_STATIC_CAST(nsIDOMFormListener*, this), NS_GET_IID(nsIDOMFormListener));
-        NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register listener");
-        // add this as a TextListener to the document
-        rv = receiver->AddEventListenerByIID(NS_STATIC_CAST(nsIDOMTextListener*, this), NS_GET_IID(nsIDOMTextListener));
-        NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register listener");
-        // add this as a MutationListener to the document
-        rv = receiver->AddEventListenerByIID(NS_STATIC_CAST(nsIDOMMutationListener*, this), NS_GET_IID(nsIDOMMutationListener));
-        NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register listener");
-     }
-   // use AddEventListener from the nsIDOMEventTarget interface -- for UserDefinedTypes
-     nsCOMPtr<nsIDOMEventTarget> target;
-     if (NS_SUCCEEDED(document->QueryInterface(NS_GET_IID(nsIDOMEventTarget), getter_AddRefs(target))) && target)
-     {
-        nsresult rv = NS_OK;
-    // we're a DOMEventListener now!!
-        nsCOMPtr<nsIDOMEventListener> listener;
-    rv = this->QueryInterface( NS_GET_IID(nsIDOMEventListener), getter_AddRefs(listener) );
-        NS_ASSERTION(NS_SUCCEEDED(rv), "failed to QI");
-    // add ourself as a CheckboxStateChange listener
-    rv = target->AddEventListener( nsAutoString(NS_LITERAL_STRING("CheckboxStateChange")) , listener, PR_TRUE );
-        NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register listener");
-    // add ourself as a RadiobuttonStateChange listener
-    rv = target->AddEventListener( nsAutoString(NS_LITERAL_STRING("RadiobuttonStateChange")) , listener, PR_TRUE );
-        NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register listener");
-   }
-
+    // use AddEventListenerByIID from the nsIDOMEventReceiver interface
+    nsCOMPtr<nsIDOMEventReceiver> receiver;
+    if (NS_SUCCEEDED(document->QueryInterface(NS_GET_IID(nsIDOMEventReceiver), getter_AddRefs(receiver))) && receiver)
+    {
+      nsresult rv = NS_OK;
+      // add this as a FocusListener to the document
+      rv = receiver->AddEventListenerByIID(NS_STATIC_CAST(nsIDOMFocusListener *, this), NS_GET_IID(nsIDOMFocusListener));
+      NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register listener");
+      // add this as a FormListener to the document
+      rv = receiver->AddEventListenerByIID(NS_STATIC_CAST(nsIDOMFormListener*, this), NS_GET_IID(nsIDOMFormListener));
+      NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register listener");
+      // add this as a TextListener to the document
+      rv = receiver->AddEventListenerByIID(NS_STATIC_CAST(nsIDOMTextListener*, this), NS_GET_IID(nsIDOMTextListener));
+      NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register listener");
+      // add this as a MutationListener to the document
+      rv = receiver->AddEventListenerByIID(NS_STATIC_CAST(nsIDOMMutationListener*, this), NS_GET_IID(nsIDOMMutationListener));
+      NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register listener");
+    }
+    // use AddEventListener from the nsIDOMEventTarget interface -- for UserDefinedTypes
+    nsCOMPtr<nsIDOMEventTarget> target;
+    if (NS_SUCCEEDED(document->QueryInterface(NS_GET_IID(nsIDOMEventTarget), getter_AddRefs(target))) && target)
+    {
+      nsresult rv = NS_OK;
+      // we're a DOMEventListener now!!
+      nsCOMPtr<nsIDOMEventListener> listener;
+      rv = this->QueryInterface( NS_GET_IID(nsIDOMEventListener), getter_AddRefs(listener) );
+      NS_ASSERTION(NS_SUCCEEDED(rv), "failed to QI");
+      // add ourself as a CheckboxStateChange listener
+      rv = target->AddEventListener( nsAutoString(NS_LITERAL_STRING("CheckboxStateChange")) , listener, PR_TRUE );
+      NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register listener");
+      // add ourself as a RadiobuttonStateChange listener
+      rv = target->AddEventListener( nsAutoString(NS_LITERAL_STRING("RadiobuttonStateChange")) , listener, PR_TRUE );
+      NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register listener");
+    }
   }
 
   // create a weak reference to the listener
@@ -243,7 +243,7 @@ nsresult nsRootAccessible::HandleEvent(nsIDOMEvent* aEvent)
       if (mCurrentFocus == content)
         return NS_OK;
       mCurrentFocus = content;
-  }
+    }
 
     nsIFrame* frame = nsnull;
     nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
@@ -259,9 +259,9 @@ nsresult nsRootAccessible::HandleEvent(nsIDOMEvent* aEvent)
       // is it a link?
       nsCOMPtr<nsILink> link(do_QueryInterface(content));
       if (link) {
-#ifdef DEBUG
+        #ifdef DEBUG
         printf("focus link!\n");
-#endif
+        #endif
         nsCOMPtr<nsIDOMNode> node(do_QueryInterface(content));
         if (node)
           a = new nsHTMLLinkAccessible(shell, node);
@@ -271,23 +271,22 @@ nsresult nsRootAccessible::HandleEvent(nsIDOMEvent* aEvent)
     if (a) {
       nsCOMPtr<nsIDOMNode> node(do_QueryInterface(content)); 
       nsCOMPtr<nsIAccessible> na(CreateNewAccessible(a, node, mPresShell));
-      if ( !na ) {
+      if ( !na ) 
         return NS_OK;
-    }
 
       if ( eventType.EqualsIgnoreCase("focus") ) {
         mListener->HandleEvent(nsIAccessibleEventListener::EVENT_FOCUS, na);
-    }
+      }
       else if ( eventType.EqualsIgnoreCase("change") ) {
         mListener->HandleEvent(nsIAccessibleEventListener::EVENT_STATE_CHANGE, na);
-    }
+      }
       else if ( eventType.EqualsIgnoreCase("CheckboxStateChange") ) {
         mListener->HandleEvent(nsIAccessibleEventListener::EVENT_STATE_CHANGE, na);
-    }
+      }
       else if ( eventType.EqualsIgnoreCase("RadiobuttonStateChange") ) {
         mListener->HandleEvent(nsIAccessibleEventListener::EVENT_STATE_CHANGE, na);
+      }
     }
-  }
   }
   return NS_OK;
 }

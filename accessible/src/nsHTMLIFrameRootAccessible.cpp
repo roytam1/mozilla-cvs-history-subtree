@@ -98,8 +98,6 @@ NS_IMETHODIMP nsHTMLIFrameRootAccessible::GetAccName(PRUnichar * *aAccName)
       return NS_OK;
     }
   }
-  //*aAccName = ToNewUnicode(NS_LITERAL_STRING("Document"));
-
   *aAccName = ToNewUnicode(NS_LITERAL_STRING("Frame"));
   return NS_OK;  
 }
