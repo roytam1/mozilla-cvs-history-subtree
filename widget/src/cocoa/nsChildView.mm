@@ -829,7 +829,7 @@ static Boolean WeAreFrontProcess()
 NS_IMETHODIMP nsChildView::SetFocus(PRBool aRaise)
 {
   NSWindow* window = [mView window];
-  if (window)
+  if (window && [window firstResponder] != mView)
     [window makeFirstResponder: mView];
   return NS_OK;
 }
@@ -3082,6 +3082,8 @@ static void ConvertCocoaKeyEventToMacEvent(NSEvent* cocoaEvent, EventRecord& mac
     }
   }
 
+  NSLog(@"key down nondead %d, handled %d, in composition %d, last key to cocoa %d", nonDeadKeyPress, isKeyEventHandled, mInComposition, mLastKeyEventWasSentToCocoa);
+
   if (!nonDeadKeyPress || mLastKeyEventWasSentToCocoa || (!isKeyDownEventHandled && !isKeyEventHandled))
   {
     // XXX hack: we need to have a flag so we call interpretKeyEvents even tho 
@@ -3122,36 +3124,45 @@ static void ConvertCocoaKeyEventToMacEvent(NSEvent* cocoaEvent, EventRecord& mac
 // This method is called when we are about to be focused.
 - (BOOL)becomeFirstResponder
 {
-  nsFocusEvent event;
-  event.eventStructType = NS_FOCUS_EVENT;
-  event.nativeMsg = nsnull;
-  event.message = NS_GOTFOCUS;
-  event.widget = mGeckoChild;
-
-  //focus and blur event should go to their base widget loc
-  event.point.x = 0;
-  event.point.y = 0;
-
-  mGeckoChild->DispatchWindowEvent(event);
-  return [super becomeFirstResponder];
+  BOOL becomeFirst = [super becomeFirstResponder];
+  if (becomeFirst)
+  {
+    nsFocusEvent event;
+    event.eventStructType = NS_FOCUS_EVENT;
+    event.nativeMsg = nsnull;
+    event.message = NS_GOTFOCUS;
+    event.widget = mGeckoChild;
+  
+    //focus and blur event should go to their base widget loc
+    event.point.x = 0;
+    event.point.y = 0;
+  
+    mGeckoChild->DispatchWindowEvent(event);
+  }
+  //NSLog(@"becomeFirstResponder on %@ returns %d", self, becomeFirst);
+  return becomeFirst;
 }
 
 // This method is called when are are about to lose focus.
 - (BOOL)resignFirstResponder
 {
-  nsFocusEvent event;
-  event.eventStructType = NS_FOCUS_EVENT;
-  event.nativeMsg = nsnull;
-  event.message = NS_LOSTFOCUS;
-  event.widget = mGeckoChild;
-
-  //focus and blur event should go to their base widget loc
-  event.point.x = 0;
-  event.point.y = 0;
-
-  mGeckoChild->DispatchWindowEvent(event);
-
-  return [super resignFirstResponder];
+  BOOL resign = [super resignFirstResponder];
+  if (resign)
+  {
+    nsFocusEvent event;
+    event.eventStructType = NS_FOCUS_EVENT;
+    event.nativeMsg = nsnull;
+    event.message = NS_LOSTFOCUS;
+    event.widget = mGeckoChild;
+  
+    //focus and blur event should go to their base widget loc
+    event.point.x = 0;
+    event.point.y = 0;
+  
+    mGeckoChild->DispatchWindowEvent(event);
+  }
+  //NSLog(@"resignFirstResponder on %@ returns %d", self, resign);
+  return resign;
 }
 
 //-------------------------------------------------------------------------
