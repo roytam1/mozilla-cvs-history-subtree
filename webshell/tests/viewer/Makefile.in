@@ -41,6 +41,7 @@ REQUIRES	= xpcom \
 		  docshell \
 		  editor \
 		  composer \
+		  commandhandler \
 		  util \
 		  uriloader \
 		  locale \
