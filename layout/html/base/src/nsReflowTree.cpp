@@ -72,7 +72,7 @@ nsReflowTree::Node::GetChild(nsIFrame *forFrame)
 nsReflowTree::Node::ChildChunk::Create(nsReflowTree::Node *node)
 {
     ChildChunk *chunk = new ChildChunk();
-    memset(&chunk->mKids[1], 0, (KIDS_CHUNK_SIZE - 1)*sizeof(chunk->mKids[0]));
+    memset(&chunk->mKids[1], 0, sizeof(chunk->mKids)-sizeof(chunk->mKids[0]));
     chunk->mKids[0] = node;
     chunk->mNext = 0;
 
