@@ -25,6 +25,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include "nsError.h"
 
 //----------------------------------------------------------------------------------------
 void nsFileSpecHelpers::Canonify(char*& ioPath, bool inMakeDirs)
@@ -164,6 +165,145 @@ void nsNativeFileSpec::Delete(bool inRecursive)
         remove(mPath);
 } // nsNativeFileSpec::Delete
 
+
+
+//----------------------------------------------------------------------------------------
+nsresult nsNativeFileSpec::Rename(const char* inNewName)
+//----------------------------------------------------------------------------------------
+{
+    // This function should not be used to move a file on disk. 
+    if (strchr(inNewName, '/')) 
+        return NS_ERROR_FAILURE;
+
+    if (PR_Rename(mPath, inNewName) != NS_OK)
+    {
+        return NS_ERROR_FAILURE;
+    }
+    
+    return NS_OK;
+} 
+
+static int CrudeFileCopy(const char* in, const char* out)
+{
+	struct stat in_stat;
+	int stat_result = -1;
+
+	char	buf [1024];
+	FILE	*ifp, *ofp;
+	int	rbytes, wbytes;
+
+	if (!in || !out)
+		return -1;
+
+	stat_result = stat (in, &in_stat);
+
+	ifp = fopen (in, "r");
+	if (!ifp) 
+	{
+		unlink(in);
+		return -1;
+	}
+
+	ofp = fopen (out, "w");
+	if (!ofp)
+	{
+		fclose (ifp);
+		unlink(in);
+		return -1;
+	}
+
+	while ((rbytes = fread (buf, 1, sizeof(buf), ifp)) > 0)
+	{
+		while (rbytes > 0)
+		{
+			if ( (wbytes = fwrite (buf, 1, rbytes, ofp)) < 0 )
+			{
+				fclose (ofp);
+				fclose (ifp);
+				unlink(in);
+				unlink(out);
+				return -1;
+			}
+			rbytes -= wbytes;
+		}
+	}
+	fclose (ofp);
+	fclose (ifp);
+	unlink(in);
+
+	if (stat_result == 0)
+		{
+		chmod (out, in_stat.st_mode & 0777);
+		}
+
+	return 0;
+}
+//----------------------------------------------------------------------------------------
+nsresult nsNativeFileSpec::Copy(const nsNativeFileSpec& inParentDirectory)
+//----------------------------------------------------------------------------------------
+{
+    // We can only copy into a directory, and (for now) can not copy entire directories
+    nsresult result = NS_ERROR_FAILURE;
+
+    if (inParentDirectory.IsDirectory() && (! IsDirectory() ) )
+    {
+        char *leafname = GetLeafName();
+        char* destPath = nsFileSpecHelpers::StringDup(inParentDirectory,  ( strlen(inParentDirectory) + 1 + strlen(leafname) ) );
+        strcat(destPath, "\\");
+        strcat(destPath, leafname);
+        delete [] leafname;
+
+        result = CrudeFileCopy(*this, destPath);
+        
+        delete [] destPath;
+    }
+    return result;
+} 
+
+//----------------------------------------------------------------------------------------
+nsresult nsNativeFileSpec::Move(const nsNativeFileSpec& inNewParentDirectory)
+//----------------------------------------------------------------------------------------
+{
+    // We can only copy into a directory, and (for now) can not copy entire directories
+    nsresult result = NS_ERROR_FAILURE;
+
+    if (inNewParentDirectory.IsDirectory() && (! IsDirectory() ) )
+    {
+        char *leafname = GetLeafName();
+        char* destPath = nsFileSpecHelpers::StringDup(inNewParentDirectory,  ( strlen(inNewParentDirectory) + 1 + strlen(leafname) ) );
+        strcat(destPath, "\\");
+        strcat(destPath, leafname);
+        delete [] leafname;
+
+        result = CrudeFileCopy(*this, destPath);
+        delete [] destPath;
+    }
+    return result;
+}
+//----------------------------------------------------------------------------------------
+nsresult nsNativeFileSpec::Execute(const char* inArgs )
+//----------------------------------------------------------------------------------------
+{
+    nsresult result = NS_ERROR_FAILURE;
+    
+    if (! IsDirectory())
+    {
+        char* fileNameWithArgs = NULL;
+
+	fileNameWithArgs = nsFileSpecHelpers::StringDup(mPath,  ( strlen(mPath) + 1 + strlen(inArgs) ) );
+        strcat(fileNameWithArgs, " ");
+        strcat(fileNameWithArgs, inArgs);
+
+        result = system(fileNameWithArgs);
+	if (result != NS_OK)
+	    result = NS_ERROR_FAILURE;
+
+        delete [] fileNameWithArgs; 
+    } 
+
+    return result;
+
+} // nsNativeFileSpec::Execute
 //========================================================================================
 //                                nsDirectoryIterator
 //========================================================================================
