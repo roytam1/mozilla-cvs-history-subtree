@@ -40,6 +40,7 @@
 #include "nsIServiceManager.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsIScriptGlobalObject.h"
+#include "jsapi.h"
 
 #include "nsISound.h"
 #include "nsWidgetsCID.h"   // ugh! contractID, please
@@ -482,7 +483,17 @@ static nsresult OpenDialogWithArg( nsIDOMWindowInternal     *parent,
                                                     (nsISupports*)arg );
                     if ( argv ) {
                         nsIDOMWindowInternal *newWindow;
-                        rv = parent->OpenDialog( jsContext, argv, 4, &newWindow );
+
+
+
+
+
+                        //                        rv = parent->OpenDialog( jsContext, argv, 4, &newWindow );
+
+
+
+
+
                         if ( NS_SUCCEEDED( rv ) ) {
                             newWindow->Release();
                         } else {

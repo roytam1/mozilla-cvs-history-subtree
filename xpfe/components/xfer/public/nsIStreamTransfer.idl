@@ -21,8 +21,10 @@
  */
 
 #include "nsIAppShellComponent.idl"
-#include "domstubs.idl"
 #include "nsIChannel.idl"
+
+interface nsIDOMWindowInternal;
+
 
 /*----------------------------- nsIStreamTransfer ------------------------------
 | This file describes Mozilla's general-purpose "stream transfer" component.   |

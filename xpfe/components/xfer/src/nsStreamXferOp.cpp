@@ -99,7 +99,15 @@ nsStreamXferOp::OpenDialog( nsIDOMWindowInternal *parent ) {
                                                 (nsISupports*)(nsIStreamTransferOperation*)this );
                 if ( argv ) {
                     nsCOMPtr<nsIDOMWindowInternal> newWindow;
-                    rv = parent->OpenDialog( jsContext, argv, 4, getter_AddRefs( newWindow ) );
+
+
+
+
+                    //                    rv = parent->OpenDialog( jsContext, argv, 4, getter_AddRefs( newWindow ) );
+
+
+
+
                     if ( NS_FAILED( rv ) ) {
                         DEBUG_PRINTF( PR_STDOUT, "%s %d: nsIDOMWindowInternal::OpenDialog failed, rv=0x%08X\n",
                                       (char*)__FILE__, (int)__LINE__, (int)rv );
