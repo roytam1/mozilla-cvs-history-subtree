@@ -1662,7 +1662,7 @@ nsresult nsExternalAppHandler::OpenWithApplication(nsIFile * aApplication)
         SendStatusChange(kLaunchError, rv, nsnull, mWebProgressListener, path);
       }
 
-#if defined(XP_MAC) || defined (XP_MACOSX)
+#if !defined(XP_MAC) && !defined (XP_MACOSX)
       // Mac users have been very verbal about temp files being deleted on app exit - they
       // don't like it - but we'll continue to do this on other platforms for now
       helperAppService->DeleteTemporaryFileOnExit(mFinalFileDestination);
