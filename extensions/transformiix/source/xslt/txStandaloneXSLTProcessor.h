@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *   Peter Van der Beken <peterv@netscape.com> (original author)
+ *   Axel Hecht <axel@pike.org>
  *
  *
  * Alternatively, the contents of this file may be used under the terms of
@@ -48,75 +49,114 @@
 
 class txStreamXMLEventHandler;
 
-/*
- * txStandaloneXSLTProcessor is a front-end to the XSLT Processor
+/**
+ * txStandaloneXSLTProcessor
+ *
+ * Use of the standalone TransforMiiX API:
+ *
+ * The XSLT Processor need initialisation and shutdown
+ * by
+ *  txStandaloneXSLTProcessor::Init();
+ * and
+ *  txStandaloneXSLTProcessor::Shutdown();
+ * Be sure to always call these functions in pairs.
+ *
+ * The API to transform documents consists of entry points
+ * to transform either one or two documents.
+ * If you provide one document, the stylesheet location is
+ * computed from the processing instruction. If that cannot
+ * be found, an error is issued.
+ *
+ * The result is output to a stream.
+ *
+ * Documents can be provided either by path or by DOM Document.
+ *
+ * Stylesheet parameters
+ *  XXX TODO 
+ * 
  */
 
 class txStandaloneXSLTProcessor : public txXSLTProcessor
 {
 public:
-    /*
+    /**
      * Methods that print the result to a stream
      */
 
-    /*
-     * Reads an XML Document from the given XML input stream.
-     * The XSL Stylesheet is obtained from the XML Documents stylesheet PI.
-     * If no Stylesheet is found, an empty document will be the result;
-     * otherwise the XML Document is processed using the stylesheet.
-     * The result tree is printed to the given ostream argument,
-     * will not close the ostream argument
+    /**
+     * Transform a XML document given by path.
+     * The stylesheet is retrieved by a processing instruction,
+     * or an error is returned.
+     *
+     * @param aXMLPath path to the source document
+     * @param aOut     stream to which the result is feeded
+     * @param aErr     error observer
+     * @result NS_OK if transformation was successful
      */
-    static void process(istream& xmlInput, ostream& out);
+    nsresult transform(String& aXMLPath, ostream& aOut, ErrorObserver& aErr);
 
-    /*
-     * Processes the given XML Document, the XSL stylesheet
-     * will be retrieved from the XML Stylesheet Processing instruction,
-     * otherwise an empty document will be returned.
+    /**
+     * Transform a XML document given by path with the given
+     * stylesheet.
+     *
+     * @param aXMLPath path to the source document
+     * @param aXSLPath path to the style document
+     * @param aOut     stream to which the result is feeded
+     * @param aErr     error observer
+     * @result NS_OK if transformation was successful
      */
-    static void process(Document& xmlDocument, ostream& out);
+    nsresult transform(String& aXMLPath, String& aXSLPath, ostream& aOut,
+                       ErrorObserver& aErr);
 
-    /*
-     * Reads an XML Document from the given XML input stream, and
-     * processes the document using the XSL document derived from
-     * the given XSL input stream.
-     * The result tree is printed to the given ostream argument,
-     * will not close the ostream argument
+    /**
+     * Transform a XML document.
+     * The stylesheet is retrieved by a processing instruction,
+     * or an error is returned.
+     *
+     * @param aXMLDoc source document
+     * @param aOut    stream to which the result is feeded
+     * @param aErr    error observer
+     * @result NS_OK if transformation was successful
      */
-    static void process(istream& xmlInput,
-                 istream& xslInput,
-                 ostream& out);
+    nsresult transform(Document* aXMLDoc, ostream& aOut, ErrorObserver& aErr);
 
-    /*
-     * Processes the given XML Document using the given XSL document.
-     * The result tree is printed to the given ostream argument,
-     * will not close the ostream argument
+    /**
+     * Transform a XML document with the given stylesheet.
+     *
+     * @param aXMLDoc  source document
+     * @param aXSLNode style node
+     * @param aOut     stream to which the result is feeded
+     * @param aErr     error observer
+     * @result NS_OK if transformation was successful
      */
-    static void process(Document& xmlDocument,
-                 Document& xslDocument,
-                 ostream& out);
+    nsresult transform(Document* aXMLDoc, Node* aXSLNode,
+                       ostream& aOut, ErrorObserver& aErr);
 
-private:
-    static Document* transform2(Document& aSource,
-                        Node& aStylesheet,
-                        ostream& out);
-
-    /*
+protected:
+    /**
      * Parses all XML Stylesheet PIs associated with the
      * given XML document. If any stylesheet PIs are found with
      * type="text/xsl" the href psuedo attribute value will be
      * added to the given href argument. If multiple text/xsl stylesheet PIs
      * are found, the one closest to the end of the document is used.
      */
-    static void getHrefFromStylesheetPI(Document& xmlDocument,
-                                 String& href);
+    static void getHrefFromStylesheetPI(Document& xmlDocument, String& href);
 
-    /*
-     * Parses the contents of data, and returns the type and href psuedo attributes
+    /**
+     * Parses the contents of data, returns the type and href psuedo attributes
      */
     static void parseStylesheetPI(String& data,
                            String& type,
                            String& href);
+
+    /**
+     * Create a Document from a path.
+     *
+     * @param aPath path to the xml file
+     * @param aErr  ErrorObserver
+     * @result Document XML Document, or null on error
+     */
+    static Document* parsePath(String& aPath, ErrorObserver& aErr);
 };
 
 #endif

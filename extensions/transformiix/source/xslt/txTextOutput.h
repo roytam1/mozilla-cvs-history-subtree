@@ -95,6 +95,18 @@ public:
     void endElement(const String& aName,
                     const PRInt32 aNsID);
 
+    /**
+     * Returns whether the output handler supports
+     * disable-output-escaping.
+     *
+     * @return MB_TRUE if this handler supports
+     *                 disable-output-escaping
+     */
+    MBool hasDisableOutputEscaping()
+    {
+        return MB_TRUE;
+    }
+
     /*
      * Signals to receive a processing instruction.
      *

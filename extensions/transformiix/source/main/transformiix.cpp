@@ -29,8 +29,6 @@
  *
  * Olivier Gerardin, ogerardin@vo.lu
  *    -- redirect non-data output (banner, errors) to stderr
- *    -- read XML from stdin when -i is omitted
- *    -- accept '-' to specify stdin/stdout on command line
  *
  */
 
@@ -94,66 +92,52 @@ int main(int argc, char** argv) {
     String* xsltFilename = (String*)options.get(String("s"));
     String* outFilename = (String*)options.get(String("o"));
 
-
-    //-- open XML file
-    istream* xmlInput = &cin;
-    if (xmlFilename && ! xmlFilename->isEqual("-")) {
-      xmlInput = new ifstream(NS_LossyConvertUCS2toASCII(*xmlFilename).get(),
-                              ios::in);
-    }
-
     //-- handle output stream
     ostream* resultOutput = &cout;
     ofstream resultFileStream;
-    if ( outFilename && ! outFilename->isEqual("-")) {
+    if (outFilename && !outFilename->isEqual("-")) {
         resultFileStream.open(NS_LossyConvertUCS2toASCII(*outFilename).get(),
                               ios::out);
-        if ( !resultFileStream ) {
+        if (!resultFileStream) {
             cerr << "error opening output file: " << *xmlFilename << endl;
             return -1;
         }
         resultOutput = &resultFileStream;
     }
 
+    SimpleErrorObserver obs;
+    txStandaloneXSLTProcessor proc;
+    nsresult rv = NS_OK;
     //-- process
-    String documentBase;
-    if ( !xsltFilename ) {
-      if (!xmlFilename) {
-        cerr << "you must specify XSLT file with -s option if XML is read from standard input" << endl;
-        printUsage();
-        return -1;
-      }
-      // TODO, pass xmlFilename to resolve URIs
-      // txStandaloneXSLTProcessor::process(*xmlInput, *resultOutput);
-      cerr << "not yet implemented" << endl;
+    if (!xsltFilename) {
+        if (!xmlFilename) {
+            cerr << "you must specify at least a source XML path" << endl;
+            printUsage();
+            return -1;
+        }
+        rv = proc.transform(*xmlFilename, *resultOutput, obs);
     }
     else {
         //-- open XSLT file
-        ifstream xsltInput(NS_LossyConvertUCS2toASCII(*xsltFilename).get(),
-                           ios::in);
-        // TODO, pass xmlFilename, xsltFilename to resolve URIs
-        txStandaloneXSLTProcessor::process(*xmlInput, xsltInput, *resultOutput);
+        rv = proc.transform(*xmlFilename, *xsltFilename, *resultOutput, obs);
     }
     resultFileStream.close();
-    if (xmlInput != &cin)
-        delete xmlInput;
     txXSLTProcessor::txShutdown();
-    return 0;
+    return NS_SUCCEEDED(rv);
 } //-- main
 
 void printHelp() {
   cerr << "transfrmx [-h] [-i xml-file] [-s xslt-file] [-o output-file]" << endl << endl;
   cerr << "Options:";
   cerr << endl << endl;
-  cerr << "\t-i  specify XML file to process (default: read from stdin)" << endl;
+  cerr << "\t-i  specify XML file to process" << endl;
   cerr << "\t-s  specify XSLT file to use for processing (default: use stylesheet" << endl
        << "\t\tspecified in XML file)" << endl;
   cerr << "\t-o  specify output file (default: write to stdout)" << endl;
   cerr << "\t-h  this help screen" << endl;
   cerr << endl;
-  cerr << "You may use '-' in place of xml-file or output-file to explicitly specify" << endl;
-  cerr << "respectively the standard input and standard output." << endl;
-  cerr << "If the XML is read from stdin, then the -s option is mandatory." << endl;
+  cerr << "You may use '-' in place of the output-file to explicitly specify" << endl;
+  cerr << "standard output." << endl;
   cerr << endl;
 }
 void printUsage() {

@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *   Peter Van der Beken <peterv@netscape.com> (original author)
+ *   Axel Hecht <axel@pike.org>
  *
  *
  * Alternatively, the contents of this file may be used under the terms of
@@ -46,279 +47,130 @@
 #include "txHTMLOutput.h"
 #include "txTextOutput.h"
 
-#if 0
-/*
- * Reads an XML document from the given XML input stream. The
- * XML document is processed using the associated XSL document
- * retrieved from the XML document's Stylesheet Processing Instruction,
- * otherwise an empty document will be returned.
+/**
+ * Transform a XML document given by path.
+ * The stylesheet is retrieved by a processing instruction,
+ * or an error is returned.
  */
-Document* txStandaloneXSLTProcessor::process(istream& xmlInput)
+nsresult
+txStandaloneXSLTProcessor::transform(String& aXMLPath, ostream& aOut,
+                                     ErrorObserver& aErr)
 {
-    XMLParser xmlParser;
-
-    // Read in XML Document
-    Document* xmlDoc = xmlParser.parse(xmlInput, String("XXX WRONG URI"));
+    Document* xmlDoc = parsePath(aXMLPath, aErr);
     if (!xmlDoc) {
-        String err("error reading XML document: ");
-        err.append(xmlParser.getErrorString());
-        cerr << err;
-        return 0;
+        return NS_ERROR_FAILURE;
     }
 
-    Document* result = process(*xmlDoc);
+    // transform
+    nsresult rv = transform(xmlDoc, aOut, aErr);
 
     delete xmlDoc;
-    return result;
+
+    return rv;
 }
 
-/*
- * Processes the given XML Document, the XSL stylesheet
- * will be retrieved from the XML Stylesheet Processing instruction,
- * otherwise an empty document will be returned.
+/**
+ * Transform a XML document given by path with the given
+ * stylesheet.
  */
-Document* txStandaloneXSLTProcessor::process(Document& xmlDocument)
+nsresult
+txStandaloneXSLTProcessor::transform(String& aXMLPath, String& aXSLPath,
+                                     ostream& aOut, ErrorObserver& aErr)
 {
-    // Look for stylesheet PIs
-    String href;
-    String errMsg;
-    getHrefFromStylesheetPI(xmlDocument, href);
-    istream* xslInput = URIUtils::getInputStream(href, errMsg);
-
-    // Read in XSL document
-    Document* xslDoc = 0;
-    XMLParser xmlParser;
-    if (xslInput) {
-        xslDoc = xmlParser.parse(*xslInput, href);
-        delete xslInput;
-    }
-    if (!xslDoc) {
-        String err("error reading XSL stylesheet document: ");
-        err.append(xmlParser.getErrorString());
-        cerr << err;
-        return 0;
-    }
-
-    Document* result = transform(xmlDocument, *xslDoc, &cout);
-
-    delete xslDoc;
-    return result;
-}
-
-/*
- * Reads an XML Document from the given XML input stream, and
- * processes the document using the XSL document derived from
- * the given XSL input stream.
- */
-Document* txStandaloneXSLTProcessor::process(istream& xmlInput,
-                                             istream& xslInput)
-{
-    XMLParser xmlParser;
-
-    // Read in XML Document
-    Document* xmlDoc = xmlParser.parse(xmlInput, String("XXX WRONG URI"));
+    Document* xmlDoc = parsePath(aXMLPath, aErr);
     if (!xmlDoc) {
-        String err("error reading XML document: ");
-        err.append(xmlParser.getErrorString());
-        cerr << err;
-        return 0;
+        return NS_ERROR_FAILURE;
     }
-
-    // Read in XSL document
-    Document* xslDoc = xmlParser.parse(xslInput, String("XXX WRONG URI"));
+    Document* xslDoc = parsePath(aXSLPath, aErr);
     if (!xslDoc) {
-        String err("error reading XSL stylesheet document: ");
-        err.append(xmlParser.getErrorString());
-        cerr << err;
         delete xmlDoc;
-        return 0;
+        return NS_ERROR_FAILURE;
     }
-
-    Document* result = transform(*xmlDoc, *xslDoc, &cout);
+    // transform
+    nsresult rv = transform(xmlDoc, xslDoc, aOut, aErr);
 
     delete xmlDoc;
     delete xslDoc;
-    return result;
+
+    return rv;
 }
 
-/*
- * Processes the given XML Document using the given XSL document
- * and returns the result tree
+/**
+ * Transform a XML document.
+ * The stylesheet is retrieved by a processing instruction,
+ * or an error is returned.
  */
-Document* txStandaloneXSLTProcessor::process(Document& xmlDocument,
-                                             Document& xslDocument)
+nsresult
+txStandaloneXSLTProcessor::transform(Document* aXMLDoc, ostream& aOut,
+                                     ErrorObserver& aErr)
 {
-    Document* result = transform(xmlDocument, xslDocument, NULL);
-    return result;
-}
-#endif
-
-/*
- * Reads an XML Document from the given XML input stream.
- * The XSL Stylesheet is obtained from the XML Documents stylesheet PI.
- * If no Stylesheet is found, an empty document will be the result;
- * otherwise the XML Document is processed using the stylesheet.
- * The result tree is printed to the given ostream argument,
- * will not close the ostream argument
- */
-void txStandaloneXSLTProcessor::process(istream& xmlInput,
-                                        ostream& out)
-{
-    XMLParser xmlParser;
-
-    // Read in XML Document
-    Document* xmlDoc = xmlParser.parse(xmlInput, String("XXX WRONG URI"));
-    if (!xmlDoc) {
-        String err("error reading XML document: ");
-        err.append(xmlParser.getErrorString());
-        cerr << err;
-        return;
+    if (!aXMLDoc) {
+        return NS_ERROR_INVALID_POINTER;
     }
 
-    process(*xmlDoc, out);
+    // get stylesheet path
+    String stylePath;
+    getHrefFromStylesheetPI(*aXMLDoc, stylePath);
 
-    delete xmlDoc;
-}
-
-/*
- * Processes the given XML Document, the XSL stylesheet
- * will be retrieved from the XML Stylesheet Processing instruction,
- * otherwise an empty document will be returned.
- */
-void txStandaloneXSLTProcessor::process(Document& xmlDocument,
-                                        ostream& out)
-{
-    // Look for stylesheet PIs
-    String href;
-    String errMsg;
-    getHrefFromStylesheetPI(xmlDocument, href);
-    istream* xslInput = URIUtils::getInputStream(href, errMsg);
-
-    // Read in XSL document
-    Document* xslDoc = 0;
-    XMLParser xmlParser;
-    if (xslInput) {
-        xslDoc = xmlParser.parse(*xslInput, String("XXX WRONG URI"));
-        delete xslInput;
-    }
+    Document* xslDoc = parsePath(stylePath, aErr);
     if (!xslDoc) {
-        String err("error reading XSL stylesheet document: ");
-        err.append(xmlParser.getErrorString());
-        cerr << err;
-        return;
+        return NS_ERROR_FAILURE;
     }
 
-    process(xmlDocument, *xslDoc, out);
+    // transform
+    nsresult rv = transform(aXMLDoc, xslDoc, aOut, aErr);
 
     delete xslDoc;
+    return NS_OK;
 }
 
-/*
- * Reads an XML Document from the given XML input stream, and
- * processes the document using the XSL document derived from
- * the given XSL input stream.
- * The result tree is printed to the given ostream argument,
- * will not close the ostream argument
- */
-void txStandaloneXSLTProcessor::process(istream& xmlInput,
-                                        istream& xslInput,
-                                        ostream& out)
-{
-    XMLParser xmlParser;
-
-    // Read in XML Document
-    Document* xmlDoc = xmlParser.parse(xmlInput, String("XXX WRONG URI"));
-    if (!xmlDoc) {
-        String err("error reading XML document: ");
-        err.append(xmlParser.getErrorString());
-        cerr << err;
-        return;
-    }
-
-    // Read in XSL document
-    Document* xslDoc = xmlParser.parse(xslInput, String("XXX WRONG URI"));
-    if (!xslDoc) {
-        String err("error reading XSL stylesheet document: ");
-        err.append(xmlParser.getErrorString());
-        cerr << err;
-        delete xmlDoc;
-        return;
-    }
-
-    process(*xmlDoc, *xslDoc, out);
-
-    delete xmlDoc;
-    delete xslDoc;
-}
-
-/*
+/**
  * Processes the given XML Document using the given XSL document
  * and prints the results to the given ostream argument
  */
-void txStandaloneXSLTProcessor::process(Document& xmlDocument,
-                                        Document& xslDocument,
-                                        ostream& out)
+nsresult
+txStandaloneXSLTProcessor::transform(Document* aSource, Node* aStylesheet,
+                                     ostream& aOut, ErrorObserver& aErr)
 {
-    Document* result = transform2(xmlDocument, xslDocument, out);
-
-    delete result;
-}
-
-/*
- * Private worker function
- */
-Document* txStandaloneXSLTProcessor::transform2(Document& aSource,
-                                               Node& aStylesheet,
-                                               ostream& aOut)
-{
-    Document* result = new Document;
-
-    // Start of block to ensure the destruction of the ProcessorState
-    // before the destruction of the result document.
-    {
-        // Create a new ProcessorState
-        Document* stylesheetDoc = 0;
-        Element* stylesheetElem = 0;
-        if (aStylesheet.getNodeType() == Node::DOCUMENT_NODE) {
-            stylesheetDoc = (Document*)&aStylesheet;
-        }
-        else {
-            stylesheetElem = (Element*)&aStylesheet;
-            stylesheetDoc = aStylesheet.getOwnerDocument();
-        }
-        ProcessorState ps(&aSource, stylesheetDoc);
-        ps.setOutputStream(&aOut);
-
-        // Add error observers
-        // XXX todo
-
-        txSingleNodeContext evalContext(&aSource, &ps);
-        ps.setEvalContext(&evalContext);
-
-        // Index templates and process top level xsl elements
-        nsresult rv;
-        if (stylesheetElem) {
-            rv = processTopLevel(&aSource, stylesheetElem, &ps);
-        }
-        else {
-            rv = processStylesheet(&aSource, stylesheetDoc, &ps);
-        }
-        if (NS_FAILED(rv)) {
-            delete result;
-            return 0;
-        }
-
-        // Process root of XML source document
-        transform(&aSource, &ps);
+    // Create a new ProcessorState
+    Document* stylesheetDoc = 0;
+    Element* stylesheetElem = 0;
+    if (aStylesheet->getNodeType() == Node::DOCUMENT_NODE) {
+        stylesheetDoc = (Document*)aStylesheet;
     }
-    // End of block to ensure the destruction of the ProcessorState
-    // before the destruction of the result document.
+    else {
+        stylesheetElem = (Element*)aStylesheet;
+        stylesheetDoc = aStylesheet->getOwnerDocument();
+    }
+    ProcessorState ps(aSource, stylesheetDoc);
+    ps.setOutputStream(&aOut);
 
-    // Return result Document
-    return result;
+    ps.addErrorObserver(aErr);
+
+    txSingleNodeContext evalContext(aSource, &ps);
+    ps.setEvalContext(&evalContext);
+
+    // Index templates and process top level xsl elements
+    nsresult rv = NS_OK;
+    if (stylesheetElem) {
+        rv = processTopLevel(stylesheetElem, 0, &ps);
+    }
+    else {
+        rv = processStylesheet(stylesheetDoc, 0, &ps);
+    }
+    if (NS_FAILED(rv)) {
+        return rv;
+    }
+
+    bool sync = aOut.sync_with_stdio(false);
+    // Process root of XML source document
+    txXSLTProcessor::transform(&ps);
+    aOut.sync_with_stdio(sync);
+
+    return NS_OK;
 }
 
-/*
+/**
  * Parses all XML Stylesheet PIs associated with the
  * given XML document. If any stylesheet PIs are found with
  * type="text/xsl" the href psuedo attribute value will be
@@ -350,7 +202,7 @@ void txStandaloneXSLTProcessor::getHrefFromStylesheetPI(Document& xmlDocument,
 
 }
 
-/*
+/**
  * Parses the contents of data, and returns the type and href pseudo attributes
  */
 void txStandaloneXSLTProcessor::parseStylesheetPI(String& data,
@@ -409,4 +261,25 @@ void txStandaloneXSLTProcessor::parseStylesheetPI(String& data,
                 break;
         }
     }
+}
+
+Document*
+txStandaloneXSLTProcessor::parsePath(String& aPath, ErrorObserver& aErr)
+{
+    ifstream xmlInput(NS_LossyConvertUCS2toASCII(aPath).get(), ios::in);
+    if (!xmlInput) {
+        String err("Couldn't open ");
+        err.append(aPath);
+        aErr.receiveError(err);
+        return 0;
+    }
+    // parse source
+    XMLParser xmlParser;
+    Document* xmlDoc = xmlParser.parse(xmlInput, aPath);
+    if (!xmlDoc) {
+        String err("Parsing error in ");
+        err.append(aPath);
+        aErr.receiveError(err);
+    }
+    return xmlDoc;
 }

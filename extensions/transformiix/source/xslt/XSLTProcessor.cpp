@@ -784,7 +784,7 @@ txXSLTProcessor::processAction(Node* aAction,
         XMLDOMUtils::getNodeValue(actionElement, data);
 
         NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
-        MBool doe = PR_FALSE;
+        MBool doe = MB_FALSE;
         if ((aPs->mResultHandler == aPs->mOutputHandler) &&
             aPs->mOutputHandler->hasDisableOutputEscaping()) {
             String attValue;
@@ -818,7 +818,7 @@ txXSLTProcessor::processAction(Node* aAction,
         exprResult->stringValue(value);
 
         NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
-        MBool doe = PR_FALSE;
+        MBool doe = MB_FALSE;
         if ((aPs->mResultHandler == aPs->mOutputHandler) &&
             aPs->mOutputHandler->hasDisableOutputEscaping()) {
             String attValue;
@@ -1043,11 +1043,11 @@ txXSLTProcessor::processInclude(String& aHref,
 
     switch(stylesheet->getNodeType()) {
         case Node::DOCUMENT_NODE :
-            processStylesheet((Document*)stylesheet, nsnull,
+            processStylesheet((Document*)stylesheet, 0,
                               aImportFrame, aPs);
             break;
         case Node::ELEMENT_NODE :
-            processTopLevel((Element*)stylesheet, nsnull,
+            processTopLevel((Element*)stylesheet, 0,
                             aImportFrame, aPs);
             break;
         default:
@@ -1370,7 +1370,7 @@ txXSLTProcessor::processTopLevel(Element* aStylesheet,
             txExpandedName varName;
             nsresult rv = varName.init(qName, element, MB_FALSE);
             if (NS_SUCCEEDED(rv)) {
-                ExprResult* defaultValue = nsnull;
+                ExprResult* defaultValue = 0;
                 if (aGlobalParams) {
                     txIGlobalParameter* globalParam =
                         (txIGlobalParameter*)aGlobalParams->get(varName);
@@ -1523,7 +1523,7 @@ txXSLTProcessor::processTopLevel(Element* aStylesheet,
             nsresult rv = varName.init(qName, element, MB_FALSE);
             if (NS_SUCCEEDED(rv)) {
                 rv = aPs->addGlobalVariable(varName, element, currentFrame,
-                                            nsnull);
+                                            0);
                 if (NS_FAILED(rv)) {
                     String err("unable to add global xsl:variable");
                     aPs->receiveError(err, NS_ERROR_FAILURE);
