@@ -37,11 +37,26 @@
 [xpfe-mailnews-xpi]
 !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/common/windows.t @topsrcdir@/xpinstall/packager/windows/mail.jst
 
-[xpfe-editor-xpi]
-!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/common/windows.t @topsrcdir@/xpinstall/packager/windows/editor.jst
+# [xpfe-editor-xpi]
+# !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/common/windows.t @topsrcdir@/xpinstall/packager/windows/editor.jst
+
+[chatzilla-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/common/windows.t @topsrcdir@/xpinstall/packager/windows/chatzilla.jst
+
+[venkman-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/common/windows.t @topsrcdir@/xpinstall/packager/windows/venkman.jst
 
 [spellcheck-enUS-xpi]
 !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/common/windows.t @topsrcdir@/xpinstall/packager/windows/spellcheck.jst
+
+# xxxbsmedberg: When I figure out how talkback is actually packaged, a configure flag will control
+# whether this is the "dummy XPI" or the real thing.
+[talkback-xpi]
+@topsrcdir@/xpinstall/packager/windows/talkback.jst xpiroot/install.js
+
+[seamonkey-stub-en-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/common/windows.t @topsrcdir@/xpinstall/packager/windows/mozilla-win32-stub-installer.jst
+dist/install/stub/mozilla-win32-stub-installer.exe xpiroot/mozilla-win32-stub-installer.exe
 
 #else
 #if OS_ARCH==OS2
@@ -63,8 +78,8 @@
 [xpfe-mailnews-xpi]
 !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/os2/mail.jst
 
-[xpfe-editor-xpi]
-!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/os2/editor.jst
+# [xpfe-editor-xpi]
+# !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/os2/editor.jst
 
 [spellcheck-enUS-xpi]
 !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/os2/spellcheck.jst
@@ -89,8 +104,8 @@
 [xpfe-mailnews-xpi]
 !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/mac/mail.jst
 
-[xpfe-editor-xpi]
-!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/mac/editor.jst
+# [xpfe-editor-xpi]
+# !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/mac/editor.jst
 
 [spellcheck-enUS-xpi]
 !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/mac/spellcheck.jst
@@ -118,8 +133,8 @@
 [xpfe-mailnews-xpi]
 !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/mail.jst
 
-[xpfe-editor-xpi]
-!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/editor.jst
+# [xpfe-editor-xpi]
+# !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/editor.jst
 
 [spellcheck-enUS-xpi]
 !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/spellcheck.jst

@@ -1,6 +1,7 @@
 use File::Spec;
+use File::Path;
 use Getopt::Long;
-use MozPackager;
+require MozPackager;
 
 Getopt::Long::Configure ("bundling");
 
@@ -31,7 +32,7 @@ GetOptions("objdir|o=s"           => \$objdir,
            "xpt-merge-file|x=s"   => \$xptMergeFile,
            "stage-directory|s=s"  => \$stageDir,
            "mapping|m=s"          => \%mappings,
-           "force-copy|f"         => \$MozStage::forceCopy,
+           "force-copy|f"         => \$MozPackager::forceCopy,
            "preprocessor|p=s"     => \$preprocessor,
            "make-xpi=s"           => \$xpiResult,
            "compute-disk-space|d" => \$calcDiskSpace);
@@ -58,8 +59,9 @@ chdir($objdir) if $objdir;
 -d "dist" || die("directory dist/ not found... perhaps you forgot to specify --objdir?");
 
 MozPackager::_verbosePrint(1, "removing $stageDir");
-system "rm -rf $stageDir" ||
-    die("rm -rf $stageDir failed: code ". ($? >> 8));
+if (-d $stageDir) {
+    rmtree($stageDir) || die ("Could not remove '$stageDir'");
+}
 
 $MozParser::missingFiles = 2 if $ignoreMissing;
 $MozParser::missingFiles = 1 if $warnMissing;

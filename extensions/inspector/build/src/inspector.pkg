@@ -6,5 +6,8 @@ dist/bin/chrome/inspector.jar
 dist/bin/res/inspector/viewer-registry.rdf
 dist/bin/res/inspector/search-registry.rdf
 
+[inspector-xpi]
+@topsrcdir@/extensions/inspector/build/install.js xpiroot/install.js
+
 [inspector xpfe-browser]
 dist/bin/defaults/pref/inspector.js

@@ -1,6 +1,6 @@
 use File::Spec;
 use Getopt::Long;
-use MozPackager;
+require MozPackager;
 
 Getopt::Long::Configure ("bundling");
 

@@ -36,10 +36,13 @@
 
 use strict;
 use warnings;
-
 use File::Spec;
 
 package MozPackager;
+
+use File::Copy;
+use File::Path;
+use Cwd;
 
 # this is a wrapper around File::Spec->catfile that splits on '/'
 # and rejoins the path
@@ -49,6 +52,14 @@ sub joinfile {
 
 sub joindir {
     return File::Spec->catdir(map(split('/', $_), @_));
+}
+
+# Executes a system call and dies if the call fails.
+sub system {
+    if (scalar(@_) > 1) {
+        die("MozPackager::system() called with more than one argument!");
+    }
+    CORE::system($_[0]) && die("Error executing '$_[0]': code ". $?<<8);
 }
 
 # level 0, no progress
@@ -61,6 +72,297 @@ sub _verbosePrint {
     my $vlevel = shift;
     local $\ = "\n";
     print STDERR @_ if ($vlevel <= $MozPackager::verbosity);
+}
+
+my $cansymlink = eval {symlink('', ''); 1; };
+
+# this global var may be set by clients who want to force a copy
+# instead of a symlink
+$MozPackager::forceCopy = 0;
+
+# this is very much like File::Path::mkpath(), except that the last element
+# is a file, which is stripped off first
+sub ensureDirs {
+    my ($to, $permissions) = @_;
+
+    my ($volume, $dirs, $file) = File::Spec->splitpath($to);
+    my @dirs = File::Spec->splitdir($dirs);
+
+    my $dirPath = File::Spec->catpath($volume, $dirs, '');
+    mkpath($dirPath, 0, 0775);
+}
+
+# this performs a symlink if possible on this system, otherwise
+# peforms a regular "copy". It creates the directory structure if
+# necessary.
+sub symCopy {
+    my ($from, $to) = @_;
+
+    MozPackager::_verbosePrint(1, "Copying $from\t to $to");
+
+    ensureDirs($to);
+
+    if ($cansymlink && !$MozPackager::forceCopy) {
+        # $from is relative to the current (objdir) directory, so we need to
+        # make it relative to $to
+        my ($tovol, $topath, $tofile) = File::Spec->splitpath($to);
+        my $todir = File::Spec->catpath($tovol, $topath, '');
+        my $relfrom = File::Spec->abs2rel($from, $todir);
+
+        MozPackager::_verbosePrint(1, "Symlinking $relfrom, $to");
+        
+        symlink($relfrom, $to) ||
+            die("symlink $relfrom, $to failed.");
+    } else {
+        copy($from, $to) ||
+            die("copy $from, $to failed.");
+    }
+}
+
+sub calcDiskSpace {
+    my ($stageDir) = @_;
+
+    MozPackager::_verbosePrint(1, "Calculating disk space for XPI package.");
+    $ENV{'XPI_SPACEREQUIRED'} = int(_realDiskSpace($stageDir) / 1024) + 1;
+    
+    opendir(my $dirHandle, $stageDir) ||
+        die("Could not open directory $stageDir for listing.");
+
+    while (my $dir = readdir($dirHandle)) {
+        if (! ($dir =~ /^\./)) {
+            MozPackager::_verbosePrint(1, "Calculating disk space for subdir $dir");
+            my $realDir = File::Spec->catdir($stageDir, $dir);
+            if (-d $realDir) {
+                $ENV{"XPI_SPACEREQUIRED_\U$dir"} = int(_realDiskSpace($realDir) / 1024) + 1;
+            }
+        }
+    }
+    closedir($dirHandle);
+}
+
+sub _realDiskSpace {
+    my ($path) = @_;
+
+    my $dsProg = File::Spec->catfile('dist', 'install', 'ds32.exe');
+
+    my $spaceRequired = 0;
+
+    if (-e $dsProg) {
+        # We're on win32, use ds32.exe
+        my $command = "$dsProg /D /L0 /A /S /C 32768 $path";
+        $spaceRequired = `$command`;
+        die("Program failed: '$command' returned code ". ($? <<8))
+            if ($?);
+    } else {
+        opendir(my $dirHandle, $path) ||
+            die("Could not open directory $path for listing.");
+
+        while (my $dir = readdir($dirHandle)) {
+            if (! ($dir =~ /^\./)) {
+                my $realDir = File::Spec->catdir($path, $dir);
+                if (-d $realDir) {
+                    $spaceRequired += _realDiskSpace($realDir);
+                } else {
+                    $spaceRequired += (-s File::Spec->catfile($path, $dir));
+                }
+            }
+        }
+        closedir($dirHandle);
+    }
+
+    return $spaceRequired;
+}
+
+# To retrieve a build id ($aDefine) from $aBuildIDFile (normally
+# $topobjdir/dist/include/nsBuildID.h).
+sub GetProductBuildID
+{
+  my($aBuildIDFile, $aDefine) = @_;
+  my($line);
+  my($buildID);
+  my($fpInIt);
+
+  if(defined($ENV{DEBUG_INSTALLER_BUILD}))
+  {
+    print " GetProductBuildID\n";
+    print "   aBuildIDFile  : $aBuildIDFile\n";
+    print "   aDefine       : $aDefine\n";
+  }
+
+  if(!(-e $aBuildIDFile))
+  {
+    die "\n file not found: $aBuildIDFile\n";
+  }
+
+  # Open the input file
+  open($fpInIt, $aBuildIDFile) || die "\n open $aBuildIDFile for reading: $!\n";
+
+  # While loop to read each line from input file
+  while($line = <$fpInIt>)
+  {
+    if($line =~ /#define.*$aDefine/)
+    {
+      $buildID = $line;
+      chop($buildID);
+
+      # only get the build id from string, excluding spaces
+      $buildID =~ s/..*$aDefine\s+//;
+      # strip out any quote characters
+      $buildID =~ s/\"//g;
+    }
+  }
+  close($fpInIt);
+  return($buildID);
+}
+
+# GetGreFileVersion()
+#   To build GRE's file version as follows:
+#     * Use mozilla's milestone version for 1st 2 numbers of version x.x.x.x.
+#     * Strip out any non numerical chars from mozilla's milestone version.
+#     * Get the y2k ID from $topobjdir/dist/include/nsBuildID.h.
+#     * Split the y2k ID exactly in 2 equal parts and use them for the last
+#       2 numbers of the version x.x.x.x.
+#         ie: y2k: 2003030510
+#             part1: 20030
+#             part2: 30510
+#
+#  XXX  XXX: Problem with this format! It won't work for dates > 65536.
+#              ie: 20030 71608 (July 16, 2003 8am)
+#
+#            mozilla/config/version_win.pl has the same problem because these
+#            two code need to be in sync with each other.
+#
+#     * Build the GRE file version given a mozilla milestone version of "1.4a"
+#         GRE version: 1.4.20030.30510
+sub GetGreFileVersion
+{
+  my($aDirTopObj, $aDirMozTopSrc)       = @_;
+  my($fileBuildID)                      = "$aDirTopObj/dist/include/nsBuildID.h";
+
+  if(defined($ENV{DEBUG_INSTALLER_BUILD}))
+  {
+    print " GetGreFileVersion\n";
+    print "   aDirTopObj    : $aDirTopObj\n";
+    print "   aDirMozTopSrc : $aDirMozTopSrc\n";
+    print "   fileBuildID   : $fileBuildID\n";
+  }
+
+  my($initEmptyValues)                  = 1;
+  my(@version)                          = undef;
+  my($y2kDate)                          = undef;
+  my($buildID_hi)                       = undef;
+  my($buildID_lo)                       = undef;
+  my($versionMilestone)                 = GetProductMilestoneVersion($aDirTopObj, $aDirMozTopSrc, $aDirMozTopSrc, $initEmptyValues);
+
+  $versionMilestone =~ s/[^0-9.][^.]*//g; # Strip out non numerical chars from versionMilestone.
+  @version          = split /\./, $versionMilestone;
+  $y2kDate          = GetProductBuildID($fileBuildID, "NS_BUILD_ID");
+
+  # If the buildID is 0000000000, it means that it's a non release build.
+  # This also means that the GRE version (xpcom.dll's version) will be
+  # 0.0.0.0.  We need to match this version for install to proceed
+  # correctly.
+  if($y2kDate eq "0000000000")
+  {
+    return("0.0.0.0");
+  }
+
+  $buildID_hi       = substr($y2kDate, 0, 5);
+  $buildID_hi       =~ s/^0+//; # strip out leading '0's
+  $buildID_hi       = 0 if($buildID_hi eq undef); #if buildID_hi happened to be all '0's, then set it to '0'
+  $buildID_lo       = substr($y2kDate, 5);
+  $buildID_lo       =~ s/^0+//; # strip out leading '0's
+  $buildID_lo       = 0 if($buildID_lo eq undef); #if buildID_hi happened to be all '0's, then set it to '0'
+
+  return("$version[0].$version[1].$buildID_hi.$buildID_lo");
+}
+
+# Retrieves the product's milestone version (ns or mozilla):
+#   ie: "1.4a.0.0"
+#
+# If the milestone version is simply "1.4a", this function will prefil
+# the rest of the 4 unit ids with '0':
+#   ie: "1.4a" -> "1.4a.0.0"
+#
+# The milestone version is acquired from [topsrcdir]/config/milestone.txt
+sub GetProductMilestoneVersion
+{
+  my($aDirTopObj, $aDirMozTopSrc, $aDirConfigTopSrc, $initEmptyValues) = @_;
+  my($y2kDate)                          = undef;
+  my($versionMilestone)                 = undef;
+  my($counter)                          = undef;
+  my(@version)                          = undef;
+  my($saveCwd)                          = cwd();
+
+  if(defined($ENV{DEBUG_INSTALLER_BUILD}))
+  {
+    print " GetProductMileStoneVersion\n";
+    print "   aDirTopObj      : $aDirTopObj\n";
+    print "   aDirMozTopSrc   : $aDirMozTopSrc\n";
+    print "   aDirConfigTopSrc: $aDirConfigTopSrc\n";
+  }
+
+  chdir("$aDirMozTopSrc/config");
+  $versionMilestone = `perl milestone.pl --topsrcdir $aDirConfigTopSrc`;
+
+  if(defined($ENV{DEBUG_INSTALLER_BUILD}))
+  {
+    print "   versionMilestone: $versionMilestone\n";
+  }
+
+  chop($versionMilestone);
+  chdir($saveCwd);
+
+  if(defined($initEmptyValues) && ($initEmptyValues eq 1))
+  {
+    @version = split /\./, $versionMilestone;
+
+    # Initialize any missing version blocks (x.x.x.x) to '0'
+    for($counter = $#version + 1; $counter <= 3; $counter++)
+    {
+      $version[$counter] = "0";
+    }
+    return("$version[0].$version[1].$version[2].$version[3]");
+  }
+  return($versionMilestone);
+}
+
+# Retrieves the products's milestone version from either the ns tree or the
+# mozilla tree.
+#
+# However, it will use the y2k compliant build id only from:
+#   .../mozilla/dist/include/nsBuildID.h
+#
+# in the last value:
+#   ie: milestone.txt               : 1.4a
+#       nsBuildID.h                 : 2003030510
+#       product version then will be: 1.4a.0.2003030510
+#
+# The milestone version is acquired from [topsrcdir]/config/milestone.txt
+sub GetProductY2KVersion
+{
+  my($aDirTopObj, $aDirMozTopSrc, $aDirConfigTopSrc, $aDirMozTopObj) = @_;
+
+  $aDirMozTopObj = $aDirTopObj if(!defined($aDirMozTopObj));
+
+  if(defined($ENV{DEBUG_INSTALLER_BUILD}))
+  {
+    print " GetProductY2KVersion\n";
+    print "   aDirTopObj      : $aDirTopObj\n";
+    print "   aDirMozTopObj   : $aDirMozTopObj\n";
+    print "   aDirMozTopSrc   : $aDirMozTopSrc\n";
+    print "   aDirConfigTopSrc: $aDirConfigTopSrc\n";
+  }
+
+  my($fileBuildID)                      = "$aDirMozTopObj/dist/include/nsBuildID.h";
+  my($initEmptyValues)                  = 1;
+  my(@version)                          = undef;
+  my($y2kDate)                          = undef;
+  my($versionMilestone)                 = GetProductMilestoneVersion($aDirTopObj, $aDirMozTopSrc, $aDirConfigTopSrc, $initEmptyValues);
+
+  @version = split /\./, $versionMilestone;
+  $y2kDate = GetProductBuildID($fileBuildID, "NS_BUILD_ID");
+  return("$version[0].$version[1].$version[2].$y2kDate");
 }
 
 package MozPackages;
@@ -373,15 +675,17 @@ sub add {
 sub mergeTo {
     my ($parser, $mergeOut) = @_;
 
-    MozPackager::_verbosePrint(1, "Merging XPT files to $mergeOut: ", join(", ", keys %{$parser->{'xptfiles'}}));
+    if (scalar(keys %{$parser->{'xptfiles'}}) > 0) {
+        MozPackager::_verbosePrint(1, "Merging XPT files to $mergeOut: ", join(", ", keys %{$parser->{'xptfiles'}}));
 
-    # XXXbsmedberg : this will not work in cross-compile environments,
-    # but I'm not sure anyone cares
-    my $linkCommand = File::Spec->catfile("dist", "bin", "xpt_link");
+        # XXXbsmedberg : this will not work in cross-compile environments,
+        # but I'm not sure anyone cares
+        my $linkCommand = File::Spec->catfile("dist", "bin", "xpt_link");
 
-    MozStage::Utils::ensureDirs($mergeOut);
-    system ($linkCommand, $mergeOut, map(MozPackager::joinfile($_), keys %{$parser->{'xptfiles'}})) &&
-        die("xpt_link failed: code ". ($? >> 8));
+        MozPackager::ensureDirs($mergeOut);
+        system ($linkCommand, $mergeOut, map(MozPackager::joinfile($_), keys %{$parser->{'xptfiles'}})) &&
+            die("xpt_link failed: code ". ($? >> 8));
+    }
 }
 
 sub _commandFunc {
@@ -463,14 +767,11 @@ sub preprocessTo {
     foreach my $ppfile (keys %{$parser->{'ppfiles'}}) {
         MozPackager::_verbosePrint(2, "Preprocessing $ppfile");
         my $output = MozPackager::joinfile($stageDir, $ppfile);
-        my $commandLine = $preprocessor. ' '.
-            $parser->{'ppfiles'}->{$ppfile}.
-            ' > '. $output;
+        MozPackager::ensureDirs($output);
 
-        MozStage::Utils::ensureDirs($output);
-
-        system $commandLine;
-        die("Error during preprocessing, command $commandLine returned, code ". ($? >>8)) if ($? >>8);
+        MozPackager::system($preprocessor. ' '.
+                            $parser->{'ppfiles'}->{$ppfile}.
+                            ' > '. $output);
     }
 }
 
@@ -525,112 +826,6 @@ sub _commandFunc {
     }
 }
 
-package MozStage::Utils;
-
-use File::Copy;
-
-my $cansymlink = eval {symlink('', ''); 1; };
-
-# this global var may be set by clients who want to force a copy
-# instead of a symlink
-$MozStage::forceCopy = 0;
-
-sub ensureDirs {
-    my ($to) = @_;
-
-    my ($volume, $dirs, $file) = File::Spec->splitpath($to);
-    my @dirs = File::Spec->splitdir($dirs);
-    
-    my $numdirs = scalar(@dirs);
-    # now create directories
-    my $i = 0;
-    while ($i < $numdirs) {
-        my $dirname = File::Spec->catpath($volume, File::Spec->catdir(@dirs[0..$i]));
-        mkdir $dirname if (! -e $dirname);
-        ++$i;
-    }
-}
-
-# this performs a symlink if possible on this system, otherwise
-# peforms a regular "copy". It creates the directory structure if
-# necessary.
-sub symCopy {
-    my ($from, $to) = @_;
-
-    MozPackager::_verbosePrint(1, "Copying $from\t to $to");
-
-    ensureDirs($to);
-
-    if ($cansymlink && !$MozStage::forceCopy) {
-        # $from is relative to the current (objdir) directory, so we need to
-        # make it relative to $to
-        my ($tovol, $topath, $tofile) = File::Spec->splitpath($to);
-        my $todir = File::Spec->catpath($tovol, $topath);
-        my $relfrom = File::Spec->abs2rel($from, $todir);
-
-        MozPackager::_verbosePrint(1, "Symlinking $relfrom, $to");
-        
-        symlink($relfrom, $to) ||
-            die("symlink $relfrom, $to failed.");
-    } else {
-        copy($from, $to) ||
-            die("copy $from, $to failed.");
-    }
-}    
-
-sub calcDiskSpace {
-    my ($stageDir) = @_;
-
-    MozPackager::_verbosePrint(1, "Calculating disk space for XPI package.");
-    $ENV{'XPI_SPACEREQUIRED'} = int(_realDiskSpace($stageDir) / 1024) + 1;
-    
-    opendir(my $dirHandle, $stageDir) ||
-        die("Could not open directory $stageDir for listing.");
-
-    while (my $dir = readdir($dirHandle)) {
-        if (! ($dir =~ /^\./)) {
-            MozPackager::_verbosePrint(1, "Calculating disk space for subdir $dir");
-            my $realDir = File::Spec->catdir($stageDir, $dir);
-            if (-d $realDir) {
-                $ENV{"XPI_SPACEREQUIRED_\U$dir"} = int(_realDiskSpace($realDir) / 1024) + 1;
-            }
-        }
-    }
-    closedir($dirHandle);
-}
-
-sub _realDiskSpace {
-    my ($path) = @_;
-
-    my $dsProg = File::Spec->catfile('dist', 'install', 'ds32.exe');
-
-    my $spaceRequired = 0;
-
-    if (-e $dsProg) {
-        # We're on win32, use ds32.exe
-        my $command = "$dsProg /D /L0 /A /S /C 32768 $path";
-        $spaceRequired = `$command` ||
-            die("Program failed: '$command' returned code ". ($? <<8));
-    } else {
-        opendir(my $dirHandle, $path) ||
-            die("Could not open directory $path for listing.");
-
-        while (my $dir = readdir($dirHandle)) {
-            if (! ($dir =~ /^\./)) {
-                my $realDir = File::Spec->catdir($path, $dir);
-                if (-d $realDir) {
-                    $spaceRequired += _realDiskSpace($realDir);
-                } else {
-                    $spaceRequired += (-s File::Spec->catfile($path, $dir));
-                }
-            }
-        }
-        closedir($dirHandle);
-    }
-
-    return $spaceRequired;
-}
-
 package MozStage;
 
 use Cwd;
@@ -638,10 +833,12 @@ use Cwd;
 sub stage {
     my ($fileHash, $destDir) = @_;
 
+    MozPackager::_verbosePrint(1, "Staging files to $destDir");
+
     for my $dest (keys %$fileHash) {
         my $from = MozPackager::joinfile($fileHash->{$dest});
         my $to   = MozPackager::joinfile($destDir, $dest);
-        MozStage::Utils::symCopy($from, $to);
+        MozPackager::symCopy($from, $to);
     }
 }
 
@@ -649,7 +846,7 @@ sub makeXPI {
     my ($stageDir, $xpiFile) = @_;
 
     MozPackager::_verbosePrint(1, "Making XPI file.");
-    MozStage::Utils::ensureDirs($xpiFile);
+    MozPackager::ensureDirs($xpiFile);
 
     unlink $xpiFile if -e $xpiFile;
 
@@ -657,9 +854,7 @@ sub makeXPI {
     $xpiFile = File::Spec->rel2abs($xpiFile);
 
     chdir $stageDir;
-    my $command = "zip -r -D -9 $xpiFile *";
-    system $command ||
-        die("Program '$command' failed with code ". ($? <<8));
+    MozPackager::system("zip -r -D -9 $xpiFile *");
     chdir $savedCwd;
 }
 

@@ -80,12 +80,13 @@ psm-support            :
 gre                    : gecko nss psm
 
 # This package will disappear as well. It contains embed.jar
-gre-support            : gecko-support psm-support
+# xxxbsmedberg is there a way to not have to ship NSPR with applications?
+gre-support            : nspr gecko-support psm-support
 
 # wallet itself is part of gecko, but the viewers are not needed by FB, etc
 walletviewers          :
 
-xpfe-browser           : gecko-support psm-support walletviewers
+xpfe-browser           : nspr gecko-support psm-support walletviewers
 xpfe-lang-enUS         :
 xpfe-locale-US         :
 xpfe-default-US        :
@@ -93,13 +94,13 @@ xpfe-mailnews          :
 xpfe-editor            :
 
 # the XPIs of the above packages contain install.js
-gre-xpi                : gre 
+gre-xpi                : gre ^xpi-bootstrap
 xpfe-browser-xpi       : xpfe-browser
 xpfe-lang-enUS-xpi     : xpfe-lang-enUS
 xpfe-locale-US-xpi     : xpfe-locale-US
 xpfe-default-US-xpi    : xpfe-default-US
 xpfe-mailnews-xpi      : xpfe-mailnews
-xpfe-editor-xpi        : xpfe-editor
+# xpfe-editor-xpi        : xpfe-editor
 
 #
 # various embedding targets
@@ -124,7 +125,7 @@ browser                : toolkit
 # thunderbird (using separate GRE)
 mail                   : toolkit
 
-# Most extensions uild the same files/XPI for both seamonkey and firebird
+# Most extensions build the same files/XPI for both seamonkey and firebird
 venkman                :
 venkman-xpi            : venkman
 inspector              :
@@ -134,6 +135,11 @@ chatzilla-xpi          : chatzilla
 calendar               :
 calendar-xpi           : calendar
 
+# Unless you do special release stuff, this just builds
+# a dummy XPI
+talkback               :
+talkback-xpi           : talkback
+
 # the core spellcheck engine is split from the dictionaries
 spellcheck             :
 spellcheck-enUS        :
@@ -141,6 +147,7 @@ spellcheck-enUS        :
 spellcheck-enUS-xpi    : spellcheck spellcheck-enUS
 
 # seamonkey separate from the GRE
-seamonkeygre-enUS      : xpfe-browser xpfe-lang-enUS xpfe-locale-US xpfe-default-US xpfe-mailnews xpfe-editor venkman inspector chatzilla
+seamonkey-stub-en-xpi  :
+seamonkeygre-enUS      : xpfe-browser xpfe-lang-enUS xpfe-locale-US xpfe-default-US xpfe-mailnews xpfe-editor venkman inspector chatzilla talkback
 # seamonkey with the GRE (nightly tarball)
 seamonkeyall-enUS      : seamonkeygre-enUS gre
