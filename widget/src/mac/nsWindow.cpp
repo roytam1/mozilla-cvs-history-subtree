@@ -97,6 +97,7 @@ void EachRegionRect (RgnHandle r, void (* proc)(Rect *, void *), void* data) ;
 #pragma mark -
 
 
+//#define MEASURE_UPDATES         // time now long updates take
 //#define PAINT_DEBUGGING         // flash areas as they are painted
 //#define INVALIDATE_DEBUGGING    // flash areas as they are invalidated
 
@@ -224,9 +225,7 @@ static void blinkRgn(RgnHandle rgn, PRBool isPaint)
 
 static Boolean control_key_down()
 {
-	EventRecord event;
-	::EventAvail(0, &event);
-	return (event.modifiers & controlKey) != 0;
+	return (::GetCurrentKeyModifiers() & controlKey) != 0;
 }
 
 static long long microseconds()
@@ -1458,7 +1457,7 @@ else
     ::LockPortBits(::GetWindowPort(mWindowPtr));
 #endif
 
-#if DEBUG
+#ifdef MEASURE_UPDATES
 		// measure the time it takes to refresh the window, if the control key is down.
     unsigned long long start, finish;
     Boolean measure_duration = control_key_down();
@@ -1540,7 +1539,7 @@ else
     }
 #endif
 
-#if DEBUG
+#ifdef MEASURE_UPDATES
     if (measure_duration) {
       finish = microseconds();
       printf("update took %g microseconds.\n", double(finish - start));
