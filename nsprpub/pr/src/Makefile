@@ -65,7 +65,7 @@ ifeq ($(OS_ARCH),SunOS)
 ifeq ($(OS_RELEASE),4.1.3_U1)
 OPTIMIZER =
 export OPTIMIZER
-OS_LIBS			= -lm -lc
+OS_LIBS			= -lm
 else	# 4.1.3_U1
 MAPFILE = $(OBJDIR)/nsprmap.sun
 ALL_TRASH += $(MAPFILE)

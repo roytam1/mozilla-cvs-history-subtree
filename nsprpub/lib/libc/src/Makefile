@@ -39,10 +39,10 @@ include $(MOD_DEPTH)/config/config.mk
 
 # Disable optimization of the nspr on SunOS4.1.3
 ifeq ($(OS_ARCH),SunOS)
-OS_LIBS += -lc
 ifeq ($(OS_RELEASE),4.1.3_U1)
 OPTIMIZER =
 else
+OS_LIBS += -lc
 MAPFILE = $(OBJDIR)/plcmap.sun
 ALL_TRASH += $(MAPFILE)
 MKSHLIB += -M $(MAPFILE)

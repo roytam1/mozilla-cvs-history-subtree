@@ -39,5 +39,6 @@ PL_strprbrk;
 PL_strrchr;
 PL_strrstr;
 PL_strstr;
+libVersionPoint;
     local: *;
 };
