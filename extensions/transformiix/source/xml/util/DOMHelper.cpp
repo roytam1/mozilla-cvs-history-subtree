@@ -73,6 +73,37 @@ Node* DOMHelper::appearsFirst(Node* node1, Node* node2) {
 } //-- compareDocumentOrders
 
 /**
+ * Generates a unique ID for the given node and places the result in
+ * dest
+**/
+void DOMHelper::generateId(Node* node, String& dest) {
+
+    if (!node) {
+        dest.append("<null>");
+        return;
+    }
+
+    dest.append("id");
+
+    if (node->getNodeType() == Node::DOCUMENT_NODE) {
+        Integer::toString((int)node,dest);
+        return;
+    }
+
+    Integer::toString((int)node->getOwnerDocument(), dest);
+
+    OrderInfo* orderInfo = getDocumentOrder(node);
+
+    int i = 0;
+    while (i < orderInfo->size) {
+        dest.append('.');
+        Integer::toString(orderInfo->order[i], dest);
+        ++i;
+    }
+
+} //-- generateId
+
+/**
  * Returns the parent of the given node. This method is available
  * mainly to compensate for the fact that Attr nodes in DOM 1.0
  * do not have parents. (Why??)

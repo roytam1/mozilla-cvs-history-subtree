@@ -31,7 +31,7 @@
 #include "dom.h"
 #include "HashTable.h"
 #include "MITREObject.h"
-
+#include "primitives.h"
 
 
 //----------------------/
@@ -83,6 +83,12 @@ public:
     * @return the node which appears first in document order
    **/
     Node* appearsFirst(Node* node1, Node* node2);
+
+    /**
+     * Generates a unique ID for the given node and places the result in
+     * dest
+    **/
+    void generateId(Node* node, String& dest);
 
     /**
      * Returns the child number of the given node. Numbering
