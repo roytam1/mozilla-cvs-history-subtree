@@ -17,6 +17,7 @@
  */
 
 #include "CContextMenuAttachment.h"
+#include "xp.h"
 
 #include "CDrawingState.h"
 #include "CApplicationEventAttachment.h"
