@@ -137,6 +137,9 @@ ifeq ($(OS_RELEASE),10.0)
 OS_ARCH		:= Rhapsody
 endif
 endif
+ifeq ($(OS_ARCH),BeOS)
+BEOS_ADDON_WORKAROUND	= 1
+endif
 
 #
 # Strip off the excessively long version numbers on these platforms,
@@ -300,7 +303,11 @@ JAVA_OPTIMIZER	= -g
 XBCFLAGS	= -FR$*
 endif
 
-INCLUDES	= $(LOCAL_INCLUDES) -I$(PUBLIC) $(OS_INCLUDES)
+ifdef MOZ_TRACK_MODULE_DEPS
+REQ_INCLUDES	= $(foreach d,$(REQUIRES),-I$(DIST)/include/$d)
+endif
+
+INCLUDES	= $(LOCAL_INCLUDES) $(REQ_INCLUDES) -I$(PUBLIC) -I$(DIST)/include $(OS_INCLUDES)
 
 LIBNT		= $(DIST)/lib/libnt.$(LIB_SUFFIX)
 LIBAWT		= $(DIST)/lib/libawt.$(LIB_SUFFIX)
@@ -355,7 +362,11 @@ LIBS_DIR	= -L$(DIST)/bin -L$(DIST)/lib
 # Default location of include files
 # Note: NSPR doesn't have $(PUBLIC) and 
 # will always install its headers to $(DIST)/include
+ifdef MOZ_TRACK_MODULE_DEPS
+PUBLIC		= $(DIST)/include/$(MODULE)
+else
 PUBLIC		= $(DIST)/include
+endif
 
 DEPENDENCIES	= .md
 
@@ -366,8 +377,12 @@ MOZ_COMPONENT_XPCOM_LIBS += -lboehm
 XPCOM_LIBS += -lboehm
 endif
 
-ifneq (all,$(BUILD_MODULES))
-DEFINES += -DXPCOM_STANDALONE -DXPCONNECT_STANDALONE
+ifeq (xpcom, $(findstring xpcom, $(BUILD_MODULES)))
+DEFINES += -DXPCOM_STANDALONE
+endif
+
+ifeq (xpconnect, $(findstring xpconnect, $(BUILD_MODULES)))
+DEFINES +=  -DXPCOM_STANDALONE -DXPCONNECT_STANDALONE
 endif
 
 ifeq ($(OS_ARCH),OS2)

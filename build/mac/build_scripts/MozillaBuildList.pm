@@ -167,6 +167,7 @@ sub InstallNonChromeResources()
     #//
     my($resource_dir) = "$dist_dir" . "res:";
     my($samples_dir) = "$resource_dir" . "samples:";
+    my($builtin_dir) = "$resource_dir" . "builtin:";
 
     #//
     #// Make aliases of resource files
@@ -185,6 +186,7 @@ sub InstallNonChromeResources()
     }
     
     MakeAlias(":mozilla:layout:html:document:src:html.css",                            "$resource_dir");
+    MakeAlias(":mozilla:layout:html:document:src:forms.css",                           "$resource_dir");
     MakeAlias(":mozilla:layout:html:document:src:quirk.css",                           "$resource_dir");
     MakeAlias(":mozilla:layout:html:document:src:arrow.gif",                           "$resource_dir"); 
     MakeAlias(":mozilla:webshell:tests:viewer:resources:viewer.properties",            "$resource_dir");
@@ -227,6 +229,10 @@ sub InstallNonChromeResources()
 
     # QA Menu
     InstallResources(":mozilla:intl:strres:tests:MANIFEST",            "$resource_dir");
+
+    # install builtin XBL bindings
+    MakeAlias(":mozilla:layout:xbl:builtin:htmlbindings.xml",                      "$builtin_dir");
+    MakeAlias(":mozilla:layout:xbl:builtin:mac:platformHTMLBindings.xml",          "$builtin_dir");
 
     print("--- End Resource copying ----\n");
 }
@@ -436,6 +442,7 @@ sub BuildClientDist()
 
     #INTL
     #CHARDET
+    InstallFromManifest(":mozilla:intl:chardet:public:MANIFEST_IDL",               "$distdirectory:idl:");
     InstallFromManifest(":mozilla:intl:chardet:public:MANIFEST",                   "$distdirectory:chardet");
 
     #UCONV
@@ -973,6 +980,7 @@ sub BuildIDLProjects()
     BuildIDLProject(":mozilla:intl:strres:macbuild:strresIDL.mcp",                  "nsIStringBundle");
     BuildIDLProject(":mozilla:intl:unicharutil:macbuild:unicharutilIDL.mcp",        "unicharutil");
     BuildIDLProject(":mozilla:intl:uconv:macbuild:uconvIDL.mcp",                    "uconv");
+    BuildIDLProject(":mozilla:intl:chardet:macbuild:chardetIDL.mcp",                "chardet");
 
     if ($main::options{ldap})
     {
@@ -1117,7 +1125,7 @@ sub BuildCommonProjects()
     BuildOneProject(":mozilla:modules:libjar:macbuild:libjar.mcp",              "libjar$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
     BuildOneProject(":mozilla:modules:libjar:macbuild:libjar.mcp",              "libjar$D.Lib", 0, 0, 0);
 
-    BuildOneProject(":mozilla:modules:oji:macbuild:oji.mcp",                    "oji$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
+    BuildOneProject(":mozilla:modules:oji:macbuild:oji.mcp",                    "oji$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
     BuildOneProject(":mozilla:caps:macbuild:Caps.mcp",                          "Caps$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
     BuildOneProject(":mozilla:modules:libpref:macbuild:libpref.mcp",            "libpref$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
     BuildOneProject(":mozilla:js:macbuild:XPConnect.mcp",                       "XPConnect$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);

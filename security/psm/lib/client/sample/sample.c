@@ -259,7 +259,6 @@ main(int argc, char **argv)
 #else
 #error Teach me how to fill in the user profile.
 #endif
-    errorMessage(0,"Using directory <%s> for dbs.\n", profileDir);
     if (CMT_Hello(control, PROTOCOL_VERSION,
 		  profile, profileDir) != CMTSuccess)
     {

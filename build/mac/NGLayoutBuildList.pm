@@ -417,13 +417,29 @@ sub ConfigureBuildSystem()
 
 sub Checkout()
 {
+    print <<EOS;
+----------------------------------------------------------------------
+You are using the old build scripts, which are going away soon. Please
+start using the new scripts, in mozilla/build/mac/build_scripts. The
+new scripts are new and improved in the following ways:
+1. Build progress allows you to restart stalled builds automatically.
+2. The 'build' script now pulls as well, so you can pull and build
+   in one step.
+3. Build options are customizable via a local prefs file.
+4. Better user interaction and error reporting.
+
+If you have any questions, contact Simon Fraser (sfraser\@netscape.com)
+----------------------------------------------------------------------
+
+EOS
+
     unless ( $main::pull{all} || $main::pull{moz} || $main::pull{runtime} ) { return;}
 
     # give application activation a chance to happen
     WaitNextEvent();
     WaitNextEvent();
     WaitNextEvent();
-    
+        
     _assertRightDirectory();
     my($cvsfile) = _pickWithMemoryFile("::nglayout.cvsloc");
     my($session) = MacCVS->new( $cvsfile );
@@ -867,6 +883,7 @@ sub InstallNonChromeResources()
     }
     
     _MakeAlias(":mozilla:layout:html:document:src:html.css",                            "$resource_dir");
+    _MakeAlias(":mozilla:layout:html:document:src:forms.css",                           "$resource_dir");
     _MakeAlias(":mozilla:layout:html:document:src:quirk.css",                           "$resource_dir");
     _MakeAlias(":mozilla:layout:html:document:src:arrow.gif",                           "$resource_dir"); 
     _MakeAlias(":mozilla:webshell:tests:viewer:resources:viewer.properties",            "$resource_dir");
@@ -909,6 +926,12 @@ sub InstallNonChromeResources()
 
     # QA Menu
     _InstallResources(":mozilla:intl:strres:tests:MANIFEST",            "$resource_dir");
+
+    # install builtin XBL bindings
+    my($builtin_dir) = "$resource_dir" . "builtin:";
+    MakeAlias(":mozilla:layout:xbl:builtin:htmlbindings.xml",                      "$builtin_dir");
+    MakeAlias(":mozilla:layout:xbl:builtin:mac:platformHTMLBindings.xml",          "$builtin_dir");
+    MakeAlias(":mozilla:layout:xbl:builtin:mac:xbl-forms.css",                     "$builtin_dir");
 
     print("--- End Resource copying ----\n");
 }
@@ -1470,6 +1493,7 @@ sub BuildClientDist()
 
     #INTL
     #CHARDET
+    _InstallFromManifest(":mozilla:intl:chardet:public:MANIFEST_IDL",               "$distdirectory:idl:");
     _InstallFromManifest(":mozilla:intl:chardet:public:MANIFEST",                   "$distdirectory:chardet");
 
     #UCONV
@@ -2050,6 +2074,8 @@ sub BuildIDLProjects()
     BuildIDLProject(":mozilla:intl:strres:macbuild:strresIDL.mcp",                  "nsIStringBundle");
     BuildIDLProject(":mozilla:intl:unicharutil:macbuild:unicharutilIDL.mcp",        "unicharutil");
     BuildIDLProject(":mozilla:intl:uconv:macbuild:uconvIDL.mcp",                    "uconv");
+    BuildIDLProject(":mozilla:intl:chardet:macbuild:chardetIDL.mcp",                "chardet");
+
 
     if ($main::options{ldap})
     {
@@ -2661,6 +2687,7 @@ sub ImportXMLProject($$)
     my $ascript = <<EOS;
     tell application "$codewarrior_ide_name"
         make new (project document) as ("$project_path") with data ("$xml_path")
+        close project "$project_path"
     end tell
 EOS
 	print $ascript."\n";

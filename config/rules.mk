@@ -275,6 +275,13 @@ LOOP_OVER_DIRS = \
         $(UPDATE_TITLE) \
         $(MAKE) -C $$d $@; \
     done
+
+LOOP_OVER_MOZ_DIRS = \
+    @$(EXIT_ON_ERROR) \
+    for d in $(filter-out $(STATIC_MAKEFILES), $(DIRS)); do \
+        $(UPDATE_TITLE) \
+        $(MAKE) -C $$d $@; \
+    done
 endif
 
 #
@@ -328,8 +335,10 @@ endif
 # Make sure to wrap static libs inside linker specific flags to turn on & off
 # inclusion of all symbols inside the static libs
 #
+ifndef NO_LD_ARCHIVE_FLAGS
 ifdef SHARED_LIBRARY_LIBS
 EXTRA_DSO_LDOPTS := $(MKSHLIB_FORCE_ALL) $(SHARED_LIBRARY_LIBS) $(MKSHLIB_UNFORCE_ALL) $(EXTRA_DSO_LDOPTS)
+endif
 endif
 
 #
@@ -568,30 +577,26 @@ alltags:
 $(PROGRAM): $(PROGOBJS) $(EXTRA_DEPS) Makefile Makefile.in
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
 	$(LD) -OUT:$@ $(LDFLAGS) $(OS_LFLAGS) $(PROGOBJS) $(LIBS) $(EXTRA_LIBS) -MAP:$(@:.exe=.map) $(OS_LIBS) /ST:0x1000000
-ifdef OS2_PROGRAM_RESOURCE
-	rc -n -x2 -r $(OS2_PROGRAM_RESOURCE)
-	rc -n -x2 $(patsubst %.rc,%.res,$(OS2_PROGRAM_RESOURCE)) $@
-endif # os2_prog_rsrc
 else
 ifeq ($(CPP_PROG_LINK),1)
 	$(CCC) -o $@ $(CXXFLAGS) $(WRAP_MALLOC_CFLAGS) $(PROGOBJS) $(LDFLAGS) $(LIBS_DIR) $(LIBS) $(OS_LIBS) $(EXTRA_LIBS) $(BIN_FLAGS) $(WRAP_MALLOC_LIB) $(PROFILER_LIBS)
 	$(MOZ_POST_PROGRAM_COMMAND) $@
-ifeq ($(OS_ARCH),BeOS)
-ifdef BEOS_PROGRAM_RESOURCE
-	xres -o $@ $(BEOS_PROGRAM_RESOURCE)
-	mimeset $@
-endif
-endif # BeOS
 else # ! CPP_PROG_LINK
 	$(CC) -o $@ $(CFLAGS) $(PROGOBJS) $(LDFLAGS) $(LIBS_DIR) $(LIBS) $(OS_LIBS) $(EXTRA_LIBS) $(BIN_FLAGS)
+endif # CPP_PROG_LINK
+endif # OS2
 ifeq ($(OS_ARCH),BeOS)
 ifdef BEOS_PROGRAM_RESOURCE
 	xres -o $@ $(BEOS_PROGRAM_RESOURCE)
 	mimeset $@
 endif
 endif # BeOS
-endif # CPP_PROG_LINK
-endif # OS2
+ifeq ($(OS_ARCH),OS2)
+ifdef OS2_PROGRAM_RESOURCE
+	rc -n -x2 -r $(OS2_PROGRAM_RESOURCE)
+	rc -n -x2 $(patsubst %.rc,%.res,$(OS2_PROGRAM_RESOURCE)) $@
+endif # os2_prog_rsrc
+endif
 
 $(HOST_PROGRAM): $(HOST_PROGOBJS) $(HOST_EXTRA_DEPS) Makefile Makefile.in
 	$(HOST_CC) -o $@ $(HOST_CFLAGS) $(HOST_PROGOBJS) $(HOST_LIBS) $(HOST_EXTRA_LIBS)
@@ -1048,10 +1053,12 @@ endif
 ################################################################################
 # Copy each element of EXPORTS to $(PUBLIC)
 
-ifneq ($(EXPORTS),)
+ifneq ($(EXPORTS)$(XPIDLSRCS),)
 $(PUBLIC)::
 	@if test ! -d $@; then echo Creating $@; rm -rf $@; $(NSINSTALL) -D $@; else true; fi
+endif
 
+ifneq ($(EXPORTS),)
 export:: $(EXPORTS) $(PUBLIC)
 	$(INSTALL) $(IFLAGS1) $^
 endif 
@@ -1374,7 +1381,7 @@ ifneq (,$(filter $(PROGRAM) $(HOST_PROGRAM) $(SIMPLE_PROGRAMS) $(HOST_LIBRARY) $
 	@echo "EXTRA_DSO_LDOPTS    = $(EXTRA_DSO_LDOPTS)"
 	@echo --------------------------------------------------------------------------------
 endif
-	+$(LOOP_OVER_DIRS)
+	+$(LOOP_OVER_MOZ_DIRS)
 
 showbuild:
 	@echo "MOZ_BUILD_ROOT     = $(MOZ_BUILD_ROOT)"
@@ -1427,4 +1434,4 @@ zipmakes:
 ifneq (,$(filter $(PROGRAM) $(SIMPLE_PROGRAMS) $(LIBRARY) $(SHARED_LIBRARY),$(TARGETS)))
 	zip $(DEPTH)/makefiles $(subst $(topsrcdir),$(MOZ_SRC)/mozilla,$(srcdir)/Makefile.in)
 endif
-	+$(LOOP_OVER_DIRS)
+	+$(LOOP_OVER_MOZ_DIRS)

@@ -640,6 +640,7 @@ case "$target" in
        CFLAGS="$CFLAGS -woff 3262"
        CXXFLAGS="$CXXFLAGS -woff 3262"
        if test -n "$USE_N32"; then
+	   ASFLAGS="$ASFLAGS -n32"
 	   CFLAGS="$CFLAGS -n32"
 	   CXXFLAGS="$CXXFLAGS -n32"
 	   LDFLAGS="$LDFLAGS -n32"
@@ -808,6 +809,8 @@ case "$target" in
     MOZ_ZLIB_LIBS='$(DIST)/lib/z.$(LIB_SUFFIX)'
     MOZ_PNG_LIBS='$(DIST)/lib/png.$(LIB_SUFFIX)'
     MOZ_JS_LIBS='$(DIST)/lib/mozjs.lib'
+    OS_ARCH=OS2
+    OS_TARGET=OS2
 
     case "$target" in
     *-*-os2_emx)
@@ -946,9 +949,6 @@ dnl the qsort routine under solaris is faulty
            ASFLAGS='-xarch=v8plus -DULTRA_SPARC -P -L -D_ASM -D__STDC__=0 -K PIC'
            AC_DEFINE(ULTRA_SPARC)
            ;;
-         *)
-           ASFLAGS='-xarch=v8 -P -L -D_ASM -D__STDC__=0 -K PIC'
-           ;;
        esac
     else
        ASFLAGS="$ASFLAGS -fPIC"
@@ -960,6 +960,13 @@ dnl the qsort routine under solaris is faulty
        if test "$OS_RELEASE" = "5.3"; then
 	  AC_DEFINE(MUST_UNDEF_HAVE_BOOLEAN_AFTER_INCLUDES)
        fi
+       case $OS_TEST in
+         sun4u)
+            CFLAGS="${CFLAGS} -Wa,-xarch=v8plus,-DULTRA_SPARC,-P,-L,-D_ASM,-D__STDC__=0"
+            CXXFLAGS="${CXXFLAGS} -Wa,-xarch=v8plus,-DULTRA_SPARC,-P,-L,-D_ASM,-D__STDC__=0,-K,PIC"
+            AC_DEFINE(ULTRA_SPARC)
+            ;;
+       esac
     fi
     if test "$OS_RELEASE" = "5.5.1"; then
        AC_DEFINE(NEED_USLEEP_PROTOTYPE)
@@ -1012,6 +1019,9 @@ case "$target" in
     NO_LD_ARCHIVE_FLAGS=
     ;;
 *-aix4.3*)
+    NO_LD_ARCHIVE_FLAGS=
+    ;;
+*-openvms*)
     NO_LD_ARCHIVE_FLAGS=
     ;;
 esac
@@ -1652,29 +1662,27 @@ AC_ARG_WITH(libIDL,
 	SKIP_IDL_CHECK="yes"
    fi ])
 
-dnl RedHat 6.0 (Hedwig) ships with orbit which includes libIDL
-if test -f /etc/redhat-release
-then
-	if egrep "Hedwig" /etc/redhat-release >/dev/null
-	then
-		if test -x /usr/bin/orbit-config
-		then
-			SKIP_IDL_CHECK="yes"
-			LIBIDL_CFLAGS="-I/usr/lib/glib/include"
-			LIBIDL_LIBS="-lglib -lIDL"
-			AC_SUBST(LIBIDL_CFLAGS)
-			AC_SUBST(LIBIDL_LIBS)
-		fi
-	fi
+AC_PATH_PROGS(LIBIDL_CONFIG, $LIBIDL_CONFIG libIDL-config)
+
+dnl We don't have a libIDL config program.  Look for orbit-config instead
+if test -z "$LIBIDL_CONFIG"; then
+    AC_PATH_PROGS(ORBIT_CONFIG, $ORBIT_CONFIG orbit-config)
+    if test -n "$ORBIT_CONFIG"; then
+        SKIP_IDL_CHECK="yes"
+	_ORBIT_CFLAGS=`${ORBIT_CONFIG} client --cflags`
+	_ORBIT_LIBS=`${ORBIT_CONFIG} client --libs`
+        _ORBIT_INC_PATH=`${PERL} -e '{ for $f (@ARGV) { print "$f " if ($f =~ m/^-I/); } }' -- ${_ORBIT_CFLAGS}`
+        _ORBIT_LIB_PATH=`${PERL} -e '{ for $f (@ARGV) { print "$f " if ($f =~ m/^-L/); } }' -- ${_ORBIT_LIBS}`
+        LIBIDL_CFLAGS="$_ORBIT_INC_PATH"
+        LIBIDL_LIBS="$_ORBIT_LIB_PATH -lIDL -lglib"
+    fi
 fi
 
 if test "$SKIP_IDL_CHECK" = "no"
 then
 AM_PATH_LIBIDL($LIBIDL_VERSION,,
   [echo libIDL $LIBIDL_VERSION or higher is required.]
-  [echo Get yourself a RPM or source package from ftp://ftp.mozilla.org/]
-  [echo before your tree is HOSED.]
-  [echo See http://atv.ne.mediaone.net/libIDL/ for more information.]
+  [echo See http://andrewtv.org/libIDL/ for more information.]
   [AC_MSG_ERROR(libIDL not installed.)])
 fi
 
@@ -1682,8 +1690,13 @@ if test -n "$CROSS_COMPILE"; then
     if test -z "$HOST_LIBIDL_CONFIG"; then
         HOST_LIBIDL_CONFIG="$LIBIDL_CONFIG"
     fi
-    HOST_LIBIDL_CFLAGS=`${HOST_LIBIDL_CONFIG} --cflags`
-    HOST_LIBIDL_LIBS=`${HOST_LIBIDL_CONFIG} --libs`
+    if test -n "$HOST_LIBIDL_CONFIG"; then
+        HOST_LIBIDL_CFLAGS=`${HOST_LIBIDL_CONFIG} --cflags`
+        HOST_LIBIDL_LIBS=`${HOST_LIBIDL_CONFIG} --libs`
+    else
+        HOST_LIBIDL_CFLAGS="$LIBIDL_CFLAGS"
+        HOST_LIBIDL_LIBS="$LIBIDL_LIBS"
+    fi
     if test "$OS_TARGET" = "POSIX_for_OpenVMS_AXP"; then
       LIBIDL_CFLAGS=`${LIBIDL_CONFIG}-VMS --cflags`
       LIBIDL_LIBS=`${LIBIDL_CONFIG}-VMS --libs`
@@ -1694,6 +1707,8 @@ if test -z "${GLIB_CFLAGS}" || test -z "${GLIB_LIBS}" ; then
     AM_PATH_GLIB(${GLIB_VERSION})
 fi
 
+AC_SUBST(LIBIDL_CFLAGS)
+AC_SUBST(LIBIDL_LIBS)
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
 
@@ -2825,6 +2840,14 @@ MOZ_ARG_DISABLE_BOOL(async-dns,
 [  --disable-async-dns     Disable separate dns thread],
   NO_UNIX_ASYNC_DNS=1)
 
+MOZ_ARG_DISABLE_BOOL(logging,
+[  --disable-logging       Disable nsLogging facilities],
+  NS_DISABLE_LOGGING=1)
+if test "$NS_DISABLE_LOGGING"; then
+  AC_DEFINE(NS_DISABLE_LOGGING)
+fi
+AC_SUBST(NS_DISABLE_LOGGING)
+
 dnl build mozilla/xpfe by default
 MOZ_BUILD_XPFE=1
 MOZ_ARG_DISABLE_BOOL(build-xpfe,
@@ -2860,6 +2883,16 @@ if test "$NS_TRACE_MALLOC"; then
   AC_DEFINE(NS_TRACE_MALLOC)
 fi
 AC_SUBST(NS_TRACE_MALLOC)
+
+dnl Turn on reflow counting
+MOZ_REFLOW_PERF=
+MOZ_ARG_ENABLE_BOOL(reflow-perf,
+[  --enable-reflow-perf    Enable reflow performance tracing],
+  MOZ_REFLOW_PERF=1 )
+if test "$MOZ_REFLOW_PERF"; then
+  AC_DEFINE(MOZ_REFLOW_PERF)
+fi
+AC_SUBST(MOZ_REFLOW_PERF)
 
 dnl make sure that we compile in multi-processor support
 NS_MT_SUPPORTED=1
@@ -3017,9 +3050,14 @@ then
 	MOZ_OPTIMIZE_FLAGS="-O"
 fi
 
-MOZ_ARG_ENABLE_BOOL(optimize,
-[  --enable-optimize       Enable code optimizations ],
-  [ MOZ_OPTIMIZE=1 ])
+MOZ_ARG_ENABLE_STRING(optimize,
+[  --enable-optimize(=val) Enable code optimizations level (val) ],
+    [ if test "$enableval" != "no"; then
+	MOZ_OPTIMIZE=1
+	if test -n "$enableval" && test "$enableval" != "yes"; then
+	    MOZ_OPTIMIZE_FLAGS="$enableval"
+	fi 
+    fi ])
 
 if test "$MOZ_OPTIMIZE"
 then
@@ -3588,6 +3626,15 @@ MOZ_ARG_ENABLE_BOOL(static,
 [  --enable-static         Enable building of internal static libs (BROKEN)],
   NO_STATIC_LIB=)
 
+dnl ========================================================
+
+MOZ_ARG_ENABLE_STRING(static-components,
+[  --enable-static-components
+                           Enable/disable static linking for specific components only],
+  [ MOZ_STATIC_COMPONENTS=`echo $enableval | sed 's/,/ /g'` ] )
+
+dnl ========================================================
+
 case "$target" in
     *-*-aix*)
 	if test "${NO_STATIC_LIB}" = "1" -o -z "${NO_SHARED_LIB}"; then
@@ -3609,6 +3656,13 @@ case "$target" in
 	AC_SUBST(AIX_SHLIB_BIN)
 	;;
 esac
+
+dnl ========================================================
+dnl =
+dnl = Maintainer debug option (no --enable equivalent)
+dnl =
+dnl ========================================================
+AC_SUBST(MOZ_TRACK_MODULE_DEPS)
 
 AC_SUBST(AR)
 AC_SUBST(AR_FLAGS)
@@ -4000,7 +4054,7 @@ fi # $no_x
 dnl Set various defines and substitutions
 dnl ========================================================
 
-if test "$OS_TARGET" = "OS/2" || test "$OS_TARGET" = "OS_2"; then
+if test "$OS_TARGET" = "OS2"; then
   AC_DEFINE(XP_PC)
   AC_DEFINE(XP_OS2)
   AC_DEFINE(BSD_SELECT)

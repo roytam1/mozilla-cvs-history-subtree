@@ -1069,7 +1069,6 @@ function makePrefForm(d)
 {
     writePrefInput(d, 'enable_ssl2');
     writePrefInput(d, 'enable_ssl3');
-    writePrefInput(d, 'enable_tls');
     writePrefInput(d, 'client_auth_auto_select');
     writePrefInput(d, 'default_email_cert');
     writePrefInput(d, 'warn_entering_secure');
@@ -1101,52 +1100,48 @@ function makeClientAuthPref(d)
 
 function enableClientAuthAutoSelect()
 {
-    client_auth_auto_select = true;
+    top.client_auth_auto_select = true;
 }
 
 function disableClientAuthAutoSelect()
 {
-    client_auth_auto_select = false;
+    top.client_auth_auto_select = false;
 }
 
 // creates the HTML string for SSL cipher family prefs
 var enableSSL2Str = {adv_enable_SSL2};
 var enableSSL3Str = {adv_enable_SSL3};
-var enableTLSStr = {adv_enable_TLS};
 function toggleSSL2Cipher()
 {
-  enable_ssl2 = !enable_ssl2;
+  if (top.enable_ssl2) {
+    top.enable_ssl2 = false;
+  } else {
+    top.enable_ssl2 = true;
+  }
 }
 
 function toggleSSL3Cipher()
 {
-  enable_ssl3 = !enable_ssl3;
-}
-
-function toggleTLSCipher()
-{
-  enable_tls = !enable_tls;
+  if (top.enable_ssl3) {
+    top.enable_ssl3 = false;
+  } else {
+    top.enable_ssl3 = true;
+  }
 }
 
 function makeSSLCipherPref(d)
 {
     d.write('<tr><td><input type=checkbox name="enable_ssl2" value="true" ');
-    if (enable_ssl2) {
+    if (enable_ssl2 == true) {
         d.write('checked ');
     }
     d.writeln('onClick="top.toggleSSL2Cipher();"></td><td><p>' + enableSSL2Str + '</p></td></tr>');
 
     d.write('<tr><td><input type=checkbox name="enable_ssl3" value="true" ');
-    if (enable_ssl3) {
+    if (enable_ssl3 == true) {
         d.write('checked ');
     }
     d.writeln('onClick="top.toggleSSL3Cipher();"></td><td><p>' + enableSSL3Str + '</p></td></tr>');
-
-    d.write('<tr><td><input type=checkbox name="enable_tls" value="true" ');
-    if (enable_tls) {
-        d.write('checked ');
-    }
-    d.writeln('onClick="top.toggleTLSCipher();"></td><td><p>' + enableTLSStr + '</p></td></tr>');
 }
 
 // these functions create the HTML strings for various navigator & messenger
@@ -1157,7 +1152,7 @@ function makeBoolPrefHTML(d, nm, vrbl)
     if (vrbl == true) {
         d.write('checked ');
     }
-    d.write('onClick="togglePrefBool(' + nm + ');"></td>');
+    d.write('onClick="top.togglePrefBool(' + nm + ');"></td>');
 }
 
 function togglePrefBool(nm, newVal)
@@ -1200,7 +1195,6 @@ function setPrefsBeforeSubmit(f)
 {
     f.enable_ssl2.value = enable_ssl2;
     f.enable_ssl3.value = enable_ssl3;
-    f.enable_tls.value = enable_tls;
     f.client_auth_auto_select.value = client_auth_auto_select;
     f.default_email_cert.value = new String(default_email_cert);
     f.warn_entering_secure.value = warn_entering_secure;
@@ -1410,13 +1404,6 @@ info_about_content:
 </html>
 :info_about_content
 
-toggle_pref_js:
-function togglePrefBool(nm, newVal)
-{
-  top[nm.name] = !top[nm.name];
-}
-:toggle_pref_js
-
 ;
 ; Applications content panes
 ;
@@ -1440,8 +1427,6 @@ apps_navigator_content:
 
 <tr>
 <script language=javascript>
-{toggle_pref_js}
-
 top.makeBoolPrefHTML(document, 'warn_entering_secure', top.warn_entering_secure);
 </script>
 <td><p>{apps_warn_enter_secure}</p></td>
@@ -1502,8 +1487,6 @@ apps_messenger_content:
 
 <tr>
 <script language=javascript>
-{toggle_pref_js}
-
 top.makeBoolPrefHTML(document, 'mail_encrypt_outgoing_mail', top.mail_encrypt_outgoing_mail);
 </script>
 <td><p>{apps_msg_encrypt}</p></td>
@@ -1733,7 +1716,6 @@ sa_noinfo:
 </head>
 <body onLoad="parent.SetHelpURL('help.htm#1044151')">
 </body>
-</html>
 :sa_noinfo
 
 ;
