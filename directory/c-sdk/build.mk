@@ -138,72 +138,53 @@ endif
 #
 LDAP_REFERRALS  = -DLDAP_REFERRALS
 
+ifeq ($(OS_ARCH), Linux)
+DEFS            += -DLINUX2_0 -DLINUX1_2 -DLINUX2_1
+endif
+
 #
 # Web server dynamic library.
 #
-ifeq ($(OS_ARCH), WINNT)
+ifeq ($(OS_ARCH), Linux)
+DEFS            += -DLINUX2_0 -DLINUX1_2 -DLINUX2_1
+endif
 
+ifeq ($(OS_ARCH), WINNT)
 DLLEXPORTS_PREFIX=/DEF:
 USE_DLL_EXPORTS_FILE	= 1
+endif
 
-else
 ifeq ($(OS_ARCH), SunOS)
-
 DLLEXPORTS_PREFIX=-Blocal -M
 USE_DLL_EXPORTS_FILE	= 1
+endif
 
-else
 ifeq ($(OS_ARCH), IRIX)
-
 DLLEXPORTS_PREFIX=-exports_file
 USE_DLL_EXPORTS_FILE	= 1
+endif
 
-else
 ifeq ($(OS_ARCH), HP-UX)
-
 DEFS		+= -Dhpux -D_REENTRANT
+endif
 
-else
 ifeq ($(OS_ARCH),AIX)
-
 DLLEXPORTS_PREFIX=-bE:
 DL=-ldl
 USE_DLL_EXPORTS_FILE	= 1
+endif
 
-else
 ifeq ($(OS_ARCH),OSF1)
-
 DL=
+endif
 
-ifeq ($(OS_ARCH), Linux)
-
-DL=-ldl
-
-else
 ifeq ($(OS_ARCH),ReliantUNIX)
-
 DL=-ldl
+endif
 
-else
 ifeq ($(OS_ARCH),UnixWare)
-
 DL=
-
-else
-
-#default
-
-
-endif # UnixWare
-endif # ReliantUNIX
-endif # Linux
-endif # OSF1
-endif # AIX
-endif # HP-UX
-endif # IRIX
-endif # SOLARIS
-endif # WINNT
-
+endif
 
 RPATHFLAG = ..:../lib:../../lib:../../../lib:../../../../lib
 
@@ -268,7 +249,7 @@ RPATHFLAG_PREFIX=-Wl,-rpath,
 # this is used like this, for example:   $(LDRPATHFLAG_PREFIX)../..
 # note, there is a trailing space
 LDRPATHFLAG_PREFIX=-rpath
-endif
+endif # Linux
 
 #
 # XXX: does anyone know of a better way to solve the "LINK_LIB2" problem? -mcs
