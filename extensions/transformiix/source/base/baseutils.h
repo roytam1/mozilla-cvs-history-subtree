@@ -34,7 +34,9 @@
 #define TRANSFRMX_BASEUTILS_H
 
 typedef int Int32;
+#ifndef nsNetUtil_h__
 typedef unsigned int UInt32;
+#endif
 
 typedef Int32 MBool;
 
