@@ -332,6 +332,48 @@ sub remove
 
 
 #############################################################################
+# Rename an attribute, return TRUE or FALSE depending on the outcome. The
+# first argument is the name of the old attribute (e.g. CN), and the last
+# argument is the new name (e.g. SN). Note that the "new" attribute can not
+# already exist, and the old attribute must exist.
+#
+# The "force" argument can be used to override the check if the new
+# attribute already exists. This is potentially dangerous.
+#
+sub rename
+{
+  my ($self, $old, $new, $force) = ($_[$[], lc $_[$[ + 1], lc $_[$[ + 2],
+				    $_[$[ + 3]);
+
+  return 0 if ($self->isAttr($new) && (!defined($force) || !$force));
+  return 0 unless $self->isAttr($old);
+
+  $self->setValue($new, @{$self->{$old}});
+  $self->remove($old);
+
+  return 1;
+}
+
+
+#############################################################################
+# Copy an attribute, return TRUE or FALSE depending on the outcome. This
+# almost identical to the rename method, except we don't delete the source.
+#
+sub copy
+{
+  my ($self, $old, $new, $force) = ($_[$[], lc $_[$[ + 1], lc $_[$[ + 2],
+				    $_[$[ + 3]);
+
+  return 0 if ($self->isAttr($new) && (!defined($force) || !$force));
+  return 0 unless $self->isAttr($old);
+
+  $self->setValue($new, @{$self->{$old}});
+
+  return 1;
+}
+
+
+#############################################################################
 # Undo a remove(), or set of removeValues() fairly useless, to restore an
 # attribute to it's original state. This is fairly useless, but hey...
 #
@@ -981,7 +1023,7 @@ Like B<matchValue>, except the attribute values are considered being DNs.
 
 Set the DN to the specified value. Only do this on new entries, it will
 not work well if you try to do this on an existing entry. If you wish to
-renamed an entry, use the Mozilla::Conn::modifyRDN method instead.
+rename an entry, use the Mozilla::Conn::modifyRDN method instead.
 Eventually we'll provide a complete "rename" method. To set the DN for a
 newly created entry, we can do
 
