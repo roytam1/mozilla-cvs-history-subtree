@@ -53,6 +53,7 @@
 #include "nsTextFormatter.h"
 #include "nsIPref.h"
 #include "nsMsgUtf7Utils.h"
+#include "nsICacheSession.h"
 
 #include "nsIMsgFilter.h"
 #include "nsImapMoveCoalescer.h"
@@ -3497,6 +3498,14 @@ nsImapMailFolder::CloseMockChannel(nsIImapMockChannel * aChannel)
 }
 
 NS_IMETHODIMP
+nsImapMailFolder::ReleaseUrlCacheEntry(nsIMsgMailNewsUrl *aUrl)
+{
+  if (aUrl)
+    aUrl->SetMemCacheEntry(nsnull);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsImapMailFolder::BeginMessageUpload()
 {
     return NS_ERROR_FAILURE;
@@ -3759,6 +3768,21 @@ NS_IMETHODIMP
 nsImapMailFolder::SetContentModified(nsIImapUrl *aImapUrl, nsImapContentModifiedType modified)
 {
   return aImapUrl->SetContentModified(modified);
+}
+
+NS_IMETHODIMP
+nsImapMailFolder::SetImageCacheSessionForUrl(nsIMsgMailNewsUrl *mailurl)
+{
+  nsresult rv;
+  nsCOMPtr<nsIImapService> imapService = do_GetService(kCImapService, &rv);
+  if (imapService)
+  {
+    nsCOMPtr<nsICacheSession> cacheSession;
+    rv = imapService->GetCacheSession(getter_AddRefs(cacheSession));
+    if (NS_SUCCEEDED(rv) && cacheSession)
+      rv = mailurl->SetImageCacheSession(cacheSession);
+  }
+  return rv;
 }
 
 NS_IMETHODIMP nsImapMailFolder::OnStartRequest(nsIRequest *request, nsISupports *ctxt)

@@ -1850,7 +1850,12 @@ void nsImapProtocol::ProcessSelectedStateURL()
 
                 nsCOMPtr<nsIMsgMailNewsUrl> mailurl = do_QueryInterface(m_runningUrl);
                 if (mailurl)
+                {
                   mailurl->SetAddToMemoryCache(PR_FALSE);
+                  // need to proxy this over to the ui thread
+                  if (m_imapMessageSink)
+                      m_imapMessageSink->SetImageCacheSessionForUrl(mailurl); 
+                } 
                 SetContentModified(modType);  // This will be looked at by the cache
                 if (bMessageIdsAreUids)
                 {
@@ -6372,7 +6377,6 @@ void nsImapProtocol::ProcessAuthenticatedStateURL()
 
 void nsImapProtocol::ProcessAfterAuthenticated()
 {
-  // mscott: ignore admin url stuff for now...
   // if we're a netscape server, and we haven't got the admin url, get it
   PRBool hasAdminUrl = PR_TRUE;
 
@@ -6844,6 +6848,7 @@ nsImapMockChannel::nsImapMockChannel()
   mLoadFlags = 0;
   mChannelClosed = PR_FALSE;
   mReadingFromCache = PR_FALSE;
+  mTryingToReadPart = PR_FALSE;
 }
 
 nsImapMockChannel::~nsImapMockChannel()
@@ -6880,6 +6885,23 @@ NS_IMETHODIMP nsImapMockChannel::Close()
 
   m_channelListener = null_nsCOMPtr();
   mCacheRequest = null_nsCOMPtr();
+  if (mTryingToReadPart)
+  {
+    // clear mem cache entry on imap part url in case it's holding
+    // onto last reference in mem cache. Need to do this on ui thread
+    nsresult rv;
+    nsCOMPtr <nsIImapUrl> imapUrl = do_QueryInterface(m_url, &rv);
+    if (imapUrl)
+    {
+      nsCOMPtr <nsIImapMailFolderSink> folderSink;
+      rv = imapUrl->GetImapMailFolderSink(getter_AddRefs(folderSink));
+      if (folderSink)
+      {
+        nsCOMPtr <nsIMsgMailNewsUrl> mailUrl = do_QueryInterface(m_url);
+        rv = folderSink->ReleaseUrlCacheEntry(mailUrl); 
+      }
+    }
+  } 
   m_url = null_nsCOMPtr();
 
   mChannelClosed = PR_TRUE;
@@ -6997,6 +7019,20 @@ nsImapMockChannel::OnCacheEntryAvailable(nsICacheEntryDescriptor *entry, nsCache
     nsCOMPtr<nsIMsgMailNewsUrl> mailnewsUrl = do_QueryInterface(m_url, &rv);
     mailnewsUrl->SetMemCacheEntry(entry);
 
+    if (mTryingToReadPart && access & nsICache::ACCESS_WRITE && !(access & nsICache::ACCESS_READ))
+    {
+#ifdef DEBUG_bienvenu
+      nsXPIDLCString entryKey;
+      entry->GetKey(getter_Copies(entryKey));
+      printf("dooming %s with access %ld\n", entryKey.get(), access);
+#endif
+      entry->Doom();
+      // whoops, we're looking for a part, but didn't find it. Fall back to fetching the whole msg.
+      nsCOMPtr<nsIImapUrl> imapUrl = do_QueryInterface(m_url);
+      SetupPartExtractorListener(imapUrl, m_channelListener);
+      return OpenCacheEntry();
+    }
+
     // if we have write access then insert a "stream T" into the flow so data 
     // gets written to both 
     if (access & nsICache::ACCESS_WRITE && !(access & nsICache::ACCESS_READ))
@@ -7045,13 +7081,32 @@ nsresult nsImapMockChannel::OpenCacheEntry()
   rv = imapService->GetCacheSession(getter_AddRefs(cacheSession));
   NS_ENSURE_SUCCESS(rv, rv);
 
+  // we're going to need to extend this logic for the case where we're looking 
+  // for a part. If we're looking for a part, we need to first ask for the part.
+  // if that comes back with a writeable cache entry, we need to doom it right
+  // away and not use it, and turn around and ask for a cache entry for the whole
+  // message, if that's available. But it seems like we shouldn't write into that
+  // cache entry if we just fetch that part - though we're doing that now. Maybe
+  // we never try to download just a single part from imap because our mime parser
+  // can't handle that, though I would think saving a single part as a file wouldn't
+  // need to go through mime...
+  
   // Open a cache entry with key = url
   nsXPIDLCString urlSpec;
   m_url->GetSpec(getter_Copies(urlSpec));
   // for now, truncate of the query part so we don't duplicate urls in the cache...
   char * anchor = PL_strrchr(urlSpec, '?');
   if (anchor)
+  {
+    // if we were trying to read a part, we failed - fall back and look for whole msg
+    if (mTryingToReadPart)
+    {
+      mTryingToReadPart = PR_FALSE;
     *anchor = '\0';
+    }
+    else
+      mTryingToReadPart = PR_TRUE;
+  } 
   return cacheSession->AsyncOpenCacheEntry(urlSpec, nsICache::ACCESS_READ_WRITE, this);
 }
 
@@ -7061,13 +7116,33 @@ nsresult nsImapMockChannel::ReadFromMemCache(nsICacheEntryDescriptor *entry)
 
   PRUint32 annotationLength = 0;
   nsXPIDLCString annotation;
+  nsXPIDLCString entryKey;
+  nsXPIDLCString contentType; 
   nsresult rv = NS_OK;
+  PRBool shouldUseCacheEntry = PR_FALSE;
+
+  entry->GetKey(getter_Copies(entryKey));
+  // if we have a part, then we should use the cache entry.
+  if (entryKey.FindChar('?') != kNotFound)
+  {
+    entry->GetMetaDataElement("contentType", getter_Copies(contentType));
+    if (contentType.Length() > 0)
+      SetContentType(contentType);
+    shouldUseCacheEntry = PR_TRUE;
+  }
+  else
+  {
+    // otherwise, we have the whole msg, and we should make sure the content isn't modified. 
 
   rv = entry->GetMetaDataElement("ContentModified", getter_Copies(annotation));
   if (NS_SUCCEEDED(rv) && (annotation.get()))
   {
     annotationLength = nsCRT::strlen(annotation.get());
     if (annotationLength == nsCRT::strlen("Not Modified") && !nsCRT::strncmp(annotation, "Not Modified", annotationLength))
+         shouldUseCacheEntry = PR_TRUE;
+    }
+  }
+  if (shouldUseCacheEntry)
     {
       nsCOMPtr<nsITransport> cacheTransport;
       rv = entry->GetTransport(getter_AddRefs(cacheTransport));
@@ -7102,8 +7177,6 @@ nsresult nsImapMockChannel::ReadFromMemCache(nsICacheEntryDescriptor *entry)
     } // if contnet is not modified
     else
       rv = NS_ERROR_FAILURE; // content is modified so return an error so we try to open it the old fashioned way
-  } // if we got an annotation
-
   return rv;
 }
 
@@ -7151,6 +7224,9 @@ PRBool nsImapMockChannel::ReadFromLocalCache()
   if (useLocalCache)
   {
     nsXPIDLCString messageIdString;
+    
+    SetupPartExtractorListener(imapUrl, m_channelListener); 
+  
     imapUrl->CreateListOfMessageIdsString(getter_Copies(messageIdString));
     nsCOMPtr <nsIMsgFolder> folder;
     rv = imapUrl->GetImapFolder(getter_AddRefs(folder));
@@ -7213,7 +7289,6 @@ NS_IMETHODIMP nsImapMockChannel::AsyncOpen(nsIStreamListener *listener, nsISuppo
   m_channelListener = listener;
   nsCOMPtr<nsIImapUrl> imapUrl  (do_QueryInterface(m_url));
 
-  SetupPartExtractorListener(imapUrl, m_channelListener);
   
   if (ReadFromLocalCache())
   {
@@ -7231,6 +7306,7 @@ NS_IMETHODIMP nsImapMockChannel::AsyncOpen(nsIStreamListener *listener, nsISuppo
     if (NS_SUCCEEDED(rv))
       return rv;
   }
+  SetupPartExtractorListener(imapUrl, m_channelListener);
   // if for some reason open cache entry failed then just default to opening an imap connection for the url
   return ReadFromImapConnection();
 }
