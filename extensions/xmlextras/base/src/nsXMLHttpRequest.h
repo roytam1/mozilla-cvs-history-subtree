@@ -33,7 +33,7 @@
 #include "nsIDOMDocument.h"
 #include "nsISecurityCheckedComponent.h"
 #include "nsIURI.h"
-#include "nsIHTTPChannel.h"
+#include "nsIHttpChannel.h"
 #include "nsIDocument.h"
 #include "nsIStreamListener.h"
 #ifdef IMPLEMENT_SYNC_LOAD
@@ -97,7 +97,7 @@ protected:
                                nsIInputStream** aStream);
 
   nsCOMPtr<nsISupports> mContext;
-  nsCOMPtr<nsIHTTPChannel> mChannel;
+  nsCOMPtr<nsIHttpChannel> mChannel;
   nsCOMPtr<nsIRequest> mReadRequest;
   nsCOMPtr<nsIDOMDocument> mDocument;
   nsCOMPtr<nsIURI> mBaseURI;

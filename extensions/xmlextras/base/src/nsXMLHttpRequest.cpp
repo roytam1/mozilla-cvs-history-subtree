@@ -22,7 +22,6 @@
 
 #include "nsXMLHttpRequest.h"
 #include "nsISimpleEnumerator.h"
-#include "nsIHTTPHeader.h"
 #include "nsIXPConnect.h"
 #include "nsIByteArrayInputStream.h"
 #include "nsIUnicodeEncoder.h"
@@ -557,8 +556,8 @@ nsXMLHttpRequest::SetOnerror(nsISupports * aOnerror)
   return AddEventListener(kErrorStr, listener);
 }
 
-/* readonly attribute nsIHTTPChannel channel; */
-NS_IMETHODIMP nsXMLHttpRequest::GetChannel(nsIHTTPChannel **aChannel)
+/* readonly attribute nsIHttpChannel channel; */
+NS_IMETHODIMP nsXMLHttpRequest::GetChannel(nsIHttpChannel **aChannel)
 {
   NS_ENSURE_ARG_POINTER(aChannel);
   *aChannel = mChannel;
@@ -589,14 +588,10 @@ nsXMLHttpRequest::DetectCharset(nsAWritableString& aCharset)
 {
   aCharset.Truncate();
   nsresult rv;
-  nsCOMPtr<nsIHTTPChannel> httpChannel(do_QueryInterface(mChannel,&rv));
+  nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(mChannel,&rv));
   if(httpChannel) {
-    nsIAtom* contentTypeKey = NS_NewAtom("content-type");
-    if (!contentTypeKey)
-      return NS_ERROR_OUT_OF_MEMORY;
     nsXPIDLCString contenttypeheader;
-    rv = httpChannel->GetResponseHeader(contentTypeKey, getter_Copies(contenttypeheader));
-    NS_RELEASE(contentTypeKey);
+    rv = httpChannel->GetResponseHeader("content-type", getter_Copies(contenttypeheader));
     if (NS_SUCCEEDED(rv)) {
       nsAutoString contentType;
       contentType.AssignWithConversion( NS_STATIC_CAST(const char*, contenttypeheader) );
@@ -750,7 +745,7 @@ nsXMLHttpRequest::GetStatusText(char * *aStatusText)
   NS_ENSURE_ARG_POINTER(aStatusText);
   *aStatusText = nsnull;
   if (mChannel) {
-    return mChannel->GetResponseString(aStatusText);
+    return mChannel->GetResponseStatusText(aStatusText);
   }
   
   return NS_OK;
@@ -774,6 +769,7 @@ nsXMLHttpRequest::GetAllResponseHeaders(char **_retval)
   NS_ENSURE_ARG_POINTER(_retval);
   *_retval = nsnull;
   if (mChannel) {
+#if 0
     nsCOMPtr<nsISimpleEnumerator> enumerator;
     nsCAutoString headers;
 
@@ -802,6 +798,7 @@ nsXMLHttpRequest::GetAllResponseHeaders(char **_retval)
       }
     }
     *_retval = headers.ToNewCString();
+#endif
   }
   
   return NS_OK;
@@ -815,10 +812,8 @@ nsXMLHttpRequest::GetResponseHeader(const char *header, char **_retval)
   NS_ENSURE_ARG_POINTER(_retval);
 
   *_retval = nsnull;
-  if (mChannel) {
-    nsCOMPtr<nsIAtom> headerAtom = dont_AddRef(NS_NewAtom(header));
-    return mChannel->GetResponseHeader(headerAtom, _retval);
-  }
+  if (mChannel)
+    return mChannel->GetResponseHeader(header, _retval);
   
   return NS_OK;
 }
@@ -883,12 +878,9 @@ nsXMLHttpRequest::OpenRequest(const char *method,
     return NS_ERROR_INVALID_ARG;
   }
 
-  mChannel->SetAuthTriedWithPrehost(authp);
+  //mChannel->SetAuthTriedWithPrehost(authp);
 
-  nsCOMPtr<nsIAtom> methodAtom = dont_AddRef(NS_NewAtom(method));
-  if (methodAtom) {
-    rv = mChannel->SetRequestMethod(methodAtom);
-  }
+  rv = mChannel->SetRequestMethod(method);
 
   mStatus = XML_HTTP_REQUEST_OPENED;
 
@@ -1312,10 +1304,8 @@ nsXMLHttpRequest::Send(nsISupports *body)
 NS_IMETHODIMP 
 nsXMLHttpRequest::SetRequestHeader(const char *header, const char *value)
 {
-  if (mChannel) {
-    nsCOMPtr<nsIAtom> headerAtom = dont_AddRef(NS_NewAtom(header));
-    return mChannel->SetRequestHeader(headerAtom, value);
-  }
+  if (mChannel)
+    return mChannel->SetRequestHeader(header, value);
   
   return NS_OK;
 }
