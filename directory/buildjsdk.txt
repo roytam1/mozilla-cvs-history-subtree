@@ -89,7 +89,7 @@ Instructions:
        mozilla/directory/java-sdk/dist/classes - class files
        mozilla/directory/java-sdk/dist/packages - ldapsp.jar JAR file 
          (if you've specified "basepackage" as the target)
-       mozilla/directory/java-sdk/dist/doc - ldapsp controls' javadoc
+       mozilla/directory/java-sdk/dist/doc/ldapsp - ldapsp controls' javadoc
          (if you've specified "doc" as the target)
 
    The JNDI LDAP Service Provider depends on the LDAP Java classes, so you 
@@ -195,7 +195,7 @@ Instructions:
        mozilla/directory/java-sdk/dist/classes - class files
        mozilla/directory/java-sdk/dist/packages - ldapsp.jar JAR file 
          (if you've specified "basepackage" as the target)
-       mozilla\directory\java-sdk\dist\doc - ldapsp controls' javadoc
+       mozilla\directory\java-sdk\dist\doc\ldapsp - ldapsp controls' javadoc
          (if you've specified "doc" as the target)
 
    The JNDI LDAP Service Provider depends on the LDAP Java classes, so you 
