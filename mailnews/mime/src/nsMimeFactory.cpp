@@ -154,9 +154,7 @@ nsresult nsMimeFactory::CreateInstance(nsISupports *aOuter, const nsIID &aIID, v
   }
   else if (mClassID.Equals(kIStreamConverterCID))
   {
-    res = NS_NewStreamConverter((nsIStreamConverter **) &inst);
-    if (res != NS_OK)  // was there a problem creating the object ?
-		    return res;
+    return res = NS_NewStreamConverter(aIID, aResult);
   }
 
 	// End of checking the interface ID code....
