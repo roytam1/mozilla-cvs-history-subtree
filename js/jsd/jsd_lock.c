@@ -34,8 +34,6 @@
 
 #ifdef JSD_USE_NSPR_LOCKS
 
-/* Removed by JSIFY: #include "jsmem.h"
- */
 #include "prlock.h"
 #include "prthread.h"
 #include "pprthred.h"   /* need this as long as JS_AttachThread is needed */

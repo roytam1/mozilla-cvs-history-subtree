@@ -141,7 +141,7 @@ label_newJSDContext_failure:
     return NULL;
 }
 
-STATIC_DLL_CALLBACK(intN)
+JS_STATIC_DLL_CALLBACK(intN)
 _hash_entry_zapper(JSHashEntry *he, intN i, void *arg)
 {
     if(he->value)
@@ -292,7 +292,7 @@ _jsd_JSDContextWrapperForJSContext(JSDContext* jsdc, JSContext* context)
     return w;
 }
 
-STATIC_DLL_CALLBACK(void)
+JS_STATIC_DLL_CALLBACK(void)
 jsd_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
 {
     JSDContextWrapper* wrapper;

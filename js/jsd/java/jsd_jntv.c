@@ -737,7 +737,7 @@ _NewStringUTF_No_Z(JNIEnv *env, const char* str, uintN len)
 
 /***************************************************************************/
 
-void DLL_CALLBACK
+void JS_DLL_CALLBACK
 _scriptHook(JSDContext* jsdc,
             JSDScript*  jsdscript,
             JSBool      creating,
@@ -823,7 +823,7 @@ _scriptHook(JSDContext* jsdc,
 }
 
 /***************************************************************************/
-uintN DLL_CALLBACK
+uintN JS_DLL_CALLBACK
 _executionHook(JSDContext*     jsdc,
                JSDThreadState* jsdstate,
                uintN           type,
@@ -951,7 +951,7 @@ _executionHook(JSDContext*     jsdc,
 
 /***************************************************************************/
 
-uintN DLL_CALLBACK
+uintN JS_DLL_CALLBACK
 _errorReporter( JSDContext*     jsdc,
                 JSContext*      cx,
                 const char*     message,

@@ -87,7 +87,7 @@ _interpreterTrace(JSDContext* jsdc, JSContext *cx, JSStackFrame *fp,
 }
 #endif
 
-void * DLL_CALLBACK
+void * JS_DLL_CALLBACK
 jsd_InterpreterHook(JSContext *cx, JSStackFrame *fp, JSBool before,
                     JSBool *ok, void *closure)
 {

@@ -27,7 +27,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "jstypes.h"
-/* Removed by JSIFY: #include "prlog.h" */
 #include "jsutil.h" /* Added by JSIFY */
 #include "jsprf.h"
 #include "jsdbgapi.h"
@@ -63,7 +62,7 @@ jsdb_HandleValToPointer(JSContext *cx, jsval val);
 extern JSBool
 jsdb_SetThreadState(JSDB_Data* data, JSDThreadState* jsdthreadstate);
 
-extern uintN DLL_CALLBACK
+extern uintN JS_DLL_CALLBACK
 jsdb_ExecHookHandler(JSDContext*     jsdc, 
                      JSDThreadState* jsdthreadstate,
                      uintN           type,

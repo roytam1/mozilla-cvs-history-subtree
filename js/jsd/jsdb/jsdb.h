@@ -42,7 +42,7 @@ JS_END_EXTERN_C
 
 JS_BEGIN_EXTERN_C
 
-extern PUBLIC_API(JSBool)
+extern JS_EXPORT_API(JSBool)
 JSDB_InitDebugger(JSRuntime* rt, JSDContext* jsdc, int depth);
 
 JS_END_EXTERN_C

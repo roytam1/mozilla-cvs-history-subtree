@@ -41,10 +41,7 @@ extern "C"
 
 JS_BEGIN_EXTERN_C
 #include "jsprf.h"
-/* Removed by JSIFY: #include "prlog.h" */
 #include "jsutil.h" /* Added by JSIFY */
-/* Removed by JSIFY: #include "JShash.h"
- */
 #include "jshash.h" /* Added by JSIFY */
 #include "jsclist.h"
 #include "jsdebug.h"
@@ -52,7 +49,7 @@ JS_BEGIN_EXTERN_C
 #include "jsobj.h"
 #include "jsfun.h"
 #include "jsdbgapi.h"
-#include "jsd_lock.h"   /* ifdef NETSCAPE_INTERNAL then defines JSD_THREADSAFE*/
+#include "jsd_lock.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -88,12 +85,6 @@ JS_BEGIN_EXTERN_C
 #endif
 
 #define MY_XP_HUGE_CHAR_PTR char MY_XP_HUGE *
-
-/***************************************************************************/
-/* Support for an unfortunate Navigator hack */
-#if defined(NETSCAPE_INTERNAL) && ! defined(LIVEWIRE)
-#define JSD_HAS_DANGEROUS_THREAD 1
-#endif
 
 /***************************************************************************/
 /* handy macros */
@@ -361,7 +352,7 @@ jsd_GetClosestPC(JSDContext* jsdc, JSDScript* jsdscript, uintN line);
 extern uintN
 jsd_GetClosestLine(JSDContext* jsdc, JSDScript* jsdscript, jsuword pc);
 
-extern void DLL_CALLBACK
+extern void JS_DLL_CALLBACK
 jsd_NewScriptHookProc(
                 JSContext   *cx,
                 const char  *filename,      /* URL this script loads from */
@@ -370,7 +361,7 @@ jsd_NewScriptHookProc(
                 JSFunction  *fun,
                 void*       callerdata);
 
-extern void DLL_CALLBACK
+extern void JS_DLL_CALLBACK
 jsd_DestroyScriptHookProc(
                 JSContext   *cx,
                 JSScript    *script,
@@ -507,7 +498,7 @@ jsd_CallExecutionHook(JSDContext* jsdc,
                       void* hookData,
                       jsval* rval);
 
-extern JSTrapStatus DLL_CALLBACK
+extern JSTrapStatus JS_DLL_CALLBACK
 jsd_DebuggerHandler(JSContext *cx, JSScript *script, jsbytecode *pc,
                     jsval *rval, void *closure);
 
@@ -800,7 +791,7 @@ jsd_GetPropertyVarArgSlot(JSDContext* jsdc, JSDProperty* jsdprop);
 
 /**************************************************/
 
-extern void * DLL_CALLBACK
+extern void * JS_DLL_CALLBACK
 jsd_InterpreterHook(JSContext *cx, JSStackFrame *fp, JSBool before,
                     JSBool *ok, void *closure);
 
@@ -835,7 +826,7 @@ jsdlw_ProcessedToRawLineNumber(JSDContext* jsdc, JSDScript* jsdscript,
 
 #if 0
 /* our hook proc for LiveWire app start/stop */
-extern void DLL_CALLBACK
+extern void JS_DLL_CALLBACK
 jsdlw_AppHookProc(LWDBGApp* app,
                   JSBool created,
                   void *callerdata);

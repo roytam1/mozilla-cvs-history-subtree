@@ -36,10 +36,7 @@ extern "C"
 #endif
 
 JS_BEGIN_EXTERN_C
-/* Removed by JSIFY: #include "prlog.h" */
 #include "jsutil.h" /* Added by JSIFY */
-/* Removed by JSIFY: #include "JShash.h"
- */
 #include "jshash.h" /* Added by JSIFY */
 #include "jsdjava.h"
 #include "jsobj.h"

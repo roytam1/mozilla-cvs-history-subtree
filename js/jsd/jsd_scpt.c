@@ -346,7 +346,7 @@ jsd_GetScriptHook(JSDContext* jsdc, JSD_ScriptHookProc* hook, void** callerdata)
 
 /***************************************************************************/
 
-void DLL_CALLBACK
+void JS_DLL_CALLBACK
 jsd_NewScriptHookProc( 
                 JSContext   *cx,
                 const char  *filename,      /* URL this script loads from */
@@ -395,7 +395,7 @@ jsd_NewScriptHookProc(
         hook(jsdc, jsdscript, JS_TRUE, hookData);
 }                
 
-void DLL_CALLBACK
+void JS_DLL_CALLBACK
 jsd_DestroyScriptHookProc( 
                 JSContext   *cx,
                 JSScript    *script,
@@ -497,7 +497,7 @@ _isActiveHook(JSDContext* jsdc, JSScript *script, JSDExecHook* jsdhook)
 }
 
 
-JSTrapStatus DLL_CALLBACK
+JSTrapStatus JS_DLL_CALLBACK
 jsd_TrapHandler(JSContext *cx, JSScript *script, jsbytecode *pc, jsval *rval,
                 void *closure)
 {

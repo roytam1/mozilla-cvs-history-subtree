@@ -22,7 +22,7 @@
 
 #include "jsd.h"
 
-JSTrapStatus DLL_CALLBACK
+JSTrapStatus JS_DLL_CALLBACK
 jsd_InterruptHandler(JSContext *cx, JSScript *script, jsbytecode *pc, jsval *rval,
                      void *closure)
 {
@@ -60,7 +60,7 @@ jsd_InterruptHandler(JSContext *cx, JSScript *script, jsbytecode *pc, jsval *rva
                                  hook, hookData, rval);
 }
 
-JSTrapStatus DLL_CALLBACK
+JSTrapStatus JS_DLL_CALLBACK
 jsd_DebuggerHandler(JSContext *cx, JSScript *script, jsbytecode *pc,
                     jsval *rval, void *closure)
 {

@@ -101,7 +101,7 @@ jsdb_SetThreadState(JSDB_Data* data, JSDThreadState* jsdthreadstate)
 
 /***************************************************************************/
 
-STATIC_DLL_CALLBACK(void)
+JS_STATIC_DLL_CALLBACK(void)
 handle_finalize(JSContext *cx, JSObject *obj)
 {
     void* ptr;
@@ -117,7 +117,7 @@ JSClass jsdb_HandleClass = {
     JS_EnumerateStub, JS_ResolveStub,   JS_ConvertStub,   handle_finalize
 };
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 handle_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     char buf[32];
@@ -187,14 +187,14 @@ JSBool _initHandleSystem(JSDB_Data* data)
 /***************************************************************************/
 /* High Level calls */
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 GetMajorVersion(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     *rval = INT_TO_JSVAL(JSD_GetMajorVersion());
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 GetMinorVersion(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     *rval = INT_TO_JSVAL(JSD_GetMinorVersion());
@@ -204,7 +204,7 @@ GetMinorVersion(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rv
 /***************************************************************************/
 /* Script functions */
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 LockScriptSubsystem(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
@@ -214,7 +214,7 @@ LockScriptSubsystem(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 UnlockScriptSubsystem(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
@@ -224,7 +224,7 @@ UnlockScriptSubsystem(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 IterateScripts(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDScript *iterp = NULL;
@@ -257,7 +257,7 @@ IterateScripts(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 IsActiveScript(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDScript *jsdscript;
@@ -275,7 +275,7 @@ IsActiveScript(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 GetScriptFilename(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDScript *jsdscript;
@@ -300,7 +300,7 @@ GetScriptFilename(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 GetScriptFunctionName(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDScript *jsdscript;
@@ -324,7 +324,7 @@ GetScriptFunctionName(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 GetScriptBaseLineNumber(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDScript *jsdscript;
@@ -347,7 +347,7 @@ GetScriptBaseLineNumber(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 GetScriptLineExtent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDScript *jsdscript;
@@ -370,7 +370,7 @@ GetScriptLineExtent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 SetScriptHook(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     jsval oldHook;
@@ -392,7 +392,7 @@ SetScriptHook(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 GetScriptHook(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
@@ -402,7 +402,7 @@ GetScriptHook(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 GetClosestPC(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     int32 line;
@@ -428,7 +428,7 @@ GetClosestPC(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 GetClosestLine(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDScript *jsdscript;
@@ -452,7 +452,7 @@ GetClosestLine(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 SetExecutionHook(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     jsval oldHook;
@@ -474,7 +474,7 @@ SetExecutionHook(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *r
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 GetExecutionHook(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
@@ -484,7 +484,7 @@ GetExecutionHook(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *r
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 SendInterrupt(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     jsval val = JSVAL_TRUE;
@@ -500,7 +500,7 @@ SendInterrupt(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval
     return success;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 ClearInterrupt(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     jsval val = JSVAL_FALSE;
@@ -515,7 +515,7 @@ ClearInterrupt(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
     return success;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 GetCountOfStackFrames(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
@@ -526,7 +526,7 @@ GetCountOfStackFrames(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 GetStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
@@ -538,7 +538,7 @@ GetStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 GetCallingStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDStackFrameInfo* jsdframe;
@@ -559,7 +559,7 @@ GetCallingStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsva
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 GetScriptForStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDStackFrameInfo* jsdframe;
@@ -580,7 +580,7 @@ GetScriptForStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 GetPCForStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDStackFrameInfo* jsdframe;
@@ -601,7 +601,7 @@ GetPCForStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval 
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 EvaluateScriptInStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     static char default_filename[] = "jsdb_show";
@@ -684,7 +684,7 @@ EvaluateScriptInStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv
     return retVal;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 SetTrap(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDScript *jsdscript;
@@ -717,7 +717,7 @@ SetTrap(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 ClearTrap(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDScript *jsdscript;
@@ -749,7 +749,7 @@ ClearTrap(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 ClearAllTrapsForScript(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDScript *jsdscript;
@@ -774,7 +774,7 @@ ClearAllTrapsForScript(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 ClearAllTraps(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSBool success;
@@ -786,7 +786,7 @@ ClearAllTraps(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 SetErrorReporterHook(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     jsval oldHook;
@@ -811,7 +811,7 @@ SetErrorReporterHook(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsva
 /***************************************************************************/
 /* Source Text functions */
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 LockSourceTextSubsystem(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
@@ -821,7 +821,7 @@ LockSourceTextSubsystem(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 UnlockSourceTextSubsystem(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
@@ -831,7 +831,7 @@ UnlockSourceTextSubsystem(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 IterateSources(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDSourceText *iterp = NULL;
@@ -864,7 +864,7 @@ IterateSources(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 FindSourceForURL(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSString* jsstr;
@@ -882,7 +882,7 @@ FindSourceForURL(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *r
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 GetSourceURL(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDSourceText* jsdsrc;
@@ -901,7 +901,7 @@ GetSourceURL(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 GetSourceText(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDSourceText* jsdsrc;
@@ -925,7 +925,7 @@ GetSourceText(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 GetSourceStatus(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDSourceText* jsdsrc;
@@ -944,7 +944,7 @@ GetSourceStatus(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rv
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 GetSourceAlterCount(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSDSourceText* jsdsrc;

@@ -25,7 +25,7 @@
 
 /***************************************************************************/
 
-STATIC_DLL_CALLBACK(void)
+JS_STATIC_DLL_CALLBACK(void)
 _ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
 {
     int i, j, k, n;
@@ -60,7 +60,7 @@ _ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
     fputs("^\n", stderr);
 }
 
-STATIC_DLL_CALLBACK(void)
+JS_STATIC_DLL_CALLBACK(void)
 jsdb_ScriptHookProc(JSDContext* jsdc,
                     JSDScript*  jsdscript,
                     JSBool      creating,
@@ -79,7 +79,7 @@ jsdb_ScriptHookProc(JSDContext* jsdc,
     }
 }
 
-uintN DLL_CALLBACK
+uintN JS_DLL_CALLBACK
 jsdb_ExecHookHandler(JSDContext*     jsdc,
                      JSDThreadState* jsdthreadstate,
                      uintN           type,
@@ -132,7 +132,7 @@ typedef enum
     ARG_LIMIT
 } ER_ARGS;
 
-uintN DLL_CALLBACK
+uintN JS_DLL_CALLBACK
 jsdb_ErrorReporter(JSDContext*     jsdc,
                    JSContext*      cx,
                    const char*     message,
@@ -196,7 +196,7 @@ jsdb_ErrorReporter(JSDContext*     jsdc,
 * }                                                        
 */                                                         
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
 /*     JSContext *cx2; */
@@ -238,7 +238,7 @@ Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return ok;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 Write(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSString *str = JS_ValueToString(cx, argv[0]);
@@ -249,7 +249,7 @@ Write(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }    
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 Gets(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     char buf[1024];
@@ -259,7 +259,7 @@ Gets(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }    
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 Version(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     if (argc > 0 && JSVAL_IS_INT(argv[0]))
@@ -270,7 +270,7 @@ Version(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 }
 
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 SafeEval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     static char default_filename[] = "jsdb_eval";
@@ -329,7 +329,7 @@ SafeEval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 NativeBreak(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
 #ifdef _WINDOWS
@@ -376,7 +376,7 @@ _initReturn(const char* str, JSBool retval)
 
 #define MAX_DEBUGGER_DEPTH 3
 
-PUBLIC_API(JSBool)
+JS_EXPORT_API(JSBool)
 JSDB_InitDebugger(JSRuntime* rt, JSDContext* jsdc, int depth)
 {
     jsval rvalIgnore;

@@ -51,11 +51,11 @@ JS_BEGIN_EXTERN_C
  * should not.
  */
 #ifdef EXPORT_JSD_API
-#define JSD_PUBLIC_API(t)    PUBLIC_API(t)
-#define JSD_PUBLIC_DATA(t)   PUBLIC_DATA(t)
+#define JSD_PUBLIC_API(t)    JS_EXPORT_API(t)
+#define JSD_PUBLIC_DATA(t)   JS_EXPORT_DATA(t)
 #else
-#define JSD_PUBLIC_API(t)    IMPORT_API(t)
-#define JSD_PUBLIC_DATA(t)   IMPORT_DATA(t)
+#define JSD_PUBLIC_API(t)    JS_IMPORT_API(t)
+#define JSD_PUBLIC_DATA(t)   JS_IMPORT_DATA(t)
 #endif
 
 #define JSD_FRIEND_API(t)    JSD_PUBLIC_API(t)

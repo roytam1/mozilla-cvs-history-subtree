@@ -28,11 +28,6 @@
  * implement the functions below.
  */
 
-/* All the NETSCAPE_INTERNAL stuff supports this locking */
-#ifdef NETSCAPE_INTERNAL
-#define JSD_THREADSAFE 1
-#endif
-
 /*
  * NOTE: These locks must be reentrant in the sense that they support
  * nested calls to lock and unlock.

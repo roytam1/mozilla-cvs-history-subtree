@@ -54,7 +54,6 @@
 
 static char* more_classpath[] =
 {
-    /* XXX temporary until js/ref/jsd gets moved to js/jsd */
     {"..\\..\\jsdj\\dist\\classes"},
     {"..\\..\\jsdj\\dist\\classes\\ifc11.jar"},
 
