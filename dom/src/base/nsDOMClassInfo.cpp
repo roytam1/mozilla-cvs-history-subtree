@@ -2817,11 +2817,7 @@ nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfoID aID)
   NS_ASSERTION(!IS_EXTERNAL(sClassInfoData[aID].mCachedClassInfo),
                "This is bad, internal class marked as external!");
 
-  nsIClassInfo *classinfo = sClassInfoData[aID].mCachedClassInfo;
-
-  NS_ADDREF(classinfo);
-
-  return classinfo;
+  return sClassInfoData[aID].mCachedClassInfo;
 }
 
 // static
@@ -2845,11 +2841,7 @@ nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfoData* aData)
     aData->mCachedClassInfo = MARK_EXTERNAL(aData->mCachedClassInfo);
   }
 
-  nsIClassInfo *classinfo = GET_CLEAN_CI_PTR(aData->mCachedClassInfo);
-
-  NS_ADDREF(classinfo);
-
-  return classinfo;
+  return GET_CLEAN_CI_PTR(aData->mCachedClassInfo);
 }
 
 // static
@@ -3940,7 +3932,7 @@ nsWindowSH::GlobalResolve(nsISupports *native, JSContext *cx, JSObject *obj,
 
       nsDOMClassInfoID ci_id = (nsDOMClassInfoID)id;
 
-      nsCOMPtr<nsIClassInfo> ci(dont_AddRef(GetClassInfoInstance(ci_id)));
+      nsCOMPtr<nsIClassInfo> ci(GetClassInfoInstance(ci_id));
       NS_ENSURE_TRUE(ci, NS_ERROR_UNEXPECTED);
 
       nsCOMPtr<nsIXPConnectJSObjectHolder> proto_holder;
@@ -3961,8 +3953,7 @@ nsWindowSH::GlobalResolve(nsISupports *native, JSContext *cx, JSObject *obj,
         }
       }
     } else if (name_struct->mType == nsGlobalNameStruct::eTypeExternalClassInfo) {
-      nsCOMPtr<nsIClassInfo> ci =
-        getter_AddRefs(GetClassInfoInstance(name_struct->mData));
+      nsCOMPtr<nsIClassInfo> ci = GetClassInfoInstance(name_struct->mData);
       NS_ENSURE_TRUE(ci, NS_ERROR_UNEXPECTED);
 
       nsCOMPtr<nsIXPConnectJSObjectHolder> proto_holder;
