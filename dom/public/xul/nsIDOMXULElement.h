@@ -17,23 +17,23 @@
  */
 /* AUTO-GENERATED. DO NOT EDIT!!! */
 
-#ifndef nsIDOMXULNode_h__
-#define nsIDOMXULNode_h__
+#ifndef nsIDOMXULElement_h__
+#define nsIDOMXULElement_h__
 
 #include "nsISupports.h"
 #include "nsString.h"
 #include "nsIScriptContext.h"
-#include "nsIDOMNode.h"
+#include "nsIDOMElement.h"
 
 class nsIDOMNode;
 
-#define NS_IDOMXULNODE_IID \
+#define NS_IDOMXULELEMENT_IID \
  { 0x574ed81, 0xc088, 0x11d2, \
   { 0x96, 0xed, 0x0, 0x10, 0x4b, 0x7b, 0x7d, 0xeb } } 
 
-class nsIDOMXULNode : public nsIDOMNode {
+class nsIDOMXULElement : public nsIDOMElement {
 public:
-  static const nsIID& IID() { static nsIID iid = NS_IDOMXULNODE_IID; return iid; }
+  static const nsIID& IID() { static nsIID iid = NS_IDOMXULELEMENT_IID; return iid; }
 
   NS_IMETHOD    AddBroadcastListener(const nsString& aAttr, nsIDOMNode* aNode)=0;
 
@@ -43,21 +43,21 @@ public:
 };
 
 
-#define NS_DECL_IDOMXULNODE   \
+#define NS_DECL_IDOMXULELEMENT   \
   NS_IMETHOD    AddBroadcastListener(const nsString& aAttr, nsIDOMNode* aNode);  \
   NS_IMETHOD    RemoveBroadcastListener(const nsString& aAttr, nsIDOMNode* aNode);  \
   NS_IMETHOD    DoCommand();  \
 
 
 
-#define NS_FORWARD_IDOMXULNODE(_to)  \
+#define NS_FORWARD_IDOMXULELEMENT(_to)  \
   NS_IMETHOD    AddBroadcastListener(const nsString& aAttr, nsIDOMNode* aNode) { return _to##AddBroadcastListener(aAttr, aNode); }  \
   NS_IMETHOD    RemoveBroadcastListener(const nsString& aAttr, nsIDOMNode* aNode) { return _to##RemoveBroadcastListener(aAttr, aNode); }  \
   NS_IMETHOD    DoCommand() { return _to##DoCommand(); }  \
 
 
-extern "C" NS_DOM nsresult NS_InitXULNodeClass(nsIScriptContext *aContext, void **aPrototype);
+extern "C" NS_DOM nsresult NS_InitXULElementClass(nsIScriptContext *aContext, void **aPrototype);
 
-extern "C" NS_DOM nsresult NS_NewScriptXULNode(nsIScriptContext *aContext, nsISupports *aSupports, nsISupports *aParent, void **aReturn);
+extern "C" NS_DOM nsresult NS_NewScriptXULElement(nsIScriptContext *aContext, nsISupports *aSupports, nsISupports *aParent, void **aReturn);
 
-#endif // nsIDOMXULNode_h__
+#endif // nsIDOMXULElement_h__
