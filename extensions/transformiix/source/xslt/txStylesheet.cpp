@@ -298,7 +298,7 @@ txStylesheet::isStripSpaceAllowed(const txXPathNode& aNode, txIMatchContext* aCo
             for (i = 0; i < frameCount; ++i) {
                 txStripSpaceTest* sst =
                     NS_STATIC_CAST(txStripSpaceTest*, mStripSpaceTests[i]);
-                if (sst->matches(aNode, aContext)) {
+                if (sst->matches(node, aContext)) {
                     if (sst->stripsSpace() && 
                         !XMLUtils::getXMLSpacePreserve(node)) {
                         return MB_TRUE;
