@@ -27,9 +27,10 @@
 
 #include "HistoryImpl.h"
 
+#include "HistoryActionEvents.h"
+
 #include "ns_util.h"
 
-#include "nsActions.h"
 
 JNIEXPORT void JNICALL 
 Java_org_mozilla_webclient_wrapper_1native_HistoryImpl_nativeBack

@@ -31,9 +31,10 @@
 
 #include "CurrentPageImpl.h"
 
+#include "CurrentPageActionEvents.h"
+
 #include "ns_util.h"
 #include "rdf_util.h"
-#include "nsActions.h"
 
 #include "nsLayoutCID.h"
 #include "nsCRT.h"

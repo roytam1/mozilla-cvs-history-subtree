@@ -28,9 +28,9 @@
 
 #include "NavigationImpl.h"
 
-#include "ns_util.h"
+#include "NavigationActionEvents.h"
 
-#include "nsActions.h"
+#include "ns_util.h"
 
 JNIEXPORT void JNICALL Java_org_mozilla_webclient_wrapper_1native_NavigationImpl_nativeLoadURL
 (JNIEnv *env, jobject obj, jint webShellPtr, jstring urlString)

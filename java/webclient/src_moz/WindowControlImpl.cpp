@@ -27,8 +27,10 @@
  */
 
 #include "WindowControlImpl.h"
+
+#include "WindowControlActionEvents.h"
+
 #include "ns_util.h"
-#include "nsActions.h"
 
 #include "nsIThread.h" // for PRThread
 

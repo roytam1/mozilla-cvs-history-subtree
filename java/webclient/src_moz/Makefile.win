@@ -34,16 +34,21 @@ OBJS =                              \
     .\$(OBJDIR)\dom_util.obj  \
     .\$(OBJDIR)\nsActions.obj  \
     .\$(OBJDIR)\CurrentPageImpl.obj  \
+    .\$(OBJDIR)\CurrentPageActionEvents.obj  \
     .\$(OBJDIR)\HistoryImpl.obj  \
+    .\$(OBJDIR)\HistoryActionEvents.obj  \
     .\$(OBJDIR)\BookmarksImpl.obj  \
     .\$(OBJDIR)\WrapperFactoryImpl.obj  \
     .\$(OBJDIR)\WindowControlImpl.obj  \
+    .\$(OBJDIR)\WindowControlActionEvents.obj  \
     .\$(OBJDIR)\InputStreamShim.obj  \
     .\$(OBJDIR)\NavigationImpl.obj  \
+    .\$(OBJDIR)\NavigationActionEvents.obj  \
     .\$(OBJDIR)\CBrowserContainer.obj  \
     .\$(OBJDIR)\NativeEventThread.obj  \
     .\$(OBJDIR)\RDFEnumeration.obj  \
     .\$(OBJDIR)\RDFTreeNode.obj  \
+    .\$(OBJDIR)\RDFActionEvents.obj  \
     .\$(OBJDIR)\ISupportsPeer.obj  \
     $(NULL)
 

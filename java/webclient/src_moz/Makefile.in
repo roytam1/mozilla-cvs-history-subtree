@@ -46,14 +46,19 @@ CPPSRCS = \
 	BookmarksImpl.cpp \
 	CBrowserContainer.cpp \
 	CurrentPageImpl.cpp \
+	CurrentPageActionEvents.cpp \
 	HistoryImpl.cpp \
+	HistoryActionEvents.cpp \
 	ISupportsPeer.cpp \
 	NativeEventThread.cpp \
 	NavigationImpl.cpp \
+	NavigationActionEvents.cpp \
+	InputStreamShim.cpp \
 	RDFEnumeration.cpp \
 	RDFTreeNode.cpp \
+	RDFActionEvents.cpp \
 	WindowControlImpl.cpp \
-	InputStreamShim.cpp \
+	WindowControlActionEvents.cpp \
 	WrapperFactoryImpl.cpp \
 	motif/MotifBrowserControlCanvas.cpp \
 	motif/gtkmozilla.cpp \
