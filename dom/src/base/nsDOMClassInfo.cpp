@@ -3940,7 +3940,7 @@ nsWindowSH::GlobalResolve(nsISupports *native, JSContext *cx, JSObject *obj,
     nsCOMPtr<nsISupports> native(do_CreateInstance(name_struct->mCID, &rv));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    jsval prop_val; // XPConnect-wrapped property value.
+    jsval prop_val; // Property value.
 
     nsCOMPtr<nsIScriptObjectOwner> owner(do_QueryInterface(native));
     if (owner) {
@@ -3949,7 +3949,6 @@ nsWindowSH::GlobalResolve(nsISupports *native, JSContext *cx, JSObject *obj,
       NS_ENSURE_TRUE(context, NS_ERROR_UNEXPECTED);
 
       JSObject *prop_obj = nsnull;
-
       rv = owner->GetScriptObject(context, (void**)&prop_obj);
       NS_ENSURE_TRUE(prop_obj, NS_ERROR_UNEXPECTED);
 
@@ -3964,7 +3963,7 @@ nsWindowSH::GlobalResolve(nsISupports *native, JSContext *cx, JSObject *obj,
     PRBool retval = ::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(str),
                                           ::JS_GetStringLength(str),
                                           prop_val, nsnull, nsnull,
-                                          JSPROP_ENUMERATE | JSPROP_READONLY);
+                                          JSPROP_ENUMERATE);
     *did_resolve = PR_TRUE;
 
     return retval ? NS_OK : NS_ERROR_FAILURE;
