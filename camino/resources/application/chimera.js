@@ -54,4 +54,5 @@ pref("font.size.minimum-size.x-western", 10);
 // Unsuppress painting sooner (XXXbryner, why is this here?)
 pref("nglayout.initialpaint.delay", 250);
 
-
+// turn on universal character detection
+pref("intl.charset.detector", "universal_charset_detector");
