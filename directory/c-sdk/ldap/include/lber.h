@@ -154,6 +154,13 @@ struct lextiof_socket_private;          /* Defined by the extended I/O */
 struct lextiof_session_private;         /* Defined by the extended I/O */
                                         /* callback functions */
 
+/* This is modeled after the PRIOVec that is passed to the NSPR
+   writev function! The void* is a char* in that struct */
+typedef struct ldap_x_iovec {
+        char    *ldapiov_base;
+        int     ldapiov_len;
+} ldap_x_iovec;
+
 /*
  * libldap read and write I/O function callbacks.  The rest of the I/O callback
  * types are defined in ldap.h
@@ -163,9 +170,12 @@ typedef int (LDAP_C LDAP_CALLBACK LDAP_IOF_READ_CALLBACK)( LBER_SOCKET s,
 typedef int (LDAP_C LDAP_CALLBACK LDAP_IOF_WRITE_CALLBACK)( LBER_SOCKET s,
 	const void *buf, int len );
 typedef int (LDAP_C LDAP_CALLBACK LDAP_X_EXTIOF_READ_CALLBACK)( int s,
-	void *buf, int bufsize, struct lextiof_socket_private *arg );
+	void *buf, int bufsize, struct lextiof_socket_private *socketarg );
 typedef int (LDAP_C LDAP_CALLBACK LDAP_X_EXTIOF_WRITE_CALLBACK)( int s,
-	const void *buf, int len, struct lextiof_socket_private *arg );
+	const void *buf, int len, struct lextiof_socket_private *socketarg );
+typedef int (LDAP_C LDAP_CALLBACK LDAP_X_EXTIOF_WRITEV_CALLBACK)(int s,
+	const ldap_x_iovec iov[], int iovcnt, struct lextiof_socket_private *socketarg);
+						     
 
 /*
  * Structure for use with LBER_SOCKBUF_OPT_EXT_IO_FNS:
@@ -176,6 +186,7 @@ struct lber_x_ext_io_fns {
 	LDAP_X_EXTIOF_READ_CALLBACK	*lbextiofn_read;
 	LDAP_X_EXTIOF_WRITE_CALLBACK	*lbextiofn_write;
 	struct lextiof_socket_private	*lbextiofn_socket_arg;
+        LDAP_X_EXTIOF_WRITEV_CALLBACK   *lbextiofn_writev;
 };
 #define LBER_X_EXTIO_FNS_SIZE sizeof(struct lber_x_ext_io_fns)
 

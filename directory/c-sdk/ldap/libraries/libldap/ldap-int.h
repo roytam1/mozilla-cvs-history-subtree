@@ -217,6 +217,22 @@ typedef struct ldappend {
  */
 typedef struct nsldapi_iostatus_info NSLDAPIIOStatus;
 
+/*
+ * old extended IO structure (before writev callback was added)
+ */
+struct ldap_x_ext_io_fns_rev0 {
+        int                                     lextiof_size;
+        LDAP_X_EXTIOF_CONNECT_CALLBACK          *lextiof_connect;
+        LDAP_X_EXTIOF_CLOSE_CALLBACK            *lextiof_close;
+        LDAP_X_EXTIOF_READ_CALLBACK             *lextiof_read;
+        LDAP_X_EXTIOF_WRITE_CALLBACK            *lextiof_write;
+        LDAP_X_EXTIOF_POLL_CALLBACK             *lextiof_poll;
+        LDAP_X_EXTIOF_NEWHANDLE_CALLBACK        *lextiof_newhandle;
+        LDAP_X_EXTIOF_DISPOSEHANDLE_CALLBACK    *lextiof_disposehandle;
+        void                                    *lextiof_session_arg;
+};
+#define LDAP_X_EXTIO_FNS_SIZE_REV0   sizeof(struct ldap_x_ext_io_fns_rev0)
+
 
 /*
  * structure representing an ldap connection
@@ -276,6 +292,7 @@ struct ldap {
 #define ld_extconnect_fn	ld_ext_io_fns.lextiof_connect
 #define ld_extread_fn		ld_ext_io_fns.lextiof_read
 #define ld_extwrite_fn		ld_ext_io_fns.lextiof_write
+#define ld_extwritev_fn         ld_ext_io_fns.lextiof_writev
 #define ld_extpoll_fn		ld_ext_io_fns.lextiof_poll
 #define ld_extnewhandle_fn	ld_ext_io_fns.lextiof_newhandle
 #define ld_extdisposehandle_fn	ld_ext_io_fns.lextiof_disposehandle

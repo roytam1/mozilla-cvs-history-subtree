@@ -108,33 +108,55 @@ typedef int (LDAP_C LDAP_CALLBACK *IFP)();
 #endif
 
 typedef struct seqorset {
-	unsigned long	sos_clen;
-	unsigned long	sos_tag;
-	char		*sos_first;
-	char		*sos_ptr;
-	struct seqorset	*sos_next;
+  unsigned long	sos_clen;
+  unsigned long	sos_tag;
+  char		*sos_first;
+  char		*sos_ptr;
+  struct seqorset	*sos_next;
 } Seqorset;
 #define NULLSEQORSET	((Seqorset *) 0)
 
 #define SOS_STACK_SIZE 8 /* depth of the pre-allocated sos structure stack */
 
+
+#define MAX_TAG_SIZE (1 + sizeof(long)) /* One byte for the length of the tag */
+#define MAX_LEN_SIZE (1 + sizeof(long)) /* One byte for the length of the length */
+#define MAX_VALUE_PREFIX_SIZE 4
+#define BER_ARRAY_QUANTITY 5 /* 0:Tag   1:Length   2:Value-prefix   3:Value   4:Value-suffix  */
+#define BER_STRUCT_TAG 0
+#define BER_STRUCT_LEN 1
+#define BER_STRUCT_PRE 2
+#define BER_STRUCT_VAL 3
+#define BER_STRUCT_SUF 4
+
 struct berelement {
-	char		*ber_buf;
-	char		*ber_ptr;
-	char		*ber_end;
-	struct seqorset	*ber_sos;
-	unsigned long	ber_tag;
-	unsigned long	ber_len;
-	int		ber_usertag;
-	char		ber_options;
-	char		*ber_rwptr;
-	BERTranslateProc ber_encode_translate_proc;
-	BERTranslateProc ber_decode_translate_proc;
-	int		ber_flags;
+  ldap_x_iovec  ber_struct[BER_ARRAY_QUANTITY];   /* See above */
+
+  char          ber_tag_contents[MAX_TAG_SIZE];
+  char          ber_len_contents[MAX_LEN_SIZE];
+  char          ber_pre_contents[MAX_VALUE_PREFIX_SIZE];
+
+  char          *ber_buf; /* update the value value when writing in case realloc is called */
+  char		*ber_ptr;
+  char		*ber_end;
+  struct seqorset	*ber_sos;
+  unsigned long	ber_tag; /* Remove me someday */
+  unsigned long	ber_len; /* Remove me someday */
+  int		ber_usertag;
+  char		ber_options;
+  char		*ber_rwptr;
+  BERTranslateProc ber_encode_translate_proc;
+  BERTranslateProc ber_decode_translate_proc;
+  int		ber_flags;
 #define LBER_FLAG_NO_FREE_BUFFER	1	/* don't free ber_buf */
-	int		ber_sos_stack_posn;
-	Seqorset	ber_sos_stack[SOS_STACK_SIZE];
+  int		ber_sos_stack_posn;
+  Seqorset	ber_sos_stack[SOS_STACK_SIZE];
 };
+
+#define BER_CONTENTS_STRUCT_SIZE (sizeof(ldap_x_iovec) * BER_ARRAY_QUANTITY)
+
+
+
 #define NULLBER	((BerElement *)NULL)
 
 #ifdef LDAP_DEBUG
@@ -150,6 +172,20 @@ struct nslberi_io_fns {
     LDAP_IOF_READ_CALLBACK	*lbiof_read;
     LDAP_IOF_WRITE_CALLBACK	*lbiof_write;
 };
+
+
+/*
+ * Old  structure for use with LBER_SOCKBUF_OPT_EXT_IO_FNS:
+ */
+struct lber_x_ext_io_fns_rev0 {
+	    /* lbextiofn_size should always be set to LBER_X_EXTIO_FNS_SIZE */
+	int				lbextiofn_size;
+	LDAP_X_EXTIOF_READ_CALLBACK	*lbextiofn_read;
+	LDAP_X_EXTIOF_WRITE_CALLBACK	*lbextiofn_write;
+	struct lextiof_socket_private	*lbextiofn_socket_arg;
+};
+#define LBER_X_EXTIO_FNS_SIZE_REV0    sizeof(struct lber_x_ext_io_fns_rev0)
+
 
 
 struct sockbuf {

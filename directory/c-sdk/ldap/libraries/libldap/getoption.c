@@ -178,16 +178,24 @@ ldap_get_option( LDAP *ld, int option, void *optdata )
 
 	/* extended i/o function pointers */
 	case LDAP_X_OPT_EXTIO_FN_PTRS:
-		if ( ((struct ldap_x_ext_io_fns *) optdata)->lextiof_size !=
-		    LDAP_X_EXTIO_FNS_SIZE ) {
-			LDAP_SET_LDERRNO( ld, LDAP_PARAM_ERROR, NULL, NULL );
-			rc = -1;
-		} else {
-			/* struct copy */
-			*((struct ldap_x_ext_io_fns *) optdata) =
-			    ld->ld_ext_io_fns;
-		}
-		break;
+	  if ( ((struct ldap_x_ext_io_fns *) optdata)->lextiof_size == LDAP_X_EXTIO_FNS_SIZE_REV0) {
+	    ((struct ldap_x_ext_io_fns_rev0 *) optdata)->lextiof_close = ld->ld_extclose_fn;
+	    ((struct ldap_x_ext_io_fns_rev0 *) optdata)->lextiof_connect = ld->ld_extconnect_fn;
+	    ((struct ldap_x_ext_io_fns_rev0 *) optdata)->lextiof_read = ld->ld_extread_fn;
+	    ((struct ldap_x_ext_io_fns_rev0 *) optdata)->lextiof_write = ld->ld_extwrite_fn;
+	    ((struct ldap_x_ext_io_fns_rev0 *) optdata)->lextiof_poll = ld->ld_extpoll_fn;
+	    ((struct ldap_x_ext_io_fns_rev0 *) optdata)->lextiof_newhandle = ld->ld_extnewhandle_fn;
+	    ((struct ldap_x_ext_io_fns_rev0 *) optdata)->lextiof_disposehandle = ld->ld_extdisposehandle_fn;
+	    ((struct ldap_x_ext_io_fns_rev0 *) optdata)->lextiof_session_arg = ld->ld_ext_session_arg;
+	  } else if ( ((struct ldap_x_ext_io_fns *) optdata)->lextiof_size ==
+		      LDAP_X_EXTIO_FNS_SIZE ) {
+	    /* struct copy */
+	    *((struct ldap_x_ext_io_fns *) optdata) = ld->ld_ext_io_fns;
+	  } else {       
+	    LDAP_SET_LDERRNO( ld, LDAP_PARAM_ERROR, NULL, NULL );
+	    rc = -1;
+	  }
+	  break;
 #endif /* LDAP_SSLIO_HOOKS */
 
 	/* thread function pointers */

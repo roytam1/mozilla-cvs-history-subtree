@@ -407,6 +407,7 @@ struct ldap_x_ext_io_fns {
         LDAP_X_EXTIOF_NEWHANDLE_CALLBACK        *lextiof_newhandle;
         LDAP_X_EXTIOF_DISPOSEHANDLE_CALLBACK    *lextiof_disposehandle;
         void                                    *lextiof_session_arg;
+        LDAP_X_EXTIOF_WRITEV_CALLBACK           *lextiof_writev;
 };
 #define LDAP_X_EXTIO_FNS_SIZE   sizeof(struct ldap_x_ext_io_fns)
 
