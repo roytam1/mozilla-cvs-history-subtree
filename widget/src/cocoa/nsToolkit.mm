@@ -139,7 +139,9 @@ static PRUintn gToolkitTLSIndex = 0;
 //
 - (void) dealloc
 {
-printf("shutting down event queue\n");
+#if DEBUG
+  printf("shutting down event queue\n");
+#endif
   if ( mEventTimer )
     [mEventTimer release];
   NS_IF_RELEASE(mEventQueueService);

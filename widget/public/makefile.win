@@ -68,6 +68,7 @@ EXPORTS=\
   nsIMenu.h \
   nsIMenuItem.h \
   nsIPopUpMenu.h \
+  nsIPluginWidget.h \
   $(NULL)
 
 

@@ -64,6 +64,42 @@
 
 #include <unistd.h>
 
+
+@interface ChildView(Private)
+
+// sends gecko an ime composition event
+- (nsRect) sendCompositionEvent:(PRInt32)aEventType;
+
+// sends gecko an ime text event
+- (void) sendTextEvent:(PRUnichar*) aBuffer 
+                       attributedString:(NSAttributedString*) aString
+                       selectedRange:(NSRange)selRange
+                       markedRange:(NSRange)markRange
+                       doCommit:(BOOL)doCommit;
+
+  // sets up our view, attaching it to its owning gecko view
+- (id) initWithGeckoChild:(nsChildView*)child eventSink:(nsIEventSink*)sink;
+
+  // convert from one event system to the other for event dispatching
+- (void) convert:(NSEvent*)inEvent message:(PRInt32)inMsg toGeckoEvent:(nsInputEvent*)outGeckoEvent;
+
+  // create a gecko key event out of a cocoa event
+- (void) convert:(NSEvent*)aKeyEvent message:(PRUint32)aMessage 
+           isChar:(PRBool*)outIsChar
+           toGeckoEvent:(nsKeyEvent*)outGeckoEvent;
+- (void) convert:(NSPoint)inPoint message:(PRInt32)inMsg 
+          modifiers:(unsigned int)inMods toGeckoEvent:(nsInputEvent*)outGeckoEvent;
+
+- (NSMenu*)getContextMenu;
+
+- (void)setIsPluginView:(BOOL)aIsPlugin;
+- (BOOL)getIsPluginView;
+
+- (BOOL)childViewHasPlugin;
+
+@end
+
+
 ////////////////////////////////////////////////////
 nsIRollupListener * gRollupListener = nsnull;
 nsIWidget         * gRollupWidget   = nsnull;
@@ -87,13 +123,11 @@ static void blinkRgn(RgnHandle rgn);
 
 #pragma mark -
 
-
 //
 // Convenience routines to go from a gecko rect to cocoa NSRects and back
 //
 
-static void ConvertGeckoToCocoaRect ( const nsRect & inGeckoRect, NSRect & outCocoaRect );
-static void
+static inline void
 ConvertGeckoToCocoaRect ( const nsRect & inGeckoRect, NSRect & outCocoaRect )
 {
   outCocoaRect.origin.x = inGeckoRect.x;
@@ -102,8 +136,7 @@ ConvertGeckoToCocoaRect ( const nsRect & inGeckoRect, NSRect & outCocoaRect )
   outCocoaRect.size.height = inGeckoRect.height;
 }
 
-static void ConvertCocoaToGeckoRect ( const NSRect & inCocoaRect, nsRect & outGeckoRect ) ;
-static void
+static inline void
 ConvertCocoaToGeckoRect ( const NSRect & inCocoaRect, nsRect & outGeckoRect )
 {
   outGeckoRect.x = NS_STATIC_CAST(nscoord, inCocoaRect.origin.x);
@@ -113,8 +146,7 @@ ConvertCocoaToGeckoRect ( const NSRect & inCocoaRect, nsRect & outGeckoRect )
 }
 
 
-static void  ConvertGeckoRectToMacRect(const nsRect& aRect, Rect& outMacRect) ;
-static void 
+static inline void 
 ConvertGeckoRectToMacRect(const nsRect& aRect, Rect& outMacRect)
 {
   outMacRect.left = aRect.x;
@@ -227,6 +259,7 @@ nsChildView::nsChildView() : nsBaseWidget() , nsDeleteObserved(this)
   mDestructorCalled = PR_FALSE;
   mVisible = PR_FALSE;
   mDrawing = PR_FALSE;
+  mInWindow = PR_FALSE;
   mFontMetrics = nsnull;
   mTempRenderingContext = nsnull;
 
@@ -269,12 +302,12 @@ nsChildView::~nsChildView()
 
   if (mVisRgn)
   {
-    DisposeRgn(mVisRgn);
+    ::DisposeRgn(mVisRgn);
     mVisRgn = nsnull;
   }
 }
 
-NS_IMPL_ISUPPORTS_INHERITED2(nsChildView, nsBaseWidget, nsIKBStateControl, nsIEventSink);
+NS_IMPL_ISUPPORTS_INHERITED3(nsChildView, nsBaseWidget, nsIPluginWidget, nsIKBStateControl, nsIEventSink);
 
 //-------------------------------------------------------------------------
 //
@@ -319,6 +352,8 @@ nsresult nsChildView::StandardCreate(nsIWidget *aParent,
   NSRect r;
   ConvertGeckoToCocoaRect(mBounds, r);
   mView = [CreateCocoaView() retain];
+  if (!mView) return NS_ERROR_FAILURE;
+  
   [mView setFrame:r];
   
 #if DEBUG
@@ -337,8 +372,10 @@ nsresult nsChildView::StandardCreate(nsIWidget *aParent,
     NS_ASSERTION(mParentView && mView, "couldn't hook up new NSView in hierarchy");
 #endif
 
-  if (mParentView && mView) {
-    if (![mParentView isKindOfClass: [ChildView class]]) {
+  if (mParentView)
+  {
+    if (![mParentView isKindOfClass: [ChildView class]])
+    {
       [mParentView addSubview:mView];
       mVisible = PR_TRUE;
       NSWindow* window = [mParentView window];
@@ -349,13 +386,22 @@ nsresult nsChildView::StandardCreate(nsIWidget *aParent,
         // to our special getNativeWindow selector, and if it does,
         // use that to get the window instead.
         //if ([mParentView respondsToSelector: @selector(getNativeWindow:)])
-          [mView setNativeWindow: [mParentView getNativeWindow]];
+        [mView setNativeWindow: [mParentView getNativeWindow]];
       }
       else
         [mView setNativeWindow: window];
+
     }
     else
+    {
       [mView setNativeWindow: [mParentView getNativeWindow]];
+    }
+
+    mInWindow = ([mParentView window] != nil);
+  }
+  else
+  {
+    mInWindow = PR_FALSE;
   }
   
   return NS_OK;
@@ -500,6 +546,17 @@ inline NSRect getWindowRefFrame(NSWindow* window)
             [window frame]);
 }
 
+#if DEBUG
+static void PrintViewHierarcy(NSView *view)
+{
+	while (view)
+	{
+		NSLog(@"  view is %@, frame %@", view, NSStringFromRect([view frame]));
+		view = [view superview];
+	}
+}
+#endif
+
 //-------------------------------------------------------------------------
 //
 // Return some native data according to aDataType
@@ -520,19 +577,18 @@ void* nsChildView::GetNativeData(PRUint32 aDataType)
       retVal = [mView getNativeWindow];
       break;
       
-    case NS_NATIVE_GRAPHIC:           // quickdraw port (for now)
-      retVal = GetQuickDrawPort();
+    case NS_NATIVE_GRAPHIC:           // quickdraw port
+      retVal = [mView qdPort];
       break;
       
     case NS_NATIVE_REGION:
     {
       if (!mVisRgn)
         mVisRgn = ::NewRgn();
-      GrafPtr port = GetQuickDrawPort();
-      //printf("asked for visrgn, port is %d\n", port);
-      //QDDebugPrintPortInfo(port);
+      GrafPtr port = (GrafPtr)[mView qdPort];
+
       if (port && mVisRgn)
-        ::GetPortVisibleRegion(GetQuickDrawPort(), mVisRgn);
+        ::GetPortVisibleRegion(port, mVisRgn);
       retVal = (void*)mVisRgn;
       break;
     }
@@ -554,43 +610,35 @@ void* nsChildView::GetNativeData(PRUint32 aDataType)
     case NS_NATIVE_PLUGIN_PORT:
       // this needs to be a combination of the port and the offsets.
       if (mPluginPort == nsnull)
+      {
         mPluginPort = new nsPluginPort;
-        
-      [mView setIsPluginView: YES];
-      
+        [mView setIsPluginView: YES];
+      }
+
       NSWindow* window = [mView getNativeWindow];
-      if (window) {
+      if (window)
+      {
         WindowRef topLevelWindow = windowToWindowRef(window);
-        if (topLevelWindow) {
-          mPluginPort->port = GetWindowPort(topLevelWindow);
-      
+        if (topLevelWindow)
+        {
+          mPluginPort->port = ::GetWindowPort(topLevelWindow);
+
           NSPoint viewOrigin = [mView convertPoint:NSZeroPoint toView:nil];
           NSRect frame = getWindowRefFrame(window);
           viewOrigin.y = frame.size.height - viewOrigin.y;
           
           // need to convert view's origin to window coordinates.
           // then, encode as "SetOrigin" ready values.
-          mPluginPort->portx = -viewOrigin.x;
-          mPluginPort->porty = -viewOrigin.y;
-          
-          // set up the clipping region for plugins.
-          RgnHandle clipRgn = ::NewRgn();
-          if (clipRgn != NULL) {
-            NSRect visibleBounds = [mView visibleRect];
-            NSPoint clipOrigin = [mView convertPoint:visibleBounds.origin toView:nil];
-            clipOrigin.y = frame.size.height - clipOrigin.y;
-            SetRectRgn(clipRgn, clipOrigin.x, clipOrigin.y,
-                       clipOrigin.x + visibleBounds.size.width,
-                       clipOrigin.y + visibleBounds.size.height);
-            SetPortClipRegion(mPluginPort->port, clipRgn);
-            DisposeRgn(clipRgn);
-          }
+          mPluginPort->portx = (PRInt32)-viewOrigin.x;
+          mPluginPort->porty = (PRInt32)-viewOrigin.y;
+
         }
-      } else {
+      }
+      else
+      {
 #ifdef DEBUG
         printf("@@@@ Couldn't get NSWindow for plugin port. @@@@\n");
 #endif
-        abort();
       }
 
       retVal = (void*)mPluginPort;
@@ -640,11 +688,11 @@ NS_IMETHODIMP nsChildView::Show(PRBool bState)
 nsIWidget*
 nsChildView::GetParent(void)
 {
-  if (mPluginPort) {
+  //if (mPluginPort) {
     NS_IF_ADDREF(mParentWidget);
     return mParentWidget;
-  }
-  return nsnull;
+  //}
+  //return nsnull;
 }
     
 NS_IMETHODIMP nsChildView::ModalEventFilter(PRBool aRealEvent, void *aEvent,
@@ -1028,7 +1076,7 @@ NS_IMETHODIMP nsChildView::MoveWithRepaintOption(PRInt32 aX, PRInt32 aY, PRBool 
     // Invalidate the current location
     if (mVisible && aRepaint)
       [[mView superview] setNeedsDisplayInRect: [mView frame]];    //XXX needed?
-    
+        
     // Set the bounds
     mBounds.x = aX;
     mBounds.y = aY;
@@ -1039,6 +1087,7 @@ NS_IMETHODIMP nsChildView::MoveWithRepaintOption(PRInt32 aX, PRInt32 aY, PRBool 
 
     if (mVisible && aRepaint)
       [mView setNeedsDisplay:YES];
+
     
     // Report the event
     ReportMoveEvent();
@@ -1062,8 +1111,6 @@ NS_IMETHODIMP nsChildView::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepai
     if (mVisible && aRepaint)
       [[mView superview] setNeedsDisplayInRect: [mView frame]];    //XXX needed?
     
-  // Recalculate the regions
-  //CalcWindowRegions();
     NSRect r;
     ConvertGeckoToCocoaRect(mBounds, r);
     [mView setFrame:r];
@@ -1124,6 +1171,159 @@ NS_IMETHODIMP nsChildView::BeginResizingChildren(void)
 NS_IMETHODIMP nsChildView::EndResizingChildren(void)
 {
   return NS_OK;
+}
+
+//-------------------------------------------------------------------------
+// 
+//
+//-------------------------------------------------------------------------
+NS_IMETHODIMP nsChildView::GetPluginClipRect(nsRect& outClipRect, nsPoint& outOrigin)
+{
+  NS_ASSERTION(mPluginPort, "GetPluginClipRect must only be called on a plugin widget");
+  if (!mPluginPort) return NS_ERROR_FAILURE;
+  
+  NSWindow* window = [mView getNativeWindow];
+  if (!window) return NS_ERROR_FAILURE;
+  
+  NSPoint viewOrigin = [mView convertPoint:NSZeroPoint toView:nil];
+  NSRect frame = getWindowRefFrame(window);
+  viewOrigin.y = frame.size.height - viewOrigin.y;
+  
+  // set up the clipping region for plugins.
+  NSRect visibleBounds = [mView visibleRect];
+  NSPoint clipOrigin   = [mView convertPoint:visibleBounds.origin toView:nil];
+  
+  // Convert from cocoa to QuickDraw coordinates
+  clipOrigin.y = frame.size.height - clipOrigin.y;
+  
+  outClipRect.x      = (nscoord)clipOrigin.x;
+  outClipRect.y      = (nscoord)clipOrigin.y;
+  
+  if (mInWindow)
+  {
+    outClipRect.width  = (nscoord)visibleBounds.size.width;
+    outClipRect.height = (nscoord)visibleBounds.size.height;
+  }
+  else
+  {
+    outClipRect.width = 0;
+    outClipRect.height = 0;
+  }
+
+  // need to convert view's origin to window coordinates.
+  // then, encode as "SetOrigin" ready values.
+  outOrigin.x = (nscoord)-viewOrigin.x;
+  outOrigin.y = (nscoord)-viewOrigin.y;
+  
+  return NS_OK;
+}
+
+
+//-------------------------------------------------------------------------
+// 
+//
+//-------------------------------------------------------------------------
+NS_IMETHODIMP nsChildView::StartDrawPlugin()
+{
+  NS_ASSERTION(mPluginPort, "StartDrawPlugin must only be called on a plugin widget");
+  if (!mPluginPort) return NS_ERROR_FAILURE;
+  
+  NSWindow* window = [mView getNativeWindow];
+  if (!window) return NS_ERROR_FAILURE;
+
+  if (window /* [mView lockFocusIfCanDraw] */)
+  {
+    // It appears that the WindowRef from which we get the plugin port undergoes the
+    // traditional BeginUpdate/EndUpdate cycle, which, if you recall, sets the visible
+    // region to the intersection of the visible region and the update region. Since
+    // we don't know here if we're being drawn inside a BeginUpdate/EndUpdate pair
+    // (which seem to occur in [NSWindow display]), and we don't want to have the burden
+    // of correctly doing Carbon invalidates of the plugin rect, we manually set the
+    // visible region to be the entire port every time.
+    RgnHandle pluginRegion = ::NewRgn();
+    if (pluginRegion)
+    {
+      nsRect  clipRect;
+      nsPoint origin;
+      GetPluginClipRect(clipRect, origin);
+      
+      Rect pluginRect;
+      ConvertGeckoRectToMacRect(clipRect, pluginRect);
+      
+      ::RectRgn(pluginRegion, &pluginRect);
+      ::SetPortVisibleRegion(mPluginPort->port, pluginRegion);
+      //::SetPortClipRegion(mPluginPort->port, pluginRegion);
+  
+      ::DisposeRgn(pluginRegion);
+    }
+
+    return NS_OK;
+  }
+  
+  NS_ASSERTION(0, "lockFocusIfCanDraw returned false\n");
+  return NS_ERROR_FAILURE;
+}
+
+//-------------------------------------------------------------------------
+// 
+//
+//-------------------------------------------------------------------------
+NS_IMETHODIMP nsChildView::EndDrawPlugin()
+{
+  NS_ASSERTION(mPluginPort, "EndDrawPlugin must only be called on a plugin widget");
+  //[mView unlockFocus];
+  return NS_OK;
+}
+
+//-------------------------------------------------------------------------
+// 
+//
+//-------------------------------------------------------------------------
+void nsChildView::RemovedFromWindow()
+{
+  mInWindow = PR_FALSE;
+
+  if (mPluginPort)
+  {
+    // force a redraw, so that the plugin knows that it's view is being hidden
+    Invalidate(PR_TRUE);
+  }
+}
+
+//-------------------------------------------------------------------------
+// 
+//
+//-------------------------------------------------------------------------
+void nsChildView::AddedToWindow()
+{
+  mInWindow = PR_TRUE;
+
+  if (mPluginPort)
+  {
+    // force a redraw, so that the plugin knows that it's view is being shown
+    // note that we can't do a sync invalidate here, because the view
+    // hierarchy is in flux.
+    Invalidate(PR_FALSE);
+  }
+}
+
+//-------------------------------------------------------------------------
+// 
+//
+//-------------------------------------------------------------------------
+void nsChildView::LiveResizeStarted()
+{
+  // XXX todo. Use this to disable Java async redraw during resize
+  mLiveResizeInProgress = PR_TRUE;
+}
+
+//-------------------------------------------------------------------------
+// 
+//
+//-------------------------------------------------------------------------
+void nsChildView::LiveResizeEnded()
+{
+  mLiveResizeInProgress = PR_FALSE;
 }
 
 
@@ -1191,7 +1391,7 @@ NS_IMETHODIMP nsChildView::Invalidate(PRBool aIsSynchronous)
     [mView display];
   else
     [mView setNeedsDisplay:YES];
-  
+
   return NS_OK;
 }
 
@@ -1208,13 +1408,26 @@ NS_IMETHODIMP nsChildView::Invalidate(const nsRect &aRect, PRBool aIsSynchronous
   NSRect r;
   ConvertGeckoToCocoaRect ( aRect, r );
   
-  if ( aIsSynchronous )
+  if (aIsSynchronous)
     [mView displayRect:r];
   else
     [mView setNeedsDisplayInRect:r];
   
   return NS_OK;
 }
+
+
+//-------------------------------------------------------------------------
+//
+// Validate the widget
+//
+//-------------------------------------------------------------------------
+NS_IMETHODIMP nsChildView::Validate()
+{
+  [mView setNeedsDisplay:NO];
+  return NS_OK;
+}
+
 
 //-------------------------------------------------------------------------
 //
@@ -1257,8 +1470,6 @@ void nsChildView::StartDraw(nsIRenderingContext* aRenderingContext)
   if (mDrawing)
     return;
   mDrawing = PR_TRUE;
-
-  //CalcWindowRegions();  //¥REVISIT
 
   if (aRenderingContext == nsnull)
   {
@@ -1386,19 +1597,22 @@ nsChildView::UpdateWidget(nsRect& aRect, nsIRenderingContext* aContext)
 {
   if (! mVisible)
     return;
-    
-  StPortSetter port(GetQuickDrawPort());
-  if (mPluginPort) ::SetOrigin(mPluginPort->portx, mPluginPort->porty);
-        
+  
+  // For updating widgets, we _always_ want to use the NSQuickDrawView's port,
+  // since that's the correct port for gecko to use to make rendering contexts.
+  // The plugin is the only thing that uses the plugin port.
+  GrafPtr curPort = (GrafPtr)[mView qdPort];
+  StPortSetter port(curPort);
+  
   // initialize the paint event
   nsPaintEvent paintEvent;
-  paintEvent.eventStructType      = NS_PAINT_EVENT;   // nsEvent
-  paintEvent.nativeMsg = nsnull;
+  paintEvent.eventStructType  = NS_PAINT_EVENT; // nsEvent
+  paintEvent.nativeMsg        = nsnull;
   paintEvent.message          = NS_PAINT;
-  paintEvent.widget         = this;         // nsGUIEvent
+  paintEvent.widget           = this;           // nsGUIEvent
   paintEvent.nativeMsg        = NULL;
-  paintEvent.renderingContext     = aContext;       // nsPaintEvent
-  paintEvent.rect           = &aRect;
+  paintEvent.renderingContext = aContext;       // nsPaintEvent
+  paintEvent.rect             = &aRect;
 
   // offscreen drawing is pointless.
   if (paintEvent.rect->x < 0)
@@ -1415,20 +1629,6 @@ nsChildView::UpdateWidget(nsRect& aRect, nsIRenderingContext* aContext)
       Flash(paintEvent);
   }
   EndDraw();
-  
-#if 0
-  // draw where a plugin will be.
-  if (mPluginPort) {
-      ::SetOrigin(mPluginPort->portx, mPluginPort->porty);
-      Rect bounds = { 0, 0, mBounds.height, mBounds.width };
-      ::FrameRect(&bounds);
-      ::MoveTo(bounds.left, bounds.top);
-      ::LineTo(bounds.right, bounds.bottom);
-      ::MoveTo(bounds.right, bounds.top);
-      ::LineTo(bounds.left, bounds.bottom);
-      ::SetOrigin(0, 0);
-  }
-#endif
 }
 
 
@@ -1441,22 +1641,24 @@ nsChildView::UpdateWidget(nsRect& aRect, nsIRenderingContext* aContext)
 //
 NS_IMETHODIMP nsChildView::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
 {
-    if ( !mVisible)
-        return NS_OK;
+  BOOL viewWasDirty = NO;
+  if (mVisible)
+  {
+    viewWasDirty = [mView needsDisplay];
 
-    BOOL viewWasDirty = [mView needsDisplay];
     NSSize scrollVector = {aDx,aDy};
     [mView scrollRect: [mView visibleRect] by:scrollVector];
-    
-    // Scroll the children
-    nsCOMPtr<nsIEnumerator> children ( getter_AddRefs(GetChildren()) );
-    if ( children ) {
-        children->First();
-        do {
+  }
+  
+  // Scroll the children (even if the widget is not visible)
+  nsCOMPtr<nsIEnumerator> children(getter_AddRefs(GetChildren()));
+  if ( children ) {
+      children->First();
+      do {
         nsCOMPtr<nsISupports> child;
         if (NS_SUCCEEDED(children->CurrentItem(getter_AddRefs(child)))) {
             nsCOMPtr<nsIWidget> widget = do_QueryInterface(child);
-
+  
             // We use resize rather than move since it gives us control
             // over repainting.  In the case of blitting, Quickdraw views
             // draw their child widgets on the blit, so we can scroll
@@ -1466,36 +1668,58 @@ NS_IMETHODIMP nsChildView::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
             widget->GetBounds(bounds);
             widget->Resize(bounds.x + aDx, bounds.y + aDy, bounds.width, bounds.height, PR_FALSE);
         }
-        } while (NS_SUCCEEDED(children->Next()));     
-    }
+      } while (NS_SUCCEEDED(children->Next()));     
+  }
 
+  if (mVisible)
+  {
     if (viewWasDirty)
     {
-        [mView setNeedsDisplay:YES];
+      [mView setNeedsDisplay:YES];
     }
     else
     {
-        NSRect frame = [mView visibleRect];
-        NSRect horizInvalid = frame;
-        NSRect vertInvalid = frame;
-    
-        horizInvalid.size.width = abs(aDx);
-        vertInvalid.size.height = abs(aDy);
-        if (aDy < 0)
-          vertInvalid.origin.y = frame.origin.y + frame.size.height + aDy;
-        if (aDx < 0)
-          horizInvalid.origin.x = frame.origin.x + frame.size.width + aDx;
-    
-        if (aDx != 0)
-          [mView setNeedsDisplayInRect: horizInvalid];
-    
-        if (aDy != 0)
-        {
-          [mView setNeedsDisplayInRect: vertInvalid];
-        }
+      NSRect frame = [mView visibleRect];
+      NSRect horizInvalid = frame;
+      NSRect vertInvalid = frame;
+  
+      horizInvalid.size.width = abs(aDx);
+      vertInvalid.size.height = abs(aDy);
+      if (aDy < 0)
+        vertInvalid.origin.y = frame.origin.y + frame.size.height + aDy;
+      if (aDx < 0)
+        horizInvalid.origin.x = frame.origin.x + frame.size.width + aDx;
+  
+      if (aDx != 0)
+        [mView setNeedsDisplayInRect: horizInvalid];
+  
+      if (aDy != 0)
+        [mView setNeedsDisplayInRect: vertInvalid];
+
     }
-    
-    return NS_OK;
+  }
+  
+  // This is an evil hack that doesn't always work.
+  // 
+  // Drawing plugins in a Cocoa environment is tricky, because the
+  // plugins are living in a Carbon WindowRef/BeginUpdate/EndUpdate
+  // world, and Cocoa has its own notion of dirty rectangles. Throw
+  // Quartz Extreme and QuickTime into the mix, and things get bad.
+  // 
+  // This code is working around a cosmetic issue seen when Quartz Extreme
+  // is active, and you're scrolling a page with a QuickTime plugin; areas
+  // outside the plugin fail to scroll properly. This [display] ensures that
+  // the view is properly drawn before the next Scroll call.
+  //
+  // The time this doesn't work is when you're scrolling a page containing
+  // an iframe which in turn contains a plugin.
+  //
+  // This is turned off because it makes scrolling pages with plugins slow.
+  // 
+  //if ([mView childViewHasPlugin])
+  //  [mView display];
+
+  return NS_OK;
 }
 
 
@@ -2006,19 +2230,6 @@ nsChildView::Idle()
 
 #pragma mark -
 
-@interface ChildView(Private)
-
-// sends gecko an ime composition event
-- (nsRect) sendCompositionEvent:(PRInt32)aEventType;
-
-// sends gecko an ime text event
-- (void) sendTextEvent:(PRUnichar*) aBuffer 
-                       attributedString:(NSAttributedString*) aString
-                       selectedRange:(NSRange)selRange
-                       markedRange:(NSRange)markRange
-                       doCommit:(BOOL)doCommit;
-
-@end
 
 @implementation ChildView
 
@@ -2155,6 +2366,24 @@ nsChildView::Idle()
   mIsPluginView = aIsPlugin;
 }
 
+-(BOOL)getIsPluginView
+{
+  return mIsPluginView;
+}
+
+- (BOOL)childViewHasPlugin
+{
+  NSArray* subviews = [self subviews];
+  for (unsigned int i = 0; i < [subviews count]; i ++)
+  {
+    id subview = [subviews objectAtIndex:i];
+    if ([subview respondsToSelector:@selector(getIsPluginView)] && [subview getIsPluginView])
+        return YES;
+  }
+  
+  return NO;
+}
+
 //
 // -acceptsFirstResponder
 //
@@ -2166,6 +2395,30 @@ nsChildView::Idle()
   return YES;
 }
 
+- (void)viewWillMoveToWindow:(NSWindow *)newWindow
+{
+  if (mGeckoChild && !newWindow)
+    mGeckoChild->RemovedFromWindow();
+}
+
+- (void)viewDidMoveToWindow
+{
+  if (mGeckoChild && [self window])
+    mGeckoChild->AddedToWindow();
+}
+
+- (void)viewWillStartLiveResize
+{
+  if (mGeckoChild && mIsPluginView)
+    mGeckoChild->LiveResizeStarted();
+}
+
+- (void)viewDidEndLiveResize
+{
+  if (mGeckoChild && mIsPluginView)
+    mGeckoChild->LiveResizeEnded();
+}
+
 
 //
 // -drawRect:
@@ -2175,11 +2428,11 @@ nsChildView::Idle()
 //
 - (void)drawRect:(NSRect)aRect
 {
-//  printf("drawing (%d) %f %f w/h %f %f\n", self, aRect.origin.x, aRect.origin.y, aRect.size.width, aRect.size.height);
   PRBool isVisible;
   mGeckoChild->IsVisible(isVisible);
-  if (!isVisible)
+  if (!isVisible) {
     return;
+  }
     
    // tell gecko to paint.
   nsRect r;
@@ -2285,12 +2538,12 @@ nsChildView::Idle()
 
 - (void)mouseEntered:(NSEvent*)theEvent
 {
-  printf("got mouse ENTERED view\n");
+  // printf("got mouse ENTERED view\n");
 }
 
 - (void)mouseExited:(NSEvent*)theEvent
 {
-  printf("got mouse EXIT view\n");
+  // printf("got mouse EXIT view\n");
 }
 
 - (void)otherMouseDown:(NSEvent *)theEvent
@@ -2333,7 +2586,7 @@ const PRInt32 kNumLines = 4;
   geckoEvent.eventStructType = NS_MOUSE_SCROLL_EVENT;
   geckoEvent.nativeMsg = nsnull;
   [self convert:theEvent message:NS_MOUSE_SCROLL toGeckoEvent:&geckoEvent];
-  PRInt32 incomingDeltaY = [theEvent deltaY];
+  PRInt32 incomingDeltaY = (PRInt32)[theEvent deltaY];
   // Use hasJaguarAppKit to determine if we're on 10.2 where the user has control
   // over the deltaY from a scrollwheel event via the Mouse panel in System Preferences
   if (hasJaguarAppKit())

@@ -94,6 +94,7 @@
 #include "nsIPrintContext.h"
 #include "nsIPrintPreviewContext.h"
 #include "nsIWidget.h"
+#include "nsIPluginWidget.h"
 #include "nsGUIEvent.h"
 #include "nsIRenderingContext.h"
 #include "nsIContentViewer.h"
@@ -321,7 +322,7 @@ public:
   void SetPluginHost(nsIPluginHost* aHost);
 
 #if defined(XP_MAC) || defined(XP_MACOSX)
-  nsPluginPort* FixUpPluginWindow();
+  nsPluginPort* FixUpPluginWindow(PRInt32 inPaintState);
   void GUItoMacEvent(const nsGUIEvent& anEvent, EventRecord& aMacEvent);
   void Composite();
 #endif
@@ -355,11 +356,16 @@ private:
 static void ConvertTwipsToPixels(nsIPresContext& aPresContext, nsRect& aTwipsRect, nsRect& aPixelRect);
 
   // Mac specific code to fix up port position and clip during paint
+#if defined(XP_MAC)
+// get the absolute widget position and clip
+static void GetWidgetPosClipAndVis(nsIWidget* aWidget,nscoord& aAbsX, nscoord& aAbsY, nsRect& aClipRect, PRBool& aIsVisible); 
+#endif
+
 #if defined(XP_MAC) || defined(XP_MACOSX)
-  // get the absolute widget position and clip
-  static void GetWidgetPosClipAndVis(nsIWidget* aWidget,nscoord& aAbsX, nscoord& aAbsY, nsRect& aClipRect, PRBool& aIsVisible); 
-  // convert relative coordinates to absolute
-  static void ConvertRelativeToWindowAbsolute(nsIFrame* aFrame, nsIPresContext* aPresContext, nsPoint& aRel, nsPoint& aAbs, nsIWidget *&aContainerWidget);
+enum { ePluginPaintIgnore, ePluginPaintEnable, ePluginPaintDisable };
+// convert relative coordinates to absolute
+
+static void ConvertRelativeToWindowAbsolute(nsIFrame* aFrame, nsIPresContext* aPresContext, nsPoint& aRel, nsPoint& aAbs, nsIWidget *&aContainerWidget);
 #endif // XP_MAC
 
 nsObjectFrame::~nsObjectFrame()
@@ -1485,7 +1491,7 @@ nsObjectFrame::DidReflow(nsIPresContext*           aPresContext,
     return rv;
 
 #if defined(XP_MAC) || defined(XP_MACOSX)
-  mInstanceOwner->FixUpPluginWindow();
+  mInstanceOwner->FixUpPluginWindow(ePluginPaintDisable);
 #endif // XP_MAC
 
   if (bHidden)
@@ -3073,18 +3079,27 @@ void nsPluginInstanceOwner::GUItoMacEvent(const nsGUIEvent& anEvent, EventRecord
 
 nsresult nsPluginInstanceOwner::ScrollPositionWillChange(nsIScrollableView* aScrollable, nscoord aX, nscoord aY)
 {
-#if defined(XP_MAC) || defined(XP_MACOSX)
-    if (mInstance != NULL) {
-        EventRecord scrollEvent;
-        InitializeEventRecord(&scrollEvent);
-        scrollEvent.what = nsPluginEventType_ScrollingBeginsEvent;
-        
-        nsPluginPort* pluginPort = FixUpPluginWindow();
-        if (pluginPort) {
-            nsPluginEvent pluginEvent = { &scrollEvent, nsPluginPlatformWindowRef(GetWindowFromPort(pluginPort->port)) };
-            
-            PRBool eventHandled = PR_FALSE;
-            mInstance->HandleEvent(&pluginEvent, &eventHandled);
+#if defined(XP_MAC) || defined(XP_MACOSX)    
+    CancelTimer();
+    
+    if (mInstance != NULL)
+    {
+        nsCOMPtr<nsIPluginWidget> pluginWidget = do_QueryInterface(mWidget);
+        if (pluginWidget && NS_SUCCEEDED(pluginWidget->StartDrawPlugin()))
+        {
+          EventRecord scrollEvent;
+          InitializeEventRecord(&scrollEvent);
+          scrollEvent.what = nsPluginEventType_ScrollingBeginsEvent;
+          
+          nsPluginPort* pluginPort = FixUpPluginWindow(ePluginPaintDisable);
+          if (pluginPort) {
+              nsPluginEvent pluginEvent = { &scrollEvent, nsPluginPlatformWindowRef(GetWindowFromPort(pluginPort->port)) };
+              
+              PRBool eventHandled = PR_FALSE;
+              mInstance->HandleEvent(&pluginEvent, &eventHandled);
+          }
+
+          pluginWidget->EndDrawPlugin();
         }
     }
 #endif
@@ -3094,30 +3109,39 @@ nsresult nsPluginInstanceOwner::ScrollPositionWillChange(nsIScrollableView* aScr
 nsresult nsPluginInstanceOwner::ScrollPositionDidChange(nsIScrollableView* aScrollable, nscoord aX, nscoord aY)
 {
 #if defined(XP_MAC) || defined(XP_MACOSX)
-    if (mInstance != NULL) {
-        EventRecord scrollEvent;
-        InitializeEventRecord(&scrollEvent);
-        scrollEvent.what = nsPluginEventType_ScrollingEndsEvent;
-
-        nsPluginPort* pluginPort = FixUpPluginWindow();
-        if (pluginPort) {
-            nsPluginEvent pluginEvent = { &scrollEvent, nsPluginPlatformWindowRef(GetWindowFromPort(pluginPort->port)) };
-    
-            PRBool eventHandled = PR_FALSE;
-            mInstance->HandleEvent(&pluginEvent, &eventHandled);
+    if (mInstance != NULL)
+    {
+        nsCOMPtr<nsIPluginWidget> pluginWidget = do_QueryInterface(mWidget);
+        if (pluginWidget && NS_SUCCEEDED(pluginWidget->StartDrawPlugin()))
+        {
+          EventRecord scrollEvent;
+          InitializeEventRecord(&scrollEvent);
+          scrollEvent.what = nsPluginEventType_ScrollingEndsEvent;
+  
+          nsPluginPort* pluginPort = FixUpPluginWindow(ePluginPaintEnable);
+          if (pluginPort) {
+              nsPluginEvent pluginEvent = { &scrollEvent, nsPluginPlatformWindowRef(GetWindowFromPort(pluginPort->port)) };
+      
+              PRBool eventHandled = PR_FALSE;
+              mInstance->HandleEvent(&pluginEvent, &eventHandled);
 #if defined(XP_MACOSX)
-            // FIXME - Only invalidate the newly revealed amount.
-            // mWidget->Invalidate(PR_TRUE);
-            Composite();
+              // FIXME - Only invalidate the newly revealed amount.
+              mWidget->Invalidate(PR_TRUE);
+              //Composite();
 #else
-            if (!eventHandled) {
-                nsRect bogus(0,0,0,0);
-                Paint(bogus, 0);     // send an update event to the plugin
-            }
+              if (!eventHandled) {
+                  nsRect bogus(0,0,0,0);
+                  Paint(bogus, 0);     // send an update event to the plugin
+              }
 #endif
+            }
+          pluginWidget->EndDrawPlugin();
         }
     }
+
 #endif
+
+    StartTimer();
     return NS_OK;
 }
 
@@ -3474,7 +3498,11 @@ nsEventStatus nsPluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
     return rv;
 
 #if defined(XP_MAC) || defined(XP_MACOSX)
-    if (mWidget != NULL) {  // check for null mWidget
+    if (mWidget != NULL)  // check for null mWidget
+    {
+      nsCOMPtr<nsIPluginWidget> pluginWidget = do_QueryInterface(mWidget);
+      if (pluginWidget && NS_SUCCEEDED(pluginWidget->StartDrawPlugin()))
+      {
         EventRecord* event = (EventRecord*)anEvent.nativeMsg;
         if ((event == NULL) || (event->what == nullEvent)  || 
             (anEvent.message == NS_FOCUS_EVENT_START)      || 
@@ -3486,7 +3514,8 @@ nsEventStatus nsPluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
             GUItoMacEvent(anEvent, macEvent);
             event = &macEvent;
         }
-        nsPluginPort* pluginPort = FixUpPluginWindow();
+
+        nsPluginPort* pluginPort = FixUpPluginWindow(ePluginPaintIgnore);
         PRBool eventHandled = PR_FALSE;
         if (pluginPort) {
             nsPluginEvent pluginEvent = { event, nsPluginPlatformWindowRef(GetWindowFromPort(pluginPort->port)) };
@@ -3494,6 +3523,9 @@ nsEventStatus nsPluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
         }
         if (eventHandled && !(anEvent.message == NS_MOUSE_LEFT_BUTTON_DOWN && !mContentFocused))
             rv = nsEventStatus_eConsumeNoDefault;
+
+        pluginWidget->EndDrawPlugin();
+      }
     }
 #endif
 
@@ -3645,23 +3677,29 @@ void nsPluginInstanceOwner::Paint(const nsRect& aDirtyRect, PRUint32 ndc)
   nsRect absDirtyRectInPixels;
   ConvertTwipsToPixels(*mContext, absDirtyRect, absDirtyRectInPixels);
 #endif
-  
-  nsPluginPort* pluginPort = FixUpPluginWindow();
-  if (pluginPort) {
-    EventRecord updateEvent;
-    InitializeEventRecord(&updateEvent);
-    updateEvent.what = updateEvt;
-    updateEvent.message = UInt32(GetWindowFromPort(pluginPort->port));
-  
-    GrafPtr oldPort;
-    ::GetPort(&oldPort);
-    ::SetPort(pluginPort->port);
-  
-    nsPluginEvent pluginEvent = { &updateEvent, nsPluginPlatformWindowRef(GetWindowFromPort(pluginPort->port)) };
-    PRBool eventHandled = PR_FALSE;
-    mInstance->HandleEvent(&pluginEvent, &eventHandled);
-  
-    ::SetPort(oldPort);
+
+  nsCOMPtr<nsIPluginWidget> pluginWidget = do_QueryInterface(mWidget);
+  if (pluginWidget && NS_SUCCEEDED(pluginWidget->StartDrawPlugin()))
+  {
+    nsPluginPort* pluginPort = FixUpPluginWindow(ePluginPaintEnable);
+    if (pluginPort) {
+      EventRecord updateEvent;
+      InitializeEventRecord(&updateEvent);
+      updateEvent.what = updateEvt;
+      updateEvent.message = UInt32(GetWindowFromPort(pluginPort->port));
+    
+      GrafPtr oldPort;
+      ::GetPort(&oldPort);
+      ::SetPort(pluginPort->port);
+    
+      nsPluginEvent pluginEvent = { &updateEvent, nsPluginPlatformWindowRef(::GetWindowFromPort(pluginPort->port)) };
+      PRBool eventHandled = PR_FALSE;
+      mInstance->HandleEvent(&pluginEvent, &eventHandled);
+    
+      ::SetPort(oldPort);
+
+      pluginWidget->EndDrawPlugin();
+    }
   }
 #endif
 
@@ -3697,23 +3735,30 @@ NS_IMETHODIMP_(void) nsPluginInstanceOwner::Notify(nsITimer* /* timer */)
     // validate the plugin clipping information by syncing the plugin window info to
     // reflect the current widget location. This makes sure that everything is updated
     // correctly in the event of scrolling in the window.
-    if (mInstance != NULL) {
-        nsPluginPort* pluginPort = FixUpPluginWindow();
-        if (pluginPort) {
-            EventRecord idleEvent;
-            InitializeEventRecord(&idleEvent);
-            idleEvent.what = nullEvent;
-
-            // give a bogus 'where' field of our null event when hidden, so Flash
-            // won't respond to mouse moves in other tabs, see bug 120875
-            if (!mWidgetVisible)
-                idleEvent.where.h = idleEvent.where.v = 20000;
-
-            nsPluginEvent pluginEvent = { &idleEvent, nsPluginPlatformWindowRef(GetWindowFromPort(pluginPort->port)) };
-
-            PRBool eventHandled = PR_FALSE;
-            mInstance->HandleEvent(&pluginEvent, &eventHandled);
-        }
+    if (mInstance != NULL)
+    {
+        nsCOMPtr<nsIPluginWidget> pluginWidget = do_QueryInterface(mWidget);
+        if (pluginWidget && NS_SUCCEEDED(pluginWidget->StartDrawPlugin()))
+        {
+            nsPluginPort* pluginPort = FixUpPluginWindow(ePluginPaintIgnore);
+            if (pluginPort) {
+                EventRecord idleEvent;
+                InitializeEventRecord(&idleEvent);
+                idleEvent.what = nullEvent;
+                    
+                // give a bogus 'where' field of our null event when hidden, so Flash
+                // won't respond to mouse moves in other tabs, see bug 120875
+                if (!mWidgetVisible)
+                    idleEvent.where.h = idleEvent.where.v = 20000;
+    
+                nsPluginEvent pluginEvent = { &idleEvent, nsPluginPlatformWindowRef(GetWindowFromPort(pluginPort->port)) };
+    
+                PRBool eventHandled = PR_FALSE;
+                mInstance->HandleEvent(&pluginEvent, &eventHandled);
+            }
+            
+            pluginWidget->EndDrawPlugin();
+       }
     }
 #endif
 }
@@ -3735,7 +3780,7 @@ void nsPluginInstanceOwner::StartTimer()
     if (!mPluginTimer) {
           mPluginTimer = do_CreateInstance("@mozilla.org/timer;1", &rv);
           if (rv == NS_OK)
-            rv = mPluginTimer->Init(this, 1020 / 60, NS_PRIORITY_NORMAL, NS_TYPE_REPEATING_SLACK);
+            rv = mPluginTimer->Init(this, /* 1020 / 60 */ 2000, NS_PRIORITY_NORMAL, NS_TYPE_REPEATING_SLACK);
     }
 #endif
 }
@@ -3967,7 +4012,8 @@ static void ConvertTwipsToPixels(nsIPresContext& aPresContext, nsRect& aTwipsRec
 }
 
   // Mac specific code to fix up the port location and clipping region
-#if defined(XP_MAC) || defined(XP_MACOSX)
+#if defined(XP_MAC)
+
   // calculate the absolute position and clip for a widget 
   // and use other windows in calculating the clip
 static void GetWidgetPosClipAndVis(nsIWidget* aWidget,nscoord& aAbsX, nscoord& aAbsY,
@@ -3987,7 +4033,8 @@ static void GetWidgetPosClipAndVis(nsIWidget* aWidget,nscoord& aAbsX, nscoord& a
 
   // Gather up the absolute position of the widget, clip window, and visibilty
   nsCOMPtr<nsIWidget> widget = getter_AddRefs(aWidget->GetParent());
-  while (widget != nsnull) {
+  while (widget != nsnull)
+  {
     if (aIsVisible)
       widget->IsVisible(aIsVisible);
 
@@ -4019,6 +4066,10 @@ static void GetWidgetPosClipAndVis(nsIWidget* aWidget,nscoord& aAbsX, nscoord& a
   if (!aIsVisible)
     aClipRect.Empty();
 } 
+
+#endif
+
+#if defined(XP_MAC) || defined(XP_MACOSX)
 
 #ifdef DO_DIRTY_INTERSECT
 // Convert from a frame relative coordinate to a coordinate relative to its
@@ -4081,13 +4132,16 @@ inline PRUint16 COLOR8TOCOLOR16(PRUint8 color8)
 	return (color8 << 8) | color8;	/* (color8 * 257) == (color8 * 0x0101) */
 }
 
-nsPluginPort* nsPluginInstanceOwner::FixUpPluginWindow()
+// enum { ePluginPaintIgnore, ePluginPaintEnable, ePluginPaintDisable };
+
+nsPluginPort* nsPluginInstanceOwner::FixUpPluginWindow(PRInt32 inPaintState)
 {
   if (mWidget) {
     nsPluginPort* pluginPort = GetPluginPort();
-    nscoord absWidgetX = 0;
-    nscoord absWidgetY = 0;
+
     nsRect widgetClip(0, 0, 0, 0);
+    
+    // printf("FixUpPluginWindow, painting %d\n", inPaintState);
     
     // first, check our view for CSS visibility style
     nsIView *view;
@@ -4095,26 +4149,53 @@ nsPluginPort* nsPluginInstanceOwner::FixUpPluginWindow()
     nsViewVisibility vis;
     view->GetVisibility(vis);
     PRBool isVisible = (vis == nsViewVisibility_kShow) ? PR_TRUE : PR_FALSE;
-
-    GetWidgetPosClipAndVis(mWidget, absWidgetX, absWidgetY, widgetClip, isVisible);
+    
 #if defined(MOZ_WIDGET_COCOA)
+    nsPoint pluginOrigin;
+    nsCOMPtr<nsIPluginWidget> pluginWidget = do_QueryInterface(mWidget);
+    pluginWidget->GetPluginClipRect(widgetClip, pluginOrigin);
+    
+    // check widget visibility (do we really have to do this here?)
+    nsCOMPtr<nsIWidget> widget = mWidget;
+    while (widget)
+    {
+      PRBool widgetVisible;
+      widget->IsVisible(widgetVisible);
+      isVisible &= widgetVisible;
+      
+      widget = getter_AddRefs(widget->GetParent());
+    }
+
+    if (!isVisible)
+      widgetClip.Empty();
+
     // set the port coordinates
     mPluginWindow.x = -pluginPort->portx;
     mPluginWindow.y = -pluginPort->porty;
-    widgetClip.x += mPluginWindow.x - absWidgetX;
-    widgetClip.y += mPluginWindow.y - absWidgetY;
 #else
+    nscoord absWidgetX = 0;
+    nscoord absWidgetY = 0;
+    GetWidgetPosClipAndVis(mWidget, absWidgetX, absWidgetY, widgetClip, isVisible);
     // set the port coordinates
     mPluginWindow.x = absWidgetX;
     mPluginWindow.y = absWidgetY;
 #endif
 
     // fix up the clipping region
-    mPluginWindow.clipRect.top = widgetClip.y;
-    mPluginWindow.clipRect.left = widgetClip.x;
-    mPluginWindow.clipRect.bottom = mPluginWindow.clipRect.top + widgetClip.height;
-    mPluginWindow.clipRect.right = mPluginWindow.clipRect.left + widgetClip.width; 
+    mPluginWindow.clipRect.top    = widgetClip.y;
+    mPluginWindow.clipRect.left   = widgetClip.x;
 
+    if (inPaintState == ePluginPaintDisable)
+    {
+      mPluginWindow.clipRect.bottom = mPluginWindow.clipRect.top;
+      mPluginWindow.clipRect.right  = mPluginWindow.clipRect.left;
+    }
+    else if (inPaintState == ePluginPaintEnable)
+    {
+      mPluginWindow.clipRect.bottom = mPluginWindow.clipRect.top  + widgetClip.height;
+      mPluginWindow.clipRect.right  = mPluginWindow.clipRect.left + widgetClip.width; 
+    }
+    
     // the Mac widget doesn't set the background color right away!!
     // the background color needs to be set here on the plugin port
     GrafPtr savePort;
