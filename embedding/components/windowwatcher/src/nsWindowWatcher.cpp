@@ -47,7 +47,6 @@
 #include "nsIJSContextStack.h"
 #include "nsIObserverService.h"
 #include "nsIScriptGlobalObject.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsISupportsArray.h"
 #include "nsISupportsPrimitives.h"
@@ -539,8 +538,13 @@ nsWindowWatcher::OpenWindowJS(nsIDOMWindow *aParent,
     }
   }
 
-  if (aDialog && argc > 0)
-    AttachArguments(*_retval, argc, argv);
+  if (aDialog && argc > 0) {
+    rv = AttachArguments(*_retval, argc, argv);
+
+    if (NS_FAILED(rv)) {
+      return rv;
+    }
+  }
 
   nsCOMPtr<nsIScriptSecurityManager> secMan;
 
@@ -595,35 +599,26 @@ nsWindowWatcher::OpenWindowJS(nsIDOMWindow *aParent,
     JSContext* ccx = nsnull;
 
     if (stack && NS_SUCCEEDED(stack->Peek(&ccx)) && ccx) {
-      JSObject *global = ::JS_GetGlobalObject(ccx);
+      nsCOMPtr<nsIScriptGlobalObject> sgo;
 
-      if (global) {
-        JSClass* jsclass = ::JS_GetClass(ccx, global);
+      nsWWJSUtils::nsGetStaticScriptGlobal(ccx, ::JS_GetGlobalObject(ccx),
+                                           getter_AddRefs(sgo));
 
-        // Check if the global object on the calling context has
-        // nsISupports * private data
-        if (jsclass &&
-            !((~jsclass->flags) & (JSCLASS_HAS_PRIVATE |
-                                   JSCLASS_PRIVATE_IS_NSISUPPORTS))) {
-          nsISupports* sup = (nsISupports *)::JS_GetPrivate(ccx, global);
+      nsCOMPtr<nsIDOMWindow> w(do_QueryInterface(sgo));
 
-          nsCOMPtr<nsIDOMWindow> w(do_QueryInterface(sup));
+      if (w) {
+        nsCOMPtr<nsIDOMDocument> document;
 
-          if (w) {
-            nsCOMPtr<nsIDOMDocument> document;
+        // Get the document from the window.
+        w->GetDocument(getter_AddRefs(document));
 
-            // Get the document from the window.
-            w->GetDocument(getter_AddRefs(document));
+        nsCOMPtr<nsIDocument> doc(do_QueryInterface(document));
 
-            nsCOMPtr<nsIDocument> doc(do_QueryInterface(document));
+        if (doc) { 
+          nsCOMPtr<nsIURI> uri(dont_AddRef(doc->GetDocumentURL()));
 
-            if (doc) { 
-              nsCOMPtr<nsIURI> uri(dont_AddRef(doc->GetDocumentURL()));
-
-              // Set the referrer
-              loadInfo->SetReferrer(uri);
-            }
-          }
+          // Set the referrer
+          loadInfo->SetReferrer(uri);
         }
       }
     }
@@ -1337,36 +1332,47 @@ nsWindowWatcher::SizeOpenedDocShellItem(nsIDocShellTreeItem *aDocShellItem,
 
 // attach the given array of JS values to the given window, as a property array
 // named "arguments"
-void
+nsresult
 nsWindowWatcher::AttachArguments(nsIDOMWindow *aWindow,
                                  PRUint32 argc, jsval *argv)
 {
   if (argc == 0)
-    return;
+    return NS_OK;
 
   // copy the extra parameters into a JS Array and attach it
   nsCOMPtr<nsIScriptGlobalObject> scriptGlobal(do_QueryInterface(aWindow));
-  if (scriptGlobal) {
-    nsCOMPtr<nsIScriptContext> scriptContext;
-    scriptGlobal->GetContext(getter_AddRefs(scriptContext));
-    if (scriptContext) {
-      JSContext *cx;
-      cx = (JSContext *) scriptContext->GetNativeContext();
-      nsCOMPtr<nsIScriptObjectOwner> owner(do_QueryInterface(aWindow));
-      if (owner) {
-        JSObject *scriptObject;
-        owner->GetScriptObject(scriptContext, (void **) &scriptObject);
-        JSObject *args;
-        args = ::JS_NewArrayObject(cx, argc, argv);
-        if (args) {
-          jsval argsVal = OBJECT_TO_JSVAL(args);
-          // ::JS_DefineProperty(cx, scriptObject, "arguments",
-          // argsVal, NULL, NULL, JSPROP_PERMANENT);
-          ::JS_SetProperty(cx, scriptObject, "arguments", &argsVal);
-        }
-      }
+  NS_ENSURE_TRUE(scriptGlobal, NS_ERROR_UNEXPECTED);
+
+  nsCOMPtr<nsIScriptContext> scriptContext;
+  scriptGlobal->GetContext(getter_AddRefs(scriptContext));
+  if (scriptContext) {
+    JSContext *cx;
+    cx = (JSContext *)scriptContext->GetNativeContext();
+
+    nsresult rv;
+    nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsCOMPtr<nsIXPConnectJSObjectHolder> wrapper;
+    rv = xpc->WrapNative(cx, ::JS_GetGlobalObject(cx), aWindow,
+                         NS_GET_IID(nsIDOMWindow), getter_AddRefs(wrapper));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    JSObject *window_obj;
+    rv = wrapper->GetJSObject(&window_obj);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    JSObject *args;
+    args = ::JS_NewArrayObject(cx, argc, argv);
+    if (args) {
+      jsval argsVal = OBJECT_TO_JSVAL(args);
+      // ::JS_DefineProperty(cx, window_obj, "arguments",
+      // argsVal, NULL, NULL, JSPROP_PERMANENT);
+      ::JS_SetProperty(cx, window_obj, "arguments", &argsVal);
     }
   }
+
+  return NS_OK;
 }
 
 nsresult

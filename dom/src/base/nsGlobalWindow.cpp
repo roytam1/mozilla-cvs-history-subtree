@@ -96,6 +96,7 @@
 #include "nsIEntropyCollector.h"
 #include "nsDOMCID.h"
 #include "nsDOMError.h"
+#include "nsIWindowWatcher.h"
 #include "nsPIWindowWatcher.h"
 #include "nsISupportsPrimitives.h"
 #include "nsDOMClassInfo.h"
@@ -2161,7 +2162,8 @@ GlobalWindowImpl::Open(const nsAReadableString& aUrl,
                        const nsAReadableString& aOptions,
                        nsIDOMWindow **_retval)
 {
-  return OpenInternal(aUrl, aName, aOptions, PR_FALSE, nsnull, 0, _retval);
+  return OpenInternal(aUrl, aName, aOptions, PR_FALSE, nsnull, 0, nsnull,
+                      _retval);
 }
 
 NS_IMETHODIMP
@@ -2204,7 +2206,8 @@ GlobalWindowImpl::Open(nsIDOMWindow **_retval)
     }
   }
 
-  return OpenInternal(url, name, options, PR_FALSE, nsnull, 0, _retval);
+  return OpenInternal(url, name, options, PR_FALSE, nsnull, 0, nsnull,
+                      _retval);
 }
 
 // like Open, but attaches to the new window any extra parameters past 
@@ -2216,7 +2219,8 @@ GlobalWindowImpl::OpenDialog(const nsAReadableString& aUrl,
                              nsISupports* aExtraArgument,
                              nsIDOMWindow** _retval)
 {
-  return OpenInternal(aUrl, aName, aOptions, PR_TRUE, nsnull, 0, _retval);
+  return OpenInternal(aUrl, aName, aOptions, PR_TRUE, nsnull, 0,
+                      aExtraArgument, _retval);
 }
 
 NS_IMETHODIMP
@@ -2259,8 +2263,7 @@ GlobalWindowImpl::OpenDialog(nsIDOMWindow** _retval)
     }
   }
 
-  return OpenInternal(url, name, options, PR_TRUE,
-                      argc > 3 ? argv + 3 : nsnull, argc > 3 ? argc - 3 : 0,
+  return OpenInternal(url, name, options, PR_TRUE, argv, argc, nsnull,
                       _retval);
 }
 
@@ -3088,6 +3091,7 @@ GlobalWindowImpl::OpenInternal(const nsAReadableString& aUrl,
                                const nsAReadableString& aName,
                                const nsAReadableString& aOptions,
                                PRBool aDialog, jsval *argv, PRUint32 argc,
+                               nsISupports *aExtraArgument,
                                nsIDOMWindow **aReturn)
 {
   nsCOMPtr<nsIDOMWindow> domReturn;
@@ -3136,12 +3140,21 @@ GlobalWindowImpl::OpenInternal(const nsAReadableString& aUrl,
     features = ToNewUTF8String(aOptions);
   }
 
-  nsCOMPtr<nsPIWindowWatcher> wwatch(do_GetService(sWindowWatcherContractID));
+  nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService(sWindowWatcherContractID));
   if (wwatch) {
-    PRUint32 extraArgc = argc >= 3 ? argc-3 : 0;
-    rv = wwatch->OpenWindowJS(this, url, name, features, aDialog,
-                              extraArgc, argv+3,
+    if (argc) {
+      nsCOMPtr<nsPIWindowWatcher> pwwatch(do_QueryInterface(wwatch));
+      NS_ENSURE_TRUE(pwwatch, NS_ERROR_UNEXPECTED);
+
+      PRUint32 extraArgc = argc >= 3 ? argc-3 : 0;
+      rv = pwwatch->OpenWindowJS(this, url, name, features, aDialog,
+                                 extraArgc, argv+3,
+                                 getter_AddRefs(domReturn));
+    } else {
+      rv = wwatch->OpenWindow(this, url, name, features, aExtraArgument,
                               getter_AddRefs(domReturn));
+    }
+
     if (domReturn)
       CallQueryInterface(domReturn, aReturn);
   }

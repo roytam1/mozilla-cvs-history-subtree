@@ -197,7 +197,7 @@ protected:
                           const nsAReadableString& aName,
                           const nsAReadableString& aOptions,
                           PRBool aDialog, jsval *argv, PRUint32 argc,
-                          nsIDOMWindow **aReturn);
+                          nsISupports *aExtraArgument, nsIDOMWindow **aReturn);
   static void CloseWindow(nsISupports* aWindow);
 
   // Timeout Functions
