@@ -151,18 +151,11 @@ nsIFrame* nsHTMLReflowCommand::GetContainingBlock(nsIFrame* aFloater) const
   return containingBlock;
 }
 
-void nsHTMLReflowCommand::BuildPath()
+nsresult nsHTMLReflowCommand::BuildPath()
 {
-#ifdef DEBUG_jesup
-  if (mPath.Count() == 0)
-    gReflowsZero++;
-  else if (mPath.Count() <= 8)
-    gReflowsAuto++;
-  else
-    gReflowsLarger++;
-#endif
 
-  mPath.Clear();
+  if (mPath.Count() != 0)
+    return NS_OK; // already built
 
   // Floating frames are handled differently. The path goes from the target
   // frame to the containing block, and then up the hierarchy
@@ -180,6 +173,16 @@ void nsHTMLReflowCommand::BuildPath()
       mPath.AppendElement((void*)f);
     }
   }
+#ifdef DEBUG_jesup
+  if (mPath.Count() == 0)
+    gReflowsZero++;
+  else if (mPath.Count() <= 8)
+    gReflowsAuto++;
+  else
+    gReflowsLarger++;
+#endif
+
+  return NS_OK;
 }
 
 nsresult
@@ -223,6 +226,7 @@ nsHTMLReflowCommand::Dispatch(nsIPresContext*      aPresContext,
     }
     root->DidReflow(aPresContext, nsnull, NS_FRAME_REFLOW_FINISHED);
   }
+  mPath.Clear();
 
   return NS_OK;
 }

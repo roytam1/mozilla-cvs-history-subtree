@@ -1,14 +1,38 @@
 #include "nsReflowTree.h"
 #include "nsIFrame.h"
+#include "nsHTMLReflowCommand.h"
+
+/* static */ nsReflowTree::Node *
+nsReflowTree::Node::Create(nsIFrame *forFrame)
+{
+    Node *node = new Node();
+    node->mFrame = forFrame;
+    node->mFlags = 0;
+    node->mKidU.mChild = 0;
+    return node;
+}
+
+/* static */ void
+nsReflowTree::Node::Destroy(nsReflowTree::Node *node)
+{
+    delete node;
+}
+
+nsReflowTree::Node::~Node()
+{
+    if (HasSingleChild())
+        Destroy(mKidU.mChild);
+    else
+        ChildChunk::Destroy(mKidU.mChunk);
+}
 
 nsReflowTree::Node *
 nsReflowTree::Node::GetChild(nsIFrame *forFrame)
 {
-
     if (!mKidU.mChild)
         // no kids yet, this becomes one
         return mKidU.mChild = Create(forFrame);
-                
+
     if (HasSingleChild()) {
         // our child is this frame, all done
         if (forFrame == mKidU.mChild->GetFrame())
@@ -25,6 +49,34 @@ nsReflowTree::Node::GetChild(nsIFrame *forFrame)
     }
 
     return mKidU.mChunk->GetChild(forFrame);
+}
+
+/* static */ nsReflowTree::Node::ChildChunk *
+nsReflowTree::Node::ChildChunk::Create(nsReflowTree::Node *node)
+{
+    ChildChunk *chunk = new ChildChunk();
+    memset(chunk->mKids + 1, 0, sizeof(chunk->mKids));
+    chunk->mKids[0] = node;
+    chunk->mNext = 0;
+
+    return chunk;
+}
+
+/* static */ void
+nsReflowTree::Node::ChildChunk::Destroy(nsReflowTree::Node::ChildChunk *chunk)
+{
+    delete chunk;
+}
+
+nsReflowTree::Node::ChildChunk::~ChildChunk()
+{
+    for (int i = 0; i < KIDS_CHUNK_SIZE; i++) {
+        if (!mKids[i])
+            break;
+        delete mKids[i];
+    }
+
+    Destroy(mNext);
 }
 
 nsReflowTree::Node *
@@ -59,17 +111,41 @@ nsReflowTree::Node::ChildChunk::GetChild(nsIFrame *forFrame)
 }
 
 nsReflowTree::Node *
+nsReflowTree::MergeCommand(nsHTMLReflowCommand *command)
+{
+    nsIFrame *frame;
+    if (NS_FAILED(command->GetTarget(/* ref */ frame)))
+        return nsnull;
+
+    if (mRoot) {
+        // XXX check that reflow types and other bits match
+    }
+    
+    return AddToTree(frame);
+}
+
+nsReflowTree::~nsReflowTree()
+{
+    delete mRoot;
+}
+
+nsReflowTree::Node *
 nsReflowTree::AddToTree(nsIFrame *frame)
 {
     nsIFrame *parent;
     frame->GetParent(&parent);
 
     if (!parent) {
-        // we're at the root, start merging if we can
+        // no root so far, this is the one.
+        if (!mRoot)
+            return mRoot = Node::Create(frame);
+
+        // we're at the root, start the merging unwind
         if (frame == mRoot->GetFrame())
             return mRoot;
         
         // Can't merge.
+        NS_ASSERTION(frame == mRoot->GetFrame(), "mismatched roots in reflow!");
         return nsnull;
     }
     
@@ -77,6 +153,58 @@ nsReflowTree::AddToTree(nsIFrame *frame)
     if (!parentNode)
         return nsnull;
 
-    return parentNode->AddChild(frame);
+    return parentNode->GetChild(frame);
 }
 
+nsReflowTree::Node *
+nsReflowTree::Node::Iterator::NextChild()
+{
+    if (!mPos) {
+        if (mNode->HasSingleChild()) {
+            mPos = &mNode->mKidU.mChild;
+        } else {
+            mCurrentChunk = mNode->mKidU.mChunk;
+            mPos = &mCurrentChunk->mKids[0];
+        }
+        return *mPos;
+    }
+
+    if (mNode->HasSingleChild())
+        return nsnull;
+
+    if (!*mPos)
+        return nsnull;
+
+
+    if (mPos < &mCurrentChunk->mKids[ChildChunk::KIDS_CHUNK_SIZE]) {
+        mPos++;
+    } else {
+        mCurrentChunk = mCurrentChunk->mNext;
+        if (!mCurrentChunk) {
+            mPos = NS_REINTERPRET_CAST(Node **, &mCurrentChunk);
+        } else {
+            mPos = &mCurrentChunk->mKids[0];
+        }
+    }
+
+    return *mPos;
+}
+
+void
+nsReflowTree::Node::Dump(int depth)
+{
+    fprintf(stderr, "%*s|\n%*s+-- %p%s\n", depth, "", depth, "", (void *)mFrame,
+            IsTarget() ? " (T)" : "");
+
+    Iterator iter(this);
+    Node *child;
+    while (child = iter.NextChild())
+        child->Dump(depth + 2);
+}
+
+void
+nsReflowTree::Dump()
+{
+    fprintf(stderr, "Tree dump:\n");
+    mRoot->Dump(0);
+}

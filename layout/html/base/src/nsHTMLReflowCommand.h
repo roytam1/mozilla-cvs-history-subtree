@@ -173,8 +173,12 @@ public:
   nsresult GetFlags(PRInt32* aFlags);
   nsresult SetFlags(PRInt32 aFlags);
 
+  /*
+   * build the path for this reflow
+   */
+  nsresult BuildPath();
+
 protected:
-  void      BuildPath();
   nsIFrame* GetContainingBlock(nsIFrame* aFloater) const;
 
 private:
