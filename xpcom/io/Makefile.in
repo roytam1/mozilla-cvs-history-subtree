@@ -35,6 +35,7 @@ REQUIRES	= xpcom uconv unicharutil
 CPPSRCS		= \
 		nsEscape.cpp \
 		nsLinebreakConverter.cpp \
+		nsLocalFileUnix.cpp \
 		nsFileSpec.cpp \
 		nsFileSpecStreaming.cpp \
 		nsFileStream.cpp \
@@ -45,9 +46,9 @@ CPPSRCS		= \
 		nsPipe2.cpp \
 		nsSpecialSystemDirectory.cpp \
 		nsUnicharInputStream.cpp \
-        nsBinaryStream.cpp \
-        nsStorageStream.cpp \
-        nsScriptableInputStream.cpp \
+	        nsBinaryStream.cpp \
+		nsStorageStream.cpp \
+		nsScriptableInputStream.cpp \
 		$(NULL)
 
 EXPORTS		= \
@@ -65,17 +66,19 @@ EXPORTS		= \
 		$(NULL)			
 
 XPIDLSRCS	= \
-		nsIPipe.idl \
-		nsIFileSpec.idl \
 		nsIBaseStream.idl \
-		nsIInputStream.idl \
-		nsIOutputStream.idl \
+		nsIBinaryInputStream.idl \
+		nsIBinaryOutputStream.idl  \
 		nsIBufferInputStream.idl \
 		nsIBufferOutputStream.idl \
-        nsIBinaryInputStream.idl \
-        nsIBinaryOutputStream.idl  \
-        nsIStorageStream.idl \
-        nsIScriptableInputStream.idl \
+		nsIFile.idl \
+		nsIFileSpec.idl \
+		nsIInputStream.idl \
+		nsILocalFile.idl \
+		nsIOutputStream.idl \
+		nsIPipe.idl \
+		nsIScriptableInputStream.idl \
+		nsIStorageStream.idl \
 		$(NULL)
 
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))

@@ -28,8 +28,6 @@
 
 /* we're going to need some autoconf loving, I can just tell */
 #include <sys/types.h>
-/* XXXautoconf for glibc */
-#define __USE_BSD
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -38,16 +36,17 @@
 
 #include "nsCRT.h"
 #include "nsCOMPtr.h"
-#include "nsFileUtils.h"
 #include "nsIAllocator.h"
 #include "nsIDirectoryEnumerator.h"
 #include "nsIFile.h"
+#include "nsILocalFile.h"
 #include "nsLocalFileUnix.h"
+#include "nsIComponentManager.h"
 
-#define FILL_STAT_CACHE()                       \
+#define VALIDATE_STAT_CACHE()                   \
   PR_BEGIN_MACRO                                \
   if (!mHaveCachedStat) {                       \
-      fillStatCache();                          \
+      FillStatCache();                          \
       if (!mHaveCachedStat)                     \
          return NSRESULT_FOR_ERRNO();           \
   }                                             \
@@ -58,6 +57,124 @@
     if (!(const char *)mPath)			\
         return NS_ERROR_NOT_INITIALIZED;	\
   PR_END_MACRO
+
+#define mLL_II2L(hi, lo, res)                   \
+  LL_I2L(res, hi);                              \
+  LL_SHL(res, res, 32);                         \
+  LL_ADD(res, res, lo);
+
+#define mLL_L2II(a64, hi, lo)                   \
+  PR_BEGIN_MACRO                                \
+    PRInt64 tmp;                                \
+    LL_SHR(tmp, a64, 32);                       \
+    LL_L2I(hi, tmp);                            \
+    LL_SHL(tmp, a64, 32);                       \
+    LL_SHR(tmp, tmp, 32);                       \
+    LL_L2I(lo, tmp);                            \
+  PR_END_MACRO
+
+/* directory enumerator */
+class NS_COM
+nsDirEnumeratorUnix : public nsISimpleEnumerator
+{
+ public:
+    nsDirEnumeratorUnix();
+    virtual ~nsDirEnumeratorUnix();
+
+    static NS_METHOD Create(nsISupports* outer, const nsIID& aIID,
+                            void* *aInstancePtr);
+
+    // nsISupports interface
+    NS_DECL_ISUPPORTS
+    
+    NS_DECL_NSISIMPLEENUMERATOR
+
+    NS_IMETHOD Init(nsIFile *parent, PRBool ignored);
+ protected:
+    NS_IMETHOD GetNextEntry();
+
+    DIR *mDir;
+    struct dirent *mEntry;
+    nsXPIDLCString mParentPath;
+};
+
+nsDirEnumeratorUnix::nsDirEnumeratorUnix() :
+  mDir(nsnull), mEntry(nsnull)
+{
+    NS_INIT_REFCNT();
+}
+
+nsDirEnumeratorUnix::~nsDirEnumeratorUnix()
+{
+    if (mDir)
+        closedir(mDir);
+}
+
+NS_IMPL_ISUPPORTS1(nsDirEnumeratorUnix, nsISimpleEnumerator)
+
+NS_IMETHODIMP
+nsDirEnumeratorUnix::Init(nsIFile *parent, PRBool resolveSymlinks /*ignored*/)
+{
+    nsXPIDLCString dirPath;
+    if (NS_FAILED(parent->GetPath(getter_Copies(dirPath))) ||
+        (const char *)dirPath == 0)
+        return NS_ERROR_FILE_INVALID_PATH;
+
+    if (NS_FAILED(parent->GetPath(getter_Copies(mParentPath))))
+        return NS_ERROR_FAILURE;
+
+    mDir = opendir(dirPath);
+    if (!mDir)
+        return NSRESULT_FOR_ERRNO();
+    return GetNextEntry();
+}
+
+NS_IMETHODIMP
+nsDirEnumeratorUnix::HasMoreElements(PRBool *result)
+{
+    *result = mDir && mEntry;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDirEnumeratorUnix::GetNext(nsISupports **_retval)
+{
+    nsresult rv;
+    if (!mDir || !mEntry) {
+        *_retval = nsnull;
+        return NS_OK;
+    }
+
+    nsIFile *file = new nsLocalFile();
+    if (!file)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    if (NS_FAILED(rv = file->AppendPath(mEntry->d_name))) {
+        NS_RELEASE(file);
+        return rv;
+    }
+    *_retval = NS_STATIC_CAST(nsISupports *, file);
+    return GetNextEntry();
+}
+
+NS_IMETHODIMP
+nsDirEnumeratorUnix::GetNextEntry()
+{
+    do {
+        errno = 0;
+        mEntry = readdir(mDir);
+
+        /* end of dir or error */
+        if (!mEntry)
+            return NSRESULT_FOR_ERRNO();
+
+        /* keep going past "." and ".." */
+    } while (mEntry->d_name[0] == '.' && 
+             (mEntry->d_name[1] == '\0' || /* .\0 */
+              (mEntry->d_name[1] == '.' &&
+               mEntry->d_name[2] == '\0'))); /* ..\0 */
+    return NS_OK;
+}
 
 nsLocalFile::nsLocalFile() :
     mHaveCachedStat(PR_FALSE)
@@ -86,7 +203,6 @@ nsLocalFile::Create(nsISupports *outer, const nsIID &aIID, void **aInstancePtr)
     return inst->QueryInterface(aIID, aInstancePtr);
 }
 
-
 NS_IMETHODIMP
 nsLocalFile::Clone(nsIFile **file)
 {
@@ -97,13 +213,13 @@ nsLocalFile::Clone(nsIFile **file)
     nsCOMPtr<nsILocalFile> localFile;
     nsresult rv = nsComponentManager::CreateInstance(NS_LOCAL_FILE_PROGID, 
                                                      nsnull, 
-                                                     nsCOMTypeInfo<nsILocalFile>::GetIID(), 
+                                                     NS_GET_IID(nsILocalFile),
                                                      getter_AddRefs(localFile));
     
     if (NS_FAILED(rv)) 
         return rv;
     
-    rv = localfile->InitWithPath(mPath);
+    rv = localFile->InitWithPath(mPath);
     
     if (NS_FAILED(rv)) 
         return rv;
@@ -115,23 +231,65 @@ nsLocalFile::Clone(nsIFile **file)
 }
 
 NS_IMETHODIMP
-nsLocalFile::InitWithPath(PRUint32 pathType, const char *filePath)
+nsLocalFile::InitWithPath(const char *filePath)
 {
     NS_ENSURE_ARG(filePath);
-    NS_ASSERTION(pathType == NATIVE_PATH ||
-                 pathType == UNIX_PATH ||
-                 pathType == NSPR_PATH, "unrecognized path type");
-
-    /* NATIVE_PATH == UNIX_PATH == NSPR_PATH for us */
     mPath = filePath;
-    invalidateCache();
+    InvalidateCache();
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsLocalFile::createAllParentDirectories(PRUint32 permissions)
+nsLocalFile::CreateAllAncestors(PRUint32 permissions)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    /* <jband> I promise to play nice */
+    char *buffer = NS_CONST_CAST(char *, (const char *)mPath),
+        *ptr = buffer;
+
+#ifdef DEBUG_NSIFILE
+    fprintf(stderr, "nsIFile: before: %s\n", buffer);
+#endif
+
+    while ((ptr = strchr(ptr + 1, '/'))) {
+        /*
+         * Sequences of '/' are equivalent to a single '/'.
+         */
+        if (ptr[1] == '/')
+            continue;
+
+        /*
+         * If the path has a trailing slash, don't make the last component here,
+         * because we'll get EEXISTS in Create when we try to build the final
+         * component again, and it's easier to condition the logic here than
+         * there.
+         */
+        if (!ptr[1])
+            break;
+        /* Temporarily NUL-terminate here */
+        *ptr = '\0';
+#ifdef DEBUG_NSIFILE
+        fprintf(stderr, "nsIFile: mkdir(\"%s\")\n", buffer);
+#endif
+        int result = mkdir(buffer, permissions);
+        /* Put the / back before we (maybe) return */
+        *ptr = '/';
+
+        /*
+         * We could get EEXISTS for an existing file -- not directory --
+         * with the name of one of our ancestors, but that's OK: we'll get
+         * ENOTDIR when we try to make the next component in the path,
+         * either here on back in Create, and error out appropriately.
+         */
+        if (result == -1 && errno != EEXIST)
+            return NSRESULT_FOR_ERRNO();
+    }
+
+#ifdef DEBUG_NSIFILE
+    fprintf(stderr, "nsIFile: after: %s\n", buffer);
+#endif
+            
+    return NS_OK;
+
 }
 
 
@@ -179,11 +337,33 @@ nsLocalFile::Create(PRUint32 type, PRUint32 permissions)
 
     if (result == -1 && errno == ENOENT) {
         /*
-         * if we failed because of missing parent components, try to create them
-         * and then retry the original creation.
+         * If we failed because of missing ancestor components, try to create
+         * them and then retry the original creation.
+         * 
+         * Ancestor directories get the same permissions as the file we're
+         * creating, with the X bit set for each of (user,group,other) with
+         * an R bit in the original permissions.  If you want to do anything
+         * fancy like setgid or sticky bits, do it by hand.
          */
-        if (NS_FAILED(createAllParentDirectories(permissions)))
+        int dirperm = permissions;
+        if (permissions & S_IRUSR)
+            dirperm |= S_IXUSR;
+        if (permissions & S_IRGRP)
+            dirperm |= S_IXGRP;
+        if (permissions & S_IROTH)
+            dirperm |= S_IXOTH;
+
+#ifdef DEBUG_NSIFILE
+        fprintf(stderr, "nsIFile: perm = %o, dirperm = %o\n", permissions, 
+                dirperm);
+#endif
+
+        if (NS_FAILED(CreateAllAncestors(dirperm)))
             return NS_ERROR_FAILURE;
+
+#ifdef DEBUG_NSIFILE
+        fprintf(stderr, "nsIFile: Create(\"%s\") again\n", (const char *)mPath);
+#endif
         result = creationFunc((const char *)mPath, permissions);
     }
 
@@ -209,7 +389,7 @@ nsLocalFile::AppendPath(const char *fragment)
     strcat(newPath, "/");
     strcat(newPath, fragment);
     mPath = newPath;
-    invalidateCache();
+    InvalidateCache();
     nsAllocator::Free(newPath);
     return NS_OK;
 }
@@ -221,7 +401,7 @@ nsLocalFile::Normalize()
 }
 
 nsresult
-nsLocalFile::getLeafNameRaw(const char **_retval)
+nsLocalFile::GetLeafNameRaw(const char **_retval)
 {
     CHECK_mPath();
     char *leafName = strrchr((const char *)mPath, '/');
@@ -237,7 +417,7 @@ nsLocalFile::GetLeafName(char **aLeafName)
     NS_ENSURE_ARG_POINTER(aLeafName);
     nsresult rv;
     const char *leafName;
-    if (NS_FAILED(rv = getLeafNameRaw(&leafName)))
+    if (NS_FAILED(rv = GetLeafNameRaw(&leafName)))
 	return rv;
     
     *aLeafName = nsCRT::strdup(leafName);
@@ -247,7 +427,7 @@ nsLocalFile::GetLeafName(char **aLeafName)
 }
 
 NS_IMETHODIMP
-nsLocalFile::GetPath(PRUint32 pathType, char **_retval)
+nsLocalFile::GetPath(char **_retval)
 {
     NS_ENSURE_ARG_POINTER(_retval);
 
@@ -256,9 +436,6 @@ nsLocalFile::GetPath(PRUint32 pathType, char **_retval)
 	return NS_OK;
     }
 
-    NS_ASSERTION(pathType == NATIVE_PATH ||
-                 pathType == UNIX_PATH ||
-                 pathType == NSPR_PATH, "unrecognized path type");
     *_retval = nsCRT::strdup((const char *)mPath);
     if (!*_retval)
         return NS_ERROR_OUT_OF_MEMORY;
@@ -284,36 +461,36 @@ nsLocalFile::MoveTo(nsIFile *newParent, const char *newName)
 }
 
 NS_IMETHODIMP
-nsLocalFile::MoveToFollowingLinks(nsIFile *newParent, const char *newName)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsLocalFile::Execute(const char *args)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
 nsLocalFile::Delete(PRBool recursive)
 {
-    FILL_STAT_CACHE();
+    VALIDATE_STAT_CACHE();
     PRBool isDir = S_ISDIR(mCachedStat.st_mode);
 
     /* XXX ?
      * if (!isDir && recursive)
      *     return NS_ERROR_INVALID_ARG;
      */
-    invalidateCache();
+    InvalidateCache();
 
     if (isDir) {
         if (recursive) {
-            nsCOMPtr<nsIDirectoryEnumerator> iterator;
-            nsresult rv = NS_NewDirectoryEnumerator(this, PR_FALSE,
-                                                    getter_AddRefs(iterator));
-            if (NS_FAILED(rv))
+            nsDirEnumeratorUnix *dir = new nsDirEnumeratorUnix();
+            if (!dir)
+                return NS_ERROR_OUT_OF_MEMORY;
+
+            nsresult rv = dir->Init(this, PR_FALSE);
+            if (NS_FAILED(rv)) {
+                delete dir;
                 return rv;
+            }
+
+            nsCOMPtr<nsISimpleEnumerator> iterator;
+            iterator = do_QueryInterface(dir, &rv);
+            if (NS_FAILED(rv)) {
+                delete dir;
+                return rv;
+            }
+
             PRBool more;
             rv = iterator->HasMoreElements(&more);
             while (NS_SUCCEEDED(rv) && more) {
@@ -342,39 +519,41 @@ nsLocalFile::Delete(PRBool recursive)
 }
 
 NS_IMETHODIMP  
-nsLocalFile::GetLastModificationDate(PRUint32 *aLastModificationDate)
+nsLocalFile::GetLastModificationDate(PRInt64 *aLastModificationDate)
 {
     NS_ENSURE_ARG(aLastModificationDate);
-    FILL_STAT_CACHE();
-    *aLastModificationDate = (PRUint32)mCachedStat.st_mtime;
+    VALIDATE_STAT_CACHE();
+    mLL_II2L(0, (PRUint32)mCachedStat.st_mtime, *aLastModificationDate);
     return NS_OK;
 }
 
 NS_IMETHODIMP  
-nsLocalFile::SetLastModificationDate(PRUint32 aLastModificationDate)
+nsLocalFile::SetLastModificationDate(PRInt64 aLastModificationDate)
 {
     int result;
     if (aLastModificationDate) {
-        FILL_STAT_CACHE();
+        VALIDATE_STAT_CACHE();
         struct utimbuf ut;
         ut.actime = mCachedStat.st_atime;
-        ut.modtime = (time_t)aLastModificationDate;
+        PRInt32 hi, lo;
+        mLL_L2II(aLastModificationDate, hi, lo);
+        ut.modtime = (time_t)lo;
         result = utime(mPath, &ut);
     } else {
         result = utime(mPath, NULL);
     }
-    invalidateCache();
+    InvalidateCache();
     return NSRESULT_FOR_RETURN(result);
 }
 
 NS_IMETHODIMP  
-nsLocalFile::GetLastModificationDateOfLink(PRUint32 *aLastModificationDateOfLink)
+nsLocalFile::GetLastModificationDateOfLink(PRInt64 *aLastModificationDateOfLink)
 {
     NS_ENSURE_ARG(aLastModificationDateOfLink);
     struct stat sbuf;
     if (lstat(mPath, &sbuf) == -1)
         return NSRESULT_FOR_ERRNO();
-    *aLastModificationDateOfLink = (PRUint32)sbuf.st_mtime;
+    mLL_II2L(0, (PRUint32)sbuf.st_mtime, *aLastModificationDateOfLink);
     return NS_OK;
 }
 
@@ -382,7 +561,7 @@ nsLocalFile::GetLastModificationDateOfLink(PRUint32 *aLastModificationDateOfLink
  * utime(2) may or may not dereference symlinks, joy.
  */
 NS_IMETHODIMP  
-nsLocalFile::SetLastModificationDateOfLink(PRUint32 aLastModificationDateOfLink)
+nsLocalFile::SetLastModificationDateOfLink(PRInt64 aLastModificationDateOfLink)
 {
     return SetLastModificationDate(aLastModificationDateOfLink);
 }
@@ -397,7 +576,7 @@ NS_IMETHODIMP
 nsLocalFile::GetPermissions(PRUint32 *aPermissions)
 {
     NS_ENSURE_ARG(aPermissions);
-    FILL_STAT_CACHE();
+    VALIDATE_STAT_CACHE();
     *aPermissions = NORMALIZE_PERMS(mCachedStat.st_mode);
     return NS_OK;
 }
@@ -416,7 +595,7 @@ nsLocalFile::GetPermissionsOfLink(PRUint32 *aPermissionsOfLink)
 NS_IMETHODIMP  
 nsLocalFile::SetPermissions(PRUint32 aPermissions)
 {
-    invalidateCache();
+    InvalidateCache();
     return NSRESULT_FOR_RETURN(chmod(mPath, aPermissions));
 }
 
@@ -427,28 +606,35 @@ nsLocalFile::SetPermissionsOfLink(PRUint32 aPermissions)
 }
 
 NS_IMETHODIMP
-nsLocalFile::GetFileSize(PRUint32 *aFileSize)
+nsLocalFile::GetFileSize(PRInt64 *aFileSize)
 {
     NS_ENSURE_ARG_POINTER(aFileSize);
-    FILL_STAT_CACHE();
-    if (sizeof(off_t) > 4 && mCachedStat.st_size > (off_t)0xffffffff)
-        *aFileSize = 0xffffffff; // return error code?
-    else
-        *aFileSize = (PRUint32)mCachedStat.st_size;
+    InvalidateCache();
+    /* XXX autoconf for and use stat64 if available */
+    mLL_II2L(0, (PRUint32)mCachedStat.st_size, *aFileSize);
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsLocalFile::GetFileSizeOfLink(PRUint32 *aFileSize)
+nsLocalFile::SetFileSize(PRInt64 aFileSize)
+{
+    PRInt32 hi, lo;
+    mLL_L2II(aFileSize, hi, lo);
+    /* XXX truncate64? */
+    if (truncate((const char *)mPath, (off_t)lo) == -1)
+        return NSRESULT_FOR_ERRNO();
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsLocalFile::GetFileSizeOfLink(PRInt64 *aFileSize)
 {
     NS_ENSURE_ARG(aFileSize);
     struct stat sbuf;
     if (lstat(mPath, &sbuf) == -1)
         return NSRESULT_FOR_ERRNO();
-    if (sizeof(off_t) > 4 && mCachedStat.st_size > (off_t)0xffffffff)
-        *aFileSize = 0xffffffff; // return error code?
-    else
-        *aFileSize = (PRUint32)sbuf.st_size;
+    /* XXX autoconf for and use lstat64 if available */
+    mLL_II2L(0, (PRInt32)sbuf.st_size, *aFileSize);
     return NS_OK;
 }
 
@@ -518,7 +704,7 @@ NS_IMETHODIMP
 nsLocalFile::IsDirectory(PRBool *_retval)
 {
     NS_ENSURE_ARG_POINTER(_retval);
-    FILL_STAT_CACHE();
+    VALIDATE_STAT_CACHE();
     *_retval = S_ISDIR(mCachedStat.st_mode);
     return NS_OK;
 }
@@ -527,7 +713,7 @@ NS_IMETHODIMP
 nsLocalFile::IsFile(PRBool *_retval)
 {
     NS_ENSURE_ARG_POINTER(_retval);
-    FILL_STAT_CACHE();
+    VALIDATE_STAT_CACHE();
     *_retval = S_ISREG(mCachedStat.st_mode);
     return NS_OK;
 }
@@ -538,7 +724,7 @@ nsLocalFile::IsHidden(PRBool *_retval)
     NS_ENSURE_ARG_POINTER(_retval);
     nsresult rv;
     const char *leafName;
-    if (NS_FAILED(rv = getLeafNameRaw(&leafName)))
+    if (NS_FAILED(rv = GetLeafNameRaw(&leafName)))
 	return rv;
     *_retval = (leafName[0] == '.');
     return NS_OK;
@@ -548,7 +734,7 @@ NS_IMETHODIMP
 nsLocalFile::IsSymlink(PRBool *_retval)
 {
     NS_ENSURE_ARG_POINTER(_retval);
-    FILL_STAT_CACHE();
+    VALIDATE_STAT_CACHE();
     *_retval = S_ISLNK(mCachedStat.st_mode);
     return NS_OK;
 }
@@ -557,7 +743,7 @@ NS_IMETHODIMP
 nsLocalFile::IsSpecial(PRBool *_retval)
 {
     NS_ENSURE_ARG_POINTER(_retval);
-    FILL_STAT_CACHE();
+    VALIDATE_STAT_CACHE();
     *_retval = !(S_ISLNK(mCachedStat.st_mode) || S_ISREG(mCachedStat.st_mode) ||
 		 S_ISDIR(mCachedStat.st_mode));
     return NS_OK;
@@ -568,7 +754,18 @@ nsLocalFile::Equals(nsIFile *inFile, PRBool *_retval)
 {
     NS_ENSURE_ARG(inFile);
     NS_ENSURE_ARG_POINTER(_retval);
-    return NS_ERROR_NOT_IMPLEMENTED;
+    *_retval = PR_FALSE;
+    
+    nsresult rv;
+    nsXPIDLCString myPath, inPath;
+    
+    if (NS_FAILED(rv = GetPath(getter_Copies(myPath))))
+        return rv;
+    if (NS_FAILED(rv = inFile->GetPath(getter_Copies(inPath))))
+        return rv;
+    *_retval = !strcmp(inPath, myPath);
+
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -580,32 +777,63 @@ nsLocalFile::IsContainedIn(nsIFile *inFile, PRBool recur, PRBool *_retval)
 }
 
 NS_IMETHODIMP
-nsLocalFile::Truncate(PRUint32 aLength)
-{
-    return NSRESULT_FOR_RETURN(truncate(mPath, (off_t)aLength));
-}
-
-NS_IMETHODIMP
 nsLocalFile::GetTarget(char **_retval)
 {
     NS_ENSURE_ARG_POINTER(_retval);
-    FILL_STAT_CACHE();
+    VALIDATE_STAT_CACHE();
     if (!S_ISLNK(mCachedStat.st_mode))
         return NS_ERROR_FILE_INVALID_PATH;
 
-    PRUint32 targetSize;
-    if (NS_FAILED(GetFileSizeOfLink(&targetSize)))
+    PRInt64 targetSize64;
+    if (NS_FAILED(GetFileSizeOfLink(&targetSize64)))
         return NS_ERROR_FAILURE;
 
-    char *target = (char *)nsAllocator::Alloc(targetSize);
+    PRInt32 hi, lo;
+    mLL_L2II(targetSize64, hi, lo);
+    char *target = (char *)nsAllocator::Alloc(lo);
     if (!target)
         return NS_ERROR_OUT_OF_MEMORY;
 
-    int result = readlink(mPath, target, (size_t)targetSize);
+    int result = readlink(mPath, target, (size_t)lo);
     if (!result) {
         *_retval = target;
         return NS_OK;
     }
     nsAllocator::Free(target);
     return NSRESULT_FOR_ERRNO();
+}
+
+NS_IMETHODIMP
+nsLocalFile::Spawn(const char *args)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsLocalFile::GetDirectoryEntries(nsISimpleEnumerator **entries)
+{
+    nsDirEnumeratorUnix *dir = new nsDirEnumeratorUnix();
+    if (!dir)
+        return NS_ERROR_OUT_OF_MEMORY;
+    
+    nsresult rv = dir->Init(this, PR_FALSE);
+    if (NS_FAILED(rv)) {
+        delete dir;
+        return rv;
+    }
+
+    /* QI needed? */
+    *entries = dir;
+    NS_ADDREF(*entries);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsLocalFile::Load(PRLibrary **_retval)
+{
+    NS_ENSURE_ARG_POINTER(_retval);
+    *_retval = PR_LoadLibrary(mPath);
+    if (!*_retval)
+        return NS_ERROR_FAILURE;
+    return NS_OK;
 }
