@@ -2869,7 +2869,7 @@ static void* PR_CALLBACK
 FE_CreateJavaWindow(MWContext *context, LO_JavaAppStruct *java_struct,
 		    int32 xp, int32 yp, int32 xs, int32 ys)
 {
-    LJAppletData* ad = (LJAppletData*)java_struct->session_data;
+    LJAppletData* ad = (LJAppletData*)java_struct->objTag.session_data;
     Widget parent;
     Arg av[20];
     int ac = 0;

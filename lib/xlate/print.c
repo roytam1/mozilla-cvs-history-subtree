@@ -1985,27 +1985,27 @@ void PSFE_DisplayJavaApp(MWContext *context, int iLocation,
 
   int x, y;
   float w, h, tw, th;
-  LJAppletData *ad = (LJAppletData *)java_app->session_data;
+  LJAppletData *ad = (LJAppletData *)java_app->objTag.session_data;
 
   if (!XP_CheckElementSpan(context,
-			  java_app->x + java_app->x_offset, java_app->height))
+			  java_app->objTag.x + java_app->objTag.x_offset, java_app->objTag.height))
     return;
 
   /* Calculate (x,y) coordinate of bottom left corner. */
-  x = java_app->x + java_app->x_offset;
-  y = java_app->y + java_app->y_offset + java_app->height;
+  x = java_app->objTag.x + java_app->objTag.x_offset;
+  y = java_app->objTag.y + java_app->objTag.y_offset + java_app->objTag.height;
 
-  w =  PAGE_TO_POINT_F(java_app->width);
-  h =  PAGE_TO_POINT_F(java_app->height);
+  w =  PAGE_TO_POINT_F(java_app->objTag.width);
+  h =  PAGE_TO_POINT_F(java_app->objTag.height);
 
-  tw = (float)java_app->width  / context->convertPixX;
-  th = (float)java_app->height / context->convertPixY;
+  tw = (float)java_app->objTag.width  / context->convertPixX;
+  th = (float)java_app->objTag.height / context->convertPixY;
 
   XP_FilePrintf(context->prSetup->out, "BeginEPSF\n");
 
   /* Clip to the applet's bounding box */
-  xl_moveto(context, java_app->x, java_app->y);
-  xl_box(context, java_app->width, java_app->height);
+  xl_moveto(context, java_app->objTag.x, java_app->objTag.y);
+  xl_box(context, java_app->objTag.width, java_app->objTag.height);
   XP_FilePrintf(context->prSetup->out, "clip\n");
 
   xl_translate(context, x, y);
