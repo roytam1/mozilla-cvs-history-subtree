@@ -967,7 +967,13 @@ private:
 void FE_RegisterWindow(nsIEventHandler* handler, void* window)
 {
 #if 1
+	LCommander::LCommander::SetDefaultCommander(LCommander::GetTopCommander());
 	CPluginWindow* pluginWindow = new CPluginWindow(handler, WindowRef(window));
+    XP_ASSERT(pluginWindow != NULL);
+    if (pluginWindow != NULL) {
+    	pluginWindow->Show();
+    	pluginWindow->Select();
+    }
 #else
 	((CPluginView*)plugin)->RegisterWindow(window);
 #endif
@@ -979,8 +985,10 @@ void FE_UnregisterWindow(nsIEventHandler* handler, void* window)
 	// Toss the pluginWindow itself.
 	LWindow* pluginWindow = LWindow::FetchWindowObject(WindowPtr(window));
 	if (pluginWindow != NULL) {
+		// Hide the window.
+		pluginWindow->Hide();
 		// Notify PowerPlant that the window is no longer active.
-		pluginWindow->Deactivate();
+		// pluginWindow->Deactivate();
 		delete pluginWindow;
 	}
 #else
