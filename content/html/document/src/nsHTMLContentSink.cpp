@@ -4171,55 +4171,58 @@ HTMLContentSink::OnStreamComplete(nsIStreamLoader* aLoader,
                                   const char* string)
 {
   
+  nsresult rv = NS_OK;
   PRUnichar *unicodeString;
   nsAutoString characterSet;
   nsICharsetConverterManager  *charsetConv = nsnull;
-  nsresult rv = NS_OK;
 
   nsCOMPtr<nsIUnicodeDecoder> unicodeDecoder;
   PRInt32 unicodeLength;
+  
+  if (stringLen) {
 
-  // charset from document default
-  rv = mDocument->GetDocumentCharacterSet(characterSet);
+    // charset from document default
+    rv = mDocument->GetDocumentCharacterSet(characterSet);
 
-  NS_ASSERTION(NS_SUCCEEDED(rv), "Could not get document charset!");
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Could not get document charset!");
 
-  rv = nsServiceManager::GetService(kCharsetConverterManagerCID, 
-                 NS_GET_IID(nsICharsetConverterManager), 
-                 (nsISupports**)&charsetConv);
+    rv = nsServiceManager::GetService(kCharsetConverterManagerCID, 
+                   NS_GET_IID(nsICharsetConverterManager), 
+                   (nsISupports**)&charsetConv);
 
-  if (NS_SUCCEEDED(rv) && (charsetConv))
-  {
-     rv = charsetConv->GetUnicodeDecoder(&characterSet,
-         getter_AddRefs(unicodeDecoder));
-     NS_RELEASE(charsetConv);
-  }
-
-  // converts from the charset to unicode
-  if (NS_SUCCEEDED(rv)) {
-    rv = unicodeDecoder->GetMaxLength(string, stringLen, &unicodeLength);
-    if (NS_SUCCEEDED(rv)) {
-        mUnicodeXferBuf.SetCapacity(unicodeLength);
-        unicodeString = (PRUnichar *) mUnicodeXferBuf.GetUnicode();
-        rv = unicodeDecoder->Convert(string, (PRInt32 *) &stringLen, unicodeString, &unicodeLength);
-        if (NS_SUCCEEDED(rv)) {
-          mUnicodeXferBuf.SetLength(unicodeLength);
-        } else {
-          mUnicodeXferBuf.SetLength(0); 
-        }
+    if (NS_SUCCEEDED(rv) && (charsetConv))
+    {
+       rv = charsetConv->GetUnicodeDecoder(&characterSet,
+           getter_AddRefs(unicodeDecoder));
+       NS_RELEASE(charsetConv);
     }
-  }
 
-  NS_ASSERTION(NS_SUCCEEDED(rv), "Could not convert Script input to Unicode!");
-  nsAutoString jsUnicodeBuffer(CBufDescriptor(unicodeString, PR_TRUE, unicodeLength+1, unicodeLength));
+    // converts from the charset to unicode
+    if (NS_SUCCEEDED(rv)) {
+      rv = unicodeDecoder->GetMaxLength(string, stringLen, &unicodeLength);
+      if (NS_SUCCEEDED(rv)) {
+          mUnicodeXferBuf.SetCapacity(unicodeLength);
+          unicodeString = (PRUnichar *) mUnicodeXferBuf.GetUnicode();
+          rv = unicodeDecoder->Convert(string, (PRInt32 *) &stringLen, unicodeString, &unicodeLength);
+          if (NS_SUCCEEDED(rv)) {
+            mUnicodeXferBuf.SetLength(unicodeLength);
+          } else {
+            mUnicodeXferBuf.SetLength(0); 
+          }
+      }
+    }
 
-  if (NS_OK == aStatus) {
-    PRBool bodyPresent = PreEvaluateScript();
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Could not convert Script input to Unicode!");
+    nsAutoString jsUnicodeBuffer(CBufDescriptor(unicodeString, PR_TRUE, unicodeLength+1, unicodeLength));
 
-    rv = EvaluateScript(jsUnicodeBuffer, mScriptURI, 1, mScriptLanguageVersion);
-    if (NS_FAILED(rv)) return rv;
+    if (NS_OK == aStatus) {
+      PRBool bodyPresent = PreEvaluateScript();
 
-    PostEvaluateScript(bodyPresent);
+      rv = EvaluateScript(jsUnicodeBuffer, mScriptURI, 1, mScriptLanguageVersion);
+      if (NS_FAILED(rv)) return rv;
+
+      PostEvaluateScript(bodyPresent);
+    }
   }
 
   rv = ResumeParsing();
