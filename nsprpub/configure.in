@@ -443,7 +443,6 @@ dnl ========================================================
 dnl Check for gcc -pipe support
 dnl ========================================================
 AC_MSG_CHECKING([for gcc -pipe support])
-
 if test -n "$GNU_CC" && test -n "$GNU_CXX" && test -n "$GNU_AS"; then
     echo '#include <stdio.h>' > dummy-hello.c
     echo 'int main() { printf("Hello World\n"); exit(0); }' >> dummy-hello.c
@@ -2147,8 +2146,6 @@ case "$target" in
             PR_MD_ASFILES=os_SunOS.s
             if test -n "$USE_64"; then
                 PR_MD_ASFILES="$PR_MD_ASFILES os_SunOS_sparcv9.s"
-            else
-                PR_MD_ASFILES="$PR_MD_ASFILES os_SunOS_32.s"
             fi
         fi
     fi
