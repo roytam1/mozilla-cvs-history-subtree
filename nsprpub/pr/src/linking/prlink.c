@@ -32,6 +32,9 @@
  * GPL.
  */
 
+#ifdef LINUX
+#define _GNU_SOURCE 1
+#endif
 #include "primpl.h"
 
 #include <string.h>
