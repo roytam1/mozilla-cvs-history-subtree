@@ -916,8 +916,9 @@ nsresult nsNNTPProtocol::LoadUrl(nsIURI * aURL, nsISupports * aConsumer)
   rv = m_newsFolder->GetNntpServer(getter_AddRefs(m_nntpServer));
   if (NS_FAILED(rv) || !m_nntpServer) goto FAIL;
 
-  if (m_messageID && commandSpecificData && !PL_strcmp (commandSpecificData, "?cancel"))
-	cancel = PR_TRUE;
+  if ((m_messageID || m_key) && commandSpecificData && PL_strstr(commandSpecificData, "?cancel")) {
+     cancel = PR_TRUE;
+  }
 
   NET_SACopy(&m_path, m_messageID);
 
@@ -2145,9 +2146,13 @@ PRInt32 nsNNTPProtocol::SendFirstNNTPCommandResponse()
             
             char outputBuffer[OUTPUT_BUFFER_SIZE];
 
-            NS_ASSERTION(m_messageID && (m_key != nsMsgKey_None), "unexpected");
-			if (m_messageID && (m_key != nsMsgKey_None)) {
-                PR_snprintf(outputBuffer,OUTPUT_BUFFER_SIZE,"<P>&lt;%.512s&gt; (%lu)", m_messageID, m_key);
+            NS_ASSERTION((m_key != nsMsgKey_None) && m_newsFolder, "yikes");
+			if ((m_key != nsMsgKey_None) && m_newsFolder) {
+                nsXPIDLCString messageID;
+                rv = m_newsFolder->GetMessageIdForKey(m_key, getter_Copies(messageID));
+                NS_ENSURE_SUCCESS(rv,rv);
+
+                PR_snprintf(outputBuffer,OUTPUT_BUFFER_SIZE,"<P>&lt;%.512s&gt; (%lu)", (const char *)messageID, m_key);
                 errorHtml.AppendWithConversion(outputBuffer);
 			}
 

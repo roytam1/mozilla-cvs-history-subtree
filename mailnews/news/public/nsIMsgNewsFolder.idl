@@ -59,6 +59,9 @@ interface nsIMsgNewsFolder : nsISupports {
   void removeMessage(in nsMsgKey key); 
   void cancelComplete();
   void cancelFailed();
+
+  string getMessageIdForKey(in nsMsgKey key);
+
   void getNextNMessages(in nsIMsgWindow aMsgWindow);
   void notifyDownloadedLine(in string line, in nsMsgKey key);
 };

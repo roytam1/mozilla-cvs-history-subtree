@@ -1790,3 +1790,14 @@ NS_IMETHODIMP nsMsgNewsFolder::Compact(nsIUrlListener *aListener)
   }
   return rv;
 }
+
+NS_IMETHODIMP nsMsgNewsFolder::GetMessageIdForKey(nsMsgKey key, char **result)
+{
+  nsresult rv;
+
+  nsCOMPtr <nsIMsgDBHdr> hdr;
+  rv = mDatabase->GetMsgHdrForKey(key, getter_AddRefs(hdr));
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  return hdr->GetMessageId(result);
+}
