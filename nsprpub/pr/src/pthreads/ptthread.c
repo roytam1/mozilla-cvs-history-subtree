@@ -75,6 +75,42 @@ static PRIntn pt_PriorityMap(PRThreadPriority pri)
 }
 #endif
 
+#if defined(GC_LEAK_DETECTOR) && (__GLIBC__ >= 2) && defined(__i386__) 
+
+#include <setjmp.h>
+
+typedef struct stack_frame stack_frame;
+
+struct stack_frame {
+    stack_frame* next;
+    void* pc;
+};
+
+static stack_frame* GetStackFrame()
+{
+    jmp_buf jb;
+    stack_frame* currentFrame;
+    setjmp(jb);
+    currentFrame = (stack_frame*)(jb[0].__jmpbuf[JB_BP]);
+    currentFrame = currentFrame->next;
+    return currentFrame;
+}
+
+static void* GetStackTop()
+{
+    stack_frame* frame;
+    frame = GetStackFrame();
+    while (frame != NULL)
+    {
+        ptrdiff_t pc = (ptrdiff_t)frame->pc;
+        if ((pc < 0x08000000) || (pc > 0x7fffffff) || (frame->next < frame))
+            return frame;
+        frame = frame->next;
+    }
+    return NULL;
+}
+#endif /* GC_LEAK_DETECTOR && (__GLIBC__ >= 2) && __i386__ */
+
 /*
 ** Initialize a stack for a native pthread thread
 */
@@ -91,8 +127,13 @@ static void _PR_InitializeStack(PRThreadStack *ts)
         ts->stackBottom = ts->allocBase + ts->stackSize;
         ts->stackTop = ts->allocBase;
 #else
+#ifdef GC_LEAK_DETECTOR
+        ts->stackTop    = GetStackTop();
+        ts->stackBottom = ts->stackTop - ts->stackSize;
+#else
         ts->stackTop    = ts->allocBase;
         ts->stackBottom = ts->allocBase - ts->stackSize;
+#endif
 #endif
     }
 }
@@ -1031,7 +1072,7 @@ PR_IMPLEMENT(PRStatus) PR_EnumerateThreads(PREnumerator func, void *arg)
          */
         PRThread* next = thred->next;
 
-        if (thred->state & PT_THREAD_GCABLE)
+        if (_PT_IS_GCABLE_THREAD(thred))
         {
 #if !defined(_PR_DCETHREADS)
             PR_ASSERT((thred == me) || (thred->suspend & PT_THREAD_SUSPENDED));
@@ -1095,7 +1136,7 @@ static void suspend_signal_handler(PRIntn sig)
 	PRThread *me = PR_CurrentThread();
 
 	PR_ASSERT(me != NULL);
-	PR_ASSERT(me->state & PT_THREAD_GCABLE);
+	PR_ASSERT(_PT_IS_GCABLE_THREAD(me));
 	PR_ASSERT((me->suspend & PT_THREAD_SUSPENDED) == 0);
 
 	PR_LOG(_pr_gc_lm, PR_LOG_ALWAYS, 
@@ -1286,7 +1327,7 @@ PR_IMPLEMENT(void) PR_SuspendAll()
 #endif
     while (thred != NULL)
     {
-	    if ((thred != me) && (thred->state & PT_THREAD_GCABLE))
+	    if ((thred != me) && _PT_IS_GCABLE_THREAD(thred))
     		PR_SuspendSet(thred);
         thred = thred->next;
     }
@@ -1295,7 +1336,7 @@ PR_IMPLEMENT(void) PR_SuspendAll()
     thred = pt_book.first;
     while (thred != NULL)
     {
-	    if ((thred != me) && (thred->state & PT_THREAD_GCABLE))
+	    if ((thred != me) && _PT_IS_GCABLE_THREAD(thred))
             PR_SuspendTest(thred);
         thred = thred->next;
     }
@@ -1328,7 +1369,7 @@ PR_IMPLEMENT(void) PR_ResumeAll()
 
     while (thred != NULL)
     {
-	    if ((thred != me) && (thred->state & PT_THREAD_GCABLE))
+	    if ((thred != me) && _PT_IS_GCABLE_THREAD(thred))
     	    PR_ResumeSet(thred);
         thred = thred->next;
     }
@@ -1336,7 +1377,7 @@ PR_IMPLEMENT(void) PR_ResumeAll()
     thred = pt_book.first;
     while (thred != NULL)
     {
-	    if ((thred != me) && (thred->state & PT_THREAD_GCABLE))
+	    if ((thred != me) && _PT_IS_GCABLE_THREAD(thred))
     	    PR_ResumeTest(thred);
         thred = thred->next;
     }
