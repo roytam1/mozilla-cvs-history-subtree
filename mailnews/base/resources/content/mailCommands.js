@@ -345,22 +345,14 @@ function SubscribeOKCallback(changeTable)
     }
 }
 
-function SaveAsFile(message)
+function SaveAsFile(uri)
 {
-	var messageResource = message.QueryInterface(Components.interfaces.nsIRDFResource);
-	var uri = messageResource.Value;
-	//dump (uri);
-	if (uri)
-		messenger.saveAs(uri, true, null, msgWindow);
+	if (uri) messenger.saveAs(uri, true, null, msgWindow);
 }
 
-function SaveAsTemplate(message, folder)
+function SaveAsTemplate(uri, folder)
 {
-	var messageResource = message.QueryInterface(Components.interfaces.nsIRDFResource);
-	var uri = messageResource.Value;
-	// dump (uri);
-	if (uri)
-    {
+	if (uri) {
 		var identity = getIdentityForServer(folder.server);
 		messenger.saveAs(uri, false, identity, msgWindow);
 	}
