@@ -50,7 +50,7 @@ nsCacheMetaData::nsCacheMetaData()
 
 nsCacheMetaData::~nsCacheMetaData()
 {
-    if (intialized)
+    if (initialized)
         PL_DHashTableFinish(&table);
 }
 
