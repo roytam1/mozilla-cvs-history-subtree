@@ -26,7 +26,7 @@ NSPR_RELEASE_TAG	= v4.1.2
 
 # NSS - Network Security Services
 NSSVERS			= 3
-NSS_RELEASE_TAG		= NSS_3_3_1_RTM
+NSS_RELEASE_TAG		= NSS_3_3_2_RTM
 
 # SVRCORE - Client/server utility library
 SVRCORE_RELEASE_TAG	= SVRCORE_3_3_RTM
