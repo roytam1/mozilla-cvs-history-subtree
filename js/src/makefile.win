@@ -89,11 +89,15 @@ DEFFILE		= $(LIBRARY_NAME).def
 !endif
 !endif
 
-FDLIBM_LIBRARY	=	fdlibm\$(OBJDIR)\fdlibm.lib
+FDLIBM_LIBRARY	= fdlibm\$(OBJDIR)\fdlibm.lib
 
-SUB_LIBRARIES=$(FDLIBM_LIBRARY)
-LLIBS=$(LIBNSPR)
-LCFLAGS= $(LCFLAGS) -DEXPORT_JS_API
+SUB_LIBRARIES	= $(FDLIBM_LIBRARY)
+
+# XXX We need to add SUB_LIBRARIES _back_ to $(LLIBS), because
+# although it wants to be, it isn't a proper EXPORT_LIBRARY.
+LLIBS		= $(LIBNSPR) $(SUB_LIBRARIES)
+
+LCFLAGS		= $(LCFLAGS) -DEXPORT_JS_API
 
 #//------------------------------------------------------------------------
 #// 
