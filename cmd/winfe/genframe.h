@@ -264,15 +264,11 @@ protected:
 	afx_msg void OnFishCam(); 
     afx_msg void OnShowBookmarkWindow();
     afx_msg void OnShowAddressBookWindow();
-<<<<<<< genframe.h
-#if defined(JAVA) || defined(OJI)
-=======
 #ifdef MOZ_MAIL_NEWS
 	afx_msg void OnMigrationTools();
 	afx_msg void OnUpdateMigrationTools(CCmdUI* pCmdUI);
 #endif //MOZ_MAIL_NEWS
-#ifdef JAVA
->>>>>>> 3.1.16.1
+#if defined(JAVA) || defined(OJI)
 	afx_msg void OnToggleJavaConsole();
 	afx_msg void OnUpdateJavaConsole(CCmdUI* pCmdUI);
 #endif

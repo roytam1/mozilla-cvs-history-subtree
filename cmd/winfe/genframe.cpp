@@ -792,15 +792,11 @@ BEGIN_MESSAGE_MAP(CGenericFrame, CFrameWnd)
 	ON_COMMAND(ID_OPEN_NEWS_WINDOW, OnOpenNewsWindow)
     ON_COMMAND(ID_WINDOW_BOOKMARKWINDOW, OnShowBookmarkWindow)
     ON_COMMAND(ID_WINDOW_ADDRESSBOOK, OnShowAddressBookWindow)
-<<<<<<< genframe.cpp
-#if defined(OJI) || defined(JAVA)
-=======
 #ifdef MOZ_MAIL_NEWS
     ON_COMMAND(ID_MIGRATION_TOOLS, OnMigrationTools)
     ON_UPDATE_COMMAND_UI(ID_MIGRATION_TOOLS, OnUpdateMigrationTools)
 #endif //MOZ_MAIL_NEWS
-#ifdef JAVA
->>>>>>> 3.2.4.1
+#if defined(OJI) || defined(JAVA)
     ON_COMMAND(ID_OPTIONS_SHOWJAVACONSOLE, OnToggleJavaConsole)
     ON_UPDATE_COMMAND_UI(ID_OPTIONS_SHOWJAVACONSOLE, OnUpdateJavaConsole)
 #endif
