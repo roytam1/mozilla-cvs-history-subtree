@@ -39,6 +39,7 @@
 #include "plstr.h"
 #include "prtime.h"
 #include "prlong.h"
+#include "nsIPresContext.h"
 
 #include "nsIImgDecoder.h"
 
@@ -187,6 +188,8 @@ struct il_container_struct {
                                    -1 means loop infinitely */
     int is_looping;             /* TRUE if this is the second or subsequent
                                    pass of an animation. */
+    nsImageAnimation animate_request;        /* Set in nsPresContext.
+                                    normal = 0; one frame = 1; one loop = 2 */
     int is_aborted;             /* True if aborted by NetLib. */
 	PRPackedBool is_url_loading;/* TRUE if NetLib is currently loading the URL. */
     int is_multipart;           /* TRUE if stream is known to be multipart. */
