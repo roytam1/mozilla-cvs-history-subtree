@@ -1828,10 +1828,10 @@ GetClassPrototype(JSContext *cx, JSObject *scope, const char *name,
 JSObject *
 js_NewObject(JSContext *cx, JSClass *clasp, JSObject *proto, JSObject *parent)
 {
-    JSObject *obj, *ctor;
+    JSObject *obj;
     JSObjectOps *ops;
     JSObjectMap *map;
-    jsval cval;
+    JSClass *protoclasp;
     uint32 nslots, i;
     jsval *newslots;
 
@@ -1860,20 +1860,17 @@ js_NewObject(JSContext *cx, JSClass *clasp, JSObject *proto, JSObject *parent)
      */
     if (proto &&
         (map = proto->map)->ops == ops &&
-        ((clasp->flags ^ OBJ_GET_CLASS(cx, proto)->flags) &
-         (JSCLASS_HAS_PRIVATE |
-          (JSCLASS_RESERVED_SLOTS_MASK << JSCLASS_RESERVED_SLOTS_SHIFT)))
-        == 0) {
-        /* Default parent to the parent of the prototype's constructor. */
-        if (!parent) {
-            if (!OBJ_GET_PROPERTY(cx, proto,
-                                  (jsid)cx->runtime->atomState.constructorAtom,
-                                  &cval)) {
-                goto bad;
-            }
-            if (JSVAL_IS_OBJECT(cval) && (ctor = JSVAL_TO_OBJECT(cval)) != NULL)
-                parent = OBJ_GET_PARENT(cx, ctor);
-        }
+        ((protoclasp = OBJ_GET_CLASS(cx, proto)) == clasp ||
+         (!((protoclasp->flags ^ clasp->flags) &
+            (JSCLASS_HAS_PRIVATE |
+             (JSCLASS_RESERVED_SLOTS_MASK << JSCLASS_RESERVED_SLOTS_SHIFT))))))
+    {
+        /*
+         * Default parent to the parent of the prototype, which was set from
+         * the parent of the prototype's constructor.
+         */
+        if (!parent)
+            parent = OBJ_GET_PARENT(cx, proto);
 
         /* Share the given prototype's map. */
         obj->map = js_HoldObjectMap(cx, map);
