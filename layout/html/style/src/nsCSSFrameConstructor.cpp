@@ -5863,10 +5863,6 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         processChildren = PR_TRUE;
         isReplaced = PR_TRUE;
 
-
-        nsCOMPtr<nsIBoxLayout> layout;
-        NS_NewBulletinBoardLayout(aPresShell, layout);
-
         rv = NS_NewStackFrame(aPresShell, &newFrame);
 
          if (IsScrollable(aPresContext, display)) {
