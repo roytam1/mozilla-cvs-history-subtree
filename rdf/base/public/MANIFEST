@@ -7,5 +7,5 @@ nsIRDFNode.h
 nsIRDFObserver.h
 nsIRDFResourceFactory.h
 nsIRDFService.h
-nsIRDFXMLDocument.h
+nsIRDFXMLDataSource.h
 nsIRDFXMLSource.h

@@ -42,7 +42,7 @@ static NS_DEFINE_CID(kRDFHTMLBuilderCID,        NS_RDFHTMLBUILDER_CID);
 static NS_DEFINE_CID(kRDFInMemoryDataSourceCID, NS_RDFINMEMORYDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFServiceCID,            NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kRDFContentSinkCID,        NS_RDFCONTENTSINK_CID);
-static NS_DEFINE_CID(kRDFStreamDataSourceCID,   NS_RDFSTREAMDATASOURCE_CID);
+static NS_DEFINE_CID(kRDFXMLDataSourceCID,      NS_RDFXMLDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFTreeBuilderCID,        NS_RDFTREEBUILDER_CID);
 
 class RDFFactoryImpl : public nsIFactory
@@ -131,8 +131,8 @@ RDFFactoryImpl::CreateInstance(nsISupports *aOuter,
         if (NS_FAILED(rv = NS_NewRDFInMemoryDataSource((nsIRDFDataSource**) &inst)))
             return rv;
     }
-    else if (mClassID.Equals(kRDFStreamDataSourceCID)) {
-        if (NS_FAILED(rv = NS_NewRDFStreamDataSource((nsIRDFDataSource**) &inst)))
+    else if (mClassID.Equals(kRDFXMLDataSourceCID)) {
+        if (NS_FAILED(rv = NS_NewRDFXMLDataSource((nsIRDFXMLDataSource**) &inst)))
           return rv;
     }
     else if (mClassID.Equals(kRDFBookmarkDataSourceCID)) {
