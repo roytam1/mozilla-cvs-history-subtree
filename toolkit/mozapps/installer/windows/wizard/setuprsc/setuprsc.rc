@@ -139,7 +139,7 @@ CLASS "MozillaSetupDlg"
 FONT 8, "MS Sans Serif"
 BEGIN
     CONTROL         "",IDC_RADIO_DECLINE,"Button",BS_AUTORADIOBUTTON | 
-                    WS_TABSTOP,11,122,295,9
+                    WS_TABSTOP,11,122,295,9 
     CONTROL         "",IDC_RADIO_ACCEPT,"Button",BS_AUTORADIOBUTTON | 
                     WS_GROUP | WS_TABSTOP,11,109,295,9
     EDITTEXT        IDC_EDIT_LICENSE,11,29,295,72,ES_MULTILINE | 

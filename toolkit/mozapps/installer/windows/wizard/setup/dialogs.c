@@ -338,8 +338,7 @@ LRESULT CALLBACK DlgProcLicense(HWND hDlg, UINT msg, WPARAM wParam, LONG lParam)
     SetDlgItemText(hDlg, IDC_RADIO_DECLINE, diLicense.szRadioDecline);
 
     // Check the "Decline" Radio button by default. 
-    CheckDlgButton(hDlg, IDC_RADIO_DECLINE, BST_CHECKED);
-    SendMessage(GetDlgItem(hDlg, IDC_RADIO_DECLINE), BM_SETCHECK, BST_CHECKED, 0);
+    CheckDlgButton(hDlg, IDC_RADIO_ACCEPT, BST_CHECKED);
 
     // License Text
     lstrcpy(szBuf, szSetupDir);
@@ -382,7 +381,7 @@ LRESULT CALLBACK DlgProcLicense(HWND hDlg, UINT msg, WPARAM wParam, LONG lParam)
       // Wizard dialog title
       PropSheet_SetTitle(GetParent(hDlg), 0, (LPTSTR)diLicense.szTitle); 
 
-      if (IsDlgButtonChecked(hDlg, IDC_RADIO_DECLINE) == BST_CHECKED) 
+      if (IsDlgButtonChecked(hDlg, IDC_RADIO_DECLINE) == BST_CHECKED)
         PropSheet_SetWizButtons(GetParent(hDlg), PSWIZB_BACK);  
       else
         PropSheet_SetWizButtons(GetParent(hDlg), PSWIZB_NEXT|PSWIZB_BACK);
