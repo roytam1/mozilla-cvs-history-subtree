@@ -52,7 +52,6 @@ REQUIRES	= xpcom \
 		  msgcompose \
 		  appcomps \
 		  intl \
-		  layout_xul \
 		  $(NULL)
 
 CPPSRCS		= \
