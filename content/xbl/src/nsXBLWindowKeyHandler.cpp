@@ -254,6 +254,7 @@ nsXBLWindowKeyHandler::WalkHandlersInternal(nsIDOMKeyEvent* aKeyEvent, nsIAtom* 
           rec = do_QueryInterface(elt);
         rv = currHandler->ExecuteHandler(rec, aKeyEvent);
         if (NS_SUCCEEDED(rv)) {
+          aKeyEvent->PreventDefault();
           return NS_OK;
         }
       }
