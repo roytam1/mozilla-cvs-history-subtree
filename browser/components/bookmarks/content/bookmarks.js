@@ -292,14 +292,14 @@ var BookmarksCommand = {
       break;
     case "Bookmark":
       commands = ["bm_open", "bm_openinnewwindow", "bm_openinnewtab", "bm_separator",
-                  "bm_newfolder", "bm_separator",
+                  "bm_newbookmark", "bm_newfolder", "bm_newseparator", "bm_separator",
                   "cut", "copy", "paste", "bm_separator",
                   "delete", "bm_separator",
                   "bm_properties"];
       break;
     case "Folder":
       commands = ["bm_expandfolder", "bm_openfolder", "bm_managefolder", "bm_separator", 
-                  "bm_newfolder", "bm_separator",
+                  "bm_newbookmark", "bm_newfolder", "bm_newseparator", "bm_separator",
                   "cut", "copy", "paste", "bm_separator",
                   "delete", "bm_separator",
                   "bm_properties"];
@@ -682,7 +682,7 @@ var BookmarksCommand = {
   {
     var selection = BookmarksUtils.getSelectionFromResource(aResource, aTarget.parent);
     var ok        = BookmarksUtils.insertAndCheckSelection(aTxnType, selection, aTarget);
-    if (ok) {
+    if (ok && aTxnType != "newseparator") {
       ok = this.openBookmarkProperties(selection);
       if (!ok)
         BookmarksCommand.deleteBookmark(selection);
