@@ -36,7 +36,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#ifdef DEBUG_darinf
 #include <stdio.h>
+#endif
 
 #include "nsXFormsSubmissionElement.h"
 #include "nsXFormsAtoms.h"
@@ -224,8 +226,10 @@ nsXFormsSubmissionElement::OnCreated(nsIXTFGenericElementWrapper *aWrapper)
 
   nsresult rv = target->AddEventListener(NS_LITERAL_STRING("xforms-submit"),
                                          this, PR_FALSE);
+#ifdef DEBUG_darinf
   if (NS_FAILED(rv))
     printf("+++ AddEventListener failed [rv=%x]\n", rv);
+#endif
   return NS_OK;
 }
 
@@ -246,7 +250,9 @@ nsXFormsSubmissionElement::HandleEvent(nsIDOMEvent *aEvent)
 void
 nsXFormsSubmissionElement::Submit()
 {
+#ifdef DEBUG_darinf
   printf("+++ nsXFormsSubmissionElement::Submit\n");
+#endif
 
   // 1. ensure that we are not currently processing a xforms-submit on our model
 
@@ -491,8 +497,10 @@ nsXFormsSubmissionElement::AppendDataToURI(nsIDOMNode *data, nsString &uri,
 nsresult
 nsXFormsSubmissionElement::SendData(nsString &uri, nsIInputStream *stream)
 {
+#ifdef DEBUG_darinf
   printf("+++ sending to uri=%s [stream=%p]\n",
       NS_ConvertUTF16toUTF8(uri).get(), (void*) stream);
+#endif
 
   // XXX need to properly support the various 'replace' modes and trigger
   //     xforms-submit-done or xforms-submit-error when appropriate.
