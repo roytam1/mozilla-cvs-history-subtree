@@ -360,7 +360,7 @@ function RerootFolder(uri, newFolder, viewType, viewFlags, sortType, sortOrder)
 
   SetUpToolbarButtons(uri);
 
-  UpdateStatusMessageCounts(newFolder);
+  UpdateStatusMessageCounts(gMsgFolderSelected);
   
   // hook for extra toolbar items
   var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
@@ -849,6 +849,7 @@ function FolderPaneSelectionChange()
                     dbFolderInfo.getBooleanProperty("searchOnline", searchOnline, false);
                     // trick the view code into updating the real folder...
                     gCurrentVirtualFolderUri = uriToLoad;
+                    viewDebug("uriToLoad = " + uriToLoad + "\n");
                     var srchFolderUri = dbFolderInfo.getCharPtrProperty("searchFolderUri");
                     var srchFolderUriArray = srchFolderUri.split('|');
                     // cross folder search

@@ -165,7 +165,7 @@ var folderListener = {
             if(folderResource) {
               var folderURI = folderResource.Value;
               if(currentURI == folderURI) {
-                UpdateStatusMessageCounts(folder);
+                UpdateStatusMessageCounts(gMsgFolderSelected);
               }
             }
           }
