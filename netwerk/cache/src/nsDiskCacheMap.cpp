@@ -50,6 +50,35 @@ nsDiskCacheRecord* nsDiskCacheMap::GetRecord(PRUint32 hashNumber)
     return oldestRecord;
 }
 
+void nsDiskCacheMap::DeleteRecord(PRUint32 hashNumber)
+{
+    nsDiskCacheBucket& bucket = mBuckets[(hashNumber & (kBucketsPerTable - 1))];
+    for (int r = 0; r < kRecordsPerBucket; ++r) {
+        nsDiskCacheRecord* record = &bucket.mRecords[r];
+        if (record->HashNumber() == hashNumber) {
+            nsDiskCacheRecord* deletedRecord = record;
+            nsDiskCacheRecord* lastRecord = nsnull;
+            // XXX use binary search to find the end, much quicker.
+            // find the last record, to fill in the deleted record.
+            for (int j = r + 1; j < kRecordsPerBucket; ++j) {
+                record = &bucket.mRecords[j];
+                if (record->HashNumber() == 0) {
+                    lastRecord = record - 1;
+                    break;
+                }
+            }
+            // copy the last record, to the newly deleted record.
+            if (lastRecord && deletedRecord != lastRecord) {
+                *deletedRecord = *lastRecord;
+                deletedRecord = lastRecord;
+            }
+            // mark record as free.
+            deletedRecord->SetHashNumber(0);
+            break;
+        }
+    }
+}
+
 nsresult nsDiskCacheMap::Read(nsIInputStream* input)
 {
     nsresult rv;

@@ -68,6 +68,7 @@ public:
     PRUint32& EntryCount() { return mHeader.mEntryCount; }
 
     nsDiskCacheRecord* GetRecord(PRUint32 hashNumber);
+    void DeleteRecord(PRUint32 hashNumber);
     
     nsresult Read(nsIInputStream* input);
     nsresult Write(nsIOutputStream* output);
