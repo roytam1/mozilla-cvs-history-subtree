@@ -70,8 +70,13 @@
 #define _PR_POLL_AVAILABLE
 #define _PR_USE_POLL
 #define _PR_STAT_HAS_ST_ATIM
+#ifdef SOLARIS2_5
+#define _PR_HAVE_SYSV_SEMAPHORES
+#define PR_HAVE_SYSV_NAMED_SHARED_MEMORY
+#else
 #define _PR_HAVE_POSIX_SEMAPHORES
 #define PR_HAVE_POSIX_NAMED_SHARED_MEMORY
+#endif
 
 #include "prinrval.h"
 PR_EXTERN(PRIntervalTime) _MD_Solaris_GetInterval(void);
