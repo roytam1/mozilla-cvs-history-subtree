@@ -144,6 +144,8 @@ XFE_NavCenterView::XFE_NavCenterView(XFE_Component *toplevel_component,
 XFE_NavCenterView::~XFE_NavCenterView()
 {
 	D(printf("XFE_NavCenterView DESTRUCTING\n"););
+    if (m_pane)
+        HT_DeletePane(m_pane);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -318,8 +320,6 @@ XFE_NavCenterView::selector_destroy_cb(Widget		w,
                                         XtPointer	callData)
 {	
   SelectorCBStruct *cbdata = (SelectorCBStruct *)clientData;
-
-  printf("destroy selector cbdata\n");
 
   delete cbdata;
 }
