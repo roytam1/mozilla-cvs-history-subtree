@@ -38,9 +38,6 @@
 #include "jsj_private.h"        /* LiveConnect internals */
 #include "jsjava.h"             /* LiveConnect external API */
 
-/* FIXME - The JNI environment should not be a global.  It needs to be in thread-local storage. */
-JNIEnv *jENV;
-
 /*
  * At certain times during initialization, there may be no JavaScript context
  * available to direct error reports to, in which case the error messages
@@ -59,7 +56,7 @@ report_java_initialization_error(JNIEnv *jEnv, const char *js_error_msg)
         (*jEnv)->ExceptionClear(jEnv);
     }
 
-    if (java_error_msg) {
+    if (java_error_msg) { 
         error_msg = PR_smprintf("initialization error: %s (%s)\n",
                                 js_error_msg, java_error_msg);
         free((void*)java_error_msg);
@@ -73,7 +70,7 @@ report_java_initialization_error(JNIEnv *jEnv, const char *js_error_msg)
 
 /*
  * Opaque JVM handles to Java classes and methods required for Java reflection.
- * These are computed and cached at initialization.
+ * These are computed and cached during initialization.
  */
 
 jclass jlObject;                        /* java.lang.Object */
@@ -350,8 +347,7 @@ JSJ_ConnectToJavaVM(JavaVM *java_vm_arg, const char *user_classpath)
 {
     JavaVM *java_vm;
     JSJavaVM *jsjava_vm;
-    char  *err_msg;
-
+    JNIEnv *jEnv;
 
     jsjava_vm = (JSJavaVM*)malloc(sizeof(JSJavaVM));
     if (!jsjava_vm)
@@ -362,15 +358,15 @@ JSJ_ConnectToJavaVM(JavaVM *java_vm_arg, const char *user_classpath)
 
     /* If a Java VM was passed in, try to attach to it on the current thread. */
     if (java_vm) {
-        if ((*java_vm)->AttachCurrentThread(java_vm, &jENV, NULL) < 0) {
+        if ((*java_vm)->AttachCurrentThread(java_vm, &jEnv, NULL) < 0) {
             jsj_LogError("Failed to attach to Java VM thread\n");
             free(jsjava_vm);
             return NULL;
         }
     } else if ( JSJ_callbacks->get_java_vm != NULL ) {
-        err_msg = NULL;
+        char* err_msg = NULL;
         java_vm = JSJ_callbacks->get_java_vm(&err_msg);
-        if ((*java_vm)->AttachCurrentThread(java_vm, &jENV, NULL) < 0) {
+        if ((*java_vm)->AttachCurrentThread(java_vm, &jEnv, NULL) < 0) {
             jsj_LogError("Failed to attach to Java VM thread\n");
             free(jsjava_vm);
             return NULL;
@@ -396,7 +392,7 @@ JSJ_ConnectToJavaVM(JavaVM *java_vm_arg, const char *user_classpath)
         }
 
         /* Attempt to create our own VM */
-        if (JNI_CreateJavaVM(&java_vm, &jENV, &vm_args) < 0) {
+        if (JNI_CreateJavaVM(&java_vm, &jEnv, &vm_args) < 0) {
             jsj_LogError("Failed to create Java VM\n");
             free(jsjava_vm);
             return NULL;
@@ -407,11 +403,11 @@ JSJ_ConnectToJavaVM(JavaVM *java_vm_arg, const char *user_classpath)
     }
 #endif /* !OJI */
     jsjava_vm->java_vm = java_vm;
-    jsjava_vm->main_thread_env = jENV;
+    jsjava_vm->main_thread_env = jEnv;
     
     /* Load the Java classes, and the method and field descriptors required for
        Java reflection. */
-    if (!init_java_VM_reflection(jsjava_vm, jENV)) {
+    if (!init_java_VM_reflection(jsjava_vm, jEnv)) {
         JSJ_DisconnectFromJavaVM(jsjava_vm);
         return NULL;
     }
@@ -423,7 +419,7 @@ JSJ_ConnectToJavaVM(JavaVM *java_vm_arg, const char *user_classpath)
      * of failure, LiveConnect is still operative, but only when calling
      * from JS to Java and not vice-versa.
      */
-    init_netscape_java_classes(jsjava_vm, jENV);
+    init_netscape_java_classes(jsjava_vm, jEnv);
 
     /* Put this VM on the list of all created VMs */
     jsjava_vm->next = jsjava_vm_list;
@@ -474,10 +470,10 @@ JSJ_InitJSContext(JSContext *cx, JSObject *global_obj,
     return JS_TRUE;
 }
 
-/* Obtain a reference to a Java class */
+/* Eliminate a reference to a Java class */
 #define UNLOAD_CLASS(qualified_name, class)                                  \
     if (class) {                                                             \
-        (*jENV)->DeleteGlobalRef(jENV, class);                               \
+        (*jEnv)->DeleteGlobalRef(jEnv, class);                               \
         class = NULL;                                                        \
     }
 
@@ -490,10 +486,17 @@ JSJ_InitJSContext(JSContext *cx, JSObject *global_obj,
 void
 JSJ_DisconnectFromJavaVM(JSJavaVM *jsjava_vm)
 {
-    /* FIXME - Clean up the various hash tables */
+    JNIEnv *jEnv;
+    JavaVM *java_vm;
+    
+    java_vm = jsjava_vm->java_vm;
+    (*java_vm)->AttachCurrentThread(java_vm, &jEnv, NULL);
 
-    if (jsjava_vm->jsj_created_java_vm) {
-        JavaVM *java_vm = jsjava_vm->java_vm;
+    /* Drop all references to Java objects and classes */
+    jsj_DiscardJavaObjReflections(jEnv);
+    jsj_DiscardJavaClassReflections(jEnv);
+
+    if (jsjava_vm->jsj_created_java_vm) { 
         (*java_vm)->DestroyJavaVM(java_vm);
     } else {
         UNLOAD_CLASS(java/lang/Object,                jlObject);
@@ -530,7 +533,7 @@ new_jsjava_thread_state(JSJavaVM *jsjava_vm, const char *thread_name, JNIEnv *jE
     if (thread_name)
         jsj_env->name = strdup(thread_name);
 
-    /* FIXME - need to protect against races */
+    /* THREADSAFETY - need to protect against races */
     jsj_env->next = thread_list;
     thread_list = jsj_env;
 
@@ -543,7 +546,7 @@ find_jsjava_thread(JNIEnv *jEnv)
     JSJavaThreadState *e, **p, *jsj_env;
     jsj_env = NULL;
 
-    /* FIXME - need to protect against races in manipulating the thread list */
+    /* THREADSAFETY - need to protect against races in manipulating the thread list */
 
     /* Search for the thread state among the list of all created
        LiveConnect threads */
@@ -674,7 +677,7 @@ JSJ_DetachCurrentThreadFromJava(JSJavaThreadState *jsj_env)
     /* Destroy the LiveConnect execution environment passed in */
     jsj_ClearPendingJSErrors(jsj_env);
 
-    /* FIXME - need to protect against races */
+    /* THREADSAFETY - need to protect against races */
     for (p = &thread_list; (e = *p) != NULL; p = &(e->next)) {
         if (e == jsj_env) {
             *p = jsj_env->next;
@@ -697,12 +700,6 @@ JSJ_ConvertJavaObjectToJSValue(JSContext *cx, jobject java_obj, jsval *vp)
         return JS_FALSE;
 
     jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_obj, vp);
-}
-
-PR_IMPLEMENT(JSObject *)
-JSJ_WrapJavaObject(JSContext *cx, JNIEnv *jEnv, jobject java_obj, jclass java_class)
-{
-   return (jsj_WrapJavaObject(cx, jEnv, java_obj,java_class));
 }
 
 /*===========================================================================*/
@@ -733,7 +730,7 @@ default_map_jsj_thread_to_js_context(JNIEnv *jEnv, char **errp)
 }
 
 /* Trivial implementation of callback function */
-JSObject *
+static JSObject *
 default_map_java_object_to_js_object(JNIEnv *jEnv, jobject hint, char **errp)
 {
     return the_global_js_obj;
@@ -756,8 +753,9 @@ JSJCallbacks jsj_default_callbacks = {
 JSBool
 JSJ_SimpleInit(JSContext *cx, JSObject *global_obj, JavaVM *java_vm, const char *classpath)
 {
-    PR_ASSERT(!the_jsj_vm);
+    JNIEnv *jEnv;
 
+    PR_ASSERT(!the_jsj_vm);
     the_jsj_vm = JSJ_ConnectToJavaVM(java_vm, classpath);
     if (!the_jsj_vm)
         return JS_FALSE;
@@ -769,7 +767,7 @@ JSJ_SimpleInit(JSContext *cx, JSObject *global_obj, JavaVM *java_vm, const char 
     the_cx = cx;
     the_global_js_obj = global_obj;
 
-    the_jsj_thread = JSJ_AttachCurrentThreadToJava(the_jsj_vm, "main thread", &jENV);
+    the_jsj_thread = JSJ_AttachCurrentThreadToJava(the_jsj_vm, "main thread", &jEnv);
     if (!the_jsj_thread)
         goto error;
 
