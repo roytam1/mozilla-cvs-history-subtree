@@ -3048,13 +3048,12 @@ nsEventStateManager::ShiftFocusInternal(PRBool aForward, nsIContent* aStart)
   nsIContent *startContent = nsnull;
 
   if (aStart) {
-    startContent = aStart;
-    presShell->GetPrimaryFrameFor(startContent, &curFocusFrame);
-    if (!curFocusFrame) {
-      // We were asked to navigate from this content, but the given content
-      // has no frame.  Fall back to navigating from the document root.
-      startContent = nsnull;
-    }
+    presShell->GetPrimaryFrameFor(aStart, &curFocusFrame);
+
+    // If there is no frame, we can't navigate from this content node, and we
+    // fall back to navigating from the document root.
+    if (curFocusFrame)
+      startContent = aStart;
   } else if (selectionFrame) {
     // We moved focus to the caret location above, so mCurrentFocus
     // reflects the starting content node.
@@ -3067,7 +3066,7 @@ nsEventStateManager::ShiftFocusInternal(PRBool aForward, nsIContent* aStart)
 
   if (aStart) {
     TabIndexFrom(aStart, &mCurrentTabIndex);
-  } else  if (!mCurrentFocus) {  // Get tabindex ready
+  } else if (!mCurrentFocus) {  // Get tabindex ready
     if (aForward) {
       mCurrentTabIndex = docHasFocus && selectionFrame ? 0 : 1;
     } else if (!docHasFocus) {
