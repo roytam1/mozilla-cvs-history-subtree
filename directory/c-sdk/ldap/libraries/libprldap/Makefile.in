@@ -39,14 +39,10 @@ OBJS		= $(addprefix $(OBJDIR_NAME)/, $(REALOBJS))
 DISTHDIR	= $(DIST)/public/ldap
 HDIR		= $(topsrcdir)/ldap/include
 
-ifeq ($(OS_ARCH), WINNT)
 LIBPRLDAP	= $(addprefix $(OBJDIR_NAME)/, \
-			nsldappr32v$(PRLDAPVERS).$(DLL_SUFFIX))
+			$(LIB_PREFIX)nsldappr32v$(PRLDAPVERS).$(LIB_SUFFIX))
 DLLPRLDAP	= $(addprefix $(OBJDIR_NAME)/, \
-			nsldappr32v$(PRLDAPVERS).$(LIB_SUFFIX))
-else
-DLLPRLDAP	= $(addprefix $(OBJDIR_NAME)/, $(LIB_PREFIX)$(PRLDAP_LIBNAME).$(DLL_SUFFIX))
-endif
+			$(LIB_PREFIX)nsldappr32v$(PRLDAPVERS).$(DLL_SUFFIX))
 
 INSTALLDIR      = $(DIST)/$(OBJDIR_NAME)
 
