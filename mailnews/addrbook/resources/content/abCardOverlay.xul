@@ -70,9 +70,9 @@ Rights Reserved.
                                                         <label control="&NameField2.id;" value="&NameField2.label;" class="CardEditLabel"/>
 							<hbox class="CardEditWidth">
 							<textbox id="&NameField2.id;" flex="1" oninput="GenerateDisplayName()" disableforreadonly="true"/>
-							<spacer flex="1"/>
 							<!-- LOCALIZATION NOTE: BEIGN -->
 							<!-- Follwing section may be commented out for non Japanese builds. -->
+							<spacer flex="1"/>
 							<label control="&PhoneticField2.id;" value="&PhoneticField2.label;" class="CardEditLabel"/>
 							<textbox id="&PhoneticField2.id;" flex="1" disableforreadonly="true"/>
 							<!-- LOCALIZATION NOTE: END -->
