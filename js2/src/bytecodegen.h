@@ -79,9 +79,10 @@ PushTypeOp,             // <poolindex>
 ReturnOp,               //                          <function> <args> <result> --> <result>
 ReturnVoidOp,           //                          <function> <args> -->
 GetConstructorOp,       //                          <type> --> <function> 
-NewObjectOp,            //                          <type> --> <object>
+NewObjectOp,            //                          --> <object>
 NewThisOp,              //                          <type> -->
 NewInstanceOp,          //  <argc>                  <type> <args> --> <object>
+DeleteOp,               //  <index>                 <object> --> <boolean>
 TypeOfOp,               //                          <object> --> <string>
 InstanceOfOp,           //                          <object> <object> --> <boolean>
 AsOp,                   //                          <object> <type> --> <object>
@@ -244,8 +245,8 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
 
         AttributeList *mNamespaceList;
 
-        uint32 mStackTop;
-        uint32 mStackMax;
+        int32 mStackTop;
+        int32 mStackMax;
 
         bool hasContent()
         {
@@ -259,6 +260,7 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
             mStackTop += gByteCodeData[op].stackImpact;
             if (mStackTop > mStackMax)
                 mStackMax = mStackTop; 
+            ASSERT(mStackTop >= 0);
         }
 
         void addOpStretchStack(uint8 op, uint32 n)        
@@ -267,19 +269,21 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
             mStackTop += gByteCodeData[op].stackImpact;
             if ((mStackTop + n) > mStackMax)
                 mStackMax = (mStackTop + n); 
+            ASSERT(mStackTop >= 0);
         }
 
         void adjustStack(uint32 n)
         {
             mStackTop += n;
+            ASSERT(mStackTop >= 0);
         }
 
         // these routines assume the depth is being reduced
         // i.e. they don't reset mStackMax
         void addOpAdjustDepth(uint8 op, uint32 depth)        
-                                    { addByte(op); mStackTop += depth; }
+                                    { addByte(op); mStackTop += depth; ASSERT(mStackTop >= 0); }
         void addOpSetDepth(uint8 op, uint32 depth)        
-                                    { addByte(op); mStackTop = depth; }
+                                    { addByte(op); mStackTop = depth; ASSERT(mStackTop >= 0); }
 
         void addByte(uint8 v)       { mBuffer->push_back(v); }
         void addPointer(void *v)    { addLong((uint32)v); }

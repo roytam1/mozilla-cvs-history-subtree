@@ -58,6 +58,11 @@ void Reference::emitTypeOf(ByteCodeGen *bcg)
     bcg->addOp(TypeOfOp);
 }
 
+void Reference::emitDelete(ByteCodeGen *bcg)
+{
+    bcg->addOp(LoadConstantFalseOp);
+}
+
 void AccessorReference::emitCodeSequence(ByteCodeGen *bcg) 
 { 
     ASSERT(false);      // NYI
@@ -251,6 +256,13 @@ void NameReference::emitTypeOf(ByteCodeGen *bcg)
     bcg->addOp(TypeOfOp);
 }
 
+void NameReference::emitDelete(ByteCodeGen *bcg)
+{
+    bcg->addOp(DeleteOp);
+    bcg->addStringRef(mName); 
+}
+
+
 void PropertyReference::emitImplicitLoad(ByteCodeGen *bcg) 
 {
     bcg->addOp(LoadGlobalObjectOp);
@@ -268,6 +280,12 @@ void PropertyReference::emitCodeSequence(ByteCodeGen *bcg)
 void PropertyReference::emitInvokeSequence(ByteCodeGen *bcg) 
 {
     bcg->addOp(GetInvokePropertyOp);
+    bcg->addStringRef(mName); 
+}
+
+void PropertyReference::emitDelete(ByteCodeGen *bcg)
+{
+    bcg->addOp(DeleteOp);
     bcg->addStringRef(mName); 
 }
 
@@ -302,9 +320,10 @@ ByteCodeData gByteCodeData[OpCodeCount] = {
 { -128,     "Return", },
 { -128,     "ReturnVoid", },
 { 0,        "GetConstructor", },
-{ 0,        "NewObject", },
+{ 1,        "NewObject", },
 { -1,       "NewThis", },
 { -1,       "NewInstance", },
+{ 0,        "Delete", },
 { 0,        "TypeOf", },
 { -1,       "InstanceOf", },
 { -1,       "At", },
@@ -1050,15 +1069,17 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                 addOp(HandlerOp);
                 CatchClause *c = t->catches;
                 ASSERT(mStackTop == 0);
+                mStackTop = 1;
                 if (mStackMax < 1) mStackMax = 1;
                 while (c) {
-                    mStackTop = 1;
                     Reference *ref = mScopeChain->getName(c->name, CURRENT_ATTR, Write);
+                    ref->emitImplicitLoad(this);
                     ref->emitCodeSequence(this);
                     delete ref;
                     genCodeForStatement(c->stmt, static_cg);
                     c = c->next;
                     if (c) {
+                        mStackTop = 1;
                         Reference *ref = mScopeChain->getName(c->name, CURRENT_ATTR, Read);
                         ref->emitCodeSequence(this);
                         delete ref;
@@ -1698,6 +1719,11 @@ BinaryOpEquals:
             delete ref;
             return type;
         }
+    case ExprNode::This:
+        {
+            addOp(LoadThisOp);
+            return Object_Type; // XXX find class we're in for methods
+        }
     case ExprNode::dot:
         {
             Reference *ref = genReference(p, Read);
@@ -1705,6 +1731,18 @@ BinaryOpEquals:
             JSType *type = ref->mType;
             delete ref;
             return type;
+        }
+    case ExprNode::Delete:
+        {
+            UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
+            Reference *ref = genReference(u->op, Read);
+            if (ref == NULL)
+                addOp(LoadConstantTrueOp);
+            else {
+                ref->emitDelete(this);
+                delete ref;
+            }
+            return Boolean_Type;
         }
     case ExprNode::Typeof:
         {
@@ -1994,6 +2032,7 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
     case GetInvokePropertyOp:
     case SetPropertyOp:
     case LoadConstantStringOp:
+    case DeleteOp:
         f << *bcm.getString(bcm.getLong(i));
         i += 4;
         break;

@@ -282,6 +282,8 @@ static const double two31 = 2147483648.0;
                 { return 0; }
 
         virtual void emitTypeOf(ByteCodeGen *bcg);
+
+        virtual void emitDelete(ByteCodeGen *bcg);
     };
 
     // a getter/setter function from an activation
@@ -435,6 +437,7 @@ static const double two31 = 2147483648.0;
         uint32 baseExpressionDepth() { return 1; }
         bool needsThis() { return true; }
         void emitImplicitLoad(ByteCodeGen *bcg);
+        void emitDelete(ByteCodeGen *bcg);
     };
     // a parameter slot (they can't have getter/setter, right?)
     class ParameterReference : public Reference {
@@ -460,6 +463,7 @@ static const double two31 = 2147483648.0;
                 { throw Exception(Exception::internalError, "get value for name ref"); }
         bool setValue(Context *cx)
                 { throw Exception(Exception::internalError, "set value for name ref"); }
+        void emitDelete(ByteCodeGen *bcg);
     };
 
     class ElementReference : public Reference {
@@ -1390,6 +1394,16 @@ static const double two31 = 2147483648.0;
             return result;
         }
 
+        uint32 countActivations()
+        {
+            uint32 result = 0;
+            for (ScopeScanner s = mScopeStack.rbegin(), end = mScopeStack.rend(); (s != end); s++)
+            {
+                if ((*s)->hasLocalVars())
+                    result++;
+            }
+            return result;
+        }
 
         void collectNames(StmtNode *p);
 
@@ -1441,7 +1455,7 @@ static const double two31 = 2147483648.0;
         NativeCode *mCode;
         JSType *mResultType;
         ParameterBarrel *mParameterBarrel;
-        Activation mActivation;
+        Activation mActivation;                 // not used during execution
         uint32 mExpectedArgs;
 
         ScopeChain *mScopeChain;

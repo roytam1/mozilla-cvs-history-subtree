@@ -689,6 +689,26 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
             case LoadConstantNullOp:
                 pushValue(kNullValue);
                 break;
+            case DeleteOp:
+                {
+                    JSValue base = popValue();
+                    JSObject *obj = NULL;
+                    if (!base.isObject() && !base.isType())
+                        obj = base.toObject(this).object;
+                    else
+                        obj = base.object;
+                    uint32 index = *((uint32 *)pc);
+                    pc += sizeof(uint32);
+                    const String &name = *mCurModule->getString(index);
+                    PropertyIterator it;
+                    if (!obj->hasOwnProperty(name, CURRENT_ATTR, Read, &it))
+                        pushValue(kTrueValue);
+                    else {
+                        obj->deleteProperty(name, CURRENT_ATTR);
+                        pushValue(kTrueValue);
+                    }
+                }
+                break;
             case TypeOfOp:
                 {
                     JSValue v = popValue();
