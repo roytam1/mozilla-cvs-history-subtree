@@ -106,16 +106,20 @@ nsresult nsMsgComposeService::OpenComposeWindow(const PRUnichar *msgComposeWindo
 	                                 getter_AddRefs(pMsgDraft));
 	    if (NS_SUCCEEDED(rv) && pMsgDraft)
 		{
+        nsAutoString uriToOpen(originalMsgURI);
+        uriToOpen.Append((const PRUnichar*)
+                         NS_LITERAL_STRING("?fetchCompleteMessage=true").get());
+
 			switch(type)
 			{
 				case nsIMsgCompType::ForwardInline:
-	    			rv = pMsgDraft->OpenDraftMsg(originalMsgURI, nsnull, identity, PR_TRUE);
+	    			rv = pMsgDraft->OpenDraftMsg(uriToOpen.GetUnicode(), nsnull, identity, PR_TRUE);
 					break;
 				case nsIMsgCompType::Draft:
-	    			rv = pMsgDraft->OpenDraftMsg(originalMsgURI, nsnull, identity, PR_FALSE);
+	    			rv = pMsgDraft->OpenDraftMsg(uriToOpen.GetUnicode(), nsnull, identity, PR_FALSE);
 					break;
 				case nsIMsgCompType::Template:
-	    			rv = pMsgDraft->OpenEditorTemplate(originalMsgURI, nsnull, identity);
+	    			rv = pMsgDraft->OpenEditorTemplate(uriToOpen.GetUnicode(), nsnull, identity);
 					break;
 			}
 

@@ -231,12 +231,12 @@ nsHTTPHandler::NewChannel(nsIURI* i_URL, nsIChannel **o_Instance)
             rv = pChannel->GetURI(getter_AddRefs(channelURI));
             if (NS_SUCCEEDED(rv) && (channelURI.get() == i_URL))
             {
-                NS_ADDREF(pChannel);
                 *o_Instance = pChannel;
                 // TODO return NS_USING_EXISTING... 
                 // or NS_DUPLICATE_REQUEST something like that.
                 return NS_OK; 
             }
+            NS_RELEASE(pChannel);
         }
 
         // Create one
@@ -763,6 +763,9 @@ nsHTTPHandler::Init()
     if (!mPrefs)
         return NS_ERROR_OUT_OF_MEMORY;
 
+    rv = InitUserAgentComponents();
+    if (NS_FAILED(rv)) return rv;
+
     mPrefs->RegisterCallback(NETWORK_PREFS, 
                 HTTPPrefsCallback, (void*)this);
     mPrefs->RegisterCallback(INTL_ACCEPT_LANGUAGES, 
@@ -770,9 +773,6 @@ nsHTTPHandler::Init()
     mPrefs->RegisterCallback(UA_PREF_PREFIX "locale", 
                 HTTPPrefsCallback, (void*)this);
     PrefsChanged();
-
-    rv = InitUserAgentComponents();
-    if (NS_FAILED(rv)) return rv;
 
 #if defined (PR_LOGGING)
     gHTTPLog = PR_NewLogModule("nsHTTPProtocol");

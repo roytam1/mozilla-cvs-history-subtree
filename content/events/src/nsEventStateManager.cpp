@@ -1516,13 +1516,6 @@ nsEventStateManager::GenerateMouseEnterExit(nsIPresContext* aPresContext, nsGUIE
           }
         
           if ( status != nsEventStatus_eConsumeNoDefault ) {
-            nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(targetContent));
-            if (!elt) {
-              // Only elements can be placed into :hover. Instead of putting
-              // ourselves into :hover, put our parent element into :hover instead.
-              nsCOMPtr<nsIContent> child = targetContent;
-              child->GetParent(*getter_AddRefs(targetContent));
-            }
             SetContentState(targetContent, NS_EVENT_STATE_HOVER);
           }
 
@@ -2651,8 +2644,15 @@ nsEventStateManager::SendFocusBlur(nsIPresContext* aPresContext, nsIContent *aCo
       nsCOMPtr<nsIDocument> doc;
       gLastFocusedContent->GetDocument(*getter_AddRefs(doc));
       if (doc) {
+        // The order of the nsIViewManager and nsIPresShell COM pointers is
+        // important below.  We want the pres shell to get released before the
+        // associated view manager on exit from this function.
+        // See bug 53763.
+        nsCOMPtr<nsIViewManager> kungFuDeathGrip;
         nsCOMPtr<nsIPresShell> shell = getter_AddRefs(doc->GetShellAt(0));
         if (shell) {
+          shell->GetViewManager(getter_AddRefs(kungFuDeathGrip));
+
           nsCOMPtr<nsIPresContext> oldPresContext;
           shell->GetPresContext(getter_AddRefs(oldPresContext));
 

@@ -22,7 +22,7 @@
 
 
 /**
- * MODULE NOTES:
+ * MODULE NOTES: 
  * @update  gess 4/1/98
  * 
  */ 
@@ -869,7 +869,7 @@ void InitializeElementTable(void) {
 	    /*rootnodes,endrootnodes*/          &gRootTags,&gRootTags,	
       /*autoclose starttags and endtags*/ 0,0,0,0,
       /*parent,incl,exclgroups*/          kBlock, kFlowEntity|kSelf, kNone,	
-      /*special props, prop-range*/       0, kNoPropRange,
+      /*special props, prop-range*/       kLegalOpen, kNoPropRange,
       /*special parents,kids,skip*/       0,0,eHTMLTag_unknown);
 
     Initialize( 
@@ -1918,7 +1918,7 @@ eHTMLTags nsHTMLElement::GetCloseTargetForEndTag(nsDTDContext& aContext,PRInt32 
         }
 
         //phrasal elements can close other phrasals, along with fontstyle and special tags...
-        if(!gHTMLElements[theTag].ContainsSet(kSpecial|kFontStyle|kPhrase)) {
+        if(!gHTMLElements[theTag].IsMemberOf(kSpecial|kFontStyle|kPhrase)) {  //fix bug 56665
           break; //it's not something I can close
         }
       }
@@ -1961,7 +1961,8 @@ eHTMLTags nsHTMLElement::GetCloseTargetForEndTag(nsDTDContext& aContext,PRInt32 
     }
   }
 
-  else if(IsMemberOf(kFormControl|kExtensions|kPreformatted)){  //bug54834...
+  else if( // ContainsSet(kPreformatted) ||  .
+          IsMemberOf(kFormControl|kExtensions|kPreformatted)){  //bug54834...
 
     while((--theIndex>=anIndex) && (eHTMLTag_unknown==result)){
       eHTMLTags theTag=aContext.TagAt(theIndex);
@@ -2024,6 +2025,19 @@ eHTMLTags nsHTMLElement::GetCloseTargetForEndTag(nsDTDContext& aContext,PRInt32 
     }
     
   }
+
+  else if(gHTMLElements[mTagID].IsTableElement()) {
+    
+    //This fixes 57378... 
+    //example: <TABLE><THEAD><TR><TH></THEAD> which didn't close the <THEAD> 
+
+    PRInt32 theLastTable=aContext.LastOf(eHTMLTag_table); 
+    PRInt32 theLastOfMe=aContext.LastOf(mTagID); 
+    if(theLastTable<theLastOfMe) { 
+      return mTagID; 
+    } 
+
+  } 
   return result;
 }
 

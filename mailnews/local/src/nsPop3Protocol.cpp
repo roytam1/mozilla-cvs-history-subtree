@@ -2082,18 +2082,22 @@ nsPop3Protocol::SendRetr()
             rv = mStringService->GetBundle(getter_AddRefs(bundle));
             NS_ASSERTION(NS_SUCCEEDED(rv), "couldn't get bundle");
 
-            const PRUnichar *formatStrings[] = {
-                realNewString.GetUnicode(),
-                reallyNewMessages.GetUnicode(),
-            };
+            if (bundle)
+            {
+              const PRUnichar *formatStrings[] = {
+                  realNewString.GetUnicode(),
+                  reallyNewMessages.GetUnicode(),
+              };
 
-            nsXPIDLString finalString;
-            rv = bundle->FormatStringFromID(LOCAL_STATUS_RECEIVING_MESSAGE_OF,
-                                            formatStrings, 2,
-                                            getter_Copies(finalString));
-            NS_ASSERTION(NS_SUCCEEDED(rv), "couldn't format string");
+              nsXPIDLString finalString;
+              rv = bundle->FormatStringFromID(LOCAL_STATUS_RECEIVING_MESSAGE_OF,
+                                              formatStrings, 2,
+                                              getter_Copies(finalString));
+              NS_ASSERTION(NS_SUCCEEDED(rv), "couldn't format string");
 
-            m_statusFeedback->ShowStatusString(finalString);
+              if (m_statusFeedback)
+                m_statusFeedback->ShowStatusString(finalString);
+            }
             
 		}
 

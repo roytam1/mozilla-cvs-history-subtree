@@ -286,6 +286,7 @@ nsHTMLDocument::nsHTMLDocument()
     //NS_WITH_SERVICE(nsIRDFService, gRDF, kRDFServiceCID, &rv);
   }
 
+  mDomainWasSet = PR_FALSE; // Bug 13871: Frameset spoofing
 }
 
 nsHTMLDocument::~nsHTMLDocument()
@@ -1362,8 +1363,20 @@ nsHTMLDocument::ContentRemoved(nsIContent* aContainer,
 NS_IMETHODIMP 
 nsHTMLDocument::FlushPendingNotifications()
 {
+  // Determine if it is safe to flush the sink
+  // by determining if it safe to flush all the presshells.
+  PRBool isSafeToFlush = PR_TRUE;
+  PRInt32 i = 0, n = mPresShells.Count();
+  while ((i < n) && (isSafeToFlush)) {
+    nsIPresShell* shell = NS_STATIC_CAST(nsIPresShell*, mPresShells[i]);
+    if (nsnull != shell) {
+      nsresult rv = shell->IsSafeToFlush(isSafeToFlush);
+    }
+    i++;
+  }
+
   nsresult result = NS_OK;
-  if (mParser) {
+  if ((isSafeToFlush) && (mParser)) {
     nsCOMPtr<nsIContentSink> sink;
     
     // XXX Ack! Parser doesn't addref sink before passing it back
@@ -1797,7 +1810,22 @@ nsHTMLDocument::SetDomain(const nsAReadableString& aDomain)
   NS_ASSERTION(NS_SUCCEEDED(rv), "Principal not an aggregate.");
   if (NS_FAILED(rv)) 
     return NS_ERROR_FAILURE;
-  return agg->SetCodebase(newCodebase);
+
+  rv = agg->SetCodebase(newCodebase);
+
+  // Bug 13871: Frameset spoofing - note that document.domain was set
+  if (NS_SUCCEEDED(rv))
+    mDomainWasSet = PR_TRUE;
+
+  return rv;
+}
+
+NS_IMETHODIMP
+nsHTMLDocument::WasDomainSet(PRBool* aDomainWasSet)
+{
+  NS_ENSURE_ARG_POINTER(aDomainWasSet);
+  *aDomainWasSet = mDomainWasSet;
+  return NS_OK;
 }
 
 NS_IMETHODIMP    

@@ -51,6 +51,7 @@
 #include "nsIDOMHTMLElement.h"
 #include "nsIDOMRange.h"
 #include "nsLayoutCID.h"
+#include "nsHTMLParts.h"
 
 #include "nsViewsCID.h"
 #include "nsWidgetsCID.h"
@@ -74,6 +75,7 @@
 #include "nsIDocShellTreeOwner.h"
 #include "nsIDocShell.h"
 #include "nsIFrameDebug.h"
+#include "nsILayoutHistoryState.h"
 #include "nsLayoutAtoms.h"
 #include "nsIDOMHTMLFrameSetElement.h"
 #include "nsIFrameManager.h"
@@ -950,7 +952,7 @@ DocumentViewerImpl::PrintContent(nsIWebShell *      aParent,
   // now complete printing the rest of the document
   // if it doesn't contain any framesets
   if (!doesContainFrameSet) {
-    aDContext->BeginDocument();
+    NS_ENSURE_SUCCESS(aDContext->BeginDocument(), NS_ERROR_FAILURE);
     aDContext->GetDeviceSurfaceDimensions(width, height);
 
     nsCOMPtr<nsIPresContext> cx;
@@ -1003,8 +1005,26 @@ DocumentViewerImpl::PrintContent(nsIWebShell *      aParent,
     cx->SetCompatibilityMode(mode);
     cx->SetContainer(aParent);
 
+    // get the old history
+    nsCOMPtr<nsIPresShell> presShell;
+    nsCOMPtr<nsILayoutHistoryState>  layoutState;
+    NS_ENSURE_SUCCESS(GetPresShell(*(getter_AddRefs(presShell))), NS_ERROR_FAILURE);
+    presShell->CaptureHistoryState(getter_AddRefs(layoutState),PR_TRUE);
+    ps->BeginObservingDocument();
+
     //lay it out...
     ps->InitialReflow(width, height);
+
+    // update the history from the old presentation shell
+    nsCOMPtr<nsIFrameManager> fm;
+    rv = ps->GetFrameManager(getter_AddRefs(fm));
+    if(NS_SUCCEEDED(rv) && fm) {
+      nsIFrame* root;
+      ps->GetRootFrame(&root);
+      fm->RestoreFrameState(cx, root, layoutState);
+    }
+
+    ps->EndObservingDocument();
 
     // Ask the page sequence frame to print all the pages
     nsIPageSequenceFrame* pageSequence;

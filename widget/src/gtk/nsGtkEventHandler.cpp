@@ -374,7 +374,7 @@ PRUint32 nsConvertCharCodeToUnicode(GdkEventKey* aGEK)
 
   // For now (will this need to change for IME?),
   // only set a char code if the result is printable:
-  if (!isprint(aGEK->string[0]))
+  if (!aGEK->string || !isprint(aGEK->string[0]))
     return 0;
 
   //

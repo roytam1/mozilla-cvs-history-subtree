@@ -413,7 +413,13 @@ nsDocShell::LoadURI(nsIURI* aURI, nsIDocShellLoadInfo* aLoadInfo, PRUint32 aLoad
       if (parent) {
         parent->GetChildSHEntry(mChildOffset, getter_AddRefs(shEntry));
         if (shEntry) {
-          loadType = LOAD_HISTORY;
+           //Get the proper loadType from the SHEntry.
+              PRUint32   lt;
+           shEntry->GetLoadType(&lt);
+           // Convert the DocShellInfoLoadType returned by the 
+           // previous function to loadType
+           loadType = ConvertDocShellLoadInfoToLoadType((nsDocShellInfoLoadType)lt);
+         
         }
       }
     }
@@ -1213,10 +1219,18 @@ nsDocShell::GetChildSHEntry(PRInt32 aChildOffset, nsISHEntry ** aResult)
   // the progress of loading a document too...
   //
   if (LSHE) {
-    nsCOMPtr<nsISHContainer> container(do_QueryInterface(LSHE));
-    if (container) {
-      rv = container->GetChildAt(aChildOffset, aResult);
-    }
+      /* Get the parent's Load Type so that it can be set on the child too.
+       * By default give a loadHistory value
+       */
+      PRUint32 loadType = nsIDocShellLoadInfo::loadHistory;
+      LSHE->GetLoadType(&loadType);
+      nsCOMPtr<nsISHContainer> container(do_QueryInterface(LSHE));
+      if (container) {
+         rv = container->GetChildAt(aChildOffset, aResult);
+         if (*aResult) {
+            (*aResult)->SetLoadType(loadType);
+                }
+         }
   }
   return rv;
 }
@@ -2539,6 +2553,12 @@ nsDocShell::OnStateChange(nsIWebProgress *aProgress, nsIRequest *aRequest,
 {
 
   if ((aStateFlags & STATE_STOP) && (aStateFlags & STATE_IS_NETWORK)) {
+    /* Be defensive about this load type. It may have got set to 
+     * something else(reloadNormal or reloadBypass) depending on how this
+     * page got loaded. Reset the loadtype to default value loadHistory
+     */
+       if (LSHE)
+         LSHE->SetLoadType(nsIDocShellLoadInfo::loadHistory);
     LSHE = nsnull;
   }
   return NS_OK;
@@ -2646,9 +2666,12 @@ NS_IMETHODIMP nsDocShell::CreateContentViewer(const char* aContentType,
       //
       // Retarget the document to this loadgroup...
       //
-      if(currentLoadGroup)
-         currentLoadGroup->RemoveChannel(aOpenedChannel, nsnull, nsnull, nsnull);
-      
+      /* First attach the channel to the right loadgroup
+       * and then remove from the old loadgroup. This 
+       * puts the notifications in the right order and
+       * we don't null-out LSHE in OnStateChange() for 
+       * all redirected urls
+       */
       aOpenedChannel->SetLoadGroup(loadGroup);
 
       // Mark the channel as being a document URI...
@@ -2658,6 +2681,9 @@ NS_IMETHODIMP nsDocShell::CreateContentViewer(const char* aContentType,
       aOpenedChannel->SetLoadAttributes(loadAttribs);
 
       loadGroup->AddChannel(aOpenedChannel, nsnull);
+      if(currentLoadGroup)
+         currentLoadGroup->RemoveChannel(aOpenedChannel, nsnull, nsnull, nsnull);
+      
       }
 #ifdef SH_IN_FRAMES
    NS_ENSURE_SUCCESS(Embed(viewer, "", (nsISupports *) nsnull), NS_ERROR_FAILURE);
@@ -4033,10 +4059,14 @@ NS_IMETHODIMP nsDocShell::LoadHistoryEntry(nsISHEntry* aEntry)
           nsresult rv = stringBundle->GetStringFromName(NS_ConvertASCIItoUCS2("repost").GetUnicode(), 
           getter_Copies(messageStr));
           
-		  if (NS_SUCCEEDED(rv) && messageStr) {
+          if (NS_SUCCEEDED(rv) && messageStr) {
              prompter->Confirm(nsnull, messageStr, &repost);
-		     if (!repost)
-                postData = nsnull;
+              /* If the user pressed cancel in the dialog, 
+               * return failure. Don't try to load the page with out 
+               * the post data. 
+               */
+              if (!repost)
+                return NS_ERROR_FAILURE;
 		  }
 	   }
     }

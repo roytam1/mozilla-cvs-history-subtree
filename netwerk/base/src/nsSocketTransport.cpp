@@ -137,6 +137,7 @@ nsSocketTransport::nsSocketTransport():
     mProxyPort(0),
     mProxyHost(nsnull),
     mProxyTransparent(PR_FALSE),
+    mSSLProxy(PR_FALSE),
     mReadWriteState(0),
     mSelectFlags(0),
     mService(nsnull),
@@ -326,6 +327,10 @@ nsresult nsSocketTransport::Init(nsSocketTransportService* aService,
                     // the default proxy behavior
                     mProxyTransparent = PR_TRUE;
                 }
+                if (mProxyHost && (nsCRT::strcmp(socketType, "ssl") == 0))
+                {
+                    mSSLProxy = PR_TRUE;
+                }
             }
         }
     } 
@@ -360,7 +365,11 @@ nsresult nsSocketTransport::CheckForTimeout (PRIntervalTime aCurrentTime)
     // Enter the socket transport lock...
     nsAutoMonitor mon(mMonitor);
     
-    idleInterval = aCurrentTime - mLastActiveTime;
+    if (aCurrentTime > mLastActiveTime) {
+        idleInterval = aCurrentTime - mLastActiveTime;
+    } else {
+        idleInterval = 0;
+    }
     
     if (mSocketConnectTimeout != PR_INTERVAL_NO_TIMEOUT && mCurrentState  == eSocketState_WaitConnect
         && idleInterval >= mSocketConnectTimeout
@@ -1368,7 +1377,7 @@ nsresult nsSocketTransport::doWriteFromStream(PRUint32 *aCount)
   *aCount = 0;
   if (NS_SUCCEEDED(rv)) {
     // Try to send the data to the network.
-    rv = nsWriteToSocket(nsnull, (void*)mSocketFD, mWriteBuffer, mWriteBufferIndex, 
+    rv = nsWriteToSocket(nsnull, (void*)mSocketFD, mWriteBuffer + mWriteBufferIndex, 0, 
                          mWriteBufferLength, aCount);
     // Update the buffer index and length with the actual amount of data
     // that was sent...
@@ -1839,7 +1848,10 @@ nsSocketTransport::GetOriginalURI(nsIURI* *aURL)
 {
   nsStdURL *url;
   url = new nsStdURL(nsnull);
-  if( mProxyHost && !mProxyTransparent)
+  // XXX: not sure this is correct behavior, but we should somehow
+  // prevent reusing the same nsSocketTransport for different SSL hosts
+  // in proxied case.
+  if (mProxyHost && !(mProxyTransparent || mSSLProxy))
   {
     url->SetHost(mProxyHost);
     url->SetPort(mProxyPort);

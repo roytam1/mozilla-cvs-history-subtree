@@ -496,13 +496,25 @@ nsSHistory::LoadEntry(PRInt32 aIndex, PRBool aReloadFlag, long aLoadType)
 	    return NS_ERROR_FAILURE;
 
    nextEntry->GetURI(getter_AddRefs(nexturi));
+   /* Set the loadType in the SHEntry to what was passed on to.
+    * This will be passed on to child subframes later in nsDocShell,
+    * so that proper loadType is maintained through out a frameset
+    */
+   nextEntry->SetLoadType(aLoadType);
 
    mRootDocShell->CreateLoadInfo (getter_AddRefs(loadInfo));
    // This is not available yet
    loadInfo->SetLoadType(aLoadType);
    loadInfo->SetSHEntry(nextEntry);
    // Time to initiate a document load
-   return docShell->LoadURI(nexturi, loadInfo, nsIWebNavigation::LOAD_FLAGS_NONE);
+   nsresult rv =  docShell->LoadURI(nexturi, loadInfo, nsIWebNavigation::LOAD_FLAGS_NONE);
+   /* If the loadURI call failed for some reason,
+    * reset mIndex to what it was. so that back/forward
+    * won't misbehave
+    */
+   if (!NS_SUCCEEDED(rv))
+      mIndex = oldIndex;
+   return rv;
 }
 
 

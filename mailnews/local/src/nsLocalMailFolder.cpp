@@ -1262,6 +1262,7 @@ NS_IMETHODIMP nsMsgLocalMailFolder::Delete()
 
 	if(mDatabase)
 	{
+    NotifyStoreClosedAllHeaders();
 		mDatabase->ForceClosed();
 		mDatabase = null_nsCOMPtr();
 	}
@@ -1757,7 +1758,7 @@ nsMsgLocalMailFolder::DeleteMessages(nsISupportsArray *messages,
                   DeleteMessage(message, msgWindow, PR_TRUE);
               }
           }
-		  if(isMove)
+		  if(!isMove)
         NotifyFolderEvent(mDeleteOrMoveMsgCompletedAtom);
       }
   }

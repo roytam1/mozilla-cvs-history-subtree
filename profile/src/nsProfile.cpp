@@ -561,6 +561,10 @@ nsProfile::ProcessArgs(nsICmdLineService *cmdLineArgs,
     nsXPIDLCString cmdResult;
     nsCOMPtr<nsILocalFile> currProfileDir;
 
+	// keep track of if the user passed us any profile related command line args
+	// if they did, we won't force migration
+	PRBool foundProfileCommandArg = PR_FALSE;
+
 #ifdef DEBUG_profile_verbose
     printf("Profile Manager : Command Line Options : Begin\n");
 #endif
@@ -575,6 +579,7 @@ nsProfile::ProcessArgs(nsICmdLineService *cmdLineArgs,
     if (NS_SUCCEEDED(rv))
     {
         if (cmdResult) {
+			foundProfileCommandArg = PR_TRUE;
             nsAutoString currProfileName; currProfileName.AssignWithConversion(cmdResult);
 
 #ifdef DEBUG_profile
@@ -631,6 +636,7 @@ nsProfile::ProcessArgs(nsICmdLineService *cmdLineArgs,
     if (NS_SUCCEEDED(rv))
     {
         if (cmdResult) {
+			foundProfileCommandArg = PR_TRUE;
             nsAutoString currProfileName; currProfileName.AssignWithConversion(strtok(NS_CONST_CAST(char*,(const char*)cmdResult), " "));
             nsAutoString currProfileDirString; currProfileDirString.AssignWithConversion(strtok(NULL, " "));
         
@@ -675,6 +681,7 @@ nsProfile::ProcessArgs(nsICmdLineService *cmdLineArgs,
     if (NS_SUCCEEDED(rv))
     {        
         if (cmdResult) {
+			foundProfileCommandArg = PR_TRUE;
             profileURLStr = PROFILE_MANAGER_URL;
         }
     }
@@ -684,6 +691,7 @@ nsProfile::ProcessArgs(nsICmdLineService *cmdLineArgs,
     if (NS_SUCCEEDED(rv))
     {        
         if (cmdResult) {
+			foundProfileCommandArg = PR_TRUE;
             profileURLStr = PROFILE_SELECTION_URL;
         }
     }
@@ -694,15 +702,22 @@ nsProfile::ProcessArgs(nsICmdLineService *cmdLineArgs,
     if (NS_SUCCEEDED(rv))
     {        
         if (cmdResult) {
+			foundProfileCommandArg = PR_TRUE;
             profileURLStr = PROFILE_WIZARD_URL;
         }
     }
 
+	PRBool forceMigration = PR_FALSE;
+	if (!foundProfileCommandArg) {
+		rv = gProfileDataAccess->DetermineForceMigration(&forceMigration);
+		NS_ASSERTION(NS_SUCCEEDED(rv),"failed to determine if we should force migration");
+	}
+
     // Start Migaration activity
     rv = cmdLineArgs->GetCmdLineValue(INSTALLER_CMD_LINE_ARG, getter_Copies(cmdResult));
-    if (NS_SUCCEEDED(rv))
+    if (NS_SUCCEEDED(rv) || forceMigration)
     {        
-        if (cmdResult) {
+        if (cmdResult || forceMigration) {
             rv = MigrateProfileInfo();
             if (NS_FAILED(rv)) return rv;
 
@@ -809,6 +824,14 @@ NS_IMETHODIMP nsProfile::GetProfileDir(const PRUnichar *profileName, nsIFile **p
                 if (NS_FAILED(rv)) return rv;
                 rv = trashFolder->Contains(aProfileDir, PR_TRUE, &inTrash);
                 if (NS_FAILED(rv)) return rv;
+
+                // Also, check if there are any contents in the folder...if there are
+                // none we need to populate this folder provided the folder is not in the trash.
+                if (!inTrash)
+                {
+                    rv = PopulateIfEmptyDir(aProfileDir);
+                    NS_ENSURE_SUCCESS(rv, rv);
+                }
             }
 #endif  
         }
@@ -856,7 +879,7 @@ NS_IMETHODIMP nsProfile::GetProfileDir(const PRUnichar *profileName, nsIFile **p
             // Return new file spec. 
             aProfileDir = tmpLocalFile;
 #endif
-                                        
+ 
             // Copy contents from defaults folder.
             rv = profDefaultsDir->Exists(&exists);
             if (NS_SUCCEEDED(rv) && exists)
@@ -940,7 +963,6 @@ NS_IMETHODIMP nsProfile::GetCurrentProfileDir(nsIFile **profileDir)
 
     return NS_OK;
 }
-
 
 /*
  * Setters
@@ -1136,8 +1158,7 @@ nsresult nsProfile::CreateUserDirectories(nsILocalFile *profileDir)
         NEW_NEWS_DIR_NAME,
         NEW_IMAPMAIL_DIR_NAME,
         NEW_MAIL_DIR_NAME,
-        "Cache",
-        "Chrome"
+        "Cache"
     };
     
     for (int i = 0; i < sizeof(subDirNames) / sizeof(char *); i++)
@@ -1524,7 +1545,6 @@ nsProfile::MigrateProfile(const PRUnichar* profileName, PRBool showProgressAsMod
     if (NS_FAILED(rv)) return rv;
     rv = newProfDir->CreateUnique(suggestedName, nsIFile::DIRECTORY_TYPE, 0775);
     if (NS_FAILED(rv)) return rv;
-    
     
     // Call migration service to do the work.
     nsCOMPtr <nsIPrefMigration> pPrefMigrator;
@@ -1965,7 +1985,7 @@ nsProfile::IsRegStringSet(const PRUnichar *profileName, char **regString)
 // File Name Defines
 
 #define PREFS_FILE_50_NAME          "prefs.js"
-#define USER_CHROME_DIR_50_NAME     "Chrome"
+#define USER_CHROME_DIR_50_NAME     "chrome"
 #define LOCAL_STORE_FILE_50_NAME    "localstore.rdf"
 #define HISTORY_FILE_50_NAME        "history.dat"
 #define PANELS_FILE_50_NAME         "panels.rdf"
@@ -2059,14 +2079,17 @@ nsProfile::GetFile(const char *prop, PRBool *persistant, nsIFile **_retval)
     }
     else if (inAtom == sApp_SearchFile50)
     {
-        // Here we differ from nsFileLocator - It checks for the
-        // existance of this file and if it does not exist, copies
-        // it from the defaults folder to the profile folder. Since
-        // WE set up any profile folder, we'll make sure it's copied then.
+        // We do need to ensure that this file exists. If
+        // not, it needs to be copied from the defaults
+        // folder. There is code which depends on this.
         
         rv = CloneProfileDirectorySpec(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv))
+        {
             rv = localFile->Append(SEARCH_FILE_50_NAME);
+            if (NS_SUCCEEDED(rv))
+                rv = EnsureProfileFileExists(localFile);
+        }
     }
     else if (inAtom == sApp_MailDirectory50)
     {
@@ -2118,3 +2141,36 @@ nsresult nsProfile::CloneProfileDirectorySpec(nsILocalFile **aLocalFile)
     
     return NS_OK;
 }
+
+// If the profile folder is empty, dump all default profile files.
+nsresult nsProfile::PopulateIfEmptyDir(nsILocalFile *aProfileDir)
+{
+    nsresult rv;
+    PRBool hasContents = PR_FALSE;
+    PRBool exists = PR_FALSE;
+                
+    // Get Enumerator object to check the dir contents..
+    nsCOMPtr<nsISimpleEnumerator> dirIterator;
+    rv = aProfileDir->GetDirectoryEntries(getter_AddRefs(dirIterator));
+    if (NS_FAILED(rv)) return rv;
+    
+    // If there are no files or folders, hasContents is set to false
+    rv = dirIterator->HasMoreElements(&hasContents);
+    if (NS_FAILED(rv)) return rv;
+    
+    if (!hasContents)
+    {
+        // Get profile defaults folder..
+        nsCOMPtr<nsIFile> profDefaultsDir;
+        rv = NS_GetSpecialDirectory(NS_APP_PROFILE_DEFAULTS_50_DIR, getter_AddRefs(profDefaultsDir));
+        if (NS_FAILED(rv)) return rv;
+        
+        // Copy contents from defaults folder.
+        rv = profDefaultsDir->Exists(&exists);
+        if (NS_SUCCEEDED(rv) && exists) {
+        rv = RecursiveCopy(profDefaultsDir, aProfileDir);
+        }
+    }
+    return rv;
+}
+

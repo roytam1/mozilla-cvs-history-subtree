@@ -6650,7 +6650,7 @@ nsXULTemplateBuilder::GetElementsForResource(nsIRDFResource* aResource, nsISuppo
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get resource URI");
     if (NS_FAILED(rv)) return rv;
 
-    rv = mDocument->GetElementsForID(NS_ConvertASCIItoUCS2(uri), aElements);
+    rv = mDocument->GetElementsForID(NS_ConvertUTF8toUCS2(uri), aElements);
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to retrieve elements from resource");
     if (NS_FAILED(rv)) return rv;
 
@@ -6910,7 +6910,7 @@ nsXULTemplateBuilder::ContentTestNode::FilterInstantiations(InstantiationSet& aI
             rv = VALUE_TO_IRDFRESOURCE(idValue)->GetValueConst(&uri);
             if (NS_FAILED(rv)) return rv;
 
-            rv = mDocument->GetElementsForID(NS_ConvertASCIItoUCS2(uri), elements);
+            rv = mDocument->GetElementsForID(NS_ConvertUTF8toUCS2(uri), elements);
             if (NS_FAILED(rv)) return rv;
 
             PRUint32 count;

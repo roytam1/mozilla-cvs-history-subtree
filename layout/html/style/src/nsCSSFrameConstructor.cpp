@@ -2907,18 +2907,16 @@ nsCSSFrameConstructor::ConstructTableCellFrame(nsIPresShell*            aPresShe
 }
 
 PRBool 
-nsCSSFrameConstructor::MustGeneratePseudoParent(nsIPresContext* aPresContext,
-                                                nsIFrame*       aParentFrame,
-                                                nsIAtom*        aTag,
-                                                nsIContent*     aContent)
+nsCSSFrameConstructor::MustGeneratePseudoParent(nsIPresContext*  aPresContext,
+                                                nsIFrame*        aParentFrame,
+                                                nsIAtom*         aTag,
+                                                nsIContent*      aContent,
+                                                nsIStyleContext* aStyleContext)
 {
-  nsCOMPtr<nsIStyleContext> styleContext;
-
-  nsresult rv = ResolveStyleContext(aPresContext, aParentFrame, aContent, aTag, getter_AddRefs(styleContext));
-  if (NS_FAILED(rv)) return PR_FALSE;
+  if (!aStyleContext) return PR_FALSE;
 
   const nsStyleDisplay* display = (const nsStyleDisplay*)
-    styleContext->GetStyleData(eStyleStruct_Display);
+    aStyleContext->GetStyleData(eStyleStruct_Display);
 
   if (NS_STYLE_DISPLAY_NONE == display->mDisplay) return PR_FALSE;
     
@@ -2986,7 +2984,7 @@ nsCSSFrameConstructor::ConstructTableForeignFrame(nsIPresShell*            aPres
     }
   }
   // Do not construct pseudo frames for trees 
-  else if (MustGeneratePseudoParent(aPresContext, aParentFrameIn, tag.get(), aContent)) {
+  else if (MustGeneratePseudoParent(aPresContext, aParentFrameIn, tag.get(), aContent, aStyleContext)) {
     // this frame may have a pseudo parent, use block frame type to trigger foreign
     GetParentFrame(aPresShell, aPresContext, aTableCreator, *aParentFrameIn, 
                    nsLayoutAtoms::blockFrame, aState, parentFrame, aIsPseudoParent);
@@ -3188,6 +3186,10 @@ nsCSSFrameConstructor::ConstructDocElementTableFrame(nsIPresShell*        aPresS
 
   ConstructFrame(aPresShell, aPresContext, state, aDocElement, aParentFrame, frameItems);
   aNewTableFrame = frameItems.childList;
+  if (!aNewTableFrame) {
+    NS_WARNING("cannot get table contentFrame");
+    return NS_ERROR_FAILURE;
+  }
   return NS_OK;
 }
 
@@ -3274,6 +3276,8 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
           
 */    
 
+  aNewFrame = nsnull;
+
   if (!mTempFrameTreeState)
     aPresShell->CaptureHistoryState(getter_AddRefs(mTempFrameTreeState));
 
@@ -3342,12 +3346,16 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
 
   nsIFrame* contentFrame = nsnull;
   PRBool isBlockFrame = PR_FALSE;
+  nsresult rv;
 
   if (docElemIsTable) {
       // if the document is a table then just populate it.
-      ConstructDocElementTableFrame(aPresShell, aPresContext, aDocElement, 
+      rv = ConstructDocElementTableFrame(aPresShell, aPresContext, aDocElement, 
                                     aParentFrame, contentFrame,
                                     aState.mFrameState);
+      if (NS_FAILED(rv)) {
+        return rv;
+      }
       contentFrame->GetStyleContext(getter_AddRefs(styleContext));
   } else {
         // otherwise build a box or a block
@@ -3355,12 +3363,18 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
         PRInt32 nameSpaceID;
         if (NS_SUCCEEDED(aDocElement->GetNameSpaceID(nameSpaceID)) &&
             nameSpaceID == nsXULAtoms::nameSpaceID) {
-          NS_NewBoxFrame(aPresShell, &contentFrame, PR_TRUE);
+          rv = NS_NewBoxFrame(aPresShell, &contentFrame, PR_TRUE);
+          if (NS_FAILED(rv)) {
+            return rv;
+          }
         }
         else
 #endif 
         {
-          NS_NewDocumentElementFrame(aPresShell, &contentFrame);
+          rv = NS_NewDocumentElementFrame(aPresShell, &contentFrame);
+          if (NS_FAILED(rv)) {
+            return rv;
+          }
           isBlockFrame = PR_TRUE;
 
           // Since we always create a block frame, we need to make sure that the 
@@ -3700,8 +3714,8 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
 
   nsIFrame* parentFrame = viewportFrame;
 
-  if (isScrollable) {
-
+  // It should be scrollable.. and it also can not be paginated
+  if (isScrollable && !isPaginated) {
       // built the frame. We give it the content we are wrapping which is the document,
       // the root frame, the parent view port frame, and we should get back the new
       // frame and the scrollable view if one was created.

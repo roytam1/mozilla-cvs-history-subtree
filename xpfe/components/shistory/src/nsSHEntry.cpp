@@ -23,6 +23,7 @@
 // Local Includes
 #include "nsSHEntry.h"
 #include "nsXPIDLString.h"
+#include "nsIDocShellLoadInfo.h"
 
 //*****************************************************************************
 //***    nsSHEntry: Object Management
@@ -148,6 +149,19 @@ NS_IMETHODIMP nsSHEntry::SetLayoutHistoryState(nsILayoutHistoryState* aState)
    return NS_OK;
 }
 
+NS_IMETHODIMP nsSHEntry::GetLoadType(PRUint32 * aResult)
+{
+   NS_ENSURE_ARG_POINTER(aResult);
+   
+   *aResult = mLoadType;
+   return NS_OK;
+}
+
+NS_IMETHODIMP nsSHEntry::SetLoadType(PRUint32  aLoadType)
+{
+   mLoadType = aLoadType;
+   return NS_OK;
+}
 
 nsresult
 nsSHEntry::Create(nsIURI * aURI, const PRUnichar * aTitle, nsIDOMDocument * aDOMDocument,
@@ -158,6 +172,8 @@ nsSHEntry::Create(nsIURI * aURI, const PRUnichar * aTitle, nsIDOMDocument * aDOM
 	SetDocument(aDOMDocument);
 	SetPostData(aInputStream);
 	SetLayoutHistoryState(aHistoryLayoutState);
+    // Set the loadType by default to loadHistory
+    SetLoadType((PRInt32)nsIDocShellLoadInfo::loadHistory);
 	return NS_OK;
 	
 }
@@ -198,9 +214,23 @@ nsSHEntry::AddChild(nsISHEntry * aChild, PRInt32 aOffset)
 	NS_ENSURE_SUCCESS(aChild->SetParent(this), NS_ERROR_FAILURE);
 	PRInt32 childCount = mChildren.Count();
 	if (aOffset < childCount)
-		mChildren.InsertElementAt((void *) aChild, aOffset);
+	  mChildren.ReplaceElementAt((void *) aChild, aOffset);
 	else
+        {
+          //
+          // Bug 52670: Ensure children are added in order.
+          //
+          //  Later frames in the child list may load faster and get appended
+          //  before earlier frames, causing session history to be scrambled.
+          //  By growing the list here, they are added to the right position.
+          //
+          //  Assert that aOffset will not be so high as to grow us a lot.
+          //
+          NS_ASSERTION(aOffset < (childCount + 1023), "Large frames array!\n");
+          while (aOffset > childCount++) 
+            mChildren.AppendElement(nsnull);
 	  mChildren.AppendElement((void *)aChild);
+        }
 	NS_ADDREF(aChild);
 
     return NS_OK;

@@ -474,6 +474,20 @@ nsGenericHTMLElement::GetLocalName(nsAWritableString& aLocalName)
   return NS_OK;
 }
 
+nsresult
+nsGenericHTMLElement::GetElementsByTagName(const nsAReadableString& aTagname,
+                                           nsIDOMNodeList** aReturn)
+{
+  nsAutoString tagName(aTagname);
+
+  // Only lowercase the name if this element has no namespace (i.e.
+  // it's a HTML element, not an XHTML element).
+  if (mNodeInfo && mNodeInfo->NamespaceEquals(kNameSpaceID_None))
+    tagName.ToLowerCase();
+
+  return nsGenericElement::GetElementsByTagName(tagName, aReturn);
+}
+
 // Implementation for nsIDOMHTMLElement
 nsresult
 nsGenericHTMLElement::GetId(nsAWritableString& aId)
@@ -1153,14 +1167,12 @@ nsGenericHTMLElement::HandleDOMEventForAnchors(nsIContent* aOuter,
 
       case NS_MOUSE_ENTER_SYNTH:
       {
-#if 0
         nsIEventStateManager *stateManager;
         if (NS_OK == aPresContext->GetEventStateManager(&stateManager)) {
           stateManager->SetContentState(mContent, NS_EVENT_STATE_HOVER);
           NS_RELEASE(stateManager);
         }
         *aEventStatus = nsEventStatus_eConsumeNoDefault; 
-#endif
       }
       // Set the status bar the same for focus and mouseover
       case NS_FOCUS_CONTENT:
@@ -1180,14 +1192,12 @@ nsGenericHTMLElement::HandleDOMEventForAnchors(nsIContent* aOuter,
 
       case NS_MOUSE_EXIT_SYNTH:
       {
-#if 0
         nsIEventStateManager *stateManager;
         if (NS_OK == aPresContext->GetEventStateManager(&stateManager)) {
           stateManager->SetContentState(nsnull, NS_EVENT_STATE_HOVER);
           NS_RELEASE(stateManager);
         }
-        *aEventStatus = nsEventStatus_eConsumeNoDefault; 
-#endif
+        *aEventStatus = nsEventStatus_eConsumeNoDefault;
 
         nsAutoString empty;
         ret = TriggerLink(aPresContext, eLinkVerb_Replace, nsnull, empty, empty, PR_FALSE);

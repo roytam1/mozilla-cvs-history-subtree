@@ -498,6 +498,18 @@ NS_IMETHODIMP nsExternalAppHandler::GetInterface(const nsIID & aIID, void * *aIn
 
 NS_IMETHODIMP nsExternalAppHandler::SetWebProgressListener(nsIWebProgressListener * aWebProgressListener)
 {
+  // while we were bringing up the progress dialog, we actually finished processing the
+  // url. If that's the case then mStopRequestIssued will be true. Tell the dialog to go away in that
+  // case....
+  if (mStopRequestIssued && aWebProgressListener)
+  {
+    // simulate a notification saying the document is done.  This will turn around and cause our
+    // progress dialog to go away....
+    return aWebProgressListener->OnStateChange(nsnull, nsnull, nsIWebProgressListener::STATE_STOP, NS_OK);
+  }
+
+  // o.t. go ahead and register the progress listener....
+
   if (mLoadCookie) 
   {
     nsCOMPtr<nsIWebProgress> webProgress(do_QueryInterface(mLoadCookie));
@@ -701,6 +713,13 @@ NS_IMETHODIMP nsExternalAppHandler::OnStartRequest(nsIChannel * aChannel, nsISup
   RetargetLoadNotifications(aChannel);
   // ignore failure...
   ExtractSuggestedFileNameFromChannel(aChannel); 
+  nsCOMPtr<nsIHTTPChannel> httpChannel = do_QueryInterface( aChannel );
+  if ( httpChannel ) 
+  {
+    // Turn off content encoding conversions.
+    httpChannel->SetApplyConversion( PR_FALSE );
+  }
+
 
   // now that the temp file is set up, find out if we need to invoke a dialog asking the user what
   // they want us to do with this content...

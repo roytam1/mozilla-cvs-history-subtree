@@ -1490,6 +1490,7 @@ js_Interpret(JSContext *cx, jsval *result)
     if (JSVAL_IS_INT(id)) {                                                   \
         atom = NULL;                                                          \
     } else {                                                                  \
+        SAVE_SP(fp);                                                          \
         atom = js_ValueToStringAtom(cx, (jsval)id);                           \
         if (!atom) {                                                          \
             ok = JS_FALSE;                                                    \
@@ -2244,6 +2245,7 @@ js_Interpret(JSContext *cx, jsval *result)
                 OBJ_GET_CLASS(cx, obj2) == &js_FunctionClass ||
                 !obj2->map->ops->construct)
             {
+                SAVE_SP(fp);
                 fun = js_ValueToFunction(cx, vp, JS_TRUE);
                 if (!fun) {
                     ok = JS_FALSE;

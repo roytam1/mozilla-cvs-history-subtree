@@ -31,17 +31,16 @@ static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
 nsHTTPSHandler::nsHTTPSHandler()
 : nsHTTPHandler()
 {
-    nsresult rv;
-    nsISupports *psm = nsnull;
-    //
-    // Initialize the PSM component.
-    // This is to ensure that PSM is initialized on the main UI thread.
-    // 
-    rv = nsServiceManager::GetService( PSM_COMPONENT_CONTRACTID,
-                                       NS_GET_IID(nsIPSMComponent), 
-                                       (nsISupports**)&psm);  
-
-    NS_IF_RELEASE(psm);
+  nsresult rv;
+  nsISupports *psm = nsnull;
+  //
+  // Initialize the PSM component.
+  // This is to ensure that PSM is initialized on the main UI thread.
+  // 
+  rv = nsServiceManager::GetService( PSM_COMPONENT_CONTRACTID,
+                                      NS_GET_IID(nsIPSMComponent), 
+                                      (nsISupports**)&psm);  
+  NS_IF_RELEASE(psm);
 }
 
 nsHTTPSHandler::~nsHTTPSHandler()

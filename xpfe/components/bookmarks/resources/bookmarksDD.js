@@ -325,15 +325,6 @@ function DropOnTree ( event )
 
     	// we may need to synthesize a name (just use the URL)
     	checkNameHack = true;
-      
-      // pull the (optional) name out of the URL
-      var space = sourceID.indexOf(" ");
-      if (space >= 0)
-        {
-          name = sourceID.substr(space+1);
-          sourceID = sourceID.substr(0, space);
-          sourceID = unescape(sourceID);
-        }
     }
     else if (bestFlavor.value == "text/unicode")
     {
@@ -348,6 +339,13 @@ function DropOnTree ( event )
         continue;
     }
 
+    // pull the (optional) name out of the URL
+    var space = sourceID.indexOf(" ");
+    if (space >= 0)
+    {
+        name = sourceID.substr(space+1);
+        sourceID = sourceID.substr(0, space);
+    }
 
     dump("    Node #" + i + ": drop '" + sourceID + "'\n");
     dump("             from container '" + parentID + "'\n");
@@ -368,9 +366,9 @@ function DropOnTree ( event )
     }
     
     // Prevent dropping of a node before, after, or on itself
-    if (sourceNode == targetNode) continue;
+    if (sourceNode == targetNode) return false;
     // Prevent dropping of a node onto its parent container
-    if ((dropAction == "on") && (containerID) && (containerID == parentID))	continue;
+    if ((dropAction == "on") && (containerID) && (containerID == parentID)) return false;
 
     RDFC.Init(Bookmarks, containerNode);
 

@@ -595,6 +595,14 @@ void nsDocLoaderImpl::DocLoaderIsEmpty(nsresult aStatus)
       // Update the progress status state - the document is done
       mProgressStateFlags = nsIWebProgressListener::STATE_STOP;
 
+      // for the branch only....we'll only over ride the current status
+      // code being passed in, IFF the last load result was a binding aborted
+      // this is to limit risk on the branch while we cleanly track regressions on the tip.
+
+      nsresult loadGroupStatus = aStatus; 
+      if (aStatus == NS_BINDING_ABORTED || aStatus == NS_ERROR_ABORT)
+        mLoadGroup->GetStatus(&loadGroupStatus);
+
       // 
       // New code to break the circular reference between 
       // the load group and the docloader... 
@@ -606,11 +614,11 @@ void nsDocLoaderImpl::DocLoaderIsEmpty(nsresult aStatus)
       // loader may be loading a *new* document - if LoadDocument()
       // was called from a handler!
       //
-      doStopDocumentLoad(docChannel, aStatus);
-      FireOnEndDocumentLoad(this, docChannel, aStatus);
+      doStopDocumentLoad(docChannel, loadGroupStatus);
+      FireOnEndDocumentLoad(this, docChannel, loadGroupStatus);
 
       if (mParent) {
-        mParent->DocLoaderIsEmpty(aStatus);
+        mParent->DocLoaderIsEmpty(loadGroupStatus);
       }
     }
   }

@@ -658,7 +658,32 @@ nsresult CNavDTD::HandleToken(CToken* aToken,nsIParser* aParser){
         return result;
       }
     }
+    else if(mDTDState==NS_HTMLPARSER_ALTERNATECONTENT) {
+      if(eHTMLTag_noscript!=theTag || theType!=eToken_end) {
+        // attribute source is a part of start token.
+        if(theType!=eToken_attribute) {
+          aToken->AppendSource(mScratch);
+        }
+        IF_FREE(aToken);
+        return result;
+      }
+      else {
+        // If you're here then we have seen a /noscript.
+        // After handling the text token intentionally
+        // fall thro' such that /noscript gets handled.
+        CTextToken theTextToken(mScratch);        
+        result=HandleStartToken(&theTextToken);
+        
+        if(NS_FAILED(result)) {
+          return result;
+        }
 
+        mScratch.Truncate();
+        mScratch.SetCapacity(0);
+      }
+    }
+
+   
     /* ---------------------------------------------------------------------------------
        This section of code is used to "move" misplaced content from one location in 
        our document model to another. (Consider what would happen if we found a <P> tag
@@ -666,7 +691,7 @@ nsresult CNavDTD::HandleToken(CToken* aToken,nsIParser* aParser){
        deque until we can deal with it.
        ---------------------------------------------------------------------------------
      */
-    if(!execSkipContent && mDTDState!=NS_HTMLPARSER_ALTERNATECONTENT) {
+    if(!execSkipContent) {
 
       switch(theTag) {
         case eHTMLTag_html:
@@ -1002,6 +1027,8 @@ PRBool CanBeContained(eHTMLTags aChildTag,nsDTDContext& aContext) {
         
         result=PR_FALSE;
 
+        static eHTMLTags gTableElements[]={eHTMLTag_td,eHTMLTag_th};
+
         PRInt32 theIndex=theCount-1;
         while(theChildIndex<theIndex) {
           eHTMLTags theParentTag=aContext.TagAt(theIndex--);
@@ -1013,6 +1040,10 @@ PRBool CanBeContained(eHTMLTags aChildTag,nsDTDContext& aContext) {
               result=PR_TRUE;
               break;
             }
+          }
+          else if(FindTagInSet(theParentTag,gTableElements,sizeof(gTableElements)/sizeof(eHTMLTag_unknown))){
+            result=PR_TRUE; //added this to catch a case we missed; bug 57173.
+            break;
           }
         }
       }
@@ -1184,7 +1215,7 @@ void WriteTokenToLog(CToken* aToken) {
 /**
  * This gets called before we've handled a given start tag.
  * It's a generic hook to let us do pre processing.
- * @param   aToken contains the tag in question
+ * @param   aToken contains the tag in question 
  * @param   aChildTag is the tag itself.
  * @param   aNode is the node (tag) with associated attributes.
  * @return  TRUE if tag processing should continue; FALSE if the tag has been handled.
@@ -1210,21 +1241,28 @@ nsresult CNavDTD::WillHandleStartTag(CToken* aToken,eHTMLTags aTag,nsCParserNode
     }
   }
 
+
     /**************************************************************************************
      *
      * Now a little code to deal with bug #49687 (crash when layout stack gets too deep)
      * I've also opened this up to any container (not just inlines): re bug 55095
+     * Improved to handle bug 55980 (infinite loop caused when DEPTH is exceeded and
+     * </P> is encountered by itself (<P>) is continuously produced.
      *
      **************************************************************************************/
-
-  if(MAX_REFLOW_DEPTH<mBodyContext->GetCount()) {
-    return kHierarchyTooDeep;  
-  }
+  
+  if(MAX_REFLOW_DEPTH<mBodyContext->GetCount()) { 
+    if(nsHTMLElement::IsContainer(aTag)) { 
+      if(!gHTMLElements[aTag].HasSpecialProperty(kHandleStrayTag)) { 
+        return kHierarchyTooDeep; //drop the container on the floor. 
+      } 
+    } 
+  } 
 
   STOP_TIMER()
   MOZ_TIMER_DEBUGLOG(("Stop: Parse Time: CNavDTD::WillHandleStartTag(), this=%p\n", this));
 
-  if(mParser && mDTDState!=NS_HTMLPARSER_ALTERNATECONTENT) {
+  if(mParser) {
 
     CObserverService* theService=mParser->GetObserverService();
     if(theService) {
@@ -1661,8 +1699,7 @@ eHTMLTags FindAutoCloseTargetForEndTag(eHTMLTags aCurrentTag,nsDTDContext& aCont
     PRInt32 theChildIndex=GetIndexOfChildOrSynonym(aContext,aCurrentTag);
     
     if(kNotFound<theChildIndex) {
-      if((thePrevTag==aContext[theChildIndex]) || 
-         (eHTMLTag_noscript==aCurrentTag)){  //bug 54571
+      if(thePrevTag==aContext[theChildIndex]){
         return aContext[theChildIndex];
       } 
     
@@ -2359,6 +2396,14 @@ PRBool CNavDTD::CanContain(PRInt32 aParent,PRInt32 aChild) const {
       }
     }
   }
+
+  if(eHTMLTag_nobr==aChild) { 
+    if(IsInlineElement(aParent,aParent)){ 
+      if(HasOpenContainer((eHTMLTags)aChild)) { 
+        return PR_FALSE; 
+      } 
+    } 
+  } 
 
   return result;
 } 
@@ -3186,17 +3231,16 @@ nsresult CNavDTD::OpenNoscript(const nsIParserNode *aNode,nsEntryStack* aStyleSt
       if(result==NS_HTMLPARSER_ALTERNATECONTENT) {
         // We're here because the sink has identified that
         // JS is enabled and therefore noscript content should
-        // not be treated as a regular content,i.e., make sure
-        // that head elements are handled correctly and may be
-        // residual style.
+        // not be treated as a regular content
+        ++mHasOpenNoXXX;
+        mScratch.Truncate();
+        mScratch.SetCapacity(0);
+        
+        mBodyContext->Push(aNode,aStyleStack);
+        
         mDTDState=result;
-        // Though NS_HTMLPARSER_ALTERNATECONTENT is a succeeded message we don't want to propagate it
-        // because there are lots of places where we don't check for succeeded result instead
-        // we check for NS_OK. Also, this message is pertinent to the DTD only 
         result=NS_OK; 
       }
-      mHasOpenNoXXX++;
-      mBodyContext->Push(aNode,aStyleStack);
     }
   }
   
@@ -3758,7 +3802,6 @@ nsresult CNavDTD::AddHeadLeaf(nsIParserNode *aNode){
     // within NOSCRIPT and since JS is enanbled we should not process
     // this content. However, when JS is disabled alternate content
     // would become regular content.
-    if(mDTDState!=NS_HTMLPARSER_ALTERNATECONTENT) {
       result=OpenHead(aNode);
       if(NS_OK==result) {
         if(eHTMLTag_title==theTag) {
@@ -3769,7 +3812,6 @@ nsresult CNavDTD::AddHeadLeaf(nsIParserNode *aNode){
           nsAutoString theString2(theBD);
 
           theString2.CompressWhitespace();
-
           STOP_TIMER()
           MOZ_TIMER_DEBUGLOG(("Stop: Parse Time: CNavDTD::AddHeadLeaf(), this=%p\n", this));
           mSink->SetTitle(theString2);
@@ -3796,8 +3838,7 @@ nsresult CNavDTD::AddHeadLeaf(nsIParserNode *aNode){
         }
       }  
     }
-    else result=AddLeaf(aNode);
-  }
+  
   return result;
 }
 

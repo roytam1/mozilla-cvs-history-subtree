@@ -356,6 +356,10 @@ nsEditorShell::Shutdown()
     editor->PreDestroy();
   }
 
+  // Make sure we blow the spellchecker away, just in
+  // case it hasn't been destroyed already.
+  mSpellChecker = nsnull;
+  
   if (mDocShell)
     mDocShell->SetParentURIContentListener(nsnull);
 
@@ -385,6 +389,12 @@ nsEditorShell::ResetEditingState()
   // Mmm, we have an editor already. That means that someone loaded more than
   // one URL into the content area. Let's tear down what we have, and rip 'em a
   // new one.
+
+  nsCOMPtr<nsIEditor> editor(do_QueryInterface(mEditor));
+  if (editor)
+  {
+    editor->PreDestroy();
+  }
 
   // Unload existing stylesheets
   nsCOMPtr<nsIEditorStyleSheets> styleSheets = do_QueryInterface(mEditor);
@@ -957,6 +967,11 @@ nsEditorShell::InstantiateEditor(nsIDOMDocument *aDoc, nsIPresShell *aPresShell)
          NS_WARNING(errorMsgCString);
          nsCRT::free(errorMsgCString);
 #endif
+    }
+
+    // disable the preference style sheet so we can override colors
+    if (NS_SUCCEEDED(err)) {
+      err = aPresShell->EnablePrefStyleRules(PR_FALSE,0);
     }
 
     if (NS_SUCCEEDED(err) && editor)
@@ -4595,7 +4610,7 @@ nsEditorShell::InitSpellChecker()
     if (!mSpellChecker)
       return NS_ERROR_NULL_POINTER;
 
-    result = mSpellChecker->SetDocument(tsDoc, PR_FALSE);
+    result = mSpellChecker->SetDocument(tsDoc, PR_TRUE);
 
     if (NS_FAILED(result))
       return result;

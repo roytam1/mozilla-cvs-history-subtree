@@ -83,6 +83,7 @@ Contributor(s): ______________________________________. -->
   <broadcaster id="canPrint"/>
   <broadcaster id="args" value=""/>
   <broadcaster id="cmd_pageSetup"/>
+  <broadcaster id="na" value="&nothingAvailable.label;"/>
 </broadcasterset>
 
 <!-- keys are appended from the overlay -->
@@ -296,7 +297,6 @@ Contributor(s): ______________________________________. -->
           <menubutton class="menubutton-icon" id="ubhist">
             <menupopup id="ubhist-popup" popupalign="topright" popupanchor="bottomright"
                        oncreate="createUBHistoryMenu(event.target);" oncommand="executeUrlBarHistoryCommand(event.target);"> 
-              <menuitem value="&nothingAvailable.label;" index="nothing_available"/>
             </menupopup>                       
           </menubutton>
           

@@ -351,8 +351,6 @@ public:
 
   nsString*           mRef;
   nsScrollPreference  mOriginalScrollPreference;
-  PRBool              mNotAtRef;
-  nsIHTMLContent*     mRefContent;
 
   nsString            mBaseHREF;
   nsString            mBaseTarget;
@@ -2154,7 +2152,6 @@ HTMLContentSink::HTMLContentSink() {
     gSinkLogModuleInfo = PR_NewLogModule("htmlcontentsink");
   }
 #endif
-  mNotAtRef        = PR_TRUE;  
   mInScript = 0;
   mInNotification = 0;
   mInMonolithicContainer = 0;
@@ -2182,7 +2179,6 @@ HTMLContentSink::~HTMLContentSink()
 
   NS_IF_RELEASE(mCurrentForm);
   NS_IF_RELEASE(mCurrentMap);
-  NS_IF_RELEASE(mRefContent);
 
   NS_IF_RELEASE(mNodeInfoManager);
 
@@ -2396,6 +2392,7 @@ HTMLContentSink::DidBuildModel(PRInt32 aQualityLevel)
                ("HTMLContentSink::DidBuildModel: layout final content"));
     mCurrentContext->FlushTags(PR_TRUE);
   }
+
   ScrollToRef();
 
   mDocument->EndLoad();
@@ -3018,6 +3015,7 @@ HTMLContentSink::CloseMap(const nsIParserNode& aNode)
 
 NS_IMETHODIMP
 HTMLContentSink::OpenNoscript(const nsIParserNode& aNode) {
+  nsresult result=NS_OK;
 
   MOZ_TIMER_DEBUGLOG(("Start: nsHTMLContentSink::OpenNoscript()\n"));
   MOZ_TIMER_START(mWatch);
@@ -3025,23 +3023,21 @@ HTMLContentSink::OpenNoscript(const nsIParserNode& aNode) {
                   "HTMLContentSink::OpenNoscript", aNode, 
                   mCurrentContext->mStackPos, this);
   
-  nsresult result=mCurrentContext->OpenContainer(aNode);
+  nsCOMPtr<nsIPref> prefs(do_GetService("@mozilla.org/preferences;1", &result));
   if(NS_SUCCEEDED(result)) {
-    NS_WITH_SERVICE(nsIPref, prefs, "@mozilla.org/preferences;1", &result);
-    if(NS_SUCCEEDED(result)) {
       PRBool jsEnabled;
       result=prefs->GetBoolPref("javascript.enabled", &jsEnabled);
       if(NS_SUCCEEDED(result)){
-        if(!jsEnabled) {
-          nsIHTMLContent* content=mCurrentContext->mStack[mCurrentContext->mStackPos -1].mContent;
-          nsCOMPtr<nsIDOMElement> element=do_QueryInterface(content, &result);
+      // If JS is disabled then we want to lose the noscript element
+      // ,and therefore don't OpenContainer, so that the noscript contents 
+      // get handled as if noscript  wasn't present.
+      if(jsEnabled) {
+
+        result=mCurrentContext->OpenContainer(aNode);
+
           if(NS_SUCCEEDED(result)) {
-            result=element->SetAttribute(NS_ConvertASCIItoUCS2("style"),NS_ConvertASCIItoUCS2("display:inline"));
-          }
-        }
-        else {
           mInsideNoXXXTag++;        // To indicate that no processing should be done to this content
-          result=NS_HTMLPARSER_ALTERNATECONTENT; // Inform DTD that the content is not regular, but an alternate content.
+          result=NS_HTMLPARSER_ALTERNATECONTENT; // Inform DTD that the noscript content should be treated as CDATA.
         }
       }
     }
@@ -3049,6 +3045,7 @@ HTMLContentSink::OpenNoscript(const nsIParserNode& aNode) {
 
   MOZ_TIMER_DEBUGLOG(("Stop: nsHTMLContentSink::OpenNoscript()\n"));
   MOZ_TIMER_STOP(mWatch);
+  
   return result;
 }
 
@@ -3062,6 +3059,9 @@ HTMLContentSink::OpenNoscript(const nsIParserNode& aNode) {
  */
 NS_IMETHODIMP
 HTMLContentSink::CloseNoscript(const nsIParserNode& aNode) {
+
+  // When JS is diabled this method wouldn't get called because
+  // noscript element will not be present then.
 
   MOZ_TIMER_DEBUGLOG(("Start: nsHTMLContentSink::CloseNoscript()\n"));
   MOZ_TIMER_START(mWatch);
@@ -3549,45 +3549,15 @@ HTMLContentSink::StartLayout()
 void
 HTMLContentSink::ScrollToRef()
 {
-  if (mNotAtRef && (nsnull != mRef) && (nsnull != mRefContent)) {
-    // See if the ref content has been reflowed by finding its frame
+  if (mRef && mRef->Length() > 0)
+  {
     PRInt32 i, ns = mDocument->GetNumberOfShells();
     for (i = 0; i < ns; i++) {
-      nsCOMPtr<nsIPresShell> shell( dont_AddRef(mDocument->GetShellAt(i)) );
+      nsCOMPtr<nsIPresShell> shell(dont_AddRef(mDocument->GetShellAt(i)));
       if (shell) {
-        nsIFrame* frame;
-        shell->GetPrimaryFrameFor(mRefContent, &frame);
-        if (nsnull != frame) {
-          nsCOMPtr<nsIViewManager> vm;
-          shell->GetViewManager(getter_AddRefs(vm));
-          if (vm) {
-            nsIScrollableView* sview = nsnull;
-            vm->GetRootScrollableView(&sview);
-
-            if (sview) {
-              // Determine the x,y scroll offsets for the given
-              // frame. The offsets are relative to the
-              // ScrollableView's upper left corner so we need frame
-              // coordinates that are relative to that.
-              nsPoint offset;
-              nsIView* view;
-              nsCOMPtr<nsIPresContext> presContext;
-              shell->GetPresContext(getter_AddRefs(presContext));
-              frame->GetOffsetFromView(presContext, offset, &view);
-              nscoord x = 0;
-              nscoord y = offset.y;
-              sview->SetScrollPreference(mOriginalScrollPreference);
-              // XXX If view != scrolledView, then there is a scrolled frame,
-              // e.g., a DIV with 'overflow' of 'scroll', somewhere in the middle,
-              // or maybe an absolutely positioned element that has a view. We
-              // need to handle these cases...
-              sview->ScrollTo(x, y, NS_VMREFRESH_IMMEDIATE);
-
-              // Note that we did this so that we don't bother doing it again
-              mNotAtRef = PR_FALSE;
-            }
-          }
-        }
+        // Scroll to the anchor
+        shell->FlushPendingNotifications();
+        shell->GoToAnchor(*mRef);
       }
     }
   }
@@ -3609,19 +3579,6 @@ HTMLContentSink::ProcessATag(const nsIParserNode& aNode,
                              nsIHTMLContent* aContent)
 {
   AddBaseTagInfo(aContent);
-  if ((nsnull != mRef) && (nsnull == mRefContent)) {
-    nsHTMLValue value;
-    aContent->GetHTMLAttribute(nsHTMLAtoms::name, value);
-    if (eHTMLUnit_String == value.GetUnit()) {
-      nsAutoString tmp;
-      value.GetStringValue(tmp);
-      if (mRef->EqualsIgnoreCase(tmp)) {
-        // Winner. We just found the content that is the named anchor
-        mRefContent = aContent;
-        NS_ADDREF(aContent);
-      }
-    }
-  }
   return NS_OK;
 }
 
@@ -3665,7 +3622,7 @@ HTMLContentSink::ProcessBaseHref(const nsString& aBaseHref)
   nsCOMPtr<nsIURI> baseHrefURI;
   rv = NS_NewURI(getter_AddRefs(baseHrefURI), aBaseHref, nsnull);
   if (NS_FAILED(rv)) return;
-  rv = securityManager->CheckLoadURI(mDocumentBaseURL, baseHrefURI, PR_FALSE);
+  rv = securityManager->CheckLoadURI(mDocumentBaseURL, baseHrefURI, nsIScriptSecurityManager::STANDARD);
   if (NS_FAILED(rv)) return;
 
   if (nsnull == mBody) {  // still in real HEAD
@@ -4355,7 +4312,7 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
                     if (NS_SUCCEEDED(rv)) {
                         rv = securityManager->CheckLoadURI(baseURI,
                                                            uri,
-                                                           PR_TRUE);
+                                                           nsIScriptSecurityManager::DISALLOW_FROM_MAIL);
                         if (NS_SUCCEEDED(rv)) {
                             nsCOMPtr<nsIRefreshURI> reefer = 
                                 do_QueryInterface(mWebShell);
@@ -4934,7 +4891,7 @@ HTMLContentSink::ProcessSCRIPTTag(const nsIParserNode& aNode)
                       NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
       if (NS_FAILED(rv)) 
           return rv;
-      rv = securityManager->CheckLoadURI(mDocumentBaseURL, mScriptURI, PR_FALSE);
+      rv = securityManager->CheckLoadURI(mDocumentBaseURL, mScriptURI, nsIScriptSecurityManager::ALLOW_CHROME);
       if (NS_FAILED(rv)) 
           return rv;
 
