@@ -9,4 +9,4 @@ en-US.jar:
     locale/en-US/messenger/am-smime.dtd                              (resources/locale/en-US/am-smime.dtd) 
     locale/en-US/messenger/am-smime.properties                       (resources/locale/en-US/am-smime.properties) 
     locale/en-US/messenger-smime/contents.rdf                        (resources/locale/en-US/contents.rdf)
-    locale/en-US/messenger-smime/msgCompSMIMEOverlay.dtd             (resources/locale/en-US/msgCompSMIMEOverlay.dtd)
+    locale/en-US/messenger/msgCompSMIMEOverlay.dtd                   (resources/locale/en-US/msgCompSMIMEOverlay.dtd)

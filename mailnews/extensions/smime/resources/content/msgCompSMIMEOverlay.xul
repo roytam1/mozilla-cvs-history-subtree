@@ -24,7 +24,7 @@
   -->
 
 
-<!DOCTYPE overlay SYSTEM "chrome://messenger-smime/locale/msgCompSMIMEOverlay.dtd">
+<!DOCTYPE overlay SYSTEM "chrome://messenger/locale/msgCompSMIMEOverlay.dtd">
 
 <overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
