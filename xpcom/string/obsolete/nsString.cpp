@@ -120,7 +120,7 @@ nsCString::nsCString(const nsStr &aString)  {
  * @param   reference to another nsCString
  */
 nsCString::nsCString(const nsCString& aString)  {
-  Initialize(*this,aString.mCharSize);
+  Initialize(*this,eCharSize(aString.mCharSize));
   StrAssign(*this,aString,0,aString.mLength);
 }
 
@@ -1477,6 +1477,21 @@ NS_ConvertUCS2toUTF8::Append( const PRUnichar* aString, PRUint32 aLength )
 
     *out = '\0'; // null terminate
     mLength += utf8len;
+  }
+
+NS_LossyConvertUCS2toASCII::NS_LossyConvertUCS2toASCII( const nsAString& aString
+ )
+  {
+    SetCapacity(aString.Length());
+
+    nsAString::const_iterator start; aString.BeginReading(start);
+    nsAString::const_iterator end;   aString.EndReading(end);
+
+    while (start != end) {
+      nsReadableFragment<PRUnichar> frag(start.fragment());
+      AppendWithConversion(frag.mStart, frag.mEnd - frag.mStart);
+      start.advance(start.size_forward());
+    }
   }
 
 

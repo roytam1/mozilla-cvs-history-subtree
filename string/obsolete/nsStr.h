@@ -440,8 +440,8 @@ struct NS_COM nsStr {
 
   PRUint32        mLength;
   PRUint32        mCapacity;
-  eCharSize       mCharSize;
-  PRBool          mOwnsBuffer;
+  PRInt8          mCharSize;
+  PRPackedBool    mOwnsBuffer;
 
   union { 
     char*         mStr;
