@@ -72,10 +72,10 @@ static NS_DEFINE_CID(kNSSComponentCID, NS_NSSCOMPONENT_CID);
 #define PIP_PKCS12_USER_CANCELED 3
 
 // constructor
-nsPKCS12Blob::nsPKCS12Blob():mTmpFile(nsnull),
+nsPKCS12Blob::nsPKCS12Blob():mCertArray(0),
+                             mTmpFile(nsnull),
                              mTmpFilePath(nsnull),
-                             mTokenSet(PR_FALSE),
-                             mCertArray(0)
+                             mTokenSet(PR_FALSE)
 {
   mUIContext = new PipUIContext();
 }
