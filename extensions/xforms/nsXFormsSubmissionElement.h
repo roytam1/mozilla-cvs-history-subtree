@@ -72,8 +72,10 @@ public:
   NS_HIDDEN_(void)     AppendURLEncodedData(nsIDOMNode *data, const nsCString &sep, nsCString &buf);
   NS_HIDDEN_(nsresult) SerializeDataMultipartRelated(nsIDOMNode *data, PRUint32 format, nsIInputStream **);
   NS_HIDDEN_(nsresult) SerializeDataMultipartFormData(nsIDOMNode *data, PRUint32 format, nsIInputStream **);
-  NS_HIDDEN_(void)     AppendMultipartFormData(nsIDOMNode *data, const nsCString &boundary, nsCString &buf, nsIMultiplexInputStream *);
-  NS_HIDDEN_(void)     AppendPostDataChunk(nsCString &postDataChunk, nsIMultiplexInputStream *multiStream);
+  NS_HIDDEN_(nsresult) AppendMultipartFormData(nsIDOMNode *data, const nsCString &boundary, nsCString &buf, nsIMultiplexInputStream *);
+  NS_HIDDEN_(nsresult) AppendPostDataChunk(nsCString &postDataChunk, nsIMultiplexInputStream *multiStream);
+  NS_HIDDEN_(nsresult) GetElementEncodingType(nsIDOMNode *data, PRUint32 *encType);
+  NS_HIDDEN_(nsresult) GetElementMediaType(nsIDOMNode *data, PRUint32 encType, nsCString &mediaType);
   NS_HIDDEN_(nsresult) SendData(PRUint32 format, const nsCString &uri, nsIInputStream *stream);
 
 private:

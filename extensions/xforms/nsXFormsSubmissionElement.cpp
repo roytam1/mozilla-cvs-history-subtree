@@ -72,11 +72,19 @@
 #include "nsINameSpaceManager.h"
 #include "nsIDocument.h"
 #include "nsIContent.h"
+#include "nsIFileURL.h"
 #include "nsLinebreakConverter.h"
 #include "nsEscape.h"
 #include "nsString.h"
 #include "nsMemory.h"
 #include "nsCOMPtr.h"
+#include "nsNetUtil.h"
+
+// namespace literals
+#define NAMESPACE_XML_SCHEMA \
+        NS_LITERAL_STRING("http://www.w3.org/2001/XMLSchema")
+#define NAMESPACE_XML_SCHEMA_INSTANCE \
+        NS_LITERAL_STRING("http://www.w3.org/2001/XMLSchema-instance")
 
 static const nsIID sScriptingIIDs[] = {
   NS_IDOMELEMENT_IID,
@@ -125,6 +133,11 @@ GetSubmissionFormat(nsIContent *content)
   }
   return 0;
 }
+
+#define ELEMENT_ENCTYPE_STRING 0
+#define ELEMENT_ENCTYPE_URI    1
+#define ELEMENT_ENCTYPE_BASE64 2
+#define ELEMENT_ENCTYPE_HEX    3
 
 static void
 MakeMultipartBoundary(nsCString &boundary)
@@ -725,13 +738,16 @@ nsXFormsSubmissionElement::SerializeDataMultipartFormData(nsIDOMNode *data,
 
   nsCOMPtr<nsIMultiplexInputStream> multiStream =
       do_CreateInstance("@mozilla.org/io/multiplex-input-stream;1");
+  NS_ENSURE_TRUE(multiStream, NS_ERROR_UNEXPECTED);
 
   nsCString postDataChunk;
-  AppendMultipartFormData(data, boundary, postDataChunk, multiStream);
+  nsresult rv = AppendMultipartFormData(data, boundary, postDataChunk, multiStream);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   postDataChunk += NS_LITERAL_CSTRING("--") + boundary
                 +  NS_LITERAL_CSTRING("--\r\n");
-  AppendPostDataChunk(postDataChunk, multiStream);
+  rv = AppendPostDataChunk(postDataChunk, multiStream);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIMIMEInputStream> mimeStream =
       do_CreateInstance("@mozilla.org/network/mime-input-stream;1");
@@ -747,7 +763,7 @@ nsXFormsSubmissionElement::SerializeDataMultipartFormData(nsIDOMNode *data,
   return NS_OK;
 }
 
-void
+nsresult
 nsXFormsSubmissionElement::AppendMultipartFormData(nsIDOMNode *data,
                                                    const nsCString &boundary,
                                                    nsCString &postDataChunk,
@@ -760,10 +776,12 @@ nsXFormsSubmissionElement::AppendMultipartFormData(nsIDOMNode *data,
       NS_ConvertUTF16toUTF8(nodeName).get()));
 #endif
 
+  nsresult rv;
+
   nsCOMPtr<nsIDOMNode> child;
   data->GetFirstChild(getter_AddRefs(child));
   if (!child)
-    return;
+    return NS_OK;
 
   PRUint16 childType;
   child->GetNodeType(&childType);
@@ -781,48 +799,177 @@ nsXFormsSubmissionElement::AppendMultipartFormData(nsIDOMNode *data,
 
     LOG(("    appending data for <%s>\n", NS_ConvertUTF16toUTF8(localName).get()));
 
-    // XXX need to deal with 'upload' as well as xsd:base64Binary and xsd:hexBinary
+    nsCOMPtr<nsIInputStream> dataStream;
+    nsCAutoString encName, encValue, filename, contentType, charset;
 
-    // XXX UTF-8 ok?
+    PRUint32 encType;
+    rv = GetElementEncodingType(data, &encType);
+    NS_ENSURE_SUCCESS(rv, rv);
 
-    NS_ConvertUTF16toUTF8 encLocalName(localName);
-    encLocalName.Adopt(nsLinebreakConverter::ConvertLineBreaks(encLocalName.get(),
+    rv = GetElementMediaType(data, encType, contentType);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    // XXX looks like we only really need to care if we have a xsd:anyURI type
+    switch (encType)
+    {
+      case ELEMENT_ENCTYPE_URI:
+        break;
+      // for these types, we assume that the data is already encoded.
+      // this assumption is based on section 8.1.6 of the xforms spec.
+      case ELEMENT_ENCTYPE_BASE64:
+      case ELEMENT_ENCTYPE_HEX:
+      default:
+        // XXX UTF-8 ok?
+        CopyUTF16toUTF8(localName, encName);
+        encName.Adopt(nsLinebreakConverter::ConvertLineBreaks(encName.get(),
+                      nsLinebreakConverter::eLinebreakAny,
+                      nsLinebreakConverter::eLinebreakNet));
+        CopyUTF16toUTF8(value, encValue);
+        encValue.Adopt(nsLinebreakConverter::ConvertLineBreaks(encValue.get(),
                        nsLinebreakConverter::eLinebreakAny,
                        nsLinebreakConverter::eLinebreakNet));
+        break;
+    }
 
-    NS_ConvertUTF16toUTF8 encValue(value);
-    encValue.Adopt(nsLinebreakConverter::ConvertLineBreaks(encValue.get(),
-                   nsLinebreakConverter::eLinebreakAny,
-                   nsLinebreakConverter::eLinebreakNet));
+    // specify UTF-8 encoding for all string encodings
+    if (encType == ELEMENT_ENCTYPE_STRING)
+      charset.AssignLiteral("UTF-8");
 
     postDataChunk += NS_LITERAL_CSTRING("--") + boundary
                   +  NS_LITERAL_CSTRING("\r\nContent-Disposition: form-data; name=\"")
-                  +  encLocalName + NS_LITERAL_CSTRING("\"\r\n")
-                  +  NS_LITERAL_CSTRING("Content-Type: text/plain; charset=UTF-8\r\n")
-                  +  encValue + NS_LITERAL_CSTRING("\r\n");
+                  +  encName + NS_LITERAL_CSTRING("\"");
+
+    if (!filename.IsEmpty())
+      postDataChunk += NS_LITERAL_CSTRING("; filename=\"")
+                    +  filename
+                    +  NS_LITERAL_CSTRING("\"");
+
+    postDataChunk += NS_LITERAL_CSTRING("\r\n")
+                  +  NS_LITERAL_CSTRING("Content-Type: ") + contentType;
+
+    if (!charset.IsEmpty())
+      postDataChunk += NS_LITERAL_CSTRING("; charset=") + charset;
+  
+    postDataChunk += NS_LITERAL_CSTRING("\r\n");
+
+    if (encType != ELEMENT_ENCTYPE_URI)
+    {
+      postDataChunk += encValue + NS_LITERAL_CSTRING("\r\n");
+    }
+    else
+    {
+      AppendPostDataChunk(postDataChunk, multiStream);
+
+      // 'value' contains a URI reference (restrict to file:// -- XXX is this correct?)
+
+      // XXX what about relative URIs?
+
+      nsCOMPtr<nsIURI> uri;
+      NS_NewURI(getter_AddRefs(uri), value);
+      NS_ENSURE_TRUE(uri, NS_ERROR_UNEXPECTED);
+
+      nsCOMPtr<nsIFileURL> fileURL = do_QueryInterface(uri);
+      NS_ENSURE_TRUE(fileURL, NS_ERROR_UNEXPECTED);
+
+      nsCOMPtr<nsIFile> file;
+      fileURL->GetFile(getter_AddRefs(file));
+      NS_ENSURE_TRUE(file, NS_ERROR_UNEXPECTED);
+
+      nsCOMPtr<nsIInputStream> fileStream;
+      NS_NewLocalFileInputStream(getter_AddRefs(fileStream), file);
+      NS_ENSURE_TRUE(fileStream, NS_ERROR_UNEXPECTED);
+
+      multiStream->AppendStream(fileStream);
+
+      postDataChunk += NS_LITERAL_CSTRING("\r\n");
+    }
   }
   else
   {
     // call AppendMultipartFormData on each child node
     do
     {
-      AppendMultipartFormData(child, boundary, postDataChunk, multiStream);
+      rv = AppendMultipartFormData(child, boundary, postDataChunk, multiStream);
+      if (NS_FAILED(rv))
+        return rv;
       child->GetNextSibling(getter_AddRefs(sibling));
       child.swap(sibling);
     }
     while (child);
   }
+  return NS_OK;
 }
 
-void
+nsresult
 nsXFormsSubmissionElement::AppendPostDataChunk(nsCString &postDataChunk,
                                                nsIMultiplexInputStream *multiStream)
 {
   nsCOMPtr<nsIInputStream> stream;
   NS_NewCStringInputStream(getter_AddRefs(stream), postDataChunk);
-  if (stream)
-    multiStream->AppendStream(stream);
+  NS_ENSURE_TRUE(stream, NS_ERROR_OUT_OF_MEMORY);
+
+  multiStream->AppendStream(stream);
+
   postDataChunk.Truncate();
+  return NS_OK;
+}
+
+nsresult
+nsXFormsSubmissionElement::GetElementEncodingType(nsIDOMNode *node, PRUint32 *encType)
+{
+  *encType = ELEMENT_ENCTYPE_STRING; // default
+
+  nsCOMPtr<nsIDOMElement> element = do_QueryInterface(node);
+  NS_ENSURE_TRUE(element, NS_ERROR_UNEXPECTED);
+
+  nsAutoString type;
+  element->GetAttributeNS(NAMESPACE_XML_SCHEMA_INSTANCE,
+                          NS_LITERAL_STRING("type"), type);
+  if (!type.IsEmpty())
+  {
+    // check for 'xsd:base64binary', 'xsd:hexBinary', or 'xsd:anyURI'
+
+    // XXX need to handle derived types (fixing bug 263384 will help)
+
+    // get 'xsd' namespace prefix
+    nsCOMPtr<nsIDOM3Node> dom3Node = do_QueryInterface(node);
+    NS_ENSURE_TRUE(dom3Node, NS_ERROR_UNEXPECTED);
+
+    nsAutoString prefix;
+    dom3Node->LookupPrefix(NAMESPACE_XML_SCHEMA, prefix);
+
+    if (type.Length() > prefix.Length() &&
+        prefix.Equals(StringHead(type, prefix.Length())) &&
+        type.CharAt(prefix.Length()) == PRUnichar(':'))
+    {
+      const nsSubstring &tail = Substring(type, prefix.Length() + 1);
+      if (tail.Equals(NS_LITERAL_STRING("anyURI")))
+        *encType = ELEMENT_ENCTYPE_URI;
+      else if (tail.Equals(NS_LITERAL_STRING("base64binary")))
+        *encType = ELEMENT_ENCTYPE_BASE64;
+      else if (tail.Equals(NS_LITERAL_STRING("hexBinary")))
+        *encType = ELEMENT_ENCTYPE_HEX;
+    }
+  }
+
+  return NS_OK;
+}
+
+nsresult
+nsXFormsSubmissionElement::GetElementMediaType(nsIDOMNode *node,
+                                               PRUint32 encType,
+                                               nsCString &result)
+{
+  switch (encType)
+  {
+    case ELEMENT_ENCTYPE_STRING:
+      result.AssignLiteral("text/plain");
+      break;
+    default:
+      result.AssignLiteral("application/octet-stream");
+      break;
+  }
+  return NS_OK;
 }
 
 nsresult
@@ -857,8 +1004,18 @@ nsXFormsSubmissionElement::SendData(PRUint32 format,
 
   NS_ConvertASCIItoUTF16 temp(uri); // XXX hack
 
+  // wrap the entire upload stream in a buffered input stream, so that
+  // it can be read in large chunks.
+  // XXX necko should probably do this (or something like this) for us.
+  nsCOMPtr<nsIInputStream> bufferedStream;
+  if (stream)
+  {
+    NS_NewBufferedInputStream(getter_AddRefs(bufferedStream), stream, 4096);
+    NS_ENSURE_TRUE(bufferedStream, NS_ERROR_UNEXPECTED);
+  }
+
   return webNav->LoadURI(temp.get(), nsIWebNavigation::LOAD_FLAGS_NONE,
-                         doc->GetDocumentURI(), stream, nsnull);
+                         doc->GetDocumentURI(), bufferedStream, nsnull);
 }
 
 // factory constructor
