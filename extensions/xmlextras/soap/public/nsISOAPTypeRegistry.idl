@@ -62,7 +62,7 @@ interface nsISOAPTypeRegistry : nsISupports {
    *
    * @return The type in the registry that matches the encoding and type name
    */
-  nsISOAPType queryByType(
+  nsISOAPType queryByTypeID(
         in DOMString aEncodingStyleURI, in DOMString aTypeID);
   
   /**
