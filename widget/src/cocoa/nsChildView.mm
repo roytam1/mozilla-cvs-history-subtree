@@ -578,6 +578,7 @@ void* nsChildView::GetNativeData(PRUint32 aDataType)
       break;
       
     case NS_NATIVE_GRAPHIC:           // quickdraw port
+      // XXX this can return NULL if we are not the focussed view
       retVal = [mView qdPort];
       break;
       
@@ -688,11 +689,8 @@ NS_IMETHODIMP nsChildView::Show(PRBool bState)
 nsIWidget*
 nsChildView::GetParent(void)
 {
-  //if (mPluginPort) {
-    NS_IF_ADDREF(mParentWidget);
-    return mParentWidget;
-  //}
-  //return nsnull;
+  NS_IF_ADDREF(mParentWidget);
+  return mParentWidget;
 }
     
 NS_IMETHODIMP nsChildView::ModalEventFilter(PRBool aRealEvent, void *aEvent,
@@ -2399,6 +2397,12 @@ nsChildView::Idle()
 {
   if (mGeckoChild && !newWindow)
     mGeckoChild->RemovedFromWindow();
+    
+  if ([self window] && !newWindow)
+  {
+    WindowRef nativeWindow = windowToWindowRef([self window]);
+    _savePort = ::GetWindowPort(nativeWindow);
+  }
 }
 
 - (void)viewDidMoveToWindow
