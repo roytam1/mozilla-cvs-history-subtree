@@ -101,11 +101,11 @@ void
 nsReflowPath::Remove(iterator &aIterator)
 {
     NS_ASSERTION(aIterator.mNode == this, "inconsistent iterator");
-    NS_ASSERTION(aIterator.mIndex >= 0 && aIterator.mIndex < mChildren.Count(),
-                 "iterator out of range");
 
-    delete NS_STATIC_CAST(nsReflowPath *, mChildren[aIterator.mIndex]);
-    mChildren.RemoveElementAt(aIterator.mIndex);
+    if (aIterator.mIndex >= 0 && aIterator.mIndex < mChildren.Count()) {
+        delete NS_STATIC_CAST(nsReflowPath *, mChildren[aIterator.mIndex]);
+        mChildren.RemoveElementAt(aIterator.mIndex);
+    }
 }
 
 #ifdef DEBUG
