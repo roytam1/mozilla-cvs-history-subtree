@@ -82,7 +82,9 @@ FE_DEFINE(FreeEdgeElement,void, (MWContext *context, LO_EdgeStruct *))
 FE_DEFINE(FormTextIsSubmit,void, (MWContext * context, LO_FormElementStruct * form_element))
 FE_DEFINE(DisplaySubtext,void, (MWContext * context, int iLocation, LO_TextStruct *text, int32 start_pos, int32 end_pos, XP_Bool need_bg))
 FE_DEFINE(DisplayText,void, (MWContext * context, int iLocation, LO_TextStruct *text, XP_Bool need_bg))
+#ifndef MOZ_NGLAYOUT
 FE_DEFINE(DisplayEmbed,void, (MWContext * context, int iLocation ,LO_EmbedStruct *embed_struct))
+#endif
 FE_DEFINE(DisplayJavaApp,void, (MWContext * context, int iLocation ,LO_JavaAppStruct *java_struct))
 FE_DEFINE(DisplayEdge,void, (MWContext * context, int iLocation ,LO_EdgeStruct *edge_struct))
 FE_DEFINE(DisplayTable,void, (MWContext * context, int iLocation ,LO_TableStruct *table_struct))
