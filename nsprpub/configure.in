@@ -43,7 +43,7 @@ dnl ========================================================
 dnl = Defaults
 dnl ========================================================
 MOD_MAJOR_VERSION=4
-MOD_MINOR_VERSION=3
+MOD_MINOR_VERSION=4
 MOD_PATCH_VERSION=0
 NSPR_MODNAME=nspr20
 _HAVE_PTHREADS=
@@ -1687,6 +1687,7 @@ mips-sony-newsos*)
             CFLAGS="$CFLAGS -xs"
             CXXFLAGS="$CXXFLAGS -xs"
         fi
+        _OPTIMIZE_FLAGS=-xO4
     fi
     if test -n "$USE_64" && test -z "$GNU_CC"; then
         CC="$CC -xarch=v9"
