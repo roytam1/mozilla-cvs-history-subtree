@@ -582,7 +582,7 @@ PUBLIC char *INTL_CreateCollationKeyByDefaultLocale(const char *in_string, int16
  */
 PUBLIC int INTL_Compare_CollationKey(const char *key1, const char *key2)
 {
-	return XP_MEMCOMP((const void *) key1, (const void *) key2, XP_STRLEN(key1));
+	return XP_MEMCMP((const void *) key1, (const void *) key2, XP_STRLEN(key1));
 }
 
 /*
