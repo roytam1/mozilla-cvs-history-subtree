@@ -527,6 +527,24 @@ elif test "$OS_ARCH" = "OS_2"; then
 fi
 
 #
+# Cross cimpiling for WinCE needs a special case here.
+# Only WCE300 (WinCE version 3.00) handled thus far.
+#
+# OSVERSION, and TARGETCPU are defined in a WinCE build environment.
+# Jump through hoops to make x86 and X86 equivalent.
+#
+if test "$OSVERSION" = "WCE300"; then
+    OS_ARCH=WINCE
+    OS_TARGET=WINCE
+    OS_RELEASE=3.00
+    if test "$TARGETCPU" = "X86"; then
+        CPU_ARCH=x86
+    else
+        CPU_ARCH=$TARGETCPU
+    fi
+else
+
+#
 # On WIN32, we also define the variable CPU_ARCH.
 #
 
@@ -585,6 +603,7 @@ elif test "$OS_ARCH" = "CYGWIN32_NT"; then
     if echo "$CPU_ARCH" | grep -c 86 >/dev/null; then
         CPU_ARCH=x86
     fi
+fi
 fi
 
 if test -n "$MOZILLA_CLIENT" && test "$OS_ARCH" = "WINNT"; then
@@ -908,10 +927,24 @@ case "$target" in
             _pwd=`pwd`
             CYGWIN_WRAPPER="sh ${_pwd}/${srcdir}/build/cygwin-wrapper"
         fi
-        CC=cl
-        CXX=cl
-        HOST_CC=cl
-        HOST_CXX=cl
+        if test "$OS_TARGET" = "WINCE"; then
+            if test "$TARGETCPU" = "ARM"; then
+                CC=clarm
+                CXX=clarm
+                HOST_CC=clarm
+                HOST_CXX=clarm
+            else
+                CC=cl
+                CXX=cl
+                HOST_CC=cl
+                HOST_CXX=cl
+            fi
+        else
+            CC=cl
+            CXX=cl
+            HOST_CC=cl
+            HOST_CXX=cl
+        fi
         LD=link
         AR='lib -NOLOGO -OUT:"$@"'
         AR_FLAGS=
@@ -969,8 +1002,32 @@ case "$target" in
     USE_SHORT_LIBNAME=1
     MOZ_ENABLE_POSTSCRIPT=
 
-    dnl Hardcode to win95 for now - cls
-    TARGET_NSPR_MDCPUCFG='\"md/_win95.cfg\"'
+    if test "$OS_TARGET" = "WINCE"; then
+        TARGET_NSPR_MDCPUCFG='\"md/_wince.cfg\"'
+        AC_DEFINE(WINCE)
+        AC_DEFINE(UNICODE)
+        AC_DEFINE(_UNICODE)
+        AC_DEFINE(_WIN32_WCE, 300)
+        AC_DEFINE(UNDER_CE, 300)
+        case "$TARGETCPU" in
+        X86)
+              AC_DEFINE(_X86_)
+              AC_DEFINE(x86)
+              AC_DEFINE(_WIN32_WCE_CEPC)
+            ;;
+        ARM)
+              AC_DEFINE(_ARM_)
+              AC_DEFINE(ARM)
+            ;;
+        *)
+              AC_DEFINE(_CPU_ARCH_NOT_DEFINED_)
+            ;;
+        esac
+    else
+        dnl Hardcode to win95 for now - cls
+        TARGET_NSPR_MDCPUCFG='\"md/_win95.cfg\"'
+    fi
+
     no_x=yes
     AC_DEFINE(NO_X11)
 
