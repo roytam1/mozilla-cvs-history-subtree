@@ -207,7 +207,7 @@ extern void *MALLOC(size_t);
  * which does not exist on 10.1.  We can safely #define it to 1 here
  * to allow 10.2 builds to run on 10.1, since we don't use fesetround().
  */
-#if MACOS_DEPLOYMENT_TARGET < 100200
+#if defined(MACOS_DEPLOYMENT_TARGET) && (MACOS_DEPLOYMENT_TARGET < 100200)
 #undef FLT_ROUNDS
 #define FLT_ROUNDS 1
 #endif
