@@ -66,6 +66,12 @@ public:
   // Link traversing control
 };
 
+typedef enum {
+  nsReload,
+  nsReloadBypassCache,
+  nsReloadBypassProxy
+} nsReloadType;
+
 // Return value from WillLoadURL
 #define NS_WEB_SHELL_CANCEL_URL_LOAD      0xC0E70000
 
@@ -111,8 +117,6 @@ public:
   NS_IMETHOD SetObserver(nsIStreamObserver* anObserver) = 0;
   NS_IMETHOD GetObserver(nsIStreamObserver*& aResult) = 0;
 
-  NS_IMETHOD GetDocumentLoader(nsIDocumentLoader*& aResult) = 0;
-
   NS_IMETHOD SetPrefs(nsIPref* aPrefs) = 0;
   NS_IMETHOD GetPrefs(nsIPref*& aPrefs) = 0;
 
@@ -127,13 +131,18 @@ public:
   NS_IMETHOD FindChildWithName(const PRUnichar* aName,
                                nsIWebShell*& aResult) = 0;
 
+  // Document load api's
+  NS_IMETHOD GetDocumentLoader(nsIDocumentLoader*& aResult) = 0;
+  NS_IMETHOD LoadURL(const PRUnichar* aURLSpec,
+                     nsIPostData* aPostData = nsnull) = 0;
+  NS_IMETHOD Stop(void) = 0;
+  NS_IMETHOD Reload(nsReloadType aType) = 0;
+  
   // History api's
   NS_IMETHOD Back() = 0;
   NS_IMETHOD CanBack() = 0;
   NS_IMETHOD Forward() = 0;
   NS_IMETHOD CanForward() = 0;
-  NS_IMETHOD LoadURL(const PRUnichar* aURLSpec,
-                     nsIPostData* aPostData=nsnull) = 0;
   NS_IMETHOD GoTo(PRInt32 aHistoryIndex) = 0;
   NS_IMETHOD GetHistoryIndex(PRInt32& aResult) = 0;
   NS_IMETHOD GetURL(PRInt32 aHistoryIndex, PRUnichar **aURLResult) = 0;

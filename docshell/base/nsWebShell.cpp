@@ -110,7 +110,6 @@ public:
   NS_IMETHOD GetContainer(nsIWebShellContainer*& aResult);
   NS_IMETHOD SetObserver(nsIStreamObserver* anObserver);
   NS_IMETHOD GetObserver(nsIStreamObserver*& aResult);
-  NS_IMETHOD GetDocumentLoader(nsIDocumentLoader*& aResult);
   NS_IMETHOD SetPrefs(nsIPref* aPrefs);
   NS_IMETHOD GetPrefs(nsIPref*& aPrefs);
   NS_IMETHOD GetRootWebShell(nsIWebShell*& aResult);
@@ -123,15 +122,23 @@ public:
   NS_IMETHOD SetName(const PRUnichar* aName);
   NS_IMETHOD FindChildWithName(const PRUnichar* aName,
                                nsIWebShell*& aResult);
+  // Document load api's
+  NS_IMETHOD GetDocumentLoader(nsIDocumentLoader*& aResult);
+  NS_IMETHOD LoadURL(const PRUnichar* aURLSpec,
+                     nsIPostData* aPostData = nsnull);
+  NS_IMETHOD Stop(void);
+  NS_IMETHOD Reload(nsReloadType aType);
+  
+  // History api's
   NS_IMETHOD Back(void);
   NS_IMETHOD CanBack(void);
   NS_IMETHOD Forward(void);
   NS_IMETHOD CanForward(void);
-  NS_IMETHOD LoadURL(const PRUnichar* aURLSpec,
-                     nsIPostData* aPostData=nsnull);
   NS_IMETHOD GoTo(PRInt32 aHistoryIndex);
   NS_IMETHOD GetHistoryIndex(PRInt32& aResult);
   NS_IMETHOD GetURL(PRInt32 aHistoryIndex, PRUnichar** aURLResult);
+
+  // Chrome api's
   NS_IMETHOD SetTitle(const PRUnichar* aTitle);
   NS_IMETHOD GetTitle(PRUnichar** aResult);
 
@@ -643,14 +650,6 @@ nsWebShell::GetObserver(nsIStreamObserver*& aResult)
 }
 
 
-NS_IMETHODIMP 
-nsWebShell::GetDocumentLoader(nsIDocumentLoader*& aResult)
-{
-  aResult = mDocLoader;
-  NS_IF_ADDREF(mDocLoader);
-  return (nsnull != mDocLoader) ? NS_OK : NS_ERROR_FAILURE;
-}
-
 NS_IMETHODIMP
 nsWebShell::SetPrefs(nsIPref* aPrefs)
 {
@@ -781,32 +780,16 @@ nsWebShell::FindChildWithName(const PRUnichar* aName1,
   return NS_OK;
 }
 
-//----------------------------------------
+/**
+ * Document Load methods
+ */
 
-// History methods
-
-NS_IMETHODIMP
-nsWebShell::Back(void)
+NS_IMETHODIMP 
+nsWebShell::GetDocumentLoader(nsIDocumentLoader*& aResult)
 {
-  return GoTo(mHistoryIndex - 1);
-}
-
-NS_IMETHODIMP
-nsWebShell::CanBack(void)
-{
-  return (mHistoryIndex > 0 ? NS_OK : NS_FALSE);
-}
-
-NS_IMETHODIMP
-nsWebShell::Forward(void)
-{
-  return GoTo(mHistoryIndex + 1);
-}
-
-NS_IMETHODIMP
-nsWebShell::CanForward(void)
-{
-  return (mHistoryIndex  < mHistory.Count() - 1 ? NS_OK : NS_FALSE);
+  aResult = mDocLoader;
+  NS_IF_ADDREF(mDocLoader);
+  return (nsnull != mDocLoader) ? NS_OK : NS_ERROR_FAILURE;
 }
 
 #define FILE_PROTOCOL "file:///"
@@ -881,8 +864,7 @@ nsWebShell::LoadURL(const PRUnichar* aURLSpec,
     }
   }
 
-  // Stop any documents that are currently being loaded...
-  mDocLoader->Stop();
+  Stop();
 
   rv = mDocLoader->LoadURL(urlSpec,       // URL string
                            nsnull,         // Command
@@ -891,6 +873,53 @@ nsWebShell::LoadURL(const PRUnichar* aURLSpec,
                            nsnull,         // Extra Info...
                            mObserver);     // Observer
   return rv;
+}
+
+NS_IMETHODIMP nsWebShell::Stop(void)
+{
+  if (mDocLoader) {
+    // Stop any documents that are currently being loaded...
+    mDocLoader->Stop();
+    return NS_OK;
+  }
+  return NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP nsWebShell::Reload(nsReloadType aType)
+{
+  if (mDocLoader) {
+    GoTo(mHistoryIndex);
+    return NS_OK;
+  }
+  return NS_ERROR_FAILURE;
+}
+
+//----------------------------------------
+
+// History methods
+
+NS_IMETHODIMP
+nsWebShell::Back(void)
+{
+  return GoTo(mHistoryIndex - 1);
+}
+
+NS_IMETHODIMP
+nsWebShell::CanBack(void)
+{
+  return (mHistoryIndex > 0 ? NS_OK : NS_FALSE);
+}
+
+NS_IMETHODIMP
+nsWebShell::Forward(void)
+{
+  return GoTo(mHistoryIndex + 1);
+}
+
+NS_IMETHODIMP
+nsWebShell::CanForward(void)
+{
+  return (mHistoryIndex  < mHistory.Count() - 1 ? NS_OK : NS_FALSE);
 }
 
 NS_IMETHODIMP
