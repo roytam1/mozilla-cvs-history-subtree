@@ -135,12 +135,14 @@ foreach my $package (keys %MozPackages::packages) {
     MozParser::Preprocess::add($parser);
     MozParser::Optional::add($parser);
     MozParser::Ignore::add($parser);
+    MozParser::Exec::add($parser);
     $parser->addCommand('error', \&MozParser::Ignore::ignoreFunc);
     $parser->addMapping("dist/bin", "dist/bin");
     $parser->addMapping("dist/lib", "dist/lib");
     $parser->addMapping("dist/include", "dist/include");
     $parser->addMapping("dist/idl", "dist/idl");
     $parser->addMapping("xpiroot", "xpiroot");
+    $parser->addMapping("installer", "installer");
     $parser->parse($packagesDir, $package);
 
     print "Files:";

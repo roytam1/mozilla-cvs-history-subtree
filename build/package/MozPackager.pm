@@ -69,6 +69,20 @@ sub system {
     CORE::system($_[0]) && die("Error executing '$_[0]': code ". ($?>>8));
 }
 
+sub makeWinPath {
+    my ($cygpath) = @_;
+
+    my $realpath = $cygpath;
+    if ($^O eq 'cygwin' && $cygpath =~ m|^/|) {
+        $realpath =~ s/\*/\\\*/g;
+        $realpath = `cygpath -m $realpath`;
+        chop $realpath;
+        die("Could not get windows path (cygpath -m) of $cygpath, code ". ($? >>8)) if ($? || !$realpath);
+    }
+
+    return $realpath;
+}
+
 # level 0, no progress
 # level 1, basic "parsing file blah"
 # level 2, more detail
@@ -78,7 +92,7 @@ $MozPackager::verbosity = 0;
 sub _verbosePrint {
     my $vlevel = shift;
     local $\ = "\n";
-    print STDERR @_ if ($vlevel <= $MozPackager::verbosity);
+    print STDOUT @_ if ($vlevel <= $MozPackager::verbosity);
 }
 
 my $cansymlink = eval {symlink('', ''); 1; };
@@ -252,7 +266,7 @@ sub GetProductBuildID
       # only get the build id from string, excluding spaces
       $buildID =~ s/..*$aDefine\s+//;
       # strip out any quote characters
-      $buildID =~ s/\"//g;
+      $buildID =~ s/[\"\s]//g;
     }
   }
   close($fpInIt);
@@ -310,6 +324,9 @@ sub GetGreFileVersion
   {
     return("0.0.0.0");
   }
+
+  my $length = length($y2kDate);
+  print STDERR "y2kdate: length($length) = $y2kDate\n";
 
   $buildID_hi       = substr($y2kDate, 0, 5);
   $buildID_hi       =~ s/^0+//; # strip out leading '0's
@@ -595,8 +612,8 @@ sub _parseFile {
     my $fileh;
     open $fileh, $file || die("Could not open file: $file");
     while (my $line = <$fileh>) {
-        MozPackager::_verbosePrint(3, "File $file, line $.");
-        chop $line;
+        chomp $line;
+        MozPackager::_verbosePrint(3, "File $file, line $.: '$line'");
 
         # [packagename1 packagename2]
         if ($line =~ /^\[([^\[\]]*)\]$/) {
@@ -721,11 +738,15 @@ sub mergeTo {
     if (scalar(keys %{$parser->{'xptfiles'}}) > 0) {
         MozPackager::_verbosePrint(1, "Merging XPT files to $mergeOut: ", join(", ", keys %{$parser->{'xptfiles'}}));
 
+        MozPackager::ensureDirs($mergeOut);
+
+        # grr, cygwin hackery
+        $mergeOut = MozPackager::makeWinPath($mergeOut);
+
         # XXXbsmedberg : this will not work in cross-compile environments,
         # but I'm not sure anyone cares
         my $linkCommand = File::Spec->catfile("dist", "bin", "xpt_link");
 
-        MozPackager::ensureDirs($mergeOut);
         system ($linkCommand, $mergeOut, map(MozPackager::joinfile($_), keys %{$parser->{'xptfiles'}})) &&
             die("xpt_link failed: code ". ($? >> 8));
     }
@@ -865,7 +886,7 @@ sub _commandFunc {
             warn($comment);
         }
     } else {
-        $parser->_addFile($args[0], $args[1]);
+        $parser->_addFile($args[0], $args[1], $filename);
     }
 }
 
@@ -906,7 +927,7 @@ sub exec {
     my ($parser, $stageDir) = @_;
 
     foreach my $command (@{$parser->{'execCommands'}}) {
-        $command =~ s/\%([^\%]+)\%/MozPackager::joinfile($stageDir, $1)/ge;
+        $command =~ s/\%([^\%]+)\%/MozPackager::makeWinPath(MozPackager::joinfile($stageDir, $1))/ge;
 
         MozPackager::system($command);
     }
