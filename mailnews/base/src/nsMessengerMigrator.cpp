@@ -1977,17 +1977,6 @@ nsMessengerMigrator::migrateAddressBookPrefEnum(const char *aPref, void *aClosur
   // we only care about ldap_2.servers.*.filename" prefs
   if (!charEndsWith(aPref, ADDRESSBOOK_PREF_NAME_SUFFIX)) return;
       
-  // check for pab without a filename and if so, set it to pab.na2.
-  // This is an ugly hack for installations that haven't set 
-  // pab.filename.
-      rv = prefs->CopyCharPref(DEFAULT_PAB_FILENAME_PREF_NAME, getter_Copies(abFileName));
-      if (NS_FAILED(rv))
-      {
-        // pab.filename not set - set it to pab.na2 and pretend aPref is it.
-        prefs->SetCharPref(DEFAULT_PAB_FILENAME_PREF_NAME, "pab.na2");
-        aPref = "ldap_2.servers.pab.filename";
-      }
-
   // check if this really is an ldap server, in which case, we're not going to migrate
   // the na2 file for now, since it confuses RDF when the import code adds this
   // server as a personal address book. I'd like to fix that but it's tricky
@@ -2105,6 +2094,7 @@ nsMessengerMigrator::migrateAddressBookPrefEnum(const char *aPref, void *aClosur
   rv = tmpLDIFFileSpec->AppendRelativeUnixPath(ldifFileName.get());
   NS_ASSERTION(NS_SUCCEEDED(rv),"ab migration failed: failed to append filename");
   if (NS_FAILED(rv)) return;
+  tmpLDIFFileSpec->MakeUnique();
      
   nsCOMPtr <nsIAddressBook> ab = do_CreateInstance(NS_ADDRESSBOOK_CONTRACTID, &rv);
   NS_ASSERTION(NS_SUCCEEDED(rv) && ab, "failed to get address book");
@@ -2171,6 +2161,15 @@ nsMessengerMigrator::MigrateAddressBooks()
     printf("the addressbook migrator is only in the commercial builds.\n");
     return NS_OK;
   }
+
+  nsXPIDLCString abFileName;
+  // check for pab without a filename and if so, set it to pab.na2.
+  // This is an ugly hack for installations that haven't set 
+  // pab.filename. Do this before we start iterating over prefs...
+  rv = m_prefs->CopyCharPref(DEFAULT_PAB_FILENAME_PREF_NAME, getter_Copies(abFileName));
+  if (NS_FAILED(rv))
+    // pab.filename not set - set it to pab.na2
+    m_prefs->SetCharPref(DEFAULT_PAB_FILENAME_PREF_NAME, "pab.na2");
 
   rv = m_prefs->EnumerateChildren(ADDRESSBOOK_PREF_NAME_ROOT, migrateAddressBookPrefEnum, (void *)m_prefs);
   return rv;
