@@ -19,6 +19,6 @@ DEPTH	= ../../..
 
 MODULE	= pref
 
-EXPORTS	= prefapi.h prefldap.h
+EXPORTS= prefapi.h prefldap.h clocal.h cprfstor.h cprofile.h cprofmgr.h cremote.h
 
 include $(DEPTH)/config/rules.mk

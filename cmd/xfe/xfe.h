@@ -311,6 +311,7 @@ extern void *fe_dialog (Widget parent, const char *title,
 			const char *text, XP_Bool wait_p, XP_Bool select_p,
 			char **passwd);
 extern Boolean fe_Confirm_2 (Widget parent, const char *message);
+extern void fe_Alert_modal (Widget parent, const char *message);
 extern void fe_Alert_2 (Widget parent, const char *message);
 extern void fe_perror_2 (Widget parent, const char *message);
 extern void fe_UpdateGraph (MWContext *context, Boolean update_text);

@@ -803,8 +803,17 @@ xfeDoRemoteCommand (Widget w, XEvent *event,
   printf ("xfeDoRemoteCommand: params[0] = %s\n", params[0]);
 #endif
 
+  //
+  // Somewhere along the line, the CST people started using "xfeDoCmd" 
+  // instead of "xfeDoCommand".  We really dont know why this happened,
+  // but the net result is that we need to handle the "xfeDoCmd" string
+  // just as "xfeDoCommand" for -remote operations which otheriwse would
+  // be broken in calendar.
+  //
+
   /* if the first argument is xfeDoCommand, skip it. */
-  if (!strcmp(params[0], "xfeDoCommand"))
+  if ((!strcmp(params[0], "xfeDoCommand")) || 
+	  (!strcmp(params[0], "xfeDoCmd")))
 	{
 	  first_param = 1;
 	  numparams --;

@@ -26,7 +26,9 @@
 #include "prefwutil.h"
 #include "macutil.h"
 #include "prefapi.h"
+#include "msgcom.h"
 #include "resgui.h"
+#include "UDeferredTask.h"
 #include "xp_file_mac.h"
 #include "DirectoryCopy.h"
 #include <LGARadioButton.h>
@@ -86,9 +88,9 @@ CFragConnectionID CUserProfile::mConfigPluginID;
 
 class LWhiteListBox: public LListBox
 {
-#if !defined(__MWERKS__) || (__MWERKS__ >= 0x2000)
-	typedef LListBox inherited;
-#endif
+private:
+	typedef LListBox Inherited;
+
 
 public:
 	enum	{ class_ID = 'Lwht' };
@@ -107,7 +109,7 @@ Boolean LWhiteListBox::FocusDraw(LPane* /*inSubPane*/)
 {
 	const RGBColor rgbWhite = { 0xFFFF, 0xFFFF, 0xFFFF };
 	
-	if ( inherited::FocusDraw() )
+	if ( Inherited::FocusDraw() )
 	{
 		::RGBBackColor( &rgbWhite );
 		return TRUE;
@@ -282,7 +284,8 @@ CUserProfile::GetUserProfile( const FSSpec& usersFolder, FSSpec& profileFolder,
 			// ¥ save the previous user ID back to profile db
 			if ( result >= eOK )
 			{
-				sCurrentProfileID = newUserID;
+				if ( sCurrentProfileID != kTemporaryProfileID )
+					sCurrentProfileID = newUserID;
 				numProfiles = profileDB.CountProfiles();
 			}
 		}
@@ -298,9 +301,12 @@ CUserProfile::GetUserProfile( const FSSpec& usersFolder, FSSpec& profileFolder,
 	
 	if (result != eUserCancelled) {
 		// ¥Êreflect path & name into xp preferences
-		if (sCurrentProfileID != kInvalidProfileID)
+		if ( (sCurrentProfileID != kInvalidProfileID) 
+			&& sCurrentProfileID != kTemporaryProfileID )
+		{
 			profileDB.GetProfileName( sCurrentProfileID, profileName );
-		ReflectToPreferences(profileName, profileFolder, numProfiles);	
+			ReflectToPreferences(profileName, profileFolder, numProfiles);	
+		}
 	}
 	return result;
 }
@@ -350,17 +356,18 @@ CUserProfile::DoNetExtendedProfileDialog(LCommander * super)
 	ThrowIfNil_(httpRadio);
 
 // Initialize the dialog from the preferences
-//	PrefToEditField("li.server.ldap.serverName", ldapAddressField );
-//	PrefToEditField("li.server.ldap.searchBase", searchBaseField );
-//	PrefToEditField("li.server.http.baseURL", httpAddressField);
-	ldapRadio->SetValue(1);
+	PrefToEditField("li.server.ldap.url", ldapAddressField );
+	PrefToEditField("li.server.ldap.userbase", searchBaseField );
+	PrefToEditField("li.server.http.baseURL", httpAddressField);
+#define PREF_LEN 10;
 	int prefStringLen;
 	char prefString[PREF_STRING_LEN];
 	prefStringLen = PREF_STRING_LEN;
 	if ( PREF_GetCharPref("li.protocol", prefString, &prefStringLen) == 0 )
 		if (XP_STRCMP(prefString, "http") == 0)
 			httpRadio->SetValue(1);
-
+		else
+			ldapRadio->SetValue(1);
 // Do the dialog
 	httpAddressField->SelectAll();
 	theDialog->SetLatentSub(httpAddressField);
@@ -381,8 +388,8 @@ CUserProfile::DoNetExtendedProfileDialog(LCommander * super)
 				if (!httpAddress.BeginsWith(LStr255("http://")))
 					httpAddress.Insert(LStr255("http://"), 0);
 			}
-			EditFieldToPref(ldapAddressField, "li.server.ldap.serverName");
-			EditFieldToPref(searchBaseField, "li.server.ldap.searchBase");
+			EditFieldToPref(ldapAddressField, "li.server.ldap.url");
+			EditFieldToPref(searchBaseField, "li.server.ldap.userbase");
 			EditFieldToPref(httpAddressField, "li.server.http.baseURL");
 		
 			if ( ldapRadio->GetValue() > 0 )
@@ -411,6 +418,9 @@ CUserProfile::DoNetProfileDialog()
 		ThrowIfNil_(usernameField);
 		ThrowIfNil_(passwordField);
 		
+		PrefToEditField( "li.login.name", usernameField);
+		PrefToEditField( "li.login.password", passwordField);
+
 		usernameField->SelectAll();
 		theDialog->SetLatentSub(usernameField);
 		theDialog->Show();
@@ -451,41 +461,37 @@ CUserProfile::DoNetProfileDialog()
 // Creates a network profile folder
 // The folder is located inside the users folder
 ProfileErr 
-CUserProfile::CreateNetProfile( FSSpec usersFolder, FSSpec& profileFolderSpec )
+CUserProfile::CreateNetProfile( FSSpec usersFolder, FSSpec &profileFolderSpec )
 {	
-	ProfileErr perr;
-	perr = DoNetProfileDialog();
+	ProfileErr	perr = eOK;
 	
-	if (perr == eOK)
-	{
 	try
 	{
-			CStr255 profileFolderName("Temporary Profile");
-			OSErr err;
-			
-		// Create the folder spec of the profile directory
-			profileFolderSpec = usersFolder;
-			LString::CopyPStr(profileFolderName, profileFolderSpec.name, sizeof(profileFolderSpec.name));
-			
-		// If the folder already exists, delete it
-			err = CFileMgr::DeleteFolder( profileFolderSpec );
-			XP_ASSERT((err == noErr) || (err == fnfErr));
+		CStr255 profileFolderName("Temporary Profile");	/* l10n */
+		OSErr err;
+		
+	// Create the folder spec of the profile directory
+		profileFolderSpec = usersFolder;
+		LString::CopyPStr(profileFolderName, profileFolderSpec.name, sizeof(profileFolderSpec.name));
+		
+	// If the folder already exists, delete it
+		err = CFileMgr::DeleteFolder( profileFolderSpec );
+		XP_ASSERT((err == noErr) || (err == fnfErr));
 
-		// Create the folder
-			short dummy; 
-			long dummy2;
-			err = CFileMgr::CreateFolderInFolder(usersFolder.vRefNum, usersFolder.parID, profileFolderName, 
-							&dummy, &dummy2);
-			ThrowIfOSErr_(err);
-			ReflectToPreferences( CStr255("Network Profile"), profileFolderSpec);
-		}
-		catch (ExceptionCode err)
-		{
-			XP_ASSERT(false);
-			return eUnknownError;
-		}
+	// Create the folder
+		short dummy; 
+		long dummy2;
+		err = CFileMgr::CreateFolderInFolder(usersFolder.vRefNum, usersFolder.parID, profileFolderName, 
+						&dummy, &dummy2);
+		ThrowIfOSErr_(err);
+		ReflectToPreferences( CStr255("Network Profile"), profileFolderSpec);
+		sCurrentProfileID = kTemporaryProfileID;
 	}
-
+	catch (ExceptionCode err)
+	{
+		XP_ASSERT(false);
+		return eUnknownError;
+	}
 	return perr;
 }
 
@@ -561,8 +567,7 @@ ProfileErr CUserProfile::HandleProfileDialog(
 	short lastUserID,
 	Boolean	wantsProfileManager )
 {
-	int					dialogID = wantsProfileManager ?
-		profileManagerDialog : profileSelectDialog;
+	int					dialogID = profileManagerDialog; // wantsProfileManager ? profileManagerDialog : profileSelectDialog;
 	Boolean				success = false;
 	LListBox*			listBox;
 	LGAPushButton*		okButton;
@@ -570,6 +575,7 @@ ProfileErr CUserProfile::HandleProfileDialog(
 	LPane*				deleteButton;
 	LPane*				renameButton;
 	LPane*				optionsButton;
+	LPane*				remoteButton;
 	
 	ProfileErr			result = eOK;
 		
@@ -584,7 +590,9 @@ ProfileErr CUserProfile::HandleProfileDialog(
 
 	LAddColumn( 1, 0, listHand );
 	PopulateListBox( listHand, profileDB, lastUserID );
-
+	Cell cell;
+	if( listBox->GetLastSelectedCell( cell ) )
+		listBox->MakeCellVisible(cell);
 	listBox->AddListener( &dialog );
 	listBox->SwitchTarget( listBox );
 	
@@ -593,7 +601,18 @@ ProfileErr CUserProfile::HandleProfileDialog(
 	renameButton = dialog.GetDialog()->FindPaneByID( 3 );
 	newButton = dialog.GetDialog()->FindPaneByID( 1 );
 	optionsButton = dialog.GetDialog()->FindPaneByID( 'Ebut' );
-	
+	remoteButton = dialog.GetDialog()->FindPaneByID( 'remo' );
+
+	if ( remoteButton )
+	{
+		XP_Bool daBool = FALSE;;
+		PREF_GetBoolPref("li.ui.enabled", &daBool);
+		if (!daBool)
+		{
+			remoteButton->Hide();
+			listBox->ResizeFrameBy(0, 24, true);
+		}
+	}
 	if ( wantsProfileManager )
 		ThrowIfNil_( okButton && deleteButton && renameButton && newButton );
 	else
@@ -615,11 +634,11 @@ ProfileErr CUserProfile::HandleProfileDialog(
 	/* keep track of the amount of time we've been idly showing this dialog */
 	long 	startTime 		= 	TickCount();
 	long 	elapsedTime		=	0;
-	long 	secsLeft		=	20;  //we can also get this from a resource in the User Profiles file if it exists.		
-	Boolean	keepCounting		=	true; // (!wantsProfileManager); /* only countdown in simple profile picker. not manager*/
+	long 	secsLeft		=	30;  //we actually get this from a resource in the User Profiles file if it exists.		
+	Boolean	keepCounting		=	(!wantsProfileManager); /* only countdown in simple profile picker. not manager*/
 	const	ResIDT	autoStartResID = 9999;		
 				
-	// Check to see if our secret keep counting resource exists - if not, use default secsLeft
+	// Check to see if our secret keep coounting resource exists
 	StUseResFile resFile( profileDB.GetFile()->GetResourceForkRefNum() );
 	StringHandle numSecsStringH = (StringHandle) ::Get1Resource('TEXT', autoStartResID);
 	if (keepCounting && numSecsStringH)
@@ -629,10 +648,13 @@ ProfileErr CUserProfile::HandleProfileDialog(
 		
 		memcpy( (unsigned char *)buffer, (unsigned char *)*numSecsStringH, min(GetHandleSize((Handle)numSecsStringH),(long)sizeof(buffer)-1));
 		secsLeft = atoi(buffer);
-		if (secsLeft <= 0)
+		if (secsLeft <= 0 || secsLeft > 300)
 			keepCounting = false;			
 	}
+	else
+		keepCounting = false;
 	
+	(dialog.GetDialog())->Show();
 	
 	while ( !success ) 
 	{
@@ -782,6 +804,21 @@ ProfileErr CUserProfile::HandleProfileDialog(
 						tempUserID = -1;
 					}
 					keepCounting = false;
+				break;	
+				case cmd_RemoteProfile:
+					{
+						result = DoNetProfileDialog();
+						if ( result == eOK )
+							result = CreateNetProfile( profileSpec, profileFolder);
+
+						if ( result != eUserCancelled )
+						{
+							newUserID = lastUserID;
+							success = true;
+						}
+						else
+							result = eOK;
+					}
 				break;	
 			}
 		}
@@ -1047,6 +1084,13 @@ ProfileErr CUserProfile::NewUserProfile(
 		}
 	}
 	
+	if (CFrontApp::GetApplication()->HasImportModule())
+	{
+		CDeferredCommand* task = new CDeferredCommand(
+				CFrontApp::GetApplication(),
+				cmd_LaunchImportModule, nil);
+		CDeferredTaskManager::Post(task, nil);
+	}
 	return result;
 }
 
@@ -1240,6 +1284,10 @@ CUserProfile::ReflectToPreferences(const CStr31& profileName,
 	}
 	
 	PREF_SetDefaultCharPref( "profile.name", profileName );
+	
+#ifdef MOZ_MAIL_NEWS
+	MSG_WriteNewProfileAge();
+#endif // MOZ_MAIL_NEWS
 	
 	if (numProfiles > -1)
 		PREF_SetDefaultIntPref( "profile.numprofiles", numProfiles );

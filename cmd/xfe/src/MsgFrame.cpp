@@ -48,10 +48,9 @@ extern int XFE_MN_UNREAD_AND_TOTAL;
 extern "C" void fe_set_scrolled_default_size(MWContext *context);
 
 MenuSpec XFE_MsgFrame::file_menu_spec[] = {
-  { "newSubmenu", CASCADEBUTTON, (MenuSpec *) &XFE_Frame::new_submenu_spec },
+  { "newSubmenu", CASCADEBUTTON, (MenuSpec *) &XFE_ThreadFrame::new_submenu_spec },
   MENU_SEPARATOR,
-  { xfeCmdSaveMessagesAs,	PUSHBUTTON },
-  { xfeCmdEditMessage,		PUSHBUTTON },
+  { "saveMsgAs", CASCADEBUTTON, (MenuSpec *) &XFE_ThreadFrame::save_submenu_spec },
   MENU_SEPARATOR,
   { xfeCmdRenameFolder,		PUSHBUTTON },
   { xfeCmdEmptyTrash,		PUSHBUTTON },
@@ -92,17 +91,13 @@ MenuSpec XFE_MsgFrame::edit_menu_spec[] = {
   { xfeCmdSearch,		PUSHBUTTON },
   { xfeCmdSearchAddress,	PUSHBUTTON },
   MENU_SEPARATOR,
-  { xfeCmdEditConfiguration,	PUSHBUTTON },
-  { xfeCmdModerateDiscussion,	PUSHBUTTON },
-  MENU_SEPARATOR,
   { xfeCmdEditMailFilterRules,PUSHBUTTON },
   { xfeCmdEditPreferences,	PUSHBUTTON },
   { NULL }
 };
 
 MenuSpec XFE_MsgFrame::view_menu_spec[] = {
-  { xfeCmdToggleNavigationToolbar,PUSHBUTTON },
-  { xfeCmdToggleLocationToolbar,  PUSHBUTTON },
+{ "showSubmenu",            CASCADEBUTTON, (MenuSpec *) &XFE_ThreadFrame::show_submenu_spec },
   MENU_SEPARATOR,
   { "headersSubmenu",     CASCADEBUTTON, (MenuSpec *) &XFE_Frame::headers_submenu_spec },
   // This should just be a toggle.  -slamm
@@ -132,6 +127,8 @@ MenuSpec XFE_MsgFrame::message_menu_spec[] = {
   { "replySubmenu",	CASCADEBUTTON, (MenuSpec *) &XFE_Frame::reply_submenu_spec },
   { xfeCmdForwardMessage,		PUSHBUTTON },
   { xfeCmdForwardMessageQuoted,		PUSHBUTTON },
+  { xfeCmdForwardMessageInLine, 	PUSHBUTTON },
+  { xfeCmdEditMessage,			PUSHBUTTON },
   MENU_SEPARATOR,
   { "addToABSubmenu", CASCADEBUTTON, (MenuSpec *) &XFE_Frame::addrbk_submenu_spec },
   { "fileSubmenu",  DYNA_CASCADEBUTTON, NULL, NULL, 
@@ -139,7 +136,7 @@ MenuSpec XFE_MsgFrame::message_menu_spec[] = {
   { "copySubmenu",  DYNA_CASCADEBUTTON, NULL, NULL, 
 	False, (void*)xfeCmdCopyMessage, XFE_FolderMenu::generate },
   MENU_SEPARATOR,
-  { "markSubmenu",	  CASCADEBUTTON, (MenuSpec *) &XFE_Frame::mark_submenu_spec },
+  { "markSubmenu",	  CASCADEBUTTON, (MenuSpec *) &XFE_ThreadFrame::mark_submenu_spec },
   { xfeCmdMarkMessage,			PUSHBUTTON },
   { xfeCmdUnflagMessage,		PUSHBUTTON },
   MENU_SEPARATOR,
@@ -171,7 +168,7 @@ MenuSpec XFE_MsgFrame::menu_bar_spec[] = {
   { xfeMenuFile, 	CASCADEBUTTON, file_menu_spec },
   { xfeMenuEdit, 	CASCADEBUTTON, edit_menu_spec },
   { xfeMenuView, 	CASCADEBUTTON, view_menu_spec },
-  { xfeMenuGo,	 	CASCADEBUTTON, go_menu_spec },
+  { xfeMenuGo,	 	CASCADEBUTTON, XFE_ThreadFrame::go_menu_spec },
   { xfeMenuMessage, 	CASCADEBUTTON, message_menu_spec },
   { xfeMenuWindow,	CASCADEBUTTON, XFE_Frame::window_menu_spec },
   { xfeMenuHelp, 	CASCADEBUTTON, XFE_Frame::help_menu_spec },
@@ -456,9 +453,9 @@ void XFE_MsgFrame::setButtonsByContext(MWContextType cxType)
 }
 
 void
-XFE_MsgFrame::allConnectionsComplete()
+XFE_MsgFrame::allConnectionsComplete(MWContext  *context)
 {
-	XFE_Frame::allConnectionsComplete();
+	XFE_Frame::allConnectionsComplete(context);
 	updateReadAndTotalCounts();
 }
 

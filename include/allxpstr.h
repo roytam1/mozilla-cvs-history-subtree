@@ -6491,7 +6491,11 @@ ResDef(XP_EDT_MSG_TEXT_BUFFER_TOO_LARGE,    (XP_MSG_BASE + 843),
 "This document has %ld characters. The Spelling Checker cannot process more than %ld characters.")
 ResDef(XP_EDT_MSG_CANNOT_PASTE, (XP_MSG_BASE + 844),
 "You cannot paste this much text in a single operation.\nTry pasting the text in several smaller segments.")
+<<<<<<< allxpstr.rc
+<<<<<<< allxpstr.rc
+=======
 <<<<<<< allxpstr.h
+>>>>>>> 3.13.4.1
 
 ResDef(XP_EDT_CAN_PASTE_AS_TABLE, (XP_MSG_BASE + 845),
 "Text can be pasted as %d rows and %d columns.\n\n")
@@ -7552,7 +7556,11 @@ ResDef(MK_ACCESS_NAME, XP_MSG_BASE + 1340,
 ResDef(MK_ACCESS_VALUE, XP_MSG_BASE + 1341,
        "Value:")
 ResDef(MK_ACCESS_HOST, XP_MSG_BASE + 1342,
+<<<<<<< allxpstr.rc
+<<<<<<< allxpstr.rc
+=======
 <<<<<<< allxpstr.h
+>>>>>>> 3.13.4.1
 	   "Host:")
 ResDef(MK_ACCESS_DOMAIN, XP_MSG_BASE + 1343,
            "Domain:")
@@ -7755,7 +7763,11 @@ ResDef(MK_IMAP_GETTING_MAILBOX_INFO, XP_MSG_BASE + 1410,
 ResDef(MK_IMAP_EMPTY_MIME_PART, XP_MSG_BASE + 1411,
 "This body part will be downloaded on demand.")
 
+<<<<<<< allxpstr.rc
+<<<<<<< allxpstr.rc
+=======
 <<<<<<< allxpstr.h
+>>>>>>> 3.13.4.1
 ResDef(MK_ACCESS_COOKIES_WISHES0, (XP_MSG_BASE + 1415),
 "The server %1$s \nwishes to set a cookie.\n\n\
 Do you wish to allow the cookie to be set?")
@@ -8919,7 +8931,11 @@ warning, potentially deleting other files on the hard disk. Any software on the 
 hard disk may be executed in the process. This is an extremely dangerous form \
 of access. It should be granted by system administrators only.")
 
+<<<<<<< allxpstr.rc
+<<<<<<< allxpstr.rc
+=======
 <<<<<<< allxpstr.h
+>>>>>>> 3.13.4.1
 ResDef(CAPS_TARGET_URL_SILENTINSTALL, (CAPS_MSG_BASE + 201), "\
 #SilentInstall")
 =======

@@ -54,6 +54,8 @@ public:
 	virtual void RemoveAllButtons() = 0;
 
 	virtual CToolbarButton *RemoveButton( int index ) = 0;
+	virtual CToolbarButton *GetButtonByIndex(int index) = 0;
+	virtual CToolbarButton *GetButtonByID(int nCmd) = 0;
 
 	virtual BOOL LoadBitmap( LPCSTR lpszResourceName ) = 0;
 

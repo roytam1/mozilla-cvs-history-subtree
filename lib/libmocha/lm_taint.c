@@ -26,6 +26,8 @@
 #include "prclist.h"
 #include "plhash.h"
 #include "prmem.h"
+#include "seccomon.h"
+#include "secstubt.h"
 #include "shist.h"
 #include "jsapi.h"
 #include "jsdbgapi.h"
@@ -40,6 +42,7 @@
 #include "jsobj.h"
 #include "jsatom.h"
 #include "jsscope.h"
+
 
 /* Needed to access private method; making method public would be
    security hole */
@@ -447,7 +450,9 @@ lm_GetSubjectOriginURL(JSContext *cx)
  * them is so expensive.
  */
 typedef struct SharedZig {
+#ifdef JAVA
     ZIG *zig;
+#endif
     int32 refCount;
     JRIGlobalRef zigObjectRef;
 } SharedZig;
