@@ -90,11 +90,11 @@ endif
 include $(DEPTH)/rules.mk
 
 ifdef USE_MSVC
-$(OBJDIR)/$(PROG_FILE).obj: ../$(PROG_FILE).c
+$(OBJDIR)/$(PROG_FILE)_lc.obj: ../$(PROG_FILE).c
 	@$(MAKE_OBJDIR)
 	$(CC) -Fo$@ -c $(CFLAGS) -DLIVECONNECT ../$(PROG_FILE).c
 
-$(PROGRAM): $(OBJDIR)/$(PROG_FILE).obj $(LIBRARY)
+$(PROGRAM): $(OBJDIR)/$(PROG_FILE)_lc.obj $(LIBRARY)
 	link.exe -out:"$@" $(EXE_LINK_FLAGS) ../$(OBJDIR)/js32.lib $?
 else
 $(OBJDIR)/$(PROG_FILE).o: ../$(PROG_FILE).c

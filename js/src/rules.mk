@@ -35,7 +35,11 @@ $(OBJDIR)/%.o: %.s
 # windows only
 $(OBJDIR)/%.obj: %.c
 	@$(MAKE_OBJDIR)
-	$(CC) -Fo$(OBJDIR)/ -c $(CFLAGS) $*.c
+	$(CC) -Fo$(OBJDIR)/ -c $(CFLAGS) $(JSDLL_CFLAGS) $*.c
+
+$(OBJDIR)/js.obj: js.c
+	@$(MAKE_OBJDIR)
+	$(CC) -Fo$(OBJDIR)/ -c $(CFLAGS) $<
 
 ifeq ($(OS_ARCH),OS2)
 $(LIBRARY): $(LIB_OBJS)
