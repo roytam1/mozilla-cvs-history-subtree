@@ -1317,12 +1317,12 @@ PRBool nsMacEventHandler::HandleUKeyEvent(PRUnichar* text, long charCount, Event
       // PR_FALSE so no character translation occurs.
       // I'm guessing we don't want to do the translation there because
       // translation already occurred for the string passed to this method.
-      if (keyEvent.isControl && keyEvent.charCode <= 26)
+      if (keyPressEvent.isControl && keyPressEvent.charCode <= 26)
       {
-        if (keyEvent.isShift)
-          keyEvent.charCode += 'A' - 1;
+        if (keyPressEvent.isShift)
+          keyPressEvent.charCode += 'A' - 1;
         else
-          keyEvent.charCode += 'a' - 1;
+          keyPressEvent.charCode += 'a' - 1;
       }
 
       // this block of code is triggered when user presses
