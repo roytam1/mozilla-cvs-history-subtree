@@ -16,6 +16,12 @@
  * Reserved.
  */
 
-treeitem[id="NC:SiteMapRoot"] > treecell > titledbutton {
+/*
+
+  Style rules specific to the related links panel
+
+*/
+
+treeitem[id="NC:SiteMapRoot"] > treerow > treecell > titledbutton {
     list-style-image: url("resource:/res/samples/sitemap.gif");
 };
