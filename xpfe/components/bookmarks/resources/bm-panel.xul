@@ -78,7 +78,7 @@
     <spacer flex="1"/>
     <toolbarseparator/>
     <toolbarbutton id="btnFindBookmarks" label="&command.findBookmarks.label;"
-            oncommand="document.getElementById('bookmarks-view').openFindDialog();"/>
+            oncommand="BookmarksCommand.findBookmark();"/>
   </hbox>
 
   <hbox id="search-bar" class="toolbar" align="center">
