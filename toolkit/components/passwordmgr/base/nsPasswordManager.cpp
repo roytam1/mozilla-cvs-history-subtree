@@ -998,7 +998,7 @@ nsPasswordManager::Notify(nsIContent* aFormNode,
 
   // Check the reject list
   nsCAutoString realm;
-  if (!GetPasswordRealm(aFormNode->GetDocument()->GetDocumentURI(), realm))
+  if (!GetPasswordRealm(aFormNode->GetNodeInfo()->GetDocument()->GetDocumentURI(), realm))
     return NS_OK;
 
   PRInt32 rejectValue;
