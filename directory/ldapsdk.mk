@@ -16,7 +16,7 @@ endif
 
 CVS_CMD		= cvs $(CVS_FLAGS)
 TARGETS		= export libs install
-LDAP_MODULE      = LDAPCClientLibrary
+LDAP_MODULE      = DirectorySDKSource
 
 
 #
@@ -32,7 +32,7 @@ endif
 
 
 ifndef MOZ_LDAPVER
-MOZ_LDAPVER = -r Ldapsdk31_StableBuild
+MOZ_LDAPVER = -r DIRECTORY_C_SDK_30_BRANCH
 endif
 
 
@@ -46,4 +46,5 @@ ifdef LDAP_MODULE
 endif
 
 build:
+	cd ../config; $(MAKE)
 	cd directory; $(MAKE) $(TARGETS)
