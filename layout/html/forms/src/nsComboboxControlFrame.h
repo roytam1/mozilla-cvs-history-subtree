@@ -214,6 +214,8 @@ public:
   NS_IMETHOD SaveState(nsIPresContext* aPresContext, nsIPresState** aState);
   NS_IMETHOD RestoreState(nsIPresContext* aPresContext, nsIPresState* aState);
 
+  static PRBool ToolkitHasNativePopup();
+
 protected:
 
   NS_IMETHOD CreateDisplayFrame(nsIPresContext* aPresContext);

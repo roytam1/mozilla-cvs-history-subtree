@@ -2360,8 +2360,7 @@ nsComboboxControlFrame::Paint(nsIPresContext*     aPresContext,
     // If all of the nsITheme implementations are fixed to draw the focus border correctly,
     // this #ifdef should be replaced with a -moz-appearance / ThemeSupportsWidget() check.
 
-#ifndef MOZ_WIDGET_COCOA
-    if (mDisplayFrame) {
+    if (!ToolkitHasNativePopup() && mDisplayFrame) {
       aRenderingContext.PushState();
       PRBool clipEmpty;
       nsRect clipRect = mDisplayFrame->GetRect();
@@ -2402,7 +2401,6 @@ nsComboboxControlFrame::Paint(nsIPresContext*     aPresContext,
       /////////////////////
       aRenderingContext.PopState(clipEmpty);
     }
-#endif
   }
   
   // Call to the base class to draw selection borders when appropriate
@@ -2511,3 +2509,22 @@ nsComboboxControlFrame::RestoreState(nsIPresContext* aPresContext,
   rv = stateful->RestoreState(aPresContext, aState);
   return rv;
 }
+
+
+//
+// Some toolkits (just Cocoa at this point) use a native widget
+// for the combobox popup, which affects drawing and event
+// handling here and in nsListControlFrame.
+// 
+
+/* static */
+PRBool
+nsComboboxControlFrame::ToolkitHasNativePopup()
+{
+#ifdef MOZ_WIDGET_COCOA
+  return PR_TRUE;
+#else
+  return PR_FALSE;
+#endif
+}
+
