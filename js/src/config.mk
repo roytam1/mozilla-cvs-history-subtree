@@ -36,7 +36,7 @@ DEFINES         =
 
 ifeq ($(OS_ARCH), WINNT)
 INSTALL = nsinstall
-CP = copy.exe
+CP = cp
 else
 INSTALL	= $(DEPTH)/../../dist/$(OBJDIR)/bin/nsinstall
 CP = cp
