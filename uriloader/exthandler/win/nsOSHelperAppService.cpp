@@ -201,6 +201,20 @@ NS_IMETHODIMP nsOSHelperAppService::ExternalProtocolHandlerExists(const char * a
   return NS_OK;
 }
 
+NS_IMETHODIMP nsOSHelperAppService::LaunchApp(const char *aName)
+{
+  LONG r;
+
+  if (strcmp(aName,"browser") == 0)
+    r = (LONG) ::ShellExecute(NULL, "open", "C:\\Program Files\\mozilla.org\\Mozilla\\mozilla.exe", NULL, NULL, SW_SHOWNORMAL);
+  else
+    r = (LONG) ::ShellExecute(NULL, "open", "C:\\Program Files\\mozilla.org\\Mozilla\\mozilla.exe", "-edit", NULL, SW_SHOWNORMAL);
+  if (r < 32) 
+    return NS_ERROR_FAILURE;
+  else
+    return NS_OK;
+}
+
 // this implementation was pretty much copied verbatime from Tony Robinson's code in nsExternalProtocolWin.cpp
 
 NS_IMETHODIMP nsOSHelperAppService::LoadUrl(nsIURI * aURL)

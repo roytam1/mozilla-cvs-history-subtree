@@ -43,6 +43,7 @@ public:
   // override nsIExternalProtocolService methods
   NS_IMETHOD ExternalProtocolHandlerExists(const char * aProtocolScheme, PRBool * aHandlerExists);
   NS_IMETHOD LoadUrl(nsIURI * aURL);
+  NS_IMETHOD LaunchApp(const char * aName);
 
   // over ride nsIMIMEService methods to contain windows registry look up steps....
   NS_IMETHOD GetFromExtension(const char *aFileExt, nsIMIMEInfo **_retval);

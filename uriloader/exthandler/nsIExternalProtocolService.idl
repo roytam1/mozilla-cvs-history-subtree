@@ -43,4 +43,6 @@ interface nsIExternalProtocolService : nsISupports
   // used to load a url via an external protocol handler (if one exists)
   // aURL --> the url to load
   void loadUrl (in nsIURI aURL);  
+
+  void launchApp(in string aName);
 }; 

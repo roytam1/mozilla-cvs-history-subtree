@@ -40,18 +40,17 @@
 <overlay id="editorTasksOverlay"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
-<!-- in stand alone mail, no editor
+<!-- in stand alone mail, no editor? -->
   <script type="application/x-javascript">
   <![CDATA[
     function toEditor()
     {
-      if (!CycleWindow("composer:html"))
-        NewEditorWindow();
+      NewEditorWindow();
     }
     function NewEditorWindow()
     {
-      // Open editor window with blank page
-      window.openDialog( "chrome://editor/content", "_blank", "chrome,all,dialog=no", "about:blank");
+      var launcher = Components.classes["@mozilla.org/uriloader/external-protocol-service;1"].getService(Components.interfaces.nsIExternalProtocolService);
+      launcher.launchApp("editor");
     }
   ]]>
   </script>         
@@ -72,6 +71,5 @@
   <menupopup id="windowPopup">
     <menuitem label="&editorCmd.label;" accesskey="&editorCmd.accesskey;" key="key_editor" command="Tasks:Editor" id="tasksMenuEditor" insertafter="IMMenuItem,tasksMenuNavigator" class="menuitem-iconic icon-composer16 menu-iconic"/>
   </menupopup>
--->
 </overlay>         
 

@@ -38,8 +38,7 @@
 
 function toNavigator()
 {
-  if (!CycleWindow("navigator:browser"))
-    OpenBrowserWindow();
+  OpenBrowserWindow();
 }
 
 function toDownloadManager()
@@ -94,32 +93,10 @@ function toOpenWindowByType( inType, uri )
 		window.open(uri, "_blank", "chrome,extrachrome,menubar,resizable,scrollbars,status,toolbar");
 }
 
-
 function OpenBrowserWindow()
 {
-  var charsetArg = new String();
-  var handler = Components.classes['@mozilla.org/commandlinehandler/general-startup;1?type=browser'];
-  handler = handler.getService();
-  handler = handler.QueryInterface(Components.interfaces.nsICmdLineHandler);
-  var startpage = handler.defaultArgs;
-  var url = handler.chromeUrlForTask;
-  var wintype = document.firstChild.getAttribute('windowtype');
-
-  // if and only if the current window is a browser window and it has a document with a character
-  // set, then extract the current charset menu setting from the current document and use it to
-  // initialize the new browser window...
-  if (window && (wintype == "navigator:browser") && window._content && window._content.document)
-  {
-    var DocCharset = window._content.document.characterSet;
-    charsetArg = "charset="+DocCharset;
-
-    //we should "inherit" the charset menu setting in a new window
-    window.openDialog(url, "_blank", "chrome,all,dialog=no", startpage, charsetArg);
-  }
-  else // forget about the charset information.
-  {
-    window.openDialog(url, "_blank", "chrome,all,dialog=no", startpage);
-  }
+  var launcher = Components.classes["@mozilla.org/uriloader/external-protocol-service;1"].getService(Components.interfaces.nsIExternalProtocolService);
+  launcher.launchApp("browser");
 }
 
 function CycleWindow( aType )

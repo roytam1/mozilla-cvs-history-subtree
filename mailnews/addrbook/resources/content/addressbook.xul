@@ -76,11 +76,9 @@ Contributor(s):
   <commandset id="selectEditMenuItems"/> 
   <commandset id="undoEditMenuItems"/>
   <commandset id="globalEditMenuItems"/>
-<!-- 
-    in stand alone mail, no nav, no editor
+<!-- in stand alone mail, no nav, no editor -->
     <command id="cmd_newNavigator"/>
     <command id="cmd_newEditor"/>
--->
     <command id="cmd_printSetup" oncommand="goPageSetup()"/>
     <command id="cmd_printCard" oncommand="AbPrintCard()"/>
     <command id="cmd_printAddressBook" oncommand="AbPrintAddressBook()"/>
@@ -112,10 +110,8 @@ Contributor(s):
 
 <keyset id="tasksKeys">
   <!-- File Menu -->
-<!-- 
-    in stand alone mail, no nav
+<!-- in stand alone mail, no nav -->
   <key id="key_newNavigator"/>
--->
   <key id="key_printCard"  key="&printCardViewCmd.key;" command="cmd_printCard"  modifiers="accel"/>
   <key id="key_close"/>
   <key id="key_quit"/>
@@ -151,12 +147,10 @@ Contributor(s):
                       <menuitem label="&newListCmd.label;" accesskey="&newListCmd.accesskey;" oncommand="AbNewList('dirTree')"/>
                       <menuitem label="&newAddressBookCmd.label;" accesskey="&newAddressBookCmd.accesskey;" oncommand="AbNewAddressBook()"/>
                       <menuitem label="&newLDAPDirectoryCmd.label;" id="addLDAP" accesskey="&newLDAPDirectoryCmd.accesskey;" oncommand="AbNewLDAPDirectory()"/>
-<!-- 
-    in stand alone mail, no nav, no editor
+<!-- in stand alone mail, no nav, no editor -->
                       <menuseparator/>
                       <menuitem id="menu_newNavigator"/>
                       <menuitem id="menu_newEditor"/>
--->
                     </menupopup>
                 </menu>
                 <menuitem id="menu_close"/>
