@@ -196,7 +196,8 @@ exn_finalize(JSContext *cx, JSObject *obj)
 }
 
 JSErrorReport *
-js_ErrorFromException(JSContext *cx, jsval exn) {
+js_ErrorFromException(JSContext *cx, jsval exn)
+{
     JSObject *obj;
     JSExnPrivate *privateData;
     jsval private;
@@ -216,7 +217,8 @@ js_ErrorFromException(JSContext *cx, jsval exn) {
 }
 
 extern JSBool
-js_ReportUncaughtException(JSContext *cx) {
+js_ReportUncaughtException(JSContext *cx)
+{
     JSObject *exnObject;
     JSString *str;
     jsval exn;
@@ -252,7 +254,7 @@ js_ReportUncaughtException(JSContext *cx) {
                              JSMSG_UNCAUGHT_EXCEPTION, js_GetStringBytes(str));
     } else {
         /* Flag the error as an exception. */
-        reportp->flags &= JSREPORT_EXCEPTION;
+        reportp->flags |= JSREPORT_EXCEPTION;
         js_ReportErrorAgain(cx, js_GetStringBytes(str), reportp);
     }
 

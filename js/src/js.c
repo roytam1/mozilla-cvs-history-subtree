@@ -313,6 +313,9 @@ Version(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 }
 
 static void
+my_LoadErrorReporter(JSContext *cx, const char *message, JSErrorReport *report);
+
+static void
 my_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report);
 
 static const JSErrorFormatString *
@@ -336,7 +339,7 @@ Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 	argv[i] = STRING_TO_JSVAL(str);
 	filename = JS_GetStringBytes(str);
 	errno = 0;
-        older = JS_SetErrorReporter(cx, NULL);
+        older = JS_SetErrorReporter(cx, my_LoadErrorReporter);
 	script = JS_CompileFile(cx, obj, filename);
 	if (!script)
             ok = JS_FALSE;
@@ -1250,6 +1253,22 @@ my_GetErrorMessage(void *userRef, const char *locale, const uintN errorNumber)
 	    return &jsShell_ErrorFormatString[errorNumber];
 	else
 	    return NULL;
+}
+
+static void
+my_LoadErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
+{
+    if (!report) {
+        fprintf(stderr, "%s\n", message);
+        return;
+    }
+
+    /* Ignore any exceptions */
+    if (JSREPORT_IS_EXCEPTION(report->flags))
+        return;
+
+    /* Otherwise, fall back to the ordinary error reporter. */
+    my_ErrorReporter(cx, message, report);
 }
 
 static void
