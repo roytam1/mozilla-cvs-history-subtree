@@ -80,7 +80,7 @@ interface nsICachedNetData : nsISupports
      * cache did not complete normally and, therefore, the content may be
      * truncated.
      */
-    readonly attribute boolean partial;
+    readonly attribute boolean partialFlag;
 
     /**
      * This flag can be set and cleared by a protocol handler as a form of
@@ -137,12 +137,23 @@ interface nsICachedNetData : nsISupports
     readonly attribute PRUint16 numberAccesses;
 
     /**
-     * Accessors for opaque protocol-specific meta-data which can be updated by
-     * the protocol handler for each cache entry, independently of the content
-     * data.
+     * Accessor methods for opaque meta-data which can be read and updated
+     * independently of the content data.
+     *
+     * The aKey argument can be used to accommodate multiple clients of the
+     * cache API, each of which wants to store its own private meta-data into
+     * the cache.  For example, there could be a "headers" key that the HTTP
+     * protocol handler uses to store http response headers and a "image size"
+     * key used to store the image dimensions of a GIF file.  The aData
+     * argument refers to an opaque blob of arbitrary bytes.
+     *
+     * IMPORTANT: The contents of aData must be byte-swapped by the caller, so
+     * as to make the cache files endian-independent.
      */
-    void getProtocolPrivate(out PRUint32 length, [size_is(length), retval] out string data);
-    void setProtocolPrivate(in  PRUint32 length, [size_is(length)] in string data);
+    void getProtocolPrivate(in string aKey, 
+                            out PRUint32 aLength, [size_is(aLength), retval] out string aData);
+    void setProtocolPrivate(in string aKey,
+                            in  PRUint32 aLength, [size_is(aLength)] in string aData);
 
     /**
      * As a getter, return the number of content bytes stored in the cache,
