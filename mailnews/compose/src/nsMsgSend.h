@@ -133,12 +133,12 @@
 #include "nsMsgAttachmentHandler.h"
 #include "nsMsgCompFields.h"
 #include "nsIMsgSendListener.h"
-#include "nsIMessage.h"
 #include "nsIDOMNode.h"
 #include "nsIEditorShell.h"
 #include "nsIUrlListener.h"
 #include "nsIMsgStatusFeedback.h"
 #include "nsIMsgStringService.h"
+#include "nsIMsgHdr.h"
 #if 0
 #include "nsMsgCopy.h"
 #endif
@@ -241,7 +241,7 @@ public:
 			             PRBool           digest_p,
 			             PRBool           dont_deliver_p,
 			             nsMsgDeliverMode mode,
-                   nsIMessage       *msgToReplace,
+                   nsIMsgDBHdr      *msgToReplace,
 			             const char       *attachment1_type,
 			             const char       *attachment1_body,
 			             PRUint32         attachment1_body_length,
@@ -313,7 +313,7 @@ public:
 							                                   // created, instead of actually delivering message.
   nsMsgDeliverMode          m_deliver_mode;      // nsMsgDeliverNow, nsMsgQueueForLater, nsMsgSaveAsDraft, 
                                                  // nsMsgSaveAsTemplate
-  nsCOMPtr<nsIMessage>      mMsgToReplace;       // If the mode is nsMsgSaveAsDraft, this is the message it will
+  nsCOMPtr<nsIMsgDBHdr>     mMsgToReplace;       // If the mode is nsMsgSaveAsDraft, this is the message it will
                                                  // replace
 
   // These are needed for callbacks to the FE...  
