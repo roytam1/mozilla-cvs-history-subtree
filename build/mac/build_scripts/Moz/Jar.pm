@@ -457,6 +457,9 @@ sub registerChromePackage($$$$$$)
     mkpath($chrome_dir);
     
     my($inst_chrome) = ${chrome_dir}.":installed-chrome.txt";
+    my $filecontents;
+    my $skinselect = "";
+    my $set = 0;
     
     if (open(CHROMEFILE, "<$inst_chrome")) {
         while (<CHROMEFILE>) {
@@ -470,11 +473,27 @@ sub registerChromePackage($$$$$$)
                 close(CHROMEFILE) || die "Error: can't close $inst_chrome: $!";
                 return 0;
             }
+            # Make sure to move the skin,install,select statement to the bottom
+            # see bugzilla bug 104953 for details.
+            if(!/skin,install,select,(.*)/)
+            {
+                $filecontents .= "$_\n";
+            }
+            else
+            {
+                $skinselect = $_;
+                $set = 1;
+            }
         }
         close(CHROMEFILE) || die "Error: can't close $inst_chrome: $!";
     }
-    open(CHROMEFILE, ">>${inst_chrome}") || die "Error: Failed to open $inst_chrome\n";
+    open(CHROMEFILE, ">${inst_chrome}") || die "Error: Failed to open $inst_chrome\n";
+    print (CHROMEFILE $filecontents);
     print(CHROMEFILE "${chrome_entry}\n");
+    if ($set == 1)
+    {
+        print (CHROMEFILE "$skinselect\n");
+    }
     close(CHROMEFILE) || die "Error: Failed to close $inst_chrome\n";
     print "+++ adding chrome $inst_chrome\n+++\t\t$chrome_entry\n";
 }
