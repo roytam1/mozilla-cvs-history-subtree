@@ -744,7 +744,7 @@ void _PR_Unblock_IO_Wait(PRThread *thr)
 		 * this thread will continue to run on the same cpu until the
 		 * I/O is aborted by closing the FD or calling CancelIO
 		 */
-		thr->md.thr_bound_cpu = me->cpu;
+		thr->md.thr_bound_cpu = cpu;
 
         PR_ASSERT(!(thr->flags & _PR_IDLE_THREAD));
         _PR_AddThreadToRunQ(me, thr);
@@ -2044,7 +2044,7 @@ _PR_MD_GETPEERNAME(PRFileDesc *fd, PRNetAddr *addr, PRUint32 *len)
                 PR_SetError(PR_NOT_CONNECTED_ERROR, 0);
                 return PR_FAILURE;
             }
-            *len = PR_NETADDR_SIZE(addr);
+            *len = PR_NETADDR_SIZE(&fd->secret->md.peer_addr);
             memcpy(addr, &fd->secret->md.peer_addr, *len);
             return PR_SUCCESS;
         } else {
@@ -3016,7 +3016,10 @@ _PR_MD_GETFILEINFO64(const char *fn, PRFileInfo64 *info)
         } 
         len = GetFullPathName(fn, sizeof(pathbuf), pathbuf,
                 &filePart);
-        PR_ASSERT(0 != len);
+        if (0 == len) {
+            _PR_MD_MAP_OPENDIR_ERROR(GetLastError());
+            return -1;
+        }
         if (len > sizeof(pathbuf)) {
             PR_SetError(PR_NAME_TOO_LONG_ERROR, 0);
             return -1;
