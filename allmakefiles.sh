@@ -926,16 +926,10 @@ toolkit/mozapps/installer/windows/wizard/setup/Makefile
 toolkit/mozapps/installer/windows/wizard/setuprsc/Makefile
 toolkit/mozapps/installer/windows/wizard/uninstall/Makefile
 toolkit/xre/Makefile
-toolkit/content/contents-platform.rdf
-toolkit/content/contents-region.rdf
-toolkit/content/contents.rdf
 toolkit/locale/contents-platform.rdf
-toolkit/locale/contents-region.rdf
-toolkit/locale/contents.rdf
 toolkit/components/passwordmgr/resources/content/contents.rdf
 toolkit/components/passwordmgr/resources/locale/contents.rdf
 toolkit/mozapps/contents-content.rdf
-toolkit/mozapps/contents-locale.rdf
 "
 
 
