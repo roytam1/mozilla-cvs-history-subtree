@@ -500,9 +500,13 @@ PRInt32 nsSmtpProtocol::SendHeloResponse(nsIInputStream * inputStream, PRUint32 
                                             nsIMsgHeaderParser::GetIID(),
                                             getter_AddRefs(parser));
 
+		 // mscott -- big hack alert...remove this once we have a mime header parser!!!
+		 char * s = PL_strdup(userAddress);
+#if 0
 		 char * s = nsnull;
 		 if (parser)
 			 parser->MakeFullAddress(nsnull, nsnull, userAddress, &s);
+#endif
 		 if (!s)
 		 {
 			nsCOMPtr<nsIMsgMailNewsUrl> url = do_QueryInterface(m_runningURL);
