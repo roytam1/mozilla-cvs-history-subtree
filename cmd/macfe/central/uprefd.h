@@ -549,10 +549,7 @@ enum pref_Strings {	prefFolderName = 1
 				,	profileTemplateDir = 49
 				,	cryptoPolicy = 50
 				,	signedAppletDb = 51
-<<<<<<< uprefd.h
 				,	cookiePermissions = 52
 				,	singleSignons = 53
-=======
-				,	jsConfig = 52		//autoadmin
->>>>>>> 3.1.14.1
+				,	jsConfig = 54		//autoadmin
 				};

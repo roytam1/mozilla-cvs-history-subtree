@@ -162,21 +162,17 @@ CEditorWindow* CEditorWindow::MakeEditWindow( MWContext* old_context, URL_Struct
 			if ( url )
 			{
 				url->force_reload = NET_NORMAL_RELOAD;
-<<<<<<< CEditorWindow.cp
 
 				XP_MEMSET( &url->savedData, 0, sizeof( SHIST_SavedData ) );
 			}
 		}
 		// if we don't have a history entry, we're kind of screwed-->just load a blank page
-=======
-		}
 		else if ( CPrefs::GetBoolean( CPrefs::LoadHomePage ) )
 		{
 			CStr255 home = CPrefs::GetString( CPrefs::HomePage );
 			if ( home.Length() > 0 )
 				url = NET_CreateURLStruct( home, NET_NORMAL_RELOAD );
 		}
->>>>>>> 3.1.14.1
 	}
 
 	// we want to open a new blank edit window

@@ -189,12 +189,9 @@ resource 'STR#' ( 300, "Pref file names", purgeable ) {{
 	"Defaults";								// 49 Template folder for new profiles
 	"moz40p3";								// 50 Cryptographic policy file
 	"SignedAppletDB";						// 51 Signed applet file
-<<<<<<< custom.r
 	"Cookie Permissions";					// 52 Cookie permission file
 	"Single Signons";						// 53 Single Signon file
-=======
-	"failover.jsc";							// 52 jsConfig - Cached failover of .jsc startup file (AutoAdmin)
->>>>>>> 3.1.14.1
+	"failover.jsc";							// 54 jsConfig - Cached failover of .jsc startup file (AutoAdmin)
 }};
 
 resource 'STR#' ( BUTTON_STRINGS_RESID, "Button Names", purgeable ) {{

@@ -659,7 +659,6 @@ void CColorButton::HotSpotResult( short inHotSpot )
 
 }
 
-<<<<<<< prefwutil.cp
 FileIconsLister::FileIconsLister (CGAPopupMenu * target)
 :	StdPopup (target)
 {
@@ -804,10 +803,7 @@ void CMimeTable::UnhiliteCell(const TableCellT &inCell)
 }
 
 
-=======
->>>>>>> 3.1.14.1
 
-<<<<<<< prefwutil.cp
 #define offsetTable			7
 #define offsetTextTop		15
 #define offsetMimeType		(offsetTable + 0)
@@ -1476,8 +1472,6 @@ LFocusEditField::GetFocusBox()
 {
 	return mFocusBox;
 }
-=======
->>>>>>> 3.1.14.1
 
 /********************************************************************
 

@@ -783,17 +783,10 @@ Boolean LTableHeader::RedistributeSpace(
 	// OK, if we get this far, then some columns were able to resize
 	// (sumOfWidths != inOldSpace), and there's merely a rounding error to adjust.
 	int signedUnit = roundingError < 0 ? -1 : +1;
-<<<<<<< LTableHeader.cp
-#ifdef DEBUG
-	int maxRound =  (inToColumn - inFromColumn + 2) / 2;
-//	Assert_(roundingError * signedUnit <= maxRound);
-#endif
-=======
 //#ifdef DEBUG
 //	int maxRound =  (inToColumn - inFromColumn + 2) / 2;
 //	Assert_(roundingError * signedUnit <= maxRound);
 //#endif
->>>>>>> 3.1.16.2
 	static int rovingIndex = 0;
 	const Int16 initialError = roundingError;
 	const int initialIndex = rovingIndex;

@@ -2399,10 +2399,6 @@ Boolean	CHTMLView::ObeyCommand(CommandT inCommand, void* ioParam)
 			// All I know is that if we do dispose it here, bad things happen later...(pinkerton).
 			URL_Struct* url = NET_CreateURLStruct(mContext->GetCurrentURL(), NET_DONT_RELOAD);
 			mContext->ImmediateLoadURL(url, FO_VIEW_SOURCE);
-<<<<<<< CHTMLView.cp
-=======
-			//NET_FreeURLStruct ( url );
->>>>>>> 3.3.6.2
 			cmdHandled = true;
 			break;
 		}

@@ -2334,6 +2334,7 @@ char* CPrefs::Concat(const char* base, const char* suffix)
 	return buf;
 }
 
+#ifdef MOZ_MAIL_NEWS
 //----------------------------------------------------------------------------------------
 static void HandlePOPPassword()
 // I moved some common code here.  It's static because I don't want to change the header
@@ -2346,6 +2347,7 @@ static void HandlePOPPassword()
 	else
 		NET_SetPopPassword(NULL);
 }
+#endif
 
 //----------------------------------------------------------------------------------------
 void CPrefs::PostInitializePref(PrefEnum id, Boolean changed)
@@ -2522,18 +2524,9 @@ void CPrefs::PostInitializePref(PrefEnum id, Boolean changed)
 			// Should we reset mail window here too?
 			break;
 		case PopHost:
-<<<<<<< uprefd.cp
 #ifdef MOZ_MAIL_NEWS
-			MSG_SetPopHost( GetCharPtr(id) );
-			if ( GetBoolean( RememberMailPassword ) )
-				NET_SetPopPassword( GetCharPtr( MailPassword) );
-			else
-				NET_SetPopPassword(NULL);
-#endif
-=======
-//			MSG_SetPopHost( GetCharPtr(id) );
 			HandlePOPPassword();
->>>>>>> 3.1.14.1
+#endif
 			break;
 			
 		case DefaultMailCC:
@@ -2639,17 +2632,8 @@ void CPrefs::PostInitializePref(PrefEnum id, Boolean changed)
 			break;
 		case RememberMailPassword:
 #ifdef MOZ_MAIL_NEWS
-		// This depends on the loading order
-		// Should be solved by the accumulator
-<<<<<<< uprefd.cp
-			if ( GetBoolean( RememberMailPassword ) )
-				NET_SetPopPassword( GetCharPtr( MailPassword) );
-			else
-				NET_SetPopPassword(NULL);
-#endif
-=======
 			HandlePOPPassword();
->>>>>>> 3.1.14.1
+#endif
 			break;
 		default:
 //			Assert_(FALSE);
