@@ -45,7 +45,7 @@
 #include "nsIWebProgress.h"
 #include "nsCURILoader.h"
 #include "nsICachingChannel.h"
-#include "nsICacheEntryDescriptor.h"
+#include "nsICacheVisitor.h"
 #include "nsIHttpChannel.h"
 #include "nsIURL.h"
 #include "nsNetUtil.h"
@@ -160,7 +160,7 @@ nsPrefetchListener::OnStartRequest(nsIRequest *aRequest,
     if (!cacheToken)
         return NS_ERROR_ABORT; // bail, no cache entry
 
-    nsCOMPtr<nsICacheEntryDescriptor> entryInfo(do_QueryInterface(cacheToken, &rv));
+    nsCOMPtr<nsICacheEntryInfo> entryInfo(do_QueryInterface(cacheToken, &rv));
     if (NS_FAILED(rv)) return rv;
 
     PRUint32 expTime;
