@@ -1,5 +1,9 @@
 [gecko]
+#if SHARED_LIBRARY
 dist/bin/components/@SHARED_LIBRARY@
+#else
+!staticcomp @LIBRARY@ @MODULE_NAME@
+#endif
 !xpt dist/bin/components/xpconnect.xpt
 
 # xpcshell is one of those interesting apps that is useful in both an application
