@@ -44,14 +44,11 @@ RootExpr::RootExpr(MBool aSerialize) {
 ExprResult* RootExpr::evaluate(txIEvalContext* aContext)
 {
     Node* context;
-    if (!aContext && context != aContext->getContextNode()) {
+    if (!aContext || !(context = aContext->getContextNode())) {
         NS_ASSERTION(0, "internal error");
         return 0;
     }
 
-    context = aContext->getContextNode();
-    if (!context)
-      return 0;
     if (context->getNodeType() != Node::DOCUMENT_NODE)
         return new NodeSet(context->getOwnerDocument());
     return new NodeSet(context);
