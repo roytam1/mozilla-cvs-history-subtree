@@ -65,7 +65,7 @@ void			newFolderBkItem(RDFFile f, char* token);
 void			newLeafBkItem (RDFFile f, char* token);
 char *			numericDate(char *url);
 void			HT_WriteOutAsBookmarks1 (RDF rdf, PRFileDesc *fp, RDF_Resource u, RDF_Resource top, int indent);
-void			flushBookmarks();
+void			flushBookmarks(void);
 
 XP_END_PROTOS
 

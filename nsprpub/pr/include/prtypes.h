@@ -108,7 +108,11 @@
 
 #define PR_CALLBACK
 #define PR_CALLBACK_DECL
+#ifndef XP_OS2_VACPP
 #define PR_STATIC_CALLBACK(__x) static __x
+#else
+#define PR_STATIC_CALLBACK(__x) static __x _Optlink
+#endif
 
 #endif
 

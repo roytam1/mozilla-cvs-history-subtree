@@ -362,12 +362,7 @@ static void edt_SetURL(void* hook3, char* pURL){
     XP_FREE(pOldURL);
 }
 
-#ifndef XP_OS2
-static
-#else
-extern "OPTLINK"
-#endif
-void edt_PreOpenDoneFunction(EDT_ImageEncoderStatus status, void* hook3){
+static void edt_PreOpenDoneFunction(EDT_ImageEncoderStatus status, void* hook3){
     PreOpenCallbackHook* hook2 = (PreOpenCallbackHook*) hook3;
     EDT_PreOpenCallbackFn doneFunction = hook2->doneFunction;
     void* hook = hook2->hook;

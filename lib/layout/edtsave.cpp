@@ -1686,12 +1686,20 @@ typedef struct edtPrivStructStr {
 	 IStreamOut *out;
 } edtPrivStruct;
 
+#ifndef XP_OS2_VACPP
 static unsigned int
+#else
+extern "C" unsigned int
+#endif
 edt_TapeIsReady(NET_StreamClass *stream) {	
     return MAX_WRITE_READY;
 }
 
+#ifndef XP_OS2_VACPP
 static void
+#else
+extern "C" void
+#endif
 edt_TapeComplete(NET_StreamClass *stream) {
     edtPrivStruct *obj = (edtPrivStruct *)stream->data_object;	
     obj->tapeFS->CloseStream(0);
@@ -1699,7 +1707,11 @@ edt_TapeComplete(NET_StreamClass *stream) {
     return;
 }
 
+#ifndef XP_OS2_VACPP
 static void
+#else
+extern "C" void
+#endif
 edt_TapeAbort(NET_StreamClass *stream, int status) {	
     edt_TapeComplete(stream);
 }

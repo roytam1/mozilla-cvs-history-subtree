@@ -212,8 +212,8 @@ typedef struct _HT_URLSiteMapAssoc {
 
 XP_BEGIN_PROTOS
 
-void				HT_Startup();
-void				HT_Shutdown();
+void				HT_Startup(void);
+void				HT_Shutdown(void);
 HT_Resource			newHTEntry (HT_View view, RDF_Resource node);
 void				addWorkspace(HT_Pane pane, RDF_Resource r, void *feData);
 void				deleteWorkspace(HT_Pane pane, RDF_Resource r);
@@ -228,9 +228,9 @@ uint32				refreshItemList1(HT_View view, HT_Resource node);
 void				refreshItemList (HT_Resource node, HT_Event whatHappened);
 void				refreshPanes();
 HT_Pane				paneFromResource(RDF_Resource resource, HT_Notification notify, PRBool autoFlushFlag, PRBool autoOpenFlag);
-RDF				newHTPaneDB();
+RDF				newHTPaneDB(void);
 PRBool				initViews (HT_Pane pane);
-HT_PaneStruct *			HT_GetHTPaneList ();
+HT_PaneStruct *			HT_GetHTPaneList (void);
 HT_PaneStruct *			HT_GetNextHTPane (HT_PaneStruct* pane);
 void				htSetWorkspaceOrder(RDF_Resource src, RDF_Resource dest, PRBool afterDestFlag);
 HT_View				HT_NewView (RDF_Resource topNode, HT_Pane pane, PRBool useColumns, void *feData, PRBool autoOpen);
@@ -248,7 +248,7 @@ void				deleteHTSubtree (HT_Resource subtree);
 void				deleteContainerItem (HT_Resource container, RDF_Resource item);
 uint32				fillContainer (HT_Resource node);
 PRBool				htIsMenuCmdEnabled(HT_Pane pane, HT_MenuCmd menuCmd, PRBool isWorkspaceFlag, PRBool isBackgroundFlag);
-void				freeMenuCommandList();
+void				freeMenuCommandList(void);
 void				exportCallbackWrite(PRFileDesc *fp, char *str);
 void				exportCallback(MWContext *context, char *filename, RDF_Resource node);
 void				htEmptyClipboard(RDF_Resource parent);
@@ -257,7 +257,7 @@ PRBool				ht_isURLReal(HT_Resource node);
 char *				buildInternalIconURL(HT_Resource node, PRBool *volatileURLFlag,	PRBool largeIconFlag, PRBool workspaceFlag);
 char *				getIconURL( HT_Resource node, PRBool largeIconFlag, PRBool workspaceFlag);
 void				addHtmlElement(HT_Resource node, RDF_Resource token, uint32 tokenType);
-void				freeHtmlElementList();
+void				freeHtmlElementList(void);
 _htmlElementPtr			findHtmlElement(void *token);
 char *				constructHTML(char *dynStr, HT_Resource node, void *token, uint32 tokenType);
 char *				constructHTMLPermission(char *dynStr, HT_Resource node, RDF_Resource token, char *permText);

@@ -69,7 +69,7 @@ DEFINES		+= -DDLL_SUFFIX=\"$(DLL_SUFFIX)\"
 EMBED_CFLAGS	= $(CFLAGS) -I$(DEPTH)/lib/plugin
 TAINT_CFLAGS	= $(CFLAGS) -I$(DEPTH)/lib/libjar -I$(DEPTH)/sun-java/netscape/security/_jri
 
-ifneq ($(OS_ARCH),OS2)
+ifndef XP_OS2_VACPP
 $(OBJDIR)/lm_embed.o: lm_embed.c
 	@$(MAKE_OBJDIR)
 	$(CC) -o $@ -c $(EMBED_CFLAGS) $<

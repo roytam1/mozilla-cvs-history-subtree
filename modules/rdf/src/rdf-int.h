@@ -25,7 +25,6 @@
 #define	DEBUG_RDF_GetSlotValue_Memory_Needs_Freedom	1
 */
 
-
 #define WINTEST 0
 #define DBMTEST 1 
 #define FSTEST 1
@@ -143,7 +142,7 @@ typedef struct RDF_TranslatorStruct *RDFT;
 typedef struct RDF_FileStruct *RDFFile;
 
 
-RDF	newNavCenterDB();
+RDF	newNavCenterDB(void);
 typedef PRBool (*assertProc)(RDFT r, RDF_Resource u, RDF_Resource  s, void* value, RDF_ValueType type, PRBool tv);
 typedef PRBool (*hasAssertionProc)(RDFT r, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type, PRBool tv);
 typedef void* (*getSlotValueProc)(RDFT r, RDF_Resource u, RDF_Resource s, RDF_ValueType type,  PRBool inversep, PRBool tv) ;
@@ -282,7 +281,7 @@ int16 revCharSearch(const char c, const char* string);
 PRBool startsWith(const char* startPattern,const  char* string);
 PRBool endsWith(const char* endPattern,const  char* string);
 PRBool inverseTV(PRBool tv);
-void createBootstrapResources();
+void createBootstrapResources(void);
 PRBool urlEquals(const char* url1,const  char* url2);
 char* append2Strings(const char* str1,const  char* str2);
 PRBool substring(const char* pattern, const char* data);
@@ -348,7 +347,7 @@ void* nlocalStoreGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_Val
 RDF_Cursor nlocalStoreGetSlotValues (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type,  PRBool inversep, PRBool tv) ;
 void* nlocalStoreNextValue (RDFT mcf, RDF_Cursor c) ;
 RDF_Error nlocalStoreDisposeCursor (RDFT mcf, RDF_Cursor c) ;
-void createCoreVocab () ;
+void createCoreVocab (void) ;
 
 
 PRBool remoteAssert (RDFT mcf, RDF_Resource u, RDF_Resource s, void* v, 

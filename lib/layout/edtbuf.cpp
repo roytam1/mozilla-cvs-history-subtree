@@ -97,6 +97,20 @@ int CEditBuffer::PrefCallback(const char *, void *)//static
   return TRUE;
 }
 
+#ifdef XP_OS2_VACPP
+// OS/2 VACPP requires fn ptr given to PREF_RegisterCallback to have C linkage.
+// This function is used as a "thunk" to get to CEditBuffer::PrefCallback (which
+// has C++ linkage).
+extern "C" int vacppPrefCallback(const char*p1,void*p2)
+{
+	// Convert extra arg to proper pointer-to-function type.
+	PrefChangedFunc callback = (PrefChangedFunc)p2;
+	// Call the real function.
+	return callback(p1,NULL);
+}
+// Redefine PREF_RegisterCallback to use our VACPP "thunk".
+#define PREF_RegisterCallback(pref,fn,arg) (PREF_RegisterCallback)(pref,vacppPrefCallback,fn)
+#endif
 
 void CEditBuffer::InitializePrefs()//static
 {
@@ -8101,7 +8115,12 @@ CEditSaveData::~CEditSaveData() {
 }
 
 // Callback from plugins to start saving process.
-PRIVATE void edt_SaveFilePluginCB(EDT_ImageEncoderStatus status, void* pArg) {
+#ifndef XP_OS2_VACPP
+PRIVATE
+#else
+extern "C"
+#endif
+void edt_SaveFilePluginCB(EDT_ImageEncoderStatus status, void* pArg) {
   CEditSaveData *pData = (CEditSaveData *)pArg;
   XP_ASSERT(pData);
   XP_Bool bFileSaved = FALSE;
@@ -8834,7 +8853,12 @@ int bNoAdjust = 0;
 
 
 // Callback from plugins to start saving process.
-PRIVATE void edt_OpenDoneCB(EDT_ImageEncoderStatus /*status*/, void* pArg) {
+#ifndef XP_OS2_VACPP
+PRIVATE
+#else
+extern "C"
+#endif
+void edt_OpenDoneCB(EDT_ImageEncoderStatus /*status*/, void* pArg) {
     MWContext *pContext = (MWContext *)pArg;
     // Notify front end that user interaction can resume
     FE_EditorDocumentLoaded( pContext );

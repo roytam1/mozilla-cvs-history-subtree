@@ -3383,7 +3383,7 @@ HT_DoMenuCmd(HT_Pane pane, HT_MenuCmd menuCmd)
 					to FE_MakeNewWindow() for opening a URL in
 					an editor window
 				*/
-#endif EDITOR
+#endif /* EDITOR */
 				break;
 
 				case	HT_CMD_NEW_BOOKMARK:

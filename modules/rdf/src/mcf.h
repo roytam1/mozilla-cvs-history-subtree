@@ -62,7 +62,7 @@ RDF_Error		exitRDF (RDF rdf);
 RDF_Resource		addDep (RDF db, RDF_Resource u);
 PRBool			rdfassert(RDF rdf, RDF_Resource u, RDF_Resource  s, void* value, RDF_ValueType type,  PRBool tv);
 PRBool			containerIDp(char* id);
-char *			makeNewID ();
+char *			makeNewID (void);
 PRBool			iscontainerp (RDF_Resource u);
 RDF_BT			resourceTypeFromID (char* id);
 RDF_Cursor		getSlotValues (RDF rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, PRBool inversep, PRBool tv);
@@ -77,7 +77,7 @@ RDF_Resource		nextFindValue (RDF_Cursor c);
 PRBool			itemMatchesFind (RDF r, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type);
 PR_PUBLIC_API(RDF_Cursor)RDF_Find (RDF_Resource s, void* v, RDF_ValueType type);
 PRIntn			findEnumerator (PLHashEntry *he, PRIntn i, void *arg);
-void			disposeAllDBs ();
+void			disposeAllDBs (void);
 
 XP_END_PROTOS
 

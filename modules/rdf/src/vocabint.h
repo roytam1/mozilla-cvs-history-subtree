@@ -34,10 +34,10 @@
 
 XP_BEGIN_PROTOS
 
-void			createVocabs ();
-void			createCoreVocab ();
-void			createNavCenterVocab ();
-void			createWebDataVocab ();
+void			createVocabs (void);
+void			createCoreVocab (void);
+void			createNavCenterVocab (void);
+void			createWebDataVocab (void);
 
 XP_END_PROTOS
 

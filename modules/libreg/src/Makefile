@@ -39,13 +39,10 @@ GARBAGE		+= $(PROGRAM)
 
 PROGRAM		= $(OBJDIR)/vreg$(BIN_SUFFIX)
 
+ifneq ($(OS_ARCH),OS2)
 $(PROGRAM): $(BIN_OBJS)
 	@$(MAKE_OBJDIR)
-ifeq ($(OS_ARCH), OS2)
-	$(LINK_EXE) -OUT:$@ $(BIN_OBJS) $(LDFLAGS) $(OS_LIBS) $(DIST)/lib/libxp.$(LIB_SUFFIX) 
-else
 	$(CCF) -o $@ $(BIN_OBJS) $(LDFLAGS) $(DIST)/lib/lib$(LITE_PREFIX)xp.$(LIB_SUFFIX)
-endif	
 
 $(OBJDIR)/R_VerReg.o:	VerReg.c
 	@$(MAKE_OBJDIR)
@@ -75,3 +72,4 @@ $(BIN_OBJS): $(BIN_SRCS)
 
 install:: $(PROGRAM)
 	$(INSTALL) -m 444 $(PROGRAM) $(DIST)/bin
+endif	

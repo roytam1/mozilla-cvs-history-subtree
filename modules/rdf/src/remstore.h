@@ -57,7 +57,7 @@ void *		remoteStoreNextValue (RDFT mcf, RDF_Cursor c);
 RDF_Error	remoteStoreDisposeCursor (RDFT mcf, RDF_Cursor c);
 void		gcRDFFile (RDFFile f);
 RDFFile		readRDFFile (char* url, RDF_Resource top, PRBool localp);
-void		possiblyRefreshRDFFiles ();
+void		possiblyRefreshRDFFiles (void);
 
 static PRBool	fileReadp (char* url, PRBool mark);
 static void	possiblyAccessFile (RDFT mcf, RDF_Resource u, RDF_Resource s, PRBool inversep);

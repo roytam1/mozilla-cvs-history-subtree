@@ -174,15 +174,15 @@ PR_PUBLIC_API(void) RDFUtil_SetFirstInstance (RDF_Resource type, RDF_Resource it
 
 typedef void (*printProc)(void* data, char* str);
 PR_PUBLIC_API(void) outputMCFTree  (RDF db, printProc printer, void* data, RDF_Resource node);
-PR_PUBLIC_API(RDF_Resource) RDFUtil_GetBreadcrumb();
-PR_PUBLIC_API(RDF_Resource) RDFUtil_GetQuickFileFolder();
+PR_PUBLIC_API(RDF_Resource) RDFUtil_GetBreadcrumb(void);
+PR_PUBLIC_API(RDF_Resource) RDFUtil_GetQuickFileFolder(void);
 PR_PUBLIC_API(void) RDFUtil_SetQuickFileFolder(RDF_Resource container);
-PR_PUBLIC_API(RDF_Resource) RDFUtil_GetPTFolder();
+PR_PUBLIC_API(RDF_Resource) RDFUtil_GetPTFolder(void);
 PR_PUBLIC_API(void) RDFUtil_SetPTFolder(RDF_Resource container);
 PR_PUBLIC_API(RDF_Cursor)  RDF_Find (RDF_Resource s, void* v, RDF_ValueType type);
-PR_PUBLIC_API(RDF_Resource) RDFUtil_GetNewBookmarkFolder();
+PR_PUBLIC_API(RDF_Resource) RDFUtil_GetNewBookmarkFolder(void);
 PR_PUBLIC_API(void) RDFUtil_SetNewBookmarkFolder(RDF_Resource container);
-PR_PUBLIC_API(RDF_Resource) RDFUtil_GetDefaultSelectedView();
+PR_PUBLIC_API(RDF_Resource) RDFUtil_GetDefaultSelectedView(void);
 PR_PUBLIC_API(void) RDFUtil_SetDefaultSelectedView(RDF_Resource container);
 
 /** end utilities **/

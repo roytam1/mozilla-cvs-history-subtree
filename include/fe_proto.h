@@ -1059,7 +1059,7 @@ void FE_FinishedRelayout(MWContext * pMWContext);
 void FE_UpdateEnableStates(MWContext * pMWContext);
 #endif /* XP_WIN */
 
-#if defined(XP_WIN) || defined(XP_UNIX)
+#if defined(XP_WIN) || defined(XP_UNIX) || defined(XP_OS2)
 /* MOVE THESE OUT OF XP_WIN WHEN ALL PLATFORMS IMPLEMENT IT*/
 /* Called during "sizing" of a table when we are really adding/subtracting
  * rows or columns. Front end should draw a line

@@ -1268,7 +1268,7 @@ lo_underline_pref_callback(const char *pref_name, void *closure)
 
 PRIVATE
 Bool 
-lo_underline_anchors()
+lo_underline_anchors(void)
 {
     static Bool first_time = TRUE;
 
@@ -2871,7 +2871,7 @@ lo_ProcessPicsLabel(MWContext *context, lo_DocState *state, char **fail_url)
 }
 #endif /* PICS_SUPPORT */
 
-Bool lo_face_attribute();
+Bool lo_face_attribute(void);
 /*************************************
  * Function: lo_face_attribute
  * Description: This function determines whether or not we should use the FACE
@@ -2885,7 +2885,7 @@ Bool lo_face_attribute();
  *          attribute in FONT tags
  *************************************/
 Bool 
-lo_face_attribute()
+lo_face_attribute(void)
 {
     static Bool first_time = TRUE;
 
