@@ -1934,6 +1934,29 @@ SetIdent(nsHttpAuthIdentity &ident,
     ident.Set(domain, user, passBuf);
 }
 
+// helper function for getting an auth prompt from an interface requestor
+static void
+GetAuthPrompt(nsIInterfaceRequestor *ifreq, PRBool proxyAuth,
+              nsIAuthPrompt **result)
+{
+    if (!ifreq)
+        return;
+
+    nsCOMPtr<nsIAuthPromptProvider> authPromptProvider;
+
+    PRUint32 promptReason;
+    if (proxyAuth)
+        promptReason = nsIAuthPromptProvider::PROMPT_PROXY;
+    else 
+        promptReason = nsIAuthPromptProvider::PROMPT_NORMAL;
+
+    authPromptProvider = do_GetInterface(ifreq);
+    if (authPromptProvider)
+        authPromptProvider->GetAuthPrompt(promptReason, result);
+    else
+        CallGetInterface(ifreq, result);
+}
+
 // generate credentials for the given challenge, and update the auth cache.
 nsresult
 nsHttpChannel::GenCredsAndSetEntry(nsIHttpAuthenticator *auth,
@@ -2381,19 +2404,13 @@ nsHttpChannel::PromptForIdentity(const char *scheme,
 
     // XXX i18n: IDN not supported.
 
-    nsCOMPtr<nsIAuthPromptProvider> authPromptProvider;
     nsCOMPtr<nsIAuthPrompt> authPrompt;
-
-    GetCallback(NS_GET_IID(nsIAuthPromptProvider), getter_AddRefs(authPromptProvider));
-    if (authPromptProvider) {
-        PRUint32 promptReason = (proxyAuth ?
-                                 nsIAuthPromptProvider::PROMPT_PROXY :
-                                 nsIAuthPromptProvider::PROMPT_NORMAL);
-        (void) authPromptProvider->GetAuthPrompt(promptReason, getter_AddRefs(authPrompt));
+    GetAuthPrompt(mCallbacks, proxyAuth, getter_AddRefs(authPrompt));
+    if (!authPrompt && mLoadGroup) {
+        nsCOMPtr<nsIInterfaceRequestor> cbs;
+        mLoadGroup->GetNotificationCallbacks(getter_AddRefs(cbs));
+        GetAuthPrompt(cbs, proxyAuth, getter_AddRefs(authPrompt));
     }
-    else
-        GetCallback(NS_GET_IID(nsIAuthPrompt), getter_AddRefs(authPrompt));
-
     if (!authPrompt)
         return NS_ERROR_NO_INTERFACE;
 
