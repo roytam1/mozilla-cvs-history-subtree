@@ -1685,7 +1685,7 @@ NET_CacheConverter (FO_Present_Types format_out,
 				else if ((URL_s->address) && 
 						(!XP_STRNCASECMP(URL_s->address, "mailbox:", 8)
 						|| !XP_STRNCASECMP(URL_s->address, "news:", 5)
-						HG65294 )
+						HG65294)
 						 && (URL_s->content_type) && (*(URL_s->content_type)))
 				{
 					/*
