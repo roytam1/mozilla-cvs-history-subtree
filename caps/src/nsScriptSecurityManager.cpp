@@ -426,7 +426,7 @@ nsScriptSecurityManager::CheckLoadURIFromScript(JSContext *cx, nsIURI *aURI)
 
     // Get principal of currently executing script.
     nsCOMPtr<nsIPrincipal> principal;
-    if (NS_FAILED(GetSubjectPrincipal(cx, getter_AddRefs(principal))))
+    if (NS_FAILED(GetCallingPrincipal(cx, getter_AddRefs(principal))))
         return NS_ERROR_FAILURE;
 
     // Native code can load all URIs.
