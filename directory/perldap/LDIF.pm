@@ -332,22 +332,24 @@ ATTRIBUTE:
 	my $value = \${$record}[$i+1];
 	next unless defined $$value; # ignore comments and "-" lines
 	my $option;
-	for ($option = $[ + 2; $option < $#_; $option += 2) {
+OPTION: for ($option = $[ + 2; $option < $#_; $option += 2) {
 	    my ($keyword, $expression) = ((lc $_[$option]), $_[$option+1]);
-	    next ATTRIBUTE unless defined $expression;
 	    my $exprType = ref $expression;
-	    next if ($exprType and ($exprType ne "CODE")); # unsupported expression
 	    my $OK = 0;
 	    if  ("name" eq $keyword or "type" eq $keyword) {
+		next ATTRIBUTE unless defined $expression;
+		next OPTION if ($exprType and ($exprType ne "CODE")); # unsupported
 		foreach $_ (${$record}[$i]) {
 		    last if ($OK = $exprType ? &$expression ($_) : eval $expression);
 		}
 	    } elsif ("value" eq $keyword) {
+		next ATTRIBUTE unless defined $expression;
+		next OPTION if ($exprType and ($exprType ne "CODE")); # unsupported
 		foreach $_ (((ref $$value) eq "ARRAY") ? @$$value : $$value) {
 		    last if ($OK = $exprType ? &$expression ($_) : eval $expression);
 		}
 	    } else { # unsupported keyword
-		last;
+		last OPTION;
 	    }
 	    next ATTRIBUTE unless $OK;
 	}
