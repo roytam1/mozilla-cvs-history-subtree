@@ -66,9 +66,6 @@
         if (mps.length == 0)
           this.ifSetAttribute("hideHistory", true);
         
-        // turn js handler attributes into functions
-        var attr = this.getAttribute("inputFilter");
-        if (attr) this.mInputFilter = new Function("val", attr);
         attr = this.getAttribute("ontextcommand");
         if (attr) this.ontextcommand = new Function("userAction", attr);
         attr = this.getAttribute("ontextrevert");
@@ -188,11 +185,6 @@
       <property name="isWaiting" 
                 onget="return this.mAutoCompleteTimer != 0;"/>
 
-      <!-- function to call to filter user input before it is searched -->
-      <property name="inputFilter"
-                onset="return this.mInputFilter = val;"
-                onget="return this.mInputFilter;"/>
-
       <!-- reference to the results popup element -->
       <property name="resultsPopup"><![CDATA[
         var elt = document.getAnonymousElementByAttribute(this, "anonid", "popup");
@@ -206,7 +198,6 @@
       <property name="mListeners"/>
       <property name="mLastResults"/>
       <property name="mLastKeyCode"/>
-      <property name="mInputFilter"/>
       <property name="mAutoCompleteTimer">0</property>
       <property name="mMenuOpen">false</property>
       <property name="mFinishAfterSearch">false</property>
@@ -215,7 +206,6 @@
       <property name="mNeedToComplete">false</property>
       <property name="mView">null</property>
       <property name="currentSearchString"/>
-      <property name="currentSearchStringPreFilter"/>
       <property name="oninit"/>
       <property name="ontextcommand"/>
       <property name="ontextrevert"/>
@@ -426,9 +416,8 @@
       <!--  -->
       <method name="startLookup">
         <body><![CDATA[
-          var str = this.filterString(this.value);
+          var str = this.value;
           this.lastSearchString = this.currentSearchString;
-          this.currentSearchStringPreFilter = this.value;
           this.currentSearchString = str;
           
           this.isSearching = true;
@@ -586,7 +575,7 @@
           
           this.clearTimer();
                     
-          this.currentSearchStringPreFilter = "";
+          this.currentSearchString = "";
           this.mNeedToComplete = false;
           
           if (aFireTextCommand)
@@ -610,7 +599,7 @@
           
           this.closeResultPopup();
 
-          this.currentSearchStringPreFilter = "";
+          this.currentSearchString = "";
 
           this.fireTextCommand("clicking");
         ]]></body>
@@ -619,7 +608,7 @@
       <!-- when the user hits escape, revert the previously typed value in the textbox -->
       <method name="undoAutoComplete">
         <body><![CDATA[
-          var val = this.currentSearchStringPreFilter;
+          var val = this.currentSearchString;
 
           var ok = this.fireTextRevert();
           if ((ok || ok == undefined) && val)
@@ -627,7 +616,7 @@
 
           this.userAction = "typing";
 
-          this.currentSearchStringPreFilter = "";
+          this.currentSearchString = "";
           this.mNeedToComplete = false;
         ]]></body>
       </method>
@@ -764,7 +753,7 @@
             if (selected != null) {
               this.value = this.getResultValueAt(selected);
             } else {
-              this.value = this.currentSearchStringPreFilter;
+              this.value = this.currentSearchString;
             }
             
             // move cursor to the end
@@ -786,14 +775,13 @@
           if (!this.mFinishAfterSearch && this.autoFill && this.mLastKeyCode != 8) {
             if (aResults.defaultItemIndex != -1) {
               var resultValue = this.getSessionValueAt(aSessionName, aResults.defaultItemIndex);
-              var match = this.filterString(resultValue.toLowerCase());
+              var match = resultValue.toLowerCase();
               var entry = this.currentSearchString.toLowerCase();
               this.ignoreInputEvent = true;
               if (match.indexOf(entry) == 0) {
-                var str = this.value;
-                this.value = this.value + match.substring(entry.length);
-                this.mNeedToComplete = false;
-                this.mInputElt.setSelectionRange(str.length, this.value.length);
+                var endPoint = this.value.length;
+                this.value = this.value + resultValue.substr(endPoint);
+                this.mInputElt.setSelectionRange(endPoint, this.value.length);
               } else {
                 this.value = this.value + " >> " + resultValue;
                 this.mNeedToComplete = true;
@@ -889,15 +877,6 @@
             clearTimeout(this.mAutoCompleteTimer);
             this.mAutoCompleteTimer = 0;
           }
-        ]]></body>
-      </method>
-
-      <!-- pass a string through the external input filter function  -->
-      <method name="filterString">
-        <parameter name="aString"/>
-        <body><![CDATA[
-          var fn = this.mInputFilter;
-          return fn ? fn(aString) : aString;
         ]]></body>
       </method>
 
