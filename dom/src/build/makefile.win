@@ -74,7 +74,6 @@ LLIBS=							\
 	$(DIST)\lib\raptorgfxwin.lib			\
 	$(DIST)\lib\netlib.lib				\
 	$(DIST)\lib\js32$(VERSION_NUMBER).lib		\
-        $(DIST)\lib\xpc32$(VERSION_NUMBER).lib          \
 	$(DIST)\lib\xpcom32.lib				\
 	$(DIST)\lib\plds3.lib			\
 	$(DIST)\lib\plc3.lib			\
