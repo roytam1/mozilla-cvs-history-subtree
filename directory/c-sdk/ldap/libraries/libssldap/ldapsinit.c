@@ -126,13 +126,13 @@ static int ldapssl_AuthCertificate(void *certdbarg, PRFileDesc *fd,
 /*
  * client auth stuff
  */
-static int get_clientauth_data( void *sessionarg, PRFileDesc *prfd,
+static SECStatus get_clientauth_data( void *sessionarg, PRFileDesc *prfd,
 	CERTDistNames *caNames,  CERTCertificate **pRetCert,
 	SECKEYPrivateKey **pRetKey );
-static int get_keyandcert( LDAPSSLSessionInfo *ssip,
+static SECStatus get_keyandcert( LDAPSSLSessionInfo *ssip,
 	CERTCertificate **pRetCert, SECKEYPrivateKey **pRetKey,
 	char **errmsgp );
-static int check_clientauth_nicknames_and_passwd( LDAP *ld,
+static SECStatus check_clientauth_nicknames_and_passwd( LDAP *ld,
 	LDAPSSLSessionInfo *ssip );
 static char *get_keypassword( PK11SlotInfo *slot, PRBool retry,
 	void *sessionarg );
@@ -149,9 +149,6 @@ ldapssl_init( const char *defhost, int defport, int defsecure )
     LDAP	*ld;
 
 
-#ifndef LDAP_SSLIO_HOOKS
-    return( NULL );
-#else
     if (0 ==defport)
 	defport = LDAPS_PORT;
     
@@ -167,7 +164,6 @@ ldapssl_init( const char *defhost, int defport, int defsecure )
     }
 
     return( ld );
-#endif
 }
 
 
@@ -384,10 +380,6 @@ int
 LDAP_CALL
 ldapssl_install_routines( LDAP *ld )
 {
-#ifndef LDAP_SSLIO_HOOKS
-    ldap_set_lderrno( ld, LDAP_LOCAL_ERROR, NULL, NULL );
-    return( -1 );
-#else
     struct ldap_x_ext_io_fns	iofns;
     LDAPSSLSessionInfo		*ssip;
     PRLDAPSessionInfo		sei;
@@ -444,7 +436,6 @@ ldapssl_install_routines( LDAP *ld )
     }
 
     return( 0 );
-#endif
 }
 
 
@@ -453,10 +444,6 @@ LDAP_CALL
 ldapssl_enable_clientauth( LDAP *ld, char *keynickname,
         char *keypasswd, char *certnickname )
 {
-#ifndef LDAP_SSLIO_HOOKS
-    ldap_set_lderrno( ld, LDAP_LOCAL_ERROR, NULL, NULL );
-    return( -1 );
-#else
     struct ldap_x_ext_io_fns	iofns;
     LDAPSSLSessionInfo		*ssip;
     PRLDAPSessionInfo		sei;
@@ -489,7 +476,7 @@ ldapssl_enable_clientauth( LDAP *ld, char *keynickname,
 	return( -1 );
     }
 
-    if ( check_clientauth_nicknames_and_passwd( ld, ssip ) != 0 ) {
+    if ( check_clientauth_nicknames_and_passwd( ld, ssip ) != SECSuccess ) {
 	return( -1 );
     }
 
@@ -517,7 +504,6 @@ ldapssl_enable_clientauth( LDAP *ld, char *keynickname,
     }
 
     return( 0 );
-#endif
 }
 
 
@@ -612,11 +598,12 @@ ldapssl_AuthCertificate(void *certdbarg, PRFileDesc *fd, PRBool checkSig,
 
 /*
  * called during SSL client auth. when server wants our cert and key.
- * return 0 if we succeeded and set *pRetCert and *pRetKey, -1 otherwise.
- * if -1 is returned SSL will proceed without sending a cert.
+ * returns: SECSuccess if we succeeded and set *pRetCert and *pRetKey,
+ *			SECFailure otherwise.
+ * if SECFailure is returned SSL will proceed without sending a cert.
  */
 
-static int
+static SECStatus
 get_clientauth_data( void *sessionarg, PRFileDesc *prfd,
         CERTDistNames *caNames,  CERTCertificate **pRetCert,
         SECKEYPrivateKey **pRetKey )
@@ -625,13 +612,13 @@ get_clientauth_data( void *sessionarg, PRFileDesc *prfd,
     LDAPSSLSessionInfo	*ssip;
 
     if (( ssip = (LDAPSSLSessionInfo *)sessionarg ) == NULL ) {
-	return( -1 );       /* client auth. not enabled */
+	return( SECFailure );       /* client auth. not enabled */
     }
 
     return( get_keyandcert( ssip, pRetCert, pRetKey, NULL ));
 }
 
-static int
+static SECStatus
 get_keyandcert( LDAPSSLSessionInfo *ssip,
 	CERTCertificate **pRetCert, SECKEYPrivateKey **pRetKey,
 	char **errmsgp )
@@ -644,10 +631,10 @@ get_keyandcert( LDAPSSLSessionInfo *ssip,
 	if ( errmsgp != NULL ) {
 	    *errmsgp = "unable to find certificate";
 	}
-	return( -1 );
+	return( SECFailure );
     }
 
-    if (!using_pkcs_functions)
+    if (!ssip->lssei_using_pcks_fns)
     {
 	PK11_SetPasswordFunc( get_keypassword );
     }
@@ -659,12 +646,12 @@ get_keyandcert( LDAPSSLSessionInfo *ssip,
 	if ( errmsgp != NULL ) {
 	    *errmsgp = "bad key or key password";
 	}
-	return( -1 );
+	return( SECFailure );
     }
 
     *pRetCert = cert;
     *pRetKey = key;
-    return( 0 );
+    return( SECSuccess );
 }
 
 
@@ -699,22 +686,22 @@ get_keypassword( PK11SlotInfo *slot, PRBool retry, void *sessionarg )
  *	2) check that public key in cert matches private key
  * see ns/netsite/ldap/servers/slapd/ssl.c:slapd_ssl_init() for example code.
  */
-static int
+static SECStatus
 check_clientauth_nicknames_and_passwd( LDAP *ld, LDAPSSLSessionInfo *ssip )
 {
     char		*errmsg = NULL;
     CERTCertificate	*cert = NULL;
     SECKEYPrivateKey	*key = NULL;
-    int rv;
+    SECStatus		rv;
 
     rv = get_keyandcert( ssip, &cert, &key, &errmsg );
 
-    if ( rv != 0 ) {
+    if ( rv != SECSuccess ) {
     	if ( errmsg != NULL ) {
 	    errmsg = strdup( errmsg );
 	}
 	ldap_set_lderrno( ld, LDAP_PARAM_ERROR, NULL, errmsg );
-	return( -1 );
+	return( rv );
     }
 
     if ( cert != NULL ) {
@@ -723,7 +710,7 @@ check_clientauth_nicknames_and_passwd( LDAP *ld, LDAPSSLSessionInfo *ssip )
     if ( key != NULL ) {
 	SECKEY_DestroyPrivateKey( key );
     }
-    return( 0 );
+    return( SECSuccess );
 }
 
 
