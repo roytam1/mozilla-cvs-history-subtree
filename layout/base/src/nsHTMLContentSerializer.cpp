@@ -468,7 +468,11 @@ nsHTMLContentSerializer::LineBreakBeforeOpen(nsIAtom* aName,
   if (aName == nsHTMLAtoms::html) {
     return PR_FALSE;
   }
-  else if (aName == nsHTMLAtoms::title) {
+  else if (aName == nsHTMLAtoms::title ||
+           aName == nsHTMLAtoms::meta  ||
+           aName == nsHTMLAtoms::link  ||
+           aName == nsHTMLAtoms::style ||
+           aName == nsHTMLAtoms::script) {
     return PR_TRUE;
   }
   else {
@@ -500,11 +504,15 @@ nsHTMLContentSerializer::LineBreakAfterOpen(nsIAtom* aName,
       (aName == nsHTMLAtoms::body) ||
       (aName == nsHTMLAtoms::ul) ||
       (aName == nsHTMLAtoms::ol) ||
+      (aName == nsHTMLAtoms::dl) ||
       (aName == nsHTMLAtoms::table) ||
       (aName == nsHTMLAtoms::tbody) ||
-      (aName == nsHTMLAtoms::style) ||
       (aName == nsHTMLAtoms::tr) ||
-      (aName == nsHTMLAtoms::br)) {
+      (aName == nsHTMLAtoms::br) ||
+      (aName == nsHTMLAtoms::meta) ||
+      (aName == nsHTMLAtoms::link) ||
+      (aName == nsHTMLAtoms::script) ||
+      (aName == nsHTMLAtoms::style)) {
     return PR_TRUE;
   }
 
@@ -524,8 +532,10 @@ nsHTMLContentSerializer::LineBreakBeforeClose(nsIAtom* aName,
       (aName == nsHTMLAtoms::body) ||
       (aName == nsHTMLAtoms::ul) ||
       (aName == nsHTMLAtoms::ol) ||
+      (aName == nsHTMLAtoms::dl) ||
       (aName == nsHTMLAtoms::table) ||
       (aName == nsHTMLAtoms::tbody) ||
+      (aName == nsHTMLAtoms::script) ||
       (aName == nsHTMLAtoms::style)) {
     return PR_TRUE;
   }
@@ -549,7 +559,12 @@ nsHTMLContentSerializer::LineBreakAfterClose(nsIAtom* aName,
       (aName == nsHTMLAtoms::td) ||
       (aName == nsHTMLAtoms::pre) ||
       (aName == nsHTMLAtoms::title) ||
-      (aName == nsHTMLAtoms::meta)) {
+      (aName == nsHTMLAtoms::li) ||
+      (aName == nsHTMLAtoms::dt) ||
+      (aName == nsHTMLAtoms::dd) ||
+      (aName == nsHTMLAtoms::blockquote) ||
+      (aName == nsHTMLAtoms::p) ||
+      (aName == nsHTMLAtoms::div)) {
     return PR_TRUE;
   }
   else {
@@ -587,7 +602,11 @@ nsHTMLContentSerializer::StartIndentation(nsIAtom* aName,
       (aName == nsHTMLAtoms::ol) ||
       (aName == nsHTMLAtoms::tbody) ||
       (aName == nsHTMLAtoms::form) ||
-      (aName == nsHTMLAtoms::frameset)) {
+      (aName == nsHTMLAtoms::frameset)
+      (aName == nsHTMLAtoms::blockquote) ||
+      (aName == nsHTMLAtoms::li) ||
+      (aName == nsHTMLAtoms::dt) ||
+      (aName == nsHTMLAtoms::dd)) {
     mIndent++;
   }
 }
