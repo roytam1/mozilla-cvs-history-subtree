@@ -392,7 +392,7 @@ NS_IMETHODIMP nsWindow::CaptureRollupEvents(nsIRollupListener * aListener,
   }
   else
     {
-#ifdef DEBUG_blizzard
+#ifdef DEBUG_pavlov
     printf("ungrabbing widget\n");
 #endif
     gdk_pointer_ungrab(GDK_CURRENT_TIME);
