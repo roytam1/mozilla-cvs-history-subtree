@@ -96,8 +96,8 @@ LIBRARY = $(OBJDIR)/jsj.lib
 SHARED_LIBRARY = $(OBJDIR)/jsj.dll
 PROGRAM = $(OBJDIR)/jsj.exe
 else
-LIBRARY = $(OBJDIR)/jsj.a
-SHARED_LIBRARY = $(OBJDIR)/jsj.so
+LIBRARY = $(OBJDIR)/libjsj.a
+SHARED_LIBRARY = $(OBJDIR)/libjsj.$(SO_SUFFIX)
 PROGRAM = $(OBJDIR)/jsj
 endif
 

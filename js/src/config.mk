@@ -56,6 +56,8 @@ DEFINES    += -DDEBUG -DDEBUG_$(shell whoami)
 OBJDIR_TAG = _DBG
 endif
 
+SO_SUFFIX = so
+
 include $(DEPTH)/config/$(OS_CONFIG).mk
 
 # Name of the binary code directories
