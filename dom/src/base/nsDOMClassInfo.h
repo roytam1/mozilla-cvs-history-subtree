@@ -474,12 +474,40 @@ public:
 };
 
 
-// HTMLEmbed/ObjectElement helper
+// Base helper for external HTML object (such as a plugin or an
+// applet)
 
-class nsHTMLPluginObjElementSH : public nsElementSH
+class nsHTMLExternalObjSH : public nsElementSH
 {
 protected:
-  nsHTMLPluginObjElementSH(nsDOMClassInfoID aID) : nsElementSH(aID)
+  nsHTMLExternalObjSH(nsDOMClassInfoID aID) : nsElementSH(aID)
+  {
+  }
+
+  virtual ~nsHTMLExternalObjSH()
+  {
+  }
+
+  nsresult GetPluginInstance(nsIXPConnectWrappedNative *aWrapper,
+                             nsIPluginInstance **aResult);
+
+  virtual nsresult GetPluginJSObject(JSContext *cx, JSObject *obj,
+                                     nsIPluginInstance *plugin_inst,
+                                     JSObject **plugin_obj,
+                                     JSObject **plugin_proto) = 0;
+
+public:
+  NS_IMETHOD PostCreate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                        JSObject *obj);
+};
+
+
+// HTMLEmbed/ObjectElement helper
+
+class nsHTMLPluginObjElementSH : public nsHTMLExternalObjSH
+{
+protected:
+  nsHTMLPluginObjElementSH(nsDOMClassInfoID aID) : nsHTMLExternalObjSH(aID)
   {
   }
 
@@ -487,12 +515,12 @@ protected:
   {
   }
 
-  nsresult GetPluginInstance(nsIXPConnectWrappedNative *aWrapper,
-                             nsIPluginInstance **aResult);
+  virtual nsresult GetPluginJSObject(JSContext *cx, JSObject *obj,
+                                     nsIPluginInstance *plugin_inst,
+                                     JSObject **plugin_obj,
+                                     JSObject **plugin_proto);
 
 public:
-  NS_IMETHOD PostCreate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                        JSObject *obj);
   NS_IMETHOD NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                         JSObject *obj, jsval id, PRUint32 flags,
                         JSObject **objp, PRBool *_retval);
@@ -500,6 +528,32 @@ public:
   static nsIClassInfo *Create(nsDOMClassInfoID aID)
   {
     return new nsHTMLPluginObjElementSH(aID);
+  }
+};
+
+
+// HTMLAppletElement helper
+
+class nsHTMLAppletElementSH : public nsHTMLExternalObjSH
+{
+protected:
+  nsHTMLAppletElementSH(nsDOMClassInfoID aID) : nsHTMLExternalObjSH(aID)
+  {
+  }
+
+  virtual ~nsHTMLAppletElementSH()
+  {
+  }
+
+  virtual nsresult GetPluginJSObject(JSContext *cx, JSObject *obj,
+                                     nsIPluginInstance *plugin_inst,
+                                     JSObject **plugin_obj,
+                                     JSObject **plugin_proto);
+
+public:
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsHTMLAppletElementSH(aID);
   }
 };
 
