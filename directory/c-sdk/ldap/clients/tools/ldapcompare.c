@@ -23,6 +23,7 @@
 /* ldapdelete.c - simple program to delete an entry using LDAP */
 
 #include "ldaptool.h"
+#include "fileurl.h"
 
 static int	contoper = 0;
 static LDAP	*ld;
@@ -150,7 +151,7 @@ static int
 docompare( LDAP *ld, const char *dn, const char *attrtype,
 		const struct berval *bvalue, LDAPControl **serverctrls )
 {
-    int		rc, notascii;
+    int		rc;
 
     if ( !ldapcompare_quiet ) {
 	char	*valuestr, tmpbuf[256];
