@@ -143,6 +143,10 @@ public:
 
   nscoord GetWidth();
   const PRUnichar* GetID() { return mID.GetUnicode(); };
+
+  PRBool IsPrimary() { return mIsPrimaryCol; };
+
+  PRInt32 GetCropStyle() { return mCropStyle; };
 };
 
 // The actual frame that paints the cells and rows.
@@ -223,6 +227,9 @@ protected:
   // Returns the height of rows in the tree.
   PRInt32 GetRowHeight();
 
+  // Returns our indentation width.
+  PRInt32 GetIndentation();
+
   // Returns our width/height once border and padding have been removed.
   nsRect GetInnerBox();
 
@@ -266,9 +273,10 @@ protected: // Data Members
   PRInt32 mTopRowIndex;
   PRInt32 mPageCount;
 
-  // Cached heights.and info.
+  // Cached heights.and indent info.
   nsRect mInnerBox;
   PRInt32 mRowHeight;
+  PRInt32 mIndentation;
 
   // A scratch array used when looking up cached style contexts.
   nsCOMPtr<nsISupportsArray> mScratchArray;

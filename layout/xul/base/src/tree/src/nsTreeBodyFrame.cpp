@@ -53,6 +53,8 @@
 #include "nsWidgetsCID.h"
 #include "nsBoxFrame.h"
 
+#define ELLIPSIS "..."
+
 // The style context cache impl
 nsresult 
 nsOutlinerStyleCache::GetStyleContext(nsICSSPseudoComparator* aComparator,
@@ -132,9 +134,9 @@ nsOutlinerColumn::nsOutlinerColumn(nsIContent* aColElement, nsIFrame* aFrame)
   mCropStyle = 0;
   nsAutoString crop;
   mColElement->GetAttribute(kNameSpaceID_None, nsXULAtoms::crop, crop);
-  if (crop.EqualsIgnoreCase("middle"))
+  if (crop.EqualsIgnoreCase("center"))
     mCropStyle = 1;
-  else if (crop.EqualsIgnoreCase("right"))
+  else if (crop.EqualsIgnoreCase("left"))
     mCropStyle = 2;
 
   // Cache our text alignment policy.
@@ -198,7 +200,7 @@ NS_NewOutlinerBodyFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 // Constructor
 nsOutlinerBodyFrame::nsOutlinerBodyFrame(nsIPresShell* aPresShell)
 :nsLeafBoxFrame(aPresShell), mPresContext(nsnull),
- mTopRowIndex(0), mColumns(nsnull), mScrollbar(nsnull)
+ mTopRowIndex(0), mRowHeight(0), mIndentation(0), mColumns(nsnull), mScrollbar(nsnull)
 {
   NS_NewISupportsArray(getter_AddRefs(mScratchArray));
 }
@@ -285,7 +287,14 @@ NS_IMETHODIMP nsOutlinerBodyFrame::SetView(nsIOutlinerView * aView)
 {
   // Outliner, meet the view.
   mView = aView;
-  
+ 
+  // Changing the view causes us to refetch our data.  This will
+  // necessarily entail a full invalidation of the outliner.
+  mTopRowIndex = 0;
+  delete mColumns;
+  mColumns = nsnull;
+  Invalidate();
+ 
   if (mView) {
     // View, meet the outliner.
     mView->SetOutliner(this);
@@ -295,15 +304,11 @@ NS_IMETHODIMP nsOutlinerBodyFrame::SetView(nsIOutlinerView * aView)
     NS_NewOutlinerSelection(this, getter_AddRefs(sel));
 
     mView->SetSelection(sel);
+
+    // The scrollbar will need to be updated.
+    InvalidateScrollbar();
   }
-  
-  // Changing the view causes us to refetch our data.  This will
-  // necessarily entail a full invalidation of the outliner.
-  mTopRowIndex = 0;
-  delete mColumns;
-  mColumns = nsnull;
-  Invalidate();
-  
+ 
   return NS_OK;
 }
 
@@ -522,6 +527,23 @@ PRInt32 nsOutlinerBodyFrame::GetRowHeight()
   return 19*15; // As good a default as any.
 }
 
+PRInt32 nsOutlinerBodyFrame::GetIndentation()
+{
+  // Look up the correct indentation.  It is equal to the specified indentation width.
+  nsCOMPtr<nsIStyleContext> indentContext;
+  mScratchArray->Clear();
+  GetPseudoStyleContext(mPresContext, nsXULAtoms::mozoutlinerindentation, getter_AddRefs(indentContext));
+  if (indentContext) {
+    const nsStylePosition* myPosition = (const nsStylePosition*)
+          indentContext->GetStyleData(eStyleStruct_Position);
+    if (myPosition->mWidth.GetUnit() == eStyleUnit_Coord)  {
+      PRInt32 val = myPosition->mWidth.GetCoordValue();
+      return val;
+    }
+  }
+  return 16*15; // As good a default as any.
+}
+
 nsRect nsOutlinerBodyFrame::GetInnerBox()
 {
   nsRect r(0,0,mRect.width, mRect.height);
@@ -557,13 +579,11 @@ NS_IMETHODIMP nsOutlinerBodyFrame::Paint(nsIPresContext*      aPresContext,
     return NS_OK;
 
   PRBool clipState = PR_FALSE;
-  nsRect clipRect(mRect);
-  aRenderingContext.PushState();
-  aRenderingContext.SetClipRect(clipRect, nsClipCombine_kReplace, clipState);
-
+  
   // Update our page count, our available height and our row height.
   PRInt32 oldRowHeight = mRowHeight;
   mRowHeight = GetRowHeight();
+  mIndentation = GetIndentation();
   mInnerBox = GetInnerBox();
   mPageCount = mInnerBox.height/mRowHeight;
 
@@ -581,8 +601,12 @@ NS_IMETHODIMP nsOutlinerBodyFrame::Paint(nsIPresContext*      aPresContext,
   // is contained in the rows.
   if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer) {
     nscoord currX = mInnerBox.x;
-    for (nsOutlinerColumn* currCol = mColumns; currCol; currCol = currCol->GetNext()) {
+    for (nsOutlinerColumn* currCol = mColumns; currCol && currX < mInnerBox.x+mInnerBox.width; 
+         currCol = currCol->GetNext()) {
       nsRect colRect(currX, mInnerBox.y, currCol->GetWidth(), mInnerBox.height);
+      PRInt32 overflow = colRect.x+colRect.width-(mInnerBox.x+mInnerBox.width);
+      if (overflow > 0)
+        colRect.width -= overflow;
       nsRect dirtyRect;
       if (dirtyRect.IntersectRect(aDirtyRect, colRect)) {
         PaintColumn(currCol, colRect, aPresContext, aRenderingContext, aDirtyRect, aWhichLayer); 
@@ -595,12 +619,24 @@ NS_IMETHODIMP nsOutlinerBodyFrame::Paint(nsIPresContext*      aPresContext,
   for (PRInt32 i = mTopRowIndex; i < rowCount && i < mTopRowIndex+mPageCount+1; i++) {
     nsRect rowRect(mInnerBox.x, mInnerBox.y+mRowHeight*(i-mTopRowIndex), mInnerBox.width, mRowHeight);
     nsRect dirtyRect;
-    if (dirtyRect.IntersectRect(aDirtyRect, rowRect)) {
+    if (dirtyRect.IntersectRect(aDirtyRect, rowRect) && rowRect.y < (mInnerBox.y+mInnerBox.height)) {
+      PRBool clip = (rowRect.y + rowRect.height > mInnerBox.y + mInnerBox.height);
+      if (clip) {
+        // We need to clip the last row, since it extends outside our inner box.  Push
+        // a clip rect down.
+        PRInt32 overflow = (rowRect.y+rowRect.height) - (mInnerBox.y+mInnerBox.height);
+        nsRect clipRect(rowRect.x, rowRect.y, mInnerBox.width, mRowHeight-overflow);
+        aRenderingContext.PushState();
+        aRenderingContext.SetClipRect(clipRect, nsClipCombine_kReplace, clipState);
+      }
+
       PaintRow(i, rowRect, aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+
+      if (clip)
+        aRenderingContext.PopState(clipState);
     }
   }
 
-  aRenderingContext.PopState(clipState);
   return NS_OK;
 }
 
@@ -673,8 +709,12 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintRow(int aRowIndex, const nsRect& aRowRec
 
   // Now loop over our cells. Only paint a cell if it intersects with our dirty rect.
   nscoord currX = rowRect.x;
-  for (nsOutlinerColumn* currCol = mColumns; currCol; currCol = currCol->GetNext()) {
+  for (nsOutlinerColumn* currCol = mColumns; currCol && currX < mInnerBox.x+mInnerBox.width; 
+       currCol = currCol->GetNext()) {
     nsRect cellRect(currX, rowRect.y, currCol->GetWidth(), rowRect.height);
+    PRInt32 overflow = cellRect.x+cellRect.width-(mInnerBox.x+mInnerBox.width);
+    if (overflow > 0)
+      cellRect.width -= overflow;
     nsRect dirtyRect;
     if (dirtyRect.IntersectRect(aDirtyRect, cellRect)) {
       PaintCell(aRowIndex, currCol, cellRect, aPresContext, aRenderingContext, aDirtyRect, aWhichLayer); 
@@ -725,7 +765,17 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int aRowIndex,
   // RIGHT means paint from right to left.
   // XXX Implement RIGHT alignment!
 
-  // XXX If we're the primary column, we need to indent and paint the twisty.
+  if (aColumn->IsPrimary()) {
+    // If we're the primary column, we need to indent and paint the twisty.
+    // First we indent
+    PRInt32 level;
+    mView->GetLevel(aRowIndex, &level);
+
+    currX += mIndentation*level;
+    remainingWidth -= mIndentation*level;
+
+    // XXX Paint the twisty.
+  }
 
   // XXX Now paint the various images.
 
@@ -788,12 +838,83 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintText(int aRowIndex,
       textRect.height = height;
     }
 
-    // XXX Crop if the width is too big!
+    // Set our font.
+    aRenderingContext.SetFont(fontMet);
+
     nscoord width;
     aRenderingContext.GetWidth(realText, width);
 
-    // Set our font.
-    aRenderingContext.SetFont(fontMet);
+    if (width > textRect.width) {
+      // See if the width is even smaller than the ellipsis
+      // If so, clear the text completely.
+      nscoord ellipsisWidth;
+      aRenderingContext.GetWidth(ELLIPSIS, ellipsisWidth);
+
+      nsAutoString ellipsis; ellipsis.AssignWithConversion(ELLIPSIS);
+
+      nscoord width = textRect.width;
+      if (ellipsisWidth > width)
+        realText.SetLength(0);
+      else if (ellipsisWidth == width)
+        realText = ellipsis;
+      else {
+        // We will be drawing an ellipsis, thank you very much.
+        // Subtract out the required width of the ellipsis.
+        // This is the total remaining width we have to play with.
+        width -= ellipsisWidth;
+
+        // Now we crop.
+        switch (aColumn->GetCropStyle()) {
+          default:
+          case 0: {
+            // Crop right. 
+            nscoord cwidth;
+            nscoord twidth = 0;
+            int length = realText.Length();
+            int i;
+            for (i = 0; i < length; ++i) {
+              PRUnichar ch = realText.CharAt(i);
+              aRenderingContext.GetWidth(ch,cwidth);
+              if (twidth + cwidth > width)
+                break;
+              twidth += cwidth;
+            }
+
+            realText.Truncate(i);
+            realText += ellipsis;
+          }
+          break;
+
+          case 2: {
+            // Crop left.
+            nscoord cwidth;
+            nscoord twidth = 0;
+            int length = realText.Length();
+            int i;
+            for (i=length-1; i >= 0; --i) {
+              PRUnichar ch = realText.CharAt(i);
+              aRenderingContext.GetWidth(ch,cwidth);
+              if (twidth + cwidth > width)
+                  break;
+
+              twidth += cwidth;
+            }
+
+            nsAutoString copy;
+            realText.Right(copy, length-1-i);
+            realText = ellipsis;
+            realText += copy;
+          }
+          break;
+
+          case 1:
+          {
+            // XXX Not yet implemented.
+          }
+          break;
+        }
+      }
+    }
 
     // Set our color.
     const nsStyleColor* colorStyle = (const nsStyleColor*)textContext->GetStyleData(eStyleStruct_Color);
@@ -862,7 +983,7 @@ NS_IMETHODIMP nsOutlinerBodyFrame::ScrollToRow(PRInt32 aRow)
   if (absDelta*mRowHeight >= mRect.height)
     Invalidate();
   else if (mOutlinerWidget)
-    mOutlinerWidget->Scroll(0, delta > 0 ? -delta*rowHeightAsPixels : delta*rowHeightAsPixels, nsnull);
+    mOutlinerWidget->Scroll(0, -delta*rowHeightAsPixels, nsnull);
  
   return NS_OK;
 }
