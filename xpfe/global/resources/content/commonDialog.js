@@ -167,6 +167,7 @@ function commonDialogOnLoad()
       break;
     }
   }
+  setTimeout(sizeToContent, 0); // XXX bug 92635
 }
 
 function setCheckbox(aChkMsg, aChkValue)
@@ -174,8 +175,11 @@ function setCheckbox(aChkMsg, aChkValue)
   if (aChkMsg) {
     var checkboxElement = document.getElementById("checkbox");
     unHideElementByID("checkboxContainer");
-    checkboxElement.label = aChkMsg;
-    checkboxElement.checked = aChkValue > 0 ? true : false;
+    // XXXjag these should rightfully be .label and .checked,
+    // but due to the checkbox binding not attaching till
+    // after onload, we'll need to use this for now. Bug 92635
+    checkboxElement.setAttribute("label", aChkMsg);
+    checkboxElement.setAttribute("checked", aChkValue > 0 ? "true" : "false");
   }
 }
 
