@@ -853,7 +853,16 @@ BOOL CALLBACK
 EnumWindowsProc(HWND   hwnd,	// handle to parent window
                 LPARAM lParam) 	// application-defined value
 {
-  UINT  msg = RegisterWindowMessage(MAPI_CUSTOM_COMPOSE_MSG);
+  UINT          msg = RegisterWindowMessage(MAPI_CUSTOM_COMPOSE_MSG);
+
+  // Need to do this to avoid SendMessage() causing recursion
+  DWORD otherID;
+  DWORD myID = GetCurrentProcessId();
+  (void) GetWindowThreadProcessId(hwnd, &otherID);
+
+  if (myID == otherID)
+    return TRUE;
+  
   LONG  rc = SendMessage(hwnd, msg, 0, 0);
   
   if (rc == MAPI_CUSTOM_RET_CODE)
