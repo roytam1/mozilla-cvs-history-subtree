@@ -241,8 +241,7 @@ MD5_HashBuf(unsigned char *dest, const unsigned char *src, uint32 src_length)
 MD5Context *
 MD5_NewContext(void)
 {
-	/* no need to ZAlloc, MD5_Begin will init the context */
-	MD5Context *cx = (MD5Context *)PORT_Alloc(sizeof(MD5Context));
+	MD5Context *cx = (MD5Context *)PORT_ZAlloc(sizeof(MD5Context));
 	if (cx == NULL) {
 		PORT_SetError(PR_OUT_OF_MEMORY_ERROR);
 		return NULL;

@@ -88,6 +88,10 @@ ifeq ($(OS_ARCH), HP-UX)
     endif
 endif
 
+ifeq ($(OS_ARCH), OpenVMS)
+    XLDOPTS += $(LDFLAGS)
+endif
+
 ifdef XP_OS2_EMX
 XCFLAGS = $(OS_EXE_CFLAGS)
 XLDOPTS = -Zlinker /PM:VIO

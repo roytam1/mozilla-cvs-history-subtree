@@ -48,7 +48,6 @@ LDAP * LDAP_CALL ldapssl_init( const char *defhost, int defport,
 /*
  * Install I/O routines to make SSL over LDAP possible.
  * Use this after ldap_init() or just use ldapssl_init() instead.
- * Returns 0 if all goes well.
  */
 int LDAP_CALL ldapssl_install_routines( LDAP *ld );
 
@@ -87,7 +86,6 @@ int LDAP_CALL ldapssl_install_routines( LDAP *ld );
 /*
  * Initialize the secure parts (Security and SSL) of the runtime for use
  * by a client application.  This is only called once.
- * Returns 0 if all goes well.
  */
 
 int LDAP_CALL ldapssl_client_init(
@@ -121,8 +119,6 @@ int LDAP_CALL ldapssl_client_init(
  *			   Furthermore, the port number must be passed
  *			   via the "defport" parameter, and cannot
  *			   be passed via a host:port option. 
- *
- * Returns 0 if all goes well.
  */
 
 int LDAP_CALL ldapssl_serverauth_init(
@@ -131,7 +127,6 @@ int LDAP_CALL ldapssl_serverauth_init(
 /*
  * Initialize the secure parts (Security and SSL) of the runtime for use
  * by a client application that may want to do SSL client authentication.
- * Returns 0 if all goes well.
  */
 
 int LDAP_CALL ldapssl_clientauth_init( 
@@ -147,8 +142,6 @@ int LDAP_CALL ldapssl_clientauth_init(
  * problems which can be caused by passing in wrong host & portname 
  * values.  The same warning applies to the ldapssl_advclientauth_init()
  * function.
- *
- * Returns 0 if all goes well.
  */
 
 int LDAP_CALL ldapssl_advclientauth_init( 
@@ -169,39 +162,16 @@ const char * LDAP_CALL ldapssl_err2string( const int prerrno );
 
 /*
  * Enable SSL client authentication on the given ld.
- * Returns 0 if all goes well.
  */
 int LDAP_CALL ldapssl_enable_clientauth( LDAP *ld, char *keynickname,
 	char *keypasswd, char *certnickname );
-
-/*
- * Set the SSL strength for an existing SSL-enabled LDAP session handle.
- *
- * See the description of ldapssl_serverauth_init() above for valid
- * sslstrength values. If ld is NULL, the default for new LDAP session
- * handles is set.
- *
- * Returns 0 if all goes well.
- */ 
-int LDAP_CALL ldapssl_set_strength( LDAP *ld, int sslstrength );
-
-
-/*
- * Set or get SSL options for an existing SSL-enabled LDAP session handle.
- * If ld is NULL, the default options used for all future LDAP SSL sessions
- * are the ones affected. The option values are specific to the underlying
- * SSL provider; see ssl.h within the Network Security Services (NSS)
- * distribution for the options supported by NSS (the default SSL provider).
- *
- * The ldapssl_set_option() function should be called before any LDAP
- * connections are created.
- *
- * Both functions return 0 if all goes well.
- */
-int LDAP_CALL ldapssl_set_option( LDAP *ld, int option, int on );
-int LDAP_CALL ldapssl_get_option( LDAP *ld, int option, int *onp );
 
 #ifdef __cplusplus
 }
 #endif
 #endif /* !defined(LDAP_SSL_H) */
+
+
+
+
+
