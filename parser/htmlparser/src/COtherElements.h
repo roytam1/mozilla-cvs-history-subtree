@@ -2217,7 +2217,6 @@ void CElementTable::InitializeElements() {
   CElement::Initialize(             mDfltElements[eHTMLTag_iframe],     eHTMLTag_iframe,    CSpecialElement::GetGroup(),  CFlowElement::GetContainedGroups());
   mDfltElements[eHTMLTag_iframe].mGroup.mBits.mBlock=1;  //make this a member of the block group.
 
-  CElement::Initialize(             mDfltElements[eHTMLTag_ilayer],     eHTMLTag_ilayer);
   CElement::InitializeLeaf(         mDfltElements[eHTMLTag_img],        eHTMLTag_img,       CSpecialElement::GetGroup(),  CLeafElement::GetContainedGroups());
   CElement::Initialize(             mDfltElements[eHTMLTag_image],      eHTMLTag_image);
   CElement::InitializeLeaf(         mDfltElements[eHTMLTag_input],      eHTMLTag_input,     CFormControlElement::GetGroup(),CLeafElement::GetContainedGroups());
@@ -2232,7 +2231,6 @@ void CElementTable::InitializeElements() {
   CElement::Initialize(             mDfltElements[eHTMLTag_label],      eHTMLTag_label,     CFormControlElement::GetGroup(), CInlineElement::GetContainedGroups());
   mDfltElements[eHTMLTag_label].mContainsGroups.mBits.mSelf=0;
 
-  CElement::Initialize(             mDfltElements[eHTMLTag_layer],      eHTMLTag_layer);
   CElement::Initialize(             mDfltElements[eHTMLTag_legend],     eHTMLTag_legend,    CElement::GetEmptyGroup(), CInlineElement::GetContainedGroups());
   CElement::Initialize(             mDfltElements[eHTMLTag_li],         eHTMLTag_li,        CListElement::GetGroup(), CFlowElement::GetContainedGroups());
   mDfltElements[eHTMLTag_li].mExcludeKids=kLIExcludeKids;
@@ -2256,7 +2254,6 @@ void CElementTable::InitializeElements() {
   CElement::Initialize(             mDfltElements[eHTMLTag_noembed],    eHTMLTag_noembed);
     
   CElement::Initialize(             mDfltElements[eHTMLTag_noframes],   eHTMLTag_noframes,  CBlockElement::GetGroup(),  CFlowElement::GetContainedGroups());
-  CElement::Initialize(             mDfltElements[eHTMLTag_nolayer],    eHTMLTag_nolayer);
   CElement::Initialize(             mDfltElements[eHTMLTag_noscript],   eHTMLTag_noscript,  CBlockElement::GetGroup(),  CFlowElement::GetContainedGroups());
 
   CElement::Initialize(             mDfltElements[eHTMLTag_object],     eHTMLTag_object,    CBlockElement::GetGroup(),  CFlowElement::GetContainedGroups());
