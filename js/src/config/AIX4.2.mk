@@ -21,8 +21,8 @@
 
 CC = xlC_r
 CCC = xlC_r
-CFLAGS += -qarch=com -qinline+$(INLINES) -DXP_UNIX -DAIX -DAIXV3 -DSYSV
-OPTIMIZER =
+CFLAGS += -qarch=com -qnoansialias -qinline+$(INLINES) -DXP_UNIX -DAIX -DAIXV3 -DSYSV
+OPTIMIZER = -O
 
 RANLIB = ranlib
 

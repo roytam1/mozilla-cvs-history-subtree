@@ -46,28 +46,16 @@ HAVE_PURIFY = 1
 
 NOSUCHFILE = /solaris-rm-f-sucks
 
-ifndef JS_NO_ULTRA
-ULTRA_OPTIONS := -xarch=v8plus
-ULTRA_OPTIONSD := -DULTRA_SPARC
+ifeq ($(OS_CPUARCH),sun4u)	# ultra sparc?
+ifeq ($(CC),gcc)		# using gcc?
+ifndef JS_NO_ULTRA		# do we want ultra?
+ifdef JS_THREADSAFE		# only in thread-safe mode
+DEFINES 	+= -DULTRA_SPARC
+DEFINES         += -Wa,-xarch=v8plus,-DULTRA_SPARC
 else
-ULTRA_OPTIONS := -xarch=v8
-ULTRA_OPTIONSD :=
-endif
-
-ifeq ($(OS_CPUARCH),sun4u)
-DEFINES 	+= $(ULTRA_OPTIONSD)
-ifeq ($(CC),gcc)
-DEFINES         += -Wa,$(ULTRA_OPTIONS),$(ULTRA_OPTIONSD)
-else
-ASFLAGS         += $(ULTRA_OPTIONS) $(ULTRA_OPTIONSD)
+ASFLAGS         += -xarch=v8plus -DULTRA_SPARC
 endif
 endif
-
-ifeq ($(OS_CPUARCH),sun4m)
-ifeq ($(CC),gcc)
-DEFINES         += -Wa,-xarch=v8
-else
-ASFLAGS         += -xarch=v8
 endif
 endif
 
