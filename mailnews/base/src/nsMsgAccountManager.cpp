@@ -798,7 +798,6 @@ nsMsgAccountManager::GetDefaultAccount(nsIMsgAccount * *aDefaultAccount)
         nsCOMPtr<nsIMsgAccount> firstAccount;
         rv = m_accounts->QueryElementAt(0, NS_GET_IID(nsIMsgAccount),
                                        (void **)getter_AddRefs(firstAccount));
-
         SetDefaultAccount(firstAccount);
       }
     }
