@@ -524,7 +524,7 @@ extern void CERT_ClosePermCertDB(CERTCertDBHandle *handle);
 **		been overridden by the user.
 */
 extern SECCertTimeValidity CERT_CheckCertValidTimes(CERTCertificate *cert,
-						    PRTime t,
+						    int64 t,
 						    PRBool allowOverride);
 
 /*
@@ -544,7 +544,7 @@ extern SECStatus CERT_CertTimesValid(CERTCertificate *cert);
 **	"notAfter" is the end of the validity period
 */
 extern SECStatus
-CERT_GetCertTimes (CERTCertificate *c, PRTime *notBefore, PRTime *notAfter);
+CERT_GetCertTimes (CERTCertificate *c, int64 *notBefore, int64 *notAfter);
 
 /*
 ** Extract the issuer and serial number from a certificate
@@ -995,9 +995,6 @@ CERT_MakeCANickname(CERTCertificate *cert);
 
 PRBool
 CERT_IsCACert(CERTCertificate *cert, unsigned int *rettype);
-
-PRBool
-CERT_IsCADERCert(SECItem *derCert, unsigned int *rettype);
 
 SECStatus
 CERT_SaveSMimeProfile(CERTCertificate *cert, SECItem *emailProfile,

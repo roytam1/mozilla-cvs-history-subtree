@@ -19,8 +19,7 @@
  * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Contributor(s): 
- *	Dr Stephen Henson <stephen.henson@gemplus.com>
+ * Contributor(s):
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -68,13 +67,6 @@ const PRUint16 SSL_ImplementedCiphers[] = {
     /* Netscape "experimental" cipher suites. */
     SSL_RSA_FIPS_WITH_3DES_EDE_CBC_SHA,
     SSL_RSA_FIPS_WITH_DES_CBC_SHA,
-
-    /* DHE ciphersuites */
-    SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA,
-    SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA,
-    SSL_DHE_RSA_WITH_DES_CBC_SHA,
-    SSL_DHE_DSS_WITH_DES_CBC_SHA,
-    TLS_DHE_DSS_WITH_RC4_128_SHA,
 
     0
 

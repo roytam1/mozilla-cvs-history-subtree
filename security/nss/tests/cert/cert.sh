@@ -114,13 +114,12 @@ certu()
         #will strip the quotes off the string, if called otherwise...
         echo "certutil -s \"${CU_SUBJECT}\" $*"
         certutil -s "${CU_SUBJECT}" $*
-        RET=$?
         CU_SUBJECT=""
     else
         echo "certutil $*"
         certutil $*
-        RET=$?
     fi
+    RET=$?
     if [ "$RET" -ne 0 ]; then
         CERTFAILED=$RET
         html_failed "<TR><TD>${CU_ACTION} ($RET) " 
@@ -151,50 +150,6 @@ cert_init_cert()
     noise
 }
 
-############################# hw_acc #################################
-# local shell function to add hw accelerator modules to the db
-########################################################################
-hw_acc()
-{
-    HW_ACC_RET=0
-    HW_ACC_ERR=""
-    if [ -n "$O_HWACC" -a "$O_HWACC" = ON -a -z "$USE_64" ] ; then
-        echo "creating $CERTNAME s cert with hwaccelerator..."
-        #case $ACCELERATOR in
-        #rainbow)
-   
-
-        echo "modutil -add rainbow -libfile /usr/lib/libcryptoki22.so "
-        echo "         -dbdir . 2>&1 "
-        echo | modutil -add rainbow -libfile /usr/lib/libcryptoki22.so \
-            -dbdir . 2>&1 
-        if [ "$?" -ne 0 ]; then
-	    echo "modutil -add rainbow failed in `pwd`"
-            HW_ACC_RET=1
-            HW_ACC_ERR="modutil -add rainbow"
-        fi
-    
-        echo "modutil -add ncipher "
-        echo "         -libfile /opt/nfast/toolkits/pkcs11/libcknfast.so "
-        echo "         -dbdir . 2>&1 "
-        echo | modutil -add ncipher \
-            -libfile /opt/nfast/toolkits/pkcs11/libcknfast.so \
-            -dbdir . 2>&1 
-        if [ "$?" -ne 0 ]; then
-	    echo "modutil -add ncipher failed in `pwd`"
-            HW_ACC_RET=`expr $HW_ACC_RET + 2`
-            HW_ACC_ERR="$HW_ACC_ERR,modutil -add ncipher"
-        fi
-        if [ "$HW_ACC_RET" -ne 0 ]; then
-            html_failed "<TR><TD>Adding HW accelerators to certDB for ${CERTNAME} ($HW_ACC_RET) " 
-        else
-            html_passed "<TR><TD>Adding HW accelerators to certDB for ${CERTNAME}"
-        fi
-
-    fi
-    return $HW_ACC_RET
-}
-
 ############################# cert_create_cert #########################
 # local shell function to create client certs 
 #     initialize DB, import
@@ -210,7 +165,7 @@ cert_create_cert()
     if [ "$RET" -ne 0 ]; then
         return $RET
     fi
-    hw_acc
+
     CU_ACTION="Import Root CA for $CERTNAME"
     certu -A -n "TestCA" -t "TC,TC,TC" -f "${R_PWFILE}" -d "${CERTDIR}" \
           -i "${R_CADIR}/root.cert" 2>&1
@@ -327,7 +282,6 @@ cert_smime_client()
   echo "$SCRIPTNAME: Creating Dave's Certificate -------------------------"
   cert_init_cert "${DAVEDIR}" Dave 5
   cp ${CADIR}/*.db .
-  hw_acc
 
   #########################################################################
   #
@@ -345,19 +299,19 @@ cert_smime_client()
   #
   echo "$SCRIPTNAME: Importing Certificates =============================="
   CU_ACTION="Import Alices's cert into Bob's db"
-  certu -E -t "p,p,p" -d ${R_BOBDIR} -f ${R_PWFILE} \
+  certu -E -t "u,u,u" -d ${R_BOBDIR} -f ${R_PWFILE} \
         -i ${R_ALICEDIR}/Alice.cert 2>&1
 
   CU_ACTION="Import Bob's cert into Alice's db"
-  certu -E -t "p,p,p" -d ${R_ALICEDIR} -f ${R_PWFILE} \
+  certu -E -t "u,u,u" -d ${R_ALICEDIR} -f ${R_PWFILE} \
         -i ${R_BOBDIR}/Bob.cert 2>&1
 
   CU_ACTION="Import Dave's cert into Alice's DB"
-  certu -E -t "p,p,p" -d ${R_ALICEDIR} -f ${R_PWFILE} \
+  certu -E -t "u,u,u" -d ${R_ALICEDIR} -f ${R_PWFILE} \
         -i ${R_DAVEDIR}/Dave.cert 2>&1
 
   CU_ACTION="Import Dave's cert into Bob's DB"
-  certu -E -t "p,p,p" -d ${R_BOBDIR} -f ${R_PWFILE} \
+  certu -E -t "u,u,u" -d ${R_BOBDIR} -f ${R_PWFILE} \
         -i ${R_DAVEDIR}/Dave.cert 2>&1
 
   if [ "$CERTFAILED" != 0 ] ; then
@@ -382,7 +336,6 @@ cert_ssl()
   echo "             ${HOSTADDR} ------------------------------------"
   cert_init_cert ${SERVERDIR} "${HOSTADDR}" 1
   cp ${CADIR}/*.db .
-  hw_acc
   CU_ACTION="Creating ${CERTNAME}'s Server Cert"
   CU_SUBJECT="CN=${CERTNAME}, O=BOGUS Netscape, L=Mountain View, ST=California, C=US"
   certu -S -n "${CERTNAME}" -c "TestCA" -t "Pu,Pu,Pu" -d . -f "${R_PWFILE}" \
@@ -429,37 +382,6 @@ cert_stresscerts()
   fi
 }
 
-############################## cert_fips #####################################
-# local shell function to create certificates for FIPS tests 
-##############################################################################
-cert_fips()
-{
-  CERTFAILED=0
-  echo "$SCRIPTNAME: Creating FIPS 140-1 DSA Certificates =============="
-  cert_init_cert "${FIPSDIR}" "FIPS PUB 140-1 Test Certificate" 1000
-
-  CU_ACTION="Initializing ${CERTNAME}'s Cert DB"
-  certu -N -d "${CERTDIR}" -f "${R_FIPSPWFILE}" 2>&1
-
-  echo "$SCRIPTNAME: Enable FIPS mode on database -----------------------"
-  modutil -dbdir ${CERTDIR} -fips true 2>&1 <<MODSCRIPT
-y
-MODSCRIPT
-  CU_ACTION="Enable FIPS mode on database for ${CERTNAME}"
-  if [ "$?" -ne 0 ]; then
-    html_failed "<TR><TD>${CU_ACTION} ($?) " 
-    cert_log "ERROR: ${CU_ACTION} failed $?"
-  else
-    html_passed "<TR><TD>${CU_ACTION}"
-  fi
-
-  CU_ACTION="Generate Certificate for ${CERTNAME}"
-  CU_SUBJECT="CN=${CERTNAME}, E=fips@bogus.com, O=BOGUS NSS, OU=FIPS PUB 140-1, L=Mountain View, ST=California, C=US"
-  certu -S -n ${FIPSCERTNICK} -x -t "Cu,Cu,Cu" -d "${CERTDIR}" -f "${R_FIPSPWFILE}" -k dsa -m ${CERTSERIAL} -z "${R_NOISE_FILE}" 2>&1
-  if [ "$RET" -eq 0 ]; then
-    cert_log "SUCCESS: FIPS passed"
-  fi
-}
 
 ############################## cert_cleanup ############################
 # local shell function to finish this script (no exit since it might be
@@ -486,5 +408,4 @@ if [ -n "$DO_DIST_ST" -a "$DO_DIST_ST" = "TRUE" ] ; then
     #cp -r $HOSTDIR/../clio.8/* $HOSTDIR
 
 fi
-cert_fips
 cert_cleanup

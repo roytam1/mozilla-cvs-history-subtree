@@ -75,7 +75,7 @@
 
 #FIXME - all will be sourced by the wrapper wrapper will do cleanup etc
 
-TESTS="cert ssl sdr cipher smime perf tools fips"
+TESTS="cert ssl sdr cipher smime perf tools"
 SCRIPTNAME=all.sh
 CLEANUP="${SCRIPTNAME}"
 cd `dirname $0`	#FIXME - if sourced 
@@ -108,7 +108,7 @@ then
     then
         echo "MKS special - killing the tail -f"
         kill `ps | grep "tail -f ${LOGFILE}" | grep -v grep | 
-            sed -e "s/^ *//" -e "s/ .*//"`
+            sed -e "s/^ *//" -e "s/ *//"`
     fi
 fi
 

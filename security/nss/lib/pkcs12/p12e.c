@@ -1686,7 +1686,10 @@ sec_pkcs12_encoder_start_context(SEC_PKCS12ExportContext *p12exp)
 		goto loser;
 	    }
 
-	    params = PK11_CreatePBEParams(salt, &pwd, 1);
+	    /* these PK11 functions have been put in the PKCS#12 lib to
+	     * maintain compatibility.  They are __'d to help avoid confusion.
+	     */
+	    params = __PK11_CreatePBEParams(salt, &pwd, 1);
 	    SECITEM_ZfreeItem(salt, PR_TRUE);
 	    SECITEM_ZfreeItem(&pwd, PR_FALSE);
 
@@ -1702,7 +1705,7 @@ sec_pkcs12_encoder_start_context(SEC_PKCS12ExportContext *p12exp)
 	    }
 
 	    symKey = PK11_KeyGen(NULL, integrityMech, params, 20, NULL);
-	    PK11_DestroyPBEParams(params);
+	    __PK11_DestroyPBEParams(params);
 	    if(!symKey) {
 		goto loser;
 	    }

@@ -216,7 +216,6 @@ SECU_GetModulePassword(PK11SlotInfo *slot, PRBool retry, void *arg)
     char prompt[255];
     secuPWData *pwdata = arg;
     secuPWData pwnull = { PW_NONE, 0 };
-    char *pw;
 
     if (arg == NULL)
 	pwdata = &pwnull;
@@ -226,27 +225,20 @@ SECU_GetModulePassword(PK11SlotInfo *slot, PRBool retry, void *arg)
     	return NULL;
     }
 
+    sprintf(prompt, "Enter Password or Pin for \"%s\":",
+	    PK11_GetTokenName(slot));
+
     switch (pwdata->source) {
     case PW_NONE:
-	sprintf(prompt, "Enter Password or Pin for \"%s\":",
-	                 PK11_GetTokenName(slot));
 	return SECU_GetPasswordString(NULL, prompt);
     case PW_FROMFILE:
-	/* Instead of opening and closing the file every time, get the pw
-	 * once, then keep it in memory (duh).
-	 */
-	pw = SECU_FilePasswd(slot, retry, pwdata->data);
-	pwdata->source = PW_PLAINTEXT;
-	pwdata->data = PL_strdup(pw);
-	/* it's already been dup'ed */
-	return pw;
+	return SECU_FilePasswd(slot, retry, pwdata->data);
     case PW_PLAINTEXT:
-	return PL_strdup(pwdata->data);
+	return PL_strdup(arg);
     default:
 	break;
     }
 
-    PR_fprintf(PR_STDERR, "Password check failed:  No password found.\n");
     return NULL;
 }
 
@@ -703,59 +695,6 @@ SECU_PrintAsHex(FILE *out, SECItem *data, char *m, int level)
     level--;
     if (column != level*INDENT_MULT) {
 	secu_Newline(out);
-    }
-}
-
-static const char *hex = "0123456789abcdef";
-
-static const char printable[257] = {
-	"................"	/* 0x */
-	"................"	/* 1x */
-	" !\"#$%&'()*+,-./"	/* 2x */
-	"0123456789:;<=>?"	/* 3x */
-	"@ABCDEFGHIJKLMNO"	/* 4x */
-	"PQRSTUVWXYZ[\\]^_"	/* 5x */
-	"`abcdefghijklmno"	/* 6x */
-	"pqrstuvwxyz{|}~."	/* 7x */
-	"................"	/* 8x */
-	"................"	/* 9x */
-	"................"	/* ax */
-	"................"	/* bx */
-	"................"	/* cx */
-	"................"	/* dx */
-	"................"	/* ex */
-	"................"	/* fx */
-};
-
-void 
-SECU_PrintBuf(FILE *out, const char *msg, const void *vp, int len)
-{
-    const unsigned char *cp = (const unsigned char *)vp;
-    char buf[80];
-    char *bp;
-    char *ap;
-
-    fprintf(out, "%s [Len: %d]\n", msg, len);
-    memset(buf, ' ', sizeof buf);
-    bp = buf;
-    ap = buf + 50;
-    while (--len >= 0) {
-	unsigned char ch = *cp++;
-	*bp++ = hex[(ch >> 4) & 0xf];
-	*bp++ = hex[ch & 0xf];
-	*bp++ = ' ';
-	*ap++ = printable[ch];
-	if (ap - buf >= 66) {
-	    *ap = 0;
-	    fprintf(out, "   %s\n", buf);
-	    memset(buf, ' ', sizeof buf);
-	    bp = buf;
-	    ap = buf + 50;
-	}
-    }
-    if (bp > buf) {
-	*ap = 0;
-	fprintf(out, "   %s\n", buf);
     }
 }
 

@@ -151,10 +151,10 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
 
     if [ -z "${DON_T_SET_PATHS}" -o "${DON_T_SET_PATHS}" != "TRUE" ] ; then
         if [ "${OS_ARCH}" = "WINNT" -a "$OS_NAME"  != "CYGWIN_NT" ]; then
-            PATH=.\;${DIST}/${OBJDIR}/bin\;${DIST}/${OBJDIR}/lib\;$PATH
+            PATH=${DIST}/${OBJDIR}/bin\;${DIST}/${OBJDIR}/lib\;$PATH
             PATH=`perl ../path_uniq -d ';' "$PATH"`
         else
-            PATH=.:${DIST}/${OBJDIR}/bin:${DIST}/${OBJDIR}/lib:$PATH
+            PATH=${DIST}/${OBJDIR}/bin:${DIST}/${OBJDIR}/lib:$PATH
             PATH=`perl ../path_uniq -d ':' "$PATH"`
         fi
 
@@ -309,15 +309,9 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
     ALICEDIR=${HOSTDIR}/alicedir
     BOBDIR=${HOSTDIR}/bobdir
     DAVEDIR=${HOSTDIR}/dave
-    FIPSDIR=${HOSTDIR}/fips
 
     PWFILE=${TMP}/tests.pw.$$
     NOISE_FILE=${TMP}/tests_noise.$$
-
-    FIPSPWFILE=${TMP}/tests.fipspw.$$
-    FIPSBADPWFILE=${TMP}/tests.fipsbadpw.$$
-    FIPSP12PWFILE=${TMP}/tests.fipsp12pw.$$
-    FIPSCERTNICK="FIPS_PUB_140-1_Test_Certificate"
 
     # we need relative pathnames of these files abd directories, since our 
     # tools can't handle the unix style absolut pathnames on cygnus
@@ -331,14 +325,6 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
 
     R_PWFILE=../tests.pw.$$
     R_NOISE_FILE=../tests_noise.$$
-
-    R_FIPSPWFILE=../tests.fipspw.$$
-    R_FIPSBADPWFILE=../tests.fipsbadpw.$$
-    R_FIPSP12PWFILE=../tests.fipsp12pw.$$
-
-    echo "fips140" > ${FIPSPWFILE}
-    echo "fips104" > ${FIPSBADPWFILE}
-    echo "pkcs12fips140" > ${FIPSP12PWFILE}
 
     # a new log file, short - fast to search, mostly for tools to
     # see if their portion of the cert has succeeded, also for me -

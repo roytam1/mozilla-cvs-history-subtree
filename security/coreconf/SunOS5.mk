@@ -100,9 +100,10 @@ ifdef NS_USE_GCC
 	CCC        = g++
 	CCC       += -Wall -Wno-format
 	ASFLAGS	  += -x assembler-with-cpp
-	OS_CFLAGS += $(NOMD_OS_CFLAGS)
-	ifdef USE_MDUPDATE
-		OS_CFLAGS += -MDupdate $(DEPENDENCIES)
+	ifdef NO_MDUPDATE
+		OS_CFLAGS += $(NOMD_OS_CFLAGS)
+	else
+		OS_CFLAGS += $(NOMD_OS_CFLAGS) -MDupdate $(DEPENDENCIES)
 	endif
 	OS_CFLAGS += $(ARCHFLAG)
 else

@@ -32,7 +32,8 @@
 # 
 
 CORE_DEPTH = ../../..
-MODULE	= sectools
+DEPTH      = .
+MODULE	= security
 
 EXPORTS = \
 	$(NULL)
@@ -42,7 +43,7 @@ CSRCS = \
 	$(NULL)
 
 
-REQUIRES = security dbm seccmd
+REQUIRES = security dbm
 
 ifdef ATTACH_CGI
 DEFINES += -DATTACH_CGI
@@ -54,8 +55,3 @@ endif
 
 PROGRAM  = crmfcgi
 
-USE_STATIC_LIBS = 1
-
-INCLUDES = 
-
-DEFINES = -DNSPR20

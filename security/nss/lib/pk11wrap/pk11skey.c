@@ -16,8 +16,7 @@
  * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Contributor(s): 
- *	Dr Stephen Henson <stephen.henson@gemplus.com>
+ * Contributor(s):
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -781,7 +780,7 @@ PK11_ExtractPublicKey(PK11SlotInfo *slot,KeyType keyType,CK_OBJECT_HANDLE id)
 	crv = PK11_GetAttributes(tmp_arena,slot,id,template,templateCount);
 	if (crv != CKR_OK) break;
 
-	if ((keyClass != CKO_PUBLIC_KEY) || (pk11KeyType != CKK_DH)) {
+	if ((keyClass != CKO_PUBLIC_KEY) || (pk11KeyType != CKK_DSA)) {
 	    crv = CKR_OBJECT_HANDLE_INVALID;
 	    break;
 	} 
@@ -1216,7 +1215,6 @@ PK11_TokenKeyGen(PK11SlotInfo *slot, CK_MECHANISM_TYPE type, SECItem *param,
     PRBool weird = PR_FALSE;   /* hack for fortezza */
     CK_BBOOL ckfalse = CK_FALSE;
     CK_BBOOL cktrue = CK_TRUE;
-    CK_ULONG ck_key_size;       /* only used for variable-length keys */
 
     if ((keySize == -1) && (type == CKM_SKIPJACK_CBC64)) {
 	weird = PR_TRUE;
@@ -1228,9 +1226,9 @@ PK11_TokenKeyGen(PK11SlotInfo *slot, CK_MECHANISM_TYPE type, SECItem *param,
 	? CKA_ENCRYPT : CKA_DECRYPT, &cktrue, sizeof(CK_BBOOL)); attrs++;
     
     if (keySize != 0) {
-        ck_key_size = keySize; /* Convert to PK11 type */
+        CK_ULONG key_size = keySize; /* Convert to PK11 type */
 
-        PK11_SETATTRS(attrs, CKA_VALUE_LEN, &ck_key_size, sizeof(ck_key_size)); 
+        PK11_SETATTRS(attrs, CKA_VALUE_LEN, &key_size, sizeof(key_size)); 
 							attrs++;
     }
 
@@ -1498,7 +1496,7 @@ pk11_PairwiseConsistencyCheck(SECKEYPublicKey *pubKey,
     /**********************************************/
 
     canSignVerify = PK11_HasAttributeSet ( privKey->pkcs11Slot, 
-					  privKey->pkcs11ID, CKA_SIGN);
+					  privKey->pkcs11ID, CKA_VERIFY);
     
     if (canSignVerify)
       {
@@ -4055,49 +4053,6 @@ PK11_DigestFinal(PK11Context *context,unsigned char *data,
  *
  ****************************************************************************/
 
-static void
-pk11_destroy_ck_pbe_params(CK_PBE_PARAMS *pbe_params)
-{
-    if (pbe_params) {
-	if (pbe_params->pPassword)
-	    PORT_ZFree(pbe_params->pPassword, PR_FALSE);
-	if (pbe_params->pSalt)
-	    PORT_ZFree(pbe_params->pSalt, PR_FALSE);
-	PORT_ZFree(pbe_params, PR_TRUE);
-    }
-}
-
-SECItem * 
-PK11_CreatePBEParams(SECItem *salt, SECItem *pwd, unsigned int iterations)
-{
-    CK_PBE_PARAMS *pbe_params = NULL;
-    SECItem *paramRV = NULL;
-    pbe_params = (CK_PBE_PARAMS *)PORT_ZAlloc(sizeof(CK_PBE_PARAMS));
-    pbe_params->pPassword = (CK_CHAR_PTR)PORT_ZAlloc(pwd->len);
-    if (pbe_params->pPassword != NULL) {
-	PORT_Memcpy(pbe_params->pPassword, pwd->data, pwd->len);
-	pbe_params->ulPasswordLen = pwd->len;
-    } else goto loser;
-    pbe_params->pSalt = (CK_CHAR_PTR)PORT_ZAlloc(salt->len);
-    if (pbe_params->pSalt != NULL) {
-	PORT_Memcpy(pbe_params->pSalt, salt->data, salt->len);
-	pbe_params->ulSaltLen = salt->len;
-    } else goto loser;
-    pbe_params->ulIteration = (CK_ULONG)iterations;
-    paramRV = SECITEM_AllocItem(NULL, NULL, sizeof(CK_PBE_PARAMS));
-    paramRV->data = (unsigned char *)pbe_params;
-    return paramRV;
-loser:
-    pk11_destroy_ck_pbe_params(pbe_params);
-    return NULL;
-}
-
-void
-PK11_DestroyPBEParams(SECItem *params)
-{
-    pk11_destroy_ck_pbe_params((CK_PBE_PARAMS *)params->data);
-}
-
 SECAlgorithmID *
 PK11_CreatePBEAlgorithmID(SECOidTag algorithm, int iteration, SECItem *salt)
 {
@@ -4290,37 +4245,6 @@ done:
     return rv;
 }
 
-SECStatus
-PK11_ImportDERPrivateKeyInfo(PK11SlotInfo *slot, SECItem *derPKI, 
-	SECItem *nickname, SECItem *publicValue, PRBool isPerm, 
-	PRBool isPrivate, unsigned int keyUsage, void *wincx) 
-{
-    SECKEYPrivateKeyInfo *pki = NULL;
-    PRArenaPool *temparena = NULL;
-    SECStatus rv = SECFailure;
-
-    temparena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
-    pki = PORT_ZNew(SECKEYPrivateKeyInfo);
-
-    rv = SEC_ASN1DecodeItem(temparena, pki, SECKEY_PrivateKeyInfoTemplate,
-		derPKI);
-    if( rv != SECSuccess ) {
-	goto finish;
-    }
-
-    rv = PK11_ImportPrivateKeyInfo(slot, pki, nickname, publicValue,
-			isPerm, isPrivate, keyUsage, wincx);
-
-finish:
-    if( pki != NULL ) {
-	SECKEY_DestroyPrivateKeyInfo(pki, PR_TRUE /*freeit*/);
-    }
-    if( temparena != NULL ) {
-	PORT_FreeArena(temparena, PR_TRUE);
-    }
-    return rv;
-}
-        
 /*
  * import a private key info into the desired slot
  */
@@ -4370,6 +4294,9 @@ PK11_ImportPrivateKeyInfo(PK11SlotInfo *slot, SECKEYPrivateKeyInfo *pki,
 	    keyType = CKK_RSA;
 	    break;
 	case SEC_OID_ANSIX9_DSA_SIGNATURE:
+	    if(!publicValue) {
+		goto loser;
+	    }
 	    keyTemplate = SECKEY_DSAPrivateKeyExportTemplate;
 	    paramTemplate = SECKEY_PQGParamsTemplate;
 	    paramDest = &(lpk->u.dsa.params);
@@ -4469,17 +4396,6 @@ PK11_ImportPrivateKeyInfo(PK11SlotInfo *slot, SECKEYPrivateKeyInfo *pki,
 	     * our database, we need to pass in the public key value for 
 	     * this dsa key. We have a netscape only CKA_ value to do this.
 	     * Only send it to internal slots */
-	    if( publicValue == NULL ) {
-		/*
-		 * Try to extract the public value out of the private key.
-		 * This might not work, since the public value is not
-	 	 * required to be in the private key.
-		 */
-		publicValue = &lpk->u.dsa.publicValue;
-		if( publicValue->data == NULL || publicValue->len == 0) {
-		    goto loser;
-		}
-	    }
 	    if (PK11_IsInternal(slot)) {
 	        PK11_SETATTRS(attrs, CKA_NETSCAPE_DB,
 				publicValue->data, publicValue->len); attrs++;
@@ -4985,33 +4901,3 @@ PK11_SetFortezzaHack(PK11SymKey *symKey) {
    symKey->origin = PK11_OriginFortezzaHack;
 }
 
-SECItem*
-PK11_DEREncodePublicKey(SECKEYPublicKey *pubk)
-{
-    CERTSubjectPublicKeyInfo *spki=NULL;
-    SECItem *spkiDER = NULL;
-
-    if( pubk == NULL ) {
-        return NULL;
-    }
-
-    /* get the subjectpublickeyinfo */
-    spki = SECKEY_CreateSubjectPublicKeyInfo(pubk);
-    if( spki == NULL ) {
-        goto finish;
-    }
-
-    /* DER-encode the subjectpublickeyinfo */
-    spkiDER = SEC_ASN1EncodeItem(NULL /*arena*/, NULL/*dest*/, spki,
-                    CERT_SubjectPublicKeyInfoTemplate);
-
-finish:
-    return spkiDER;
-}
-
-PK11SymKey*
-PK11_CopySymKeyForSigning(PK11SymKey *originalKey, CK_MECHANISM_TYPE mech)
-{
-    return pk11_CopyToSlot(PK11_GetSlotFromKey(originalKey), mech, CKA_SIGN,
-			originalKey);
-}

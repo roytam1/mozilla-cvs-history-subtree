@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 #ifndef nspr_pth_defs_h_
@@ -94,6 +78,27 @@
 #define _PT_PTHREAD_CONDATTR_INIT         pthread_condattr_init
 #define _PT_PTHREAD_CONDATTR_DESTROY      pthread_condattr_destroy
 #define _PT_PTHREAD_COND_INIT(m, a)       pthread_cond_init(&(m), &(a))
+#endif
+
+/* The pthread_t handle used to identify a thread can vary in size
+ * with different implementations of pthreads.  This macro defines
+ * a way to get a unique identifier from the handle.  This may be
+ * more of a problem as we adapt to more pthreads implementations.
+ */
+#if defined(_PR_DCETHREADS)
+#define _PT_PTHREAD_ZERO_THR_HANDLE(t)        memset(&(t), 0, sizeof(pthread_t))
+#define _PT_PTHREAD_THR_HANDLE_IS_ZERO(t) \
+	(!memcmp(&(t), &pt_zero_tid, sizeof(pthread_t)))
+#define _PT_PTHREAD_COPY_THR_HANDLE(st, dt)   (dt) = (st)
+#elif defined(IRIX) || defined(OSF1) || defined(AIX) || defined(SOLARIS) \
+	|| defined(HPUX) || defined(LINUX) || defined(FREEBSD) \
+	|| defined(NETBSD) || defined(OPENBSD) || defined(BSDI) \
+	|| defined(VMS) || defined(NTO) || defined(RHAPSODY)
+#define _PT_PTHREAD_ZERO_THR_HANDLE(t)        (t) = 0
+#define _PT_PTHREAD_THR_HANDLE_IS_ZERO(t)     (t) == 0
+#define _PT_PTHREAD_COPY_THR_HANDLE(st, dt)   (dt) = (st)
+#else 
+#error "pthreads is not supported for this architecture"
 #endif
 
 #if defined(_PR_DCETHREADS)
