@@ -419,8 +419,8 @@ void CMailFolderMixin::RegisterMailFolderMixin(CMailFolderMixin *inMailFolderMix
 
 	Assert_(inMailFolderMixin != nil);
 
-	if ( sMailFolderMixinRegisterList.FetchIndexOf(&inMailFolderMixin) == arrayIndex_Bad ) {
-		sMailFolderMixinRegisterList.InsertItemsAt(1, arrayIndex_Last, &inMailFolderMixin);
+	if ( sMailFolderMixinRegisterList.FetchIndexOf(&inMailFolderMixin) == LArray::index_Bad ) {
+		sMailFolderMixinRegisterList.InsertItemsAt(1, LArray::index_Last, &inMailFolderMixin);
 	}
 }
 
