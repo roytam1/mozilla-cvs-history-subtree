@@ -436,7 +436,7 @@ OSErr CPluginHandler::InitCodeResource(NPNetscapeFuncs* funcs, _np_handle* handl
 			    ThrowIf_(res != NS_OK || plugin == NULL);
 			    // beard: establish the primary reference.
 			    plugin->AddRef();
-			    res = plugin->Initialize(thePluginManager);
+			    res = plugin->Initialize((nsIPluginManager2*)thePluginManager);
 			    ThrowIf_(res != NS_OK);
 				handle->userPlugin = plugin;
 			} else {
