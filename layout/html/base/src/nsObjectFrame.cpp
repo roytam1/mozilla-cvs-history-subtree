@@ -66,6 +66,14 @@
 #include "nsIDOMRange.h"
 #include "nsIPrintContext.h"
 
+// headers for plugin scriptability
+#include "nsIScriptGlobalObject.h"
+#include "nsIScriptContext.h"
+#include "nsIXPConnect.h"
+#include "nsIXPCScriptable.h"
+#include "nsIClassInfo.h"
+#include "jsapi.h"
+
 // XXX For temporary paint code
 #include "nsIStyleContext.h"
 
@@ -928,19 +936,19 @@ nsObjectFrame::Reflow(nsIPresContext*          aPresContext,
     rv = ReinstantiatePlugin(aPresContext, aMetrics, aReflowState);
 
   // finish up
-  if (NS_SUCCEEDED(rv))
-  {
-    aStatus = NS_FRAME_COMPLETE;
-    return NS_OK;
+  if (NS_FAILED(rv)) {
+    // if we got an error, we'll check for alternative content with
+    // CantRenderReplacedElement()
+    nsIPresShell* presShell;
+    aPresContext->GetShell(&presShell);
+    presShell->CantRenderReplacedElement(aPresContext, this);
+    NS_RELEASE(presShell);
+  } else {
+    NotifyContentObjectWrapper();
   }
 
-  // if we got an error, we'll check for alternative content with
-  // CantRenderReplacedElement()
-  nsIPresShell* presShell;
-  aPresContext->GetShell(&presShell);
-  presShell->CantRenderReplacedElement(aPresContext, this);
-  NS_RELEASE(presShell);
   aStatus = NS_FRAME_COMPLETE;
+
   return NS_OK;
 }
 
@@ -978,12 +986,12 @@ nsObjectFrame::InstantiateWidget(nsIPresContext*          aPresContext,
 }
 
 nsresult
-nsObjectFrame::InstantiatePlugin(nsIPresContext*          aPresContext,
-                            nsHTMLReflowMetrics&     aMetrics,
-                            const nsHTMLReflowState& aReflowState,
-                            nsIPluginHost* aPluginHost, 
-                            const char* aMimetype,
-                            nsIURI* aURL)
+nsObjectFrame::InstantiatePlugin(nsIPresContext* aPresContext,
+                                 nsHTMLReflowMetrics& aMetrics,
+                                 const nsHTMLReflowState& aReflowState,
+                                 nsIPluginHost* aPluginHost, 
+                                 const char* aMimetype,
+                                 nsIURI* aURL)
 {
   nsIView *parentWithView;
   nsPoint origin;
@@ -1437,10 +1445,70 @@ nsresult nsObjectFrame::GetFullURL(nsIURI*& aFullURL)
 
 nsresult nsObjectFrame::GetPluginInstance(nsIPluginInstance*& aPluginInstance)
 {
+  aPluginInstance = nsnull;
+
   if(mInstanceOwner == nsnull)
     return NS_ERROR_NULL_POINTER;
   else
     return mInstanceOwner->GetInstance(aPluginInstance);
+}
+
+nsresult
+nsObjectFrame::NotifyContentObjectWrapper()
+{
+  nsCOMPtr<nsIDocument> doc;
+
+  mContent->GetDocument(*getter_AddRefs(doc));
+  NS_ENSURE_TRUE(doc, NS_ERROR_UNEXPECTED);
+
+  nsCOMPtr<nsIScriptGlobalObject> sgo;
+  doc->GetScriptGlobalObject(getter_AddRefs(sgo));
+  NS_ENSURE_TRUE(sgo, NS_ERROR_UNEXPECTED);
+
+  nsCOMPtr<nsIScriptContext> scx;
+  sgo->GetContext(getter_AddRefs(scx));
+  NS_ENSURE_TRUE(scx, NS_ERROR_UNEXPECTED);
+
+  JSContext *cx = (JSContext *)scx->GetNativeContext();
+
+  nsresult rv = NS_OK;
+  nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
+  xpc->GetWrappedNativeOfNativeObject(cx, ::JS_GetGlobalObject(cx), mContent,
+                                      NS_GET_IID(nsISupports),
+                                      getter_AddRefs(wrapper));
+
+  if (!wrapper) {
+    // Nothing to do here if there's no wrapper for mContent
+
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIClassInfo> ci(do_QueryInterface(mContent));
+  NS_ENSURE_TRUE(ci, NS_ERROR_UNEXPECTED);
+
+  nsCOMPtr<nsISupports> s;
+  ci->GetHelperForLanguage(nsIClassInfo::LANGUAGE_JAVASCRIPT,
+                           getter_AddRefs(s));
+
+  nsCOMPtr<nsIXPCScriptable> helper(do_QueryInterface(s));
+
+  if (!helper) {
+    // There's nothing we can do if there's no helper
+
+    return NS_OK;
+  }
+
+  JSObject *obj = nsnull;
+  rv = wrapper->GetJSObject(&obj);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // Abuse the scriptable helper to trigger prototype setup for the
+  // wrapper for mContent so that this plugin becomes part of the DOM
+  // object.
+  return helper->Create(wrapper, cx, obj);
 }
 
 nsresult
