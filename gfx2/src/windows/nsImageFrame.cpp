@@ -428,5 +428,3 @@ nsresult nsImageFrame::DrawImage(HDC aDestDC, const nsRect * aSrcRect, const nsP
 
 }
 
-
-
