@@ -49,15 +49,11 @@ if (!getopts('b:h:D:p:s:w:P:'))
 
 
 #################################################################################
-# Instantiate an LDAP object, which also binds to the LDAP server.
+# Now do all the searches, one by one.
 #
 $conn = new Mozilla::LDAP::Conn(\%ld);
 die "Could't connect to LDAP server $ld{host}" unless $conn;
 
-
-#################################################################################
-# Now do all the searches, one by one.
-#
 foreach (@ARGV)
 {
   if (/\=/)
