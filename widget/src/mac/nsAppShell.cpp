@@ -127,7 +127,7 @@ NS_IMETHODIMP nsAppShell::Exit()
 // Prepare to process events
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsAppShell::Spinup(nsIEventQueue* anEventQueue)
+NS_IMETHODIMP nsAppShell::Spinup()
 {
 	if (mMacPump.get())
 	{
@@ -142,7 +142,7 @@ NS_IMETHODIMP nsAppShell::Spinup(nsIEventQueue* anEventQueue)
 // Stop being prepared to process events.
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsAppShell::Spindown(nsIEventQueue* anEventQueue)
+NS_IMETHODIMP nsAppShell::Spindown()
 {
 	if (mMacPump.get())
 		mMacPump->StopRunning();

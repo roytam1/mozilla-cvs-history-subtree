@@ -269,6 +269,18 @@ PRBool nsMacMessagePump::GetEvent(EventRecord &theEvent)
 }
 
 //=================================================================
+/* Set the event queue
+ *  @param   anEventQueue - the new queue to use for NSPR events
+ */
+
+void nsMacMessagePump::SetEventQueue(nsIEventQueue* aNewQueue)
+{
+	NS_IF_RELEASE(mEventQueue);
+	mEventQueue = aNewQueue;
+	NS_IF_ADDREF(aNewQueue);
+}
+
+//=================================================================
 /*  Dispatch a single event
  *  @param   theEvent - the event to dispatch
  */

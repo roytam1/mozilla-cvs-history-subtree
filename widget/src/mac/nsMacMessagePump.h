@@ -67,6 +67,8 @@ public:
 	void			StartRunning() {mRunning = PR_TRUE;}
 	void			StopRunning() {mRunning = PR_FALSE;}
 
+	void			SetEventQueue(nsIEventQueue* aNewQueue);
+
 private:
 	void 			DoMouseDown(EventRecord &anEvent);
 	void			DoMouseUp(EventRecord &anEvent);
