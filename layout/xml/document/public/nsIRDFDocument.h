@@ -24,6 +24,7 @@
 
 class nsString;
 class nsIRDFDataSource;
+class nsIRDFNode;
 
 // {954F0811-81DC-11d2-B52A-000000000000}
 #define NS_IRDFDOCUMENT_IID \
@@ -34,7 +35,6 @@ class nsIRDFDataSource;
  */
 class nsIRDFDocument : public nsIXMLDocument {
 public:
-  NS_IMETHOD GenerateAnonymousResource(nsString& rResource) = 0;
   NS_IMETHOD GetDataSource(nsIRDFDataSource*& rResource) = 0;
 };
 
