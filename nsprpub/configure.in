@@ -101,6 +101,9 @@ case "$target" in
 *-msvc*)
     _WIN32_MSVC=1
     ;;
+*-mksnt*)
+    _WIN32_MSVC=1
+    ;;
 esac
 
 if test -n "$_WIN32_MSVC"; then
@@ -116,8 +119,11 @@ dnl =
 dnl ========================================================
 dist_prefix='${MOD_DEPTH}/dist'
 dist_bindir='${dist_prefix}/bin'
-dist_includedir='${dist_prefix}/include'
+dist_includedir='${dist_prefix}/include/nspr'
 dist_libdir='${dist_prefix}/lib'
+if test "${includedir}" = '${prefix}/include'; then
+    includedir='${prefix}/include/nspr'
+fi
 
 AC_ARG_WITH(dist-prefix,
     [  --with-dist-prefix=DIST_PREFIX
@@ -130,7 +136,7 @@ AC_ARG_WITH(dist-bindir,
 
 AC_ARG_WITH(dist-includedir,
     [  --with-dist-includedir=DIR
-                          build include files in DIR [DIST_PREFIX/include]],
+                          build include files in DIR [DIST_PREFIX/include/nspr]],
     dist_includedir=$withval)
 
 AC_ARG_WITH(dist-libdir,
@@ -537,7 +543,7 @@ elif test "$OS_ARCH" = "Windows_NT"; then
 # Moreover, it doesn't have the -p option, so we need to use uname -m.
 #
     OS_ARCH=WINNT
-#    OS_MINOR_RELEASE=`uname -v`
+    OS_MINOR_RELEASE=`uname -v`
     if test "$OS_MINOR_RELEASE" = "00"; then
         OS_MINOR_RELEASE=0
     fi
@@ -602,7 +608,7 @@ dnl ========================================================
 dnl Override of system specific host options
 dnl ========================================================
 case "$host" in
-*-mingw*|*-cygwin*|*-msvc*)
+*-mingw*|*-cygwin*|*-msvc*|*-mksnt*)
     ;;
 *-beos*)
     HOST_CFLAGS="$HOST_CFLAGS -DXP_BEOS -DBeOS -DBEOS -D_POSIX_SOURCE"
@@ -1083,7 +1089,7 @@ case "$target" in
     esac    
     ;;
 
-*-mingw*|*-cygwin*|*-msvc*)
+*-mingw*|*-cygwin*|*-msvc*|*-mksnt*)
     AC_DEFINE(XP_PC)
     AC_DEFINE(WIN32)
     PR_MD_ARCH_DIR=windows
@@ -1320,16 +1326,12 @@ mips-sony-newsos*)
     AC_DEFINE(HAVE_POINTER_LOCALTIME_R)
     MDCPUCFG_H=_nto.cfg
     PR_MD_CSRCS=nto.c
-    MKSHLIB='qcc -Vgcc_ntox86 -shared -Wl,-h$(@:$(OBJDIR)/%.so=%.so) -M -o $(@:$(OBJDIR)/%.so=%.so)'
-    CFLAGS="$CFLAGS -Wc,-Wall -Wc,-Wno-parentheses -shared"
+    MKSHLIB='$(CC) $(DSO_LDOPTS) -Wl,-soname -Wl,$(notdir $@) -o $@'
+    DSO_CFLAGS=-fPIC
+    DSO_LDOPTS=-shared
     OS_LIBS="$OS_LIBS -lsocket"
     _OPTIMIZE_FLAGS="-O1"
-    _DEBUG_FLAGS="-O1 -gstabs"
-    CC="qcc -Vgcc_ntox86 -w"
-    CXX='$(CC)'
-    LD="qcc -Vgcc_ntox86 -nostdlib"
-    AR="qcc -Vgcc_ntox86 -M -a $@"
-    AR_FLAGS=
+    _DEBUG_FLAGS="-gstabs"
 	;;
 
 *-openbsd*)
@@ -2063,7 +2065,7 @@ case "$target" in
         AC_DEFINE(_PR_LOCAL_THREADS_ONLY)
     fi
     ;;
-*-mingw*|*-cygwin*|*-uwin*|*-msvc*)
+*-mingw*|*-cygwin*|*-msvc*|*-mksnt*)
     dnl win32 does not use pthreads
     USE_PTHREADS=
     _PTHREAD_LDFLAGS=
@@ -2107,6 +2109,12 @@ case "$target" in
                 PR_MD_ASFILES="$PR_MD_ASFILES os_SunOS_32.s"
             fi
         fi
+    fi
+    ;;
+*-nto*)
+    if test -n "$USE_PTHREADS"; then
+        AC_DEFINE(_PR_HAVE_GETHOST_R)
+        AC_DEFINE(_PR_HAVE_GETHOST_R_POINTER)
     fi
     ;;
 esac
