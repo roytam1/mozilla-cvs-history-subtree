@@ -292,7 +292,8 @@ struct nsTimeoutImpl {
 // NavigatorImpl: Script "navigator" object
 //*****************************************************************************
 
-class NavigatorImpl : public nsIDOMNavigator
+class NavigatorImpl : public nsIDOMNavigator,
+                      public nsIDOMJSNavigator
 {
 public:
   NavigatorImpl(nsIDocShell *aDocShell);
@@ -300,6 +301,7 @@ public:
 
   NS_DECL_ISUPPORTS
   NS_DECL_NSIDOMNAVIGATOR
+  NS_DECL_NSIDOMJSNAVIGATOR
 
   void SetDocShell(nsIDocShell *aDocShell);
 

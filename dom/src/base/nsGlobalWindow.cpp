@@ -3893,13 +3893,15 @@ NavigatorImpl::~NavigatorImpl()
 // XPConnect interface list for NavigatorImpl
 NS_CLASSINFO_MAP_BEGIN(Navigator)
   NS_CLASSINFO_MAP_ENTRY(nsIDOMNavigator)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMJSNavigator)
 NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for NavigatorImpl
 NS_INTERFACE_MAP_BEGIN(NavigatorImpl)
-  NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMNavigator)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNavigator)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMJSNavigator)
   NS_DOM_INTERFACE_MAP_ENTRY_CLASSINFO(Navigator)
 NS_INTERFACE_MAP_END
 
@@ -3919,7 +3921,8 @@ void NavigatorImpl::SetDocShell(nsIDocShell *aDocShell)
 //    NavigatorImpl::nsIDOMNavigator
 //*****************************************************************************
 
-NS_IMETHODIMP NavigatorImpl::GetUserAgent(nsAWritableString& aUserAgent)
+NS_IMETHODIMP
+NavigatorImpl::GetUserAgent(nsAWritableString& aUserAgent)
 {
   nsresult res;
   nsCOMPtr<nsIHTTPProtocolHandler>
@@ -3934,7 +3937,8 @@ NS_IMETHODIMP NavigatorImpl::GetUserAgent(nsAWritableString& aUserAgent)
   return res;
 }
 
-NS_IMETHODIMP NavigatorImpl::GetAppCodeName(nsAWritableString& aAppCodeName)
+NS_IMETHODIMP
+NavigatorImpl::GetAppCodeName(nsAWritableString& aAppCodeName)
 {
   nsresult res;
   nsCOMPtr<nsIHTTPProtocolHandler>
@@ -3949,7 +3953,8 @@ NS_IMETHODIMP NavigatorImpl::GetAppCodeName(nsAWritableString& aAppCodeName)
   return res;
 }
 
-NS_IMETHODIMP NavigatorImpl::GetAppVersion(nsAWritableString& aAppVersion)
+NS_IMETHODIMP
+NavigatorImpl::GetAppVersion(nsAWritableString& aAppVersion)
 {
   nsresult res;
   nsCOMPtr<nsIHTTPProtocolHandler>
@@ -3982,13 +3987,15 @@ NS_IMETHODIMP NavigatorImpl::GetAppVersion(nsAWritableString& aAppVersion)
   return res;
 }
 
-NS_IMETHODIMP NavigatorImpl::GetAppName(nsAWritableString& aAppName)
+NS_IMETHODIMP
+NavigatorImpl::GetAppName(nsAWritableString& aAppName)
 {
   aAppName.Assign(NS_LITERAL_STRING("Netscape"));
   return NS_OK;
 }
 
-NS_IMETHODIMP NavigatorImpl::GetLanguage(nsAWritableString& aLanguage)
+NS_IMETHODIMP
+NavigatorImpl::GetLanguage(nsAWritableString& aLanguage)
 {
   nsresult res;
   nsCOMPtr<nsIHTTPProtocolHandler>
@@ -4003,7 +4010,8 @@ NS_IMETHODIMP NavigatorImpl::GetLanguage(nsAWritableString& aLanguage)
   return res;
 }
 
-NS_IMETHODIMP NavigatorImpl::GetPlatform(nsAWritableString& aPlatform)
+NS_IMETHODIMP
+NavigatorImpl::GetPlatform(nsAWritableString& aPlatform)
 {
   nsresult res;
   nsCOMPtr<nsIHTTPProtocolHandler>
@@ -4031,7 +4039,8 @@ NS_IMETHODIMP NavigatorImpl::GetPlatform(nsAWritableString& aPlatform)
   return res;
 }
 
-NS_IMETHODIMP NavigatorImpl::GetOscpu(nsAWritableString& aOSCPU)
+NS_IMETHODIMP
+NavigatorImpl::GetOscpu(nsAWritableString& aOSCPU)
 {
   nsresult res;
   nsCOMPtr<nsIHTTPProtocolHandler>
@@ -4046,7 +4055,8 @@ NS_IMETHODIMP NavigatorImpl::GetOscpu(nsAWritableString& aOSCPU)
   return res;
 }
 
-NS_IMETHODIMP NavigatorImpl::GetVendor(nsAWritableString& aVendor)
+NS_IMETHODIMP
+NavigatorImpl::GetVendor(nsAWritableString& aVendor)
 {
   nsresult res;
   nsCOMPtr<nsIHTTPProtocolHandler>
@@ -4062,7 +4072,8 @@ NS_IMETHODIMP NavigatorImpl::GetVendor(nsAWritableString& aVendor)
 }
 
 
-NS_IMETHODIMP NavigatorImpl::GetVendorSub(nsAWritableString& aVendorSub)
+NS_IMETHODIMP
+NavigatorImpl::GetVendorSub(nsAWritableString& aVendorSub)
 {
   nsresult res;
   nsCOMPtr<nsIHTTPProtocolHandler>
@@ -4077,7 +4088,8 @@ NS_IMETHODIMP NavigatorImpl::GetVendorSub(nsAWritableString& aVendorSub)
   return res;
 }
 
-NS_IMETHODIMP NavigatorImpl::GetProduct(nsAWritableString& aProduct)
+NS_IMETHODIMP
+NavigatorImpl::GetProduct(nsAWritableString& aProduct)
 {
   nsresult res;
   nsCOMPtr<nsIHTTPProtocolHandler>
@@ -4092,7 +4104,8 @@ NS_IMETHODIMP NavigatorImpl::GetProduct(nsAWritableString& aProduct)
   return res;
 }
 
-NS_IMETHODIMP NavigatorImpl::GetProductSub(nsAWritableString& aProductSub)
+NS_IMETHODIMP
+NavigatorImpl::GetProductSub(nsAWritableString& aProductSub)
 {
   nsresult res;
   nsCOMPtr<nsIHTTPProtocolHandler>
@@ -4107,12 +4120,14 @@ NS_IMETHODIMP NavigatorImpl::GetProductSub(nsAWritableString& aProductSub)
   return res;
 }
 
-NS_IMETHODIMP NavigatorImpl::GetSecurityPolicy(nsAWritableString& aSecurityPolicy)
+NS_IMETHODIMP
+NavigatorImpl::GetSecurityPolicy(nsAWritableString& aSecurityPolicy)
 {
   return NS_OK;
 }
 
-NS_IMETHODIMP NavigatorImpl::GetMimeTypes(nsIDOMMimeTypeArray **aMimeTypes)
+NS_IMETHODIMP
+NavigatorImpl::GetMimeTypes(nsIDOMMimeTypeArray **aMimeTypes)
 {
   if (!mMimeTypes) {
     mMimeTypes = new MimeTypeArrayImpl(this);
@@ -4125,7 +4140,8 @@ NS_IMETHODIMP NavigatorImpl::GetMimeTypes(nsIDOMMimeTypeArray **aMimeTypes)
   return NS_OK;
 }
 
-NS_IMETHODIMP NavigatorImpl::GetPlugins(nsIDOMPluginArray **aPlugins)
+NS_IMETHODIMP
+NavigatorImpl::GetPlugins(nsIDOMPluginArray **aPlugins)
 {
   if (!mPlugins) {
     mPlugins = new PluginArrayImpl(this, mDocShell);
@@ -4141,7 +4157,8 @@ NS_IMETHODIMP NavigatorImpl::GetPlugins(nsIDOMPluginArray **aPlugins)
   return NS_OK;
 }
 
-NS_IMETHODIMP NavigatorImpl::GetCookieEnabled(PRBool *aCookieEnabled)
+NS_IMETHODIMP
+NavigatorImpl::GetCookieEnabled(PRBool *aCookieEnabled)
 {
   nsresult rv = NS_OK;
   *aCookieEnabled = PR_FALSE;
@@ -4161,7 +4178,8 @@ NS_IMETHODIMP NavigatorImpl::GetCookieEnabled(PRBool *aCookieEnabled)
   return rv;
 }
 
-NS_IMETHODIMP NavigatorImpl::JavaEnabled(PRBool *aReturn)
+NS_IMETHODIMP
+NavigatorImpl::JavaEnabled(PRBool *aReturn)
 {
   nsresult rv = NS_OK;
   *aReturn = PR_FALSE;
@@ -4211,104 +4229,135 @@ NS_IMETHODIMP NavigatorImpl::JavaEnabled(PRBool *aReturn)
   return rv;
 }
 
-NS_IMETHODIMP NavigatorImpl::TaintEnabled(PRBool *aReturn)
+NS_IMETHODIMP
+NavigatorImpl::TaintEnabled(PRBool *aReturn)
 {
   *aReturn = PR_FALSE;
   return NS_OK;
 }
 
-#if 0
-NS_IMETHODIMP NavigatorImpl::Preference(nsISupports** aReturn)
+NS_IMETHODIMP
+NavigatorImpl::Preference()
 {
-  nsresult result = NS_OK;
+  nsresult rv;
+  nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  *aReturn = JSVAL_NULL;
+  nsCOMPtr<nsIXPCNativeCallContext> ncc;
 
-  JSObject *self = mJSObject;
-  if (!self)
-    return NS_ERROR_FAILURE;
+  rv = xpc->GetCurrentNativeCallContext(getter_AddRefs(ncc));
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  NS_WITH_SERVICE(nsIScriptSecurityManager, secMan,
-                  NS_SCRIPTSECURITYMANAGER_CONTRACTID, &result);
-  if (NS_FAILED(result))
-    return result;
+  if (!ncc)
+    return NS_ERROR_NOT_AVAILABLE;
 
-  result =
-    secMan->CheckScriptAccess(cx, self, NS_DOM_PROP_NAVIGATOR_PREFERENCE,
-                              argc != 1);
-  if (NS_FAILED(result)) {
-    // Need to throw error here
-    return NS_ERROR_FAILURE;
+  PRBool force_get = PR_FALSE;
+
+  PRUint32 argc;
+
+  ncc->GetArgc(&argc);
+
+  if (argc == 0) {
+    // No arguments means there's nothing to be done here.
+
+    return NS_OK;
   }
 
-  NS_WITH_SERVICE(nsIPref, pref, kPrefServiceCID, &result);
-  if (NS_FAILED(result))
-    return result;
+  jsval *argv = nsnull;
 
-  if (argc > 0) {
-    JSString *str = ::JS_ValueToString(cx, argv[0]);
-    if (str) {
-      char *prefStr = ::JS_GetStringBytes(str);
-      if (argc == 1) {
-        PRInt32 prefType;
-        pref->GetPrefType(prefStr, &prefType);
-        switch (prefType & nsIPref::ePrefValuetypeMask) {
-        case nsIPref::ePrefString:
-          {
-            char *prefCharVal;
-            result = pref->CopyCharPref(prefStr, &prefCharVal);
-            if (NS_SUCCEEDED(result)) {
-              JSString *retStr = ::JS_NewStringCopyZ(cx, prefCharVal);
-              if (retStr)
-                *aReturn = STRING_TO_JSVAL(retStr);
-              PL_strfree(prefCharVal);
-            }
-            break;
-          }
+  ncc->GetArgvPtr(&argv);
+  NS_ENSURE_TRUE(argv, NS_ERROR_UNEXPECTED);
 
-        case nsIPref::ePrefInt:
-          {
-            PRInt32 prefIntVal;
-            result = pref->GetIntPref(prefStr, &prefIntVal);
-            if (NS_SUCCEEDED(result))
-              *aReturn = INT_TO_JSVAL(prefIntVal);
-            break;
-          }
+  JSContext *cx = nsnull;
 
-        case nsIPref::ePrefBool:
-          {
-            PRBool prefBoolVal;
-            result = pref->GetBoolPref(prefStr, &prefBoolVal);
-            if (NS_SUCCEEDED(result))
-              *aReturn = BOOLEAN_TO_JSVAL(prefBoolVal);
-            break;
-          }
-        }
+  rv = ncc->GetJSContext(&cx);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIPref> pref(do_GetService(kPrefServiceCID, &rv));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  JSString *str = ::JS_ValueToString(cx, argv[0]);
+  NS_ENSURE_TRUE(str, NS_ERROR_OUT_OF_MEMORY);
+
+  jsval *retval = nsnull;
+
+  rv = ncc->GetRetValPtr(&retval);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  char *prefStr = ::JS_GetStringBytes(str);
+  if (argc == 1) {
+    PRInt32 prefType;
+
+    pref->GetPrefType(prefStr, &prefType);
+
+    switch (prefType & nsIPref::ePrefValuetypeMask) {
+    case nsIPref::ePrefString:
+      {
+        nsXPIDLCString prefCharVal;
+        rv = pref->CopyCharPref(prefStr, getter_Copies(prefCharVal));
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        JSString *retStr = ::JS_NewStringCopyZ(cx, prefCharVal);
+        NS_ENSURE_TRUE(retStr, NS_ERROR_OUT_OF_MEMORY);
+
+        *retval = STRING_TO_JSVAL(retStr);
+
+        break;
       }
-      else {
-        if (JSVAL_IS_STRING(argv[1])) {
-          JSString *valueJSStr = ::JS_ValueToString(cx, argv[1]);
-          if (valueJSStr)
-            result = pref->SetCharPref(prefStr, ::JS_GetStringBytes(valueJSStr));
-        }
-        else if (JSVAL_IS_INT(argv[1])) {
-          jsint valueInt = JSVAL_TO_INT(argv[1]);
-          result = pref->SetIntPref(prefStr, (PRInt32) valueInt);
-        }
-        else if (JSVAL_IS_BOOLEAN(argv[1])) {
-          JSBool valueBool = JSVAL_TO_BOOLEAN(argv[1]);
-          result = pref->SetBoolPref(prefStr, (PRBool) valueBool);
-        }
-        else if (JSVAL_IS_NULL(argv[1])) {
-          result = pref->DeleteBranch(prefStr);
-        }
+
+    case nsIPref::ePrefInt:
+      {
+        PRInt32 prefIntVal;
+        rv = pref->GetIntPref(prefStr, &prefIntVal);
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        *retval = INT_TO_JSVAL(prefIntVal);
+
+        break;
       }
+
+    case nsIPref::ePrefBool:
+      {
+        PRBool prefBoolVal;
+
+        rv = pref->GetBoolPref(prefStr, &prefBoolVal);
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        *retval = BOOLEAN_TO_JSVAL(prefBoolVal);
+
+        break;
+      }
+    default:
+      {
+        // Nothing we can do here...
+
+        return ncc->SetReturnValueWasSet(PR_FALSE);
+      }
+    }
+
+    ncc->SetReturnValueWasSet(PR_TRUE);
+  } else {
+    if (JSVAL_IS_STRING(argv[1])) {
+      JSString *valueJSStr = ::JS_ValueToString(cx, argv[1]);
+      NS_ENSURE_TRUE(valueJSStr, NS_ERROR_OUT_OF_MEMORY);
+
+      rv = pref->SetCharPref(prefStr, ::JS_GetStringBytes(valueJSStr));
+    } else if (JSVAL_IS_INT(argv[1])) {
+      jsint valueInt = JSVAL_TO_INT(argv[1]);
+
+      rv = pref->SetIntPref(prefStr, (PRInt32) valueInt);
+    } else if (JSVAL_IS_BOOLEAN(argv[1])) {
+      JSBool valueBool = JSVAL_TO_BOOLEAN(argv[1]);
+
+      rv = pref->SetBoolPref(prefStr, (PRBool) valueBool);
+    } else if (JSVAL_IS_NULL(argv[1])) {
+      rv = pref->DeleteBranch(prefStr);
     }
   }
 
-  return result;
+  return rv;
 }
-#endif
+
 
 #ifdef XP_MAC
 #pragma mark -
