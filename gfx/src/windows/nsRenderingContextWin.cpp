@@ -73,10 +73,10 @@ void CALLBACK LineDDAFunc(int x,int y,LONG lData)
 {
   lineddastruct * dda_struct = (lineddastruct *) lData;
   
-  dda_struct->nDottedPixel ^= 1; 
-
   if (dda_struct->nDottedPixel)
     SetPixel(dda_struct->dc, x, y, dda_struct->crColor);
+
+  dda_struct->nDottedPixel ^= 1; 
 }   
 
 
