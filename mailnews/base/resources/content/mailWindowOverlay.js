@@ -1018,5 +1018,3 @@ function MsgGoBack() {}
 function MsgGoForward() {}
 function MsgAddSenderToAddressBook() {}
 function MsgAddAllToAddressBook() {}
-function MsgIgnoreThread() {}
-function MsgWatchThread() {}

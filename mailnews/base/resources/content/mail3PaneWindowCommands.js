@@ -212,7 +212,7 @@ var DefaultController =
 			case "cmd_setFolderCharset":
 			case "cmd_reload":
 			case "cmd_getNewMessages":
-                        case "cmd_getMsgsForAuthAccounts":
+      case "cmd_getMsgsForAuthAccounts":
 			case "cmd_getNextNMessages":
 			case "cmd_find":
 			case "cmd_findAgain":
@@ -226,6 +226,8 @@ var DefaultController =
 			case "cmd_sortByThread":
       case "cmd_downloadFlagged":
       case "cmd_downloadSelected":
+      case "cmd_watchThread":
+      case "cmd_killThread":
 				return true;
 			default:
 				return false;
@@ -249,12 +251,10 @@ var DefaultController =
          gDBView.getCommandStatus(nsMsgViewCommandType.deleteNoTrash, enabled, checkStatus);
        return enabled.value;
 			case "cmd_killThread":
-        if (gDBView)
-          gDBView.navigateStatus(nsMsgNavigationType.toggleThreadKilled, enabled);
-        return enabled.value;
+				return MailAreaHasFocus() && IsViewNavigationItemEnabled();
 			case "cmd_watchThread":
         if (gDBView)
-          gDBView.getCommandStatus(nsMsgViewCommandType.toggleThreadWatched, enabled);
+          gDBView.getCommandStatus(nsMsgViewCommandType.toggleThreadWatched, enabled, checkStatus);
         return enabled.value;
 			case "cmd_reply":
 			case "button_reply":
@@ -361,7 +361,7 @@ var DefaultController =
 
 	doCommand: function(command)
 	{
-   		//dump("ThreadPaneController.doCommand(" + command + ")\n");
+   		// dump("ThreadPaneController.doCommand(" + command + ")\n");
 
 		switch ( command )
 		{
@@ -574,6 +574,8 @@ function CommandUpdate_Mail()
 	goUpdateCommand('cmd_delete');
 	goUpdateCommand('cmd_editDraft');
 	goUpdateCommand('cmd_nextMsg');
+	goUpdateCommand('cmd_killThread');
+	goUpdateCommand('cmd_watchThread');
 	goUpdateCommand('cmd_nextUnreadMsg');
 	goUpdateCommand('cmd_nextUnreadThread');
 	goUpdateCommand('cmd_nextFlaggedMsg');

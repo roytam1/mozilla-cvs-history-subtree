@@ -364,6 +364,8 @@ var MessageWindowController =
 			case "cmd_forwardAttachment":
 			case "cmd_editAsNew":
 			case "cmd_delete":
+      case "cmd_killThread":
+      case "cmd_watchThread":
 			case "button_delete":
 			case "cmd_shiftDelete":
 			case "cmd_print":
@@ -449,7 +451,7 @@ var MessageWindowController =
 
 	doCommand: function(command)
 	{
-   		//dump("MessageWindowController.doCommand(" + command + ")\n");
+   		dump("MessageWindowController.doCommand(" + command + ")\n");
 
 		switch ( command )
 		{
@@ -558,6 +560,8 @@ function CommandUpdate_Mail()
 	goUpdateCommand('button_forward');
 	goUpdateCommand('cmd_editAsNew');
 	goUpdateCommand('cmd_delete');
+	goUpdateCommand('cmd_killThread');
+	goUpdateCommand('cmd_watchThread');
 	goUpdateCommand('button_delete');
 	goUpdateCommand('cmd_shiftDelete');
 	goUpdateCommand('cmd_print');

@@ -142,7 +142,7 @@ function GoNextMessage(type, startFromBeginning)
     dump("XXX outliner selection = " + outlinerSelection + "\n");
     dump("XXX current Index = " + currentIndex + "\n");
 
-    var status = gDBView.navigateStatus(type, currentIndex, selection, 1 /* numSelected */);
+    var status = gDBView.navigateStatus(type);
 
     dump("XXX status = " + status + "\n");
     dump("XXX selection = " + selection.value + "\n");
@@ -152,7 +152,7 @@ function GoNextMessage(type, startFromBeginning)
     var threadIndex = new Object;
     var resultFolder = new Object;
 
-    gDBView.viewNavigate(type, currentIndex, selection, 1 /* numSelected */, resultId, resultIndex, threadIndex, true /* wrap */, resultFolder);
+    gDBView.viewNavigate(type, resultId, resultIndex, threadIndex, true /* wrap */, resultFolder);
 
     dump("XXX selection = " + selection.value + "\n");
     dump("XXX resultID = " + resultId.value + "\n");

@@ -219,12 +219,12 @@ interface nsIMsgDBView : nsISupports
      * this method will automatically expand the destination thread, 
      * if needs be. 
      */
-    void viewNavigate(in nsMsgNavigationTypeValue motion, in nsMsgViewIndex startIndex, out nsMsgKey selection, in unsigned long numSelected, out nsMsgKey resultId, out nsMsgViewIndex resultIndex, out nsMsgViewIndex threadIndex, in boolean wrap, out nsIMsgFolder resultFolderInfo);
+    void viewNavigate(in nsMsgNavigationTypeValue motion, out nsMsgKey resultId, out nsMsgViewIndex resultIndex, out nsMsgViewIndex threadIndex, in boolean wrap, out nsIMsgFolder resultFolderInfo);
 
     /**
      * Indicates if navigation of the passed motion type is valid. 
      */
-    boolean navigateStatus(in nsMsgNavigationTypeValue motion, in nsMsgViewIndex index, out nsMsgKey selection, in unsigned long numSelected);
+    boolean navigateStatus(in nsMsgNavigationTypeValue motion);
 
 	attribute nsIDOMElement sortedColumn;
    
