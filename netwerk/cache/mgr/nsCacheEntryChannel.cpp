@@ -26,23 +26,25 @@
 #include "nsCacheEntryChannel.h"
 #include "nsIOutputStream.h"
 
-NS_IMPL_ISUPPORTS3(nsChannelProxy, nsISupports, nsIChannel, nsIRequest)
+NS_IMPL_ISUPPORTS3(nsCacheEntryChannel, nsISupports, nsIChannel, nsIRequest)
 
 // A proxy for nsIOutputStream
 class CacheOutputStream : public nsIOutputStream {
 
 public:
     CacheOutputStream(nsIOutputStream *aOutputStream, nsCachedNetData *aCacheEntry):
-	mOutputStream(aOutputStream), mCacheEntry(aCacheEntry) {}
+        mOutputStream(aOutputStream), mCacheEntry(aCacheEntry), mStartTime(PR_Now())
+        { NS_INIT_REFCNT(); }
 
     ~CacheOutputStream() {}
 
     NS_DECL_ISUPPORTS
 
     NS_IMETHOD Close() {
-	mCacheEntry->NoteDownloadTime(mStartTime, PR_Now());
-	return mOutputStream->Close();
+        mCacheEntry->NoteDownloadTime(mStartTime, PR_Now());
+        return mOutputStream->Close();
     }
+
     NS_IMETHOD Flush() { return mOutputStream->Flush(); }
 
     NS_IMETHOD
@@ -82,7 +84,8 @@ nsCacheEntryChannel::OpenOutputStream(PRUint32 aStartPosition, nsIOutputStream* 
 
     *aOutputStream = new CacheOutputStream(baseOutputStream, mCacheEntry);
     if (!*aOutputStream)
-	return NS_ERROR_OUT_OF_MEMORY;
+        return NS_ERROR_OUT_OF_MEMORY;
+    NS_ADDREF(*aOutputStream);
     return NS_OK;
 }
 
@@ -99,7 +102,7 @@ nsCacheEntryChannel::AsyncRead(PRUint32 aStartPosition, PRInt32 aReadCount,
 			       nsISupports *aContext, nsIStreamListener *aListener)
 {
     mCacheEntry->NoteAccess();
-    return AsyncRead(aStartPosition, aReadCount, aContext, aListener);
+    return mChannel->AsyncRead(aStartPosition, aReadCount, aContext, aListener);
 }
 
 // No async writes allowed to the cache yet

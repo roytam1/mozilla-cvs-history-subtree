@@ -34,7 +34,6 @@
 class nsChannelProxy : public nsIChannel {
 
 public:
-    NS_DECL_ISUPPORTS
     NS_FORWARD_NSICHANNEL(mChannel->)
     NS_FORWARD_NSIREQUEST(mChannel->)
 
@@ -47,6 +46,8 @@ protected:
 class nsCacheEntryChannel : public nsChannelProxy {
 
 public:
+    NS_DECL_ISUPPORTS
+
     NS_IMETHOD OpenOutputStream(PRUint32 aStartPosition, nsIOutputStream* *aOutputStream);
     NS_IMETHOD OpenInputStream(PRUint32 aStartPosition, PRInt32 aReadCount,
 			       nsIInputStream* *aInputStream);
@@ -58,7 +59,7 @@ public:
 
 protected:
     nsCacheEntryChannel(nsCachedNetData* aCacheEntry, nsIChannel* aChannel):
-        nsChannelProxy(aChannel), mCacheEntry(aCacheEntry) {}
+        nsChannelProxy(aChannel), mCacheEntry(aCacheEntry) { NS_INIT_REFCNT(); }
     ~nsCacheEntryChannel() {};
 
     friend class nsCachedNetData;

@@ -27,12 +27,16 @@
 #include "nsCacheManager.h"
 #include "nsCacheEntryChannel.h"
 #include "nsINetDataCache.h"
+#include "nsIStreamListener.h"
 #include "nsIStreamAsFile.h"
+#include "nsIStorageStream.h"
 #include "nsIStringStream.h"
 #include "nsIBinaryInputStream.h"
 #include "nsIBinaryOutputStream.h"
 #include "nsISupportsArray.h"
+#include "nsIArena.h"
 #include "nsCRT.h"
+#include "nsString.h"
 
 // Version of the cache record meta-data format.  If this version doesn't match
 // the one in the database, an error is signaled when the record is read.
@@ -42,8 +46,21 @@
 // cache entry or one that has been Release'ed by everyone but the cache manager.
 #define CHECK_AVAILABILITY()                                                  \
 {                                                                             \
-    if (GetFlag((Flag)(DELETED | DORMANT)))                                   \
+    if (GetFlag((Flag)(RECYCLED | DORMANT))) {                                \
+        NS_ASSERTION(0, "Illegal cache entry state");                         \
         return NS_ERROR_NOT_AVAILABLE;                                        \
+    }                                                                         \
+}
+
+// placement new for arena-allocation
+void *
+nsCachedNetData::operator new (size_t aSize, nsIArena *aArena)
+{
+    nsCachedNetData* entry = (nsCachedNetData*)aArena->Alloc(aSize);
+    if (!entry)
+        return 0;
+    nsCRT::zero(entry, aSize);
+    return entry;
 }
 
 // Convert PRTime to unix-style time_t, i.e. seconds since the epoch
@@ -173,12 +190,14 @@ nsCachedNetData::Release(void)
     if (mRefCnt == 1) {
 
         nsCacheManager::NoteDormant(this);
+        
+        if (!GetFlag(RECYCLED)) {
+            // Clear flag, in case the protocol handler forgot to
+            mFlags &= ~UPDATE_IN_PROGRESS;
 
-        // Clear flag, in case the protocol handler forgot to
-        mFlags &= ~UPDATE_IN_PROGRESS;
-
-        // First, flush any altered cache entry data to the database
-        Commit();
+            // First, flush any altered cache entry data to the database
+            Commit();
+        }
         
         SetFlag(DORMANT);
         
@@ -187,12 +206,14 @@ nsCachedNetData::Release(void)
         mObservers = 0;
         PRInt32 recordID;
         mRecord->GetRecordID(&recordID);
+        NS_RELEASE(mRecord);
         mRecord = 0;
         mRecordID = recordID;
         if (mProtocolData) {
             nsAllocator::Free((void*)mProtocolData);
             mProtocolData = 0;
         }
+        mProtocolDataLength = 0;
     }
     return mRefCnt;
 }
@@ -240,25 +261,62 @@ nsCachedNetData::NoteAccess()
         mAccessTime[i] = mAccessTime[i - 1];
     }
     mAccessTime[0] = now;
+
+    SetDirty();
 }
 
 void
 nsCachedNetData::NoteUpdate()
 {
+    ClearFlag(VESTIGIAL);
+
     // We only keep track of last-modified time or update time, not both
     if (GetFlag(LAST_MODIFIED_KNOWN))
         return;
     mLastUpdateTime = convertPRTimeToSeconds(PR_Now());
+    SetDirty();
 }
 
 nsresult
 nsCachedNetData::Init(nsINetDataCacheRecord *aRecord, nsINetDataCache *aCache)
 {
     mRecord = aRecord;
+    NS_ADDREF(aRecord);
     mCache = aCache;
     
-    nsresult rv = Deserialize();
-    ComputeProfit(0);
+    return Deserialize(true);
+}
+
+nsresult
+nsCachedNetData::Resurrect(nsINetDataCacheRecord *aRecord)
+{
+    ClearFlag(DORMANT);
+    mRecord = aRecord;
+    NS_ADDREF(aRecord);
+    
+    return Deserialize(true);
+}
+
+nsresult
+nsCachedNetData::CommitFlags()
+{
+    nsresult rv;
+    nsCachedNetData* thisAlias = this;
+
+    NS_ASSERTION(GetFlag(DORMANT) && GetFlag(DIRTY),
+                 "Invalid state");
+
+    nsCOMPtr<nsINetDataCacheRecord> record;
+    rv = GetRecord(getter_AddRefs(record));
+    if (NS_FAILED(rv)) return rv;
+
+    Resurrect(record);
+    NS_ADDREF(thisAlias);
+
+    rv = Deserialize(false);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Deserialize() failed");
+    
+    NS_RELEASE(thisAlias);
     return rv;
 }
 
@@ -266,20 +324,39 @@ nsCachedNetData::Init(nsINetDataCacheRecord *aRecord, nsINetDataCache *aCache)
 // extract its components, namely the protocol-specific meta-data and the
 // protocol-independent cache manager meta-data.
 nsresult
-nsCachedNetData::Deserialize()
+nsCachedNetData::Deserialize(bool aDeserializeFlags)
 {
     nsresult rv;
     PRUint32 metaDataLength;
     char* metaData;
 
-    rv = mRecord->GetMetaData(&metaDataLength, &metaData);
+    // Either this is the first time the cache entry has ever been read or
+    // we're resurrecting a record that has been previously serialized to the
+    // cache database.
+    
+    nsCOMPtr<nsINetDataCacheRecord> record;
+    rv = GetRecord(getter_AddRefs(record));
     if (NS_FAILED(rv)) return rv;
 
-    // FIXME
-    nsIInputStream* stringStream;
+    rv = record->GetMetaData(&metaDataLength, &metaData);
+    if (NS_FAILED(rv)) return rv;
+
+    // No meta-data means a virgin record
+    if (!metaDataLength)
+        return NS_OK;
+
+    nsCString metaDataCStr(metaData, metaDataLength);
+    if (metaData)
+        nsAllocator::Free(metaData);
+
+    nsCOMPtr<nsISupports> stringStreamSupports;
+    rv = NS_NewStringInputStream(getter_AddRefs(stringStreamSupports), metaDataCStr);
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsIInputStream> inputStream = do_QueryInterface(stringStreamSupports);
 
     nsCOMPtr<nsIBinaryInputStream> binaryStream;
-    rv = NS_NewBinaryInputStream(getter_AddRefs(binaryStream), stringStream);
+    rv = NS_NewBinaryInputStream(getter_AddRefs(binaryStream), inputStream);
     if (NS_FAILED(rv)) return rv;
 
     // Verify that the record meta-data was serialized by this version of the
@@ -296,8 +373,11 @@ nsCachedNetData::Deserialize()
     rv = binaryStream->ReadBytes(&mProtocolData, mProtocolDataLength);
     if (NS_FAILED(rv)) return rv;
 
-    rv = binaryStream->Read16(&mFlags);
+    PRUint16 flags;
+    rv = binaryStream->Read16(&flags);
     if (NS_FAILED(rv)) return rv;
+    if (aDeserializeFlags)
+        mFlags = flags;
 
     rv = binaryStream->Read16(&mNumAccesses);
     if (NS_FAILED(rv)) return rv;
@@ -367,6 +447,7 @@ nsCachedNetData::GetSecondaryKey(PRUint32 *aLength, char **aSecondaryKey)
 
     // Account for NUL character
     keyLength--;
+    secondaryKey++;
     
     if (keyLength) {
         char* copy = (char*)nsAllocator::Alloc(keyLength);
@@ -384,7 +465,7 @@ nsCachedNetData::GetSecondaryKey(PRUint32 *aLength, char **aSecondaryKey)
 NS_IMETHODIMP
 nsCachedNetData::GetAllowPartial(PRBool *aAllowPartial)
 {
-    return GetFlag(ALLOW_PARTIAL);
+    return GetFlag(aAllowPartial, ALLOW_PARTIAL);
 }
 
 NS_IMETHODIMP
@@ -509,7 +590,21 @@ nsCachedNetData::GetNumberAccesses(PRUint16 *aNumberAccesses)
 NS_IMETHODIMP
 nsCachedNetData::Commit(void)
 {
-    CHECK_AVAILABILITY();
+    nsresult rv;
+    char *metaData;
+    PRUint32 metaDataLength, bytesRead;
+    nsCOMPtr<nsIInputStream> inputStream;
+    nsCOMPtr<nsIOutputStream> outputStream;
+    nsCOMPtr<nsIBinaryOutputStream> binaryStream;
+
+    if (GetFlag(RECYCLED)) {
+        NS_ASSERTION(0, "Illegal cache manager state");
+        return NS_ERROR_NOT_AVAILABLE;
+    }
+
+    nsCOMPtr<nsINetDataCacheRecord> record;
+    rv = GetRecord(getter_AddRefs(record));
+    if (NS_FAILED(rv)) return rv;
 
 #ifdef DEBUG
     if (GetFlag(EXPIRATION_KNOWN))
@@ -521,20 +616,23 @@ nsCachedNetData::Commit(void)
     // Check to see if any data changed.  If not, nothing to do.
     if (!GetFlag(DIRTY))
         return NS_OK;
+
+    // Must clear dirty flag early so record is not stored with dirty flag set
     ClearFlag(DIRTY);
 
     int i;
-    nsresult rv;
 
-    // FIXME
-    nsIOutputStream* stringStream;
-
-    nsCOMPtr<nsIBinaryOutputStream> binaryStream;
-    rv = NS_NewBinaryOutputStream(getter_AddRefs(binaryStream), stringStream);
+    nsCOMPtr<nsIStorageStream> storageStream;
+    // Init: (block size, maximum length)
+    rv = NS_NewStorageStream(256, (PRUint32)-1, getter_AddRefs(storageStream));
     if (NS_FAILED(rv)) goto error;
 
-    // Verify that the record meta-data was serialized by this version of the
-    // cache manager code.
+    rv = storageStream->GetOutputStream(0, getter_AddRefs(outputStream));
+    if (NS_FAILED(rv)) goto error;
+
+    rv = NS_NewBinaryOutputStream(getter_AddRefs(binaryStream), outputStream);
+
+    // Prepend version of record meta-data to ensure against version mismatches
     rv = binaryStream->Write8(CACHE_MANAGER_VERSION);
     if (NS_FAILED(rv)) goto error;
 
@@ -564,8 +662,22 @@ nsCachedNetData::Commit(void)
     rv = binaryStream->WriteFloat(mDownloadRate);
     if (NS_FAILED(rv)) goto error;
 
-    // FIXME - Store string in MetaData
-    return NS_OK;
+    rv = storageStream->NewInputStream(0, getter_AddRefs(inputStream));
+    if (NS_FAILED(rv)) goto error;
+
+    inputStream->Available(&metaDataLength);
+
+    metaData = (char*)nsAllocator::Alloc(metaDataLength);
+    if (!metaData) goto error;
+    inputStream->Read(metaData, metaDataLength, &bytesRead);
+    if (NS_FAILED(rv)) {
+        nsAllocator::Free(metaData);
+        goto error;
+    }
+
+    rv = record->SetMetaData(metaDataLength, metaData);
+    nsAllocator::Free(metaData);
+    return rv;
 
  error:
     SetDirty();
@@ -580,7 +692,15 @@ nsCachedNetData::GetProtocolPrivate(PRUint32* aProtocolDataLength, char* *aProto
     NS_ENSURE_ARG_POINTER(aProtocolDataLength);
     NS_ENSURE_ARG_POINTER(aProtocolData);
 
-    *aProtocolData = mProtocolData;
+    char *copyProtocolData = 0;
+    if (mProtocolData) {
+        copyProtocolData = (char*)nsAllocator::Alloc(mProtocolDataLength);
+        if (!copyProtocolData)
+            return NS_ERROR_OUT_OF_MEMORY;
+        memcpy(copyProtocolData, mProtocolData, mProtocolDataLength);
+    }
+
+    *aProtocolData = copyProtocolData;
     *aProtocolDataLength = mProtocolDataLength;
     
     return NS_OK;
@@ -595,7 +715,7 @@ nsCachedNetData::SetProtocolPrivate(PRUint32 aLength, const char *aProtocolData)
 
     if (aProtocolData) {
         newProtocolData = (char*)nsAllocator::Alloc(aLength);
-        if (!mProtocolData)
+        if (!newProtocolData)
             return NS_ERROR_OUT_OF_MEMORY;
         memcpy(newProtocolData, aProtocolData, aLength);
     }
@@ -681,7 +801,7 @@ nsCachedNetData::Notify(PRUint32 aMessage, nsresult aError)
 NS_IMETHODIMP
 nsCachedNetData::Delete(void)
 {
-    if (GetFlag(DELETED))
+    if (GetFlag(RECYCLED))
         return NS_OK;
 
     // Tell observers about the deletion, so that they can release their
@@ -691,6 +811,8 @@ nsCachedNetData::Delete(void)
     // Can only delete if all references are dropped excepting, of course, the
     // one from the cache manager and the caller of this method.
     if (mRefCnt <= 2) {
+
+        // FIXME - This isn't gonna work
         nsresult rv;
         nsCOMPtr<nsINetDataCacheRecord> record;
 
@@ -701,7 +823,7 @@ nsCachedNetData::Delete(void)
         if (NS_FAILED(rv)) return rv;
 
         // Now record is available for recycling
-        SetFlag(DELETED);
+        SetFlag(RECYCLED);
         return NS_OK;
     }
         
@@ -714,6 +836,9 @@ nsCachedNetData::Delete(void)
 nsresult
 nsCachedNetData::Evict(PRUint32 aTruncatedContentLength)
 {
+    nsCOMPtr<nsINetDataCacheRecord> record;
+    GetRecord(getter_AddRefs(record));
+
     // Tell observers about the eviction, so that they can release their
     // references to this cache object.
     Notify(nsIStreamAsFileObserver::REQUEST_DELETION, NS_OK);
@@ -721,12 +846,13 @@ nsCachedNetData::Evict(PRUint32 aTruncatedContentLength)
     // Can only delete if all references are dropped excepting, of course, the
     // one from the cache manager.
     if (mRefCnt == 1) {
-        nsresult rv = mRecord->SetStoredContentLength(aTruncatedContentLength);
+        nsresult rv = record->SetStoredContentLength(aTruncatedContentLength);
         if (NS_FAILED(rv)) return rv;
 
         if (aTruncatedContentLength == 0) {
-            SetFlag(EVICTED);
-            // FIXME - reset flags, delete meta-data ?
+            SetFlag(VESTIGIAL);
+            ClearFlag(TRUNCATED_CONTENT);
+            // FIXME - delete meta-data ?
         } else {
             SetFlag(TRUNCATED_CONTENT);
         }
@@ -761,6 +887,7 @@ nsCachedNetData::NewChannel(nsILoadGroup* loadGroup, nsIChannel* *aChannel)
     *aChannel = new nsCacheEntryChannel(this, channel);
     if (!*aChannel)
         return NS_ERROR_OUT_OF_MEMORY;
+    NS_ADDREF(*aChannel);
     return NS_OK;
 }
 
@@ -771,10 +898,103 @@ nsCachedNetData::GetFileSpec(nsIFileSpec* *aFileSpec)
     return mRecord->GetFilename(aFileSpec);
 }
 
+class InterceptStreamListener : public nsIStreamListener,
+                                public nsIInputStream
+{
+public:
+
+    InterceptStreamListener(nsCachedNetData *aCacheEntry, nsIStreamListener *aOriginalListener):
+        mCacheEntry(aCacheEntry), mOriginalListener(aOriginalListener) {}
+
+    nsresult Init(PRUint32 aStartingOffset) {
+        nsresult rv;
+
+        nsCOMPtr<nsIChannel> channel;
+        rv = mCacheEntry->NewChannel(0, getter_AddRefs(channel));
+        if (NS_FAILED(rv)) return rv;
+
+        return channel->OpenOutputStream(aStartingOffset, getter_AddRefs(mCacheStream));
+    }
+
+    NS_DECL_ISUPPORTS
+
+    NS_IMETHOD OnStartRequest(nsIChannel *channel, nsISupports *ctxt) {
+        return mOriginalListener->OnStartRequest(channel, ctxt);
+    }
+
+    NS_IMETHOD OnStopRequest(nsIChannel *channel, nsISupports *ctxt,
+                             nsresult status, const PRUnichar *errorMsg) {
+        if (NS_FAILED(status))
+            mCacheEntry->SetFlag(nsCachedNetData::TRUNCATED_CONTENT);
+        else
+            mCacheEntry->ClearFlag(nsCachedNetData::TRUNCATED_CONTENT);
+        mCacheEntry->ClearFlag(nsCachedNetData::VESTIGIAL);
+        mCacheEntry->ClearFlag(nsCachedNetData::UPDATE_IN_PROGRESS);
+            
+        return mOriginalListener->OnStopRequest(channel, ctxt, status, errorMsg);
+    }
+
+    NS_IMETHOD OnDataAvailable(nsIChannel *channel, nsISupports *ctxt,
+                               nsIInputStream *inStr, PRUint32 sourceOffset,
+                               PRUint32 count) {
+        mOriginalStream = inStr;
+        return mOriginalListener->OnDataAvailable(channel, ctxt, 
+                                                  NS_STATIC_CAST(nsIInputStream*, this),
+                                                  sourceOffset, count);
+    }
+
+    NS_IMETHOD Close(void) {
+        return mOriginalStream->Close();
+    }
+
+    NS_IMETHOD Available(PRUint32 *aBytesAvailable) {
+        return mOriginalStream->Available(aBytesAvailable);
+    }
+
+    NS_IMETHOD Read(char* buf, PRUint32 count, PRUint32 *aActualBytes) {
+        nsresult rv;
+        rv = mOriginalStream->Read(buf, count, aActualBytes);
+        if (NS_FAILED(rv)) return rv;
+
+        write(buf, *aActualBytes);
+        return NS_OK;
+    }
+
+private:
+    nsresult
+    write(char* aBuf, PRUint32 aNumBytes) {
+        PRUint32 actualBytes;
+        return mCacheStream->Write(aBuf, aNumBytes, &actualBytes);
+    }
+
+private:
+    nsCOMPtr<nsCachedNetData> mCacheEntry;
+    nsCOMPtr<nsIStreamListener>  mOriginalListener;
+    nsCOMPtr<nsIOutputStream>    mCacheStream;
+
+    nsCOMPtr<nsIInputStream>     mOriginalStream;
+};
+
+NS_IMPL_ISUPPORTS2(InterceptStreamListener, nsIInputStream, nsIStreamListener)
+
 NS_IMETHODIMP
 nsCachedNetData::InterceptAsyncRead(nsIStreamListener *aOriginalListener,
+                                    PRUint32 aStartingOffset,
                                     nsIStreamListener **aResult)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
+    nsresult rv;
+    InterceptStreamListener* interceptListener;
 
+    interceptListener = new InterceptStreamListener(this, aOriginalListener);
+    if (!interceptListener)
+        return NS_ERROR_OUT_OF_MEMORY;
+    
+    rv = interceptListener->Init(aStartingOffset);
+    if (NS_FAILED(rv)) return rv;
+        
+    SetFlag(UPDATE_IN_PROGRESS);
+
+    NS_ADDREF(interceptListener);
+    *aResult = interceptListener;
+    return NS_OK;
+}

@@ -32,6 +32,7 @@
 class nsINetDataCache;
 class nsIStreamAsFileObserver;
 class nsIStreamAsFile;
+class nsIArena;
 class StreamAsFileObserverClosure;
 
 // Number of recent access times recorded
@@ -44,8 +45,6 @@ class StreamAsFileObserverClosure;
 class nsCachedNetData : public nsICachedNetData {
 
 public:
-    ~nsCachedNetData();
-
     NS_DECL_ISUPPORTS
 
     // nsICachedNetData methods
@@ -57,40 +56,69 @@ protected:
 
     // Bits for mFlags, below
     typedef enum {
-        ALLOW_PARTIAL       = 1 << 0, // Protocol supports partial fetching
-        TRUNCATED_CONTENT   = 1 << 1, // Cache manager truncated content
-        UPDATE_IN_PROGRESS  = 1 << 2, // Protocol handler is modifying cache data
-        DIRTY               = 1 << 3, // Cache entry data needs to be flushed to database
+        DIRTY               = 1 << 0, // Cache entry data needs to be flushed to database
 
-        DELETED             = 1 << 4, // Associated database record is deleted;  This
-                                      //   cache entry is available for recycling
-        EVICTED             = 1 << 5, // All cache entry content data has been purged,
-                                      //   though cache entry remains
-        DORMANT             = 1 << 6, // No references to this cache entry, except the
-                                      //   cache manager itself
+    // ==== Flags that can be set by the protocol handler ====
+        ALLOW_PARTIAL       = 1 << 1, // Protocol handler supports partial fetching
+        UPDATE_IN_PROGRESS  = 1 << 2, // Protocol handler now modifying cache data
 
-        LAST_MODIFIED_KNOWN = 1 << 7, // Protocol has called SetLastModifiedTime()
-        EXPIRATION_KNOWN    = 1 << 8, // Protocol has called SetExpirationTime()
-        STALE_TIME_KNOWN    = 1 << 9, // Protocol has called SetStaleTime()
+    // ==== Cache-entry state flags.  At most one of these flags can be set ====
+        TRUNCATED_CONTENT   = 1 << 4, // Entry contains valid content, but it has
+                                      //   been truncated by cache manager
 
-        UNAVAILABLE         = DELETED | EVICTED | UPDATE_IN_PROGRESS
+        // A previously-used cache entry, which has been purged of all cached
+        // content and protocol-private data.  This cache entry can be refilled
+        // with new content or it may be retained in this vestigial state
+        // because the usage statistics it contains will be used by the
+        // replacement policy if the same URI is ever cached again.
+        VESTIGIAL           = 1 << 5,
+
+    // ==== Memory usage status bits.  At most one of these flags can be set ====
+        RECYCLED            = 1 << 8, // Previously associated database record has
+                                      //   been deleted; This cache entry is available
+                                      //   for recycling.
+
+        DORMANT             = 1 << 9, // No references to this cache entry, except by
+                                      //   the cache manager itself
+        
+    // ==== Setter bits ====
+        LAST_MODIFIED_KNOWN = 1 <<12, // Protocol handler called SetLastModifiedTime()
+        EXPIRATION_KNOWN    = 1 <<13, // Protocol handler called SetExpirationTime()
+        STALE_TIME_KNOWN    = 1 <<14, // Protocol handler called SetStaleTime()
+
+    // ==== Useful flag combinations ====
+        // Cache entry not eligible for eviction
+        UNEVICTABLE         = VESTIGIAL | RECYCLED | UPDATE_IN_PROGRESS,
+        
+        // State flags that are in-memory only, i.e. not persistent 
+        TRANSIENT_FLAGS     = DIRTY | RECYCLED | DORMANT
     } Flag;
 
     PRBool GetFlag(Flag aFlag) {
-        if (mFlags & DELETED)
-            return NS_ERROR_NOT_AVAILABLE;
         return (mFlags & aFlag) != 0;
     }
     nsresult GetFlag(PRBool *aResult, Flag aFlag) { *aResult = GetFlag(aFlag); return NS_OK; }
 
     // Set a boolean flag for the cache entry
     nsresult SetFlag(PRBool aValue, Flag aFlag) {
-        if (mFlags & DELETED)
+        if (mFlags & RECYCLED)
             return NS_ERROR_NOT_AVAILABLE;
-        PRUint8 newFlags = mFlags | (-(aValue != 0) & aFlag);
-        if (newFlags != mFlags)
+        NS_ASSERTION(aValue == 1 || aValue == 0, "Illegal argument");
+        PRUint16 newFlags;
+        newFlags = mFlags & ~aFlag;
+        newFlags |= (-aValue & aFlag);
+
+        // Mark record as dirty if any non-transient flag has changed
+        if ((newFlags & ~TRANSIENT_FLAGS) != (mFlags & ~TRANSIENT_FLAGS)) {
             newFlags |= DIRTY;
+        }
+        
         mFlags = newFlags;
+
+        // Once a record has become dormant, only its flags can change
+        if ((newFlags & DIRTY) && (newFlags & DORMANT))
+            CommitFlags();
+
         return NS_OK;
     }
 
@@ -114,28 +142,38 @@ protected:
 
     void NoteDownloadTime(PRTime start, PRTime end);
 
+    // placement new for arena-allocation
+    void *operator new (size_t aSize, nsIArena *aArena);
+
     friend class nsReplacementPolicy;
     friend class nsCacheManager;
     friend class StreamAsFile;
     friend class nsCacheEntryChannel;
     friend class CacheOutputStream;
+    friend class InterceptStreamListener;
 
 private:
 
-    // Constructor should never be invoked since this class is arena-allocated 
-    nsCachedNetData();
+    nsCachedNetData() {};
+    ~nsCachedNetData() {};
 
     // Initialize internal fields of this nsCachedNetData instance from the
     // underlying raw cache database record.
-    nsresult Deserialize(void);
+    nsresult Deserialize(bool aDeserializeFlags);
 
-    // Notify observers about change in cache entry status
+    // Notify stream-as-file observers about change in cache entry status
     nsresult Notify(PRUint32 aMessage, nsresult aError);
 
+    // Add/Remove stream-as-file observers
     nsresult AddObserver(nsIStreamAsFile *aStreamAsFile, nsIStreamAsFileObserver* aObserver);
     nsresult RemoveObserver(nsIStreamAsFileObserver* aObserver);
 
+    // Mark cache entry to indicate a write out to the cache database is required
     void SetDirty() { mFlags |= DIRTY; }
+
+    nsresult Resurrect(nsINetDataCacheRecord *aRecord);
+
+    nsresult CommitFlags();
 
 private:
     
@@ -170,13 +208,13 @@ protected:
     PRUint16    mNumAccesses;
 
     // A reference to the underlying, raw cache database record, either as a
-    // pointer to an in-memory object or as a database identifier
+    // pointer to an in-memory object or as a database record identifier
     union {
         nsINetDataCacheRecord* mRecord;
 
         // Database record ID of associated cache record.  See
         // nsINetDataCache::GetRecordByID().
-        PRInt32                mRecordID;
+        PRInt32  mRecordID;
     };
 
     // Weak link to parent cache

@@ -44,7 +44,9 @@ nsCacheManager* gCacheManager = 0;
 NS_IMPL_ISUPPORTS(nsCacheManager, NS_GET_IID(nsINetDataCacheManager))
 
 nsCacheManager::nsCacheManager()
-    : mActiveCacheRecords(0)
+    : mActiveCacheRecords(0),
+    mDiskCacheCapacity((PRUint32)-1),
+    mMemCacheCapacity((PRUint32)-1)
 {
     NS_ASSERTION(!gCacheManager, "Multiple cache managers created");
     gCacheManager = this;
@@ -113,6 +115,7 @@ nsCacheManager::Init()
         return NS_ERROR_OUT_OF_MEMORY;
     rv = mMemSpaceManager->Init(MAX_MEM_CACHE_ENTRIES);
     if (NS_FAILED(rv)) return rv;
+    rv = mMemSpaceManager->AddCache(mMemCache);
 
     // Initialize replacement policy for disk cache modules (file
     // cache and flat cache)
@@ -136,7 +139,6 @@ nsCacheManager::GetCachedNetData(const char *aUriSpec, const char *aSecondaryKey
                                  PRUint32 aSecondaryKeyLength,
                                  PRUint32 aFlags, nsICachedNetData* *aResult)
 {
-    nsCOMPtr<nsINetDataCacheRecord> record;
     nsCachedNetData *cachedData;
     nsresult rv;
     nsINetDataCache *cache;
@@ -145,12 +147,25 @@ nsCacheManager::GetCachedNetData(const char *aUriSpec, const char *aSecondaryKey
     if (aFlags & CACHE_AS_FILE) {
         cache = mFileCache;
         spaceManager = mDiskSpaceManager;
-    } else if (aFlags & BYPASS_PERSISTENT_CACHE) {
+
+        // Ensure that cache is initialized
+        if (mDiskCacheCapacity == (PRUint32)-1)
+            return NS_ERROR_NOT_AVAILABLE;
+
+    } else if ((aFlags & BYPASS_PERSISTENT_CACHE) || !mDiskCacheCapacity) {
         cache = mMemCache;
         spaceManager = mMemSpaceManager;
+
+        // Ensure that cache is initialized
+        if (mMemCacheCapacity == (PRUint32)-1)
+            return NS_ERROR_NOT_AVAILABLE;
     } else {
         cache = mFlatCache ? mFlatCache : mFileCache;
         spaceManager = mDiskSpaceManager;
+
+        // Ensure that cache is initialized
+        if (mDiskCacheCapacity == (PRUint32)-1)
+            return NS_ERROR_NOT_AVAILABLE;
     }
 
     // Construct the cache key by appending the secondary key to the URI spec
@@ -166,18 +181,20 @@ nsCacheManager::GetCachedNetData(const char *aUriSpec, const char *aSecondaryKey
 
     // There is no existing instance of nsCachedNetData for this URL.
     // Make one from the corresponding record in the cache module.
-    if (!cachedData) {
-        rv = cache->GetCachedNetData(cacheKey.GetBuffer(), cacheKey.Length(), getter_AddRefs(record));
-        if (NS_FAILED(rv)) return rv;
-
-        rv = spaceManager->AddCacheRecord(record, cache, &cachedData);
+    if (cachedData) {
+        NS_ASSERTION(cache == cachedData->mCache,
+                     "Cannot yet handle simultaneously active requests for the "
+                     "same URL using different caches");
+        NS_ADDREF(cachedData);
+    } else {
+        rv = spaceManager->GetCachedNetData(cacheKey.GetBuffer(), cacheKey.Length(),
+                                            cache, &cachedData);
         if (NS_FAILED(rv)) return rv;
 
         mActiveCacheRecords->Put(&key, cachedData);
     }
     
     *aResult = cachedData;
-    NS_ADDREF(*aResult);
     return NS_OK;
 }
 
@@ -199,7 +216,7 @@ nsCacheManager::NoteDormant(nsCachedNetData* aEntry)
     
     nsStringKey hashTableKey(nsCString(key, keyLength));
     deletedEntry = (nsCachedNetData*)gCacheManager->mActiveCacheRecords->Remove(&hashTableKey);
-    NS_ASSERTION(deletedEntry == aEntry, "Hash table inconsistency");
+// FIXME    NS_ASSERTION(deletedEntry == aEntry, "Hash table inconsistency");
     return NS_OK;
 }
 
@@ -210,11 +227,12 @@ nsCacheManager::Contains(const char *aUriSpec, const char *aSecondaryKey,
 {
     nsINetDataCache *cache;
     nsReplacementPolicy *spaceManager;
+    nsCachedNetData *cachedData;
 
     if (aFlags & CACHE_AS_FILE) {
         cache = mFileCache;
         spaceManager = mDiskSpaceManager;
-    } else if (aFlags & BYPASS_PERSISTENT_CACHE) {
+    } else if ((aFlags & BYPASS_PERSISTENT_CACHE) || !mDiskCacheCapacity) {
         cache = mMemCache;
         spaceManager = mMemSpaceManager;
     } else {
@@ -229,7 +247,17 @@ nsCacheManager::Contains(const char *aUriSpec, const char *aSecondaryKey,
     cacheKey += '\0';
     cacheKey.Append(aSecondaryKey, aSecondaryKeyLength);
     
-    return cache->Contains(cacheKey.GetBuffer(), cacheKey.Length(), aResult);
+    nsStringKey key(cacheKey);
+    cachedData = (nsCachedNetData*)mActiveCacheRecords->Get(&key);
+
+    // There is no existing instance of nsCachedNetData for this URL.
+    // Make one from the corresponding record in the cache module.
+    if (cachedData && (cache == cachedData->mCache)) {
+        *aResult = PR_TRUE;
+        return NS_OK;
+    } else {
+        return cache->Contains(cacheKey.GetBuffer(), cacheKey.Length(), aResult);
+    }
 }
 
 NS_IMETHODIMP
@@ -273,7 +301,8 @@ nsCacheManager::NewCacheEntryIterator(nsISimpleEnumerator* *aResult)
 class CacheEnumerator : public nsISimpleEnumerator
 {
 public:
-    CacheEnumerator(nsINetDataCache* aFirstCache):mCache(aFirstCache) {}
+    CacheEnumerator(nsINetDataCache* aFirstCache):mCache(aFirstCache)
+        { NS_INIT_REFCNT(); }
     
     NS_DECL_ISUPPORTS
 
@@ -289,8 +318,11 @@ public:
         if (!mCache)
             return NS_ERROR_FAILURE;
         NS_ADDREF(*aSupports);
-        
-        return mCache->GetNextCache(getter_AddRefs(mCache));
+
+        nsCOMPtr<nsINetDataCache> nextCache;
+        nsresult rv = mCache->GetNextCache(getter_AddRefs(nextCache));
+        mCache = nextCache;
+        return rv;
     }
 
 private:
@@ -305,6 +337,7 @@ nsCacheManager::NewCacheModuleIterator(nsISimpleEnumerator* *aResult)
     *aResult = new CacheEnumerator(mCacheSearchChain);
     if (!*aResult)
         return NS_ERROR_OUT_OF_MEMORY;
+    NS_ADDREF(*aResult);
     return NS_OK;
 }
 

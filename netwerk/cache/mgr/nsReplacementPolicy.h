@@ -22,6 +22,14 @@
  *   Scott Furman, fur@netscape.com
  */
 
+/**
+ * This class manages one or more caches that share a storage resource, e.g. a
+ * file cache and a flat-database cache might each occupy space on the disk and
+ * they would share a single instance of nsReplacementPolicy.  The replacement
+ * policy heuristically chooses which cache entries to evict when storage is
+ * required to accommodate incoming cache data.
+ */
+
 #ifndef _nsReplacementPolicy_h_
 #define _nsReplacementPolicy_h_
 
@@ -52,9 +60,9 @@ protected:
 
     nsresult Init(PRUint32 aMaxCacheEntries);
     nsresult AddCache(nsINetDataCache *aCache);
-    nsresult AddCacheRecord(nsINetDataCacheRecord *aRecord,
-                            nsINetDataCache* aCache,
-                            nsCachedNetData** aResult);
+    nsresult GetCachedNetData(const char* cacheKey, PRUint32 cacheKeyLength,
+                              nsINetDataCache* aCache,
+                              nsCachedNetData** aResult);
     nsresult GetStorageInUse(PRUint32* aNumKBytes);
 
     friend class nsCacheManager;
@@ -70,7 +78,9 @@ private:
     void AddCacheEntry(nsCachedNetData* aCacheEntry, PRInt32 aRecordID);
     nsresult DeleteCacheEntry(nsCachedNetData* aCacheEntry);
     PRUint32 HashRecordID(PRInt32 aRecordID);
-
+    nsresult AssociateCacheEntryWithRecord(nsINetDataCacheRecord *aRecord,
+                                           nsINetDataCache* aCache,
+                                           nsCachedNetData** aResult);
 
     nsresult AddAllRecordsInCache(nsINetDataCache *aCache);
     nsresult CheckForTooManyCacheEntries();

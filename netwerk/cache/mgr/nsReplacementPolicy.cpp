@@ -50,7 +50,8 @@ nsReplacementPolicy::nsReplacementPolicy()
 
 nsReplacementPolicy::~nsReplacementPolicy()
 {
-    delete mRankedEntries;
+    if (mRankedEntries)
+        nsAllocator::Free(mRankedEntries);
     if (mMapRecordIdToEntry)
         nsAllocator::Free(mMapRecordIdToEntry);
 }
@@ -66,9 +67,12 @@ nsReplacementPolicy::Init(PRUint32 aMaxCacheEntries)
     mMaxEntries = aMaxCacheEntries;
 
     mHashArrayLength = PR_CeilingLog2(aMaxCacheEntries) >> 3;
-    mMapRecordIdToEntry = (nsCachedNetData**)nsAllocator::Alloc(mHashArrayLength);
+    size_t numBytes = mHashArrayLength * sizeof(*mMapRecordIdToEntry);
+    mMapRecordIdToEntry = (nsCachedNetData**)nsAllocator::Alloc(numBytes);
     if (!mMapRecordIdToEntry)
         return NS_ERROR_OUT_OF_MEMORY;
+
+    nsCRT::zero(mMapRecordIdToEntry, numBytes);
 
     return NS_OK;
 }
@@ -93,15 +97,20 @@ nsReplacementPolicy::HashRecordID(PRInt32 aRecordID)
 nsCachedNetData*
 nsReplacementPolicy::FindCacheEntryByRecordID(PRInt32 aRecordID, nsINetDataCache *aCache)
 {
+    nsresult rv;
     nsCachedNetData* cacheEntry;
     PRUint32 bucket = HashRecordID(aRecordID);
 
     cacheEntry = mMapRecordIdToEntry[bucket];
-    while (cacheEntry) {
-        if (cacheEntry && (cacheEntry->mRecordID == aRecordID) &&
-            (cacheEntry->mCache == aCache))
+    for (;cacheEntry; cacheEntry = cacheEntry->mNext) {
+
+        PRInt32 recordID;
+        rv = cacheEntry->GetRecordID(&recordID);
+        if (NS_FAILED(rv))
+            continue;
+
+        if ((recordID == aRecordID) && (cacheEntry->mCache == aCache))
             return cacheEntry;
-        cacheEntry = cacheEntry->mNext;
     }
 
     return 0;
@@ -158,7 +167,6 @@ nsReplacementPolicy::AddAllRecordsInCache(nsINetDataCache *aCache)
 
     while (1) {
         PRBool notDone;
-        nsCachedNetData *cacheEntry;
 
         rv = iterator->HasMoreElements(&notDone);
         if (NS_FAILED(rv)) return rv;
@@ -169,7 +177,7 @@ nsReplacementPolicy::AddAllRecordsInCache(nsINetDataCache *aCache)
         if (!NS_SUCCEEDED(rv)) return rv;
         record = do_QueryInterface(iSupports);
         
-        rv = AddCacheRecord(record, aCache, &cacheEntry);
+        rv = AssociateCacheEntryWithRecord(record, aCache, 0);
         if (!NS_SUCCEEDED(rv)) return rv;
     }
 
@@ -240,10 +248,13 @@ nsCachedNetData::ComputeProfit(PRUint32 aNow)
         now = now32();
     
     K = PR_MIN(MAX_K, mNumAccesses);
-    NS_ASSERTION(K, "Internal inconsistency");
+    if (!K) {
+        mProfit = 0;
+        return;
+    }
 
     // Compute time, in seconds, since k'th most recent access
-    double timeSinceKthAccess = now - mAccessTime[K];
+    double timeSinceKthAccess = now - mAccessTime[K - 1];
     if (timeSinceKthAccess <= 0.0)    // Sanity check
         timeSinceKthAccess = 1.0;
 
@@ -301,46 +312,49 @@ nsCachedNetData::ComputeProfit(PRUint32 aNow)
 int
 nsCachedNetData::Compare(const void *a, const void *b, void *unused)
 {
-    nsCachedNetData& entryA = *(nsCachedNetData*)a;
-    nsCachedNetData& entryB = *(nsCachedNetData*)a;
+    nsCachedNetData* entryA = (nsCachedNetData*)a;
+    nsCachedNetData* entryB = (nsCachedNetData*)b;
 
-    // Percolate deleted entries to the end of the mRankedEntries array, so that they
-    // can be recycled.
-    if (entryA.GetFlag(DELETED)) {
-        if (entryB.GetFlag(DELETED))
+    // Percolate deleted or empty entries to the end of the mRankedEntries
+    // array, so that they can be recycled.
+    if (!entryA || entryA->GetFlag(RECYCLED)) {
+        if (!entryB || entryB->GetFlag(RECYCLED))
             return 0;
         else 
             return +1;
     } 
-    if (entryB.GetFlag(DELETED))
+    if (!entryB || entryB->GetFlag(RECYCLED))
         return -1;
 
     // Evicted entries (those with no content data) and active entries (those
     // currently being updated) are collected towards the end of the sorted
     // array just prior to the deleted cache entries, since evicted entries
     // can't be re-evicted.
-    if (entryA.GetFlag(UNAVAILABLE)) {
-        if (entryB.GetFlag(UNAVAILABLE))
+    if (entryA->GetFlag(UPDATE_IN_PROGRESS)) {
+        if (entryB->GetFlag(UPDATE_IN_PROGRESS))
             return 0;
         else 
             return +1;
     } 
-    if (entryB.GetFlag(UNAVAILABLE))
+    if (entryB->GetFlag(UPDATE_IN_PROGRESS))
         return -1;
 
+    PRUint16 Ka = PR_MIN(MAX_K, entryA->mNumAccesses);
+    PRUint16 Kb = PR_MIN(MAX_K, entryB->mNumAccesses);
+
     // Order cache entries by the number of times they've been accessed
-    if (entryA.mNumAccesses < entryB.mNumAccesses)
+    if (Ka < Kb)
         return -1;
-    if (entryA.mNumAccesses > entryB.mNumAccesses)
+    if (Ka > Kb)
         return +1;
 
     /*
      * Among records that have been accessed an equal number of times, order
      * them by profit.
      */
-    if (entryA.mProfit > entryB.mProfit)
+    if (entryA->mProfit > entryB->mProfit)
         return +1;
-    if (entryA.mProfit < entryB.mProfit)
+    if (entryA->mProfit < entryB->mProfit)
         return -1;
     return 0;
 }
@@ -353,7 +367,7 @@ nsReplacementPolicy::RankRecords()
 {
     PRUint32 i, now;
 
-    // Init replacement policy if this is the first ranking
+    // Add all cache records if this is the first ranking
     if (!mLastRankTime) {
         nsresult rv;
         CacheInfo *cacheInfo;
@@ -370,13 +384,14 @@ nsReplacementPolicy::RankRecords()
     // Get current time and convert to seconds since the epoch
     now = now32();
 
-    // Recompute profit for every known cache record, except deleted/evicted ones
+    // Recompute profit for every known cache record, except deleted ones
     for (i = 0; i < mNumEntries; i++) {
         nsCachedNetData* entry = mRankedEntries[i];
-        if (!entry->GetFlag(nsCachedNetData::UNAVAILABLE))
+        if (entry && !entry->GetFlag(nsCachedNetData::RECYCLED))
             entry->ComputeProfit(now);
     }
-    NS_QuickSort(mRankedEntries, mNumEntries, sizeof *mRankedEntries, nsCachedNetData::Compare, 0);
+    NS_QuickSort(mRankedEntries, mNumEntries, sizeof *mRankedEntries, 
+                 nsCachedNetData::Compare, 0);
 
     mNumEntries -= mRecordsRemovedSinceLastRanking;
     mRecordsRemovedSinceLastRanking = 0;
@@ -432,13 +447,14 @@ nsReplacementPolicy::CheckForTooManyCacheEntries()
 
 
 /** 
- * Add a cache record to the set of entries eligible for eviction from the cache.
- * This would typically be done when the cache entry is created.
+ * Create a new association between a low-level cache database record and a
+ * cache entry.  Add the entry to the set of entries eligible for eviction from
+ * the cache.  This would typically be done when the cache entry is created.
  */
 nsresult
-nsReplacementPolicy::AddCacheRecord(nsINetDataCacheRecord *aRecord,
-                                    nsINetDataCache* aCache,
-                                    nsCachedNetData** aResult)
+nsReplacementPolicy::AssociateCacheEntryWithRecord(nsINetDataCacheRecord *aRecord,
+                                                   nsINetDataCache* aCache,
+                                                   nsCachedNetData** aResult)
 {
     nsCachedNetData* cacheEntry;
     nsresult rv;
@@ -449,7 +465,12 @@ nsReplacementPolicy::AddCacheRecord(nsINetDataCacheRecord *aRecord,
     if (NS_FAILED(rv)) return rv;
     cacheEntry = FindCacheEntryByRecordID(recordID, aCache);
     if (cacheEntry) {
-        *aResult = cacheEntry;
+        if (aResult) {
+            if (cacheEntry->GetFlag(nsCachedNetData::DORMANT))
+                cacheEntry->Resurrect(aRecord);
+            NS_ADDREF(cacheEntry);
+            *aResult = cacheEntry;
+        }
         return NS_OK;
     }
 
@@ -470,14 +491,14 @@ nsReplacementPolicy::AddCacheRecord(nsINetDataCacheRecord *aRecord,
         if (newCapacity > mMaxEntries)
             newCapacity = mMaxEntries;
 
-        nsCachedNetData** newStatsArray; 
+        nsCachedNetData** newRankedEntriesArray; 
         PRUint32 numBytes = sizeof(nsCachedNetData*) * newCapacity;
-        newStatsArray = 
+        newRankedEntriesArray = 
             (nsCachedNetData**)nsAllocator::Realloc(mRankedEntries, numBytes);
-        if (!newStatsArray)
+        if (!newRankedEntriesArray)
             return NS_ERROR_OUT_OF_MEMORY;
         
-        mRankedEntries = newStatsArray;
+        mRankedEntries = newRankedEntriesArray;
         mCapacityRankedEntriesArray = newCapacity;
 
         PRUint32 i;
@@ -487,24 +508,47 @@ nsReplacementPolicy::AddCacheRecord(nsINetDataCacheRecord *aRecord,
 
     // Recycle the record after the last in-use record in the array
     nsCachedNetData *entry = mRankedEntries[mNumEntries];
-    NS_ASSERTION(!entry || !entry->GetFlag(nsCachedNetData::DELETED),
+    NS_ASSERTION(!entry || !entry->GetFlag(nsCachedNetData::RECYCLED),
                  "Only deleted cache entries should appear at end of array");
 
     if (!entry) {
-        entry = (nsCachedNetData*)mArena->Alloc(sizeof nsCachedNetData);
+        entry = new(mArena) nsCachedNetData;
         if (!entry)
             return NS_ERROR_OUT_OF_MEMORY;
-        nsCRT::zero(entry, sizeof nsCachedNetData);
+        mRankedEntries[mNumEntries] = entry;
+    } else {
+        // Clear out recycled data structure
+        nsCRT::zero(entry, sizeof(*entry));
     }
 
     entry->Init(aRecord, aCache);
+    AddCacheEntry(entry, recordID);
     
     // Add one reference to the cache entry from the cache manager
     NS_ADDREF(entry);
 
-    *aResult = entry;
+    if (aResult) {
+        // And one reference from our caller
+        NS_ADDREF(entry);
+        *aResult = entry;
+    }
+
     mNumEntries++;
     return NS_OK;
+}
+
+nsresult
+nsReplacementPolicy::GetCachedNetData(const char* cacheKey, PRUint32 cacheKeyLength,
+                                      nsINetDataCache* aCache,
+                                      nsCachedNetData** aResult)
+{
+    nsresult rv;
+    nsCOMPtr<nsINetDataCacheRecord> record;
+
+    rv = aCache->GetCachedNetData(cacheKey, cacheKeyLength,
+                                  getter_AddRefs(record));
+    if (NS_FAILED(rv)) return rv;
+    return AssociateCacheEntryWithRecord(record, aCache, aResult);
 }
 
 /**
@@ -524,7 +568,7 @@ nsReplacementPolicy::DeleteOneEntry(nsINetDataCache *aCache)
         MaybeRerankRecords();
         for (; i < mNumEntries; i++) {
             entry = mRankedEntries[i];
-            if (entry->GetFlag(nsCachedNetData::DELETED))
+            if (!entry || entry->GetFlag(nsCachedNetData::RECYCLED))
                 continue;
             if (!aCache || (entry->mCache == aCache))
                 break;
@@ -571,7 +615,9 @@ nsReplacementPolicy::Evict(PRUint32 aTargetOccupancy)
     PRUint32 i;
     nsCachedNetData *entry;
     nsresult rv;
-    PRUint32 occupancy, truncatedLength;
+    PRUint32 occupancy;
+    PRInt32 truncatedLength;
+    nsCOMPtr<nsINetDataCacheRecord> record;
 
     MaybeRerankRecords();
     for (i = 0; i < mNumEntries; i++) {
@@ -583,12 +629,24 @@ nsReplacementPolicy::Evict(PRUint32 aTargetOccupancy)
 
         entry = mRankedEntries[i];
 
-        // Skip deleted cache entries and ones that have already been evicted
-        if (entry->GetFlag(nsCachedNetData::UNAVAILABLE))
+        // Skip deleted/empty cache entries and ones that have already been evicted
+        if (!entry || entry->GetFlag(nsCachedNetData::UNEVICTABLE))
             continue;
 
         if (entry->GetFlag(nsCachedNetData::ALLOW_PARTIAL)) {
-            truncatedLength = aTargetOccupancy - occupancy;
+            rv = entry->GetRecord(getter_AddRefs(record));
+            if (NS_FAILED(rv))
+                continue;
+
+            PRUint32 contentLength;
+            rv = record->GetStoredContentLength(&contentLength);
+            if (NS_FAILED(rv))
+                continue;
+            
+            // Additional cache storage required, in KB
+            PRUint32 storageToReclaim = (occupancy - aTargetOccupancy) << 10;
+            
+            truncatedLength = (PRInt32)(contentLength - storageToReclaim);
             if (truncatedLength < 0)
                 truncatedLength = 0;
         } else {
