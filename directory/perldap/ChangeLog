@@ -1,3 +1,14 @@
+1998-09-08  Leif Hedstrom  <leif@netscape.com>
+
+	* Conn.pm (setDefaultRebindProc): Bug fix, it had the Ldapc:: crap
+	stil in there... :-(.
+	(simpleAuth): New method, to do simple authentication rebind.
+
+1998-09-07  Leif Hedstrom  <leif@netscape.com>
+
+	* Makefile.PL: Changed all <> to <STDIN>, to support command line
+	arguments for MakeMaker.
+
 1998-09-03  Leif Hedstrom  <leif@netscape.com>
 
 	* Conn.pm (nextEntry): Fixed bug with case sensitivity.
