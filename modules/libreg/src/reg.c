@@ -84,7 +84,11 @@
 #define MAX_PATH 1024
 #endif
 #elif defined(WIN32)
+#if defined(__GNUC__)
+#include <windows.h>
+#else
 #include <windef.h>  /* for MAX_PATH */
+#endif
 #elif defined(XP_MAC)
 #define MAX_PATH 512
 #elif defined(XP_BEOS)
