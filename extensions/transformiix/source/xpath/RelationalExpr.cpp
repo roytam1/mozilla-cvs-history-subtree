@@ -25,6 +25,7 @@
  */
 
 #include "Expr.h"
+#include "XMLDOMUtils.h"
 
   //------------------/
  //- RelationalExpr -/
