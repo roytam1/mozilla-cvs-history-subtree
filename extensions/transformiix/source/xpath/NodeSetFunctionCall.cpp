@@ -20,6 +20,9 @@
  * Contributor(s): 
  * Keith Visco, kvisco@ziplink.net
  *   -- original author.
+ *
+ * Marina Mechtcheriakova, mmarina@mindspring.com
+ *   -- changed some behavoir to be more compliant with spec
  *    
  * $Id$
  */
@@ -129,7 +132,14 @@ ExprResult* NodeSetFunctionCall::evaluate(Node* context, ContextState* cs) {
                     }
                     delete exprResult;
                 }
-                if ( !node ) node = context;
+                //if ( !node ) node = context;  ///Marina
+                else node = context;
+
+                //-- if no node was found just return an empty string (Marina)
+                if ( !node ) {
+                    result = new StringResult("");
+                    break;
+                }
 
                 switch ( type ) {
                     case LOCAL_NAME :
