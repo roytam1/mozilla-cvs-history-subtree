@@ -24,10 +24,9 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include "prtypes.h"
-#include "plugin_inst.h"
 #include "nsStreamConverter.h"
 #include "nsIMimeEmitter.h"
-#include "nsMimeEmitter2.h"
+#include "nsIURI.h"
 
 // SHERRY - Need to get these out of here eventually
 
@@ -98,7 +97,6 @@ struct mime_stream_data {           /* This struct is the state we pass around
   char                *url_name;
   int                 format_out;
   MWContext           *context;     /* Must REMOVE this entry. */
-  void                *pluginObj;   /* The new XP-COM stream converter object */
   void                *pluginObj2;  /* The new XP-COM stream converter object */
   nsMIMESession       *istream;     /* Holdover - new stream we're writing out image data-if any. */
   MimeObject          *obj;         /* The root parser object */
@@ -108,7 +106,6 @@ struct mime_stream_data {           /* This struct is the state we pass around
   PRInt16             lastcsid;     /* csid corresponding to above. */
   PRInt16             outcsid;      /* csid passed to EDT_PasteQuoteINTL */
   nsIMimeEmitter      *output_emitter;  /* Output emitter engine for libmime */
-  nsMimeEmitter2      *output_emitter2; /* Output emitter 2 engine for libmime */
   nsIPref             *prefs;       /* Connnection to prefs service manager */
 };
 
@@ -117,18 +114,21 @@ struct mime_stream_data {           /* This struct is the state we pass around
 ////////////////////////////////////////////////////////////////
 
 // Create bridge stream for libmime
-void         *mime_bridge_create_stream(MimePluginInstance  *newPluginObj, 
+extern "C"
+void         *mime_bridge_create_stream(
                                         nsIMimeEmitter      *newEmitter,
                                         nsStreamConverter   *newPluginObj2,
-                                        nsMimeEmitter2      *newEmitter2,
-                                        const char          *urlString,
-                                        int                 format_out);
+                                        nsIURI              *uri,
+                                        nsMimeOutputType    format_out);
 
 // Destroy bridge stream for libmime
 void          mime_bridge_destroy_stream(void *newStream);
+void          mime_bridge_set_output_type(void *bridgeStream, nsMimeOutputType aType);
+nsresult      mime_bridge_new_new_uri(void *bridgeStream, nsIURI *aURI);
 
 // These are hooks into the libmime parsing functions...
 extern "C" int            mime_display_stream_write (nsMIMESession *stream, const char* buf, PRInt32 size);
+//extern "C" void           mime_display_stream_complete (nsMIMESession *stream, PRBool  aProcessLeftoverData);
 extern "C" void           mime_display_stream_complete (nsMIMESession *stream);
 extern "C" void           mime_display_stream_abort (nsMIMESession *stream, int status);
 
