@@ -84,7 +84,7 @@ nsAbSync::InternalInit()
   mNewServerTable = nsnull;
 
   mLastChangeNum = 1;
-  mUserName = nsCString("RHPizzarro").ToNewCString();
+  mUserName = nsnull;
 
   mLocale.AssignWithConversion("");
   mDeletedRecordTags = nsnull;
