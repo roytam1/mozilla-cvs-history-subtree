@@ -474,7 +474,8 @@ DEFINES		+= -DUSE_ABCOM
 endif
 
 INCLUDES	+= -Isrc -I. -I$(DEPTH)/dist/public/nls -I$(DEPTH)/dist/public/security \
-		-I$(DEPTH)/lib/libmsg -I$(DEPTH)/dist/public/ldap
+		-I$(DEPTH)/lib/libmsg -I$(DEPTH)/dist/public/ldap \
+		-I$(DEPTH)/modules/libimg/public
 
 
 #######################################################################
