@@ -102,12 +102,17 @@ static int gNumActiveDownloads = 0;
   [super windowDidLoad];
   
   mDownloadIsComplete = NO;
+  mDoingAutoFileDownload = NO;
 
   if (!mIsFileSave) {
     nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID));
     PRBool save = PR_FALSE;
     prefs->GetBoolPref("browser.download.progressDnldDialog.keepAlive", &save);
     mSaveFileDialogShouldStayOpen = save;
+    
+    PRBool autoHelperDispatch = PR_FALSE;
+    prefs->GetBoolPref("browser.download.autoDispatch", &autoHelperDispatch);
+    mDoingAutoFileDownload = autoHelperDispatch;
   }
   
   [self setupToolbar];
@@ -196,7 +201,7 @@ static int gNumActiveDownloads = 0;
         [toolbarItem setTarget:self];
         [toolbarItem setAction:@selector(openFile)];
     } else if ( [itemIdent isEqual:LeaveOpenToolbarItemIdentifier] ) {
-        if ( !mIsFileSave ) {
+        if ( !mIsFileSave || mDoingAutoFileDownload ) {
             if ( mSaveFileDialogShouldStayOpen ) {
                 [toolbarItem setLabel:NSLocalizedString(@"Leave Open",@"Leave Open")];
                 [toolbarItem setPaletteLabel:NSLocalizedString(@"Toggle Close Behavior",@"Toggle Close Behavior")];
@@ -430,7 +435,7 @@ static int gNumActiveDownloads = 0;
     mDownloadIsComplete = YES;            // all done. we got a STATE_STOP
     [mTimeLeftLabel setStringValue:@""];
     [self setProgressTo:mCurrentProgress ofMax:mCurrentProgress];
-    if (!mSaveFileDialogShouldStayOpen)
+    if (!mSaveFileDialogShouldStayOpen || mDoingAutoFileDownload)
       [[self window] performClose:self];  // close window
     else
       [[self window] update];             // redraw window

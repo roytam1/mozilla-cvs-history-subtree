@@ -50,6 +50,7 @@
 #include "nsEmbedAPI.h"
 #include "nsIDownload.h"
 #include "nsIExternalHelperAppService.h"
+#include "nsIPref.h"
 
 NSString* TermEmbeddingNotificationName = @"TermEmbedding";
 NSString* XPCOMShutDownNotificationName = @"XPCOMShutDown";
@@ -230,12 +231,25 @@ CHBrowserService::CreateChromeWindow(nsIWebBrowserChrome *parent,
 NS_IMETHODIMP
 CHBrowserService::Show(nsIHelperAppLauncher* inLauncher, nsISupports* inContext)
 {
-  // Old way - always prompt to save file to disk
-  return inLauncher->SaveToDisk(nsnull, PR_FALSE);
-  // New way - just save the file to disk in download folder and invoke the default helper app
-  // XXX fix me. We need to update the downlaod dialog UI to account for this,
-  // and warn if the user is launching an executable.
-  //return inLauncher->LaunchWithApplication(nsnull, PR_FALSE);
+  PRBool autoHelperDispatch = PR_FALSE;
+  
+  // See if pref enabled to allow automatic helper app dispatch on a download
+  nsCOMPtr<nsIPref> prefService (do_GetService(NS_PREF_CONTRACTID));
+  if (prefService) {
+    prefService->GetBoolPref("browser.download.autoDispatch", &autoHelperDispatch);
+  }
+  
+  if (autoHelperDispatch) {
+    // Pref is enabled so just save the file to disk in download folder
+    // then invoke the default helper app
+    // XXX fix me. When we add UI to enable this pref it needs to be clear it carries
+    // a security risk
+    return inLauncher->LaunchWithApplication(nsnull, PR_FALSE);
+  }
+  else {
+    // Pref not enabled so do it old way - prompt to save file to disk
+    return inLauncher->SaveToDisk(nsnull, PR_FALSE);
+  }
 }
 
 NS_IMETHODIMP
