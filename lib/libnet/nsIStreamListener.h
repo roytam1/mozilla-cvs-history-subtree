@@ -50,7 +50,7 @@ struct nsIStreamListener : public nsISupports
      * 
      * This method is currently not called.  
      */
-    NS_IMETHOD GetBindInfo(void)                           = 0;
+    NS_IMETHOD GetBindInfo(void) = 0;
     /**
      * Notify the client that progress as occurred for the URL load.<BR>
      */
@@ -63,7 +63,7 @@ struct nsIStreamListener : public nsISupports
      * @return The return value is currently ignored.  In the future it may be
      * used to cancel the URL load..
      */
-    NS_IMETHOD OnStartBinding(void)                        = 0;
+    NS_IMETHOD OnStartBinding(void) = 0;
 
     /**
      * Notify the client that data is available in the input stream.  This
@@ -84,13 +84,17 @@ struct nsIStreamListener : public nsISupports
      * 
      * This method is called regardless of whether the URL loaded successfully.<BR><BR>
      * 
-     * In the future a status code will be provided to determine whether the
-     * URL load succeeded or failed. <BR><BR>
-     *
+     * @param status    Status code for the URL load.
+     * @param msg   A text string describing the error.
      * @return The return value is currently ignored.
      */
-    NS_IMETHOD OnStopBinding(void)                         = 0;
+    NS_IMETHOD OnStopBinding(PRInt32 status, const char *msg) = 0;
 };
+
+/* Generic status codes for OnStopBinding */
+#define NS_BINDING_SUCCEEDED    NS_OK
+#define NS_BINDING_FAILED       (-1)
+#define NS_BINDING_ABORTED      (-2)
 
 
 #endif /* nsIStreamListener_h___ */
