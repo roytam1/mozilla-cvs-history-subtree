@@ -5,13 +5,11 @@
           xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
           xmlns:xbl="http://www.mozilla.org/xbl">
 
-  <binding id="download-view">
+  <binding id="download-view" extends="chrome://mozapps/content/downloads/download.xml#download-view">
     <content>
-      <xul:vbox flex="1" class="downloadViewContainer">
-        <xul:vbox flex="1" class="downloadViewInner1">
-          <xul:vbox flex="1" class="downloadViewInner2">
-            <children/>
-          </xul:vbox>
+      <xul:vbox flex="1" class="downloadViewInner1">
+        <xul:vbox flex="1" class="downloadViewInner2">
+          <children/>
         </xul:vbox>
       </xul:vbox>
     </content>

@@ -50,20 +50,54 @@
     <key id="key_close"   key="&cmd.close.commandKey;" command="cmd_close" modifiers="accel"/>
   </keyset>
   
-  <popup id="downloadHistoryPopup" onpopupshowing="return buildContextMenu();">
-    <menuitem id="menuitem_launch" label="&cmd.openfile.label;" default="true"
-              accesskey="&cmd.openfile.accesskey;" command="cmd_openfile"/>
-    <menuitem id="menuitem_show" label="&cmd.show.label;" accesskey="&cmd.show.accesskey;"
-              command="cmd_showinshell"/>
-    <menuseparator id="menuseparator_launch"/>
-    <menuitem id="menuitem_remove" label="&cmd.remove.label;" accesskey="&cmd.remove.accesskey;"
-              command="cmd_remove"/>
-    <menuseparator id="menuseparator_properties"/>
-    <menuitem id="menuitem_properties" label="&cmd.properties.label;" accesskey="&cmd.properties.accesskey;"
-              command="cmd_properties"/>
-  </popup>
+  <vbox id="contextMenuPalette" hidden="true">
+    <menuitem id="menuitem_pause" 
+              label="&cmd.pause.label;" accesskey="&cmd.pause.accesskey;"
+              command="cmd_pause"/>
+    <menuitem id="menuitem_resume" 
+              label="&cmd.resume.label;" accesskey="&cmd.resume.accesskey;"
+              command="cmd_resume"/>
+    <menuitem id="menuitem_cancel" 
+              label="&cmd.cancel.label;" accesskey="&cmd.cancel.accesskey;"
+              command="cmd_cancel"/>
 
+    <menuitem id="menuitem_open" default="true"
+              label="&cmd.open.label;" accesskey="&cmd.open.accesskey;"
+              command="cmd_open"/>
+    <menu id="menuitem_openWith" 
+          label="&cmd.openWith.label;" accesskey="&cmd.openWith.accesskey;"
+          command="cmd_openWith">
+      <menupopup>
+        <menuitem id="menuitem_openWith_default"/>
+        <menuitem id="menuitem_openWith_custom"/>
+        <menuseparator/>
+        <menuitem id="menuitem_openWith_browse"
+                  label="&cmd.openWithBrowse.label;" accesskey="&cmd.openWithBrowse.accesskey;"/>
+      </menupopup>
+    </menu>          
+    <menuitem id="menuitem_show" 
+              label="&cmd.show.label;" accesskey="&cmd.show.accesskey;"
+              command="cmd_show"/>
+
+    <menuitem id="menuitem_retry" default="true"
+              label="&cmd.retry.label;" accesskey="&cmd.retry.accesskey;"
+              command="cmd_retry"/>
+
+    <menuitem id="menuitem_remove"
+              label="&cmd.remove.label;" accesskey="&cmd.remove.accesskey;"
+              command="cmd_remove"/>
+
+              
+    <menuseparator id="menuseparator_properties"/>              
+    <menuitem id="menuitem_properties" 
+              label="&cmd.properties.label;" accesskey="&cmd.properties.accesskey;"
+              command="cmd_properties"/>
+  </vbox>
+  
+  <popup id="downloadContextMenu" onpopupshowing="return buildContextMenu(event);"/>
+  
   <vbox id="downloadView" flex="1" style="overflow: auto;"
+        context="downloadContextMenu"
         datasources="rdf:null" ref="NC:DownloadsRoot"
         ondragdrop="nsDragAndDrop.drop(event, downloadDNDObserver);">
     <template>
@@ -82,7 +116,7 @@
   
   <hbox>
     <hbox id="commandBar">
-      <toolbarbutton id="cleanUpButton" label="&cmd.cleanUp.label;" tooltiptext="&cmd.cleanUp.tooltip;" oncommand="cleanUpDownloads();"/>
+      <toolbarbutton id="cleanUpButton" label="&cmd.cleanUp.label;" tooltiptext="&cmd.cleanUp.tooltip;" command="cmd_cleanUp"/>
       <toolbarbutton type="checkbox" label="&closeWhenDone.label;" tooltiptext="&closeWhenDone.tooltip;" oncommand="toggleCloseWhenDone(this);"/>
     </hbox>
     

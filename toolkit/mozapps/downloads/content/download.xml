@@ -266,4 +266,82 @@
     </content>  
   </binding>
   
+  <binding id="download-view" extends="chrome://global/content/widgets/scrollbox.xml#scrollbox">
+    <implementation>
+      <field name="_selected">null</field>
+      <property name="selected">
+        <setter>
+        <![CDATA[
+          if (this._selected)
+            this._selected.removeAttribute("selected");
+          this._selected = val;
+          if (this._selected)
+            this._selected.setAttribute("selected", "true");
+        ]]>
+        </setter>
+        <getter>
+        <![CDATA[
+          return this._selected;
+        ]]>
+        </getter>
+      </property>
+      
+      <method name="selectionForward">
+        <parameter name="aEvent"/>
+        <body>
+        <![CDATA[
+          if (this.selected) {
+            if (this.selected.nextSibling &&
+                this.selected.nextSibling.localName == "download")
+              this.selected = this.selected.nextSibling;
+          }
+          else {
+            if (this.hasChildNodes())
+              this.selected = this.firstChild.nextSibling;
+          }
+        ]]>
+        </body>
+      </method>
+
+      <method name="selectionBackward">
+        <parameter name="aEvent"/>
+        <body>
+        <![CDATA[
+          if (this.selected) {
+            if (this.selected.previousSibling && 
+                this.selected.previousSibling.localName == "download")
+              this.selected = this.selected.previousSibling;
+          }
+          else {
+            if (this.hasChildNodes())
+              this.selected = this.lastChild;
+          }
+        ]]>
+        </body>
+      </method>
+    </implementation>
+    <handlers>
+      <handler event="click">
+      <![CDATA[
+        if (event.ctrlKey) {
+          this.selected = null;
+          return;
+        }
+        
+        this.selected = event.target;
+      ]]>
+      </handler>
+      <handler event="keypress" keycode="vk_enter" action="if (this.selected) this.selected.fireEvent('open');"/>
+      <handler event="keypress" keycode="vk_return" action="if (this.selected) this.selected.fireEvent('open');"/>
+      <handler event="keypress" keycode="vk_up" action="this.selectionBackward(event);"/>
+      <handler event="keypress" keycode="vk_left" action="this.selectionBackward(event);"/>
+      <handler event="keypress" keycode="vk_down" action="this.selectionForward(event);"/>
+      <handler event="keypress" keycode="vk_right" action="this.selectionForward(event);"/>
+      <handler event="keypress" keycode="vk_up" modifiers="meta" action="this.selected = null"/>
+      <handler event="keypress" keycode="vk_down" modifiers="meta" action="this.selected = null"/>
+      <handler event="keypress" keycode="vk_left" modifiers="meta" action="this.selected = null"/>
+      <handler event="keypress" keycode="vk_right" modifiers="meta" action="this.selected = null"/>
+    </handlers>
+  </binding>
+  
 </bindings>

@@ -87,6 +87,7 @@ function Startup()
   downloadView.addEventListener("download-resume",  onDownloadResume,   false);
   downloadView.addEventListener("download-remove",  onDownloadRemove,   false);
   downloadView.addEventListener("download-show",    onDownloadShow,     false);
+  downloadView.addEventListener("download-open",    onDownloadOpen,     false);
   downloadView.addEventListener("download-retry",   onDownloadRetry,    false);
   downloadView.addEventListener("download-animated",onDownloadAnimated, false);
   downloadView.addEventListener("dblclick",         onDownloadOpen,     false);
@@ -95,6 +96,8 @@ function Startup()
 
   downloadView.database.AddDataSource(ds);
   downloadView.builder.rebuild();
+  
+  downloadView.focus();
   
   var downloadStrings = document.getElementById("downloadStrings");
   gDownloadListener = new DownloadProgressListener(document, downloadStrings);
@@ -131,6 +134,40 @@ function saveStatusMessages()
   }
  
   gDownloadManager.endBatchUpdate();
+}
+
+var gContextMenus = [ 
+  ["menuitem_pause", "menuitem_cancel", "menuseparator_properties", "menuitem_properties"],
+  ["menuitem_open", "menuitem_openWith", "menuitem_show", "menuseparator_properties", "menuitem_properties"],
+  ["menuitem_retry", "menuitem_remove", "menuseparator_properties", "menuitem_properties"],
+  ["menuitem_retry", "menuitem_remove", "menuseparator_properties", "menuitem_properties"],
+  ["menuitem_resume", "menuitem_cancel", "menuseparator_properties", "menuitem_properties"]
+];
+
+function buildContextMenu(aEvent)
+{
+  if (aEvent.target.id != "downloadContextMenu")
+    return;
+    
+  var downloadView = document.getElementById("downloadView");
+  
+  var popup = document.getElementById("downloadContextMenu");
+  while (popup.hasChildNodes())
+    popup.removeChild(popup.firstChild);
+  
+  if (downloadView.selected) {
+    var idx = parseInt(downloadView.selected.getAttribute("state"));
+    if (idx < 0)
+      idx = 0;
+    
+    var menus = gContextMenus[idx];
+    for (var i = 0; i < menus.length; ++i)
+      popup.appendChild(document.getElementById(menus[i]).cloneNode(true));
+    
+    return true;
+  }
+  
+  return false;
 }
 
 var downloadDNDObserver =
@@ -289,26 +326,6 @@ function createLocalFile(aFilePath)
   return lf;
 }
 
-function buildContextMenu()
-{
-  var selectionCount = gDownloadHistoryView.selectedCount;
-  if (!selectionCount)
-    return false;
-
-  var launchItem = document.getElementById("menuitem_launch");
-  var launchSep = document.getElementById("menuseparator_launch");
-  var removeItem = document.getElementById("menuitem_remove");
-  var showItem = document.getElementById("menuitem_show");
-  var propsItem = document.getElementById("menuitem_properties");
-  var propsSep = document.getElementById("menuseparator_properties");
-  showItem.hidden = selectionCount != 1;
-  launchItem.hidden = selectionCount != 1;
-  launchSep.hidden = selectionCount != 1;
-  propsItem.hidden = selectionCount != 1;
-  propsSep.hidden = selectionCount != 1;
-  return true;
-}
-    
 function cleanUpDownloads()
 {
   gDownloadManager.startBatchUpdate();

@@ -27,3 +27,7 @@ download[state="4"] {
   -moz-binding: url('chrome://mozapps/content/downloads/download.xml#download-paused');
 }
 
+#downloadView {
+  -moz-binding: url('chrome://mozapps/content/downloads/download.xml#download-view');
+}
+

@@ -2,6 +2,7 @@ classic.jar:
   skin/classic/mozapps/downloads/unknownContentType.css
   skin/classic/mozapps/downloads/viewFader.png
   skin/classic/mozapps/downloads/downloadFader.png
+  skin/classic/mozapps/downloads/downloadSelected.png
   skin/classic/mozapps/downloads/downloadsBG.png
   skin/classic/mozapps/downloads/downloads.css
   skin/classic/mozapps/downloads/downloads.xml
