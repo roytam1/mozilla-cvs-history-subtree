@@ -26,6 +26,8 @@
 #include "nsURL.h"
 #include <stdlib.h>
 #include "plstr.h"
+#include "nsIProtocolHandler.h"
+#include "nsIHTTPHandler.h" // This will go away with DPs work.
 
 static const PRInt32 DEFAULT_PORT = -1;
 
@@ -163,13 +165,25 @@ nsresult nsURL::OpenProtocolInstance(nsIProtocolInstance* *o_ProtocolInstance)
     if (iFoo)
     {
         nsIProtocolHandler *pHandler=0;
-        if (NS_OK == iFoo->QueryInterface(nsIProtocolHandler::IID(), (void**)&pHandler)))
+        if (NS_OK == iFoo->QueryInterface(nsIProtocolHandler::GetIID(), (void**)&pHandler)))
         {
-            return pHandler->GetInstanceFor(this, o_ProtocolInstance);
+            return pHandler->GetProtocolInstance(this, o_ProtocolInstance);
         }
     }
     else
         return NS_ERROR_NO_PROTOCOL_FOUND; // ??? This the right error or check with repository for error?
+#else // For now hardcode it...
+    if (0==PL_strcasecmp(scheme, "http"))
+    {
+        nsIHTTPHandler* pHandler= 0;
+        if (NS_OK == CreateOrGetHTTPHandler(&pHandler))
+        {
+            if (pHandler)
+            {
+                return pHandler->GetProtocolInstance(this, o_ProtocolInstance);
+            }
+        }
+    }
 #endif
 
     return NS_ERROR_NOT_IMPLEMENTED;
@@ -464,12 +478,12 @@ nsURL::QueryInterface(REFNSIID aIID, void** aInstancePtr)
     
     static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
-    if (aIID.Equals(nsICoolURL::IID())) {
+    if (aIID.Equals(nsICoolURL::GetIID())) {
         *aInstancePtr = (void*) ((nsICoolURL*)this);
         NS_ADDREF_THIS();
         return NS_OK;
     }
-    if (aIID.Equals(nsIURI::IID())) {
+    if (aIID.Equals(nsIURI::GetIID())) {
         *aInstancePtr = (void*) ((nsIURI*)this);
         NS_ADDREF_THIS();
         return NS_OK;

@@ -75,6 +75,8 @@ OBJS=                                   \
         .\$(OBJDIR)\nsNetFactory.obj    \
         .\$(OBJDIR)\nsHttpURLFactory.obj  \
         .\$(OBJDIR)\nsURL.obj  \
+        .\$(OBJDIR)\nsHTTPHandler.obj  \
+        .\$(OBJDIR)\nsHTTPInstance.obj  \
         $(NULL)
 
 #//------------------------------------------------------------------------
