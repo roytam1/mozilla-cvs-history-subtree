@@ -59,7 +59,14 @@ public:
     void setCommandDispatcher(XFE_Component* d) { m_cmdDispatcher = d; }
 
 	// local:
-	XFE_Frame* getParentFrame() { return (XFE_Frame*)m_toplevel; }
+	XFE_Frame* getParentFrame() {
+		XFE_Component *c = m_toplevel;
+
+		while (c && !c->isClassOf("Frame"))
+			c = c->getToplevel();
+
+		return (XFE_Frame*)c;
+	}
 	Widget     getChildrenManager() { return m_rowcol; };
 	void       show();
 
@@ -93,7 +100,12 @@ public:
 		m_parent = parent;
 	}
 	XFE_Frame* getParentFrame() {
-		return (XFE_Frame*)getToplevel();
+		XFE_Component *c = getToplevel();
+
+		while (c && !c->isClassOf("Frame"))
+			c = c->getToplevel();
+
+		return (XFE_Frame*)c;
 	}
 	XFE_Component* getParent() {
 		return m_parent;
