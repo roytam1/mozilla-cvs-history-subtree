@@ -327,7 +327,7 @@ function closeFindBar()
 
 function shouldFastFind(evt)
 {
-  if (evt.ctrlKey || evt.altKey || evt.metaKey)
+  if (evt.ctrlKey || evt.altKey || evt.metaKey || evt.getPreventDefault())
     return false;
     
   var elt = document.commandDispatcher.focusedElement;
