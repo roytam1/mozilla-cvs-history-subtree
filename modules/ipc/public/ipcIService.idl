@@ -186,8 +186,6 @@ interface ipcIService : nsISupports
      *
      * @param aTarget
      *        wait for the next message for the specified target.
-     * @param aTimeout
-     *        wait no more than this many seconds.  pass 0 to wait indefinitely.
      *
      * NOTE: this method can be used to synchronously wait for a response from
      * the daemon.  however, there is no guarantee that the next event will be
@@ -196,8 +194,7 @@ interface ipcIService : nsISupports
      * message previously sent.  consumers should be aware of this fact, and
      * design for it accordingly.
      */
-    void waitMessage(in nsIDRef       aTarget,
-                     in unsigned long aTimeout);
+    void waitMessage(in nsIDRef aTarget);
 };
 
 /**

@@ -412,10 +412,9 @@ ipcService::SendMessage(PRUint32 clientID,
 }
 
 NS_IMETHODIMP
-ipcService::WaitMessage(const nsID &target,
-                        PRUint32 timeout)
+ipcService::WaitMessage(const nsID &target)
 {
-    LOG(("ipcService::WaitMessage [timeout=%u]\n", timeout));
+    LOG(("ipcService::WaitMessage\n"));
 
     NS_ENSURE_TRUE(mWaiting == PR_FALSE, NS_ERROR_IN_PROGRESS);
 

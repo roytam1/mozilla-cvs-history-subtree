@@ -273,7 +273,7 @@ int main(int argc, char **argv)
                 "59 this is a really long message.\n"
                 "60 this is a really long message.\n";
         SendMsg(ipcServ, 0, kTestTargetID, data, strlen(data)+1);
-        ipcServ->WaitMessage(kTestTargetID, 0);
+        ipcServ->WaitMessage(kTestTargetID);
 
         PRUint32 queryID;
         nsCOMPtr<ipcIClientQueryHandler> handler(new myIpcClientQueryHandler());
