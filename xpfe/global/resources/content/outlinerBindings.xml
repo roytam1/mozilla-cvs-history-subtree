@@ -18,7 +18,78 @@
 	  <property name="outlinerBoxObject"
                 onget="return this.boxObject.QueryInterface(Components.interfaces.nsIOutlinerBoxObject);"
                 readonly="true"/>
+	  <property name="currentIndex"
+	            onget="return this.outlinerBoxObject.selection.currentIndex;"
+				readonly="true"/>
+	  <property name="isUpSelection">
+        0
+      </property>
+      <property name="isDownSelection">
+        0
+      </property>
 	</implementation>
+	<handlers>
+      <handler event="keypress" keycode="vk_enter">
+        <![CDATA[
+		 if (this.currentIndex == -1)
+		   return;
+         if (this.outlinerBoxObject.view.isContainer(this.currentIndex))
+           this.outlinerBoxObject.view.toggleOpenState(this.currentIndex);
+        ]]>
+      </handler>
+      <handler event="keypress" keycode="vk_return">
+        <![CDATA[
+		 if (this.currentIndex == -1)
+		   return;
+         if (this.outlinerBoxObject.view.isContainer(this.currentIndex))
+           this.outlinerBoxObject.view.toggleOpenState(this.currentIndex);
+        ]]>
+      </handler>
+      <handler event="keypress" keycode="vk_left">
+        <![CDATA[
+		 if (this.currentIndex == -1)
+		   return;
+		 if (!this.outlinerBoxObject.view.isContainer(this.currentIndex))
+           return;
+         if (this.outlinerBoxObject.view.isContainerOpen(this.currentIndex))
+           this.outlinerBoxObject.view.toggleOpenState(this.currentIndex);
+        ]]>
+      </handler>
+      <handler event="keypress" keycode="vk_right">
+        <![CDATA[
+		 if (this.currentIndex == -1)
+		   return;
+         if (!this.outlinerBoxObject.view.isContainer(this.currentIndex))
+           return;
+         if (!this.outlinerBoxObject.view.isContainerOpen(this.currentIndex))
+           this.outlinerBoxObject.view.toggleOpenState(this.currentIndex);
+        ]]>
+      </handler>
+      <handler event="keypress" keycode="vk_up">
+        <![CDATA[
+		 var c = this.currentIndex;
+         this.isUpSelection=0;
+         this.isDownSelection=0;
+		 if (c == -1 || c == 0)
+		   return;
+		 this.outlinerBoxObject.selection.timedSelect(c-1, 500);
+         this.outlinerBoxObject.ensureRowIsVisible(c-1);
+        ]]>
+      </handler>
+      <handler event="keypress" keycode="vk_down">
+        <![CDATA[
+		 var c = this.currentIndex;
+         this.isUpSelection=0;
+         this.isDownSelection=0;
+		 try { if (c+1 == this.outlinerBoxObject.view.rowCount)
+		   return;
+		 } catch (e) {}
+		 this.outlinerBoxObject.selection.timedSelect(c+1, 500);
+         this.outlinerBoxObject.ensureRowIsVisible(c+1);
+         
+        ]]>
+      </handler>
+    </handlers>    
   </binding>
 
   <binding id="outlinerrows" extends="xul:box">
@@ -48,8 +119,6 @@
 		   else
 		     if (!b.selection.isSelected(row.value))
                b.selection.select(row.value);
-			 
-		   b.selection.currentIndex = row.value;
          }
       ]]>
       </handler>

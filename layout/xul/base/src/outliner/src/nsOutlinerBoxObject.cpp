@@ -161,6 +161,15 @@ NS_IMETHODIMP nsOutlinerBoxObject::GetPageCount(PRInt32 *_retval)
 }
 
 NS_IMETHODIMP
+nsOutlinerBoxObject::EnsureRowIsVisible(PRInt32 aRow)
+{
+  nsIOutlinerBoxObject* body = GetOutlinerBody();
+  if (body)
+    return body->EnsureRowIsVisible(aRow);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsOutlinerBoxObject::ScrollToRow(PRInt32 aRow)
 {
   nsIOutlinerBoxObject* body = GetOutlinerBody();

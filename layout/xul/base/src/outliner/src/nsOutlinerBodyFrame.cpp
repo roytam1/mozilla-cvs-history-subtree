@@ -967,6 +967,25 @@ nsOutlinerBodyFrame::PaintBackgroundLayer(nsIStyleContext* aStyleContext, nsIPre
 }
 
 // Scrolling
+NS_IMETHODIMP nsOutlinerBodyFrame::EnsureRowIsVisible(PRInt32 aRow)
+{
+  if (!mView)
+    return NS_OK;
+
+  if (mTopRowIndex <= aRow && mTopRowIndex+mPageCount > aRow)
+    return NS_OK;
+
+  if (aRow < mTopRowIndex)
+    ScrollToRow(aRow);
+  else {
+    // Bring it just on-screen.
+    PRInt32 distance = aRow - (mTopRowIndex+mPageCount)-1;
+    ScrollToRow(mTopRowIndex+distance);
+  }
+
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsOutlinerBodyFrame::ScrollToRow(PRInt32 aRow)
 {
   if (!mView)

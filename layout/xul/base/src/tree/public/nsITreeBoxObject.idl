@@ -49,6 +49,9 @@ interface nsIOutlinerBoxObject : nsISupports
   long getPageCount();
 
   // Ensures that a row at a given index is visible.
+  void ensureRowIsVisible(in long index);
+
+  // Scrolls such that the row at index is at the top of the visible view.
   void scrollToRow(in long index);
   
   // Invalidation methods for fine-grained painting control.
