@@ -55,7 +55,6 @@ typedef unsigned long   uint32;
 typedef long            int32;
 typedef unsigned short  uint16;
 typedef short           int16;
-typedef unsigned char   uchar;
 typedef unsigned char   BOOL;
 typedef unsigned char   XP_Bool;
 typedef unsigned char   uint8;

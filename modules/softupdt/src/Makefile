@@ -17,11 +17,12 @@
 
 DEPTH		= ../../..
 
+DIRS		= nsdiff nspatch
 MODULE		= softupdate
 LIBRARY_NAME	= softupdate
 
 REQUIRES	= softupdt js java net dbm nspr img util layer pref \
-                  jar security applet lay style libreg network progress
+                  jar security applet lay style libreg network progress zlib
 
 JRI_GEN		= netscape.softupdate.FolderSpec \
           netscape.softupdate.InstallDelete \

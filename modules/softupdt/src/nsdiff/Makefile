@@ -21,6 +21,8 @@ REQUIRES	= softupdt zlib
 
 CSRCS		= nsdiff.c crc32.c
 
+COPY		= cp -p
+
 PROGRAM		= nsdiff$(BIN_SUFFIX)
 
 include $(DEPTH)/config/rules.mk
@@ -33,5 +35,5 @@ symbols:
 	@echo "TARGETS	= $(TARGETS)"
 
 crc32.c:  $(DEPTH)/modules/zlib/src/crc32.c
-        @$(RM) $@
-        @$(COPY) $< $@
+	@$(RM) $@
+	@$(COPY) $< $@

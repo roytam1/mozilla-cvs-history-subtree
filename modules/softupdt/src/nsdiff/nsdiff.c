@@ -37,13 +37,15 @@
  *  types
  *------------------------------------*/
 
+#if 0
+/* zlib.h appears to define these now. If it stops remove the #if */
 typedef unsigned long   uint32;
 typedef long            int32;
 typedef unsigned short  uint16;
 typedef short           int16;
-typedef unsigned char   uchar;
-typedef unsigned char   XP_Bool;
 typedef unsigned char   uint8;
+#endif
+typedef unsigned char   XP_Bool;
 typedef FILE*           XP_File;
 
 
