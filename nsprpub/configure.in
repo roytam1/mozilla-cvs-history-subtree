@@ -1430,7 +1430,8 @@ mips-sony-newsos*)
         AC_DEFINE(ppc)
         CPU_ARCH=ppc
     fi
-    DSO_LDOPTS='-dynamiclib -compatibility_version 1 -current_version 1 -all_load'
+    DSO_LDOPTS='-dynamiclib -compatibility_version 1 -current_version 1 -all_load -install_name @executable_path/$@'
+    CFLAGS="$CFLAGS -traditional-cpp"
     MKSHLIB='$(CC) -arch $(CPU_ARCH) $(DSO_LDOPTS) -o $@'
     DLL_SUFFIX=dylib
     USE_PTHREADS=1
