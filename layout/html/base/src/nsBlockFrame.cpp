@@ -827,8 +827,21 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
     }
 
     // now handle any targets that are children of this node
+    PRBool firstTime; // can't combine with next line due to GCC
+    firstTime = PR_TRUE;
     while (reflowIterator.NextChild(&childFrame))
     {
+      // If we've looped already, Reflow... the previous line.  The
+      // last pass through the loop will be Reflowed after the switch(){}.
+      if (firstTime)
+      {
+        // Now reflow...
+        firstTime = PR_FALSE;
+        rv = ReflowDirtyLines(state);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "reflow dirty lines failed");
+        if (NS_FAILED(rv)) return rv;
+      }
+
       // set reflow state for child
       aReflowState.SetCurrentReflowNode(reflowIterator.CurrentChild());
       state.mNextRCFrame = childFrame;
@@ -844,11 +857,6 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
 
       rv = PrepareChildIncrementalReflow(state);
       NS_ASSERTION(NS_SUCCEEDED(rv), "setting up reflow failed");
-      if (NS_FAILED(rv)) return rv;
-
-      // Now reflow...
-      rv = ReflowDirtyLines(state);
-      NS_ASSERTION(NS_SUCCEEDED(rv), "reflow dirty lines failed");
       if (NS_FAILED(rv)) return rv;
     }
     break;
