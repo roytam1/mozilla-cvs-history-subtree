@@ -496,6 +496,16 @@ PRStatus
 _PR_MD_CLOSE_DIR(_MDDir *d)
 {
     if ( d ) {
+#if defined(WINCE)
+        /*
+        ** Handle case where we faked no more files.
+        ** FindFirstFile likes to return ERROR_NO_MORE_FILES itself.
+        */
+        if (NULL == d->d_hdl) {
+            d->magic = (PRUint32)-1;
+            return PR_SUCCESS;
+        } else
+#endif /* WINCE */
         if (FindClose(d->d_hdl)) {
         d->magic = (PRUint32)-1;
         return PR_SUCCESS;
@@ -543,6 +553,15 @@ _PR_MD_OPEN_DIR(_MDDir *d, const char *name)
         if(NULL != ceResult)
         {
             d->d_hdl = FindFirstFile( ceFileName, &(d->d_entry) );
+
+            /*
+            ** WINCE likes to report no files on the first call....
+            */
+            if(INVALID_HANDLE_VALUE == d->d_hdl && ERROR_NO_MORE_FILES == GetLastError())
+            {
+                d->d_hdl = NULL;
+                SetLastError(NO_ERROR);
+            }
         }
         else
         {
@@ -554,7 +573,19 @@ _PR_MD_OPEN_DIR(_MDDir *d, const char *name)
 		_PR_MD_MAP_OPENDIR_ERROR(GetLastError());
         return PR_FAILURE;
     }
+#if !defined(WINCE)
     d->firstEntry = PR_TRUE;
+#else /* WINCE */
+    /*
+    **  If we are having to fake ERROR_NO_MORE_FILES on wince, make sure we
+    **    have _PR_MD_READ_DIR act correctly.
+    */
+    if (NULL != d->d_hdl) {
+        d->firstEntry = PR_TRUE;
+    } else {
+        d->firstEntry = PR_FALSE;
+    }
+#endif /* WINCE */
     d->magic = _MD_MAGIC_DIR;
     return PR_SUCCESS;
 }
@@ -574,9 +605,20 @@ _PR_MD_READ_DIR(_MDDir *d, PRIntn flags)
             } else {
 #if !defined(WINCE)
                 rv = FindNextFile(d->d_hdl, &(d->d_entry));
-#else
-                rv = FindNextFile(d->d_hdl, &(d->d_entry));
-#endif
+#else /* WINCE */
+                if (NULL != d->d_hdl) {
+                    rv = FindNextFile(d->d_hdl, &(d->d_entry));
+                } else {
+                    /*
+                    ** Fake the no more files we'd normally expect.
+                    ** All of this magic started by setting d_hdl to NULL
+                    **   in _PR_MD_OPEN_DIR because FindFirstFile likes to
+                    **   return ERROR_NO_MORE_FILES itself.
+                    */
+                    rv = 0;
+                    SetLastError(ERROR_NO_MORE_FILES);
+                }
+#endif /* WINCE */
             }
             if (rv == 0) {
                 break;
