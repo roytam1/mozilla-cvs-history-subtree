@@ -411,6 +411,22 @@ NS_IMETHODIMP nsOutlinerSelection::RangedSelect(PRInt32 aStartIndex, PRInt32 aEn
   return NS_OK;
 }
 
+NS_IMETHODIMP nsOutlinerSelection::ClearRange(PRInt32 aStartIndex, PRInt32 aEndIndex)
+{
+  SetCurrentIndex(aEndIndex);
+
+  if (mFirstRange) {
+    PRInt32 start = aStartIndex < aEndIndex ? aStartIndex : aEndIndex;
+    PRInt32 end = aStartIndex < aEndIndex ? aEndIndex : aStartIndex;
+
+    mFirstRange->RemoveRange(start, end);
+
+    mOutliner->InvalidateRange(start, end);
+  }
+  
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsOutlinerSelection::ClearSelection()
 {
   if (mFirstRange) {

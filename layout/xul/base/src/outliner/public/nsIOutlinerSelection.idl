@@ -50,6 +50,9 @@ interface nsIOutlinerSelection : nsISecurityCheckedComponent
   // else.  If augment is false, everything is cleared except for the specified range.
   void rangedSelect(in long startIndex, in long endIndex, in boolean augment);
 
+  // Clears the range.
+  void clearRange(in long startIndex, in long endIndex);
+
   // Clears the selection.
   void clearSelection();
 
