@@ -109,45 +109,19 @@ function RenameFolder(name,uri)
 
 function MsgEmptyTrash() 
 {
-    var tree = GetFolderTree();
-    if (tree)
+    var folderOutliner = GetFolderOutliner();
+    var startIndex = {};
+    var endIndex = {};
+    folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startIndex, endIndex);
+    if (startIndex.value >= 0)
     {
-        var folderList = tree.selectedItems;
-        if (folderList)
-        {
-            var folder;
-            folder = folderList[0];
-            if (folder)
-			{
-                var trashUri = GetSelectTrashUri(folder);
-                if (trashUri)
-                {
-                    var trashElement = document.getElementById(trashUri);
-                    if (trashElement)
-                    {
-                        dump ('found trash folder\n');
-                        trashElement.setAttribute('open','');
-                    }
-                    var trashSelected = IsSpecialFolderSelected(MSG_FOLDER_FLAG_TRASH);
-                    if(trashSelected)
-                    {
-                        tree.clearItemSelection();
-                    }
-                    try {
-                          messenger.EmptyTrash(tree.database, folder.resource);
-                      }
-                      catch(e)
-                       {  
-                          dump ("Exception : messenger.EmptyTrash \n");
-                       }
-                    if (trashSelected)
-                    {
-                        trashElement = document.getElementById(trashUri);
-                        if (trashElement)
-                            ChangeSelection(tree, trashElement);
-                    }
-                }
-			}
+        var folderResource = GetFolderResource(startIndex.value);
+        try {
+            messenger.EmptyTrash(GetFolderDatasource(), folderResource);
+        }
+            catch(e)
+        {  
+            dump ("Exception : messenger.EmptyTrash \n");
         }
     }
 }
