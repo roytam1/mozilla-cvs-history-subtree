@@ -85,7 +85,7 @@
 #include "nsIDOMHTMLMapElement.h"
 #include "nsBoxLayoutState.h"
 #include "nsIDOMDocument.h"
-#include "nsIEventQueueService.h"
+#include "nsEventQueueUtils.h"
 #include "nsTransform2D.h"
 #include "nsITheme.h"
 
@@ -171,11 +171,11 @@ DestroyImagePLEvent(PLEvent* aEvent)
 // is loaded from the netswork the notifications come back
 // asynchronously.
 
+static NS_DEFINE_CID(kEventQueueServiceCID,   NS_EVENTQUEUESERVICE_CID);
+
 void
 FireDOMEvent(nsIContent* aContent, PRUint32 aMessage)
 {
-  static NS_DEFINE_CID(kEventQueueServiceCID,   NS_EVENTQUEUESERVICE_CID);
-
   nsCOMPtr<nsIEventQueueService> event_service =
     do_GetService(kEventQueueServiceCID);
 
@@ -230,6 +230,80 @@ FireDOMEvent(nsIContent* aContent, PRUint32 aMessage)
   NS_ADDREF(aContent);
 
   event_queue->PostEvent(event);
+}
+
+static void* HandleCancelEvent(PLEvent *aEvent);
+static void DestroyCancelEvent(PLEvent *aEvent);
+
+class CancelImageRequestEvent : public PLEvent {
+public:
+  static void PostCancelRequest(imgIRequest* aRequest,
+                                imgIDecoderObserver *aListener);
+
+  friend void* HandleCancelEvent(PLEvent *aEvent);
+  friend void DestroyCancelEvent(PLEvent *aEvent);
+
+private:
+  static CancelImageRequestEvent* gEvent;
+  nsCOMArray<imgIRequest> mRequests;
+  nsCOMArray<imgIDecoderObserver> mListeners;
+};
+
+/* static */ CancelImageRequestEvent* CancelImageRequestEvent::gEvent = nsnull;
+
+/* static */ void
+CancelImageRequestEvent::PostCancelRequest(imgIRequest* aRequest,
+                                           imgIDecoderObserver *aListener)
+{
+  if (!gEvent) {
+    nsCOMPtr<nsIEventQueue> eventQ;
+    NS_GetCurrentEventQ(getter_AddRefs(eventQ));
+    gEvent = new CancelImageRequestEvent();
+    if (!eventQ || !gEvent) {
+      // Cancel now since the listener is going to go away
+      aRequest->Cancel(NS_ERROR_FAILURE);
+      delete gEvent;
+      gEvent = nsnull;
+      return;
+    }
+    PL_InitEvent(gEvent, nsnull, HandleCancelEvent, DestroyCancelEvent);
+
+    nsresult rv = eventQ->PostEvent(gEvent);
+    if (NS_FAILED(rv)) {
+      // Cancel now since the listener is going to go away
+      aRequest->Cancel(NS_ERROR_FAILURE);
+      PL_DestroyEvent(gEvent);
+      gEvent = nsnull;
+      return;
+    }
+  }
+
+  gEvent->mRequests.AppendObject(aRequest);
+  gEvent->mListeners.AppendObject(aListener);
+}
+
+static void* HandleCancelEvent(PLEvent *aEvent)
+{
+  CancelImageRequestEvent *event =
+    NS_STATIC_CAST(CancelImageRequestEvent*, aEvent);
+
+  NS_ASSERTION(CancelImageRequestEvent::gEvent == event, "multiple events");
+  CancelImageRequestEvent::gEvent = nsnull;
+
+  for (PRInt32 i = event->mRequests.Count() - 1; i >= 0; --i) {
+    event->mRequests[i]->Cancel(NS_ERROR_FAILURE);
+  }
+  event->mRequests.Clear();
+  event->mListeners.Clear();
+
+  return nsnull;
+}
+
+static void DestroyCancelEvent(PLEvent *aEvent)
+{
+  CancelImageRequestEvent *event =
+    NS_STATIC_CAST(CancelImageRequestEvent*, aEvent);
+  delete event;
 }
 
 //
@@ -296,7 +370,7 @@ nsImageBoxFrame::NeedsRecalc()
   return NS_OK;
 }
 
-NS_METHOD
+NS_IMETHODIMP
 nsImageBoxFrame::Destroy(nsIPresContext* aPresContext)
 {
   // Release image loader first so that it's refcnt can go to zero
@@ -304,7 +378,7 @@ nsImageBoxFrame::Destroy(nsIPresContext* aPresContext)
     mImageRequest->Cancel(NS_ERROR_FAILURE);
 
   if (mListener)
-    NS_REINTERPRET_CAST(nsImageBoxListener*, mListener.get())->SetFrame(nsnull); // set the frame to null so we don't send messages to a dead object.
+    mListener->SetFrame(nsnull);
 
   return nsLeafBoxFrame::Destroy(aPresContext);
 }
@@ -317,15 +391,6 @@ nsImageBoxFrame::Init(nsIPresContext*  aPresContext,
                           nsStyleContext*  aContext,
                           nsIFrame*        aPrevInFlow)
 {
-  if (!mListener) {
-    nsImageBoxListener *listener;
-    NS_NEWXPCOM(listener, nsImageBoxListener);
-    NS_ADDREF(listener);
-    listener->SetFrame(this);
-    listener->QueryInterface(NS_GET_IID(imgIDecoderObserver), getter_AddRefs(mListener));
-    NS_RELEASE(listener);
-  }
-
   mSuppressStyleCheck = PR_TRUE;
   nsresult  rv = nsLeafBoxFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
   mSuppressStyleCheck = PR_FALSE;
@@ -391,6 +456,19 @@ nsImageBoxFrame::UpdateLoadFlags()
     mLoadFlags = nsIRequest::LOAD_NORMAL;
 }
 
+void
+nsImageBoxFrame::StopCurrentLoad()
+{
+  if (mListener) {
+    if (mImageRequest) {
+      CancelImageRequestEvent::PostCancelRequest(mImageRequest, mListener);
+      mImageRequest = nsnull;
+    }
+    mListener->SetFrame(nsnull);
+    mListener = nsnull;
+  }
+}
+
 PRBool
 nsImageBoxFrame::UpdateImage()
 {
@@ -398,12 +476,7 @@ nsImageBoxFrame::UpdateImage()
   if (!mURI) {
     mSizeFrozen = PR_TRUE;
     mHasImage = PR_FALSE;
-
-    if (mImageRequest) {
-      mImageRequest->Cancel(NS_ERROR_FAILURE);
-      mImageRequest = nsnull;
-    }
-
+    StopCurrentLoad();
     return PR_TRUE;
   }
 
@@ -424,10 +497,7 @@ nsImageBoxFrame::UpdateImage()
   mHasImage = PR_TRUE;
 
   // otherwise, we need to load the new uri
-  if (mImageRequest) {
-    mImageRequest->Cancel(NS_ERROR_FAILURE);
-    mImageRequest = nsnull;
-  }
+  StopCurrentLoad();
 
   // Get the document URI for the referrer...
   nsCOMPtr<nsIDocument> doc;
@@ -436,8 +506,13 @@ nsImageBoxFrame::UpdateImage()
   }
 
   if (nsContentUtils::CanLoadImage(mURI, mContent, doc)) {
-    nsContentUtils::LoadImage(mURI, doc, mListener, mLoadFlags,
-                              getter_AddRefs(mImageRequest));
+    NS_ASSERTION(!mListener, "should not have listener");
+    NS_NEWXPCOM(mListener, nsImageBoxListener);
+    if (mListener) {
+      mListener->SetFrame(this);
+      nsContentUtils::LoadImage(mURI, doc, mListener, mLoadFlags,
+                                getter_AddRefs(mImageRequest));
+    }
   }
 
   return PR_TRUE;

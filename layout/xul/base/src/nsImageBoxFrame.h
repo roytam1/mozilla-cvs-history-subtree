@@ -46,7 +46,7 @@
 
 class nsImageBoxFrame;
 
-class nsImageBoxListener : imgIDecoderObserver
+class nsImageBoxListener : public imgIDecoderObserver
 {
 public:
   nsImageBoxListener();
@@ -117,6 +117,8 @@ public:
    */
   void UpdateLoadFlags();
 
+  void StopCurrentLoad();
+
   NS_IMETHOD  Paint(nsIPresContext*      aPresContext,
                     nsIRenderingContext& aRenderingContext,
                     const nsRect&        aDirtyRect,
@@ -152,7 +154,7 @@ protected:
 private:
 
   nsCOMPtr<imgIRequest> mImageRequest;
-  nsCOMPtr<imgIDecoderObserver> mListener;
+  nsRefPtr<nsImageBoxListener> mListener;
 
   nsCOMPtr<nsIURI> mURI; ///< The URI of the image.
 
