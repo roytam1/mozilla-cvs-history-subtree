@@ -4722,7 +4722,7 @@ GlobalWindowImpl::OpenInternal(const nsAString& aUrl,
         do_QueryInterface(NS_STATIC_CAST(nsIDOMWindow *, this));
       if (!thisChrome) {
 
-        PRInt32 restrictionPref = 2;
+        PRInt32 restrictionPref = 0;
         gPrefBranch->GetIntPref("browser.link.open_newwindow", &containerPref);
         gPrefBranch->GetIntPref("browser.link.open_newwindow.restriction",
                                 &restrictionPref);
