@@ -41,7 +41,7 @@
    *
    * Represents a tuple of string fragments.  Built as a recursive binary tree.
    */
-class NS_COM nsTStringTuple_CharT
+class nsTStringTuple_CharT
   {
     public:
 
@@ -70,20 +70,20 @@ class NS_COM nsTStringTuple_CharT
         /**
          * computes the aggregate string length
          */
-      size_type Length() const;
+      NS_COM size_type Length() const;
 
         /**
          * writes the aggregate string to the given buffer.  bufLen is assumed
          * to be equal to or greater than the value returned by the Length()
          * method.  the string written to |buf| is not null-terminated.
          */
-      void WriteTo(char_type *buf, PRUint32 bufLen) const;
+      NS_COM void WriteTo(char_type *buf, PRUint32 bufLen) const;
 
         /**
          * returns true if this tuple is dependent on (i.e., overlapping with)
          * the given char sequence.
          */
-      PRBool IsDependentOn(const char_type *start, const char_type *end) const;
+      NS_COM PRBool IsDependentOn(const char_type *start, const char_type *end) const;
 
     private:
 

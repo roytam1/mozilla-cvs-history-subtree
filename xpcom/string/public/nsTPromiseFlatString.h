@@ -91,7 +91,7 @@
    * the right thing happens.
    */
 
-class NS_COM nsTPromiseFlatString_CharT : public nsTString_CharT
+class nsTPromiseFlatString_CharT : public nsTString_CharT
   {
     public:
 
@@ -106,8 +106,8 @@ class NS_COM nsTPromiseFlatString_CharT : public nsTString_CharT
 
     private:
 
-      void Init( const string_base_type& );
-      void Init( const abstract_string_type& );
+      NS_COM void Init( const string_base_type& );
+      NS_COM void Init( const abstract_string_type& );
 
         // NOT TO BE IMPLEMENTED
       void operator=( const self_type& );

@@ -529,7 +529,7 @@ class nsTAutoString_CharT : public nsTString_CharT
 
       friend class nsTStringBase_CharT;
 
-      void Init( const CBufDescriptor& aBufDesc );
+      NS_COM void Init( const CBufDescriptor& aBufDesc );
 
       size_type mFixedCapacity;
       char_type mFixedBuf[kDefaultStringSize];
