@@ -379,8 +379,8 @@ nsPresContext::SetShell(nsIPresShell* aShell)
 					else if (mBidioptions.mtexttype != IBMBIDI_TEXTTYPE_LOGICAL) {
             // XXX shouldn't be hard-coded.
             if ( (charset.EqualsIgnoreCase("visual") )
-                || (charset.EqualsIgnoreCase("ibm-864") )           // Arabic
-                || (charset.EqualsIgnoreCase("ibm-862") )           // Hebrew
+                || (charset.EqualsIgnoreCase("ibm864") )           // Arabic//ahmed
+                || (charset.EqualsIgnoreCase("ibm862") )           // Hebrew
                 || (charset.EqualsIgnoreCase("iso-8859-8") ) ) {    // Hebrew
               isVisual = PR_TRUE;
             }

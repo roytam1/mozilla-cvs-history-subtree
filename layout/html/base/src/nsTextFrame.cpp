@@ -67,6 +67,8 @@
 #include "nsIServiceManager.h"
 
 #ifdef IBMBIDI
+//ahmed
+static NS_DEFINE_CID(kBidiCID, NS_BIDI_CID);
 // {2DC80A03-66EF-11d4-BA58-006008CD3717}
 #define NS_TEXT_FRAME_CID \
 { 0x2dc80a03, 0x66ef, 0x11d4, { 0xba, 0x58, 0x00, 0x60, 0x08, 0xcd, 0x37, 0x17 } }
@@ -1921,6 +1923,25 @@ nsTextFrame::PaintUnicodeText(nsIPresContext* aPresContext,
                                      level & 1,  isBidiSystem);
       }
     }
+//ahmed for visual rtl
+		nsBidiOptions mBidiop;
+		PRBool mIsvisual;
+    aPresContext->IsVisualMode(mIsvisual);
+    aPresContext->GetBidi(&mBidiop);
+		nsAutoString charset;
+		if((mIsvisual)&&(mBidiop.mdirection==IBMBIDI_TEXTDIRECTION_RTL)){
+		 	PRUnichar buffer[8192];
+	  	PRInt32 newLen;
+	  	nsresult rv;
+	  	NS_WITH_SERVICE(nsIBidi, bidiEngine, kBidiCID, &rv);
+	  	bidiEngine->writeReverse(text,textLength, buffer,
+                                   UBIDI_REMOVE_BIDI_CONTROLS | UBIDI_DO_MIRRORING,
+                                   &newLen);
+      for (PRInt32 i = 0; i < newLen; i++) {
+      text[i] = buffer[i];
+    }
+	}
+
     if (0 != textLength) { // textLength might change due to the bidi formattimg
 #endif // IBMBIDI
     if (!displaySelection || !isSelected ) //draw text normally
