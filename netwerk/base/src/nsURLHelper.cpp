@@ -219,6 +219,34 @@ net_CoalesceDirsRel(char* io_Path)
      */
     char *fwdPtr = io_Path;
     char *urlPtr = io_Path;
+
+    /* replace all %2E or %2e with . in the path */ 
+    for(; (*fwdPtr != '\0') && 
+            (*fwdPtr != '?') && 
+            (*fwdPtr != '#'); ++fwdPtr)
+    {
+        if (*fwdPtr == '%' && *(fwdPtr+1) == '2' && 
+            (*(fwdPtr+2) == 'E' || *(fwdPtr+2) == 'e'))
+        {
+            *urlPtr++ = '.';
+            ++fwdPtr;
+            ++fwdPtr;
+        } 
+        else 
+        {
+            *urlPtr++ = *fwdPtr;
+        }
+    }
+    // Copy remaining stuff past the #?;
+    for (; *fwdPtr != '\0'; ++fwdPtr)
+    {
+        *urlPtr++ = *fwdPtr;
+    }
+    *urlPtr = '\0';  // terminate the url 
+
+    // start again, this time for real 
+    fwdPtr = io_Path;
+    urlPtr = io_Path;
     
     for(; (*fwdPtr != '\0') && 
             (*fwdPtr != '?') && 
@@ -294,6 +322,34 @@ net_CoalesceDirsAbs(char* io_Path)
     char *fwdPtr = io_Path;
     char *urlPtr = io_Path;
     PRUint32 traversal = 0;
+
+    /* replace all %2E or %2e with . in the path */ 
+    for(; (*fwdPtr != '\0') && 
+            (*fwdPtr != '?') && 
+            (*fwdPtr != '#'); ++fwdPtr)
+    {
+        if (*fwdPtr == '%' && *(fwdPtr+1) == '2' && 
+            (*(fwdPtr+2) == 'E' || *(fwdPtr+2) == 'e'))
+        {
+            *urlPtr++ = '.';
+            ++fwdPtr;
+            ++fwdPtr;
+        } 
+        else 
+        {
+            *urlPtr++ = *fwdPtr;
+        }
+    }
+    // Copy remaining stuff past the #?;
+    for (; *fwdPtr != '\0'; ++fwdPtr)
+    {
+        *urlPtr++ = *fwdPtr;
+    }
+    *urlPtr = '\0';  // terminate the url 
+
+    // start again, this time for real 
+    fwdPtr = io_Path;
+    urlPtr = io_Path;
 
     for(; (*fwdPtr != '\0') && 
             (*fwdPtr != '?') && 
