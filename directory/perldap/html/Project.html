@@ -138,8 +138,7 @@ important that a module or method doesn't work without it). The oustanding
     $del is defined or not, or the strict parsing will complain. Reported
     by James Briggs <briggsja@netscape.com>. There's a few of these in the
     code, I tried to fix as many as possible before shipping v1.0, some
-    were still left... We should change all such occurences, and add tests
-    using "if defined()". <B><I>[leif]</I></B>
+    were still left... <B><I>[leif, fixed 09/12]</I></B>
 
     <LI><B>Conn.pm</B>: Bug fix for case sensitivity on searches for
     specific attributes. <B><I>[leif, fixed 09/03]</I></B>
@@ -165,6 +164,11 @@ important that a module or method doesn't work without it). The oustanding
     the modifyRDN() method. This is reported by LHOIR Sébastien"
     <lhoir@smd.ucl.ac.be>. <B><I>[leif]</I></B>
 
+    <LI><B>Makefile.PL</B>: Include/merge patch from ActiveState, to fix
+    problems with Perl-5.005 and Win/NT. We need to verify that this
+    builds and runs with both the ActiveState port, and a native Perl/NT
+    build.
+
   </UL>
 
   <LI><FONT size=+1>Additional methods, changes to methods, or new
@@ -175,12 +179,6 @@ important that a module or method doesn't work without it). The oustanding
     e.g. in a Web server. This method is now named simpleAuth(), since it
     will only accept simple authentication. <B><I>[leif, added/tested
     09/08]</I></B>
-
-    <LI><B>LDIF.pm</B>: Two methods to generate LDIF "update" files as
-    well (from changes made to an ::Entry object). <B><I>[leif]</I></B>
-
-    <LI><B>LDIF.pm</B>: The write() methods needs to support Base64
-    encoding, as well as continuation lines (if opted). <B><I>[leif]</I></B>
 
     <LI><B>Makefile.PL</B>: Add build targets for creating HTML docs, and
     to produce binary distributions. We already have the source
@@ -240,6 +238,12 @@ a followup on new features etc.
   <LI><FONT size=+1>Additional methods, changes to methods, or new
   features to existing modules</FONT>
   <UL>
+    <LI><B>LDIF.pm</B>: Two methods to generate LDIF "update" files as
+    well (from changes made to an ::Entry object). <B><I>[leif]</I></B>
+
+    <LI><B>LDIF.pm</B>: The write() methods needs to support Base64
+    encoding, as well as continuation lines (if opted). <B><I>[leif]</I></B>
+
     <LI>Update API with whatever changes are made to the C SDK in the
     final RTM release (SDK v3.0 is still beta).
 
