@@ -111,10 +111,10 @@ med3(a, b, c, cmp)
 }
 
 void XP_QSORT (
-	void *a,
-	unsigned n,
-    unsigned es,
-	cmp_t *cmp
+    void *a,
+    size_t n,
+    size_t es,
+    cmp_t *cmp
     )
 {
 	char *pa, *pb, *pc, *pd, *pl, *pm, *pn;
