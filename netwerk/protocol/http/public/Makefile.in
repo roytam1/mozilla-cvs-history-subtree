@@ -32,8 +32,7 @@ XPIDLSRCS = \
 		nsIHttpChannel.idl \
 		nsIHttpProtocolHandler.idl \
 		nsIHttpEventSink.idl \
+        nsIHttpNotify.idl \
 		$(NULL)
-
-		#nsIHttpNotify.idl \
 
 include $(topsrcdir)/config/rules.mk
