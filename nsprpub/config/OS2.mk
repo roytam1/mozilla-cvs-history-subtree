@@ -58,8 +58,8 @@ XP_DEFINE 		= -DXP_PC
 LIB_SUFFIX 		= lib
 DLL_SUFFIX 		= dll
 
-OS_CFLAGS     		= -I. -W3 -gm -gd+ -sd- -su4 -ge-
-OS_EXE_CFLAGS 		= -I. -W3 -gm -gd+ -sd- -su4 
+OS_CFLAGS     		= -W3 -Wcnd- -gm -gd+ -sd- -su4 -ge-
+OS_EXE_CFLAGS 		= -W3 -Wcnd- -gm -gd+ -sd- -su4 
 AR_EXTRA_ARGS 		= ,,
 
 ifdef BUILD_OPT
@@ -70,16 +70,16 @@ EXEFLAGS    		= -PMTYPE:VIO -OUT:$@ -MAP:$(@:.exe=.map) -nologo -NOE
 OBJDIR_TAG 		= _OPT
 else
 OPTIMIZER		= -Ti+
-DEFINES 		= -DDEBUG -D_DEBUG -UNDEBUG
+DEFINES 		= -DDEBUG -D_DEBUG -DDEBUGPRINTS
 DLLFLAGS		= -DEBUG -DLL -OUT:$@ -MAP:$(@:.dll=.map)
 EXEFLAGS    		= -DEBUG -PMTYPE:VIO -OUT:$@ -MAP:$(@:.exe=.map) -nologo -NOE
 OBJDIR_TAG 		= _DBG
 LDFLAGS 		= -DEBUG 
 endif
 
-DEFINES += -DOS2=4 -DBSD_SELECT
+DEFINES += -DOS2=4
 DEFINES += -D_X86_
-DEFINES += -D_PR_GLOBAL_THREADS_ONLY
+DEFINES += -D_PR_GLOBAL_THREADS_ONLY -DBSD_SELECT
 
 # Name of the binary code directories
 ifdef MOZ_LITE
@@ -105,22 +105,22 @@ FILTER  		= emxexp
 IMPLIB  		= emximp -o
 
 # Determine which object format to use.  Two choices:
-# a.out and omf.  We default to a.out.
-ifeq ($(MOZ_OS2_EMX_OBJECTFORMAT), OMF)
+# a.out and omf.  We default to omf.
+ifeq ($(MOZ_OS2_EMX_OBJECTFORMAT), A.OUT)
+AR      	= ar -q $@
+LIB_SUFFIX	= a
+else
 OMF_FLAG 	= -Zomf
 AR		= emxomfar r $@
 LIB_SUFFIX	= lib
-else
-AR      	= ar -q $@
-LIB_SUFFIX	= a
 endif
 
 OS_LIBS     		= -lsocket -lemxio
 
 DEFINES += -DXP_OS2_EMX
 
-OS_CFLAGS     		= $(OMF_FLAG) -I. -Wall -Zmt
-OS_EXE_CFLAGS 		= $(OMF_FLAG) -I. -Wall -Zmt
+OS_CFLAGS     		= $(OMF_FLAG) -Wall -Wno-unused -Zmt
+OS_EXE_CFLAGS 		= $(OMF_FLAG) -Wall -Wno-unused -Zmt
 OS_DLLFLAGS 		= $(OMF_FLAG) -Zmt -Zdll -Zcrtdll -o $@
 
 ifdef BUILD_OPT
