@@ -535,7 +535,7 @@ public void eventDispatched(WebclientEvent event)
             statusLabel.setText("Done.");
             currentDocument = currentPage.getDOM();
             // add the new document to the domViewer
-            if (null != domViewer) {
+            if (null != currentDocument && null != domViewer) {
                 domViewer.setDocument(currentDocument);
             }
 
