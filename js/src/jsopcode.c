@@ -1678,64 +1678,43 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 		todo = Sprint(&ss->sprinter, "%u", (unsigned) i);
 		break;
 
-	      case JSOP_NUMBER:
-	      case JSOP_STRING:
-	      case JSOP_OBJECT:
-	      case JSOP_ANONFUNOBJ:
-	      case JSOP_NAMEDFUNOBJ:
-		atom = GET_ATOM(cx, jp->script, pc);
-		key = ATOM_KEY(atom);
-		if (JSVAL_IS_INT(key)) {
-		    long ival = (long)JSVAL_TO_INT(key);
-		    todo = Sprint(&ss->sprinter, "%ld", ival);
-		} else if (JSVAL_IS_DOUBLE(key)) {
-		    char buf[DTOSTR_STANDARD_BUFFER_SIZE];
-		    char *numStr = JS_dtostr(buf, sizeof buf, DTOSTR_STANDARD,
+              case JSOP_NUMBER:
+                atom = GET_ATOM(cx, jp->script, pc);
+                key = ATOM_KEY(atom);
+                if (JSVAL_IS_INT(key)) {
+                    long ival = (long)JSVAL_TO_INT(key);
+                    todo = Sprint(&ss->sprinter, "%ld", ival);
+                } else {
+                    char buf[DTOSTR_STANDARD_BUFFER_SIZE];
+                    char *numStr = JS_dtostr(buf, sizeof buf, DTOSTR_STANDARD,
                                              0, *JSVAL_TO_DOUBLE(key));
-		    if (!numStr) {
-			JS_ReportOutOfMemory(cx);
-			return JS_FALSE;
-		    }
-		    todo = Sprint(&ss->sprinter, numStr);
-		} else if (JSVAL_IS_STRING(key)) {
-		    rval = QuoteString(&ss->sprinter, ATOM_TO_STRING(atom),
-				       (jschar)'"');
-		    if (!rval)
-			return JS_FALSE;
-		    todo = Sprint(&ss->sprinter, "%s", rval);
-		} else if (JSVAL_IS_OBJECT(key)) {
-#if JS_HAS_LEXICAL_CLOSURE
-		    if (JSVAL_IS_FUNCTION(cx, key)) {
-                        obj = ATOM_TO_OBJECT(atom);
-                        fun = JS_GetPrivate(cx, obj);
-                        jp2 = js_NewPrinter(cx, JS_GetFunctionName(fun),
-                                            jp->indent, JS_FALSE);
-                        if (!jp2)
-                            return JS_FALSE;
-                        jp2->scope = jp->scope;
-                        todo = -1;
-                        if (js_DecompileFunction(jp2, fun)) {
-                            str = js_GetPrinterOutput(jp2);
-                            if (str) {
-                                todo = SprintPut(&ss->sprinter,
-                                                 JS_GetStringBytes(str),
-                                                 str->length);
-                            }
-                        }
-                        js_DestroyPrinter(jp2);
-                        break;
+                    if (!numStr) {
+                        JS_ReportOutOfMemory(cx);
+                        return JS_FALSE;
                     }
-#endif
-		    str = js_ValueToString(cx, key);
-		    if (!str)
-			return JS_FALSE;
-		    todo = SprintPut(&ss->sprinter,
-				     JS_GetStringBytes(str),
-				     str->length);
-		} else {
-		    todo = -2;
-		}
-		break;
+                    todo = Sprint(&ss->sprinter, numStr);
+                }
+                break;
+
+              case JSOP_STRING:
+                atom = GET_ATOM(cx, jp->script, pc);
+                rval = QuoteString(&ss->sprinter, ATOM_TO_STRING(atom),
+                                   (jschar)'"');
+                if (!rval)
+                    return JS_FALSE;
+                todo = Sprint(&ss->sprinter, "%s", rval);
+                break;
+
+              case JSOP_OBJECT:
+              case JSOP_ANONFUNOBJ:
+              case JSOP_NAMEDFUNOBJ:
+                atom = GET_ATOM(cx, jp->script, pc);
+                str = js_ValueToSource(cx, ATOM_KEY(atom));
+                if (!str)
+                    return JS_FALSE;
+                todo = SprintPut(&ss->sprinter, JS_GetStringBytes(str),
+                                 str->length);
+                break;
 
 #if JS_HAS_SWITCH_STATEMENT
 	      case JSOP_TABLESWITCH:
