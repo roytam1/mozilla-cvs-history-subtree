@@ -162,7 +162,7 @@ enum icstate {
 
 /* Force memory cache to be flushed ? */
 #define FORCE_RELOAD(reload_method)                                           \
- (((reload_method)==NET_NORMAL_RELOAD) || ((reload_method)==NET_SUPER_RELOAD))
+    (reload_method > IMG_NTWK_SERVER)
 
 /* Simple list of image contexts. */
 struct il_context_list {
