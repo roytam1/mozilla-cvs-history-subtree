@@ -345,7 +345,6 @@ js_ReportErrorNumberVA(JSContext *cx, uintN flags, JSErrorCallback callback,
 				 &message, &report, charArgs, ap))
 	return;
 
-#if JS_HAS_ERROR_EXCEPTIONS
     /*
      * Check the error report, and set a JavaScript-catchable exception
      * if the error is defined to have an associated exception.  If an
@@ -358,6 +357,7 @@ js_ReportErrorNumberVA(JSContext *cx, uintN flags, JSErrorCallback callback,
     if (errorNumber == JSMSG_UNCAUGHT_EXCEPTION)
         report.flags |= JSREPORT_EXCEPTION;
     
+#if JS_HAS_ERROR_EXCEPTIONS
     /* 
      * Only call the error reporter if an exception wasn't raised. 
      *
