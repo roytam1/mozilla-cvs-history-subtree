@@ -1,0 +1,20 @@
+<!ENTITY lHeader "Características web">
+<!ENTITY enbJavaCheck.label "Habilitar Java">
+<!ENTITY enbJavaCheck.accesskey "J">
+<!ENTITY enableJavaScript.label "Habilitar JavaScript">
+<!ENTITY enableJavaScript.accesskey "S">
+<!ENTITY advancedJavaScript.label "Avanzado...">
+<!ENTITY advancedJavaScript.accesskey "A">
+<!ENTITY enableImages.label "Cargar imágenes">
+<!ENTITY enableImages.accesskey "i">
+<!ENTITY forOriginatingSiteOnly.label "para el sitio web original solamente">
+<!ENTITY forOriginatingSiteOnly.accesskey "w">
+<!ENTITY manageImages.label "Permisos...">
+<!ENTITY manageImages.accesskey "P">
+<!ENTITY popupReject.label "Bloquear ventanas emergentes">
+<!ENTITY popupReject.accesskey "B">
+<!ENTITY  enableSoftwareUpdate.label        "Permitir que los sitios web instalen software">
+<!ENTITY  enableSoftwareUpdate.accesskey    "i">
+
+<!ENTITY  exceptions.label                  "Excepciones">
+

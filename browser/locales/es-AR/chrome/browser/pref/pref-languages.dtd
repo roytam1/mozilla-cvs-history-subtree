@@ -1,0 +1,18 @@
+<!-- LOCALIZATION NOTE : 'Languages' preferences dialog -->
+<!ENTITY languages.customize.Header "Idiomas y codificación de caracteres">
+<!ENTITY languages.customize.label "Idiomas">
+<!ENTITY languages.customize.prefLangDescript "Las páginas web a veces se ofrecen en más de un idioma. Seleccione idiomas para mostrar estas páginas, en orden de preferencia.">
+<!ENTITY languages.customize.active.label "Idiomas en orden de preferencia:">
+<!ENTITY languages.customize.Charset.grouplabel "Codificación de caracteres">
+<!ENTITY languages.customize.DefaultCharset.label "Codificación de caracteres predeterminada:">
+<!ENTITY languages.customize.DefaultCharset.accesskey "C">
+<!ENTITY languages.customize.moveUp.label "Mover arriba">
+<!ENTITY languages.customize.moveUp.accesskey "i">
+<!ENTITY languages.customize.moveDown.label "Mover abajo">
+<!ENTITY languages.customize.moveDown.accesskey "j">
+<!ENTITY languages.customize.deleteButton.label "Remover">
+<!ENTITY languages.customize.deleteButton.accesskey "R">
+<!ENTITY languages.customize.selectLanguage.label "Seleccionar un idioma para agregar...">
+<!ENTITY languages.customize.selectLanguage.accesskey "S">
+<!ENTITY languages.customize.addButton.label "Agregar">
+<!ENTITY languages.customize.addButton.accesskey "A">

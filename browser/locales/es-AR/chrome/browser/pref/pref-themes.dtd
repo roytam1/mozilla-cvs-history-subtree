@@ -1,0 +1,14 @@
+<!--LOCALIZATION NOTE : FILE Theme management prefs -->
+<!ENTITY lHeader "Temas">
+<!ENTITY skinIntro.label "Seleccionar un nuevo tema cambia la forma de los botones, cajas de diálogo, menúes, barras de herramientas, y otros ítems..">
+<!ENTITY installedThemes.label "Tema a usar:">
+<!ENTITY selectSkin.label "Aplicar tema">
+<!ENTITY selectSkin.accesskey "A">
+<!ENTITY uninstallSkin.label "Desinstalar tema">
+<!ENTITY uninstallSkin.accesskey "s">
+<!ENTITY general.label "General">
+<!ENTITY preview.label "Vista previa">
+<!ENTITY getNewThemes.label "Obtener nuevos temas">
+<!ENTITY author.tooltip "Cerrar opciones y visitar la página web del autor.">
+<!ENTITY getnew.tooltip "Cerrar opciones y visitar la página de ayuda de temas de Firefox">
+<!ENTITY getnew.url "http://texturizer.net/firefox/themes/">

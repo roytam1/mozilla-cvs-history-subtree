@@ -1,0 +1,31 @@
+<!ENTITY lHeader "General">
+<!ENTITY header2.label "Página de inicio">
+<!ENTITY location.label "Direccion(es):">
+<!ENTITY location.accesskey "i">
+<!ENTITY useCurrent.label "Usar página actual">
+<!ENTITY useCurrent.accesskey "c">
+<!ENTITY useCurrentMultiple.label "Usar páginas actuales">
+<!ENTITY useBookmark.label "Usar marcador...">
+<!ENTITY useBookmark.accesskey "U">
+<!ENTITY useBlank.label "Usar página en blanco">
+<!ENTITY useBlank.accesskey "b">
+<!ENTITY defaultBrowserGroup.label "Navegador predeterminado">
+<!ENTITY defaultBrowserButton.label "Asignar navegador por defecto">
+<!ENTITY makeDefaultText "Hacer que &brandShortName; sea su navegador predeterminado.">
+<!-- XXXben oh please, can we do better than this text-wise? -->
+<!ENTITY showConnections.label "Configuración de conexión...">
+<!ENTITY showConnections.accesskey "o">
+<!ENTITY proxiesInfo.label "Configurar proxys para acceder a internet.">
+<!ENTITY connectionsInfo.caption "Conexión">
+<!ENTITY fonts.caption "Tipos de letra y colores">
+<!ENTITY fontsInfo.label "Seleccione los tipos de letra y colores predeterminados para mostrar páginas.">
+<!ENTITY showFontsAndColors.label "Tipos de letra y colores...">
+<!ENTITY showFontsAndColors.accesskey "l">
+<!ENTITY languages.caption "Idiomas">
+<!ENTITY languagesInfo.label "Seleccione idiomas y codificación de caracteres por defecto para las páginas web.">
+<!ENTITY showLanguages.label "Idiomas...">
+<!ENTITY showLanguages.accesskey "d">
+<!ENTITY checkForDefault.label "&brandShortName; debería verificar si es el navegador predeterminado al iniciarse.">
+<!ENTITY checkForDefault.accesskey "b">
+<!ENTITY checkNow.label "Verificar ahora">
+<!ENTITY checkNow.accesskey "h">

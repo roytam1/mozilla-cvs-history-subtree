@@ -1,0 +1,51 @@
+<!ENTITY lHeader "Privacidad">
+<!ENTITY privacyDescription.label "Mientras navega la web, la información de donde ha estado, que ha hecho, etc se guarda en las siguientes áreas.">
+<!ENTITY history.label "Historial">
+<!ENTITY pageHis.label "Recordar páginas visitadas en los últimos">
+<!ENTITY pageHis.accesskey "R">
+<!ENTITY days.label "días">
+<!ENTITY clearHistory.label "Borrar">
+<!ENTITY cache.label "Caché">
+<!ENTITY cacheExplanation.label "Las páginas visitadas son guardadas en caché para una visión posterior más rápida.">
+<!ENTITY diskCache.label "Usar hasta:">
+<!ENTITY diskCache.accesskey "U">
+<!ENTITY kbytes "KB de disco para caché.">
+<!ENTITY clearCache.label "Borrar">
+<!ENTITY cookies.label "Cookies">
+<!ENTITY enableCookies.label "Habilitar cookies">
+<!ENTITY enableCookies.accesskey "c">
+<!ENTITY forOriginatingSiteOnly.label "para el sitio web original solamente">
+<!ENTITY forOriginatingSiteOnly.accesskey "w">
+<!ENTITY forCurrentSessionOnly.label "para la sesión actual solamente">
+<!ENTITY forCurrentSessionOnly.accesskey "s">
+<!ENTITY cookieExplanation.label "Las Cookies son unas delicadas delicias.">
+<!ENTITY butAskFirst.label "pero preguntar antes de aceptar">
+<!ENTITY butAskFirst.accesskey "g">
+<!ENTITY clearCookies.label "Borrar">
+<!ENTITY viewCookies.label "Ver cookies">
+<!ENTITY exceptions.label "Excepciones...">
+<!ENTITY formfill.label "Información guardada de formularios">
+<!ENTITY formfillDescription.label "La información ingresada en formularios en páginas web y la barra de búsquedas se guardan para facilitar el llenado de formularios y acelerar la búsqueda.">
+<!ENTITY formfillEnable.label "Guardar la información que ingrese en los formularios y la barra de búsqueda">
+<!ENTITY formfillEnable.accesskey "f">
+<!ENTITY clearFormfill.label "Borrar">
+<!ENTITY downloads.label "Historial del administrador de descargas">
+<!ENTITY downloadsDescription.label "El administrador de descargas lleva un registro de los archivos recientemente descargados.">
+<!ENTITY downloadsRetentionPolicy.label "Remover archivos del administrador de descargas:">
+<!ENTITY downloadsRemoveImmediately.label "Al descargar exitosamente">
+<!ENTITY downloadsRemoveExit.label "Al salir de &brandShortName;">
+<!ENTITY downloadsRemoveManually.label "Manualmente">
+<!ENTITY clearDownloads.label "Borrar">
+<!ENTITY passwords.label "Contraseñas guardadas">
+<!ENTITY passwordsDescription.label "La información de ingreso a sitios puede ser guardada en el administrador de contraseñas para no tener que reingresar sus datos cada vez que los visite. ">
+<!ENTITY passwordsEnable.label "Recordar contraseñas">
+<!ENTITY passwordsEnable.accesskey "d">
+<!ENTITY clearPasswords.label "Borrar">
+<!ENTITY viewPasswords.label "Ver contraseñas guardadas">
+<!ENTITY clearAll.label "Borrar todo">
+<!ENTITY clearAllDescription.label "Borrar toda la información guardada al navegar:">
+
+<!ENTITY cookieRetention.label             "Mantener cookies:">
+<!ENTITY acceptNormally.label "Aceptar cookies normalmente">
+<!ENTITY acceptForSession.label "Aceptar solamente para la sesión actual">
+<!ENTITY askAboutCookies.label "Preguntar por cada cookie">

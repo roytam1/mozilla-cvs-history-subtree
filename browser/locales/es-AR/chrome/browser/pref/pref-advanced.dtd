@@ -1,0 +1,92 @@
+<!--LOCALIZATION NOTE : FILE 'Advanced' prefs settings -->
+<!ENTITY lHeader "Avanzadas">
+<!ENTITY accessibility.label "Accesibilidad">
+<!ENTITY moveSystemCaret.label "Mover el cursor del sistema con cambios de foco/selección">
+<!ENTITY browsing.label "Navegación">
+<!ENTITY hideTabBar.label "Ocultar la barra de pestañas cuando sólo haya abierto un sitio web">
+<!ENTITY loadInBackground.label "Abrir enlaces en segundo plano">
+<!ENTITY useAutoScrolling.label "Usar desplazamiento automático">
+<!ENTITY useSmoothScrolling.label "Usar desplazamiento suave">
+<!ENTITY multimedia.label "Multimedia">
+<!ENTITY enableAutoImageResizing.label "Cambiar tamaño de las imágenes grandes para que entren en la ventana del navegador.">
+<!ENTITY security.label "Seguridad">
+<!ENTITY useSSL2.label "Usar SSL 2.0">
+<!ENTITY useSSL3.label "Usar SSL 3.0">
+<!ENTITY useTLS1.label "Usar TLS 1.0">
+<!ENTITY useTypeAheadFind.label "Usar búsqueda al tipear">
+<!ENTITY linksOnlyTypeAheadFind.label "sólo para buscar enlaces">
+
+<!-- Certs -->
+<!ENTITY certs.label "Certificados">
+<!ENTITY SSLClientAuthMethod "Selección de certificado de cliente">
+<!ENTITY certselect.description "Decidir como &brandShortName; selecciona un certificado de seguridad para presentar sitios web que requieran uno:">
+<!ENTITY certselect.auto "Seleccionar automáticamente">
+<!ENTITY certselect.ask "Preguntar cada vez">
+<!ENTITY managecerts.label "Administrar certificados">
+<!ENTITY managecerts.text "Usar el administrador de certificados para manejar sus certificados personales, así como otras personas y autoridades de certificados.">
+<!ENTITY managecerts.button "Manejar certificados...">
+<!ENTITY managecerts.accesskey "m">
+<!ENTITY managedevices.label "Administrar dispositivos de seguridad">
+<!ENTITY managedevices.text "Usar este botón para manejar sus dispositivos de seguridad, como smart cards.">
+<!ENTITY managedevices.button "Manejar dispositivos de seguridad...">
+<!ENTITY managedevices.accesskey "s">
+<!ENTITY validation.label "Validación">
+<!-- Validation -->
+<!ENTITY validation.title "Validación">
+<!ENTITY validation.crl.label "CRL">
+<!ENTITY validation.crl.description "Usar el administrador de CRL para manejar las listas de revocación de certificados (CRL) que están guardadas en  su base de datos de certificados.">
+<!ENTITY validation.managecrls.button "Administrar CRLs...">
+<!ENTITY validation.managecrls.accesskey "C">
+<!ENTITY validation.crlmanager.label "Administrar CRLs">
+<!ENTITY validation.crlname.label "Nombre">
+<!ENTITY validation.crllastupdate.label "Última actualización">
+<!ENTITY validation.crlnextupdate.label "Próxima actualización">
+<!ENTITY validation.crlautoupdateenabled.label "Actualizar automáticamente">
+<!ENTITY validation.crlautoupdatestatus.label "Estado de actualización automática">
+<!ENTITY validation.deletecrl.label "Borrar">
+<!ENTITY validation.updatecrl.label "Actualización">
+<!ENTITY validation.advanced.label "Opciones">
+<!ENTITY validation.crl.autoupdate.title "Preferencias de actualización automática de CRL">
+<!ENTITY validation.crl.autoupdate.enable.label "Habilitar actualización automática para esta CRL">
+<!ENTITY validation.crl.autoupdate.time.label1 "Actualización">
+<!ENTITY validation.crl.autoupdate.time.label2 "Día(s) antes de la fecha de la próxima actualización">
+<!ENTITY validation.crl.autoupdate.freq.label1 "Actualizar cada">
+<!ENTITY validation.crl.autoupdate.freq.label2 "Día(s)">
+<!ENTITY validation.crl.autoupdate.url.label "CRL será importado de:">
+<!ENTITY crl.import.status.title "Estado de importación CRL">
+<!ENTITY crl.import.success.message "La lista de revocación de certificados (CRL) fue importada exitosamente.">
+<!ENTITY crl.issuer.label "CRL emitido por:">
+<!ENTITY crl.issuer.org.label "Organización:">
+<!ENTITY crl.issuer.orgunit.label "Unidad:">
+<!ENTITY crl.import.nextupdate.label "Próxima actualización:">
+<!ENTITY crl.autoupdate.fail.cnt.label "Fallas anteriores de actualización consecutivas:">
+<!ENTITY crl.autoupdate.fail.reason.label "Detalles de la falla de la última actualización:">
+<!ENTITY ok.button "Aceptar">
+<!ENTITY cancel.button "Cancelar">
+<!ENTITY help.button "Ayuda">
+<!ENTITY edit.button "Opciones">
+<!ENTITY validation.ocsp.label "OCSP">
+<!ENTITY validation.ocsp.description "&brandShortName; puede usar el protocolo de estado de certificados online (OCSP) para verificar certificados. Haga que &brandShortName; use OCSP de la siguiente manera:">
+<!ENTITY disableOCSP.label "No usar OCSP para validar certificados">
+<!ENTITY certOCSP.label "Usar OCSP para validar solamente los certificados que especifiquen una URL de servicio OCSP">
+<!ENTITY proxyOCSP.label "Usar OCSP para validar todos los certificados usando esta URL y firmante:">
+<!ENTITY serviceURL.label "URL de servicio:">
+<!ENTITY serviceURL.accesskey "s">
+<!ENTITY signingCA.label "Firmante de respuesta:">
+<!ENTITY signingCA.accesskey "r">
+<!-- Software Update -->
+<!ENTITY browsing.label "Navegando">
+<!ENTITY softwareupdate.label "Actualización de software">
+<!ENTITY softwareupdateinfo.label "Verificar actualizaciones periódicamente a:">
+<!ENTITY enableSmartUpdate.label "&brandShortName;">
+<!ENTITY enableSmartUpdate.accesskey "F">
+<!ENTITY enableExtensionUpdate.label "Mis extensiones">
+<!ENTITY enableExtensionUpdate.accesskey "x">
+<!ENTITY enableAutoInstall.label "Descargar e instalar automáticamente las actualizaciones de las extensiones">
+<!ENTITY enableAutoInstall.accesskey "D">
+<!ENTITY checkNow.label "Verificar ahora">
+<!ENTITY checkNow.accesskey "h">
+
+
+<!ENTITY xpinstall.allowedSites.label     "Sitios permitidos">
+<!ENTITY xpinstall.allowedSites.accesskey "S">

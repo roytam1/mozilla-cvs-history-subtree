@@ -1,0 +1,64 @@
+<!ENTITY preface "Información para:">
+<!ENTITY title "Información de página">
+<!ENTITY description "Información acerca de la página actual">
+<!ENTITY helpButton "Ayuda">
+<!ENTITY pageInfoWindow.width "425">
+<!ENTITY pageInfoWindow.height "470">
+<!ENTITY unknown "Desconocido">
+<!ENTITY closeWindow "w">
+<!ENTITY generalTab "General">
+<!ENTITY generalTitle "Título:">
+<!ENTITY generalURL "URL:">
+<!ENTITY generalMode "Modo de dibujo:">
+<!ENTITY generalType "Tipo:">
+<!ENTITY generalSize "Tamaño:">
+<!ENTITY generalReferrer "URL referente:">
+<!ENTITY generalSource "Fuente:">
+<!ENTITY generalSent "Enviado:">
+<!ENTITY generalModified "Modificado:">
+<!ENTITY generalExpires "Expira:">
+<!ENTITY generalEncoding "Codificación:">
+<!ENTITY generalMeta "Meta:">
+<!ENTITY generalMetaName "Nombre">
+<!ENTITY generalMetaContent "Contenido">
+<!ENTITY formsTab "Formularios">
+<!ENTITY formAction "Acción del formulario">
+<!ENTITY formMethod "Método">
+<!ENTITY formName "Nombre">
+<!ENTITY formNo "No.">
+<!ENTITY formEncoding "Codificación:">
+<!ENTITY formTarget "Destino:">
+<!ENTITY formFields "Campos:">
+<!ENTITY formLabel "Etiqueta">
+<!ENTITY formFName "Nombre de campo">
+<!ENTITY formType "Tipo">
+<!ENTITY formCValue "Valor actual">
+<!ENTITY linksTab "Enlaces">
+<!ENTITY linkNo "No.">
+<!ENTITY linkName "Nombre">
+<!ENTITY linkAddress "Dirección">
+<!ENTITY linkType "Tipo">
+<!ENTITY linkTarget "Destino">
+<!ENTITY linkAccessKey "Tecla de acceso">
+<!ENTITY mediaTab "Medios">
+<!ENTITY mediaHeader "Imágenes en esta página">
+<!ENTITY mediaURL "URL:">
+<!ENTITY mediaBase "URL base:">
+<!ENTITY mediaAlt "Texto alternativo:">
+<!ENTITY mediaAltHeader "Texto alternativo">
+<!ENTITY mediaNo "No.">
+<!ENTITY mediaName "Nombre">
+<!ENTITY mediaAddress "Dirección">
+<!ENTITY mediaType "Tipo">
+<!ENTITY mediaPlugin "Plugin:">
+<!ENTITY mediaCharset "Codificación:">
+<!ENTITY mediaDimensions "Dimensiones:">
+<!ENTITY mediaEncryption "Encriptación">
+<!ENTITY mediaTitle "Attributo título:">
+<!ENTITY mediaLongdesc "Descripción larga:">
+<!ENTITY mediaSaveAs "Guardar como...">
+<!ENTITY mediaSaveAsAccesskey "u">
+<!ENTITY framesTab "Marcos">
+<!ENTITY frameName "Nombre">
+<!ENTITY frameAddress "Dirección">
+<!ENTITY frameType "Tipo">
