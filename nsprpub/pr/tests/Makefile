@@ -95,7 +95,6 @@ CSRCS =             \
 	nonblock.c		\
 	ntioto.c        \
 	ntoh.c			\
-	obsints.c		\
 	op_2long.c      \
 	op_excl.c		\
 	op_filnf.c		\

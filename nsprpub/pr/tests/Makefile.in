@@ -99,7 +99,6 @@ CSRCS =             \
 	nonblock.c		\
 	ntioto.c	\
 	ntoh.c			\
-	obsints.c		\
 	op_2long.c      \
 	op_excl.c		\
 	op_filnf.c		\
@@ -444,11 +443,7 @@ endif # !USE_AUTOCONF
 
 include $(topsrcdir)/config/rules.mk
 
-ifdef USE_AUTOCONF
-$(OBJDIR)/%$(PROG_SUFFIX): %.c
-	$(CC) $< -o $@ $(CFLAGS) $(LDOPTS) $(LIBPLC) $(LIBPR) $(OS_LIBS)
-
-else
+ifndef USE_AUTOCONF
 AIX_PRE_4_2 = 0
 ifeq ($(OS_ARCH),AIX)
 ifeq ($(OS_RELEASE),4.1)
@@ -517,7 +512,6 @@ install:: export
 clean::
 	rm -f $(TARGETS)
 
-ifndef USE_AUTOCONF
 # The prpoll test calls BSD socket functions, so it needs to link
 # with -lsocket on some platforms.
 ifeq ($(OS_ARCH),SunOS)
@@ -539,8 +533,6 @@ $(OBJDIR)/socket: $(OBJDIR)/socket.o
 $(OBJDIR)/testfile: $(OBJDIR)/testfile.o
 	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
 endif
-
-endif # !USE_AUTOCONF
 
 #
 # Run the test programs with no arguments
