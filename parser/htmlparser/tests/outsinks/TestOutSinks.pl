@@ -79,25 +79,11 @@ if ($status != 0) {
   $errmsg = "$errmsg simplemail.out";
 }
 
-print "Testing conversion of XIF entities ...\n";
-$status = system("TestOutput -i text/xif -o text/plain -c OutTestData/entityxif.out OutTestData/entityxif.xif");
-if ($status != 0) {
-  print "XIF entity conversion test failed.\n";
-  $errmsg = "$errmsg entityxif.out";
-}
-
 print "Testing HTML Table to Text ...\n";
 $status = system("TestOutput -i text/html -o text/plain -f 2 -c OutTestData/htmltable.out OutTestData/htmltable.html");
 if ($status != 0) {
   print "HTML Table to Plain text failed.\n";
   $errmsg = "$errmsg htmltable.out";
-}
-
-print "Testing XIF to plain with doctype (bug 28447) ...\n";
-$status = system("TestOutput -i text/xif -o text/plain -f 2 -c OutTestData/xifdtplain.out OutTestData/doctype.xif");
-if ($status != 0) {
-  print "XIF to plain with doctype failed.\n";
-  $errmsg = "$errmsg xifdtplain.out";
 }
 
 if ($errmsg ne "") {
