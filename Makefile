@@ -25,7 +25,7 @@ ifndef NO_MOCHA
 DIRS_JS		= js
 endif
 
-DIRS		= config coreconf $(NSPRDIR) jpeg dbm xpcom network
+DIRS		= config coreconf $(NSPRDIR) jpeg dbm xpcom network caps
 
 ifdef MOZ_NETCAST
 DIRS		+= netcast
