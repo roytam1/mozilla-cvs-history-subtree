@@ -284,3 +284,13 @@ bin\chrome\help.jar
 ; [Additional Browsing Enhancements]
 [abe]
 
+[talkback]
+bin\components\qfaservices.dll
+bin\components\qfaservices.xpt
+bin\components\BrandRes.dll
+bin\components\fullsoft.dll
+bin\components\master.ini
+bin\components\talkback-l10n.ini
+bin\components\talkback.cnt
+bin\components\talkback.exe
+bin\components\talkback.hlp
