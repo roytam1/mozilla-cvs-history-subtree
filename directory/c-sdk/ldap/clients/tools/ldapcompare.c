@@ -91,7 +91,7 @@ main( int argc, char **argv )
 	usage( LDAP_PARAM_ERROR );
     }
 
-    typeval = ldaptool_local2UTF8( argv[optind], "type and value" );
+    typeval = ldaptool_local2UTF8( argv[optind] );
     if (( rc = typeval2berval( typeval, &type, &bv )) != LDAP_SUCCESS ) {
 	fprintf( stderr, "%s: unable to parse \"%s\"\n",
 		    ldaptool_progname, argv[optind] );
@@ -107,14 +107,14 @@ main( int argc, char **argv )
 		++optind ) {
             char *conv;
 
-            conv = ldaptool_local2UTF8( argv[ optind ], "DN" );
+            conv = ldaptool_local2UTF8( argv[ optind ] );
 	    rc = docompare( ld, conv, type, &bv, ldaptool_request_ctrls );
             if ( conv != NULL ) {
                 free( conv );
 	    }
 	}
     } else {
-	while (( contoper || !LDAPTOOL_RESULT_IS_AN_ERROR( rc )) &&
+	while ( contoper || !LDAPTOOL_RESULT_IS_AN_ERROR( rc ) &&
 		fgets(buf, sizeof(buf), ldaptool_fp) != NULL) {
 	    buf[ strlen( buf ) - 1 ] = '\0';	/* remove trailing newline */
 	    if ( *buf != '\0' ) {
@@ -131,7 +131,6 @@ main( int argc, char **argv )
     return( rc );
 }
 
-/*ARGSUSED1*/
 static void
 options_callback( int option, char *optarg )
 {
@@ -139,7 +138,7 @@ options_callback( int option, char *optarg )
     case 'c':	/* continuous operation mode */
 	++contoper;
 	break;
-    case 'q':	/* quiet mode */
+    case 'q':	/* continuous operation mode */
 	++ldapcompare_quiet;
 	break;
     default:

@@ -680,7 +680,7 @@ test "$host_alias" != "$target_alias" &&
 
 
 MOD_MAJOR_VERSION=4
-MOD_MINOR_VERSION=4
+MOD_MINOR_VERSION=3
 MOD_PATCH_VERSION=0
 NSPR_MODNAME=nspr20
 _HAVE_PTHREADS=
@@ -4724,9 +4724,9 @@ if test -z "$SKIP_LIBRARY_CHECKS"; then
 
 case $target in
 *-darwin*)
-    ;;
+        ;;
 *)
-    echo $ac_n "checking for dlopen in -ldl""... $ac_c" 1>&6
+        echo $ac_n "checking for dlopen in -ldl""... $ac_c" 1>&6
 echo "configure:4731: checking for dlopen in -ldl" >&5
 ac_lib_var=`echo dl'_'dlopen | sed 'y%./+-%__p_%'`
 if eval "test \"`echo '$''{'ac_cv_lib_$ac_lib_var'+set}'`\" = set"; then
@@ -4798,7 +4798,7 @@ else
   echo "$ac_t""no" 1>&6
 fi
 
-    ;;
+        ;;
 esac
 
 

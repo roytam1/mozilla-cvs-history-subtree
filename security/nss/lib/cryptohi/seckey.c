@@ -37,6 +37,7 @@
  */
 #include "cryptohi.h"
 #include "keyhi.h"
+#include "secrng.h"
 #include "secoid.h"
 #include "secitem.h"
 #include "secder.h"
@@ -430,7 +431,7 @@ done:
  *      formats.  The public key extraction code will deal with the different
  *      formats at the time of extraction.  */
 
-static SECStatus
+SECStatus
 seckey_UpdateCertPQGChain(CERTCertificate * subjectCert, int count)
 {
     SECStatus rv, rvCompare;
@@ -484,16 +485,16 @@ seckey_UpdateCertPQGChain(CERTCertificate * subjectCert, int count)
     /* check if the cert is self-signed */
     rvCompare = (SECStatus)SECITEM_CompareItem(&subjectCert->derSubject,
 				    &subjectCert->derIssuer);
-    if (rvCompare == SECEqual) {
-      /* fail since cert is self-signed and has no pqg params. */
-	return SECFailure;     
-    }
+	if (rvCompare == SECEqual) {
+	  /* fail since cert is self-signed and has no pqg params. */
+            return SECFailure;     
+	}
      
     /* get issuer cert */
     issuerCert = CERT_FindCertIssuer(subjectCert, PR_Now(), certUsageAnyCA);
-    if ( ! issuerCert ) {
-	return SECFailure;
-    }
+	if ( ! issuerCert ) {
+            return SECFailure;
+	}
 
     /* if parent is not DSA or fortezza, return failure since
        we don't allow this case. */
@@ -552,11 +553,7 @@ seckey_UpdateCertPQGChain(CERTCertificate * subjectCert, int count)
 SECStatus
 SECKEY_UpdateCertPQG(CERTCertificate * subjectCert)
 {
-    if (!subjectCert) {
-        PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	return SECFailure;
-    }
-    return seckey_UpdateCertPQGChain(subjectCert,0);
+    return(seckey_UpdateCertPQGChain(subjectCert,0));
 }
    
 
@@ -1152,10 +1149,6 @@ CERT_ExtractPublicKey(CERTCertificate *cert)
 {
     SECStatus rv;
 
-    if (!cert) {
-        PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	return NULL;
-    }
     rv = SECKEY_UpdateCertPQG(cert);
     if (rv != SECSuccess) return NULL;
 

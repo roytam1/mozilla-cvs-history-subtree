@@ -69,7 +69,8 @@ struct NSSTokenStr
 };
 
 NSS_IMPLEMENT NSSToken *
-nssToken_Create (
+nssToken_Create
+(
   CK_SLOT_ID slotID,
   NSSSlot *peer
 )
@@ -147,12 +148,14 @@ loser:
 #endif /* PURE_STAN_BUILD */
 
 NSS_IMPLEMENT PRStatus
-nssToken_Destroy (
+nssToken_Destroy
+(
   NSSToken *tok
 )
 {
     if (tok) {
-	if (PR_AtomicDecrement(&tok->base.refCount) == 0) {
+	PR_AtomicDecrement(&tok->base.refCount);
+	if (tok->base.refCount == 0) {
 	    PZ_DestroyLock(tok->base.lock);
 	    nssTokenObjectCache_Destroy(tok->cache);
 	    return nssArena_Destroy(tok->base.arena);
@@ -162,7 +165,8 @@ nssToken_Destroy (
 }
 
 NSS_IMPLEMENT void
-nssToken_Remove (
+nssToken_Remove
+(
   NSSToken *tok
 )
 {
@@ -170,7 +174,8 @@ nssToken_Remove (
 }
 
 NSS_IMPLEMENT void
-NSSToken_Destroy (
+NSSToken_Destroy
+(
   NSSToken *tok
 )
 {
@@ -178,7 +183,8 @@ NSSToken_Destroy (
 }
 
 NSS_IMPLEMENT NSSToken *
-nssToken_AddRef (
+nssToken_AddRef
+(
   NSSToken *tok
 )
 {
@@ -187,7 +193,8 @@ nssToken_AddRef (
 }
 
 NSS_IMPLEMENT NSSSlot *
-nssToken_GetSlot (
+nssToken_GetSlot
+(
   NSSToken *tok
 )
 {
@@ -196,7 +203,8 @@ nssToken_GetSlot (
 
 #ifdef PURE_STAN_BUILD
 NSS_IMPLEMENT NSSModule *
-nssToken_GetModule (
+nssToken_GetModule
+(
   NSSToken *token
 )
 {
@@ -205,7 +213,8 @@ nssToken_GetModule (
 #endif
 
 NSS_IMPLEMENT void *
-nssToken_GetCryptokiEPV (
+nssToken_GetCryptokiEPV
+(
   NSSToken *token
 )
 {
@@ -213,7 +222,8 @@ nssToken_GetCryptokiEPV (
 }
 
 NSS_IMPLEMENT nssSession *
-nssToken_GetDefaultSession (
+nssToken_GetDefaultSession
+(
   NSSToken *token
 )
 {
@@ -221,7 +231,8 @@ nssToken_GetDefaultSession (
 }
 
 NSS_IMPLEMENT NSSUTF8 *
-nssToken_GetName (
+nssToken_GetName
+(
   NSSToken *tok
 )
 {
@@ -235,7 +246,8 @@ nssToken_GetName (
 }
 
 NSS_IMPLEMENT NSSUTF8 *
-NSSToken_GetName (
+NSSToken_GetName
+(
   NSSToken *token
 )
 {
@@ -243,7 +255,8 @@ NSSToken_GetName (
 }
 
 NSS_IMPLEMENT PRBool
-nssToken_IsLoginRequired (
+nssToken_IsLoginRequired
+(
   NSSToken *token
 )
 {
@@ -251,7 +264,8 @@ nssToken_IsLoginRequired (
 }
 
 NSS_IMPLEMENT PRBool
-nssToken_NeedsPINInitialization (
+nssToken_NeedsPINInitialization
+(
   NSSToken *token
 )
 {
@@ -259,7 +273,8 @@ nssToken_NeedsPINInitialization (
 }
 
 NSS_IMPLEMENT PRStatus
-nssToken_DeleteStoredObject (
+nssToken_DeleteStoredObject
+(
   nssCryptokiObject *instance
 )
 {
@@ -294,7 +309,8 @@ nssToken_DeleteStoredObject (
 }
 
 static nssCryptokiObject *
-import_object (
+import_object
+(
   NSSToken *tok,
   nssSession *sessionOpt,
   CK_ATTRIBUTE_PTR objectTemplate,
@@ -341,7 +357,8 @@ import_object (
 }
 
 static nssCryptokiObject **
-create_objects_from_handles (
+create_objects_from_handles
+(
   NSSToken *tok,
   nssSession *session,
   CK_OBJECT_HANDLE *handles,
@@ -366,7 +383,8 @@ create_objects_from_handles (
 }
 
 static nssCryptokiObject **
-find_objects (
+find_objects
+(
   NSSToken *tok,
   nssSession *sessionOpt,
   CK_ATTRIBUTE_PTR obj_template,
@@ -488,7 +506,8 @@ loser:
 }
 
 static nssCryptokiObject **
-find_objects_by_template (
+find_objects_by_template
+(
   NSSToken *token,
   nssSession *sessionOpt,
   CK_ATTRIBUTE_PTR obj_template,
@@ -539,7 +558,8 @@ find_objects_by_template (
 extern const NSSError NSS_ERROR_INVALID_CERTIFICATE;
 
 NSS_IMPLEMENT nssCryptokiObject *
-nssToken_ImportCertificate (
+nssToken_ImportCertificate
+(
   NSSToken *tok,
   nssSession *sessionOpt,
   NSSCertificateType certType,
@@ -663,7 +683,8 @@ nssToken_ImportCertificate (
  * has been marked as "traversable"
  */
 NSS_IMPLEMENT nssCryptokiObject **
-nssToken_FindCertificates (
+nssToken_FindCertificates
+(
   NSSToken *token,
   nssSession *sessionOpt,
   nssTokenSearchType searchType,
@@ -699,7 +720,8 @@ nssToken_FindCertificates (
 }
 
 NSS_IMPLEMENT nssCryptokiObject **
-nssToken_FindCertificatesBySubject (
+nssToken_FindCertificatesBySubject
+(
   NSSToken *token,
   nssSession *sessionOpt,
   NSSDER *subject,
@@ -730,7 +752,8 @@ nssToken_FindCertificatesBySubject (
 }
 
 NSS_IMPLEMENT nssCryptokiObject **
-nssToken_FindCertificatesByNickname (
+nssToken_FindCertificatesByNickname
+(
   NSSToken *token,
   nssSession *sessionOpt,
   NSSUTF8 *name,
@@ -779,7 +802,8 @@ nssToken_FindCertificatesByNickname (
  * it just won't return a value for it.
  */
 NSS_IMPLEMENT nssCryptokiObject **
-nssToken_FindCertificatesByEmail (
+nssToken_FindCertificatesByEmail
+(
   NSSToken *token,
   nssSession *sessionOpt,
   NSSASCII7 *email,
@@ -822,7 +846,8 @@ nssToken_FindCertificatesByEmail (
 }
 
 NSS_IMPLEMENT nssCryptokiObject **
-nssToken_FindCertificatesByID (
+nssToken_FindCertificatesByID
+(
   NSSToken *token,
   nssSession *sessionOpt,
   NSSItem *id,
@@ -895,7 +920,8 @@ nssToken_decodeSerialItem(NSSItem *serial, NSSItem *serialDecode)
 }
 
 NSS_IMPLEMENT nssCryptokiObject *
-nssToken_FindCertificateByIssuerAndSerialNumber (
+nssToken_FindCertificateByIssuerAndSerialNumber
+(
   NSSToken *token,
   nssSession *sessionOpt,
   NSSDER *issuer,
@@ -970,7 +996,8 @@ nssToken_FindCertificateByIssuerAndSerialNumber (
 }
 
 NSS_IMPLEMENT nssCryptokiObject *
-nssToken_FindCertificateByEncodedCertificate (
+nssToken_FindCertificateByEncodedCertificate
+(
   NSSToken *token,
   nssSession *sessionOpt,
   NSSBER *encodedCertificate,
@@ -1005,7 +1032,8 @@ nssToken_FindCertificateByEncodedCertificate (
 }
 
 NSS_IMPLEMENT nssCryptokiObject **
-nssToken_FindPrivateKeys (
+nssToken_FindPrivateKeys
+(
   NSSToken *token,
   nssSession *sessionOpt,
   nssTokenSearchType searchType,
@@ -1035,7 +1063,8 @@ nssToken_FindPrivateKeys (
 
 /* XXX ?there are no session cert objects, so only search token objects */
 NSS_IMPLEMENT nssCryptokiObject *
-nssToken_FindPrivateKeyByID (
+nssToken_FindPrivateKeyByID
+(
   NSSToken *token,
   nssSession *sessionOpt,
   NSSItem *keyID
@@ -1065,7 +1094,8 @@ nssToken_FindPrivateKeyByID (
 
 /* XXX ?there are no session cert objects, so only search token objects */
 NSS_IMPLEMENT nssCryptokiObject *
-nssToken_FindPublicKeyByID (
+nssToken_FindPublicKeyByID
+(
   NSSToken *token,
   nssSession *sessionOpt,
   NSSItem *keyID
@@ -1130,7 +1160,8 @@ md5_hash(NSSItem *input, NSSItem *output)
 }
 
 static CK_TRUST
-get_ck_trust (
+get_ck_trust
+(
   nssTrustLevel nssTrust
 )
 {
@@ -1149,7 +1180,8 @@ get_ck_trust (
 }
  
 NSS_IMPLEMENT nssCryptokiObject *
-nssToken_ImportTrust (
+nssToken_ImportTrust
+(
   NSSToken *tok,
   nssSession *sessionOpt,
   NSSDER *certEncoding,
@@ -1206,7 +1238,8 @@ nssToken_ImportTrust (
 }
 
 NSS_IMPLEMENT nssCryptokiObject **
-nssToken_FindTrustObjects (
+nssToken_FindTrustObjects
+(
   NSSToken *token,
   nssSession *sessionOpt,
   nssTokenSearchType searchType,
@@ -1244,7 +1277,8 @@ nssToken_FindTrustObjects (
 }
 
 NSS_IMPLEMENT nssCryptokiObject *
-nssToken_FindTrustForCertificate (
+nssToken_FindTrustForCertificate
+(
   NSSToken *token,
   nssSession *sessionOpt,
   NSSDER *certEncoding,
@@ -1282,7 +1316,8 @@ nssToken_FindTrustForCertificate (
 }
  
 NSS_IMPLEMENT nssCryptokiObject *
-nssToken_ImportCRL (
+nssToken_ImportCRL
+(
   NSSToken *token,
   nssSession *sessionOpt,
   NSSDER *subject,
@@ -1325,7 +1360,8 @@ nssToken_ImportCRL (
 }
 
 NSS_IMPLEMENT nssCryptokiObject **
-nssToken_FindCRLs (
+nssToken_FindCRLs
+(
   NSSToken *token,
   nssSession *sessionOpt,
   nssTokenSearchType searchType,
@@ -1363,7 +1399,8 @@ nssToken_FindCRLs (
 }
 
 NSS_IMPLEMENT nssCryptokiObject **
-nssToken_FindCRLsBySubject (
+nssToken_FindCRLsBySubject
+(
   NSSToken *token,
   nssSession *sessionOpt,
   NSSDER *subject,
@@ -1397,7 +1434,8 @@ nssToken_FindCRLsBySubject (
 }
 
 NSS_IMPLEMENT PRStatus
-nssToken_GetCachedObjectAttributes (
+nssToken_GetCachedObjectAttributes
+(
   NSSToken *token,
   NSSArena *arenaOpt,
   nssCryptokiObject *object,
@@ -1415,7 +1453,8 @@ nssToken_GetCachedObjectAttributes (
 }
 
 NSS_IMPLEMENT NSSItem *
-nssToken_Digest (
+nssToken_Digest
+(
   NSSToken *tok,
   nssSession *sessionOpt,
   NSSAlgorithmAndParameters *ap,
@@ -1482,7 +1521,8 @@ nssToken_Digest (
 }
 
 NSS_IMPLEMENT PRStatus
-nssToken_BeginDigest (
+nssToken_BeginDigest
+(
   NSSToken *tok,
   nssSession *sessionOpt,
   NSSAlgorithmAndParameters *ap
@@ -1499,7 +1539,8 @@ nssToken_BeginDigest (
 }
 
 NSS_IMPLEMENT PRStatus
-nssToken_ContinueDigest (
+nssToken_ContinueDigest
+(
   NSSToken *tok,
   nssSession *sessionOpt,
   NSSItem *item
@@ -1518,7 +1559,8 @@ nssToken_ContinueDigest (
 }
 
 NSS_IMPLEMENT NSSItem *
-nssToken_FinishDigest (
+nssToken_FinishDigest
+(
   NSSToken *tok,
   nssSession *sessionOpt,
   NSSItem *rvOpt,
@@ -1570,7 +1612,8 @@ nssToken_FinishDigest (
 }
 
 NSS_IMPLEMENT PRBool
-nssToken_IsPresent (
+nssToken_IsPresent
+(
   NSSToken *token
 )
 {
@@ -1587,7 +1630,8 @@ nssToken_IsPresent (
  * increasing the likelihood that the cache takes care of it.
  */
 NSS_IMPLEMENT PRStatus
-nssToken_TraverseCertificates (
+nssToken_TraverseCertificates
+(
   NSSToken *token,
   nssSession *sessionOpt,
   nssTokenSearchType searchType,
@@ -1687,7 +1731,8 @@ loser:
 }
 
 NSS_IMPLEMENT PRBool
-nssToken_IsPrivateKeyAvailable (
+nssToken_IsPrivateKeyAvailable
+(
   NSSToken *token,
   NSSCertificate *c,
   nssCryptokiObject *instance

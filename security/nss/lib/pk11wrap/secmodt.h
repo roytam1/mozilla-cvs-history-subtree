@@ -43,7 +43,6 @@
 extern const SEC_ASN1Template SECKEY_PointerToEncryptedPrivateKeyInfoTemplate[];
 extern SEC_ASN1TemplateChooser NSS_Get_SECKEY_PointerToEncryptedPrivateKeyInfoTemplate;
 extern const SEC_ASN1Template SECKEY_EncryptedPrivateKeyInfoTemplate[];
-extern SEC_ASN1TemplateChooser NSS_Get_SECKEY_EncryptedPrivateKeyInfoTemplate;
 extern const SEC_ASN1Template SECKEY_PrivateKeyInfoTemplate[];
 extern SEC_ASN1TemplateChooser NSS_Get_SECKEY_PrivateKeyInfoTemplate;
 extern const SEC_ASN1Template SECKEY_PointerToPrivateKeyInfoTemplate[];
@@ -77,7 +76,7 @@ struct SECMODModuleStr {
     void	*functionList; /* The PKCS #11 function table */
     void	*refLock;	/* only used pk11db.c */
     int		refCount;	/* Module reference count */
-    PK11SlotInfo **slots;	/* array of slot points attached to this mod*/
+    PK11SlotInfo **slots;	/* array of slot points attatched to this mod*/
     int		slotCount;	/* count of slot in above array */
     PK11PreSlotInfo *slotInfo;	/* special info about slots default settings */
     int		slotInfoCount;  /* count */

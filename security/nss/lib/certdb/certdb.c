@@ -1200,15 +1200,13 @@ loser:
 SECStatus
 CERT_CheckKeyUsage(CERTCertificate *cert, unsigned int requiredUsage)
 {
-    if (!cert) {
-        PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	return SECFailure;
-    }
+    SECKEYPublicKey *key;
+    
     /* choose between key agreement or key encipherment based on key
      * type in cert
      */
     if ( requiredUsage & KU_KEY_AGREEMENT_OR_ENCIPHERMENT ) {
-	SECKEYPublicKey *key = CERT_ExtractPublicKey(cert);
+	key = CERT_ExtractPublicKey(cert);
 	if (!key)
 	    return SECFailure;
 	if ( ( key->keyType == keaKey ) || ( key->keyType == fortezzaKey ) ||
@@ -2575,7 +2573,10 @@ CERT_FilterCertListByUsage(CERTCertList *certList, SECCertUsage usage,
     unsigned int requiredKeyUsage;
     unsigned int requiredCertType;
     CERTCertListNode *node, *savenode;
+    PRBool bad;
     SECStatus rv;
+    unsigned int certType;
+    PRBool dummyret;
     
     if (certList == NULL) goto loser;
 
@@ -2589,28 +2590,26 @@ CERT_FilterCertListByUsage(CERTCertList *certList, SECCertUsage usage,
 	
     while ( !CERT_LIST_END(node, certList) ) {
 
-	PRBool bad = (PRBool)(!node->cert);
+	bad = PR_FALSE;
 
-	/* bad key usage ? */
-	if ( !bad && 
-	     CERT_CheckKeyUsage(node->cert, requiredKeyUsage) != SECSuccess ) {
+	/* bad key usage */
+	if ( CERT_CheckKeyUsage(node->cert, requiredKeyUsage )
+	    != SECSuccess ) {
 	    bad = PR_TRUE;
 	}
-	/* bad cert type ? */
-	if ( !bad ) {
-	    unsigned int certType = 0;
-	    if ( ca ) {
-		/* This function returns a more comprehensive cert type that
-		 * takes trust flags into consideration.  Should probably
-		 * fix the cert decoding code to do this.
-		 */
-		PRBool dummyret = CERT_IsCACert(node->cert, &certType);
-	    } else {
-		certType = node->cert->nsCertType;
-	    }
-	    if ( !( certType & requiredCertType ) ) {
-		bad = PR_TRUE;
-	    }
+	/* bad cert type */
+	if ( ca ) {
+	    /* This function returns a more comprehensive cert type that
+	     * takes trust flags into consideration.  Should probably
+	     * fix the cert decoding code to do this.
+	     */
+	    dummyret = CERT_IsCACert(node->cert, &certType);
+	} else {
+	    certType = node->cert->nsCertType;
+	}
+	
+	if ( ! ( certType & requiredCertType ) ) {
+	    bad = PR_TRUE;
 	}
 
 	if ( bad ) {

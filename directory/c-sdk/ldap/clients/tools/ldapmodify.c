@@ -215,7 +215,7 @@ main( int argc, char **argv )
 		    newfile = 1;
 		}
 	    }
-	    if (( rfp = ldaptool_open_file( rejfile, "a" )) == NULL ) {
+	    if (( rfp = fopen( rejfile, "a" )) == NULL ) {
 		fprintf( stderr, "Cannot open error file \"%s\" - "
 			"erroneous entries will not be saved\n", rejfile );
 		rejfile = NULL;
@@ -320,8 +320,7 @@ process_ldif_rec( char *rbuf )
     deleteoldrdn = 1;
     use_record = force;
     pmods = NULL;
-    dn = newrdn = newparent = value = NULL;
-    modop = -1;	/* invalid value */
+    dn = newrdn = newparent = NULL;
 
     while ( rc == 0 && ( line = ldif_getline( &rbuf )) != NULL ) {
 	++linenum;
@@ -617,7 +616,7 @@ static int
 process_ldapmod_rec( char *rbuf )
 {
     char	*line, *dn, *p, *q, *attr, *value;
-    int		rc, linenum;
+    int		rc, linenum, modop;
     LDAPMod	**pmods;
 
     pmods = NULL;
@@ -681,8 +680,7 @@ process_ldapmod_rec( char *rbuf )
 			ldaptool_progname, linenum, attr );
 		rc = LDAP_PARAM_ERROR;
 	    } else {
-		int modop = -1;	/* an invalid value */
-		switch ( *attr ) {
+		 switch ( *attr ) {
 		case '-':
 		    modop = LDAP_MOD_DELETE;
 		    ++attr;
@@ -698,10 +696,8 @@ process_ldapmod_rec( char *rbuf )
 		      rc = LDAP_PARAM_ERROR;
 		}
 
-		if ( rc == 0 && modop != -1 ) {
-		    addmodifyop( &pmods, modop, attr, value,
-			    ( value == NULL ) ? 0 : strlen( value ));
-		}
+		addmodifyop( &pmods, modop, attr, value,
+			( value == NULL ) ? 0 : strlen( value ));
 	    }
 	}
 

@@ -89,8 +89,7 @@ ifdef NS_USE_GCC
     DEFINES += -DMP_NO_MP_WORD -DMP_USE_UINT_DIGIT
 else
     ASFILES  = mpi_x86.asm
-    DEFINES += -DMP_ASSEMBLY_MULTIPLY -DMP_ASSEMBLY_SQUARE -DMP_ASSEMBLY_DIV_2DX1D \
-    -DMP_USE_UINT_DIGIT -DMP_NO_MP_WORD
+    DEFINES += -DMP_ASSEMBLY_MULTIPLY -DMP_ASSEMBLY_SQUARE -DMP_ASSEMBLY_DIV_2DX1D
 endif
 ifdef BUILD_OPT
 ifndef NS_USE_GCC
@@ -252,6 +251,15 @@ rijndael_tables:
 	$(CC) -o $(OBJDIR)/make_rijndael_tab rijndael_tables.c \
 	         $(DEFINES) $(INCLUDES) $(OBJDIR)/libfreebl.a
 	$(OBJDIR)/make_rijndael_tab
+
+ifdef MOZILLA_BSAFE_BUILD
+
+private_export::
+ifeq (,$(filter-out WIN%,$(OS_TARGET)))
+	rm -f $(DIST)/lib/bsafe$(BSAFEVER).lib
+endif
+	$(NSINSTALL) -R $(BSAFEPATH) $(DIST)/lib
+endif
 
 ifdef USE_PURE_32 
 vpath %.h $(FREEBL_PARENT)/mpi:$(FREEBL_PARENT)

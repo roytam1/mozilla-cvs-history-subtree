@@ -106,7 +106,8 @@ nssPKIObject_Destroy (
 {
     PRUint32 i;
     PR_ASSERT(object->refCount > 0);
-    if (PR_AtomicDecrement(&object->refCount) == 0) {
+    PR_AtomicDecrement(&object->refCount);
+    if (object->refCount == 0) {
 	for (i=0; i<object->numInstances; i++) {
 	    nssCryptokiObject_Destroy(object->instances[i]);
 	}
@@ -807,19 +808,22 @@ nssPKIObjectCollection_AddInstances (
 	    if (numInstances > 0 && i == numInstances) {
 		break;
 	    }
-	    if (status == PR_SUCCESS) {
-		node = add_object_instance(collection, *instances, &foundIt);
-		if (node == NULL) {
-		    /* add_object_instance freed the current instance */
-		    /* free the remaining instances */
-		    status = PR_FAILURE;
-		}
-	    } else {
-		nssCryptokiObject_Destroy(*instances);
+	    node = add_object_instance(collection, *instances, &foundIt);
+	    if (node == NULL) {
+		goto loser;
 	    }
 	}
     }
     return status;
+loser:
+    /* free the remaining instances */
+    for (; *instances; instances++, i++) {
+	if (numInstances > 0 && i == numInstances) {
+	    break;
+	}
+	nssCryptokiObject_Destroy(*instances);
+    }
+    return PR_FAILURE;
 }
 
 static void

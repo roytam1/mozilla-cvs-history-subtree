@@ -20,261 +20,55 @@
  * Contributor(s):
  */
 
-
-#ifdef _WIN32
-#define  VC_EXTRALEAN
-#include <afxwin.h>
-#include <winnls.h>
-static char *win_char_converter(const char *instr, int bFromUTF8);
-#else
-#include <locale.h>
-#endif
-
-#include "ldaptool.h"
+#include <stdio.h>
+#include <string.h>
 
 #ifndef HAVE_LIBNLS
-
-#ifndef _WIN32
-#include <iconv.h>
-#include <langinfo.h>	/* for nl_langinfo() */
-#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* OS name for the UTF-8 character set */
-#if defined(_HPUX_SOURCE)
-#define LDAPTOOL_CHARSET_UTF8		"utf8"		/* HP/UX */
-#else
-#define LDAPTOOL_CHARSET_UTF8		"UTF-8"		/* all others */
-#endif
+extern char	*ldaptool_charset;
+char		*ldaptool_convdir = NULL;
+static		int charsetset = 0;
+char		*ldaptool_local2UTF8( const char *src );
 
-/* OS name for the default character set */
-#if defined(_HPUX_SOURCE)
-#define LDAPTOOL_CHARSET_DEFAULT	"roma8"		/* HP/UX */
-#elif defined(__GLIBC__)
-#define LDAPTOOL_CHARSET_DEFAULT	"US-ASCII"	/* glibc (Linux) */
-#else
-#define LDAPTOOL_CHARSET_DEFAULT	"646"		/* all others */
-#endif
-
-/* Type used for the src parameter to iconv() (the 2nd parameter) */
-#if defined(_HPUX_SOURCE) || defined(__GLIBC__)
-#define LDAPTOOL_ICONV_SRC_TYPE	char **		/* HP/UX and glibc (Linux) */
-#else
-#define LDAPTOOL_ICONV_SRC_TYPE const char **	/* all others */
-#endif
-
-#if defined(SOLARIS)
-/*
- * On some versions of Solaris, the inbytesleft parameter can't be NULL
- * even in calls to iconv() where inbuf itself is NULL
- */
-#define LDAPTOOL_ICONV_NO_NULL_INBYTESLEFT	1
-#endif
-
-static char *convert_to_utf8( const char *src );
-#ifndef _WIN32
-static const char *GetCurrentCharset(void);
-#endif
-
-
-/* Version that uses OS functions */
 char *
-ldaptool_local2UTF8( const char *src, const char *desc )
+ldaptool_local2UTF8( const char *src )
 {
-    char	*utf8;
+    char *utf8;
 
-    if ( src == NULL ) {		/* trivial case # 1 */
-	utf8 = NULL;
-    } else if ( *src == '\0' ) {	/* trivial case # 2 */
-	utf8 = strdup( "" );
-    } else {
-	utf8 = convert_to_utf8( src );	/* the real deal */
+    charsetset = 0;
 
-	if ( NULL == utf8 ) {
-	    utf8 = strdup( src );	/* fallback: no conversion */
-	    fprintf( stderr, "%s: warning: no conversion of %s to "
-		    LDAPTOOL_CHARSET_UTF8 "\n", desc, ldaptool_progname );
-	}
-    }
-
-    return utf8;
-}
-
-#ifdef _WIN32
-/*
- * Try to convert src to a UTF-8.
- * Returns a malloc'd string or NULL upon error (with messages logged).
- * src should not be NULL.
- */
-static char *
-convert_to_utf8( const char *src )	/* returns NULL on error */
-{
-    return win_char_converter( src, FALSE );
-}
-#else /* _WIN32 */
-
-/*
- * Try to convert src to a UTF-8.
- * Returns a malloc'd string or NULL upon error (with messages logged).
- * src should not be NULL.
- */
-static char *
-convert_to_utf8( const char *src )
-{
-    static const char	*src_charset = NULL;
-    iconv_t		convdesc;
-    char		*outbuf, *curoutbuf;
-    size_t		inbytesleft, outbytesleft;
-
-#ifdef LDAPTOOL_ICONV_NO_NULL_INBYTESLEFT
-#define LDAPTOOL_ICONV_UNUSED_INBYTESLEFT	&inbytesleft
-#else
-#define LDAPTOOL_ICONV_UNUSED_INBYTESLEFT	NULL
-#endif
-
-    /* Determine the source charset if not already done */
-    if ( NULL == src_charset ) {
-	if ( NULL != ldaptool_charset && 0 != strcmp( ldaptool_charset, "" )) {
-	    src_charset = ldaptool_charset;
-	} else {
-	    src_charset = GetCurrentCharset();
-	}
-    }
-
-    if ( NULL != src_charset
-		&& 0 == strcmp( LDAPTOOL_CHARSET_UTF8, src_charset )) {
-	/* no conversion needs to be done */
-	return strdup( src );
-    }
-
-    /* Get a converter */
-    convdesc = iconv_open( LDAPTOOL_CHARSET_UTF8, src_charset );
-    if ( (iconv_t)-1 == convdesc ) {
-	if ( errno == EINVAL ) {
-	    fprintf( stderr, "%s: conversion from %s to %s is not supported\n",
-			ldaptool_progname, src_charset, LDAPTOOL_CHARSET_UTF8 );
-	} else {
-	    perror( src_charset );
-	}
+    if (src == NULL)
+    {
 	return NULL;
     }
+    utf8 = strdup(src);
 
-    /* Allocate room for the UTF-8 equivalent (maximum expansion = 6 times) */
-/* XXX is that correct? */
-    inbytesleft = strlen( src );
-    outbytesleft = 6 * inbytesleft + 1;
-    if ( NULL == ( outbuf = (char *)malloc( outbytesleft ))) {
-	perror( "convert_to_utf8 - malloc" );
-	iconv_close( convdesc );
-	return NULL;
-    }
-
-    curoutbuf = outbuf;
-    /*
-     * Three steps for a good conversion:
-     * 1) Insert the initial shift sequence if any.
-     * 2) Convert our characters.
-     * 3) Insert the closing shift sequence, if any.
-     */
-    if ( (size_t)-1 == iconv( convdesc,
-		( LDAPTOOL_ICONV_SRC_TYPE )0, LDAPTOOL_ICONV_UNUSED_INBYTESLEFT,
-		&curoutbuf, &outbytesleft )	/* initial shift seq. */
-	    || (size_t)-1 == iconv( convdesc,
-		( LDAPTOOL_ICONV_SRC_TYPE ) &src, &inbytesleft,
-		&curoutbuf, &outbytesleft ) 	/* convert our chars. */
-	    || (size_t)-1 == iconv( convdesc,
-		( LDAPTOOL_ICONV_SRC_TYPE )0, LDAPTOOL_ICONV_UNUSED_INBYTESLEFT,
-		&curoutbuf, &outbytesleft )) {	/* closing shift seq. */
-	perror( "convert_to_utf8 - iconv" );
-	iconv_close( convdesc );
-	free( outbuf );
-	return NULL;
-    }
-
-    iconv_close( convdesc );
-    *curoutbuf = '\0';	/* zero-terminate the resulting string */
-
-    return outbuf;
+    return ( utf8 );
 }
 
-
-/* returns a malloc'd string */
-static const char *
-GetCurrentCharset(void)
-{
-    static char	*locale = NULL;
-    const char	*charset;
-
-    if ( NULL == locale ) {
-	locale = setlocale(LC_CTYPE, "");	/* need to call this once */
-    }
-
-    charset = nl_langinfo( CODESET );
-    if ( NULL == charset || '\0' == *charset ) {
-	charset = LDAPTOOL_CHARSET_DEFAULT;
-    }
-    return strdup( charset );
-}
-#endif /* else _WIN32 */
-
-#ifdef __cplusplus
-}
-#endif	/* __cplusplus */
-#endif /* !HAVE_LIBNLS */
-
-
-#ifdef _WIN32
-/* returns a malloc'd string */
-static char *
-win_char_converter(const char *instr, int bFromUTF8)
-{
-    char  *outstr = NULL;
-    int    inlen, wclen, outlen;
-    LPWSTR wcstr;
-         
-    if (instr == NULL)
-            return NULL;
-
-    if ((inlen = strlen(instr)) <= 0)
-            return NULL;
- 
-    /* output never becomes longer than input,   XXXmcs: really true?
-    ** thus we don't have to ask for the length
-    */
-    wcstr = (LPWSTR) malloc( sizeof( WCHAR ) * (inlen+1) );
-    if (!wcstr)
-        return NULL;
- 
-    wclen = MultiByteToWideChar(bFromUTF8 ? CP_UTF8 : CP_ACP, 0, instr,
-                                 inlen, wcstr, inlen);
-    outlen = WideCharToMultiByte(bFromUTF8 ? CP_ACP : CP_UTF8, 0, wcstr,
-                                  wclen, NULL, 0, NULL, NULL);
- 
-    if (outlen > 0) {
-        outstr = (char *) malloc(outlen + 2);
-        outlen = WideCharToMultiByte(bFromUTF8 ? CP_ACP : CP_UTF8, 0, wcstr,
-                                      wclen, outstr, outlen, NULL, NULL);
-        if (outlen > 0)
-            *(outstr+outlen) = _T('\0');
-        else
-            return NULL;
-    }
-    free( wcstr );
-    return outstr;
-}
-#endif /* _WIN32 */
-
-
-#ifdef HAVE_LIBNLS
+#else /* HAVE_LIBNLS */
 
 #define NSPR20
 
+#ifdef XP_WIN32
+#define  VC_EXTRALEAN
+#include <afxwin.h>
+#include <winnls.h>
+#endif
+
+extern char *ldaptool_charset;
 static int charsetset = 0;
 
-#ifndef _WIN32
+extern "C" {
+char *ldaptool_convdir = NULL;
+char *ldaptool_local2UTF8( const char * );
+}
+
+#ifndef XP_WIN32
 char * GetNormalizedLocaleName(void);
 
 #include "unistring.h"
@@ -284,8 +78,7 @@ extern NLS_StaticConverterRegistry _STATICLINK_NSJPN_;
 extern NLS_StaticConverterRegistry _STATICLINK_NSCCK_;
 extern NLS_StaticConverterRegistry _STATICLINK_NSSB_;
 
-/* returns a malloc'd string */
-static char *
+char *
 GetNormalizedLocaleName(void)
 {
 #ifdef _HPUX_SOURCE
@@ -679,14 +472,52 @@ GetCharsetFromLocale(char *locale)
     return tmpcharset;
 }
  
-#endif /* !_WIN32 */
+#endif /* Not defined XP_WIN32 */
 
-/* version that uses libNLS */
+#ifdef XP_WIN32
+char *_convertor(const char *instr, int bFromUTF8)
+{
+    char  *outstr = NULL;
+    int    inlen, wclen, outlen;
+    LPWSTR wcstr;
+         
+    if (instr == NULL)
+            return NULL;
+
+    if ((inlen = strlen(instr)) <= 0)
+            return NULL;
+ 
+    /* output never becomes longer than input,
+    ** thus we don't have to ask for the length
+    */
+    wcstr = (LPWSTR) malloc( sizeof( WCHAR ) * (inlen+1) );
+    if (!wcstr)
+        return NULL;
+ 
+    wclen = MultiByteToWideChar(bFromUTF8 ? CP_UTF8 : CP_ACP, 0, instr,
+                                 inlen, wcstr, inlen);
+    outlen = WideCharToMultiByte(bFromUTF8 ? CP_ACP : CP_UTF8, 0, wcstr,
+                                  wclen, NULL, 0, NULL, NULL);
+ 
+    if (outlen > 0) {
+        outstr = (char *) malloc(outlen + 2);
+        outlen = WideCharToMultiByte(bFromUTF8 ? CP_ACP : CP_UTF8, 0, wcstr,
+                                      wclen, outstr, outlen, NULL, NULL);
+        if (outlen > 0)
+            *(outstr+outlen) = _T('\0');
+        else
+            return NULL;
+    }
+    free( wcstr );
+    return outstr;
+}
+#endif
+
 char *
-ldaptool_local2UTF8( const char *src, const char *desc )
+ldaptool_local2UTF8( const char *src )
 {
     char *utf8;
-#ifndef _WIN32
+#ifndef XP_WIN32
     char *locale, *newcharset;
     size_t outLen, resultLen;
     NLS_ErrorCode err;
@@ -750,7 +581,7 @@ ldaptool_local2UTF8( const char *src, const char *desc )
     NLS_EncTerminate();
  
 #else
-    utf8 = win_char_converter(src, FALSE);
+    utf8 = _convertor(src, FALSE);
     if( utf8 == NULL )
         utf8 = strdup(src);
 #endif
@@ -758,3 +589,10 @@ ldaptool_local2UTF8( const char *src, const char *desc )
     return utf8;
 }
 #endif /* HAVE_LIBNLS */
+
+#ifndef HAVE_LIBNLS
+#ifdef __cplusplus
+}
+#endif
+#endif
+
