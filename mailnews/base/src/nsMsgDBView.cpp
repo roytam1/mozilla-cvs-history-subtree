@@ -2361,14 +2361,7 @@ void	nsMsgDBView::NoteChange(nsMsgViewIndex firstLineChanged, PRInt32 numChanged
       mOutliner->InvalidateRange(firstLineChanged, numChanged);
       break;
     case nsMsgViewNotificationCode::insertOrDelete:
-      if (numChanged > 0)
-      {
-        mOutliner->RowsInserted(firstLineChanged, numChanged);
-      }
-      else if (numChanged < 0)
-      {
-        mOutliner->RowsRemoved(firstLineChanged, numChanged);
-      }
+      mOutliner->RowCountChanged(firstLineChanged, numChanged);
     case nsMsgViewNotificationCode::all:
       ClearHdrCache();
       break;
