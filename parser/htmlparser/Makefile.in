@@ -22,14 +22,109 @@
 DEPTH		= ..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
-VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
-
-DIRS		= public src
+VPATH		= @srcdir@$(VPS)@srcdir@/public
 
 ifdef ENABLE_TESTS
 DIRS		+= robot tests
 endif
 
+MODULE		= htmlparser
+LIBRARY_NAME	= htmlpars
+EXPORT_LIBRARY	= 1
+IS_COMPONENT	= 1
+MODULE_NAME	= nsParserModule
+SHORT_LIBNAME	= gkparser
+
+REQUIRES	= xpcom \
+		  string \
+		  necko \
+		  util \
+		  uconv \
+		  unicharutil \
+		  expat \
+		  layout \
+		  dom \
+		  pref \
+		  nkcache \
+		  intl \
+		  $(NULL)
+
+CPPSRCS		= \
+		src/nsDTDUtils.cpp      \
+		src/nsHTMLTokenizer.cpp \
+		src/nsElementTable.cpp  \
+		src/nsExpatDriver.cpp   \
+		src/CNavDTD.cpp         \
+		src/COtherDTD.cpp       \
+		src/nsHTMLEntities.cpp  \
+		src/nsHTMLTags.cpp      \
+		src/nsHTMLTokens.cpp    \
+		src/nsParser.cpp        \
+		src/CParserContext.cpp  \
+		src/nsParserService.cpp \
+		src/nsParserModule.cpp  \
+		src/nsParserNode.cpp    \
+		src/nsScanner.cpp       \
+		src/nsToken.cpp         \
+		src/nsViewSourceHTML.cpp\
+		src/nsParserMsgUtils.cpp\
+		src/nsAVLTree.cpp\
+		$(NULL)
+
+ifdef MOZ_DEBUG
+CPPSRCS += \
+		src/nsLoggingSink.cpp   \
+		src/nsHTMLNullSink.cpp  \
+		$(NULL)
+endif
+
+EXPORTS 	= \
+		public/nsIContentSink.h            \
+		public/nsITokenizer.h              \
+		public/nsIHTMLContentSink.h        \
+		public/nsIHTMLFragmentContentSink.h\
+		public/nsIParserNode.h             \
+		public/nsIParser.h                 \
+		public/nsIDTD.h                    \
+		public/nsIParserFilter.h           \
+		public/nsIElementObserver.h        \
+		public/nsIParserService.h          \
+		public/nsHTMLTagList.h             \
+		public/nsHTMLTags.h                \
+		public/nsHTMLTokens.h              \
+		public/nsParserError.h             \
+		public/nsParserCIID.h              \
+		public/nsToken.h                   \
+		$(NULL)
+
+ifdef MOZ_DEBUG
+EXPORTS		+= \
+		public/nsILoggingSink.h \
+		$(NULL)
+endif
+
+XPIDLSRCS 	= \
+		nsIExpatSink.idl \
+		$(NULL)
+
+SHARED_LIBRARY_LIBS = \
+		$(DIST)/lib/$(LIB_PREFIX)expat_s.$(LIB_SUFFIX) \
+		$(NULL)
+
+ifdef MOZ_PERF_METRICS
+EXTRA_DSO_LIBS	+= mozutil_s
+endif
+
+EXTRA_DSO_LDOPTS += \
+		$(LIBS_DIR) \
+		$(EXTRA_DSO_LIBS) \
+		$(MOZ_UNICHARUTIL_LIBS) \
+		$(MOZ_COMPONENT_LIBS) \
+		$(NULL)
+
 include $(topsrcdir)/config/rules.mk
+
+DEFINES		+= -DXML_DTD
+
