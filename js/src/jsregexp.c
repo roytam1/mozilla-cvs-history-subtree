@@ -2129,7 +2129,7 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
 			matched = (cp[-1] == '\n');
 		} else {
 		    state->anchoring = JS_TRUE;
-		    for (cp2 = cp; cp2 < cpend; cp2++) {
+		    for (cp2 = cp; cp2 <= cpend; cp2++) {
 			if (cp2 == cpbegin || cp2[-1] == '\n') {
 			    cp3 = MatchRegExp(state, pc, cp2);
 			    if (cp3) {
@@ -2530,7 +2530,7 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
 	    pc2 = pc + oplen;
 	    if (pc2 == pcend)
 		break;
-	    for (cp2 = cp; cp2 < cpend; cp2++) {
+	    for (cp2 = cp; cp2 <= cpend; cp2++) {
 		cp3 = MatchRegExp(state, pc2, cp2);
 		if (cp3) {
 		    state->skipped = cp2 - cp;
