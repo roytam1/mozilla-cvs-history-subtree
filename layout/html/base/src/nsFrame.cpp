@@ -91,7 +91,16 @@
 // For triple-click pref
 #include "nsIPref.h"
 #include "nsIServiceManager.h"
+#include "nsISelectionImageService.h"
+#include "imgIContainer.h"
+#include "gfxIImageFrame.h"
+#include "nsILookAndFeel.h"
+#include "nsLayoutCID.h"
+#include "nsWidgetsCID.h"     // for NS_LOOKANDFEEL_CID
+
 static NS_DEFINE_CID(kPrefCID,     NS_PREF_CID);//for tripple click pref
+static NS_DEFINE_CID(kSelectionImageService, NS_SELECTIONIMAGESERVICE_CID);
+static NS_DEFINE_CID(kLookAndFeelCID,  NS_LOOKANDFEEL_CID);
 
 
 // Some Misc #defines
@@ -224,6 +233,169 @@ nsIFrameDebug::RootFrameList(nsIPresContext* aPresContext, FILE* out, PRInt32 aI
 }
 #endif
 // end nsIFrameDebug
+
+
+// frame image selection drawing service implementation
+class SelectionImageService : public nsISelectionImageService
+{
+public:
+  SelectionImageService();
+  virtual ~SelectionImageService();
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSISELECTIONIMAGESERVICE
+private:
+  nsresult CreateImage(nscolor aImageColor, imgIContainer *aContainer);
+  nsCOMPtr<imgIContainer> mContainer;
+  nsCOMPtr<imgIContainer> mDisabledContainer;
+};
+
+NS_IMPL_ISUPPORTS1(SelectionImageService, nsISelectionImageService)
+
+SelectionImageService::SelectionImageService()
+{
+  NS_INIT_ISUPPORTS();
+}
+
+SelectionImageService::~SelectionImageService()
+{
+}
+
+NS_IMETHODIMP
+SelectionImageService::GetImage(PRInt16 aSelectionValue, imgIContainer **aContainer)
+{
+  nsresult result;
+  if (aSelectionValue != nsISelectionController::SELECTION_ON)
+  {
+    if (!mDisabledContainer)
+    {
+        mDisabledContainer = do_CreateInstance("@mozilla.org/image/container;1",&result);
+        if (NS_FAILED(result))
+          return result;
+        if (mDisabledContainer)
+        {
+          nscolor disabledTextColor = NS_RGB(176,176,176);
+          CreateImage(disabledTextColor, mDisabledContainer);
+        }
+    }
+    *aContainer = mDisabledContainer; 
+  }
+  else
+  {
+    if (!mContainer)
+    {
+        mContainer = do_CreateInstance("@mozilla.org/image/container;1",&result);
+        if (NS_FAILED(result))
+          return result;
+        if (mContainer)
+        {
+          nscolor selectionTextColor = NS_RGB(255, 255, 255);
+          nsCOMPtr<nsILookAndFeel> look;
+          look = do_GetService(kLookAndFeelCID,&result);
+          if (NS_SUCCEEDED(result) && look)
+            look->GetColor(nsILookAndFeel::eColor_TextSelectBackground, selectionTextColor);
+          CreateImage(selectionTextColor, mContainer);
+        }
+    }
+    *aContainer = mContainer; 
+  }
+  if (!*aContainer)
+    return NS_ERROR_OUT_OF_MEMORY;
+  NS_ADDREF(*aContainer);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+SelectionImageService::Reset()
+{
+  mContainer = 0;
+  mDisabledContainer = 0;
+  return NS_OK;
+}
+
+#define SEL_IMAGE_WIDTH 32
+#define SEL_IMAGE_HEIGHT 32
+#define SEL_ALPHA_AMOUNT 128
+
+nsresult
+SelectionImageService::CreateImage(nscolor aImageColor, imgIContainer *aContainer)
+{
+  if (aContainer)
+  {
+    nsresult result = aContainer->Init(SEL_IMAGE_WIDTH,SEL_IMAGE_HEIGHT,nsnull);
+    if (NS_SUCCEEDED(result))
+    {
+      nsCOMPtr<gfxIImageFrame> image = do_CreateInstance("@mozilla.org/gfx/image/frame;2",&result);
+      if (NS_SUCCEEDED(result) && image)
+      {
+        image->Init(0, 0, SEL_IMAGE_WIDTH, SEL_IMAGE_HEIGHT, gfxIFormats::RGB_A8);
+        aContainer->AppendFrame(image);
+
+        PRUint32 bpr, abpr;
+        image->GetImageBytesPerRow(&bpr);
+        image->GetAlphaBytesPerRow(&abpr);
+
+        //its better to temporarily go after heap than put big data on stack
+        unsigned char *row_data = (unsigned char *)malloc(bpr);
+        if (!row_data)
+          return NS_ERROR_OUT_OF_MEMORY;
+        unsigned char *alpha = (unsigned char *)malloc(abpr);
+        if (!alpha)
+        {
+          free (row_data);
+          return NS_ERROR_OUT_OF_MEMORY;
+        }
+        unsigned char *data = row_data;
+
+        PRInt16 i;
+        for (i = 0; i < SEL_IMAGE_WIDTH; i++)
+        {
+#ifdef XP_PC
+          *data++ = NS_GET_B(aImageColor);
+          *data++ = NS_GET_G(aImageColor);
+          *data++ = NS_GET_R(aImageColor);
+#endif
+#ifdef XP_UNIX
+          *data++ = NS_GET_R(aImageColor);
+          *data++ = NS_GET_G(aImageColor);
+          *data++ = NS_GET_B(aImageColor);
+#endif
+#if defined(XP_MAC) || defined(XP_MACOSX)
+          *data++ = 0;
+          *data++ = NS_GET_R(aImageColor);
+          *data++ = NS_GET_G(aImageColor);
+          *data++ = NS_GET_B(aImageColor);
+#endif
+        }
+
+        memset((void *)alpha, SEL_ALPHA_AMOUNT, abpr);
+
+        for (i = 0; i < SEL_IMAGE_HEIGHT; i++)
+        {
+          image->SetAlphaData(alpha, abpr, i*abpr);
+          image->SetImageData(row_data,  bpr, i*bpr);
+        }
+        free(row_data);
+        free(alpha);
+        return NS_OK;
+      }
+    } 
+  }
+  return NS_ERROR_FAILURE;
+}
+
+
+nsresult NS_NewSelectionImageService(nsISelectionImageService** aResult)
+{
+  *aResult = new SelectionImageService;
+  if (!*aResult)
+    return NS_ERROR_OUT_OF_MEMORY;
+  NS_ADDREF(*aResult);
+  return NS_OK;
+}
+
+
+//end selection service
+
 
 // a handy utility to set font
 void SetFontFromStyle(nsIRenderingContext* aRC, nsIStyleContext* aSC) 
@@ -694,9 +866,21 @@ nsFrame::Paint(nsIPresContext*      aPresContext,
     rect.height-=2;
     rect.x++;
     rect.y++;
-    aRenderingContext.SetColor(NS_RGB(0,0,255));
-    nsRect drawrect(1, 1, rect.width, rect.height);
-    aRenderingContext.DrawRect(drawrect);
+
+    nsCOMPtr<nsISelectionImageService> imageService;
+    imageService = do_GetService(kSelectionImageService, &result);
+    if (NS_SUCCEEDED(result) && imageService)
+    {
+      nsCOMPtr<imgIContainer> container;
+      imageService->GetImage(selectionValue, getter_AddRefs(container));
+      if (container)
+      {
+        nsRect rect(0, 0, mRect.width, mRect.height);
+        rect.IntersectRect(rect,aDirtyRect);
+        aRenderingContext.DrawTile(container,0,0,&rect);
+      }
+    }
+    
     SelectionDetails *deletingDetails = details;
     while ((deletingDetails = details->mNext) != nsnull) {
       delete details;
@@ -2817,11 +3001,6 @@ nsFrame::SetSelected(nsIPresContext* aPresContext, nsIDOMRange *aRange, PRBool a
 */
   nsFrameState  frameState;
   GetFrameState(&frameState);
-  PRBool isSelected = ((frameState & NS_FRAME_SELECTED_CONTENT) == NS_FRAME_SELECTED_CONTENT);
-  if (aSelected == isSelected) //allready set thanks
-  {
-    return NS_OK;
-  }
   if ( aSelected ){
     frameState |=  NS_FRAME_SELECTED_CONTENT;
   }
