@@ -1097,9 +1097,18 @@ nsHTMLEditRules::WillInsertText(PRInt32          aAction,
   if (!doc) return NS_ERROR_NULL_POINTER;
     
   if (aAction == kInsertTextIME) 
-  { 
-    nsWSRunObject wsObj(mHTMLEditor, selNode, selOffset);
-    res = wsObj.InsertText(*inString, address_of(selNode), &selOffset, doc);
+  {
+    // Right now the nsWSRunObject code bails on empty strings, but IME needs 
+    // the InsertTextImpl() call to still happen since empty strings are meaningful there.
+    if (inString->IsEmpty())
+    {
+      res = mHTMLEditor->InsertTextImpl(*inString, address_of(selNode), &selOffset, doc);
+    }
+    else
+    {
+      nsWSRunObject wsObj(mHTMLEditor, selNode, selOffset);
+      res = wsObj.InsertText(*inString, address_of(selNode), &selOffset, doc);
+    }
     if (NS_FAILED(res)) return res;
   }
   else // aAction == kInsertText
