@@ -24,6 +24,7 @@
 #include "nsCOMPtr.h"
 #include "nsCSSRule.h"
 #include "nsICSSStyleRule.h"
+#include "nsICSSGroupRule.h"
 #include "nsICSSDeclaration.h"
 #include "nsICSSStyleSheet.h"
 #include "nsICSSParser.h"
@@ -1294,6 +1295,8 @@ public:
 
   NS_IMETHOD GetStyleSheet(nsIStyleSheet*& aSheet) const;
   NS_IMETHOD SetStyleSheet(nsICSSStyleSheet* aSheet);
+  
+  NS_IMETHOD SetParentRule(nsICSSGroupRule* aRule);
 
   NS_IMETHOD GetType(PRInt32& aType) const;
   NS_IMETHOD Clone(nsICSSRule*& aClone) const;
@@ -1589,6 +1592,12 @@ CSSStyleRuleImpl::SetStyleSheet(nsICSSStyleSheet* aSheet)
     mImportantRule->mSheet = aSheet;
   }
   return NS_OK;
+}
+
+NS_IMETHODIMP
+CSSStyleRuleImpl::SetParentRule(nsICSSGroupRule* aRule)
+{
+  return nsCSSRule::SetParentRule(aRule);
 }
 
 NS_IMETHODIMP
@@ -2376,7 +2385,11 @@ CSSStyleRuleImpl::GetParentStyleSheet(nsIDOMCSSStyleSheet** aSheet)
 NS_IMETHODIMP    
 CSSStyleRuleImpl::GetParentRule(nsIDOMCSSRule** aParentRule)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  if (mParentRule) {
+    return CallQueryInterface(mParentRule, aParentRule);
+  }
+  *aParentRule = nsnull;
+  return NS_OK;
 }
 
 NS_IMETHODIMP    
