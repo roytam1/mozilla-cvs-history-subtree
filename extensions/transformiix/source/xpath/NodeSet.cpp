@@ -32,7 +32,7 @@
 
 #include "NodeSet.h"
 #include "XMLDOMUtils.h"
-#ifndef MOZ_XSL
+#ifdef TX_EXE
 #include <iostream.h>
 #endif
 

@@ -28,7 +28,7 @@
  */
 
 #include "NodeStack.h"
-#ifndef MOZ_XSL
+#ifdef TX_EXE
 #include <iostream.h>
 #endif
 
