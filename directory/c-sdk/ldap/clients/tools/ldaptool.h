@@ -87,6 +87,8 @@ extern int getopt (int argc, char *const *argv, const char *optstring);
 #include <ldap_ssl.h>
 #endif
 
+#include <ldappr.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -99,6 +101,7 @@ extern "C" {
 #define LDAPTOOL_DEFHOST	"localhost"
 #define LDAPTOOL_DEFCERTDBPATH	"."
 #define LDAPTOOL_DEFKEYDBPATH	"."
+#define LDAPTOOL_DEFREFHOPLIMIT		5
 
 #define LDAPTOOL_SAFEREALLOC( ptr, size )  ( ptr == NULL ? malloc( size ) : \
 						realloc( ptr, size ))
