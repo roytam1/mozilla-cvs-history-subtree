@@ -1360,7 +1360,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 			js_Emit1(cx, cg, JSOP_LEAVEWITH) < 0)
 			return JS_FALSE;
 		} else {
-		    /* set stack to orig depth (see SETSP comment above) */
+		    /* set stack to original depth (see SETSP comment above) */
 		    EMIT_ATOM_INDEX_OP(JSOP_SETSP, (jsatomid)depth);
 		}
 
@@ -1452,7 +1452,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 	     */
 	    EMIT_ATOM_INDEX_OP(JSOP_SETSP, (jsatomid)depth);
 
-	    if (catchjmp != -1) {
+	    if (catchjmp != -1 && iter->pn_kid1->pn_expr) {
 		CHECK_AND_SET_JUMP_OFFSET_AT(cx, cg, catchjmp);
 	    }
 	    /* last discriminant jumps to rethrow if none match */
