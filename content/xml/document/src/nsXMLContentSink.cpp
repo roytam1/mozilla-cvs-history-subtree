@@ -723,7 +723,6 @@ nsXMLContentSink::CloseContainer(const nsIParserNode& aNode)
       if (mStyleElement) {
         result = ProcessSTYLETag(aNode);
         mStyleElement=nsnull;
-        mStyleText.Truncate();
       }
     }
   }
