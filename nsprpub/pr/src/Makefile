@@ -24,7 +24,11 @@ include $(MOD_DEPTH)/config/config.mk
 ifdef USE_PTHREADS
     DIRS = io linking malloc md memory misc pthreads threads
 else
+ifdef USE_CTHREADS
+    DIRS = io linking malloc md memory misc cthreads threads
+else
     DIRS = io linking malloc md memory misc threads
+endif
 endif
 
 #
