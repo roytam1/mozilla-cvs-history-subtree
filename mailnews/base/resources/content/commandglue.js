@@ -492,6 +492,7 @@ var nsMsgViewSortOrder = Components.interfaces.nsMsgViewSortOrder;
 var nsMsgViewFlagsType = Components.interfaces.nsMsgViewFlagsType;
 var nsMsgViewCommandType = Components.interfaces.nsMsgViewCommandType;
 var nsMsgViewType = Components.interfaces.nsMsgViewType;
+var nsMsgNavigationType = Components.interfaces.nsMsgNavigationType;
 
 var gDBView = null;
 var gCurViewFlags;
