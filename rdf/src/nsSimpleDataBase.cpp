@@ -356,7 +356,7 @@ nsSimpleDataBase::nsSimpleDataBase(void)
 
 nsSimpleDataBase::~nsSimpleDataBase(void)
 {
-    for (PRInt32 i = mDataSources.Count(); i >= 0; --i) {
+    for (PRInt32 i = mDataSources.Count() - 1; i >= 0; --i) {
         nsIRDFDataSource* ds = static_cast<nsIRDFDataSource*>(mDataSources[i]);
         NS_IF_RELEASE(ds);
     }
