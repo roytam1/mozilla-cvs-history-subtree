@@ -60,6 +60,7 @@ REQUIRES	= \
 		  unicharutil \
 		  windowwatcher \
 		  dom \
+		  cookie \
 		  $(NULL)
 
 CPPSRCS  = nsProfileMigrator.cpp \

@@ -49,6 +49,7 @@ class nsICookieManager2;
 class nsILineInputStream;
 class nsILocalFile;
 class nsINIParser;
+class nsIPermissionManager;
 class nsIPrefBranch;
 
 class nsOperaProfileMigrator : public nsIBrowserProfileMigrator
@@ -159,17 +160,24 @@ protected:
 
   void     SynthesizePath(char** aResult);
   void     SynthesizeDomain(char** aResult);
-  nsresult AddCookie(nsICookieManager2* aManager,
-                     const nsACString& aID, 
-                     const nsACString& aData, 
-                     PRBool aSecure, 
-                     PRInt32 aExpiryTime);
+  nsresult AddCookieOverride(nsIPermissionManager* aManager);
+  nsresult AddCookie(nsICookieManager2* aManager);
 
 private:
   nsCOMPtr<nsIBinaryInputStream> mStream;
 
   nsVoidArray mDomainStack;
   nsVoidArray mPathStack;
+
+  typedef struct {
+    nsCString id;
+    nsCString data;
+    PRInt32 expiryTime;
+    PRBool isSecure;
+  } COOKIE;
+
+  COOKIE mCurrCookie;
+  PRUint8 mCurrHandlingInfo;
 
   PRUint32 mAppVersion;
   PRUint32 mFileVersion;

@@ -48,6 +48,7 @@
 #include "nsILocalFile.h"
 #include "nsINIParser.h"
 #include "nsIObserverService.h"
+#include "nsIPermissionManager.h"
 #include "nsIPrefLocalizedString.h"
 #include "nsIPrefService.h"
 #include "nsIProperties.h"
@@ -401,11 +402,15 @@ nsOperaProfileMigrator::CopyCookies(PRBool aReplace)
 }
 
 nsOperaCookieMigrator::nsOperaCookieMigrator(nsIInputStream* aSourceStream) :
-  mAppVersion(0), mFileVersion(0), mTagTypeLength(0), mPayloadTypeLength(0), mCookieOpen(PR_FALSE)
+  mAppVersion(0), mFileVersion(0), mTagTypeLength(0), mPayloadTypeLength(0), 
+  mCookieOpen(PR_FALSE), mCurrHandlingInfo(0)
 {
   mStream = do_CreateInstance("@mozilla.org/binaryinputstream;1");
   if (mStream)
     mStream->SetInputStream(aSourceStream);
+
+  mCurrCookie.isSecure = PR_FALSE;
+  mCurrCookie.expiryTime = 0;
 }
 
 nsresult
@@ -421,16 +426,12 @@ nsOperaCookieMigrator::Migrate()
     return NS_OK;
 
   nsCOMPtr<nsICookieManager2> manager(do_GetService(NS_COOKIEMANAGER_CONTRACTID));
+  nsCOMPtr<nsIPermissionManager> permissionManager(do_GetService("@mozilla.org/permissionmanager;1"));
 
   PRUint8 tag;
   PRUint16 length, segmentLength;
-  PRInt32 expiryTime;
-  PRUint8 handlingInfo = 0;
-  PRBool hasHandlingInfo = PR_FALSE;
-  PRBool isSecure = PR_FALSE;
 
-  nsCAutoString id, data;
-  char* buf;
+  char* buf = nsnull;
   do {
     if (NS_FAILED(mStream->Read8(&tag))) 
       return NS_OK; // EOF.
@@ -450,6 +451,9 @@ nsOperaCookieMigrator::Migrate()
       break;
     case END_DOMAIN_SEGMENT:
       {
+        if (mCurrHandlingInfo)
+          AddCookieOverride(permissionManager);
+
         // Pop the domain stack
         PRUint32 count = mDomainStack.Count();
         if (count > 0)
@@ -473,7 +477,7 @@ nsOperaCookieMigrator::Migrate()
       {
         // Add the last remaining cookie for this path.
         if (mCookieOpen) 
-          AddCookie(manager, id, data, isSecure, expiryTime);
+          AddCookie(manager);
 
         // We receive one "End Path Segment" even if the path stack is empty
         // i.e. telling us that we are done processing cookies for "/"
@@ -487,7 +491,7 @@ nsOperaCookieMigrator::Migrate()
 
     case FILTERING_INFO:
       mStream->Read16(&length);
-      mStream->Read8(&handlingInfo);
+      mStream->Read8(&mCurrHandlingInfo);
       break;
     case PATH_HANDLING_INFO:
     case THIRD_PARTY_HANDLING_INFO: 
@@ -503,7 +507,7 @@ nsOperaCookieMigrator::Migrate()
         // Be sure to save the last cookie before overwriting the buffers
         // with data from subsequent cookies. 
         if (mCookieOpen)
-          AddCookie(manager, id, data, isSecure, expiryTime);
+          AddCookie(manager);
 
         mStream->Read16(&segmentLength);
         mCookieOpen = PR_TRUE;
@@ -514,7 +518,7 @@ nsOperaCookieMigrator::Migrate()
         mStream->Read16(&length);
         mStream->ReadBytes(length, &buf);
         buf[length] = '\0';
-        id.Assign(buf);
+        mCurrCookie.id.Assign(buf);
       }
       break;
     case COOKIE_DATA:
@@ -522,14 +526,15 @@ nsOperaCookieMigrator::Migrate()
         mStream->Read16(&length);
         mStream->ReadBytes(length, &buf);
         buf[length] = '\0';
-        data.Assign(buf);
+        mCurrCookie.data.Assign(buf);
       }
       break;
     case COOKIE_EXPIRY:
       mStream->Read16(&length);
-      mStream->Read32(NS_REINTERPRET_CAST(PRUint32*, &expiryTime));
+      mStream->Read32(NS_REINTERPRET_CAST(PRUint32*, &(mCurrCookie.expiryTime)));
       break;
     case COOKIE_SECURE:
+      mCurrCookie.isSecure = PR_TRUE;
       break;
 
     // We don't support any of these fields but we must read them in
@@ -576,11 +581,29 @@ nsOperaCookieMigrator::Migrate()
 }
 
 nsresult
-nsOperaCookieMigrator::AddCookie(nsICookieManager2* aManager,
-                                 const nsACString& aID, 
-                                 const nsACString& aData, 
-                                 PRBool aSecure, 
-                                 PRInt32 aExpiryTime)
+nsOperaCookieMigrator::AddCookieOverride(nsIPermissionManager* aManager)
+{
+  nsresult rv;
+
+  nsXPIDLCString domain;
+  SynthesizeDomain(getter_Copies(domain));
+  nsCOMPtr<nsIURI> uri(do_CreateInstance("@mozilla.org/network/standard-url;1"));
+  if (!uri)
+    return NS_ERROR_OUT_OF_MEMORY;
+  uri->SetHost(domain);
+
+  rv = aManager->Add(uri, "cookie", 
+                     (mCurrHandlingInfo == 1 || mCurrHandlingInfo == 3) ? nsIPermissionManager::ALLOW_ACTION :
+                                                                          nsIPermissionManager::DENY_ACTION);
+
+  mCurrHandlingInfo = 0;
+
+  return rv;
+}
+
+
+nsresult
+nsOperaCookieMigrator::AddCookie(nsICookieManager2* aManager)
 {
   // This is where we use the information gathered in all the other 
   // states to add a cookie to the Firebird Cookie Manager.
@@ -592,7 +615,18 @@ nsOperaCookieMigrator::AddCookie(nsICookieManager2* aManager,
 
   mCookieOpen = PR_FALSE;
   
-  return aManager->Add(domain, path, aID, aData, aSecure, PR_FALSE, PRInt64(aExpiryTime));
+  nsresult rv = aManager->Add(domain, 
+                              path, 
+                              mCurrCookie.id, 
+                              mCurrCookie.data, 
+                              mCurrCookie.isSecure, 
+                              PR_FALSE, 
+                              PRInt64(mCurrCookie.expiryTime));
+
+  mCurrCookie.isSecure = 0;
+  mCurrCookie.expiryTime = 0;
+
+  return rv;
 }
 
 void
