@@ -646,8 +646,6 @@ nsOperaProfileMigrator::ParseBookmarksFolder(nsILineInputStream* aStream,
                                              nsIRDFResource* aToolbar,
                                              nsIBookmarksService* aBMS)
 {
-  static PRBool foundToolbarFolder = PR_FALSE;
-
   PRBool moreData = PR_FALSE;
   nsAutoString buffer;
   EntryType entryType = EntryType_BOOKMARK;
