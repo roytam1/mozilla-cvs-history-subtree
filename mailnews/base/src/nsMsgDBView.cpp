@@ -501,6 +501,14 @@ nsresult nsMsgDBView::GetSelectedIndices(nsUInt32Array *selection)
       }
     }
   }
+  else
+  {
+    // if there is no outliner selection object then we must be in stand alone message mode.
+    // in that case the selected indices are really just the current message key.
+    nsMsgViewIndex viewIndex = FindViewIndex(m_currentlyDisplayedMsgKey);
+    if (viewIndex != nsMsgViewIndex_None)
+      selection->Add(viewIndex);
+  }
   return NS_OK;
 }
 
@@ -2953,12 +2961,10 @@ NS_IMETHODIMP nsMsgDBView::OnKeyChange(nsMsgKey aKeyChanged, PRUint32 aOldFlags,
 NS_IMETHODIMP nsMsgDBView::OnKeyDeleted(nsMsgKey aKeyChanged, nsMsgKey aParentKey, PRInt32 aFlags, 
                             nsIDBChangeListener *aInstigator)
 {
-  if (mOutliner)
-  {
-    nsMsgViewIndex deletedIndex = m_keys.FindIndex(aKeyChanged);
-    if (deletedIndex != nsMsgViewIndex_None)
-      RemoveByIndex(deletedIndex);
-  }
+  nsMsgViewIndex deletedIndex = m_keys.FindIndex(aKeyChanged);
+  if (deletedIndex != nsMsgViewIndex_None)
+    RemoveByIndex(deletedIndex);
+
   return NS_OK;
 }
 
@@ -3786,7 +3792,11 @@ nsMsgDBView::GetFirstSelected(nsMsgViewIndex *firstSelected)
 {
   NS_ENSURE_ARG_POINTER(firstSelected);
   *firstSelected = nsMsgViewIndex_None;
-  if (!mOutlinerSelection) {
+  if (!mOutlinerSelection) 
+  {
+    // if we don't have an outliner selection then we must be in stand alone mode.
+    // return the index of the current message key as the first selected index.
+    *firstSelected = FindViewIndex(m_currentlyDisplayedMsgKey);
     return NS_OK;
   }
    
