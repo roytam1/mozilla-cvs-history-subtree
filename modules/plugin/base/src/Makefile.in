@@ -118,6 +118,9 @@ ifdef MOZ_ENABLE_GTK
 CXXFLAGS        += $(MOZ_GTK_CFLAGS)
 CFLAGS          += $(MOZ_GTK_CFLAGS)
 EXTRA_DSO_LDOPTS += -lgtkxtbin -lgtksuperwin $(XLDFLAGS) -lXt $(MOZ_GTK_LDFLAGS)
+ifneq (,$(filter HP-UX,$(OS_ARCH)))
+EXTRA_DSO_LDOPTS += -lXm
+endif
 endif		#MOZ_ENABLE_GTK
 
 ifdef MOZ_ENABLE_XLIB
