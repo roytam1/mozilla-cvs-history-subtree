@@ -78,7 +78,6 @@
 #include "nsMsgPrintEngine.h"
 #include "nsMsgSearchSession.h"
 #include "nsMsgSearchAdapter.h"
-#include "nsMsgSearchDataSource.h"
 #include "nsMsgFolderCompactor.h"
 #include "nsMsgThreadedDBView.h"
 #include "nsMsgSpecialViews.h"
@@ -99,7 +98,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMsgFolderDataSource, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMsgAccountManagerDataSource, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgSearchSession)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgSearchValidityManager)
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMsgSearchDataSource,Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgFilterService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgFilterDataSource)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgFilterDelegateFactory)
@@ -186,10 +184,6 @@ static nsModuleComponentInfo gComponents[] = {
     { "Message Search Validity Manager", NS_MSGSEARCHVALIDITYMANAGER_CID,
         NS_MSGSEARCHVALIDITYMANAGER_CONTRACTID,
         nsMsgSearchValidityManagerConstructor,
-    },
-    { "Search Datasource", NS_MSGSEARCHDATASOURCE_CID,
-      NS_MSGSEARCHDATASOURCE_CONTRACTID,
-      nsMsgSearchDataSourceConstructor,
     },
     { "Message Filter Service", NS_MSGFILTERSERVICE_CID,
       NS_MSGFILTERSERVICE_CONTRACTID,

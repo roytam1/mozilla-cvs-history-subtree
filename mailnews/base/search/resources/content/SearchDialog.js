@@ -22,7 +22,6 @@ var rdfDatasourcePrefix = "@mozilla.org/rdf/datasource;1?name=";
 var rdfServiceContractID    = "@mozilla.org/rdf/rdf-service;1";
 var searchSessionContractID = "@mozilla.org/messenger/searchSession;1";
 var folderDSContractID         = rdfDatasourcePrefix + "mailnewsfolders";
-var gSearchDatasource;
 var gSearchView;
 var gSearchSession;
 var gCurrentFolder;
@@ -304,11 +303,7 @@ var nsMsgViewCommandType = Components.interfaces.nsMsgViewCommandType;
 function setupDatasource() {
 
     RDF = Components.classes[rdfServiceContractID].getService(Components.interfaces.nsIRDFService);
-    
-    gSearchDatasource = Components.classes[rdfDatasourcePrefix + "msgsearch"].createInstance(Components.interfaces.nsIRDFDataSource);
     gSearchView = Components.classes["@mozilla.org/messenger/msgdbview;1?type=search"].createInstance(Components.interfaces.nsIMsgDBView);
-    dump("The root is " + gSearchDatasource.URI + "\n");
-//    gThreadTree.setAttribute("ref", gSearchDatasource.URI);
     
     var count = new Object;
     gSearchView.init(messenger, msgWindow);
@@ -326,13 +321,6 @@ function setupDatasource() {
     // attributes about each message)
     gSearchSession = Components.classes[searchSessionContractID].createInstance(Components.interfaces.nsIMsgSearchSession);
     
-//    setMsgDatasourceWindow(gSearchDatasource, msgWindow);
-//    gThreadTree.database.AddDataSource(gSearchDatasource);
-
-//    var messageDatasource = Components.classes[rdfDatasourcePrefix + "mailnewsmessages"].createInstance(Components.interfaces.nsIRDFDataSource);
-//    setMsgDatasourceWindow(messageDatasource, msgWindow);
-    
-//    gThreadTree.database.AddDataSource(messageDatasource);
     
     // the datasource is a listener on the search results
     gViewSearchListener = gSearchView.QueryInterface(Components.interfaces.nsIMsgSearchNotify);
