@@ -96,7 +96,7 @@ static void DEBUG_TrackScopeShutdown()
 #define DEBUG_TrackNewScope(scope) ((void)0)
 #define DEBUG_TrackDeleteScope(scope) ((void)0)
 #define DEBUG_TrackScopeTraversal() ((void)0)
-#define DEBUG_TrackScopeShutdown(scope) ((void)0)
+#define DEBUG_TrackScopeShutdown() ((void)0)
 #endif
 
 /***************************************************************************/
