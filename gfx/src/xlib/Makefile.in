@@ -57,6 +57,10 @@ ifdef SUNCTL
 REQUIRES	+= ctl
 endif
 
+ifdef MOZ_ENABLE_XPRINT
+REQUIRES	+= xprintutil
+endif
+
 # Code shared between GTK+, Xlib and Xprint gfx modules
 # (empty for now - but this will be filled soon...)
 X11SHARED_LCPPSRCS = \
@@ -83,12 +87,7 @@ ifdef HAVE_XIE
 CSRCS		+= XIE.c
 endif
 
-ifdef MOZ_ENABLE_XPRINT
-XPU_LCSRCS	 = xprintutil.c
-CSRCS           += $(XPU_LCSRCS)
-endif
-
-GARBAGE         += $(X11SHARED_LCPPSRCS) $(XPU_LCSRCS) $(wildcard *.$(OBJ_SUFFIX))
+GARBAGE         += $(X11SHARED_LCPPSRCS) $(wildcard *.$(OBJ_SUFFIX))
 
 include $(topsrcdir)/config/rules.mk
 
@@ -101,6 +100,7 @@ GFX_XIE_LIBS    += $(MOZ_XIE_LIBS)
 endif
 
 EXTRA_DSO_LDOPTS += \
+		$(LIBS_DIR)     \
 		$(NSPR_LIBS)	\
 		-lxpcom		\
 		-lgkgfx		\
@@ -116,7 +116,9 @@ endif
 
 ifdef MOZ_ENABLE_XPRINT
 DEFINES         += -DUSE_XPRINT
-EXTRA_DSO_LDOPTS += $(MOZ_XPRINT_LDFLAGS)
+EXTRA_DSO_LDOPTS += \
+		-lxprintutil \
+		$(MOZ_XPRINT_LDFLAGS)
 endif
 
 LOCAL_INCLUDES	+= \
@@ -128,8 +130,8 @@ LOCAL_INCLUDES	+= \
 		$(NULL)
 
 ifdef MOZ_ENABLE_XPRINT
-export:: $(addprefix $(srcdir)/../xprint/,$(XPU_LCSRCS)) $(addprefix $(srcdir)/../x11shared/,$(X11SHARED_LCPPSRCS))
-	$(INSTALL) $^ .
+#export:: $(addprefix $(srcdir)/../x11shared/,$(X11SHARED_LCPPSRCS))
+#	$(INSTALL) $^ .
 else
 # disabled until X11SHARED_LCPPSRCS becomes non-empty
 # export:: $(addprefix $(srcdir)/../x11shared/,$(X11SHARED_LCPPSRCS))
