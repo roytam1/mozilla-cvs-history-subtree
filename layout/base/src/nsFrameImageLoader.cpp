@@ -269,6 +269,9 @@ nsFrameImageLoader::StopImageLoad(PRBool aStopChrome)
   printf("\n");
 #endif
   if (nsnull != mImageRequest) {
+    if (mNotifyLockCount) {
+	return NS_ERROR_FAILURE;
+    }
     mImageRequest->RemoveObserver(this);
     NS_RELEASE(mImageRequest);
   }
