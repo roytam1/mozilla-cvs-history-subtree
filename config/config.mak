@@ -169,9 +169,11 @@ CFGFILE=$(OBJDIR)\cmd.cfg
 !if "$(MOZ_BITS)" == "16"
 INCS=-I$(XPDIST)\public\win16 $(INCS) -I$(DEPTH)\include -I$(DIST)\include -I..\include
 !else
-INCS=$(INCS) -I$(DEPTH)\include -I$(DIST)\include \
-             -I$(XPDIST)\public\img -I$(XPDIST)\public\util \
-             -I$(XPDIST)\public\coreincl
+# Need to get rid of $(XPDIST)\public\img (currently, GFX depends on it).
+
+INCS=$(INCS) -I$(DEPTH)\include -I$(XPDIST)\include -I$(DIST)\include \
+             -I$(XPDIST)\public\img
+
 !endif # 16
 
 !ifndef NO_LAYERS

@@ -210,6 +210,12 @@ $(JAVA_DESTPATH)\$(PACKAGE): $(JAVA_DESTPATH)
 $(JMCSRCDIR):
     -mkdir $(JMCSRCDIR)
 
+# The new, one-size-fits-all include directory
+$(XPDIST)\include:
+    -mkdir $(XPDIST:/=\)\include
+
+# Still need this rule for those who have hard coded dependencies on
+# the creation of this directory (e.g., DOM).
 $(XPDIST)\public\$(MODULE):
     -mkdir $(XPDIST:/=\)\public\$(MODULE:/=\)
 
@@ -576,11 +582,11 @@ export:: $(JMC_STUBS) $(OBJDIR) $(JMC_OBJS)
 #//
 #//------------------------------------------------------------------------
 !if defined(EXPORTS)
-export:: $(XPDIST)\public\$(MODULE)
-    for %f in ($(EXPORTS)) do $(MAKE_INSTALL:/=\) %f $(XPDIST:/=\)\public\$(MODULE:/=\)
+export:: $(XPDIST)\include
+    for %f in ($(EXPORTS)) do $(MAKE_INSTALL:/=\) %f $(XPDIST:/=\)\include
 
 clobber::
-    -for %g in ($(EXPORTS)) do $(RM) $(XPDIST:/=\)\public\$(MODULE:/=\)\%g
+    -for %g in ($(EXPORTS)) do $(RM) $(XPDIST:/=\)\include\%g
 !endif # EXPORTS
 
 #//------------------------------------------------------------------------
