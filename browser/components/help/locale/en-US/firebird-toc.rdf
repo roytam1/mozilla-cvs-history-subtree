@@ -130,16 +130,6 @@
         <rdf:Seq>
           <rdf:li><rdf:Description ID="extensions-uninstalling" nc:name="Uninstalling" nc:link="customization.xhtml#uninstalling_extensions"/> </rdf:li>
           <rdf:li><rdf:Description ID="extensions-updating" nc:name="Updating Extensions" nc:link="customization.xhtml#updating_extensions"/> </rdf:li>
-          <rdf:li><rdf:Description ID="profile-manager" nc:name="Profile Manager" nc:link="profiles.xhtml"/> </rdf:li>
-        </rdf:Seq>
-      </nc:subheadings>
-  </rdf:Description>
-
-  <rdf:Description about="#profile-manager">
-      <nc:subheadings>
-        <rdf:Seq>
-          <rdf:li> <rdf:Description ID="profile-manager-creating-a-new-profile" nc:name="Creating a New Profile" nc:link="profiles.xhtml#creating_a_new_profile"/> </rdf:li>
-          <rdf:li> <rdf:Description ID="profile-manager-deleting-or-renaming-a-profile" nc:name="Deleting or Renaming a Profile" nc:link="profiles.xhtml#deleting_or_renaming_a_profile"/> </rdf:li>
         </rdf:Seq>
       </nc:subheadings>
   </rdf:Description>

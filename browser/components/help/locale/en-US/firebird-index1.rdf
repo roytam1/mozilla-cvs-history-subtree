@@ -354,7 +354,6 @@
                 <rdf:li><rdf:Description ID="popups" nc:name="Popups" nc:link="popup.xhtml"/></rdf:li>
 				<rdf:li><rdf:Description ID="printing" nc:name="Printing" nc:link="using_firebird.xhtml#printing_a_page"/></rdf:li>
                 <rdf:li><rdf:Description ID="privacy-options" nc:name="Privacy Options" nc:link="prefs.xhtml#privacy_options"/></rdf:li>
-                <rdf:li><rdf:Description ID="profiles" nc:name="Profiles" nc:link="profiles.xhtml"/></rdf:li>
 	    </rdf:Seq>
         </nc:subheadings>
     </rdf:Description>
@@ -386,16 +385,6 @@
             <rdf:Seq>
                 <rdf:li><rdf:Description ID="popups-blocking" nc:name="Blocking" nc:link="popup.xhtml#popup_blocker_preferences"/></rdf:li>
                 <rdf:li><rdf:Description ID="popups-defined" nc:name="What are popups" nc:link="popup.xhtml#what_are_popups"/></rdf:li>
-            </rdf:Seq>
-        </nc:subheadings>
-    </rdf:Description>
-
-    <rdf:Description about="#profiles">
-        <nc:subheadings>
-            <rdf:Seq>
-                <rdf:li><rdf:Description ID="profiles-creating" nc:name="Creating" nc:link="profiles.xhtml#creating_a_new_profile"/></rdf:li>
-                <rdf:li><rdf:Description ID="profiles-deleting" nc:name="Deleting" nc:link="profiles.xhtml#deleting_or_renaming_a_profile"/></rdf:li>
-                <rdf:li><rdf:Description ID="profiles-renaming" nc:name="Renaming" nc:link="profiles.xhtml#deleting_or_renaming_a_profile"/></rdf:li>
             </rdf:Seq>
         </nc:subheadings>
     </rdf:Description>
