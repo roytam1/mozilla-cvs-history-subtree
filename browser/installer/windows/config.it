@@ -324,7 +324,7 @@ Message0=Create icons for $ProductShortName$:
 ; Only a maximum of 3 "Windows Integration-Item"s are allowded.  Each Item
 ; shows up as a checkbox in the Windows Integration dialog.
 [Windows Integration-Item0]
-CheckBoxState=FALSE
+CheckBoxState=TRUE
 ;*** LOCALIZE ME BABY ***
 Description=On my Desktop
 Archive=
@@ -910,7 +910,6 @@ Timing=pre smartupdate
 
 [Windows Registry1]
 Root Key=HKEY_LOCAL_MACHINE
-;*** LOCALIZE ME BABY ***
 Key=Software\$CompanyName$\$ProductName$
 Name=
 Name Value=
@@ -924,7 +923,6 @@ Timing=pre smartupdate
 
 [Windows Registry2]
 Root Key=HKEY_LOCAL_MACHINE
-;*** LOCALIZE ME BABY ***
 Key=Software\$CompanyName$\$ProductName$\$UserAgent$
 Name=
 Name Value=
@@ -938,7 +936,6 @@ Timing=pre smartupdate
 
 [Windows Registry3]
 Root Key=HKEY_LOCAL_MACHINE
-;*** LOCALIZE ME BABY ***
 Key=Software\$CompanyName$\$ProductName$\$UserAgent$\Main
 Name=Program Folder Path
 Name Value=[Default Folder]
@@ -952,7 +949,6 @@ Timing=pre smartupdate
 
 [Windows Registry4]
 Root Key=HKEY_LOCAL_MACHINE
-;*** LOCALIZE ME BABY ***
 Key=Software\$CompanyName$\$ProductName$\$UserAgent$\Uninstall
 Name=Description
 Name Value=$ProductName$ ($UserAgentShort$)
@@ -966,7 +962,6 @@ Timing=pre smartupdate
 
 [Windows Registry5]
 Root Key=HKEY_LOCAL_MACHINE
-;*** LOCALIZE ME BABY ***
 Key=Software\$CompanyName$\$ProductName$\$UserAgent$\Uninstall
 Name=Uninstall Log Folder
 Name Value=[SETUP PATH]\uninstall
@@ -980,7 +975,6 @@ Timing=pre smartupdate
 
 [Windows Registry6]
 Root Key=HKEY_CURRENT_USER
-;*** LOCALIZE ME BABY ***
 Key=Software\$CompanyName$
 Name=
 Name Value=
@@ -994,7 +988,6 @@ Timing=pre smartupdate
 
 [Windows Registry7]
 Root Key=HKEY_CURRENT_USER
-;*** LOCALIZE ME BABY ***
 Key=Software\$CompanyName$\$ProductName$
 Name=
 Name Value=
@@ -1008,7 +1001,6 @@ Timing=pre smartupdate
 
 [Windows Registry8]
 Root Key=HKEY_CURRENT_USER
-;*** LOCALIZE ME BABY ***
 Key=Software\$CompanyName$\$ProductName$\$UserAgent$
 Name=
 Name Value=
@@ -1022,7 +1014,6 @@ Timing=pre smartupdate
 
 [Windows Registry9]
 Root Key=HKEY_CURRENT_USER
-;*** LOCALIZE ME BABY ***
 Key=Software\$CompanyName$\$ProductName$\$UserAgent$\Main
 Name=Program Folder Path
 Name Value=[Default Folder]
@@ -1036,7 +1027,6 @@ Timing=pre smartupdate
 
 [Windows Registry10]
 Root Key=HKEY_CURRENT_USER
-;*** LOCALIZE ME BABY ***
 Key=Software\$CompanyName$\$ProductName$\$UserAgent$\Uninstall
 Name=Description
 Name Value=$ProductName$ ($UserAgentShort$)
@@ -1050,7 +1040,6 @@ Timing=pre smartupdate
 
 [Windows Registry11]
 Root Key=HKEY_CURRENT_USER
-;*** LOCALIZE ME BABY ***
 Key=Software\$CompanyName$\$ProductName$\$UserAgent$\Uninstall
 Name=Uninstall Log Folder
 Name Value=[SETUP PATH]\uninstall
@@ -1079,8 +1068,126 @@ Timing=post smartupdate
 Root Key=HKEY_LOCAL_MACHINE
 Key=Software\Microsoft\Windows\CurrentVersion\Uninstall\$ProductName$ ($UserAgentShort$)
 Name=UninstallString
-;*** LOCALIZE ME BABY ***
 Name Value=[WINDIR]\$UninstallFile$ /ua "$UserAgent$"
+Type=REG_SZ
+Decrypt Key=FALSE
+Decrypt Name=FALSE
+Decrypt Name Value=TRUE
+Overwrite Key=TRUE
+Overwrite Name=TRUE
+Timing=post smartupdate
+
+[Windows Registry14]
+Root Key=HKEY_LOCAL_MACHINE
+Key=Software\Microsoft\Windows\CurrentVersion\Uninstall\$ProductName$ ($UserAgentShort$)
+Name=DisplayIcon
+Name Value=[SETUP PATH]\$MainExeFile$,0
+Type=REG_SZ
+Decrypt Key=FALSE
+Decrypt Name=FALSE
+Decrypt Name Value=TRUE
+Overwrite Key=TRUE
+Overwrite Name=TRUE
+Timing=post smartupdate
+
+[Windows Registry15]
+Root Key=HKEY_LOCAL_MACHINE
+Key=Software\Microsoft\Windows\CurrentVersion\Uninstall\$ProductName$ ($UserAgentShort$)
+Name=DisplayVersion
+Name Value=$UserAgent$
+Type=REG_SZ
+Decrypt Key=FALSE
+Decrypt Name=FALSE
+Decrypt Name Value=TRUE
+Overwrite Key=TRUE
+Overwrite Name=TRUE
+Timing=post smartupdate
+
+[Windows Registry16]
+Root Key=HKEY_LOCAL_MACHINE
+Key=Software\Microsoft\Windows\CurrentVersion\Uninstall\$ProductName$ ($UserAgentShort$)
+Name=Comment
+Name Value=The Browser, Reloaded.
+Type=REG_SZ
+Decrypt Key=FALSE
+Decrypt Name=FALSE
+Decrypt Name Value=TRUE
+Overwrite Key=TRUE
+Overwrite Name=TRUE
+Timing=post smartupdate
+
+[Windows Registry17]
+Root Key=HKEY_LOCAL_MACHINE
+Key=Software\Microsoft\Windows\CurrentVersion\Uninstall\$ProductName$ ($UserAgentShort$)
+Name=InstallLocation
+Name Value=[SETUP PATH]
+Type=REG_SZ
+Decrypt Key=FALSE
+Decrypt Name=FALSE
+Decrypt Name Value=TRUE
+Overwrite Key=TRUE
+Overwrite Name=TRUE
+Timing=post smartupdate
+
+[Windows Registry18]
+Root Key=HKEY_LOCAL_MACHINE
+Key=Software\Microsoft\Windows\CurrentVersion\Uninstall\$ProductName$ ($UserAgentShort$)
+Name=NoModify
+Name Value=1
+Type=REG_SZ
+Decrypt Key=FALSE
+Decrypt Name=FALSE
+Decrypt Name Value=TRUE
+Overwrite Key=TRUE
+Overwrite Name=TRUE
+Timing=post smartupdate
+
+[Windows Registry19]
+Root Key=HKEY_LOCAL_MACHINE
+Key=Software\Microsoft\Windows\CurrentVersion\Uninstall\$ProductName$ ($UserAgentShort$)
+Name=NoRepair
+Name Value=1
+Type=REG_SZ
+Decrypt Key=FALSE
+Decrypt Name=FALSE
+Decrypt Name Value=TRUE
+Overwrite Key=TRUE
+Overwrite Name=TRUE
+Timing=post smartupdate
+
+[Windows Registry20]
+Root Key=HKEY_LOCAL_MACHINE
+Key=Software\Microsoft\Windows\CurrentVersion\Uninstall\$ProductName$ ($UserAgentShort$)
+Name=Publisher
+Name Value=$CompanyName$
+Type=REG_SZ
+Decrypt Key=FALSE
+Decrypt Name=FALSE
+Decrypt Name Value=TRUE
+Overwrite Key=TRUE
+Overwrite Name=TRUE
+Timing=post smartupdate
+
+[Windows Registry21]
+Root Key=HKEY_LOCAL_MACHINE
+Key=Software\Microsoft\Windows\CurrentVersion\Uninstall\$ProductName$ ($UserAgentShort$)
+Name=URLInfoAbout
+;*** LOCALIZE ME BABY ***
+Name Value=http://www.mozilla.org/
+Type=REG_SZ
+Decrypt Key=FALSE
+Decrypt Name=FALSE
+Decrypt Name Value=TRUE
+Overwrite Key=TRUE
+Overwrite Name=TRUE
+Timing=post smartupdate
+
+[Windows Registry22]
+Root Key=HKEY_LOCAL_MACHINE
+Key=Software\Microsoft\Windows\CurrentVersion\Uninstall\$ProductName$ ($UserAgentShort$)
+Name=URLUpdateInfo
+;*** LOCALIZE ME BABY ***
+Name Value=http://www.mozilla.org/products/firefox/
 Type=REG_SZ
 Decrypt Key=FALSE
 Decrypt Name=FALSE
@@ -1091,7 +1198,7 @@ Timing=post smartupdate
 
 ; The following keys are to help JRE's installer locate where mozilla gets
 ; installed to.  It has not been updated to look for the new keys.
-[Windows Registry14]
+[Windows Registry23]
 Root Key=HKEY_LOCAL_MACHINE
 Key=Software\Mozilla
 Name=
