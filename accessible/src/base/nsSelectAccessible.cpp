@@ -35,6 +35,7 @@
 #include "nsLayoutAtoms.h"
 #include "nsIDOMMenuListener.h"
 #include "nsIDOMEventReceiver.h"
+#include "nsReadableUtils.h"
 
 class nsSelectChildAccessible : public nsAccessible,
                                 public nsIDOMMenuListener
@@ -87,7 +88,8 @@ public:
   NS_IMETHOD GetAccChildCount(PRInt32 *_retval);
   NS_IMETHOD GetAccName(PRUnichar **_retval);
   NS_IMETHOD GetAccRole(PRUnichar **_retval);
-  NS_IMETHOD GetAccState(PRUnichar **_retval);
+  NS_IMETHOD GetAccState(PRUint32 *_retval);
+  NS_IMETHOD GetAccExtState(PRUint32 *_retval);
 
   // popup listener
   NS_IMETHOD Create(nsIDOMEvent* aEvent);
@@ -189,9 +191,7 @@ NS_IMETHODIMP nsSelectAccessible::GetAccName(PRUnichar **_retval)
 
 NS_IMETHODIMP nsSelectAccessible::GetAccRole(PRUnichar **_retval)
 {
-  nsAutoString a;
-  a.AssignWithConversion("combo box");
-  *_retval = a.ToNewUnicode();
+  *_retval = ToNewUnicode(NS_LITERAL_STRING("combo box"));
   return NS_OK;
 }
 
@@ -310,9 +310,7 @@ NS_IMETHODIMP nsSelectChildAccessible::GetAccRole(PRUnichar **_retval)
   // any text in the combo box is static
   if (role.EqualsIgnoreCase("text")) {
     // if it the comboboxes text. Make it static
-    nsAutoString name;
-    name.AssignWithConversion("static text");
-    *_retval = name.ToNewUnicode();
+    *_retval = ToNewUnicode(NS_LITERAL_STRING("static text"));
   } else {
     rv = nsAccessible::GetAccRole(_retval);
   }
@@ -352,13 +350,11 @@ NS_IMETHODIMP nsSelectChildAccessible::GetAccName(PRUnichar **_retval)
      // set _retval to it.
      // notice its supposed to be reversed. Close if opened
      // and Open if closed.
-     nsAutoString name;
-     if (mOpen)
-       name.AssignWithConversion("Close");
-     else
-       name.AssignWithConversion("Open");
 
-     *_retval = name.ToNewUnicode();
+     if (mOpen)
+         *_retval = ToNewUnicode(NS_LITERAL_STRING("Close"));
+     else
+         *_retval = ToNewUnicode(NS_LITERAL_STRING("Open"));
 
   } else {
     /*rv = nsAccessible::GetAccName(_retval);*/
@@ -498,7 +494,7 @@ NS_IMETHODIMP nsSelectWindowAccessible::Close(nsIDOMEvent* aEvent)
 }
 
 
-NS_IMETHODIMP nsSelectWindowAccessible::GetAccState(PRUnichar **_retval)
+NS_IMETHODIMP nsSelectWindowAccessible::GetAccState(PRUint32 *_retval)
 {
   // not not already one register ourselves as a popup listener
    
@@ -506,14 +502,14 @@ NS_IMETHODIMP nsSelectWindowAccessible::GetAccState(PRUnichar **_retval)
 
      nsCOMPtr<nsIDOMEventReceiver> eventReceiver = do_QueryInterface(mContent);
      if (!eventReceiver) {
-       *_retval = nsnull;
+       *_retval = 0;
        return NS_ERROR_NOT_IMPLEMENTED;
      }
 
      nsresult rv = eventReceiver->AddEventListener(NS_LITERAL_STRING("create"), this, PR_TRUE);   
 
      if (NS_FAILED(rv)) {
-       *_retval = nsnull;
+       *_retval = 0;
        return rv;
      }
 
@@ -522,14 +518,18 @@ NS_IMETHODIMP nsSelectWindowAccessible::GetAccState(PRUnichar **_retval)
 
   // if open we are visible if closed we are invisible
    // set _retval to it.
-   nsAutoString a;
    if (mOpen)
-      a.AssignWithConversion("default");
+     *_retval |= STATE_DEFAULT;
    else
-      a.AssignWithConversion("invisible");
+     *_retval |= STATE_INVISIBLE;
 
-   *_retval = a.ToNewUnicode();
+   return NS_OK;
+}
 
+
+NS_IMETHODIMP nsSelectWindowAccessible::GetAccExtState(PRUint32 *_retval)
+{
+	*_retval=0;
    return NS_OK;
 }
 
@@ -540,9 +540,7 @@ NS_IMETHODIMP nsSelectWindowAccessible::GetAccName(PRUnichar **_retval)
  
 NS_IMETHODIMP nsSelectWindowAccessible::GetAccRole(PRUnichar **_retval)
 {
-  nsAutoString a;
-  a.AssignWithConversion("window");
-  *_retval = a.ToNewUnicode();
+  *_retval = ToNewUnicode(NS_LITERAL_STRING("window"));
   return NS_OK;
 }
 
@@ -649,9 +647,7 @@ NS_IMETHODIMP nsSelectListAccessible::GetAccName(PRUnichar **_retval)
 
 NS_IMETHODIMP nsSelectListAccessible::GetAccRole(PRUnichar **_retval)
 {
-  nsAutoString a;
-  a.AssignWithConversion("list");
-  *_retval = a.ToNewUnicode();
+  *_retval = ToNewUnicode(NS_LITERAL_STRING("list"));
   return NS_OK;
 }
 
@@ -708,9 +704,7 @@ void nsListChildAccessible::GetListAtomForFrame(nsIFrame* aFrame, nsIAtom*& aLis
 
 NS_IMETHODIMP nsListChildAccessible::GetAccRole(PRUnichar **_retval)
 {
-  nsAutoString a;
-  a.AssignWithConversion("list item");
-  *_retval = a.ToNewUnicode();
+  *_retval = ToNewUnicode(NS_LITERAL_STRING("list item"));
   return NS_OK;
 }
 
