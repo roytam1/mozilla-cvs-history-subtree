@@ -88,22 +88,22 @@ private:
 	static PRInt32		gRefCnt;
 
     // pseudo-constants
-	static nsIRDFResource	*kNC_Child;
-	static nsIRDFResource	*kNC_Name;
-	static nsIRDFResource	*kNC_URL;
-	static nsIRDFResource	*kNC_FindObject;
-	static nsIRDFResource	*kRDF_InstanceOf;
-	static nsIRDFResource	*kRDF_type;
+	static nsISupports	*kNC_Child;
+	static nsISupports	*kNC_Name;
+	static nsISupports	*kNC_URL;
+	static nsISupports	*kNC_FindObject;
+	static nsISupports	*kRDF_InstanceOf;
+	static nsISupports	*kRDF_type;
 
-	NS_METHOD	getFindResults(nsIRDFResource *source,
+	NS_METHOD	getFindResults(nsISupports *source,
 				nsVoidArray **array /* out */);
-	NS_METHOD	getFindName(nsIRDFResource *source,
+	NS_METHOD	getFindName(nsISupports *source,
 				nsVoidArray **array /* out */);
-	NS_METHOD	parseResourceIntoFindTokens(nsIRDFResource *u,
+	NS_METHOD	parseResourceIntoFindTokens(nsISupports *u,
 				findTokenPtr tokens);
 	NS_METHOD	doMatch(nsIRDFLiteral *literal, char *matchMethod,
 				char *matchText);
-	NS_METHOD	parseFindURL(nsIRDFResource *u,
+	NS_METHOD	parseFindURL(nsISupports *u,
 				nsVoidArray *array);
 
 public:
@@ -117,50 +117,50 @@ public:
 
 	NS_IMETHOD	Init(const char *uri);
 	NS_IMETHOD	GetURI(const char **uri) const;
-	NS_IMETHOD	GetSource(nsIRDFResource *property,
-				nsIRDFNode *target,
+	NS_IMETHOD	GetSource(nsISupports *property,
+				nsISupports *target,
 				PRBool tv,
-				nsIRDFResource **source /* out */);
-	NS_IMETHOD	GetSources(nsIRDFResource *property,
-				nsIRDFNode *target,
+				nsISupports **source /* out */);
+	NS_IMETHOD	GetSources(nsISupports *property,
+				nsISupports *target,
 				PRBool tv,
 				nsIRDFAssertionCursor **sources /* out */);
-	NS_IMETHOD	GetTarget(nsIRDFResource *source,
-				nsIRDFResource *property,
+	NS_IMETHOD	GetTarget(nsISupports *source,
+				nsISupports *property,
 				PRBool tv,
-				nsIRDFNode **target /* out */);
-	NS_IMETHOD	GetTargets(nsIRDFResource *source,
-				nsIRDFResource *property,
+				nsISupports **target /* out */);
+	NS_IMETHOD	GetTargets(nsISupports *source,
+				nsISupports *property,
 				PRBool tv,
 				nsIRDFAssertionCursor **targets /* out */);
-	NS_IMETHOD	Assert(nsIRDFResource *source,
-				nsIRDFResource *property,
-				nsIRDFNode *target,
+	NS_IMETHOD	Assert(nsISupports *source,
+				nsISupports *property,
+				nsISupports *target,
 				PRBool tv);
-	NS_IMETHOD	Unassert(nsIRDFResource *source,
-				nsIRDFResource *property,
-				nsIRDFNode *target);
-	NS_IMETHOD	HasAssertion(nsIRDFResource *source,
-				nsIRDFResource *property,
-				nsIRDFNode *target,
+	NS_IMETHOD	Unassert(nsISupports *source,
+				nsISupports *property,
+				nsISupports *target);
+	NS_IMETHOD	HasAssertion(nsISupports *source,
+				nsISupports *property,
+				nsISupports *target,
 				PRBool tv,
 				PRBool *hasAssertion /* out */);
-	NS_IMETHOD	ArcLabelsIn(nsIRDFNode *node,
+	NS_IMETHOD	ArcLabelsIn(nsISupports *node,
 				nsIRDFArcsInCursor **labels /* out */);
-	NS_IMETHOD	ArcLabelsOut(nsIRDFResource *source,
+	NS_IMETHOD	ArcLabelsOut(nsISupports *source,
 				nsIRDFArcsOutCursor **labels /* out */);
 	NS_IMETHOD	GetAllResources(nsIRDFResourceCursor** aCursor);
 	NS_IMETHOD	AddObserver(nsIRDFObserver *n);
 	NS_IMETHOD	RemoveObserver(nsIRDFObserver *n);
 	NS_IMETHOD	Flush();
-	NS_IMETHOD	GetAllCommands(nsIRDFResource* source,
-				nsIEnumerator/*<nsIRDFResource>*/** commands);
-	NS_IMETHOD	IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-				nsIRDFResource*   aCommand,
-				nsISupportsArray/*<nsIRDFResource>*/* aArguments);
-	NS_IMETHOD	DoCommand(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-				nsIRDFResource*   aCommand,
-				nsISupportsArray/*<nsIRDFResource>*/* aArguments);
+	NS_IMETHOD	GetAllCommands(nsISupports* source,
+				nsIEnumerator** commands);
+	NS_IMETHOD	IsCommandEnabled(nsISupportsArray* aSources,
+				nsISupports*   aCommand,
+				nsISupportsArray* aArguments);
+	NS_IMETHOD	DoCommand(nsISupportsArray* aSources,
+				nsISupports*   aCommand,
+				nsISupportsArray* aArguments);
 };
 
 
@@ -168,26 +168,26 @@ public:
 class FindCursor : public nsIRDFAssertionCursor, public nsIRDFArcsOutCursor
 {
 private:
-	nsIRDFNode	*mValue;
-	nsIRDFResource	*mSource;
-	nsIRDFResource	*mProperty;
-	nsIRDFNode	*mTarget;
+	nsISupports	*mValue;
+	nsISupports	*mSource;
+	nsISupports	*mProperty;
+	nsISupports	*mTarget;
 	int		mCount;
 	nsVoidArray	*mArray;
 	PRBool		mArcsOut;
 
 public:
-			FindCursor(nsIRDFResource *source, nsIRDFResource *property, PRBool isArcsOut, nsVoidArray *array);
+			FindCursor(nsISupports *source, nsISupports *property, PRBool isArcsOut, nsVoidArray *array);
 	virtual		~FindCursor(void);
 
 	NS_DECL_ISUPPORTS
 
 	NS_IMETHOD	Advance(void);
-	NS_IMETHOD	GetValue(nsIRDFNode **aValue);
+	NS_IMETHOD	GetValue(nsISupports **aValue);
 	NS_IMETHOD	GetDataSource(nsIRDFDataSource **aDataSource);
-	NS_IMETHOD	GetSubject(nsIRDFResource **aResource);
-	NS_IMETHOD	GetPredicate(nsIRDFResource **aPredicate);
-	NS_IMETHOD	GetObject(nsIRDFNode **aObject);
+	NS_IMETHOD	GetSubject(nsISupports **aResource);
+	NS_IMETHOD	GetPredicate(nsISupports **aPredicate);
+	NS_IMETHOD	GetObject(nsISupports **aObject);
 	NS_IMETHOD	GetTruthValue(PRBool *aTruthValue);
 };
 

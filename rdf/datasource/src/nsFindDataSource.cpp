@@ -53,8 +53,6 @@ static NS_DEFINE_IID(kIRDFAssertionCursorIID,      NS_IRDFASSERTIONCURSOR_IID);
 static NS_DEFINE_IID(kIRDFCursorIID,               NS_IRDFCURSOR_IID);
 static NS_DEFINE_IID(kIRDFArcsOutCursorIID,        NS_IRDFARCSOUTCURSOR_IID);
 static NS_DEFINE_IID(kISupportsIID,                NS_ISUPPORTS_IID);
-static NS_DEFINE_IID(kIRDFResourceIID,             NS_IRDFRESOURCE_IID);
-static NS_DEFINE_IID(kIRDFNodeIID,                 NS_IRDFNODE_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,              NS_IRDFLITERAL_IID);
 
 
@@ -73,38 +71,30 @@ static	FindDataSource		*gFindDataSource = nsnull;
 
 PRInt32 FindDataSource::gRefCnt;
 
-nsIRDFResource		*FindDataSource::kNC_Child;
-nsIRDFResource		*FindDataSource::kNC_Name;
-nsIRDFResource		*FindDataSource::kNC_URL;
-nsIRDFResource		*FindDataSource::kNC_FindObject;
-nsIRDFResource		*FindDataSource::kRDF_InstanceOf;
-nsIRDFResource		*FindDataSource::kRDF_type;
+nsISupports		*FindDataSource::kNC_Child;
+nsISupports		*FindDataSource::kNC_Name;
+nsISupports		*FindDataSource::kNC_URL;
+nsISupports		*FindDataSource::kNC_FindObject;
+nsISupports		*FindDataSource::kRDF_InstanceOf;
+nsISupports		*FindDataSource::kRDF_type;
 
 
 
-static PRBool
-peq(nsIRDFResource* r1, nsIRDFResource* r2)
+inline PRBool
+peq(nsISupports* r1, nsISupports* r2)
 {
-	PRBool		retVal=PR_FALSE, result;
-
-	if (NS_SUCCEEDED(r1->EqualsResource(r2, &result)))
-	{
-		if (result)
-		{
-			retVal = PR_TRUE;
-		}
-	}
-	return(retVal);
+    return NS_EqualsResource(r1, r2) == NS_OK;
 }
 
 
 static PRBool
-isFindURI(nsIRDFResource *r)
+isFindURI(nsISupports *r)
 {
 	PRBool		isFindURI = PR_FALSE;
 	const char	*uri;
 	
-	r->GetValue(&uri);
+	nsresult rv = NS_GetURI(r, &uri);
+        if (NS_FAILED(rv)) return PR_FALSE;     // XXX return rv;
 	if (!strncmp(uri, "find:", 5))
 	{
 		isFindURI = PR_TRUE;
@@ -204,10 +194,10 @@ FindDataSource::GetURI(const char **uri) const
 
 
 NS_IMETHODIMP
-FindDataSource::GetSource(nsIRDFResource* property,
-                          nsIRDFNode* target,
+FindDataSource::GetSource(nsISupports* property,
+                          nsISupports* target,
                           PRBool tv,
-                          nsIRDFResource** source /* out */)
+                          nsISupports** source /* out */)
 {
 	nsresult rv = NS_ERROR_RDF_NO_VALUE;
 	return rv;
@@ -216,8 +206,8 @@ FindDataSource::GetSource(nsIRDFResource* property,
 
 
 NS_IMETHODIMP
-FindDataSource::GetSources(nsIRDFResource *property,
-                           nsIRDFNode *target,
+FindDataSource::GetSources(nsISupports *property,
+                           nsISupports *target,
 			   PRBool tv,
                            nsIRDFAssertionCursor **sources /* out */)
 {
@@ -228,10 +218,10 @@ FindDataSource::GetSources(nsIRDFResource *property,
 
 
 NS_IMETHODIMP
-FindDataSource::GetTarget(nsIRDFResource *source,
-                          nsIRDFResource *property,
+FindDataSource::GetTarget(nsISupports *source,
+                          nsISupports *property,
                           PRBool tv,
-                          nsIRDFNode **target /* out */)
+                          nsISupports **target /* out */)
 {
 	nsresult		rv = NS_ERROR_RDF_NO_VALUE;
 
@@ -260,8 +250,8 @@ FindDataSource::GetTarget(nsIRDFResource *source,
 		else if (peq(property, kRDF_type))
 		{
 			const char	*uri;
-			kNC_FindObject->GetValue(&uri);
-			if (uri)
+			rv = NS_GetURI(kNC_FindObject, &uri);
+			if (NS_SUCCEEDED(rv))
 			{
 				nsAutoString	url(uri);
 				nsIRDFLiteral	*literal;
@@ -274,7 +264,7 @@ FindDataSource::GetTarget(nsIRDFResource *source,
 		if (array != nsnull)
 		{
 			nsIRDFLiteral *literal = (nsIRDFLiteral *)(array->ElementAt(0));
-			*target = (nsIRDFNode *)literal;
+			*target = (nsISupports *)literal;
 			delete array;
 			rv = NS_OK;
 		}
@@ -289,14 +279,14 @@ FindDataSource::GetTarget(nsIRDFResource *source,
 
 
 NS_METHOD
-FindDataSource::parseResourceIntoFindTokens(nsIRDFResource *u, findTokenPtr tokens)
+FindDataSource::parseResourceIntoFindTokens(nsISupports *u, findTokenPtr tokens)
 {
 	const char		*uri;
 	char			*id, *token, *value;
 	int			loop;
 	nsresult		rv;
 
-	if (NS_FAILED(rv = u->GetValue(&uri)))	return(rv);
+	if (NS_FAILED(rv = NS_GetURI(u, &uri)))	return(rv);
 
 	printf("Find: %s\n", uri);
 
@@ -382,7 +372,7 @@ FindDataSource::doMatch(nsIRDFLiteral *literal, char *matchMethod, char *matchTe
 
 
 NS_METHOD
-FindDataSource::parseFindURL(nsIRDFResource *u, nsVoidArray *array)
+FindDataSource::parseFindURL(nsISupports *u, nsVoidArray *array)
 {
 	findTokenStruct		tokens[5];
 	nsresult		rv;
@@ -406,38 +396,33 @@ FindDataSource::parseFindURL(nsIRDFResource *u, nsVoidArray *array)
 			{
 				while (NS_SUCCEEDED(rv = cursor->Advance()))
 				{
-					nsIRDFNode	*node = nsnull;
+					nsISupports	*node = nsnull;
 					if (NS_SUCCEEDED(rv = cursor->GetValue(&node)))
 					{
-						nsIRDFResource	*source = nsnull;
-						if (NS_SUCCEEDED(rv = node->QueryInterface(kIRDFResourceIID, (void **)&source)))
-						{
-							const char *uri;
-							source->GetValue(&uri);
-							if (PL_strncmp(uri, "find:", PL_strlen("find:")))	// never match against a "find:" URI
-							{
-								nsIRDFResource	*property = nsnull;
-								if (NS_SUCCEEDED(rv = gRDFService->GetResource(tokens[1].value, &property)))
-								{
-									nsIRDFNode	*value = nsnull;
-									if (NS_SUCCEEDED(rv = datasource->GetTarget(source, property, PR_TRUE, &value)))
-									{
-										nsIRDFLiteral	*literal = nsnull;
-										if (NS_SUCCEEDED(rv = value->QueryInterface(kIRDFLiteralIID, (void **)&literal)))
-										{
-											if (PR_TRUE == doMatch(literal, tokens[2].value, tokens[3].value))
-											{
-												array->AppendElement(node);
-											}
-											NS_RELEASE(literal);
-										}
-										NS_RELEASE(node);
-									}
-									NS_RELEASE(property);
-								}
-							}
-							NS_RELEASE(source);
-						}
+                                            const char *uri;
+                                            rv = NS_GetURI(node, &uri);
+                                            if (PL_strncmp(uri, "find:", PL_strlen("find:")))	// never match against a "find:" URI
+                                            {
+                                                nsISupports	*property = nsnull;
+                                                if (NS_SUCCEEDED(rv = gRDFService->GetResource(tokens[1].value, &property)))
+                                                {
+                                                    nsISupports	*value = nsnull;
+                                                    if (NS_SUCCEEDED(rv = datasource->GetTarget(node, property, PR_TRUE, &value)))
+                                                    {
+                                                        nsIRDFLiteral	*literal = nsnull;
+                                                        if (NS_SUCCEEDED(rv = value->QueryInterface(kIRDFLiteralIID, (void **)&literal)))
+                                                        {
+                                                            if (PR_TRUE == doMatch(literal, tokens[2].value, tokens[3].value))
+                                                            {
+                                                                array->AppendElement(node);
+                                                            }
+                                                            NS_RELEASE(literal);
+                                                        }
+                                                        NS_RELEASE(node);
+                                                    }
+                                                    NS_RELEASE(property);
+                                                }
+                                            }
 					}
 				}
 				if (rv == NS_ERROR_RDF_CURSOR_EMPTY)
@@ -464,7 +449,7 @@ FindDataSource::parseFindURL(nsIRDFResource *u, nsVoidArray *array)
 
 
 NS_METHOD
-FindDataSource::getFindResults(nsIRDFResource *source, nsVoidArray **array /* out */)
+FindDataSource::getFindResults(nsISupports *source, nsVoidArray **array /* out */)
 {
 	nsresult	rv;
 	nsVoidArray	*nameArray = new nsVoidArray();
@@ -480,7 +465,7 @@ FindDataSource::getFindResults(nsIRDFResource *source, nsVoidArray **array /* ou
 
 
 NS_METHOD
-FindDataSource::getFindName(nsIRDFResource *source, nsVoidArray **array /* out */)
+FindDataSource::getFindName(nsISupports *source, nsVoidArray **array /* out */)
 {
 	// XXX construct find URI human-readable name
 	*array = nsnull;
@@ -490,8 +475,8 @@ FindDataSource::getFindName(nsIRDFResource *source, nsVoidArray **array /* out *
 
 
 NS_IMETHODIMP
-FindDataSource::GetTargets(nsIRDFResource *source,
-                           nsIRDFResource *property,
+FindDataSource::GetTargets(nsISupports *source,
+                           nsISupports *property,
                            PRBool tv,
                            nsIRDFAssertionCursor **targets /* out */)
 {
@@ -515,8 +500,8 @@ FindDataSource::GetTargets(nsIRDFResource *source,
 		else if (peq(property, kRDF_type))
 		{
 			const char	*uri;
-			kNC_FindObject->GetValue(&uri);
-			if (uri)
+			rv = NS_GetURI(kNC_FindObject, &uri);
+			if (NS_SUCCEEDED(rv))
 			{
 				nsAutoString	url(uri);
 				nsIRDFLiteral	*literal;
@@ -541,9 +526,9 @@ FindDataSource::GetTargets(nsIRDFResource *source,
 
 
 NS_IMETHODIMP
-FindDataSource::Assert(nsIRDFResource *source,
-                       nsIRDFResource *property,
-                       nsIRDFNode *target,
+FindDataSource::Assert(nsISupports *source,
+                       nsISupports *property,
+                       nsISupports *target,
                        PRBool tv)
 {
 //	PR_ASSERT(0);
@@ -553,9 +538,9 @@ FindDataSource::Assert(nsIRDFResource *source,
 
 
 NS_IMETHODIMP
-FindDataSource::Unassert(nsIRDFResource *source,
-                         nsIRDFResource *property,
-                         nsIRDFNode *target)
+FindDataSource::Unassert(nsISupports *source,
+                         nsISupports *property,
+                         nsISupports *target)
 {
 //	PR_ASSERT(0);
 	return NS_ERROR_NOT_IMPLEMENTED;
@@ -564,9 +549,9 @@ FindDataSource::Unassert(nsIRDFResource *source,
 
 
 NS_IMETHODIMP
-FindDataSource::HasAssertion(nsIRDFResource *source,
-                             nsIRDFResource *property,
-                             nsIRDFNode *target,
+FindDataSource::HasAssertion(nsISupports *source,
+                             nsISupports *property,
+                             nsISupports *target,
                              PRBool tv,
                              PRBool *hasAssertion /* out */)
 {
@@ -582,7 +567,7 @@ FindDataSource::HasAssertion(nsIRDFResource *source,
 	{
 		if (peq(property, kRDF_type))
 		{
-			if (peq((nsIRDFResource *)target, kRDF_type))
+			if (peq((nsISupports *)target, kRDF_type))
 			{
 				*hasAssertion = PR_TRUE;
 				rv = NS_OK;
@@ -595,7 +580,7 @@ FindDataSource::HasAssertion(nsIRDFResource *source,
 
 
 NS_IMETHODIMP
-FindDataSource::ArcLabelsIn(nsIRDFNode *node,
+FindDataSource::ArcLabelsIn(nsISupports *node,
                             nsIRDFArcsInCursor ** labels /* out */)
 {
 	PR_ASSERT(0);
@@ -605,7 +590,7 @@ FindDataSource::ArcLabelsIn(nsIRDFNode *node,
 
 
 NS_IMETHODIMP
-FindDataSource::ArcLabelsOut(nsIRDFResource *source,
+FindDataSource::ArcLabelsOut(nsISupports *source,
                              nsIRDFArcsOutCursor **labels /* out */)
 {
 	nsresult		rv = NS_ERROR_RDF_NO_VALUE;
@@ -675,7 +660,7 @@ FindDataSource::Flush()
 
 
 NS_IMETHODIMP
-FindDataSource::GetAllCommands(nsIRDFResource* source,nsIEnumerator/*<nsIRDFResource>*/** commands)
+FindDataSource::GetAllCommands(nsISupports* source,nsIEnumerator** commands)
 {
     NS_NOTYETIMPLEMENTED("write me!");
     return NS_ERROR_NOT_IMPLEMENTED;
@@ -684,9 +669,9 @@ FindDataSource::GetAllCommands(nsIRDFResource* source,nsIEnumerator/*<nsIRDFReso
 
 
 NS_IMETHODIMP
-FindDataSource::IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-				nsIRDFResource*   aCommand,
-				nsISupportsArray/*<nsIRDFResource>*/* aArguments)
+FindDataSource::IsCommandEnabled(nsISupportsArray* aSources,
+				nsISupports*   aCommand,
+				nsISupportsArray* aArguments)
 {
 	NS_NOTYETIMPLEMENTED("write me!");
 	return NS_ERROR_NOT_IMPLEMENTED;
@@ -695,9 +680,9 @@ FindDataSource::IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
 
 
 NS_IMETHODIMP
-FindDataSource::DoCommand(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-				nsIRDFResource*   aCommand,
-				nsISupportsArray/*<nsIRDFResource>*/* aArguments)
+FindDataSource::DoCommand(nsISupportsArray* aSources,
+				nsISupports*   aCommand,
+				nsISupportsArray* aArguments)
 {
 	NS_NOTYETIMPLEMENTED("write me!");
 	return NS_ERROR_NOT_IMPLEMENTED;
@@ -726,8 +711,8 @@ NS_NewRDFFindDataSource(nsIRDFDataSource **result)
 
 
 
-FindCursor::FindCursor(nsIRDFResource *source,
-				nsIRDFResource *property,
+FindCursor::FindCursor(nsISupports *source,
+				nsISupports *property,
 				PRBool isArcsOut,
 				nsVoidArray *array)
 	: mSource(source),
@@ -767,7 +752,7 @@ FindCursor::Advance(void)
 	if (mArray->Count() <= mCount)
 		return NS_ERROR_RDF_CURSOR_EMPTY;
 	NS_IF_RELEASE(mValue);
-	mTarget = mValue = (nsIRDFNode *)mArray->ElementAt(mCount++);
+	mTarget = mValue = (nsISupports *)mArray->ElementAt(mCount++);
 	NS_ADDREF(mValue);
 	NS_ADDREF(mTarget);
 	return NS_OK;
@@ -776,7 +761,7 @@ FindCursor::Advance(void)
 
 
 NS_IMETHODIMP
-FindCursor::GetValue(nsIRDFNode **aValue)
+FindCursor::GetValue(nsISupports **aValue)
 {
 	if (nsnull == mValue)
 		return NS_ERROR_NULL_POINTER;
@@ -798,7 +783,7 @@ FindCursor::GetDataSource(nsIRDFDataSource **aDataSource)
 
 
 NS_IMETHODIMP
-FindCursor::GetSubject(nsIRDFResource **aResource)
+FindCursor::GetSubject(nsISupports **aResource)
 {
 	NS_ADDREF(mSource);
 	*aResource = mSource;
@@ -808,7 +793,7 @@ FindCursor::GetSubject(nsIRDFResource **aResource)
 
 
 NS_IMETHODIMP
-FindCursor::GetPredicate(nsIRDFResource **aPredicate)
+FindCursor::GetPredicate(nsISupports **aPredicate)
 {
 	if (mArcsOut == PR_FALSE)
 	{
@@ -820,7 +805,7 @@ FindCursor::GetPredicate(nsIRDFResource **aPredicate)
 		if (nsnull == mValue)
 			return NS_ERROR_NULL_POINTER;
 		NS_ADDREF(mValue);
-		*(nsIRDFNode **)aPredicate = mValue;
+		*(nsISupports **)aPredicate = mValue;
 	}
 	return NS_OK;
 }
@@ -828,7 +813,7 @@ FindCursor::GetPredicate(nsIRDFResource **aPredicate)
 
 
 NS_IMETHODIMP
-FindCursor::GetObject(nsIRDFNode **aObject)
+FindCursor::GetObject(nsISupports **aObject)
 {
 	if (nsnull != mTarget)
 		NS_ADDREF(mTarget);

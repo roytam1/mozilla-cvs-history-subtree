@@ -70,7 +70,7 @@ public:
     /**
      * Called when the root resource of the RDF/XML document is found
      */
-    NS_IMETHOD OnRootResourceFound(nsIRDFXMLDataSource* aStream, nsIRDFResource* aResource) = 0;
+    NS_IMETHOD OnRootResourceFound(nsIRDFXMLDataSource* aStream, nsISupports* aResource) = 0;
 
     /**
      * Called when a CSS style sheet is included (via XML processing
@@ -133,12 +133,12 @@ public:
     /**
      * Set the root resource for the document.
      */
-    NS_IMETHOD SetRootResource(nsIRDFResource* aResource) = 0;
+    NS_IMETHOD SetRootResource(nsISupports* aResource) = 0;
 
     /**
      * Retrieve the root resource for the document.
      */
-    NS_IMETHOD GetRootResource(nsIRDFResource** aResource) = 0;
+    NS_IMETHOD GetRootResource(nsISupports** aResource) = 0;
 
     /**
      * Add a CSS style sheet to the document.

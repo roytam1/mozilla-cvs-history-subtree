@@ -31,7 +31,6 @@
 class nsIAtom;
 class nsIContent;
 class nsIDOMNodeList;
-class nsIRDFNode;
 class nsString;
 
 
@@ -40,7 +39,7 @@ class nsRDFContentUtils
 public:
 
     static nsresult
-    AttachTextNode(nsIContent* parent, nsIRDFNode* value);
+    AttachTextNode(nsIContent* parent, nsISupports* value);
 };
 
 

@@ -28,21 +28,20 @@
 #include "nsString.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMXULElement.h"
-#include "nsIRDFResource.h"
+#include "nsISupports.h"
 #include "nsIDOMNodeList.h"
-
+#include "nsIRDFResource.h"
 
 static NS_DEFINE_IID(kIScriptObjectOwnerIID, NS_ISCRIPTOBJECTOWNER_IID);
 static NS_DEFINE_IID(kIJSScriptObjectIID, NS_IJSSCRIPTOBJECT_IID);
 static NS_DEFINE_IID(kIScriptGlobalObjectIID, NS_ISCRIPTGLOBALOBJECT_IID);
 static NS_DEFINE_IID(kIElementIID, NS_IDOMELEMENT_IID);
 static NS_DEFINE_IID(kIXULElementIID, NS_IDOMXULELEMENT_IID);
-static NS_DEFINE_IID(kIRDFResourceIID, NS_IRDFRESOURCE_IID);
 static NS_DEFINE_IID(kINodeListIID, NS_IDOMNODELIST_IID);
 
 NS_DEF_PTR(nsIDOMElement);
 NS_DEF_PTR(nsIDOMXULElement);
-NS_DEF_PTR(nsIRDFResource);
+NS_DEF_PTR(nsISupports);
 NS_DEF_PTR(nsIDOMNodeList);
 
 //
@@ -70,10 +69,10 @@ GetXULElementProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
     switch(JSVAL_TO_INT(id)) {
       case XULELEMENT_RESOURCE:
       {
-        nsIRDFResource* prop;
+        nsISupports* prop;
         if (NS_OK == a->GetResource(&prop)) {
           // get the js object
-          *vp = OBJECT_TO_JSVAL(nsIRDFResource::GetJSObject(cx, prop));
+          *vp = OBJECT_TO_JSVAL(NS_GetJSObject(cx, prop));
         }
         else {
           return JS_FALSE;

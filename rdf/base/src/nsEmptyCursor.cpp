@@ -75,15 +75,15 @@ public:
         return NS_ERROR_UNEXPECTED;
     }
 
-    NS_IMETHOD GetSubject(nsIRDFResource** aResource) {
+    NS_IMETHOD GetSubject(nsISupports** aResource) {
         return NS_ERROR_UNEXPECTED;
     }
 
-    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate) {
+    NS_IMETHOD GetPredicate(nsISupports** aPredicate) {
         return NS_ERROR_UNEXPECTED;
     }
 
-    NS_IMETHOD GetObject(nsIRDFNode** aObject) {
+    NS_IMETHOD GetObject(nsISupports** aObject) {
         return NS_ERROR_UNEXPECTED;
     }
 
@@ -91,7 +91,7 @@ public:
         return NS_ERROR_UNEXPECTED;
     }
 
-    NS_IMETHOD GetValue(nsIRDFNode** aValue) {
+    NS_IMETHOD GetValue(nsISupports** aValue) {
         return NS_ERROR_UNEXPECTED;
     }
 
@@ -146,11 +146,11 @@ public:
         return NS_ERROR_UNEXPECTED;
     }
 
-    NS_IMETHOD GetSubject(nsIRDFResource** aResource) {
+    NS_IMETHOD GetSubject(nsISupports** aResource) {
         return NS_ERROR_UNEXPECTED;
     }
 
-    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate) {
+    NS_IMETHOD GetPredicate(nsISupports** aPredicate) {
         return NS_ERROR_UNEXPECTED;
     }
 
@@ -158,7 +158,7 @@ public:
         return NS_ERROR_UNEXPECTED;
     }
 
-    NS_IMETHOD GetValue(nsIRDFNode** aValue) {
+    NS_IMETHOD GetValue(nsISupports** aValue) {
         return NS_ERROR_UNEXPECTED;
     }
 
@@ -213,11 +213,11 @@ public:
         return NS_ERROR_UNEXPECTED;
     }
 
-    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate) {
+    NS_IMETHOD GetPredicate(nsISupports** aPredicate) {
         return NS_ERROR_UNEXPECTED;
     }
 
-    NS_IMETHOD GetObject(nsIRDFNode** aNode) {
+    NS_IMETHOD GetObject(nsISupports** aNode) {
         return NS_ERROR_UNEXPECTED;
     }
 
@@ -225,7 +225,7 @@ public:
         return NS_ERROR_UNEXPECTED;
     }
 
-    NS_IMETHOD GetValue(nsIRDFNode** aValue) {
+    NS_IMETHOD GetValue(nsISupports** aValue) {
         return NS_ERROR_UNEXPECTED;
     }
 

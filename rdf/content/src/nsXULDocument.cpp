@@ -55,7 +55,7 @@
 #include "nsIRDFCursor.h"
 #include "nsIRDFDataSource.h"
 #include "nsIRDFDocument.h"
-#include "nsIRDFNode.h"
+#include "nsISupports.h"
 #include "nsIRDFService.h"
 #include "nsIScriptContextOwner.h"
 #include "nsIScriptGlobalObject.h"
@@ -84,6 +84,7 @@
 #include "plstr.h"
 #include "rdfutil.h"
 #include "prlog.h"
+#include "nsIRDFNode.h"
 
 #include "nsILineBreakerFactory.h"
 #include "nsLWBrkCIID.h"
@@ -107,7 +108,6 @@ static NS_DEFINE_IID(kIRDFContentModelBuilderIID, NS_IRDFCONTENTMODELBUILDER_IID
 static NS_DEFINE_IID(kIRDFDataSourceIID,      NS_IRDFDATASOURCE_IID);
 static NS_DEFINE_IID(kIRDFDocumentIID,        NS_IRDFDOCUMENT_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,         NS_IRDFLITERAL_IID);
-static NS_DEFINE_IID(kIRDFResourceIID,        NS_IRDFRESOURCE_IID);
 static NS_DEFINE_IID(kIRDFServiceIID,         NS_IRDFSERVICE_IID);
 static NS_DEFINE_IID(kIScriptObjectOwnerIID,  NS_ISCRIPTOBJECTOWNER_IID);
 static NS_DEFINE_IID(kIDOMSelectionIID,       NS_IDOMSELECTION_IID);
@@ -201,7 +201,7 @@ public:
     }
 
     nsresult
-    Add(nsIRDFResource* aResource, nsIContent* aContent)
+    Add(nsISupports* aResource, nsIContent* aContent)
     {
         NS_PRECONDITION(mResources != nsnull, "not initialized");
         if (! mResources)
@@ -238,7 +238,7 @@ public:
     }
 
     nsresult
-    Remove(nsIRDFResource* aResource, nsIContent* aContent)
+    Remove(nsISupports* aResource, nsIContent* aContent)
     {
         NS_PRECONDITION(mResources != nsnull, "not initialized");
         if (! mResources)
@@ -282,7 +282,7 @@ public:
     }
 
     nsresult
-    Find(nsIRDFResource* aResource, nsISupportsArray* aResults)
+    Find(nsISupports* aResource, nsISupportsArray* aResults)
     {
         NS_PRECONDITION(mResources != nsnull, "not initialized");
         if (! mResources)
@@ -480,11 +480,11 @@ public:
     NS_IMETHOD AppendToEpilog(nsIContent* aContent);
 
     // nsIRDFDocument interface
-    NS_IMETHOD SetRootResource(nsIRDFResource* resource);
-    NS_IMETHOD SplitProperty(nsIRDFResource* aResource, PRInt32* aNameSpaceID, nsIAtom** aTag);
-    NS_IMETHOD AddElementForResource(nsIRDFResource* aResource, nsIContent* aElement);
-    NS_IMETHOD RemoveElementForResource(nsIRDFResource* aResource, nsIContent* aElement);
-    NS_IMETHOD GetElementsForResource(nsIRDFResource* aResource, nsISupportsArray* aElements);
+    NS_IMETHOD SetRootResource(nsISupports* resource);
+    NS_IMETHOD SplitProperty(nsISupports* aResource, PRInt32* aNameSpaceID, nsIAtom** aTag);
+    NS_IMETHOD AddElementForResource(nsISupports* aResource, nsIContent* aElement);
+    NS_IMETHOD RemoveElementForResource(nsISupports* aResource, nsIContent* aElement);
+    NS_IMETHOD GetElementsForResource(nsISupports* aResource, nsISupportsArray* aElements);
     NS_IMETHOD CreateContents(nsIContent* aElement);
     NS_IMETHOD AddContentModelBuilder(nsIRDFContentModelBuilder* aBuilder);
     NS_IMETHOD GetDocumentDataSource(nsIRDFDataSource** aDatasource);
@@ -513,8 +513,8 @@ public:
     NS_IMETHOD    GetCommand(nsString& aCommand);
 
     // nsIXULChildDocument Interface
-    NS_IMETHOD    SetFragmentRoot(nsIRDFResource* aFragmentRoot);
-    NS_IMETHOD    GetFragmentRoot(nsIRDFResource** aFragmentRoot);
+    NS_IMETHOD    SetFragmentRoot(nsISupports* aFragmentRoot);
+    NS_IMETHOD    GetFragmentRoot(nsISupports** aFragmentRoot);
 
     // nsIDOMNode interface
     NS_IMETHOD    GetNodeName(nsString& aNodeName);
@@ -622,7 +622,7 @@ protected:
     nsILineBreaker*            mLineBreaker;
     nsIContentViewerContainer* mContentViewerContainer;
     nsString                   mCommand;
-    nsIRDFResource*            mFragmentRoot;
+    nsISupports*            mFragmentRoot;
     nsVoidArray                mSubDocuments;
 };
 
@@ -1823,7 +1823,7 @@ XULDocumentImpl::AppendToEpilog(nsIContent* aContent)
 // nsIRDFDocument interface
 
 NS_IMETHODIMP
-XULDocumentImpl::SetRootResource(nsIRDFResource* aResource)
+XULDocumentImpl::SetRootResource(nsISupports* aResource)
 {
     NS_PRECONDITION(mXULBuilder != nsnull, "not initialized");
     if (! mXULBuilder)
@@ -1840,7 +1840,7 @@ XULDocumentImpl::SetRootResource(nsIRDFResource* aResource)
 }
 
 NS_IMETHODIMP
-XULDocumentImpl::SplitProperty(nsIRDFResource* aProperty,
+XULDocumentImpl::SplitProperty(nsISupports* aProperty,
                                PRInt32* aNameSpaceID,
                                nsIAtom** aTag)
 {
@@ -1859,7 +1859,11 @@ XULDocumentImpl::SplitProperty(nsIRDFResource* aProperty,
     //
 
     const char* p;
-    aProperty->GetValue(&p);
+    nsresult rv = NS_GetURI(aProperty, &p);
+    if (NS_FAILED(rv)) {
+        NS_WARNING("XULDocumentImpl::SplitProperty: unable to get property URI");
+        return rv;
+    }
     nsAutoString uri(p);
 
     PRInt32 index;
@@ -1886,7 +1890,6 @@ XULDocumentImpl::SplitProperty(nsIRDFResource* aProperty,
     // upper case. This sucks.
     //tag.ToUpperCase();  // All XML is case sensitive even HTML in XML
  
-    nsresult rv;
     PRInt32 nameSpaceID;
     rv = mNameSpaceManager->GetNameSpaceID(uri, nameSpaceID);
 
@@ -1927,7 +1930,7 @@ XULDocumentImpl::SplitProperty(nsIRDFResource* aProperty,
 
 
 NS_IMETHODIMP
-XULDocumentImpl::AddElementForResource(nsIRDFResource* aResource, nsIContent* aElement)
+XULDocumentImpl::AddElementForResource(nsISupports* aResource, nsIContent* aElement)
 {
     NS_PRECONDITION(aResource != nsnull, "null ptr");
     if (! aResource)
@@ -1939,7 +1942,7 @@ XULDocumentImpl::AddElementForResource(nsIRDFResource* aResource, nsIContent* aE
 
 #ifdef DEBUG
     const char* uri;
-    aResource->GetValue(&uri);
+    NS_GetURI(aResource, &uri);
     printf("add    [%p] <-- %s\n", aElement, uri);
 #endif
 
@@ -1949,7 +1952,7 @@ XULDocumentImpl::AddElementForResource(nsIRDFResource* aResource, nsIContent* aE
 
 
 NS_IMETHODIMP
-XULDocumentImpl::RemoveElementForResource(nsIRDFResource* aResource, nsIContent* aElement)
+XULDocumentImpl::RemoveElementForResource(nsISupports* aResource, nsIContent* aElement)
 {
     NS_PRECONDITION(aResource != nsnull, "null ptr");
     if (! aResource)
@@ -1961,7 +1964,7 @@ XULDocumentImpl::RemoveElementForResource(nsIRDFResource* aResource, nsIContent*
 
 #ifdef DEBUG
     const char* uri;
-    aResource->GetValue(&uri);
+    NS_GetURI(aResource, &uri);
     printf("remove [%p] <-- %s\n", aElement, uri);
 #endif
 
@@ -1971,7 +1974,7 @@ XULDocumentImpl::RemoveElementForResource(nsIRDFResource* aResource, nsIContent*
 
 
 NS_IMETHODIMP
-XULDocumentImpl::GetElementsForResource(nsIRDFResource* aResource, nsISupportsArray* aElements)
+XULDocumentImpl::GetElementsForResource(nsISupports* aResource, nsISupportsArray* aElements)
 {
     NS_PRECONDITION(aElements != nsnull, "null ptr");
     if (! aElements)
@@ -2280,7 +2283,7 @@ XULDocumentImpl::GetElementById(const nsString& aId, nsIDOMElement** aReturn)
 
     rdf_PossiblyMakeAbsolute(documentURL, uri);
 
-    nsCOMPtr<nsIRDFResource> resource;
+    nsCOMPtr<nsISupports> resource;
     if (NS_FAILED(rv = mRDFService->GetUnicodeResource(uri, getter_AddRefs(resource)))) {
         NS_ERROR("unable to get resource");
         return rv;
@@ -2386,7 +2389,7 @@ XULDocumentImpl::GetCommand(nsString& aCommand)
 ////////////////////////////////////////////////////////////////////////
 // nsIXULChildDocument interface
 NS_IMETHODIMP 
-XULDocumentImpl::SetFragmentRoot(nsIRDFResource* aFragmentRoot)
+XULDocumentImpl::SetFragmentRoot(nsISupports* aFragmentRoot)
 {
     if (aFragmentRoot != mFragmentRoot)
     {
@@ -2398,7 +2401,7 @@ XULDocumentImpl::SetFragmentRoot(nsIRDFResource* aFragmentRoot)
 }
 
 NS_IMETHODIMP
-XULDocumentImpl::GetFragmentRoot(nsIRDFResource** aFragmentRoot)
+XULDocumentImpl::GetFragmentRoot(nsISupports** aFragmentRoot)
 {
     if (mFragmentRoot) {
         NS_ADDREF(mFragmentRoot);

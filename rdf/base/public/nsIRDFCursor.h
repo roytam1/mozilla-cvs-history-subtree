@@ -31,8 +31,6 @@
 #include "prtypes.h"
 #include "rdf.h" // for error codes
 class nsIRDFDataSource;
-class nsIRDFNode;
-class nsIRDFResource;
 
 // 1c2abdb0-4cef-11d2-bc16-00805f912fe7
 #define NS_IRDFCURSOR_IID \
@@ -60,7 +58,7 @@ public:
      * Irrespective of the query, a cursor is an interator over a set.
      * This allows you to obtain the current value.
      */
-    NS_IMETHOD GetValue(nsIRDFNode** aValue) = 0;
+    NS_IMETHOD GetValue(nsISupports** aValue) = 0;
 
 };
 
@@ -81,19 +79,19 @@ public:
      * Retrieve the assertion's subject resource.
      * @return NS_OK, unless a catastrophic error occurs.
      */
-    NS_IMETHOD GetSubject(nsIRDFResource** aSubject) = 0;
+    NS_IMETHOD GetSubject(nsISupports** aSubject) = 0;
 
     /**
      * Retrieve the assertion's predicate resource.
      * @return NS_OK, unless a catastrophic error occurs.
      */
-    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate) = 0;
+    NS_IMETHOD GetPredicate(nsISupports** aPredicate) = 0;
 
     /**
      * Retrieve the assertion's object node.
      * @return NS_OK, unless a catastrophic error occurs.
      */
-    NS_IMETHOD GetObject(nsIRDFNode** aObject) = 0;
+    NS_IMETHOD GetObject(nsISupports** aObject) = 0;
 
     /**
      * Retrieve the assertion's truth value.
@@ -120,13 +118,13 @@ public:
      * Retrieve the "subject" node from which the arcs originate.
      * @return NS_OK, unless a catastrophic error occurs.
      */
-    NS_IMETHOD GetSubject(nsIRDFResource** aSubject) = 0;
+    NS_IMETHOD GetSubject(nsISupports** aSubject) = 0;
 
     /**
      * Retrieve the predicate label of the arc.
      * @return NS_OK, unless a catastrophic error occurs.
      */
-    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate) = 0;
+    NS_IMETHOD GetPredicate(nsISupports** aPredicate) = 0;
 
 };
 
@@ -147,13 +145,13 @@ public:
      * Retrieve the "object" node in which the arc terminates.
      * @return NS_OK, unless a catastrophic error occurs.
      */
-    NS_IMETHOD GetObject(nsIRDFNode** aObject) = 0;
+    NS_IMETHOD GetObject(nsISupports** aObject) = 0;
 
     /**
      * Retrieve the predicate label of the arc
      * @return NS_OK, unless a catastrophic error occurs.
      */
-    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate) = 0;
+    NS_IMETHOD GetPredicate(nsISupports** aPredicate) = 0;
 
 };
 
@@ -167,7 +165,7 @@ public:
 class nsIRDFResourceCursor : public nsIRDFCursor {
 public:
     static const nsIID& GetIID() { static nsIID iid = NS_IRDFRESOURCECURSOR_IID; return iid; }
-    NS_IMETHOD GetResource(nsIRDFResource** aResource) = 0;
+    NS_IMETHOD GetResource(nsISupports** aResource) = 0;
 };
 
 

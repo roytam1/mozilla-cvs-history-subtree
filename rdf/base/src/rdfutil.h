@@ -36,9 +36,6 @@ class nsIRDFArcsOutCursor;
 class nsIRDFAssertionCursor;
 class nsIRDFCursor;
 class nsIRDFDataSource;
-class nsIRDFResource;
-class nsIRDFNode;
-class nsIRDFResource;
 class nsString;
 
 /**
@@ -46,19 +43,19 @@ class nsString;
  * rdf:_2, etc.
  */
 PR_EXTERN(PRBool)
-rdf_IsOrdinalProperty(const nsIRDFResource* property);
+rdf_IsOrdinalProperty(const nsISupports* property);
 
 /**
  * Converts an ordinal property to an index
  */
 PR_EXTERN(nsresult)
-rdf_OrdinalResourceToIndex(nsIRDFResource* aOrdinal, PRInt32* aIndex);
+rdf_OrdinalResourceToIndex(nsISupports* aOrdinal, PRInt32* aIndex);
 
 /**
  * Converts an index to an ordinal property
  */
 PR_EXTERN(nsresult)
-rdf_IndexToOrdinalResource(PRInt32 aIndex, nsIRDFResource** aOrdinal);
+rdf_IndexToOrdinalResource(PRInt32 aIndex, nsISupports** aOrdinal);
 
 
 /**
@@ -67,19 +64,19 @@ rdf_IndexToOrdinalResource(PRInt32 aIndex, nsIRDFResource** aOrdinal);
  */
 PR_EXTERN(PRBool)
 rdf_IsContainer(nsIRDFDataSource* db,
-                nsIRDFResource* resource);
+                nsISupports* resource);
 
 PR_EXTERN(PRBool)
 rdf_IsBag(nsIRDFDataSource* aDataSource,
-          nsIRDFResource* aResource);
+          nsISupports* aResource);
 
 PR_EXTERN(PRBool)
 rdf_IsSeq(nsIRDFDataSource* aDataSource,
-          nsIRDFResource* aResource);
+          nsISupports* aResource);
 
 PR_EXTERN(PRBool)
 rdf_IsAlt(nsIRDFDataSource* aDataSource,
-          nsIRDFResource* aResource);
+          nsISupports* aResource);
 
 /**
  * Various utilities routines for making assertions in a data source
@@ -88,9 +85,9 @@ rdf_IsAlt(nsIRDFDataSource* aDataSource,
 // 0. node, node, node
 PR_EXTERN(nsresult)
 rdf_Assert(nsIRDFDataSource* ds,
-           nsIRDFResource* subject,
-           nsIRDFResource* predicate,
-           nsIRDFNode* object);
+           nsISupports* subject,
+           nsISupports* predicate,
+           nsISupports* object);
 
 // 1. string, string, string
 PR_EXTERN(nsresult)
@@ -102,44 +99,44 @@ rdf_Assert(nsIRDFDataSource* ds,
 // 2. node, node, string
 PR_EXTERN(nsresult)
 rdf_Assert(nsIRDFDataSource* ds,
-           nsIRDFResource* subject,
-           nsIRDFResource* predicate,
+           nsISupports* subject,
+           nsISupports* predicate,
            const nsString& objectURI);
 
 // 3. node, string, string
 PR_EXTERN(nsresult)
 rdf_Assert(nsIRDFDataSource* ds,
-           nsIRDFResource* subject,
+           nsISupports* subject,
            const nsString& predicateURI,
            const nsString& objectURI);
 
 // 4. node, string, node
 PR_EXTERN(nsresult)
 rdf_Assert(nsIRDFDataSource* ds,
-           nsIRDFResource* subject,
+           nsISupports* subject,
            const nsString& predicateURI,
-           nsIRDFNode* object);
+           nsISupports* object);
 
 // 5. string, string, node
 PR_EXTERN(nsresult)
 rdf_Assert(nsIRDFDataSource* ds,
            const nsString& subjectURI,
            const nsString& predicateURI,
-           nsIRDFNode* object);
+           nsISupports* object);
 
 /**
  * Construct a new, "anonymous" node; that is, a node with an internal
  * resource URI.
  */
 PR_EXTERN(nsresult)
-rdf_CreateAnonymousResource(const nsString& aContextURI, nsIRDFResource** result);
+rdf_CreateAnonymousResource(const nsString& aContextURI, nsISupports** result);
 
 /**
  * Determine if a resource is an "anonymous" resource that we've constructed
  * ourselves.
  */
 PR_EXTERN(PRBool)
-rdf_IsAnonymousResource(const nsString& aContextURI, nsIRDFResource* aResource);
+rdf_IsAnonymousResource(const nsString& aContextURI, nsISupports* aResource);
 
 /**
  * Try to convert the absolute URL into a relative URL.
@@ -159,21 +156,21 @@ rdf_PossiblyMakeAbsolute(const nsString& aContextURI, nsString& aURI);
  */
 PR_EXTERN(nsresult)
 rdf_MakeBag(nsIRDFDataSource* ds,
-            nsIRDFResource* resource);
+            nsISupports* resource);
 
 /**
  * Create a sequence resource.
  */
 PR_EXTERN(nsresult)
 rdf_MakeSeq(nsIRDFDataSource* ds,
-            nsIRDFResource* resource);
+            nsISupports* resource);
 
 /**
  * Create an alternation resource.
  */
 PR_EXTERN(nsresult)
 rdf_MakeAlt(nsIRDFDataSource* ds,
-            nsIRDFResource* resource);
+            nsISupports* resource);
 
 
 /**
@@ -181,8 +178,8 @@ rdf_MakeAlt(nsIRDFDataSource* ds,
  */
 PR_EXTERN(nsresult)
 rdf_ContainerAppendElement(nsIRDFDataSource* ds,
-                           nsIRDFResource* container,
-                           nsIRDFNode* element);
+                           nsISupports* container,
+                           nsISupports* element);
 
 
 /**
@@ -190,8 +187,8 @@ rdf_ContainerAppendElement(nsIRDFDataSource* ds,
  */
 PR_EXTERN(nsresult)
 rdf_ContainerRemoveElement(nsIRDFDataSource* aDataSource,
-                           nsIRDFResource* aContainer,
-                           nsIRDFNode* aElement);
+                           nsISupports* aContainer,
+                           nsISupports* aElement);
 
 
 /**
@@ -199,8 +196,8 @@ rdf_ContainerRemoveElement(nsIRDFDataSource* aDataSource,
  */
 PR_EXTERN(nsresult)
 rdf_ContainerInsertElementAt(nsIRDFDataSource* aDataSource,
-                             nsIRDFResource* aContainer,
-                             nsIRDFNode* aElement,
+                             nsISupports* aContainer,
+                             nsISupports* aElement,
                              PRInt32 aIndex);
 
 /**
@@ -208,8 +205,8 @@ rdf_ContainerInsertElementAt(nsIRDFDataSource* aDataSource,
  */
 PR_EXTERN(nsresult)
 rdf_ContainerIndexOf(nsIRDFDataSource* aDataSource,
-                     nsIRDFResource* aContainer,
-                     nsIRDFNode* aElement,
+                     nsISupports* aContainer,
+                     nsISupports* aElement,
                      PRInt32* aIndex);
 
 
@@ -219,7 +216,7 @@ rdf_ContainerIndexOf(nsIRDFDataSource* aDataSource,
  */
 PR_EXTERN(nsresult)
 NS_NewContainerCursor(nsIRDFDataSource* ds,
-                      nsIRDFResource* container,
+                      nsISupports* container,
                       nsIRDFAssertionCursor** cursor);
 
 

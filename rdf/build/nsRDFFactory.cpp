@@ -132,7 +132,7 @@ NS_IMPL_ADDREF(RDFFactoryImpl);
 NS_IMPL_RELEASE(RDFFactoryImpl);
 
 extern nsresult
-NS_NewDefaultResource(nsIRDFResource** aResult);
+NS_NewDefaultResource(nsISupports** aResult);
 
 NS_IMETHODIMP
 RDFFactoryImpl::CreateInstance(nsISupports *aOuter,
@@ -228,7 +228,7 @@ RDFFactoryImpl::CreateInstance(nsISupports *aOuter,
             return rv;
     }
 	else if (mClassID.Equals(kRDFDefaultResourceCID)) {
-        if (NS_FAILED(rv = NS_NewDefaultResource((nsIRDFResource**) &inst)))
+        if (NS_FAILED(rv = NS_NewDefaultResource((nsISupports**) &inst)))
             return rv;
     }
     else {

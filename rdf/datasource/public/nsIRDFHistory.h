@@ -48,7 +48,7 @@ public:
     /**
      * Remove the page from history
      */
-    NS_IMETHOD RemovePage (nsIRDFResource* page) = 0;
+    NS_IMETHOD RemovePage (nsISupports* page) = 0;
 
     /**
      * Get the uri's last visit date

@@ -34,7 +34,7 @@
 #include "nsIRDFCursor.h"
 #include "nsIRDFCompositeDataSource.h"
 #include "nsIRDFDocument.h"
-#include "nsIRDFNode.h"
+#include "nsISupports.h"
 #include "nsIRDFObserver.h"
 #include "nsIRDFService.h"
 #include "nsIServiceManager.h"
@@ -101,7 +101,6 @@ static NS_DEFINE_IID(kIDomElementIID,         NS_IDOMELEMENT_IID);
 
 static NS_DEFINE_CID(kRDFServiceCID,          NS_RDFSERVICE_CID);
 static NS_DEFINE_IID(kIRDFServiceIID,         NS_IRDFSERVICE_IID);
-static NS_DEFINE_IID(kIRDFResourceIID,        NS_IRDFRESOURCE_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,         NS_IRDFLITERAL_IID);
 
 static NS_DEFINE_IID(kIDomXulTreeElementIID,  NS_IDOMXULTREEELEMENT_IID);
@@ -118,7 +117,7 @@ DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, Name);
 typedef	struct	_sortStruct	{
     nsIRDFService		*rdfService;
     nsIRDFCompositeDataSource	*db;
-    nsIRDFResource		*sortProperty;
+    nsISupports		*sortProperty;
     PRInt32			colIndex;
     nsIAtom			*kNaturalOrderPosAtom;
     nsIAtom			*kTreeCellAtom;
@@ -131,7 +130,7 @@ typedef	struct	_sortStruct	{
 
 int		openSortCallback(const void *data1, const void *data2, void *sortData);
 int		inplaceSortCallback(const void *data1, const void *data2, void *sortData);
-nsresult	getNodeValue(nsIContent *node1, nsIRDFResource *sortProperty, sortPtr sortInfo, nsString &cellVal1);
+nsresult	getNodeValue(nsIContent *node1, nsISupports *sortProperty, sortPtr sortInfo, nsString &cellVal1);
 nsresult	GetTreeCell(sortPtr sortInfo, nsIContent *node, PRInt32 cellIndex, nsIContent **cell);
 nsresult	GetTreeCellValue(sortPtr sortInfo, nsIContent *node, nsString & val);
 
@@ -190,7 +189,7 @@ public:
 
     // nsISortService
     NS_IMETHOD DoSort(nsIDOMNode* node, const nsString& sortResource, const nsString& sortDirection);
-    NS_IMETHOD OpenContainer(nsIRDFCompositeDataSource *db, nsIContent *container, nsIRDFResource **flatArray,
+    NS_IMETHOD OpenContainer(nsIRDFCompositeDataSource *db, nsIContent *container, nsISupports **flatArray,
 				PRInt32 numElements, PRInt32 elementSize);
 };
 
@@ -603,20 +602,19 @@ openSortCallback(const void *data1, const void *data2, void *sortData)
 	int		sortOrder = 0;
 	nsresult	rv;
 
-	nsIRDFNode	*node1, *node2;
-	node1 = *(nsIRDFNode **)data1;
-	node2 = *(nsIRDFNode **)data2;
+	nsISupports	*node1, *node2;
+	node1 = *(nsISupports **)data1;
+	node2 = *(nsISupports **)data2;
 	_sortStruct	*sortPtr = (_sortStruct *)sortData;
 
-	nsIRDFResource	*res1;
-	nsIRDFResource	*res2;
+    const char* uri;
 	const PRUnichar	*uniStr1 = nsnull;
 	const PRUnichar	*uniStr2 = nsnull;
 
-	if (NS_SUCCEEDED(node1->QueryInterface(kIRDFResourceIID, (void **) &res1)))
+    if (NS_SUCCEEDED(NS_GetURI(node1, &uri)))
 	{
-		nsIRDFNode	*nodeVal1;
-		if (NS_SUCCEEDED(rv = sortPtr->db->GetTarget(res1, sortPtr->sortProperty, PR_TRUE, &nodeVal1)))
+		nsISupports	*nodeVal1;
+		if (NS_SUCCEEDED(rv = sortPtr->db->GetTarget(node1, sortPtr->sortProperty, PR_TRUE, &nodeVal1)))
 		{
 			nsIRDFLiteral *literal1;
 			if (NS_SUCCEEDED(nodeVal1->QueryInterface(kIRDFLiteralIID, (void **) &literal1)))
@@ -625,12 +623,11 @@ openSortCallback(const void *data1, const void *data2, void *sortData)
 				NS_RELEASE(literal1);
 			}
 		}
-		NS_RELEASE(res1);
 	}
-	if (NS_SUCCEEDED(node2->QueryInterface(kIRDFResourceIID, (void **) &res2)))
+    if (NS_SUCCEEDED(NS_GetURI(node2, &uri)))
 	{
-		nsIRDFNode	*nodeVal2;
-		if (NS_SUCCEEDED(rv = sortPtr->db->GetTarget(res2, sortPtr->sortProperty, PR_TRUE, &nodeVal2)))
+		nsISupports	*nodeVal2;
+		if (NS_SUCCEEDED(rv = sortPtr->db->GetTarget(node2, sortPtr->sortProperty, PR_TRUE, &nodeVal2)))
 		{
 			nsIRDFLiteral	*literal2;
 			if (NS_SUCCEEDED(nodeVal2->QueryInterface(kIRDFLiteralIID, (void **) &literal2)))
@@ -639,7 +636,6 @@ openSortCallback(const void *data1, const void *data2, void *sortData)
 				NS_RELEASE(literal2);
 			}
 		}
-		NS_RELEASE(res2);
 	}
 	if ((uniStr1 != nsnull) && (uniStr2 != nsnull))
 	{
@@ -664,10 +660,10 @@ openSortCallback(const void *data1, const void *data2, void *sortData)
 
 
 nsresult
-getNodeValue(nsIContent *node1, nsIRDFResource *sortProperty, sortPtr sortInfo, nsString &cellVal1)
+getNodeValue(nsIContent *node1, nsISupports *sortProperty, sortPtr sortInfo, nsString &cellVal1)
 {
 	nsIDOMXULElement	*dom1;
-	nsIRDFResource		*res1;
+	nsISupports		*res1;
 	nsresult		rv;
 
 	cellVal1 = "";
@@ -677,7 +673,7 @@ getNodeValue(nsIContent *node1, nsIRDFResource *sortProperty, sortPtr sortInfo, 
 		{
 			if ((sortInfo->naturalOrderSort == PR_FALSE) && (sortInfo->sortProperty))
 			{
-				nsIRDFNode	*target1 = nsnull;
+				nsISupports	*target1 = nsnull;
 
 				// for any given property, first ask the graph for its value with "?sort=true" appended
 				// to indicate that if there is any distinction between its display value and sorting
@@ -685,15 +681,15 @@ getNodeValue(nsIContent *node1, nsIRDFResource *sortProperty, sortPtr sortInfo, 
 				// off a "Re:" on a mail message subject)
 
 				const char	*sortPropertyURI;
-				sortInfo->sortProperty->GetValue(&sortPropertyURI);
-				if (sortPropertyURI)
+				rv = NS_GetURI(sortInfo->sortProperty, &sortPropertyURI);
+				if (NS_SUCCEEDED(rv))
 				{
 					nsAutoString	modSortProperty(sortPropertyURI);
 					modSortProperty += "?sort=true";
 					char	*sortProp = modSortProperty.ToNewCString();
 					if (sortProp)
 					{
-						nsIRDFResource	*modSortRes = nsnull;
+						nsISupports	*modSortRes = nsnull;
 						if (NS_SUCCEEDED(sortInfo->rdfService->GetResource(sortProp, &modSortRes)))
 						{
 							if (modSortRes)
@@ -769,14 +765,14 @@ inplaceSortCallback(const void *data1, const void *data2, void *sortData)
 	nsIContent		*node1 = *(nsIContent **)data1;
 	nsIContent		*node2 = *(nsIContent **)data2;
 	nsIDOMXULElement	*dom1 = nsnull, *dom2 = nsnull;
-	nsIRDFResource		*res1 = nsnull, *res2 = nsnull;
+	nsISupports		*res1 = nsnull, *res2 = nsnull;
 	nsAutoString		cellVal1(""), cellVal2("");
 	nsresult		rv;
 	PRBool			sortOnName = PR_FALSE;
 
 	if (NS_FAILED(rv = getNodeValue(node1, sortInfo->sortProperty, sortInfo, cellVal1)))
 	{
-		nsIRDFResource	*name;
+		nsISupports	*name;
 		sortInfo->rdfService->GetResource(kURINC_Name, &name);
 		if (name)
 		{
@@ -786,7 +782,7 @@ inplaceSortCallback(const void *data1, const void *data2, void *sortData)
 	}
 	if (NS_FAILED(rv = getNodeValue(node2, sortInfo->sortProperty, sortInfo, cellVal2)))
 	{
-		nsIRDFResource	*name;
+		nsISupports	*name;
 		sortInfo->rdfService->GetResource(kURINC_Name, &name);
 		if (name)
 		{
@@ -808,7 +804,7 @@ inplaceSortCallback(const void *data1, const void *data2, void *sortData)
 		{
 			if ((sortPtr->naturalOrderSort == PR_FALSE) && (sortPtr->sortProperty))
 			{
-				nsIRDFNode	*target1 = nsnull;
+				nsISupports	*target1 = nsnull;
 				if (NS_SUCCEEDED(rv = (sortPtr->db)->GetTarget(res1, sortPtr->sortProperty, PR_TRUE, &target1)))
 				{
 					nsIRDFLiteral *literal1;
@@ -851,7 +847,7 @@ inplaceSortCallback(const void *data1, const void *data2, void *sortData)
 		{
 			if ((sortPtr->naturalOrderSort == PR_FALSE) && (sortPtr->sortProperty))
 			{
-				nsIRDFNode	*target2 = nsnull;
+				nsISupports	*target2 = nsnull;
 				if (NS_SUCCEEDED(rv = (sortPtr->db)->GetTarget(res2, sortPtr->sortProperty, PR_TRUE, &target2)))
 				{
 					nsIRDFLiteral *literal2;
@@ -903,7 +899,7 @@ nsresult
 XULSortServiceImpl::SortTreeChildren(nsIContent *container, PRInt32 colIndex, sortPtr sortInfo, PRInt32 indentLevel)
 {
 	PRInt32			childIndex = 0, numChildren = 0, nameSpaceID;
-        nsCOMPtr<nsIContent>	child;
+    nsCOMPtr<nsIContent>	child;
 	nsresult		rv;
 	nsVoidArray		*childArray;
 
@@ -1004,7 +1000,7 @@ XULSortServiceImpl::SortTreeChildren(nsIContent *container, PRInt32 colIndex, so
 
 NS_IMETHODIMP
 XULSortServiceImpl::OpenContainer(nsIRDFCompositeDataSource *db, nsIContent *container,
-			nsIRDFResource **flatArray, PRInt32 numElements, PRInt32 elementSize)
+			nsISupports **flatArray, PRInt32 numElements, PRInt32 elementSize)
 {
 	nsresult	rv;
 	nsIContent	*treeNode;
@@ -1118,6 +1114,7 @@ XULSortServiceImpl::PrintTreeChildren(nsIContent *container, PRInt32 colIndex, P
 					PRInt32 len = textFrags->GetLength();
 					if (val)	printf("value='%.*s'", len, val);
 				}
+                NS_RELEASE(text);
 			}
 			printf("\n");
 		}

@@ -36,7 +36,7 @@
 #include "nsCOMPtr.h"
 #include "nsIRDFCursor.h"
 #include "nsIRDFDataSource.h"
-#include "nsIRDFNode.h"
+#include "nsISupports.h"
 #include "nsIRDFService.h"
 #include "nsIServiceManager.h"
 #include "nsRDFCID.h"
@@ -44,6 +44,7 @@
 #include "plstr.h"
 #include "prprf.h"
 #include "rdfutil.h"
+#include "nsIRDFNode.h"
 
 ////////////////////////////////////////////////////////////////////////
 // RDF core vocabulary
@@ -67,7 +68,6 @@ DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, nextVal); // ad hoc way to make contain
 
 ////////////////////////////////////////////////////////////////////////
 
-static NS_DEFINE_IID(kIRDFResourceIID, NS_IRDFRESOURCE_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,  NS_IRDFLITERAL_IID);
 static NS_DEFINE_IID(kIRDFServiceIID,  NS_IRDFSERVICE_IID);
 
@@ -78,11 +78,11 @@ static NS_DEFINE_CID(kRDFServiceCID,   NS_RDFSERVICE_CID);
 // XXX This'll permanently leak
 static nsIRDFService* gRDFService = nsnull;
 
-static nsIRDFResource* kRDF_instanceOf = nsnull;
-static nsIRDFResource* kRDF_Bag        = nsnull;
-static nsIRDFResource* kRDF_Seq        = nsnull;
-static nsIRDFResource* kRDF_Alt        = nsnull;
-static nsIRDFResource* kRDF_nextVal    = nsnull;
+static nsISupports* kRDF_instanceOf = nsnull;
+static nsISupports* kRDF_Bag        = nsnull;
+static nsISupports* kRDF_Seq        = nsnull;
+static nsISupports* kRDF_Alt        = nsnull;
+static nsISupports* kRDF_nextVal    = nsnull;
 
 static nsresult
 rdf_EnsureRDFService(void)
@@ -130,10 +130,10 @@ done:
 ////////////////////////////////////////////////////////////////////////
 
 PRBool
-rdf_IsOrdinalProperty(const nsIRDFResource* property)
+rdf_IsOrdinalProperty(const nsISupports* property)
 {
     const char* s;
-    if (NS_FAILED(property->GetValue(&s)))
+    if (NS_FAILED(NS_GetURI((nsISupports*)property, &s)))
         return PR_FALSE;
 
     if (PL_strncmp(s, kRDFNameSpaceURI, sizeof(kRDFNameSpaceURI) - 1) != 0)
@@ -156,10 +156,10 @@ rdf_IsOrdinalProperty(const nsIRDFResource* property)
 
 
 nsresult
-rdf_OrdinalResourceToIndex(nsIRDFResource* aOrdinal, PRInt32* aIndex)
+rdf_OrdinalResourceToIndex(nsISupports* aOrdinal, PRInt32* aIndex)
 {
     const char* s;
-    if (NS_FAILED(aOrdinal->GetValue(&s)))
+    if (NS_FAILED(NS_GetURI(aOrdinal, &s)))
         return PR_FALSE;
 
     if (PL_strncmp(s, kRDFNameSpaceURI, sizeof(kRDFNameSpaceURI) - 1) != 0) {
@@ -193,7 +193,7 @@ rdf_OrdinalResourceToIndex(nsIRDFResource* aOrdinal, PRInt32* aIndex)
 }
 
 nsresult
-rdf_IndexToOrdinalResource(PRInt32 aIndex, nsIRDFResource** aOrdinal)
+rdf_IndexToOrdinalResource(PRInt32 aIndex, nsISupports** aOrdinal)
 {
     NS_PRECONDITION(aIndex > 0, "illegal value");
     if (aIndex <= 0)
@@ -223,7 +223,7 @@ rdf_IndexToOrdinalResource(PRInt32 aIndex, nsIRDFResource** aOrdinal)
 
 PRBool
 rdf_IsContainer(nsIRDFDataSource* ds,
-                nsIRDFResource* resource)
+                nsISupports* resource)
 {
     if (rdf_IsBag(ds, resource) ||
         rdf_IsSeq(ds, resource) ||
@@ -237,7 +237,7 @@ rdf_IsContainer(nsIRDFDataSource* ds,
 
 PRBool
 rdf_IsBag(nsIRDFDataSource* aDataSource,
-          nsIRDFResource* aResource)
+          nsISupports* aResource)
 {
     PRBool result = PR_FALSE;
 
@@ -254,7 +254,7 @@ done:
 
 PRBool
 rdf_IsSeq(nsIRDFDataSource* aDataSource,
-          nsIRDFResource* aResource)
+          nsISupports* aResource)
 {
     PRBool result = PR_FALSE;
 
@@ -271,7 +271,7 @@ done:
 
 PRBool
 rdf_IsAlt(nsIRDFDataSource* aDataSource,
-          nsIRDFResource* aResource)
+          nsISupports* aResource)
 {
     PRBool result = PR_FALSE;
 
@@ -312,9 +312,9 @@ rdf_IsResource(const nsString& s)
 // 0. node, node, node
 nsresult
 rdf_Assert(nsIRDFDataSource* ds,
-           nsIRDFResource* subject,
-           nsIRDFResource* predicate,
-           nsIRDFNode* object)
+           nsISupports* subject,
+           nsISupports* predicate,
+           nsISupports* object)
 {
     NS_ASSERTION(ds,        "null ptr");
     NS_ASSERTION(subject,   "null ptr");
@@ -329,13 +329,16 @@ rdf_Assert(nsIRDFDataSource* ds,
     printf("(%s, ", s);
      
 
-    nsIRDFResource* objectResource;
+    nsISupports* objectResource;
     nsIRDFLiteral* objectLiteral;
 
-    if (NS_SUCCEEDED(object->QueryInterface(kIRDFResourceIID, (void**) &objectResource))) {
-        objectResource->GetValue(&s);
+    rv = NS_GetURI(object, &s);
+    if (NS_SUCCEEDED(rv))
+//    if (NS_SUCCEEDED(object->QueryInterface(kIRDFResourceIID, (void**) &objectResource)))
+    {
+//        objectResource->GetValue(&s);
         printf(" %s)\n", s);
-        NS_RELEASE(objectResource);
+//        NS_RELEASE(objectResource);
     }
     else if (NS_SUCCEEDED(object->QueryInterface(kIRDFLiteralIID, (void**) &objectLiteral))) {
         const PRUnichar* p;
@@ -360,7 +363,7 @@ rdf_Assert(nsIRDFDataSource* ds,
     NS_ASSERTION(ds, "null ptr");
 
     nsresult rv;
-    nsIRDFResource* subject;
+    nsISupports* subject;
     if (NS_FAILED(rv = rdf_EnsureRDFService()))
         return rv;
 
@@ -376,15 +379,15 @@ rdf_Assert(nsIRDFDataSource* ds,
 // 2. node, node, string
 nsresult
 rdf_Assert(nsIRDFDataSource* ds,
-           nsIRDFResource* subject,
-           nsIRDFResource* predicate,
+           nsISupports* subject,
+           nsISupports* predicate,
            const nsString& objectURI)
 {
     NS_ASSERTION(ds,      "null ptr");
     NS_ASSERTION(subject, "null ptr");
 
     nsresult rv;
-    nsIRDFNode* object;
+    nsISupports* object;
 
     if (NS_FAILED(rv = rdf_EnsureRDFService()))
         return rv;
@@ -392,7 +395,7 @@ rdf_Assert(nsIRDFDataSource* ds,
     // XXX Make a guess *here* if the object should be a resource or a
     // literal. If you don't like it, then call ds->Assert() yerself.
     if (rdf_IsResource(objectURI)) {
-        nsIRDFResource* resource;
+        nsISupports* resource;
         if (NS_FAILED(rv = gRDFService->GetUnicodeResource(objectURI, &resource)))
             return rv;
 
@@ -416,7 +419,7 @@ rdf_Assert(nsIRDFDataSource* ds,
 // 3. node, string, string
 nsresult
 rdf_Assert(nsIRDFDataSource* ds,
-           nsIRDFResource* subject,
+           nsISupports* subject,
            const nsString& predicateURI,
            const nsString& objectURI)
 {
@@ -428,7 +431,7 @@ rdf_Assert(nsIRDFDataSource* ds,
     if (NS_FAILED(rv = rdf_EnsureRDFService()))
         return rv;
 
-    nsIRDFResource* predicate;
+    nsISupports* predicate;
     if (NS_FAILED(rv = gRDFService->GetUnicodeResource(predicateURI, &predicate)))
         return rv;
 
@@ -441,9 +444,9 @@ rdf_Assert(nsIRDFDataSource* ds,
 // 4. node, string, node
 nsresult
 rdf_Assert(nsIRDFDataSource* ds,
-           nsIRDFResource* subject,
+           nsISupports* subject,
            const nsString& predicateURI,
-           nsIRDFNode* object)
+           nsISupports* object)
 {
     NS_ASSERTION(ds,      "null ptr");
     NS_ASSERTION(subject, "null ptr");
@@ -453,7 +456,7 @@ rdf_Assert(nsIRDFDataSource* ds,
     if (NS_FAILED(rv = rdf_EnsureRDFService()))
         return rv;
 
-    nsIRDFResource* predicate;
+    nsISupports* predicate;
     if (NS_FAILED(rv = gRDFService->GetUnicodeResource(predicateURI, &predicate)))
         return rv;
 
@@ -468,7 +471,7 @@ nsresult
 rdf_Assert(nsIRDFDataSource* ds,
            const nsString& subjectURI,
            const nsString& predicateURI,
-           nsIRDFNode* object)
+           nsISupports* object)
 {
     NS_ASSERTION(ds, "null ptr");
 
@@ -476,7 +479,7 @@ rdf_Assert(nsIRDFDataSource* ds,
     if (NS_FAILED(rv = rdf_EnsureRDFService()))
         return rv;
 
-    nsIRDFResource* subject;
+    nsISupports* subject;
     if (NS_FAILED(rv = gRDFService->GetUnicodeResource(subjectURI, &subject)))
         return rv;
 
@@ -489,7 +492,7 @@ rdf_Assert(nsIRDFDataSource* ds,
 
 
 nsresult
-rdf_CreateAnonymousResource(const nsString& aContextURI, nsIRDFResource** result)
+rdf_CreateAnonymousResource(const nsString& aContextURI, nsISupports** result)
 {
 static PRUint32 gCounter = 0;
 
@@ -502,7 +505,7 @@ static PRUint32 gCounter = 0;
         s.Append("#$");
         s.Append(++gCounter, 10);
 
-        nsIRDFResource* resource;
+        nsISupports* resource;
         if (NS_FAILED(rv = gRDFService->GetUnicodeResource(s, &resource)))
             return rv;
 
@@ -521,11 +524,11 @@ static PRUint32 gCounter = 0;
 }
 
 PRBool
-rdf_IsAnonymousResource(const nsString& aContextURI, nsIRDFResource* aResource)
+rdf_IsAnonymousResource(const nsString& aContextURI, nsISupports* aResource)
 {
-    nsresult rv;
     const char* s;
-    if (NS_FAILED(rv = aResource->GetValue(&s))) {
+    nsresult rv;
+    if (NS_FAILED(rv = NS_GetURI(aResource, &s))) {
         NS_ASSERTION(PR_FALSE, "unable to get resource URI");
         return PR_FALSE;
     }
@@ -601,7 +604,7 @@ rdf_PossiblyMakeAbsolute(const nsString& aContextURI, nsString& aURI)
 
 nsresult
 rdf_MakeBag(nsIRDFDataSource* ds,
-            nsIRDFResource* bag)
+            nsISupports* bag)
 {
     NS_ASSERTION(ds,  "null ptr");
     NS_ASSERTION(bag, "null ptr");
@@ -622,7 +625,7 @@ rdf_MakeBag(nsIRDFDataSource* ds,
 
 nsresult
 rdf_MakeSeq(nsIRDFDataSource* ds,
-            nsIRDFResource* seq)
+            nsISupports* seq)
 {
     NS_ASSERTION(ds,  "null ptr");
     NS_ASSERTION(seq, "null ptr");
@@ -643,7 +646,7 @@ rdf_MakeSeq(nsIRDFDataSource* ds,
 
 nsresult
 rdf_MakeAlt(nsIRDFDataSource* ds,
-            nsIRDFResource* alt)
+            nsISupports* alt)
 {
     NS_ASSERTION(ds,  "null ptr");
     NS_ASSERTION(alt, "null ptr");
@@ -664,7 +667,7 @@ rdf_MakeAlt(nsIRDFDataSource* ds,
 
 static nsresult
 rdf_ContainerSetNextValue(nsIRDFDataSource* aDataSource,
-                          nsIRDFResource* aContainer,
+                          nsISupports* aContainer,
                           PRInt32 aIndex)
 {
     nsresult rv;
@@ -673,7 +676,7 @@ rdf_ContainerSetNextValue(nsIRDFDataSource* aDataSource,
         return rv;
 
     // Remove the current value of nextVal, if there is one.
-    nsCOMPtr<nsIRDFNode> nextValNode;
+    nsCOMPtr<nsISupports> nextValNode;
     if (NS_SUCCEEDED(rv = aDataSource->GetTarget(aContainer,
                                                  kRDF_nextVal,
                                                  PR_TRUE,
@@ -703,8 +706,8 @@ rdf_ContainerSetNextValue(nsIRDFDataSource* aDataSource,
 
 static nsresult
 rdf_ContainerGetNextValue(nsIRDFDataSource* ds,
-                          nsIRDFResource* container,
-                          nsIRDFResource** result)
+                          nsISupports* container,
+                          nsISupports** result)
 {
     NS_ASSERTION(ds,        "null ptr");
     NS_ASSERTION(container, "null ptr");
@@ -713,7 +716,7 @@ rdf_ContainerGetNextValue(nsIRDFDataSource* ds,
     if (NS_FAILED(rv = rdf_EnsureRDFService()))
         return rv;
 
-    nsIRDFNode* nextValNode       = nsnull;
+    nsISupports* nextValNode       = nsnull;
     nsIRDFLiteral* nextValLiteral = nsnull;
     const PRUnichar* s;
     nsAutoString nextValStr;
@@ -772,8 +775,8 @@ done:
 
 nsresult
 rdf_ContainerAppendElement(nsIRDFDataSource* ds,
-                           nsIRDFResource* container,
-                           nsIRDFNode* element)
+                           nsISupports* container,
+                           nsISupports* element)
 {
     NS_ASSERTION(ds,        "null ptr");
     NS_ASSERTION(container, "null ptr");
@@ -781,7 +784,7 @@ rdf_ContainerAppendElement(nsIRDFDataSource* ds,
 
     nsresult rv;
 
-    nsIRDFResource* nextVal;
+    nsISupports* nextVal;
 
     if (NS_FAILED(rv = rdf_ContainerGetNextValue(ds, container, &nextVal)))
         goto done;
@@ -797,8 +800,8 @@ done:
 
 nsresult
 rdf_ContainerRemoveElement(nsIRDFDataSource* aDataSource,
-                           nsIRDFResource* aContainer,
-                           nsIRDFNode* aElement)
+                           nsISupports* aContainer,
+                           nsISupports* aElement)
 {
     NS_PRECONDITION(aDataSource != nsnull, "null ptr");
     if (! aDataSource)
@@ -825,25 +828,24 @@ rdf_ContainerRemoveElement(nsIRDFDataSource* aDataSource,
     }
 
     while (NS_SUCCEEDED(rv = elements->Advance())) {
-        nsCOMPtr<nsIRDFNode> element;
+        nsCOMPtr<nsISupports> element;
         if (NS_FAILED(rv = elements->GetObject(getter_AddRefs(element)))) {
             NS_ERROR("unable to read cursor");
             return rv;
         }
 
-        PRBool eq;
-        if (NS_FAILED(rv = element->EqualsNode(aElement, &eq))) {
+
+        if (NS_FAILED(rv = NS_EqualsResource(element, aElement))) {
             NS_ERROR("severe error on equality check");
             return rv;
         }
-
-        if (! eq)
+        if (rv != NS_OK)
             continue;
 
         // Okay, we've found it.
 
         // What was it's index?
-        nsCOMPtr<nsIRDFResource> ordinal;
+        nsCOMPtr<nsISupports> ordinal;
         if (NS_FAILED(rv = elements->GetPredicate(getter_AddRefs(ordinal)))) {
             NS_ERROR("unable to get element's ordinal index");
             return rv;
@@ -913,8 +915,8 @@ rdf_ContainerRemoveElement(nsIRDFDataSource* aDataSource,
 
 nsresult
 rdf_ContainerInsertElementAt(nsIRDFDataSource* aDataSource,
-                             nsIRDFResource* aContainer,
-                             nsIRDFNode* aElement,
+                             nsISupports* aContainer,
+                             nsISupports* aElement,
                              PRInt32 aIndex)
 {
     NS_PRECONDITION(aDataSource != nsnull, "null ptr");
@@ -944,7 +946,7 @@ rdf_ContainerInsertElementAt(nsIRDFDataSource* aDataSource,
         return rv;
     }
 
-    nsCOMPtr<nsIRDFResource> ordinal;
+    nsCOMPtr<nsISupports> ordinal;
     PRInt32 index = 1;
 
     // Advance the cursor to the aIndex'th element.
@@ -1013,7 +1015,7 @@ rdf_ContainerInsertElementAt(nsIRDFDataSource* aDataSource,
                 return rv;
             }
 
-            nsCOMPtr<nsIRDFNode> element;
+            nsCOMPtr<nsISupports> element;
             if (NS_FAILED(rv = elements->GetObject(getter_AddRefs(element)))) {
                 NS_ERROR("unable to get element from cursor");
                 return rv;
@@ -1050,8 +1052,8 @@ rdf_ContainerInsertElementAt(nsIRDFDataSource* aDataSource,
 
 nsresult
 rdf_ContainerIndexOf(nsIRDFDataSource* aDataSource,
-                     nsIRDFResource* aContainer,
-                     nsIRDFNode* aElement,
+                     nsISupports* aContainer,
+                     nsISupports* aElement,
                      PRInt32* aIndex)
 {
     NS_PRECONDITION(aDataSource != nsnull, "null ptr");
@@ -1083,14 +1085,14 @@ rdf_ContainerIndexOf(nsIRDFDataSource* aDataSource,
 
     // Advance the cursor until we find the element we want
     while (NS_SUCCEEDED(rv = elements->Advance())) {
-        nsCOMPtr<nsIRDFNode> element;
+        nsCOMPtr<nsISupports> element;
         if (NS_FAILED(rv = elements->GetObject(getter_AddRefs(element)))) {
             NS_ERROR("unable to get element from cursor");
             return rv;
         }
 
         // Okay, we've found it.
-        nsCOMPtr<nsIRDFResource> ordinal;
+        nsCOMPtr<nsISupports> ordinal;
         if (NS_FAILED(rv = elements->GetPredicate(getter_AddRefs(ordinal)))) {
             NS_ERROR("unable to get element's ordinal index");
             return rv;
@@ -1102,7 +1104,7 @@ rdf_ContainerIndexOf(nsIRDFDataSource* aDataSource,
             return rv;
         }
 
-        if (element != nsCOMPtr<nsIRDFNode>( do_QueryInterface(aElement)) )
+        if (element != nsCOMPtr<nsISupports>( do_QueryInterface(aElement)) )
             continue;
 
         *aIndex = index;

@@ -29,8 +29,6 @@
 #include "nsISupports.h"
 
 class nsIRDFDataSource;
-class nsIRDFResource;
-class nsIRDFNode;
 
 /**
  * An observer on an nsIRDFDataSource.
@@ -48,16 +46,16 @@ public:
     /**
      * Called whenever a new assertion is made in the data source.
      */
-    NS_IMETHOD OnAssert(nsIRDFResource* subject,
-                        nsIRDFResource* predicate,
-                        nsIRDFNode* object) = 0;
+    NS_IMETHOD OnAssert(nsISupports* subject,
+                        nsISupports* predicate,
+                        nsISupports* object) = 0;
 
     /**
      * Called whenever an assertion is removed from the data source.
      */
-    NS_IMETHOD OnUnassert(nsIRDFResource* subject,
-                          nsIRDFResource* predicate,
-                          nsIRDFNode* object) = 0;
+    NS_IMETHOD OnUnassert(nsISupports* subject,
+                          nsISupports* predicate,
+                          nsISupports* object) = 0;
 };
 
 

@@ -41,7 +41,6 @@
 class nsIRDFDataBase;
 class nsIRDFDataSource;
 class nsIRDFLiteral;
-class nsIRDFResource;
 class nsIRDFResourceFactory;
 class nsIRDFDate;
 class nsIRDFInt;
@@ -63,8 +62,19 @@ public:
      * for the same <tt>uri</tt> will return identical pointers. FindResource
      * is used to find out whether there already exists a resource corresponding to that url.
      */
-    NS_IMETHOD GetResource(const char* uri, nsIRDFResource** resource) = 0;
-    NS_IMETHOD FindResource(const char* uri, nsIRDFResource** resource, PRBool* found) = 0;
+    NS_IMETHOD GetResource(const char* uri, nsISupports** resource) = 0;
+    NS_IMETHOD FindResource(const char* uri, nsISupports** resource, PRBool* found) = 0;
+
+    /**
+     * Gets the URI of a resource.
+     */
+    NS_IMETHOD GetURI(nsISupports* resource, const char* *uri) = 0;
+
+    /**
+     * Compares whether two resources are equal, taking into account literal values.
+     * Returns NS_OK if equal, NS_COMFALSE if not.
+     */
+    NS_IMETHOD EqualsResource(nsISupports* r1, nsISupports* r2) = 0;
 
     /**
      * Construct an RDF resource from a Unicode URI. This is provided
@@ -72,7 +82,7 @@ public:
      * conversion from <tt>nsString</tt> objects. The <tt>uri</tt> will
      * be converted to a single-byte representation internally.
      */
-    NS_IMETHOD GetUnicodeResource(const PRUnichar* uri, nsIRDFResource** resource) = 0;
+    NS_IMETHOD GetUnicodeResource(const PRUnichar* uri, nsISupports** resource) = 0;
 
     /**
      * Construct an RDF literal from a Unicode string.
@@ -95,10 +105,6 @@ public:
      * Registers a resource with the RDF system, making it unique w.r.t.
      * GetResource.
      *
-     * An implementation of nsIRDFResource should call this in its
-     * Init() method if it wishes the resource to be globally unique
-     * (which is usually the case).
-     *
      * NOTE that the resource will <i>not</i> be ref-counted by the
      * RDF service: the assumption is that the resource implementation
      * will call nsIRDFService::UnregisterResource() when the last
@@ -107,7 +113,7 @@ public:
      * NOTE that the nsIRDFService implementation may choose to
      * maintain a reference to the resource's URI; therefore, the
      * resource implementation should ensure that the resource's URI
-     * (accessable via nsIRDFResource::GetValue(const char* *aURI)) is
+     * (accessable via nsIRDFService::GetURI) is
      * valid before calling RegisterResource(). Furthermore, the
      * resource implementation should ensure that this pointer
      * <i>remains</i> valid for the lifetime of the resource. (The
@@ -115,7 +121,7 @@ public:
      * URI maintained "internally" in the resource as a key into the
      * cache rather than copying the resource URI itself.)
      */
-    NS_IMETHOD RegisterResource(nsIRDFResource* aResource, PRBool replace = PR_FALSE) = 0;
+    NS_IMETHOD RegisterResource(const char* uri, nsISupports* aResource, PRBool replace = PR_FALSE) = 0;
 
     /**
 
@@ -125,13 +131,11 @@ public:
      * RDF service that the last reference to the resource has been
      * released, so the resource is no longer valid.
      *
-     * NOTE. As mentioned in nsIRDFResourceFactory::CreateResource(),
-     * the RDF service will use the result of
-     * nsIRDFResource::GetValue() as a key into its cache. For this
+     * NOTE. The RDF service will use the URI as a key into its cache. For this
      * reason, you must always un-cache the resource <b>before</b>
      * releasing the storage for the <tt>const char*</tt> URI.
      */
-    NS_IMETHOD UnregisterResource(nsIRDFResource* aResource) = 0;
+    NS_IMETHOD UnregisterResource(const char* uri, nsISupports* aResource) = 0;
 
     // Data source management routines
 
@@ -142,9 +146,8 @@ public:
      *
      * Note that the data source will <i>not</i> be refcounted by the
      * RDF service! The assumption is that an RDF data source
-     * registers with the service once it is initialized (via
-     * <tt>nsIRDFDataSource::Init()</tt>), and unregisters when the
-     * last reference to the data source is released.
+     * registers with the service once it is initialized, and unregisters
+     * when the last reference to the data source is released.
      */
     NS_IMETHOD RegisterDataSource(nsIRDFDataSource* dataSource,
                                   PRBool replace = PR_FALSE) = 0;
@@ -190,5 +193,18 @@ public:
 
 extern nsresult
 NS_NewRDFService(nsIRDFService** result);
+
+// Convenience routine that is a shorthand for getting the nsIRDFService and
+// invoking GetURI:
+extern nsresult
+NS_GetURI(nsISupports* resource, const char* *result);
+
+// Convenience routine that is a shorthand for getting the nsIRDFService and
+// invoking EqualsResource:
+extern nsresult
+NS_EqualsResource(nsISupports* r1, nsISupports* r2);
+
+extern nsresult
+NS_EqualsString(nsISupports* resource, const char* str, PRBool *result);
 
 #endif // nsIRDFService_h__

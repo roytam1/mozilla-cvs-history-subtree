@@ -43,6 +43,7 @@
 #include "nsIRDFNode.h"
 #include "nsIRDFCompositeDataSource.h"
 #include "nsIRDFObserver.h"
+#include "nsIRDFService.h"
 #include "nsIComponentManager.h"
 #include "nsVoidArray.h"
 #include "nsCOMPtr.h"
@@ -83,38 +84,38 @@ public:
 
     NS_IMETHOD GetURI(const char* *uri) const;
 
-    NS_IMETHOD GetSource(nsIRDFResource* property,
-                         nsIRDFNode* target,
+    NS_IMETHOD GetSource(nsISupports* property,
+                         nsISupports* target,
                          PRBool tv,
-                         nsIRDFResource** source);
+                         nsISupports** source);
 
-    NS_IMETHOD GetSources(nsIRDFResource* property,
-                          nsIRDFNode* target,
+    NS_IMETHOD GetSources(nsISupports* property,
+                          nsISupports* target,
                           PRBool tv,
                           nsIRDFAssertionCursor** sources);
 
-    NS_IMETHOD GetTarget(nsIRDFResource* source,
-                         nsIRDFResource* property,
+    NS_IMETHOD GetTarget(nsISupports* source,
+                         nsISupports* property,
                          PRBool tv,
-                         nsIRDFNode** target);
+                         nsISupports** target);
 
-    NS_IMETHOD GetTargets(nsIRDFResource* source,
-                          nsIRDFResource* property,
+    NS_IMETHOD GetTargets(nsISupports* source,
+                          nsISupports* property,
                           PRBool tv,
                           nsIRDFAssertionCursor** targets);
 
-    NS_IMETHOD Assert(nsIRDFResource* source, 
-                      nsIRDFResource* property, 
-                      nsIRDFNode* target,
+    NS_IMETHOD Assert(nsISupports* source, 
+                      nsISupports* property, 
+                      nsISupports* target,
                       PRBool tv);
 
-    NS_IMETHOD Unassert(nsIRDFResource* source,
-                        nsIRDFResource* property,
-                        nsIRDFNode* target);
+    NS_IMETHOD Unassert(nsISupports* source,
+                        nsISupports* property,
+                        nsISupports* target);
 
-    NS_IMETHOD HasAssertion(nsIRDFResource* source,
-                            nsIRDFResource* property,
-                            nsIRDFNode* target,
+    NS_IMETHOD HasAssertion(nsISupports* source,
+                            nsISupports* property,
+                            nsISupports* target,
                             PRBool tv,
                             PRBool* hasAssertion);
 
@@ -122,44 +123,44 @@ public:
 
     NS_IMETHOD RemoveObserver(nsIRDFObserver* n);
 
-    NS_IMETHOD ArcLabelsIn(nsIRDFNode* node,
+    NS_IMETHOD ArcLabelsIn(nsISupports* node,
                            nsIRDFArcsInCursor** labels);
 
-    NS_IMETHOD ArcLabelsOut(nsIRDFResource* source,
+    NS_IMETHOD ArcLabelsOut(nsISupports* source,
                             nsIRDFArcsOutCursor** labels);
 
     NS_IMETHOD GetAllResources(nsIRDFResourceCursor** aCursor);
 
     NS_IMETHOD Flush();
 
-    NS_IMETHOD GetAllCommands(nsIRDFResource* source,
-                              nsIEnumerator/*<nsIRDFResource>*/** commands);
+    NS_IMETHOD GetAllCommands(nsISupports* source,
+                              nsIEnumerator** commands);
 
-    NS_IMETHOD IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-                                nsIRDFResource*   aCommand,
-                                nsISupportsArray/*<nsIRDFResource>*/* aArguments);
+    NS_IMETHOD IsCommandEnabled(nsISupportsArray* aSources,
+                                nsISupports*   aCommand,
+                                nsISupportsArray* aArguments);
 
-    NS_IMETHOD DoCommand(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-                         nsIRDFResource*   aCommand,
-                         nsISupportsArray/*<nsIRDFResource>*/* aArguments);
+    NS_IMETHOD DoCommand(nsISupportsArray* aSources,
+                         nsISupports*   aCommand,
+                         nsISupportsArray* aArguments);
 
     // nsIRDFCompositeDataSource interface
     NS_IMETHOD AddDataSource(nsIRDFDataSource* source);
     NS_IMETHOD RemoveDataSource(nsIRDFDataSource* source);
 
     // nsIRDFObserver interface
-    NS_IMETHOD OnAssert(nsIRDFResource* subject,
-                        nsIRDFResource* predicate,
-                        nsIRDFNode* object);
+    NS_IMETHOD OnAssert(nsISupports* subject,
+                        nsISupports* predicate,
+                        nsISupports* object);
 
-    NS_IMETHOD OnUnassert(nsIRDFResource* subject,
-                          nsIRDFResource* predicate,
-                          nsIRDFNode* object);
+    NS_IMETHOD OnUnassert(nsISupports* subject,
+                          nsISupports* predicate,
+                          nsISupports* object);
 
     // Implementation methods
-    PRBool HasAssertionN(int n, nsIRDFResource* source,
-                            nsIRDFResource* property,
-                            nsIRDFNode* target,
+    PRBool HasAssertionN(int n, nsISupports* source,
+                            nsISupports* property,
+                            nsISupports* target,
                             PRBool tv);
 protected:
     nsVoidArray*  mObservers;
@@ -173,7 +174,7 @@ class DBArcsInOutCursor : public nsIRDFArcsOutCursor,
                           public nsIRDFArcsInCursor
 {
 public:
-    DBArcsInOutCursor(CompositeDataSourceImpl* db, nsIRDFNode* node, PRBool arcsOutp);
+    DBArcsInOutCursor(CompositeDataSourceImpl* db, nsISupports* node, PRBool arcsOutp);
 
     virtual ~DBArcsInOutCursor();
     
@@ -186,28 +187,28 @@ public:
                 mOutCursor->GetDataSource(aDataSource));
     }
 
-    NS_IMETHOD GetSubject(nsIRDFResource** aResource) {
+    NS_IMETHOD GetSubject(nsISupports** aResource) {
         return mOutCursor->GetSubject(aResource);
     }
 
-    NS_IMETHOD GetObject(nsIRDFNode** aNode) {
+    NS_IMETHOD GetObject(nsISupports** aNode) {
         return mInCursor->GetObject(aNode);
     }
 
-    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate) {     
+    NS_IMETHOD GetPredicate(nsISupports** aPredicate) {     
         return (mInCursor ? mInCursor->GetPredicate(aPredicate) : 
                 mOutCursor->GetPredicate(aPredicate));
     }
 
-    NS_IMETHOD GetValue(nsIRDFNode** aValue) {
+    NS_IMETHOD GetValue(nsISupports** aValue) {
         return (mInCursor ? mInCursor->GetValue(aValue) : 
                 mOutCursor->GetValue(aValue));
     }
 
 protected:
     CompositeDataSourceImpl* mCompositeDataSourceImpl;
-    nsIRDFResource*      mSource;
-    nsIRDFNode*          mTarget;
+    nsISupports*      mSource;
+    nsISupports*          mTarget;
     PRInt32              mCount;
     nsIRDFArcsOutCursor* mOutCursor;
     nsIRDFArcsInCursor*  mInCursor;
@@ -216,7 +217,7 @@ protected:
 
         
 DBArcsInOutCursor::DBArcsInOutCursor(CompositeDataSourceImpl* db,
-                                     nsIRDFNode* node,
+                                     nsISupports* node,
                                      PRBool arcsOutp)
     : mCompositeDataSourceImpl(db), 
 	  mTarget(0),
@@ -229,7 +230,7 @@ DBArcsInOutCursor::DBArcsInOutCursor(CompositeDataSourceImpl* db,
     NS_ADDREF(mCompositeDataSourceImpl);
 
     if (arcsOutp) {
-        mSource = (nsIRDFResource*) node;
+        mSource = node;
     } else {
         mTarget = node;
     }
@@ -255,7 +256,7 @@ DBArcsInOutCursor::DBArcsInOutCursor(CompositeDataSourceImpl* db,
 DBArcsInOutCursor::~DBArcsInOutCursor(void)
 {
     for (PRInt32 i = mResults.Count() - 1; i >= 0; --i) {
-        nsIRDFNode* node = (nsIRDFNode*) mResults[i];
+        nsISupports* node = (nsISupports*) mResults[i];
         NS_RELEASE(node);
     }
 
@@ -293,7 +294,7 @@ DBArcsInOutCursor::Advance(void)
         nsresult result = (mInCursor ? mInCursor->Advance() : mOutCursor->Advance());
         
         while (NS_SUCCEEDED(result)) {
-            nsIRDFNode* obj ;
+            nsISupports* obj ;
             result = GetValue(&obj);
             NS_ASSERTION(NS_SUCCEEDED(result), "Advance is broken");
             if (NS_SUCCEEDED(result) && mResults.IndexOf(obj) < 0) {
@@ -332,8 +333,8 @@ DBArcsInOutCursor::Advance(void)
 class DBGetSTCursor : public nsIRDFAssertionCursor
 {
 public:
-    DBGetSTCursor(CompositeDataSourceImpl* db, nsIRDFNode* u,  
-                       nsIRDFResource* property, PRBool inversep, PRBool tv);
+    DBGetSTCursor(CompositeDataSourceImpl* db, nsISupports* u,  
+                       nsISupports* property, PRBool inversep, PRBool tv);
 
     virtual ~DBGetSTCursor();
 
@@ -347,15 +348,15 @@ public:
         return mCurrentCursor->GetDataSource(aDataSource);
     }
 
-    NS_IMETHOD GetSubject(nsIRDFResource** aResource) {
+    NS_IMETHOD GetSubject(nsISupports** aResource) {
         return mCurrentCursor->GetSubject(aResource);
     }
 
-    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate) {     
+    NS_IMETHOD GetPredicate(nsISupports** aPredicate) {     
         return mCurrentCursor->GetPredicate(aPredicate);
     }
 
-    NS_IMETHOD GetObject(nsIRDFNode** aObject) {
+    NS_IMETHOD GetObject(nsISupports** aObject) {
         nsresult rv = mCurrentCursor->GetObject(aObject);
 #ifdef NS_DEBUG
         if (NS_SUCCEEDED(rv)) {
@@ -369,7 +370,7 @@ public:
         return mCurrentCursor->GetTruthValue(aTruthValue);
     }
 
-    NS_IMETHOD GetValue(nsIRDFNode** aValue) {
+    NS_IMETHOD GetValue(nsISupports** aValue) {
         nsresult rv = mCurrentCursor->GetValue(aValue);
 #ifdef NS_DEBUG
         if (NS_SUCCEEDED(rv)) {
@@ -380,12 +381,12 @@ public:
     }
 
 #ifdef NS_DEBUG
-    void Trace(const char* msg, nsIRDFNode* valueNode) {
+    void Trace(const char* msg, nsISupports* valueNode) {
         if (PR_LOG_TEST(nsRDFLog, PR_LOG_ALWAYS)) {
             nsresult rv;
-            nsIRDFResource* subRes;
-            nsIRDFResource* predRes;
-            nsIRDFResource* valRes;
+            nsISupports* subRes;
+            nsISupports* predRes;
+            nsISupports* valRes;
             const char* dsName;
             const char* subject;
             const char* predicate;
@@ -398,20 +399,20 @@ public:
             if (NS_FAILED(rv)) return;
             rv = GetSubject(&subRes);
             if (NS_FAILED(rv)) return;
-            rv = subRes->GetValue(&subject);
+            rv = NS_GetURI(subRes, &subject);
             if (NS_FAILED(rv)) return;
             rv = GetPredicate(&predRes);
             if (NS_FAILED(rv)) return;
-            rv = predRes->GetValue(&predicate);
+            rv = NS_GetURI(predRes, &predicate);
             if (NS_FAILED(rv)) return;
-            if (NS_SUCCEEDED(valueNode->QueryInterface(nsIRDFResource::GetIID(), (void**)&valRes))) {
-                rv = valRes->GetValue((const char**)&value);
+            if (NS_SUCCEEDED(valueNode->QueryInterface(nsISupports::GetIID(), (void**)&valRes))) {
+                rv = NS_GetURI(valRes, (const char**)&value);
                 if (NS_FAILED(rv)) return;
                 NS_RELEASE(valRes);
                 value = PR_smprintf("%s", value);   // freed below
             }
             else {
-                value = PR_smprintf("<nsIRDFNode 0x%x>", valueNode);
+                value = PR_smprintf("<nsISupports 0x%x>", valueNode);
             }
             if (value == nsnull) return;
             printf("RDF %s: datasource=%s\n  subject: %s\n     pred: %s\n    value: %s\n",
@@ -424,9 +425,9 @@ public:
 #endif
 private:
     CompositeDataSourceImpl* mCompositeDataSourceImpl;
-    nsIRDFResource* mSource;
-    nsIRDFResource* mLabel;    
-    nsIRDFNode*     mTarget;
+    nsISupports* mSource;
+    nsISupports* mLabel;    
+    nsISupports*     mTarget;
     PRInt32         mCount;
     PRBool          mTruthValue;
     nsIRDFAssertionCursor* mCurrentCursor;
@@ -435,8 +436,8 @@ private:
 //NS_IMPL_ISUPPORTS(DBGetSTCursor, kIRDFAssertionCursorIID);        
 
 DBGetSTCursor::DBGetSTCursor(CompositeDataSourceImpl* db,
-                             nsIRDFNode* u,
-                             nsIRDFResource* property,
+                             nsISupports* u,
+                             nsISupports* property,
                              PRBool inversep, 
                              PRBool tv)
     : mCompositeDataSourceImpl(db),
@@ -451,7 +452,7 @@ DBGetSTCursor::DBGetSTCursor(CompositeDataSourceImpl* db,
     NS_ADDREF(mCompositeDataSourceImpl);
 
     if (!inversep) {
-        mSource = (nsIRDFResource*) u;
+        mSource = u;
     } else {
         mTarget = u;
     }
@@ -505,8 +506,8 @@ DBGetSTCursor::Advance(void)
     while (mCurrentCursor) {
         nsresult result = mCurrentCursor->Advance();
         while (NS_ERROR_RDF_CURSOR_EMPTY != result) {
-            nsIRDFResource* src;
-            nsIRDFNode*     trg;            
+            nsISupports* src;
+            nsISupports*     trg;            
             mCurrentCursor->GetSubject(&src);
             mCurrentCursor->GetObject(&trg);
             if (!mCompositeDataSourceImpl->HasAssertionN(mCount-1, src, mLabel, trg, !mTruthValue)) {
@@ -620,10 +621,10 @@ CompositeDataSourceImpl::GetURI(const char* *uri) const
 }
 
 NS_IMETHODIMP
-CompositeDataSourceImpl::GetSource(nsIRDFResource* property,
-                                   nsIRDFNode* target,
+CompositeDataSourceImpl::GetSource(nsISupports* property,
+                                   nsISupports* target,
                                    PRBool tv,
-                                   nsIRDFResource** source)
+                                   nsISupports** source)
 {
     PRInt32 count = mDataSources.Count();
     for (PRInt32 i = 0; i < count; ++i) {
@@ -644,8 +645,8 @@ CompositeDataSourceImpl::GetSource(nsIRDFResource* property,
 }
 
 NS_IMETHODIMP
-CompositeDataSourceImpl::GetSources(nsIRDFResource* property,
-                                    nsIRDFNode* target,
+CompositeDataSourceImpl::GetSources(nsISupports* property,
+                                    nsISupports* target,
                                     PRBool tv,
                                     nsIRDFAssertionCursor** result)
 {
@@ -661,10 +662,10 @@ CompositeDataSourceImpl::GetSources(nsIRDFResource* property,
 }
 
 NS_IMETHODIMP
-CompositeDataSourceImpl::GetTarget(nsIRDFResource* source,
-                                   nsIRDFResource* property,
+CompositeDataSourceImpl::GetTarget(nsISupports* source,
+                                   nsISupports* property,
                                    PRBool tv,
-                                   nsIRDFNode** target)
+                                   nsISupports** target)
 {
     PRInt32 count = mDataSources.Count();
     for (PRInt32 i = 0; i < count; ++i) {
@@ -687,9 +688,9 @@ CompositeDataSourceImpl::GetTarget(nsIRDFResource* source,
 
 PRBool
 CompositeDataSourceImpl::HasAssertionN(int n,
-                                       nsIRDFResource* source,
-                                       nsIRDFResource* property,
-                                       nsIRDFNode* target,
+                                       nsISupports* source,
+                                       nsISupports* property,
+                                       nsISupports* target,
                                        PRBool tv)
 {
     int m = 0;
@@ -706,8 +707,8 @@ CompositeDataSourceImpl::HasAssertionN(int n,
 
 
 NS_IMETHODIMP
-CompositeDataSourceImpl::GetTargets(nsIRDFResource* source,
-                                    nsIRDFResource* property,
+CompositeDataSourceImpl::GetTargets(nsISupports* source,
+                                    nsISupports* property,
                                     PRBool tv,
                                     nsIRDFAssertionCursor** targets)
 {
@@ -725,9 +726,9 @@ CompositeDataSourceImpl::GetTargets(nsIRDFResource* source,
 }
 
 NS_IMETHODIMP
-CompositeDataSourceImpl::Assert(nsIRDFResource* source, 
-                                nsIRDFResource* property, 
-                                nsIRDFNode* target,
+CompositeDataSourceImpl::Assert(nsISupports* source, 
+                                nsISupports* property, 
+                                nsISupports* target,
                                 PRBool tv)
 {
     // Need to add back the stuff for unblocking ...
@@ -741,9 +742,9 @@ CompositeDataSourceImpl::Assert(nsIRDFResource* source,
 }
 
 NS_IMETHODIMP
-CompositeDataSourceImpl::Unassert(nsIRDFResource* source,
-                                  nsIRDFResource* property,
-                                  nsIRDFNode* target)
+CompositeDataSourceImpl::Unassert(nsISupports* source,
+                                  nsISupports* property,
+                                  nsISupports* target)
 {
     nsresult rv;
     PRInt32 count = mDataSources.Count();
@@ -762,9 +763,9 @@ CompositeDataSourceImpl::Unassert(nsIRDFResource* source,
 }
 
 NS_IMETHODIMP
-CompositeDataSourceImpl::HasAssertion(nsIRDFResource* source,
-                                      nsIRDFResource* property,
-                                      nsIRDFNode* target,
+CompositeDataSourceImpl::HasAssertion(nsISupports* source,
+                                      nsISupports* property,
+                                      nsISupports* target,
                                       PRBool tv,
                                       PRBool* hasAssertion)
 {
@@ -822,7 +823,7 @@ CompositeDataSourceImpl::RemoveObserver(nsIRDFObserver* obs)
 }
 
 NS_IMETHODIMP
-CompositeDataSourceImpl::ArcLabelsIn(nsIRDFNode* node,
+CompositeDataSourceImpl::ArcLabelsIn(nsISupports* node,
                                      nsIRDFArcsInCursor** labels)
 {
     if (! labels)
@@ -838,7 +839,7 @@ CompositeDataSourceImpl::ArcLabelsIn(nsIRDFNode* node,
 }
 
 NS_IMETHODIMP
-CompositeDataSourceImpl::ArcLabelsOut(nsIRDFResource* source,
+CompositeDataSourceImpl::ArcLabelsOut(nsISupports* source,
                                       nsIRDFArcsOutCursor** labels)
 {
     if (! labels)
@@ -870,38 +871,9 @@ CompositeDataSourceImpl::Flush()
     return NS_OK;
 }
 
-#if 0
 NS_IMETHODIMP
-CompositeDataSourceImpl::GetEnabledCommands(nsISupportsArray* aSources,
-                                            nsISupportsArray* aArguments,
-                                            nsIEnumerator**   aResult)
-{
-    nsCOMPtr<nsIEnumerator> commands;        // union of enabled commands
-    for (PRInt32 i = mDataSources.Count() - 1; i >= 0; --i) {
-        nsIRDFDataSource* ds = NS_STATIC_CAST(nsIRDFDataSource*, mDataSources[i]);
-        nsIEnumerator* dsCmds;
-        nsresult rv = ds->GetEnabledCommands(aSources, aArguments, &dsCmds);
-        if (NS_SUCCEEDED(rv)) {
-            if (commands == nsnull) {
-                commands = dont_QueryInterface(dsCmds);
-            }
-            else {
-                nsIEnumerator* unionCmds;
-                rv = NS_NewUnionEnumerator(commands, dsCmds, &unionCmds);
-                if (NS_FAILED(rv)) return rv;
-                NS_RELEASE(dsCmds);
-                commands = dont_QueryInterface(unionCmds);
-            }
-        }
-    }
-    *aResult = commands;
-    return NS_OK;
-}
-#endif
-
-NS_IMETHODIMP
-CompositeDataSourceImpl::GetAllCommands(nsIRDFResource* source,
-                                        nsIEnumerator/*<nsIRDFResource>*/** result)
+CompositeDataSourceImpl::GetAllCommands(nsISupports* source,
+                                        nsIEnumerator** result)
 {
     nsCOMPtr<nsIEnumerator> commands;        // union of enabled commands
     for (PRInt32 i = mDataSources.Count() - 1; i >= 0; --i) {
@@ -926,9 +898,9 @@ CompositeDataSourceImpl::GetAllCommands(nsIRDFResource* source,
 }
 
 NS_IMETHODIMP
-CompositeDataSourceImpl::IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-                                          nsIRDFResource*   aCommand,
-                                          nsISupportsArray/*<nsIRDFResource>*/* aArguments)
+CompositeDataSourceImpl::IsCommandEnabled(nsISupportsArray* aSources,
+                                          nsISupports*   aCommand,
+                                          nsISupportsArray* aArguments)
 {
     nsresult rv;
     for (PRInt32 i = mDataSources.Count() - 1; i >= 0; --i) {
@@ -941,9 +913,9 @@ CompositeDataSourceImpl::IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* 
 }
 
 NS_IMETHODIMP
-CompositeDataSourceImpl::DoCommand(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-                                   nsIRDFResource*   aCommand,
-                                   nsISupportsArray/*<nsIRDFResource>*/* aArguments)
+CompositeDataSourceImpl::DoCommand(nsISupportsArray* aSources,
+                                   nsISupports*   aCommand,
+                                   nsISupportsArray* aArguments)
 {
     for (PRInt32 i = mDataSources.Count() - 1; i >= 0; --i) {
         nsIRDFDataSource* ds = NS_STATIC_CAST(nsIRDFDataSource*, mDataSources[i]);
@@ -992,9 +964,9 @@ CompositeDataSourceImpl::RemoveDataSource(nsIRDFDataSource* source)
 }
 
 NS_IMETHODIMP
-CompositeDataSourceImpl::OnAssert(nsIRDFResource* subject,
-                                  nsIRDFResource* predicate,
-                                  nsIRDFNode* object)
+CompositeDataSourceImpl::OnAssert(nsISupports* subject,
+                                  nsISupports* predicate,
+                                  nsISupports* object)
 {
     if (mObservers) {
         for (PRInt32 i = mObservers->Count() - 1; i >= 0; --i) {
@@ -1007,9 +979,9 @@ CompositeDataSourceImpl::OnAssert(nsIRDFResource* subject,
 }
 
 NS_IMETHODIMP
-CompositeDataSourceImpl::OnUnassert(nsIRDFResource* subject,
-                                    nsIRDFResource* predicate,
-                                    nsIRDFNode* object)
+CompositeDataSourceImpl::OnUnassert(nsISupports* subject,
+                                    nsISupports* predicate,
+                                    nsISupports* object)
 {
     if (mObservers) {
         for (PRInt32 i = mObservers->Count() - 1; i >= 0; --i) {

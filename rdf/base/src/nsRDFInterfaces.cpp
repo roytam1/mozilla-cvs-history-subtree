@@ -143,7 +143,7 @@ nsIRDFResource_EqualsString(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
   if (!JS_ConvertArguments(cx, argc, argv, "s", &aURI))
     return JS_FALSE;
   PRBool retval;
-  nsresult rv = priv->EqualsString(aURI, &retval);
+  nsresult rv = NS_EqualsString(priv, aURI, &retval);
   if (NS_FAILED(rv)) {
     JS_ReportError(cx, XXXnsresult2string(rv));
     return JS_FALSE;

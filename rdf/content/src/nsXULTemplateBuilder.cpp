@@ -83,7 +83,6 @@ DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, child);
 static NS_DEFINE_IID(kIContentIID,                NS_ICONTENT_IID);
 static NS_DEFINE_IID(kIDocumentIID,               NS_IDOCUMENT_IID);
 static NS_DEFINE_IID(kINameSpaceManagerIID,       NS_INAMESPACEMANAGER_IID);
-static NS_DEFINE_IID(kIRDFResourceIID,            NS_IRDFRESOURCE_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,             NS_IRDFLITERAL_IID);
 static NS_DEFINE_IID(kIRDFContentModelBuilderIID, NS_IRDFCONTENTMODELBUILDER_IID);
 static NS_DEFINE_IID(kIRDFObserverIID,            NS_IRDFOBSERVER_IID);
@@ -114,11 +113,11 @@ PRInt32  RDFGenericBuilderImpl::kNameSpaceID_XUL;
 nsIRDFService*  RDFGenericBuilderImpl::gRDFService;
 nsINameSpaceManager* RDFGenericBuilderImpl::gNameSpaceManager;
 
-nsIRDFResource* RDFGenericBuilderImpl::kNC_Title;
-nsIRDFResource* RDFGenericBuilderImpl::kNC_child;
-nsIRDFResource* RDFGenericBuilderImpl::kNC_Column;
-nsIRDFResource* RDFGenericBuilderImpl::kNC_Folder;
-nsIRDFResource* RDFGenericBuilderImpl::kRDF_child;
+nsISupports* RDFGenericBuilderImpl::kNC_Title;
+nsISupports* RDFGenericBuilderImpl::kNC_child;
+nsISupports* RDFGenericBuilderImpl::kNC_Column;
+nsISupports* RDFGenericBuilderImpl::kNC_Folder;
+nsISupports* RDFGenericBuilderImpl::kRDF_child;
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -311,7 +310,7 @@ RDFGenericBuilderImpl::GetDataBase(nsIRDFCompositeDataSource** aDataBase)
 
 
 NS_IMETHODIMP
-RDFGenericBuilderImpl::CreateRootContent(nsIRDFResource* aResource)
+RDFGenericBuilderImpl::CreateRootContent(nsISupports* aResource)
 {
     // Create a structure that looks like this:
     //
@@ -434,10 +433,10 @@ RDFGenericBuilderImpl::CreateContents(nsIContent* aElement)
     }
 
     // Get the element's resource so that we can generate cell
-    // values. We could QI for the nsIRDFResource here, but doing this
+    // values. We could QI for the nsISupports here, but doing this
     // via the nsIContent interface allows us to support generic nodes
     // that might get added in by DOM calls.
-    nsCOMPtr<nsIRDFResource> resource;
+    nsCOMPtr<nsISupports> resource;
     if (NS_FAILED(rv = GetElementResource(aElement, getter_AddRefs(resource)))) {
         NS_ERROR("unable to get element resource");
         return rv;
@@ -453,11 +452,11 @@ RDFGenericBuilderImpl::CreateContents(nsIContent* aElement)
         return rv;
 
 // rjc - sort
-	nsVoidArray	*tempArray;
-        if ((tempArray = new nsVoidArray()) == nsnull)	return (NS_ERROR_OUT_OF_MEMORY);
+    nsVoidArray	*tempArray;
+        if ((tempArray = new nsVoidArray()) == nsnull)    return (NS_ERROR_OUT_OF_MEMORY);
 
     while (NS_SUCCEEDED(rv = properties->Advance())) {
-        nsCOMPtr<nsIRDFResource> property;
+        nsCOMPtr<nsISupports> property;
 
         if (NS_FAILED(rv = properties->GetPredicate(getter_AddRefs(property))))
             break;
@@ -478,20 +477,22 @@ RDFGenericBuilderImpl::CreateContents(nsIContent* aElement)
         }
 
         while (NS_SUCCEEDED(rv = assertions->Advance())) {
-            nsCOMPtr<nsIRDFNode> value;
+            nsCOMPtr<nsISupports> value;
             if (NS_FAILED(rv = assertions->GetValue(getter_AddRefs(value)))) {
                 NS_ERROR("unable to get cursor value");
                 // return rv;
                 break;
             }
 
-            nsCOMPtr<nsIRDFResource> valueResource;
-            if (NS_SUCCEEDED(value->QueryInterface(kIRDFResourceIID, (void**) getter_AddRefs(valueResource)))
-                && IsContainmentProperty(aElement, property)) {
-			/* XXX hack: always append value resource 1st!
-			       due to sort callback implementation */
-                	tempArray->AppendElement(valueResource);
-                	tempArray->AppendElement(property);
+            const char* uri;
+            rv = NS_GetURI(value, &uri);
+            if (NS_FAILED(rv))
+                NS_WARNING("RDFGenericBuilderImpl::CreateContents: cant' get URI");
+            if (NS_SUCCEEDED(rv) && IsContainmentProperty(aElement, property)) {
+                /* XXX hack: always append value resource 1st!
+                   due to sort callback implementation */
+                tempArray->AppendElement(value);
+                tempArray->AppendElement(property);
             }
             else {
                /* if (NS_FAILED(rv = SetCellValue(aElement, property, value))) {
@@ -504,39 +505,39 @@ RDFGenericBuilderImpl::CreateContents(nsIContent* aElement)
         }
     }
 
-        unsigned long numElements = tempArray->Count();
-        if (numElements > 0)
+    unsigned long numElements = tempArray->Count();
+    if (numElements > 0)
+    {
+        nsISupports ** flatArray = new nsISupports *[numElements];
+        if (flatArray)
         {
-        	nsIRDFResource ** flatArray = new nsIRDFResource *[numElements];
-        	if (flatArray)
-        	{
-			// flatten array of resources, sort them, then add as item elements
-			unsigned long loop;
+            // flatten array of resources, sort them, then add as item elements
+            unsigned long loop;
 
-        	        for (loop=0; loop<numElements; loop++)
-				flatArray[loop] = (nsIRDFResource *)tempArray->ElementAt(loop);
+            for (loop=0; loop<numElements; loop++)
+                flatArray[loop] = (nsISupports *)tempArray->ElementAt(loop);
 
-			nsIXULSortService		*gXULSortService = nsnull;
+            nsIXULSortService *gXULSortService = nsnull;
 
-			nsresult rv = nsServiceManager::GetService(kXULSortServiceCID,
-				kIXULSortServiceIID, (nsISupports**) &gXULSortService);
-			if (nsnull != gXULSortService)
-			{
-				gXULSortService->OpenContainer(mDB, aElement, flatArray, numElements/2, 2*sizeof(nsIRDFResource *));
-				nsServiceManager::ReleaseService(kXULSortServiceCID, gXULSortService);
-			}
+            nsresult rv = nsServiceManager::GetService(kXULSortServiceCID,
+                                                       kIXULSortServiceIID, (nsISupports**) &gXULSortService);
+            if (nsnull != gXULSortService)
+            {
+                gXULSortService->OpenContainer(mDB, aElement, flatArray, numElements/2, 2*sizeof(nsISupports *));
+                nsServiceManager::ReleaseService(kXULSortServiceCID, gXULSortService);
+            }
 
-        		for (loop=0; loop<numElements; loop+=2)
-        		{
-				if (NS_FAILED(rv = AddWidgetItem(aElement, flatArray[loop+1], flatArray[loop], loop+1)))
-				{
-					NS_ERROR("unable to create widget item");
-				}
-        		}
-			delete [] flatArray;
-        	}
+            for (loop=0; loop<numElements; loop+=2)
+            {
+                if (NS_FAILED(rv = AddWidgetItem(aElement, flatArray[loop+1], flatArray[loop], loop+1)))
+                {
+                    NS_ERROR("unable to create widget item");
+                }
+            }
+            delete [] flatArray;
         }
-        delete tempArray;
+    }
+    delete tempArray;
 
     if (rv == NS_ERROR_RDF_CURSOR_EMPTY)
         // This is a normal return code from nsIRDFCursor::Advance()
@@ -547,9 +548,9 @@ RDFGenericBuilderImpl::CreateContents(nsIContent* aElement)
 
 
 NS_IMETHODIMP
-RDFGenericBuilderImpl::OnAssert(nsIRDFResource* aSubject,
-                                nsIRDFResource* aPredicate,
-                                nsIRDFNode* aObject)
+RDFGenericBuilderImpl::OnAssert(nsISupports* aSubject,
+                                nsISupports* aPredicate,
+                                nsISupports* aObject)
 {
     NS_PRECONDITION(mDocument != nsnull, "not initialized");
     if (! mDocument)
@@ -582,9 +583,11 @@ RDFGenericBuilderImpl::OnAssert(nsIRDFResource* aSubject,
         if (!IsElementInWidget(element))
             continue;
         
-        nsCOMPtr<nsIRDFResource> resource;
-        if (NS_SUCCEEDED(aObject->QueryInterface(kIRDFResourceIID,
-                                                 (void**) getter_AddRefs(resource)))
+        const char* uri;
+        rv = NS_GetURI(aObject, &uri);
+        if (NS_FAILED(rv))
+            NS_WARNING("RDFGenericBuilderImpl::OnAssert: cant' get URI");
+        if (NS_SUCCEEDED(rv)
             && IsContainmentProperty(element, aPredicate)) {
             // Okay, the object _is_ a resource, and the predicate is
             // a containment property. So this'll be a new item in the widget
@@ -607,7 +610,7 @@ RDFGenericBuilderImpl::OnAssert(nsIRDFResource* aSubject,
                 contentsGenerated.EqualsIgnoreCase("true")) {
                 // Okay, it's a "live" element, so go ahead and append the new
                 // child to this node.
-                if (NS_FAILED(rv = AddWidgetItem(element, aPredicate, resource, 0))) {
+                if (NS_FAILED(rv = AddWidgetItem(element, aPredicate, aObject, 0))) {
                     NS_ERROR("unable to create new widget item");
                     return rv;
                 }
@@ -631,9 +634,9 @@ RDFGenericBuilderImpl::OnAssert(nsIRDFResource* aSubject,
 
 
 NS_IMETHODIMP
-RDFGenericBuilderImpl::OnUnassert(nsIRDFResource* aSubject,
-                                  nsIRDFResource* aPredicate,
-                                  nsIRDFNode* aObject)
+RDFGenericBuilderImpl::OnUnassert(nsISupports* aSubject,
+                                  nsISupports* aPredicate,
+                                  nsISupports* aObject)
 {
     NS_PRECONDITION(mDocument != nsnull, "not initialized");
     if (! mDocument)
@@ -666,9 +669,11 @@ RDFGenericBuilderImpl::OnUnassert(nsIRDFResource* aSubject,
         if (!IsElementInWidget(element))
             continue;
         
-        nsCOMPtr<nsIRDFResource> resource;
-        if (NS_SUCCEEDED(aObject->QueryInterface(kIRDFResourceIID,
-                                                 (void**) getter_AddRefs(resource)))
+        const char* uri;
+        rv = NS_GetURI(aObject, &uri);
+        if (NS_FAILED(rv))
+            NS_WARNING("RDFGenericBuilderImpl::OnUnassert: can't get URI");
+        if (NS_SUCCEEDED(rv)
             && IsContainmentProperty(element, aPredicate)) {
             // Okay, the object _is_ a resource, and the predicate is
             // a containment property. So this'll be a new item in the widget
@@ -689,7 +694,7 @@ RDFGenericBuilderImpl::OnUnassert(nsIRDFResource* aSubject,
                 contentsGenerated.EqualsIgnoreCase("true")) {
                 // Okay, it's a "live" element, so go ahead and append the new
                 // child to this node.
-                if (NS_FAILED(rv = RemoveWidgetItem(element, aPredicate, resource))) {
+                if (NS_FAILED(rv = RemoveWidgetItem(element, aPredicate, aObject))) {
                     NS_ERROR("unable to create new widget item");
                     return rv;
                 }
@@ -765,7 +770,7 @@ RDFGenericBuilderImpl::OnSetAttribute(nsIDOMElement* aElement, const nsString& a
 {
     nsresult rv;
 
-    nsCOMPtr<nsIRDFResource> resource;
+    nsCOMPtr<nsISupports> resource;
     if (NS_FAILED(rv = GetDOMNodeResource(aElement, getter_AddRefs(resource)))) {
         // XXX it's not a resource element, so there's no assertions
         // we need to make on the back-end. Should we just do the
@@ -855,7 +860,7 @@ RDFGenericBuilderImpl::OnSetAttribute(nsIDOMElement* aElement, const nsString& a
         // We are (possibly) changing the actual identity of the
         // element; e.g., re-rooting an item in the tree.
 
-        nsCOMPtr<nsIRDFResource> newResource;
+        nsCOMPtr<nsISupports> newResource;
         if (NS_FAILED(rv = gRDFService->GetUnicodeResource(aValue, getter_AddRefs(newResource)))) {
             NS_ERROR("unable to get new resource");
             return rv;
@@ -934,7 +939,7 @@ RDFGenericBuilderImpl::OnSetAttribute(nsIDOMElement* aElement, const nsString& a
     }
 
     // If we get here, it's a "vanilla" property: push its value into the graph.
-    nsCOMPtr<nsIRDFResource> property;
+    nsCOMPtr<nsISupports> property;
     if (NS_FAILED(rv = GetResource(attrNameSpaceID, attrNameAtom, getter_AddRefs(property)))) {
         NS_ERROR("unable to construct resource");
         return rv;
@@ -975,7 +980,7 @@ RDFGenericBuilderImpl::OnRemoveAttribute(nsIDOMElement* aElement, const nsString
 {
     nsresult rv;
 
-    nsCOMPtr<nsIRDFResource> resource;
+    nsCOMPtr<nsISupports> resource;
     if (NS_FAILED(rv = GetDOMNodeResource(aElement, getter_AddRefs(resource)))) {
         // XXX it's not a resource element, so there's no assertions
         // we need to make on the back-end. Should we just do the
@@ -1037,7 +1042,7 @@ RDFGenericBuilderImpl::OnRemoveAttribute(nsIDOMElement* aElement, const nsString
     else {
         // It's a "vanilla" property: push its value into the graph.
 
-        nsCOMPtr<nsIRDFResource> property;
+        nsCOMPtr<nsISupports> property;
         if (NS_FAILED(rv = GetResource(attrNameSpaceID, attrNameAtom, getter_AddRefs(property)))) {
             NS_ERROR("unable to construct resource");
             return rv;
@@ -1121,7 +1126,7 @@ nsresult
 RDFGenericBuilderImpl::FindChildByTagAndResource(nsIContent* aElement,
                                               PRInt32 aNameSpaceID,
                                               nsIAtom* aTag,
-                                              nsIRDFResource* aResource,
+                                              nsISupports* aResource,
                                               nsIContent** aChild)
 {
     nsresult rv;
@@ -1153,7 +1158,7 @@ RDFGenericBuilderImpl::FindChildByTagAndResource(nsIContent* aElement,
         // Now get the resource ID from the RDF:ID attribute. We do it
         // via the content model, because you're never sure who
         // might've added this stuff in...
-        nsCOMPtr<nsIRDFResource> resource;
+        nsCOMPtr<nsISupports> resource;
         if (NS_FAILED(rv = GetElementResource(kid, getter_AddRefs(resource)))) {
             NS_ERROR("severe error retrieving resource");
             return rv;
@@ -1306,7 +1311,7 @@ RDFGenericBuilderImpl::IsWidgetInsertionRootElement(nsIContent* element)
 }
 
 PRBool
-RDFGenericBuilderImpl::IsContainmentProperty(nsIContent* aElement, nsIRDFResource* aProperty)
+RDFGenericBuilderImpl::IsContainmentProperty(nsIContent* aElement, nsISupports* aProperty)
 {
     // XXX is this okay to _always_ treat ordinal properties as tree
     // properties? Probably not...
@@ -1315,7 +1320,8 @@ RDFGenericBuilderImpl::IsContainmentProperty(nsIContent* aElement, nsIRDFResourc
 
     nsresult rv;
     const char* propertyURI;
-    if (NS_FAILED(rv = aProperty->GetValue(&propertyURI))) {
+    rv = NS_GetURI(aProperty, &propertyURI);
+    if (NS_FAILED(rv)) {
         NS_ERROR("unable to get property URI");
         return PR_FALSE;
     }
@@ -1372,7 +1378,7 @@ RDFGenericBuilderImpl::IsContainmentProperty(nsIContent* aElement, nsIRDFResourc
 }
 
 PRBool
-RDFGenericBuilderImpl::IsContainer(nsIContent* aElement, nsIRDFResource* aResource)
+RDFGenericBuilderImpl::IsContainer(nsIContent* aElement, nsISupports* aResource)
 {
     PRBool result = PR_FALSE;
     nsCOMPtr<nsIRDFArcsOutCursor> arcs;
@@ -1382,7 +1388,7 @@ RDFGenericBuilderImpl::IsContainer(nsIContent* aElement, nsIRDFResource* aResour
     }
 
     while (NS_SUCCEEDED(arcs->Advance())) {
-        nsCOMPtr<nsIRDFResource> property;
+        nsCOMPtr<nsISupports> property;
         if (NS_FAILED(arcs->GetPredicate(getter_AddRefs(property)))) {
             NS_ERROR("unable to get cursor value");
             return result;
@@ -1470,7 +1476,7 @@ RDFGenericBuilderImpl::IsElementInWidget(nsIContent* aElement)
 }
 
 nsresult
-RDFGenericBuilderImpl::GetDOMNodeResource(nsIDOMNode* aNode, nsIRDFResource** aResource)
+RDFGenericBuilderImpl::GetDOMNodeResource(nsIDOMNode* aNode, nsISupports** aResource)
 {
     nsresult rv;
 
@@ -1490,7 +1496,7 @@ RDFGenericBuilderImpl::GetDOMNodeResource(nsIDOMNode* aNode, nsIRDFResource** aR
 nsresult
 RDFGenericBuilderImpl::CreateResourceElement(PRInt32 aNameSpaceID,
                                              nsIAtom* aTag,
-                                             nsIRDFResource* aResource,
+                                             nsISupports* aResource,
                                              nsIContent** aResult)
 {
     nsresult rv;
@@ -1500,8 +1506,11 @@ RDFGenericBuilderImpl::CreateResourceElement(PRInt32 aNameSpaceID,
         return rv;
 
     const char* uri;
-    if (NS_FAILED(rv = aResource->GetValue(&uri)))
+    rv = NS_GetURI(aResource, &uri);
+    if (NS_FAILED(rv)) {
+        NS_ERROR("RDFGenericBuilderImpl::CreateResourceElement: unable to get resource URI");
         return rv;
+    }
 
     if (NS_FAILED(rv = result->SetAttribute(kNameSpaceID_None, kIdAtom, uri, PR_FALSE)))
         return rv;
@@ -1516,7 +1525,7 @@ RDFGenericBuilderImpl::CreateResourceElement(PRInt32 aNameSpaceID,
 nsresult
 RDFGenericBuilderImpl::GetResource(PRInt32 aNameSpaceID,
                                    nsIAtom* aNameAtom,
-                                   nsIRDFResource** aResource)
+                                   nsISupports** aResource)
 {
     NS_PRECONDITION(aNameAtom != nsnull, "null ptr");
     if (! aNameAtom)
@@ -1617,7 +1626,7 @@ RDFGenericBuilderImpl::CloseWidgetItem(nsIContent* aElement)
 
 
 nsresult
-RDFGenericBuilderImpl::GetElementResource(nsIContent* aElement, nsIRDFResource** aResult)
+RDFGenericBuilderImpl::GetElementResource(nsIContent* aElement, nsISupports** aResult)
 {
     // Perform a reverse mapping from an element in the content model
     // to an RDF resource.

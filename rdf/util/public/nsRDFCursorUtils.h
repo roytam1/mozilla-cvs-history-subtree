@@ -20,7 +20,6 @@
 #define nsRDFCursorUtils_h__
 
 #include "nsIRDFCursor.h"
-#include "nsIRDFNode.h"
 #include "nsSupportsArrayEnumerator.h"
 #include "nsIEnumerator.h"
 
@@ -33,7 +32,7 @@ public:
     // nsIRDFCursor methods:
     NS_IMETHOD Advance(void);
     NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource);
-    NS_IMETHOD GetValue(nsIRDFNode** aValue);
+    NS_IMETHOD GetValue(nsISupports** aValue);
 
     // nsRDFArrayCursor methods:
     nsRDFArrayCursor(nsIRDFDataSource* aDataSource,
@@ -60,27 +59,27 @@ public:
     NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource) {
         return nsRDFArrayCursor::GetDataSource(aDataSource);
     }
-    NS_IMETHOD GetValue(nsIRDFNode** aValue) {
+    NS_IMETHOD GetValue(nsISupports** aValue) {
         return nsRDFArrayCursor::GetValue(aValue);
     }
 
     // nsIRDFAssertionCursor methods:
-    NS_IMETHOD GetSubject(nsIRDFResource* *aSubject);
-    NS_IMETHOD GetPredicate(nsIRDFResource* *aPredicate);
-    NS_IMETHOD GetObject(nsIRDFNode* *aObject);
+    NS_IMETHOD GetSubject(nsISupports* *aSubject);
+    NS_IMETHOD GetPredicate(nsISupports* *aPredicate);
+    NS_IMETHOD GetObject(nsISupports* *aObject);
     NS_IMETHOD GetTruthValue(PRBool *aTruthValue);
 
     // nsRDFArrayAssertionCursor methods:
     nsRDFArrayAssertionCursor(nsIRDFDataSource* aDataSource,
-                              nsIRDFResource* subject,
-                              nsIRDFResource* predicate,
+                              nsISupports* subject,
+                              nsISupports* predicate,
                               nsISupportsArray* objectsArray,
                               PRBool truthValue = PR_TRUE);
     virtual ~nsRDFArrayAssertionCursor();
     
 protected:
-    nsIRDFResource* mSubject;
-    nsIRDFResource* mPredicate;
+    nsISupports* mSubject;
+    nsISupports* mPredicate;
     PRBool mTruthValue;
 };
 
@@ -94,12 +93,12 @@ public:
     // nsIRDFCursor methods:
     NS_IMETHOD Advance(void);
     NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource);
-    NS_IMETHOD GetValue(nsIRDFNode** aValue);
+    NS_IMETHOD GetValue(nsISupports** aValue);
 
     // nsIRDFAssertionCursor methods:
-    NS_IMETHOD GetSubject(nsIRDFResource* *aSubject);
-    NS_IMETHOD GetPredicate(nsIRDFResource* *aPredicate);
-    NS_IMETHOD GetObject(nsIRDFNode* *aObject);
+    NS_IMETHOD GetSubject(nsISupports* *aSubject);
+    NS_IMETHOD GetPredicate(nsISupports* *aPredicate);
+    NS_IMETHOD GetObject(nsISupports* *aObject);
     NS_IMETHOD GetTruthValue(PRBool *aTruthValue);
 
     // nsRDFSingletonAssertionCursor methods:
@@ -108,17 +107,17 @@ public:
     // node == target if inverse == true
     // value computed when accessed from datasource
     nsRDFSingletonAssertionCursor(nsIRDFDataSource* aDataSource,
-                                  nsIRDFNode* node,
-                                  nsIRDFResource* predicate,
+                                  nsISupports* node,
+                                  nsISupports* predicate,
                                   PRBool inverse = PR_FALSE,
                                   PRBool truthValue = PR_TRUE);
     virtual ~nsRDFSingletonAssertionCursor();
 
 protected:
     nsIRDFDataSource* mDataSource;
-    nsIRDFNode* mNode;
-    nsIRDFResource* mPredicate;
-    nsIRDFNode* mValue;
+    nsISupports* mNode;
+    nsISupports* mPredicate;
+    nsISupports* mValue;
     PRBool mInverse;
     PRBool mTruthValue;
     PRBool mConsumed;
@@ -131,22 +130,22 @@ class NS_RDF nsRDFArrayArcsCursor : public nsRDFArrayCursor
 public:
     // nsRDFArrayArcsCursor methods:
     nsRDFArrayArcsCursor(nsIRDFDataSource* aDataSource,
-                         nsIRDFNode* node,
+                         nsISupports* node,
                          nsISupportsArray* arcs);
     virtual ~nsRDFArrayArcsCursor();
 
 protected:
-    nsresult GetPredicate(nsIRDFResource** aPredicate) {
-        return GetValue((nsIRDFNode**)aPredicate);
+    nsresult GetPredicate(nsISupports** aPredicate) {
+        return GetValue((nsISupports**)aPredicate);
     }
 
-    nsresult GetNode(nsIRDFNode* *result) {
+    nsresult GetNode(nsISupports* *result) {
         *result = mNode;
         NS_ADDREF(mNode);
         return NS_OK;
     }
     
-    nsIRDFNode* mNode;
+    nsISupports* mNode;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -164,21 +163,21 @@ public:
     NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource) {
         return nsRDFArrayArcsCursor::GetDataSource(aDataSource);
     }
-    NS_IMETHOD GetValue(nsIRDFNode** aValue) {
+    NS_IMETHOD GetValue(nsISupports** aValue) {
         return nsRDFArrayArcsCursor::GetValue(aValue);
     }
 
     // nsIRDFArcsOutCursor methods:
-    NS_IMETHOD GetSubject(nsIRDFResource** aSubject) {
-        return GetNode((nsIRDFNode**)aSubject);
+    NS_IMETHOD GetSubject(nsISupports** aSubject) {
+        return GetNode((nsISupports**)aSubject);
     }
-    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate) {
+    NS_IMETHOD GetPredicate(nsISupports** aPredicate) {
         return nsRDFArrayArcsCursor::GetPredicate(aPredicate);
     }
 
     // nsRDFArrayArcsOutCursor methods:
     nsRDFArrayArcsOutCursor(nsIRDFDataSource* aDataSource,
-                            nsIRDFResource* subject,
+                            nsISupports* subject,
                             nsISupportsArray* arcs)
         : nsRDFArrayArcsCursor(aDataSource, subject, arcs) {}
     virtual ~nsRDFArrayArcsOutCursor() {}
@@ -199,21 +198,21 @@ public:
     NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource) {
         return nsRDFArrayArcsCursor::GetDataSource(aDataSource);
     }
-    NS_IMETHOD GetValue(nsIRDFNode** aValue) {
+    NS_IMETHOD GetValue(nsISupports** aValue) {
         return nsRDFArrayArcsCursor::GetValue(aValue);
     }
 
     // nsIRDFArcsInCursor methods:
-    NS_IMETHOD GetObject(nsIRDFNode** aObject) {
+    NS_IMETHOD GetObject(nsISupports** aObject) {
         return GetNode(aObject);
     }
-    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate) {
+    NS_IMETHOD GetPredicate(nsISupports** aPredicate) {
         return nsRDFArrayArcsCursor::GetPredicate(aPredicate);
     }
 
     // nsRDFArrayArcsInCursor methods:
     nsRDFArrayArcsInCursor(nsIRDFDataSource* aDataSource,
-                            nsIRDFNode* object,
+                            nsISupports* object,
                             nsISupportsArray* arcs)
         : nsRDFArrayArcsCursor(aDataSource, object, arcs) {}
     virtual ~nsRDFArrayArcsInCursor() {}
@@ -229,7 +228,7 @@ public:
     // nsIRDFCursor methods:
     NS_IMETHOD Advance(void);
     NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource);
-    NS_IMETHOD GetValue(nsIRDFNode** aValue);
+    NS_IMETHOD GetValue(nsISupports** aValue);
 
     // nsRDFEnumeratorCursor methods:
     nsRDFEnumeratorCursor(nsIRDFDataSource* aDataSource,
@@ -257,27 +256,27 @@ public:
     NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource) {
         return nsRDFEnumeratorCursor::GetDataSource(aDataSource);
     }
-    NS_IMETHOD GetValue(nsIRDFNode** aValue) {
+    NS_IMETHOD GetValue(nsISupports** aValue) {
         return nsRDFEnumeratorCursor::GetValue(aValue);
     }
 
     // nsIRDFAssertionCursor methods:
-    NS_IMETHOD GetSubject(nsIRDFResource* *aSubject);
-    NS_IMETHOD GetPredicate(nsIRDFResource* *aPredicate);
-    NS_IMETHOD GetObject(nsIRDFNode* *aObject);
+    NS_IMETHOD GetSubject(nsISupports* *aSubject);
+    NS_IMETHOD GetPredicate(nsISupports* *aPredicate);
+    NS_IMETHOD GetObject(nsISupports* *aObject);
     NS_IMETHOD GetTruthValue(PRBool *aTruthValue);
 
     // nsRDFEnumeratorAssertionCursor methods:
     nsRDFEnumeratorAssertionCursor(nsIRDFDataSource* aDataSource,
-                                   nsIRDFResource* subject,
-                                   nsIRDFResource* predicate,
+                                   nsISupports* subject,
+                                   nsISupports* predicate,
                                    nsIEnumerator* objectsEnumerator,
                                    PRBool truthValue = PR_TRUE);
     virtual ~nsRDFEnumeratorAssertionCursor();
     
 protected:
-    nsIRDFResource* mSubject;
-    nsIRDFResource* mPredicate;
+    nsISupports* mSubject;
+    nsISupports* mPredicate;
     PRBool mTruthValue;
 };
 
@@ -288,22 +287,22 @@ class NS_RDF nsRDFEnumeratorArcsCursor : public nsRDFEnumeratorCursor
 public:
     // nsRDFEnumeratorArcsOutCursor methods:
     nsRDFEnumeratorArcsCursor(nsIRDFDataSource* aDataSource,
-                              nsIRDFNode* node,
+                              nsISupports* node,
                               nsIEnumerator* arcs);
     virtual ~nsRDFEnumeratorArcsCursor();
 
 protected:
-    nsresult GetPredicate(nsIRDFResource** aPredicate) {
-        return GetValue((nsIRDFNode**)aPredicate);
+    nsresult GetPredicate(nsISupports** aPredicate) {
+        return GetValue((nsISupports**)aPredicate);
     }
 
-    nsresult GetNode(nsIRDFNode* *result) {
+    nsresult GetNode(nsISupports* *result) {
         *result = mNode;
         NS_ADDREF(mNode);
         return NS_OK;
     }
     
-    nsIRDFNode* mNode;
+    nsISupports* mNode;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -321,21 +320,21 @@ public:
     NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource) {
         return nsRDFEnumeratorArcsCursor::GetDataSource(aDataSource);
     }
-    NS_IMETHOD GetValue(nsIRDFNode** aValue) {
+    NS_IMETHOD GetValue(nsISupports** aValue) {
         return nsRDFEnumeratorArcsCursor::GetValue(aValue);
     }
 
     // nsIRDFArcsOutCursor methods:
-    NS_IMETHOD GetSubject(nsIRDFResource** aSubject) {
-        return GetNode((nsIRDFNode**)aSubject);
+    NS_IMETHOD GetSubject(nsISupports** aSubject) {
+        return GetNode((nsISupports**)aSubject);
     }
-    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate) {
+    NS_IMETHOD GetPredicate(nsISupports** aPredicate) {
         return nsRDFEnumeratorArcsCursor::GetPredicate(aPredicate);
     }
 
     // nsRDFEnumeratorArcsOutCursor methods:
     nsRDFEnumeratorArcsOutCursor(nsIRDFDataSource* aDataSource,
-                                 nsIRDFResource* subject,
+                                 nsISupports* subject,
                                  nsIEnumerator* arcs)
         : nsRDFEnumeratorArcsCursor(aDataSource, subject, arcs) {}
     virtual ~nsRDFEnumeratorArcsOutCursor() {}
@@ -356,21 +355,21 @@ public:
     NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource) {
         return nsRDFEnumeratorArcsCursor::GetDataSource(aDataSource);
     }
-    NS_IMETHOD GetValue(nsIRDFNode** aValue) {
+    NS_IMETHOD GetValue(nsISupports** aValue) {
         return nsRDFEnumeratorArcsCursor::GetValue(aValue);
     }
 
     // nsIRDFArcsInCursor methods:
-    NS_IMETHOD GetObject(nsIRDFNode** aObject) {
+    NS_IMETHOD GetObject(nsISupports** aObject) {
         return GetNode(aObject);
     }
-    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate) {
+    NS_IMETHOD GetPredicate(nsISupports** aPredicate) {
         return nsRDFEnumeratorArcsCursor::GetPredicate(aPredicate);
     }
 
     // nsRDFEnumeratorArcsInCursor methods:
     nsRDFEnumeratorArcsInCursor(nsIRDFDataSource* aDataSource,
-                                nsIRDFNode* object,
+                                nsISupports* object,
                                 nsIEnumerator* arcs)
         : nsRDFEnumeratorArcsCursor(aDataSource, object, arcs) {}
     virtual ~nsRDFEnumeratorArcsInCursor() {}

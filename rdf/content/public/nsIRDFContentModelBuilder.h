@@ -33,8 +33,6 @@
 class nsIContent;
 class nsIRDFCompositeDataSource;
 class nsIRDFDocument;
-class nsIRDFNode;
-class nsIRDFResource;
 
 // {541AFCB0-A9A3-11d2-8EC5-00805F29F370}
 #define NS_IRDFCONTENTMODELBUILDER_IID \
@@ -58,7 +56,7 @@ public:
      * Set the root element from which this content model will
      * operate.
      */
-    NS_IMETHOD CreateRootContent(nsIRDFResource* aResource) = 0;
+    NS_IMETHOD CreateRootContent(nsISupports* aResource) = 0;
     NS_IMETHOD SetRootContent(nsIContent* aElement) = 0;
 
     /**

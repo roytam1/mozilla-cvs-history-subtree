@@ -25,20 +25,20 @@
 //
 //   Convenience macros for implementing the RDF resource interface.
 //
-//   XXX It might make sense to move these macros to nsIRDFResource.h?
+//   XXX It might make sense to move these macros to nsISupports.h?
 
 #define NS_DECL_IRDFRESOURCE \
-    NS_IMETHOD EqualsNode(nsIRDFNode* node, PRBool* result) const;\
+    NS_IMETHOD EqualsNode(nsISupports* node, PRBool* result) const;\
     NS_IMETHOD GetValue(const char* *uri) const;\
-    NS_IMETHOD EqualsResource(const nsIRDFResource* resource, PRBool* result) const;\
+    NS_IMETHOD EqualsResource(const nsISupports* resource, PRBool* result) const;\
     NS_IMETHOD EqualsString(const char* uri, PRBool* result) const;
 
 
 #define NS_IMPL_IRDFRESOURCE(__class) \
 NS_IMETHODIMP \
-__class::EqualsNode(nsIRDFNode* node, PRBool* result) const {\
+__class::EqualsNode(nsISupports* node, PRBool* result) const {\
     nsresult rv;\
-    nsIRDFResource* resource;\
+    nsISupports* resource;\
     if (NS_SUCCEEDED(node->QueryInterface(kIRDFResourceIID, (void**) &resource))) {\
         rv = EqualsResource(resource, result);\
         NS_RELEASE(resource);\
@@ -57,9 +57,9 @@ __class::GetValue(const char* *uri) const{\
     return NS_OK;\
 }\
 NS_IMETHODIMP \
-__class::EqualsResource(const nsIRDFResource* resource, PRBool* result) const {\
+__class::EqualsResource(const nsISupports* resource, PRBool* result) const {\
     if (!resource || !result)  return NS_ERROR_NULL_POINTER;\
-    *result = (resource == (nsIRDFResource*) this);\
+    *result = (resource == (nsISupports*) this);\
     return NS_OK;\
 }\
 NS_IMETHODIMP \
@@ -80,13 +80,13 @@ private:
     static PRInt32 gRefCnt;
 
     // pseudo-constants
-	static nsIRDFResource		*kNC_FileSystemRoot;
-	static nsIRDFResource		*kNC_Child;
-	static nsIRDFResource		*kNC_Name;
-	static nsIRDFResource		*kNC_URL;
-	static nsIRDFResource		*kNC_FileSystemObject;
-	static nsIRDFResource		*kRDF_InstanceOf;
-	static nsIRDFResource		*kRDF_type;
+	static nsISupports		*kNC_FileSystemRoot;
+	static nsISupports		*kNC_Child;
+	static nsISupports		*kNC_Name;
+	static nsISupports		*kNC_URL;
+	static nsISupports		*kNC_FileSystemObject;
+	static nsISupports		*kRDF_InstanceOf;
+	static nsISupports		*kRDF_type;
 
 public:
 
@@ -99,52 +99,52 @@ public:
 
 	NS_IMETHOD	Init(const char *uri);
 	NS_IMETHOD	GetURI(const char **uri) const;
-	NS_IMETHOD	GetSource(nsIRDFResource *property,
-				nsIRDFNode *target,
+	NS_IMETHOD	GetSource(nsISupports *property,
+				nsISupports *target,
 				PRBool tv,
-				nsIRDFResource **source /* out */);
-	NS_IMETHOD	GetSources(nsIRDFResource *property,
-				nsIRDFNode *target,
+				nsISupports **source /* out */);
+	NS_IMETHOD	GetSources(nsISupports *property,
+				nsISupports *target,
 				PRBool tv,
 				nsIRDFAssertionCursor **sources /* out */);
-	NS_IMETHOD	GetTarget(nsIRDFResource *source,
-				nsIRDFResource *property,
+	NS_IMETHOD	GetTarget(nsISupports *source,
+				nsISupports *property,
 				PRBool tv,
-				nsIRDFNode **target /* out */);
-	NS_IMETHOD	GetTargets(nsIRDFResource *source,
-				nsIRDFResource *property,
+				nsISupports **target /* out */);
+	NS_IMETHOD	GetTargets(nsISupports *source,
+				nsISupports *property,
 				PRBool tv,
 				nsIRDFAssertionCursor **targets /* out */);
-	NS_IMETHOD	Assert(nsIRDFResource *source,
-				nsIRDFResource *property,
-				nsIRDFNode *target,
+	NS_IMETHOD	Assert(nsISupports *source,
+				nsISupports *property,
+				nsISupports *target,
 				PRBool tv);
-	NS_IMETHOD	Unassert(nsIRDFResource *source,
-				nsIRDFResource *property,
-				nsIRDFNode *target);
-	NS_IMETHOD	HasAssertion(nsIRDFResource *source,
-				nsIRDFResource *property,
-				nsIRDFNode *target,
+	NS_IMETHOD	Unassert(nsISupports *source,
+				nsISupports *property,
+				nsISupports *target);
+	NS_IMETHOD	HasAssertion(nsISupports *source,
+				nsISupports *property,
+				nsISupports *target,
 				PRBool tv,
 				PRBool *hasAssertion /* out */);
-	NS_IMETHOD	ArcLabelsIn(nsIRDFNode *node,
+	NS_IMETHOD	ArcLabelsIn(nsISupports *node,
 				nsIRDFArcsInCursor **labels /* out */);
-	NS_IMETHOD	ArcLabelsOut(nsIRDFResource *source,
+	NS_IMETHOD	ArcLabelsOut(nsISupports *source,
 				nsIRDFArcsOutCursor **labels /* out */);
 	NS_IMETHOD	GetAllResources(nsIRDFResourceCursor** aCursor);
 	NS_IMETHOD	AddObserver(nsIRDFObserver *n);
 	NS_IMETHOD	RemoveObserver(nsIRDFObserver *n);
 	NS_IMETHOD	Flush();
-    NS_IMETHOD GetAllCommands(nsIRDFResource* source,
-                              nsIEnumerator/*<nsIRDFResource>*/** commands);
+    NS_IMETHOD GetAllCommands(nsISupports* source,
+                              nsIEnumerator** commands);
 
-    NS_IMETHOD IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-                                nsIRDFResource*   aCommand,
-                                nsISupportsArray/*<nsIRDFResource>*/* aArguments);
+    NS_IMETHOD IsCommandEnabled(nsISupportsArray* aSources,
+                                nsISupports*   aCommand,
+                                nsISupportsArray* aArguments);
 
-    NS_IMETHOD DoCommand(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-                         nsIRDFResource*   aCommand,
-                         nsISupportsArray/*<nsIRDFResource>*/* aArguments);
+    NS_IMETHOD DoCommand(nsISupportsArray* aSources,
+                         nsISupports*   aCommand,
+                         nsISupportsArray* aArguments);
 };
 
 
@@ -152,26 +152,26 @@ public:
 class FileSystemCursor : public nsIRDFAssertionCursor, public nsIRDFArcsOutCursor
 {
 private:
-	nsIRDFNode	*mValue;
-	nsIRDFResource	*mSource;
-	nsIRDFResource	*mProperty;
-	nsIRDFNode	*mTarget;
+	nsISupports	*mValue;
+	nsISupports	*mSource;
+	nsISupports	*mProperty;
+	nsISupports	*mTarget;
 	int		mCount;
 	nsVoidArray	*mArray;
 	PRBool		mArcsOut;
 
 public:
-			FileSystemCursor(nsIRDFResource *source, nsIRDFResource *property, PRBool isArcsOut, nsVoidArray *array);
+			FileSystemCursor(nsISupports *source, nsISupports *property, PRBool isArcsOut, nsVoidArray *array);
 	virtual		~FileSystemCursor(void);
 
 	NS_DECL_ISUPPORTS
 
 	NS_IMETHOD	Advance(void);
-	NS_IMETHOD	GetValue(nsIRDFNode **aValue);
+	NS_IMETHOD	GetValue(nsISupports **aValue);
 	NS_IMETHOD	GetDataSource(nsIRDFDataSource **aDataSource);
-	NS_IMETHOD	GetSubject(nsIRDFResource **aResource);
-	NS_IMETHOD	GetPredicate(nsIRDFResource **aPredicate);
-	NS_IMETHOD	GetObject(nsIRDFNode **aObject);
+	NS_IMETHOD	GetSubject(nsISupports **aResource);
+	NS_IMETHOD	GetPredicate(nsISupports **aPredicate);
+	NS_IMETHOD	GetObject(nsISupports **aObject);
 	NS_IMETHOD	GetTruthValue(PRBool *aTruthValue);
 };
 

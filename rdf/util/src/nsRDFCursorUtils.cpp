@@ -58,7 +58,7 @@ NS_IMETHODIMP nsRDFArrayCursor::GetDataSource(nsIRDFDataSource** aDataSource)
     return NS_OK;
 }
  
-NS_IMETHODIMP nsRDFArrayCursor::GetValue(nsIRDFNode** aValue)
+NS_IMETHODIMP nsRDFArrayCursor::GetValue(nsISupports** aValue)
 {
     return CurrentItem((nsISupports**)aValue);
 }
@@ -66,8 +66,8 @@ NS_IMETHODIMP nsRDFArrayCursor::GetValue(nsIRDFNode** aValue)
 ////////////////////////////////////////////////////////////////////////////////
 
 nsRDFArrayAssertionCursor::nsRDFArrayAssertionCursor(nsIRDFDataSource* aDataSource,
-                                                     nsIRDFResource* subject,
-                                                     nsIRDFResource* predicate,
+                                                     nsISupports* subject,
+                                                     nsISupports* predicate,
                                                      nsISupportsArray* objectsArray,
                                                      PRBool truthValue)
     : nsRDFArrayCursor(aDataSource, objectsArray),
@@ -88,21 +88,21 @@ NS_IMPL_ISUPPORTS_INHERITED(nsRDFArrayAssertionCursor,
                             nsIRDFAssertionCursor);
 
 NS_IMETHODIMP 
-nsRDFArrayAssertionCursor::GetSubject(nsIRDFResource* *aSubject)
+nsRDFArrayAssertionCursor::GetSubject(nsISupports* *aSubject)
 {
     *aSubject = mSubject;
     NS_ADDREF(mSubject);
     return NS_OK;
 }
 
-NS_IMETHODIMP nsRDFArrayAssertionCursor::GetPredicate(nsIRDFResource* *aPredicate)
+NS_IMETHODIMP nsRDFArrayAssertionCursor::GetPredicate(nsISupports* *aPredicate)
 {
     *aPredicate = mPredicate;
     NS_ADDREF(mPredicate);
     return NS_OK;
 }
 
-NS_IMETHODIMP nsRDFArrayAssertionCursor::GetObject(nsIRDFNode* *aObject)
+NS_IMETHODIMP nsRDFArrayAssertionCursor::GetObject(nsISupports* *aObject)
 {
     return nsRDFArrayCursor::GetValue(aObject);
 }
@@ -116,8 +116,8 @@ NS_IMETHODIMP nsRDFArrayAssertionCursor::GetTruthValue(PRBool *aTruthValue)
 ////////////////////////////////////////////////////////////////////////////////
 
 nsRDFSingletonAssertionCursor::nsRDFSingletonAssertionCursor(nsIRDFDataSource* aDataSource,
-                                                             nsIRDFNode* node,
-                                                             nsIRDFResource* predicate,
+                                                             nsISupports* node,
+                                                             nsISupports* predicate,
                                                              PRBool inverse,
                                                              PRBool truthValue)
     : mDataSource(aDataSource), mNode(node), mPredicate(predicate),
@@ -172,37 +172,37 @@ NS_IMETHODIMP nsRDFSingletonAssertionCursor::GetDataSource(nsIRDFDataSource** aD
     return NS_OK;
 }
 
-NS_IMETHODIMP nsRDFSingletonAssertionCursor::GetValue(nsIRDFNode** aValue)
+NS_IMETHODIMP nsRDFSingletonAssertionCursor::GetValue(nsISupports** aValue)
 {
     if (mConsumed)
         return NS_ERROR_RDF_CURSOR_EMPTY;
     if (mValue == nsnull) {
         if (mInverse)
             return mDataSource->GetSource(mPredicate, mNode, mTruthValue,
-                                          (nsIRDFResource**)&mValue);
+                                          (nsISupports**)&mValue);
         else
-            return mDataSource->GetTarget(NS_STATIC_CAST(nsIRDFResource*, mNode),
+            return mDataSource->GetTarget(NS_STATIC_CAST(nsISupports*, mNode),
                                           mPredicate,  mTruthValue, &mValue);
     }
     *aValue = mValue;
     return NS_OK;
 }
 
-NS_IMETHODIMP nsRDFSingletonAssertionCursor::GetSubject(nsIRDFResource* *aSubject)
+NS_IMETHODIMP nsRDFSingletonAssertionCursor::GetSubject(nsISupports* *aSubject)
 {
     if (mConsumed)
         return NS_ERROR_RDF_CURSOR_EMPTY;
     if (mInverse) {
-        return GetValue((nsIRDFNode**)aSubject); 
+        return GetValue((nsISupports**)aSubject); 
     }
     else {
-        *aSubject = NS_STATIC_CAST(nsIRDFResource*, mNode);
+        *aSubject = NS_STATIC_CAST(nsISupports*, mNode);
         NS_ADDREF(mNode);
         return NS_OK;
     }
 }
 
-NS_IMETHODIMP nsRDFSingletonAssertionCursor::GetPredicate(nsIRDFResource* *aPredicate)
+NS_IMETHODIMP nsRDFSingletonAssertionCursor::GetPredicate(nsISupports* *aPredicate)
 {
     if (mConsumed)
         return NS_ERROR_RDF_CURSOR_EMPTY;
@@ -211,7 +211,7 @@ NS_IMETHODIMP nsRDFSingletonAssertionCursor::GetPredicate(nsIRDFResource* *aPred
     return NS_OK;
 }
 
-NS_IMETHODIMP nsRDFSingletonAssertionCursor::GetObject(nsIRDFNode* *aObject)
+NS_IMETHODIMP nsRDFSingletonAssertionCursor::GetObject(nsISupports* *aObject)
 {
     if (mConsumed)
         return NS_ERROR_RDF_CURSOR_EMPTY;
@@ -236,7 +236,7 @@ NS_IMETHODIMP nsRDFSingletonAssertionCursor::GetTruthValue(PRBool *aTruthValue)
 ////////////////////////////////////////////////////////////////////////////////
 
 nsRDFArrayArcsCursor::nsRDFArrayArcsCursor(nsIRDFDataSource* aDataSource,
-                                           nsIRDFNode* node,
+                                           nsISupports* node,
                                            nsISupportsArray* arcs)
     : nsRDFArrayCursor(aDataSource, arcs), mNode(node)
 {
@@ -316,7 +316,7 @@ NS_IMETHODIMP nsRDFEnumeratorCursor::GetDataSource(nsIRDFDataSource** aDataSourc
     return NS_OK;
 }
  
-NS_IMETHODIMP nsRDFEnumeratorCursor::GetValue(nsIRDFNode** aValue)
+NS_IMETHODIMP nsRDFEnumeratorCursor::GetValue(nsISupports** aValue)
 {
     return mEnum->CurrentItem((nsISupports**)aValue);
 }
@@ -324,8 +324,8 @@ NS_IMETHODIMP nsRDFEnumeratorCursor::GetValue(nsIRDFNode** aValue)
 ////////////////////////////////////////////////////////////////////////////////
 
 nsRDFEnumeratorAssertionCursor::nsRDFEnumeratorAssertionCursor(nsIRDFDataSource* aDataSource,
-                                                               nsIRDFResource* subject,
-                                                               nsIRDFResource* predicate,
+                                                               nsISupports* subject,
+                                                               nsISupports* predicate,
                                                                nsIEnumerator* objectsEnumerator,
                                                                PRBool truthValue)
     : nsRDFEnumeratorCursor(aDataSource, objectsEnumerator),
@@ -346,21 +346,21 @@ NS_IMPL_ISUPPORTS_INHERITED(nsRDFEnumeratorAssertionCursor,
                             nsIRDFAssertionCursor);
 
 NS_IMETHODIMP 
-nsRDFEnumeratorAssertionCursor::GetSubject(nsIRDFResource* *aSubject)
+nsRDFEnumeratorAssertionCursor::GetSubject(nsISupports* *aSubject)
 {
     *aSubject = mSubject;
     NS_ADDREF(mSubject);
     return NS_OK;
 }
 
-NS_IMETHODIMP nsRDFEnumeratorAssertionCursor::GetPredicate(nsIRDFResource* *aPredicate)
+NS_IMETHODIMP nsRDFEnumeratorAssertionCursor::GetPredicate(nsISupports* *aPredicate)
 {
     *aPredicate = mPredicate;
     NS_ADDREF(mPredicate);
     return NS_OK;
 }
 
-NS_IMETHODIMP nsRDFEnumeratorAssertionCursor::GetObject(nsIRDFNode* *aObject)
+NS_IMETHODIMP nsRDFEnumeratorAssertionCursor::GetObject(nsISupports* *aObject)
 {
     return nsRDFEnumeratorCursor::GetValue(aObject);
 }
@@ -374,7 +374,7 @@ NS_IMETHODIMP nsRDFEnumeratorAssertionCursor::GetTruthValue(PRBool *aTruthValue)
 ////////////////////////////////////////////////////////////////////////////////
 
 nsRDFEnumeratorArcsCursor::nsRDFEnumeratorArcsCursor(nsIRDFDataSource* aDataSource,
-                                                     nsIRDFNode* node,
+                                                     nsISupports* node,
                                                      nsIEnumerator* arcs)
     : nsRDFEnumeratorCursor(aDataSource, arcs), mNode(node)
 {

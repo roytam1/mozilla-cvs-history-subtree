@@ -38,9 +38,7 @@ class nsIRDFAssertionCursor;
 class nsIRDFArcsInCursor;
 class nsIRDFArcsOutCursor;
 class nsIRDFDataBase;
-class nsIRDFNode;
 class nsIRDFObserver;
-class nsIRDFResource;
 class nsIRDFResourceCursor;
 
 /**
@@ -74,10 +72,10 @@ public:
      * @return NS_ERROR_FAILURE if there is no source that leads
      * to the target with the specified property.
      */
-    NS_IMETHOD GetSource(nsIRDFResource* property,
-                         nsIRDFNode* target,
+    NS_IMETHOD GetSource(nsISupports* property,
+                         nsISupports* target,
                          PRBool tv,
-                         nsIRDFResource** source /* out */) = 0;
+                         nsISupports** source /* out */) = 0;
 
     /**
      * Find all RDF resources that point to a given node over the
@@ -87,8 +85,8 @@ public:
      * method returns NS_OK, you may assume that nsIRDFCursor points
      * to a valid (but possibly empty) cursor.
      */
-    NS_IMETHOD GetSources(nsIRDFResource* property,
-                          nsIRDFNode* target,
+    NS_IMETHOD GetSources(nsISupports* property,
+                          nsISupports* target,
                           PRBool tv,
                           nsIRDFAssertionCursor** sources /* out */) = 0;
 
@@ -99,10 +97,10 @@ public:
      * @return NS_ERROR_FAILURE if there is no target accessable from the
      * source via the specified property.
      */
-    NS_IMETHOD GetTarget(nsIRDFResource* source,
-                         nsIRDFResource* property,
+    NS_IMETHOD GetTarget(nsISupports* source,
+                         nsISupports* property,
                          PRBool tv,
-                         nsIRDFNode** target /* out */) = 0;
+                         nsISupports** target /* out */) = 0;
 
     /**
      * Find all children of that are related to the source by the given arc
@@ -112,34 +110,34 @@ public:
      * method returns NS_OK, you may assume that nsIRDFCursor points
      * to a valid (but possibly empty) cursor.
      */
-    NS_IMETHOD GetTargets(nsIRDFResource* source,
-                          nsIRDFResource* property,
+    NS_IMETHOD GetTargets(nsISupports* source,
+                          nsISupports* property,
                           PRBool tv,
                           nsIRDFAssertionCursor** targets /* out */) = 0;
 
     /**
      * Add an assertion to the graph.
      */
-    NS_IMETHOD Assert(nsIRDFResource* source, 
-                      nsIRDFResource* property, 
-                      nsIRDFNode* target,
+    NS_IMETHOD Assert(nsISupports* source, 
+                      nsISupports* property, 
+                      nsISupports* target,
                       PRBool tv) = 0;
 
     /**
      * Remove an assertion from the graph.
      */
-    NS_IMETHOD Unassert(nsIRDFResource* source,
-                        nsIRDFResource* property,
-                        nsIRDFNode* target) = 0;
+    NS_IMETHOD Unassert(nsISupports* source,
+                        nsISupports* property,
+                        nsISupports* target) = 0;
 
     /**
      * Query whether an assertion exists in this graph.
      *
      * @return NS_OK unless a catastrophic error occurs.
      */
-    NS_IMETHOD HasAssertion(nsIRDFResource* source,
-                            nsIRDFResource* property,
-                            nsIRDFNode* target,
+    NS_IMETHOD HasAssertion(nsISupports* source,
+                            nsISupports* property,
+                            nsISupports* target,
                             PRBool tv,
                             PRBool* hasAssertion /* out */) = 0;
 
@@ -162,7 +160,7 @@ public:
      * returns NS_OK, you may assume that labels points to a valid (but
      * possible empty) nsIRDFCursor object.
      */
-    NS_IMETHOD ArcLabelsIn(nsIRDFNode* node,
+    NS_IMETHOD ArcLabelsIn(nsISupports* node,
                            nsIRDFArcsInCursor** labels /* out */) = 0;
 
     /**
@@ -173,7 +171,7 @@ public:
      * returns NS_OK, you may assume that labels points to a valid (but
      * possible empty) nsIRDFCursor object.
      */
-    NS_IMETHOD ArcLabelsOut(nsIRDFResource* source,
+    NS_IMETHOD ArcLabelsOut(nsISupports* source,
                             nsIRDFArcsOutCursor** labels /* out */) = 0;
 
     /**
@@ -191,8 +189,8 @@ public:
     /**
      * Returns the set of all commands defined for a given source.
      */
-    NS_IMETHOD GetAllCommands(nsIRDFResource* source,
-                              nsIEnumerator/*<nsIRDFResource>*/** commands) = 0;
+    NS_IMETHOD GetAllCommands(nsISupports* source,
+                              nsIEnumerator** commands) = 0;
 
     /**
      * Returns whether a given command is enabled for a set of sources. 
@@ -200,16 +198,16 @@ public:
      * @return NS_OK if command is enabled for all sources 
      * @return NS_COMFALSE if command is not enabled for some source 
      */
-    NS_IMETHOD IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-                                nsIRDFResource*   aCommand,
-                                nsISupportsArray/*<nsIRDFResource>*/* aArguments) = 0;
+    NS_IMETHOD IsCommandEnabled(nsISupportsArray* aSources,
+                                nsISupports*   aCommand,
+                                nsISupportsArray* aArguments) = 0;
 
     /**
      * Perform the specified command on set of sources.
      */
-    NS_IMETHOD DoCommand(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-                         nsIRDFResource*   aCommand,
-                         nsISupportsArray/*<nsIRDFResource>*/* aArguments) = 0;
+    NS_IMETHOD DoCommand(nsISupportsArray* aSources,
+                         nsISupports*   aCommand,
+                         nsISupportsArray* aArguments) = 0;
 };
 
 #endif /* nsIRDFDataSource_h__ */

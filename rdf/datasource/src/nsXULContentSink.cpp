@@ -152,15 +152,15 @@ protected:
     // pseudo-constants
     PRInt32 kNameSpaceID_XUL; // XXX per-instance member variable
 
-    static nsIRDFResource* kRDF_child; // XXX needs to be NC:child (or something else)
-    static nsIRDFResource* kRDF_instanceOf;
-    static nsIRDFResource* kRDF_type;
-    static nsIRDFResource* kXUL_element;
+    static nsISupports* kRDF_child; // XXX needs to be NC:child (or something else)
+    static nsISupports* kRDF_instanceOf;
+    static nsISupports* kRDF_type;
+    static nsISupports* kXUL_element;
 
     nsresult
     MakeResourceFromQualifiedTag(PRInt32 aNameSpaceID,
                                  const nsString& aTag,
-                                 nsIRDFResource** aResource);
+                                 nsISupports** aResource);
 
     // Text management
     nsresult FlushText(PRBool aCreateTextNode=PR_TRUE,
@@ -185,8 +185,8 @@ protected:
                             nsString& rProperty);
 
     // RDF-specific parsing
-    nsresult GetXULIDAttribute(const nsIParserNode& aNode, nsIRDFResource** aResource);
-    nsresult AddAttributes(const nsIParserNode& aNode, nsIRDFResource* aSubject);
+    nsresult GetXULIDAttribute(const nsIParserNode& aNode, nsISupports** aResource);
+    nsresult AddAttributes(const nsIParserNode& aNode, nsISupports* aSubject);
 
     nsresult OpenTag(const nsIParserNode& aNode);
 
@@ -226,9 +226,9 @@ protected:
     XULContentSinkState    mState;
 
     // content stack management
-    PRInt32         PushResourceAndState(nsIRDFResource *aContext, XULContentSinkState aState);
-    nsresult        PopResourceAndState(nsIRDFResource*& rContext, XULContentSinkState& rState);
-    nsIRDFResource* GetTopResource(void);
+    PRInt32         PushResourceAndState(nsISupports *aContext, XULContentSinkState aState);
+    nsresult        PopResourceAndState(nsISupports*& rContext, XULContentSinkState& rState);
+    nsISupports* GetTopResource(void);
 
     nsVoidArray* mContextStack;
 
@@ -239,17 +239,17 @@ protected:
     nsIDocument* mDocument;
     nsIParser*   mParser;
     
-    nsIRDFResource*  mFragmentRoot;
+    nsISupports*  mFragmentRoot;
 
 };
 
 nsrefcnt             XULContentSinkImpl::gRefCnt = 0;
 nsIRDFService*       XULContentSinkImpl::gRDFService = nsnull;
 
-nsIRDFResource*      XULContentSinkImpl::kRDF_child;
-nsIRDFResource*      XULContentSinkImpl::kRDF_instanceOf;
-nsIRDFResource*      XULContentSinkImpl::kRDF_type;
-nsIRDFResource*      XULContentSinkImpl::kXUL_element;
+nsISupports*      XULContentSinkImpl::kRDF_child;
+nsISupports*      XULContentSinkImpl::kRDF_instanceOf;
+nsISupports*      XULContentSinkImpl::kRDF_type;
+nsISupports*      XULContentSinkImpl::kXUL_element;
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -322,7 +322,7 @@ XULContentSinkImpl::~XULContentSinkImpl()
         // pop all the elements off the stack and release them.
         PRInt32 index = mContextStack->Count();
         while (0 < index--) {
-            nsIRDFResource* resource;
+            nsISupports* resource;
             XULContentSinkState state;
             PopResourceAndState(resource, state);
             NS_IF_RELEASE(resource);
@@ -371,7 +371,7 @@ XULContentSinkImpl::QueryInterface(REFNSIID iid, void** result)
 nsresult
 XULContentSinkImpl::MakeResourceFromQualifiedTag(PRInt32 aNameSpaceID,
                                                  const nsString& aTag,
-                                                 nsIRDFResource** aResource)
+                                                 nsISupports** aResource)
 {
     nsresult rv;
     nsAutoString uri;
@@ -510,7 +510,7 @@ XULContentSinkImpl::CloseContainer(const nsIParserNode& aNode)
         FlushText();
     }
 
-    nsIRDFResource* resource;
+    nsISupports* resource;
     if (NS_FAILED(PopResourceAndState(resource, mState))) {
         NS_ERROR("parser didn't catch unmatched tags?");
         return NS_ERROR_UNEXPECTED; // XXX
@@ -869,8 +869,8 @@ XULContentSinkImpl::Init(nsIDocument* aDocument, nsIRDFDataSource* aDataSource)
 
         // Retrieve the root data source. 
         nsCOMPtr<nsIRDFDocument> rdfRootDoc; 
-        rdfRootDoc = do_QueryInterface(rootDocument); 
-        if (rdfRootDoc == nsnull) { 
+        rdfRootDoc = do_QueryInterface(rootDocument, &rv); 
+        if (NS_FAILED(rv)) { 
             NS_ERROR("Root document of a XUL fragment is not an RDF doc."); 
             NS_RELEASE(rootDocument); 
             return NS_ERROR_INVALID_ARG; 
@@ -1011,7 +1011,7 @@ XULContentSinkImpl::SplitQualifiedName(const nsString& aQualifiedName,
 
 nsresult
 XULContentSinkImpl::GetXULIDAttribute(const nsIParserNode& aNode,
-                                      nsIRDFResource** aResource)
+                                      nsISupports** aResource)
 {
     nsAutoString k;
     nsAutoString attr;
@@ -1059,7 +1059,7 @@ XULContentSinkImpl::GetXULIDAttribute(const nsIParserNode& aNode,
 
 nsresult
 XULContentSinkImpl::AddAttributes(const nsIParserNode& aNode,
-                                  nsIRDFResource* aSubject)
+                                  nsISupports* aSubject)
 {
     // Add tag attributes to the content attributes
     nsAutoString k, v;
@@ -1141,7 +1141,7 @@ XULContentSinkImpl::OpenTag(const nsIParserNode& aNode)
     // Figure out the URI of this object, and create an RDF node for it.
     nsresult rv;
 
-    nsCOMPtr<nsIRDFResource> rdfResource;
+    nsCOMPtr<nsISupports> rdfResource;
     if (NS_FAILED(rv = GetXULIDAttribute(aNode, getter_AddRefs(rdfResource)))) {
         NS_ERROR("unable to parser XUL ID from tag");
         return rv;
@@ -1159,7 +1159,7 @@ XULContentSinkImpl::OpenTag(const nsIParserNode& aNode)
 
     // Convert the container's namespace/tag pair to a fully qualified
     // URI so that we can specify it as an RDF resource.
-    nsCOMPtr<nsIRDFResource> tagResource;
+    nsCOMPtr<nsISupports> tagResource;
     if (NS_FAILED(rv = MakeResourceFromQualifiedTag(nameSpaceID, tag, getter_AddRefs(tagResource)))) {
         NS_ERROR("unable to construct resource from namespace/tag pair");
         return rv;
@@ -1385,11 +1385,11 @@ XULContentSinkImpl::CloseScript(const nsIParserNode& aNode)
 // Content stack management
 
 struct RDFContextStackElement {
-    nsIRDFResource*     mResource;
+    nsISupports*     mResource;
     XULContentSinkState mState;
 };
 
-nsIRDFResource* 
+nsISupports* 
 XULContentSinkImpl::GetTopResource(void)
 {
     if ((nsnull == mContextStack) ||
@@ -1406,7 +1406,7 @@ XULContentSinkImpl::GetTopResource(void)
 }
 
 PRInt32 
-XULContentSinkImpl::PushResourceAndState(nsIRDFResource* aResource,
+XULContentSinkImpl::PushResourceAndState(nsISupports* aResource,
                                          XULContentSinkState aState)
 {
     if (! mContextStack) {
@@ -1428,7 +1428,7 @@ XULContentSinkImpl::PushResourceAndState(nsIRDFResource* aResource,
 }
  
 nsresult
-XULContentSinkImpl::PopResourceAndState(nsIRDFResource*& rResource,
+XULContentSinkImpl::PopResourceAndState(nsISupports*& rResource,
                                         XULContentSinkState& rState)
 {
     RDFContextStackElement* e;

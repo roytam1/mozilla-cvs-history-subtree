@@ -73,16 +73,16 @@ class ContainerCursorImpl : public nsIRDFAssertionCursor {
 private:
     // pseudo-constants
     static nsrefcnt        gRefCnt;
-    static nsIRDFResource* kRDF_nextVal;
+    static nsISupports* kRDF_nextVal;
 
     nsIRDFDataSource* mDataSource;
-    nsIRDFResource*   mContainer;
-    nsIRDFNode*       mCurrent;
-    nsIRDFResource*   mOrdinalProperty;
+    nsISupports*   mContainer;
+    nsISupports*       mCurrent;
+    nsISupports*   mOrdinalProperty;
     PRInt32           mNextIndex;
 
 public:
-    ContainerCursorImpl(nsIRDFDataSource* ds, nsIRDFResource* container);
+    ContainerCursorImpl(nsIRDFDataSource* ds, nsISupports* container);
     virtual ~ContainerCursorImpl(void);
 
     NS_DECL_ISUPPORTS
@@ -90,18 +90,18 @@ public:
     NS_IMETHOD Advance(void);
 
     NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource);
-    NS_IMETHOD GetSubject(nsIRDFResource** aResource);
-    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate);
-    NS_IMETHOD GetObject(nsIRDFNode** aObject);
+    NS_IMETHOD GetSubject(nsISupports** aResource);
+    NS_IMETHOD GetPredicate(nsISupports** aPredicate);
+    NS_IMETHOD GetObject(nsISupports** aObject);
     NS_IMETHOD GetTruthValue(PRBool* aTruthValue);
-    NS_IMETHOD GetValue(nsIRDFNode** aValue);
+    NS_IMETHOD GetValue(nsISupports** aValue);
 };
 
 nsrefcnt        ContainerCursorImpl::gRefCnt;
-nsIRDFResource* ContainerCursorImpl::kRDF_nextVal;
+nsISupports* ContainerCursorImpl::kRDF_nextVal;
 
 ContainerCursorImpl::ContainerCursorImpl(nsIRDFDataSource* ds,
-                                         nsIRDFResource* container)
+                                         nsISupports* container)
     : mDataSource(ds),
       mContainer(container),
       mCurrent(nsnull),
@@ -170,7 +170,7 @@ ContainerCursorImpl::Advance(void)
     // release the last value that we were holding
     NS_IF_RELEASE(mCurrent);
 
-    nsIRDFNode* nextNode        = nsnull;
+    nsISupports* nextNode        = nsnull;
     nsIRDFLiteral* nextVal      = nsnull;
     const PRUnichar* p;
     nsAutoString s;
@@ -237,7 +237,7 @@ ContainerCursorImpl::GetDataSource(nsIRDFDataSource** aDataSource)
 
 
 NS_IMETHODIMP
-ContainerCursorImpl::GetSubject(nsIRDFResource** aSubject)
+ContainerCursorImpl::GetSubject(nsISupports** aSubject)
 {
     NS_PRECONDITION(aSubject != nsnull, "null ptr");
     if (! aSubject)
@@ -250,7 +250,7 @@ ContainerCursorImpl::GetSubject(nsIRDFResource** aSubject)
 
 
 NS_IMETHODIMP
-ContainerCursorImpl::GetPredicate(nsIRDFResource** aPredicate)
+ContainerCursorImpl::GetPredicate(nsISupports** aPredicate)
 {
     NS_PRECONDITION(aPredicate != nsnull, "null ptr");
     if (! aPredicate)
@@ -267,7 +267,7 @@ ContainerCursorImpl::GetPredicate(nsIRDFResource** aPredicate)
 
 
 NS_IMETHODIMP
-ContainerCursorImpl::GetObject(nsIRDFNode** aObject)
+ContainerCursorImpl::GetObject(nsISupports** aObject)
 {
     NS_PRECONDITION(aObject != nsnull, "null ptr");
     if (! aObject)
@@ -284,7 +284,7 @@ ContainerCursorImpl::GetObject(nsIRDFNode** aObject)
 
 
 NS_IMETHODIMP
-ContainerCursorImpl::GetValue(nsIRDFNode** aObject)
+ContainerCursorImpl::GetValue(nsISupports** aObject)
 {
     NS_PRECONDITION(aObject != nsnull, "null ptr");
     if (! aObject)
@@ -315,7 +315,7 @@ ContainerCursorImpl::GetTruthValue(PRBool* aTruthValue)
 
 nsresult
 NS_NewContainerCursor(nsIRDFDataSource* ds,
-                      nsIRDFResource* container,
+                      nsISupports* container,
                       nsIRDFAssertionCursor** cursor)
 {
     NS_PRECONDITION(ds != nsnull,        "null ptr");
