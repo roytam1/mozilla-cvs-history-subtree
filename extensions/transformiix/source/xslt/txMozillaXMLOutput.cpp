@@ -65,8 +65,6 @@ static NS_DEFINE_CID(kXMLDocumentCID, NS_XMLDOCUMENT_CID);
 static NS_DEFINE_CID(kHTMLDocumentCID, NS_HTMLDOCUMENT_CID);
 
 #define kXHTMLNameSpaceURI "http://www.w3.org/1999/xhtml"
-#define kTXNameSpaceURI "http://www.mozilla.org/TransforMiix"
-#define kTXWrapper "transformiix:result"
 
 #define TX_ENSURE_CURRENTNODE                           \
     NS_ASSERTION(mCurrentNode, "mCurrentNode is NULL"); \

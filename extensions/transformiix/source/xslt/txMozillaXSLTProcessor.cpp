@@ -118,12 +118,6 @@ txToDocHandlerFactory::createHandlerWith(txOutputFormat* aFormat,
             break;
 
         case eTextOutput:
-            // If we don't have an observer we are parsing into a non-displayed
-            // new document, so textoutput doesn't make sence.
-            // But still support if there is a result document, for compability
-            if (!mObserver && !mResultDocument) {
-                return NS_ERROR_FAILURE;
-            }
             aHandler = new txMozillaTextOutput(mSourceDocument, mResultDocument, mObserver);
             break;
     }
@@ -151,12 +145,6 @@ txToDocHandlerFactory::createHandlerWith(txOutputFormat* aFormat,
             break;
 
         case eTextOutput:
-            // If we don't have an observer we are parsing into a non-displayed
-            // new document, so textoutput doesn't make sence.
-            // but still support if there is a result document, for compability
-            if (!mObserver && !mResultDocument) {
-                return NS_ERROR_FAILURE;
-            }
             aHandler = new txMozillaTextOutput(mSourceDocument, mResultDocument, mObserver);
             break;
     }
@@ -379,10 +367,14 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
 }
 
 NS_IMETHODIMP
-txMozillaXSLTProcessor::Init(nsIDOMNode *aStyle)
+txMozillaXSLTProcessor::ImportStylesheet(nsIDOMNode *aStyle)
 {
     if (!URIUtils::CanCallerAccess(aStyle)) {
         return NS_ERROR_DOM_SECURITY_ERR;
+    }
+    
+    if (mStylesheet) {
+        return NS_ERROR_NOT_IMPLEMENTED;
     }
 
     PRUint16 type = 0;

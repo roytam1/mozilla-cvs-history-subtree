@@ -32,6 +32,9 @@ class txOutputFormat;
 #include <iostream.h>
 #else
 #include "nsISupports.h"
+#define kTXNameSpaceURI "http://www.mozilla.org/TransforMiix"
+#define kTXWrapper "transformiix:result"
+
 class nsIContent;
 class nsIDOMDocument;
 class nsIDOMHTMLScriptElement;
