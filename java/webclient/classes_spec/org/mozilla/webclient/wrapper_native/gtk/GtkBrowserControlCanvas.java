@@ -57,7 +57,7 @@ public class GtkBrowserControlCanvas extends BrowserControlCanvas /* implements 
         GtkBrowserControlCanvas.loadMainDll();
     }
     
-    static private boolean firstTime = true;
+    private boolean firstTime = true;
     private int gtkWinID;
     private int gtkTopWindow;
     private int canvasWinID;
