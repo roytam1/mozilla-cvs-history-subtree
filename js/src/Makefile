@@ -198,9 +198,9 @@ JSMATH_PRELINK	= $(OBJDIR)/jsmathtemp.o
 $(OBJDIR)/jsmath.o: $(FDLIBM_LIBRARY) $(JSMATH_PRELINK)
 	@$(MAKE_OBJDIR)
 ifneq (,$(filter OS2 WINNT,$(OS_ARCH)))
-	$(LD) -r -o $@ $(JSMATH_PRELINK) $(FDLIBM_LIBRARY)
+	ld -r -o $@ $(JSMATH_PRELINK) $(FDLIBM_LIBRARY)
 else
-	$(LD) -r -o $@ $(JSMATH_PRELINK) $(FDLIBM_LIBRARY)
+	ld -r -o $@ $(JSMATH_PRELINK) $(FDLIBM_LIBRARY)
 endif
 
 $(JSMATH_PRELINK): jsmath.c
