@@ -36,7 +36,7 @@
 #include <UModalDialogs.h>
 #include "CLargeEditField.h"
 #include "macgui.h"
-#include "newshost.h"
+//#include "newshost.h"
 #include "miconutils.h"
 #include "MercutioAPI.h"
 
