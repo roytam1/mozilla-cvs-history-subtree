@@ -2008,7 +2008,14 @@ js_DefaultValue(JSContext *cx, JSObject *obj, JSType hint, jsval *vp)
     v = OBJECT_TO_JSVAL(obj);
     switch (hint) {
       case JSTYPE_STRING:
-	js_TryMethod(cx, obj, cx->runtime->atomState.toStringAtom, 0, NULL, &v);
+        /*
+         * Propagate the exception if js_TryMethod finds an appropriate
+         * method, and calling that method returned failure.
+         */
+        if (!js_TryMethod(cx, obj, cx->runtime->atomState.toStringAtom, 0, NULL,
+                          &v))
+            return JS_FALSE;
+
 	if (!JSVAL_IS_PRIMITIVE(v)) {
 	    if (!OBJ_GET_CLASS(cx, obj)->convert(cx, obj, hint, &v))
 		return JS_FALSE;
@@ -2043,8 +2050,9 @@ js_DefaultValue(JSContext *cx, JSObject *obj, JSType hint, jsval *vp)
 	    /* Don't convert to string (source object literal) for JS1.2. */
 	    if (cx->version == JSVERSION_1_2 && hint == JSTYPE_BOOLEAN)
 		goto out;
-	    js_TryMethod(cx, obj, cx->runtime->atomState.toStringAtom, 0, NULL,
-			 &v);
+	    if (!js_TryMethod(cx, obj, cx->runtime->atomState.toStringAtom, 0,
+                              NULL, &v))
+                return JS_FALSE;
 	}
 	break;
     }
@@ -2400,33 +2408,45 @@ js_ValueToNonNullObject(JSContext *cx, jsval v)
     return obj;
 }
 
-void
+JSBool
 js_TryValueOf(JSContext *cx, JSObject *obj, JSType type, jsval *rval)
 {
 #if JS_HAS_VALUEOF_HINT
     jsval argv[1];
 
     argv[0] = ATOM_KEY(cx->runtime->atomState.typeAtoms[type]);
-    js_TryMethod(cx, obj, cx->runtime->atomState.valueOfAtom, 1, argv, rval);
+    return js_TryMethod(cx, obj, cx->runtime->atomState.valueOfAtom, 1, argv,
+                        rval);
 #else
-    js_TryMethod(cx, obj, cx->runtime->atomState.valueOfAtom, 0, NULL, rval);
+    return js_TryMethod(cx, obj, cx->runtime->atomState.valueOfAtom, 0, NULL,
+                        rval);
 #endif
 }
 
-void
+JSBool
 js_TryMethod(JSContext *cx, JSObject *obj, JSAtom *atom,
 	     uintN argc, jsval *argv, jsval *rval)
 {
     JSErrorReporter older;
     jsval fval;
+    JSBool ok;
+
+    /*
+     * Report failure only if an appropriate method was found, and calling it
+     * returned failure.  We propagate failure in this case to make exceptions
+     * behave properly.
+     */
 
     older = JS_SetErrorReporter(cx, NULL);
     if (OBJ_GET_PROPERTY(cx, obj, (jsid)atom, &fval) &&
 	JSVAL_IS_OBJECT(fval) &&
 	fval != JSVAL_NULL) {
-	(void) js_CallFunctionValue(cx, obj, fval, argc, argv, rval);
+	ok = js_CallFunctionValue(cx, obj, fval, argc, argv, rval);
+    } else {
+        ok = JS_TRUE;
     }
     JS_SetErrorReporter(cx, older);
+    return ok;
 }
 
 #if JS_HAS_XDR

@@ -297,8 +297,7 @@ array_convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
 	    return JS_TRUE;
 	}
     }
-    js_TryValueOf(cx, obj, type, vp);
-    return JS_TRUE;
+    return js_TryValueOf(cx, obj, type, vp);
 }
 
 JSClass js_ArrayClass = {

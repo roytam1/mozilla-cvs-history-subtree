@@ -309,10 +309,10 @@ js_ValueToObject(JSContext *cx, jsval v, JSObject **objp);
 extern JSObject *
 js_ValueToNonNullObject(JSContext *cx, jsval v);
 
-extern void
+extern JSBool
 js_TryValueOf(JSContext *cx, JSObject *obj, JSType type, jsval *rval);
 
-extern void
+extern JSBool
 js_TryMethod(JSContext *cx, JSObject *obj, JSAtom *atom,
 	     uintN argc, jsval *argv, jsval *rval);
 

@@ -2171,9 +2171,10 @@ js_ValueToSource(JSContext *cx, jsval v)
     if (JSVAL_IS_STRING(v))
 	return js_QuoteString(cx, JSVAL_TO_STRING(v), '"');
     if (!JSVAL_IS_PRIMITIVE(v)) {
-	js_TryMethod(cx, JSVAL_TO_OBJECT(v),
+	if (!js_TryMethod(cx, JSVAL_TO_OBJECT(v),
 		     cx->runtime->atomState.toSourceAtom,
-		     0, NULL, &v);
+		     0, NULL, &v))
+            return NULL;
     }
     return js_ValueToString(cx, v);
 }
