@@ -620,7 +620,7 @@ struct nsCallbackEventRequest
 //   before we've finished all of layout.
 //
 
-class DummyLayoutRequest : public nsIChannel
+class DummyLayoutRequest : public nsIRequest
 {
 protected:
   DummyLayoutRequest(nsIPresShell* aPresShell);
@@ -634,7 +634,7 @@ protected:
 
 public:
   static nsresult
-  Create(nsIChannel** aResult, nsIPresShell* aPresShell);
+  Create(nsIRequest** aResult, nsIPresShell* aPresShell);
 
   NS_DECL_ISUPPORTS
 
@@ -648,41 +648,9 @@ public:
   NS_IMETHOD Cancel(nsresult status);
   NS_IMETHOD Suspend(void) { return NS_OK; }
   NS_IMETHOD Resume(void)  { return NS_OK; }
+  NS_IMETHOD GetParent(nsISupports * *aParent) {*aParent = nsnull; return NS_OK;}
+  NS_IMETHOD SetParent(nsISupports * aParent) { return NS_ERROR_NOT_IMPLEMENTED; }
 
-	// nsIChannel
-  NS_IMETHOD GetOriginalURI(nsIURI* *aOriginalURI) { *aOriginalURI = gURI; NS_ADDREF(*aOriginalURI); return NS_OK; }
-  NS_IMETHOD SetOriginalURI(nsIURI* aOriginalURI) { gURI = aOriginalURI; NS_ADDREF(gURI); return NS_OK; }
-  NS_IMETHOD GetURI(nsIURI* *aURI) { *aURI = gURI; NS_ADDREF(*aURI); return NS_OK; }
-  NS_IMETHOD SetURI(nsIURI* aURI) { gURI = aURI; NS_ADDREF(gURI); return NS_OK; }
-  NS_IMETHOD OpenInputStream(nsIInputStream **_retval) { *_retval = nsnull; return NS_OK; }
-	NS_IMETHOD OpenOutputStream(nsIOutputStream **_retval) { *_retval = nsnull; return NS_OK; }
-	NS_IMETHOD AsyncOpen(nsIStreamObserver *observer, nsISupports *ctxt) { return NS_OK; }
-	NS_IMETHOD AsyncRead(nsIStreamListener *listener, nsISupports *ctxt) { return NS_OK; }
-	NS_IMETHOD AsyncWrite(nsIInputStream *fromStream, nsIStreamObserver *observer, nsISupports *ctxt) { return NS_OK; }
-	NS_IMETHOD GetLoadAttributes(nsLoadFlags *aLoadAttributes) { *aLoadAttributes = nsIChannel::LOAD_NORMAL; return NS_OK; }
-  NS_IMETHOD SetLoadAttributes(nsLoadFlags aLoadAttributes) { return NS_OK; }
-	NS_IMETHOD GetContentType(char * *aContentType) { *aContentType = nsnull; return NS_OK; }
-  NS_IMETHOD SetContentType(const char *aContentType) { return NS_OK; }
-	NS_IMETHOD GetContentLength(PRInt32 *aContentLength) { *aContentLength = 0; return NS_OK; }
-  NS_IMETHOD SetContentLength(PRInt32 aContentLength) { NS_NOTREACHED("SetContentLength"); return NS_ERROR_NOT_IMPLEMENTED; }
-  NS_IMETHOD GetTransferOffset(PRUint32 *aTransferOffset) { NS_NOTREACHED("GetTransferOffset"); return NS_ERROR_NOT_IMPLEMENTED; }
-  NS_IMETHOD SetTransferOffset(PRUint32 aTransferOffset) { NS_NOTREACHED("SetTransferOffset"); return NS_ERROR_NOT_IMPLEMENTED; }
-  NS_IMETHOD GetTransferCount(PRInt32 *aTransferCount) { NS_NOTREACHED("GetTransferCount"); return NS_ERROR_NOT_IMPLEMENTED; }
-  NS_IMETHOD SetTransferCount(PRInt32 aTransferCount) { NS_NOTREACHED("SetTransferCount"); return NS_ERROR_NOT_IMPLEMENTED; }
-  NS_IMETHOD GetBufferSegmentSize(PRUint32 *aBufferSegmentSize) { NS_NOTREACHED("GetBufferSegmentSize"); return NS_ERROR_NOT_IMPLEMENTED; }
-  NS_IMETHOD SetBufferSegmentSize(PRUint32 aBufferSegmentSize) { NS_NOTREACHED("SetBufferSegmentSize"); return NS_ERROR_NOT_IMPLEMENTED; }
-  NS_IMETHOD GetBufferMaxSize(PRUint32 *aBufferMaxSize) { NS_NOTREACHED("GetBufferMaxSize"); return NS_ERROR_NOT_IMPLEMENTED; }
-  NS_IMETHOD SetBufferMaxSize(PRUint32 aBufferMaxSize) { NS_NOTREACHED("SetBufferMaxSize"); return NS_ERROR_NOT_IMPLEMENTED; }
-  NS_IMETHOD GetLocalFile(nsIFile* *result) { NS_NOTREACHED("GetLocalFile"); return NS_ERROR_NOT_IMPLEMENTED; }
-  NS_IMETHOD GetPipeliningAllowed(PRBool *aPipeliningAllowed) { *aPipeliningAllowed = PR_FALSE; return NS_OK; }
-  NS_IMETHOD SetPipeliningAllowed(PRBool aPipeliningAllowed) { NS_NOTREACHED("SetPipeliningAllowed"); return NS_ERROR_NOT_IMPLEMENTED; }
-	NS_IMETHOD GetOwner(nsISupports * *aOwner) { *aOwner = nsnull; return NS_OK; }
-	NS_IMETHOD SetOwner(nsISupports * aOwner) { return NS_OK; }
-	NS_IMETHOD GetLoadGroup(nsILoadGroup * *aLoadGroup) { *aLoadGroup = mLoadGroup; NS_IF_ADDREF(*aLoadGroup); return NS_OK; }
-	NS_IMETHOD SetLoadGroup(nsILoadGroup * aLoadGroup) { mLoadGroup = aLoadGroup; return NS_OK; }
-	NS_IMETHOD GetNotificationCallbacks(nsIInterfaceRequestor * *aNotificationCallbacks) { *aNotificationCallbacks = nsnull; return NS_OK; }
-	NS_IMETHOD SetNotificationCallbacks(nsIInterfaceRequestor * aNotificationCallbacks) { return NS_OK; }
-  NS_IMETHOD GetSecurityInfo(nsISupports **info) {*info = nsnull; return NS_OK;}
 };
 
 PRInt32 DummyLayoutRequest::gRefCnt;
@@ -690,10 +658,10 @@ nsIURI* DummyLayoutRequest::gURI;
 
 NS_IMPL_ADDREF(DummyLayoutRequest);
 NS_IMPL_RELEASE(DummyLayoutRequest);
-NS_IMPL_QUERY_INTERFACE2(DummyLayoutRequest, nsIRequest, nsIChannel);
+NS_IMPL_QUERY_INTERFACE1(DummyLayoutRequest, nsIRequest);
 
 nsresult
-DummyLayoutRequest::Create(nsIChannel** aResult, nsIPresShell* aPresShell)
+DummyLayoutRequest::Create(nsIRequest** aResult, nsIPresShell* aPresShell)
 {
   DummyLayoutRequest* request = new DummyLayoutRequest(aPresShell);
   if (!request)
@@ -1066,7 +1034,7 @@ protected:
   nsCOMPtr<nsIObserverService>  mObserverService; // Observer service for reflow events
   nsCOMPtr<nsIDragService>      mDragService;
   PRInt32                       mRCCreatedDuringLoad; // Counter to keep track of reflow commands created during doc
-  nsCOMPtr<nsIChannel>          mDummyLayoutRequest;
+  nsCOMPtr<nsIRequest>          mDummyLayoutRequest;
 
   // used for list of posted events and attribute changes. To be done
   // after reflow.
@@ -5344,10 +5312,7 @@ PresShell::AddDummyLayoutRequest(void)
     }
 
     if (loadGroup) {
-      rv = mDummyLayoutRequest->SetLoadGroup(loadGroup);
-      if (NS_FAILED(rv)) return rv;
-
-      rv = loadGroup->AddChannel(mDummyLayoutRequest, nsnull);
+      rv = loadGroup->AddRequest(mDummyLayoutRequest, nsnull);
       if (NS_FAILED(rv)) return rv;
     }
 
@@ -5371,7 +5336,7 @@ PresShell::RemoveDummyLayoutRequest(void)
     }
 
     if (loadGroup && mDummyLayoutRequest) {
-      rv = loadGroup->RemoveChannel(mDummyLayoutRequest, nsnull, NS_OK, nsnull);
+      rv = loadGroup->RemoveRequest(mDummyLayoutRequest, nsnull, NS_OK, nsnull);
       if (NS_FAILED(rv)) return rv;
 
       mDummyLayoutRequest = nsnull;

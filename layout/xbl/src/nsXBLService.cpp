@@ -270,38 +270,38 @@ nsXBLStreamListener::~nsXBLStreamListener()
   }
 }
 
-/* void onDataAvailable (in nsIChannel channel, in nsISupports ctxt, in nsIInputStream inStr, in unsigned long sourceOffset, in unsigned long count); */
 NS_IMETHODIMP
-nsXBLStreamListener::OnDataAvailable(nsIChannel* aChannel, nsISupports* aCtxt, nsIInputStream* aInStr, 
+nsXBLStreamListener::OnDataAvailable(nsIRequest *request, nsISupports* aCtxt, nsIInputStream* aInStr, 
                                      PRUint32 aSourceOffset, PRUint32 aCount)
 {
   if (mInner)
-    return mInner->OnDataAvailable(aChannel, aCtxt, aInStr, aSourceOffset, aCount);
+    return mInner->OnDataAvailable(request, aCtxt, aInStr, aSourceOffset, aCount);
   return NS_ERROR_FAILURE;
 }
 
-/* void onStartRequest (in nsIChannel channel, in nsISupports ctxt); */
 NS_IMETHODIMP
-nsXBLStreamListener::OnStartRequest(nsIChannel* aChannel, nsISupports* aCtxt)
+nsXBLStreamListener::OnStartRequest(nsIRequest* request, nsISupports* aCtxt)
 {
   if (mInner)
-    return mInner->OnStartRequest(aChannel, aCtxt);
+    return mInner->OnStartRequest(request, aCtxt);
     
   return NS_ERROR_FAILURE;
 }
 
-/* void onStopRequest (in nsIChannel channel, in nsISupports ctxt, in nsresult status, in wstring statusArg); */
 NS_IMETHODIMP 
-nsXBLStreamListener::OnStopRequest(nsIChannel* aChannel, nsISupports* aCtxt, nsresult aStatus, const PRUnichar* aStatusArg)
+nsXBLStreamListener::OnStopRequest(nsIRequest* request, nsISupports* aCtxt, nsresult aStatus, const PRUnichar* aStatusArg)
 {
   nsresult rv = NS_OK;
   if (mInner) {
-     rv = mInner->OnStopRequest(aChannel, aCtxt, aStatus, aStatusArg);
+     rv = mInner->OnStopRequest(request, aCtxt, aStatus, aStatusArg);
   }
 
   if (NS_FAILED(rv) || NS_FAILED(aStatus))
   {
-  	if (aChannel)
+  	
+    nsCOMPtr<nsIChannel> aChannel;
+    request->GetParent(getter_AddRefs(aChannel));
+    if (aChannel)
   	{
       nsCOMPtr<nsIURI> channelURI;
       aChannel->GetURI(getter_AddRefs(channelURI));
@@ -1226,7 +1226,7 @@ nsXBLService::FetchBindingDocument(nsIContent* aBoundElement, nsIDocument* aBoun
   nsCOMPtr<nsILoadGroup> loadGroup;
   if (aBoundDocument)
     aBoundDocument->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
-  
+  nsCOMPtr<nsIRequest> request;
   nsCOMPtr<nsIChannel> channel;
   rv = NS_OpenURI(getter_AddRefs(channel), aURI, nsnull, loadGroup);
   if (NS_FAILED(rv)) return rv;
@@ -1268,14 +1268,14 @@ nsXBLService::FetchBindingDocument(nsIContent* aBoundElement, nsIDocument* aBoun
     xblListener->AddRequest(req);
 
     // Now kick off the async read.
-    channel->AsyncRead(xblListener, nsnull);
+    channel->AsyncRead(xblListener, nsnull, 0, -1, getter_AddRefs(request));
     return NS_OK;
   }
 
   // Now do a blocking synchronous parse of the file.
   nsCOMPtr<nsIInputStream> in;
   PRUint32 sourceOffset = 0;
-  rv = channel->OpenInputStream(getter_AddRefs(in));
+  rv = channel->OpenInputStream(0, -1, getter_AddRefs(in));
 
   // If we couldn't open the channel, then just return.
   if (NS_FAILED(rv)) return NS_OK;
@@ -1288,7 +1288,7 @@ nsXBLService::FetchBindingDocument(nsIContent* aBoundElement, nsIDocument* aBoun
   if (! proxy)
     return NS_ERROR_FAILURE;
 
-  listener->OnStartRequest(channel, nsnull);
+  listener->OnStartRequest(request, nsnull);
   while (PR_TRUE) {
     char buf[1024];
     PRUint32 readCount;
@@ -1301,12 +1301,12 @@ nsXBLService::FetchBindingDocument(nsIContent* aBoundElement, nsIDocument* aBoun
 
     proxy->SetBuffer(buf, readCount);
 
-    rv = listener->OnDataAvailable(channel, nsnull, proxy, sourceOffset, readCount);
+    rv = listener->OnDataAvailable(request, nsnull, proxy, sourceOffset, readCount);
     sourceOffset += readCount;
     if (NS_FAILED(rv))
         break;
   }
-  listener->OnStopRequest(channel, nsnull, NS_OK, nsnull);
+  listener->OnStopRequest(request, nsnull, NS_OK, nsnull);
 
   // don't leak proxy!
   proxy->Close();
