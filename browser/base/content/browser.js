@@ -680,8 +680,7 @@ const gPopupBlockerObserver = {
       var ifr = shell.QueryInterface(Components.interfaces.nsIInterfaceRequestor);
       var dwi = ifr.getInterface(Components.interfaces.nsIDOMWindowInternal);
       // XXXben - nsIDOMPopupBlockedEvent needs to store target, too!
-      // dwi.open(popupWindowURI, "", features);
-      dump("*** XXX can't open popup window until I figure out how to open them in the page's context not the browser\n");
+      dwi.open(popupWindowURI, "", features);
     }
   },
   
