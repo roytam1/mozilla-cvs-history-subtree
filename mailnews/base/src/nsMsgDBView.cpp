@@ -2552,7 +2552,7 @@ nsresult nsMsgDBView::CollapseByIndex(nsMsgViewIndex index, PRUint32 *pNumCollap
 	PRInt32	flags = m_flags[index];
 	PRInt32	threadCount = 0;
 
-	if (flags & MSG_FLAG_ELIDED || m_sortType != nsMsgViewSortType::byThread)
+	if (flags & MSG_FLAG_ELIDED || m_sortType != nsMsgViewSortType::byThread || !(flags & MSG_VIEW_FLAG_HASCHILDREN))
 		return NS_OK;
 	flags  |= MSG_FLAG_ELIDED;
 
