@@ -44,9 +44,7 @@
  * UTF-16. The primary use for this interface is in the parser when it
  * notifies parser data listeners about additional data being
  * available.
- */
-
-/**
+ *
  * nsIUnicharStreamListener
  *
  * @status FROZEN
