@@ -53,7 +53,7 @@ CSRCS		= \
 		  mimevcrd.c \
 		  $(NULL)
 
-REQUIRES	= mime nspr dbm img util layer security pref js
+REQUIRES	= mime nspr dbm img util layer security pref js julian nls
 
 include $(DEPTH)/config/rules.mk
 
