@@ -32,7 +32,7 @@
 <?xul-overlay href="chrome://communicator/content/utilityOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
 
-<window id="main-window"
+<window id="chatzilla-window"
         xmlns:html="http://www.w3.org/1999/xhtml"
         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
@@ -41,7 +41,6 @@
         persist="width height" windowtype="irc:chatzilla">
 
 <script src="chrome://global/content/strres.js"/>
-<script src="chrome://navigator/content/tooltip.js"/>
 <script src="chrome://global/content/nsJSSupportsUtils.js"/>
 <script src="chrome://global/content/nsJSComponentManager.js"/>
 <script src="chrome://global/content/nsUserSettings.js"/>
@@ -71,11 +70,17 @@
 </commandset>
 
 <commandset id="chatzillaCommands">
+  <command id="cmd_reload_ui"
+    oncommand="if (client.getConnectionCount() == 0) window.location.href = window.location.href;"/>
+    <key id="key_reload_ui" observes="cmd_reload_ui" 
+      modifiers="accel alt" key="R"/>
   <command id="cmd_focus_input" oncommand="focusInput();"/>
   <command id="cmd_debug" oncommand="onToggleTraceHook()"/>
   <command id="cmd_toggletabstrip" oncommand="onToggleVisibility('tabstrip');"/>
   <command id="cmd_togglelist" oncommand="onToggleVisibility('info');"/>
+  <command id="cmd_toggleheader" oncommand="onToggleVisibility('header');"/>
   <command id="cmd_togglestatus" oncommand="onToggleVisibility('status');"/>
+  <command id="cmd_leaveview" oncommand="onPopupSimulateCommand('/part');"/>
   <command id="cmd_clearview" oncommand="onClearCurrentView();"/>
   <command id="cmd_deleteview" oncommand="onDeleteCurrentView();"/>
   <command id="cmd_status" oncommand="client.onInputStatus();"/>
@@ -106,20 +111,24 @@
 <keyset id="chatzillaKeys">
   <key id="key_focus_input" observes="cmd_focus_input" keycode="VK_ESCAPE"/>
 
+  <key id="key_reload_ui" observes="cmd_reload_ui" 
+    modifiers="accel alt" key="R"/>
   <key id="key_debug" observes="cmd_debug"
-    modifiers="control shift" key="D"/>
+    modifiers="accel shift" key="D"/>
   <key id="key_clearview" observes="cmd_clearview"
-    modifiers="control" key="R"/>
+    modifiers="accel" key="R"/>
   <key id="key_deleteview" observes="cmd_deleteview"
-    modifiers="control" key="D"/>
+    modifiers="accel" key="D"/>
   <key id="key_toggletabstrip" observes="cmd_toggletabstrip"
-    modifiers="control" key="T"/>
+    modifiers="accel" key="T"/>
   <key id="key_togglelist" observes="cmd_togglelist"
-    modifiers="control" key="L"/>
+    modifiers="accel" key="L"/>
+  <key id="key_toggleheader" observes="cmd_toggleheader"
+    modifiers="accel" key="H"/>
   <key id="key_togglestatus" observes="cmd_togglestatus"
-    modifiers="control" key="S"/>
+    modifiers="accel" key="S"/>
   <key id="key_status" observes="cmd_status"
-    modifiers="control shift" key="S"/>
+    modifiers="accel shift" key="S"/>
 </keyset>
 
 <keyset id="tasksKeys">
@@ -151,31 +160,30 @@
     </popup>
 
     <popup id="outputContext"
-        onpopupshowing="if (event.originalTarget == this) onOutputContextMenuCreate(event);"
+        onpopupshowing="if (event.originalTarget == this) return onOutputContextMenuCreate(event); else return true;"
         onpopuphiding="if (event.originalTarget == this) delete client._popupContext;">
         <menuitem format="&PopupQueryCmd.label;" accesskey="&PopupQueryCmd.aKey;"
           observes="cmd_popup_query"
-          showfor="targetUser != 'undefined'"/>
+          showfor="targetUser"/>
         <menuitem format="&PopupWhoisCmd.label;" accesskey="&PopupWhoisCmd.aKey;"
           observes="cmd_popup_whois"
-          showfor="targetUser != 'undefined'"/>
+          showfor="targetUser"/>
         <menuitem format="&PopupPingCmd.label;" accesskey="&PopupPingCmd.aKey;"
           observes="cmd_popup_ping"
-          showfor="targetUser != 'undefined'"/>
+          showfor="targetUser"/>
         <menuitem format="&PopupVersionCmd.label;"
           accesskey="&PopupVersionCmd.aKey;"
           observes="cmd_popup_version"
-          showfor="targetUser != 'undefined'"/>
+          showfor="targetUser"/>
 
-    <!-- css bugs keep this from working for now, see bug 91447
         <menu format="&PopupHighlightStyle.label;" 
           accesskey="&PopupHighlightStyle.aKey;"
-          showfor="targetUser != 'undefined'">
+          showfor="targetUser">
           <menupopup id="highlightMenu"><menuitem/></menupopup>
         </menu>
-    -->
+
         <menuseparator
-          showfor="targetUser != 'undefined'"/>
+          showfor="targetUser"/>
 
         <menuitem label="&PopupGiveOp.label;" accesskey="&PopupGiveOp.aKey;"
           observes="cmd_popup_giveop"
@@ -198,10 +206,14 @@
         <menuseparator
           showfor="targetUser != 'undefined' and iAmOp is 'yes'"/>
 
+        <menuitem format="&LeaveViewCmd.label;" accesskey="&LeaveViewCmd.aKey;"
+          observes="cmd_leaveview"
+          showfor="client.currentObject.TYPE is 'IRCChannel'"/>
+        <menuitem label="&DeleteViewCmd.label;" accesskey="&DeleteViewCmd.aKey;"
+          observes="cmd_deleteview" key="key_deleteview"
+          showfor="client.currentObject.TYPE != 'IRCChannel'"/>
         <menuitem label="&ClearViewCmd.label;" accesskey="&ClearViewCmd.aKey;"
           observes="cmd_clearview" key="key_clearview"/>
-        <menuitem label="&DeleteViewCmd.label;" accesskey="&DeleteViewCmd.aKey;"
-          observes="cmd_deleteview" key="key_deleteview"/>
         <menuseparator/>
 
         <menuitem label="&StatusCmd.label;" accesskey="&StatusCmd.aKey;"
@@ -248,15 +260,23 @@
     <menu label="&ViewCmd.label;" accesskey="&ViewCmd.aKey;">
       <menupopup>
 
-        <menuitem id="menu-view-tabstrip" label="&ShowTabStripCmd.label;" 
-          accesskey="&ShowTabStripCmd.aKey;" type="checkbox"
-          key="key_toggletabstrip" observes="cmd_toggletabstrip"/>
-        <menuitem id="menu-view-info" label="&ShowUserlistCmd.label;" 
-          accesskey="&ShowUserlistCmd.aKey;" type="checkbox"
-          key="key_togglelist" observes="cmd_togglelist"/>
-        <menuitem id="menu-view-status" label="&ShowStatusbarCmd.label;" 
-          accesskey="&ShowStatusbarCmd.aKey;" type="checkbox"
-          key="key_togglestatus" observes="cmd_togglestatus"/>
+        <menu label="&ShowCmd.label;">
+          <menupopup>
+            <menuitem id="menu-view-tabstrip" label="&ShowTabStripCmd.label;" 
+              accesskey="&ShowTabStripCmd.aKey;" type="checkbox"
+              key="key_toggletabstrip" observes="cmd_toggletabstrip"/>
+            <menuitem id="menu-view-header" label="&ShowHeaderCmd.label;" 
+              accesskey="&ShowHeaderCmd.aKey;" type="checkbox"
+              key="key_toggleheader" observes="cmd_toggleheader"/>
+            <menuitem id="menu-view-info" label="&ShowUserlistCmd.label;" 
+              accesskey="&ShowUserlistCmd.aKey;" type="checkbox"
+              key="key_togglelist" observes="cmd_togglelist"/>
+            <menuitem id="menu-view-status" label="&ShowStatusbarCmd.label;" 
+              accesskey="&ShowStatusbarCmd.aKey;" type="checkbox"
+              key="key_togglestatus" observes="cmd_togglestatus"/>
+          </menupopup>
+        </menu>
+
         <menuseparator/>
 
         <menuitem id="menu-view-none" label="&NoneCmd.label;" 
@@ -296,7 +316,7 @@
   <vbox id="upper-box" flex="1">
     <hbox id="tabpanels-contents-box" flex="1">
       <vbox id="user-list-box" width="20%" persist="collapsed width">
-  
+ 
         <tree id="user-list" container="true" datasources="rdf:null" flex="1"
          containment="http://home.netscape.com/NC-irc#chanuser"
          multiple="true" context="userlistPopup">
@@ -344,8 +364,7 @@
                 onclick="return onSortCol('usercol-op');"/>
               <treecell id="usercol-voice"
                 resource="http://home.netscape.com/NC-irc#voice"
-                class="treecell-header" label="V"
-                onclick="return onSortCol('usercol-voice');"/>
+                class="treecell-header" label="V"                onclick="return onSortCol('usercol-voice');"/>
               <treecell id="usercol-nick"
                 resource="http://home.netscape.com/NC-irc#nick"
                 class="treecell-header sortDirectionIndicator" label="Nick"
@@ -363,8 +382,41 @@
       </splitter>
 
       <vbox flex="1">
+        <toolbox id="header-bar-tbox" crop="right">
+          <toolbar id="header-bar-tbar" persist="collapsed"
+            grippytooltip="aTooltip"
+            grippytooltiptext="&header.tooltip;" crop="right">
+            <vbox flex="1" class="header-box">
+              <hbox flex="1">
+                <hbox flex="50%">
+                  <text class="header-label" flex="5%" value="&url.label;"/>
+                  <text class="header-data" flex="95%" id="header-url"
+                    crop="right"/>
+                </hbox>
+                <hbox flex="25%">
+                  <text class="header-label" flex="5%" value="&mode.label;"/>
+                  <text class="header-data" flex="95%" id="channel-mode" value="(none)" crop="right"/>
+                </hbox>
+                <hbox flex="25%">
+                  <text class="header-label" flex="5%" value="&users.label;"/>
+                  <text class="header-data" flex="95%" id="channel-users" value="(none)"/>
+                </hbox>
+              </hbox>
+              <hbox flex="1">
+                <text class="header-label" width="5%" value="&topic.label;"/>
+                <text class="header-data" width="95%" id="channel-topic" value="(none)" crop="right"
+                  onclick="onTopicEditStart()"/>
+                <textbox flex="1" id="channel-topicedit" collapsed="true"
+                  onblur="onTopicEditEnd();"/>
+              </hbox>
+            </vbox>
+
+          </toolbar>
+        </toolbox>
+
         <iframe id="output-iframe" class="output-container" type="content"
           flex="1" tooltip="aHTMLTooltip" context="outputContext"
+          onmouseover="onMouseOver(event);"
           ondragover="nsDragAndDrop.dragOver(event, contentDropObserver);"
           ondragdrop="nsDragAndDrop.drop(event, contentDropObserver);"
           ondraggesture="nsDragAndDrop.startDrag(event, contentAreaDNDObserver);"
@@ -377,11 +429,13 @@
       <scrollbox id="view-tabs" persist="collapsed" orient="horizontal"
         flex="1">
 
+        <hbox>
         <tabs class="tabs-bottom" id="views-tbar-inner" flex="1"
           crop="right">
           <tab collapsed="true"/> <!-- dummy tab to keep the freaking xbl from 
                                        causing an exception -->
         </tabs>
+        </hbox>
       </scrollbox>
     </hbox>
 
@@ -390,80 +444,22 @@
   <splitter id="input-splitter" orient="vertical" collapse="after"
     collapsed="true"/>
 
-  <vbox id="input-widgets">
+  <hbox id="input-widgets">
+    <text id="server-nick" value=""/>
     <textbox id="multiline-input" multiline="true" flex="1" height="100px"
-      class="multiline-input-widget" collapsed="true"/>
-    <textbox id="input" class="input-widget"/>
-  </vbox>
+      class="multiline-input-widget" collapsed="true" autostretch="true"/>
+    <textbox id="input" class="input-widget" flex="1" autostretch="true"/>
+  </hbox>
 
 </vbox> <!-- outer-box -->
 
-<toolbox id="status-bar-tbox" crop="right">
-  <toolbar id="status-bar-tbar" class="chromeclass-status" persist="collapsed" grippytooltip="aTooltip"
-    grippytooltiptext="&statusBar.tooltip;"
-    crop="right">
-    <hbox class="status-box" flex="20%" crop="right">
-      <vbox class="status-label" crop="right">
-        <text value="&network.label;" crop="right"/>
-        <text value="&channel.label;" crop="right"/>
-        <text value="&topicBy.label;" crop="right"/>
-      </vbox>
-      <vbox class="status-data" crop="right">
-         <text id="net-name" value="(one)" crop="right"/> 
-         <text id="channel-name" value="(none)" crop="right"/>
-         <text id="channel-topicby" value="(nobody)" crop="right"/>
-      </vbox>
-      <spacer flex="20%"/>
-      <vbox class="status-label" crop="right">
-         <text value="&server.label;" crop="right"/>
-         <text value="&mode.label;" crop="right"/>
-         <text value="&topic.label;" crop="right"/>
-      </vbox>
-      <vbox flex="80%" crop="right">
-        <hbox flex="1" crop="right">
-          <vbox class="status-data" crop="right">
-            <text id="server-name" value="(none)" crop="right"/>
-            <text id="channel-mode" value="(none)" crop="right"/>
-          </vbox>
-          <spacer flex="100%"/>
-          <vbox class="status-label" crop="right">
-            <text value="&nickname.label;" crop="right"/>
-            <text value="&users.label;" crop="right"/>
-          </vbox>
-          <vbox class="status-data" crop="right">
-            <text id="server-nick" value="(unknown)" crop="right"/>
-            <text id="channel-users" value="(none)" crop="right"/>
-          </vbox>
-          <spacer flex="100%"/>
-          <vbox class="status-label" crop="right">
-            <text value="&lag.label;" crop="right"/>
-            <text value="&limit.label;" crop="right"/>
-          </vbox>
-          <vbox class="status-data" crop="right">
-            <text id="server-lag" value="-1" crop="right"/>
-            <text id="channel-limit" value="(none)" crop="right"/>
-          </vbox>
-          <spacer flex="100%"/>
-          <vbox class="status-label" crop="right"
-            collapsed="true">
-            <text value="&lastPing.label;" crop="right"/>
-            <text value="&key.label;" crop="right"/>
-          </vbox>
-          <vbox class="status-data" crop="right"
-            collapsed="true">
-            <text id="last-ping" value="(never)" crop="right"/>
-          <text id="channel-key" value="(none)" crop="right"/>
-          </vbox>
-        </hbox>
-        <hbox flex="1" crop="right">
-          <vbox class="status-data" flex="1" crop="right">
-            <text id="channel-topic" value="(none)" crop="right"/>
-          </vbox>
-        </hbox>
-      </vbox>
-    </hbox>
-  </toolbar>
-</toolbox>
+ <statusbar id="status-bar">
+   <hbox id="component-bar"/>
+   <statusbarpanel id="status-text" label="&StatusText.label;" flex="1"
+     crop="right"/>
+   <statusbarpanel class="statusbarpanel-icononly" id="offline-status"
+     hidden="true" offline="true"/>
+  </statusbar>
 
 
 </window>

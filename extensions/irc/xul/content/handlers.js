@@ -22,6 +22,46 @@
  *  Chiaki Koufugata chiaki@mozilla.gr.jp UI i18n 
  */
 
+function onTopicEditStart()
+{
+    if (client.currentObject.TYPE != "IRCChannel")
+        return;
+
+    var text = client.statusBar["channel-topic"];
+    var edit = client.statusBar["channel-topicedit"];
+    text.setAttribute("collapsed", "true");
+    edit.removeAttribute("collapsed");
+    edit.value = client.currentObject.topic;
+    edit.focus();
+    edit.selectionStart = 0;
+    edit.selectionEnd = edit.value.length;
+}
+
+function onTopicEditEnd ()
+{
+    if (!("statusBar" in client))
+        return;
+    
+    var edit = client.statusBar["channel-topicedit"];
+    var text = client.statusBar["channel-topic"];
+    edit.setAttribute("collapsed", "true");
+    text.removeAttribute("collapsed");
+    focusInput();
+}
+
+function onTopicKeyPress (e)
+{
+    if (client.currentObject.TYPE != "IRCChannel")
+        return;
+    
+    if (e.keyCode == 13)
+    {        
+        var line = stringTrim(e.target.value);
+        client.currentObject.setTopic (line);
+        onTopicEditEnd();
+    }
+}
+
 function onLoad()
 {
     
@@ -43,13 +83,12 @@ function onLoad()
         }
     }
     
-    focusInput();
     mainStep();
 }
 
 function onClose()
 {
-    if (client.userClose)
+    if ("userClose" in client && client.userClose)
         return true;
     
     client.userClose = true;
@@ -88,6 +127,29 @@ function onTabClick (id)
     
 }
 
+function onMouseOver (e)
+{
+    var i = 0;
+    var target = e.target;
+    while (target && i < 5)
+    {
+        if (target.nodeName == "html:a")
+            break;
+        target = target.parentNode;
+        ++i;
+    }
+        
+    if (target && i < 5)
+    {
+        var href = target.getAttribute ("href");
+        client.status = href;
+    }
+    else
+    {
+        client.status = client.defaultStatus;
+    }
+}
+    
 function onSimulateCommand (line)
 {
     onInputCompleteLine ({line: line}, true);
@@ -95,16 +157,19 @@ function onSimulateCommand (line)
 
 function onPopupSimulateCommand (line)
 {
-    var nick = client._popupContext.user;
-    if (nick == "ME!")
+    if ("user" in client._popupContext)
     {
-        var server =
-            getObjectDetails(client.currentObject).server;
-        if (server)
-            nick = server.me.properNick;
-    }
+        var nick = client._popupContext.user;
+        if (nick == "ME!")
+        {
+            var details = getObjectDetails(client.currentObject);
+            if ("server" in details)
+                nick = details.server.me.properNick;
+        }
 
-    line = line.replace (/\$nick/ig, nick);
+        line = line.replace (/\$nick/ig, nick);
+    }
+    
     onInputCompleteLine ({line: line}, true);
 }
 
@@ -193,26 +258,27 @@ function onOutputContextMenuCreate(e)
 {
     var target = document.popupNode;
     var foundSomethingUseful = false;
-    var targetType;
     
     do
     {
-        if (target.tagName == "html:a" ||
-            target.tagName == "html:td")
+        if ("tagName" in target &&
+            (target.tagName == "html:a" || target.tagName == "html:td"))
             foundSomethingUseful = true;
         else
             target = target.parentNode;
     } while (target && !foundSomethingUseful);
     
-
     var targetType = createPopupContext(e, target);
-    var targetClass = client._popupContext.targetClass;
+    var targetClass = ("targetClass" in client._popupContext) ?
+        client._popupContext.targetClass : "";
     var viewType = client.currentObject.TYPE;
     var targetIsOp = "n/a";
     var targetIsVoice = "n/a";
     var iAmOp = "n/a";
-    var targetUser = String(client._popupContext.user);
-    var targetServer = getObjectDetails(client.currentObject).server;
+    var targetUser = ("user" in client._popupContext) ?
+        String(client._popupContext.user) : "";
+    var details = getObjectDetails(client.currentObject);
+    var targetServer = ("server" in details) ? details.server : "";
 
     if (targetServer && targetUser == "ME!")
     {
@@ -220,14 +286,14 @@ function onOutputContextMenuCreate(e)
     }
 
     var targetProperNick = targetUser;
-    if (targetServer && targetServer.users[targetUser])
+    if (targetServer && targetUser in targetServer.users)
         targetProperNick = targetServer.users[targetUser].properNick;
     
     if (viewType == "IRCChannel" && targetUser)
     {
-        var cuser = client.currentObject.users[targetUser];
-        if (cuser)
+        if (targetUser in client.currentObject.users)
         {
+            var cuser = client.currentObject.users[targetUser];
             targetIsOp = cuser.isOp ? "yes" : "no";
             targetIsVoice = cuser.isVoice ? "yes" : "no";
         }
@@ -255,6 +321,8 @@ function onOutputContextMenuCreate(e)
                 if (format)
                 {
                     format = format.replace (/\$nick/gi, targetProperNick);
+                    format = format.replace (/\$viewname/gi,
+                                             client.currentObject.name);
                     menuitem.setAttribute ("label", format);
                 }
                 menuitem.setAttribute ("hidden", "false");
@@ -265,6 +333,8 @@ function onOutputContextMenuCreate(e)
         
         menuitem = menuitem.nextSibling;
     }
+
+    return true;
 }
 
 /* popup click in user list */
@@ -329,11 +399,15 @@ function onToggleVisibility(thing)
             break;
             
         case "info":
-            ids = ["user-list-box", "main-splitter"];            
+            ids = ["main-splitter", "user-list-box"];            
+            break;
+            
+        case "header":
+            ids = ["header-bar-tbox"];
             break;
             
         case "status":
-            ids = ["status-bar-tbar"];
+            ids = ["status-bar"];
             break;
 
         default:
@@ -520,7 +594,7 @@ function onToggleMunger()
 
 }
 
-function onMultilineInputKeyUp (e)
+function onMultilineInputKeyPress (e)
 {
     if (e.ctrlKey && e.keyCode == 13)
     {
@@ -534,7 +608,7 @@ function onMultilineInputKeyUp (e)
             multilineInputMode (false);
 }
 
-function onInputKeyUp (e)
+function onInputKeyPress (e)
 {
     
     switch (e.keyCode)
@@ -763,7 +837,7 @@ function onInputCompleteLine(e, simulated)
     
         if (client.inputHistory.length > client.MAX_HISTORY)
             client.inputHistory.pop();
-    
+        
         client.lastHistoryReferenced = -1;
         client.incompleteLine = "";
     }
@@ -794,11 +868,17 @@ function onNotifyTimeout ()
     for (var n in client.networks)
     {
         var net = client.networks[n];
-        if (net.isConnected() && net.notifyList &&
-            net.notifyList.length > 0)
-            net.primServ.sendData ("ISON " +
-                                   client.networks[n].notifyList.join(" ")
-                                   + "\n");
+        if (net.isConnected()) {
+            if ("notifyList" in net && net.notifyList.length > 0) {
+                net.primServ.sendData ("ISON " +
+                                       client.networks[n].notifyList.join(" ")
+                                       + "\n");
+            } else {
+                /* if the notify list is empty, just send a ping to see if we're
+                 * alive. */
+                net.primServ.sendData ("PING :ALIVECHECK\n");
+            }
+        }
     }
 }
     
@@ -1005,7 +1085,7 @@ function cli_istatus (e)
             for (s in client.currentObject.servers)
             {
                 serverStatus(client.currentObject.servers[s]);
-                for (var c in client.currentObject.servers[s].channels)
+                for (c in client.currentObject.servers[s].channels)
                     channelStatus (client.currentObject.servers[s].channels[c]);
             }
             break;
@@ -1020,7 +1100,7 @@ function cli_istatus (e)
                 for (s in client.networks[n].servers)
                 {
                     serverStatus(client.networks[n].servers[s]);
-                    for (var c in client.networks[n].servers[s].channels)
+                    for (c in client.networks[n].servers[s].channels)
                         channelStatus (client.networks[n].servers[s].channels[c]);
                 }
             break;
@@ -1198,19 +1278,29 @@ function cli_iserver (e)
     if (!e.inputData)
         return false;
 
-    var ary = e.inputData.match(/^([^\s\:]+)[\s\:]?(\d+)? ?(\S+)?/);
-    var pass = (ary[2]) ? ary[2] : "";
+    var ary = 
+        e.inputData.match(/^([^\s\:]+)[\s\:]?(?:(\d+)(?:\s+(\S+)|$)|(\S+)|$)/);
+    var pass;
+    if (3 in ary && ary[3])
+        pass = ary[3];
+    else if (4 in ary && ary[4])
+        pass = ary[4];
     
     if (ary == null)
         return false;
 
-    if (!ary[2])
-        ary[2] = 6667;
+    var port;
+    if (2 in ary && ary[2])
+        port = ary[2];
+    else
+        port = 6667;
 
     var net = null;
     
     for (var n in client.networks)
+    {
         if (n == ary[1])
+        {
             if (client.networks[n].isConnected())
             {
                 client.currentObject.display (getMsg("cli_iserverMsg",ary[1]),
@@ -1222,15 +1312,26 @@ function cli_iserver (e)
                 net = client.networks[n];
                 break;
             }
+        }
+    }
 
     if (!net)
+    {
+        /* if there wasn't already a network created for this server,
+         * make one. */
         client.networks[ary[1]] =
-            new CIRCNetwork (ary[1], [{name: ary[1], port: ary[2]}],
+            new CIRCNetwork (ary[1],
+                             [{name: ary[1], port: port, password: pass}],
                              client.eventPump);
+    }
     else
-        net.serverList = [{name: ary[1], port: ary[2]}];
+    {
+        /* if we've already created a network for this server, reinit the
+         * serverList, in case the user changed the port or password */
+        net.serverList = [{name: ary[1], port: port, password: pass}];
+    }
     
-    client.onInputAttach ({inputData: ary[1] + " " + pass});
+    onSimulateCommand ("/attach " + ary[1]);
     
     return true;
 
@@ -1269,7 +1370,7 @@ function cli_exit (e)
 client.onInputDelete =
 function cli_idelete (e)
 {
-    if (e.inputData)
+    if ("inputData" in e && e.inputData)
         return false;
     onDeleteCurrentView();
     return true;
@@ -1361,6 +1462,15 @@ function cli_isbar ()
 
 }
 
+client.onInputHeaders =
+function cli_isbar ()
+{
+    
+    onToggleVisibility ("header");
+    return true;
+
+}
+
 client.onInputCommands =
 function cli_icommands (e)
 {
@@ -1406,19 +1516,20 @@ function cli_iattach (e)
     {
         var ary = e.inputData.match (/(\S+) ?(\S+)?/);
         net = client.networks[ary[1]];
-        pass = ary[2];
+        if (2 in ary)
+            pass = ary[2];
         
         if (!net)
         {
-            client.currentObject.display (getMsg("cli_iattachMsg3",e.inputData),
+            client.currentObject.display (getMsg("cli_iattachMsg3", e.inputData),
                                           "ERROR");
             return false;
         }
         client.lastNetwork = net;
     }
 
-    if (!net.messages)
-        net.displayHere (getMsg("cli_iattachMsg4",net.name),"INFO");
+    if (!("messages" in net))
+        net.displayHere (getMsg("cli_iattachMsg4", net.name), "INFO");
     setCurrentObject(net);
 
     if (net.isConnected())
@@ -1473,7 +1584,7 @@ function cli_imsg (e)
     var usr = e.network.primServ.addUser(ary[1].toLowerCase());
 
     if (!usr.messages)
-        usr.displayHere (getMsg("cli_imsgMsg3",usr.properNick),"INFO");
+        usr.displayHere (getMsg("cli_imsgMsg3", usr.properNick), "INFO");
     setCurrentObject (usr);
     
     if (ary[2])
@@ -1639,7 +1750,7 @@ function cli_ijoin (e)
     if (ary)
     {
         name = ary[1];
-        if (ary[2])
+        if (2 in ary)
             key = ary[2];
     }
     else
@@ -1659,7 +1770,7 @@ function cli_ijoin (e)
 
     e.channel = e.server.addChannel (name);
     e.channel.join(key);
-    if (!e.channel.messages)
+    if (!("messages" in e.channel))
         e.channel.display (getMsg("cli_ijoinMsg3",e.channel.name), "INFO");
     setCurrentObject(e.channel);
     
@@ -1767,6 +1878,14 @@ function cli_itopic (e)
 
     return true;
     
+}
+
+client.onInputAbout =
+function cli_iabout (e)
+{
+    client.currentObject.display (CIRCServer.prototype.VERSION_REPLY, "ABOUT");
+    client.currentObject.display (getMsg("aboutHomepage"), "ABOUT");
+    return true;
 }
 
 client.onInputAway =
@@ -2290,7 +2409,7 @@ CIRCNetwork.prototype.on372 = /* MOTD line */
 CIRCNetwork.prototype.on376 = /* end of MOTD */
 function my_showtonet (e)
 {
-    var p = (e.params[2]) ? e.params[2] + " " : "";
+    var p = (2 in e.params) ? e.params[2] + " " : "";
     var str = "";
 
     switch (e.code)
@@ -2302,7 +2421,12 @@ function my_showtonet (e)
         case "001":
             updateTitle(this);
             updateNetwork (this);
-            if (this.pendingURLs)
+            if (client.currentObject == this)
+            {
+                var status = document.getElementById("offline-status");
+                status.removeAttribute ("offline");
+            }
+            if ("pendingURLs" in this)
             {
                 var url = this.pendingURLs.pop();
                 while (url)
@@ -2522,6 +2646,7 @@ CIRCNetwork.prototype.onDisconnect =
 function my_netdisconnect (e)
 {
     var connection = e.server.connection;
+    var msg;
     
     if (typeof e.disconnectStatus != "undefined")
     {
@@ -2530,6 +2655,7 @@ function my_netdisconnect (e)
             case 0:
                 msg = getMsg("my_netdisconnectConnectionClosed", [this.name,
                              connection.host, connection.port]);
+                break;
 
             case NS_ERROR_CONNECTION_REFUSED:
                 msg = getMsg("my_netdisconnectConnectionRefused", [this.name,
@@ -2558,10 +2684,28 @@ function my_netdisconnect (e)
                      connection.host, connection.port]);
     }
     
-    this.display (msg, "ERROR");
+    for (var v in client.viewsArray)
+    {
+        var obj = client.viewsArray[v].source;
+        if (obj != client)
+        {        
+            var details = getObjectDetails(obj);
+            if ("server" in details && details.server == e.server)
+                obj.displayHere (msg, "ERROR");
+        }
+    }
+
+    for (var c in this.primServ.channels)
+    {
+        var channel = this.primServ.channels[c];
+        client.rdf.clearTargets(channel.getGraphResource(),
+                                client.rdf.resChanUser);
+    }
+    
     this.connecting = false;
     updateTitle();
-    if (client.userClose && client.getConnectionCount() == 0)
+    if ("userClose" in client && client.userClose &&
+        client.getConnectionCount() == 0)
         window.close();
 }
 
@@ -2595,7 +2739,7 @@ CIRCNetwork.prototype.onPing =
 function my_netping (e)
 {
 
-    updateNetwork (e.network);
+    updateNetwork (this);
     
 }
 
@@ -2603,7 +2747,7 @@ CIRCNetwork.prototype.onPong =
 function my_netpong (e)
 {
 
-    updateNetwork (e.network);
+    updateNetwork (this);
     
 }
 
@@ -2665,13 +2809,12 @@ function my_366 (e)
         this.users[u].updateGraphResource();
         this._addUserToGraph (this.users[u]);
     }
-
     
     if (client.currentObject == this)
         /* redisplay the tree */
         client.rdf.setTreeRoot("user-list", this.getGraphResource());
     
-    if (e.channel.pendingNamesReply)
+    if ("pendingNamesReply" in e.channel)
     {       
         display (e.meat, "366");
         e.channel.pendingNamesReply = false;
@@ -2713,7 +2856,7 @@ function my_topicinfo (e)
 CIRCChannel.prototype.on353 = /* names reply */
 function my_topic (e)
 {
-    if (e.channel.pendingNamesReply)
+    if ("pendingNamesReply" in e.channel)
         e.channel.display (e.meat, "NAMES");
 }
 
@@ -2833,7 +2976,7 @@ CIRCChannel.prototype.onChanMode =
 function my_cmode (e)
 {
 
-    if (e.user)
+    if ("user" in e)
         this.display (getMsg("my_cmodeMsg", [e.params.slice(1).join(" "),
                                              e.user.properNick]), "MODE",
                       e.user, this);

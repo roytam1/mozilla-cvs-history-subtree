@@ -56,18 +56,6 @@ a.chatzilla-link:visited {
     color: magenta !important;
 }
 
-.chatzilla-highlight[name="Large"] {
-    font-size: 12pt;
-}
-
-.chatzilla-highlight[name="Small"] {
-    font-size: 8pt;
-}
-
-.chatzilla-highlight[name="Bold text"] {
-    font-weight: bold;
-}
-
 .chatzilla-highlight[name="Slate"] {
     color: white;
     background: #15272d;

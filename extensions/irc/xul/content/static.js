@@ -31,7 +31,7 @@ var client = new Object();
 
 client.defaultNick = getMsg( "defaultNick" );
 
-client.version = "0.8.4";
+client.version = "0.8.5-pre1";
 
 client.TYPE = "IRCClient";
 client.COMMAND_CHAR = "/";
@@ -46,7 +46,7 @@ client.MAX_WORD_DISPLAY = 20;
 client.PRINT_DIRECTION = 1; /*1 => new messages at bottom, -1 => at top */
 client.ADDRESSED_NICK_SEP = ": ";
 
-client.NOTIFY_TIMEOUT = 5 * 60 * 100; /* update notify list every 5 minutes */
+client.NOTIFY_TIMEOUT = 5 * 60 * 1000; /* update notify list every 5 minutes */
 
 client.SLOPPY_NETWORKS = true; /* true if msgs from a network can be displayed
                                 * on the current object if it is related to
@@ -132,13 +132,16 @@ function initStatic()
             navigator.userAgent + "]";
 
     obj = document.getElementById("input");
-    obj.addEventListener("keyup", onInputKeyUp, false);
+    obj.addEventListener("keypress", onInputKeyPress, false);
     obj = document.getElementById("multiline-input");
-    obj.addEventListener("keyup", onMultilineInputKeyUp, false);
+    obj.addEventListener("keypress", onMultilineInputKeyPress, false);
+    obj = document.getElementById("channel-topicedit");
+    obj.addEventListener("keypress", onTopicKeyPress, false);
+    obj.active = false;
 
     window.onkeypress = onWindowKeyPress;
 
-    setMenuCheck ("menu-dmessages", 
+    setMenuCheck ("menu-dmessages",
                   client.eventPump.getHook ("event-tracer").enabled);
     setMenuCheck ("menu-munger-global", !client.munger.enabled);
 
@@ -148,36 +151,29 @@ function initStatic()
         setMenuCheck ("menu-view-tabstrip", isVisible("view-tabs"));
     client.uiState["info"] =
         setMenuCheck ("menu-view-info", isVisible("user-list-box"));
+    client.uiState["header"] =
+        setMenuCheck ("menu-view-header", isVisible("header-bar-tbox"));
     client.uiState["status"] =
-        setMenuCheck ("menu-view-status", isVisible("status-bar-tbar"));
+        setMenuCheck ("menu-view-status", isVisible("status-bar"));
 
     client.statusBar = new Object();
     
-    client.statusBar["net-name"] =
-        document.getElementById ("net-name");
-    client.statusBar["server-name"] =
-        document.getElementById ("server-name");
+    client.statusBar["header-url"] =
+        document.getElementById ("header-url");
     client.statusBar["server-nick"] =
         document.getElementById ("server-nick");
-    client.statusBar["server-lag"] =
-        document.getElementById ("server-lag");
-    client.statusBar["last-ping"] =
-        document.getElementById ("last-ping");
-    client.statusBar["channel-name"] =
-        document.getElementById ("channel-name");
-    client.statusBar["channel-limit"] =
-        document.getElementById ("channel-limit");
-    client.statusBar["channel-key"] =
-        document.getElementById ("channel-key");
     client.statusBar["channel-mode"] =
         document.getElementById ("channel-mode");
     client.statusBar["channel-users"] =
         document.getElementById ("channel-users");
     client.statusBar["channel-topic"] =
         document.getElementById ("channel-topic");
-    client.statusBar["channel-topicby"] =
-        document.getElementById ("channel-topicby");
+    client.statusBar["channel-topicedit"] =
+        document.getElementById ("channel-topicedit");
 
+    client.statusElement = document.getElementById ("status-text");
+    client.defaultStatus = getMsg ("defaultStatus");
+    
     onSortCol ("usercol-nick");
 
     client.display (getMsg("welcome"), "HELLO");
@@ -198,8 +194,10 @@ function initStatic()
     m.setAttribute ("checked", String(client.SAVE_SETTINGS));
      
     var wentSomewhere = false;
-    
-    if (window.arguments && window.arguments[0] && window.arguments[0].url)
+
+    if ("arguments" in window &&
+        0 in window.arguments && typeof window.arguments[0] == "object" &&
+        "url" in window.arguments[0])
     {
         url = window.arguments[0].url;
         if (url.search(/^irc:\/?\/?$/i) == -1)
@@ -213,7 +211,7 @@ function initStatic()
     if (!wentSomewhere)
     {
         /* if we had nowhere else to go, connect to any default urls */
-        var ary = client.INITIAL_URLS.split(";");
+        ary = client.INITIAL_URLS.split(";");
         for (var i in ary)
             if ((ary[i] = stringTrim(ary[i])))
                 gotoIRCURL (ary[i]);
@@ -222,6 +220,21 @@ function initStatic()
     setInterval ("onNotifyTimeout()", client.NOTIFY_TIMEOUT);
     
 }
+
+function setStatus (str)
+{
+    client.statusElement.setAttribute ("label", str);
+    return str;
+}
+
+client.__defineSetter__ ("status", setStatus);
+
+function getStatus ()
+{
+    return client.statusElement.getAttribute ("label");
+}
+
+client.__defineGetter__ ("status", getStatus);
 
 function setMenuCheck (id, state)
 {
@@ -282,7 +295,7 @@ function initHost(obj)
                          obj.eventPump);
     obj.networks["opennet"] =
         new CIRCNetwork ("opennet",         
-                         [{name:"irc.openprojects.net", port:6667},
+                         [{name: "irc.openprojects.net", port:6667},
                           {name: "eu.opirc.nu", port:6667},
                           {name: "au.opirc.nu", port:6667},
                           {name: "us.opirc.nu", port:6667}],
@@ -301,11 +314,16 @@ function initHost(obj)
 
     obj.munger = new CMunger();
     obj.munger.enabled = true;
-    obj.munger.addRule ("mailto", /((mailto:)?[^<>\[\]()\'\"\s]+@[^.<>\[\]()\'\"\s]+\.[^<>\[\]()\'\"\s]+)/i,
+    obj.munger.addRule ("mailto",
+       /((mailto:)?[^<>\[\]()\'\"\s]+@[^.<>\[\]()\'\"\s]+\.[^<>\[\]()\'\"\s]+)/i,
                         insertMailToLink);
     obj.munger.addRule ("link", obj.linkRE, insertLink);
-    obj.munger.addRule ("channel-link", /[@+]?(#[^<>\[\]()\'\"\s]+[^:,.<>\[\]()\'\"\s])/i,
+    obj.munger.addRule ("channel-link",
+                        /[@+]?(#[^<>\[\]()\'\"\s]+[^:,.<>\[\]()\'\"\s])/i,
                         insertChannelLink);
+    
+    obj.munger.addRule ("bugzilla-link", /(?:\s|^)(bug\s+\d{3,6})/i,
+                        insertBugzillaLink);
     obj.munger.addRule ("face",
          /((^|\s)[\<\>]?[\;\=\:]\~?[\-\^\v]?[\)\|\(pP\<\>oO0\[\]\/\\](\s|$))/,
          insertSmiley);
@@ -390,6 +408,23 @@ function insertChannelLink (matchText, containerTag, eventData)
                          matchText);
     anchor.setAttribute ("class", "chatzilla-link");
     //anchor.setAttribute ("target", "_content");
+    insertHyphenatedWord (matchText, anchor);
+    containerTag.appendChild (anchor);
+    
+}
+
+function insertBugzillaLink (matchText, containerTag)
+{
+
+    var number = matchText.match (/(\d+)/)[1];
+    
+    var anchor = document.createElementNS ("http://www.w3.org/1999/xhtml",
+                                           "html:a");
+    anchor.setAttribute ("href",
+                         "http://bugzilla.mozilla.org/show_bug.cgi?id=" + 
+                         number);
+    anchor.setAttribute ("class", "chatzilla-link");
+    anchor.setAttribute ("target", "_content");
     insertHyphenatedWord (matchText, anchor);
     containerTag.appendChild (anchor);
     
@@ -536,7 +571,7 @@ function fillInHTMLTooltip(tipElement)
 /* timer-based mainloop */
 function mainStep()
 {
-    if (!frames[0].initialized)
+    if (!("initialized" in frames[0]))
     {  /* voodoo required for skin switching.  When the user changes a skin,
         * the output document is reloaded. this document *cannot* tell us
         * it has been reloaded, because the type="content" attribute used
@@ -563,7 +598,7 @@ function getMsg (msgName)
 {
     var restCount = arguments.length - 1;
 
-    if (!client.bundle)
+    if (!("bundle" in client))
     {       
         client.bundle = 
             srGetStrBundle("chrome://chatzilla/locale/chatzilla.properties");
@@ -653,7 +688,7 @@ function getObjectDetails (obj, rv)
     }
     
     rv.orig = obj;
-    rv.parent = obj.parent;
+    rv.parent = ("parent" in obj) ? obj.parent : null;
     
     switch (obj.TYPE)
     {
@@ -678,12 +713,12 @@ function getObjectDetails (obj, rv)
 
         case "IRCNetwork":
             rv.network = obj;
-            if (rv.network.isConnected())
+            if ("primServ" in rv.network)
                 rv.server = rv.network.primServ;
             break;
 
         case "IRCClient":
-            if (obj.lastNetwork)
+            if ("lastNetwork" in obj)
             {
                 rv.network = obj.lastNetwork;
                 if (rv.network.isConnected())
@@ -731,7 +766,7 @@ function addDynamicRule (rule)
 function setClientOutput(doc) 
 {
     client.output = frames[0].document.getElementById("output");
-    //createHighlightMenu();
+    createHighlightMenu();
 }
 
 function createHighlightMenu()
@@ -741,12 +776,13 @@ function createHighlightMenu()
         for (var i = 0; i < rules.length; ++i)
         {
             var rule = rules.item(i);
-            if (rule.selectorText)
+            if (rule instanceof CSSStyleRule)
             {
-                ary = rule.selectorText.
+                var ary = rule.selectorText.
                     match(/\.chatzilla-highlight\[name=\"?([^\"]+)\"?\]/i);
                 if (ary)
                 {
+                    dd ("adding " + ary[1]);
                     menuitem = document.createElement("menuitem");
                     menuitem.setAttribute ("class", "highlight-menu-item");
                     menuitem.setAttribute ("label", ary[1]);
@@ -756,9 +792,9 @@ function createHighlightMenu()
                     menu.appendChild(menuitem);
                 }
             }
-            else if (rule.styleSheet)
+            else if (rule instanceof CSSImportRule)
             {
-                processStyleRules(rule.styleSheet.rules);
+                processStyleRules(rule.styleSheet.cssRules);
             }
         }
     }
@@ -772,7 +808,7 @@ function createHighlightMenu()
     menuitem.setAttribute ("oncommand", "onPopupHighlight('');");
     menu.appendChild(menuitem);
     
-    //processStyleRules(frames[0].document.styleSheets[0].cssRules);
+    processStyleRules(frames[0].document.styleSheets[0].cssRules);
 }
 
 function setupMungerMenu(munger)
@@ -857,9 +893,9 @@ function parseIRCURL (url)
         return null;
     }
     
-    if (ary[2])
+    if (2 in ary)
     {
-        if (!ary[1])
+        if (!(1 in ary))
         {
             dd ("parseIRCURL: port with no host");
             return null;
@@ -868,7 +904,7 @@ function parseIRCURL (url)
         rv.isserver = true;
         rv.port = parseInt(ary[2].substr(1));
     }
-    else if (ary[1])
+    else if (1 in ary)
     {
         specifiedHost = rv.host = ary[1].toLowerCase();
         if (specifiedHost.indexOf(".") != -1)
@@ -884,10 +920,10 @@ function parseIRCURL (url)
             return null;
         }
         
-        rv.target = (ary[1]) ? 
+        rv.target = (1 in ary) ? 
             unescape(ary[1]).toLowerCase().replace("\n", "\\n"): "";
-        var params = (ary[2]) ? ary[2].toLowerCase() : "";
-        var query = (ary[3]) ? ary[3] : "";
+        var params = (2 in ary) ? ary[2].toLowerCase() : "";
+        var query = (3 in ary) ? ary[3] : "";
 
         if (params)
         {
@@ -923,7 +959,7 @@ function parseIRCURL (url)
                 (/^\?msg=([^\&]*)$|^\?msg=([^\&]*)\&|\&msg=([^\&]*)\&|\&msg=([^\&]*)$/);
             if (ary)
                 for (var i = 1; i < ary.length; i++)
-                    if (ary[i])
+                    if (i in ary)
                     {
                         rv.msg = unescape(ary[i]).replace ("\n", "\\n");
                         break;
@@ -1005,7 +1041,7 @@ function gotoIRCURL (url)
                 "network " + url.host + " trying to connect...");
             */
             client.onInputAttach ({inputData: url.host + " " + pass});
-            if (!net.pendingURLs)
+            if (!("pendingURLs" in net))
                 net.pendingURLs = new Array();
             net.pendingURLs.push (url);            
             return;
@@ -1061,39 +1097,19 @@ function gotoIRCURL (url)
 
 function updateNetwork(obj)
 {
-    var o = new Object();
-    getObjectDetails (client.currentObject, o);
+    var o = getObjectDetails (client.currentObject);
 
-    if (obj && obj != o.network)
-        return;
-    
-    var net = o.network ? o.network.name : "(none)";
-    var serv = "(none)", nick = "(unknown)", lag = "(unknown)",
-        ping = "(never)";
-    if (o.server)
+    var lag = "(unknown)";
+    var nick = "";
+    if ("server" in o)
     {
-        serv  = o.server.connection.host;
         if (o.server.me)
             nick = o.server.me.properNick;
         lag = (o.server.lag != -1) ? o.server.lag : "(unknown)";
-        
-        if (o.server.lastPing)
-        {
-            var mins = String(o.server.lastPing.getMinutes());
-            if (mins.length == 1)
-                mins = "0" + mins;
-            ping = o.server.lastPing.getHours() + ":" + mins;
-        }
-        else
-            ping = "(never)";
     }
-
-    client.statusBar["net-name"].setAttribute("value", net);
-    client.statusBar["server-name"].setAttribute("value", serv);
+    client.statusBar["header-url"].setAttribute("value", 
+                                                 client.currentObject.getURL());
     client.statusBar["server-nick"].setAttribute("value", nick);
-    client.statusBar["server-lag"].setAttribute("value", lag);
-    client.statusBar["last-ping"].setAttribute("value", ping);
-
 }
 
 function updateChannel (obj)
@@ -1101,49 +1117,42 @@ function updateChannel (obj)
     if (obj && obj != client.currentObject)
         return;
     
-    var o = new Object();
-    getObjectDetails (client.currentObject, o);
+    var o = getObjectDetails (client.currentObject);
 
-    var chan = "(none)", l = "(none)", k = "(none)", mode = "(none)",
-        users = 0, topicBy = "(nobody)", topic = "(unknown)";
+    var mode = "(none)", users = "(none)", topic = "(unknown)";
 
-    if (o.channel)
+    if ("channel" in o)
     {
-        chan = o.channel.name;
-        l = (o.channel.mode.limit != -1) ? o.channel.mode.limit : "(none)";
-        k = o.channel.mode.key ? o.channel.mode.key : "(none)";
         mode = o.channel.mode.getModeStr();
         if (!mode)
             mode = "(none)";
-        users = o.channel.getUsersLength();
+        users = getMsg("userCountDetails",
+                       [o.channel.getUsersLength(), o.channel.opCount,
+                        o.channel.voiceCount]);
         topic = o.channel.topic ? o.channel.topic : "(none)";
-        topicBy = o.channel.topicBy ? o.channel.topicBy : "(nobody)";
     }
     
-    client.statusBar["channel-name"].setAttribute("value", chan);
-    client.statusBar["channel-limit"].setAttribute("value", l);
-    client.statusBar["channel-key"].setAttribute("value", k);
     client.statusBar["channel-mode"].setAttribute("value", mode);
     client.statusBar["channel-users"].setAttribute("value", users);
     client.statusBar["channel-topic"].setAttribute("value", topic);
-    client.statusBar["channel-topicby"].setAttribute("value", topicBy);
 
 }
 
 function updateTitle (obj)
 {
-    if ((obj && obj != client.currentObject) || !client.currentObject)
+    if (!("currentObject" in client) || (obj && obj != client.currentObject))
         return;
 
     var tstring;
     var o = getObjectDetails (client.currentObject);
-    var net = o.network ? o.network.name : "";
-
+    var net = "network" in o ? o.network.name : "";
+    var nick = "";
+    
     switch (client.currentObject.TYPE)
     {
         case "IRCNetwork":
-            var serv = "", port = "", nick = "";
-            if (o.server)
+            var serv = "", port = "";
+            if ("server" in o)
             {
                 serv = o.server.connection.host;
                 port = o.server.connection.port;
@@ -1160,8 +1169,8 @@ function updateTitle (obj)
             
         case "IRCChannel":
             var chan = "", mode = "", topic = "";
-            var nick = o.parent.me ? o.parent.me.properNick : 
-                                     getMsg ("updateTitleNoNick");
+            nick = "me" in o.parent ? o.parent.me.properNick : 
+                getMsg ("updateTitleNoNick");
             chan = o.channel.name;
             mode = o.channel.mode.getModeStr();
             if (!mode)
@@ -1235,6 +1244,7 @@ function multilineInputMode (state)
 
 function focusInput ()
 {
+    dd (getStackTrace());
     client.input.focus();
 }
 
@@ -1245,7 +1255,8 @@ function newInlineText (data, className, tagName)
     
     var a = document.createElementNS ("http://www.w3.org/1999/xhtml",
                                       tagName);
-    a.setAttribute ("class", className);
+    if (className)
+        a.setAttribute ("class", className);
 
     switch (typeof data)
     {
@@ -1307,12 +1318,12 @@ function setCurrentObject (obj)
         return;
     }
 
-    if (client.currentObject == obj)
+    if ("currentObject" in client && client.currentObject == obj)
         return;
         
     var tb, userList;
 
-    if (client.currentObject)
+    if ("currentObject" in client && client.currentObject)
     {
         tb = getTabForObject(client.currentObject);
     }
@@ -1328,12 +1339,9 @@ function setCurrentObject (obj)
 
     /* Unselect currently selected users. */
     userList = document.getElementById("user-list");
-    if (userList) 
-        /* Remove curently selection items before this tree gets rerooted,
-         * because it seems to remember the selections for eternity if not. */
-        userList.clearItemSelection ();    
-    else
-        dd ("setCurrentObject: could not find element with ID='user-list'");
+    /* Remove curently selection items before this tree gets rerooted,
+     * because it seems to remember the selections for eternity if not. */
+    userList.clearItemSelection ();    
 
     if (obj.TYPE == "IRCChannel")
         client.rdf.setTreeRoot ("user-list", obj.getGraphResource());
@@ -1358,7 +1366,27 @@ function setCurrentObject (obj)
     if (client.PRINT_DIRECTION == 1)
         scrollDown();
 
-    focusInput();
+    onTopicEditEnd();
+
+    if (client.currentObject.TYPE == "IRCChannel")
+        client.statusBar["channel-topic"].setAttribute ("editable", "true");
+    else
+        client.statusBar["channel-topic"].removeAttribute ("editable");
+
+    var status = document.getElementById("offline-status");
+    if (client.currentObject == client)
+    {
+        status.setAttribute ("hidden", "true");
+    }
+    else
+    {
+        status.removeAttribute ("hidden");
+        var details = getObjectDetails(client.currentObject);
+        if ("network" in details && details.network.isConnected())
+            status.removeAttribute ("offline");    
+        else
+            status.setAttribute ("offline", "true");
+    }
 }
 
 function scrollDown ()
@@ -1370,7 +1398,7 @@ function addHistory (source, obj)
 {
     var tbody;
     
-    if (!source.messages)
+    if (!("messages" in source))
     {
         source.messages =
             document.createElementNS ("http://www.w3.org/1999/xhtml",
@@ -1420,7 +1448,8 @@ function addHistory (source, obj)
                 tbody.removeChild (tbody.lastChild);
     }
 
-    if (needScroll && client.currentObject == source)
+    if ("currentObject" in client && client.currentObject == source &&
+        needScroll)
         w.scrollTo (w.pageXOffset, w.document.height);
     
 }
@@ -1433,12 +1462,12 @@ function notifyActivity (source)
     var tb = getTabForObject (source, true);
     var vk = Number(tb.getAttribute("viewKey"));
     
-    if (client.currentObject != source)
+    if ("currentObject" in client && client.currentObject != source)
     {
         if (tb.getAttribute ("state") == "normal")
         {       
             tb.setAttribute ("state", "activity");
-            if (!client.activityList[vk])
+            if (!(vk in client.activityList))
             {
                 client.activityList[vk] = "+";
                 updateTitle();
@@ -1483,7 +1512,7 @@ function getTabForObject (source, create)
 
     if (!source)
     {
-        dd ("** UNDEFINED  passed to getTabForObject **");
+        dd ("** UNDEFINED passed to getTabForObject **");
         dd (getStackTrace());
         return null;
     }
@@ -1534,7 +1563,7 @@ function getTabForObject (source, create)
         tb.setAttribute ("onclick", "onTabClick('" + id + "');");
         tb.setAttribute ("crop", "right");
         
-        tb.setAttribute ("class", "tab-bottom view-button");
+        tb.setAttribute ("class", "tabs-bottom view-button");
         tb.setAttribute ("id", id);
         tb.setAttribute ("state", "normal");
 
@@ -1648,7 +1677,13 @@ function deleteTab (tb)
     
     if (!isNaN(key))
     {
-        if (!client.viewsArray[key].source.isPermanent)
+        if ("isPermanent" in client.viewsArray[key].source &&
+            client.viewsArray[key].source.isPermanent)
+        {
+            window.alert (getMsg("deleteTabMsg"));
+            return -1;
+        }
+        else
         {
             /* re-index higher toolbuttons */
             for (i = key + 1; i < client.viewsArray.length; i++)
@@ -1656,18 +1691,12 @@ function deleteTab (tb)
                 client.viewsArray[i].tb.setAttribute ("viewKey", i - 1);
                 client.viewsArray[i].spacer.setAttribute ("index", i - 1);
             }
-            spacer = client.viewsArray[key].spacer;
+            var spacer = client.viewsArray[key].spacer;
             arrayRemoveAt(client.viewsArray, key);
             var tbinner = document.getElementById("views-tbar-inner");
             tbinner.removeChild(tb);
             tbinner.removeChild(spacer);
         }
-        else
-        {
-            window.alert (getMsg("deleteTabMsg"));
-            return -1;
-        }
-            
     }
     else
         dd  ("*** INVALID OBJECT passed to deleteTab (" + tb + ") " +
@@ -1785,8 +1814,10 @@ function display (message, msgtype, sourceObj, destObj)
 }
 
 client.display =
+client.displayHere =
 CIRCNetwork.prototype.displayHere =
 CIRCChannel.prototype.display =
+CIRCChannel.prototype.displayHere =
 CIRCUser.prototype.displayHere =
 function __display(message, msgtype, sourceObj, destObj)
 {            
@@ -1803,25 +1834,28 @@ function __display(message, msgtype, sourceObj, destObj)
             obj.setAttribute (a, attrs[a]);
         obj.setAttribute ("class", c);
         obj.setAttribute ("msg-type", msgtype);
-        obj.setAttribute ("msg-user", fromAttr);
         obj.setAttribute ("msg-dest", toAttr);
         obj.setAttribute ("dest-type", toType);
-        obj.setAttribute ("view-type", viewType);
-    }
+        obj.setAttribute ("view-type", viewType); 
+        if (fromAttr)
+            obj.setAttribute ("msg-user", fromAttr);
+   }
 
     var blockLevel = false; /* true if this row should be rendered at block
                              * level, (like, if it has a really long nickname
                              * that might disturb the rest of the layout)     */
     var o = getObjectDetails (this);          /* get the skinny on |this|     */
-    var me = (o.server) ? o.server.me : null; /* get the object representing
-                                               * the user
-                                               */
+    var me;
+    if ("server" in o && "me" in o.server)
+    {
+        me = o.server.me;    /* get the object representing the user           */
+    }
     if (sourceObj == "ME!") sourceObj = me;   /* if the caller to passes "ME!"*/
     if (destObj == "ME!") destObj = me;       /* substitute the actual object */
 
     var fromType = (sourceObj && sourceObj.TYPE) ? sourceObj.TYPE : "unk";
-    var fromAttr;
     
+    var fromAttr;
     if      (sourceObj && sourceObj == me)       fromAttr = "ME!";
     else if (fromType.search(/IRC.*User/) != -1) fromAttr = sourceObj.nick;
     else if (typeof sourceObj == "object")       fromAttr = sourceObj.name;
@@ -1877,10 +1911,10 @@ function __display(message, msgtype, sourceObj, destObj)
             nick = sourceObj.properNick;
         }
         
-        if (typeof this.mark == "undefined") 
+        if (!("mark" in this))
             this.mark = "odd";
         
-        if (this.lastNickDisplayed != nick)
+        if ("lastNickDisplayed" in this && this.lastNickDisplayed != nick)
         {
             this.lastNickDisplayed = nick;
             this.mark = (this.mark == "even") ? "odd" : "even";
@@ -1897,9 +1931,13 @@ function __display(message, msgtype, sourceObj, destObj)
         msgRow.appendChild (msgSource);
 
     }
-    else if ((client.debugMode && (code = "[" + msgtype + "]")) ||
-             (code = client.responseCodeMap[msgtype]) != "none")
+    else
     {
+        if (!client.debugMode && msgtype in client.responseCodeMap)
+            code = client.responseCodeMap[msgtype];
+        else
+            code = "[" + msgtype + "]";
+
         /* Display the message code */
         var msgType = document.createElementNS("http://www.w3.org/1999/xhtml",
                                                "html:td");
@@ -1922,7 +1960,7 @@ function __display(message, msgtype, sourceObj, destObj)
         if (isImportant)
             msgData.setAttribute ("important", "true");
 
-        if (this.mark)
+        if ("mark" in this)
             msgData.setAttribute ("mark", this.mark);
         
         if (typeof message == "string")
@@ -1990,12 +2028,10 @@ function cli_gccount ()
 
 client.quit =
 function cli_quit (reason)
-{
-    
+{    
     for (var n in client.networks)
-        if (client.networks[n].primServ)
-            client.networks[n].quit (reason);
-    
+        if ("primServ" in client.networks[n])
+            client.networks[n].quit (reason);   
 }
 
 /**
@@ -2038,7 +2074,7 @@ function my_getselectedusers ()
 CIRCChannel.prototype.getGraphResource =
 function my_graphres ()
 {
-    if (!this.rdfRes)
+    if (!("rdfRes" in this))
     {
         this.rdfRes = 
             client.rdf.GetResource(RES_PFX + "CHANNEL:" +
@@ -2059,9 +2095,9 @@ function usr_graphres()
     
     var rdf = client.rdf;
     
-    if (!this.rdfRes)
+    if (!("rdfRes" in this))
     {
-        if (!CIRCUser.nextResID)
+        if (!("nextResID" in CIRCUser))
             CIRCUser.nextResID = 0;
         
         this.rdfRes = rdf.GetResource (RES_PFX + "CUSER:" + 
@@ -2097,7 +2133,7 @@ function usr_updres()
     if (this.TYPE != "IRCChanUser")
         dd ("** WARNING: cuser.updateGraphResource called on wrong object **");
 
-    if (!this.rdfRes)
+    if (!("rdfRes" in this))
         this.getGraphResource();
     
     var rdf = client.rdf;
