@@ -7,12 +7,12 @@
 #   mozilla/gc, , 10/25/2000 12:00:00
 #
 
-mozilla/nsprpub,        NSPRPUB_PRE_4_2_CLIENT_BRANCH
-mozilla/security/nss,   NSS_CLIENT_TAG
-mozilla/security/manager,
-mozilla/accessible,
-DirectorySDKSourceC,    LDAPCSDK_40_BRANCH
-mozilla/lib/mac/Instrumentation
-mozilla/gfx2
-mozilla/modules/libpr0n
-SeaMonkeyAll
+mozilla/nsprpub,        OTIS_TEST_BRANCH
+mozilla/security/nss,   OTIS_TEST_BRANCH
+mozilla/security/manager, OTIS_TEST_BRANCH
+mozilla/accessible, OTIS_TEST_BRANCH
+DirectorySDKSourceC,    OTIS_TEST_BRANCH
+mozilla/lib/mac/Instrumentation, OTIS_TEST_BRANCH
+mozilla/gfx2, OTIS_TEST_BRANCH
+mozilla/modules/libpr0n, OTIS_TEST_BRANCH
+SeaMonkeyAll, OTIS_TEST_BRANCH
