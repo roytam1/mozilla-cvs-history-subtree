@@ -52,20 +52,20 @@ class NS_COM nsLocalString
     
       explicit
       nsLocalString( const PRUnichar* aLiteral )
-          : mHandle(aLiteral, aLiteral ? (aLiteral+nsCharTraits<PRUnichar>::length(aLiteral)) : aLiteral)
+          : mHandle(NS_CONST_CAST(PRUnichar*, aLiteral), aLiteral ? (NS_CONST_CAST(PRUnichar*, aLiteral)+nsCharTraits<PRUnichar>::length(aLiteral)) : NS_CONST_CAST(PRUnichar*, aLiteral))
         {
           // nothing else to do here
         }
 
       nsLocalString( const PRUnichar* aLiteral, PRUint32 aLength )
-          : mHandle(aLiteral, aLiteral+aLength)
+          : mHandle(NS_CONST_CAST(PRUnichar*, aLiteral), NS_CONST_CAST(PRUnichar*, aLiteral)+aLength)
         {
             // This is an annoying hack.  Callers should be fixed to use the other
             //  constructor if they don't really know the length.
           if ( aLength == PRUint32(-1) )
             {
 //            NS_WARNING("Tell scc: Caller constructing a string doesn't know the real length.  Please use the other constructor.");
-              mHandle.DataEnd(aLiteral ? (aLiteral+nsCharTraits<PRUnichar>::length(aLiteral)) : aLiteral);
+              mHandle.DataEnd(aLiteral ? (NS_CONST_CAST(PRUnichar*, aLiteral)+nsCharTraits<PRUnichar>::length(aLiteral)) : NS_CONST_CAST(PRUnichar*, aLiteral));
             }
         }
 
@@ -91,20 +91,20 @@ class NS_COM nsLocalCString
     
       explicit
       nsLocalCString( const char* aLiteral )
-          : mHandle(aLiteral, aLiteral ? (aLiteral+nsCharTraits<char>::length(aLiteral)) : aLiteral)
+          : mHandle(NS_CONST_CAST(char*, aLiteral), aLiteral ? (NS_CONST_CAST(char*, aLiteral)+nsCharTraits<char>::length(aLiteral)) : NS_CONST_CAST(char*, aLiteral))
         {
           // nothing else to do here
         }
 
       nsLocalCString( const char* aLiteral, PRUint32 aLength )
-          : mHandle(aLiteral, aLiteral+aLength)
+          : mHandle(NS_CONST_CAST(char*, aLiteral), NS_CONST_CAST(char*, aLiteral)+aLength)
         {
             // This is an annoying hack.  Callers should be fixed to use the other
             //  constructor if they don't really know the length.
           if ( aLength == PRUint32(-1) )
             {
 //            NS_WARNING("Tell scc: Caller constructing a string doesn't know the real length.  Please use the other constructor.");
-              mHandle.DataEnd(aLiteral ? (aLiteral+nsCharTraits<char>::length(aLiteral)) : aLiteral);
+              mHandle.DataEnd(aLiteral ? (NS_CONST_CAST(char*, aLiteral)+nsCharTraits<char>::length(aLiteral)) : NS_CONST_CAST(char*, aLiteral));
             }
         }
 
