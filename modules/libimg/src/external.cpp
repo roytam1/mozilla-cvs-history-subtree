@@ -33,15 +33,6 @@ il_load_image(MWContext *cx, char *image_url, NET_ReloadMethod cache_reload_poli
 
 #include "il_strm.h"            /* Stream converters. */
 
-/* 
- * XXX Temporary inclusion of this prototype. It was originally in
- * libimg.h but needed to be removed since it required C++ compilation.
- * It should eventually return to libimg.h and may be remove when
- * a modularized netlib comes around.
- */
-extern ilIURL *
-IL_CreateIURL(URL_Struct *urls);
-
 static unsigned int
 il_view_write_ready(NET_StreamClass *stream)
 {
@@ -98,6 +89,36 @@ il_abort(NET_StreamClass *stream, int status)
 	stream->data_object = 0;
 }
 
+/* Only for internal-external-reconnect. */
+void
+il_stream_reconnect_complete(NET_StreamClass *stream)
+{
+    /* Get reader before calling il_stream_complete because it 
+       may set stream->data_object to NULL. */     
+    ilINetReader *reader = (ilINetReader *)stream->data_object;
+    PR_ASSERT(reader);
+
+    il_stream_complete(stream);
+
+    NS_RELEASE(reader);
+    stream->data_object = NULL;
+}
+
+/* Only for internal-external-reconnect. */
+void
+il_reconnect_abort(NET_StreamClass *stream, int status)
+{
+    /* Get reader before calling il_abort because it 
+       may set stream->data_object to NULL. */     
+    ilINetReader *reader = (ilINetReader *)stream->data_object;
+    PR_ASSERT(reader);
+
+    il_abort(stream,status);
+
+    NS_RELEASE(reader);
+    stream->data_object = NULL;
+}
+
 unsigned int
 il_write_ready(NET_StreamClass *stream)
 {
@@ -139,12 +160,12 @@ il_reconnect(il_container *ic)
 {
 	if (unconnected_stream)
 	{
+        /* Will be freed in il_stream_reconnect_complete or il_reconnect_abort */
 	    ilINetReader *reader = IL_NewNetReader(ic);
-	    ilIURL *iurl;
 
 		if (reader != NULL) {
-    		unconnected_stream->complete       = il_stream_complete;
-		    unconnected_stream->abort          = il_abort;
+    		unconnected_stream->complete       = il_stream_reconnect_complete;
+		    unconnected_stream->abort          = il_reconnect_abort;
 		    unconnected_stream->is_write_ready = il_write_ready;
 		    unconnected_stream->data_object    = (void *)reader;
 			unconnected_stream->put_block      = (MKStreamWriteFunc)il_first_write;
@@ -152,8 +173,8 @@ il_reconnect(il_container *ic)
 			ic->type = IL_UNKNOWN;
 			ic->state = IC_STREAM;
 
-			iurl = (ilIURL *)unconnected_urls->fe_data;
-			iurl->SetReader(reader);
+      /* unconnected_urls->fe_data no longer has a ponter to an ilIURL, 
+         it wasn't used anyway. */
 			ic->content_length = unconnected_urls->content_length;
 		}
 
@@ -219,7 +240,9 @@ IL_ViewStream(FO_Present_Types format_out, void *newshack, URL_Struct *urls,
 	ILTRACE(0,("il: new view stream, %s", urls->address));
 
 	PR_ASSERT(!unconnected_stream);
- 	IL_CreateIURL(urls);
+    /* Note that this URL_Struct does not have a iURL wrapper around
+       it anymore.  It doesn't need it and we wouldn't have any good place
+       to free it anyway. */
 	unconnected_stream = stream;
 	unconnected_urls = urls;
 

@@ -28,15 +28,6 @@ PR_BEGIN_EXTERN_C
 extern int MK_OUT_OF_MEMORY;
 PR_END_EXTERN_C
 
-/* 
- * XXX Temporary inclusion of this prototype. It was originally in
- * libimg.h but needed to be removed since it required C++ compilation.
- * It should eventually return to libimg.h and may be remove when
- * a modularized netlib comes around.
- */
-extern ilIURL *
-IL_CreateIURL(URL_Struct *urls);
-
 typedef struct dum_TitleObsClosure {
     MWContext *context;
     XP_ObserverList obs_list;
@@ -83,7 +74,6 @@ private:
 class URLImpl : public ilIURL {
 public:
     URLImpl();
-    URLImpl(URL_Struct *urls);
     ~URLImpl();
 
     nsresult Init(const char *aURL, NET_ReloadMethod aReloadMethod);
@@ -416,13 +406,6 @@ URLImpl::URLImpl()
     NS_INIT_REFCNT();
 }
 
-URLImpl::URLImpl(URL_Struct *urls)
-{
-    NS_INIT_REFCNT();
-    mURLS = urls;
-    urls->fe_data = this;
-}
-
 URLImpl::~URLImpl()
 {
     if (mURLS != NULL) {
@@ -432,15 +415,6 @@ URLImpl::~URLImpl()
     if (mReader != NULL) {
         NS_RELEASE(mReader);
     }
-}
-
-ilIURL *
-IL_CreateIURL(URL_Struct *urls)
-{
-    ilIURL *iurl = new URLImpl(urls);
-    NS_ADDREF(iurl);
-    
-    return iurl;
 }
 
 NS_IMPL_ISUPPORTS(URLImpl, kIURLIID)

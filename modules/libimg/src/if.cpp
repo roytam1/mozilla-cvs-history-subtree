@@ -1019,7 +1019,9 @@ IL_NetRequestDone(il_container *ic, ilIURL *url, int status)
 	    }
     }
 
+    PR_ASSERT(ic->url == url);
 	NS_RELEASE(url);
+    ic->url = NULL;
 }
 
 
@@ -1302,6 +1304,8 @@ il_image_complete(il_container *ic)
 					reader = IL_NewNetReader(ic);
                     (void) ic->net_cx->GetURL(ic->url, NET_DONT_RELOAD, 
 											  reader);
+                    /* Release reader, GetURL will keep a ref to it. */
+                    NS_RELEASE(reader);
                 } else {
                     ic->loop_count = 0;
                     NS_RELEASE(netRequest);
@@ -1851,6 +1855,8 @@ IL_GetImage(const char* image_url,
         return NULL;
 	}
     err = ic->net_cx->GetURL(url, cache_reload_policy, reader);
+    /* Release reader, GetURL will keep a ref to it. */
+    NS_RELEASE(reader);
 	return image_req;
 }
 
