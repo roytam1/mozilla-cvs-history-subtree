@@ -108,6 +108,11 @@ function onAccountWizardLoad() {
 
     checkForInvalidAccounts();
 
+    var rg = document.getElementById("acctyperadio");
+    var targetElement = rg.getElementsByAttribute("value", "AOL")[0];
+    if (targetElement)
+      rg.selectedItem = targetElement;
+
     if (gCurrentAccount) {
         // Set the page index to identity page.
         document.documentElement.pageIndex = 1;

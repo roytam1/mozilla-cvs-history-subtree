@@ -51,11 +51,7 @@ Rights Reserved.
       <description>&accountTypeDesc.label;</description>
       <description>&accountTypeDirections.label;</description>
       <separator/>
-      <radiogroup id="acctyperadio" >
-        <radio id="mailaccount" value="mailaccount"
-               label="&accountTypeMail.label;"
-               selected="true"/>
-  
+      <radiogroup id="acctyperadio" > 
         <vbox datasources="rdf:ispdefaults" 
               containment="http://home.netscape.com/NC-rdf#providers"
               id="ispBox"
@@ -68,6 +64,10 @@ Rights Reserved.
             </rule>
          </template>
         </vbox>
+
+        <radio id="mailaccount" value="mailaccount"
+            label="&accountTypeMail.label;" selected="true"/>
+
         <radio id="newsaccount" value="newsaccount"
                label="&accountTypeNews.label;"/>
       </radiogroup>
