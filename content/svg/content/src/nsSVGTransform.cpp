@@ -164,6 +164,20 @@ nsSVGTransform::GetValueString(nsAWritableString& aValue)
           sprintf(buf, "scale(%g)", sx);
       }
       break;
+    case nsIDOMSVGTransform::SVG_TRANSFORM_SKEWX:
+      {
+        float sx;
+        mMatrix->GetC(&sx);
+        sprintf(buf, "skewX(%g)", sx);
+      }
+      break;
+    case nsIDOMSVGTransform::SVG_TRANSFORM_SKEWY:
+      {
+        float sy;
+        mMatrix->GetB(&sy);
+        sprintf(buf, "skewY(%g)", sy);
+      }
+      break;
     default:
       buf[0] = '\0';
       NS_NOTYETIMPLEMENTED("write me!");
@@ -285,15 +299,35 @@ NS_IMETHODIMP nsSVGTransform::SetRotate(float angle, float cx, float cy)
 /* void setSkewX (in float angle); */
 NS_IMETHODIMP nsSVGTransform::SetSkewX(float angle)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  WillModify();
+  
+  mType = SVG_TRANSFORM_SKEWX;
+  mAngle = angle;
+
+  nsSVGMatrix::Create(getter_AddRefs(mMatrix));
+  nsCOMPtr<nsIDOMSVGMatrix> temp;
+  mMatrix->SkewX(angle, getter_AddRefs(temp));
+  mMatrix = temp;
+
+  DidModify();
+  return NS_OK;
 }
 
 /* void setSkewY (in float angle); */
 NS_IMETHODIMP nsSVGTransform::SetSkewY(float angle)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  WillModify();
+  
+  mType = SVG_TRANSFORM_SKEWY;
+  mAngle = angle;
+
+  nsSVGMatrix::Create(getter_AddRefs(mMatrix));
+  nsCOMPtr<nsIDOMSVGMatrix> temp;
+  mMatrix->SkewY(angle, getter_AddRefs(temp));
+  mMatrix = temp;
+
+  DidModify();
+  return NS_OK;
 }
 
 

@@ -7,6 +7,7 @@ nsIDOMSVGAnimTransformList.idl
 nsIDOMSVGCircleElement.idl
 nsIDOMSVGDocument.idl
 nsIDOMSVGElement.idl
+nsIDOMSVGEllipseElement.idl
 nsIDOMSVGFitToViewBox.idl
 nsIDOMSVGForeignObjectElem.idl
 nsIDOMSVGGElement.idl

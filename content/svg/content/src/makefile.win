@@ -38,11 +38,13 @@ CPP_OBJS=					                 \
   .\$(OBJDIR)\nsSVGCircleElement.obj         \
   .\$(OBJDIR)\nsSVGElement.obj               \
   .\$(OBJDIR)\nsSVGElementFactory.obj        \
+  .\$(OBJDIR)\nsSVGEllipseElement.obj        \
   .\$(OBJDIR)\nsSVGForeignObjectElement.obj  \
   .\$(OBJDIR)\nsSVGGElement.obj              \
   .\$(OBJDIR)\nsSVGGenericStringValue.obj    \
   .\$(OBJDIR)\nsSVGGraphicElement.obj        \
   .\$(OBJDIR)\nsSVGLength.obj                \
+  .\$(OBJDIR)\nsSVGLineElement.obj           \
   .\$(OBJDIR)\nsSVGMatrix.obj                \
   .\$(OBJDIR)\nsSVGPathDataParser.obj        \
   .\$(OBJDIR)\nsSVGPathElement.obj           \
@@ -53,6 +55,7 @@ CPP_OBJS=					                 \
   .\$(OBJDIR)\nsSVGPolygonElement.obj        \
   .\$(OBJDIR)\nsSVGPolylineElement.obj       \
   .\$(OBJDIR)\nsSVGRect.obj                  \
+  .\$(OBJDIR)\nsSVGRectElement.obj           \
   .\$(OBJDIR)\nsSVGSVGElement.obj            \
   .\$(OBJDIR)\nsSVGStyleValue.obj            \
   .\$(OBJDIR)\nsSVGTransform.obj             \

@@ -32,6 +32,7 @@ REQUIRES	= xpcom string widget dom js locale htmlparser view pref necko webshell
 
 CPPSRCS		= \
 		nsSVGBPathBuilder.cpp \
+		nsSVGEllipseFrame.cpp \
 		nsSVGCircleFrame.cpp \
 		nsSVGFill.cpp \
 		nsSVGForeignObjectFrame.cpp \
@@ -39,10 +40,12 @@ CPPSRCS		= \
 		nsSVGGenericContainerFrame.cpp \
 		nsSVGGraphic.cpp \
 		nsSVGGraphicFrame.cpp \
+		nsSVGLineFrame.cpp \
 		nsSVGOuterSVGFrame.cpp \
 		nsSVGPathFrame.cpp \
 		nsSVGPolygonFrame.cpp \
 		nsSVGPolylineFrame.cpp \
+		nsSVGRectFrame.cpp \
 		nsSVGRenderItem.cpp \
 		nsSVGRenderingContext.cpp \
 		nsSVGStroke.cpp \

@@ -222,6 +222,22 @@ nsSVGTransformList::SetValueString(const nsAReadableString& aValue)
       float cy = arg3 ? (float) PR_strtod(arg3, &end) : 0.0f;
       transform->SetRotate(angle, cx, cy);
     }      
+    else if (keyatom == nsSVGAtoms::skewX) {
+      char* arg1 = nsCRT::strtok(args, delimiters3, &args);
+      if (!arg1) break; // parse error
+
+      char* end;
+      float angle = (float) PR_strtod(arg1, &end);
+      transform->SetSkewX(angle);
+    }  
+    else if (keyatom == nsSVGAtoms::skewY) {
+      char* arg1 = nsCRT::strtok(args, delimiters3, &args);
+      if (!arg1) break; // parse error
+
+      char* end;
+      float angle = (float) PR_strtod(arg1, &end);
+      transform->SetSkewY(angle);
+    }  
     else { // parse error
       break;
     }    

@@ -67,11 +67,14 @@ SVG_ATOM(rx, "rx")
 SVG_ATOM(ry, "ry")
 SVG_ATOM(style, "style")
 SVG_ATOM(transform, "transform")
-SVG_ATOM(viewBox, "viewBox")  
+SVG_ATOM(viewBox, "viewBox")
 SVG_ATOM(width, "width")
 SVG_ATOM(x, "x")
 SVG_ATOM(y, "y")
-
+SVG_ATOM(x1, "x1")
+SVG_ATOM(y1, "y1")
+SVG_ATOM(x2, "x2")
+SVG_ATOM(y2, "y2")
   
 // transformation keywords
 SVG_ATOM(rotate, "rotate")

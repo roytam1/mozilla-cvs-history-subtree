@@ -293,15 +293,37 @@ NS_IMETHODIMP nsSVGMatrix::FlipY(nsIDOMSVGMatrix **_retval)
 /* nsIDOMSVGMatrix skewX (in float angle); */
 NS_IMETHODIMP nsSVGMatrix::SkewX(float angle, nsIDOMSVGMatrix **_retval)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  Create(_retval);
+  if (!*_retval) return NS_ERROR_OUT_OF_MEMORY;
+  
+  double ta = tan( angle*radPerDegree );
+  
+  (*_retval)->SetA( mA );
+  (*_retval)->SetB( mB );
+  (*_retval)->SetC( (float) ( mC + mA*ta) );
+  (*_retval)->SetD( (float) ( mD + mB*ta) );
+  (*_retval)->SetE( mE );
+  (*_retval)->SetF( mF );  
+  
+  return NS_OK;
 }
 
 /* nsIDOMSVGMatrix skewY (in float angle); */
 NS_IMETHODIMP nsSVGMatrix::SkewY(float angle, nsIDOMSVGMatrix **_retval)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  Create(_retval);
+  if (!*_retval) return NS_ERROR_OUT_OF_MEMORY;
+  
+  double ta = tan( angle*radPerDegree );
+  
+  (*_retval)->SetA( (float) (mA + mC*ta) );
+  (*_retval)->SetB( (float) (mB + mD*ta) );
+  (*_retval)->SetC( mC );
+  (*_retval)->SetD( mD );
+  (*_retval)->SetE( mE );
+  (*_retval)->SetF( mF ); 
+  
+  return NS_OK;
 }
 
 

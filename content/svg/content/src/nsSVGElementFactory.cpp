@@ -33,10 +33,14 @@
 extern nsresult NS_NewSVGPolylineElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
 extern nsresult NS_NewSVGPolygonElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
 extern nsresult NS_NewSVGCircleElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
+extern nsresult NS_NewSVGEllipseElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
+extern nsresult NS_NewSVGLineElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
+extern nsresult NS_NewSVGRectElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
 extern nsresult NS_NewSVGGElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
 extern nsresult NS_NewSVGSVGElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
 extern nsresult NS_NewSVGForeignObjectElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
 extern nsresult NS_NewSVGPathElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
+
 
 class nsSVGElementFactory : public nsIElementFactory
 {
@@ -101,6 +105,12 @@ nsSVGElementFactory::CreateInstanceByTag(nsINodeInfo *aNodeInfo,
     return NS_NewSVGPolygonElement(aResult, aNodeInfo);
   else if (name == nsSVGAtoms::circle)
     return NS_NewSVGCircleElement(aResult, aNodeInfo);
+  else if (name == nsSVGAtoms::ellipse)
+    return NS_NewSVGEllipseElement(aResult, aNodeInfo);
+  else if (name == nsSVGAtoms::line)
+    return NS_NewSVGLineElement(aResult, aNodeInfo);
+  else if (name == nsSVGAtoms::rect)
+    return NS_NewSVGRectElement(aResult, aNodeInfo);
   else if (name == nsSVGAtoms::svg)
     return NS_NewSVGSVGElement(aResult, aNodeInfo);
   else if (name == nsSVGAtoms::g)

@@ -140,6 +140,12 @@ NS_NewSVGPolygonFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame**
 extern nsresult
 NS_NewSVGCircleFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
 extern nsresult
+NS_NewSVGEllipseFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
+extern nsresult
+NS_NewSVGLineFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
+extern nsresult
+NS_NewSVGRectFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
+extern nsresult
 NS_NewSVGGFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
 extern nsresult
 NS_NewSVGGenericContainerFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
@@ -7152,6 +7158,12 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
     rv = NS_NewSVGPolylineFrame(aPresShell, aContent, &newFrame);
   else if (aTag == nsSVGAtoms::circle)
     rv = NS_NewSVGCircleFrame(aPresShell, aContent, &newFrame);
+  else if (aTag == nsSVGAtoms::ellipse)
+    rv = NS_NewSVGEllipseFrame(aPresShell, aContent, &newFrame);
+  else if (aTag == nsSVGAtoms::line)
+    rv = NS_NewSVGLineFrame(aPresShell, aContent, &newFrame);
+  else if (aTag == nsSVGAtoms::rect)
+    rv = NS_NewSVGRectFrame(aPresShell, aContent, &newFrame);
   else if (aTag == nsSVGAtoms::foreignObject) {
     processChildren = PR_TRUE;
     rv = NS_NewSVGForeignObjectFrame(aPresShell, aContent, &newFrame);

@@ -30,16 +30,19 @@ DEFINES= -D_IMPL_NS_HTML -DWIN32_LEAN_AND_MEAN
 CPP_OBJS=					                 \
   .\$(OBJDIR)\nsSVGBPathBuilder.obj          \
   .\$(OBJDIR)\nsSVGCircleFrame.obj           \
+  .\$(OBJDIR)\nsSVGEllipseFrame.obj          \
   .\$(OBJDIR)\nsSVGFill.obj                  \
   .\$(OBJDIR)\nsSVGForeignObjectFrame.obj    \
   .\$(OBJDIR)\nsSVGGFrame.obj                \
   .\$(OBJDIR)\nsSVGGenericContainerFrame.obj \
   .\$(OBJDIR)\nsSVGGraphic.obj               \
   .\$(OBJDIR)\nsSVGGraphicFrame.obj          \
+  .\$(OBJDIR)\nsSVGLineFrame.obj             \
   .\$(OBJDIR)\nsSVGOuterSVGFrame.obj         \
   .\$(OBJDIR)\nsSVGPathFrame.obj             \
   .\$(OBJDIR)\nsSVGPolygonFrame.obj          \
   .\$(OBJDIR)\nsSVGPolylineFrame.obj         \
+  .\$(OBJDIR)\nsSVGRectFrame.obj             \
   .\$(OBJDIR)\nsSVGRenderItem.obj            \
   .\$(OBJDIR)\nsSVGRenderingContext.obj      \
   .\$(OBJDIR)\nsSVGStroke.obj                \
