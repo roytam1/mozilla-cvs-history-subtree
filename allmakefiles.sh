@@ -40,12 +40,12 @@ fi
 
 add_makefiles <<END_NGMAKEFILES
 Makefile
-#build/Makefile
-#build/unix/Makefile
+build/Makefile
+build/unix/Makefile
 #build/unix/nspr_my_config.mk
 #build/unix/nspr_my_overrides.mk
-#build/package/rpm/mozilla.spec
-#build/package/rpm/nspr-pthreads.spec
+build/package/rpm/mozilla.spec
+build/package/rpm/nspr-pthreads.spec
 config/Makefile
 config/autoconf.mk
 config/mkdepend/Makefile
@@ -373,6 +373,7 @@ xpcom/reflect/xptcall/src/Makefile
 xpcom/reflect/xptcall/src/md/Makefile
 xpcom/reflect/xptcall/src/md/test/Makefile
 xpcom/reflect/xptcall/src/md/unix/Makefile
+xpcom/reflect/xptcall/src/md/win32/Makefile
 xpcom/reflect/xptcall/tests/Makefile
 xpcom/reflect/xptinfo/Makefile
 xpcom/reflect/xptinfo/public/Makefile
