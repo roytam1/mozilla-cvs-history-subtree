@@ -267,7 +267,7 @@ void CleanupPreviousVersionRegKeys(void)
       }
     }
 
-  } while(szRvSubKey);
+  } while(*szRvSubKey);
 }
 
 void ProcessFileOps(DWORD dwTiming, char *szSectionPrefix)
