@@ -32,8 +32,6 @@
 
 //#define SSU_DEBUG
 
-#define APP_NAME "nsz.exe"
-
 /* Function to show the usage for this application */
 void ShowUsage(char *name)
 {
