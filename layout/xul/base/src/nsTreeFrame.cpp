@@ -210,7 +210,7 @@ nsTreeFrame::HandleEvent(nsIPresContext& aPresContext,
       treeRowGroup->EnsureRowIsVisible(rowIndex);
 
       // Now that the row is scrolled into view, we have a frame created. We can retrieve the cell.
-      nsTreeCellFrame* cellFrame;
+      nsTreeCellFrame* cellFrame=nsnull;
       treeRowGroup->GetCellFrameAtIndex(rowIndex, cellIndex, &cellFrame);
       if (!cellFrame)
         return NS_OK; // No cell. Whatever. Bail.
