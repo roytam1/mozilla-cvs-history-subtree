@@ -697,16 +697,20 @@ Statements(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 	return NULL;
     PN_INIT_LIST(pn);
 
+    ts->flags |= TSF_REGEXP;
     while ((tt = js_PeekToken(cx, ts)) > TOK_EOF && tt != TOK_RC) {
+	ts->flags &= ~TSF_REGEXP;
 	pn2 = Statement(cx, ts, tc);
 	if (!pn2)
             return NULL;
 	PN_APPEND(pn, pn2);
+        ts->flags |= TSF_REGEXP;
     }
+    ts->flags &= ~TSF_REGEXP;
+    if (tt == TOK_ERROR)
+	return NULL;
 
     pn->pn_pos.end = CURRENT_TOKEN(ts).pos.end;
-    if (tt == TOK_ERROR)
-	pn = NULL;
     return pn;
 }
 
