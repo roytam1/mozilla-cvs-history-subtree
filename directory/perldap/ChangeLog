@@ -1,3 +1,15 @@
+1999-08-16  Kevin McCarthy  <kmccarth@perldap.org> and Leif Hedstrom
+
+	* API.xs: Cleaned most all the memory allocation changes, we are
+	changing it to use the LDAP_OPT_MEMALLOC_FN_PTRS option in the
+	C-SDK instead (much cleaner!).
+	(perldap_init): New function, set up the memory management
+	handlers. This is called when the API module is loaded.
+	(perldap_malloc): New function, our memory management method(s).
+	(perldap_calloc): Ditto.
+	(perldap_realloc): Ditto.
+	(perldap_free): Ditto.
+
 1999-08-16  Kevin McCarthy  <kmccarth@perldap.org>
 
 	* API.xs: Cleaned up prototypes, changed strdup() to use a
