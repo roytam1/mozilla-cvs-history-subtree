@@ -2646,9 +2646,6 @@ nsFrame::IsFrameTreeTooDeep(const nsHTMLReflowState& aReflowState,
     aMetrics.mOverflowArea.y = 0;
     aMetrics.mOverflowArea.width = 0;
     aMetrics.mOverflowArea.height = 0;
-    if (aMetrics.mComputeMEW) {
-      aMetrics.mMaxElementWidth = 0;
-    }
     return PR_TRUE;
   }
   mState &= ~NS_FRAME_IS_UNFLOWABLE;
@@ -5145,7 +5142,7 @@ nsFrame::BoxReflow(nsBoxLayoutState& aState,
                    nscoord                  aHeight,
                    PRBool                   aMoveFrame)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsBoxToBlockAdaptor", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsBoxToBlockAdaptor");
 
 #ifdef DEBUG_REFLOW
   nsAdaptorAddIndents();
@@ -6236,28 +6233,7 @@ static void DisplayReflowEnterPrint(nsPresContext*          aPresContext,
 
     DR_state->PrettyUC(aReflowState.availableWidth, width);
     DR_state->PrettyUC(aReflowState.availableHeight, height);
-    if (aReflowState.path && aReflowState.path->mReflowCommand) {
-      nsReflowType type;
-      aReflowState.path->mReflowCommand->GetType(type);
-      const char *incr_reason;
-      switch(type) {
-        case eReflowType_ContentChanged:
-          incr_reason = "incr. (Content)";
-          break;
-        case eReflowType_StyleChanged:
-          incr_reason = "incr. (Style)";
-          break;
-        case eReflowType_ReflowDirty:
-          incr_reason = "incr. (Dirty)";
-          break;
-        default:
-          incr_reason = "incr. (Unknown)";
-      }
-      printf("r=%d %s a=%s,%s ", aReflowState.reason, incr_reason, width, height);
-    }
-    else {
-      printf("r=%d a=%s,%s ", aReflowState.reason, width, height);
-    }
+    printf("a=%s,%s ", width, height);
 
     DR_state->PrettyUC(aReflowState.mComputedWidth, width);
     DR_state->PrettyUC(aReflowState.mComputedHeight, height);
