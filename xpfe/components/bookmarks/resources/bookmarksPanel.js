@@ -44,8 +44,6 @@ function Startup()
 {
   var bookmarksView = document.getElementById("bookmarks-view");  
   bookmarksView.treeBoxObject.selection.select(0);
-  bookmarksView.tree.focus();
-  
 }
 
 function manageBookmarks() {
@@ -54,8 +52,13 @@ function manageBookmarks() {
 
 function addBookmark() {
   var contentArea = top.document.getElementById('content');                   
-  if (contentArea)                                                       
-    BookmarksUtils.addBookmarkForBrowser(contentArea.webNavigation, true);    
+  if (contentArea) {
+    const browsers = contentArea.browsers;
+    if (browsers.length > 1)
+      BookmarksUtils.addBookmarkForTabBrowser(contentArea);
+    else
+      BookmarksUtils.addBookmarkForBrowser(contentArea.webNavigation, true);    
+  }
   else
     BookmarksUtils.addBookmark(null, null, undefined, true);
 }
