@@ -44,7 +44,7 @@
 /*
  * Creates a new DocumentFunctionCall.
  */
-DocumentFunctionCall::DocumentFunctionCall(const String& aBaseURI)
+DocumentFunctionCall::DocumentFunctionCall(const nsAString& aBaseURI)
     : mBaseURI(aBaseURI)
 {
 }
@@ -65,7 +65,7 @@ ExprResult* DocumentFunctionCall::evaluate(txIEvalContext* aContext)
         txListIterator iter(&params);
         Expr* param1 = (Expr*)iter.next();
         ExprResult* exprResult1 = param1->evaluate(aContext);
-        String baseURI;
+        nsAutoString baseURI;
         MBool baseURISet = MB_FALSE;
 
         if (iter.hasNext()) {
@@ -74,7 +74,7 @@ ExprResult* DocumentFunctionCall::evaluate(txIEvalContext* aContext)
             Expr* param2 = (Expr*)iter.next();
             ExprResult* exprResult2 = param2->evaluate(aContext);
             if (exprResult2->getResultType() != ExprResult::NODESET) {
-                String err("node-set expected as second argument to document(): ");
+                nsAutoString err(NS_LITERAL_STRING("node-set expected as second argument to document(): "));
                 toString(err);
                 aContext->receiveError(err, NS_ERROR_XPATH_INVALID_ARG);
                 delete exprResult1;
@@ -89,7 +89,7 @@ ExprResult* DocumentFunctionCall::evaluate(txIEvalContext* aContext)
 
             NodeSet* nodeSet2 = (NodeSet*) exprResult2;
             if (!nodeSet2->isEmpty()) {
-                baseURI = nodeSet2->get(0)->getBaseURI();
+                nodeSet2->get(0)->getBaseURI(baseURI);
             }
             delete exprResult2;
         }
@@ -100,29 +100,24 @@ ExprResult* DocumentFunctionCall::evaluate(txIEvalContext* aContext)
             int i;
             for (i = 0; i < nodeSet1->size(); i++) {
                 Node* node = nodeSet1->get(i);
-                String uriStr;
+                nsAutoString uriStr;
                 XMLDOMUtils::getNodeValue(node, uriStr);
                 if (!baseURISet) {
                     // if the second argument wasn't specified, use
                     // the baseUri of node itself
-                    //nodeSet->add(mProcessorState->retrieveDocument(uriStr, node->getBaseURI()));
+                    node->getBaseURI(baseURI);
                 }
-                else {
-                    //nodeSet->add(mProcessorState->retrieveDocument(uriStr, baseURI));
-                }
+                //nodeSet->add(mProcessorState->retrieveDocument(uriStr, baseURI));
             }
         }
         else {
             // The first argument is not a NodeSet
-            String uriStr;
+            nsAutoString uriStr;
             exprResult1->stringValue(uriStr);
             if (!baseURISet) {
-                //nodeSet->add(mProcessorState->retrieveDocument(uriStr,
-                //                                               mBaseURI));
+                //mDefResolveNode->getBaseURI(baseURI);
             }
-            else {
-                //nodeSet->add(mProcessorState->retrieveDocument(uriStr, baseURI));
-            }
+            //nodeSet->add(mProcessorState->retrieveDocument(uriStr, baseURI));
         }
         delete exprResult1;
     }
@@ -130,9 +125,9 @@ ExprResult* DocumentFunctionCall::evaluate(txIEvalContext* aContext)
     return nodeSet;
 }
 
-nsresult DocumentFunctionCall::getNameAtom(txAtom** aAtom)
+nsresult DocumentFunctionCall::getNameAtom(nsIAtom** aAtom)
 {
     *aAtom = txXSLTAtoms::document;
-    TX_ADDREF_ATOM(*aAtom);
+    NS_ADDREF(*aAtom);
     return NS_OK;
 }

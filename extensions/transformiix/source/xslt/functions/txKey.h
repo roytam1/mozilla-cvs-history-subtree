@@ -63,7 +63,7 @@ public:
     PLDHashNumber GetHash() const
     {
         return mKeyName.mNamespaceID ^
-               NS_PTR_TO_INT32(mKeyName.mLocalName) ^
+               NS_PTR_TO_INT32(mKeyName.mLocalName.get()) ^
                NS_PTR_TO_INT32(mDocument) ^
                HashString(mKeyValue);
     }
@@ -102,7 +102,7 @@ public:
     PLDHashNumber GetHash() const
     {
         return mKeyName.mNamespaceID ^
-               NS_PTR_TO_INT32(mKeyName.mLocalName) ^
+               NS_PTR_TO_INT32(mKeyName.mLocalName.get()) ^
                NS_PTR_TO_INT32(mDocument);
     }
 

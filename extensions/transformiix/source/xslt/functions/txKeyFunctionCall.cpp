@@ -51,7 +51,7 @@ txKeyFunctionCall::txKeyFunctionCall(txNamespaceMap& aMappings)
 ExprResult* txKeyFunctionCall::evaluate(txIEvalContext* aContext)
 {
     if (!aContext || !requireParams(2, 2, aContext))
-        return new StringResult("error");
+        return new StringResult(NS_LITERAL_STRING("error"));
 
     NodeSet* res = new NodeSet;
     if (!res) {
@@ -60,7 +60,7 @@ ExprResult* txKeyFunctionCall::evaluate(txIEvalContext* aContext)
     }
 
     txListIterator iter(&params);
-    String keyQName;
+    nsAutoString keyQName;
     evaluateToString((Expr*)iter.next(), aContext, keyQName);
 
     txExpandedName keyName;
@@ -83,7 +83,7 @@ ExprResult* txKeyFunctionCall::evaluate(txIEvalContext* aContext)
         NodeSet* nodeSet = (NodeSet*) exprResult;
         int i;
         for (i = 0; i < nodeSet->size(); ++i) {
-            String val;
+            nsAutoString val;
             XMLDOMUtils::getNodeValue(nodeSet->get(i), val);
             NodeSet* nodes = 0;
             //rv = mProcessorState->getKeyValue(keyName, contextDoc, val,
@@ -91,7 +91,7 @@ ExprResult* txKeyFunctionCall::evaluate(txIEvalContext* aContext)
             if (NS_FAILED(rv)) {
                 delete res;
                 delete exprResult;
-                return new StringResult("error");
+                return new StringResult(NS_LITERAL_STRING("error"));
             }
             if (nodes) {
                 res->add(nodes);
@@ -99,7 +99,7 @@ ExprResult* txKeyFunctionCall::evaluate(txIEvalContext* aContext)
         }
     }
     else {
-        String val;
+        nsAutoString val;
         exprResult->stringValue(val);
         NodeSet* nodes = 0;
         //rv = mProcessorState->getKeyValue(keyName, contextDoc, val,
@@ -107,7 +107,7 @@ ExprResult* txKeyFunctionCall::evaluate(txIEvalContext* aContext)
         if (NS_FAILED(rv)) {
             delete res;
             delete exprResult;
-            return new StringResult("error");
+            return new StringResult(NS_LITERAL_STRING("error"));
         }
         if (nodes) {
             res->append(nodes);
@@ -117,10 +117,10 @@ ExprResult* txKeyFunctionCall::evaluate(txIEvalContext* aContext)
     return res;
 }
 
-nsresult txKeyFunctionCall::getNameAtom(txAtom** aAtom)
+nsresult txKeyFunctionCall::getNameAtom(nsIAtom** aAtom)
 {
     *aAtom = txXSLTAtoms::key;
-    TX_ADDREF_ATOM(*aAtom);
+    NS_ADDREF(*aAtom);
     return NS_OK;
 }
 
@@ -309,7 +309,7 @@ nsresult txXSLKey::indexDocument(Document* aDocument,
                                  PLDHashTable* aKeyValueHash,
                                  txExecutionState* aEs)
 {
-    txKeyValueHashKey key(aKeyName, aDocument, NS_LITERAL_STRING(""));
+    txKeyValueHashKey key(aKeyName, aDocument, nsString());
     return indexTree(aDocument, &key, aKeyValueHash, aEs);
 }
 
@@ -358,7 +358,7 @@ nsresult txXSLKey::indexTree(Node* aNode, txKeyValueHashKey* aKey,
 nsresult txXSLKey::testNode(Node* aNode, txKeyValueHashKey* aKey,
                             PLDHashTable* aKeyValueHash, txExecutionState* aEs)
 {
-    String val;
+    nsAutoString val;
     txListIterator iter(&mKeys);
     while (iter.hasNext())
     {
@@ -371,7 +371,7 @@ nsresult txXSLKey::testNode(Node* aNode, txKeyValueHashKey* aKey,
             if (exprResult->getResultType() == ExprResult::NODESET) {
                 NodeSet* res = (NodeSet*)exprResult;
                 for (int i=0; i<res->size(); i++) {
-                    val.clear();
+                    val.Truncate();
                     XMLDOMUtils::getNodeValue(res->get(i), val);
 
                     aKey->mKeyValue.Assign(val);

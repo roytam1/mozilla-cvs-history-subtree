@@ -64,7 +64,7 @@ FunctionAvailableFunctionCall::FunctionAvailableFunctionCall(txNamespaceMap& aMa
 **/
 ExprResult* FunctionAvailableFunctionCall::evaluate(txIEvalContext* aContext)
 {
-    ExprResult* result = NULL;
+    ExprResult* result = nsnull;
 
     if (requireParams(1, 1, aContext)) {
         txListIterator iter(&params);
@@ -72,7 +72,7 @@ ExprResult* FunctionAvailableFunctionCall::evaluate(txIEvalContext* aContext)
         ExprResult* exprResult = param->evaluate(aContext);
         if (exprResult &&
             exprResult->getResultType() == ExprResult::STRING) {
-            String property;
+            nsAutoString property;
             exprResult->stringValue(property);
             txExpandedName qname;
             nsresult rv = qname.init(property, mMappings, MB_FALSE);
@@ -118,7 +118,7 @@ ExprResult* FunctionAvailableFunctionCall::evaluate(txIEvalContext* aContext)
             }
         }
         else {
-            String err("Invalid argument passed to function-available, expecting String");
+            NS_NAMED_LITERAL_STRING(err, "Invalid argument passed to function-available, expecting String");
             aContext->receiveError(err, NS_ERROR_XPATH_INVALID_ARG);
             result = new StringResult(err);
         }
@@ -132,9 +132,9 @@ ExprResult* FunctionAvailableFunctionCall::evaluate(txIEvalContext* aContext)
     return result;
 }
 
-nsresult FunctionAvailableFunctionCall::getNameAtom(txAtom** aAtom)
+nsresult FunctionAvailableFunctionCall::getNameAtom(nsIAtom** aAtom)
 {
     *aAtom = txXSLTAtoms::functionAvailable;
-    TX_ADDREF_ATOM(*aAtom);
+    NS_ADDREF(*aAtom);
     return NS_OK;
 }

@@ -25,11 +25,7 @@
 #include "txAtoms.h"
 #include "txIXPathContext.h"
 #include "XSLTFunctions.h"
-#ifdef TX_EXE
-#include <stdio.h>
-#else
 #include "prprf.h"
-#endif
 
 /*
   Implementation of XSLT 1.0 extension function: generate-id
@@ -73,8 +69,7 @@ ExprResult* GenerateIdFunctionCall::evaluate(txIEvalContext* aContext)
             return 0;
 
         if (exprResult->getResultType() != ExprResult::NODESET) {
-            String err("Invalid argument passed to generate-id(), "
-                       "expecting NodeSet");
+            NS_NAMED_LITERAL_STRING(err, "Invalid argument passed to generate-id(), expecting NodeSet");
             aContext->receiveError(err, NS_ERROR_XPATH_INVALID_ARG);
             delete exprResult;
             return new StringResult(err);
@@ -94,17 +89,13 @@ ExprResult* GenerateIdFunctionCall::evaluate(txIEvalContext* aContext)
 
     // generate id for selected node
     char buf[22];
-#ifdef TX_EXE
-    sprintf(buf, printfFmt, node);
-#else
     PR_snprintf(buf, 21, printfFmt, node);
-#endif
-    return new StringResult(buf);
+    return new StringResult(NS_ConvertASCIItoUCS2(buf));
 }
 
-nsresult GenerateIdFunctionCall::getNameAtom(txAtom** aAtom)
+nsresult GenerateIdFunctionCall::getNameAtom(nsIAtom** aAtom)
 {
     *aAtom = txXSLTAtoms::generateId;
-    TX_ADDREF_ATOM(*aAtom);
+    NS_ADDREF(*aAtom);
     return NS_OK;
 }
