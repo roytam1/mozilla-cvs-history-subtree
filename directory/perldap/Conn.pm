@@ -36,7 +36,7 @@ use Mozilla::LDAP::Entry 1.0300 ();
 use strict;
 use vars qw($VERSION);
 
-$VERSION = "1.0303";
+$VERSION = "1.0400";
 
 
 #############################################################################

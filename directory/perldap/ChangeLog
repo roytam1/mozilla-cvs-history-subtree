@@ -1,3 +1,8 @@
+1999-08-18  Leif Hedstrom  <leif@netscape.com>
+
+	* Set version number to v1.4! Woohoo! Also tagged it as v1.3.4,
+	last "development" release.
+
 1999-08-17  Leif Hedstrom  <leif@netscape.com>
 
 	* Makefile.PL: Fixes for Windows/NT, cleaned out some code etc.
