@@ -26,12 +26,11 @@
 
 /**
  * A utility class for use with XML DOM implementations
- * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
 **/
 #include "dom.h"
 
-#ifndef MITRE_XMLDOMUTILS_H
-#define MITRE_XMLDOMUTILS_H
+#ifndef TRANSFRMX_XMLDOMUTILS_H
+#define TRANSFRMX_XMLDOMUTILS_H
 
 class XMLDOMUtils {
 
