@@ -22,6 +22,7 @@
 
 #include "nsISupports.idl"
 
+interface nsISOAPStruct;
 interface nsISupportsArray;
 
 /**
@@ -81,10 +82,8 @@ interface nsISOAPParameter : nsISupports {
    *   <li><code>#array</code> - The value is of type
    *       nsISupportsArray (each element is itself an instance of 
    *       nsISOAPParameter).</li>
-   *   <li><code>#js#&lt;actual js class&gt;</code> - The value is
-   *       a generic JSObject of type <class>.</li>
-   *   <li><code>#iid#&lt;actual uuid&gt;</code> - The value is
-   *       implementation of iid.</li>
+   *   <li><code>#struct#&lt;struct type&gt;</code> - The value is
+   *       a soap struct interface.</li>
    *   <li>Types not beginning with '#' are permitted for custom uses</li>
    * </ul>
    * </p>
@@ -109,7 +108,7 @@ interface nsISOAPParameter : nsISupports {
    * value, callers should use a specialized language constructor or
    * setAs methods.</p>
    */
-  [noscript] readonly attribute nsISupports value;
+  [noscript] attribute nsISupports value;
 
   /**
    * A convenience method to set the value and type as a AString.
@@ -184,14 +183,13 @@ interface nsISOAPParameter : nsISupports {
   void setAsArray(in nsISupportsArray aValue);
 
   /**
-   * A convenience method to set the value and type as an XPCOM
-   * interface.
-   * This sets the type to "#iid#&lt;specific uuid&gt;".
+   * A convenience method to set the value and type as a struct
+   * This sets the type to "#struct#&lt;struct type&gt;".
    *
-   * @param aIID In nsIIDRef, iid of xpcom object.
-   * @param aValue In nsISupports parameter specifying value.
+   * @param aStructType In AString, type of struct
+   * @param aValue In nsISOAPStruct parameter specifying value.
    */
-  void setAsInterface(in nsIIDRef aIID, in nsISupports aValue);
+  void setAsStruct(in AString aStructType, in nsISOAPStruct aValue);
 };
 
 %{ C++

@@ -183,7 +183,7 @@ NS_IMETHODIMP nsSOAPJSValue::GetMember(const nsAReadableString& name, nsISOAPPar
     nsCOMPtr<nsISupports>value;
     rv = nsSOAPJSValue::ConvertJSValToValue(mContext, val, getter_AddRefs(value), type);
     if (NS_FAILED(rv)) return rv;
-    rv = newparam->SetAsInterface(NS_GET_IID(nsISOAPParameter), value);
+    rv = newparam->SetValue(value);
     if (NS_FAILED(rv)) return rv;
     rv = newparam->SetType(type);
     if (NS_FAILED(rv)) return rv;
@@ -373,9 +373,6 @@ nsSOAPJSValue::ConvertValueToJSVal(JSContext* aContext,
 
       *vp = OBJECT_TO_JSVAL(arrayobj);
 
-//  We really should wrap an IID with a JS Native wrapper here, if I knew how
-//  } else if (nsAutoString(aType).RFind(nsSOAPUtils::kIIDObjectTypePrefix, false, 0) >= 0) {
-
   } else if (nsAutoString(aType).RFind(nsSOAPUtils::kStructTypePrefix, false, 0) >= 0) {
       
       nsCOMPtr<nsISOAPJSValue> jsvalue = do_QueryInterface(aValue);
@@ -507,7 +504,7 @@ nsSOAPJSValue::ConvertJSValToValue(JSContext* aContext,
           if (NS_FAILED(rc)) 
             return rc;
 
-          param->SetAsInterface(NS_GET_IID(nsISOAPParameter), xpcval);
+          param->SetValue(xpcval);
           param->SetType(type);
         }
         value->InsertElementAt(param, index);
@@ -520,7 +517,7 @@ nsSOAPJSValue::ConvertJSValToValue(JSContext* aContext,
       nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
       xpc->GetWrappedNativeOfJSObject(aContext, jsobj, getter_AddRefs(wrapper));
 
-//  We could handle wrapped native objects differently, but what type should we use?
+//  We should be able to get a better name if we know it is wrapped, but how?
 //      if (wrapper) {
 //      }
 //      else 
@@ -599,7 +596,7 @@ nsSOAPJSValue::ConvertJSArgsToValue(JSContext* aContext,
       }
       nsCOMPtr<nsISOAPParameter> newparam = new nsSOAPParameter();
       if (!newparam) return NS_ERROR_OUT_OF_MEMORY;
-      newparam->SetAsInterface(NS_GET_IID(nsISOAPParameter), newparam);
+      newparam->SetValue(newparam);
       newparam->SetType(type);
       array->InsertElementAt(newparam, count - argc - 1);
     }

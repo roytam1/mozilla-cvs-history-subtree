@@ -104,6 +104,12 @@ NS_IMETHODIMP nsSOAPParameter::GetValue(nsISupports * *aValue)
   NS_IF_ADDREF(*aValue);
   return NS_OK;
 }
+/* void setValue (in nsISupports aValue); */
+NS_IMETHODIMP nsSOAPParameter::SetValue(nsISupports *aValue)
+{
+    mValue = aValue;
+    return NS_OK;
+}
 
 /* void setAsWString (in DOMString aValue); */
 NS_IMETHODIMP nsSOAPParameter::SetAsWString(const nsAReadableString & aValue)
@@ -190,16 +196,6 @@ NS_IMETHODIMP nsSOAPParameter::SetAsArray(nsISupportsArray *aValue)
 {
     mType.Assign(nsSOAPUtils::kArrayType);
     mValue = NS_REINTERPRET_CAST(nsISupports*, aValue);
-    return NS_OK;
-}
-
-/* void setAsInterface (in nsIIDRef aIID, in nsISupports aValue); */
-NS_IMETHODIMP nsSOAPParameter::SetAsInterface(const nsIID & aIID, nsISupports *aValue)
-{
-    nsAutoString iid = NS_ConvertASCIItoUCS2(aIID.ToString());
-    mType.Assign(nsSOAPUtils::kIIDObjectTypePrefix);
-    mType.Append(iid);
-    mValue = aValue;
     return NS_OK;
 }
 

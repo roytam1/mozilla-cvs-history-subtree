@@ -183,7 +183,7 @@ nsSOAPStruct::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 	return rc;
     nsCOMPtr<nsISOAPParameter> parameter = do_CreateInstance(NS_SOAPPARAMETER_CONTRACTID);
     parameter->SetName(namestr);
-    parameter->SetAsInterface(NS_GET_IID(nsISOAPStruct), value);
+    parameter->SetValue(value);
     parameter->SetType(type);
     mMembers->Put(&nameKey, parameter);
   }
