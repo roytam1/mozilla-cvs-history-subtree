@@ -80,13 +80,13 @@ var personalToolbarObserver = {
       if (navigator.platform != "Win32" && aEvent.target.localName != "button")
         return;
         
-       if (aEvent.target.localName == "menu") {
+      if (aEvent.target.localName == "menu" || aEvent.target.localName == "menubutton") {
          var child = aEvent.target.childNodes[0];
-         if (child.localName == "menupopup")
+         if (child && child.localName == "menupopup")
            child.closePopup();
          else {
            var parent = aEvent.target.parentNode;
-           if (parent.localName == "menupopup")
+           if (parent && parent.localName == "menupopup")
              parent.closePopup();
          }
       }
