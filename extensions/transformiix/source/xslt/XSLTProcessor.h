@@ -258,6 +258,7 @@ private:
                       MBool allowShadowing,
                       ProcessorState* ps);
 
+
 #ifndef MOZ_XSL
 
     /**

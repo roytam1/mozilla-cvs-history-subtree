@@ -45,7 +45,6 @@
 #include "Tokenizer.h"
 #include "VariableBinding.h"
 #include "OutputFormat.h"
-#include "XSLTFunctions.h"
 
 /**
  * Class used for keeping the current state of the XSL Processor
@@ -123,6 +122,11 @@ public:
      * or null if no AttributeSet is found
     **/
     NodeSet* getAttributeSet(const String& name);
+
+    /**
+     * Returns the source node currently being processed
+    **/
+    Node* getCurrentNode();
 
     /**
      * Gets the default Namespace URI stack.
@@ -222,9 +226,21 @@ public:
     Node* popAction();
 
     /**
+     * Removes and returns the current node being processed from the stack
+     * @return the current node
+    **/
+    Node* popCurrentNode();
+
+    /**
      * Adds the given XSLT action to the top of the action stack
     **/
     void pushAction(Node* xsltAction);
+
+    /**
+     * Sets the given source node as the "current node" being processed
+     * @param node the source node currently being processed
+    **/
+    void pushCurrentNode(Node* node);
 
 
     /**
@@ -333,6 +349,8 @@ private:
         XSLTAction* prev;
     };
 
+    NodeStack currentNodeStack;
+
     /**
      * Allows us to overcome some DOM deficiencies
     **/
@@ -362,7 +380,7 @@ private:
     /**
      * Current stack of nodes, where we are in the result document tree
     **/
-    NodeStack*     nodeStack;
+    NodeStack*     resultNodeStack;
 
 
     /**

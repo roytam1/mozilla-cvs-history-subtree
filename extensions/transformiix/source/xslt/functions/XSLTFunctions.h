@@ -32,6 +32,7 @@
 #include "Names.h"
 #include "DOMHelper.h"
 #include "TxString.h"
+#include "ProcessorState.h"
 
 #ifndef TRANSFRMX_XSLT_FUNCTIONS_H
 #define TRANSFRMX_XSLT_FUNCTIONS_H
@@ -123,7 +124,7 @@ public:
     /**
      * Creates a new current() function call
     **/
-    CurrentFunctionCall();
+    CurrentFunctionCall(ProcessorState* ps);
 
     /**
      * Evaluates this Expr based on the given context node and processor state
@@ -136,6 +137,7 @@ public:
     virtual ExprResult* evaluate(Node* context, ContextState* cs);
 
 private:
+   ProcessorState* processorState;
 };
 
 /**

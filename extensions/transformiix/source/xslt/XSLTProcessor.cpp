@@ -866,6 +866,7 @@ void XSLTProcessor::processAction
 
         Element* actionElement = (Element*)xslAction;
         ps->pushAction(actionElement);
+        ps->pushCurrentNode(node);
 
         switch ( getElementType(nodeName, ps) ) {
 
@@ -1378,6 +1379,7 @@ void XSLTProcessor::processAction
                 break;
         } //-- switch
         ps->popAction();
+        ps->popCurrentNode();
     } //-- end if (element)
 
     //cout << "XSLTProcessor#processAction [exit]\n";
