@@ -1028,7 +1028,8 @@ public:
                             nsISupports* aSubContent);
   NS_IMETHOD ContentStatesChanged(nsIDocument* aDocument,
                                   nsIContent* aContent1,
-                                  nsIContent* aContent2);
+                                  nsIContent* aContent2,
+                                  nsIAtom* aChangedPseudoClass);
   NS_IMETHOD AttributeChanged(nsIDocument *aDocument,
                               nsIContent*  aContent,
                               PRInt32      aNameSpaceID,
@@ -3907,14 +3908,14 @@ PresShell::GoToAnchor(const nsAString& aAnchorName)
   }
 
   // Finally try FIXptr
-  nsCOMPtr<nsIDOMRange> fixPtrRange;
+  nsCOMPtr<nsIDOMRange> jumpToRange;
   if (!content) {
     nsCOMPtr<nsIDOMXMLDocument> xmldoc = do_QueryInterface(mDocument);
     if (xmldoc) {
-      xmldoc->EvaluateFIXptr(aAnchorName,getter_AddRefs(fixPtrRange));
-      if (fixPtrRange) {
+      xmldoc->EvaluateFIXptr(aAnchorName,getter_AddRefs(jumpToRange));
+      if (jumpToRange) {
         nsCOMPtr<nsIDOMNode> node;
-        fixPtrRange->GetStartContainer(getter_AddRefs(node));
+        jumpToRange->GetStartContainer(getter_AddRefs(node));
         if (node) {
           node->QueryInterface(NS_GET_IID(nsIContent),getter_AddRefs(content));
         }
@@ -3923,32 +3924,39 @@ PresShell::GoToAnchor(const nsAString& aAnchorName)
   }
  
   if (content) {
-    nsIFrame* frame;
+    nsIFrame* frame = nsnull;
 
     // Get the primary frame
-    if (NS_SUCCEEDED(GetPrimaryFrameFor(content, &frame))) {
+    if (NS_SUCCEEDED(GetPrimaryFrameFor(content, &frame)) && frame) {
       rv = ScrollFrameIntoView(frame, NS_PRESSHELL_SCROLL_TOP,
                                NS_PRESSHELL_SCROLL_ANYWHERE);
 
       if (NS_SUCCEEDED(rv)) {
         // Should we select the target?
         // This action is controlled by a preference: the default is to not select.
+        PRBool selectAnchor = PR_FALSE;
         nsCOMPtr<nsIPref> prefs(do_GetService(kPrefServiceCID,&rv));
         if (NS_SUCCEEDED(rv) && prefs) {
-          PRBool selectAnchor;
-          nsresult rvPref = prefs->GetBoolPref("layout.selectanchor",&selectAnchor);
-          if (NS_SUCCEEDED(rvPref) && selectAnchor) {
-            if (!fixPtrRange) {
-              nsCOMPtr<nsIDOMRange> range(do_CreateInstance(kRangeCID));
-              nsCOMPtr<nsIDOMNode> node(do_QueryInterface(content));
-              if (range && node) {
-                range->SelectNode(node);
-                SelectRange(range);
-              }
-            } else {
-              SelectRange(fixPtrRange);
-            }
-          }
+          prefs->GetBoolPref("layout.selectanchor",&selectAnchor);
+        }
+        // Even if select anchor pref is false, we must still move the caret there.
+        // That way tabbing will start from the new location
+        if (!jumpToRange) {
+          jumpToRange = do_CreateInstance(kRangeCID);
+          nsCOMPtr<nsIDOMNode> node(do_QueryInterface(content));
+          if (jumpToRange && node) 
+            jumpToRange->SelectNode(node);
+        }
+        if (jumpToRange) {
+          if (!selectAnchor)
+            jumpToRange->Collapse(PR_TRUE);
+          SelectRange(jumpToRange);
+        }
+        
+        nsCOMPtr<nsIEventStateManager> esm;
+        if (NS_SUCCEEDED(mPresContext->GetEventStateManager(getter_AddRefs(esm))) && esm) {
+          PRBool isSelectionWithFocus;
+          esm->MoveFocusToCaret(PR_TRUE, &isSelectionWithFocus);
         }
       }
     }
@@ -4238,6 +4246,7 @@ NS_IMETHODIMP PresShell::DoCopyLinkLocation(nsIDOMNode* aNode)
   NS_ENSURE_ARG_POINTER(aNode);
   nsresult rv;
   nsAutoString anchorText;
+  static char strippedChars[] = {'\t','\r','\n'};
 
   // are we an anchor?
   nsCOMPtr<nsIDOMHTMLAnchorElement> anchor(do_QueryInterface(aNode));
@@ -4300,6 +4309,9 @@ NS_IMETHODIMP PresShell::DoCopyLinkLocation(nsIDOMNode* aNode)
     nsCOMPtr<nsIClipboardHelper>
       clipboard(do_GetService("@mozilla.org/widget/clipboardhelper;1", &rv));
     NS_ENSURE_SUCCESS(rv, rv);
+     
+    //Remove all the '\t', '\r' and '\n' from 'anchorText'
+    anchorText.StripChars(strippedChars);
 
     // copy the href onto the clipboard
     return clipboard->CopyString(anchorText);
@@ -5095,10 +5107,12 @@ PresShell::ContentChanged(nsIDocument *aDocument,
 NS_IMETHODIMP
 PresShell::ContentStatesChanged(nsIDocument* aDocument,
                                 nsIContent* aContent1,
-                                nsIContent* aContent2)
+                                nsIContent* aContent2,
+                                nsIAtom* aChangedPseudoClass)
 {
   WillCauseReflow();
-  nsresult rv = mStyleSet->ContentStatesChanged(mPresContext, aContent1, aContent2);
+  nsresult rv = mStyleSet->ContentStatesChanged(mPresContext, aContent1, aContent2,
+                                                aChangedPseudoClass);
   VERIFY_STYLE_TREE;
   DidCauseReflow();
 
@@ -5210,6 +5224,11 @@ PresShell::ReconstructFrames(void)
   return rv;
 }
 
+/*
+ * It's better to add stuff to the |DidSetStyleContext| method of the
+ * relevant frames than adding it here.  This method should (ideally,
+ * anyway) go away.
+ */
 static nsresult 
 FlushMiscWidgetInfo(nsStyleChangeList& aChangeList, nsIPresContext* aPresContext, nsIFrame* aFrame)
 {
@@ -5246,12 +5265,7 @@ FlushMiscWidgetInfo(nsStyleChangeList& aChangeList, nsIPresContext* aPresContext
     return NS_OK;
   }
 
-  // Outliners have a special style cache that needs to be flushed when
-  // the theme changes.
-  nsCOMPtr<nsIOutlinerBoxObject> outlinerBox(do_QueryInterface(aFrame));
-  if (outlinerBox)
-    outlinerBox->ClearStyleAndImageCaches();
-
+  // Perhaps this should move to the appropriate |DidSetStyleContext|?
   nsCOMPtr<nsIMenuFrame> menuFrame(do_QueryInterface(aFrame));
   if (menuFrame) {
     menuFrame->UngenerateMenu();   // We deliberately don't re-resolve style on
@@ -5272,7 +5286,7 @@ FlushMiscWidgetInfo(nsStyleChangeList& aChangeList, nsIPresContext* aPresContext
     while (child) {
       nsFrameState  state;
       child->GetFrameState(&state);
-      if (NS_FRAME_OUT_OF_FLOW != (state & NS_FRAME_OUT_OF_FLOW)) {
+      if (!(state & NS_FRAME_OUT_OF_FLOW)) {
         // only do frames that are in flow
         nsCOMPtr<nsIAtom> frameType;
         child->GetFrameType(getter_AddRefs(frameType));
@@ -5637,13 +5651,8 @@ PresShell::BidiStyleChangeReflow()
 
 //nsIViewObserver
 
-// If the element is absolutely positioned and has a specified clip rect
-// then it pushes the current rendering context and sets the clip rect.
-// Returns PR_TRUE if the clip rect is set and PR_FALSE otherwise
-static PRBool
-SetClipRect(nsIRenderingContext& aRenderingContext, nsIFrame* aFrame)
-{
-  PRBool clipState;
+// Return TRUE if any clipping is to be done.
+static PRBool ComputeClipRect(nsIFrame* aFrame, nsRect& aResult) {
   const nsStyleDisplay* display;
   aFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
   
@@ -5673,13 +5682,44 @@ SetClipRect(nsIRenderingContext& aRenderingContext, nsIFrame* aFrame)
       }
     }
 
+    aResult = clipRect;
+
+    return PR_TRUE;
+  }
+
+  return PR_FALSE;
+}
+
+// If the element is absolutely positioned and has a specified clip rect
+// then it pushes the current rendering context and sets the clip rect.
+// Returns PR_TRUE if the clip rect is set and PR_FALSE otherwise
+static PRBool
+SetClipRect(nsIRenderingContext& aRenderingContext, nsIFrame* aFrame)
+{
+  nsRect clipRect;
+
+  if (ComputeClipRect(aFrame, clipRect)) {
     // Set updated clip-rect into the rendering context
+    PRBool clipState;
+
     aRenderingContext.PushState();
     aRenderingContext.SetClipRect(clipRect, nsClipCombine_kIntersect, clipState);
     return PR_TRUE;
   }
 
   return PR_FALSE;
+}
+
+static PRBool
+InClipRect(nsIFrame* aFrame, nsPoint& aEventPoint)
+{
+  nsRect clipRect;
+
+  if (ComputeClipRect(aFrame, clipRect)) {
+    return clipRect.Contains(aEventPoint);
+  } else {
+    return PR_TRUE;
+  }
 }
 
 NS_IMETHODIMP
@@ -5881,7 +5921,19 @@ PresShell::HandleEvent(nsIView         *aView,
           */
         }
       }
-      else {
+      else if (!InClipRect(frame, aEvent->point)) {
+        // we only check for the clip rect on this frame ... all frames with clip have views so any
+        // viewless children of this frame cannot have clip. Furthermore if the event is not in the clip
+        // for this frame, then none of the children can get it either.
+        if (aForceHandle) {
+          mCurrentEventFrame = frame;
+        }
+        else {
+          mCurrentEventFrame = nsnull;
+        }
+        aHandled = PR_FALSE;
+        rv = NS_OK;
+      } else {
         // aEvent->point is relative to aView's upper left corner. We need
         // a point that is in the same coordinate system as frame's rect
         // so that the frame->mRect.Contains(aPoint) calls in 
@@ -6672,7 +6724,8 @@ CompareTrees(nsIPresContext* aFirstPresContext, nsIFrame* aFirstFrame,
 
     nsRect r1, r2;
     nsIView* v1, *v2;
-    nsIWidget* w1, *w2;
+    nsCOMPtr<nsIWidget> w1;
+    nsCOMPtr<nsIWidget> w2;
     for (;;) {
       if (((nsnull == k1) && (nsnull != k2)) ||
           ((nsnull != k1) && (nsnull == k2))) {
@@ -6707,8 +6760,8 @@ CompareTrees(nsIPresContext* aFirstPresContext, nsIFrame* aFirstFrame,
             LogVerifyMessage(k1, k2, "(view rects)", r1, r2);
           }
 
-          v1->GetWidget(w1);
-          v2->GetWidget(w2);
+          v1->GetWidget(*getter_AddRefs(w1));
+          v2->GetWidget(*getter_AddRefs(w2));
           if (((nsnull == w1) && (nsnull != w2)) ||
               ((nsnull != w1) && (nsnull == w2))) {
             ok = PR_FALSE;
@@ -6983,8 +7036,8 @@ PresShell::VerifyIncrementalReflow()
   if (NS_OK == rv) {
     scrollView->GetScrollPreference(scrolling);
   }
-  nsIWidget* rootWidget;
-  rootView->GetWidget(rootWidget);
+  nsCOMPtr<nsIWidget> rootWidget;
+  rootView->GetWidget(*getter_AddRefs(rootWidget));
   void* nativeParentWidget = rootWidget->GetNativeData(NS_NATIVE_WIDGET);
 
   // Create a new view manager.

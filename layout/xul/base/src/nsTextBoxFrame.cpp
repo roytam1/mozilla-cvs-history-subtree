@@ -70,8 +70,8 @@
 #ifdef IBMBIDI
 #include "nsBidiUtils.h"
 #include "nsBidiPresUtils.h"
-#include "nsReadableUtils.h"
 #endif // IBMBIDI
+#include "nsReadableUtils.h"
 
 #define ELLIPSIS "..."
 
@@ -709,7 +709,7 @@ nsTextBoxFrame::UpdateAccessTitle()
     nsMenuBarListener::GetMenuAccessKey(&menuAccessKey);
     if (menuAccessKey) {
         if (!mAccessKey.IsEmpty()) {
-            if ((mTitle.Find(mAccessKey, PR_TRUE) == kNotFound) 
+            if (( !FindInReadable(mAccessKey, mTitle, nsCaseInsensitiveStringComparator()))
                 || AlwaysAppendAccessKey()) 
             {
                 nsAutoString tmpstring(NS_LITERAL_STRING("("));
@@ -717,10 +717,16 @@ nsTextBoxFrame::UpdateAccessTitle()
                 ToUpperCase(tmpstring);
                 tmpstring.Append(NS_LITERAL_STRING(")"));
                 PRInt32 offset = mTitle.RFind("...");
-                if (offset != kNotFound)
+                if (offset != kNotFound) {
                     mTitle.Insert(tmpstring,NS_STATIC_CAST(PRUint32, offset));
-                else
-                    mTitle += tmpstring;
+                } else {
+                    PRUint32 l = mTitle.Length();
+                    if((l > 0) && (PRUnichar(':')==mTitle[l-1])) {
+                      mTitle.Insert(tmpstring,l-1);
+                    } else {
+                      mTitle += tmpstring;
+                    }
+                }
             }
         }
     }
@@ -741,17 +747,34 @@ nsTextBoxFrame::UpdateAccessIndex()
             if (!mAccessKeyInfo)
                 mAccessKeyInfo = new nsAccessKeyInfo();
 
+            nsAString::const_iterator start, end;
+                
+            mCroppedTitle.BeginReading(start);
+            mCroppedTitle.EndReading(end);
+            
+            // remember the beginning of the string
+            nsAString::const_iterator originalStart = start;
+
+            PRBool found;
             if (!AlwaysAppendAccessKey()) {
-                // not appending access key - do case-sensitive search first
-                mAccessKeyInfo->mAccesskeyIndex = mCroppedTitle.Find(mAccessKey, PR_FALSE);
-                if (mAccessKeyInfo->mAccesskeyIndex == kNotFound) {
+                // not appending access key - do case-sensitive search
+                // first
+                found = FindInReadable(mAccessKey, start, end);
+                if (!found) {
                     // didn't find it - perform a case-insensitive search
-                    mAccessKeyInfo->mAccesskeyIndex = mCroppedTitle.Find(mAccessKey, PR_TRUE);
+                    start = originalStart;
+                    found = FindInReadable(mAccessKey, start, end,
+                                           nsCaseInsensitiveStringComparator());
                 }
             } else {
-                // use case-insensitive, reverse find for appended access keys
-                mAccessKeyInfo->mAccesskeyIndex = mCroppedTitle.RFind(mAccessKey, PR_TRUE);
+                found = RFindInReadable(mAccessKey, start, end,
+                                        nsCaseInsensitiveStringComparator());
             }
+            
+            if (found)
+                mAccessKeyInfo->mAccesskeyIndex = Distance(originalStart, start);
+            else
+                mAccessKeyInfo->mAccesskeyIndex = kNotFound;
         }
     }
 }

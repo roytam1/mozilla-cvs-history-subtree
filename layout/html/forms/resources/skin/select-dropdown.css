@@ -43,7 +43,7 @@
  **/
 
 select, select[size="1"] {
-  -moz-appearance: menulist;
+  /*-moz-appearance: menulist;*/
   margin: 2px 4px;
   border: 2px solid;
   -moz-border-top-colors: ThreeDShadow ThreeDDarkShadow;
@@ -62,13 +62,13 @@ xul|*.select-label-box {
 }
 
 xul|*.select-dropmarker {
-  -moz-appearance: menulist-button;
+  /*-moz-appearance: menulist-button;*/
   min-width: 17px;
   -moz-box-align: center;
   -moz-box-pack: center;
   border: 2px solid;
   background-color: -moz-Dialog;
-  list-style-image: url("chrome://global/skin/arrow/arrow-dn.gif");
+  list-style-image: url("chrome://forms/skin/arrow-dn.gif");
 }
 
 xul|*.select-dropmarker,
@@ -81,7 +81,7 @@ select[disabled="true"]:hover:active > xul|*.select-dropmarker {
 }
 
 select[disable="true"] > xul|*.select-dropmarker {
-  list-style-image: url("chrome://global/skin/arrow/arrow-dn-dis.gif");
+  list-style-image: url("chrome://forms/skin/arrow-dn-dis.gif");
 }
 
 select:hover:active > xul|*.select-dropmarker {
@@ -96,6 +96,10 @@ select:focus > xul|*.select-label-box {
   border: 1px dotted #F5DB95;
   background-color: Highlight;
   color: HighlightText;
+}
+
+xul|*.select-menupopup {
+  -moz-binding: url("chrome://global/content/bindings/popup.xml#popup-scrollbars");
 }
 
 /* ..... disabled state ..... */

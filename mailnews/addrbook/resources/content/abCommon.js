@@ -40,6 +40,7 @@
 
 var gResultsOutliner = 0;
 var dirTree = 0;
+var abList = 0;
 var gAbView = null;
 
 var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
@@ -226,6 +227,7 @@ function AbEditSelectedDirectory()
 function InitCommonJS()
 {
   dirTree = document.getElementById("dirTree");
+  abList = document.getElementById("addressbookList");
   gResultsOutliner = document.getElementById("abResultsOutliner");
 }
 
@@ -869,5 +871,47 @@ function DirPaneHasFocus()
 {
   // returns true if diectory pane has the focus. Returns false, otherwise.
   return (top.document.commandDispatcher.focusedElement == dirTree)
+}
+
+function onAbSearchKeyPress(event)
+{
+  // 13 == return
+  if (event && event.keyCode == 13) 
+    onAbSearchInput(true);
+}
+    
+function onAbSearchInput(returnKeyHit)
+{
+  SearchInputChanged();
+
+  if (gSearchTimer) {
+    clearTimeout(gSearchTimer);
+    gSearchTimer = null;
+  }
+
+  if (returnKeyHit) {
+    onEnterInSearchBar();
+  }
+  else {
+    gSearchTimer = setTimeout("onEnterInSearchBar();", 800);
+  }
+}
+
+function SearchInputChanged() 
+{
+  var clearButton = document.getElementById("clear");
+  if (clearButton) {
+    if (gSearchInput.value && (gSearchInput.value != ""))
+      clearButton.removeAttribute("disabled");
+    else
+      clearButton.setAttribute("disabled", "true");
+  }
+}
+
+function onAbClearSearch() 
+{
+  if (gSearchInput) 
+    gSearchInput.value ="";  //on input does not get fired for some reason
+  onAbSearchInput(true);
 }
 

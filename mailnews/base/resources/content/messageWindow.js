@@ -376,6 +376,13 @@ function SelectFolder(folderUri)
 	gCurrentFolderUri = folderUri;
 }
 
+function SelectMessage(messageUri)
+{
+  var msgHdr = messenger.messageServiceFromURI(messageUri).messageURIToMsgHdr(messageUri)
+  gDBView.loadMessageByMsgKey(msgHdr.messageKey);
+}
+ 
+
 function ReloadMessage()
 {
   gDBView.reloadMessage();
@@ -654,12 +661,13 @@ var MessageWindowController =
       case "cmd_synchronizeOffline":
         MsgSynchronizeOffline();
         return;
-			case "cmd_settingsOffline":
-				MsgSettingsOffline();
-				return;
-			case "cmd_nextUnreadMsg":
+      case "cmd_settingsOffline":
+        MsgSettingsOffline();
+        return;
+      case "cmd_nextUnreadMsg":
+      case "button_next":
         performNavigation(nsMsgNavigationType.nextUnreadMessage);
-				break;
+        break;
 			case "cmd_nextUnreadThread":      
         performNavigation(nsMsgNavigationType.nextUnreadThread);
 				break;

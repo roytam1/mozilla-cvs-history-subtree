@@ -337,7 +337,8 @@ nsXULTemplateBuilder::ContentChanged(nsIDocument *aDocument,
 NS_IMETHODIMP
 nsXULTemplateBuilder::ContentStatesChanged(nsIDocument* aDocument,
                                            nsIContent* aContent1,
-                                           nsIContent* aContent2)
+                                           nsIContent* aContent2,
+                                           nsIAtom* aChangedPseudoClass)
 {
     return NS_OK;
 }
@@ -1481,7 +1482,7 @@ nsXULTemplateBuilder::InitializeRuleNetwork()
     nsAutoString flags;
     mRoot->GetAttr(kNameSpaceID_None, nsXULAtoms::flags, flags);
 
-    if (flags.Find(NS_LITERAL_STRING("dont-test-empty").get()) >= 0)
+    if (flags.Find(NS_LITERAL_STRING("dont-test-empty")) >= 0)
         mFlags |= eDontTestEmpty;
 
     // Initialize the rule network

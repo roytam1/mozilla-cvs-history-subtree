@@ -165,23 +165,6 @@ nsChildView::~nsChildView()
     [mView release];
   }
   
-  // notify the children that we're gone
-//FIXME do we still need this?
-  nsCOMPtr<nsIEnumerator> children ( getter_AddRefs(GetChildren()) );
-  if (children)
-  {
-    children->First();
-    do
-    {
-      nsISupports* child;
-      if (NS_SUCCEEDED(children->CurrentItem(&child)))
-      {
-        nsChildView* childWindow = static_cast<nsChildView*>(static_cast<nsIWidget*>(child));
-        NS_RELEASE(child);
-      }
-    } while (NS_SUCCEEDED(children->Next()));     
-  }
-      
   NS_IF_RELEASE(mTempRenderingContext); 
   NS_IF_RELEASE(mFontMetrics);
   
@@ -1257,12 +1240,21 @@ NS_IMETHODIMP nsChildView::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
 
     NSRect frame = [mView bounds];
     NSRect horizInvalid = frame;
-    horizInvalid.size.height = abs(aDy);
-    if ( aDy < 0 )
-        horizInvalid.origin.y = frame.origin.y + frame.size.height + aDy;
+    NSRect vertInvalid = frame;
+
+    horizInvalid.size.width = abs(aDx);
+    vertInvalid.size.height = abs(aDy);
+    if (aDy < 0)
+      vertInvalid.origin.y = frame.origin.y + frame.size.height + aDy;
+    if (aDx < 0)
+      horizInvalid.origin.x = frame.origin.x + frame.size.width + aDx;
+
+    if (aDx != 0)
+      [mView setNeedsDisplayInRect: horizInvalid];
+
     if (aDy != 0)
-        [mView setNeedsDisplayInRect: horizInvalid];
-  
+      [mView setNeedsDisplayInRect: vertInvalid];
+    
     return NS_OK;
 }
 
@@ -1518,48 +1510,6 @@ PRBool nsChildView::PointInWidget(Point aThePoint)
   return(widgetRect.Contains(aThePoint.h, aThePoint.v));
 }
 
-
-//-------------------------------------------------------------------------
-// FindWidgetHit
-//    Recursively look for the widget hit
-//    @param aParent   -- parent widget. 
-//    @param aThePoint -- a point in local coordinates to test for the hit. 
-//-------------------------------------------------------------------------
-nsChildView*  nsChildView::FindWidgetHit(Point aThePoint)
-{
-  if (!mVisible || !PointInWidget(aThePoint))
-    return nsnull;
-
-  nsChildView* widgetHit = this;
-
-  nsCOMPtr<nsIEnumerator> normalEnum ( getter_AddRefs(GetChildren()) );
-  nsCOMPtr<nsIBidirectionalEnumerator> children ( do_QueryInterface(normalEnum) );
-  if (children)
-  {
-    // traverse through all the nsChildViews to find out who got hit, lowest level of course
-    children->Last();
-    do
-    {
-      nsISupports* child;
-      if (NS_SUCCEEDED(children->CurrentItem(&child)))
-      {
-        nsChildView* childWindow = static_cast<nsChildView*>(static_cast<nsIWidget*>(child));
-        NS_RELEASE(child);
-
-        nsChildView* deeperHit = childWindow->FindWidgetHit(aThePoint);
-        if (deeperHit)
-        {
-          widgetHit = deeperHit;
-          break;
-        }
-      }
-    }
-    while (NS_SUCCEEDED(children->Prev()));
-  }
-
-  return widgetHit;
-}
-
 #pragma mark -
 
 
@@ -1722,6 +1672,33 @@ nsChildView::GetQuickDrawPort()
 
 
 @implementation ChildView
+
+-(NSMenu*)menuForEvent:(NSEvent*)theEvent
+{
+  int button = [theEvent buttonNumber];
+  if (button == 1) {
+    // The right mouse went down.  Fire off a right mouse down and
+    // then send the context menu event.
+    nsMouseEvent geckoEvent;
+    geckoEvent.eventStructType = NS_MOUSE_EVENT;
+    [self convert: theEvent message: NS_MOUSE_RIGHT_BUTTON_DOWN toGeckoEvent:&geckoEvent];
+    geckoEvent.clickCount = 1;
+    mGeckoChild->DispatchMouseEvent(geckoEvent);
+  }
+
+  // Fire the context menu event into Gecko.
+  nsMouseEvent geckoEvent;
+  geckoEvent.eventStructType = NS_MOUSE_EVENT;
+  [self convert:theEvent message:NS_CONTEXTMENU toGeckoEvent:&geckoEvent];
+  geckoEvent.clickCount = 0;
+  
+  // send event into Gecko by going directly to the
+  // the widget.
+  mGeckoChild->DispatchMouseEvent(geckoEvent);
+  
+  // Go up our view chain to fetch the correct menu to return.
+  return nil;
+}
 
 
 //
@@ -1888,7 +1865,13 @@ nsChildView::GetQuickDrawPort()
 
 - (void)mouseDragged:(NSEvent*)theEvent
 {
-  [self mouseMoved: theEvent];
+    nsMouseEvent geckoEvent;
+    geckoEvent.eventStructType = NS_MOUSE_EVENT;
+    [self convert:theEvent message:NS_MOUSE_MOVE toGeckoEvent:&geckoEvent];
+    
+    // send event into Gecko by going directly to the
+    // the widget.
+    mGeckoChild->DispatchMouseEvent(geckoEvent);    
 }
 
 - (void)mouseEntered:(NSEvent*)theEvent
@@ -1900,6 +1883,32 @@ nsChildView::GetQuickDrawPort()
 {
   printf("got mouse EXIT view\n");
 }
+
+- (void)otherMouseDown:(NSEvent *)theEvent
+{
+  nsMouseEvent geckoEvent;
+  geckoEvent.eventStructType = NS_MOUSE_EVENT;
+  [self convert:theEvent message:NS_MOUSE_MIDDLE_BUTTON_DOWN toGeckoEvent:&geckoEvent];
+  geckoEvent.clickCount = [theEvent clickCount];
+  
+  // send event into Gecko by going directly to the
+  // the widget.
+  mGeckoChild->DispatchMouseEvent(geckoEvent);
+  
+} // otherMouseDown
+
+
+- (void)otherMouseUp:(NSEvent *)theEvent
+{
+  nsMouseEvent geckoEvent;
+  geckoEvent.eventStructType = NS_MOUSE_EVENT;
+  [self convert:theEvent message:NS_MOUSE_MIDDLE_BUTTON_UP toGeckoEvent:&geckoEvent];
+  
+  // send event into Gecko by going directly to the
+  // the widget.
+  mGeckoChild->DispatchMouseEvent(geckoEvent);
+  
+} // mouseUp
 
 const PRInt32 kNumLines = 8;
 
@@ -1937,13 +1946,11 @@ const PRInt32 kNumLines = 8;
   
   if (outGeckoEvent->eventStructType != NS_KEY_EVENT) {
     NSPoint mouseLoc = [inEvent locationInWindow];
-    outGeckoEvent->refPoint.x = NS_STATIC_CAST(nscoord, mouseLoc.x);
-    outGeckoEvent->refPoint.y = NS_STATIC_CAST(nscoord, mouseLoc.y);
     
     // convert point to view coordinate system
     NSPoint localPoint = [self convertPoint:mouseLoc fromView:nil];
-    outGeckoEvent->point.x = NS_STATIC_CAST(nscoord, localPoint.x);
-    outGeckoEvent->point.y = NS_STATIC_CAST(nscoord, localPoint.y);
+    outGeckoEvent->refPoint.x = outGeckoEvent->point.x = NS_STATIC_CAST(nscoord, localPoint.x);
+    outGeckoEvent->refPoint.y = outGeckoEvent->point.y = NS_STATIC_CAST(nscoord, localPoint.y);
 
     if (outGeckoEvent->message == NS_MOUSE_SCROLL) {
       outGeckoEvent->refPoint.x = outGeckoEvent->refPoint.y = 0;
@@ -2013,11 +2020,8 @@ const PRInt32 kNumLines = 8;
       mGeckoChild->DispatchWindowEvent(geckoEvent);
     }
   }
-  else {
-    // XXXdwh. Check to see if we're a context menu key.  If so,
-    // fire a context menu event instead.
+  else
     mGeckoChild->DispatchWindowEvent(geckoEvent);
-  }
 }
 
 - (void)keyUp:(NSEvent*)theEvent;
@@ -2030,6 +2034,39 @@ const PRInt32 kNumLines = 8;
         isChar: &isChar
         toGeckoEvent: &geckoEvent];
   mGeckoChild->DispatchWindowEvent(geckoEvent);
+}
+
+// This method is called when we are about to be focused.
+- (BOOL)becomeFirstResponder
+{
+  nsFocusEvent event;
+  event.eventStructType = NS_FOCUS_EVENT;
+  event.message = NS_GOTFOCUS;
+  event.widget = mGeckoChild;
+
+  //focus and blur event should go to their base widget loc
+  event.point.x = 0;
+  event.point.y = 0;
+
+  mGeckoChild->DispatchWindowEvent(event);
+  return [super becomeFirstResponder];
+}
+
+// This method is called when are are about to lose focus.
+- (BOOL)resignFirstResponder
+{
+  nsFocusEvent event;
+  event.eventStructType = NS_FOCUS_EVENT;
+  event.message = NS_LOSTFOCUS;
+  event.widget = mGeckoChild;
+
+  //focus and blur event should go to their base widget loc
+  event.point.x = 0;
+  event.point.y = 0;
+
+  mGeckoChild->DispatchWindowEvent(event);
+
+  return [super resignFirstResponder];
 }
 
 //-------------------------------------------------------------------------

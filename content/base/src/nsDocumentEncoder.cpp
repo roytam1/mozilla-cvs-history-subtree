@@ -167,6 +167,7 @@ protected:
   nsAutoVoidArray   mStartOffsets;
   nsAutoVoidArray   mEndNodes;
   nsAutoVoidArray   mEndOffsets;
+  PRPackedBool      mIsCopying;  // Set to PR_TRUE only while copying
 };
 
 #ifdef XP_MAC
@@ -240,6 +241,7 @@ nsDocumentEncoder::Init(nsIDocument* aDocument,
   mMimeType = aMimeType;
 
   mFlags = aFlags;
+  mIsCopying = PR_FALSE;
 
   return NS_OK;
 }
@@ -905,7 +907,7 @@ nsDocumentEncoder::EncodeToString(nsAWritableString& aOutputString)
     rv = mCharsetConverterManager->GetCharsetAtom(mCharset.get(), getter_AddRefs(charsetAtom));
     NS_ENSURE_SUCCESS(rv, rv);
   }
-  mSerializer->Init(mFlags, mWrapColumn, charsetAtom);
+  mSerializer->Init(mFlags, mWrapColumn, charsetAtom, mIsCopying);
 
   if (mSelection) {
     nsCOMPtr<nsIDOMRange> range;
@@ -1075,6 +1077,7 @@ nsHTMLCopyEncoder::Init(nsIDocument* aDocument,
   if (!aDocument)
     return NS_ERROR_INVALID_ARG;
 
+  mIsCopying = PR_TRUE;
   mDocument = aDocument;
 
   mMimeType = NS_LITERAL_STRING("text/html");
@@ -1141,7 +1144,7 @@ nsHTMLCopyEncoder::SetSelection(nsISelection* aSelection)
       nsCOMPtr<nsIDOMElement> bodyElem = do_QueryInterface(selContent);
       nsAutoString wsVal;
       rv = bodyElem->GetAttribute(NS_LITERAL_STRING("style"), wsVal);
-      if (NS_SUCCEEDED(rv) && (kNotFound != wsVal.Find(NS_LITERAL_STRING("-moz-pre-wrap").get())))
+      if (NS_SUCCEEDED(rv) && (kNotFound != wsVal.Find(NS_LITERAL_STRING("-moz-pre-wrap"))))
       {
         mIsTextWidget = PR_TRUE;
         break;
@@ -1300,7 +1303,9 @@ nsHTMLCopyEncoder::IncludeInContext(nsIDOMNode *aNode)
       tag.get() == nsHTMLAtoms::h3       ||
       tag.get() == nsHTMLAtoms::h4       ||
       tag.get() == nsHTMLAtoms::h5       ||
-      tag.get() == nsHTMLAtoms::h6) {
+      tag.get() == nsHTMLAtoms::h6       ||
+      tag.get() == nsHTMLAtoms::ol       ||
+      tag.get() == nsHTMLAtoms::li) {
     return PR_TRUE;
   }
 

@@ -461,7 +461,7 @@ var nsPublishCommand =
       if (filename)
       {
         // Try to get site data from the document url
-        publishData = GetPublishDataFromUrl(docUrl);
+        publishData = CreatePublishDataFromUrl(docUrl);
 
         // If none, use default publishing site
         //XXX Should we do this? Maybe bring up dialog instead?
@@ -480,8 +480,7 @@ var nsPublishCommand =
 
       // User needs to supply a filename or we didn't find publish data above
       // Bring up the dialog via cmd_publishAs, 
-      //   but set commandnode "state" attribute to "" to use default initial site
-      doStatefulCommand("cmd_publishAs", "");
+      goDoCommand("cmd_publishAs")
       return true;
     }
     return false;
@@ -501,25 +500,10 @@ var nsPublishAsCommand =
     {
       FinishHTMLSource();
 
-      // SiteName is stored in the "state" attribute on the command node
-      var siteName;
-      var commandNode = document.getElementById(aCommand);
-      if (commandNode)
-        siteName = commandNode.getAttribute("state");
-
-      var docUrl = GetDocumentUrl();
-      var filename = GetFilename(docUrl);
-      var publishData;
-
-      // Try to publish to a particular site
-      if (filename && siteName && (publishData = GetPublishDataFromSiteName(siteName, docUrl)))
-        return Publish(publishData);
-
-      // User needs to supply a filename or sitename or we didn't find publish data above
-      // Launch the publish dialog to initialized with requested sitename (or default if none)
       window.ok = false;
       publishData = {};
-      window.openDialog("chrome://editor/content/EditorPublish.xul","_blank", "chrome,close,titlebar,modal", "", siteName, publishData);
+      window.openDialog("chrome://editor/content/EditorPublish.xul","_blank", 
+                        "chrome,close,titlebar,modal", "", "", publishData);
       window._content.focus();
       if (window.ok)
         return Publish(publishData);
@@ -711,7 +695,8 @@ var gPersistObj;
 // Don't forget to do these things after calling OutputFileWithPersistAPI:
 //    window.editorShell.doAfterSave(doUpdateURLOnDocument, urlstring);  // we need to update the url before notifying listeners
 //    if (!aSaveCopy && success)
-//      window.editorShell.editor.ResetModificationCount();  // this should cause notification to listeners that document has changed
+//      window.editorShell.editor.resetModificationCount();
+      // this should cause notification to listeners that document has changed
 
 const webPersist = Components.interfaces.nsIWebBrowserPersist;
 function OutputFileWithPersistAPI(editorDoc, aDestinationLocation, aRelatedFilesParentDir, aMimeType)
@@ -755,6 +740,7 @@ function OutputFileWithPersistAPI(editorDoc, aDestinationLocation, aRelatedFiles
     persistObj.persistFlags = persistObj.persistFlags 
                             | webPersist.PERSIST_FLAGS_NO_BASE_TAG_MODIFICATIONS
                             | webPersist.PERSIST_FLAGS_REPLACE_EXISTING_FILES
+                            | webPersist.PERSIST_FLAGS_FIXUP_LINKS_TO_DESTINATION
                             | webPersist.PERSIST_FLAGS_FIXUP_ORIGINAL_DOM;
     persistObj.saveDocument(editorDoc, aDestinationLocation, aRelatedFilesParentDir, 
                             aMimeType, outputFlags, wrapColumn);
@@ -850,15 +836,37 @@ var gEditorOutputProgressListener =
 
       dump("\n");
     }
-    // This is how to detect end of file upload of HTML file:
+    // Detect end of file upload of HTML file:
     if (gPublishData)
     {
       var pubSpec = gPublishData.publishUrl + gPublishData.docDir + gPublishData.filename;
+
       if ((aStateFlags & nsIWebProgressListener.STATE_STOP) &&
           (aStateFlags & nsIWebProgressListener.STATE_IS_NETWORK)
            && requestSpec && requestSpec == pubSpec)
       {
-        // Do window.editorShell.doAfterSave(true, docUrl) and related stuff here
+        // Get the new docUrl from the "browse location" in case "publish location" was FTP
+        var urlstring = GetDocUrlFromPublishData(gPublishData);
+        
+        if (aStatus)
+        {
+          // we should provide more meaningful errors (if possible)
+          var saveDocStr = GetString("Publish");
+          var failedStr = GetString("PublishFailed");
+          AlertWithTitle(saveDocStr, failedStr);
+
+          return;  // we don't want to change location or reset mod count, etc.
+        }
+
+        try {
+          window.editorShell.doAfterSave(true, urlstring);  // we need to update the url before notifying listeners
+          var editor = window.editorShell.editor.QueryInterface(Components.interfaces.nsIEditor);
+          editor.resetModificationCount();
+          // this should cause notification to listeners that doc has changed
+
+          // Set UI based on whether we're editing a remote or local url
+          SetSaveAndPublishUI(urlstring);
+        } catch (e) {}
       }
     }
   },
@@ -1246,10 +1254,6 @@ function SaveDocument(aSaveAs, aSaveCopy, aMimeType)
   }
   catch (e)
   {
-    // XXX we need to change these strings if we are publishing!!!
-    var saveDocStr = GetString("SaveDocument");
-    var failedStr = GetString("SaveFileFailed");
-    AlertWithTitle(saveDocStr, failedStr);
     success = false;
   }
 
@@ -1258,11 +1262,18 @@ function SaveDocument(aSaveAs, aSaveCopy, aMimeType)
     try {
       window.editorShell.doAfterSave(doUpdateURL, urlstring);  // we need to update the url before notifying listeners
       if (!aSaveCopy)
-        window.editorShell.editor.ResetModificationCount();  // this should cause notification to listeners that document has changed
+        window.editorShell.editor.resetModificationCount();
+      // this should cause notification to listeners that document has changed
 
       // Set UI based on whether we're editing a remote or local url
-      SetSaveAndPublishUI(urlString);
+      SetSaveAndPublishUI(urlstring);
     } catch (e) {}
+  }
+  else
+  {
+    var saveDocStr = GetString("SaveDocument");
+    var failedStr = GetString("SaveFileFailed");
+    AlertWithTitle(saveDocStr, failedStr);
   }
   return success;
 }
@@ -1280,82 +1291,16 @@ function Publish(publishData)
   if (!docURI)
     return false;
 
-  // Set global for username password requests
+  // Set data in global for username password requests
+  //  and to do "post saving" actions after monitoring nsIWebProgressListener messages
+  //  and we are sure file transfer was successful
   gPublishData = publishData;
 
   var otherFilesURI = CreateURIFromPublishData(publishData, false);
   var success = OutputFileWithPersistAPI(window.editorShell.editorDocument, 
                                          docURI, otherFilesURI, window.editorShell.contentsMIMEType);
 
-  if (success)
-  {
-    //XXX We really shouldn't continue here unless we get confirmation that file was really uploaded
-    // Get the new docUrl from the "browse location" in case "publish location" was FTP
-    var urlString = GetDocUrlFromPublishData(publishData);
-
-    try {
-      window.editorShell.doAfterSave(true, urlString);  // we need to update the url before notifying listeners
-      window.editorShell.editor.ResetModificationCount();  // this should cause notification to listeners that document has changed
-
-      // Set UI based on whether we're editing a remote or local url
-      SetSaveAndPublishUI(urlString);
-    } catch (e) {}
-  }
   return success;
-}
-
-function InitPublishMenu()
-{
-  var publishSitesSeparator = document.getElementById("publishSitesSeparator");
-  if (!publishSitesSeparator)
-    return;
-
-  var menupopup = publishSitesSeparator.parentNode;
-  if (!menupopup)
-    return;
-
-  // Clear existing site items
-  var next = publishSitesSeparator.nextSibling;
-  while (next)
-  {
-    var tmp = next.nextSibling
-    menupopup.removeChild(next);
-    next = tmp
-  }
-
-  // Get site name list: sorted, but put default name is first
-  var siteNameList = GetSiteNameList(true, true);
-  if (!siteNameList)
-  {
-    // No site data in prefs yet
-    SetElementHidden(publishSitesSeparator, true);
-    return;
-  }
-
-  SetElementHidden(publishSitesSeparator, false);
-
-  // Append sitenames to submenu
-  for (var i = 0; i < siteNameList.length; i++)
-  {
-    var menuItem = document.createElementNS(XUL_NS, "menuitem");
-    if (menuItem)
-    {
-      var accessKey;
-      if (i <= 9)
-        accessKey = String(i+1);
-      else if (i == 10)
-        accessKey = "0";
-      else
-        accessKey = " ";
-
-      menuItem.setAttribute("label", accessKey+" " + siteNameList[i]);
-      menuItem.setAttribute("value", siteNameList[i]);
-      if (accessKey != " ")
-        menuItem.setAttribute("accesskey", accessKey);
-
-      menupopup.appendChild(menuItem);
-    }
-  }
 }
 
 // Create a nsIURI object filled in with all required publishing info
@@ -1415,24 +1360,27 @@ function GetDocUrlFromPublishData(publishData)
 //   3. Shift accel+S keybinding to Save or Publish commands
 // Note: A new, unsaved file is treated as a local file
 //     (XXX Have a pref to treat as remote for user's who mostly edit remote?)
-function SetSaveAndPublishUI(urlString)
+function SetSaveAndPublishUI(urlstring)
 {
   // Associate the "save" keybinding with Save for local files, 
   //   or with Publish for remote files
-  var scheme = GetScheme(urlString);
+  var scheme = GetScheme(urlstring);
   var menuItem1;
   var menuItem2;
   var saveButton = document.getElementById("saveButton");
   var publishButton = document.getElementById("publishButton");
   var command;
+
   if (!scheme || scheme == "file")
   {
+    // Editing a new or local file
     menuItem1 = document.getElementById("publishMenuitem");
     menuItem2 = document.getElementById("saveMenuitem");
     command = "cmd_save";
+
+    // Hide "Publish". Show "Save" toolbar and menu items
     SetElementHidden(publishButton, true);
     SetElementHidden(saveButton, false);
-    SetElementHidden(menuItem2, false);
   }
   else
   {
@@ -1440,10 +1388,15 @@ function SetSaveAndPublishUI(urlString)
     menuItem1 = document.getElementById("saveMenuitem");
     menuItem2 = document.getElementById("publishMenuitem");
     command = "cmd_publish";
+
+    // Hide "Save", show "Publish" toolbar and menuitems
     SetElementHidden(saveButton, true);
     SetElementHidden(publishButton, false);
-    SetElementHidden(menuItem1, true);
   }
+
+  SetElementHidden(menuItem1, true);
+  SetElementHidden(menuItem2, false);
+
   var key = document.getElementById("savekb");
   if (key && command)
     key.setAttribute("observes", command);
@@ -1662,7 +1615,9 @@ var nsPrintCommand =
   {
     // In editor.js
     FinishHTMLSource();
-    window.editorShell.Print();
+    try {
+      window.editorShell.Print();
+    } catch (e) {}
   }
 };
 
@@ -1721,10 +1676,9 @@ var nsFindCommand =
     
     if (newfind)
     {
-      dump("Using new find dialog\n");
       try {
         window.openDialog("chrome://editor/content/EdReplace.xul", "_blank",
-                          "chrome,close,titlebar,modal", "");
+                          "chrome,dependent", "");
       }
       catch(ex) {
         dump("*** Exception: couldn't open Replace Dialog\n");
@@ -1732,7 +1686,6 @@ var nsFindCommand =
       window._content.focus();
     }
     else {
-      dump("Using old find\n");
       window.editorShell.Replace();
     }
   }
@@ -2242,6 +2195,7 @@ var nsObjectPropertiesCommand =
         case 'ol':
         case 'ul':
         case 'dl':
+        case 'li':
           goDoCommand("cmd_listProperties");
           break;
         case 'a':

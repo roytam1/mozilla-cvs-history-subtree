@@ -20,7 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Blake Ross <blakeross@telocity.com>
+ *   Blake Ross <blaker@netscape.com>
  *   Ben Goodger <ben@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
@@ -51,9 +51,9 @@
 #include "nsIRDFContainerUtils.h"
 #include "nsIWebProgressListener.h"
 #include "nsIURI.h"
+#include "nsIWebBrowserPersist.h"
 #include "nsILocalFile.h"
 #include "nsHashtable.h"
-#include "nsIWebBrowserPersist.h"
 #include "nsIRequest.h"
 #include "nsIObserver.h"
 #include "nsIStringBundle.h"
@@ -78,7 +78,7 @@ public:
 
 protected:
   nsresult GetDownloadsContainer(nsIRDFContainer** aResult);
-  nsresult GetProfileDownloadsFileURL(char** aDownloadsFileURL);
+  nsresult GetProfileDownloadsFileURL(nsCString& aDownloadsFileURL);
   nsresult GetInternalListener(nsIDownloadProgressListener** aInternalListener);
   nsresult GetDataSource(nsIRDFDataSource** aDataSource);
   nsresult AssertProgressInfo();
@@ -98,7 +98,8 @@ private:
   friend class nsDownload;
 };
 
-class nsDownload : public nsIDownload
+class nsDownload : public nsIDownload,
+                   public nsIWebProgressListener
 {
 public:
   NS_DECL_NSIWEBPROGRESSLISTENER
@@ -120,10 +121,14 @@ protected:
   nsresult GetTransferInformation(PRInt32* aCurr, PRInt32* aMax);
   nsresult GetDownloadState(DownloadState* aState);
   nsresult SetDownloadState(DownloadState aState);
+  nsresult SetOpeningWith(const PRUnichar* aOpeningWith);
+  nsresult SetStartTime(PRInt64 aStartTime);
 private:
   nsDownloadManager* mDownloadManager;
 
   nsString mDisplayName;
+  nsString mOpeningWith;
+
   nsCOMPtr<nsILocalFile> mTarget;
   nsCOMPtr<nsIURI> mSource;
   nsCOMPtr<nsIWebProgressListener> mListener;

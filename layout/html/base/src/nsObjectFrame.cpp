@@ -102,6 +102,7 @@
 #include "nsGfxCIID.h"
 #include "nsHTMLUtils.h"
 #include "nsUnicharUtils.h"
+#include "nsTransform2D.h"
 
 // headers for plugin scriptability
 #include "nsIScriptGlobalObject.h"
@@ -122,6 +123,7 @@
 #include "nsIMIMEService.h"
 #include "nsCExternalHandlerService.h"
 #include "nsICategoryManager.h"
+#include "nsIComponentRegistrar.h"
 
 #include "nsObjectFrame.h"
 #include "nsIObjectFrame.h"
@@ -433,22 +435,13 @@ void nsObjectFrame::IsSupportedImage(nsIContent* aContent, PRBool* aImage)
   nsresult rv = aContent->GetAttr(kNameSpaceID_HTML, nsHTMLAtoms::type, type);
   if((rv == NS_CONTENT_ATTR_HAS_VALUE) && (type.Length() > 0)) 
   {
-    // should be really call to imlib
-    if(type.EqualsIgnoreCase(IMAGE_GIF) ||
-       type.EqualsIgnoreCase(IMAGE_JPG) ||
-       type.EqualsIgnoreCase(IMAGE_PJPG)||
-       type.EqualsIgnoreCase(IMAGE_PNG) ||
-       type.EqualsIgnoreCase(IMAGE_PPM) ||
-       type.EqualsIgnoreCase(IMAGE_XBM) ||
-       type.EqualsIgnoreCase(IMAGE_XBM2)||
-       type.EqualsIgnoreCase(IMAGE_XBM3)||
-       type.EqualsIgnoreCase(IMAGE_BMP) ||
-       type.EqualsIgnoreCase(IMAGE_ICO) ||
-       type.EqualsIgnoreCase(IMAGE_MNG) ||
-       type.EqualsIgnoreCase(IMAGE_JNG))
-    {
+    nsCOMPtr<nsIComponentRegistrar> reg;
+    NS_GetComponentRegistrar(getter_AddRefs(reg));
+    PRBool isReg = PR_FALSE;
+    nsCAutoString decoderId(NS_LITERAL_CSTRING("@mozilla.org/image/decoder;2?type=") + NS_LossyConvertUCS2toASCII(type));
+    reg->IsContractIDRegistered(decoderId.get(), &isReg);
+    if (isReg)
       *aImage = PR_TRUE;
-    }
     return;
   }
 
@@ -842,8 +835,8 @@ nsObjectFrame::GetDesiredSize(nsIPresContext* aPresContext,
   aMetrics.descent = 0;
 
   // for EMBED and APPLET, default to 240x200 for compatibility
-  nsIAtom *atom;
-  mContent->GetTag(atom);
+  nsCOMPtr<nsIAtom> atom;
+  mContent->GetTag(*getter_AddRefs(atom));
   if ( nsnull != atom &&
      ((atom == nsHTMLAtoms::applet) || (atom == nsHTMLAtoms::embed))) {
     
@@ -868,21 +861,8 @@ nsObjectFrame::GetDesiredSize(nsIPresContext* aPresContext,
 
     if (NS_UNCONSTRAINEDSIZE != aReflowState.availableWidth)
       aMetrics.width = NSToCoordRound (factor * aReflowState.availableWidth);
-    else {  // unconstrained percent case
-      nsRect rect;
-      aPresContext->GetVisibleArea(rect);
-      nscoord w = rect.width;
-      // now make it nicely fit counting margins
-      nsIFrame *containingBlock = nsnull;
-      if (NS_SUCCEEDED(GetContainingBlock(this, &containingBlock)) && containingBlock) {
-        containingBlock->GetRect(rect);
-        w -= 2*rect.x;
-        // XXX: this math seems suspect to me.  Is the parent's margin really twice the x-offset?
-        //      in CSS, a frame can have independent top and bottom margins
-        // but for now, let's just copy what we had before
-      }
-      aMetrics.width = NSToCoordRound (factor * w);
-    }
+    else // unconstrained percent case
+      aMetrics.width = (NS_UNCONSTRAINEDSIZE == aReflowState.mComputedWidth) ? 0 : aReflowState.mComputedWidth;
   }
 
   // height
@@ -896,30 +876,12 @@ nsObjectFrame::GetDesiredSize(nsIPresContext* aPresContext,
 
     if (NS_UNCONSTRAINEDSIZE != aReflowState.availableHeight)
       aMetrics.height = NSToCoordRound (factor * aReflowState.availableHeight);
-    else {  // unconstrained percent case
-      nsRect rect;
-      aPresContext->GetVisibleArea(rect);
-      nscoord h = rect.height;
-      // now make it nicely fit counting margins
-      nsIFrame *containingBlock = nsnull;
-      if (NS_SUCCEEDED(GetContainingBlock(this, &containingBlock)) && containingBlock) {
-        containingBlock->GetRect(rect);
-        h -= 2*rect.y;
-        // XXX: this math seems suspect to me.  Is the parent's margin really twice the x-offset?
-        //      in CSS, a frame can have independent top and bottom margins
-        // but for now, let's just copy what we had before
-      }
-      aMetrics.height = NSToCoordRound (factor * h);
-    }
+    else // unconstrained percent case
+      aMetrics.height = (NS_UNCONSTRAINEDSIZE == aReflowState.mComputedHeight) ? 0 : aReflowState.mComputedHeight;
   }
+  
   // accent
   aMetrics.ascent = aMetrics.height;
-  
-  if (aMetrics.width || aMetrics.height) {
-    // Make sure that the other dimension is non-zero
-    if (!aMetrics.width) aMetrics.width = 1;
-    if (!aMetrics.height) aMetrics.height = 1;
-  }
 
   if (nsnull != aMetrics.maxElementSize) {
     aMetrics.maxElementSize->width = aMetrics.width;
@@ -947,8 +909,6 @@ nsObjectFrame::MakeAbsoluteURL(nsIURI* *aFullURI,
   return NS_NewURI(aFullURI, aSrc, NS_LossyConvertUCS2toASCII(originCharset).get(),
                    aBaseURI, nsHTMLUtils::IOService);
 }
-
-#define JAVA_CLASS_ID "8AD9C840-044E-11D1-B3E9-00805F499D93"
 
 NS_IMETHODIMP
 nsObjectFrame::Reflow(nsIPresContext*          aPresContext,
@@ -994,28 +954,17 @@ nsObjectFrame::Reflow(nsIPresContext*          aPresContext,
     // if we have a clsid, we're either an internal widget, an ActiveX control, or an applet
     mContent->GetNameSpaceID(nameSpaceID);
     if (NS_CONTENT_ATTR_HAS_VALUE == mContent->GetAttr(nameSpaceID, nsHTMLAtoms::classid, classid)) {
-      PRBool bJavaObject = PR_FALSE;
-      PRBool bJavaPluginClsid = PR_FALSE;
+      PRBool bJavaObject;
 
-      if (classid.Find("java:") != -1) {
-        classid.Cut(0, 5); // Strip off the "java:". What's left is the class file.
-        bJavaObject = PR_TRUE;
-      }
+      bJavaObject = !nsCRT::strncmp(classid.get(), NS_LITERAL_STRING("java:").get(), 5);
 
-      if (classid.Find("clsid:") != -1) {
-        classid.Cut(0, 6); // Strip off the "clsid:". What's left is the class ID.
-        bJavaPluginClsid = (classid.EqualsWithConversion(JAVA_CLASS_ID));
-      }
-
-      // if we find "java:" in the class id, or we match the Java
-      // classid number, we have a java applet
-      if(bJavaObject || bJavaPluginClsid) {
+      // if we find "java:" in the class id, we have a java applet
+      if(bJavaObject) {
         if (NS_FAILED(rv = GetBaseURL(*getter_AddRefs(baseURL)))) return rv;
 
         nsAutoString codeBase;
         if ((NS_CONTENT_ATTR_HAS_VALUE == 
-             mContent->GetAttr(kNameSpaceID_HTML, nsHTMLAtoms::codebase, codeBase)) && 
-            !bJavaPluginClsid) {
+          mContent->GetAttr(kNameSpaceID_HTML, nsHTMLAtoms::codebase, codeBase))) {          
           nsCOMPtr<nsIURI> codeBaseURL;
           rv = MakeAbsoluteURL(getter_AddRefs(codeBaseURL), codeBase, baseURL);
           if (NS_SUCCEEDED(rv)) {
@@ -1023,11 +972,7 @@ nsObjectFrame::Reflow(nsIPresContext*          aPresContext,
           }
         }
 
-        // Create an absolute URL
-        if(bJavaPluginClsid) {
-          rv = MakeAbsoluteURL(getter_AddRefs(fullURL), classid, baseURL);
-        }
-        else fullURL = baseURL;
+        fullURL = baseURL;
 
         // get the nsIPluginHost interface
         pluginHost = do_GetService(kCPluginManagerCID);
@@ -1223,9 +1168,9 @@ nsObjectFrame::InstantiateWidget(nsIPresContext*          aPresContext,
   if((rv = nsComponentManager::CreateInstance(aWidgetCID, nsnull, NS_GET_IID(nsIWidget), (void**)&mWidget)) != NS_OK)
     return rv;
 
-  nsIWidget *parent;
-  parentWithView->GetOffsetFromWidget(nsnull, nsnull, parent);
-  mWidget->Create(parent, r, nsnull, nsnull);
+  nsCOMPtr<nsIWidget> parent;
+  parentWithView->GetOffsetFromWidget(nsnull, nsnull, *getter_AddRefs(parent));
+  mWidget->Create(NS_STATIC_CAST(nsIWidget*,parent), r, nsnull, nsnull);
 
   mWidget->Show(PR_TRUE);
   return rv;
@@ -1794,9 +1739,11 @@ nsObjectFrame::Paint(nsIPresContext*      aPresContext,
           doupdatewindow = PR_TRUE;
         }
 
-        // check if we need to update window position
+        // Get the offset of the DC
+        nsTransform2D* rcTransform;
+        aRenderingContext.GetCurrentTransform(rcTransform);
         nsPoint origin;
-        GetWindowOriginInPixels(aPresContext, PR_TRUE, &origin);
+        rcTransform->GetTranslationCoord(&origin.x, &origin.y);
 
         if((window->x != origin.x) || (window->y != origin.y)) {
           window->x = origin.x;
@@ -2603,126 +2550,20 @@ NS_IMETHODIMP nsPluginInstanceOwner::GetAlignment(const char* *result)
   
 NS_IMETHODIMP nsPluginInstanceOwner::GetWidth(PRUint32 *result)
 {
-  nsresult    rv;
-  const char  *width;
+  NS_ENSURE_ARG_POINTER(result);
 
-  rv = GetAttribute("WIDTH", &width);
+  *result = mPluginWindow.width;
 
-  if (NS_OK == rv)
-  {
-    if (*result != 0)
-    {
-      *result = 0;
-
-      PRInt32 attr = atol(width);
-
-      if(nsnull == strchr(width, '%'))
-        *result = (PRUint32)attr;
-      else
-      {
-        if(mContext == nsnull)
-          return NS_ERROR_FAILURE;
-        
-        attr = (attr > 100) ? 100 : attr;
-        attr = (attr < 0) ? 0 : attr;
-
-        float t2p;
-
-        mContext->GetTwipsToPixels(&t2p);
-
-        nsRect rect;
-        mContext->GetVisibleArea(rect);
-
-        nscoord w = rect.width;
-
-        if(mOwner == nsnull)
-        {
-          *result = NSTwipsToIntPixels(attr*w/100, t2p);
-          return NS_OK;
-        }
-
-        // now make it nicely fit counting margins
-        nsIFrame *containingBlock=nsnull;
-        rv = GetContainingBlock(mOwner, &containingBlock);
-        if (NS_SUCCEEDED(rv) && containingBlock)
-        {
-          containingBlock->GetRect(rect);
-          w -= 2*rect.x;
-          // XXX: this math seems suspect to me.  Is the parent's margin really twice the x-offset?
-          //      in CSS, a frame can have independent left and right margins
-        }
-        *result = NSTwipsToIntPixels(attr*w/100, t2p);
-      }
-    }
-    else
-      *result = 0;
-  }
-  else
-    *result = 0;
-
-  return rv;
+  return NS_OK;
 }
   
 NS_IMETHODIMP nsPluginInstanceOwner::GetHeight(PRUint32 *result)
 {
-  nsresult    rv;
-  const char  *height;
+  NS_ENSURE_ARG_POINTER(result);
 
-  rv = GetAttribute("HEIGHT", &height);
+  *result = mPluginWindow.height;
 
-  if (NS_OK == rv)
-  {
-    if (*result != 0)
-    {
-      *result = 0;
-
-      PRInt32 attr = atol(height);
-
-      if(nsnull == strchr(height, '%'))
-        *result = (PRUint32)attr;
-      else
-      {
-        if(mContext == nsnull)
-          return NS_ERROR_FAILURE;
-        
-        attr = (attr > 100) ? 100 : attr;
-        attr = (attr < 0) ? 0 : attr;
-
-        float t2p;
-
-        mContext->GetTwipsToPixels(&t2p);
-
-        nsRect rect;
-        mContext->GetVisibleArea(rect);
-
-        nscoord h = rect.height;
-
-        if(mOwner == nsnull)
-        {
-          *result = NSTwipsToIntPixels(attr*h/100, t2p);
-          return NS_OK;
-        }
-
-        // now make it nicely fit counting margins
-        nsIFrame *containingBlock=nsnull;
-        rv = GetContainingBlock(mOwner, &containingBlock);
-        if (NS_SUCCEEDED(rv) && containingBlock)
-        {
-          containingBlock->GetRect(rect);
-          h -= 2*rect.y;
-          // XXX: this math seems suspect to me.  Is the parent's margin really twice the x-offset?
-          //      in CSS, a frame can have independent top and bottom margins
-        }
-        *result = NSTwipsToIntPixels(attr*h/100, t2p);
-      }
-    }
-    else
-      *result = 0;
-  }
-  else
-    *result = 0;
-
-  return rv;
+  return NS_OK;
 }
 
 // it would indicate a serious error in the frame model if aContainingBlock were null when 
@@ -2991,29 +2832,26 @@ nsresult nsPluginInstanceOwner::EnsureCachedAttrParamArrays()
   // now fill in the PARAM name/value pairs from the cached DOM nodes
   c = 0;
   for (PRInt16 idx = 0; idx < mNumCachedParams; idx++) {
-    nsCOMPtr<nsISupports> sup = ourParams->ElementAt(idx);
-    if (sup) {
-     nsCOMPtr<nsIDOMElement> param = do_QueryInterface(sup);
-     if (param) {
-       nsAutoString name;
-       nsAutoString value;
-       param->GetAttribute(NS_LITERAL_STRING("name"), name); // check for empty done above
-       param->GetAttribute(NS_LITERAL_STRING("value"), value);
-       /*
-        * According to the HTML 4.01 spec, at
-        * http://www.w3.org/TR/html4/types.html#type-cdata
-        * ''User agents may ignore leading and trailing
-        * white space in CDATA attribute values (e.g., "
-        * myval " may be interpreted as "myval"). Authors
-        * should not declare attribute values with
-        * leading or trailing white space.''
-        */            
-       name.CompressWhitespace();  // XXX right function?
-       value.CompressWhitespace();
-       mCachedAttrParamNames [mNumCachedAttrs + 1 + c] = ToNewUTF8String(name);
-       mCachedAttrParamValues[mNumCachedAttrs + 1 + c] = ToNewUTF8String(value);
-       c++;                                                      // rules!
-     }
+    nsCOMPtr<nsIDOMElement> param = do_QueryElementAt(ourParams, idx);
+    if (param) {
+     nsAutoString name;
+     nsAutoString value;
+     param->GetAttribute(NS_LITERAL_STRING("name"), name); // check for empty done above
+     param->GetAttribute(NS_LITERAL_STRING("value"), value);
+     /*
+      * According to the HTML 4.01 spec, at
+      * http://www.w3.org/TR/html4/types.html#type-cdata
+      * ''User agents may ignore leading and trailing
+      * white space in CDATA attribute values (e.g., "
+      * myval " may be interpreted as "myval"). Authors
+      * should not declare attribute values with
+      * leading or trailing white space.''
+      */            
+     name.CompressWhitespace();  // XXX right function?
+     value.CompressWhitespace();
+     mCachedAttrParamNames [mNumCachedAttrs + 1 + c] = ToNewUTF8String(name);
+     mCachedAttrParamValues[mNumCachedAttrs + 1 + c] = ToNewUTF8String(value);
+     c++;                                                      // rules!
     }
   }
 
@@ -3026,42 +2864,47 @@ nsresult nsPluginInstanceOwner::EnsureCachedAttrParamArrays()
 #ifdef XP_MAC
 
 #if TARGET_CARBON
-inline Boolean OSEventAvail(EventMask mask, EventRecord* event) { return EventAvail(mask, event); }
+static void InitializeEventRecord(EventRecord* event)
+{
+    memset(event, 0, sizeof(EventRecord));
+    GetGlobalMouse(&event->where);
+    event->when = TickCount();
+    event->modifiers = GetCurrentKeyModifiers();
+}
+#else
+inline void InitializeEventRecord(EventRecord* event) { ::OSEventAvail(0, event); }
 #endif
 
 void nsPluginInstanceOwner::GUItoMacEvent(const nsGUIEvent& anEvent, EventRecord& aMacEvent)
 {
-	::OSEventAvail(0, &aMacEvent);
-	
-	switch (anEvent.message) {
-  case NS_FOCUS_EVENT_START:   // this is the same as NS_FOCUS_CONTENT
-		aMacEvent.what = nsPluginEventType_GetFocusEvent;
-		if (mOwner && mOwner->mPresContext)
-		{
-		  nsCOMPtr<nsIContent> content;
-      mOwner->GetContent(getter_AddRefs(content));
-      if (content)
-        content->SetFocus(mOwner->mPresContext);
+    InitializeEventRecord(&aMacEvent);
+    switch (anEvent.message) {
+    case NS_FOCUS_EVENT_START:   // this is the same as NS_FOCUS_CONTENT
+        aMacEvent.what = nsPluginEventType_GetFocusEvent;
+        if (mOwner && mOwner->mPresContext) {
+            nsCOMPtr<nsIContent> content;
+            mOwner->GetContent(getter_AddRefs(content));
+            if (content)
+                content->SetFocus(mOwner->mPresContext);
+        }
+        break;
+    case NS_BLUR_CONTENT:
+        aMacEvent.what = nsPluginEventType_LoseFocusEvent;
+        if (mOwner && mOwner->mPresContext) {
+            nsCOMPtr<nsIContent> content;
+            mOwner->GetContent(getter_AddRefs(content));
+            if (content)
+                content->RemoveFocus(mOwner->mPresContext);
+        }
+        break;
+    case NS_MOUSE_MOVE:
+    case NS_MOUSE_ENTER:
+        aMacEvent.what = nsPluginEventType_AdjustCursorEvent;
+        break;
+    default:
+        aMacEvent.what = nullEvent;
+        break;
     }
-		break;
-	case NS_BLUR_CONTENT:
-		aMacEvent.what = nsPluginEventType_LoseFocusEvent;
-		if (mOwner && mOwner->mPresContext)
-		{
-		  nsCOMPtr<nsIContent> content;
-      mOwner->GetContent(getter_AddRefs(content));
-      if (content)
-        content->RemoveFocus(mOwner->mPresContext);
-    }
-		break;
-	case NS_MOUSE_MOVE:
-	case NS_MOUSE_ENTER:
-		aMacEvent.what = nsPluginEventType_AdjustCursorEvent;
-		break;
-	default:
-		aMacEvent.what = nullEvent;
-		break;
-	}
 }
 
 #endif
@@ -3071,7 +2914,7 @@ nsresult nsPluginInstanceOwner::ScrollPositionWillChange(nsIScrollableView* aScr
 #ifdef XP_MAC
     if (mInstance != NULL) {
         EventRecord scrollEvent;
-        ::OSEventAvail(0, &scrollEvent);
+        InitializeEventRecord(&scrollEvent);
         scrollEvent.what = nsPluginEventType_ScrollingBeginsEvent;
         
         nsPluginPort* pluginPort = GetPluginPort();
@@ -3089,7 +2932,7 @@ nsresult nsPluginInstanceOwner::ScrollPositionDidChange(nsIScrollableView* aScro
 #ifdef XP_MAC
     if (mInstance != NULL) {
         EventRecord scrollEvent;
-        ::OSEventAvail(0, &scrollEvent);
+        InitializeEventRecord(&scrollEvent);
         scrollEvent.what = nsPluginEventType_ScrollingEndsEvent;
 
         nsPluginPort* pluginPort = GetPluginPort();
@@ -3387,11 +3230,15 @@ nsEventStatus nsPluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
 #endif
 
 #ifdef XP_WIN
+        // this code supports windowless plugins
         nsPluginEvent * pPluginEvent = (nsPluginEvent *)anEvent.nativeMsg;
-        PRBool eventHandled = PR_FALSE;
-        mInstance->HandleEvent(pPluginEvent, &eventHandled);
-        if (eventHandled)
-            rv = nsEventStatus_eConsumeNoDefault;
+        // we can get synthetic events from the nsEventStateManager... these have no nativeMsg
+        if (pPluginEvent != nsnull) {
+            PRBool eventHandled = PR_FALSE;
+            mInstance->HandleEvent(pPluginEvent, &eventHandled);
+            if (eventHandled)
+                rv = nsEventStatus_eConsumeNoDefault;
+        }
 #endif
 
   return rv;
@@ -3513,7 +3360,7 @@ void nsPluginInstanceOwner::Paint(const nsRect& aDirtyRect, PRUint32 ndc)
   FixUpPluginWindow();
 
   EventRecord updateEvent;
-  ::OSEventAvail(0, &updateEvent);
+  InitializeEventRecord(&updateEvent);
   updateEvent.what = updateEvt;
   updateEvent.message = UInt32(pluginPort->port);
 
@@ -3557,7 +3404,7 @@ NS_IMETHODIMP_(void) nsPluginInstanceOwner::Notify(nsITimer* /* timer */)
     FixUpPluginWindow();
     if (mInstance != NULL) {
         EventRecord idleEvent;
-        ::OSEventAvail(0, &idleEvent);
+        InitializeEventRecord(&idleEvent);
         idleEvent.what = nullEvent;
         
         nsPluginPort* pluginPort = GetPluginPort();

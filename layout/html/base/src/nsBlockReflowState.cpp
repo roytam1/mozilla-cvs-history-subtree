@@ -47,6 +47,10 @@
 #include "nsLayoutAtoms.h"
 #include "nsIFrame.h"
 
+#include "nsINameSpaceManager.h"
+#include "nsHTMLAtoms.h"
+
+
 #ifdef DEBUG
 #include "nsBlockDebugFlags.h"
 #endif
@@ -172,6 +176,8 @@ nsBlockReflowState::nsBlockReflowState(const nsHTMLReflowState& aReflowState,
   mMinLineHeight = nsHTMLReflowState::CalcLineHeight(mPresContext,
                                                      aReflowState.rendContext,
                                                      aReflowState.frame);
+
+  SetFlag(BRS_DAMAGECONSTRAINED, IsIncrementalDamageConstrained(aFrame));
 }
 
 nsBlockReflowState::~nsBlockReflowState()
@@ -182,6 +188,32 @@ nsBlockReflowState::~nsBlockReflowState()
     const nsMargin& borderPadding = BorderPadding();
     mSpaceManager->Translate(-borderPadding.left, -borderPadding.top);
   }
+}
+
+PRBool 
+nsBlockReflowState::IsIncrementalDamageConstrained(nsIFrame* aBlockFrame) const
+{
+  // see if the reflow will go through a text control. if so, we can optimize 
+  // because we know the text control won't change size.
+  if ((eReflowReason_Incremental == mReflowState.reason) && (mReflowState.reflowCommand)) {
+    nsIFrame* target;
+    mReflowState.reflowCommand->GetTarget(target);
+    while (target) { 
+      // starting with the target's parent, scan for a text control
+      nsIFrame* parent;
+      target->GetParent(&parent);
+      if ((aBlockFrame == parent) || !parent)  // the null check is paranoia, it should never happen
+        break;  // we found the block, so we know there's no text control between the block and target
+      nsCOMPtr<nsIAtom> frameType;
+      parent->GetFrameType(getter_AddRefs(frameType));
+      if (frameType) {
+        if (nsLayoutAtoms::textInputFrame == frameType.get())
+          return PR_TRUE; // damage is constrained to the text control innards
+      }
+      target = parent;  // advance the loop up the frame tree
+    }
+  }
+  return PR_FALSE;  // default case, damage is not constrained (or unknown)
 }
 
 nsLineBox*
@@ -887,12 +919,72 @@ nsBlockReflowState::FlowAndPlaceFloater(nsFloaterCache* aFloaterCache,
 	       "invalid float type");
 
   // Can the floater fit here?
-  while (! CanPlaceFloater(region, floaterDisplay->mFloats)) {
-    // Nope. Advance to the next band.
-    mY += mAvailSpaceRect.height;
-    GetAvailableSpace();
-  }
+  PRBool keepFloaterOnSameLine = PR_FALSE;
+  nsCompatibility mode;
+  mPresContext->GetCompatibilityMode(&mode);
 
+  while (! CanPlaceFloater(region, floaterDisplay->mFloats)) {
+    // Nope. try to advance to the next band.
+    if (NS_STYLE_DISPLAY_TABLE != floaterDisplay->mDisplay ||
+          eCompatibility_NavQuirks != mode ) {
+
+      mY += mAvailSpaceRect.height;
+      GetAvailableSpace();
+    } else {
+      // IE handles floater tables in a very special way
+
+      // see if the previous floater is also a table and has "align"
+      nsFloaterCache* fc = mCurrentLineFloaters.Head();
+      nsIFrame* prevFrame = nsnull;
+      while (fc) {
+        if (fc->mPlaceholder->GetOutOfFlowFrame() == floater) {
+          break;
+        }
+        prevFrame = fc->mPlaceholder->GetOutOfFlowFrame();
+        fc = fc->Next();
+      }
+      
+      if(prevFrame) {
+        //get the frame type
+        nsIAtom* atom;
+        prevFrame->GetFrameType(&atom);
+        if(nsLayoutAtoms::tableOuterFrame == atom) {
+          //see if it has "align="
+          // IE makes a difference between align and he float property
+          nsCOMPtr<nsIContent> content;
+          prevFrame->GetContent(getter_AddRefs(content));
+          if (content) {
+            nsAutoString value;
+            if (NS_CONTENT_ATTR_HAS_VALUE == content->GetAttr(kNameSpaceID_None, nsHTMLAtoms::align, value)) {
+              // we're interested only if previous frame is align=left
+              // IE messes things up when "right" (overlapping frames) 
+              if (value.EqualsIgnoreCase("left")) {
+                keepFloaterOnSameLine = PR_TRUE;
+                // don't advance to next line (IE quirkie behaviour)
+                // it breaks rule CSS2/9.5.1/1, but what the hell
+                // since we cannot evangelize the world
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      // the table does not fit anymore in this line so advance to next band 
+      mY += mAvailSpaceRect.height;
+      GetAvailableSpace();
+      // reflow the floater again now since we have more space
+      mBlock->ReflowFloater(*this, aFloaterCache->mPlaceholder, aFloaterCache->mCombinedArea,
+        aFloaterCache->mMargins, aFloaterCache->mOffsets);
+      // Get the floaters bounding box and margin information
+      floater->GetRect(region);
+      // Adjust the floater size by its margin. That's the area that will
+      // impact the space manager.
+      region.width += aFloaterCache->mMargins.left + aFloaterCache->mMargins.right;
+      region.height += aFloaterCache->mMargins.top + aFloaterCache->mMargins.bottom;
+
+    }
+  }
   // Assign an x and y coordinate to the floater. Note that the x,y
   // coordinates are computed <b>relative to the translation in the
   // spacemanager</b> which means that the impacted region will be
@@ -906,7 +998,13 @@ nsBlockReflowState::FlowAndPlaceFloater(nsFloaterCache* aFloaterCache,
   else {
     isLeftFloater = PR_FALSE;
     if (NS_UNCONSTRAINEDSIZE != mAvailSpaceRect.XMost())
-      region.x = mAvailSpaceRect.XMost() - region.width;
+      if(!keepFloaterOnSameLine) {
+        region.x = mAvailSpaceRect.XMost() - region.width;
+      } else {
+        // this is the IE quirk (see few lines above)
+        // the table is keept in the same line: don't let it overlap the previous floater 
+        region.x = mAvailSpaceRect.x;
+      }
     else {
       okToAddRectRegion = PR_FALSE;
       region.x = mAvailSpaceRect.x;

@@ -224,31 +224,10 @@ nsStorageStream::WriteSegments(nsReadSegmentFun reader, void * closure, PRUint32
 }
 
 NS_IMETHODIMP 
-nsStorageStream::GetNonBlocking(PRBool *aNonBlocking)
+nsStorageStream::IsNonBlocking(PRBool *aNonBlocking)
 {
-    NS_NOTREACHED("GetNonBlocking");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP 
-nsStorageStream::SetNonBlocking(PRBool aNonBlocking)
-{
-    NS_NOTREACHED("SetNonBlocking");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP 
-nsStorageStream::GetObserver(nsIOutputStreamObserver * *aObserver)
-{
-    NS_NOTREACHED("GetObserver");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP 
-nsStorageStream::SetObserver(nsIOutputStreamObserver * aObserver)
-{
-    NS_NOTREACHED("SetObserver");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    *aNonBlocking = PR_TRUE;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -385,12 +364,10 @@ nsStorageStream::NewInputStream(PRInt32 aStartingOffset, nsIInputStream* *aInput
 
     NS_ADDREF(inputStream);
 
-    if (aStartingOffset) {
-        nsresult rv = inputStream->Seek(aStartingOffset);
-        if (NS_FAILED(rv)) {
-            NS_RELEASE(inputStream);
-            return rv;
-        }
+    nsresult rv = inputStream->Seek(aStartingOffset);
+    if (NS_FAILED(rv)) {
+        NS_RELEASE(inputStream);
+        return rv;
     }
 
     *aInputStream = inputStream;
@@ -425,7 +402,7 @@ nsStorageInputStream::Read(char* aBuffer, PRUint32 aCount, PRUint32 *aNumRead)
             if (!available)
                 goto out;
 	    
-            mReadCursor = mStorageStream->mSegmentedBuffer->GetSegment(mSegmentNum++);
+            mReadCursor = mStorageStream->mSegmentedBuffer->GetSegment(++mSegmentNum);
             mSegmentEnd = mReadCursor + PR_MIN(mSegmentSize, available);
         }
 	
@@ -463,7 +440,7 @@ nsStorageInputStream::ReadSegments(nsWriteSegmentFun writer, void * closure, PRU
             if (!available)
                 goto out;
 
-            mReadCursor = mStorageStream->mSegmentedBuffer->GetSegment(mSegmentNum++);
+            mReadCursor = mStorageStream->mSegmentedBuffer->GetSegment(++mSegmentNum);
             mSegmentEnd = mReadCursor + PR_MIN(mSegmentSize, available);
             availableInSegment = mSegmentEnd - mReadCursor;
         }
@@ -489,24 +466,10 @@ nsStorageInputStream::ReadSegments(nsWriteSegmentFun writer, void * closure, PRU
 }
 
 NS_IMETHODIMP 
-nsStorageInputStream::GetNonBlocking(PRBool *aNonBlocking)
+nsStorageInputStream::IsNonBlocking(PRBool *aNonBlocking)
 {
-    NS_NOTREACHED("GetNonBlocking");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP 
-nsStorageInputStream::GetObserver(nsIInputStreamObserver * *aObserver)
-{
-    NS_NOTREACHED("GetObserver");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP 
-nsStorageInputStream::SetObserver(nsIInputStreamObserver * aObserver)
-{
-    NS_NOTREACHED("SetObserver");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    *aNonBlocking = PR_TRUE;
+    return NS_OK;
 }
 
 NS_IMETHODIMP

@@ -730,6 +730,13 @@ CSSParserImpl::ParseAndAppendDeclaration(const nsAReadableString& aBuffer,
 
       if (NS_FAILED(errorCode))
         break;
+
+      if (!SkipDeclaration(errorCode, PR_FALSE)) {
+        if (errorCode != -1) {
+          rv = errorCode;
+        }
+        break;
+      }
     }
   } while (!aParseOnlyOneDecl);
 
@@ -1550,6 +1557,7 @@ static PRBool IsPseudoClass(const nsIAtom* aAtom)
                 (nsCSSAtoms::lastChildPseudo == aAtom) ||
                 (nsCSSAtoms::lastNodePseudo == aAtom) ||
                 (nsCSSAtoms::linkPseudo == aAtom) ||
+                (nsCSSAtoms::menuActivePseudo == aAtom) ||
                 (nsCSSAtoms::rootPseudo == aAtom) ||
                 (nsCSSAtoms::xblBoundElementPseudo == aAtom) ||
                 (nsCSSAtoms::visitedPseudo == aAtom));

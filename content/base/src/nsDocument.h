@@ -162,7 +162,8 @@ public:
                             nsISupports* aSubContent) { return NS_OK; }
   NS_IMETHOD ContentStatesChanged(nsIDocument* aDocument,
                                   nsIContent* aContent1,
-                                  nsIContent* aContent2) { return NS_OK; }
+                                  nsIContent* aContent2,
+                                  nsIAtom* aChangedPseudoClass) { return NS_OK; }
   NS_IMETHOD AttributeChanged(nsIDocument *aDocument,
                               nsIContent*  aContent,
                               PRInt32      aNameSpaceID,
@@ -284,7 +285,7 @@ public:
   NS_IMETHOD GetDocumentLoadGroup(nsILoadGroup **aGroup) const;
 
   /**
-   * Return the base URL for realtive URLs in the document. May return null (or the document URL).
+   * Return the base URL for relative URLs in the document. May return null (or the document URL).
    */
   NS_IMETHOD GetBaseURL(nsIURI*& aURL) const;
   NS_IMETHOD SetBaseURL(nsIURI* aURL);
@@ -391,7 +392,7 @@ public:
   NS_IMETHOD GetNumberOfStyleSheets(PRInt32* aCount);
   NS_IMETHOD GetStyleSheetAt(PRInt32 aIndex, nsIStyleSheet** aSheet);
   NS_IMETHOD GetIndexOfStyleSheet(nsIStyleSheet* aSheet, PRInt32* aIndex);
-  virtual void AddStyleSheet(nsIStyleSheet* aSheet);
+  virtual void AddStyleSheet(nsIStyleSheet* aSheet, PRUint32 aFlags);
   virtual void RemoveStyleSheet(nsIStyleSheet* aSheet);
   
   NS_IMETHOD UpdateStyleSheets(nsISupportsArray* aOldSheets,
@@ -452,7 +453,8 @@ public:
   NS_IMETHOD ContentChanged(nsIContent* aContent,
                             nsISupports* aSubContent);
   NS_IMETHOD ContentStatesChanged(nsIContent* aContent1,
-                                  nsIContent* aContent2);
+                                  nsIContent* aContent2,
+                                  nsIAtom* aChangedPseudoClass);
 
   NS_IMETHOD AttributeWillChange(nsIContent* aChild,
                                  PRInt32 aNameSpaceID,
@@ -556,9 +558,9 @@ public:
   virtual nsresult Init();
 
 protected:
-  NS_IMETHOD GetDTD(nsIDTD** aDTD) const;
-
-  virtual void InternalAddStyleSheet(nsIStyleSheet* aSheet);  // subclass hooks for sheet ordering
+  // subclass hooks for sheet ordering
+  virtual void InternalAddStyleSheet(nsIStyleSheet* aSheet,
+                                     PRUint32 aFlags);
   virtual void InternalInsertStyleSheetAt(nsIStyleSheet* aSheet,
                                           PRInt32 aIndex);
 

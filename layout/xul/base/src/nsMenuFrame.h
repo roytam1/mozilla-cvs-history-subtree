@@ -167,6 +167,8 @@ public:
   NS_IMETHOD MarkChildrenStyleChange();
   NS_IMETHOD MarkAsGenerated();
 
+  NS_IMETHOD NotifyStateChanged(nsIMenuFrame* aOtherFrame);
+
   // nsIScrollableViewProvider methods
 
   NS_IMETHOD GetScrollableView(nsIScrollableView** aView);
@@ -193,6 +195,8 @@ public:
   void SetFrameConstructor(nsCSSFrameConstructor* aFC) {
     mFrameConstructor = aFC;
   }
+
+  static PRBool IsSizedToPopup(nsIContent* aContent, PRBool aRequireAlways);
 
 protected:
 

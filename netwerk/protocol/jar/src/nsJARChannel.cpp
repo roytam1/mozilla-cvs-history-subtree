@@ -240,7 +240,7 @@ nsJARChannel::OpenJARElement()
 {
     nsresult rv;
     nsAutoCMonitor mon(this);
-    rv = Open(nsnull, nsnull);
+    rv = Open((PRInt32*) nsnull); // is there a better way....  where is my C++ book?!
     if (NS_SUCCEEDED(rv))
         rv = GetInputStream(getter_AddRefs(mSynchronousInputStream));
     mon.Notify();       // wake up nsIChannel::Open
@@ -646,7 +646,7 @@ nsJARChannel::EnsureZipReader()
 }
 
 NS_IMETHODIMP
-nsJARChannel::Open(char* *contentType, PRInt32 *contentLength) 
+nsJARChannel::Open(PRInt32 *contentLength) 
 {
     nsresult rv;
     rv = EnsureZipReader();
@@ -661,10 +661,6 @@ nsJARChannel::Open(char* *contentType, PRInt32 *contentLength)
         if (NS_FAILED(rv)) return rv;
     }
 
-    if (contentType) {
-        rv = GetContentType(contentType);
-        if (NS_FAILED(rv)) return rv;
-    }
     return rv;
 }
 

@@ -336,7 +336,8 @@ Rights Reserved.
 
 </keyset>
 
-  <popup id="threadPaneContext" onpopupshowing="return fillThreadPaneContextMenu();" >
+  <popup id="threadPaneContext" onpopupshowing="return fillThreadPaneContextMenu();"
+    onpopuphiding="if (event.target == this) threadPaneOnPopupHiding();">
     <menuitem id="threadPaneContext-openNewWindow"
         label="&contextOpenNewWindow.label;"
         accesskey="&contextOpenNewWindow.accesskey;"
@@ -551,8 +552,9 @@ Rights Reserved.
         command="cmd_delete"/>
   </popup>
 
-    <popup id="folderPaneContext" onpopupshowing="return fillFolderPaneContextMenu();" >
-        <menuitem id="folderPaneContext-openNewWindow"
+  <popup id="folderPaneContext" onpopupshowing="return fillFolderPaneContextMenu();"
+    onpopuphiding="if (event.target == this) folderPaneOnPopupHiding();">
+    <menuitem id="folderPaneContext-openNewWindow"
         label="&folderContextOpenNewWindow.label;"
         accesskey="&folderContextOpenNewWindow.accesskey;"
         oncommand="MsgOpenNewWindowForFolder(null,-1);"/>
@@ -1463,7 +1465,7 @@ Rights Reserved.
         </template>
         <menupopup/>
       </toolbarbutton>
-      <toolbarbutton class="toolbarbutton-1" id="button-next" label="&nextButton.label;"  oncommand="goDoCommand('cmd_nextUnreadMsg')" tooltiptext="&nextButton.tooltip;" observes="button_next"/>
+      <toolbarbutton class="toolbarbutton-1" id="button-next" label="&nextButton.label;" oncommand="goDoCommand('button_next')" tooltiptext="&nextButton.tooltip;" observes="button_next"/>
       <toolbarbutton class="toolbarbutton-1" id="button-delete" label="&deleteButton.label;" tooltiptext="&deleteButton.tooltip;" observes="button_delete" oncommand="goDoCommand('button_delete')"/>
       <toolbarbutton type="menu-button" id="button-mark" class="toolbarbutton-1" label="&markButton.label;" hidden="true" oncommand="goDoCommand('button_mark')"
                   observes="button_mark" tooltiptext="&markButton.tooltip;">  
@@ -1492,7 +1494,7 @@ Rights Reserved.
 
 <hbox id="searchBox" persist="collapsed" align="center">
   <label id="searchCriteria" value="&SearchSubjectOrSender.label;"/>
-  <textbox id="searchInput" flex="1" onfocus="this.select();" oninput="onSearchInput(event);"/>
+  <textbox id="searchInput" flex="1" onfocus="this.select();" oninput="onSearchInput(false);" onkeypress="onSearchKeyPress(event);"/>
   <button id="clearButton" label="&clearButton.label;" disabled="true" tooltiptext="&clearButton.tooltip;" oncommand="onClearSearch();" accesskey="&clearButton.accesskey;"/>
   <button id="advancedButton" label="&advancedButton.label;" tooltiptext="&advancedButton.tooltip;" oncommand="onAdvancedSearch();"/>
 </hbox>

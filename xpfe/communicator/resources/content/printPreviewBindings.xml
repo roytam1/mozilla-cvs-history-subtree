@@ -139,7 +139,7 @@
         var print = _getWebBrowserPrint();
         this.mTotalPages.value = print.printPreviewNumPages;
 
-        var settings = print.globalPrintSettings;
+        var settings = print.currentPrintSettings;
         if (settings.orientation == 
             Components.interfaces.nsIPrintSettings.kLandscapeOrientation)
           this.orient('landscape');
@@ -148,9 +148,17 @@
         this.mScaleTextBox.value = normalizedScale;
 
         // XXX TEMPORARY
-        // XXX Until bug 119491 is fixed we will hide the ``Print...'' button
+        // XXX Until bug 119491 ("Cleanup global vars in PostScript and Xprint
+        // modules") is fixed we will hide the ``Print...'' button
         // XXX the scaling widgets, and the orientation widgets on unices.
-        if (navigator.appVersion.indexOf("X11") != -1)
+        var canPrint = true;
+        try
+        {
+          var prefs = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch);
+          canPrint = prefs.getBoolPref("print.whileInPrintPreview");
+        } catch(e) {}
+
+        if (!canPrint)
         {
           // hide print button
           this.mPrintButton.setAttribute("hidden", "true");
@@ -254,7 +262,7 @@
             newValue = parseInt(aValue);
           
           // bounds check the new value
-          if (newValue >= 50 && newValue <= 100)
+          if (newValue >= 10 && newValue <= 500)
           {
             this.mScaleTextBox.value = newValue;
 
@@ -263,7 +271,7 @@
             this.mScaleTextBox.setAttribute("lastvalid", newValue);
 
             var print = this._getWebBrowserPrint();
-            var settings = print.globalPrintSettings;
+            var settings = print.currentPrintSettings;
             settings.scaling = newValue/100.0;
             print.printPreview(settings);
 
@@ -302,7 +310,7 @@
           }
 
           var print = this._getWebBrowserPrint();
-          var settings = print.globalPrintSettings;
+          var settings = print.currentPrintSettings;
           settings.orientation = orientValue;
           print.printPreview(settings);
 

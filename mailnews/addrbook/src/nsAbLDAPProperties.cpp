@@ -150,9 +150,9 @@ static MozillaLdapPropertyRelation mozillaLdapPropertyTable[] =
     {MozillaProperty_String, "WorkCountry",        "countryname"},
 
     // ?
-    {MozillaProperty_String, "WebPage1",        "homeurl"},
+    {MozillaProperty_String, "WebPage1",        "workurl"},
     // ?
-    {MozillaProperty_String, "WebPage2",        "workurl"},
+    {MozillaProperty_String, "WebPage2",        "homeurl"},
 
     // ?
     {MozillaProperty_String, "BirthYear",        "birthyear"},
@@ -196,6 +196,18 @@ void MozillaLdapPropertyRelator::Initialize(void)
         mMozillaToLdap.Put(&keyMozilla, NS_REINTERPRET_CAST(void *, NS_CONST_CAST(MozillaLdapPropertyRelation*, &table[i]))) ;
     }
     IsInitialized = PR_TRUE;
+}
+
+nsresult MozillaLdapPropertyRelator::GetAllSupportedLDAPAttributes(nsCString &aResult)
+{
+  if (tableSize < 1)
+    return NS_ERROR_UNEXPECTED;
+
+  for (int i = tableSize - 1 ; i != 0 ; i--)
+    aResult += nsDependentCString(table[i].ldapProperty) + NS_LITERAL_CSTRING(",");
+  
+  aResult += table[0].ldapProperty;
+  return NS_OK;
 }
 
 const MozillaLdapPropertyRelation* MozillaLdapPropertyRelator::findMozillaPropertyFromLdap (const char* ldapProperty)

@@ -221,10 +221,11 @@ protected:
   void FireDOMEvent(PRUint32 aMessage);
 
 private:
-  nsresult LoadImage(const nsAReadableString& aSpec, nsIPresContext *aPresContext, imgIRequest *aRequest);
-  nsresult RealLoadImage(const nsAReadableString& aSpec, nsIPresContext *aPresContext, imgIRequest *aRequest);
+  nsresult LoadImage(const nsAReadableString& aSpec, nsIPresContext *aPresContext, imgIRequest *aRequest, PRBool aCheckContentPolicy = PR_TRUE);
+  nsresult RealLoadImage(const nsAReadableString& aSpec, nsIPresContext *aPresContext, imgIRequest *aRequest, PRBool aCheckContentPolicy = PR_TRUE);
   inline int GetImageLoad(imgIRequest *aRequest);
   nscoord GetContinuationOffset(nscoord* aWidth = 0) const;
+  void GetDocumentCharacterSet(nsAWritableString& aCharset) const;
 
   nsImageMap*         mImageMap;
 
@@ -265,15 +266,16 @@ private:
     // private class that wraps the data and logic needed for 
     // broken image and loading image icons
   public:
-    IconLoad(nsIPresContext *aPresContext):mRefCount(0),mIconsLoaded(PR_FALSE) { GetAltModePref(aPresContext); }
+    IconLoad(nsIPresContext *aPresContext):mRefCount(0),mIconsLoaded(PR_FALSE) { GetPrefs(aPresContext); }
     void AddRef(void) { ++mRefCount; }
     PRBool Release(void) { return --mRefCount == 0; }
-    void GetAltModePref(nsIPresContext *aPresContext);
+    void GetPrefs(nsIPresContext *aPresContext);
 
     PRUint32         mRefCount;
     struct ImageLoad mIconLoads[2];   // 0 is for the 'loading' icon, 1 is for the 'broken' icon
     PRPackedBool     mIconsLoaded;
     PRPackedBool     mPrefForceInlineAltText;
+    PRPackedBool     mPrefAllImagesBlocked;
   };
   static IconLoad* mIconLoad; // singleton patern: one LoadIcons instance is used
 };

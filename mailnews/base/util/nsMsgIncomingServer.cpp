@@ -84,8 +84,6 @@ static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kMsgFilterServiceCID, NS_MSGFILTERSERVICE_CID);
 
-#define OFFLINE_STATUS_CHANGED_TOPIC "network:offline-status-changed"
-
 #define PORT_NOT_SET -1
 
 MOZ_DECL_CTOR_COUNTER(nsMsgIncomingServer)
@@ -1611,7 +1609,11 @@ nsMsgIncomingServer::GetIsAuthenticated(PRBool *isAuthenticated)
 
       // Get password entry corresponding to the host URI we are passing in.
       rv = passwordMgr->FindPasswordEntry(&hostURI, getter_Copies(userName), getter_Copies(password));
-      NS_ENSURE_SUCCESS(rv, rv);
+      if (NS_FAILED(rv)) {
+        // release hostURI
+        nsMemory::Free(hostURI);
+        return rv;
+      }
 
       // release hostURI
       nsMemory::Free(hostURI);

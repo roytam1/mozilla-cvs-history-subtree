@@ -106,12 +106,20 @@ nsInputStreamIO::Init(const char* name, nsIInputStream* input,
 }
 
 NS_IMETHODIMP
-nsInputStreamIO::Open(char **contentType, PRInt32 *contentLength)
+nsInputStreamIO::Open(PRInt32 *contentLength)
 {
-    *contentType = nsCRT::strdup(mContentType);
-    if (*contentType == nsnull)
-        return NS_ERROR_OUT_OF_MEMORY;
     *contentLength = mContentLength;
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP 
+nsInputStreamIO::GetContentType(char * *aContentType)
+{
+    *aContentType = nsCRT::strdup(mContentType);
+    if (*aContentType == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+
     return NS_OK;
 }
 
@@ -121,8 +129,8 @@ nsInputStreamIO::Close(nsresult status)
     mStatus = status;
     if (mInputStream)
         return mInputStream->Close();
-    else
-        return NS_OK;
+
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -313,8 +321,8 @@ nsStreamIOChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt)
         if (NS_FAILED(rv)) goto done;
 
         rv = fts->CreateTransportFromStreamIO(mStreamIO, getter_AddRefs(mFileTransport));
-        if (NS_FAILED(rv)) goto done;
-    }
+        if (NS_FAILED(rv)) goto done; 
+   }
 
     // Hook up the notification callbacks InterfaceRequestor...
     {
@@ -325,12 +333,6 @@ nsStreamIOChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt)
         if (NS_FAILED(rv)) goto done;
     }
 
-#if 0
-    if (mContentType == nsnull) {
-        rv = mStreamIO->Open(&mContentType, &mContentLength);
-        if (NS_FAILED(rv)) goto done;
-    }
-#endif
     rv = mFileTransport->AsyncRead(this, ctxt, 0, PRUint32(-1), 0, getter_AddRefs(mRequest));
 
   done:
@@ -416,15 +418,23 @@ NS_IMETHODIMP
 nsStreamIOChannel::GetContentType(char * *aContentType)
 {
     nsresult rv;
-    if (mContentType == nsnull) {
-        rv = mStreamIO->Open(&mContentType, &mContentLength);
-        if (NS_FAILED(rv)) return rv;
+    if (mContentType)
+    {
+        *aContentType = nsCRT::strdup(mContentType);
+        if (*aContentType == nsnull) {
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
+        return NS_OK;
     }
-    *aContentType = nsCRT::strdup(mContentType);
-    if (*aContentType == nsnull) {
-        return NS_ERROR_OUT_OF_MEMORY;
+    if (mStreamIO) {
+        rv = mStreamIO->GetContentType(&mContentType);
+        *aContentType = nsCRT::strdup(mContentType);
+        if (*aContentType == nsnull) {
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
+        return NS_OK;
     }
-    return NS_OK;
+    return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
@@ -441,12 +451,18 @@ NS_IMETHODIMP
 nsStreamIOChannel::GetContentLength(PRInt32 *aContentLength)
 {
     nsresult rv;
-    if (mContentType == nsnull) {
-        rv = mStreamIO->Open(&mContentType, &mContentLength);
-        if (NS_FAILED(rv)) return rv;
+    if (mContentLength == -1) 
+    {
+
+        // this is broken - should not have to do an open.  content 
+        // length should be an attribute of the nsIStreamIO.
+        
+        rv = mStreamIO->Open(&mContentLength);
+        if (NS_FAILED(rv))
+            return rv;
     }
     *aContentLength = mContentLength;
-    return NS_OK;
+     return NS_OK;
 }
 
 NS_IMETHODIMP

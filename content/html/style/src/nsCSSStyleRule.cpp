@@ -1118,6 +1118,19 @@ DOMCSSDeclarationImpl::RemoveProperty(const nsAReadableString& aPropertyName,
   nsresult rv = GetCSSDeclaration(&decl, PR_TRUE);
 
   if (NS_SUCCEEDED(rv) && decl) {
+    nsCOMPtr<nsICSSStyleSheet> cssSheet;
+    nsCOMPtr<nsIDocument> owningDoc;
+    if (mRule) {
+      nsCOMPtr<nsIStyleSheet> sheet;
+      mRule->GetStyleSheet(*getter_AddRefs(sheet));
+      cssSheet = do_QueryInterface(sheet);
+      if (sheet) {
+        sheet->GetOwningDocument(*getter_AddRefs(owningDoc));
+      }
+    }
+    if (owningDoc) {
+      owningDoc->BeginUpdate();
+    }
     nsCSSProperty prop = nsCSSProps::LookupProperty(aPropertyName);
     nsCSSValue val;
 
@@ -1127,10 +1140,19 @@ DOMCSSDeclarationImpl::RemoveProperty(const nsAReadableString& aPropertyName,
       // We pass in eCSSProperty_UNKNOWN here so that we don't get the
       // property name in the return string.
       val.ToString(aReturn, eCSSProperty_UNKNOWN);
+      if (cssSheet) {
+        cssSheet->SetModified(PR_TRUE);
+      }
+      if (owningDoc) {
+        owningDoc->StyleRuleChanged(cssSheet, mRule, nsCSSProps::kHintTable[prop]);
+      }
     } else {
       // If we tried to remove an invalid property or a property that wasn't 
       //  set we simply return success and an empty string
       rv = NS_OK;
+    }
+    if (owningDoc) {
+      owningDoc->EndUpdate();
     }
   }
 
@@ -2305,6 +2327,13 @@ MapDisplayForDeclaration(nsCSSDeclaration* aDecl, const nsStyleStructID& aID, ns
     // clear: enum, none, inherit
     if (aDisplay.mClear.GetUnit() == eCSSUnit_Null && ourDisplay->mClear.GetUnit() != eCSSUnit_Null)
       aDisplay.mClear = ourDisplay->mClear;
+
+    // temp fix for bug 24000
+    if (aDisplay.mBreakBefore.GetUnit() == eCSSUnit_Null && ourDisplay->mBreakBefore.GetUnit() != eCSSUnit_Null)
+      aDisplay.mBreakBefore = ourDisplay->mBreakBefore;
+    if (aDisplay.mBreakAfter.GetUnit() == eCSSUnit_Null && ourDisplay->mBreakAfter.GetUnit() != eCSSUnit_Null)
+      aDisplay.mBreakAfter = ourDisplay->mBreakAfter;
+    // end temp fix
 
     // float: enum, none, inherit
     if (aDisplay.mFloat.GetUnit() == eCSSUnit_Null && ourDisplay->mFloat.GetUnit() != eCSSUnit_Null)

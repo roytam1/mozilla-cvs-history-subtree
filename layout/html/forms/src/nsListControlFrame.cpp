@@ -93,11 +93,7 @@ const PRInt32 kNothingSelected          = -1;
 const PRInt32 kMaxZ                     = 0x7fffffff; //XXX: Shouldn't there be a define somewhere for MaxInt for PRInt32
 const PRInt32 kNoSizeSpecified          = -1;
 
-//XXX: This is temporary. It simulates psuedo states by using a attribute selector on 
-// -moz-option-selected in the ua.css style sheet. This will not be needed when
-//The event state manager is functional. KMM
-//const char * kMozSelected = "-moz-option-selected";
-// it is now using "nsLayoutAtoms::optionSelectedPseudo"
+// We now use the :checked pseudoclass for the option selected state
 
 //---------------------------------------------------------
 nsresult
@@ -1678,11 +1674,13 @@ nsListControlFrame::GetOption(nsIDOMHTMLCollection& aCollection, PRInt32 aIndex)
 PRBool 
 nsListControlFrame::IsContentSelected(nsIContent* aContent)
 {
-  nsAutoString value;
-  //nsIAtom * selectedAtom = NS_NewAtom("selected");
-  nsresult result = aContent->GetAttr(kNameSpaceID_None, nsLayoutAtoms::optionSelectedPseudo, value);
+  PRBool isSelected = PR_FALSE;
 
-  return (NS_CONTENT_ATTR_NOT_THERE == result ? PR_FALSE : PR_TRUE);
+  nsCOMPtr<nsIDOMHTMLOptionElement> optEl = do_QueryInterface(aContent);
+  if (optEl)
+    optEl->GetSelected(&isSelected);
+
+  return isSelected;
 }
 
 
@@ -2145,6 +2143,11 @@ NS_IMETHODIMP
 nsListControlFrame::FireOnChange()
 {
   nsresult rv = NS_OK;
+  
+  // Since we're firing onChange, we don't want to fire it anymore.
+  if (mComboboxFrame) {
+    mComboboxFrame->SetNeedToFireOnChange(PR_FALSE);
+  }
 
   // Dispatch the NS_FORM_CHANGE event
   nsEventStatus status = nsEventStatus_eIgnore;
@@ -2157,10 +2160,6 @@ nsListControlFrame::FireOnChange()
   if (presShell) {
     rv = presShell->HandleEventWithTarget(&event, this, nsnull,
                                            NS_EVENT_FLAG_INIT, &status);
-    // Obviously the combobox doesn't need to fire onChange anymore
-    if (NS_SUCCEEDED(rv) && mComboboxFrame) {
-      rv = mComboboxFrame->SetNeedToFireOnChange(PR_FALSE);
-    }
   }
 
   return rv;
@@ -3059,7 +3058,7 @@ nsListControlFrame::KeyPress(nsIDOMEvent* aKeyEvent)
     return NS_OK;
 
   nsresult rv         = NS_ERROR_FAILURE; 
-  PRUint32 code       = 0;
+  PRUint32 keycode    = 0;
   PRUint32 numOptions = 0;
   PRBool isControl    = PR_FALSE;
   PRBool isShift      = PR_FALSE;
@@ -3070,10 +3069,7 @@ nsListControlFrame::KeyPress(nsIDOMEvent* aKeyEvent)
   if (keyEvent) {
     //uiEvent->GetCharCode(&code);
     //REFLOW_DEBUG_MSG3("%c %d   ", code, code);
-    keyEvent->GetKeyCode(&code);
-    if (code == 0) {
-      keyEvent->GetCharCode(&code);
-    }
+    keyEvent->GetKeyCode(&keycode);
 #ifdef DO_REFLOW_DEBUG
     if (code >= 32) {
       REFLOW_DEBUG_MSG3("KeyCode: %c %d\n", code, code);
@@ -3144,7 +3140,7 @@ nsListControlFrame::KeyPress(nsIDOMEvent* aKeyEvent)
   // default processing checks to see if the pressed the first 
   //   letter of an item in the list and advances to it
 
-  switch (code) {
+  switch (keycode) {
 
     case nsIDOMKeyEvent::DOM_VK_UP:
     case nsIDOMKeyEvent::DOM_VK_LEFT: {
@@ -3215,13 +3211,33 @@ nsListControlFrame::KeyPress(nsIDOMEvent* aKeyEvent)
       newIndex = mEndSelectionIndex;
       } break;
   
+#if defined(XP_WIN) || defined(XP_OS2)
+    case nsIDOMKeyEvent::DOM_VK_F4: {
+      if (IsInDropDownMode() == PR_TRUE) {
+        PRBool isDroppedDown;
+        mComboboxFrame->IsDroppedDown(&isDroppedDown);
+        mComboboxFrame->ShowDropDown(!isDroppedDown);
+        aKeyEvent->PreventDefault();
+
+        nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aKeyEvent));
+
+        if (nsevent) {
+          nsevent->PreventCapture();
+          nsevent->PreventBubble();
+        }
+      }
+      } break;
+#endif
+
     default: { // Select option with this as the first character
                // XXX Not I18N compliant
       if (isControl) {
         return NS_OK;
       }
 
-      code = (PRUint32)nsCRT::ToLower((char)code);
+      PRUint32 charcode = 0;
+      keyEvent->GetCharCode(&charcode);
+      charcode = (PRUint32)nsCRT::ToLower((char)charcode);
       PRInt32 selectedIndex;
       GetSelectedIndex(&selectedIndex);
       if (selectedIndex == kNothingSelected) {
@@ -3239,7 +3255,7 @@ nsListControlFrame::KeyPress(nsIDOMEvent* aKeyEvent)
           if (NS_OK == optionElement->GetText(text)) {
             ToLowerCase(text);
             PRUnichar firstChar = text.CharAt(0);
-            if (firstChar == (PRUnichar)code) {
+            if (firstChar == (PRUnichar)charcode) {
               PRBool wasChanged = PerformSelection(selectedIndex,
                                                    isShift, isControl);
               if (wasChanged) {
@@ -3263,7 +3279,7 @@ nsListControlFrame::KeyPress(nsIDOMEvent* aKeyEvent)
   // do the scrolling for us
   if (newIndex != kNothingSelected) {
     // If you hold control, no key will actually do anything except space.
-    if (isControl && code != nsIDOMKeyEvent::DOM_VK_SPACE) {
+    if (isControl && keycode != nsIDOMKeyEvent::DOM_VK_SPACE) {
       mStartSelectionIndex = newIndex;
       mEndSelectionIndex = newIndex;
       ScrollToIndex(newIndex);

@@ -86,6 +86,7 @@
 #define NS_ERROR_MODULE_PROFILE    19
 #define NS_ERROR_MODULE_LDAP       20
 #define NS_ERROR_MODULE_SECURITY   21
+#define NS_ERROR_MODULE_DOM_XPATH  22
 // NS_ERROR_MODULE_GENERAL should be used by modules that don't
 // care if return code values overlap. Callers of methods that
 // return such codes should be aware that they are not
@@ -145,7 +146,7 @@
 /* Standard "it worked" return value */
 #define NS_OK                              0
 
-/* The backwards COM false */
+/* The backwards COM false. This is deprecated, please do not use */
 #define NS_COMFALSE                        1
 
 #define NS_ERROR_BASE                      ((nsresult) 0xC1F30000)
@@ -175,7 +176,7 @@
 /* Returned when an unexpected error occurs */
 #define NS_ERROR_UNEXPECTED                ((nsresult) 0x8000ffffL)
 
-/* Returned when a memory allocation failes */
+/* Returned when a memory allocation fails */
 #define NS_ERROR_OUT_OF_MEMORY             ((nsresult) 0x8007000eL)
 
 /* Returned when an illegal value is passed */

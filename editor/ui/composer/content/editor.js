@@ -108,7 +108,7 @@ nsButtonPrefListener.prototype =
       var htmlEditor = editorShell.editor.QueryInterface(Components.interfaces.nsIHTMLEditor);
       if (useCSS && htmlEditor) {
         button.removeAttribute("disabled");
-        var state = htmlEditor.GetHighlightColor(mixedObj);
+        var state = htmlEditor.getHighlightColorState(mixedObj);
         button.setAttribute("state", state);
       }      
       else {
@@ -116,7 +116,7 @@ nsButtonPrefListener.prototype =
         button.setAttribute("state", "transparent");
       }
       if (htmlEditor) {
-        htmlEditor.SetCSSEnabled(useCSS);
+        htmlEditor.isCSSEnabled = useCSS;
       }
     }
   }
@@ -127,13 +127,11 @@ function AfterHighlightColorChange()
   var button = document.getElementById("cmd_highlight");
   var mixedObj = new Object();
   if (button) {
-    var state = editorShell.editor.QueryInterface(Components.interfaces.nsIHTMLEditor).GetHighlightColor(mixedObj);
+    var state = editorShell.editor.QueryInterface(Components.interfaces.nsIHTMLEditor).getHighlightColorState(mixedObj);
     button.setAttribute("state", state);
     onHighlightColorChange();
   }      
 }
-
-
 
 function EditorOnLoad()
 {
@@ -141,9 +139,7 @@ function EditorOnLoad()
     if ( window.arguments && window.arguments[0] ) {
         // Opened via window.openDialog with URL as argument.
         // Put argument where EditorStartup expects it.
-        var url = window.arguments[0];
-        document.getElementById( "args" ).setAttribute( "value", url );
-        SetSaveAndPublishUI(url);
+        document.getElementById( "args" ).setAttribute( "value", window.arguments[0] );
     }
 
     // get default character set if provided
@@ -170,9 +166,7 @@ function TextEditorOnLoad()
     if ( window.arguments && window.arguments[0] ) {
         // Opened via window.openDialog with URL as argument.
         // Put argument where EditorStartup expects it.
-        var url = window.arguments[0];
-        document.getElementById( "args" ).setAttribute( "value", url );
-        SetSaveAndPublishUI(url);
+        document.getElementById( "args" ).setAttribute( "value", window.arguments[0] );
     }
     // Continue with normal startup.
     EditorStartup('text', document.getElementById("content-frame"));
@@ -247,6 +241,10 @@ var DocumentStateListener =
 
     if (!("InsertCharWindow" in window))
       window.InsertCharWindow = null;
+    
+    // We must wait until document is created to get proper Url
+    // (Windows may load with local file paths)
+    SetSaveAndPublishUI(GetDocumentUrl());
   },
 
   NotifyDocumentWillBeDestroyed: function() {},
@@ -318,7 +316,6 @@ function EditorStartup(editorType, editorElement)
   if (charset) editorShell.SetDocumentCharacterSet(charset);
 
   editorShell.LoadUrl(url);
-  SetSaveAndPublishUI(url);
 }
 
 // This is also called by Message Composer
@@ -1168,7 +1165,7 @@ function EditorSelectColor(colorType, mouseEvent)
   }
   else if (element)
   {
-    if (false /*gColorObj.Type == "Table"*/)
+    if (gColorObj.Type == "Table")
     {
       // Set background on a table
       // Note that we shouldn't trust "currentColor" because of "TableOrCell" behavior
@@ -1178,9 +1175,9 @@ function EditorSelectColor(colorType, mouseEvent)
         if (bgcolor != gColorObj.BackgroundColor)
         {
           if (gColorObj.BackgroundColor)
-            window.editorShell.SetAttribute(table, "bgcolor", gColorObj.BackgroundColor);
+            window.editorShell.editor.setAttributeOrEquivalent(table, "bgcolor", gColorObj.BackgroundColor);
           else
-            window.editorShell.RemoveAttribute(table, "bgcolor");
+            window.editorShell.editor.removeAttributeOrEquivalent(table, "bgcolor");
         }
       }
     }
@@ -1198,10 +1195,12 @@ function EditorSelectColor(colorType, mouseEvent)
         {
           var defColors = GetDefaultBrowserColors();
           if (defColors)
-          { // GLAZOU : this has to be changed
+          {
             if (!bodyelement.getAttribute("text"))
-              window.editorShell.SetAttribute(bodyelement, "text", defColors.TextColor);
+              window.editorShell.editor.setAttributeOrEquivalent(bodyelement, "text", defColors.TextColor);
 
+            // The following attributes have no individual CSS declaration counterparts
+            // Getting rid of them in favor of CSS implies CSS rules management
             if (!bodyelement.getAttribute("link"))
               window.editorShell.SetAttribute(bodyelement, "link", defColors.LinkColor);
 
@@ -1247,11 +1246,42 @@ function GetParentTableCell(element)
   return node;
 }
 
+function EditorDblClick(event)
+{
+  goDoCommand("cmd_objectProperties");  
+}
+
+function EditorClick(event)
+{
+  // In Show All Tags Mode,
+  // single click selects entire element,
+  //  except for body and table elements
+  if (event && event.target && gEditorDisplayMode == DisplayModeAllTags)
+  {
+    try {
+      var element = event.target.QueryInterface( Components.interfaces.nsIDOMElement);
+      if (element)
+      {
+        var name = element.localName.toLowerCase();
+        if (name != "body" && name != "table" &&
+            name != "td" && name != "th" && name != "caption" && name != "tr")
+        {          
+          var htmlEditor = editorShell.editor.QueryInterface(Components.interfaces.nsIHTMLEditor);
+          if (htmlEditor && event.target)
+          {
+            htmlEditor.selectElement(event.target);
+            event.preventDefault();
+          }
+        }
+      }
+    } catch (e) {}
+  }
+}
+
 /*TODO: We need an oncreate hook to do enabling/disabling for the
         Format menu. There should be code like this for the
         object-specific "Properties" item
 */
-
 // For property dialogs, we want the selected element,
 //  but will accept a parent link, list, or table cell if inside one
 function GetObjectForProperties()
@@ -1643,8 +1673,9 @@ function BuildRecentMenu(savePrefs)
     if (!url)
       continue;
 
-    // Skip over current URL
-    if (url != curUrl)
+    var scheme = GetScheme(url);
+    // Skip over current and "data:" URL
+    if (url != curUrl && scheme && scheme != "data")
     {
       // Build the menu
       AppendRecentMenuitem(popup, title, url, menuIndex);
@@ -1754,7 +1785,12 @@ function InitObjectPropertiesMenuitem(id)
     switch (name)
     {
       case "img":
-        objStr = GetString("Image");
+        // Check if img is enclosed in link
+        //  (use "href" to not be fooled by named anchor)
+        if (editorShell.GetElementOrParentByTagName("href", element))
+          objStr = GetString("ImageAndLink");
+        else
+          objStr = GetString("Image");
         break;
       case "hr":
         objStr = GetString("HLine");
@@ -2627,23 +2663,4 @@ function SwitchInsertCharToAnotherEditorOrClose()
     // Didn't find another editor - close the dialog
     window.InsertCharWindow.close();
   }
-}
-
-function GetHTMLOrCSSStyleValue(element, attrName, cssPropertyName)
-{
-  var prefs = GetPrefs();
-  var IsCSSPrefChecked = prefs.getBoolPref("editor.use_css");
-  var value;
-  if (IsCSSPrefChecked && editorShell.editorType == "html")
-  {
-    value = element.style.getPropertyValue(cssPropertyName);
-    if (value == "") {
-      value = element.getAttribute(attrName);
-    }
-  }
-  else
-  {
-    value = element.getAttribute(attrName);
-  }
-  return value;
 }

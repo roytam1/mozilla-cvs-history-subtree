@@ -196,6 +196,8 @@ table[rules] {
   background: inherit;
   border: inherit;
   -moz-opacity: inherit;
+  page-break-before: inherit;
+  page-break-after: inherit;
 }
 
 /* make sure backgrounds are inherited in tables  -- see bug 4510*/
@@ -464,6 +466,16 @@ noframes {
   -moz-outline: 1px dotted invert;
 }
 
+*|*:-moz-any-link:focus img {
+  -moz-outline: 1px dotted invert;
+}
+*|*:-moz-any-link:focus object {
+  -moz-outline: 1px dotted invert;
+}
+*|*:-moz-any-link:focus embed {
+  -moz-outline: 1px dotted invert;
+}
+
 /* hidden elements */
 area, base, basefont, head, meta, script, style, title,
 noembed, noscript, param {
@@ -497,6 +509,10 @@ noembed, noscript, param {
 
 *|*:-moz-pagecontent {
   display: block;
+}
+
+*|*:-moz-pagebreak {
+  display: -moz-page-break;
 }
 
 *|*:-moz-anonymous-positioned-block {

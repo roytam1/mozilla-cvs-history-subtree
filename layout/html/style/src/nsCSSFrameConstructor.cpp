@@ -2281,6 +2281,9 @@ nsCSSFrameConstructor::GetParentFrame(nsIPresShell*            aPresShell,
 }
 
 // Construct the outer, inner table frames and the children frames for the table. 
+// XXX Page break frames for pseudo table frames are not constructed to avoid the risk
+// associated with revising the pseudo frame mechanism. The long term solution
+// of having frames handle page-break-before/after will solve the problem. 
 nsresult
 nsCSSFrameConstructor::ConstructTableFrame(nsIPresShell*            aPresShell,
                                            nsIPresContext*          aPresContext,
@@ -2923,10 +2926,27 @@ nsCSSFrameConstructor::TableProcessChild(nsIPresShell*            aPresShell,
 
   switch (styleDisplay->mDisplay) {
   case NS_STYLE_DISPLAY_TABLE:
-    nsIFrame* innerTableFrame;
-    rv = ConstructTableFrame(aPresShell, aPresContext, aState, aChildContent, aParentFrame,
-                             childStyleContext, aTableCreator, PR_FALSE, aChildItems,
-                             childFrame, innerTableFrame, isPseudoParent);
+    {
+      PRBool pageBreakAfter = PR_FALSE;
+      PRBool paginated;
+      aPresContext->IsPaginated(&paginated);
+
+      if (paginated) {
+        // See if there is a page break before, if so construct one. Also see if there is one after
+        pageBreakAfter = PageBreakBefore(aPresShell, aPresContext, aState, aChildContent, 
+                                       aParentFrame, childStyleContext, aChildItems);
+      }
+      // construct the table frame
+      nsIFrame* innerTableFrame;
+      rv = ConstructTableFrame(aPresShell, aPresContext, aState, aChildContent, aParentFrame,
+                               childStyleContext, aTableCreator, PR_FALSE, aChildItems,
+                               childFrame, innerTableFrame, isPseudoParent);
+      if (NS_SUCCEEDED(rv) && pageBreakAfter) {
+        // Construct the page break after
+        ConstructPageBreakFrame(aPresShell, aPresContext, aState, aChildContent,
+                                aParentFrame, childStyleContext, aChildItems);
+      }
+    }
     break;
 
   case NS_STYLE_DISPLAY_TABLE_CAPTION:
@@ -3470,14 +3490,17 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
   // Only need to create a scroll frame/view for cases 2 and 3.
   // Currently OVERFLOW_SCROLL isn't honored, as
   // scrollportview::SetScrollPref is not implemented.
-  PRBool isXUL = PR_FALSE;
 
+  PRInt32 nameSpaceID;
+  aDocElement->GetNameSpaceID(nameSpaceID);
+
+  PRBool isHTML = (nameSpaceID == kNameSpaceID_HTML);
+  PRBool isXUL = (nameSpaceID == nsXULAtoms::nameSpaceID);
+
+  // Never create scrollbars for XUL documents
 #ifdef INCLUDE_XUL
-  PRInt32 nameSpaceID; // Never create scrollbars for XUL documents
-  if (NS_SUCCEEDED(aDocElement->GetNameSpaceID(nameSpaceID)) &&
-      nameSpaceID == nsXULAtoms::nameSpaceID) {
+  if (isXUL) {
     isScrollable = PR_FALSE;
-    isXUL = PR_TRUE;
   } else 
 #endif
   {
@@ -3508,6 +3531,73 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
           aPresContext->GetPaginatedScrolling(&isScrollable);
         } else {
           isScrollable = PR_FALSE; // we are printing
+        }
+      }
+    }
+  }
+
+  // if scrolling is still supported, check for the style data on the HTML and BODY
+  // NOTE: the docElement in HTML will have a BODY child, and we have to check for
+  //       no scrolling on that element as well as the docElement. Outside of HTML,
+  //       we will not check the children of the docElement
+  if (isScrollable) {
+    NS_ASSERTION(!isXUL, "XUL documents should never be scrollable - see above");
+
+    // see if the style is overflow: hidden, first on the document element
+    nsCOMPtr<nsIStyleContext> styleContext;
+    aPresContext->ResolveStyleContextFor(aDocElement, nsnull, PR_FALSE,
+                                         getter_AddRefs(styleContext));
+    if (styleContext) {
+      const nsStyleDisplay* display = (const nsStyleDisplay*)
+        styleContext->GetStyleData(eStyleStruct_Display);
+      if (display) {
+        if (display->mOverflow == NS_STYLE_OVERFLOW_HIDDEN || 
+            display->mOverflow == NS_STYLE_OVERFLOW_SCROLLBARS_NONE) {
+          isScrollable = PR_FALSE;
+        }
+      }
+    }
+    
+    // if still scrollable, check the BODY element, but only if we are in an HTML document
+    if (isScrollable && isHTML) {
+      // XXX: there is a nice convenient method on nsIHTMLDocument that we could use to get the body
+      //      element - it is called, strangely enough, GetBodyElement, but we cannot use it here
+      //      because the separation between content and layout prohibits including nsIHTMLDocument
+      //      without pulling more of content into content/shared, so we do the search the hard way
+
+      // walk the children of the docElement looking fo the BODY
+      nsCOMPtr<nsIContent> bodyElement;
+      PRInt32 count = 0;
+      aDocElement->ChildCount(count);
+      for (PRInt32 i = 0; i < count; ++i) {
+        nsCOMPtr<nsIContent> kidElement;
+        aDocElement->ChildAt(i, *getter_AddRefs(kidElement));
+        if (kidElement){
+          nsCOMPtr<nsIAtom> kidTag;
+          kidElement->GetTag(*getter_AddRefs(kidTag));
+          if (kidTag == nsHTMLAtoms::body) {
+            bodyElement = kidElement;
+            // done looking
+            break;
+          }
+        } else {
+          NS_ASSERTION(PR_FALSE, "null child element returned from ChildAt");
+          break;
+        }
+      }      
+      if (bodyElement) {
+        nsCOMPtr<nsIStyleContext> bodyContext;
+        aPresContext->ResolveStyleContextFor(bodyElement, styleContext, PR_FALSE,
+                                             getter_AddRefs(bodyContext));
+        if (bodyContext) {
+          const nsStyleDisplay* display = (const nsStyleDisplay*)
+            bodyContext->GetStyleData(eStyleStruct_Display);
+          if (display) {
+            if (display->mOverflow == NS_STYLE_OVERFLOW_HIDDEN || 
+                display->mOverflow == NS_STYLE_OVERFLOW_SCROLLBARS_NONE) {
+              isScrollable = PR_FALSE;
+            }
+          }
         }
       }
     }
@@ -6905,8 +6995,56 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
 }
 #endif // MOZ_SVG
 
+PRBool
+nsCSSFrameConstructor::PageBreakBefore(nsIPresShell*            aPresShell,
+                                       nsIPresContext*          aPresContext,
+                                       nsFrameConstructorState& aState,
+                                       nsIContent*              aContent,
+                                       nsIFrame*                aParentFrame,
+                                       nsIStyleContext*         aStyleContext,
+                                       nsFrameItems&            aFrameItems)
+{
+  const nsStyleDisplay* display = (const nsStyleDisplay*)
+    aStyleContext->GetStyleData(eStyleStruct_Display);
+
+  // See if page-break-before is set for all elements except row groups, rows, cells 
+  // (these are handled internally by tables) and construct a page break frame if so.
+  if (display && ((NS_STYLE_DISPLAY_TABLE == display->mDisplay) ||
+                  (!IsTableRelated(display->mDisplay, PR_TRUE)))) { 
+    if (display->mBreakBefore) {
+      ConstructPageBreakFrame(aPresShell, aPresContext, aState, aContent,
+                              aParentFrame, aStyleContext, aFrameItems);
+    }
+    return display->mBreakAfter;
+  }
+  return PR_FALSE;
+}
+
 nsresult
-nsCSSFrameConstructor::ConstructFrame(nsIPresShell*        aPresShell, 
+nsCSSFrameConstructor::ConstructPageBreakFrame(nsIPresShell*            aPresShell, 
+                                               nsIPresContext*          aPresContext,
+                                               nsFrameConstructorState& aState,
+                                               nsIContent*              aContent,
+                                               nsIFrame*                aParentFrame,
+                                               nsIStyleContext*         aStyleContext,
+                                               nsFrameItems&            aFrameItems)
+{
+  nsCOMPtr<nsIStyleContext> pseudoStyle;
+  aPresContext->ResolvePseudoStyleContextFor(nsnull, nsLayoutAtoms::pageBreakPseudo,
+                                             aStyleContext, PR_FALSE,
+                                             getter_AddRefs(pseudoStyle));
+  nsIFrame* pageBreakFrame;
+  nsresult rv = NS_NewPageBreakFrame(aPresShell, &pageBreakFrame); 
+  if (NS_SUCCEEDED(rv)) {
+    InitAndRestoreFrame(aPresContext, aState, aContent, aParentFrame, 
+                        pseudoStyle, nsnull, pageBreakFrame);
+    aFrameItems.AddChild(pageBreakFrame);
+  }
+  return rv;
+}
+
+nsresult
+nsCSSFrameConstructor::ConstructFrame(nsIPresShell*            aPresShell, 
                                       nsIPresContext*          aPresContext,
                                       nsFrameConstructorState& aState,
                                       nsIContent*              aContent,
@@ -6936,20 +7074,27 @@ nsCSSFrameConstructor::ConstructFrame(nsIPresShell*        aPresShell,
   rv = ResolveStyleContext(aPresContext, aParentFrame, aContent,
                            getter_AddRefs(styleContext));
 
-  if (NS_SUCCEEDED(rv)) {
-    
+  if (NS_SUCCEEDED(rv)) {   
     PRInt32 nameSpaceID;
     aContent->GetNameSpaceID(nameSpaceID);
-    rv = ConstructFrameInternal(aPresShell,
-                                  aPresContext,
-                                  aState,
-                                  aContent,
-                                  aParentFrame,
-                                  tag,
-                                  nameSpaceID,
-                                  styleContext,
-                                  aFrameItems,
-                                  PR_FALSE);
+
+    PRBool pageBreakAfter = PR_FALSE;
+    PRBool paginated;
+    aPresContext->IsPaginated(&paginated);
+
+    if (paginated) {
+      // See if there is a page break before, if so construct one. Also see if there is one after
+      pageBreakAfter = PageBreakBefore(aPresShell, aPresContext, aState, aContent, 
+                                       aParentFrame, styleContext, aFrameItems);
+    }
+    // construct the frame
+    rv = ConstructFrameInternal(aPresShell, aPresContext, aState, aContent, aParentFrame,
+                                tag, nameSpaceID, styleContext, aFrameItems, PR_FALSE);
+    if (NS_SUCCEEDED(rv) && pageBreakAfter) {
+      // Construct the page break after
+      ConstructPageBreakFrame(aPresShell, aPresContext, aState, aContent,
+                              aParentFrame, styleContext, aFrameItems);
+    }
   }
   
   return rv;
@@ -7201,7 +7346,7 @@ nsCSSFrameConstructor::ReconstructDocElementHierarchy(nsIPresContext* aPresConte
                                                 docElementFrame);
           if (NS_SUCCEEDED(rv)) {
             // Remove any existing fixed items: they are always on the FixedContainingBlock
-            rv = RemoveFixedItems(*aPresContext, *shell);
+            rv = RemoveFixedItems(aPresContext, shell, state.mFrameManager);
             if (NS_SUCCEEDED(rv)) {
               // Create the new document element hierarchy
               nsIFrame*                 newChild;
@@ -8344,6 +8489,13 @@ nsCSSFrameConstructor::AddDummyFrameToSelect(nsIPresContext*  aPresContext,
   return NS_ERROR_FAILURE;
 }
 
+// defined below
+static nsresult
+DeletingFrameSubtree(nsIPresContext*  aPresContext,
+                     nsIPresShell*    aPresShell,
+                     nsIFrameManager* aFrameManager,
+                     nsIFrame*        aFrame);
+
 nsresult
 nsCSSFrameConstructor::RemoveDummyFrameFromSelect(nsIPresContext* aPresContext,
                                                   nsIPresShell *  aPresShell,
@@ -8375,6 +8527,8 @@ nsCSSFrameConstructor::RemoveDummyFrameFromSelect(nsIPresContext* aPresContext,
 
           nsCOMPtr<nsIFrameManager> frameManager;
           aPresShell->GetFrameManager(getter_AddRefs(frameManager));
+          DeletingFrameSubtree(aPresContext, aPresShell, frameManager,
+                               dummyFrame);
           frameManager->RemoveFrame(aPresContext, *aPresShell,
                                     parentFrame, nsnull, dummyFrame);
           return NS_OK;
@@ -9221,6 +9375,9 @@ RemoveGeneratedContentFrameSiblings(nsIPresContext *aPresContext, nsIPresShell *
 
   if (beforeFrame &&
       IsGeneratedContentFor(content, beforeFrame, nsCSSAtoms::beforePseudo)) {
+    // Do we need to call something like |DeletingFrameSubtree| here?
+    // (Do we create content nodes for images specified in
+    // ::before/::after?  Even if they're 'display: none'?)
     aFrameManager->RemoveFrame(aPresContext, *aPresShell,
                                aInsertionPoint, nsnull,
                                beforeFrame);
@@ -9248,6 +9405,9 @@ RemoveGeneratedContentFrameSiblings(nsIPresContext *aPresContext, nsIPresShell *
 
   if (afterFrame &&
       IsGeneratedContentFor(content, afterFrame, nsCSSAtoms::afterPseudo)) {
+    // Do we need to call something like |DeletingFrameSubtree| here?
+    // (Do we create content nodes for images specified in
+    // ::before/::after?  Even if they're 'display: none'?)
     aFrameManager->RemoveFrame(aPresContext, *aPresShell,
                                aInsertionPoint, nsnull,
                                afterFrame);
@@ -10064,7 +10224,8 @@ nsCSSFrameConstructor::ProcessRestyledFrames(nsStyleChangeList& aChangeList,
 NS_IMETHODIMP
 nsCSSFrameConstructor::ContentStatesChanged(nsIPresContext* aPresContext, 
                                             nsIContent* aContent1,
-                                            nsIContent* aContent2)
+                                            nsIContent* aContent2,
+                                            nsIAtom* aChangedPseudoClass)
 {
   nsresult  result = NS_OK;
 
@@ -10269,9 +10430,15 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
 
   nsCOMPtr<nsIPresShell> shell;
   aPresContext->GetShell(getter_AddRefs(shell));
-  nsIFrame*     primaryFrame;
-  
-  shell->GetPrimaryFrameFor(aContent, &primaryFrame);
+
+  // Get the frame associated with the content which is the highest in the frame tree
+  nsIFrame* primaryFrame;
+  shell->GetPrimaryFrameFor(aContent, &primaryFrame); 
+  // Get the frame associated with the content whose style context is highest in the style context tree
+  nsIFrame* primaryStyleFrame = nsnull;
+  if (primaryFrame) {
+    primaryFrame->GetStyleContextProvider(aPresContext, &primaryStyleFrame);
+  }
 
   PRBool  reconstruct = PR_FALSE;
   PRBool  restyle = PR_FALSE;
@@ -10363,8 +10530,8 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
         // This style rule exists and we need to blow away any computed data that this
         // rule cached in the rule tree.
         rule = getter_AddRefs((nsIStyleRule*)val.GetISupportsValue());
-        if (primaryFrame)
-          primaryFrame->GetStyleContext(getter_AddRefs(styleContext));
+        if (primaryStyleFrame)
+          primaryStyleFrame->GetStyleContext(getter_AddRefs(styleContext));
         else {
           // We might be in the undisplayed map.  Retrieve the style context from there.
           nsCOMPtr<nsIFrameManager> frameManager;
@@ -10909,6 +11076,9 @@ nsCSSFrameConstructor::CantRenderReplacedElement(nsIPresShell* aPresShell,
       presShell->GetFrameManager(getter_AddRefs(frameManager));
 
       // Replace the old frame with the new frame
+
+      DeletingFrameSubtree(aPresContext, presShell, frameManager, aFrame);
+
       // Reset the primary frame mapping
       frameManager->SetPrimaryFrameFor(content, newFrame);
 
@@ -11050,6 +11220,8 @@ nsCSSFrameConstructor::CantRenderReplacedElement(nsIPresShell* aPresShell,
         newFrame = state.mFloatedItems.childList;
         state.mFloatedItems.childList = nsnull;
       }
+      DeletingFrameSubtree(aPresContext, presShell,
+                           state.mFrameManager, aFrame);
       state.mFrameManager->ReplaceFrame(aPresContext, *presShell, parentFrame,
                                         listName, aFrame, newFrame);
 
@@ -12673,6 +12845,8 @@ nsCSSFrameConstructor::WrapFramesInFirstLetterFrame(
     }
     else {
       // Take the old textFrame out of the inline parents child list
+      DeletingFrameSubtree(aPresContext, aState.mPresShell, 
+                           aState.mFrameManager, textFrame);
       parentFrame->RemoveFrame(aPresContext, *aState.mPresShell.get(),
                                nsnull, textFrame);
 
@@ -12819,9 +12993,8 @@ nsCSSFrameConstructor::RemoveFloatingFirstLetterFrames(
     return NS_OK;
   }
   nsCOMPtr<nsIStyleContext> newSC;
-  aPresContext->ResolveStyleContextFor(textContent, parentSC,
-                                       PR_FALSE,
-                                       getter_AddRefs(newSC));
+  aPresContext->ResolveStyleContextForNonElement(parentSC, PR_FALSE,
+                                                 getter_AddRefs(newSC));
   if (!newSC) {
     return NS_OK;
   }
@@ -12841,6 +13014,8 @@ nsCSSFrameConstructor::RemoveFloatingFirstLetterFrames(
     nextTextFrame->GetParent(&nextTextParent);
     if (nextTextParent) {
       nsSplittableFrame::BreakFromPrevFlow(nextTextFrame);
+      DeletingFrameSubtree(aPresContext, aPresShell, 
+                           aFrameManager, nextTextFrame);
       aFrameManager->RemoveFrame(aPresContext, *aPresShell, nextTextParent,
                                  nsnull, nextTextFrame);
     }
@@ -12863,10 +13038,12 @@ nsCSSFrameConstructor::RemoveFloatingFirstLetterFrames(
   printf("RemoveFloatingFirstLetterFrames: textContent=%p oldTextFrame=%p newTextFrame=%p\n",
          textContent.get(), textFrame, newTextFrame);
 #endif
+  // Should we call DeletingFrameSubtree on the placeholder instead
+  // and skip this call?
   aFrameManager->UnregisterPlaceholderFrame(placeholderFrame);
-  aFrameManager->SetPrimaryFrameFor(textContent, nsnull);
 
   // Remove the floater frame
+  DeletingFrameSubtree(aPresContext, aPresShell, aFrameManager, floater);
   aFrameManager->RemoveFrame(aPresContext, *aPresShell,
                              aBlockFrame, nsLayoutAtoms::floaterList,
                              floater);
@@ -12926,7 +13103,7 @@ nsCSSFrameConstructor::RemoveFirstLetterFrames(nsIPresContext* aPresContext,
 
       // Next rip out the kid and replace it with the text frame
       nsIFrameManager* frameManager = aFrameManager;
-      frameManager->SetPrimaryFrameFor(textContent, nsnull);
+      DeletingFrameSubtree(aPresContext, aPresShell, frameManager, kid);
       frameManager->RemoveFrame(aPresContext, *aPresShell,
                                 aFrame, nsnull, kid);
 
@@ -12994,6 +13171,8 @@ nsCSSFrameConstructor::RecoverLetterFrames(nsIPresShell* aPresShell, nsIPresCont
   }
   if (parentFrame) {
     // Take the old textFrame out of the parents child list
+    DeletingFrameSubtree(aPresContext, aState.mPresShell,
+                         aState.mFrameManager, textFrame);
     parentFrame->RemoveFrame(aPresContext, *aState.mPresShell.get(),
                              nsnull, textFrame);
 
@@ -13738,6 +13917,10 @@ nsCSSFrameConstructor::WipeContainingBlock(nsIPresContext* aPresContext,
 
       // Destroy the frames. As we do make sure any content to frame mappings
       // or entries in the undisplayed content map are removed
+      nsCOMPtr<nsIContent> parentContent;
+      aFrame->GetContent(getter_AddRefs(parentContent));
+      frameManager->ClearAllUndisplayedContentIn(parentContent);
+
       CleanupFrameReferences(aPresContext, frameManager, aFrameList);
       nsFrameList tmp(aFrameList);
       tmp.DestroyFrames(aPresContext);
@@ -14079,6 +14262,17 @@ nsCSSFrameConstructor::ReframeContainingBlock(nsIPresContext* aPresContext, nsIF
   }
 #endif
 
+  nsCOMPtr<nsIPresShell> shell;
+  aPresContext->GetShell(getter_AddRefs(shell));
+  PRBool isReflowing;
+  shell->IsReflowLocked(&isReflowing);
+  if(isReflowing) {
+    // don't ReframeContainingBlock, this will result in a crash
+    // if we remove a tree that's in reflow - see bug 121368 for testcase
+    NS_ASSERTION(0, "Atemptted to nsCSSFrameConstructor::ReframeContainingBlock during a Reflow!!!");
+    return NS_OK;
+  }
+
   // Get the first "normal" ancestor of the target frame.
   nsIFrame* containingBlock = GetIBContainingBlockFor(aFrame);
   if (containingBlock) {
@@ -14123,22 +14317,25 @@ nsCSSFrameConstructor::RecreateEntireFrameTree(nsIPresContext* aPresContext)
   return NS_OK;
 }
 
-nsresult nsCSSFrameConstructor::RemoveFixedItems(nsIPresContext& aPresContext,
-                                                 nsIPresShell&   aPresShell)
+nsresult nsCSSFrameConstructor::RemoveFixedItems(nsIPresContext*  aPresContext,
+                                                 nsIPresShell*    aPresShell,
+                                                 nsIFrameManager* aFrameManager)
 {
   nsresult rv=NS_OK;
 
   if (mFixedContainingBlock) {
     nsIFrame *fixedChild = nsnull;
     do {
-      mFixedContainingBlock->FirstChild(&aPresContext,
+      mFixedContainingBlock->FirstChild(aPresContext,
                                         nsLayoutAtoms::fixedList,
                                         &fixedChild);
       if (fixedChild) {
-        rv = mFixedContainingBlock->RemoveFrame(&aPresContext,
-                                                aPresShell,
-                                                nsLayoutAtoms::fixedList,
-                                                fixedChild);
+        DeletingFrameSubtree(aPresContext, aPresShell, aFrameManager,
+                             fixedChild);
+        rv = aFrameManager->RemoveFrame(aPresContext, *aPresShell,
+                                        mFixedContainingBlock,
+                                        nsLayoutAtoms::fixedList,
+                                        fixedChild);
         if (NS_FAILED(rv)) {
           NS_WARNING("Error removing frame from fixed containing block in RemoveFixedItems");
           break;

@@ -70,6 +70,24 @@ static PRLogModuleInfo *gSocketTransportLog = nsnull;
 static NS_DEFINE_CID(kSocketProviderService, NS_SOCKETPROVIDERSERVICE_CID);
 static NS_DEFINE_CID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
 
+static nsresult
+ErrorAccordingToNSPR()
+{
+    nsresult rv = NS_ErrorAccordingToNSPR();
+    if (rv == NS_ERROR_FAILURE) {
+        LOG(("PR_GetError() returned %d\n", PR_GetError()));
+        // maybe this really maps to a more specific necko error
+        switch (PR_GetError()) {
+        case PR_CONNECT_ABORTED_ERROR:
+        case PR_CONNECT_RESET_ERROR:
+            LOG(("mapping to NS_ERROR_NET_RESET\n"));
+            rv = NS_ERROR_NET_RESET;
+            break;
+        }
+    }
+    return rv;
+}
+
 //
 //----------------------------------------------------------------------------
 // nsSocketTransport
@@ -513,21 +531,8 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
 
             // on connection failure, reuse next address if one exists
             if (mStatus == NS_ERROR_CONNECTION_REFUSED) {
-                mNetAddress = mNetAddrList.GetNext(mNetAddress);
-                if (mNetAddress) {
-#if defined(PR_LOGGING)
-                    char buf[50];
-                    PR_NetAddrToString(mNetAddress, buf, sizeof(buf));
-                    LOG(("connection failed... trying %s\n", buf));
-#endif
-                    PR_Close(mSocketFD);
-                    mSocketFD = nsnull;
-
-                    // mask error status so we'll return to this state
-                    mStatus = NS_OK;
-
-                    // need to re-enter Process() asynchronously
-                    mService->AddToWorkQ(this);
+                LOG(("connection failed [this=%x error=%x]\n", this, mStatus));
+                if (TryNextAddress()) {
                     done = PR_TRUE;
                     continue;
                 }
@@ -545,6 +550,23 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
             LOG(("nsSocketTransport: Transport [host=%s:%d this=%x] is in Timeout state.\n",
                 mHostName, mPort, this));
             mStatus = NS_ERROR_NET_TIMEOUT;
+
+            // on timeout, reuse next address if one exists ... do this only
+            // if we haven't already fired OnStartRequest.
+            if (mReadRequest || mWriteRequest) {
+                PRBool firedOnStart = PR_TRUE; // initial value doesn't matter
+                if (mReadRequest)
+                    firedOnStart = mReadRequest->IsInitialized();
+                if (!firedOnStart && mWriteRequest)
+                    firedOnStart = mWriteRequest->IsInitialized();
+                if (!firedOnStart && TryNextAddress()) {
+                    // a little bit of hackery here so we'll end up in the
+                    // WaitConnect state...
+                    mCurrentState = eSocketState_WaitConnect;
+                    done = PR_TRUE;
+                    continue;
+                }
+            }
             break;
 
         default:
@@ -591,6 +613,29 @@ nsSocketTransport::Cancel(nsresult status)
     if (mWriteRequest)
         mWriteRequest->Cancel(status);
     return NS_OK;
+}
+
+PRBool
+nsSocketTransport::TryNextAddress()
+{
+    mNetAddress = mNetAddrList.GetNext(mNetAddress);
+    if (mNetAddress) {
+#if defined(PR_LOGGING)
+        char buf[64];
+        PR_NetAddrToString(mNetAddress, buf, sizeof(buf));
+        LOG(("  ...trying next address: %s\n", buf));
+#endif
+        PR_Close(mSocketFD);
+        mSocketFD = nsnull;
+
+        // mask error status so we'll return to this state
+        mStatus = NS_OK;
+
+        // need to re-enter Process() asynchronously
+        mService->AddToWorkQ(this);
+        return PR_TRUE;
+    }
+    return PR_FALSE;
 }
 
 void
@@ -2218,7 +2263,7 @@ nsSocketBIS::Read(char *aBuf, PRUint32 aCount, PRUint32 *aBytesRead)
 tryRead:
     total = PR_Read(sock, aBuf, aCount);
     if (total < 0) {
-        rv = NS_ErrorAccordingToNSPR();
+        rv = ErrorAccordingToNSPR();
         if (rv == NS_BASE_STREAM_WOULD_BLOCK) {
             //
             // Block until the socket is readable and then try again.
@@ -2231,7 +2276,7 @@ tryRead:
             LOG(("nsSocketBIS::Read [this=%x] Poll succeeded; looping back to PR_Read\n", this));
             goto tryRead;
         }
-        LOG(("nsSocketBIS::Read [this=%x] PR_Read failed  [error=%x]\n", this, PR_GetError()));
+        LOG(("nsSocketBIS::Read [this=%x] PR_Read failed [error=%d]\n", this, PR_GetError()));
         goto end;
     }
     *aBytesRead = (PRUint32) total;
@@ -2248,21 +2293,10 @@ nsSocketBIS::ReadSegments(nsWriteSegmentFun aWriter, void *aClosure,
 }
 
 NS_IMETHODIMP
-nsSocketBIS::GetNonBlocking(PRBool *aValue)
+nsSocketBIS::IsNonBlocking(PRBool *aValue)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsSocketBIS::GetObserver(nsIInputStreamObserver **aObserver)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsSocketBIS::SetObserver(nsIInputStreamObserver *aObserver)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
+    *aValue = PR_FALSE;
+    return NS_OK;
 }
 
 //
@@ -2313,7 +2347,7 @@ tryWrite:
     LOG(("nsSocketBOS PR_Write [this=%x] wrote %d of %d\n", this, total, aCount));
 
     if (written < 0) {
-        rv = NS_ErrorAccordingToNSPR();
+        rv = ErrorAccordingToNSPR();
         if (rv == NS_BASE_STREAM_WOULD_BLOCK) {
             //
             // Block until the socket is writable and then try again.
@@ -2326,7 +2360,7 @@ tryWrite:
             LOG(("nsSocketBOS::Write [this=%x] Poll succeeded; looping back to PR_Write\n", this));
             goto tryWrite;
         }
-        LOG(("nsSocketBOS::Write [this=%x] PR_Write failed [error=%x]\n", this, PR_GetError()));
+        LOG(("nsSocketBOS::Write [this=%x] PR_Write failed [error=%d]\n", this, PR_GetError()));
         goto end;
     }
     
@@ -2358,27 +2392,10 @@ nsSocketBOS::WriteSegments(nsReadSegmentFun aReader, void *aClosure,
 }
 
 NS_IMETHODIMP
-nsSocketBOS::GetNonBlocking(PRBool *aValue)
+nsSocketBOS::IsNonBlocking(PRBool *aValue)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsSocketBOS::SetNonBlocking(PRBool aValue)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsSocketBOS::GetObserver(nsIOutputStreamObserver **aObserver)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsSocketBOS::SetObserver(nsIOutputStreamObserver *aObserver)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
+    *aValue = PR_FALSE;
+    return NS_OK;
 }
 
 //
@@ -2434,9 +2451,9 @@ nsSocketIS::Read(char *aBuf, PRUint32 aCount, PRUint32 *aBytesRead)
             rv = NS_BASE_STREAM_WOULD_BLOCK;
         }
         else {
-            LOG(("nsSocketIS: PR_Read() failed [error=%x, os_error=%x]\n",
+            LOG(("nsSocketIS: PR_Read() failed [error=%d, os_error=%d]\n",
                 mError, PR_GetOSError()));
-            rv = NS_ERROR_FAILURE;
+            rv = ErrorAccordingToNSPR();
         }
         *aBytesRead = 0;
     }
@@ -2456,25 +2473,11 @@ nsSocketIS::ReadSegments(nsWriteSegmentFun aWriter, void *aClosure,
 }
 
 NS_IMETHODIMP
-nsSocketIS::GetNonBlocking(PRBool *aValue)
+nsSocketIS::IsNonBlocking(PRBool *aValue)
 {
     NS_ENSURE_ARG_POINTER(aValue);
     *aValue = PR_TRUE;
     return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSocketIS::GetObserver(nsIInputStreamObserver **aObserver)
-{
-    NS_NOTREACHED("nsSocketIS::GetObserver");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsSocketIS::SetObserver(nsIInputStreamObserver *aObserver)
-{
-    NS_NOTREACHED("nsSocketIS::SetObserver");
-    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
@@ -2554,9 +2557,9 @@ nsSocketOS::Write(const char *aBuf, PRUint32 aCount, PRUint32 *aBytesWritten)
             LOG(("nsSocketTransport: PR_Write() failed with PR_WOULD_BLOCK_ERROR\n"));
             rv = NS_BASE_STREAM_WOULD_BLOCK;
         } else {
-            LOG(("nsSocketTransport: PR_Write() failed [error=%x, os_error=%x]\n",
+            LOG(("nsSocketTransport: PR_Write() failed [error=%d, os_error=%d]\n",
                 mError, PR_GetOSError()));
-            rv = NS_ERROR_FAILURE;
+            rv = ErrorAccordingToNSPR();
         }
         *aBytesWritten = 0;
     }
@@ -2582,32 +2585,11 @@ nsSocketOS::WriteSegments(nsReadSegmentFun aReader, void *aClosure,
 }
 
 NS_IMETHODIMP
-nsSocketOS::GetNonBlocking(PRBool *aValue)
+nsSocketOS::IsNonBlocking(PRBool *aValue)
 {
     NS_ENSURE_ARG_POINTER(aValue);
     *aValue = PR_TRUE;
     return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSocketOS::SetNonBlocking(PRBool aValue)
-{
-    NS_NOTREACHED("nsSocketOS::SetNonBlocking");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsSocketOS::GetObserver(nsIOutputStreamObserver **aObserver)
-{
-    NS_NOTREACHED("nsSocketOS::GetObserver");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsSocketOS::SetObserver(nsIOutputStreamObserver *aObserver)
-{
-    NS_NOTREACHED("nsSocketOS::SetObserver");
-    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP

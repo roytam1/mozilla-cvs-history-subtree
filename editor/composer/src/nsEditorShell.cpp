@@ -113,7 +113,6 @@
 #include "nsISpellChecker.h"
 #include "nsInterfaceState.h"
 
-#include "nsEditorShellMouseListener.h"
 #include "nsIStringBundle.h"
 
 #include "nsHTMLTags.h"
@@ -251,12 +250,12 @@ nsEditorShell::nsEditorShell()
 ,  mCloseWindowWhenLoaded(PR_FALSE)
 ,  mCantEditReason(eCantEditNoReason)
 ,  mEditorType(eUninitializedEditorType)
+,  mEditorTypeString(NS_LITERAL_STRING("html"))
 ,  mContentMIMEType("text/html")
 ,  mContentTypeKnown(PR_FALSE)
 ,  mWrapColumn(0)
 ,  mSuggestedWordIndex(0)
 ,  mDictionaryIndex(0)
-,  mEditorTypeString(NS_LITERAL_STRING("html"))
 {
   //TODO:Save last-used display mode in prefs so new window inherits?
   NS_INIT_REFCNT();
@@ -304,23 +303,6 @@ nsEditorShell::Shutdown()
       (void) webProgress->RemoveProgressListener(this);
     }
   }
-
-  // Remove our document mouse event listener
-  if (mMouseListenerP)
-  {
-    nsCOMPtr<nsIDOMEventReceiver> erP;
-    rv = GetDocumentEventReceiver(getter_AddRefs(erP));
-    if (NS_SUCCEEDED(rv))
-    {
-      if (erP)
-      {
-        erP->RemoveEventListenerByIID(mMouseListenerP, NS_GET_IID(nsIDOMMouseListener));
-        mMouseListenerP = nsnull;
-      }
-      else rv = NS_ERROR_NULL_POINTER;
-    }
-  }
-
   return rv;
 }
 
@@ -377,18 +359,6 @@ nsEditorShell::ResetEditingState()
       nsCOMPtr<nsISelectionPrivate> selPriv(do_QueryInterface(domSelection));
       selPriv->RemoveSelectionListener(mStateMaintainer);
       NS_IF_RELEASE(mStateMaintainer);
-    }
-  }
-
-  // Remove our document mouse event listener
-  if (mMouseListenerP)
-  {
-    nsCOMPtr<nsIDOMEventReceiver> erP;
-    rv = GetDocumentEventReceiver(getter_AddRefs(erP));
-    if (NS_SUCCEEDED(rv) && erP)
-    {
-      erP->RemoveEventListenerByIID(mMouseListenerP, NS_GET_IID(nsIDOMMouseListener));
-      mMouseListenerP = nsnull;
     }
   }
 
@@ -536,34 +506,9 @@ nsEditorShell::PrepareDocumentForEditing(nsIDOMWindow* aDOMWindow, nsIURI *aUrl)
     mEditorController->SetCommandRefCon(editorAsISupports);
   }
 
-  if (mEditorType == eHTMLTextEditorType)
-  {
-    // get a mouse listener for double click on tags
-    // We can't use nsEditor listener because core editor shouldn't call UI commands
-    rv = NS_NewEditorShellMouseListener(getter_AddRefs(mMouseListenerP), this);
-    if (NS_FAILED(rv))
-    {
-      mMouseListenerP = nsnull;
-      return rv;
-    }
-
-    // Add mouse listener to document
-    nsCOMPtr<nsIDOMEventReceiver> erP;
-    rv = GetDocumentEventReceiver(getter_AddRefs(erP));
-    if (NS_FAILED(rv))
-    {
-      mMouseListenerP = nsnull;
-      return rv;
-    }
-
-    rv = erP->AddEventListenerByIID(mMouseListenerP, NS_GET_IID(nsIDOMMouseListener));
-    if (NS_FAILED(rv)) return rv;
-  }
-
-  // now all the listeners are set up, we can call PostCreate
   rv = editor->PostCreate();
   if (NS_FAILED(rv)) return rv;
-  
+
   if (!mMailCompose) {
     // Set the editor-specific Window caption
     UpdateWindowTitleAndRecentMenu(PR_TRUE);
@@ -647,37 +592,6 @@ nsEditorShell::PrepareDocumentForEditing(nsIDOMWindow* aDOMWindow, nsIURI *aUrl)
   }
 
   return NS_OK;
-}
-
-nsresult nsEditorShell::GetDocumentEventReceiver(nsIDOMEventReceiver **aEventReceiver)
-{
-  if (!aEventReceiver) return NS_ERROR_NULL_POINTER;
-  if (!mContentWindow || !mEditor) return NS_ERROR_NOT_INITIALIZED;
-
-  nsCOMPtr<nsIDOMDocument> domDoc;
-
-  if(!mContentWindow)
-    return NS_ERROR_NOT_INITIALIZED;
-  nsCOMPtr<nsIDOMWindowInternal> cwP = do_QueryReferent(mContentWindow);
-  if (!cwP) return NS_ERROR_NOT_INITIALIZED;
-    cwP->GetDocument(getter_AddRefs(domDoc));
-  //mContentWindow->GetDocument(getter_AddRefs(domDoc));
-
-  if (!domDoc) return NS_ERROR_NOT_INITIALIZED;
-
-  nsCOMPtr<nsIDOMElement> rootElement;
-  nsCOMPtr<nsIEditor> editor = do_QueryInterface(mEditor);
-  nsresult rv = editor->GetRootElement(getter_AddRefs(rootElement));
-
-  nsCOMPtr<nsIDOMEventReceiver> erP;
-  rv = rootElement->QueryInterface(NS_GET_IID(nsIDOMEventReceiver), getter_AddRefs(erP));
-
-  if (erP)
-  {
-    *aEventReceiver = erP;
-    NS_ADDREF(*aEventReceiver);
-  }  
-  return rv;
 }
 
 nsresult
@@ -1582,7 +1496,7 @@ nsEditorShell::LoadUrl(const PRUnichar *url)
   
   nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(mContentAreaDocShell));
   rv = webNav->LoadURI(url,                               // uri string
-                       nsIWebNavigation::LOAD_FLAGS_NONE, // load flags
+                       nsIWebNavigation::LOAD_FLAGS_BYPASS_CACHE, // load flags
                        nsnull,                            // referrer
                        nsnull,                            // post-data stream
                        nsnull);                           // headers stream
@@ -1930,11 +1844,11 @@ nsEditorShell::SetDocumentTitle(const PRUnichar *title)
     return res;
 
   // This should only be allowed for HTML documents
-  if (mEditorType != eHTMLTextEditorType)
-    return NS_ERROR_NOT_IMPLEMENTED;
-
-  res = mEditor->SetDocumentTitle(nsDependentString(title));
-  if (NS_FAILED(res)) return res;
+  if (mEditorType == eHTMLTextEditorType)
+  {
+    res = mEditor->SetDocumentTitle(nsDependentString(title));
+    if (NS_FAILED(res)) return res;
+  }
 
   // PR_FALSE means don't save menu to prefs
   return UpdateWindowTitleAndRecentMenu(PR_FALSE);
@@ -3674,7 +3588,7 @@ nsEditorShell::GetRowIndex(nsIDOMElement *cellElement, PRInt32 *_retval)
         {
           // Get both row and column indexes - return just row
           PRInt32 colIndex;
-          result = tableEditor->GetCellIndexes(cellElement, *_retval, colIndex);
+          result = tableEditor->GetCellIndexes(cellElement, _retval, &colIndex);
         }
       }
       break;
@@ -3700,7 +3614,7 @@ nsEditorShell::GetColumnIndex(nsIDOMElement *cellElement, PRInt32 *_retval)
         {
           // Get both row and column indexes - return just column
           PRInt32 rowIndex;
-          result = tableEditor->GetCellIndexes(cellElement, rowIndex, *_retval);
+          result = tableEditor->GetCellIndexes(cellElement, &rowIndex, _retval);
         }
       }
       break;
@@ -3727,7 +3641,7 @@ nsEditorShell::GetTableRowCount(nsIDOMElement *tableElement, PRInt32 *_retval)
         {
           // This returns both the number of rows and columns: return just rows
           PRInt32 cols;
-          result = tableEditor->GetTableSize(tableElement, *_retval, cols);
+          result = tableEditor->GetTableSize(tableElement, _retval, &cols);
         }
       }
       break;
@@ -3754,7 +3668,7 @@ nsEditorShell::GetTableColumnCount(nsIDOMElement *tableElement, PRInt32 *_retval
         {
           // This returns both the number of rows and columns: return just columns
           PRInt32 rows;
-          result = tableEditor->GetTableSize(tableElement, rows, *_retval);
+          result = tableEditor->GetTableSize(tableElement, &rows, _retval);
         }
       }
       break;
@@ -3817,10 +3731,10 @@ nsEditorShell::GetCellDataAt(nsIDOMElement *tableElement, PRInt32 rowIndex, PRIn
       nsCOMPtr<nsITableEditor> tableEditor = do_QueryInterface(mEditor);
       if (tableEditor)
         result = tableEditor->GetCellDataAt(tableElement, rowIndex, colIndex, _retval,
-                                            *aStartRowIndex, *aStartColIndex, 
-                                            *aRowSpan, *aColSpan, 
-                                            *aActualRowSpan, *aActualColSpan,
-                                            *aIsSelected);
+                                            aStartRowIndex, aStartColIndex, 
+                                            aRowSpan, aColSpan, 
+                                            aActualRowSpan, aActualColSpan,
+                                            aIsSelected);
       // Don't return NS_EDITOR_ELEMENT_NOT_FOUND (passes NS_SUCCEEDED macro)
       //  to JavaScript
       if(NS_SUCCEEDED(result)) return NS_OK;
@@ -3892,7 +3806,9 @@ nsEditorShell::GetSelectedOrParentTableElement(PRUnichar **aTagName, PRInt32 *aS
         nsCOMPtr<nsITableEditor> tableEditor = do_QueryInterface(mEditor);
         nsAutoString TagName(*aTagName);
         if (tableEditor)
-          result = tableEditor->GetSelectedOrParentTableElement(*_retval, TagName, *aSelectedCount);
+          result = tableEditor->GetSelectedOrParentTableElement(_retval,
+                                                                TagName,
+                                                                aSelectedCount);
           *aTagName = ToNewUnicode(TagName);
       }
       break;
@@ -3915,7 +3831,7 @@ nsEditorShell::GetSelectedCellsType(nsIDOMElement *aElement, PRUint32 *_retval)
       {
         nsCOMPtr<nsITableEditor> tableEditor = do_QueryInterface(mEditor);
         if (tableEditor)
-          result = tableEditor->GetSelectedCellsType(aElement, *_retval);
+          result = tableEditor->GetSelectedCellsType(aElement, _retval);
       }
       break;
     default:
@@ -4900,41 +4816,6 @@ nsEditorShell::CheckPrefAndNormalizeTable()
   return res;
 }
 
-
-NS_IMETHODIMP
-nsEditorShell::HandleMouseClickOnElement(nsIDOMElement *aElement, PRInt32 aClickCount,
-                                         PRInt32 x, PRInt32 y, PRBool *_retval)
-{
-  // Guess it's ok if we don't have an element
-  if (!aElement) return NS_OK;
-  if (!_retval)  return NS_ERROR_NULL_POINTER;
-
-  *_retval = PR_FALSE;
-
-  nsresult rv = NS_OK;
-
-  // For double-click, edit element properties
-  if (aClickCount == 2)
-  {
-    // In "All Tags" mode, use AdvancedProperties,
-    //  in others use appriate object property dialog
-    if (mDisplayMode == eDisplayModeAllTags)
-    {
-        // We must select element here because we don't do that for
-        //  body, table, td, tr, caption elements in nsEditorShellMouseListener 
-        rv = SelectElement(aElement);
-        if (NS_FAILED(rv)) return rv;
-        rv = DoControllerCommand(NS_LITERAL_STRING("cmd_advancedProperties"));
-    }
-    else
-        rv = DoControllerCommand(NS_LITERAL_STRING("cmd_objectProperties"));
-        
-    if (NS_SUCCEEDED(rv))
-      *_retval = PR_TRUE;
-  }
-
-  return rv;
-}
 
 nsresult
 nsEditorShell::DoControllerCommand(const nsAReadableString& aCommand)

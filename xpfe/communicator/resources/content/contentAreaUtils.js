@@ -197,6 +197,23 @@ function saveInternal(aURL, aDocument,
 function foundHeaderInfo(aSniffer, aData)
 {
   var contentType = aSniffer.contentType;
+  var contentEncodingType = aSniffer.contentEncodingType;
+
+  var shouldDecode = false;
+  // Are we allowed to decode?
+  try {
+    const helperAppService =
+      Components.classes["@mozilla.org/uriloader/external-helper-app-service;1"].
+        getService(Components.interfaces.nsIExternalHelperAppService);
+    var url = aSniffer.uri.QueryInterface(Components.interfaces.nsIURL);
+    var urlExt = url.fileExtension;
+    if (helperAppService.applyDecodingForType(contentType) &&
+        (!urlExt || helperAppService.applyDecodingForExtension(urlExt))) {
+      shouldDecode = true;
+    }
+  }
+  catch (e) {
+  }
 
   var fp = makeFilePicker();
   var titleKey = aData.filePickerTitle || "SaveLinkTitle";
@@ -206,7 +223,16 @@ function foundHeaderInfo(aSniffer, aData)
 
 
   var isDocument = aData.document != null && isDocumentType(contentType);
-  appendFiltersForContentType(fp, aSniffer.contentType,
+  if (!isDocument && !shouldDecode && contentEncodingType) {
+    // The data is encoded, we are not going to decode it, and this is not a
+    // document save so we won't be doing a "save as, complete" (which would
+    // break if we reset the type here).  So just set our content type to
+    // correspond to the outermost encoding so we get extensions and the like
+    // right.
+    contentType = contentEncodingType;
+  }
+    
+  appendFiltersForContentType(fp, contentType,
                               isDocument ? MODE_COMPLETE : MODE_FILEONLY);  
 
   const prefSvcContractID = "@mozilla.org/preferences-service;1";
@@ -232,7 +258,8 @@ function foundHeaderInfo(aSniffer, aData)
   // should be. 
   var defaultFileName = getDefaultFileName(aData.fileName, 
                                            aSniffer.suggestedFileName, 
-                                           aSniffer.uri);
+                                           aSniffer.uri,
+                                           aData.document);
   var defaultExtension = getDefaultExtension(defaultFileName, aSniffer.uri, contentType);
   fp.defaultExtension = defaultExtension;
   fp.defaultString = getNormalizedLeafName(defaultFileName, defaultExtension);
@@ -251,7 +278,6 @@ function foundHeaderInfo(aSniffer, aData)
   // as converted text, pass the document to the web browser persist component.
   // If we're just saving the HTML (second option in the list), send only the URI.
   var source = (isDocument && fp.filterIndex != 1) ? aData.document : aSniffer.uri;
-  
   var persistArgs = {
     source      : source,
     contentType : (isDocument && fp.filterIndex == 2) ? "text/plain" : contentType,
@@ -260,16 +286,7 @@ function foundHeaderInfo(aSniffer, aData)
     bypassCache : aData.bypassCache
   };
   
-  // Create persist object and progress dialog, connect them up, and
-  // initiate download.
-  var dialog  = makeProgressDialog();
   var persist = makeWebBrowserPersist();
-
-  dialog.source = makeURL(aData.url);
-  dialog.target = persistArgs.target;
-
-  // Set up the persist object to do the download/save.
-  persist.progressListener = dialog;
 
   // Calculate persist flags.
   const nsIWBP = Components.interfaces.nsIWebBrowserPersist;
@@ -279,15 +296,12 @@ function foundHeaderInfo(aSniffer, aData)
   else 
     persist.persistFlags = flags | nsIWBP.PERSIST_FLAGS_FROM_CACHE;
 
-  try {
-    const helperAppService =
-      Components.classes["@mozilla.org/uriloader/external-helper-app-service;1"].getService(Components.interfaces.nsIExternalHelperAppService);
-    if (helperAppService.applyDecodingForType(persistArgs.contentType)) {
-      persist.persistFlags &= ~nsIWBP.PERSIST_FLAGS_NO_CONVERSION;
-    }
-  } catch (e) {
-  }      
-  
+  if (shouldDecode)
+    persist.persistFlags &= ~nsIWBP.PERSIST_FLAGS_NO_CONVERSION;
+    
+  // Create download and initiate it (below)
+  var dl = Components.classes["@mozilla.org/download;1"].createInstance(Components.interfaces.nsIDownload);
+
   if (isDocument && fp.filterIndex != 1) {
     // Saving a Document, not a URI:
     var filesFolder = null;
@@ -315,12 +329,11 @@ function foundHeaderInfo(aSniffer, aData)
     }
     
     const kWrapColumn = 80;
-
-    dialog.open(null, persist);
+    dl.init(aSniffer.uri, persistArgs.target, null, null, null, persist);
     persist.saveDocument(persistArgs.source, persistArgs.target, filesFolder, 
                          persistArgs.contentType, encodingFlags, kWrapColumn);
   } else {
-    dialog.open(null, persist);
+    dl.init(source, persistArgs.target, null, null, null, persist);
     persist.saveURI(source, persistArgs.postData, persistArgs.target);
   }
 }
@@ -404,6 +417,22 @@ nsHeaderSniffer.prototype = {
         this.contentType = channel.contentType;
         try {
           var httpChannel = channel.QueryInterface(Components.interfaces.nsIHttpChannel);
+          this.contentEncodingType = null;
+          // There may be content-encodings on the channel.  Multiple content
+          // encodings are allowed, eg "Content-Encoding: gzip, uuencode".  This
+          // header would mean that the content was first gzipped and then
+          // uuencoded.  The encoding enumerator returns MIME types
+          // corresponding to each encoding starting from the end, so the first
+          // thing it returns corresponds to the outermost encoding.
+          var encodingEnumerator = httpChannel.contentEncodings;
+          if (encodingEnumerator && encodingEnumerator.hasMoreElements()) {
+            try {
+              this.contentEncodingType =
+                encodingEnumerator.getNext().
+                  QueryInterface(Components.interfaces.nsISupportsString).data;
+            } catch (e) {
+            }
+          }
           this.mContentDisposition = httpChannel.getResponseHeader("content-disposition");
         }
         catch (e) {
@@ -567,11 +596,10 @@ function makeProgressDialog()
 
 function makeURL(aURL)
 {
-  const stdURLContractID = "@mozilla.org/network/standard-url;1";
-  const stdURLIID = Components.interfaces.nsIURI;
-  var uri = Components.classes[stdURLContractID].createInstance(stdURLIID);
-  uri.spec = aURL;
-  return uri;
+  var ioService = Components.classes["@mozilla.org/network/io-service;1"]
+                .getService(Components.interfaces.nsIIOService);
+  return ioService.newURI(aURL, null, null);
+  
 }
 
 function makeFilePicker()

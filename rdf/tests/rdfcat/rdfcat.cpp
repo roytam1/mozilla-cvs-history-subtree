@@ -50,7 +50,6 @@
 #include "nsCOMPtr.h"
 #include "nsIComponentManager.h"
 #include "nsIEventQueueService.h"
-#include "nsIGenericFactory.h"
 #include "nsIIOService.h"
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
@@ -78,7 +77,6 @@ static NS_DEFINE_CID(kRDFXMLDataSourceCID,  NS_RDFXMLDATASOURCE_CID);
 
 // xpcom
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
-static NS_DEFINE_CID(kGenericFactoryCID,    NS_GENERICFACTORY_CID);
 
 ////////////////////////////////////////////////////////////////////////
 // Blatantly stolen from netwerk/test/
@@ -126,26 +124,8 @@ public:
     }
 
     NS_IMETHOD
-    GetNonBlocking(PRBool *aNonBlocking) {
-        NS_NOTREACHED("GetNonBlocking");
-        return NS_ERROR_NOT_IMPLEMENTED;
-    }
-
-    NS_IMETHOD
-    SetNonBlocking(PRBool aNonBlocking) {
-        NS_NOTREACHED("SetNonBlocking");
-        return NS_ERROR_NOT_IMPLEMENTED;
-    }
-
-    NS_IMETHOD
-    GetObserver(nsIOutputStreamObserver * *aObserver) {
-        NS_NOTREACHED("GetObserver");
-        return NS_ERROR_NOT_IMPLEMENTED;
-    }
-
-    NS_IMETHOD
-    SetObserver(nsIOutputStreamObserver * aObserver) {
-        NS_NOTREACHED("SetObserver");
+    IsNonBlocking(PRBool *aNonBlocking) {
+        NS_NOTREACHED("IsNonBlocking");
         return NS_ERROR_NOT_IMPLEMENTED;
     }
 

@@ -76,7 +76,6 @@ static HANDLE s_hHackedNonReentrancy = NULL;
   {0xa2112d6a, 0x0e28, 0x421f, {0xb4, 0x6a, 0x25, 0xc0, 0xb3, 0x8, 0xcb, 0xd0}}
 
 static NS_DEFINE_CID(kPromptServiceCID, NS_PROMPTSERVICE_CID);
-static NS_DEFINE_CID(kPrintOptionsCID, NS_PRINTOPTIONS_CID);
 
 // Macros to return errors from bad calls to the automation
 // interfaces and sets a descriptive string on IErrorInfo so VB programmers
@@ -186,6 +185,19 @@ CMozillaBrowser::~CMozillaBrowser()
     Terminate();
 }
 
+// See bug 127982:
+//
+// Microsoft's InlineIsEqualGUID global function is multiply defined
+// in ATL and/or SDKs with varying namespace requirements. To save the control
+// from future grief, this method is used instead. 
+static inline BOOL _IsEqualGUID(REFGUID rguid1, REFGUID rguid2)
+{
+   return (
+	  ((PLONG) &rguid1)[0] == ((PLONG) &rguid2)[0] &&
+	  ((PLONG) &rguid1)[1] == ((PLONG) &rguid2)[1] &&
+	  ((PLONG) &rguid1)[2] == ((PLONG) &rguid2)[2] &&
+	  ((PLONG) &rguid1)[3] == ((PLONG) &rguid2)[3]);
+}
 
 STDMETHODIMP CMozillaBrowser::InterfaceSupportsErrorInfo(REFIID riid)
 {
@@ -195,9 +207,9 @@ STDMETHODIMP CMozillaBrowser::InterfaceSupportsErrorInfo(REFIID riid)
         &IID_IWebBrowser2,
         &IID_IWebBrowserApp
     };
-    for (int i=0;i<(sizeof(arr)/sizeof(arr[0]));i++)
+    for (int i = 0; i < (sizeof(arr) / sizeof(arr[0])); i++)
     {
-        if (::ATL::InlineIsEqualGUID(*arr[i],riid))
+        if (_IsEqualGUID(*arr[i], riid))
             return S_OK;
     }
     return S_FALSE;
@@ -1434,27 +1446,27 @@ HRESULT CMozillaBrowser::UnloadBrowserHelpers()
 // Print document
 HRESULT CMozillaBrowser::PrintDocument(BOOL promptUser)
 {
-    nsresult rv;
-
-    PRBool oldPrintSilent = PR_FALSE;
-    nsCOMPtr<nsIPrintOptions> printService = 
-             do_GetService(kPrintOptionsCID, &rv);
-    if (printService)
-    {
-        printService->GetPrintSilent(&oldPrintSilent);
-        printService->SetPrintSilent(promptUser ? PR_FALSE : PR_TRUE);
-    }
-
     // Print the contents
     nsCOMPtr<nsIWebBrowserPrint> browserAsPrint = do_GetInterface(mWebBrowser);
+    NS_ASSERTION(browserAsPrint, "No nsIWebBrowserPrint!");
+
+    PRBool oldPrintSilent = PR_FALSE;
+    nsCOMPtr<nsIPrintSettings> printSettings;
+    browserAsPrint->GetGlobalPrintSettings(getter_AddRefs(printSettings));
+    if (printSettings) 
+    {
+        printSettings->GetPrintSilent(&oldPrintSilent);
+        printSettings->SetPrintSilent(promptUser ? PR_FALSE : PR_TRUE);
+    }
+
     PrintListener *listener = new PrintListener;
     nsCOMPtr<nsIWebProgressListener> printListener = do_QueryInterface(listener);
-    browserAsPrint->Print(nsnull, nsnull);
+    browserAsPrint->Print(printSettings, nsnull);
     listener->WaitForComplete();
 
-    if (printService)
+    if (printSettings)
     {
-        printService->SetPrintSilent(oldPrintSilent);
+        printSettings->SetPrintSilent(oldPrintSilent);
     }
     
     return S_OK;
@@ -1772,7 +1784,7 @@ HRESULT STDMETHODCALLTYPE CMozillaBrowser::Navigate(BSTR URL, VARIANT __RPC_FAR 
 
     // Check for a view-source op - this is a bit kludgy
     // TODO
-    if (sUrl.CompareWithConversion(L"view-source:", PR_TRUE, 12) == 0)
+    if (NS_LossyConvertUCS2toASCII(sUrl).Compare("view-source:", PR_TRUE, 12) == 0)
      {
         // Broken code - appears to want to replace view-source: with view: to 
         // get Mozilla to respond to the IE view-source: protocol.

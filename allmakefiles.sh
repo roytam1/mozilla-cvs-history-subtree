@@ -85,6 +85,7 @@ dom/public/idl/range/Makefile
 dom/public/idl/stylesheets/Makefile
 dom/public/idl/views/Makefile
 dom/public/idl/xbl/Makefile
+dom/public/idl/xpath/Makefile
 dom/public/idl/xul/Makefile
 dom/src/Makefile
 dom/src/base/Makefile
@@ -630,6 +631,9 @@ xpfe/components/bookmarks/Makefile
 xpfe/components/bookmarks/public/Makefile
 xpfe/components/bookmarks/src/Makefile
 xpfe/components/directory/Makefile
+xpfe/components/download-manager/Makefile
+xpfe/components/download-manager/src/Makefile
+xpfe/components/download-manager/public/Makefile
 xpfe/components/timebomb/Makefile
 xpfe/components/timebomb/tools/Makefile
 xpfe/components/regviewer/Makefile
@@ -1042,11 +1046,6 @@ for extension in $MOZ_EXTENSIONS; do
         p3p ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/p3p/Makefile
             extensions/p3p/public/Makefile
-            extensions/p3p/resources/Makefile
-            extensions/p3p/resources/content/Makefile
-            extensions/p3p/resources/locale/Makefile
-            extensions/p3p/resources/locale/en-US/Makefile
-            extensions/p3p/resources/skin/Makefile
             extensions/p3p/src/Makefile
             " ;;
         pics ) MAKEFILES_extensions="$MAKEFILES_extensions

@@ -61,7 +61,8 @@ nsresult nsDateTimeFormatUnix::Initialize(nsILocale* locale)
 
   // use cached info if match with stored locale
   if (NULL == locale) {
-    if (mLocale.Length() && mLocale.EqualsIgnoreCase(mAppLocale)) {
+    if (mLocale.Length() &&
+        mLocale.Equals(mAppLocale, nsCaseInsensitiveStringComparator())) {
       return NS_OK;
     }
   }
@@ -198,8 +199,6 @@ nsresult nsDateTimeFormatUnix::FormatTMTime(nsILocale* locale,
       PL_strncpy(fmtD, "", NSDATETIME_FORMAT_BUFFER_LEN);
       break; 
     case kDateFormatLong:
-      PL_strncpy(fmtD, "%c", NSDATETIME_FORMAT_BUFFER_LEN);
-      break; 
     case kDateFormatShort:
       PL_strncpy(fmtD, "%x", NSDATETIME_FORMAT_BUFFER_LEN);
       break; 

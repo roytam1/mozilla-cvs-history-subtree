@@ -6,7 +6,7 @@
  * the License at http://www.mozilla.org/NPL/
  *
  * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express oqr
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  *
@@ -60,12 +60,12 @@ extern JSBool
 js_HasLengthProperty(JSContext *cx, JSObject *obj, jsuint *lengthp);
 
 /*
- * JS-specific qsort function.
+ * JS-specific heap sort function.
  */
 typedef int (*JSComparator)(const void *a, const void *b, void *arg);
 
 extern JSBool
-js_qsort(void *vec, size_t nel, size_t elsize, JSComparator cmp, void *arg);
+js_HeapSort(void *vec, size_t nel, size_t elsize, JSComparator cmp, void *arg);
 
 JS_END_EXTERN_C
 

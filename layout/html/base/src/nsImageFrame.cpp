@@ -1228,17 +1228,12 @@ nsImageFrame::Paint(nsIPresContext*      aPresContext,
       if (vis->IsVisibleOrCollapsed()) {
         const nsStyleBorder* myBorder = (const nsStyleBorder*)
           mStyleContext->GetStyleData(eStyleStruct_Border);
-        const nsStyleOutline* myOutline = (const nsStyleOutline*)
-          mStyleContext->GetStyleData(eStyleStruct_Outline);
         nsRect rect(0, 0, mRect.width, mRect.height);
         nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, this,
                                         aDirtyRect, rect, *myBorder, 0, 0);
         nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
                                     aDirtyRect, rect, *myBorder,
                                     mStyleContext, 0);
-        nsCSSRendering::PaintOutline(aPresContext, aRenderingContext, this,
-                                     aDirtyRect, rect, *myBorder,
-                                     *myOutline, mStyleContext, 0);
       }
     }
 
@@ -1256,7 +1251,7 @@ nsImageFrame::Paint(nsIPresContext*      aPresContext,
       // indicating the status (unless image is blocked, in which case we show nothing)
 #ifndef SUPPRESS_LOADING_ICON
       if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer &&
-          !mImageBlocked) {
+          (!mImageBlocked || mIconLoad->mPrefAllImagesBlocked)) {
 #else
       if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer &&
           mInitialLoadCompleted) {
@@ -1268,6 +1263,7 @@ nsImageFrame::Paint(nsIPresContext*      aPresContext,
       }
     }
     else {
+      PRBool paintOutline   = PR_FALSE;
       mInitialLoadCompleted = PR_TRUE;
       if (NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer) {
         // Now render the image into our content area (the area inside the
@@ -1330,6 +1326,7 @@ nsImageFrame::Paint(nsIPresContext*      aPresContext,
 
             aRenderingContext.DrawScaledImage(imgCon, &r, &d);
           }
+          paintOutline = PR_TRUE;
         }
       }
 
@@ -1344,6 +1341,20 @@ nsImageFrame::Paint(nsIPresContext*      aPresContext,
         aRenderingContext.Translate(inner.x, inner.y);
         map->Draw(aPresContext, aRenderingContext);
         aRenderingContext.PopState(clipState);
+        paintOutline = PR_TRUE;
+      }
+
+      // paint the outline in the overlay layer (or if there is an image map) until the 
+      // general problem of painting it outside the border box is solved.
+      if (paintOutline) {
+        const nsStyleBorder* myBorder = (const nsStyleBorder*)
+          mStyleContext->GetStyleData(eStyleStruct_Border);
+        const nsStyleOutline* myOutline = (const nsStyleOutline*)
+          mStyleContext->GetStyleData(eStyleStruct_Outline);
+        nsRect rect(0, 0, mRect.width, mRect.height);
+        nsCSSRendering::PaintOutline(aPresContext, aRenderingContext, this,
+                                     aDirtyRect, rect, *myBorder,
+                                     *myOutline, mStyleContext, 0);
       }
 
 #ifdef DEBUG
@@ -1849,9 +1860,9 @@ nsImageFrame::IsImageComplete(PRBool* aComplete)
 }
 
 nsresult
-nsImageFrame::LoadImage(const nsAReadableString& aSpec, nsIPresContext *aPresContext, imgIRequest *aRequest)
+nsImageFrame::LoadImage(const nsAReadableString& aSpec, nsIPresContext *aPresContext, imgIRequest *aRequest, PRBool aCheckContentPolicy)
 {
-  nsresult rv = RealLoadImage(aSpec, aPresContext, aRequest);
+  nsresult rv = RealLoadImage(aSpec, aPresContext, aRequest, aCheckContentPolicy);
 
   if (NS_FAILED(rv)) {
     int whichLoad = GetImageLoad(aRequest);
@@ -1863,7 +1874,7 @@ nsImageFrame::LoadImage(const nsAReadableString& aSpec, nsIPresContext *aPresCon
 }
 
 nsresult
-nsImageFrame::RealLoadImage(const nsAReadableString& aSpec, nsIPresContext *aPresContext, imgIRequest *aRequest)
+nsImageFrame::RealLoadImage(const nsAReadableString& aSpec, nsIPresContext *aPresContext, imgIRequest *aRequest, PRBool aCheckContentPolicy)
 {
   nsresult rv = NS_OK;
 
@@ -1877,7 +1888,8 @@ nsImageFrame::RealLoadImage(const nsAReadableString& aSpec, nsIPresContext *aPre
 
   /* don't load the image if some security check fails... */
   GetRealURI(aSpec, getter_AddRefs(realURI));
-  if (!CanLoadImage(realURI)) return NS_ERROR_FAILURE;
+  if (aCheckContentPolicy)
+    if (!CanLoadImage(realURI)) return NS_ERROR_FAILURE;
 
   if (!mListener) {
     nsImageListener *listener = new nsImageListener(this);
@@ -1917,6 +1929,19 @@ nsImageFrame::RealLoadImage(const nsAReadableString& aSpec, nsIPresContext *aPre
 #define INTERNAL_GOPHER_LENGTH 16 /* "internal-gopher-" length */
 
 void
+nsImageFrame::GetDocumentCharacterSet(nsAWritableString& aCharset) const
+{
+  nsresult rv;
+  nsCOMPtr<nsIHTMLContent> htmlContent(do_QueryInterface(mContent, &rv));
+  if (NS_SUCCEEDED(rv)) {
+    nsCOMPtr<nsIDocument> doc;
+    rv = htmlContent->GetDocument(*getter_AddRefs(doc));
+    if (NS_SUCCEEDED(rv))
+      (void) doc->GetDocumentCharacterSet(aCharset);
+  }
+}
+
+void
 nsImageFrame::GetURI(const nsAReadableString& aSpec, nsIURI **aURI)
 {
   *aURI = nsnull;
@@ -1943,7 +1968,11 @@ nsImageFrame::GetRealURI(const nsAReadableString& aSpec, nsIURI **aURI)
 {
   nsCOMPtr<nsIURI> baseURI;
   GetBaseURI(getter_AddRefs(baseURI));
-  NS_NewURI(aURI, aSpec, nsnull, baseURI);
+  nsAutoString charset;
+  GetDocumentCharacterSet(charset);
+  NS_NewURI(aURI, aSpec, 
+            charset.IsEmpty() ? nsnull : NS_ConvertUCS2toUTF8(charset).get(), 
+            baseURI);
 }
 
 void
@@ -2021,7 +2050,7 @@ nsImageFrame::CanLoadImage(nsIURI *aURI)
     nsCOMPtr<nsIDOMWindow> domWin(do_QueryInterface(globalScript));
 
     rv = NS_CheckContentLoadPolicy(nsIContentPolicy::IMAGE,
-                                 aURI, element, domWin, &shouldLoad);
+                                   aURI, element, domWin, &shouldLoad);
     if (NS_SUCCEEDED(rv) && !shouldLoad) {
       // this image has been blocked, so flag it
       mImageBlocked = PR_TRUE;
@@ -2069,14 +2098,14 @@ nsresult nsImageFrame::LoadIcons(nsIPresContext *aPresContext)
 #ifdef NOISY_ICON_LOADING
       printf( "Loading request %p\n", mIconLoad->mIconLoads[NS_ICON_LOADING_IMAGE].mRequest.get() );
 #endif
-      rv = LoadImage(loadingSrc, aPresContext, mIconLoad->mIconLoads[NS_ICON_LOADING_IMAGE].mRequest);
+      rv = LoadImage(loadingSrc, aPresContext, mIconLoad->mIconLoads[NS_ICON_LOADING_IMAGE].mRequest, PR_FALSE);
       if (NS_SUCCEEDED(rv)) {
         mIconLoad->mIconLoads[NS_ICON_BROKEN_IMAGE].mRequest = do_CreateInstance("@mozilla.org/image/request;1");
         if (mIconLoad->mIconLoads[NS_ICON_BROKEN_IMAGE].mRequest) {
 #ifdef NOISY_ICON_LOADING
           printf( "Loading request %p\n", mIconLoad->mIconLoads[NS_ICON_BROKEN_IMAGE].mRequest.get() );
 #endif
-          rv = LoadImage(brokenSrc, aPresContext, mIconLoad->mIconLoads[NS_ICON_BROKEN_IMAGE].mRequest);
+          rv = LoadImage(brokenSrc, aPresContext, mIconLoad->mIconLoads[NS_ICON_BROKEN_IMAGE].mRequest, PR_FALSE);
           // ImageLoader will callback into OnStartContainer, which will handle the mIconsLoaded flag
         }
       }
@@ -2132,7 +2161,7 @@ void nsImageFrame::InvalidateIcon(nsIPresContext *aPresContext)
   Invalidate(aPresContext, rect, PR_FALSE);
 }
 
-void nsImageFrame::IconLoad::GetAltModePref(nsIPresContext *aPresContext)
+void nsImageFrame::IconLoad::GetPrefs(nsIPresContext *aPresContext)
 {
   NS_ASSERTION(aPresContext, "null presContext is not allowed in GetAltModePref");
   // NOTE: the presContext could be used to fetch a cached pref if needed, but is not for now
@@ -2140,10 +2169,16 @@ void nsImageFrame::IconLoad::GetAltModePref(nsIPresContext *aPresContext)
   nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID);
   if (prefs) {
     PRBool boolPref;
+    PRInt32 intPref;
     if (NS_SUCCEEDED(prefs->GetBoolPref("browser.display.force_inline_alttext", &boolPref))) {
       mPrefForceInlineAltText = boolPref;
     } else {
       mPrefForceInlineAltText = PR_FALSE;
+    }
+    if (NS_SUCCEEDED(prefs->GetIntPref("network.image.imageBehavior", &intPref)) && intPref == 2) {
+      mPrefAllImagesBlocked = PR_TRUE;
+    } else {
+      mPrefAllImagesBlocked = PR_FALSE;
     }
   }
 }

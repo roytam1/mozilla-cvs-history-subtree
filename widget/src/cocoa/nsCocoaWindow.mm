@@ -324,8 +324,8 @@ nsCocoaWindow::nsCocoaWindow()
 nsCocoaWindow::~nsCocoaWindow()
 {
   if ( mWindow && mWindowMadeHere ) {
-    [mWindow release];
-    [mDelegate release];
+    [mWindow autorelease];
+    [mDelegate autorelease];
   }
   
 #if 0
@@ -393,16 +393,25 @@ nsresult nsCocoaWindow::StandardCreate(nsIWidget *aParent,
                               | NSResizableWindowMask;
     if ( mWindowType == eWindowType_popup || mWindowType == eWindowType_invisible )
       features = 0;
+
+    // XXXdwh Just don't make popup windows yet.  They mess up the world.
+    if (mWindowType == eWindowType_popup)
+      return NS_OK;
+
     mWindow = [[NSWindow alloc] initWithContentRect:rect styleMask:features 
                         backing:NSBackingStoreBuffered defer:NO];
     
+    // Popups will receive a "close" message when an app terminates
+    // that causes an extra release to occur.  Make sure popups
+    // are set not to release when closed.
+    if (features == 0)
+      [mWindow setReleasedWhenClosed: NO];
+
     // create a quickdraw view as the toplevel content view of the window
     NSQuickDrawView* content = [[[NSQuickDrawView alloc] init] autorelease];
     [content setFrame:[[mWindow contentView] frame]];
     [mWindow setContentView:content];
     
-    NSLog(@"New quickdraw view. %@", content);
-
     // register for mouse-moved events. The default is to ignore them for perf reasons.
     [mWindow setAcceptsMouseMovedEvents:YES];
     
@@ -873,7 +882,7 @@ NS_IMETHODIMP nsCocoaWindow::Show(PRBool bState)
     [mWindow orderFront:NULL];
   else
     [mWindow orderOut:NULL];
- 
+
   mVisible = bState;
 
 #if 0
@@ -1719,7 +1728,6 @@ void StopResizing ( )
   return self;
 }
 
-
 - (void)windowDidResize:(NSNotification *)aNotification
 {
   if ( !mGeckoWindow->IsResizing() ) {
@@ -1759,7 +1767,6 @@ void StopResizing ( )
 
 - (void)windowDidMove:(NSNotification *)aNotification
 {
-  printf("did move\n");
 }
 
 @end

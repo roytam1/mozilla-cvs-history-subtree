@@ -1460,7 +1460,8 @@ nsXMLContentSink::HandleCDataSection(const PRUnichar *aData,
 
 NS_IMETHODIMP
 nsXMLContentSink::HandleDoctypeDecl(const PRUnichar *aDoctype,
-                                    PRUint32 aLength)
+                                    PRUint32 aLength,
+                                    nsISupports* aCatalogData)
 {
   nsresult rv = NS_OK;
 
@@ -1487,7 +1488,6 @@ nsXMLContentSink::HandleDoctypeDecl(const PRUnichar *aDoctype,
   // The rest is the internal subset (minus whitespace)
   str.Trim(kWhitespace);
 
-  nsCOMPtr<nsIDOMDocumentType> oldDocType;
   nsCOMPtr<nsIDOMDocumentType> docType;
   
   // Create a new doctype node
@@ -1496,6 +1496,25 @@ nsXMLContentSink::HandleDoctypeDecl(const PRUnichar *aDoctype,
                              publicId, systemId, str);
   if (NS_FAILED(rv) || !docType) {
     return rv;
+  }
+
+  if (aCatalogData && mCSSLoader && mDocument) {
+    // bug 124570 - we only expect additional agent sheets for now -- ignore
+    // exit codes, error are not fatal here, just that the stylesheet won't apply
+    nsCOMPtr<nsIURI> uri(do_QueryInterface(aCatalogData));
+    if (uri) {
+      PRBool complete;
+      nsCOMPtr<nsICSSStyleSheet> sheet;
+      mCSSLoader->LoadAgentSheet(uri, *getter_AddRefs(sheet), complete, nsnull);
+#ifdef NS_DEBUG
+      nsCAutoString uriStr;
+      uri->GetSpec(uriStr);
+      printf("Loading catalog stylesheet: %s ... %s\n", uriStr.get(), sheet.get() ? "Done" : "Failed");
+#endif
+      if (sheet) {
+        mDocument->AddStyleSheet(sheet, NS_STYLESHEET_FROM_CATALOG);
+      }
+    }
   }
 
   nsCOMPtr<nsIDOMNode> tmpNode;
@@ -1587,13 +1606,26 @@ nsXMLContentSink::ReportError(const PRUnichar* aErrorText,
 {
   nsresult rv = NS_OK;
 
+  mState = eXMLContentSinkState_InProlog;
+
+  // Clear the current content and
+  // prepare to set <parsererror> as the document root
+  nsCOMPtr<nsIDOMNode> node(do_QueryInterface(mDocument));
+  if (node) {
+    for (;;) {
+      nsCOMPtr<nsIDOMNode> child, dummy;
+      node->GetLastChild(getter_AddRefs(child));
+      if (!child)
+        break;
+      node->RemoveChild(child, getter_AddRefs(dummy));
+    }
+  }
+  NS_IF_RELEASE(mDocElement); 
+
   NS_NAMED_LITERAL_STRING(name, "xmlns");
-  NS_NAMED_LITERAL_STRING(value, "http://www.w3.org/1999/xhtml");
+  NS_NAMED_LITERAL_STRING(value, "http://www.mozilla.org/newlayout/xml/parsererror.xml");
 
   const PRUnichar* atts[] = {name.get(), value.get(), nsnull};
-
-  mState = eXMLContentSinkState_InProlog;
-  NS_IF_RELEASE(mDocElement); // Do this inorder to set the <parsererror> as the document root
     
   rv = HandleStartElement(NS_LITERAL_STRING("parsererror").get(), atts, 1, -1, -1);
   NS_ENSURE_SUCCESS(rv,rv);
@@ -1601,7 +1633,8 @@ nsXMLContentSink::ReportError(const PRUnichar* aErrorText,
   rv = HandleCharacterData(aErrorText, nsCRT::strlen(aErrorText));
   NS_ENSURE_SUCCESS(rv,rv);  
   
-  rv = HandleStartElement(NS_LITERAL_STRING("sourcetext").get(), atts, 1, -1, -1);
+  const PRUnichar* noAtts[] = {0, 0};
+  rv = HandleStartElement(NS_LITERAL_STRING("sourcetext").get(), noAtts, 0, -1, -1);
   NS_ENSURE_SUCCESS(rv,rv);
   
   rv = HandleCharacterData(aSourceText, nsCRT::strlen(aSourceText));

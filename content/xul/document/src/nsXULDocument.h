@@ -240,7 +240,7 @@ public:
     NS_IMETHOD GetStyleSheetAt(PRInt32 aIndex, nsIStyleSheet** aSheet);
     NS_IMETHOD GetIndexOfStyleSheet(nsIStyleSheet* aSheet, PRInt32* aIndex);
 
-    virtual void AddStyleSheet(nsIStyleSheet* aSheet);
+    virtual void AddStyleSheet(nsIStyleSheet* aSheet, PRUint32 aFlags);
     virtual void RemoveStyleSheet(nsIStyleSheet* aSheet);
     NS_IMETHOD UpdateStyleSheets(nsISupportsArray* aOldSheets, nsISupportsArray* aNewSheets);
     void AddStyleSheetToStyleSets(nsIStyleSheet* aSheet);
@@ -249,7 +249,7 @@ public:
     NS_IMETHOD InsertStyleSheetAt(nsIStyleSheet* aSheet, PRInt32 aIndex, PRBool aNotify);
 
     virtual void SetStyleSheetDisabledState(nsIStyleSheet* aSheet,
-                                            PRBool mDisabled);
+                                            PRBool aDisabled);
 
     NS_IMETHOD GetCSSLoader(nsICSSLoader*& aLoader);
 
@@ -278,7 +278,9 @@ public:
     NS_IMETHOD ContentChanged(nsIContent* aContent,
                               nsISupports* aSubContent);
 
-    NS_IMETHOD ContentStatesChanged(nsIContent* aContent1, nsIContent* aContent2);
+    NS_IMETHOD ContentStatesChanged(nsIContent* aContent1,
+                                    nsIContent* aContent2,
+                                    nsIAtom* aChangedPseudoClass);
 
     NS_IMETHOD AttributeChanged(nsIContent* aChild,
                                 PRInt32 aNameSpaceID,

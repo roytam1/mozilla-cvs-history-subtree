@@ -6,7 +6,7 @@
  * the License at http://www.mozilla.org/NPL/
  *
  * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express oqr
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  *
@@ -40,7 +40,6 @@
 #include "pratom.h"
 #include "prlock.h"
 #include "prcvar.h"
-#include "jshash.h" /* Added by JSIFY */
 
 #include "jsprvtd.h"    /* for JSScope, etc. */
 #include "jspubtd.h"    /* for JSRuntime, etc. */

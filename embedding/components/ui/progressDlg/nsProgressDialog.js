@@ -52,6 +52,7 @@ function nsProgressDialog() {
     // Initialize data properties.
     this.mParent      = null;
     this.mOperation   = null;
+    this.mCancelOnClose = null;
     this.mStartTime   = ( new Date() ).getTime();
     this.observer     = null;
     this.mLastUpdate  = Number.MIN_VALUE; // To ensure first onProgress causes update.
@@ -64,6 +65,7 @@ function nsProgressDialog() {
     this.mTarget      = null;
     this.mApp         = null;
     this.mDialog      = null;
+    this.mDisplayName = null;
     this.mPaused      = null;
     this.mRequest     = null;
     this.mCompleted   = false;
@@ -84,11 +86,13 @@ nsProgressDialog.prototype = {
     dialogFeatures: "chrome,titlebar,minimizable=yes",
 
     // getters/setters
-    get saving()            { return this.openingWith == null; },
+    get saving()            { return this.openingWith == null || this.openingWith == ""; },
     get parent()            { return this.mParent; },
     set parent(newval)      { return this.mParent = newval; },
     get operation()         { return this.mOperation; },
     set operation(newval)   { return this.mOperation = newval; },
+    get cancelOnClose()     { return this.mCancelOnClose; },
+    set cancelOnClose(newval) { return this.mCancelOnClose = newval; },
     get observer()          { return this.mObserver; },
     set observer(newval)    { return this.mObserver = newval; },
     get startTime()         { return this.mStartTime; },
@@ -109,6 +113,8 @@ nsProgressDialog.prototype = {
     set openingWith(newval) { return this.mApp = newval; },
     get dialog()            { return this.mDialog; },
     set dialog(newval)      { return this.mDialog = newval; },
+    get displayName()       { return this.mDisplayName; },
+    set displayName(newval) { return this.mDisplayName = newval; },
     get paused()            { return this.mPaused; },
     get request()           { return this.mRequest; },
     get completed()         { return this.mCompleted; },
@@ -128,10 +134,9 @@ nsProgressDialog.prototype = {
     // ---------- nsIProgressDialog methods ----------
 
     // open: Store aParentWindow and open the dialog.
-    open: function( aParentWindow, aPersist ) {
+    open: function( aParentWindow ) {
         // Save parent and "persist" operation.
         this.parent    = aParentWindow;
-        this.operation = aPersist;
 
         // Open dialog using the WindowWatcher service.
         var ww = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
@@ -141,6 +146,17 @@ nsProgressDialog.prototype = {
                                      null,
                                      this.dialogFeatures,
                                      this );
+    },
+    
+    init: function( aSource, aTarget, aDisplayName, aOpeningWith, aStartTime, aOperation ) {
+      this.source = aSource;
+      this.target = aTarget;
+      this.displayName = aDisplayName;
+      this.openingWith = aOpeningWith;
+      if ( aStartTime ) {
+          this.startTime = aStartTime;
+      }
+      this.operation = aOperation;
     },
 
     // ---------- nsIWebProgressListener methods ----------
@@ -307,6 +323,7 @@ nsProgressDialog.prototype = {
     // of interface inheritance), nsIObserver, and nsISupports.
     QueryInterface: function (iid) {
         if (!iid.equals(Components.interfaces.nsIProgressDialog) &&
+            !iid.equals(Components.interfaces.nsIDownload) && 
             !iid.equals(Components.interfaces.nsIWebProgressListener) &&
             !iid.equals(Components.interfaces.nsIObserver) &&
             !iid.equals(Components.interfaces.nsISupports)) {
@@ -390,6 +407,10 @@ nsProgressDialog.prototype = {
                 this.dialogElement( "keep" ).checked = prefs.getBoolPref( "browser.download.progressDnldDialog.keepAlive" );
             }
         }
+        
+        if ( !this.cancelOnClose ) {
+            this.hide( "cancel" );
+        }
 
         // Initialize title.
         this.setTitle();
@@ -429,7 +450,9 @@ nsProgressDialog.prototype = {
             }
          }
          this.dialog = null; // The dialog is history.
-         this.onCancel();
+         if ( this.cancelOnClose ) {
+             this.onCancel();
+         }
     },
 
     // onpause event means the user pressed the pause/resume button
@@ -572,8 +595,7 @@ nsProgressDialog.prototype = {
                 }
 
                 // Disable the Pause/Resume buttons.
-                this.dialogElement( "pause" ).disabled = true;
-                this.dialogElement( "resume" ).disabled = true;
+                this.dialogElement( "pauseResume" ).disabled = true;
 
                 // Fix up dialog layout (which gets messed up sometimes).
                 this.dialog.sizeToContent();
@@ -597,10 +619,8 @@ nsProgressDialog.prototype = {
     setPaused: function( pausing ) {
         // If state changing, then update stuff.
         if ( this.paused != pausing ) {
-            // Set selected index:
-            //   Going from active state to paused: 2 -> "resume"
-            //   Going from initial or paused state to active:  1 -> "pause"
-            this.dialogElement( "pauseResume" ).selectedIndex = pausing ? 2 : 1;
+            var string = pausing ? "resume" : "pause";
+            this.dialogElement( "pauseResume" ).label = this.getString(string);
 
             // If we have a request, suspend/resume it.
             if ( this.request ) {
@@ -628,7 +648,7 @@ nsProgressDialog.prototype = {
             try {
                 ftpChannel = aRequest.QueryInterface( Components.interfaces.nsIFTPChannel );
                 if ( ftpChannel ) {
-                    this.dialogElement("pauseResume").selectedIndex = 1;
+                    this.dialogElement("pauseResume").label = this.getString("pause");
                     this.paused = false;
                 }
             } catch ( e ) {
@@ -739,8 +759,11 @@ nsProgressDialog.prototype = {
     // Hide a given dialog field.
     hide: function( field ) {
         this.dialogElement( field ).setAttribute( "style", "display: none;" );
-        // Hide the associated separator, too.
-        this.dialogElement( field+"Separator" ).setAttribute( "style", "display: none;" );
+        // Hide the associated separator, too, if one exists.
+        var separator = this.dialogElement( field+"Separator" );
+        if ( separator ) {
+            separator.setAttribute( "style", "display: none;" );
+        }
     },
 
     // Return input in hex, prepended with "0x" and leading zeros (to 8 digits).

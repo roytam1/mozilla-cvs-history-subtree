@@ -50,11 +50,15 @@
 #include "nsCSSAtoms.h"
 #include "nsThemeConstants.h"
 #include "nsITheme.h"
+#include "pldhash.h"
 
 // Temporary - Test of full time Standard mode for forms
 #include "nsIPref.h"
 #include "nsIServiceManager.h"
 
+/*
+ * For storage of an |nsRuleNode|'s children in a linked list.
+ */
 struct nsRuleList {
   nsRuleNode* mRuleNode;
   nsRuleList* mNext;
@@ -85,49 +89,57 @@ public:
     this->~nsRuleList();
     aContext->FreeToShell(sizeof(nsRuleList), this);
   }
+
+  // Destroy this node, but not its rule node or the rest of the list.
+  nsRuleList* DestroySelf(nsIPresContext* aContext) {
+    nsRuleList *next = mNext;
+    MOZ_COUNT_DTOR(nsRuleList); // hack
+    aContext->FreeToShell(sizeof(nsRuleList), this);
+    return next;
+  }
 };
 
-class nsShellISupportsKey : public nsHashKey {
-public:
-  nsISupports* mKey;
-  
-public:
-  nsShellISupportsKey(nsISupports* key) {
-#ifdef DEBUG
-    mKeyType = SupportsKey;
-#endif
-    mKey = key;
-  }
-  
-  ~nsShellISupportsKey(void) {
-  }
-  
-  void* operator new(size_t sz, nsIPresContext* aContext) {
-    void* result = nsnull;
-    aContext->AllocateFromShell(sz, &result);
-    return result;
-  };
-  void operator delete(void* aPtr) {} // Does nothing. The arena will free us up when the rule tree
-                                      // dies.
+/*
+ * For storage of an |nsRuleNode|'s children in a PLDHashTable.
+ */
 
-  void Destroy(nsIPresContext* aContext) {
-    this->~nsShellISupportsKey();
-    aContext->FreeToShell(sizeof(nsShellISupportsKey), this);
-  }
-
-  PRUint32 HashCode(void) const {
-    return NS_PTR_TO_INT32(mKey);
-  }
-
-  PRBool Equals(const nsHashKey *aKey) const {
-    NS_ASSERTION(aKey->GetKeyType() == SupportsKey, "mismatched key types");
-    return (mKey == ((nsShellISupportsKey *) aKey)->mKey);
-  }
-
-  nsHashKey* Clone() const {
-    return (nsHashKey*)this; // Just return ourselves.
-  }
+struct ChildrenHashEntry : public PLDHashEntryHdr {
+  // key (the rule) is |mRuleNode->Rule()|
+  nsRuleNode *mRuleNode;
 };
+
+PR_STATIC_CALLBACK(const void *)
+ChildrenHashGetKey(PLDHashTable *table, PLDHashEntryHdr *hdr)
+{
+  ChildrenHashEntry *entry = NS_STATIC_CAST(ChildrenHashEntry*, hdr);
+  return entry->mRuleNode->Rule();
+}
+
+PR_STATIC_CALLBACK(PRBool)
+ChildrenHashMatchEntry(PLDHashTable *table, const PLDHashEntryHdr *hdr,
+                         const void *key)
+{
+  const ChildrenHashEntry *entry =
+    NS_STATIC_CAST(const ChildrenHashEntry*, hdr);
+  return entry->mRuleNode->Rule() == key;
+}
+
+static PLDHashTableOps ChildrenHashOps = {
+  // It's probably better to allocate the table itself using malloc and
+  // free rather than the pres shell's arena because the table doesn't
+  // grow very often and the pres shell's arena doesn't recycle very
+  // large size allocations.
+  PL_DHashAllocTable,
+  PL_DHashFreeTable,
+  ChildrenHashGetKey,
+  PL_DHashVoidPtrKeyStub,
+  ChildrenHashMatchEntry,
+  PL_DHashMoveEntryStub,
+  PL_DHashClearEntryStub,
+  PL_DHashFinalizeStub,
+  NULL
+};
+
 
 // EnsureBlockDisplay:
 //  - if the display value (argument) is not a block-type
@@ -239,6 +251,7 @@ nscoord CalcLength(const nsCSSValue& aValue,
       aPresContext->GetScaledPixelsToTwips(&p2t);
       return NSFloatPixelsToTwips(aValue.GetFloatValue(), p2t);
     default:
+      NS_NOTREACHED("unexpected unit");
       break;
   }
   return 0;
@@ -402,21 +415,23 @@ void nsRuleNode::CreateRootNode(nsIPresContext* aPresContext, nsRuleNode** aResu
 nsILanguageAtomService* nsRuleNode::gLangService = nsnull;
 
 nsRuleNode::nsRuleNode(nsIPresContext* aContext, nsIStyleRule* aRule, nsRuleNode* aParent)
-    :mPresContext(aContext), mParent(aParent), mDependentBits(0), mNoneBits(0)
+  : mPresContext(aContext),
+    mParent(aParent),
+    mRule(aRule),
+    mChildrenTaggedPtr(nsnull),
+    mDependentBits(0),
+    mNoneBits(0)
 {
   MOZ_COUNT_CTOR(nsRuleNode);
-  mRule = aRule;
-  if (mParent)
-    mChildren = nsnull;
-  else
-    mRootChildren = nsnull;
 }
 
-PR_STATIC_CALLBACK(PRBool) DeleteRuleNodeChildren(nsHashKey* aKey, void* aData, void* aClosure)
+PR_STATIC_CALLBACK(PLDHashOperator)
+DeleteRuleNodeChildren(PLDHashTable *table, PLDHashEntryHdr *hdr,
+                       PRUint32 number, void *arg)
 {
-  nsRuleNode* ruleNode = (nsRuleNode*)aData;
-  ruleNode->Destroy();
-  return PR_TRUE;
+  ChildrenHashEntry *entry = NS_STATIC_CAST(ChildrenHashEntry*, hdr);
+  entry->mRuleNode->Destroy();
+  return PL_DHASH_NEXT;
 }
 
 nsRuleNode::~nsRuleNode()
@@ -424,16 +439,12 @@ nsRuleNode::~nsRuleNode()
   MOZ_COUNT_DTOR(nsRuleNode);
   if (mStyleData.mResetData || mStyleData.mInheritedData)
     mStyleData.Destroy(0, mPresContext);
-  if (mParent) {
-    if (mChildren)
-      mChildren->Destroy(mPresContext);
-  }
-  else {
-    if (mRootChildren) {
-      mRootChildren->Enumerate(DeleteRuleNodeChildren, nsnull);
-      delete mRootChildren;
-    }
-  }
+  if (ChildrenAreHashed()) {
+    PLDHashTable *children = ChildrenHash();
+    PL_DHashTableEnumerate(children, DeleteRuleNodeChildren, nsnull);
+    PL_DHashTableDestroy(children);
+  } else if (HaveChildren())
+    ChildrenList()->Destroy(mPresContext);
 }
 
 nsresult 
@@ -454,44 +465,66 @@ nsRuleNode::Transition(nsIStyleRule* aRule, nsRuleNode** aResult)
 {
   nsRuleNode* next = nsnull;
 
-  if (!mParent) {
-    nsShellISupportsKey key(aRule);
-    if (mRootChildren)
-      next = NS_STATIC_CAST(nsRuleNode*, mRootChildren->Get(&key));
-    if (!next) {
-      // Create the new entry in our table.
-      nsRuleNode* newNode = new (mPresContext) nsRuleNode(mPresContext, aRule, this);
-      next = newNode;
-
-      if (!mRootChildren)
-        mRootChildren = new nsHashtable(4);
-      
-      // Clone the key ourselves by allocating it from the shell's arena.
-      nsShellISupportsKey* clonedKey = new (mPresContext) nsShellISupportsKey(aRule);
-      mRootChildren->Put(clonedKey, next);
+  if (HaveChildren() && !ChildrenAreHashed()) {
+    PRInt32 numKids = 0;
+    nsRuleList* curr = ChildrenList();
+    while (curr && curr->mRuleNode->mRule != aRule) {
+      curr = curr->mNext;
+      ++numKids;
     }
+    if (curr)
+      next = curr->mRuleNode;
+    else if (numKids >= kMaxChildrenInList)
+      ConvertChildrenToHash();
   }
-  else {
-    if (mChildren) {
-      nsRuleList* curr = mChildren;
-      for ( ; curr && curr->mRuleNode->mRule != aRule; curr = curr->mNext);
-      if (curr)
-        next = curr->mRuleNode;
-    }
-    if (!next) {
-      // Create the new entry in our table.
-      nsRuleNode* newNode = new (mPresContext) nsRuleNode(mPresContext, aRule, this);
-      next = newNode;
 
-      if (!mChildren)
-        mChildren = new (mPresContext) nsRuleList(newNode);
-      else
-        mChildren = new (mPresContext) nsRuleList(newNode, mChildren);
+  if (ChildrenAreHashed()) {
+    ChildrenHashEntry *entry = NS_STATIC_CAST(ChildrenHashEntry*,
+        PL_DHashTableOperate(ChildrenHash(), aRule, PL_DHASH_ADD));
+    if (entry->mRuleNode)
+      next = entry->mRuleNode;
+    else {
+      next = entry->mRuleNode =
+          new (mPresContext) nsRuleNode(mPresContext, aRule, this);
+      if (!next) {
+        PL_DHashTableRawRemove(ChildrenHash(), entry);
+        *aResult = nsnull;
+        return NS_ERROR_OUT_OF_MEMORY;
+      }
     }
+  } else if (!next) {
+    // Create the new entry in our list.
+    next = new (mPresContext) nsRuleNode(mPresContext, aRule, this);
+    if (!next) {
+      *aResult = nsnull;
+      return NS_ERROR_OUT_OF_MEMORY;
+    }
+    SetChildrenList(new (mPresContext) nsRuleList(next, ChildrenList()));
   }
     
   *aResult = next;
   return NS_OK;
+}
+
+void
+nsRuleNode::ConvertChildrenToHash()
+{
+  NS_ASSERTION(!ChildrenAreHashed() && HaveChildren(),
+               "must have a non-empty list of children");
+  PLDHashTable *hash = PL_NewDHashTable(&ChildrenHashOps, nsnull,
+                                        sizeof(ChildrenHashEntry),
+                                        kMaxChildrenInList * 4);
+  if (!hash)
+    return;
+  for (nsRuleList* curr = ChildrenList(); curr;
+       curr = curr->DestroySelf(mPresContext)) {
+    // This will never fail because of the initial size we gave the table.
+    ChildrenHashEntry *entry = NS_STATIC_CAST(ChildrenHashEntry*,
+        PL_DHashTableOperate(hash, curr->mRuleNode->mRule, PL_DHASH_ADD));
+    NS_ASSERTION(!entry->mRuleNode, "duplicate entries in list");
+    entry->mRuleNode = curr->mRuleNode;
+  }
+  SetChildrenHash(hash);
 }
 
 nsresult
@@ -544,12 +577,14 @@ nsRuleNode::ClearCachedData(nsIStyleRule* aRule)
   return NS_OK;
 }
 
-PRBool PR_CALLBACK ClearCachedDataInSubtreeHelper(nsHashKey* aKey, void* aData, void* aClosure)
+PR_STATIC_CALLBACK(PLDHashOperator)
+ClearCachedDataInSubtreeHelper(PLDHashTable *table, PLDHashEntryHdr *hdr,
+                               PRUint32 number, void *arg)
 {
-  nsRuleNode* ruleNode = (nsRuleNode*)aData;
-  nsIStyleRule* rule = (nsIStyleRule*)aClosure;
-  ruleNode->ClearCachedDataInSubtree(rule);
-  return PR_TRUE;
+  ChildrenHashEntry *entry = NS_STATIC_CAST(ChildrenHashEntry*, hdr);
+  nsIStyleRule* rule = NS_STATIC_CAST(nsIStyleRule*, arg);
+  entry->mRuleNode->ClearCachedDataInSubtree(rule);
+  return PL_DHASH_NEXT;
 }
 
 nsresult
@@ -564,12 +599,11 @@ nsRuleNode::ClearCachedDataInSubtree(nsIStyleRule* aRule)
     aRule = nsnull;  // Cause everything to be blown away in the descendants.
   }
 
-  if (!mParent) {
-    if (mRootChildren)
-      mRootChildren->Enumerate(ClearCachedDataInSubtreeHelper, (void*)aRule);
-  } 
+  if (ChildrenAreHashed())
+    PL_DHashTableEnumerate(ChildrenHash(),
+                           ClearCachedDataInSubtreeHelper, aRule);
   else
-    for (nsRuleList* curr = mChildren; curr; curr = curr->mNext)
+    for (nsRuleList* curr = ChildrenList(); curr; curr = curr->mNext)
       curr->mRuleNode->ClearCachedDataInSubtree(aRule);
 
   return NS_OK;
@@ -761,6 +795,8 @@ CheckFontCallback(const nsCSSStruct& aData)
         (family == NS_STYLE_FONT_LIST) ||
         (family == NS_STYLE_FONT_FIELD) ||
         (family == NS_STYLE_FONT_THEME))
+      // Mixed rather than Reset in case another sub-property has
+      // an explicit 'inherit'.   XXXperf Could check them.
       return nsRuleNode::eRuleFullMixed;
   }
   return nsRuleNode::eRuleUnknown;
@@ -783,7 +819,9 @@ static const PropertyCheckData DisplayCheckProperties[] = {
   CHECKDATA_PROP(nsCSSDisplay, mPosition, CHECKDATA_VALUE, PR_FALSE),
   CHECKDATA_PROP(nsCSSDisplay, mFloat, CHECKDATA_VALUE, PR_FALSE),
   CHECKDATA_PROP(nsCSSDisplay, mClear, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSDisplay, mOverflow, CHECKDATA_VALUE, PR_FALSE)
+  CHECKDATA_PROP(nsCSSDisplay, mOverflow, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsCSSDisplay, mBreakBefore, CHECKDATA_VALUE, PR_FALSE), // temp fix for bug 2400
+  CHECKDATA_PROP(nsCSSDisplay, mBreakAfter, CHECKDATA_VALUE, PR_FALSE)   // temp fix for bug 2400
 };
 
 static const PropertyCheckData VisibilityCheckProperties[] = {
@@ -1468,14 +1506,14 @@ nsRuleNode::WalkRuleTree(const nsStyleStructID aSID,
     if (ruleNode->mNoneBits & bit)
       break;
 
-    // If the inherit bit is set on a rule node for this struct, that
+    // If the dependent bit is set on a rule node for this struct, that
     // means its rule won't have any information to add, so skip it.
     // XXXldb I don't understand why we need to check |detail| here, but
     // we do.
     if (detail == eRuleNone)
       while (ruleNode->mDependentBits & bit) {
         NS_ASSERTION(ruleNode->mStyleData.GetStyleData(aSID) == nsnull,
-                     "inherit bit with cached data makes no sense");
+                     "dependent bit with cached data makes no sense");
         // Climb up to the next rule in the tree (a less specific rule).
         rootNode = ruleNode;
         ruleNode = ruleNode->mParent;
@@ -1869,7 +1907,22 @@ SetFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
     }
 #endif
 
-#ifdef XP_PC
+#if defined(XP_OS2)
+      switch (sysID) {
+        case eSystemFont_List:
+        case eSystemFont_Button:
+          aFont->mFont.name = defaultVariableFont->name;
+          break;
+        case eSystemFont_Field:
+          if (eCompatibility_NavQuirks == mode)
+             aFont->mFont.name.Assign(NS_LITERAL_STRING("monospace"));
+          else
+             aFont->mFont.name = defaultVariableFont->name;
+          break;
+    }
+#endif
+
+#ifdef XP_WIN
     //
     // As far as I can tell the system default fonts and sizes for
     // on MS-Windows for Buttons, Listboxes/Comboxes and Text Fields are 
@@ -2211,7 +2264,12 @@ nsRuleNode::ComputeFontData(nsStyleStruct* aStartStruct, const nsCSSStruct& aDat
   const nsStyleFont* parentFont = nsnull;
   PRBool inherited = aInherited;
 
-  if (parentContext && aRuleDetail != eRuleFullReset)
+  // This optimization is a little weaker here since 'em', etc., for
+  // 'font-size' require inheritance.
+  if (parentContext &&
+      (aRuleDetail != eRuleFullReset ||
+       (fontData.mSize.IsRelativeLengthUnit() &&
+        fontData.mSize.GetUnit() != eCSSUnit_Pixel)))
     parentFont = NS_STATIC_CAST(const nsStyleFont*,
                                parentContext->GetStyleData(eStyleStruct_Font));
   if (aStartStruct)
@@ -2808,6 +2866,15 @@ nsRuleNode::ComputeDisplayData(nsStyleStruct* aStartStruct, const nsCSSStruct& a
     inherited = PR_TRUE;
     display->mBreakType = parentDisplay->mBreakType;
   }
+
+  // temp fix for bug 24000
+  if (eCSSUnit_Enumerated == displayData.mBreakBefore.GetUnit()) {
+    display->mBreakBefore = (NS_STYLE_PAGE_BREAK_ALWAYS == displayData.mBreakBefore.GetIntValue());
+  }
+  if (eCSSUnit_Enumerated == displayData.mBreakAfter.GetUnit()) {
+    display->mBreakAfter = (NS_STYLE_PAGE_BREAK_ALWAYS == displayData.mBreakAfter.GetIntValue());
+  }
+  // end temp fix
 
   // float: enum, none, inherit
   if (eCSSUnit_Enumerated == displayData.mFloat.GetUnit()) {

@@ -6,7 +6,7 @@
  * the License at http://www.mozilla.org/NPL/
  *
  * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express oqr
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  *
@@ -740,11 +740,13 @@ XPCNativeSet::NewInstance(XPCCallContext& ccx,
     PRUint16 slots = count+1;
 
     PRUint16 i;
-    XPCNativeInterface* cur;
+    XPCNativeInterface** pcur;
 
-    for(i = 0, cur = *array; i < count; i++, cur++)
-        if(cur == isup)
+    for(i = 0, pcur = array; i < count; i++, pcur++)
+    {
+        if(*pcur == isup)
             slots--;
+    }
 
     // Use placement new to create an object with the right amount of space
     // to hold the members array
@@ -766,6 +768,8 @@ XPCNativeSet::NewInstance(XPCCallContext& ccx,
 
         for(i = 0; i < count; i++)
         {
+            XPCNativeInterface* cur;
+
             if(isup == (cur = *(inp++)))
                 continue;
             *(outp++) = cur;

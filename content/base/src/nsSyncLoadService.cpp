@@ -38,7 +38,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsSyncLoader.h"
-#include "nsAppShellCIDs.h"
 #include "nsIDocument.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMElement.h"
@@ -54,7 +53,6 @@ static const char* kLoadAsData = "loadAsData";
 
 static NS_DEFINE_CID(kIDOMDOMImplementationCID, NS_DOM_IMPLEMENTATION_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
-static NS_DEFINE_CID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID);
 
 /*
  * This class exists to prevent a circular reference between
@@ -228,27 +226,26 @@ nsSyncLoader::LoadDocument(nsIURI* documentURI, nsIDocument *aLoader, nsIDOMDocu
 
     nsCOMPtr<nsIEventQueue> currentThreadQ;
     rv = service->PushThreadEventQueue(getter_AddRefs(currentThreadQ));
-    NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
+    NS_ENSURE_SUCCESS(rv, rv);
 
     // Register as a load listener on the document
     nsCOMPtr<nsIDOMEventReceiver> target = do_QueryInterface(DOMDocument);
-    txLoadListenerProxy* proxy;
-    if (target) {
-        nsWeakPtr requestWeak = getter_AddRefs(NS_GetWeakReference(NS_STATIC_CAST(nsIDOMLoadListener*, this)));
-        proxy = new txLoadListenerProxy(requestWeak);
-        if (!proxy) {
-            service->PopThreadEventQueue(currentThreadQ);
-            return NS_ERROR_OUT_OF_MEMORY;
-        }
+    NS_ENSURE_TRUE(target, NS_ERROR_FAILURE);
 
-        // This will addref the proxy
-        rv = target->AddEventListenerByIID(NS_STATIC_CAST(nsIDOMEventListener*, 
-                                                          proxy), 
-                                           NS_GET_IID(nsIDOMLoadListener));
-        if (NS_FAILED(rv)) {
-            service->PopThreadEventQueue(currentThreadQ);
-            return rv;
-        }
+    nsWeakPtr requestWeak = getter_AddRefs(NS_GetWeakReference(NS_STATIC_CAST(nsIDOMLoadListener*, this)));
+    txLoadListenerProxy* proxy = new txLoadListenerProxy(requestWeak);
+    if (!proxy) {
+        service->PopThreadEventQueue(currentThreadQ);
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    // This will addref the proxy
+    rv = target->AddEventListenerByIID(NS_STATIC_CAST(nsIDOMEventListener*, 
+                                                      proxy), 
+                                       NS_GET_IID(nsIDOMLoadListener));
+    if (NS_FAILED(rv)) {
+        service->PopThreadEventQueue(currentThreadQ);
+        return rv;
     }
     
     mLoadSuccess = PR_FALSE;

@@ -55,6 +55,7 @@
 #include "nsICookieConsent.h"
 #include "nsIURL.h"
 #include "nsIHttpChannel.h"
+#include "prnetdb.h"
 
 #define MAX_NUMBER_OF_COOKIES 300
 #define MAX_COOKIES_PER_SERVER 20
@@ -92,8 +93,8 @@ typedef struct _cookie_CookieStruct {
   time_t lastAccessed;
   PRBool isSecure;
   PRBool isDomain;   /* is it a domain instead of an absolute host? */
-  nsCookieStatus_t status;
-  nsCookiePolicy_t policy;
+  nsCookieStatus status;
+  nsCookiePolicy policy;
 } cookie_CookieStruct;
 
 typedef enum {
@@ -328,7 +329,17 @@ cookie_CheckForPrevCookie(char * path, char * hostname, char * name) {
 
 /* cookie utility functions */
 PRIVATE void
-cookie_SetBehaviorPref(PERMISSION_BehaviorEnum x) {
+cookie_SetBehaviorPref(PERMISSION_BehaviorEnum x, nsIPref* prefs) {
+  // can't have pref specifying accept-cookie-based-on-p3p if p3p module is not installed
+  if (x == PERMISSION_P3P) {
+    // pref specifies that cookie acceptance is based on site's p3p policy
+    nsCOMPtr<nsICookieConsent> p3p(do_GetService(NS_COOKIECONSENT_CONTRACTID));
+    if (!p3p) {
+      // p3p module is not installed, so change pref to accept-all
+      x = PERMISSION_Accept;
+      prefs->SetIntPref(cookie_behaviorPref, x);
+    }
+  }
   cookie_behavior = x;
 }
 
@@ -407,7 +418,7 @@ cookie_BehaviorPrefChanged(const char * newpref, void * data) {
     n = PERMISSION_Accept;
   }
     
-  cookie_SetBehaviorPref((PERMISSION_BehaviorEnum)n);
+  cookie_SetBehaviorPref((PERMISSION_BehaviorEnum)n, prefs);
   return 0;
 }
 
@@ -512,8 +523,7 @@ COOKIE_RegisterPrefCallbacks(void) {
   if (NS_FAILED(prefs->GetIntPref(cookie_behaviorPref, &n))) {
     n = PERMISSION_Accept;
   }
-
-  cookie_SetBehaviorPref((PERMISSION_BehaviorEnum)n);
+  cookie_SetBehaviorPref((PERMISSION_BehaviorEnum)n, prefs);
   prefs->RegisterCallback(cookie_behaviorPref, cookie_BehaviorPrefChanged, nsnull);
 
   // Initialize for cookie_warningPref
@@ -561,6 +571,13 @@ COOKIE_RegisterPrefCallbacks(void) {
 }
 
 PRBool
+cookie_IsIPAddress(const char* name) {
+  // determine if name is an IP address
+  PRNetAddr addr;
+  return (PR_StringToNetAddr(name, &addr) == PR_SUCCESS);
+}
+
+PRBool
 cookie_IsInDomain(char* domain, char* host, int hostLength) {
   int domainLength = PL_strlen(domain);
 
@@ -579,16 +596,9 @@ cookie_IsInDomain(char* domain, char* host, int hostLength) {
   }
 
   /*
-   * test for domain name being an IP address (e.g., 105.217) and reject if so
+   * test for domain name being an IP address (e.g., 105.217.180.21) and reject if so
    */
-  PRBool hasNonDigitChar = PR_FALSE;
-  for (int i = 0; i<domainLength; i++) {
-    if (!nsCRT::IsAsciiDigit(domain[i]) && domain[i] != '.') {
-      hasNonDigitChar = PR_TRUE;
-      break;
-    }
-  }
-  if (!hasNonDigitChar) {
+  if (cookie_IsIPAddress(domain)) {
     return PR_FALSE;
   }
 
@@ -804,11 +814,11 @@ cookie_isForeign (char * curURL, char * firstURL, nsIIOService* ioService) {
   char * firstHostColon = 0;
 
   /* strip ports */
-  curHostColon = strchr(curHost.get(), ':');
+  curHostColon = (char *)strchr(curHost.get(), ':');
   if(curHostColon) {
     *curHostColon = '\0';
   }
-  firstHostColon = strchr(firstHost.get(), ':');
+  firstHostColon = (char *)strchr(firstHost.get(), ':');
   if(firstHostColon) {
     *firstHostColon = '\0';
   }
@@ -826,7 +836,7 @@ cookie_isForeign (char * curURL, char * firstURL, nsIIOService* ioService) {
   return retval;
 }
 
-nsCookieStatus_t
+nsCookieStatus
 cookie_GetStatus(char decision) {
   switch (decision) {
     case ' ':
@@ -837,11 +847,13 @@ cookie_GetStatus(char decision) {
       return nsICookie::STATUS_DOWNGRADED;
     case 'f':
       return nsICookie::STATUS_FLAGGED;
+    case 'r':
+      return nsICookie::STATUS_REJECTED;
   }
   return nsICookie::STATUS_UNKNOWN;
 }
 
-nsCookiePolicy_t
+nsCookiePolicy
 cookie_GetPolicy(int policy) {
   switch (policy) {
     case P3P_NoPolicy:
@@ -879,7 +891,8 @@ P3P_SitePolicy(char * curURL, nsIHttpChannel* aHttpChannel) {
  */
 int
 cookie_P3PUserPref(PRInt32 policy, PRBool foreign) {
-  NS_ASSERTION(policy == P3P_NoPolicy ||
+  NS_ASSERTION(policy == P3P_UnknownPolicy ||
+               policy == P3P_NoPolicy ||
                policy == P3P_NoConsent ||
                policy == P3P_ImplicitConsent ||
                policy == P3P_ExplicitConsent ||
@@ -890,7 +903,8 @@ cookie_P3PUserPref(PRInt32 policy, PRBool foreign) {
      * asked for explicit consent */
     policy = P3P_ExplicitConsent;
   }
-  if (cookie_P3P && PL_strlen(cookie_P3P) == 8) {
+  // note: P3P_UnknownPolicy means that the p3p module was not installed
+  if (cookie_P3P && PL_strlen(cookie_P3P) == 8 && policy != P3P_UnknownPolicy) {
     return (foreign ? cookie_P3P[policy+1] : cookie_P3P[policy]);
   } else {
     return P3P_Accept;
@@ -900,7 +914,7 @@ cookie_P3PUserPref(PRInt32 policy, PRBool foreign) {
 /*
  * returns STATUS_ACCEPT, STATUS_DOWNGRADE, STATUS_FLAG, or STATUS_REJECT based on user's preferences
  */
-nsCookieStatus_t
+nsCookieStatus
 cookie_P3PDecision (char * curURL, char * firstURL, nsIIOService* ioService, nsIHttpChannel* aHttpChannel) {
   return cookie_GetStatus(
            cookie_P3PUserPref(
@@ -987,7 +1001,7 @@ cookie_Count(char * host) {
 PRIVATE void
 cookie_SetCookieString(char * curURL, nsIPrompt *aPrompter, const char * setCookieHeader,
                        time_t timeToExpire, nsIIOService* ioService,
-                       nsIHttpChannel* aHttpChannel, nsCookieStatus_t status) {
+                       nsIHttpChannel* aHttpChannel, nsCookieStatus status) {
   cookie_CookieStruct * prev_cookie;
   char *path_from_header=nsnull, *host_from_header=nsnull;
   char *name_from_header=nsnull, *cookie_from_header=nsnull;
@@ -1094,7 +1108,13 @@ cookie_SetCookieString(char * curURL, nsIPrompt *aPrompter, const char * setCook
       int domain_length, cur_host_length;
 
       /* allocate more than we need */
-      nsCAutoString domain(ptr+7);
+      nsCAutoString domain;
+      if (*(ptr+7) != '.' && !cookie_IsIPAddress(cur_host.get())) {
+        // if host is not an IP address, force domain name to start with a dot
+        domain = '.';
+      }
+      domain.Append(ptr+7);
+
       domain.CompressWhitespace();
       CKutil_StrAllocCopy(domain_from_header, domain.get());
 
@@ -1128,12 +1148,12 @@ cookie_SetCookieString(char * curURL, nsIPrompt *aPrompter, const char * setCook
       }
 
       /* strip port numbers from the current host for the domain test */
-      colon = strchr(cur_host.get(), ':');
+      colon = (char *)strchr(cur_host.get(), ':');
       if(colon) {
         *colon = '\0';
       }
       domain_length   = PL_strlen(domain_from_header);
-      cur_host_length = cur_host.Length();
+      cur_host_length = PL_strlen(cur_host.get());
 
       /* check to see if the host is in the domain */
       if (!cookie_IsInDomain(domain_from_header, (char*)cur_host.get(), cur_host_length)) {
@@ -1167,7 +1187,7 @@ cookie_SetCookieString(char * curURL, nsIPrompt *aPrompter, const char * setCook
       }
       if ( pref_scd == PR_TRUE ) {
         cur_host.SetCharAt(cur_host_length-domain_length, '\0');
-        dot = strchr(cur_host.get(), '.');
+        dot = (char *)strchr(cur_host.get(), '.');
         cur_host.SetCharAt(cur_host_length-domain_length, '.');
         if (dot) {
         // TRACEMSG(("host minus domain failed no-dot test."
@@ -1372,8 +1392,10 @@ COOKIE_SetCookieString(char * aURL, nsIPrompt *aPrompter, const char * setCookie
   if (aHttpChannel) {
     rv = aHttpChannel->GetDocumentURI(getter_AddRefs(pFirstURL));
     if (NS_FAILED(rv)) return;
-    rv = pFirstURL->GetSpec(firstSpec);
-    if (NS_FAILED(rv)) return;
+    if (pFirstURL) {
+      rv = pFirstURL->GetSpec(firstSpec);
+      if (NS_FAILED(rv)) return;
+    }
   }
   COOKIE_SetCookieStringFromHttp(aURL, NS_CONST_CAST(char *, firstSpec.get()), aPrompter, setCookieHeader, 0, ioService, aHttpChannel);
 }
@@ -1414,10 +1436,14 @@ COOKIE_SetCookieStringFromHttp(char * curURL, char * firstURL, nsIPrompt *aPromp
   time_t gmtCookieExpires=0, expires=0, sDate;
 
   /* check to see if P3P pref is satisfied */
-  nsCookieStatus_t status = nsICookie::STATUS_UNKNOWN;
+  nsCookieStatus status = nsICookie::STATUS_UNKNOWN;
   if (cookie_GetBehaviorPref() == PERMISSION_P3P) {
     status = cookie_P3PDecision(curURL, firstURL, ioService, aHttpChannel);
     if (status == nsICookie::STATUS_REJECTED) {
+      nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
+      if (os) {
+        nsresult rv = os->NotifyObservers(nsnull, "cookieIcon", NS_ConvertASCIItoUCS2("on").get());
+      }
       return;
     }
   }
@@ -1770,8 +1796,8 @@ COOKIE_Enumerate
      char ** path,
      PRBool * isSecure,
      PRUint64 * expires,
-     nsCookieStatus_t * status,
-     nsCookiePolicy_t * policy) {
+     nsCookieStatus * status,
+     nsCookiePolicy * policy) {
   if (count > COOKIE_Count()) {
     return NS_ERROR_FAILURE;
   }
@@ -1798,7 +1824,7 @@ COOKIE_Enumerate
 
 PUBLIC void
 COOKIE_Remove
-    (const char* host, const char* name, const char* path, const PRBool permanent) {
+    (const char* host, const char* name, const char* path, const PRBool blocked) {
   cookie_CookieStruct * cookie;
   PRInt32 count = 0;
 
@@ -1812,7 +1838,7 @@ COOKIE_Remove
       if ((PL_strcmp(cookie->host, host) == 0) &&
           (PL_strcmp(cookie->name, name) == 0) &&
           (PL_strcmp(cookie->path, path) == 0)) {
-        if (permanent && cookie->host) {
+        if (blocked && cookie->host) {
           char * hostname = nsnull;
           char * hostnameAfterDot = cookie->host;
           while (*hostnameAfterDot == '.') {

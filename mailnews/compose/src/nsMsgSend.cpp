@@ -66,6 +66,7 @@
 #include "nsReadableUtils.h"
 #include "nsUnicharUtils.h"
 #include "nsMsgPrompts.h"
+#include "nsIDOMHTMLBodyElement.h"
 #include "nsIDOMHTMLImageElement.h"
 #include "nsIDOMHTMLLinkElement.h"
 #include "nsIDOMHTMLAnchorElement.h"
@@ -1690,12 +1691,26 @@ nsMsgComposeAndSend::ProcessMultipartRelated(PRInt32 *aMailboxCount, PRInt32 *aN
 
     // Now, we know the types of objects this node can be, so we will do
     // our query interface here and see what we come up with 
+    nsCOMPtr<nsIDOMHTMLBodyElement>     body = (do_QueryInterface(node));
     nsCOMPtr<nsIDOMHTMLImageElement>    image = (do_QueryInterface(node));
     nsCOMPtr<nsIDOMHTMLLinkElement>     link = (do_QueryInterface(node));
     nsCOMPtr<nsIDOMHTMLAnchorElement>   anchor = (do_QueryInterface(node));
     
-    // First, try to see if this is an embedded image 
-    if (image)
+    // First, try to see if the body as a background image
+    if (body)
+    {
+      nsAutoString    tUrl;
+      if (NS_SUCCEEDED(body->GetBackground(tUrl)))
+      {
+        nsCAutoString turlC;
+        turlC.AssignWithConversion(tUrl);
+        if (NS_SUCCEEDED(nsMsgNewURL(&attachment.url, turlC.get())))      
+          NS_IF_ADDREF(attachment.url);
+        else
+          continue;
+      }
+    }
+    else if (image)        // Is this an image?
     {
       nsString    tUrl;
       nsString    tName;
@@ -1917,6 +1932,11 @@ nsMsgComposeAndSend::ProcessMultipartRelated(PRInt32 *aMailboxCount, PRInt32 *aN
         image->GetSrc(domURL);
         image->SetSrc(newSpec);
       }
+      else if (body)
+      {
+        body->GetBackground(domURL);
+        body->SetBackground(newSpec);
+      }
 
       if (!domURL.IsEmpty())
         domSaveArray[j].url = ToNewCString(domURL);
@@ -1936,6 +1956,7 @@ nsMsgComposeAndSend::ProcessMultipartRelated(PRInt32 *aMailboxCount, PRInt32 *aN
 
     // Now, we know the types of objects this node can be, so we will do
     // our query interface here and see what we come up with 
+    nsCOMPtr<nsIDOMHTMLBodyElement>     body = (do_QueryInterface(domSaveArray[i].node));
     nsCOMPtr<nsIDOMHTMLImageElement>    image = (do_QueryInterface(domSaveArray[i].node));
     nsCOMPtr<nsIDOMHTMLLinkElement>     link = (do_QueryInterface(domSaveArray[i].node));
     nsCOMPtr<nsIDOMHTMLAnchorElement>   anchor = (do_QueryInterface(domSaveArray[i].node));
@@ -1948,6 +1969,8 @@ nsMsgComposeAndSend::ProcessMultipartRelated(PRInt32 *aMailboxCount, PRInt32 *aN
       link->SetHref(NS_ConvertASCIItoUCS2(domSaveArray[i].url));
     else if (image)
       image->SetSrc(NS_ConvertASCIItoUCS2(domSaveArray[i].url));
+    else if (body)
+      body->SetBackground(NS_ConvertASCIItoUCS2(domSaveArray[i].url));
 
     nsMemory::Free(domSaveArray[i].url);
   }
@@ -2684,15 +2707,24 @@ nsMsgComposeAndSend::InitCompositionFields(nsMsgCompFields *fields)
   }
   else
   {
+    PRBool useDefaultFCC = PR_TRUE;
     const char *fieldsFCC = fields->GetFcc();
     if (fieldsFCC && *fieldsFCC)
     {
       if (PL_strcasecmp(fieldsFCC, "nocopy://") == 0)
+      {
+        useDefaultFCC = PR_FALSE;
         mCompFields->SetFcc("");
-      else
+      }
+      else if (IsValidFolderURI(fieldsFCC))
+      {
+        useDefaultFCC = PR_FALSE;
         SetMimeHeader(nsMsgCompFields::MSG_FCC_HEADER_ID, fieldsFCC); 
+      }
     }
-    else
+    
+    // We use default FCC setting if it's not set or was set to an invalid folder.
+    if (useDefaultFCC)
     {
       char *uri = GetFolderURIFromUserPrefs(nsMsgDeliverNow, mUserIdentity);
       if ( (uri) && (*uri) )
@@ -3817,7 +3849,7 @@ BuildURLAttachmentData(nsIURI *url)
   url->GetSpec(spec);
   if (!spec.IsEmpty())
   {
-    theName = strrchr(spec.get(), '/');
+    theName = (char *)strrchr(spec.get(), '/');
   }
 
   if (!theName)
@@ -4195,7 +4227,12 @@ nsMsgComposeAndSend::MimeDoFCC(nsFileSpec       *input_file,
 #endif
     )
   {
-    PRInt32 L = PL_strlen(bcc_header) + 20;
+    char *convBcc;
+    convBcc = nsMsgI18NEncodeMimePartIIStr(bcc_header, PR_TRUE,
+                    mCompFields->GetCharacterSet(), 0,
+                    nsMsgMIMEGetConformToStandard());
+
+    PRInt32 L = strlen(convBcc ? convBcc : bcc_header) + 20;
     char *buf = (char *) PR_Malloc (L);
     if (!buf)
     {
@@ -4203,9 +4240,11 @@ nsMsgComposeAndSend::MimeDoFCC(nsFileSpec       *input_file,
       goto FAIL;
     }
 
-    PR_snprintf(buf, L-1, "BCC: %s" CRLF, bcc_header);
-    PRInt32   len = PL_strlen(buf);
+    PR_snprintf(buf, L-1, "BCC: %s" CRLF, convBcc ? convBcc : bcc_header);
+    PRInt32   len = strlen(buf);
     n = tempOutfile.write(buf, len);
+    PR_Free(buf);
+    PR_FREEIF(convBcc);
     if (n != len)
     {
       status = NS_ERROR_FAILURE;

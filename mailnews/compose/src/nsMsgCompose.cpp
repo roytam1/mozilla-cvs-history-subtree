@@ -144,7 +144,7 @@ static nsresult GetReplyHeaderInfo(PRInt32* reply_header_type,
     if (NS_FAILED(rv) || !*reply_header_locale)
       *reply_header_locale = nsCRT::strdup(NS_LITERAL_STRING("").get());
 
-    rv = prefs->CopyUnicharPref("mailnews.reply_header_authorwrote", reply_header_authorwrote);
+    rv = prefs->GetLocalizedUnicharPref("mailnews.reply_header_authorwrote", reply_header_authorwrote);
     if (NS_FAILED(rv) || !*reply_header_authorwrote)
       *reply_header_authorwrote = nsCRT::strdup(NS_LITERAL_STRING("%s wrote").get());
 
@@ -160,7 +160,7 @@ static nsresult GetReplyHeaderInfo(PRInt32* reply_header_type,
     if (NS_FAILED(rv) || !*reply_header_colon)
       *reply_header_colon = nsCRT::strdup(NS_LITERAL_STRING(":").get());
 
-    rv = prefs->CopyUnicharPref("mailnews.reply_header_originalmessage", reply_header_originalmessage);
+    rv = prefs->GetLocalizedUnicharPref("mailnews.reply_header_originalmessage", reply_header_originalmessage);
     if (NS_FAILED(rv) || !*reply_header_originalmessage)
       *reply_header_originalmessage = nsCRT::strdup(NS_LITERAL_STRING("--- Original Message ---").get());
   }
@@ -386,7 +386,7 @@ PRBool nsMsgCompose::IsEmbeddedObjectSafe(const char * originalScheme,
           rv = uri->GetPath(path);
           if (NS_SUCCEEDED(rv))
           {
-            char * query = strrchr(path.get(), '?');
+            const char * query = strrchr(path.get(), '?');
             if (query && nsCRT::strncasecmp(path.get(), originalPath, query - path.get()) == 0)
               return PR_TRUE; //This object is a part of the original message, we can send it safely.
           }
@@ -477,9 +477,9 @@ NS_IMETHODIMP nsMsgCompose::ConvertAndLoadComposeWindow(nsIEditorShell *aEditorS
   TranslateLineEnding(aBuf);
   TranslateLineEnding(aSignature);
 
-  aEditorShell->GetEditor(getter_AddRefs(editor));
+  nsresult rv = aEditorShell->GetEditor(getter_AddRefs(editor));
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  if (editor)
     editor->EnableUndo(PR_FALSE);
 
   // Ok - now we need to figure out the charset of the aBuf we are going to send
@@ -497,6 +497,7 @@ NS_IMETHODIMP nsMsgCompose::ConvertAndLoadComposeWindow(nsIEditorShell *aEditorS
         aEditorShell->InsertSource(aPrefix.get());
       else
         aEditorShell->InsertText(aPrefix.get());
+      editor->EndOfDocument();
     }
 
     if (!aBuf.IsEmpty())
@@ -510,6 +511,7 @@ NS_IMETHODIMP nsMsgCompose::ConvertAndLoadComposeWindow(nsIEditorShell *aEditorS
       else
         aEditorShell->InsertAsQuotation(aBuf.get(),
                                         getter_AddRefs(nodeInserted));
+      editor->EndOfDocument();
     }
 
     (void)TagEmbeddedObjects(aEditorShell);
@@ -527,14 +529,43 @@ NS_IMETHODIMP nsMsgCompose::ConvertAndLoadComposeWindow(nsIEditorShell *aEditorS
     if (aHTMLEditor)
     {
       if (!aBuf.IsEmpty())
+      {
+        /* If we have attribute for the body tag, we need to save them in order
+           to add them back later as InsertSource will ignore them */
+        nsAutoString bodyAttributes;
+        PRInt32 start = aBuf.Find("<body", PR_TRUE);
+        if (start != kNotFound && aBuf[start + 5] == ' ')
+        {
+          PRInt32 end = aBuf.Find(">", PR_FALSE, start + 6);
+          if (end != kNotFound)
+          {
+            const PRUnichar* data = aBuf.get();
+            PRUnichar* attribute = new PRUnichar[end - start - 5];
+            if (attribute)
+            {
+              attribute = nsCRT::strndup(&data[start + 6], end - start - 6);
+              bodyAttributes.Adopt(attribute);
+            }
+          }
+        }
+
+      {
         aEditorShell->InsertSource(aBuf.get());
+        editor->EndOfDocument();
+      }
+
+        SetBodyAttributes(bodyAttributes);
+      }
       if (!aSignature.IsEmpty())
         aEditorShell->InsertSource(aSignature.get());
     }
     else
     {
       if (!aBuf.IsEmpty())
+      {
         aEditorShell->InsertText(aBuf.get());
+        editor->EndOfDocument();
+      }
 
       if (!aSignature.IsEmpty())
         aEditorShell->InsertText(aSignature.get());
@@ -1296,45 +1327,47 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
   if (m_identity)
   {
       /* Setup reply-to field */
-      nsString replyToStr;
       nsXPIDLCString replyTo;
-      replyToStr.AssignWithConversion(m_compFields->GetReplyTo());
-
-      m_identity->GetReplyTo(getter_Copies(replyTo));                                      
+      m_identity->GetReplyTo(getter_Copies(replyTo));
       if (replyTo && *(const char *)replyTo)
       {
+        nsXPIDLCString replyToStr;
+        replyToStr.Assign(m_compFields->GetReplyTo());
+
         if (replyToStr.Length() > 0)
-          replyToStr.Append(PRUnichar(','));
-        replyToStr.AppendWithConversion(replyTo);
+          replyToStr.Append(',');
+        replyToStr.Append(replyTo);
+        m_compFields->SetReplyTo(replyToStr.get());
       }
-      
-      m_compFields->SetReplyTo(replyToStr.get());
-      
+
       /* Setup bcc field */
-      PRBool  aBool;
-      nsString bccStr;
-      bccStr.AssignWithConversion(m_compFields->GetBcc());
-      
-      m_identity->GetBccSelf(&aBool);
-      if (aBool)
+      PRBool  bccSelf, bccOthers;
+      m_identity->GetBccSelf(&bccSelf);
+      m_identity->GetBccOthers(&bccOthers);
+      if (bccSelf || bccOthers) 
       {
+        nsXPIDLCString bccStr;
+        bccStr.Assign(m_compFields->GetBcc());
+
+        if (bccSelf)
+        {
           nsXPIDLCString email;
           m_identity->GetEmail(getter_Copies(email));
           if (bccStr.Length() > 0)
-            bccStr.Append(PRUnichar(','));
-          bccStr.AppendWithConversion(email);
-      }
-      
-      m_identity->GetBccOthers(&aBool);
-      if (aBool)
-      {
+            bccStr.Append(',');
+          bccStr.Append(email);
+        }
+
+        if (bccOthers)
+        {
           nsXPIDLCString bccList;
           m_identity->GetBccList(getter_Copies(bccList));
           if (bccStr.Length() > 0)
-              bccStr.Append(PRUnichar(','));
-          bccStr.AppendWithConversion(bccList);
+            bccStr.Append(',');
+          bccStr.Append(bccList);
+        }
+        m_compFields->SetBcc(bccStr.get());
       }
-      m_compFields->SetBcc(bccStr.get());
   }
 
   // If we don't have an original message URI, nothing else to do...
@@ -2927,10 +2960,13 @@ nsMsgCompose::LoadDataFromFile(nsFileSpec& fSpec, nsString &sigData)
     nsAutoString metaCharset;
     metaCharset.Assign(NS_LITERAL_STRING("charset="));
     metaCharset.AppendWithConversion(sigEncoding.get());
-    PRInt32 metaCharsetOffset = sigData.Find(metaCharset,PR_TRUE,0,-1);
-
-    if (metaCharsetOffset != kNotFound)
-      sigData.Cut(metaCharsetOffset, metaCharset.Length());
+    nsAString::const_iterator realstart, start, end;
+    sigData.BeginReading(start);
+    sigData.EndReading(end);
+    realstart = start;
+    if (FindInReadable(metaCharset, start, end,
+                       nsCaseInsensitiveStringComparator()))
+      sigData.Cut(Distance(realstart, start), Distance(start, end));
   }
 
   PR_FREEIF(readBuf);
@@ -3420,7 +3456,7 @@ nsresult nsMsgCompose::GetMailListAddresses(nsString& name, nsISupportsArray* ma
       rv = enumerator->CurrentItem((nsISupports**)&mailList);
       if (NS_SUCCEEDED(rv) && mailList)
       {
-        if (name.EqualsIgnoreCase(mailList->mFullName))
+        if (name.Equals(mailList->mFullName, nsCaseInsensitiveStringComparator()))
         {
           if (!mailList->mDirectory)
             return NS_ERROR_FAILURE;
@@ -3667,7 +3703,9 @@ NS_IMETHODIMP nsMsgCompose::CheckAndPopulateRecipients(PRBool populateMailList, 
 
             /* Then if we have a card for this email address */
             nsCAutoString emailStr; emailStr.AssignWithConversion(recipient->mEmail);
-            rv = abDataBase->GetCardFromAttribute(abDirectory, kPriEmailColumn, emailStr.get(), PR_TRUE /* caseInsensitive */, getter_AddRefs(existingCard));
+            // Please DO NOT change the 3rd param of GetCardFromAttribute() call to 
+            // PR_TRUE (ie, case insensitive) without reading bugs #128535 and #121478.
+            rv = abDataBase->GetCardFromAttribute(abDirectory, kPriEmailColumn, emailStr.get(), PR_FALSE /* retain case */, getter_AddRefs(existingCard));
             if (NS_SUCCEEDED(rv) && existingCard)
             {
               recipient->mPreferFormat = nsIAbPreferMailFormat::unknown;
@@ -3728,10 +3766,10 @@ NS_IMETHODIMP nsMsgCompose::CheckAndPopulateRecipients(PRBool populateMailList, 
             if (atPos >= 0)
             {
               recipient->mEmail.Right(domain, recipient->mEmail.Length() - atPos - 1);
-              if (plaintextDomains.Find(domain, PR_TRUE) >= 0)
+              if (FindInReadable(domain, plaintextDomains, nsCaseInsensitiveStringComparator()))
                 recipient->mPreferFormat = nsIAbPreferMailFormat::plaintext;
               else
-                if (htmlDomains.Find(domain, PR_TRUE) >= 0)
+                if (FindInReadable(domain, htmlDomains, nsCaseInsensitiveStringComparator()))
                   recipient->mPreferFormat = nsIAbPreferMailFormat::html;
             }
           }
@@ -3821,8 +3859,7 @@ nsresult nsMsgCompose::TagConvertible(nsIDOMNode *node,  PRInt32 *_retval)
               element.EqualsIgnoreCase("tt") ||
               element.EqualsIgnoreCase("html") ||
               element.EqualsIgnoreCase("head") ||
-              element.EqualsIgnoreCase("title") ||
-              element.EqualsIgnoreCase("body")
+              element.EqualsIgnoreCase("title")
             )
     {
       *_retval = nsIMsgCompConvertible::Plain;
@@ -3863,6 +3900,28 @@ nsresult nsMsgCompose::TagConvertible(nsIDOMNode *node,  PRInt32 *_retval)
             )
     {
       *_retval = nsIMsgCompConvertible::Altering;
+    }
+    else if (element.EqualsIgnoreCase("body"))
+    {
+      *_retval = nsIMsgCompConvertible::Plain;
+
+      nsCOMPtr<nsIDOMElement> domElement = do_QueryInterface(node);
+      if (domElement)
+      {
+        PRBool hasAttribute;
+        if (NS_SUCCEEDED(domElement->HasAttribute(NS_LITERAL_STRING("background"), &hasAttribute))
+            && hasAttribute)  // There is a background image
+          *_retval = nsIMsgCompConvertible::No; 
+        else if (NS_SUCCEEDED(domElement->HasAttribute(NS_LITERAL_STRING("text"), &hasAttribute))
+            && hasAttribute)  // There is a text color
+          *_retval = nsIMsgCompConvertible::Altering;
+        else if (NS_SUCCEEDED(domElement->HasAttribute(NS_LITERAL_STRING("bgcolor"), &hasAttribute))
+            && hasAttribute)  // There is a background color
+          *_retval = nsIMsgCompConvertible::Altering;
+
+        //ignore special color setting for link, vlink and alink at this point.
+      }
+
     }
     else if (element.EqualsIgnoreCase("blockquote"))
     {
@@ -4053,6 +4112,134 @@ nsresult nsMsgCompose::BodyConvertible(PRInt32 *_retval)
       return NS_ERROR_FAILURE;
       
     return _BodyConvertible(node, _retval);
+}
+
+nsresult nsMsgCompose::SetBodyAttribute(nsIEditor* editor, nsIDOMElement* element, nsString& name, nsString& value)
+{
+  /* cleanup the attribute name and check if we care about it */
+  name.Trim(" \t\n\r\"");
+  if (name.CompareWithConversion("text", PR_TRUE) == 0 ||
+      name.CompareWithConversion("bgcolor", PR_TRUE) == 0 ||
+      name.CompareWithConversion("link", PR_TRUE) == 0 ||
+      name.CompareWithConversion("vlink", PR_TRUE) == 0 ||
+      name.CompareWithConversion("alink", PR_TRUE) == 0 ||
+      name.CompareWithConversion("background", PR_TRUE) == 0)
+  {
+    /* cleanup the attribute value */
+    value.Trim(" \t\n\r");
+    value.Trim("\"");
+
+    /* remove the attribute from the node first */
+    (void)editor->RemoveAttribute(element, name);
+
+    /* then add the new one */
+    return editor->SetAttribute(element, name, value);
+  }
+
+  return NS_OK;
+}
+
+nsresult nsMsgCompose::SetBodyAttributes(nsString& attributes)
+{
+  nsresult rv = NS_OK;
+
+  if (attributes.IsEmpty()) //Nothing to do...
+    return NS_OK;
+
+  nsCOMPtr<nsIEditor> editor;
+  rv = m_editor->GetEditor(getter_AddRefs(editor));
+  if (NS_FAILED(rv) || nsnull == editor)
+    return rv;
+
+  nsCOMPtr<nsIDOMElement> rootElement;
+  rv = editor->GetRootElement(getter_AddRefs(rootElement));
+  if (NS_FAILED(rv) || nsnull == rootElement)
+    return rv;
+  
+  /* The following code will parse a string and extract pairs of
+     <attribute name>=<attribute value>. A pair consists of an
+     attribute name and an attribute value. An attribute value can
+     be between double-quote and could potentially contains an
+     '=' character which should not be interpreted as a delimiter.
+
+     Once we get a pair, we can call SetBodyAttribute to set the
+     attribute in the DOM.
+  */
+  PRUnichar * data = (PRUnichar *)attributes.get();
+  PRUnichar * start = data;
+  PRUnichar * end = data + attributes.Length();
+
+  /* Let's initialized the delimiter to a '=', it's the delimiter between
+     attribute name and attribute value */
+  PRUnichar delimiter = '=';
+
+  nsAutoString attributeName;
+  nsAutoString attributeValue;
+  
+  while (data < end)
+  {
+    if (*data == '\n' || *data == '\r' || *data == '\t')
+    {
+      /* skip over line feed, carriage return and tab.
+         That will work as long we are between attributes */
+      start = data + 1;
+    }
+    else if (*data == delimiter)
+    {
+      if (attributeName.IsEmpty())
+      {
+        /* we found the end of an attribute name */
+        attributeName.Assign(start, data - start);
+        start = data + 1;
+        if (start < end && *start == '\"')
+        {
+          /* if the attribute value start with a double-quote, we need to find the other one... */
+          delimiter = '\"';
+          data ++;
+        }
+        else
+        {
+          /* ... else the separator with the next attribute is a space */
+          delimiter = ' ';
+        }
+      }
+      else
+      {
+        if (delimiter == '\"')
+        {
+          /* we found the closing double-quote of an attribute value,
+             let's find now the real attribute delimiter */
+          delimiter = ' ';
+        }
+        else
+        {
+          /* we found the end of an attribute value */
+          attributeValue.Assign(start, data - start);
+          rv = SetBodyAttribute(editor, rootElement, attributeName, attributeValue);
+          NS_ENSURE_SUCCESS(rv, rv);
+
+          /* restart the search for the next pair of attribute */
+          start = data + 1;
+          attributeName.Truncate();
+          attributeValue.Truncate();
+          delimiter = '=';
+        }
+      }
+    }
+
+    data ++;
+  }
+
+  /* In the case the buffer we are parsing doesn't finish with a space character,
+     we will exit the loop above before we get a chance to get the value of the attribute.
+     Be sure we already got the name of the attribute before accepting the value */
+  if (!attributeName.IsEmpty() && attributeValue.IsEmpty() && delimiter == ' ')
+  {
+    attributeValue.Assign(start, data - start);
+    rv = SetBodyAttribute(editor, rootElement, attributeName, attributeValue);
+  }
+
+  return rv;
 }
 
 nsresult nsMsgCompose::SetSignature(nsIMsgIdentity *identity)

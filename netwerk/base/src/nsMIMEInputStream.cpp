@@ -183,17 +183,14 @@ void nsMIMEInputStream::InitStreams()
     mStartedReading = PR_TRUE;
 
     // We'll use the content-length stream to add the final \r\n
-    if (mAddContentLength && mData) {
-        PRUint32 cl;
-        mData->Available(&cl);
-        if (!cl) {
-            mContentLength = "\r\n";
+    if (mAddContentLength) {
+        PRUint32 cl = 0;
+        if (mData) {
+            mData->Available(&cl);
         }
-        else {
-            mContentLength = "Content-Length: ";
-            mContentLength.AppendInt((PRInt32)cl);
-            mContentLength.Append("\r\n\r\n");
-        }
+        mContentLength = "Content-Length: ";
+        mContentLength.AppendInt((PRInt32)cl);
+        mContentLength.Append("\r\n\r\n");
     }
     else {
         mContentLength = "\r\n";
@@ -264,9 +261,7 @@ nsMIMEInputStream::ReadSegCb(nsIInputStream* aIn, void* aClosure,
 NS_IMETHODIMP nsMIMEInputStream::Close(void) { INITSTREAMS; return mStream->Close(); }
 NS_IMETHODIMP nsMIMEInputStream::Available(PRUint32 *_retval) { INITSTREAMS; return mStream->Available(_retval); }
 NS_IMETHODIMP nsMIMEInputStream::Read(char * buf, PRUint32 count, PRUint32 *_retval) { INITSTREAMS; return mStream->Read(buf, count, _retval); }
-NS_IMETHODIMP nsMIMEInputStream::GetNonBlocking(PRBool *aNonBlocking) { INITSTREAMS; return mStream->GetNonBlocking(aNonBlocking); }
-NS_IMETHODIMP nsMIMEInputStream::GetObserver(nsIInputStreamObserver * *aObserver) { INITSTREAMS; return mStream->GetObserver(aObserver); }
-NS_IMETHODIMP nsMIMEInputStream::SetObserver(nsIInputStreamObserver * aObserver) { INITSTREAMS; return mStream->SetObserver(aObserver); } 
+NS_IMETHODIMP nsMIMEInputStream::IsNonBlocking(PRBool *aNonBlocking) { INITSTREAMS; return mStream->IsNonBlocking(aNonBlocking); }
 
 // nsISeekableStream
 NS_IMETHODIMP nsMIMEInputStream::Tell(PRUint32 *_retval)

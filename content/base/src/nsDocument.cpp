@@ -1254,7 +1254,8 @@ nsDocument::GetIndexOfStyleSheet(nsIStyleSheet* aSheet, PRInt32* aIndex)
   return NS_OK;
 }
 
-void nsDocument::InternalAddStyleSheet(nsIStyleSheet* aSheet)  // subclass hook for sheet ordering
+// subclass hooks for sheet ordering
+void nsDocument::InternalAddStyleSheet(nsIStyleSheet* aSheet, PRUint32 aFlags)
 {
   mStyleSheets.AppendElement(aSheet);
 }
@@ -1274,10 +1275,10 @@ void nsDocument::AddStyleSheetToStyleSets(nsIStyleSheet* aSheet)
   }
 }
 
-void nsDocument::AddStyleSheet(nsIStyleSheet* aSheet)
+void nsDocument::AddStyleSheet(nsIStyleSheet* aSheet, PRUint32 aFlags)
 {
   NS_PRECONDITION(nsnull != aSheet, "null arg");
-  InternalAddStyleSheet(aSheet);
+  InternalAddStyleSheet(aSheet, aFlags);
   NS_ADDREF(aSheet);
   aSheet->SetOwningDocument(this);
 
@@ -1317,7 +1318,10 @@ void nsDocument::RemoveStyleSheetFromStyleSets(nsIStyleSheet* aSheet)
 void nsDocument::RemoveStyleSheet(nsIStyleSheet* aSheet)
 {
   NS_PRECONDITION(nsnull != aSheet, "null arg");
-  mStyleSheets.RemoveElement(aSheet);
+  if (!mStyleSheets.RemoveElement(aSheet)) {
+    NS_NOTREACHED("stylesheet not found");
+    return;
+  }
   
   PRBool enabled = PR_TRUE;
   aSheet->GetEnabled(enabled);
@@ -1352,16 +1356,19 @@ nsDocument::UpdateStyleSheets(nsISupportsArray* aOldSheets, nsISupportsArray* aN
     aOldSheets->GetElementAt(i, getter_AddRefs(supp));
     sheet = do_QueryInterface(supp);
     if (sheet) {
-      mStyleSheets.RemoveElement(sheet);
-      PRBool enabled = PR_TRUE;
-      sheet->GetEnabled(enabled);
-      if (enabled) {
-        RemoveStyleSheetFromStyleSets(sheet);
-      }
+      PRBool found = mStyleSheets.RemoveElement(sheet);
+      NS_ASSERTION(found, "stylesheet not found");
+      if (found) {
+        PRBool enabled = PR_TRUE;
+        sheet->GetEnabled(enabled);
+        if (enabled) {
+          RemoveStyleSheetFromStyleSets(sheet);
+        }
 
-      sheet->SetOwningDocument(nsnull);
-      nsIStyleSheet* sheetPtr = sheet.get();
-      NS_RELEASE(sheetPtr);
+        sheet->SetOwningDocument(nsnull);
+        nsIStyleSheet* sheetPtr = sheet.get();
+        NS_RELEASE(sheetPtr);
+      }
     }
   }
 
@@ -1372,7 +1379,7 @@ nsDocument::UpdateStyleSheets(nsISupportsArray* aOldSheets, nsISupportsArray* aN
     aNewSheets->GetElementAt(i, getter_AddRefs(supp));
     sheet = do_QueryInterface(supp);
     if (sheet) {
-      InternalAddStyleSheet(sheet);
+      InternalAddStyleSheet(sheet, 0);
       nsIStyleSheet* sheetPtr = sheet;
       NS_ADDREF(sheetPtr);
       sheet->SetOwningDocument(this);
@@ -1386,6 +1393,7 @@ nsDocument::UpdateStyleSheets(nsISupportsArray* aOldSheets, nsISupportsArray* aN
     }
   }
 
+  // XXXldb Hopefully the observer doesn't care which sheet you use.
   for (PRInt32 indx = 0; indx < mObservers.Count(); indx++) {
     nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(indx);
     observer->StyleSheetRemoved(this, sheet);
@@ -1847,14 +1855,15 @@ nsDocument::ContentChanged(nsIContent* aContent,
 
 NS_IMETHODIMP
 nsDocument::ContentStatesChanged(nsIContent* aContent1,
-                                 nsIContent* aContent2)
+                                 nsIContent* aContent2,
+                                 nsIAtom* aChangedPseudoClass)
 {
   PRInt32 i;
   // Get new value of count for every iteration in case
   // observers remove themselves during the loop.
   for (i = 0; i < mObservers.Count(); i++) {
     nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers[i];
-    observer->ContentStatesChanged(this, aContent1, aContent2);
+    observer->ContentStatesChanged(this, aContent1, aContent2, aChangedPseudoClass);
     // Make sure that the observer didn't remove itself during the
     // notification. If it did, update our index and count.
     if (i < mObservers.Count() &&
@@ -3460,41 +3469,6 @@ nsDocument::RemoveReference(void *aKey, nsISupports **aOldReference)
 
   mContentWrapperHash.Remove(&key, aOldReference);
 
-  return NS_OK;
-}
-
-NS_IMETHODIMP    
-nsDocument::GetDTD(nsIDTD** aDTD) const
-{
-  if (!aDTD)
-    return NS_ERROR_INVALID_ARG;
-  if (!mDTD)
-  {
-    nsCOMPtr<nsIDOMDocumentType> doctype;
-    // Wish for mutable:
-    nsresult rv = NS_CONST_CAST(nsDocument* , this)->GetDoctype(getter_AddRefs(doctype));
-    if (NS_FAILED(rv)) return rv;
-    if (!doctype) return NS_ERROR_FAILURE;
-    nsAutoString doctypename;
-    rv = doctype->GetName(doctypename);
-    if (NS_FAILED(rv)) return rv;
-
-    nsCOMPtr<nsIParser> parser( do_CreateInstance(kCParserCID, &rv) );
-    if (NS_FAILED(rv)) return rv;
-    if (!parser) return NS_ERROR_FAILURE;
-
-    nsIDTD* dtd = 0;
-    rv = parser->CreateCompatibleDTD(&dtd, &doctypename, eViewNormal,
-                                     0, eDTDMode_unknown);
-    if (NS_FAILED(rv)) return rv;
-    if (!dtd) return NS_ERROR_FAILURE;
-
-    // Wish again for mutable:
-    NS_CONST_CAST(nsDocument* , this)->mDTD = dtd;
-  }
-
-  NS_ADDREF(mDTD);
-  *aDTD = mDTD;
   return NS_OK;
 }
 

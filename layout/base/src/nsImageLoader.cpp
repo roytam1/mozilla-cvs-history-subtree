@@ -35,6 +35,8 @@
 #include "nsIContent.h"
 #include "nsIDocument.h"
 
+#include "imgIContainer.h"
+
 #include "nsIHTMLContent.h"
 
 #include "nsIViewManager.h"
@@ -130,6 +132,18 @@ NS_IMETHODIMP nsImageLoader::OnStartDecode(imgIRequest *aRequest, nsISupports *a
 
 NS_IMETHODIMP nsImageLoader::OnStartContainer(imgIRequest *aRequest, nsISupports *aContext, imgIContainer *aImage)
 {
+  if (aImage)
+  {
+    /* Get requested animation policy from the pres context:
+     *   normal = 0
+     *   one frame = 1
+     *   one loop = 2
+     */
+    PRUint16 animateMode = imgIContainer::kNormalAnimMode; //default value
+    nsresult rv = mPresContext->GetImageAnimationMode(&animateMode);
+    if (NS_SUCCEEDED(rv))
+      aImage->SetAnimationMode(animateMode);
+  }
   return NS_OK;
 }
 
@@ -140,25 +154,19 @@ NS_IMETHODIMP nsImageLoader::OnStartFrame(imgIRequest *aRequest, nsISupports *aC
 
 NS_IMETHODIMP nsImageLoader::OnDataAvailable(imgIRequest *aRequest, nsISupports *aContext, gfxIImageFrame *aFrame, const nsRect *aRect)
 {
-  if (!mFrame)
-    return NS_ERROR_FAILURE;
-
-  nsRect r(*aRect);
-
-  float p2t;
-  mPresContext->GetPixelsToTwips(&p2t);
-  r.x = NSIntPixelsToTwips(r.x, p2t);
-  r.y = NSIntPixelsToTwips(r.y, p2t);
-  r.width = NSIntPixelsToTwips(r.width, p2t);
-  r.height = NSIntPixelsToTwips(r.height, p2t);
-
-  RedrawDirtyFrame(&r);
-
+  // Background images are not displayed incrementally, they are displayed after the entire 
+  // image has been loaded.
+  // Note: Images referenced by the <img> element are displayed incrementally in nsImageFrame.cpp
   return NS_OK;
 }
 
 NS_IMETHODIMP nsImageLoader::OnStopFrame(imgIRequest *aRequest, nsISupports *aContext, gfxIImageFrame *aFrame)
 {
+  if (!mFrame)
+    return NS_ERROR_FAILURE;
+
+  // Draw the background image
+  RedrawDirtyFrame(nsnull);
   return NS_OK;
 }
 

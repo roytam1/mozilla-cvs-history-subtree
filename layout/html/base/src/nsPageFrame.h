@@ -39,6 +39,7 @@
 
 #include "nsContainerFrame.h"
 #include "nsIPrintSettings.h"
+#include "nsLeafFrame.h"
 
 class nsSharedPageData;
 
@@ -92,6 +93,10 @@ public:
 
   virtual void SetSharedPageData(nsSharedPageData* aPD) { mPD = aPD; }
 
+// XXX Part of Temporary fix for Bug 127263
+  static  void   SetCreateWidget(PRBool aDoCreateWidget)  { mDoCreateWidget = aDoCreateWidget; }
+  static  PRBool GetCreateWidget()                        { return mDoCreateWidget; }
+
 protected:
   nsPageFrame();
   virtual ~nsPageFrame();
@@ -139,10 +144,36 @@ protected:
 
   nsSharedPageData* mPD;
 
+// XXX Part of Temporary fix for Bug 127263
+  static PRBool mDoCreateWidget;
+
 private:
   void DrawBackground(nsIPresContext* aPresContext,
                       nsIRenderingContext& aRenderingContext,
                       const nsRect&  aDirtyRect);
+};
+
+
+class nsPageBreakFrame : public nsLeafFrame {
+
+  nsPageBreakFrame();
+  ~nsPageBreakFrame();
+
+  NS_IMETHOD Reflow(nsIPresContext*          aPresContext,
+                    nsHTMLReflowMetrics&     aDesiredSize,
+                    const nsHTMLReflowState& aReflowState,
+                    nsReflowStatus&          aStatus);
+
+  NS_IMETHOD GetFrameType(nsIAtom** aType) const;
+
+protected:
+
+    virtual void GetDesiredSize(nsIPresContext*        aPresContext,
+                              const nsHTMLReflowState& aReflowState,
+                              nsHTMLReflowMetrics&     aDesiredSize);
+    PRBool mHaveReflowed;
+
+    friend nsresult NS_NewPageBreakFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 };
 
 #endif /* nsPageFrame_h___ */

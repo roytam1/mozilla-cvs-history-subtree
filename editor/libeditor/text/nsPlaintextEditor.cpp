@@ -99,6 +99,7 @@
 #include "nsIPref.h"
 #include "nsStyleConsts.h"
 #include "nsIStyleContext.h"
+#include "nsUnicharUtils.h"
 
 #include "nsAOLCiter.h"
 #include "nsInternetCiter.h"
@@ -111,11 +112,6 @@
 //#include "nsIDOMNSUIEvent.h"
 
 const PRUnichar nbsp = 160;
-
-// HACK - CID for NS_CTRANSITIONAL_DTD_CID so that we can get at transitional dtd
-#define NS_CTRANSITIONAL_DTD_CID \
-{ 0x4611d482, 0x960a, 0x11d4, { 0x8e, 0xb0, 0xb6, 0x17, 0x66, 0x1b, 0x6f, 0x7c } }
-
 
 static NS_DEFINE_CID(kCContentIteratorCID, NS_CONTENTITERATOR_CID);
 static NS_DEFINE_CID(kCRangeCID,      NS_RANGE_CID);
@@ -267,7 +263,6 @@ nsPlaintextEditor::SetDocumentCharacterSet(const nsAReadableString & characterSe
     nsCOMPtr<nsIDOMDocument>domdoc; 
     result = GetDocument(getter_AddRefs(domdoc)); 
     if (NS_SUCCEEDED(result) && domdoc) { 
-      nsAutoString newMetaString; 
       nsCOMPtr<nsIDOMNodeList>metaList; 
       nsCOMPtr<nsIDOMNode>metaNode; 
       nsCOMPtr<nsIDOMElement>metaElement; 
@@ -285,20 +280,26 @@ nsPlaintextEditor::SetDocumentCharacterSet(const nsAReadableString & characterSe
           metaElement = do_QueryInterface(metaNode); 
           if (!metaElement) continue; 
 
-          nsString currentValue; 
+          nsAutoString currentValue; 
           if (NS_FAILED(metaElement->GetAttribute(NS_LITERAL_STRING("http-equiv"), currentValue))) continue; 
 
-          if (kNotFound != currentValue.Find("content-type", PR_TRUE)) { 
+          if (FindInReadable(NS_LITERAL_STRING("content-type"),
+                             currentValue,
+                             nsCaseInsensitiveStringComparator())) { 
             NS_NAMED_LITERAL_STRING(content, "content");
             if (NS_FAILED(metaElement->GetAttribute(content, currentValue))) continue; 
 
-            NS_NAMED_LITERAL_STRING(charset, "charset=");
-            PRInt32 offset = currentValue.Find(charset.get(), PR_TRUE); 
-            if (kNotFound != offset) {
-              currentValue.Left(newMetaString, offset); // copy current value before "charset=" (e.g. text/html) 
-              newMetaString.Append(charset); 
-              newMetaString.Append(characterSet); 
-              result = nsEditor::SetAttribute(metaElement, content, newMetaString); 
+            NS_NAMED_LITERAL_STRING(charsetEquals, "charset=");
+            nsAString::const_iterator originalStart, start, end;
+            originalStart = currentValue.BeginReading(start);
+            currentValue.EndReading(end);
+            if (FindInReadable(charsetEquals, start, end,
+                               nsCaseInsensitiveStringComparator())) {
+
+              // set attribute to <original prefix> charset=text/html
+              result = nsEditor::SetAttribute(metaElement, content,
+                                              Substring(originalStart, start) +
+                                              charsetEquals + characterSet); 
               if (NS_SUCCEEDED(result)) 
                 newMetaCharset = PR_FALSE; 
               break; 
@@ -327,10 +328,9 @@ nsPlaintextEditor::SetDocumentCharacterSet(const nsAReadableString & characterSe
                 // not undoable, undo should undo CreateNode 
                 result = metaElement->SetAttribute(NS_LITERAL_STRING("http-equiv"), NS_LITERAL_STRING("Content-Type")); 
                 if (NS_SUCCEEDED(result)) { 
-                  newMetaString.Assign(NS_LITERAL_STRING("text/html;charset=")); 
-                  newMetaString.Append(characterSet); 
                   // not undoable, undo should undo CreateNode 
-                  result = metaElement->SetAttribute(NS_LITERAL_STRING("content"), newMetaString); 
+                  result = metaElement->SetAttribute(NS_LITERAL_STRING("content"),
+                                                     NS_LITERAL_STRING("text/html;charset=") + characterSet); 
                 } 
               } 
             } 
@@ -1906,26 +1906,35 @@ nsPlaintextEditor::SetCompositionString(const nsAReadableString& aCompositionStr
   if (NS_FAILED(result)) return result;
 
   mIMETextRangeList = aTextRangeList;
-  nsAutoPlaceHolderBatch batch(this, gIMETxnName);
 
-  result = InsertText(aCompositionString);
-
-  mIMEBufferLength = aCompositionString.Length();
-
-  if (!mPresShellWeak) return NS_ERROR_NOT_INITIALIZED;
-  nsCOMPtr<nsIPresShell> ps = do_QueryReferent(mPresShellWeak);
-  if (!ps) return NS_ERROR_NOT_INITIALIZED;
-  ps->GetCaret(getter_AddRefs(caretP));
-  caretP->SetCaretDOMSelection(selection);
-
-  caretP->GetCaretCoordinates(nsICaret::eIMECoordinates, selection,
-            &(aReply->mCursorPosition), &(aReply->mCursorIsCollapsed));
-
-  // second part of 23558 fix:
-  if (aCompositionString.IsEmpty()) 
+  // we need the nsAutoPlaceHolderBatch destructor called before hitting
+  // GetCaretCoordinates so the states in Frame system sync with content
+  // therefore, we put the nsAutoPlaceHolderBatch into a inner block
   {
-    mIMETextNode = nsnull;
+    nsAutoPlaceHolderBatch batch(this, gIMETxnName);
+
+    result = InsertText(aCompositionString);
+
+    mIMEBufferLength = aCompositionString.Length();
+
+    if (!mPresShellWeak) 
+      return NS_ERROR_NOT_INITIALIZED;
+    nsCOMPtr<nsIPresShell> ps = do_QueryReferent(mPresShellWeak);
+    if (!ps) 
+      return NS_ERROR_NOT_INITIALIZED;
+    ps->GetCaret(getter_AddRefs(caretP));
+    caretP->SetCaretDOMSelection(selection);
+
+    // second part of 23558 fix:
+    if (aCompositionString.IsEmpty()) 
+    {
+      mIMETextNode = nsnull;
+    }
   }
+
+  result = caretP->GetCaretCoordinates(nsICaret::eIMECoordinates, selection,
+            &(aReply->mCursorPosition), &(aReply->mCursorIsCollapsed));
+  NS_ASSERTION(NS_SUCCEEDED(result), "cannot get caret position");
   
   return result;
 }
@@ -2110,6 +2119,12 @@ nsPlaintextEditor::SetAttributeOrEquivalent(nsIDOMElement * aElement,
                                             const nsAReadableString & aAttribute,
                                             const nsAReadableString & aValue)
 {
-  nsEditor::SetAttribute(aElement, aAttribute, aValue);
-  return NS_OK;
+  return nsEditor::SetAttribute(aElement, aAttribute, aValue);
+}
+
+nsresult
+nsPlaintextEditor::RemoveAttributeOrEquivalent(nsIDOMElement * aElement,
+                                               const nsAReadableString & aAttribute)
+{
+  return nsEditor::RemoveAttribute(aElement, aAttribute);
 }

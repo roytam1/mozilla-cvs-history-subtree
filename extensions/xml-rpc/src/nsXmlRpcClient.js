@@ -735,7 +735,7 @@ nsXmlRpcClient.prototype = {
 /* The XMLWriter class constructor */
 function XMLWriter() {
     // We assume for now that all data is already in ISO-8859-1.
-    this.data = '<?xml version="1.0" encoding="ISO-8859-1"?>\n';
+    this.data = '<?xml version="1.0" encoding="ISO-8859-1"?>';
 }
 
 /* The XMLWriter class def */

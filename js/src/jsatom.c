@@ -6,7 +6,7 @@
  * the License at http://www.mozilla.org/NPL/
  *
  * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express oqr
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  *
@@ -427,7 +427,8 @@ js_atom_unpinner(JSHashEntry *he, intN i, void *arg)
 void
 js_UnpinPinnedAtoms(JSAtomState *state)
 {
-    JS_HashTableEnumerateEntries(state->table, js_atom_unpinner, NULL);
+    if (state->table)
+        JS_HashTableEnumerateEntries(state->table, js_atom_unpinner, NULL);
 }
 
 static JSAtom *

@@ -81,6 +81,7 @@
 #define IDI_MAILBIFF 101
 
 #define NEW_MAIL_ALERT_ICON "chrome://messenger/skin/icons/new-mail-alert.png"
+#define SHOW_ALERT_PREF "mail.biff.show_alert"
 
 // since we are including windows.h in this file, undefine get user name....
 #ifdef GetUserName
@@ -496,13 +497,28 @@ nsresult nsMessengerWinIntegration::GetStringBundle(nsIStringBundle **aBundle)
 nsresult nsMessengerWinIntegration::ShowAlertMessage(const PRUnichar * aAlertText, const char * aFolderURI)
 {
   nsresult rv;
-  nsCOMPtr<nsIAlertsService> alertsService (do_GetService(NS_ALERTSERVICE_CONTRACTID, &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsIAlertListener> alertListener (do_QueryInterface(NS_STATIC_CAST(nsIMessengerOSIntegration*, this)));
+  nsCOMPtr<nsIPref> prefService;
+  prefService = do_GetService(NS_PREF_CONTRACTID, &rv);  
+  PRBool showAlert = PR_TRUE; 
+  
+  if (prefService)
+    prefService->GetBoolPref(SHOW_ALERT_PREF, &showAlert);
+  
+  if (showAlert)
+  {
+    nsCOMPtr<nsIAlertsService> alertsService (do_GetService(NS_ALERTSERVICE_CONTRACTID, &rv));
+    if (NS_SUCCEEDED(rv))
+    {
+      nsCOMPtr<nsIAlertListener> alertListener (do_QueryInterface(NS_STATIC_CAST(nsIMessengerOSIntegration*, this)));
+  
+      rv = alertsService->ShowAlertNotification(NEW_MAIL_ALERT_ICON, NS_LITERAL_STRING("New Messages").get(), aAlertText, PR_TRUE, 
+      NS_ConvertASCIItoUCS2(aFolderURI).get(), alertListener); 
+    }
+  }
 
-  rv = alertsService->ShowAlertNotification(NEW_MAIL_ALERT_ICON, NS_LITERAL_STRING("New Messages").get(), aAlertText, PR_TRUE, 
-    NS_ConvertASCIItoUCS2(aFolderURI).get(), alertListener); 
+  if (!showAlert || NS_FAILED(rv)) // go straight to showing the system tray icon.
+    OnAlertFinished(nsnull);
 
   return rv;
 }
@@ -634,6 +650,7 @@ void nsMessengerWinIntegration::FillToolTipInfo()
       if (msgFolder)
         msgFolder->GetURI(getter_Copies(folderURI));
     }
+
     ShowAlertMessage(toolTipText.get(), folderURI);
   }
   else

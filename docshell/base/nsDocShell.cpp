@@ -648,7 +648,9 @@ nsDocShell::LoadURI(nsIURI * aURI,
                           nsnull,         // No headers stream
                           loadType,
                           nsnull,         // No SHEntry
-                          firstParty);
+                          firstParty,
+                          nsnull,         // No nsIDocShell
+                          nsnull);        // No nsIRequest
     }
 
     return rv;
@@ -2029,8 +2031,8 @@ nsDocShell::GetChildAt(PRInt32 aIndex, nsIDocShellTreeItem ** aChild)
 {
     NS_ENSURE_ARG_POINTER(aChild);
 
-    NS_ASSERTION(aIndex >= 0 && aIndex < mChildren.Count(),"Bad docshell ChildAt index");
-    *aChild = (nsIDocShellTreeItem *) mChildren.ElementAt(aIndex);
+    NS_WARN_IF_FALSE(aIndex >=0 && aIndex < mChildren.Count(), "index of child element is out of range!");
+    *aChild = (nsIDocShellTreeItem *) mChildren.SafeElementAt(aIndex);
     NS_IF_ADDREF(*aChild);
 
     return NS_OK;
@@ -2417,8 +2419,10 @@ nsDocShell::Reload(PRUint32 aReloadFlags)
                           nsnull,         // No post data
                           nsnull,         // No headers data
                           type,           // Load type
-                          nsnull,        // No SHEntry
-                          PR_TRUE);
+                          nsnull,         // No SHEntry
+                          PR_TRUE,
+                          nsnull,         // No nsIDocShell
+                          nsnull);        // No nsIRequest
     return rv;
 }
 
@@ -3644,10 +3648,14 @@ nsDocShell::OnStateChange(nsIWebProgress * aProgress, nsIRequest * aRequest,
                           PRInt32 aStateFlags, nsresult aStatus)
 {
     nsresult rv;
+
     // Update the busy cursor
     if ((~aStateFlags & (STATE_START | STATE_IS_NETWORK)) == 0) {
-        nsCOMPtr<nsIWyciwygChannel>  wcwgChannel(do_QueryInterface(aRequest));        
-        if (wcwgChannel && !mLSHE && (mItemType == typeContent)) {
+        nsCOMPtr<nsIWyciwygChannel>  wcwgChannel(do_QueryInterface(aRequest));
+        nsCOMPtr<nsIWebProgress> webProgress(do_QueryInterface(mLoadCookie));
+
+        // Was the wyciwyg document loaded on this docshell?   
+        if (wcwgChannel && !mLSHE && (mItemType == typeContent) && aProgress == webProgress.get()) {
             nsCOMPtr<nsIURI> uri;
             wcwgChannel->GetURI(getter_AddRefs(uri));
         
@@ -4285,9 +4293,19 @@ nsDocShell::InternalLoad(nsIURI * aURI,
                          nsIInputStream * aHeadersData,
                          PRUint32 aLoadType,
                          nsISHEntry * aSHEntry,
-                         PRBool firstParty)
+                         PRBool firstParty,
+                         nsIDocShell** aDocShell,
+                         nsIRequest** aRequest)
 {
-    nsresult rv;
+    nsresult rv = NS_OK;
+
+    // Initialize aDocShell/aRequest
+    if (aDocShell) {
+        *aDocShell = nsnull;
+    }
+    if (aRequest) {
+        *aRequest = nsnull;
+    }
 
     nsCOMPtr<nsISupports> owner(aOwner);
     //
@@ -4334,8 +4352,9 @@ nsDocShell::InternalLoad(nsIURI * aURI,
 
                     extProtService->ExternalProtocolHandlerExists(urlScheme.get(),
                                                                   &haveHandler);
-                    if (haveHandler)
+                    if (haveHandler) {
                         return extProtService->LoadUrl(aURI);
+                    }
                 }
             }
         }
@@ -4397,7 +4416,9 @@ nsDocShell::InternalLoad(nsIURI * aURI,
                                               aHeadersData,
                                               aLoadType,
                                               aSHEntry,
-                                              firstParty);
+                                              firstParty,
+                                              aDocShell,
+                                              aRequest);
             if (rv == NS_ERROR_NO_CONTENT) {
                 if (bIsNewWindow) {
                     //
@@ -4512,7 +4533,8 @@ nsDocShell::InternalLoad(nsIURI * aURI,
     // been called. 
     mLSHE = aSHEntry;
 
-    rv = DoURILoad(aURI, aReferrer, owner, aPostData, aHeadersData, firstParty);
+    rv = DoURILoad(aURI, aReferrer, owner, aPostData, aHeadersData, firstParty,
+                   aDocShell, aRequest);
 
     return rv;
 }
@@ -4583,12 +4605,15 @@ nsDocShell::GetCurrentDocumentOwner(nsISupports ** aOwner)
     return rv;
 }
 
-nsresult nsDocShell::DoURILoad(nsIURI * aURI,
-                               nsIURI * aReferrerURI,
-                               nsISupports * aOwner,
-                               nsIInputStream * aPostData,
-                               nsIInputStream * aHeadersData,
-                               PRBool firstParty)
+nsresult
+nsDocShell::DoURILoad(nsIURI * aURI,
+                      nsIURI * aReferrerURI,
+                      nsISupports * aOwner,
+                      nsIInputStream * aPostData,
+                      nsIInputStream * aHeadersData,
+                      PRBool firstParty,
+                      nsIDocShell ** aDocShell,
+                      nsIRequest ** aRequest)
 {
     nsresult rv;
     nsCOMPtr<nsIURILoader> uriLoader;
@@ -4716,6 +4741,20 @@ nsresult nsDocShell::DoURILoad(nsIURI * aURI,
     }
 
     rv = DoChannelLoad(channel, uriLoader);
+    
+    //
+    // If the channel load failed, we failed and nsIWebProgress just ain't
+    // gonna happen.
+    //
+    if (NS_SUCCEEDED(rv)) {
+        if (aDocShell) {
+          *aDocShell = this;
+          NS_ADDREF(*aDocShell);
+        }
+        if (aRequest) {
+          CallQueryInterface(channel, aRequest);
+        }
+    }
 
     return rv;
 }
@@ -5497,7 +5536,9 @@ nsDocShell::LoadHistoryEntry(nsISHEntry * aEntry, PRUint32 aLoadType)
                       nsnull,       // No headers stream
                       aLoadType,    // Load type
                       aEntry,       // SHEntry
-                      PR_TRUE);
+                      PR_TRUE,
+                      nsnull,       // No nsIDocShell
+                      nsnull);      // No nsIRequest
     return rv;
 }
 

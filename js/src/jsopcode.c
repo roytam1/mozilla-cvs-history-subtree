@@ -6,7 +6,7 @@
  * the License at http://www.mozilla.org/NPL/
  *
  * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express oqr
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  *
@@ -1904,8 +1904,8 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 			    table[j++].offset = off2;
 			}
 		    }
-                    js_qsort(table, (size_t)j, sizeof *table, CompareOffsets,
-                             NULL);
+                    js_HeapSort(table, (size_t) j, sizeof *table,
+                                CompareOffsets, NULL);
 		}
 
 		ok = DecompileSwitch(ss, table, (uintN)j, pc, len, off,

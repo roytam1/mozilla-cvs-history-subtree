@@ -6,7 +6,7 @@
  * the License at http://www.mozilla.org/NPL/
  *
  * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express oqr
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  *
@@ -93,6 +93,9 @@ JS_ClearAllWatchPoints(JSContext *cx);
  * Hide these non-API function prototypes by testing whether the internal
  * header file "jsconfig.h" has been included.
  */
+extern void
+js_MarkWatchPoints(JSRuntime *rt);
+
 extern JSScopeProperty *
 js_FindWatchPoint(JSRuntime *rt, JSScope *scope, jsid id);
 
@@ -102,7 +105,15 @@ js_GetWatchedSetter(JSRuntime *rt, JSScope *scope,
 
 extern JSBool JS_DLL_CALLBACK
 js_watch_set(JSContext *cx, JSObject *obj, jsval id, jsval *vp);
-#endif
+
+extern JSBool JS_DLL_CALLBACK
+js_watch_set_wrapper(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
+                     jsval *rval);
+
+extern JSPropertyOp
+js_WrapWatchedSetter(JSContext *cx, jsid id, uintN attrs, JSPropertyOp setter);
+
+#endif /* JS_HAS_OBJ_WATCHPOINT */
 
 /************************************************************************/
 
@@ -241,6 +252,10 @@ typedef struct JSPropertyDesc {
 #define JSPD_ALIAS      0x08    /* property has an alias id */
 #define JSPD_ARGUMENT   0x10    /* argument to function */
 #define JSPD_VARIABLE   0x20    /* local variable in function */
+#define JSPD_EXCEPTION  0x40    /* exception occurred fetching the property, */
+                                /* value is exception */
+#define JSPD_ERROR      0x80    /* native getter returned JS_FALSE without */
+                                /* throwing an exception */
 
 typedef struct JSPropertyDescArray {
     uint32          length;     /* number of elements in array */

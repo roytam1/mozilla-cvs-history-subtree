@@ -86,12 +86,17 @@
 #include "nsChildIterator.h"
 #include "nsIScrollableView.h"
 #include "nsITheme.h"
+#include "nsITimelineService.h"
 
 #ifdef USE_IMG2
 #include "imgIRequest.h"
 #include "imgIContainer.h"
 #include "imgIContainerObserver.h"
 #include "imgILoader.h"
+#endif
+
+#ifdef IBMBIDI
+#include "nsBidiPresUtils.h"
 #endif
 
 #define ELLIPSIS "..."
@@ -444,6 +449,7 @@ nsOutlinerBodyFrame::GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSiz
       PRInt32 err;
       desiredRows = size.ToInteger(&err);
       mHasFixedRowCount = PR_TRUE;
+      mPageCount = desiredRows;
     } else
       desiredRows = 1;
   } else {
@@ -455,12 +461,13 @@ nsOutlinerBodyFrame::GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSiz
       PRInt32 err;
       desiredRows = rows.ToInteger(&err);
       mHasFixedRowCount = PR_TRUE;
+      mPageCount = desiredRows;
     } else
       desiredRows = 0;
   }
 
   aSize.height = GetRowHeight() * desiredRows;
-
+  
   AddBorderAndPadding(aSize);
   AddInset(aSize);
   nsIBox::AddCSSPrefSize(aBoxLayoutState, this, aSize);
@@ -572,7 +579,9 @@ nsOutlinerBodyFrame::SetBounds(nsBoxLayoutState& aBoxLayoutState, const nsRect& 
 
   if (recompute) {
     mInnerBox = GetInnerBox();
-    mPageCount = mRowHeight ? (mInnerBox.height / mRowHeight) : 0;
+
+    if (!mHasFixedRowCount)
+      mPageCount = mRowHeight ? (mInnerBox.height / mRowHeight) : 0;
 
     PRInt32 rowCount;
     mView->GetRowCount(&rowCount);
@@ -848,14 +857,32 @@ NS_IMETHODIMP nsOutlinerBodyFrame::InvalidateRange(PRInt32 aStart, PRInt32 aEnd)
   return NS_OK;
 }
 
+nsIFrame*
+nsOutlinerBodyFrame::EnsureScrollbar()
+{
+  if (!mScrollbar) {
+    // Try to find it.
+    nsCOMPtr<nsIContent> parContent;
+    GetBaseElement(getter_AddRefs(parContent));
+    nsCOMPtr<nsIPresShell> shell;
+    mPresContext->GetShell(getter_AddRefs(shell));
+    nsIFrame* outlinerFrame;
+    shell->GetPrimaryFrameFor(parContent, &outlinerFrame);
+    if (outlinerFrame)
+      mScrollbar = InitScrollbarFrame(mPresContext, outlinerFrame, this);
+  }
+
+  NS_ASSERTION(mScrollbar, "no scroll bar");
+  return mScrollbar;
+}
+
 void
 nsOutlinerBodyFrame::UpdateScrollbar()
 {
   // Update the scrollbar.
-  nsCOMPtr<nsIContent> scrollbarContent;
-  NS_ASSERTION(mScrollbar, "no scroll bar");
-  if (!mScrollbar)
+  if (!EnsureScrollbar())
     return;
+  nsCOMPtr<nsIContent> scrollbarContent;
   mScrollbar->GetContent(getter_AddRefs(scrollbarContent));
   float t2p;
   mPresContext->GetTwipsToPixels(&t2p);
@@ -906,20 +933,7 @@ nsresult nsOutlinerBodyFrame::CheckVerticalOverflow(PRBool aInReflow)
 
 NS_IMETHODIMP nsOutlinerBodyFrame::InvalidateScrollbar()
 {
-  if (!mScrollbar) {
-    // Try to find it.
-    nsCOMPtr<nsIContent> parContent;
-    GetBaseElement(getter_AddRefs(parContent));
-    nsCOMPtr<nsIPresShell> shell;
-    mPresContext->GetShell(getter_AddRefs(shell));
-    nsIFrame* outlinerFrame;
-    shell->GetPrimaryFrameFor(parContent, &outlinerFrame);
-    if (outlinerFrame)
-      mScrollbar = InitScrollbarFrame(mPresContext, outlinerFrame, this);
-  }
-
-  NS_ASSERTION(mScrollbar, "no scroll bar");
-  if (!mScrollbar || !mView)
+  if (!EnsureScrollbar() || !mView)
     return NS_OK;
 
   PRInt32 rowCount = 0;
@@ -1842,6 +1856,16 @@ nsLineStyle nsOutlinerBodyFrame::ConvertBorderStyleToLineStyle(PRUint8 aBorderSt
   }
 }
 
+NS_IMETHODIMP
+nsOutlinerBodyFrame::DidSetStyleContext(nsIPresContext* aPresContext)
+{
+  mStyleCache.Clear();
+  mImageCache = nsnull;
+  mScrollbar = nsnull;
+
+  return nsLeafBoxFrame::DidSetStyleContext(aPresContext);
+}
+
 // Painting routines
 NS_IMETHODIMP nsOutlinerBodyFrame::Paint(nsIPresContext*      aPresContext,
                                          nsIRenderingContext& aRenderingContext,
@@ -1877,7 +1901,9 @@ NS_IMETHODIMP nsOutlinerBodyFrame::Paint(nsIPresContext*      aPresContext,
   PRInt32 oldPageCount = mPageCount;
   mRowHeight = GetRowHeight();
   mInnerBox = GetInnerBox();
-  mPageCount = mInnerBox.height/mRowHeight;
+
+  if (!mHasFixedRowCount)
+    mPageCount = mInnerBox.height/mRowHeight;
 
   if (mRowHeight != oldRowHeight || oldPageCount != mPageCount) {
     // Schedule a ResizeReflow that will update our page count properly.
@@ -2692,9 +2718,34 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintText(int aRowIndex,
       fontMet->GetStrikeout(offset, size);
       aRenderingContext.FillRect(textRect.x, textRect.y + baseline - offset, width, size);
     }
-
+#ifdef MOZ_TIMELINE
+    NS_TIMELINE_START_TIMER("Render Outline Text");
+#endif
+#ifdef IBMBIDI
+    nsresult rv = NS_ERROR_FAILURE;
+    nsBidiPresUtils* bidiUtils;
+    aPresContext->GetBidiUtils(&bidiUtils);
+    
+    if (bidiUtils) {
+      const nsStyleVisibility* vis;
+      GetStyleData(eStyleStruct_Visibility, (const nsStyleStruct*&) vis);
+      nsBidiDirection direction = 
+        (NS_STYLE_DIRECTION_RTL == vis->mDirection) ?
+        NSBIDI_RTL : NSBIDI_LTR;
+      PRUnichar* buffer = (PRUnichar*) text.get();
+      rv = bidiUtils->RenderText(buffer, text.Length(), direction,
+                                 aPresContext, aRenderingContext,
+                                 textRect.x, textRect.y + baseline);
+    }
+    if (NS_FAILED(rv))
+#endif // IBMBIDI
     aRenderingContext.DrawString(text, textRect.x, textRect.y + baseline);
   }
+#ifdef MOZ_TIMELINE
+    NS_TIMELINE_STOP_TIMER("Render Outline Text");
+    NS_TIMELINE_MARK_TIMER("Render Outline Text");
+#endif
+ 
 
   return NS_OK;
 }
@@ -2976,8 +3027,10 @@ nsOutlinerBodyFrame::ScrollbarButtonPressed(PRInt32 aOldIndex, PRInt32 aNewIndex
 NS_IMETHODIMP
 nsOutlinerBodyFrame::PositionChanged(PRInt32 aOldIndex, PRInt32& aNewIndex)
 {
+  if (!mRowHeight || !EnsureScrollbar())
+    return NS_ERROR_UNEXPECTED;
+
   float t2p;
-  if (!mRowHeight) return NS_ERROR_UNEXPECTED;
   mPresContext->GetTwipsToPixels(&t2p);
   nscoord rh = NSToCoordRound((float)mRowHeight*t2p);
 
@@ -3126,14 +3179,6 @@ nsOutlinerBodyFrame::GetBaseElement(nsIContent** aContent)
 
   *aContent = parent;
   NS_IF_ADDREF(*aContent);
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsOutlinerBodyFrame::ClearStyleAndImageCaches()
-{
-  mStyleCache.Clear();
-  mImageCache = nsnull;
-  mScrollbar = nsnull;
   return NS_OK;
 }
 

@@ -915,13 +915,12 @@ function MsgOpenNewWindowForFolder(uri, key)
   var keyToSelect = key;
 
   if (!uriToOpen)
-  {
-    var folder = GetLoadedMsgFolder();
-    var folderResource = folder.QueryInterface(Components.interfaces.nsIRDFResource);
-    uriToOpen = folderResource.Value;
-    dump('found folder resource\n');
-  }
-
+    // use GetSelectedFolderURI() to find out which message to open instead of
+    // GetLoadedMsgFolder().QueryIntervace(Components.interfaces.nsIRDFResource).value.
+    // This is required because on a right-click, the currentIndex value will be
+    // different from the actual row that is highlighted.  GetSelectedFolderURI()
+    // will return the message that is highlighted.
+    uriToOpen = GetSelectedFolderURI();
   if (uriToOpen) {
    // get the messenger window open service and ask it to open a new window for us
    var mailWindowService = Components.classes["@mozilla.org/messenger/windowservice;1"].getService(Components.interfaces.nsIMessengerWindowService);
@@ -944,21 +943,23 @@ function MsgOpenSelectedMessages()
 
 function MsgOpenNewWindowForMessage(messageUri, folderUri)
 {
-    var currentIndex;
+    if (!messageUri)
+        // use GetFirstSelectedMessage() to find out which message to open
+        // instead of gDBView.getURIForViewIndex(currentIndex).  This is
+        // required because on a right-click, the currentIndex value will be
+        // different from the actual row that is highlighted.
+        // GetFirstSelectedMessage() will return the message that is
+        // highlighted.
+        messageUri = GetFirstSelectedMessage();
 
-    if (!messageUri || !folderUri) {
-        var outlinerView = gDBView.QueryInterface(Components.interfaces.nsIOutlinerView);
-        var outlinerSelection = outlinerView.selection;
-        currentIndex = outlinerSelection.currentIndex;
-    }
-
-    if (!messageUri) {
-        messageUri = gDBView.getURIForViewIndex(currentIndex);
-    }
-
-    if (!folderUri) {
-        folderUri = gDBView.getFolderForViewIndex(currentIndex).URI;
-    }
+    if (!folderUri)
+        // use GetSelectedFolderURI() to find out which message to open
+        // instead of gDBView.getURIForViewIndex(currentIndex).  This is
+        // required because on a right-click, the currentIndex value will be
+        // different from the actual row that is highlighted.
+        // GetSelectedFolderURI() will return the message that is
+        // highlighted.
+        folderUri = GetSelectedFolderURI();
 
     // be sure to pass in the current view....
     if (messageUri && folderUri) {
@@ -1009,10 +1010,7 @@ function MsgDownloadSelected()
 
 function MsgMarkThreadAsRead()
 {
-    var uri = GetFirstSelectedMessage();
-    if (uri) {
-        MarkThreadAsRead(uri);
-    }
+  gDBView.doCommand(nsMsgViewCommandType.markThreadRead);
 }
 
 function MsgViewPageSource()

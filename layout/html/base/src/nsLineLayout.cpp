@@ -163,7 +163,8 @@ nsLineLayout::nsLineLayout(nsIPresContext* aPresContext,
     mBlockReflowState(aOuterReflowState),
     mBlockRS(nsnull),/* XXX temporary */
     mMinLineHeight(0),
-    mComputeMaxElementSize(aComputeMaxElementSize)
+    mComputeMaxElementSize(aComputeMaxElementSize),
+    mWordFrames(0)
 {
   MOZ_COUNT_CTOR(nsLineLayout);
 
@@ -194,7 +195,8 @@ nsLineLayout::nsLineLayout(nsIPresContext* aPresContext,
 }
 
 nsLineLayout::nsLineLayout(nsIPresContext* aPresContext)
-  : mPresContext(aPresContext)
+  : mPresContext(aPresContext),
+    mWordFrames(0)
 {
   MOZ_COUNT_CTOR(nsLineLayout);
   
@@ -2636,8 +2638,8 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
         if ( NS_SUCCEEDED(result) && blockTagAtom) {
           // (2) above, if the first line of LI
           if (isFirstLine && blockTagAtom.get() == nsHTMLAtoms::li) {
-            // if the line is empty, then don't force the min width (see bug 75963)
-            if ((mLineBox->mBounds.height > 0) || (mLineBox->mBounds.width > 0)) {
+            // if the line is empty, then don't force the min height (see bug 75963)
+            if (!IsZeroHeight()) {
               applyMinLH = PR_TRUE;
               foundLI = PR_TRUE;
             }
@@ -3329,9 +3331,9 @@ nsLineLayout::RelativePositionFrames(PerSpanData* psd, nsRect& aCombinedArea)
 void
 nsLineLayout::ForgetWordFrame(nsIFrame* aFrame)
 {
-  NS_ASSERTION((void*)aFrame == mWordFrames[0], "forget-word-frame");
-  if (0 != mWordFrames.Count()) {
-    mWordFrames.RemoveElementAt(0);
+  if (0 != mWordFrames.GetSize()) {
+    NS_ASSERTION((void*)aFrame == mWordFrames.PeekFront(), "forget-word-frame");
+    mWordFrames.PopFront();
   }
 }
 

@@ -130,10 +130,7 @@ function onEnterInSearchBar()
      return;
    }
    else
-   {
-     gSearchInput.select();
      gClearButton.setAttribute("disabled", false); //coming into search enable clear button
-   }
 
    ClearThreadPaneSelection();
    ClearMessagePane();
@@ -210,14 +207,24 @@ function onSearchStop()
   gSearchSession.interruptSearch();
 }
 
-function onSearchInput(event)
+function onSearchKeyPress(event)
+{
+  // 13 == return
+  if (event && event.keyCode == 13)
+    onSearchInput(true);
+}
+
+function onSearchInput(returnKeyHit)
 {
   if (gSearchTimer) {
     clearTimeout(gSearchTimer); 
     gSearchTimer = null;
   }
 
-  if (event && event.keyCode == 13) {
+  // only select the text when the return key was hit
+  if (returnKeyHit) {
+    GetSearchInput();
+    gSearchInput.select();
     onEnterInSearchBar();
   }
   else {
@@ -229,8 +236,8 @@ function onClearSearch()
 {
   if (gSearchInput) 
     gSearchInput.value ="";  //on input does not get fired for some reason
-  onSearchInput(null);
-}  
+  onSearchInput(true);
+}
 
 function disableQuickSearchClearButton()
 {

@@ -1,11 +1,11 @@
 
 <!-- for SearchDialog.xul -->
 <!ENTITY searchHeading.label         "Search for messages in:">
-<!ENTITY searchHeading.accesskey     "S">
+<!ENTITY searchHeading.accesskey     "h">
 <!ENTITY searchSubfolders.label      "Search subfolders">
 <!ENTITY searchSubfolders.accesskey  "e">
 <!ENTITY searchButton.label          "Search">
-<!ENTITY searchButton.accesskey      "h">
+<!ENTITY searchButton.accesskey      "S">
 <!ENTITY resetButton.label           "Clear">
 <!ENTITY resetButton.accesskey       "C">
 <!ENTITY optionsButton.label         "Options">
@@ -30,5 +30,7 @@
 <!ENTITY abSearchHeading.accesskey   "S">
 <!ENTITY propertiesButton.label      "Properties">
 <!ENTITY propertiesButton.accesskey  "P">
+<!ENTITY composeButton.label         "Compose">
+<!ENTITY composeButton.accesskey     "C">
 <!ENTITY abSearchDialogTitle.label   "Advanced Address Book Search">
 

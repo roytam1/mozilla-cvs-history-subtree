@@ -6,7 +6,7 @@
  * the License at http://www.mozilla.org/NPL/
  *
  * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express oqr
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  *
@@ -99,27 +99,29 @@ InitMinimalScope(JSScope *scope)
 static JSBool
 CreateScopeTable(JSScope *scope)
 {
-    uint32 size;
+    int sizeLog2;
     JSScopeProperty *sprop, **spp;
 
     JS_ASSERT(!scope->table);
     JS_ASSERT(scope->lastProp);
 
-    size = MIN_SCOPE_TABLE_SIZE;
     if (scope->entryCount > SCOPE_HASH_THRESHOLD) {
         /*
          * Ouch: calloc failed at least once already -- let's try again,
          * overallocating to hold at least twice the current population.
          */
-        scope->sizeLog2 = JS_CeilingLog2(2 * scope->entryCount);
-        scope->hashShift = JS_DHASH_BITS - scope->sizeLog2;
-        size = JS_BIT(scope->sizeLog2);
+        sizeLog2 = JS_CeilingLog2(2 * scope->entryCount);
+    } else {
+        sizeLog2 = MIN_SCOPE_SIZE_LOG2;
     }
 
-    scope->table = (JSScopeProperty **) calloc(size, 1);
+    scope->table = (JSScopeProperty **)
+        calloc(JS_BIT(sizeLog2), sizeof(JSScopeProperty *));
     if (!scope->table)
         return JS_FALSE;
 
+    scope->sizeLog2 = sizeLog2;
+    scope->hashShift = JS_DHASH_BITS - sizeLog2;
     for (sprop = scope->lastProp; sprop; sprop = sprop->parent) {
         spp = js_SearchScope(scope, sprop->id, JS_TRUE);
         SPROP_STORE_PRESERVING_COLLISION(spp, sprop);
@@ -238,7 +240,7 @@ JS_FRIEND_API(JSScopeProperty **)
 js_SearchScope(JSScope *scope, jsid id, JSBool adding)
 {
     JSHashNumber hash0, hash1, hash2;
-    int hashShift;
+    int hashShift, sizeLog2;
     JSScopeProperty *stored, *sprop, **spp, **firstRemoved;
     uint32 sizeMask;
 
@@ -258,7 +260,7 @@ js_SearchScope(JSScope *scope, jsid id, JSBool adding)
 
     /* Compute the primary hash address. */
     hash0 = SCOPE_HASH0(id);
-    hashShift = JS_HASH_BITS - scope->sizeLog2;
+    hashShift = scope->hashShift;
     hash1 = SCOPE_HASH1(hash0, hashShift);
     spp = scope->table + hash1;
 
@@ -277,8 +279,9 @@ js_SearchScope(JSScope *scope, jsid id, JSBool adding)
     }
 
     /* Collision: double hash. */
-    hash2 = SCOPE_HASH2(hash0, scope->sizeLog2, hashShift);
-    sizeMask = JS_BITMASK(scope->sizeLog2);
+    sizeLog2 = scope->sizeLog2;
+    hash2 = SCOPE_HASH2(hash0, sizeLog2, hashShift);
+    sizeMask = JS_BITMASK(sizeLog2);
 
     /* Save the first removed entry pointer so we can recycle it if adding. */
     if (SPROP_IS_REMOVED(stored)) {
@@ -889,8 +892,15 @@ js_AddScopeProperty(JSContext *cx, JSScope *scope, jsid id,
 
         /*
          * If all property members match, this is a redundant add and we can
-         * return early.
+         * return early.  If the caller wants to allocate a slot, but doesn't
+         * care which slot, copy sprop->slot into slot so we can match sprop,
+         * if all other members match.
          */
+        if (!(attrs & JSPROP_SHARED) &&
+            slot == SPROP_INVALID_SLOT &&
+            SPROP_HAS_VALID_SLOT(sprop, scope)) {
+            slot = sprop->slot;
+        }
         if (SPROP_MATCH_PARAMS_AFTER_ID(sprop, getter, setter, slot, attrs,
                                         flags, shortid)) {
             METER(redundantAdds);
@@ -1073,10 +1083,21 @@ js_AddScopeProperty(JSContext *cx, JSScope *scope, jsid id,
          * a JS_ClearScope call.
          */
         if (!(flags & SPROP_IS_ALIAS)) {
-            if (attrs & JSPROP_SHARED)
+            if (attrs & JSPROP_SHARED) {
                 slot = SPROP_INVALID_SLOT;
-            else if (!js_AllocSlot(cx, scope->object, &slot))
-                goto fail_overwrite;
+            } else {
+                /*
+                 * We may have set slot from a nearly-matching sprop, above.
+                 * If so, we're overwriting that nearly-matching sprop, so we
+                 * can reuse its slot -- we don't need to allocate a new one.
+                 * Callers should therefore pass SPROP_INVALID_SLOT for all
+                 * non-alias, unshared property adds.
+                 */
+                if (slot != SPROP_INVALID_SLOT)
+                    JS_ASSERT(overwriting);
+                else if (!js_AllocSlot(cx, scope->object, &slot))
+                    goto fail_overwrite;
+            }
         }
 
         /*
@@ -1086,7 +1107,9 @@ js_AddScopeProperty(JSContext *cx, JSScope *scope, jsid id,
          */
         if (!JS_CLIST_IS_EMPTY(&cx->runtime->watchPointList) &&
             js_FindWatchPoint(cx->runtime, scope, id)) {
-            setter = js_watch_set;
+            setter = js_WrapWatchedSetter(cx, id, attrs, setter);
+            if (!setter)
+                goto fail_overwrite;
         }
 
         /* Find or create a property tree node labeled by our arguments. */
@@ -1207,22 +1230,20 @@ js_ChangeScopePropertyAttrs(JSContext *cx, JSScope *scope,
         }
     } else {
         /*
-         * js_RemoveScopeProperty must allocate scope->table, so it may fail.
-         * Let's hope this doesn't happen too often for small scopes, due e.g.
-         * to getter/setter definitions interleaved for several properties.
+         * Let js_AddScopeProperty handle this |overwriting| case, including
+         * the conservation of sprop->slot (if it's valid).  We must not call
+         * js_RemoveScopeProperty here, it will free a valid sprop->slot and
+         * js_AddScopeProperty won't re-allocate it.
          */
-        if (!js_RemoveScopeProperty(cx, scope, sprop->id)) {
-            newsprop = NULL;
-        } else {
-            newsprop = js_AddScopeProperty(cx, scope, child.id, child.getter,
-                                           child.setter, child.slot,
-                                           child.attrs, child.flags,
-                                           child.shortid);
-        }
+        newsprop = js_AddScopeProperty(cx, scope, child.id,
+                                       child.getter, child.setter, child.slot,
+                                       child.attrs, child.flags, child.shortid);
     }
 
+#ifdef DEBUG_brendan
     if (!newsprop)
         METER(changeFailures);
+#endif
     return newsprop;
 }
 
@@ -1423,6 +1444,9 @@ js_SweepScopeProperties(JSRuntime *rt)
     js_nkids_sqsum = 0;
     memset(js_nkids_hist, 0, sizeof js_nkids_hist);
 #endif
+
+    /* Mark watched scope properties hidden in the runtime before we sweep. */
+    js_MarkWatchPoints(rt);
 
     ap = &rt->propertyArenaPool.first.next;
     while ((a = *ap) != NULL) {

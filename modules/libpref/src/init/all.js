@@ -91,7 +91,7 @@ pref("browser.display.focus_ring_width",     1);
 pref("browser.display.focus_ring_on_anything", false);
 
 pref("browser.new_find", true);  // temporary
-pref("editor.new_find", false);  // temporary
+pref("editor.new_find",  true);  // temporary
 
 pref("browser.urlbar.autoFill", false);
 pref("browser.urlbar.showPopup", true);
@@ -222,11 +222,14 @@ pref("print.print_footerright", "&D");
 pref("print.show_print_progress", true);
 
 // When this is set to false it means each window has its PrintSettings
-// and a change in one browser window does not efect the others
+// and a change in one browser window does not effect the others
 pref("print.use_global_printsettings", false);
 
-// This indeicates whether it should use the native dialog or the XP Dialog50
+// This indicates whether it should use the native dialog or the XP Dialog50
 pref("print.use_native_print_dialog", false);
+
+// Save the Printings after each print job
+pref("print.save_print_settings", true);
 
 pref("print.whileInPrintPreview", true);
 
@@ -280,7 +283,7 @@ pref("capability.policy.default.Window.Components", "allAccess");
 pref("capability.policy.default.Window.document", "allAccess");
 pref("capability.policy.default.Window.focus", "allAccess");
 pref("capability.policy.default.Window.frames", "allAccess");
-pref("capability.policy.default.Window.fullScreen", "allAccess");
+pref("capability.policy.default.Window.fullScreen", "noAccess");
 pref("capability.policy.default.Window.history", "allAccess");
 pref("capability.policy.default.Window.length", "allAccess");
 pref("capability.policy.default.Window.location", "allAccess");
@@ -441,7 +444,7 @@ pref("network.http.proxy.ssl.connect",true);
 
 // This preference controls whether or not internationalized domain names (IDN)
 // are handled.  IDN requires a nsIIDNService implementation.
-pref("network.enableIDN", false);
+pref("network.enableIDN", true);
 
 // This preference controls whether or not URLs with UTF-8 characters are
 // escaped.  Set this preference to TRUE for strict RFC2396 conformance.
@@ -485,7 +488,7 @@ pref("network.proxy.no_proxies_on",         "");
 pref("network.online",                      true); //online/offline
 pref("network.accept_cookies",              0);     // 0 = Always, 1 = warn, 2 = never
 pref("network.foreign_cookies",             0); // 0 = Accept, 1 = Don't accept
-pref("network.cookie.cookieBehavior",       0); // 0-Accept, 1-dontAcceptForeign, 2-dontUse
+pref("network.cookie.cookieBehavior",       3); // 0-Accept, 1-dontAcceptForeign, 2-dontUse, 3-p3p
 pref("network.cookie.warnAboutCookies",     false);
 pref("network.cookie.lifetime.enabled",     false);
 pref("network.cookie.lifetime.behavior",    0);
@@ -669,3 +672,5 @@ pref("alerts.height", 50);
 pref("update_notifications.enabled", true);
 pref("update_notifications.provider.0.frequency", 7); // number of days
 pref("update_notifications.provider.0.datasource", "chrome://communicator-region/locale/region.properties");
+
+pref("browser.downloadmanager.behavior", 0);

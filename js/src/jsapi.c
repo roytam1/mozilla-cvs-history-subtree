@@ -6,7 +6,7 @@
  * the License at http://www.mozilla.org/NPL/
  *
  * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express oqr
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  *
@@ -2769,6 +2769,24 @@ JS_GetFunctionName(JSFunction *fun)
            : js_anonymous_str;
 }
 
+JS_PUBLIC_API(JSString *)
+JS_GetFunctionId(JSFunction *fun)
+{
+    return fun->atom ? ATOM_TO_STRING(fun->atom) : NULL;
+}
+
+JS_PUBLIC_API(uintN)
+JS_GetFunctionFlags(JSFunction *fun)
+{
+    return fun->flags;
+}
+
+JS_PUBLIC_API(JSBool)
+JS_ObjectIsFunction(JSContext *cx, JSObject *obj)
+{
+    return OBJ_GET_CLASS(cx, obj) == &js_FunctionClass;
+}
+
 JS_PUBLIC_API(JSBool)
 JS_DefineFunctions(JSContext *cx, JSObject *obj, JSFunctionSpec *fs)
 {
@@ -2901,7 +2919,7 @@ JS_CompileUCScriptForPrincipals(JSContext *cx, JSObject *obj,
     return script;
 }
 
-extern JS_PUBLIC_API(JSBool)
+JS_PUBLIC_API(JSBool)
 JS_BufferIsCompilableUnit(JSContext *cx, JSObject *obj,
                           const char *bytes, size_t length)
 {
@@ -3035,6 +3053,12 @@ JS_NewScriptObject(JSContext *cx, JSScript *script)
         script->object = obj;
     }
     return obj;
+}
+
+JS_PUBLIC_API(JSObject *)
+JS_GetScriptObject(JSScript *script)
+{
+    return script->object;
 }
 
 JS_PUBLIC_API(void)
@@ -3424,7 +3448,7 @@ JS_IsAssigning(JSContext *cx)
     jsbytecode *pc;
 
     for (fp = cx->fp; fp && !fp->script; fp = fp->down)
-        ;
+        continue;
     if (!fp || !(pc = fp->pc))
         return JS_FALSE;
     return (js_CodeSpec[*pc].format & JOF_SET) != 0;

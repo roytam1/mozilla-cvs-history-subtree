@@ -1025,7 +1025,8 @@ XULContentSinkImpl::HandleCDataSection(const PRUnichar *aData, PRUint32 aLength)
 }
 
 NS_IMETHODIMP 
-XULContentSinkImpl::HandleDoctypeDecl(const PRUnichar *aDoctype, PRUint32 aLength)
+XULContentSinkImpl::HandleDoctypeDecl(const PRUnichar *aDoctype, PRUint32 aLength,
+                                      nsISupports* aCatalogData)
 {
     return NS_OK;
 }
@@ -1153,7 +1154,7 @@ XULContentSinkImpl::ReportError(const PRUnichar* aErrorText,
   mState = eInProlog;
 
   NS_NAMED_LITERAL_STRING(name, "xmlns");
-  NS_NAMED_LITERAL_STRING(value, "http://www.w3.org/1999/xhtml");
+  NS_NAMED_LITERAL_STRING(value, "http://www.mozilla.org/newlayout/xml/parsererror.xml");
 
   const PRUnichar* atts[] = {name.get(), value.get(), nsnull};;
     
@@ -1163,7 +1164,8 @@ XULContentSinkImpl::ReportError(const PRUnichar* aErrorText,
   rv = HandleCharacterData(aErrorText, nsCRT::strlen(aErrorText));
   NS_ENSURE_SUCCESS(rv,rv);  
   
-  rv = HandleStartElement(NS_LITERAL_STRING("sourcetext").get(), atts, 1, -1, -1);
+  const PRUnichar* noAtts[] = {0, 0};
+  rv = HandleStartElement(NS_LITERAL_STRING("sourcetext").get(), noAtts, 0, -1, -1);
   NS_ENSURE_SUCCESS(rv,rv);
   
   rv = HandleCharacterData(aSourceText, nsCRT::strlen(aSourceText));

@@ -1,3 +1,4 @@
+
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
  * The contents of this file are subject to the Mozilla Public
@@ -398,7 +399,7 @@ nsHttpChannel::SetupTransaction()
         requestURI = mSpec.get();
 
     // trim off the #ref portion if any...
-    char *p = strchr(requestURI, '#');
+    char *p = (char *)strchr(requestURI, '#');
     if (p) *p = 0;
 
     mRequestHead.SetVersion(nsHttpHandler::get()->DefaultVersion());
@@ -430,7 +431,9 @@ nsHttpChannel::SetupTransaction()
             mRequestHead.SetHeader(nsHttp::Pragma, "no-cache");
     }
 
-    return mTransaction->SetupRequest(&mRequestHead, mUploadStream, mUploadStreamHasHeaders);
+    return mTransaction->SetupRequest(&mRequestHead, mUploadStream, 
+                                      mUploadStreamHasHeaders, 
+                                      mConnectionInfo->UsingHttpProxy() && mConnectionInfo->UsingSSL());
 }
 
 void
@@ -1211,7 +1214,7 @@ nsHttpChannel::ProcessRedirection(PRUint32 redirectType)
         PRInt32 proxyPort;
         
         // location is of the form "host:port"
-        char *p = strchr(location, ':');
+        char *p = (char *)strchr(location, ':');
         if (p) {
             *p = 0;
             proxyPort = atoi(p+1);
@@ -1253,9 +1256,19 @@ nsHttpChannel::ProcessRedirection(PRUint32 redirectType)
             }
         }
 
+        PRUint32 newLoadFlags = mLoadFlags | LOAD_REPLACE;
+        // if the original channel was using SSL and this channel is not using
+        // SSL, then no need to inhibit persistent caching.  however, if the
+        // original channel was not using SSL and has INHIBIT_PERSISTENT_CACHING
+        // set, then allow the flag to apply to the redirected channel as well.
+        // since we force set INHIBIT_PERSISTENT_CACHING on all HTTPS channels,
+        // we only need to check if the original channel was using SSL.
+        if (mConnectionInfo->UsingSSL())
+            newLoadFlags &= ~INHIBIT_PERSISTENT_CACHING;
+
         // build the new channel
         rv = NS_NewChannel(getter_AddRefs(newChannel), newURI, ioService, mLoadGroup,
-                           mCallbacks, mLoadFlags | LOAD_REPLACE);
+                           mCallbacks, newLoadFlags);
         if (NS_FAILED(rv)) return rv;
     }
 
@@ -1634,18 +1647,12 @@ nsHttpChannel::PromptForUserPass(const char *host,
     }
 
     // construct the domain string
+    // we always add the port to domain since it is used
+    // as the key for storing in password maanger.
     nsCAutoString domain;
     domain.Assign(host);
-    // Add port only if it was originally specified in the URI
-    PRInt32 uriPort = -1;
-    mURI->GetPort(&uriPort);
-    if (uriPort != -1) {
-        domain.Append(':');
-        domain.AppendInt(port);
-    }
-
-    NS_ConvertASCIItoUCS2 hostU(domain);
-
+    domain.Append(':');
+    domain.AppendInt(port);
     domain.Append(" (");
     domain.Append(realm);
     domain.Append(')');
@@ -1660,6 +1667,16 @@ nsHttpChannel::PromptForUserPass(const char *host,
     if (NS_FAILED(rv)) return rv;
 
     // figure out what message to display...
+    nsCAutoString displayHost;
+    displayHost.Assign(host);
+    // Add port only if it was originally specified in the URI
+    PRInt32 uriPort = -1;
+    mURI->GetPort(&uriPort);
+    if (uriPort != -1) {
+        displayHost.Append(':');
+        displayHost.AppendInt(port);
+    }
+    NS_ConvertASCIItoUCS2 hostU(displayHost);
     nsXPIDLString message;
     if (proxyAuth) {
         const PRUnichar *strings[] = { hostU.get() };
@@ -2181,10 +2198,13 @@ nsHttpChannel::SetReferrer(nsIURI *referrer, PRUint32 referrerType)
             mURI->GetAsciiHost(host);
             mURI->SchemeIs("https", &isHTTPS);
 
-            if (nsCRT::strcasecmp(referrerHost.get(), host.get()) != 0)
-                return NS_OK;
             if (!isHTTPS)
                 return NS_OK;
+
+            if ((nsCRT::strcasecmp(referrerHost.get(), host.get()) != 0) &&
+                (!nsHttpHandler::get()->SendSecureXSiteReferrer()))
+                return NS_OK;
+
         }
     }
 
@@ -2454,6 +2474,22 @@ nsHttpChannel::SetRedirectionLimit(PRUint32 value)
 {
     mRedirectionLimit = CLAMP(value, 0, 0xff);
     return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetContentEncodings(nsISimpleEnumerator** aEncodings)
+{
+    NS_PRECONDITION(aEncodings, "Null out param");
+    const char *encoding = mResponseHead->PeekHeader(nsHttp::Content_Encoding);
+    if (!encoding) {
+        *aEncodings = nsnull;
+        return NS_OK;
+    }
+    nsContentEncodings* enumerator = new nsContentEncodings(this, encoding);
+    if (!enumerator)
+        return NS_ERROR_OUT_OF_MEMORY;
+    
+    return CallQueryInterface(enumerator, aEncodings);
 }
 
 //-----------------------------------------------------------------------------
@@ -2791,3 +2827,151 @@ nsHttpChannel::ClearPasswordManagerEntry(const char *host, PRInt32 port, const c
         passWordManager->RemoveUser(domain.get(), user);
     }
 } 
+
+//-----------------------------------------------------------------------------
+// nsHttpChannel::nsContentEncodings <public>
+//-----------------------------------------------------------------------------
+
+nsHttpChannel::nsContentEncodings::nsContentEncodings(nsIHttpChannel* aChannel,
+                                                          const char* aEncodingHeader) :
+    mEncodingHeader(aEncodingHeader), mChannel(aChannel), mReady(PR_FALSE)
+{
+    mCurEnd = aEncodingHeader + strlen(aEncodingHeader);
+    mCurStart = mCurEnd;
+    NS_INIT_ISUPPORTS();
+}
+    
+nsHttpChannel::nsContentEncodings::~nsContentEncodings()
+{
+}
+
+//-----------------------------------------------------------------------------
+// nsHttpChannel::nsContentEncodings::nsISimpleEnumerator
+//-----------------------------------------------------------------------------
+
+NS_IMETHODIMP
+nsHttpChannel::nsContentEncodings::HasMoreElements(PRBool* aMoreEncodings)
+{
+    if (mReady) {
+        *aMoreEncodings = PR_TRUE;
+        return NS_OK;
+    }
+    
+    nsresult rv = PrepareForNext();
+    *aMoreEncodings = NS_SUCCEEDED(rv);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::nsContentEncodings::GetNext(nsISupports** aNextEncoding)
+{
+    *aNextEncoding = nsnull;
+    if (!mReady) {
+        nsresult rv = PrepareForNext();
+        if (NS_FAILED(rv)) {
+            return NS_ERROR_FAILURE;
+        }
+    }
+
+    const nsACString & encoding = Substring(mCurStart, mCurEnd);
+
+    nsACString::const_iterator start, end;
+    encoding.BeginReading(start);
+    encoding.EndReading(end);
+
+    nsCOMPtr<nsISupportsString> str;
+    str = do_CreateInstance("@mozilla.org/supports-string;1");
+    if (!str)
+        return NS_ERROR_FAILURE;
+
+    PRBool haveType = PR_FALSE;
+    if (CaseInsensitiveFindInReadable(NS_LITERAL_CSTRING("gzip"),
+                                      start,
+                                      end)) {
+        str->SetDataWithLength(sizeof(APPLICATION_GZIP) - 1,
+                               APPLICATION_GZIP);
+        haveType = PR_TRUE;
+    }
+
+    if (!haveType) {
+        encoding.BeginReading(start);
+        if (CaseInsensitiveFindInReadable(NS_LITERAL_CSTRING("compress"),
+                                          start,
+                                          end)) {
+            str->SetDataWithLength(sizeof(APPLICATION_COMPRESS) - 1,
+                                   APPLICATION_COMPRESS);
+            haveType = PR_TRUE;
+        }
+    }
+    
+    if (! haveType) {
+        encoding.BeginReading(start);
+        if (CaseInsensitiveFindInReadable(NS_LITERAL_CSTRING("deflate"),
+                                          start,
+                                          end)) {
+            str->SetDataWithLength(sizeof(APPLICATION_ZIP) - 1,
+                                   APPLICATION_ZIP);
+            haveType = PR_TRUE;
+        }
+    }
+
+    // Prepare to fetch the next encoding
+    mCurEnd = mCurStart;
+    mReady = PR_FALSE;
+    
+    if (haveType)
+        return CallQueryInterface(str, aNextEncoding);
+
+    NS_WARNING("Unknown encoding type");
+    return NS_ERROR_FAILURE;
+}
+
+//-----------------------------------------------------------------------------
+// nsHttpChannel::nsContentEncodings::nsISupports
+//-----------------------------------------------------------------------------
+
+NS_IMPL_ISUPPORTS1(nsHttpChannel::nsContentEncodings, nsISimpleEnumerator)
+
+//-----------------------------------------------------------------------------
+// nsHttpChannel::nsContentEncodings <private>
+//-----------------------------------------------------------------------------
+
+nsresult
+nsHttpChannel::nsContentEncodings::PrepareForNext(void)
+{
+    NS_PRECONDITION(mCurStart == mCurEnd, "Indeterminate state");
+    
+    // At this point both mCurStart and mCurEnd point to somewhere
+    // past the end of the next thing we want to return
+    
+    while (mCurEnd != mEncodingHeader) {
+        --mCurEnd;
+        if (*mCurEnd != ',' && !nsCRT::IsAsciiSpace(*mCurEnd))
+            break;
+    }
+    if (mCurEnd == mEncodingHeader)
+        return NS_ERROR_NOT_AVAILABLE; // no more encodings
+    ++mCurEnd;
+        
+    // At this point mCurEnd points to the first char _after_ the
+    // header we want.  Furthermore, mCurEnd - 1 != mEncodingHeader
+    
+    mCurStart = mCurEnd - 1;
+    while (mCurStart != mEncodingHeader &&
+           *mCurStart != ',' && !nsCRT::IsAsciiSpace(*mCurStart))
+        --mCurStart;
+    if (*mCurStart == ',' || nsCRT::IsAsciiSpace(*mCurStart))
+        ++mCurStart; // we stopped because of a weird char, so move up one
+        
+    // At this point mCurStart and mCurEnd bracket the encoding string
+    // we want.  Check that it's not "identity"
+    if (Substring(mCurStart, mCurEnd).Equals("identity",
+                                             nsCaseInsensitiveCStringComparator())) {
+        mCurEnd = mCurStart;
+        return PrepareForNext();
+    }
+        
+    mReady = PR_TRUE;
+    return NS_OK;
+}
+

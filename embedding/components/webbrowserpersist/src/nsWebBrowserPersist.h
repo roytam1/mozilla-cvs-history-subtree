@@ -112,6 +112,7 @@ private:
         nsIDOMNode *aNode, const char *aAttribute,
         PRBool aNeedsPersisting = PR_TRUE,
         URIData **aData = nsnull);
+    nsresult GetNodeToFixup(nsIDOMNode *aNodeIn, nsIDOMNode **aNodeOut);
     nsresult FixupNodeAttribute(nsIDOMNode *aNode, const char *aAttribute);
     nsresult FixupAnchor(nsIDOMNode *aNode);
     nsresult StoreAndFixupStyleSheet(nsIStyleSheet *aStyleSheet);
@@ -122,6 +123,8 @@ private:
     nsresult SaveSubframeContent(
         nsIDOMDocument *aFrameContent, URIData *aData);
     nsresult SetDocumentBase(nsIDOMDocument *aDocument, nsIURI *aBaseURI);
+    nsresult SendErrorStatusChange(
+        PRBool aIsReadError, nsresult aResult, nsIRequest *aRequest, nsIURI *aURI);
 
     nsresult FixRedirectedChannelEntry(nsIChannel *aNewChannel);
 
@@ -148,11 +151,14 @@ private:
         nsHashKey *aKey, void *aData, void* closure);
     static PRBool PR_CALLBACK EnumCountURIsToPersist(
         nsHashKey *aKey, void *aData, void* closure);
+    static PRBool PR_CALLBACK EnumCheckForDuplicateFileNames(
+        nsHashKey *aKey, void *aData, void* closure);
 
     nsCOMPtr<nsIURI>          mCurrentDataPath;
     PRBool                    mCurrentDataPathIsRelative;
     nsCString                 mCurrentRelativePathToData;
     nsCOMPtr<nsIURI>          mCurrentBaseURI;
+    nsCOMPtr<nsIURI>          mTargetBaseURI;
     PRUint32                  mCurrentThingsToPersist;
 
     nsCOMPtr<nsIMIMEService>  mMIMEService;
@@ -162,8 +168,6 @@ private:
     nsHashtable               mUploadList;
     nsHashtable               mURIMap;
     nsVoidArray               mDocList;
-    PRUint32                  mFileCounter;
-    PRUint32                  mFrameCounter;
     PRPackedBool              mFirstAndOnlyUse;
     PRPackedBool              mCancel;
     PRPackedBool              mJustStartedLoading;

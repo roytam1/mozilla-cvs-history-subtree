@@ -89,15 +89,19 @@ toolbarbutton.bookmark-item[disabled="true"][container="true"] {
 /* ..... drag and drop styles ..... */
 
 toolbarbutton.bookmark-item[dragover-left="true"] {
-  border-left-color: ThreeDDarkShadow;
+  -moz-border-left-colors: transparent ThreeDDarkShadow;
 }
 
 toolbarbutton.bookmark-item[dragover-right="true"] {
-  border-right-color: ThreeDDarkShadow;
+  -moz-border-right-colors: transparent ThreeDDarkShadow;
 }
 
 toolbarbutton.bookmark-item[dragover-top="true"] {
-  border: 1px solid ThreeDDarkShadow;
+  -moz-appearance: none;
+  -moz-border-top-colors: transparent ThreeDDarkShadow;
+  -moz-border-right-colors: transparent ThreeDDarkShadow;
+  -moz-border-bottom-colors: transparent ThreeDDarkShadow;
+  -moz-border-left-colors: transparent ThreeDDarkShadow;
 }
 
 /* ::::: bookmark menus ::::: */
@@ -107,6 +111,10 @@ menuitem.bookmark-item {
   border-top: 1px solid transparent !important;
   border-bottom: 1px solid transparent !important;
   padding: 1px 2px;
+}
+
+.bookmark-group {
+  list-style-image: url(chrome://communicator/skin/bookmarks/bookmark-group.gif) !important;
 }
 
 .menuitem-iconic.bookmark-item[disabled="true"] {

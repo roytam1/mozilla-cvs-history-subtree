@@ -85,6 +85,7 @@
 #include "nsGUIEvent.h"
 #include "nsIEventListenerManager.h"
 #include "nsIEventStateManager.h"
+#include "nsCSSAtoms.h"
 
 #define NS_MENU_POPUP_LIST_INDEX   0
 
@@ -583,14 +584,10 @@ nsMenuFrame::SelectMenu(PRBool aActivateFlag)
   nsAutoString domEventToFire;
 
   if (aActivateFlag) {
-    // Highlight the menu.
-    mContent->SetAttr(kNameSpaceID_None, nsXULAtoms::menuactive, NS_LITERAL_STRING("true"), PR_TRUE);
     // The menuactivated event is used by accessibility to track the user's movements through menus
     domEventToFire.Assign(NS_LITERAL_STRING("DOMMenuItemActive"));
   }
   else {
-    // Unhighlight the menu.
-    mContent->UnsetAttr(kNameSpaceID_None, nsXULAtoms::menuactive, PR_TRUE);
     domEventToFire.Assign(NS_LITERAL_STRING("DOMMenuItemInactive"));
   }
 
@@ -921,6 +918,12 @@ nsMenuFrame::OpenMenuInternal(PRBool aActivateFlag)
 void
 nsMenuFrame::GetMenuChildrenElement(nsIContent** aResult)
 {
+  if (!mContent)
+  {
+    *aResult = nsnull;
+    return;
+  }
+  
   nsresult rv;
   nsCOMPtr<nsIXBLService> xblService = 
            do_GetService("@mozilla.org/xbl;1", &rv);
@@ -941,6 +944,24 @@ nsMenuFrame::GetMenuChildrenElement(nsIContent** aResult)
   }
 }
 
+PRBool
+nsMenuFrame::IsSizedToPopup(nsIContent* aContent, PRBool aRequireAlways)
+{
+  nsCOMPtr<nsIAtom> tag;
+  aContent->GetTag(*getter_AddRefs(tag));
+  PRBool sizeToPopup;
+  if (tag == nsHTMLAtoms::select)
+    sizeToPopup = PR_TRUE;
+  else {
+    nsAutoString sizedToPopup;
+    aContent->GetAttr(kNameSpaceID_None, nsXULAtoms::sizetopopup, sizedToPopup);
+    sizeToPopup = (sizedToPopup.EqualsIgnoreCase("always") ||
+                   (!aRequireAlways && sizedToPopup.EqualsIgnoreCase("pref")));
+  }
+  
+  return sizeToPopup;
+}
+
 NS_IMETHODIMP
 nsMenuFrame::GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
 {
@@ -956,13 +977,8 @@ nsMenuFrame::GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
 
   nsIFrame* popupChild = mPopupFrames.FirstChild();
 
-  if (popupChild) {
-    nsAutoString sizedToPopup;
-    mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::sizetopopup, sizedToPopup);
-    
-    if (sizedToPopup.EqualsIgnoreCase("always"))
-      return GetPrefSize(aBoxLayoutState, aSize);
-  }
+  if (popupChild && IsSizedToPopup(mContent, PR_TRUE))
+    return GetPrefSize(aBoxLayoutState, aSize);
 
   return nsBoxFrame::GetMinSize(aBoxLayoutState, aSize);
 }
@@ -980,11 +996,7 @@ nsMenuFrame::DoLayout(nsBoxLayoutState& aState)
   nsIFrame* popupChild = mPopupFrames.FirstChild();
 
   if (popupChild) {
-    nsAutoString sizedToPopup;
-    mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::sizetopopup, sizedToPopup);
-    PRBool sizeToPopup = (sizedToPopup.EqualsIgnoreCase("pref") ||
-                          sizedToPopup.EqualsIgnoreCase("always"));
-    
+    PRBool sizeToPopup = IsSizedToPopup(mContent, PR_FALSE);
     nsIBox* ibox = nsnull;
     nsresult rv2 = popupChild->QueryInterface(NS_GET_IID(nsIBox), (void**)&ibox);
     NS_ASSERTION(NS_SUCCEEDED(rv2) && ibox,"popupChild is not box!!");
@@ -1307,9 +1319,9 @@ nsMenuFrame::Notify(nsITimer* aTimer)
   // Our timer has fired.
   if (aTimer == mOpenTimer.get()) {
     if (!mMenuOpen && mMenuParent) {
-      nsAutoString active;
-      mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::menuactive, active);
-      if (active.Equals(NS_LITERAL_STRING("true"))) {
+      nsIMenuFrame* activeMenu = nsnull;
+      mMenuParent->GetCurrentMenuItem(&activeMenu);
+      if (activeMenu == this) {
         // We're still the active menu. Make sure all submenus/timers are closed
         // before opening this one
         mMenuParent->KillPendingTimers();
@@ -1986,12 +1998,7 @@ nsMenuFrame::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
   aSize.height = 0;
   nsresult rv = nsBoxFrame::GetPrefSize(aState, aSize);
 
-  nsAutoString sizedToPopup;
-  mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::sizetopopup, sizedToPopup);
-  PRBool sizeToPopup = (sizedToPopup.EqualsIgnoreCase("pref") ||
-                        sizedToPopup.EqualsIgnoreCase("always"));
-
-  if (sizeToPopup) {
+  if (IsSizedToPopup(mContent, PR_FALSE)) {
     nsSize tmpSize(-1,0);
     nsIBox::AddCSSPrefSize(aState, this, tmpSize);
     nscoord flex;
@@ -2090,6 +2097,24 @@ nsMenuFrame::GetScrollableView(nsIScrollableView** aView)
     childFrame->GetRect(itemRect);
     (*aView)->SetLineHeight(itemRect.height);
   }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMenuFrame::NotifyStateChanged(nsIMenuFrame* aOtherMenuFrame)
+{
+  nsCOMPtr<nsIContent> otherContent;
+  if (aOtherMenuFrame) {
+    nsIFrame* otherFrame = nsnull;
+    CallQueryInterface(aOtherMenuFrame, &otherFrame);
+    otherFrame->GetContent(getter_AddRefs(otherContent));
+  }
+
+  nsCOMPtr<nsIDocument> document;
+  mContent->GetDocument(*getter_AddRefs(document));
+  if (document)
+    document->ContentStatesChanged(mContent, otherContent, nsCSSAtoms::menuActivePseudo);
 
   return NS_OK;
 }

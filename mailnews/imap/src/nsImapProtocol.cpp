@@ -999,7 +999,6 @@ nsImapProtocol::ImapThreadMainLoop()
     // in the case of the server dropping the connection, this call is reputed
     // to make it so that we process the :OnStop notification.
       m_eventQueue->ProcessPendingEvents();
-  //    m_sinkEventQueue->ProcessPendingEvents();
 
     if (m_nextUrlReadyToRun && m_runningUrl)
     {
@@ -1211,11 +1210,6 @@ PRBool nsImapProtocol::ProcessCurrentURL()
     }
   m_lastActiveTime = PR_Now(); // ** jt -- is this the best place for time stamp
   SetFlag(IMAP_CLEAN_UP_URL_STATE);
-  if (GetConnectionStatus() >= 0 && m_imapMiscellaneousSink && m_runningUrl)
-  {
-      m_imapMiscellaneousSink->CopyNextStreamMessage(this, m_runningUrl, GetServerStateParser().LastCommandSuccessful());
-      WaitForFEEventCompletion();
-  }
 
 #ifdef DEBUG_bienvenu1
     mailnewsurl->GetSpec(getter_Copies(urlSpec));
@@ -1225,11 +1219,19 @@ PRBool nsImapProtocol::ProcessCurrentURL()
   // BEFORE calling ReleaseUrlState
   mailnewsurl = nsnull;
 
+  // save the imap folder sink since we need it to do the CopyNextStreamMessage
+  nsCOMPtr<nsIImapMailFolderSink> imapMailFolderSink = m_imapMailFolderSink;
   // release the url as we are done with it...
   ReleaseUrlState();
   ResetProgressInfo();
   m_urlInProgress = PR_FALSE;
   ClearFlag(IMAP_CLEAN_UP_URL_STATE);
+
+  if (GetConnectionStatus() >= 0 && imapMailFolderSink)
+  {
+      imapMailFolderSink->CopyNextStreamMessage(GetServerStateParser().LastCommandSuccessful());
+      imapMailFolderSink = nsnull;
+  }
 
   // now try queued urls, now that we've released this connection.
   if (m_imapServerSink)
@@ -1321,7 +1323,7 @@ NS_IMETHODIMP nsImapProtocol::OnStartRequest(nsIRequest *request, nsISupports *c
 NS_IMETHODIMP nsImapProtocol::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult aStatus)
 {
 
-  PRBool killThread = PR_FALSE;
+  PRBool killThread = PR_TRUE; // we always want to kill the thread, I believe.
 
   if (NS_FAILED(aStatus)) 
   {
@@ -1363,22 +1365,6 @@ NS_IMETHODIMP nsImapProtocol::OnStopRequest(nsIRequest *request, nsISupports *ct
 /////////////////////////////////////////////////////////////////////////////////////////////
 // End of nsIStreamListenerSupport
 //////////////////////////////////////////////////////////////////////////////////////////////
-
-NS_IMETHODIMP nsImapProtocol::GetStreamConsumer (nsISupports **result)
-{
-    // mscott - i'm going to make this method obsolete...
-    NS_NOTREACHED("nsImapProtocol::GetStreamConsumer");
-    return NS_ERROR_NOT_IMPLEMENTED;
-#if 0
-  if (result)
-  {
-    *result = nsnull;
-    NS_IF_ADDREF(*result);
-    return NS_OK;
-  }
-  return NS_ERROR_NULL_POINTER;
-#endif
-}
 
 NS_IMETHODIMP
 nsImapProtocol::GetRunningUrl(nsIURI **result)
@@ -1532,13 +1518,13 @@ NS_IMETHODIMP nsImapProtocol::CanHandleUrl(nsIImapUrl * aImapUrl,
     return NS_ERROR_NULL_POINTER;
   nsresult rv = NS_OK;
   NS_LOCK_INSTANCE();
-
+  
   *aCanRunUrl = PR_FALSE; // assume guilty until proven otherwise...
   *hasToWait = PR_FALSE;
-
+  
   PRBool isBusy = PR_FALSE;
   PRBool isInboxConnection = PR_FALSE;
-
+  
   if (!m_channel)
   {
     // *** jt -- something is really wrong; it could be the dialer gave up
@@ -1552,34 +1538,34 @@ NS_IMETHODIMP nsImapProtocol::CanHandleUrl(nsIImapUrl * aImapUrl,
     IsBusy(&isBusy, &isInboxConnection);
     
     PRBool inSelectedState = GetServerStateParser().GetIMAPstate() ==
-        nsImapServerResponseParser::kFolderSelected;
+      nsImapServerResponseParser::kFolderSelected;
     
     nsCString curUrlFolderName;
     if (inSelectedState)
     {
-        curUrlFolderName = 
-            GetServerStateParser().GetSelectedMailboxName();
+      curUrlFolderName = 
+        GetServerStateParser().GetSelectedMailboxName();
     }
     else if (isBusy)
     {
-        nsImapState curUrlImapState;
-		NS_ASSERTION(m_runningUrl,"isBusy, but no running url.");
-		if (m_runningUrl) {
-			m_runningUrl->GetRequiredImapState(&curUrlImapState);
-			if (curUrlImapState == nsIImapUrl::nsImapSelectedState) {
-				char *folderName = OnCreateServerSourceFolderPathString();
-        curUrlFolderName.Assign(folderName);
-				inSelectedState = PR_TRUE;
-        PR_FREEIF(folderName);
-			}
+      nsImapState curUrlImapState;
+      NS_ASSERTION(m_runningUrl,"isBusy, but no running url.");
+      if (m_runningUrl) {
+        m_runningUrl->GetRequiredImapState(&curUrlImapState);
+        if (curUrlImapState == nsIImapUrl::nsImapSelectedState) {
+          char *folderName = OnCreateServerSourceFolderPathString();
+          curUrlFolderName.Assign(folderName);
+          inSelectedState = PR_TRUE;
+          PR_FREEIF(folderName);
         }
+      }
     }
-
+    
     nsImapState imapState;
     nsImapAction actionForProposedUrl;
     aImapUrl->GetImapAction(&actionForProposedUrl);
     aImapUrl->GetRequiredImapState(&imapState);
-
+    
     // OK, this is a bit of a hack - we're going to pretend that
     // these types of urls requires a selected state connection on
     // the folder in question. This isn't technically true,
@@ -1608,78 +1594,78 @@ NS_IMETHODIMP nsImapProtocol::CanHandleUrl(nsIImapUrl * aImapUrl,
       rv = server->GetUsername(&urlUserName);
       if (NS_FAILED(rv)) return rv;
       if ((!GetImapHostName() || 
-           PL_strcasecmp(urlHostName, GetImapHostName()) == 0) &&
-          (!GetImapUserName() || 
-           PL_strcasecmp(urlUserName, GetImapUserName()) == 0))
+        PL_strcasecmp(urlHostName, GetImapHostName()) == 0) &&
+        (!GetImapUserName() || 
+        PL_strcasecmp(urlUserName, GetImapUserName()) == 0))
       {
-          if (isSelectedStateUrl)
+        if (isSelectedStateUrl)
+        {
+          if (inSelectedState)
           {
-              if (inSelectedState)
-              {
-                  // *** jt - in selected state can only run url with
-                  // matching foldername
-                  char *folderNameForProposedUrl = nsnull;
-                  rv = aImapUrl->CreateServerSourceFolderPathString(
-                      &folderNameForProposedUrl);
-                  if (NS_SUCCEEDED(rv) && folderNameForProposedUrl)
-                  {
-                      PRBool isInbox = 
-                          PL_strcasecmp("Inbox", folderNameForProposedUrl) == 0;
-                      if (curUrlFolderName.Length() > 0)
-                      {
-                          PRBool matched = isInbox ?
-                              PL_strcasecmp(curUrlFolderName.get(),
-                                            folderNameForProposedUrl) == 0 : 
-                              PL_strcmp(curUrlFolderName.get(),
-                                        folderNameForProposedUrl) == 0;
-                          if (matched)
-                          {
-                            if (isBusy)
-                                *hasToWait = PR_TRUE;
-                            else
-                                *aCanRunUrl = PR_TRUE;
-                          }
-                      }
-                  }
-#ifdef DEBUG_bienvenu1
-                  printf("proposed url = %s folder for connection %s has To Wait = %s can run = %s\n",
-                    folderNameForProposedUrl, curUrlFolderName.get(),
-                    (*hasToWait) ? "TRUE" : "FALSE", (*aCanRunUrl) ? "TRUE" : "FALSE");
-#endif
-                  PR_FREEIF(folderNameForProposedUrl);
-              }
-          }
-          else // *** jt - an authenticated state url can be run in either
-              // authenticated or selected state
-          {
-            nsImapAction actionForRunningUrl;
-
-            // If proposed url is subscription related, and we are currently running
-            // a subscription url, then we want to queue the proposed url after the current url.
-            // Otherwise, we can run this url if we're not busy.
-            // If we never find a running subscription-related url, the caller will
-            // just use whatever free connection it can find, which is what we want.
-            if (IS_SUBSCRIPTION_RELATED_ACTION(actionForProposedUrl))
+            // *** jt - in selected state can only run url with
+            // matching foldername
+            char *folderNameForProposedUrl = nsnull;
+            rv = aImapUrl->CreateServerSourceFolderPathString(
+              &folderNameForProposedUrl);
+            if (NS_SUCCEEDED(rv) && folderNameForProposedUrl)
             {
-              if (isBusy && m_runningUrl)
+              PRBool isInbox = 
+                PL_strcasecmp("Inbox", folderNameForProposedUrl) == 0;
+              if (curUrlFolderName.Length() > 0)
               {
-                m_runningUrl->GetImapAction(&actionForRunningUrl);
-                if (IS_SUBSCRIPTION_RELATED_ACTION(actionForRunningUrl))
+                PRBool matched = isInbox ?
+                  PL_strcasecmp(curUrlFolderName.get(),
+                  folderNameForProposedUrl) == 0 : 
+                PL_strcmp(curUrlFolderName.get(),
+                  folderNameForProposedUrl) == 0;
+                if (matched)
                 {
-                  *aCanRunUrl = PR_FALSE;
-                  *hasToWait = PR_TRUE;
+                  if (isBusy)
+                    *hasToWait = PR_TRUE;
+                  else
+                    *aCanRunUrl = PR_TRUE;
                 }
               }
             }
-            else
+#ifdef DEBUG_bienvenu1
+            printf("proposed url = %s folder for connection %s has To Wait = %s can run = %s\n",
+              folderNameForProposedUrl, curUrlFolderName.get(),
+              (*hasToWait) ? "TRUE" : "FALSE", (*aCanRunUrl) ? "TRUE" : "FALSE");
+#endif
+            PR_FREEIF(folderNameForProposedUrl);
+          }
+        }
+        else // *** jt - an authenticated state url can be run in either
+          // authenticated or selected state
+        {
+          nsImapAction actionForRunningUrl;
+          
+          // If proposed url is subscription related, and we are currently running
+          // a subscription url, then we want to queue the proposed url after the current url.
+          // Otherwise, we can run this url if we're not busy.
+          // If we never find a running subscription-related url, the caller will
+          // just use whatever free connection it can find, which is what we want.
+          if (IS_SUBSCRIPTION_RELATED_ACTION(actionForProposedUrl))
+          {
+            if (isBusy && m_runningUrl)
             {
-              if (!isBusy)
-                  *aCanRunUrl = PR_TRUE;
+              m_runningUrl->GetImapAction(&actionForRunningUrl);
+              if (IS_SUBSCRIPTION_RELATED_ACTION(actionForRunningUrl))
+              {
+                *aCanRunUrl = PR_FALSE;
+                *hasToWait = PR_TRUE;
+              }
             }
           }
-          
-          PR_FREEIF(urlHostName);
-          PR_FREEIF(urlUserName);
+          else
+          {
+            if (!isBusy)
+              *aCanRunUrl = PR_TRUE;
+          }
+        }
+        
+        PR_FREEIF(urlHostName);
+        PR_FREEIF(urlUserName);
       }
     }
   }
@@ -5600,23 +5586,23 @@ void nsImapProtocol::FolderNotCreated(const char *folderName)
 void nsImapProtocol::FolderRenamed(const char *oldName,
                                    const char *newName)
 {
-    char onlineDelimiter = kOnlineHierarchySeparatorUnknown;
-
-    if ((m_hierarchyNameState == kNoOperationInProgress) ||
+  char onlineDelimiter = kOnlineHierarchySeparatorUnknown;
+  
+  if ((m_hierarchyNameState == kNoOperationInProgress) ||
     (m_hierarchyNameState == kListingForInfoAndDiscovery))
-
-    {
-		nsXPIDLCString canonicalOldName, canonicalNewName;
-            m_runningUrl->AllocateCanonicalPath(oldName,
-                                                onlineDelimiter,
-                                                getter_Copies(canonicalOldName));
-            m_runningUrl->AllocateCanonicalPath(newName,
-                                                onlineDelimiter,
-                                                getter_Copies(canonicalNewName));
-            nsCOMPtr<nsIMsgWindow> msgWindow;
-            GetMsgWindow(getter_AddRefs(msgWindow));
-            m_imapServerSink->OnlineFolderRename(msgWindow, canonicalOldName, canonicalNewName);
-    }
+    
+  {
+    nsXPIDLCString canonicalOldName, canonicalNewName;
+    m_runningUrl->AllocateCanonicalPath(oldName,
+      onlineDelimiter,
+      getter_Copies(canonicalOldName));
+    m_runningUrl->AllocateCanonicalPath(newName,
+      onlineDelimiter,
+      getter_Copies(canonicalNewName));
+    nsCOMPtr<nsIMsgWindow> msgWindow;
+    GetMsgWindow(getter_AddRefs(msgWindow));
+    m_imapServerSink->OnlineFolderRename(msgWindow, canonicalOldName, canonicalNewName);
+  }
 }
 
 void nsImapProtocol::OnDeleteFolder(const char * sourceMailbox)
@@ -6826,6 +6812,7 @@ PRBool nsImapProtocol::TryToLogon()
                 m_hostSessionList->SetPasswordForHost(GetImapServerKey(), nsnull);
                 m_currentBiffState = nsIMsgFolder::nsMsgBiffState_Unknown;
                 SendSetBiffIndicatorEvent(m_currentBiffState);
+                password.Truncate();
             } // if we didn't receive the death signal...
           } // if login failed
       else  // login succeeded
@@ -7202,6 +7189,11 @@ nsImapMockChannel::OnCacheEntryAvailable(nsICacheEntryDescriptor *entry, nsCache
 
   NS_ENSURE_ARG(m_url); // kick out if m_url is null for some reason. 
 
+#ifdef DEBUG_bienvenu
+      nsXPIDLCString entryKey;
+      entry->GetKey(getter_Copies(entryKey));
+      printf("%s with access %ld status %ld\n", entryKey.get(), access, status);
+#endif
   if (NS_SUCCEEDED(status)) 
   {
     nsCOMPtr<nsIMsgMailNewsUrl> mailnewsUrl = do_QueryInterface(m_url, &rv);
@@ -7209,11 +7201,6 @@ nsImapMockChannel::OnCacheEntryAvailable(nsICacheEntryDescriptor *entry, nsCache
 
     if (mTryingToReadPart && access & nsICache::ACCESS_WRITE && !(access & nsICache::ACCESS_READ))
     {
-#ifdef DEBUG_bienvenu
-      nsXPIDLCString entryKey;
-      entry->GetKey(getter_Copies(entryKey));
-      printf("dooming %s with access %ld\n", entryKey.get(), access);
-#endif
       entry->Doom();
       // whoops, we're looking for a part, but didn't find it. Fall back to fetching the whole msg.
       nsCOMPtr<nsIImapUrl> imapUrl = do_QueryInterface(m_url);
@@ -7228,19 +7215,23 @@ nsImapMockChannel::OnCacheEntryAvailable(nsICacheEntryDescriptor *entry, nsCache
       // use a stream listener Tee to force data into the cache and to our current channel listener...
       nsCOMPtr<nsIStreamListener> newListener;
       nsCOMPtr<nsIStreamListenerTee> tee = do_CreateInstance(kStreamListenerTeeCID, &rv);
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      nsCOMPtr<nsITransport> transport;
-      rv = entry->GetTransport(getter_AddRefs(transport));
-      if (NS_FAILED(rv)) return rv;
-
-      nsCOMPtr<nsIOutputStream> out;
-      rv = transport->OpenOutputStream(0, PRUint32(-1), 0, getter_AddRefs(out));
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      rv = tee->Init(m_channelListener, out);
-      m_channelListener = do_QueryInterface(tee);
-      NS_ENSURE_SUCCESS(rv, rv);
+      if (NS_SUCCEEDED(rv))
+      {
+        nsCOMPtr<nsITransport> transport;
+        rv = entry->GetTransport(getter_AddRefs(transport));
+        if (NS_SUCCEEDED(rv))
+        {
+          nsCOMPtr<nsIOutputStream> out;
+          // this will fail with the mem cache turned off, so we need to fall through
+          // to ReadFromImapConnection instead of aborting with NS_ENSURE_SUCCESS(rv,rv)
+          rv = transport->OpenOutputStream(0, PRUint32(-1), 0, getter_AddRefs(out));
+          if (NS_SUCCEEDED(rv))
+          {
+            rv = tee->Init(m_channelListener, out);
+            m_channelListener = do_QueryInterface(tee);
+          }
+        }
+      }
     }
     else
     {
@@ -7282,7 +7273,7 @@ nsresult nsImapMockChannel::OpenCacheEntry()
   nsCAutoString urlSpec;
   m_url->GetAsciiSpec(urlSpec);
   // for now, truncate of the query part so we don't duplicate urls in the cache...
-  char * anchor = strrchr(urlSpec.get(), '?');
+  char * anchor = (char *)strrchr(urlSpec.get(), '?');
   if (anchor)
   {
     // if we were trying to read a part, we failed - fall back and look for whole msg

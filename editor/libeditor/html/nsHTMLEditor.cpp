@@ -48,6 +48,7 @@
 #include "nsHTMLEditUtils.h"
 
 #include "nsEditorEventListeners.h"
+#include "nsHTMLEditorMouseListener.h"
 #include "TypeInState.h"
 
 #include "nsHTMLURIRefObject.h"
@@ -129,11 +130,7 @@
 #include "TextEditorTest.h"
 #include "nsEditorUtils.h"
 #include "nsIPref.h"
-
-// HACK - CID for NS_CTRANSITIONAL_DTD_CID so that we can get at transitional dtd
-#define NS_CTRANSITIONAL_DTD_CID \
-{ 0x4611d482, 0x960a, 0x11d4, { 0x8e, 0xb0, 0xb6, 0x17, 0x66, 0x1b, 0x6f, 0x7c } }
-
+#include "nsParserCIID.h"
 
 static NS_DEFINE_CID(kHTMLEditorCID,  NS_HTMLEDITOR_CID);
 static NS_DEFINE_CID(kCContentIteratorCID, NS_CONTENTITERATOR_CID);
@@ -350,7 +347,7 @@ nsHTMLEditor::InstallEventListeners()
   }
   
   // get a mouse listener
-  result = NS_NewEditorMouseListener(getter_AddRefs(mMouseListenerP), this);
+  result = NS_NewHTMLEditorMouseListener(getter_AddRefs(mMouseListenerP), this);
   if (NS_FAILED(result)) {
     HandleEventListenerError();
     return result;
@@ -2123,7 +2120,7 @@ nsHTMLEditor::GetBackgroundColorState(PRBool *aMixed, nsAWritableString &aOutCol
 {
   nsresult res;
   PRBool useCSS;
-  IsCSSEnabled(&useCSS);
+  GetIsCSSEnabled(&useCSS);
   if (useCSS) {
     // if we are in CSS mode, we have to check if the containing block defines
     // a background color
@@ -2141,7 +2138,7 @@ nsHTMLEditor::GetHighlightColorState(PRBool *aMixed, nsAWritableString &aOutColo
 {
   nsresult res = NS_OK;
   PRBool useCSS;
-  IsCSSEnabled(&useCSS);
+  GetIsCSSEnabled(&useCSS);
   *aMixed = PR_FALSE;
   aOutColor.Assign(NS_LITERAL_STRING("transparent"));
   if (useCSS) {
@@ -2284,7 +2281,9 @@ nsHTMLEditor::GetHTMLBackgroundColorState(PRBool *aMixed, nsAWritableString &aOu
   nsCOMPtr<nsIDOMElement> element;
   PRInt32 selectedCount;
   nsAutoString tagName;
-  nsresult res = GetSelectedOrParentTableElement(*getter_AddRefs(element), tagName, selectedCount);
+  nsresult res = GetSelectedOrParentTableElement(getter_AddRefs(element),
+                                                 tagName,
+                                                 &selectedCount);
   if (NS_FAILED(res)) return res;
 
   NS_NAMED_LITERAL_STRING(styleName, "bgcolor"); 
@@ -3209,7 +3208,8 @@ nsHTMLEditor::SetHTMLBackgroundColor(const nsAReadableString& aColor)
   nsCOMPtr<nsIDOMElement> element;
   PRInt32 selectedCount;
   nsAutoString tagName;
-  nsresult res = GetSelectedOrParentTableElement(*getter_AddRefs(element), tagName, selectedCount);
+  nsresult res = GetSelectedOrParentTableElement(getter_AddRefs(element),
+                                                 tagName, &selectedCount);
   if (NS_FAILED(res)) return res;
 
   PRBool setColor = (aColor.Length() > 0);
@@ -3576,6 +3576,17 @@ nsHTMLEditor::GetEmbeddedObjects(nsISupportsArray** aNodeList)
                 (*aNodeList)->AppendElement(node);
           }
         }
+        else if (tagName.Equals(NS_LITERAL_STRING("body")))
+        {
+          nsCOMPtr<nsIDOMElement> element = do_QueryInterface(node);
+          if (element)
+          {
+            PRBool hasBackground = PR_FALSE;
+            if (NS_SUCCEEDED(element->HasAttribute(NS_LITERAL_STRING("background"), &hasBackground)))
+              if (hasBackground)
+                (*aNodeList)->AppendElement(node);
+          }
+        }
       }
       iter->Next();
     }
@@ -3722,25 +3733,35 @@ nsHTMLEditor::SetCompositionString(const nsAReadableString& aCompositionString, 
   if (NS_FAILED(result)) return result;
 
   mIMETextRangeList = aTextRangeList;
-  nsAutoPlaceHolderBatch batch(this, gIMETxnName);
 
-  result = InsertText(aCompositionString);
+  // we need the nsAutoPlaceHolderBatch destructor called before hitting
+  // GetCaretCoordinates so the states in Frame system sync with content
+  // therefore, we put the nsAutoPlaceHolderBatch into a inner block
+  {
+    nsAutoPlaceHolderBatch batch(this, gIMETxnName);
 
-  mIMEBufferLength = aCompositionString.Length();
+    result = InsertText(aCompositionString);
 
-  if (!mPresShellWeak) return NS_ERROR_NOT_INITIALIZED;
-  nsCOMPtr<nsIPresShell> ps = do_QueryReferent(mPresShellWeak);
-  if (!ps) return NS_ERROR_NOT_INITIALIZED;
-  ps->GetCaret(getter_AddRefs(caretP));
-  caretP->SetCaretDOMSelection(selection);
+    mIMEBufferLength = aCompositionString.Length();
+
+    if (!mPresShellWeak)  
+      return NS_ERROR_NOT_INITIALIZED;
+    nsCOMPtr<nsIPresShell> ps = do_QueryReferent(mPresShellWeak);
+    if (!ps) 
+      return NS_ERROR_NOT_INITIALIZED;
+    ps->GetCaret(getter_AddRefs(caretP));
+    caretP->SetCaretDOMSelection(selection);
+
+    // second part of 23558 fix:
+    if (aCompositionString.IsEmpty()) 
+    {
+      mIMETextNode = nsnull;
+    }
+  }
   result = caretP->GetCaretCoordinates(nsICaret::eIMECoordinates, selection,
               &(aReply->mCursorPosition), &(aReply->mCursorIsCollapsed));
+  NS_ASSERTION(NS_SUCCEEDED(result), "cannot get caret position");
 
-  // second part of 23558 fix:
-  if (aCompositionString.IsEmpty()) 
-  {
-    mIMETextNode = nsnull;
-  }
   
   return result;
 }
@@ -4989,12 +5010,22 @@ nsHTMLEditor::SetAttributeOrEquivalent(nsIDOMElement * aElement,
 {
   PRBool useCSS;
   nsresult res = NS_OK;
-  IsCSSEnabled(&useCSS);
+  GetIsCSSEnabled(&useCSS);
   if (useCSS && mHTMLCSSUtils) {
     PRInt32 count;
     res = mHTMLCSSUtils->SetCSSEquivalentToHTMLStyle(aElement, nsnull, &aAttribute, &aValue, &count);
     if (NS_FAILED(res)) return res;
-    if (!count) {
+    if (count) {
+      // we found an equivalence ; let's remove the HTML attribute itself if it is set
+      nsAutoString existingValue;
+      PRBool wasSet = PR_FALSE;
+      res = GetAttributeValue(aElement, aAttribute, existingValue, &wasSet);
+      if (NS_FAILED(res)) return res;
+      if (wasSet) {
+        res = RemoveAttribute(aElement, aAttribute);
+      }
+    }
+    else {
       // count is an integer that represents the number of CSS declarations applied to the
       // element. If it is zero, we found no equivalence in this implementation for the
       // attribute
@@ -5024,7 +5055,29 @@ nsHTMLEditor::SetAttributeOrEquivalent(nsIDOMElement * aElement,
 }
 
 nsresult
-nsHTMLEditor::SetCSSEnabled(PRBool aIsCSSPrefChecked)
+nsHTMLEditor::RemoveAttributeOrEquivalent(nsIDOMElement * aElement,
+                                          const nsAReadableString & aAttribute)
+{
+  PRBool useCSS;
+  nsresult res = NS_OK;
+  GetIsCSSEnabled(&useCSS);
+  if (useCSS && mHTMLCSSUtils) {
+    res = mHTMLCSSUtils->RemoveCSSEquivalentToHTMLStyle(aElement, nsnull, &aAttribute, nsnull);
+    if (NS_FAILED(res)) return res;
+  }
+
+  nsAutoString existingValue;
+  PRBool wasSet = PR_FALSE;
+  res = GetAttributeValue(aElement, aAttribute, existingValue, &wasSet);
+  if (NS_FAILED(res)) return res;
+  if (wasSet) {
+    res = RemoveAttribute(aElement, aAttribute);
+  }
+  return res;
+}
+
+nsresult
+nsHTMLEditor::SetIsCSSEnabled(PRBool aIsCSSPrefChecked)
 {
   nsresult  err = NS_ERROR_NOT_INITIALIZED;
   if (mHTMLCSSUtils)
@@ -5267,7 +5320,7 @@ nsHTMLEditor::SetBackgroundColor(const nsAReadableString& aColor)
 {
   nsresult res;
   PRBool useCSS;
-  IsCSSEnabled(&useCSS);
+  GetIsCSSEnabled(&useCSS);
   if (useCSS) {
     // if we are in CSS mode, we have to apply the background color to the
     // containing block (or the body if we have no block-level element in
@@ -5294,7 +5347,7 @@ nsHTMLEditor::NodesSameType(nsIDOMNode *aNode1, nsIDOMNode *aNode2)
   }
 
   PRBool useCSS;
-  IsCSSEnabled(&useCSS);
+  GetIsCSSEnabled(&useCSS);
 
   nsCOMPtr<nsIAtom> atom1 = GetTag(aNode1);
   nsCOMPtr<nsIAtom> atom2 = GetTag(aNode2);
@@ -5313,7 +5366,8 @@ nsHTMLEditor::NodesSameType(nsIDOMNode *aNode1, nsIDOMNode *aNode2)
 }
 
 NS_IMETHODIMP
-nsHTMLEditor::ParseStyleAttrIntoCSSRule(const PRUnichar *aString, nsIDOMCSSStyleRule **_retval)
+nsHTMLEditor::ParseStyleAttrIntoCSSRule(const nsAString& aString,
+                                        nsIDOMCSSStyleRule **_retval)
 {
   nsCOMPtr<nsIDOMDocument> domdoc;
   nsEditor::GetDocument(getter_AddRefs(domdoc));
@@ -5334,12 +5388,79 @@ nsHTMLEditor::ParseStyleAttrIntoCSSRule(const PRUnichar *aString, nsIDOMCSSStyle
   NS_ASSERTION(css, "can't get a css parser");
   if (!css) return NS_ERROR_NULL_POINTER;    
 
-  nsAutoString value(aString);
-  css->ParseStyleAttribute(value, docURL, getter_AddRefs(mRule));
+  //nsAutoString value(aString);
+  css->ParseStyleAttribute(aString, docURL, getter_AddRefs(mRule));
   nsCOMPtr<nsIDOMCSSStyleRule> styleRule = do_QueryInterface(mRule);
   if (styleRule) {
     *_retval = styleRule;
     NS_ADDREF(*_retval);
+  }
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTMLEditor::CopyLastEditableChildStyles(nsIDOMNode * aPreviousBlock, nsIDOMNode * aNewBlock,
+                                          nsIDOMNode **aOutBrNode)
+{
+  *aOutBrNode = nsnull;
+  nsCOMPtr<nsIDOMNode> child = aPreviousBlock, tmp = aPreviousBlock;
+  nsresult res;
+  while (tmp) {
+    child = tmp;
+    res = GetLastEditableChild(child, address_of(tmp));
+    if (NS_FAILED(res)) return res;
+  }
+  while (child && nsTextEditUtils::IsBreak(child)) {
+    nsCOMPtr<nsIDOMNode> priorNode;
+    res = GetPriorHTMLNode(child, address_of(priorNode));
+    if (NS_FAILED(res)) return res;
+    child = priorNode;
+  }
+  nsCOMPtr<nsIDOMNode> newStyles = nsnull, deepestStyle = nsnull;
+  while (child && (child != aPreviousBlock)) {
+    if (nsTextEditUtils::NodeIsType(child, NS_LITERAL_STRING("a"))      ||
+        nsTextEditUtils::NodeIsType(child, NS_LITERAL_STRING("b"))      ||
+        nsTextEditUtils::NodeIsType(child, NS_LITERAL_STRING("i"))      ||
+        nsTextEditUtils::NodeIsType(child, NS_LITERAL_STRING("u"))      ||
+        nsTextEditUtils::NodeIsType(child, NS_LITERAL_STRING("tt"))     ||
+        nsTextEditUtils::NodeIsType(child, NS_LITERAL_STRING("s"))      ||
+        nsTextEditUtils::NodeIsType(child, NS_LITERAL_STRING("strike")) ||
+        nsTextEditUtils::NodeIsType(child, NS_LITERAL_STRING("big"))    ||
+        nsTextEditUtils::NodeIsType(child, NS_LITERAL_STRING("small"))  ||
+        nsTextEditUtils::NodeIsType(child, NS_LITERAL_STRING("blink"))  ||
+        nsTextEditUtils::NodeIsType(child, NS_LITERAL_STRING("sub"))    ||
+        nsTextEditUtils::NodeIsType(child, NS_LITERAL_STRING("sup"))    ||
+        nsTextEditUtils::NodeIsType(child, NS_LITERAL_STRING("font"))   ||
+        nsTextEditUtils::NodeIsType(child, NS_LITERAL_STRING("span"))) {
+      nsAutoString domTagName;
+      child->GetNodeName(domTagName);
+      ToLowerCase(domTagName);
+      if (newStyles) {
+        nsCOMPtr<nsIDOMNode> newContainer;
+        res = InsertContainerAbove(newStyles, address_of(newContainer), domTagName);
+        if (NS_FAILED(res)) return res;
+        newStyles = newContainer;
+      }
+      else {
+        res = CreateNode(domTagName, aNewBlock, 0, getter_AddRefs(newStyles));
+        if (NS_FAILED(res)) return res;
+        deepestStyle = newStyles;
+      }
+      res = CloneAttributes(newStyles, child);
+      if (NS_FAILED(res)) return res;
+    }
+    nsCOMPtr<nsIDOMNode> tmp;
+    res = child->GetParentNode(getter_AddRefs(tmp));
+    if (NS_FAILED(res)) return res;
+    child = tmp;
+  }
+  if (deepestStyle) {
+    nsCOMPtr<nsIDOMNode> outBRNode;
+    res = CreateBR(deepestStyle, 0, address_of(outBRNode));
+    if (NS_FAILED(res)) return res;
+    // Getters must addref
+    *aOutBrNode = outBRNode;
+    NS_ADDREF(*aOutBrNode);
   }
   return NS_OK;
 }

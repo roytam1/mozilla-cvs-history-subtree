@@ -118,11 +118,6 @@
 #include "nsIPref.h"
 const PRUnichar nbsp = 160;
 
-// HACK - CID for NS_CTRANSITIONAL_DTD_CID so that we can get at transitional dtd
-#define NS_CTRANSITIONAL_DTD_CID \
-{ 0x4611d482, 0x960a, 0x11d4, { 0x8e, 0xb0, 0xb6, 0x17, 0x66, 0x1b, 0x6f, 0x7c } }
-
-
 static NS_DEFINE_CID(kCRangeCID,      NS_RANGE_CID);
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 
@@ -248,47 +243,39 @@ NS_IMETHODIMP nsHTMLEditor::LoadHTMLWithCharset(const nsAReadableString & aInput
 }
 
 
-NS_IMETHODIMP nsHTMLEditor::InsertHTML(const nsAReadableString & aInString)
+NS_IMETHODIMP nsHTMLEditor::InsertHTML(const nsAString & aInString)
 {
   nsAutoString charset;
   return InsertHTMLWithCharset(aInString, charset);
 }
 
-nsresult nsHTMLEditor::InsertHTMLWithContext(const nsAReadableString & aInputString, const nsAReadableString & aContextStr, const nsAReadableString & aInfoStr)
+nsresult
+nsHTMLEditor::InsertHTMLWithContext(const nsAString & aInputString,
+                                    const nsAString & aContextStr,
+                                    const nsAString & aInfoStr)
 {
   nsAutoString charset;
-  return InsertHTMLWithCharsetAndContext(aInputString, charset, aContextStr, aInfoStr);
+  return InsertHTMLWithCharsetAndContext(aInputString, charset,
+                                         aContextStr, aInfoStr);
 }
 
 
-NS_IMETHODIMP nsHTMLEditor::InsertHTMLWithCharset(const nsAReadableString & aInputString, const nsAReadableString & aCharset)
+NS_IMETHODIMP
+nsHTMLEditor::InsertHTMLWithCharset(const nsAString & aInputString,
+                                    const nsAString & aCharset)
 {
-  return InsertHTMLWithCharsetAndContext(aInputString, aCharset, nsAutoString(), nsAutoString());
+  return InsertHTMLWithCharsetAndContext(aInputString, aCharset,
+                                         nsAutoString(), nsAutoString());
 }
 
 
-nsresult nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsAReadableString & aInputString,
-                                                       const nsAReadableString & aCharset,
-                                                       const nsAReadableString & aContextStr,
-                                                       const nsAReadableString & aInfoStr)
+nsresult
+nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsAString & aInputString,
+                                              const nsAString & aCharset,
+                                              const nsAString & aContextStr,
+                                              const nsAString & aInfoStr)
 {
   if (!mRules) return NS_ERROR_NOT_INITIALIZED;
-
-/* all this is unneeded: parser handles this for us
-
-  // First, make sure there are no return chars in the document.
-  // Bad things happen if you insert returns (instead of dom newlines, \n)
-  // into an editor document.
-  nsAutoString inputString (aInputString);  // hope this does copy-on-write
-
-  // Windows linebreaks: Map CRLF to LF:
-  inputString.ReplaceSubstring(NS_LITERAL_STRING("\r\n").get(),
-                               NS_LITERAL_STRING("\n").get());
- 
-  // Mac linebreaks: Map any remaining CR to LF:
-  inputString.ReplaceSubstring(NS_LITERAL_STRING("\r").get(),
-                               NS_LITERAL_STRING("\n").get());
-*/
 
   // force IME commit; set up rules sniffing and batching
   ForceCompositionEnd();
@@ -613,7 +600,7 @@ nsresult nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsAReadableString &
 }
 
 nsresult
-nsHTMLEditor::StripFormattingNodes(nsIDOMNode *aNode)
+nsHTMLEditor::StripFormattingNodes(nsIDOMNode *aNode, PRBool aListOnly)
 {
   NS_ENSURE_TRUE(aNode, NS_ERROR_NULL_POINTER);
 
@@ -625,7 +612,8 @@ nsHTMLEditor::StripFormattingNodes(nsIDOMNode *aNode)
     aNode->GetParentNode(getter_AddRefs(parent));
     if (parent)
     {
-      res = parent->RemoveChild(aNode, getter_AddRefs(ignored));
+      if (!aListOnly || nsHTMLEditUtils::IsList(parent))
+        res = parent->RemoveChild(aNode, getter_AddRefs(ignored));
       return res;
     }
   }
@@ -639,7 +627,7 @@ nsHTMLEditor::StripFormattingNodes(nsIDOMNode *aNode)
     {
       nsCOMPtr<nsIDOMNode> tmp;
       child->GetPreviousSibling(getter_AddRefs(tmp));
-      res = StripFormattingNodes(child);
+      res = StripFormattingNodes(child, aListOnly);
       NS_ENSURE_SUCCESS(res, res);
       child = tmp;
     }
@@ -1376,7 +1364,7 @@ NS_IMETHODIMP nsHTMLEditor::PasteAsQuotation(PRInt32 aSelectionType)
   return PasteAsCitedQuotation(citation, aSelectionType);
 }
 
-NS_IMETHODIMP nsHTMLEditor::PasteAsCitedQuotation(const nsAReadableString & aCitation,
+NS_IMETHODIMP nsHTMLEditor::PasteAsCitedQuotation(const nsAString & aCitation,
                                                   PRInt32 aSelectionType)
 {
   nsAutoEditBatch beginBatching(this);
@@ -1486,7 +1474,7 @@ NS_IMETHODIMP nsHTMLEditor::PasteAsPlaintextQuotation(PRInt32 aSelectionType)
   return rv;
 }
 
-NS_IMETHODIMP nsHTMLEditor::InsertAsQuotation(const nsAReadableString & aQuotedText,
+NS_IMETHODIMP nsHTMLEditor::InsertAsQuotation(const nsAString & aQuotedText,
                                               nsIDOMNode **aNodeInserted)
 {
   if (mFlags & eEditorPlaintextMask)
@@ -1503,7 +1491,7 @@ NS_IMETHODIMP nsHTMLEditor::InsertAsQuotation(const nsAReadableString & aQuotedT
 // in that here, quoted material is enclosed in a <pre> tag
 // in order to preserve the original line wrapping.
 NS_IMETHODIMP
-nsHTMLEditor::InsertAsPlaintextQuotation(const nsAReadableString & aQuotedText,
+nsHTMLEditor::InsertAsPlaintextQuotation(const nsAString & aQuotedText,
                                          nsIDOMNode **aNodeInserted)
 {
   nsresult rv;
@@ -1597,10 +1585,10 @@ nsHTMLEditor::InsertAsPlaintextQuotation(const nsAReadableString & aQuotedText,
 }
 
 NS_IMETHODIMP
-nsHTMLEditor::InsertAsCitedQuotation(const nsAReadableString & aQuotedText,
-                                     const nsAReadableString & aCitation,
+nsHTMLEditor::InsertAsCitedQuotation(const nsAString & aQuotedText,
+                                     const nsAString & aCitation,
                                      PRBool aInsertHTML,
-                                     const nsAReadableString & aCharset,
+                                     const nsAString & aCharset,
                                      nsIDOMNode **aNodeInserted)
 {
   nsCOMPtr<nsIDOMNode> newNode;
@@ -1727,7 +1715,10 @@ nsresult nsHTMLEditor::CreateDOMFragmentFromPaste(nsIDOMNSRange *aNSRange,
     // no longer have fragmentAsNode in tree
     contextDepth--;
   }
-  
+ 
+  res = StripFormattingNodes(*outFragNode, PR_TRUE);
+  NS_ENSURE_SUCCESS(res, res);
+ 
   // get the infoString contents
   nsAutoString numstr1, numstr2;
   if (aInfoStr.Length())
@@ -1928,9 +1919,10 @@ nsHTMLEditor::ScanForListAndTableStructure( PRBool aEnd,
       else structureNode = GetTableParent(pNode);
       if (structureNode == aListOrTable)
       {
-        if (pNode == originalNode)
-          break;  // we are starting right off with a list item of the list
-        *outReplaceNode = pNode;
+        if (bList)
+          *outReplaceNode = structureNode;
+        else
+          *outReplaceNode = pNode;
         break;
       }
     }

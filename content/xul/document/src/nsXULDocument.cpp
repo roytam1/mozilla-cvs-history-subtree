@@ -283,19 +283,9 @@ public:
     return NS_ERROR_NOT_IMPLEMENTED;
   }
 
-  NS_IMETHOD GetNonBlocking(PRBool *aNonBlocking) {
-    NS_NOTREACHED("GetNonBlocking");
-    return NS_ERROR_NOT_IMPLEMENTED;
-  }
-
-  NS_IMETHOD GetObserver(nsIInputStreamObserver * *aObserver) {
-    NS_NOTREACHED("GetObserver");
-    return NS_ERROR_NOT_IMPLEMENTED;
-  }
-
-  NS_IMETHOD SetObserver(nsIInputStreamObserver * aObserver) {
-    NS_NOTREACHED("SetObserver");
-    return NS_ERROR_NOT_IMPLEMENTED;
+  NS_IMETHOD IsNonBlocking(PRBool *aNonBlocking) {
+    *aNonBlocking = PR_TRUE;
+    return NS_OK;
   }
 
   // Implementation
@@ -681,7 +671,7 @@ nsXULDocument::PrepareStyleSheets(nsIURI* anURL)
                                                        getter_AddRefs(sheet)))) {
         if (NS_SUCCEEDED(rv = sheet->Init(anURL, this))) {
             mAttrStyleSheet = sheet;
-            AddStyleSheet(mAttrStyleSheet);
+            AddStyleSheet(mAttrStyleSheet, 0);
         }
     }
 
@@ -699,7 +689,7 @@ nsXULDocument::PrepareStyleSheets(nsIURI* anURL)
                                                        (void**)&inlineSheet))) {
         if (NS_SUCCEEDED(rv = inlineSheet->Init(anURL, this))) {
             mInlineStyleSheet = dont_QueryInterface(inlineSheet);
-            AddStyleSheet(mInlineStyleSheet);
+            AddStyleSheet(mInlineStyleSheet, 0);
         }
         NS_RELEASE(inlineSheet);
     }
@@ -1234,7 +1224,7 @@ nsXULDocument::AddStyleSheetToStyleSets(nsIStyleSheet* aSheet)
 }
 
 void
-nsXULDocument::AddStyleSheet(nsIStyleSheet* aSheet)
+nsXULDocument::AddStyleSheet(nsIStyleSheet* aSheet, PRUint32 aFlags)
 {
     NS_PRECONDITION(aSheet, "null arg");
     if (!aSheet)
@@ -1654,7 +1644,7 @@ nsXULDocument::EndLoad()
                 if (useXULCache && IsChromeURI(sheetURL)) {
                     mCurrentPrototype->AddStyleSheetReference(sheetURL);
                 }
-                AddStyleSheet(sheet);
+                AddStyleSheet(sheet, 0);
             }
         }
     }
@@ -1933,11 +1923,13 @@ nsXULDocument::ContentChanged(nsIContent* aContent,
 }
 
 NS_IMETHODIMP
-nsXULDocument::ContentStatesChanged(nsIContent* aContent1, nsIContent* aContent2)
+nsXULDocument::ContentStatesChanged(nsIContent* aContent1,
+                                    nsIContent* aContent2,
+                                    nsIAtom* aChangedPseudoClass)
 {
     for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
         nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers[i];
-        observer->ContentStatesChanged(this, aContent1, aContent2);
+        observer->ContentStatesChanged(this, aContent1, aContent2, aChangedPseudoClass);
     }
     return NS_OK;
 }
@@ -6382,7 +6374,7 @@ nsXULDocument::CheckTemplateBuilder(nsIContent* aElement)
     if ((nameSpaceID == kNameSpaceID_XUL) && (baseTag == nsXULAtoms::outliner)) {
         nsAutoString flags;
         aElement->GetAttr(kNameSpaceID_None, nsXULAtoms::flags, flags);
-        if (flags.Find(NS_LITERAL_STRING("dont-build-content").get()) >= 0) {
+        if (flags.Find(NS_LITERAL_STRING("dont-build-content")) >= 0) {
             nsCOMPtr<nsIXULTemplateBuilder> builder =
                 do_CreateInstance("@mozilla.org/xul/xul-outliner-builder;1");
 
@@ -6496,7 +6488,7 @@ nsXULDocument::AddPrototypeSheets()
         rv = sheet->Clone(*getter_AddRefs(newsheet));
         if (NS_FAILED(rv)) return rv;
 
-        AddStyleSheet(newsheet);
+        AddStyleSheet(newsheet, 0);
     }
 
     return NS_OK;

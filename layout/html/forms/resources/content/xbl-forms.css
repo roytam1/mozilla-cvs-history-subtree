@@ -47,9 +47,10 @@ select[size] {
 
 select, select[size="1"] {
   -moz-binding: url("chrome://forms/content/select.xml#select");
-  display: -moz-box;
+  display: -moz-inline-box;
   -moz-box-orient: horizontal;
   -moz-user-focus: normal;
+  font: list;
 }
 
 select[size] > option {
@@ -74,6 +75,14 @@ xul|*.select-outlinerbody {
   display: -moz-box;
 }
 
+xul|*.select-scrollbar[disabled="true"] {
+  visibility: hidden;
+}
+
+xul|*.select-menupopup {
+  background-color: inherit !important; 
+  display:-moz-popup!important;
+}
 
 input[type="checkbox"] {
   -moz-binding: url("chrome://forms/content/checkbox.xml#checkbox");

@@ -39,6 +39,7 @@
 #include "nsCURILoader.h"
 #include "nsIWebProgress.h"
 #include "nsIWebProgressListener.h"
+#include "nsIDownload.h"
 #include "nsReadableUtils.h"
 
 // used to manage our in memory data source of helper applications
@@ -140,6 +141,12 @@ static nsDefaultMimeTypeEntry extraMimeEntries [] =
 static const char* const nonDecodableTypes [] = {
   "application/tar",
   "application/x-tar",
+  0
+};
+
+static const char* const nonDecodableExtensions [] = {
+  "gz",
+  "zip",
   0
 };
 
@@ -319,10 +326,25 @@ NS_IMETHODIMP nsExternalHelperAppService::DoContent(const char *aMimeContentType
 
 NS_IMETHODIMP nsExternalHelperAppService::ApplyDecodingForType(const char *aMimeContentType, PRBool *aApplyDecoding)
 {
+  NS_PRECONDITION(aMimeContentType, "Null MIME type");
   *aApplyDecoding = PR_TRUE;
   PRUint32 index;
   for (index = 0; nonDecodableTypes[index]; ++index) {
     if (!PL_strcasecmp(aMimeContentType, nonDecodableTypes[index])) {
+      *aApplyDecoding = PR_FALSE;
+      break;
+    }
+  }
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsExternalHelperAppService::ApplyDecodingForExtension(const char *aExtension, PRBool *aApplyDecoding)
+{
+  NS_PRECONDITION(aExtension, "Null Extension");
+  *aApplyDecoding = PR_TRUE;
+  PRUint32 index;
+  for(index = 0; nonDecodableExtensions[index]; ++index) {
+    if (!PL_strcasecmp(aExtension, nonDecodableExtensions[index])) {
       *aApplyDecoding = PR_FALSE;
       break;
     }
@@ -1061,11 +1083,26 @@ NS_IMETHODIMP nsExternalAppHandler::OnStartRequest(nsIRequest *request, nsISuppo
   {
     // Turn off content encoding conversions if needed
     PRBool applyConversion = PR_TRUE;
-    nsXPIDLCString MIMEType;
-    mMimeInfo->GetMIMEType( getter_Copies( MIMEType ) );
+    
     nsCOMPtr<nsIExternalHelperAppService> extHandler = do_GetService("@mozilla.org/uriloader/external-helper-app-service;1");
-    if (extHandler)
+    if (extHandler) {
+      nsXPIDLCString MIMEType;
+      mMimeInfo->GetMIMEType( getter_Copies( MIMEType ) );
       extHandler->ApplyDecodingForType(MIMEType, &applyConversion);
+      
+      if (applyConversion) {
+        // Now we double-check that it's OK to decode this extension
+        nsCOMPtr<nsIURI> channelURI;
+        aChannel->GetURI(getter_AddRefs(channelURI));
+        nsCOMPtr<nsIURL> channelURL(do_QueryInterface(channelURI));
+        nsCAutoString extension;
+        if (channelURL) {
+          channelURL->GetFileExtension(extension);
+          if (!extension.IsEmpty())
+            extHandler->ApplyDecodingForExtension(extension.get(), &applyConversion);
+        }
+      }
+    }
     
     httpChannel->SetApplyConversion( applyConversion );
   }
@@ -1257,8 +1294,16 @@ NS_IMETHODIMP nsExternalAppHandler::OnStopRequest(nsIRequest *request, nsISuppor
   mStopRequestIssued = PR_TRUE;
 
   // first, check to see if we've been canceled....
-  if (mCanceled) // then go cancel our underlying channel too
-    return request->Cancel(NS_BINDING_ABORTED);
+  if (mCanceled) { // then go cancel our underlying channel too
+    nsresult rv = request->Cancel(NS_BINDING_ABORTED);
+    // Notify dialog that download is complete.
+    if(mWebProgressListener)
+    {
+      // XXX Do we need to check for errors here (server goes down, network cable cut, etc.)?
+      mWebProgressListener->OnStateChange(nsnull, request, nsIWebProgressListener::STATE_STOP, NS_OK);
+    }
+    return rv;
+  }
 
   // go ahead and execute the application passing in our temp file as an argument
   // this may involve us calling back into the OS external app service to make the call
@@ -1348,51 +1393,41 @@ nsresult nsExternalAppHandler::ShowProgressDialog()
 {
   // we are back from the helper app dialog (where the user chooses to save or open), but we aren't
   // done processing the load. in this case, throw up a progress dialog so the user can see what's going on...
-  nsresult rv = NS_OK;
+  nsresult rv;
+  nsCOMPtr<nsILocalFile> local = do_QueryInterface(mFinalFileDestination);
 
-  nsCOMPtr<nsIProgressDialog> progressDlg = do_CreateInstance( "@mozilla.org/progressdialog;1", &rv );
-  if (progressDlg)
+  nsCOMPtr<nsIDownload> dl = do_CreateInstance("@mozilla.org/download;1", &rv);
+  if (NS_FAILED(rv)) return rv;
+
+  nsXPIDLString openWith(NS_LITERAL_STRING(""));  
+  nsMIMEInfoHandleAction action = nsIMIMEInfo::saveToDisk;
+  mMimeInfo->GetPreferredAction(&action);
+  if (action != nsIMIMEInfo::saveToDisk)
   {
-    // Wire up this progress dialog.
-    progressDlg->SetSource( mSourceUrl );
-    progressDlg->SetStartTime( mTimeDownloadStarted );
-    progressDlg->SetObserver(this);
-    nsCOMPtr<nsILocalFile> local = do_QueryInterface(mFinalFileDestination);
-    progressDlg->SetTarget(local);
-
-    nsMIMEInfoHandleAction action = nsIMIMEInfo::saveToDisk;
-    mMimeInfo->GetPreferredAction(&action);
-    if (action != nsIMIMEInfo::saveToDisk)
+    // Opening with an application; use either description or application file name.
+    mMimeInfo->GetApplicationDescription(getter_Copies(openWith));
+    if (openWith.IsEmpty())
     {
-      // Opening with an application; use either description or application file name.
-      nsXPIDLString openWith;
-      mMimeInfo->GetApplicationDescription(getter_Copies(openWith));
-      if (openWith.IsEmpty())
+      nsCOMPtr<nsIFile> appl;
+      mMimeInfo->GetPreferredApplicationHandler(getter_AddRefs(appl));
+      if (appl)
       {
-        nsCOMPtr<nsIFile> appl;
-        mMimeInfo->GetPreferredApplicationHandler(getter_AddRefs(appl));
-        if (appl)
+        nsCOMPtr<nsILocalFile> file = do_QueryInterface(appl);
+        if (file)
         {
-          nsCOMPtr<nsILocalFile> file = do_QueryInterface(appl);
-          if (file)
-          {
-            file->GetUnicodeLeafName(getter_Copies(openWith));
-          }
+          file->GetUnicodeLeafName(getter_Copies(openWith));
         }
       }
-      // Tell progress dialog what we're opening with.
-      progressDlg->SetOpeningWith(openWith);
-    }
-
-    // Open the dialog.
-    rv = progressDlg->Open(nsnull, nsnull);
-
-    if(NS_SUCCEEDED(rv))
-    {
-      // Send notifications to the dialog.
-      this->SetWebProgressListener(progressDlg);
     }
   }
+
+  rv = dl->Init(mSourceUrl, local, nsnull, openWith, mTimeDownloadStarted, nsnull);
+  if (NS_FAILED(rv)) return rv;
+
+  dl->SetObserver(this);
+  nsCOMPtr<nsIWebProgressListener> listener = do_QueryInterface(dl);
+  if (listener)
+    SetWebProgressListener(listener);
 
   return rv;
 }

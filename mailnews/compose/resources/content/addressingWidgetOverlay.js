@@ -247,6 +247,7 @@ function awSetInputAndPopupFromArray(inputArray, popupValue, parentNode, templat
 
 function awRemoveRecipients(msgCompFields, recipientType, recipientsList)
 {
+  dump('calling removing recipients\n\n');
   if (!msgCompFields)
     return;
 
@@ -272,6 +273,7 @@ function awRemoveRecipients(msgCompFields, recipientType, recipientsList)
 
 function awAddRecipients(msgCompFields, recipientType, recipientsList)
 {
+  dump('calling add recipients\n\n');
   if (!msgCompFields)
     return;
 
@@ -373,6 +375,7 @@ function awCleanupRows()
 
 function awDeleteRow(rowToDelete, cols)
 {
+  dump('delete row\n\n');
   /* When we delete a row, we must reset the id of others row in order to not break the sequence */
   var maxRecipients = top.MAX_RECIPIENTS;
 

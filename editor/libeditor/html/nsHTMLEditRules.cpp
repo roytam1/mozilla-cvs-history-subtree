@@ -718,7 +718,7 @@ nsHTMLEditRules::GetAlignment(PRBool *aMixed, nsIHTMLEditor::EAlignment *aAlign)
   if (!nodeToExamine) return NS_ERROR_NULL_POINTER;
 
   PRBool useCSS;
-  mHTMLEditor->IsCSSEnabled(&useCSS);
+  mHTMLEditor->GetIsCSSEnabled(&useCSS);
   NS_NAMED_LITERAL_STRING(typeAttrName, "align");
   nsIAtom  *dummyProperty = nsnull;
   if (useCSS && mHTMLEditor->mHTMLCSSUtils->IsCSSEditableProperty(nodeToExamine, dummyProperty, &typeAttrName))
@@ -827,7 +827,7 @@ nsHTMLEditRules::GetIndentState(PRBool *aCanIndent, PRBool *aCanOutdent)
   PRInt32 i;
   arrayOfNodes->Count(&listCount);
   PRBool useCSS;
-  mHTMLEditor->IsCSSEnabled(&useCSS);
+  mHTMLEditor->GetIsCSSEnabled(&useCSS);
   for (i=(PRInt32)listCount-1; i>=0; i--)
   {
     nsCOMPtr<nsISupports> isupports = dont_AddRef(arrayOfNodes->ElementAt(i));
@@ -3029,7 +3029,7 @@ nsHTMLEditRules::WillIndent(nsISelection *aSelection, PRBool *aCancel, PRBool * 
 {
   PRBool useCSS;
   nsresult res;
-  mHTMLEditor->IsCSSEnabled(&useCSS);
+  mHTMLEditor->GetIsCSSEnabled(&useCSS);
   
   if (useCSS) {
     res = WillCSSIndent(aSelection, aCancel, aHandled);
@@ -3408,7 +3408,7 @@ nsHTMLEditRules::WillOutdent(nsISelection *aSelection, PRBool *aCancel, PRBool *
   nsresult res = NS_OK;
   nsCOMPtr<nsIDOMNode> rememberedLeftBQ, rememberedRightBQ;
   PRBool useCSS;
-  mHTMLEditor->IsCSSEnabled(&useCSS);
+  mHTMLEditor->GetIsCSSEnabled(&useCSS);
 
   res = NormalizeSelection(aSelection);
   if (NS_FAILED(res)) return res;
@@ -4008,7 +4008,7 @@ nsHTMLEditRules::WillAlign(nsISelection *aSelection,
   nsCOMPtr<nsIDOMNode> curParent;
   nsCOMPtr<nsIDOMNode> curDiv;
   PRBool useCSS;
-  mHTMLEditor->IsCSSEnabled(&useCSS);
+  mHTMLEditor->GetIsCSSEnabled(&useCSS);
   for (i=0; i<(PRInt32)listCount; i++)
   {
     // here's where we actually figure out what to do
@@ -4145,7 +4145,7 @@ nsHTMLEditRules::AlignBlockContents(nsIDOMNode *aNode, const nsAReadableString *
   nsCOMPtr <nsIDOMNode> firstChild, lastChild, divNode;
   
   PRBool useCSS;
-  mHTMLEditor->IsCSSEnabled(&useCSS);
+  mHTMLEditor->GetIsCSSEnabled(&useCSS);
 
   res = mHTMLEditor->GetFirstEditableChild(aNode, address_of(firstChild));
   if (NS_FAILED(res)) return res;
@@ -4162,12 +4162,10 @@ nsHTMLEditRules::AlignBlockContents(nsIDOMNode *aNode, const nsAReadableString *
     // act on this div.
     nsCOMPtr<nsIDOMElement> divElem = do_QueryInterface(firstChild);
     if (useCSS) {
-      res = mHTMLEditor->RemoveAttribute(divElem, attr);
-      mHTMLEditor->SetAttributeOrEquivalent(divElem, attr, *alignType); 
+      res = mHTMLEditor->SetAttributeOrEquivalent(divElem, attr, *alignType); 
     }
     else {
       res = mHTMLEditor->SetAttribute(divElem, attr, *alignType);
-      if (NS_FAILED(res)) return res;
     }
     if (NS_FAILED(res)) return res;
   }
@@ -4179,13 +4177,12 @@ nsHTMLEditRules::AlignBlockContents(nsIDOMNode *aNode, const nsAReadableString *
     // set up the alignment on the div
     nsCOMPtr<nsIDOMElement> divElem = do_QueryInterface(divNode);
     if (useCSS) {
-      res = mHTMLEditor->RemoveAttribute(divElem, attr);
-      mHTMLEditor->SetAttributeOrEquivalent(divElem, attr, *alignType); 
+      res = mHTMLEditor->SetAttributeOrEquivalent(divElem, attr, *alignType); 
     }
     else {
       res = mHTMLEditor->SetAttribute(divElem, attr, *alignType);
-      if (NS_FAILED(res)) return res;
     }
+    if (NS_FAILED(res)) return res;
     // tuck the children into the end of the active div
     while (lastChild && (lastChild != divNode))
     {
@@ -5012,7 +5009,7 @@ nsHTMLEditRules::GetNodesForOperation(nsISupportsArray *inArrayOfRanges,
   nsCOMPtr<nsISupports> isupports;
 
   PRBool useCSS;
-  mHTMLEditor->IsCSSEnabled(&useCSS);
+  mHTMLEditor->GetIsCSSEnabled(&useCSS);
 
   // bust up any inlines that cross our range endpoints,
   // but only if we are allowed to touch content.
@@ -5976,13 +5973,14 @@ nsHTMLEditRules::ReturnInListItem(nsISelection *aSelection,
   if (NS_FAILED(res)) return res;
   // now split list item
   PRInt32 newOffset;
-  res = mHTMLEditor->SplitNodeDeep( aListItem, selNode, aOffset, &newOffset);
+  res = mHTMLEditor->SplitNodeDeep( aListItem, selNode, aOffset, &newOffset, PR_FALSE);
   if (NS_FAILED(res)) return res;
   // hack: until I can change the damaged doc range code back to being
   // extra inclusive, I have to manually detect certain list items that
   // may be left empty.
   nsCOMPtr<nsIDOMNode> prevItem;
   mHTMLEditor->GetPriorHTMLSibling(aListItem, address_of(prevItem));
+
   if (prevItem && nsHTMLEditUtils::IsListItem(prevItem))
   {
     PRBool bIsEmptyNode;
@@ -5993,6 +5991,21 @@ nsHTMLEditRules::ReturnInListItem(nsISelection *aSelection,
       nsCOMPtr<nsIDOMNode> brNode;
       res = CreateMozBR(prevItem, 0, address_of(brNode));
       if (NS_FAILED(res)) return res;
+    }
+    else {
+      res = mHTMLEditor->IsEmptyNode(aListItem, &bIsEmptyNode, PR_TRUE);
+      if (NS_FAILED(res)) return res;
+      if (bIsEmptyNode) {
+        nsCOMPtr<nsIDOMNode> brNode;
+        res = mHTMLEditor->CopyLastEditableChildStyles(prevItem, aListItem, getter_AddRefs(brNode));
+        if (NS_FAILED(res)) return res;
+        if (brNode) {
+          nsCOMPtr<nsIDOMNode> brParent;
+          PRInt32 offset;
+          res = nsEditor::GetNodeLocation(brNode, address_of(brParent), &offset);
+          return aSelection->Collapse(brParent, offset);
+        }
+      }
     }
   }
   res = aSelection->Collapse(aListItem,0);
@@ -6684,19 +6697,10 @@ nsHTMLEditRules::CheckInterlinePosition(nsISelection *aSelection)
     return NS_OK;
   }
   
-  // are we between to <br>s?  If so we want to stick to the second one.
+  // are we after a <br>?  If so we want to stick to whatever is after <br>.
   mHTMLEditor->GetPriorHTMLNode(selNode, selOffset, address_of(node), PR_TRUE);
   if (node && nsTextEditUtils::IsBreak(node))
-  {
-    nsCOMPtr<nsIDOMNode> nextNode;
-    mHTMLEditor->GetNextHTMLNode(selNode, selOffset, address_of(nextNode), PR_TRUE);
-    if (nextNode && nsTextEditUtils::IsBreak(nextNode))
-    {
-      // selection between two br's.  make it stick to second
-      // so that it will be on blank line.   
       selPriv->SetInterlinePosition(PR_TRUE);
-    }
-  }
   return NS_OK;
 }
 
@@ -6771,13 +6775,9 @@ nsHTMLEditRules::AdjustSelection(nsISelection *aSelection, nsIEditor::EDirection
     nearBlock = mHTMLEditor->GetBlockNodeParent(nearNode);
     if (block == nearBlock)
     {
-      if (nearNode && nsTextEditUtils::IsBreak(nearNode)
-          && !nsTextEditUtils::IsMozBR(nearNode))
-      {
-        PRBool bIsLast;
-        res = mHTMLEditor->IsLastEditableChild(nearNode, &bIsLast);
-        if (NS_FAILED(res)) return res;
-        if (bIsLast)
+      if (nearNode && nsTextEditUtils::IsBreak(nearNode) )
+      {   
+        if (!IsVisBreak(nearNode))
         {
           // need to insert special moz BR. Why?  Because if we don't
           // the user will see no new line for the break.  Also, things
@@ -6794,30 +6794,9 @@ nsHTMLEditRules::AdjustSelection(nsISelection *aSelection, nsIEditor::EDirection
         }
         else
         {
-          // ok, the br inst the last child.  
-          // the br might be right in front of a new block (ie,:
-          // <body> text<br> <ol><li>list item</li></ol></body>  )
-          // in this case we also need moz-br.
           nsCOMPtr<nsIDOMNode> nextNode;
-          res = mHTMLEditor->GetNextHTMLNode(nearNode, address_of(nextNode));
-          if (NS_FAILED(res)) return res;
-          res = mHTMLEditor->GetNextHTMLSibling(nearNode, address_of(nextNode));
-          if (NS_FAILED(res)) return res;
-          if (nextNode && IsBlockNode(nextNode))
-          {
-            // need to insert special moz BR. Why?  Because if we don't
-            // the user will see no new line for the break.  
-            nsCOMPtr<nsIDOMNode> brNode;
-            res = CreateMozBR(selNode, selOffset, address_of(brNode));
-            if (NS_FAILED(res)) return res;
-            res = nsEditor::GetNodeLocation(brNode, address_of(selNode), &selOffset);
-            if (NS_FAILED(res)) return res;
-            // selection stays *before* moz-br, sticking to it
-            selPriv->SetInterlinePosition(PR_TRUE);
-            res = aSelection->Collapse(selNode,selOffset);
-            if (NS_FAILED(res)) return res;
-          }
-          else if (nextNode && nsTextEditUtils::IsMozBR(nextNode))
+          mHTMLEditor->GetNextHTMLNode(nearNode, address_of(nextNode), PR_TRUE);
+          if (nextNode && nsTextEditUtils::IsMozBR(nextNode))
           {
             // selection between br and mozbr.  make it stick to mozbr
             // so that it will be on blank line.   
@@ -6883,6 +6862,8 @@ nsHTMLEditRules::IsVisBreak(nsIDOMNode *aNode)
   mHTMLEditor->GetNextHTMLNode(aNode, address_of(nextNode), PR_TRUE); 
   if (!nextNode) 
     return PR_FALSE;  // this break is trailer in block, it's not visible
+  if (IsBlockNode(nextNode))
+    return PR_FALSE; // break is right before a block, it's not visible
   return PR_TRUE;
 }
 
@@ -7730,7 +7711,7 @@ nsHTMLEditRules::RemoveAlignment(nsIDOMNode * aNode, nsAReadableString & aAlignT
     aNode->GetFirstChild(getter_AddRefs(child));
   }
   PRBool useCSS;
-  mHTMLEditor->IsCSSEnabled(&useCSS);
+  mHTMLEditor->GetIsCSSEnabled(&useCSS);
 
   while (child)
   {
@@ -7760,13 +7741,14 @@ nsHTMLEditRules::RemoveAlignment(nsIDOMNode * aNode, nsAReadableString & aAlignT
       {
         if (nsHTMLEditUtils::IsTable(child) || nsHTMLEditUtils::IsHR(child))
         {
-          mHTMLEditor->SetAttributeOrEquivalent(curElem, NS_LITERAL_STRING("align"), aAlignType); 
+          res = mHTMLEditor->SetAttributeOrEquivalent(curElem, NS_LITERAL_STRING("align"), aAlignType); 
         }
         else
         {
           nsAutoString dummyCssValue;
-          mHTMLEditor->mHTMLCSSUtils->RemoveCSSInlineStyle(child, nsIEditProperty::cssTextAlign, dummyCssValue);
+          res = mHTMLEditor->mHTMLCSSUtils->RemoveCSSInlineStyle(child, nsIEditProperty::cssTextAlign, dummyCssValue);
         }
+        if (NS_FAILED(res)) return res;
       }
       if (!nsHTMLEditUtils::IsTable(child))
       {
@@ -7788,7 +7770,8 @@ nsHTMLEditRules::RemoveAlignment(nsIDOMNode * aNode, nsAReadableString & aAlignT
         // if we are in CSS mode and if the element is a DIV, let's remove it
         // if it does not carry any style hint (style attr, class or ID)
         nsAutoString dummyCssValue;
-        mHTMLEditor->mHTMLCSSUtils->RemoveCSSInlineStyle(child, nsIEditProperty::cssTextAlign, dummyCssValue);
+        res = mHTMLEditor->mHTMLCSSUtils->RemoveCSSInlineStyle(child, nsIEditProperty::cssTextAlign, dummyCssValue);
+        if (NS_FAILED(res)) return res;
         nsCOMPtr<nsIDOMElement> childElt = do_QueryInterface(child);
         PRBool hasStyleOrIdOrClass;
         res = mHTMLEditor->HasStyleOrIdOrClass(childElt, &hasStyleOrIdOrClass);
@@ -7921,13 +7904,12 @@ nsHTMLEditRules::AlignBlock(nsIDOMElement * aElement, const nsAReadableString * 
   if (NS_FAILED(res)) return res;
   NS_NAMED_LITERAL_STRING(attr, "align");
   PRBool useCSS;
-  mHTMLEditor->IsCSSEnabled(&useCSS);
+  mHTMLEditor->GetIsCSSEnabled(&useCSS);
   if (useCSS) {
     // let's use CSS alignment; we use margin-left and margin-right for tables
     // and text-align for other block-level elements
-    res = mHTMLEditor->RemoveAttribute(aElement, attr);
+    res = mHTMLEditor->SetAttributeOrEquivalent(aElement, attr, *aAlignType); 
     if (NS_FAILED(res)) return res;
-    mHTMLEditor->SetAttributeOrEquivalent(aElement, attr, *aAlignType); 
   }
   else {
     // HTML case; this code is supposed to be called ONLY if the element

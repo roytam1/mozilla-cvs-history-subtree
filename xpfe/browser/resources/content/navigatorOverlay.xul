@@ -134,7 +134,7 @@
 
     <!-- View Menu -->
     <command id="View:PageSource" oncommand="BrowserViewSource();"/>
-    <command id="View:PageInfo"   oncommand="BrowserPageInfo(getBrowser().contentDocument);"/>
+    <command id="View:PageInfo"   oncommand="BrowserPageInfo();"/>
     <command id="View:FullScreen" oncommand="BrowserFullScreen();"/>
   
     <!-- Search Menu -->
@@ -296,12 +296,20 @@
           datasources="rdf:bookmarks rdf:files rdf:localsearch rdf:internetsearch" 
           ref="NC:BookmarksRoot" flags="dont-test-empty" template="bookmarksMenuTemplate"
           oncommand="OpenBookmarkURL(event.target, document.getElementById('BookmarksMenu').database)">
-      <template id="bookmarksMenuTemplate">
+      <template id="bookmarksMenuTemplate" xmlns:nc="http://home.netscape.com/NC-rdf#">
+        <rule nc:FolderGroup="true" iscontainer="true">
+          <menupopup>
+            <menuitem class="menuitem-iconic bookmark-group" 
+                      label="rdf:http://home.netscape.com/NC-rdf#Name"
+                      group="true"
+                      uri="rdf:*"
+                      xulcontentsgenerated="true"/>
+          </menupopup>
+        </rule>
         <rule iscontainer="true" isempty="true"
               rdf:type="http://home.netscape.com/NC-rdf#Folder">
           <menupopup>
             <menu class="menu-iconic bookmark-item" uri="rdf:*" 
-                  validate="never"
                   type="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
                   label="rdf:http://home.netscape.com/NC-rdf#Name">
               <menupopup>
@@ -313,7 +321,6 @@
         <rule iscontainer="true">
           <menupopup>
             <menu class="menu-iconic bookmark-item" uri="rdf:*"
-                  validate="never"
                   label="rdf:http://home.netscape.com/NC-rdf#Name"
                   type="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type">
               <menupopup />
@@ -328,8 +335,6 @@
         <rule>
           <menupopup>
             <menuitem class="menuitem-iconic bookmark-item" uri="rdf:*"
-                      src="rdf:http://home.netscape.com/NC-rdf#Icon"
-                      validate="never"
                       label="rdf:http://home.netscape.com/NC-rdf#Name" 
                       status="rdf:http://home.netscape.com/WEB-rdf#status"/>
           </menupopup>

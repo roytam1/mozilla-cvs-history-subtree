@@ -78,12 +78,19 @@ const gButtonPrefListener =
     var buttonId = buttonName + "-button";
     var button = document.getElementById(buttonId);
 
+    // We need to explicitly set "hidden" to "false"
+    // in order for persistence to work correctly
     var show = pref.getBoolPref(prefName);
-    button.hidden = !show;
+    if (show)
+      button.setAttribute("hidden","false");
+    else
+      button.setAttribute("hidden", "true");
 
     // If all buttons before the separator are hidden, also hide the separator
-    var bookmarkSeparator = document.getElementById("home-bm-separator");
-    bookmarkSeparator.hidden = allLeftButtonsAreHidden();
+    if (allLeftButtonsAreHidden())
+      document.getElementById("home-bm-separator").setAttribute("hidden", "true");
+    else
+      document.getElementById("home-bm-separator").removeAttribute("hidden");
   }
 };
 
@@ -482,7 +489,7 @@ function WindowFocusTimerCallback(element)
 
 function BrowserFlushBookmarksAndHistory()
 {
-  // Flush bookmakrs and history (used when window closes or is cached).
+  // Flush bookmarks and history (used when window closes or is cached).
   try {
     // If bookmarks are dirty, flush 'em to disk
     var bmks = Components.classes["@mozilla.org/browser/bookmarks-service;1"]
@@ -613,8 +620,56 @@ function BrowserHome()
   loadURI(homePage);
 }
 
+function OpenBookmarkGroup(element, datasource)
+{
+  if (!datasource)
+    return;
+    
+  var id = element.getAttribute("id");
+  var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"]
+                          .getService(Components.interfaces.nsIRDFService);
+  var resource = rdf.GetResource(id, true);
+  return OpenBookmarkGroupFromResource(resource, datasource, rdf);
+}
+
+function OpenBookmarkGroupFromResource(resource, datasource, rdf) {
+  var urlResource = rdf.GetResource("http://home.netscape.com/NC-rdf#URL");
+  var rdfContainer = Components.classes["@mozilla.org/rdf/container;1"].getService(Components.interfaces.nsIRDFContainer);
+  rdfContainer.Init(datasource, resource);
+  var containerChildren = rdfContainer.GetElements();
+  var tabPanels = gBrowser.mPanelContainer.childNodes;
+  var tabCount = tabPanels.length;
+  var index = 0;
+  while (containerChildren.hasMoreElements()) {
+    var resource = containerChildren.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+    var target = datasource.GetTarget(resource, urlResource, true);
+    if (target) {
+      var uri = target.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
+      if (index < tabCount)
+        tabPanels[index].loadURI(uri, null, nsIWebNavigation.LOAD_FLAGS_NONE);
+      else
+        gBrowser.addTab(uri);
+      index++;
+    }
+  }  
+  
+  if (index == 0)
+    return; // If the bookmark group was completely invalid, just bail.
+     
+  // Select the first tab in the group.
+  var tabs = gBrowser.mTabContainer.childNodes;
+  gBrowser.selectedTab = tabs[0];
+  
+  // Close any remaining open tabs that are left over.
+  for (var i = tabCount-1; i >= index; i--)
+    gBrowser.removeTab(tabs[i]);
+}
+
 function OpenBookmarkURL(node, datasources)
 {
+  if (node.getAttribute("group") == "true")
+    OpenBookmarkGroup(node, datasources);
+    
   if (node.getAttribute("container") == "true")
     return;
 
@@ -1050,7 +1105,7 @@ function BrowserViewSourceOfURL(url, charset)
              url, charset);
 }
 
-// doc=owner document.
+// doc=null for regular page info, doc=owner document for frame info.
 function BrowserPageInfo(doc)
 {
   window.openDialog("chrome://navigator/content/pageInfo.xul",

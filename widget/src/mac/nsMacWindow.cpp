@@ -193,11 +193,12 @@ nsMacWindow::nsMacWindow() : Inherited()
   , mAcceptsActivation(PR_TRUE)
   , mIsActive(PR_FALSE)
   , mZoomOnShow(PR_FALSE)
+  , mZooming(PR_FALSE)
+  , mResizeIsFromUs(PR_FALSE)
 #if !TARGET_CARBON
   , mPhantomScrollbar(nsnull)
   , mPhantomScrollbarData(nsnull)
 #endif
-  , mResizeIsFromUs(PR_FALSE)
 {
   mMacEventHandler.reset(new nsMacEventHandler(this));
   WIDGET_SET_CLASSNAME("nsMacWindow");  
@@ -354,14 +355,18 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
 #if TARGET_CARBON
               if (nsToolkit::OnMacOSX() && aParent && (aInitData->mBorderStyle & eBorderStyle_sheet))
               {
-                  nsWindowType parentType;
-                  aParent->GetWindowType(parentType);
-                  if (parentType != eWindowType_invisible)
+                nsWindowType parentType;
+                aParent->GetWindowType(parentType);
+                if (parentType != eWindowType_invisible)
+                {
+                  // Mac OS X sheet support
+                  mIsSheet = PR_TRUE;
+                  wDefProcID = kWindowSheetProc;
+                  if (aInitData->mBorderStyle & eBorderStyle_resizeh)
                   {
-                      // Mac OS X sheet support
-                      mIsSheet = PR_TRUE;
-                      wDefProcID = kWindowSheetProc;
+                    resizable = true;
                   }
+                }
               }
               else
 #endif
@@ -541,12 +546,16 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
 
     if (mIsSheet)
     {
-        // Mac OS X sheet support
-        ::SetWindowClass(mWindowPtr, kSheetWindowClass);
-        EventTypeSpec windEventList[] = { {kEventClassWindow, kEventWindowUpdate},
-                                          {kEventClassWindow, kEventWindowDrawContent} };
-        OSStatus err1 = ::InstallWindowEventHandler ( mWindowPtr,
-            NewEventHandlerUPP(WindowEventHandler), 2, windEventList, this, NULL );
+      // Mac OS X sheet support
+      if ( resizable )
+      {
+        ::ChangeWindowAttributes ( mWindowPtr, kWindowResizableAttribute, kWindowNoAttributes );
+      }
+      ::SetWindowClass(mWindowPtr, kSheetWindowClass);
+      EventTypeSpec windEventList[] = { {kEventClassWindow, kEventWindowUpdate},
+                                        {kEventClassWindow, kEventWindowDrawContent} };
+      OSStatus err1 = ::InstallWindowEventHandler ( mWindowPtr,
+          NewEventHandlerUPP(WindowEventHandler), 2, windEventList, this, NULL );
     }
     
     // Setup the live window resizing if appropriate
@@ -1180,8 +1189,14 @@ NS_METHOD nsMacWindow::SetSizeMode(PRInt32 aMode)
   if (aMode == nsSizeMode_Minimized) // unlikely on the Mac
     return NS_ERROR_UNEXPECTED;
 
+  // resize during zoom may attempt to unzoom us. here's where we put a stop to that.
+  if (mZooming)
+    return NS_OK;
+
   // already done? it's bad to rezoom a window, so do nothing
   rv = nsBaseWidget::GetSizeMode(&currentMode);
+  if (currentMode == nsSizeMode_Normal && !mVisible && mZoomOnShow)
+    currentMode = nsSizeMode_Maximized;
   if (NS_SUCCEEDED(rv) && currentMode == aMode)
     return NS_OK;
 
@@ -1189,10 +1204,10 @@ NS_METHOD nsMacWindow::SetSizeMode(PRInt32 aMode)
     /* zooming on the Mac doesn't seem to work until the window is visible.
        the rest of the app is structured to zoom before the window is visible
        to avoid flashing. here's where we defeat that. */
-    if (aMode == nsSizeMode_Maximized)
-      mZoomOnShow = PR_TRUE;
+    mZoomOnShow = aMode == nsSizeMode_Maximized;
   } else {
     Rect macRect;
+    mZooming = PR_TRUE;
     rv = nsBaseWidget::SetSizeMode(aMode);
     if (NS_SUCCEEDED(rv)) {
       if (aMode == nsSizeMode_Maximized) {
@@ -1203,9 +1218,44 @@ NS_METHOD nsMacWindow::SetSizeMode(PRInt32 aMode)
       ::GetWindowPortBounds(mWindowPtr, &macRect);
       Resize(macRect.right - macRect.left, macRect.bottom - macRect.top, PR_FALSE);
     }
+    mZooming = PR_FALSE;
   }
 
   return rv;
+}
+
+
+// we're resizing. if we happen to be zoomed ("standard" state),
+// switch to the user state without changing the window size.
+void
+nsMacWindow::UserStateForResize()
+{
+  nsresult rv;
+  PRInt32  currentMode;
+
+  // but not if we're currently zooming
+  if (mZooming)
+    return;
+
+  // nothing to do if we're already in the user state
+  rv = nsBaseWidget::GetSizeMode(&currentMode);
+  if (NS_SUCCEEDED(rv) && currentMode == nsSizeMode_Normal)
+    return;
+
+  // we've just finished sizing, so make our current size our user state,
+  // and switch to the user state
+  StPortSetter portState(mWindowPtr);
+  StOriginSetter originState(mWindowPtr);
+  Rect bounds;
+
+  ::GetWindowPortBounds(mWindowPtr, &bounds);
+  ::LocalToGlobal((Point *)&bounds.top);
+  ::LocalToGlobal((Point *)&bounds.bottom);
+  ::SetWindowUserState(mWindowPtr, &bounds);
+  ::ZoomWindow(mWindowPtr, inZoomIn, false);
+
+  // finally, reset our internal state to match
+  nsBaseWidget::SetSizeMode(nsSizeMode_Normal);
 }
 
 

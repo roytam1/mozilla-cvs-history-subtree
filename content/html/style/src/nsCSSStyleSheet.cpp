@@ -70,6 +70,8 @@
 #include "nsIDOMHTMLAnchorElement.h"
 #include "nsIDOMHTMLLinkElement.h"
 #include "nsIDOMHTMLAreaElement.h"
+#include "nsIDOMHTMLInputElement.h"
+#include "nsIDOMHTMLOptionElement.h"
 #include "nsIDOMStyleSheetList.h"
 #include "nsIDOMCSSStyleSheet.h"
 #include "nsIDOMCSSStyleRule.h"
@@ -93,6 +95,9 @@
 #include "nsQuickSort.h"
 #ifdef MOZ_XUL
 #include "nsIXULContent.h"
+#include "nsIDOMXULPopupElement.h"
+#include "nsIDOMXULMenuBarElement.h"
+#include "nsXULAtoms.h"
 #endif
 
 #include "nsContentUtils.h"
@@ -3232,6 +3237,8 @@ RuleProcessorData::RuleProcessorData(nsIPresContext* aPresContext,
   mIsHTMLContent = PR_FALSE;
   mIsHTMLLink = PR_FALSE;
   mIsSimpleXLink = PR_FALSE;
+  mIsChecked = PR_FALSE;
+  mIsMenuActive = PR_FALSE;
   mLinkState = eLinkState_Unknown;
   mEventState = NS_EVENT_STATE_UNSPECIFIED;
   mNameSpaceID = kNameSpaceID_Unknown;
@@ -3299,6 +3306,43 @@ RuleProcessorData::RuleProcessorData(nsIPresContext* aPresContext,
        nsStyleUtil::IsSimpleXlink(aContent, mPresContext, &mLinkState)) {
       mIsSimpleXLink = PR_TRUE;
     } 
+
+    // The :checked pseudoclass applies to input and option elements
+    if (mIsHTMLContent) {
+      PRBool isChecked = PR_FALSE;
+      if (mContentTag == nsHTMLAtoms::option) {
+        nsCOMPtr<nsIDOMHTMLOptionElement> optEl = do_QueryInterface(mContent);
+        optEl->GetSelected(&isChecked);
+      } else if (mContentTag == nsHTMLAtoms::input) {
+        nsCOMPtr<nsIDOMHTMLInputElement> inputEl = do_QueryInterface(mContent);
+        inputEl->GetChecked(&isChecked);
+      }
+
+      mIsChecked = isChecked;
+    }
+
+    // The :-moz-menuactive pseudoclass applies to HTML option elements,
+    // XUL menuitem elements, and XUL menu elements.
+    if ((mIsHTMLContent && mContentTag == nsHTMLAtoms::option) ||
+        (mContent->IsContentOfType(nsIContent::eXUL) &&
+         (mContentTag == nsXULAtoms::menuitem || mContentTag == nsXULAtoms::menu))) {
+      
+      nsCOMPtr<nsIDOMElement> currentItem;
+      nsCOMPtr<nsIDOMXULPopupElement> popupEl = do_QueryInterface(mParentContent);
+      if (popupEl)
+        popupEl->GetActiveItem(getter_AddRefs(currentItem));
+      else {
+        nsCOMPtr<nsIDOMXULMenuBarElement> menubar = do_QueryInterface(mParentContent);
+        if (menubar)
+          menubar->GetActiveMenu(getter_AddRefs(currentItem));
+      }
+
+      if (currentItem) {
+        nsCOMPtr<nsIDOMElement> element = do_QueryInterface(mContent);
+        if (currentItem == element)
+          mIsMenuActive = PR_TRUE;
+      }
+    }
   }
 }
 
@@ -3590,6 +3634,20 @@ static PRBool SelectorMatches(RuleProcessorData &data,
           result = localFalse;  // not a link
         }
       }
+      else if (nsCSSAtoms::checkedPseudo == pseudoClass->mAtom) {
+        // This pseudoclass matches the selected state on the following elements:
+        //  <option>
+        //  <input type=checkbox>
+        //  <input type=radio>
+        if (aTestState)
+          result = data.mIsChecked ? localTrue : localFalse;
+      }
+      else if (nsCSSAtoms::menuActivePseudo == pseudoClass->mAtom) {
+        // This pseudoclass will match on at most one child of
+        // a menupopup.
+        if (aTestState)
+          result = data.mIsMenuActive ? localTrue : localFalse;
+      }
       else {
         result = localFalse;  // unknown pseudo class
       }
@@ -3605,22 +3663,25 @@ static PRBool SelectorMatches(RuleProcessorData &data,
     } else {
       result = localTrue;
       nsAttrSelector* attr = aSelector->mAttrList;
-      nsAutoString value;
       do {
-        nsresult  attrState = data.mContent->GetAttr(attr->mNameSpace, attr->mAttr, value);
-        if (NS_FAILED(attrState) || (NS_CONTENT_ATTR_NOT_THERE == attrState)) {
+        if (!data.mContent->HasAttr(attr->mNameSpace, attr->mAttr)) {
           result = localFalse;
         }
-        else {
+        else if (attr->mFunction != NS_ATTR_FUNC_SET) {
+          nsAutoString value;
+          nsresult attrState =
+              data.mContent->GetAttr(attr->mNameSpace, attr->mAttr, value);
+          NS_ASSERTION(NS_SUCCEEDED(attrState) &&
+                       NS_CONTENT_ATTR_NOT_THERE != attrState,
+                       "HasAttr lied or GetAttr failed");
           PRBool isCaseSensitive = attr->mCaseSensitive;
           switch (attr->mFunction) {
-            case NS_ATTR_FUNC_SET:    break;
             case NS_ATTR_FUNC_EQUALS: 
               if (isCaseSensitive) {
                 result = PRBool(localTrue == value.Equals(attr->mValue));
               }
               else {
-                result = PRBool(localTrue == value.EqualsIgnoreCase(attr->mValue));
+                result = PRBool(localTrue == value.Equals(attr->mValue, nsCaseInsensitiveStringComparator()));
               }
               break;
             case NS_ATTR_FUNC_INCLUDES: 
@@ -3677,7 +3738,7 @@ static PRBool SelectorMatches(RuleProcessorData &data,
               }
               break;
             case NS_ATTR_FUNC_CONTAINSMATCH:
-              result = PRBool(localTrue == (-1 != value.Find(attr->mValue, isCaseSensitive)));
+              result = PRBool(localTrue == (FindInReadable(attr->mValue, value, nsCaseInsensitiveStringComparator())));
               break;
           }
         }
@@ -4223,6 +4284,7 @@ PRBool IsStateSelector(nsCSSSelector& aSelector)
         (pseudoClass->mAtom == nsCSSAtoms::focusPseudo) || 
         (pseudoClass->mAtom == nsCSSAtoms::hoverPseudo) || 
         (pseudoClass->mAtom == nsCSSAtoms::linkPseudo) ||
+        (pseudoClass->mAtom == nsCSSAtoms::menuActivePseudo) ||
         (pseudoClass->mAtom == nsCSSAtoms::selectionPseudo) ||
         (pseudoClass->mAtom == nsCSSAtoms::visitedPseudo)) {
       return PR_TRUE;

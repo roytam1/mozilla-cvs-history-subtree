@@ -782,6 +782,7 @@ case "$target" in
         TK_CFLAGS="-I/Developer/Headers/FlatCarbon -F/System/Library/Frameworks"
         CFLAGS="$CFLAGS $TK_CFLAGS"
         CXXFLAGS="$CXXFLAGS $TK_CFLAGS"
+        MOZ_ENABLE_POSTSCRIPT=
         ;;
     esac
     ;;
@@ -2407,15 +2408,11 @@ dnl ========================================================
 dnl = If NSPR was not detected in the system, 
 dnl = use the one in the source tree (mozilla/nsprpub)
 dnl ========================================================
-MOZ_ARG_WITHOUT_BOOL(system-nspr,
-[  --without-system-nspr   Do not use system installed NSPR],
-    _NO_NSPR=1 )
+MOZ_ARG_WITH_BOOL(system-nspr,
+[  --with-system-nspr      Use system installed NSPR],
+    _USE_SYSTEM_NSPR=1 )
 
-if test "$_WIN32_MSVC"; then
-    _NO_NSPR=1
-fi
-	
-if test -z "$_NO_NSPR"; then
+if test -n "$_USE_SYSTEM_NSPR"; then
     AM_PATH_NSPR(4.0.0, [MOZ_NATIVE_NSPR=1], [MOZ_NATIVE_NSPR=])
 fi
 
@@ -2437,7 +2434,7 @@ dnl system JPEG support
 dnl ========================================================
 MOZ_ARG_WITH_STRING(system-jpeg,
 [  --with-system-jpeg[=PFX]
-                          Use installed libjpeg [installed at prefix PFX]],
+                          Use system libjpeg [installed at prefix PFX]],
     JPEG_DIR=$withval)
 
 _SAVE_CFLAGS=$CFLAGS
@@ -2447,7 +2444,7 @@ if test -n "${JPEG_DIR}"; then
     CFLAGS="-I${JPEG_DIR}/include $CFLAGS"
     LDFLAGS="-L${JPEG_DIR}/lib $LDFLAGS"
 fi
-if test "$JPEG_DIR" = no; then
+if test -z "$JPEG_DIR" -o "$JPEG_DIR" = no; then
     SYSTEM_JPEG=
 else
     AC_CHECK_LIB(jpeg, jpeg_destroy_compress, [SYSTEM_JPEG=1 JPEG_LIBS="-ljpeg $JPEG_LIBS"], SYSTEM_JPEG=, $JPEG_LIBS)
@@ -2482,7 +2479,7 @@ dnl system ZLIB support
 dnl ========================================================
 MOZ_ARG_WITH_STRING(system-zlib,
 [  --with-system-zlib[=PFX]
-                          Use installed libz [installed at prefix PFX]],
+                          Use system libz [installed at prefix PFX]],
     ZLIB_DIR=$withval)
 
 _SAVE_CFLAGS=$CFLAGS
@@ -2491,7 +2488,7 @@ if test -n "${ZLIB_DIR}"; then
     CFLAGS="-I${ZLIB_DIR}/include $CFLAGS"
     LDFLAGS="-L${ZLIB_DIR}/lib $LDFLAGS"
 fi
-if test "$ZLIB_DIR" = no; then
+if test -z "$ZLIB_DIR" -o "$ZLIB_DIR" = no; then
     SYSTEM_ZLIB=
 else
     AC_MSG_CHECKING("for zlib.h")
@@ -2516,7 +2513,7 @@ dnl system PNG Support
 dnl ========================================================
 MOZ_ARG_WITH_STRING(system-png, 
 [  --with-system-png[=PFX]
-                          Use installed libpng [installed at prefix PFX]],
+                          Use system libpng [installed at prefix PFX]],
     PNG_DIR=$withval)
 
 _SAVE_CFLAGS=$CFLAGS
@@ -2528,7 +2525,7 @@ if test -n "${PNG_DIR}"; then
     CFLAGS="-I${PNG_DIR}/include $CFLAGS"
     LDFLAGS="-L${PNG_DIR}/lib $LDFLAGS"
 fi
-if test "$PNG_DIR" = no; then
+if test -z "$PNG_DIR" -o "$PNG_DIR" = no; then
     SYSTEM_PNG=
 else
     AC_CHECK_LIB(png, png_get_valid, [SYSTEM_PNG=1 PNG_LIBS="-lpng $PNG_LIBS"],
@@ -2563,7 +2560,7 @@ dnl system MNG Support
 dnl ========================================================
 MOZ_ARG_WITH_STRING(system-mng, 
 [  --with-system-mng[=PFX]
-                          Use installed libmng [installed at prefix PFX]],
+                          Use system libmng [installed at prefix PFX]],
     MNG_DIR=$withval)
 
 _SAVE_CFLAGS=$CFLAGS
@@ -2575,7 +2572,7 @@ if test -n "${MNG_DIR}"; then
     CFLAGS="-I${MNG_DIR}/include $CFLAGS"
     LDFLAGS="-L${MNG_DIR}/lib $LDFLAGS"
 fi
-if test "$MNG_DIR" = no; then
+if test -z "$MNG_DIR" -o "$MNG_DIR" = no; then
     SYSTEM_MNG=
 else
     AC_CHECK_LIB(mng, mng_initialize, [SYSTEM_MNG=1 MNG_LIBS="-lmng $MNG_LIBS"],
@@ -3122,15 +3119,12 @@ dnl ========================================================
 dnl = Enable compilation of specific extension modules
 dnl ========================================================
 
-dnl Need cookie and wallet to build mozilla, this should
-dnl not be the case, 18352 has been filed.
-dnl http://bugzilla.mozilla.org/show_bug.cgi?id=18352
-MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc xmlextras help pref transformiix venkman inspector"
+MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc xmlextras help pref transformiix venkman inspector irc"
 
 dnl universalchardet is only built on win32 (bug XXXXXX)
 case "$target_os" in
 msvc*|mksnt*|mingw*|cygwin*)
-    MOZ_EXTENSIONS_DEFAULT="$MOZ_EXTENSIONS_DEFAULT universalchardet irc"
+    MOZ_EXTENSIONS_DEFAULT="$MOZ_EXTENSIONS_DEFAULT universalchardet"
     ;;
 esac
 
@@ -3139,7 +3133,7 @@ if test -n "$SUNCTL"; then
   MOZ_EXTENSIONS_DEFAULT="$MOZ_EXTENSIONS_DEFAULT ctl"
 fi
 
-MOZ_EXTENSIONS_ALL="$MOZ_EXTENSIONS_DEFAULT irc xmlterm access-builtin ctl" 
+MOZ_EXTENSIONS_ALL="$MOZ_EXTENSIONS_DEFAULT xmlterm access-builtin ctl p3p" 
 
 MOZ_ARG_ENABLE_STRING(extensions,
 [  --enable-extensions     Enable extensions],

@@ -6,7 +6,7 @@
  * the License at http://www.mozilla.org/NPL/
  *
  * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express oqr
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  *
@@ -61,9 +61,7 @@
 #include "jsstr.h"
 #include "jsopcode.h"
 
-#if JS_HAS_OBJ_WATCHPOINT
-#include "jsdbgapi.h"
-#endif
+#include "jsdbgapi.h"   /* whether or not JS_HAS_OBJ_WATCHPOINT */
 
 #ifdef JS_THREADSAFE
 #define NATIVE_DROP_PROPERTY js_DropProperty
@@ -1203,7 +1201,7 @@ obj_defineGetter(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
         return JS_FALSE;
     return OBJ_DEFINE_PROPERTY(cx, obj, id, JSVAL_VOID,
                                (JSPropertyOp) JSVAL_TO_OBJECT(fval), NULL,
-                               JSPROP_GETTER, NULL);
+                               JSPROP_GETTER | JSPROP_SHARED, NULL);
 }
 
 static JSBool
@@ -1235,7 +1233,7 @@ obj_defineSetter(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
         return JS_FALSE;
     return OBJ_DEFINE_PROPERTY(cx, obj, id, JSVAL_VOID,
                                NULL, (JSPropertyOp) JSVAL_TO_OBJECT(fval),
-                               JSPROP_SETTER, NULL);
+                               JSPROP_SETTER | JSPROP_SHARED, NULL);
 }
 
 static JSBool
@@ -1483,14 +1481,12 @@ With(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JSObject *parent, *proto;
     jsval v;
 
-    if (JS_HAS_STRICT_OPTION(cx)) {
-        if (!JS_ReportErrorFlagsAndNumber(cx,
-                                          JSREPORT_WARNING | JSREPORT_STRICT,
-                                          js_GetErrorMessage, NULL,
-                                          JSMSG_DEPRECATED_USAGE,
-                                          js_WithClass.name)) {
-            return JS_FALSE;
-        }
+    if (!JS_ReportErrorFlagsAndNumber(cx,
+                                      JSREPORT_WARNING | JSREPORT_STRICT,
+                                      js_GetErrorMessage, NULL,
+                                      JSMSG_DEPRECATED_USAGE,
+                                      js_WithClass.name)) {
+        return JS_FALSE;
     }
 
     if (!(cx->fp->flags & JSFRAME_CONSTRUCTING)) {
@@ -1659,8 +1655,11 @@ js_NewObject(JSContext *cx, JSClass *clasp, JSObject *proto, JSObject *parent)
 
     /* Allocate a slots vector, with a -1'st element telling its length. */
     newslots = (jsval *) JS_malloc(cx, (nslots + 1) * sizeof(jsval));
-    if (!newslots)
+    if (!newslots) {
+        js_DropObjectMap(cx, obj->map, obj);
+        obj->map = NULL;
         goto bad;
+    }
     newslots[0] = nslots;
     newslots++;
 
@@ -1783,10 +1782,8 @@ js_FinalizeObject(JSContext *cx, JSObject *obj)
     if (cx->runtime->objectHook)
         cx->runtime->objectHook(cx, obj, JS_FALSE, cx->runtime->objectHookData);
 
-#if JS_HAS_OBJ_WATCHPOINT
     /* Remove all watchpoints with weak links to obj. */
     JS_ClearWatchPointsForObject(cx, obj);
-#endif
 
     /*
      * Finalize obj first, in case it needs map and slots.  Optimized to use
@@ -1930,18 +1927,23 @@ js_AddNativeProperty(JSContext *cx, JSObject *obj, jsid id,
                      uintN attrs, uintN flags, intN shortid)
 {
     JSScope *scope;
+    JSScopeProperty *sprop;
 
+    JS_LOCK_OBJ(cx, obj);
     scope = js_GetMutableScope(cx, obj);
-    if (!scope)
-        return NULL;
-
-    /*
-     * Handle old bug that took empty string as zero index.  Also convert
-     * string indices to integers if appropriate.
-     */
-    CHECK_FOR_FUNNY_INDEX(id);
-    return js_AddScopeProperty(cx, scope, id, getter, setter, slot, attrs,
-                               flags, shortid);
+    if (!scope) {
+        sprop = NULL;
+    } else {
+        /*
+         * Handle old bug that took empty string as zero index.  Also convert
+         * string indices to integers if appropriate.
+         */
+        CHECK_FOR_FUNNY_INDEX(id);
+        sprop = js_AddScopeProperty(cx, scope, id, getter, setter, slot, attrs,
+                                    flags, shortid);
+    }
+    JS_UNLOCK_OBJ(cx, obj);
+    return sprop;
 }
 
 JSScopeProperty *
@@ -1951,16 +1953,19 @@ js_ChangeNativePropertyAttrs(JSContext *cx, JSObject *obj,
 {
     JSScope *scope;
     
+    JS_LOCK_OBJ(cx, obj);
     scope = js_GetMutableScope(cx, obj);
-    if (!scope)
-        return NULL;
-
-    sprop = js_ChangeScopePropertyAttrs(cx, scope, sprop, attrs, mask,
-                                        getter, setter);
-    if (!sprop)
-        return NULL;
-
-    PROPERTY_CACHE_FILL(&cx->runtime->propertyCache, obj, sprop->id, sprop);
+    if (!scope) {
+        sprop = NULL;
+    } else {
+        sprop = js_ChangeScopePropertyAttrs(cx, scope, sprop, attrs, mask,
+                                            getter, setter);
+        if (sprop) {
+            PROPERTY_CACHE_FILL(&cx->runtime->propertyCache, obj, sprop->id,
+                                sprop);
+        }
+    }
+    JS_UNLOCK_OBJ(cx, obj);
     return sprop;
 }
 
@@ -2590,9 +2595,15 @@ js_SetProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
             shortid = sprop->shortid;
             getter = sprop->getter;
             setter = sprop->setter;
-            if (setter == js_watch_set)
-                setter = js_GetWatchedSetter(rt, scope, sprop);
             JS_UNLOCK_SCOPE(cx, scope);
+
+            /* Recover watched setter *after* releasing scope's lock. */
+            if ((attrs & JSPROP_SETTER)
+                ? ((JSFunction *)JS_GetPrivate(cx, (JSObject *)setter))->native
+                  == js_watch_set_wrapper
+                : setter == js_watch_set) {
+                setter = js_GetWatchedSetter(rt, scope, sprop);
+            }
             sprop = NULL;
         }
 #ifdef __GNUC__         /* suppress bogus gcc warnings */
@@ -2904,7 +2915,7 @@ out:
     return JS_TRUE;
 }
 
-extern JSIdArray *
+JSIdArray *
 js_NewIdArray(JSContext *cx, jsint length)
 {
     JSIdArray *ida;
@@ -2916,7 +2927,7 @@ js_NewIdArray(JSContext *cx, jsint length)
     return ida;
 }
 
-extern JSIdArray *
+JSIdArray *
 js_GrowIdArray(JSContext *cx, JSIdArray *ida, jsint length)
 {
     ida = (JSIdArray *)

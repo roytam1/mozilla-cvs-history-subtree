@@ -421,6 +421,32 @@ nsTableFrame::RePositionViews(nsIPresContext* aPresContext,
   nsContainerFrame::PositionChildViews(aPresContext, aFrame);
 }
 
+PRBool
+nsTableFrame::PageBreakAfter(nsIFrame& aSourceFrame,
+                             nsIFrame* aNextFrame)
+{
+  nsCOMPtr<nsIStyleContext> sourceContext;
+  aSourceFrame.GetStyleContext(getter_AddRefs(sourceContext)); NS_ENSURE_TRUE(sourceContext, PR_FALSE);
+  const nsStyleDisplay* display = (const nsStyleDisplay*)
+    sourceContext->GetStyleData(eStyleStruct_Display);         NS_ENSURE_TRUE(display, PR_FALSE); 
+  // don't allow a page break after a repeated header
+  if (display->mBreakAfter && (NS_STYLE_DISPLAY_TABLE_HEADER_GROUP != display->mDisplay)) {
+    return PR_TRUE;
+  }
+
+  if (aNextFrame) {
+    nsCOMPtr<nsIStyleContext> nextContext;
+    aNextFrame->GetStyleContext(getter_AddRefs(nextContext));  NS_ENSURE_TRUE(nextContext, PR_FALSE);
+    display = (const nsStyleDisplay*)
+      nextContext->GetStyleData(eStyleStruct_Display);         NS_ENSURE_TRUE(display, PR_FALSE); 
+    // don't allow a page break before a repeated footer
+    if (display->mBreakBefore && (NS_STYLE_DISPLAY_TABLE_FOOTER_GROUP != display->mDisplay)) {
+      return PR_TRUE;
+    }
+  }
+  return PR_FALSE;
+}
+
 nsIPresShell*
 nsTableFrame::GetPresShellNoAddref(nsIPresContext* aPresContext)
 {
@@ -1756,39 +1782,6 @@ nsTableFrame::SetColumnDimensions(nsIPresContext* aPresContext,
 
 // SEC: TODO need to worry about continuing frames prev/next in flow for splitting across pages.
 
-// GetParentStyleContextProvider:
-//  The grandparent frame is he parent style context provider
-//  That is, the parent of the outerTableFrame is the frame that has our parent style context
-//  NOTE: if ther is a placeholder frame for the outer table, then we use its grandparent frame.
-//
-NS_IMETHODIMP 
-nsTableFrame::GetParentStyleContextProvider(nsIPresContext* aPresContext,
-                                            nsIFrame** aProviderFrame, 
-                                            nsContextProviderRelationship& aRelationship)
-{
-  NS_ASSERTION(aProviderFrame, "null argument aProviderFrame");
-  if (aProviderFrame) {
-    nsIFrame* f;
-    GetParent(&f);
-    NS_ASSERTION(f,"TableFrame has no parent frame");
-    if (f) {
-      // see if there is a placeholder frame representing our parent's place in the frame tree
-      // if there is, we get the parent of that frame as our surrogate grandparent
-      nsIFrame* placeholder = nsnull;
-      GetPlaceholderFor(*aPresContext,*f,&placeholder);
-      if (placeholder) {
-        f = placeholder;
-      } 
-      f->GetParent(&f);
-      NS_ASSERTION(f,"TableFrame has no grandparent frame");
-    }
-    // parent context provider is the grandparent frame
-    *aProviderFrame = f;
-    aRelationship = eContextProvider_Ancestor;
-  }
-  return ((aProviderFrame != nsnull) && (*aProviderFrame != nsnull)) ? NS_OK : NS_ERROR_FAILURE;
-}
-
 // XXX this could be made more general to handle row modifications that change the
 // table height, but first we need to scrutinize every Invalidate
 static void
@@ -1927,6 +1920,9 @@ NS_METHOD nsTableFrame::Reflow(nsIPresContext*          aPresContext,
 
   nsReflowReason nextReason = aReflowState.reason;
 
+  // Check for an overflow list, and append any row group frames being pushed
+  MoveOverflowToChildList(aPresContext);
+
   // Processes an initial (except when there is mPrevInFlow), incremental, or style 
   // change reflow 1st. resize reflows are processed in the next phase.
   switch (aReflowState.reason) {
@@ -1937,9 +1933,6 @@ NS_METHOD nsTableFrame::Reflow(nsIPresContext*          aPresContext,
         // NS_ASSERTION(PR_FALSE, "intial reflow called twice");
       }
       else {
-        // Check for an overflow list, and append any row group frames being pushed
-        MoveOverflowToChildList(aPresContext);
-
         if (!mPrevInFlow) { // only do pass1 on a first in flow
           if (IsAutoLayout()) {     
             // only do pass1 reflow on an auto layout table
@@ -3236,7 +3229,7 @@ nsTableFrame::ReflowChildren(nsIPresContext*     aPresContext,
   nsTableRowGroupFrame *thead, *tfoot;
   OrderRowGroups(rowGroups, numRowGroups, &aReflowState.firstBodySection, &thead, &tfoot);
   PRBool haveReflowedRowGroup = PR_FALSE;
-
+  PRBool pageBreak = PR_FALSE;
   for (PRUint32 childX = 0; ((PRInt32)childX) < rowGroups.Count(); childX++) {
     nsIFrame* kidFrame = (nsIFrame*)rowGroups.ElementAt(childX);
     // Get the frame state bits
@@ -3250,6 +3243,12 @@ nsTableFrame::ReflowChildren(nsIPresContext*     aPresContext,
     }
 
     if (doReflowChild) {
+      if (pageBreak) {
+        PushChildren(aPresContext, kidFrame, prevKidFrame);
+        aStatus = NS_FRAME_NOT_COMPLETE;
+        break;
+      }
+
       nsSize kidAvailSize(aReflowState.availSize);
       // if the child is a tbody in paginated mode reduce the height by a repeated footer
       nsIFrame* repeatedFooter = nsnull;
@@ -3297,12 +3296,19 @@ nsTableFrame::ReflowChildren(nsIPresContext*     aPresContext,
         haveReflowedRowGroup = PR_TRUE;
         aLastChildReflowed   = kidFrame;
 
+        pageBreak = PR_FALSE;
+        // see if there is a page break after this row group or before the next one
+        if (NS_FRAME_IS_COMPLETE(aStatus) && isPaginated && 
+            (NS_UNCONSTRAINEDSIZE != kidReflowState.availableHeight)) {
+          nsIFrame* nextKid = (childX + 1 < numRowGroups) ? (nsIFrame*)rowGroups.ElementAt(childX + 1) : nsnull;
+          pageBreak = PageBreakAfter(*kidFrame, nextKid);
+        }
         // Place the child
         PlaceChild(aPresContext, aReflowState, kidFrame, desiredSize);
   
         // Remember where we just were in case we end up pushing children
         prevKidFrame = kidFrame;
-  
+ 
         // Special handling for incomplete children
         if (NS_FRAME_IS_NOT_COMPLETE(aStatus)) {         
           kidFrame->GetNextInFlow(&kidNextInFlow);
@@ -4978,26 +4984,14 @@ BCMapCellIterator::First(BCMapCellInfo& aMapInfo)
   while (!mAtEnd) {
     if ((mAreaStart.y >= mRowGroupStart) && (mAreaStart.y <= mRowGroupEnd)) {
       CellData* cellData = mCellMap->GetDataAt(*mTableCellMap, mAreaStart.y - mRowGroupStart, mAreaStart.x, PR_FALSE);
-      if (cellData) {
-        if (!cellData->IsOrig()) {
-          // if the start data does not have an originating cell, adjust it to have one
-          if (cellData->IsRowSpan()) {
-            mAreaStart.y -= cellData->GetRowSpanOffset();
-            NS_ASSERTION(mAreaStart.y >= 0, "program error");
-          }
-          if (cellData->IsColSpan()) {
-            mAreaStart.x -= cellData->GetColSpanOffset();
-            NS_ASSERTION(mAreaStart.x >= 0, "program error");
-          }
-          cellData = mCellMap->GetDataAt(*mTableCellMap, mAreaStart.y - mRowGroupStart, mAreaStart.x, PR_FALSE);
-        }
-        if (cellData && cellData->IsOrig()) {
-          SetInfo(mRow, mAreaStart.x, cellData, aMapInfo);
-          break;
-        }
-        else mAtEnd = PR_TRUE;
+      if (cellData && cellData->IsOrig()) {
+        SetInfo(mRow, mAreaStart.x, cellData, aMapInfo);
+        break;
       }
-      else mAtEnd = PR_TRUE;
+      else {
+        NS_ASSERTION(PR_FALSE, "damage area expanded incorrectly");
+        mAtEnd = PR_TRUE;
+      }
     }
     SetNewRowGroup(); // could set mAtEnd
   } 
@@ -5610,9 +5604,9 @@ nsTableFrame::ExpandBCDamageArea(nsRect& aRect) const
   // to rebuild versus expand. This could be optimized to expand to the smallest area that contains
   // no spanners, but it may not be worth the effort in general, and it would need to be done in the
   // cell map as well.
+  PRBool haveSpanner = PR_FALSE;
   if ((dStartX > 0) || (dEndX < (numCols - 1)) || (dStartY > 0) || (dEndY < (numRows - 1))) {
     nsTableCellMap* tableCellMap = GetCellMap(); if (!tableCellMap) ABORT0();
-    PRBool haveSpanner = PR_FALSE;
     // Get the ordered row groups 
     PRUint32 numRowGroups;
     nsVoidArray rowGroups;
@@ -5683,10 +5677,19 @@ nsTableFrame::ExpandBCDamageArea(nsRect& aRect) const
       }
     }
   }
-  aRect.x      = dStartX;
-  aRect.y      = dStartY;
-  aRect.width  = 1 + dEndX - dStartX;
-  aRect.height = 1 + dEndY - dStartY;
+  if (haveSpanner) {
+    // make the damage area the whole table
+    aRect.x      = 0;
+    aRect.y      = 0;
+    aRect.width  = numCols;
+    aRect.height = numRows;
+  }
+  else {
+    aRect.x      = dStartX;
+    aRect.y      = dStartY;
+    aRect.width  = 1 + dEndX - dStartX;
+    aRect.height = 1 + dEndY - dStartY;
+  }
 }
 
 #define MAX_TABLE_BORDER_WIDTH 256

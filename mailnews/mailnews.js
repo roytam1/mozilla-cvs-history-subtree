@@ -130,14 +130,18 @@ pref("mail.compose.other.header",	    "");
 localDefPref("mail.fcc_folder",                     "");
 pref("mail.encrypt_outgoing_mail",          false);
 pref("mail.crypto_sign_outgoing_mail",      false);
-pref("mail.default_html_action", 0);    // 0=ask, 1=plain, 2=html, 3=both
-pref("mail.smtp.ssl",                       0); // 0 = no, 1 = try, 2 = must use SSL
-pref("mail.mdn.report.not_in_to_cc", 0);      // 0: Never 1: Always 2: Ask me
-pref("mail.mdn.report.outside_domain", 2);    // 0: Never 1: Always 2: Ask me
-pref("mail.mdn.report.other", 2);   // 0: Never 1: Always 2: Ask me 3: Denial
-pref("mail.incorporate.return_receipt", 1); // 0: inbox/filter 1: Sent folder
-pref("mail.request.return_receipt", 2);     // 1: DSN 2: MDN 3: Both
-pref("mail.receipt.request_header_type", 0); // 0: MDN-DNT header  1: RRT header 2: Both (MC)
+pref("mail.default_html_action", 0);          // 0=ask, 1=plain, 2=html, 3=both
+pref("mail.smtp.ssl",0);                      // 0 = no, 1 = try, 2 = must use SSL
+
+pref("mail.mdn.report.not_in_to_cc", 2);               // 0: Never 1: Always 2: Ask me
+pref("mail.mdn.report.outside_domain", 2);             // 0: Never 1: Always 2: Ask me
+pref("mail.mdn.report.other", 2);                      // 0: Never 1: Always 2: Ask me 3: Denial
+
+pref("mail.incorporate.return_receipt", 0);            // 0: Inbox/filter 1: Sent folder
+pref("mail.request.return_receipt", 2);                // 1: DSN 2: MDN 3: Both
+pref("mail.receipt.request_header_type", 0);           // 0: MDN-DNT header  1: RRT header 2: Both (MC)
+pref("mail.receipt.request_return_receipt_on", false);
+pref("mail.mdn.report.enabled", false);                // false: Never send true: Send sometimes
 
 pref("news.default_cc",                     "");
 pref("news.default_fcc",                    ""); // mailbox:URL or Imap://Host/OnlineFolderName
@@ -156,12 +160,12 @@ pref("mailnews.reply_on_top",               0); // 0=bottom 1=top 2=select+botto
 pref("mailnews.reply_header_type",          1);
 // locale which affects date format, set empty string to use application default locale
 pref("mailnews.reply_header_locale",        "en-US");
-pref("mailnews.reply_header_authorwrote",   "%s wrote");
+pref("mailnews.reply_header_authorwrote",   "chrome://messenger/locale/messengercompose/composeMsgs.properties");
 pref("mailnews.reply_header_ondate",        "On %s");
 // separator to separate between date and author
 pref("mailnews.reply_header_separator",     ", ");
 pref("mailnews.reply_header_colon",         ":");
-pref("mailnews.reply_header_originalmessage",   "--- Original Message ---");
+pref("mailnews.reply_header_originalmessage",   "chrome://messenger/locale/messengercompose/composeMsgs.properties");
 
 pref("mail.purge_threshhold",                100);
 pref("mail.prompt_purge_threshhold",             false);   

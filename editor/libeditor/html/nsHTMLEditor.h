@@ -119,7 +119,11 @@ public:
 
   /* ------------ nsIHTMLEditor methods -------------- */
 
-  NS_IMETHOD ParseStyleAttrIntoCSSRule(const PRUnichar *aString, nsIDOMCSSStyleRule **_retval); 
+  NS_IMETHOD CopyLastEditableChildStyles(nsIDOMNode *aPreviousBlock, nsIDOMNode *aNewBlock,
+                                         nsIDOMNode **aOutBrNode);
+
+  NS_IMETHOD ParseStyleAttrIntoCSSRule(const nsAString& aString,
+                                       nsIDOMCSSStyleRule **_retval); 
 
   NS_IMETHOD SetCSSInlineProperty(nsIAtom *aProperty, 
                              const nsAReadableString & aAttribute, 
@@ -191,8 +195,8 @@ public:
 
   NS_IMETHOD GetLinkedObjects(nsISupportsArray** aNodeList);
 
-  NS_IMETHOD SetCSSEnabled(PRBool aIsCSSPrefChecked);
-  NS_IMETHOD IsCSSEnabled(PRBool  * aIsCSSEnabled);
+  NS_IMETHOD SetIsCSSEnabled(PRBool aIsCSSPrefChecked);
+  NS_IMETHOD GetIsCSSEnabled(PRBool *aIsCSSEnabled);
 
   /* ------------ nsIEditorIMESupport overrides -------------- */
   
@@ -244,14 +248,18 @@ public:
   NS_IMETHOD JoinTableCells(PRBool aMergeNonContiguousContents);
   NS_IMETHOD SplitTableCell();
   NS_IMETHOD NormalizeTable(nsIDOMElement *aTable);
-  NS_IMETHOD GetCellIndexes(nsIDOMElement *aCell, PRInt32& aRowIndex, PRInt32& aColIndex);
-  NS_IMETHOD GetTableSize(nsIDOMElement *aTable, PRInt32& aRowCount, PRInt32& aColCount);
+  NS_IMETHOD GetCellIndexes(nsIDOMElement *aCell,
+                            PRInt32* aRowIndex, PRInt32* aColIndex);
+  NS_IMETHOD GetTableSize(nsIDOMElement *aTable,
+                          PRInt32* aRowCount, PRInt32* aColCount);
   NS_IMETHOD GetCellAt(nsIDOMElement* aTable, PRInt32 aRowIndex, PRInt32 aColIndex, nsIDOMElement **aCell);
-  NS_IMETHOD GetCellDataAt(nsIDOMElement* aTable, PRInt32 aRowIndex, PRInt32 aColIndex, nsIDOMElement **aCell,
-                           PRInt32& aStartRowIndex, PRInt32& aStartColIndex,
-                           PRInt32& aRowSpan, PRInt32& aColSpan, 
-                           PRInt32& aActualRowSpan, PRInt32& aActualColSpan, 
-                           PRBool& aIsSelected);
+  NS_IMETHOD GetCellDataAt(nsIDOMElement* aTable,
+                           PRInt32 aRowIndex, PRInt32 aColIndex,
+                           nsIDOMElement **aCell,
+                           PRInt32* aStartRowIndex, PRInt32* aStartColIndex,
+                           PRInt32* aRowSpan, PRInt32* aColSpan, 
+                           PRInt32* aActualRowSpan, PRInt32* aActualColSpan, 
+                           PRBool* aIsSelected);
   NS_IMETHOD GetFirstRow(nsIDOMElement* aTableElement, nsIDOMNode** aRowNode);
   NS_IMETHOD GetNextRow(nsIDOMNode* aCurrentRowNode, nsIDOMNode** aRowNode);
   NS_IMETHOD GetFirstCellInRow(nsIDOMNode* aRowNode, nsIDOMNode** aCellNode);
@@ -260,8 +268,10 @@ public:
 
   NS_IMETHOD SetSelectionAfterTableEdit(nsIDOMElement* aTable, PRInt32 aRow, PRInt32 aCol, 
                                         PRInt32 aDirection, PRBool aSelected);
-  NS_IMETHOD GetSelectedOrParentTableElement(nsIDOMElement* &aTableElement, nsString& aTagName, PRInt32 &aSelectedCount);
-  NS_IMETHOD GetSelectedCellsType(nsIDOMElement *aElement, PRUint32 &aSelectionType);
+  NS_IMETHOD GetSelectedOrParentTableElement(nsIDOMElement** aTableElement,
+                                             nsAString& aTagName,
+                                             PRInt32 *aSelectedCount);
+  NS_IMETHOD GetSelectedCellsType(nsIDOMElement *aElement, PRUint32 *aSelectionType);
 
   nsresult GetCellFromRange(nsIDOMRange *aRange, nsIDOMElement **aCell);
 
@@ -385,6 +395,8 @@ public:
   NS_IMETHOD SetAttributeOrEquivalent(nsIDOMElement * aElement,
                                       const nsAReadableString & aAttribute,
                                       const nsAReadableString & aValue);
+  NS_IMETHOD RemoveAttributeOrEquivalent(nsIDOMElement * aElement,
+                                         const nsAReadableString & aAttribute);
 
   /** join together any afjacent editable text nodes in the range */
   NS_IMETHOD CollapseAdjacentTextNodes(nsIDOMRange *aInRange);
@@ -600,7 +612,7 @@ protected:
                                              const nsAReadableString & aCharset,
                                              const nsAReadableString & aContextStr,
                                              const nsAReadableString & aInfoStr);
-  nsresult   StripFormattingNodes(nsIDOMNode *aNode);
+  nsresult   StripFormattingNodes(nsIDOMNode *aNode, PRBool aOnlyList = PR_FALSE);
   nsresult   CreateDOMFragmentFromPaste(nsIDOMNSRange *aNSRange,
                                         const nsAReadableString & aInputString,
                                         const nsAReadableString & aContextStr,

@@ -206,7 +206,8 @@ public:
                             nsISupports* aSubContent);
   NS_IMETHOD ContentStatesChanged(nsIPresContext* aPresContext, 
                                   nsIContent* aContent1,
-                                  nsIContent* aContent2);
+                                  nsIContent* aContent2,
+                                  nsIAtom* aChangedPseudoClass);
   NS_IMETHOD AttributeChanged(nsIPresContext*  aPresContext,
                               nsIContent* aChild,
                               PRInt32 aNameSpaceID,
@@ -887,6 +888,12 @@ EnumRulesMatching(nsISupports* aProcessor, void* aData)
   return PR_TRUE;
 }
 
+/**
+ * |GetContext| implements sharing of style contexts (not just the data
+ * on the rule nodes) between siblings and cousins of the same
+ * generation.  (It works for cousins of the same generation since
+ * |aParentContext| could itself be a shared context.)
+ */
 nsIStyleContext* StyleSetImpl::GetContext(nsIPresContext* aPresContext, 
                                           nsIStyleContext* aParentContext, 
                                           nsIAtom* aPseudoTag, 
@@ -1476,9 +1483,11 @@ StyleSetImpl::ContentChanged(nsIPresContext* aPresContext,
 NS_IMETHODIMP
 StyleSetImpl::ContentStatesChanged(nsIPresContext* aPresContext, 
                                    nsIContent* aContent1,
-                                   nsIContent* aContent2)
+                                   nsIContent* aContent2,
+                                   nsIAtom* aChangedPseudoClass)
 {
-  return mFrameConstructor->ContentStatesChanged(aPresContext, aContent1, aContent2);
+  return mFrameConstructor->ContentStatesChanged(aPresContext, aContent1, aContent2,
+                                                 aChangedPseudoClass);
 }
 
 

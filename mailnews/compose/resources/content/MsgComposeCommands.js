@@ -151,9 +151,7 @@ function ReleaseGlobalVariables()
 
 function disableEditableFields()
 {
-  var flags = new Object;
-  editorShell.editor.GetFlags(flags);
-  editorShell.editor.SetFlags(flags.value | nsIPlaintextEditor.eEditorReadonlyMask);
+  editorShell.editor.flags |= nsIPlaintextEditor.eEditorReadonlyMask;
   var disableElements = document.getElementsByAttribute("disableonsend", "true");
   for (i=0;i<disableElements.length;i++)
   {
@@ -163,9 +161,7 @@ function disableEditableFields()
 
 function enableEditableFields()
 {
-  var flags = new Object;
-  editorShell.editor.GetFlags(flags);
-  editorShell.editor.SetFlags(flags.value ^ nsIPlaintextEditor.eEditorReadonlyMask);
+  editorShell.editor.flags ^= nsIPlaintextEditor.eEditorReadonlyMask;
   var enableElements = document.getElementsByAttribute("disableonsend", "true");
   for (i=0;i<enableElements.length;i++)
   {
@@ -346,6 +342,8 @@ var defaultController =
 
       //Edit Menu
       case "cmd_pasteQuote":
+      case "cmd_delete":
+      case "cmd_selectAll":
       case "cmd_find":
       case "cmd_findNext":
       case "cmd_account":
@@ -463,6 +461,10 @@ var defaultController =
       case "cmd_findNext":
         //Disable the editor specific edit commands if the focus is not into the body
         return !focusedElement;
+      case "cmd_delete":
+        return MessageHasSelectedAttachments();
+      case "cmd_selectAll":
+        return MessageHasAttachments();
       case "cmd_account":
       case "cmd_preferences":
         return true;
@@ -583,6 +585,8 @@ var defaultController =
       case "cmd_print"              : DoCommandPrint();                                                        break;
 
       //Edit Menu
+      case "cmd_delete"             : if (MessageHasSelectedAttachments()) RemoveSelectedAttachment();         break;
+      case "cmd_selectAll"          : if (MessageHasAttachments()) SelectAllAttachments();                     break;
       case "cmd_account"            : MsgAccountManager(null); break;
       case "cmd_preferences"        : DoCommandPreferences(); break;
 
@@ -665,6 +669,8 @@ function updateComposeItems() {
 
 function updateEditItems() {
   goUpdateCommand("cmd_pasteQuote");
+  goUpdateCommand("cmd_delete");
+  goUpdateCommand("cmd_selectAll");
   goUpdateCommand("cmd_find");
   goUpdateCommand("cmd_findNext");
 }
@@ -2108,7 +2114,6 @@ function AttachFile()
       fp.appendFilters(nsIFilePicker.filterAll);
       if (fp.show() == nsIFilePicker.returnOK) {
         currentAttachment = fp.fileURL.spec;
-        //dump("nsIFilePicker - "+currentAttachment+"\n");
         SetLastAttachDirectory(fp.file)
       }
   }
@@ -2119,22 +2124,17 @@ function AttachFile()
   if (currentAttachment == "")
     return;
 
-  if (!(DuplicateFileCheck(currentAttachment)))
+  if (DuplicateFileCheck(currentAttachment))
   {
-    var attachment = Components.classes["@mozilla.org/messengercompose/attachment;1"].createInstance(Components.interfaces.nsIMsgAttachment);
-    attachment.url = currentAttachment;
-    AddAttachment(attachment);
-    gContentChanged = true;
+    dump("Error, attaching the same item twice\n");
   }
   else
   {
-    dump("###ERROR ADDING DUPLICATE FILE \n");
-    var errorTitle = sComposeMsgsBundle.getString("DuplicateFileErrorDlogTitle");
-    var errorMsg = sComposeMsgsBundle.getString("DuplicateFileErrorDlogMessage");
-    if (gPromptService)
-      gPromptService.alert(window, errorTitle, errorMsg);
-    else
-      window.alert(errorMsg);
+    var attachment = Components.classes["@mozilla.org/messengercompose/attachment;1"]
+                     .createInstance(Components.interfaces.nsIMsgAttachment);
+    attachment.url = currentAttachment;
+    AddAttachment(attachment);
+    gContentChanged = true;
   }
 }
 
@@ -2156,13 +2156,39 @@ function AddAttachment(attachment)
     }
     catch(e) {cell.setAttribute("tooltiptext", attachment.url);}
     cell.setAttribute("class", "treecell-iconic");
-    cell.setAttribute('src', "moz-icon:" + attachment.url);
+    cell.setAttribute("src", "moz-icon:" + attachment.url);
     row.appendChild(cell);
     item.appendChild(row);
     bucketBody.appendChild(item);
   }
 }
 
+function SelectAllAttachments()
+{
+  var bucketTree = document.getElementById("attachmentBucket");
+  if (bucketTree)
+    bucketTree.selectAll();
+}
+
+function MessageHasAttachments()
+{
+  var bucketTree = document.getElementById("attachmentBucket");
+  if (bucketTree)
+  {
+    var body = document.getElementById("bucketBody");
+    return (body && body.hasChildNodes() && (bucketTree == top.document.commandDispatcher.focusedElement));
+  }
+  return false;
+}
+
+function MessageHasSelectedAttachments()
+{
+  var bucketTree = document.getElementById("attachmentBucket");
+
+  if (bucketTree)
+    return (MessageHasAttachments() && bucketTree.selectedItems.length);
+  return false;
+}
 
 function AttachPage()
 {
@@ -2267,8 +2293,9 @@ function RemoveSelectedAttachment()
 
       gContentChanged = true;
     }
+    // Clear selection after removal
+    bucketTree.selectedItems.length = 0;
   }
-
 }
 
 function FocusOnFirstAttachment()
@@ -2529,45 +2556,64 @@ function editorKeyPress(event)
 
 function AttachmentBucketClicked(event)
 {
+  if (event.button != 0)
+    return;
+
   if (event.originalTarget.localName == 'treechildren')
     goDoCommand('cmd_attachFile');
 }
 
 var attachmentBucketObserver = {
+
+  canHandleMultipleItems: true,
+
   onDrop: function (aEvent, aData, aDragSession)
     {
-      var prettyName;
-      var rawData = aData.data;
-      switch (aData.flavour.contentType) {
-      case "text/x-moz-url":
-      case "text/x-moz-message-or-folder":
-        var separator = rawData.indexOf("\n");
-        if (separator != -1) {
-          prettyName = rawData.substr(separator+1);
-          rawData = rawData.substr(0,separator);
-        }
-        break;
-      case "application/x-moz-file":
-        var ioService = Components.classes["@mozilla.org/network/io-service;1"]
-            .getService(Components.interfaces.nsIIOService);
-        rawData = ioService.getURLSpecFromFile(aData.data);
-        break;
-      }
-      if (!(DuplicateFileCheck(rawData)))
+      var dataList = aData.dataList;
+      var dataListLength = dataList.length;
+      var errorTitle;
+      var attachment;
+      var errorMsg;
+
+      for (var i = 0; i < dataListLength; i++) 
       {
-        var attachment = Components.classes["@mozilla.org/messengercompose/attachment;1"].createInstance(Components.interfaces.nsIMsgAttachment);
-        attachment.url = rawData;
-        attachment.name = prettyName;
-        AddAttachment(attachment);
-        gContentChanged = true;
-      }
-      else {
-        var errorTitle = sComposeMsgsBundle.getString("DuplicateFileErrorDlogTitle");
-        var errorMsg = sComposeMsgsBundle.getString("DuplicateFileErrorDlogMessage");
-        if (gPromptService)
-          gPromptService.alert(window, errorTitle, errorMsg);
-        else
-          window.alert(errorMsg);
+        var item = dataList[i].first;
+        var prettyName;
+        var rawData = item.data;
+        
+        if (item.flavour.contentType == "text/x-moz-url" ||
+            item.flavour.contentType == "text/x-moz-message-or-folder" ||
+            item.flavour.contentType == "application/x-moz-file")
+        {
+          if (item.flavour.contentType == "application/x-moz-file")
+          {
+            var ioService = Components.classes["@mozilla.org/network/io-service;1"]
+                            .getService(Components.interfaces.nsIIOService);
+            rawData = ioService.getURLSpecFromFile(aData.data);
+          }
+          else
+          {
+            var separator = rawData.indexOf("\n");
+            if (separator != -1) 
+            {
+              prettyName = rawData.substr(separator+1);
+              rawData = rawData.substr(0,separator);
+            }
+          }
+
+          if (DuplicateFileCheck(rawData)) 
+          {
+            dump("Error, attaching the same item twice\n");
+          }
+          else 
+          {
+            attachment = Components.classes["@mozilla.org/messengercompose/attachment;1"]
+                         .createInstance(Components.interfaces.nsIMsgAttachment);
+            attachment.url = rawData;
+            attachment.name = prettyName;
+            AddAttachment(attachment);
+          }
+        }
       }
     },
 

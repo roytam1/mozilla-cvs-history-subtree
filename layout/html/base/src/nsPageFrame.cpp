@@ -95,6 +95,8 @@ static NS_DEFINE_CID(kCChildCID, NS_CHILD_CID);
 #define PRINT_DEBUG_MSG5(_msg1, _msg2, _msg3, _msg4, _msg5) 
 #endif
 
+// XXX Part of Temporary fix for Bug 127263
+PRBool nsPageFrame::mDoCreateWidget = PR_TRUE;
 
 nsresult
 NS_NewPageFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
@@ -130,12 +132,12 @@ nsPageFrame::SetInitialChildList(nsIPresContext* aPresContext,
 {
   nsIView * view;
   aChildList->GetView(aPresContext, &view);
-  if (view != nsnull) {
+  if (view != nsnull && mDoCreateWidget) {
     nscoord dx, dy;
-    nsIWidget* widget;
-    view->GetOffsetFromWidget(&dx, &dy, widget);
+    nsCOMPtr<nsIWidget> widget;
+    view->GetOffsetFromWidget(&dx, &dy, *getter_AddRefs(widget));
     nsCOMPtr<nsIPrintPreviewContext> ppContext = do_QueryInterface(aPresContext);
-    if (ppContext && widget != nsnull) {
+    if (ppContext && widget) {
       view->CreateWidget(kCChildCID);  
     }
   }
@@ -286,29 +288,21 @@ nsPageFrame::IsPercentageBase(PRBool& aBase) const
   return NS_OK;
 }
 
-//------------------------------------------------------------------------------
-// helper function for converting from char * to unichar
-static PRUnichar *
-GetUStr(const char * aCStr)
-{
-  return ToNewUnicode(nsDependentCString(aCStr));
-}
-
 // Remove fix below when string gets fixed
 #define WORKAROUND_FOR_BUG_110335
 // replace the &<code> with the value, but if the value is empty
 // set the string to zero length
 static void
-SubstValueForCode(nsString& aStr, PRUnichar * aUKey, PRUnichar * aUStr)
+SubstValueForCode(nsString& aStr, const PRUnichar * aUKey, const PRUnichar * aUStr)
 {
 #ifdef WORKAROUND_FOR_BUG_110335
-  PRUnichar* uKeyStr = aUKey;
+  const PRUnichar* uKeyStr = aUKey;
 
   // Check to make sure our subst code &<code> isn't in the data string
   // for example &T for title is in QB&T
   nsAutoString dataStr(aUStr);
   nsAutoString newKey(aUKey);
-  PRBool fixingSubstr = dataStr.Find(newKey) > -1;
+  PRBool fixingSubstr = (dataStr.Find(newKey) != kNotFound);
   if (fixingSubstr) {
     // well, the code is in the data str so make up a new code
     // but make sure it it isn't in either substs string or the data string
@@ -327,14 +321,11 @@ SubstValueForCode(nsString& aStr, PRUnichar * aUKey, PRUnichar * aUStr)
 
     // Ok, we have the new code, so repplace the old code 
     // in the dest str with the new code
-    nsAutoString oldKey(aUKey);
-    aStr.ReplaceSubstring(oldKey, newKey);
+    aStr.ReplaceSubstring(aUKey, newKey.get());
     uKeyStr = ToNewUnicode(newKey);
   }
 
-  nsAutoString str;
-  str = aUStr;
-  if (str.Length() == 0) {
+  if (nsCRT::strlen(aUStr) == 0) {
     aStr.SetLength(0);
   } else {
     aStr.ReplaceSubstring(uKeyStr, aUStr);
@@ -342,12 +333,11 @@ SubstValueForCode(nsString& aStr, PRUnichar * aUKey, PRUnichar * aUStr)
 
   // Free uKeyStr only if we fixed the string.
   if (fixingSubstr) {
-    nsMemory::Free(uKeyStr);
+    nsMemory::Free(NS_CONST_CAST(PRUnichar*, uKeyStr));
   }
 #else
-  nsAutoString str;
-  str = aUStr;
-  if (str.Length() == 0) {
+
+  if (nsCRT::strlen(aUStr) == 0) {
     aStr.SetLength(0);
   } else {
     aStr.ReplaceSubstring(aUKey, aUStr);
@@ -366,74 +356,53 @@ nsPageFrame::ProcessSpecialCodes(const nsString& aStr, nsString& aNewStr)
 
   // Search to see if the &D code is in the string 
   // then subst in the current date/time
-  PRUnichar * kDate = GetUStr("&D");
-  if (kDate != nsnull) {
-    if (aStr.Find(kDate) > -1) {
-      if (mPD->mDateTimeStr != nsnull) {
-        aNewStr.ReplaceSubstring(kDate, mPD->mDateTimeStr);
-      } else {
-        aNewStr.ReplaceSubstring(kDate, NS_LITERAL_STRING("").get());
-      }
-      nsMemory::Free(kDate);
-      return;
+  NS_NAMED_LITERAL_STRING(kDate, "&D");
+  if (aStr.Find(kDate) != kNotFound) {
+    if (mPD->mDateTimeStr != nsnull) {
+      aNewStr.ReplaceSubstring(kDate.get(), mPD->mDateTimeStr);
+    } else {
+      aNewStr.ReplaceSubstring(kDate.get(), NS_LITERAL_STRING("").get());
     }
-    nsMemory::Free(kDate);
+    return;
   }
 
   // NOTE: Must search for &PT before searching for &P
   //
   // Search to see if the "page number and page" total code are in the string
-  // and replace the page number and page total code with the actual values
-  PRUnichar * kPage = GetUStr("&PT");
-  if (kPage != nsnull) {
-    if (aStr.Find(kPage) > -1) {
-      PRUnichar * uStr = nsTextFormatter::smprintf(mPD->mPageNumAndTotalsFormat, mPageNum, mTotNumPages);
-      aNewStr.ReplaceSubstring(kPage, uStr);
-      nsMemory::Free(uStr);
-      nsMemory::Free(kPage);
-      return;
-    }
-    nsMemory::Free(kPage);
+  // and replace the page number and page total code with the actual
+  // values
+  NS_NAMED_LITERAL_STRING(kPageAndTotal, "&PT");
+  if (aStr.Find(kPageAndTotal) != kNotFound) {
+    PRUnichar * uStr = nsTextFormatter::smprintf(mPD->mPageNumAndTotalsFormat, mPageNum, mTotNumPages);
+    aNewStr.ReplaceSubstring(kPageAndTotal.get(), uStr);
+    nsMemory::Free(uStr);
+    return;
   }
 
   // Search to see if the page number code is in the string
-  // and replace the page number code with the actual values
-  kPage = GetUStr("&P");
-  if (kPage != nsnull) {
-    if (aStr.Find(kPage) > -1) {
-      PRUnichar * uStr = nsTextFormatter::smprintf(mPD->mPageNumFormat, mPageNum);
-      aNewStr.ReplaceSubstring(kPage, uStr);
-      nsMemory::Free(uStr);
-      nsMemory::Free(kPage);
-      return;
-    }
-    nsMemory::Free(kPage);
+  // and replace the page number code with the actual value
+  NS_NAMED_LITERAL_STRING(kPage, "&P");
+  if (aStr.Find(kPage) != kNotFound) {
+    PRUnichar * uStr = nsTextFormatter::smprintf(mPD->mPageNumFormat, mPageNum);
+    aNewStr.ReplaceSubstring(kPage.get(), uStr);
+    nsMemory::Free(uStr);
+    return;
   }
 
-  PRUnichar * kTitle = GetUStr("&T");
-  if (kTitle != nsnull) {
-    if (aStr.Find(kTitle) > -1) {
-      PRUnichar * uTitle;
-      mPD->mPrintOptions->GetTitle(&uTitle);   // creates memory
-      SubstValueForCode(aNewStr, kTitle, uTitle);
-      nsMemory::Free(uTitle);
-      nsMemory::Free(kTitle);
-      return;
-    }
-    nsMemory::Free(kTitle);
+  NS_NAMED_LITERAL_STRING(kTitle, "&T");
+  if (aStr.Find(kTitle) != kNotFound) {
+    nsXPIDLString uTitle;
+    mPD->mPrintOptions->GetTitle(getter_Copies(uTitle));
+    SubstValueForCode(aNewStr, kTitle.get(), uTitle.get());
+    return;
   }
 
-  PRUnichar * kDocURL = GetUStr("&U");
-  if (kDocURL != nsnull) {
-    if (aStr.Find(kDocURL) > -1) {
-      PRUnichar * uDocURL;
-      mPD->mPrintOptions->GetDocURL(&uDocURL);   // creates memory
-      SubstValueForCode(aNewStr, kDocURL, uDocURL);
-      nsMemory::Free(uDocURL);
-      nsMemory::Free(kDocURL);
-      return;
-    }
-    nsMemory::Free(kDocURL);
+  NS_NAMED_LITERAL_STRING(kDocURL, "&U");
+  if (aStr.Find(kDocURL) != kNotFound) {
+    nsXPIDLString uDocURL;
+    mPD->mPrintOptions->GetDocURL(getter_Copies(uDocURL));
+    SubstValueForCode(aNewStr, kDocURL.get(), uDocURL.get());
+    return;
   }
 }
 
@@ -756,4 +725,91 @@ nsPageFrame::DrawBackground(nsIPresContext*      aPresContext,
                                     aDirtyRect, rect, *border, 0, 0, PR_TRUE);      
   }
 }
+
+nsresult
+NS_NewPageBreakFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
+{
+  NS_PRECONDITION(aPresShell && aNewFrame, "null PresShell or OUT ptr");
+#ifdef DEBUG
+  //check that we are only creating page break frames when printing
+  nsCOMPtr<nsIPresContext> presContext;    
+  aPresShell->GetPresContext(getter_AddRefs(presContext));
+  PRBool isPaginated;
+  presContext->IsPaginated(&isPaginated);
+  NS_ASSERTION(isPaginated, "created a page break frame while not printing");
+#endif
+
+  nsPageBreakFrame* it = new (aPresShell) nsPageBreakFrame;
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  *aNewFrame = it;
+  return NS_OK;
+}
+
+nsPageBreakFrame::nsPageBreakFrame()
+: mHaveReflowed(PR_FALSE)
+{
+}
+
+nsPageBreakFrame::~nsPageBreakFrame()
+{
+}
+
+void 
+nsPageBreakFrame::GetDesiredSize(nsIPresContext*          aPresContext,
+                                 const nsHTMLReflowState& aReflowState,
+                                 nsHTMLReflowMetrics&     aDesiredSize)
+{
+  NS_PRECONDITION(aPresContext, "null pres context");
+  float p2t;
+  aPresContext->GetScaledPixelsToTwips(&p2t);
+  nscoord onePixel = NSToCoordRound(p2t);
+
+  aDesiredSize.width  = onePixel;
+  if (mHaveReflowed) {
+    // If blocks reflow us a 2nd time trying to put us on a new page, then return
+    // a desired height of 0 to avoid an extra page break. 
+    aDesiredSize.height = 0;
+  }
+  else {
+    aDesiredSize.height = aReflowState.availableHeight;
+    // round the height down to the nearest pixel
+    aDesiredSize.height -= aDesiredSize.height % onePixel;
+  }
+
+  if (aDesiredSize.maxElementSize) {
+    aDesiredSize.maxElementSize->width  = onePixel;
+    aDesiredSize.maxElementSize->height = aDesiredSize.height;
+  }
+  aDesiredSize.ascent  = 0;
+  aDesiredSize.descent = 0;
+}
+
+nsresult 
+nsPageBreakFrame::Reflow(nsIPresContext*          aPresContext,
+                         nsHTMLReflowMetrics&     aDesiredSize,
+                         const nsHTMLReflowState& aReflowState,
+                         nsReflowStatus&          aStatus)
+{
+  NS_PRECONDITION(aPresContext, "null pres context");
+  DO_GLOBAL_REFLOW_COUNT("nsTableFrame", aReflowState.reason);
+  DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
+
+  aStatus = NS_FRAME_COMPLETE; 
+  GetDesiredSize(aPresContext, aReflowState, aDesiredSize);
+  mHaveReflowed = PR_TRUE;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsPageBreakFrame::GetFrameType(nsIAtom** aType) const
+{
+  NS_PRECONDITION(nsnull != aType, "null OUT parameter pointer");
+  *aType = nsLayoutAtoms::pageBreakFrame; 
+  NS_ADDREF(*aType);
+  return NS_OK;
+}
+
 

@@ -119,7 +119,8 @@ nsHttpTransaction::~nsHttpTransaction()
 nsresult
 nsHttpTransaction::SetupRequest(nsHttpRequestHead *requestHead,
                                 nsIInputStream *requestBody,
-                                PRBool requestBodyHasHeaders)
+                                PRBool requestBodyHasHeaders,
+                                PRBool pruneProxyHeaders)
 {
     nsresult rv;
 
@@ -155,7 +156,7 @@ nsHttpTransaction::SetupRequest(nsHttpRequestHead *requestHead,
     mRequestHead = requestHead;
 
     mReqHeaderBuf.SetLength(0);
-    requestHead->Flatten(mReqHeaderBuf);
+    requestHead->Flatten(mReqHeaderBuf, pruneProxyHeaders);
 
 #if defined(PR_LOGGING)
     if (LOG2_ENABLED()) {
@@ -890,18 +891,7 @@ nsHttpTransaction::ReadSegments(nsWriteSegmentFun writer, void *closure,
 }
 
 NS_IMETHODIMP
-nsHttpTransaction::GetNonBlocking(PRBool *result)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsHttpTransaction::GetObserver(nsIInputStreamObserver **obs)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-NS_IMETHODIMP
-nsHttpTransaction::SetObserver(nsIInputStreamObserver *obs)
+nsHttpTransaction::IsNonBlocking(PRBool *result)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }

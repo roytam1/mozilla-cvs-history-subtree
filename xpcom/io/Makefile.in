@@ -78,6 +78,7 @@ EXPORTS		= \
 		nsAppDirectoryServiceDefs.h \
 		nsDirectoryService.h \
 		nsDirectoryServiceDefs.h \
+		nsDirectoryServiceUtils.h \
 		nsEscape.h \
 		nsFastLoadPtr.h \
 		nsFastLoadService.h \
@@ -129,6 +130,8 @@ XPIDLSRCS	= \
 		nsIStorageStream.idl \
 		nsIStreamBufferAccess.idl \
 		nsIStringStream.idl \
+		nsIObservableInputStream.idl \
+		nsIObservableOutputStream.idl \
 		$(NULL)
 
 SDK_XPIDLSRCS   = \
