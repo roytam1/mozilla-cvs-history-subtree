@@ -114,14 +114,49 @@ CC=cc
 ###############################################################################
 # You should not need to change anything below here....
 
+INTERNAL_LIBLDAP_HEADERS=$(wildcard ../libraries/libldap/*.h)
+ifeq (,$(findstring h, $(INTERNAL_LIBLDAP_HEADERS)))
+IN_SRC_TREE=0
+else
+IN_SRC_TREE=1
+endif
+
+ifneq ($(IN_SRC_TREE),1)
+# we are not in the C SDK source tree... so must be in a binary distribution
 INCDIR=../include
 LIBDIR=../lib
 NSPRINCDIR=../include
 NSPRLIBDIR=../lib
 
+else
+# we are in the C SDK source tree... paths to headers and libs are different
+NS_DEPTH	= ../../..
+LDAP_SRC	= ..
+NSCP_DISTDIR	= ../../../../dist
+NSPR_TREE	= ../..
+MOD_DEPTH	= ../..
+
+ifeq ($(HAVE_CCONF), 1)
+COMPS_FROM_OBJDIR=1
+endif
+
+include $(NSPR_TREE)/config/config.mk
+
+ifeq ($(COMPS_FROM_OBJDIR),1)
+NSPR_DISTDIR=$(NSCP_DISTDIR)/$(OBJDIR_NAME)
+else
+NSPR_DISTDIR=$(NSCP_DISTDIR)
+endif
+
+INCDIR=$(NSCP_DISTDIR)/public/ldap
+LIBDIR=$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib
+NSPRINCDIR=$(NSPR_DISTDIR)/include
+NSPRLIBDIR=$(NSPR_DISTDIR)/lib
+endif
+
 LIBS=-L$(LIBDIR) -l$(LDAPLIB) $(EXTRALDFLAGS)
 NSPRLIBS=$(EXTRANSPRLDFLAGS) -L$(NSPRLIBDIR) -l$(NSPRLIB) -l$(LDAPPRLIB)
-SLIBS=-L$(LIBDIR) -l$(SLDAPLIB) $(NSPRLIBS) $(EXTRALDFLAGS)
+SLIBS=-L$(LIBDIR) $(NSPRLIBS) -l$(SLDAPLIB) $(EXTRALDFLAGS)
 OPTFLAGS=-g
 CFLAGS=$(OPTFLAGS) -I$(INCDIR) -I$(NSPRINCDIR) $(EXTRACFLAGS)
 NSPRCFLAGS=-I$(NSPRINCDIR)
@@ -132,7 +167,7 @@ SSLPROGS=ssnoauth ssearch
 
 NSPRPROGS=nsprio
 
-ALLPROGS= $(PROGS)
+ALLPROGS= $(PROGS) $(SSLPROGS) $(NSPRPROGS)
 
 standard:	$(PROGS)
 
@@ -231,7 +266,7 @@ crtfilt:	crtfilt.o
 crtfilt.o:	examples.h
 
 nsprio:		nsprio.o
-		$(CC) -o nsprio nsprio.o $(NSPRLIBS) $(LIBS)
+		$(CC) -o nsprio nsprio.o $(LIBS) $(NSPRLIBS)
 
 nsprio.o:	examples.h
 

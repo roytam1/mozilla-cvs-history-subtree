@@ -47,7 +47,7 @@ main( int argc, char **argv )
     LDAP	    	*ld;
     LDAPMessage	    	*result, *e;
     BerElement	    	*ber;
-    char	    	*a, *dn;
+    char	    	*host, *a, *dn;
     char	  	**vals;
     int		    	i;
     int		   	rc;
@@ -55,6 +55,12 @@ main( int argc, char **argv )
     int			msgid;
     int			num_entries = 0;
     struct timeval	zerotime;
+
+    if ( argc > 1 ) {
+	host = argv[1];
+    } else {
+	host = MY_HOST;
+    }
 
     zerotime.tv_sec = zerotime.tv_usec = 0L;
 
@@ -64,8 +70,8 @@ main( int argc, char **argv )
     }
 
     /* get a handle to an LDAP connection */
-    if ( (ld = ldap_init( MY_HOST, MY_PORT )) == NULL ) {
-	perror( "ldap_init" );
+    if ( (ld = ldap_init( host, MY_PORT )) == NULL ) {
+	perror( host );
 	return( 1 );
     }
 
