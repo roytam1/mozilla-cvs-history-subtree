@@ -10,7 +10,7 @@
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  * 
- * The Original Code is nsMemoryCacheDevice.cpp, released February 22, 2001.
+ * The Original Code is nsDiskCacheDevice.cpp, released February 22, 2001.
  * 
  * The Initial Developer of the Original Code is Netscape Communications
  * Corporation.  Portions created by Netscape are
@@ -530,11 +530,6 @@ NS_IMETHODIMP nsDiskCacheEntryInfo::GetLastModified(PRUint32 *aLastModified)
     return NS_OK;
 }
 
-NS_IMETHODIMP nsDiskCacheEntryInfo::GetLastValidated(PRUint32 *aLastValidated)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
 NS_IMETHODIMP nsDiskCacheEntryInfo::GetExpirationTime(PRUint32 *aExpirationTime)
 {
     *aExpirationTime = mMetaDataFile.mExpirationTime;
@@ -833,6 +828,13 @@ nsDiskCacheDevice::Visit(nsICacheVisitor * visitor)
 
     return NS_OK;
 }
+
+nsresult
+nsDiskCacheDevice::EvictEntries(const char * clientID)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 
 void nsDiskCacheDevice::setPrefsObserver(nsIObserver* observer)
 {
