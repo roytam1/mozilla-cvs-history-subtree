@@ -79,22 +79,22 @@ public:
     RemoveFromClassPath(const char* dirPath) = 0;
 
     // Returns the current classpath in use by the JVM.
-    NS_IMETHOD_(const char*)
-    GetClassPath(void) = 0;
+    NS_IMETHOD
+    GetClassPath(const char* *result) = 0;
     
-    NS_IMETHOD_(nsIPluginInstance*)
-    GetPluginInstance(jobject javaObject) = 0;
+    NS_IMETHOD
+    GetPluginInstance(jobject javaObject, nsIPluginInstance* *result) = 0;
 
-    NS_IMETHOD_(nsIPluginInstance*)
-    GetPluginInstance(JNIEnv* jenv) = 0;
+    NS_IMETHOD
+    GetPluginInstance(JNIEnv* jenv, nsIPluginInstance* *result) = 0;
 
-    NS_IMETHOD_(JavaVM *)
-    GetJavaVM(void) = 0;
+    NS_IMETHOD
+    GetJavaVM(JavaVM* *result) = 0;
 
     // Find or create a JNIEnv for the current thread.
     // Returns NULL if an error occurs.
-    NS_IMETHOD_(JNIEnv*)
-    GetJNIEnv(void) = 0;
+    NS_IMETHOD_(nsrefcnt)
+    GetJNIEnv(JNIEnv* *result) = 0;
 
     // This method must be called when the caller is done using the JNIEnv.
     // This decrements a refcount associated with it may free it.

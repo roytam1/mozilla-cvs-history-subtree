@@ -199,15 +199,15 @@ map_jsj_thread_to_js_context_impl(JNIEnv *env, char **errp)
         nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
         jvmMochaPrefsEnabled = pJVMMgr->IsJVMAndMochaPrefsEnabled();
         if (pJVMPI != NULL) {
-            nsIPluginInstance* pPIT = 
-                pJVMPI->GetPluginInstance(env);
-            if (pPIT != NULL) {
+            nsIPluginInstance* pPIT;
+            nsresult err = pJVMPI->GetPluginInstance(env, &pPIT);
+            if (err == NS_OK) {
                 nsIJVMPluginInstance* pJVMPIT;
                 if (pPIT->QueryInterface(kIJVMPluginInstanceIID,
                                          (void**)&pJVMPIT) == NS_OK) {
-                    nsPluginInstancePeer* pPITP = 
-                        (nsPluginInstancePeer*)pJVMPIT->GetPeer(); 
-                    if (pPITP != NULL) {
+                    nsPluginInstancePeer* pPITP;
+                    err = pJVMPIT->GetPeer((nsIPluginInstancePeer**)&pPITP); 
+                    if (err == NS_OK) {
                         cx = pPITP->GetJSContext();
                         pPITP->Release();
                     }
@@ -316,19 +316,20 @@ map_java_object_to_js_object_impl(JNIEnv *env, jobject applet, char **errp)
         jvmMochaPrefsEnabled = pJVMMgr->IsJVMAndMochaPrefsEnabled();
         if (pJVMPI != NULL) {
             jobject javaObject = applet;
-            nsIPluginInstance* pPIT = 
-                pJVMPI->GetPluginInstance(javaObject);
-            if (pPIT != NULL) {
+            nsIPluginInstance* pPIT;
+            nsresult err = pJVMPI->GetPluginInstance(javaObject, &pPIT);
+            if (err == NS_OK) {
                 nsIJVMPluginInstance* pJVMPIT;
                 if (pPIT->QueryInterface(kIJVMPluginInstanceIID,
                                          (void**)&pJVMPIT) == NS_OK) {
-                    nsPluginInstancePeer* pPITP = 
-                        (nsPluginInstancePeer*)pJVMPIT->GetPeer(); 
-                    if (pPITP != NULL) {
+                    nsPluginInstancePeer* pPITP;
+                    err = pJVMPIT->GetPeer((nsIPluginInstancePeer**)&pPITP); 
+                    if (err == NS_OK) {
                         nsIJVMPluginTagInfo* pJVMTagInfo;
                         if (pPITP->QueryInterface(kIJVMPluginTagInfoIID,
                                                   (void**)&pJVMTagInfo) == NS_OK) {
-                            mayscript = pJVMTagInfo->GetMayScript();
+                            err = pJVMTagInfo->GetMayScript(&mayscript);
+                            PR_ASSERT(err != NS_OK ? mayscript == PR_FALSE : PR_TRUE);
                             pJVMTagInfo->Release();
                         }
                         cx = pPITP->GetMWContext();
@@ -382,7 +383,8 @@ get_java_vm_impl(char **errp)
     if (pJVMMgr != NULL) {
         nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
         if (pJVMPI != NULL) {
-            pJavaVM = pJVMPI->GetJavaVM();
+            nsresult err = pJVMPI->GetJavaVM(&pJavaVM);
+            PR_ASSERT(err != NS_OK ? pJavaVM == NULL : PR_TRUE);
             pJVMPI->Release();
         }
         pJVMMgr->Release();
@@ -424,8 +426,12 @@ nsJVMMgr::JSJInit()
 
         if( (pJVMPI = GetJVMPlugin()) != NULL)
         {
-            if (StartupJVM() == nsJVMStatus_Running)
-                fJSJavaVM = JSJ_ConnectToJavaVM(JVM_GetJavaVM(), pJVMPI->GetClassPath());
+            if (StartupJVM() == nsJVMStatus_Running) {
+                const char* classpath = NULL;
+                nsresult err = pJVMPI->GetClassPath(&classpath);
+                PR_ASSERT(err == NS_OK);
+                fJSJavaVM = JSJ_ConnectToJavaVM(JVM_GetJavaVM(), classpath);
+            }
             pJVMPI->Release();
         }
     }
@@ -484,7 +490,7 @@ ConvertToPlatformPathList(const char* cp)
 #endif
 }
 
-NS_METHOD_(void)
+NS_METHOD
 nsJVMMgr::ReportJVMError(void* env, nsresult err)
 {
     MWContext* cx = XP_FindSomeContext();
@@ -647,8 +653,9 @@ nsJVMMgr::StartupJVM(void)
 		// On the MacOS, MRJ uses JNI exclusively.
         nsIJVMPlugin* jniJVM;
         if (fJVM->QueryInterface(kIJVMPluginIID, (void**)&jniJVM) == NS_OK) {
-            JNIEnv* env = jniJVM->GetJNIEnv();
-            if (env) {
+            JNIEnv* env;
+            nsresult err = jniJVM->GetJNIEnv(&env);
+            if (err == NS_OK) {
                 if (env->ExceptionOccurred()) {
                     env->ExceptionDescribe();
                     env->ExceptionClear();
@@ -666,8 +673,9 @@ nsJVMMgr::StartupJVM(void)
 #else
         nsIJRIPlugin* jriJVM;
         if (fJVM->QueryInterface(kIJRIPluginIID, (void**)&jriJVM) == NS_OK) {
-            JRIEnv* env = jriJVM->GetJRIEnv();
-            if (env) {
+            JRIEnv* env;
+            nsresult err = jriJVM->GetJRIEnv(&env);
+            if (err == NS_OK) {
                 SU_Initialize(env);
                 if (JRI_ExceptionOccurred(env)) {
 #ifdef DEBUG
@@ -874,44 +882,57 @@ oji_StandardizeCodeAttribute(char* buf)
     }
 }
 
-NS_METHOD_(const char *) 
-nsJVMPluginTagInfo::GetCode(void)
+NS_METHOD
+nsJVMPluginTagInfo::GetCode(const char* *result)
 {
-    if (fSimulatedCode)
-        return fSimulatedCode;
-
-    const char* code = fPluginTagInfo->GetAttribute("code");
-    if (code) {
-        fSimulatedCode = PL_strdup(code);
-        oji_StandardizeCodeAttribute(fSimulatedCode);
-        return fSimulatedCode;
+    if (fSimulatedCode) {
+        *result = fSimulatedCode;
+        return NS_OK;
     }
 
-    const char* classid = fPluginTagInfo->GetAttribute("classid");
-    if (classid && PL_strncasecmp(classid, "java:", 5) == 0) {
+    const char* code;
+    nsresult err = fPluginTagInfo->GetAttribute("code", &code);
+    if (err == NS_OK && code) {
+        fSimulatedCode = PL_strdup(code);
+        oji_StandardizeCodeAttribute(fSimulatedCode);
+        *result = fSimulatedCode;
+        return NS_OK;
+    }
+
+    const char* classid;
+    err = fPluginTagInfo->GetAttribute("classid", &classid);
+    if (err == NS_OK && classid && PL_strncasecmp(classid, "java:", 5) == 0) {
         fSimulatedCode = PL_strdup(classid + 5); // skip "java:"
         oji_StandardizeCodeAttribute(fSimulatedCode);
-        return fSimulatedCode;
+        *result = fSimulatedCode;
+        return NS_OK;
     }
 
     // XXX what about "javaprogram:" and "javabean:"?
-    return NULL;
+    return NS_ERROR_FAILURE;
 }
 
-NS_METHOD_(const char *) 
-nsJVMPluginTagInfo::GetCodeBase(void)
+NS_METHOD
+nsJVMPluginTagInfo::GetCodeBase(const char* *result)
 {
     // If we've already cached and computed the value, use it...
-    if (fSimulatedCodebase)
-        return fSimulatedCodebase;
+    if (fSimulatedCodebase) {
+        *result = fSimulatedCodebase;
+        return NS_OK;
+    }
 
     // See if it's supplied as an attribute...
-    const char* codebase = fPluginTagInfo->GetAttribute("codebase");
-    if (codebase != NULL)
-        return codebase;
+    const char* codebase;
+    nsresult err = fPluginTagInfo->GetAttribute("codebase", &codebase);
+    if (err == NS_OK && codebase != NULL) {
+        *result = fSimulatedCodebase;
+        return NS_OK;
+    }
 
     // Okay, we'll need to simulate it from the layout tag's base URL.
-    const char* docBase = fPluginTagInfo->GetDocumentBase();
+    const char* docBase;
+    err = fPluginTagInfo->GetDocumentBase(&docBase);
+    if (err != NS_OK) return err;
     PA_LOCK(codebase, const char*, docBase);
 
     if ((fSimulatedCodebase = PL_strdup(codebase)) != NULL) {
@@ -924,20 +945,24 @@ nsJVMPluginTagInfo::GetCodeBase(void)
     }
     
     PA_UNLOCK(docBase);
-    return fSimulatedCodebase;
+    *result = fSimulatedCodebase;
+    return NS_OK;
 }
 
-NS_METHOD_(const char *) 
-nsJVMPluginTagInfo::GetArchive(void)
+NS_METHOD
+nsJVMPluginTagInfo::GetArchive(const char* *result)
 {
-    return fPluginTagInfo->GetAttribute("archive");
+    return fPluginTagInfo->GetAttribute("archive", result);
 }
 
-NS_METHOD_(const char *) 
-nsJVMPluginTagInfo::GetName(void)
+NS_METHOD
+nsJVMPluginTagInfo::GetName(const char* *result)
 {
     const char* attrName;
-    switch (fPluginTagInfo->GetTagType()) {
+    nsPluginTagType type;
+    nsresult err = fPluginTagInfo->GetTagType(&type);
+    if (err != NS_OK) return err;
+    switch (type) {
       case nsPluginTagType_Applet:
         attrName = "name";
         break;
@@ -945,13 +970,17 @@ nsJVMPluginTagInfo::GetName(void)
         attrName = "id";
         break;
     }
-    return fPluginTagInfo->GetAttribute(attrName);
+    return fPluginTagInfo->GetAttribute(attrName, result);
 }
 
-NS_METHOD_(PRBool) 
-nsJVMPluginTagInfo::GetMayScript(void)
+NS_METHOD
+nsJVMPluginTagInfo::GetMayScript(PRBool *result)
 {
-    return (fPluginTagInfo->GetAttribute("mayscript") != NULL);
+    const char* attr;
+    nsresult err = fPluginTagInfo->GetAttribute("mayscript", &attr);
+    if (err) return err;
+    *result = (err == NS_OK);
+    return NS_OK;
 }
 
 NS_METHOD
@@ -1084,7 +1113,8 @@ JVM_IsConsoleVisible(void)
     PRBool result = PR_FALSE;
     nsIJVMConsole* console = GetConsole();
     if (console) {
-        result = console->IsConsoleVisible();
+        nsresult err = console->IsConsoleVisible(&result);
+        PR_ASSERT(err != NS_OK ? result == PR_FALSE : PR_TRUE);
         console->Release();
     }
     return result;
@@ -1095,7 +1125,10 @@ JVM_ToggleConsole(void)
 {
     nsIJVMConsole* console = GetConsole();
     if (console) {
-        if (console->IsConsoleVisible())
+        PRBool visible = PR_FALSE;
+        nsresult err = console->IsConsoleVisible(&visible);
+        PR_ASSERT(err != NS_OK ? visible == PR_FALSE : PR_TRUE);
+        if (visible)
             console->HideConsole();
         else
             console->ShowConsole();
@@ -1134,7 +1167,8 @@ JVM_GetJavaVM(void)
     JavaVM* javaVM = NULL;
     nsIJVMPlugin* jvm = GetRunningJVM();
     if (jvm) {
-        javaVM = jvm->GetJavaVM();
+        nsresult err = jvm->GetJavaVM(&javaVM);
+        PR_ASSERT(err == NS_OK);
         jvm->Release();
     }
     return javaVM;
@@ -1160,7 +1194,8 @@ JVM_GetJNIEnv(void)
 
     nsIJVMPlugin* jvm = GetRunningJVM();
     if (jvm) {
-        env = jvm->GetJNIEnv();
+        nsresult err = jvm->GetJNIEnv(&env);
+        PR_ASSERT(err == NS_OK);
         jvm->Release();
     }
 

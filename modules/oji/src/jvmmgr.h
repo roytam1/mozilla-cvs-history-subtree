@@ -93,7 +93,7 @@ public:
 
     NS_DECL_AGGREGATED
 
-    NS_IMETHOD_(PRBool)
+    NS_IMETHOD
     SetDebugAgentPassword(PRInt32 pwd);
 
     static NS_METHOD
@@ -122,20 +122,20 @@ public:
 
     // ====> These are usually only called by the plugin, not the browser...
 
-    NS_IMETHOD_(const char *)
-    GetCode(void);
+    NS_IMETHOD
+    GetCode(const char* *result);
 
-    NS_IMETHOD_(const char *)
-    GetCodeBase(void);
+    NS_IMETHOD
+    GetCodeBase(const char* *result);
 
-    NS_IMETHOD_(const char *)
-    GetArchive(void);
+    NS_IMETHOD
+    GetArchive(const char* *result);
 
-    NS_IMETHOD_(const char *)
-    GetName(void);
+    NS_IMETHOD
+    GetName(const char* *result);
 
-    NS_IMETHOD_(PRBool)
-    GetMayScript(void);
+    NS_IMETHOD
+    GetMayScript(PRBool *result);
 
     ////////////////////////////////////////////////////////////////////////////
     // Methods specific to nsJVMPluginInstancePeer:

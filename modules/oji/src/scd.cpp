@@ -66,7 +66,7 @@ nsSymantecDebugManager::Create(nsISupports* outer, const nsIID& aIID, void* *aIn
 extern "C" HWND FindNavigatorHiddenWindow(void);
 #endif
 
-NS_METHOD_(PRBool)
+NS_METHOD
 nsSymantecDebugManager::SetDebugAgentPassword(PRInt32 pwd)
 {
 #if defined(XP_PC) && defined(_WIN32)
@@ -86,9 +86,9 @@ nsSymantecDebugManager::SetDebugAgentPassword(PRInt32 pwd)
         ReleaseSemaphore(sem, 1, NULL);
         CloseHandle(sem);
     }
-    return PR_TRUE;
+    return NS_OK;
 #else
-    return PR_FALSE;
+    return NS_ERROR_FAILURE;
 #endif
 }
 
