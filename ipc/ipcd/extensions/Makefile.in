@@ -43,6 +43,7 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+MODULE		= ipcd
 DIRS        = lock transmngr
 
 include $(topsrcdir)/config/rules.mk
