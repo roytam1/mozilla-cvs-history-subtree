@@ -3529,6 +3529,7 @@ nsDocShell::DoURILoad(nsIURI * aURI, nsIURI * aReferrerURI,
     if (httpChannel) {
         nsCOMPtr<nsICachingChannel>
             cacheChannel(do_QueryInterface(httpChannel));
+        printf(">>> caching channel @%x\n", cacheChannel.get());
         /* Get the cache Key from SH */
         nsCOMPtr<nsISupports> cacheKey;
         if (LSHE) {
@@ -3536,6 +3537,8 @@ nsDocShell::DoURILoad(nsIURI * aURI, nsIURI * aReferrerURI,
         }
         else if (OSHE)          // for reload cases
             OSHE->GetCacheKey(getter_AddRefs(cacheKey));
+
+        printf(">>> cache key @%x\n", cacheKey.get());
 
         // figure out if we need to set the post data stream on the channel...
         // right now, this is only done for http channels.....

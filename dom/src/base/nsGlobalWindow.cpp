@@ -2825,11 +2825,6 @@ NS_IMETHODIMP GlobalWindowImpl::Activate()
 
 NS_IMETHODIMP GlobalWindowImpl::Deactivate()
 {
-  nsCOMPtr<nsIBaseWindow> treeOwnerAsWin;
-  GetTreeOwner(getter_AddRefs(treeOwnerAsWin));
-  if (treeOwnerAsWin)
-    treeOwnerAsWin->SetVisibility(PR_TRUE);
-
   nsCOMPtr<nsIPresShell> presShell;
   mDocShell->GetPresShell(getter_AddRefs(presShell));
   NS_ENSURE_TRUE(presShell, NS_ERROR_FAILURE);
@@ -4096,9 +4091,8 @@ NavigatorImpl::Preference()
       action = nsIXPCSecurityManager::ACCESS_GET_PROPERTY;
   else
       action = nsIXPCSecurityManager::ACCESS_SET_PROPERTY;
-  rv = secMan->CheckPropertyAccess(action,
-                                   cx, nsnull, nsnull, nsnull, "Navigator", "preferenceinternal",
-                                   PR_TRUE);
+  rv = secMan->CheckPropertyAccess(action, cx, nsnull, nsnull, nsnull,
+                                   "Navigator", "preferenceinternal");
   if (NS_FAILED(rv))
   {
       //-- XXX doing the right thing here? Does the exception propagate?
