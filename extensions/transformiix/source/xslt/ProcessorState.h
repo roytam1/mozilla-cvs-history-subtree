@@ -29,7 +29,6 @@
 #define TRANSFRMX_PROCESSORSTATE_H
 
 #include "NodeSet.h"
-#include "NodeStack.h"
 #include "Stack.h"
 #include "ErrorObserver.h"
 #include "NamedMap.h"
@@ -166,6 +165,12 @@ public:
      */
     nsresult addGlobalVariable(Element* aVarElem,
                                ImportFrame* aImportFrame);
+
+    /**
+     * Add a stylesheet parameter
+     */
+    nsresult addStyleSheetParameter(txExpandedName& aName,
+                                    ExprResult* aValue);
 
     /**
      * Returns map on top of the stack of local variable-bindings

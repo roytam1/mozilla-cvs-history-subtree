@@ -676,6 +676,28 @@ nsresult ProcessorState::addGlobalVariable(Element* aVarElem,
 }
 
 /*
+ * Add a stylesheet parameter
+ */
+nsresult ProcessorState::addStyleSheetParameter(txExpandedName& aName,
+                                                ExprResult* aValue)
+{
+    GlobalVariableValue* var =
+        (GlobalVariableValue*)mGlobalVariableValues.get(aName);
+    if (var) {
+        return var->mValue == aValue ? NS_OK : NS_ERROR_UNEXPECTED;
+    }
+
+    var = new GlobalVariableValue;
+    if (!var) {
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    var->mEvaluating = MB_FALSE;
+    var->mValue = aValue;
+    return mGlobalVariableValues.add(aName, var);
+}
+
+/*
  * Returns map on top of the stack of local variable-bindings
  */
 txVariableMap* ProcessorState::getLocalVariables()
