@@ -3934,7 +3934,7 @@ EOF
         case "$TARGETCPU" in
         X86)
 	        cat >> confdefs.h <<\EOF
-#define _ARM_ 1
+#define _X86_ 1
 EOF
             ;;
         ARM)
