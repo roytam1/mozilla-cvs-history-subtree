@@ -33,6 +33,7 @@ MOD_DEPTH	= ../nsprpub
 NSPR_VERSION	= 4.1
 NSS_VERSION	= 3.2
 DEPTH		= ..
+CONFIGDIR	= c-sdk/config
 
 include $(NSPR_TREE)/config/rules.mk
 
@@ -48,6 +49,13 @@ all export::	FORCE
 		cd nss; \
 	else \
 		echo "No NSS $(NSS_VERSION) directory found"; \
+		exit 0; \
+	fi
+	@if [ -d $(CONFIGDIR)/ ]; then \
+		cd $(CONFIGDIR); \
+		gmake; \
+	else \
+		echo "No NSS $(CONFIGDIR) directory found"; \
 		exit 0; \
 	fi
 	@if [ -d $(LDAP_DEPTH)/c-sdk/ldap ]; then \
