@@ -28,6 +28,11 @@
 #ifndef nsINIParser_h__
 #define nsINIParser_h__
 
+// hack alert: in static builds, nsINIParser here conflicts with nsINIParser
+// in browser/components/migration. So we use a #define to make the symbols
+// unique.
+#define nsINIParser nsINITParser
+
 #include "nsAppRunner.h"
 class nsILocalFile;
 
