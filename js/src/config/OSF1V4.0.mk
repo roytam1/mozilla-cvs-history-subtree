@@ -23,9 +23,15 @@
 #  Initial DG/UX port by Marc Fraioli (fraioli@dg-rtp.dg.com)
 #
 
-AS = as
-CC = gcc 
-CCC = g++ 
+ifndef NS_USE_NATIVE
+CC = gcc
+CCC = g++
+CFLAGS +=  -Wall -Wno-format
+else
+CC  = cc
+CCC = cxx
+CFLAGS = -ieee_with_inexact -std1
+endif
 
 RANLIB = echo
 MKSHLIB = $(LD) -shared -all -expect_unresolved "*"
