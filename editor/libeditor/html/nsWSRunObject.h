@@ -213,8 +213,8 @@ class nsWSRunObject
     {
       nsCOMPtr<nsIDOMNode> mStartNode;  // node where ws run starts
       nsCOMPtr<nsIDOMNode> mEndNode;    // node where ws run ends
-      PRInt16 mStartOffset;             // offset where ws run starts
-      PRInt16 mEndOffset;               // offset where ws run ends
+      PRInt32 mStartOffset;             // offset where ws run starts
+      PRInt32 mEndOffset;               // offset where ws run ends
       PRInt16 mType, mLeftType, mRightType;  // type of ws, and what is to left and right of it
       WSFragment *mLeft, *mRight;            // other ws runs to left or right.  may be null.
 
@@ -231,7 +231,7 @@ class nsWSRunObject
     struct WSPoint
     {
       nsCOMPtr<nsITextContent> mTextNode;
-      PRInt16 mOffset;
+      PRInt32 mOffset;
       PRUnichar mChar;
       
       WSPoint() : mTextNode(0),mOffset(0),mChar(0) {}
@@ -254,8 +254,8 @@ class nsWSRunObject
                                nsIDOMNode *aBlockParent, 
                                nsCOMPtr<nsIDOMNode> *aPriorNode);
     nsresult GetPreviousWSNode(nsIDOMNode *aStartNode,
-                               PRInt16      aOffset, 
-                               nsIDOMNode  *aBlockParent, 
+                               PRInt32     aOffset, 
+                               nsIDOMNode *aBlockParent, 
                                nsCOMPtr<nsIDOMNode> *aPriorNode);
     nsresult GetPreviousWSNode(DOMPoint aPoint,
                                nsIDOMNode  *aBlockParent, 
@@ -264,7 +264,7 @@ class nsWSRunObject
                            nsIDOMNode *aBlockParent, 
                            nsCOMPtr<nsIDOMNode> *aNextNode);
     nsresult GetNextWSNode(nsIDOMNode *aStartNode,
-                           PRInt16     aOffset, 
+                           PRInt32     aOffset, 
                            nsIDOMNode *aBlockParent, 
                            nsCOMPtr<nsIDOMNode> *aNextNode);
     nsresult GetNextWSNode(DOMPoint aPoint,
