@@ -32,7 +32,7 @@ PROTO = \
 	$(ROOT)/usr/include/mps 
 
 ifdef USE_64
-PROTO += $(ROOT)/usr/lib/mps/sparcv9 \
+PROTO += $(ROOT)/usr/lib/mps/secv1/sparcv9 \
 	$(ROOT)/usr/include/mps/sparcv9
 endif
 
@@ -53,8 +53,8 @@ $(ROOT) $(ROOT)/%:
 	mkdir -p $@
 
 ifdef USE_64
-$(ROOT)/usr/lib/mps/sparcv9: $(ROOT)/usr/lib
-	$(LN) -sf ../../../../$(DIST)/lib $@
+$(ROOT)/usr/lib/mps/secv1/sparcv9: $(ROOT)/usr/lib
+	$(LN) -sf ../../../../../$(DIST)/lib $@
 $(ROOT)/usr/include/mps/sparcv9: $(ROOT)/usr/include
 	$(LN) -sf ../../../../$(DIST)/include $@
 else
