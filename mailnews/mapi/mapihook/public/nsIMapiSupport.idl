@@ -54,7 +54,7 @@ interface nsIMapiSupport : nsISupports {
    /**  Shuts down the MAPI support
     */
 
-   void unInitializeMAPISupport();
+   void shutdownMAPISupport();
 };
 
 %{C++

@@ -34,10 +34,16 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#include "nsComPtr.h"
 #include "nsMapiSupport.h"
 #include "nsISupports.h"
 #include "nsMapiRegistry.h"
 #include "nsIGenericFactory.h"
+#include "nsIObserverService.h"
+#include "nsIAppStartupNotifier.h"
+#include "nsIServiceManager.h"
+#include "nsIComponentManager.h"
+#include "nsICategoryManager.h"
 
 const CLSID CLSID_nsMapiImp = {0x29f458be, 0x8866, 0x11d5, \
                               {0xa3, 0xdd, 0x0, 0xb0, 0xd0, 0xf3, 0xba, 0xa7}};
@@ -45,12 +51,50 @@ const CLSID CLSID_nsMapiImp = {0x29f458be, 0x8866, 0x11d5, \
 /** Implementation of the nsIMapiSupport interface.
  *  Use standard implementation of nsISupports stuff.
  */
-NS_IMPL_ISUPPORTS1(nsMapiSupport, nsIMapiSupport);
+
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsMapiSupport, nsIMapiSupport, nsIObserver);
+
+static NS_METHOD nsMapiRegistrationProc(nsIComponentManager *aCompMgr,
+                   nsIFile *aPath, const char *registryLocation, const char *componentType,
+                   const nsModuleComponentInfo *info)
+{
+  nsresult rv;
+
+  nsCOMPtr<nsICategoryManager> categoryManager(do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv));
+  if (NS_SUCCEEDED(rv)) 
+      rv = categoryManager->AddCategoryEntry(APPSTARTUP_CATEGORY, "Mapi Support", 
+                  "service," NS_IMAPISUPPORT_CONTRACTID, PR_TRUE, PR_TRUE, nsnull);
+
+  return rv;
+}
+
+NS_IMETHODIMP
+nsMapiSupport::Observe(nsISupports *aSubject, const char *aTopic, const PRUnichar *aData)
+{
+    if (!nsCRT::strcmp(aTopic, "profile-after-change"))
+        return InitializeMAPISupport();
+
+    if (!nsCRT::strcmp(aTopic, NS_XPCOM_SHUTDOWN_OBSERVER_ID))
+        return ShutdownMAPISupport();
+
+    nsresult rv;
+
+    nsCOMPtr<nsIObserverService> observerService(do_GetService("@mozilla.org/observer-service;1", &rv));
+    if (NS_FAILED(rv)) return rv;
+
+    rv = observerService->AddObserver(this,"profile-after-change", PR_FALSE);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = observerService->AddObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, PR_FALSE);
+           
+    return rv;
+}
 
 nsMapiSupport::nsMapiSupport()
 : m_dwRegister(0),
   m_nsMapiFactory(nsnull)
 {
+    NS_INIT_ISUPPORTS();
 }
 
 nsMapiSupport::~nsMapiSupport()
@@ -86,7 +130,7 @@ nsMapiSupport::InitializeMAPISupport()
 }
 
 NS_IMETHODIMP
-nsMapiSupport::UnInitializeMAPISupport()
+nsMapiSupport::ShutdownMAPISupport()
 {
     if (m_dwRegister != 0)
         ::CoRevokeClassObject(m_dwRegister);
@@ -120,9 +164,11 @@ static nsModuleComponentInfo components[] =
     NS_IMAPISUPPORT_CLASSNAME,
     NS_IMAPISUPPORT_CID,
     NS_IMAPISUPPORT_CONTRACTID,
-    nsMapiSupportConstructor
+    nsMapiSupportConstructor,
+    nsMapiRegistrationProc,
+    nsnull
   }
 };
 
-NS_IMPL_NSGETMODULE(nsMapiHookModule, components);
+NS_IMPL_NSGETMODULE(msgMapiModule, components);
 
