@@ -7,9 +7,9 @@
 #   mozilla/gc, , 10/25/2000 12:00:00
 #
 
-mozilla/nsprpub,        MOZILLA_0_7_20010109_RELEASE
-mozilla/security/nss,   MOZILLA_0_7_20010109_RELEASE
-mozilla/security/psm,   MOZILLA_0_7_20010109_RELEASE
-DirectorySDKSourceC,    MOZILLA_0_7_20010109_RELEASE
-mozilla/lib/mac/Instrumentation, MOZILLA_0_7_20010109_RELEASE
-SeaMonkeyAll, 		MOZILLA_0_7_20010109_RELEASE
+mozilla/nsprpub,        MOZILLA_0_7_BRANCH
+mozilla/security/nss,   MOZILLA_0_7_BRANCH
+mozilla/security/psm,   MOZILLA_0_7_BRANCH
+DirectorySDKSourceC,    MOZILLA_0_7_BRANCH
+mozilla/lib/mac/Instrumentation, MOZILLA_0_7_BRANCH
+SeaMonkeyAll, 		MOZILLA_0_7_BRANCH
