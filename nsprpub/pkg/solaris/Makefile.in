@@ -32,11 +32,23 @@ PROTO = \
 	$(ROOT)/usr/include/mps
 
 ifeq ($(MACH), sparc)
-	PROTO += $(ROOT)/usr/lib/mps/sparcv9 \
-	$(ROOT)/usr/lib/mps/cpu/sparcv8plus
+	PROTO += $(ROOT)/usr/lib/mps/cpu/sparcv8plus
 endif
 
-abs_dist64_libdir = $(shell echo $(abs_dist_libdir) | sed -e "s|_OPT|_64_OPT|g" -e "s|_DBG|_64_DBG|g")
+ifeq ($(USE_64), 1)
+ifeq ($(MACH), sparc)
+# Sparc
+	PROTO += $(ROOT)/usr/lib/mps/sparcv9
+else
+# AMD64
+	PROTO += $(ROOT)/usr/lib/mps/amd64
+endif
+	abs_dist64_libdir = $(abs_dist_libdir)
+	abs_dist32_libdir = $(shell echo $(abs_dist_libdir) | sed -e "s|_64_OPT|_OPT|g" -e "s|_64_DBG|_DBG|g")
+else
+	abs_dist32_libdir = $(abs_dist_libdir)
+	abs_dist64_libdir = $(shell echo $(abs_dist_libdir) | sed -e "s|_OPT|_64_OPT|g" -e "s|_DBG|_64_DBG|g")
+endif
 
 awk_pkginfo: bld_awk_pkginfo
 	./bld_awk_pkginfo -m $(MACH) -p "$(PRODUCT_VERSION)" -o $@ -v $(PRODUCT_VERSION)
@@ -55,12 +67,15 @@ $(ROOT):
 $(ROOT)/usr/lib/mps/sparcv9:
 	mkdir -p $@
 	$(CP) -r $(abs_dist64_libdir)/*.so $@
+$(ROOT)/usr/lib/mps/amd64:
+	mkdir -p $@
+	$(CP) -r $(abs_dist64_libdir)/*.so $@
 $(ROOT)/usr/lib/mps:
 	mkdir -p $@
-	$(CP) -r $(abs_dist_libdir)/*.so $@
+	$(CP) -r $(abs_dist32_libdir)/*.so $@
 $(ROOT)/usr/lib/mps/cpu/sparcv8plus:
 	mkdir -p $@
-	$(CP) -r $(abs_dist_libdir)/cpu/sparcv8plus/*.so $@
+	$(CP) -r $(abs_dist32_libdir)/cpu/sparcv8plus/*.so $@
 $(ROOT)/usr/include/mps:
 	mkdir -p $@
 	$(CP) -r $(abs_dist_includedir)/* $@
