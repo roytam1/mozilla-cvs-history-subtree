@@ -26,10 +26,6 @@
 #ifndef MKFORMAT_H
 #define MKFORMAT_H
 
-#ifndef MKSTREAM_H
-#include "mkstream.h"
-#endif /* MKSTREAM_H */
-
 /* ------------------------------ Constants ------------------------------- */
 
 

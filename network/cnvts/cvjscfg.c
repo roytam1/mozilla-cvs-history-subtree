@@ -19,6 +19,8 @@
 #include "cvjscfg.h"
 #include "cvsimple.h"
 #include "prefapi.h"
+#include "cstream.h"
+
 
 /*
  * jsc_complete

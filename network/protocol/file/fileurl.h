@@ -19,6 +19,8 @@
 #ifndef FILEURL_H
 #define FILEURL_H
 
+#include "cstream.h"
+
 extern void NET_InitFileProtocol(void);
 
 extern NET_StreamClass *

@@ -73,6 +73,7 @@ LINCS= \
     -I$(XPDIST)\public\js	\
     -I$(XPDIST)\public\security	\
     -I$(XPDIST)\public\netcache	\
+    -I$(XPDIST)\public\cstream	\
     -I$(XPDIST)\public\network 
 #!endif
 
