@@ -777,7 +777,7 @@ NS_IMETHODIMP nsImapMailFolder::CreateSubfolder(const PRUnichar* folderName, nsI
         ThrowAlertMsg("folderExists", msgWindow);
         return NS_MSG_FOLDER_EXISTS;
     }
-    else if ( nsDependentString(folderName).Equals(NS_LITERAL_STRING("Inbox"),nsCaseInsensitiveStringComparator()) )  // Inbox, a special folder
+    else if (mIsServer && nsDependentString(folderName).Equals(NS_LITERAL_STRING("Inbox"),nsCaseInsensitiveStringComparator()) )  // Inbox, a special folder
     {
         ThrowAlertMsg("folderExists", msgWindow);
         return NS_MSG_FOLDER_EXISTS;
@@ -1966,6 +1966,7 @@ NS_IMETHODIMP nsImapMailFolder::DeleteMessages(nsISupportsArray *messages,
   nsMsgKeyArray srcKeyArray;
   PRBool deleteMsgs = PR_TRUE;  //used for toggling delete status - default is true
   nsMsgImapDeleteModel deleteModel = nsMsgImapDeleteModels::MoveToTrash;
+  imapMessageFlagsType messageFlags = kImapMsgDeletedFlag;
   
   nsCOMPtr<nsIImapIncomingServer> imapServer;
   nsresult rv = GetFlag(MSG_FOLDER_FLAG_TRASH, &deleteImmediatelyNoTrash);
@@ -2046,7 +2047,9 @@ NS_IMETHODIMP nsImapMailFolder::DeleteMessages(nsISupportsArray *messages,
         }
       }
     }
-    rv = StoreImapFlags(kImapMsgDeletedFlag, deleteMsgs, srcKeyArray.GetArray(), srcKeyArray.GetSize());
+    if (deleteMsgs)
+      messageFlags |= kImapMsgSeenFlag;
+    rv = StoreImapFlags(messageFlags, deleteMsgs, srcKeyArray.GetArray(), srcKeyArray.GetSize());
     
     if (NS_SUCCEEDED(rv))
     {
