@@ -2030,11 +2030,10 @@ typedef struct PRAddrInfoFB {
     PRHostEnt hostent;
 } PRAddrInfoFB;
 
-static PRStatus
+static PRAddrInfo *
 pr_GetAddrInfoByNameFB(const char  *hostname,
                        PRUint16     af,
-                       PRIntn       flags,
-                       PRAddrInfo **result)
+                       PRIntn       flags)
 {
     PRStatus rv;
     PRAddrInfoFB *ai;
@@ -2042,37 +2041,34 @@ pr_GetAddrInfoByNameFB(const char  *hostname,
     ai = PR_NEW(PRAddrInfoFB);
     if (!ai) {
         PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
-        return PR_FAILURE;
+        return NULL;
     }
     rv = PR_GetHostByName(hostname, ai->buf, sizeof ai->buf, &ai->hostent);
     if (rv == PR_FAILURE) {
         PR_Free(ai);
-        *result = NULL;
-    } else {
-        *result = (PRAddrInfo *) ai;
+        return NULL;
     }
-    return rv;
+    return (PRAddrInfo *) ai;
 }
 
-PRStatus PR_GetAddrInfoByName(const char  *hostname,
-                              PRUint16     af,
-                              PRIntn       flags,
-                              PRAddrInfo **result)
+PR_IMPLEMENT(PRAddrInfo *) PR_GetAddrInfoByName(const char  *hostname,
+                                                PRUint16     af,
+                                                PRIntn       flags)
 {
     /* restrict input to supported values */
-    if (af != 0 || flags != 0) {
+    if (af != PR_AF_UNSPEC || flags != PR_AI_ADDRCONFIG) {
         PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
-        return PR_FAILURE;
+        return NULL;
     }
 
     if (!_pr_initialized) _PR_ImplicitInitialization();
 
 #if !defined(_PR_HAVE_GETADDRINFO)
-    return pr_GetAddrInfoByNameFB(hostname, af, flags, result);
+    return pr_GetAddrInfoByNameFB(hostname, af, flags);
 #else
 #if defined(_PR_INET6_PROBE)
     if (!_pr_ipv6_is_present) {
-        return pr_GetAddrInfoByNameFB(hostname, af, flags, result);
+        return pr_GetAddrInfoByNameFB(hostname, af, flags);
     }
 #endif
     {
@@ -2091,18 +2087,16 @@ PRStatus PR_GetAddrInfoByName(const char  *hostname,
 #endif
         
         rv = GETADDRINFO(hostname, NULL, &hints, &res);
+        if (rv == 0)
+            return (PRAddrInfo *) res;
 
-        if (rv == 0) {
-            *result = (PRAddrInfo *) res;
-            return PR_SUCCESS;
-        }
         PR_SetError(PR_DIRECTORY_LOOKUP_ERROR, rv);
     }
-    return PR_FAILURE;
+    return NULL;
 #endif
 }
 
-void PR_FreeAddrInfo(PRAddrInfo *ai)
+PR_IMPLEMENT(void) PR_FreeAddrInfo(PRAddrInfo *ai)
 {
 #if defined(_PR_HAVE_GETADDRINFO)
 #if defined(_PR_INET6_PROBE)
@@ -2116,10 +2110,10 @@ void PR_FreeAddrInfo(PRAddrInfo *ai)
 #endif
 }
 
-void *PR_EnumerateAddrInfo(void             *iterPtr,
-                           const PRAddrInfo *base,
-                           PRUint16          port,
-                           PRNetAddr        *result)
+PR_IMPLEMENT(void *) PR_EnumerateAddrInfo(void             *iterPtr,
+                                          const PRAddrInfo *base,
+                                          PRUint16          port,
+                                          PRNetAddr        *result)
 {
 #if defined(_PR_HAVE_GETADDRINFO)
     PRADDRINFO *ai;
@@ -2160,7 +2154,7 @@ void *PR_EnumerateAddrInfo(void             *iterPtr,
 #endif
 }
 
-const char *PR_GetCanonNameFromAddrInfo(const PRAddrInfo *ai)
+PR_IMPLEMENT(const char *) PR_GetCanonNameFromAddrInfo(const PRAddrInfo *ai)
 {
 #if defined(_PR_HAVE_GETADDRINFO)
 #if defined(_PR_INET6_PROBE)

@@ -393,24 +393,20 @@ NSPR_API(PRStatus) PR_GetProtoByNumber(
 **
 ** INPUTS:
 **  char *hostname      Character string defining the host name of interest
-**  PRUint16 af         Reserved for future use.  Must pass zero.
-**  PRIntn flags        Reserved for future use.  Must pass zero.
-** OUTPUTS:
-**  PRAddrInfo **result
-**                      Handle to a data structure containing the results
+**  PRUint16 af         Must be PR_AF_UNSPEC
+**  PRIntn flags        Must be PR_AI_ADDRCONFIG
+** RETURN:
+**  PRAddrInfo*         Handle to a data structure containing the results
 **                      of the host lookup. Use PR_EnumerateAddrInfo to
 **                      inspect the PRNetAddr values stored in this object.
 **                      When no longer needed, this handle must be destroyed
-**                      with a call to PR_FreeAddrInfo.
-** RETURN:
-**  PRStatus            PR_SUCCESS if the lookup succeeds. If it fails
-**                      the result will be PR_FAILURE and the reason for
-**                      the failure can be retrieved by PR_GetError().
+**                      with a call to PR_FreeAddrInfo.  If a lookup error
+**                      occurs, then NULL will be returned.
 ***********************************************************************/
 typedef struct PRAddrInfo PRAddrInfo;
 
-NSPR_API(PRStatus) PR_GetAddrInfoByName(
-    const char *hostname, PRUint16 af, PRIntn flags, PRAddrInfo **result);
+NSPR_API(PRAddrInfo*) PR_GetAddrInfoByName(
+    const char *hostname, PRUint16 af, PRIntn flags);
 
 /***********************************************************************
 ** FUNCTION:
