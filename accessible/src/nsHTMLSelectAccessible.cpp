@@ -171,7 +171,17 @@ public:
   nsCOMPtr<nsIAccessible> mParent;
 };
 
-// -------------Helper method for determination of proper Frame ------
+//--------- nsHTMLSelectAccessible -----
+ 
+nsHTMLSelectAccessible::nsHTMLSelectAccessible(nsIDOMNode* aDOMNode, 
+                                       nsIWeakReference* aShell)
+                                               :nsAccessible(aDOMNode, aShell)
+{
+}
+
+NS_IMPL_ISUPPORTS_INHERITED1(nsHTMLSelectAccessible, nsAccessible, nsIAccessibleSelectable)
+
+// ------------- Helper method for determination of proper Frame ------
 //static 
 PRBool nsHTMLSelectAccessible::IsCorrectFrame( nsIFrame* aFrame, nsIAtom* aAtom ) {
   if (!aFrame || !aAtom)
@@ -182,16 +192,6 @@ PRBool nsHTMLSelectAccessible::IsCorrectFrame( nsIFrame* aFrame, nsIAtom* aAtom 
     return PR_FALSE;
   return PR_TRUE;
 }
-
-//--------- nsHTMLSelectAccessible -----
- 
-nsHTMLSelectAccessible::nsHTMLSelectAccessible(nsIDOMNode* aDOMNode, 
-                                       nsIWeakReference* aShell)
-                                               :nsAccessible(aDOMNode, aShell)
-{
-}
-
-NS_IMPL_ISUPPORTS_INHERITED1(nsHTMLSelectAccessible, nsAccessible, nsIAccessibleSelectable)
 
 NS_IMETHODIMP nsHTMLSelectAccessible::GetAccValue(nsAWritableString& _retval)
 {
