@@ -1,5 +1,0 @@
-nsIHTTPChannel.idl
-nsIHTTPProtocolHandler.idl
-nsIHTTPHeader.idl
-nsIHttpNotify.idl
-nsIHTTPEventSink.idl
