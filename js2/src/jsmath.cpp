@@ -31,13 +31,23 @@
  * file under either the NPL or the GPL.
  */
 
-#include <math.h>
+#ifdef _WIN32
+ // Turn off warnings about identifiers too long in browser information
+#pragma warning(disable: 4786)
+#endif
+
+#include <algorithm>
+
+#include "parser.h"
+#include "numerics.h"
+#include "js2runtime.h"
+
 #include "jsmath.h"
 
-namespace JavaScript {
-namespace JSMathClass {
+#include "fdlibm_ns.h"
 
-using namespace JSTypes;
+namespace JavaScript {    
+namespace JS2Runtime {
 
 #ifndef M_E
 #define M_E		2.7182818284590452354
@@ -63,146 +73,172 @@ using namespace JSTypes;
 #ifndef M_SQRT1_2
 #define M_SQRT1_2	0.70710678118654752440
 #endif
+#define M_CONSTANTS_COUNT     8
 
 
-/*
-    Concept copied from SpiderMonkey -
-    fd_XXX needs to be defined either as a call to the fdlibm routine
-    or the native C library routine depending on the platform
-*/
-
-#define JS_USE_FDLIBM_MATH 0
-
-
-#if !JS_USE_FDLIBM_MATH
-/*
- * Use system provided math routines.
- */
-
-
-#define fd_acos acos
-#define fd_asin asin
-#define fd_atan atan
-#define fd_atan2 atan2
-#define fd_ceil ceil
-#define fd_copysign copysign
-#define fd_cos cos
-#define fd_exp exp
-#define fd_fabs fabs
-#define fd_floor floor
-#define fd_fmod fmod
-#define fd_log log
-#define fd_pow pow
-#define fd_sin sin
-#define fd_sqrt sqrt
-#define fd_tan tan
-
-#endif
-
-static JSValue math_abs(Context *, const JSValues& argv)
+JSValue Math_abs(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    if (argv.size() > 0) {
-        JSValue num = argv[1].toNumber();
-        if (num.isNaN()) return num;
-        if (num.isNegativeZero()) return kPositiveZero;
-        if (num.isNegativeInfinity()) return kPositiveInfinity;
-        if (num.f64 < 0) return JSValue(-num.f64);
-        return num;
+    if (argc == 0)
+        return kNaNValue;
+    else
+        return JSValue(fd::fabs(argv[0].toNumber(cx).f64));
+}
+JSValue Math_acos(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    if (argc == 0)
+        return kNaNValue;
+    return JSValue(fd::acos(argv[0].toNumber(cx).f64));
+}
+JSValue Math_asin(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    if (argc == 0)
+        return kNaNValue;
+    return JSValue(fd::asin(argv[0].toNumber(cx).f64));
+}
+JSValue Math_atan(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    if (argc == 0)
+        return kNaNValue;
+    return JSValue(fd::atan(argv[0].toNumber(cx).f64));
+}
+JSValue Math_atan2(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    if (argc <= 1)
+        return kNaNValue;
+    float64 y = argv[0].toNumber(cx).f64;
+    float64 x = argv[1].toNumber(cx).f64;
+    return JSValue(fd::atan2(y, x));
+}
+JSValue Math_ceil(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    if (argc == 0)
+        return kNaNValue;
+    return JSValue(fd::ceil(argv[0].toNumber(cx).f64));
+}
+JSValue Math_cos(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    if (argc == 0)
+        return kNaNValue;
+    return JSValue(fd::cos(argv[0].toNumber(cx).f64));
+}
+JSValue Math_exp(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    return kNaNValue;
+}
+JSValue Math_floor(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    if (argc == 0)
+        return kNaNValue;
+    else
+        return JSValue(fd::floor(argv[0].toNumber(cx).f64));
+}
+JSValue Math_log(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    return kNaNValue;
+}
+JSValue Math_max(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    if (argc == 0)
+        return kNaNValue;
+    float64 result = argv[0].toNumber(cx).f64;
+    for (uint32 i = 1; i < argc; ++i) {
+        float64 arg = argv[i].toNumber(cx).f64;
+        if (arg > result)
+            result = arg;
     }
-    return kUndefinedValue;
+    return JSValue(result);
+}
+JSValue Math_min(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    if (argc == 0)
+        return kNaNValue;
+    float64 result = argv[0].toNumber(cx).f64;
+    for (uint32 i = 1; i < argc; ++i) {
+        float64 arg = argv[i].toNumber(cx).f64;
+        if (arg < result)
+            result = arg;
+    }
+    return JSValue(result);
+}
+JSValue Math_pow(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    return kNaNValue;
+}
+JSValue Math_random(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    return kNaNValue;
+}
+JSValue Math_round(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    return kNaNValue;
+}
+JSValue Math_sin(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    return kNaNValue;
+}
+JSValue Math_sqrt(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    return kNaNValue;
+}
+JSValue Math_tan(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)   
+{
+    return kNaNValue;
 }
 
-static JSValue math_acos(Context *, const JSValues& argv)
-{
-    if (argv.size() > 0) {
-        JSValue num = argv[1].toNumber();
-        return JSValue(fd_acos(num.f64));
-    }
-    return kUndefinedValue;
-}
 
-static JSValue math_asin(Context *, const JSValues& argv)
-{
-    if (argv.size() > 0) {
-        JSValue num = argv[1].toNumber();
-        return JSValue(fd_asin(num.f64));
-    }
-    return kUndefinedValue;
-}
-
-static JSValue math_atan(Context *, const JSValues& argv)
-{
-    if (argv.size() > 0) {
-        JSValue num = argv[1].toNumber();
-        return JSValue(fd_atan(num.f64));
-    }
-    return kUndefinedValue;
-}
-
-static JSValue math_atan2(Context *, const JSValues& argv)
-{
-    if (argv.size() > 1) {
-        JSValue num1 = argv[1].toNumber();
-        JSValue num2 = argv[1].toNumber();
-        return JSValue(fd_atan2(num1.f64, num2.f64));
-    }
-    return kUndefinedValue;
-}
-
-static JSValue math_ceil(Context *, const JSValues& argv)
-{
-    if (argv.size() > 0) {
-        JSValue num = argv[1].toNumber();
-        return JSValue(fd_ceil(num.f64));
-    }
-    return kUndefinedValue;
-}
-
-struct MathFunctionEntry {
+struct {
     char *name;
-    JSNativeFunction::JSCode fn;
-} MathFunctions[] = {
-    { "abs",     math_abs },
-    { "acos",    math_acos },
-    { "asin",    math_asin },
-    { "atan",    math_atan },
-    { "atan2",   math_atan2 },
-    { "ceil",    math_ceil },
-    { "acos",    math_acos },
-    { "acos",    math_acos }
+    float64 value;
+} MathObjectConstants[M_CONSTANTS_COUNT] = {
+    { "E",      M_E },
+    { "LOG2E",  M_LOG2E },
+    { "LOG10E", M_LOG10E },
+    { "LN2",    M_LN2 },
+    { "LN10",   M_LN10 },
+    { "PI",     M_PI },
+    { "SQRT2",  M_SQRT2 },
+    { "SQRT1_2",M_SQRT1_2 }
 };
 
-struct MathConstantEntry {
+struct MathObjectFunctionDef {
     char *name;
-    double value;
-} MathConstants[] = {
-    { "E",           M_E },
-    { "LOG2E",       M_LOG2E },
-    { "LOG10E",      M_LOG10E },
-    { "LN2",         M_LN2 },
-    { "LN10",        M_LN10 },
-    { "PI",          M_PI },
-    { "SQRT2",       M_SQRT2 },
-    { "SQRT1_2",     M_SQRT1_2 }
+    JSFunction::NativeCode *imp;
+} MathObjectFunctions[] = {
+    { "abs",    Math_abs },
+    { "acos",   Math_acos },
+    { "asin",   Math_asin },
+    { "atan",   Math_atan },
+    { "atan2",  Math_atan2 },
+    { "ceil",   Math_ceil },
+    { "cos",    Math_cos },
+    { "exp",    Math_exp },
+    { "floor",  Math_floor },
+    { "log",    Math_log },
+    { "max",    Math_max },
+    { "min",    Math_min },
+    { "pow",    Math_pow },
+    { "random", Math_random },
+    { "round",  Math_round },
+    { "sin",    Math_sin },
+    { "sqrt",   Math_sqrt },
+    { "tan",    Math_tan },    
 };
 
-// There is no constructor for Math, we simply initialize
-//  the properties of the Math object
-void JSMath::initMathObject(JSScope *g)
+void initMathObject(Context *cx, JSObject *mathObj)
 {
-    uint i;
-    JSMath *m = new JSMath();
-    m->setClass(new JSString("Math"));
+    int i;
+    for (i = 0; i < M_CONSTANTS_COUNT; i++)
+        mathObj->defineVariable(widenCString(MathObjectConstants[i].name), 
+                                    NULL, Number_Type, JSValue(MathObjectConstants[i].value));
 
-    for (i = 0; i < sizeof(MathFunctions) / sizeof(MathFunctionEntry); i++)
-        m->setProperty(widenCString(MathFunctions[i].name), JSValue(new JSNativeFunction(MathFunctions[i].fn) ) );
+    for (i = 0; i < sizeof(MathObjectFunctions) / sizeof(MathObjectFunctionDef); i++) {
+        JSFunction *f = new JSFunction(cx, MathObjectFunctions[i].imp, Number_Type);
+        mathObj->defineVariable(widenCString(MathObjectFunctions[i].name), 
+                                    NULL, Number_Type, JSValue(f));
+    }
+}    
 
-    for (i = 0; i < sizeof(MathConstants) / sizeof(MathConstantEntry); i++)
-        m->setProperty(widenCString(MathConstants[i].name), JSValue(MathConstants[i].value) );
 
-    g->setProperty(widenCString("Math"), JSValue(m));
-    
+
 }
-
-} /* JSMathClass */
-} /* JavaScript */
+}

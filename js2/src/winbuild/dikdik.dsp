@@ -113,6 +113,10 @@ SOURCE=..\jsarray.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\jsmath.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\jsstring.cpp
 # End Source File
 # Begin Source File
@@ -190,6 +194,10 @@ SOURCE=..\js2runtime.h
 # Begin Source File
 
 SOURCE=..\jsarray.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\jsmath.h
 # End Source File
 # Begin Source File
 
