@@ -61,7 +61,7 @@ endif
 
 
 ifdef NSJVM
-JNI_GEN		= netscape.javascript.JSObject netscape.javascript.JSException
+JNI_GEN		= netscape.javascript.JSObject
 endif
 
 EXPORTS		= jsjava.h \
