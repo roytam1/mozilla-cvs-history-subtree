@@ -77,7 +77,8 @@
 #endif
 #define null NULL
 #define nullp(x) (((void*)x) == ((void*)0))
-
+#define XML_FILE_TYPE 1
+#define SMIL_FILE_TYPE 2
 
 
 /* xmlparse.c data structures and defines */
@@ -102,6 +103,7 @@ typedef struct _XMLFileStruct {
   XML_Parser parser;
   int32   numTransclusions;
   struct _XMLElementStruct** transclusions;
+  int16     type;
 } XMLFileStruct;
 
 typedef XMLFileStruct* XMLFile;
@@ -152,6 +154,11 @@ typedef struct _XMLHTMLInclusionStruct {
 typedef  XMLHTMLInclusionStruct *XMLHTMLInclusion;
 
 
+const char* XML_ElementTag(XMLElement el);
+char** XML_ElementAttributes(XMLElement el);
+XMLElement XML_ElementContent(XMLElement el);
+XMLElement XML_ElementChildren(XMLElement el);
+XMLElement XML_ElementNextChild(XMLElement el);
 
 /* xmlparse.c function prototypes */
 
@@ -196,6 +203,7 @@ void				xmlhtml_complete  (NET_StreamClass *stream);
 void				xmlhtml_complete_int (XMLFile xml);
 void				xmlhtml_GetUrlExitFunc (URL_Struct *urls, int status, MWContext *cx);
 void				readHTML (char* url, XMLHTMLInclusion ss);
+NET_StreamClass * XML_ConverterInt(FO_Present_Types  format_out, void *data_object, URL_Struct *URL_s, MWContext  *window_id);
 
 PUBLIC NET_StreamClass *	XML_XMLConverter(FO_Present_Types  format_out, void *data_object, URL_Struct *URL_s, MWContext  *window_id);
 PUBLIC NET_StreamClass *	XML_CSSConverter(FO_Present_Types  format_out, void *data_object, URL_Struct *URL_s, MWContext  *window_id);

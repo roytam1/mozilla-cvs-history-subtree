@@ -172,7 +172,17 @@ PUBLIC NET_StreamClass *
 
 XML_XMLConverter(FO_Present_Types  format_out, void *data_object, URL_Struct *URL_s, MWContext  *window_id)
 {
-    NET_StreamClass* stream;
+    return XML_ConverterInt(format_out, data_object, URL_s, window_id, XML_FILE_TYPE);
+}
+
+XML_SMILConverter(FO_Present_Types  format_out, void *data_object, URL_Struct *URL_s, MWContext  *window_id)
+{
+    return XML_ConverterInt(format_out, data_object, URL_s, window_id, SMIL_FILE_TYPE);
+}
+
+
+NET_StreamClass * XML_ConverterInt(FO_Present_Types  format_out, void *data_object, URL_Struct *URL_s, MWContext  *window_id, int16 fileType) {
+  NET_StreamClass * stream;
     XMLFile  xmlf; 
     TRACEMSG(("Setting up display stream. Have URL: %s\n", URL_s->address));
 
@@ -184,6 +194,7 @@ XML_XMLConverter(FO_Present_Types  format_out, void *data_object, URL_Struct *UR
     XML_SetProcessingInstructionHandler(xmlf->parser, (void (*)(void*, const char*, const char*))XMLDOM_PIHandler);
     XML_SetUserData(xmlf->parser, xmlf);
     xmlf->status = 1;
+    xmlf->type = fileType;
     xmlf->address = copyString(URL_s->address);
     xmlf->mwcontext = window_id;
     window_id->xmlfile = xmlf;

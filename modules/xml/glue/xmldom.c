@@ -297,3 +297,26 @@ tokenizeXMLElement (char* attr, char** attlist)
   }
 }
 
+
+
+const char* XML_ElementTag(XMLElement el) {
+  return el->tag;
+}
+
+char** XML_ElementAttributes(XMLElement el) {
+  return el->attributes;
+}
+
+XMLElement XML_ElementContent(XMLElement el) {
+  return el->content;
+}
+
+XMLElement XML_ElementChildren(XMLElement el) {
+  return el->child;
+}
+
+XMLElement XML_ElementNextChild(XMLElement el) {
+  return el->next;
+}
+
+
