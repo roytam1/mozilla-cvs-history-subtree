@@ -184,7 +184,7 @@ versiont.c:	Makefile.client Version.c
 	-e "s|%VERSION%|$${v}|" \
 	< Version.c > $@)
 
-all::    $(OBJDEST) $(LIBDIR) $(OBJS) $(DLLSSLDAP)
+export::    $(OBJDEST) $(LIBDIR) $(OBJS) $(DLLSSLDAP)
 
 $(LIBDIR):
 	$(MKDIR) $(LIBDIR)
@@ -208,7 +208,7 @@ veryclean:: clean
 $(OBJDEST):
 	$(MKDIR) $(OBJDEST)
 
-install:: $(DLLSSLDAP)
+export:: $(DLLSSLDAP)
 ifeq ($(OS_ARCH), WINNT)
 	$(INSTALL) -m 555 $(LIBSSLDAP) $(dist_libdir)
 	$(INSTALL) -m 555 $(DLLSSLDAP) $(dist_libdir)

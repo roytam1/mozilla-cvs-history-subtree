@@ -86,6 +86,4 @@ $(INCLUDEDIR)/ldap-standard.h:	ldap-standard-tmpl.h
 			LDAP_VENDOR_VERSION="$(VENDOR_VERSION)" \
 			< $< > $@
 
-install::	export
-
 FORCE:

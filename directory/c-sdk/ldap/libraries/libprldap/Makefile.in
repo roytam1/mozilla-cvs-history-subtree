@@ -160,7 +160,7 @@ versiont.c:	Makefile.client Version.c
 	-e "s|%VERSION%|$${v}|" \
 	< Version.c > $@)
 
-all::    $(OBJDEST) $(LIBDIR) $(OBJS) $(DLLPRLDAP)
+export::    $(OBJDEST) $(LIBDIR) $(OBJS) $(DLLPRLDAP)
 
 $(LIBDIR):
 	$(MKDIR) $(LIBDIR)
@@ -210,7 +210,7 @@ $(OBJDEST):
 # the $(dist_bindir) line is for the mozilla client, which for reasons
 # unknown wants shared libraries in /bin also
 #
-install:: $(LIBPRLDAP) $(DLLPRLDAP)	
+export:: $(LIBPRLDAP) $(DLLPRLDAP)	
 ifeq ($(OS_ARCH), WINNT)
 	$(INSTALL) -m 555 $(LIBPRLDAP) $(dist_libdir)
 	$(INSTALL) -m 555 $(DLLPRLDAP) $(dist_libdir)

@@ -71,7 +71,7 @@ versiont.c:	Makefile.client Version.c
 	-e "s|%VERSION%|$${v}|" \
 	< Version.c > $@)
 
-all::    $(OBJDEST) $(LIBDIR) $(OBJS) $(LIBIUTIL)
+export::    $(OBJDEST) $(LIBDIR) $(OBJS) $(LIBIUTIL)
 
 $(LIBDIR):
 	$(MKDIR) $(LIBDIR)
@@ -88,5 +88,5 @@ veryclean:: clean
 $(OBJDEST):
 	$(MKDIR) $(OBJDEST)
 
-install::	$(LIBIUTIL)
+export::	$(LIBIUTIL)
 	$(INSTALL) -m 444 $(LIBIUTIL) $(dist_libdir)
