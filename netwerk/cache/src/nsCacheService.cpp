@@ -370,6 +370,8 @@ NS_IMETHODIMP nsCacheService::VisitEntries(nsICacheVisitor *visitor)
 NS_IMETHODIMP nsCacheService::EvictEntries(nsCacheStoragePolicy storagePolicy)
 {
     nsresult rv = NS_ERROR_NOT_IMPLEMENTED;
+
+    nsAutoLock lock(mCacheServiceLock);
     
     if (storagePolicy == nsICache::STORE_ON_DISK) {
         if (mEnableDiskDevice) {
