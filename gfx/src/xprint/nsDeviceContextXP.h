@@ -76,6 +76,10 @@ public:
   NS_IMETHOD 	BeginPage(void);
   NS_IMETHOD 	EndPage(void);
 
+  NS_IMETHOD    GetBandHeight(int &aBandHeight);
+  NS_IMETHOD    StartBand(void);
+  NS_IMETHOD    EndBand(void);
+
   NS_IMETHOD  SetSpec(nsIDeviceContextSpec *aSpec);
 
   Display * GetDisplay(); 
@@ -83,6 +87,7 @@ public:
 
   NS_IMETHOD    GetMetricsFor(const nsFont& aFont, nsIFontMetrics*& aMetrics);
   NS_IMETHOD    GetMetricsFor(const nsFont& aFont, nsIAtom* aLangGroup, nsIFontMetrics*& aMetrics);
+
 
 protected:
   virtual 	~nsDeviceContextXP();
@@ -106,6 +111,7 @@ private:
   float                mHeightFloat;
   PRInt32              mWidth;
   PRInt32              mHeight;
+
 
 };
 

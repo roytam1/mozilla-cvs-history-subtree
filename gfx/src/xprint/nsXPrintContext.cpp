@@ -25,8 +25,10 @@
 #include "xlibrgb.h"
 #include "nsXPrintContext.h"
 
-#undef XPRINT_ON_SCREEN
 
+//#undef XPRINT_ON_SCREEN
+
+// why is this not in the constructor?
 Display * nsXPrintContext::mDisplay = (Display *)0;
 
 static int xerror_handler(Display *display, XErrorEvent *ev) {
@@ -51,6 +53,12 @@ nsXPrintContext::nsXPrintContext()
    mDepth = 0;
    mAlphaPixmap = 0;
    mImagePixmap = 0;
+   mBandHeight = 0; // No banding
+#ifdef RAS_PRINTER
+   pSS = NULL;
+   pPC = NULL;
+   pJob = NULL;
+#endif
 }
 
 /** ---------------------------------------------------
@@ -58,10 +66,13 @@ nsXPrintContext::nsXPrintContext()
  */
 nsXPrintContext::~nsXPrintContext()
 {
+
+#ifndef RAS_PRINTER
   // end the document
   EndDocument();
   // Cleanup things allocated along the way
-  XpDestroyContext(mDisplay, mPContext);
+//  XpDestroyContext(mDisplay, mPContext);
+#endif
   XCloseDisplay(mDisplay);
 }
 
@@ -69,16 +80,33 @@ NS_IMETHODIMP
 nsXPrintContext::Init(nsIDeviceContextSpecXP *aSpec)
 {
   int prefDepth = 8;
-#ifdef XPRINT_ON_SCREEN
+#if defined(XPRINT_ON_SCREEN) || defined(RAS_PRINTER)
+
+#ifdef DEBUG_TLOGUE
+ printf("Init RAS_PRINTER or XPRINT_ON_SCREEN...\n");
+#endif
+
+  mPrintResolution = 300;
+  prefDepth = 24;
   if (nsnull == mDisplay)
      mDisplay  = (Display *)XOpenDisplay(NULL);
   mScreen = XDefaultScreenOfDisplay(mDisplay);
   xlib_rgb_init_with_depth(mDisplay, mScreen, prefDepth);
   mScreenNumber = XDefaultScreen(mDisplay);
-  SetupWindow(0, 0, 1000, 1100);
-  mPrintResolution = 300;
+
+#ifdef RAS_PRINTER
+  if (NS_OK != SetupRasterPrintJob(aSpec)) {
+    printf("Failure in SetupRasterPrintJob\n");
+    return NS_ERROR_FAILURE;
+  }
+#else
+  mWidth = 1000;
+  mHeight = 700;
+  SetupWindow(0, 0, mWidth, mHeight);
   mTextZoom = 1.0f; 
   XMapWindow(mDisplay, mDrawable);
+#endif // RAS_PRINTER
+
 #else
   char *printservername = (char *)0;
   if (!(printservername =  getenv("XPDISPLAY"))) {
@@ -99,11 +127,14 @@ nsXPrintContext::Init(nsIDeviceContextSpecXP *aSpec)
   xlib_rgb_init_with_depth(mDisplay, mScreen, prefDepth);
 
   XpGetPageDimensions(mDisplay, mPContext, &width, &height, &rect);
-  SetupWindow(rect.x, rect.y, rect.width, rect.height);
+
+  mWidth = rect.width;
+  mHeight = rect.height;
+  SetupWindow(rect.x, rect.y, mWidth, mHeight);
 
   // mGC =  XDefaultGCOfScreen(mScreen);
   mTextZoom = 2.0f; 
-#endif
+#endif  // ! XPRINT_ON_SCREEN || RAS_PRINTER
   mPDisplay = mDisplay; 
   (void)XSetErrorHandler(xerror_handler);
   XSynchronize(mDisplay, True);
@@ -120,8 +151,6 @@ nsXPrintContext::SetupWindow(int x, int y, int width, int height)
   unsigned long gcmask;
   XGCValues gcvalues;
 
-  mWidth = width;
-  mHeight = height;
   visual_info = xlib_rgb_get_visual_info();
 
   parent_win = RootWindow(mDisplay, mScreenNumber);
@@ -138,21 +167,32 @@ nsXPrintContext::SetupWindow(int x, int y, int width, int height)
 			mDepth, InputOutput, mVisual, xattributes_mask, 
 			&xattributes );
 #else
-   mDrawable = (Drawable)XCreateSimpleWindow(mDisplay,
+  mDepth  = XDefaultDepth(mDisplay, mScreenNumber);
+  mVisual = XDefaultVisual(mDisplay, mScreenNumber);
+
+#ifdef DEBUG_TLOGUE
+  printf("mVisual->red=%lu,green=%lu,blue=%lu,bprgb=%d\n",mVisual->red_mask,mVisual->green_mask,mVisual->blue_mask,mVisual->bits_per_rgb);
+#endif
+
+#ifdef RAS_PRINTER
+  mDrawable = (Drawable) XCreatePixmap(mDisplay,parent_win,width,height,mDepth);
+#else
+ mDrawable = (Drawable)XCreateSimpleWindow(mDisplay,
                                 parent_win,
                                 x, y,
                                 width, height,
                                 0, BlackPixel(mDisplay, mScreenNumber),
                                 WhitePixel(mDisplay, mScreenNumber));
-  mDepth  = XDefaultDepth(mDisplay, mScreenNumber);
-  mVisual = XDefaultVisual(mDisplay, mScreenNumber);
-#endif
+#endif // RAS_PRINTER
+#endif // !_USE_PRIMITIVE_CALL
+
   gcmask = GCBackground | GCForeground | GCFunction ;
   gcvalues.background = WhitePixel(mDisplay, mScreenNumber);
   gcvalues.foreground = BlackPixel(mDisplay, mScreenNumber);
   gcvalues.function = GXcopy;
   mGC     = XCreateGC(mDisplay, mDrawable, gcmask, &gcvalues);
- return NS_OK;
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -220,38 +260,238 @@ nsXPrintContext::SetupPrintContext(nsIDeviceContextSpecXP *aSpec)
   } 
   
   return NS_OK;
-}  
+} 
+
+#ifdef RAS_PRINTER 
+NS_IMETHODIMP
+nsXPrintContext::SetupRasterPrintJob(nsIDeviceContextSpecXP *aSpec)
+{
+  int printSize = NS_LETTER_SIZE;
+  PRBool IsGrayscale = PR_FALSE;
+  char *PortName = "/dev/usb/lp0"; // NULL; <- REVISIT: Remove hardcoded value
+
+  mTextZoom = 3.0f;
+
+  // this value is dependent on available memory:  X gives us 32bits/pixel
+  // * 2400 pixels/raster (for letter or A4 paper at 300dpi)
+  // = 9600 bytes/raster which is then multiplied by mBandHeight (# rasters/band)
+  mBandHeight = 100; // = 960000 bytes
+
+  aSpec->GetSize( printSize );
+  aSpec->GetGrayscale( IsGrayscale );
+  //aSpec->GetPath(&PortName);
+
+#ifdef DEBUG_TLOGUE
+  printf("Init HP Services to '%s'\n",PortName);
+#endif
+  // instantiate SystemServices, check for instantiation and constructor success
+  pSS = new HPLinuxSS(PortName);
+  if (nsnull != pSS)
+  {
+    if (NO_ERROR != pSS->constructor_error)
+      return NS_ERROR_FAILURE;
+  }
+  else return NS_ERROR_FAILURE;
+
+  // instantiate HP PrintContext, check for instantiation and constructor success
+  pPC = new PrintContext(pSS);
+  if (nsnull != pPC)
+  {
+    if (NO_ERROR != pPC->constructor_error)
+      return NS_ERROR_FAILURE;
+  }
+  else return NS_ERROR_FAILURE;
+
+  if( !(pPC->PrinterSelected()) ) {
+    pSS->DisplayPrinterStatus(DISPLAY_NO_PRINTER_FOUND);
+
+    // wait for user to cancel the job, otherwise they
+    // might miss the error message
+    while (pSS->BusyWait(500) != JOB_CANCELED);
+
+    return NS_ERROR_FAILURE;
+  }
+
+  switch(printSize)
+  {
+    case(NS_LETTER_SIZE): pPC->SetPaperSize(LETTER);
+                          break;
+    case(NS_A4_SIZE): pPC->SetPaperSize(A4);
+                          break;
+    case(NS_LEGAL_SIZE): pPC->SetPaperSize(LEGAL);
+                          break;
+    default: pPC->SetPaperSize(LETTER);
+                          printf("No Valid Paper Selection: Default to LETTER ");
+                          break;
+  }
+
+  mWidth = pPC->InputPixelsPerRow();
+  mHeight = int( pPC->PrintableHeight() * 300 ); // height in inches * dpi
+
+  if (PR_TRUE == IsGrayscale)
+    pPC->SelectPrintMode(GRAYMODE_INDEX);
+
+  SetupWindow(0,0,mWidth,mBandHeight);
+
+  // instantiate job, check for instantiation and constructor success
+  pJob = new Job(pPC);
+  if (nsnull != pJob)
+  {
+    if (NO_ERROR != pJob->constructor_error)
+      return NS_ERROR_FAILURE;
+  }
+  else return NS_ERROR_FAILURE;
+
+  return NS_OK;
+
+}
+#endif
 
 NS_IMETHODIMP
 nsXPrintContext::BeginDocument()
 {
+  printf("XPrint: BeginDocument\n");
   return NS_OK;
 }
 
 NS_IMETHODIMP 
 nsXPrintContext::BeginPage()
 {
+#ifndef RAS_PRINTER
   XpStartPage(mDisplay, mDrawable);
   // Move the print window according to the given margin
   // XMoveWindow(mDisplay, mDrawable, 100, 100);
+#endif
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsXPrintContext::StartBand()
+{
+
+#ifdef RAS_PRINTER
+  // We need to clear our pixmap at init and between bands
+  XSetForeground(mDisplay,mGC,WhitePixel(mDisplay,mScreenNumber));
+  XFillRectangle(mDisplay,mDrawable,mGC,0,0,mWidth,mBandHeight);
+  XSetForeground(mDisplay,mGC,BlackPixel(mDisplay,mScreenNumber));
+#endif
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsXPrintContext::EndBand()
+{
+
+#ifdef RAS_PRINTER
+  XImage* x_image = XGetImage(mDisplay, mDrawable, 0, 0, mWidth, mBandHeight, 0xffffff, ZPixmap);
+  XInitImage(x_image);
+
+  unsigned short *pix16 = NULL;
+
+#ifdef DEBUG_TLOGUE
+  //printf("w=%d,h=%d,xoff=%d,f=%d,data=0x%x,bo=%d,bu=%d,bbo=%d,bp=%d,d=%d,bpl=%d,bpp=%d,red=0x%lx,green=0x%lx,blue=0x%lx\n",
+  //x_image->width,x_image->height,x_image->xoffset,x_image->format,x_image->data,
+  //x_image->byte_order,x_image->bitmap_unit,x_image->bitmap_bit_order,x_image->bitmap_pad,
+  //x_image->depth,x_image->bytes_per_line,x_image->bits_per_pixel,x_image->red_mask,x_image->green_mask,x_image->blue_mask);
+#endif
+
+  BYTE RGBtriplet[14400];  // this raster will handle up to 600dpi x 8" 24bit RGB
+  int i=0, j=0, k=0, ras_value=0, iFactor=1;
+
+  for (i = 0; i<mBandHeight; i++)
+  {
+    ras_value = 0;
+
+    if(x_image->depth == 24)
+    {
+      iFactor = 4;
+
+      // transform the 32bit RGB pixel to 24bit RGB
+      for (j=i*mWidth*iFactor, k=0; j<(i+1)*mWidth*iFactor; j+=iFactor, k+=3)
+      {
+
+         // Redhat/Intel - BGRX -> RGB
+         RGBtriplet[k]   = (BYTE)(x_image->data[j+2]);
+         RGBtriplet[k+1] = (BYTE)(x_image->data[j+1]);
+         RGBtriplet[k+2] = (BYTE)(x_image->data[j]);
+/*
+         // XRGB -> RGB (just remove padding byte)
+         RGBtriplet[k]   = (BYTE)(x_image->data[j+1]);
+         RGBtriplet[k+1] = (BYTE)(x_image->data[j+2]);
+         RGBtriplet[k+2] = (BYTE)(x_image->data[j+3]);
+*/
+         ras_value += RGBtriplet[k]+RGBtriplet[k+1]+RGBtriplet[k+2];
+      }
+    }
+    else if(x_image->depth == 16)
+    {
+      iFactor = 2;
+
+      // transform the 16bit (5-6-5) RGB pixel to 24bit RGB
+      for (j=i*mWidth*iFactor, k=0; j<(i+1)*mWidth*iFactor; j+=iFactor, k+=3)
+      {
+
+         // 16bit
+         pix16 = (unsigned short *)(&(x_image->data[j]));
+         RGBtriplet[k]   = BYTE( ( *pix16 & 0xF800 ) >> 11)*255/31;
+         RGBtriplet[k+1] = BYTE( ( *pix16 & 0x07E0 ) >>  5)*255/63;
+         RGBtriplet[k+2] = BYTE( ( *pix16 & 0x001F ) >>  0)*255/31;
+
+         ras_value += RGBtriplet[k]+RGBtriplet[k+1]+RGBtriplet[k+2];
+      }
+    }
+    else return NS_ERROR_FAILURE;  // 8-bit is not supported
+
+    // don't send empty rasters into the imaging pipeline - HUGE speed increase
+    if(ras_value == 255*mWidth*3)
+    {
+      pJob->SendRasters( NULL, NULL );
+//      printf("NULL ");
+    }
+    else pJob->SendRasters( RGBtriplet, NULL );
+
+//    printf("Raster: %d\n", i);
+    
+  }
+
+  XDestroyImage(x_image);
+  x_image = NULL;
+#endif
+
   return NS_OK;
 }
 
 NS_IMETHODIMP 
 nsXPrintContext::EndPage()
 {
+#ifdef RAS_PRINTER
+  pJob->NewPage();
+#else
   XpEndPage(mDisplay);
+#endif
   return NS_OK;
 }
 
 NS_IMETHODIMP 
 nsXPrintContext::EndDocument()
 {
+printf("XPrint: EndDocument\n");
+#ifdef RAS_PRINTER
+  if (pJob != NULL) delete pJob;
+  if (pPC != NULL) delete pPC;
+  if (pSS != NULL) delete pSS;
+  
+  XFreePixmap(mDisplay,(Pixmap)mDrawable);
+  XFlush(mDisplay);
+#else
   XFlush(mDisplay);
   XpEndJob(mDisplay);
   // Cleanup things allocated along the way
   XpDestroyContext(mDisplay, mPContext);
   // XCloseDisplay(mDisplay);
+#endif
   return NS_OK;
 }
 
@@ -263,7 +503,7 @@ nsXPrintContext::DrawImage(nsIImage *aImage,
    PRUint8 *image_bits = aImage->GetBits();
    PRInt32 row_bytes   = aImage->GetLineStride();
    
-  // XpSetImageResolution(mDisplay, mPContext, new_res, &prev_res);
+   // XpSetImageResolution(mDisplay, mPContext, new_res, &prev_res);
    xlib_draw_gray_image(mDrawable,
                       mGC,
                       aDX, aDY, aDWidth, aDHeight,
@@ -271,7 +511,7 @@ nsXPrintContext::DrawImage(nsIImage *aImage,
                       image_bits + row_bytes * aSY + 3 * aDX,
                       row_bytes);
 
-  // XpSetImageResolution(mDisplay, mPContext, prev_res, &new_res);
+   // XpSetImageResolution(mDisplay, mPContext, prev_res, &new_res);
   return NS_OK;
 }
 
@@ -387,7 +627,7 @@ nsXPrintContext::DrawImage(nsIImage *aImage,
                          XLIB_RGB_DITHER_NONE,
                          image_bits, row_bytes);
 #endif
-    // XpSetImageResolution(mDisplay, mPContext, prev_res, &new_res);
+   //  XpSetImageResolution(mDisplay, mPContext, prev_res, &new_res);
   }
   if (nsnull  != mAlphaPixmap)
   {

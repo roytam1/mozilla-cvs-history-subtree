@@ -430,6 +430,31 @@ public:
    * @return error status
    */
   NS_IMETHOD EndPage(void) = 0;
+
+  /**
+   * Returns the number of raster bands requested by the device
+   * context.  The default value of 0 will indicate no banding
+   * is performed.
+   * @return error status
+   */
+  NS_IMETHOD GetBandHeight(PRInt32 &aAppBandHeight) = 0;
+
+  /**
+   * Inform the device context that a print band is being started.
+   * Must be matched 1:1 with EndBand() and reside within a 
+   * BeginPage()/EndPage() pair.
+   * @return error status
+   */
+  NS_IMETHOD StartBand(void) = 0;
+
+  /**
+   * Inform the device context that a print band has been completed.
+   * Must be matched 1:1 with EndBand() and reside within a 
+   * BeginPage()/EndPage() pair.
+   * @return error status
+   */
+  NS_IMETHOD EndBand(void) = 0;
+
 };
 
 #endif /* nsIDeviceContext_h___ */

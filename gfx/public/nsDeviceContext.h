@@ -89,6 +89,12 @@ public:
 
   NS_IMETHOD GetPaletteInfo(nsPaletteInfo&);
 
+  NS_IMETHOD GetBandHeight(PRInt32 &aAppBandHeight);
+
+  NS_IMETHOD StartBand(void);
+
+  NS_IMETHOD EndBand(void);
+
 protected:
   virtual ~DeviceContextImpl();
 

@@ -37,6 +37,21 @@
 
 #include "nsIDeviceContextSpecXPrint.h"
 
+#ifdef RAS_PRINTER
+#include "../rasprinter/HPPrintAPI.h"
+#include "../rasprinter/HPLinuxPrintServices.h"
+#endif
+
+
+// As commented in nsPrintdGTK.h, these #defines should exist in some area
+// common to gtk, ps and now XPrint
+#ifndef NS_LEGAL_SIZE
+#define NS_LETTER_SIZE    0
+#define NS_LEGAL_SIZE     1
+#define NS_EXECUTIVE_SIZE 2
+#define NS_A4_SIZE        3
+#endif
+
 class nsXPrintContext
 {
 public:
@@ -48,6 +63,10 @@ public:
   NS_IMETHOD EndPage();
   NS_IMETHOD BeginDocument();
   NS_IMETHOD EndDocument();
+
+  int GetBandHeight() { return mBandHeight; }
+  NS_IMETHOD StartBand();
+  NS_IMETHOD EndBand();
  
   GC         GetGC(void) { return mGC; }
   Drawable   GetDrawable(void) { return (mDrawable); }
@@ -91,12 +110,23 @@ private:
   int		mPrintResolution;
   float		mTextZoom;
 
+  int           mBandHeight;
+
   char 		*mPrintServerName;
   char 		*mPrinterName;
   char 		*mAttrPool;
 
+#ifdef RAS_PRINTER
+  HPLinuxSS*           pSS;
+  PrintContext*        pPC;
+  Job*                 pJob;
+  NS_IMETHOD SetupRasterPrintJob(nsIDeviceContextSpecXP *aSpec);
+#endif
+
   NS_IMETHOD SetupWindow(int x, int y, int width, int height);
   NS_IMETHOD SetupPrintContext(nsIDeviceContextSpecXP *aSpec);
+
+
 };
 
 

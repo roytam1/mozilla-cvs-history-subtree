@@ -1,0 +1,59 @@
+SRCS =	breaks_open.cpp \
+	broadway.cpp \
+	capture.cpp \
+	cgtimes.cpp \
+	Compression.cpp \
+	Context.cpp \
+	courier.cpp \
+	create_so.cpp \
+	creator.cpp \
+	DJ600.cpp \
+	DJ600_maps.cpp \
+	DJ660.cpp \
+	DJ660_maps.cpp \
+	DJ690.cpp \
+	DJ690_maps.cpp \
+	DJ6XX.cpp \
+	DJ895.cpp \
+	DJ895_maps2.cpp \
+	DJ895_maps.cpp \
+	DJ970_maps2.cpp \
+	DJ970_maps.cpp \
+	Font.cpp \
+	globals.cpp \
+	Header.cpp \
+	htfed_open.cpp \
+	imager.cpp \
+	imager_open.cpp \
+	interp_open.cpp \
+	IO_Utils.cpp \
+	Job.cpp \
+	ltrgothic.cpp \
+	Printer.cpp \
+	Registry.cpp \
+	ResSynth.cpp \
+	rgbtocmyk.cpp \
+	scaler_open.cpp \
+	script.cpp \
+	SystemServices.cpp \
+	TextManager.cpp \
+	TextSupport.cpp \
+	Translator.cpp \
+	univers.cpp \
+	versioncode.cpp \
+	version.cpp
+
+OBJS := $(SRCS:.cpp=.o)
+
+default: harness
+
+CFLAGS = -g -DDEBUG -DDBG_MASK=0x02 -D_DJ9xx -D_DJ8xx -D_DJ6xx -D_DJ600 -D_DJ6xxPhoto -D_LITTLE_ENDIAN
+
+%.o : %.cpp
+	gcc $(CFLAGS) -c -o $@ $<
+
+sdk.o : $(OBJS)
+	ld -r -o $@ $^
+
+harness: Harness.cpp sdk.o
+	gcc $(CFLAGS) -o $@ $^ -lm

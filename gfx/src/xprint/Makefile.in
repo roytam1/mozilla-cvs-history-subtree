@@ -30,6 +30,8 @@ MODULE		= layout
 LIBRARY_NAME	= gfxxprt
 IS_COMPONENT	= 1
 
+IS_RAS_PRINTER  = 1
+
 CSRCS		= ../xlibrgb/xlibrgb.c \
 		$(NULL)
 
@@ -42,6 +44,60 @@ CPPSRCS		= \
 		nsRegionXP.cpp \
 		$(NULL)
 
+ifeq ($(IS_RAS_PRINTER), 1)
+# Sources for HP Printer Driver
+CPPSRCS += \
+      ../rasprinter/breaks_open.cpp \
+      ../rasprinter/broadway.cpp \
+      ../rasprinter/capture.cpp \
+      ../rasprinter/cgtimes.cpp \
+      ../rasprinter/Compression.cpp \
+      ../rasprinter/Context.cpp \
+      ../rasprinter/courier.cpp \
+      ../rasprinter/create_so.cpp \
+      ../rasprinter/creator.cpp \
+      ../rasprinter/DJ600.cpp \
+      ../rasprinter/DJ600_maps.cpp \
+      ../rasprinter/DJ660.cpp \
+      ../rasprinter/DJ660_maps.cpp \
+      ../rasprinter/DJ690.cpp \
+      ../rasprinter/DJ690_maps.cpp \
+      ../rasprinter/DJ6XX.cpp \
+      ../rasprinter/DJ895.cpp \
+      ../rasprinter/DJ895_maps2.cpp \
+      ../rasprinter/DJ895_maps.cpp \
+      ../rasprinter/DJ970_maps2.cpp \
+      ../rasprinter/DJ970_maps.cpp \
+      ../rasprinter/Font.cpp \
+      ../rasprinter/globals.cpp \
+      ../rasprinter/Header.cpp \
+      ../rasprinter/htfed_open.cpp \
+      ../rasprinter/imager.cpp \
+      ../rasprinter/imager_open.cpp \
+      ../rasprinter/interp_open.cpp \
+      ../rasprinter/IO_Utils.cpp \
+      ../rasprinter/Job.cpp \
+      ../rasprinter/ltrgothic.cpp \
+      ../rasprinter/Printer.cpp \
+      ../rasprinter/Registry.cpp \
+      ../rasprinter/ResSynth.cpp \
+      ../rasprinter/rgbtocmyk.cpp \
+      ../rasprinter/scaler_open.cpp \
+      ../rasprinter/script.cpp \
+      ../rasprinter/SystemServices.cpp \
+      ../rasprinter/TextManager.cpp \
+      ../rasprinter/TextSupport.cpp \
+      ../rasprinter/Translator.cpp \
+      ../rasprinter/univers.cpp \
+      ../rasprinter/versioncode.cpp \
+      ../rasprinter/version.cpp \
+      $(NULL)
+
+HP_DRIVER_FLAGS = -D_DJ9xx -D_DJ8xx -D_DJ6xx -D_DJ6xxPhoto -D_DJ600 -D_LITTLE_ENDIAN -DRAS_PRINTER
+# for debugging HP driver add these: -DDEBUG -DDBG_MASK=0x02 -DDEBUG_TLOGUE
+
+endif
+
 EXPORTS		= \
 		nsIDeviceContextXPrint.h \
 		nsGfxXPrintCID.h \
@@ -49,9 +105,10 @@ EXPORTS		= \
 		$(NULL)
 
 EXTRA_DSO_LDOPTS += $(MOZ_XPRINT_LDFLAGS)
-CXXFLAGS	 += $(MOZ_XPRINT_CFLAGS)
+CXXFLAGS	 += $(MOZ_XPRINT_CLAGS)
 
 EXTRA_DSO_LDOPTS += $(MOZ_COMPONENT_LIBS) \
+              -lgkgfx \
 		$(NULL)
 
 include $(topsrcdir)/config/rules.mk
@@ -60,10 +117,8 @@ DEFINES		+= -D_IMPL_NS_GFXONXP
 ifeq ($(OS_ARCH), Linux)
 DEFINES         += -D_BSD_SOURCE
 endif
-CFLAGS		+= $(TK_CFLAGS)
-CXXFLAGS	+= $(TK_CFLAGS)
-
-LLIBS		+= $(DIST)/lib/libxpcom.a $(DIST)/lib/libgkgfx.a
+CFLAGS		+= $(TK_CFLAGS) $(HP_DRIVER_FLAGS)
+CXXFLAGS	+= $(TK_CFLAGS) $(HP_DRIVER_FLAGS)
 
 INCLUDES	+= \
 		-I$(srcdir)/../gtk \

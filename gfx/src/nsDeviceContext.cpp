@@ -671,6 +671,22 @@ NS_IMETHODIMP DeviceContextImpl::GetPaletteInfo(nsPaletteInfo& aPaletteInfo)
   return NS_OK;
 }
 
+NS_IMETHODIMP DeviceContextImpl::GetBandHeight(PRInt32 &aAppBandHeight)
+{
+  aAppBandHeight = 0;
+  return NS_OK;
+}
+
+NS_IMETHODIMP DeviceContextImpl::StartBand(void)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP DeviceContextImpl::EndBand(void)
+{
+  return NS_OK;
+}
+
 /////////////////////////////////////////////////////////////
 
 MOZ_DECL_CTOR_COUNTER(nsFontCache);

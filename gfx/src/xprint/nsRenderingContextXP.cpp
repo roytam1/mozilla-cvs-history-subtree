@@ -662,7 +662,6 @@ nsRenderingContextXP :: DrawLine(nscoord aX0, nscoord aY0, nscoord aX1, nscoord 
   mTMatrix->TransformCoord(&aX0,&aY0);
   mTMatrix->TransformCoord(&aX1,&aY1);
 
-  
   ::XDrawLine(mPrintContext->GetDisplay(), mPrintContext->GetDrawable(),
               mPrintContext->GetGC(), aX0, aY0, aX1, aY1);
 
@@ -1191,13 +1190,12 @@ nsRenderingContextXP :: DrawString(const char *aString, PRUint32 aLength,
   nscoord y = aY;
 
   // Substract xFontStruct ascent since drawing specifies baseline
-#ifdef XPRINT_ON_SCREEN
+#if defined(XPRINT_ON_SCREEN) || defined(RAS_PRINTER)
   if (mFontMetrics) {
       mFontMetrics->GetMaxAscent(y);
       y += aY;
   }
 #endif
-
   if (nsnull != aSpacing) {
      // Render the string, one character at a time...
      const char* end = aString + aLength;
@@ -1267,7 +1265,7 @@ nsRenderingContextXP :: DrawString(const PRUnichar *aString, PRUint32 aLength,
     nscoord y;
 
     // Substract xFontStruct ascent since drawing specifies baseline
-#ifdef XPRINT_ON_SCREEN
+#if defined(XPRINT_ON_SCREEN) || defined(RAS_PRINTER)
     mFontMetrics->GetMaxAscent(y);
     y += aY;
     aY = y;

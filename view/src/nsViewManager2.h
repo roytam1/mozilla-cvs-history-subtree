@@ -322,6 +322,8 @@ private:
   nsIScrollableView *mRootScrollable;
   PRInt32     mCachingWidgetChanges;
 
+  PRInt32            mOffsetY;  // for banding purposes
+
   //from here to public should be static and locked... MMP
   static PRInt32           mVMCount;        //number of viewmanagers
   static nsDrawingSurface  mDrawingSurface; //single drawing surface

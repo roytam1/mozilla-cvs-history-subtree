@@ -155,6 +155,8 @@ nsViewManager2::nsViewManager2()
 	// assumed to be cleared here.
   mX = 0;
   mY = 0;
+  mOffsetY = 0;
+  mOffsetY = 0;
   mCachingWidgetChanges = 0;
   mAllowDoubleBuffering = PR_TRUE; 
 }
@@ -741,7 +743,9 @@ void nsViewManager2::RenderViews(nsIView *aRootView, nsIRenderingContext& aRC, c
 		PRBool clipEmpty;
 
 		// compute this view's origin, and mark it and all parent views.
-		nsPoint origin(0, 0);
+		// The mOffset for y is required for rendering to a banded device
+		nsPoint origin(0, mOffsetY);
+
 		ComputeViewOffset(aRootView, &origin, 1);
 		
 		// create the display list.
@@ -2302,11 +2306,52 @@ NS_IMETHODIMP nsViewManager2::Display(nsIView* aView)
 	PRBool  result;
 
 	trect.x = trect.y = 0;
-	localcx->SetClipRect(trect, nsClipCombine_kReplace, result);
+//    printf("page size = %d, %d\n",trect.width,trect.height);
 
-	// Paint the view. The clipping rect was set above set don't clip again.
-	//aView->Paint(*localcx, trect, NS_VIEW_FLAG_CLIP_SET, result);
-  RenderViews(aView,*localcx,trect,result);
+      int bandheight = 0;
+      mContext->GetBandHeight(bandheight);
+      if (bandheight != 0)
+      {
+        int pageheight = trect.height;
+        int numbands = pageheight/bandheight;
+        if (pageheight%bandheight != 0) numbands++;
+
+//      printf("bandheight=%d, pageheight=%d, numbands=%d\n",bandheight,pageheight,numbands);
+        trect.height = bandheight+1; //+1 else we lose a row at bottom of clip rectangle
+        for (int i = 0; i<numbands; i++)
+        {
+//        printf("Band[%d], ",i);
+
+          mContext->StartBand();
+
+          trect.y = 0; //i * bandheight;
+
+          localcx->SetClipRect(trect, nsClipCombine_kReplace, result);
+
+            // Set the offset for this band so we will always origin to 0,0
+            // of our clipping pixmap regardless of where the band is on the 'page'.
+            mOffsetY = i * bandheight;
+//             printf("mOffsetY=%d\n",mOffsetY);
+
+          // Paint the view. The clipping rect was set above set don't clip again.
+          //aView->Paint(*localcx, trect, NS_VIEW_FLAG_CLIP_SET, result);
+          RenderViews(aView,*localcx,trect,result);
+
+            // Make sure we restore the offset to 0 else the display gets corrupted
+            mOffsetY = 0;
+
+          mContext->EndBand();
+        }
+      }
+      else
+      {
+        localcx->SetClipRect(trect, nsClipCombine_kReplace, result);
+
+        // Paint the view. The clipping rect was set above set don't clip again.
+        //aView->Paint(*localcx, trect, NS_VIEW_FLAG_CLIP_SET, result);
+        RenderViews(aView,*localcx,trect,result);
+      }
+
 
 	// XXX Reset the view's origin
 	aView->SetPosition(x, y);

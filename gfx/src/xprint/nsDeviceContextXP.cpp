@@ -40,7 +40,6 @@ static NS_DEFINE_IID(kIDeviceContextSpecXPIID, NS_IDEVICE_CONTEXT_SPEC_XP_IID);
  */
 nsDeviceContextXP :: nsDeviceContextXP()
 {
-
   NS_INIT_REFCNT();
   mSpec = nsnull; 
   /* Inherited from xlib device context code */
@@ -58,6 +57,7 @@ nsDeviceContextXP :: nsDeviceContextXP()
   mWidth = -1;
   mHeight = -1;
 
+  printf("+nsDeviceContextXP\n");
 }
 
 /** ---------------------------------------------------
@@ -66,7 +66,9 @@ nsDeviceContextXP :: nsDeviceContextXP()
  */
 nsDeviceContextXP :: ~nsDeviceContextXP()
 {
-PRInt32 i, n;
+  PRInt32 i, n;
+
+  if(nsnull != mPrintContext) delete mPrintContext;
 
   // get rid of the fonts in our mFontMetrics cache
   n= mFontMetrics.Count();
@@ -78,6 +80,7 @@ PRInt32 i, n;
   mFontMetrics.Clear();
   NS_IF_RELEASE(mSpec);
 
+  printf("~nsDeviceContextXP\n");
 }
 
 NS_IMETHODIMP
@@ -92,11 +95,11 @@ nsDeviceContextXP :: SetSpec(nsIDeviceContextSpec* aSpec)
      mPrintContext = new nsXPrintContext();
      res = mSpec->QueryInterface(kIDeviceContextSpecXPIID, (void **) &psSpec);
      if (res == NS_OK) {
-        mPrintContext->Init(psSpec);
+        res = mPrintContext->Init(psSpec);
      }
   }
  
-  return NS_OK;
+  return res;
 }
 
 NS_IMPL_ISUPPORTS_INHERITED(nsDeviceContextXP,
@@ -125,7 +128,6 @@ nsDeviceContextXP::InitDeviceContextXP(nsIDeviceContext *aCreatingDeviceContext,
 
   mAppUnitsToDevUnits = (a2d / t2d) * mTwipsToPixels;
   mDevUnitsToAppUnits = 1.0f / mAppUnitsToDevUnits;
-
 #ifdef XPRINT_ON_SCREEN
   mAppUnitsToDevUnits = 1.0;
   mDevUnitsToAppUnits = 1.0;
@@ -360,7 +362,7 @@ NS_IMETHODIMP nsDeviceContextXP::EndDocument(void)
   nsresult  rv = NS_OK;
   if (mPrintContext != nsnull) {
       rv = mPrintContext->EndDocument();
-  } 
+  }
   return rv;
 }
 
@@ -385,6 +387,41 @@ NS_IMETHODIMP nsDeviceContextXP::EndPage(void)
   nsresult  rv = NS_OK;
   if (mPrintContext != nsnull) {
       rv = mPrintContext->EndPage();
+  }
+  return rv;
+}
+
+NS_IMETHODIMP nsDeviceContextXP::GetBandHeight(PRInt32 &aAppBandHeight)
+{
+  PRInt32 mDevBandHeight = 0;
+
+  if (mPrintContext != nsnull) {
+    mDevBandHeight = mPrintContext->GetBandHeight();
+    aAppBandHeight = NSToIntRound(mDevBandHeight * mDevUnitsToAppUnits);
+
+#ifdef DEBUG_TLOGUE
+    printf("GetBandHeight = %d DevUnits, %d AppUnits\n",mDevBandHeight,aAppBandHeight);
+#endif
+
+    return NS_OK;
+  }
+  return NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP nsDeviceContextXP::StartBand(void)
+{
+  nsresult  rv = NS_OK;
+  if (mPrintContext != nsnull) {
+      rv = mPrintContext->StartBand();
+  }
+  return rv;
+}
+
+NS_IMETHODIMP nsDeviceContextXP::EndBand(void)
+{
+  nsresult  rv = NS_OK;
+  if (mPrintContext != nsnull) {
+      rv = mPrintContext->EndBand();
   }
   return rv;
 }
