@@ -1262,6 +1262,7 @@ NS_IMETHODIMP nsMsgLocalMailFolder::Delete()
 
 	if(mDatabase)
 	{
+    NotifyStoreClosedAllHeaders();
 		mDatabase->ForceClosed();
 		mDatabase = null_nsCOMPtr();
 	}
