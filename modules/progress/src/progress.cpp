@@ -20,31 +20,49 @@
 #include "nsProgressManager.h"
 
 void
-PM_CreateProgressManager(MWContext* context, const char* url)
+PM_EnsureProgressManager(MWContext* context)
 {
-    // Enforce that there is no progress manager on the context, but
-    // if there is, release it.
-    PR_ASSERT(context->progressManager == NULL);
-    if (context->progressManager)
-        return;
+    nsProgressManager::Ensure(context);
+}
 
-    nsITransferObserver* progressManager
-        = new nsProgressManager(context, url);
-    
-    if (progressManager) {
-        context->progressManager = progressManager;
-        progressManager->AddRef();
+void
+PM_ReleaseProgressManager(MWContext* context)
+{
+    nsProgressManager::Release(context);
+}
+
+void
+PM_StartBinding(MWContext* context, const URL_Struct* url)
+{
+    if (context->progressManager) {
+        context->progressManager->OnStartBinding(url);
+    }
+}
+
+
+void
+PM_Progress(MWContext* context, const URL_Struct* url, PRUint32 bytesReceived, PRUint32 contentLength)
+{
+    if (context->progressManager) {
+        context->progressManager->OnProgress(url, bytesReceived, contentLength);
+    }
+}
+
+
+void
+PM_Status(MWContext* context, const URL_Struct* url, const char* message)
+{
+    if (context->progressManager) {
+        context->progressManager->OnStatus(url, message);
     }
 }
 
 
 
 void
-PM_DestroyProgressManager(MWContext* context)
+PM_StopBinding(MWContext* context, const URL_Struct* url, PRInt32 status, const char* message)
 {
     if (context->progressManager) {
-        context->progressManager->Release();
-        context->progressManager = NULL;
+        context->progressManager->OnStopBinding(url, status, message);
     }
 }
-

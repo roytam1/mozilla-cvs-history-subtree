@@ -16,34 +16,30 @@
  * Reserved.
  */
 
-#ifndef nsITransferObserver_h__
-#define nsITransferObserver_h__
+#include "prtime.h"
 
-#include "nsISupports.h"
-#include "nsITransfer.h"
-#include "net.h" // for URL_Struct
-
-// {663f0fa1-edfe-11d1-8031-006008159b5a}
-#define NS_ITRANSFEROBSERVER_IID \
-{0x663f0fa1, 0xedfe, 0x11d1,  \
-    {0x80, 0x31, 0x00, 0x60, 0x08, 0x15, 0x9b, 0x5a}}
-
-
-class nsITransferObserver : public nsISupports
+class nsTime
 {
+private:
+    PRTime fValue;
+
 public:
-    /**
-     * Add an object that the observer should track.
-     */
-    virtual void
-    Add(const char* url) = 0;
+    nsTime(void);
+    nsTime(PRTime t);
+    nsTime(nsTime& t);
+    nsTime& operator =(nsTime& t);
+    nsTime& operator =(PRTime t);
 
-    /**
-     * Notify the observer that the specified transfer
-     * is beginning.
-     */
-    virtual void NotifyBegin(nsITransfer* transfer) = 0;
+    nsTime& operator -=(nsTime& t);
+    nsTime& operator -=(PRTime t);
+
+    nsTime& operator +=(nsTime& t);
+    nsTime& operator +=(PRTime t);
+
+    PRUint32 ToMSec(void);
+
+    friend nsTime operator +(nsTime& t1, nsTime& t2);
+    friend nsTime operator -(nsTime& t1, nsTime& t2);
+
+    static nsTime FromMSec(PRUint32 msec);
 };
-
-
-#endif /* nsITransferObserver_h__ */

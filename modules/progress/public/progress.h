@@ -23,15 +23,52 @@
 #ifndef progress_h__
 #define progress_h__
 
+#include "prtypes.h"
 #include "structs.h"
+#include "net.h"
 
 PR_BEGIN_EXTERN_C
 
+/**
+ * Ensure that the context has a progress manager
+ */
 extern void
-PM_CreateProgressManager(MWContext* context, const char* url);
+PM_EnsureProgressManager(MWContext* context);
 
+/**
+ * Release the progress manager for a context.
+ */
 extern void
-PM_DestroyProgressManager(MWContext* context);
+PM_ReleaseProgressManager(MWContext* context);
+
+/**
+ * Notify the progress manager for the specified context that the
+ * specified URL has begun to connect.
+ */
+extern void
+PM_StartBinding(MWContext* context, const URL_Struct* url);
+
+/**
+ * Notify the progress manager for the specified context that some
+ * progress has been made for the specified URL.
+ */
+extern void
+PM_Progress(MWContext* context, const URL_Struct* url, PRUint32 bytesReceived, PRUint32 contentLength);
+
+/**
+ * Notify the progress manager for the specified context of status
+ * for the specified URL. The progress manager will make a copy of the
+ * message.
+ */
+extern void
+PM_Status(MWContext* context, const URL_Struct* url, const char* message);
+
+/**
+ * Notify the progress manager for the specified context that the
+ * URL has completed.
+ */
+extern void
+PM_StopBinding(MWContext* context, const URL_Struct* url, PRInt32 status, const char* message);
 
 PR_END_EXTERN_C
 

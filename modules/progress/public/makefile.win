@@ -23,10 +23,10 @@ DEPTH=..\..\..
 
 EXPORTS=\
 !ifdef MOZ_SMOOTH_PROGRESS
-        nsITransfer.h                   \
-        nsITransferObserver.h           \
+        nsITransferListener.h           \
         nsProgressManager.h             \
-        nsSimpleTransfer.h              \
+        nsTime.h                        \
+        progress.h                      \
 !endif
         pw_public.h                     \
         $(NULL)

@@ -36,6 +36,8 @@ CPPSRCS=\
         pwcommon.cpp                            \
 !ifdef MOZ_SMOOTH_PROGRESS
         nsProgressManager.cpp                   \
+        nsTime.cpp                              \
+        progress.cpp                            \
 !endif
         $(NULL)
 
@@ -46,7 +48,8 @@ CPP_OBJS=\
         .\$(OBJDIR)\pwcommon.obj                \
 #ifdef MOZ_SMOOTH_PROGRESS
         .\$(OBJDIR)\nsProgressManager.obj       \
-        .\$(OBJDIR)\nsSimpleTransfer.obj        \
+        .\$(OBJDIR)\progress.obj                \
+        .\$(OBJDIR)\nsTime.obj                  \
 #endif
         $(NULL)
 

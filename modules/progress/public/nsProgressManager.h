@@ -20,71 +20,50 @@
 #ifndef nsProgressManager_h__
 #define nsProgressManager_h__
 
-#include "nsITransferObserver.h"
-#include "nsITransfer.h"
-#include "nsISupportsArray.h"
-#include "nsSimpleTransfer.h"
+#include "nsITransferListener.h"
+#include "nsTime.h"
 
 #include "prtypes.h"
-#include "prtime.h"
 #include "plhash.h"
 
 #include "structs.h" // for MWContext
 
-class nsProgressManager : public nsITransferObserver, public nsSimpleTransfer
+class nsProgressManager : public nsITransferListener
 {
 protected:
     MWContext* fContext;
 
-    /**
-     * Transfers that are currently being observed
-     */
-    nsISupportsArray* fTransfers;
-
-    /**
-     * The amount of progress made; ranges from zero to 100.
-     */
-    PRUint16 fProgress;
-
-    /**
-     * The URLs that the progress manager is tracking.
-     */
-    PLHashTable* fURLs;
-
-    /**
-     * An FE_Timeout() object
-     */
-    void* fTimeout;
-
-    /**
-     * Static entry point called by the FE_Timeout().
-     */
-    static void TimeoutCallback(void* self);
-
-    virtual void Tick(void);
-
-    static void DisplayStatusCallback(void* self, char* message);
-    virtual void DisplayStatus(char* message);
-
-public:
-    nsProgressManager(MWContext* context, const char* url);
+    nsProgressManager(MWContext* context);
     virtual ~nsProgressManager(void);
 
-    // The nsITransferObserver interface
-    virtual void Add(const char* url);
-    virtual void NotifyBegin(nsITransfer* transfer);
+public:
 
-    // The nsITransfer interface
-    virtual PRUint32
-    GetTimeRemainingMSec(void);
-
-    virtual void
-    DisplayStatusMessage(void* closure, nsITransferDisplayStatusFunc callback);
-
+    static void Ensure(MWContext* context);
+    static void Release(MWContext* context);
 
     NS_DECL_ISUPPORTS
+
+    // The nsITransferListener interface.
+
+    // XXX This is _really_ similar to the nsIStreamListener
+    // interface, which I want to supplant nsITransferListener at some
+    // point. For now, bringing in nsIURL, nsString, etc. is just to
+    // heavyweight.
+    NS_IMETHOD
+    OnStartBinding(const URL_Struct* url) = 0;
+
+    NS_IMETHOD
+    OnProgress(const URL_Struct* url, PRUint32 bytesReceived, PRUint32 contentLength) = 0;
+
+    NS_IMETHOD
+    OnStatus(const URL_Struct* url, const char* message) = 0;
+
+    NS_IMETHOD
+    OnStopBinding(const URL_Struct* url, PRInt32 status, const char* message) = 0;
 };
 
 
-#endif
+
+
+#endif // nsProgressManager_h__
 
