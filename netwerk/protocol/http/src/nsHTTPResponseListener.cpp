@@ -851,39 +851,6 @@ nsresult nsHTTPServerListener::FireSingleOnData(nsIStreamListener *aListener,
     return rv;
 }
 
-#if 0  // DWF: THIS IMPLEMENTATION IS HORRIBLY WRONG!!!
-static NS_METHOD
-nsWriteLineToString(nsIInputStream* in,
-                    void* closure,
-                    const char* fromRawSegment,
-                    PRUint32 offset,
-                    PRUint32 count,
-                    PRUint32 *writeCount) 
-{
-  nsCString* str = (nsCString*)closure;
-  *writeCount = 0;
-
-  char c = 0;
-
-  const char *buf = fromRawSegment;
-  for (; count>0; --count) {
-    c = *buf++;
-    (*writeCount)++;
-    if (c == LF) {
-      break;
-    }
-  }
-  str->Append(fromRawSegment, *writeCount);
-  //
-  // If the entire segment has been read, and no LF has been found,
-  // then return OK to continue reading the next segment (if there
-  // is one).  Else, return WOULD_BLOCK to cause ReadSegments to exit
-  // and allow us to parse this header.
-  //
-  return (c != LF) ? NS_OK : NS_BASE_STREAM_WOULD_BLOCK;
-}
-#endif
-
 struct nsWriteLineInfo
 {
     nsCString &buf;

@@ -119,7 +119,6 @@ protected:
     Substitutions                       mSubstitutions;
     nsCOMPtr<nsIStreamObserver>         mUserObserver;
     nsCOMPtr<nsISupports>               mUserContext;
-    //nsCOMPtr<nsIInputStream>            mFromStream;
     PRUint32                            mStartPosition;
     PRInt32                             mCount;
     PRUint32                            mBufferSegmentSize;
