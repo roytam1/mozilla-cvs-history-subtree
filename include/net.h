@@ -38,7 +38,7 @@
 
 #include "xp_error.h"
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
 #include <sys/param.h> /* for MAXPATHLEN */
 #endif
 
