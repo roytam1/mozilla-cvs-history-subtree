@@ -43,7 +43,7 @@ HT_Pane			gAutoOpenPane = NULL;
 RDF			gNCDB = NULL;
 PRBool			gInited = PR_FALSE, gHTEventsEnabled = PR_TRUE;
 PRBool			gBatchUpdate = false, gAutoEditNewNode = false, gPaneDeletionMode = false;
-XP_Bool			gMissionControlEnabled = false;
+PRBool			gMissionControlEnabled = false;
 char			*gAutoOpenTo = NULL;
 HT_MenuCommand		menuCommandsList = NULL;
 void			*htTimerID = NULL;

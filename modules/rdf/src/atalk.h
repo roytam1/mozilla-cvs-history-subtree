@@ -66,7 +66,7 @@ PRBool		isAFPVolume(short ioVRefNum);
 #endif
 
 void		getZones(RDFT rdf);
-void		processZones(RDFT rdf, char *zones, uint16 numZones, XP_Bool noHierarchyFlag);
+void		processZones(RDFT rdf, char *zones, uint16 numZones, PRBool noHierarchyFlag);
 void		checkServerLookup (MPPParamBlock *nbp);
 void		getServers(RDFT rdf, RDF_Resource parent);
 void		AtalkPossible(RDFT rdf, RDF_Resource u, RDF_Resource s, PRBool inversep);

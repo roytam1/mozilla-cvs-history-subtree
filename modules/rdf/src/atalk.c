@@ -75,7 +75,7 @@ getZones(RDFT rdf)
 {
 	XPPParamBlock		xBlock;
 	OSErr			err = noErr;
-	XP_Bool			noHierarchyFlag;
+	PRBool			noHierarchyFlag;
 
 	startAsyncCursors();
 
@@ -108,7 +108,7 @@ getZones(RDFT rdf)
 
 
 void
-processZones(RDFT rdf, char *zones, uint16 numZones, XP_Bool noHierarchyFlag)
+processZones(RDFT rdf, char *zones, uint16 numZones, PRBool noHierarchyFlag)
 {
 	RDF_Resource		r, parent;
 	char			*escapedURL, url[1024], virtualURL[1024], *p;
@@ -751,7 +751,7 @@ AtalkGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type,
 	void		*retVal = NULL;
 	int32		creationTime, modifyTime;
 	int		len, n;
-	XP_Bool		noHierarchyFlag;
+	PRBool		noHierarchyFlag;
 
 	if (startsWith("afp:/", resourceID(u)))
 	{
@@ -1047,7 +1047,7 @@ AtalkNextValue (RDFT rdf, RDF_Cursor c)
 	PRDirEntry		*de;
 	PRFileInfo		fn;
 	RDF_Resource		r;
-	XP_Bool			noHierarchyFlag;
+	PRBool			noHierarchyFlag;
 	char			*base, *slash, *temp = NULL, *encoded = NULL, *url, *url2;
 	void			*retVal = NULL;
 
