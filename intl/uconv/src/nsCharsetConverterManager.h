@@ -44,6 +44,8 @@
 #include "nsISupportsArray.h"
 #include "nsIRegistry.h"
 
+#include "nsINativeUConvService.h"
+
 class nsCharsetConverterManager : public nsICharsetConverterManager, 
 public nsICharsetConverterManager2
 {
@@ -65,6 +67,8 @@ private:
 
   nsIStringBundle * mDataBundle;
   nsIStringBundle * mTitleBundle;
+
+  nsCOMPtr<nsINativeUConvService> mNativeUC;
 
   nsresult LoadExtensibleBundle(const char * aRegistryKey, 
       nsIStringBundle ** aResult);

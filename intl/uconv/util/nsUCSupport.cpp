@@ -580,7 +580,7 @@ NS_IMETHODIMP nsEncoderSupport::SetOutputErrorBehavior(
   if ((aBehavior == kOnError_CallBack) && (aEncoder == NULL)) 
     return NS_ERROR_NULL_POINTER;
 
-  NS_IF_RELEASE(aEncoder);
+  NS_IF_RELEASE(mErrEncoder);
   mErrEncoder = aEncoder;
   NS_IF_ADDREF(aEncoder);
 
