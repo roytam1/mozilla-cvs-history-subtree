@@ -1131,12 +1131,13 @@ static PRStatus pt_Close(PRFileDesc *fd)
         {
 #ifdef OSF1
             /*
-             * Bug 86764: On Tru64 UNIX V5.0A and V5.1, the close()
+             * Bug 86941: On Tru64 UNIX V5.0A and V5.1, the close()
              * system call, when called to close a TCP socket, may
              * return -1 with errno set to EINVAL but the system call
              * does close the socket successfully.  An application
-             * may safely ignore the EINVAL error.  The defect
-             * tracking number is QAR 81431.
+             * may safely ignore the EINVAL error.  This bug is fixed
+             * on Tru64 UNIX V5.1A and later.  The defect tracking
+             * number is QAR 81431.
              */
             if (PR_DESC_SOCKET_TCP != fd->methods->file_type
             || EINVAL != errno)
