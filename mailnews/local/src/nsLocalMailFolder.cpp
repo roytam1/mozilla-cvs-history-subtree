@@ -271,7 +271,34 @@ NS_IMETHODIMP nsMsgLocalMailFolder::AddSubfolder(nsAutoString *name,
   nsXPIDLCString escapedName;
   rv = NS_MsgEscapeEncodeURLPath((*name).get(), getter_Copies(escapedName));
   NS_ENSURE_SUCCESS(rv,rv);
-  uri.Append(escapedName.get());
+
+  // fix for #192780
+  // if this is the root folder
+  // make sure the the special folders
+  // have the right uri.
+  // on disk, host\INBOX should be a folder with the uri mailbox://user@host/Inbox"
+  // as mailbox://user@host/Inbox != mailbox://user@host/INBOX
+  nsCOMPtr<nsIMsgFolder> rootFolder;
+  rv = GetRootFolder(getter_AddRefs(rootFolder));
+  if (NS_SUCCEEDED(rv) && rootFolder && (rootFolder.get() == (nsIMsgFolder *)this))
+  {
+    if (nsCRT::strcasecmp(escapedName.get(), "INBOX") == 0)
+      uri += "Inbox";
+    else if (nsCRT::strcasecmp(escapedName.get(), "UNSENT%20MESSAGES") == 0)
+      uri += "Unsent%20Messages";
+    else if (nsCRT::strcasecmp(escapedName.get(), "DRAFTS") == 0)
+      uri += "Drafts";
+    else if (nsCRT::strcasecmp(escapedName.get(), "TRASH") == 0)
+      uri += "Trash";
+    else if (nsCRT::strcasecmp(escapedName.get(), "SENT") == 0)
+      uri += "Sent";
+    else if (nsCRT::strcasecmp(escapedName.get(), "TEMPLATES") == 0)
+      uri +="Templates";
+    else
+      uri += escapedName.get();
+  }
+  else
+    uri += escapedName.get();
 
   nsCOMPtr <nsIMsgFolder> msgFolder;
   rv = GetChildWithURI(uri.get(), PR_FALSE/*deep*/, PR_TRUE /*case Insensitive*/, getter_AddRefs(msgFolder));  
