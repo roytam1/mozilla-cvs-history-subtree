@@ -673,49 +673,6 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
   if (NS_BLOCK_SPACE_MGR & mState)
     autoSpaceManager.CreateSpaceManagerFor(aPresContext, this);
 
-  // See if it's an incremental reflow command targeted only at
-  // absolute frames. If so we can skip a whole lot of work via this
-  // fast path.
-  if (mAbsoluteContainer.HasAbsoluteFrames() &&
-      eReflowReason_Incremental == aReflowState.reason &&
-      !aMetrics.mComputeMEW &&
-      mAbsoluteContainer.ReflowingAbsolutesOnly(this, aReflowState)) {
-    nscoord containingBlockWidth;
-    nscoord containingBlockHeight;
-
-    CalculateContainingBlock(aReflowState, mRect.width, mRect.height,
-                             containingBlockWidth, containingBlockHeight);
-    
-    mAbsoluteContainer.IncrementalReflow(this, aPresContext, aReflowState,
-                                         containingBlockWidth,
-                                         containingBlockHeight);
-
-    // Just return our current size as our desired size.
-    aMetrics.width = mRect.width;
-    aMetrics.height = mRect.height;
-    aMetrics.ascent = mAscent;
-    aMetrics.descent = aMetrics.height - aMetrics.ascent;
-    
-    // Whether or not we're complete hasn't changed
-    aStatus = (nsnull != mNextInFlow) ? NS_FRAME_NOT_COMPLETE : NS_FRAME_COMPLETE;
-    
-    // Factor the absolutely positioned child bounds into the overflow area
-    ComputeCombinedArea(aReflowState, aMetrics);
-    nsRect childBounds;
-    mAbsoluteContainer.CalculateChildBounds(aPresContext, childBounds);
-    aMetrics.mOverflowArea.UnionRect(aMetrics.mOverflowArea, childBounds);
-    
-    FinishAndStoreOverflow(&aMetrics);
-
-#ifdef DEBUG
-    if (gNoisy) {
-      gNoiseIndent--;
-    }
-#endif
-    
-    return NS_OK;
-  }
-
   // OK, some lines may be reflowed. Blow away any saved line cursor because
   // we may invalidate the nondecreasing combinedArea.y/yMost invariant,
   // and we may even delete the line with the line cursor.
@@ -739,39 +696,33 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
                            aReflowState.mFlags.mHasClearance || (NS_BLOCK_MARGIN_ROOT & mState),
                            (NS_BLOCK_MARGIN_ROOT & mState));
 
-  // The condition for doing Bidi resolutions includes a test for the
-  // dirtiness flags, because blocks sometimes send a resize reflow
-  // even though they have dirty children, An example where this can
-  // occur is when adding lines to a text control (bugs 95228 and 95400
-  // were caused by not doing Bidi resolution in these cases)
-  if (eReflowReason_Resize != aReflowState.reason ||
-      mState & NS_FRAME_IS_DIRTY || mState & NS_FRAME_HAS_DIRTY_CHILDREN) {
 #ifdef IBMBIDI
-    if (! mLines.empty()) {
-      if (aPresContext->BidiEnabled()) {
-        nsBidiPresUtils* bidiUtils = aPresContext->GetBidiUtils();
-        if (bidiUtils) {
-          PRBool forceReflow;
-          nsresult rc = bidiUtils->Resolve(aPresContext, this,
-                                           mLines.front()->mFirstChild,
-                                           forceReflow,
-                                           aReflowState.mFlags.mVisualBidiFormControl);
-          if (NS_SUCCEEDED(rc) && forceReflow) {
-            // Mark everything dirty
-            // XXXldb This should be done right.
-            for (line_iterator line = begin_lines(), line_end = end_lines();
-                 line != line_end;
-                 ++line)
-            {
-              line->MarkDirty();
-            }
+  // XXXldb Could this happen at frame construction time?
+  if (! mLines.empty()) {
+    if (aPresContext->BidiEnabled()) {
+      nsBidiPresUtils* bidiUtils = aPresContext->GetBidiUtils();
+      if (bidiUtils) {
+        PRBool forceReflow;
+        nsresult rc = bidiUtils->Resolve(aPresContext, this,
+                                         mLines.front()->mFirstChild,
+                                         forceReflow,
+                                         aReflowState.mFlags.mVisualBidiFormControl);
+        if (NS_SUCCEEDED(rc) && forceReflow) {
+          // Mark everything dirty
+          // XXXldb This should be done right.
+          for (line_iterator line = begin_lines(), line_end = end_lines();
+               line != line_end;
+               ++line)
+          {
+            line->MarkDirty();
           }
         }
       }
     }
-#endif // IBMBIDI
-    RenumberLists(aPresContext);
   }
+#endif // IBMBIDI
+
+  RenumberLists(aPresContext);
 
   nsresult rv = NS_OK;
 
@@ -913,14 +864,25 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
     }
   }
 
-  // XXX_perf get rid of this!  This is one of the things that makes
-  // incremental reflow O(N^2).
-  BuildFloatList(state);
+  if (didSomething) {
+    // XXX_perf get rid of this!  This is one of the things that makes
+    // incremental reflow O(N^2).
+    BuildFloatList(state);
 
-  // Compute our final size
-  ComputeFinalSize(aReflowState, state, aMetrics);
-  nsRect currentOverflow = aMetrics.mOverflowArea;
-  FinishAndStoreOverflow(&aMetrics);
+    // Compute our final size
+    ComputeFinalSize(aReflowState, state, aMetrics);
+  } else {
+    // Just return our current size as our desired size.
+    aMetrics.width = mRect.width;
+    aMetrics.height = mRect.height;
+    aMetrics.ascent = mAscent;
+    aMetrics.descent = aMetrics.height - aMetrics.ascent;
+    
+    // Whether or not we're complete hasn't changed
+    aStatus = (nsnull != mNextInFlow) ? NS_FRAME_NOT_COMPLETE : NS_FRAME_COMPLETE;
+  }
+
+  ComputeCombinedArea(aReflowState, aMetrics);
 
   // see if verifyReflow is enabled, and if so store off the space manager pointer
 #ifdef DEBUG
@@ -958,51 +920,34 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
     CalculateContainingBlock(aReflowState, aMetrics.width, aMetrics.height,
                              containingBlockWidth, containingBlockHeight);
 
-    PRBool needAbsoluteReflow = PR_TRUE;
-    if (eReflowReason_Incremental == aReflowState.reason) {
-      // Do the incremental reflows ... would be nice to merge with
-      // the reflows below but that would be more work, and more risky
-      mAbsoluteContainer.IncrementalReflow(this, aPresContext, aReflowState,
-                                           containingBlockWidth,
-                                           containingBlockHeight);
-      
-      // If a reflow was targeted at this block then we'd better
-      // reflow the absolutes. For example the borders and padding
-      // might have changed in a way that leaves the frame size the
-      // same but the padding edge has moved.
-      if (!aReflowState.path->mReflowCommand) {
-        // Now we can assume that the padding edge hasn't moved.
-        // We need to reflow the absolutes if one of them depends on
-        // its placeholder position, or the containing block size in a
-        // direction in which the containing block size might have
-        // changed.
-        PRBool cbWidthChanged = aMetrics.width != oldSize.width;
-        PRBool isRoot = !GetContent()->GetParent();
-        // If isRoot and we have auto height, then we are the initial
-        // containing block and the containing block height is the
-        // viewport height, which can't change during incremental
-        // reflow.
-        PRBool cbHeightChanged = isRoot && NS_UNCONSTRAINEDSIZE == aReflowState.mComputedHeight
-          ? PR_FALSE : aMetrics.height != oldSize.height;
-        if (!mAbsoluteContainer.FramesDependOnContainer(cbWidthChanged, cbHeightChanged)) {
-          needAbsoluteReflow = PR_FALSE;
-        }
-      }
-    }
+    // Mark frames that depend on changes we just made to this frame as dirty:
+    // Now we can assume that the padding edge hasn't moved.
+    // We need to reflow the absolutes if one of them depends on
+    // its placeholder position, or the containing block size in a
+    // direction in which the containing block size might have
+    // changed.
+    PRBool cbWidthChanged = aMetrics.width != oldSize.width;
+    PRBool isRoot = !GetContent()->GetParent();
+    // If isRoot and we have auto height, then we are the initial
+    // containing block and the containing block height is the
+    // viewport height, which can't change during incremental
+    // reflow.
+    PRBool cbHeightChanged =
+      !(isRoot && NS_UNCONSTRAINEDSIZE == aReflowState.mComputedHeight) &&
+      aMetrics.height != oldSize.height;
+    mAbsoluteContainer.DirtyFramesDependingOnContainer(cbWidthChanged,
+                                                       cbHeightChanged);
 
-    if (needAbsoluteReflow) {
-      rv = mAbsoluteContainer.Reflow(this, aPresContext, aReflowState,
-                                     containingBlockWidth,
-                                     containingBlockHeight,
-                                     &childBounds);
-    } else {
-      mAbsoluteContainer.CalculateChildBounds(aPresContext, childBounds);
-    }
+    rv = mAbsoluteContainer.Reflow(this, aPresContext, aReflowState,
+                                   containingBlockWidth,
+                                   containingBlockHeight,
+                                   &childBounds);
 
     // Factor the absolutely positioned child bounds into the overflow area
-    aMetrics.mOverflowArea.UnionRect(currentOverflow, childBounds);
-    FinishAndStoreOverflow(&aMetrics);
+    aMetrics.mOverflowArea.UnionRect(aMetrics.mOverflowArea, childBounds);
   }
+
+  FinishAndStoreOverflow(&aMetrics);
 
   // Determine if we need to repaint our border, background or outline
   CheckInvalidateSizeChange(aPresContext, aMetrics, aReflowState);
@@ -1352,8 +1297,6 @@ nsBlockFrame::ComputeFinalSize(const nsHTMLReflowState& aReflowState,
     printf(": WARNING: desired:%d,%d\n", aMetrics.width, aMetrics.height);
   }
 #endif
-
-  ComputeCombinedArea(aReflowState, aMetrics);
 }
 
 void
@@ -4411,6 +4354,8 @@ nsBlockFrame::DrainOverflowLines()
 
   // Now grab our own overflow lines
   overflowLines = RemoveOverflowLines();
+  NS_ASSERTION(!overflowLines, "This code shouldn't be needed anymore "
+                               "(tell dbaron if you see this)");
   if (overflowLines) {
     NS_ASSERTION(! overflowLines->empty(),
                  "overflow lines should never be set and empty");

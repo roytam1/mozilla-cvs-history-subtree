@@ -1254,13 +1254,8 @@ nsPositionedInlineFrame::Reflow(nsPresContext*          aPresContext,
       (aReflowState.mComputedBorderPadding.top +
        aReflowState.mComputedBorderPadding.bottom);
 
-    // Do any incremental reflows ... would be nice to merge with
-    // the reflows below but that would be more work, and more risky
-    if (eReflowReason_Incremental == aReflowState.reason) {
-      mAbsoluteContainer.IncrementalReflow(this, aPresContext, aReflowState,
-                                           containingBlockWidth,
-                                           containingBlockHeight);
-    }
+    // XXX This could be optimized.
+    mAbsoluteContainer.DirtyFramesDependingOnContainer(PR_TRUE, PR_TRUE);
 
     // Factor the absolutely positioned child bounds into the overflow area
     // Don't include this frame's bounds, nor its inline descendants' bounds,

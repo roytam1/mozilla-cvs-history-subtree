@@ -166,37 +166,17 @@ nsAbsoluteContainingBlock::Reflow(nsIFrame*                aDelegatingFrame,
   if (aChildBounds)
     aChildBounds->SetRect(0, 0, 0, 0);
 
-  // Make a copy of the reflow state.  If the reason is
-  // eReflowReason_Incremental (which should mean either that the target
-  // is the frame for which this is the absolute container or that the
-  // container changed size due to incremental reflow of its children),
-  // then change it to eReflowReason_Resize.
-  // XXXldb If the target is this frame, shouldn't we be setting it
-  // appropriately (which might mean to StyleChanged)?
-  nsHTMLReflowState reflowState(aReflowState);
-  if (eReflowReason_Incremental == reflowState.reason) {
-    reflowState.reason = eReflowReason_Resize;
-  }
+  PRBool parentDirty = aDelegatingFrame->GetStateBits() & NS_FRAME_IS_DIRTY;
 
   nsIFrame* kidFrame;
   for (kidFrame = mAbsoluteFrames.FirstChild(); kidFrame; kidFrame = kidFrame->GetNextSibling()) {
-    nsReflowReason  reason = reflowState.reason;
+    if (parentDirty || kidFrame->GetStateBits() & NS_FRAME_IS_DIRTY) {
+      // Reflow the frame
+      nsReflowStatus  kidStatus;
+      ReflowAbsoluteFrame(aDelegatingFrame, aPresContext, aReflowState, aContainingBlockWidth,
+                          aContainingBlockHeight, kidFrame, kidStatus);
 
-    nsFrameState kidState = kidFrame->GetStateBits();
-    if (NS_FRAME_FIRST_REFLOW & kidState) {
-      // The frame has never had a reflow, so change the reason to eReflowReason_Initial
-      reason = eReflowReason_Initial;
-
-    } else if (NS_FRAME_IS_DIRTY & kidState) {
-      // The frame is dirty so give it the correct reflow reason
-      reason = eReflowReason_Dirty;
     }
-
-    // Reflow the frame
-    nsReflowStatus  kidStatus;
-    ReflowAbsoluteFrame(aDelegatingFrame, aPresContext, reflowState, aContainingBlockWidth,
-                        aContainingBlockHeight, kidFrame, reason, kidStatus);
-
     if (aChildBounds) {
       // Add in the child's bounds
       nsRect  kidBounds = kidFrame->GetRect();
@@ -219,35 +199,6 @@ nsAbsoluteContainingBlock::Reflow(nsIFrame*                aDelegatingFrame,
     }
   }
   return NS_OK;
-}
-
-void
-nsAbsoluteContainingBlock::CalculateChildBounds(nsPresContext* aPresContext,
-                                                nsRect&         aChildBounds)
-{
-  // Initialize the OUT parameters
-  aChildBounds.SetRect(0, 0, 0, 0);
-
-  for (nsIFrame* f = mAbsoluteFrames.FirstChild(); f; f = f->GetNextSibling()) {
-    // Add in the child's bounds
-    nsRect  bounds = f->GetRect();
-    aChildBounds.UnionRect(aChildBounds, bounds);
-  
-    // If the frame has visible overflow, then take it into account, too.
-    if (f->GetStateBits() & NS_FRAME_OUTSIDE_CHILDREN) {
-      // Get the property
-      nsRect* overflowArea = f->GetOverflowAreaProperty();
-  
-      if (overflowArea) {
-        // The overflow area is in the child's coordinate space, so translate
-        // it into the parent's coordinate space
-        nsRect  rect(*overflowArea);
-  
-        rect.MoveBy(bounds.x, bounds.y);
-        aChildBounds.UnionRect(aChildBounds, rect);
-      }
-    }
-  }
 }
 
 PRBool
@@ -302,11 +253,9 @@ static PRBool IsFixedMaxSize(nsStyleUnit aUnit) {
   return aUnit == eStyleUnit_Null || aUnit == eStyleUnit_Coord;
 }
 
-// XXX this logic should eventually be combined into the Reflow methods
-// so we reflow only those frames that need it
-PRBool
-nsAbsoluteContainingBlock::FramesDependOnContainer(PRBool aWidthChanged,
-                                                   PRBool aHeightChanged)
+void
+nsAbsoluteContainingBlock::DirtyFramesDependingOnContainer(PRBool aWidthChanged,
+                                                           PRBool aHeightChanged)
 {
   for (nsIFrame* f = mAbsoluteFrames.FirstChild(); f; f = f->GetNextSibling()) {
     const nsStylePosition* pos = f->GetStylePosition();
@@ -317,7 +266,8 @@ nsAbsoluteContainingBlock::FramesDependOnContainer(PRBool aWidthChanged,
          ? pos->mOffset.GetRightUnit() : pos->mOffset.GetLeftUnit()) == eStyleUnit_Auto) {
       // Note that in CSS2.1, 'bottom:auto' can never actually induce a dependence
       // on the position of the placeholder
-      return PR_TRUE;
+      f->AddStateBits(NS_FRAME_IS_DIRTY);
+      continue;
     }
     if (!aWidthChanged && !aHeightChanged) {
       // skip getting style data
@@ -338,7 +288,8 @@ nsAbsoluteContainingBlock::FramesDependOnContainer(PRBool aWidthChanged,
           !IsFixedBorderSize(border->mBorder.GetRightUnit()) ||
           !IsFixedPaddingSize(padding->mPadding.GetLeftUnit()) ||
           !IsFixedPaddingSize(padding->mPadding.GetRightUnit())) {
-        return PR_TRUE;
+        f->AddStateBits(NS_FRAME_IS_DIRTY);
+        continue;
       }
 
       // See if f's position might have changed. If we're RTL then the
@@ -346,7 +297,8 @@ nsAbsoluteContainingBlock::FramesDependOnContainer(PRBool aWidthChanged,
       // margins will always induce a dependency on the size
       if (!IsFixedMarginSize(margin->mMargin.GetLeftUnit()) ||
           !IsFixedMarginSize(margin->mMargin.GetRightUnit())) {
-        return PR_TRUE;
+        f->AddStateBits(NS_FRAME_IS_DIRTY);
+        continue;
       }
       if (f->GetStyleVisibility()->mDirection == NS_STYLE_DIRECTION_RTL) {
         // Note that even if 'left' is a length, our position can
@@ -357,11 +309,13 @@ nsAbsoluteContainingBlock::FramesDependOnContainer(PRBool aWidthChanged,
         // we can be sure of.
         if (pos->mOffset.GetLeftUnit() != eStyleUnit_Coord ||
             pos->mOffset.GetRightUnit() != eStyleUnit_Auto) {
-          return PR_TRUE;
+          f->AddStateBits(NS_FRAME_IS_DIRTY);
+          continue;
         }
       } else {
         if (pos->mOffset.GetLeftUnit() != eStyleUnit_Coord) {
-          return PR_TRUE;
+          f->AddStateBits(NS_FRAME_IS_DIRTY);
+          continue;
         }
       }
     }
@@ -381,87 +335,19 @@ nsAbsoluteContainingBlock::FramesDependOnContainer(PRBool aWidthChanged,
           !IsFixedBorderSize(border->mBorder.GetBottomUnit()) ||
           !IsFixedPaddingSize(padding->mPadding.GetTopUnit()) ||
           !IsFixedPaddingSize(padding->mPadding.GetBottomUnit())) { 
-       return PR_TRUE;
+        f->AddStateBits(NS_FRAME_IS_DIRTY);
+        continue;
       }
       
       // See if f's position might have changed.
       if (!IsFixedMarginSize(margin->mMargin.GetTopUnit()) ||
           !IsFixedMarginSize(margin->mMargin.GetBottomUnit())) {
-        return PR_TRUE;
+        f->AddStateBits(NS_FRAME_IS_DIRTY);
+        continue;
       }
       if (pos->mOffset.GetTopUnit() != eStyleUnit_Coord) {
-        return PR_TRUE;
-      }
-    }
-  }
-  return PR_FALSE;
-}
-
-void
-nsAbsoluteContainingBlock::IncrementalReflow(nsIFrame*                aDelegatingFrame,
-                                             nsPresContext*           aPresContext,
-                                             const nsHTMLReflowState& aReflowState,
-                                             nscoord                  aContainingBlockWidth,
-                                             nscoord                  aContainingBlockHeight)
-{
-  // See if the reflow command is targeted at us.
-  nsReflowPath *path = aReflowState.path;
-  nsHTMLReflowCommand *command = path->mReflowCommand;
-
-  if (command) {
-    // It's targeted at us. See if it's for the positioned child frames
-    nsCOMPtr<nsIAtom> listName;
-    command->GetChildListName(*getter_AddRefs(listName));
-
-    if (GetChildListName() == listName) {
-      nsReflowType  type;
-
-      // Get the type of reflow command
-      command->GetType(type);
-
-      // The only type of reflow command we expect is that we have dirty
-      // child frames to reflow
-      NS_ASSERTION(type == eReflowType_ReflowDirty, "unexpected reflow type");
-
-      // Walk the positioned frames and reflow the dirty frames
-      for (nsIFrame* f = mAbsoluteFrames.FirstChild(); f; f = f->GetNextSibling()) {
-        nsFrameState  frameState = f->GetStateBits();
-
-        if (frameState & NS_FRAME_IS_DIRTY) {
-          nsReflowStatus  status;
-          nsReflowReason  reason;
-
-          reason = (frameState & NS_FRAME_FIRST_REFLOW)
-            ? eReflowReason_Initial
-            : eReflowReason_Dirty;
-
-          ReflowAbsoluteFrame(aDelegatingFrame, aPresContext, aReflowState,
-                              aContainingBlockWidth, aContainingBlockHeight, f,
-                              reason, status);
-        }
-      }
-    }
-  }
-
-  nsReflowPath::iterator iter = path->FirstChild();
-  nsReflowPath::iterator end = path->EndChildren();
-
-  if (iter != end && mAbsoluteFrames.NotEmpty()) {
-    for ( ; iter != end; ++iter) {
-      // See if it's one of our absolutely positioned child frames
-      if (mAbsoluteFrames.ContainsFrame(*iter)) {
-        // Remove the next frame from the reflow path
-        nsReflowStatus kidStatus;
-        ReflowAbsoluteFrame(aDelegatingFrame, aPresContext, aReflowState,
-                            aContainingBlockWidth, aContainingBlockHeight, *iter,
-                            aReflowState.reason, kidStatus);
-
-        // We don't need to invalidate anything because the frame
-        // should invalidate any area within its frame that needs
-        // repainting, and because it has a view if it changes size
-        // the view manager will damage the dirty area
-
-        aReflowState.path->Remove(iter);
+        f->AddStateBits(NS_FRAME_IS_DIRTY);
+        continue;
       }
     }
   }
@@ -489,7 +375,6 @@ nsAbsoluteContainingBlock::ReflowAbsoluteFrame(nsIFrame*                aDelegat
                                                nscoord                  aContainingBlockWidth,
                                                nscoord                  aContainingBlockHeight,
                                                nsIFrame*                aKidFrame,
-                                               nsReflowReason           aReason,
                                                nsReflowStatus&          aStatus)
 {
 #ifdef DEBUG
@@ -538,6 +423,7 @@ nsAbsoluteContainingBlock::ReflowAbsoluteFrame(nsIFrame*                aDelegat
   }
 
   nscoord availWidth = aReflowState.mComputedWidth;
+#error "This code needs to go."
   enum { NOT_SHRINK_TO_FIT, SHRINK_TO_FIT_AVAILWIDTH, SHRINK_TO_FIT_MEW };
   PRUint32 situation = NOT_SHRINK_TO_FIT;
   while (1) {
@@ -561,8 +447,7 @@ nsAbsoluteContainingBlock::ReflowAbsoluteFrame(nsIFrame*                aDelegat
     nsSize            availSize(availWidth, NS_UNCONSTRAINEDSIZE);
     nsHTMLReflowState kidReflowState(aPresContext, aReflowState, aKidFrame,
                                      availSize, aContainingBlockWidth,
-                                     aContainingBlockHeight,
-                                     aReason);
+                                     aContainingBlockHeight);
 
     if (situation == SHRINK_TO_FIT_MEW) {
       situation = NOT_SHRINK_TO_FIT; // This is the last reflow
@@ -630,6 +515,7 @@ nsAbsoluteContainingBlock::ReflowAbsoluteFrame(nsIFrame*                aDelegat
         availWidth = 0;
       }
 
+#error "This code needs to go!"
       // Shrink-to-fit: min(max(preferred minimum width, available width), preferred width).
       // XXX this is not completely correct - see bug 201897 comment 56/58 and bug 268499.
       if (kidDesiredSize.mMaxElementWidth > availWidth) {
@@ -638,7 +524,6 @@ nsAbsoluteContainingBlock::ReflowAbsoluteFrame(nsIFrame*                aDelegat
                                kidReflowState.mComputedBorderPadding.left -
                                kidReflowState.mComputedBorderPadding.right);
         situation = SHRINK_TO_FIT_MEW;
-        aReason = eReflowReason_Resize;
         continue; // Do a second reflow constrained to MEW.
       }
     }

@@ -110,31 +110,13 @@ public:
                   nscoord                  aContainingBlockHeight,
                   nsRect*                  aChildBounds = nsnull);
 
-  // Called by the delegating frame to determine whether the
-  // incremental reflow is entirely targeted at absolute children
-  PRBool ReflowingAbsolutesOnly(nsIFrame* aDelegatingFrame,
-                                const nsHTMLReflowState& aReflowState);
-
-  // Called only for a reflow reason of eReflowReason_Incremental.
-  // Returns (in the local coordinate space) the bounding rect of the
-  // absolutely positioned child elements taking into account their
-  // overflow area (if it is visible).
-  void IncrementalReflow(nsIFrame*                aDelegatingFrame,
-                         nsPresContext*           aPresContext,
-                         const nsHTMLReflowState& aReflowState,
-                         nscoord                  aContainingBlockWidth,
-                         nscoord                  aContainingBlockHeight);
-
-  // Returns PR_TRUE if any absolute frames depend on the position of their
-  // placeholders
-  PRBool FramesDependOnContainer(PRBool aWidthChanged, PRBool aHeightChanged);
+  void DirtyFramesDependingOnContainer(PRBool aWidthChanged,
+                                       PRBool aHeightChanged);
 
   void DestroyFrames(nsIFrame*       aDelegatingFrame,
                      nsPresContext* aPresContext);
 
   PRBool  HasAbsoluteFrames() {return mAbsoluteFrames.NotEmpty();}
-
-  void CalculateChildBounds(nsPresContext* aPresContext, nsRect& aChildBounds);
 
 protected:
   nsresult ReflowAbsoluteFrame(nsIFrame*                aDelegatingFrame,
