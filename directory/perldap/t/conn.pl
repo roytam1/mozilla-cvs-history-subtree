@@ -47,7 +47,7 @@ $CN	= "test-group-1";
 #################################################################################
 # Constants, shouldn't have to edit these...
 #
-$APPNAM	= "test1";
+$APPNAM	= "conn.pl";
 $USAGE	= "$APPNAM -b base -h host -D bind -w pswd -P cert";
 
 
@@ -227,7 +227,7 @@ $conn->close();
 #
 $conn = new Mozilla::LDAP::Conn($ld{host}, $ld{port});
 $ent = $conn->search($ld{root}, $ld{scope}, $filter);
-print "Can't locate entry again" unless $ent;
+die "Can't locate entry again" unless $ent;
 
 dotPrint("Conn/simpleAuth");
 $err = 0;
@@ -238,3 +238,24 @@ print "not " if $err;
 print "ok\n";
 
 $conn->close();
+
+
+#################################################################################
+# Test the modifyRDN functionality
+#
+$conn = getConn();
+$ent = $conn->search($ld{root}, $ld{scope}, $filter);
+die "Can't locate entry again" unless $ent;
+
+dotPrint("Conn/modifyRDN");
+$err = 0;
+$rdn = "uid=$UID-rdn";
+$conn->modifyRDN($rdn, $ent->getDN()) || ($err = 1);
+
+$filter = "($rdn)";
+$ent = $conn->search($ld{root}, $ld{scope}, $filter);
+$err = 1 unless $ent;
+print "not " if $err;
+print "ok\n";
+
+$conn->delete($ent->getDN()) if $ent;
