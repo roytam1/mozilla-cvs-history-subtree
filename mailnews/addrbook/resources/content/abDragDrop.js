@@ -43,9 +43,6 @@ var abResultsPaneObserver = {
       var selectedRows = GetSelectedRows();
       var selectedAddresses = GetSelectedAddresses();
 
-      dump("XXX " + selectedAddresses + "\n");
-      dump("XXX " + selectedRows + "\n");
-
       aXferData.data.addDataForFlavour("moz/abcard", selectedRows);
       aXferData.data.addDataForFlavour("text/x-moz-address", selectedAddresses);
     },
@@ -76,8 +73,7 @@ var abDirTreeObserver = {
   onDrop: function (aEvent, aXferData, aDragSession)
     {
 	    var xferData = aXferData.data.split("\n");
-      dump("XXX = " + xferData[0] + "\n");
-
+ 
       // XXX do we still need this check, since we do it in onDragOver?
       if (aEvent.target.localName != "treecell") {
          return;
@@ -110,7 +106,6 @@ var abDirTreeObserver = {
 
   onDragOver: function (aEvent, aFlavour, aDragSession)
     {
-      //dump("XXX " + aEvent.target.localName + "\n");
       if (aEvent.target.localName != "treecell") {
          aDragSession.canDrop = false;
          return false;
@@ -122,7 +117,6 @@ var abDirTreeObserver = {
         return false;
 
       var targetID = treeItem.getAttribute("id");
-      //dump("over = " + targetID + "\n");
       return true;
     },
 
