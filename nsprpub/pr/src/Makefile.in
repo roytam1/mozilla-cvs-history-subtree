@@ -142,7 +142,7 @@ endif
 endif
 
 ifeq ($(OS_ARCH),OS2)
-MAPFILE = $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION).def
+MAPFILE = $(OBJDIR)/nspr.def
 GARBAGE += $(MAPFILE)
 MKSHLIB += $(MAPFILE)
 endif

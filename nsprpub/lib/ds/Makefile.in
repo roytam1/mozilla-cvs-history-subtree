@@ -96,7 +96,7 @@ endif
 endif
 
 ifeq ($(OS_ARCH),OS2)
-MAPFILE = $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION).def
+MAPFILE = $(OBJDIR)/plds.def
 GARBAGE += $(MAPFILE)
 MKSHLIB += $(MAPFILE)
 endif

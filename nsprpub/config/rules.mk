@@ -366,20 +366,22 @@ endif
 	@echo $(RES) finished
 endif
 
+ifeq ($(OS_ARCH),SunOS)
 $(MAPFILE): $(LIBRARY_NAME).def
 	@$(MAKE_OBJDIR)
-ifeq ($(OS_ARCH),SunOS)
 	grep -v ';-' $< | \
 	sed -e 's,;+,,' -e 's; DATA ;;' -e 's,;;,,' -e 's,;.*,;,' > $@
 endif
+
 ifeq ($(OS_ARCH),OS2)
+$(MAPFILE): $(LIBRARY)
+	rm -f $@
 	echo LIBRARY $(LIBRARY_NAME)$(LIBRARY_VERSION) INITINSTANCE TERMINSTANCE > $@
 	echo PROTMODE >> $@
 	echo CODE    LOADONCALL MOVEABLE DISCARDABLE >> $@
 	echo DATA    PRELOAD MOVEABLE MULTIPLE NONSHARED >> $@
 	echo EXPORTS >> $@
-	grep -v ';+' $< | grep -v ';-' | \
-	sed -e 's; DATA ;;' -e 's,;;,,' -e 's,;.*,,' >> $@
+	$(FILTER) $(LIBRARY) >> $@
 endif
 
 $(OBJDIR)/%.$(OBJ_SUFFIX): %.cpp
