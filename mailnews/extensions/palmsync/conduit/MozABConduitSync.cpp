@@ -262,9 +262,6 @@ BOOL CMozABConduitSync::CategoryExists(CPString &mozABName, BOOL isPAB)
 // needs to call SyncYieldCycles(1) atleast once every 7 seconds
 DWORD WINAPI DoFastSync(LPVOID lpParameter)
 {
-    long retval=0;
-    BOOL success = FALSE;
-
     // Log the start time.
     time_t ltime;
     time( &ltime );
@@ -272,14 +269,21 @@ DWORD WINAPI DoFastSync(LPVOID lpParameter)
 
     CMozABConduitSync * sync = (CMozABConduitSync * ) lpParameter;
     if(!sync || !sync->m_dbHH)
-        return retval;
+        return 0;
     
+    BOOL initialHHSync = (sync->m_rSyncProperties.m_FirstDevice == eHH);
+    if (initialHHSync) // if HH has been reset, copy everything on pc to hh.
+      return sync->CopyPCtoHH();
+
+    long retval=0;
+    BOOL success = FALSE;
+
     DWORD mozABCount=0;
     LONG * mozCatIndexList = NULL; // freed by MSCOM/Mozilla
     CPString ** mozABNameList = NULL; // freed by MSCOM/Mozilla
     CPString ** mozABUrlList = NULL; // freed by MSCOM/Mozilla
     BOOL * mozDirFlagsList = NULL; // freed by MSCOM/Mozilla
-    BOOL neverDidPalmSyncBefore; // 1st time palm sync?
+    BOOL neverDidPalmSyncBefore = TRUE; // 1st time palm sync?
     DWORD mozABIndex;
 
     retval = sync->m_dbHH->OpenDB(FALSE);
@@ -302,7 +306,6 @@ DWORD WINAPI DoFastSync(LPVOID lpParameter)
       memset(mozABSeen, FALSE, sizeof(DWORD) * mozABCount);
 
     CONDUIT_LOG1(gFD, "first device = %lx\n", sync->m_rSyncProperties.m_FirstDevice);
-    BOOL initialHHSync = (sync->m_rSyncProperties.m_FirstDevice == eHH);
 
     // See if palm sync was performed before.
     for(mozABIndex=0; mozABIndex<mozABCount; mozABIndex++)
@@ -505,7 +508,8 @@ DWORD WINAPI DoFastSync(LPVOID lpParameter)
     // and the case where Palm ABs have been deleted.
     for(mozABIndex=0; mozABIndex<mozABCount; mozABIndex++)
     {
-        if((mozDirFlagsList[mozABIndex] & kFirstTimeSyncDirFlag || neverDidPalmSyncBefore || initialHHSync) && !sync->CategoryExists(*mozABNameList[mozABIndex],  mozDirFlagsList[mozABIndex] & kIsPabDirFlag))
+        if((mozDirFlagsList[mozABIndex] & kFirstTimeSyncDirFlag || neverDidPalmSyncBefore || initialHHSync)
+          && !sync->CategoryExists(*mozABNameList[mozABIndex],  mozDirFlagsList[mozABIndex] & kIsPabDirFlag))
         {
             CONDUIT_LOG3(gFD, "\nMoz AB[%d] category index = %d, name = '%s' doesn't exist on Palm so needs to be added to palm\n",
                     mozABIndex, mozCatIndexList[mozABIndex], mozABNameList[mozABIndex]->GetBuffer(0));
@@ -935,7 +939,8 @@ long CMozABConduitSync::CopyPCtoHH()
             CONDUIT_LOG1(gFD, "  Creating new Palm AB with %d record(s) ... ", recordCountPC);
             retval = m_dbHH->AddCategory(cat);
             CONDUIT_LOG2(gFD, "Done creating new Palm AB, new category index=%d. retval=%d.\n", cat.GetIndex(), retval);
-            if(!retval) {
+            if(!retval)
+            {
                 CONDUIT_LOG1(gFD, "  Adding %d record(s) to new Palm AB ... ", recordCountPC);
                 newRecIDList = (DWORD *) calloc(recordCountPC, sizeof(DWORD));
                 for (unsigned long i=0; i < recordCountPC; i++) 
