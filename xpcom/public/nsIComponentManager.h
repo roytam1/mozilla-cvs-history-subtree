@@ -146,13 +146,13 @@ public:
   // ".dso",    // Unix
   // ".so",     // Unix
   // ".sl",     // Unix: HP
-  // "_dll",    // Mac
+  // ".shld",	// Mac
   // ".dlm",    // new for all platforms
   //
   // Directory and fullname are what NSPR will accept. For eg.
-  // 	WIN	y:/home/dp/mozilla/dist/bin
-  //	UNIX	/home/dp/mozilla/dist/bin
-  //	MAC	/Hard drive/mozilla/dist/apprunner
+  //	MAC		/Hard drive/mozilla/dist/bin
+  // 	WIN		y:/Hard drive/mozilla/dist/bin (or) y:\Hard drive\mozilla\dist\bin
+  //	UNIX	/Hard drive/mozilla/dist/bin
   //
   enum RegistrationTime {
 	NS_Startup = 0,
