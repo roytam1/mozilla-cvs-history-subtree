@@ -5254,9 +5254,7 @@ void nsImapProtocol::UploadMessageFromFile (nsIFileSpec* fileSpec,
           {
             // if the appended to folder isn't selected in the connection,
             // select it.
-            if (!GetServerStateParser().GetSelectedMailboxName() || 
-                  PL_strcmp(GetServerStateParser().GetSelectedMailboxName(),
-                            mailboxName))
+            if (!FolderIsSelected(mailboxName))
               SelectMailbox(mailboxName);
           
             if (GetServerStateParser().LastCommandSuccessful())
@@ -5668,8 +5666,23 @@ void nsImapProtocol::GetMyRightsForFolder(const char *mailboxName)
     ParseIMAPandCheckForNewMail();
 }
 
+PRBool nsImapProtocol::FolderIsSelected(const char *mailboxName)
+{
+  return (GetServerStateParser().GetIMAPstate() ==
+      nsImapServerResponseParser::kFolderSelected && GetServerStateParser().GetSelectedMailboxName() && 
+      PL_strcmp(GetServerStateParser().GetSelectedMailboxName(),
+                    mailboxName) == 0);
+}
+
 void nsImapProtocol::OnStatusForFolder(const char *mailboxName)
 {
+  // don't run status on selected folder, just do a noop.
+  if (FolderIsSelected(mailboxName))
+  {
+    Noop();
+  }
+  else
+  {
   IncrementCommandTagNumber();
 
   nsCAutoString command(GetServerCommandTag());
@@ -5685,6 +5698,7 @@ void nsImapProtocol::OnStatusForFolder(const char *mailboxName)
   if (NS_SUCCEEDED(rv))
       ParseIMAPandCheckForNewMail();
 
+  }
   if (GetServerStateParser().LastCommandSuccessful())
   {
     nsImapMailboxSpec *new_spec = GetServerStateParser().CreateCurrentMailboxSpec(mailboxName);
@@ -6613,10 +6627,7 @@ void nsImapProtocol::DeleteMailbox(const char *mailboxName)
   // check if this connection currently has the folder to be deleted selected.
   // If so, we should close it because at least some UW servers don't like you deleting
   // a folder you have open.
-  if (GetServerStateParser().GetIMAPstate() ==
-      nsImapServerResponseParser::kFolderSelected && GetServerStateParser().GetSelectedMailboxName() && 
-      PL_strcmp(GetServerStateParser().GetSelectedMailboxName(),
-                    mailboxName) == 0)
+  if (FolderIsSelected(mailboxName))
     Close();
   
   
@@ -6640,10 +6651,7 @@ void nsImapProtocol::RenameMailbox(const char *existingName,
                                    const char *newName)
 {
   // just like DeleteMailbox; Some UW servers don't like it.
-  if (GetServerStateParser().GetIMAPstate() ==
-    nsImapServerResponseParser::kFolderSelected && GetServerStateParser().GetSelectedMailboxName() && 
-    PL_strcmp(GetServerStateParser().GetSelectedMailboxName(),
-                  existingName) == 0)
+  if (FolderIsSelected(existingName))
     Close();
 
   ProgressEventFunctionUsingIdWithString (IMAP_STATUS_RENAMING_MAILBOX, existingName);
