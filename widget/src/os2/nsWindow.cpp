@@ -116,6 +116,8 @@ nsIWidget         * gRollupWidget             = nsnull;
 PRBool              gRollupConsumeRollupEvent = PR_FALSE;
 ////////////////////////////////////////////////////
 
+PRBool gJustGotActivate = PR_FALSE;
+PRBool gJustGotDeactivate = PR_FALSE;
 
 ////////////////////////////////////////////////////
 // Mouse Clicks - static variable defintions 
@@ -154,6 +156,8 @@ nsWindow::nsWindow() : nsBaseWidget()
     mPreferredWidth     = 0;
     mPreferredHeight    = 0;
     mWindowState        = nsWindowState_ePrecreate;
+    mWindowType         = eWindowType_child;
+    mBorderStyle        = eBorderStyle_default;
     mFont               = nsnull;
     mOS2Toolkit         = nsnull;
     mMenuBar            = nsnull;
@@ -566,21 +570,33 @@ nsWindow :: DealWithPopups ( ULONG inMsg, MRESULT* outResult )
 // Are both windows from this app?
 BOOL bothFromSameWindow( HWND hwnd1, HWND hwnd2 )
 {
-   HWND hwnd1Owner = WinQueryWindow( hwnd1, QW_OWNER);
-   HWND hwnd1GOwner = WinQueryWindow( hwnd1Owner, QW_OWNER);
-   HWND hwnd2Owner = WinQueryWindow( hwnd2, QW_OWNER);
-   HWND hwnd2GOwner = WinQueryWindow( hwnd2Owner, QW_OWNER);
-   while( hwnd1GOwner) {
-      hwnd1 = hwnd1Owner;
-      hwnd1Owner = hwnd1GOwner;
-      hwnd1GOwner = WinQueryWindow( hwnd1Owner, QW_OWNER);
-   }
-   while( hwnd2GOwner) {
-      hwnd2 = hwnd2Owner;
-      hwnd2Owner = hwnd2GOwner;
-      hwnd2GOwner = WinQueryWindow( hwnd2Owner, QW_OWNER);
-   }
-   return (hwnd1 == hwnd2);
+  HWND hwnd1Chain = WinQueryWindow( hwnd1, QW_OWNER );
+  if (!hwnd1Chain)
+    hwnd1Chain = WinQueryWindow( hwnd1, QW_PARENT );
+  HWND hwnd1GChain = WinQueryWindow( hwnd1Chain, QW_OWNER );
+  if (!hwnd1GChain)
+    hwnd1GChain = WinQueryWindow( hwnd1Chain, QW_PARENT );
+  HWND hwnd2Chain = WinQueryWindow( hwnd2, QW_OWNER );
+  if (!hwnd2Chain)
+    hwnd2Chain = WinQueryWindow( hwnd2, QW_PARENT );
+  HWND hwnd2GChain = WinQueryWindow( hwnd2Chain, QW_OWNER );
+  if (!hwnd2GChain)
+    hwnd2GChain = WinQueryWindow( hwnd2Chain, QW_PARENT );
+  while( hwnd1GChain) {
+    hwnd1 = hwnd1Chain;
+    hwnd1Chain = hwnd1GChain;
+    hwnd1GChain = WinQueryWindow( hwnd1Chain, QW_OWNER );
+    if (!hwnd1GChain)
+      hwnd1GChain = WinQueryWindow( hwnd1Chain, QW_PARENT );
+  }
+  while( hwnd2GChain) {
+    hwnd2 = hwnd2Chain;
+    hwnd2Chain = hwnd2GChain;
+    hwnd2GChain = WinQueryWindow( hwnd2Chain, QW_OWNER );
+    if (!hwnd2GChain)
+      hwnd2GChain = WinQueryWindow( hwnd2Chain, QW_PARENT );
+  }
+  return (hwnd1 == hwnd2);
 }
 
 //-------------------------------------------------------------------------
@@ -666,7 +682,7 @@ MRESULT EXPENTRY fnwpNSWindow( HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
    {
       BOOL bPreHandling = g_bHandlingMouseClick;
       if( PR_FALSE == wnd->ProcessMessage( msg, mp1, mp2, mRC) &&
-          wnd->GetPrevWP())
+          WinIsWindow( (HAB)0, hwnd) && wnd->GetPrevWP())
       {
          mRC = (wnd->GetPrevWP())( hwnd, msg, mp1, mp2);
 
@@ -694,6 +710,11 @@ void nsWindow::DoCreate( HWND hwndP, nsWindow *aParent,
                       nsWidgetInitData *aInitData)
 {
    mWindowState = nsWindowState_eInCreate;
+
+   if( aInitData != nsnull) {
+     SetWindowType(aInitData->mWindowType);
+     SetBorderStyle(aInitData->mBorderStyle);
+   }
 
    // Must ensure toolkit before attempting to thread-switch!
    if( !mToolkit)
@@ -777,15 +798,22 @@ void nsWindow::RealDoCreate( HWND              hwndP,
          style &= ~WS_CLIPSIBLINGS;
    }
 
-   // For pop-up menus, the parent is the desktop, but use the "parent" as owner
-   if( hwndP != HWND_DESKTOP && aInitData &&
-       aInitData->mWindowType == eWindowType_popup)
+   if( hwndP != HWND_DESKTOP)
    {
-      if( !hwndOwner)
+      // For pop-up menus, the parent is the desktop, but use the "parent" as owner
+      if( aInitData && aInitData->mWindowType == eWindowType_popup)
+      {
+         if( !hwndOwner)
+         {
+            hwndOwner = hwndP;
+         }
+         hwndP = HWND_DESKTOP;
+      }
+      // For scrollbars, the parent is the owner, for notification purposes
+      else if( !hwndOwner && WindowClass() == WC_SCROLLBAR)
       {
          hwndOwner = hwndP;
       }
-      hwndP = HWND_DESKTOP;
    }
 
    // Create a window: create hidden & then size to avoid swp_noadjust problems
@@ -856,7 +884,7 @@ void nsWindow::RealDoCreate( HWND              hwndP,
 
    // call the event callback to notify about creation
 
-   DispatchStandardEvent(NS_CREATE);
+   DispatchStandardEvent( NS_CREATE );
    SubclassWindow(TRUE);
    PostCreateWidget();
 }
@@ -1092,7 +1120,7 @@ NS_METHOD nsWindow::ModalEventFilter(PRBool aRealEvent, void *aEvent,
      else if( mQmsg.msg >= WM_MOUSETRANSLATEFIRST &&
               mQmsg.msg <= WM_MOUSETRANSLATELAST)
         isMouseEvent = PR_TRUE;
-     else if( mQmsg.msg == WMU_MOUSEENTER || mQmsg.msg == WMU_MOUSELEAVE)
+     else if( mQmsg.msg == WM_MOUSEENTER || mQmsg.msg == WM_MOUSELEAVE)
         isMouseEvent = PR_TRUE;
   }
  
@@ -1164,7 +1192,7 @@ NS_METHOD nsWindow::Resize(PRInt32 aX,
 
       if( !SetWindowPos( 0, ptl.x, ptl.y, w, GetHeight(h), SWP_MOVE | SWP_SIZE))
          if( aRepaint)
-            Update();
+            Invalidate(PR_FALSE);
 
 #if DEBUG_sobotka
    printf("+++++++++++Resized 0x%lx at %ld, %ld to %ld x %ld\n\n", mWnd, ptl.x, ptl.y, w, GetHeight(h));
@@ -1767,17 +1795,26 @@ PRBool nsWindow::OnKey( MPARAM mp1, MPARAM mp2)
       gModuleData.ConvertToUcs( (char *)inbuf, (PRUnichar *)outbuf, 4);
 
       event.charCode = outbuf[0];
-   
+
       if( event.isControl && !event.isShift && event.charCode >= 'A' && event.charCode <= 'Z' )
       {
          event.charCode = tolower(event.charCode);
       }
       else if( !event.isControl && !event.isAlt && event.charCode != 0)
       {
-         if (!(fsFlags & KC_VIRTUALKEY))
+         if ( !(fsFlags & KC_VIRTUALKEY) || 
+              ((fsFlags & KC_CHAR) && (event.keyCode == 0)) )
          {
-            event.isShift = PR_FALSE;  // OS2TODO - Why do we need this?
+            event.isShift = PR_FALSE;
             event.keyCode = 0;
+         }
+         else if (usVKey == VK_SPACE)
+         {
+            event.isShift = PR_FALSE;
+         }
+         else  // Real virtual key 
+         {
+            event.charCode = 0;
          }
       }
    }
@@ -1788,167 +1825,182 @@ PRBool nsWindow::OnKey( MPARAM mp1, MPARAM mp2)
 // 'Window procedure'
 PRBool nsWindow::ProcessMessage( ULONG msg, MPARAM mp1, MPARAM mp2, MRESULT &rc)
 {
-   PRBool result = PR_FALSE; // call the default window procedure
-            
-   switch( msg)
-   {
+    PRBool result = PR_FALSE; // call the default window procedure
+
+    switch (msg) {
 #if 0
-      case WM_COMMAND: // fire off menu selections
-      {
-         USHORT usSrc = SHORT1FROMMP( mp2);
-         if( usSrc == CMDSRC_MENU || usSrc == CMDSRC_ACCELERATOR)
+        case WM_COMMAND: // fire off menu selections
+        {
+          USHORT usSrc = SHORT1FROMMP( mp2);
+          if( usSrc == CMDSRC_MENU || usSrc == CMDSRC_ACCELERATOR)
             result = OnMenuClick( SHORT1FROMMP(mp1));
-         break;
-      }
+          break;
+        }
 
-      case WM_INITMENU:
-         result = OnActivateMenu( HWNDFROMMP(mp2), TRUE);
-         break;
+        case WM_INITMENU:
+          result = OnActivateMenu( HWNDFROMMP(mp2), TRUE);
+          break;
 
-      case WM_MENUEND:
-         result = OnActivateMenu( HWNDFROMMP(mp2), FALSE);
-         break;
+        case WM_MENUEND:
+          result = OnActivateMenu( HWNDFROMMP(mp2), FALSE);
+          break;
 #endif
 
 #if 0  // Tooltips appear to be gone
-      case WMU_SHOW_TOOLTIP:
-      {
-         nsTooltipEvent event;
-         InitEvent( event, NS_SHOW_TOOLTIP);
-         event.tipIndex = LONGFROMMP(mp1);
-         event.eventStructType = NS_TOOLTIP_EVENT;
-         result = DispatchWindowEvent(&event);
-// OS2TODO       NS_RELEASE(event.widget);
-         break;
-      }
+        case WMU_SHOW_TOOLTIP:
+        {
+          nsTooltipEvent event;
+          InitEvent( event, NS_SHOW_TOOLTIP);
+          event.tipIndex = LONGFROMMP(mp1);
+          event.eventStructType = NS_TOOLTIP_EVENT;
+          result = DispatchWindowEvent(&event);
+// OS2TODO        NS_RELEASE(event.widget);
+          break;
+        }
 
-      case WMU_HIDE_TOOLTIP:
-         result = DispatchStandardEvent( NS_HIDE_TOOLTIP);
-         break;
+        case WMU_HIDE_TOOLTIP:
+          result = DispatchStandardEvent( NS_HIDE_TOOLTIP );
+          break;
 #endif
-      case WM_CONTROL: // remember this is resent to the orginator...
-         result = OnControl( mp1, mp2);
-         break;
+        case WM_CONTROL: // remember this is resent to the orginator...
+          result = OnControl( mp1, mp2);
+          break;
 
-      case WM_HSCROLL:
-      case WM_VSCROLL:
-         result = OnScroll( mp1, mp2);
-         break;
+        case WM_CLOSE:  // close request
+          DispatchStandardEvent( NS_XUL_CLOSE );
+          result = PR_TRUE; // abort window closure
+          break;
 
-      case WM_DESTROY: // clean up object
-         OnDestroy();
-         break;
+        case WM_DESTROY:
+            // clean up.
+            OnDestroy();
+            result = PR_TRUE;
+            break;
 
-      case WM_CLOSE:
-      {
-         // for now... eventually there'll be an nsIFrameWindow which will
-         // generate 'close' events which will be veto-able.  Hopefully.
-         // (that'll be `re-write the hierarchy' time for us...)
-         Destroy();
-         result = PR_TRUE;
-         break;
-      }
+        case WM_PAINT:
+            result = OnPaint();
+            break;
 
-      case WM_PAINT:
-         result = OnPaint();
-         break;
+        case WM_CHAR:
+            result = OnKey( mp1, mp2);
+            break;
 
-      case WM_CHAR:
-         result = OnKey( mp1, mp2);
-         break;
+        // Mouseclicks: we don't dispatch CLICK events because they just cause
+        // trouble: gecko seems to expect EITHER buttondown/up OR click events
+        // and so that's what we give it.
+        //
+        // Plus we make WM_CHORD do a button3down in order to get warp-4 paste
+        // behaviour (see nsEditorEventListeners.cpp)
+    
+        case WM_BUTTON1DOWN:
+          result = DispatchMouseEvent( NS_MOUSE_LEFT_BUTTON_DOWN, mp1, mp2);
+          break;
+        case WM_BUTTON1UP:
+          result = DispatchMouseEvent( NS_MOUSE_LEFT_BUTTON_UP, mp1, mp2);
+          break;
+        case WM_BUTTON1DBLCLK:
+          result = DispatchMouseEvent( NS_MOUSE_LEFT_DOUBLECLICK, mp1, mp2);
+          break;
+    
+        case WM_BUTTON2DOWN:
+          result = DispatchMouseEvent( NS_MOUSE_RIGHT_BUTTON_DOWN, mp1, mp2);
+          break;
+        case WM_BUTTON2UP:
+          result = DispatchMouseEvent( NS_MOUSE_RIGHT_BUTTON_UP, mp1, mp2);
+          break;
+        case WM_BUTTON2DBLCLK:
+          result = DispatchMouseEvent( NS_MOUSE_RIGHT_DOUBLECLICK, mp1, mp2);
+          break;
+    
+        case WM_CHORD:
+          result = DispatchMouseEvent( 0, mp1, mp2);
+          break;
+        case WM_BUTTON3DOWN:
+          result = DispatchMouseEvent( NS_MOUSE_MIDDLE_BUTTON_DOWN, mp1, mp2);
+          break;
+        case WM_BUTTON3UP:
+          result = DispatchMouseEvent( NS_MOUSE_MIDDLE_BUTTON_UP, mp1, mp2);
+          break;
+        case WM_BUTTON3DBLCLK:
+          result = DispatchMouseEvent( NS_MOUSE_MIDDLE_DOUBLECLICK, mp1, mp2);
+          break;
+    
+        case WM_MOUSEMOVE:
+          result = DispatchMouseEvent( NS_MOUSE_MOVE, mp1, mp2);
+          break;
+        case WM_MOUSEENTER:
+          result = DispatchMouseEvent( NS_MOUSE_ENTER, mp1, mp2);
+          break;
+        case WM_MOUSELEAVE:
+          result = DispatchMouseEvent( NS_MOUSE_EXIT, mp1, mp2);
+          break;
+    
+        case WM_HSCROLL:
+        case WM_VSCROLL:
+          result = OnScroll( msg, mp1, mp2);
+          break;
 
-      // Mouseclicks: we don't dispatch CLICK events because they just cause
-      // trouble: gecko seems to expect EITHER buttondown/up OR click events
-      // and so that's what we give it.
-      //
-      // Plus we make WM_CHORD do a button3down in order to get warp-4 paste
-      // behaviour (see nsEditorEventListeners.cpp)
-
-      case WM_BUTTON1DOWN:
-         result = DispatchMouseEvent( NS_MOUSE_LEFT_BUTTON_DOWN, mp1, mp2);
-         break;
-      case WM_BUTTON1UP:
-         result = DispatchMouseEvent( NS_MOUSE_LEFT_BUTTON_UP, mp1, mp2);
-         break;
-      case WM_BUTTON1DBLCLK:
-         result = DispatchMouseEvent( NS_MOUSE_LEFT_DOUBLECLICK, mp1, mp2);
-         break;
-
-      case WM_BUTTON2DOWN:
-         result = DispatchMouseEvent( NS_MOUSE_RIGHT_BUTTON_DOWN, mp1, mp2);
-         break;
-      case WM_BUTTON2UP:
-         result = DispatchMouseEvent( NS_MOUSE_RIGHT_BUTTON_UP, mp1, mp2);
-         break;
-      case WM_BUTTON2DBLCLK:
-         result = DispatchMouseEvent( NS_MOUSE_RIGHT_DOUBLECLICK, mp1, mp2);
-         break;
-
-      case WM_CHORD:
-         result = DispatchMouseEvent( 0, mp1, mp2);
-         break;
-      case WM_BUTTON3DOWN:
-         result = DispatchMouseEvent( NS_MOUSE_MIDDLE_BUTTON_DOWN, mp1, mp2);
-         break;
-      case WM_BUTTON3UP:
-         result = DispatchMouseEvent( NS_MOUSE_MIDDLE_BUTTON_UP, mp1, mp2);
-         break;
-      case WM_BUTTON3DBLCLK:
-         result = DispatchMouseEvent( NS_MOUSE_MIDDLE_DOUBLECLICK, mp1, mp2);
-         break;
-
-      case WM_MOUSEMOVE:
-         result = DispatchMouseEvent( NS_MOUSE_MOVE, mp1, mp2);
-         break;
-      case WMU_MOUSEENTER:
-         result = DispatchMouseEvent( NS_MOUSE_ENTER, mp1, mp2);
-         break;
-      case WMU_MOUSELEAVE:
-         result = DispatchMouseEvent( NS_MOUSE_EXIT, mp1, mp2);
-         break;
-
-      case WM_SETFOCUS:
-         result = DispatchStandardEvent( SHORT1FROMMP( mp2) ? NS_GOTFOCUS
-                                                            : NS_LOSTFOCUS);
-         break;
-
-      case WM_WINDOWPOSCHANGED: 
-         result = OnReposition( (PSWP) mp1);
-         break;
-
-
-      case WM_REALIZEPALETTE:           // hopefully only nsCanvas & nsFrame
-         result = OnRealizePalette();   // will need this
-         break;
-
-      case WM_PRESPARAMCHANGED:
-         // This is really for font-change notifies.  Do that first.
-         rc = GetPrevWP()( mWnd, msg, mp1, mp2);
-         OnPresParamChanged( mp1, mp2);
-         result = PR_TRUE;
-         break;
-
-      case DM_DRAGOVER:
-         result = OnDragOver( mp1, mp2, rc);
-         break;
-
-      case DM_DRAGLEAVE:
-         result = OnDragLeave( mp1, mp2);
-         break;
-
-      case DM_DROP:
-         result = OnDrop( mp1, mp2);
-         break;
-
-      // Need to handle this method in order to keep track of whether there
-      // is a drag inside the window; we need to do *this* so that we can
-      // generate DRAGENTER messages [which os/2 doesn't provide].
-      case DM_DROPHELP:
-         mDragInside = FALSE;
-         break;
-   }
-
-   return result;
+        case WM_FOCUSCHANGED:
+          if( SHORT1FROMMP( mp2 ) || mWnd == WinQueryFocus(HWND_DESKTOP) )
+          {
+            result = DispatchStandardEvent( NS_GOTFOCUS );
+            // Only sending an Activate event when we get a WM_ACTIVATE message
+            // isn't good enough; need to do this every time we gain focus.
+            if( !gJustGotActivate )
+            {
+              gJustGotActivate = PR_TRUE;
+              result = DispatchStandardEvent( NS_ACTIVATE );
+              gJustGotActivate = PR_FALSE;
+            }
+          }
+          else
+          {
+            result = DispatchStandardEvent( NS_LOSTFOCUS );
+            if( gJustGotDeactivate )
+            {
+              gJustGotDeactivate = PR_FALSE;
+              result = DispatchStandardEvent( NS_DEACTIVATE );
+            }
+          }
+          break;
+    
+        case WM_WINDOWPOSCHANGED: 
+          result = OnReposition( (PSWP) mp1);
+          break;
+    
+    
+        case WM_REALIZEPALETTE:          // hopefully only nsCanvas & nsFrame
+          result = OnRealizePalette();   // will need this
+          break;
+    
+        case WM_PRESPARAMCHANGED:
+          // This is really for font-change notifies.  Do that first.
+          rc = GetPrevWP()( mWnd, msg, mp1, mp2);
+          OnPresParamChanged( mp1, mp2);
+          result = PR_TRUE;
+          break;
+    
+        case DM_DRAGOVER:
+          result = OnDragOver( mp1, mp2, rc);
+          break;
+    
+        case DM_DRAGLEAVE:
+          result = OnDragLeave( mp1, mp2);
+          break;
+    
+        case DM_DROP:
+          result = OnDrop( mp1, mp2);
+          break;
+    
+        // Need to handle this method in order to keep track of whether there
+        // is a drag inside the window; we need to do *this* so that we can
+        // generate DRAGENTER messages [which os/2 doesn't provide].
+        case DM_DROPHELP:
+          mDragInside = FALSE;
+          break;
+    }
+    
+    return result;
 }
 
 
@@ -2060,7 +2112,7 @@ void nsWindow::OnDestroy()
    if( nsWindowState_eDoingDelete != mWindowState)
    {
       AddRef();
-      DispatchStandardEvent( NS_DESTROY);
+      DispatchStandardEvent( NS_DESTROY );
       Release();
    }
 
@@ -2361,11 +2413,79 @@ PRBool nsWindow::DispatchMouseEvent( PRUint32 aEventType, MPARAM mp1, MPARAM mp2
 
 //-------------------------------------------------------------------------
 //
-// Deal with scrollbar messages (actually implemented only in nsScrollbar)
+// Deal with scrollbar messages
 //
 //-------------------------------------------------------------------------
-PRBool nsWindow::OnScroll( MPARAM mp1, MPARAM mp2)
+PRBool nsWindow::OnScroll( ULONG msgid, MPARAM mp1, MPARAM mp2)
 {
+   return( (msgid == WM_HSCROLL) ? OnHScroll(mp1, mp2) : OnVScroll(mp1, mp2) );
+}
+
+PRBool nsWindow::OnVScroll( MPARAM mp1, MPARAM mp2)
+{
+    if (nsnull != mEventCallback) {
+        nsMouseScrollEvent scrollEvent;
+        scrollEvent.eventStructType = NS_MOUSE_SCROLL_EVENT;
+        InitEvent(scrollEvent, NS_MOUSE_SCROLL);
+        scrollEvent.isShift = WinIsKeyDown( VK_SHIFT);
+        scrollEvent.isControl = WinIsKeyDown( VK_CTRL);
+        scrollEvent.isAlt = WinIsKeyDown( VK_ALT) || WinIsKeyDown( VK_ALTGRAF);
+        scrollEvent.isMeta = PR_FALSE;
+        switch (SHORT2FROMMP(mp2)) {
+          case SB_LINEUP:
+            scrollEvent.deltaLines = -1;
+            break;
+          case SB_LINEDOWN:
+            scrollEvent.deltaLines = 1;
+            break;
+          case SB_PAGEUP:
+            scrollEvent.deltaLines = -10; /* OS2TODO ??? */
+            break;
+          case SB_PAGEDOWN:
+            scrollEvent.deltaLines = 10; /* OS2TODO ??? */
+            break;
+          default:
+            scrollEvent.deltaLines = 0;
+            break;
+        }
+        DispatchWindowEvent(&scrollEvent);
+    }
+// OS2TODO    NS_RELEASE(scrollEvent.widget);
+    return PR_FALSE;
+}
+
+PRBool nsWindow::OnHScroll( MPARAM mp1, MPARAM mp2)
+{
+#if 0  /* OS2TODO */
+    if (nsnull != mEventCallback) {
+        nsMouseScrollEvent scrollEvent;
+        scrollEvent.eventStructType = NS_MOUSE_SCROLL_EVENT;
+        InitEvent(scrollEvent, NS_MOUSE_SCROLL);
+        scrollEvent.isShift = WinIsKeyDown( VK_SHIFT);
+        scrollEvent.isControl = WinIsKeyDown( VK_CTRL);
+        scrollEvent.isAlt = WinIsKeyDown( VK_ALT) || WinIsKeyDown( VK_ALTGRAF);
+        scrollEvent.isMeta = PR_FALSE;
+        switch (SHORT2FROMMP(mp2)) {
+          case SB_LINELEFT:
+            scrollEvent.deltaColumns = -1;
+            break;
+          case SB_LINERIGHT:
+            scrollEvent.deltaColumns = 1;
+            break;
+          case SB_PAGELEFT:
+            scrollEvent.deltaColumns = -10; /* OS2TODO ??? */
+            break;
+          case SB_PAGERIGHT:
+            scrollEvent.deltaColumns = 10; /* OS2TODO ??? */
+            break;
+          default:
+            scrollEvent.deltaColumns = 0;
+            break;
+        }
+        DispatchWindowEvent(&scrollEvent);
+    }
+// OS2TODO    NS_RELEASE(scrollEvent.widget);
+#endif
     return PR_FALSE;
 }
 
@@ -2642,7 +2762,14 @@ PRUint32 WMChar2KeyCode( MPARAM mp1, MPARAM mp2)
    else if( flags & KC_VIRTUALKEY)
    {
       USHORT vk = SHORT2FROMMP( mp2);
-      if( !(flags & KC_CHAR) ||
+      if( isNumPadScanCode(CHAR4FROMMP(mp1)) && 
+          ( ((flags & KC_ALT) && (CHAR4FROMMP(mp1) != PMSCAN_PADPERIOD)) || 
+            ((flags & (KC_CHAR | KC_SHIFT)) == KC_CHAR) ) )
+      {
+         // No virtual key for Alt+NumPad or NumLock+NumPad
+         rc = 0;
+      }
+      else if( !(flags & KC_CHAR) || isNumPadScanCode(CHAR4FROMMP(mp1)) ||
           (vk == VK_BACKSPACE) || (vk == VK_TAB) || 
           (vk == VK_ENTER) || (vk == VK_NEWLINE) || (vk == VK_SPACE) )
       {
@@ -2658,7 +2785,7 @@ PRUint32 WMChar2KeyCode( MPARAM mp1, MPARAM mp2)
             case VK_BACKTAB:   rc = NS_VK_TAB; break; // layout tests for isShift
             case VK_CLEAR:     rc = NS_VK_CLEAR; break;
             case VK_NEWLINE:   rc = NS_VK_RETURN; break;
-            case VK_ENTER:     rc = NS_VK_ENTER; break;
+            case VK_ENTER:     rc = NS_VK_RETURN; break;
             case VK_SHIFT:     rc = NS_VK_SHIFT; break;
             case VK_CTRL:      rc = NS_VK_CONTROL; break;
             case VK_ALT:       rc = NS_VK_ALT; break;

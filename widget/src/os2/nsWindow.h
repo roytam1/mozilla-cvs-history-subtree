@@ -205,7 +205,9 @@ protected:
    virtual PRBool OnMove( PRInt32 aX, PRInt32 aY);
    virtual PRBool OnKey( MPARAM mp1, MPARAM mp2);
    virtual PRBool OnRealizePalette();
-   virtual PRBool OnScroll( MPARAM mp1, MPARAM mp2);
+   virtual PRBool OnScroll( ULONG msgid, MPARAM mp1, MPARAM mp2);
+   virtual PRBool OnVScroll( MPARAM mp1, MPARAM mp2);
+   virtual PRBool OnHScroll( MPARAM mp1, MPARAM mp2);
    virtual PRBool OnControl( MPARAM mp1, MPARAM mp2);
 //   virtual PRBool OnMenuClick( USHORT aCmd);
 //   virtual PRBool OnActivateMenu( HWND aMenu, BOOL aActivate);
@@ -294,6 +296,25 @@ protected:
 
 #define PM2NS_PARENT NS2PM_PARENT
 #define PM2NS NS2PM
+
+#define PMSCAN_PAD7         0x47
+#define PMSCAN_PAD8         0x48
+#define PMSCAN_PAD9         0x49
+#define PMSCAN_PADMINUS     0x4A
+#define PMSCAN_PAD4         0x4B
+#define PMSCAN_PAD5         0x4C
+#define PMSCAN_PAD6         0x4D
+#define PMSCAN_PADPLUS      0x4E
+#define PMSCAN_PAD1         0x4F
+#define PMSCAN_PAD2         0x50
+#define PMSCAN_PAD3         0x51
+#define PMSCAN_PAD0         0x52
+#define PMSCAN_PADPERIOD    0x53
+
+#define isNumPadScanCode(scanCode) !( (scanCode < PMSCAN_PAD7) ||      \
+                                      (scanCode > PMSCAN_PADPERIOD) || \
+                                      (scanCode == PMSCAN_PADMINUS) || \
+                                      (scanCode == PMSCAN_PADPLUS) )
 
 extern PRUint32 WMChar2KeyCode( MPARAM mp1, MPARAM mp2);
 

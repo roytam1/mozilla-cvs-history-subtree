@@ -43,10 +43,14 @@ extern nsIRollupListener * gRollupListener;
 extern nsIWidget         * gRollupWidget;
 extern PRBool              gRollupConsumeRollupEvent;
 
+extern PRBool gJustGotDeactivate;
+
+
 nsFrameWindow::nsFrameWindow() : nsCanvas()
 {
-   hwndFrame = 0;
+   hwndFrame    = 0;
    fnwpDefFrame = 0;
+   mWindowType  = eWindowType_toplevel;
 }
 
 nsFrameWindow::~nsFrameWindow()
@@ -169,9 +173,48 @@ void nsFrameWindow::RealDoCreate( HWND hwndP, nsWindow *aParent,
 
 ULONG nsFrameWindow::GetFCFlags()
 {
-   return FCF_TITLEBAR | FCF_SYSMENU | FCF_SIZEBORDER |
-          FCF_MINMAX | FCF_TASKLIST | FCF_NOBYTEALIGN |
-          (gModuleData.bIsDBCS ? FCF_DBE_APPSTAT : 0);
+  ULONG style = FCF_TITLEBAR | FCF_SYSMENU | FCF_TASKLIST |
+                FCF_CLOSEBUTTON | FCF_NOBYTEALIGN |
+                (gModuleData.bIsDBCS ? FCF_DBE_APPSTAT : 0);
+
+  if (mBorderStyle == eBorderStyle_default) {
+    style |= FCF_DLGBORDER;
+  } else {
+    style |= FCF_SIZEBORDER | FCF_MINMAX;
+  }
+
+  if (mBorderStyle != eBorderStyle_default && mBorderStyle != eBorderStyle_all) {
+    if (mBorderStyle == eBorderStyle_none || !(mBorderStyle & eBorderStyle_resizeh)) {
+      style &= ~FCF_SIZEBORDER;
+      style |= FCF_DLGBORDER;
+    }
+    
+    if (mBorderStyle == eBorderStyle_none || !(mBorderStyle & eBorderStyle_border))
+      style &= ~(FCF_DLGBORDER | FCF_SIZEBORDER);
+    
+    if (mBorderStyle == eBorderStyle_none || !(mBorderStyle & eBorderStyle_title)) {
+      style &= ~(FCF_TITLEBAR | FCF_TASKLIST);
+    }
+
+    if (mBorderStyle == eBorderStyle_none || !(mBorderStyle & eBorderStyle_close))
+      style &= ~FCF_CLOSEBUTTON;
+
+    if (mBorderStyle == eBorderStyle_none ||
+      !(mBorderStyle & (eBorderStyle_menu | eBorderStyle_close)))
+      style &= ~FCF_SYSMENU;
+    // Looks like getting rid of the system menu also does away with the
+    // close box. So, we only get rid of the system menu if you want neither it
+    // nor the close box. How does the Windows "Dialog" window class get just
+    // closebox and no sysmenu? Who knows.
+    
+    if (mBorderStyle == eBorderStyle_none || !(mBorderStyle & eBorderStyle_minimize))
+      style &= ~FCF_MINBUTTON;
+    
+    if (mBorderStyle == eBorderStyle_none || !(mBorderStyle & eBorderStyle_maximize))
+      style &= ~FCF_MAXBUTTON;
+  }
+
+  return style;
 }
 
 void nsFrameWindow::UpdateClientSize()
@@ -213,8 +256,8 @@ nsresult nsFrameWindow::Show( PRBool bState)
    {
       nsWindow::Show( bState);
       SetWindowListVisibility( bState);
-      if( bState)
-         WinSetWindowPos( GetMainWindow(), 0, 0, 0, 0, 0, SWP_ACTIVATE);
+      WinSetWindowPos( GetMainWindow(), NULLHANDLE, 0L, 0L, 0L, 0L, 
+                       (bState == PR_TRUE) ? SWP_ACTIVATE : SWP_DEACTIVATE);
    }
 
    return NS_OK;
@@ -291,6 +334,11 @@ MRESULT nsFrameWindow::FrameMessage( ULONG msg, MPARAM mp1, MPARAM mp2)
       case WM_UPDATEFRAME:
          if( LONGFROMMP(mp1) & FCF_MENU)
             UpdateClientSize();
+         break;
+
+      case WM_ACTIVATE:
+         if( !mp1)
+            gJustGotDeactivate = PR_TRUE;
          break;
    }
 
