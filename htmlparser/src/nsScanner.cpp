@@ -50,6 +50,7 @@
 
 static NS_DEFINE_CID(kCharsetAliasCID, NS_CHARSETALIAS_CID);
 
+#if 0
 nsScannerString::nsScannerString(PRUnichar* aStorageStart, 
                                  PRUnichar* aDataEnd, 
                                  PRUnichar* aStorageEnd) : nsSlidingString(aStorageStart, aDataEnd, aStorageEnd)
@@ -57,7 +58,7 @@ nsScannerString::nsScannerString(PRUnichar* aStorageStart,
 }
 
 void
-nsScannerString::ReplaceCharacter(nsReadingIterator<PRUnichar>& aPosition,
+nsScannerString::ReplaceCharacter(nsScannerIterator& aPosition,
                                   PRUnichar aChar)
 {
   // XXX Casting a const to non-const. Unless the base class
@@ -66,6 +67,7 @@ nsScannerString::ReplaceCharacter(nsReadingIterator<PRUnichar>& aPosition,
   PRUnichar* pos = (PRUnichar*)aPosition.get();
   *pos = aChar;
 }
+#endif
 
 nsReadEndCondition::nsReadEndCondition(const PRUnichar* aTerminateChars) :
   mChars(aTerminateChars), mFilter(PRUnichar(~0)) // All bits set
@@ -112,11 +114,10 @@ nsScanner::nsScanner(const nsAString& anHTMLString, const nsACString& aCharset, 
 {
   MOZ_COUNT_CTOR(nsScanner);
 
-  PRUnichar* buffer = ToNewUnicode(anHTMLString);
   mTotalRead = anHTMLString.Length();
   mSlidingBuffer = nsnull;
   mCountRemaining = 0;
-  AppendToBuffer(buffer, buffer+mTotalRead, buffer+mTotalRead);
+  AppendToBuffer(anHTMLString);
   mSlidingBuffer->BeginReading(mCurrentPosition);
   mMarkPosition = mCurrentPosition;
   mIncremental=PR_FALSE;
@@ -140,10 +141,13 @@ nsScanner::nsScanner(nsString& aFilename,PRBool aCreateStream, const nsACString&
   MOZ_COUNT_CTOR(nsScanner);
 
   mSlidingBuffer = nsnull;
+#if 0
   // XXX This is a big hack.  We want to initialize the iterators in the
   // constructor.  So, we temporarily use the mFileName string for this
   // purpose.  This fixes bug 182067.
   mFilename.BeginReading(mCurrentPosition);
+#endif
+  // XXX need to initialize mCurrentPosition to something --darin
   mMarkPosition = mCurrentPosition;
   mEndPosition = mCurrentPosition;
   mIncremental=PR_TRUE;
@@ -179,10 +183,13 @@ nsScanner::nsScanner(const nsAString& aFilename,nsIInputStream* aStream,const ns
   MOZ_COUNT_CTOR(nsScanner);
 
   mSlidingBuffer = nsnull;
+#if 0
   // XXX This is a big hack.  We want to initialize the iterators in the
   // constructor.  So, we temporarily use the mFileName string for this
   // purpose.  This fixes bug 182067.
   mFilename.BeginReading(mCurrentPosition);
+#endif
+  // XXX need to initialize mCurrentPosition to something --darin
   mMarkPosition = mCurrentPosition;
   mEndPosition = mCurrentPosition;
   mIncremental=PR_FALSE;
@@ -327,12 +334,8 @@ PRBool nsScanner::UngetReadable(const nsAString& aBuffer) {
  */
 nsresult nsScanner::Append(const nsAString& aBuffer) {
   
-  PRUnichar* buffer = ToNewUnicode(aBuffer);
-  PRUint32 bufLen = aBuffer.Length();
-  mTotalRead += bufLen;
-
-  AppendToBuffer(buffer, buffer+bufLen, buffer+bufLen);
-
+  mTotalRead += aBuffer.Length();
+  AppendToBuffer(aBuffer);
   return NS_OK;
 }
 
@@ -349,8 +352,11 @@ nsresult nsScanner::Append(const char* aBuffer, PRUint32 aLen){
   if(mUnicodeDecoder) {
     PRInt32 unicharBufLen = 0;
     mUnicodeDecoder->GetMaxLength(aBuffer, aLen, &unicharBufLen);
-    start = unichars = (PRUnichar*)nsMemory::Alloc((unicharBufLen+1) * sizeof(PRUnichar));
-    NS_ENSURE_TRUE(unichars,NS_ERROR_OUT_OF_MEMORY);
+    nsScannerString::Buffer* buffer = nsScannerString::AllocBuffer(unicharBufLen + 1);
+    NS_ENSURE_TRUE(buffer,NS_ERROR_OUT_OF_MEMORY);
+    //start = unichars = (PRUnichar*)nsMemory::Alloc((unicharBufLen+1) * sizeof(PRUnichar));
+    //NS_ENSURE_TRUE(unichars,NS_ERROR_OUT_OF_MEMORY);
+    start = unichars = buffer->DataStart();
 	  
     PRInt32 totalChars = 0;
     PRInt32 unicharLength = unicharBufLen;
@@ -381,9 +387,13 @@ nsresult nsScanner::Append(const char* aBuffer, PRUint32 aLen){
 		  }
 	  } while (NS_FAILED(res) && (aLen > 0));
 
+    buffer->SetDataLength(totalChars);
+    AppendToBuffer(buffer);
+    /*
     AppendToBuffer(start, 
                    start+totalChars, 
                    start+unicharBufLen);
+    */
     mTotalRead += totalChars;
 
     // Don't propagate return code of unicode decoder
@@ -392,9 +402,7 @@ nsresult nsScanner::Append(const char* aBuffer, PRUint32 aLen){
     res = NS_OK; 
   }
   else {
-    nsDependentCString str(aBuffer, aLen);
-    unichars = ToNewUnicode(str);
-    AppendToBuffer(unichars, unichars+aLen, unichars+aLen);
+    AppendToBuffer(NS_ConvertASCIItoUTF16(aBuffer, aLen));
     mTotalRead+=aLen;
   }
 
@@ -431,6 +439,9 @@ nsresult nsScanner::FillBuffer(void) {
     char buf[kBufsize+1];
     buf[kBufsize]=0;
 
+    // XXX use ReadSegments to avoid extra buffer copy? --darin
+    // XXX we know that mInputStream is non-null !!
+
     if(mInputStream) {
     	result = mInputStream->Read(buf, kBufsize, &numread);
       if (0 == numread) {
@@ -439,9 +450,7 @@ nsresult nsScanner::FillBuffer(void) {
     }
 
     if((0<numread) && (0==result)) {
-      nsDependentCString str(buf, numread);
-      PRUnichar* unichars = ToNewUnicode(str);
-      AppendToBuffer(unichars, unichars+numread, unichars+kBufsize+1);
+      AppendToBuffer(NS_ConvertASCIItoUTF16(buf, numread));
     }
     mTotalRead+=numread;
   }
@@ -528,7 +537,7 @@ nsresult nsScanner::Peek(PRUnichar& aChar, PRUint32 aOffset) {
       }
 
       if (NS_OK == result) {
-        nsReadingIterator<PRUnichar> pos = mCurrentPosition;
+        nsScannerIterator pos = mCurrentPosition;
         pos.advance(aOffset);
         aChar=*pos;
       }
@@ -551,7 +560,7 @@ nsresult nsScanner::Peek(nsAString& aStr, PRInt32 aNumChars)
     return Eof();
   }    
   
-  nsReadingIterator<PRUnichar> start, end;
+  nsScannerIterator start, end;
 
   start = mCurrentPosition;
 
@@ -586,10 +595,11 @@ nsresult nsScanner::SkipWhitespace(PRInt32& aNewlinesSkipped) {
   nsresult  result = Peek(theChar);
   
   if (result == kEOF) {
+    // XXX why wouldn't Eof() return kEOF?? --darin
     return Eof();
   }
   
-  nsReadingIterator<PRUnichar> current = mCurrentPosition;
+  nsScannerIterator current = mCurrentPosition;
   PRBool    done = PR_FALSE;
   PRBool    skipped = PR_FALSE;
   
@@ -765,7 +775,7 @@ nsresult nsScanner::GetIdentifier(nsString& aString,PRBool allowPunct) {
 
   PRUnichar         theChar=0;
   nsresult          result=Peek(theChar);
-  nsReadingIterator<PRUnichar> current, end;
+  nsScannerIterator current, end;
   PRBool            found=PR_FALSE;  
   
   current = mCurrentPosition;
@@ -829,7 +839,7 @@ nsresult nsScanner::ReadIdentifier(nsString& aString,PRBool allowPunct) {
 
   PRUnichar         theChar=0;
   nsresult          result=Peek(theChar);
-  nsReadingIterator<PRUnichar> origin, current, end;
+  nsScannerIterator origin, current, end;
   PRBool            found=PR_FALSE;  
 
   origin = mCurrentPosition;
@@ -876,8 +886,8 @@ nsresult nsScanner::ReadIdentifier(nsString& aString,PRBool allowPunct) {
   return result;
 }
 
-nsresult nsScanner::ReadIdentifier(nsReadingIterator<PRUnichar>& aStart,
-                                   nsReadingIterator<PRUnichar>& aEnd,
+nsresult nsScanner::ReadIdentifier(nsScannerIterator& aStart,
+                                   nsScannerIterator& aEnd,
                                    PRBool allowPunct) {
 
   if (!mSlidingBuffer) {
@@ -886,7 +896,7 @@ nsresult nsScanner::ReadIdentifier(nsReadingIterator<PRUnichar>& aStart,
 
   PRUnichar         theChar=0;
   nsresult          result=Peek(theChar);
-  nsReadingIterator<PRUnichar> origin, current, end;
+  nsScannerIterator origin, current, end;
   PRBool            found=PR_FALSE;  
 
   origin = mCurrentPosition;
@@ -951,7 +961,7 @@ nsresult nsScanner::ReadNumber(nsString& aString,PRInt32 aBase) {
 
   PRUnichar         theChar=0;
   nsresult          result=Peek(theChar);
-  nsReadingIterator<PRUnichar> origin, current, end;
+  nsScannerIterator origin, current, end;
 
   origin = mCurrentPosition;
   current = origin;
@@ -984,8 +994,9 @@ nsresult nsScanner::ReadNumber(nsString& aString,PRInt32 aBase) {
   return result;
 }
 
-nsresult nsScanner::ReadNumber(nsReadingIterator<PRUnichar>& aStart,
-                               nsReadingIterator<PRUnichar>& aEnd,
+// XXX looks like this is unused --darin
+nsresult nsScanner::ReadNumber(nsScannerIterator& aStart,
+                               nsScannerIterator& aEnd,
                                PRInt32 aBase) {
 
   if (!mSlidingBuffer) {
@@ -996,7 +1007,7 @@ nsresult nsScanner::ReadNumber(nsReadingIterator<PRUnichar>& aStart,
 
   PRUnichar         theChar=0;
   nsresult          result=Peek(theChar);
-  nsReadingIterator<PRUnichar> origin, current, end;
+  nsScannerIterator origin, current, end;
 
   origin = mCurrentPosition;
   current = origin;
@@ -1053,7 +1064,7 @@ nsresult nsScanner::ReadWhitespace(nsString& aString,
     return Eof();
   }
   
-  nsReadingIterator<PRUnichar> origin, current, end;
+  nsScannerIterator origin, current, end;
   PRBool done = PR_FALSE;  
 
   origin = mCurrentPosition;
@@ -1092,8 +1103,8 @@ nsresult nsScanner::ReadWhitespace(nsString& aString,
   return result;
 }
 
-nsresult nsScanner::ReadWhitespace(nsReadingIterator<PRUnichar>& aStart, 
-                                   nsReadingIterator<PRUnichar>& aEnd,
+nsresult nsScanner::ReadWhitespace(nsScannerIterator& aStart, 
+                                   nsScannerIterator& aEnd,
                                    PRInt32& aNewlinesSkipped) {
 
   if (!mSlidingBuffer) {
@@ -1107,7 +1118,7 @@ nsresult nsScanner::ReadWhitespace(nsReadingIterator<PRUnichar>& aStart,
     return Eof();
   }
   
-  nsReadingIterator<PRUnichar> origin, current, end;
+  nsScannerIterator origin, current, end;
   PRBool done = PR_FALSE;  
 
   origin = mCurrentPosition;
@@ -1168,7 +1179,7 @@ nsresult nsScanner::ReadWhile(nsString& aString,
 
   PRUnichar         theChar=0;
   nsresult          result=Peek(theChar);
-  nsReadingIterator<PRUnichar> origin, current, end;
+  nsScannerIterator origin, current, end;
 
   origin = mCurrentPosition;
   current = origin;
@@ -1219,7 +1230,7 @@ nsresult nsScanner::ReadUntil(nsAString& aString,
     return kEOF;
   }
 
-  nsReadingIterator<PRUnichar> origin, current;
+  nsScannerIterator origin, current;
   const PRUnichar* setstart = aEndCondition.mChars;
   const PRUnichar* setcurrent;
 
@@ -1269,8 +1280,8 @@ found:
   return NS_OK;
 }
 
-nsresult nsScanner::ReadUntil(nsReadingIterator<PRUnichar>& aStart, 
-                              nsReadingIterator<PRUnichar>& aEnd,
+nsresult nsScanner::ReadUntil(nsScannerIterator& aStart, 
+                              nsScannerIterator& aEnd,
                               const nsReadEndCondition &aEndCondition,
                               PRBool addTerminal)
 {
@@ -1278,7 +1289,7 @@ nsresult nsScanner::ReadUntil(nsReadingIterator<PRUnichar>& aStart,
     return kEOF;
   }
 
-  nsReadingIterator<PRUnichar> origin, current;
+  nsScannerIterator origin, current;
   const PRUnichar* setstart = aEndCondition.mChars;
   const PRUnichar* setcurrent;
 
@@ -1343,7 +1354,7 @@ nsresult nsScanner::ReadUntil(nsAString& aString,
     return kEOF;
   }
 
-  nsReadingIterator<PRUnichar> origin, current;
+  nsScannerIterator origin, current;
 
   origin = mCurrentPosition;
   current = origin;
@@ -1371,22 +1382,22 @@ nsresult nsScanner::ReadUntil(nsAString& aString,
 
 }
 
-void nsScanner::BindSubstring(nsSlidingSubstring& aSubstring, const nsReadingIterator<PRUnichar>& aStart, const nsReadingIterator<PRUnichar>& aEnd)
+void nsScanner::BindSubstring(nsScannerSubstring& aSubstring, const nsScannerIterator& aStart, const nsScannerIterator& aEnd)
 {
   aSubstring.Rebind(*mSlidingBuffer, aStart, aEnd);
 }
 
-void nsScanner::CurrentPosition(nsReadingIterator<PRUnichar>& aPosition)
+void nsScanner::CurrentPosition(nsScannerIterator& aPosition)
 {
   aPosition = mCurrentPosition;
 }
 
-void nsScanner::EndReading(nsReadingIterator<PRUnichar>& aPosition)
+void nsScanner::EndReading(nsScannerIterator& aPosition)
 {
   aPosition = mEndPosition;
 }
  
-void nsScanner::SetPosition(nsReadingIterator<PRUnichar>& aPosition, PRBool aTerminate, PRBool aReverse)
+void nsScanner::SetPosition(nsScannerIterator& aPosition, PRBool aTerminate, PRBool aReverse)
 {
   if (mSlidingBuffer) {
     if (aReverse) {
@@ -1403,7 +1414,7 @@ void nsScanner::SetPosition(nsReadingIterator<PRUnichar>& aPosition, PRBool aTer
   }
 }
 
-void nsScanner::ReplaceCharacter(nsReadingIterator<PRUnichar>& aPosition,
+void nsScanner::ReplaceCharacter(nsScannerIterator& aPosition,
                                  PRUnichar aChar)
 {
   if (mSlidingBuffer) {
@@ -1411,24 +1422,22 @@ void nsScanner::ReplaceCharacter(nsReadingIterator<PRUnichar>& aPosition,
   }
 }
 
-void nsScanner::AppendToBuffer(PRUnichar* aStorageStart, 
-                               PRUnichar* aDataEnd, 
-                               PRUnichar* aStorageEnd)
+void nsScanner::AppendToBuffer(nsScannerString::Buffer* aBuf)
 {
   if (!mSlidingBuffer) {
-    mSlidingBuffer = new nsScannerString(aStorageStart, aDataEnd, aStorageEnd);
+    mSlidingBuffer = new nsScannerString(aBuf);
     mSlidingBuffer->BeginReading(mCurrentPosition);
     mMarkPosition = mCurrentPosition;
     mSlidingBuffer->EndReading(mEndPosition);
-    mCountRemaining = (aDataEnd - aStorageStart);
+    mCountRemaining = aBuf->DataLength();
   }
   else {
-    mSlidingBuffer->AppendBuffer(aStorageStart, aDataEnd, aStorageEnd);
+    mSlidingBuffer->AppendBuffer(aBuf);
     if (mCurrentPosition == mEndPosition) {
       mSlidingBuffer->BeginReading(mCurrentPosition);
     }
     mSlidingBuffer->EndReading(mEndPosition);
-    mCountRemaining += (aDataEnd - aStorageStart);
+    mCountRemaining += aBuf->DataLength();
   }
 }
 
@@ -1441,7 +1450,7 @@ void nsScanner::AppendToBuffer(PRUnichar* aStorageStart,
  *  @return  nada
  */
 void nsScanner::CopyUnusedData(nsString& aCopyBuffer) {
-  nsReadingIterator<PRUnichar> start, end;
+  nsScannerIterator start, end;
   start = mCurrentPosition;
   end = mEndPosition;
 

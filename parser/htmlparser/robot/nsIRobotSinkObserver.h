@@ -39,7 +39,7 @@
 #define nsIRobotSinkObserver_h___
 
 #include "nsISupports.h"
-class nsString;
+#include "nsStringFwd.h"
 
 /* fab1d970-cfda-11d1-9328-00805f8add32 */
 #define NS_IROBOTSINKOBSERVER_IID \
