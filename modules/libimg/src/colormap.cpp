@@ -51,8 +51,8 @@ il_reset_palette(il_container *ic)
     }
 
     ic->colormap_serial_num = -1;
-    ic->dont_use_custom_palette = FALSE;
-    ic->rendered_with_custom_palette = FALSE;
+    ic->dont_use_custom_palette = PR_FALSE;
+    ic->rendered_with_custom_palette = PR_FALSE;
     
     return ret;
    
