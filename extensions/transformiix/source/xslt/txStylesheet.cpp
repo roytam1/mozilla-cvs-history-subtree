@@ -279,7 +279,7 @@ txStylesheet::isStripSpaceAllowed(const txXPathNode& aNode, txIMatchContext* aCo
 {
     txXPathTreeWalker walker(aNode);
 
-    PRInt16 nodeType = walker.getNodeType();
+    PRUint16 nodeType = walker.getNodeType();
     if (nodeType == txXPathNodeType::TEXT_NODE ||
         nodeType == txXPathNodeType::CDATA_SECTION_NODE) {
         if (!txXPathNodeUtils::isWhitespace(aNode) || !walker.moveToParent()) {

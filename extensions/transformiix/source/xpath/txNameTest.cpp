@@ -29,7 +29,7 @@
 #include "txIXPathContext.h"
 
 txNameTest::txNameTest(nsIAtom* aPrefix, nsIAtom* aLocalName, PRInt32 aNSID,
-                       PRInt32 aNodeType)
+                       PRUint16 aNodeType)
     :mPrefix(aPrefix), mLocalName(aLocalName), mNamespace(aNSID),
      mNodeType(aNodeType)
 {

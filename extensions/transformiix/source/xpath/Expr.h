@@ -231,7 +231,7 @@ public:
      * principal node type
      */
     txNameTest(nsIAtom* aPrefix, nsIAtom* aLocalName, PRInt32 aNSID,
-               PRInt32 aNodeType);
+               PRUint16 aNodeType);
 
     ~txNameTest();
 
@@ -241,7 +241,7 @@ private:
     nsCOMPtr<nsIAtom> mPrefix;
     nsCOMPtr<nsIAtom> mLocalName;
     PRInt32 mNamespace;
-    PRInt32 mNodeType;
+    PRUint16 mNodeType;
 };
 
 /*

@@ -48,7 +48,7 @@ void txNodeTypeTest::setNodeName(const nsAString& aName)
 PRBool txNodeTypeTest::matches(const txXPathNode& aNode,
                                txIMatchContext* aContext)
 {
-    PRInt32 type = txXPathNodeUtils::getNodeType(aNode);
+    PRUint16 type = txXPathNodeUtils::getNodeType(aNode);
 
     switch (mNodeType) {
         case COMMENT_TYPE:
