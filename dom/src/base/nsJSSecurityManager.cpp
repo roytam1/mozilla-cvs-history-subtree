@@ -254,9 +254,11 @@ nsJSSecurityManager::NewJSPrincipals(nsIURI *aURL, nsString* aName, nsString* aC
   //Allocate and fill the nsJSPrincipalsData struct
   result = PR_NEWZAP(nsJSPrincipalsData);
   if (result == nsnull) return NS_ERROR_FAILURE;
-  char * codebaseStr;
+  char * codebaseStr = NULL;
   nsresult rv;
-  if ((rv = GetOriginFromSourceURL(aCodebase->ToNewCString(), &codebaseStr)) != NS_OK) return rv;
+  char * test = aCodebase->ToNewCString();
+  rv = GetOriginFromSourceURL(test, &codebaseStr);
+  if (rv != NS_OK) return rv;
   if (!codebaseStr) {
     PR_Free(result);
     return NS_ERROR_FAILURE;
@@ -304,7 +306,7 @@ nsJSSecurityManager::CheckScriptAccess(nsIScriptContext* aContext, void* aObj,
       return NS_OK;
 
     case SCRIPT_SECURITY_SAME_DOMAIN_ACCESS:
-      return CheckPermissions(cx, (JSObject*)aObj, eJSTarget_Max, aResult);
+      return this->CheckPermissions(cx, (JSObject*)aObj, eJSTarget_Max, aResult);
 
     default:
       // Default is no access
@@ -470,27 +472,17 @@ nsJSSecurityManager::FindOriginURL(JSContext *aCx, JSObject *aGlobal)
 }
 
 PRInt32 
-nsJSSecurityManager::CheckForPrivilege(JSContext *cx, char *prop_name, 
-                                       int priv_code)
+nsJSSecurityManager::CheckForPrivilege(JSContext *cx, char *prop_name, int priv_code)
 {
   char *tmp_prop_name;
-
-  if(prop_name == NULL) {
-    return SCRIPT_SECURITY_NO_ACCESS;
-  }
-
+  if(prop_name == NULL) return SCRIPT_SECURITY_NO_ACCESS;
   tmp_prop_name = AddSecPolicyPrefix(cx, prop_name);
-  if(tmp_prop_name == NULL) {
-    return SCRIPT_SECURITY_NO_ACCESS;
-  }
-
+  if(tmp_prop_name == NULL) return SCRIPT_SECURITY_NO_ACCESS;
   PRInt32 secLevel = SCRIPT_SECURITY_NO_ACCESS;
-
   if (NS_OK == mPrefs->GetIntPref(tmp_prop_name, &secLevel)) {
     PR_FREEIF(tmp_prop_name);
     return secLevel;
   }
-
   PR_FREEIF(tmp_prop_name);
   return SCRIPT_SECURITY_ALL_ACCESS;
 }
@@ -1029,16 +1021,16 @@ nsJSSecurityManager::GetOriginFromSourceURL(char * aSourceURL, char * * result)
     *result = nsnull;
     return NS_OK;
   }
-  char * tempChars = ParseURL(* result, GET_PROTOCOL_PART|GET_HOST_PART|GET_PATH_PART);
+  char * tempChars;// = ParseURL(aSourceURL, GET_PROTOCOL_PART|GET_HOST_PART|GET_PATH_PART);
   NS_WITH_SERVICE(nsIComponentManager, compMan,kComponentManagerCID,&rv);
   if (!NS_SUCCEEDED(rv)) return nsnull;
   rv = compMan->CreateInstance(kURLCID,NULL,nsIURL::GetIID(),(void**)&url);
   if (!NS_SUCCEEDED(rv)) return nsnull;
-  tempChars = buffer->ToNewCString();
-  rv = url->SetSpec(tempChars);
+  rv = url->SetSpec(aSourceURL);
   if (!NS_SUCCEEDED(rv)) return nsnull;
   url->GetScheme(& tempChars);
   buffer->Assign(tempChars);
+  buffer->Append("://");
   url->GetHost(& tempChars);
   buffer->Append(tempChars);
   url->GetPath(& tempChars);
@@ -2220,54 +2212,48 @@ nsJSSecurityManager::RegisterPrincipals(nsIScriptContext *aContext, nsIScriptGlo
   if (NS_OK == aGlobal->QueryInterface(kIScriptObjectOwnerIID, (void**)&aGlobalObjOwner)) {
     aGlobalObjOwner->GetScriptObject(aContext, (void**)&inner);
   }
-  if (inner == nsnull) {
-    return NS_ERROR_FAILURE;
-  }
-
-  if (NS_OK != GetContainerPrincipals(cx, inner, &containerPrincipals)) {
-    return NS_ERROR_FAILURE;
-  }
-
+  if (inner == nsnull) return NS_ERROR_FAILURE;
+  if (NS_OK != GetContainerPrincipals(cx, inner, &containerPrincipals)) return NS_ERROR_FAILURE;
   containerData = (nsJSPrincipalsData *)containerPrincipals;
   JSObject* container = inner;
-
   if (!aName && aPrincipals != containerPrincipals && aPrincipals) {
-      /*
-       * "name" argument omitted since it was specified when "principals"
-       * was created. Get it from "principals".
-       */
-      aName = new nsString(data->name);
+    // "name" argument omitted since it was specified when "principals"
+    // was created. Get it from "principals".
+    aName = new nsString(data->name);
   }
 #if 0
   implicitName = nsnull;
   if (!aName && data && data->signedness == HAS_SIGNED_SCRIPTS) {
-      /*
-       * Name is unspecified. Use the implicit name formed from the
-       * origin URL and the ordinal within the page. For example, the
-       * third implicit name on http://www.co.com/dir/mypage.html
-       * would be "_mypage2".
-       */
-      char *url;
-      char *path;
-
-      url = FindOriginURL(cx, inner);
-      if (!url) {
-        return nsnull;
-      }
-      path = *url? ParseURL(url, GET_PATH_PART) : nsnull;
-      if (path && *path) {
-          char *s;
-          s = PL_strrchr(path, '.');
-          if (s)
-              *s = '\0';
-          s = PL_strrchr(path, '/');
-          //XXXGlobalApi
-          implicitName = PR_sprintf_append(nsnull, "_%s%d", s ? s+1 : path,
-                                           aGlobal->signature_ordinal++);
-          name = implicitName;
-      }
-      PR_FREEIF(path);
-      delete url;
+    /*
+     * Name is unspecified. Use the implicit name formed from the
+     * origin URL and the ordinal within the page. For example, the
+     * third implicit name on http://www.co.com/dir/mypage.html
+     * would be "_mypage2".
+     */
+    char * urlchars, * path, * tempchars;
+    urlchars = FindOriginURL(cx, inner);
+    if (!urlchars) return nsnull;
+    path = ParseURL(urlchars, GET_PATH_PART)
+    nsIURL * url;
+    nsresult rv;
+    NS_WITH_SERVICE(nsIComponentManager, compMan,kComponentManagerCID,&rv);
+    if (!NS_SUCCEEDED(rv)) return nsnull;
+    rv = compMan->CreateInstance(kURLCID,NULL,nsIURL::GetIID(),(void**)&url);
+    if (!NS_SUCCEEDED(rv)) return nsnull;
+    rv = url->SetSpec(urlchars);
+    if (!NS_SUCCEEDED(rv)) return nsnull;
+    url->GetPath(& path);
+    if (path && *path) {
+        char * s = PL_strrchr(path, '.');
+        if (s) *s = '\0';
+        s = PL_strrchr(path, '/');
+        //XXXGlobalApi
+        implicitName = PR_sprintf_append(nsnull, "_%s%d", s ? s+1 : path,
+                                         aGlobal->signature_ordinal++);
+        name = implicitName;
+    }
+    PR_FREEIF(path);
+    delete url;
   }
 #endif
   untransformed = nsnull;

@@ -55,8 +55,8 @@ interface nsIScriptSecurityManager : nsISupports
 
 	void NewJSPrincipals(in nsIURI aURL, in nsString aName, in nsString aCodebase, out JSPrincipals aPrincipals);
 	void CheckScriptAccess(in nsIScriptContext cx, in voidStar obj, [const] in string prop, out boolean res);
-	void GetSubjectOriginURL(in JSContext cx, out nsString origin);
-	void GetObjectOriginURL(in JSContext cx, in JSObject obj, out nsString origin);
+	void GetSubjectOriginURL(in JSContext cx, out string origin);
+	void GetObjectOriginURL(in JSContext cx, in JSObject obj, out string origin);
 /*
 	void GetPrincipalsFromStackFrame(in JSContext cx, out JSPrincipals prins);
 	void GetCompilationPrincipals(in nsIScriptContext cx, in nsIScriptGlobalObject go, in JSPrincipals prins, out JSPrincipals resultprins);
