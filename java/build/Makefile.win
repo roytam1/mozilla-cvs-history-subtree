@@ -127,7 +127,7 @@ buildRunems:
 	chmod 775 $(PACKAGE_LIB)\webclient.dll
 	chmod 775 $(PACKAGE_LIB)\wc_share.lib
 	@echo +++ Creating Commercial Package. Use runem.bat to run the test browser.
-	del /Q runem_win_commercial.bat
+	rm -f runem_win_commercial.bat
 	@echo set CLASSPATH="..\lib\webclient_$(PACKAGE_VER)_win32.jar"> runem_win_commercial.bat
 	@echo $(PERL) .\runem.pl org.mozilla.webclient.test.EmbeddedMozillaImpl $(DEPTH) %1% >> runem_win_commercial.bat
 	copy runem_win_commercial.bat $(PACKAGE_EXAMPLE)\runem.bat
