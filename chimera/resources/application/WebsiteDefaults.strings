@@ -1,5 +1,5 @@
 HomePageDefault = "http://www.mozilla.org/projects/chimera/";
-SearchPageDefault = "http://www.google.com/defaults";
+SearchPageDefault = "http://www.google.com/";
 StartPageDefault = "about:blank";
 ThrobberPageDefault = "http://www.mozilla.org";
 FeedbackPageDefault = "http://www.mozilla.org/projects/chimera/";
