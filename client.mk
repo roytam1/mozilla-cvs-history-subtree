@@ -52,10 +52,10 @@
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_BRANCH = SeaMonkey_M18_BRANCH
-NSPR_CO_TAG = SeaMonkey_M18_BRANCH
-PSM_CO_TAG = SeaMonkey_M18_BRANCH
-LDAPCSDK_CO_TAG = SeaMonkey_M18_BRANCH
+MOZ_CO_BRANCH = SeaMonkey_M18_RELEASE
+NSPR_CO_TAG = SeaMonkey_M18_RELEASE
+PSM_CO_TAG = SeaMonkey_M18_RELEASE
+LDAPCSDK_CO_TAG = SeaMonkey_M18_RELEASE
 BUILD_MODULES = all
 
 #######################################################################

@@ -432,11 +432,11 @@ sub Checkout()
     # activate MacCVS
     ActivateApplication('Mcvs');
 
-    my($sma_tag) = "SeaMonkey_M18_BRANCH";
-    my($nsprpub_tag) = "SeaMonkey_M18_BRANCH";
-    my($nss_tab) = "SeaMonkey_M18_BRANCH";
-    my($psm_tag) = "SeaMonkey_M18_MAC_BRANCH";
-    my($ldapsdk_tag) = "SeaMonkey_M18_BRANCH";
+    my($sma_tag) = "SeaMonkey_M18_RELEASE";
+    my($nsprpub_tag) = "SeaMonkey_M18_RELEASE";
+    my($nss_tab) = "SeaMonkey_M18_RELEASE";
+    my($psm_tag) = "SeaMonkey_M18_MAC_RELEASE";
+    my($ldapsdk_tag) = "SeaMonkey_M18_RELEASE";
     
     #//
     #// Checkout commands
