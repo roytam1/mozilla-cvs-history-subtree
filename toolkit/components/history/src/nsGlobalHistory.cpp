@@ -734,6 +734,8 @@ nsGlobalHistory::AddNewPageToDatabase(const char *aURL,
 {
   mdb_err err;
   
+  NS_ENSURE_SUCCESS(OpenDB(), NS_ERROR_NOT_INITIALIZED);
+
   // Create a new row
   mdbOid rowId;
   rowId.mOid_Scope = kToken_HistoryRowScope;
