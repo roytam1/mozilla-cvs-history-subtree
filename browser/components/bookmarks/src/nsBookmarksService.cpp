@@ -5473,9 +5473,9 @@ nsBookmarksService::OnAssert(nsIRDFDataSource* aDataSource,
         observersCopy.AppendObject(mObservers[i]);
     }
 
-    for (PRInt32 i = 0; i < count; ++i)
+    for (PRInt32 j = 0; j < count; ++j)
     {
-        (void) observersCopy[i]->OnAssert(this, aSource, aProperty, aTarget);
+        (void) observersCopy[j]->OnAssert(this, aSource, aProperty, aTarget);
     }
 
     return NS_OK;
@@ -5502,9 +5502,9 @@ nsBookmarksService::OnUnassert(nsIRDFDataSource* aDataSource,
         observersCopy.AppendObject(mObservers[i]);
     }
 
-    for (PRInt32 i = 0; i < count; ++i)
+    for (PRInt32 j = 0; j < count; ++j)
     {
-        (void) observersCopy[i]->OnUnassert(this, aSource, aProperty, aTarget);
+        (void) observersCopy[j]->OnUnassert(this, aSource, aProperty, aTarget);
     }
 
     return NS_OK;
@@ -5532,9 +5532,9 @@ nsBookmarksService::OnChange(nsIRDFDataSource* aDataSource,
         observersCopy.AppendObject(mObservers[i]);
     }
 
-    for (PRInt32 i = 0; i < count; ++i)
+    for (PRInt32 j = 0; j < count; ++j)
     {
-        (void) observersCopy[i]->OnChange(this, aSource, aProperty, aOldTarget, aNewTarget);
+        (void) observersCopy[j]->OnChange(this, aSource, aProperty, aOldTarget, aNewTarget);
     }
 
     return NS_OK;
@@ -5562,9 +5562,9 @@ nsBookmarksService::OnMove(nsIRDFDataSource* aDataSource,
         observersCopy.AppendObject(mObservers[i]);
     }
 
-    for (PRInt32 i = 0; i < count; ++i)
+    for (PRInt32 j = 0; j < count; ++j)
     {
-        (void) observersCopy[i]->OnMove(this, aOldSource, aNewSource, aProperty, aTarget);
+        (void) observersCopy[j]->OnMove(this, aOldSource, aNewSource, aProperty, aTarget);
     }
 
     return NS_OK;
