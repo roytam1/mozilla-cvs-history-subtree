@@ -580,12 +580,12 @@ nsSOAPJSValue::ConvertJSValToValue(JSContext* aContext,
 	}
 
 //  We might be able to get a better struct name, in any case...
+        aType = nsSOAPUtils::kStructTypePrefix;
         nsCOMPtr<nsIClassInfo> info = do_QueryInterface(native);
 	if (info) {
 	  char* cname = nsnull;
 	  info->GetClassDescription(&cname);
 	  if (cname) {
-             aType = nsSOAPUtils::kStructTypePrefix;
              aType.Append(NS_ConvertASCIItoUCS2(cname).get());
 	     nsMemory::Free(cname);
 	  }
@@ -597,9 +597,9 @@ nsSOAPJSValue::ConvertJSValToValue(JSContext* aContext,
       value->SetContext(aContext);
       value->SetObject(jsobj);
 
-// Look for a constructor name on the current object or a prototype
+// For a non-wrapped object, look for a constructor name on the current object or a prototype
 
-      if (aType.IsEmpty()) {
+      if (!wrapper) {
         for (;;) {
           JSObject* constructor = JS_GetConstructor(aContext, jsobj);
           jsobj = JS_GetPrototype(aContext, jsobj);
