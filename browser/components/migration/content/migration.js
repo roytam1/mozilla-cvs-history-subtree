@@ -30,10 +30,9 @@ var MigrationWizard = {
       // easily identifiable way to avoid migration and create a new profile.
       var nothing = document.getElementById("nothing");
       nothing.hidden = false;
-      
-      var phoenix = document.getElementById("phoenix");
-      phoenix.hidden = false;
     }
+    
+    this.onImportSourcePageShow();
   },
   
   uninit: function ()
@@ -73,14 +72,14 @@ var MigrationWizard = {
       var suffix = group.childNodes[i].id;
       if (suffix != "nothing" && suffix != "fromfile") {
         var contractID = kProfileMigratorContractIDPrefix + suffix;
-	try {
+        try {
           var migrator = Components.classes[contractID].createInstance(kIMig);
-	}
-	catch (e) {
-	  dump("*** eeee!!! contractID =" + contractID + "\n");
-	  return;
-	}
-        if (!migrator.sourceExists)
+        }
+        catch (e) {
+          dump("*** invalid contractID =" + contractID + "\n");
+          return;
+        }
+        if (!migrator.sourceExists || (suffix == "phoenix" && !this._autoMigrate))
           group.childNodes[i].hidden = true;
       }
     }
