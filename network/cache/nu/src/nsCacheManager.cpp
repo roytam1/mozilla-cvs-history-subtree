@@ -35,7 +35,7 @@
 #include "nsCacheBkgThd.h"
 
 /* TODO move this to InitNetLib */
-static nsCacheManager TheManager;
+static nsCacheManager* pTheManager=0;
 
 PRUint32 NumberOfObjects(void);
 
@@ -69,7 +69,12 @@ nsCacheManager::~nsCacheManager()
 nsCacheManager* 
 nsCacheManager::GetInstance()
 {
-    return &TheManager;
+	if (0 == pTheManager)
+	{
+		pTheManager = new nsCacheManager();
+		PR_ASSERT(pTheManager);
+	}
+    return pTheManager;
 }
 
 #if 0
