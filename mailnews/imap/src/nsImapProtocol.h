@@ -284,7 +284,7 @@ private:
 	nsCOMPtr<nsIChannel>		m_channel; 
 	nsCOMPtr<nsIOutputStream>	m_outputStream;   // this will be obtained from the transport interface
 	nsCOMPtr<nsIInputStream>    m_inputStream;
-
+	nsCOMPtr<nsIStreamListener> m_outputConsumer;
 	nsCOMPtr<nsISupports>	  m_streamConsumer; // if we are displaying an article this is the rfc-822 display sink...
 
 
