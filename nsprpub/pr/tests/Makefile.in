@@ -181,6 +181,8 @@ LDOPTS = -L$(DIST)/lib
 LIBPR = -lnspr$(MOD_VERSION)
 LIBPLC = -lplc$(MOD_VERSION)
 
+ifndef USE_AUTOCONF
+
 ifeq ($(OS_ARCH), WINNT)
 ifeq ($(OS_TARGET), WIN16)
   LIBPR = $(DIST)/lib/nspr$(MOD_VERSION).lib
@@ -410,6 +412,8 @@ else
 endif
 endif
 
+endif # !USE_AUTOCONF
+
 #####################################################
 #
 # The rules
@@ -417,6 +421,16 @@ endif
 #####################################################
 
 include $(topsrcdir)/config/rules.mk
+
+ifdef USE_AUTOCONF
+
+# Cancel this rule (force implicit)
+%: %.c
+
+%: %.$(OBJ_SUFFIX)
+	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(EXTRA_LIBS) -o $@
+
+else # !USE_AUTOCONF
 
 AIX_PRE_4_2 = 0
 ifeq ($(OS_ARCH),AIX)
@@ -478,6 +492,8 @@ else
 endif
 
 endif
+
+endif # !USE_AUTOCONF
 
 export:: $(TARGETS)
 install:: export
