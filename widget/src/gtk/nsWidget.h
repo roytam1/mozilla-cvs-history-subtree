@@ -36,6 +36,8 @@ class nsIToolkit;
 #include <gdk/gdkprivate.h>
 #endif
 
+#include "gtkmozbox.h"
+
 #define NSRECT_TO_GDKRECT(ns,gdk) \
   PR_BEGIN_MACRO \
   gdk.x = ns.x; \
@@ -151,14 +153,14 @@ public:
 #endif
 
   // Return the Gdk window used for rendering
-  virtual GdkWindow * GetRenderWindow(GtkWidget * aGtkWidget);
+  virtual GdkWindow * GetRenderWindow(GtkObject * aGtkObject);
 
 protected:
 
   virtual void InitCallbacks(char * aName = nsnull);
   virtual void OnDestroy();
 
-  NS_IMETHOD CreateNative(GtkWidget *parentWindow) { return NS_OK; }
+  NS_IMETHOD CreateNative(GtkObject *parentWindow) { return NS_OK; }
 
   nsresult CreateWidget(nsIWidget *aParent,
                         const nsRect &aRect,
@@ -346,12 +348,19 @@ protected:
                       PRUint32         aEventType);
 
 #ifdef DEBUG
-  nsCAutoString  debug_GetName(GtkWidget * aGtkWidget);
-  PRInt32       debug_GetRenderXID(GtkWidget * aGtkWidget);
+  nsCAutoString  debug_GetName(GtkObject * aGtkObject);
+  PRInt32       debug_GetRenderXID(GtkObject * aGtkWidget);
 #endif
 
   guint32 mGrabTime;
+  // this indicates if it's a full fledged gtk widget, otherwise it's
+  // a gdksuperwin
+  PRBool     mIsWidget;
+  // the mozbox will be present if it is a full widget.
+  GtkWidget *mMozBox;
   GtkWidget *mWidget;
+
+  // the parent of this window
   nsIWidget *mParent;
 
   // This is the composite update area (union of all the calls to
