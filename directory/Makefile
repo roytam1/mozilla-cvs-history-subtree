@@ -46,6 +46,7 @@ all:	FORCE
 	@echo "   BUILD_OPT=1		for optimized build"
 	@echo "   USE_PTHREADS=1	for using pthreads"
 	@echo "   NS_USE_GCC=1		for using gcc"
+	@echo "   USE_64=1		for building 64 bit versions"
 	@echo 
 	@echo iPlanet internal options
 	@echo
@@ -56,6 +57,8 @@ all:	FORCE
 	@echo "   HAVE_CCONF=1		for building with components"
 	@echo "   HAVE_SVRCORE=1	for building with svrcore"
 	@echo
+	@echo "   For iPlanet builds, coreconf must be installed"
+	@echo "   in $(CORECONFDIR)"
 
 buildLdapClientSDK export: PullSDKComponents
 	@echo

@@ -20,10 +20,10 @@
  * Contributor(s):
  */
 
-#ifndef HAVE_LIBNLS
-
 #include <stdio.h>
 #include <string.h>
+
+#ifndef HAVE_LIBNLS
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,8 +52,8 @@ ldaptool_local2UTF8( const char *src )
 
 #else /* HAVE_LIBNLS */
 
-#include <stdio.h>
-#include <string.h>
+#define NSPR20
+
 #ifdef XP_WIN32
 #define  VC_EXTRALEAN
 #include <afxwin.h>
@@ -590,7 +590,9 @@ ldaptool_local2UTF8( const char *src )
 }
 #endif /* HAVE_LIBNLS */
 
+#ifndef HAVE_LIBNLS
 #ifdef __cplusplus
 }
+#endif
 #endif
 

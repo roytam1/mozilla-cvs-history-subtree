@@ -70,7 +70,11 @@ ifeq ($(CLASSIC_NSPR), 1)
 	DEFINES += -D_PR_LOCAL_THREADS_ONLY
 else
 	USE_PTHREADS = 1
+ifeq ($(HAVE_CCONF), 1)
+	IMPL_STRATEGY =
+else
 	IMPL_STRATEGY = _PTH
+endif
 endif
 
 CC			= cc $(NON_LD_FLAGS) -std1

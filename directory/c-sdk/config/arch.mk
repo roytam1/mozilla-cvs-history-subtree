@@ -46,6 +46,20 @@ OS_TEST		:= $(shell uname -m)
 #
 # Tweak the default OS_ARCH and OS_RELEASE macros as needed.
 #
+ifeq ($(HAVE_CCONF), 1)
+ifeq ($(OS_ARCH), Linux)
+ifeq (2.2,$(findstring 2.2,$(OS_RELEASE)))
+OS_RELEASE	:=2.2
+endif
+ifeq (2.1,$(findstring 2.1,$(OS_RELEASE)))
+OS_RELEASE	:=2.1
+endif
+ifeq (2.0,$(findstring 2.0,$(OS_RELEASE)))
+OS_RELEASE	:=2.0
+endif
+endif
+endif
+
 ifeq ($(OS_ARCH),AIX)
 OS_RELEASE	:= $(shell uname -v).$(shell uname -r)
 endif

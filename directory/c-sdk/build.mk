@@ -110,14 +110,16 @@ NSPR_LIBNAME=nspr$(NSPR_LIBVERSION)
 # NLS library
 #
 NLS_LIBVERSION	=31
-NSCNV_LIBNAME	=nscnv$(NLS_LIBVERSION)
-NSJPN_LIBNAME	=nsjpn$(NLS_LIBVERSION)
-NSCCK_LIBNAME	=nscck$(NLS_LIBVERSION)
-NSSB_LIBNAME	=nssb$(NLS_LIBVERSION)
+NSCNV_LIBNAME	=libnscnv$(NLS_LIBVERSION).$(LIB_SUFFIX)
+NSJPN_LIBNAME	=libnsjpn$(NLS_LIBVERSION).$(LIB_SUFFIX)
+NSCCK_LIBNAME	=libnscck$(NLS_LIBVERSION).$(LIB_SUFFIX)
+NSSB_LIBNAME	=libnssb$(NLS_LIBVERSION).$(LIB_SUFFIX)
 
 # as used in clients/tools/Makefile.client
-LIBNLS_INCLUDES =../../../dist/include
-LIBNLS_DISTDIR	=../../../dist/lib
+LIBNLS_INCLUDES_LOC = /share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/include
+LIBNLS_LIB_LOC	    = /share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/lib
+LIBNLS_INCLUDES =../../../../../dist/public/libnls
+LIBNLS_LIBDIR	=../../../../../dist/$(OBJDIR_NAME)/libnls
 
 RM              = rm -f
 SED             = sed

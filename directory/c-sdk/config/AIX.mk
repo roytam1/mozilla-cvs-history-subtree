@@ -69,7 +69,11 @@ ifeq ($(PTHREADS_USER),1)
 	IMPL_STRATEGY = _PTH_USER
 else
 	USE_PTHREADS = 1
+ifeq ($(HAVE_CCONF), 1)
+	IMPL_STRATEGY =
+else
 	IMPL_STRATEGY = _PTH
+endif
 endif
 endif
 
@@ -91,7 +95,11 @@ OBJECT_MODE	= 64
 export OBJECT_MODE
 COMPILER_TAG	= _64
 else
+ifeq ($(HAVE_CCONF), 1)
+COMPILER_TAG	=
+else
 COMPILER_TAG	= _32
+endif
 endif
 
 CPU_ARCH	= rs6000

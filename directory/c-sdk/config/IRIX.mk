@@ -66,7 +66,7 @@ else
 	IMPL_STRATEGY = _PTH
 endif
 
-ifdef NS_USE_GCC
+ifeq ($(NS_USE_GCC), 1) 
 	CC			= gcc
 	COMPILER_TAG		= _gcc
 	AS			= $(CC) -x assembler-with-cpp -D_ASM -mips2
@@ -135,7 +135,7 @@ OS_CFLAGS		+= -D_PR_HAVE_SGI_PRDA_PROCMASK
 endif
 
 ifeq (,$(filter-out 6.5,$(OS_RELEASE)))
-ifndef NS_USE_GCC
+ifneq ($(NS_USE_GCC), 1)
 OS_CFLAGS		+= -mips3
 endif
 OS_CFLAGS		+= -D_PR_HAVE_GETPROTO_R -D_PR_HAVE_GETPROTO_R_POINTER

@@ -39,7 +39,7 @@ include $(MOD_DEPTH)/config/UNIX.mk
 
 DLL_SUFFIX	= sl
 
-ifdef NS_USE_GCC
+ifeq ($(NS_USE_GCC), 1)
 	CC			        = gcc
 	CCC			        = g++
 	OS_CFLAGS		    =
@@ -112,7 +112,7 @@ endif
 
 ifeq ($(OS_RELEASE),B.10.20)
 OS_CFLAGS		+= -DHPUX10 -DHPUX10_20
-ifndef NS_USE_GCC
+ifneq ($(NS_USE_GCC), 1)
 OS_CFLAGS		+= +DAportable +DS1.1
 endif
 DEFAULT_IMPL_STRATEGY = _PTH
@@ -123,7 +123,7 @@ endif
 #
 
 ifeq ($(OS_RELEASE),B.10.30)
-ifndef NS_USE_GCC
+ifneq ($(NS_USE_GCC), 1)
 CCC			= /opt/aCC/bin/aCC -ext
 OS_CFLAGS		+= +DAportable +DS1.1
 endif
@@ -133,18 +133,26 @@ endif
 
 # 11.00 is similar to 10.30.
 ifeq ($(OS_RELEASE),B.11.00)
-	ifndef NS_USE_GCC
+	ifneq ($(NS_USE_GCC), 1)
 		CCC			        = /opt/aCC/bin/aCC -ext
 		ifeq ($(USE_64), 1)
 			OS_CFLAGS       += +DA2.0W +DS2.0
 			COMPILER_TAG    = _64
 		else
 			OS_CFLAGS       += +DAportable +DS2.0
+ifeq ($(HAVE_CCONF), 1)
+			COMPILER_TAG    =
+else
 			COMPILER_TAG    = _32
+endif
 		endif
 	endif
 OS_CFLAGS		+= -DHPUX10 -DHPUX11 -D_LARGEFILE64_SOURCE -D_PR_HAVE_OFF64_T
+ifeq ($(HAVE_CCONF), 1)
+DEFAULT_IMPL_STRATEGY =
+else
 DEFAULT_IMPL_STRATEGY = _PTH
+endif
 endif
 
 ifeq ($(DEFAULT_IMPL_STRATEGY),_EMU)
@@ -196,7 +204,7 @@ DSO_LDOPTS		= -b +h $(notdir $@)
 
 # -fPIC or +Z generates position independent code for use in shared
 # libraries.
-ifdef NS_USE_GCC
+ifeq ($(NS_USE_GCC), 1)
 DSO_CFLAGS		= -fPIC
 else
 DSO_CFLAGS		= +Z

@@ -127,8 +127,10 @@ EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
 endif
 
 ifdef HAVE_LIBNLS
-EXTRA_LIBS += -L$(LIBNLS_DISTDIR) -l$(NSCNV_LIBNAME) -l$(NSJPN_LIBNAME) \
-	   += -l$(NSCCK_LIBNAME) -l$(NSSB_LIBNAME)
+EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) -lC \
+		$(LIBNLS_LIBDIR)/$(NSJPN_LIBNAME) \
+	        $(LIBNLS_LIBDIR)/$(NSCCK_LIBNAME) \
+		$(LIBNLS_LIBDIR)/$(NSSB_LIBNAME)
 endif
 
 LDTOOLS_LIBS += $(EXTRA_LIBS)
@@ -136,9 +138,9 @@ LIBLOCATION   = $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib
 
 ###########################################################################
 
-all::	$(OBJDEST) libdir $(BINS)
+all::	$(OBJDEST) linklibnls libdir $(BINS)
 
-libdir:
+libdir: linklibnls
 ifneq ($(HAVE_SVRCORE), 1)
 	  @echo ""
 	  @echo "***************************************************"
@@ -172,6 +174,16 @@ ifeq ($(COPYFREEBL), 1)
 	$(NSINSTALL) $(NSCP_DISTDIR)/lib/lib$(HYBRID_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(NSCP_DISTDIR)/lib/lib$(PURE32_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 endif
+endif
+endif
+
+linklibnls: FORCE
+ifneq ($(OS_ARCH), WINNT)
+ifeq ($(HAVE_LIBNLS), 1)
+	$(RM) -f $(LIBNLS_INCLUDES)
+	$(RM) -f $(LIBNLS_LIBDIR)
+	ln -s $(LIBNLS_INCLUDES_LOC) $(LIBNLS_INCLUDES)
+	ln -s $(LIBNLS_LIB_LOC) $(LIBNLS_LIBDIR)
 endif
 endif
 
@@ -214,3 +226,5 @@ $(LDAPDELETE_OBJ):	$(LDAPTOOL_COMMON_DEPS)
 $(LDAPMODIFY_OBJ):	$(LDAPTOOL_COMMON_DEPS) fileurl.h
 $(LDAPSEARCH_OBJ):	$(LDAPTOOL_COMMON_DEPS) fileurl.h
 $(LDAPCMP_OBJ):		$(LDAPTOOL_COMMON_DEPS)
+
+FORCE:

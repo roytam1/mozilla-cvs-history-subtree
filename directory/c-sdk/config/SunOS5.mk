@@ -63,7 +63,7 @@ else
     DEFINES += -D_PR_LOCAL_THREADS_ONLY
   else
     USE_PTHREADS = 1
-ifdef HAVE_CCONF 
+ifeq ($(HAVE_CCONF), 1) 
     IMPL_STRATEGY =
 else
     IMPL_STRATEGY = _PTH
@@ -71,7 +71,7 @@ endif
   endif
 endif
 
-ifdef NS_USE_GCC
+ifeq ($(NS_USE_GCC), 1)
 CC			= gcc -Wall
 CCC			= g++ -Wall
 ASFLAGS			+= -Wa,-P
@@ -101,14 +101,14 @@ endif
 
 ifeq ($(USE_64),1)
 ifndef INTERNAL_TOOLS
-ifndef NS_USE_GCC
+ifneq ($(NS_USE_GCC), 1)
 CC			+= -xarch=v9
 CCC			+= -xarch=v9
 endif
 endif
 COMPILER_TAG		= _64
 else
-ifdef HAVE_CCONF
+ifeq ($(HAVE_CCONF), 1)
 COMPILER_TAG		=
 else
 COMPILER_TAG		= _32
@@ -127,19 +127,19 @@ OS_DEFINES		+= -Di386
 # assumed that the Solaris assembler /usr/ccs/bin/as is used.
 # If your gcc uses GNU as, you do not need the -Wa,-s option.
 ifndef BUILD_OPT
-ifdef NS_USE_GCC
+ifeq ($(NS_USE_GCC), 1)
 OPTIMIZER		= -Wa,-s -gstabs
 endif
 endif
 else
-ifdef HAVE_CCONF
+ifeq ($(HAVE_CCONF), 1)
 CPU_ARCH		=
 else
 CPU_ARCH		= sparc
 endif
 endif
 
-ifdef HAVE_CCONF
+ifeq ($(HAVE_CCONF), 1)
 CPU_ARCH_TAG		=
 else
 CPU_ARCH_TAG		= _$(CPU_ARCH)
@@ -159,7 +159,7 @@ OS_DEFINES		+= -D_PR_HAVE_OFF64_T
 #     set.
 # But gcc 2.7.2.x fails to define _LARGEFILE64_SOURCE by default.
 # The native compiler, gcc 2.8.x, and egcs don't have this problem.
-ifdef NS_USE_GCC
+ifeq ($(NS_USE_GCC), 1)
 OS_DEFINES		+= -D_LARGEFILE64_SOURCE
 endif
 endif
@@ -181,7 +181,7 @@ DSO_LDOPTS		= -G -h $(notdir $@)
 
 # -KPIC generates position independent code for use in shared libraries.
 # (Similarly for -fPIC in case of gcc.)
-ifdef NS_USE_GCC
+ifeq ($(NS_USE_GCC), 1)
 DSO_CFLAGS		= -fPIC
 else
 DSO_CFLAGS		= -KPIC
