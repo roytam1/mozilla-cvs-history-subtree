@@ -68,9 +68,9 @@ Rights Reserved.
 <!ENTITY newcardButton.label "New Card">  
 <!ENTITY newlistButton.img "chrome://addressbook/skin/newlist.gif">
 <!ENTITY newlistButton.label ".New List">  
-<!ENTITY editButton.img "chrome://addressbook/skin/property.gif">
+<!ENTITY editButton.img "chrome://addressbook/skin/edit.gif">
 <!ENTITY editButton.label "Edit">  
-<!ENTITY newmsgButton.img "chrome://addressbook/skin/abnewmsg.gif">
+<!ENTITY newmsgButton.img "chrome://addressbook/skin/newmsgab.gif">
 <!ENTITY newmsgButton.label "New Msg">  
 <!ENTITY deleteButton.img "chrome://messenger/skin/trash.gif">
 <!ENTITY deleteButton.label "Delete">  
