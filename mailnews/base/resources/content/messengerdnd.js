@@ -38,58 +38,58 @@ function debugDump(msg)
 function DragOverOutliner(event)
 {
     debugDump("In DragOverOutliner");
-    return false;
-
-    if (event.target.localName != "treecell" &&
-        event.target.localName != "treeitem") {        
-        event.preventBubble();
-        return false;
-    }
 
     var dragSession = null;
     var dragFolder = false;
-    var flavor =false;
+    var flavor = false;
 
     dragSession = dragService.getCurrentSession();
-    if ( !dragSession )	return(false);
+    if (!dragSession)
+        return false;
 
-    if ( dragSession.isDataFlavorSupported("text/nsmessageOrfolder") ) flavor = true;
+    if (dragSession.isDataFlavorSupported("text/nsmessageOrfolder"))
+        flavor = true;
 
-    var treeItem = event.target.parentNode.parentNode;
-    if (!treeItem)	return(false);
+    var folderOutliner = GetFolderOutliner();
+    var row = { };
+    var col = { };
+    var elt = { };
+    folderOutliner.outlinerBoxObject.getCellAt(event.clientX, event.clientY, row, col, elt);
+    var folderResource = GetFolderResource(row.value);
 
     var trans = Components.classes["@mozilla.org/widget/transferable;1"].createInstance(Components.interfaces.nsITransferable);
-    if ( !trans ) return(false);
 
-    var targetID = treeItem.getAttribute("id");
-    var targetNode = RDF.GetResource(targetID, true);
-    if (!targetNode)	return(false);
-    var targetFolder = targetNode.QueryInterface(Components.interfaces.nsIMsgFolder);
+    var targetID = folderResource.Value;
+    var targetFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
     var targetServer = targetFolder.server;
     var sourceServer;
 
     trans.addDataFlavor("text/nsmessageOrfolder");
    
-    for ( var i = 0; i < dragSession.numDropItems; ++i )
+    for (var i = 0; i < dragSession.numDropItems; i++)
     {
-       dragSession.getData ( trans, i );
+       dragSession.getData(trans, i);
        var dataObj = new Object();
        var bestFlavor = new Object();
        var len = new Object();
        try
        {
-         trans.getAnyTransferData ( bestFlavor, dataObj, len );
+           trans.getAnyTransferData(bestFlavor, dataObj, len);
        }
        catch (ex)
        {
-          continue;   //no data so continue;
+           //no data so continue;
+           continue;
        }
-       if ( dataObj )	dataObj = dataObj.value.QueryInterface(Components.interfaces.nsISupportsWString);
-       if ( !dataObj )	continue;
+       if (dataObj)
+           dataObj = dataObj.value.QueryInterface(Components.interfaces.nsISupportsWString);
+       if (!dataObj)
+           continue;
 
        // pull the URL out of the data object
        var sourceID = dataObj.data.substring(0, len.value);
-       if (!sourceID)	continue;
+       if (!sourceID)
+           continue;
 
        var sourceNode;
        try
@@ -102,94 +102,98 @@ function DragOverOutliner(event)
        catch(ex)
        {
           sourceNode = null;
-          var isServer = treeItem.getAttribute("IsServer");
+          var isServer = GetFolderAttribute(folderResource, "IsServer");
           if (isServer == "true")
           {
-     	    debugDump("***isServer == true\n");
-     	    return(false);
+              debugDump("***isServer == true");
+     	      return false;
           }
-          var canFileMessages = treeItem.getAttribute("CanFileMessages");
+          var canFileMessages = GetFolderAttribute(folderResource, "CanFileMessages");
           if (canFileMessages != "true")
           {
-     	    debugDump("***canFileMessages == false\n");
-     	    return(false);
+              debugDump("***canFileMessages == false");
+              return false;
           }
-          var noSelect = treeItem.getAttribute("NoSelect");
+          var noSelect = GetFolderAttribute(folderResource, "NoSelect");
           if (noSelect == "true")
           {
-            debugDump("***NoSelect == true\n");
-            return(false);
+              debugDump("***NoSelect == true");
+              return false;
           } 
+          dump("sourceID: "+sourceID+"\n");
           var hdr = messenger.messageServiceFromURI(sourceID).messageURIToMsgHdr(sourceID);
           if (hdr.folder == targetFolder)
-             return (false);
+             return false;
           break;
        }
 
        // we should only get here if we are dragging and dropping folders
        var sourceResource = folder.QueryInterface(Components.interfaces.nsIRDFResource);
-  	   var sourceFolder = sourceResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+       var sourceFolder = sourceResource.QueryInterface(Components.interfaces.nsIMsgFolder);
        sourceServer = sourceFolder.server;
 
        if (targetID == sourceID)	
-          return (false);
+          return false;
 
-      if (sourceServer != targetServer && targetServer.type == "imap") //don't allow drop on different imap servers.
-          return (false);
+       //don't allow drop on different imap servers.
+       if (sourceServer != targetServer && targetServer.type == "imap")
+          return false;
 			    
-      if (targetFolder.URI == sourceFolder.parent.URI)   //don't allow immediate child to be dropped to it's parent
-      {
-          debugDump(targetFolder.URI + "\n");
-          debugDump(sourceFolder.parent.URI + "\n");     
-          return (false);
-	  }
+       if (targetFolder.URI == sourceFolder.parent.URI)   //don't allow immediate child to be dropped to it's parent
+       {
+          debugDump(targetFolder.URI);
+          debugDump(sourceFolder.parent.URI);     
+          return false;
+       }
 			
        var isAncestor = sourceFolder.isAncestorOf(targetFolder);
-       if (isAncestor)  // don't allow parent to be dropped on its ancestors
-          return (false);
-	
+       // don't allow parent to be dropped on its ancestors
+       if (isAncestor)
+          return false;
     }
 
     if (dragFolder)
     {
-       debugDump("***isFolderFlavor == true \n");  //first check these conditions then proceed further
+        debugDump("***isFolderFlavor == true");
+
+        //first check these conditions then proceed further
         
-       if (event.ctrlKey)   //ctrlkey does not apply to folder drag
-          return(false);
+        //ctrlkey does not apply to folder drag
+        if (event.ctrlKey)
+            return false;
 
-       var canCreateSubfolders = treeItem.getAttribute('CanCreateSubfolders');
-       if ( canCreateSubfolders == "false")  // if cannot create subfolders then a folder cannot be dropped here     
-       {
-          debugDump("***canCreateSubfolders == false \n");
-          return(false);
-       }
-       var serverType = treeItem.getAttribute('ServerType');
+        var canCreateSubfolders = GetFolderAttribute(folderResource, "CanCreateSubfolders");
+        if (canCreateSubfolders == "false")
+        {
+            // if cannot create subfolders then a folder cannot be dropped here          debugDump("***canCreateSubfolders == false \n");
+            return false;
+        }
 
-       // if we've got a folder that can't be renamed
-       // allow us to drop it if we plan on dropping it on "Local Folders"
-       // (but not within the same server, to prevent renaming folders on "Local Folders" that
-       // should not be renamed)
-       if (gSrcCanRename == "false") {
-          if (sourceServer == targetServer) {
-            return(false);
-          }
-          if (serverType != "none") {
-            return(false);
-          }
-	   }
+        var serverType = GetFolderAttribute(folderResource, 'ServerType');
+        // if we've got a folder that can't be renamed
+        // allow us to drop it if we plan on dropping it on "Local Folders"
+        // (but not within the same server, to prevent renaming folders on "Local Folders" that
+        // should not be renamed)
+        if (gSrcCanRename == "false")
+        {
+            if (sourceServer == targetServer)
+                return false;
+            if (serverType != "none")
+                return false;
+        }
     }
 
-	//XXX other flavors here...
+    //XXX other flavors here...
 
-	// touch the attribute on the treeItem to trigger the repaint with the drop feedback
-	// (recall that it is two levels above the target, which is a treeCell).
-	//XXX this is really slow and likes to refresh N times per second.
+    // touch the attribute on the treeItem to trigger the repaint with the drop feedback
+    // (recall that it is two levels above the target, which is a treeCell).
+    // XXX this is really slow and likes to refresh N times per second.
     if (flavor) //message or folder
     {
-     event.target.parentNode.parentNode.setAttribute ( "dd-triggerrepaint", 0 );
-     dragSession.canDrop = true;
-     event.preventBubble();  // do not propagate message
-     return true;
+//        event.target.parentNode.parentNode.setAttribute ( "dd-triggerrepaint", 0 );
+          dragSession.canDrop = true;
+          event.preventBubble();  // do not propagate message
+          return true;
     }
 	
     return false;
@@ -294,7 +298,7 @@ function BeginDragFolderOutliner(event)
             var resource = GetFolderResource(j);
             dump("resource: "+resource.Value+"\n");
             dump("resource.length: "+resource.Value.length+"\n");
-            genTextData.data = resource;
+            genTextData.data = resource.Value;
 
             // double byte data
             trans.setTransferData ("text/nsmessageOrfolder", genTextData, resource.Value.length * 2 );
@@ -313,9 +317,9 @@ function BeginDragFolderOutliner(event)
     return false;
 }
 
-function DropOnFolderTree(event)
+function DropOnFolderOutliner(event)
 {
-    debugDump("DropOnTree\n");
+    debugDump("DropOnFolderOutliner\n");
 
     var treeRoot = GetFolderTree();
     if (!treeRoot)	return(false);
