@@ -414,6 +414,7 @@
     <statusbarpanel class="statusbarpanel-progress" collapsed="true" id="statusbar-progresspanel">
       <progressmeter class="progressmeter-statusbar" id="statusbar-icon" mode="normal" value="0"/>
     </statusbarpanel>
+    <statusbarpanel id="statusbar-updates"/>
   </statusbar>
 </window>
   

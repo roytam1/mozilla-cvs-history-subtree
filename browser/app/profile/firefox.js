@@ -44,11 +44,45 @@ pref("general.startup.browser", true);
 pref("browser.chromeURL","chrome://browser/content/");
 pref("browser.hiddenWindowChromeURL", "chrome://browser/content/hiddenWindow.xul");
 pref("xpinstall.dialog.confirm", "chrome://mozapps/content/xpinstall/xpinstallConfirm.xul");
-pref("xpinstall.dialog.progress", "chrome://mozapps/content/downloads/downloads.xul");
-pref("xpinstall.dialog.progress.type", "Download:Manager");
+pref("xpinstall.dialog.progress.skin", "chrome://mozapps/content/extensions/extensions.xul?type=themes");
+pref("xpinstall.dialog.progress.chrome", "chrome://mozapps/content/extensions/extensions.xul?type=extensions");
+pref("xpinstall.dialog.progress.type.skin", "Extension:Manager-themes");
+pref("xpinstall.dialog.progress.type.chrome", "Extension:Manager-extensions");
+
+// This is this application's unique identifier used by the Extension System to identify
+// this application as an extension target, and by the SmartUpdate system to identify
+// this application to the Update server.
+pref("app.id", "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}");
+pref("app.version", 
+#expand __APP_VERSION__
+);
+
+pref("update.app.enabled", true);
+pref("update.app.url", "chrome://mozapps/locale/update/update.properties");
+pref("update.app.updateVersion", "");
+pref("update.app.updateDescription", "");
+pref("update.app.updateURL", "");
+pref("update.extensions.enabled", true);
+pref("update.extensions.wsdl", "chrome://mozapps/locale/extensions/extensions.properties");
+pref("extensions.getMoreExtensionsURL", "chrome://mozapps/locale/extensions/extensions.properties");
+pref("extensions.getMoreThemesURL", "chrome://mozapps/locale/extensions/extensions.properties");
+// Automatically download and install updates to themes and extensions.
+pref("update.extensions.autoUpdate", false);
+
+pref("update.interval", 604800000); // every 7 days
+pref("update.lastUpdateDate", 0); // UTC offset when last update was performed. 
+
+// These prefs relate to the number and severity of updates available. This is a 
+// cache that the browser notification mechanism uses to determine if it should show
+// status bar UI if updates are detected and the app is shut down before installing
+// them.
+// 0 = low (extension/theme updates), 1 = medium (app minor version), 2 = high (major version)
+pref("update.severity", 0); 
+// The number of extension/theme/etc updates available
+pref("update.extensions.count", 0);
 
 pref("keyword.enabled", true);
-pref("keyword.URL", "http://www.google.com/search?btnI=I%27m+Feeling+Lucky&ie=UTF-8&oe=UTF-8&q=");
+pref("keyword.URL", "http://www.google.com/search?btnI=I%27m+Feeling+Lucky&ie=UTF-8&oe=UTF-8&sourceid=mozilla-search&q=");
 
 pref("general.useragent.locale", "chrome://global/locale/intl.properties");
 pref("general.useragent.contentlocale", "chrome://browser-region/locale/region.properties");

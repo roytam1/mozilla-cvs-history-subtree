@@ -38,25 +38,62 @@
 
 #include "nsISupports.idl"
 
-interface nsIInputStream;
+interface nsIFile;
 interface nsIRDFDataSource;
-interface nsIDOMWindowInternal;
+interface nsIUpdateItem;
+
+[scriptable, uuid(9048223f-ec50-49e5-9866-80ee8f26179d)]
+interface nsIExtensionDownloadProgressListener : nsISupports
+{
+  void onStateChange(in wstring aURL, in short aState, in long aValue);
+
+  void onProgress(in wstring aURL, in unsigned long aValue, in unsigned long aMaxValue);
+};
 
 [scriptable, uuid(c3515b0f-99f4-453b-805e-1fdf5724d6d9)]
 interface nsIExtensionManager : nsISupports
 {
-  void installExtensionFromStream(in nsIInputStream aStream, in boolean aUseProfile);
+  const unsigned long FLAG_INSTALL_PROFILE = 0x01;
+  const unsigned long FLAG_INSTALL_GLOBAL  = 0x02;
+
+  void installExtension(in nsIFile aXPIFile, in unsigned long aFlags);
   void uninstallExtension(in string aExtensionID);
   void enableExtension(in string aExtensionID);
   void disableExtension(in string aExtensionID);
-  /* aDOMWindow param here is temporary hack until xpinstall trigger is accessible 
-     via xpconnect */
-  void updateExtension(in string aExtensionID, in nsIDOMWindowInternal aDOMWindow);
 
-  void installTheme(in string aThemeID);
+  void addDownloads([array, size_is(aItemCount)] in nsIUpdateItem aItems,
+                    in unsigned long aItemCount);
+  void removeDownload(in wstring aURL, in unsigned short aType);
+  long addDownloadObserver(in nsIExtensionDownloadProgressListener aObserver);
+  void removeDownloadObserverAt(in long aIndex);
+
+  void installTheme(in nsIFile aJARFile, in unsigned long aFlags);
   void uninstallTheme(in string aThemeID);
-  void updateTheme(in string aThemeID);
+
+  /** 
+   * Returns true if mismatches were found and the app needs to restart. 
+   */
+  boolean checkForMismatches();
+
+  readonly attribute boolean inSafeMode;
+
+  void update([array, size_is(aItemCount)] in nsIUpdateItem aItems,
+               in unsigned long aItemCount);
+
+  void getItemList(in string aItemID, 
+                   in unsigned short aType, 
+                   out unsigned long aItemCount,
+                   [retval, array, size_is(aItemCount)] out nsIUpdateItem aItems);
 
   readonly attribute nsIRDFDataSource datasource;
+};
+
+[scriptable, uuid(c0b7517f-0b3a-41a2-bde8-ba3ac8a5af47)]
+interface nsIExtensionItemUpdater : nsISupports
+{
+  void checkForUpdates();
+
+  readonly attribute unsigned short sourceEvent;
+  readonly attribute unsigned short updateTypes;
 };
 

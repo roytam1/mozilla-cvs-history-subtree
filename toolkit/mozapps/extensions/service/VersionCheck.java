@@ -46,36 +46,61 @@ public class VersionCheck
   {
   }
 
-  /*
-  public static void main(String[] args) throws Exception 
+/*
+  public static void main(String[] args)
   {
     VersionCheck impl = new VersionCheck();
-    int id = impl.getNewestExtension("{bb8ee064-ccb9-47fc-94ae-ec335af3fe2d}", "3.0", "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}", "0.8.0+");
-    System.out.println("result = " + impl.getProperty(id, "xpiurl"));
+    // int id = impl.getNewestExtension("{bb8ee064-ccb9-47fc-94ae-ec335af3fe2d}", "3.0", "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}", "0.8.0+");
+    int id = impl.getNewestExtension("{93c4cb22-bf10-40a2-adff-c4c64a38df0c}", "1.5", "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}", "0.8.0+");
+    System.out.println("result row = " + id + ", xpiUrl = " + impl.getProperty(id, "xpiurl"));
   }
-  */
+*/
 
-  protected Connection getConnection() throws Exception
+  public UpdateItem[] getExtensionsToUpdate(UpdateItem[] aItems, String aTargetApp, String aTargetAppVersion)
   {
-    Class.forName("com.mysql.jdbc.Driver");
-    return DriverManager.getConnection("jdbc:mysql://localhost/umo_extensions", "root", "");
+    Vector results = new Vector();
+    for (int i = 0; i < aItems.length; ++i) 
+    {
+      UpdateItem e = aItems[i];
+      int row = getNewestExtension(e.getId(), e.getVersion(), aTargetApp, aTargetAppVersion);
+      if (row != -1) 
+      {
+        e.setRow(row);
+        e.setId(getProperty(row, "guid"));
+        e.setName(getProperty(row, "name"));
+        e.setVersion(getProperty(row, "version"));
+        e.setUpdateURL(getProperty(row, "updateurl"));
+        e.setIconURL(getProperty(row, "iconurl"));
+        results.add(e);
+      }
+    }
+
+    return (UpdateItem[])results.toArray();
   }
 
-  public Extension getExtension(String aExtensionGUID, String aInstalledVersion, String aTargetApp, String aTargetAppVersion)
+  // This method is a temporary workaround until Mozilla's Web Services implementation 
+  // supports passing Arrays of complex types.
+  public UpdateItem getNewestExtension(UpdateItem aItem, 
+                                       String aTargetApp, 
+                                       String aTargetAppVersion)
   {
-    int id = getNewestExtension(aExtensionGUID, aInstalledVersion, aTargetApp, aTargetAppVersion);
-    Extension e = new Extension();
+    UpdateItem e = new UpdateItem();
 
-    e.setRow(id);
-    e.setId(getProperty(id, "id"));
-    e.setVersion(getProperty(id, "version"));
-    e.setName(getProperty(id, "name"));
-    e.setXpiURL(getProperty(id, "xpiurl"));
-
+    int row = getNewestExtension(aItem.getId(), aItem.getVersion(), 
+                                 aTargetApp, aTargetAppVersion);
+    if (row != -1) 
+    {
+      e.setRow(row);
+      e.setId(getProperty(row, "guid"));
+      e.setName(getProperty(row, "name"));
+      e.setVersion(getProperty(row, "version"));
+      e.setUpdateURL(getProperty(row, "updateurl"));
+      e.setIconURL(getProperty(row, "iconurl"));
+    }
     return e;
   }
 
-  public String getProperty(int aRowID, String aProperty)
+  protected String getProperty(int aRowID, String aProperty)
   {
     String result = null;
     try
@@ -96,10 +121,7 @@ public class VersionCheck
     return result;
   }
 
-  public int getNewestExtension(String aExtensionGUID, 
-    String aInstalledVersion, 
-    String aTargetApp, 
-    String aTargetAppVersion)
+  protected int getNewestExtension(String aExtensionGUID, String aInstalledVersion, String aTargetApp, String aTargetAppVersion)
   {
     int id = -1;
     int extensionVersionParts = getPartCount(aInstalledVersion);
@@ -180,6 +202,12 @@ public class VersionCheck
   protected int getPartCount(String aVersionString)
   {
     return (new StringTokenizer(aVersionString, ".")).countTokens();
+  }
+
+  protected Connection getConnection() throws Exception
+  {
+    Class.forName("com.mysql.jdbc.Driver");
+    return DriverManager.getConnection("jdbc:mysql://localhost/umo_extensions", "root", "");
   }
 }
 

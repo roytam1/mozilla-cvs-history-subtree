@@ -41,9 +41,9 @@
 
 1 24 "firefox.exe.manifest"
 
-IDI_APPICON ICON "firefox.ico"
-IDI_DOCUMENT ICON "document.ico"
-IDI_APPLICATION ICON "firefox.ico"
+IDI_APPICON ICON FIREFOX_ICO
+IDI_DOCUMENT ICON DOCUMENT_ICO
+IDI_APPLICATION ICON FIREFOX_ICO
 
 STRINGTABLE DISCARDABLE
 BEGIN
@@ -51,8 +51,8 @@ BEGIN
     ID_DDE_APPLICATION_NAME,            "Firefox Debug"
     IDS_STARTMENU_APPNAME,              "Firefox Debug"
 #else
-    ID_DDE_APPLICATION_NAME,            "Firefox"
-    IDS_STARTMENU_APPNAME,              "Firefox"
+    ID_DDE_APPLICATION_NAME,            "Firefox Debug"
+    IDS_STARTMENU_APPNAME,              "Firefox Debug"
 #endif
 END
 
