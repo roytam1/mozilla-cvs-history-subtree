@@ -179,8 +179,5 @@ struct CRLCacheStr {
     PLHashTable* issuers;
 };
 
-SECStatus InitCRLCache(void);
-SECStatus ShutdownCRLCache(void);
-
 #endif /* _CERTI_H_ */
 
