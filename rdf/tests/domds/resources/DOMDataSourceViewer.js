@@ -39,16 +39,16 @@ function loadUrl() {
 }
 
 
-function setMode(mode) {
+function setMode(mode, active) {
     
-    domds.mode = mode;
+    domds.setMode(mode, active);
 }
 
 function refreshTree() {
 
     dump("refresh..\n");
     var win = window.frames["srcdoc"];
-    domds.SetWindow(win);
+    domds.setWindow(win);
 
     var tree = document.getElementById("dataSourceTree");
     tree.clearItemSelection();

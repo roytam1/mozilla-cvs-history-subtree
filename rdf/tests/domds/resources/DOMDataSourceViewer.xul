@@ -13,10 +13,15 @@
 <html:script language="JavaScript" src="DOMDataSourceViewer.js"/>
 <box align="vertical" flex="30%">
   <html:input value="resource:/res/samples/rdf/domviewer.html" type="text" name="url" id="url" onkeyup="if (event.which == 13) loadUrl();"/>
-  <html:select id="mode" onchange="setMode(event.target.value);">
-    <html:option value="0">DOM</html:option>
-    <html:option value="1">Content</html:option>
-  </html:select>
+  <html:div>
+    Show: 
+    <html:input type="checkbox" onclick="setMode('content', !event.target.checked);"/>
+    Content
+    <html:input type="checkbox" onclick="setMode('dom', !event.target.checked);"/>
+    DOM
+    <html:input type="checkbox" onclick="setMode('leaf', !event.target.checked);"/>
+    OOB data
+  </html:div>
   <box align="horizontal">
     <titledbutton onclick="loadUrl();" value="Load"/>
     <titledbutton onclick="refreshTree();" value="Refresh"/>
