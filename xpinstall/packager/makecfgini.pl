@@ -1,4 +1,4 @@
-#!c:\perl\bin\perl
+#! /usr/bin/perl
 # 
 # The contents of this file are subject to the Netscape Public
 # License Version 1.1 (the "License"); you may not use this file
@@ -39,26 +39,23 @@
 #        xpi path
 #             - path on where xpi files will be located at
 #
-#        redirect file url
-#             - url to where the redirect.ini file will be staged at.
-#               Either ftp:// or http:// can be used
-#               ie: ftp://ftp.netscape.com/pub/seamonkey
-#
 #        xpi url
 #             - url to where the .xpi files will be staged at.
 #               Either ftp:// or http:// can be used
 #               ie: ftp://ftp.netscape.com/pub/seamonkey/xpi
 #
-#   ie: perl makecfgini.pl config.it 5.0.0.1999120608 k:\windows\32bit\5.0 d:\builds\mozilla\dist\win32_o.obj\install\xpi ftp://ftp.netscape.com/pub/seamonkey/windows/32bit/x86/1999-09-13-10-M10 ftp://ftp.netscape.com/pub/seamonkey/windows/32bit/x86/1999-09-13-10-M10/xpi
+#   ie: perl makecfgini.pl 5.0.0.1999120608 k:\windows\32bit\5.0 d:\builds\mozilla\dist\win32_o.obj\install\xpi ftp://ftp.netscape.com/pub/seamonkey/windows/32bit/x86/1999-09-13-10-M10 ftp://ftp.netscape.com/pub/seamonkey/windows/32bit/x86/1999-09-13-10-M10/xpi
 #
 #
+
+use Cwd;
+use File::Spec;
+use File::Basename;
 
 # Make sure there are at least two arguments
-if($#ARGV < 5)
+if(scalar(@ARGV) != 5)
 {
-  die "usage: $0 <.it file> <version> <staging path> <.xpi path> <redirect file url> <xpi url>
-
-       .it file      : input ini template file
+  die "usage: $0 <version> <staging path> <.xpi path> <redirect file url> <xpi url>
 
        version       : version to be shown in setup.  Typically the same version
                        as show in mozilla.exe.
@@ -73,15 +70,20 @@ if($#ARGV < 5)
        xpi url       : url to where the .xpi files will be staged at.
                        Either ftp:// or http:// can be used
                        ie: ftp://ftp.netscape.com/pub/seamonkey/xpi
+
+       This script should be run from the topobjdir.
        \n";
 }
 
-$inItFile         = $ARGV[0];
-$inVersion        = $ARGV[1];
-$inStagePath      = $ARGV[2];
-$inXpiPath        = $ARGV[3];
-$inRedirIniUrl    = $ARGV[4];
-$inUrl            = $ARGV[5];
+$inVersion        = $ARGV[0];
+$inStagePath      = $ARGV[1];
+$inXpiPath        = $ARGV[2];
+$inUrl            = $ARGV[4];
+
+$DEPTH = "../..";
+$topsrcdir = GetTopSrcDir();
+push(@INC, "$topsrcdir/build/package");
+require MozPackager;
 
 # get environment vars
 $userAgent        = $ENV{XPI_USERAGENT};
@@ -97,27 +99,8 @@ $greBuildID       = $ENV{XPI_GREBUILDID};
 $greFileVersion   = $ENV{XPI_GREFILEVERSION};
 $greUniqueID      = $ENV{XPI_GREUNIQUEID};
 
-# ($inDomain,      $dummy) = ParseDomainAndPath($inUrl);
-#($inRedirDomain, $dummy) = ParseDomainAndPath($inRedirIniUrl);
-# 
-# for the sake of -w, re-reference $inRedirDomain
-# $inRedirDomain .= "";
-
-# Get the name of the file replacing the .it extension with a .ini extension
-@inItFileSplit    = split(/\./,$inItFile);
-$outIniFile       = $inItFileSplit[0];
-$outIniFile      .= ".ini";
-
-# Open the input file
-open my $fpInIt, $inItFile || die "\ncould not open $ARGV[0]: $!\n";
-
-# Open the output file
-open($fpOutIni, ">$outIniFile") || die "\nCould not open $outIniFile: $!\n";
-
-print "\n Making $outIniFile...\n";
-
 # While loop to read each line from input file
-while(defined($line = <$fpInIt>))
+while(defined($line = <STDIN>))
 {
   # For each line read, search and replace $InstallSize$ with the calculated size
   if($line =~ /\$InstallSize\$/i)
@@ -147,11 +130,16 @@ while(defined($line = <$fpInIt>))
         {
           $installSize = int($installSize * 3.62);
         }
+
+        if($componentName =~ /gre/i)
+        {
+          $installSize = int($installSize * 4.48);
+        }
       }
     }
 
     # Read the next line to calculate for the "Install Size System="
-    if(defined($line = <$fpInIt>))
+    if(defined($line = <STDIN>))
     {
       if($line =~ /\$InstallSizeSystem\$/i)
       {
@@ -160,8 +148,8 @@ while(defined($line = <$fpInIt>))
     }
 
     $installSize -= $installSizeSystem;
-    print $fpOutIni "Install Size=$installSize\n";
-    print $fpOutIni "Install Size System=$installSizeSystem\n";
+    print STDOUT "Install Size=$installSize\n";
+    print STDOUT "Install Size System=$installSizeSystem\n";
   }
   elsif($line =~ /\$InstallSizeArchive\$/i)
   {
@@ -177,13 +165,12 @@ while(defined($line = <$fpInIt>))
       $installSizeArchive = OutputInstallSizeArchive("$inXpiPath/$componentName");
     }
 
-    print $fpOutIni "Install Size Archive=$installSizeArchive\n";
+    print STDOUT "Install Size Archive=$installSizeArchive\n";
   }
   else
   {
     # For each line read, search and replace $Version$ with the version passed in
     $line =~ s/\$Version\$/$inVersion/gi;
-    $line =~ s/\$RedirIniUrl\$/$inRedirIniUrl/gi;
     $line =~ s/\$ArchiveUrl\$/$inUrl/gi;
     $line =~ s/\$UserAgent\$/$userAgent/gi;
     $line =~ s/\$UserAgentShort\$/$userAgentShort/gi;
@@ -197,63 +184,19 @@ while(defined($line = <$fpInIt>))
     $line =~ s/\$GreBuildID\$/$greBuildID/gi;
     $line =~ s/\$GreFileVersion\$/$greFileVersion/gi;
     $line =~ s/\$GreUniqueID\$/$greUniqueID/gi;
-    print $fpOutIni $line;
+    print STDOUT $line;
   }
 }
-
-close $fpInIt;
-close $fpOutIni;
-
-print " done!\n";
 
 # end of script
 exit(0);
-
-sub ParseDomainAndPath
-{
-  my($aUrl) = @_;
-  my($aDomain, $aServerPath);
-
-  @slashSplit = split(/\//, $aUrl);
-  if($#slashSplit >= 0)
-  {
-    for($i = 0; $i <= $#slashSplit; $i++)
-    {
-      if($i <= 2)
-      {
-        if(! $aDomain)
-        {
-          $aDomain = "$slashSplit[$i]";
-        }
-        else
-        {
-          $aDomain = "$aDomain/$slashSplit[$i]";
-        }
-      }
-      else
-      {
-        if(! $aServerPath)
-        {
-          $aServerPath = "/$slashSplit[$i]";
-        }
-        else
-        {
-          $aServerPath = "$aServerPath/$slashSplit[$i]";
-        }
-      }
-    }
-  }
-
-  return($aDomain, $aServerPath);
-}
 
 sub OutputInstallSize
 {
   my($inPath) = @_;
   my($installSize);
 
-  print "   calculating size for $inPath\n";
-  $installSize    = `$ENV{XPI_DISTINSTALLPATH}/../install/ds32.exe /D /L0 /A /S /C 32768 $inPath`;
+  $installSize    = MozPackager::realDiskSpace($inPath);
   $installSize   += 32768; # take into account install.js
   $installSize    = int($installSize / 1024);
   $installSize   += 1;
@@ -266,7 +209,6 @@ sub OutputInstallSizeArchive
   my($installSizeArchive);
   my($dev, $ino, $mode, $nlink, $uid, $gui, $rdev, $size, $atime, $mtime, $ctime, $blksize, $blocks);
 
-  print "   calculating size for $inPath\n";
   ($dev, $ino, $mode, $nlink, $uid, $gui, $rdev, $size, $atime, $mtime, $ctime, $blksize, $blocks) = stat $inPath;
   $installSizeArchive   += 32768; # take into account install.js
   $installSizeArchive    = int($size / 1024);
@@ -290,28 +232,23 @@ sub OutputInstallSizeSystem
       foreach(@commaSplit)
       {
         # calculate the size of component installed using ds32.exe in Kbytes
-        print "   calculating size for $inPath/$_";
-        $installSizeSystem += `$ENV{XPI_DISTINSTALLPATH}/../install/ds32.exe /D /L0 /A /S /C 32768 $inPath/$_`;
-        $installSizeSystem  = int($installSizeSystem / 1024);
-        $installSizeSystem += 1;
+        $installSizeSystem += MozPackager::realDiskSpace("$inPath/$_");
       }
     }
   }
 
+  $installSizeSystem  = int($installSizeSystem / 1024);
+  $installSizeSystem += 1;
   return($installSizeSystem);
 }
 
-sub ParseUserAgentShort
+sub GetTopSrcDir
 {
-  my($aUserAgent) = @_;
-  my($aUserAgentShort);
+  my($rootDir) = dirname($0) . "/$DEPTH";
+  my($savedCwdDir) = cwd();
 
-  @spaceSplit = split(/ /, $aUserAgent);
-  if($#spaceSplit >= 0)
-  {
-    $aUserAgentShort = $spaceSplit[0];
-  }
-
-  return($aUserAgentShort);
+  chdir($rootDir);
+  $rootDir = cwd();
+  chdir($savedCwdDir);
+  return($rootDir);
 }
-
