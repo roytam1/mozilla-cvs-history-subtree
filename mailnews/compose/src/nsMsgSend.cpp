@@ -3263,7 +3263,7 @@ nsMsgComposeAndSend::DeliverFileAsMail()
     if (collectAddresses)
       addressCollecter->CollectAddress(mCompFields->GetCc(), PR_TRUE);
   }
-  if (mCompFields->GetBcc() && *mCompFields->GetBcc(), PR_TRUE) {
+  if (mCompFields->GetBcc() && *mCompFields->GetBcc()) {
     if (*buf2) PL_strcat (buf2, ",");
       PL_strcat (buf2, mCompFields->GetBcc());
     if (collectAddresses)
