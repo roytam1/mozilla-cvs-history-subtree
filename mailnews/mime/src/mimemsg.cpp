@@ -622,10 +622,19 @@ MimeMessage_write_headers_html (MimeObject *obj)
 
   mimeEmitterEndHeader(obj->options);
 
-  if (obj->options->headers == MimeHeadersOnly)
-    return -1;
-  else
-    return 0;
+  // rhp:
+  // For now, we are going to parse the entire message, even if we are
+  // only interested in headers...why? Well, because this is the only
+  // way to build the attachment list. Now we will have the attachment
+  // list in the output being created by the XML emitter. If we ever
+  // want to go back to where we were before, just uncomment the conditional
+  // and it will stop at header parsing.
+  //
+  // if (obj->options->headers == MimeHeadersOnly)
+  //   return -1;
+  // else
+
+  return 0;
 }
 
 
