@@ -327,8 +327,10 @@ function PageDataToAccountData(pageData, accountData)
     var server = accountData.incomingServer;
     var smtp = accountData.smtp;
 
-    dump("Setting identity for " + pageData.identity.email.value + "\n");
+    dump("Setting identity for \n");
+    if (pageData.identity.email)
     identity.email = pageData.identity.email.value;
+    if (pageData.identity.fullName)
     identity.fullName = pageData.identity.fullName.value;
 
     server.type = getCurrentServerType(pageData);
@@ -396,6 +398,11 @@ function createAccount(accountData)
                                          server.hostName,
                                          server.type);
     
+    dump("am.createAccount()\n");
+    var account = am.createAccount();
+    
+    if (accountData.identity.email) // only create an identity for this account if we really have one (use the email address as a check)
+    {
     dump("am.createIdentity()\n");
     var identity = am.createIdentity();
     
@@ -405,9 +412,9 @@ function createAccount(accountData)
 			identity.composeHtml = false;
     }
 
-    dump("am.createAccount()\n");
-    var account = am.createAccount();
     account.addIdentity(identity);
+    }
+
     // we mark the server as invalid so that the account manager won't
     // tell RDF about the new server - it's not quite finished getting
     // set up yet, in particular, the deferred storage pref hasn't been set.
@@ -449,10 +456,12 @@ function finishAccount(account, accountData)
     }
 
     // copy identity info
-    var destIdentity =
-        account.identities.QueryElementAt(0, nsIMsgIdentity);
+    var destIdentity = account.identities.Count() ? account.identities.QueryElementAt(0, nsIMsgIdentity) : null;
     
-    if (accountData.identity && destIdentity) {
+    if (destIdentity) // does this account have an identity? 
+    {   
+        if (accountData.identity && accountData.identity.email) {
+            dump('trying to write out an identity: ' + destIdentity + '\n');
 
         // fixup the email address if we have a default domain
         var emailArray = accountData.identity.email.split('@');
@@ -522,6 +531,7 @@ function finishAccount(account, accountData)
           }
         }
      }
+     } // if the account has an identity...
 
      if (this.FinishAccountHook != undefined) {
          FinishAccountHook(accountData.domain);
