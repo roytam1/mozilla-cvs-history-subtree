@@ -34,6 +34,16 @@
 #include "nsITransport.h"
 #endif
 
+
+/******************************************************************************
+ *  nsDiskCacheEntry
+ *
+ *  Created for disk cache specific data and stored in nsCacheEntry.mData as
+ *  an nsISupports.  Also stored in nsDiscCacheEntryHashTable, with collisions
+ *  linked by the PRCList.
+ *
+ *****************************************************************************/
+
 class nsDiskCacheEntry : public nsISupports, public PRCList {
 public:
     NS_DECL_ISUPPORTS
@@ -95,10 +105,22 @@ private:
 #ifdef MOZ_NEW_CACHE_REUSE_TRANSPORTS
     nsCOMPtr<nsITransport>  mTransports[3];
 #endif
-    nsCacheEntry*           mCacheEntry;
-    PRUint32                mGeneration;
-    PLDHashNumber           mHashNumber;
+    nsCacheEntry*           mCacheEntry;    // back pointer to parent nsCacheEntry
+    PRUint32                mGeneration;    // XXX part of nsDiskCacheRecord
+    PLDHashNumber           mHashNumber;    // XXX part of nsDiskCacheRecord
+// XXX    nsDiskCacheRecord       mMapRecord;
 };
+
+
+/******************************************************************************
+ *  nsDiskCacheEntryHashTable
+ *
+ *  Used to keep track of nsDiskCacheEntries associated with active/bound (and
+ *  possibly doomed) entries.  Lookups on 4 byte disk hash to find collisions
+ *  (which need to be doomed, instead of just evicted.  Collisions are linked
+ *  using a PRCList to keep track of current generation number.
+ *
+ *****************************************************************************/
 
 class nsDiskCacheEntryHashTable {
 public:

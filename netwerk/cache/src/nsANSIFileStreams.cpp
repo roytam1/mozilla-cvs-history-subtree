@@ -243,7 +243,7 @@ nsANSIFileStream::~nsANSIFileStream()
     Close();
 }
 
-nsresult nsANSIFileStream::Open(nsILocalFile* file)
+NS_IMETHODIMP nsANSIFileStream::Open(nsILocalFile* file)
 {
     nsresult rv;
     rv = file->OpenANSIFileDesc("rb+", &mFile);

@@ -19,9 +19,11 @@
  * 
  * Contributor(s): 
  *    Patrick C. Beard <beard@netscape.com>
+ *    Gordon Sheridan  <gordon@netscape.com>
  */
 
 #ifndef _nsDiskCacheMap_h_
+#define _nsDiskCacheMap_h_
 
 #include "nsDiskCache.h"
 #include "nsError.h"
@@ -32,6 +34,8 @@ class nsIOutputStream;
 struct nsDiskCacheHeader {
     enum { kCurrentVersion = 0x00010002 };
 
+    PRUint32    mHashNumber;
+    PRUint32    mLocation;
     PRUint32    mVersion;                           // cache version.
     PRUint32    mDataSize;                          // size of cache in bytes.
     PRUint32    mEntryCount;                        // number of entries stored in cache.
@@ -46,20 +50,25 @@ struct nsDiskCacheHeader {
 
     void        Swap()
     {
-        mVersion = ::PR_htonl(mVersion);
-        mDataSize = ::PR_htonl(mDataSize);
+#if defined(IS_LITTLE_ENDIAN)
+        mVersion    = ::PR_htonl(mVersion);
+        mDataSize   = ::PR_htonl(mDataSize);
         mEntryCount = ::PR_htonl(mEntryCount);
-        mIsDirty = ::PR_htonl(mIsDirty);
+        mIsDirty    = ::PR_htonl(mIsDirty);
+#endif
     }
     
     void        Unswap()
     {
-        mVersion = ::PR_ntohl(mVersion);
-        mDataSize = ::PR_ntohl(mDataSize);
+#if defined(IS_LITTLE_ENDIAN)
+        mVersion    = ::PR_ntohl(mVersion);
+        mDataSize   = ::PR_ntohl(mDataSize);
         mEntryCount = ::PR_ntohl(mEntryCount);
-        mIsDirty = ::PR_ntohl(mIsDirty);
+        mIsDirty    = ::PR_ntohl(mIsDirty);
+#endif
     }
 };
+
 
 // XXX initial capacity, enough for 8192 distinct entries.
 class nsDiskCacheMap {
@@ -69,13 +78,37 @@ public:
 
     void Reset();
     
-    PRUint32& DataSize() { return mHeader.mDataSize; }
+    PRUint32& DataSize()   { return mHeader.mDataSize; }
     PRUint32& EntryCount() { return mHeader.mEntryCount; }
-    PRUint32& IsDirty() { return mHeader.mIsDirty; }
+    PRUint32& IsDirty()    { return mHeader.mIsDirty; }
     
     nsDiskCacheRecord* GetRecord(PRUint32 hashNumber);
     void DeleteRecord(nsDiskCacheRecord* record);
     
+
+/**
+ *  Open
+ *
+ *  Creates a new cache map file if one doesn't exist.
+ *  Returns error if it detects change in format or cache wasn't closed.
+ */
+//  nsresult Open(nsIFile *  cacheDirectory);
+
+//  nsresult Flush();
+//  nsresult Close();
+
+/**
+ *  Record operations
+ *
+ *  AddRecord - 
+ */
+//  nsresult AddRecord( nsDiskCacheRecord *  mapRecord);
+//  nsresult UpdateRecord( nsDiskCacheRecord *  mapRecord);
+//  nsresult GetRecord( nsDiskCacheRecord *  mapRecord);
+//  nsresult DeleteRecord( nsDiskCacheRecord *  mapRecord);
+//  nsresult EvictRecords( nsDiskCacheRecordVisitor *  visitor);
+
+
     enum {
         kRecordsPerBucket = 256,
         kBucketsPerTable = (1 << 5)                 // must be a power of 2!

@@ -72,9 +72,9 @@ public:
 
     NS_DECL_NSISEEKABLESTREAM
 
-    nsANSIFileStream();
+    NS_EXPORT nsANSIFileStream();
     virtual ~nsANSIFileStream();
-    nsresult Open(nsILocalFile* file);
+    NS_IMETHOD Open(nsILocalFile* file);
 };
 
 #endif // _nsANSIFileStreams_h_

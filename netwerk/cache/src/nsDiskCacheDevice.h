@@ -110,12 +110,13 @@ public:
     
 private:
     PRBool                      mInitialized;
-    nsCOMPtr<nsIObserver>       mPrefsObserver;
+    nsCOMPtr<nsIObserver>       mPrefsObserver;     // XXX ?
     nsCOMPtr<nsILocalFile>      mCacheDirectory;
-    nsDiskCacheEntryHashTable   mBoundEntries;
-    PRUint32                    mCacheCapacity;
+    nsDiskCacheEntryHashTable   mBoundEntries;      // XXX rename to refer to active entries
+    PRUint32                    mCacheCapacity;     // XXX need soft/hard limits, currentTotal
     nsDiskCacheMap*             mCacheMap;
-    nsANSIFileStream*           mCacheStream;
+    nsANSIFileStream*           mCacheStream;       // XXX should be owned by cache map
+//  XXX need array of cache block files
 };
 
 #endif // _nsDiskCacheDevice_h_

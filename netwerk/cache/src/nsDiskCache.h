@@ -30,21 +30,44 @@
 #include "prnetdb.h"
 #include "nsDebug.h"
 
+/**
+ *   Cache Location Format
+ *
+ *    0011 0000 0000 0000 0000 0000 0000 0000 : File Selector (0 = separate file)
+ *    0000 0011 0000 0000 0000 0000 0000 0000 : number of extra contiguous blocks 1-4
+ *    1100 1100 0000 0000 0000 0000 0000 0000 : reserved bits
+ *    0000 0000 1111 1111 1111 1111 1111 1111 : block#  0-16777216 (2^24)
+ *
+ *    0000 0000 1111 1111 1111 1111 0000 0000 : eFileReservedMask
+ *    0000 0000 0000 0000 0000 0000 1111 1111 : eFileGenerationMask
+ *
+ *  File Selector:
+ *      0 = separate file on disk
+ *      1 = 256 byte block file
+ *      2 = 1k block file
+ *      3 = 4k block file
+ */
+ 
+ 
 class nsDiskCacheRecord {
     enum {
-        eEvictionRankMask       = 0xFF000000,
-        eLocationSelectorMask   = 0x00C00000,
+        eLocationSelectorMask   = 0x30000000,
+        eLocationSelectorOffset = 28,
+        
+        eExtraBlocksMask        = 0x03000000,
+        eExtraBlocksOffset      = 24,
+        
+        eReservedMask           = 0xCC000000,
+        
+        eBlockNumberMask        = 0x00FFFFFF,
 
-        eExtraBlocksMask        = 0x00300000,
-        eBlockNumberMask        = 0x000FFFFF,
-
-        eFileReservedMask       = 0x003F0000,
-        eFileGenerationMask     = 0x0000FFFF
+        eFileReservedMask       = 0x00FFFF00,
+        eFileGenerationMask     = 0x000000FF
     };
 
 public:
     nsDiskCacheRecord()
-        :   mHashNumber(0), mEvictionRank(0), mLocation(0), mUnused(0)
+        :   mHashNumber(0), mEvictionRank(0), mLocation(0), mMetaLocation(0)
     {
     }
     
@@ -70,18 +93,18 @@ public:
 
     PRUint32   LocationSelector() const
     {
-        return (PRUint32)(mLocation & eLocationSelectorMask) >> 22;
+        return (PRUint32)(mLocation & eLocationSelectorMask) >> eLocationSelectorOffset;
     }
 
     void       SetLocationSelector(PRUint32 selector)
     {
         mLocation &= ~eLocationSelectorMask; // clear location selector bits
-        mLocation |= (selector & eLocationSelectorMask) << 22;
+        mLocation |= (selector & eLocationSelectorMask) << eLocationSelectorOffset;
     }
 
     PRUint32   BlockCount() const
     {
-        return (PRUint32)((mLocation & eExtraBlocksMask) >> 20) + 1;
+        return (PRUint32)((mLocation & eExtraBlocksMask) >> eExtraBlocksOffset) + 1;
     }
 
     void       SetBlockCount(PRUint32 count)
@@ -89,7 +112,7 @@ public:
         NS_ASSERTION( (count>=1) && (count<=4),"invalid block count");
         count = --count;
         mLocation &= ~eExtraBlocksMask; // clear extra blocks bits
-        mLocation |= (count & eExtraBlocksMask) << 20;
+        mLocation |= (count & eExtraBlocksMask) << eExtraBlocksOffset;
     }
 
     PRUint32   BlockNumber() const
@@ -116,84 +139,35 @@ public:
 
     void        Swap()
     {
-        mHashNumber = ::PR_htonl(mHashNumber);
+#if defined(IS_LITTLE_ENDIAN)
+        mHashNumber   = ::PR_htonl(mHashNumber);
         mEvictionRank = ::PR_htonl(mEvictionRank);
-        mLocation = ::PR_htonl(mLocation);
-        mUnused = ::PR_htonl(mUnused);
+        mLocation     = ::PR_htonl(mLocation);
+        mMetaLocation = ::PR_htonl(mMetaLocation);
+#endif
     }
     
     void        Unswap()
     {
-        mHashNumber = ::PR_ntohl(mHashNumber);
+#if defined(IS_LITTLE_ENDIAN)
+        mHashNumber   = ::PR_ntohl(mHashNumber);
         mEvictionRank = ::PR_ntohl(mEvictionRank);
-        mLocation = ::PR_ntohl(mLocation);
-        mUnused = ::PR_ntohl(mUnused);
+        mLocation     = ::PR_ntohl(mLocation);
+        mMetaLocation = ::PR_ntohl(mMetaLocation);
+#endif
     }
 
 private:
     PRUint32    mHashNumber;
     PRUint32    mEvictionRank;
     PRUint32    mLocation;
-    PRUint32    mUnused;
+    PRUint32    mMetaLocation;
 };
 
 
 /*
 
-Cache Extent Table
-
-
-1111 1111 0000 0000 0000 0000 0000 0000 : eEvictionRankMask
-0000 0000 1100 0000 0000 0000 0000 0000 : eLocationSelectorMask   (0-3)
-0000 0000 0011 0000 0000 0000 0000 0000 : number of extra contiguous blocks 1-4
-0000 0000 0000 1111 1111 1111 1111 1111 : block#  0-1,048,575
-
-0000 0000 0011 1111 0000 0000 0000 0000 : eFileReservedMask
-0000 0000 0000 0000 1111 1111 1111 1111 : eFileGenerationMask
-
-0  file
-1   256 bytes
-2  1024
-3  4096
-
-
-	log2 of seconds = 5 bits
-
-log2	minutes	hours	days   years
-00000	   1
-00001	   2
-00010	   4
-00011	   8
-00100	  16
-00101	  32
-00110	  64	  1
-00111	 128	  2
-01000	 256	  4
-01001	 512	  8.5
-01010	1024	 17
-01011	2048	 34
-01100		 68
-01101		136
-01110		273	 11
-01111			 22
-10000			 45.5
-10001			 91
-10010			182
-10011			364	1
-10100				2
-10101				3
-10110				4
-10111
-11000
-11001
-11010
-11011
-11100
-11101
-11110
-11111
 
 */
-
 
 #endif // _nsDiskCache_h_

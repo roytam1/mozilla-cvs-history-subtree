@@ -1064,6 +1064,7 @@ nsCacheService::DeactivateAndClearEntry(PLDHashTable *    table,
                                         PRUint32          number,
                                         void *            arg)
 {
+    NS_ASSERTION(hdr, "### hdr = nsnull!");
     nsCacheEntry * entry = ((nsCacheEntryHashTableEntry *)hdr)->cacheEntry;
     NS_ASSERTION(entry, "### active entry = nsnull!");
     gService->ClearPendingRequests(entry);
