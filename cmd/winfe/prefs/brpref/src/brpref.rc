@@ -479,11 +479,8 @@ BEGIN
     CONTROL         "Enable Internet &Keywords",IDC_CHECK2,"Button",
                     BS_AUTOCHECKBOX | WS_TABSTOP,17,109,97,10
 END
-<<<<<<< brpref.rc
-=======
-#endif /*MOZ_MAIL_NEWS */
->>>>>>> 3.1.16.1
 
+#endif
 
 
 
@@ -799,13 +796,10 @@ BEGIN
     IDS_EXT_IN_USE          "The extension '.%s' is already in use by file type '%s'. Choose another extension."
     IDS_FILTER_PROGRAM      "Programs\n*.exe\n\n"
     IDS_SAVE_TO_DISK        "SAVE TO DISK"
-<<<<<<< brpref.rc
     IDS_DISK_SPACE          "Disk Space"
     IDS_NUMERIC_ONLY        "Please enter numeric digits only."
     IDS_MORE_DISK_SPACE     "More disk space"
     IDD_SMARTBROWSING       "Smart Browsing\nConfigure browsing aids"
-=======
->>>>>>> 3.1.16.1
 END
 
 #ifdef MOZ_SMARTUPDATE
