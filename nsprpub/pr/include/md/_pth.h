@@ -96,6 +96,34 @@
 #define _PT_PTHREAD_COND_INIT(m, a)       pthread_cond_init(&(m), &(a))
 #endif
 
+/* The pthreads standard does not specify an invalid value for the
+ * pthread_t handle.  These macros define a way to set the handle
+ * to or compare the handle with an invalid identifier.  These
+ * macros are not portable and may be more of a problem as we adapt
+ * to more pthreads implementations.  They are only used in the
+ * PRMonitor functions.  Do not use them in new code.
+ *
+ * Unfortunately some of our clients are depending on certain
+ * properties of our current PRMonitor implementation, preventing
+ * me from replacing it by a portable implementation.
+ */
+#if defined(_PR_DCETHREADS)
+#define _PT_PTHREAD_INVALIDATE_THR_HANDLE(t) \
+	memset(&(t), 0, sizeof(pthread_t))
+#define _PT_PTHREAD_THR_HANDLE_IS_INVALID(t) \
+	(!memcmp(&(t), &pt_zero_tid, sizeof(pthread_t)))
+#define _PT_PTHREAD_COPY_THR_HANDLE(st, dt)   (dt) = (st)
+#elif defined(IRIX) || defined(OSF1) || defined(AIX) || defined(SOLARIS) \
+	|| defined(HPUX) || defined(LINUX) || defined(FREEBSD) \
+	|| defined(NETBSD) || defined(OPENBSD) || defined(BSDI) \
+	|| defined(VMS) || defined(NTO) || defined(RHAPSODY)
+#define _PT_PTHREAD_INVALIDATE_THR_HANDLE(t)  (t) = 0
+#define _PT_PTHREAD_THR_HANDLE_IS_INVALID(t)  (t) == 0
+#define _PT_PTHREAD_COPY_THR_HANDLE(st, dt)   (dt) = (st)
+#else 
+#error "pthreads is not supported for this architecture"
+#endif
+
 #if defined(_PR_DCETHREADS)
 #define _PT_PTHREAD_ATTR_INIT            pthread_attr_create
 #define _PT_PTHREAD_ATTR_DESTROY         pthread_attr_delete
