@@ -22,7 +22,6 @@
 
 extern "C" {
 #include "secdert.h"
-#include "keydbt.h"
 }
 #include "nspr.h"
 #include "nsNSSComponent.h" // for PIPNSS string bundle calls.
