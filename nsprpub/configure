@@ -3825,8 +3825,8 @@ EOF
         fi
         
         if test "$OS_TARGET" = "WINCE"; then
-            LIBNSPR='$(dist_libdir)/libnspr$(MOD_MAJOR_VERSION).$(LIB_SUFFIX)'
-            LIBPLC='$(dist_libdir)/libplc$(MOD_MAJOR_VERSION).$(LIB_SUFFIX)'
+            LIBNSPR='$(dist_libdir)/nspr$(MOD_MAJOR_VERSION).$(LIB_SUFFIX)'
+            LIBPLC='$(dist_libdir)/plc$(MOD_MAJOR_VERSION).$(LIB_SUFFIX)'
         elif test "$OS_TARGET" = "WINNT"; then
             CFLAGS="$CFLAGS -GT"
             if test "$CPU_ARCH" = "x86"; then
