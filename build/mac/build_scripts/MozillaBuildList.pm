@@ -381,9 +381,9 @@ sub ProcessJarManifests()
     CreateJarFromManifest(":mozilla:xpcom:base:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:browser:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:browser:resources:content:mac:jar.mn", $chrome_dir, \%jars);
-    CreateJarFromManifest(":mozilla:xpfe:browser:resources:locale:en-US:mac:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:browser:resources:locale:en-US:unix:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:browser:resources:locale:en-US:win:jar.mn", $chrome_dir, \%jars);
+    CreateJarFromManifest(":mozilla:xpfe:browser:resources:locale:en-US:mac:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:communicator:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:communicator:resources:content:mac:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:components:jar.mn", $chrome_dir, \%jars);
@@ -393,9 +393,9 @@ sub ProcessJarManifests()
     CreateJarFromManifest(":mozilla:xpfe:components:prefwindow:resources:locale:en-US:win:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:global:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:global:resources:content:mac:jar.mn", $chrome_dir, \%jars);
-    CreateJarFromManifest(":mozilla:xpfe:global:resources:locale:en-US:mac:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:global:resources:locale:en-US:unix:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:global:resources:locale:en-US:win:jar.mn", $chrome_dir, \%jars);
+    CreateJarFromManifest(":mozilla:xpfe:global:resources:locale:en-US:mac:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpinstall:res:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:embedding:components:ui:jar.mn", $chrome_dir, \%jars);
 
@@ -1909,6 +1909,9 @@ sub BuildPluginsProjects()
 
     StartBuildModule("plugins");
 
+    # $C becomes a component of target names for selecting either the Carbon or non-Carbon target of a project
+    my($C) = $main::options{carbon} ? "Carbon" : "";
+
     # as a temporary measure, make sure that the folder "MacOS Support:JNIHeaders" exists,
     # before we attempt to build the MRJ plugin. This will allow a gradual transition.
     if ( -e GetCodeWarriorRelativePath("MacOS Support:JNIHeaders"))
@@ -1945,7 +1948,7 @@ sub BuildPluginsProjects()
     my($plugin_path) = ":mozilla:modules:plugin:samples:default:mac:";
     my($plugin_dist) = GetBinDirectory() . "Plug-ins:";
 
-    BuildProject($plugin_path . "NullPlugin.mcp", "NullPluginPPC");
+    BuildProject($plugin_path . "NullPlugin.mcp", "NullPluginPPC$C");
     MakeAlias($plugin_path . "Default Plug-in", $plugin_dist);
 
     EndBuildModule("plugins");

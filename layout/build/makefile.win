@@ -30,6 +30,7 @@ REQUIRES	= xpcom \
 		  content \
 		  layout_xul \
 		  $(NULL)
+
 include <$(DEPTH)/config/config.mak>
 
 DEFINES=-D_IMPL_NS_HTML 
@@ -76,7 +77,7 @@ SUB_LIBRARIES=                          \
 !endif
 !ifdef MOZ_SVG
  $(DIST)\lib\layoutsvgbase_s.lib        \
- $(DIST)\lib\libart.lib                 \
+ $(LIBART)\libart.lib                 \
 !endif
  $(NULL)
 

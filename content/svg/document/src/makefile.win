@@ -28,6 +28,22 @@ LIBRARY_NAME=contentsvgdoc_s
 MODULE=raptor
 
 DEFINES=-D_IMPL_NS_HTML -DWIN32_LEAN_AND_MEAN
+REQUIRES   = content \
+             layout \
+             widget \
+             xpcom \
+             string \
+             gfx \
+             dom \
+             webshell \
+             htmlparser \
+             lwbrk \
+             necko \
+             js \
+             caps \
+             locale \
+             view \
+             $(null)
 
 
 CPP_OBJS=                      \

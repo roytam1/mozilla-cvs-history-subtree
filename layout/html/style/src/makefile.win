@@ -41,6 +41,7 @@ REQUIRES	= xpcom \
 		  gfx2 \
 		  gfx \
 		  content \
+                  raptor \
 		  layout_xul \
 		  $(NULL)
 

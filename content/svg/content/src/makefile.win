@@ -25,7 +25,21 @@
 DEPTH=..\..\..\..
 
 LIBRARY_NAME=contentsvg_s 
-MODULE=raptor 
+MODULE=raptor
+REQUIRES  = xpcom \
+            string \
+            layout \
+            content \
+            widget \
+            gfx \
+            dom \
+            js \
+            locale \
+            htmlparser \
+            webshell \
+            necko \
+            view \
+            $(NULL) 
 
 DEFINES=-D_IMPL_NS_HTML -DWIN32_LEAN_AND_MEAN
 
@@ -78,6 +92,7 @@ LINCS=-I$(PUBLIC)\xpcom -I$(PUBLIC)\raptor -I$(PUBLIC)\js \
   -I..\..\..\base\src \
   -I..\..\..\xml\content\src \
   -I..\..\..\..\layout\svg\base\src\ \
+  -I$(LIBART) \
   $(NULL)
 
 LCFLAGS = \

@@ -25,7 +25,20 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE		= content
 LIBRARY_NAME	= gkcontentsvg_s
-REQUIRES	= xpcom string widget dom js locale htmlparser view pref necko webshell
+REQUIRES	= xpcom \
+		  string \
+		  layout \
+		  content \
+		  widget \
+		  gfx \
+		  dom \
+		  js \
+		  locale \
+		  htmlparser \
+		  view \
+		  pref \
+		  necko \
+		  webshell
 
 CPPSRCS		= \
 		nsSVGAnimatedLength.cpp \
