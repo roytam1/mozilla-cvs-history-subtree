@@ -23,7 +23,7 @@
 //
 //
 
-#include "MacPrefix.h"
+#include "MacPrefix_debug.h"
 #include "JavaScriptConfig.h"
 
 #define JSFILE 1
