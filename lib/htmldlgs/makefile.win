@@ -50,6 +50,7 @@ LINCS = -I$(PUBLIC)/nspr \
         -I$(DEPTH)\include \
         -I$(PUBLIC)/security \
         -I$(PUBLIC)/js \
+        -I$(PUBLIC)/network \
         -I$(PUBLIC)/img
 
 #//------------------------------------------------------------------------

@@ -190,7 +190,7 @@ CStreamOutNet::CStreamOutNet( MWContext* pContext )
 
     URL_s->content_type = XP_STRDUP(TEXT_PLAIN);
 
-    m_pStream = NET_StreamBuilder(FO_PRESENT, URL_s, pNewContext);
+    m_pStream = NET_VoidStreamBuilder(FO_PRESENT, URL_s, pNewContext);
 
     if(!m_pStream){
         XP_ASSERT( FALSE );
@@ -214,10 +214,10 @@ CStreamOutNet::CStreamOutNet(void){
 // 
 //-----------------------------------------------------------------------------
 CStreamOutAnyNet::CStreamOutAnyNet(MWContext* pContext, URL_Struct *URL_s, FO_Present_Types type ){
-    NET_StreamClass *stream;
+    NET_VoidStreamClass *stream;
     //URL_s->content_type = XP_STRDUP(TEXT_PLAIN);
 
-    stream = NET_StreamBuilder(type, URL_s, pContext);
+    stream = NET_VoidStreamBuilder(type, URL_s, pContext);
 
     if(!stream){
         XP_ASSERT( FALSE );
@@ -228,7 +228,7 @@ CStreamOutAnyNet::CStreamOutAnyNet(MWContext* pContext, URL_Struct *URL_s, FO_Pr
 }
 
 CNetStreamToTapeFS::CNetStreamToTapeFS(MWContext* pContext, ITapeFileSystem *tapeFS ){
-    NET_StreamClass *stream = NULL;
+    NET_VoidStreamClass *stream = NULL;
 
     if(!stream){
         XP_ASSERT( FALSE );
@@ -243,11 +243,11 @@ CNetStreamToTapeFS::CNetStreamToTapeFS(MWContext* pContext, ITapeFileSystem *tap
 //
 CStreamOutNet::~CStreamOutNet(){
     if (m_pStream == NULL) return;
-    (*m_pStream->complete)(m_pStream);
-    XP_FREE(m_pStream);
+    NET_StreamComplete(m_pStream);
+    NET_StreamFree(m_pStream);
 }
 
-void CStreamOutNet::SetStream(NET_StreamClass *stream){
+void CStreamOutNet::SetStream(NET_VoidStreamClass *stream){
     m_pStream = stream;
 }
 
@@ -277,11 +277,11 @@ void CStreamOutNet::Write( char *pBuffer, int32 iCount ){
         }
         XP_MEMCPY(buffer, pBuffer, iChunkSize);
 
-        int status = (*m_pStream->put_block)(m_pStream, buffer, iChunkSize );
+        int status = NET_StreamPutBlock(m_pStream, buffer, iChunkSize );
     
         if(status < 0){
 	    m_status = EOS_FileError;
-            (*m_pStream->abort)(m_pStream, status);
+            NET_StreamAbort(m_pStream, status);
 	    XP_FREE(m_pStream);
 	    m_pStream = NULL;
 	    break;

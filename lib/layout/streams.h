@@ -26,6 +26,7 @@
 #include "xp_file.h"
 #include "itapefs.h"
 #include "libi18n.h"
+#include "netstream.h"
 
 //-----------------------------------------------------------------------------
 //  Streams
@@ -64,11 +65,11 @@ public:
 //
 class CStreamOutNet: public IStreamOut {
 private:
-    NET_StreamClass * m_pStream;
+    NET_VoidStreamClass * m_pStream;
     EOutStreamStatus m_status;
 protected:
     CStreamOutNet();
-    void SetStream(NET_StreamClass *m_pStream);
+    void SetStream(NET_VoidStreamClass *m_pStream);
 public:
     CStreamOutNet( MWContext* pContext );
     virtual ~CStreamOutNet();

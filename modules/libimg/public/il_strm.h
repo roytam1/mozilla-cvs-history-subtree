@@ -21,6 +21,7 @@
  *  $Id$
  */
 
+#include "cstream.h"
 
 /******************** Identifiers for standard image types. ******************/
 #define IL_UNKNOWN 0
