@@ -288,6 +288,12 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     // from nsIPluginManager:
 
+    NS_IMETHOD
+    GetValue(nsPluginManagerVariable variable, void *value);
+
+    NS_IMETHOD
+    SetValue(nsPluginManagerVariable variable, void *value);
+
     // (Corresponds to NPN_ReloadPlugins.)
     NS_IMETHOD
     ReloadPlugins(PRBool reloadPages);
@@ -435,10 +441,10 @@ public:
     // from nsIPluginInstancePeer:
 
     NS_IMETHOD
-    GetValue(nsPluginManagerVariable variable, void *value);
+    GetValue(nsPluginInstancePeerVariable variable, void *value);
 
     NS_IMETHOD
-    SetValue(nsPluginManagerVariable variable, void *value);
+    SetValue(nsPluginInstancePeerVariable variable, void *value);
 
     // (Corresponds to NPP_New's MIMEType argument.)
     NS_IMETHOD

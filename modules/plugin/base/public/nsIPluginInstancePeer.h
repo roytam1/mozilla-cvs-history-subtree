@@ -64,7 +64,7 @@ public:
      * @result - NS_OK if this operation was successful
      */
     NS_IMETHOD
-    GetValue(nsPluginManagerVariable variable, void *value) = 0;
+    GetValue(nsPluginInstancePeerVariable variable, void *value) = 0;
 
     /**
      * Sets the value of a variable associated with the plugin manager.
@@ -76,7 +76,7 @@ public:
      * @result - NS_OK if this operation was successful
      */
     NS_IMETHOD
-    SetValue(nsPluginManagerVariable variable, void *value) = 0;
+    SetValue(nsPluginInstancePeerVariable variable, void *value) = 0;
 
     /**
      * Returns the MIME type of the plugin instance. 

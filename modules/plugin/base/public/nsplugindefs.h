@@ -177,11 +177,18 @@ enum nsPluginManagerVariable {
     nsPluginManagerVariable_XDisplay = 1,
     nsPluginManagerVariable_XtAppContext,
     nsPluginManagerVariable_NetscapeWindow,
-    nsPluginManagerVariable_WindowBool,
-    nsPluginManagerVariable_TransparentBool,
-    nsPluginManagerVariable_JavaClass,
-    nsPluginManagerVariable_WindowSize,
-    nsPluginManagerVariable_TimerInterval
+
+    nsPluginManagerVariable_COUNT       // must be last
+};
+
+enum nsPluginInstancePeerVariable {
+    nsPluginInstancePeerVariable_WindowBool = nsPluginManagerVariable_COUNT,
+    nsPluginInstancePeerVariable_TransparentBool,
+    nsPluginInstancePeerVariable_JavaClass,
+    nsPluginInstancePeerVariable_WindowSize,
+    nsPluginInstancePeerVariable_TimerInterval,
+
+    nsPluginInstancePeerVariable_COUNT  // must be last
 };
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -148,6 +148,31 @@ nsPluginManager::Create(nsISupports* outer, const nsIID& aIID, void* *aInstanceP
     return result;
 }
 
+int varMap[] = {
+    (int)NPNVxDisplay,                  // nsPluginManagerVariable_XDisplay = 1,
+    (int)NPNVxtAppContext,              // nsPluginManagerVariable_XtAppContext,
+    (int)NPNVnetscapeWindow,            // nsPluginManagerVariable_NetscapeWindow,
+    (int)NPPVpluginWindowBool,          // nsPluginInstancePeerVariable_WindowBool,
+    (int)NPPVpluginTransparentBool,     // nsPluginInstancePeerVariable_TransparentBool,
+    (int)NPPVjavaClass,                 // nsPluginInstancePeerVariable_JavaClass,
+    (int)NPPVpluginWindowSize,          // nsPluginInstancePeerVariable_WindowSize,
+    (int)NPPVpluginTimerInterval,       // nsPluginInstancePeerVariable_TimerInterval
+};
+
+NS_METHOD
+nsPluginManager::GetValue(nsPluginManagerVariable variable, void *value)
+{
+    NPError err = npn_getvalue(NULL, (NPNVariable)varMap[(int)variable], value);
+    return fromNPError[err];
+}
+
+NS_METHOD
+nsPluginManager::SetValue(nsPluginManagerVariable variable, void *value)
+{
+    NPError err = npn_setvalue(NULL, (NPPVariable)varMap[(int)variable], value);
+    return fromNPError[err];
+}
+
 NS_METHOD
 nsPluginManager::ReloadPlugins(PRBool reloadPages)
 {
@@ -644,26 +669,15 @@ nsPluginInstancePeer::QueryInterface(const nsIID& aIID, void** aInstancePtr)
     return fTagInfo->QueryInterface(aIID, aInstancePtr);
 }
 
-int varMap[] = {
-    (int)NPNVxDisplay,                  // nsPluginManagerVariable_XDisplay = 1,
-    (int)NPNVxtAppContext,              // nsPluginManagerVariable_XtAppContext,
-    (int)NPNVnetscapeWindow,            // nsPluginManagerVariable_NetscapeWindow,
-    (int)NPPVpluginWindowBool,          // nsPluginManagerVariable_WindowBool,
-    (int)NPPVpluginTransparentBool,     // nsPluginManagerVariable_TransparentBool,
-    (int)NPPVjavaClass,                 // nsPluginManagerVariable_JavaClass,
-    (int)NPPVpluginWindowSize,          // nsPluginManagerVariable_WindowSize,
-    (int)NPPVpluginTimerInterval,       // nsPluginManagerVariable_TimerInterval
-};
-
 NS_METHOD
-nsPluginInstancePeer::GetValue(nsPluginManagerVariable variable, void *value)
+nsPluginInstancePeer::GetValue(nsPluginInstancePeerVariable variable, void *value)
 {
     NPError err = npn_getvalue(fNPP, (NPNVariable)varMap[(int)variable], value);
     return fromNPError[err];
 }
 
 NS_METHOD
-nsPluginInstancePeer::SetValue(nsPluginManagerVariable variable, void *value)
+nsPluginInstancePeer::SetValue(nsPluginInstancePeerVariable variable, void *value)
 {
     NPError err = npn_setvalue(fNPP, (NPPVariable)varMap[(int)variable], value);
     return fromNPError[err];
