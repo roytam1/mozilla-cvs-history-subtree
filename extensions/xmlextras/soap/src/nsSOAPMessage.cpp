@@ -30,7 +30,12 @@
 #include "nsISOAPEncoder.h"
 #include "nsISOAPDecoder.h"
 #include "nsSOAPJSValue.h"
+#include "nsIDOMDocument.h"
+#include "nsIDOMParser.h"
+#include "nsIDOMElement.h"
+#include "nsIDOMNamedNodeMap.h"
 
+static NS_DEFINE_CID(kDOMParserCID, NS_DOMPARSER_CID);
 /////////////////////////////////////////////
 //
 //
@@ -177,38 +182,167 @@ NS_IMETHODIMP nsSOAPMessage::SetTargetObjectURI(const nsAReadableString & aTarge
   return NS_OK;
 }
 
+NS_NAMED_LITERAL_STRING(kEmptySOAPDocStr, "<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"http://schemas.xmlsoap.org/soap/envelope/\" SOAP-ENV:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\" xmlns:SOAP-ENC=\"http://schemas.xmlsoap.org/soap/encoding/\" xmlns:xsi=\"http://www.w3.org/1999/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/1999/XMLSchema\">"
+"<SOAP-ENV:Header>"
+"</SOAP-ENV:Header>"
+"<SOAP-ENV:Body>"
+"</SOAP-ENV:Body>"
+"</SOAP-ENV:Envelope>");
+
+//  The default encoders assume that the above declarations are in place, without bothering to check.
+
 /* void encodeParameters (in nsISupportsArray SOAPParameters); */
 NS_IMETHODIMP nsSOAPMessage::EncodeParameters(nsISupportsArray *SOAPParameters)
 {
-  nsCOMPtr<nsISOAPParameter> param = new nsSOAPParameter();
-  nsresult rc = param->SetValue(SOAPParameters);
-  if (NS_FAILED(rc)) return rc;
+  nsresult rv;
+  nsCOMPtr<nsIDOMNode> ignored;
+  nsCOMPtr<nsIDOMParser> parser = do_CreateInstance(kDOMParserCID, &rv);
+  if (NS_FAILED(rv)) return rv;
 
-//  We ought to set the type, but no one checks anyway.
+  nsAutoString docstr;
+  rv = parser->ParseFromString(kEmptySOAPDocStr.get(), "text/xml", 
+		               getter_AddRefs(mMessage));
+  if (NS_FAILED(rv)) return rv;
 
-  return mTypes->Encode(this, param, mEncodingStyleURI, nsSOAPUtils::kSOAPCallType, nsnull);
+  nsCOMPtr<nsIDOMElement> header;
+  nsCOMPtr<nsIDOMElement> body;
+  rv = GetHeader(getter_AddRefs(header));
+  if (NS_FAILED(rv)) return rv;
+  rv = GetBody(getter_AddRefs(body));
+  if (NS_FAILED(rv)) return rv;
+
+  if (!mMethodName.IsEmpty()) {  //  Only produce a call element if mMethodName was non-empty
+    nsCOMPtr<nsIDOMElement> call;
+    rv = mMessage->CreateElementNS(mTargetObjectURI, mMethodName, getter_AddRefs(call));
+    if (NS_FAILED(rv)) return rv;
+    nsCOMPtr<nsIDOMNode> ignored;
+    rv = body->AppendChild(call, getter_AddRefs(ignored));
+    if (NS_FAILED(rv)) return rv;
+    body = call;
+    nsAutoString prefix;
+    rv = nsSOAPUtils::MakeNamespacePrefixFixed(body, mTargetObjectURI, prefix);
+    if (NS_FAILED(rv)) return rv;
+    if (!prefix.IsEmpty()) {
+      rv = body->SetPrefix(prefix);
+      if (NS_FAILED(rv)) return rv;
+    }
+  }
+
+  PRUint32 count;
+  rv = SOAPParameters->Count(&count);
+  if (NS_FAILED(rv)) return rv;
+
+  nsCOMPtr<nsISupports> next;
+  nsCOMPtr<nsISOAPParameter> param;
+  nsCOMPtr<nsIDOMElement> element;
+  nsAutoString type;
+  PRBool isHeader;
+  for (PRUint32 i = 0; i < count; i++) {
+    next = dont_AddRef(SOAPParameters->ElementAt(i));
+    param = do_QueryInterface(next);
+    if (!param) return NS_ERROR_FAILURE;
+    rv = param->GetType(type);
+    if (NS_FAILED(rv)) return rv;
+    rv = param->GetHeader(&isHeader);
+    if (NS_FAILED(rv)) return rv;
+    rv = mTypes->Encode(mTypes, param, mEncodingStyleURI, type, isHeader ? header : body, nsnull);
+    if (NS_FAILED(rv)) return rv;
+  }
+  return NS_OK;
 }
 
 /* nsISupportsArray decodeParameters (); */
 NS_IMETHODIMP nsSOAPMessage::DecodeParameters(nsISupportsArray **_retval)
 {
-  *_retval = nsnull;
-  nsCOMPtr<nsISOAPParameter> result;
-  nsresult rc = mTypes->Decode(this, mMessage, mEncodingStyleURI, nsSOAPUtils::kSOAPCallSchemaType, getter_AddRefs(result));
-  if (NS_FAILED(rc)) return rc;
-  if (result) {
-    //  We ought to check the type here, but no one is setting it right now.
-    nsCOMPtr<nsISupports> value;
-    rc = result->GetValue(getter_AddRefs(result));
-    if (value) {
-      nsCOMPtr<nsISupportsArray> array = do_QueryInterface(value);
-      if (array) {
-	*_retval = array;
-	NS_ADDREF(*_retval);
-      }
-    }
+  nsresult rv;
+  nsCOMPtr<nsIDOMElement> header;
+  nsCOMPtr<nsIDOMElement> body;
+  nsCOMPtr<nsISupportsArray> array = do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID);
+  rv = GetHeader(getter_AddRefs(header));
+  if (NS_FAILED(rv)) return rv;
+  rv = GetBody(getter_AddRefs(body));
+  if (NS_FAILED(rv)) return rv;
+  if (!body) return NS_ERROR_FAILURE;
+  nsCOMPtr<nsIDOMElement> current;
+
+  if (NS_FAILED(rv)) return rv;
+  if (!mMethodName.IsEmpty()) {
+    nsSOAPUtils::GetFirstChildElement(body, getter_AddRefs(current));
+    body = current;
+    if (!body) return NS_ERROR_FAILURE;
+    rv = current->GetNamespaceURI(mTargetObjectURI);
+    if (NS_FAILED(rv)) return rv;
+    rv = current->GetLocalName(mMethodName);
+    if (NS_FAILED(rv)) return rv;
   }
-  return rc;
+  nsCOMPtr<nsIDOMElement> next;
+  nsCOMPtr<nsIDOMNamedNodeMap> attrs;
+  nsCOMPtr<nsIDOMNode> attr;
+  nsCOMPtr<nsISOAPParameter> param;
+  nsAutoString encoding;
+  nsAutoString type;
+  PRBool isHeader = header != nsnull;
+  if (!isHeader)
+    header = body;
+  PRUint32 count = 0;
+  for (;;) {
+    nsSOAPUtils::GetFirstChildElement(header, getter_AddRefs(current));
+    while (current) {
+      rv = current->GetAttributes(getter_AddRefs(attrs));
+      if (NS_FAILED(rv)) return rv;
+// Get the encoding
+      rv = attrs->GetNamedItemNS(nsSOAPUtils::kSOAPEnvURI, 
+		                 nsSOAPUtils::kEncodingStyleAttribute, 
+				 getter_AddRefs(attr));
+      if (NS_FAILED(rv)) return rv;
+      if (attr) {
+	attr->GetNodeValue(encoding);
+      }
+      else {
+	encoding = mEncodingStyleURI;
+      }
+// Get the schema type
+      rv = attrs->GetNamedItemNS(nsSOAPUtils::kXSIURI, nsSOAPUtils::kXSITypeAttribute, getter_AddRefs(attr));
+      if (NS_FAILED(rv)) return rv;
+      if (attr) {
+        type = nsSOAPUtils::kXMLSchemaSchemaTypePrefix;
+	nsAutoString t1;
+	nsAutoString t2;
+	attr->GetNodeValue(t1);
+	nsSOAPUtils::GetNamespaceURI(current, t1, t2);
+	type.Append(t2);
+	type.Append(nsSOAPUtils::kTypeSeparator);
+	nsSOAPUtils::GetLocalName(t1, t2);
+	type.Append(t2);
+      }
+      else {
+        type = nsSOAPUtils::kXMLNameSchemaTypePrefix;
+	nsAutoString t1;
+	current->GetNamespaceURI(t1);
+	type.Append(t1);
+	type.Append(nsSOAPUtils::kTypeSeparator);
+	current->GetLocalName(t1);
+	type.Append(t1);
+      }
+      rv = mTypes->Decode(mTypes, current, encoding, type, nsnull, getter_AddRefs(param));
+      if (NS_FAILED(rv)) return rv;
+      if (param) {
+	rv = param->SetHeader(isHeader);
+        if (NS_FAILED(rv)) return rv;
+	rv = array->InsertElementAt(param, count++);
+        if (NS_FAILED(rv)) return rv;
+      }
+      nsSOAPUtils::GetNextSiblingElement(current, getter_AddRefs(next));
+      current = next;
+    }
+    if (isHeader)
+      header = body;
+    else
+      break;
+  }
+  *_retval = array;
+  NS_IF_ADDREF(*_retval);
+  return NS_OK;
 }
 
 /* readonly attribute unsigned long status; */

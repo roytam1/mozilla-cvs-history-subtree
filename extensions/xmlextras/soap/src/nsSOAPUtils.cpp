@@ -47,7 +47,6 @@ NS_NAMED_LITERAL_STRING(kFaultDetailTagName,"detail");
 NS_NAMED_LITERAL_STRING(kEmpty,"");
 NS_NAMED_LITERAL_STRING(kTypeSeparator,"#");
 
-NS_NAMED_LITERAL_STRING(kSOAPCallType,"#SOAPCallType");
 NS_NAMED_LITERAL_STRING(kStringType,"#string");
 NS_NAMED_LITERAL_STRING(kBooleanType,"#boolean");
 NS_NAMED_LITERAL_STRING(kDoubleType,"#double");
@@ -63,7 +62,6 @@ NS_NAMED_LITERAL_STRING(kNullType,"#null");
 NS_NAMED_LITERAL_STRING(kVoidType,"#void");
 NS_NAMED_LITERAL_STRING(kUnknownType,"#unknown");
 
-NS_NAMED_LITERAL_STRING(kSOAPCallSchemaType,"#SOAPCallType");
 NS_NAMED_LITERAL_STRING(kStringSchemaType,"#schema#http://www.w3.org/1999/XMLSchema#string");
 NS_NAMED_LITERAL_STRING(kBooleanSchemaType,"#schema#http://www.w3.org/1999/XMLSchema#boolean");
 NS_NAMED_LITERAL_STRING(kDoubleSchemaType,"#schema#http://www.w3.org/1999/XMLSchema#double");
@@ -415,6 +413,25 @@ MakeNamespacePrefix(nsIDOMElement* aScope,
   *i2 = 's';
   i2--;
   *i2 = 'n';
+  return NS_OK;
+}
+
+nsresult 
+nsSOAPUtils::MakeNamespacePrefixFixed(nsIDOMElement* aScope,
+		                      nsAReadableString & aURI,
+				      nsAWritableString & aPrefix)
+{
+  if (aURI.Equals(kSOAPEncodingURI))
+    aPrefix = kSOAPEncodingPrefix;
+  else if (aURI.Equals(kSOAPEnvURI))
+    aPrefix = kSOAPEnvPrefix;
+  else if (aURI.Equals(kXSIURI))
+    aPrefix = kXSIPrefix;
+  else if (aURI.Equals(kXSDURI))
+    aPrefix = kXSDPrefix;
+  else
+    return MakeNamespacePrefix(aScope, aURI, aPrefix);
+
   return NS_OK;
 }
 

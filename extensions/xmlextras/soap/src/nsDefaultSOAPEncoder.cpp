@@ -24,6 +24,7 @@
 #include "nsSOAPUtils.h"
 #include "nsSOAPJSValue.h"
 #include "nsSOAPParameter.h"
+#include "nsISOAPAttachments.h"
 #include "nsXPIDLString.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMText.h"
@@ -39,8 +40,6 @@
 #include "nsReadableUtils.h"
 #include "nsIDOMNamedNodeMap.h"
 #include "nsIDOMAttr.h"
-
-static NS_DEFINE_CID(kDOMParserCID, NS_DOMPARSER_CID);
 
 NS_NAMED_LITERAL_STRING(kStructElementName,"Struct");
 NS_NAMED_LITERAL_STRING(kStringElementName,"string");
@@ -80,7 +79,6 @@ ns##name##Encoder::~ns##name##Encoder() {}
 }
 
 // All encoders must be first declared and then registered.
-DECLARE_ENCODER(SOAPCall)
 DECLARE_ENCODER(String)
 DECLARE_ENCODER(Boolean)
 DECLARE_ENCODER(Double)
@@ -98,7 +96,6 @@ DECLARE_ENCODER(Unknown)
 
 NS_IMETHODIMP nsDefaultSOAPEncoder::RegisterEncoders(nsISOAPTypeRegistry* registry)
 {
-  REGISTER_ENCODER(SOAPCall)
   REGISTER_ENCODER(String)
   REGISTER_ENCODER(Boolean)
   REGISTER_ENCODER(Double)
@@ -115,234 +112,7 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::RegisterEncoders(nsISOAPTypeRegistry* regist
   REGISTER_ENCODER(Unknown)
   return NS_OK;
 }
-
-NS_IMETHODIMP nsDefaultSOAPEncoder::MakeNamespacePrefix(nsIDOMElement* aScope,
-		                      nsAReadableString & aURI,
-				      nsAWritableString & aPrefix)
-{
-  if (aURI.Equals(nsSOAPUtils::kSOAPEncodingURI))
-    aPrefix = nsSOAPUtils::kSOAPEncodingPrefix;
-  else if (aURI.Equals(nsSOAPUtils::kSOAPEnvURI))
-    aPrefix = nsSOAPUtils::kSOAPEnvPrefix;
-  else if (aURI.Equals(nsSOAPUtils::kXSIURI))
-    aPrefix = nsSOAPUtils::kXSIPrefix;
-  else if (aURI.Equals(nsSOAPUtils::kXSDURI))
-    aPrefix = nsSOAPUtils::kXSDPrefix;
-  else
-    return nsSOAPUtils::MakeNamespacePrefix(aScope, aURI, aPrefix);
-
-  return NS_OK;
-}
 //  Here is the implementation of the encoders.
-
-NS_NAMED_LITERAL_STRING(kEmptySOAPDocStr, "<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"http://schemas.xmlsoap.org/soap/envelope/\" SOAP-ENV:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\" xmlns:SOAP-ENC=\"http://schemas.xmlsoap.org/soap/encoding/\" xmlns:xsi=\"http://www.w3.org/1999/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/1999/XMLSchema\">"
-"<SOAP-ENV:Header>"
-"</SOAP-ENV:Header>"
-"<SOAP-ENV:Body>"
-"</SOAP-ENV:Body>"
-"</SOAP-ENV:Envelope>");
-
-//  The default serializers below assume that the above declarations are in place, without bothering to check.
-
-//  Here is the main SOAP call
-
-NS_IMETHODIMP nsSOAPCallEncoder::Encode(nsISOAPMessage *aMessage, 
-		                          nsISOAPParameter *aSource, 
-					  const nsAReadableString & aEncodingStyleURI, 
-					  const nsAReadableString & aNativeType, 
-					  nsIDOMNode* aDestination)
-{
-  nsresult rv;
-  
-  nsCOMPtr<nsISOAPTypeRegistry> types;
-  rv = aMessage->GetTypes(getter_AddRefs(types));
-  if (NS_FAILED(rv)) return rv;
-
-  nsCOMPtr<nsISupportsArray> parameters = do_QueryInterface(aSource);
-  if (parameters == nsnull)
-    return NS_ERROR_FAILURE;
-
-  nsAutoString method;
-  nsAutoString targetObjectURI;
-  nsAutoString encodingStyleURI;
-  nsCOMPtr<nsIDOMNode> ignored;
-
-  rv = aMessage->GetMethodName(method);
-  if (NS_FAILED(rv)) return rv;
-
-  rv = aMessage->GetTargetObjectURI(targetObjectURI);
-  if (NS_FAILED(rv)) return rv;
-
-  rv = aMessage->GetEncodingStyleURI(encodingStyleURI);
-  if (NS_FAILED(rv)) return rv;
-
-  nsCOMPtr<nsIDOMDocument> document;
-  nsCOMPtr<nsIDOMParser> parser = do_CreateInstance(kDOMParserCID, &rv);
-  if (NS_FAILED(rv)) return rv;
-
-  rv = aMessage->SetMessage(document);
-  if (NS_FAILED(rv)) return rv;
-
-  nsAutoString docstr;
-  rv = parser->ParseFromString(kEmptySOAPDocStr.get(), "text/xml", 
-		               getter_AddRefs(document));
-  if (NS_FAILED(rv)) return rv;
-
-  rv = aMessage->SetMessage(document);
-  if (NS_FAILED(rv)) return rv;
-
-  nsCOMPtr<nsIDOMElement> header;
-  nsCOMPtr<nsIDOMElement> body;
-  rv = aMessage->GetHeader(getter_AddRefs(header));
-  if (NS_FAILED(rv)) return rv;
-  rv = aMessage->GetBody(getter_AddRefs(body));
-  if (NS_FAILED(rv)) return rv;
-
-  if (!method.IsEmpty()) {  //  Only produce a call element if method was non-empty
-    nsCOMPtr<nsIDOMElement> call;
-    rv = document->CreateElementNS(targetObjectURI, method, getter_AddRefs(call));
-    if (NS_FAILED(rv)) return rv;
-    rv = body->AppendChild(call, getter_AddRefs(ignored));
-    if (NS_FAILED(rv)) return rv;
-    body = call;
-    nsAutoString prefix;
-    rv = MakeNamespacePrefix(body, targetObjectURI, prefix);
-    if (NS_FAILED(rv)) return rv;
-    if (!prefix.IsEmpty()) {
-      rv = body->SetPrefix(prefix);
-      if (NS_FAILED(rv)) return rv;
-    }
-  }
-
-  PRUint32 count;
-  rv = parameters->Count(&count);
-  if (NS_FAILED(rv)) return rv;
-
-  nsCOMPtr<nsISupports> next;
-  nsCOMPtr<nsISOAPParameter> param;
-  nsCOMPtr<nsIDOMElement> element;
-  nsAutoString type;
-  PRBool isHeader;
-  for (PRUint32 i = 0; i < count; i++) {
-    next = dont_AddRef(parameters->ElementAt(i));
-    param = do_QueryInterface(next);
-    if (!param) return NS_ERROR_FAILURE;
-    rv = param->GetType(type);
-    if (NS_FAILED(rv)) return rv;
-    rv = param->GetHeader(&isHeader);
-    if (NS_FAILED(rv)) return rv;
-    rv = types->Encode(aMessage, param, encodingStyleURI, type, isHeader ? header : body);
-    if (NS_FAILED(rv)) return rv;
-  }
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsSOAPCallEncoder::Decode(nsISOAPMessage *aMessage, 
-		                            nsIDOMNode *aSource, 
-					    const nsAReadableString & aEncodingStyleURI, 
-					    const nsAReadableString & aSchemaType, 
-					    nsISOAPParameter **_retval)
-{
-  nsresult rv;
-  nsCOMPtr<nsISOAPTypeRegistry> types;
-  rv = aMessage->GetTypes(getter_AddRefs(types));
-  nsCOMPtr<nsIDOMElement> header;
-  nsCOMPtr<nsIDOMElement> body;
-  nsCOMPtr<nsISupportsArray> array = do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID);
-  rv = aMessage->GetHeader(getter_AddRefs(header));
-  if (NS_FAILED(rv)) return rv;
-  rv = aMessage->GetBody(getter_AddRefs(body));
-  if (NS_FAILED(rv)) return rv;
-  if (!body) return NS_ERROR_FAILURE;
-  nsCOMPtr<nsIDOMElement> current;
-
-  nsAutoString method;
-  rv = aMessage->GetMethodName(method);
-  if (NS_FAILED(rv)) return rv;
-  if (!method.IsEmpty()) {
-    nsSOAPUtils::GetFirstChildElement(body, getter_AddRefs(current));
-    body = current;
-    if (!body) return NS_ERROR_FAILURE;
-    rv = current->GetNamespaceURI(method);
-    if (NS_FAILED(rv)) return rv;
-    aMessage->SetTargetObjectURI(method);
-    if (NS_FAILED(rv)) return rv;
-    rv = current->GetLocalName(method);
-    if (NS_FAILED(rv)) return rv;
-    aMessage->SetMethodName(method);
-  }
-  nsCOMPtr<nsIDOMElement> next;
-  nsCOMPtr<nsIDOMNamedNodeMap> attrs;
-  nsCOMPtr<nsIDOMNode> attr;
-  nsCOMPtr<nsISOAPParameter> param;
-  nsAutoString encoding;
-  nsAutoString type;
-  PRBool isHeader = header != nsnull;
-  if (!isHeader)
-    header = body;
-  PRUint32 count = 0;
-  for (;;) {
-    nsSOAPUtils::GetFirstChildElement(header, getter_AddRefs(current));
-    while (current) {
-      rv = current->GetAttributes(getter_AddRefs(attrs));
-      if (NS_FAILED(rv)) return rv;
-// Get the encoding
-      rv = attrs->GetNamedItemNS(nsSOAPUtils::kSOAPEnvURI, 
-		                 nsSOAPUtils::kEncodingStyleAttribute, 
-				 getter_AddRefs(attr));
-      if (NS_FAILED(rv)) return rv;
-      if (attr) {
-	attr->GetNodeValue(encoding);
-      }
-      else {
-	encoding = aEncodingStyleURI;
-      }
-// Get the schema type
-      rv = attrs->GetNamedItemNS(nsSOAPUtils::kXSIURI, nsSOAPUtils::kXSITypeAttribute, getter_AddRefs(attr));
-      if (NS_FAILED(rv)) return rv;
-      if (attr) {
-        type = nsSOAPUtils::kXMLSchemaSchemaTypePrefix;
-	nsAutoString t1;
-	nsAutoString t2;
-	attr->GetNodeValue(t1);
-	nsSOAPUtils::GetNamespaceURI(current, t1, t2);
-	type.Append(t2);
-	type.Append(nsSOAPUtils::kTypeSeparator);
-	nsSOAPUtils::GetLocalName(t1, t2);
-	type.Append(t2);
-      }
-      else {
-        type = nsSOAPUtils::kXMLNameSchemaTypePrefix;
-	nsAutoString t1;
-	current->GetNamespaceURI(t1);
-	type.Append(t1);
-	type.Append(nsSOAPUtils::kTypeSeparator);
-	current->GetLocalName(t1);
-	type.Append(t1);
-      }
-      rv = types->Decode(aMessage, current, encoding, type, getter_AddRefs(param));
-      if (NS_FAILED(rv)) return rv;
-      if (param) {
-	rv = param->SetHeader(isHeader);
-        if (NS_FAILED(rv)) return rv;
-	rv = array->InsertElementAt(param, count++);
-        if (NS_FAILED(rv)) return rv;
-      }
-      nsSOAPUtils::GetNextSiblingElement(current, getter_AddRefs(next));
-      current = next;
-    }
-    if (isHeader)
-      header = body;
-    else
-      break;
-  }
-  *_retval = new nsSOAPParameter();
-  (*_retval)->SetValue(array);
-//  We probably ought to set the type, etc., but no one will see it.
-  return NS_OK;
-}
-
-//  Generic handling of primitive values
 
 NS_IMETHODIMP nsDefaultSOAPEncoder::EncodeValue(
 		                          const nsAReadableString & aValue, 
@@ -376,7 +146,7 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::EncodeValue(
       nsAutoString type;
       nsAutoString temp;
       aSchemaType.Mid(temp, i, l - i);
-      rc = MakeNamespacePrefix(element, temp, type);
+      rc = nsSOAPUtils::MakeNamespacePrefixFixed(element, temp, type);
       if (NS_FAILED(rc)) return rc;
       type.Append(nsSOAPUtils::kTypeSeparator);
       aSchemaType.Right(temp,aSchemaType.Length() - l - 1);
@@ -395,11 +165,12 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::EncodeValue(
 
 //  String
 
-NS_IMETHODIMP nsStringEncoder::Encode(nsISOAPMessage *aMessage, 
-		                          nsISOAPParameter *aSource, 
+NS_IMETHODIMP nsStringEncoder::Encode(nsISOAPTypeRegistry* aTypes,
+		                          nsISOAPParameter* aSource,
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aNativeType, 
-					  nsIDOMNode* aDestination)
+					  nsIDOMNode* aDestination,
+					  nsISOAPAttachments* aAttachments)
 {
   nsresult rc;
   nsCOMPtr<nsISupports> value;
@@ -426,11 +197,12 @@ NS_IMETHODIMP nsStringEncoder::Encode(nsISOAPMessage *aMessage,
 
 //  PRBool
 
-NS_IMETHODIMP nsBooleanEncoder::Encode(nsISOAPMessage *aMessage, 
-		                          nsISOAPParameter *aSource, 
+NS_IMETHODIMP nsBooleanEncoder::Encode(nsISOAPTypeRegistry* type,
+		                           nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aNativeType, 
-					  nsIDOMNode* aDestination)
+					  nsIDOMNode* aDestination, 
+					  nsISOAPAttachments* aAttachments)
 {
   nsresult rc;
   nsCOMPtr<nsISupports> value;
@@ -456,11 +228,12 @@ NS_IMETHODIMP nsBooleanEncoder::Encode(nsISOAPMessage *aMessage,
 
 //  Double
 
-NS_IMETHODIMP nsDoubleEncoder::Encode(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsDoubleEncoder::Encode(nsISOAPTypeRegistry* types,
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aNativeType, 
-					  nsIDOMNode* aDestination)
+					  nsIDOMNode* aDestination,
+					  nsISOAPAttachments* aAttachments)
 {
   nsresult rc;
   nsCOMPtr<nsISupports> value;
@@ -487,11 +260,12 @@ NS_IMETHODIMP nsDoubleEncoder::Encode(nsISOAPMessage *aMessage,
 
 //  Float
 
-NS_IMETHODIMP nsFloatEncoder::Encode(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsFloatEncoder::Encode(nsISOAPTypeRegistry* types,
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aNativeType, 
-					  nsIDOMNode* aDestination)
+					  nsIDOMNode* aDestination,
+					  nsISOAPAttachments* aAttachments)
 {
   nsresult rc;
   nsCOMPtr<nsISupports> value;
@@ -518,11 +292,12 @@ NS_IMETHODIMP nsFloatEncoder::Encode(nsISOAPMessage *aMessage,
 
 //  PRInt64
 
-NS_IMETHODIMP nsLongEncoder::Encode(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsLongEncoder::Encode(nsISOAPTypeRegistry* types,
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aNativeType, 
-					  nsIDOMNode* aDestination)
+					  nsIDOMNode* aDestination,
+					  nsISOAPAttachments* aAttachments)
 {
   nsresult rc;
   nsCOMPtr<nsISupports> value;
@@ -549,11 +324,12 @@ NS_IMETHODIMP nsLongEncoder::Encode(nsISOAPMessage *aMessage,
 
 //  PRInt32
 
-NS_IMETHODIMP nsIntEncoder::Encode(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsIntEncoder::Encode(nsISOAPTypeRegistry* types,
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aNativeType, 
-					  nsIDOMNode* aDestination)
+					  nsIDOMNode* aDestination,
+					  nsISOAPAttachments* aAttachments)
 {
   nsresult rc;
   nsCOMPtr<nsISupports> value;
@@ -580,11 +356,12 @@ NS_IMETHODIMP nsIntEncoder::Encode(nsISOAPMessage *aMessage,
 
 //  PRInt16
 
-NS_IMETHODIMP nsShortEncoder::Encode(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsShortEncoder::Encode(nsISOAPTypeRegistry* types,
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aNativeType, 
-					  nsIDOMNode* aDestination)
+					  nsIDOMNode* aDestination,
+					  nsISOAPAttachments* aAttachments)
 {
   nsresult rc;
   nsCOMPtr<nsISupports> value;
@@ -611,11 +388,12 @@ NS_IMETHODIMP nsShortEncoder::Encode(nsISOAPMessage *aMessage,
 
 //  Byte
 
-NS_IMETHODIMP nsByteEncoder::Encode(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsByteEncoder::Encode(nsISOAPTypeRegistry* types,
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aNativeType, 
-					  nsIDOMNode* aDestination)
+					  nsIDOMNode* aDestination,
+					  nsISOAPAttachments* aAttachments)
 {
   nsresult rc;
   nsCOMPtr<nsISupports> value;
@@ -641,7 +419,6 @@ NS_IMETHODIMP nsByteEncoder::Encode(nsISOAPMessage *aMessage,
 }
 
 /*
-SOAPCall
 String
 Boolean
 Double
@@ -658,10 +435,11 @@ Void
 Unknown
 */
 
-NS_IMETHODIMP nsStringEncoder::Decode(nsISOAPMessage *aMessage, 
-		                            nsIDOMNode *aSource, 
+NS_IMETHODIMP nsStringEncoder::Decode(nsISOAPTypeRegistry* types,
+		                          nsIDOMNode *aSource, 
 					    const nsAReadableString & aEncodingStyleURI, 
 					    const nsAReadableString & aSchemaType, 
+					    nsISOAPAttachments* aAttachments,
 					    nsISOAPParameter **_retval)
 {
   return NS_ERROR_NOT_IMPLEMENTED;

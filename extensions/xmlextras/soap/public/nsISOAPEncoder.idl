@@ -22,9 +22,10 @@
 
 #include "nsISupports.idl"
 
-interface nsISOAPMessage;
+interface nsISOAPTypeRegistry;
 interface nsISOAPParameter;
 interface nsIDOMNode;
+interface nsISOAPAttachments;
 
 /**
  * This interface permits encoding of SOAP parameters.
@@ -52,7 +53,7 @@ interface nsISOAPEncoder : nsISupports {
  *   details used by the encoder.
  */
 void encode(
-    in nsISOAPMessage aMessage, in nsISOAPParameter aSource, 
+    in nsISOAPTypeRegistry aTypes, in nsISOAPParameter aSource, 
     in AString aEncodingStyleURI, in AString aNativeType, 
-    in nsIDOMNode aDestination);
+    in nsIDOMNode aDestination, in nsISOAPAttachments aAttachments);
 };

@@ -22,9 +22,10 @@
 
 #include "nsISupports.idl"
 
+interface nsISOAPTypeRegistry;
 interface nsIDOMNode;
-interface nsISOAPMessage;
 interface nsISOAPParameter;
+interface nsISOAPAttachments;
 
 /**
  * This interface supplies decoding of a specific
@@ -50,7 +51,7 @@ interface nsISOAPDecoder : nsISupports {
  *   the operation failed or did not return a result.  In case of 
  *   failure, a more complete status is recorded in the message.
  */
-nsISOAPParameter decode(
-    in nsISOAPMessage aMessage, in nsIDOMNode aSource,
-    in AString aEncodingStyleURI, in AString aSchemaType);
+nsISOAPParameter decode(in nsISOAPTypeRegistry aTypes, in nsIDOMNode aSource, 
+    in AString aEncodingStyleURI, in AString aSchemaType,
+    in nsISOAPAttachments aAttachments);
 };

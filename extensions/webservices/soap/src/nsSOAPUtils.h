@@ -49,6 +49,9 @@ public:
   static nsresult MakeNamespacePrefix(nsIDOMElement* aElement,
                                      const nsAReadableString & aURI,
                                      nsAWritableString & aPrefix);
+  static nsresult MakeNamespacePrefixFixed(nsIDOMElement* aElement,
+                                     const nsAReadableString & aURI,
+                                     nsAWritableString & aPrefix);
   static nsresult GetNamespaceURI(nsIDOMElement* aElement,
                                   const nsAReadableString & aQName, 
                                   nsAWritableString & aURI);

@@ -28,6 +28,7 @@ interface nsISOAPEncoder;
 interface nsISOAPDecoder;
 interface nsISOAPMessage;
 interface nsISOAPParameter;
+interface nsISOAPAttachments;
 
 /**
  * This interface keeps track of all the known types and how
@@ -81,10 +82,9 @@ interface nsISOAPTypeRegistry : nsISupports {
    *   having to locally declare everything.  If this is null, then
    *   everything must be locally declared.
    */
-  void encode(
-      in nsISOAPMessage aMessage, in nsISOAPParameter aSource, 
+  void encode(in nsISOAPTypeRegistry aTypes, in nsISOAPParameter aSource, 
       in AString aEncodingStyleURI, in AString aNativeType,
-      in nsIDOMNode aDestination);
+      in nsIDOMNode aDestination, in nsISOAPAttachments aAttachments);
 
   /**
    * Decode the source node into the specified
@@ -103,9 +103,9 @@ interface nsISOAPTypeRegistry : nsISupports {
    *   operation failed.  In case of failure, 
    *   a more complete status is recorded in the message.
    */
-  nsISOAPParameter decode(
-      in nsISOAPMessage aMessage, in nsIDOMNode aSource, 
-      in AString aEncodingStyleURI, in AString aSchemaType);
+  nsISOAPParameter decode(in nsISOAPTypeRegistry aTypes, in nsIDOMNode aSource, 
+      in AString aEncodingStyleURI, in AString aSchemaType,
+      in nsISOAPAttachments aAttachments);
   };
 
 %{ C++

@@ -62,7 +62,10 @@ nsSOAPTypeRegistry::~nsSOAPTypeRegistry()
 NS_IMETHODIMP nsSOAPTypeRegistry::AddNativeType(nsAReadableString & aEncoding, nsAReadableString & aType, nsISOAPEncoder* aEncoder)
 {
   NS_ENSURE_ARG_POINTER(aEncoder);
-  nsStringKey typeKey(aType);
+  nsAutoString type(aEncoding);
+  type.Append(nsSOAPUtils::kTypeSeparator);
+  type.Append(aType);
+  nsStringKey typeKey(type);
   if (mNativeTypes->Exists(&typeKey))
   {
     return NS_ERROR_ALREADY_INITIALIZED;
@@ -77,7 +80,10 @@ NS_IMETHODIMP nsSOAPTypeRegistry::AddNativeType(nsAReadableString & aEncoding, n
 NS_IMETHODIMP nsSOAPTypeRegistry::AddSchemaType(nsAReadableString & aEncoding, nsAReadableString & aType, nsISOAPDecoder* aDecoder)
 {
   NS_ENSURE_ARG_POINTER(aDecoder);
-  nsStringKey typeKey(aType);
+  nsAutoString type(aEncoding);
+  type.Append(nsSOAPUtils::kTypeSeparator);
+  type.Append(aType);
+  nsStringKey typeKey(type);
   if (mNativeTypes->Exists(&typeKey))
   {
     return NS_ERROR_ALREADY_INITIALIZED;
@@ -91,7 +97,10 @@ NS_IMETHODIMP nsSOAPTypeRegistry::AddSchemaType(nsAReadableString & aEncoding, n
 /* nsISOAPType queryByNativeType (in DOMString aEncodingStyleURI, in DOMString aNativeType); */
 nsresult nsSOAPTypeRegistry::QueryByNativeType(const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aNativeType, nsISOAPEncoder **_retval)
 {
-  nsStringKey typeKey(aNativeType);
+  nsAutoString type(aEncodingStyleURI);
+  type.Append(nsSOAPUtils::kTypeSeparator);
+  type.Append(aNativeType);
+  nsStringKey typeKey(type);
   *_retval = NS_STATIC_CAST(nsISOAPEncoder*, mNativeTypes->Get(&typeKey));
   return NS_OK;
 }
@@ -99,12 +108,15 @@ nsresult nsSOAPTypeRegistry::QueryByNativeType(const nsAReadableString & aEncodi
 /* nsISOAPType queryBySchemaType (in DOMString aEncodingStyleURI, in DOMString aSchemaType); */
 nsresult nsSOAPTypeRegistry::QueryBySchemaType(const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaType, nsISOAPDecoder **_retval)
 {
-  nsStringKey schemaKey(aSchemaType);
+  nsAutoString type(aEncodingStyleURI);
+  type.Append(nsSOAPUtils::kTypeSeparator);
+  type.Append(aSchemaType);
+  nsStringKey schemaKey(type);
   *_retval = NS_STATIC_CAST(nsISOAPDecoder*, mSchemaTypes->Get(&schemaKey));
   return NS_OK;
 }
 
-NS_IMETHODIMP nsSOAPTypeRegistry::Encode(nsISOAPMessage *aMessage, nsISOAPParameter *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aNativeType, nsIDOMNode* aDestination)
+NS_IMETHODIMP nsSOAPTypeRegistry::Encode(nsISOAPTypeRegistry *aTypes, nsISOAPParameter *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aNativeType, nsIDOMNode* aDestination, nsISOAPAttachments* aAttachments)
 {
   nsAutoString typeID(aNativeType);
   nsCOMPtr<nsISOAPEncoder> encoder;
@@ -120,11 +132,10 @@ NS_IMETHODIMP nsSOAPTypeRegistry::Encode(nsISOAPMessage *aMessage, nsISOAPParame
       return NS_ERROR_NOT_IMPLEMENTED;
     typeID.Left(typeID, i);
   }
-  return encoder->Encode(aMessage, aSource, aEncodingStyleURI, aNativeType, aDestination);
+  return encoder->Encode(aTypes, aSource, aEncodingStyleURI, aNativeType, aDestination, aAttachments);
 }
 
-/* nsISupports decode (in nsISOAPMessage aMessage, in nsISupports aSource, in DOMString aEncodingStyleURI, in DOMString aSchemaType); */
-NS_IMETHODIMP nsSOAPTypeRegistry::Decode(nsISOAPMessage *aMessage, nsIDOMNode *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaType, nsISOAPParameter **_retval)
+NS_IMETHODIMP nsSOAPTypeRegistry::Decode(nsISOAPTypeRegistry *aTypes, nsIDOMNode *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaType, nsISOAPAttachments* aAttachments, nsISOAPParameter **_retval)
 {
   *_retval = nsnull;
   nsAutoString schemaID(aSchemaType);
@@ -145,7 +156,7 @@ NS_IMETHODIMP nsSOAPTypeRegistry::Decode(nsISOAPMessage *aMessage, nsIDOMNode *a
     schemaID.Left(schemaID, i);
 #endif
   }
-  return decoder->Decode(aMessage, aSource, aEncodingStyleURI, aSchemaType, _retval);
+  return decoder->Decode(aTypes, aSource, aEncodingStyleURI, aSchemaType, aAttachments, _retval);
 }
 
 static const char* kAllAccess = "AllAccess";

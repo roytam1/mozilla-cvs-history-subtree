@@ -30,6 +30,7 @@ MODULE		= xmlextras
 XPIDL_MODULE	= xmlsoap
 
 XPIDLSRCS	= \
+		nsISOAPAttachments.idl \
 		nsISOAPCall.idl \
 		nsISOAPFault.idl \
 		nsISOAPJSValue.idl \

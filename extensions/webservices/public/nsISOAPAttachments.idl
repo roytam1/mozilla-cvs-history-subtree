@@ -22,36 +22,31 @@
 
 #include "nsISupports.idl"
 
-interface nsISOAPTypeRegistry;
-interface nsIDOMNode;
 interface nsISOAPParameter;
-interface nsISOAPAttachments;
 
 /**
- * This interface supplies decoding of a specific
- * part of a message XML DOM into appropriate objects
- * for the script or application.
+ * This interface permits attachment of SOAP attachments.
  */
 
-[scriptable, uuid(4c2e02ae-1dd2-11b2-b1cd-c79dea3d46db)]
-interface nsISOAPDecoder : nsISupports {
+[scriptable, uuid(6192dcbe-1dd2-11b2-81ad-a4597614c4ae)]
+interface nsISOAPAttachments : nsISupports {
 
 /**
- * Decode the source DOM node
+ * Get the attachment associated with a particular identifier.
  *
- * @param aMessage The message supplying the data to be decoded
+ * @param aIdentifier The identifier of the attachment to be accessed.
  *
- * @param aSource The DOM node to be decoded.
- *
- * @param aEncodingStyleURI The encoding style
- *
- * @param aSchemaType The schema ID of the source DOM node
- *
- * @return The decoded parameter, which is null if 
- *   the operation failed or did not return a result.  In case of 
- *   failure, a more complete status is recorded in the message.
+ * Appropriate return(s) must be identified.
  */
-nsISOAPParameter decode(in nsISOAPTypeRegistry aTypes, in nsIDOMNode aSource, 
-    in AString aEncodingStyleURI, in AString aSchemaType,
-    in nsISOAPAttachments aAttachments);
+void getAttachment(in AString aIdentifier);
+
+/**
+ * Attach an attachment to the message.
+ *
+ * Appropriate argument(s) must be identified.
+ *
+ * @return The identifier of the attachment, to be referenced in SOAP encoding
+ */
+AString attach();
+
 };
