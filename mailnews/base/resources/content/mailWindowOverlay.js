@@ -574,7 +574,7 @@ function ConfirmUnsubscribe(folder)
     var sBundle = srGetStrBundle("chrome://messenger/locale/messenger.properties"); 
     var titleMsg = sBundle.GetStringFromName("confirmUnsubscribeTitle");
     var dialogMsg = sBundle.formatStringFromName("confirmUnsubscribeText",
-                                        [ folder.name], 1);
+                                        [folder.name], 1);
 
     var commonDialogService = nsJSComponentManager.getService("@mozilla.org/appshell/commonDialogs;1",
                                                                     "nsICommonDialogs");
@@ -591,23 +591,17 @@ function MsgUnsubscribe()
 
 function MsgSaveAsFile() 
 {
-    //dump("\MsgSaveAsFile from XUL\n");
-    var messages = GetSelectedMessages();
-    if (messages && messages.length == 1)
-    {
-        SaveAsFile(messages[0]);
+    if (gDBView.numSelected == 1) {
+        SaveAsFile(gDBView.URIForFirstSelectedMessage);
     }
 }
 
 
 function MsgSaveAsTemplate() 
 {
-    //dump("\MsgSaveAsTemplate from XUL\n");
     var folder = GetLoadedMsgFolder();
-    var messages = GetSelectedMessages();
-    if (messages && messages.length == 1)
-    {
-        SaveAsTemplate(messages[0], folder);
+    if (gDBView.numSelected == 1) {
+        SaveAsTemplate(gDBView.URIForFirstSelectedMessage, folder);
     }
 }
 
@@ -631,15 +625,17 @@ function MsgOpenNewWindowForFolder(folderUri)
     }
 }
 
+// passing in the view, so this will work for search and the thread pane
 function MsgOpenSelectedMessages()
 {
-  dump("fix this for gayatrib\n");
-  var selectedMessages = GetSelectedMessages();
-  var numMessages = selectedMessages.length;
-  var folderUri = gDBView.msgFolder.URI;
+  var dbView = GetDBView();
+
+  dump("XXX dbView " + dbView + "\n");
+  var indices = GetSelectedIndices(dbView);
+  var numMessages = indices.length;
 
   for (var i = 0; i < numMessages; i++) {
-    MsgOpenNewWindowForMessage(selectedMessages[i], folderUri);
+    MsgOpenNewWindowForMessage(dbView.getURIForViewIndex(indices[i]),dbView.getFolderForViewIndex(indices[i]).URI);
   }
 }
 
@@ -692,6 +688,7 @@ function MsgMarkAllRead()
 
 function MsgDownloadFlagged()
 {
+    dump("fix this, this won't work anymore\n");
     var compositeDataSource = GetCompositeDataSource("DownloadFlagged");
     var folder = GetLoadedMsgFolder();
 
@@ -701,15 +698,15 @@ function MsgDownloadFlagged()
 
 function MsgDownloadSelected()
 {
+    dump("fix this, this won't work anymore\n");
     var selectedMessages = GetSelectedMessages();
     var compositeDataSource = GetCompositeDataSource("DownloadSelected");
-
     DownloadSelectedMessages(compositeDataSource, selectedMessages);
 }
 
 function MsgMarkThreadAsRead()
 {
-    
+    dump("fix this, this won't work anymore\n");
     var messageList = GetSelectedMessages();
     if(messageList.length == 1)
     {
@@ -723,8 +720,6 @@ function MsgMarkThreadAsRead()
 
 function MsgViewPageSource() 
 {
-    //dump("MsgViewPageSource(); \n ");
-    
     var messages = GetSelectedMessages();
     ViewPageSource(messages);
 }
@@ -778,37 +773,25 @@ function MsgStop()
 function MsgSendUnsentMsg() 
 {
     var folder = GetFirstSelectedMsgFolder();
-    if(folder)
-    {
+    if(folder) {
         SendUnsentMessages(folder);
     }
 }
 
 function PrintEnginePrint()
 {
-
     var messageList = GetSelectedMessages();
     numMessages = messageList.length;
 
-
-    if (numMessages == 0)
-    {
+    if (numMessages == 0) {
         dump("PrintEnginePrint(): No messages selected.\n");
         return false;
     }  
 
-    var selectionArray = new Array(numMessages);
-
-    for(var i = 0; i < numMessages; i++)
-    {
-        var messageResource = messageList[i].QueryInterface(Components.interfaces.nsIRDFResource);
-        selectionArray[i] = messageResource.Value;
-    }
-
     printEngineWindow = window.openDialog("chrome://messenger/content/msgPrintEngine.xul",
                                                         "",
                                                         "chrome,dialog=no,all",
-                                                        numMessages, selectionArray, statusFeedback);
+                                                        numMessages, messageList, statusFeedback);
     return true;
 }
 

@@ -65,7 +65,7 @@ var nsSearchResultsController =
     isCommandEnabled: function(command)
     {
         var enabled = true;
-//        if (gThreadTree.selectedItems.length <= 0)
+//        if (GetNumSelectedMessages() <= 0)
 //            enabled = false;
 
         return enabled;
@@ -75,7 +75,7 @@ var nsSearchResultsController =
     {
         switch(command) {
         case "cmd_open":
-            MsgOpenSelectedMessages();
+            MsgOpenSelectedMessages(gSearchView);
             return true;
 
         default:
@@ -410,4 +410,20 @@ function onSearchButton(event)
 function ThreadTreeUpdate_Search()
 {
     goUpdateCommand("cmd_open");
+}
+
+// threadPane.js will be needing this, too
+function GetNumSelectedMessages()
+{
+   try {
+       return gSearchView.numSelected;
+   }
+   catch (ex) {
+       return 0;
+   }
+}
+
+function GetDBView()
+{
+    return gSearchView;
 }

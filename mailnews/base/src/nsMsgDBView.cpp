@@ -969,6 +969,27 @@ int PR_CALLBACK CompareViewIndices (const void *v1, const void *v2, void *)
 	return i1 - i2;
 }
 
+NS_IMETHODIMP nsMsgDBView::GetIndicesForSelection(nsMsgViewIndex **indices,  PRUint32 *length)
+{
+  NS_ENSURE_ARG_POINTER(length);
+  *length = 0;
+  NS_ENSURE_ARG_POINTER(indices);
+  *indices = nsnull;
+
+  nsUInt32Array selection;
+  GetSelectedIndices(&selection);
+  *length = selection.GetSize();
+  PRUint32 numIndicies = *length;
+  if (!numIndicies) return NS_OK;
+
+  *indices = (nsMsgViewIndex *)nsMemory::Alloc(numIndicies * sizeof(nsMsgViewIndex));
+  if (!indices) return NS_ERROR_OUT_OF_MEMORY;
+  for (PRUint32 i=0;i<numIndicies;i++) {
+    (*indices)[i] = selection.GetAt(i);
+  }
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsMsgDBView::GetURIsForSelection(char ***uris, PRUint32 *length)
 {
   nsresult rv = NS_OK;
@@ -991,7 +1012,7 @@ NS_IMETHODIMP nsMsgDBView::GetURIsForSelection(char ***uris, PRUint32 *length)
   for (PRUint32 i=0;i<numIndicies;i++) 
   {
     nsMsgViewIndex selectedIndex = selection.GetAt(i);
-    if (!m_folder)
+    if (!folder)
       GetFolderForViewIndex(selectedIndex, getter_AddRefs(folder));
     rv = GenerateURIForMsgKey(m_keys[selectedIndex], folder, next);
     NS_ENSURE_SUCCESS(rv,rv);
@@ -1000,6 +1021,19 @@ NS_IMETHODIMP nsMsgDBView::GetURIsForSelection(char ***uris, PRUint32 *length)
   }
 
   *uris = outArray;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::GetURIForViewIndex(nsMsgViewIndex index, char **result)
+{
+  nsresult rv;
+  nsCOMPtr <nsIMsgFolder> folder = m_folder;
+  if (!folder) {
+    rv = GetFolderForViewIndex(index, getter_AddRefs(folder));
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+  rv = GenerateURIForMsgKey(m_keys[index], folder, result);
+  NS_ENSURE_SUCCESS(rv,rv);
   return NS_OK;
 }
 
@@ -3247,7 +3281,7 @@ nsresult nsMsgDBView::FindNextUnread(nsMsgKey startId, nsMsgKey *pResultKey,
         // check for collapsed thread with unread children
         if (m_sortType == nsMsgViewSortType::byThread && flags & MSG_VIEW_FLAG_ISTHREAD && flags & MSG_FLAG_ELIDED) {
             nsCOMPtr<nsIMsgThread> thread;
-            nsMsgKey threadId = m_keys.GetAt(curIndex);
+            //nsMsgKey threadId = m_keys.GetAt(curIndex);
             rv = GetThreadFromMsgIndex(curIndex, getter_AddRefs(thread));
             if (NS_SUCCEEDED(rv) && thread) {
               nsCOMPtr <nsIMsgDBHdr> unreadChild;
@@ -3585,22 +3619,13 @@ nsMsgDBView::GetKeyForFirstSelectedMessage(nsMsgKey *key)
 {
   NS_ENSURE_ARG_POINTER(key);
 
-  if (!mOutlinerSelection) return NS_ERROR_FAILURE;
-
-  PRInt32 selectionCount; 
-  nsresult rv = mOutlinerSelection->GetRangeCount(&selectionCount);
-  NS_ENSURE_SUCCESS(rv, rv); 
-
-  if (selectionCount < 0) return NS_ERROR_FAILURE;
-
-  // get the first key (startRange) of the first range (range 0)
-  PRInt32 startRange;
-  PRInt32 endRange;
-  rv = mOutlinerSelection->GetRangeAt(0, &startRange, &endRange);
+  PRInt32 currentIndex;
+  nsresult rv = mOutlinerSelection->GetCurrentIndex(&currentIndex);
   NS_ENSURE_SUCCESS(rv, rv);
+
   // check that the first index is valid, it may not be if nothing is selected
-  if (startRange >= 0 && startRange < GetSize()) {
-    *key = m_keys.GetAt(startRange);
+  if (currentIndex >= 0 && currentIndex < GetSize()) {
+    *key = m_keys.GetAt(currentIndex);
   }
   else {
     return NS_ERROR_UNEXPECTED;

@@ -845,6 +845,20 @@ function GetFirstSelectedMessage()
     }
 }
 
+function GetSelectedIndices(dbView)
+{
+  try {
+    var indicesArray = {}; 
+    var length = {};
+    dbView.getIndicesForSelection(indicesArray,length);
+    return indicesArray.value;
+  }
+  catch (ex) {
+    dump("ex = " + ex + "\n");
+    return null;
+  }
+}
+
 function GetSelectedMessages()
 {
   try {
@@ -931,4 +945,9 @@ function SetBusyCursor(window, enable)
 	{
 		SetBusyCursor(window.frames[i], enable);
 	}
+}
+
+function GetDBView()
+{
+    return gDBView;
 }
