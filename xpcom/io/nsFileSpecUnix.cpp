@@ -173,11 +173,11 @@ nsresult nsFileSpec::Rename(const char* inNewName)
 {
     // This function should not be used to move a file on disk. 
     if (strchr(inNewName, '/')) 
-        return NS_ERROR_FAILURE;
+        return NS_FILE_FAILURE;
 
-    if (PR_Rename(mPath, inNewName) != NS_OK)
+    if (PR_Rename(mPath, inNewName) != 0)
     {
-        return NS_ERROR_FAILURE;
+        return NS_FILE_FAILURE;
     }
     SetLeafName(inNewName);
     return NS_OK;
@@ -244,7 +244,7 @@ nsresult nsFileSpec::Copy(const nsFileSpec& inParentDirectory) const
 //----------------------------------------------------------------------------------------
 {
     // We can only copy into a directory, and (for now) can not copy entire directories
-    nsresult result = NS_ERROR_FAILURE;
+    nsresult result = NS_FILE_FAILURE;
 
     if (inParentDirectory.IsDirectory() && (! IsDirectory() ) )
     {
@@ -254,7 +254,7 @@ nsresult nsFileSpec::Copy(const nsFileSpec& inParentDirectory) const
         strcat(destPath, leafname);
         delete [] leafname;
 
-        result = CrudeFileCopy(*this, destPath);
+        result = NS_FILE_RESULT(CrudeFileCopy(*this, destPath));
         
         delete [] destPath;
     }
@@ -266,7 +266,7 @@ nsresult nsFileSpec::Move(const nsFileSpec& inNewParentDirectory) const
 //----------------------------------------------------------------------------------------
 {
     // We can only copy into a directory, and (for now) can not copy entire directories
-    nsresult result = NS_ERROR_FAILURE;
+    nsresult result = NS_FILE_FAILURE;
 
     if (inNewParentDirectory.IsDirectory() && (! IsDirectory() ) )
     {
@@ -279,7 +279,7 @@ nsresult nsFileSpec::Move(const nsFileSpec& inNewParentDirectory) const
         strcat(destPath, leafname);
         delete [] leafname;
 
-        result = CrudeFileCopy(*this, destPath);
+        result = NS_FILE_RESULT(CrudeFileCopy(*this, destPath));
         delete [] destPath;
     }
     return result;
@@ -289,7 +289,7 @@ nsresult nsFileSpec::Move(const nsFileSpec& inNewParentDirectory) const
 nsresult nsFileSpec::Execute(const char* inArgs ) const
 //----------------------------------------------------------------------------------------
 {
-    nsresult result = NS_ERROR_FAILURE;
+    nsresult result = NS_FILE_FAILURE;
     
     if (! IsDirectory())
     {
@@ -298,10 +298,7 @@ nsresult nsFileSpec::Execute(const char* inArgs ) const
         strcat(fileNameWithArgs, " ");
         strcat(fileNameWithArgs, inArgs);
 
-        result = system(fileNameWithArgs);
-	    if (result != NS_OK)
-	        result = NS_ERROR_FAILURE;
-
+        result = NS_FILE_RESULT(system(fileNameWithArgs));
         delete [] fileNameWithArgs; 
     } 
 

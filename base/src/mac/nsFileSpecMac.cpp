@@ -507,7 +507,7 @@ Clean:
 //----------------------------------------------------------------------------------------
 nsFileSpec::nsFileSpec()
 //----------------------------------------------------------------------------------------
-:	mError(noErr)
+:	mError(NS_OK)
 {
 	mSpec.name[0] = '\0';
 }
@@ -524,11 +524,11 @@ nsFileSpec::nsFileSpec(const nsFileSpec& inSpec)
 nsFileSpec::nsFileSpec(const char* inString, PRBool inCreateDirs)
 //----------------------------------------------------------------------------------------
 {
-	mError = MacFileHelpers::FSSpecFromFullUnixPath(
-								inString, mSpec, true, true, inCreateDirs);
+	mError = NS_FILE_RESULT(MacFileHelpers::FSSpecFromFullUnixPath(
+								inString, mSpec, true, true, inCreateDirs));
 		// allow a partial path, create as necessary
-	if (mError == fnfErr)
-		mError = noErr;
+	if (mError == NS_FILE_RESULT(fnfErr))
+		mError = NS_OK;
 } // nsFileSpec::nsFileSpec
 
 //----------------------------------------------------------------------------------------
@@ -538,8 +538,8 @@ nsFileSpec::nsFileSpec(
 	ConstStr255Param name)
 //----------------------------------------------------------------------------------------
 {
-	mError = ::FSMakeFSSpec(vRefNum, parID, name, &mSpec);
-	if (mError == fnfErr)
+	mError = NS_FILE_RESULT(::FSMakeFSSpec(vRefNum, parID, name, &mSpec));
+	if (mError == NS_FILE_RESULT(fnfErr))
 		mError = noErr;
 }
 
@@ -563,7 +563,7 @@ nsBasicOutStream& operator << (nsBasicOutStream& s, const nsFileSpec& spec)
 void nsFileSpec::operator = (const char* inString)
 //----------------------------------------------------------------------------------------
 {
-	mError = MacFileHelpers::FSSpecFromFullUnixPath(inString, mSpec, true);
+	mError = NS_FILE_RESULT(MacFileHelpers::FSSpecFromFullUnixPath(inString, mSpec, true));
 } // nsFileSpec::operator =
 
 //----------------------------------------------------------------------------------------
@@ -597,7 +597,8 @@ void nsFileSpec::SetLeafName(const char* inLeafName)
 	// what about long relative paths?  Hmm?
 	Str255 partialPath;
 	MacFileHelpers::PLstrcpy(partialPath, inLeafName);
-	mError = FSMakeFSSpec(mSpec.vRefNum, mSpec.parID, partialPath, &mSpec);
+	mError = NS_FILE_RESULT(
+	    ::FSMakeFSSpec(mSpec.vRefNum, mSpec.parID, partialPath, &mSpec));
 } // nsFileSpec::SetLeafName
 
 //----------------------------------------------------------------------------------------
@@ -615,7 +616,7 @@ char* nsFileSpec::GetLeafName() const
 void nsFileSpec::MakeAliasSafe()
 //----------------------------------------------------------------------------------------
 {
-	mError = MacFileHelpers::MakeAliasSafe(mSpec);
+	mError = NS_FILE_RESULT(MacFileHelpers::MakeAliasSafe(mSpec));
 } // nsFileSpec::MakeAliasSafe
 
 //----------------------------------------------------------------------------------------
@@ -633,7 +634,7 @@ void nsFileSpec::ResolveAlias(PRBool& wasAliased)
 //----------------------------------------------------------------------------------------
 {
 	Boolean wasAliased2;
-	mError = MacFileHelpers::ResolveAliasFile(mSpec, wasAliased2);
+	mError = NS_FILE_RESULT(MacFileHelpers::ResolveAliasFile(mSpec, wasAliased2));
 	wasAliased = (wasAliased2 != false);
 } // nsFileSpec::ResolveAlias
 
@@ -659,8 +660,9 @@ PRBool nsFileSpec::IsDirectory() const
 void nsFileSpec::GetParent(nsFileSpec& outSpec) const
 //----------------------------------------------------------------------------------------
 {
-	if (mError == noErr)
-		outSpec.mError = FSMakeFSSpec(mSpec.vRefNum, mSpec.parID, nsnull, outSpec);
+	if (NS_SUCCEEDED(mError))
+		outSpec.mError
+		    = NS_FILE_RESULT(::FSMakeFSSpec(mSpec.vRefNum, mSpec.parID, nsnull, outSpec));
 } // nsFileSpec::GetParent
 
 //----------------------------------------------------------------------------------------
@@ -669,13 +671,13 @@ void nsFileSpec::operator += (const char* inRelativePath)
 {
 	long dirID;
 	Boolean isDirectory;
-	mError = FSpGetDirectoryID(&mSpec, &dirID, &isDirectory);
-	if (mError == noErr && isDirectory)
+	mError = NS_FILE_RESULT(::FSpGetDirectoryID(&mSpec, &dirID, &isDirectory));
+	if (NS_SUCCEEDED(mError) && isDirectory)
 	{
 		Str255 partialPath;
 		MacFileHelpers::PLstrcpy(partialPath, inRelativePath);
-		mError = FSMakeFSSpec(mSpec.vRefNum, dirID, partialPath, *this);
-		//if (mError == noErr)
+		mError = NS_FILE_RESULT(::FSMakeFSSpec(mSpec.vRefNum, dirID, partialPath, *this));
+		//if (NS_SUCCEEDED(mError))
 		//	SetLeafName(inRelativePath);
 	}
 } // nsFileSpec::operator +=
@@ -695,13 +697,13 @@ void nsFileSpec::Delete(PRBool inRecursive)
 	if (inRecursive)
 	{
 		// MoreFilesExtras
-		mError = DeleteDirectory(
+		mError = NS_FILE_RESULT(::DeleteDirectory(
 					mSpec.vRefNum,
 					mSpec.parID,
-					const_cast<unsigned char*>(mSpec.name));
+					const_cast<unsigned char*>(mSpec.name)));
 	}
 	else
-		mError = FSpDelete(&mSpec);
+		mError = NS_FILE_RESULT(FSpDelete(&mSpec));
 } // nsFileSpec::Delete
 
 //----------------------------------------------------------------------------------------
@@ -725,20 +727,17 @@ nsresult nsFileSpec::Copy(const nsFileSpec& newParentDir) const
     // We can only copy into a directory, and (for now) can not copy entire directories
 
     if (!newParentDir.IsDirectory() || (IsDirectory() ) )
-        return NS_ERROR_FAILURE;
+        return NS_FILE_FAILURE;
 
     
-    OSErr result = FSpFileCopy(   &mSpec,
+    nsresult result = NS_FILE_RESULT(::FSpFileCopy(   &mSpec,
                             &newParentDir.mSpec,
                             const_cast<StringPtr>(GetLeafPName()),
                             nsnull,
                             0,
-                            true);
+                            true));
 
-    if (result != noErr)
-        result = NS_ERROR_FAILURE;
-
-    return NS_OK;
+    return result;
 
 } // nsFileSpec::Copy
 
@@ -749,16 +748,13 @@ nsresult nsFileSpec::Move(const nsFileSpec& newParentDir) const
     // We can only move into a directory
     
     if (!newParentDir.IsDirectory())
-    	return NS_ERROR_FAILURE;
+    	return NS_FILE_FAILURE;
  
-    OSErr result = FSpMoveRenameCompat(&mSpec,
+    nsresult result = NS_FILE_RESULT(::FSpMoveRenameCompat(&mSpec,
                                     &newParentDir.mSpec,
-                                    const_cast<StringPtr>(GetLeafPName()));
+                                    const_cast<StringPtr>(GetLeafPName())));
     
-    if (result != noErr)
-        return NS_ERROR_FAILURE;
-
-    return NS_OK;
+    return result;
 } // nsFileSpec::Move
 
 //----------------------------------------------------------------------------------------
@@ -766,7 +762,7 @@ nsresult nsFileSpec::Execute(const char* /*args - how can this be cross-platform
 //----------------------------------------------------------------------------------------
 {
     if (IsDirectory())
-        return NS_ERROR_FAILURE;
+        return NS_FILE_FAILURE;
 
     LaunchParamBlockRec launchThis;
     launchThis.launchAppSpec = const_cast<FSSpec*>(&mSpec);
@@ -778,11 +774,8 @@ nsresult nsFileSpec::Execute(const char* /*args - how can this be cross-platform
     launchThis.launchControlFlags = launchContinue + launchNoFileFlags + launchUseMinimum;
     launchThis.launchControlFlags += launchDontSwitch;
 
-    OSErr result = LaunchApplication(&launchThis);
-    if (result != noErr)
-        return NS_ERROR_FAILURE;
-
-    return NS_OK;
+    nsresult result = NS_FILE_RESULT(::LaunchApplication(&launchThis));
+    return result;
   
 } // nsFileSpec::Execute
 

@@ -57,6 +57,14 @@ NS_NAMESPACE nsFileSpecHelpers
 #endif
 } NS_NAMESPACE_END
 
+//----------------------------------------------------------------------------------------
+inline nsresult ns_file_convert_result(PRInt32 nativeErr)
+//----------------------------------------------------------------------------------------
+{
+    return nativeErr ?
+        NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_FILES,((nativeErr)&0xFFFF))
+        : NS_OK;
+}
 
 //----------------------------------------------------------------------------------------
 char* nsFileSpecHelpers::StringDup(
@@ -434,6 +442,7 @@ void nsFilePath::operator = (const nsFileURL& inOther)
 nsFileSpec::nsFileSpec()
 //----------------------------------------------------------------------------------------
 :    mPath(nsnull)
+,    mError(NS_OK)
 {
 }
 #endif
@@ -522,16 +531,17 @@ void nsFileSpec::operator = (const nsPersistentFileDescriptor& inDescriptor)
     char* decodedData = PL_Base64Decode((const char*)data, (int)dataSize, nsnull);
     // Cast to an alias record and resolve.
 	AliasHandle aliasH = nsnull;
-	mError = PtrToHand(decodedData, &(Handle)aliasH, (dataSize * 3) / 4);
+	mError = NS_FILE_RESULT(PtrToHand(decodedData, &(Handle)aliasH, (dataSize * 3) / 4));
 	PR_Free(decodedData);
-	if (mError != noErr)
+	if (NS_SUCCEEDED(mError))
 		return; // not enough memory?
 
 	Boolean changed;
-	mError = ::ResolveAlias(nsnull, aliasH, &mSpec, &changed);
+	mError = NS_FILE_RESULT(::ResolveAlias(nsnull, aliasH, &mSpec, &changed));
 	DisposeHandle((Handle) aliasH);
 #else
     nsFileSpecHelpers::StringAssign(mPath, (char*)data);
+    mError = NS_OK;
 #endif
 }
 
@@ -544,6 +554,7 @@ void nsFileSpec::operator = (const nsPersistentFileDescriptor& inDescriptor)
 nsFileSpec::nsFileSpec(const nsFilePath& inPath)
 //----------------------------------------------------------------------------------------
 :    mPath(nsFileSpecHelpers::StringDup((const char*)inPath))
+,    mError(NS_OK)
 {
 }
 #endif // XP_UNIX
@@ -554,6 +565,7 @@ void nsFileSpec::operator = (const nsFilePath& inPath)
 //----------------------------------------------------------------------------------------
 {
     nsFileSpecHelpers::StringAssign(mPath, (const char*)inPath);
+    mError = NS_OK;
 }
 #endif //XP_UNIX
 
@@ -562,6 +574,7 @@ void nsFileSpec::operator = (const nsFilePath& inPath)
 nsFileSpec::nsFileSpec(const nsFileSpec& inSpec)
 //----------------------------------------------------------------------------------------
 :    mPath(nsFileSpecHelpers::StringDup(inSpec.mPath))
+,    mError(NS_OK)
 {
 }
 #endif //XP_UNIX
@@ -571,6 +584,7 @@ nsFileSpec::nsFileSpec(const nsFileSpec& inSpec)
 nsFileSpec::nsFileSpec(const char* inString, PRBool inCreateDirs)
 //----------------------------------------------------------------------------------------
 :    mPath(nsFileSpecHelpers::StringDup(inString))
+,    mError(NS_OK)
 {
     // Make canonical and absolute.
     nsFileSpecHelpers::Canonify(mPath, inCreateDirs);
@@ -592,6 +606,7 @@ void nsFileSpec::operator = (const nsFileSpec& inSpec)
 //----------------------------------------------------------------------------------------
 {
     mPath = nsFileSpecHelpers::StringAssign(mPath, inSpec.mPath);
+    mError = inSpec.Error();
 }
 #endif //XP_UNIX
 
@@ -604,6 +619,7 @@ void nsFileSpec::operator = (const char* inString)
     mPath = nsFileSpecHelpers::StringAssign(mPath, inString);
     // Make canonical and absolute.
     nsFileSpecHelpers::Canonify(mPath, PR_TRUE /* XXX? */);
+    mError = NS_OK;
 }
 #endif //XP_UNIX
 

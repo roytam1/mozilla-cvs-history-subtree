@@ -147,6 +147,7 @@ void nsFileSpec::operator = (const nsFilePath& inPath)
 {
 	nsFileSpecHelpers::StringAssign(mPath, (const char*)inPath);
 	nsFileSpecHelpers::UnixToNative(mPath);
+	mError = NS_OK;
 } // nsFileSpec::operator =
 
 //----------------------------------------------------------------------------------------
@@ -262,11 +263,11 @@ nsresult nsFileSpec::Rename(const char* inNewName)
 {
     // This function should not be used to move a file on disk. 
     if (strchr(inNewName, '/')) 
-        return NS_ERROR_FAILURE;
+        return NS_FILE_FAILURE;
 
     if (PR_Rename(*this, inNewName) != NS_OK)
     {
-        return NS_ERROR_FAILURE;
+        return NS_FILE_FAILURE;
     }
     SetLeafName(inNewName);
     return NS_OK;
@@ -297,7 +298,7 @@ nsresult nsFileSpec::Copy(const nsFileSpec& inParentDirectory) const
         }
     }
 
-    return NS_ERROR_FAILURE;
+    return NS_FILE_FAILURE;
 } // nsFileSpec::Copy
 
 //----------------------------------------------------------------------------------------
@@ -325,7 +326,7 @@ nsresult nsFileSpec::Move(const nsFileSpec& nsNewParentDirectory) const
         }
     }
 
-    return NS_ERROR_FAILURE;
+    return NS_FILE_FAILURE;
 } // nsFileSpec::Move
 
 //----------------------------------------------------------------------------------------
@@ -351,7 +352,7 @@ nsresult nsFileSpec::Execute(const char* inArgs ) const
         }
     }
 
-    return NS_ERROR_FAILURE;
+    return NS_FILE_FAILURE;
 } // nsFileSpec::Execute
 
 //========================================================================================

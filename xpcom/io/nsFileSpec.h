@@ -160,6 +160,17 @@ class nsBasicOutStream;
 class nsBasicInStream;
 
 //========================================================================================
+// Conversion of native file errors to nsresult values. These are really only for use
+// in the file module, clients of this interface shouldn't really need them.
+// Error results returned from this interface have, in the low-order 16 bits,
+// native errors that are masked to 16 bits.  Assumption: a native error of 0 is success
+// on all platforms. Note the way we define this using an inline function.  This
+// avoids multiple evaluation if people go NS_FILE_RESULT(function_call()).
+#define NS_FILE_RESULT(x) ns_file_convert_result((PRInt32)x)
+nsresult ns_file_convert_result(PRInt32 nativeErr);
+#define NS_FILE_FAILURE NS_FILE_RESULT(-1)
+
+//========================================================================================
 class NS_BASE nsFileSpec
 //    This is whatever each platform really prefers to describe files as.  Declared first
 //  because the other two types have an embeded nsFileSpec object.
@@ -195,13 +206,12 @@ class NS_BASE nsFileSpec
                                     long parID,
                                     ConstStr255Param name);
                                 nsFileSpec(const FSSpec& inSpec)
-                                    : mSpec(inSpec), mError(noErr) {}
+                                    : mSpec(inSpec), mError(NS_OK) {}
 
                                 operator FSSpec* () { return &mSpec; }
                                 operator const FSSpec* const () { return &mSpec; }
                                 operator  FSSpec& () { return mSpec; }
                                 operator const FSSpec& () const { return mSpec; }
-        OSErr                   Error() const { return mError; }
         void                    MakeAliasSafe();
                                     // Called for the spec of an alias.  Copies the alias to
                                     // a secret temp directory and modifies the spec to point
@@ -214,11 +224,8 @@ class NS_BASE nsFileSpec
         ConstStr255Param        GetLeafPName() const { return mSpec.name; }
 #endif // end of Macintosh utility methods.
 
-#ifdef XP_MAC
-        PRBool                  Valid() const { return mError == noErr; }
-#else
-        PRBool                  Valid() const { return PR_TRUE; } // Fixme.
-#endif // XP_MAC
+        PRBool                  Valid() const { return NS_SUCCEEDED(Error()); }
+        nsresult                Error() const { return mError; }
 
         friend                  NS_BASE nsBasicOutStream& operator << (
                                     nsBasicOutStream& s,
@@ -281,10 +288,10 @@ class NS_BASE nsFileSpec
                                 friend class nsFilePath;
 #ifdef XP_MAC
         FSSpec                  mSpec;
-        OSErr                   mError;
 #else
         char*                   mPath;
 #endif
+        nsresult                mError;
 }; // class nsFileSpec
 
 // FOR HISTORICAL REASONS:
