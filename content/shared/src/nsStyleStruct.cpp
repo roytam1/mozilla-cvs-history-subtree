@@ -53,9 +53,7 @@
 #include "nsLayoutAtoms.h"
 #include "prenv.h"
 
-#ifdef IBMBIDI
 #include "nsBidiUtils.h"
-#endif
 
 inline PRBool IsFixedUnit(nsStyleUnit aUnit, PRBool aEnumOK)
 {
@@ -1003,27 +1001,28 @@ nsChangeHint nsStyleColor::CalcDifference(const nsStyleColor& aOther) const
 //
 
 nsStyleBackground::nsStyleBackground(nsIPresContext* aPresContext)
+  : mBackgroundFlags(NS_STYLE_BG_COLOR_TRANSPARENT | NS_STYLE_BG_IMAGE_NONE),
+    mBackgroundAttachment(NS_STYLE_BG_ATTACHMENT_SCROLL),
+    mBackgroundClip(NS_STYLE_BG_CLIP_BORDER),
+    mBackgroundInlinePolicy(NS_STYLE_BG_INLINE_POLICY_CONTINUOUS),
+    mBackgroundOrigin(NS_STYLE_BG_ORIGIN_PADDING),
+    mBackgroundRepeat(NS_STYLE_BG_REPEAT_XY)
 {
-  mBackgroundFlags = NS_STYLE_BG_COLOR_TRANSPARENT | NS_STYLE_BG_IMAGE_NONE;
   aPresContext->GetDefaultBackgroundColor(&mBackgroundColor);
-  mBackgroundAttachment = NS_STYLE_BG_ATTACHMENT_SCROLL;
-  mBackgroundClip = NS_STYLE_BG_CLIP_BORDER;
-  mBackgroundOrigin = NS_STYLE_BG_ORIGIN_PADDING;
-  mBackgroundRepeat = NS_STYLE_BG_REPEAT_XY;
-  mBackgroundXPosition = mBackgroundYPosition = 0;
 }
 
 nsStyleBackground::nsStyleBackground(const nsStyleBackground& aSource)
+  : mBackgroundFlags(aSource.mBackgroundFlags),
+    mBackgroundAttachment(aSource.mBackgroundAttachment),
+    mBackgroundClip(aSource.mBackgroundClip),
+    mBackgroundInlinePolicy(aSource.mBackgroundInlinePolicy),
+    mBackgroundOrigin(aSource.mBackgroundOrigin),
+    mBackgroundRepeat(aSource.mBackgroundRepeat),
+    mBackgroundXPosition(aSource.mBackgroundXPosition),
+    mBackgroundYPosition(aSource.mBackgroundYPosition),
+    mBackgroundColor(aSource.mBackgroundColor),
+    mBackgroundImage(aSource.mBackgroundImage)
 {
-  mBackgroundAttachment = aSource.mBackgroundAttachment;
-  mBackgroundFlags = aSource.mBackgroundFlags;
-  mBackgroundRepeat = aSource.mBackgroundRepeat;
-  mBackgroundClip = aSource.mBackgroundClip;
-  mBackgroundOrigin = aSource.mBackgroundOrigin;
-  mBackgroundColor = aSource.mBackgroundColor;
-  mBackgroundXPosition = aSource.mBackgroundXPosition;
-  mBackgroundYPosition = aSource.mBackgroundYPosition;
-  mBackgroundImage = aSource.mBackgroundImage;
 }
 
 nsChangeHint nsStyleBackground::CalcDifference(const nsStyleBackground& aOther) const
@@ -1038,11 +1037,18 @@ nsChangeHint nsStyleBackground::CalcDifference(const nsStyleBackground& aOther) 
       (mBackgroundFlags == aOther.mBackgroundFlags) &&
       (mBackgroundRepeat == aOther.mBackgroundRepeat) &&
       (mBackgroundColor == aOther.mBackgroundColor) &&
-      (mBackgroundXPosition == aOther.mBackgroundXPosition) &&
-      (mBackgroundYPosition == aOther.mBackgroundYPosition) &&
       (mBackgroundClip == aOther.mBackgroundClip) &&
+      (mBackgroundInlinePolicy == aOther.mBackgroundInlinePolicy) &&
       (mBackgroundOrigin == aOther.mBackgroundOrigin) &&
-      (mBackgroundImage == aOther.mBackgroundImage))
+      (mBackgroundImage == aOther.mBackgroundImage) &&
+      ((!(mBackgroundFlags & NS_STYLE_BG_X_POSITION_PERCENT) ||
+       (mBackgroundXPosition.mFloat == aOther.mBackgroundXPosition.mFloat)) &&
+       (!(mBackgroundFlags & NS_STYLE_BG_X_POSITION_LENGTH) ||
+        (mBackgroundXPosition.mCoord == aOther.mBackgroundXPosition.mCoord))) &&
+      ((!(mBackgroundFlags & NS_STYLE_BG_Y_POSITION_PERCENT) ||
+       (mBackgroundYPosition.mFloat == aOther.mBackgroundYPosition.mFloat)) &&
+       (!(mBackgroundFlags & NS_STYLE_BG_Y_POSITION_LENGTH) ||
+        (mBackgroundYPosition.mCoord == aOther.mBackgroundYPosition.mCoord))))
     return NS_STYLE_HINT_NONE;
   return NS_STYLE_HINT_VISUAL;
 }
@@ -1114,16 +1120,12 @@ nsChangeHint nsStyleDisplay::CalcDifference(const nsStyleDisplay& aOther) const
 
 nsStyleVisibility::nsStyleVisibility(nsIPresContext* aPresContext)
 {
-#ifdef IBMBIDI
   PRUint32 bidiOptions;
   aPresContext->GetBidi(&bidiOptions);
   if (GET_BIDI_OPTION_DIRECTION(bidiOptions) == IBMBIDI_TEXTDIRECTION_RTL)
     mDirection = NS_STYLE_DIRECTION_RTL;
   else
     mDirection = NS_STYLE_DIRECTION_LTR;
-#else
-  mDirection = NS_STYLE_DIRECTION_LTR;
-#endif // IBMBIDI
 
   aPresContext->GetLanguage(getter_AddRefs(mLanguage));
   mVisible = NS_STYLE_VISIBILITY_VISIBLE;
@@ -1308,9 +1310,7 @@ nsStyleTextReset::nsStyleTextReset(void)
 { 
   mVerticalAlign.SetIntValue(NS_STYLE_VERTICAL_ALIGN_BASELINE, eStyleUnit_Enumerated);
   mTextDecoration = NS_STYLE_TEXT_DECORATION_NONE;
-#ifdef IBMBIDI
   mUnicodeBidi = NS_STYLE_UNICODE_BIDI_NORMAL;
-#endif // IBMBIDI
 }
 
 nsStyleTextReset::nsStyleTextReset(const nsStyleTextReset& aSource) 
@@ -1323,10 +1323,7 @@ nsStyleTextReset::~nsStyleTextReset(void) { }
 nsChangeHint nsStyleTextReset::CalcDifference(const nsStyleTextReset& aOther) const
 {
   if (mVerticalAlign == aOther.mVerticalAlign
-#ifdef IBMBIDI
-      && mUnicodeBidi == aOther.mUnicodeBidi
-#endif // IBMBIDI
-      ) {
+      && mUnicodeBidi == aOther.mUnicodeBidi) {
     if (mTextDecoration != aOther.mTextDecoration)
       return NS_STYLE_HINT_VISUAL;
     return NS_STYLE_HINT_NONE;

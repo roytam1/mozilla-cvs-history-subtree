@@ -158,23 +158,33 @@ struct nsStyleBackground : public nsStyleStruct {
   nsChangeHint CalcDifference(const nsStyleBackground& aOther) const;
 
   // On Linux (others?), there is an extra byte being used up by
-  // inheritance so we only have 3 bytes to fit these 5 things into.
+  // inheritance so we only have 3 bytes to fit these 6 things into.
   // Fortunately, the properties are enums which have few possible
   // values.
-  PRUint8 mBackgroundFlags;          // [reset] See nsStyleConsts.h
-  PRUint8 mBackgroundAttachment : 4; // [reset] See nsStyleConsts.h
-  PRUint8 mBackgroundClip       : 4; // [reset] See nsStyleConsts.h
-  PRUint8 mBackgroundOrigin     : 4; // [reset] See nsStyleConsts.h
-  PRUint8 mBackgroundRepeat     : 4; // [reset] See nsStyleConsts.h
+  PRUint8 mBackgroundFlags;            // [reset] See nsStyleConsts.h
+  PRUint8 mBackgroundAttachment   : 4; // [reset] See nsStyleConsts.h
+  PRUint8 mBackgroundClip         : 3; // [reset] See nsStyleConsts.h
+  PRUint8 mBackgroundInlinePolicy : 2; // [reset] See nsStyleConsts.h
+  PRUint8 mBackgroundOrigin       : 3; // [reset] See nsStyleConsts.h
+  PRUint8 mBackgroundRepeat       : 4; // [reset] See nsStyleConsts.h
+
+  // Note: a member of this union is valid IFF the appropriate bit flag
+  // is set in mBackgroundFlags.
+  union {
+    nscoord mCoord;
+    float   mFloat;
+  } mBackgroundXPosition,         // [reset]
+    mBackgroundYPosition;         // [reset]
 
   nscolor mBackgroundColor;       // [reset]
-  nscoord mBackgroundXPosition;   // [reset]
-  nscoord mBackgroundYPosition;   // [reset]
   nsString mBackgroundImage;      // [reset] absolute url string
 
-  PRBool BackgroundIsTransparent() const {return (mBackgroundFlags &
-    (NS_STYLE_BG_COLOR_TRANSPARENT | NS_STYLE_BG_IMAGE_NONE)) ==
-    (NS_STYLE_BG_COLOR_TRANSPARENT | NS_STYLE_BG_IMAGE_NONE);}
+  PRBool IsTransparent() const
+  {
+    return (mBackgroundFlags &
+            (NS_STYLE_BG_COLOR_TRANSPARENT | NS_STYLE_BG_IMAGE_NONE)) ==
+            (NS_STYLE_BG_COLOR_TRANSPARENT | NS_STYLE_BG_IMAGE_NONE);
+  }
 };
 
 #define BORDER_COLOR_DEFINED      0x80  
@@ -624,9 +634,7 @@ struct nsStyleTextReset : public nsStyleStruct {
   nsChangeHint CalcDifference(const nsStyleTextReset& aOther) const;
   
   PRUint8 mTextDecoration;              // [reset] see nsStyleConsts.h
-#ifdef IBMBIDI
   PRUint8 mUnicodeBidi;                 // [reset] see nsStyleConsts.h
-#endif // IBMBIDI
 
   nsStyleCoord  mVerticalAlign;         // [reset] see nsStyleConsts.h for enums
 };

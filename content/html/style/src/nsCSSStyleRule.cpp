@@ -47,7 +47,6 @@
 #include "nsICSSLoader.h"
 #include "nsIHTMLContentContainer.h"
 #include "nsIURL.h"
-#include "nsIStyleContext.h"
 #include "nsIPresContext.h"
 #include "nsIDocument.h"
 #include "nsIDeviceContext.h"
@@ -967,7 +966,6 @@ CSSImportantRule::CSSImportantRule(nsICSSStyleSheet* aSheet, nsCSSDeclaration* a
   : mDeclaration(aDeclaration),
     mSheet(aSheet)
 {
-  NS_INIT_ISUPPORTS();
 }
 
 CSSImportantRule::~CSSImportantRule(void)
@@ -2152,6 +2150,10 @@ MapColorForDeclaration(nsCSSDeclaration* aDecl, const nsStyleStructID& aID, nsRu
     if (aColor.mBackClip.GetUnit() == eCSSUnit_Null && ourColor->mBackClip.GetUnit() != eCSSUnit_Null)
       aColor.mBackClip = ourColor->mBackClip;
 
+    // background-inline-policy: enum, inherit
+    if (aColor.mBackInlinePolicy.GetUnit() == eCSSUnit_Null && ourColor->mBackInlinePolicy.GetUnit() != eCSSUnit_Null)
+      aColor.mBackInlinePolicy = ourColor->mBackInlinePolicy;
+
     // background-origin: enum, inherit
     if (aColor.mBackOrigin.GetUnit() == eCSSUnit_Null && ourColor->mBackOrigin.GetUnit() != eCSSUnit_Null)
       aColor.mBackOrigin = ourColor->mBackOrigin;
@@ -2270,10 +2272,8 @@ MapTextForDeclaration(nsCSSDeclaration* aDecl, const nsStyleStructID& aID, nsRul
     if (aText.mDecoration.GetUnit() == eCSSUnit_Null && ourText->mDecoration.GetUnit() != eCSSUnit_Null)
       aText.mDecoration = ourText->mDecoration;
 
-#ifdef IBMBIDI
     if (aText.mUnicodeBidi.GetUnit() == eCSSUnit_Null && ourText->mUnicodeBidi.GetUnit() != eCSSUnit_Null)
       aText.mUnicodeBidi = ourText->mUnicodeBidi;
-#endif
   }
 
   return NS_OK;

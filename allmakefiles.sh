@@ -558,6 +558,8 @@ string/Makefile
 string/obsolete/Makefile
 string/public/Makefile
 string/src/Makefile
+string/embed/Makefile
+string/embed/standalone/Makefile
 xpcom/Makefile
 xpcom/base/Makefile
 xpcom/build/Makefile
@@ -827,6 +829,13 @@ extensions/transformiix/source/Makefile
 extensions/transformiix/Makefile
 "
 
+MAKEFILES_tridentprofile="
+extensions/tridentprofile/Makefile
+extensions/tridentprofile/public/Makefile
+extensions/tridentprofile/resources/Makefile
+extensions/tridentprofile/src/Makefile
+"
+
 MAKEFILES_typeaheadfind="
 extensions/typeaheadfind/public/Makefile
 extensions/typeaheadfind/resources/Makefile
@@ -868,6 +877,23 @@ mail/Makefile
 mail/base/Makefile
 mail/components/Makefile
 mail/components/compose/Makefile
+"
+
+MAKEFILES_sql="
+extensions/sql/Makefile
+extensions/sql/base/Makefile
+extensions/sql/base/public/Makefile
+extensions/sql/base/src/Makefile
+extensions/sql/base/resources/Makefile
+extensions/sql/pgsql/public/Makefile
+extensions/sql/pgsql/src/Makefile
+extensions/sql/build/Makefile
+extensions/sql/build/src/Makefile
+extensions/sql/packager/Makefile
+extensions/sql/packager/mac/Makefile
+extensions/sql/packager/unix/Makefile
+extensions/sql/packager/win/Makefile
+extensions/sql/tests/Makefile
 "
 
 
@@ -988,7 +1014,7 @@ fi
 
 # tools/trace-malloc
 if [ "$NS_TRACE_MALLOC" ]; then
-    MAKEFILES_tracemalloc="tools/trace-malloc/Makefile"
+    MAKEFILES_tracemalloc="tools/trace-malloc/Makefile tools/trace-malloc/lib/Makefile"
 fi
 
 # tools/codesighs
@@ -1115,6 +1141,9 @@ for extension in $MOZ_EXTENSIONS; do
         transformiix ) MAKEFILES_extensions="$MAKEFILES_extensions
             $MAKEFILES_transformiix"
             ;;
+        tridentprofile ) MAKEFILES_extensions="$MAKEFILES_extensions
+            $MAKEFILES_tridentprofile"
+            ;;
         universalchardet ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/universalchardet/Makefile
             extensions/universalchardet/src/Makefile
@@ -1173,6 +1202,9 @@ for extension in $MOZ_EXTENSIONS; do
             extensions/interfaceinfo/public/Makefile
             extensions/interfaceinfo/src/Makefile
             " ;;
+        sql ) MAKEFILES_extensions="$MAKEFILES_extensions
+            $MAKEFILES_sql"
+            ;;
     esac
 done
 
@@ -1485,7 +1517,7 @@ MAKEFILES_test_necko="js/src/fdlibm/Makefile js/src/Makefile modules/libreg/Make
 
 MAKEFILES_timebombgen="xpfe/components/timebomb/tools/Makefile"
 
-MAKEFILES_transformiix="js/src/fdlibm/Makefile js/src/Makefile modules/libreg/Makefile string/Makefile xpcom/Makefile expat/Makefile intl/Makefile netwerk/cache/Makefile intl/lwbrk/Makefile sun-java/stubs/Makefile js/jsd/classes/Makefile js/src/liveconnect/Makefile embedding/components/windowwatcher/Makefile modules/zlib/Makefile modules/libimg/png/Makefile jpeg/Makefile modules/libpr0n/public/Makefile modules/libpr0n/src/Makefile xpfe/components/shistory/Makefile webshell/Makefile embedding/components/ui/helperAppDlg/Makefile rdf/util/Makefile rdf/Makefile gfx/src/xlibrgb/Makefile widget/src/gtkxtbin/Makefile modules/plugin/Makefile uriloader/exthandler/Makefile embedding/components/webbrowserpersist/Makefile embedding/browser/webBrowser/Makefile embedding/browser/build/Makefile profile/pref-migrator/Makefile view/Makefile content/xul/content/Makefile content/xul/templates/Makefile content/xul/document/Makefile modules/libjar/Makefile rdf/chrome/Makefile profile/Makefile editor/composer/Makefile editor/txmgr/Makefile embedding/components/commandhandler/Makefile editor/Makefile editor/txtsvc/Makefile embedding/components/jsconsole/Makefile xpfe/components/find/Makefile embedding/components/find/Makefile embedding/components/appstartup/Makefile embedding/components/windowwatcher/Makefile embedding/components/printingui/Makefile embedding/components/build/Makefile embedding/base/Makefile xpfe/appshell/Makefile xpfe/browser/Makefile embedding/components/ui/progressDlg/Makefile xpfe/components/download-manager/Makefile db/mork/Makefile db/mdb/Makefile directory/xpcom/base/Makefile xpfe/components/Makefile docshell/Makefile uriloader/Makefile modules/libutil/Makefile content/Makefile gfx/Makefile xpfe/components/xremote/Makefile widget/Makefile modules/oji/Makefile accessible/Makefile layout/Makefile htmlparser/Makefile xpfe/components/sidebar/Makefile dom/Makefile caps/Makefile js/src/xpconnect/Makefile modules/libpref/Makefile netwerk/mime/Makefile netwerk/protocol/ftp/Makefile netwerk/protocol/gopher/Makefile netwerk/protocol/viewsource/Makefile netwerk/build2/Makefile netwerk/base/Makefile netwerk/protocol/about/Makefile netwerk/protocol/data/Makefile netwerk/protocol/file/Makefile netwerk/protocol/http/Makefile netwerk/protocol/jar/Makefile netwerk/protocol/keyword/Makefile netwerk/protocol/res/Makefile netwerk/dns/Makefile netwerk/socket/Makefile netwerk/streamconv/Makefile netwerk/cookie/Makefile netwerk/build/Makefile intl/chardet/Makefile intl/uconv/Makefile intl/unicharutil/Makefile intl/locale/Makefile extensions/transformiix/Makefile"
+MAKEFILES_transformiix="extensions/transformiix/source/base/Makefile extensions/transformiix/source/lib/Makefile extensions/transformiix/source/main/Makefile extensions/transformiix/source/xml/dom/standalone/Makefile extensions/transformiix/source/xml/dom/Makefile extensions/transformiix/source/xml/dom/mozImpl/Makefile extensions/transformiix/source/xml/parser/Makefile extensions/transformiix/source/xml/Makefile extensions/transformiix/source/xpath/Makefile extensions/transformiix/source/xslt/functions/Makefile extensions/transformiix/source/xslt/util/Makefile extensions/transformiix/source/xslt/Makefile extensions/transformiix/source/Makefile extensions/transformiix/Makefile"
 
 MAKEFILES_txmgr="modules/libreg/Makefile string/Makefile xpcom/Makefile editor/txmgr/Makefile"
 

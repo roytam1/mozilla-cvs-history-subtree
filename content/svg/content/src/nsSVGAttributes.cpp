@@ -100,7 +100,6 @@ nsSVGAttribute::nsSVGAttribute(nsINodeInfo* aNodeInfo,
       mNodeInfo(aNodeInfo),
       mValue(value)
 {
-  NS_INIT_ISUPPORTS();
 }
 
 nsSVGAttribute::~nsSVGAttribute()
@@ -407,7 +406,6 @@ nsSVGAttribute::GetQualifiedName(nsAString& aQualifiedName)const
 nsSVGAttributes::nsSVGAttributes(nsIStyledContent* aContent)
     : mContent(aContent)
 {
-  NS_INIT_ISUPPORTS();
 }
 
 

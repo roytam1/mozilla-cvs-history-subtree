@@ -269,6 +269,8 @@ enum nsDOMClassInfoID {
   // Processing-instruction with target "xml-stylesheet"
   eDOMClassInfo_XMLStylesheetProcessingInstruction_id,
   
+  eDOMClassInfo_ImageDocument_id,
+
   // This one better be the last one in this list
   eDOMClassInfoIDCount
 };
@@ -283,6 +285,7 @@ enum nsDOMClassInfoID {
    nsIXPCScriptable::ALLOW_PROP_MODS_TO_PROTOTYPE |                        \
    nsIXPCScriptable::DONT_ASK_INSTANCE_FOR_SCRIPTABLE |                    \
    nsIXPCScriptable::DONT_REFLECT_INTERFACE_NAMES |                        \
+   nsIXPCScriptable::WANT_NEWRESOLVE |                                     \
    nsIXPCScriptable::WANT_CHECKACCESS |                                    \
    nsIXPCScriptable::WANT_POSTCREATE)
 
@@ -407,7 +410,6 @@ NS_DOMCI_EXTENSION_CONSTRUCTOR_IMP(NS_DOMCI_EXTENSION_NAME(_module))      \
                                                                           \
 NS_DOMCI_EXTENSION_NAME(_module)::NS_DOMCI_EXTENSION_NAME(_module)()      \
 {                                                                         \
-  NS_INIT_ISUPPORTS();                                                    \
 };                                                                        \
                                                                           \
 NS_DOMCI_EXTENSION_NAME(_module)::~NS_DOMCI_EXTENSION_NAME(_module)()     \

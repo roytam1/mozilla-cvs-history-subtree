@@ -140,7 +140,6 @@ nsSVGLength::nsSVGLength(float value,
     : mValueInSpecifiedUnits(value),
       mSpecifiedUnitType(unit)
 {
-  NS_INIT_ISUPPORTS();
   MaybeAddAsObserver();
 }
 

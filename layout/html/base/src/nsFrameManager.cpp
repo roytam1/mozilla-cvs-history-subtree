@@ -45,6 +45,7 @@
 #include "nsPlaceholderFrame.h"
 #include "nsLayoutAtoms.h"
 #include "nsCSSAnonBoxes.h"
+#include "nsCSSPseudoElements.h"
 #include "nsHTMLAtoms.h"
 #ifdef NS_DEBUG
 #include "nsISupportsArray.h"
@@ -75,6 +76,7 @@
 #include "nsPrintfCString.h"
 #include "nsDummyLayoutRequest.h"
 #include "nsLayoutErrors.h"
+#include "nsLayoutUtils.h"
 
 #ifdef MOZ_SVG
 #include "nsISVGContent.h"
@@ -202,25 +204,22 @@ MOZ_DECL_CTOR_COUNTER(UndisplayedNode)
 class UndisplayedNode {
 public:
   UndisplayedNode(nsIContent* aContent, nsIStyleContext* aStyle)
+    : mContent(aContent),
+      mStyle(aStyle),
+      mNext(nsnull)
   {
     MOZ_COUNT_CTOR(UndisplayedNode);
-    mContent = aContent;
-    mStyle = aStyle;
-    NS_ADDREF(mStyle);
-    mNext = nsnull;
-  }
-  ~UndisplayedNode(void)
-  {
-    MOZ_COUNT_DTOR(UndisplayedNode);
-    NS_RELEASE(mStyle);
-    if (mNext) {
-      delete mNext;
-    }
   }
 
-  nsIContent*       mContent;
-  nsIStyleContext*  mStyle;
-  UndisplayedNode*  mNext;
+  ~UndisplayedNode()
+  {
+    MOZ_COUNT_DTOR(UndisplayedNode);
+    delete mNext;
+  }
+
+  nsCOMPtr<nsIContent>      mContent;
+  nsCOMPtr<nsIStyleContext> mStyle;
+  UndisplayedNode*          mNext;
 };
 
 class UndisplayedMap {
@@ -257,6 +256,9 @@ class FrameManager;
 struct CantRenderReplacedElementEvent : public PLEvent {
   CantRenderReplacedElementEvent(FrameManager* aFrameManager, nsIFrame* aFrame, nsIPresShell* aPresShell);
   ~CantRenderReplacedElementEvent();
+  // XXXldb Should the pres shell maintain a reference count on a single
+  // dummy layout request instead of doing creation of a separate one
+  // here (and per-event!)?
   nsresult AddLoadGroupRequest(nsIPresShell* aPresShell);
   nsresult RemoveLoadGroupRequest();
 
@@ -456,7 +458,6 @@ NS_NewFrameManager(nsIFrameManager** aInstancePtrResult)
 
 FrameManager::FrameManager()
 {
-  NS_INIT_ISUPPORTS();
 }
 
 FrameManager::~FrameManager()
@@ -1746,9 +1747,26 @@ FrameManager::ReResolveStyleContext(nsIPresContext* aPresContext,
     else if (pseudoTag) {
       nsIContent* pseudoContent =
           aParentContent ? aParentContent : localContent;
-      aPresContext->ResolvePseudoStyleContextFor(pseudoContent, pseudoTag,
+      if (pseudoTag == nsCSSPseudoElements::before ||
+          pseudoTag == nsCSSPseudoElements::after) {
+        // XXX what other pseudos do we need to treat like this?
+        aPresContext->ProbePseudoStyleContextFor(pseudoContent, pseudoTag,
                                                  parentContext, 
                                                  &newContext);
+        if (!newContext) {
+          // This pseudo should no longer exist; gotta reframe
+          NS_UpdateHint(aMinChange, nsChangeHint_ReconstructFrame);
+          aChangeList.AppendChange(aFrame, pseudoContent,
+                                   nsChangeHint_ReconstructFrame);
+          // We're reframing anyway; just keep the same context
+          newContext = oldContext;
+          NS_ADDREF(newContext);
+        }
+      } else {
+        aPresContext->ResolvePseudoStyleContextFor(pseudoContent, pseudoTag,
+                                                   parentContext, 
+                                                   &newContext);
+      }
       NS_RELEASE(pseudoTag);
     }
     else {
@@ -1856,49 +1874,110 @@ FrameManager::ReResolveStyleContext(nsIPresContext* aPresContext,
 
     // now look for undisplayed child content and pseudos
     if (localContent && mUndisplayedMap) {
-      UndisplayedNode* undisplayed = mUndisplayedMap->GetFirstNode(localContent);
-      while (undisplayed) {
-        nsIStyleContext* undisplayedContext = nsnull;
+      for (UndisplayedNode* undisplayed =
+                                   mUndisplayedMap->GetFirstNode(localContent);
+           undisplayed; undisplayed = undisplayed->mNext) {
+        nsCOMPtr<nsIStyleContext> undisplayedContext;
         undisplayed->mStyle->GetPseudoType(pseudoTag);
         if (pseudoTag == nsnull) {  // child content
           aPresContext->ResolveStyleContextFor(undisplayed->mContent,
-                                               newContext, 
-                                               &undisplayedContext);
+                               newContext, getter_AddRefs(undisplayedContext));
         }
         else if (pseudoTag == nsCSSAnonBoxes::mozNonElement) {
           aPresContext->ResolveStyleContextForNonElement(newContext, 
-                                                         &undisplayedContext);
+                                           getter_AddRefs(undisplayedContext));
         }
         else {  // pseudo element
           NS_NOTREACHED("no pseudo elements in undisplayed map");
           NS_ASSERTION(pseudoTag, "pseudo element without tag");
           aPresContext->ResolvePseudoStyleContextFor(localContent, pseudoTag,
-                                                     newContext,
-                                                     &undisplayedContext);
+                               newContext, getter_AddRefs(undisplayedContext));
         }
         NS_IF_RELEASE(pseudoTag);
         if (undisplayedContext) {
-          const nsStyleDisplay* display = 
-                (const nsStyleDisplay*)undisplayedContext->GetStyleData(eStyleStruct_Display);
+          const nsStyleDisplay* display;
+          ::GetStyleData(undisplayedContext.get(), &display);
           if (display->mDisplay != NS_STYLE_DISPLAY_NONE) {
-            aChangeList.AppendChange(nsnull, ((undisplayed->mContent) ? undisplayed->mContent : localContent), 
+            aChangeList.AppendChange(nsnull,
+                                     undisplayed->mContent
+                                       ? NS_STATIC_CAST(nsIContent*,
+                                                        undisplayed->mContent)
+                                       : localContent, 
                                      NS_STYLE_HINT_FRAMECHANGE);
             // The node should be removed from the undisplayed map when
             // we reframe it.
-            NS_RELEASE(undisplayedContext);
           } else {
             // update the undisplayed node with the new context
-            NS_RELEASE(undisplayed->mStyle);
             undisplayed->mStyle = undisplayedContext;
           }
         }
-        undisplayed = undisplayed->mNext;
       }
     }
 
     aResultChange = aMinChange;
 
     if (!(aMinChange & (nsChangeHint_ReconstructFrame | nsChangeHint_ReconstructDoc))) {
+      if (localContent && localContent->IsContentOfType(nsIContent::eELEMENT)) {
+        // Check for a new :before pseudo and an existing :before
+        // frame, but only if the frame is the first-in-flow.
+        nsIFrame* prevInFlow = nsnull;
+        aFrame->GetPrevInFlow(&prevInFlow);
+        if (!prevInFlow) {
+          // Checking for a :before frame is cheaper than getting the
+          // :before style context.
+          nsIFrame* beforeFrame = nsLayoutUtils::GetBeforeFrame(aFrame,
+                                                                aPresContext);
+          if (!beforeFrame) {
+            // Look for a new :before style context
+            nsCOMPtr<nsIStyleContext> newBeforeContext;
+            aPresContext->ProbePseudoStyleContextFor(localContent,
+                                                     nsCSSPseudoElements::before,
+                                                     newContext,
+                                                     getter_AddRefs(newBeforeContext));
+            if (newBeforeContext) {
+              // Have to create the new :before frame
+              NS_UpdateHint(aMinChange, nsChangeHint_ReconstructFrame);
+              aChangeList.AppendChange(aFrame, content,
+                                       nsChangeHint_ReconstructFrame);
+            }
+          }
+        }
+      }
+    }
+
+    
+    if (!(aMinChange & (nsChangeHint_ReconstructFrame | nsChangeHint_ReconstructDoc))) {
+      if (localContent && localContent->IsContentOfType(nsIContent::eELEMENT)) {
+        // Check for new :after content, but only if the frame is the first-in-flow.
+        nsIFrame* nextInFlow = nsnull;
+        aFrame->GetNextInFlow(&nextInFlow);
+
+        if (!nextInFlow) {
+          // Getting the :after frame is
+          // more expensive than getting the pseudo context, so get the
+          // pseudo context first.
+          nsCOMPtr<nsIStyleContext> newAfterContext;
+          aPresContext->ProbePseudoStyleContextFor(localContent,
+                                                   nsCSSPseudoElements::after,
+                                                   newContext,
+                                                   getter_AddRefs(newAfterContext));
+          if (newAfterContext) {
+            // Check whether we already have an :after frame
+            nsIFrame* afterFrame = nsLayoutUtils::GetAfterFrame(aFrame,
+                                                                aPresContext);
+            if (!afterFrame) {
+              // have to create one 
+              NS_UpdateHint(aMinChange, nsChangeHint_ReconstructFrame);
+              aChangeList.AppendChange(aFrame, content,
+                                       nsChangeHint_ReconstructFrame);
+            }
+          }
+        }        
+      }
+    }
+    
+    if (!(aMinChange & (nsChangeHint_ReconstructFrame | nsChangeHint_ReconstructDoc))) {
+      
       // There is no need to waste time crawling into a frame's children on a frame change.
       // The act of reconstructing frames will force new style contexts to be resolved on all
       // of this frame's descendants anyway, so we want to avoid wasting time processing
@@ -1997,9 +2076,6 @@ FrameManager::ComputeStyleChangeFor(nsIPresContext* aPresContext,
       ReResolveStyleContext(aPresContext, frame, nsnull,
                             aAttrNameSpaceID, aAttribute,
                             aChangeList, aMinChange, frameChange);
-#ifdef NS_DEBUG
-      VerifyStyleTree(aPresContext, frame, nsnull);
-#endif
       NS_UpdateHint(aTopLevelChange, frameChange);
 
       if (aTopLevelChange & (nsChangeHint_ReconstructDoc | nsChangeHint_ReconstructFrame)) {

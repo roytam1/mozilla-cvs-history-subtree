@@ -435,7 +435,6 @@ CSSParserImpl::CSSParserImpl()
     mGroupStack(nsnull),
     mParsingCompoundProperty(PR_FALSE)
 {
-  NS_INIT_ISUPPORTS();
 }
 
 NS_IMETHODIMP
@@ -3749,6 +3748,9 @@ PRBool CSSParserImpl::ParseSingleValueProperty(PRInt32& aErrorCode,
                         nsCSSProps::kBackgroundColorKTable);
   case eCSSProperty_background_image:
     return ParseVariant(aErrorCode, aValue, VARIANT_HUO, nsnull);
+  case eCSSProperty__moz_background_inline_policy:
+    return ParseVariant(aErrorCode, aValue, VARIANT_HK,
+                        nsCSSProps::kBackgroundInlinePolicyKTable);
   case eCSSProperty__moz_background_origin:
     return ParseVariant(aErrorCode, aValue, VARIANT_HK,
                         nsCSSProps::kBackgroundOriginKTable);
@@ -4257,9 +4259,10 @@ PRBool CSSParserImpl::ParseBackground(PRInt32& aErrorCode, nsCSSDeclaration* aDe
   }
 
   // Background properties not settable from the shorthand get reset to their initial value
-  const PRInt32 numResetProps = 2;
+  static const PRInt32 numResetProps = 3;
   static const nsCSSProperty kBackgroundResetIDs[numResetProps] = {
     eCSSProperty__moz_background_clip,
+    eCSSProperty__moz_background_inline_policy,
     eCSSProperty__moz_background_origin
   };
 

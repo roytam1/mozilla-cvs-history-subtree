@@ -105,8 +105,14 @@ nsCSSProps::LookupProperty(const nsACString& aProperty)
 
 nsCSSProperty 
 nsCSSProps::LookupProperty(const nsAString& aProperty) {
-  nsCAutoString theProp; theProp.AssignWithConversion(aProperty);
-  return LookupProperty(theProp);
+  // This is faster than converting and calling
+  // LookupProperty(nsACString&).  The table will do its own
+  // converting and avoid a PromiseFlatCString() call.
+  NS_ASSERTION(gPropertyTable, "no lookup table, needs addref");
+  if (gPropertyTable) {
+    return nsCSSProperty(gPropertyTable->Lookup(aProperty));
+  }  
+  return eCSSProperty_UNKNOWN;
 }
 
 const nsAFlatCString& 
@@ -225,6 +231,13 @@ const PRInt32 nsCSSProps::kBackgroundColorKTable[] = {
 const PRInt32 nsCSSProps::kBackgroundClipKTable[] = {
   eCSSKeyword_border,     NS_STYLE_BG_CLIP_BORDER,
   eCSSKeyword_padding,    NS_STYLE_BG_CLIP_PADDING,
+  -1,-1
+};
+
+const PRInt32 nsCSSProps::kBackgroundInlinePolicyKTable[] = {
+  eCSSKeyword_each_box,     NS_STYLE_BG_INLINE_POLICY_EACH_BOX,
+  eCSSKeyword_continuous,   NS_STYLE_BG_INLINE_POLICY_CONTINUOUS,
+  eCSSKeyword_bounding_box, NS_STYLE_BG_INLINE_POLICY_BOUNDING_BOX,
   -1,-1
 };
 
@@ -968,6 +981,9 @@ static const PRInt32 kBackgroundYPositionKTable[] = {
 
   case eCSSProperty__moz_background_clip:
     return SearchKeywordTable(aValue, kBackgroundClipKTable);
+
+  case eCSSProperty__moz_background_inline_policy:
+    return SearchKeywordTable(aValue, kBackgroundInlinePolicyKTable);
 
   case eCSSProperty__moz_background_origin:
     return SearchKeywordTable(aValue, kBackgroundOriginKTable);
