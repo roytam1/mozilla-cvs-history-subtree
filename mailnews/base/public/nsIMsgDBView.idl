@@ -253,6 +253,7 @@ interface nsIMsgDBView : nsISupports
     readonly attribute string URIForFirstSelectedMessage;
     readonly attribute nsIMsgDBHdr hdrForFirstSelectedMessage;
 	void loadMessageByMsgKey (in nsMsgKey aMsgKey);
+	void reloadMessage();
 
     readonly attribute unsigned long numSelected;
     readonly attribute nsMsgViewIndex firstSelected; // the lowest view index selected.
