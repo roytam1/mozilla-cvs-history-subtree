@@ -1574,6 +1574,9 @@ NS_IMETHODIMP nsImageGTK::DrawToImage(nsIImage* aDstImage,
   if (!dest)
     return NS_ERROR_FAILURE;
   
+  PRInt32 ValidWidth = ( aDWidth < ( dest->mWidth - aDX ) ) ? aDWidth : ( dest->mWidth - aDX ); 
+  PRInt32 ValidHeight = ( aDHeight < ( dest->mHeight - aDY ) ) ? aDHeight : ( dest->mHeight - aDY );
+
   if (!dest->mImagePixmap) {
     dest->CreateOffscreenPixmap(dest->mWidth, dest->mHeight);
   }
@@ -1663,12 +1666,12 @@ NS_IMETHODIMP nsImageGTK::DrawToImage(nsIImage* aDstImage,
   // now composite the two images together
   switch (mAlphaDepth) {
   case 1:
-    for (y=0; y<aDHeight; y++) {
+    for (y=0; y<ValidHeight; y++) {
       PRUint8 *dst = dest->mImageBits + (y+aDY)*dest->mRowBytes + 3*aDX;
       PRUint8 *dstAlpha = dest->mAlphaBits + (y+aDY)*dest->mAlphaRowBytes;
       PRUint8 *src = rgbPtr + y*rgbStride; 
       PRUint8 *alpha = alphaPtr + y*alphaStride;
-      for (int x=0; x<aDWidth; x++, dst+=3, src+=3) {
+      for (int x=0; x<ValidWidth; x++, dst+=3, src+=3) {
 #define NS_GET_BIT(rowptr, x) (rowptr[(x)>>3] &  (1<<(7-(x)&0x7)))
 #define NS_SET_BIT(rowptr, x) (rowptr[(x)>>3] |= (1<<(7-(x)&0x7)))
 
@@ -1686,13 +1689,13 @@ NS_IMETHODIMP nsImageGTK::DrawToImage(nsIImage* aDstImage,
     }
     break;
   case 8:
-    for (y=0; y<aDHeight; y++) {
+    for (y=0; y<ValidHeight; y++) {
       PRUint8 *dst = dest->mImageBits + (y+aDY)*dest->mRowBytes + 3*aDX;
       PRUint8 *dstAlpha = 
         dest->mAlphaBits + (y+aDY)*dest->mAlphaRowBytes + aDX;
       PRUint8 *src = rgbPtr + y*rgbStride; 
       PRUint8 *alpha = alphaPtr + y*alphaStride;
-      for (int x=0; x<aDWidth; x++, dst+=3, dstAlpha++, src+=3, alpha++) {
+      for (int x=0; x<ValidWidth; x++, dst+=3, dstAlpha++, src+=3, alpha++) {
 
         // blend this pixel over the destination image
         unsigned val = *alpha;
@@ -1705,10 +1708,10 @@ NS_IMETHODIMP nsImageGTK::DrawToImage(nsIImage* aDstImage,
     break;
   case 0:
   default:
-    for (y=0; y<aDHeight; y++)
+    for (y=0; y<ValidHeight; y++)
       memcpy(dest->mImageBits + (y+aDY)*dest->mRowBytes + 3*aDX, 
              rgbPtr + y*rgbStride,
-             3*aDWidth);
+             3*ValidWidth);
   }
   if (scaledAlpha)
     nsMemory::Free(scaledAlpha);
