@@ -28,8 +28,10 @@
 
 LDAP_DEPTH	= .
 NSPR_TREE	= ../nsprpub
+NSS_TREE	= ../security
 MOD_DEPTH	= ../nsprpub
-NSPR_VERSION	= 3.5.1
+NSPR_VERSION	= 4.1
+NSS_VERSION	= 3.2
 DEPTH		= ..
 
 include $(NSPR_TREE)/config/rules.mk
@@ -37,9 +39,15 @@ include $(NSPR_TREE)/config/rules.mk
 all export::	FORCE
 	@if [ -d $(NSPR_TREE)/ ]; then \
 		cd $(NSPR_TREE); \
-		$(MAKE); \
 	else \
 		echo "No NSPR $(NSPR_VERSION) directory found"; \
+		exit 0; \
+	fi
+	@if [ -d $(NSS_TREE)/ ]; then \
+		cd $(NSS_TREE); \
+		cd nss; \
+	else \
+		echo "No NSS $(NSS_VERSION) directory found"; \
 		exit 0; \
 	fi
 	@if [ -d $(LDAP_DEPTH)/c-sdk/ldap ]; then \

@@ -1,19 +1,23 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/*
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * The Original Code is Mozilla Communicator client code, released
+ * March 31, 1998.
  *
- * The Initial Developer of this code under the NPL is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s):
  */
 
 /*
@@ -1039,11 +1043,23 @@ get_buffer_tag(byte_buffer *sb )
 
 /* Like ber_get_next, but from a byte buffer the caller already has. */
 /* Bytes_Scanned returns the number of bytes we actually looked at in the buffer. */
+/* ber_get_next_buffer is now implemented in terms of ber_get_next_buffer_ext */
+/* and is here for backward compatibility.  This new function allows us to pass */
+/* the Sockbuf structure along */
 
 unsigned long
 LDAP_CALL
 ber_get_next_buffer( void *buffer, size_t buffer_size, unsigned long *len,
     BerElement *ber, unsigned long *Bytes_Scanned )
+{
+	return (ber_get_next_buffer_ext( buffer, buffer_size, len, ber,
+		Bytes_Scanned, NULL));
+}
+
+unsigned long
+LDAP_CALL
+ber_get_next_buffer_ext( void *buffer, size_t buffer_size, unsigned long *len,
+    BerElement *ber, unsigned long *Bytes_Scanned, Sockbuf *sock )
 {
 	unsigned long	tag = 0, netlen, toread;
 	unsigned char	lc;
@@ -1120,6 +1136,12 @@ ber_get_next_buffer( void *buffer, size_t buffer_size, unsigned long *len,
 			goto premature_exit;
 		}
 #endif /* DOS && !_WIN32 */
+
+                if ( (sock != NULL)  &&
+		    ( sock->sb_options & LBER_SOCKBUF_OPT_MAX_INCOMING_SIZE )
+                    && (*len > sock->sb_max_incoming) ) {
+                        return( LBER_DEFAULT );
+                }
 
 		if ( ber->ber_buf + *len > ber->ber_end ) {
 			if ( nslberi_ber_realloc( ber, *len ) != 0 )

@@ -18,36 +18,36 @@ The "avail" lists included options that are available for use.
 
 
 common.c (supported by all of the tools):
-	raw:	nvEMRHZ0d:D:f:h:I:K:N:O:P:p:Q:W:w:V:X:m:i:k:y:
-	sorted: 0 DEHIKMNOPQRVWXZ dfhikmnpvwy
-	avail:	[2-9] CJY gj (not used by any of the tools)
+	raw:	nvEMRHZ0d:D:f:h:I:K:N:O:P:p:Q:W:w:V:X:m:i:k:y:Y:
+	sorted: 0 DEHIKMNOPQRVWXYZ dfhikmnpvwy
+	avail:	[2-9] CJ gj (not used by any of the tools)
 
 ldapcmp.c:
 	raw:	Bb:l:s:z:
 	sorted:	B blsz
-	all:	0 BDHIKMNOPQRVWXZ bdfhiklmnpsvwyz
+	all:	0 BDHIKMNOPQRVWXYZ bdfhiklmnpsvwyz
 	avail:	[1-9] ACFGJLSTU acegjoqrtu
 
 ldapdelete.c (deprecated)
 	raw:	c
 	sorted:	c
-	all:	0 DHIKMNOPQRVWXZ cdfhikmnpvwy
-	avail:	[1-9] ABCFGJLSTUY abegjloqrstuxz
+	all:	0 DHIKMNOPQRVWXYZ cdfhikmnpvwy
+	avail:	[1-9] ABCFGJLSTU abegjloqrstuxz
 
 ldapmodify.c
 	raw:	aAbcFe:B:q
 	sorted:	ABF abceq
-	all:	0 ABDFHIKMNOPQRVWXZ abcdefhikmnpqvwy
-	avail:	[1-9] CGJLSTUY gjlorstuxz
+	all:	0 ABDFHIKMNOPQRVWXYZ abcdefhikmnpqvwy
+	avail:	[1-9] CGJLSTU gjlorstuxz
 
 ldapmodrdn.c (deprecated)
 	raw:	cr
 	sorted:	cr
-	all:	0 DHIKMNOPQRVWXZ cdfhikmnprvwy
-	avail:	[1-9]  ABCFGJLSTUY abegjloqstuxz
+	all:	0 DHIKMNOPQRVWXYZ cdfhikmnprvwy
+	avail:	[1-9]  ABCFGJLSTU abegjloqstuxz
 
 ldapsearch.c
 	raw:	ABLTU1eotuxa:b:F:G:l:S:s:z:
 	sorted:	1 ABFGLSTU abeostuxz
-	all:	01 ABDFGHIKLMNOPQRSTUVWXZ abdefhikmnopstuvwxyz
-	avail:	[2-9] CJY cgjlqr
+	all:	01 ABDFGHIKLMNOPQRSTUVWXYZ abdefhikmnopstuvwxyz
+	avail:	[2-9] CJ cgjlqr

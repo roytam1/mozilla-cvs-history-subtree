@@ -1,3 +1,25 @@
+/* 
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *  
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *  
+ * The Original Code is Mozilla Communicator client code, released
+ * March 31, 1998.
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ * 
+ * Contributor(s): 
+ */
+
 /*
  * code that is shared by two or more of the LDAP command line tools
  */
@@ -44,7 +66,7 @@ static char * ldaptool_fortezza_err2string( int err );
  * since the description tends to be tool-specific.
  *
  * As of 1-Jul-1998, of the characters in the set [A-Za-z] the following are
- * not currently used by any of the tools: EJYgjqr
+ * not currently used by any of the tools: EJgjqr
  */
 void
 ldaptool_common_usage( int two_hosts )
@@ -92,7 +114,15 @@ ldaptool_common_usage( int two_hosts )
 #endif
     fprintf( stderr, "    -i charset\tcharacter set for command line input (default is locale)\n" );
     fprintf( stderr, "    -k dir\tconversion routine directory (default is .)\n" );
+#if 0
+/*
+ * Suppress usage for -y (old proxied authorization control) even though
+ * we still support it.  We want to encourage people to use -Y instead (the
+ * new proxied authorization control).
+ */
     fprintf( stderr, "    -y proxydn\tDN used for proxy authorization\n" );
+#endif
+    fprintf( stderr, "    -Y proxyid\tproxied authorization id, e.g, dn:uid=bjensen,dc=example,dc=com\n" );
     fprintf( stderr, "    -H\t\tdisplay usage information\n" );
 }
 
@@ -107,7 +137,8 @@ int			ldaptool_not = 0;
 FILE			*ldaptool_fp = NULL;
 char			*ldaptool_progname = "";
 char			*ldaptool_nls_lang = NULL;
-char                    *proxyauth_dn=NULL;
+char                    *proxyauth_id = NULL;
+int			proxyauth_version = 2;	/* use newer proxy control */
 LDAPControl		*ldaptool_request_ctrls[CONTROL_REQUESTS]
 				= {NULL,NULL,NULL,NULL,NULL} ;
 #ifdef LDAP_DEBUG
@@ -262,7 +293,7 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	extra_opts = "";
     }
 
-    common_opts = "nvEMRHZ0d:D:f:h:I:K:N:O:P:p:Q:W:w:V:X:m:i:k:y:";
+    common_opts = "nvEMRHZ0d:D:f:h:I:K:N:O:P:p:Q:W:w:V:X:m:i:k:y:Y:";
 
     /* note: optstring must include room for liblcache "C:" option */
     if (( optstring = (char *) malloc( strlen( extra_opts ) + strlen( common_opts )
@@ -446,9 +477,12 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 		exit( LDAP_NO_MEMORY );
 	    }
 	    break;
-	case 'y':   /* proxied auth control */
-	    proxyauth_dn= strdup(optarg);
-	    if (NULL == proxyauth_dn)
+	case 'y':   /* old (version 1) proxied authorization control */
+		proxyauth_version = 1;
+	case 'Y':   /* new (version 2 ) proxied authorization control */
+		/*FALLTHRU*/
+	    proxyauth_id = strdup(optarg);
+	    if (NULL == proxyauth_id)
 	    {
 		perror( "malloc" );
 		exit( LDAP_NO_MEMORY );
@@ -463,7 +497,8 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	}
     }
     /*
-     * If verbose (-v) flag was passed in, display program name and detailed
+     * If verbose (-v) flag was passed in, display program name and start time.
+     * If the verbose flag was passed at least twice (-vv), also display
      * information about the API library we are running with.
      */
     if ( ldaptool_verbose ) {
@@ -471,7 +506,9 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 
 	curtime = time( NULL );
 	printf( "%s: started %s\n", ldaptool_progname, ctime( &curtime ));
-	print_library_info( &ldai, stdout );
+	if ( ldaptool_verbose > 1 ) {
+	    print_library_info( &ldai, stdout );
+	}
     }
     if ((NULL != pkcs_token) && (NULL != ssl_certname)) {
 	char *result;
@@ -1204,11 +1241,15 @@ ldaptool_create_proxyauth_control( LDAP *ld )
     int rc;
     
 
-    if ( !proxyauth_dn)
+    if ( !proxyauth_id)
 	return( NULL );
 
-    if ( (rc = ldap_create_proxyauth_control( ld, proxyauth_dn, 1, &ctl))
-	 != LDAP_SUCCESS) 
+    if ( 2 == proxyauth_version ) {
+	rc = ldap_create_proxiedauth_control( ld, proxyauth_id, &ctl);
+    } else {
+	rc = ldap_create_proxyauth_control( ld, proxyauth_id, 1, &ctl);
+    }
+    if ( rc != LDAP_SUCCESS) 
     {
 	if (ctl)
 	    ldap_control_free( ctl);

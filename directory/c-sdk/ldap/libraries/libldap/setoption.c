@@ -1,19 +1,23 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/*
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * The Original Code is Mozilla Communicator client code, released
+ * March 31, 1998.
  *
- * The Initial Developer of this code under the NPL is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s):
  */
 /*
  * setoption.c - ldap_set_option implementation 
@@ -33,7 +37,7 @@ int
 LDAP_CALL
 ldap_set_option( LDAP *ld, int option, const void *optdata )
 {
-	int		rc;
+	int		rc, i;
 	char		*matched, *errstr;
 
 	if ( !nsldapi_initialized ) {
@@ -95,7 +99,8 @@ ldap_set_option( LDAP *ld, int option, const void *optdata )
 	}
 
 	rc = 0;
-	if ( ld != &nsldapi_ld_defaults ) {
+	if ( ld != &nsldapi_ld_defaults &&
+		option != LDAP_OPT_EXTRA_THREAD_FN_PTRS) {
 	    LDAP_MUTEX_LOCK( ld, LDAP_OPTION_LOCK );
 	}
 	switch( option ) {
@@ -197,7 +202,6 @@ ldap_set_option( LDAP *ld, int option, const void *optdata )
 		if ( ld->ld_mutex_alloc_fn != NULL &&
 		    ld != &nsldapi_ld_defaults &&
 		    ld->ld_mutex != NULL ) {
-			int i;
 			for( i=0; i<LDAP_MAX_LOCK; i++ ) {
 				ld->ld_mutex[i] = (ld->ld_mutex_alloc_fn)();
 			}
@@ -210,44 +214,25 @@ ldap_set_option( LDAP *ld, int option, const void *optdata )
 
 	/* extra thread function pointers */
 	case LDAP_OPT_EXTRA_THREAD_FN_PTRS:
-        /*
-         * XXXceb removing the full deal extra thread funcs to only 
-         * pick up the threadid.  Should this assumes that the LD 
-         * was nulled prior to setting the functions.?
-         *
-         *  this is how it previously went.
-         *		ld->ld_thread2 = *((struct ldap_extra_thread_fns *) optdata); 
-        */
-	    
-	    /* structure copy */
+	/* The extra thread funcs will only pick up the threadid */
 	    ld->ld_thread2  = *((struct ldap_extra_thread_fns *) optdata);
 	    
-            /*
-	     *
-	    ld->ld_threadid_fn = *((struct ldap_extra_thread_fns *) optdata)ltf_threadid_fn;
-	    */	    
-	    
+	/* Reset the rest of the structure preserving the threadid fn */
 	    ld->ld_mutex_trylock_fn =  (LDAP_TF_MUTEX_TRYLOCK_CALLBACK *)NULL;
 	    ld->ld_sema_alloc_fn = (LDAP_TF_SEMA_ALLOC_CALLBACK *) NULL;
 	    ld->ld_sema_free_fn = (LDAP_TF_SEMA_FREE_CALLBACK *) NULL;
 	    ld->ld_sema_wait_fn = (LDAP_TF_SEMA_WAIT_CALLBACK *) NULL;
 	    ld->ld_sema_post_fn = (LDAP_TF_SEMA_POST_CALLBACK *) NULL;
 
-		
-	
-	/* 
-	 * In the case where the threadid function is being set, the
-	 * LDAP_OPTION_LOCK was acquired without recording the lock
-	 * owner and updating the reference count.  We set that
-	 * information here. 
-	 */ 
-            if (ld->ld_mutex_lock_fn != NULL
-	        && ld->ld_threadid_fn != NULL) {
-	        ld->ld_mutex_threadid[LDAP_OPTION_LOCK] =
-		ld->ld_threadid_fn();
-	        ld->ld_mutex_refcnt[LDAP_OPTION_LOCK] = 1;
+	/* We assume that only one thread is active when replacing */
+	/* the threadid function.  We will now proceed and reset all */
+	/* of the threadid/refcounts */
+	    for( i=0; i<LDAP_MAX_LOCK; i++ ) {
+                ld->ld_mutex_threadid[i] = (void *) -1;
+                ld->ld_mutex_refcnt[i] = 0;
             }
-	    break;
+
+	    return (rc);
 
 	/* DNS function pointers */
 	case LDAP_OPT_DNS_FN_PTRS:

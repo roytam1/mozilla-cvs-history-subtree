@@ -1,19 +1,23 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/*
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * The Original Code is Mozilla Communicator client code, released
+ * March 31, 1998.
  *
- * The Initial Developer of this code under the NPL is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s):
  */
 /*
  *  Copyright (c) 1995 Regents of the University of Michigan.
@@ -64,6 +68,222 @@ struct ldap                     nsldapi_ld_defaults;
 struct ldap_memalloc_fns        nsldapi_memalloc_fns = { 0, 0, 0, 0 };
 int				nsldapi_initialized = 0;
 
+#ifndef _WINDOWS
+#include <pthread.h>
+static pthread_key_t		nsldapi_key;
+
+struct nsldapi_ldap_error {
+        int     le_errno;
+        char    *le_matched;
+        char    *le_errmsg;
+};
+#else
+__declspec ( thread ) int	nsldapi_gldaperrno;
+__declspec ( thread ) char	*nsldapi_gmatched = NULL;
+__declspec ( thread ) char	*nsldapi_gldaperror = NULL; 
+#endif /* _WINDOWS */
+
+
+#ifdef _WINDOWS
+#define	LDAP_MUTEX_T	HANDLE
+
+int
+pthread_mutex_init( LDAP_MUTEX_T *mp, void *attr)
+{
+        if ( (*mp = CreateMutex(NULL, FALSE, NULL)) == NULL )
+                return( 1 );
+        else
+                return( 0 );
+}
+
+static void *
+pthread_mutex_alloc( void )
+{
+        LDAP_MUTEX_T *mutexp;
+
+        if ( (mutexp = malloc( sizeof(LDAP_MUTEX_T) )) != NULL ) {
+                pthread_mutex_init( mutexp, NULL );
+        }
+        return( mutexp );
+}
+
+int
+pthread_mutex_destroy( LDAP_MUTEX_T *mp )
+{
+        if ( !(CloseHandle(*mp)) )
+                return( 1 );
+        else
+                return( 0 );
+}
+
+static void
+pthread_mutex_free( void *mutexp )
+{
+        pthread_mutex_destroy( (LDAP_MUTEX_T *) mutexp );
+        free( mutexp );
+}
+
+int
+pthread_mutex_lock( LDAP_MUTEX_T *mp )
+{
+        if ( (WaitForSingleObject(*mp, INFINITE) != WAIT_OBJECT_0) )
+                return( 1 );
+        else
+                return( 0 );
+}
+
+int
+pthread_mutex_unlock( LDAP_MUTEX_T *mp )
+{
+        if ( !(ReleaseMutex(*mp)) )
+                return( 1 );
+        else
+                return( 0 );
+}
+
+static int
+get_errno( void )
+{
+	return errno;
+}
+
+static void
+set_errno( int Errno )
+{
+	errno = Errno;
+}
+
+static int
+get_ld_error( char **LDMatched, char **LDError, void * Args )
+{
+	if ( LDMatched != NULL )
+	{
+		*LDMatched = nsldapi_gmatched;
+	}
+	if ( LDError != NULL )
+	{
+		*LDError = nsldapi_gldaperror;
+	}
+	return nsldapi_gldaperrno;
+}
+
+static void
+set_ld_error( int LDErrno, char *  LDMatched, char *  LDError,
+	void *  Args )
+{
+	/* Clean up any previous string storage. */
+	if ( nsldapi_gmatched != NULL )
+	{
+		ldap_memfree( nsldapi_gmatched );
+	}
+	if ( nsldapi_gldaperror != NULL )
+	{
+		ldap_memfree( nsldapi_gldaperror );
+	}
+
+	nsldapi_gldaperrno  = LDErrno;
+	nsldapi_gmatched    = LDMatched;
+	nsldapi_gldaperror  = LDError;
+}
+#else
+static void *
+pthread_mutex_alloc( void )
+{
+	pthread_mutex_t *mutexp;
+
+	if ( (mutexp = malloc( sizeof(pthread_mutex_t) )) != NULL ) {
+		pthread_mutex_init( mutexp, NULL );
+	}
+	return( mutexp );
+}
+
+static void
+pthread_mutex_free( void *mutexp )
+{
+	pthread_mutex_destroy( (pthread_mutex_t *) mutexp );
+	free( mutexp );
+}
+
+static void
+set_ld_error( int err, char *matched, char *errmsg, void *dummy )
+{
+        struct nsldapi_ldap_error *le;
+        void *tsd;
+
+        le = pthread_getspecific( nsldapi_key );
+
+        if (le == NULL) {
+                tsd = (void *)calloc(1, sizeof(struct nsldapi_ldap_error));
+                pthread_setspecific( nsldapi_key, tsd );
+        }
+
+        le = pthread_getspecific( nsldapi_key );
+
+        if (le == NULL)
+                return;
+
+        le->le_errno = err;
+
+        if ( le->le_matched != NULL ) {
+                ldap_memfree( le->le_matched );
+        }
+        le->le_matched = matched;
+
+        if ( le->le_errmsg != NULL ) {
+                ldap_memfree( le->le_errmsg );
+        }
+        le->le_errmsg = errmsg;
+}
+
+static int
+get_ld_error( char **matched, char **errmsg, void *dummy )
+{
+        struct nsldapi_ldap_error *le;
+
+        le = pthread_getspecific( nsldapi_key );
+        if ( matched != NULL ) {
+                *matched = le->le_matched;
+        }
+        if ( errmsg != NULL ) {
+                *errmsg = le->le_errmsg;
+        }
+        return( le->le_errno );
+}
+
+static void
+set_errno( int err )
+{
+        errno = err;
+}
+
+static int
+get_errno( void )
+{
+        return( errno );
+}
+#endif /* _WINDOWS */
+
+static struct ldap_thread_fns
+	nsldapi_default_thread_fns = {
+		(void *(*)(void))pthread_mutex_alloc,
+		(void (*)(void *))pthread_mutex_free,
+		(int (*)(void *))pthread_mutex_lock,
+		(int (*)(void *))pthread_mutex_unlock,
+                (int (*)(void))get_errno,
+                (void (*)(int))set_errno,
+                (int (*)(char **, char **, void *))get_ld_error,
+                (void (*)(int, char *, char *, void *))set_ld_error,
+		0 };
+
+static struct ldap_extra_thread_fns
+	nsldapi_default_extra_thread_fns = {
+		0, 0, 0, 0, 0,
+#ifdef _WINDOWS
+		0
+#else
+		(void *(*)(void))pthread_self
+#endif /* _WINDOWS */
+		};
 
 void
 nsldapi_initialize_defaults( void )
@@ -72,6 +292,12 @@ nsldapi_initialize_defaults( void )
 	if ( nsldapi_initialized ) {
 		return;
 	}
+
+#ifndef _WINDOWS
+        if ( pthread_key_create(&nsldapi_key, free ) != 0) {
+                perror("pthread_key_create");
+        }
+#endif /* _WINDOWS */
 
 	nsldapi_initialized = 1;
 	memset( &nsldapi_memalloc_fns, 0, sizeof( nsldapi_memalloc_fns ));
@@ -92,6 +318,20 @@ nsldapi_initialize_defaults( void )
         /* set default connect timeout (in milliseconds) */
         /* this was picked as it is the standard tcp timeout as well */
         nsldapi_ld_defaults.ld_connect_timeout = LDAP_X_IO_TIMEOUT_NO_TIMEOUT;
+
+        /* load up default platform specific locking routines */
+        if (ldap_set_option( NULL, LDAP_OPT_THREAD_FN_PTRS,
+                (void *)&nsldapi_default_thread_fns) != LDAP_SUCCESS) {
+                return;
+        }
+
+#ifndef _WINDOWS
+        /* load up default threadid function */
+        if (ldap_set_option( NULL, LDAP_OPT_EXTRA_THREAD_FN_PTRS,
+                (void *)&nsldapi_default_extra_thread_fns) != LDAP_SUCCESS) {
+                return;
+        }
+#endif /* _WINDOWS */
 }
 
 
@@ -426,7 +666,7 @@ ldap_x_hostlist_statusfree( struct ldap_x_hostlist_status *status )
  *    in anyways.
  */
 void *
-nsldapi_malloc( size_t size )
+ldap_x_malloc( size_t size )
 {
 	return( nsldapi_memalloc_fns.ldapmem_malloc == NULL ?
 	    malloc( size ) :
@@ -435,7 +675,7 @@ nsldapi_malloc( size_t size )
 
 
 void *
-nsldapi_calloc( size_t nelem, size_t elsize )
+ldap_x_calloc( size_t nelem, size_t elsize )
 {
 	return( nsldapi_memalloc_fns.ldapmem_calloc == NULL ?
 	    calloc(  nelem, elsize ) :
@@ -444,7 +684,7 @@ nsldapi_calloc( size_t nelem, size_t elsize )
 
 
 void *
-nsldapi_realloc( void *ptr, size_t size )
+ldap_x_realloc( void *ptr, size_t size )
 {
 	return( nsldapi_memalloc_fns.ldapmem_realloc == NULL ?
 	    realloc( ptr, size ) :
@@ -453,7 +693,7 @@ nsldapi_realloc( void *ptr, size_t size )
 
 
 void
-nsldapi_free( void *ptr )
+ldap_x_free( void *ptr )
 {
 	if ( nsldapi_memalloc_fns.ldapmem_free == NULL ) {
 		free( ptr );

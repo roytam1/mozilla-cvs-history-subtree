@@ -1,6 +1,26 @@
 /*
- * Copyright (c) 1996-2000 Netscape Communications Corp.
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is Mozilla Communicator client code, released
+ * March 31, 1998.
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s):
+ */
+
+/*
  * ldapsinit.c
  */
 
@@ -8,9 +28,21 @@
 
 #if defined( _WINDOWS )
 #include <windows.h>
-#include <errno.h>
 #endif
 
+/* XXX:mhein The following is a workaround for the redefinition of */
+/*           const problem on OSF.  Fix to be provided by NSS */
+/*           This is a pretty benign workaround for us which */
+/*           should not cause problems in the future even if */
+/*           we forget to take it out :-) */
+
+#ifdef OSF1V4D
+#ifndef __STDC__
+#  define __STDC__
+#endif /* __STDC__ */
+#endif /* OSF1V4D */
+
+#include <errno.h>
 #include <nspr.h>
 #include <cert.h>
 #include <key.h>
@@ -22,6 +54,7 @@
 #include <ldap.h>
 #include <ldap_ssl.h>
 #include <ldappr.h>
+#include <pk11func.h>
 
 /*
  * Data structure to hold the standard NSPR I/O function pointers set by

@@ -2,7 +2,7 @@ DEPTH	= ../../..
 NSPR_TREE = ../../../nsprpub
 MOD_DEPTH = ../../../nsprpub
 
-SRCDIRS	= build include libraries
+SRCDIRS	= build include libraries clients/tools
 
 include $(NSPR_TREE)/config/rules.mk
 

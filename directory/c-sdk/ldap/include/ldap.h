@@ -1,20 +1,25 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/*
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * The Original Code is Mozilla Communicator client code, released
+ * March 31, 1998.
  *
- * The Initial Developer of this code under the NPL is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s):
  */
+
 /* ldap.h - general header file for libldap */
 #ifndef _LDAP_H
 #define _LDAP_H
@@ -63,8 +68,8 @@ extern "C" {
 #define LDAP_VERSION_MIN	LDAP_VERSION1
 #define LDAP_VERSION_MAX	LDAP_VERSION3
 
-#define LDAP_VENDOR_VERSION	410	/* version # * 100 */
-#define LDAP_VENDOR_NAME	"Netscape Communications Corp."
+#define LDAP_VENDOR_VERSION	500	/* version # * 100 */
+#define LDAP_VENDOR_NAME	"Iplanet A Sun|Netscape Alliance"
 /*
  * The following will be an RFC number once the LDAP C API Internet Draft
  * is published as a Proposed Standard RFC.  For now we use 2000 + the
@@ -322,7 +327,8 @@ typedef struct ldap_apifeature_info {
 #define LDAP_CONTROL_ENTRYCHANGE	"2.16.840.1.113730.3.4.7"
 #define LDAP_CONTROL_VLVREQUEST    	"2.16.840.1.113730.3.4.9"
 #define LDAP_CONTROL_VLVRESPONSE	"2.16.840.1.113730.3.4.10"
-#define LDAP_CONTROL_PROXYAUTH		"2.16.840.1.113730.3.4.12"
+#define LDAP_CONTROL_PROXYAUTH		"2.16.840.1.113730.3.4.12" /* version 1 */
+#define LDAP_CONTROL_PROXIEDAUTH	"2.16.840.1.113730.3.4.18" /* version 2 */
 
 /* Authentication request and response controls */
 #define LDAP_CONTROL_AUTH_REQUEST	"2.16.840.1.113730.3.4.16"
@@ -593,11 +599,17 @@ LDAP_API(int) LDAP_CALL ldap_parse_entrychange_control( LDAP *ld,
 
 
 /*
- * Routine for creating the Proxied Authorization control (an LDAPv3
+ * Routines for creating Proxied Authorization controls (an LDAPv3
  * extension -- LDAP_API_FEATURE_PROXY_AUTHORIZATION)
+ * ldap_create_proxyauth_control() is for the old (version 1) control.
+ * ldap_create_proxiedauth_control() is for the newer (version 2) control.
+ * Version 1 is supported by iPlanet Directory Server 4.1 and later.
+ * Version 2 is supported by iPlanet Directory Server 5.0 and later.
  */
 LDAP_API(int) LDAP_CALL ldap_create_proxyauth_control( LDAP *ld,
 	const char *dn, const char ctl_iscritical, LDAPControl **ctrlp );
+LDAP_API(int) LDAP_CALL ldap_create_proxiedauth_control( LDAP *ld,
+	const char *authzid, LDAPControl **ctrlp );
 
 
 /*
@@ -675,7 +687,10 @@ LDAP_API(void) LDAP_CALL ldap_mods_free( LDAPMod **mods, int freemods );
 /*
  * Preferred language and get_lang_values (an API extension --
  * LDAP_API_FEATURE_X_GETLANGVALUES)
+ *
+ * The following two APIs are deprecated 
  */
+
 #define LDAP_OPT_PREFERRED_LANGUAGE	0x14	/* 20 - API extension */
 LDAP_API(char **) LDAP_CALL ldap_get_lang_values( LDAP *ld, LDAPMessage *entry,
 	const char *target, char **type );
@@ -1034,6 +1049,8 @@ struct ldap_dns_fns {
 #define	LDAP_X_OPT_CONNECT_TIMEOUT    (LDAP_OPT_PRIVATE_EXTENSION_BASE + 0x0F01)
         /* 0x4000 + 0x0F01 = 0x4F01 = 20225 - API extension */
 
+
+
 /********* the functions in the following section are experimental ***********/
 
 /*
@@ -1053,6 +1070,15 @@ struct ldap_memalloc_fns {
 	LDAP_REALLOC_CALLBACK	*ldapmem_realloc;
 	LDAP_FREE_CALLBACK	*ldapmem_free;
 };
+
+
+/*
+ * Memory allocation functions (an API extension)
+ */
+void *ldap_x_malloc( size_t size );
+void *ldap_x_calloc( size_t nelem, size_t elsize );
+void *ldap_x_realloc( void *ptr, size_t size );
+void ldap_x_free( void *ptr );
 
 
 /*

@@ -1,19 +1,23 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/*
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * The Original Code is Mozilla Communicator client code, released
+ * March 31, 1998.
  *
- * The Initial Developer of this code under the NPL is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s):
  */
 #ifndef _LDAPINT_H
 #define _LDAPINT_H
@@ -541,10 +545,10 @@ extern int				nsldapi_initialized;
  * following macros. This is so we can plug-in alternative memory
  * allocators, etc. as the need arises.
  */
-#define NSLDAPI_MALLOC( size )		nsldapi_malloc( size )
-#define NSLDAPI_CALLOC( nelem, elsize )	nsldapi_calloc( nelem, elsize )
-#define NSLDAPI_REALLOC( ptr, size )	nsldapi_realloc( ptr, size )
-#define NSLDAPI_FREE( ptr )		nsldapi_free( ptr )
+#define NSLDAPI_MALLOC( size )		ldap_x_malloc( size )
+#define NSLDAPI_CALLOC( nelem, elsize )	ldap_x_calloc( nelem, elsize )
+#define NSLDAPI_REALLOC( ptr, size )	ldap_x_realloc( ptr, size )
+#define NSLDAPI_FREE( ptr )		ldap_x_free( ptr )
 
 
 /*
@@ -611,11 +615,7 @@ int nsldapi_parse_result( LDAP *ld, int msgtype, BerElement *rber,
  */
 void nsldapi_initialize_defaults( void );
 int nsldapi_open_ldap_defconn( LDAP *ld );
-void *nsldapi_malloc( size_t size );
-void *nsldapi_calloc( size_t nelem, size_t elsize );
-void *nsldapi_realloc( void *ptr, size_t size );
-void nsldapi_free( void *ptr );
-char *nsldapi_strdup( const char *s );	/* if s is NULL, returns NULL */
+char *nsldapi_strdup( const char *s );  /* if s is NULL, returns NULL */
 
 /*
  * in os-ip.c

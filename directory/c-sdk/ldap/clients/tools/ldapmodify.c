@@ -1,3 +1,25 @@
+/* 
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *  
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *  
+ * The Original Code is Mozilla Communicator client code, released
+ * March 31, 1998.
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ * 
+ * Contributor(s): 
+ */
+
 /* ldapmodify.c - generic program to modify or add entries using LDAP */
 
 #include "ldaptool.h"
@@ -859,8 +881,25 @@ domodify( char *dn, LDAPMod **pmods, int newentry )
 
     if ( !ldaptool_not ) {
 	if ( newentry ) {
-	    i = ldaptool_add_ext_s( ld, dn, pmods, ldaptool_request_ctrls,
-		    NULL, "ldap_add" );
+	unsigned int	sleep_interval = 2; /* seconds */
+
+	    while ((i = ldaptool_add_ext_s( ld, dn, pmods,
+			ldaptool_request_ctrls, NULL, "ldap_add" ))
+			== LDAP_BUSY) {
+		if ( sleep_interval > 3600 ) {
+			printf("ldap_add: Unable to complete request.  ");
+			printf("Server is too ");
+			printf("busy servicing other requests\n");
+			break;
+		}
+		if ( !ldapmodify_quiet ) {
+			printf("ldap_add: LDAP_BUSY returned by server.  ");
+			printf("Will retry operation ");
+			printf("in %d seconds\n", sleep_interval); 
+		}
+		sleep( sleep_interval );
+		sleep_interval *= 2;
+	    }
 	} else {
 	    i = ldaptool_modify_ext_s( ld, dn, pmods, ldaptool_request_ctrls,
 		    NULL, "ldap_modify" );

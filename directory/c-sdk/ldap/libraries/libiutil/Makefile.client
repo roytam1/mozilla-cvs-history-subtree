@@ -1,0 +1,64 @@
+DEPTH		= ../../../../..
+NS_DEPTH	= ../../../..
+MOD_DEPTH       = ../../../../../nsprpub
+NSPR_TREE	= ../../../../../nsprpub
+LDAP_SRC	= ../..
+NSCP_DISTDIR	= ../../../../../dist
+
+include		$(NSPR_TREE)/config/rules.mk
+include		../../../build.mk
+
+SRCS		= iutil-lock.c
+
+REALOBJS	= $(SRCS:.c=.o)
+
+IUTILOBJDEST	= $(OBJDIR_NAME)
+OBJS		= $(addprefix $(IUTILOBJDEST)/, $(REALOBJS))
+
+HDIR		= $(LDAP_SRC)/include
+
+LIBIUTIL	= $(addprefix $(IUTILOBJDEST)/, \
+		  lib$(IUTIL_LIBNAME).$(LIB_SUFFIX))
+INSTALLDIR      = $(DEPTH)/dist/$(OBJDIR_NAME)
+
+LOCAL_INCLUDES  = -I$(PUBLIC)/nspr
+INCLUDES	+= -I$(HDIR) -I$(INSTALLDIR)/include -I../../../../../dist/include
+DEFINES		+= $(DEFS)
+
+PLATFORMCFLAGS	= -DUSE_WAITPID -DNEEDPROTOS
+PLATFORMLIBS	=
+THREADS		=
+THREADSLIB	=
+
+###########################################################################
+
+versiont.c:	Makefile.client Version.c
+	@$(RM) $@
+	@(u="$${USER-root}" v="$(shell cat ../../build/version)" d="$(shell pwd)" \
+	h="$(shell hostname)" t="$(shell date)"; $(SED) -e "s|%WHEN%|$${t}|" \
+	-e "s|%WHOANDWHERE%|$${u}@$${h}:$${d}|" \
+	-e "s|%VERSION%|$${v}|" \
+	< Version.c > $@)
+
+all::    $(OBJDEST) $(LIBDIR) $(OBJS) $(LIBIUTIL)
+
+$(LIBDIR):
+	$(MKDIR) $(LIBDIR)
+
+$(LIBIUTIL): $(OBJS) $(LIBDIR)
+	@echo ======= making $(LIBIUTIL)
+ifdef SO_FILES_TO_REMOVE
+	-$(RM) $(SO_FILES_TO_REMOVE)
+endif
+	$(LINK_LIB)
+
+veryclean:: clean
+
+clean::
+	$(RM) $(OBJS) $(LIBIUTIL)
+
+$(OBJDEST):
+	$(MKDIR) $(OBJDEST)
+
+install::	$(LIBIUTIL)
+	$(INSTALL) -m 444 $(LIBIUTIL) $(INSTALLDIR)/lib

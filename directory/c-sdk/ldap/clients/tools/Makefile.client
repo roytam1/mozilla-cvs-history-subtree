@@ -1,0 +1,119 @@
+DEPTH           = ../../../../..
+NS_DEPTH        = ../../../..
+MOD_DEPTH       = ../../../../../nsprpub
+NSPR_TREE       = ../../../../../nsprpub
+LDAP_SRC	= ../..
+NSCP_DISTDIR	= ../../../../../dist
+
+include		$(NSPR_TREE)/config/rules.mk
+include		../../../build.mk
+
+INSTALLDIR      = $(DEPTH)/dist/$(OBJDIR_NAME)
+
+INCLUDES	+= -I$(HDIR) -I$(INSTALLDIR)/include \
+		-I../../../../../dist/include \
+		-I../../../../../dist/public/security \
+		-I../../../ldap/include
+
+DEFINES         += $(DEFS)
+
+CXXSRCS		= convutf8.cpp
+
+OBJDEST		= $(OBJDIR_NAME)
+BINDIR		= $(OBJDIR_NAME)/bin
+LIBDIR		= $(OBJDIR_NAME)/lib
+
+LDAPDELETE_OBJ		= $(addprefix $(OBJDEST)/, ldapdelete.o)
+LDAPMODIFY_OBJ		= $(addprefix $(OBJDEST)/, ldapmodify.o) \
+			  $(addprefix $(OBJDEST)/, fileurl.o) 
+LDAPSEARCH_OBJ		= $(addprefix $(OBJDEST)/, ldapsearch.o) \
+			  $(addprefix $(OBJDEST)/, fileurl.o) 
+LDAPCMP_OBJ     	= $(addprefix $(OBJDEST)/, ldapcmp.o)
+LDAPTOOLCOMMON_OBJ	= $(addprefix $(OBJDEST)/, common.o) \
+			  $(addprefix $(OBJDEST)/, convutf8.o) \
+			  $(addprefix $(OBJDEST)/, argpin.o) \
+			  $(addprefix $(OBJDEST)/, ntuserpin.o)
+
+CLIENT_OBJS = $(LDAPDELETE_OBJ) $(LDAPMODIFY_OBJ) \
+	$(LDAPSEARCH_OBJ) $(LDAPCMP_OBJ) $(LDAPTOOLCOMMON_OBJ)
+
+LDAPDELETE = $(addprefix $(BINDIR)/, $(addsuffix $(EXE_SUFFIX), ldapdelete))
+LDAPMODIFY = $(addprefix $(BINDIR)/, $(addsuffix $(EXE_SUFFIX), ldapmodify))
+LDAPSEARCH = $(addprefix $(BINDIR)/, $(addsuffix $(EXE_SUFFIX), ldapsearch))
+LDAPCMP    = $(addprefix $(BINDIR)/, $(addsuffix $(EXE_SUFFIX), ldapcmp))
+
+BINS=	 $(LDAPDELETE) $(LDAPMODIFY) $(LDAPSEARCH) $(LDAPCMP)
+
+ifeq ($(OS_ARCH), WINNT)
+LDTOOLS_LIBS += $(LIBNSPR)
+else
+LDTOOLS_LIBS += $(DYNAMICNSPR)
+endif
+
+ifeq ($(OS_ARCH), AIX)
+LDTOOLS_LIBS += $(EXE_EXTRA_LIBS)
+endif 
+
+ifeq ($(OS_ARCH), SunOS)
+EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
+	     -l$(LDIF_LIBNAME) -l$(SSLDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
+             -L$(NSCP_DISTDIR)/lib -l$(SVRCORE_LIBNAME) \
+	     -l$(SSL_LIBNAME) -l$(SSL_LIBNAME) \
+	     -ldbm -lthread -lposix4 -lsocket -lnls \
+	     -ldl -lresolv -lgen 
+EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
+endif
+
+LDTOOLS_LIBS += $(EXTRA_LIBS)
+LIBLOCATION   = $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib
+
+###########################################################################
+
+all::	$(OBJDEST) libdir $(BINS)
+
+libdir:
+	$(NSINSTALL) $(LIBLOCATION)/lib$(LDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(LIBLOCATION)/lib$(PRLDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(LIBLOCATION)/lib$(SSLDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(NSCP_DISTDIR)/lib/$(PLC_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(NSCP_DISTDIR)/lib/$(PLDS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(NSCP_DISTDIR)/lib/$(NSPR_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(NSCP_DISTDIR)/lib/lib$(SSL_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(NSCP_DISTDIR)/lib/lib$(NSS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+ifeq ($(COPYFREEBL), 1)
+        $(NSINSTALL) $(NSCP_DISTDIR)/lib/lib$(HYBRID_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+        $(NSINSTALL) $(NSCP_DISTDIR)/lib/lib$(PURE32_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+endif
+
+$(LDAPTOOLCOMMON_OBJ):
+
+$(LDAPDELETE):	$(LDAPDELETE_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDTOOLS_LIBS_DEP)
+	$(LINK_EXE) $(LDAPDELETE_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDTOOLS_LIBS)
+
+$(LDAPMODIFY):	$(LDAPMODIFY_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDTOOLS_LIBS_DEP)
+	$(LINK_EXE) $(LDAPMODIFY_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDTOOLS_LIBS)
+
+$(LDAPSEARCH):	$(LDAPSEARCH_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDTOOLS_LIBS_DEP)
+	$(LINK_EXE) $(LDAPSEARCH_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDTOOLS_LIBS)
+
+$(LDAPCMP):	$(LDAPCMP_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDTOOLS_LIBS_DEP)
+	$(LINK_EXE) $(LDAPCMP_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDTOOLS_LIBS)
+
+$(OBJDEST):
+	$(NSINSTALL) -D $(OBJDEST)
+	$(NSINSTALL) -D $(BINDIR)
+	$(NSINSTALL) -D $(LIBDIR)
+
+clean::
+	$(RM) $(CLIENT_OBJS)
+	$(RM) $(BINS)
+
+#
+# Simple, local dependencies
+#
+LDAPTOOL_COMMON_DEPS = ldaptool.h Makefile
+$(LDAPTOOLCOMMON_OBJ):	$(LDAPTOOL_COMMON_DEPS)
+$(LDAPDELETE_OBJ):	$(LDAPTOOL_COMMON_DEPS)
+$(LDAPMODIFY_OBJ):	$(LDAPTOOL_COMMON_DEPS) fileurl.h
+$(LDAPSEARCH_OBJ):	$(LDAPTOOL_COMMON_DEPS) fileurl.h
+$(LDAPCMP_OBJ):		$(LDAPTOOL_COMMON_DEPS)

@@ -1,19 +1,23 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/*
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * The Original Code is Mozilla Communicator client code, released
+ * March 31, 1998.
  *
- * The Initial Developer of this code under the NPL is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s):
  */
 #include "ldap-int.h"
 
@@ -83,7 +87,8 @@ ldap_get_option( LDAP *ld, int option, void *optdata )
 	}
 
 
-	LDAP_MUTEX_LOCK( ld, LDAP_OPTION_LOCK );
+	if (ld != &nsldapi_ld_defaults)
+		LDAP_MUTEX_LOCK( ld, LDAP_OPTION_LOCK );
 	switch( option ) {
 #ifdef LDAP_DNS
 	case LDAP_OPT_DNS:
@@ -252,8 +257,8 @@ ldap_get_option( LDAP *ld, int option, void *optdata )
 		LDAP_SET_LDERRNO( ld, LDAP_PARAM_ERROR, NULL, NULL );
 		rc = -1;
 	}
-
-	LDAP_MUTEX_UNLOCK( ld, LDAP_OPTION_LOCK  );
+	if (ld != &nsldapi_ld_defaults)
+		LDAP_MUTEX_UNLOCK( ld, LDAP_OPTION_LOCK  );
 	return( rc );
 }
 

@@ -1,6 +1,26 @@
 /*
- * Copyright (c) 1996 Netscape Communications Corp.
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is Mozilla Communicator client code, released
+ * March 31, 1998.
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s):
+ */
+
+/*
  * clientinit.c
  */
 
@@ -16,14 +36,23 @@
 #include <plstr.h>
 #include <cert.h>
 #include <key.h>
-#include <secrng.h>	/* for RNG_RNGInit() and RNG_SystemInfoForRNG() */
-#include <secmod.h>	/* for SECMOD_init() */
 #include <ssl.h>
 #include <sslproto.h>
 #include <ldap.h>
 #include <ldap_ssl.h>
 #include <nss.h>
 
+/* XXX:mhein The following is a workaround for the redefinition of */
+/*	     const problem on OSF.  Fix to be provided by NSS */
+/*	     This is a pretty benign workaround for us which */
+/*	     should not cause problems in the future even if */
+/*	     we forget to take it out :-) */
+
+#ifdef OSF1V4D
+#ifndef __STDC__
+#  define __STDC__
+#endif /* __STDC__ */
+#endif /* OSF1V4D */
 
 #ifndef FILE_PATHSEP
 #define FILE_PATHSEP '/'
@@ -39,6 +68,72 @@ static int		inited = 0;
 static int ssl_strength = LDAPSSL_AUTH_CERT;
 static char  tokDes[34] = "Internal (Software) Database     ";
 static char ptokDes[34] = "Internal (Software) Token        ";
+
+
+/* IN:					     */
+/* string:	/u/mhein/.netscape/mykey3.db */
+/* OUT:					     */
+/* dir: 	/u/mhein/.netscape/	     */
+/* prefix:	my			     */
+/* key:		key3.db			     */
+
+static int
+splitpath(char *string, char *dir, char *prefix, char *key) {
+        char *k;
+        char *s;
+        char *d = string;
+        char *l;
+        int  len = 0;
+
+
+        if (string == NULL)
+                return (-1);
+
+        /* goto the end of the string, and walk backwards until */
+        /* you get to the first pathseparator */
+        len = PL_strlen(string);
+        l = string + len - 1;
+        while (l != string && *l != '/' && *l != '\\')
+                        l--;
+        /* search for the .db */
+        if ((k = PL_strstr(l, ".db")) != NULL) {
+                /* now we are sitting on . of .db */
+
+                /* move backward to the first 'c' or 'k' */
+                /* indicating cert or key */
+                while (k != l && *k != 'c' && *k != 'k')
+                        k--;
+
+                /* move backwards to the first path separator */
+                if (k != d && k > d)
+                        s = k - 1;
+                while (s != d && *s != '/' && *s != '\\')
+                        s--;
+
+                /* if we are sitting on top of a path */
+                /* separator there is no prefix */
+                if (s + 1 == k) {
+                        /* we know there is no prefix */
+                        prefix = '\0';
+                        PL_strcpy(key, k);
+                        *k = '\0';
+                        PL_strcpy(dir, d);
+                } else {
+                        /* grab the prefix */
+                        PL_strcpy(key, k);
+                        *k = '\0';
+                        PL_strcpy(prefix, ++s);
+                        *s = '\0';
+                        PL_strcpy(dir, d);
+                }
+        } else {
+                /* neither *key[0-9].db nor *cert[0=9].db found */
+                return (-1);
+        }
+
+	return (0);
+}
+
 
 static PRStatus local_SSLPLCY_Install(void)
 {
@@ -63,10 +158,6 @@ ldapssl_basic_init( void )
     PR_Init(PR_USER_THREAD, PR_PRIORITY_NORMAL, 0);
 
     PR_SetConcurrency( 4 );	/* work around for NSPR 3.x I/O hangs */
-
-    /* Initilize NSS' random number generator */
-    RNG_SystemInfoForRNG();
-    RNG_RNGInit();
 }
 
 
@@ -254,131 +345,28 @@ ldapssl_clientauth_init( const char *certdbpath, void *certdbhandle,
 
 {
 
-    char		*certdbName, *keydbName, *s;
-    static char         *secmodname =  "secmod.db";
-    int			rc, len, use_default_db;
-    SECStatus		rv;
-    CERTCertDBHandle	*certdbh;
-    SECKEYKeyDBHandle	*keydbh;
+    int	rc;
      
     /*
      *     LDAPDebug(LDAP_DEBUG_TRACE, "ldapssl_clientauth_init\n",0 ,0 ,0);
      */
+
     if ( inited ) {
 	return( 0 );
     }
 
     ldapssl_basic_init();
 
-    certdbh = (CERTCertDBHandle *)certdbhandle;
-    if ( certdbh == NULL ) {
-	/* XXXmcs: certdbh is leaked... */
-	if (( certdbh = (CERTCertDBHandle *)ldapssl_calloc( 1,
-		sizeof( CERTCertDBHandle ))) == NULL ) {
-	    rc = PR_GetError();
-	    return( rc == 0 ? -1 : rc );
-	}
-    } else {
-	memset( certdbh, 0, sizeof( CERTCertDBHandle ));
-    }
-
-    use_default_db = ( certdbpath == NULL || *certdbpath == '\0' );
-    if ( use_default_db ) {
-	certdbName = NULL;
-    } else if (( len = PL_strlen( certdbpath )) > 3
-	    && PL_strcasecmp( ".db", certdbpath + len - 3 ) == 0 ) {
-	certdbName = GetDBName(certdbpath, NULL);
-    } else {
-	certdbName = GetDBName("cert7.db", certdbpath);
-    }
 
     /* Open the certificate database */
-    rv = CERT_OpenCertDBFilename(certdbh, certdbName, PR_TRUE);
-    if ( certdbName != NULL ) ldapssl_free((void **)&certdbName);
-    if (rv != SECSuccess && !use_default_db) {
-	/* fallback:  try to open cert5.db (version 5 database) */
-	if (( certdbName = GetDBName("cert5.db", certdbpath)) != NULL ) {
-	    rv = CERT_OpenCertDBFilename(certdbh, certdbName, PR_TRUE);
-	    ldapssl_free((void **)&certdbName);
-	}
-    }
+    NSS_Init(certdbpath);
 
-    if (rv != SECSuccess) {
+    if (SSL_OptionSetDefault(SSL_ENABLE_SSL2, PR_FALSE)
+	    || SSL_OptionSetDefault(SSL_ENABLE_SSL3, PR_TRUE)) {
 	if (( rc = PR_GetError()) >= 0 ) {
 	    rc = -1;
 	}
 	return( rc );
-    }
-    CERT_SetDefaultCertDB(certdbh);
-
-    if (SSL_EnableDefault(SSL_ENABLE_SSL2, PR_FALSE)
-	    || SSL_EnableDefault(SSL_ENABLE_SSL3, PR_TRUE)) {
-	if (( rc = PR_GetError()) >= 0 ) {
-	    rc = -1;
-	}
-	return( rc );
-    }
-
-    if ( needkeydb ) {
-	/* XXXmcs: keydbh is leaked */
-	if (( keydbh = (SECKEYKeyDBHandle *)keydbhandle ) == NULL ) {
-	    if (( keydbh = (SECKEYKeyDBHandle *)ldapssl_calloc( 1,
-		    sizeof( SECKEYKeyDBHandle ))) == NULL ) {
-		rc = PR_GetError();
-		return( rc == 0 ? -1 : rc );
-	    }
-	} else {
-	    memset( keydbh, 0, sizeof( SECKEYKeyDBHandle ));
-	}
-
-	use_default_db = ( keydbpath == NULL || *keydbpath == '\0' );
-
-	if ( use_default_db ) {
-	    keydbName = NULL;
-	} else if (( len = PL_strlen( keydbpath )) > 3
-		&& PL_strcasecmp( ".db", keydbpath + len - 3 ) == 0 ) {
-	    keydbName = GetDBName(keydbpath, NULL);
-	} else {
-	    keydbName = GetDBName("key3.db", keydbpath);
-	}
-
-	keydbh = SECKEY_OpenKeyDBFilename( keydbName, PR_TRUE );
-	keydbName = NULL;	/* OpenKeyDBFilename() frees keydbName! */
-	if ( keydbh == NULL ) {
-	    rc = PR_GetError();
-	    return( rc == 0 ? -1 : rc );
-	}
-
-	SECKEY_SetDefaultKeyDB( keydbh );
-    }
-
-    /*
-     * SECMOD_init() should be done last (after key and cert dbs are open)
-     */
-
-    if (( len = PL_strlen( certdbpath )) > 3
-	&& PL_strcasecmp( ".db", certdbpath + len - 3 ) == 0 ) {
-	s = ldapssl_strdup(certdbpath);
-	if (PL_strrchr( s, FILE_PATHSEP )) {
-	    char *s2;
-	    
-	    *(PL_strrchr(s, FILE_PATHSEP)) = '\0';
-	    s2 = buildDBName( s, secmodname);
-	    SECMOD_init( s2 );
-	    ldapssl_free((void **) &s2 );
-	    ldapssl_free((void **) &s );
-	}	
-	else 
-	{
-	    SECMOD_init( secmodname );		
-	}
-	
-    }
-    else
-    {
-	s = buildDBName( certdbpath, secmodname);
-	SECMOD_init( s );
-	ldapssl_free((void **) &s );
     }
 
 
@@ -470,135 +458,17 @@ ldapssl_advclientauth_init(
     const int sslstrength )
 {
 
-    char		*certdbName, *keydbName, *secmoddbName, *s;
-    static char         *secmodname =  "secmod.db";
-    
-    int			rc, len, use_default_db;
-    SECStatus		rv;
-    CERTCertDBHandle	*certdbh;
-    SECKEYKeyDBHandle	*keydbh;
-
-
     if ( inited ) {
 	return( 0 );
     }
+
     /*
      *    LDAPDebug(LDAP_DEBUG_TRACE, "ldapssl_advclientauth_init\n",0 ,0 ,0);
      */
 
-
     ldapssl_basic_init();
 
-    certdbh = (CERTCertDBHandle *)certdbhandle;
-    if ( certdbh == NULL ) {
-	if (( certdbh = (CERTCertDBHandle *)ldapssl_calloc( 1,
-		sizeof( CERTCertDBHandle ))) == NULL ) {
-	    rc = PR_GetError();
-	    return( rc == 0 ? -1 : rc );
-	}
-    } else {
-	memset( certdbh, 0, sizeof( CERTCertDBHandle ));
-    }
-    certdbName = ldapssl_strdup( certdbpath );
-    
-    /* Open the certificate database */
-
-    rv = CERT_OpenCertDB(certdbh, PR_TRUE, GetCertDBName, certdbName );
-    if (rv)
-	return( -1 );
-    
-    CERT_SetDefaultCertDB(certdbh);
-
-    if (SSL_EnableDefault(SSL_ENABLE_SSL2, PR_FALSE)
-	|| SSL_EnableDefault(SSL_ENABLE_SSL3, PR_TRUE)) {
-	if (( rc = PR_GetError()) >= 0 ) {
-	    rc = -1;
-	}
-	return( rc );
-    }
-
-    if ( needkeydb ) {
-#if 0
-	/*
-	 * XXXmcs: this code seems to do nothing except leak memory...
-	 * keydbh is reassigned below in the call to SECKEY_OpenKeyDBFilename().
-	 */
-	if (( keydbh = (SECKEYKeyDBHandle *)keydbhandle ) == NULL ) {
-	    if (( keydbh = (SECKEYKeyDBHandle *)ldapssl_calloc( 1,
-		    sizeof( SECKEYKeyDBHandle ))) == NULL ) {
-		rc = PR_GetError();
-		return( rc == 0 ? -1 : rc );
-	    }
-	} else {
-	    memset( keydbh, 0, sizeof( SECKEYKeyDBHandle ));
-	}
-#endif /* 0 */
-
-	use_default_db = ( keydbpath == NULL || *keydbpath == '\0' );
-
-	if ( use_default_db ) {
-	    keydbName = NULL;
-	} else if (( len = PL_strlen( keydbpath )) > 3
-		&& PL_strcasecmp( ".db", keydbpath + len - 3 ) == 0 ) {
-	    keydbName = GetDBName(keydbpath, NULL);
-	} else {
-	    keydbName = GetDBName("key3.db", keydbpath);
-	}
-
-	keydbh = SECKEY_OpenKeyDBFilename( keydbName, PR_TRUE );
-	keydbName = NULL;	/* OpenKeyDBFilename() frees keydbName! */
-	if ( keydbh == NULL ) {
-	    rc = PR_GetError();
-	    return( rc == 0 ? -1 : rc );
-	}
-
-	SECKEY_SetDefaultKeyDB( keydbh );
-    }
-
-    /*
-     * SECMOD_init() should be done last (after key and cert dbs are open)
-     */
-    if (needsecmoddb )
-    {
-	if ( secmoddbpath) {
-	    
-	    secmoddbName = buildDBName( secmoddbpath, secmodname);
-	    SECMOD_init( secmoddbName);
-	    ldapssl_free((void **) &secmoddbName );
-	}
-	else 
-	    SECMOD_init( secmodname);
-    }
-    
-    else {
-	
-	if (( len = PL_strlen( certdbName )) > 3
-	    && PL_strcasecmp( ".db", certdbName + len - 3 ) == 0 ) {
-	    s = ldapssl_strdup(certdbName);
-	    if (PL_strrchr( s, FILE_PATHSEP )) {
-		char *s2;
-		
-		*(PL_strrchr(s, FILE_PATHSEP)) = '\0';
-		s2 = buildDBName( s, secmodname);
-	
-		SECMOD_init( s2 );
-		ldapssl_free((void **) &s2 );
-		ldapssl_free((void **) &s );
-	    }	
-	    else 
-	    {
-		SECMOD_init( secmodname );		
-	    }
-
-	}
-	else
-	{
-	    s = buildDBName( certdbName, secmodname);
-	    SECMOD_init( s );
-	    ldapssl_free((void **) &s );
-	}
-    }
-    
+    NSS_Init(certdbpath);
 
 #if defined(NS_DOMESTIC)
     if (local_SSLPLCY_Install() == PR_FAILURE)
@@ -636,15 +506,10 @@ ldapssl_pkcs_init( const struct ldapssl_pkcs_fns *pfns )
 {
 
     char		*certdbName, *s, *keydbpath;
+    char		*certdbPrefix, *keydbPrefix;
+    char		*confDir, *keydbName;
     static char         *secmodname =  "secmod.db";
-    
-    int			rc, len, use_default_db;
-    SECStatus		rv;
-    CERTCertDBHandle	*certdbh;
-    SECKEYKeyDBHandle	*keydbh;
-#if 0
-    int			err;
-#endif /* 0 */
+    int			rc;
     
     if ( inited ) {
 	return( 0 );
@@ -663,191 +528,39 @@ ldapssl_pkcs_init( const struct ldapssl_pkcs_fns *pfns )
 
     ldapssl_basic_init();
 
-    if (( certdbh = (CERTCertDBHandle *)ldapssl_calloc( 1,
-	sizeof( CERTCertDBHandle ))) == NULL ) {
-      rc = PR_GetError();
-      return( rc == 0 ? -1 : rc );
-    }
-
     pfns->pkcs_getcertpath( NULL, &s);
+    confDir = ldapssl_strdup( s );
+    certdbPrefix = ldapssl_strdup( s );
     certdbName = ldapssl_strdup( s );
-    
-
-    
-    /* Open the certificate database */
-
-    rv = CERT_OpenCertDB(certdbh, PR_TRUE, GetCertDBName, certdbName );
-
-    /* XXXceb SSL Err needed here */
-    if (rv)
-	return( -1 );
-    
-    CERT_SetDefaultCertDB(certdbh);
+    *certdbPrefix = 0;
+    splitpath(s, confDir, certdbPrefix, certdbName);
 
     pfns->pkcs_getkeypath( NULL, &s);
     keydbpath = ldapssl_strdup( s );
-    {
-	char	*keydbName;
-#if 0
-	/*
-	 * XXXmcs: this code seems to do nothing except leak memory...
-	 * keydbh is reassigned below in the call to SECKEY_OpenKeyDBFilename().
-	 */
-	if (( keydbh = (SECKEYKeyDBHandle *)ldapssl_calloc( 1,
-            sizeof( SECKEYKeyDBHandle ))) == NULL ) {
-	    rc = PR_GetError();
-	    return( rc == 0 ? -1 : rc );
-	}
-	memset( keydbh, 0, sizeof( SECKEYKeyDBHandle ));
-#endif /* 0 */
+    keydbPrefix = ldapssl_strdup( s );
+    keydbName = ldapssl_strdup( s );
+    *keydbPrefix = 0;
+    splitpath(s, keydbpath, keydbPrefix, keydbName);
 
-	use_default_db = ( keydbpath == NULL || *keydbpath == '\0' );
-	
-	if ( use_default_db ) {
-	    keydbName = NULL;
-	} else if (( len = PL_strlen( keydbpath )) > 3
-		   && PL_strcasecmp( ".db", keydbpath + len - 3 ) == 0 ) {
-	    keydbName = GetDBName(keydbpath, NULL);
-	} else {
-	    keydbName = GetDBName("key3.db", keydbpath);
-	}
-	
-	keydbh = SECKEY_OpenKeyDBFilename( keydbName, PR_TRUE );
-	keydbName = NULL;	/* OpenKeyDBFilename() frees keydbName! */
-	if ( keydbh == NULL ) {
-	    rc = PR_GetError();
-	    return( rc == 0 ? -1 : rc );
-	}
 
-	SECKEY_SetDefaultKeyDB( keydbh );
-    }
-    ldapssl_free((void **) &keydbpath );
+    /* verify confDir == keydbpath and adjust as necessary */
+    ldapssl_free((void **)&certdbName);
+    ldapssl_free((void **)&keydbName);
+    ldapssl_free((void **)&keydbpath);
+
+    NSS_Initialize(confDir,certdbPrefix,keydbPrefix,secmodname,
+		NSS_INIT_READONLY);
+
+    ldapssl_free((void **)&certdbPrefix);
+    ldapssl_free((void **)&keydbPrefix);
+    ldapssl_free((void **)&confDir);
+    
 
     /* this is odd */
     PK11_ConfigurePKCS11(NULL, NULL, tokDes, ptokDes, NULL, NULL, NULL, NULL, 0, 0 );
 
-    /*
-     * SECMOD_init() should be done last (after key and cert dbs are open)
-     */
-	
-    if (( len = PL_strlen( certdbName )) > 3
-	&& PL_strcasecmp( ".db", certdbName + len - 3 ) == 0 ) {
-      s = ldapssl_strdup(certdbName);
-      if (PL_strrchr( s, FILE_PATHSEP )) {
-	char *s2;
-	
-	*(PL_strrchr(s, FILE_PATHSEP)) = '\0';
-	s2 = buildDBName( s, secmodname);
-	
-	SECMOD_init( s2 );
-	ldapssl_free((void **) &s2 );
-	ldapssl_free((void **) &s );
-      }	
-      else 
-	{
-	  SECMOD_init( secmodname );		
-	}
-      
-    }
-    else
-    {
-	s = buildDBName( certdbName, secmodname);
-	SECMOD_init( s );
-	ldapssl_free((void **) &s );
-    }
-
-#if 0    
-    /* Create and register the pin object for PKCS 11 */
-    pfns->pkcs_getdonglefilename(NULL, &filename);
-
-    pfns->pkcs_getpin(NULL, "", &pin);
-
-#ifndef _WIN32
-    
-    if ( SVRCORE_CreateStdPinObj(&StdPinObj, filename, PR_TRUE) !=
-	 SVRCORE_Success) {
-	printf("Security Initialization: Unable to create PinObj "
-	       "(%d)", PR_GetError());
-	return -1;
-    }
-    if (pin != NULL)
-    {
-
-      pfns->pkcs_gettokenname(NULL, &tokenName);
-
-      SVRCORE_CreateArgPinObj(&ArgPinObj, tokenName, pin, (SVRCOREPinObj *)StdPinObj);
-
-      SVRCORE_RegisterPinObj((SVRCOREPinObj *)ArgPinObj);
-    }
-    else
-    {
-      SVRCORE_RegisterPinObj((SVRCOREPinObj *)StdPinObj);
-    }
-	
-    
-#else
-
-    if (NULL != pin)
-    {
-	
-	pfns->pkcs_gettokenname(NULL, &tokenName);
-
-	if ((err = SVRCORE_CreateNTUserPinObj(&NTUserPinObj)) != SVRCORE_Success){
-	    printf("Security Initialization: Unable to create NTUserPinObj "
-		   "(%d)", PR_GetError());
-	    return -1;
-	}
-
-	if ((err = SVRCORE_CreateArgPinObj(&ArgPinObj, tokenName, pin,
-	    (SVRCOREPinObj *)NTUserPinObj)) != SVRCORE_Success)
-	{
-	    printf("Security Initialization: Unable to create ArgPinObj "
-		   "(%d)", PR_GetError());
-	    return -1;
-	}
-
-	SVRCORE_RegisterPinObj((SVRCOREPinObj *)ArgPinObj);
-
-    }
-    else
-    {
-	if ((err = SVRCORE_CreateNTUserPinObj(&NTUserPinObj)) != SVRCORE_Success){
-	    printf("Security Initialization: Unable to create NTUserPinObj "
-		   "(%d)", PR_GetError());
-	    return -1;
-	}
-	if (filename && *filename)
-	{
-	if ((err = SVRCORE_CreateFilePinObj(&FilePinObj, filename)) !=
-	    SVRCORE_Success) {
-	    printf("Security Initialization: Unable to create FilePinObj "
-		   "(%d)", PR_GetError());
-	    return -1;
-	    
-	}
-	if ((err = SVRCORE_CreateAltPinObj(&AltPinObj, (SVRCOREPinObj *)FilePinObj,
-					  (SVRCOREPinObj *)NTUserPinObj)) != SVRCORE_Success) {
-	    printf("Security Initialization: Unable to create AltPinObj "
-		   "(%d)", PR_GetError());
-	    return -1;
-	}
-	SVRCORE_RegisterPinObj((SVRCOREPinObj *)AltPinObj);
-	}
-	else
-	{
-		SVRCORE_RegisterPinObj((SVRCOREPinObj *)NTUserPinObj);
-	}
-    }
-#endif
-
-#endif
-
-/*
- *    if (filename) free(filename);
- */
-
-    if (SSL_EnableDefault(SSL_ENABLE_SSL2, PR_FALSE)
-	|| SSL_EnableDefault(SSL_ENABLE_SSL3, PR_TRUE)) {
+    if (SSL_OptionSetDefault(SSL_ENABLE_SSL2, PR_FALSE)
+	|| SSL_OptionSetDefault(SSL_ENABLE_SSL3, PR_TRUE)) {
 	if (( rc = PR_GetError()) >= 0 ) {
 	    rc = -1;
 	}
@@ -877,28 +590,6 @@ ldapssl_pkcs_init( const struct ldapssl_pkcs_fns *pfns )
 
     set_ssl_strength( LDAPSSL_AUTH_CERT );
     return( 0 );
-
-
-#if 0
-    { 
-      char *man= PORT_Strdup(MyInternationalizedString(SEC_PK11_MANUFACTURER)); 
-      char *libdes = PORT_Strdup(MyInternationalizedString(SEC_PK11_LIBARARY)); 
-      char *tokdes = PORT_Strdup(MyInternationalizedString(SEC_PK11_TOKEN)); 
-      char *ptokdes = PORT_Strdup(MyInternationalizedString(SEC_PK11_PRIV_TOKEN)); 
-      char *slotdes = PORT_Strdup(MyInternationalizedString(SEC_PK11_SLOT)); 
-      char *pslotdes = PORT_Strdup(MyInternationalizedString(SEC_PK11_PRIV_SLOT)); 
-      char *fslotdes = PORT_Strdup(MyInternationalizedString(SEC_PK11_FIPS_SLOT)); 
-      char *fpslotdes = PORT_Strdup(MyInternationalizedString(SEC_PK11_FIPS_PRIV_SLOT)); 
-      
-      PK11_ConfigurePKCS11(man,libdes,tokdes,ptokdes,slotdes,pslotdes,fslotdes,fpslotdes); 
-    } 
-
-    /* 
-     * set our default password function 
-     */ 
-    PK11_SetPasswordFunc(MyPasswordFunc); 
-#endif
-
 }
 
 

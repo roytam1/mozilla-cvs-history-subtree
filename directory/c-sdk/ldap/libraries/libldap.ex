@@ -139,6 +139,7 @@
 148	ber_get_next_buffer
 149	ber_err_print		C
 150	ber_sockbuf_free
+151	ber_get_next_buffer_ext
 
 200	ldap_memfree
 201	ldap_ber_free
@@ -250,9 +251,14 @@
 526	ldap_parse_virtuallist_control
 527	ldap_create_proxyauth_control
 528	ldap_unbind_ext
-529 ldap_x_hostlist_first
-530 ldap_x_hostlist_next
-531 ldap_x_hostlist_statusfree
+529	ldap_x_hostlist_first
+530	ldap_x_hostlist_next
+531	ldap_x_hostlist_statusfree
+532	ldap_x_malloc
+533	ldap_x_calloc
+534	ldap_x_realloc
+535	ldap_x_free
+536     ldap_create_proxiedauth_control
 1000	ldap_memcache_init
 1001	ldap_memcache_set
 1002	ldap_memcache_get

@@ -1,5 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- *
+/*
  * The contents of this file are subject to the Netscape Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -10,14 +9,15 @@
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  *
- * The Original Code is mozilla.org code.
+ * The Original Code is Mozilla Communicator client code, released
+ * March 31, 1998.
  *
  * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  */
 #include "ldap-int.h"
 #if defined( macintosh ) || defined( DOS ) || defined( _WINDOWS ) || defined( NEED_BSDREGEX ) || defined( XP_OS2)
@@ -241,8 +241,6 @@ static REGEXCHAR bittab[BITBLK];	/* bit table for CCL */
 					/* pre-set bits...   */
 static REGEXCHAR bitarr[] = {1,2,4,8,16,32,64,128};
 
-static void nfadump( REGEXCHAR *ap);
-
 static void
 chset(REGEXCHAR c)
 {
@@ -268,11 +266,13 @@ re_comp( char *pat )
 	register REGEXCHAR mask;	/* xor mask -CCL/NCL */
 	int c1, c2;
 		
-	if (!pat || !*pat)
-		if (sta)
+	if (!pat || !*pat) {
+		if (sta) {
 			return 0;
-		else
+		} else {
 			return badpat("No previous regular expression");
+		}
+	}
 	sta = NOP;
 
 	for (p = (REGEXCHAR*)pat; *p; p++) {
@@ -799,7 +799,7 @@ re_subs( char *src, char *dst)
 	return 1;
 }
 			
-#ifdef LDAP_REGEX_DEBUG
+#ifdef DEBUG
 
 /* No printf or exit in 16-bit Windows */
 #if defined( _WINDOWS ) && !defined( _WIN32 )
@@ -814,7 +814,12 @@ static int LDAP_C printf( const char* pszFormat, ...)
 	return 0;
 }
 #define exit(v) return
-#endif
+#endif /* 16-bit Windows */
+
+
+#ifdef REGEX_DEBUG
+
+static void nfadump( REGEXCHAR *ap);
 
 /*
  * symbolic - produce a symbolic dump of the nfa
@@ -895,6 +900,6 @@ nfadump( REGEXCHAR *ap)
 			break;
 		}
 }
-#endif /* LDAP_REGEX_DEBUG */
-
+#endif /* REGEX_DEBUG */
+#endif /* DEBUG */
 #endif /* macintosh or DOS or _WINDOWS or NEED_BSDREGEX */
