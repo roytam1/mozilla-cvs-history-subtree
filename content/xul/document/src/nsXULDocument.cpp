@@ -4366,6 +4366,16 @@ nsXULDocument::ResumeWalk()
 
         mOverlays->RemoveElementAt(0);
 
+#ifdef PR_LOGGING
+        if (PR_LOG_TEST(gXULLog, PR_LOG_DEBUG)) {
+            nsXPIDLCString urlspec;
+            uri->GetSpec(getter_Copies(urlspec));
+
+            PR_LOG(gXULLog, PR_LOG_DEBUG,
+                   ("xul: loading overlay %s", (const char*) urlspec));
+        }
+#endif
+
         // Look in the prototype cache for the prototype document with
         // the specified URI.
         rv = gXULPrototypeCache->Get(uri, getter_AddRefs(mCurrentPrototype));
@@ -4375,9 +4385,13 @@ nsXULDocument::ResumeWalk()
             // Found the overlay's prototype in the cache: walk it!
             rv = PrepareToWalk();
             if (NS_FAILED(rv)) return rv;
+
+            PR_LOG(gXULLog, PR_LOG_DEBUG, ("xul: overlay was cached"));
         }
         else {
             // Not there. Initiate an asynchronous load.
+            PR_LOG(gXULLog, PR_LOG_DEBUG, ("xul: overlay was not cached"));
+
             nsCOMPtr<nsIParser> parser;
             rv = PrepareToLoadPrototype(uri, "view", getter_AddRefs(parser));
             if (NS_FAILED(rv)) return rv;
@@ -4793,7 +4807,7 @@ nsXULDocument::OverlayForwardReference::Resolve()
     nsresult rv;
 
     nsCOMPtr<nsIDocument> doc;
-    rv = mContent->GetDocument(*getter_AddRefs(doc));
+    rv = mOverlay->GetDocument(*getter_AddRefs(doc));
     if (NS_FAILED(rv)) return eResolve_Error;
 
     nsCOMPtr<nsIDOMXULDocument> xuldoc = do_QueryInterface(doc);
@@ -4801,24 +4815,24 @@ nsXULDocument::OverlayForwardReference::Resolve()
         return eResolve_Error;
 
     nsAutoString id;
-    rv = mContent->GetAttribute(kNameSpaceID_None, kIdAtom, id);
+    rv = mOverlay->GetAttribute(kNameSpaceID_None, kIdAtom, id);
     if (NS_FAILED(rv)) return eResolve_Error;
 
-    nsCOMPtr<nsIDOMElement> domoverlay;
-    rv = xuldoc->GetElementById(id, getter_AddRefs(domoverlay));
+    nsCOMPtr<nsIDOMElement> domtarget;
+    rv = xuldoc->GetElementById(id, getter_AddRefs(domtarget));
     if (NS_FAILED(rv)) return eResolve_Error;
 
     // If we can't find the element in the document, defer the hookup
     // until later.
-    if (! domoverlay)
+    if (! domtarget)
         return eResolve_Later;
 
-    nsCOMPtr<nsIContent> overlay = do_QueryInterface(domoverlay);
-    NS_ASSERTION(overlay != nsnull, "not an nsIContent");
-    if (! overlay)
+    nsCOMPtr<nsIContent> target = do_QueryInterface(domtarget);
+    NS_ASSERTION(target != nsnull, "not an nsIContent");
+    if (! target)
         return eResolve_Error;
 
-    rv = Merge(mContent, overlay);
+    rv = Merge(target, mOverlay);
     if (NS_FAILED(rv)) return eResolve_Error;
 
     PR_LOG(gXULLog, PR_LOG_ALWAYS,
@@ -4832,8 +4846,8 @@ nsXULDocument::OverlayForwardReference::Resolve()
 
 
 nsresult
-nsXULDocument::OverlayForwardReference::Merge(nsIContent* aOriginalNode,
-                                                       nsIContent* aOverlayNode)
+nsXULDocument::OverlayForwardReference::Merge(nsIContent* aTargetNode,
+                                              nsIContent* aOverlayNode)
 {
     nsresult rv;
 
@@ -4856,11 +4870,11 @@ nsXULDocument::OverlayForwardReference::Merge(nsIContent* aOriginalNode,
             rv = aOverlayNode->GetAttribute(nameSpaceID, tag, value);
             if (NS_FAILED(rv)) return rv;
 
-            rv = aOriginalNode->SetAttribute(nameSpaceID, tag, value, PR_FALSE);
+            rv = aTargetNode->SetAttribute(nameSpaceID, tag, value, PR_FALSE);
             if (NS_FAILED(rv)) return rv;
         }
 
-        rv = ProcessCommonAttributes(aOriginalNode);
+        rv = ProcessCommonAttributes(aTargetNode);
     }
 
     {
@@ -4874,7 +4888,7 @@ nsXULDocument::OverlayForwardReference::Merge(nsIContent* aOriginalNode,
             rv = aOverlayNode->ChildAt(i, *getter_AddRefs(child));
             if (NS_FAILED(rv)) return rv;
 
-            rv = InsertElement(aOriginalNode, child);
+            rv = InsertElement(aTargetNode, child);
             if (NS_FAILED(rv)) return rv;
         }
 
@@ -4893,7 +4907,7 @@ nsXULDocument::OverlayForwardReference::~OverlayForwardReference()
 #ifdef PR_LOGGING
     if (PR_LOG_TEST(gXULLog, PR_LOG_ALWAYS) && !mResolved) {
         nsAutoString id;
-        mContent->GetAttribute(kNameSpaceID_None, kIdAtom, id);
+        mOverlay->GetAttribute(kNameSpaceID_None, kIdAtom, id);
         
         PR_LOG(gXULLog, PR_LOG_ALWAYS,
                ("xul: overlay failed to resolve '%s'",

@@ -648,14 +648,14 @@ protected:
     class OverlayForwardReference : public nsForwardReference
     {
     protected:
-        nsCOMPtr<nsIContent> mContent;
+        nsCOMPtr<nsIContent> mOverlay;
         PRBool mResolved;
 
-        nsresult Merge(nsIContent* aOriginalNode, nsIContent* aOverlayNode);
+        nsresult Merge(nsIContent* aTargetNode, nsIContent* aOverlayNode);
 
     public:
-        OverlayForwardReference(nsIContent* aElement)
-            : mContent(aElement), mResolved(PR_FALSE) {}
+        OverlayForwardReference(nsIContent* aOverlay)
+            : mOverlay(aOverlay), mResolved(PR_FALSE) {}
 
         virtual ~OverlayForwardReference();
 
