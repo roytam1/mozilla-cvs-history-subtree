@@ -367,11 +367,11 @@ nsAbsoluteContainingBlock::ReflowAbsoluteFrame(nsIFrame*                aDelegat
     NS_NOTYETIMPLEMENTED("percentage border");
   }
 
-  nscoord availWidth = aReflowState.mComputedWidth;
   nsHTMLReflowMetrics kidDesiredSize(nsnull);
-  nsSize            availSize(availWidth, NS_UNCONSTRAINEDSIZE);
   nsHTMLReflowState kidReflowState(aPresContext, aReflowState, aKidFrame,
-                                   availSize, aContainingBlockWidth,
+                                   nsSize(aReflowState.mComputedWidth,
+                                          NS_UNCONSTRAINEDSIZE),
+                                   aContainingBlockWidth,
                                    aContainingBlockHeight);
 
   // Send the WillReflow() notification and position the frame
