@@ -759,7 +759,6 @@ var BookmarksController = {
       item0 = aSelection.item[0].Value;
       type0 = aSelection.type[0];
     }
-    var isValidTarget = BookmarksUtils.isValidTargetContainer(aTarget.parent)
     var i;
 
     switch(aCommand) {
@@ -769,7 +768,7 @@ var BookmarksController = {
     case "cmd_bm_redo":
       return true;
     case "cmd_bm_paste":
-      if (!isValidTarget)
+      if (!BookmarksUtils.isValidTargetContainer(aTarget.parent))
         return false;
       const kClipboardContractID = "@mozilla.org/widget/clipboard;1";
       const kClipboardIID = Components.interfaces.nsIClipboard;
@@ -823,7 +822,7 @@ var BookmarksController = {
     case "cmd_bm_newbookmark":
     case "cmd_bm_newfolder":
     case "cmd_bm_newseparator":
-      return isValidTarget;
+      return BookmarksUtils.isValidTargetContainer(aTarget.parent);
     case "cmd_bm_properties":
     case "cmd_bm_rename":
       return length == 1;
