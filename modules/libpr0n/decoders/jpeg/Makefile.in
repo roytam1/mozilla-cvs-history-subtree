@@ -35,11 +35,15 @@ MODULE_NAME	= nsJPEGDecoderModule
 REQUIRES	= xpcom \
 		  string \
 		  gfx \
+      widget \
 		  imglib2 \
+      necko \
 		  $(JPEG_REQUIRES) \
 		  $(NULL)
 
-CPPSRCS		= nsJPEGDecoder.cpp
+CPPSRCS		= nsJPEGDecoder.cpp \
+            nsJPEGEncoder.cpp \
+            $(NULL)
 
 include $(topsrcdir)/config/rules.mk
 
