@@ -485,7 +485,7 @@ app_getModuleInfo(nsStaticModuleInfo **info, PRUint32 *count);
 
 - (NSString *)searchPage
 {
-  NSString* resultString = @"http://www.foo.bar/";
+  NSString* resultString = @"http://www.google.com/";
   if (!mPrefs)
     return resultString;
 
@@ -498,18 +498,18 @@ app_getModuleInfo(nsStaticModuleInfo **info, PRUint32 *count);
     return resultString;
 
   NSString* searchPagePref = nil;
-  PRInt32 haveUserPref;
-  if (NS_FAILED(prefBranch->PrefHasUserValue("chimera.search_page", &haveUserPref)) || !haveUserPref)
+  PRBool haveUserPref = PR_FALSE;
+  prefBranch->PrefHasUserValue("chimera.search_page", &haveUserPref);
+  if (haveUserPref)
+    searchPagePref = [self getStringPref:"chimera.search_page" withSuccess:NULL];
+  
+  if (!haveUserPref || (searchPagePref == NULL) || ([searchPagePref length] == 0))
   {
-    // no home page pref is set in user prefs.
+    // no home page pref is set in user prefs, or it's an empty string
     searchPagePref = NSLocalizedStringFromTable( @"SearchPageDefault", @"WebsiteDefaults", nil);
     // and let's copy this into the homepage pref if it's not bad
     if (![searchPagePref isEqualToString:@"SearchPageDefault"])
       mPrefs->SetCharPref("chimera.search_page", [searchPagePref UTF8String]);
-  }
-  else
-  {
-    searchPagePref = [self getStringPref:"chimera.search_page" withSuccess:NULL];
   }
 
   if (searchPagePref && [searchPagePref length] > 0 && ![searchPagePref isEqualToString:@"SearchPageDefault"])
