@@ -120,23 +120,6 @@ JavaStringToId(JSContext *cx, JNIEnv *jEnv, jstring jstr, jsid *idp)
     return JS_TRUE;
 }
 
-/* Not used ?
-const char *
-jsj_ClassNameOfJavaObject(JSContext *cx, JNIEnv *jEnv, jobject java_object)
-{
-    jobject java_class;
-
-    java_class = (*jEnv)->GetObjectClass(jEnv, java_object);
-
-    if (!java_class) {
-        JS_ASSERT(0);
-        return NULL;
-    }
-
-    return jsj_GetJavaClassName(cx, jEnv, java_class);
-}
-*/
-
 /*
  * Return, as a C string, the error message associated with a Java exception
  * that occurred as a result of a JNI call, preceded by the class name of
@@ -159,14 +142,22 @@ jsj_GetJavaErrorMessage(JNIEnv *jEnv)
     if (exception && jlThrowable_toString) {
         java_exception_jstring =
             (*jEnv)->CallObjectMethod(jEnv, exception, jlThrowable_toString);
+        if (!java_exception_jstring)
+            goto done;
         java_error_msg = (*jEnv)->GetStringUTFChars(jEnv, java_exception_jstring, NULL);
-        error_msg = strdup((char*)java_error_msg);
-        (*jEnv)->ReleaseStringUTFChars(jEnv, java_exception_jstring, java_error_msg);
+        if (java_error_msg) {
+            error_msg = strdup((char*)java_error_msg);
+            (*jEnv)->ReleaseStringUTFChars(jEnv, java_exception_jstring, java_error_msg);
+        }
+        (*jEnv)->DeleteLocalRef(jEnv, java_exception_jstring);
 
 #ifdef DEBUG
         /* (*jEnv)->ExceptionDescribe(jEnv); */
 #endif
     }
+done:
+    if (exception)
+        (*jEnv)->DeleteLocalRef(jEnv, exception);
     return error_msg;
 }    
 
@@ -193,6 +184,7 @@ get_java_stack_trace(JSContext *cx, JNIEnv *jEnv, jthrowable java_exception)
             return NULL;
         }
         backtrace = jsj_DupJavaStringUTF(cx, jEnv, backtrace_jstr);
+        (*jEnv)->DeleteLocalRef(jEnv, backtrace_jstr);
     }
     return backtrace;
 } 
@@ -219,8 +211,9 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
     jthrowable java_exception;
     JSType wrapped_exception_type;
     jsval js_exception;
-    
+       
     /* Get the exception out of the java environment. */
+    java_obj = NULL;
     java_error_msg = NULL;
     java_exception = (*jEnv)->ExceptionOccurred(jEnv);
     if (java_exception) {
@@ -232,7 +225,7 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
             wrapped_exception_type = 
                 (*jEnv)->GetIntField(jEnv, java_exception,
                                      njJSException_wrappedExceptionType);
-            
+                
             if (wrapped_exception_type != JSTYPE_EMPTY) {
                 java_obj = 
                     (*jEnv)->GetObjectField(jEnv, java_exception, 
@@ -241,7 +234,6 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
                 /* All this just to get a class descriptor. Go figure.*/
                 js_obj = jsj_UnwrapJSObjectWrapper(jEnv, java_obj);
                 java_wrapper = JS_GetPrivate(cx, js_obj); 
-                java_obj = java_wrapper->java_obj; 
                 class_descriptor = java_wrapper->class_descriptor; 
 
                 /* Convert native JS values back to native types. */
@@ -288,12 +280,12 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
                 goto do_report;
             }
         }
-
+        
         /* Set pending JS exception and clear the java exception. */
         JS_SetPendingException(cx, js_exception);                        
-        (*jEnv)->ExceptionClear(jEnv);
-        return;
+        goto done;
     }
+
 do_report:
 
     js_error_msg = JS_vsmprintf(format, ap);
@@ -311,7 +303,7 @@ do_report:
         free((char*)java_stack_trace);
         if (!error_msg) {
             JS_ASSERT(0);       /* Out-of-memory */
-            return;
+            goto done;
         }
     } else
 
@@ -333,7 +325,12 @@ do_report:
      *  has been called, because the capture_js_error_reports_for_java(),
      *  called from JS_ReportError(), needs to read the exception from the JVM 
      */
+done:
     (*jEnv)->ExceptionClear(jEnv);
+    if (java_obj)
+        (*jEnv)->DeleteLocalRef(jEnv, java_obj);
+    if (java_exception)
+        (*jEnv)->DeleteLocalRef(jEnv, java_exception);
     free(error_msg);
 }
 
@@ -382,13 +379,13 @@ jsj_LogError(const char *error_msg)
 }
 
 /*
-	Error number handling. 
+        Error number handling. 
 
-	jsj_ErrorFormatString is an array of format strings mapped
-	by error number. It is initialized by the contents of jsj.msg
+        jsj_ErrorFormatString is an array of format strings mapped
+        by error number. It is initialized by the contents of jsj.msg
 
-	jsj_GetErrorMessage is invoked by the engine whenever it wants 
-	to convert an error number into an error format string.
+        jsj_GetErrorMessage is invoked by the engine whenever it wants 
+        to convert an error number into an error format string.
 */
 /*
         this define needs to go somewhere sensible
@@ -411,17 +408,19 @@ const JSErrorFormatString *
 jsj_GetErrorMessage(void *userRef, const char *locale, const uintN errorNumber)
 {
     if ((errorNumber > 0) && (errorNumber < JSJ_Err_Limit))
-	    return &jsj_ErrorFormatString[errorNumber];
-	else
-	    return NULL;
+            return &jsj_ErrorFormatString[errorNumber];
+        else
+            return NULL;
 }
 
 jsize
 jsj_GetJavaArrayLength(JSContext *cx, JNIEnv *jEnv, jarray java_array)
 {
     jsize array_length = (*jEnv)->GetArrayLength(jEnv, java_array);
-    if ((*jEnv)->ExceptionOccurred(jEnv)) {
+    jthrowable java_exception = (*jEnv)->ExceptionOccurred(jEnv);
+    if (java_exception) {
         jsj_UnexpectedJavaError(cx, jEnv, "Couldn't obtain array length");
+        (*jEnv)->DeleteLocalRef(jEnv, java_exception);
         return -1;
     }
     return array_length;
@@ -440,7 +439,7 @@ jsj_MapJSContextToJSJThread(JSContext *cx, JNIEnv **envp)
     
     jsj_env = the_java_jsj_env;
     if (jsj_env == NULL)
-	    jsj_env = JSJ_callbacks->map_js_context_to_jsj_thread(cx, &err_msg);
+            jsj_env = JSJ_callbacks->map_js_context_to_jsj_thread(cx, &err_msg);
     if (!jsj_env) {
         if (err_msg) {
             JS_ReportError(cx, err_msg);
