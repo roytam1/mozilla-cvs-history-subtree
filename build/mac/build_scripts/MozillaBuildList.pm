@@ -186,20 +186,13 @@ sub InstallNonChromeResources()
         MakeAlias(":mozilla:layout:svg:base:src:svg.dtd",                              "$resource_dir"."dtd:");
     }
     
-    if (! $main::options{mathml})
-    {
-        MakeAlias(":mozilla:layout:html:document:src:ua.css",                          "$resource_dir");
-    }
-    else
+    if ($main::options{mathml})
     {
         MakeAlias(":mozilla:layout:mathml:content:src:mathml.dtd",                     "$resource_dir"."dtd:");
-        #// Building MathML so include the mathml.css file in ua.css
         MakeAlias(":mozilla:layout:mathml:content:src:mathml.css",                     "$resource_dir");
-        copy(":mozilla:layout:html:document:src:ua.css",                               "$resource_dir"."ua.css");
-        @ARGV = ("$resource_dir"."ua.css");
-        do ":mozilla:layout:mathml:content:src:mathml-css.pl";
     }
-    
+
+    MakeAlias(":mozilla:layout:html:document:src:ua.css",                          "$resource_dir");
     MakeAlias(":mozilla:layout:html:document:src:html.css",                            "$resource_dir");
     MakeAlias(":mozilla:layout:html:document:src:forms.css",                           "$resource_dir");
     MakeAlias(":mozilla:layout:html:document:src:quirk.css",                           "$resource_dir");
@@ -282,6 +275,9 @@ sub InstallComponentFiles()
     # update notifications
     InstallResources(":mozilla:xpfe:components:updates:src:MANIFEST",                      "$components_dir");
 
+    # download manager
+    InstallResources(":mozilla:xpfe:components:download-manager:src:MANIFEST_COMPONENTS",  "$components_dir");
+
     # embedding UI
     InstallResources(":mozilla:embedding:components:ui:helperAppDlg:MANIFEST",             "$components_dir");
     InstallResources(":mozilla:embedding:components:ui:progressDlg:MANIFEST",              "$components_dir");
@@ -307,6 +303,183 @@ sub MakeNonChromeAliases()
     InstallDefaultsFiles();
     InstallComponentFiles();
 }
+
+
+#//--------------------------------------------------------------------------------------------------
+#// DumpChromeToTemp
+#//
+#// Iterates over all the .jar files in $chrome_dir and unzips them into a temp 
+#// directory organized by the name of the jar file. This matches the expected 
+#// format in the embedding jar manifest.
+#//--------------------------------------------------------------------------------------------------
+
+sub DumpChromeToTemp($$$$)
+{
+  my($dist_dir, $chrome_dir, $temp_chrome_dir, $verbose) = @_;
+  use Archive::Zip qw( :ERROR_CODES :CONSTANTS );
+  
+  opendir(CHROMEDIR, $chrome_dir);
+  my(@jarList) = readdir(CHROMEDIR);
+  closedir(CHROMEDIR);
+  
+  # the jar manifest generator expects the dumped files to be in
+  # a certain hierarchy:
+  #  <jar name>/<...path within jar...>
+  
+  mkpath($temp_chrome_dir, $verbose, 0777);
+  my($file);
+  foreach $file ( @jarList ) {
+    if ( $file =~ /\.jar/ ) {
+      print "-- unzipping $file\n" if $verbose;
+      
+      # pull everything from the jar's name (eg: classic.jar) up to the
+      # last "." and make that the foldername that everything in this
+      # jar file goes into
+      my($foldername) = substr($file, 0, rindex($file,".")) . ":";
+      
+      my($zip) = Archive::Zip->new("$chrome_dir:$file");
+      my(@members) = $zip->members();
+      my($item);
+      foreach $item ( @members ) {
+        my($name) = $item->fileName();
+        $name =~ s/\//:/g;
+#        print("+ extracting $name\n") if $verbose;
+        die "extract error" if $item->extractToFileNamed($temp_chrome_dir . $foldername . $name) != AZ_OK;
+      }
+    }
+  }
+}
+
+#//--------------------------------------------------------------------------------------------------
+#// PackageEmbeddingChrome
+#//
+#// Make use of mozilla/embedding/config's jar packaging scripts to build embed.jar
+#// with the bare-minimum chrome required for embedding. This process is unpleasant and
+#// suboptimal, but it allows us to reuse scripts and manifests so as to not get
+#// out of sync when changes are made for win/unix.
+#//
+#// Basically, this takes all the jar files in mozilla/viewer/Chrome, unzips them,
+#// runs a script to generate a manifest file with some substiutions, then rejars
+#// based on the new, minimal manifest.
+#//--------------------------------------------------------------------------------------------------
+
+sub PackageEmbeddingChrome($$)
+{
+  my($dist_dir, $chrome_dir) = @_;
+  
+  # we prefer not to use the jars when packaging, since it adds a lot of time and 
+  # effort to the build process. use the raw files if they're at all available.
+  my($must_use_jars) = !$main::options{chrome_files};
+  
+  my($embed_dir) = $dist_dir . ":Embed";
+  mkdir($embed_dir, 0);
+
+  # unzip the existing jar files and dump them in a tempdir or point our
+  # tempdir at the existing chrome files.
+  my($temp_chrome_dir) = "$embed_dir:tempchrome";
+  if ( $must_use_jars ) {
+    DumpChromeToTemp($dist_dir, $chrome_dir, "$temp_chrome_dir:", 1);  
+  }
+  else {
+    $temp_chrome_dir = $chrome_dir;
+  }
+  
+  # Make sure we add the config dir to search, to pick up GenerateManifest.pm
+  # Need to do this dynamically, because this module can be used before
+  # mozilla/config has been checked out.
+  my ($top_path) = $0;        # $0 is the path to the parent script
+  $top_path =~ s/:build:mac:build_scripts:.+$//;
+  my($inc_path) = $top_path . ":embedding:config:";
+  push(@INC, $inc_path);
+  require GenerateManifest;
+  
+  # generate the embedding manifest from the template in embedding/config. The
+  # resulting manifest must go at the root of the tree it describes. The paths
+  # in the manifest are local to that location. As a result, we dump it
+  # in our temp chrome dir.
+  my($temp_manifest) = "$temp_chrome_dir:embed-jar.tmp.mn";
+  local(*MANIFEST);
+  open(MANIFEST, ">$temp_manifest") || die "couldn't create embed jar manifest";
+  GenerateManifest::GenerateManifest($top_path, $inc_path . "embed-jar.mn", $temp_chrome_dir,
+                                      "en-US", *MANIFEST, ":", 1);
+  close(MANIFEST);
+  
+  # make embed.jar.
+  my(%jars);
+  CreateJarFromManifest($temp_manifest, "$temp_chrome_dir:", \%jars);
+  if ($main::options{embedding_xulprefs}) {
+    # copy over our xul-pref manifest so that it's also at the root
+    # of our chrome tree then run it through the jar machine. We need to
+    # use GenerateManifest to get the locales correct.
+    copy($inc_path."xulprefs.mn", "$temp_chrome_dir:xulprefs.mn") || die "can't copy xul prefs manifest";
+    my($temp_pref_manifest) = "$temp_chrome_dir:xulprefs.tmp.mn";
+    local(*PREFMANIFEST);
+    open(PREFMANIFEST, ">$temp_pref_manifest") || die "couldn't create embed jar manifest";
+    GenerateManifest::GenerateManifest($top_path, $inc_path . "xulprefs.mn", $temp_chrome_dir,
+                                        "en-US", *PREFMANIFEST, ":", 1);
+    close(PREFMANIFEST);
+
+    CreateJarFromManifest($temp_pref_manifest, "$temp_chrome_dir:", \%jars);
+
+    # clean up our temp files
+    unlink("$temp_chrome_dir:xulprefs.mn");
+    unlink($temp_pref_manifest);
+  }
+  WriteOutJarFiles("$temp_chrome_dir:", \%jars);
+
+  # clean up after ourselves and move everything to the right locations. The embed.jar
+  # and resulting installed-chrome need to end up in dist/Embed in either case.
+  if ( $must_use_jars ) {
+    print("deleting temp chrome dir $temp_chrome_dir\n");
+    rmtree($temp_chrome_dir, 0, 0);
+  }
+  else {
+    # since we used chrome files from $dist_dir, our new jar needs to be moved and
+    # we need to clean up the copied chrome files
+    move($dist_dir . "Embed.jar", $embed_dir);
+    move($dist_dir . "installed-chrome.txt", $embed_dir);
+    rmtree($dist_dir . "embed");
+    unlink($temp_manifest);    
+  }
+  
+}
+
+#//--------------------------------------------------------------------------------------------------
+#// BuildEmbeddingPackage
+#//
+#// Run through the basebrowser manifest file and copy all the files into dist/Embed
+#//--------------------------------------------------------------------------------------------------
+sub BuildEmbeddingPackage
+{
+  unless ($main::options{embedding_chrome}) { return; }
+  my($D) = $main::DEBUG ? "Debug" : "";
+  
+  my($dist_dir) = GetBinDirectory();
+
+  # Make sure we add the config dir to search, to pick up Packager.pm
+  # Need to do this dynamically, because this module can be used before
+  # mozilla/xpinstall has been checked out.
+  my($top_path) = $0;        # $0 is the path to the parent script
+  $top_path =~ s/:build:mac:build_scripts:.+$//;
+  my($inc_path) = "$top_path:xpinstall:packager:";
+  push(@INC, $inc_path);
+  require Packager;
+  
+  # final destination will be a sibling of $dist_dir in dist
+  my($destination) = "$top_path:dist";  
+  my($manifest) = "$top_path:embedding:config:basebrowser-mac-cfm$D";
+  chop $dist_dir;             # Copy() expects the src/dest dirs not to have a ':' at the end
+  Packager::Copy($dist_dir, $destination, $manifest, "mac", 0, 0, 0, () );
+
+  # the Embed.jar is in the wrong place, move it into the chrome dir
+  move("$destination:Embed:embed.jar", "$destination:Embed:Chrome");
+  move("$destination:Embed:installed-chrome.txt", "$destination:Embed:Chrome");
+  
+  # copy PPEmbed into our new package
+  print("-- copying PPEmbed to embed package");
+  copy("$dist_dir:PPEmbed$D", "$destination:Embed");
+}
+
 
 #//--------------------------------------------------------------------------------------------------
 #// ProcessJarManifests
@@ -349,10 +522,6 @@ sub ProcessJarManifests()
     {
       CreateJarFromManifest(":mozilla:extensions:inspector:jar.mn", $chrome_dir, \%jars);
     }
-    if ($main::options{p3p})
-    {
-      CreateJarFromManifest(":mozilla:extensions:p3p:resources:jar.mn", $chrome_dir, \%jars);
-    }
     if ($main::options{jsd} && $main::options{venkman})
     {
       CreateJarFromManifest(":mozilla:extensions:venkman:resources:jar.mn", $chrome_dir, \%jars);
@@ -376,6 +545,9 @@ sub ProcessJarManifests()
     if ($main::options{smime} && $main::options{psm}) {
     	CreateJarFromManifest(":mozilla:mailnews:extensions:smime:jar.mn", $chrome_dir, \%jars);
     }
+    if ($main::options{mdn}) {
+    	CreateJarFromManifest(":mozilla:mailnews:extensions:mdn:jar.mn", $chrome_dir, \%jars);
+    }
     CreateJarFromManifest(":mozilla:netwerk:resources:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:profile:pref-migrator:resources:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:profile:resources:jar.mn", $chrome_dir, \%jars);
@@ -392,6 +564,7 @@ sub ProcessJarManifests()
     CreateJarFromManifest(":mozilla:xpfe:communicator:resources:content:mac:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:components:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:components:bookmarks:resources:jar.mn", $chrome_dir, \%jars);
+    CreateJarFromManifest(":mozilla:xpfe:components:download-manager:resources:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:components:prefwindow:resources:content:mac:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:components:prefwindow:resources:locale:en-US:unix:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:components:prefwindow:resources:locale:en-US:win:jar.mn", $chrome_dir, \%jars);
@@ -409,8 +582,14 @@ sub ProcessJarManifests()
     }
     # bad jar.mn files
 #    CreateJarFromManifest(":mozilla:extensions:xmlterm:jar.mn", $chrome_dir, \%jars);
-
+    
     WriteOutJarFiles($chrome_dir, \%jars);
+    
+    # generate a jar manifest for embedding and package it. This needs to be done _after_
+    # all of the other jar files are created.
+    if ($main::options{embedding_chrome}) {
+      PackageEmbeddingChrome($dist_dir, $chrome_dir);
+    }
 }
 
 
@@ -443,7 +622,9 @@ sub BuildResources()
     ActivateApplication('McPL');
     
     MakeNonChromeAliases();   # Defaults, JS components etc.      
-    BuildJarFiles();    
+    BuildJarFiles();
+
+    BuildEmbeddingPackage();
 
     # Set the default skin to be classic
     SetDefaultSkin("classic/1.0"); 
@@ -735,6 +916,7 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:dom:public:idl:stylesheets:MANIFEST_IDL",        "$distdirectory:idl:");
     InstallFromManifest(":mozilla:dom:public:idl:views:MANIFEST_IDL",              "$distdirectory:idl:");
     InstallFromManifest(":mozilla:dom:public:idl:xbl:MANIFEST_IDL",                "$distdirectory:idl:");
+    InstallFromManifest(":mozilla:dom:public:idl:xpath:MANIFEST_IDL",              "$distdirectory:idl:");
     InstallFromManifest(":mozilla:dom:public:idl:xul:MANIFEST_IDL",                "$distdirectory:idl:");
     
     # SVG
@@ -826,6 +1008,8 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:xpfe:components:regviewer:MANIFEST_IDL",     "$distdirectory:idl:");
     # autocomplete
     InstallFromManifest(":mozilla:xpfe:components:autocomplete:public:MANIFEST_IDL", "$distdirectory:idl:");
+    # download manager
+    InstallFromManifest(":mozilla:xpfe:components:download-manager:public:MANIFEST_IDL", "$distdirectory:idl:");
 
     # XPAPPS
     InstallFromManifest(":mozilla:xpfe:appshell:public:MANIFEST",                  "$distdirectory:xpfe:");
@@ -908,7 +1092,8 @@ sub BuildClientDist()
     #P3P
     if ($main::options{p3p})
     {
-        InstallFromManifest(":mozilla:extensions:p3p:public:MANIFEST", "$distdirectory:idl:");
+        InstallFromManifest(":mozilla:extensions:p3p:public:MANIFEST_IDL", "$distdirectory:idl:");
+        InstallFromManifest(":mozilla:extensions:p3p:public:MANIFEST",     "$distdirectory:p3p:");
     }
 
     #JS DEBUGGER
@@ -1115,6 +1300,7 @@ sub BuildIDLProjects()
     BuildIDLProject(":mozilla:dom:macbuild:dom_stylesheetsIDL.xml",                 "dom_stylesheets");
     BuildIDLProject(":mozilla:dom:macbuild:dom_viewsIDL.xml",                       "dom_views");
     BuildIDLProject(":mozilla:dom:macbuild:dom_xblIDL.xml",                         "dom_xbl");
+    BuildIDLProject(":mozilla:dom:macbuild:dom_xpathIDL.xml",                       "dom_xpath");
     BuildIDLProject(":mozilla:dom:macbuild:dom_xulIDL.xml",                         "dom_xul");
 
 	if ($main::options{svg}) {
@@ -1167,6 +1353,7 @@ sub BuildIDLProjects()
     BuildIDLProject(":mozilla:xpfe:components:timebomb:macbuild:timebombIDL.xml",   "tmbm");
     BuildIDLProject(":mozilla:xpfe:components:urlbarhistory:macbuild:urlbarhistoryIDL.xml", "urlbarhistory");
     BuildIDLProject(":mozilla:xpfe:components:autocomplete:macbuild:AutoCompleteIDL.xml", "autocomplete");
+    BuildIDLProject(":mozilla:xpfe:components:download-manager:macbuild:DownloadManagerIDL.xml", "downloadmanager");
 
     BuildIDLProject(":mozilla:xpfe:appshell:macbuild:appshellIDL.xml",              "appshell");
     
@@ -2101,6 +2288,9 @@ sub BuildMailNewsProjects()
     	InstallResources(":mozilla:mailnews:extensions:smime:src:MANIFEST",				 "${dist_dir}Components");
     } else {
         BuildOneProject(":mozilla:mailnews:mime:cthandlers:smimestub:macbuild:smime.xml",   "smime$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
+    }
+    if ($main::options{mdn}) {
+    	InstallResources(":mozilla:mailnews:extensions:mdn:src:MANIFEST",				 "${dist_dir}Components");
     }
     EndBuildModule("mailnews");
 }

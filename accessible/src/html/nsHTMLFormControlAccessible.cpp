@@ -97,10 +97,8 @@ NS_IMETHODIMP nsHTMLCheckboxAccessible::AccDoAction(PRUint8 index)
 {
   if (index == 0) {   // 0 is the magic value for default action
     nsCOMPtr<nsIDOMHTMLInputElement> htmlCheckboxElement(do_QueryInterface(mDOMNode));
-    PRBool checked = PR_FALSE;
     if (htmlCheckboxElement) {
-      htmlCheckboxElement->GetChecked(&checked);
-      htmlCheckboxElement->SetChecked(!checked);
+      htmlCheckboxElement->Click();
       return NS_OK;
     }
     return NS_ERROR_FAILURE;
@@ -134,8 +132,10 @@ NS_IMETHODIMP nsHTMLRadioButtonAccessible::AccDoAction(PRUint8 index)
 {
   if (index == eAction_Click) {
     nsCOMPtr<nsIDOMHTMLInputElement> element(do_QueryInterface(mDOMNode));
-    element->Click();
-    return NS_OK;
+    if (element) {
+      element->Click();
+      return NS_OK;
+    }
   }
   return NS_ERROR_INVALID_ARG;
 }
@@ -181,10 +181,26 @@ NS_IMETHODIMP nsHTMLButtonAccessible::AccDoAction(PRUint8 index)
 {
   if (index == 0) {
     nsCOMPtr<nsIDOMHTMLInputElement> element(do_QueryInterface(mDOMNode));
-    element->Click();
-    return NS_OK;
+    if (element) {
+      element->Click();
+      return NS_OK;
+    }
   }
   return NS_ERROR_INVALID_ARG;
+}
+
+NS_IMETHODIMP nsHTMLButtonAccessible::GetAccState(PRUint32 *_retval)
+{
+  nsFormControlAccessible::GetAccState(_retval);
+  nsCOMPtr<nsIDOMElement> element(do_QueryInterface(mDOMNode));
+  NS_ASSERTION(element, "No nsIDOMElement for button node!");
+
+  nsAutoString buttonType;
+  element->GetAttribute(NS_LITERAL_STRING("type"), buttonType);
+  if (buttonType.EqualsIgnoreCase("submit"))
+    *_retval |= STATE_DEFAULT;
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsHTMLButtonAccessible::GetAccRole(PRUint32 *_retval)
@@ -255,6 +271,15 @@ NS_IMETHODIMP nsHTML4ButtonAccessible::GetAccState(PRUint32 *_retval)
 {
   nsAccessible::GetAccState(_retval);
   *_retval |= STATE_FOCUSABLE;
+
+  nsCOMPtr<nsIDOMElement> element(do_QueryInterface(mDOMNode));
+  NS_ASSERTION(element, "No nsIDOMElement for button node!");
+
+  nsAutoString buttonType;
+  element->GetAttribute(NS_LITERAL_STRING("type"), buttonType);
+  if (buttonType.EqualsIgnoreCase("submit"))
+    *_retval |= STATE_DEFAULT;
+
   return NS_OK;
 }
 
@@ -402,8 +427,6 @@ NS_IMETHODIMP nsHTMLGroupboxAccessible::GetAccState(PRUint32 *_retval)
 
 NS_IMETHODIMP nsHTMLGroupboxAccessible::GetAccName(nsAWritableString& _retval)
 {
-  _retval.Assign(NS_LITERAL_STRING(""));  // Default name is blank 
-
   nsCOMPtr<nsIDOMElement> element(do_QueryInterface(mDOMNode));
   if (element) {
     nsCOMPtr<nsIDOMNodeList> legends;
@@ -412,7 +435,10 @@ NS_IMETHODIMP nsHTMLGroupboxAccessible::GetAccName(nsAWritableString& _retval)
       nsCOMPtr<nsIDOMNode> legendNode;
       legends->Item(0, getter_AddRefs(legendNode));
       nsCOMPtr<nsIContent> legendContent(do_QueryInterface(legendNode));
-      return AppendFlatStringFromSubtree(legendContent, &_retval);
+      if (legendContent) {
+        _retval.Assign(NS_LITERAL_STRING(""));  // Default name is blank 
+        return AppendFlatStringFromSubtree(legendContent, &_retval);
+      }
     }
   }
   return NS_OK;
