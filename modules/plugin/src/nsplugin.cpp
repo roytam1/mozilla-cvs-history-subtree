@@ -863,7 +863,8 @@ nsPluginTagInfo::GetAttribute(const char* name, const char* *result)
     nsresult rslt = GetAttributes(nAttrs, names, values);
     if (rslt != NS_OK)
         return rslt;
-
+    
+    *result = NULL;
     for( i = 0; i < nAttrs; i++ ) {
         if (PL_strcasecmp(name, names[i]) == 0) {
             *result = values[i];
@@ -871,12 +872,13 @@ nsPluginTagInfo::GetAttribute(const char* name, const char* *result)
         }
     }
 
-    return NS_ERROR_FAILURE;
+    return NS_OK;
 }
 
 NS_METHOD
 nsPluginTagInfo::GetTagType(nsPluginTagType *result)
 {
+    *result = nsPluginTagType_Unknown;
     switch (GetLayoutElement()->type) {
       case LO_JAVA:
         *result = nsPluginTagType_Applet;
@@ -888,7 +890,7 @@ nsPluginTagInfo::GetTagType(nsPluginTagType *result)
         *result = nsPluginTagType_Object;
         return NS_OK;
       default:
-        return NS_ERROR_FAILURE;
+        return NS_OK;
     }
 }
 
@@ -959,6 +961,7 @@ nsPluginTagInfo::GetParameter(const char* name, const char* *result)
     if (rslt != NS_OK)
         return rslt;
 
+    *result = NULL;
     for( i = 0; i < nParams; i++ ) {
         if (PL_strcasecmp(name, names[i]) == 0) {
             *result = values[i];
@@ -966,7 +969,7 @@ nsPluginTagInfo::GetParameter(const char* name, const char* *result)
         }
     }
 
-    return NS_ERROR_FAILURE;
+    return NS_OK;
 }
 
 NS_METHOD

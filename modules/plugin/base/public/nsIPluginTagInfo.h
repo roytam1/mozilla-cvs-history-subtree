@@ -61,7 +61,8 @@ public:
      * @param name - the name of the attribute to find
      * @param result - the resulting attribute
      * @result - NS_OK if this operation was successful, NS_ERROR_FAILURE if
-     * the desired attribute could not be found
+     * this operation failed. result is set to NULL if the attribute is not found
+     * else to the found value.
      */
     NS_IMETHOD
     GetAttribute(const char* name, const char* *result) = 0;

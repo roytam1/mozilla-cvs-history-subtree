@@ -64,6 +64,9 @@ public:
 
     // Get the value for the named parameter.  Returns null
     // if the parameter was not set.
+    // @result - NS_OK if this operation was successful, NS_ERROR_FAILURE if
+    // this operation failed. result is set to NULL if the attribute is not found
+    // else to the found value.
     NS_IMETHOD
     GetParameter(const char* name, const char* *result) = 0;
     
