@@ -86,12 +86,14 @@ protected:
   static nsIRDFResource      *kNC_Bookmark;
   static nsIRDFResource      *kNC_BookmarkSeparator;
   static nsIRDFResource      *kNC_Folder;
+  static nsIRDFResource      *kNC_FolderGroup;
   static nsIRDFResource      *kNC_Parent;
   static nsIRDFResource      *kNC_Child;
   static nsIRDFResource      *kNC_URL;
   static nsIRDFResource      *kNC_Name;
   static nsIRDFResource      *kNC_ShortcutURL;
   static nsIRDFResource      *kNC_Description;
+  static nsIRDFLiteral       *kTrueLiteral;
 
   static nsIRDFResource      *kNC_BookmarkCommand_NewBookmark;
   static nsIRDFResource      *kNC_BookmarkCommand_NewFolder;

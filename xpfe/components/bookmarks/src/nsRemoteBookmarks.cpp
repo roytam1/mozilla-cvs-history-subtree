@@ -94,6 +94,15 @@
 #define MOZ_SCHEMA_NAME           "mozillaName"
 #define MOZ_SCHEMA_KEYWORD        "mozillaKeyword"
 #define MOZ_SCHEMA_DESCRIPTION    "mozillaDesc"
+#define MOZ_SCHEMA_GROUPFLAG      "mozillaGroupFlag"
+
+// XXX ToDo schema items
+#define MOZ_SCHEMA_LASTCHARSET    "mozillaLastCharset"
+#define MOZ_SCHEMA_ICONURL        "mozillaIconURL"
+#define MOZ_SCHEMA_DATEADDED      "mozillaDateAdded"
+#define MOZ_SCHEMA_LASTMOD        "mozillaDateLastMod"
+#define MOZ_SCHEMA_LASTVISIT      "mozillaDateLastVisit"
+#define MOZ_SCHEMA_SEPARATORFLAG  "mozillaSeparatorFlag"
 
 #define NS_LDAPCONNECTION_CONTRACTID   "@mozilla.org/network/ldap-connection;1" 
 #define NS_LDAPOPERATION_CONTRACTID    "@mozilla.org/network/ldap-operation;1" 
@@ -117,12 +126,15 @@ nsIRDFResource *nsRemoteBookmarks::kRDF_type;
 nsIRDFResource *nsRemoteBookmarks::kNC_Bookmark;
 nsIRDFResource *nsRemoteBookmarks::kNC_BookmarkSeparator;
 nsIRDFResource *nsRemoteBookmarks::kNC_Folder;
+nsIRDFResource *nsRemoteBookmarks::kNC_FolderGroup;
 nsIRDFResource *nsRemoteBookmarks::kNC_Parent;
 nsIRDFResource *nsRemoteBookmarks::kNC_Child;
 nsIRDFResource *nsRemoteBookmarks::kNC_URL;
 nsIRDFResource *nsRemoteBookmarks::kNC_Name;
 nsIRDFResource *nsRemoteBookmarks::kNC_ShortcutURL;
 nsIRDFResource *nsRemoteBookmarks::kNC_Description;
+nsIRDFLiteral  *nsRemoteBookmarks::kTrueLiteral;
+
 
 nsIRDFResource *nsRemoteBookmarks::kNC_BookmarkCommand_NewBookmark;
 nsIRDFResource *nsRemoteBookmarks::kNC_BookmarkCommand_NewFolder;
@@ -161,12 +173,14 @@ nsRemoteBookmarks::~nsRemoteBookmarks()
     NS_IF_RELEASE(kNC_Bookmark);
     NS_IF_RELEASE(kNC_BookmarkSeparator);
     NS_IF_RELEASE(kNC_Folder);
+    NS_IF_RELEASE(kNC_FolderGroup);
     NS_IF_RELEASE(kNC_Parent);
     NS_IF_RELEASE(kNC_Child);
     NS_IF_RELEASE(kNC_URL);
     NS_IF_RELEASE(kNC_Name);
     NS_IF_RELEASE(kNC_ShortcutURL);
     NS_IF_RELEASE(kNC_Description);
+    NS_IF_RELEASE(kTrueLiteral);
 
     NS_IF_RELEASE(kNC_BookmarkCommand_NewBookmark);
     NS_IF_RELEASE(kNC_BookmarkCommand_NewFolder);
@@ -241,12 +255,15 @@ nsRemoteBookmarks::Init()
     gRDF->GetResource(NC_NAMESPACE_URI "Bookmark",          &kNC_Bookmark);
 		gRDF->GetResource(NC_NAMESPACE_URI "BookmarkSeparator", &kNC_BookmarkSeparator);
     gRDF->GetResource(NC_NAMESPACE_URI "Folder",            &kNC_Folder);
+    gRDF->GetResource(NC_NAMESPACE_URI "FolderGroup",       &kNC_FolderGroup);
     gRDF->GetResource(NC_NAMESPACE_URI "parent",            &kNC_Parent);
     gRDF->GetResource(NC_NAMESPACE_URI "child",             &kNC_Child);
     gRDF->GetResource(NC_NAMESPACE_URI "URL",               &kNC_URL);
     gRDF->GetResource(NC_NAMESPACE_URI "Name",              &kNC_Name);
     gRDF->GetResource(NC_NAMESPACE_URI "ShortcutURL",       &kNC_ShortcutURL);
     gRDF->GetResource(NC_NAMESPACE_URI "Description",       &kNC_Description);
+
+    gRDF->GetLiteral(NS_LITERAL_STRING("true").get(),       &kTrueLiteral);
 
 		gRDF->GetResource(NC_NAMESPACE_URI "command?cmd=newbookmark",             &kNC_BookmarkCommand_NewBookmark);
 		gRDF->GetResource(NC_NAMESPACE_URI "command?cmd=newfolder",               &kNC_BookmarkCommand_NewFolder);
@@ -845,6 +862,7 @@ nsRemoteBookmarks::ArcLabelsOut(nsIRDFResource* aSource,
 
       array->AppendElement(kNC_Bookmark);
       array->AppendElement(kNC_Folder);
+      array->AppendElement(kNC_FolderGroup);
       array->AppendElement(kNC_Child);
       array->AppendElement(kNC_URL);
       array->AppendElement(kNC_Name);
@@ -1285,10 +1303,10 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
           rv = mLDAPURL->GetFilter(getter_Copies (filter));
           NS_ENSURE_SUCCESS(rv, rv);
 
-          static const PRUint32 numLDAPAttrs = 5;
+          static const PRUint32 numLDAPAttrs = 6;
           static const char *attrs[numLDAPAttrs] = {
             MOZ_SCHEMA_URL, MOZ_SCHEMA_NAME, MOZ_SCHEMA_KEYWORD,
-            MOZ_SCHEMA_DESCRIPTION, MOZ_SCHEMA_OBJ_CLASS
+            MOZ_SCHEMA_DESCRIPTION, MOZ_SCHEMA_GROUPFLAG, MOZ_SCHEMA_OBJ_CLASS
           };
 
           // when we called SetSpec(), our spec contained UTF8 data
@@ -1583,7 +1601,7 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
       nsCOMPtr<nsIRDFLiteral> searchResLit;
 
       // check objectclass to determine what we are dealing with
-      nsAutoString classStr, urlStr, nameStr, keywordStr, descStr;
+      nsAutoString classStr, urlStr, nameStr, keywordStr, descStr, groupFlagStr;
 
       GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_OBJ_CLASS, classStr);
       classStr.Trim(" \t");
@@ -1611,6 +1629,7 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
         // it is a Folder
         GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_NAME, nameStr);
         GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_DESCRIPTION, descStr);
+        GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_GROUPFLAG, groupFlagStr);
 
         rv = gRDF->GetResource(ldapSearchUrlString.get(), getter_AddRefs(searchRes));
         NS_ENSURE_SUCCESS(rv, rv);
@@ -1657,6 +1676,13 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
           rv = mInner->Assert(searchRes, kNC_Description, descLiteral, PR_TRUE);
           NS_ENSURE_SUCCESS(rv, rv);
         }
+      }
+
+      if (groupFlagStr.EqualsIgnoreCase("TRUE"))
+      {
+        // assert #FolderGroup
+        rv = mInner->Assert(searchRes, kNC_FolderGroup, kTrueLiteral, PR_TRUE);
+        NS_ENSURE_SUCCESS(rv, rv);
       }
 
       if (searchType)
