@@ -1158,8 +1158,9 @@ nsDownloadManager::OpenDownloadManager(PRBool aShouldFocus, PRInt32 aFlashCount,
     if (aShouldFocus)
       recentWindow->Focus();
     else {
-      nsCOMPtr<nsIDOMChromeWindow> chromeWindow(do_QueryInterface(recentWindow));
-      chromeWindow->GetAttentionWithCycleCount(aFlashCount);
+      // XXXben off until we fix the sticky flash bug
+      // nsCOMPtr<nsIDOMChromeWindow> chromeWindow(do_QueryInterface(recentWindow));
+      // chromeWindow->GetAttentionWithCycleCount(aFlashCount);
     }
   }
   else {
