@@ -991,11 +991,11 @@ static const PropertyCheckData SVGCheckProperties[] = {
   CHECKDATA_PROP(nsRuleDataSVG, mStrokeOpacity, CHECKDATA_VALUE, PR_FALSE),
   CHECKDATA_PROP(nsRuleDataSVG, mStrokeWidth, CHECKDATA_VALUE, PR_FALSE) 
   CHECKDATA_PROP(nsRuleDataSVG, mTextAnchor, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsRuleDataSVG, mTextRendering, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataSVG, mTextRendering, CHECKDATA_VALUE, PR_FALSE)
 };
 
 static const PropertyCheckData SVGResetCheckProperties[] = {
-  CHECKDATA_PROP(nsRuleDataSVG, mDominantBaseline, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataSVG, mDominantBaseline, CHECKDATA_VALUE, PR_FALSE)
 };  
 #endif
   
