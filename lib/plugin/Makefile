@@ -26,7 +26,7 @@ CPPSRCS		= nsplugin.cpp
 
 EXPORTS		= nppg.h npupp.h nsplugin.h npglue.h nppriv.h
 
-REQUIRES	= lay layer js style applet nspr dbm img util java pref xpcom
+REQUIRES	= lay layer js style applet nspr dbm img util java pref xpcom oji
 
 ifeq ($(subst /,_,$(shell uname -s)),OS2) 
 CPPSRCS		= npwplat.cpp
@@ -40,5 +40,7 @@ include $(DEPTH)/config/rules.mk
 ifeq ($(subst /,_,$(shell uname -s)),OS2)
 INCLUDES	+= -I$(DEPTH)/cmd/os2fe/nfc/include -I$(DEPTH)/cmd/os2fe -I$(DEPTH)/cmd/winfe
 endif
+
+INCLUDES        += -I.
 
 $(LIBRARY): $(OBJS)
