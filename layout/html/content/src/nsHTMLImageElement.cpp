@@ -86,37 +86,12 @@ public:
   NS_IMPL_IDOMHTMLELEMENT_USING_GENERIC(mInner)
 
   // nsIDOMHTMLImageElement
-  NS_IMETHOD GetLowSrc(nsString& aLowSrc);
-  NS_IMETHOD SetLowSrc(const nsString& aLowSrc);
-  NS_IMETHOD GetName(nsString& aName);
-  NS_IMETHOD SetName(const nsString& aName);
-  NS_IMETHOD GetAlign(nsString& aAlign);
-  NS_IMETHOD SetAlign(const nsString& aAlign);
-  NS_IMETHOD GetAlt(nsString& aAlt);
-  NS_IMETHOD SetAlt(const nsString& aAlt);
-  NS_IMETHOD GetBorder(nsString& aBorder);
-  NS_IMETHOD SetBorder(const nsString& aBorder);
-  NS_IMETHOD GetHeight(nsString& aHeight);
-  NS_IMETHOD SetHeight(const nsString& aHeight);
-  NS_IMETHOD GetHspace(nsString& aHspace);
-  NS_IMETHOD SetHspace(const nsString& aHspace);
-  NS_IMETHOD GetIsMap(PRBool* aIsMap);
-  NS_IMETHOD SetIsMap(PRBool aIsMap);
-  NS_IMETHOD GetLongDesc(nsString& aLongDesc);
-  NS_IMETHOD SetLongDesc(const nsString& aLongDesc);
-  NS_IMETHOD GetSrc(nsString& aSrc);
-  NS_IMETHOD SetSrc(const nsString& aSrc);
-  NS_IMETHOD GetUseMap(nsString& aUseMap);
-  NS_IMETHOD SetUseMap(const nsString& aUseMap);
-  NS_IMETHOD GetVspace(nsString& aVspace);
-  NS_IMETHOD SetVspace(const nsString& aVspace);
-  NS_IMETHOD GetWidth(nsString& aWidth);
-  NS_IMETHOD SetWidth(const nsString& aWidth);
+  NS_DECL_IDOMHTMLIMAGEELEMENT
 
   // nsIDOMImage
   // XXX Casing is different for backward compatibility
-  NS_IMETHOD    GetLowsrc(nsString& aLowsrc);
-  NS_IMETHOD    SetLowsrc(const nsString& aLowsrc);
+  NS_IMETHOD    GetLowsrc(nsAWritableString& aLowsrc);
+  NS_IMETHOD    SetLowsrc(const nsAReadableString& aLowsrc);
   NS_IMETHOD    GetComplete(PRBool* aComplete);
   NS_IMETHOD    GetBorder(PRInt32* aBorder);
   NS_IMETHOD    SetBorder(PRInt32 aBorder);
@@ -154,7 +129,7 @@ public:
   // nsIJSNativeInitializer
   NS_IMETHOD Initialize(JSContext* aContext, JSObject *aObj, 
                         PRUint32 argc, jsval *argv);
-  nsresult SetSrcInner(nsIURI* aBaseURL, const nsString& aSrc);
+  nsresult SetSrcInner(nsIURI* aBaseURL, const nsAReadableString& aSrc);
   nsresult GetCallerSourceURL(JSContext* cx, nsIURI** sourceURL);
 
   nsresult GetImageFrame(nsImageFrame** aImageFrame);
@@ -341,7 +316,7 @@ nsHTMLImageElement::GetComplete(PRBool* aComplete)
 }
 
 NS_IMETHODIMP
-nsHTMLImageElement::GetHeight(nsString& aValue)
+nsHTMLImageElement::GetHeight(nsAWritableString& aValue)
 {
   nsresult rv = mInner.GetAttribute(kNameSpaceID_None, nsHTMLAtoms::height,
                                     aValue);
@@ -353,8 +328,10 @@ nsHTMLImageElement::GetHeight(nsString& aValue)
 
     // A zero height most likely means that the image is not loaded yet.
     if (NS_SUCCEEDED(GetHeight(&height)) && height) {
-      aValue.AppendInt(height);
-      aValue.AppendWithConversion("px");
+      nsAutoString heightStr;
+      heightStr.AppendInt(height);
+      aValue.Append(heightStr);
+      aValue.Append(NS_LITERAL_STRING("px"));
     }
   }
 
@@ -362,7 +339,7 @@ nsHTMLImageElement::GetHeight(nsString& aValue)
 }
 
 NS_IMETHODIMP
-nsHTMLImageElement::SetHeight(const nsString& aValue)
+nsHTMLImageElement::SetHeight(const nsAReadableString& aValue)
 {
   return mInner.SetAttribute(kNameSpaceID_None, nsHTMLAtoms::height, aValue,
                              PR_TRUE);
@@ -415,7 +392,7 @@ nsHTMLImageElement::SetHeight(PRInt32 aHeight)
 }
 
 NS_IMETHODIMP
-nsHTMLImageElement::GetWidth(nsString& aValue)
+nsHTMLImageElement::GetWidth(nsAWritableString& aValue)
 {
   nsresult rv = mInner.GetAttribute(kNameSpaceID_None, nsHTMLAtoms::width,
                                     aValue);
@@ -427,8 +404,10 @@ nsHTMLImageElement::GetWidth(nsString& aValue)
 
     // A zero width most likely means that the image is not loaded yet.
     if (NS_SUCCEEDED(GetWidth(&width)) && width) {
-      aValue.AppendInt(width);
-      aValue.AppendWithConversion("px");
+      nsAutoString widthStr;
+      widthStr.AppendInt(width);
+      aValue.Append(widthStr);
+      aValue.Append(NS_LITERAL_STRING("px"));
     }
   }
 
@@ -436,7 +415,7 @@ nsHTMLImageElement::GetWidth(nsString& aValue)
 }
 
 NS_IMETHODIMP
-nsHTMLImageElement::SetWidth(const nsString& aValue)
+nsHTMLImageElement::SetWidth(const nsAReadableString& aValue)
 {
   return mInner.SetAttribute(kNameSpaceID_None, nsHTMLAtoms::width, aValue,
                              PR_TRUE);
@@ -490,7 +469,7 @@ nsHTMLImageElement::SetWidth(PRInt32 aWidth)
 
 NS_IMETHODIMP
 nsHTMLImageElement::StringToAttribute(nsIAtom* aAttribute,
-                                      const nsString& aValue,
+                                      const nsAReadableString& aValue,
                                       nsHTMLValue& aResult)
 {
   if (aAttribute == nsHTMLAtoms::align) {
@@ -512,7 +491,7 @@ nsHTMLImageElement::StringToAttribute(nsIAtom* aAttribute,
 NS_IMETHODIMP
 nsHTMLImageElement::AttributeToString(nsIAtom* aAttribute,
                                       const nsHTMLValue& aValue,
-                                      nsString& aResult) const
+                                      nsAWritableString& aResult) const
 {
   if (aAttribute == nsHTMLAtoms::align) {
     if (eHTMLUnit_Enumerated == aValue.GetUnit()) {
@@ -842,7 +821,7 @@ nsHTMLImageElement::SetDocument(nsIDocument* aDocument,
 }
 
 NS_IMETHODIMP
-nsHTMLImageElement::GetSrc(nsString& aSrc)
+nsHTMLImageElement::GetSrc(nsAWritableString& aSrc)
 {
   // Resolve url to an absolute url
   nsresult rv = NS_OK;
@@ -857,7 +836,8 @@ nsHTMLImageElement::GetSrc(nsString& aSrc)
 
   if (nsnull != baseURL && relURLSpec.Length() > 0) {
     // Get absolute URL.
-    rv = NS_MakeAbsoluteURI(aSrc, relURLSpec, baseURL);
+    nsAutoString srcStr(aSrc);
+    rv = NS_MakeAbsoluteURI(srcStr, relURLSpec, baseURL);
   }
   else {
     // Absolute URL is same as relative URL.
@@ -868,7 +848,7 @@ nsHTMLImageElement::GetSrc(nsString& aSrc)
 }
 
 nsresult
-nsHTMLImageElement::SetSrcInner(nsIURI* aBaseURL, const nsString& aSrc)
+nsHTMLImageElement::SetSrcInner(nsIURI* aBaseURL, const nsAReadableString& aSrc)
 {
   nsresult result = NS_OK;
 
@@ -946,7 +926,7 @@ nsHTMLImageElement::SetSrcInner(nsIURI* aBaseURL, const nsString& aSrc)
 }
 
 NS_IMETHODIMP 
-nsHTMLImageElement::SetSrc(const nsString& aSrc)
+nsHTMLImageElement::SetSrc(const nsAReadableString& aSrc)
 {
   nsIURI* baseURL = nsnull;
   nsresult result = NS_OK;

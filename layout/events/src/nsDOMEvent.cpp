@@ -144,12 +144,12 @@ NS_INTERFACE_MAP_BEGIN(nsDOMEvent)
 NS_INTERFACE_MAP_END
 
 // nsIDOMEventInterface
-NS_METHOD nsDOMEvent::GetType(nsString& aType)
+NS_METHOD nsDOMEvent::GetType(nsAWritableString& aType)
 {
   const char* mName = GetEventName(mEvent->message);
 
   if (nsnull != mName) {
-    aType.AssignWithConversion(mName);
+    aType.Assign(NS_ConvertASCIItoUCS2(mName));
     return NS_OK;
   }
   
@@ -886,7 +886,7 @@ NS_METHOD nsDOMEvent::GetPreventDefault(PRBool* aReturn)
 }
 
 nsresult
-nsDOMEvent::SetEventType(const nsString& aEventTypeArg)
+nsDOMEvent::SetEventType(const nsAReadableString& aEventTypeArg)
 {
   nsAutoString str; str.AssignWithConversion("on");
   nsIAtom* atom;
@@ -958,7 +958,7 @@ nsDOMEvent::SetEventType(const nsString& aEventTypeArg)
 }
 
 NS_IMETHODIMP
-nsDOMEvent::InitEvent(const nsString& aEventTypeArg, PRBool aCanBubbleArg, PRBool aCancelableArg)
+nsDOMEvent::InitEvent(const nsAReadableString& aEventTypeArg, PRBool aCanBubbleArg, PRBool aCancelableArg)
 {
   NS_ENSURE_SUCCESS(SetEventType(aEventTypeArg), NS_ERROR_FAILURE);
   mEvent->flags |= aCanBubbleArg ? NS_EVENT_FLAG_NONE : NS_EVENT_FLAG_CANT_BUBBLE;
@@ -968,13 +968,13 @@ nsDOMEvent::InitEvent(const nsString& aEventTypeArg, PRBool aCanBubbleArg, PRBoo
 }
 
 NS_IMETHODIMP
-nsDOMEvent::InitUIEvent(const nsString& aTypeArg, PRBool aCanBubbleArg, PRBool aCancelableArg, nsIDOMAbstractView* aViewArg, PRInt32 aDetailArg)
+nsDOMEvent::InitUIEvent(const nsAReadableString& aTypeArg, PRBool aCanBubbleArg, PRBool aCancelableArg, nsIDOMAbstractView* aViewArg, PRInt32 aDetailArg)
 {
     return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
-nsDOMEvent::InitMouseEvent(const nsString& aTypeArg, PRBool aCtrlKeyArg, PRBool aAltKeyArg, PRBool aShiftKeyArg, PRBool aMetaKeyArg, PRInt32 aScreenXArg, PRInt32 aScreenYArg, PRInt32 aClientXArg, PRInt32 aClientYArg, PRUint16 aButtonArg, PRUint16 aDetailArg)
+nsDOMEvent::InitMouseEvent(const nsAReadableString& aTypeArg, PRBool aCtrlKeyArg, PRBool aAltKeyArg, PRBool aShiftKeyArg, PRBool aMetaKeyArg, PRInt32 aScreenXArg, PRInt32 aScreenYArg, PRInt32 aClientXArg, PRInt32 aClientYArg, PRUint16 aButtonArg, PRUint16 aDetailArg)
 {
   NS_ENSURE_SUCCESS(SetEventType(aTypeArg), NS_ERROR_FAILURE);
   //mEvent->flags |= aCanBubbleArg ? NS_EVENT_FLAG_NONE : NS_EVENT_FLAG_CANT_BUBBLE;
@@ -983,7 +983,7 @@ nsDOMEvent::InitMouseEvent(const nsString& aTypeArg, PRBool aCtrlKeyArg, PRBool 
 }
 
 NS_IMETHODIMP
-nsDOMEvent::InitKeyEvent(const nsString& aTypeArg, PRBool aCanBubbleArg, PRBool aCancelableArg, PRBool aCtrlKeyArg, PRBool aAltKeyArg, PRBool aShiftKeyArg, PRBool aMetaKeyArg, PRUint32 aKeyCodeArg, PRUint32 aCharCodeArg, nsIDOMAbstractView* aViewArg)
+nsDOMEvent::InitKeyEvent(const nsAReadableString& aTypeArg, PRBool aCanBubbleArg, PRBool aCancelableArg, PRBool aCtrlKeyArg, PRBool aAltKeyArg, PRBool aShiftKeyArg, PRBool aMetaKeyArg, PRUint32 aKeyCodeArg, PRUint32 aCharCodeArg, nsIDOMAbstractView* aViewArg)
 {
   NS_ENSURE_SUCCESS(SetEventType(aTypeArg), NS_ERROR_FAILURE);
   mEvent->flags |= aCanBubbleArg ? NS_EVENT_FLAG_NONE : NS_EVENT_FLAG_CANT_BUBBLE;

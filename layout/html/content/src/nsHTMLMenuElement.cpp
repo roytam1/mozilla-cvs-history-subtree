@@ -132,7 +132,7 @@ NS_IMPL_BOOL_ATTR(nsHTMLMenuElement, Compact, compact)
 
 NS_IMETHODIMP
 nsHTMLMenuElement::StringToAttribute(nsIAtom* aAttribute,
-                                     const nsString& aValue,
+                                     const nsAReadableString& aValue,
                                      nsHTMLValue& aResult)
 {
   if (aAttribute == nsHTMLAtoms::type) {
@@ -152,7 +152,7 @@ nsHTMLMenuElement::StringToAttribute(nsIAtom* aAttribute,
 NS_IMETHODIMP
 nsHTMLMenuElement::AttributeToString(nsIAtom* aAttribute,
                                      const nsHTMLValue& aValue,
-                                     nsString& aResult) const
+                                     nsAWritableString& aResult) const
 {
   if (aAttribute == nsHTMLAtoms::type) {
     nsGenericHTMLElement::EnumValueToString(aValue, kListTypeTable, aResult);

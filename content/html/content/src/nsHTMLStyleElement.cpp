@@ -62,12 +62,7 @@ public:
   NS_IMPL_IDOMHTMLELEMENT_USING_GENERIC(mInner)
 
   // nsIDOMHTMLStyleElement
-  NS_IMETHOD GetDisabled(PRBool* aDisabled);
-  NS_IMETHOD SetDisabled(PRBool aDisabled);
-  NS_IMETHOD GetMedia(nsString& aMedia);
-  NS_IMETHOD SetMedia(const nsString& aMedia);
-  NS_IMETHOD GetType(nsString& aType);
-  NS_IMETHOD SetType(const nsString& aType);
+  NS_DECL_IDOMHTMLSTYLEELEMENT
 
   // nsIJSScriptObject
   NS_IMPL_IJSSCRIPTOBJECT_USING_GENERIC(mInner)
@@ -212,7 +207,7 @@ nsHTMLStyleElement::GetStyleSheet(nsIStyleSheet*& aStyleSheet)
 
 NS_IMETHODIMP
 nsHTMLStyleElement::StringToAttribute(nsIAtom* aAttribute,
-                               const nsString& aValue,
+                               const nsAReadableString& aValue,
                                nsHTMLValue& aResult)
 {
   return NS_CONTENT_ATTR_NOT_THERE;
@@ -221,7 +216,7 @@ nsHTMLStyleElement::StringToAttribute(nsIAtom* aAttribute,
 NS_IMETHODIMP
 nsHTMLStyleElement::AttributeToString(nsIAtom* aAttribute,
                                const nsHTMLValue& aValue,
-                               nsString& aResult) const
+                               nsAWritableString& aResult) const
 {
   return mInner.AttributeToString(aAttribute, aValue, aResult);
 }

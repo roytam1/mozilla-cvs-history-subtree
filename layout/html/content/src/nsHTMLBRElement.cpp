@@ -55,8 +55,7 @@ public:
   NS_IMPL_IDOMHTMLELEMENT_USING_GENERIC(mInner)
 
   // nsIDOMHTMLBRElement
-  NS_IMETHOD GetClear(nsString& aClear);
-  NS_IMETHOD SetClear(const nsString& aClear);
+  NS_DECL_IDOMHTMLBRELEMENT    
 
   // nsIJSScriptObject
   NS_IMPL_IJSSCRIPTOBJECT_USING_GENERIC(mInner)
@@ -136,7 +135,7 @@ static nsGenericHTMLElement::EnumTable kClearTable[] = {
 
 NS_IMETHODIMP
 nsHTMLBRElement::StringToAttribute(nsIAtom* aAttribute,
-                                   const nsString& aValue,
+                                   const nsAReadableString& aValue,
                                    nsHTMLValue& aResult)
 {
   if (aAttribute == nsHTMLAtoms::clear) {
@@ -150,7 +149,7 @@ nsHTMLBRElement::StringToAttribute(nsIAtom* aAttribute,
 NS_IMETHODIMP
 nsHTMLBRElement::AttributeToString(nsIAtom* aAttribute,
                                    const nsHTMLValue& aValue,
-                                   nsString& aResult) const
+                                   nsAWritableString& aResult) const
 {
   if (aAttribute == nsHTMLAtoms::clear) {
     if (eHTMLUnit_Enumerated == aValue.GetUnit()) {

@@ -513,7 +513,7 @@ nsresult nsEventListenerManager::GetIdentifiersForType(nsIAtom* aType, nsIID& aI
 }
 
 nsresult nsEventListenerManager::AddEventListenerByType(nsIDOMEventListener *aListener, 
-                                                        const nsString& aType, PRInt32 aFlags)
+                                                        const nsAReadableString& aType, PRInt32 aFlags)
 {
   PRInt32 subType;
   nsIID iid;
@@ -533,7 +533,7 @@ nsresult nsEventListenerManager::AddEventListenerByType(nsIDOMEventListener *aLi
 }
 
 nsresult nsEventListenerManager::RemoveEventListenerByType(nsIDOMEventListener *aListener, 
-                                                          const nsString& aType, PRInt32 aFlags)
+                                                          const nsAReadableString& aType, PRInt32 aFlags)
 {
   PRInt32 subType;
   nsIID iid;
@@ -1696,11 +1696,12 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
 
 nsresult nsEventListenerManager::CreateEvent(nsIPresContext* aPresContext,
                                              nsEvent* aEvent,
-                                             const nsString& aEventType,
+                                             const nsAReadableString& aEventType,
                                              nsIDOMEvent** aDOMEvent)
 {
-  if (!aEvent && !aEventType.EqualsIgnoreCase("MouseEvent") && !aEventType.EqualsIgnoreCase("KeyEvent") &&
-      !aEventType.EqualsIgnoreCase("HTMLEvent")) {
+  nsAutoString str(aEventType);
+  if (!aEvent && !str.EqualsIgnoreCase("MouseEvent") && !str.EqualsIgnoreCase("KeyEvent") &&
+      !str.EqualsIgnoreCase("HTMLEvent")) {
     return NS_ERROR_FAILURE;
   }
 
@@ -1977,7 +1978,7 @@ nsresult nsEventListenerManager::SetListenerTarget(nsISupports* aTarget)
 
 // nsIDOMEventTarget interface
 NS_IMETHODIMP 
-nsEventListenerManager::AddEventListener(const nsString& aType, 
+nsEventListenerManager::AddEventListener(const nsAReadableString& aType, 
                                          nsIDOMEventListener* aListener, 
                                          PRBool aUseCapture)
 {
@@ -1987,7 +1988,7 @@ nsEventListenerManager::AddEventListener(const nsString& aType,
 }
 
 NS_IMETHODIMP 
-nsEventListenerManager::RemoveEventListener(const nsString& aType, 
+nsEventListenerManager::RemoveEventListener(const nsAReadableString& aType, 
                                             nsIDOMEventListener* aListener, 
                                             PRBool aUseCapture)
 {

@@ -60,17 +60,7 @@ public:
   NS_IMPL_IDOMHTMLELEMENT_USING_GENERIC(mInner)
 
   // nsIDOMHTMLTableSectionElement
-  NS_IMETHOD GetCh(nsString& aCh);
-  NS_IMETHOD SetCh(const nsString& aCh);
-  NS_IMETHOD GetChOff(nsString& aChOff);
-  NS_IMETHOD SetChOff(const nsString& aChOff);
-  NS_IMETHOD GetAlign(nsString& aAlign);
-  NS_IMETHOD SetAlign(const nsString& aAlign);
-  NS_IMETHOD GetVAlign(nsString& aVAlign);
-  NS_IMETHOD SetVAlign(const nsString& aVAlign);
-  NS_IMETHOD GetRows(nsIDOMHTMLCollection** aRows);
-  NS_IMETHOD InsertRow(PRInt32 aIndex, nsIDOMHTMLElement** aReturn);
-  NS_IMETHOD DeleteRow(PRInt32 aIndex);
+  NS_DECL_IDOMHTMLTABLESECTIONELEMENT
 
   // nsIJSScriptObject
   NS_IMPL_IJSSCRIPTOBJECT_USING_GENERIC(mInner)
@@ -215,7 +205,7 @@ nsHTMLTableSectionElement::DeleteRow(PRInt32 aValue)
 
 NS_IMETHODIMP
 nsHTMLTableSectionElement::StringToAttribute(nsIAtom* aAttribute,
-                                      const nsString& aValue,
+                                      const nsAReadableString& aValue,
                                       nsHTMLValue& aResult)
 {
   /* ignore these attributes, stored simply as strings
@@ -258,7 +248,7 @@ nsHTMLTableSectionElement::StringToAttribute(nsIAtom* aAttribute,
 NS_IMETHODIMP
 nsHTMLTableSectionElement::AttributeToString(nsIAtom* aAttribute,
                                       const nsHTMLValue& aValue,
-                                      nsString& aResult) const
+                                      nsAWritableString& aResult) const
 {
   /* ignore these attributes, stored already as strings
      ch

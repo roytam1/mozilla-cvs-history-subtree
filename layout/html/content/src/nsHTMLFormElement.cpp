@@ -85,10 +85,7 @@ public:
   NS_DECL_IDOMHTMLFORMELEMENT
 
   // nsIDOMNSHTMLFormElement
-  NS_IMETHOD    GetEncoding(nsString& aEncoding);
-  NS_IMETHOD    Item(PRUint32 aIndex, nsIDOMElement** aReturn);
-  NS_IMETHOD    NamedItem(JSContext* cx, jsval* argv, PRUint32 argc, jsval* aReturn);
-  
+  NS_DECL_IDOMNSHTMLFORMELEMENT  
 
   // nsIContent
   NS_IMPL_ICONTENT_USING_GENERIC(mInner)
@@ -113,11 +110,11 @@ public:
 
   // nsIForm
   NS_IMETHOD AddElement(nsIFormControl* aElement);
-  NS_IMETHOD AddElementToTable(nsIFormControl* aChild, const nsString& aName);
+  NS_IMETHOD AddElementToTable(nsIFormControl* aChild, const nsAReadableString& aName);
   NS_IMETHOD GetElementAt(PRInt32 aIndex, nsIFormControl** aElement) const;
   NS_IMETHOD GetElementCount(PRUint32* aCount) const;
   NS_IMETHOD RemoveElement(nsIFormControl* aElement);
-  NS_IMETHOD RemoveElementFromTable(nsIFormControl* aElement, const nsString& aName);
+  NS_IMETHOD RemoveElementFromTable(nsIFormControl* aElement, const nsAReadableString& aName);
 
 protected:
   nsFormControlList*       mControls;
@@ -145,8 +142,8 @@ public:
 
   nsresult GetNamedObject(JSContext* aContext, jsval aID, JSObject** aObj);
 
-  nsresult AddElementToTable(nsIFormControl* aChild, const nsString& aName);
-  nsresult RemoveElementFromTable(nsIFormControl* aChild, const nsString& aName);
+  nsresult AddElementToTable(nsIFormControl* aChild, const nsAReadableString& aName);
+  nsresult RemoveElementFromTable(nsIFormControl* aChild, const nsAReadableString& aName);
 
 #ifdef DEBUG
   nsresult SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const;
@@ -260,13 +257,13 @@ nsHTMLFormElement::GetElements(nsIDOMHTMLCollection** aElements)
 }
 
 NS_IMETHODIMP
-nsHTMLFormElement::GetName(nsString& aValue)
+nsHTMLFormElement::GetName(nsAWritableString& aValue)
 {
   return mInner.GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::name, aValue);
 }
 
 NS_IMETHODIMP
-nsHTMLFormElement::SetName(const nsString& aValue)
+nsHTMLFormElement::SetName(const nsAReadableString& aValue)
 {
   return mInner.SetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::name, aValue, PR_TRUE);
 }
@@ -358,7 +355,7 @@ static nsGenericHTMLElement::EnumTable kFormEnctypeTable[] = {
 
 NS_IMETHODIMP
 nsHTMLFormElement::StringToAttribute(nsIAtom* aAttribute,
-                              const nsString& aValue,
+                              const nsAReadableString& aValue,
                               nsHTMLValue& aResult)
 {
   if (aAttribute == nsHTMLAtoms::method) {
@@ -377,7 +374,7 @@ nsHTMLFormElement::StringToAttribute(nsIAtom* aAttribute,
 NS_IMETHODIMP
 nsHTMLFormElement::AttributeToString(nsIAtom* aAttribute,
                               const nsHTMLValue& aValue,
-                              nsString& aResult) const
+                              nsAWritableString& aResult) const
 {
   if (aAttribute == nsHTMLAtoms::method) {
     if (eHTMLUnit_Enumerated == aValue.GetUnit()) {
@@ -463,7 +460,7 @@ nsHTMLFormElement::AddElement(nsIFormControl* aChild)
 }
 
 NS_IMETHODIMP
-nsHTMLFormElement::AddElementToTable(nsIFormControl* aChild, const nsString& aName)
+nsHTMLFormElement::AddElementToTable(nsIFormControl* aChild, const nsAReadableString& aName)
 {
   return mControls->AddElementToTable(aChild, aName);  
 }
@@ -479,13 +476,13 @@ nsHTMLFormElement::RemoveElement(nsIFormControl* aChild)
 
 NS_IMETHODIMP 
 nsHTMLFormElement::RemoveElementFromTable(nsIFormControl* aElement,
-                                          const nsString& aName)
+                                          const nsAReadableString& aName)
 {
   return mControls->RemoveElementFromTable(aElement, aName);
 }
 
 NS_IMETHODIMP
-nsHTMLFormElement::GetEncoding(nsString& aEncoding)
+nsHTMLFormElement::GetEncoding(nsAWritableString& aEncoding)
 {
   return mInner.GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::enctype, aEncoding);
 }
@@ -915,7 +912,7 @@ nsFormControlList::NamedItem(JSContext* cx, jsval* argv, PRUint32 argc, jsval* a
 }
 
 NS_IMETHODIMP 
-nsFormControlList::NamedItem(const nsString& aName, nsIDOMNode** aReturn)
+nsFormControlList::NamedItem(const nsAReadableString& aName, nsIDOMNode** aReturn)
 {
   NS_ENSURE_ARG_POINTER(aReturn);
 
@@ -948,7 +945,7 @@ nsFormControlList::NamedItem(const nsString& aName, nsIDOMNode** aReturn)
 }
 
 nsresult
-nsFormControlList::AddElementToTable(nsIFormControl* aChild, const nsString& aName)
+nsFormControlList::AddElementToTable(nsIFormControl* aChild, const nsAReadableString& aName)
 {
   nsStringKey key(aName);
   if (!mLookupTable) {
@@ -1017,7 +1014,7 @@ nsFormControlList::AddElementToTable(nsIFormControl* aChild, const nsString& aNa
 
 nsresult
 nsFormControlList::RemoveElementFromTable(nsIFormControl* aChild,
-                                          const nsString& aName)
+                                          const nsAReadableString& aName)
 {
   nsAutoString name;
   nsCOMPtr<nsIContent> content = do_QueryInterface(aChild);  

@@ -368,16 +368,16 @@ public:
   NS_DECL_ISUPPORTS
   
   // nsIDOMDOMImplementation
-  NS_IMETHOD    HasFeature(const nsString& aFeature, 
-                           const nsString& aVersion, 
+  NS_IMETHOD    HasFeature(const nsAReadableString& aFeature, 
+                           const nsAReadableString& aVersion, 
                            PRBool* aReturn);
-  NS_IMETHOD    CreateDocumentType(const nsString& aQualifiedName,
-                                   const nsString& aPublicId,
-                                   const nsString& aSystemId,
+  NS_IMETHOD    CreateDocumentType(const nsAReadableString& aQualifiedName,
+                                   const nsAReadableString& aPublicId,
+                                   const nsAReadableString& aSystemId,
                                    nsIDOMDocumentType** aReturn);
 
-  NS_IMETHOD    CreateDocument(const nsString& aNamespaceURI,
-                               const nsString& aQualifiedName,
+  NS_IMETHOD    CreateDocument(const nsAReadableString& aNamespaceURI,
+                               const nsAReadableString& aQualifiedName,
                                nsIDOMDocumentType* aDoctype,
                                nsIDOMDocument** aReturn);
 
@@ -418,17 +418,17 @@ NS_IMPL_ISUPPORTS4(nsDOMImplementation, nsIDOMDOMImplementation, nsIPrivateDOMIm
 
 
 NS_IMETHODIMP    
-nsDOMImplementation::HasFeature(const nsString& aFeature, 
-                                const nsString& aVersion, 
+nsDOMImplementation::HasFeature(const nsAReadableString& aFeature, 
+                                const nsAReadableString& aVersion, 
                                 PRBool* aReturn)
 {
   return nsGenericElement::InternalSupports(aFeature, aVersion, aReturn);
 }
 
 NS_IMETHODIMP
-nsDOMImplementation::CreateDocumentType(const nsString& aQualifiedName,
-                                        const nsString& aPublicId, 
-                                        const nsString& aSystemId, 
+nsDOMImplementation::CreateDocumentType(const nsAReadableString& aQualifiedName,
+                                        const nsAReadableString& aPublicId, 
+                                        const nsAReadableString& aSystemId, 
                                         nsIDOMDocumentType** aReturn)
 {
   NS_ENSURE_ARG_POINTER(aReturn);
@@ -438,8 +438,8 @@ nsDOMImplementation::CreateDocumentType(const nsString& aQualifiedName,
 }
 
 NS_IMETHODIMP
-nsDOMImplementation::CreateDocument(const nsString& aNamespaceURI, 
-                                    const nsString& aQualifiedName, 
+nsDOMImplementation::CreateDocument(const nsAReadableString& aNamespaceURI, 
+                                    const nsAReadableString& aQualifiedName, 
                                     nsIDOMDocumentType* aDoctype, 
                                     nsIDOMDocument** aReturn)
 {  
@@ -1033,7 +1033,7 @@ nsDocument::AddPrincipal(nsIPrincipal *aNewPrincipal)
 }
 
 NS_IMETHODIMP 
-nsDocument::GetContentType(nsString& aContentType) const
+nsDocument::GetContentType(nsAWritableString& aContentType) const
 {
   // Must be implemented by derived class.
   return NS_ERROR_NOT_IMPLEMENTED;
@@ -1057,15 +1057,15 @@ nsDocument::GetBaseURL(nsIURI*& aURL) const
   return NS_OK;
 }
 
-NS_IMETHODIMP nsDocument::GetDocumentCharacterSet(nsString& oCharSetID) 
+NS_IMETHODIMP nsDocument::GetDocumentCharacterSet(nsAWritableString& oCharSetID) 
 {
   oCharSetID = mCharacterSet;
   return NS_OK;
 }
 
-NS_IMETHODIMP nsDocument::SetDocumentCharacterSet(const nsString& aCharSetID)
+NS_IMETHODIMP nsDocument::SetDocumentCharacterSet(const nsAReadableString& aCharSetID)
 {
-  if (mCharacterSet != aCharSetID) {
+  if (!mCharacterSet.Equals(aCharSetID)) {
     mCharacterSet = aCharSetID;
     nsAutoString charSetTopic;
     charSetTopic.AssignWithConversion("charset");
@@ -1073,7 +1073,7 @@ NS_IMETHODIMP nsDocument::SetDocumentCharacterSet(const nsString& aCharSetID)
     for (PRInt32 i = 0; i < n; i++) {
       nsIObserver* observer = (nsIObserver*) mCharSetObservers.ElementAt(i);
       observer->Observe((nsIDocument*) this, charSetTopic.GetUnicode(),
-                        aCharSetID.GetUnicode());
+                        nsAutoString(aCharSetID).GetUnicode());
     }
   }
   return NS_OK;
@@ -1155,7 +1155,7 @@ NS_IMETHODIMP nsDocument::SetWordBreaker(nsIWordBreaker* aWordBreaker)
 }
 
 NS_IMETHODIMP
-nsDocument::GetHeaderData(nsIAtom* aHeaderField, nsString& aData) const
+nsDocument::GetHeaderData(nsIAtom* aHeaderField, nsAWritableString& aData) const
 {
   aData.Truncate();
   const nsDocHeaderData* data = mHeaderData;
@@ -1170,7 +1170,7 @@ nsDocument::GetHeaderData(nsIAtom* aHeaderField, nsString& aData) const
 }
 
 NS_IMETHODIMP
-nsDocument::SetHeaderData(nsIAtom* aHeaderField, const nsString& aData)
+nsDocument::SetHeaderData(nsIAtom* aHeaderField, const nsAReadableString& aData)
 {
   if (nsnull != aHeaderField) {
     if (nsnull == mHeaderData) {
@@ -2152,7 +2152,7 @@ nsDocument::GetDocumentElement(nsIDOMElement** aDocumentElement)
 }
 
 NS_IMETHODIMP    
-nsDocument::CreateElement(const nsString& aTagName, 
+nsDocument::CreateElement(const nsAReadableString& aTagName, 
                           nsIDOMElement** aReturn)
 {
   // Should be implemented by subclass
@@ -2160,7 +2160,7 @@ nsDocument::CreateElement(const nsString& aTagName,
 }
 
 NS_IMETHODIMP
-nsDocument::CreateTextNode(const nsString& aData, nsIDOMText** aReturn)
+nsDocument::CreateTextNode(const nsAReadableString& aData, nsIDOMText** aReturn)
 {
   nsIContent* text = nsnull;
   nsresult        rv = NS_NewTextNode(&text);
@@ -2181,7 +2181,7 @@ nsDocument::CreateDocumentFragment(nsIDOMDocumentFragment** aReturn)
 }
 
 NS_IMETHODIMP    
-nsDocument::CreateComment(const nsString& aData, nsIDOMComment** aReturn)
+nsDocument::CreateComment(const nsAReadableString& aData, nsIDOMComment** aReturn)
 {
   nsIContent* comment = nsnull;
   nsresult        rv = NS_NewCommentNode(&comment);
@@ -2196,15 +2196,15 @@ nsDocument::CreateComment(const nsString& aData, nsIDOMComment** aReturn)
 }
 
 NS_IMETHODIMP 
-nsDocument::CreateCDATASection(const nsString& aData, nsIDOMCDATASection** aReturn)
+nsDocument::CreateCDATASection(const nsAReadableString& aData, nsIDOMCDATASection** aReturn)
 {
   // Should be implemented by subclass
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP    
-nsDocument::CreateProcessingInstruction(const nsString& aTarget, 
-                                        const nsString& aData, 
+nsDocument::CreateProcessingInstruction(const nsAReadableString& aTarget, 
+                                        const nsAReadableString& aData, 
                                         nsIDOMProcessingInstruction** aReturn)
 {
   // Should be implemented by subclass
@@ -2212,7 +2212,7 @@ nsDocument::CreateProcessingInstruction(const nsString& aTarget,
 }
 
 NS_IMETHODIMP    
-nsDocument::CreateAttribute(const nsString& aName, 
+nsDocument::CreateAttribute(const nsAReadableString& aName, 
                             nsIDOMAttr** aReturn)
 {
   NS_ENSURE_ARG_POINTER(aReturn);
@@ -2233,7 +2233,7 @@ nsDocument::CreateAttribute(const nsString& aName,
 }
 
 NS_IMETHODIMP    
-nsDocument::CreateEntityReference(const nsString& aName, 
+nsDocument::CreateEntityReference(const nsAReadableString& aName, 
                                   nsIDOMEntityReference** aReturn)
 {
   // Should be implemented by subclass
@@ -2241,7 +2241,7 @@ nsDocument::CreateEntityReference(const nsString& aName,
 }
 
 NS_IMETHODIMP    
-nsDocument::GetElementsByTagName(const nsString& aTagname, 
+nsDocument::GetElementsByTagName(const nsAReadableString& aTagname, 
                                  nsIDOMNodeList** aReturn)
 {
   nsCOMPtr<nsIAtom> nameAtom = dont_AddRef(NS_NewAtom(aTagname));
@@ -2253,8 +2253,8 @@ nsDocument::GetElementsByTagName(const nsString& aTagname,
 }
 
 NS_IMETHODIMP    
-nsDocument::GetElementsByTagNameNS(const nsString& aNamespaceURI,
-                                   const nsString& aLocalName,
+nsDocument::GetElementsByTagNameNS(const nsAReadableString& aNamespaceURI,
+                                   const nsAReadableString& aLocalName,
                                    nsIDOMNodeList** aReturn)
 {
   nsCOMPtr<nsIAtom> nameAtom;
@@ -2264,7 +2264,7 @@ nsDocument::GetElementsByTagNameNS(const nsString& aNamespaceURI,
 
   nsContentList* list = nsnull;
 
-  if (!aNamespaceURI.EqualsWithConversion("*")) {
+  if (!aNamespaceURI.Equals(NS_ConvertASCIItoUCS2("*"))) {
     mNameSpaceManager->GetNameSpaceID(aNamespaceURI, nameSpaceId);
 
     if (nameSpaceId == kNameSpaceID_Unknown) {
@@ -2300,14 +2300,14 @@ nsDocument::GetStyleSheets(nsIDOMStyleSheetList** aStyleSheets)
 }
 
 NS_IMETHODIMP    
-nsDocument::GetCharacterSet(nsString& aCharacterSet)
+nsDocument::GetCharacterSet(nsAWritableString& aCharacterSet)
 {
   return GetDocumentCharacterSet(aCharacterSet);
 }
 
 NS_IMETHODIMP    
-nsDocument::CreateElementWithNameSpace(const nsString& aTagName, 
-                                       const nsString& aNameSpace, 
+nsDocument::CreateElementWithNameSpace(const nsAReadableString& aTagName, 
+                                       const nsAReadableString& aNameSpace, 
                                        nsIDOMElement** aReturn)
 {
   *aReturn = nsnull;
@@ -2326,7 +2326,7 @@ nsDocument::ImportNode(nsIDOMNode* aImportedNode,
 }
 
 NS_IMETHODIMP
-nsDocument::AddBinding(nsIDOMElement* aContent, const nsString& aURL)
+nsDocument::AddBinding(nsIDOMElement* aContent, const nsAReadableString& aURL)
 {
   nsCOMPtr<nsIBindingManager> bm;
   GetBindingManager(getter_AddRefs(bm));
@@ -2336,7 +2336,7 @@ nsDocument::AddBinding(nsIDOMElement* aContent, const nsString& aURL)
 }
 
 NS_IMETHODIMP
-nsDocument::RemoveBinding(nsIDOMElement* aContent, const nsString& aURL)
+nsDocument::RemoveBinding(nsIDOMElement* aContent, const nsAReadableString& aURL)
 {
   if (mBindingManager) {
     nsCOMPtr<nsIContent> content(do_QueryInterface(aContent));
@@ -2542,7 +2542,7 @@ nsDocument::GetHeight(PRInt32* aHeight)
 }
 
 NS_IMETHODIMP
-nsDocument::Load (const nsString& aUrl)
+nsDocument::Load (const nsAReadableString& aUrl)
 {
   // Should be implemented by subclass
   return NS_ERROR_NOT_IMPLEMENTED;
@@ -2585,21 +2585,21 @@ nsDocument::GetPlugins(nsIDOMPluginArray** aPlugins)
 // nsIDOMNode methods
 //
 NS_IMETHODIMP    
-nsDocument::GetNodeName(nsString& aNodeName)
+nsDocument::GetNodeName(nsAWritableString& aNodeName)
 {
-  aNodeName.AssignWithConversion("#document");
+  aNodeName.Assign(NS_ConvertASCIItoUCS2("#document"));
   return NS_OK;
 }
 
 NS_IMETHODIMP    
-nsDocument::GetNodeValue(nsString& aNodeValue)
+nsDocument::GetNodeValue(nsAWritableString& aNodeValue)
 {
   aNodeValue.Truncate();
   return NS_OK;
 }
 
 NS_IMETHODIMP    
-nsDocument::SetNodeValue(const nsString& aNodeValue)
+nsDocument::SetNodeValue(const nsAReadableString& aNodeValue)
 {
   return NS_ERROR_DOM_NO_MODIFICATION_ALLOWED_ERR;
 }
@@ -2715,27 +2715,27 @@ nsDocument::GetAttributes(nsIDOMNamedNodeMap** aAttributes)
 }
 
 NS_IMETHODIMP
-nsDocument::GetNamespaceURI(nsString& aNamespaceURI)
+nsDocument::GetNamespaceURI(nsAWritableString& aNamespaceURI)
 { 
   aNamespaceURI.Truncate();
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsDocument::GetPrefix(nsString& aPrefix)
+nsDocument::GetPrefix(nsAWritableString& aPrefix)
 {
   aPrefix.Truncate();
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsDocument::SetPrefix(const nsString& aPrefix)
+nsDocument::SetPrefix(const nsAReadableString& aPrefix)
 {
   return NS_ERROR_DOM_NO_MODIFICATION_ALLOWED_ERR;
 }
 
 NS_IMETHODIMP
-nsDocument::GetLocalName(nsString& aLocalName)
+nsDocument::GetLocalName(nsAWritableString& aLocalName)
 {
   aLocalName.Truncate();
   return NS_OK;
@@ -3018,7 +3018,7 @@ nsDocument::Normalize()
 }
 
 NS_IMETHODIMP
-nsDocument::Supports(const nsString& aFeature, const nsString& aVersion,
+nsDocument::Supports(const nsAReadableString& aFeature, const nsAReadableString& aVersion,
                      PRBool* aReturn)
 {
   return nsGenericElement::InternalSupports(aFeature, aVersion, aReturn);
@@ -3132,7 +3132,7 @@ nsresult nsDocument::RemoveEventListenerByIID(nsIDOMEventListener *aListener, co
   return NS_ERROR_FAILURE;
 }
 
-nsresult nsDocument::AddEventListener(const nsString& aType, nsIDOMEventListener* aListener, 
+nsresult nsDocument::AddEventListener(const nsAReadableString& aType, nsIDOMEventListener* aListener, 
                                       PRBool aUseCapture)
 {
   nsIEventListenerManager *manager;
@@ -3147,7 +3147,7 @@ nsresult nsDocument::AddEventListener(const nsString& aType, nsIDOMEventListener
   return NS_ERROR_FAILURE;
 }
 
-nsresult nsDocument::RemoveEventListener(const nsString& aType, nsIDOMEventListener* aListener, 
+nsresult nsDocument::RemoveEventListener(const nsAReadableString& aType, nsIDOMEventListener* aListener, 
                                          PRBool aUseCapture)
 {
   if (nsnull != mListenerManager) {
@@ -3182,7 +3182,7 @@ nsDocument::DispatchEvent(nsIDOMEvent* aEvent)
 }
 
 NS_IMETHODIMP
-nsDocument::CreateEvent(const nsString& aEventType, nsIDOMEvent** aReturn)
+nsDocument::CreateEvent(const nsAReadableString& aEventType, nsIDOMEvent** aReturn)
 {
   // Obtain a presentation context
   PRInt32 count = GetNumberOfShells();
@@ -3363,7 +3363,7 @@ void      nsDocument::Finalize(JSContext *aContext, JSObject *aObj)
 /**
   * Finds text in content
  */
-NS_IMETHODIMP nsDocument::FindNext(const nsString &aSearchStr, PRBool aMatchCase, PRBool aSearchDown, PRBool &aIsFound)
+NS_IMETHODIMP nsDocument::FindNext(const nsAReadableString& aSearchStr, PRBool aMatchCase, PRBool aSearchDown, PRBool &aIsFound)
 {
   aIsFound = PR_FALSE;
   return NS_ERROR_FAILURE;

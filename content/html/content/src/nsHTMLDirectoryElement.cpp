@@ -132,7 +132,7 @@ NS_IMPL_BOOL_ATTR(nsHTMLDirectoryElement, Compact, compact)
 
 NS_IMETHODIMP
 nsHTMLDirectoryElement::StringToAttribute(nsIAtom* aAttribute,
-                                          const nsString& aValue,
+                                          const nsAReadableString& aValue,
                                           nsHTMLValue& aResult)
 {
   if (aAttribute == nsHTMLAtoms::type) {
@@ -156,7 +156,7 @@ nsHTMLDirectoryElement::StringToAttribute(nsIAtom* aAttribute,
 NS_IMETHODIMP
 nsHTMLDirectoryElement::AttributeToString(nsIAtom* aAttribute,
                                           const nsHTMLValue& aValue,
-                                          nsString& aResult) const
+                                          nsAWritableString& aResult) const
 {
   if (aAttribute == nsHTMLAtoms::type) {
     nsGenericHTMLElement::EnumValueToString(aValue, kListTypeTable, aResult);

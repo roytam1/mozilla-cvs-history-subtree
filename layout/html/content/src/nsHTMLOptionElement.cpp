@@ -304,14 +304,14 @@ nsHTMLOptionElement::SetDisabled(PRBool aDisabled)
 #endif
 
 NS_IMETHODIMP                                                      
-nsHTMLOptionElement::GetLabel(nsString& aValue)                             
+nsHTMLOptionElement::GetLabel(nsAWritableString& aValue)                             
 {                                                                  
   mInner.GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::label, aValue);                                                  
   return NS_OK;
 }         
                                                          
 NS_IMETHODIMP                                                      
-nsHTMLOptionElement::SetLabel(const nsString& aValue)                       
+nsHTMLOptionElement::SetLabel(const nsAReadableString& aValue)                       
 {                                                                  
   nsresult result = mInner.SetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::label, aValue, PR_TRUE); 
   if (NS_SUCCEEDED(result)) {
@@ -397,7 +397,7 @@ nsHTMLOptionElement::GetIndex(PRInt32* aIndex)
 
 NS_IMETHODIMP
 nsHTMLOptionElement::StringToAttribute(nsIAtom* aAttribute,
-                                const nsString& aValue,
+                                const nsAReadableString& aValue,
                                 nsHTMLValue& aResult)
 {
   if (aAttribute == nsHTMLAtoms::selected) {
@@ -414,7 +414,7 @@ nsHTMLOptionElement::StringToAttribute(nsIAtom* aAttribute,
 NS_IMETHODIMP
 nsHTMLOptionElement::AttributeToString(nsIAtom* aAttribute,
                                 const nsHTMLValue& aValue,
-                                nsString& aResult) const
+                                nsAWritableString& aResult) const
 {
   return mInner.AttributeToString(aAttribute, aValue, aResult);
 }
@@ -465,7 +465,7 @@ nsHTMLOptionElement::HandleDOMEvent(nsIPresContext* aPresContext,
 }
 
 NS_IMETHODIMP
-nsHTMLOptionElement::GetText(nsString& aText)
+nsHTMLOptionElement::GetText(nsAWritableString& aText)
 {
   aText.SetLength(0);
   PRInt32 numNodes;
@@ -484,10 +484,10 @@ nsHTMLOptionElement::GetText(nsString& aText)
         // the option could be all spaces, so compress the white space
         // then make sure the length is greater than zero
         if (aText.Length() > 0) { 
-          nsAutoString compressText = aText;
+          nsAutoString compressText(aText);
           compressText.CompressWhitespace(PR_TRUE, PR_TRUE);
           if (compressText.Length() != 0) {
-            aText = compressText;
+            aText.Assign(compressText);
           }
         }
         NS_RELEASE(node);
@@ -501,7 +501,7 @@ nsHTMLOptionElement::GetText(nsString& aText)
 }
 
 NS_IMETHODIMP
-nsHTMLOptionElement::SetText(const nsString& aText)
+nsHTMLOptionElement::SetText(const nsAReadableString& aText)
 {
   PRInt32 numNodes;
   PRBool usedExistingTextNode = PR_FALSE;  // Do we need to create a text node?

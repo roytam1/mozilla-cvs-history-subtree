@@ -390,9 +390,9 @@ nsHTMLDocument::Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup)
 }
 
 NS_IMETHODIMP 
-nsHTMLDocument::GetContentType(nsString& aContentType) const
+nsHTMLDocument::GetContentType(nsAWritableString& aContentType) const
 {
-  aContentType.AssignWithConversion("text/html");
+  aContentType.Assign(NS_LITERAL_STRING("text/html"));
   return NS_OK;
 }
 
@@ -864,7 +864,7 @@ nsHTMLDocument::EndLoad()
   return nsDocument::EndLoad();
 }
 
-NS_IMETHODIMP nsHTMLDocument::SetTitle(const nsString& aTitle)
+NS_IMETHODIMP nsHTMLDocument::SetTitle(const nsAReadableString& aTitle)
 {
   if (nsnull == mDocumentTitle) {
     mDocumentTitle = new nsString(aTitle);
@@ -884,7 +884,7 @@ NS_IMETHODIMP nsHTMLDocument::SetTitle(const nsString& aTitle)
       if (container) {
         nsCOMPtr<nsIBaseWindow> docShell(do_QueryInterface(container));
         if(docShell) {
-          docShell->SetTitle(aTitle.GetUnicode());
+          docShell->SetTitle(mDocumentTitle->GetUnicode());
         }
       }
     }
@@ -1017,7 +1017,7 @@ nsHTMLDocument::GetBaseURL(nsIURI*& aURL) const
 }
 
 NS_IMETHODIMP
-nsHTMLDocument:: SetBaseURL(const nsString& aURLSpec)
+nsHTMLDocument:: SetBaseURL(const nsAReadableString& aURLSpec)
 {
   nsresult result = NS_OK;
 
@@ -1031,10 +1031,10 @@ nsHTMLDocument:: SetBaseURL(const nsString& aURLSpec)
 }
 
 NS_IMETHODIMP
-nsHTMLDocument:: GetBaseTarget(nsString& aTarget) const
+nsHTMLDocument:: GetBaseTarget(nsAWritableString& aTarget) const
 {
   if (nsnull != mBaseTarget) {
-    aTarget = *mBaseTarget;
+    aTarget.Assign(*mBaseTarget);
   }
   else {
     aTarget.Truncate();
@@ -1043,14 +1043,14 @@ nsHTMLDocument:: GetBaseTarget(nsString& aTarget) const
 }
 
 NS_IMETHODIMP
-nsHTMLDocument:: SetBaseTarget(const nsString& aTarget)
+nsHTMLDocument:: SetBaseTarget(const nsAReadableString& aTarget)
 {
   if (0 < aTarget.Length()) {
     if (nsnull != mBaseTarget) {
       *mBaseTarget = aTarget;
     }
     else {
-      mBaseTarget = aTarget.ToNewString();
+      mBaseTarget = new nsString(aTarget);
     }
   }
   else {
@@ -1063,14 +1063,14 @@ nsHTMLDocument:: SetBaseTarget(const nsString& aTarget)
 }
 
 NS_IMETHODIMP 
-nsHTMLDocument::SetLastModified(const nsString& aLastModified)
+nsHTMLDocument::SetLastModified(const nsAReadableString& aLastModified)
 {
   if (0 < aLastModified.Length()) {
     if (nsnull != mLastModified) {
       *mLastModified = aLastModified;
     }
     else {
-      mLastModified = aLastModified.ToNewString();
+      mLastModified = new nsString(aLastModified);
     }
   }
   else if (nsnull != mLastModified) {
@@ -1082,14 +1082,14 @@ nsHTMLDocument::SetLastModified(const nsString& aLastModified)
 }
 
 NS_IMETHODIMP 
-nsHTMLDocument::SetReferrer(const nsString& aReferrer)
+nsHTMLDocument::SetReferrer(const nsAReadableString& aReferrer)
 {
   if (0 < aReferrer.Length()) {
     if (nsnull != mReferrer) {
       *mReferrer = aReferrer;
     }
     else {
-      mReferrer = aReferrer.ToNewString();
+      mReferrer = new nsString(aReferrer);
     }
   }
   else if (nsnull != mReferrer) {
@@ -1147,7 +1147,8 @@ nsHTMLDocument::SetDTDMode(nsDTDMode aMode)
 }
 
 NS_IMETHODIMP
-nsHTMLDocument::SetHeaderData(nsIAtom* aHeaderField, const nsString& aData)
+nsHTMLDocument::SetHeaderData(nsIAtom* aHeaderField,
+                              const nsAReadableString& aData)
 {
   nsresult result = nsMarkupDocument::SetHeaderData(aHeaderField, aData);
 
@@ -1166,7 +1167,7 @@ nsHTMLDocument::SetHeaderData(nsIAtom* aHeaderField, const nsString& aData)
           sheet->GetTitle(title);
           if (0 < title.Length()) {  // if sheet has title
             PRBool disabled = ((0 == aData.Length()) || 
-                               (PR_FALSE == aData.EqualsIgnoreCase(title)));
+                               (PR_FALSE == title.EqualsIgnoreCase(aData)));
             SetStyleSheetDisabledState(sheet, disabled);
           }
         }
@@ -1273,9 +1274,9 @@ nsHTMLDocument::FlushPendingNotifications()
 }
 
 NS_IMETHODIMP
-nsHTMLDocument::CreateElementNS(const nsString& aNamespaceURI,
-                               const nsString& aQualifiedName,
-                               nsIDOMElement** aReturn)
+nsHTMLDocument::CreateElementNS(const nsAReadableString& aNamespaceURI,
+                                const nsAReadableString& aQualifiedName,
+                                nsIDOMElement** aReturn)
 {
   nsresult rv = NS_OK;
 
@@ -1312,7 +1313,7 @@ nsHTMLDocument::CreateElementNS(const nsString& aNamespaceURI,
 // nsIDOMDocument interface implementation
 //
 NS_IMETHODIMP    
-nsHTMLDocument::CreateElement(const nsString& aTagName, 
+nsHTMLDocument::CreateElement(const nsAReadableString& aTagName, 
                               nsIDOMElement** aReturn)
 {
   NS_ENSURE_ARG_POINTER(aReturn);
@@ -1335,8 +1336,8 @@ nsHTMLDocument::CreateElement(const nsString& aTagName,
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::CreateProcessingInstruction(const nsString& aTarget, 
-                                            const nsString& aData, 
+nsHTMLDocument::CreateProcessingInstruction(const nsAReadableString& aTarget, 
+                                            const nsAReadableString& aData, 
                                             nsIDOMProcessingInstruction** aReturn)
 {
   // There are no PIs for HTML
@@ -1346,7 +1347,7 @@ nsHTMLDocument::CreateProcessingInstruction(const nsString& aTarget,
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::CreateCDATASection(const nsString& aData, 
+nsHTMLDocument::CreateCDATASection(const nsAReadableString& aData, 
                                    nsIDOMCDATASection** aReturn)
 {
   // There are no CDATASections in HTML
@@ -1356,7 +1357,7 @@ nsHTMLDocument::CreateCDATASection(const nsString& aData,
 }
  
 NS_IMETHODIMP    
-nsHTMLDocument::CreateEntityReference(const nsString& aName, 
+nsHTMLDocument::CreateEntityReference(const nsAReadableString& aName, 
                                       nsIDOMEntityReference** aReturn)
 {
   // There are no EntityReferences in HTML
@@ -1391,25 +1392,25 @@ nsHTMLDocument::CreateDocumentFragment(nsIDOMDocumentFragment** aReturn)
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::CreateComment(const nsString& aData, nsIDOMComment** aReturn)
+nsHTMLDocument::CreateComment(const nsAReadableString& aData, nsIDOMComment** aReturn)
 { 
   return nsDocument::CreateComment(aData, aReturn); 
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::CreateAttribute(const nsString& aName, nsIDOMAttr** aReturn)
+nsHTMLDocument::CreateAttribute(const nsAReadableString& aName, nsIDOMAttr** aReturn)
 { 
   return nsDocument::CreateAttribute(aName, aReturn); 
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::CreateTextNode(const nsString& aData, nsIDOMText** aReturn)
+nsHTMLDocument::CreateTextNode(const nsAReadableString& aData, nsIDOMText** aReturn)
 { 
   return nsDocument::CreateTextNode(aData, aReturn); 
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::GetElementsByTagName(const nsString& aTagname, nsIDOMNodeList** aReturn)
+nsHTMLDocument::GetElementsByTagName(const nsAReadableString& aTagname, nsIDOMNodeList** aReturn)
 { 
   nsAutoString tmp(aTagname);
   tmp.ToLowerCase(); // HTML elements are lower case internally.
@@ -1472,19 +1473,19 @@ nsHTMLDocument::HasChildNodes(PRBool* aReturn)
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::GetNodeName(nsString& aNodeName)
+nsHTMLDocument::GetNodeName(nsAWritableString& aNodeName)
 { 
   return nsDocument::GetNodeName(aNodeName); 
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::GetNodeValue(nsString& aNodeValue)
+nsHTMLDocument::GetNodeValue(nsAWritableString& aNodeValue)
 { 
   return nsDocument::GetNodeValue(aNodeValue); 
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::SetNodeValue(const nsString& aNodeValue)
+nsHTMLDocument::SetNodeValue(const nsAReadableString& aNodeValue)
 { 
   return nsDocument::SetNodeValue(aNodeValue); 
 }
@@ -1496,25 +1497,25 @@ nsHTMLDocument::GetNodeType(PRUint16* aNodeType)
 }
 
 NS_IMETHODIMP
-nsHTMLDocument::GetNamespaceURI(nsString& aNamespaceURI)
+nsHTMLDocument::GetNamespaceURI(nsAWritableString& aNamespaceURI)
 { 
   return nsDocument::GetNamespaceURI(aNamespaceURI);
 }
 
 NS_IMETHODIMP
-nsHTMLDocument::GetPrefix(nsString& aPrefix)
+nsHTMLDocument::GetPrefix(nsAWritableString& aPrefix)
 {
   return nsDocument::GetPrefix(aPrefix);
 }
 
 NS_IMETHODIMP
-nsHTMLDocument::SetPrefix(const nsString& aPrefix)
+nsHTMLDocument::SetPrefix(const nsAReadableString& aPrefix)
 {
   return nsDocument::SetPrefix(aPrefix);
 }
 
 NS_IMETHODIMP
-nsHTMLDocument::GetLocalName(nsString& aLocalName)
+nsHTMLDocument::GetLocalName(nsAWritableString& aLocalName)
 {
   return nsDocument::GetLocalName(aLocalName);
 }
@@ -1562,7 +1563,7 @@ nsHTMLDocument::Normalize()
 }
 
 NS_IMETHODIMP
-nsHTMLDocument::Supports(const nsString& aFeature, const nsString& aVersion,
+nsHTMLDocument::Supports(const nsAReadableString& aFeature, const nsAReadableString& aVersion,
                         PRBool* aReturn)
 {
   return nsDocument::Supports(aFeature, aVersion, aReturn);
@@ -1576,19 +1577,21 @@ nsHTMLDocument::Supports(const nsString& aFeature, const nsString& aVersion,
 // for full specification.
 //
 NS_IMETHODIMP
-nsHTMLDocument::GetTitle(nsString& aTitle)
+nsHTMLDocument::GetTitle(nsAWritableString& aTitle)
 {
   if (nsnull != mDocumentTitle) {
-    aTitle=*mDocumentTitle;
+    aTitle.Assign(*mDocumentTitle);
+  } else {
+    aTitle.Truncate();
   }
   return NS_OK;
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::GetReferrer(nsString& aReferrer)
+nsHTMLDocument::GetReferrer(nsAWritableString& aReferrer)
 {
   if (nsnull != mReferrer) {
-    aReferrer = *mReferrer;
+    aReferrer.Assign(*mReferrer);
   }
   else {
     aReferrer.Truncate();
@@ -1611,7 +1614,7 @@ nsHTMLDocument::GetDomainURI(nsIURI **uri)
 
 
 NS_IMETHODIMP    
-nsHTMLDocument::GetDomain(nsString& aDomain)
+nsHTMLDocument::GetDomain(nsAWritableString& aDomain)
 {
   nsCOMPtr<nsIURI> uri;
   if (NS_FAILED(GetDomainURI(getter_AddRefs(uri))))
@@ -1620,14 +1623,14 @@ nsHTMLDocument::GetDomain(nsString& aDomain)
   char *hostName;
   if (NS_FAILED(uri->GetHost(&hostName)))
     return NS_ERROR_FAILURE;
-  aDomain.AssignWithConversion(hostName);
+  aDomain.Assign(NS_ConvertASCIItoUCS2(hostName));
   nsCRT::free(hostName);
 
   return NS_OK;
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::SetDomain(const nsString& aDomain)
+nsHTMLDocument::SetDomain(const nsAReadableString& aDomain)
 {
   // Check new domain
   
@@ -1641,7 +1644,7 @@ nsHTMLDocument::SetDomain(const nsString& aDomain)
     nsAutoString suffix;
     current.Right(suffix, aDomain.Length());
     PRUnichar c = current.CharAt(current.Length() - aDomain.Length() - 1);
-    if (aDomain.EqualsIgnoreCase(suffix) && (c == '.' || c == '/'))
+    if (suffix.EqualsIgnoreCase(aDomain) && (c == '.' || c == '/'))
       ok = PR_TRUE;
   }
   if (!ok) {
@@ -1685,12 +1688,12 @@ nsHTMLDocument::SetDomain(const nsString& aDomain)
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::GetURL(nsString& aURL)
+nsHTMLDocument::GetURL(nsAWritableString& aURL)
 {
   if (nsnull != mDocumentURL) {
     char* str;
     mDocumentURL->GetSpec(&str);
-    aURL.AssignWithConversion(str);
+    aURL.Assign(NS_ConvertASCIItoUCS2(str));
     nsCRT::free(str);
   }
   return NS_OK;
@@ -1852,23 +1855,25 @@ nsHTMLDocument::GetAnchors(nsIDOMHTMLCollection** aAnchors)
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::GetCookie(nsString& aCookie)
+nsHTMLDocument::GetCookie(nsAWritableString& aCookie)
 {
   nsresult result = NS_OK;
+  nsAutoString str;
   NS_WITH_SERVICE(nsICookieService, service, kCookieServiceCID, &result);
   if ((NS_OK == result) && (nsnull != service) && (nsnull != mDocumentURL)) {
-    result = service->GetCookieString(mDocumentURL, aCookie);
+    result = service->GetCookieString(mDocumentURL, str);
   }
+  aCookie.Assign(str);
   return result;
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::SetCookie(const nsString& aCookie)
+nsHTMLDocument::SetCookie(const nsAReadableString& aCookie)
 {
   nsresult result = NS_OK;
   NS_WITH_SERVICE(nsICookieService, service, kCookieServiceCID, &result);
   if ((NS_OK == result) && (nsnull != service) && (nsnull != mDocumentURL)) {
-    result = service->SetCookieString(mDocumentURL, aCookie);
+    result = service->SetCookieString(mDocumentURL, nsAutoString(aCookie));
   }
   return result;
 }
@@ -2089,13 +2094,13 @@ nsHTMLDocument::WriteCommon(const nsString& aText,
 }
 
 NS_IMETHODIMP
-nsHTMLDocument::Write(const nsString& aText)
+nsHTMLDocument::Write(const nsAReadableString& aText)
 {
   return WriteCommon(aText, PR_FALSE);
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::Writeln(const nsString& aText)
+nsHTMLDocument::Writeln(const nsAReadableString& aText)
 {
   return WriteCommon(aText, PR_TRUE);
 }
@@ -2223,7 +2228,7 @@ nsHTMLDocument::MatchName(nsIContent *aContent, const nsString& aName)
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::GetElementById(const nsString& aElementId, nsIDOMElement** aReturn)
+nsHTMLDocument::GetElementById(const nsAReadableString& aElementId, nsIDOMElement** aReturn)
 {
   NS_ENSURE_ARG_POINTER(aReturn);
   *aReturn = nsnull;
@@ -2253,8 +2258,8 @@ nsHTMLDocument::ImportNode(nsIDOMNode* aImportedNode,
 }
 
 NS_IMETHODIMP
-nsHTMLDocument::CreateAttributeNS(const nsString& aNamespaceURI,
-                                  const nsString& aQualifiedName,
+nsHTMLDocument::CreateAttributeNS(const nsAReadableString& aNamespaceURI,
+                                  const nsAReadableString& aQualifiedName,
                                   nsIDOMAttr** aReturn)
 {
   NS_NOTYETIMPLEMENTED("write me");
@@ -2262,8 +2267,8 @@ nsHTMLDocument::CreateAttributeNS(const nsString& aNamespaceURI,
 }
 
 NS_IMETHODIMP
-nsHTMLDocument::GetElementsByTagNameNS(const nsString& aNamespaceURI,
-                                       const nsString& aLocalName,
+nsHTMLDocument::GetElementsByTagNameNS(const nsAReadableString& aNamespaceURI,
+                                       const nsAReadableString& aLocalName,
                                        nsIDOMNodeList** aReturn)
 {
   nsAutoString tmp(aLocalName);
@@ -2290,12 +2295,14 @@ nsHTMLDocument::MatchNameAttribute(nsIContent* aContent, nsString* aData)
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::GetElementsByName(const nsString& aElementName, 
+nsHTMLDocument::GetElementsByName(const nsAReadableString& aElementName, 
                                   nsIDOMNodeList** aReturn)
 {
+  nsAutoString name(aElementName);
+
   nsContentList* elements = new nsContentList(this, 
                                               MatchNameAttribute, 
-                                              &aElementName);
+                                              &name);
   if (nsnull == elements) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
@@ -2304,7 +2311,7 @@ nsHTMLDocument::GetElementsByName(const nsString& aElementName,
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::GetAlinkColor(nsString& aAlinkColor)
+nsHTMLDocument::GetAlinkColor(nsAWritableString& aAlinkColor)
 {
   nsresult result = NS_OK;
   nsIDOMHTMLBodyElement* body;
@@ -2328,7 +2335,7 @@ nsHTMLDocument::GetAlinkColor(nsString& aAlinkColor)
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::SetAlinkColor(const nsString& aAlinkColor)
+nsHTMLDocument::SetAlinkColor(const nsAReadableString& aAlinkColor)
 {
   nsresult result = NS_OK;
   nsIDOMHTMLBodyElement* body;
@@ -2350,7 +2357,7 @@ nsHTMLDocument::SetAlinkColor(const nsString& aAlinkColor)
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::GetLinkColor(nsString& aLinkColor)
+nsHTMLDocument::GetLinkColor(nsAWritableString& aLinkColor)
 {
   nsresult result = NS_OK;
   nsIDOMHTMLBodyElement* body;
@@ -2374,7 +2381,7 @@ nsHTMLDocument::GetLinkColor(nsString& aLinkColor)
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::SetLinkColor(const nsString& aLinkColor)
+nsHTMLDocument::SetLinkColor(const nsAReadableString& aLinkColor)
 {
   nsresult result = NS_OK;
   nsIDOMHTMLBodyElement* body;
@@ -2395,7 +2402,7 @@ nsHTMLDocument::SetLinkColor(const nsString& aLinkColor)
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::GetVlinkColor(nsString& aVlinkColor)
+nsHTMLDocument::GetVlinkColor(nsAWritableString& aVlinkColor)
 {
   nsresult result = NS_OK;
   nsIDOMHTMLBodyElement* body;
@@ -2419,7 +2426,7 @@ nsHTMLDocument::GetVlinkColor(nsString& aVlinkColor)
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::SetVlinkColor(const nsString& aVlinkColor)
+nsHTMLDocument::SetVlinkColor(const nsAReadableString& aVlinkColor)
 {
   nsresult result = NS_OK;
   nsIDOMHTMLBodyElement* body;
@@ -2440,7 +2447,7 @@ nsHTMLDocument::SetVlinkColor(const nsString& aVlinkColor)
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::GetBgColor(nsString& aBgColor)
+nsHTMLDocument::GetBgColor(nsAWritableString& aBgColor)
 {
   nsresult result = NS_OK;
   nsIDOMHTMLBodyElement* body;
@@ -2464,7 +2471,7 @@ nsHTMLDocument::GetBgColor(nsString& aBgColor)
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::SetBgColor(const nsString& aBgColor)
+nsHTMLDocument::SetBgColor(const nsAReadableString& aBgColor)
 {
   nsresult result = NS_OK;
   nsIDOMHTMLBodyElement* body;
@@ -2485,7 +2492,7 @@ nsHTMLDocument::SetBgColor(const nsString& aBgColor)
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::GetFgColor(nsString& aFgColor)
+nsHTMLDocument::GetFgColor(nsAWritableString& aFgColor)
 {
   nsresult result = NS_OK;
   nsIDOMHTMLBodyElement* body;
@@ -2509,7 +2516,7 @@ nsHTMLDocument::GetFgColor(nsString& aFgColor)
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::SetFgColor(const nsString& aFgColor)
+nsHTMLDocument::SetFgColor(const nsAReadableString& aFgColor)
 {
   nsresult result = NS_OK;
   nsIDOMHTMLBodyElement* body;
@@ -2531,13 +2538,13 @@ nsHTMLDocument::SetFgColor(const nsString& aFgColor)
 }
 
 NS_IMETHODIMP    
-nsHTMLDocument::GetLastModified(nsString& aLastModified)
+nsHTMLDocument::GetLastModified(nsAWritableString& aLastModified)
 {
   if (nsnull != mLastModified) {
-    aLastModified = *mLastModified;
+    aLastModified.Assign(*mLastModified);
   }
   else {
-    aLastModified.AssignWithConversion("January 1, 1970 GMT");
+    aLastModified.Assign(NS_LITERAL_STRING("January 1, 1970 GMT"));
   }
 
   return NS_OK;
@@ -2599,7 +2606,7 @@ nsHTMLDocument::GetLayers(nsIDOMHTMLCollection** aLayers)
 #endif
 
 NS_IMETHODIMP    
-nsHTMLDocument::GetSelection(nsString& aReturn)
+nsHTMLDocument::GetSelection(nsAWritableString& aReturn)
 {
   aReturn.Truncate();
 
@@ -2626,7 +2633,7 @@ nsHTMLDocument::GetSelection(nsString& aReturn)
     (do_GetService("mozilla.consoleservice.1"));
 
   if (consoleService) {
-    consoleService->LogStringMessage(NS_ConvertASCIItoUCS2("Depricated method document.getSelection() called, use window.getSelection() in stead!").GetUnicode());
+    consoleService->LogStringMessage(NS_ConvertASCIItoUCS2("Deprecated method document.getSelection() called, use window.getSelection() instead!").GetUnicode());
   }
 
   return domSelection->ToString(NS_ConvertASCIItoUCS2("text/plain"), nsIDocumentEncoder::OutputFormatted |nsIDocumentEncoder::OutputSelectionOnly, 0, aReturn);
@@ -3572,7 +3579,9 @@ static nsIDOMNode * FindDOMNode(nsIDOMNode * aNode, nsIContent * aContent)
 /**
   * Finds text in content
  */
-NS_IMETHODIMP nsHTMLDocument::FindNext(const nsString &aSearchStr, PRBool aMatchCase, PRBool aSearchDown, PRBool &aIsFound)
+NS_IMETHODIMP nsHTMLDocument::FindNext(const nsAReadableString &aSearchStr,
+                                       PRBool aMatchCase, PRBool aSearchDown,
+                                       PRBool &aIsFound)
 {
 #if 0
   aIsFound         = PR_FALSE;

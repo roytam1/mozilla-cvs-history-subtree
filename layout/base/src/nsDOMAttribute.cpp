@@ -36,7 +36,7 @@ static NS_DEFINE_IID(kIDOMNodeListIID, NS_IDOMNODELIST_IID);
 
 nsDOMAttribute::nsDOMAttribute(nsIContent* aContent,
                                nsINodeInfo *aNodeInfo,
-                               const nsString& aValue)
+                               const nsAReadableString& aValue)
   : mNodeInfo(aNodeInfo), mValue(aValue)
 {
   NS_ABORT_IF_FALSE(mNodeInfo, "We must get a nodeinfo here!");
@@ -155,7 +155,7 @@ nsDOMAttribute::SetScriptObject(void *aScriptObject)
 }
 
 nsresult
-nsDOMAttribute::GetName(nsString& aName)
+nsDOMAttribute::GetName(nsAWritableString& aName)
 {
   NS_ENSURE_TRUE(mNodeInfo, NS_ERROR_FAILURE);
 
@@ -163,7 +163,7 @@ nsDOMAttribute::GetName(nsString& aName)
 }
 
 nsresult
-nsDOMAttribute::GetValue(nsString& aValue)
+nsDOMAttribute::GetValue(nsAWritableString& aValue)
 {
   NS_ENSURE_TRUE(mNodeInfo, NS_ERROR_FAILURE);
 
@@ -187,7 +187,7 @@ nsDOMAttribute::GetValue(nsString& aValue)
 }
 
 nsresult
-nsDOMAttribute::SetValue(const nsString& aValue)
+nsDOMAttribute::SetValue(const nsAReadableString& aValue)
 {
   NS_ENSURE_TRUE(mNodeInfo, NS_ERROR_FAILURE);
 
@@ -246,19 +246,19 @@ nsDOMAttribute::GetOwnerElement(nsIDOMElement** aOwnerElement)
 }
 
 NS_IMETHODIMP
-nsDOMAttribute::GetNodeName(nsString& aNodeName)
+nsDOMAttribute::GetNodeName(nsAWritableString& aNodeName)
 {
   return GetName(aNodeName);
 }
 
 NS_IMETHODIMP
-nsDOMAttribute::GetNodeValue(nsString& aNodeValue)
+nsDOMAttribute::GetNodeValue(nsAWritableString& aNodeValue)
 {
   return GetValue(aNodeValue);
 }
 
 NS_IMETHODIMP
-nsDOMAttribute::SetNodeValue(const nsString& aNodeValue)
+nsDOMAttribute::SetNodeValue(const nsAReadableString& aNodeValue)
 {
   return SetValue(aNodeValue);
 }
@@ -448,7 +448,7 @@ nsDOMAttribute::GetOwnerDocument(nsIDOMDocument** aOwnerDocument)
 }
 
 NS_IMETHODIMP 
-nsDOMAttribute::GetNamespaceURI(nsString& aNamespaceURI)
+nsDOMAttribute::GetNamespaceURI(nsAWritableString& aNamespaceURI)
 {
   NS_ENSURE_TRUE(mNodeInfo, NS_ERROR_FAILURE);
 
@@ -456,7 +456,7 @@ nsDOMAttribute::GetNamespaceURI(nsString& aNamespaceURI)
 }
 
 NS_IMETHODIMP 
-nsDOMAttribute::GetPrefix(nsString& aPrefix)
+nsDOMAttribute::GetPrefix(nsAWritableString& aPrefix)
 {
   NS_ENSURE_TRUE(mNodeInfo, NS_ERROR_FAILURE);
 
@@ -464,7 +464,7 @@ nsDOMAttribute::GetPrefix(nsString& aPrefix)
 }
 
 NS_IMETHODIMP 
-nsDOMAttribute::SetPrefix(const nsString& aPrefix)
+nsDOMAttribute::SetPrefix(const nsAReadableString& aPrefix)
 {
   NS_ENSURE_TRUE(mNodeInfo, NS_ERROR_FAILURE);
   nsCOMPtr<nsINodeInfo> newNodeInfo;
@@ -499,7 +499,7 @@ nsDOMAttribute::SetPrefix(const nsString& aPrefix)
 }
 
 NS_IMETHODIMP 
-nsDOMAttribute::GetLocalName(nsString& aLocalName)
+nsDOMAttribute::GetLocalName(nsAWritableString& aLocalName)
 {
   NS_ENSURE_TRUE(mNodeInfo, NS_ERROR_FAILURE);
 
@@ -514,7 +514,7 @@ nsDOMAttribute::Normalize()
 }
 
 NS_IMETHODIMP
-nsDOMAttribute::Supports(const nsString& aFeature, const nsString& aVersion,
+nsDOMAttribute::Supports(const nsAReadableString& aFeature, const nsAReadableString& aVersion,
                          PRBool* aReturn)
 {
   return nsGenericElement::InternalSupports(aFeature, aVersion, aReturn);

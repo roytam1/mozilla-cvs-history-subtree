@@ -52,7 +52,7 @@
 
 #include "nsIDOMText.h"
 #include "nsIDOMComment.h"
-#include "nsIDOMDocument.h"
+#include "nsIDOMHTMLDocument.h"
 #include "nsIDOMDOMImplementation.h"
 #include "nsIDOMDocumentType.h"
 
@@ -2357,7 +2357,9 @@ HTMLContentSink::DidBuildModel(PRInt32 aQualityLevel)
   }
 
   if (nsnull == mTitle) {
-    mHTMLDocument->SetTitle(nsString());
+    nsCOMPtr<nsIDOMHTMLDocument> domDoc(do_QueryInterface(mHTMLDocument));
+    if (domDoc)
+      domDoc->SetTitle(nsString());
   }
 
   // XXX this is silly; who cares? RickG cares. It's part of the regression test. So don't bug me. 
@@ -2617,7 +2619,10 @@ HTMLContentSink::SetTitle(const nsString& aValue)
   }
   ReduceEntities(*mTitle);
   mTitle->CompressWhitespace(PR_TRUE, PR_TRUE);
-  mHTMLDocument->SetTitle(*mTitle);
+
+  nsCOMPtr<nsIDOMHTMLDocument> domDoc(do_QueryInterface(mHTMLDocument));
+  if (domDoc)
+    domDoc->SetTitle(*mTitle);
 
   nsCOMPtr<nsINodeInfo> nodeInfo;
   nsresult rv = mNodeInfoManager->GetNodeInfo(nsHTMLAtoms::title, nsnull,

@@ -73,8 +73,8 @@ public:
 
   virtual nsresult AddEventListenerByIID(nsIDOMEventListener *aListener, const nsIID& aIID, PRInt32 aFlags);
   virtual nsresult RemoveEventListenerByIID(nsIDOMEventListener *aListener, const nsIID& aIID, PRInt32 aFlags);
-  virtual nsresult AddEventListenerByType(nsIDOMEventListener *aListener, const nsString& type, PRInt32 aFlags);
-  virtual nsresult RemoveEventListenerByType(nsIDOMEventListener *aListener, const nsString& type, PRInt32 aFlags) ;
+  virtual nsresult AddEventListenerByType(nsIDOMEventListener *aListener, const nsAReadableString& type, PRInt32 aFlags);
+  virtual nsresult RemoveEventListenerByType(nsIDOMEventListener *aListener, const nsAReadableString& type, PRInt32 aFlags) ;
 
   virtual nsresult AddScriptEventListener(nsIScriptContext*aContext, 
                                           nsIScriptObjectOwner *aScriptObjectOwner, 
@@ -100,7 +100,7 @@ public:
 
   virtual nsresult CreateEvent(nsIPresContext* aPresContext, 
                                nsEvent* aEvent,
-                               const nsString& aEventType,
+                               const nsAReadableString& aEventType,
                                nsIDOMEvent** aDOMEvent);
 
   virtual nsresult RemoveAllListeners(PRBool aScriptOnly);
@@ -110,10 +110,10 @@ public:
   static nsresult GetIdentifiersForType(nsIAtom* aType, nsIID& aIID, PRInt32* aSubType);
 
   // nsIDOMEventTarget interface
-  NS_IMETHOD AddEventListener(const nsString& aType, 
+  NS_IMETHOD AddEventListener(const nsAReadableString& aType, 
                               nsIDOMEventListener* aListener, 
                               PRBool aUseCapture);
-  NS_IMETHOD RemoveEventListener(const nsString& aType, 
+  NS_IMETHOD RemoveEventListener(const nsAReadableString& aType, 
                                  nsIDOMEventListener* aListener, 
                                  PRBool aUseCapture);
   NS_IMETHOD DispatchEvent(nsIDOMEvent* aEvent);

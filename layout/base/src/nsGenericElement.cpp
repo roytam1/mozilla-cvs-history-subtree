@@ -484,14 +484,14 @@ nsGenericElement::Init(nsIContent* aOuterContentObject,
 }
 
 nsresult
-nsGenericElement::GetNodeValue(nsString& aNodeValue)
+nsGenericElement::GetNodeValue(nsAWritableString& aNodeValue)
 {
   aNodeValue.Truncate();
   return NS_OK;
 }
 
 nsresult
-nsGenericElement::SetNodeValue(const nsString& aNodeValue)
+nsGenericElement::SetNodeValue(const nsAReadableString& aNodeValue)
 {
   // The node value can't be modified
   return NS_ERROR_DOM_NO_MODIFICATION_ALLOWED_ERR;
@@ -612,19 +612,19 @@ nsGenericElement::GetOwnerDocument(nsIDOMDocument** aOwnerDocument)
 }
 
 nsresult
-nsGenericElement::GetNamespaceURI(nsString& aNamespaceURI)
+nsGenericElement::GetNamespaceURI(nsAWritableString& aNamespaceURI)
 {
   return mNodeInfo->GetNamespaceURI(aNamespaceURI);
 }
 
 nsresult
-nsGenericElement::GetPrefix(nsString& aPrefix)
+nsGenericElement::GetPrefix(nsAWritableString& aPrefix)
 {
   return mNodeInfo->GetPrefix(aPrefix);
 }
 
 nsresult
-nsGenericElement::SetPrefix(const nsString& aPrefix)
+nsGenericElement::SetPrefix(const nsAReadableString& aPrefix)
 {
   // XXX: Validate the prefix string!
 
@@ -647,30 +647,31 @@ nsGenericElement::SetPrefix(const nsString& aPrefix)
 }
 
 nsresult
-nsGenericElement::InternalSupports(const nsString& aFeature,
-                                   const nsString& aVersion,
+nsGenericElement::InternalSupports(const nsAReadableString& aFeature,
+                                   const nsAReadableString& aVersion,
                                    PRBool* aReturn)
 {
   NS_ENSURE_ARG_POINTER(aReturn);
   *aReturn = PR_FALSE;
+  nsAutoString feature(aFeature);
 
-  if (aFeature.EqualsWithConversion("XML", PR_TRUE) ||
-      aFeature.EqualsWithConversion("HTML", PR_TRUE)) {
+  if (feature.EqualsWithConversion("XML", PR_TRUE) ||
+      feature.EqualsWithConversion("HTML", PR_TRUE)) {
     if (!aVersion.Length() ||
-        aVersion.EqualsWithConversion("1.0") ||
-        aVersion.EqualsWithConversion("2.0")) {
+        aVersion.Equals(NS_LITERAL_STRING("1.0")) ||
+        aVersion.Equals(NS_LITERAL_STRING("2.0"))) {
       *aReturn = PR_TRUE;
     }
-  } else if (aFeature.EqualsWithConversion("Views", PR_TRUE) ||
-             aFeature.EqualsWithConversion("StyleSheets", PR_TRUE) ||
-             aFeature.EqualsWithConversion("CSS", PR_TRUE) ||
-             aFeature.EqualsWithConversion("CSS2", PR_TRUE) ||
-             aFeature.EqualsWithConversion("Events", PR_TRUE) ||
-             aFeature.EqualsWithConversion("UIEvents", PR_TRUE) ||
-             aFeature.EqualsWithConversion("MouseEvents", PR_TRUE) ||
-             aFeature.EqualsWithConversion("HTMLEvents", PR_TRUE) ||
-             aFeature.EqualsWithConversion("Range", PR_TRUE)) {
-    if (!aVersion.Length() || aVersion.EqualsWithConversion("2.0")) {
+  } else if (feature.EqualsWithConversion("Views", PR_TRUE) ||
+             feature.EqualsWithConversion("StyleSheets", PR_TRUE) ||
+             feature.EqualsWithConversion("CSS", PR_TRUE) ||
+             feature.EqualsWithConversion("CSS2", PR_TRUE) ||
+             feature.EqualsWithConversion("Events", PR_TRUE) ||
+             feature.EqualsWithConversion("UIEvents", PR_TRUE) ||
+             feature.EqualsWithConversion("MouseEvents", PR_TRUE) ||
+             feature.EqualsWithConversion("HTMLEvents", PR_TRUE) ||
+             feature.EqualsWithConversion("Range", PR_TRUE)) {
+    if (!aVersion.Length() || aVersion.Equals(NS_LITERAL_STRING("2.0"))) {
       *aReturn = PR_TRUE;
     }
   }
@@ -679,7 +680,7 @@ nsGenericElement::InternalSupports(const nsString& aFeature,
 }
 
 nsresult
-nsGenericElement::Supports(const nsString& aFeature, const nsString& aVersion,
+nsGenericElement::Supports(const nsAReadableString& aFeature, const nsAReadableString& aVersion,
                            PRBool* aReturn)
 {
   return InternalSupports(aFeature, aVersion, aReturn);
@@ -704,7 +705,7 @@ nsGenericElement::GetAttributes(nsIDOMNamedNodeMap** aAttributes)
 }
 
 nsresult
-nsGenericElement::GetTagName(nsString& aTagName)
+nsGenericElement::GetTagName(nsAWritableString& aTagName)
 {
   aTagName.Truncate();
   if (mNodeInfo) {
@@ -714,7 +715,7 @@ nsGenericElement::GetTagName(nsString& aTagName)
 }
 
 nsresult
-nsGenericElement::GetAttribute(const nsString& aName, nsString& aReturn)
+nsGenericElement::GetAttribute(const nsAReadableString& aName, nsAWritableString& aReturn)
 {
   nsCOMPtr<nsIAtom> nameAtom(dont_AddRef(NS_NewAtom(aName)));
 
@@ -724,13 +725,13 @@ nsGenericElement::GetAttribute(const nsString& aName, nsString& aReturn)
 }
 
 nsresult
-nsGenericElement::SetAttribute(const nsString& aName,
-                               const nsString& aValue)
+nsGenericElement::SetAttribute(const nsAReadableString& aName,
+                               const nsAReadableString& aValue)
 {
   if (kStrictDOMLevel2) {
     PRInt32 pos = aName.FindChar(':');
     if (pos >= 0) {
-      nsCAutoString tmp; tmp.AssignWithConversion(aName);
+      nsCAutoString tmp; tmp.Assign(NS_ConvertUCS2toUTF8(aName));
       printf ("Possible DOM Error: SetAttribute(\"%s\") called, use SetAttributeNS() in stead!\n", (const char *)tmp);
     }
 
@@ -753,12 +754,12 @@ nsGenericElement::SetAttribute(const nsString& aName,
 }
 
 nsresult
-nsGenericElement::RemoveAttribute(const nsString& aName)
+nsGenericElement::RemoveAttribute(const nsAReadableString& aName)
 {
   if (kStrictDOMLevel2) {
     PRInt32 pos = aName.FindChar(':');
     if (pos >= 0) {
-      nsCAutoString tmp; tmp.AssignWithConversion(aName);
+      nsCAutoString tmp; tmp.Assign(NS_ConvertUCS2toUTF8(aName));
       printf ("Possible DOM Error: RemoveAttribute(\"%s\") called, use RemoveAttributeNS() in stead!\n", (const char *)tmp);
     }
 
@@ -781,7 +782,7 @@ nsGenericElement::RemoveAttribute(const nsString& aName)
 }
 
 nsresult
-nsGenericElement::GetAttributeNode(const nsString& aName,
+nsGenericElement::GetAttributeNode(const nsAReadableString& aName,
                                    nsIDOMAttr** aReturn)
 {
   if (nsnull == aReturn) {
@@ -862,7 +863,7 @@ nsGenericElement::RemoveAttributeNode(nsIDOMAttr* aAttribute,
 }
 
 nsresult
-nsGenericElement::GetElementsByTagName(const nsString& aTagname,
+nsGenericElement::GetElementsByTagName(const nsAReadableString& aTagname,
                                        nsIDOMNodeList** aReturn)
 {
   nsIAtom* nameAtom;
@@ -872,7 +873,7 @@ nsGenericElement::GetElementsByTagName(const nsString& aTagname,
   if (kStrictDOMLevel2) {
     PRInt32 pos = aTagname.FindChar(':');
     if (pos >= 0) {
-      nsCAutoString tmp; tmp.AssignWithConversion(aTagname);
+      nsCAutoString tmp; tmp.Assign(NS_ConvertUCS2toUTF8(aTagname));
       printf ("Possible DOM Error: GetElementsByTagName(\"%s\") called, use GetElementsByTagNameNS() in stead!\n", (const char *)tmp);
     }
 
@@ -899,8 +900,8 @@ nsGenericElement::GetElementsByTagName(const nsString& aTagname,
 }
 
 nsresult
-nsGenericElement::GetAttributeNS(const nsString& aNamespaceURI,
-                                 const nsString& aLocalName, nsString& aReturn)
+nsGenericElement::GetAttributeNS(const nsAReadableString& aNamespaceURI,
+                                 const nsAReadableString& aLocalName, nsAWritableString& aReturn)
 {
   nsCOMPtr<nsIAtom> name(dont_AddRef(NS_NewAtom(aLocalName)));
   PRInt32 nsid;
@@ -928,9 +929,9 @@ nsGenericElement::GetAttributeNS(const nsString& aNamespaceURI,
 }
 
 nsresult
-nsGenericElement::SetAttributeNS(const nsString& aNamespaceURI,
-                                 const nsString& aQualifiedName,
-                                 const nsString& aValue)
+nsGenericElement::SetAttributeNS(const nsAReadableString& aNamespaceURI,
+                                 const nsAReadableString& aQualifiedName,
+                                 const nsAReadableString& aValue)
 {
   nsCOMPtr<nsINodeInfoManager> nimgr;
   mNodeInfo->GetNodeInfoManager(*getter_AddRefs(nimgr));
@@ -946,8 +947,8 @@ nsGenericElement::SetAttributeNS(const nsString& aNamespaceURI,
 
 nsresult
 
-nsGenericElement::RemoveAttributeNS(const nsString& aNamespaceURI,
-                                    const nsString& aLocalName)
+nsGenericElement::RemoveAttributeNS(const nsAReadableString& aNamespaceURI,
+                                    const nsAReadableString& aLocalName)
 {
   nsCOMPtr<nsIAtom> name(dont_AddRef(NS_NewAtom(aLocalName)));
   PRInt32 nsid;
@@ -975,8 +976,8 @@ nsGenericElement::RemoveAttributeNS(const nsString& aNamespaceURI,
 }
 
 nsresult
-nsGenericElement::GetAttributeNodeNS(const nsString& aNamespaceURI,
-                                     const nsString& aLocalName,
+nsGenericElement::GetAttributeNodeNS(const nsAReadableString& aNamespaceURI,
+                                     const nsAReadableString& aLocalName,
                                      nsIDOMAttr** aReturn)
 {
   NS_ENSURE_ARG_POINTER(aReturn);
@@ -1027,8 +1028,8 @@ nsGenericElement::SetAttributeNodeNS(nsIDOMAttr* aNewAttr,
 }
 
 nsresult
-nsGenericElement::GetElementsByTagNameNS(const nsString& aNamespaceURI,
-                                         const nsString& aLocalName,
+nsGenericElement::GetElementsByTagNameNS(const nsAReadableString& aNamespaceURI,
+                                         const nsAReadableString& aLocalName,
                                          nsIDOMNodeList** aReturn)
 {
   nsCOMPtr<nsIAtom> nameAtom(dont_AddRef(NS_NewAtom(aLocalName)));
@@ -1036,7 +1037,7 @@ nsGenericElement::GetElementsByTagNameNS(const nsString& aNamespaceURI,
   
   nsContentList* list = nsnull;
 
-  if (!aNamespaceURI.EqualsWithConversion("*")) {
+  if (!aNamespaceURI.Equals(NS_LITERAL_STRING("*"))) {
     nsCOMPtr<nsINodeInfoManager> nimgr;
     mNodeInfo->GetNodeInfoManager(*getter_AddRefs(nimgr));
     NS_ENSURE_TRUE(nimgr, NS_ERROR_FAILURE);
@@ -1063,7 +1064,7 @@ nsGenericElement::GetElementsByTagNameNS(const nsString& aNamespaceURI,
 }
 
 nsresult
-nsGenericElement::HasAttribute(const nsString& aName, PRBool* aReturn)
+nsGenericElement::HasAttribute(const nsAReadableString& aName, PRBool* aReturn)
 {
   NS_ENSURE_ARG_POINTER(aReturn);
 
@@ -1078,8 +1079,8 @@ nsGenericElement::HasAttribute(const nsString& aName, PRBool* aReturn)
 }
 
 nsresult
-nsGenericElement::HasAttributeNS(const nsString& aNamespaceURI,
-                                 const nsString& aLocalName, PRBool* aReturn)
+nsGenericElement::HasAttributeNS(const nsAReadableString& aNamespaceURI,
+                                 const nsAReadableString& aLocalName, PRBool* aReturn)
 {
   NS_ENSURE_ARG_POINTER(aReturn);
 
@@ -1637,7 +1638,7 @@ nsGenericElement::GetScriptObject(nsIScriptContext* aContext,
               nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(mContent));
               viewCSS->GetComputedStyle(elt, empty, getter_AddRefs(cssDecl));
               if (cssDecl) {
-                nsAutoString behavior; behavior.AssignWithConversion("behavior");
+                nsAutoString behavior; behavior.Assign(NS_LITERAL_STRING("behavior"));
                 nsAutoString value;
                 cssDecl->GetPropertyValue(behavior, value);
                 if (!value.IsEmpty()) {
@@ -1735,7 +1736,7 @@ nsGenericElement::SetProperty(JSContext *aContext, JSObject *aObj, jsval aID, js
     propName.Assign(NS_REINTERPRET_CAST(const PRUnichar*, JS_GetStringChars(JS_ValueToString(aContext, aID))));
     if (propName.Length() > 2) 
       prefix.Assign(propName.GetUnicode(), 2);
-    if (prefix.EqualsWithConversion("on")) {
+    if (prefix.Equals(NS_LITERAL_STRING("on"))) {
       nsCOMPtr<nsIAtom> atom = getter_AddRefs(NS_NewAtom(propName));
       nsIEventListenerManager *manager = nsnull;
 
@@ -2381,7 +2382,7 @@ nsGenericElement::TriggerLink(nsIPresContext* aPresContext,
 
 nsresult
 nsGenericElement::AddScriptEventListener(nsIAtom* aAttribute,
-                                         const nsString& aValue,
+                                         const nsAReadableString& aValue,
                                          REFNSIID aIID)
 {
   nsresult ret = NS_OK;
@@ -2462,7 +2463,7 @@ nsGenericElement::CutNameSpacePrefix(nsString& aString)
 
 struct nsGenericAttribute
 {
-  nsGenericAttribute(nsINodeInfo *aNodeInfo, const nsString& aValue)
+  nsGenericAttribute(nsINodeInfo *aNodeInfo, const nsAReadableString& aValue)
     : mNodeInfo(aNodeInfo),
       mValue(aValue)
   {
@@ -2629,7 +2630,7 @@ nsGenericContainerElement::GetLastChild(nsIDOMNode** aNode)
 
 nsresult 
 nsGenericContainerElement::SetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                                        const nsString& aValue,
+                                        const nsAReadableString& aValue,
                                         PRBool aNotify)
 {
   nsresult rv;
@@ -2647,7 +2648,7 @@ nsGenericContainerElement::SetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName,
 
 nsresult 
 nsGenericContainerElement::SetAttribute(nsINodeInfo* aNodeInfo, 
-                                        const nsString& aValue,
+                                        const nsAReadableString& aValue,
                                         PRBool aNotify)
 {
   NS_ENSURE_ARG_POINTER(aNodeInfo);
@@ -2708,7 +2709,7 @@ nsGenericContainerElement::SetAttribute(nsINodeInfo* aNodeInfo,
 
 nsresult 
 nsGenericContainerElement::GetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                                        nsString& aResult) const
+                                        nsAWritableString& aResult) const
 {
   nsCOMPtr<nsIAtom> prefix;
   return GetAttribute(aNameSpaceID, aName, *getter_AddRefs(prefix), aResult);
@@ -2717,7 +2718,7 @@ nsGenericContainerElement::GetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName,
 nsresult 
 nsGenericContainerElement::GetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, 
                                         nsIAtom*& aPrefix,
-                                        nsString& aResult) const
+                                        nsAWritableString& aResult) const
 {
   NS_ASSERTION(nsnull != aName, "must have attribute name");
   if (nsnull == aName) {
@@ -2735,7 +2736,7 @@ nsGenericContainerElement::GetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName,
            attr->mNodeInfo->NamespaceEquals(aNameSpaceID)) && 
           (attr->mNodeInfo->Equals(aName))) {
         attr->mNodeInfo->GetPrefixAtom(aPrefix);
-        aResult = attr->mValue;
+        aResult.Assign(attr->mValue);
         if (0 < aResult.Length()) {
           rv = NS_CONTENT_ATTR_HAS_VALUE;
         }

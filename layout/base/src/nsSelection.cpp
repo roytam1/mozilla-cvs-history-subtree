@@ -147,7 +147,7 @@ public:
   NS_IMETHOD    RemoveSelectionListener(nsIDOMSelectionListener* aListenerToRemove);
   NS_IMETHOD    GetEnumerator(nsIEnumerator **aIterator);
 
-  NS_IMETHOD    ToString(const nsString& aFormatType, PRUint32 aFlags, PRInt32 aWrapCount, nsString& aReturn);
+  NS_IMETHOD    ToString(const nsAReadableString& aFormatType, PRUint32 aFlags, PRInt32 aWrapCount, nsAWritableString& aReturn);
 
   NS_IMETHOD    SetHint(PRBool aHintRight);
   NS_IMETHOD    GetHint(PRBool *aHintRight);
@@ -1528,7 +1528,7 @@ nsSelection::HandleKeyEvent(nsIPresContext* aPresContext, nsGUIEvent *aGuiEvent)
 //BEGIN nsIFrameSelection methods
 
 NS_IMETHODIMP
-nsDOMSelection::ToString(const nsString& aFormatType, PRUint32 aFlags, PRInt32 aWrapCount, nsString& aReturn)
+nsDOMSelection::ToString(const nsAReadableString& aFormatType, PRUint32 aFlags, PRInt32 aWrapCount, nsAWritableString& aReturn)
 {
   nsresult rv = NS_OK;
 
@@ -1561,7 +1561,11 @@ nsDOMSelection::ToString(const nsString& aFormatType, PRUint32 aFlags, PRInt32 a
   if (aWrapCount != 0)
     encoder->SetWrapColumn(aWrapCount);
 
-  rv = encoder->EncodeToString(aReturn);
+  // XXX To avoid a copy, we'd have to send nsAWritableStrings
+  // all the way down.
+  nsAutoString str;
+  rv = encoder->EncodeToString(str);
+  aReturn = str;
 
   return rv;
 }
