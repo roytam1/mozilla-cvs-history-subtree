@@ -33,6 +33,7 @@ EXPORTS		= nsCom.h \
 		  nsID.h \
 		  nsIFactory.h \
 		  nsISupports.h \
+		  nsIPtr.h \
 		  nsISupportsArray.h \
 		  nsRepository.h \
 		  nsIEnumerator.h \
