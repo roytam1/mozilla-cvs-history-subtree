@@ -79,6 +79,13 @@ static NSString *ProgressWindowFrameSaveName      = @"ProgressWindow";
 
 @implementation ProgressDlgController
 
+static int gNumActiveDownloads = 0;
+
++ (int)numDownloadInProgress
+{
+  return gNumActiveDownloads;
+}
+
 - (void)dealloc
 {
   // if we get here because we're quitting, the listener will still be alive
@@ -228,7 +235,7 @@ static NSString *ProgressWindowFrameSaveName      = @"ProgressWindow";
     // if we delete it, fantastic.  if not, oh well.  better to move to trash instead?
     [fileManager removeFileAtPath:thePath handler:nil];
   
-  // we can _not_ set the |mIsDownloadComplete| flag here because the download really
+  // we can _not_ set the |mDownloadIsComplete| flag here because the download really
   // isn't done yet. We'll probably continue to process more PLEvents that are already
   // in the queue until we get a STATE_STOP state change. As a result, we just keep
   // going until that comes in (and it will, because we called CancelDownload() above).
@@ -445,18 +452,22 @@ static NSString *ProgressWindowFrameSaveName      = @"ProgressWindow";
 
   [self showWindow: self];
   [self setupDownloadTimer];
+  
+  gNumActiveDownloads++;
 }
 
 - (void)onEndDownload
 {
+  gNumActiveDownloads --;
+  
   // if we're quitting, our progress window is already gone and we're in the
   // process of shutting down gecko and all the d/l listeners. The timer, at 
   // that point, is the only thing keeping us alive. Killing it will cause
   // us to go away immediately, so kung-fu deathgrip it until we're done twiddling
   // bits on ourself.
   [self retain];                           // Enter The Dragon!
-    [self killDownloadTimer];
-    [self setDownloadProgress:nil];
+  [self killDownloadTimer];
+  [self setDownloadProgress:nil];
   [self release];
 }
 

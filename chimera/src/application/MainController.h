@@ -86,8 +86,6 @@
     NSString*               mStartURL;
 }
 
--(void)dealloc;
-
 // File menu actions.
 -(IBAction) newWindow:(id)aSender;
 -(IBAction) openFile:(id)aSender;
@@ -160,5 +158,7 @@
 
 - (void)updatePrebinding;
 - (void)prebindFinished:(NSNotification *)aNotification;
+
+- (void)pumpGeckoEventQueue;
 
 @end

@@ -48,6 +48,7 @@
 #import "UserDefaults.h"
 #import "KeychainService.h"
 #import "RemoteDataProvider.h"
+#import "ProgressDlgController.h"
 
 #include "nsCOMPtr.h"
 #include "nsEmbedAPI.h"
@@ -59,6 +60,7 @@
 #include "nsIChromeRegistry.h"
 #include "nsIObserverService.h"
 #include "nsIGenericFactory.h"
+#include "nsIEventQueueService.h"
 
 #ifdef _BUILD_STATIC_BIN
 #include "nsStaticComponent.h"
@@ -175,6 +177,23 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
     
   // Initialize the keychain service.
   mKeychainService = [KeychainService instance];  
+}
+
+- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender
+{
+  if ([ProgressDlgController numDownloadInProgress] > 0)
+  {
+    NSString *alert     = NSLocalizedString(@"QuitWithDownloadsMsg", @"Really Quit?");
+    NSString *message   = NSLocalizedString(@"QuitWithDownloadsExpl", @"");
+    NSString *okButton  = NSLocalizedString(@"QuitWithdownloadsButtonDefault",@"Cancel");
+    NSString *altButton = NSLocalizedString(@"QuitWithdownloadsButtonAlt",@"Quit");
+    // while the panel is up, download dialogs won't update (no timers firing) but
+    // downloads continue (PLEvents being processed)
+    if (NSRunAlertPanel(alert, message, okButton, altButton, nil)== NSAlertDefaultReturn)
+      return NSTerminateCancel;
+  }
+  
+  return NSTerminateNow;
 }
 
 -(void)applicationWillTerminate: (NSNotification*)aNotification
@@ -999,6 +1018,17 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
   }
   
   [self openNewWindowOrTabWithURL:urlString andReferrer:nil];
+}
+
+- (void)pumpGeckoEventQueue
+{
+  nsCOMPtr<nsIEventQueueService> service = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID);
+  if (!service) return;
+  
+  nsCOMPtr<nsIEventQueue> queue;
+  service->GetThreadEventQueue(NS_CURRENT_THREAD, getter_AddRefs(queue));
+  if (queue)
+    queue->ProcessPendingEvents();
 }
 
 @end
