@@ -1985,7 +1985,7 @@ sub BuildMailNewsProjects()
     	BuildOneProject(":mozilla:mailnews:extensions:smime:macbuild:smime.mcp",         "msgsmime$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
     	InstallResources(":mozilla:mailnews:extensions:smime:src:MANIFEST",				 "${dist_dir}Components");
     } 
-    if (!$main::options(psm)){
+    if (!$main::options{psm}){
         BuildOneProject(":mozilla:mailnews:mime:cthandlers:smimestub:macbuild:smime.mcp",   "smime$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
     }
     EndBuildModule("mailnews");
