@@ -122,13 +122,13 @@ NS_IMETHODIMP nsMessengerBootstrap::OpenMessengerWindowWithUri(nsIURI *aURI)
 {
 	nsresult rv = NS_OK;
 
-	nsXPIDLCString args;
+	nsCAutoString args;
 	nsXPIDLCString chromeurl;
 
   // aURI can be null. 
   if (aURI)
   {
-  	rv = aURI->GetSpec(getter_Copies(args));
+  	rv = aURI->GetSpec(args);
 	  if (NS_FAILED(rv)) return rv;
   }
 
@@ -137,8 +137,5 @@ NS_IMETHODIMP nsMessengerBootstrap::OpenMessengerWindowWithUri(nsIURI *aURI)
 
 	// we need to use the "mailnews.reuse_thread_window2" pref
 	// to determine if we should open a new window, or use an existing one.
-  rv = openWindow(NS_ConvertASCIItoUCS2(chromeurl).get(), args ? NS_ConvertASCIItoUCS2(args).get() : nsnull);
-	if (NS_FAILED(rv)) return rv;
-
-	return NS_OK;
+	return openWindow(NS_ConvertUTF8toUCS2(chromeurl).get(), args.IsEmpty() ? nsnull : NS_ConvertUTF8toUCS2(args).get());
 }

@@ -520,8 +520,8 @@ NS_IMETHODIMP nsAbLDAPDirectoryQuery::DoQuery(nsIAbDirectoryQueryArguments* argu
     rv = GetLDAPURL (getter_AddRefs (directoryUrl));
     NS_ENSURE_SUCCESS(rv, rv);
     
-    nsXPIDLCString host;
-    rv = directoryUrl->GetHost(getter_Copies (host));
+    nsCAutoString host;
+    rv = directoryUrl->GetAsciiHost(host);
     NS_ENSURE_SUCCESS(rv, rv);
 
     PRInt32 port;
@@ -549,7 +549,7 @@ NS_IMETHODIMP nsAbLDAPDirectoryQuery::DoQuery(nsIAbDirectoryQueryArguments* argu
     url = do_CreateInstance(NS_LDAPURL_CONTRACTID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = url->SetSpec(ldapSearchUrlString.get ());
+    rv = url->SetSpec(ldapSearchUrlString);
     NS_ENSURE_SUCCESS(rv, rv);
 
 
@@ -596,7 +596,7 @@ NS_IMETHODIMP nsAbLDAPDirectoryQuery::DoQuery(nsIAbDirectoryQueryArguments* argu
 
     // Now lets initialize the LDAP connection properly. We'll kick
     // off the bind operation in the callback function, |OnLDAPInit()|.
-    rv = ldapConnection->Init(host, port, NS_ConvertASCIItoUCS2(dn).get(),
+    rv = ldapConnection->Init(host.get(), port, NS_ConvertASCIItoUCS2(dn).get(),
                               messageListener);
     NS_ENSURE_SUCCESS(rv, rv);
 

@@ -315,7 +315,7 @@ NS_IMETHODIMP nsImapUrl::SetImapMiscellaneousSink(nsIImapMiscellaneousSink  *
 // End nsIImapUrl specific support
 ////////////////////////////////////////////////////////////////////////////////////
 
-NS_IMETHODIMP nsImapUrl::SetSpec(const char * aSpec)
+NS_IMETHODIMP nsImapUrl::SetSpec(const nsACString &aSpec)
 {
   nsresult rv = nsMsgMailNewsUrl::SetSpec(aSpec);
   if (NS_SUCCEEDED(rv))
@@ -323,7 +323,7 @@ NS_IMETHODIMP nsImapUrl::SetSpec(const char * aSpec)
   return rv;
 }
 
-NS_IMETHODIMP nsImapUrl::SetQuery(const char *aQuery)
+NS_IMETHODIMP nsImapUrl::SetQuery(const nsACString &aQuery)
 {
   nsresult rv = nsMsgMailNewsUrl::SetQuery(aQuery);
   if (NS_SUCCEEDED(rv))
@@ -335,15 +335,14 @@ nsresult nsImapUrl::ParseUrl()
 {
 	nsresult rv = NS_OK;
   // extract the user name
-  GetPreHost(getter_Copies(m_userName));
+  GetUserPass(m_userName);
 
-	char * imapPartOfUrl = nsnull;
-	rv = GetPath(&imapPartOfUrl);
-    imapPartOfUrl = nsUnescape(imapPartOfUrl);
-	if (NS_SUCCEEDED(rv) && imapPartOfUrl && imapPartOfUrl+1)
+	nsCAutoString imapPartOfUrl;
+	rv = GetPath(imapPartOfUrl);
+    NS_UnescapeURL(imapPartOfUrl);
+	if (NS_SUCCEEDED(rv) && !imapPartOfUrl.IsEmpty())
 	{
-		ParseImapPart(imapPartOfUrl+1);  // GetPath leaves leading '/' in the path!!!
-		nsCRT::free(imapPartOfUrl);
+		ParseImapPart((char *) imapPartOfUrl.get()+1);  // GetPath leaves leading '/' in the path!!!
 	}
 
   return NS_OK;
@@ -1223,14 +1222,13 @@ NS_IMETHODIMP nsImapUrl::GetUri(char** aURI)
     CreateCanonicalSourceFolderPathString(getter_Copies(theFile));
     nsCString fullFolderPath("/");
     fullFolderPath += (const char *) m_userName;
-    char *hostName = nsnull;
-    rv = GetHost(&hostName);
+    nsCAutoString hostName;
+    rv = GetHost(hostName);
     fullFolderPath += '@';
     fullFolderPath += hostName;
     fullFolderPath += '/';
     fullFolderPath.Append(theFile);
 
-    PR_FREEIF(hostName);
     char * baseMessageURI;
     nsCreateImapBaseMessageURI(fullFolderPath.get(), &baseMessageURI);
     nsCAutoString uriStr;

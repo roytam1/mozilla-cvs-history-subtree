@@ -419,7 +419,7 @@ nsImapService::SelectFolder(nsIEventQueue * aClientEventQueue,
       urlSpec.Append("/select>");
       urlSpec.AppendWithConversion(hierarchySeparator);
       urlSpec.Append((const char *) folderName);
-      rv = mailNewsUrl->SetSpec(urlSpec.get());
+      rv = mailNewsUrl->SetSpec(urlSpec);
       if (NS_SUCCEEDED(rv))
         rv = GetImapConnectionAndLoadUrl(aClientEventQueue,
         imapUrl,
@@ -469,7 +469,7 @@ nsImapService::LiteSelectFolder(nsIEventQueue * aClientEventQueue,
             nsXPIDLCString folderName;
             GetFolderName(aImapMailFolder, getter_Copies(folderName));
 			urlSpec.Append((const char *) folderName);
-			rv = uri->SetSpec(urlSpec.get());
+			rv = uri->SetSpec(urlSpec);
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
                                                  nsnull, aURL);
@@ -510,9 +510,7 @@ NS_IMETHODIMP nsImapService::GetUrlForUri(const char *aMessageURI, nsIURI **aURL
       }
 
       nsCOMPtr<nsIURI> url = do_QueryInterface(imapUrl);
-      nsXPIDLCString currentSpec;
-      url->GetSpec(getter_Copies(currentSpec));
-      urlSpec.Assign(currentSpec);
+      url->GetSpec(urlSpec);
 
 		  urlSpec.Append("fetch>");
 		  urlSpec.Append(uidString);
@@ -524,7 +522,7 @@ NS_IMETHODIMP nsImapService::GetUrlForUri(const char *aMessageURI, nsIURI **aURL
 		  urlSpec.Append((const char *) folderName);
 		  urlSpec.Append(">");
 		  urlSpec.Append(msgKey);
-		  rv = url->SetSpec(urlSpec.get());
+		  rv = url->SetSpec(urlSpec);
       imapUrl->QueryInterface(NS_GET_IID(nsIURI), (void **) aURL);
     }
   }
@@ -598,7 +596,7 @@ NS_IMETHODIMP nsImapService::OpenAttachment(const char *aContentType,
       {
         nsCOMPtr<nsIMsgMailNewsUrl> mailUrl (do_QueryInterface(imapUrl));
         if (mailUrl)
-          mailUrl->SetFileName(aFileName);
+          mailUrl->SetFileName(nsDependentCString(aFileName));
         rv =  FetchMimePart(imapUrl, nsIImapUrl::nsImapOpenMimePart, folder, imapMessageSink,
                         nsnull, aDisplayConsumer, msgKey, uriMimePart);
       }
@@ -783,10 +781,8 @@ nsresult nsImapService::FetchMimePart(nsIImapUrl * aImapUrl,
   rv = aImapUrl->SetImapMessageSink(aImapMessage);
   if (NS_SUCCEEDED(rv))
 	{
-      nsXPIDLCString currentSpec;
       nsCOMPtr<nsIURI> url = do_QueryInterface(aImapUrl);
-      url->GetSpec(getter_Copies(currentSpec));
-      urlSpec.Assign(currentSpec);
+      url->GetSpec(urlSpec);
 
       PRUnichar hierarchySeparator = GetHierarchyDelimiter(aImapMailFolder); 
 
@@ -812,7 +808,7 @@ nsresult nsImapService::FetchMimePart(nsIImapUrl * aImapUrl,
 		  // mscott - this cast to a char * is okay...there's a bug in the XPIDL
 		  // compiler that is preventing in string parameters from showing up as
 		  // const char *. hopefully they will fix it soon.
-		  rv = url->SetSpec(urlSpec.get());
+		  rv = url->SetSpec(urlSpec);
 
 	    rv = aImapUrl->SetImapAction(actionToUse /* nsIImapUrl::nsImapMsgFetch */);
 	   if (aImapMailFolder && aDisplayConsumer)
@@ -1026,7 +1022,7 @@ NS_IMETHODIMP nsImapService::Search(nsIMsgSearchSession *aSearchSession, nsIMsgW
     char *search_cmd = nsEscape((char *)aSearchUri, url_XAlphas);
     urlSpec.Append(search_cmd);
     nsCRT::free(search_cmd);
-    rv = mailNewsUrl->SetSpec(urlSpec.get());
+    rv = mailNewsUrl->SetSpec(urlSpec);
     if (NS_SUCCEEDED(rv))
     {
       nsCOMPtr<nsIEventQueue> queue;	
@@ -1156,7 +1152,6 @@ nsImapService::FetchMessage(nsIImapUrl * aImapUrl,
       return NS_ERROR_NULL_POINTER;
 
   nsresult rv = NS_OK;
-  nsXPIDLCString currentSpec;
   nsCOMPtr<nsIURI> url = do_QueryInterface(aImapUrl);
   if (WeAreOffline())
   {
@@ -1186,8 +1181,7 @@ nsImapService::FetchMessage(nsIImapUrl * aImapUrl,
   rv = SetImapUrlSink(aImapMailFolder, aImapUrl);
 
   rv = aImapUrl->SetImapMessageSink(aImapMessage);
-  url->GetSpec(getter_Copies(currentSpec));
-  urlSpec.Assign(currentSpec);
+  url->GetSpec(urlSpec);
 
   PRUnichar hierarchySeparator = GetHierarchyDelimiter(aImapMailFolder); 
 
@@ -1211,7 +1205,7 @@ nsImapService::FetchMessage(nsIImapUrl * aImapUrl,
   // mscott - this cast to a char * is okay...there's a bug in the XPIDL
   // compiler that is preventing in string parameters from showing up as
   // const char *. hopefully they will fix it soon.
-  rv = url->SetSpec(urlSpec.get());
+  rv = url->SetSpec(urlSpec);
 
   rv = aImapUrl->SetImapAction(aImapAction);
   if (aImapMailFolder && aDisplayConsumer)
@@ -1340,7 +1334,7 @@ nsImapService::CreateStartOfImapUrl(const char * aImapURI, nsIImapUrl ** imapUrl
  		  // mscott - this cast to a char * is okay...there's a bug in the XPIDL
 		  // compiler that is preventing in string parameters from showing up as
 		  // const char *. hopefully they will fix it soon.
-		  rv = mailnewsUrl->SetSpec(urlSpec.get());
+		  rv = mailnewsUrl->SetSpec(urlSpec);
 
 		  hierarchyDelimiter = kOnlineHierarchySeparatorUnknown;
 		  nsCOMPtr <nsIMsgImapMailFolder> imapFolder = do_QueryInterface(aImapMailFolder);
@@ -1398,7 +1392,7 @@ nsImapService::GetHeaders(nsIEventQueue * aClientEventQueue,
 			urlSpec.Append((const char *) folderName);
             urlSpec.Append(">");
 			urlSpec.Append(messageIdentifierList);
-			rv = uri->SetSpec(urlSpec.get());
+			rv = uri->SetSpec(urlSpec);
 
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
@@ -1445,7 +1439,7 @@ nsImapService::Noop(nsIEventQueue * aClientEventQueue,
 
             GetFolderName(aImapMailFolder, getter_Copies(folderName));
 			urlSpec.Append((const char *) folderName);
-			rv = uri->SetSpec(urlSpec.get());
+			rv = uri->SetSpec(urlSpec);
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
                                                  nsnull, aURL);
@@ -1491,7 +1485,7 @@ nsImapService::Expunge(nsIEventQueue * aClientEventQueue,
 
             GetFolderName(aImapMailFolder, getter_Copies(folderName));
 			urlSpec.Append((const char *) folderName);
-			rv = uri->SetSpec(urlSpec.get());
+			rv = uri->SetSpec(urlSpec);
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
                                                  nsnull, aURL);
@@ -1540,7 +1534,7 @@ nsImapService::Biff(nsIEventQueue * aClientEventQueue,
             urlSpec.Append((const char *) folderName);
 			urlSpec.Append(">");
 			urlSpec.AppendInt(uidHighWater, 10);
-			rv = uri->SetSpec(urlSpec.get());
+			rv = uri->SetSpec(urlSpec);
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
                                                  nsnull, aURL);
@@ -1581,7 +1575,7 @@ nsImapService::DeleteFolder(nsIEventQueue* eventQueue,
             if (NS_SUCCEEDED(rv))
             {
                 urlSpec.Append((const char *) folderName);
-                rv = uri->SetSpec(urlSpec.get());
+                rv = uri->SetSpec(urlSpec);
                 if (NS_SUCCEEDED(rv))
                 {
                     rv = GetImapConnectionAndLoadUrl(eventQueue, imapUrl,
@@ -1637,7 +1631,7 @@ nsImapService::DeleteMessages(nsIEventQueue * aClientEventQueue,
             urlSpec.Append((const char *) folderName);
 			urlSpec.Append(">");
 			urlSpec.Append(messageIdentifierList);
-			rv = uri->SetSpec(urlSpec.get());
+			rv = uri->SetSpec(urlSpec);
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
                                                  nsnull, aURL);
@@ -1681,7 +1675,7 @@ nsImapService::DeleteAllMessages(nsIEventQueue * aClientEventQueue,
             nsXPIDLCString folderName;
             GetFolderName(aImapMailFolder, getter_Copies(folderName));
 			urlSpec.Append((const char *) folderName);
-			rv = uri->SetSpec(urlSpec.get());
+			rv = uri->SetSpec(urlSpec);
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
                                                  nsnull, aURL);
@@ -1780,7 +1774,7 @@ nsresult nsImapService::DiddleFlags(nsIEventQueue * aClientEventQueue,
 			urlSpec.Append(messageIdentifierList);
 			urlSpec.Append('>');
 			urlSpec.AppendInt(flags, 10);
-			rv = uri->SetSpec(urlSpec.get());
+			rv = uri->SetSpec(urlSpec);
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
                                                   nsnull, aURL);
@@ -1874,7 +1868,7 @@ nsImapService::DiscoverAllFolders(nsIEventQueue* aClientEventQueue,
         mailnewsurl->SetMsgWindow(aMsgWindow);
       urlSpec.Append("/discoverallboxes");
       nsCOMPtr <nsIURI> url = do_QueryInterface(imapUrl, &rv);
-		  rv = uri->SetSpec(urlSpec.get());
+		  rv = uri->SetSpec(urlSpec);
       if (NS_SUCCEEDED(rv))
          rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
                                           nsnull, aURL);
@@ -1910,7 +1904,7 @@ nsImapService::DiscoverAllAndSubscribedFolders(nsIEventQueue* aClientEventQueue,
             nsCOMPtr<nsIURI> uri = do_QueryInterface(aImapUrl);
 
             urlSpec.Append("/discoverallandsubscribedboxes");
-			rv = uri->SetSpec(urlSpec.get());
+			rv = uri->SetSpec(urlSpec);
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(aClientEventQueue, aImapUrl,
                                                  nsnull, aURL);
@@ -1954,7 +1948,7 @@ nsImapService::DiscoverChildren(nsIEventQueue* aClientEventQueue,
     			// mscott - this cast to a char * is okay...there's a bug in the XPIDL
 				// compiler that is preventing in string parameters from showing up as
 				// const char *. hopefully they will fix it soon.
-				rv = uri->SetSpec(urlSpec.get());
+				rv = uri->SetSpec(urlSpec);
 
         // Make sure the uri has the same hierarchy separator as the one in msg folder 
         // obj if it's not kOnlineHierarchySeparatorUnknown (ie, '^').
@@ -2012,7 +2006,7 @@ nsImapService::DiscoverLevelChildren(nsIEventQueue* aClientEventQueue,
                 urlSpec.AppendWithConversion(hierarchySeparator); // hierarchySeparator "/"
                 urlSpec.Append(folderPath);
 
-				rv = uri->SetSpec(urlSpec.get());
+				rv = uri->SetSpec(urlSpec);
                 if (NS_SUCCEEDED(rv))
                     rv = GetImapConnectionAndLoadUrl(aClientEventQueue,
                                                      aImapUrl,
@@ -2103,7 +2097,7 @@ nsImapService::OnlineMessageCopy(nsIEventQueue* aClientEventQueue,
         GetFolderName(aDstFolder, getter_Copies(folderName));
         urlSpec.Append((const char *) folderName);
 
-    		rv = uri->SetSpec(urlSpec.get());
+    		rv = uri->SetSpec(urlSpec);
         if (NS_SUCCEEDED(rv))
             rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
                                              nsnull, aURL);
@@ -2283,7 +2277,7 @@ nsImapService::AppendMessageFromFile(nsIEventQueue* aClientEventQueue,
                 urlSpec.Append(messageId);
         }
 
-        rv = uri->SetSpec(urlSpec.get());
+        rv = uri->SetSpec(urlSpec);
         if (WeAreOffline())
         {
           return OfflineAppendFromFile(aFileSpec, uri, aDstFolder, messageId, inSelectedState, aListener, aURL, aCopyState);
@@ -2378,7 +2372,7 @@ nsImapService::MoveFolder(nsIEventQueue* eventQueue, nsIMsgFolder* srcFolder,
                urlSpec.Append(hierarchySeparator);
                urlSpec.Append((const char *) folderName);
             }
-            rv = uri->SetSpec(urlSpec.get());
+            rv = uri->SetSpec(urlSpec);
             if (NS_SUCCEEDED(rv))
             {
                 GetFolderName(srcFolder, getter_Copies(folderName));
@@ -2445,7 +2439,7 @@ nsImapService::RenameLeaf(nsIEventQueue* eventQueue, nsIMsgFolder* srcFolder,
             nsCRT::free(escapedNewName);
 			nsCRT::free(utfNewName);
 
-            rv = uri->SetSpec(urlSpec.get());
+            rv = uri->SetSpec(urlSpec);
             if (NS_SUCCEEDED(rv))
             {
                 rv = GetImapConnectionAndLoadUrl(eventQueue, imapUrl,
@@ -2497,7 +2491,7 @@ nsImapService::CreateFolder(nsIEventQueue* eventQueue, nsIMsgFolder* parent,
             nsCRT::free(escapedFolderName);
             nsCRT::free(utfNewName);
     
-            rv = uri->SetSpec(urlSpec.get());
+            rv = uri->SetSpec(urlSpec);
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(eventQueue, imapUrl,
                                                      nsnull,
@@ -2545,7 +2539,7 @@ nsImapService::EnsureFolderExists(nsIEventQueue* eventQueue, nsIMsgFolder* paren
 			nsCRT::free(escapedFolderName);
 			nsCRT::free(utfNewName);
     
-            rv = uri->SetSpec(urlSpec.get());
+            rv = uri->SetSpec(urlSpec);
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(eventQueue, imapUrl,
                                                      nsnull,
@@ -2587,7 +2581,7 @@ nsImapService::ListFolder(nsIEventQueue* aClientEventQueue,
           if ((const char *) folderName && strlen(folderName) > 0)
           {
             urlSpec.Append((const char *) folderName);
-            rv = uri->SetSpec(urlSpec.get());
+            rv = uri->SetSpec(urlSpec);
             if (NS_SUCCEEDED(rv))
               rv = GetImapConnectionAndLoadUrl(aClientEventQueue, imapUrl,
               nsnull,
@@ -3176,14 +3170,10 @@ char *CreateIMAPListFolderURL(const char *imapHost, const char *mailboxName, cha
 #endif
 
 
-NS_IMETHODIMP nsImapService::GetScheme(char * *aScheme)
+NS_IMETHODIMP nsImapService::GetScheme(nsACString &aScheme)
 {
-	nsresult rv = NS_OK;
-	if (aScheme)
-        *aScheme = nsCRT::strdup("imap");
-	else
-		rv = NS_ERROR_NULL_POINTER;
-	return rv; 
+    aScheme = "imap";
+	return NS_OK; 
 }
 
 NS_IMETHODIMP nsImapService::GetDefaultPort(PRInt32 *aDefaultPort)
@@ -3229,7 +3219,10 @@ nsImapService::GetDefaultServerPort(PRBool isSecure, PRInt32 *aDefaultPort)
     return rv;
 }
 
-NS_IMETHODIMP nsImapService::NewURI(const char *aSpec, nsIURI *aBaseURI, nsIURI **_retval)
+NS_IMETHODIMP nsImapService::NewURI(const nsACString &aSpec,
+                                    const char *aOriginCharset, // ignored 
+                                    nsIURI *aBaseURI,
+                                    nsIURI **_retval)
 {
   nsCOMPtr<nsIImapUrl> aImapUrl;
 	nsresult rv = nsComponentManager::CreateInstance(kImapUrlCID, nsnull, NS_GET_IID(nsIImapUrl), getter_AddRefs(aImapUrl));
@@ -3239,20 +3232,20 @@ NS_IMETHODIMP nsImapService::NewURI(const char *aSpec, nsIURI *aBaseURI, nsIURI 
     nsCOMPtr<nsIMsgMailNewsUrl> mailnewsUrl = do_QueryInterface(aImapUrl);
     nsCAutoString unescapedSpec(aSpec);
     // nsUnescape(NS_CONST_CAST(char*, unescapedSpec.get()));
-    mailnewsUrl->SetSpec(unescapedSpec.get()); // set the url spec...
+    mailnewsUrl->SetSpec(unescapedSpec); // set the url spec...
     
-    nsXPIDLCString userName;
-    nsXPIDLCString hostName;
+    nsCAutoString userPass;
+    nsCAutoString hostName;
     nsXPIDLCString folderName;
     
     // extract the user name and host name information...
-    rv = mailnewsUrl->GetHost(getter_Copies(hostName));
+    rv = mailnewsUrl->GetAsciiHost(hostName);
     if (NS_FAILED(rv)) return rv;
-    rv = mailnewsUrl->GetPreHost(getter_Copies(userName));
+    rv = mailnewsUrl->GetUserPass(userPass);
     if (NS_FAILED(rv)) return rv;
 
-    if ((const char *) userName)
-      nsUnescape(NS_CONST_CAST(char*,(const char*)userName));
+    if (!userPass.IsEmpty())
+	  NS_UnescapeURL(userPass);
 
     // if we can't get a folder name out of the url then I think this is an error
     aImapUrl->CreateCanonicalSourceFolderPathString(getter_Copies(folderName));
@@ -3263,7 +3256,7 @@ NS_IMETHODIMP nsImapService::NewURI(const char *aSpec, nsIURI *aBaseURI, nsIURI 
     if (NS_FAILED(rv)) return rv;
     
     nsCOMPtr<nsIMsgIncomingServer> server;
-    rv = accountManager->FindServer(userName, hostName, "imap",
+    rv = accountManager->FindServer(userPass.get(), hostName.get(), "imap",
                                     getter_AddRefs(server));
     // if we can't extract the imap server from this url then give up!!!
     if (NS_FAILED(rv)) return rv;
@@ -3613,7 +3606,7 @@ nsImapService::SubscribeFolder(nsIEventQueue* eventQueue,
             urlSpec.Append(escapedFolderName);
             nsCRT::free(escapedFolderName);
             nsCRT::free(utfFolderName);
-            rv = uri->SetSpec(urlSpec.get());
+            rv = uri->SetSpec(urlSpec);
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(eventQueue, imapUrl,
                                                  nsnull, url);
@@ -3652,7 +3645,7 @@ nsImapService::UnsubscribeFolder(nsIEventQueue* eventQueue,
             urlSpec.Append(escapedFolderName);
             nsCRT::free(escapedFolderName);
             nsCRT::free(utfFolderName);
-            rv = uri->SetSpec(urlSpec.get());
+            rv = uri->SetSpec(urlSpec);
             if (NS_SUCCEEDED(rv))
                 rv = GetImapConnectionAndLoadUrl(eventQueue, imapUrl,
                                                  nsnull, url);
@@ -3695,7 +3688,7 @@ nsImapService::GetFolderAdminUrl(nsIEventQueue *aClientEventQueue,
       urlSpec.Append("/refreshfolderurls>");
       urlSpec.AppendWithConversion(hierarchySeparator);
       urlSpec.Append((const char *) folderName);
-      rv = mailNewsUrl->SetSpec(urlSpec.get());
+      rv = mailNewsUrl->SetSpec(urlSpec);
       if (NS_SUCCEEDED(rv))
         rv = GetImapConnectionAndLoadUrl(aClientEventQueue,
         imapUrl,

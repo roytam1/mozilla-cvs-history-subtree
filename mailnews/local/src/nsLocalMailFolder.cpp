@@ -3019,20 +3019,20 @@ nsMsgLocalMailFolder::GetIncomingServerType()
 
   if (NS_FAILED(rv)) return "";
 
-  rv = url->SetSpec(mURI);
+  rv = url->SetSpec(nsDependentCString(mURI));
   if (NS_FAILED(rv)) return "";
 
-  nsXPIDLCString userName;
-  rv = url->GetPreHost(getter_Copies(userName));
+  nsCAutoString userPass;
+  rv = url->GetUserPass(userPass);
   if (NS_FAILED(rv)) return "";
-  if ((const char *) userName)
-	nsUnescape(NS_CONST_CAST(char*,(const char*)userName));
+  if (!userPass.IsEmpty())
+	nsUnescape(NS_CONST_CAST(char*,userPass.get()));
 
-  nsXPIDLCString hostName;
-  rv = url->GetHost(getter_Copies(hostName));
+  nsCAutoString hostName;
+  rv = url->GetAsciiHost(hostName);
   if (NS_FAILED(rv)) return "";
-  if ((const char *) hostName)
-	nsUnescape(NS_CONST_CAST(char*,(const char*)hostName));
+  if (!hostName.IsEmpty())
+	nsUnescape(NS_CONST_CAST(char*,hostName.get()));
 
   nsCOMPtr<nsIMsgAccountManager> accountManager = 
            do_GetService(NS_MSGACCOUNTMANAGER_CONTRACTID, &rv);
@@ -3041,8 +3041,8 @@ nsMsgLocalMailFolder::GetIncomingServerType()
   nsCOMPtr<nsIMsgIncomingServer> server;
 
   // try "none" first
-  rv = accountManager->FindServer(userName,
-                                  hostName,
+  rv = accountManager->FindServer(userPass.get(),
+                                  hostName.get(),
                                   "none",
                                   getter_AddRefs(server));
   if (NS_SUCCEEDED(rv) && server) {
@@ -3051,8 +3051,8 @@ nsMsgLocalMailFolder::GetIncomingServerType()
   }
 
   // next try "pop3"
-  rv = accountManager->FindServer(userName,
-                                  hostName,
+  rv = accountManager->FindServer(userPass.get(),
+                                  hostName.get(),
                                   "pop3",
                                   getter_AddRefs(server));
   if (NS_SUCCEEDED(rv) && server) {
@@ -3062,8 +3062,8 @@ nsMsgLocalMailFolder::GetIncomingServerType()
 
 #ifdef HAVE_MOVEMAIL
   // next try "movemail"
-  rv = accountManager->FindServer(userName,
-                                  hostName,
+  rv = accountManager->FindServer(userPass.get(),
+                                  hostName.get(),
                                   "movemail",
                                   getter_AddRefs(server));
   if (NS_SUCCEEDED(rv) && server) {
@@ -3091,9 +3091,9 @@ nsMsgLocalMailFolder::OnStartRunningUrl(nsIURI * aUrl)
   nsCOMPtr<nsIPop3URL> popurl = do_QueryInterface(aUrl, &rv);
   if (NS_SUCCEEDED(rv))
   {
-    nsXPIDLCString aSpec;
-    aUrl->GetSpec(getter_Copies(aSpec));
-    if (aSpec && strstr(aSpec.get(), "uidl="))
+    nsCAutoString aSpec;
+    aUrl->GetSpec(aSpec);
+    if (strstr(aSpec.get(), "uidl="))
     {
       nsCOMPtr<nsIPop3Sink> popsink;
       rv = popurl->GetPop3Sink(getter_AddRefs(popsink));
@@ -3114,10 +3114,10 @@ nsMsgLocalMailFolder::OnStopRunningUrl(nsIURI * aUrl, nsresult aExitCode)
     if (NS_FAILED(rv)) return rv;	
     nsCOMPtr<nsIMsgWindow> msgWindow;
     rv = mailSession->GetTopmostMsgWindow(getter_AddRefs(msgWindow));
-    nsXPIDLCString aSpec;
-    aUrl->GetSpec(getter_Copies(aSpec));
+    nsCAutoString aSpec;
+    aUrl->GetSpec(aSpec);
     
-    if (strstr(aSpec, "uidl="))
+    if (strstr(aSpec.get(), "uidl="))
     {
       nsCOMPtr<nsIPop3URL> popurl = do_QueryInterface(aUrl, &rv);
       if (NS_SUCCEEDED(rv))
