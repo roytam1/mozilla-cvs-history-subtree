@@ -2065,6 +2065,8 @@ printf( "Setting ddexec subkey entries\n" );
   if (NS_SUCCEEDED(args->GetCmdLineValue("-silent", getter_Copies(arg))) && (const char*)arg) {
     canInteract = PR_FALSE;
   }
+  Mutex lock(MOZ_PREF_FILE_MUTEX_NAME);
+  lock.Lock( 15000 ); // Make sure nobody else is reading/writing the prefs file.
   rv = appShell->DoProfileStartup(args, canInteract);
 
   mForceProfileStartup = PR_FALSE;
