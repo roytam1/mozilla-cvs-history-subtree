@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "License"); you may not use this file except in
@@ -115,9 +115,7 @@ void nsTreeRowGroupFrame::DestroyRows(nsTableFrame* aTableFrame, nsIPresContext&
   // reduced.  A reflow will then pick up and create the new frames.
   nsIFrame* childFrame = GetFirstFrame();
   while (childFrame && rowsToLose > 0) {
-    const nsStyleDisplay *childDisplay;
-    childFrame->GetStyleData(eStyleStruct_Display, ((const nsStyleStruct *&)childDisplay));
-    if (NS_STYLE_DISPLAY_TABLE_ROW_GROUP == childDisplay->mDisplay)
+    if (IsTableRowGroupFrame(childFrame))
     {
       PRInt32 rowGroupCount;
       ((nsTreeRowGroupFrame*)childFrame)->GetRowCount(rowGroupCount);
@@ -130,7 +128,7 @@ void nsTreeRowGroupFrame::DestroyRows(nsTableFrame* aTableFrame, nsIPresContext&
       else 
         ((nsTreeRowGroupFrame*)childFrame)->DestroyRows(aTableFrame, aPresContext, rowsToLose);
     }
-    else if (NS_STYLE_DISPLAY_TABLE_ROW == childDisplay->mDisplay)
+    else if (IsTableRowFrame(childFrame))
     {
       // Lost a row.
       rowsToLose--;
@@ -154,9 +152,7 @@ void nsTreeRowGroupFrame::ReverseDestroyRows(nsTableFrame* aTableFrame, nsIPresC
   // reduced.  A reflow will then pick up and create the new frames.
   nsIFrame* childFrame = GetLastFrame();
   while (childFrame && rowsToLose > 0) {
-    const nsStyleDisplay *childDisplay;
-    childFrame->GetStyleData(eStyleStruct_Display, ((const nsStyleStruct *&)childDisplay));
-    if (NS_STYLE_DISPLAY_TABLE_ROW_GROUP == childDisplay->mDisplay)
+    if (IsTableRowGroupFrame(childFrame))
     {
       PRInt32 rowGroupCount;
       ((nsTreeRowGroupFrame*)childFrame)->GetRowCount(rowGroupCount);
@@ -169,7 +165,7 @@ void nsTreeRowGroupFrame::ReverseDestroyRows(nsTableFrame* aTableFrame, nsIPresC
       else
         ((nsTreeRowGroupFrame*)childFrame)->ReverseDestroyRows(aTableFrame, aPresContext, rowsToLose);
     }
-    else if (NS_STYLE_DISPLAY_TABLE_ROW == childDisplay->mDisplay)
+    else if (IsTableRowFrame(childFrame))
     {
       // Lost a row.
       rowsToLose--;
@@ -205,7 +201,8 @@ nsTreeRowGroupFrame::ConstructContentChain(nsIContent* aRowContent)
 }
 
 void 
-nsTreeRowGroupFrame::ConstructOldContentChain(nsIPresContext& aPresContext, nsIContent* aOldRowContent)
+nsTreeRowGroupFrame::ConstructOldContentChain(nsIPresContext& aPresContext,
+                                              nsIContent* aOldRowContent)
 {
 	nsCOMPtr<nsIContent> childOfCommonAncestor;
 
@@ -257,27 +254,55 @@ nsTreeRowGroupFrame::FindChildOfCommonContentChainAncestor(nsIContent *startCont
 }
 
 
+// if oldRowContent is an ancestor of rowContent, return true,
+// and return the previous ancestor if requested
 PRBool
 nsTreeRowGroupFrame::IsAncestor(nsIContent *aRowContent, nsIContent *aOldRowContent, nsIContent** firstDescendant)
 {
   nsCOMPtr<nsIContent> prevContent;	
   nsCOMPtr<nsIContent> currContent = dont_QueryInterface(aOldRowContent);
+  
   while (currContent) {
 
-	if(aRowContent == currContent.get())
-	{
-		if(firstDescendant)
-		{
-		  *firstDescendant = prevContent;
-		  NS_IF_ADDREF(*firstDescendant);
-		}
-		return PR_TRUE;
-	}
-	prevContent = currContent;
-	prevContent->GetParent(*getter_AddRefs(currContent));
+    if(aRowContent == currContent.get())
+      {
+        if(firstDescendant)
+          {
+            *firstDescendant = prevContent;
+            NS_IF_ADDREF(*firstDescendant);
+          }
+        return PR_TRUE;
+      }
+    
+    prevContent = currContent;
+    prevContent->GetParent(*getter_AddRefs(currContent));
   }
 
   return PR_FALSE;
+}
+
+PRBool
+nsTreeRowGroupFrame::IsTableRowGroupFrame(nsIFrame *frame)
+{
+    if (!frame) return PR_FALSE;
+    
+    const nsStyleDisplay *display;
+    frame->GetStyleData(eStyleStruct_Display,
+                        (const nsStyleStruct*&)display);
+
+    return (display->mDisplay == NS_STYLE_DISPLAY_TABLE_ROW_GROUP);
+}
+
+PRBool
+nsTreeRowGroupFrame::IsTableRowFrame(nsIFrame *frame)
+{
+    if (!frame) return PR_FALSE;
+    
+    const nsStyleDisplay *display;
+    frame->GetStyleData(eStyleStruct_Display,
+                        (const nsStyleStruct*&)display);
+
+    return (display->mDisplay == NS_STYLE_DISPLAY_TABLE_ROW);
 }
 
 void
@@ -289,22 +314,18 @@ nsTreeRowGroupFrame::CreateOldContentChain(nsIPresContext& aPresContext, nsICont
   nsCOMPtr<nsIPresShell> shell;
   aPresContext.GetShell(getter_AddRefs(shell));
 
-  //For each item between the oldtoprow and the new first child of common ancestor between
-  //new top row and old top row we need to see if the content chain has to be reset.
+  //For each item between the (oldtoprow) and
+  // (the new first child of common ancestry between new top row and old top row)
+  // we need to see if the content chain has to be reset.
   while(currContent.get() != topOfChain)
   {
-
-
-    nsIFrame* result = nsnull;
-    shell->GetPrimaryFrameFor(currContent, &result);
+    nsIFrame* primaryFrame = nsnull;
+    shell->GetPrimaryFrameFor(currContent, &primaryFrame);
       
-    if(result)
+    if(primaryFrame)
 	{
-      const nsStyleDisplay *display;
-	  result->GetStyleData(eStyleStruct_Display, ((const nsStyleStruct *&)display));
-	  if (display->mDisplay == NS_STYLE_DISPLAY_TABLE_ROW_GROUP)
+	  if (IsTableRowGroupFrame(primaryFrame))
 	  {
-        nsTreeRowGroupFrame *curRowGroup = (nsTreeRowGroupFrame*)result;
 		//Get the current content's parent's first child
 		nsCOMPtr<nsIContent> parent;
 		currContent->GetParent(*getter_AddRefs(parent));
@@ -312,22 +333,24 @@ nsTreeRowGroupFrame::CreateOldContentChain(nsIPresContext& aPresContext, nsICont
 		nsCOMPtr<nsIContent> firstChild;
 		parent->ChildAt(0, *getter_AddRefs(firstChild));
 
+        nsTreeRowGroupFrame *curRowGroup = (nsTreeRowGroupFrame*)primaryFrame;
 		nsIFrame *parentFrame;
 		curRowGroup->GetParent(&parentFrame);
 
-	    result->GetStyleData(eStyleStruct_Display, ((const nsStyleStruct *&)display));
-	    if (display->mDisplay == NS_STYLE_DISPLAY_TABLE_ROW_GROUP)
+	    if (IsTableRowGroupFrame(parentFrame))
 		{
            //Get the current content's parent's first frame.
-           nsTreeRowGroupFrame *parentRowGroupFrame = (nsTreeRowGroupFrame*)parentFrame;
+           nsTreeRowGroupFrame *parentRowGroupFrame =
+               (nsTreeRowGroupFrame*)parentFrame;
 		   nsIFrame *currentTopFrame = parentRowGroupFrame->GetFirstFrame();
 
 			nsCOMPtr<nsIContent> topContent;
 			currentTopFrame->GetContent(getter_AddRefs(topContent));
 
-			//If the current content's parent's first child is different than the
-			//current frame's parent's first child then we know they are out of synch
-			//and we need to set the content chain correctly.
+			// If the current content's parent's first child is different
+            // than the current frame's parent's first child then we know
+            // they are out of synch and we need to set the content
+            // chain correctly.
 			if(topContent.get() != firstChild.get())
 			{
 
@@ -352,15 +375,13 @@ nsTreeRowGroupFrame::GetFirstRowContent(nsIContent** aResult)
   *aResult = nsnull;
   nsIFrame* kid = GetFirstFrame();
   while (kid) {
-    const nsStyleDisplay *childDisplay;
-    kid->GetStyleData(eStyleStruct_Display, ((const nsStyleStruct *&)childDisplay));
-    if (NS_STYLE_DISPLAY_TABLE_ROW_GROUP == childDisplay->mDisplay)
+    if (IsTableRowGroupFrame(kid))
     {
       ((nsTreeRowGroupFrame*)kid)->GetFirstRowContent(aResult);
       if (*aResult)
         return;
     }
-    else if (NS_STYLE_DISPLAY_TABLE_ROW == childDisplay->mDisplay)
+    else if (IsTableRowFrame(kid))
     {
       kid->GetContent(aResult); // The ADDREF happens here.
       return;
@@ -370,7 +391,8 @@ nsTreeRowGroupFrame::GetFirstRowContent(nsIContent** aResult)
 }
 
 void
-nsTreeRowGroupFrame::FindRowContentAtIndex(PRInt32& aIndex, nsIContent* aParent,
+nsTreeRowGroupFrame::FindRowContentAtIndex(PRInt32& aIndex,
+                                           nsIContent* aParent,
                                            nsIContent** aResult)
 {
   // Init to nsnull.
@@ -388,6 +410,8 @@ nsTreeRowGroupFrame::FindRowContentAtIndex(PRInt32& aIndex, nsIContent* aParent,
     aParent->ChildAt(i, *getter_AddRefs(childContent));
     nsCOMPtr<nsIAtom> tag;
     childContent->GetTag(*getter_AddRefs(tag));
+
+    // treerow - Count this row, if we're at 0, then we've found the row.
     if (tag.get() == nsXULAtoms::treerow) {
       aIndex--;
       if (aIndex < 0) {
@@ -558,6 +582,7 @@ nsTreeRowGroupFrame::ComputeVisibleRowCount(PRInt32& aCount, nsIContent* aParent
 NS_IMETHODIMP
 nsTreeRowGroupFrame::PositionChanged(nsIPresContext& aPresContext, PRInt32 aOldIndex, PRInt32 aNewIndex)
 {
+    printf("PositionChanged from %d to %d\n", aOldIndex, aNewIndex);
   if (aNewIndex < 0)
     return NS_OK;
 
@@ -648,6 +673,7 @@ nsTreeRowGroupFrame::PagedUpDown()
     char ch[100];
     sprintf(ch,"%d", rowGroupCount);
     
+    printf("PagedUpDown, setting increment to %d\n", rowGroupCount);
     scrollbarContent->SetAttribute(kNameSpaceID_None, nsXULAtoms::pageincrement, nsString(ch), PR_FALSE);
   }
 
@@ -680,18 +706,14 @@ PRBool nsTreeRowGroupFrame::RowGroupDesiresExcessSpace()
 {
   nsIFrame* parentFrame;
   GetParent(&parentFrame);
-  const nsStyleDisplay *display;
-  parentFrame->GetStyleData(eStyleStruct_Display, ((const nsStyleStruct *&)display));
-  if (display->mDisplay == NS_STYLE_DISPLAY_TABLE_ROW_GROUP)
+  if (IsTableRowGroupFrame(parentFrame))
     return PR_FALSE; // Nested groups don't grow.
   else return PR_TRUE; // The outermost group can grow.
 }
 
 PRBool nsTreeRowGroupFrame::RowGroupReceivesExcessSpace()
 {
-  const nsStyleDisplay *display;
-  GetStyleData(eStyleStruct_Display, ((const nsStyleStruct *&)display));
-  if (NS_STYLE_DISPLAY_TABLE_ROW_GROUP == display->mDisplay)
+  if (IsTableRowGroupFrame(this))
     return PR_TRUE;
   else return PR_FALSE; // Headers and footers don't get excess space.
 }
@@ -1059,9 +1081,7 @@ nsTreeRowGroupFrame::GetFirstFrameForReflow(nsIPresContext& aPresContext)
 
     //printf("Created a frame\n");
     mBottomFrame = mTopFrame;
-    const nsStyleDisplay *rowDisplay;
-    mTopFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct *&)rowDisplay);
-    if (NS_STYLE_DISPLAY_TABLE_ROW == rowDisplay->mDisplay) {
+    if (IsTableRowFrame(mTopFrame)) {
       nsCOMPtr<nsIContent> rowContent;
       mTopFrame->GetContent(getter_AddRefs(rowContent));
       /*nsCOMPtr<nsIContent> cellContent;
@@ -1098,7 +1118,7 @@ nsTreeRowGroupFrame::GetFirstFrameForReflow(nsIPresContext& aPresContext)
         }
       }
     }
-    else if (NS_STYLE_DISPLAY_TABLE_ROW_GROUP==rowDisplay->mDisplay && mContentChain) {
+    else if (IsTableRowGroupFrame(mTopFrame) && mContentChain) {
       // We have just instantiated a row group, and we have a content chain. This
       // means we need to potentially pass a sub-content chain to the instantiated
       // frame, so that it can also sync up with its children.
@@ -1167,9 +1187,7 @@ nsTreeRowGroupFrame::GetNextFrameForReflow(nsIPresContext& aPresContext, nsIFram
 
         // XXX Can be optimized if we detect that we're appending a row to the end of the tree.
         // Also the act of appending or inserting a row group is harmless.
-        const nsStyleDisplay *rowDisplay;
-        (*aResult)->GetStyleData(eStyleStruct_Display, (const nsStyleStruct *&)rowDisplay);
-        if (NS_STYLE_DISPLAY_TABLE_ROW == rowDisplay->mDisplay) {
+        if (IsTableRowFrame(*aResult)) {
           
           nsCOMPtr<nsIContent> topRowContent;
           PRInt32 delta = 1;
@@ -1397,9 +1415,138 @@ nsTreeRowGroupFrame::IndexOfRow(nsIPresContext& aPresContext,
   else {
     // We didn't find a frame.  This mean we have no choice but to crawl
     // the row group.
+    // do we mean the content? -alecf
+    // if so:
+    printf("Searching for non-visible content node\n");
+#if 0
+    // find the "parent" <treeitem> by searching up the parent chain
+      aRowIndex = ChildrenAbove(nsnull, aRowContent);
+#endif
   }
 }
 
+// method for counting children above:
+// basically we want all rows above this parent 
+// ChildrenAbove(parent, child[n]) =
+//    1 + ChildrenAbove(parent->parent, parent) +
+//        RecursiveItemCount(child[0]) + ... + RecursiveItemCount(child[n-1])
+//
+// where "parent" is the parent <treeitem>, and
+// children of a node are all first level child nodes of the
+//   <treechildren> child of that node.
+
+#if 0
+// counts the children of parent up to but not including item
+PRInt32
+nsTreeRowGroupFrame::ChildrenAbove(nsIContent *parent, nsIContent *item)
+{
+  nsresult rv;
+  PRInt32 result = 0;
+
+  // make sure we have the parent
+  if (!parent) {
+    nsIContent *tmpParent=nsnull;
+    rv = FindParentWithTag(item, nsXULAtoms::treeitem, &tmpParent);
+
+    // parent doesn't come in refcounted, so don't refcount it.
+    if (NS_SUCCEEDED(rv)) {
+      parent = tmpParent;
+      NS_IF_RELEASE(tmpParent);
+    }
+  }
+
+  // if there are no more treeitems, we're done.
+  // XXX not sure about this case. I think sometimes
+  // <treechildren> is a root
+  if (!parent) return result;
+
+  // treeitem found, so count it
+  result++;                     
+  // find the <treechildren> node, immediately below <treeitem>
+
+  PRInt32 childCount;
+  parent->ChildCount(childCount);
+
+  nsCOMPtr<nsIContent> treeChildrenContent;
+  PRInt32 i;
+  for (i=0; i<childCount; i++) {
+    nsCOMPtr<nsIContent> child;
+    rv = parent->ChildAt(i,*getter_AddRefs(child));
+    if (NS_FAILED(rv) || !child) continue;
+
+    nsCOMPtr<nsIAtom> tag;
+    child->GetTag(*getter_AddRefs(tag));
+
+    if (tag.get() == nsXULAtoms::treechildren) break;
+  }
+
+  // if no <treechildren>, then it's just us.
+  if (i==childCount) return 1;
+
+                                // not implemented yet!
+  return result;
+}
+
+
+// count all tags with the given name below "node"
+PRInt32
+nsTreeRowGroupFrame::RecursiveTagCount(nsIContent *node, nsIAtom *tag)
+{
+  PRInt32 result=0;
+                                
+  { // keep the stack small in case of deep content
+    nsCOMPtr<nsIAtom> nodeTag;
+    node->GetTag(*getter_AddRefs(nodeTag));
+    if (nodeTag.get() == tag)
+      result = 1;
+  }
+  
+  PRInt32 childCount=0;
+  node->ChildCount(childCount);
+
+  for (PRInt32 i = 0; i < childCount; i++) {
+    nsCOMPtr<nsIContent> childContent;
+    node->ChildAt(i, *getter_AddRefs(childContent));
+    result += RecursiveTagCount(childContent, tag);
+  }
+
+  return result;
+}
+
+
+// crawl up the parents until you get the required tag
+nsresult
+nsTreeRowGroupFrame::FindParentWithTag(nsIContent *node, nsIAtom *tag,
+                                       nsIContent **aResult)
+{
+  nsresult rv;
+  nsCOMPtr<nsIContent> prevContent;
+  nsCOMPtr<nsIContent> currContent = node;
+  while (currContent) {
+    nsCOMPtr<nsIAtom> parentTag;
+
+    nsCOMPtr<nsIContent> parent;
+    rv = currContent->GetParent(*getter_AddRefs(parent));
+    if (NS_FAILED(rv) || !parent) break;
+    
+    rv = parent->GetTag(*getter_AddRefs(parentTag));
+    if (NS_FAILED(rv) || !parentTag) break;
+    
+    if (parentTag.get() == nsXULAtoms::treeitem) {
+      *aResult = parent;
+      NS_ADDREF(*aResult);
+    }
+    
+    prevContent = currContent;
+    prevContent->GetParent(*getter_AddRefs(currContent));
+  }
+  
+  *aResult = nsnull;
+  return NS_ERROR_FAILURE;
+}
+
+#endif
+                                   
 PRBool
 nsTreeRowGroupFrame::IsValidRow(PRInt32 aRowIndex)
 {
@@ -1411,13 +1558,34 @@ nsTreeRowGroupFrame::IsValidRow(PRInt32 aRowIndex)
 void
 nsTreeRowGroupFrame::EnsureRowIsVisible(PRInt32 aRowIndex)
 {
-//XXX need to write
+  // if no scrollbar, then it must be visible
+  if (!mScrollbar) return;
+  nsCOMPtr<nsIContent> scrollbarContent;
+  mScrollbar->GetContent(getter_AddRefs(scrollbarContent));
+  nsString value;
+  value.Append(aRowIndex);
+  PRInt32 screenIndex = aRowIndex - mCurrentIndex;
+  
+  printf("Trying to make %d visible (at screen position %d)\n",
+         aRowIndex, screenIndex);
+
+  PRInt32 rows;
+  GetRowCount(rows);
+
+  PRInt32 bottomIndex = rows + mCurrentIndex;
+  if ((aRowIndex <= mCurrentIndex) || (aRowIndex >= bottomIndex)) {
+      printf("%d is offscreen..(not between %d and %d)\n",
+             aRowIndex, mCurrentIndex, bottomIndex);
+  }
+  //  scrollbarContent->SetAttribute(kNameSpaceID_None, nsXULAtoms::curpos,
+  //                                   value, PR_TRUE);
 }
 
 void
 nsTreeRowGroupFrame::GetCellFrameAtIndex(PRInt32 aRowIndex, PRInt32 aColIndex, 
                                          nsTreeCellFrame** aResult)
 {
+  printf("Looking for cell (%d, %d)..", aRowIndex, aColIndex);
   // The screen index = (aRowIndex - mCurrentIndex)
   PRInt32 screenIndex = aRowIndex - mCurrentIndex;
 
@@ -1427,6 +1595,7 @@ nsTreeRowGroupFrame::GetCellFrameAtIndex(PRInt32 aRowIndex, PRInt32 aColIndex,
 
   nsTableCellFrame* cellFrame;
 
+  printf("(screen index (%d,%d))\n", screenIndex, aColIndex);
   nsCellMap * cellMap = tableFrame->GetCellMap();
   CellData* cellData = cellMap->GetCellAt(screenIndex, aColIndex);
   if (cellData) {
@@ -1435,6 +1604,8 @@ nsTreeRowGroupFrame::GetCellFrameAtIndex(PRInt32 aRowIndex, PRInt32 aColIndex,
       *aResult = (nsTreeCellFrame*)cellFrame; // XXX I am evil.
     }
   }
+
+  printf("got cell frame %p\n", *aResult);
 }
 
 void nsTreeRowGroupFrame::PostAppendRow(nsIFrame* aRowFrame, nsIPresContext& aPresContext)
