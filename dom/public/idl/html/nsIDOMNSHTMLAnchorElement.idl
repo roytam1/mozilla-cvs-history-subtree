@@ -33,5 +33,5 @@ interface nsIDOMNSHTMLAnchorElement : nsISupports
   readonly attribute DOMString        hash;
   readonly attribute DOMString        text;
 
-  DOMString                 ToString();
+  DOMString                 toString();
 };
