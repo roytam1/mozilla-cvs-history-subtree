@@ -625,17 +625,17 @@ ListCerts(CERTCertDBHandle *handle, char *name, PK11SlotInfo *slot,
     SECStatus rv;
 
     if (slot == NULL) {
-	PK11SlotList *list;
-	PK11SlotListElement *le;
+	CERTCertList *list;
+	CERTCertListNode *node;
 
-	list= PK11_GetAllTokens(CKM_INVALID_MECHANISM,
-						PR_FALSE,PR_FALSE,pwdata);
-	if (list) {
-	    for (le = list->head; le; le = le->next) {
-		rv = listCerts(handle,name,le->slot,raw,ascii,outfile,pwdata);
-	    }
-	    PK11_FreeSlotList(list);
+	list = PK11_ListCerts(PK11CertListUnique, pwdata);
+	for (node = CERT_LIST_HEAD(list); !CERT_LIST_END(node, list);
+	     node = CERT_LIST_NEXT(node)) 
+	{
+	    SECU_PrintCertNickname(node->cert, stdout);
 	}
+	CERT_DestroyCertList(list);
+	return SECSuccess;
     } else {
 	rv = listCerts(handle,name,slot,raw,ascii,outfile,pwdata);
     }
@@ -695,22 +695,22 @@ ValidateCert(CERTCertDBHandle *handle, char *name, char *date,
     SECStatus rv;
     CERTCertificate *cert = NULL;
     int64 timeBoundary;
-    SECCertUsage usage;
+    SECCertificateUsage usage;
     CERTVerifyLog reallog;
     CERTVerifyLog *log = NULL;
     
     switch (*certUsage) {
 	case 'C':
-	    usage = certUsageSSLClient;
+	    usage = certificateUsageSSLClient;
 	    break;
 	case 'V':
-	    usage = certUsageSSLServer;
+	    usage = certificateUsageSSLServer;
 	    break;
 	case 'S':
-	    usage = certUsageEmailSigner;
+	    usage = certificateUsageEmailSigner;
 	    break;
 	case 'R':
-	    usage = certUsageEmailRecipient;
+	    usage = certificateUsageEmailRecipient;
 	    break;
 	default:
 	    PORT_SetError (SEC_ERROR_INVALID_ARGS);
@@ -747,8 +747,8 @@ ValidateCert(CERTCertDBHandle *handle, char *name, char *date,
 	    }
 	}
  
-	rv = CERT_VerifyCert(handle, cert, checkSig, usage,
-			     timeBoundary, pwdata, log);
+	rv = CERT_VerifyCertificate(handle, cert, checkSig, usage,
+			     timeBoundary, pwdata, log, &usage);
 	if ( log ) {
 	    if ( log->head == NULL ) {
 		fprintf(stdout, "%s: certificate is valid\n", progName);
@@ -1494,7 +1494,7 @@ AddExtKeyUsage (void *extHandle)
     fprintf(stdout, "%-25s 2 - Code Signing\n", "");
     fprintf(stdout, "%-25s 3 - Email Protection\n", "");
     fprintf(stdout, "%-25s 4 - Timestamp\n", "");
-    fprintf(stdout, "%-25s 5 - OSCP Responder\n", "");
+    fprintf(stdout, "%-25s 5 - OCSP Responder\n", "");
 #ifdef DEBUG_NSSTEAM_ONLY
     fprintf(stdout, "%-25s 6 - Step-up\n", "");
 #endif /* DEBUG_NSSTEAM_ONLY */
