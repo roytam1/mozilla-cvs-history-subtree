@@ -56,7 +56,7 @@
 #define HG73299
 #define HG00374
 #define HG83666
-#define HG77677
+#define HG77677 "msgpane.h"
 #define HG77678
 #define HG72266
 #define HG72267
@@ -70,7 +70,7 @@
 #define HG62294
 #define HG52286
 #define HG64384
-#define HG99874
+#define HG99874 "msgsend.h"
 #define HG83647
 #define HG62453
 #define HG42326
@@ -92,7 +92,7 @@
 #define HG28265
 #define HG24239
 #define HG56307
-#define HG32686
+#define HG32686 STRDUP
 #define HG53961
 #define HG97760
 #define HG29866
@@ -226,10 +226,11 @@
 #define HG22067
 #define HG98330
 #define HG98373
+#define HG22860
+#define HG02700 "NIKI"
+#define HG99877 "prefapi.h"
+#define HG02902 "msgsend.h"
 #if 0
-#define 
-#define 
-#define 
 #define 
 #define 
 #define 
