@@ -221,8 +221,10 @@ void nsFileSpec::operator += (const char* inRelativePath)
 	if (!inRelativePath || !mPath)
 		return;
 	
-	if (mPath[strlen(mPath) - 1] != '\\')
-		char* newPath = nsFileSpecHelpers::ReallocCat(mPath, "\\");
+	if (mPath[strlen(mPath) - 1] == '\\')
+		nsFileSpecHelpers::ReallocCat(mPath, "x");
+	else
+		nsFileSpecHelpers::ReallocCat(mPath, "\\x");
 	SetLeafName(inRelativePath);
 } // nsFileSpec::operator +=
 

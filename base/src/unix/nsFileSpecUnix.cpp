@@ -131,8 +131,11 @@ void nsFileSpec::operator += (const char* inRelativePath)
     if (!inRelativePath || !mPath)
         return;
     
-    if (mPath[strlen(mPath) - 1] != '/')
-        nsFileSpecHelpers::ReallocCat(mPath, "/");
+    char endChar = mPath[strlen(mPath) - 1];
+    if (endChar == '/')
+        nsFileSpecHelpers::ReallocCat(mPath, "x");
+    else
+        nsFileSpecHelpers::ReallocCat(mPath, "/x");
     SetLeafName(inRelativePath);
 } // nsFileSpec::operator +=
 
