@@ -27,9 +27,12 @@ DIRS = \
 PROTO = \
 	$(ROOT) \
 	$(ROOT)/usr/lib/mps \
-	$(ROOT)/usr/lib/mps/cpu/sparcv8plus \
-	$(ROOT)/usr/lib/mps/sparcv9 \
 	$(ROOT)/usr/include/mps
+
+ifeq ($(ARCH), sparc)
+	PROTO += $(ROOT)/usr/lib/mps/sparcv9 \
+	$(ROOT)/usr/lib/mps/cpu/sparcv8plus
+endif
 
 include $(srcdir)/Makefile.com
 
