@@ -1,8 +1,0 @@
-java/build/Makefile
-java/dom/Makefile
-java/dom/classes/Makefile
-java/dom/jni/Makefile
-java/dom/src/Makefile
-java/webclient/src_share/Makefile
-java/webclient/src_moz/Makefile
-java/webclient/src_moz/motif/Makefile
