@@ -3732,6 +3732,10 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 	             result = PR_FALSE;
             }
 
+			// Apps that don't use XUL *need* these messages.  Lacking 
+			// a better fix, just turning this off in our branch
+			// until a Gecko-approved solution surfaces. 
+#if 0
             if (wParam == VK_MENU || (wParam == VK_F10 && !mIsShiftDown)) {
               // This is required to prevent Windows
               // default menu processing getting in the
@@ -3743,6 +3747,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
               result = PR_TRUE;
               *aRetValue = 0;           
             }
+#endif
             break;
 
         // say we've dealt with erase background if widget does

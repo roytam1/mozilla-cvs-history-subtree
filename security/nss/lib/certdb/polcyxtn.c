@@ -138,6 +138,7 @@ CERT_DecodeCertificatePoliciesExtension(SECItem *extnValue)
     CERTCertificatePolicies *policies;
     CERTPolicyInfo **policyInfos, *policyInfo;
     CERTPolicyQualifier **policyQualifiers, *policyQualifier;
+    SECItem newExtnValue;
     
     /* make a new arena */
     arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
@@ -156,9 +157,16 @@ CERT_DecodeCertificatePoliciesExtension(SECItem *extnValue)
     
     policies->arena = arena;
 
+    /* copy the DER into the arena, since Quick DER returns data that points
+       into the DER input, which may get freed by the caller */
+    rv = SECITEM_CopyItem(arena, &newExtnValue, extnValue);
+    if ( rv != SECSuccess ) {
+	goto loser;
+    }
+
     /* decode the policy info */
-    rv = SEC_ASN1DecodeItem(arena, policies, CERT_CertificatePoliciesTemplate,
-			    extnValue);
+    rv = SEC_QuickDERDecodeItem(arena, policies, CERT_CertificatePoliciesTemplate,
+			    &newExtnValue);
 
     if ( rv != SECSuccess ) {
 	goto loser;
@@ -205,6 +213,7 @@ CERT_DecodeUserNotice(SECItem *noticeItem)
     PRArenaPool *arena = NULL;
     SECStatus rv;
     CERTUserNotice *userNotice;
+    SECItem newNoticeItem;
     
     /* make a new arena */
     arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
@@ -223,9 +232,16 @@ CERT_DecodeUserNotice(SECItem *noticeItem)
     
     userNotice->arena = arena;
 
+    /* copy the DER into the arena, since Quick DER returns data that points
+       into the DER input, which may get freed by the caller */
+    rv = SECITEM_CopyItem(arena, &newNoticeItem, noticeItem);
+    if ( rv != SECSuccess ) {
+	goto loser;
+    }
+
     /* decode the user notice */
-    rv = SEC_ASN1DecodeItem(arena, userNotice, CERT_UserNoticeTemplate, 
-			    noticeItem);
+    rv = SEC_QuickDERDecodeItem(arena, userNotice, CERT_UserNoticeTemplate, 
+			    &newNoticeItem);
 
     if ( rv != SECSuccess ) {
 	goto loser;
@@ -240,7 +256,7 @@ CERT_DecodeUserNotice(SECItem *noticeItem)
 
 	newBytes = SEC_ASN1LengthLength(userNotice->derNoticeReference.len)+1;
 	tmpbuf.len = newBytes + userNotice->derNoticeReference.len;
-	tmpbuf.data = PORT_ZAlloc(tmpbuf.len);
+	tmpbuf.data = PORT_ArenaZAlloc(arena, tmpbuf.len);
 	if (tmpbuf.data == NULL) {
 	    goto loser;
 	}
@@ -250,7 +266,7 @@ CERT_DecodeUserNotice(SECItem *noticeItem)
 				userNotice->derNoticeReference.len);
 
 	/* OK, no decode it */
-    	rv = SEC_ASN1DecodeItem(arena, &userNotice->noticeReference, 
+    	rv = SEC_QuickDERDecodeItem(arena, &userNotice->noticeReference, 
 	    CERT_NoticeReferenceTemplate, &tmpbuf);
 
 	PORT_Free(tmpbuf.data); tmpbuf.data = NULL;
@@ -449,6 +465,7 @@ CERT_DecodeOidSequence(SECItem *seqItem)
     PRArenaPool *arena = NULL;
     SECStatus rv;
     CERTOidSequence *oidSeq;
+    SECItem newSeqItem;
     
     /* make a new arena */
     arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
@@ -467,8 +484,15 @@ CERT_DecodeOidSequence(SECItem *seqItem)
     
     oidSeq->arena = arena;
 
+    /* copy the DER into the arena, since Quick DER returns data that points
+       into the DER input, which may get freed by the caller */
+    rv = SECITEM_CopyItem(arena, &newSeqItem, seqItem);
+    if ( rv != SECSuccess ) {
+	goto loser;
+    }
+
     /* decode the user notice */
-    rv = SEC_ASN1DecodeItem(arena, oidSeq, CERT_OidSeqTemplate, seqItem);
+    rv = SEC_QuickDERDecodeItem(arena, oidSeq, CERT_OidSeqTemplate, &newSeqItem);
 
     if ( rv != SECSuccess ) {
 	goto loser;

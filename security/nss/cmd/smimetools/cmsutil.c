@@ -47,6 +47,7 @@
 #include "cms.h"
 #include "nss.h"
 #include "smime.h"
+#include "pk11func.h"
 
 #if defined(XP_UNIX)
 #include <unistd.h>
@@ -195,7 +196,7 @@ struct encryptOptionsStr {
 
 static NSSCMSMessage *
 decode(FILE *out, SECItem *output, SECItem *input, 
-       struct decodeOptionsStr *decodeOptions)
+       const struct decodeOptionsStr *decodeOptions)
 {
     NSSCMSDecoderContext *dcx;
     NSSCMSMessage *cmsg;
@@ -509,6 +510,12 @@ signed_data(struct signOptionsStr *signOptions)
 	    fprintf(stderr, "ERROR: cannot add SMIMEEncKeyPrefs attribute.\n");
 	    goto loser;
 	}
+	if (NSS_CMSSignerInfo_AddMSSMIMEEncKeyPrefs(signerinfo, ekpcert, 
+	                                     signOptions->options->certHandle)
+	      != SECSuccess) {
+	    fprintf(stderr, "ERROR: cannot add MS SMIMEEncKeyPrefs attribute.\n");
+	    goto loser;
+	}
 	if (NSS_CMSSignedData_AddCertificate(sigd, ekpcert) != SECSuccess) {
 	    fprintf(stderr, "ERROR: cannot add encryption certificate.\n");
 	    goto loser;
@@ -525,6 +532,13 @@ signed_data(struct signOptionsStr *signOptions)
                   != SECSuccess) {
                 fprintf(stderr, 
                     "ERROR: cannot add default SMIMEEncKeyPrefs attribute.\n");
+                goto loser;
+            }
+            if (NSS_CMSSignerInfo_AddMSSMIMEEncKeyPrefs(signerinfo, cert, 
+                                              signOptions->options->certHandle)
+                  != SECSuccess) {
+                fprintf(stderr, 
+                    "ERROR: cannot add default MS SMIMEEncKeyPrefs attribute.\n");
                 goto loser;
             }
         } else {
@@ -547,6 +561,13 @@ signed_data(struct signOptionsStr *signOptions)
                   != SECSuccess) {
                 fprintf(stderr, 
                         "ERROR: cannot add SMIMEEncKeyPrefs attribute.\n");
+                goto loser;
+            }
+            if (NSS_CMSSignerInfo_AddMSSMIMEEncKeyPrefs(signerinfo, ekpcert, 
+                                              signOptions->options->certHandle)
+                  != SECSuccess) {
+                fprintf(stderr, 
+                        "ERROR: cannot add MS SMIMEEncKeyPrefs attribute.\n");
                 goto loser;
             }
             if (NSS_CMSSignedData_AddCertificate(sigd, ekpcert) != SECSuccess) {

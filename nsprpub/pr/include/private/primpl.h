@@ -1022,6 +1022,12 @@ extern PRStatus _PR_MD_CREATE_THREAD(
                         PRUint32 stackSize);
 #define    _PR_MD_CREATE_THREAD _MD_CREATE_THREAD
 
+extern void _PR_MD_JOIN_THREAD(_MDThread *md);
+#define    _PR_MD_JOIN_THREAD _MD_JOIN_THREAD
+
+extern void _PR_MD_END_THREAD(void);
+#define    _PR_MD_END_THREAD _MD_END_THREAD
+
 extern void _PR_MD_YIELD(void);
 #define    _PR_MD_YIELD _MD_YIELD
 
@@ -1716,6 +1722,13 @@ struct PRFilePrivate {
     PRBool  appendMode;                             
 #endif
     _MDFileDesc md;
+#ifdef _PR_STRICT_ADDR_LEN
+    PRUint16 af;        /* If the platform requires passing the exact
+                         * length of the sockaddr structure for the
+                         * address family of the socket to socket
+                         * functions like accept(), we need to save
+                         * the address family of the socket. */
+#endif
 };
 
 struct PRDir {
@@ -1750,6 +1763,9 @@ extern void _PR_CleanupIO(void);
 extern void _PR_CleanupNet(void);
 extern void _PR_CleanupLayerCache(void);
 extern void _PR_CleanupStacks(void);
+#ifdef WINNT
+extern void _PR_CleanupCPUs(void);
+#endif
 extern void _PR_CleanupThreads(void);
 extern void _PR_CleanupTPD(void);
 extern void _PR_Cleanup(void);
