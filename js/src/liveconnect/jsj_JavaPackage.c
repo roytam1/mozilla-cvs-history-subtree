@@ -58,7 +58,7 @@ typedef struct {
     int flags;                  /* e.g. PKG_SYSTEM, PKG_CLASS */
 } JavaPackage_Private;
 
-JSObject *
+static JSObject *
 define_JavaPackage(JSContext *cx, JSObject *parent_obj,
                    const char *obj_name, const char *path, int flags)
 {
@@ -106,8 +106,7 @@ JavaPackage_setProperty(JSContext *cx, JSObject *obj, jsval slot, jsval *vp)
                            "JavaPackage prototype object");
         return JS_FALSE;
     }
-    JS_ReportError(cx, "You may not add properties to %s, "
-                       "as it is not a JavaScript object", package->path);
+    JS_ReportError(cx, "You may not add properties to a JavaPackage object");
     return JS_FALSE;
 }
 
@@ -133,6 +132,16 @@ JavaPackage_resolve(JSContext *cx, JSObject *obj, jsval id)
     if (!JSVAL_IS_STRING(id))
 	return JS_TRUE;
     subPath = JS_GetStringBytes(JSVAL_TO_STRING(id));
+
+    /*
+     * There will be an attempt to invoke the toString() method when producing
+     * the string representation of a JavaPackage.  When this occurs, avoid
+     * creating a bogus toString package.  (This means that no one can ever
+     * create a package with the simple name "toString", but we'll live with
+     * that limitation.)
+     */
+    if (!strcmp(subPath, "toString"))
+        return JS_FALSE;
 
     path = package->path;
     newPath = PR_smprintf("%s%s%s", path, (path[0] ? "/" : ""), subPath);
@@ -306,7 +315,7 @@ JSClass JavaPackage_class = {
 
 JavaPackageDef
 standard_java_packages[] = {
-    {"java",                NULL,   PKG_USER},
+    /* {"java",                NULL,   PKG_USER},
     {"java.applet",         NULL,   PKG_USER},
     {"java.awt",            NULL,   PKG_USER},
     {"java.awt.datatransfer",
@@ -349,7 +358,7 @@ standard_java_packages[] = {
     {"netscape.security",   NULL,   PKG_SYSTEM},
     {"netscape.WAI",        NULL,   PKG_SYSTEM},
 
-    {"sun",                 NULL,   PKG_USER},
+    {"sun",                 NULL,   PKG_USER}, */
     {"Packages",            "",     PKG_USER},
     0
 };
@@ -450,6 +459,20 @@ error:
     return JS_FALSE;
 }
 
+static JSBool
+JavaPackage_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
+	             jsval *rval)
+{
+    if (!JS_InstanceOf(cx, obj, &JavaPackage_class, argv))
+        return JS_FALSE;
+    return JavaPackage_convert(cx, obj, JSTYPE_STRING, rval);
+}
+
+static JSFunctionSpec JavaPackage_methods[] = {
+    {"toString",   JavaPackage_toString,        0},
+    {0}
+};
+
 /*
  * One-time initialization for the JavaPackage class.  (This is not
  * run once per thread, rather it's run once for a given JSContext.)
@@ -459,15 +482,15 @@ jsj_init_JavaPackage(JSContext *cx, JSObject *global_obj,
                      JavaPackageDef *additional_predefined_packages) {
 
     /* Define JavaPackage class */
-    if (!JS_InitClass(cx, global_obj, 0, &JavaPackage_class, 0, 0, 0, 0, 0, 0))
+    if (!JS_InitClass(cx, global_obj, 0, &JavaPackage_class,
+                      0, 0, 0, JavaPackage_methods, 0, 0))
         return JS_FALSE;
 
-    /* Add top-level packages, e.g. : java, netscape, sun  
-
+    /* Add top-level packages, e.g. : java, netscape, sun */
     if (!pre_define_java_packages(cx, global_obj, standard_java_packages))
         return JS_FALSE;
-    if (!pre_define_java_packages(cx, global_obj, additional_predefined_packages))
-        return JS_FALSE;*/
+    /* if (!pre_define_java_packages(cx, global_obj, additional_predefined_packages))
+        return JS_FALSE; */
     
     return JS_TRUE;
 }
