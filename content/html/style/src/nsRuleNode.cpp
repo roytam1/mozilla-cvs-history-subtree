@@ -245,10 +245,6 @@ nsRuleNode::operator new(size_t sz, nsIPresContext* aPresContext)
   // Check the recycle list first.
   void* result = nsnull;
   aPresContext->AllocateFromShell(sz, &result);
-  
-  if (result)
-    nsCRT::zero(result, sz);
-
   return result;
 }
 

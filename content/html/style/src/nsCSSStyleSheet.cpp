@@ -2533,14 +2533,25 @@ struct SelectorMatchesData {
   {
     MOZ_COUNT_DTOR(SelectorMatchesData);
 
-    delete mPreviousSiblingData;
-    delete mParentData;
+    if (mPreviousSiblingData)
+      mPreviousSiblingData->Destroy(mPresContext);
+    if (mParentData)
+      mParentData->Destroy(mPresContext);
 
     NS_IF_RELEASE(mParentContent);
     NS_IF_RELEASE(mContentTag);
     NS_IF_RELEASE(mContentID);
     NS_IF_RELEASE(mStyledContent);
   }
+
+  void* operator new(size_t sz, nsIPresContext* aContext) {
+    void* result = nsnull;
+    aContext->AllocateFromShell(sz, &result);
+    return result;
+  }
+  void Destroy(nsIPresContext* aContext) {
+    aContext->FreeToShell(sizeof(SelectorMatchesData), this);
+  };
 
   nsIPresContext*   mPresContext;
   nsIContent*       mContent;
@@ -2644,10 +2655,8 @@ SelectorMatchesData::SelectorMatchesData(nsIPresContext* aPresContext, nsIConten
 #endif
     nsIHTMLContent* hc;
     if (PR_FALSE == isXUL &&
-        NS_SUCCEEDED(aContent->QueryInterface(NS_GET_IID(nsIHTMLContent), (void**)&hc))) {
+        aContent->IsContentOfType(nsIContent::eHTML)) 
       mIsHTMLContent = PR_TRUE;
-      NS_RELEASE(hc);
-    } 
 
     // if HTML content and it has some attributes, check for an HTML link
     // NOTE: optimization: cannot be a link if no attributes (since it needs an href)
@@ -3148,8 +3157,8 @@ static PRBool SelectorMatchesTree(SelectorMatchesData &data,
                   (tag != nsLayoutAtoms::commentTagName)) {
                 NS_IF_RELEASE(tag);
                 newdata =
-                    new SelectorMatchesData(curdata->mPresContext, content,
-                                            curdata->mRuleWalker, &compat);
+                    new (curdata->mPresContext) SelectorMatchesData(curdata->mPresContext, content,
+                                                                    curdata->mRuleWalker, &compat);
                 curdata->mPreviousSiblingData = newdata;    
                 break;
               }
@@ -3170,8 +3179,8 @@ static PRBool SelectorMatchesTree(SelectorMatchesData &data,
         if (!newdata) {
           lastContent->GetParent(content);
           if (content) {
-            newdata = new SelectorMatchesData(curdata->mPresContext, content,
-                                              curdata->mRuleWalker, &compat);
+            newdata = new (curdata->mPresContext) SelectorMatchesData(curdata->mPresContext, content,
+                                                                      curdata->mRuleWalker, &compat);
             curdata->mParentData = newdata;    
           }
         } else {

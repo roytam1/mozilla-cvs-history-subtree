@@ -830,7 +830,8 @@ public:
                    nsIPresContext* aPresContext);
   virtual ~StyleContextImpl();
 
-  NS_DECL_AND_IMPL_ZEROING_OPERATOR_NEW
+  void* operator new(size_t sz, nsIPresContext* aPresContext);
+  void Destroy();
 
   NS_DECL_ISUPPORTS
 
@@ -957,7 +958,7 @@ StyleContextImpl::~StyleContextImpl()
 }
 
 NS_IMPL_ADDREF(StyleContextImpl)
-NS_IMPL_RELEASE(StyleContextImpl)
+NS_IMPL_RELEASE_WITH_DESTROY(StyleContextImpl, Destroy())
 
 NS_IMETHODIMP
 StyleContextImpl::QueryInterface(const nsIID& aIID, void** aInstancePtr)
@@ -2006,6 +2007,34 @@ void StyleContextImpl::DumpRegressionData(nsIPresContext* aPresContext, FILE* ou
 }
 #endif
 
+// Overloaded new operator. Initializes the memory to 0 and relies on an arena
+// (which comes from the presShell) to perform the allocation.
+void* 
+StyleContextImpl::operator new(size_t sz, nsIPresContext* aPresContext)
+{
+  // Check the recycle list first.
+  void* result = nsnull;
+  aPresContext->AllocateFromShell(sz, &result);
+  return result;
+}
+
+// Overridden to prevent the global delete from being called, since the memory
+// came out of an nsIArena instead of the global delete operator's heap.
+void 
+StyleContextImpl::Destroy()
+{
+  // Get the pres context from our rule node.
+  nsCOMPtr<nsIPresContext> presContext;
+  mRuleNode->GetPresContext(getter_AddRefs(presContext));
+
+  // Call our destructor.
+  this->~StyleContextImpl();
+
+  // Don't let the memory be freed, since it will be recycled
+  // instead. Don't call the global operator delete.
+  presContext->FreeToShell(sizeof(StyleContextImpl), this);
+}
+
 NS_LAYOUT nsresult
 NS_NewStyleContext(nsIStyleContext** aInstancePtrResult,
                    nsIStyleContext* aParentContext,
@@ -2018,8 +2047,8 @@ NS_NewStyleContext(nsIStyleContext** aInstancePtrResult,
     return NS_ERROR_NULL_POINTER;
   }
 
-  StyleContextImpl* context = new StyleContextImpl(aParentContext, aPseudoTag, 
-                                                   aRuleNode, aPresContext);
+  StyleContextImpl* context = new (aPresContext) StyleContextImpl(aParentContext, aPseudoTag, 
+                                                                  aRuleNode, aPresContext);
   if (nsnull == context) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
