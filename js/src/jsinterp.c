@@ -1474,6 +1474,7 @@ js_Interpret(JSContext *cx, jsval *result)
 	ok = SPROP_SET(cx, sprop, obj, obj, &rval);                           \
 	if (ok) {                                                             \
 	    SET_ENUMERATE_ATTR(sprop);                                        \
+            GC_POKE(cx, NULL);  /* second arg ignored! */                     \
 	    OBJ_SET_SLOT(cx, obj, sprop->slot, rval);                         \
 	}                                                                     \
     } else {                                                                  \
