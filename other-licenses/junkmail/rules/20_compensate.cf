@@ -1,0 +1,347 @@
+# SpamAssassin rules file: compensation for common false positives.
+# $Id$
+###########################################################################
+# Header compensation tests
+
+require_version 2.40
+
+# support for Habeas sender-warranted email: http://www.habeas.com/
+header HABEAS_SWE               eval:message_is_habeas_swe()
+describe HABEAS_SWE             Uses the Habeas warrant mark (http://www.habeas.com/)
+tflags HABEAS_SWE               nice
+
+header GENUINE_EBAY_RCVD        eval:check_for_from_domain_in_received_headers('ebay.com', 'true')
+describe GENUINE_EBAY_RCVD      Message from eBay
+tflags GENUINE_EBAY_RCVD	nice
+
+# very bad results: 3.6 times as much spam as nonspam matches this
+#  0.45     0.47     0.13    0.78   -3.00  ORDER_STATUS (fn)
+#header ORDER_STATUS             Subject =~ / order\b/i
+#describe ORDER_STATUS           Subject looks like order info
+#tflags ORDER_STATUS             nice
+
+header   APPROVED_BY            exists:Approved-By
+describe APPROVED_BY            Has an Approved-By moderated list header
+tflags APPROVED_BY		nice
+
+header   EXCHANGE_SERVER        X-Mailer =~ /Internet Mail Service \([\d\.]+\)/
+describe EXCHANGE_SERVER        Came via Internet Mail Service plugin
+tflags EXCHANGE_SERVER		nice
+
+# This is a Bugzilla bug status report e-mail and probably OK
+header BUGZILLA_BUG             eval:message_from_bugzilla()
+describe BUGZILLA_BUG           Looks like a Bugzilla bug
+tflags BUGZILLA_BUG		nice
+
+header DEBIAN_BTS_BUG           eval:message_from_debian_bts()
+describe DEBIAN_BTS_BUG         Looks like a Debian BTS bug
+tflags DEBIAN_BTS_BUG		nice
+
+# give a negative score to Majordomo results.
+header   MAJORDOMO              Subject =~ /Majordomo (?:request )?results/
+describe MAJORDOMO              From Majordomo
+tflags MAJORDOMO		nice
+
+# these headers have very low correlation with spam
+header CRON_ENV                 exists:X-Cron-Env
+header IN_REP_TO                exists:In-Reply-To
+header REFERENCES               exists:References
+header USER_AGENT               exists:User-Agent
+header X_AUTH_WARNING           exists:X-Authentication-Warning
+header X_MAILING_LIST           exists:X-Mailing-List
+header X_LOOP                   exists:X-Loop
+header X_ACCEPT_LANG            exists:X-Accept-Language
+header RESENT_TO                exists:Resent-To
+tflags CRON_ENV                 nice
+tflags IN_REP_TO                nice
+tflags REFERENCES               nice
+tflags USER_AGENT               nice
+tflags X_AUTH_WARNING           nice
+tflags X_MAILING_LIST           nice
+tflags X_LOOP                   nice
+tflags X_ACCEPT_LANG            nice
+tflags RESENT_TO                nice
+
+header PGP_SIGNATURE_2          Content-Type =~ /protocol=.?application\/pgp-signature.?;/i
+describe PGP_SIGNATURE_2        Contains a PGP-signed message (signature attached)
+tflags PGP_SIGNATURE_2		nice
+
+# came from a known mailing list system -- but one which does *not* have built-in
+# (or working!) spam filtering.
+header   KNOWN_MAILING_LIST     eval:detect_mailing_list()
+describe KNOWN_MAILING_LIST     Email came from some known mailing list software
+tflags KNOWN_MAILING_LIST	nice
+
+# cf http://bugzilla.spamassassin.org/show_bug.cgi?id=587
+rawbody LISTBUILDER             eval:detect_ml_listbuilder()
+describe LISTBUILDER            Sent through Microsoft's ListBuilder service
+tflags LISTBUILDER        	nice
+
+# from Theo Van Dinter, see http://www.hughes-family.org/bugzilla/show_bug.cgi?id=591
+body MSN_GROUPS                 eval:check_for_msn_groups_headers()
+describe MSN_GROUPS             Came from MSN Communities
+tflags MSN_GROUPS               nice
+
+header NMS_CGI_NOT_BUGGY        X-Mailer =~ /^NMS FormMail.pl.*v\d/
+describe NMS_CGI_NOT_BUGGY      Not Matt's Scripts formmail.pl
+tflags NMS_CGI_NOT_BUGGY	nice
+
+# some non-spam rules from http://www.darkmere.gen.nz/2002/0628.html
+header Q_FOR_SELLER             Subject =~ /Question.*(?:for|to|from eBay).*(?:seller|Member)/
+describe Q_FOR_SELLER           Subject is an eBay question
+tflags Q_FOR_SELLER		nice
+
+
+# TERRIBLE hitrate ;) 1:1 spam to nonspam
+#  2.75     2.93     2.58    0.53   -2.00  FROM_NEWS_LIST (fn)
+#header FROM_NEWS_LIST           From =~ /(?:\@news|\@list)/i
+#describe FROM_NEWS_LIST         From: has a news or list hostname in FQDN
+#tflags FROM_NEWS_LIST		nice
+
+header FROM_US_PHONE            From =~ /^[2-9]\d{9}\@/
+describe FROM_US_PHONE          From: looks like US Telephone Number
+tflags FROM_US_PHONE		nice
+
+header SUBJECT_IS_LIST          Subject =~ /\blist\b/i
+describe SUBJECT_IS_LIST        Subject contains newsletter header (list)
+tflags SUBJECT_IS_LIST		nice
+
+header SUBJECT_IS_NEWS          Subject =~ /\bnews\b/i
+describe SUBJECT_IS_NEWS        Subject contains newsletter header (news)
+tflags SUBJECT_IS_NEWS		nice
+
+header SUBJECT_IS_IN_REVIEW     Subject =~ /\bin review\b/i
+describe SUBJECT_IS_IN_REVIEW   Subject contains newsletter header (in review)
+tflags SUBJECT_IS_IN_REVIEW	nice
+
+header SUBJECT_FREQ             Subject =~ /\b(?:monday|daily|weekly|monthly)\b/i
+describe SUBJECT_FREQ           Subject contains a frequency - probable newsletter
+tflags SUBJECT_FREQ		nice
+
+header SUBJECT_MONTH            Subject =~ /\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b/
+describe SUBJECT_MONTH          Subject contains a month name - probable newsletter
+tflags SUBJECT_MONTH		nice
+
+# a case-insensitive one; doesn't have "Apr" => "0% APR!" or "May" => "you may
+# want to check this out".
+header SUBJECT_MONTH_2          Subject =~ /\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b/i
+describe SUBJECT_MONTH_2        Subject contains a month name - probable newsletter (2)
+tflags SUBJECT_MONTH_2		nice
+
+header FROM_EGROUPS             X-eGroups-Return =~ /^sentto-.*\@returns.groups.yahoo.com$/
+describe FROM_EGROUPS           Appears to be from yahoo groups
+tflags FROM_EGROUPS		nice
+
+# thanks Rod, these work better
+
+
+
+# compensate for common false pos on above rule: Yahoo! webmail
+header YAHOO_MSGID_ADDED        ALL =~ /Message-Id: <\S+\.mail.yahoo.com>\nReceived: .*by \S+mail.yahoo.com via HTTP;/s
+describe YAHOO_MSGID_ADDED      'Message-Id' was added by yahoo.com, that's OK
+tflags YAHOO_MSGID_ADDED        nice
+
+###########################################################################
+# Body compensation tests
+###########################################################################
+
+body HOTMAIL_FOOTER1             /Send and receive Hotmail on your mobile device: /
+describe HOTMAIL_FOOTER1        Common footer for Hotmail
+tflags HOTMAIL_FOOTER1		nice
+
+body HOTMAIL_FOOTER2            /Get your FREE download of MSN Explorer at /
+describe HOTMAIL_FOOTER2        Common footer for Hotmail
+tflags HOTMAIL_FOOTER2		nice
+
+body HOTMAIL_FOOTER3            /Get Your Private, Free E-mail from MSN Hotmail at http:\/\/www\.hotmail\.com\./
+describe HOTMAIL_FOOTER3        Common footer for Hotmail
+tflags HOTMAIL_FOOTER3		nice
+
+body HOTMAIL_FOOTER5            /Chat with friends online, try MSN Messenger: /
+describe HOTMAIL_FOOTER5        Common footer for Hotmail
+tflags HOTMAIL_FOOTER5		nice
+
+body MSN_FOOTER1                /MSN Photos is the easiest way to share and print your photos: /
+describe MSN_FOOTER1            Common footer for MSN
+tflags MSN_FOOTER1		nice
+
+
+body GROUPS_YAHOO_1             /^Your use of Yahoo! Groups is subject to http:\/\/\Qdocs.yahoo.com\E\/info\/terms\//
+describe GROUPS_YAHOO_1         Yahoo! Groups message
+tflags GROUPS_YAHOO_1		nice
+
+# signature tests
+full SIGNATURE_SHORT_DENSE	eval:check_signature('1', '7', '0')
+describe SIGNATURE_SHORT_DENSE	Short signature present (no empty lines)
+tflags SIGNATURE_SHORT_DENSE	nice
+
+full SIGNATURE_SHORT_SPARSE	eval:check_signature('1', '7', '1')
+describe SIGNATURE_SHORT_SPARSE	Short signature present (empty lines)
+tflags SIGNATURE_SHORT_SPARSE	nice
+
+full SIGNATURE_LONG_DENSE	eval:check_signature('8', '15', '0')
+describe SIGNATURE_LONG_DENSE	Long signature present (no empty lines)
+tflags SIGNATURE_LONG_DENSE	nice
+
+full SIGNATURE_LONG_SPARSE	eval:check_signature('8', '15', '1')
+describe SIGNATURE_LONG_SPARSE	Long signature present (empty lines)
+tflags SIGNATURE_LONG_SPARSE	nice
+
+rawbody EGP_HTML_BANNER         /^<!-- \S+begin egp html banner/
+describe EGP_HTML_BANNER        non-spam Yahoo! Groups banner found
+tflags EGP_HTML_BANNER		nice
+
+body MAILMAN_CONFIRM            /We have received a request .*subscription of your email address.* to the .* mailing list/
+describe MAILMAN_CONFIRM        A MailMan confirm-your-address message
+tflags MAILMAN_CONFIRM		nice
+
+rawbody PGP_SIGNATURE           /-----BEGIN PGP SIGNATURE-----/
+describe PGP_SIGNATURE          Contains a PGP-signed message
+tflags PGP_SIGNATURE		nice
+
+# too many false matches, see bug #670
+#body BALANCE_FOR_LONG           eval:check_for_very_long_text('10000')
+#describe BALANCE_FOR_LONG       Message text is over 10K in size
+#tflags BALANCE_FOR_LONG		nice
+#
+#
+
+rawbody PATCH_UNIFIED_DIFF	/^\@\@ [-+0-9]+,[0-9]+ [-+0-9]+,[0-9]+ \@\@$/
+describe PATCH_UNIFIED_DIFF	Contains what looks like a patch from diff -u
+tflags PATCH_UNIFIED_DIFF	nice
+
+rawbody PATCH_CONTEXT_DIFF	/^\*{3} \S+\s+.{10,}\b\d{2}:\d{2}:\d{2}\s/
+describe PATCH_CONTEXT_DIFF	Contains what looks like a patch from diff -c
+tflags PATCH_CONTEXT_DIFF	nice
+
+body DISCLAIMER_LEGALESE        /This e?-?mail.{1,20}confidential.{1,20}legally privileged/i
+describe DISCLAIMER_LEGALESE    Contains what looks like an 'E-Mail Disclaimer'
+tflags DISCLAIMER_LEGALESE	nice
+
+body EMAIL_ATTRIBUTION		/^"?\w.{4,} (?:wrote|writes):$/
+describe EMAIL_ATTRIBUTION	Contains what looks like an email attribution
+tflags EMAIL_ATTRIBUTION	nice
+
+rawbody QUOTED_EMAIL_TEXT	/^>+ +.{60,72}$/
+describe QUOTED_EMAIL_TEXT	Contains what looks like a quoted email text
+tflags QUOTED_EMAIL_TEXT	nice
+
+# matt@nightrealms.com (Matthew Cline)
+
+
+
+# spamassassin@davidgreenaway.com (David Greenaway)
+body     FORGOTTEN_PASSWORD     /[fF]org[oe]t.{0,25}[pP]assword/
+describe FORGOTTEN_PASSWORD     Contains a password retrieval system
+tflags   FORGOTTEN_PASSWORD     nice
+
+body     REG_THANKS             /\bThank you for registering\b/i
+describe REG_THANKS             Something about registration
+tflags   REG_THANKS             nice
+
+body     ACCOUNT_CLICK          /\baccount.{1,50}click/i
+describe ACCOUNT_CLICK          Click to perform an action on an account
+tflags   ACCOUNT_CLICK          nice
+
+# *terrible* results. :(
+#    0.14     0.14     0.13    0.51   -1.00  AUTO_RESP (fn)
+#body     AUTO_RESP              /\bauto.{1,100}(?:response|reply)/i
+#describe AUTO_RESP              Talks about automatic responses
+#tflags   AUTO_RESP              nice
+
+#    0.06     0.06     0.00    1.00   -1.00  ORDER_CONFIRM (non-nice but -ve score, low matches)
+#header ORDER_CONFIRM            Subject =~ /\border\b.{0,20}\bconfirm/i
+#describe ORDER_CONFIRM          Your order is confirmed!  I hope you like it.
+#tflags ORDER_CONFIRM            nice
+
+###########################################################################
+# meta compensation tests
+###########################################################################
+
+header __EVITE_CTYPE		Content-Type =~ /(?:multipart\/alternative|text\/(?:plain|html));/
+header __EVITE_RCVD		Received =~ /(?:evite|citysearch)\.com/
+uri __EVITE_URI			/\.(?:evite|citysearch)\.com\/.*iid=[A-Z]{20}/
+meta EVITE			((__EVITE_RCVD && __EVITE_URI) || (__EVITE_CTYPE && (__EVITE_RCVD || __EVITE_URI)))
+describe EVITE			Message looks like an Evite
+tflags EVITE			nice
+
+# Till now no spammer told me where he's working at :o)
+#   -- Malte
+# freqs:  2.273    0.383    3.416    0.10    1.00  NOSPAM_INC
+header NOSPAM_INC             exists:Organization
+describe NOSPAM_INC           Where are you working at?
+tflags NOSPAM_INC             nice
+
+header ORDER_STATUS             Subject =~ / order\b/i
+describe ORDER_STATUS           Subject looks like order info
+tflags ORDER_STATUS             nice
+score ORDER_STATUS -1.0         
+
+body HOTMAIL_FOOTER4            /Join the world's largest e-mail service with MSN Hotmail\./
+describe HOTMAIL_FOOTER4        Common footer for Hotmail
+tflags HOTMAIL_FOOTER4          nice
+score HOTMAIL_FOOTER4           -1.0
+
+header MAILER_DAEMON            From =~ /^(?:Mail Delivery \w+ )?<?mailer.?daemon\@\S+>?(?: \(Mail Delivery \w+\))?$/i
+describe MAILER_DAEMON          From the Mailer-Daemon
+tflags MAILER_DAEMON            nice
+
+#   0.149    0.221    0.105    0.68   -1.00  FAILURE_NOTICE_1
+header   FAILURE_NOTICE_1       Subject =~ /^(?:failure notice|returned mail:|Delivery Status Notification|Undeliverable:)/i
+describe FAILURE_NOTICE_1       Mailer daemon failure notice (1)
+tflags   FAILURE_NOTICE_1       nice
+score FAILURE_NOTICE_1          -1.0
+
+#   0.534    0.593    0.499    0.54   -1.00  FWD_MSG
+header FWD_MSG                  Subject =~ /Fwd:\s/
+describe FWD_MSG                Forwarded email
+tflags FWD_MSG                  nice
+score   FWD_MSG                 -1.0
+test FWD_MSG ok Subject: Fwd: Dracula
+test FWD_MSG ok Subject: [landho] Fwd: tell rod
+test FWD_MSG fail Subject: Fwd:Pure Opt-In for half the price
+test FWD_MSG fail Subject: Re: RE: FWD: search results        .       .       .
+
+#   0.002    0.005    0.000    1.00   -1.00  MAILBITS_EMAIL
+body MAILBITS_EMAIL             /This is a free service provided by MailBits\.com\./
+describe MAILBITS_EMAIL         recommended page from MailBits.com
+tflags MAILBITS_EMAIL           nice
+score MAILBITS_EMAIL            -1.0
+
+#   0.923    0.447    1.137    0.28   -0.97  MIME_NULL_BLOCK
+body MIME_NULL_BLOCK            /This message is in MIME format/
+describe MIME_NULL_BLOCK        Correct for MIME 'null block'
+tflags MIME_NULL_BLOCK  nice         
+lang fr describe MIME_NULL_BLOCK        Bloc vide pour un message au format MIME
+score MIME_NULL_BLOCK                -0.975
+
+#   0.000    0.000    0.000    0.00   -1.00  MSN_FOOTER2
+score MSN_FOOTER2               -1.0
+body MSN_FOOTER2                /Remove my e-mail address from Gaming Zone /
+describe MSN_FOOTER2            Common footer for MSN
+tflags MSN_FOOTER2              nice
+score MSN_FOOTER2           -1.0
+
+#   0.307    0.301    0.311    0.49   -1.00  SUBJECT_HAS_DATE
+header SUBJECT_HAS_DATE         Subject =~ /1?\d[-\/][1-3]?\d[-\/](?:20)?0\d/
+describe SUBJECT_HAS_DATE       Subject contains a date
+tflags SUBJECT_HAS_DATE         nice
+score SUBJECT_HAS_DATE          -1.0
+
+#   0.002    0.001    0.003    0.22   -1.00  TRACK_NUMBER
+body     TRACK_NUMBER           /\bassign.{1,100}\b(?:ticket|tracking) number/i
+describe TRACK_NUMBER           Talks about tracking numbers
+tflags   TRACK_NUMBER           nice
+score TRACK_NUMBER           -1.0
+
+header OUTLOOK_FW_MSG         Subject =~ /\[?F[Ww]:\s/
+describe OUTLOOK_FW_MSG         Forwarded email (Outlook style)
+tflags OUTLOOK_FW_MSG           nice
+score   OUTLOOK_FW_MSG          -0.3
+
+#   0.041    0.057    0.031    0.65   -1.00  PRIVACY_STATEMENT
+body     PRIVACY_STATEMENT      /\bPRIVACY STATEMENT\b/i
+describe PRIVACY_STATEMENT      Contains a Privacy Statement
+tflags   PRIVACY_STATEMENT      nice
+score PRIVACY_STATEMENT           -1.0
+
