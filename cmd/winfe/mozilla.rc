@@ -994,7 +994,7 @@ FONT 8, "MS Sans Serif"
 BEGIN
     LTEXT           "&Port:",IDC_STATIC,7,29,25,10
     EDITTEXT        IDC_EDIT_PORT,35,28,83,12,ES_AUTOHSCROLL
-#if MOZ_SECURITY
+#ifdef MOZ_SECURITY
     CONTROL         "Se&cure",IDC_SECURE,"Button",BS_AUTOCHECKBOX | 
                     WS_TABSTOP,35,47,49,13
 #endif
@@ -1067,7 +1067,7 @@ BEGIN
     LTEXT           "&Maximum Number of Hits:",IDC_STATIC_MAX_HITS,8,68,83,
                     11
     EDITTEXT        IDC_EDIT_MAX_HITS,95,66,32,12,ES_AUTOHSCROLL
-#if MOZ_SECURITY
+#ifdef MOZ_SECURITY
     CONTROL         "Se&cure",IDC_SECURE,"Button",BS_AUTOCHECKBOX | 
                     WS_TABSTOP,155,55,55,10
 #endif
@@ -1835,7 +1835,7 @@ BEGIN
     CONTROL         "Set &new folders for offline download",
                     IDC_CHECK_IMAP_LOCAL,"Button",BS_AUTOCHECKBOX | 
                     WS_TABSTOP,11,7,200,10
-#if MOZ_SECURITY
+#ifdef MOZ_SECURITY
     CONTROL         "&Server supports encrypted connections (SSL)",
                     IDC_CHECK_IMAP_SSL,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
                     11,22,200,10
