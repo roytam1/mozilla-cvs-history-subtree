@@ -47,9 +47,9 @@
 #include "il_util.h"            /* Public API. */
 #include "il_utilp.h"           /* Private header file. */
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 #include "icc_profile_types.h"
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
 /************************* Colormap utilities ********************************/
 
@@ -154,7 +154,6 @@ il_NewColorCube(uint32 red_size, uint32 green_size, uint32 blue_size,
     return cmap;
 }
 
-/*	ebb - begin */
 /*	---------------------------------------------------------------------------
 	il_NewColorSpace
 	
@@ -182,6 +181,7 @@ il_NewColorSpace(	NI_ColorSpaceType	type,
         return NULL;
     }
     
+#if defined (COLORSYNC)
     /*
     	Set a default icc profile reference.  Callers can override.
     	In the future, we want to be able to have a MWContext
@@ -202,12 +202,12 @@ il_NewColorSpace(	NI_ColorSpaceType	type,
     	default:
     		color_space->icc_profile_ref = (void*) kICCProfileRef_NoProfile;
     		break;
-    }
-        
+    }        
+#endif /* (COLORSYNC) */
+
     color_space->ref_count = 1;
     return color_space;
 }
-/*	ebb - end */
 
 /* Determine allocation of desired colors to components, and fill in Ncolors[]
    array to indicate choice.  Return value is total number of colors (product
@@ -410,10 +410,9 @@ IL_IMPLEMENT(IL_ColorSpace *)
 IL_CreateTrueColorSpace(IL_RGBBits *rgb, uint8 pixmap_depth)
 {
     IL_ColorSpace *color_space;
-/*	ebb - begin */
+
 	/* Call generic routine */
     color_space = il_NewColorSpace(NI_TrueColor, pixmap_depth);
-/*	ebb - end */
 
     if (!color_space)
         return NULL;
@@ -440,10 +439,10 @@ IL_CreatePseudoColorSpace(IL_ColorMap *cmap, uint8 index_depth,
                           uint8 pixmap_depth)
 {
     IL_ColorSpace *color_space;
-/*	ebb - begin */
+
 	/* Call generic routine */
     color_space = il_NewColorSpace(NI_PseudoColor, pixmap_depth);
-/*	ebb - end */
+
     if (!color_space)
         return NULL;
 
@@ -466,10 +465,10 @@ IL_IMPLEMENT(IL_ColorSpace *)
 IL_CreateGreyScaleColorSpace(uint8 index_depth, uint8 pixmap_depth)
 {
     IL_ColorSpace *color_space;
-/*	ebb - begin */
+
 	/* Call generic routine */
     color_space = il_NewColorSpace(NI_GreyScale, pixmap_depth);
-/*	ebb - end */
+
     return color_space;
 }
 
