@@ -249,6 +249,9 @@ bin/components/libnegotiateauth.so
 ; GnomeVFS support
 bin/components/libnkgnomevfs.so
 
+; Kerberos NegotiateAuth
+bin/components/libnegotiateauth.so
+
 ; webservices
 bin/components/libwebsrvcs.so
 bin/components/websrvcs.xpt
