@@ -51,7 +51,7 @@
 #ifdef XP_PC
 #define XPCOM_DLL  "xpcom32.dll"
 #define PREF_DLL   "xppref32.dll"
-#define APPSHELL_DLL "nsappshell.dll"
+#define APPSHELL_DLL "d:\\mozilla\\dist\\win32_d.obj\\bin\\nsappshell.dll"
 #else
 #ifdef XP_MAC
 #include "nsMacRepository.h"
@@ -425,8 +425,10 @@ int main()
 
 	nsComponentManager::RegisterComponent(kEventQueueServiceCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
 	nsComponentManager::RegisterComponent(kEventQueueCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
-	nsComponentManager::RegisterComponent(kPrefCID, nsnull, nsnull, PREF_DLL, PR_TRUE, PR_TRUE);
-	nsComponentManager::RegisterComponent(kFileLocatorCID,  NULL, NULL, APPSHELL_DLL, PR_FALSE, PR_FALSE);
+//	result = nsComponentManager::RegisterComponent(kPrefCID, nsnull, nsnull, PREF_DLL, PR_TRUE, PR_TRUE);
+	nsComponentManager::RegisterComponent(kFileLocatorCID,  NULL, NS_FILELOCATOR_PROGID, APPSHELL_DLL, PR_FALSE, PR_FALSE);
+
+	result = nsComponentManager::AutoRegister(nsIComponentManager::NS_Startup, NULL /* default */);
 
 	// make sure prefs get initialized and loaded..
 	// mscott - this is just a bad bad bad hack right now until prefs
@@ -436,6 +438,7 @@ int main()
     if (NS_FAILED(result) || (prefs == nsnull)) {
         exit(result);
     }
+	prefs->StartUp();
    
     if (NS_FAILED(prefs->ReadUserPrefs()))
     {
