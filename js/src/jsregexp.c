@@ -1103,8 +1103,8 @@ CountFirstChars(RENode *alt)
     len = 0;
     do {
 	for (kid = alt->kid;
-                (REOP(kid) == REOP_LPAREN) || (REOP(kid) == REOP_LPARENNON);
-                kid = kid->kid)
+	     REOP(kid) == REOP_LPAREN || REOP(kid) == REOP_LPARENNON;
+	     kid = kid->kid)
 	    ;
 	switch (REOP(kid)) {
 	  case REOP_QUANT:
@@ -1185,8 +1185,8 @@ StoreFirstChars(RENode *alt, jschar *cp, ptrdiff_t i)
 
     do {
 	for (kid = alt->kid;
-                (REOP(kid) == REOP_LPAREN) || (REOP(kid) == REOP_LPARENNON);
-                kid = kid->kid)
+	     REOP(kid) == REOP_LPAREN || REOP(kid) == REOP_LPARENNON;
+	     kid = kid->kid)
 	    ;
 	switch (REOP(kid)) {
 	  case REOP_QUANT:
@@ -1246,8 +1246,8 @@ AnchorRegExp(CompilerState *state, RENode *ren)
     REOp op;
 
     for (ren2 = ren;
-            (REOP(ren2) == REOP_LPAREN) || (REOP(ren2) == REOP_LPARENNON);
-            ren2 = ren2->kid)
+	 REOP(ren2) == REOP_LPAREN || REOP(ren2) == REOP_LPARENNON;
+	 ren2 = ren2->kid)
 	;
     len = 0; /* Avoid warning. */
     switch (REOP(ren2)) {
@@ -1409,7 +1409,7 @@ OptimizeRegExp(CompilerState *state, RENode *ren)
             if (!(ren->flags & RENODE_MINIMAL)) {
 	        if (!(kid->flags & RENODE_SINGLE)) {
 		    /*
-		     * If kid is not simple, deoptimize <kid>* as follows 
+		     * If kid is not simple, deoptimize <kid>* as follows
                      * (the |__| are byte placeholders for next/jump offsets):
 		     *
 		     * FROM: |STAR|<kid>|
@@ -1454,21 +1454,25 @@ OptimizeRegExp(CompilerState *state, RENode *ren)
                     next = ren->next;
                     /* this is the center jump above */
                     jump = NewRENode(state, REOP_JUMP, NULL);
-                    if (!jump) return JS_FALSE;
+                    if (!jump)
+			return JS_FALSE;
                     jump->next = next;
                     jump->flags |= RENODE_ISNEXT;
                     /* we know there are many paths to next */
                     next->flags |= RENODE_ISJOIN;
                     alt1 = NewRENode(state, REOP_ALT, jump);
-                    if (!alt1) return JS_FALSE;
+                    if (!alt1)
+			return JS_FALSE;
                     alt1->flags |= RENODE_GOODNEXT;
                     /* the rightmost jump, that drives the loop */
                     jump = NewRENode(state, REOP_JUMP, NULL);
-                    if (!jump) return JS_FALSE;
+                    if (!jump)
+			return JS_FALSE;
                     jump->next = kid;
                     jump->flags |= RENODE_ISNEXT;
                     alt2 = NewRENode(state, REOP_ALT, jump);
-                    if (!alt2) return JS_FALSE;
+                    if (!alt2)
+			return JS_FALSE;
                     alt2->flags |= RENODE_ISNEXT;
                     alt2->flags |= RENODE_GOODNEXT;
                     alt1->next = alt2;
@@ -1478,13 +1482,15 @@ OptimizeRegExp(CompilerState *state, RENode *ren)
                     /* this completes the sequence from <kid> thru <next> */
 
                     jump = NewRENode(state, REOP_JUMP, NULL);
-                    if (!jump) return JS_FALSE;
+                    if (!jump)
+			return JS_FALSE;
                     jump->next = next;
                     jump->flags |= RENODE_ISNEXT;
                     ren->op = REOP_ALT;
                     ren->kid = jump;
                     alt2 = NewRENode(state, REOP_ALT, kid);
-                    if (!alt2) return JS_FALSE;
+                    if (!alt2)
+			return JS_FALSE;
                     alt2->flags |= RENODE_ISNEXT;
                     alt2->flags |= RENODE_GOODNEXT;
                     ren->next = alt2;
@@ -1546,24 +1552,28 @@ OptimizeRegExp(CompilerState *state, RENode *ren)
 
                     /* this is the rightmost jump above */
                     jump = NewRENode(state, REOP_JUMP, NULL);
-                    if (!jump) return JS_FALSE;
+                    if (!jump)
+			return JS_FALSE;
                     jump->next = ren;
 		    if (ren->flags & RENODE_ISNEXT)
 		        ren->flags |= RENODE_ISJOIN;
                     jump->flags |= RENODE_ISNEXT;
 
                     alt1 = NewRENode(state, REOP_ALT, jump);
-                    if (!alt1) return JS_FALSE;
+                    if (!alt1)
+			return JS_FALSE;
                     alt1->flags |= RENODE_GOODNEXT;
                     alt1->next = next;
 
                     /* the leftmost jump */
                     jump = NewRENode(state, REOP_JUMP, NULL);
-                    if (!jump) return JS_FALSE;
+                    if (!jump)
+			return JS_FALSE;
                     jump->next = next;
                     jump->flags |= RENODE_ISNEXT;
                     alt2 = NewRENode(state, REOP_ALT, jump);
-                    if (!alt2) return JS_FALSE;
+                    if (!alt2)
+			return JS_FALSE;
                     alt2->flags |= RENODE_ISNEXT;
                     alt2->flags |= RENODE_GOODNEXT;
                     alt2->next = alt1;
@@ -2322,8 +2332,8 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
 	  case REOP_BOL:
 	    matched = (cp == cpbegin);
 /* XXX This needs a version check on v1.5  ? */
-            if (state->context->regExpStatics.multiline
-                    || ((state->flags & JSREG_MULTILINE) != 0)) {
+            if (state->context->regExpStatics.multiline ||
+		(state->flags & JSREG_MULTILINE) != 0) {
 		/* Anchor-search only if RegExp.multiline is true. */
 		if (state->anchoring) {
 		    if (!matched)
@@ -2351,9 +2361,11 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
 	    matched = (cp == cpend);
 	    if (op == REOP_EOL || state->anchoring) {
 /* XXX This needs a version check on v1.5  ? */
-		if (!matched && (state->context->regExpStatics.multiline
-                                || ((state->flags & JSREG_MULTILINE) != 0)))
+		if (!matched &&
+		    (state->context->regExpStatics.multiline ||
+		     (state->flags & JSREG_MULTILINE) != 0)) {
 		    matched = (*cp == '\n');
+		}
 	    } else {
 		/* Always anchor-search EOLONLY, which has no BOL analogue. */
 		state->anchoring = JS_TRUE;
@@ -2408,10 +2420,12 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
                 for (; !max || num < max; num++) {
                     state->pcend = pcend;
                     cp3 = MatchRegExp(state, pc + oplen, cp);
-                    if (cp3) return cp3;
+                    if (cp3)
+			return cp3;
                     state->pcend = pc + oplen;
                     cp2 = MatchRegExp(state, pc2, cp);
-                    if (!cp2) return NULL;
+                    if (!cp2)
+			return NULL;
                     cp = cp2;
                 }
             }
@@ -2428,7 +2442,8 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
                         cp = MatchRegExp(state, pc2, cp);
                         state->pcend = pcend;
                         /* couldn't grab one more, so bail */
-                        if (!cp) return cp2;
+                        if (!cp)
+			    return cp2;
                         num++;
                     }
                     else /* return our best case */
@@ -2652,7 +2667,8 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
             pc2 = pc + oplen;
             do {
                 cp3 = MatchRegExp(state, pc2, cp);
-                if (cp3) return cp3;
+                if (cp3)
+		    return cp3;
                 cp2 = cp;
                 switch (op) {
 		  NONDOT_SINGLE_CASES
@@ -2678,7 +2694,8 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
                     return NULL;
                 cp++;
                 cp3 = MatchRegExp(state, pc2, cp);
-                if (cp3) return cp3;
+                if (cp3)
+		    return cp3;
             } while (cp < cpend);
             return NULL;
 
@@ -2787,7 +2804,8 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
 	    pc += oplen;
             for (cp2 = cp; cp2 < cpend; cp2++) {
                 cp3 = MatchRegExp(state, pc, cp2);
-                if (cp3) return cp3;
+                if (cp3)
+		    return cp3;
 		if (*cp2 == '\n')
 		    return NULL;
             }
