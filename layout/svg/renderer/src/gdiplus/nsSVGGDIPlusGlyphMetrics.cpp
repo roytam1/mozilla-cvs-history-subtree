@@ -87,14 +87,14 @@ nsWindowsDC::nsWindowsDC(nsIPresContext* presContext)
 {
   nsIDeviceContext* devicecontext = presContext->DeviceContext();
 
-  isWndDC=((nsDeviceContextWin *)(devicecontext.get()))->mDC==nsnull;
+  isWndDC=((nsDeviceContextWin *)devicecontext)->mDC==nsnull;
   if (isWndDC) {
-    mWND = (HWND)((nsDeviceContextWin *)(devicecontext.get()))->mWidget;
+    mWND = (HWND)((nsDeviceContextWin *)devicecontext)->mWidget;
     NS_ASSERTION(mWND, "no window and no handle in devicecontext (continuing with screen dc)");
     mHDC = ::GetDC(mWND);
   }
   else
-    mHDC = ((nsDeviceContextWin *)(devicecontext.get()))->mDC;
+    mHDC = ((nsDeviceContextWin *)devicecontext)->mDC;
 }
 
 nsWindowsDC::~nsWindowsDC()
@@ -623,10 +623,7 @@ nsSVGGDIPlusGlyphMetrics::GetPixelScale()
     return 1.0f;
   }
 
-  nsCOMPtr<nsIDeviceContext> devicecontext;
-  presContext->GetDeviceContext(getter_AddRefs(devicecontext));
-
   float scale;
-  devicecontext->GetCanonicalPixelScale(scale);
+  presContext->DeviceContext()->GetCanonicalPixelScale(scale);
   return scale;
 }  
