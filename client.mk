@@ -414,6 +414,7 @@ SVG_BRANCH_FILES := \
 	layout/html/tests/makefile.win \
 	layout/macbuild/layoutsvg.mcp \
 	Makefile.in \
+	makefile.win \
 	netwerk/mime/src/nsXMLMIMEDataSource.cpp \
 	uriloader/exthandler/nsExternalHelperAppService.cpp \
 	xpfe/browser/src/nsBrowserInstance.cpp

@@ -26,20 +26,21 @@ DEPTH=..\..\..\..
 
 LIBRARY_NAME=contentsvg_s 
 MODULE=raptor
-REQUIRES  = xpcom \
-            string \
-            layout \
-            content \
-            widget \
-            gfx \
-            dom \
-            js \
-            locale \
-            htmlparser \
-            webshell \
-            necko \
-            view \
-			libart \
+REQUIRES  =             \
+            xpcom       \
+            string      \
+            layout      \
+            content     \
+            widget      \
+            gfx         \
+            dom         \
+            js          \
+            locale      \
+            htmlparser  \
+            webshell    \
+            necko       \
+            view        \
+			libart_lgpl \
             $(NULL) 
 
 DEFINES=-D_IMPL_NS_HTML -DWIN32_LEAN_AND_MEAN

@@ -41,6 +41,9 @@ MOZ_OBJDIR = WIN32_O.OBJ
 #//------------------------------------------------------------------------
 # uncomment these, modify branch tag, and check in to branch for milestones
 
+# yes, we're building mozilla with svg:
+MOZ_SVG=1
+
 # pull the svg mini-branch:
 MOZ_BRANCH=SVG_20010721_BRANCH
 # we pull the head revision if a file is not tagged: 
@@ -121,6 +124,7 @@ SVG_BRANCH_FILES = \
 	layout/html/tests/makefile.win \
 	layout/macbuild/layoutsvg.mcp \
 	Makefile.in \
+	makefile.win \
 	netwerk/mime/src/nsXMLMIMEDataSource.cpp \
 	uriloader/exthandler/nsExternalHelperAppService.cpp \
 	xpfe/browser/src/nsBrowserInstance.cpp
@@ -301,6 +305,40 @@ GFX2_CO_FLAGS=$(GFX2_CO_FLAGS) $(CVS_BRANCH)
 
 CVSCO_GFX2 = cvs $(CVS_FLAGS) co $(GFX2_CO_FLAGS)
 
+#//------------------------------------------------------------------------
+#// Figure out how to pull the internal libart
+#// (only pulled and built if MOZ_INTERNAL_LIBART_LGPL is set)
+#// If no MOZ_INTERNAL_LIBART_CO_TAG is specified, use the default tag
+#//------------------------------------------------------------------------
+
+!if defined(MOZ_SVG) && !defined(MOZ_INTERNAL_LIBART_LGPL)
+ERR_MESSAGE = ^
+You are trying to build Mozilla with SVG support (MOZ_SVG=1), but you ^
+haven't specified that mozilla/other-licenses/libart_lgpl should be ^
+pulled and built. At the moment Mozilla SVG builds need this patched ^
+version of libart. You either need to disable SVG support (unset MOZ_SVG) ^
+or enable pulling and building by setting MOZ_INTERNAL_LIBART_LGPL=1.^
+^
+If you choose to pull and build libart, note that it is only licensed^
+under the terms of the LGPL, not the MPL. (Which is why you have to opt^
+in explicitly.)
+!endif
+
+!if defined(MOZ_INTERNAL_LIBART_LGPL)
+
+!ifndef MOZ_INTERNAL_LIBART_CO_FLAGS
+MOZ_INTERNAL_LIBART_CO_FLAGS=$(MOZ_CO_FLAGS)
+!endif
+
+!if "$(MOZ_INTERNAL_LIBART_CO_TAG)" != ""
+MOZ_INTERNAL_LIBART_CO_FLAGS=$(MOZ_INTERNAL_LIBART_CO_FLAGS) -r $(MOZ_INTERNAL_LIBART_CO_TAG)
+!else
+MOZ_INTERNAL_LIBART_CO_FLAGS=$(MOZ_INTERNAL_LIBART_CO_FLAGS) $(CVS_BRANCH)
+!endif
+
+CVSCO_MOZ_INTERNAL_LIBART = cvs $(CVS_FLAGS) co $(MOZ_INTERNAL_LIBART_CO_FLAGS)
+
+!endif
 
 ## The master target
 ############################################################
@@ -313,7 +351,11 @@ pull_and_build_all: pull_all build_all_dep
 
 pull_clobber_and_build_all: pull_all clobber_all build_all
 
+!if !defined(MOZ_INTERNAL_LIBART_LGPL)
 pull_all: pull_nspr pull_psm pull_ldapcsdk pull_accessible pull_gfx2 pull_imglib2 pull_seamonkey
+!else
+pull_all: pull_nspr pull_psm pull_ldapcsdk pull_accessible pull_gfx2 pull_imglib2 pull_moz_internal_libart pull_seamonkey
+!endif
 
 pull_nspr: pull_clientmak
       cd $(MOZ_SRC)\.
@@ -344,6 +386,12 @@ pull_gfx2:
 pull_imglib2:
   cd $(MOZ_SRC)\.
   $(CVSCO_IMGLIB2) mozilla/modules/libpr0n
+
+!if defined(MOZ_INTERNAL_LIBART_LGPL)
+pull_moz_internal_libart:
+  cd $(MOZ_SRC)\.
+  $(CVSCO_MOZ_INTERNAL_LIBART) mozilla/other-licenses/libart_lgpl
+!endif
 
 pull_xpconnect: pull_nspr
 	cd $(MOZ_SRC)\.
