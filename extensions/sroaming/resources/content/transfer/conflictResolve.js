@@ -58,7 +58,7 @@ function AddItem(fileid, filename, server, local)
   var radios = document.getElementById("radios");
 
   var label = document.createElement("text");
-  label.setAttribute("value", filename);
+  label.setAttribute("value", GetFileDescription(filename));
 
   var radiogroup = document.createElement("radiogroup");
   radiogroup.setAttribute("orient", "horizontal");

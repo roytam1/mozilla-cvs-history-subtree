@@ -28,6 +28,7 @@ var _elementIDs = []; // no prefs (nsIPref) needed, see above
 
 function Startup()
 {
+  FileLabels();
   SetFiles();
   // dataManager.pageData doesn't work, because it needs to work on both panes
   if (!parent.roaming)
@@ -139,4 +140,23 @@ function UIToData()
       data.Files.push(checkbox.getAttribute("filename"));
   }
   data.changed = true; // excessive
+}
+
+/* read human-readable names for profile files from filedescr.properties
+   and use them as labels */
+function FileLabels()
+{
+  ddump("filelabels()");
+  var children = E("filesList").childNodes;
+  for (var i = 0; i < children.length; i++)
+  {
+    var checkbox = children[i];
+    if (!("getAttribute" in checkbox) ||
+        checkbox.getAttribute("type") != "checkbox")
+      continue;
+
+    checkbox.setAttribute("label",
+                          GetFileDescription(checkbox.getAttribute("filename"),
+                                             checkbox.getAttribute("id")));
+  }
 }

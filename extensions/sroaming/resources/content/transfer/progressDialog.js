@@ -214,9 +214,9 @@ function PassBackParams()
 function SetProgressStatus(filei)
 {
   ddumpCont("SetProgressStatus(" + filei + "): ");
-  filename = gTransfer.files[filei].filename;
-  status = gTransfer.files[filei].status;
-  statusCode = gTransfer.files[filei].statusCode;
+  var filename = gTransfer.files[filei].filename;
+  var status = gTransfer.files[filei].status;
+  var statusCode = gTransfer.files[filei].statusCode;
   ddump(filename + ", " + status + ", " + NameForStatusCode(statusCode));
 
   if (!filename)
@@ -235,7 +235,7 @@ function SetProgressStatus(filei)
   for (var i = 0; i < listitems.length; i++)
   {
     var li = listitems[i];
-    if (li.getAttribute("label") == filename)
+    if (li.getAttribute("filename") == filename)
     {
       if (li.getAttribute("progress") != status)
       {
@@ -257,7 +257,8 @@ function SetProgressStatus(filei)
     listitem.setAttribute("class", "listitem-iconic progressitem");
     // This triggers CSS to show icon for each status state
     listitem.setAttribute("progress", status);
-    listitem.setAttribute("label", filename);
+    listitem.setAttribute("filename", filename);
+    listitem.setAttribute("label", GetFileDescription(filename));
     gDialog.FileList.appendChild(listitem);
   }
   return false;
@@ -266,9 +267,9 @@ function SetProgressStatus(filei)
 function SetProgressFinished(filei)
 {
   ddumpCont("SetProgressFinished(" + filei + "): ");
-  filename = gTransfer.files[filei].filename;
-  networkStatus = gTransfer.files[filei].statusCode;
-  status = gTransfer.files[filei].status;
+  var filename = gTransfer.files[filei].filename;
+  var networkStatus = gTransfer.files[filei].statusCode;
+  var status = gTransfer.files[filei].status;
   ddump(filename + ", " + status);
 
   SetProgressStatus(filei);
@@ -492,7 +493,8 @@ function onEnterKey()
  */
 function addFileStatus(file)
 {
-  gResults += ErrorMessageForFile(file) + "\n";
+  gResults += GetFileDescription(file.filename)
+              + ": " + ErrorMessageForFile(file) + "\n";
 }
 
 //XXX hack

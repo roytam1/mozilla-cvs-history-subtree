@@ -17,6 +17,7 @@ sroaming.jar:
   locale/en-US/sroaming/transfer.properties      (resources/locale/en-US/transfer.properties)
   locale/en-US/sroaming/progressDialog.dtd       (resources/locale/en-US/progressDialog.dtd)
   locale/en-US/sroaming/conflictResolve.dtd      (resources/locale/en-US/conflictResolve.dtd)
+  locale/en-US/sroaming/filedescr.properties     (resources/locale/en-US/filedescr.properties)
   locale/en-US/sroaming/prefs.dtd                (resources/locale/en-US/prefs.dtd)
   locale/en-US/sroaming/prefs.properties         (resources/locale/en-US/prefs.properties)
   skin/modern/sroaming/contents.rdf              (resources/skin/modern/contents.rdf)
