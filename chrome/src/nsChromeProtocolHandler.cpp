@@ -697,7 +697,13 @@ nsChromeProtocolHandler::NewChannel(nsIURI* aURI,
 
         nsCAutoString spec;
         rv = reg->ConvertChromeURL(aURI, spec);
-        if (NS_FAILED(rv)) return rv;
+        if (NS_FAILED(rv)) {
+#ifdef DEBUG
+            aURI->GetSpec(spec);
+            printf("Couldn't convert chrome URL: %s\n", spec.get());
+#endif
+            return rv;
+        }
 
         nsCOMPtr<nsIIOService> ioServ(do_GetService(kIOServiceCID, &rv));
         if (NS_FAILED(rv)) return rv;
@@ -710,15 +716,30 @@ nsChromeProtocolHandler::NewChannel(nsIURI* aURI,
         if (NS_FAILED(rv)) return rv;
 
         // XXX Will be removed someday when we handle remote chrome.
-        nsCOMPtr<nsIFileChannel> fileChan;
-        nsCOMPtr<nsIJARChannel> jarChan;
-        fileChan = do_QueryInterface(result);
-        if (!fileChan)
-            jarChan = do_QueryInterface(result);
-        if (!fileChan && !jarChan) {
-            NS_WARNING("Remote chrome not allowed! Only file:, resource:, and jar: are valid.\n");
-            result = nsnull;
-            return NS_ERROR_FAILURE;
+        nsCOMPtr<nsIFileChannel> fileChan
+            (do_QueryInterface(result));
+        if (fileChan) {
+#ifdef DEBUG
+            nsCOMPtr<nsIFile> file;
+            fileChan->GetFile(getter_AddRefs(file));
+
+            PRBool exists = PR_FALSE;
+            file->Exists(&exists);
+            if (!exists) {
+                nsCAutoString path;
+                file->GetNativePath(path);
+                printf("Chrome file doesn't exist: %s\n", path.get());
+            }
+#endif
+        }
+        else {
+            nsCOMPtr<nsIJARChannel> jarChan
+                (do_QueryInterface(result));
+            if (!jarChan) {
+                NS_WARNING("Remote chrome not allowed! Only file:, resource:, and jar: are valid.\n");
+                result = nsnull;
+                return NS_ERROR_FAILURE;
+            }
         }
 
         // Make sure that the channel remembers where it was

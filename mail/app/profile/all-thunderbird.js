@@ -165,7 +165,9 @@ pref("mail.checkDefaultNews", false);
 /////////////////////////////////////////////////////////////////
 
 // l12n and i18n
-pref("general.useragent.locale", "chrome://global/locale/intl.properties");
+#expand pref("general.useragent.locale", "__AB_CD__");
+pref("general.skins.selectedSkin", "classic/1.0");
+
 pref("intl.charsetmenu.mailedit", "chrome://global/locale/intl.properties");
 pref("intl.accept_languages", "chrome://global/locale/intl.properties");
 // collationOption is only set on linux for japanese. see bug 18338 and 62015

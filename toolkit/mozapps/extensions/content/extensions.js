@@ -108,9 +108,8 @@ function Startup()
                        .getService(Components.interfaces.nsIPrefBranch);
   if (!isExtensions) {
     gExtensionsView.addEventListener("richview-select", onThemeSelect, false);
-    var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
-                       .getService(Components.interfaces.nsIXULChromeRegistry);
-    gCurrentTheme = cr.getSelectedSkin("global");
+
+    gCurrentTheme = pref.getCharPref(PREF_GENERAL_SKINS_SELECTEDSKIN);
     
     var useThemeButton = document.getElementById("useThemeButton");
     useThemeButton.hidden = false;
@@ -684,21 +683,14 @@ var gExtensionsViewController = {
   
     cmd_useTheme: function (aSelectedItem)
     {
-      var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
-                         .getService(Components.interfaces.nsIXULChromeRegistry);
       var pref = Components.classes["@mozilla.org/preferences-service;1"]
                            .getService(Components.interfaces.nsIPrefBranch);
       gCurrentTheme = aSelectedItem.getAttribute("internalName");
-      var inUse = cr.isSkinSelected(gCurrentTheme , true);
-      if (inUse == Components.interfaces.nsIChromeRegistry.FULL)
-        return;
-        
-      pref.setCharPref(PREF_GENERAL_SKINS_SELECTEDSKIN, gCurrentTheme);
       // Set this pref so the user can reset the theme in safe mode
       pref.setCharPref(PREF_EM_LAST_SELECTED_SKIN, gCurrentTheme);
+
       if (pref.getBoolPref(PREF_EXTENSIONS_DSS_ENABLED)) {
-        cr.selectSkin(gCurrentTheme, true);
-        cr.refreshSkins();
+        pref.setCharPref(PREF_GENERAL_SKINS_SELECTEDSKIN, gCurrentTheme);
       }
       else {
         // Theme change will happen on next startup, this flag tells

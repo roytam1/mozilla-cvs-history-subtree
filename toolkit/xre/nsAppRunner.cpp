@@ -143,9 +143,6 @@
 #define DEBUG_CMD_LINE
 #endif
 
-#define UILOCALE_CMD_LINE_ARG "-UILocale"
-#define CONTENTLOCALE_CMD_LINE_ARG "-contentLocale"
-
 extern "C" void ShowOSAlert(const char* aMessage);
 
 #define HELP_SPACER_1   "\t"
@@ -676,100 +673,6 @@ DoCommandLines(nsICmdLineService* cmdLineArgs, PRBool heedGeneralStartupPrefs, P
     }
   }
   return NS_OK;
-}
-
-// match OS locale
-static char kMatchOSLocalePref[] = "intl.locale.matchOS";
-
-nsresult
-getCountry(const nsAString& lc_name, nsAString& aCountry)
-{
-
-  nsresult        result = NS_OK;
-
-  PRInt32 dash = lc_name.FindChar('-');
-  if (dash > 0)
-    aCountry = Substring(lc_name, dash+1, lc_name.Length()-dash);
-  else
-    result = NS_ERROR_FAILURE;
-
-  return result;
-}
-
-static nsresult
-getUILangCountry(nsAString& aUILang, nsAString& aCountry)
-{
-  nsresult	 result;
-  // get a locale service 
-  nsCOMPtr<nsILocaleService> localeService = do_GetService(NS_LOCALESERVICE_CONTRACTID, &result);
-  NS_ASSERTION(NS_SUCCEEDED(result),"getUILangCountry: get locale service failed");
-
-  result = localeService->GetLocaleComponentForUserAgent(aUILang);
-  NS_ASSERTION(NS_SUCCEEDED(result),
-          "getUILangCountry: get locale componet for user agent failed");
-  result = getCountry(aUILang, aCountry);
-  return result;
-}
-
-// update global locale if possible (in case when user-*.rdf can be updated)
-// so that any apps after this can be invoked in the UILocale and contentLocale
-static nsresult InstallGlobalLocale(nsICmdLineService *cmdLineArgs)
-{
-    nsresult rv = NS_OK;
-
-    // check the pref first
-    nsCOMPtr<nsIPref> prefService(do_GetService(NS_PREF_CONTRACTID));
-    PRBool matchOS = PR_FALSE;
-    if (prefService)
-      prefService->GetBoolPref(kMatchOSLocalePref, &matchOS);
-
-    // match os locale
-    nsAutoString uiLang;
-    nsAutoString country;
-    if (matchOS) {
-      // compute lang and region code only when needed!
-      rv = getUILangCountry(uiLang, country);
-    }
-
-    nsXPIDLCString cmdUI;
-    rv = cmdLineArgs->GetCmdLineValue(UILOCALE_CMD_LINE_ARG, getter_Copies(cmdUI));
-    if (NS_SUCCEEDED(rv)){
-        if (cmdUI) {
-            nsCAutoString UILocaleName(cmdUI);
-            nsCOMPtr<nsIXULChromeRegistry> chromeRegistry = do_GetService(NS_CHROMEREGISTRY_CONTRACTID, &rv);
-            if (chromeRegistry)
-                rv = chromeRegistry->SelectLocale(UILocaleName, PR_FALSE);
-        }
-    }
-    // match OS when no cmdline override
-    if (!cmdUI && matchOS) {
-      nsCOMPtr<nsIXULChromeRegistry> chromeRegistry = do_GetService(NS_CHROMEREGISTRY_CONTRACTID, &rv);
-      if (chromeRegistry) {
-        chromeRegistry->SetRuntimeProvider(PR_TRUE);
-        rv = chromeRegistry->SelectLocale(NS_ConvertUCS2toUTF8(uiLang), PR_FALSE);
-      }
-    }
-
-    nsXPIDLCString cmdContent;
-    rv = cmdLineArgs->GetCmdLineValue(CONTENTLOCALE_CMD_LINE_ARG, getter_Copies(cmdContent));
-    if (NS_SUCCEEDED(rv)){
-        if (cmdContent) {
-            nsCAutoString contentLocaleName(cmdContent);
-            nsCOMPtr<nsIXULChromeRegistry> chromeRegistry = do_GetService(NS_CHROMEREGISTRY_CONTRACTID, &rv);
-            if(chromeRegistry)
-                rv = chromeRegistry->SelectLocale(contentLocaleName, PR_FALSE);
-        }
-    }
-    // match OS when no cmdline override
-    if (!cmdContent && matchOS) {
-      nsCOMPtr<nsIXULChromeRegistry> chromeRegistry = do_GetService(NS_CHROMEREGISTRY_CONTRACTID, &rv);
-      if (chromeRegistry) {
-        chromeRegistry->SetRuntimeProvider(PR_TRUE);        
-        rv = chromeRegistry->SelectLocale(NS_ConvertUCS2toUTF8(country), PR_FALSE);
-      }
-    }
-
-    return NS_OK;
 }
 
 // English text needs to go into a dtd file.
@@ -1978,10 +1881,6 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
         nsCOMPtr<nsICmdLineService> cmdLineArgs
           (do_GetService("@mozilla.org/appshell/commandLineService;1"));
         NS_ENSURE_TRUE(cmdLineArgs, 1);
-
-        NS_TIMELINE_ENTER("InstallGlobalLocale");
-        InstallGlobalLocale(cmdLineArgs);
-        NS_TIMELINE_LEAVE("InstallGlobalLocale");
 
         // This will go away once Components are handling there own commandlines
         // if we have no command line arguments, we need to heed the
