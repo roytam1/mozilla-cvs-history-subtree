@@ -47,7 +47,6 @@ static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
 static NS_DEFINE_IID(kIPluginManager2IID, NS_IPLUGINMANAGER2_IID);
 static NS_DEFINE_IID(kIJNIEnvIID, NS_IJNIENV_IID); 
-static NS_DEFINE_IID(kPluginInstancePeerIID, NS_IPLUGININSTANCEPEER_IID); 
 static NS_DEFINE_IID(kILiveConnectPluginInstancePeerIID, NS_ILIVECONNECTPLUGININSTANCEPEER_IID); 
 static NS_DEFINE_IID(kPluginInstancePeerCID, NS_PLUGININSTANCEPEER_CID);
 static NS_DEFINE_IID(kIPluginInstancePeerIID, NS_IPLUGININSTANCEPEER_IID); 
@@ -202,7 +201,7 @@ nsPluginManager::GetURL(nsISupports* peer, const char* url, const char* target, 
     nsPluginError rslt;
     nsPluginInstancePeer* instPeer;
     NPP npp = NULL;
-    if (peer->QueryInterface(kPluginInstancePeerIID, (void**)&instPeer) == NS_OK)
+    if (peer->QueryInterface(kPluginInstancePeerCID, (void**)&instPeer) == NS_OK)
         npp = instPeer->GetNPP();
     rslt = (nsPluginError)np_geturlinternal(npp, url, target, altHost, referrer,
                                             forceJSEnabled, notifyData != NULL, notifyData);
@@ -221,7 +220,7 @@ nsPluginManager::PostURL(nsISupports* peer, const char* url, const char* target,
     nsPluginError rslt;
     nsPluginInstancePeer* instPeer;
     NPP npp = NULL;
-    if (peer->QueryInterface(kPluginInstancePeerIID, (void**)&instPeer) == NS_OK)
+    if (peer->QueryInterface(kPluginInstancePeerCID, (void**)&instPeer) == NS_OK)
         npp = instPeer->GetNPP();
     rslt = (nsPluginError)np_posturlinternal(npp, url, target, altHost, referrer, forceJSEnabled,
                                              bufLen, buf, file, notifyData != NULL, notifyData);
