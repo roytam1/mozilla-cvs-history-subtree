@@ -1208,9 +1208,12 @@ nsXULDocument::AddStyleSheet(nsIStyleSheet* aSheet)
         AddStyleSheetToStyleSets(aSheet);
 
         // XXX should observers be notified for disabled sheets??? I think not, but I could be wrong
-        for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
+        for (PRInt32 i = 0; i < mObservers.Count(); i++) {
             nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(i);
-            observer->StyleSheetAdded(this, aSheet);            
+            observer->StyleSheetAdded(this, aSheet);
+            if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
+                i--;
+            }
         }
     }
 }
@@ -1272,9 +1275,12 @@ nsXULDocument::UpdateStyleSheets(nsISupportsArray* aOldSheets, nsISupportsArray*
     }
   }
 
-  for (PRInt32 indx = mObservers.Count() - 1; indx >= 0; --indx) {
+  for (PRInt32 indx = 0; indx < mObservers.Count(); indx++) {
     nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(indx);
-    observer->StyleSheetRemoved(this, sheet);    
+    observer->StyleSheetRemoved(this, sheet);
+    if (observer != (nsIDocumentObserver*)mObservers.ElementAt(indx)) {
+      indx--;
+    }
   }
 
   return NS_OK;
@@ -1309,9 +1315,12 @@ nsXULDocument::RemoveStyleSheet(nsIStyleSheet* aSheet)
     RemoveStyleSheetFromStyleSets(aSheet);
 
     // XXX should observers be notified for disabled sheets??? I think not, but I could be wrong
-   for (PRInt32 indx = mObservers.Count() - 1; indx >= 0; --indx) {
+    for (PRInt32 indx = 0; indx < mObservers.Count(); indx++) {
       nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(indx);
-      observer->StyleSheetRemoved(this, aSheet);      
+      observer->StyleSheetRemoved(this, aSheet);
+      if (observer != (nsIDocumentObserver*)mObservers.ElementAt(indx)) {
+        indx--;
+      }
     }
   }
 
@@ -1346,9 +1355,12 @@ nsXULDocument::InsertStyleSheetAt(nsIStyleSheet* aSheet, PRInt32 aIndex, PRBool 
     }
   }
   if (aNotify) {  // notify here even if disabled, there may have been others that weren't notified
-    for (i = mObservers.Count() - 1; i >= 0; --i) {
+    for (i = 0; i < mObservers.Count(); i++) {
       nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(i);
-      observer->StyleSheetAdded(this, aSheet);      
+      observer->StyleSheetAdded(this, aSheet);
+      if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
+        i--;
+      }
     }
   }
 
@@ -1381,9 +1393,12 @@ nsXULDocument::SetStyleSheetDisabledState(nsIStyleSheet* aSheet,
         }
     }
 
-    for (i = mObservers.Count() - 1; i >= 0; --i) {
+    for (i = 0; i < mObservers.Count(); i++) {
         nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(i);
         observer->StyleSheetDisabledStateChanged(this, aSheet, aDisabled);
+        if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
+            i--;
+        }
     }
 }
 
@@ -1523,9 +1538,12 @@ NS_IMETHODIMP
 nsXULDocument::BeginUpdate()
 {
     // XXX Never called. Does this matter?
-    for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
+    for (PRInt32 i = 0; i < mObservers.Count(); i++) {
         nsIDocumentObserver* observer = (nsIDocumentObserver*) mObservers[i];
         observer->BeginUpdate(this);
+        if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
+            i--;
+        }
     }
     return NS_OK;
 }
@@ -1534,9 +1552,12 @@ NS_IMETHODIMP
 nsXULDocument::EndUpdate()
 {
     // XXX Never called. Does this matter?
-    for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
+    for (PRInt32 i = 0; i < mObservers.Count(); i++) {
         nsIDocumentObserver* observer = (nsIDocumentObserver*) mObservers[i];
-        observer->EndUpdate(this);        
+        observer->EndUpdate(this);
+        if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
+            i--;
+        }
     }
     return NS_OK;
 }
@@ -1545,9 +1566,12 @@ NS_IMETHODIMP
 nsXULDocument::BeginLoad()
 {
     // XXX Never called. Does this matter?
-    for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
+    for (PRInt32 i = 0; i < mObservers.Count(); i++) {
         nsIDocumentObserver* observer = (nsIDocumentObserver*) mObservers[i];
-        observer->BeginLoad(this);        
+        observer->BeginLoad(this);
+        if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
+            i--;
+        }
     }
     return NS_OK;
 }
@@ -1663,9 +1687,12 @@ NS_IMETHODIMP
 nsXULDocument::ContentChanged(nsIContent* aContent,
                               nsISupports* aSubContent)
 {
-    for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
+    for (PRInt32 i = 0; i < mObservers.Count(); i++) {
         nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers[i];
-        observer->ContentChanged(this, aContent, aSubContent);        
+        observer->ContentChanged(this, aContent, aSubContent);
+        if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
+            i--;
+        }
     }
     return NS_OK;
 }
@@ -1673,9 +1700,12 @@ nsXULDocument::ContentChanged(nsIContent* aContent,
 NS_IMETHODIMP
 nsXULDocument::ContentStatesChanged(nsIContent* aContent1, nsIContent* aContent2)
 {
-    for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
+    for (PRInt32 i = 0; i < mObservers.Count(); i++) {
         nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers[i];
-        observer->ContentStatesChanged(this, aContent1, aContent2);        
+        observer->ContentStatesChanged(this, aContent1, aContent2);
+        if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
+            i--;
+        }
     }
     return NS_OK;
 }
@@ -1706,9 +1736,12 @@ nsXULDocument::AttributeChanged(nsIContent* aElement,
     }
 
     // Now notify external observers
-    for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
+    for (PRInt32 i = 0; i < mObservers.Count(); i++) {
         nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers[i];
         observer->AttributeChanged(this, aElement, aNameSpaceID, aAttribute, aModType, aHint);
+        if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
+            i--;
+        }
     }
 
     // Finally, see if there is anything we need to persist in the
@@ -1756,9 +1789,12 @@ nsXULDocument::ContentAppended(nsIContent* aContainer,
     }
 
     // Now notify external observers
-    for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
+    for (PRInt32 i = 0; i < mObservers.Count(); i++) {
         nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers[i];
         observer->ContentAppended(this, aContainer, aNewIndexInContainer);
+        if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
+            i--;
+        }
     }
     return NS_OK;
 }
@@ -1775,9 +1811,12 @@ nsXULDocument::ContentInserted(nsIContent* aContainer,
     }
 
     // Now notify external observers
-    for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
+    for (PRInt32 i = 0; i < mObservers.Count(); i++) {
         nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers[i];
         observer->ContentInserted(this, aContainer, aChild, aIndexInContainer);
+        if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
+            i--;
+        }
     }
     return NS_OK;
 }
@@ -1798,10 +1837,13 @@ nsXULDocument::ContentReplaced(nsIContent* aContainer,
     }
 
     // Now notify external observers
-    for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
+    for (PRInt32 i = 0; i < mObservers.Count(); i++) {
         nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers[i];
         observer->ContentReplaced(this, aContainer, aOldChild, aNewChild,
-                                  aIndexInContainer);        
+                                  aIndexInContainer);
+        if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
+            i--;
+        }
     }
     return NS_OK;
 }
@@ -1818,10 +1860,13 @@ nsXULDocument::ContentRemoved(nsIContent* aContainer,
     }
 
     // Now notify external observers
-    for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
+    for (PRInt32 i = 0; i < mObservers.Count(); i++) {
         nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers[i];
         observer->ContentRemoved(this, aContainer,
-                                 aChild, aIndexInContainer);        
+                                 aChild, aIndexInContainer);
+        if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
+            i--;
+        }
     }
     return NS_OK;
 }
@@ -1839,9 +1884,12 @@ nsXULDocument::StyleRuleChanged(nsIStyleSheet* aStyleSheet,
                                   nsIStyleRule* aStyleRule,
                                   PRInt32 aHint)
 {
-    for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
+    for (PRInt32 i = 0; i < mObservers.Count(); i++) {
         nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers[i];
-        observer->StyleRuleChanged(this, aStyleSheet, aStyleRule, aHint);        
+        observer->StyleRuleChanged(this, aStyleSheet, aStyleRule, aHint);
+        if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
+            i--;
+        }
     }
     return NS_OK;
 }
@@ -1850,9 +1898,12 @@ NS_IMETHODIMP
 nsXULDocument::StyleRuleAdded(nsIStyleSheet* aStyleSheet,
                                 nsIStyleRule* aStyleRule)
 {
-    for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
+    for (PRInt32 i = 0; i < mObservers.Count(); i++) {
         nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers[i];
-        observer->StyleRuleAdded(this, aStyleSheet, aStyleRule);        
+        observer->StyleRuleAdded(this, aStyleSheet, aStyleRule);
+        if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
+            i--;
+        }
     }
     return NS_OK;
 }
@@ -1861,9 +1912,12 @@ NS_IMETHODIMP
 nsXULDocument::StyleRuleRemoved(nsIStyleSheet* aStyleSheet,
                                   nsIStyleRule* aStyleRule)
 {
-    for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
+    for (PRInt32 i = 0; i < mObservers.Count(); i++) {
         nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers[i];
-        observer->StyleRuleRemoved(this, aStyleSheet, aStyleRule);        
+        observer->StyleRuleRemoved(this, aStyleSheet, aStyleRule);
+        if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
+            i--;
+        }
     }
     return NS_OK;
 }
@@ -5494,9 +5548,12 @@ nsXULDocument::ResumeWalk()
     // do this after StartLayout() in case we want to serialize frames.
     EndFastLoad();
 
-    for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
+    for (PRInt32 i = 0; i < mObservers.Count(); i++) {
         nsIDocumentObserver* observer = (nsIDocumentObserver*) mObservers[i];
-        observer->EndLoad(this);        
+        observer->EndLoad(this);
+        if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
+            i--;
+        }
     }
 
     // Remove the placeholder channel; if we're the last channel in the

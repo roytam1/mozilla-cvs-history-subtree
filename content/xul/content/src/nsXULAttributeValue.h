@@ -47,7 +47,7 @@ public:
                 nsXULAttributeValue();
                 ~nsXULAttributeValue();
 
-    void        ReleaseValue();
+    void        ReleaseValue( void );
 
     nsresult    GetValue(nsAWritableString& aResult);
 
