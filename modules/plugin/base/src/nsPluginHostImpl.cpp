@@ -2845,16 +2845,10 @@ NS_IMETHODIMP nsPluginHostImpl::GetURLWithHeaders(nsISupports* pluginInst,
 
   nsCOMPtr<nsIPluginInstance> instance = do_QueryInterface(pluginInst, &rv);
 
-#ifdef OJI
   if (NS_SUCCEEDED(rv))
   {
-    // if this is a Java plugin calling, we need to do a security check
-    nsCOMPtr<nsIJVMPluginInstance> javaInstance(do_QueryInterface(instance));
-    
-    if (javaInstance)
-        rv = DoURLLoadSecurityCheck(instance, url);
+    rv = DoURLLoadSecurityCheck(instance, url);
   }
-#endif
   
   if (NS_SUCCEEDED(rv))
   {
@@ -2914,16 +2908,10 @@ NS_IMETHODIMP nsPluginHostImpl::PostURL(nsISupports* pluginInst,
   
   nsCOMPtr<nsIPluginInstance> instance = do_QueryInterface(pluginInst, &rv);
 
-#ifdef OJI
   if (NS_SUCCEEDED(rv))
   {
-    // if this is a Java plugin calling, we need to do a security check
-    nsCOMPtr<nsIJVMPluginInstance> javaInstance(do_QueryInterface(instance));
-    
-    if (javaInstance)
-        rv = DoURLLoadSecurityCheck(instance, url);
+    rv = DoURLLoadSecurityCheck(instance, url);
   }
-#endif
 
   if (NS_SUCCEEDED(rv))
   {
