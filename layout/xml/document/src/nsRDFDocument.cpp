@@ -26,8 +26,10 @@
 #include "nsParserCIID.h"
 #include "nsRDFDocument.h"
 #include "nsWellFormedDTD.h"
-#include "nsIRDFDataSource.h"
+
 #include "nsRDFCID.h"
+#include "nsIRDFDataSource.h"
+#include "nsIRDFNode.h"
 
 #include "nsIHTMLStyleSheet.h" // for basic styles
 
@@ -56,7 +58,6 @@ NS_NewRDFDocument(nsIDocument** aInstancePtrResult)
 
 nsRDFDocument::nsRDFDocument()
     : mParser(NULL),
-      mGenSym(0),
       mNameSpaces(NULL)
 {
     nsRepository::CreateInstance(kRDFMemoryDataSourceCID,
@@ -98,7 +99,7 @@ nsRDFDocument::QueryInterface(REFNSIID iid, void** result)
         AddRef();
         return NS_OK;
     }
-    return nsDocument::QueryInterface(iid, result);
+    return nsMarkupDocument::QueryInterface(iid, result);
 }
 
 nsrefcnt nsRDFDocument::AddRef()
@@ -289,20 +290,6 @@ nsRDFDocument::AppendToEpilog(nsIContent* aContent)
 // nsIRDFDocument interface
 
 NS_IMETHODIMP
-nsRDFDocument::GenerateAnonymousResource(nsString& rResource)
-{
-    rResource.Truncate();
-    nsIURL* docURL = GetDocumentURL();
-    if (docURL) {
-        docURL->ToString(rResource);
-        NS_RELEASE(docURL);
-    }
-    rResource.Append("#anonymous$");
-    rResource.Append(mGenSym++, 10);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
 nsRDFDocument::GetDataSource(nsIRDFDataSource*& result)
 {
     if (! mDataSource)
@@ -312,3 +299,5 @@ nsRDFDocument::GetDataSource(nsIRDFDataSource*& result)
     result->AddRef();
     return NS_OK;
 }
+
+

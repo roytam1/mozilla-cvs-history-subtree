@@ -63,13 +63,11 @@ public:
   NS_IMETHOD AppendToEpilog(nsIContent* aContent);
 
   // nsIRDFDocument interface
-  NS_IMETHOD GenerateAnonymousResource(nsString& rResource);
   NS_IMETHOD GetDataSource(nsIRDFDataSource*& result);
 
 protected:
   nsVoidArray*      mNameSpaces;
   nsIParser*        mParser;
-  PRUint32          mGenSym;
   nsIRDFDataSource* mDataSource;
 };
 
