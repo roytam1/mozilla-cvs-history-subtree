@@ -57,6 +57,7 @@ CPPSRCS = \
   nsStyleStruct.cpp \
   nsTextFragment.cpp \
   nsXULAtoms.cpp \
+  nsXBLAtoms.cpp \
   nsStyleCoord.cpp \
 !ifdef MOZ_SVG
   nsSVGAtoms.cpp   \
@@ -76,6 +77,7 @@ CPP_OBJS= \
   .\$(OBJDIR)\nsStyleStruct.obj \
   .\$(OBJDIR)\nsTextFragment.obj \
   .\$(OBJDIR)\nsXULAtoms.obj \
+  .\$(OBJDIR)\nsXBLAtoms.obj \
   .\$(OBJDIR)\nsStyleCoord.obj \
 !ifdef MOZ_SVG
   .\$(OBJDIR)\nsSVGAtoms.obj \

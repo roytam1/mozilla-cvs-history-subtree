@@ -57,6 +57,7 @@ CPPSRCS		= \
 		nsStyleUtil.cpp \
 		nsTextFragment.cpp \
 		nsXULAtoms.cpp \
+		nsXBLAtoms.cpp \
 		nsStyleCoord.cpp \
 		nsStyleStruct.cpp \
 		$(NULL)

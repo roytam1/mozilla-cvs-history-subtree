@@ -231,7 +231,6 @@ nsHTMLDocument::nsHTMLDocument()
   mCSSLoader = nsnull;
   mDocWriteDummyRequest = nsnull;
 
-  mBodyContent = nsnull;
   mForms = nsnull;
   mIsWriting = 0;
   mWriteLevel = 0;
@@ -291,8 +290,6 @@ nsHTMLDocument::~nsHTMLDocument()
     mCSSLoader->DropDocumentReference();  // release weak ref
   }
 
-  NS_IF_RELEASE(mBodyContent);
-
   if (--gRefCntRDFService == 0)
   {     
      nsServiceManager::ReleaseService("@mozilla.org/rdf/rdf-service;1", gRDF);
@@ -336,6 +333,8 @@ nsHTMLDocument::Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup)
   NS_IF_RELEASE(mLinks);
   NS_IF_RELEASE(mAnchors);
   NS_IF_RELEASE(mLayers);
+
+  mBodyContent = nsnull;
 
   mImageMaps.Clear();
   NS_IF_RELEASE(mForms);
@@ -402,7 +401,8 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
                                   nsILoadGroup* aLoadGroup,
                                   nsISupports* aContainer,
                                   nsIStreamListener **aDocListener,
-                                  PRBool aReset)
+                                  PRBool aReset,
+                                  nsIContentSink* aSink)
 {
   PRBool needsParser=PR_TRUE;
   if (aCommand)
@@ -500,7 +500,7 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
       // if we failed to get a last modification date, then we don't
       // want to necessarily fail to create a document for this
       // file. Just don't set the last modified date on it...
-      rv = file->GetLastModificationDate(&modDate);
+      rv = file->GetLastModificationTime(&modDate);
       if (NS_SUCCEEDED(rv)) {
         PRExplodedTime prtime;
         char buf[100];
@@ -822,9 +822,15 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
     mParser->SetCommand(aCommand);
     // create the content sink
     nsCOMPtr<nsIWebShell> webShell(do_QueryInterface(docShell));
-    rv = NS_NewHTMLContentSink(getter_AddRefs(sink), this, aURL, webShell,aChannel);
-    if (NS_FAILED(rv)) { return rv; }
-    NS_ASSERTION(sink, "null sink with successful result from factory method");
+
+    if (aSink)
+      sink = do_QueryInterface(aSink);
+    else {
+      rv = NS_NewHTMLContentSink(getter_AddRefs(sink), this, aURL, webShell,aChannel);
+      if (NS_FAILED(rv)) { return rv; }
+      NS_ASSERTION(sink, "null sink with successful result from factory method");
+    }
+
     mParser->SetContentSink(sink); 
     // parser the content of the URL
     mParser->Parse(aURL, nsnull, PR_FALSE, (void *)this);
@@ -1828,7 +1834,7 @@ nsHTMLDocument::SetBody(nsIDOMHTMLElement* aBody)
 
         nsresult rv = root->ReplaceChild(aBody, child, getter_AddRefs(ret));
 
-        NS_IF_RELEASE(mBodyContent);
+        mBodyContent = nsnull;
 
         return rv;
       }
@@ -2603,7 +2609,7 @@ nsHTMLDocument::GetPixelDimensions(nsIPresShell* aShell,
 
   // Find the <body> element: this is what we'll want to use for the
   // document's width and height values.
-  if (mBodyContent == nsnull && PR_FALSE == GetBodyContent()) {
+  if (!mBodyContent && PR_FALSE == GetBodyContent()) {
     return NS_OK;
   }
 
@@ -2664,6 +2670,8 @@ nsHTMLDocument::GetWidth(PRInt32* aWidth)
 {
   NS_ENSURE_ARG_POINTER(aWidth);
 
+  FlushPendingNotifications();
+
   nsCOMPtr<nsIPresShell> shell;
   nsresult result = NS_OK;
 
@@ -2685,6 +2693,8 @@ NS_IMETHODIMP
 nsHTMLDocument::GetHeight(PRInt32* aHeight)
 {
   NS_ENSURE_ARG_POINTER(aHeight);
+
+  FlushPendingNotifications();
 
   nsCOMPtr<nsIPresShell> shell;
   nsresult result = NS_OK;
@@ -3511,7 +3521,7 @@ nsHTMLDocument::GetBodyContent()
 
       if (bodyStr.EqualsIgnoreCase(tagName)) {
         mBodyContent = child;
-        NS_ADDREF(mBodyContent);
+
         return PR_TRUE;
       }
     }
@@ -3525,7 +3535,7 @@ nsHTMLDocument::GetBodyContent()
 NS_IMETHODIMP
 nsHTMLDocument::GetBodyElement(nsIDOMHTMLBodyElement** aBody)
 {
-  if (mBodyContent == nsnull && PR_FALSE == GetBodyContent()) {
+  if (!mBodyContent && PR_FALSE == GetBodyContent()) {
     return NS_ERROR_FAILURE;
   }
   

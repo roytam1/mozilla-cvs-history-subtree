@@ -47,6 +47,8 @@ EXPORTS =				\
   nsSVGAtomList.h \
   nsSVGAtoms.h \
 !endif
+  nsXBLAtomList.h \
+  nsXBLAtoms.h \
 	$(NULL)
 
 include <$(DEPTH)\config\rules.mak>

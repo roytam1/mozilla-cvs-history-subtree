@@ -36,6 +36,7 @@
  * the terms of any one of the NPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
+#include "nsXBLAtoms.h"     // to addref/release table
 #include "nsCSSAtoms.h"     // to addref/release table
 #include "nsCSSKeywords.h"  // to addref/release table
 #include "nsCSSProps.h"     // to addref/release table
@@ -174,6 +175,7 @@ Initialize(nsIModule* aSelf)
   nsCSSProps::AddRefTable();
   nsColorNames::AddRefTable();
   nsHTMLAtoms::AddRefAtoms();
+  nsXBLAtoms::AddRefAtoms();
   nsLayoutAtoms::AddRefAtoms();
 
 #ifdef MOZ_XUL
@@ -221,6 +223,7 @@ Shutdown(nsIModule* aSelf)
   nsCSSKeywords::ReleaseTable();
   nsCSSAtoms::ReleaseAtoms();
   nsHTMLAtoms::ReleaseAtoms();
+  nsXBLAtoms::ReleaseAtoms();
   nsLayoutAtoms::ReleaseAtoms();
 
 #ifdef MOZ_XUL
