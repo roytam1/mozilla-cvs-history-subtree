@@ -872,6 +872,8 @@ NS_IMETHODIMP nsExternalAppHandler::SaveToDisk(nsIFile * aNewFileLocation, PRBoo
   if (mCanceled)
     return NS_OK;
 
+  mMimeInfo->SetPreferredAction(nsIMIMEInfo::saveToDisk);
+
   if (!aNewFileLocation)
   {
     nsXPIDLString leafName;
@@ -926,6 +928,8 @@ NS_IMETHODIMP nsExternalAppHandler::LaunchWithApplication(nsIFile * aApplication
 {
   if (mCanceled)
     return NS_OK;
+
+  mMimeInfo->SetPreferredAction(nsIMIMEInfo::useHelperApp);
 
   mReceivedDispostionInfo = PR_TRUE; 
   if (mMimeInfo && aApplication)
