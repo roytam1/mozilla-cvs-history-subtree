@@ -358,8 +358,8 @@ Expr* ExprParser::createFilterExpr(ExprLexer& lexer, txIParseContext* aContext)
 
 } //-- createFilterExpr
 
-FunctionCall* ExprParser::createFunctionCall(ExprLexer& lexer,
-                                             txIParseContext* aContext)
+Expr* ExprParser::createFunctionCall(ExprLexer& lexer,
+                                     txIParseContext* aContext)
 {
     FunctionCall* fnCall = 0;
 
@@ -369,10 +369,10 @@ FunctionCall* ExprParser::createFunctionCall(ExprLexer& lexer,
         return 0;
     }
 
-    String fnName = tok->value;
-
     //-- compare function names
     //-- * we should hash these names for speed
+
+    nsresult rv = NS_OK;
 
     if (XPathNames::BOOLEAN_FN.isEqual(tok->value)) {
         fnCall = new BooleanFunctionCall(BooleanFunctionCall::TX_BOOLEAN);
@@ -458,8 +458,7 @@ FunctionCall* ExprParser::createFunctionCall(ExprLexer& lexer,
     else {
         txAtom *prefix, *lName;
         PRInt32 namespaceID;
-        nsresult rv = resolveQName(tok->value, prefix, aContext,
-                                   lName, namespaceID);
+        rv = resolveQName(tok->value, prefix, aContext, lName, namespaceID);
         if (NS_FAILED(rv)) {
             // XXX error report namespace resolve failed
             return 0;
@@ -470,14 +469,19 @@ FunctionCall* ExprParser::createFunctionCall(ExprLexer& lexer,
         TX_IF_RELEASE_ATOM(lName);
     }
     
-    if (!fnCall)
-        return 0;
-
     //-- handle parametes
     if (!parseParameters(fnCall, lexer, aContext)) {
         delete fnCall;
         return 0;
     }
+
+    if (rv == NS_ERROR_NOT_IMPLEMENTED) {
+        NS_ASSERTION(!fnCall, "Now is it implemented or not?");
+        String err(tok->value);
+        err.append(" not implemented.");
+        return new StringExpr(err);
+    }
+
     return fnCall;
 } //-- createFunctionCall
 
@@ -893,7 +897,8 @@ MBool ExprParser::parseParameters(FunctionCall* fnCall, ExprLexer& lexer,
         if (!expr)
             return MB_FALSE;
 
-        fnCall->addParam(expr);
+        if (fnCall)
+            fnCall->addParam(expr);
             
         switch (lexer.nextToken()->type) {
             case Token::R_PAREN :

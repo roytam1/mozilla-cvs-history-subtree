@@ -952,7 +952,7 @@ nsresult ProcessorState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
                                              Element* aElem,
                                              FunctionCall*& aFunction)
 {
-   String err;
+   aFunction = 0;
 
    if (aID != kNameSpaceID_None) {
        return NS_OK;
@@ -974,8 +974,6 @@ nsresult ProcessorState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
        return NS_OK;
    }
    if (CHECK_FN(unparsedEntityUri)) {
-       err = "unparsed-entity-uri function not yet implemented";
-       aFunction = new ErrorFunctionCall(err);
        return NS_ERROR_NOT_IMPLEMENTED;
    }
    if (CHECK_FN(generateId)) {

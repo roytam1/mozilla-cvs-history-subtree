@@ -56,8 +56,8 @@ protected:
     static Expr* createBinaryExpr(Expr* left, Expr* right, Token* op);
     static Expr* createExpr(ExprLexer& lexer, txIParseContext* aContext);
     static Expr* createFilterExpr(ExprLexer& lexer, txIParseContext* aContext);
-    static FunctionCall* createFunctionCall(ExprLexer& lexer,
-                                            txIParseContext* aContext);
+    static Expr* createFunctionCall(ExprLexer& lexer,
+                                    txIParseContext* aContext);
     static LocationStep* createLocationStep(ExprLexer& lexer,
                                             txIParseContext* aContext);
     static txNodeTypeTest* createNodeTypeTest(ExprLexer& lexer);
