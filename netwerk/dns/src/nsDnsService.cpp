@@ -535,7 +535,6 @@ nsDNSLookup::nsDNSLookup()
     , mState(LOOKUP_NEW)
     , mProcessingRequests(0)
 #ifdef MOZ_DNS_CACHE
-#error "shut it"
     , mFlags(eCacheableMask)
 #else
     , mFlags(0) // assume not cacheable
