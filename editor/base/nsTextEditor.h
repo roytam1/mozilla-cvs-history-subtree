@@ -16,6 +16,8 @@
  * Reserved.
  */
 
+#error "This file is no longer used"
+
 #ifndef nsTextEditor_h__
 #define nsTextEditor_h__
 
@@ -69,7 +71,7 @@ public:
                              const nsString *aValue,
                              PRBool &aFirst, PRBool &aAny, PRBool &aAll);
   NS_IMETHOD RemoveTextProperty(nsIAtom *aProperty, const nsString *aAttribute);
-  NS_IMETHOD DeleteSelection(nsIEditor::ECollapsedSelectionAction aAction);
+  NS_IMETHOD DeleteSelection(nsIEditor::ESelectionCollapseDirection aAction);
   NS_IMETHOD InsertText(const nsString& aStringToInsert);
   NS_IMETHOD SetMaxTextLength(PRInt32 aMaxTextLength);
   NS_IMETHOD GetMaxTextLength(PRInt32& aMaxTextLength);
