@@ -53,6 +53,7 @@
 #include "nsIBaseWindow.h"
 #include "nsIDocShell.h"
 #include "nsIDocShellTreeItem.h"
+#include "nsIJARURI.h"
 
 #include "nsGUIEvent.h"
 
@@ -697,8 +698,14 @@ nsDocument::Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup)
     // Use the channel owner as our principal if we're loading a
     // javascript:, data:, or chrome: URI.
     PRBool useOwner = PR_FALSE;
+    nsCOMPtr<nsIJARURI> jarURI;
+    while ((jarURI = do_QueryInterface(uri)))
+      jarURI->GetJARFile(getter_AddRefs(uri));
+ 
     if (NS_FAILED(uri->SchemeIs("javascript", &useOwner)) || useOwner ||
         NS_FAILED(uri->SchemeIs("data", &useOwner)) || useOwner ||
+        NS_FAILED(uri->SchemeIs("about", &useOwner)) || useOwner ||
+        NS_FAILED(uri->SchemeIs("resource", &useOwner)) || useOwner ||
         NS_FAILED(uri->SchemeIs("chrome", &useOwner)) || useOwner) {
       nsCOMPtr<nsISupports> owner;
       aChannel->GetOwner(getter_AddRefs(owner));
