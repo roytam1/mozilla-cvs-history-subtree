@@ -53,6 +53,7 @@ CSRCS			= cvactive.c \
 			  mkautocf.c \
 			  mkcache.c \
 			  mkconect.c \
+                          mkcburl.c \
 			  mkextcac.c \
 			  mkfile.c \
 			  mkftp.c \
@@ -66,9 +67,10 @@ CSRCS			= cvactive.c \
 
 CPPSRCS			= mkmarimb.cpp
 
+
 REQUIRES		= netcast parse js dbm nspr security htmldlgs ldap softupdt \
 			  img util jtools layer pref java libfont lay style applet \
-			  zlib li msg progress
+			  zlib li msg progress net
 
 EXPORTS			= extcache.h \
 			  mkutils.h \
@@ -98,16 +100,15 @@ CSRCS			+= \
 			  mknewsgr.c \
 			  mkpop3.c \
 			  mksmtp.c \
-			  prefetch.c \
 			  $(NULL)
 
-CPPSRCS			+= imaphier.cpp \
+CPPSRCS			+= mkabook.cpp \
+			  imapbody.cpp \
+			  imaphier.cpp \
 			  imapearl.cpp \
 			  mkimap4.cpp \
 			  mkldap.cpp \
 			  imappars.cpp \
-			  imapbody.cpp \
-			  mkabook.cpp \
 			  $(NULL)
 endif
 
