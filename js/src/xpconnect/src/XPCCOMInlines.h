@@ -42,15 +42,7 @@
 inline
 void XPCCOMObject::CleanupVariant(VARIANT & var)
 {
-    // TODO: we need to more types here
-    switch (var.vt & ~VT_BYREF)
-    {
-        case VT_BSTR:
-        {
-            ::SysFreeString(*var.pbstrVal);
-        }
-        break;
-    }
+    VariantClear(&var);
 }
 
 // XPCCOMIDispatchInterface inlines
@@ -384,4 +376,3 @@ const nsACString & XPCCOMTypeInfo::GetNameForDispID(DISPID dispID)
 {
     return mNameArray.Get(dispID);
 }
-

@@ -75,7 +75,7 @@ public:
      * Returns the COM type for a given jsval
      */
     static
-    VARTYPE JSTypeToCOMType(jsval val);
+    VARTYPE JSTypeToCOMType(XPCCallContext& ccx, jsval val);
 
     /**
      * Converts a JSVal to a COM variant
@@ -104,6 +104,13 @@ public:
                    VARIANT const & src,
                    jsval & dest,
                    uintN & err);
+private:
+    /**
+     * Converts a JS Array to a safe array
+     */
+    static
+    JSBool ConvertJSArray(XPCCallContext& ccx, JSObject *obj, VARIANT & var,
+                          uintN & err);
 };
 
 /**
@@ -357,7 +364,7 @@ public:
 private:
     nsVoidArray      mArray;
 
-    void BuildFuncDesc(JSObject* obj,
+    void BuildFuncDesc(XPCCallContext& ccx, JSObject* obj,
                        XPCJSPropertyInfo & propInfo);
 };
 
@@ -535,7 +542,7 @@ public:
     /**
      * Assigns the return type in elemDesc
      */
-    void GetReturnType(ELEMDESC & elemDesc);
+    void GetReturnType(XPCCallContext& ccx, ELEMDESC & elemDesc);
     /**
      * Returns a
      */
@@ -562,7 +569,7 @@ private:
     jsval           mProperty;
     nsCAutoString   mName;
 
-    VARTYPE COMType() const { return XPCCOMConvert::JSTypeToCOMType(mProperty); }
+    VARTYPE COMType(XPCCallContext& ccx) const { return XPCCOMConvert::JSTypeToCOMType(ccx, mProperty); }
     property_type PropertyType() const { return NS_STATIC_CAST(property_type,mPropertyType & ~SETTER_MODE); }
 };
 

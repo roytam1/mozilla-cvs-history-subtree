@@ -52,7 +52,7 @@ void FillOutElemDesc(VARTYPE vt, PRUint16 paramFlags, ELEMDESC & elemDesc)
     elemDesc.tdesc.hreftype = 0;
 }
 
-void XPCJSPropertyInfo::GetReturnType(ELEMDESC & elemDesc)
+void XPCJSPropertyInfo::GetReturnType(XPCCallContext& ccx, ELEMDESC & elemDesc)
 {
     VARTYPE vt;
     if(IsSetterMode())     // we're working on a property
@@ -61,7 +61,7 @@ void XPCJSPropertyInfo::GetReturnType(ELEMDESC & elemDesc)
     }
     else if(IsProperty())
     {
-        vt = XPCCOMConvert::JSTypeToCOMType(mProperty);
+        vt = XPCCOMConvert::JSTypeToCOMType(ccx, mProperty);
     }
     else // Function
     {
@@ -136,7 +136,7 @@ XPCJSPropertyInfo::XPCJSPropertyInfo(JSContext* cx, PRUint32 memid,
     }
 }
 
-void XPCFuncDescArray::BuildFuncDesc(JSObject* obj, 
+void XPCFuncDescArray::BuildFuncDesc(XPCCallContext& ccx, JSObject* obj, 
                                      XPCJSPropertyInfo & propInfo)
 {
     FUNCDESC* funcDesc = new FUNCDESC;
@@ -155,7 +155,7 @@ void XPCFuncDescArray::BuildFuncDesc(JSObject* obj,
     funcDesc->oVft = 0;
     funcDesc->cScodes = 0;
     funcDesc->wFuncFlags = 0;
-    propInfo.GetReturnType(funcDesc->elemdescFunc);
+    propInfo.GetReturnType(ccx, funcDesc->elemdescFunc);
 }
 
 XPCFuncDescArray::XPCFuncDescArray(XPCCallContext& ccx, JSObject* obj, const XPCIDArray& array, XPCNameArray & names)
@@ -168,11 +168,11 @@ XPCFuncDescArray::XPCFuncDescArray(XPCCallContext& ccx, JSObject* obj, const XPC
     {
         XPCJSPropertyInfo propInfo(cx, ++memid, obj, array[index]);
         names.SetName(index + 1, propInfo.GetName());
-        BuildFuncDesc(obj, propInfo);
+        BuildFuncDesc(ccx, obj, propInfo);
         if(propInfo.IsProperty() && !propInfo.IsReadOnly())
         {
             propInfo.SetSetterMode();
-            BuildFuncDesc(obj, propInfo);
+            BuildFuncDesc(ccx, obj, propInfo);
         }
     }
 }

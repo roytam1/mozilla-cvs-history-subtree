@@ -41,7 +41,7 @@ static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 /**
  * Returns the COM type for a given JS value
  */
-VARTYPE XPCCOMConvert::JSTypeToCOMType(jsval val)
+VARTYPE XPCCOMConvert::JSTypeToCOMType(XPCCallContext& ccx, jsval val)
 {
     if(JSVAL_IS_STRING(val))
     {
@@ -57,7 +57,10 @@ VARTYPE XPCCOMConvert::JSTypeToCOMType(jsval val)
     }
     else if(JSVAL_IS_OBJECT(val))
     {
-        return VT_DISPATCH;
+        if (JS_IsArrayObject(ccx, JSVAL_TO_OBJECT(val)))
+            return VT_ARRAY | VT_VARIANT;
+        else
+            return VT_DISPATCH;
     }
     else if(JSVAL_IS_BOOLEAN(val))
     {
@@ -76,6 +79,40 @@ VARTYPE XPCCOMConvert::JSTypeToCOMType(jsval val)
         NS_ERROR("XPCCOMConvert::JSTypeToCOMType was unable to identify the type of the jsval");
         return VT_EMPTY;
     }
+}
+
+JSBool XPCCOMConvert::ConvertJSArray(XPCCallContext& ccx, JSObject *obj, VARIANT & var, uintN& err)
+{
+    err = NS_OK;
+    jsuint len;
+    if (!JS_GetArrayLength(ccx, obj, &len))
+    {
+        // TODO: I think we should create a specific error for this
+        err = NS_ERROR_XPC_NOT_ENOUGH_ELEMENTS_IN_ARRAY;
+        return PR_FALSE;
+    }
+    SAFEARRAY * array = SafeArrayCreateVector(VT_VARIANT, 0, len);
+    for (long index = 0; index < len; ++index)
+    {
+        VARIANT arrayVar;
+        jsval val;
+        if(JS_GetElement(ccx, obj, index, &val) &&
+           JSToCOM(ccx, val, arrayVar, err))
+        {
+            SafeArrayPutElement(array, &index, &arrayVar);
+        }
+        else
+        {
+            if (err == NS_OK)
+                err = NS_ERROR_FAILURE;
+            // This cleans up the elements as well
+            SafeArrayDestroyData(array);
+            return JS_FALSE;
+        }
+    }
+    var.vt = VT_ARRAY | VT_VARIANT;
+    var.parray = array;
+    return JS_TRUE;
 }
 
 JSBool XPCCOMConvert::JSToCOM(XPCCallContext& ccx,
@@ -119,17 +156,24 @@ JSBool XPCCOMConvert::JSToCOM(XPCCallContext& ccx,
     else if(JSVAL_IS_OBJECT(src))
     {
         JSObject * obj = JSVAL_TO_OBJECT(src);
-        // only wrap JSObjects
-        nsISupports * pSupport;
-        XPCConvert::JSObject2NativeInterface(
-            ccx, 
-            (void**)&pSupport, 
-            obj, 
-            &kISupportsIID,
-            nsnull, 
-            &err);
-        dest.vt = VT_DISPATCH;
-        pSupport->QueryInterface(NSID_IDISPATCH, NS_REINTERPRET_CAST(void**,&dest.pdispVal));
+        if (JS_IsArrayObject(ccx, obj))
+        {
+            return ConvertJSArray(ccx, obj, dest, err);
+        }
+        else
+        {
+            // only wrap JSObjects
+            nsISupports * pSupport;
+            XPCConvert::JSObject2NativeInterface(
+                ccx, 
+                (void**)&pSupport, 
+                obj, 
+                &kISupportsIID,
+                nsnull, 
+                &err);
+            dest.vt = VT_DISPATCH;
+            pSupport->QueryInterface(NSID_IDISPATCH, NS_REINTERPRET_CAST(void**,&dest.pdispVal));
+        }
     }
     else if(JSVAL_IS_BOOLEAN(src))
     {

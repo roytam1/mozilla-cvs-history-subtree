@@ -341,6 +341,8 @@ JSBool XPCCOMObject::Invoke(XPCCallContext & ccx, CallMode mode)
         ThrowBadResult(invokeResult, ccx);
     }
 
+    for(int index = 0; index < args; ++index)
+        CleanupVariant(dispParams.rgvarg[index]);
     // Cleanup if we allocated the variant array
     if(dispParams.rgvarg != stackArgs)
         delete [] dispParams.rgvarg;
