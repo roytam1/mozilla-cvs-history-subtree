@@ -112,5 +112,7 @@ interface nsIInterfaceInfo : nsISupports
     void   getIIDShared([shared,retval] out nsIIDPtrShared iid);
 
     PRBool isFunction();
+
+    PRBool hasAncestor(in nsIIDPtr iid);
 };
 

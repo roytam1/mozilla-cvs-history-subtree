@@ -674,3 +674,27 @@ xptiInterfaceInfo::GetIIDShared(const nsIID * *iid)
     return NS_OK;
 }
 
+/* PRBool hasAncestor (in nsIIDPtr iid); */
+NS_IMETHODIMP 
+xptiInterfaceInfo::HasAncestor(const nsIID * iid, PRBool *_retval)
+{
+    NS_PRECONDITION(iid, "bad param");
+    NS_PRECONDITION(_retval, "bad param");
+
+    *_retval = PR_FALSE;
+
+    for(xptiInterfaceInfo* current = this; 
+        current;
+        current = current->mInterface->mParent)
+    {
+        if(current->mIID.Equals(*iid))
+        {
+            *_retval = PR_TRUE;
+            break;
+        }
+        if(!current->EnsureResolved())
+            return NS_ERROR_UNEXPECTED;
+    }
+
+    return NS_OK;
+}
