@@ -52,7 +52,11 @@
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-#MOZ_CO_TAG = <tag>
+
+# pull svg mini-branch
+MOZ_CO_TAG = SVG_20010721_BRANCH
+MOZ_CO_FLAGS := $(MOZ_CO_FLAGS) -f
+
 NSPR_CO_TAG = NSPRPUB_CLIENT_BRANCH
 PSM_CO_TAG = #We will now build PSM from the tip instead of a branch.
 NSS_CO_TAG = NSS_CLIENT_TAG
@@ -369,6 +373,7 @@ SVG_BRANCH_FILES := \
 	dom/public/nsIDOMClassInfo.h \
 	dom/src/base/nsDOMClassInfo.cpp \
 	gfx/public/nsTransform2D.h \
+	htmlparser/public/nsIParser.h \
 	htmlparser/src/nsViewSourceHTML.cpp \
 	layout/build/Makefile.in \
 	layout/build/makefile.win \
@@ -379,8 +384,6 @@ SVG_BRANCH_FILES := \
 	netwerk/mime/src/nsXMLMIMEDataSource.cpp \
 	uriloader/exthandler/nsExternalHelperAppService.cpp \
 	xpfe/browser/src/nsBrowserInstance.cpp
-
-CVSBRANCH_SVG := $(CVSCO) -r SVG_20010721_BRANCH $(patsubst %,mozilla/%,$(SVG_BRANCH_FILES))
 
 #######################################################################
 # Rules
@@ -439,7 +442,6 @@ real_checkout:
         cvs_co $(CVSCO_GFX2) && \
         cvs_co $(CVSCO_IMGLIB2) && \
 	cvs_co $(CVSCO_SEAMONKEY) && \
-	cvs_co $(CVSBRANCH_SVG) && \
 	cvs_co $(CVSCO_NOSUBDIRS)
 	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE)
 #	@: Check the log for conflicts. ;

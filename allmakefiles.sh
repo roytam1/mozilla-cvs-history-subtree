@@ -970,8 +970,6 @@ if [ "$MOZ_MATHML" ]; then
 	layout/mathml/Makefile
 	layout/mathml/base/Makefile
 	layout/mathml/base/src/Makefile
-	layout/mathml/content/Makefile
-	layout/mathml/content/src/Makefile
 "
 fi
 
@@ -981,7 +979,8 @@ if [ "$MOZ_SVG" ]; then
 	content/svg/Makefile
 	content/svg/document/Makefile
 	content/svg/document/src/Makefile
-	content/svg/src/Makefile
+	content/svg/content/Makefile
+	content/svg/content/src/Makefile
 "
     MAKEFILES_dom="$MAKEFILES_dom
 	dom/public/idl/svg/Makefile

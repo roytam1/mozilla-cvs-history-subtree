@@ -456,8 +456,10 @@ nsXMLMIMEDataSource::InitFromHack() {
     rv = AppendExtension(TEXT_XML, "xsl");
     if (NS_FAILED(rv)) return rv;
 
+#ifdef MOZ_SVG
     rv = AddMapping("image/svg+xml", "svg", "Scalable Vector Graphics", nsnull, 'svg ', 'ttxt');
     if (NS_FAILED(rv)) return rv;
+#endif
 
     rv = AddMapping(TEXT_CSS, "css", "Style Sheet", nsnull, 'TEXT','ttxt');
     if (NS_FAILED(rv)) return rv;

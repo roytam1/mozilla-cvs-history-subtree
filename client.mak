@@ -40,7 +40,12 @@ MOZ_OBJDIR = WIN32_O.OBJ
 #// Figure out how to do the pull.
 #//------------------------------------------------------------------------
 # uncomment these, modify branch tag, and check in to branch for milestones
-#MOZ_BRANCH=SeaMonkey_M17_BRANCH
+
+# pull the svg mini-branch:
+MOZ_BRANCH=SVG_20010721_BRANCH
+# we pull the head revision if a file is not tagged: 
+CVS_CO_FLAGS=-f
+
 #NSPR_CO_TAG=SeaMonkey_M17_BRANCH
 #PSM_CO_TAG=SeaMonkey_M17_BRANCH
 #NSS_CO_TAG=SeaMonkey_M17_BRANCH
@@ -89,7 +94,7 @@ CVS_FLAGS=$(CVS_FLAGS) -d "$(CVSROOT)"
 !endif
 !endif
 
-CVSCO = cvs -q $(CVS_FLAGS) co $(CVS_BRANCH) -P
+CVSCO = cvs -q $(CVS_FLAGS) co $(CVS_BRANCH) $(CVS_CO_FLAGS) -P
 
 CVSCO_TAG = cvs -q co -P
 
