@@ -608,6 +608,10 @@ nsHttpConnection::OnStopRequest(nsIRequest *request, nsISupports *ctxt,
     }
 
     if (mReadDone && mWriteDone) {
+        // if the transaction failed for any reason, the socket will not be
+        // reusable.
+        if (NS_FAILED(status))
+            DontReuse();
 
         nsCOMPtr<nsISupports> info;
         mSocketTransport->GetSecurityInfo(getter_AddRefs(info));
