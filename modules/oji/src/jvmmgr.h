@@ -23,6 +23,7 @@
 #include "nsscd.h"
 #include "nsAgg.h"
 #include "jsjava.h"
+#include "nsVector.h"
 
 class nsSymantecDebugManager;
 
@@ -78,7 +79,7 @@ public:
     nsJVMStatus GetJVMStatus(void);
     void SetJVMEnabled(PRBool enabled);
 
-    nsPluginError AddToClassPathRecursively(const char* dirPath);
+    nsPluginError AddToClassPath(const char* dirPath);
     void        JSJInit();
     PRBool      IsJVMAndMochaPrefsEnabled(void);
     JSJavaVM*   GetJSJavaVM() { return fJSJavaVM; }
@@ -96,6 +97,7 @@ protected:
     PRBool              fRegisteredJavaPrefChanged;
     nsISupports*        fDebugManager;
     JSJavaVM *          fJSJavaVM;  
+    nsVector*           fClassPathAdditions;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -185,7 +187,7 @@ PR_EXTERN(PRBool)
 JVM_IsJVMAvailable(void);
 
 PR_EXTERN(nsPluginError)
-JVM_AddToClassPathRecursively(const char* dirPath);
+JVM_AddToClassPath(const char* dirPath);
 
 PR_EXTERN(void)
 JVM_ShowConsole(void);

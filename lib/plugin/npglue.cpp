@@ -28,6 +28,7 @@
 
 #include "xp.h"
 #include "npglue.h"
+#include "plstr.h"
 #ifdef OJI
 #include "jni.h"
 #include "jvmmgr.h"
@@ -3332,6 +3333,16 @@ NPL_RegisterPluginFile(const char* pluginname, const char* filename, const char*
     handle->userPlugin = NULL;
    	np_plist = handle;
    	
+#ifdef OJI
+    char* pluginDir = PL_strdup(filename);
+    if (pluginDir) {
+        char* lastSlash = PL_strrchr(pluginDir, PR_DIRECTORY_SEPARATOR);
+        if (lastSlash)
+            lastSlash[0] = '\0';
+        JVM_AddToClassPath(pluginDir);
+    }
+#endif
+
    	return NPERR_NO_ERROR;
 }
 

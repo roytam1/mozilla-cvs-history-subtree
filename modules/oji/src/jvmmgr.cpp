@@ -28,8 +28,9 @@
 #include "xp_str.h"
 #include "libmocha.h"
 #include "np.h"
-#include "plstr.h"
 #include "prio.h"
+#include "prmem.h"
+#include "plstr.h"
 #include "jni.h"
 #include "jsjava.h"
 #ifdef MOCHA
@@ -100,13 +101,19 @@ nsJVMMgr::GetJVMPlugin(void)
 
 nsJVMMgr::nsJVMMgr(nsISupports* outer)
     : fJVM(NULL), fStatus(nsJVMStatus_Enabled),
-      fRegisteredJavaPrefChanged(PR_FALSE), fDebugManager(NULL), fJSJavaVM(NULL)
+      fRegisteredJavaPrefChanged(PR_FALSE), fDebugManager(NULL), fJSJavaVM(NULL),
+      fClassPathAdditions(new nsVector())
 {
     NS_INIT_AGGREGATED(outer);
 }
 
 nsJVMMgr::~nsJVMMgr()
 {
+    int count = fClassPathAdditions->GetSize();
+    for (int i = 0; i < count; i++) {
+        PR_Free((*fClassPathAdditions)[i]);
+    }
+    delete fClassPathAdditions;
     if (fJVM) {
         nsrefcnt c = fJVM->Release();   // Release for QueryInterface in GetJVM
         // XXX unload plugin if c == 1 ? (should this be done inside Release?)
@@ -165,7 +172,6 @@ PR_IMPLEMENT(JSContext *)
 map_jsj_thread_to_js_context_impl(JNIEnv *env, char **errp)
 {
     JSContext *cx    = lm_crippled_context;
-    jobject   loader;
     PRBool    mayscript = PR_FALSE;
     PRBool    jvmMochaPrefsEnabled = PR_FALSE;
 
@@ -255,7 +261,6 @@ map_js_context_to_jsj_thread_impl(JSContext *cx, char **errp)
 PR_IMPLEMENT(JSObject *)
 map_java_object_to_js_object_impl(JNIEnv *env, jobject applet, char **errp)
 {
-    LJAppletData    *ad;
     MWContext       *cx;
     JSObject        *window;
     MochaDecoder    *decoder; 
@@ -390,7 +395,8 @@ nsJVMMgr::JSJInit()
 
         if( (pJVMPI = GetJVMPlugin()) != NULL)
         {
-            fJSJavaVM = JSJ_ConnectToJavaVM(JVM_GetJavaVM(), pJVMPI->GetClassPath());
+            if (StartupJVM() == nsJVMStatus_Running)
+                fJSJavaVM = JSJ_ConnectToJavaVM(JVM_GetJavaVM(), pJVMPI->GetClassPath());
             pJVMPI->Release();
         }
     }
@@ -577,8 +583,11 @@ nsJVMStatus
 nsJVMMgr::StartupJVM(void)
 {
     // Be sure to check the prefs first before asking java to startup.
-    if (GetJVMStatus() == nsJVMStatus_Disabled) {
+    switch (GetJVMStatus()) {
+      case nsJVMStatus_Disabled:
         return nsJVMStatus_Disabled;
+      case nsJVMStatus_Running:
+        return nsJVMStatus_Running;
     }
 
     nsIJVMPlugin* jvm = GetJVMPlugin();
@@ -587,10 +596,21 @@ nsJVMMgr::StartupJVM(void)
         return fStatus;
     }
     
-    JDK1_1InitArgs initargs;
-    jvm->GetDefaultJVMInitArgs(&initargs);
-
-    // XXX munge initargs
+    nsJVMInitArgs initargs;
+    int count = fClassPathAdditions->GetSize();
+    char* classpathAdditions = NULL;
+    for (int i = 0; i < count; i++) {
+        const char* path = (const char*)(*fClassPathAdditions)[i];
+        char* oldPath = classpathAdditions;
+        if (oldPath) {
+            classpathAdditions = PR_smprintf("%s%c%s", oldPath, PR_PATH_SEPARATOR, path);
+            PR_Free(oldPath);
+        }
+        else
+            classpathAdditions = PL_strdup(path);
+    }
+    initargs.version = nsJVMInitArgs_Version;
+    initargs.classpathAdditions = classpathAdditions;
 
     nsJVMError err = fJVM->StartupJVM(&initargs);
     if (err == nsJVMError_Ok) {
@@ -720,42 +740,43 @@ nsJVMMgr::IsJVMAndMochaPrefsEnabled(void)
 ////////////////////////////////////////////////////////////////////////////////
 
 nsPluginError
-nsJVMMgr::AddToClassPathRecursively(const char* dirPath)
+nsJVMMgr::AddToClassPath(const char* dirPath)
 {
-    PRDir* dir;
-    PRDirEntry* ptr;
     nsIJVMPlugin* jvm = GetJVMPlugin();
-    if (jvm == NULL) 
-        return nsPluginError_GenericError;      // XXX better error?
 
-    /* Add this path to the classpath: */
-    jvm->AddToClassPath(dirPath);
-
-    /* Also add any zip or jar files in this directory to the classpath: */
-    dir = PR_OpenDir(dirPath);
-    if (dir == NULL)
-        return nsPluginError_InvalidParam;
-    while ((ptr = PR_ReadDir(dir, PR_SKIP_NONE)) != NULL) {
-        if (PL_strcmp(PR_DirName(ptr), ".") && PL_strcmp(PR_DirName(ptr), "..")) {
-            char* path = PR_smprintf("%s%c%s", dirPath, PR_DIRECTORY_SEPARATOR, PR_DirName(ptr));
-            if (path == NULL)
-                return nsPluginError_OutOfMemoryError;
+    /* Add any zip or jar files in this directory to the classpath: */
+    PRDir* dir = PR_OpenDir(dirPath);
+    if (dir != NULL) {
+        PRDirEntry* dirent;
+        while ((dirent = PR_ReadDir(dir, PR_SKIP_BOTH)) != NULL) {
             PRFileInfo info;
-            if (PR_GetFileInfo(path, &info) == PR_SUCCESS
-                && info.type == PR_FILE_FILE) {
+            char* path = PR_smprintf("%s%c%s", dirPath, PR_DIRECTORY_SEPARATOR, PR_DirName(dirent));
+
+            if ((PR_GetFileInfo(path, &info) == PR_SUCCESS)
+                && (info.type == PR_FILE_FILE)) {
                 int len = PL_strlen(path);
+
                 /* Is it a zip or jar file? */
                 if ((len > 4) && 
                     ((PL_strcasecmp(path+len-4, ".zip") == 0) || 
-                     (PL_strcasecmp(path+len-4, ".jar") == 0))) {	
-                    jvm->AddToClassPath(path);
+                     (PL_strcasecmp(path+len-4, ".jar") == 0))) {
+                    fClassPathAdditions->Add((void*)path);
+                    if (jvm) {
+                        /* Add this path to the classpath: */
+                        jvm->AddToClassPath(path);
+                    }
                 }
             }
-            PR_smprintf_free(path);
         }
+        PR_CloseDir(dir);
     }
-    PR_CloseDir(dir);
-    jvm->Release();
+
+    /* Also add the directory to the classpath: */
+    fClassPathAdditions->Add((void*)dirPath);
+    if (jvm) {
+        jvm->AddToClassPath(dirPath);
+        jvm->Release();
+    }
     return nsPluginError_NoError;
 }
 
@@ -971,12 +992,12 @@ JVM_IsJVMAvailable(void)
 }
 
 PR_IMPLEMENT(nsPluginError)
-JVM_AddToClassPathRecursively(const char* dirPath)
+JVM_AddToClassPath(const char* dirPath)
 {
     nsPluginError err = nsPluginError_GenericError;
     nsJVMMgr* mgr = JVM_GetJVMMgr();
     if (mgr) {
-        err = mgr->AddToClassPathRecursively(dirPath);
+        err = mgr->AddToClassPath(dirPath);
         mgr->Release();
     }
     return err;

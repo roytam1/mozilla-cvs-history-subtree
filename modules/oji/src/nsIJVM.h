@@ -87,14 +87,15 @@ public:
 // This interface defines additional entry points that a plugin developer needs
 // to implement in order to implement a Java virtual machine plugin. 
 
+struct nsJVMInitArgs {
+    jint version;
+    const char* classpathAdditions;     // appended to the JVM's classpath
+};
+
+#define nsJVMInitArgs_Version   0x00010000 
+
 class nsIJVMPlugin : public nsIPlugin {
 public:
-
-    // This method fills out an initargs struct defined by jni.h
-    // according to what the JVM thinks is appropriate. It basically
-    // corresponds to JNI_GetDefaultJavaVMInitArgs.
-    NS_IMETHOD_(nsJVMError)
-    GetDefaultJVMInitArgs(void* initargs) = 0;
 
     // This method us used to start the Java virtual machine.
     // It sets up any global state necessary to host Java programs.
@@ -102,7 +103,7 @@ public:
     // initializing the nsIJVMPlugin object (done by the Initialize
     // method).
     NS_IMETHOD_(nsJVMError)
-    StartupJVM(void* initargs) = 0;
+    StartupJVM(nsJVMInitArgs* initargs) = 0;
 
     // This method us used to stop the Java virtual machine.
     // It tears down any global state necessary to host Java programs.
@@ -126,7 +127,7 @@ public:
     GetClassPath(void) = 0;
     
     NS_IMETHOD_(nsIPluginInstance*)
-    GetPluginInstance(jobject hJavaObject) = 0;
+    GetPluginInstance(jobject javaObject) = 0;
 
     NS_IMETHOD_(jobject)
     AttachThreadToJavaObject(JNIEnv *jenv) = 0;

@@ -450,12 +450,8 @@ void fe_RegisterPlugins(char* pszPluginDir)
     CString csPluginSpec;
     csPluginSpec = pszPluginDir; 
 
-    // add directory to the java path no matter what
-#ifdef OJI      // XXX This needs to go away, and be done each time the JVM starts up...
-    // add the plugin directory if successful
-    JVM_AddToClassPathRecursively(pszPluginDir);
-#endif
 #if defined(JAVA)
+    // add directory to the java path no matter what
     LJ_AddToClassPath(pszPluginDir);
 #endif
 
