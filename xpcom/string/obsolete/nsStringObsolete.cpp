@@ -50,6 +50,7 @@
 #include "nsReadableUtils.h"
 #include "bufferRoutines.h"
 #include "nsCRT.h"
+#include "nsUTF8Utils.h"
 
 
 static const char* kWhitespace="\b\t\r\n ";
@@ -640,8 +641,9 @@ nsString::ToCString( char* aBuf, PRUint32 aBufLength, PRUint32 aOffset ) const
 
     PRUint32 maxCount = NS_MIN(aBufLength-1, mLength - aOffset);
 
-    CopyChars2To1(aBuf, 0, (const char*) mData, aOffset, maxCount);
-    aBuf[maxCount] = 0;
+    LossyConvertEncoding<PRUnichar, char> converter(aBuf);
+    converter.write(mData + aOffset, maxCount);
+    converter.write_terminator();
     return aBuf;
   }
 
