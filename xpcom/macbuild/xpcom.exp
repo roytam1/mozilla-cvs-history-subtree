@@ -93,3 +93,5 @@ Destroy__13nsTraceRefcntFPvPCci
 Create__13nsTraceRefcntFPvPCcPCci
 Release__13nsTraceRefcntFPvUlPCci
 AddRef__13nsTraceRefcntFPvUlPCci
+
+nsRegistry_GetFactory
