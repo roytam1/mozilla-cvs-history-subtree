@@ -607,8 +607,6 @@ nsDiskCacheMap::WriteDiskCacheEntry(nsDiskCacheBinding *  binding)
         fileIndex = 0;
     }
     
-   PRInt32   startBlock = binding->mRecord.MetaStartBlock();
-   PRInt32   blockCount = binding->mRecord.MetaBlockCount();
    PRUint32  metaFile   = binding->mRecord.MetaFile();
 
     // Deallocate old storage if necessary    
@@ -656,7 +654,7 @@ nsDiskCacheMap::WriteDiskCacheEntry(nsDiskCacheBinding *  binding)
         
     } else {
         // write entry data to disk cache block file
-        startBlock = mBlockFile[fileIndex - 1].AllocateBlocks(blocks);
+        PRInt32 startBlock = mBlockFile[fileIndex - 1].AllocateBlocks(blocks);
         if (startBlock < 0) {
             rv = NS_ERROR_UNEXPECTED;
             goto exit;
