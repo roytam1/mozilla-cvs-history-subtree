@@ -53,6 +53,7 @@
 #include "nsIServiceManager.h"
 #include "nsXPIDLString.h"
 #include "nsIDocShell.h"
+#include "nsIDocShellTreeItem.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsIRefreshURI.h"
 #include "nsStyleConsts.h"
@@ -360,9 +361,7 @@ static inline nsresult SpecialAutoLoadReturn(nsresult aRv, nsLinkVerb aVerb)
 NS_IMETHODIMP
 nsXMLElement::MaybeTriggerAutoLink(nsIWebShell *aShell)
 {
-  NS_ABORT_IF_FALSE(aShell,"null ptr");
-  if (!aShell)
-    return NS_ERROR_NULL_POINTER;
+  NS_ENSURE_ARG_POINTER(aShell);
 
   nsresult rv = NS_OK;
 
@@ -379,6 +378,22 @@ nsXMLElement::MaybeTriggerAutoLink(nsIWebShell *aShell)
                                               value);
       if (rv == NS_CONTENT_ATTR_HAS_VALUE &&
           value.Equals(onloadString)) {
+
+        // Disable in Mail/News for now. We may want a pref to control
+        // this at some point.
+        nsCOMPtr<nsIDocShellTreeItem> docShellItem(do_QueryInterface(aShell));
+        if (docShellItem) {
+          nsCOMPtr<nsIDocShellTreeItem> rootItem;
+          docShellItem->GetRootTreeItem(getter_AddRefs(rootItem));
+          nsCOMPtr<nsIDocShell> docshell(do_QueryInterface(rootItem));
+          if (docshell) {
+            PRUint32 appType;
+            if (NS_SUCCEEDED(docshell->GetAppType(&appType)) &&
+                appType == nsIDocShell::APP_TYPE_MAIL) {
+              return NS_OK;
+            }
+          }
+        }
 
         // show= ?
         nsLinkVerb verb = eLinkVerb_Undefined;
