@@ -68,9 +68,11 @@
 #include "nsIAtom.h"
 #include "nsIObserverService.h" // so we can be an xpcom shutdown observer
 
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined (XP_MACOSX)
 #include "nsILocalFileMac.h"
 #include "nsIInternetConfigService.h"
+#endif // defined(XP_MAC) || defined (XP_MACOSX)
+#ifdef XP_MAC
 #include "nsIAppleFileDecoder.h"
 #endif // XP_MAC
 
@@ -127,7 +129,7 @@ static nsDefaultMimeTypeEntry extraMimeEntries [] =
 {
 #if defined(VMS)
   { APPLICATION_OCTET_STREAM, "exe,bin,sav,bck,pcsi,dcx_axpexe,dcx_vaxexe,sfx_axpexe,sfx_vaxexe", "Binary Executable", 0, 0 },
-#elif defined(XP_MAC) // don't define .bin on the mac...use internet config to look that up...
+#elif defined(XP_MAC) || defined (XP_MACOSX)// don't define .bin on the mac...use internet config to look that up...
   { APPLICATION_OCTET_STREAM, "exe", "Binary Executable", 0, 0 },
 #else
   { APPLICATION_OCTET_STREAM, "exe,bin", "Binary Executable", 0, 0 },
@@ -1003,24 +1005,11 @@ nsresult nsExternalAppHandler::SetUpTempFile(nsIChannel * aChannel)
 {
   nsresult rv = NS_OK;
 
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined (XP_MACOSX)
  // create a temp file for the data...and open it for writing.
  // use NS_MAC_DEFAULT_DOWNLOAD_DIR which gets download folder from InternetConfig
  // if it can't get download folder pref, then it uses desktop folder
   NS_GetSpecialDirectory(NS_MAC_DEFAULT_DOWNLOAD_DIR, getter_AddRefs(mTempFile));
- // while we're here, also set Mac type and creator
- if (mMimeInfo)
- {
-   nsCOMPtr<nsILocalFileMac> macfile = do_QueryInterface(mTempFile);
-   if (macfile)
-   {
-     PRUint32 type, creator;
-     mMimeInfo->GetMacType(&type);
-     mMimeInfo->GetMacCreator(&creator);
-     macfile->SetFileType(type);
-     macfile->SetFileCreator(creator);
-   }
- }
 #else
   // create a temp file for the data...and open it for writing.
   NS_GetSpecialDirectory(NS_OS_TEMP_DIR, getter_AddRefs(mTempFile));
@@ -1076,6 +1065,22 @@ nsresult nsExternalAppHandler::SetUpTempFile(nsIChannel * aChannel)
 
   mTempFile->Append(saltedTempLeafName); // make this file unique!!!
   mTempFile->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 0600);
+
+#if defined(XP_MAC) || defined (XP_MACOSX)
+ // Now that the file exists set Mac type and creator
+  if (mMimeInfo)
+  {
+    nsCOMPtr<nsILocalFileMac> macfile = do_QueryInterface(mTempFile);
+    if (macfile)
+    {
+      PRUint32 type, creator;
+      mMimeInfo->GetMacType(&type);
+      mMimeInfo->GetMacCreator(&creator);
+      macfile->SetFileType(type);
+      macfile->SetFileCreator(creator);
+    }
+  }
+#endif
 
   NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
   nsCOMPtr<nsIFileTransportService> fts = 
@@ -1657,7 +1662,7 @@ nsresult nsExternalAppHandler::OpenWithApplication(nsIFile * aApplication)
         SendStatusChange(kLaunchError, rv, nsnull, mWebProgressListener, path);
       }
 
-#ifndef XP_MAC
+#if defined(XP_MAC) || defined (XP_MACOSX)
       // Mac users have been very verbal about temp files being deleted on app exit - they
       // don't like it - but we'll continue to do this on other platforms for now
       helperAppService->DeleteTemporaryFileOnExit(mFinalFileDestination);
@@ -1699,7 +1704,7 @@ NS_IMETHODIMP nsExternalAppHandler::LaunchWithApplication(nsIFile * aApplication
   // The directories specified here must match those specified in SetUpTempFile().  This avoids
   // having to do a copy of the file when it finishes downloading and the potential for errors
   // that would introduce
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined (XP_MACOSX)
   NS_GetSpecialDirectory(NS_MAC_DEFAULT_DOWNLOAD_DIR, getter_AddRefs(fileToUse));
 #else
   NS_GetSpecialDirectory(NS_OS_TEMP_DIR, getter_AddRefs(fileToUse));
@@ -1929,7 +1934,7 @@ NS_IMETHODIMP nsExternalHelperAppService::GetTypeFromURI(nsIURI *aURI, char **aC
   // filename stuff (i.e. query string)
   nsCOMPtr<nsIURL> url = do_QueryInterface(aURI, &rv);
     
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined (XP_MACOSX)
  	if (NS_SUCCEEDED(rv))
  	{
     nsCAutoString fileExt;
@@ -2008,7 +2013,7 @@ NS_IMETHODIMP nsExternalHelperAppService::GetTypeFromFile( nsIFile* aFile, char 
   
   nsCString fileExt( ext );       
   // Handle the mac case
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined (XP_MACOSX)
   nsCOMPtr<nsILocalFileMac> macFile;
   macFile = do_QueryInterface( aFile, &rv );
   if ( NS_SUCCEEDED( rv ) && fileExt.IsEmpty())
