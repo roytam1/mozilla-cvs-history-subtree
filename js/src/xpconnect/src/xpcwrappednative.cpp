@@ -111,7 +111,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     XPCNativeScriptableInfo siWrapper;
     
     if(NS_FAILED(GatherScriptableInfo(identity,
-                                      isClassInfo ? nsnull : info,
+                                      isClassInfo ? nsnull : info.get(),
                                       &siProto, &siWrapper)))
         return nsnull;
 
