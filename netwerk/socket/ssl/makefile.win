@@ -38,7 +38,9 @@ LINCS = \
 	-I$(PUBLIC) \
     -I$(DEPTH)\..\mozilla\netwerk\base\src \
 	-I..\..\security\psm \
+        -I$(PUBLIC)\security \
 	$(NULL)
+
 
 LLIBS	= \
 	$(LIBNSPR) \
