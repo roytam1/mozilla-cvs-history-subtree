@@ -265,7 +265,7 @@ int main(int argc, char **argv)
     	PR_SetNetAddr(PR_IpAddrAny, PR_AF_INET6, 0, &addr);
 		addr.ipv6.ip = v6addr;
 		PR_NetAddrToString(&addr, tmp_buf, 256);
-		printf("IPv6 LOOPBACK: %s\n", tmp_buf);
+		printf("IPv4-mapped IPv6 LOOPBACK: %s\n", tmp_buf);
 	}
     printf("PASS\n");
     return 0;
