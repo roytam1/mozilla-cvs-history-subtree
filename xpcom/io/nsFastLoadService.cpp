@@ -220,7 +220,8 @@ struct nsFastLoadPtrEntry : public PLDHashEntryHdr {
 NS_IMETHODIMP
 nsFastLoadService::GetFastLoadReferent(nsISupports* *aPtrAddr)
 {
-    *aPtrAddr = nsnull;
+    NS_ASSERTION(*aPtrAddr == nsnull,
+                 "aPtrAddr doesn't point to null nsFastLoadPtr<T>::mRawAddr?");
 
     nsAutoLock lock(mLock);
     if (!mObjectInputStream)
@@ -261,17 +262,14 @@ nsFastLoadService::ReadFastLoadPtr(nsIObjectInputStream* aInputStream,
     if (*aPtrAddr)
         return NS_OK;
 
-    nsAutoLock lock(mLock);
-    if (!mObjectInputStream)
-        return NS_OK;
-
     nsresult rv;
     PRUint32 nextOffset;
+    nsAutoLock lock(mLock);
 
-    rv = mObjectInputStream->Read32(&nextOffset);
+    rv = aInputStream->Read32(&nextOffset);
     if (NS_FAILED(rv)) return rv;
 
-    nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mObjectInputStream));
+    nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(aInputStream));
     PRUint32 thisOffset;
 
     rv = seekable->Tell(&thisOffset);
@@ -297,22 +295,22 @@ nsFastLoadService::WriteFastLoadPtr(nsIObjectOutputStream* aOutputStream,
                                     const nsCID& aCID)
 {
     NS_ASSERTION(aObject != nsnull, "writing an unread nsFastPtr?!");
-
-    nsAutoLock lock(mLock);
-    if (!mObjectOutputStream)
-        return NS_OK;
+    if (!aObject)
+        return NS_ERROR_UNEXPECTED;
 
     nsresult rv;
-    nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mObjectOutputStream));
+    nsAutoLock lock(mLock);
+
+    nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(aOutputStream));
     PRUint32 saveOffset, nextOffset;
 
     rv = seekable->Tell(&saveOffset);
     if (NS_FAILED(rv)) return rv;
 
-    rv = mObjectOutputStream->Write32(0);       // nextOffset placeholder
+    rv = aOutputStream->Write32(0);       // nextOffset placeholder
     if (NS_FAILED(rv)) return rv;
 
-    rv = mObjectOutputStream->WriteObject(aObject, aCID, PR_TRUE);
+    rv = aOutputStream->WriteObject(aObject, aCID, PR_TRUE);
     if (NS_FAILED(rv)) return rv;
 
     rv = seekable->Tell(&nextOffset);
@@ -321,7 +319,7 @@ nsFastLoadService::WriteFastLoadPtr(nsIObjectOutputStream* aOutputStream,
     rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, saveOffset);
     if (NS_FAILED(rv)) return rv;
 
-    rv = mObjectOutputStream->Write32(nextOffset);
+    rv = aOutputStream->Write32(nextOffset);
     if (NS_FAILED(rv)) return rv;
 
     rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, nextOffset);
