@@ -438,7 +438,7 @@ et_generic_destructor(void * event)
  */
 void
 ET_SendLoadEvent(MWContext * pContext, int32 type, ETVoidPtrFunc fnClosure,
-		 NET_StreamClass *stream, int32 layer_id, Bool resize_reload)
+		 NET_VoidStreamClass *stream, int32 layer_id, Bool resize_reload)
 {
 
     LoadEvent * pEvent;
@@ -1238,8 +1238,8 @@ ET_FireTimeoutCallBack(void * obj)
 
 typedef struct {
     ETEvent	           ce;
-    NET_StreamClass      * stream;
-    NET_StreamClass	 * old_stream;
+    NET_VoidStreamClass      * stream;
+    NET_VoidStreamClass	 * old_stream;
     URL_Struct	         * url_struct;
     JSBool                 free_stream_on_close;
 } DecoderStreamStruct;
@@ -1262,7 +1262,7 @@ et_setstream_handler(DecoderStreamStruct * e)
 /*
  */
 void
-ET_SetDecoderStream(MWContext * pContext, NET_StreamClass *stream,
+ET_SetDecoderStream(MWContext * pContext, NET_VoidStreamClass *stream,
 	            URL_Struct *url_struct, JSBool free_stream_on_close)
 {
     /* create our event object */
@@ -1298,7 +1298,7 @@ et_clearstream_handler(DecoderStreamStruct * e)
 
     lm_ClearDecoderStream(decoder, JS_TRUE);
     if (e->old_stream)
-        XP_FREE(e->old_stream);
+        NET_StreamFree(e->old_stream);
 
     ET_END_EVENT_HANDLER(e);
 }
@@ -1306,7 +1306,7 @@ et_clearstream_handler(DecoderStreamStruct * e)
 /*
  */
 void
-ET_ClearDecoderStream(MWContext * pContext, NET_StreamClass * old_stream)
+ET_ClearDecoderStream(MWContext * pContext, NET_VoidStreamClass * old_stream)
 {
     /* create our event object */
     DecoderStreamStruct * pEvent = XP_NEW_ZAP(DecoderStreamStruct);
@@ -1770,9 +1770,9 @@ et_streamcomplete_handler(StreamEvent * e)
     url = decoder->nesting_url;
     if (decoder->stream && !url) {
 	/* complete and remove the stream */
-	ET_moz_CallFunction( (ETVoidPtrFunc) decoder->stream->complete, 
+	ET_moz_CallFunction( (ETVoidPtrFunc) NET_StreamComplete, 
 			    (void *)decoder->stream);
-        XP_DELETE(decoder->stream); 
+        NET_StreamFree(decoder->stream); 
         decoder->stream = 0;
         decoder->stream_owner = LO_DOCUMENT_LAYER_ID;
         decoder->free_stream_on_close = JS_FALSE;
@@ -1840,8 +1840,8 @@ et_streamabort_handler(StreamEvent * e)
     ET_BEGIN_EVENT_HANDLER(e);
 
     if (decoder->stream && !decoder->nesting_url) {
-        ET_moz_Abort(decoder->stream->abort, decoder->stream, e->status);
-        XP_DELETE(decoder->stream);
+        ET_moz_Abort(NET_StreamAbort, decoder->stream, e->status);
+        NET_StreamFree(decoder->stream);
         decoder->stream = 0;
         decoder->free_stream_on_close = JS_FALSE;
         decoder->stream_owner = LO_DOCUMENT_LAYER_ID;
