@@ -1385,10 +1385,10 @@ NS_IMETHODIMP nsExternalAppHandler::OnStopRequest(nsIRequest *request, nsISuppor
   if (mCanceled) { // then go cancel our underlying channel too
     nsresult rv = request->Cancel(NS_BINDING_ABORTED);
     // Notify dialog that download is complete.
-    if(mWebProgressListener)
+    if (mWebProgressListener)
     {
       // XXX Do we need to check for errors here (server goes down, network cable cut, etc.)?
-      mWebProgressListener->OnStateChange(nsnull, request, nsIWebProgressListener::STATE_STOP, NS_OK);
+      mWebProgressListener->OnStateChange(nsnull, request, nsIWebProgressListener::STATE_STOP, aStatus);
     }
     return rv;
   }
@@ -1406,10 +1406,10 @@ NS_IMETHODIMP nsExternalAppHandler::OnStopRequest(nsIRequest *request, nsISuppor
   }
 
   // Notify dialog that download is complete.
-  if(mWebProgressListener)
+  if (mWebProgressListener)
   {
     // XXX Do we need to check for errors here (server goes down, network cable cut, etc.)?
-    mWebProgressListener->OnStateChange(nsnull, request, nsIWebProgressListener::STATE_STOP, NS_OK);
+    mWebProgressListener->OnStateChange(nsnull, request, nsIWebProgressListener::STATE_STOP, aStatus);
   }
 
   return ExecuteDesiredAction();
