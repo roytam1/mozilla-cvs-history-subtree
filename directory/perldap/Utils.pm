@@ -196,13 +196,13 @@ sub str2Scope
 #
 sub askPassword
 {
-  my ($prompt) = $_[0];
+  my ($prompt) = shift;
   my ($hasReadKey) = 0;
 
   eval "use Term::ReadKey";
   $hasReadKey=1 unless ($@);
 
-  print "LDAP password: " unless $prompt;
+  print "LDAP password: " if $prompt;
   if ($hasReadKey)
     {
       ReadMode(2);
