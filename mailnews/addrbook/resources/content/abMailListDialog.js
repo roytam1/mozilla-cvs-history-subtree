@@ -42,7 +42,7 @@ var mailList;
 var gParentURI;
 var gListCard;
 var gEditList;
-var gOkCallback;
+var gOkCallback = null;
 var hitReturnInList = false;
 var oldListName = "";
 var gAddressBookBundle;
@@ -246,6 +246,9 @@ function EditListOKButton()
     }
 
     gEditList.editMailListToDatabase(gParentURI, gListCard);
+
+    if (gOkCallback)
+      gOkCallback();
     return true;  // close the window
   }
   else
