@@ -100,6 +100,7 @@
 #include "nsIXBLService.h"
 #include "nsIFrameLoader.h"
 #include "nsICaret.h"
+#include "nsJSEnvironment.h"
 #include "nsLayoutAtoms.h"
 #include "nsPlainTextSerializer.h"
 #include "mozSanitizingSerializer.h"
@@ -260,7 +261,8 @@ Initialize(nsIModule* aSelf)
   }
 
   gInitialized = PR_TRUE;
-    
+
+  nsJSEnvironment::Startup();
   nsresult rv = nsContentUtils::Init();
   if (NS_FAILED(rv)) {
     NS_ERROR("Could not initialize nsContentUtils");
@@ -653,10 +655,11 @@ CreateHTMLImgElement(nsISupports* aOuter, REFNSIID aIID, void** aResult)
   *aResult = nsnull;
   if (aOuter)
     return NS_ERROR_NO_AGGREGATION;
-  nsIHTMLContent* inst;
   // Note! NS_NewHTMLImageElement is special cased to handle a null nodeinfo
-  nsresult rv = NS_NewHTMLImageElement(&inst, nsnull);
-  if (NS_SUCCEEDED(rv)) {
+  nsIHTMLContent* inst = NS_NewHTMLImageElement(nsnull);
+  nsresult rv = NS_ERROR_OUT_OF_MEMORY;
+  if (inst) {
+    NS_ADDREF(inst);
     rv = inst->QueryInterface(aIID, aResult);
     NS_RELEASE(inst);
   }
@@ -703,10 +706,11 @@ CreateHTMLOptionElement(nsISupports* aOuter, REFNSIID aIID, void** aResult)
   *aResult = nsnull;
   if (aOuter)
     return NS_ERROR_NO_AGGREGATION;
-  nsIHTMLContent* inst;
   // Note! NS_NewHTMLOptionElement is special cased to handle a null nodeinfo
-  nsresult rv = NS_NewHTMLOptionElement(&inst, nsnull);
-  if (NS_SUCCEEDED(rv)) {
+  nsIHTMLContent* inst = NS_NewHTMLOptionElement(nsnull);
+  nsresult rv = NS_ERROR_OUT_OF_MEMORY;
+  if (inst) {
+    NS_ADDREF(inst);
     rv = inst->QueryInterface(aIID, aResult);
     NS_RELEASE(inst);
   }

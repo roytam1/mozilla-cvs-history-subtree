@@ -679,9 +679,6 @@ xpfe/components/sidebar/src/Makefile
 xpfe/components/autocomplete/Makefile
 xpfe/components/autocomplete/public/Makefile
 xpfe/components/autocomplete/src/Makefile
-xpfe/components/urlbarhistory/Makefile
-xpfe/components/urlbarhistory/public/Makefile
-xpfe/components/urlbarhistory/src/Makefile
 xpfe/components/urlwidget/Makefile
 xpfe/components/winhooks/Makefile
 xpfe/components/alerts/Makefile
@@ -979,6 +976,12 @@ composer/app/Makefile
 composer/app/profile/Makefile
 composer/base/Makefile
 xpfe/components/build2/Makefile
+"
+
+MAKEFILES_sunbird="
+calendar/sunbird/Makefile
+calendar/sunbird/app/Makefile
+calendar/sunbird/base/Makefile
 "
 
 MAKEFILES_sql="
@@ -1397,6 +1400,7 @@ MAKEFILES_calendar="
         calendar/Makefile
         calendar/libxpical/Makefile
         calendar/resources/Makefile
+        calendar/resources/locale/Makefile
 	other-licenses/libical/Makefile
 	other-licenses/libical/src/Makefile
 	other-licenses/libical/src/libical/Makefile
@@ -1493,6 +1497,10 @@ fi
 
 if test -n "$MOZ_STANDALONE_COMPOSER"; then
     add_makefiles "$MAKEFILES_standalone_composer"
+fi
+
+if test -n "$MOZ_SUNBIRD"; then
+    add_makefiles "$MAKEFILES_sunbird"
 fi
 
 if test -n "$MOZ_IPCD"; then
