@@ -35,12 +35,12 @@ gtk_mozbox_get_type (void)
     {
       static const GtkTypeInfo mozbox_info =
       {
-	"GtkMozBox",
-	sizeof (GtkMozBox),
-	sizeof (GtkMozBoxClass),
-	(GtkClassInitFunc) gtk_mozbox_class_init,
-	(GtkObjectInitFunc) gtk_mozbox_init,
-	/* reserved_1 */ NULL,
+        "GtkMozBox",
+        sizeof (GtkMozBox),
+        sizeof (GtkMozBoxClass),
+        (GtkClassInitFunc) gtk_mozbox_class_init,
+        (GtkObjectInitFunc) gtk_mozbox_init,
+        /* reserved_1 */ NULL,
         /* reserved_2 */ NULL,
         (GtkClassInitFunc) NULL
       };
