@@ -663,7 +663,7 @@ pref("capability.policy.default.SOAPCall.invokeVerifySourceHeader", "allAccess")
 pref("alerts.width", 200);
 pref("alerts.slideIncrement", 1);
 pref("alerts.slideIncrementTime", 10);
-pref("alerts.totalOpenTime", 3000);
+pref("alerts.totalOpenTime", 3500);
 pref("alerts.height", 50);
 
 // update notifications prefs
