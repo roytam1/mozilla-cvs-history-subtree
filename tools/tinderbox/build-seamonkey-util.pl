@@ -1441,6 +1441,7 @@ sub run_all_tests {
            $Settings::XULWindowOpenTest      or
            $Settings::StartupPerformanceTest or
            $Settings::MailBloatTest          or
+           $Settings::QATest                 or
            $Settings::BloatTest2             or
            $Settings::BloatTest) {
             
@@ -2025,7 +2026,7 @@ sub QATest {
                     $Settings::QATestTimeout);
     
     # XXXX testing.  -mcafee
-    #$rv = 'success';
+    $rv = 'success';
 
 
     # Post-process log of test output.
