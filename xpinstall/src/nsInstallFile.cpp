@@ -139,7 +139,12 @@ nsInstallFile::nsInstallFile(nsInstall* inInstall,
         else
         {
             nsresult rv = inPartialPath.Mid(subString, offset, nodeLength);
+// remove dependency on libuconv on unix.
+#ifndef XP_UNIX
             mFinalFile->AppendUnicode(subString.get());
+#else
+            mFinalFile->Append(NS_LossyConvertUCS2toASCII(subString).get());
+#endif
             offset += nodeLength + 1;
             if (!finished)
                 location = inPartialPath.FindChar('/', offset);
@@ -204,10 +209,16 @@ void nsInstallFile::CreateAllFolders(nsInstall *aInstall, nsIFile *aFolder, PRIn
 
         aFolder->Create(nsIFile::DIRECTORY_TYPE, 0755); //nsIFileXXX: What kind of permissions are required here?
         ++mFolderCreateCount;
-
+// remove dependency on libuconv on unix.
+#ifndef XP_UNIX
         nsXPIDLString folderPath;
         aFolder->GetUnicodePath(getter_Copies(folderPath));
         ilc = new nsInstallLogComment(aInstall, NS_LITERAL_STRING("CreateFolder"), folderPath, aError);
+#else
+        nsXPIDLCString folderPath;
+        aFolder->GetPath(getter_Copies(folderPath));
+        ilc = new nsInstallLogComment(aInstall, NS_LITERAL_STRING("CreateFolder"), NS_ConvertASCIItoUCS2(folderPath), aError);
+#endif
         if(ilc == nsnull)
             *aError = nsInstall::OUT_OF_MEMORY;
 

@@ -532,7 +532,8 @@ nsInstallFolder::AppendXPPath(const nsString& aRelativePath)
             aRelativePath.Mid(segment,start,curr-start);
             start = curr+1;
         }
-
+// remove dependency on libuconv on unix.
+#ifndef XP_UNIX
         nsresult rv = mFileSpec->AppendUnicode(segment.get());
         if (NS_FAILED(rv))
         {
@@ -541,6 +542,9 @@ nsInstallFolder::AppendXPPath(const nsString& aRelativePath)
             NS_WARNING("nsInstallFolder: unicode conversion failed");
             mFileSpec->Append(NS_LossyConvertUCS2toASCII(segment).get());
         }
+#else
+        mFileSpec->Append(NS_LossyConvertUCS2toASCII(segment).get());
+#endif
     } while ( start < aRelativePath.Length() );
 }
 
@@ -585,6 +589,9 @@ nsInstallFolder::ToString(nsAutoString* outString)
       return NS_ERROR_NULL_POINTER;
 
   nsXPIDLString  tempUC;
+
+// remove dependency on libuconv on unix. 
+#ifndef XP_UNIX
   nsresult rv = mFileSpec->GetUnicodePath(getter_Copies(tempUC));
   if (NS_SUCCEEDED(rv))
   {
@@ -604,6 +611,11 @@ nsInstallFolder::ToString(nsAutoString* outString)
       rv = mFileSpec->GetPath(getter_Copies(temp));
       outString->Assign(NS_ConvertASCIItoUCS2(temp));
   }
+#else
+  nsXPIDLCString temp;
+  nsresult rv = mFileSpec->GetPath(getter_Copies(temp));
+  outString->Assign(NS_ConvertASCIItoUCS2(temp));
+#endif
 
   PRBool flagIsFile = PR_FALSE;
   mFileSpec->IsFile(&flagIsFile);
