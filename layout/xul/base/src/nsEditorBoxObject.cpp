@@ -37,6 +37,7 @@
  * ***** END LICENSE BLOCK ***** */
 #include "nsCOMPtr.h"
 #include "nsIEditorBoxObject.h"
+#include "nsIDocShell.h"
 #include "nsBoxObject.h"
 #include "nsIPresShell.h"
 #include "nsIFrame.h"
