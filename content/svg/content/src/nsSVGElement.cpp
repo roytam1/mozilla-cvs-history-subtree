@@ -109,7 +109,7 @@ nsSVGElement::Init()
   NS_ENSURE_SUCCESS(rv,rv);
 
   nsCOMPtr<nsINodeInfoManager> nimgr;  
-  rv = mNodeInfo->GetNodeInfoManager(*getter_AddRefs(nimgr));
+  rv = mNodeInfo->GetNodeInfoManager(getter_AddRefs(nimgr));
   NS_ENSURE_SUCCESS(rv,rv);
   
   nsCOMPtr<nsINodeInfo> ni;
@@ -153,13 +153,12 @@ nsSVGElement::ChildCount(PRInt32& aResult) const
 }
 
 NS_IMETHODIMP
-nsSVGElement::ChildAt(PRInt32 aIndex, nsIContent*& aResult) const
+nsSVGElement::ChildAt(PRInt32 aIndex, nsIContent** aResult) const
 {
   nsIContent *child = (nsIContent *)mChildren.SafeElementAt(aIndex);
-  if (nsnull != child) {
-    NS_ADDREF(child);
-  }
-  aResult = child;
+
+  *aResult = child;
+  NS_IF_ADDREF(*aResult);
   return NS_OK;
 }
 
@@ -335,7 +334,7 @@ nsSVGElement::RemoveChildAt(PRInt32 aIndex, PRBool aNotify)
 
 NS_IMETHODIMP
 nsSVGElement::NormalizeAttrString(const nsAString& aStr,
-                                       nsINodeInfo*& aNodeInfo)
+                                  nsINodeInfo** aNodeInfo)
 {
   return mAttributes->NormalizeAttrString(aStr, aNodeInfo);
 }
@@ -347,11 +346,11 @@ nsSVGElement::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
 {
     nsCOMPtr<nsINodeInfoManager> nimgr;
 
-    mNodeInfo->GetNodeInfoManager(*getter_AddRefs(nimgr));
+    mNodeInfo->GetNodeInfoManager(getter_AddRefs(nimgr));
     NS_ENSURE_TRUE(nimgr, NS_ERROR_FAILURE);
 
     nsCOMPtr<nsINodeInfo> ni;
-    nimgr->GetNodeInfo(aName, nsnull, aNameSpaceID, *getter_AddRefs(ni));
+    nimgr->GetNodeInfo(aName, nsnull, aNameSpaceID, getter_AddRefs(ni));
 
     return SetAttr(ni, aValue, aNotify);
 }
@@ -369,12 +368,12 @@ nsSVGElement::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
                            nsAString& aResult) const
 {
   nsCOMPtr<nsIAtom> prefix;
-  return GetAttr(aNameSpaceID, aName, *getter_AddRefs(prefix), aResult);
+  return GetAttr(aNameSpaceID, aName, getter_AddRefs(prefix), aResult);
 }
 
 NS_IMETHODIMP
 nsSVGElement::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                      nsIAtom*& aPrefix,
+                      nsIAtom** aPrefix,
                       nsAString& aResult) const
 {
   return mAttributes->GetAttr(aNameSpaceID, aName, aPrefix, aResult);
@@ -395,9 +394,9 @@ nsSVGElement::HasAttr(PRInt32 aNameSpaceID, nsIAtom* aName) const
 
 NS_IMETHODIMP
 nsSVGElement::GetAttrNameAt(PRInt32 aIndex,
-                            PRInt32& aNameSpaceID, 
-                            nsIAtom*& aName,
-                            nsIAtom*& aPrefix) const
+                            PRInt32* aNameSpaceID,
+                            nsIAtom** aName,
+                            nsIAtom** aPrefix) const
 {
   return mAttributes->GetAttrNameAt(aIndex, aNameSpaceID, aName, aPrefix);
 }
@@ -442,14 +441,16 @@ nsSVGElement::SetBindingParent(nsIContent* aParent)
 // nsIStyledContent methods
 
 NS_IMETHODIMP
-nsSVGElement::GetID(nsIAtom*& aId)const
+nsSVGElement::GetID(nsIAtom** aId)const
 {
-  nsresult rv;  
   nsAutoString value;
   
-  rv = NS_CONST_CAST(nsSVGElement*,this)->GetAttribute(NS_LITERAL_STRING("id"), value);
+  nsresult rv = NS_CONST_CAST(nsSVGElement*,this)->
+                    GetAttribute(NS_LITERAL_STRING("id"), value);
   if (NS_SUCCEEDED(rv))
-    aId = NS_NewAtom(value);
+    *aId = NS_NewAtom(value);
+  else
+    *aId = nsnull;
   
   return rv;
 }
@@ -772,7 +773,7 @@ nsSVGElement::GetOwnerSVGElement(nsIDOMSVGSVGElement * *aOwnerSVGElement)
 
     if (!next) {
       // no anonymous parent, so use explicit one
-      parent->GetParent(*getter_AddRefs(next));
+      parent->GetParent(getter_AddRefs(next));
     }
     
     parent = next;

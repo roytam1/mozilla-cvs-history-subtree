@@ -87,62 +87,6 @@
 
 //#define ENABLE_COUNTERS  // un-comment this to enable counters (bug 15174)
 
-MOZ_DECL_CTOR_COUNTER(SelectorList)
-
-// e.g. "P B, H1 B { ... }" has a selector list with two elements,
-// each of which has two selectors.
-struct SelectorList {
-  SelectorList(void);
-  ~SelectorList(void);
-
-  void AddSelector(const nsCSSSelector& aSelector);
-
-#ifdef NS_DEBUG
-  void Dump(void);
-#endif
-
-  nsCSSSelector*  mSelectors;
-  PRInt32         mWeight;
-  SelectorList*   mNext;
-};
-
-SelectorList::SelectorList(void)
-  : mSelectors(nsnull),
-    mNext(nsnull)
-{
-  MOZ_COUNT_CTOR(SelectorList);
-}
-
-SelectorList::~SelectorList()
-{
-  MOZ_COUNT_DTOR(SelectorList);
-  nsCSSSelector*  sel = mSelectors;
-  while (nsnull != sel) {
-    nsCSSSelector* dead = sel;
-    sel = sel->mNext;
-    delete dead;
-  }
-  if (nsnull != mNext) {
-    delete mNext;
-  }
-}
-
-void SelectorList::AddSelector(const nsCSSSelector& aSelector)
-{ // prepend to list
-  nsCSSSelector* newSel = new nsCSSSelector(aSelector);
-  if (nsnull != newSel) {
-    newSel->mNext = mSelectors;
-    mSelectors = newSel;
-  }
-}
-
-
-#ifdef NS_DEBUG
-void SelectorList::Dump()
-{
-}
-#endif
-
 //----------------------------------------------------------------------
 
 // Your basic top-down recursive descent style parser
@@ -240,8 +184,8 @@ protected:
   void ParseLangSelector(nsCSSSelector& aSelector, PRInt32& aParsingStatus,
                          PRInt32& aErrorCode);
 
-  PRBool ParseSelectorList(PRInt32& aErrorCode, SelectorList*& aListHead);
-  PRBool ParseSelectorGroup(PRInt32& aErrorCode, SelectorList*& aListHead);
+  PRBool ParseSelectorList(PRInt32& aErrorCode, nsCSSSelectorList*& aListHead);
+  PRBool ParseSelectorGroup(PRInt32& aErrorCode, nsCSSSelectorList*& aListHead);
   PRBool ParseSelector(PRInt32& aErrorCode, nsCSSSelector& aSelectorResult);
   nsCSSDeclaration* ParseDeclarationBlock(PRInt32& aErrorCode,
                                            PRBool aCheckForBraces);
@@ -692,12 +636,15 @@ CSSParserImpl::ParseStyleAttribute(const nsAString& aAttributeValue,
     haveBraces = PR_FALSE;
   }
 
-  nsCSSDeclaration* declaration =
-      ParseDeclarationBlock(errorCode, haveBraces);
-  if (nsnull != declaration) {
+  nsCSSDeclaration* declaration = ParseDeclarationBlock(errorCode, haveBraces);
+  if (declaration) {
     // Create a style rule for the delcaration
     nsICSSStyleRule* rule = nsnull;
-    NS_NewCSSStyleRule(&rule, nsCSSSelector());
+    rv = NS_NewCSSStyleRule(&rule, nsnull);
+    if (NS_FAILED(rv)) {
+      declaration->RuleAbort();
+      return rv;
+    }
     rule->SetDeclaration(declaration);
     *aResult = rule;
   }
@@ -1496,7 +1443,7 @@ void CSSParserImpl::AppendRule(nsICSSRule* aRule)
 PRBool CSSParserImpl::ParseRuleSet(PRInt32& aErrorCode, RuleAppendFunc aAppendFunc, void* aData)
 {
   // First get the list of selectors for the rule
-  SelectorList* slist = nsnull;
+  nsCSSSelectorList* slist = nsnull;
   PRUint32 linenum = mScanner->GetLineNumber();
   if (! ParseSelectorList(aErrorCode, slist)) {
     REPORT_UNEXPECTED(
@@ -1525,38 +1472,24 @@ PRBool CSSParserImpl::ParseRuleSet(PRInt32& aErrorCode, RuleAppendFunc aAppendFu
 
   // Translate the selector list and declaration block into style data
 
-  SelectorList* list = slist;
-
-  while (nsnull != list) {
-    nsICSSStyleRule* rule = nsnull;
-
-    NS_NewCSSStyleRule(&rule, *(list->mSelectors));
-    if (nsnull != rule) {
-      if (nsnull != list->mSelectors->mNext) { // hand off other selectors to new rule
-        nsCSSSelector* ruleFirst = rule->FirstSelector();
-        ruleFirst->mNext = list->mSelectors->mNext;
-        list->mSelectors->mNext = nsnull;
-      }
-      rule->SetLineNumber(linenum);
-      rule->SetDeclaration(declaration);
-      rule->SetWeight(list->mWeight);
-//      rule->List();
-      (*aAppendFunc)(rule, aData);
-      NS_RELEASE(rule);
-    }
-
-    list = list->mNext;
+  nsCOMPtr<nsICSSStyleRule> rule;
+  NS_NewCSSStyleRule(getter_AddRefs(rule), slist);
+  if (!rule) {
+    aErrorCode = NS_ERROR_OUT_OF_MEMORY;
+    delete slist;
+    return PR_FALSE;
   }
+  rule->SetLineNumber(linenum);
+  rule->SetDeclaration(declaration);
+  (*aAppendFunc)(rule, aData);
 
-  // Release temporary storage
-  delete slist;
   return PR_TRUE;
 }
 
 PRBool CSSParserImpl::ParseSelectorList(PRInt32& aErrorCode,
-                                        SelectorList*& aListHead)
+                                        nsCSSSelectorList*& aListHead)
 {
-  SelectorList* list = nsnull;
+  nsCSSSelectorList* list = nsnull;
   if (! ParseSelectorGroup(aErrorCode, list)) {
     // must have at least one selector group
     aListHead = nsnull;
@@ -1575,7 +1508,7 @@ PRBool CSSParserImpl::ParseSelectorList(PRInt32& aErrorCode,
 
     if (eCSSToken_Symbol == tk->mType) {
       if (',' == tk->mSymbol) {
-        SelectorList* newList = nsnull;
+        nsCSSSelectorList* newList = nsnull;
         // Another selector group must follow
         if (! ParseSelectorGroup(aErrorCode, newList)) {
           break;
@@ -1627,9 +1560,9 @@ static PRBool IsTreePseudoElement(nsIAtom* aPseudo)
 #endif
 
 PRBool CSSParserImpl::ParseSelectorGroup(PRInt32& aErrorCode,
-                                         SelectorList*& aList)
+                                         nsCSSSelectorList*& aList)
 {
-  SelectorList* list = nsnull;
+  nsCSSSelectorList* list = nsnull;
   PRUnichar     combinator = PRUnichar(0);
   PRInt32       weight = 0;
   PRBool        havePseudoElement = PR_FALSE;
@@ -1639,7 +1572,7 @@ PRBool CSSParserImpl::ParseSelectorGroup(PRInt32& aErrorCode,
       break;
     }
     if (nsnull == list) {
-      list = new SelectorList();
+      list = new nsCSSSelectorList();
       if (nsnull == list) {
         aErrorCode = NS_ERROR_OUT_OF_MEMORY;
         return PR_FALSE;
@@ -1841,13 +1774,12 @@ void CSSParserImpl::ParseTypeOrUniversalSelector(PRInt32&  aDataMask,
     else {  // was universal element selector
       aSelector.SetNameSpace(kNameSpaceID_Unknown); // wildcard
       if (mNameSpace) { // look for default namespace
-        nsINameSpace* defaultNameSpace = nsnull;
-        mNameSpace->FindNameSpace(nsnull, defaultNameSpace);
+        nsCOMPtr<nsINameSpace> defaultNameSpace;
+        mNameSpace->FindNameSpace(nsnull, getter_AddRefs(defaultNameSpace));
         if (defaultNameSpace) {
           PRInt32 defaultID;
-          defaultNameSpace->GetNameSpaceID(defaultID);
+          defaultNameSpace->GetNameSpaceID(&defaultID);
           aSelector.SetNameSpace(defaultID);
-          NS_RELEASE(defaultNameSpace);
         }
       }
       aDataMask |= SEL_MASK_ELEM;
@@ -1867,7 +1799,7 @@ void CSSParserImpl::ParseTypeOrUniversalSelector(PRInt32&  aDataMask,
       if (mNameSpace) {
         ToLowerCase(buffer); // always case insensitive, since stays within CSS
         nsCOMPtr<nsIAtom> prefix = do_GetAtom(buffer);
-        mNameSpace->FindNameSpaceID(prefix, nameSpaceID);
+        mNameSpace->FindNameSpaceID(prefix, &nameSpaceID);
       } // else, no declared namespaces
       if (kNameSpaceID_Unknown == nameSpaceID) {  // unknown prefix, dump it
         REPORT_UNEXPECTED(NS_LITERAL_STRING("Unknown namespace prefix '") +
@@ -1907,13 +1839,12 @@ void CSSParserImpl::ParseTypeOrUniversalSelector(PRInt32&  aDataMask,
     else {  // was element name
       aSelector.SetNameSpace(kNameSpaceID_Unknown); // wildcard
       if (mNameSpace) { // look for default namespace
-        nsINameSpace* defaultNameSpace = nsnull;
-        mNameSpace->FindNameSpace(nsnull, defaultNameSpace);
+        nsCOMPtr<nsINameSpace> defaultNameSpace;
+        mNameSpace->FindNameSpace(nsnull, getter_AddRefs(defaultNameSpace));
         if (defaultNameSpace) {
           PRInt32 defaultID;
-          defaultNameSpace->GetNameSpaceID(defaultID);
+          defaultNameSpace->GetNameSpaceID(&defaultID);
           aSelector.SetNameSpace(defaultID);
-          NS_RELEASE(defaultNameSpace);
         }
       }
       if (mCaseSensitive) {
@@ -1971,13 +1902,12 @@ void CSSParserImpl::ParseTypeOrUniversalSelector(PRInt32&  aDataMask,
     // set namespace to unknown since it is not specified
     aSelector.SetNameSpace(kNameSpaceID_Unknown); // wildcard
     if (mNameSpace) { // look for default namespace
-      nsINameSpace* defaultNameSpace = nsnull;
-      mNameSpace->FindNameSpace(nsnull, defaultNameSpace);
+      nsCOMPtr<nsINameSpace> defaultNameSpace;
+      mNameSpace->FindNameSpace(nsnull, getter_AddRefs(defaultNameSpace));
       if (defaultNameSpace) {
         PRInt32 defaultID;
-        defaultNameSpace->GetNameSpaceID(defaultID);
+        defaultNameSpace->GetNameSpaceID(&defaultID);
         aSelector.SetNameSpace(defaultID);
-        NS_RELEASE(defaultNameSpace);
       }
     }
   }
@@ -2054,7 +1984,7 @@ void CSSParserImpl::ParseAttributeSelector(PRInt32&  aDataMask,
       if (mNameSpace) {
         ToLowerCase(attr); // always case insensitive, since stays within CSS
         nsCOMPtr<nsIAtom> prefix = do_GetAtom(attr);
-        mNameSpace->FindNameSpaceID(prefix, nameSpaceID);
+        mNameSpace->FindNameSpaceID(prefix, &nameSpaceID);
       } // else, no declared namespaces
       if (kNameSpaceID_Unknown == nameSpaceID) {  // unknown prefix, dump it
         REPORT_UNEXPECTED(NS_LITERAL_STRING("Unknown namespace prefix '") +
@@ -2569,7 +2499,7 @@ PRBool CSSParserImpl::ParseColor(PRInt32& aErrorCode, nsCSSValue& aValue)
         }
         return PR_FALSE;  // already pushed back
       }
-      else if (mToken.mIdent.EqualsIgnoreCase("-moz-hsl")) {
+      else if (mToken.mIdent.EqualsIgnoreCase("hsl")) {
         // hsl ( hue , saturation , lightness )
         // "hue" is a number, "saturation" and "lightness" are percentages.
         if (ParseHSLColor(aErrorCode, rgba, ')')) {
@@ -3414,7 +3344,7 @@ PRBool CSSParserImpl::ParseVariant(PRInt32& aErrorCode, nsCSSValue& aValue,
         (eCSSToken_Ident == tk->mType) ||
         ((eCSSToken_Function == tk->mType) && 
          (tk->mIdent.EqualsIgnoreCase("rgb") ||
-          tk->mIdent.EqualsIgnoreCase("-moz-hsl") ||
+          tk->mIdent.EqualsIgnoreCase("hsl") ||
           tk->mIdent.EqualsIgnoreCase("-moz-rgba") ||
           tk->mIdent.EqualsIgnoreCase("-moz-hsla")))) {
       // Put token back so that parse color can get it
@@ -3536,7 +3466,7 @@ PRBool CSSParserImpl::ParseAttr(PRInt32& aErrorCode, nsCSSValue& aValue)
           if (mNameSpace) {
             ToLowerCase(holdIdent); // always case insensitive, since stays within CSS
             nsCOMPtr<nsIAtom> prefix = do_GetAtom(holdIdent);
-            mNameSpace->FindNameSpaceID(prefix, nameSpaceID);
+            mNameSpace->FindNameSpaceID(prefix, &nameSpaceID);
           } // else, no declared namespaces
           if (kNameSpaceID_Unknown == nameSpaceID) {  // unknown prefix, dump it
             return PR_FALSE;

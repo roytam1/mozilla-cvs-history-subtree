@@ -164,21 +164,21 @@ public:
   // interface exposed to the content element:
   PRInt32 Count() const;
   nsresult GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                   nsIAtom*& aPrefix,
+                   nsIAtom** aPrefix,
                    nsAString& aResult);
   nsresult SetAttr(nsINodeInfo* aNodeInfo,
                    const nsAString& aValue,
                    PRBool aNotify);
   nsresult UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
                      PRBool aNotify);
-  PRBool HasAttr(PRInt32 aNameSpaceID,
-                 nsIAtom* aName) const;
+  NS_IMETHOD_(PRBool) HasAttr(PRInt32 aNameSpaceID,
+                              nsIAtom* aName) const;
   nsresult NormalizeAttrString(const nsAString& aStr,
-                               nsINodeInfo*& aNodeInfo);
+                               nsINodeInfo** aNodeInfo);
   nsresult GetAttrNameAt(PRInt32 aIndex,
-                         PRInt32& aNameSpaceID, 
-                         nsIAtom*& aName,
-                         nsIAtom*& aPrefix);
+                         PRInt32* aNameSpaceID, 
+                         nsIAtom** aName,
+                         nsIAtom** aPrefix);
   nsresult AddMappedSVGValue(nsIAtom* name, nsISupports* value,
                              PRInt32 namespaceID=kNameSpaceID_None);
   nsresult CopyAttributes(nsSVGAttributes* dest);
