@@ -663,20 +663,27 @@ nsTopProgressManager::UpdateStatusMessage(AggregateTransferInfo& info)
     }
 
     if (elapsed > TIME_UNTIL_DETAILS) {
-        PRUint32 len = PL_strlen(buf);
-
-        // XXX needs to go to allxpstr.h
-        if (len > 0)
-            len += PR_snprintf(buf + len, sizeof(buf) - len, ", ");
-
-        char* p = buf + len;
-        PRUint32 size = sizeof(buf) - len;
+        char details[256];
+        *details = 0;
 
         if (!info.UnknownLengthCount && info.ContentLength > 0) {
-            formatKnownContentLength(p, size, info.BytesReceived, info.ContentLength, elapsed);
+            formatKnownContentLength(details, sizeof(details),
+                                     info.BytesReceived,
+                                     info.ContentLength,
+                                     elapsed);
         }
-        else {
-            formatUnknownContentLength(p, size, info.BytesReceived, elapsed);
+        else if (info.BytesReceived > 0) {
+            formatUnknownContentLength(details, sizeof(details),
+                                       info.BytesReceived,
+                                       elapsed);
+        }
+
+        if (*details) {
+            // XXX needs to go to allxpstr.h
+            if (*buf)
+                PL_strcatn(buf, sizeof(buf), ", ");
+
+            PL_strcatn(buf, sizeof(buf), details);
         }
     }
 
