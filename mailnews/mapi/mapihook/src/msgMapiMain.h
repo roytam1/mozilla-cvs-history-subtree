@@ -46,14 +46,6 @@
 #include "nsString.h"
 #include "nsHashtable.h"
 
-typedef struct _tagProfileNameSessionIdMap
-{
-    PRUint32 sessionId;
-    PRUint32 shareCount;
-
-} ProfileNameSessionIdMap;
-
-
 class nsMAPIConfiguration
 {
 private :

@@ -93,9 +93,6 @@ FreeSessionMapEntries(nsHashKey *aKey, void *aData, void* aClosure)
 static PRBool
 FreeProfileMapEntries(nsHashKey *aKey, void *aData, void* aClosure)
 {
-    ProfileNameSessionIdMap *pTemp = (ProfileNameSessionIdMap *) aData;
-    delete pTemp;
-    pTemp = nsnull;
     return PR_TRUE;
 }
 
@@ -147,50 +144,31 @@ PRInt16 nsMAPIConfiguration::RegisterSession(PRUint32 aHwnd,
         return -1;
     }
 
-    nsAutoString usernameString(aUserName);
-    usernameString.AppendInt(aHwnd);
-    nsStringKey usernameKey(usernameString.get());
+    nsStringKey usernameKey(aUserName);
+    n_SessionId = (PRUint32) m_ProfileMap->Get(&usernameKey);
 
-    ProfileNameSessionIdMap *pProfTemp = nsnull;
-    pProfTemp = (ProfileNameSessionIdMap *) m_ProfileMap->Get(&usernameKey);
-    if (pProfTemp != nsnull)
+    // try to share a session; if not create a session
+
+    if (n_SessionId > 0)
     {
-        n_SessionId = pProfTemp->sessionId;
-        
-        // check wheather is there any session. if not let us create one.
-
         nsPRUintKey sessionKey(n_SessionId);
-        nsMAPISession *pCheckSession = (nsMAPISession *)m_SessionMap->Get(&sessionKey);
-        if (pCheckSession == nsnull)
-            n_SessionId = 0;
+        nsMAPISession *pTemp = (nsMAPISession *)m_SessionMap->Get(&sessionKey);
+        if (pTemp != nsnull)
+        {
+            pTemp->IncrementSession();
+            *aSession = n_SessionId;
+            nResult = 1;
+        }
     }
-
-    // create a new session ; if new session is specified OR there is no session
-
-    if (aNewSession || n_SessionId == 0) // checking for n_SessionId is a concession
+    else if (aNewSession || n_SessionId == 0) // checking for n_SessionId is a concession
     {
+        // create a new session ; if new session is specified OR there is no session
         nsMAPISession *pTemp = nsnull;
         pTemp = new nsMAPISession(aHwnd, aUserName,
                                aPassword, aForceDownLoad, aIdKey);
 
         if (pTemp != nsnull)
         {
-            if (pProfTemp == nsnull)
-            {
-                pProfTemp = new ProfileNameSessionIdMap;
-                if (pProfTemp == nsnull)
-                {
-                    delete pTemp;
-                    pTemp = nsnull;
-                    PR_Unlock(m_Lock);
-                    return 0;
-                }
-
-                pProfTemp->shareCount = 1;
-            }
-            else
-                pProfTemp->shareCount++;
-
             session_generator++;
 
             // I don't think there will be (2 power 32) sessions alive
@@ -201,25 +179,10 @@ PRInt16 nsMAPIConfiguration::RegisterSession(PRUint32 aHwnd,
 
             nsPRUintKey sessionKey(session_generator);
             m_SessionMap->Put(&sessionKey, pTemp);
-
-            pProfTemp->sessionId  = session_generator;
-            m_ProfileMap->Put(&usernameKey, (void*)pProfTemp);
+            m_ProfileMap->Put(&usernameKey, (void*)session_generator);
 
             *aSession = session_generator;
             sessionCount++;
-            nResult = 1;
-        }
-    }
-    else
-    if (n_SessionId > 0)        // share the session;
-    {
-        nsPRUintKey sessionKey(n_SessionId);
-        nsMAPISession *pTemp = (nsMAPISession *)m_SessionMap->Get(&sessionKey);
-        if (pTemp != nsnull)
-        {
-            pTemp->IncrementSession();
-            pProfTemp->shareCount++;
-            *aSession = n_SessionId;
             nResult = 1;
         }
     }
@@ -243,29 +206,15 @@ PRBool nsMAPIConfiguration::UnRegisterSession(PRUint32 aSessionID)
         {
             if (pTemp->DecrementSession() == 0)
             {
-                nsAutoString usernameString(pTemp->m_pProfileName.get());
-                usernameString.AppendInt(pTemp->m_hAppHandle);
-                nsStringKey stringKey(usernameString.get());
-
-                ProfileNameSessionIdMap *pProfTemp = nsnull;
-                pProfTemp = (ProfileNameSessionIdMap *) m_ProfileMap->Get(&stringKey);
-                pProfTemp->shareCount--;
-                if (pProfTemp->shareCount == 0)
-                {
-                    m_ProfileMap->Remove(&stringKey);
-                    delete pProfTemp;
-                    pProfTemp = nsnull;
-                }
-
-                delete pTemp;
-                pTemp = nsnull;
-
+                nsStringKey stringKey(pTemp->m_pProfileName.get());
+                m_ProfileMap->Remove(&stringKey);
                 m_SessionMap->Remove(&sessionKey);
                 sessionCount--;
                 bResult = PR_TRUE;
             }
         }
     }
+
     PR_Unlock(m_Lock);
     return bResult;
 }
