@@ -1118,17 +1118,17 @@ rdf_BlockingWrite(nsIOutputStream* stream, const char* buf, PRUint32 size)
 static nsresult
 rdf_BlockingWrite(nsIOutputStream* stream, const nsString& s)
 {
-    char buf[256];
-    char* p = buf;
+    nsresult rv;
+    char* utf8 = s.ToNewUTF8String();
+    if (! utf8)
+        return NS_ERROR_OUT_OF_MEMORY;
 
-    if (s.Length() >= PRInt32(sizeof buf))
-        p = (char *)nsAllocator::Alloc(s.Length() + 1);
+    // Be sure to grab the UTF-8 encoded string's length, because it
+    // may be longer than the length of the unencoded string.
+    PRInt32 len = PL_strlen(utf8);
+    rv = rdf_BlockingWrite(stream, utf8, len);
 
-    nsresult rv = rdf_BlockingWrite(stream, s.ToCString(p, s.Length() + 1), s.Length());
-
-    if (p != buf)
-        nsCRT::free(p);
-
+    nsCRT::free(utf8);
     return rv;
 }
 
