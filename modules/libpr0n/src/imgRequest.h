@@ -34,8 +34,6 @@
 #include "nsIChannel.h"
 #include "nsIStreamListener.h"
 #include "nsIURI.h"
-#include "nsIHttpEventSink.h"
-#include "nsIInterfaceRequestor.h"
 
 #include "nsCOMPtr.h"
 #include "nsString.h"
@@ -57,9 +55,7 @@ enum {
 class imgRequest : public imgILoad,
                    public imgIDecoderObserver,
                    public nsIStreamListener,
-                   public nsSupportsWeakReference,
-                   public nsIHttpEventSink,
-                   public nsIInterfaceRequestor
+                   public nsSupportsWeakReference
 {
 public:
   imgRequest();
@@ -107,8 +103,6 @@ public:
   NS_DECL_IMGICONTAINEROBSERVER
   NS_DECL_NSISTREAMLISTENER
   NS_DECL_NSIREQUESTOBSERVER
-  NS_DECL_NSIHTTPEVENTSINK
-  NS_DECL_NSIINTERFACEREQUESTOR
 
 private:
   nsCOMPtr<nsIChannel> mChannel;
