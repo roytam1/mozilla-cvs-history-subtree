@@ -29,6 +29,10 @@ Contributors:
 <overlay xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
      xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
+<script type="application/x-javascript" src="chrome://global/content/nsTransferable.js"/>
+<script type="application/x-javascript" src="chrome://global/content/nsDragAndDrop.js"/>
+<script type="application/x-javascript" src="chrome://messenger/content/addressbook/abDragDrop.js"/>
+
   <!-- FIX ME - remove document.commandDispatcher.updateCommands() when tree selection calls this automatically -->
   <tree id="dirTree" 
       class="abDirectory" 
@@ -41,8 +45,8 @@ Contributors:
       allownegativeassertions="false"
           coalesceduplicatearcs="false"
           multiple="true"
-          ondragover="return DragOverTree(event);"
-          ondragdrop="return DropOnDirectoryTree(event);">
+          ondragover="nsDragAndDrop.dragOver(event, abDirTreeObserver);"
+          ondragdrop="nsDragAndDrop.drop(event, abDirTreeObserver);">
     
     <template>
       <rule>
