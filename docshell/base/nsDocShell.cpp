@@ -3777,6 +3777,17 @@ nsDocShell::OnNewURI(nsIURI *aURI, nsIChannel *aChannel, PRUint32 aLoadType)
   }
 
    SetCurrentURI(aURI);
+   // if there's a refresh header in the channel, this method
+   // will set it up for us. 
+   SetupRefreshURI(aChannel);
+   
+   mInitialPageLoad = PR_FALSE;
+   return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsDocShell::SetupRefreshURI(nsIChannel * aChannel)
+{
    nsCOMPtr<nsIHTTPChannel> httpChannel(do_QueryInterface(aChannel));
    if(httpChannel)
    {
@@ -3859,7 +3870,6 @@ nsDocShell::OnNewURI(nsIURI *aURI, nsIChannel *aChannel, PRUint32 aLoadType)
       }
    }
 
-   mInitialPageLoad = PR_FALSE;
    return NS_OK;
 }
 
