@@ -317,7 +317,10 @@ typedef enum {
   NPPVpluginTimerInterval,
 
   NPPVpluginScriptableInstance = 10,
-  NPPVpluginScriptableIID = 11
+  NPPVpluginScriptableIID = 11,
+
+  /* 12 and over are available on Mozilla builds starting with 0.9.9 */
+  NPPVjavascriptPushCallerBool = 12
 } NPPVariable;
 
 /*
