@@ -573,11 +573,16 @@
       <parameter name="aInput"/>
         <body><![CDATA[
           this.treeBoxObject.selection.currentIndex=-1;
-          if (!aInput) 
-            this.tree.setAttribute("ref", "NC:BookmarksRoot");
-          else
+          if (!aInput) {
+            this.tree.setAttribute("ref", this.originalRef);
+          }
+          else {
+            if (!this.originalRef) {
+              this.originalRef = this.tree.getAttribute("ref");
+            }
             this.tree.setAttribute("ref",
                                    "find:datasource=rdf:bookmarks&match=http://home.netscape.com/NC-rdf#Name&method=contains&text=" + escape(aInput));
+          }
         ]]></body>
       </method>
 
@@ -835,7 +840,7 @@
                  onkeypress="event.preventBubble();"/>
       <vbox flex="1">
         <tree anonid="bookmarks-tree" flex="1" class="plain" enableColumnDrag="true"
-                  datasources="rdf:bookmarks rdf:internetsearch rdf:files rdf:localsearch" ref="NC:BookmarksRoot" flags="dont-build-content"
+                  datasources="rdf:bookmarks rdf:internetsearch rdf:files rdf:localsearch" ref="NC:BookmarksTopRoot" flags="dont-build-content"
                   onkeypress="if (event.keyCode == 13) this.parentNode.parentNode.loadBookmarkBrowser(event);"
                   onclick="this.parentNode.parentNode.openItem(event, 1);"
                   ondblclick="this.parentNode.parentNode.openItem(event, 2);"
@@ -998,7 +1003,7 @@
     <xbl:content xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" xmlns:xbl="http://www.mozilla.org/xbl">
       <tree anonid="bookmarks-tree" flex="1" hidecolumnpicker="true"
             xbl:inherits="rows"
-            datasources="rdf:bookmarks rdf:internetsearch rdf:files rdf:localsearch" ref="NC:BookmarksRoot" flags="dont-build-content"
+            datasources="rdf:bookmarks rdf:internetsearch rdf:files rdf:localsearch" ref="NC:BookmarksTopRoot" flags="dont-build-content"
             onselect="this.parentNode.treeBoxObject.view.selectionChanged();">
         <template>
           <rule iscontainer="true">

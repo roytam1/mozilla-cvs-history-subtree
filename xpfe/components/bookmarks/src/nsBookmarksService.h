@@ -56,15 +56,15 @@
 #include "nsICacheSession.h"
 #include "nsILocalFile.h"
 
-#ifdef	DEBUG
-#ifdef	XP_MAC
+#ifdef DEBUG
+#ifdef XP_MAC
 #include <Timer.h>
 #endif
 #endif
 
 class nsBookmarksService : public nsIBookmarksService,
-			   public nsIRDFDataSource,
-			   public nsIRDFRemoteDataSource,
+                           public nsIRDFDataSource,
+                           public nsIRDFRemoteDataSource,
 			   public nsIStreamListener,
 			   public nsIRDFObserver,
 			   public nsIObserver,
@@ -82,7 +82,8 @@ protected:
 
   PRUint32      htmlSize;
   PRInt32       mUpdateBatchNest;
-  nsString      mPersonalToolbarName;
+  nsXPIDLString mPersonalToolbarName;
+  nsXPIDLString mBookmarksRootName;
   PRBool        mBookmarksAvailable;
   PRBool        mDirty;
   PRBool        mBrowserIcons;

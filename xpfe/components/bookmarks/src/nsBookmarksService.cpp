@@ -49,6 +49,7 @@
 #include "nsFileStream.h"
 #include "nsIDOMWindow.h"
 #include "nsIObserverService.h"
+#include "nsIProfile.h"
 #include "nsIRDFContainer.h"
 #include "nsIRDFContainerUtils.h"
 #include "nsIRDFService.h"
@@ -89,6 +90,7 @@ nsIRDFResource    *kNC_SystemBookmarksStaticRoot;
 nsIRDFResource		*kNC_Bookmark;
 nsIRDFResource		*kNC_BookmarkSeparator;
 nsIRDFResource		*kNC_BookmarkAddDate;
+nsIRDFResource		*kNC_BookmarksTopRoot;
 nsIRDFResource		*kNC_BookmarksRoot;
 nsIRDFResource		*kNC_Description;
 nsIRDFResource		*kNC_Folder;
@@ -147,15 +149,16 @@ static NS_DEFINE_CID(kPlatformCharsetCID,         NS_PLATFORMCHARSET_CID);
 static NS_DEFINE_CID(kCacheServiceCID,            NS_CACHESERVICE_CID);
 static NS_DEFINE_CID(kCharsetAliasCID,            NS_CHARSETALIAS_CID);
 
+#define URINC_BOOKMARKS_TOPROOT_STRING            "NC:BookmarksTopRoot"
 #define URINC_BOOKMARKS_ROOT_STRING               "NC:BookmarksRoot"
 
+static const char kURINC_BookmarksTopRoot[]           = URINC_BOOKMARKS_TOPROOT_STRING; 
 static const char kURINC_BookmarksRoot[]              = URINC_BOOKMARKS_ROOT_STRING; 
 static const char kURINC_IEFavoritesRoot[]            = "NC:IEFavoritesRoot"; 
 static const char kURINC_SystemBookmarksStaticRoot[]  = "NC:SystemBookmarksStaticRoot"; 
 static const char kURINC_NewBookmarkFolder[]          = "NC:NewBookmarkFolder"; 
 static const char kURINC_PersonalToolbarFolder[]      = "NC:PersonalToolbarFolder"; 
 static const char kURINC_NewSearchFolder[]            = "NC:NewSearchFolder"; 
-static const char kDefaultPersonalToolbarFolder[]     = "Personal Toolbar Folder";
 static const char kBookmarkCommand[]                  = "http://home.netscape.com/NC-rdf#command?";
 
 #define bookmark_properties  NS_LITERAL_CSTRING("chrome://communicator/locale/bookmarks/bookmarks.properties")
@@ -195,6 +198,8 @@ bm_AddRefGlobals()
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get charset alias service");
 		if (NS_FAILED(rv)) return rv;
 
+		gRDF->GetResource(NS_LITERAL_CSTRING(kURINC_BookmarksTopRoot),
+                      &kNC_BookmarksTopRoot);
 		gRDF->GetResource(NS_LITERAL_CSTRING(kURINC_BookmarksRoot),
                       &kNC_BookmarksRoot);
 		gRDF->GetResource(NS_LITERAL_CSTRING(kURINC_IEFavoritesRoot),
@@ -319,6 +324,7 @@ bm_ReleaseGlobals()
 		NS_IF_RELEASE(kNC_Bookmark);
 		NS_IF_RELEASE(kNC_BookmarkSeparator);
 		NS_IF_RELEASE(kNC_BookmarkAddDate);
+		NS_IF_RELEASE(kNC_BookmarksTopRoot);
 		NS_IF_RELEASE(kNC_BookmarksRoot);
 		NS_IF_RELEASE(kNC_Description);
 		NS_IF_RELEASE(kNC_Folder);
@@ -446,7 +452,6 @@ private:
   PRUint32                    mContentsLen;
   PRInt32                     mStartOffset;
   nsInputFileStream*          mInputStream;
-  nsString                    mPersonalToolbarName;
 
 friend	class nsBookmarksService;
 
@@ -501,7 +506,7 @@ public:
 	~BookmarkParser();
 
 	nsresult Init(nsFileSpec *fileSpec, nsIRDFDataSource *aDataSource, 
-                const nsString &defaultPersonalToolbarName, PRBool aIsImportOperation = PR_FALSE);
+                      PRBool aIsImportOperation = PR_FALSE);
 	nsresult DecodeBuffer(nsString &line, char *buf, PRUint32 aLength);
 	nsresult ProcessLine(nsIRDFContainer *aContainer, nsIRDFResource *nodeType,
 			nsCOMPtr<nsIRDFResource> &bookmarkNode, const nsString &line,
@@ -590,13 +595,12 @@ static const char kCharsetEquals[]         = "charset=";		// note: no quote
 
 nsresult
 BookmarkParser::Init(nsFileSpec *fileSpec, nsIRDFDataSource *aDataSource, 
-                     const nsString &defaultPersonalToolbarName, PRBool aIsImportOperation)
+                     PRBool aIsImportOperation)
 {
 	mDataSource = aDataSource;
 	mFoundIEFavoritesRoot = PR_FALSE;
 	mFoundPersonalToolbarFolder = PR_FALSE;
   mIsImportOperation = aIsImportOperation;
-  mPersonalToolbarName = defaultPersonalToolbarName;
 
 	nsresult		rv;
 
@@ -1804,15 +1808,45 @@ nsBookmarksService::Init()
 		if (mPersonalToolbarName.Length() == 0)
 		{
 			// rjc note: always try to get the string bundle (see above) before trying this
-			getLocaleString("DefaultPersonalToolbarFolder", mPersonalToolbarName);
-		}
-
-		if (mPersonalToolbarName.Length() == 0)
-		{
-			// no preference, so fallback to a well-known name
-			mPersonalToolbarName.AssignWithConversion(kDefaultPersonalToolbarFolder);
+                        rv = mBundle->GetStringFromName(NS_LITERAL_STRING("bookmarks_root").get(), 
+                                                        getter_Copies(mPersonalToolbarName));
+                        if (NS_FAILED(rv) || mPersonalToolbarName.Length() == 0) {
+                          // no preference, so fallback to a well-known name
+                          mPersonalToolbarName.Assign(NS_LITERAL_STRING("Personal Toolbar Folder"));
+                        }
 		}
 	}
+
+  // Gets the default name for NC:BookmarksRoot
+  // if the user has more than one profile: always include the profile name
+  // otherwise, include the profile name only if it is not named 'default'
+  // the profile "default" is not localizable and arises when there is no ns4.x install
+  nsCOMPtr<nsIProfile> profileService(do_GetService(NS_PROFILE_CONTRACTID,&rv));
+  nsXPIDLString        currentProfileName;
+  nsresult             useProfile;
+
+  useProfile = profileService->GetCurrentProfile(getter_Copies(currentProfileName));
+  if (NS_SUCCEEDED(useProfile))
+  {
+    const PRUnichar *param[1] = {currentProfileName.get()};
+    useProfile = mBundle->FormatStringFromName(NS_LITERAL_STRING("bookmarks_root").get(),
+                                               param, 1, getter_Copies(mBookmarksRootName));
+    if (NS_SUCCEEDED(useProfile))
+    {
+      PRInt32 profileCount;
+      useProfile = profileService->GetProfileCount(&profileCount);
+      if (NS_SUCCEEDED(useProfile) && profileCount == 1)
+      {
+        ToLowerCase(currentProfileName);
+        if (currentProfileName.Equals(NS_LITERAL_STRING("default")))
+          useProfile = NS_ERROR_FAILURE;
+      }
+    }
+  }
+
+  if (NS_FAILED(useProfile)) {
+    mBookmarksRootName.Assign(NS_LITERAL_STRING("Bookmarks"));
+  }
 
     // Register as an observer of profile changes
     nsCOMPtr<nsIObserverService> observerService = 
@@ -3375,7 +3409,7 @@ nsBookmarksService::ImportSystemBookmarks(nsIRDFResource* aParentFolder)
   ieFavoritesFile += "Favorites.html";
 
   BookmarkParser parser;
-  parser.Init(&ieFavoritesFile, mInner, nsAutoString());
+  parser.Init(&ieFavoritesFile, mInner);
   BeginUpdateBatch(this);
   parser.Parse(aParentFolder, kNC_Bookmark);
   EndUpdateBatch(this);
@@ -4489,7 +4523,7 @@ nsBookmarksService::importBookmarks(nsISupportsArray *aArguments)
 
 	// read 'em in
 	BookmarkParser		parser;
-	parser.Init(&fileSpec, mInner, nsAutoString(), PR_TRUE);
+	parser.Init(&fileSpec, mInner, PR_TRUE);
 
 	// Note: can't Begin|EndUpdateBatch() this as notifications are required
 	parser.Parse(newBookmarkFolder, kNC_Bookmark);
@@ -4771,7 +4805,7 @@ nsBookmarksService::ReadFavorites()
 	if (NS_SUCCEEDED(rv = gRDFC->MakeSeq(mInner, kNC_IEFavoritesRoot, nsnull)))
 	{
 		BookmarkParser parser;
-		parser.Init(&ieFavoritesFile, mInner, nsAutoString());
+		parser.Init(&ieFavoritesFile, mInner);
         BeginUpdateBatch(this);
 		parser.Parse(kNC_IEFavoritesRoot, kNC_IEFavorite);
 		EndUpdateBatch(this);
@@ -4824,12 +4858,27 @@ nsBookmarksService::initDatasource()
     rv = mInner->AddObserver(this);
     if (NS_FAILED(rv)) return rv;
 
+    rv = gRDFC->MakeSeq(mInner, kNC_BookmarksTopRoot, nsnull);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Unable to make NC:BookmarksTopRoot a sequence");
+    if (NS_FAILED(rv)) return rv;
+
     rv = gRDFC->MakeSeq(mInner, kNC_BookmarksRoot, nsnull);
     NS_ASSERTION(NS_SUCCEEDED(rv), "Unable to make NC:BookmarksRoot a sequence");
     if (NS_FAILED(rv)) return rv;
 
     // Make sure bookmark's root has the correct type
+    rv = mInner->Assert(kNC_BookmarksTopRoot, kRDF_type, kNC_Folder, PR_TRUE);
+    if (NS_FAILED(rv)) return rv;
+
     rv = mInner->Assert(kNC_BookmarksRoot, kRDF_type, kNC_Folder, PR_TRUE);
+    if (NS_FAILED(rv)) return rv;
+
+    // Insert NC:BookmarksRoot in NC:BookmarksTopRoot
+    nsCOMPtr<nsIRDFContainer> container(do_CreateInstance(kRDFContainerCID, &rv));
+    if (NS_FAILED(rv)) return rv;
+    rv = container->Init(this, kNC_BookmarksTopRoot);
+    if (NS_FAILED(rv)) return rv;
+    rv = container->AppendElement(kNC_BookmarksRoot);
 
     return rv;
 }
@@ -4898,7 +4947,7 @@ nsBookmarksService::LoadBookmarks()
 	{ 
     // <-- scope the stream to get the open/close automatically.
     BookmarkParser parser;
-    parser.Init(&bookmarksFile, mInner, mPersonalToolbarName);
+    parser.Init(&bookmarksFile, mInner);
 
 #if defined(XP_WIN) || defined(XP_BEOS)
 #if defined(XP_WIN)
@@ -4950,7 +4999,15 @@ nsBookmarksService::LoadBookmarks()
           setFolderHint(ptSource, kNC_PersonalToolbarFolder);
       }
     }
-	} // <-- scope the stream to get the open/close automatically.
+
+    // sets the default bookmarks root name.
+    nsCOMPtr<nsIRDFLiteral>	brNameLiteral;
+    rv = gRDF->GetLiteral(mBookmarksRootName.get(), getter_AddRefs(brNameLiteral));
+    if (NS_SUCCEEDED(rv))
+      mInner->Assert(kNC_BookmarksRoot, kNC_Name, brNameLiteral, PR_TRUE);
+
+  } // <-- scope the stream to get the open/close automatically.
+
 
   // Now append the one-time-per-profile empty "Full" System Bookmarks Root. 
   // When the user opens this folder for the first time, system bookmarks are 

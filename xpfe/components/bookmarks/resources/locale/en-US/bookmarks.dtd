@@ -30,7 +30,7 @@
 <!ENTITY command.newBookmark.accesskey "B">
 <!ENTITY menuitem.newFolder.label      "Folder">
 <!ENTITY button.newFolder.label        "New Folder">
-<!ENTITY button.newFolder.accesskey    "N">
+<!ENTITY button.newFolder.accesskey    "F">
 <!ENTITY command.newFolder.accesskey   "F">
 <!ENTITY menuitem.newSeparator.label   "Separator">
 <!ENTITY button.newSeparator.label     "New Separator">
@@ -92,5 +92,5 @@
 
 <!ENTITY bookmarksWindowTitle.label     "Bookmark Manager">
 
-<!ENTITY find.label                     "Search">
-<!ENTITY find.accesskey                 "S">
+<!ENTITY find.label                     "Find">
+<!ENTITY find.accesskey                 "n">

@@ -46,22 +46,13 @@ function Startup()
       title = BookmarksUtils.getProperty(window.arguments[0], NC_NS+"Name");
     
     titleString = BookmarksUtils.getLocaleString("window_title", title);
-    windowNode.setAttribute("title", titleString);
   }
   else {
-    const kProfileContractID = "@mozilla.org/profile/manager;1";
-    const kProfileIID = Components.interfaces.nsIProfile;
-    const kProfile = Components.classes[kProfileContractID].getService(kProfileIID);
-    var length = {value:0};
-    var profileList = kProfile.getProfileList(length);
-    // unset the default BM title if the user has more than one profile
-    // or if he/she has changed the name of the default one.
-    // the profile "default" is not localizable.
-    if (length.value > 1 || kProfile.currentProfile.toLowerCase() != "default") {
-      titleString = BookmarksUtils.getLocaleString("bookmarks_root", kProfile.currentProfile);
-      windowNode.setAttribute("title", titleString);
-    }
+    titleString = BookmarksUtils.getLocaleString("bookmarks_title", title);
   }
+
+  windowNode.setAttribute("title", titleString);
+
   gBMtxmgr = BookmarksUtils.getTransactionManager();
  
   bookmarksView.treeBoxObject.selection.select(0);

@@ -99,9 +99,6 @@
     <separator id="folderbuttonseparator" class="thin"/>
 
     <hbox pack="end">
-      <button label="&button.defaultfolder.label;" 
-              accesskey="&button.defaultfolder.accesskey;"
-              oncommand="useDefaultFolder();"/>
       <button label="&newFolder.label;"
               accesskey="&newFolder.accesskey;"
               oncommand="createNewFolder();"/>

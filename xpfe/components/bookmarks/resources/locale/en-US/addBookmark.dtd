@@ -32,7 +32,5 @@
 <!ENTITY destination.accesskey      "D">
 <!ENTITY newFolder.label            "New Folder...">
 <!ENTITY newFolder.accesskey        "w">
-<!ENTITY button.defaultfolder.label "Use Default">
-<!ENTITY button.defaultfolder.accesskey "U">
 <!ENTITY addGroup.label             "Bookmark this group of tabs">
 <!ENTITY addGroup.accesskey         "B">

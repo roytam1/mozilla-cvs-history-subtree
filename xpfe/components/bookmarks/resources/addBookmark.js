@@ -293,20 +293,6 @@ function createNewFolder ()
   bookmarksView.createNewFolder();
 }
 
-function useDefaultFolder ()
-{
-  var bookmarkView = document.getElementById("bookmarks-view");
-  var folder = BookmarksUtils.getNewBookmarkFolder();
-  var ind = bookmarkView.treeBuilder.getIndexOfResource(folder);
-  if (ind != -1) {
-    bookmarkView.tree.focus();
-    bookmarkView.treeBoxObject.selection.select(ind);
-  } else {
-    bookmarkView.treeBoxObject.selection.clearSelection();
-  }
-  gCreateInFolder = folder.Value;
-}
-
 var gOldNameValue = "";
 var gOldURLValue = "";
 var gOldShortcutURLValue = "";
