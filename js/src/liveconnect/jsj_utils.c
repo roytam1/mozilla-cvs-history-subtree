@@ -219,39 +219,37 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
     java_error_msg = NULL;
     java_exception = (*jEnv)->ExceptionOccurred(jEnv);
     if (java_exception) {
-        if (njJSException &&    /* Check for JSException */
+
+        /* Check for JSException */
+        if (njJSException && 
             (*jEnv)->IsInstanceOf(jEnv, java_exception, njJSException)) {
-            (*jEnv)->ExceptionClear(jEnv);
-            jsj_ReportUncaughtJSException(cx, jEnv, java_exception);
-            return;
+
+            /* Check for wrappedException */
+            java_obj = (*jEnv)->GetObjectField(jEnv, java_exception, 
+                                               njJSException_wrappedException);
             
-        /* Check for JSWrappedException */
-        } else if (njJSWrappedException && 
-                   (*jEnv)->IsInstanceOf(jEnv, java_exception, 
-                                         njJSWrappedException)) {
-            java_obj = 
-                (*jEnv)->GetObjectField(jEnv, 
-                                        java_exception, 
-                                        njJSWrappedException_exception);
-            
-            if (!jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_obj, 
-                                                &js_exception))
-                goto do_report;
-            
+            if (java_obj == NULL) {
+                jsj_ReportUncaughtJSException(cx, jEnv, java_exception);
+                return;
+            } else 
+                if (!jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_obj, 
+                                                    &js_exception)) {
+                    goto do_report;
+                }
+
         /* Check for internal exception */
         } else { 
             if (!JSJ_ConvertJavaObjectToJSValue(cx, java_exception,
-                                                &js_exception))
+                                                &js_exception)) {
                 goto do_report;
-            
+            }
         }
+    
+        /* Set pending JS exception and clear the java exception. */
+        JS_SetPendingException(cx, js_exception);                        
+        (*jEnv)->ExceptionClear(jEnv);  
+        return;
     }
-    
-    /* Set pending JS exception and clear the java exception. */
-    JS_SetPendingException(cx, js_exception);                        
-    (*jEnv)->ExceptionClear(jEnv);  
-    return;
-    
 do_report:
     js_error_msg = JS_vsmprintf(format, ap);
 
