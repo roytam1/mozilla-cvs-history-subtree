@@ -3952,7 +3952,7 @@ pr/tests/dll/Makefile
 
 
 if test -z "$USE_PTHREADS" && test -z "$USE_BTHREADS"; then
-    MAKEFILES="$MAKEFILES pr/src/threads/combined/Makefile"e
+    MAKEFILES="$MAKEFILES pr/src/threads/combined/Makefile"
 elif test -n "$USE_PTHREADS"; then
     MAKEFILES="$MAKEFILES pr/src/pthreads/Makefile"
 elif test -n "$USE_BTHREADS"; then
