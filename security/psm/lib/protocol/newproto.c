@@ -39,6 +39,9 @@
 #ifdef XP_MAC
 #include "macsocket.h"
 #endif
+#ifdef XP_UNIX
+#include "netinet/in.h" /* for ntohl & htonl */
+#endif
 
 #include "newproto.h"
 
