@@ -42,7 +42,6 @@ DIRS= \
     urlbarhistory \
     winhooks \
     urlwidget \
-    localstore \
     build \
     $(NULL)
 
