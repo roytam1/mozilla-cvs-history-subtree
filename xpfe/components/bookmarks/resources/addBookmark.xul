@@ -41,7 +41,6 @@
         ondialogaccept="return onOK(event)"
         title="&newBookmark.title;" selectFolderTitle="&selectFolder.title;"
         onload="Startup();"
-        onunload="persistTreeSize();"
         persist="screenX screenY"
         screenX="24" screenY="24">
    
