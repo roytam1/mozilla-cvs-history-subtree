@@ -42,7 +42,7 @@
 #include "jarint.h"
 
 /* from proto.h */
-#ifdef MOZILLA_CLIENT_OLD
+#ifdef MOZILLA_CLIENT
 extern MWContext *XP_FindSomeContext(void);
 #endif
 
@@ -64,7 +64,7 @@ static MWContext *(*jar_fn_GetInitContext) (void) = NULL;
 
 void JAR_init (void)
   {
-#ifdef MOZILLA_CLIENT_OLD
+#ifdef MOZILLA_CLIENT
   JAR_init_callbacks (XP_GetString, XP_FindSomeContext, FE_GetInitContext);
 #else
   JAR_init_callbacks (XP_GetString, NULL, NULL);

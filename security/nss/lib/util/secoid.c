@@ -112,7 +112,7 @@
 #define	ID_CE_OID X500, 0x1d
 
 #define RFC1274_ATTR_TYPE  0x09, 0x92, 0x26, 0x89, 0x93, 0xf2, 0x2c, 0x64, 0x1
-/* #define RFC2247_ATTR_TYPE  0x09, 0x92, 0x26, 0xf5, 0x98, 0x1e, 0x64, 0x1 this is WRONG! */
+#define RFC2247_ATTR_TYPE  0x09, 0x92, 0x26, 0xf5, 0x98, 0x1e, 0x64, 0x1
 
 /* PKCS #12 name spaces */
 #define PKCS12_MODE_IDS		PKCS12, 0x01
@@ -127,7 +127,6 @@
 #define PKCS9_CERT_TYPES	PKCS9, 0x16
 #define PKCS9_CRL_TYPES		PKCS9, 0x17
 #define PKCS9_SMIME_IDS		PKCS9, 0x10
-#define PKCS9_SMIME_ATTRS	PKCS9_SMIME_IDS, 2
 #define PKCS9_SMIME_ALGS	PKCS9_SMIME_IDS, 3
 #define PKCS12_VERSION1		PKCS12, 0x0a
 #define PKCS12_V1_BAG_IDS	PKCS12_VERSION1, 1
@@ -220,7 +219,7 @@ static unsigned char x500RSAEncryption[] = { X500_ALG_ENCRYPTION, 0x01 };
 /* added for alg 1485 */
 static unsigned char rfc1274Uid[] = { RFC1274_ATTR_TYPE, 1 };
 static unsigned char rfc1274Mail[] = { RFC1274_ATTR_TYPE, 3 };
-static unsigned char rfc2247DomainComponent[] = { RFC1274_ATTR_TYPE, 25 };
+static unsigned char rfc2247DomainComponent[] = { RFC2247_ATTR_TYPE, 25 };
 
 /* Netscape private certificate extensions */
 static unsigned char nsCertExtNetscapeOK[] = { NS_CERT_EXT, 1 };
@@ -391,9 +390,6 @@ static unsigned char netscapeRecoveryRequest[] =
 static unsigned char cmsESDH[] = { PKCS9_SMIME_ALGS, 5 };
 static unsigned char cms3DESwrap[] = { PKCS9_SMIME_ALGS, 6 };
 static unsigned char cmsRC2wrap[] = { PKCS9_SMIME_ALGS, 7 };
-
-/* RFC2633 SMIME message attributes */
-static unsigned char smimeEncryptionKeyPreference[] = { PKCS9_SMIME_ATTRS, 11 };
 
 /*
  * NOTE: the order of these entries must mach the SECOidTag enum in secoidt.h!
@@ -1209,12 +1205,6 @@ static SECOidData oids[] = {
         SEC_OID_CMS_RC2_KEY_WRAP,
         "CMS RC2 Key Wrap", CKM_INVALID_MECHANISM /* XXX */,
         INVALID_CERT_EXTENSION },
-    { { siDEROID, smimeEncryptionKeyPreference,
-	sizeof(smimeEncryptionKeyPreference) },
-	SEC_OID_SMIME_ENCRYPTION_KEY_PREFERENCE,
-	"S/MIME Encryption Key Preference", CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION },
-
 };
 
 /*

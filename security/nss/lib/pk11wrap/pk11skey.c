@@ -154,54 +154,6 @@ pk11_ExitKeyMonitor(PK11SymKey *symKey) {
     	PK11_ExitSlotMonitor(symKey->slot);
 }
 
-
-static PK11SymKey *pk11SymKeyHead = NULL;
-static PK11SymKey *
-pk11_getKeyFromList(PK11SlotInfo *slot) {
-    PK11SymKey *symKey = NULL;
-
-
-    PK11_USE_THREADS(PR_Lock(slot->freeListLock);)
-    if (slot->freeSymKeysHead) {
-    	symKey = slot->freeSymKeysHead;
-	slot->freeSymKeysHead = symKey->next;
-	slot->keyCount--;
-    }
-    PK11_USE_THREADS(PR_Unlock(slot->freeListLock);)
-    if (symKey) {
-	symKey->next = NULL;
-	return symKey;
-    }
-
-    symKey = (PK11SymKey *)PORT_ZAlloc(sizeof(PK11SymKey));
-    if (symKey == NULL) {
-	return NULL;
-    }
-    symKey->refLock = PR_NewLock();
-    if (symKey->refLock == NULL) {
-	PORT_Free(symKey);
-	return NULL;
-    }
-    symKey->session = pk11_GetNewSession(slot,&symKey->sessionOwner);
-    symKey->next = NULL;
-    return symKey;
-}
-
-void
-PK11_CleanKeyList(PK11SlotInfo *slot)
-{
-    PK11SymKey *symKey = NULL;
-
-    while (slot->freeSymKeysHead) {
-    	symKey = slot->freeSymKeysHead;
-	slot->freeSymKeysHead = symKey->next;
-	pk11_CloseSession(symKey->slot, symKey->session,symKey->sessionOwner);
-	PK11_USE_THREADS(PR_DestroyLock(symKey->refLock);)
-	PORT_Free(symKey);
-    };
-    return;
-}
-
 /*
  * create a symetric key:
  *      Slot is the slot to create the key in.
@@ -211,13 +163,15 @@ PK11SymKey *
 PK11_CreateSymKey(PK11SlotInfo *slot, CK_MECHANISM_TYPE type, void *wincx)
 {
 
-    PK11SymKey *symKey = pk11_getKeyFromList(slot);
-
-
+    PK11SymKey *symKey = (PK11SymKey *)PORT_Alloc(sizeof(PK11SymKey));
     if (symKey == NULL) {
 	return NULL;
     }
-
+    symKey->refLock = PR_NewLock();
+    if (symKey->refLock == NULL) {
+	PORT_Free(symKey);
+	return NULL;
+    }
     symKey->type = type;
     symKey->data.data = NULL;
     symKey->data.len = 0;
@@ -229,6 +183,7 @@ PK11_CreateSymKey(PK11SlotInfo *slot, CK_MECHANISM_TYPE type, void *wincx)
     symKey->size = 0;
     symKey->refCount = 1;
     symKey->origin = PK11_OriginNULL;
+    symKey->session = pk11_GetNewSession(slot,&symKey->sessionOwner);
     symKey->origin = PK11_OriginNULL;
     PK11_ReferenceSlot(slot);
     return symKey;
@@ -241,8 +196,6 @@ void
 PK11_FreeSymKey(PK11SymKey *symKey)
 {
     PRBool destroy = PR_FALSE;
-    PK11SlotInfo *slot;
-    PRBool freeit = PR_TRUE;
 
     PK11_USE_THREADS(PR_Lock(symKey->refLock);)
      if (symKey->refCount-- == 1) {
@@ -256,27 +209,14 @@ PK11_FreeSymKey(PK11SymKey *symKey)
 		C_DestroyObject(symKey->session, symKey->objectID);
 	    pk11_ExitKeyMonitor(symKey);
 	}
+	pk11_CloseSession(symKey->slot, symKey->session,symKey->sessionOwner);
 	if (symKey->data.data) {
 	    PORT_Memset(symKey->data.data, 0, symKey->data.len);
 	    PORT_Free(symKey->data.data);
 	}
-        slot = symKey->slot;
-        PK11_USE_THREADS(PR_Lock(slot->freeListLock);)
-	if (slot->keyCount < slot->maxKeyCount) {
-	   symKey->next = slot->freeSymKeysHead;
-	   slot->freeSymKeysHead = symKey;
-	   slot->keyCount++;
-	   symKey->slot = NULL;
-	   freeit = PR_FALSE;
-        }
-	PK11_USE_THREADS(PR_Unlock(slot->freeListLock);)
-        if (freeit) {
-	    pk11_CloseSession(symKey->slot, symKey->session,
-							symKey->sessionOwner);
-	    PK11_USE_THREADS(PR_DestroyLock(symKey->refLock);)
-	    PORT_Free(symKey);
-	}
-	PK11_FreeSlot(slot);
+	PK11_USE_THREADS(PR_DestroyLock(symKey->refLock);)
+	PK11_FreeSlot(symKey->slot);
+	PORT_Free(symKey);
     }
 }
 
@@ -2780,17 +2720,13 @@ pk11_AnyUnwrapKey(PK11SlotInfo *slot, CK_OBJECT_HANDLE wrappingKey,
 	symKey = pk11_HandUnwrap(slot, wrappingKey, &mechanism, wrappedKey, 
 	                         target, keyTemplate, templateCount, keySize, 
 				 wincx);
-	if (symKey) {
-	    if (param_free) SECITEM_FreeItem(param_free,PR_TRUE);
-	    return symKey;
-	}
+	if (symKey) return symKey;
 	/* fall through, maybe they incorrectly set CKF_DECRYPT */
     }
 
     /* get our key Structure */
     symKey = PK11_CreateSymKey(slot,target,wincx);
     if (symKey == NULL) {
-	if (param_free) SECITEM_FreeItem(param_free,PR_TRUE);
 	return NULL;
     }
 

@@ -255,9 +255,8 @@ SECU_FilePasswd(PK11SlotInfo *slot, PRBool retry, void *arg)
     nb = PR_Read(fd, phrase, sizeof(phrase));
   
     PR_Close(fd);
-    /* handle the Windows EOL case */
-    if ((nb > 2) && (phrase[nb-2] == '\r') ) nb--;
     if (phrase[nb-1] == '\n') {
+	if ( nb > 2 && phrase[nb-2] == '\r' ) nb--;
 	phrase[nb-1] = '\0';
 	if (nb == 0) {
 	    fprintf(stderr,"password file contains no data\n");
@@ -315,11 +314,11 @@ secu_InitSlotPassword(PK11SlotInfo *slot, PRBool retry, void *arg)
 	input = stdin;
 #else
 	input = fopen(consoleName, "r");
+#endif
 	if (input == NULL) {
 	    PR_fprintf(PR_STDERR, "Error opening input terminal for read\n");
 	    return NULL;
 	}
-#endif
 
 	/* we have no password, so initialize database with one */
 	PR_fprintf(PR_STDERR, 
@@ -401,14 +400,14 @@ SECU_ChangePW(PK11SlotInfo *slot, char *passwd, char *pwFile)
 
 	if (PK11_CheckUserPassword(slot, oldpw) != SECSuccess) {
 	    if (pwdata.source == PW_NONE) {
-		PR_fprintf(PR_STDERR, "Invalid password.  Try again.\n");
+	         PR_fprintf(PR_STDERR, "Invalid password.  Try again.\n");
 	    } else {
-		PR_fprintf(PR_STDERR, "Invalid password.\n");
-		PORT_Memset(oldpw, 0, PL_strlen(oldpw));
+	         PR_fprintf(PR_STDERR, "Invalid password.\n");
+    		PORT_Memset(oldpw, 0, PL_strlen(oldpw));
 		PORT_Free(oldpw);
 		return SECFailure;
 	    }
-	} else
+        } else
 	    break;
 
 	PORT_Free(oldpw);
@@ -591,15 +590,11 @@ SECU_ChangeKeyDBPassword(SECKEYKeyDBHandle *handle)
     oldpwitem = secu_GetZeroLengthPassword(handle);
 
     /* open terminal */
-#ifdef _WINDOWS
-    input = stdin;
-#else
     input = fopen(consoleName, "r");
     if (input == NULL) {
 	fprintf(stderr, "Error opening input terminal\n");
 	return SECFailure;
     }
-#endif
 
     output = fopen(consoleName, "w");
     if (output == NULL) {
@@ -684,7 +679,7 @@ SECU_ChangeKeyDBPassword(SECKEYKeyDBHandle *handle)
     SECITEM_ZfreeItem(newpwitem, PR_TRUE);
     SECITEM_ZfreeItem(oldpwitem, PR_TRUE);
 
-    if (input != stdin) fclose(input);
+    fclose(input);
     fclose(output);
 
     if (failed) {
@@ -1311,7 +1306,7 @@ SECU_PrintSet(FILE *out, SECItem *t, char *m, int level)
     if (t->data[1] & 0x80) {
 	start = (t->data[1] & 0x7f) +1;
     }
-    for (bp=&t->data[start]; bp < &t->data[t->len]; ) {
+    for (bp=&t->data[start]; bp <= &t->data[t->len]; ) {
 	SECItem tmp;
 	unsigned int i,len,lenlen;
 
@@ -2005,9 +2000,8 @@ printflags(char *trusts, unsigned int flags)
     return;
 }
 
-/* callback for listing certs through pkcs11 */
-SECStatus
-SECU_PrintCertNickname(CERTCertificate *cert, void *data)
+static SECStatus
+secu_PrintCertNickname(CERTCertificate *cert, SECItem *k, void *data)
 {
     CERTCertTrust *trust;
     FILE *out;
@@ -2029,12 +2023,13 @@ SECU_PrintCertNickname(CERTCertificate *cert, void *data)
 	printflags(trusts, trust->emailFlags);
 	PORT_Strcat(trusts, ",");
 	printflags(trusts, trust->objectSigningFlags);
-	fprintf(out, "%-60s %-5s\n", name, trusts);
+	fprintf(out, "%-35s %-5s\n", name, trusts);
     }
 
     return (SECSuccess);
 }
 
+#if 1
 typedef struct {
     char *		name;
     CERTCertTrust	trust;
@@ -2116,8 +2111,8 @@ sec_name_and_trust_compare_by_trust(const void *p1, const void *p2)
 }
 
 SECStatus
-SECU_PrintCertificateNames(CERTCertDBHandle *handle, PRFileDesc *out, 
-                           PRBool sortByName, PRBool sortByTrust)
+SECU_PrintCertificateNames_(CERTCertDBHandle *handle, FILE *out, PRBool sortByName, 
+                            PRBool sortByTrust)
 {
     certNameAndTrustList certNames = { 0, NULL };
     int numCerts, i;
@@ -2140,6 +2135,12 @@ SECU_PrintCertificateNames(CERTCertDBHandle *handle, PRFileDesc *out,
     if (rv != SECSuccess)
 	return SECFailure;
 
+#if 0
+    rv = PK11_TraverseSlotCerts(sec_CountCerts, &numCerts, NULL);
+    certs = (CERTCertificate**)PORT_Alloc(numCerts*sizeof(CERTCertificate*));
+    rv = PK11_TraverseSlotCerts(sec_CollectCerts, certs, NULL);
+#endif
+
     if (sortByName)
 	comparefn = sec_name_and_trust_compare_by_name;
     else if (sortByTrust)
@@ -2151,7 +2152,6 @@ SECU_PrintCertificateNames(CERTCertDBHandle *handle, PRFileDesc *out,
 	qsort(certNames.nameAndTrustEntries, certNames.numCerts, 
 			    sizeof(certNameAndTrustEntry), comparefn);
 
-    PR_fprintf(out, "\n%-60s %-5s\n\n", "Certificate Name", "Trust Attributes");
     for (i = 0; i < certNames.numCerts; i++) {
 	PORT_Memset (trusts, 0, sizeof(trusts));
 	printflags(trusts, certNames.nameAndTrustEntries[i].trust.sslFlags);
@@ -2159,23 +2159,37 @@ SECU_PrintCertificateNames(CERTCertDBHandle *handle, PRFileDesc *out,
 	printflags(trusts, certNames.nameAndTrustEntries[i].trust.emailFlags);
 	PORT_Strcat(trusts, ",");
 	printflags(trusts, certNames.nameAndTrustEntries[i].trust.objectSigningFlags);
-	PR_fprintf(out, "%-60s %-5s\n", 
-	           certNames.nameAndTrustEntries[i].name, trusts);
+	fprintf(out, "%-60s %-5s\n", certNames.nameAndTrustEntries[i].name, trusts);
     }
-    PR_fprintf(out, "\n");
-    PR_fprintf(out, "p    Valid peer\n");
-    PR_fprintf(out, "P    Trusted peer (implies p)\n");
-    PR_fprintf(out, "c    Valid CA\n");
-    PR_fprintf(out, "T    Trusted CA to issue client certs (implies c)\n");
-    PR_fprintf(out, "C    Trusted CA to certs(only server certs for ssl) (implies c)\n");
-    PR_fprintf(out, "u    User cert\n");
-    PR_fprintf(out, "w    Send warning\n");
 
     for (i = 0; i < certNames.numCerts; i++)
 	PORT_Free(certNames.nameAndTrustEntries[i].name);
     PORT_Free(certNames.nameAndTrustEntries);
 
     return rv;
+}
+#endif
+
+int
+SECU_PrintCertificateNames(CERTCertDBHandle *handle, FILE *out)
+{
+    int rv;
+
+    SECU_Indent(out, 0);
+    fprintf(out, "\n%-30s %-5s\n\n", "Certificate Name", "Trust Attributes");
+    rv = SEC_TraversePermCerts(handle, secu_PrintCertNickname, out);
+    if (rv)
+	return -1;
+
+    fprintf(out, "\n");
+    fprintf(out, "p    Valid peer\n");
+    fprintf(out, "P    Trusted peer (implies p)\n");
+    fprintf(out, "c    Valid CA\n");
+    fprintf(out, "T    Trusted CA to issue client certs (implies c)\n");
+    fprintf(out, "C    Trusted CA to certs(only server certs for ssl) (implies c)\n");
+    fprintf(out, "u    User cert\n");
+    fprintf(out, "w    Send warning\n");
+    return 0;
 }
 
 int
