@@ -366,6 +366,17 @@ class nsParser : public nsIParser,
      */
     void HandleParserContinueEvent(void);
 
+    /** 
+     * Detects the existence of a META tag with charset information in 
+     * the given buffer.
+     */
+    PRBool DetectMetaTag(const char* aBytes, 
+                         PRInt32 aLen, 
+                         nsString& oCharset, 
+                         nsCharsetSource& oCharsetSource);
+
+    void SetSinkCharset(nsAWritableString& aCharset);
+
 protected:
 
     /**
