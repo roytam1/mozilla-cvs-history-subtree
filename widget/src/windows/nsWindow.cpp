@@ -80,6 +80,43 @@ extern HINSTANCE g_hinst;
 #define IME_X_OFFSET	35
 #define IME_Y_OFFSET	35
 
+
+static PRBool NS_IsDBCSLeadByte(UINT aCP, BYTE aByte)
+{
+   switch(aCP) {
+       case 932: 
+         return (((0x81<=aByte)&&(aByte<=0x9F))||((0xE0<=aByte)&&(aByte<=0xFC)));
+       case 936:
+       case 949:
+       case 950: 
+         return ((0x81<=aByte)&&(aByte<=0xFE));
+       default: 
+         return PR_FALSE;
+   };
+}
+static PRBool LangIDToCP(WORD aLangID, UINT& oCP)
+{
+	int localeid=MAKELCID(aLangID,SORT_DEFAULT);
+	int numchar=GetLocaleInfo(localeid,LOCALE_IDEFAULTANSICODEPAGE,NULL,0);
+        char cp_on_stack[32];
+
+	char* cp_name;
+        if(numchar > 32)
+           cp_name  = new char[numchar];
+        else 
+           cp_name = cp_on_stack;
+	if (cp_name) {
+           GetLocaleInfo(localeid,LOCALE_IDEFAULTANSICODEPAGE,cp_name,numchar);
+           oCP = atoi(cp_name);
+           if(cp_name != cp_on_stack)
+               delete [] cp_name;
+           return PR_TRUE;
+	} else {
+           oCP = CP_ACP;
+           return PR_FALSE;
+        }
+}
+
 //-------------------------------------------------------------------------
 //
 // nsWindow constructor
@@ -133,7 +170,8 @@ nsWindow::nsWindow() : nsBaseWidget()
 	mIMECompClauseString = NULL;
 	mIMECompClauseStringSize = 0;
 	mIMECompClauseStringLength = 0;
-	mCurrentKeyboardCP = CP_ACP;
+        WORD kblayout = (WORD)GetKeyboardLayout(0);
+        LangIDToCP((WORD)(0x0FFFFL & kblayout), mCurrentKeyboardCP);
 
 #if 1
 	mHaveDBCSLeadByte = false;
@@ -2412,7 +2450,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 				// check first to see if we have the first byte of a two-byte DBCS sequence
 				//  if so, store it away and do nothing until we get the second sequence
 				//
-				if (IsDBCSLeadByte(ch) && !mHaveDBCSLeadByte) {
+				if (NS_IsDBCSLeadByte(mCurrentKeyboardCP, ch) && !mHaveDBCSLeadByte) {
 					mHaveDBCSLeadByte = TRUE;
 					mDBCSLeadByte = ch;
 					result = PR_TRUE;
@@ -2766,18 +2804,10 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 			printf("input language changed\n");
 #endif
 
-			int langid =(int)(lParam&0xFFFF);
-			int localeid=MAKELCID(langid,SORT_DEFAULT);
-			int numchar=GetLocaleInfo(localeid,LOCALE_IDEFAULTANSICODEPAGE,NULL,0);
-			char* cp_name = new char[numchar];
-			if (cp_name) {
-				GetLocaleInfo(localeid,LOCALE_IDEFAULTANSICODEPAGE,cp_name,numchar);
-				mCurrentKeyboardCP = atoi(cp_name);
-				delete [] cp_name;
-				*aRetValue=TRUE;
-				result = PR_TRUE;
-			}
-
+			result = PR_FALSE;  // always pass to child window
+                        *aRetValue = LangIDToCP((WORD)(lParam&0x0FFFF),mCurrentKeyboardCP);
+                        mHaveDBCSLeadByte=PR_FALSE; // reset this when we change keyboard layout
+   
 			break;
 		}
 		case WM_IME_STARTCOMPOSITION: {
