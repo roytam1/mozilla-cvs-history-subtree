@@ -388,7 +388,7 @@ PRStatus PR_CALLBACK _PR_SocketSetSocketOption(PRFileDesc *fd, const PRSocketOpt
  * Some platforms, such as NCR 2.03, don't have TCP_NODELAY defined
  * in <netinet/tcp.h>
  */
-#if !defined(NCR)
+#if !defined(NCR) && !(defined(XP_MAC) && (UNIVERSAL_INTERFACES_VERSION >= 0x0330))
 #if !defined(TCP_NODELAY)
 #error "TCP_NODELAY is not defined"
 #endif
