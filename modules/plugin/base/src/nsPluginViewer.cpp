@@ -154,6 +154,7 @@ public:
   // nsITimerCallback interface
   NS_IMETHOD_(void) Notify(nsITimer *timer);
   void CancelTimer();
+  void StartTimer();
 
 #if defined(XP_MAC) || defined(XP_MACOSX)
   void GUItoMacEvent(const nsGUIEvent& anEvent, EventRecord& aMacEvent);
@@ -502,6 +503,9 @@ PluginViewerImpl::Destroy(void)
   // doing this in the destructor is too late.
   if(mOwner != nsnull)
   {
+    // stop the timer explicitly to reduce reference count.
+    mOwner->CancelTimer();
+
     nsIPluginInstance *inst;
     if(NS_OK == mOwner->GetInstance(inst))
     {
@@ -1101,41 +1105,27 @@ NS_IMETHODIMP pluginInstanceOwner :: GetMode(nsPluginMode *aMode)
 NS_IMETHODIMP pluginInstanceOwner :: CreateWidget(void)
 {
   PRBool    windowless;
-  nsresult  rv = NS_OK;
   
-  if (nsnull != mInstance)
-  {
-#if defined(XP_MAC) || defined(XP_MACOSX)
-          // start a periodic timer to provide null events to the plugin instance.
-          mPluginTimer = do_CreateInstance("@mozilla.org/timer;1", &rv);
-          if (rv == NS_OK)
-            rv = mPluginTimer->Init(this, 1020 / 60, NS_PRIORITY_NORMAL, NS_TYPE_REPEATING_SLACK);
-#endif
-
-
+  if (nsnull != mInstance) {
     mInstance->GetValue(nsPluginInstanceVariable_WindowlessBool, (void *)&windowless);
 
-    if (PR_TRUE == windowless)
-    {
+    if (PR_TRUE == windowless) {
       mPluginWindow.window = nsnull;    //XXX this needs to be a HDC
       mPluginWindow.type = nsPluginWindowType_Drawable;
-    }
-    else if (nsnull != mWindow)
-    {
-      mPluginWindow.window = (nsPluginPort *)mWindow->GetNativeData(NS_NATIVE_PLUGIN_PORT);
+    } else if (nsnull != mWindow) {
       mPluginWindow.type = nsPluginWindowType_Window;
-    }
-    else
+      mPluginWindow.window = (nsPluginPort *)mWindow->GetNativeData(NS_NATIVE_PLUGIN_PORT);
+    } else
       return NS_ERROR_FAILURE;
-  }
-  else
-    return NS_ERROR_FAILURE;
 
 #if defined(XP_MAC) || defined(XP_MACOSX)
-  FixUpPluginWindow();
+    FixUpPluginWindow();
+    // start the idle timer.
+    StartTimer();
 #endif
-
-  return rv;
+    return NS_OK;
+  }
+  return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP pluginInstanceOwner::GetURL(const char *aURL, const char *aTarget, void *aPostData, PRUint32 aPostDataLen, void *aHeadersData, 
@@ -1397,6 +1387,19 @@ void pluginInstanceOwner::CancelTimer()
     }
 }
 
+void pluginInstanceOwner::StartTimer()
+{
+#if defined(XP_MAC) || defined(XP_MACOSX)
+  nsresult rv;
+
+  // start a periodic timer to provide null events to the plugin instance.
+  if (!mPluginTimer) {
+    mPluginTimer = do_CreateInstance("@mozilla.org/timer;1", &rv);
+    if (rv == NS_OK)
+      rv = mPluginTimer->Init(this, 1020 / 60, NS_PRIORITY_NORMAL, NS_TYPE_REPEATING_SLACK);
+  }
+#endif
+}
 
 #if defined(XP_MAC) || defined(XP_MACOSX)
 nsPluginPort* pluginInstanceOwner::GetPluginPort()
@@ -1469,40 +1472,31 @@ static void GetWidgetPosClipAndVis(nsIWidget* aWidget,nscoord& aAbsX, nscoord& a
 nsPluginPort* pluginInstanceOwner::FixUpPluginWindow()
 {
   if (mWindow) {
-#if defined(MOZ_WIDGET_COCOA)
     nsPluginPort* pluginPort = GetPluginPort();
-
-    mPluginWindow.x = -pluginPort->portx;
-    mPluginWindow.y = -pluginPort->porty;    
-    RgnHandle clipRgn = ::NewRgn();
-    if (clipRgn) {
-      ::GetPortClipRegion(pluginPort->port, clipRgn);
-      ::GetRegionBounds(clipRgn, (Rect*)&mPluginWindow.clipRect);
-      ::DisposeRgn(clipRgn);
-    }
-#else
     nscoord absWidgetX = 0;
     nscoord absWidgetY = 0;
-    nsRect widgetClip(0,0,0,0);
+    nsRect widgetClip(0, 0, 0, 0);
     PRBool isVisible = PR_TRUE;
-    GetWidgetPosClipAndVis(mWindow,absWidgetX,absWidgetY,widgetClip,isVisible);
 
-    if (mWidgetVisible != isVisible)
-      mWidgetVisible = isVisible;
-
+    GetWidgetPosClipAndVis(mWindow, absWidgetX, absWidgetY, widgetClip, isVisible);
+#if defined(MOZ_WIDGET_COCOA)
+    // set the port coordinates
+    mPluginWindow.x = -pluginPort->portx;
+    mPluginWindow.y = -pluginPort->porty;
+    widgetClip.x += mPluginWindow.x - absWidgetX;
+    widgetClip.y += mPluginWindow.y - absWidgetY;
+#else
     // set the port coordinates
     mPluginWindow.x = absWidgetX;
     mPluginWindow.y = absWidgetY;
+#endif
 
     // fix up the clipping region
     mPluginWindow.clipRect.top = widgetClip.y;
     mPluginWindow.clipRect.left = widgetClip.x;
     mPluginWindow.clipRect.bottom =  mPluginWindow.clipRect.top + widgetClip.height;
-    mPluginWindow.clipRect.right =  mPluginWindow.clipRect.left + widgetClip.width;  
-#endif
+    mPluginWindow.clipRect.right =  mPluginWindow.clipRect.left + widgetClip.width; 
 
-    PRBool isVisible;
-    mWindow->IsVisible(isVisible);
     if (mWidgetVisible != isVisible) {
       mWidgetVisible = isVisible;
       // must do this to disable async Java Applet drawing
@@ -1516,12 +1510,10 @@ nsPluginPort* pluginInstanceOwner::FixUpPluginWindow()
     }
 
 #if defined(MOZ_WIDGET_COCOA)
-    // XXX somebody needs to synchronize clipping of the plugin's window port.
     if (!mWidgetVisible) {
       mPluginWindow.clipRect.right = mPluginWindow.clipRect.left;
       mPluginWindow.clipRect.bottom = mPluginWindow.clipRect.top;
     }
-    ::ClipRect((Rect*)&mPluginWindow.clipRect);
 #endif
     return pluginPort;
   }

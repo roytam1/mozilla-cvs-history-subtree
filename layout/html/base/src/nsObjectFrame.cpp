@@ -305,6 +305,7 @@ public:
   NS_IMETHOD_(void) Notify(nsITimer *timer);
   
   void CancelTimer();
+  void StartTimer();
   
   // nsIScrollPositionListener interface
   NS_IMETHOD ScrollPositionWillChange(nsIScrollableView* aScrollable, nscoord aX, nscoord aY);
@@ -363,9 +364,7 @@ static void ConvertTwipsToPixels(nsIPresContext& aPresContext, nsRect& aTwipsRec
 
 nsObjectFrame::~nsObjectFrame()
 {
-  // beard: stop the timer explicitly to reduce reference count.
   if (nsnull != mInstanceOwner) {
-    mInstanceOwner->CancelTimer();
     mInstanceOwner->Destroy();
   }
 
@@ -3519,6 +3518,9 @@ nsPluginInstanceOwner::Destroy()
   nsCOMPtr<nsIContent> content;
   mOwner->GetContent(getter_AddRefs(content));
 
+  // stop the timer explicitly to reduce reference count.
+  CancelTimer();
+
   // unregister context menu listener
   if (mCXMenuListener) {
     mCXMenuListener->Destroy(mOwner);    
@@ -3714,15 +3716,6 @@ NS_IMETHODIMP_(void) nsPluginInstanceOwner::Notify(nsITimer* /* timer */)
         }
     }
 #endif
-
-#ifndef REPEATING_TIMERS
-  // reprime the timer? currently have to create a new timer for each call, which is
-  // kind of wasteful. need to get periodic timers working on all platforms.
-  nsresult rv;
-  mPluginTimer = do_CreateInstance("@mozilla.org/timer;1", &rv);
-  if (NS_SUCCEEDED(rv))
-    mPluginTimer->Init(this, 1020 / 60);
-#endif
 }
 
 void nsPluginInstanceOwner::CancelTimer()
@@ -3731,6 +3724,20 @@ void nsPluginInstanceOwner::CancelTimer()
         mPluginTimer->Cancel();
         mPluginTimer = nsnull;
     }
+}
+
+void nsPluginInstanceOwner::StartTimer()
+{
+#if defined(XP_MAC) || defined(XP_MACOSX)
+    nsresult rv;
+
+    // start a periodic timer to provide null events to the plugin instance.
+    if (!mPluginTimer) {
+          mPluginTimer = do_CreateInstance("@mozilla.org/timer;1", &rv);
+          if (rv == NS_OK)
+            rv = mPluginTimer->Init(this, 1020 / 60, NS_PRIORITY_NORMAL, NS_TYPE_REPEATING_SLACK);
+    }
+#endif
 }
 
 NS_IMETHODIMP nsPluginInstanceOwner::Init(nsIPresContext* aPresContext, nsObjectFrame *aFrame)
@@ -3927,16 +3934,11 @@ NS_IMETHODIMP nsPluginInstanceOwner::CreateWidget(void)
         {
           mWidget->Resize(mPluginWindow.width, mPluginWindow.height, PR_FALSE);
 
-          mPluginWindow.window = GetPluginPort();
           mPluginWindow.type = nsPluginWindowType_Window;
+          mPluginWindow.window = GetPluginPort();
 
-#if defined(XP_MAC) || defined(XP_MACOSX)
-          // Is this needed in the windowless case ???
-          // start a periodic timer to provide null events to the plugin instance.
-          mPluginTimer = do_CreateInstance("@mozilla.org/timer;1", &rv);
-          if (rv == NS_OK)
-            rv = mPluginTimer->Init(this, 1020 / 60, NS_PRIORITY_NORMAL, NS_TYPE_REPEATING_SLACK);
-#endif
+          // start the idle timer.
+          StartTimer();
         }
       }
     }
@@ -3974,52 +3976,48 @@ static void GetWidgetPosClipAndVis(nsIWidget* aWidget,nscoord& aAbsX, nscoord& a
   if (aIsVisible)
     aWidget->IsVisible(aIsVisible);
 
-  aWidget->GetBounds(aClipRect); 
-  aAbsX = aClipRect.x; 
-  aAbsY = aClipRect.y; 
-  
-  nscoord ancestorX = -aClipRect.x, ancestorY = -aClipRect.y; 
-  // Calculate clipping relative to the widget passed in 
-  aClipRect.x = 0; 
+  aWidget->GetBounds(aClipRect);
+  aAbsX = aClipRect.x;
+  aAbsY = aClipRect.y;
+
+  nscoord ancestorX = -aClipRect.x, ancestorY = -aClipRect.y;
+  // Calculate clipping relative to the widget passed in
+  aClipRect.x = 0;
   aClipRect.y = 0;
 
-  // Gather up the absolute position of the widget, clip window, and visibilty 
+  // Gather up the absolute position of the widget, clip window, and visibilty
   nsCOMPtr<nsIWidget> widget = getter_AddRefs(aWidget->GetParent());
-  while (widget != nsnull) { 
+  while (widget != nsnull) {
     if (aIsVisible)
       widget->IsVisible(aIsVisible);
 
-    nsRect wrect; 
-    widget->GetClientBounds(wrect); 
-    nscoord wx, wy; 
-    wx = wrect.x; 
-    wy = wrect.y; 
-    wrect.x = ancestorX; 
-    wrect.y = ancestorY; 
-    aClipRect.IntersectRect(aClipRect, wrect); 
-    aAbsX += wx; 
-    aAbsY += wy; 
+    nsRect wrect;
+    widget->GetClientBounds(wrect);
+    nscoord wx, wy;
+    wx = wrect.x;
+    wy = wrect.y;
+    wrect.x = ancestorX;
+    wrect.y = ancestorY;
+    aClipRect.IntersectRect(aClipRect, wrect);
+    aAbsX += wx;
+    aAbsY += wy;
     widget = getter_AddRefs(widget->GetParent());
-    if (widget == nsnull) { 
-      // Don't include the top-level windows offset 
-      // printf("Top level window offset %d %d\n", wx, wy); 
-      aAbsX -= wx; 
-      aAbsY -= wy; 
-    } 
-    ancestorX -=wx; 
-    ancestorY -=wy; 
-  } 
+    if (widget == nsnull) {
+      // Don't include the top-level windows offset
+      // printf("Top level window offset %d %d\n", wx, wy);
+      aAbsX -= wx;
+      aAbsY -= wy;
+    }
+    ancestorX -=wx;
+    ancestorY -=wy;
+  }
 
-  aClipRect.x += aAbsX; 
-  aClipRect.y += aAbsY; 
+  aClipRect.x += aAbsX;
+  aClipRect.y += aAbsY;
 
   // if we are not visible, clear out the plugin's clip so it won't paint
   if (!aIsVisible)
     aClipRect.Empty();
-
-  //printf("--------------\n"); 
-  //printf("Widget clip X %d Y %d rect %d %d %d %d\n", aAbsX, aAbsY,  aClipRect.x,  aClipRect.y, aClipRect.width,  aClipRect.height ); 
-  //printf("--------------\n"); 
 } 
 
 #ifdef DO_DIRTY_INTERSECT
@@ -4087,44 +4085,35 @@ nsPluginPort* nsPluginInstanceOwner::FixUpPluginWindow()
 {
   if (mWidget) {
     nsPluginPort* pluginPort = GetPluginPort();
-
-#if defined(MOZ_WIDGET_COCOA)
-    mPluginWindow.x = -pluginPort->portx;
-    mPluginWindow.y = -pluginPort->porty;
-    RgnHandle clipRgn = ::NewRgn();
-    if (clipRgn) {
-        ::GetPortClipRegion(pluginPort->port, clipRgn);
-        ::GetRegionBounds(clipRgn, (Rect*)&mPluginWindow.clipRect);
-        ::DisposeRgn(clipRgn);
-    }
-#else
     nscoord absWidgetX = 0;
     nscoord absWidgetY = 0;
-    nsRect widgetClip(0,0,0,0);
+    nsRect widgetClip(0, 0, 0, 0);
     
-    // XXXbryner should this be inside this #ifdef?
     // first, check our view for CSS visibility style
     nsIView *view;
     mOwner->GetView(mContext, &view);
     nsViewVisibility vis;
     view->GetVisibility(vis);
     PRBool isVisible = (vis == nsViewVisibility_kShow) ? PR_TRUE : PR_FALSE;
-    
-    GetWidgetPosClipAndVis(mWidget,absWidgetX,absWidgetY,widgetClip,isVisible);
 
-    if (mWidgetVisible != isVisible)
-      mWidgetVisible = isVisible;
-
+    GetWidgetPosClipAndVis(mWidget, absWidgetX, absWidgetY, widgetClip, isVisible);
+#if defined(MOZ_WIDGET_COCOA)
+    // set the port coordinates
+    mPluginWindow.x = -pluginPort->portx;
+    mPluginWindow.y = -pluginPort->porty;
+    widgetClip.x += mPluginWindow.x - absWidgetX;
+    widgetClip.y += mPluginWindow.y - absWidgetY;
+#else
     // set the port coordinates
     mPluginWindow.x = absWidgetX;
     mPluginWindow.y = absWidgetY;
+#endif
 
     // fix up the clipping region
     mPluginWindow.clipRect.top = widgetClip.y;
     mPluginWindow.clipRect.left = widgetClip.x;
-    mPluginWindow.clipRect.bottom =  mPluginWindow.clipRect.top + widgetClip.height;
-    mPluginWindow.clipRect.right =  mPluginWindow.clipRect.left + widgetClip.width; 
-#endif
+    mPluginWindow.clipRect.bottom = mPluginWindow.clipRect.top + widgetClip.height;
+    mPluginWindow.clipRect.right = mPluginWindow.clipRect.left + widgetClip.width; 
 
     // the Mac widget doesn't set the background color right away!!
     // the background color needs to be set here on the plugin port
@@ -4138,9 +4127,8 @@ nsPluginPort* nsPluginInstanceOwner::FixUpPluginWindow()
     macColor.green = COLOR8TOCOLOR16(NS_GET_G(color));
     macColor.blue  = COLOR8TOCOLOR16(NS_GET_B(color));
     ::RGBBackColor(&macColor);
+    ::SetPort(savePort);  // restore port
     
-    PRBool isVisible;
-    mWidget->IsVisible(isVisible);
     if (mWidgetVisible != isVisible) {
         mWidgetVisible = isVisible;
         // must do this to disable async Java Applet drawing
@@ -4154,22 +4142,17 @@ nsPluginPort* nsPluginInstanceOwner::FixUpPluginWindow()
     }
 
 #if defined(MOZ_WIDGET_COCOA)
-    // XXX somebody needs to synchronize clipping of the plugin's window port.
     if (!mWidgetVisible) {
         mPluginWindow.clipRect.right = mPluginWindow.clipRect.left;
         mPluginWindow.clipRect.bottom = mPluginWindow.clipRect.top;
     }
-    ::ClipRect((Rect*)&mPluginWindow.clipRect);
 #endif
-
-    ::SetPort(savePort);  // restore port
 
     return pluginPort;
   }
   
   return nsnull;
 }
-
 
 void nsPluginInstanceOwner::Composite()
 {

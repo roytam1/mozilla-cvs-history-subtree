@@ -270,6 +270,7 @@ public:
   id              mView;      // my parallel cocoa view, [STRONG]
 
   NSView*         mParentView;
+  nsIWidget*      mParentWidget;
   
   PRBool          mDestroyCalled;
   PRBool          mDestructorCalled;

@@ -218,6 +218,7 @@ nsChildView::nsChildView() : nsBaseWidget() , nsDeleteObserved(this)
   mView = nil;
   
   mParentView = nil;
+  mParentWidget = nil;
   
   mDestroyCalled = PR_FALSE;
   mDestructorCalled = PR_FALSE;
@@ -304,7 +305,8 @@ nsresult nsChildView::StandardCreate(nsIWidget *aParent,
     // inherit the top-level window. NS_NATIVE_WIDGET is always a NSView
     // regardless of if we're asking a window or a view (for compatibility
     // with windows).
-    mParentView = (NSView*)aParent->GetNativeData(NS_NATIVE_WIDGET);    
+    mParentView = (NSView*)aParent->GetNativeData(NS_NATIVE_WIDGET); 
+    mParentWidget = aParent;   
   }
   else
     mParentView = NS_REINTERPRET_CAST(NSView*,aNativeParent);
@@ -429,6 +431,7 @@ NS_IMETHODIMP nsChildView::Destroy()
   }
 
   ReportDestroyEvent(); // beard: this seems to cause the window to be deleted. moved all release code to destructor.
+  mParentWidget = nil;
 
   return NS_OK;
 }
@@ -634,7 +637,8 @@ NS_IMETHODIMP nsChildView::Show(PRBool bState)
 nsIWidget*
 nsChildView::GetParent(void)
 {
-  return nsnull;
+  NS_IF_ADDREF(mParentWidget);
+  return mParentWidget;
 }
     
 NS_IMETHODIMP nsChildView::ModalEventFilter(PRBool aRealEvent, void *aEvent,
@@ -1376,7 +1380,7 @@ nsChildView::UpdateWidget(nsRect& aRect, nsIRenderingContext* aContext)
 {
   if (! mVisible)
     return;
-  
+    
   StPortSetter port(GetQuickDrawPort());
   if (mPluginPort) ::SetOrigin(mPluginPort->portx, mPluginPort->porty);
         
