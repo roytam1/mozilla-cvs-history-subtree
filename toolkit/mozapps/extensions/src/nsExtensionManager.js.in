@@ -2428,7 +2428,7 @@ nsExtensionManager.prototype = {
   _getItemForIncompatibleID: function nsExtensionManager__getItemForID (aDataSource, aType)
   {
     var newItem = null;
-    var id, version, targetAppInfo, name;
+    var id, version, targetAppInfo, name, updateURL;
     var manifestRoot = gRDF.GetResource("urn:mozilla:install-manifest");
     try {
       function getProperty (aDataSource, aSourceResource, aProperty)
@@ -2449,12 +2449,15 @@ nsExtensionManager.prototype = {
       version       = getProperty(aDataSource, root, "version");
       targetAppInfo = this._ds.getTargetApplicationInfo(id, aDataSource, aType);
       name          = getProperty(aDataSource, root, "name");
+      updateURL     = getProperty(aDataSource, root, "updateURL");
+      if (updateURL == "--")
+        updateURL = "";
       
       newItem = Components.classes["@mozilla.org/updates/item;1"]
                           .createInstance(Components.interfaces.nsIUpdateItem);
       newItem.init(id, version, targetAppInfo.minVersion, 
                    targetAppInfo.maxVersion,
-                   name, -1, "", "", "", aType);
+                   name, -1, "", updateURL, "", aType);
     }
     catch (e) {
       return null;
