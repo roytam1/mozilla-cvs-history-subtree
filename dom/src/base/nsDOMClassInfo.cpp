@@ -85,6 +85,8 @@
 #include "nsIDOMEventReceiver.h"
 
 // CSS related includes
+#include "nsIDOMStyleSheet.h"
+#include "nsIDOMStyleSheetList.h"
 #include "nsIDOMCSSStyleDeclaration.h"
 
 // XBL related includes.
@@ -426,7 +428,7 @@ nsDOMClassInfo::Init()
 
 
   // StyleSheet classes
-  NS_DEFINE_CLASSINFO_DATA(DocumentStyleSheetList, nsDOMGenericSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(DocumentStyleSheetList, nsStyleSheetListSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
 
   // Event
@@ -2274,6 +2276,24 @@ nsMediaListSH::GetStringAt(nsISupports *aNative, PRInt32 aIndex,
   nsCOMPtr<nsIDOMMediaList> media_list(do_QueryInterface(aNative));
 
   return media_list->Item(PRUint32(aNative), aResult);
+}
+
+
+// StyleSheetList helper
+
+nsresult
+nsStyleSheetListSH::GetItemAt(nsISupports *aNative, PRUint32 aIndex,
+                              nsISupports **aResult)
+{
+  nsCOMPtr<nsIDOMStyleSheetList> stylesheets(do_QueryInterface(aNative));
+  NS_ENSURE_TRUE(stylesheets, NS_ERROR_UNEXPECTED);
+
+  nsIDOMStyleSheet *sheet = nsnull;
+  nsresult rv = stylesheets->Item(aIndex, &sheet);
+
+  *aResult = sheet;
+
+  return rv;
 }
 
 

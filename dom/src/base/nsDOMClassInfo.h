@@ -620,6 +620,32 @@ public:
 };
 
 
+// StyleSheetList helper
+
+class nsStyleSheetListSH : public nsArraySH
+{
+protected:
+  nsStyleSheetListSH(nsDOMClassInfoID aID) : nsArraySH(aID)
+  {
+  }
+
+  virtual ~nsStyleSheetListSH()
+  {
+  }
+
+  // Override nsArraySH::GetItemAt() since our list isn't a
+  // nsIDOMNodeList
+  virtual nsresult GetItemAt(nsISupports *aNative, PRUint32 aIndex,
+                             nsISupports **aResult);
+
+public:
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsStyleSheetListSH(aID);
+  }
+};
+
+
 // CSSStyleDeclaration helper
 
 class nsCSSStyleDeclSH : public nsStringArraySH
