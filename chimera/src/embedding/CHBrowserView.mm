@@ -191,8 +191,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
       // web browser, it won't get a garbage object that's past its prime. As a result,
       // this routine MUST be called otherwise we will leak.
       baseWin->Destroy();
-      NS_RELEASE(_webBrowser);
-      NS_RELEASE(_listener);
+      NS_IF_RELEASE(_webBrowser);
+      NS_IF_RELEASE(_listener);
     }
   } // matters
 
@@ -413,8 +413,7 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 
   if (_webBrowser) {
     // Set the container nsIWebBrowserChrome
-    _webBrowser->SetContainerWindow(NS_STATIC_CAST(nsIWebBrowserChrome *, 
-               _listener));
+    _webBrowser->SetContainerWindow(NS_STATIC_CAST(nsIWebBrowserChrome *, _listener));
 
     NSRect frame = [self frame];
  
