@@ -96,7 +96,7 @@ NS_IMETHODIMP nsPNGDecoder::Init(nsIImageRequest *aRequest)
   }
 
   /* use ic as libpng "progressive pointer" (retrieve in callbacks) */
-  png_set_progressive_read_fn(mPNG, this, nsPNGDecoder::info_callback, nsPNGDecoder::row_callback, nsPNGDecoder::end_callback);
+  png_set_progressive_read_fn(mPNG, NS_STATIC_CAST(png_voidp, this), nsPNGDecoder::info_callback, nsPNGDecoder::row_callback, nsPNGDecoder::end_callback);
 
   return NS_OK;
 }
