@@ -209,14 +209,14 @@ nsCacheService::Init()
     rv = mActiveEntries.Init();
     if (NS_FAILED(rv)) goto error;
     
-    nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID, &rv);
-    if (NS_SUCCEEDED(rv)) {
-        
-        rv = prefs->GetBoolPref(gCacheEnableDiskCachePref, &mEnableDiskDevice);
-        rv = prefs->GetBoolPref(gCacheEnableMemoryCachePref, &mEnableMemoryDevice);
-        // ignore errors
+    { // scope nsCOMPtr<nsIPref>
+        nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID, &rv);
+        if (NS_SUCCEEDED(rv)) {
+            rv = prefs->GetBoolPref(gCacheEnableDiskCachePref, &mEnableDiskDevice);
+            rv = prefs->GetBoolPref(gCacheEnableMemoryCachePref, &mEnableMemoryDevice);
+            // ignore errors
+        }
     }
-
 
     if (mEnableMemoryDevice) {   // create memory cache
         mMemoryDevice = new nsMemoryCacheDevice;
