@@ -14,9 +14,9 @@ endif
 ifeq ($(OS_ARCH), Linux)
   LINUX_REL     := $(shell uname -r)
   ifneq (,$(findstring 2.0,$(LINUX_REL)))
-    NSPR_OBJDIR := $(subst _All,2.0_x86_PTH,$(NSPR_OBJDIR))
+    NSPR_OBJDIR := $(subst _All,2.0_x86_glibc_PTH,$(NSPR_OBJDIR))
   else
-    NSPR_OBJDIR := $(subst _All,2.2_x86_PTH,$(NSPR_OBJDIR))
+    NSPR_OBJDIR := $(subst _All,2.2_x86_glibc_PTH,$(NSPR_OBJDIR))
   endif
 endif
 ifeq ($(OS_ARCH), AIX)
