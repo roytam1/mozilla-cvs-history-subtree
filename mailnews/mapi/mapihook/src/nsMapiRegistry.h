@@ -61,8 +61,8 @@ public:
     NS_DECL_NSIMAPIREGISTRY
 
 protected:
-    
     PRBool m_DefaultMailClient;
+    PRBool m_DefaultNewsClient;
     PRBool m_ShowDialog;
     nsMapiRegistryUtils m_registryUtils ;
 

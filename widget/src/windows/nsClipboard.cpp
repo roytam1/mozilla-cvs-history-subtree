@@ -42,6 +42,8 @@
 #include <shlobj.h>
 #include <intshcut.h>
 
+#include <urlmon.h> // needed for CopyStgMedium
+
 // shellapi.h is needed to build with WIN32_LEAN_AND_MEAN
 #include <shellapi.h>
 
@@ -61,6 +63,7 @@
 #include "nsIWidget.h"
 #include "nsIComponentManager.h"
 #include "nsWidgetsCID.h"
+#include "nsGfxCIID.h"
 #include "nsCRT.h"
 
 #include "nsVoidArray.h"
@@ -102,7 +105,8 @@ UINT nsClipboard::GetFormat(const char* aMimeStr)
     format = CF_TEXT;
   else if (strcmp(aMimeStr, kUnicodeMime) == 0)
     format = CF_UNICODETEXT;
-  else if (strcmp(aMimeStr, kJPEGImageMime) == 0)
+  else if (strcmp(aMimeStr, kJPEGImageMime) == 0 ||
+           strcmp(aMimeStr, kNativeImageMime) == 0)
     format = CF_DIB;
   else if (strcmp(aMimeStr, kFileMime) == 0 || 
            strcmp(aMimeStr, kFilePromiseMime) == 0)
@@ -458,16 +462,21 @@ nsresult nsClipboard::GetNativeDataOffClipboard(IDataObject * aDataObject, UINT 
                 BYTE  * pGlobal = (BYTE  *)::GlobalLock (hGlobal) ;
                 BITMAPV4HEADER * header = (BITMAPV4HEADER *)pGlobal;
 
-                nsImageFromClipboard converter ( header );
-                nsIImage* image;
-                converter.GetImage ( &image );   // addrefs for us, don't release
-                if ( image ) {
-                  *aData = image;
-                  *aLen = sizeof(nsIImage*);
+                nsIClipboardImage * nativeImageWrapper = nsnull; // don't use a nsCOMPtr here
+
+                nsresult rv = nsComponentManager::CreateInstance("@mozilla.org/widget/clipboardimage;1", nsnull, 
+                                                    NS_GET_IID(nsIClipboardImage), 
+                                                    (void**) &nativeImageWrapper);
+
+                if (nativeImageWrapper)
+                {                                  
+                  nativeImageWrapper->SetNativeImage((void *) &stm);
+                  *aData = nativeImageWrapper; // note that we never release our ref to nativeImageWrapper. We pass it on to the owner of *aData
+                  *aLen = sizeof(nsIClipboardImage *);
                   result = NS_OK;
                 }
-
-                ::GlobalUnlock (hGlobal) ;
+                else
+                 ::GlobalUnlock (hGlobal); // only unlock this memory if we did not store it in the native image wrapper
               } break;
 
             case CF_HDROP : 
@@ -623,6 +632,11 @@ nsresult nsClipboard::GetDataFromDataObject(IDataObject     * aDataObject,
           else
             continue;     // something wrong with this flavor, keep looking for other data
         }
+        else if ( strcmp(flavorStr, kJPEGImageMime) == 0 || strcmp(flavorStr, kNativeImageMime) == 0) {
+          // we have image data. We don't want to attempt any conversions here 
+          nsIClipboardImage * image = NS_REINTERPRET_CAST(nsIClipboardImage*, data);
+          genericDataWrapper = do_QueryInterface(image);       
+        }
         else {
           // we probably have some form of text. The DOM only wants LF, so convert from Win32 line 
           // endings to DOM line endings.
@@ -636,6 +650,8 @@ nsresult nsClipboard::GetDataFromDataObject(IDataObject     * aDataObject,
         NS_ASSERTION ( genericDataWrapper, "About to put null data into the transferable" );
         aTransferable->SetTransferData(flavorStr, genericDataWrapper, dataLen);
 
+        // don't free data if it is an image object
+        if (strcmp(flavorStr, kJPEGImageMime) && strcmp(flavorStr, kNativeImageMime))
         nsMemory::Free ( NS_REINTERPRET_CAST(char*, data) );        
         res = NS_OK;
         
@@ -908,5 +924,44 @@ NS_IMETHODIMP nsClipboard::HasDataMatchingFlavors(nsISupportsArray *aFlavorList,
     }
   }
 
+  return NS_OK;
+}
+
+
+nsClipboardImage::nsClipboardImage()
+{
+  memset(&mStgMedium, 0, sizeof(STGMEDIUM));
+}
+
+nsClipboardImage :: ~nsClipboardImage()
+{
+  if(mStgMedium.hGlobal)
+    ReleaseStgMedium(&mStgMedium);
+}
+
+NS_IMPL_ISUPPORTS1(nsClipboardImage, nsIClipboardImage)
+
+NS_IMETHODIMP nsClipboardImage::SetNativeImage(void * aNativeImageData)
+{
+  if(mStgMedium.hGlobal)
+    ReleaseStgMedium(&mStgMedium);
+    
+  HRESULT err = CopyStgMedium((STGMEDIUM *) aNativeImageData, &mStgMedium);
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsClipboardImage::GetNativeImage(void * aNativeImageData)
+{
+  // the caller should be passing in a STGMEDIUM object which we can copy into
+
+  HRESULT err = CopyStgMedium(&mStgMedium, (STGMEDIUM *) aNativeImageData);
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsClipboardImage::ReleaseNativeImage(void * aNativeImageData)
+{
+  STGMEDIUM * stg = (STGMEDIUM *) aNativeImageData;
+  if (stg)
+    ReleaseStgMedium(stg);
   return NS_OK;
 }
