@@ -809,8 +809,10 @@ nsSVGOuterSVGFrame::Paint(nsIPresContext* aPresContext,
 
   float pxPerTwips = GetPxPerTwips();
   // XXX why do we need to inflate the rect here? 
-  nsRect dirtyRectPx((int)(aDirtyRect.x*pxPerTwips-1), (int)(aDirtyRect.y*pxPerTwips-1),
-                     (int)(aDirtyRect.width*pxPerTwips+2), (int)(aDirtyRect.height*pxPerTwips+2));
+  nsRect dirtyRectPx((int)(aDirtyRect.x*pxPerTwips), (int)(aDirtyRect.y*pxPerTwips),
+                     (int)(aDirtyRect.width*pxPerTwips), (int)(aDirtyRect.height*pxPerTwips));
+//   nsRect dirtyRectPx((int)(aDirtyRect.x*pxPerTwips-1), (int)(aDirtyRect.y*pxPerTwips-1),
+//                      (int)(aDirtyRect.width*pxPerTwips+2), (int)(aDirtyRect.height*pxPerTwips+2));
   
   nsCOMPtr<nsISVGRendererCanvas> canvas;
   mRenderer->CreateCanvas(&aRenderingContext, aPresContext, dirtyRectPx,

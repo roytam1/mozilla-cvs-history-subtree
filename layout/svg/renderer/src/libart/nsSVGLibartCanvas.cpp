@@ -159,9 +159,8 @@ nsSVGLibartCanvas::LockRenderingContext(const nsRect & rect,
                                         nsIRenderingContext **_retval)
 {
   *_retval = nsnull;
-  *_retval = mBitmap->LockRenderingContext(rect);
+  mBitmap->LockRenderingContext(rect, _retval);
   if (!*_retval) return NS_ERROR_FAILURE;
-  
   return NS_OK;
 }
 

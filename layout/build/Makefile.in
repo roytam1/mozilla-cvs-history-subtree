@@ -146,7 +146,13 @@ EXTRA_DSO_LDOPTS = \
 		$(NULL)
 
 ifdef MOZ_SVG_RENDERER_LIBART
-EXTRA_DSO_LDOPTS += $(MOZ_LIBART_LIBS)
+EXTRA_DSO_LDOPTS += $(MOZ_LIBART_LIBS) \
+		    $(NULL)
+
+ifdef MOZ_ENABLE_GTK2
+EXTRA_DSO_LDOPTS += $(MOZ_GTK2_LIBS) \
+		    $(NULL)
+endif
 endif
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))

@@ -75,7 +75,7 @@ public:
   NS_IMETHOD_(int) GetLineStride();
   NS_IMETHOD_(int) GetWidth();
   NS_IMETHOD_(int) GetHeight();
-  NS_IMETHOD_(nsIRenderingContext*) LockRenderingContext(const nsRect& rect);
+  NS_IMETHOD_(void) LockRenderingContext(const nsRect& rect, nsIRenderingContext**ctx);
   NS_IMETHOD_(void) UnlockRenderingContext();
   NS_IMETHOD_(void) Flush();
   
@@ -234,11 +234,11 @@ nsSVGLibartBitmapDefault::GetHeight()
   return mRect.height;
 }
 
-NS_IMETHODIMP_(nsIRenderingContext*)
-nsSVGLibartBitmapDefault::LockRenderingContext(const nsRect& rect)
+NS_IMETHODIMP_(void)
+nsSVGLibartBitmapDefault::LockRenderingContext(const nsRect& rect, nsIRenderingContext** ctx)
 {
   // doesn't work on default bitmap!
-  return nsnull;
+  *ctx = nsnull;
 }
 
 NS_IMETHODIMP_(void)

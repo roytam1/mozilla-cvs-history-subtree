@@ -454,9 +454,16 @@ nsSVGForeignObjectFrame::Paint(nsISVGRendererCanvas* canvas, const nsRect& dirty
 
   nsIPresContext *presContext = GetPresContext();
 
+  nsRect r(mRect);
+  if (!r.IntersectRect(dirtyRectTwips, r))
+    return PR_TRUE;
+  
   float pxPerTwips = GetPxPerTwips();
-  nsRect r(mRect.x*pxPerTwips, mRect.y*pxPerTwips,
-           mRect.width*pxPerTwips, mRect.height*pxPerTwips);
+  r.x*=pxPerTwips;
+  r.y*=pxPerTwips;
+  r.width*=pxPerTwips;
+  r.height*=pxPerTwips;
+  
   nsCOMPtr<nsIRenderingContext> ctx;
   canvas->LockRenderingContext(r, getter_AddRefs(ctx));
 

@@ -54,6 +54,7 @@ REQUIRES = \
 	content \
 	necko   \
 	libart_lgpl \
+	util \
 	$(NULL)
 
 CPPSRCS = \
@@ -71,6 +72,8 @@ CPPSRCS = \
 
 include $(topsrcdir)/config/config.mk
 
+
+
 # we don't want the shared lib, but we want to force the creation of a static lib.
 FORCE_STATIC_LIB = 1
 
@@ -78,7 +81,11 @@ ifdef MOZ_ENABLE_GTK2
 CPPSRCS  += nsSVGLibartBitmapGdk.cpp
 CFLAGS   += $(MOZ_GTK2_CFLAGS)
 CXXFLAGS += $(MOZ_GTK2_CFLAGS)
-# EXTRA_DSO_LDOPTS += $(MOZ_GTK2_LIBS)
+
+LOCAL_INCLUDES	= \
+		-I$(topsrcdir)/gfx/src/gtk \
+		-I$(topsrcdir)/gfx/src \
+		$(NULL)
 endif
 ifeq (,$(filter gtk2,$(MOZ_GFX_TOOLKIT)))
 CPPSRCS += nsSVGLibartBitmapDefault.cpp

@@ -70,7 +70,7 @@ public:
 
   // Obtain a rendering context for part of the bitmap. In general
   // this will be different to the RC passed at initialization time
-  NS_IMETHOD_(nsIRenderingContext*) LockRenderingContext(const nsRect& rect)=0;
+  NS_IMETHOD_(void) LockRenderingContext(const nsRect& rect, nsIRenderingContext**ctx)=0;
   NS_IMETHOD_(void) UnlockRenderingContext()=0;
 
   // flush changes to the rendering context passed at initialization time

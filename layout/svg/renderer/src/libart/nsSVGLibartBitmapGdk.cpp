@@ -43,12 +43,9 @@
 #include "nsIDeviceContext.h"
 #include "nsIPresContext.h"
 #include "nsRect.h"
-#include "nsIImage.h"
 #include "nsIComponentManager.h"
-#include "imgIContainer.h"
-#include "gfxIImageFrame.h"
-#include "nsIInterfaceRequestor.h"
-#include "nsIInterfaceRequestorUtils.h"
+#include "nsDrawingSurfaceGTK.h"
+#include "nsRenderingContextGTK.h"
 
 ////////////////////////////////////////////////////////////////////////
 // nsSVGLibartBitmapGdk
@@ -73,56 +70,45 @@ public:
   NS_IMETHOD_(int) GetLineStride();
   NS_IMETHOD_(int) GetWidth();
   NS_IMETHOD_(int) GetHeight();
-  NS_IMETHOD_(nsIRenderingContext*) LockRenderingContext(const nsRect& rect);
+  NS_IMETHOD_(void) LockRenderingContext(const nsRect& rect, nsIRenderingContext**ctx);
   NS_IMETHOD_(void) UnlockRenderingContext();
   NS_IMETHOD_(void) Flush();
   
 private:
-  void LockBuffer();
-  void UnlockBuffer();
-
-  PRBool mLocked;
   nsCOMPtr<nsIRenderingContext> mRenderingContext;
-  nsCOMPtr<imgIContainer> mContainer;
-  nsCOMPtr<gfxIImageFrame> mBuffer;
-  nsRect mRectTwips;
-  nsRect mRect;
+  nsRect mBufferRect;
+  GdkPixbuf *mBuffer;
+  nsRect mLockRect;
+  nsDrawingSurface mTempSurface;
 };
 
 //----------------------------------------------------------------------
 // implementation:
 
 nsSVGLibartBitmapGdk::nsSVGLibartBitmapGdk()
-    : mLocked(PR_FALSE)
+    : mBuffer(nsnull),
+      mTempSurface(nsnull)
 {
 }
 
 nsSVGLibartBitmapGdk::~nsSVGLibartBitmapGdk()
 {
-
+  if (mBuffer) {
+    gdk_pixbuf_unref(mBuffer);
+  }
 }
 
 nsresult
 nsSVGLibartBitmapGdk::Init(nsIRenderingContext* ctx,
-                               nsIPresContext* presContext,
-                               const nsRect & rect)
+                           nsIPresContext* presContext,
+                           const nsRect & rect)
 {
   mRenderingContext = ctx;
-
-  float twipsPerPx;
-  presContext->GetPixelsToTwips(&twipsPerPx);
-  mRectTwips.x = (nscoord)(rect.x*twipsPerPx);
-  mRectTwips.y = (nscoord)(rect.y*twipsPerPx);
-  mRectTwips.width = (nscoord)(rect.width*twipsPerPx);
-  mRectTwips.height = (nscoord)(rect.height*twipsPerPx);
-  mRect = rect;
+  mBufferRect = rect;
   
-  mContainer = do_CreateInstance("@mozilla.org/image/container;1");
-  mContainer->Init(rect.width, rect.height, nsnull);
-    
-  mBuffer = do_CreateInstance("@mozilla.org/gfx/image/frame;2");
-  mBuffer->Init(0, 0, rect.width, rect.height, gfxIFormats::RGB, 24);
-  mContainer->AppendFrame(mBuffer);
+  mBuffer = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8, rect.width, rect.height);
+
+  printf("nsSVGLibartBitmapGdk::Init [Created new pixbuf (%d,%d,%d,%d)]\n", rect.x, rect.y, rect.width, rect.height);
   
   return NS_OK;
 }
@@ -162,24 +148,6 @@ NS_INTERFACE_MAP_END
 
 //----------------------------------------------------------------------
 // Implementation helpers:
-void
-nsSVGLibartBitmapGdk::LockBuffer()
-{
-  if (mLocked) return;
-
-  mBuffer->LockImageData();    
-  mLocked = PR_TRUE;
-}
-
-void
-nsSVGLibartBitmapGdk::UnlockBuffer()
-{
-  if (!mLocked) return;
-
-  mBuffer->UnlockImageData();
-  mLocked = PR_FALSE;
-}
-
 
 //----------------------------------------------------------------------
 // nsISVGLibartBitmap methods:
@@ -187,10 +155,7 @@ nsSVGLibartBitmapGdk::UnlockBuffer()
 NS_IMETHODIMP_(PRUint8 *)
 nsSVGLibartBitmapGdk::GetBits()
 {
-  LockBuffer();
-  PRUint8* bits=nsnull;
-  PRUint32 length;
-  mBuffer->GetImageData(&bits, &length);
+  PRUint8* bits=gdk_pixbuf_get_pixels(mBuffer);
   return bits;
 }
 
@@ -215,67 +180,96 @@ nsSVGLibartBitmapGdk::GetIndexB()
 NS_IMETHODIMP_(int)
 nsSVGLibartBitmapGdk::GetLineStride()
 {
-  PRUint32 bytesPerRow=0;
-  mBuffer->GetImageBytesPerRow(&bytesPerRow);
-  return (int) bytesPerRow;
+  return gdk_pixbuf_get_rowstride(mBuffer);
 }
 
 NS_IMETHODIMP_(int)
 nsSVGLibartBitmapGdk::GetWidth()
 {
-  return mRect.width; 
+  return mBufferRect.width; 
 }
 
 NS_IMETHODIMP_(int)
 nsSVGLibartBitmapGdk::GetHeight()
 {
-  return mRect.height;
+  return mBufferRect.height;
 }
 
-NS_IMETHODIMP_(nsIRenderingContext*)
-nsSVGLibartBitmapGdk::LockRenderingContext(const nsRect& rect)
-{
-  // doesn't work on default bitmap!
-  return nsnull;
+NS_IMETHODIMP_(void)
+nsSVGLibartBitmapGdk::LockRenderingContext(const nsRect& rect, nsIRenderingContext**ctx)
+{ 
+  NS_ASSERTION(mTempSurface==nsnull, "nested locking?");
+  mLockRect = rect;
+  
+  nsDrawingSurfaceGTK *surface=nsnull;
+  mRenderingContext->CreateDrawingSurface(rect, NS_CREATEDRAWINGSURFACE_FOR_PIXEL_ACCESS,
+                                          (nsDrawingSurface&)surface);
+  NS_ASSERTION(surface, "could not create drawing surface");
+
+  // copy from pixbuf to surface
+  GdkDrawable *drawable = surface->GetDrawable();
+  NS_ASSERTION(drawable, "null gdkdrawable");
+
+  gdk_draw_pixbuf(drawable, 0, mBuffer,
+                  mLockRect.x-mBufferRect.x,
+                  mLockRect.y-mBufferRect.y,
+                  0, 0,
+                  mLockRect.width, mLockRect.height,
+                  GDK_RGB_DITHER_NONE, 0, 0);
+
+  mRenderingContext->GetDrawingSurface(&mTempSurface);
+  mRenderingContext->SelectOffScreenDrawingSurface(surface);
+  mRenderingContext->PushState();
+
+  nsTransform2D* transform;
+  mRenderingContext->GetCurrentTransform(transform);
+  transform->SetTranslation(-mLockRect.x, -mLockRect.y);
+  
+  *ctx = mRenderingContext;
+  NS_ADDREF(*ctx);
 }
 
 NS_IMETHODIMP_(void)
 nsSVGLibartBitmapGdk::UnlockRenderingContext()
-{
-  // doesn't work on default bitmap!
+{ 
+  NS_ASSERTION(mTempSurface, "no temporary surface. multiple unlock calls?");
+  nsDrawingSurfaceGTK *surface=nsnull;
+  mRenderingContext->GetDrawingSurface((nsDrawingSurface*)&surface);
+  NS_ASSERTION(surface, "null surface");
+
+  PRBool clipEmpty;
+  mRenderingContext->PopState(clipEmpty);
+  mRenderingContext->SelectOffScreenDrawingSurface(mTempSurface);
+  mTempSurface = nsnull;
+  
+  // copy from surface to pixbuf
+  GdkPixbuf * pb = gdk_pixbuf_get_from_drawable(mBuffer, surface->GetDrawable(),
+                                                0,
+                                                0,0,
+                                                mLockRect.x-mBufferRect.x,mLockRect.y-mBufferRect.y,
+                                                mLockRect.width,mLockRect.height);
+  NS_ASSERTION(pb, "gdk_pixbuf_get_from_drawable failed");
+  mRenderingContext->DestroyDrawingSurface(surface);
 }
 
 NS_IMETHODIMP_(void)
 nsSVGLibartBitmapGdk::Flush()
 {
-  UnlockBuffer();
 
-  nsCOMPtr<nsIDeviceContext> ctx;
-  mRenderingContext->GetDeviceContext(*getter_AddRefs(ctx));
+  nsDrawingSurfaceGTK *surface=nsnull;
+  mRenderingContext->GetDrawingSurface((nsDrawingSurface*)&surface);
+  NS_ASSERTION(surface, "null drawing surface");
 
-  nsCOMPtr<nsIInterfaceRequestor> ireq(do_QueryInterface(mBuffer));
-  if (ireq) {
-    nsCOMPtr<nsIImage> img(do_GetInterface(ireq));
+  GdkDrawable *drawable = surface->GetDrawable();
+  NS_ASSERTION(drawable, "null gdkdrawable");
 
-    if (!img->GetIsRowOrderTopToBottom()) {
-      // XXX we need to flip the image. This is silly. Blt should take
-      // care of it
-      int stride = img->GetLineStride();
-      int height = GetHeight();
-      PRUint8* bits = img->GetBits();
-      PRUint8* rowbuf = new PRUint8[stride];
-      for (int row=0; row<height/2; ++row) {
-        memcpy(rowbuf, bits+row*stride, stride);
-        memcpy(bits+row*stride, bits+(height-1-row)*stride, stride);
-        memcpy(bits+(height-1-row)*stride, rowbuf, stride);
-      }
-      delete[] rowbuf;
-    }
-    
-    nsRect r(0, 0, GetWidth(), GetHeight());
-    img->ImageUpdated(ctx, nsImageUpdateFlags_kBitsChanged, &r);
-  }
-  
-  mContainer->DecodingComplete();
-  mRenderingContext->DrawTile(mContainer, mRectTwips.x, mRectTwips.y, &mRectTwips);
+  nsTransform2D* transform;
+  mRenderingContext->GetCurrentTransform(transform);
+
+  gdk_draw_pixbuf(drawable, 0, mBuffer,
+                  0, 0,
+                  mBufferRect.x + transform->GetXTranslation(),
+                  mBufferRect.y + transform->GetYTranslation(),
+                  mBufferRect.width, mBufferRect.height,
+                  GDK_RGB_DITHER_NONE, 0, 0);
 }
