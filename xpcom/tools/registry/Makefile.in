@@ -33,14 +33,11 @@ REQUIRES	= string \
 		  embedstring \
 	          $(NULL)
 
-DEFINES		+= -DXPCOM_GLUE 
-
 
 SIMPLE_PROGRAMS	= $(CPPSRCS:.cpp=$(BIN_SUFFIX))
 
 LIBS            = \
-		$(DIST)/lib/$(LIB_PREFIX)xpcomglue.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)embedstring.$(LIB_SUFFIX) \
+		$(MOZ_COMPONENT_LIBS) \
 		$(NSPR_LIBS) \
 		$(NULL)
 
