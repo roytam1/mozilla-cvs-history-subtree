@@ -54,6 +54,7 @@
 #include "nsIDOMHTMLSelectElement.h"
 #include "nsIDOMHTMLOptionElement.h"
 #include "nsIDOMHTMLOptionsCollection.h"
+#include "nsIDOMHTMLOptGroupElement.h"
 #include "nsIDOMWindow.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIDocument.h"
@@ -81,7 +82,10 @@
 
 -(IBAction)selectOption:(id)aSender
 {
-  nsIDOMHTMLOptionElement* optionElt = (nsIDOMHTMLOptionElement*) [aSender tag];
+  nsIDOMHTMLOptionElement* optionElt = (nsIDOMHTMLOptionElement*)[[aSender representedObject] pointerValue];
+  NS_ASSERTION(optionElt, "Missing option element");
+  if (!optionElt) return;
+
   optionElt->SetSelected(PR_TRUE);
 
   // Fire a DOM event for the title change.
@@ -115,18 +119,31 @@ CHClickListener::~CHClickListener()
 NS_IMETHODIMP
 CHClickListener::MouseDown(nsIDOMEvent* aEvent)
 {
+  nsCOMPtr<nsIDOMMouseEvent> mouseEvent(do_QueryInterface(aEvent));
+  if (!mouseEvent) return NS_ERROR_FAILURE;
+  
+  PRUint16 button;
+  mouseEvent->GetButton(&button);
+  // only show popup on left button
+  if (button != 0)
+    return NS_OK;
+
   nsCOMPtr<nsIDOMEventTarget> target;
-  aEvent->GetTarget(getter_AddRefs(target));
+  mouseEvent->GetTarget(getter_AddRefs(target));
   if (!target)
     return NS_OK;
+
   nsCOMPtr<nsIDOMHTMLSelectElement> sel(do_QueryInterface(target));
-  if (sel) {
+  if (!sel)
+    return NS_OK;
+
     PRInt32 size = 0;
     sel->GetSize(&size);
     PRBool multiple = PR_FALSE;
     sel->GetMultiple(&multiple);
     if(size > 1 || multiple)
       return NS_OK;
+
     // the call to popUpContextMenu: is synchronous so we don't need to
     // worry about retaining the menu for later.
     NSMenu* menu = [[[NSMenu alloc] init] autorelease];
@@ -139,19 +156,47 @@ CHClickListener::MouseDown(nsIDOMEvent* aEvent)
     sel->GetOptions(getter_AddRefs(options));
     PRUint32 count;
     options->GetLength(&count);
-    PRInt32 selIndex = 0;
+  PRInt32 selIndex = 0;   // currently unused
+
+  nsCOMPtr<nsIDOMHTMLOptGroupElement> curOptGroup;
+
     for (PRUint32 i = 0; i < count; i++) {
+    nsAutoString itemLabel;
+
       nsCOMPtr<nsIDOMNode> node;
       options->Item(i, getter_AddRefs(node));
+
       nsCOMPtr<nsIDOMHTMLOptionElement> option(do_QueryInterface(node));
-      nsAutoString text;
-      option->GetLabel(text);
-      if (text.IsEmpty())
-        option->GetText(text);
-      NSString* title = [[NSString stringWith_nsAString: text] stringByTruncatingTo:75 at:kTruncateAtMiddle];
+
+    nsCOMPtr<nsIDOMNode> parentNode;
+    option->GetParentNode(getter_AddRefs(parentNode));
+    nsCOMPtr<nsIDOMHTMLOptGroupElement> parentOptGroup = do_QueryInterface(parentNode);
+    if (parentOptGroup && (parentOptGroup != curOptGroup))
+    {
+      // insert optgroup item
+      parentOptGroup->GetLabel(itemLabel);
+      NSString* title = [[NSString stringWith_nsAString: itemLabel] stringByTruncatingTo:75 at:kTruncateAtMiddle];
       NSMenuItem* menuItem = [[[NSMenuItem alloc] initWithTitle: title action: NULL keyEquivalent: @""] autorelease];
       [menu addItem: menuItem];
-      [menuItem setTag: (int)option.get()];
+      [menuItem setEnabled: NO];
+
+      curOptGroup = parentOptGroup;
+    }
+
+    option->GetLabel(itemLabel);
+    if (itemLabel.IsEmpty())
+      option->GetText(itemLabel);
+
+    NSString* title = [[NSString stringWith_nsAString: itemLabel] stringByTruncatingTo:75 at:kTruncateAtMiddle];
+    
+    // indent items in optgroup
+    if (parentOptGroup)
+      title = [@"  " stringByAppendingString:title];
+
+    NSMenuItem* menuItem = [[[NSMenuItem alloc] initWithTitle: title action: NULL keyEquivalent: @""] autorelease];
+    [menu addItem: menuItem];
+    [menuItem setRepresentedObject:[NSValue valueWithPointer:option.get()]];
+
       PRBool selected;
       option->GetSelected(&selected);
       if (selected) {
@@ -187,9 +232,8 @@ CHClickListener::MouseDown(nsIDOMEvent* aEvent)
       currNS->GetOffsetParent(getter_AddRefs(currOffsetParent));
     }
     
-    nsCOMPtr<nsIDOMMouseEvent> msEvent(do_QueryInterface(aEvent));
-    msEvent->GetClientX(&clientX);
-    msEvent->GetClientY(&clientY);
+  mouseEvent->GetClientX(&clientX);
+  mouseEvent->GetClientY(&clientY);
 
     PRInt32 xDelta = clientX - left;
     PRInt32 yDelta = top + height - clientY;
@@ -219,6 +263,6 @@ CHClickListener::MouseDown(nsIDOMEvent* aEvent)
     [cell setFont:[NSFont systemFontOfSize:[NSFont systemFontSize]]];
     [cell trackMouse: event inRect: bounds ofView: [[event window] contentView] untilMouseUp: YES];
     [cell release];
-  }
+
   return NS_OK;
 }
