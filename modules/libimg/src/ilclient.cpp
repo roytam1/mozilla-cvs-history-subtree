@@ -25,7 +25,10 @@
 
 
 #include "if.h"
-#include "il_strm.h"            /* For OPAQUE_CONTEXT. */
+#include "il_strm.h"			/* For OPAQUE_CONTEXT. */
+/*	ebb - begin */
+#include "icc_profile.h"		/* For il_remove_icc_profile_request */
+/*	ebb - end */
 
 #ifdef STANDALONE_IMAGE_LIB
 #include "ilISystemServices.h"
@@ -419,6 +422,9 @@ il_container *
 il_get_container(IL_GroupContext *img_cx,    
                  NET_ReloadMethod cache_reload_policy,
                  const char *image_url,
+/*	ebb - begin */
+				 const char *icc_profile_url,
+/*	ebb - end */
                  IL_IRGB *background_color,
                  IL_DitherMode dither_mode,
                  int req_depth,
@@ -432,6 +438,11 @@ il_get_container(IL_GroupContext *img_cx,
 #else
 	void *exc = NULL;
 #endif
+
+/*	ebb - begin */
+     /* Read the matching state from prefs */
+	int32 color_matching_pref = il_color_matching_on(kReadPref);
+/*	ebb - end */
 
     urlhash = hash = il_hash(image_url);
 
@@ -474,8 +485,53 @@ il_get_container(IL_GroupContext *img_cx,
                 il_delete_container(ic);
             }
             ic = NULL;
-            
-        }
+ 
+        }      
+/*	ebb - begin */
+        if (ic)
+        {
+	        /*
+	        	Check if the icc_profile is the same as the one
+	        	passed in.  If not, we don't want to use this
+	        	cached image, because the pixels are matched.
+	        	The urls MUST be equal, even if one is blank.
+	        */
+	        if (icc_profile_url != NULL && ic->icc_profile_url != NULL)
+	        {
+				if (PL_strcmp(icc_profile_url,ic->icc_profile_url))
+					ic = NULL;
+	        }
+			else if (icc_profile_url != NULL || ic->icc_profile_url != NULL)
+			{
+				ic = NULL;
+			}
+			
+			/*
+	        	The other cases which we should force a reload are:
+	        	¥	if the image container had an embedded profile,
+	        		OR if the image has a profile url
+	        		
+	        		IF it went into cache un-matched
+	        			AND the current color matching pref is ON
+		        	
+		        	ELSE it went into the cache matched
+		        		AND matching is now OFF.
+	        */
+			if (ic && CONTAINER_HAS_PROFILE(ic))
+			{
+				if (CONTAINER_WAS_MATCHED(ic))
+				{
+					if (color_matching_pref == kColorMatchingOff)
+						ic = NULL;
+				}
+				else
+				{
+					if (color_matching_pref != kColorMatchingOff)
+						ic = NULL;
+				}
+			}
+		}
+/*	ebb - end */
     }
 
     /* Reorder the cache list so it remains in LRU order*/
@@ -540,6 +596,23 @@ il_get_container(IL_GroupContext *img_cx,
         ic->hash = hash;
         ic->urlhash = urlhash;
         ic->url_address = PL_strdup(image_url);
+        
+/*	ebb - begin */
+        /* Init the matching state of the container based on prefs */
+        switch (color_matching_pref)
+        {
+        	case kColorMatchingOff:
+        		ic->icc_profile_flags = kColorSyncOFF;
+        		break;
+        	case kColorMatchIfProfile:
+        		ic->icc_profile_flags = kProfilePresent;
+        		break;
+        	case kColorMatchAllImages:
+        		ic->icc_profile_flags = kProfileDefault;
+        		break;
+        }
+/*	ebb - end */
+
 		ic->is_url_loading = PR_FALSE;
         ic->dest_width  = req_width;
         ic->dest_height = req_height;
@@ -575,6 +648,23 @@ il_get_container(IL_GroupContext *img_cx,
         }
 #endif /* STANDALONE_IMAGE_LIB */
     }
+    
+/*	ebb - begin */
+    /*
+    	If the container already has a profile url, it must
+    	have come from the cache.  We have ensured that it
+    	is equal to the icc_profile_url parameter, so we
+    	don't need to copy it again.
+    */
+	if (ic->icc_profile_url == NULL)
+	{
+		if (color_matching_pref != kColorMatchingOff)
+		{
+			if (icc_profile_url != NULL)
+    			ic->icc_profile_url = PL_strdup(icc_profile_url);
+		}
+	}        	
+/*	ebb - end */
     
 	il_addtocache(ic);
     ic->is_in_use = TRUE;
@@ -637,6 +727,12 @@ il_delete_container(il_container *ic)
         IL_ReleaseColorSpace(ic->src_header->color_space);
         PR_FREEIF(ic->src_header);
 
+/*	ebb - begin */
+		/* get rid of any icc profile references */
+		if (ic->icc_profile_req)
+			il_remove_icc_profile_request(ic->icc_profile_req);
+/*	ebb - end */
+
 		/* delete the image */
         if (!(ic->image || ic->mask))
             return;
@@ -655,6 +751,9 @@ il_delete_container(il_container *ic)
 
         FREE_IF_NOT_NULL(ic->comment);
         FREE_IF_NOT_NULL(ic->url_address);
+/*	ebb - begin */
+        FREE_IF_NOT_NULL(ic->icc_profile_url);
+/*	ebb - end */
         FREE_IF_NOT_NULL(ic->fetch_url);
 		
         PR_FREEIF(ic);
@@ -1321,6 +1420,10 @@ IL_Init()
 #ifdef STANDALONE_IMAGE_LIB
     il_ss = ss;
 #endif /* STANDALONE_IMAGE_LIB */
+
+/*	ebb - begin */	
+	IL_Init_ColorSync();	
+/*	ebb - end */
 
     /* XXXM12N - finish me. */
     return TRUE;
