@@ -67,9 +67,8 @@ nsEventStatus ScrollBarView :: HandleEvent(nsGUIEvent *aEvent, PRUint32 aEventFl
     case NS_SCROLLBAR_LINE_NEXT:
     case NS_SCROLLBAR_LINE_PREV:
       NS_ASSERTION((nsnull != mScrollingView), "HandleEvent() called after the ScrollingView has been destroyed.");
-      if (nsnull != mScrollingView) {
+      if (nsnull != mScrollingView)
         mScrollingView->HandleScrollEvent(aEvent, aEventFlags);
-      }
       retval = nsEventStatus_eConsumeNoDefault;
       break;
 
@@ -1050,8 +1049,8 @@ void nsScrollingView :: ComputeContainerSize()
 
     NS_IF_RELEASE(scrollv);
 
-    if ((dx != 0) || (dy != 0))
-      AdjustChildWidgets(this, this, 0, 0, px->GetTwipsToPixels());
+//    if ((dx != 0) || (dy != 0))
+//      AdjustChildWidgets(this, this, 0, 0, px->GetTwipsToPixels());
 
     NS_RELEASE(px);
     NS_RELEASE(scrollview);
