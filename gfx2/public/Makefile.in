@@ -32,6 +32,7 @@ XPIDL_MODULE	= gfx2
 
 XPIDLSRCS	= \
 		gfxtypes.idl \
+		nsIGFXFormat.idl \
 		nsIImageContainer.idl \
 		nsIImageFrame.idl \
 		$(NULL)

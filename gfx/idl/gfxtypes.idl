@@ -79,38 +79,6 @@ typedef long                gfx_format;
  */
 typedef float               gfx_gamma;
 
-/**
- * nsIGFXFormat interface
- *
- * @author Tim Rowley <tor@cs.brown.edu>
- * @author Stuart Parmenter <pavlov@netscape.com>
- * @version 0.0
- * @see gfx_format
- */
-[scriptable]
-interface nsIGFXFormat
-{
-  /**
-   * RGB    - duh...
-   */
-  const gfx_format RGB    = 0;
-
-  /**
-   * RGB_A1 - RGB image and 1-bit alpha mask
-   */
-  const gfx_format RGB_A1 = 1;
-
-  /**
-   * RGB_A8 - RGB image and 8-bit alpha image
-   */
-  const gfx_format RGB_A8 = 2;
-
-  /**
-   * RGBA   - packed RGBA image
-   */
-  const gfx_format RGBA   = 3;
-};
-
 /*! @verbatim */
 [ptr] native nsRect2(nsRect2);
 [ptr] native nsSize2(nsSize2);
