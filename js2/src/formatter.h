@@ -89,9 +89,11 @@ namespace JavaScript
         Formatter &operator<<(uint32 i) {printFormat(*this, "%u", i); return *this;}
         Formatter &operator<<(int32 i) {printFormat(*this, "%d", i); return *this;}
 
+#ifndef _WIN32
         // Cause compile-time undefined YOU_TRIED_TO_PRINT_A_RAW_POINTER identifier errors for accidental printing of pointers.
         // The error occurs at the place where you try to instantiate this template; the compiler may or may not tell you where it is.
         template<class T> Formatter &operator<<(const T *s) {YOU_TRIED_TO_PRINT_A_RAW_POINTER(s); return *this;}
+#endif
 
         friend void printString(Formatter &f, const char *strBegin, const char *strEnd) {f.printStr8(strBegin, strEnd);}
         friend void printString(Formatter &f, const char16 *strBegin, const char16 *strEnd) {f.printStr16(strBegin, strEnd);}
