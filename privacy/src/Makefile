@@ -34,7 +34,7 @@ MODULE = privacy
 EXPORTS = \
 	$(NULL)
 
-REQUIRES = network layer pref style lay rdf
+REQUIRES = privacy network layer pref style lay rdf nspr util img js
 
 include $(DEPTH)/config/config.mk
 
