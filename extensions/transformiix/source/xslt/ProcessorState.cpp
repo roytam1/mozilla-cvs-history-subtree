@@ -48,8 +48,7 @@
 /**
  * Creates a new ProcessorState
 **/
-ProcessorState::ProcessorState() : mXPathParseContext(0),
-                                   mSourceDocument(0),
+ProcessorState::ProcessorState() : mSourceDocument(0),
                                    xslDocument(0),
                                    resultDocument(0)
 {
@@ -63,8 +62,7 @@ ProcessorState::ProcessorState() : mXPathParseContext(0),
 ProcessorState::ProcessorState(Document* aSourceDocument,
                                Document* aXslDocument,
                                Document* aResultDocument)
-    : mXPathParseContext(0),
-      mSourceDocument(aSourceDocument),
+    : mSourceDocument(aSourceDocument),
       xslDocument(aXslDocument),
       resultDocument(aResultDocument)
 {
@@ -198,11 +196,8 @@ void ProcessorState::addTemplate(Element* aXslTemplate,
     }
 
     // Get the pattern
-    Element* oldContext = mXPathParseContext;
-    mXPathParseContext = aXslTemplate;
     txPSParseContext context(this, aXslTemplate);
     txPattern* pattern = exprParser.createPattern(match, &context);
-    mXPathParseContext = oldContext;
     if (!pattern) {
         return;
     }
@@ -462,9 +457,6 @@ Expr* ProcessorState::getExpr(Element* aElem, ExprAttr aAttr)
 {
     NS_ASSERTION(aElem, "missing element while getting expression");
 
-    // This is how we'll have to do it for now
-    mXPathParseContext = aElem;
-
     Expr* expr = (Expr*)mExprHashes[aAttr].get(aElem);
     if (expr) {
         return expr;
@@ -506,9 +498,6 @@ Expr* ProcessorState::getExpr(Element* aElem, ExprAttr aAttr)
 txPattern* ProcessorState::getPattern(Element* aElem, PatternAttr aAttr)
 {
     NS_ASSERTION(aElem, "missing element while getting pattern");
-
-    // This is how we'll have to do it for now
-    mXPathParseContext = aElem;
 
     txPattern* pattern = (txPattern*)mExprHashes[aAttr].get(aElem);
     if (pattern) {
@@ -560,14 +549,6 @@ Element* ProcessorState::getNamedTemplate(String& aName)
             return templ;
     }
     return 0;
-}
-
-void ProcessorState::getNameSpaceURIFromPrefix(const String& aPrefix,
-                                               String& aNamespaceURI)
-{
-    if (mXPathParseContext)
-        XMLDOMUtils::getNamespaceURI(aPrefix, mXPathParseContext,
-                                     aNamespaceURI);
 }
 
 txOutputFormat* ProcessorState::getOutputFormat()
@@ -628,11 +609,8 @@ void ProcessorState::processAttrValueTemplate(const String& aAttValue,
             return;
     }
     txPSParseContext pContext(this, xpathParse);
-    Element* oldXPath = mXPathParseContext;
-    mXPathParseContext = xpathParse;
     AttributeValueTemplate* avt =
         exprParser.createAttributeValueTemplate(aAttValue, &pContext);
-    mXPathParseContext = oldXPath;
 
     if (!avt) {
         // shortcut, this is just a regular string
@@ -717,8 +695,6 @@ MBool ProcessorState::addKey(Element* aKeyElem)
             return MB_FALSE;
         xslKeys.put(keyName, xslKey);
     }
-    Element* oldContext = mXPathParseContext;
-    mXPathParseContext = aKeyElem;
     txPattern* match = 0;
     txPSParseContext pContext(this, aKeyElem);
     String attrVal;
@@ -730,7 +706,6 @@ MBool ProcessorState::addKey(Element* aKeyElem)
     if (aKeyElem->getAttr(txXSLTAtoms::use, kNameSpaceID_None, attrVal)) {
         use = exprParser.createExpr(attrVal, &pContext);
     }
-    mXPathParseContext = oldContext;
     if (!match || !use || !xslKey->addKey(match, use)) {
         delete match;
         delete use;
@@ -982,7 +957,8 @@ void ProcessorState::receiveError(const String& errorMessage, nsresult aRes)
 #define CHECK_FN(_name) txXSLTAtoms::##_name == aName
 
 nsresult ProcessorState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
-                                                  FunctionCall*& aFunction)
+                                             Element* aElem,
+                                             FunctionCall*& aFunction)
 {
    String err;
 
@@ -990,7 +966,7 @@ nsresult ProcessorState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
        return NS_OK;
    }
    if (CHECK_FN(document)) {
-       aFunction = new DocumentFunctionCall(this, mXPathParseContext);
+       aFunction = new DocumentFunctionCall(this, aElem);
        return NS_OK;
    }
    if (CHECK_FN(key)) {
@@ -1015,11 +991,11 @@ nsresult ProcessorState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
        return NS_OK;
    }
    if (CHECK_FN(systemProperty)) {
-       aFunction = new SystemPropertyFunctionCall(mXPathParseContext);
+       aFunction = new SystemPropertyFunctionCall(aElem);
        return NS_OK;
    }
    if (CHECK_FN(elementAvailable)) {
-       aFunction = new ElementAvailableFunctionCall(mXPathParseContext);
+       aFunction = new ElementAvailableFunctionCall(aElem);
        return NS_OK;
    }
    if (CHECK_FN(functionAvailable)) {
@@ -1093,9 +1069,6 @@ void ProcessorState::initialize()
     }
     if (xslDocument) {
         loadedDocuments.put(xslDocument->getBaseURI(), xslDocument);
-        // XXX hackarond to get namespacehandling in a little better shape
-        // we won't need to do this once we resolve namespaces during parsing
-        mXPathParseContext = xslDocument->getDocumentElement();
     }
 
     // make sure all keys are deleted
@@ -1157,7 +1130,7 @@ nsresult txPSParseContext::resolveNamespacePrefix(txAtom* aPrefix,
 nsresult txPSParseContext::resolveFunctionCall(txAtom* aName, PRInt32 aID,
                                                FunctionCall*& aFunction)
 {
-    return mPS->resolveFunctionCall(aName, aID, aFunction);
+    return mPS->resolveFunctionCall(aName, aID, mStyle, aFunction);
 }
 
 void txPSParseContext::receiveError(const String& aMsg, nsresult aRes)

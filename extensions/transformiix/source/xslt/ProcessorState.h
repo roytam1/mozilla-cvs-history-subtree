@@ -46,7 +46,7 @@ class txDecimalFormat;
 /**
  * Class used for keeping the current state of the XSL Processor
 **/
-class ProcessorState : public txIMatchContext {
+class ProcessorState : public txIEvalContext {
 
 public:
     /**
@@ -313,15 +313,10 @@ public:
     txDecimalFormat* getDecimalFormat(String& name);
 
     /*
-     * Virtual methods from txIMatchContext
+     * Virtual methods from txIEvalContext
      */
 
-    nsresult getVariable(PRInt32 aNamespace, txAtom* aLName,
-                         ExprResult*& aResult);
-
-    MBool isStripSpaceAllowed(Node* node);
-
-    void receiveError(const String& errorMessage, nsresult aRes);
+    TX_DECL_EVAL_CONTEXT;
 
     /*
      * More other functions
@@ -336,15 +331,7 @@ public:
      * @return the FunctionCall for the function with the given name.
     **/
     nsresult resolveFunctionCall(txAtom* aName, PRInt32 aID,
-                                 FunctionCall*& aFunction);
-
-    /**
-     * Returns the namespace URI for the given namespace prefix. This method
-     * should only be called to get a namespace declared within the
-     * context (ie. the stylesheet).
-    **/
-    void getNameSpaceURIFromPrefix(const String& aPrefix,
-                                   String& aNamespaceURI);
+                                 Element* aElem, FunctionCall*& aFunction);
 
     /*
      * XXX Die.
@@ -428,7 +415,6 @@ private:
      */
     TemplateRule*  mCurrentTemplateRule;
 
-    Element*       mXPathParseContext;
     Stack          nodeSetStack;
     Document*      mSourceDocument;
     Document*      xslDocument;
