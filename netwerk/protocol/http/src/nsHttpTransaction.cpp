@@ -180,8 +180,8 @@ nsHttpTransaction::OnStopTransaction(nsresult status)
 			mFiredOnStart = PR_TRUE;
 			mListener->OnStartRequest(this, nsnull); 
 		}
-
 		mListener->OnStopRequest(this, nsnull, status);
+        mListener = 0;
 	}
     return NS_OK;
 }
@@ -422,8 +422,10 @@ nsHttpTransaction::Cancel(nsresult status)
 
     // if the transaction is already "done" then there is nothing more to do.
     // ie., our consumer _will_ eventually receive their OnStopRequest.
-    if (mTransactionDone)
+    if (mTransactionDone) {
+        LOG(("ignoring cancel since transaction is already done [this=%x]\n", this));
         return NS_OK;
+    }
 
     // the status must be set immediately as the following routines may
     // take action asynchronously.

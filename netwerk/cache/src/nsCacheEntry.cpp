@@ -302,6 +302,8 @@ nsCacheEntry::CreateDescriptor(nsCacheRequest *           request,
                                nsICacheEntryDescriptor ** result)
 {
     NS_ENSURE_ARG_POINTER(request && result);
+
+    printf(">>> creating descriptor for entry @%x\n", this);
     
     nsCacheEntryDescriptor * descriptor =
         new nsCacheEntryDescriptor(this, accessGranted);

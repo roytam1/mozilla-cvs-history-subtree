@@ -307,6 +307,8 @@ nsCacheEntryDescriptor::Doom()
 {
     if (!mCacheEntry)  return NS_ERROR_NOT_AVAILABLE;
 
+    printf(">>> dooming cache entry @%x\n", mCacheEntry);
+
     return nsCacheService::GlobalInstance()->DoomEntry(mCacheEntry);
 }
 

@@ -54,6 +54,8 @@ public:
     nsHttpTransaction(nsIStreamListener *, nsIInterfaceRequestor *);
     virtual ~nsHttpTransaction();
 
+    nsrefcnt RefCnt() { return mRefCnt; }
+
     // Called when assigned to a connection
     nsresult SetConnection(nsHttpConnection *);
 

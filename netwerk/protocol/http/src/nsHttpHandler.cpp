@@ -390,6 +390,8 @@ nsHttpHandler::ReclaimConnection(nsHttpConnection *conn)
     // remove connection from the active connection list
     mActiveConnections.RemoveElement(conn);
 
+    LOG(("active connection count = %u\n", mActiveConnections.Count()));
+
     if (conn->CanReuse()) {
         // verify that we aren't already maxed out on the number of
         // keep-alives we can have for this server.
@@ -589,7 +591,9 @@ nsHttpHandler::ProcessTransactionQ()
     nsPendingTransaction *pt = nsnull;
 
     PRInt32 i;
-    for (i=0; i<mTransactionQ.Count(); ++i) {
+    for (i=0; (i < mTransactionQ.Count()) &&
+              (mActiveConnections.Count() < mMaxConnections); ++i) {
+
         pt = (nsPendingTransaction *) mTransactionQ[i];
 
         // try to initiate this transaction... if it fails
@@ -618,9 +622,7 @@ nsHttpHandler::EnqueueTransaction(nsHttpTransaction *trans,
 
     mTransactionQ.AppendElement(pt);
 
-#ifdef DEBUG
     LOG(("transaction queue contains %u elements\n", mTransactionQ.Count()));
-#endif
     return NS_OK;
 }
 
@@ -1583,6 +1585,8 @@ nsPendingTransaction::nsPendingTransaction(nsHttpTransaction *trans,
     : mTransaction(trans)
     , mConnectionInfo(ci)
 {
+    LOG(("Creating nsPendingTransaction @%x\n", this));
+
     NS_PRECONDITION(mTransaction, "null transaction");
     NS_PRECONDITION(mConnectionInfo, "null connection info");
 
@@ -1593,6 +1597,8 @@ nsPendingTransaction::nsPendingTransaction(nsHttpTransaction *trans,
 nsHttpHandler::
 nsPendingTransaction::~nsPendingTransaction()
 {
+    LOG(("Destroying nsPendingTransaction @%x\n", this));
+ 
     NS_RELEASE(mTransaction);
     NS_RELEASE(mConnectionInfo);
 }

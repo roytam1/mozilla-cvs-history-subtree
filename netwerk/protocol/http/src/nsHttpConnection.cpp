@@ -44,7 +44,8 @@ TransactionReleaseEventHandler(PLEvent *ev)
 {
     nsHttpTransaction *trans = (nsHttpTransaction *) PL_GetEventOwner(ev);
 
-    LOG(("TransactionReleaseEventHandler [trans=%x] calling release...\n", trans));
+    LOG(("TransactionReleaseEventHandler [trans=%x refcnt=%u] calling release...\n",
+        trans, trans->RefCnt()));
 
     NS_RELEASE(trans);
     return 0;
@@ -358,8 +359,8 @@ nsHttpConnection::CreateTransport()
 nsresult
 nsHttpConnection::ProxyReleaseTransaction(nsHttpTransaction *trans)
 {
-    LOG(("nsHttpConnection::ProxyReleaseTransaction [this=%x trans=%x]\n",
-        this, trans));
+    LOG(("nsHttpConnection::ProxyReleaseTransaction [this=%x trans=%x refcnt=%u]\n",
+        this, trans, trans->RefCnt()));
 
     NS_ENSURE_TRUE(mEventQ, NS_ERROR_NOT_INITIALIZED);
     NS_ENSURE_ARG_POINTER(trans);
