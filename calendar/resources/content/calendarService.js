@@ -390,7 +390,7 @@ function(compMgr, fileSpec, location)
     catman.deleteCategoryEntry("command-line-argument-handlers",
                                "calendar command line handler", true);
     catman.deleteCategoryEntry("command-line-handler",
-                               CLINE_SERVICE_CONTRACTID, true);
+                               "m-calendar", true);
 }
 
 CalendarModule.getClassObject =
