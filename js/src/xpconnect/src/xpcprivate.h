@@ -1238,7 +1238,7 @@ public:
     XPCNativeScriptableFlags(JSUint32 flags = 0) : mFlags(flags) {}
 
     JSUint32 GetFlags() const {return mFlags & ~XPC_WN_SJSFLAGS_MARK_FLAG;}
-    JSUint32 SetFlags(JSUint32 flags) {mFlags = flags;}
+    void     SetFlags(JSUint32 flags) {mFlags = flags;}
 
     operator JSUint32() const {return GetFlags();}
 
