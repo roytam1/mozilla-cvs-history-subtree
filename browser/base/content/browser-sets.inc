@@ -158,7 +158,7 @@
     <command id="Tools:Extensions" oncommand="BrowserOpenExtensions('extensions');"/>
     <command id="Tools:Themes" oncommand="BrowserOpenExtensions('themes');"/>
 
-    <command id="Tools:Sanitize" oncommand="BrowserSanitize();"/>
+    <command id="Tools:Sanitize" oncommand="gSanitizeListener.sanitize(window || null);"/>
     
 #ifdef XP_MACOSX
     <command id="minimizeWindow" label="&minimizeWindow.label;" oncommand="window.minimize();" />

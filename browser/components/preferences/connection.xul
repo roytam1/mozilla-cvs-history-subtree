@@ -105,10 +105,10 @@
               </hbox>
               <hbox align="center">
                 <textbox id="networkProxyHTTP" flex="1"
-                         preference="network.proxy.http"/>
+                         preference="network.proxy.http" onpreferenceread="return gConnectionsDialog.readHTTPProxyServer();"/>
                 <label value="&port.label;" accesskey="&HTTPport.accesskey;" control="networkProxyHTTP_Port"/>
                 <textbox id="networkProxyHTTP_Port" size="5"
-                         preference="network.proxy.http_port"/>
+                         preference="network.proxy.http_port" onpreferenceread="return gConnectionsDialog.readHTTPProxyPort();"/>
               </hbox>
             </row>
             <row>

@@ -160,4 +160,20 @@ var gConnectionsDialog = {
     }
     return undefined;
   },
+  
+  readHTTPProxyServer: function ()
+  {
+    var shareProxiesPref = document.getElementById("network.proxy.share_proxy_settings");
+    if (shareProxiesPref.value)
+      this.updateProtocolPrefs();
+    return undefined;
+  },
+  
+  readHTTPProxyPort: function ()
+  {
+    var shareProxiesPref = document.getElementById("network.proxy.share_proxy_settings");
+    if (shareProxiesPref.value)
+      this.updateProtocolPrefs();
+    return undefined;
+  },
 };

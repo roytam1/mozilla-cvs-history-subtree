@@ -94,7 +94,7 @@
           this._setValue(lastStatePref ? lastStatePref.value 
                                        : this.valueFromPreferences, false);
         }
-        else 
+        else
           this._setValue(this.valueFromPreferences, false);
       ]]>
       </constructor>
@@ -239,7 +239,6 @@
           if (this.readonly || this.valueFromPreferences == val)
             return val;
             
-          dump("*** writing " + this.name +" = " + this.value + "\n");
           // Force a resync of preferences with value.
           switch (this.type) {
           case "int":
@@ -339,7 +338,7 @@
           }
           switch (this.type) {
           case "int":
-            return parseInt(aElement.value);
+            return aElement.value != "" ? parseInt(aElement.value) : 0;
           case "bool":
             return typeof(aElement.value) == "boolean" ? aElement.value : aElement.value == "true";
           }
@@ -419,7 +418,7 @@
         <children/>
       </xul:hbox>
       <xul:keyset>
-        <xul:key key="&windowClose.key;" modifiers="accel" oncommand="window.close();"/>
+        <xul:key anonid="keyClose" key="&windowClose.key;" modifiers="accel" oncommand="window.close();"/>
       </xul:keyset>
     </content>
     <implementation implements="nsITimerCallback">
@@ -442,6 +441,16 @@
             cancelButton.accesskey = docElt.getAttribute("closebuttonaccesskey");
 #endif
           }
+          else {
+            // No Cmd+W in non-instant-apply preferences windows
+            var keyClose = document.getAnonymousElementByAttribute(this, "anonid", "keyClose");
+            keyClose.parentNode.removeChild(keyClose);
+          }
+        }
+        else {
+          // No Cmd+W in child dialogs
+          var keyClose = document.getAnonymousElementByAttribute(this, "anonid", "keyClose");
+          keyClose.parentNode.removeChild(keyClose);          
         }
         var panes = this.preferencePanes;
         var lastPane = this.lastSelected ? document.getElementById(this.lastSelected) : panes[0];

@@ -76,6 +76,6 @@
 <!ENTITY  clearCache.label            "Clear Cache Now">
 <!ENTITY  clearCache.accesskey        "h">
 
-<!ENTITY  sanitizeSettings.label      "Sanitize Settings">
+<!ENTITY  sanitizeSettings.label      "Sanitize Settings...">
 <!ENTITY  sanitizeSettings.accesskey  "z">
 <!ENTITY  sanitize.intro              "Sanitize automatically removes privacy information when you use a keyboard shortcut or close &brandShortName;">

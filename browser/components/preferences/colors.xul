@@ -44,7 +44,7 @@
             xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
             title="&colorsDialog.title;"
             dlgbuttons="accept,cancel"
-            style="width: 30em;">
+            style="width: 38em !important;">
 
   <prefpane id="ColorsDialogPane">
   

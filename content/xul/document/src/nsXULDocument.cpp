@@ -782,7 +782,7 @@ ClearPresentationStuff(nsHashKey *aKey, void *aData, void* aClosure)
         boxObject->InvalidatePresentationStuff();
     }
 
-    return PR_TRUE;
+    return 2;
 }
 
 NS_IMETHODIMP

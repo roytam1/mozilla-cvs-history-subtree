@@ -77,9 +77,9 @@ var gContentPane = {
         preference = document.createElement("preference");
         var name = prefs[i].format.replace(/%LANG%/, aLanguageGroup);
         preference.id = name;
+        preference.setAttribute("name", name);
+        preference.setAttribute("type", prefs[i].type);
         preferences.appendChild(preference);
-        preference.name = name;
-        preference.type = prefs[i].type;
       }
       
       if (!prefs[i].element)
