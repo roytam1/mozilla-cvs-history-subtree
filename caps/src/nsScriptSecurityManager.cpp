@@ -31,7 +31,6 @@ static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 static NS_DEFINE_CID(kURLCID, NS_STANDARDURL_CID);
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_IID(kIScriptSecurityManagerIID, NS_ISCRIPTSECURITYMANAGER_IID);
-static NS_DEFINE_IID(kIScriptGlobalObjectDataIID, NS_ISCRIPTGLOBALOBJECTDATA_IID);
 
 NS_IMPL_ISUPPORTS(nsScriptSecurityManager, kIScriptSecurityManagerIID);
 
@@ -57,7 +56,7 @@ nsScriptSecurityManager::GetScriptSecurityManager()
 }
 
 NS_IMETHODIMP 
-nsScriptSecurityManager::NewJSPrincipals(nsIURI *aURL, nsString* aName, nsIPrincipal * * result)
+nsScriptSecurityManager::NewJSPrincipals(nsIURI * aURL, nsString * aName, nsIPrincipal * * result)
 {
 //  nsJSPrincipalsData * pdata;
   PRBool needUnlock = PR_FALSE;
@@ -191,7 +190,7 @@ nsScriptSecurityManager::GetObjectOriginURL(JSContext *aCx, JSObject *aObj, char
 {
   nsresult rv;
   JSObject *parent;
-  while (parent = JS_GetParent(aCx, aObj)) aObj = parent;
+  while (parent = ::JS_GetParent(aCx, aObj)) aObj = parent;
   nsIPrincipal * prin;
   if((rv = this->GetContainerPrincipals(aCx, aObj, & prin)) != NS_OK) return rv;
   nsICodebasePrincipal * cbprin;
@@ -287,7 +286,7 @@ nsScriptSecurityManager::GetContainerPrincipals(JSContext *aCx, JSObject *contai
   nsISupports * tmp;
   nsIScriptGlobalObjectData * globalData;
   tmp = (nsISupports *)JS_GetPrivate(aCx, container);
-  if (tmp == nsnull || (rv = tmp->QueryInterface(kIScriptGlobalObjectDataIID, (void * *)& globalData)) != NS_OK) 
+  if (tmp == nsnull || (rv = tmp->QueryInterface(NS_GET_IID(nsIScriptGlobalObjectData), (void * *)& globalData)) != NS_OK) 
   {
       delete originUrl;
       return rv;
@@ -391,7 +390,7 @@ nsScriptSecurityManager::FindOriginURL(JSContext * aCx, JSObject * aGlobal)
   nsIURI *origin = nsnull;
   tmp1 = (nsISupports *)JS_GetPrivate(aCx, aGlobal);
   if (nsnull != tmp1 && 
-      NS_OK == tmp1->QueryInterface(kIScriptGlobalObjectDataIID, (void**)&globalData)) {
+      NS_OK == tmp1->QueryInterface(NS_GET_IID(nsIScriptGlobalObjectData), (void**)&globalData)) {
     globalData->GetOrigin(&origin);
   }
   if (origin == nsnull) {
@@ -403,7 +402,7 @@ nsScriptSecurityManager::FindOriginURL(JSContext * aCx, JSObject * aGlobal)
         nsAutoString urlString = "[unknown origin]";
         NS_IF_RELEASE(globalData);
         return urlString.ToNewCString();
-    } else if (nsnull != tmp2 && NS_OK == tmp2->QueryInterface(kIScriptGlobalObjectDataIID, (void**)&globalData)) {
+    } else if (nsnull != tmp2 && NS_OK == tmp2->QueryInterface(NS_GET_IID(nsIScriptGlobalObjectData), (void**)&globalData)) {
       globalData->GetOrigin(&origin);
     }
   }

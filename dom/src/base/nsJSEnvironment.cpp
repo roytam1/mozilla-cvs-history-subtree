@@ -50,7 +50,6 @@ const size_t gStackSize = 8192;
 static NS_DEFINE_IID(kIScriptContextIID, NS_ISCRIPTCONTEXT_IID);
 static NS_DEFINE_IID(kIScriptObjectOwnerIID, NS_ISCRIPTOBJECTOWNER_IID);
 static NS_DEFINE_IID(kIScriptGlobalObjectIID, NS_ISCRIPTGLOBALOBJECT_IID);
-static NS_DEFINE_IID(kIScriptGlobalObjectDataIID, NS_ISCRIPTGLOBALOBJECTDATA_IID);
 static NS_DEFINE_IID(kIScriptNameSetRegistryIID, NS_ISCRIPTNAMESETREGISTRY_IID);
 static NS_DEFINE_IID(kCScriptNameSetRegistryCID, NS_SCRIPT_NAMESET_REGISTRY_CID);
 static NS_DEFINE_CID(kXPConnectCID,              NS_XPCONNECT_CID);
@@ -128,7 +127,7 @@ nsJSContext::EvaluateString(const nsString& aScript, const char * aURL, PRUint32
 	nsIScriptGlobalObject *global = GetGlobalObject();
 	nsIScriptGlobalObjectData *globalData;
 	nsIPrincipal * prin = nsnull;
-	if (global && NS_SUCCEEDED(global->QueryInterface(kIScriptGlobalObjectDataIID, (void**)&globalData))) {
+	if (global && NS_SUCCEEDED(global->QueryInterface(NS_GET_IID(nsIScriptGlobalObjectData), (void**)&globalData))) {
 		if (NS_FAILED(globalData->GetPrincipal(& prin))) {
 			NS_RELEASE(global);
 			NS_RELEASE(globalData);
@@ -137,8 +136,8 @@ nsJSContext::EvaluateString(const nsString& aScript, const char * aURL, PRUint32
 		NS_RELEASE(globalData);
 	}
 	NS_IF_RELEASE(global);
-	JSPrincipals * jsprin;
-	prin->ToJSPrincipal(& jsprin);
+  JSPrincipals * jsprin;
+  prin->ToJSPrincipal(& jsprin);
 	PRBool ret = ::JS_EvaluateUCScriptForPrincipals(mContext, 
 		JS_GetGlobalObject(mContext),
 		jsprin,
@@ -278,7 +277,7 @@ nsJSContext::InitClasses()
 	// Hook up XPConnect
 	{
 		nsIXPConnect* xpc;
-		res = nsServiceManager::GetService(kXPConnectCID, nsIXPConnect::GetIID(), (nsISupports**) &xpc);
+		res = nsServiceManager::GetService(kXPConnectCID, NS_GET_IID(nsIXPConnect), (nsISupports**) &xpc);
 		//NS_ASSERTION(NS_SUCCEEDED(res), "unable to get xpconnect");
 		if (NS_SUCCEEDED(res)) {
 			res = xpc->AddNewComponentsObject(mContext, JS_GetGlobalObject(mContext));
@@ -290,9 +289,7 @@ nsJSContext::InitClasses()
 			res = NS_OK;
 		}
 	}
-	
 	mIsInitialized = PR_TRUE;
-	
 	NS_RELEASE(global);
 	return res;
 }
@@ -300,25 +297,13 @@ nsJSContext::InitClasses()
 NS_IMETHODIMP     
 nsJSContext::IsContextInitialized()
 {
-	if (mIsInitialized) {
-		return NS_OK;
-	}
-	else {
-		return NS_COMFALSE;
-	}
+	return (mIsInitialized) ? NS_OK : NS_COMFALSE;
 }
 
 NS_IMETHODIMP
-nsJSContext::AddNamedReference(void *aSlot, 
-                               void *aScriptObject,
-                               const char *aName)
+nsJSContext::AddNamedReference(void *aSlot, void *aScriptObject, const char *aName)
 {
-	if (::JS_AddNamedRoot(mContext, aSlot, aName)) {
-		return NS_OK;
-	}
-	else {
-		return NS_ERROR_FAILURE;
-	}
+	return (::JS_AddNamedRoot(mContext, aSlot, aName)) ? NS_OK : NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
@@ -326,12 +311,7 @@ nsJSContext::RemoveReference(void *aSlot, void *aScriptObject)
 {
 	JSObject *obj = (JSObject *)aScriptObject;
 	
-	if (::JS_RemoveRoot(mContext, aSlot)) {
-		return NS_OK;
-	}
-	else {
-		return NS_ERROR_FAILURE;
-	}
+	return (::JS_RemoveRoot(mContext, aSlot)) ? NS_OK : NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
@@ -385,12 +365,12 @@ nsJSContext::GetSecurityManager(nsIScriptSecurityManager * * aInstancePtr)
 {
   nsresult ret;
   NS_WITH_SERVICE(nsIScriptSecurityManager, secManager,NS_SCRIPTSECURITYMANAGER_PROGID,& ret);
-	if (NS_OK == ret) 
-	{
+  if (NS_OK == ret) 
+  {
     *aInstancePtr = secManager;
-	  NS_ADDREF(* aInstancePtr);
-	}
-	return ret;
+    NS_ADDREF(* aInstancePtr);
+  }
+  return ret;
 }
 
 nsJSEnvironment *nsJSEnvironment::sTheEnvironment = nsnull;
@@ -461,8 +441,7 @@ extern "C" NS_DOM nsresult NS_CreateScriptContext(nsIScriptGlobalObject *aGlobal
 	nsresult rv = NS_OK;
 	nsJSEnvironment *environment = nsJSEnvironment::GetScriptingEnvironment();
 	*aContext = environment->GetNewContext();
-	if (! *aContext) 
-            return NS_ERROR_OUT_OF_MEMORY; // XXX
+	if (! *aContext) return NS_ERROR_OUT_OF_MEMORY; // XXX
 	// Hook up XPConnect
 	nsIXPConnect* xpc;
 	rv = nsServiceManager::GetService(kXPConnectCID, nsIXPConnect::GetIID(), (nsISupports**) &xpc);

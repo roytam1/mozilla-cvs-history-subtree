@@ -84,9 +84,6 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #include "jsapi.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
-static NS_DEFINE_IID(kIScriptGlobalObjectIID, NS_ISCRIPTGLOBALOBJECT_IID);
-static NS_DEFINE_IID(kIScriptGlobalObjectDataIID, NS_ISCRIPTGLOBALOBJECTDATA_IID);
-static NS_DEFINE_IID(kIScriptObjectOwnerIID, NS_ISCRIPTOBJECTOWNER_IID);
 static NS_DEFINE_IID(kIScriptEventListenerIID, NS_ISCRIPTEVENTLISTENER_IID);
 static NS_DEFINE_IID(kIDOMWindowIID, NS_IDOMWINDOW_IID);
 static NS_DEFINE_IID(kIDOMNavigatorIID, NS_IDOMNAVIGATOR_IID);
@@ -105,7 +102,6 @@ static NS_DEFINE_IID(kIDOMEventCapturerIID, NS_IDOMEVENTCAPTURER_IID);
 static NS_DEFINE_IID(kIDOMEventReceiverIID, NS_IDOMEVENTRECEIVER_IID);
 static NS_DEFINE_IID(kIDOMEventTargetIID, NS_IDOMEVENTTARGET_IID);
 static NS_DEFINE_IID(kIBrowserWindowIID, NS_IBROWSER_WINDOW_IID);
-static NS_DEFINE_IID(kIScriptContextOwnerIID, NS_ISCRIPTCONTEXTOWNER_IID);
 static NS_DEFINE_IID(kIDocumentIID, NS_IDOCUMENT_IID);
 static NS_DEFINE_IID(kIDocumentViewerIID, NS_IDOCUMENT_VIEWER_IID);
 #ifndef NECKO
@@ -179,17 +175,17 @@ GlobalWindowImpl::QueryInterface(const nsIID& aIID,
   if (nsnull == aInstancePtrResult) {
     return NS_ERROR_NULL_POINTER;
   }
-  if (aIID.Equals(kIScriptObjectOwnerIID)) {
+  if (aIID.Equals(NS_GET_IID(nsIScriptObjectOwner))) {
     *aInstancePtrResult = (void*) ((nsIScriptObjectOwner*)this);
     AddRef();
     return NS_OK;
   }
-  if (aIID.Equals(kIScriptGlobalObjectIID)) {
+  if (aIID.Equals(NS_GET_IID(nsIScriptGlobalObject))) {
     *aInstancePtrResult = (void*) ((nsIScriptGlobalObject*)this);
     AddRef();
     return NS_OK;
   }
-  if (aIID.Equals(kIScriptGlobalObjectDataIID)) {
+  if (aIID.Equals(NS_GET_IID(nsIScriptGlobalObjectData))) {
     *aInstancePtrResult = (void*) ((nsIScriptGlobalObjectData*)this);
     AddRef();
     return NS_OK;
@@ -1152,7 +1148,7 @@ GlobalWindowImpl::Confirm(JSContext *cx, jsval *argv, PRUint32 argc, PRBool* aRe
       if (nsnull != rootContainer) {
 #ifdef NECKO
         nsIPrompt *prompter;
-        if (NS_OK == (ret = rootContainer->QueryInterface(nsIPrompt::GetIID(), (void**)&prompter))) {
+        if (NS_OK == (ret = rootContainer->QueryInterface(NS_GET_IID(nsIPrompt), (void**)&prompter))) {
           ret = prompter->Confirm(str.GetUnicode(), aReturn);
           NS_RELEASE(prompter);
         }
@@ -1198,7 +1194,7 @@ GlobalWindowImpl::Prompt(JSContext *cx, jsval *argv, PRUint32 argc, nsString& aR
       if (nsnull != rootContainer) {
 #ifdef NECKO
         nsIPrompt *prompter;
-        if (NS_OK == (ret = rootContainer->QueryInterface(nsIPrompt::GetIID(), (void**)&prompter))) {
+        if (NS_OK == (ret = rootContainer->QueryInterface(NS_GET_IID(nsIPrompt), (void**)&prompter))) {
           PRBool b;
           PRUnichar* uniResult = nsnull;
           ret = prompter->Prompt(str.GetUnicode(), initial.GetUnicode(), &uniResult, &b);
@@ -2075,11 +2071,11 @@ GlobalWindowImpl::AttachArguments(nsIDOMWindow *aWindow, jsval *argv, PRUint32 a
   JSContext *jsContext;
   nsIScriptContext *scriptContext;
 
-  if (NS_SUCCEEDED(aWindow->QueryInterface(kIScriptGlobalObjectIID, (void **)&scriptGlobal))) {
+  if (NS_SUCCEEDED(aWindow->QueryInterface(NS_GET_IID(nsIScriptGlobalObject), (void **)&scriptGlobal))) {
     scriptGlobal->GetContext(&scriptContext);
     if (scriptContext) {
       jsContext = (JSContext *) scriptContext->GetNativeContext();
-      if (NS_SUCCEEDED(aWindow->QueryInterface(kIScriptObjectOwnerIID, (void**)&owner))) {
+      if (NS_SUCCEEDED(aWindow->QueryInterface(NS_GET_IID(nsIScriptObjectOwner), (void**)&owner))) {
         owner->GetScriptObject(scriptContext, (void **) &scriptObject);
         args = JS_NewArrayObject(jsContext, argc, argv);
         if (args) {
@@ -2333,7 +2329,7 @@ GlobalWindowImpl::ReadyOpenedWebShell(nsIWebShell *aWebShell, nsIDOMWindow **aDO
   nsresult              res;
 
   *aDOMWindow = nsnull;
-  res = aWebShell->QueryInterface(kIScriptContextOwnerIID, (void**)&newContextOwner);
+  res = aWebShell->QueryInterface(NS_GET_IID(nsIScriptContextOwner), (void**)&newContextOwner);
   if (NS_SUCCEEDED(res)) {
     res = newContextOwner->GetScriptGlobalObject(&newGlobalObject);
     if (NS_SUCCEEDED(res)) {
@@ -2563,8 +2559,7 @@ GlobalWindowImpl::GetProperty(JSContext *aContext, jsval aID, jsval *aVp)
       if (NS_OK == GetLocation(&location)) {
         if (location != nsnull) {
           nsIScriptObjectOwner *owner = nsnull;
-          if (NS_OK == location->QueryInterface(kIScriptObjectOwnerIID, 
-                                                (void**)&owner)) {
+          if (NS_OK == location->QueryInterface(NS_GET_IID(nsIScriptObjectOwner), (void**)&owner)) {
             JSObject *object = nsnull;
             nsIScriptContext *script_cx = (nsIScriptContext *)JS_GetContextPrivate(aContext);
             if (NS_OK == owner->GetScriptObject(script_cx, (void**)&object)) {
@@ -2689,11 +2684,11 @@ GlobalWindowImpl::Resolve(JSContext *aContext, jsval aID)
             JSObject *childObj;
             //We found a subframe of the right name.  The rest of this is to get its script object.
             nsIScriptContextOwner *contextOwner;
-            if (NS_SUCCEEDED(child->QueryInterface(kIScriptContextOwnerIID, (void**)&contextOwner))) {
+            if (NS_SUCCEEDED(child->QueryInterface(NS_GET_IID(nsIScriptContextOwner), (void**)&contextOwner))) {
               nsIScriptGlobalObject *childGlobalObj;
               if (NS_SUCCEEDED(contextOwner->GetScriptGlobalObject(&childGlobalObj))) {
                 nsIScriptObjectOwner *objOwner;
-                  if (NS_SUCCEEDED(childGlobalObj->QueryInterface(kIScriptObjectOwnerIID, (void**)&objOwner))) {
+                  if (NS_SUCCEEDED(childGlobalObj->QueryInterface(NS_GET_IID(nsIScriptObjectOwner), (void**)&objOwner))) {
                     nsIScriptContext *scriptContext;
                     childGlobalObj->GetContext(&scriptContext);
                     if (scriptContext) {
@@ -2995,7 +2990,7 @@ NS_NewScriptGlobalObject(nsIScriptGlobalObject **aResult)
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  return global->QueryInterface(kIScriptGlobalObjectIID, (void **)aResult);
+  return global->QueryInterface(NS_GET_IID(nsIScriptGlobalObject), (void **)aResult);
 }
 
 
@@ -3028,7 +3023,7 @@ NavigatorImpl::QueryInterface(const nsIID& aIID,
   if (nsnull == aInstancePtrResult) {
     return NS_ERROR_NULL_POINTER;
   }
-  if (aIID.Equals(kIScriptObjectOwnerIID)) {
+  if (aIID.Equals(NS_GET_IID(nsIScriptObjectOwner))) {
     *aInstancePtrResult = (void*) ((nsIScriptObjectOwner*)this);
     AddRef();
     return NS_OK;

@@ -33,16 +33,16 @@
 #include "nsIURL.h"
 
 static NS_DEFINE_IID(kIXPCSecurityManagerIID, NS_IXPCSECURITYMANAGER_IID);
-static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
-static NS_DEFINE_IID(kIScriptSecurityManagerIID, NS_ISCRIPTSECURITYMANAGER_IID);
-static NS_DEFINE_IID(kICapsSecurityCallbacksIID, NS_ICAPSSECURITYCALLBACKS_IID);
-static NS_DEFINE_CID(kURLCID, NS_STANDARDURL_CID);
 static NS_DEFINE_IID(kIScriptObjectOwnerIID, NS_ISCRIPTOBJECTOWNER_IID);
-static NS_DEFINE_IID(kIScriptGlobalObjectDataIID, NS_ISCRIPTGLOBALOBJECTDATA_IID);
+static NS_DEFINE_IID(kICapsSecurityCallbacksIID, NS_ICAPSSECURITYCALLBACKS_IID);
+
+static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
+static NS_DEFINE_CID(kURLCID, NS_STANDARDURL_CID);
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 
 static nsString gUnknownOriginStr("[unknown origin]");
 static nsString gFileUrlPrefix("file:");
+
 static nsString gFileDoubleSlashUrlPrefix("file://");
 static char * targetStrings[] = {
   "UniversalBrowserRead",
@@ -72,7 +72,7 @@ NS_NewScriptSecurityManager(nsIScriptSecurityManager ** aInstancePtrResult)
 nsJSSecurityManager::nsJSSecurityManager()
 {
   NS_INIT_REFCNT();
-  nsServiceManager::GetService(kPrefServiceCID, nsIPref::GetIID(), (nsISupports**)&mPrefs);
+  nsServiceManager::GetService(kPrefServiceCID, NS_GET_IID(nsIPref), (nsISupports**)&mPrefs);
 }
 
 nsJSSecurityManager::~nsJSSecurityManager()
@@ -872,7 +872,7 @@ nsJSSecurityManager::SetContainerPrincipals(JSContext *aCx, JSObject *aContainer
 
   tmp = (nsISupports*)JS_GetPrivate(aCx, aContainer);
   if (nsnull != tmp &&
-      NS_OK == tmp->QueryInterface(kIScriptGlobalObjectDataIID, (void**)&globalData)) {
+      NS_OK == tmp->QueryInterface(NS_GET_IID(nsIScriptGlobalObjectData), (void**)&globalData)) {
     globalData->SetPrincipals((void*)aPrincipals);
   }
 

@@ -26,13 +26,15 @@
 #define NS_ISCRIPTGLOBALOBJECTDATA_IID \
 { 0x98485f80, 0x9615, 0x11d2,  \
 { 0xbd, 0x92, 0x00, 0x80, 0x5f, 0x8a, 0xe3, 0xf4} }
-
 /**
  * JS Global Object information.
  */
 
 class nsIScriptGlobalObjectData : public nsISupports {
 public:
+
+NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCRIPTGLOBALOBJECTDATA_IID)
+
   NS_IMETHOD       GetPrincipal(nsIPrincipal * * aPrincipal) = 0;
   NS_IMETHOD       SetPrincipal(nsIPrincipal * aPrincipal) = 0;
   NS_IMETHOD       GetOrigin(nsIURI * * aOrigin) = 0;
