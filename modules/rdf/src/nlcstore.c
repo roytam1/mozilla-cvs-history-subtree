@@ -890,6 +890,8 @@ MakeLocalStore (char* url)
     ntr->arcLabelsOut = nlcStoreArcsOut;
     ntr->pdata = db;
     DBM_OpenDBMStore(db, (startsWith(url, "rdf:localStore") ? "NavCen" : &url[4]));
+    nlocalStoreAssert(ntr,  gNavCenter->RDF_BookmarkFolderCategory,  gCoreVocab->RDF_name, 
+                      copyString("Bookmarks"), RDF_STRING_TYPE, 1);
     return ntr;
   } 
   else return NULL;

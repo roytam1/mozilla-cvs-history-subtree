@@ -47,7 +47,7 @@ PLHashTable     *hostHash = 0;
 RDFT grdf = NULL;
 RDFT gHistoryStore = 0;
 PRBool ByDateOpened = 0;
-
+PRBool historyInitialized = 0;
 
 
 char    *prefixList[] = {
@@ -393,7 +393,7 @@ updateNewHistItem (DBT *key, DBT *data)
   time_t	last,first,numaccess;
   int32 flg = (int32)*((char*)data->data + 3*sizeof(int32));
   if (!displayHistoryItem((char*)key->data)) return;
-  if (gHistoryStore != NULL) {
+  if (historyInitialized && (gHistoryStore != NULL)) {
     HIST_COPY_INT32(&last, (time_t *)((char *)data->data));
     HIST_COPY_INT32(&first, (time_t *)((char *)data->data + sizeof(int32)));
     HIST_COPY_INT32(&numaccess, (time_t *)((char *)data->data + 2*sizeof(int32)));
@@ -599,6 +599,7 @@ HistPossiblyAccessFile (RDFT rdf, RDF_Resource u, RDF_Resource s, PRBool inverse
              (u == gNavCenter->RDF_HistoryMostVisited)) {
       collateHistory(rdf, gNavCenter->RDF_HistoryBySite, 0); 
   }
+ historyInitialized = 1;
 }
 
 RDFT

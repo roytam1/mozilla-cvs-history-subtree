@@ -238,6 +238,7 @@ createNavCenterVocab () {
   gNavCenter->buttonStatusbarText = newResource("buttonStatusbarText", 0 /* XXX */);
   gNavCenter->urlBar = newResource("urlBar", 0 /* XXX */);
   gNavCenter->urlBarWidth = newResource("urlBarWidth", 0 /* XXX */);
+  gNavCenter->pos = newResource("pos", 0 /* XXX */);
   gNavCenter->viewRolloverColor = newResource("viewRolloverColor", 0 /* XXX */);
   gNavCenter->viewPressedColor = newResource("viewPressedColor", 0 /* XXX */);
   gNavCenter->viewDisabledColor = newResource("viewDisabledColor", 0 /* XXX */);

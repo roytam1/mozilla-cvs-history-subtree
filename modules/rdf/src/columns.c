@@ -151,6 +151,7 @@ ColumnsNextValue (RDFT rdf, RDF_Cursor c)
 				case	5:	arc = gNavCenter->RDF_bookmarkAddDate;	break;
 				case	6:	arc = gWebData->RDF_lastVisitDate;	break;
 				case	7:	arc = gWebData->RDF_lastModifiedDate;	break;
+				case	8:	arc = gNavCenter->pos;	break;
 			}
 		} while ((c->count <= 6) && (arc == NULL));
 		break;
