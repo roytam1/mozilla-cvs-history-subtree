@@ -49,7 +49,10 @@ public:
     
     /* from nsIJVMManager: */
 
-    /* NsJVMManager specific methods: */
+    NS_IMETHOD
+    GetClasspathAdditions(const char* *result);
+
+    /* nsJVMManager specific methods: */
 
     /* ====> From here on are things only called by the browser, not the plugin... */
 
@@ -64,9 +67,11 @@ public:
     nsJVMStatus ShutdownJVM(PRBool fullShutdown = PR_FALSE);
     nsJVMStatus GetJVMStatus(void);
     void SetJVMEnabled(PRBool enabled);
-    
+
+#if 0    
     void        ReportJVMError(nsresult err);
     const char* GetJavaErrorString(JNIEnv* env);
+#endif
 
     nsresult    AddToClassPath(const char* dirPath);
     PRBool      MaybeStartupLiveConnect(void);
@@ -88,6 +93,7 @@ protected:
     nsISupports*        fDebugManager;
     JSJavaVM *          fJSJavaVM;  
     nsVector*           fClassPathAdditions;
+    char*               fClassPathAdditionsString;
 };
 
 /*******************************************************************************

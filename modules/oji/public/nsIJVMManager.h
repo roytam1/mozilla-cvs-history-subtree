@@ -32,18 +32,6 @@
 #include "nsISupports.h"
 
 ////////////////////////////////////////////////////////////////////////////////
-
-#define NPJVM_MIME_TYPE         "application/x-java-vm" // XXX application/java
-
-enum {
-    NS_JVM_ERROR_BASE           = NS_ERROR_BASE + 0x10000,
-    NS_JVM_ERROR_NO_CLASSES,
-    NS_JVM_ERROR_WRONG_CLASSES,
-    NS_JVM_ERROR_JAVA_ERROR,
-    NS_JVM_ERROR_NO_DEBUGGER
-};
-
-////////////////////////////////////////////////////////////////////////////////
 // Java VM Plugin Manager
 // This interface defines additional entry points that are available
 // to JVM plugins for browsers that support JVM plugins.
@@ -52,6 +40,9 @@ class nsIJVMPlugin;
 
 class nsIJVMManager : public nsISupports {
 public:
+
+    NS_IMETHOD
+    GetClasspathAdditions(const char* *result) = 0;
 
 };
 

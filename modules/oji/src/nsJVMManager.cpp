@@ -79,7 +79,7 @@ nsJVMManager::Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
 nsJVMManager::nsJVMManager(nsISupports* outer)
     : fJVM(NULL), fStatus(nsJVMStatus_Enabled),
       fRegisteredJavaPrefChanged(PR_FALSE), fDebugManager(NULL), fJSJavaVM(NULL),
-      fClassPathAdditions(new nsVector())
+      fClassPathAdditions(new nsVector()), fClassPathAdditionsString(NULL)
 {
     NS_INIT_AGGREGATED(outer);
 }
@@ -91,6 +91,8 @@ nsJVMManager::~nsJVMManager()
         PR_Free((*fClassPathAdditions)[i]);
     }
     delete fClassPathAdditions;
+    if (fClassPathAdditionsString)
+        PR_Free(fClassPathAdditionsString);
     if (fJVM) {
         /*nsrefcnt c =*/ fJVM->Release();   // Release for QueryInterface in GetJVM
         // XXX unload plugin if c == 1 ? (should this be done inside Release?)
@@ -117,6 +119,30 @@ nsJVMManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
 #else
     return NS_NOINTERFACE;
 #endif
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+NS_METHOD
+nsJVMManager::GetClasspathAdditions(const char* *result)
+{
+    if (fClassPathAdditionsString != NULL)
+        PR_Free(fClassPathAdditionsString);
+    int count = fClassPathAdditions->GetSize();
+    char* classpathAdditions = NULL;
+    for (int i = 0; i < count; i++) {
+        const char* path = (const char*)(*fClassPathAdditions)[i];
+        char* oldPath = classpathAdditions;
+        if (oldPath) {
+            classpathAdditions = PR_smprintf("%s%c%s", oldPath, PR_PATH_SEPARATOR, path);
+            PR_Free(oldPath);
+        }
+        else
+            classpathAdditions = PL_strdup(path);
+    }
+    fClassPathAdditionsString = classpathAdditions;
+    *result = classpathAdditions;  // XXX need to convert to PRUnichar*
+    return classpathAdditions ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -163,7 +189,6 @@ ConvertToPlatformPathList(const char* cp)
     return c;
 #endif
 }
-#endif
 
 void
 nsJVMManager::ReportJVMError(nsresult err)
@@ -241,6 +266,7 @@ nsJVMManager::GetJavaErrorString(JNIEnv* env)
     }
     return msg;
 }
+#endif // 0
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -285,31 +311,8 @@ nsJVMManager::StartupJVM(void)
         return fStatus;
     }
     
-    nsJVMInitArgs initargs;
-    int count = fClassPathAdditions->GetSize();
-    char* classpathAdditions = NULL;
-    for (int i = 0; i < count; i++) {
-        const char* path = (const char*)(*fClassPathAdditions)[i];
-        char* oldPath = classpathAdditions;
-        if (oldPath) {
-            classpathAdditions = PR_smprintf("%s%c%s", oldPath, PR_PATH_SEPARATOR, path);
-            PR_Free(oldPath);
-        }
-        else
-            classpathAdditions = PL_strdup(path);
-    }
-    initargs.version = nsJVMInitArgs_Version;
-    initargs.classpathAdditions = classpathAdditions;
-
-    nsresult err = fJVM->StartupJVM(&initargs);
-    if (err == NS_OK) {
-        /* assume the JVM is running. */
-        fStatus = nsJVMStatus_Running;
-    }
-    else {
-        ReportJVMError(err);
-        fStatus = nsJVMStatus_Failed;
-    }
+    /* else the JVM is running. */
+    fStatus = nsJVMStatus_Running;
 
 #if 0
     JSContext* crippledContext = LM_GetCrippledContext();
@@ -338,13 +341,14 @@ nsJVMManager::ShutdownJVM(PRBool fullShutdown)
     if (fStatus == nsJVMStatus_Running) {
         PR_ASSERT(fJVM != NULL);
         (void)MaybeShutdownLiveConnect();
-        nsresult err = fJVM->ShutdownJVM(fullShutdown);
-        if (err == NS_OK)
+        // XXX need to shutdown JVM via ServiceManager
+//        nsresult err = fJVM->ShutdownJVM(fullShutdown);
+//        if (err == NS_OK)
             fStatus = nsJVMStatus_Enabled;
-        else {
-            ReportJVMError(err);
-            fStatus = nsJVMStatus_Disabled;
-        }
+//        else {
+//            ReportJVMError(err);
+//            fStatus = nsJVMStatus_Disabled;
+//        }
         fJVM = NULL;
     }
     PR_ASSERT(fJVM == NULL);
