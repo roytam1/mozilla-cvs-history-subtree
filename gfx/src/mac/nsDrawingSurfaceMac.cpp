@@ -76,6 +76,9 @@ nsDrawingSurfaceMac::~nsDrawingSurfaceMac()
 		::DisposeGWorld(offscreenGWorld);
 		
 		nsGraphicsUtils::SetPortToKnownGoodPort();
+		::SetOrigin(0,0);
+		Rect bigRect = { -32767, -32767, 32767, 32767};
+		::ClipRect(&bigRect);
 	}
 
 	if (mGS){
