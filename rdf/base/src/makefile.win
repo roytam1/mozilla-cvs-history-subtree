@@ -25,8 +25,8 @@ CPP_OBJS=\
         .\$(OBJDIR)\nsDefaultResourceFactory.obj  \
         .\$(OBJDIR)\nsEmptyCursor.obj             \
         .\$(OBJDIR)\nsInMemoryDataSource.obj      \
-        .\$(OBJDIR)\nsRDFService.obj              \
         .\$(OBJDIR)\nsRDFContentSink.obj          \
+        .\$(OBJDIR)\nsRDFService.obj              \
         .\$(OBJDIR)\nsStreamDataSource.obj        \
         .\$(OBJDIR)\rdfutil.obj                   \
 	$(NULL)
