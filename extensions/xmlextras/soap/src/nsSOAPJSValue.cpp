@@ -517,10 +517,22 @@ nsSOAPJSValue::ConvertJSValToValue(JSContext* aContext,
       nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
       xpc->GetWrappedNativeOfJSObject(aContext, jsobj, getter_AddRefs(wrapper));
 
+      if (wrapper) {
+	nsCOMPtr<nsISupports> native;
+	rc = wrapper->GetNative(getter_AddRefs(native));
+        if (NS_FAILED(rc)) return rc;
+
+//  First, check for a DOM node, and return it if that is what JS gave us.
+	nsCOMPtr<nsIDOMNode> node = do_QueryInterface(native);
+	if (node) {
+	  aType = nsSOAPUtils::kLiteralType;
+	  *aValue = node;
+          NS_ADDREF(*aValue);
+	  return NS_OK;
+	}
 //  We should be able to get a better name if we know it is wrapped, but how?
-//      if (wrapper) {
-//      }
-//      else 
+      }
+	
       {
         nsCOMPtr<nsISOAPJSValue> value = do_CreateInstance(NS_SOAPJSVALUE_CONTRACTID);
         if (NS_FAILED(rc)) return rc;
