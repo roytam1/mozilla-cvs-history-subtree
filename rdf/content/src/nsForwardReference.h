@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "License"); you may not use this file except in
@@ -22,9 +22,24 @@
 
 class nsForwardReference
 {
-public:
-    enum Result { eResolveSucceeded, eResolveLater, eResolveError };
+protected:
+    nsForwardReference() {}
 
+public:
+    virtual ~nsForwardReference() {}
+
+    enum Result {
+        eResolveSucceeded, // resolution succeeded, i'm done
+        eResolveLater,     // couldn't resolve, try me later
+        eResolveError      // something bad happened, don't try again
+    };
+
+    /**
+     * Attempt to resolve the forward reference.
+     *
+     * @return a Result that tells the resolver how to treat
+     * the reference.
+     */
     virtual Result Resolve() = 0;
 };
 
