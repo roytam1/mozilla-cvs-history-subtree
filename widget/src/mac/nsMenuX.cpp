@@ -47,13 +47,8 @@
 #include "nsIServiceManager.h"
 
 #include <Appearance.h>
-#include <TextUtils.h>
 #include <ToolUtils.h>
-#include <Devices.h>
 #include <UnicodeConverter.h>
-#include <Fonts.h>
-#include <Sound.h>
-#include <Balloons.h>
 #include <CarbonEvents.h>
 
 #include "nsGUIEvent.h"
@@ -122,9 +117,9 @@ nsMenuX::~nsMenuX()
 {
   RemoveAll();
 
-  if (mMacMenuHandle != NULL)
+  if ( mMacMenuHandle ) 
     ::ReleaseMenu(mMacMenuHandle);
-
+  
   // alert the change notifier we don't care no more
   mManager->Unregister(mMenuContent);
 
@@ -248,9 +243,7 @@ NS_METHOD nsMenuX::AddMenuItem(nsIMenuItem * aMenuItem)
 
   nsAutoString label;
   aMenuItem->GetLabel(label);
-  CFStringRef labelRef = ::CFStringCreateWithCharacters(kCFAllocatorDefault, (UniChar*)label.get(), label.Length());
-  ::InsertMenuItemTextWithCFString(mMacMenuHandle, labelRef, currItemIndex, 0, 0);
-  ::CFRelease(labelRef);
+  InsertMenuItemWithTruncation ( label, currItemIndex );
   
   // I want to be internationalized too!
   nsAutoString keyEquivalent(NS_LITERAL_STRING(" "));
@@ -316,12 +309,8 @@ NS_METHOD nsMenuX::AddMenu(nsIMenu * aMenu)
   // We have to add it as a menu item and then associate it with the item
   nsAutoString label;
   aMenu->GetLabel(label);
-  //printf("AddMenu %s \n", label.ToNewCString());
-
-  CFStringRef labelRef = ::CFStringCreateWithCharacters(kCFAllocatorDefault, (UniChar*)label.get(), label.Length());
-  ::InsertMenuItemTextWithCFString(mMacMenuHandle, labelRef, currItemIndex, 0, 0);
-  ::CFRelease(labelRef);
-
+  InsertMenuItemWithTruncation ( label, currItemIndex );
+  
   PRBool isEnabled;
   aMenu->GetEnabled(&isEnabled);
   if (isEnabled)
@@ -335,6 +324,31 @@ NS_METHOD nsMenuX::AddMenu(nsIMenu * aMenu)
   
   return NS_OK;
 }
+
+
+//
+// InsertMenuItemWithTruncation
+//
+// Insert a new item in this menu with index |inItemIndex| with the text |inItemLabel|,
+// middle-truncated to a certain pixel width with an elipsis.
+//
+void
+nsMenuX :: InsertMenuItemWithTruncation ( nsAutoString & inItemLabel, PRUint32 inItemIndex )
+{
+  // ::TruncateThemeText() doesn't take the number of characters to truncate to, it takes a pixel with
+  // to fit the string in. Ugh. I talked it over with sfraser and we couldn't come up with an 
+  // easy way to compute what this should be given the system font, etc, so we're just going
+  // to hard code it to something reasonable and bigger fonts will just have to deal.
+  const short kMaxItemPixelWidth = 300;
+
+  CFMutableStringRef labelRef = ::CFStringCreateMutable ( kCFAllocatorDefault, inItemLabel.Length() );
+  ::CFStringAppendCharacters ( labelRef, (UniChar*)inItemLabel.get(), inItemLabel.Length() );
+  ::TruncateThemeText(labelRef, kThemeMenuItemFont, kThemeStateActive, kMaxItemPixelWidth, truncMiddle, NULL);
+  ::InsertMenuItemTextWithCFString(mMacMenuHandle, labelRef, inItemIndex, 0, 0);
+  ::CFRelease(labelRef);
+
+} // InsertMenuItemWithTruncation
+
 
 //-------------------------------------------------------------------------
 NS_METHOD nsMenuX::AddSeparator() 
