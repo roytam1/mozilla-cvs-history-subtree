@@ -338,8 +338,10 @@ InstallFileOpFileCopy(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
 
     srcFolder = (nsInstallFolder*)JS_GetPrivate(cx, jsSrcObj);
     targetFolder = (nsInstallFolder*)JS_GetPrivate(cx, jsTargetObj);
+    PRInt32 tempRet;
+    tempRet = nativeThis->FileOpFileCopy(*srcFolder, *targetFolder, &nativeRet);
 
-    if(!srcFolder || !targetFolder || NS_OK != nativeThis->FileOpFileCopy(*srcFolder, *targetFolder, &nativeRet))
+    if(!srcFolder || !targetFolder || NS_OK != tempRet)
     {
       return JS_TRUE;
     }
@@ -359,7 +361,7 @@ InstallFileOpFileCopy(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
 // Native method FileDelete
 //
 JSBool PR_CALLBACK
-InstallFileOpFileDelete(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+InstallFileOpFileRemove(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
   PRInt32 nativeRet;
@@ -1304,7 +1306,7 @@ static JSFunctionSpec FileOpMethods[] =
   {"dirRemove",                 InstallFileOpDirRemove,                2},
   {"dirRename",                 InstallFileOpDirRename,                2},
   {"copy",                      InstallFileOpFileCopy,                 2},
-  {"delete",                    InstallFileOpFileDelete,               1},
+  {"remove",                    InstallFileOpFileRemove,               1},
   {"exists",                    InstallFileOpFileExists,               1},
   {"execute",                   InstallFileOpFileExecute,              2},
   {"nativeVersion",             InstallFileOpFileGetNativeVersion,     1},
