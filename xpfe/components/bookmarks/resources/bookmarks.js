@@ -1588,9 +1588,9 @@ var BookmarksUtils = {
     }
   },                                                                          
 
-  loadBookmarkBrowser: function (aEvent, aTarget, aDS)
+  loadBookmarkBrowser: function (aEvent, aDS)
   {
-    var rSource   = RDF.GetResource(aTarget.id);
+    var rSource   = RDF.GetResource(aEvent.target.id);
     var selection = BookmarksUtils.getSelectionFromResource(rSource);
     BookmarksCommand.openBookmark(selection, "current", aDS)
   }

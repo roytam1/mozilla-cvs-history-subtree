@@ -498,9 +498,9 @@
         ]]></body>
       </method>
 
-      <method name="openItem">
-      <parameter name="aEvent"/>
-      <parameter name="aClickCount"/>
+      <method name="openItemClick">
+        <parameter name="aEvent"/>
+        <parameter name="aClickCount"/>
         <body><![CDATA[
           if (aEvent.button == 2 || aEvent.originalTarget.localName != "treechildren")
             return;
@@ -539,11 +539,14 @@
         ]]></body>
       </method>
 
-      <method name="loadBookmarkBrowser">
-      <parameter name="aEvent"/>
+      <method name="openItemKey">
         <body><![CDATA[
-          var browserTarget = BookmarksUtils.getBrowserTargetFromEvent(aEvent);
-          BookmarksCommand.openBookmark(this._selection, browserTarget, this.db)
+          if (this._selection.length != 1) {
+            SOUND.beep();
+            return;
+          }
+          if (!this._selection.isContainer[0])
+            BookmarksCommand.openBookmark(this._selection, "current", this.db)
         ]]></body>
       </method>
 
@@ -823,9 +826,9 @@
       <vbox flex="1">
         <tree anonid="bookmarks-tree" flex="1" class="plain" enableColumnDrag="true"
                   datasources="rdf:bookmarks rdf:internetsearch rdf:localsearch" ref="NC:BookmarksTopRoot" flags="dont-build-content"
-                  onkeypress="if (event.keyCode == 13) this.parentNode.parentNode.loadBookmarkBrowser(event);"
-                  onclick="this.parentNode.parentNode.openItem(event, 1);"
-                  ondblclick="this.parentNode.parentNode.openItem(event, 2);"
+                  onkeypress="if (event.keyCode == 13) this.parentNode.parentNode.openItemKey();"
+                  onclick="this.parentNode.parentNode.openItemClick(event, 1);"
+                  ondblclick="this.parentNode.parentNode.openItemClick(event, 2);"
                   ondraggesture="if (event.originalTarget.localName == 'treechildren') nsDragAndDrop.startDrag(event, this.parentNode.parentNode.DNDObserver);"
                   onselect="this.treeBoxObject.view.selectionChanged();">
           <template xmlns:nc="http://home.netscape.com/NC-rdf#">
