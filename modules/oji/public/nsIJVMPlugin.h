@@ -66,7 +66,7 @@ public:
     // The fullShutdown flag specifies whether the browser is quitting
     // (PR_TRUE) or simply whether the JVM is being shut down (PR_FALSE).
     NS_IMETHOD
-    ShutdownJVM(PRBool fullShutdown) = 0;
+    ShutdownJVM(PRBool fullShutdown = PR_FALSE) = 0;
 
     // Causes the JVM to append a new directory to its classpath.
     // If the JVM doesn't support this operation, an error is returned.
