@@ -105,72 +105,52 @@ ExprResult* PathExpr::evaluate(txIEvalContext* aContext)
         return new StringResult("error");
     }
 
-    NodeSet nodes(aContext->getContextNode());
-    NodeSet* resNodes = new NodeSet();
-    if (!resNodes) {
+    NodeSet* nodes = new NodeSet(aContext->getContextNode());
+    if (!nodes) {
         // XXX ErrorReport: out of memory
         NS_ASSERTION(0, "out of memory");
         return 0;
     }
 
     ListIterator iter(&expressions);
-    nsresult rv = evalStep(iter, aContext, &nodes, *resNodes);
-    if (NS_FAILED(rv)) {
-        NS_ASSERTION(0, "report an error");
-        delete resNodes;
-        return 0;
-    }
-    return resNodes;
-} //-- evaluate
-
-nsresult PathExpr::evalStep(txListIterator& aIter, txIMatchContext* aContext,
-                            NodeSet* aNodes, NodeSet& aResult)
-{
-    NS_ASSERTION(aNodes && aContext, "Internal error");
-
     PathExprItem* pxi;
-    nsresult rv = NS_OK;
-    if ((pxi = (PathExprItem*)aIter.next())) {
-        txNodeSetContext eContext(aNodes, aContext);
+    while ((pxi = (PathExprItem*)iter.next())) {
+        NodeSet* tmpNodes = 0;
+        txNodeSetContext eContext(nodes, aContext);
         while (eContext.hasNext()) {
             eContext.next();
             Node* node = eContext.getContextNode();
+            
+            NodeSet* resNodes;
             if (pxi->pathOp == DESCENDANT_OP) {
-                NodeSet resNodes;
-                evalDescendants(pxi->expr, node, &eContext, &resNodes);
-                if (!resNodes.isEmpty()) {
-                    rv = evalStep(aIter, aContext, &resNodes, aResult);
-                    if (NS_FAILED(rv))
-                        return rv;
-                }
+                resNodes = new NodeSet;
+                evalDescendants(pxi->expr, node, &eContext, resNodes);
             }
             else {
                 ExprResult *res = pxi->expr->evaluate(&eContext);
                 if (!res || (res->getResultType() != ExprResult::NODESET)) {
                     //XXX ErrorReport: report nonnodeset error
                     delete res;
-                    NS_ASSERTION(0,"Step didn't return NodeSet");
-                    return NS_ERROR_XPATH_EVAL_FAILED;
+                    res = new NodeSet;
                 }
-                NodeSet* resNodes = (NodeSet*)res;
-                if (!resNodes->isEmpty()) {
-                    rv = evalStep(aIter, aContext, resNodes, aResult);
-                    if (NS_FAILED(rv)) {
-                        delete resNodes;
-                        return rv;
-                    }
-                }
+                resNodes = (NodeSet*)res;
+            }
+
+            if (tmpNodes) {
+                tmpNodes->add(resNodes);
                 delete resNodes;
             }
-        }
-    }
-    else {
-        aResult.add(aNodes);
-    }
-    aIter.previous(); // done with this step, get back
-    return NS_OK;
-}
+            else
+                tmpNodes = resNodes;
 
+        }
+        delete nodes;
+        nodes = tmpNodes;
+        if (!nodes || (nodes->size() == 0)) break;
+    }
+
+    return nodes;
+} //-- evaluate
 
 /**
  * Selects from the descendants of the context node

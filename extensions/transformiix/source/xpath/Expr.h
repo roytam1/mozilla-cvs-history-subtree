@@ -597,13 +597,6 @@ private:
     txList expressions;
 
     /*
-     * Creates a txIEvalContext and recursivly calls itself for
-     * each step
-     */
-    nsresult evalStep(txListIterator& aIter, txIMatchContext* aContext,
-                      NodeSet* aNodes, NodeSet& aResult);
-
-    /*
      * Selects from the descendants of the context node
      * all nodes that match the Expr
      */
