@@ -267,7 +267,6 @@
 <!ENTITY copyEmailCmd.accesskey       "E">
 <!ENTITY thisFrameMenu.label              "This Frame">
 <!ENTITY thisFrameMenu.accesskey          "h">
-<!ENTITY search.accesskey             "S">
 
 <!ENTITY textZoomEnlargeCmd.label       "Increase Text Size">
 <!ENTITY textZoomEnlargeCmd.accesskey   "I">
