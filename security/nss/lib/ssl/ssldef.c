@@ -108,15 +108,6 @@ int ssl_DefSend(sslSocket *ss, const unsigned char *buf, int len, int flags)
     PRFileDesc *lower = ss->fd->lower;
     int rv, count;
 
-#if NSS_DISABLE_NAGLE_DELAYS
-    /* Although this is overkill, we disable Nagle delays completely for 
-    ** SSL sockets.
-    */
-    if (ss->useSecurity && !ss->delayDisabled) {
-	ssl_EnableNagleDelay(ss, PR_FALSE);   /* ignore error */
-    	ss->delayDisabled = 1;
-    }
-#endif
     count = 0;
     for (;;) {
 	rv = lower->methods->send(lower, (const void *)buf, len,
@@ -124,10 +115,8 @@ int ssl_DefSend(sslSocket *ss, const unsigned char *buf, int len, int flags)
 	if (rv < 0) {
 	    PRErrorCode err = PR_GetError();
 	    if (err == PR_WOULD_BLOCK_ERROR) {
-		ss->lastWriteBlocked = 1;
 		return count ? count : rv;
 	    }
-	    ss->lastWriteBlocked = 0;
 	    MAP_ERROR(PR_CONNECT_ABORTED_ERROR, PR_CONNECT_RESET_ERROR)
 	    /* Loser */
 	    return rv;
@@ -141,7 +130,6 @@ int ssl_DefSend(sslSocket *ss, const unsigned char *buf, int len, int flags)
 	}
 	break;
     }
-    ss->lastWriteBlocked = 0;
     return count;
 }
 
@@ -169,10 +157,8 @@ int ssl_DefWrite(sslSocket *ss, const unsigned char *buf, int len)
 	if (rv < 0) {
 	    PRErrorCode err = PR_GetError();
 	    if (err == PR_WOULD_BLOCK_ERROR) {
-		ss->lastWriteBlocked = 1;
 		return count ? count : rv;
 	    }
-	    ss->lastWriteBlocked = 0;
 	    MAP_ERROR(PR_CONNECT_ABORTED_ERROR, PR_CONNECT_RESET_ERROR)
 	    /* Loser */
 	    return rv;
@@ -186,7 +172,6 @@ int ssl_DefWrite(sslSocket *ss, const unsigned char *buf, int len)
 	}
 	break;
     }
-    ss->lastWriteBlocked = 0;
     return count;
 }
 

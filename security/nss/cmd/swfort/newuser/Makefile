@@ -51,16 +51,18 @@ include $(CORE_DEPTH)/coreconf/config.mk
 # (4) Include "local" platform-dependent assignments (OPTIONAL).      #
 #######################################################################
 
-# can't do this in manifest.mn because OS_ARCH isn't defined ther
+# can't do this in manifest.mn because OS_ARCH isn't defined there.
+ifeq ($(OS_ARCH), WINNT)
 
-ctmp := $(strip $(shell $(MAKE) -C ../../../lib/fortcrypt --no-print-directory cilib_name))
-ifeq ($(ctmp), $(patsubst /%,/,$(ctmp)))
-  CILIB := ../../../lib/fortcrypt/$(ctmp)
+EXTRA_LIBS = \
+	../../../lib/fortcrypt/$(OBJDIR)/cilib.lib \
+	$(NULL)
 else
-  CILIB := $(ctmp)
-endif
 
-EXTRA_LIBS += $(CILIB) 
+EXTRA_LIBS += \
+	../../../lib/fortcrypt/$(OBJDIR)/cilib.$(LIB_SUFFIX) \
+	$(NULL)
+endif
 
 include ../../platlibs.mk
 

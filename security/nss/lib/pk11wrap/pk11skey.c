@@ -16,8 +16,7 @@
  * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Contributor(s): 
- *	Dr Stephen Henson <stephen.henson@gemplus.com>
+ * Contributor(s):
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -781,7 +780,7 @@ PK11_ExtractPublicKey(PK11SlotInfo *slot,KeyType keyType,CK_OBJECT_HANDLE id)
 	crv = PK11_GetAttributes(tmp_arena,slot,id,template,templateCount);
 	if (crv != CKR_OK) break;
 
-	if ((keyClass != CKO_PUBLIC_KEY) || (pk11KeyType != CKK_DH)) {
+	if ((keyClass != CKO_PUBLIC_KEY) || (pk11KeyType != CKK_DSA)) {
 	    crv = CKR_OBJECT_HANDLE_INVALID;
 	    break;
 	} 
@@ -1495,7 +1494,7 @@ pk11_PairwiseConsistencyCheck(SECKEYPublicKey *pubKey,
     /**********************************************/
 
     canSignVerify = PK11_HasAttributeSet ( privKey->pkcs11Slot, 
-					  privKey->pkcs11ID, CKA_SIGN);
+					  privKey->pkcs11ID, CKA_VERIFY);
     
     if (canSignVerify)
       {
