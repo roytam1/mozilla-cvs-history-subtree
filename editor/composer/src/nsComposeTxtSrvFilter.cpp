@@ -49,6 +49,8 @@ nsComposeTxtSrvFilter::nsComposeTxtSrvFilter() :
   mBlockQuoteAtom  = do_GetAtom("blockquote");
   mPreAtom         = do_GetAtom("pre");
   mSpanAtom        = do_GetAtom("span");
+  mDivAtom         = do_GetAtom("div");
+  mMozSkipSpellCheckAtom = do_GetAtom("_moz_skip_spellcheck");
   mMozQuoteAtom    = do_GetAtom("_moz_quote");
   mTypeAtom        = do_GetAtom("type");
   mScriptAtom      = do_GetAtom("script");
@@ -77,11 +79,15 @@ nsComposeTxtSrvFilter::Skip(nsIDOMNode* aNode, PRBool *_retval)
           *_retval = cite.EqualsIgnoreCase("cite");
         }
       }
-    } else if (tag == mPreAtom || tag == mSpanAtom) {
+    } else if (tag == mPreAtom || tag == mSpanAtom || tag == mDivAtom) {
       if (mIsForMail) {
         nsAutoString mozQuote;
         if (NS_SUCCEEDED(content->GetAttr(kNameSpaceID_None, mMozQuoteAtom, mozQuote))) {
           *_retval = mozQuote.EqualsIgnoreCase("true");            
+        
+        nsAutoString mozSkipSpellCheck; 
+        if (!(*_retval) && NS_SUCCEEDED(content->GetAttr(kNameSpaceID_None, mMozSkipSpellCheckAtom, mozSkipSpellCheck)))
+          *_retval = mozSkipSpellCheck.EqualsIgnoreCase("true");            
         }
       }         
     } else if (tag == mScriptAtom ||
