@@ -665,10 +665,9 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
 
   for (PRInt32 y = aY0; y < aY1; y += mBHead->biHeight)
     for (PRInt32 x = aX0; x < aX1; x += mBHead->biWidth)
-      Draw(aContext,aSurface, x,y,
-           PR_MIN(validWidth, aX1-x),
-           PR_MIN(validHeight, aY1-y));
-
+      Draw(aContext, aSurface,
+           0, 0, PR_MIN(validWidth, aX1-x), PR_MIN(validHeight, aY1-y),
+           x, y, PR_MIN(validWidth, aX1-x), PR_MIN(validHeight, aY1-y));
 
   return PR_TRUE;
 
