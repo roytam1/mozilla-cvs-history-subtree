@@ -482,6 +482,7 @@ nsNNTPProtocol::nsNNTPProtocol(nsIURI * aURL, nsIMsgWindow *aMsgWindow)
 
 nsNNTPProtocol::~nsNNTPProtocol()
 {
+    PR_LOG(NNTP,PR_LOG_ALWAYS,("destroying nsNNTPProtocol(%x)",(int)this));
     if (m_nntpServer) {
         m_nntpServer->WriteNewsrcFile();
         m_nntpServer->RemoveConnection(this);
@@ -5140,6 +5141,7 @@ nsresult nsNNTPProtocol::ProcessProtocolState(nsIURI * url, nsIInputStream * inp
 
 NS_IMETHODIMP nsNNTPProtocol::CloseConnection()
 {
+  PR_LOG(NNTP,PR_LOG_ALWAYS,("ClosingConnection on nsNNTPProtocol(%x)",(int)this));
   SendData(nsnull, NNTP_CMD_QUIT); // this will cause OnStopRequest get called, which will call CloseSocket()
   
   // break some cycles
@@ -5231,6 +5233,7 @@ nsresult nsNNTPProtocol::CleanupAfterRunningUrl()
 
 nsresult nsNNTPProtocol::CloseSocket()
 {
+  PR_LOG(NNTP,PR_LOG_ALWAYS,("ClosingSocket() on nsNNTPProtocol(%x)",(int)this));
   CleanupAfterRunningUrl(); // is this needed?
 	return nsMsgProtocol::CloseSocket();
 }
