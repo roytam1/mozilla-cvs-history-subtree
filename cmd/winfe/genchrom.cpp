@@ -1050,6 +1050,13 @@ void CGenericChrome::ImagesButton(BOOL bShowImagesButton)
 	}
 }
 
+// URL Bar Stuff
+void CGenericChrome::UpdateURLBars(char* url)
+{
+	if(m_pCustToolbar)
+		m_pCustToolbar->UpdateURLBars(url);
+}
+
 //	Window Title Stuff
 void CGenericChrome::SetWindowTitle(const char *lpszText)
 {

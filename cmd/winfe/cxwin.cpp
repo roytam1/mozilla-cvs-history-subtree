@@ -4411,20 +4411,11 @@ void CWinCX::LayoutNewDocument(MWContext *pContext, URL_Struct *pURL, int32 *pWi
 
 	if(GetContext()->type == MWContextBrowser && !EDT_IS_EDITOR(GetContext()))	{
 	    LPCHROME pChrome = GetFrame()->GetChrome();
-	    if(pChrome) {
-    		CWnd *pWnd = pChrome->GetToolbar(ID_LOCATION_TOOLBAR);
-
-    		if (pWnd && pWnd->IsKindOf(RUNTIME_CLASS(CURLBar))){
-    			CURLBar *pUrlBar = (CURLBar *) pWnd;
-
-    			if(pUrlBar != NULL) {
-    				pUrlBar->m_pBox->GetWindowText(csText);
-        			if(m_csSaveLocationBarText == csText && IsGridCell() == FALSE)	{
-    					pUrlBar->UpdateFields(pURL->address);
-        			}
-    			}
-    			else
-    				csText.Empty();
+	    if(pChrome) 
+		{
+    		if(IsGridCell() == FALSE)	
+			{
+    				pChrome->UpdateURLBars(pURL->address);
     		}
     		else
     			csText.Empty();

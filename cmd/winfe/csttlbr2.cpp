@@ -112,6 +112,11 @@ void CButtonToolbarWindow::OnUpdateCmdUI( CFrameWnd* pTarget, BOOL bDisableIfNoH
 	((CNSToolbar2*)GetToolbar())->OnUpdateCmdUI(pTarget, bDisableIfNoHndler);
 }
 
+void CButtonToolbarWindow::UpdateURLBars(char* url)
+{
+	((CNSToolbar2*)GetToolbar())->UpdateURLBars(url);
+}
+
 void CButtonToolbarWindow::SetToolbarStyle(int nToolbarStyle)
 {
 
@@ -388,6 +393,11 @@ void CDragToolbar::OnUpdateCmdUI( CFrameWnd* pTarget, BOOL bDisableIfNoHndler )
 {
 
 	m_pToolbar->OnUpdateCmdUI(pTarget, bDisableIfNoHndler);
+}
+
+void CDragToolbar::UpdateURLBars(char* url)
+{
+	m_pToolbar->UpdateURLBars(url);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1190,6 +1200,17 @@ void CCustToolbar::OnUpdateCmdUI( CFrameWnd* pTarget, BOOL bDisableIfNoHndler )
 		if(m_pToolbarArray[i] != NULL)
 		{
 			m_pToolbarArray[i]->OnUpdateCmdUI(pTarget, bDisableIfNoHndler);
+		}
+	}
+}
+
+void CCustToolbar::UpdateURLBars(char* url)
+{
+	for (int i = 0; i < m_nNumToolbars; i++)
+	{
+		if(m_pToolbarArray[i] != NULL)
+		{
+			m_pToolbarArray[i]->UpdateURLBars(url);
 		}
 	}
 }

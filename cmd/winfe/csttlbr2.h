@@ -81,7 +81,7 @@ public:
 	HTAB_BITMAP GetHTab(void) { return m_nHTab; }
 
 	virtual void OnUpdateCmdUI( CFrameWnd* pTarget, BOOL bDisableIfNoHndler ){}
-
+	virtual void UpdateURLBars(char* url) {}
 };
 
 // Class:  CButtonToolbarWindow
@@ -94,6 +94,7 @@ public:
 						 HTAB_BITMAP nHTab);
 
 	virtual void OnUpdateCmdUI( CFrameWnd* pTarget, BOOL bDisableIfNoHndler );
+	virtual void UpdateURLBars(char* url);
 	virtual void SetToolbarStyle(int nToolbarStyle);
 	virtual int GetHeight(void);
 	virtual CWnd* GetNSToolbar() { return GetToolbar(); }
@@ -162,6 +163,8 @@ public:
 	void SetAnimation(CAnimationBar2 *pAnimation);
 	HTAB_BITMAP GetHTabType(void) { return m_eHTabType;}
 	void OnUpdateCmdUI( CFrameWnd* pTarget, BOOL bDisableIfNoHndler );
+	virtual void UpdateURLBars(char* url);
+
 	// Generated message map functions
 	//{{AFX_MSG(CDragToolbar)
 	afx_msg void OnSize( UINT nType, int cx, int cy );
@@ -276,6 +279,7 @@ public:
 	CSize CalcDynamicLayout(int nLength, DWORD dwMode );
 
 	virtual void OnUpdateCmdUI( CFrameWnd* pTarget, BOOL bDisableIfNoHndler );
+	virtual void UpdateURLBars(char* url);
 
 	void Customize(CRDFToolbar *pRDFToolbar = NULL, int nSelectedButton = 0);
 	BOOL GetSaveToolbarInfo(void);

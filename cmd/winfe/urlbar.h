@@ -184,6 +184,8 @@ public:
 	virtual void DrawButtonBitmap(HDC hDC, CRect rcImg);
 	virtual void DrawButtonText(HDC hDC, CRect rcTxt, CSize sizeTxt, CString strTxt);
 
+	virtual void UpdateURLBar(char* url);
+
 	int Create(CWnd *pParent, int nToolbarStyle, CSize noviceButtonSize, CSize advancedButtonSize,
 			   LPCTSTR pButtonText, LPCTSTR pToolTipText, 
 			   LPCTSTR pStatusText,

@@ -142,6 +142,7 @@ public:
 	virtual BOOL OnNotify( WPARAM wParam, LPARAM lParam, LRESULT* pResult );
 
 	void OnUpdateCmdUI( CFrameWnd* pTarget, BOOL bDisableIfNoHndler );
+	void UpdateURLBars(char* url);
 
     // Set a button to do its command on button down instead of button up
     BOOL SetDoOnButtonDownByCommand(UINT nCommand, BOOL bDoOnButtonDown);

@@ -600,9 +600,7 @@ void CMainFrame::OnLoadHomePage()
         if (nStartup != 0){
             GetMainContext()->NormalGetUrl(lpszHomePage);
 
-			CURLBar *pUrlBar = (CURLBar *)GetChrome()->GetToolbar(ID_LOCATION_TOOLBAR);
-			if(pUrlBar != NULL)
-				pUrlBar->UpdateFields(lpszHomePage);
+			GetChrome()->UpdateURLBars(lpszHomePage);
 		}
     }
 }

@@ -235,6 +235,8 @@ public:
     virtual void CheckForMinimalSize(void);
     virtual void CheckForMaximalSize(void);
 
+	virtual void UpdateURLBar(char* url) {}
+
 	BOOL IsResourceID(void) { return m_bIsResourceID; }
 	UINT GetBitmapID(void) { return m_nBitmapID; }
 	UINT GetBitmapIndex(void) { return m_nBitmapIndex; }

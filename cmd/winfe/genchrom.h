@@ -240,6 +240,9 @@ public:
 	virtual void SaveToolbarConfiguration(UINT nToolbarID, CString &csToolbarName);
 	virtual void SetSaveToolbarInfo(BOOL bSaveToolbarInfo);
 
+// URL bars stuff
+	virtual void UpdateURLBars(char* url);
+
 // Animation Stuff
 	virtual void StartAnimation();
 	virtual void StopAnimation();

@@ -1118,6 +1118,12 @@ void CURLBarButton::OnSize(UINT nType, int x, int y)
 	}
 }
 
+void CURLBarButton::UpdateURLBar(char* url)
+{
+	if (m_pURLBar)
+		m_pURLBar->UpdateFields(url);
+}
+
 CURLBarButton::CURLBarButton() 
 :m_pURLBar(NULL)
 {}

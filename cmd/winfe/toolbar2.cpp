@@ -647,6 +647,14 @@ void CNSToolbar2::OnUpdateCmdUI( CFrameWnd* pTarget, BOOL bDisableIfNoHndler )
 	}
 }
 
+void CNSToolbar2::UpdateURLBars(char* url)
+{
+	for(int i = 0; i < m_nNumButtons; i++)
+	{
+		m_pButtonArray[i]->UpdateURLBar(url);
+	}
+}
+
 BOOL CNSToolbar2::OnNotify( WPARAM wParam, LPARAM lParam, LRESULT* pResult )
 {
 	NMHDR *hdr = (NMHDR*)lParam;
