@@ -167,6 +167,7 @@ static NS_DEFINE_IID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
   DEFAULT_SCRIPTABLE_FLAGS |                                                  \
   WANT_PRECREATE |                                                            \
   WANT_NEWRESOLVE |                                                           \
+  WANT_ADDPROPERTY |                                                          \
   WANT_SETPROPERTY
 
 #define ELEMENT_SCRIPTABLE_FLAGS                                              \
@@ -1646,9 +1647,8 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
   return rv;
 }
 
-
 NS_IMETHODIMP
-nsNodeSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+nsNodeSH::AddProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                       JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
 {
   nsCOMPtr<nsISupports> native;
@@ -1659,12 +1659,6 @@ nsNodeSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   nsCOMPtr<nsIDocument> doc;
 
   if  (content) {
-#ifdef DEBUG_jst
-    JSString *jsstr = JSVAL_TO_STRING(id);
-
-    jschar *s = ::JS_GetStringChars(jsstr);
-#endif
-
     // XXX: Use GetOwnerDocument here!
     content->GetDocument(*getter_AddRefs(doc));
   }
@@ -1674,11 +1668,16 @@ nsNodeSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   }
 
   if (doc) {
+#ifdef DEBUG_jst
+    JSString *jsstr = JSVAL_TO_STRING(id);
+
+    jschar *s = ::JS_GetStringChars(jsstr);
+#endif
+
     doc->AddReference(content, wrapper);
   }
 
-
-  return nsEventRecieverSH::SetProperty(wrapper, cx, obj, id, vp, _retval);
+  return NS_OK;
 }
 
 
@@ -1739,15 +1738,12 @@ nsEventRecieverSH::RegisterCompileHandler(nsIXPConnectWrappedNative *wrapper,
   *did_compile = PR_FALSE;
 
   JSString *str = JSVAL_TO_STRING(id);
+  nsresult rv = NS_OK;
 
   if (IsEventName(str)) {
     nsCOMPtr<nsIScriptContext> script_cx;
-    nsresult rv =
-      nsJSUtils::GetStaticScriptContext(cx, obj, getter_AddRefs(script_cx));
-
-    if (NS_FAILED(rv)) {
-      return rv;
-    }
+    rv = nsJSUtils::GetStaticScriptContext(cx, obj, getter_AddRefs(script_cx));
+    NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr<nsISupports> native;
     wrapper->GetNative(getter_AddRefs(native));
@@ -1773,15 +1769,11 @@ nsEventRecieverSH::RegisterCompileHandler(nsIXPConnectWrappedNative *wrapper,
         } else {
           rv = manager->RegisterScriptEventListener(script_cx, receiver, atom);
         }
-
-        if (NS_FAILED(rv)) {
-          return rv;
-        }
       }
     }
   }
 
-  return NS_OK;
+  return rv;
 }
 
 NS_IMETHODIMP
