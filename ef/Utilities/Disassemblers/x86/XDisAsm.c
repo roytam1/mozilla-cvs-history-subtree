@@ -1152,7 +1152,7 @@ db_disasm(db_addr_t loc)
 	int	len;
 	struct i_addr	address;
 
-        // Point to first character in static disassembly buffer
+        /* Point to first character in static disassembly buffer */
         disasm_next = &disasm_buff[0];
 
 	get_value_inc(inst, loc, 1, FALSE);
