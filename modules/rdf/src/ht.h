@@ -271,6 +271,7 @@ void				exportCallbackWrite(PRFileDesc *fp, char *str);
 void				exportCallback(MWContext *context, char *filename, RDF_Resource node);
 void				htEmptyClipboard(RDF_Resource parent);
 void				htCopyReference(RDF_Resource original, RDF_Resource newParent, PRBool empty);
+PRBool				htVerifyUniqueToken(HT_Resource node, void *token, uint32 tokenType, char *data);
 PRBool				ht_isURLReal(HT_Resource node);
 char *				buildInternalIconURL(HT_Resource node, PRBool *volatileURLFlag,	PRBool largeIconFlag, PRBool workspaceFlag);
 char *				getIconURL( HT_Resource node, PRBool largeIconFlag, PRBool workspaceFlag);

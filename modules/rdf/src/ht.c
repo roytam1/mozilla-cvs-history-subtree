@@ -4468,6 +4468,55 @@ HT_GetNodeData (HT_Resource node, void *token, uint32 tokenType, void **nodeData
 
 
 
+PRBool
+htVerifyUniqueToken(HT_Resource node, void *token, uint32 tokenType, char *data)
+{
+	RDF_Cursor		c;
+	RDF_Resource		r;
+	char			*msg;
+	PRBool			ok = PR_FALSE, oldFindMode;
+
+	XP_ASSERT(node != NULL);
+	if (node == NULL)	return(PR_FALSE);
+	XP_ASSERT(token != NULL);
+	if (token == NULL)	return(PR_FALSE);
+	XP_ASSERT(data != NULL);
+	if (data == NULL)	return(PR_FALSE);
+
+	oldFindMode = setFindExactStringMatchingMode(PR_TRUE);
+	if ((c = RDF_Find(gNavCenter->RDF_URLShortcut, data,
+		RDF_STRING_TYPE)) != NULL)
+	{
+		if ((r = RDF_NextValue(c)) == NULL)
+		{
+			ok = PR_TRUE;
+		}
+		else
+		{
+			/* XXX localization */
+			msg = PR_smprintf("'%s' is assigned as a shortcut for '%s'. Reassign it?",
+				data, resourceID(r));
+			if (msg != NULL)
+			{
+				if (FE_Confirm(((MWContext *)gRDFMWContext()), msg))
+				{
+					RDF_Unassert(gNCDB, r, gNavCenter->RDF_URLShortcut,
+						(void *)data, RDF_STRING_TYPE);
+					RDF_Assert(gNCDB, node->node, gNavCenter->RDF_URLShortcut,
+						(void *)data, RDF_STRING_TYPE);
+				}
+				XP_FREE(msg);
+			}
+		}
+		RDF_DisposeCursor(c);
+	}
+	setFindExactStringMatchingMode(oldFindMode);
+
+	return(ok);
+}
+
+
+
 PR_PUBLIC_API(HT_Error)
 HT_SetNodeData (HT_Resource node, void *token, uint32 tokenType, void *data)
 {
@@ -4490,6 +4539,11 @@ HT_SetNodeData (HT_Resource node, void *token, uint32 tokenType, void *data)
 					if (!strcmp(data, oldData))
 					{
 						dirty = PR_FALSE;
+					}
+					else if (token == gNavCenter->RDF_URLShortcut)
+					{
+						dirty = htVerifyUniqueToken(node, token,
+							tokenType, (char *)data);
 					}
 				}
 				if (dirty == PR_TRUE)
@@ -6197,42 +6251,79 @@ PR_PUBLIC_API(PRBool)
 HT_LaunchURL(HT_Pane pane, char *url, MWContext *context)
 {
 	HT_View			view;
-	RDF_Resource		u = NULL;
-	PRBool			retVal = PR_FALSE;
+	URL_Struct		*urls;
+	RDF_Cursor		c;
+	RDF_Resource		u = NULL, r;
+	PRBool			isShortcut = PR_FALSE, oldFindMode, retVal = PR_FALSE;
 
 	XP_ASSERT(url != NULL);
 
-	if (pane == NULL)	pane = gHTTop;
+	/* Note: if pane is NULL, bypass trying to load info into Aurora but DO try shortcut matching */
 
-	if ((url != NULL) && (pane != NULL))
+	if (url != NULL)
 	{
-		if (startsWith("ftp://", url) && endsWith("/", url))
+		oldFindMode = setFindExactStringMatchingMode(PR_TRUE);
+		if ((c = RDF_Find(gNavCenter->RDF_URLShortcut, url, RDF_STRING_TYPE)) != NULL)
 		{
-			u = RDF_GetResource(pane->db, url, 1);
-		}
-	}
-	if ((u != NULL) && (iscontainerp(u)))
-	{
-		if ((view = HT_GetViewType(pane, HT_VIEW_FILES)) != NULL)
-		{
-			if (!remoteStoreHasAssertion(*(pane->db->translators), gNavCenter->RDF_FTP,
-				gCoreVocab->RDF_parent, gNavCenter->RDF_LocalFiles, RDF_RESOURCE_TYPE,
-				PR_TRUE))
+			if ((r = RDF_NextValue(c)) != NULL)
 			{
-				gAutoOpenPane = pane;
-				remoteStoreAdd (*(pane->db->translators), gNavCenter->RDF_FTP,
-					gCoreVocab->RDF_parent, gNavCenter->RDF_LocalFiles,
-					RDF_RESOURCE_TYPE, PR_TRUE);
-				gAutoOpenPane = NULL;
+				isShortcut = PR_TRUE;
 			}
-			gAutoOpenPane = pane;
-			remoteStoreAdd (*(pane->db->translators), u, gCoreVocab->RDF_parent,
-				gNavCenter->RDF_FTP, RDF_RESOURCE_TYPE, PR_TRUE);
-			gAutoOpenPane = NULL;
-
-			HT_SetSelectedView (pane, view);
-			retVal = PR_TRUE;
+			RDF_DisposeCursor(c);
 		}
+		setFindExactStringMatchingMode(oldFindMode);
+	}
+
+	if (isShortcut == PR_TRUE)
+	{
+		url = copyString(resourceID(r));
+	}
+	else
+	{
+		url = NET_Escape(url, URL_PATH);
+	}
+	if (url != NULL)
+	{
+		if (pane != NULL)
+		{
+			if (startsWith("ftp://", url) && endsWith("/", url))
+			{
+				u = RDF_GetResource(pane->db, url, 1);
+			}
+		}
+		if ((pane != NULL) && (iscontainerp(u)))
+		{
+			if ((view = HT_GetViewType(pane, HT_VIEW_FILES)) != NULL)
+			{
+				if (!remoteStoreHasAssertion(*(pane->db->translators), gNavCenter->RDF_FTP,
+					gCoreVocab->RDF_parent, gNavCenter->RDF_LocalFiles, RDF_RESOURCE_TYPE,
+					PR_TRUE))
+				{
+					gAutoOpenPane = pane;
+					remoteStoreAdd (*(pane->db->translators), gNavCenter->RDF_FTP,
+						gCoreVocab->RDF_parent, gNavCenter->RDF_LocalFiles,
+						RDF_RESOURCE_TYPE, PR_TRUE);
+					gAutoOpenPane = NULL;
+				}
+				gAutoOpenPane = pane;
+				remoteStoreAdd (*(pane->db->translators), u, gCoreVocab->RDF_parent,
+					gNavCenter->RDF_FTP, RDF_RESOURCE_TYPE, PR_TRUE);
+				gAutoOpenPane = NULL;
+
+				HT_SetSelectedView (pane, view);
+				retVal = PR_TRUE;
+			}
+		}
+		else if ((isShortcut == PR_TRUE) && (context != NULL))
+		{
+			retVal = PR_TRUE;
+			if ((urls = NET_CreateURLStruct(url, NET_NORMAL_RELOAD)) != NULL)
+			{
+				urls->method = URL_GET_METHOD;
+				FE_GetURL(context, urls);
+			}
+		}
+		freeMem(url);
 	}
 	return(retVal);
 }
