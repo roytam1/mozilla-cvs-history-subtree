@@ -18,81 +18,131 @@
 
 ##############################################################################
 ##
-## Name:		xmversion.sh - Get motif lib location and info.
+## Name:		xmversion.sh - Get motif lib location, version and other info.
 ##
-## Description:	Print the major and minor version numbers for motif libs on
-##				the system that executes the script.  Could be tweaked
-##				to output more info.
+## Description:	Artificial intelligence to figure out:
 ##
-##              More checks need to be added for more platforms.  
-##              Currently this script is only useful in Linux Universe
-##              where there are a many versions of motif.
+##              + Where the motif headers/lib are located.
+##              + Whether lesstif is being used.
+##              + The version of motif being used.
+##              + The compile and link flags needed to build motif apps.
 ##
 ## Author:		Ramiro Estrugo <ramiro@netscape.com>
 ##
 ##############################################################################
 
+##
+## Command Line Flags Supported:
+##
+##  -l | --is-lesstif:				Prints True/False if usign lesstif.
+##
+##  -v | --print-version:			Prints XmVERSION.
+##  -r | --print-revision:			Prints XmREVISION.
+##  -u | --print-update-level:		Prints XmUPDATE_LEVEL.
+##  -s | --print-version-string:	Prints XmVERSION_STRING.
+##
+##  -id | --print-include-dir:		Prints dir dir of motif includes.
+##  -sd | --print-static-dir:		Prints dir dir of motif static libs.
+##  -dd | --print-dynamic-dir:		Prints dir dir of motif dynamic libs.
+##
+##  -if | --print-include-flags:	Prints cc flags needed to build motif apps.
+##  -sf | --print-static-flags:		Prints ld flags for linking statically.
+##  -df | --print-dynamic-flags:	Prints ld flags for linking dynamically.
+##
+##  -de | --dynamic-ext:			Set extension used on dynamic libs.
+##  -se | --static-ext:				Set extension used on static libs.
+##
 
 ##
-## To be done: Handle startup flags:
-##
-##  --is-lesstif:			Prints True/False if LESSTIF_VERSION is defined.
-##
-##  --print-version:		Prints XmVERSION.
-##  --print-revision:		Prints XmREVISION.
-##  --print-update-level:	Prints XmUPDATE_LEVEL.
-##  --print-version-string:	Prints XmVERSION_STRING.
-##
-##  --print-include-dir:	Prints the dir of the motif headers.
-##  --print-lib-dir:		Prints the dir of the motif libs.
-##
-##  --shared-ext:			Shared externsion used by system: so sl.
-##  --archive-ext:			Archive externsion used by system: a
-##
-
-##
-## Look for motif stuff in the followin places:
+## Look for motif stuff in the following places:
 ##
 XM_SEARCH_PATH="\
 /usr/lesstif \
 /usr/local \
+/usr/dt \
 /usr/X11R6 \
 /usr \
 "
 
 ##
-## Defaults
+## Constants
 ##
-XM_SHARED_EXT=so
-XM_ARCHIVE_EXT=a
-
 XM_PROG=./test_motif
 XM_SRC=test_motif.c
+
+##
+## Option defaults
+##
+XM_DYNAMIC_EXT=so
+XM_STATIC_EXT=a
 
 XM_IS_LESSTIF=False
 
 XM_PRINT_VERSION=False
 XM_PRINT_REVISION=False
 XM_PRINT_UPDATE_LEVEL=False
-XM_PRINT_INCLUDE_DIR=False
-XM_PRINT_LIB_DIR=False
 
-XM_MAJOR_NUMBER=
-XM_MINOR_NUMBER=
-XM_UPDATE_NUMBER=
-XM_PRINT_INCLUDE_DIR=
+XM_PRINT_INCLUDE_DIR=False
+XM_PRINT_STATIC_DIR=False
+XM_PRINT_DYNAMIC_DIR=False
+
+XM_PRINT_INCLUDE_FLAGS=False
+XM_PRINT_STATIC_FLAGS=False
+XM_PRINT_DYNAMIC_FLAGS=False
+
+XM_PRINT_EVERYTHING=False
+
+##
+## Stuff we need to figure out
+##
+XM_VERSION_RESULT=
+XM_REVISION_RESULT=
+XM_UPDATE_RESULT=
+XM_VERSION_REVISION_RESULT=
+XM_VERSION_REVISION_UPDATE_RESULT=
+XM_VERSION_STRING_RESULT=
+XM_IS_LESSTIF_RESULT=
+
+XM_INCLUDE_DIR=
 XM_LIB_DIR=
 
-XM_ARCHIVE_LIB=
-XM_SHARED_LIB=
-XM_ARCHIVE_DIR=
-XM_SHARED_DIR=
+XM_STATIC_LIB=
+XM_DYNAMIC_LIB=
+
+XM_STATIC_DIR=
+XM_DYNAMIC_DIR=
+
+XM_INCLUDE_FLAGS=not_found
+XM_STATIC_FLAGS=not_found
+XM_DYNAMIC_FLAGS=not_found
 
 function test_motif_usage()
 {
-	echo
-	echo FOO
-	echo
+echo
+echo "Usage:   `basename $0` [options]"
+echo
+echo "  -l,  --is-lesstif:            Prints {True,False} if using lesstif."
+echo
+echo "  -v,  --print-version:         Prints XmVERSION."
+echo "  -r,  --print-revision:        Prints XmREVISION."
+echo "  -u,  --print-update-level:    Prints XmUPDATE_LEVEL."
+echo "  -s,  --print-version-string:  Prints XmVERSION_STRING."
+echo
+echo "  -id, --print-include-dir:     Prints dir of motif includes."
+echo "  -sd, --print-static-dir:      Prints dir of motif static libs."
+echo "  -dd, --print-dynamic-dir:     Prints dir of motif dynamic libs."
+echo
+echo "  -if, --print-include-flags:   Prints cc flags needed to compile."
+echo "  -sf, --print-static-flags:    Prints ld flags for linking statically."
+echo "  -df, --print-dynamic-flags:   Prints ld flags for linking dynamically."
+echo
+echo "  -e, --print-everything:       Prints everything that is known."
+echo
+echo "  -de, --dynamic-ext:           Set extension used on dynamic libs."
+echo "  -se, --static-ext:            Set extension used on static libs."
+echo
+echo "The default is '-v -r' if no options are given."
+echo
 }
 
 ##
@@ -105,44 +155,79 @@ while [ "$*" ]; do
             test_motif_usage
 			exit 0
             ;;
-        -t | --is-lesstif)
+
+        -l | --is-lesstif)
             shift
             XM_IS_LESSTIF=True
             ;;
+
         -v | --print-version)
             shift
             XM_PRINT_VERSION=True
             ;;
+
         -r | --print-revision)
             shift
             XM_PRINT_REVISION=True
             ;;
+
         -u | --print-update-level)
             shift
             XM_PRINT_UPDATE_LEVEL=True
             ;;
+
         -s | --print-version-string)
             shift
             XM_PRINT_VERSION_STRING=True
             ;;
-        -i | --print-include-dir)
+
+        -id | --print-include-dir)
             shift
             XM_PRINT_INCLUDE_DIR=True
             ;;
-        -l | --print-lib-dir)
+
+        -sd | --print-static-dir)
             shift
-            XM_PRINT_LIB_DIR=True
+            XM_PRINT_STATIC_DIR=True
             ;;
-        -e | --shared-ext)
+
+        -dd | --print-dynamic-dir)
             shift
-            XM_SHARED_EXT="$1"
+            XM_PRINT_DYNAMIC_DIR=True
+            ;;
+
+        -if | --print-include-flags)
+            shift
+            XM_PRINT_INCLUDE_FLAGS=True
+            ;;
+
+        -sf | --print-static-flags)
+            shift
+            XM_PRINT_STATIC_FLAGS=True
+            ;;
+
+        -df | --print-dynamic-flags)
+            shift
+            XM_PRINT_DYNAMIC_FLAGS=True
+            ;;
+
+        -e | --print-everything)
+            shift
+            XM_PRINT_EVERYTHING=True
+            ;;
+
+        -de | --dynamic-ext)
+            shift
+            XM_DYNAMIC_EXT="$1"
             shift
             ;;
-        -a | --archive-ext)
+
+        -se | --static-ext)
             shift
-            XM_ARCHIVE_EXT="$1"
+            XM_STATIC_EXT="$1"
             shift
             ;;
+
         -*)
             echo "`basename $0`: invalid option '$1'"
             shift
@@ -155,8 +240,8 @@ done
 ##
 ## The library names
 ##
-XM_SHARED_LIB_NAME=libXm.$XM_SHARED_EXT
-XM_ARCHIVE_LIB_NAME=libXm.$XM_ARCHIVE_EXT
+XM_DYNAMIC_LIB_NAME=libXm.$XM_DYNAMIC_EXT
+XM_STATIC_LIB_NAME=libXm.$XM_STATIC_EXT
 
 ##
 ## Cleanup the dummy test source/program
@@ -166,17 +251,6 @@ function xm_cleanup()
 	rm -f $XM_PROG
 	rm -f $XM_SRC
 }
-
-#echo "XM_PROG = $XM_PROG"
-#echo "XM_SRC = $XM_SRC"
-#echo "XM_IS_LESSTIF = $XM_IS_LESSTIF"
-#echo "XM_PRINT_VERSION = $XM_PRINT_VERSION"
-#echo "XM_PRINT_REVISION = $XM_PRINT_REVISION"
-#echo "XM_PRINT_UPDATE_LEVEL = $XM_PRINT_UPDATE_LEVEL"
-#echo "XM_PRINT_INCLUDE_DIR = $XM_PRINT_INCLUDE_DIR"
-#echo "XM_LIB_DIR = $XM_LIB_DIR"
-#echo "XM_SHARED_EXT = $XM_SHARED_EXT"
-#echo "XM_ARCHIVE_EXT = $XM_ARCHIVE_EXT"
 
 ##
 ## Cleanup the dummy test program
@@ -208,48 +282,6 @@ then
 	xm_cleanup
 	exit 1
 fi
-
-##
-## Look for libraries
-##
-for d in $XM_SEARCH_PATH
-do
-	done=False
-
-	##
-	## Look for libXm.a
-	##
-	if [ -f $d/lib/$XM_ARCHIVE_LIB_NAME ]
-	then
-		done=True
-
-		XM_ARCHIVE_DIR=$d/lib
-
-		XM_ARCHIVE_LIB=$XM_ARCHIVE_DIR/$XM_ARCHIVE_LIB_NAME
-	fi
-
-	##
-	## Look for libXm.so
-	##
-	if [ -x $d/lib/$XM_SHARED_LIB_NAME ]
-	then
-		done=True
-
-		XM_SHARED_DIR=$d/lib
-
-		XM_SHARED_LIB=$XM_SHARED_DIR/$XM_SHARED_LIB_NAME
-	fi
-
-	if [ "$done" = "True" ]
-	then
-		break
-	fi
-done
-
-#echo "XM_ARCHIVE_LIB = $XM_ARCHIVE_LIB"
-#echo "XM_SHARED_LIB = $XM_SHARED_LIB"
-#echo "XM_ARCHIVE_DIR = $XM_ARCHIVE_DIR"
-#echo "XM_SHARED_DIR = $XM_SHARED_DIR"
 
 ##
 ## Generate the dummy test program
@@ -297,12 +329,12 @@ fi
 ##
 ## Set flags needed to Compile the dummy test program
 ##
-XM_FLAGS=-I$XM_INCLUDE_DIR
+XM_INCLUDE_FLAGS=-I$XM_INCLUDE_DIR
 
 ##
 ## Compile the dummy test program
 ##
-cc $XM_FLAGS -o $XM_PROG $XM_SRC
+cc $XM_INCLUDE_FLAGS -o $XM_PROG $XM_SRC
 
 ##
 ## Make sure it compiled
@@ -328,13 +360,74 @@ XM_PROG_OUTPUT=`$XM_PROG`
 ## 1         2          3              4                5
 ## XmVERSION:XmREVISION:XmUPDATE_LEVEL:XmVERSION_STRING:IsLesstif
 ##
+XM_VERSION_RESULT=`echo $XM_PROG_OUTPUT | awk -F":" '{ print $1; }'`
+XM_REVISION_RESULT=`echo $XM_PROG_OUTPUT | awk -F":" '{ print $2; }'`
+XM_UPDATE_RESULT=`echo $XM_PROG_OUTPUT | awk -F":" '{ print $3; }'`
+XM_VERSION_REVISION_RESULT=$XM_VERSION_RESULT.$XM_REVISION_RESULT
+XM_VERSION_REVISION_UPDATE_RESULT=$XM_VERSION_REVISION_RESULT.$XM_UPDATE_RESULT
+XM_VERSION_STRING_RESULT=`echo $XM_PROG_OUTPUT | awk -F":" '{ print $4; }'`
+XM_IS_LESSTIF_RESULT=`echo $XM_PROG_OUTPUT | awk -F":" '{ print $5; }'`
 
 ##
-## -t | --is-lesstif
+## There could be up to 4 dyanmic libs and/or links.
+##
+## libXm.so
+## libXm.so.1
+## libXm.so.1.2
+## libXm.so.1.2.4
+##
+XM_DYNAMIC_SEARCH_PATH="\
+$XM_DYNAMIC_LIB_NAME \
+$XM_DYNAMIC_LIB_NAME.$XM_VERSION_RESULT \
+$XM_DYNAMIC_LIB_NAME.$XM_VERSION_REVISION_RESULT \
+$XM_DYNAMIC_LIB_NAME.$XM_VERSION_REVISION_UPDATE_RESULT \
+"
+
+##
+## Look for static library
+##
+for d in $XM_SEARCH_PATH
+do
+	if [ -f $d/lib/$XM_STATIC_LIB_NAME ]
+	then
+		XM_STATIC_DIR=$d/lib
+
+		XM_STATIC_LIB=$XM_STATIC_DIR/$XM_STATIC_LIB_NAME
+
+		XM_STATIC_FLAGS=$XM_STATIC_LIB
+
+		break
+	fi
+done
+
+
+##
+## Look for dyanmic libraries
+##
+for d in $XM_SEARCH_PATH
+do
+	for l in $XM_DYNAMIC_SEARCH_PATH
+	do
+		if [ -x $d/lib/$l ]
+		then
+			XM_DYNAMIC_DIR=$d/lib
+
+			XM_DYNAMIC_LIB=$d/lib/$l
+
+			XM_DYNAMIC_FLAGS="-L$XM_DYNAMIC_DIR -lXm"
+
+			break 2
+		fi
+	done
+done
+
+
+##
+## -l | --is-lesstif
 ##
 if [ "$XM_IS_LESSTIF" = "True" ]
 then
-	echo $XM_PROG_OUTPUT | awk -F":" '{ print $5; }'
+	echo $XM_IS_LESSTIF_RESULT
 
 	xm_cleanup
 
@@ -342,7 +435,34 @@ then
 fi
 
 ##
-## -i | --print-include-dir
+## -e | --print-everything
+##
+if [ "$XM_PRINT_EVERYTHING" = "True" ]
+then
+	echo
+	echo "XM_VERSION:            $XM_VERSION_RESULT"
+	echo "XM_REVISION:           $XM_REVISION_RESULT"
+	echo "XM_UPDATE:             $XM_UPDATE_RESULT"
+	echo "XM_VERSION_STRING:     $XM_VERSION_STRING_RESULT"
+	echo "XM_IS_LESSTIF:         $XM_IS_LESSTIF_RESULT"
+	echo "XM_INCLUDE_DIR:        $XM_INCLUDE_DIR"
+	echo "XM_LIB_DIR:            $XM_LIB_DIR"
+	echo "XM_STATIC_LIB:         $XM_STATIC_LIB"
+	echo "XM_DYNAMIC_LIB:        $XM_DYNAMIC_LIB"
+	echo "XM_STATIC_DIR:         $XM_STATIC_DIR"
+	echo "XM_DYNAMIC_DIR:        $XM_DYNAMIC_DIR"
+	echo "XM_INCLUDE_FLAGS:      $XM_INCLUDE_FLAGS"
+	echo "XM_STATIC_FLAGS:       $XM_STATIC_FLAGS"
+	echo "XM_DYNAMIC_FLAGS:      $XM_DYNAMIC_FLAGS"
+	echo
+
+	xm_cleanup
+
+	exit 0
+fi
+
+##
+## -id | --print-include-dir
 ##
 if [ "$XM_PRINT_INCLUDE_DIR" = "True" ]
 then
@@ -354,28 +474,65 @@ then
 fi
 
 ##
-## -l | --print-lib-dir
+## -dd | --print-dynamic-dir
 ##
-if [ "$XM_PRINT_LIB_DIR" = "True" ]
+if [ "$XM_PRINT_DYNAMIC_DIR" = "True" ]
 then
-
-	##
-	## Print the shared path first, archive path second.  Most of the 
-	## time (always ?) these will be the same.  The shared path is 
-	## checked first, because lesstif by default does not install 
-	## static libs.
-	##
-	if [ -d $XM_SHARED_DIR ]
-	then
-		echo $XM_SHARED_DIR
-	else
-		echo $XM_ARCHIVE_DIR
-	fi
+	echo $XM_DYNAMIC_DIR
 
 	xm_cleanup
 
 	exit 0
 fi
+
+##
+## -sd | --print-static-dir
+##
+if [ "$XM_PRINT_STATIC_DIR" = "True" ]
+then
+	echo $XM_STATIC_DIR
+
+	xm_cleanup
+
+	exit 0
+fi
+
+##
+## -if | --print-include-flags
+##
+if [ "$XM_PRINT_INCLUDE_FLAGS" = "True" ]
+then
+	echo $XM_INCLUDE_FLAGS
+
+	xm_cleanup
+
+	exit 0
+fi
+
+##
+## -df | --print-dynamic-flags
+##
+if [ "$XM_PRINT_DYNAMIC_FLAGS" = "True" ]
+then
+	echo $XM_DYNAMIC_FLAGS
+
+	xm_cleanup
+
+	exit 0
+fi
+
+##
+## -sf | --print-static-flags
+##
+if [ "$XM_PRINT_STATIC_FLAGS" = "True" ]
+then
+	echo $XM_STATIC_FLAGS
+
+	xm_cleanup
+
+	exit 0
+fi
+
 
 num=
 
@@ -384,7 +541,7 @@ num=
 ##
 if [ "$XM_PRINT_VERSION" = "True" ]
 then
-	num=`echo $XM_PROG_OUTPUT | awk -F":" '{ print $1; }'`
+	num=$XM_VERSION_RESULT
 
 	##
 	## -r | --print-revision
@@ -392,7 +549,7 @@ then
 	if [ "$XM_PRINT_REVISION" = "True" ]
 	then
 		num="$num".
-		num="$num"`echo $XM_PROG_OUTPUT | awk -F":" '{ print $2; }'`
+		num="$num"$XM_REVISION_RESULT
 
 		##
 		## -u | --print-update-level
@@ -400,7 +557,7 @@ then
 		if [ "$XM_PRINT_UPDATE_LEVEL" = "True" ]
 		then
 			num="$num".
-			num="$num"`echo $XM_PROG_OUTPUT | awk -F":" '{ print $3; }'`
+			num="$num"$XM_UPDATE_RESULT
 		fi
 	fi
 
@@ -417,7 +574,7 @@ fi
 ##
 if [ "$XM_PRINT_VERSION_STRING" = "True" ]
 then
-	echo $XM_PROG_OUTPUT | awk -F":" '{ print $4; }'
+	echo $XM_VERSION_STRING_RESULT
 
 	xm_cleanup
 
@@ -427,7 +584,8 @@ fi
 ##
 ## Default: Print XmVERSION.XmREVISION
 ##
-echo `echo $XM_PROG_OUTPUT | awk -F":" '{ print $1; }'`.`echo $XM_PROG_OUTPUT | awk -F":" '{ print $2; }'`
+echo $XM_VERSION_RESULT.$XM_REVISION_RESULT
 
 xm_cleanup
+
 exit 0
