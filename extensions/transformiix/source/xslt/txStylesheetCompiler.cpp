@@ -228,6 +228,14 @@ txStylesheetCompiler::characters(const String& aStr)
 }
 
 nsresult
+txStylesheetCompiler::doneLoading()
+{
+    return mState.mStylesheet->doneCompiling();
+}
+
+
+
+nsresult
 txStylesheetCompiler::flushCharacters()
 {
     // bail if we don't have any characters, or if it is ignorable whitespace

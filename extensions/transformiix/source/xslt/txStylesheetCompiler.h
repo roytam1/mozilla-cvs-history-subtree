@@ -124,6 +124,7 @@ public:
                           PRInt32 aAttrCount);
     nsresult endElement();
     nsresult characters(const String& aStr);
+    nsresult doneLoading(); // XXX do we want to merge this with cancel?
 
     void cancel(nsresult aError);
 
