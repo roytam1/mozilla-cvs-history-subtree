@@ -126,12 +126,13 @@ public:
 
     void cancel(nsresult aError);
 
-    txStylesheetCompilerState mState;
+    txStylesheet* getStylesheet();
 
 private:
     nsresult flushCharacters();
     nsresult ensureNewElementContext();
 
+    txStylesheetCompilerState mState;
     nsString mCharacters;
 };
 

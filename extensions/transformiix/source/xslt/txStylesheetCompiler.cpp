@@ -235,6 +235,12 @@ txStylesheetCompiler::doneLoading()
     return mState.mStylesheet->doneCompiling();
 }
 
+txStylesheet*
+txStylesheetCompiler::getStylesheet()
+{
+    return mState.mStylesheet;
+}
+
 nsresult
 txStylesheetCompiler::flushCharacters()
 {
