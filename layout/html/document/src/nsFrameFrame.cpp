@@ -527,8 +527,12 @@ nsHTMLFrameOuterFrame::Reflow(nsIPresContext*          aPresContext,
   }
 
   // Place and size the child
-  FinishReflowChild(firstChild, aPresContext, nsnull, 
+  FinishReflowChild(firstChild, aPresContext, nsnull,
                     kidMetrics, offset.x, offset.y, 0);
+
+  // Determine if we need to repaint our border / padding
+  nsresult rv = CheckInvalidateBorder(aPresContext, aDesiredSize, aReflowState);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   NS_FRAME_TRACE(NS_FRAME_TRACE_CALLS,
      ("exit nsHTMLFrameOuterFrame::Reflow: size=%d,%d status=%x",
