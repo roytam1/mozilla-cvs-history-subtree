@@ -1,4 +1,4 @@
-/* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+﻿/* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -52,8 +52,8 @@ pref("font.name.sans-serif.he", "Arial");
 pref("font.name.monospace.he", "Courier New");
 pref("font.name.cursive.he", "Comic Sans MS");
 
-pref("font.name.serif.ja", "ＭＳ Ｐ明朝"); // "MS PMincho"
-pref("font.name.sans-serif.ja", "ＭＳ Ｐゴシック"); // "MS PGothic"
+pref("font.name.serif.ja", "MS UI Gothic");
+pref("font.name.sans-serif.ja", "ＭＳ Ｐ明朝"); // "MS PMincho"
 pref("font.name.monospace.ja", "ＭＳ ゴシック"); // "MS Gothic"
 pref("font.name-list.serif.ja", "MS PMincho, MS PGothic, MS Mincho, MS Gothic");
 pref("font.name-list.sans-serif.ja", "MS PGothic, MS PMincho, MS Gothic, MS Mincho");
