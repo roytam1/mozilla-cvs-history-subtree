@@ -668,15 +668,6 @@ NS_IMETHODIMP nsImapService::DisplayMessage(const char* aMessageURI,
       PRBool shouldStoreMsgOffline = PR_FALSE;
       PRBool hasMsgOffline = PR_FALSE;
 
-      if (folder)
-      {
-        folder->ShouldStoreMsgOffline(key, &shouldStoreMsgOffline);
-        folder->HasMsgOffline(key, &hasMsgOffline);
-      }
-
-      if (imapMessageSink)
-        imapMessageSink->SetNotifyDownloadedLines(shouldStoreMsgOffline);
-
       nsCOMPtr<nsIMsgIncomingServer> aMsgIncomingServer;
 
       if (imapMessageSink)
@@ -705,6 +696,12 @@ NS_IMETHODIMP nsImapService::DisplayMessage(const char* aMessageURI,
           useMimePartsOnDemand = PR_FALSE;
       }
 
+      if (folder)
+      {
+        folder->ShouldStoreMsgOffline(key, &shouldStoreMsgOffline);
+        folder->HasMsgOffline(key, &hasMsgOffline);
+      }
+
       if (!useMimePartsOnDemand || (messageSize < (uint32) gMIMEOnDemandThreshold))
 //                allowedToBreakApart && 
 //              !GetShouldFetchAllParts() &&
@@ -718,8 +715,12 @@ NS_IMETHODIMP nsImapService::DisplayMessage(const char* aMessageURI,
       {
       // whenever we are displaying a message, we want to add it to the memory cache..
         imapUrl->SetFetchPartsOnDemand(PR_TRUE);
+        shouldStoreMsgOffline = PR_FALSE; // if we're fetching by parts, don't store offline
         msgurl->SetAddToMemoryCache(PR_FALSE);
       }
+      if (imapMessageSink)
+        imapMessageSink->SetNotifyDownloadedLines(shouldStoreMsgOffline);
+
       PRBool msgLoadingFromCache = PR_FALSE;
       if (hasMsgOffline)
         msgurl->SetMsgIsInLocalCache(PR_TRUE);
