@@ -36,11 +36,9 @@ static NS_DEFINE_IID(kIXPCSecurityManagerIID, NS_IXPCSECURITYMANAGER_IID);
 static NS_DEFINE_IID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_IID(kIScriptSecurityManagerIID, NS_ISCRIPTSECURITYMANAGER_IID);
 static NS_DEFINE_IID(kICapsSecurityCallbacksIID, NS_ICAPSSECURITYCALLBACKS_IID);
-static NS_DEFINE_IID(kIPrincipalManagerIID, NS_IPRINCIPALMANAGER_IID);
 static NS_DEFINE_IID(kURLCID, NS_STANDARDURL_CID);
 static NS_DEFINE_IID(kIScriptObjectOwnerIID, NS_ISCRIPTOBJECTOWNER_IID);
 static NS_DEFINE_IID(kIScriptGlobalObjectDataIID, NS_ISCRIPTGLOBALOBJECTDATA_IID);
-static NS_DEFINE_IID(kIPrefIID, NS_IPREF_IID);
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 
 static nsString gUnknownOriginStr("[unknown origin]");
@@ -184,9 +182,7 @@ PR_STATIC_CALLBACK(PRBool)
 GlobalPrivilegesEnabled(JSContext *aCx, JSPrincipals *aPrincipals)
 {
   nsJSPrincipalsData *data = (nsJSPrincipalsData *) aPrincipals;
-
-  return (PRBool)(nsnull != data->principalsArrayRef ||
-         gUnknownOriginStr.Equals(aPrincipals->codebase));
+  return (PRBool)(nsnull != data->principalsArrayRef || gUnknownOriginStr.Equals(aPrincipals->codebase));
 }
 
 
@@ -276,10 +272,6 @@ nsJSSecurityManager::CheckScriptAccess(nsIScriptContext* aContext, void* aObj, c
       return NS_OK;
   }
 }
-
-/**
-  * nsIScriptSecurityManager interface
-  */
 
 NS_IMETHODIMP
 nsJSSecurityManager::GetSubjectOriginURL(JSContext *aCx, char * * aOrigin)
@@ -412,8 +404,7 @@ nsJSSecurityManager::FindOriginURL(JSContext *aCx, JSObject *aGlobal)
         nsAutoString urlString = "[unknown origin]";
         NS_IF_RELEASE(globalData);
         return urlString.ToNewCString();
-    } else if (nsnull != tmp2 && 
-             NS_OK == tmp2->QueryInterface(kIScriptGlobalObjectDataIID, (void**)&globalData)) {
+    } else if (nsnull != tmp2 && NS_OK == tmp2->QueryInterface(kIScriptGlobalObjectDataIID, (void**)&globalData)) {
       globalData->GetOrigin(&origin);
     }
   }
@@ -593,8 +584,8 @@ nsJSSecurityManager::SameOrigins(JSContext * aCx, const char * aOrigin1, const c
   }
   delete tmp;
   if (PL_strcmp(aOrigin1, aOrigin2) == 0) return PR_TRUE;
-  nsString * cmp1 = new nsString(GetCanonicalizedOrigin(aCx, aOrigin1));
-  nsString * cmp2 = new nsString(GetCanonicalizedOrigin(aCx, aOrigin2));
+  nsString * cmp1 = new nsString(this->GetCanonicalizedOrigin(aCx, aOrigin1));
+  nsString * cmp2 = new nsString(this->GetCanonicalizedOrigin(aCx, aOrigin2));
   
   PRBool result = PR_FALSE;
   // Either the strings are equal or they are both file: uris.
@@ -635,8 +626,6 @@ nsJSSecurityManager::GetCanonicalizedOrigin(JSContext* aCx, const char * aUrlStr
   delete buffer;
   return origin;
 }
-
-#define PMAXHOSTNAMELEN 64
 
 NS_IMETHODIMP
 nsJSSecurityManager::GetPrincipalsFromStackFrame(JSContext *aCx, JSPrincipals** aPrincipals)
@@ -695,26 +684,21 @@ nsJSSecurityManager::GetOriginFromSourceURL(nsIURI * url, char * * result)
 }
 
 NS_IMETHODIMP
-nsJSSecurityManager::CanCreateWrapper(JSContext * aJSContext, const nsIID & aIID, 
-                                      nsISupports *aObj)
+nsJSSecurityManager::CanCreateWrapper(JSContext * aJSContext, const nsIID & aIID, nsISupports * aObj)
 {
-#if 0
-    nsString* aOrigin=nsnull;
-    nsresult rv=this->GetSubjectOriginURL(aJSContext, &aOrigin);
-#endif
-    return NS_OK;
+  return NS_OK;
 }
  
 NS_IMETHODIMP
 nsJSSecurityManager::CanCreateInstance(JSContext * aJSContext, const nsCID & aCID)
 {
-    return NS_OK;
+  return NS_OK;
 }
  
 NS_IMETHODIMP
 nsJSSecurityManager::CanGetService(JSContext * aJSContext, const nsCID & aCID)
 {
-    return NS_OK;
+  return NS_OK;
 }
  
 NS_IMETHODIMP
@@ -776,7 +760,6 @@ nsJSSecurityManager::CanAccessTarget(JSContext *aCx, PRInt16 aTarget, PRBool* aR
 #else
   *aReturn = PR_FALSE;
 #endif
-
   return NS_OK;
 }
 
@@ -1005,9 +988,7 @@ nsJSSecurityManager::PrincipalsCanAccessTarget(JSContext *aCx, PRInt16 aTarget)
   if (pFrameToStartLooking == nsnull) {
     pFrameToStartLooking = JS_FrameIterator(aCx, &pFrameToStartLooking);
     if (pFrameToStartLooking == nsnull) {
-      /*
-      ** There are no frames or scripts at this point.
-      */
+// There are no frames or scripts at this point.
       pFrameToEndLooking = nsnull;
     }
   }
@@ -2105,8 +2086,7 @@ nsJSSecurityManager::CheckURI(nsString *uri, nsIURI *base, PRBool checkFile,
 	         * synchronous event handling.
 	         */
 	        LO_UnlockLayout();
-                if (!lm_CheckPermissions(cx, obj, 
-                                         JSTARGET_UNIVERSAL_BROWSER_READ))
+                if (!lm_CheckPermissions(cx, obj, JSTARGET_UNIVERSAL_BROWSER_READ))
                 {
                     /* Don't leak information about the url of this page. */
                     XP_FREEIF(absolute);

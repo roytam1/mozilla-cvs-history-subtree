@@ -40,6 +40,7 @@ EXPORTS=                           \
         nsPrivilege.h              \
         nsPrivilegeManager.h       \
         nsPrivilegeTable.h         \
+        nsScriptSecurityManager.h  \
         nsSystemPrivilegeTable.h   \
         nsTarget.h                 \
         nsUserDialogHelper.h       \

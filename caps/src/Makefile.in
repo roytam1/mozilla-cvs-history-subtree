@@ -38,6 +38,7 @@ CPPSRCS		= \
 		nsPrivilege.cpp \
 		nsPrivilegeManager.cpp \
 		nsPrivilegeTable.cpp \
+		nsScriptSecurityManager.cpp \
 		nsSecurityManagerFactory.cpp \
 		nsSystemPrivilegeTable.cpp \
 		nsTarget.cpp \

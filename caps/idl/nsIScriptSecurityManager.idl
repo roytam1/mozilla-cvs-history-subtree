@@ -31,6 +31,8 @@ interface nsIURI;
 
 %{C++
 struct nsJSPrincipalsList;
+struct JSContext;
+struct JSObject;
 %}
 
 [uuid(58df5780-8006-11d2-bd91-00805f8ae3f4)]
@@ -55,13 +57,13 @@ interface nsIScriptSecurityManager : nsISupports
 	void CheckScriptAccess(in nsIScriptContext cx, in voidStar obj, [const] in string prop, out boolean res);
 	void GetSubjectOriginURL(in JSContext cx, out string origin);
 	void GetObjectOriginURL(in JSContext cx, in JSObject obj, out string origin);
-/*
-	void GetPrincipalsFromStackFrame(in JSContext cx, out JSPrincipals prins);
-	void GetCompilationPrincipals(in nsIScriptContext cx, in nsIScriptGlobalObject go, in JSPrincipals prins, out JSPrincipals resultprins);
-	void CanAccessTarget(in JSContext cx, in short target, out boolean res);
 	void CheckPermissions(in JSContext cx, in JSObject obj, in short target, out boolean res);
+	void GetContainerPrincipals(in JSContext cx, in JSObject container, out nsIPrincipal prin);
+	void CanAccessTarget(in JSContext cx, in short target, out boolean res);
+	void GetPrincipalsFromStackFrame(in JSContext cx, out JSPrincipals prins);
+/*
+	void GetCompilationPrincipals(in nsIScriptContext cx, in nsIScriptGlobalObject go, in JSPrincipals prins, out JSPrincipals resultprins);
 	void CheckContainerAccess(in JSContext cx, in JSObject obj, in short target, out boolean res);
-	void GetContainerPrincipals(in JSContext cx, in JSObject container, out JSPrincipals prins);
 	void SetContainerPrincipals(in JSContext cx, in JSObject container, in JSPrincipals prins);
 	void CanCaptureEvent(in JSContext cx, in JSFunction func, in JSObject eventTarget, out boolean res);
 	void SetExternalCapture(in JSContext cx, in JSPrincipals prins, in boolean abool);
