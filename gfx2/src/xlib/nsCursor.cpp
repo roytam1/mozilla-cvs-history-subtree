@@ -43,7 +43,12 @@ nsCursor::~nsCursor()
     ::XFreeCursor(mDisplay, mCursor);
 }
 
-NS_IMETHODIMP nsCursor::Init(const PRInt32 aCursor)
+NS_IMETHODIMP nsCursor::GetCursor(PRInt32 *aCursor)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsCursor::SetCursor(PRInt32 aCursor)
 {
   unsigned int cursor = 0;
 
@@ -101,6 +106,11 @@ NS_IMETHODIMP nsCursor::Init(const PRInt32 aCursor)
   mCursor = ::XCreateFontCursor(mDisplay, cursor);
 
   return NS_OK;
+}
+
+NS_IMETHODIMP SetToImage(nsIImage *aImage)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* nsPICursorXlib interface */

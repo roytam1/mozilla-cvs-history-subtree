@@ -64,10 +64,12 @@ EXPORTS		= \
 		nsColor.h \
 		nsGUIEvent.h \
 		nsMargin.h \
+		nsMatrix.h \
 		nsFont.h \
 		nsPoint.h \
 		nsRect.h \
 		nsSize.h \
+		nsTransform.h \
 		nsUnitConverters.h \
 		$(NULL)
 

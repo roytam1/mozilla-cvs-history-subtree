@@ -40,6 +40,8 @@
  *      [a c e]
  *      [b d f]
  *      [0 0 1]
+ *
+ * @see nsTransform
  */
 class nsMatrix { 
 
@@ -55,6 +57,14 @@ class nsMatrix {
   nsMatrix();
   virtual ~nsMatrix();
 
+  float GetA() const { return a; };
+  float GetB() const { return b; };
+  float GetC() const { return c; };
+  float GetD() const { return d; };
+  float GetE() const { return e; };
+  float GetF() const { return f; };
+
+
   /**
    * Performs matrix multiplication. This matrix is post-multiplied by another matrix, returning the resulting new matrix. 
    *
@@ -62,14 +72,14 @@ class nsMatrix {
    *
    * @return The resulting matrix.
    */
-  nsMatrix multiply(nsMatrix secondMatrix);
+  nsMatrix *Multiply(nsMatrix secondMatrix);
 
   /**
    * Returns the inverse matrix.
    *
    * @return The inverse matrix
    */
-  nsMatrix inverse();
+  nsMatrix *Inverse();
 
   /**
    * Post-multiplies a translation transformation on the current matrix and returns the resulting matrix. 
@@ -79,7 +89,7 @@ class nsMatrix {
    *
    * @return The resulting matrix.
    */
-  nsMatrix translate(float x, float y);
+  nsMatrix *Translate(float x, float y);
 
   /**
    * Post-multiplies a uniform scale transformation on the current matrix and returns the resulting matrix.
@@ -88,7 +98,7 @@ class nsMatrix {
    *
    * @return The resulting matrix.
    */
-  nsMatrix scale(float scaleFactor);
+  nsMatrix *Scale(float scaleFactor);
 
 
   /**
@@ -99,7 +109,7 @@ class nsMatrix {
    *
    * @return The resulting matrix.
    */
-  nsMatrix scaleNonUniform(float scaleFactorX, float scaleFactorY);
+  nsMatrix *ScaleNonUniform(float scaleFactorX, float scaleFactorY);
 
   /**
    * Post-multiplies a rotation transformation on the current matrix and returns the resulting matrix.
@@ -108,7 +118,7 @@ class nsMatrix {
    *
    * @return The resulting matrix.
    */
-  nsMatrix rotate(float angle);
+  nsMatrix *Rotate(float angle);
 
   /**
    * Post-multiplies a rotation transformation on the current matrix and returns the resulting matrix.
@@ -120,21 +130,21 @@ class nsMatrix {
    *
    * @return The resulting matrix.
    */
-  nsMatrix rotateFromVector(float x, float y);
+  nsMatrix *RotateFromVector(float x, float y);
 
   /**
    * Post-multiplies the transformation [-1 0 0 1 0 0] and returns the resulting matrix. 
    *
    * @return The resulting matrix.
    */
-  nsMatrix flipX();
+  nsMatrix *FlipX();
 
   /**
    * Post-multiplies the transformation [1 0 0 -1 0 0] and returns the resulting matrix. 
    *
    * @return The resulting matrix.
    */
-  nsMatrix flipY();
+  nsMatrix *FlipY();
 
   /**
    * Post-multiplies a skewX transformation on the current matrix and returns the resulting matrix.
@@ -143,7 +153,7 @@ class nsMatrix {
    *
    * @return The resulting matrix.
    */
-  nsMatrix skewX(float angle);
+  nsMatrix *SkewX(float angle);
 
   /**
    * Post-multiplies a skewY transformation on the current matrix and returns the resulting matrix.
@@ -152,5 +162,5 @@ class nsMatrix {
    *
    * @return The resulting matrix.
    */
-  nsMatrix skewY(float angle);
+  nsMatrix *SkewY(float angle);
 };

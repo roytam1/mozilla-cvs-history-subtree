@@ -31,6 +31,8 @@
 /**
  * nsTransform class
  * @class nsTransform
+ *
+ * @see nsMatrix
  */
 class nsTransform {
  public:
@@ -46,50 +48,51 @@ class nsTransform {
    * The unit type is not one of predefined types. It is invalid to attempt to define a
    * new value of this type or to attempt to switch an existing value to this type.
    */
-  const unsigned short NS_TRANSFORM_UNKNOWN   = 0;
+  enum {
+    NS_TRANSFORM_UNKNOWN   = 0,
 
   /**
    * A "matrix(...)" transformation.
    */
-  const unsigned short NS_TRANSFORM_MATRIX    = 1;
+    NS_TRANSFORM_MATRIX    = 1,
 
   /**
    * A "translate(...)" transformation.
    */
-  const unsigned short NS_TRANSFORM_TRANSLATE = 2;
+    NS_TRANSFORM_TRANSLATE = 2,
 
   /**
    * A "scale(...)" transformation.
    */
-  const unsigned short NS_TRANSFORM_SCALE     = 3;
+    NS_TRANSFORM_SCALE     = 3,
 
   /**
    * A "rotate(...)" transformation.
    */
-  const unsigned short NS_TRANSFORM_ROTATE    = 4;
+    NS_TRANSFORM_ROTATE    = 4,
 
   /**
    * A "skewX(...)" transformation.
    */
-  const unsigned short NS_TRANSFORM_SKEWX     = 5;
+    NS_TRANSFORM_SKEWX     = 5,
 
   /**
    * A "skewY(...)" transformation.
    */
-  const unsigned short NS_TRANSFORM_SKEWY     = 6;
-
+    NS_TRANSFORM_SKEWY     = 6
+  };
   //@}
 
-  unsigned short getType();
-  nsMatrix getMatrix();
-  float getAngle;
+  unsigned short getType() const;
+  nsMatrix *getMatrix() const;
+  float getAngle() const;
 
   /**
    * Sets the transform type to NS_TRANSFORM_MATRIX, with parameter matrix defining the new transformation.
    *
    * @param matrix The new matrix for the transformation.
    */
-  void setMatrix(nsMatrix matrix);
+  void setMatrix(nsMatrix *matrix);
 
   /**
    * Sets the transform type to NS_TRANSFORM_TRANSLATE, with parameters tx and ty defining the translation amounts
