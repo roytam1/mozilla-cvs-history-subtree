@@ -9254,8 +9254,6 @@ SmartUpdate failed: There is not enough disk space to complete this operation.")
 ResDef(SU_LOW_DISK_SPACE_WARNING, SU_MSG_BASE + 39,"\
 SmartUpdate warning:\n\nYou are running low on disk space.  This install may not complete successfully.  Do you want to continue?")
 
-
-
 END_STR(mcom_include_xp_msg_i_strings)
 
 /* WARNING: DO NOT TAKE ERROR CODE -666, it is used internally
