@@ -209,7 +209,7 @@ void testCollector()
     ConsCell** link = &head;
     
     for (uint32 i = 0; i < kCellCount; ++i) {
-        *link = cell = (ConsCell*) gc.allocateObject(sizeof(ConsCell));
+        *link = cell = new (gc) ConsCell;
         ASSERT(cell);
         cell->car = gc.allocateFloat64(i);
         ASSERT(cell->car);
