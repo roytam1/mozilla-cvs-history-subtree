@@ -14,7 +14,7 @@
 # Copyright (C) 1998 Netscape Communications Corporation.  All Rights
 # Reserved.
 
-JDK = /usr/java
+JDK = /share/builds/components/jdk/1.1.6/IRIX
 
 INCLUDES   += -I$(JDK)/include -I$(JDK)/include/irix
 
