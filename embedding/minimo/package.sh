@@ -35,10 +35,17 @@
 #
 # ***** END LICENSE BLOCK *****
 
+name="$1"
+if [ $# -eq 0 ]
+then
+  name="obj-minimo"
+fi
+
+echo "$name"
 
 pushd .
 
-cd ../../obj-minimo/embedding/config/
+cd ../../$name/embedding/config/
 
 make
 make merge_xpt
@@ -51,3 +58,7 @@ find . -type f -exec cp '{}' . \;
 rm -rf skin content locale
 
 popd
+
+cp all.js ../../$name/dist/Embed/defaults/pref/
+cp unix.js ../../$name/dist/Embed/defaults/pref/
+
