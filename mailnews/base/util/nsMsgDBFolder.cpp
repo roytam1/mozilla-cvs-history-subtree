@@ -1104,7 +1104,9 @@ nsresult nsMsgDBFolder::GetFolderCacheKey(nsIFileSpec **aFileSpec)
 
 	  	        // create the .msf file
 			// see bug #244217 for details
-			dbPath->Touch();
+			PRBool exists;
+			if (NS_SUCCEEDED(dbPath->Exists(&exists)) && !exists)
+				dbPath->Touch();
 		}
 	}
 	return rv;
