@@ -145,7 +145,7 @@ function goPreferences(containerID, paneURL, itemID)
   }
 
   var modality = modal ? "yes" : "no";
-  var resizability = resizable ? "yes" : "no";
+  var resizability = "yes"; // resizable ? "yes" : "no";
   var features = "chrome,titlebar,modal=" + modality + ",resizable=" + resizability;
   openDialog("chrome://communicator/content/pref/pref.xul","PrefWindow", 
              features, paneURL, containerID, itemID);
