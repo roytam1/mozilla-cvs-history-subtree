@@ -159,6 +159,6 @@ interface nsIDirectoryIterator : nsISupports
 
 %{C++
 // Factory methods
-NS_BASE nsresult NS_NewFileSpec(nsIFileSpec** result);
-NS_BASE nsresult NS_NewDirectoryIterator(nsIDirectoryIterator** result);
+NS_COM nsresult NS_NewFileSpec(nsIFileSpec** result);
+NS_COM nsresult NS_NewDirectoryIterator(nsIDirectoryIterator** result);
 %}
