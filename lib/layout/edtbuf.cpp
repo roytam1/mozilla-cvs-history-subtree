@@ -104,7 +104,9 @@ void CEditBuffer::InitializePrefs()//static
   {                              //this means that someone has changed 
                                  //them and we need to reset them 
     PREF_RegisterCallback("editor", CEditBuffer::PrefCallback, NULL);//no instance data, only setting statics.  we are all of the same mind here
-    PREF_GetBoolPref("editor.page_updown_move_cursor",&m_bMoveCursor);
+    PRBool prBool;
+    PREF_GetBoolPref("editor.page_updown_move_cursor",&prBool);
+    m_bMoveCursor = prBool;
   }
   m_bEdtBufPrefInitialized=TRUE;
 }

@@ -673,9 +673,9 @@ ED_FileError EDT_PublishFile( MWContext * pContext,
                     // PROBLEM: If password was wrong, user may have
                     // enterred it in prompted dialog, but we dont know that one!
                     PREF_SetCharPref("editor.publish_last_pass",SECNAV_MungeString(pPassword));
-			        PREF_SetBoolPref("editor.publish_save_password",TRUE);
+			        PREF_SetBoolPref("editor.publish_save_password",PR_TRUE);
                 } else {
-			        PREF_SetBoolPref("editor.publish_save_password",FALSE);
+			        PREF_SetBoolPref("editor.publish_save_password",PR_FALSE);
                 }
             }
         }
