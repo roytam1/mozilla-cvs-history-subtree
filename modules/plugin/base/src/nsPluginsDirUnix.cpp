@@ -117,6 +117,7 @@ static void SetMIMETypeSeparator(char *minfo)
 #define DEFAULT_X11_PATH "/usr/lib/X11R6/"
 #undef LOCAL_PLUGIN_DLL_SUFFIX
 #define LOCAL_PLUGIN_DLL_SUFFIX ".sl"
+#define LOCAL_PLUGIN_DLL_ALT_SUFFIX ".so"
 #elif defined(SOLARIS)
 #define DEFAULT_X11_PATH "/usr/openwin/lib/"
 #elif defined(LINUX)
@@ -329,6 +330,15 @@ PRBool nsPluginsDir::IsPluginFile(const nsFileSpec& fileSpec)
         if (n > 0 && !PL_strcmp(&pathname[n], LOCAL_PLUGIN_DLL_SUFFIX)) {
             ret  = PR_TRUE; // *.so or *.sl file
         }
+#ifdef LOCAL_PLUGIN_DLL_ALT_SUFFIX
+        if (PR_TRUE != ret) {
+            n = PL_strlen(pathname) - (sizeof(LOCAL_PLUGIN_DLL_ALT_SUFFIX) - 1);
+            if (n > 0 && !PL_strcmp(&pathname[n], LOCAL_PLUGIN_DLL_ALT_SUFFIX)) {
+                ret = PR_TRUE;
+            }
+        }
+#endif
+
 #ifdef NS_DEBUG
         printf("IsPluginFile(%s) == %s\n", pathname, ret?"TRUE":"FALSE");
 #endif
