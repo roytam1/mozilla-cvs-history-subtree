@@ -17,27 +17,22 @@
                 clearCookies = id; 
                 clickAutoFillPasswords = id; 
                 clickEnableCookies = id; 
-                clickEnableJS = id; 
-                clickEnableJava = id; 
-                clickEnableLeaveEncrypted = id; 
-                clickEnableLoadLowGrade = id; 
-                clickEnableViewMixed = id; 
                 clickPromptForCookie = id; 
                 clickStorePasswords = id; 
+                editCookieSites = id; 
+                editCookieSitesDone = id; 
                 launchKeychainAccess = id; 
+                removeCookieSite = id; 
             }; 
             CLASS = OrgMozillaChimeraPreferencePrivacy; 
             LANGUAGE = ObjC; 
             OUTLETS = {
                 mAutoFillPasswords = NSButton; 
+                mCookieSitePanel = id; 
                 mCookies = id; 
-                mEnableJS = NSButton; 
-                mEnableJava = NSButton; 
-                mLeaveEncrypted = NSButton; 
-                mLoadLowGrade = NSButton; 
                 mPromptForCookie = NSButton; 
+                mSiteTable = NSTableView; 
                 mStorePasswords = NSButton; 
-                mViewMixed = NSButton; 
             }; 
             SUPERCLASS = PreferencePaneBase; 
         }, 
