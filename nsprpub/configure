@@ -4122,15 +4122,15 @@ EOF
 EOF
 
         else
-            cat >> confdefs.h <<\EOF
-#define _POSIX_C_SOURCE "199506L"
+            cat >> confdefs.h <<EOF
+#define _POSIX_C_SOURCE 199506L
 EOF
 
         fi
     fi
     if test "$USE_USER_PTHREADS"; then
-        cat >> confdefs.h <<\EOF
-#define _POSIX_C_SOURCE "199506L"
+        cat >> confdefs.h <<EOF
+#define _POSIX_C_SOURCE 199506L
 EOF
 
     fi
