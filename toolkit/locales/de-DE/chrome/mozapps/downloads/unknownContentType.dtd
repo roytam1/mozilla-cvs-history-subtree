@@ -1,0 +1,18 @@
+<!ENTITY actionQuestion.label "Wie soll &brandShortName; mit dieser Datei verfahren?">
+<!ENTITY save.label "Auf Diskette/Festplatte speichern">
+<!ENTITY openWith.accesskey "Ö">
+<!ENTITY whichIsA.label "Vom Typ:">
+<!ENTITY save.accesskey "A">
+<!ENTITY openWith.label "Öffnen mit">
+<!ENTITY rememberChoice.label "Für Dateien dieses Typs immer diese Aktion ausführen">
+<!ENTITY rememberChoice.accesskey "F">
+<!ENTITY other.label "Andere...">
+<!ENTITY intro.label "Sie möchten folgende Datei herunterladen:">
+<!ENTITY settingsChange.label "Die Einstellungen können im Abschnitt Downloads geändert werden, unter: Extras, Einstellungen...">
+<!ENTITY from.label "Von:">
+<!ENTITY settingsChangeMac.label "Die Einstellungen können im Abschnitt Downloads geändert werden, unter: Extras, Einstellungen...">
+<!ENTITY settingsChangeUnix.label "Die Einstellungen können im Abschnitt Downloads geändert werden, unter: Bearbeiten, Einstellungen...">
+<!ENTITY chooseHandler.accesskey "D">
+<!ENTITY chooseHandler.label "Durchsuchen...">
+<!ENTITY chooseHandlerMac.accesskey "D">
+<!ENTITY chooseHandlerMac.label "Durchsuchen...">

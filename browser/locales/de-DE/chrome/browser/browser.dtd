@@ -1,0 +1,296 @@
+<!ENTITY taskbarCmd.label "Statusleiste">
+<!ENTITY printSetupCmd.accesskey "e">
+<!ENTITY saveLinkCmd.label "Ziel speichern unter...">
+<!ENTITY copyEmailCmd.label "E-Mail-Adresse kopieren">
+<!ENTITY newNavigatorCmd.label "Neues Fenster">
+<!ENTITY editMenu.accesskey "B">
+<!ENTITY showOnlyThisFrameCmd.label "Nur diesen Frame anzeigen">
+<!ENTITY selectAllCmd.accesskey "m">
+<!ENTITY findAgainCmd.label "Weitersuchen">
+<!ENTITY saveImageCmd.accesskey "G">
+<!ENTITY historyButton.tooltip "Zeigt Seiten an, die Sie kürzlich besucht haben">
+<!ENTITY pasteCmd.key "V">
+<!ENTITY bookmarkPageCmd.label "Lesezeichen für diese Seite hinzufügen...">
+<!ENTITY tabCmd.label "Neuer Tab">
+<!ENTITY printButton.label "Drucken">
+<!ENTITY viewFrameSourceCmd.accesskey "F">
+<!ENTITY javaScriptConsoleCmd.accesskey "J">
+<!ENTITY viewCustomizeToolbar.label "Anpassen...">
+<!ENTITY copyEmailCmd.accesskey "E">
+<!ENTITY goHomeCmd.label "Startseite">
+<!ENTITY printPreviewCmd.label "Druckvorschau">
+<!ENTITY cutCmd.label "Ausschneiden">
+<!ENTITY stopCmd.label "Stopp">
+<!ENTITY copyCmd.label "Kopieren">
+<!ENTITY closeCmd.accesskey "S">
+<!ENTITY openFileCmd.label "Datei öffnen...">
+<!ENTITY quitApplicationCmd.accesskey "B">
+<!ENTITY editMenu.label "Bearbeiten">
+<!ENTITY openFrameCmd.label "Frame in neuem Fenster öffnen">
+<!ENTITY setWallpaperCmd.label "Als Hintergrundbild einrichten...">
+<!ENTITY reloadFrameCmd.accesskey "R">
+<!ENTITY pageSourceCmd.label "Seitenquelltext anzeigen">
+<!ENTITY navbarCmd.accesskey "N">
+<!ENTITY goButton.tooltip 'Geben Sie eine Adresse in das Feld auf der linken Seite ein, dann klicken Sie auf  "Go"'>
+<!ENTITY metadataCmd.label "Eigenschaften">
+<!ENTITY textZoomEnlargeCmd.label "Schriftgrad vergrößern">
+<!ENTITY openLinkCmd.label "Link in neuem Fenster öffnen">
+<!ENTITY newMenu.label "Neu">
+<!ENTITY setWallpaperCmd.accesskey "A">
+<!ENTITY proxyIcon.tooltip "Ziehen Sie dieses Symbol in eine Symbolleiste, um einen Link zu dieser Seite zu erstellen">
+<!ENTITY aboutCmd.accesskey "Ü">
+<!ENTITY stopCmd.accesskey "S">
+<!ENTITY viewToolbarsMenu.accesskey "y">
+<!ENTITY copyLinkCmd.label "Link-Adresse kopieren">
+<!ENTITY newNavigatorCmd.key "N">
+<!ENTITY selectAllCmd.label "Alles markieren">
+<!ENTITY bookmarkLinkCmd.accesskey "L">
+<!ENTITY viewFrameInfoCmd.label "Frame-Informationen anzeigen">
+<!ENTITY mainWindow.title "&brandFullName;">
+<!ENTITY preferencesCmd.accesskey "E">
+<!ENTITY textZoomReduceCmd.commandkey "-">
+<!ENTITY viewSidebarMenu.accesskey "b">
+<!ENTITY forwardCmd.accesskey "V">
+<!ENTITY forwardButton.tooltip "Eine Seite vor">
+<!ENTITY openFrameCmdInTab.label "Frame in  neuem Tab öffnen">
+<!ENTITY throbber.tooltip "Zur &brandShortName;-Homepage gehen">
+<!ENTITY manBookmarksCmd.accesskey "m">
+<!ENTITY locationItem.title "Adresse">
+<!ENTITY closeCmd.key "W">
+<!ENTITY openFileCmd.commandkey "o">
+<!ENTITY viewPartialSourceForSelectionCmd.label "Auswahl-Quelltext anzeigen">
+<!ENTITY undoCmd.label "Rückgängig">
+<!ENTITY earlierHistory.label "Frühere Chronik">
+<!ENTITY cutCmd.key "X">
+<!ENTITY helpMenu.label "Hilfe">
+<!ENTITY addCurPageAsCmd.label "Lesezeichen hinzufügen...">
+<!ENTITY reloadCmd.commandkey "r">
+<!ENTITY backCmd.accesskey "Z">
+<!ENTITY goHomeCmd.accesskey "S">
+<!ENTITY reloadButton.tooltip "Aktuelle Seite neu laden">
+<!ENTITY goButton.label "Go">
+<!ENTITY pageSourceCmd.commandkey "u">
+<!ENTITY viewBGImageCmd.accesskey "H">
+<!ENTITY findOnCmd.accesskey "S">
+<!ENTITY goMenu.accesskey "G">
+<!ENTITY fileMenu.accesskey "D">
+<!ENTITY viewPageSourceCmd.label "Seitenquelltext anzeigen">
+<!ENTITY javaConsoleCmd.accesskey "J">
+<!ENTITY textZoomResetCmd.commandkey "0">
+<!ENTITY savePageCmd.commandkey "s">
+<!ENTITY printCmd.commandkey "p">
+<!ENTITY viewPartialSourceForMathMLCmd.label "MathML-Quelle anzeigen">
+<!ENTITY searchItem.title "Suchen">
+<!ENTITY bookmarksButton.tooltip "Öffnet Ihre Lesezeichen-Liste">
+<!ENTITY printButton.tooltip "Diese Seite drucken">
+<!ENTITY saveImageCmd.label "Grafik speichern unter...">
+<!ENTITY saveFrameCmd.accesskey "u">
+<!ENTITY viewToolbarsMenu.label "Symbolleisten">
+<!ENTITY javaConsoleCmd.label "Java-Konsole">
+<!ENTITY findOnCmd.commandkey "f">
+<!ENTITY searchFocus.commandkey "k">
+<!ENTITY navbarCmd.label "Navigations-Symbolleiste">
+<!ENTITY savePageCmd.label "Seite speichern unter...">
+<!ENTITY cutCmd.accesskey "A">
+<!ENTITY saveLinkCmd.accesskey "Z">
+<!ENTITY pasteCmd.accesskey "E">
+<!ENTITY copyImageCmd.accesskey "d">
+<!ENTITY deleteCmd.accesskey "L">
+<!ENTITY findOnSearchBarCmd.label "Seite durchsuchen">
+<!ENTITY bookmarkFrameCmd.label "Lesezeichen für diesen Frame hinzufügen...">
+<!ENTITY helpMenu.accesskey "H">
+<!ENTITY openLinkInWindowCmd.label "Öffnen">
+<!ENTITY preferencesCmd.label "Einstellungen...">
+<!ENTITY viewCustomizeToolbar.accesskey "A">
+<!ENTITY aboutCmd.label "Über &brandFullName;">
+<!ENTITY backButton.tooltip "Eine Seite zurück">
+<!ENTITY throbberItem.title "Aktivitäts-Anzeige">
+<!ENTITY newTabButton.tooltip "Öffnet einen neuen Tab">
+<!ENTITY taskbarCmd.accesskey "t">
+<!ENTITY viewPartialSourceCmd.accesskey "A">
+<!ENTITY viewsourcetitle.preface "Quelle von: ">
+<!ENTITY selectAllCmd.key "A">
+<!ENTITY viewPageInfoCmd.label "Seiteninformationen anzeigen">
+<!ENTITY historyButton.label "Chronik">
+<!ENTITY showOnlyThisFrameCmd.accesskey "N">
+<!ENTITY findAgainCmd.commandkey "g">
+<!ENTITY fullScreenCmd.label "Vollbild">
+<!ENTITY stopButton.tooltip "Laden dieser Seite stoppen">
+<!ENTITY redoCmd.accesskey "W">
+<!ENTITY closeCmd.label "Schließen">
+<!ENTITY javaScriptConsoleCmd.label "JavaScript-Konsole">
+<!ENTITY textZoomReduceCmd.accesskey "e">
+<!ENTITY reloadFrameCmd.label "Frame neu laden">
+<!ENTITY findAgainCmd.commandkey2 "VK_F3">
+<!ENTITY bookmarksMenu.accesskey "L">
+<!ENTITY pageInfoCmd.accesskey "S">
+<!ENTITY deleteCmd.label "Löschen">
+<!ENTITY openFileCmd.accesskey "ö">
+<!ENTITY viewFrameInfoCmd.accesskey "I">
+<!ENTITY fullScreenCmd.accesskey "v">
+<!ENTITY redoCmd.label "Wiederherstellen">
+<!ENTITY viewMenu.label "Ansicht">
+<!ENTITY newWindowButton.tooltip "Öffnet ein neues Fenster">
+<!ENTITY textZoomReduceCmd.label "Schriftgrad verkleinern">
+<!ENTITY printSetupCmd.label "Seite einrichten...">
+<!ENTITY pageSourceCmd.accesskey "a">
+<!ENTITY viewBGImageCmd.label "Hintergrundgrafik anzeigen">
+<!ENTITY textZoomEnlargeCmd.commandkey2 "=">
+<!ENTITY reloadCmd.accesskey "N">
+<!ENTITY bookmarksButton.label "Lesezeichen">
+<!ENTITY findOnCmd.label "Seite durchsuchen">
+<!ENTITY deleteCmd.key "D">
+<!ENTITY viewImageCmd.label "Grafik anzeigen">
+<!ENTITY search.accesskey "W">
+<!ENTITY pageInfoCmd.label "Seiteninformationen">
+<!ENTITY tabCmd.accesskey "T">
+<!ENTITY pasteCmd.label "Einfügen">
+<!ENTITY bookmarkLinkCmd.label "Lesezeichen für diesen Link hinzufügen...">
+<!ENTITY tabCmd.commandkey "t">
+<!ENTITY mainWindow.titlemodifiermenuseparator " - ">
+<!ENTITY metadataCmd.accesskey "E">
+<!ENTITY copyImageCmd.label "Grafikadresse kopieren">
+<!ENTITY viewFrameSourceCmd.label "Frame-Quelltext anzeigen">
+<!ENTITY bookmarkPageCmd.accesskey "L">
+<!ENTITY openLinkCmdInTab.accesskey "T">
+<!ENTITY openFrameCmdInTab.accesskey "T">
+<!ENTITY printCmd.label "Drucken...">
+<!ENTITY openLinkInWindowCmd.accesskey "ö">
+<!ENTITY closeWindow.label "Fenster schließen">
+<!ENTITY textZoomEnlargeCmd.accesskey "d">
+<!ENTITY viewPageSourceCmd.accesskey "a">
+<!ENTITY personalbarCmd.label "Lesezeichen-Symbolleiste">
+<!ENTITY manBookmarksCmd.label "Lesezeichen-Manager">
+<!ENTITY thisFrameMenu.accesskey "F">
+<!ENTITY saveFrameCmd.label "Frame speichern unter...">
+<!ENTITY viewImageCmd.accesskey "i">
+<!ENTITY printCmd.accesskey "D">
+<!ENTITY thisFrameMenu.label "Aktueller Frame">
+<!ENTITY newMenu.accesskey "N">
+<!ENTITY undoCmd.accesskey "R">
+<!ENTITY newNavigatorCmd.accesskey "N">
+<!ENTITY openLinkCmd.accesskey "F">
+<!ENTITY redoCmd.key "Y">
+<!ENTITY mainWindow.titlemodifier "&brandFullName;">
+<!ENTITY viewSidebarMenu.label "Sidebar">
+<!ENTITY copyLinkCmd.accesskey "k">
+<!ENTITY copyCmd.key "C">
+<!ENTITY goMenu.label "Gehe">
+<!ENTITY forwardCmd.label "Vor">
+<!ENTITY quitApplicationCmd.label "Beenden">
+<!ENTITY viewPageInfoCmd.accesskey "e">
+<!ENTITY openLinkCmdInTab.label "Link in neuem Tab öffnen">
+<!ENTITY openCmd.commandkey "l">
+<!ENTITY bookmarksMenu.label "Lesezeichen">
+<!ENTITY printPreviewCmd.accesskey "v">
+<!ENTITY backCmd.label "Zurück">
+<!ENTITY fileMenu.label "Datei">
+<!ENTITY pageInfoCmd.commandkey "i">
+<!ENTITY addCurPageAsCmd.commandkey "d">
+<!ENTITY reloadCmd.label "Neu laden">
+<!ENTITY textZoomEnlargeCmd.commandkey "+">
+<!ENTITY bookmarkFrameCmd.accesskey "z">
+<!ENTITY nothingAvailable.label "(Nichts verfügbar)">
+<!ENTITY personalbarCmd.accesskey "L">
+<!ENTITY homeButton.label "Startseite">
+<!ENTITY bookmarksItem.title "Lesezeichen">
+<!ENTITY savePageCmd.accesskey "u">
+<!ENTITY undoCmd.key "Z">
+<!ENTITY addCurPageAsCmd.accesskey "L">
+<!ENTITY openFrameCmd.accesskey "F">
+<!ENTITY copyCmd.accesskey "K">
+<!ENTITY viewMenu.accesskey "A">
+<!ENTITY findAgainCmd.accesskey "n">
+<!ENTITY urlbar.accesskey "s">
+<!ENTITY copyButton.tooltip "Kopieren">
+<!ENTITY pasteButton.tooltip "Einfügen">
+<!ENTITY cutButton.tooltip "Ausschneiden">
+<!ENTITY pageThemeNoTheme.label "Kein Theme">
+<!ENTITY pageThemeNoTheme.accesskey "K">
+<!ENTITY sendImageCmd.label "Grafik senden...">
+<!ENTITY pageReportIcon.tooltip "Die Einstellungen des Pop-up-Blockers für diese Website ändern">
+<!ENTITY quitApplicationCmdWin.accesskey "B">
+<!ENTITY sendPageCmd.label "Link senden...">
+<!ENTITY bookmarksToolbarItem.label "Lesezeichen-Symbole">
+<!ENTITY toolsMenu.accesskey "x">
+<!ENTITY bringAllToFront.label "Alles nach vorne bringen">
+<!ENTITY quitApplicationCmdWin.label "Beenden">
+<!ENTITY zoomWindow.label "Zoom">
+<!ENTITY pageThemePersistentOnly.accesskey "B">
+<!ENTITY sendPageCmd.accesskey "d">
+<!ENTITY pageThemeIcon.tooltip "Zu einem anderen Stylesheet wechseln">
+<!ENTITY pageThemePersistentOnly.label "Basis-Theme">
+<!ENTITY toolsMenu.label "Extras">
+<!ENTITY goBackCmd.commandKey "[">
+<!ENTITY pageThemeButton.label "Seiten-Themes">
+<!ENTITY sendLinkCmd.accesskey "L">
+<!ENTITY sendLinkCmd.label "Link senden...">
+<!ENTITY sendImageCmd.accesskey "n">
+<!ENTITY minimizeWindow.label "Minimieren">
+<!ENTITY minimizeWindow.key "m">
+<!ENTITY goForwardCmd.commandKey "]">
+<!ENTITY searchFocusUnix.commandkey "j">
+<!ENTITY pageInfoWinCmd.commandkey "j">
+<!ENTITY goOfflineCmd.accesskey "O">
+<!ENTITY downloads.label "Downloads">
+<!ENTITY windowMenu.label "Fenster">
+<!ENTITY downloads.accesskey "D">
+<!ENTITY helpMenuWin.label "Hilfe">
+<!ENTITY downloads.commandkey "e">
+<!ENTITY goOfflineCmd.label "Offline arbeiten">
+<!ENTITY helpMenuWin.accesskey "H">
+<!ENTITY downloads.tooltip "Zeigt den Fortschritt der aktuellen Downloads an">
+<!ENTITY mailButton.readMail.label "E-Mail lesen">
+<!ENTITY search.label "Web-Suche">
+<!ENTITY mailButton.tooltip "E-Mail lesen und senden">
+<!ENTITY extensions.accesskey "E">
+<!ENTITY extensions.label "Erweiterungen">
+<!ENTITY import.label "Importieren...">
+<!ENTITY copyImageContentsCmd.label "Grafik kopieren">
+<!ENTITY keywordfield.accesskey "S">
+<!ENTITY sendMessage.commandkey "m">
+<!ENTITY mailButton.newMessage.label "Neue Nachricht...">
+<!ENTITY sidebarCloseButton.tooltip "Sidebar schließen">
+<!ENTITY mailButton.newMessage.accesskey "N">
+<!ENTITY mailButton.readNews.accesskey "l">
+<!ENTITY themes.tooltip "Das Theme ändern">
+<!ENTITY keywordfield.label "Ein Schlüsselwort für diese Suche hinzufügen...">
+<!ENTITY mailButton.sendLink.accesskey "L">
+<!ENTITY import.accesskey "I">
+<!ENTITY copyImageContentsCmd.accesskey "k">
+<!ENTITY mailButton.readNews.label "News lesen">
+<!ENTITY mailButton.readMail.accesskey "E">
+<!ENTITY themes.accesskey "T">
+<!ENTITY blockImageCmd.accesskey "B">
+<!ENTITY themes.label "Themes">
+<!ENTITY mailButton.sendLink.label "Link senden...">
+<!ENTITY mailButton.label "Mail">
+<!ENTITY extensions.tooltip "Installierte Erweiterungen anzeigen und verwalten">
+<!ENTITY preferencesCmdUnix.label "Einstellungen">
+<!ENTITY preferencesCmdUnix.accesskey "E">
+<!ENTITY allowPopups.accesskey "P">
+<!ENTITY editPopupSettings.accesskey "b">
+<!ENTITY find.label "Suchen:">
+<!ENTITY highlight.tooltip "Jedes Vorkommen des Ausrucks im Text hervorheben">
+<!ENTITY editPopupSettings.label "Pop-up-Blocker-Einstellungen bearbeiten...">
+<!ENTITY openLocationCmd.label "Adresse öffnen...">
+<!ENTITY promote.label "&brandShortName; promoten">
+<!ENTITY tellAFriend.accesskey "T">
+<!ENTITY findPrevious.tooltip "Das vorherige Auftreten des Ausdrucks suchen">
+<!ENTITY bookmarksSidebarWinCmd.commandkey "i">
+<!ENTITY findNext.tooltip "Das nächste Auftreten des Ausdrucks suchen">
+<!ENTITY tellAFriend.label "Tell a Friend">
+<!ENTITY mailMenu.label "Mail &amp; Newsgroups">
+<!ENTITY mailMenu.accesskey "M">
+<!ENTITY findCloseButton.tooltip "Such-Symbolleiste schließen">
+<!ENTITY historySidebarCmd.accesskey "C">
+<!ENTITY bookmarksSidebarCmd.accesskey "B">
+<!ENTITY bookmarksSidebarCmd.commandkey "B">
+<!ENTITY historySidebarCmd.commandKey "H">
+<!ENTITY findNext.label "Weitersuchen">
+<!ENTITY openLocationCmd.accesskey "ö">
+<!ENTITY searchFocus.commandkey2 "e">
+<!ENTITY promote.accesskey "p">
+<!ENTITY dontShowMessage.accesskey "I">
+<!ENTITY findPrevious.label "Vorheriges suchen">
+<!ENTITY highlight.label "Hervorheben">

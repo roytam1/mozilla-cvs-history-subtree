@@ -1,0 +1,27 @@
+<!ENTITY launch "Datei ausführen">
+<!ENTITY unknownSavingTitle "Speichern von #1">
+<!ENTITY progress "Fortschritt:">
+<!ENTITY savingTarget "nach:">
+<!ENTITY resume "Fortsetzen">
+<!ENTITY timeElapsed "Abgelaufene Zeit:">
+<!ENTITY shortTimeFormat "#2:#3">
+<!ENTITY progressMsg "#1 KB von #2 KB (bei #3 KB/sek)">
+<!ENTITY unknownOpeningTitle "Öffnen von #1">
+<!ENTITY cancel "Abbrechen">
+<!ENTITY reveal "Ordner anzeigen">
+<!ENTITY keep "Dieses Fenster nicht schließen, nachdem der Download abgeschlossen ist.">
+<!ENTITY savingTitle "#2&#037; von #1 gespeichert">
+<!ENTITY openingTarget "Mit:">
+<!ENTITY unknownTime "unbekannt">
+<!ENTITY openingTitle "#2&#037; von #1 fertiggestellt">
+<!ENTITY timeLeft "Verbleibende Zeit:">
+<!ENTITY close "Schließen">
+<!ENTITY percentMsg "#1&#037;">
+<!ENTITY savingSource "Speichern von:">
+<!ENTITY status "Status:">
+<!ENTITY completeMsg "Abgeschlossen, #2 KB heruntergeladen (benötigte Zeit: #1)">
+<!ENTITY defaultTitle "Speichern">
+<!ENTITY longTimeFormat "#1:#2:#3">
+<!ENTITY pausedMsg "Download pausiert">
+<!ENTITY openingSource "Öffnen von:">
+<!ENTITY pause "Pause">

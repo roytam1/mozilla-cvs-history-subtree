@@ -1,0 +1,12 @@
+<!ENTITY cmdInput.label "Druckbefehl:">
+<!ENTITY paperInput.label "Papiergröße:">
+<!ENTITY topInput.label "Oben:">
+<!ENTITY leftInput.label "Links:">
+<!ENTITY edgeMarginInput.label "Abstand zwischen Papierrand und Druckrand (Zoll)">
+<!ENTITY colorRadio.label "Farben">
+<!ENTITY grayRadio.label "Graustufen">
+<!ENTITY colorGroup.label "Farbe:">
+<!ENTITY plexInput.label "Plex-Modus:">
+<!ENTITY printJobOptions.title "Druckereigenschaften">
+<!ENTITY bottomInput.label "Unten:">
+<!ENTITY rightInput.label "Rechts:">

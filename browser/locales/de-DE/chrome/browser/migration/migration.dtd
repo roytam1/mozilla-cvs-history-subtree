@@ -1,0 +1,38 @@
+<!ENTITY selectProfile.label "Es stehen folgende Profile zum Import zur Verfügung:">
+<!ENTITY importFromCamino.label "Camino">
+<!ENTITY importFromEpiphany.accesskey "E">
+<!ENTITY importFromSafari.accesskey "Safari">
+<!ENTITY importFrom.label "Einstellungen, Lesezeichen, Chronik, Passwörter und sonstige Daten importieren, von:">
+<!ENTITY importFromIE.label "Microsoft Internet Explorer">
+<!ENTITY importFromKonqueror.label "Konqueror">
+<!ENTITY importFromSeamonkey.accesskey "N">
+<!ENTITY importItems.label "Wählen Sie bitte aus, welche Daten importiert werden sollen:">
+<!ENTITY importFromEpiphany.label "Epiphany">
+<!ENTITY importFromOmniWeb.accesskey "W">
+<!ENTITY done.title "Importierung abgeschlossen">
+<!ENTITY migrating.title "Importiere">
+<!ENTITY importFromNetscape4.accesskey "4">
+<!ENTITY importFromICab.label "iCab">
+<!ENTITY importFromNetscape4.label "Netscape 4.x">
+<!ENTITY importFromOpera.accesskey "O">
+<!ENTITY importFromKonqueror.accesskey "k">
+<!ENTITY importFromSafari.label "Safari">
+<!ENTITY selectProfile.title "Profil wählen">
+<!ENTITY done.label "Folgende Daten wurden erfolgreich importiert:">
+<!ENTITY importFromIE.accesskey "M">
+<!ENTITY migrating.label "Folgende Daten werden momentan importiert:">
+<!ENTITY importItems.title "Zu importierende Daten">
+<!ENTITY importFromICab.accesskey "i">
+<!ENTITY importFromGaleon.label "Galeon">
+<!ENTITY migrationWizard.title "Import-Assistent">
+<!ENTITY importFromSeamonkey.label "Netscape 6, 7 oder Mozilla 1.x">
+<!ENTITY importFromCamino.accesskey "Camino">
+<!ENTITY importSource.title "Einstellungen und Daten importieren">
+<!ENTITY importFromOpera.label "Opera">
+<!ENTITY importFromPhoenix.label "Firefox 0.8, Firebird oder Phoenix">
+<!ENTITY importFromGaleon.accesskey "G">
+<!ENTITY importFromPhoenix.accesskey "P">
+<!ENTITY importFromOmniWeb.label "OmniWeb">
+<!ENTITY importFromNothing.label "Nichts importieren">
+<!ENTITY importFromNothing.accesskey "i">
+<!ENTITY importFromUnix.label "Einstellungen, Lesezeichen, Chronik, Passwörter und sonstige Daten importieren, von:">

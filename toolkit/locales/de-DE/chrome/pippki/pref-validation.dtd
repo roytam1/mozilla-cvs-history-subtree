@@ -1,0 +1,42 @@
+<!ENTITY validation.crlnextupdate.label "Nächstes Update">
+<!ENTITY validation.crlautoupdatestatus.label "Auto-Update-Status">
+<!ENTITY validation.crllastupdate.label "Letztes Update">
+<!ENTITY crl.import.nextupdate.label "Nächstes Update am:">
+<!ENTITY validation.crl.autoupdate.title "Einstellungen für automatisches CRL-Update">
+<!ENTITY crl.issuer.label "CRL herausgegeben von:">
+<!ENTITY disableOCSP.label "OCSP nicht für Zertifikatsvalidierung verwenden">
+<!ENTITY crl.import.success.message "Die Certificate Revocation List (CRL) wurde erfolgreich importiert.">
+<!ENTITY validation.crlautoupdateenabled.label "Auto-Update">
+<!ENTITY validation.deletecrl.label "Löschen">
+<!ENTITY serviceURL.label "Service URL:">
+<!ENTITY help.button "Hilfe">
+<!ENTITY proxyOCSP.label "OCSP zur Validierung aller Zertifikate unter Verwendung folgender URL und Unterzeichner verwenden:">
+<!ENTITY validation.crl.autoupdate.enable.label "Automatisches Update für diese CRL aktivieren">
+<!ENTITY edit.button "Einstellungen">
+<!ENTITY ok.button "OK">
+<!ENTITY validation.crl.autoupdate.time.label2 'Tag(e) vor dem Datum unter "Nächstes Update" durch'>
+<!ENTITY validation.crl.autoupdate.time.label1 "Führe Update">
+<!ENTITY validation.crl.label "CRL">
+<!ENTITY validation.title "Validierung">
+<!ENTITY crl.autoupdate.fail.cnt.label "Letzte Fehlschläge beim fortlaufenden Update:">
+<!ENTITY crl.import.status.title "CRL Importstatus">
+<!ENTITY validation.crlname.label "Name">
+<!ENTITY validation.crlmanager.label "CRLs verwalten">
+<!ENTITY crl.issuer.orgunit.label "Einheiten:">
+<!ENTITY validation.crl.autoupdate.url.label "CRL würde importiert werden von:">
+<!ENTITY validation.updatecrl.label "Update">
+<!ENTITY validation.crl.autoupdate.freq.label2 "Tag(e) durch">
+<!ENTITY crl.autoupdate.fail.reason.label "Details des letzten fehlgeschlagenen Updates:">
+<!ENTITY validation.crl.autoupdate.freq.label1 "Führe Update alle">
+<!ENTITY signingCA.label "Antwort-Unterzeichner:">
+<!ENTITY validation.crl.description "Verwenden Sie den CRL-Manager, um die Certificate Revocation Lists (CRL) zu verwalten, die in Ihrer Zertifikatsdatenbank gespeichert sind.">
+<!ENTITY validation.ocsp.description "&brandShortName; kann das Online Certificate Status Protocol (OCSP) zum Verifizieren von Zertifikaten verwenden. OCSP wie folgt verwenden:">
+<!ENTITY cancel.button "Abbrechen">
+<!ENTITY validation.managecrls.button "CRLs verwalten...">
+<!ENTITY validation.ocsp.label "OCSP">
+<!ENTITY certOCSP.label "OCSP nur zur Validierung von Zertifikaten verwenden, die eine OCSP-Service-URL angeben.">
+<!ENTITY crl.issuer.org.label "Organisation:">
+<!ENTITY validation.advanced.label "Einstellungen">
+<!ENTITY signingCA.accesskey "U">
+<!ENTITY serviceURL.accesskey "S">
+<!ENTITY validation.managecrls.accesskey "E">

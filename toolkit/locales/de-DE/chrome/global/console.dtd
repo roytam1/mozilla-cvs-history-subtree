@@ -1,0 +1,25 @@
+<!ENTITY sortFirst.label "Erster > Letzter Sortierreihenfolge">
+<!ENTITY clear.accesskey "ö">
+<!ENTITY sortLast.accesskey "L">
+<!ENTITY errLine.label "Zeile:">
+<!ENTITY messages.label "Mitteilungen">
+<!ENTITY sortLast.label "Letzter > Erster Sortierreihenfolge">
+<!ENTITY warnings.label "Warnungen">
+<!ENTITY evaluate.label "Evaluieren">
+<!ENTITY warnings.accesskey "W">
+<!ENTITY errColumn.label "Spalte:">
+<!ENTITY clear.label "Löschen">
+<!ENTITY all.accesskey "A">
+<!ENTITY messages.accesskey "N">
+<!ENTITY all.label "Alle">
+<!ENTITY errors.label "Fehler">
+<!ENTITY sortFirst.accesskey "E">
+<!ENTITY errFile.label "Quelldatei:">
+<!ENTITY console.title "JavaScript-Konsole">
+<!ENTITY errors.accesskey "F">
+<!ENTITY focus2.commandkey "d">
+<!ENTITY closeCmd.commandkey "w">
+<!ENTITY focus1.commandkey "l">
+<!ENTITY copyCmd.accesskey "K">
+<!ENTITY copyCmd.label "Kopieren">
+<!ENTITY copyCmd.commandkey "C">

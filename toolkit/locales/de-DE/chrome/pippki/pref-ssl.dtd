@@ -1,0 +1,66 @@
+<!ENTITY enable.ssl2 "SSL Version 2 aktivieren">
+<!ENTITY cipher.ssl3.rsa_rc4_40_md5 "40-Bit RC4-Verschlüsselung mit RSA und einem MD5 MAC (export)">
+<!ENTITY cipher.ssl3.rsa_1024_rc4_56_sha "56-Bit RC4-Verschlüsselung mit RSA und einem SHA-1 MAC (export)">
+<!ENTITY SSLWarnings "SSL-Warnungen">
+<!ENTITY cipher.ssl3.rsa_1024_des_cbc_sha "56-Bit DES-Verschlüsselung mit RSA und einem SHA-1 MAC (export)">
+<!ENTITY warn.leavingsecure "Verlassen einer Seite, die Verschlüsselung unterstützt">
+<!ENTITY cipher.ssl3.rsa_des_ede3_sha "168-Bit Triple-DES-Verschlüsselung mit RSA und einem SHA-1 MAC">
+<!ENTITY enable.tls "TLS aktivieren">
+<!ENTITY SSLClientAuthMethod "Client-Zertifikatswahl">
+<!ENTITY cipher.ssl3.rsa_null_md5 "Keine Verschlüsselung, aber mit RSA-Authentifizierung und einem MD5 MAC">
+<!ENTITY cipher.ssl3.rsa_fips_des_ede3_sha "168-Bit Triple-DES-Verschlüsselung mit RSA und einem SHA-1 MAC (FIPS)">
+<!ENTITY cipher.title "SSL: Kodierung einstellen">
+<!ENTITY cipher.ssl2.rc4_128 "128-Bit RC4-Verschlüsselung mit RSA und einem MD5 MAC">
+<!ENTITY prefheader.title "Secure Sockets Layer (SSL)">
+<!ENTITY cipher.ssl3.rsa_fips_des_sha "56-Bit DES-Verschlüsselung mit RSA und einem SHA-1 MAC (FIPS)">
+<!ENTITY cipher.ssl2.des_64 "56-Bit DES-Verschlüsselung mit RSA und einem MD5 MAC">
+<!ENTITY warn.insecurepost "Senden von Formulardaten von einer unverschlüsselten Seite an eine unverschlüsselte Seite">
+<!ENTITY warn.enteringweak "Laden einer Seite, die Verschlüsselung auf niedriger Stufe verwendet">
+<!ENTITY warn.secureredirecttoinsecure "Umleitung von einer verschlüsselten Seite auf eine unverschlüsselte Seite">
+<!ENTITY cipher.ssl3.label "SSL3/TLS Ciphersuites">
+<!ENTITY SSLProtocolVersions "SSL-Protokoll-Versionen">
+<!ENTITY warn.enteringsecure "Laden einer Seite, die Verschlüsselung unterstützt">
+<!ENTITY edit.sslciphers "Kodierung einstellen...">
+<!ENTITY cipher.ssl2.rc2_40 "40-Bit RC2-Verschlüsselung mit RSA und einem MD5 MAC">
+<!ENTITY warn.viewmixed "Anzeigen einer Seite mit einer Mischung von sicheren und unsicheren Inhalten">
+<!ENTITY certselect.ask "Jedes Mal fragen">
+<!ENTITY cipher.ssl2.rc4_40 "40-Bit RC4-Verschlüsselung mit RSA und einem MD5 MAC">
+<!ENTITY cipher.ssl3.rsa_rc2_40_md5 "40-Bit RC2-Verschlüsselung mit RSA und einem MD5 MAC (export)">
+<!ENTITY cipher.ssl3.rsa_rc4_128_md5 "128-Bit RC4-Verschlüsselung mit RSA und einem MD5 MAC">
+<!ENTITY cipher.ssl2.des_ede3_192 "168-Bit Triple-DES-Verschlüsselung mit RSA und MD5 MAC">
+<!ENTITY certselect.description "Bestimmen Sie, wie &brandShortName; ein Sicherheitszertifikat verwendet, das Websites vorgezeigt wird, die ein solches verlangen:">
+<!ENTITY warn.secureredirect "Umleitung von einer verschlüsselten Seite auf eine andere verschlüsselte Seite">
+<!ENTITY certselect.auto "Automatisch wählen">
+<!ENTITY warn.description "&brandShortName; kann Sie über den Sicherheitsstatus von Webseiten, die Sie anzeigen, informieren. Anzeigen einer Warnung und Frage um Erlaubnis aktivieren vor:">
+<!ENTITY cipher.ssl3.rsa_des_sha "56-Bit DES-Verschlüsselung mit RSA und einem SHA-1 MAC">
+<!ENTITY cipher.ssl2.rc2_128 "128-Bit RC2-Verschlüsselung mit RSA und einem MD5 MAC">
+<!ENTITY cipher.ssl2.label "SSL2 Ciphersuites">
+<!ENTITY enable.ssl3 "SSL Version 3 aktivieren">
+<!ENTITY cipher.tab.ssl2 "SSL2">
+<!ENTITY cipher.ssl3.dhe_rsa_aes_256_sha "256-Bit AES-Verschlüsselung mit RSA, DHE und einem SHA-1 MAC">
+<!ENTITY cipher.details "Details...">
+<!ENTITY cipher.ssl3.dhe_dss_aes_128_sha "128-Bit AES-Verschlüsselung mit DSA, DHE und einem SHA-1 MAC">
+<!ENTITY cipher.keySize "Effektive Schlüssellänge:">
+<!ENTITY cipher.ssl3_extra.label "Zusätzliche SSL3/TLS Ciphersuites">
+<!ENTITY cipher.tab.ssl3tls "SSL3/TLS">
+<!ENTITY cipher.ssl3.rsa_rc4_128_sha "128-Bit RC4-Verschlüsselung mit RSA und einem SHA1 MAC">
+<!ENTITY cipher.name "Cipher">
+<!ENTITY cipher.ssl3.rsa_null_sha "Keine Verschlüsselung, aber mit RSA-Authentifizierung und einem SHA1-MAC">
+<!ENTITY cipher.encryption "Verschlüsselungsalgorithmus:">
+<!ENTITY cipher.authAlg "Authentifizierungsalgorithmus:">
+<!ENTITY cipher.ssl3.dhe_rsa_aes_128_sha "128-Bit AES-Verschlüsselung mit RSA, DHE und einem SHA-1 MAC">
+<!ENTITY cipher.ssl3.dhe_rsa_des_sha "56-Bit DES-Verschlüsselung mit RSA, DHE und einem SHA-1 MAC">
+<!ENTITY cipher.macAlg "MAC-Algorithmus:">
+<!ENTITY cipher.ssl3.rsa_aes_256_sha "256-Bit AES-Verschlüsselung mit RSA und einem SHA-1 MAC">
+<!ENTITY cipher.ssl3.dhe_dss_des_ede3_sha "168-Bit Triple-DES-Verschlüsselung mit DSA, DHE und einem SHA-1 MAC">
+<!ENTITY cipher.ssl3.dhe_rsa_des_ede3_sha "168-Bit Triple-DES-Verschlüsselung mit RSA, DHE und einem SHA-1 MAC">
+<!ENTITY edit.sslciphers.accesskey "e">
+<!ENTITY cipher.keyAlg "Schlüsselalgorithmus:">
+<!ENTITY cipher.fips "FIPS">
+<!ENTITY cipher.ssl3.rsa_aes_128_sha "128-Bit AES-Verschlüsselung mit RSA und einem SHA-1 MAC">
+<!ENTITY cipherinfo.title "Cipher-Details">
+<!ENTITY cipher.ssl3.dhe_dss_aes_256_sha "256-Bit AES-Verschlüsselung mit DSA, DHE und einem SHA-1 MAC">
+<!ENTITY cipher.exportable "IsExportable">
+<!ENTITY cipher.tab.ssl3tls_extra "Zusätzliche SSL3/TLS">
+<!ENTITY cipher.other "Andere Attribute:">
+<!ENTITY cipher.ssl3.dhe_dss_des_sha "56-Bit DES-Verschlüsselung mit DSA, DHE und einem SHA-1 MAC">

@@ -1,0 +1,23 @@
+<!ENTITY netOffline.longDesc "Der Browser ist momentan offline und kann keine Verbindung zur gewünschten Website herstellen. Schalten Sie Ihren Browser in den Online-Modus, bevor Sie es nochmals versuchen.">
+<!ENTITY netTimeout.longDesc "Der Browser stellte eine Zeitüberschreitung fest, während er versuchte, eine Verbindung mit der angegebenen Website herzustellen. Die Website hat eventuell hohe Ladezeiten (durch viele Zugriffe), die sie langsam machen, oder Netzwerkproblene verhindern, dass Daten von der Website zeitgerecht empfangen werden können. Wenn Sie wissen, dass die Website überlastet ist, warten Sie eventuell einen Moment, bevor Sie die Website nochmals anfordern.">
+<!ENTITY connectionFailure.title "Fehler: Verbindung fehlgeschlagen">
+<!ENTITY dnsNotFound.longDesc "Die Adresse (URL) passt zu keiner bekannten Website und konnte nicht geladen werden. Dies kann durch einen Schreibfehler in der Adresse auftreten, oder weil die Site nicht existiert. Wenn Sie wissen, dass die Adresse gültig ist, oder das Problem bei vielen Websites auftritt, kann es an Ihrem Proxy-Service (falls Sie einen verwenden) oder der DNS-Suche liegen. In solchen Fällen sollten Sie Ihre Systemdokumentation, Ihren Systemadministrator oder Internet Service Provider (ISP) für weitere Hilfe konsultieren.">
+<!ENTITY loadError.label "Seiten-Ladefehler">
+<!ENTITY malformedURI.longDesc "Die Adresse (URL) hat kein gültiges Format und kann nicht gelesen werden. Eine typische Adresse beginnt mit &quot;http://&quot;, gefolgt von einer Adresse (z.B. www.mozilla.org), gefolgt von einem Pfad zum Inhalt (oder nur &quot;/&quot;). Ein häufiger Grund für dieses Problem ist die Verwendung von verkehrten Schrägstrichen (Backslash, \) statt 'normalen' Schrägstrichen (/).">
+<!ENTITY dnsNotFound.title "Fehler: Adresse nicht gefunden">
+<!ENTITY netReset.title "Fehler: Netz zurückgesetzt">
+<!ENTITY protocolNotFound.title "Fehler: Protokoll unbekannt">
+<!ENTITY retry.label "Nochmals versuchen">
+<!ENTITY unknownSocketType.title "Fehler: unbekannter Socket">
+<!ENTITY netOffline.title "Fehler: Offline">
+<!ENTITY malformedURI.title "Fehler: Ungültige Adresse">
+<!ENTITY generic.longDesc "Die Seite konnte nicht geladen werden. Wahrscheinlich existiert sie nicht oder die Adresse ist nicht korrekt.<br/>Überprüfen Sie bitte die Adresse, um sicherzustellen, dass sie gültig und richtig formatiert ist.">
+<!ENTITY fileNotFound.longDesc "Die durch die Adresse (URL) angegebene Datei konnte nicht gefunden werden. Überprüfen Sie, ob die Datei existiert und Sie genügend Rechte haben, um sie anzusehen.">
+<!ENTITY protocolNotFound.longDesc "Die Adresse (URL) beginnt mit einem Protokoll, das der Browser nicht erkennt. Ein Protokoll ist jener Teil am Anfang der Adresse - wie http: oder ftp: - der den Browser anweist, wie er eine Verbindung zur Site aufbauen soll. In diesem Fall ist das Protokoll unbekannt, sodass das Laden nicht fortgesetzt werden kann. Überprüfen Sie, ob die Adresse korrekt ist, bevor Sie es nochmals versuchen.">
+<!ENTITY redirectLoop.title "Fehler: Umleitungsschleife">
+<!ENTITY fileNotFound.title "Fehler: Datei nicht gefunden">
+<!ENTITY connectionFailure.longDesc "Der Browser konnte keine Verbindung zur angegebenen Seite aufbauen, obwohl sie existiert. Dies kann daran liegen, dass die Website keine Verbindungen von Ihrem Computer akzeptiert, der Service nicht verfügbar ist, oder die Website unterstützt den Service oder Port nicht, mit dem Sie die Verbindung herstellen wollten.">
+<!ENTITY netTimeout.title "Fehler: Netzwerk-Zeitüberschreitung">
+<!ENTITY netReset.longDesc "Die Verbindung mit der Website wurde unerwartet beendet, während die Verbindung 'ausgehandelt' wurde oder Daten übertragen wurden. Dies kann durch einen Netzwerkfehler zwischen der Website und Ihrem Computer auftreten. Wenn das Problem weiterhin besteht, sollten Sie Ihre Systemdokumentation, Ihren Systemadministrator oder Internet Service Provider (ISP) für weitere Hilfe konsultieren.">
+<!ENTITY redirectLoop.longDesc "Der Browser hat einen Verbindung unterbrochen, weil die Website Anforderungen in einer Art auf sich selbst umleitet, dass sie niemals abgeschlossen werden können.">
+<!ENTITY unknownSocketType.longDesc "Die Website hat die Netzwerkanforderung auf eine unerwartete Art beantwortet. Dies kann auftreten, wenn die Adresse (URL) das falsche Protokoll für den angegebenen Port verwendet, oder eine nicht standardgemäße Konfiguration bei der Site verwendet wird, die andere Services betreibt, als erwartet werden.">

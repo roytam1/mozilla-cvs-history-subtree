@@ -1,0 +1,9 @@
+<!ENTITY newTab.label "Neuer Tab">
+<!ENTITY enter.label "Geben Sie die Web-Adresse (URL) oder die Datei an, die Sie öffnen wollen:">
+<!ENTITY topWindow.label "Aktuellem Fenster">
+<!ENTITY openWhere.label "Öffnen in:">
+<!ENTITY example.label "Beispiel: &vendorURL;">
+<!ENTITY newWindow.label "Neuem Fenster">
+<!ENTITY chooseFile.label "Datei öffnen...">
+<!ENTITY caption.label "Web-Adresse öffnen">
+<!ENTITY openBtn.label "Öffnen">

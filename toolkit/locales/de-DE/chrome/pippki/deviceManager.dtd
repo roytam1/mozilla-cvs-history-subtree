@@ -1,0 +1,18 @@
+<!ENTITY loaddevice.modname.default "Neues PKCS#11 Modul">
+<!ENTITY devmgr.button.unload.label "Entladen">
+<!ENTITY devmgr.button.load.label "Laden">
+<!ENTITY devmgr.title "Einrichtungs-Manager">
+<!ENTITY loaddevice.filename "Modul-Dateiname:">
+<!ENTITY devmgr.button.login.label "Anmelden">
+<!ENTITY loaddevice.info "Geben Sie die Informationen für das Modul an, das Sie hinzufügen wollen.">
+<!ENTITY devmgr.button.changeslotname.label "Slot-Namen ändern">
+<!ENTITY devmgr.details.title "Details">
+<!ENTITY devmgr.button.changepw.label "Passwort ändern">
+<!ENTITY devmgr.devlist.label "Sicherheitsmodule und -einrichtungen">
+<!ENTITY devmgr.button.logout.label "Abmelden">
+<!ENTITY devmgr.status.label "Status">
+<!ENTITY devmgr.version.label "Version">
+<!ENTITY devmgr.details.title2 "Wert">
+<!ENTITY loaddevice.title "PKCS#11-Einrichtung laden">
+<!ENTITY loaddevice.browse "Durchsuchen...">
+<!ENTITY loaddevice.modname "Modulname:">

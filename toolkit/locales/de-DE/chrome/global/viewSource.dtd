@@ -1,0 +1,35 @@
+<!ENTITY savePageCmd.commandkey "S">
+<!ENTITY printCmd.label "Drucken...">
+<!ENTITY mainWindow.preface "Quelle von: ">
+<!ENTITY fileMenu.label "Datei">
+<!ENTITY menu_highlightSyntax.label "Syntax-Hervorhebung">
+<!ENTITY closeCmd.label "Schließen">
+<!ENTITY savePageCmd.accesskey "S">
+<!ENTITY printCmd.accesskey "D">
+<!ENTITY mainWindow.titlemodifier "&brandFullName;">
+<!ENTITY closeCmd.accesskey "c">
+<!ENTITY closeCmd.commandkey "W">
+<!ENTITY menu_highlightSyntax.accesskey "H">
+<!ENTITY menu_wrapLongLines.title "Lange Zeilen umbrechen">
+<!ENTITY viewMenu.label "Ansicht">
+<!ENTITY mainWindow.title "&brandFullName;">
+<!ENTITY fileMenu.accesskey "D">
+<!ENTITY mainWindow.titlemodifierseparator " - ">
+<!ENTITY printCmd.commandkey "P">
+<!ENTITY viewMenu.accesskey "A">
+<!ENTITY savePageCmd.label "Seite speichern unter...">
+<!ENTITY menu_wrapLongLines.accesskey "L">
+<!ENTITY printPreviewCmd.accesskey "v">
+<!ENTITY pageSetupCmd.accesskey "e">
+<!ENTITY goToLineCmd.commandkey "l">
+<!ENTITY pageSetupCmd.label "Seite einrichten...">
+<!ENTITY goToLineCmd.accesskey "G">
+<!ENTITY goToLineCmd.label "Gehe zu Zeile...">
+<!ENTITY printPreviewCmd.label "Druckvorschau">
+<!ENTITY menu_textReduce.label "Schriftgrad verkleinern">
+<!ENTITY textEnlarge.commandkey "+">
+<!ENTITY menu_textEnlarge.label "Schriftgrad vergrößern">
+<!ENTITY menu_textEnlarge.accesskey "d">
+<!ENTITY menu_textReduce.accesskey "e">
+<!ENTITY textReduce.commandkey "-">
+<!ENTITY textReset.commandkey "0">

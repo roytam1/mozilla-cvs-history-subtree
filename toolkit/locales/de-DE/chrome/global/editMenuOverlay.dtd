@@ -1,0 +1,32 @@
+<!ENTITY editMenu.accesskey "B">
+<!ENTITY pasteCmd.label "Einfügen">
+<!ENTITY selectAllCmd.key "A">
+<!ENTITY redoCmd.key "Y">
+<!ENTITY pasteCmd.accesskey "E">
+<!ENTITY selectAllCmd.label "Alles markieren">
+<!ENTITY undoCmd.accesskey "R">
+<!ENTITY cutCmd.accesskey "A">
+<!ENTITY deleteCmd.accesskey "L">
+<!ENTITY findCmd.accesskey "S">
+<!ENTITY deleteCmd.key "D">
+<!ENTITY cutCmd.key "X">
+<!ENTITY findPreviousCmd.accesskey "V">
+<!ENTITY cutCmd.label "Ausschneiden">
+<!ENTITY undoCmd.label "Rückgängig">
+<!ENTITY findCmd.label "Suchen">
+<!ENTITY selectAllCmd.accesskey "m">
+<!ENTITY editMenu.label "Bearbeiten">
+<!ENTITY copyCmd.accesskey "K">
+<!ENTITY findAgainCmd.key2 "VK_F3">
+<!ENTITY pasteCmd.key "V">
+<!ENTITY undoCmd.key "Z">
+<!ENTITY findAgainCmd.accesskey "t">
+<!ENTITY copyCmd.key "C">
+<!ENTITY findAgainCmd.key "G">
+<!ENTITY findPreviousCmd.label "Vorheriges suchen">
+<!ENTITY findAgainCmd.label "Weitersuchen">
+<!ENTITY redoCmd.label "Wiederherstellen">
+<!ENTITY copyCmd.label "Kopieren">
+<!ENTITY deleteCmd.label "Löschen">
+<!ENTITY findCmd.key "F">
+<!ENTITY redoCmd.accesskey "W">

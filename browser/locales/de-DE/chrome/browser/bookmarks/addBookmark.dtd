@@ -1,0 +1,30 @@
+<!ENTITY name.accesskey "N">
+<!ENTITY alwayscreateinfolder.label "Diesen Dialog nicht mehr anzeigen">
+<!ENTITY button.defaultfolder.accesskey "S">
+<!ENTITY selectFolder.label "Ordner wählen">
+<!ENTITY createin.label "Erstellen in:">
+<!ENTITY button.createin.label "Erstellen in &gt;&gt;">
+<!ENTITY createin.accesskey "E">
+<!ENTITY url.label "Adresse:">
+<!ENTITY newbookmark.label "&brandShortName; wird ein Lesezeichen für diese Seite hinzufügen.">
+<!ENTITY newBookmark.title "Lesezeichen hinzufügen">
+<!ENTITY button.createin2.label "Erstellen in &lt;&lt;">
+<!ENTITY button.defaultfolder.label "Standard verwenden">
+<!ENTITY button.createin.accesskey "i">
+<!ENTITY button.newfolder.label "Neuer Ordner...">
+<!ENTITY addGroup.accesskey "L">
+<!ENTITY name.label "Name:">
+<!ENTITY button.newfolder.accesskey "O">
+<!ENTITY dontshowmessage.tooltip "Wenn diese Option gewählt ist, werden neue Lesezeichen mit jenem Titel hinzugefügt, den die Seite selbst vorgibt.">
+<!ENTITY url.accesskey "A">
+<!ENTITY addGroup.label "Lesezeichen für alle Tabs in einem Ordner erstellen">
+<!ENTITY alwayscreateinfolder.accesskey "D">
+<!ENTITY newFolder.label "Neuer Ordner...">
+<!ENTITY newFolder.accesskey "N">
+<!ENTITY acceptButton.label "Hinzufügen">
+<!ENTITY expanderDown.tooltip "Alle Lesezeichenordner anzeigen">
+<!ENTITY expanderUp.tooltip "Ausblenden">
+<!ENTITY keyword.label "Schlüsselwort:">
+<!ENTITY keyword.accesskey "S">
+<!ENTITY moveto.label "Verschieben nach:">
+<!ENTITY moveto.accesskey "V">

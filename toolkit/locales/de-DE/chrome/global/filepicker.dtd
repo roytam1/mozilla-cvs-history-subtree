@@ -1,0 +1,16 @@
+<!ENTITY folderHome.tooltiptext "Zum persönlichen Ordner gehen">
+<!ENTITY lastModified.label "Zuletzt geändert">
+<!ENTITY noPermissionError.label "Sie haben nicht die notwendigen Rechte, um diesen Ordner anzusehen.">
+<!ENTITY showHiddenFiles.label "Versteckte Dateien und Ordner anzeigen">
+<!ENTITY folderUp.tooltiptext "Eine Ebene höher gehen">
+<!ENTITY textInput.label "Dateiname:">
+<!ENTITY lookInMenuList.label "Suchen in:">
+<!ENTITY permissions.label "Zugriffsrechte">
+<!ENTITY folderNew.tooltiptext "Neuen Ordner erstellen">
+<!ENTITY size.label "Größe">
+<!ENTITY filterMenuList.label "Dateityp:">
+<!ENTITY name.label "Name">
+<!ENTITY textInput.accesskey "d">
+<!ENTITY showHiddenFiles.accesskey "v">
+<!ENTITY lookInMenuList.accesskey "s">
+<!ENTITY filterMenuList.accesskey "t">

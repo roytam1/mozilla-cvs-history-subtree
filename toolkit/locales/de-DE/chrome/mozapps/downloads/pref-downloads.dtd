@@ -1,0 +1,21 @@
+<!ENTITY neverAsk.label "Alle Dateien in diesem Ordner abspeichern:">
+<!ENTITY fileTypes.label "Dateitypen">
+<!ENTITY showWhenStarting.label "Das Download-Manager-Fenster anzeigen, wenn ein Download startet">
+<!ENTITY closeWhenDone.label "Download Manager schließen, wenn alle Downloads abgeschlossen sind.">
+<!ENTITY removeFileHandler.label "Entfernen">
+<!ENTITY plugins.accesskey "P">
+<!ENTITY fileTypesDescription.label "Bei jedem der folgenden Dateitypen wird automatisch die verknüpfte Aktion durchgeführt:">
+<!ENTITY plugins.label "Plugins">
+<!ENTITY editFileHandler.label "Aktion ändern">
+<!ENTITY showFolder.label "Ordner anzeigen">
+<!ENTITY editFileHandler.accesskey "A">
+<!ENTITY downloads.label "Eigene Downloads">
+<!ENTITY downloadManagerWindow.label "Download-Manager">
+<!ENTITY choose.label "Andere...">
+<!ENTITY fileTypeColName.label "Dateityp">
+<!ENTITY removeFileHandler.accesskey "E">
+<!ENTITY alwaysAsk.label "Jedes Mal nachfragen, wo eine Datei gespeichert werden soll">
+<!ENTITY askOnSave.label "Download-Ordner">
+<!ENTITY lHeader "Downloads">
+<!ENTITY fileHandlerColName.label "Anwendung">
+<!ENTITY desktop.label "Desktop">

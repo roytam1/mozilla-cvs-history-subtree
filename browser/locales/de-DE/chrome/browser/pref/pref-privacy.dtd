@@ -1,0 +1,50 @@
+<!ENTITY forCurrentSessionOnly.accesskey "a">
+<!ENTITY forOriginatingSiteOnly.accesskey "n">
+<!ENTITY enableCookies.label "Cookies akzeptieren">
+<!ENTITY diskCache.label "Es werden bis zu">
+<!ENTITY cookieExplanation.label "Ein Cookie ist eine kurze Information, die manche Webseiten auf Ihrem Computer speichern. Sie werden verwendet, um Log-in-Informationen und andere Daten zu speichern ">
+<!ENTITY kbytes "KB Speicherplatz als Cache verwendet">
+<!ENTITY pageHis.label "Besuchte Seiten speichern für die letzten">
+<!ENTITY enableCookies.accesskey "C">
+<!ENTITY history.label "Chronik">
+<!ENTITY forOriginatingSiteOnly.label "nur von der ursprünglichen Website">
+<!ENTITY diskCache.accesskey "E">
+<!ENTITY pageHis.accesskey "B">
+<!ENTITY butAskFirst.label "vor dem Akzeptieren fragen">
+<!ENTITY cookies.label "Cookies">
+<!ENTITY clearHistory.label "Löschen">
+<!ENTITY days.label "Tage">
+<!ENTITY cacheExplanation.label "Im Cache werden von Ihnen besuchte Seiten gespeichert, um sie später schneller laden zu können.">
+<!ENTITY cache.label "Cache">
+<!ENTITY lHeader "Datenschutz">
+<!ENTITY butAskFirst.accesskey "a">
+<!ENTITY forCurrentSessionOnly.label "nur für die aktuelle Sitzung">
+<!ENTITY clearCache.label "Löschen">
+<!ENTITY viewPasswords.label "Gespeicherte Passwörter anzeigen">
+<!ENTITY formfill.label "Gespeicherte Formulardaten">
+<!ENTITY passwordsEnable.accesskey "P">
+<!ENTITY formfillEnable.accesskey "f">
+<!ENTITY clearAllDescription.label "Alle Daten, die während der Benutzung angefallen sind, löschen:">
+<!ENTITY downloads.label "Download-Manager-Chronik">
+<!ENTITY clearAll.label "Alles löschen">
+<!ENTITY passwords.label "Gespeicherte Passwörter">
+<!ENTITY passwordsDescription.label "Log-in-Daten für Webseiten können im Passwort-Manager gespeichert werden, damit Sie sie nicht bei jedem Besuch erneut eingeben müssen.">
+<!ENTITY viewCookies.label "Cookies anzeigen">
+<!ENTITY passwordsEnable.label "Passwörter speichern">
+<!ENTITY clearDownloads.label "Löschen">
+<!ENTITY privacyDescription.label "In den folgenden Feldern werden Daten abgelegt, die während Ihrer Mozilla Firefox-Sitzung anfallen.">
+<!ENTITY downloadsDescription.label "Der Download-Manager gibt Ihnen einen Überblick über kürzlich heruntergeladene Dateien.">
+<!ENTITY clearPasswords.label "Löschen">
+<!ENTITY clearCookies.label "Löschen">
+<!ENTITY clearFormfill.label "Löschen">
+<!ENTITY formfillDescription.label "Daten, die Sie in Webseiten-Formulare eingeben, werden gespeichert, um das Ausfüllen von Formularen und die Suche zu beschleunigen">
+<!ENTITY formfillEnable.label "Daten speichern, die in Webseiten-Formulare und die Suchleiste eingegeben werden">
+<!ENTITY downloadsRemoveManually.label "Manuell">
+<!ENTITY downloadsRetentionPolicy.label "Dateien aus dem Download-Manager entfernen:">
+<!ENTITY downloadsRemoveExit.label "Wenn &brandShortName; beendet wird">
+<!ENTITY exceptions.label "Ausnahmen">
+<!ENTITY downloadsRemoveImmediately.label "Nach erfolgreichem Download">
+<!ENTITY acceptNormally.label "solange sie gültig sind">
+<!ENTITY askAboutCookies.label "jedes Mal nachfragen">
+<!ENTITY acceptForSession.label "bis &brandShortName; geschlossen wird">
+<!ENTITY cookieRetention.label "Cookies behalten:">

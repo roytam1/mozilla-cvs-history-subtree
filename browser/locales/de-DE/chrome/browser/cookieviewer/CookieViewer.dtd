@@ -1,0 +1,14 @@
+<!ENTITY treehead.cookiedomain.label "Website">
+<!ENTITY props.domain.label "Host:">
+<!ENTITY props.name.label "Name:">
+<!ENTITY props.value.label "Information:">
+<!ENTITY treehead.cookiename.label "Cookie-Name">
+<!ENTITY button.removecookie.label "Cookie entfernen">
+<!ENTITY treehead.infoselected.label "Informationen über das ausgewählte Cookie">
+<!ENTITY button.removeallcookies.label "Alle Cookies entfernen">
+<!ENTITY window.title "Gespeicherte Cookies">
+<!ENTITY props.expires.label "Gültig bis:">
+<!ENTITY props.secure.label "Senden für:">
+<!ENTITY div.cookiesonsystem.label "Auf Ihrem Computer gespeicherte Cookies ansehen und löschen.">
+<!ENTITY props.path.label "Pfad:">
+<!ENTITY checkbox.label "Einmal entfernte Cookies nicht mehr akzeptieren">

@@ -1,0 +1,4 @@
+<!ENTITY dialog.title "Software-Installation">
+<!ENTITY warningText3.label "Sie sollten Software nur von Quellen installieren, denen Sie vertrauen.">
+<!ENTITY warningText2.label "Böswillige Software kann Dateien auf Ihrem Computer beschädigen oder Ihre Privatsphäre verletzen.">
+<!ENTITY from.label "von:">

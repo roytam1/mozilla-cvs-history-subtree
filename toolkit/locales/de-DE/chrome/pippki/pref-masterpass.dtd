@@ -1,0 +1,15 @@
+<!ENTITY resetpassword.text "Wenn Sie Ihr Master-Passwort zurücksetzen, gehen alle Ihre gespeicherten Web- und E-Mail-Passwörter, Formulardaten, persönlichen Zertifikate und privaten Schlüssel verloren.">
+<!ENTITY lheader "Master-Passwörter">
+<!ENTITY changepassword.text "Ihr Master-Passwort schützt sensible Informationen wie Web-Passwörter und Zertifikate.">
+<!ENTITY managepassword.asktimeout "Wenn es für">
+<!ENTITY managepassword.askfirsttime "Das erste Mal, wenn es gebraucht wird">
+<!ENTITY changepassword.label "Master-Passwort ändern">
+<!ENTITY managepassword.timeout.unit "Minuten oder länger nicht gebraucht wurde">
+<!ENTITY managepassword.text "&brandShortName; fragt nach Ihrem Master-Passwort:">
+<!ENTITY resetpassword.button "Passwort zurücksetzen">
+<!ENTITY managepassword.askeverytime "Jedes Mal, wenn es gebraucht wird">
+<!ENTITY resetpassword.label "Master-Passwort zurücksetzen">
+<!ENTITY managepassword.label "Master-Passwort-Gültigkeitsdauer">
+<!ENTITY changepassword.button "Passwort ändern...">
+<!ENTITY resetpassword.accesskey "z">
+<!ENTITY changepassword.accesskey "M">

@@ -1,0 +1,54 @@
+<!ENTITY checking.title "Update-Überprüfung">
+<!ENTITY noupdates.intro.user.label "&brandShortName; konnte keine verfügbaren Updates finden.">
+<!ENTITY updateWizard.title "&brandShortName;-Update">
+<!ENTITY errors.intro.label "Während des Updates Ihrer Software ist ein Fehler aufgetreten. Infolgedessen konnten nicht alle Komponenten aktualisiert werden.">
+<!ENTITY finished.updated.label "&brandShortName; hat die verfügbaren Updates installiert.">
+<!ENTITY found.title "Update gefunden">
+<!ENTITY mismatch.intro2.label "Sie wurden deaktiviert, bis kompatible Versionen verfügbar sind. ">
+<!ENTITY errors.details.accesskey "D">
+<!ENTITY errors.details.label "Details">
+<!ENTITY finished.error.label "Das Herunterladen und Installieren einiger Updates ist fehlgeschlagen.">
+<!ENTITY installing.disclaimer.label "Diese Funktion ist momentan nicht verfügbar.">
+<!ENTITY noupdates.intro.mismatch.label "&brandShortName; konnte keine verfügbaren Updates finden - Eventuell sind bisher noch keine kompatiblen Versionen verfügbar.">
+<!ENTITY noupdates.enableChecking.label "&brandShortName; das Suchen nach Updates erlauben.">
+<!ENTITY finished.mismatch.label "Klicken Sie auf 'Fertigstellen' um mit dem Starten von &brandShortName; fortzufahren.">
+<!ENTITY finished.remaining2.label "Einige inkompatible Komponenten konnten nicht upgedated werden. Eventuell sind bisher noch keine kompatiblen Versionen verfügbar. &brandShortName; kann in regelmäßigen Abständen nach Updates suchen und Sie benachrichtigen, wenn kompatible Versionen zur Verfügung stehen.">
+<!ENTITY noupdates.intro2.mismatch.label "&brandShortName; wird in regelmäßigen Abständen nach Updates suchen und Sie benachrichtigen, wenn kompatible Versionen zur Verfügung stehen.">
+<!ENTITY errors.title "Probleme während des Updates">
+<!ENTITY noupdates.title "Keine Updates gefunden">
+<!ENTITY finished.enableChecking.label "&brandShortName; das Suchen nach Updates erlauben.">
+<!ENTITY mismatch.title "Inkompatible Komponenten">
+<!ENTITY checking.intro.label "&brandShortName; überprüft nun, ob Updates vorliegen...">
+<!ENTITY from.label "Von:">
+<!ENTITY noupdates.intro3.mismatch.label "&brandShortName; kann in regelmäßigen Abständen nach Updates suchen und Sie benachrichtigen, wenn kompatible Versionen zur Verfügung stehen.">
+<!ENTITY installing.intro.label "Die Updates werden jetzt heruntergeladen und installiert...">
+<!ENTITY mismatch.intro1.label "Die folgenden Komponenten sind nicht kompatibel mit der neuen &brandShortName;-Version, die Sie soeben installiert haben.">
+<!ENTITY installing.title "Updates werden installiert">
+<!ENTITY finished.title "Update abgeschlossen">
+<!ENTITY mismatch.intro3.label "&brandShortName; kann überprüfen, ob neuere, kompatible Versionen dieser Komponenten verfügbar sind und diese installieren.">
+<!ENTITY finished.remaining.label "Einige inkompatible Komponenten konnten nicht upgedated werden. Eventuell sind bisher noch keine kompatiblen Versionen verfügbar. &brandShortName; wird in regelmäßigen Abständen nach Updates suchen und Sie benachrichtigen, wenn kompatible Versionen zur Verfügung stehen.">
+<!ENTITY found.intro.label "&brandShortName; hat die folgenden verfügbaren Updates gefunden:">
+<!ENTITY updateCheckError.label "Details">
+<!ENTITY updateCheckError.description "Während der Suche nach Updates für einige Objekte ist ein Fehler aufgetreten.">
+<!ENTITY updateCheckError.accesskey "D">
+<!ENTITY found.criticalUpdates.info "Um Ihren Computer vor Angriffen zu schützen, sollten Sie diese Updates unverzüglich installieren.">
+<!ENTITY restart.updated.label "&brandShortName; hat die Updates erfolgreich heruntergeladen und installiert. Um das Update abzuschließen muss &brandShortName; neugestartet werden..">
+<!ENTITY found.updatetype.languages.accesskey "S">
+<!ENTITY resolveMaxVersion.intro1.label "&brandShortName; überprüft nun, ob Kompatibilitäts-Updates für Ihre Erweiterungen und Themes zur Verfügung stehen...">
+<!ENTITY found.components.info "Das Installieren dieser Komponenten könnte Ihre ">
+<!ENTITY found.updatetype.patches.accesskey "c">
+<!ENTITY restart.title "Upgrade Abgeschlossen">
+<!ENTITY found.addons.label "Folgende Updates stehen für die Erweiterungen und Themes zur Verfügung, die Sie bereits installiert haben.">
+<!ENTITY version.title "Kompatibilitäts-Update-Überprüfung">
+<!ENTITY found.criticalUpdates.label "Folgende kritische Updates stehen für Firefox zur Verfügung:">
+<!ENTITY optional.title "Optionale Komponenten">
+<!ENTITY resolveMaxVersion.title "Update-Überprüfung für kompatible Erweiterungen und Themes...">
+<!ENTITY optional.intro.label 'Bitte wählen Sie die zusätzlichen Komponenten aus, die Sie installieren möchten. Klicken Sie dann auf  "Jetzt installieren".'>
+<!ENTITY version.status "Dies kann einige Minuten dauern...">
+<!ENTITY found.app.infoLink "Weitere Informationen...">
+<!ENTITY found.languages.label "Folgende Sprachpakete stehen zur Verfügung:">
+<!ENTITY found.components.label "Folgende Komponenten und Plug-ins stehen zur Verfügung:">
+<!ENTITY checking.status "Dies kann einige Minuten dauern...">
+<!ENTITY found.updatetype.components.accesskey "K">
+<!ENTITY version.intro.label "&brandShortName; überprüft nun, ob Kompatibilitäts-Updates für Ihre Erweiterungen und Themes zur Verfügung stehen...">
+<!ENTITY found.updatetype.addons.accesskey "A">

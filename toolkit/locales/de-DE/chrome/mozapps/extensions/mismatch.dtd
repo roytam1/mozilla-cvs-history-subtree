@@ -1,0 +1,4 @@
+<!ENTITY intro1.label "Die folgenden Erweiterungen sind nicht kompatibel mit der neuen &brandShortName;-Version, die Sie soeben installiert haben.">
+<!ENTITY mismatch.title "Inkompatible Erweiterungen">
+<!ENTITY intro3.label "&brandShortName; kann überprüfen, ob neuere, kompatible Versionen dieser Erweiterungen verfügbar sind und diese installieren.">
+<!ENTITY intro2.label "Sie wurden deaktiviert, bis kompatible Versionen verfügbar sind. ">

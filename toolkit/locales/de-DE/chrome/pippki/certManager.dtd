@@ -1,0 +1,69 @@
+<!ENTITY certmgr.detail.general_tab.title "Allgemein">
+<!ENTITY certmgr.details.label "Zertifikats-Layout">
+<!ENTITY certmgr.ocsp_info "Zertifikate wurden nicht mit OCSP validiert. Klicken Sie Anzeigen, um dies durchzuführen.">
+<!ENTITY certmgr.websites "Sie haben gespeicherte Zertifikate, die diese Websites identifizieren:">
+<!ENTITY certmgr.certdetail.title "Zertifikats-Detail">
+<!ENTITY certmgr.editsslcert.donttrust "Der Echtheit dieses Zertifikates nicht vertrauen.">
+<!ENTITY certmgr.fingerprints.label "Fingerabdrücke">
+<!ENTITY certmgr.deleteusercert.beforename "Sie wollen dieses Zertifikat löschen:">
+<!ENTITY certmgr.editemailcert.edittrust "Zertifikats-Vertrauenseinstellungen bearbeiten:">
+<!ENTITY certmgr.editsslcert.dotrust "Der Echtheit dieses Zertifikates vertrauen.">
+<!ENTITY certmgr.cas "Sie haben gespeicherte Zertifikate, die diese Zertifizierungsstellen identifizieren:">
+<!ENTITY certmgr.editcert.trustemail "Dieses Zertifikat kann Mail-Benutzer identifizieren.">
+<!ENTITY certmgr.add.label "Hinzufügen">
+<!ENTITY certmgr.ok.label "OK">
+<!ENTITY certmgr.tokenname "Kryptographie-Modul">
+<!ENTITY certmgr.editsslcert.edittrust "Zertifikats-Vertrauenseinstellungen bearbeiten:">
+<!ENTITY certmgr.tab.ca "Authority">
+<!ENTITY certmgr.purpose "Zwecke">
+<!ENTITY certmgr.certdetail.serialnumber "Seriennummer">
+<!ENTITY certmgr.deleteusercert.title "Ihr Zertifikat löschen">
+<!ENTITY certmgr.certdetail.sha1fingerprint "SHA1 Fingerprint">
+<!ENTITY certmgr.editemailcert.dotrust "Der Echtheit dieses Zertifikates vertrauen.">
+<!ENTITY certmgr.closeWindowAccessKey "s">
+<!ENTITY certmgr.cancel.label "Abbrechen">
+<!ENTITY certmgr.editca.label "CA-Vertrauen bearbeiten">
+<!ENTITY certmgr.helpButtonAccessKey "h">
+<!ENTITY certmgr.restore.label "Importieren">
+<!ENTITY certmgr.delete.label "Löschen">
+<!ENTITY certmgr.backup.label "Backup">
+<!ENTITY certmgr.editcert.title "Sicherheitszertifikat-Einstellungen bearbeiten">
+<!ENTITY certmgr.editcert.edittrust "Vertrauenseinstellungen bearbeiten">
+<!ENTITY certmgr.issued "Herausgegeben am">
+<!ENTITY certmgr.expires "Läuft ab am">
+<!ENTITY certmgr.others "Sie haben gespeicherte Zertifikate, die diese Personen identifizieren:">
+<!ENTITY certmgr.certdetail.ou "Organisationseinheit (OU)">
+<!ENTITY certmgr.mine "Sie haben Zertifikate dieser Organisationen, die Sie identifizieren:">
+<!ENTITY certmgr.certname "Zertifikatsname">
+<!ENTITY certmgr.subjectinfo.label "Herausgegeben für">
+<!ENTITY certmgr.detail.prettyprint_tab.title "Details">
+<!ENTITY certmgr.view.label "Ansicht">
+<!ENTITY certmgr.deleteusercert.aftername "Sobald Sie dieses Zertifikat gelöscht haben, könne Sie Mail, die damit verschlüsselt wurde, nicht mehr lesen.">
+<!ENTITY certmgr.help.label "Hilfe">
+<!ENTITY certmgr.serial "Seriennummer">
+<!ENTITY certmgr.title "Zertifikat-Manager">
+<!ENTITY certmgr.deletecert.title "Zertifikat löschen">
+<!ENTITY certmgr.certdetail.md5fingerprint "MD5 Fingerprint">
+<!ENTITY certmgr.validity.label "Validität">
+<!ENTITY certmgr.edit.label "Bearbeiten">
+<!ENTITY certmgr.backupall.label "Backup von allen">
+<!ENTITY certmgr.issuerinfo.label "Herausgegeben von">
+<!ENTITY certmgr.tab.websites "Websites">
+<!ENTITY certmgr.editsslcert.title "Website-Zertifikat-Vertrauenseinstellungen bearbeiten">
+<!ENTITY certmgr.tab.others "Zertifikate anderer Personen">
+<!ENTITY certmgr.certdetail.o "Organisation (O)">
+<!ENTITY certmgr.certdetail.cn "Allgemeiner Name (CN)">
+<!ENTITY certmgr.editcacert.title "CA-Zertifikat-Vertrauenseinstellungen bearbeiten">
+<!ENTITY certmgr.deletecert.beforename "Sie wollen dieses Zertifikat löschen:">
+<!ENTITY certmgr.ca.mycas "Von Ihnen verwaltete CAs">
+<!ENTITY certmgr.ca.builtins "Eingebaute CAs">
+<!ENTITY certmgr.editemailcert.title "E-Mail-Zertifikats-Vertrauenseinstellungen bearbeiten">
+<!ENTITY certmgr.editcert.trustobjsign "Dieses Zertifikat kann Software-Hersteller identifizieren.">
+<!ENTITY certmgr.email "E-Mail-Adresse">
+<!ENTITY certmgr.editcert.trustssl "Dieses Zertifikat kann Websites identifizieren.">
+<!ENTITY certmgr.close.label "Schließen">
+<!ENTITY certmgr.hierarchy.label "Zertifikatshierarchie">
+<!ENTITY certmgr.tab.mine "Ihre Zertifikate">
+<!ENTITY certmgr.deletecert.aftername "Sind Sie sicher, dass Sie dieses Zertifikat löschen wollen?">
+<!ENTITY certmgr.editemailcert.donttrust "Der Echtheit dieses Zertifikates nicht vertrauen.">
+<!ENTITY certmgr.fields.label "Feld-Wert">

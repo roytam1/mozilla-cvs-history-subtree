@@ -1,0 +1,15 @@
+<!ENTITY button.choosefolder.label "Ordner wählen...">
+<!ENTITY profileCreationExplanation_2.text "Wenn Sie diese Kopie von &brandShortName; mit anderen Benutzern gemeinsam verwenden, können Sie verschiedene Profile nutzen, um die Informationen jedes Benutzers getrennt zu verwahren. Dazu sollte jeder Benutzer sein eigenes Profil erstellen.">
+<!ENTITY newprofile.title "Assistent zum Erstellen eines Profils">
+<!ENTITY button.choosefolder.accesskey "w">
+<!ENTITY profileDirExplanation.text "Ihre Benutzer-Einstellungen, Lesezeichen und Mails werden gespeichert in: ">
+<!ENTITY profileDefaultName "Standard-Benutzer">
+<!ENTITY window.size "width: 45em; height: 32em;">
+<!ENTITY profilePrompt.accesskey "G">
+<!ENTITY button.usedefault.label "Standardordner verwenden">
+<!ENTITY profileCreationExplanation_3.text "Wenn Sie die einzige Person sind, die diese Kopie von &brandShortName; verwendet, müssen Sie zumindest ein Profil erstellen. Wenn Sie möchten, können Sie mehrere Profile für sich selbst erstellen, um verschiedene Einstellungstypen zu speichern. Zum Beispiel möchten Sie vielleicht separate Profile für berufliche and persönliche Angelegenheiten verwenden.">
+<!ENTITY profileCreationExplanation_1.text "&brandShortName; speichert Informationen über ihre Einstellungen und Lesezeichen in Ihrem persönlichen Profil.">
+<!ENTITY button.usedefault.accesskey "v">
+<!ENTITY profileCreationIntro.text "Verschiedene Profile können durch ihre Namen unterschieden werden. Sie können den vorgegebenen oder einen eigenen Namen verwenden.">
+<!ENTITY profilePrompt.label "Geben Sie den neuen Profilnamen ein:">
+<!ENTITY profileCreationExplanation_4.text "Um mit der Erstellung Ihres Profils zu beginnen, klicken Sie auf 'Weiter'.">
