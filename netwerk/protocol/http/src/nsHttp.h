@@ -54,10 +54,10 @@ extern PRLogModuleInfo *gHttpLog;
 #define NS_HTTP_BUFFER_SIZE  4096*8 // 32k maximum
 
 enum nsHttpVersion {
-    HTTP_VERSION_UNKNOWN,
-    HTTP_VERSION_0_9,
-    HTTP_VERSION_1_0,
-    HTTP_VERSION_1_1
+    NS_HTTP_VERSION_UNKNOWN,
+    NS_HTTP_VERSION_0_9,
+    NS_HTTP_VERSION_1_0,
+    NS_HTTP_VERSION_1_1
 };
 
 //-----------------------------------------------------------------------------

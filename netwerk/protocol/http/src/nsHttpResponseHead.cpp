@@ -33,11 +33,11 @@
 nsresult
 nsHttpResponseHead::Flatten(nsACString &buf)
 {
-    if (mVersion == HTTP_VERSION_0_9)
+    if (mVersion == NS_HTTP_VERSION_0_9)
         return NS_OK;
 
     buf.Append("HTTP/");
-    if (mVersion == HTTP_VERSION_1_1)
+    if (mVersion == NS_HTTP_VERSION_1_1)
         buf.Append("1.1 ");
     else
         buf.Append("1.0 ");
@@ -102,7 +102,7 @@ nsHttpResponseHead::ParseStatusLine(char *line)
     rv = ParseVersion(line);
     if (NS_FAILED(rv)) return rv;
     
-    if ((mVersion == HTTP_VERSION_0_9) || !(line = PL_strchr(line, ' '))) {
+    if ((mVersion == NS_HTTP_VERSION_0_9) || !(line = PL_strchr(line, ' '))) {
         mStatus = 200;
         mStatusText = "OK";
         goto end;
@@ -329,7 +329,7 @@ nsHttpResponseHead::ParseVersion(const char *str)
     // make sure we have HTTP at the beginning
     if (PL_strncmp(str, "HTTP", 4) != 0) {
         LOG(("looks like a HTTP/0.9 response\n"));
-        mVersion = HTTP_VERSION_0_9;
+        mVersion = NS_HTTP_VERSION_0_9;
         return NS_OK;
     }
     str += 4;
@@ -338,14 +338,14 @@ nsHttpResponseHead::ParseVersion(const char *str)
         LOG(("server did not send a version number; assuming HTTP/1.0\n"));
         // NCSA/1.5.2 has a bug in which it fails to send a version number
         // if the request version is HTTP/1.1, so we fall back on HTTP/1.0
-        mVersion = HTTP_VERSION_1_0;
+        mVersion = NS_HTTP_VERSION_1_0;
         return NS_OK;
     }
 
     char *p = PL_strchr(str, '.');
     if (p == nsnull) {
         LOG(("mal-formed server version; assuming HTTP/1.0\n"));
-        mVersion = HTTP_VERSION_1_0;
+        mVersion = NS_HTTP_VERSION_1_0;
         return NS_OK;
     }
 
@@ -356,10 +356,10 @@ nsHttpResponseHead::ParseVersion(const char *str)
 
     if ((major > 1) || ((major == 1) && (minor >= 1)))
         // at least HTTP/1.1
-        mVersion = HTTP_VERSION_1_1;
+        mVersion = NS_HTTP_VERSION_1_1;
     else
         // treat anything else as version 1.0
-        mVersion = HTTP_VERSION_1_0;
+        mVersion = NS_HTTP_VERSION_1_0;
 
     return NS_OK;
 }

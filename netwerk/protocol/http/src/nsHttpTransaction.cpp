@@ -381,7 +381,7 @@ nsHttpTransaction::HandleContent(char *buf,
         if (priorVal == 0 && mConnection) {
             // let the connection know that we are done with it; this should
             // result in OnStopTransaction being fired.
-            return mConnection->OnTransactionComplete(this, NS_OK);
+            return mConnection->OnTransactionComplete(NS_OK);
         }
     }
 
@@ -448,7 +448,7 @@ nsHttpTransaction::Cancel(nsresult status)
 
     PRInt32 priorVal = PR_AtomicSet(&mTransactionDone, 1);
     if (priorVal == 0)
-        mConnection->OnTransactionComplete(this, status);
+        mConnection->OnTransactionComplete(status);
 
     return NS_OK;
 }

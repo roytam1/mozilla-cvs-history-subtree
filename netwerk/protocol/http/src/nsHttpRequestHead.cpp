@@ -38,10 +38,10 @@ nsHttpRequestHead::Flatten(nsACString &buf)
     buf.Append(" HTTP/");
 
     switch (mVersion) {
-    case HTTP_VERSION_1_1:
+    case NS_HTTP_VERSION_1_1:
         buf.Append("1.1");
         break;
-    case HTTP_VERSION_0_9:
+    case NS_HTTP_VERSION_0_9:
         buf.Append("0.9");
         break;
     default:

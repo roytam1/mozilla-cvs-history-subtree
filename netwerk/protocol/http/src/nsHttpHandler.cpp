@@ -75,7 +75,7 @@ nsHttpHandler *nsHttpHandler::mGlobalInstance = 0;
 
 nsHttpHandler::nsHttpHandler()
     : mAuthCache(nsnull)
-    , mHttpVersion(HTTP_VERSION_1_1)
+    , mHttpVersion(NS_HTTP_VERSION_1_1)
     , mSendReferrer(0)
     , mCapabilities(ALLOW_KEEPALIVE)
     , mProxyCapabilities(ALLOW_KEEPALIVE)
@@ -912,14 +912,14 @@ nsHttpHandler::PrefsChanged(const char *pref)
 	
         if (httpVersion) {
             if (PL_strcmp(httpVersion, "1.1") == 0)
-                mHttpVersion = HTTP_VERSION_1_1;
+                mHttpVersion = NS_HTTP_VERSION_1_1;
             else if (PL_strcmp(httpVersion, "0.9") == 0)
-                mHttpVersion = HTTP_VERSION_0_9;
+                mHttpVersion = NS_HTTP_VERSION_0_9;
             else
-                mHttpVersion = HTTP_VERSION_1_0;
+                mHttpVersion = NS_HTTP_VERSION_1_0;
         }
 
-        if (mHttpVersion == HTTP_VERSION_1_1) {
+        if (mHttpVersion == NS_HTTP_VERSION_1_1) {
             mCapabilities = ALLOW_KEEPALIVE;
             mProxyCapabilities = ALLOW_KEEPALIVE;
         }

@@ -278,7 +278,7 @@ nsHttpChannel::SetupTransaction()
         if (NS_FAILED(rv)) return rv;
     }
 
-    mRequestHead.SetVersion(HTTP_VERSION_1_1);
+    mRequestHead.SetVersion(NS_HTTP_VERSION_1_1);
     mRequestHead.SetRequestURI(path ? path : mSpec);
 
     // set the request time for cache expiration calculations

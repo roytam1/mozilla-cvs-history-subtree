@@ -58,7 +58,7 @@ extern PRLogModuleInfo* gFTPLog;
 #endif /* PR_LOGGING */
 
 
-class DataRequestForwarder : public nsIChannel, 
+class DataRequestForwarder : public nsIFTPChannel, 
                              public nsIStreamListener,
                              public nsIInterfaceRequestor,
                              public nsIProgressEventSink
@@ -77,14 +77,15 @@ public:
     NS_DECL_NSIPROGRESSEVENTSINK
 
     NS_FORWARD_NSIREQUEST(mRequest->)
-    NS_FORWARD_NSICHANNEL(mChannel->)
+    NS_FORWARD_NSICHANNEL(mFTPChannel->)
+    NS_FORWARD_NSIFTPCHANNEL(mFTPChannel->)
     
     PRUint32 GetBytesTransfered() {return mBytesTransfered;} ;
 
 protected:
 
     nsCOMPtr<nsIRequest> mRequest;
-    nsCOMPtr<nsIChannel> mChannel;
+    nsCOMPtr<nsIFTPChannel> mFTPChannel;
     nsCOMPtr<nsIStreamListener> mListener;
     nsCOMPtr<nsIProgressEventSink> mEventSink;
 
@@ -98,9 +99,10 @@ protected:
 // the socket transport so that clients only see
 // the same nsIChannel/nsIRequest that they started.
 
-NS_IMPL_THREADSAFE_ISUPPORTS6(DataRequestForwarder, 
+NS_IMPL_THREADSAFE_ISUPPORTS7(DataRequestForwarder, 
                               nsIStreamListener, 
                               nsIRequestObserver, 
+                              nsIFTPChannel,
                               nsIChannel,
                               nsIRequest,
                               nsIInterfaceRequestor,
@@ -142,11 +144,12 @@ DataRequestForwarder::Init(nsIRequest *request)
     NS_ENSURE_ARG(request);
 
     // for the forwarding declarations.
-    mRequest  = request;
-    mChannel  = do_QueryInterface(request);
-    mEventSink= do_QueryInterface(request);
-
-    if (!mRequest || !mChannel)
+    mRequest    = request;
+    mFTPChannel = do_QueryInterface(request);
+    mEventSink  = do_QueryInterface(request);
+    mListener   = do_QueryInterface(request);
+    
+    if (!mRequest || !mFTPChannel)
         return NS_ERROR_FAILURE;
     
     return NS_OK;
@@ -1134,6 +1137,10 @@ nsFtpState::S_list() {
         mResponseMsg = "";
         return rv;
     }
+    
+    // the data forwarder defaults to sending notifications
+    // to the channel.  Lets hijack and send the notifications
+    // to the stream converter.
     mDRequestForwarder->SetStreamListener(converter);
     
     nsCAutoString listString("LIST" CRLF);
@@ -1160,8 +1167,6 @@ nsFtpState::S_retr() {
     if (!mDRequestForwarder)
         return NS_ERROR_FAILURE;
     
-    nsCOMPtr<nsIStreamListener> streamListener = do_QueryInterface(mChannel);
-    mDRequestForwarder->SetStreamListener(streamListener);
     rv = SendFTPCommand(retrStr);
     return rv;
 }
@@ -1588,7 +1593,13 @@ nsFtpState::Init(nsIFTPChannel* aChannel,
     if (NS_FAILED(rv)) return rv;
 
     char *path = nsnull;
-    rv = mURL->GetPath(&path);
+    nsCOMPtr<nsIURL> aURL(do_QueryInterface(mURL));
+    
+    if (aURL)
+        rv = aURL->GetFilePath(&path);
+    else
+        rv = mURL->GetPath(&path);
+    
     if (NS_FAILED(rv)) return rv;
     mPath = nsUnescape(path);
     nsMemory::Free(path);
@@ -1730,6 +1741,10 @@ nsFtpState::StopProcessing() {
         NS_ASSERTION(mPrompter, "no prompter!");
         if (mPrompter)
             (void) mPrompter->Alert(nsnull, text.GetUnicode());
+#if DEBUG
+        else
+            printf("NO ALERT! FTP error: %s", text.get());
+#endif
    }
 
     if ( NS_FAILED(mControlStatus) ) {

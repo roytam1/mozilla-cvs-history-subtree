@@ -41,6 +41,7 @@ CPPSRCS	= \
         nsHttpChunkedDecoder.cpp \
         nsHttpAuthCache.cpp \
         nsHttpBasicAuth.cpp \
+        nsHttpsProxyListener.cpp \
         $(NULL)
 
 LOCAL_INCLUDES=-I$(srcdir)/../../../streamconv/converters

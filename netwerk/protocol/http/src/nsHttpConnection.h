@@ -71,7 +71,7 @@ public:
     nsresult OnHeadersAvailable(nsHttpTransaction *);
 
     // called by the transaction to inform the connection that it is done.
-    nsresult OnTransactionComplete(nsHttpTransaction *, nsresult status);
+    nsresult OnTransactionComplete(nsresult status);
 
     // called by the transaction to resume a read-in-progress
     nsresult Resume();
@@ -101,6 +101,8 @@ private:
 
     // proxy the release of the transaction
     nsresult ProxyReleaseTransaction(nsHttpTransaction *);
+
+    nsresult SetupSSLProxyConnect();
 
 private:
     nsCOMPtr<nsISocketTransport>    mSocketTransport;

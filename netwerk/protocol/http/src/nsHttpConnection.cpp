@@ -23,8 +23,10 @@
 
 #include "nsHttpConnection.h"
 #include "nsHttpTransaction.h"
+#include "nsHttpRequestHead.h"
 #include "nsHttpResponseHead.h"
 #include "nsHttpHandler.h"
+#include "nsHttpsProxyListener.h"
 #include "nsISocketTransportService.h"
 #include "nsISocketTransport.h"
 #include "nsIServiceManager.h"
@@ -205,13 +207,14 @@ nsHttpConnection::OnHeadersAvailable(nsHttpTransaction *trans)
 
 // called from any thread
 nsresult
-nsHttpConnection::OnTransactionComplete(nsHttpTransaction *trans, nsresult status)
+nsHttpConnection::OnTransactionComplete(nsresult status)
 {
     LOG(("nsHttpConnection::OnTransactionComplete [this=%x status=%x]\n",
         this, status));
 
     NS_ENSURE_TRUE(mSocketTransport, NS_ERROR_UNEXPECTED);
-    NS_ENSURE_TRUE(trans == mTransaction, NS_ERROR_UNEXPECTED);
+
+    // be warned: trans may not be mTransaction
 
     // cancel the requests... this will cause OnStopRequest to be fired
     if (mWriteRequest) {
@@ -284,12 +287,16 @@ nsHttpConnection::ActivateConnection()
 {
     nsresult rv;
 
-    // XXX need to handle SSL proxy CONNECT if this is the first time.
-
-    // If we don't have a socket transport then create a new one
+    // if we don't have a socket transport then create a new one
     if (!mSocketTransport) {
         rv = CreateTransport();
         if (NS_FAILED(rv)) return rv;
+
+        // need to handle SSL proxy CONNECT if this is the first time.
+        if (mConnectionInfo->UsingSSL() && mConnectionInfo->ProxyHost()) {
+            rv = SetupSSLProxyConnect();
+            if (NS_FAILED(rv)) return rv;
+        }
     }
 
     mState = WAITING_FOR_WRITE;
@@ -375,6 +382,48 @@ nsHttpConnection::ProxyReleaseTransaction(nsHttpTransaction *trans)
                  TransactionReleaseDestroyHandler);
 
     return mEventQ->PostEvent(event);
+}
+
+nsresult
+nsHttpConnection::SetupSSLProxyConnect()
+{
+    nsresult rv;
+
+    LOG(("nsHttpConnection::SetupSSLProxyConnect [this=%x]\n", this));
+
+    nsCAutoString buf;
+    buf.Assign(mConnectionInfo->Host());
+    buf.Append(':');
+    buf.AppendInt(mConnectionInfo->Port());
+
+    // CONNECT host:port HTTP/1.1
+    nsHttpRequestHead request;
+    request.SetMethod(nsHttp::Connect);
+    request.SetVersion(NS_HTTP_VERSION_1_1);
+    request.SetRequestURI(buf.get());
+
+    // the listener's job will be to call SetTransaction on "this"
+    nsHttpsProxyListener *listener =
+            new nsHttpsProxyListener(this, mTransaction);
+    if (!listener)
+        return NS_ERROR_OUT_OF_MEMORY;
+    NS_ADDREF(listener);
+
+    // create a transaction object for the proxy connect request
+    nsHttpTransaction *trans =
+            new nsHttpTransaction(listener, mTransaction->Callbacks());
+    if (!trans)
+        return NS_ERROR_OUT_OF_MEMORY;
+    NS_ADDREF(trans);
+
+    rv = trans->SetupRequest(&request, nsnull);
+    if (NS_FAILED(rv)) return rv;
+
+    // switch to the proxy connect transaction
+    NS_RELEASE(mTransaction);
+    mTransaction = trans;
+
+    return NS_OK;
 }
 
 //-----------------------------------------------------------------------------
