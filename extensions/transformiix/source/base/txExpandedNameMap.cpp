@@ -42,7 +42,7 @@
 const int kTxExpandedNameMapAllocSize = 16;
 
 txExpandedNameMap::txExpandedNameMap(MBool aOwnsValues) :
-    mItems(0), mBufferCount(0), mItemCount(0), mOwnsValues(aOwnsValues)
+    mItems(0), mItemCount(0), mBufferCount(0), mOwnsValues(aOwnsValues)
 {
 }
 
