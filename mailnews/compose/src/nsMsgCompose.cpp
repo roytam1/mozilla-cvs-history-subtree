@@ -1292,6 +1292,8 @@ NS_IMETHODIMP QuotingOutputStreamListener::OnStopRequest(nsIChannel *aChannel, n
         nsAutoString followUpTo;
         nsAutoString messageId;
         nsAutoString references;
+        nsAutoString encodedCharset;
+        nsAutoString encodedHeader;
         char *outCString = nsnull;
         PRUnichar emptyUnichar = 0;
         PRBool needToRemoveDup = PR_FALSE;
@@ -1301,16 +1303,18 @@ NS_IMETHODIMP QuotingOutputStreamListener::OnStopRequest(nsIChannel *aChannel, n
           mHeaders->ExtractHeader(HEADER_TO, PR_TRUE, &outCString);
           if (outCString)
           {
-            // Convert fields from UTF-8
-            ConvertToUnicode(aCharset, outCString, recipient);
+            encodedHeader.AssignWithConversion(outCString);
+            if (NS_FAILED(nsMsgI18NDecodeMimePartIIStr(encodedHeader, encodedCharset, recipient)))
+              recipient = encodedHeader;
             PR_FREEIF(outCString);
           }
               
           mHeaders->ExtractHeader(HEADER_CC, PR_TRUE, &outCString);
           if (outCString)
           {
-            // Convert fields from UTF-8
-            ConvertToUnicode(aCharset, outCString, cc);
+            encodedHeader.AssignWithConversion(outCString);
+            if (NS_FAILED(nsMsgI18NDecodeMimePartIIStr(encodedHeader, encodedCharset, cc)))
+              cc = encodedHeader;
             PR_FREEIF(outCString);
           }
               
@@ -1325,40 +1329,45 @@ NS_IMETHODIMP QuotingOutputStreamListener::OnStopRequest(nsIChannel *aChannel, n
         mHeaders->ExtractHeader(HEADER_REPLY_TO, PR_FALSE, &outCString);
         if (outCString)
         {
-          // Convert fields to UTF-8
-          ConvertToUnicode(aCharset, outCString, replyTo);
+          encodedHeader.AssignWithConversion(outCString);
+          if (NS_FAILED(nsMsgI18NDecodeMimePartIIStr(encodedHeader, encodedCharset, replyTo)))
+            replyTo = encodedHeader;
           PR_FREEIF(outCString);
         }
         
         mHeaders->ExtractHeader(HEADER_NEWSGROUPS, PR_FALSE, &outCString);
         if (outCString)
         {
-          // Convert fields to UTF-8
-          ConvertToUnicode(aCharset, outCString, newgroups);
+          encodedHeader.AssignWithConversion(outCString);
+          if (NS_FAILED(nsMsgI18NDecodeMimePartIIStr(encodedHeader, encodedCharset, newgroups)))
+            newgroups = encodedHeader;
           PR_FREEIF(outCString);
         }
         
         mHeaders->ExtractHeader(HEADER_FOLLOWUP_TO, PR_FALSE, &outCString);
         if (outCString)
         {
-          // Convert fields to UTF-8
-          ConvertToUnicode(aCharset, outCString, followUpTo);
+          encodedHeader.AssignWithConversion(outCString);
+          if (NS_FAILED(nsMsgI18NDecodeMimePartIIStr(encodedHeader, encodedCharset, followUpTo)))
+            followUpTo = encodedHeader;
           PR_FREEIF(outCString);
         }
         
         mHeaders->ExtractHeader(HEADER_MESSAGE_ID, PR_FALSE, &outCString);
         if (outCString)
         {
-          // Convert fields to UTF-8
-          ConvertToUnicode(aCharset, outCString, messageId);
+          encodedHeader.AssignWithConversion(outCString);
+          if (NS_FAILED(nsMsgI18NDecodeMimePartIIStr(encodedHeader, encodedCharset, messageId)))
+            messageId = encodedHeader;
           PR_FREEIF(outCString);
         }
         
         mHeaders->ExtractHeader(HEADER_REFERENCES, PR_FALSE, &outCString);
         if (outCString)
         {
-          // Convert fields to UTF-8
-          ConvertToUnicode(aCharset, outCString, references);
+          encodedHeader.AssignWithConversion(outCString);
+          if (NS_FAILED(nsMsgI18NDecodeMimePartIIStr(encodedHeader, encodedCharset, references)))
+            references = encodedHeader;
           PR_FREEIF(outCString);
         }
         
