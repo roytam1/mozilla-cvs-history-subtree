@@ -574,10 +574,10 @@ public:
 
 // History helper
 
-class nsHistorySH : public nsDOMClassInfo
+class nsHistorySH : public nsStringArraySH
 {
 protected:
-  nsHistorySH(nsDOMClassInfoID aID) : nsDOMClassInfo(aID)
+  nsHistorySH(nsDOMClassInfoID aID) : nsStringArraySH(aID)
   {
   }
 
@@ -598,10 +598,10 @@ public:
 
 // MediaList helper
 
-class nsMediaListSH : public nsDOMClassInfo
+class nsMediaListSH : public nsStringArraySH
 {
 protected:
-  nsMediaListSH(nsDOMClassInfoID aID) : nsDOMClassInfo(aID)
+  nsMediaListSH(nsDOMClassInfoID aID) : nsStringArraySH(aID)
   {
   }
 
@@ -622,10 +622,10 @@ public:
 
 // CSSStyleDeclaration helper
 
-class nsCSSStyleDeclSH : public nsDOMClassInfo
+class nsCSSStyleDeclSH : public nsStringArraySH
 {
 protected:
-  nsCSSStyleDeclSH(nsDOMClassInfoID aID) : nsDOMClassInfo(aID)
+  nsCSSStyleDeclSH(nsDOMClassInfoID aID) : nsStringArraySH(aID)
   {
   }
 
