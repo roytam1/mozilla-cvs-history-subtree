@@ -33,7 +33,7 @@
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 static NS_DEFINE_CID(kEventQueueService, NS_EVENTQUEUESERVICE_CID);
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsMemCacheChannel, nsIChannel, nsITransport)
+NS_IMPL_THREADSAFE_ISUPPORTS3(nsMemCacheChannel, nsIChannel, nsIRequest, nsITransport)
 
 void
 nsMemCacheChannel::NotifyStorageInUse(PRInt32 aBytesUsed)
