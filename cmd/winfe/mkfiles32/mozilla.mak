@@ -737,6 +737,7 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\layout\laycols.c 
 	$(DEPTH)\lib\layout\laydisp.c 
 	$(DEPTH)\lib\layout\layembed.c
+	$(DEPTH)\lib\layout\laybuiltin.c
 	$(DEPTH)\lib\layout\layfind.c 
 	$(DEPTH)\lib\layout\layform.c 
 	$(DEPTH)\lib\layout\layfree.c 

@@ -1751,9 +1751,7 @@ lo_PrintLayoutElement(MWContext *pContext, lo_TopState* top_state,
 		"LO_HEADING",
 		"LO_SPAN",
 		"LO_DIV",
-#ifdef SHACK
 		"LO_BUILTIN",
-#endif /* SHACK */
 		"LO_SPACER"
 	};
     type = eptr->lo_any.type;

@@ -286,6 +286,9 @@ void CStubsCX::DisplayEdge(MWContext *pContext, int iLocation, LO_EdgeStruct *pE
 void CStubsCX::DisplayEmbed(MWContext *pContext, int iLocation, LO_EmbedStruct *pEmbed)	{
 }
 
+void CStubsCX::DisplayBuiltin(MWContext *pContext, int iLocation, LO_BuiltinStruct *pBuiltin)	{
+}
+
 void CStubsCX::DisplayFormElement(MWContext *pContext, int iLocation, LO_FormElementStruct *pFormElement)	{
 }
 
@@ -355,6 +358,9 @@ void CStubsCX::DestroyEmbedWindow(MWContext *pContext, NPEmbeddedApp *pApp) {
 }
 
 void CStubsCX::FreeEmbedElement(MWContext *pContext, LO_EmbedStruct *pEmbed)	{
+}
+
+void CStubsCX::FreeBuiltinElement(MWContext *pContext, LO_BuiltinStruct *pBuiltin)	{
 }
 
 void CStubsCX::GetEmbedSize(MWContext *pContext, LO_EmbedStruct *pEmbed, NET_ReloadMethod Reload)	{

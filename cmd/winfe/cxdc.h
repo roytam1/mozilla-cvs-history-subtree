@@ -683,6 +683,7 @@ public:
 //	Context Overrides
 	virtual void DisplayBullet(MWContext *pContext, int iLocation, LO_BullettStruct *pBullet);
 	virtual void DisplayEmbed(MWContext *pContext, int iLocation, LO_EmbedStruct *pEmbed);
+	virtual void DisplayBuiltin(MWContext *pContext, int iLocation, LO_BuiltinStruct *pBuiltin);
     virtual void DisplayBorder(MWContext *pContext, int iLocation, int x, int y, int width, int height, int bw, LO_Color *color, LO_LineStyle style);
 	virtual void DisplayHR(MWContext *pContext, int iLocation, LO_HorizRuleStruct *pHorizRule);
 	virtual BITMAPINFO*	 NewPixmap(NI_Pixmap* pImage, BOOL mask = FALSE);
@@ -708,6 +709,7 @@ public:
         virtual void EraseBackground(MWContext *pContext, int iLocation, int32 x, int32 y, uint32 width, uint32 height, LO_Color *pColor);
 #endif
 	virtual void FreeEmbedElement(MWContext *pContext, LO_EmbedStruct *pEmbed);
+	virtual void FreeBuiltinElement(MWContext *pContext, LO_BuiltinStruct *pBuiltin);
 	virtual void GetEmbedSize(MWContext *pContext, LO_EmbedStruct *pEmbed, NET_ReloadMethod bReload);
 #ifdef LAYERS
 	virtual void GetTextFrame(MWContext *pContext, LO_TextStruct *pText,

@@ -2531,8 +2531,6 @@ extern "C" MWContext *FE_GetRDFContext(void) {
    like fe_frameFromMWContext()...
    */
 
-#ifdef SHACK
-
 extern "C" Widget
 fe_showRDFView (Widget parent, int width, int height)
 {
@@ -2561,4 +2559,3 @@ fe_showRDFView (Widget parent, int width, int height)
   return (view->getBaseWidget());
 }
 
-#endif /* SHACK */
