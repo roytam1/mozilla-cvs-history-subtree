@@ -843,8 +843,6 @@ ParseAtom(CompilerState *state)
     switch (*cp) {
       /* handle /|a/ by returning an empty node for the leftside */
       case '|':
-        return NewRENode(state, REOP_EMPTY, NULL);
-
       case 0:
 	ren = NewRENode(state, REOP_EMPTY, NULL);
 	break;
@@ -1349,8 +1347,7 @@ AnchorRegExp(CompilerState *state, RENode *ren)
 	 */
 	JS_ASSERT(REOP(ren2) != REOP_ANCHOR);
 	JS_ASSERT(!(ren2->flags & RENODE_ISNEXT));
-	if ((ren2->flags & (RENODE_ANCHORED | RENODE_NONEMPTY))
-	    == RENODE_NONEMPTY) {
+        if (!(ren2->flags & RENODE_ANCHORED)) {
 	    ren2 = NewRENode(state, REOP(ren), ren->kid);
 	    if (!ren2)
 		return JS_FALSE;
@@ -1902,7 +1899,7 @@ EmitRegExp(CompilerState *state, RENode *ren, JSRegExp *re)
 		    pc[i] = fill;
 		nchars = n * JS_BITS_PER_BYTE;
 	    }
-
+            pc[0] &= 0xFE;  /* 0 never matches */
 /* Split ops up into statements to keep MSVC1.52 from crashing. */
 #define MATCH_BIT(c)    { i = (c) >> 3; b = (c) & 7; b = 1 << b;              \
 			  if (fill) pc[i] &= ~b; else pc[i] |= b; }
