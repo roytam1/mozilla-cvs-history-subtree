@@ -45,6 +45,7 @@
 
 #sidebar-panel-picker {
   color: inherit;
+  -moz-user-focus:normal !important;
 }
 
 #sidebar-panel-picker > .toolbarbutton-dropmarker {
