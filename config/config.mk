@@ -238,12 +238,31 @@ endif
 OS_CFLAGS += $(DEBUG_FLAGS)
 OS_CXXFLAGS += $(DEBUG_FLAGS)
 
+#
+# Build using PIC by default
+# Do not use PIC if not building a shared lib (see exceptions below)
+#
+_ENABLE_PIC=1
+ifndef BUILD_SHARED_LIBS
+_ENABLE_PIC=
+endif
+
 ifneq (,$(IS_COMPONENT))
 ifneq (, $(findstring $(LIBRARY_NAME), $(MOZ_STATIC_COMPONENTS)))
 DEFINES	+= -DNSGetModule=$(LIBRARY_NAME)_NSGetModule -DNSGetModule_components=$(LIBRARY_NAME)_NSGM_comps -DNSGetModule_components_count=$(LIBRARY_NAME)_NSGM_comp_count
-NO_STATIC_LIB=
-NO_SHARED_LIB=1
+FORCE_STATIC_LIB=1
+_ENABLE_PIC=1
 endif
+endif
+
+#
+# Disable PIC if necessary
+#
+
+ifndef _ENABLE_PIC
+DSO_CFLAGS=
+DSO_PIC_CFLAGS=
+MKSHLIB=
 endif
 
 #

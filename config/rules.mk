@@ -101,8 +101,9 @@ endif
 #
 # Library rules
 #
-# If NO_STATIC_LIB is set, the static library will not be built.
-# If NO_SHARED_LIB is set, the shared library will not be built.
+# If BUILD_SHARED_LIBS is set, the shared library will be built.
+# If BUILD_STATIC_LIBS or FORCE_STATIC_LIB is set, 
+#	the static library will  be built.
 #
 
 ifeq ($(OS_ARCH),OS2)
@@ -138,7 +139,8 @@ endif
 endif
 
 ifdef LIBRARY
-ifndef NO_SHARED_LIB
+ifndef FORCE_STATIC_LIB
+ifdef BUILD_SHARED_LIBS
 ifdef MKSHLIB
 
 ifeq ($(OS_ARCH),OS2)
@@ -164,10 +166,11 @@ IMPORT_LIBRARY		:=
 
 endif # OS2
 endif # MKSHLIB
-endif # !NO_SHARED_LIB
+endif # BUILD_SHARED_LIBS
+endif # !FORCE_STATIC_LIB
 endif # LIBRARY
 
-ifdef NO_STATIC_LIB
+ifeq (,$(BUILD_STATIC_LIBS)$(FORCE_STATIC_LIB))
 LIBRARY			= $(NULL)
 endif
 
@@ -517,7 +520,7 @@ export::
 ifdef LIBRARY_NAME
 ifdef EXPORT_LIBRARY
 ifdef IS_COMPONENT
-ifndef NO_STATIC_LIB
+ifdef BUILD_STATIC_LIBS
 	@$(PERL) $(MOZILLA_DIR)/config/build-list.pl $(FINAL_LINK_COMPS) $(LIBRARY_NAME)
 endif
 else
@@ -528,7 +531,7 @@ endif # LIBRARY_NAME
 
 ##############################################
 install:: $(SUBMAKEFILES) $(MAKE_DIRS) $(HOST_LIBRARY) $(LIBRARY) $(SHARED_LIBRARY) $(IMPORT_LIBRARY) $(HOST_PROGRAM) $(PROGRAM) $(HOST_SIMPLE_PROGRAMS) $(SIMPLE_PROGRAMS) $(MAPS)
-ifndef NO_STATIC_LIB
+ifneq (,$(BUILD_STATIC_LIBS)$(FORCE_STATIC_LIB))
 ifdef LIBRARY
 ifeq ($(OS_ARCH),OS2)
 	$(INSTALL) $(IFLAGS1) $(LIBRARY) $(DIST)/lib
@@ -540,7 +543,7 @@ else
 endif
 endif # OS2
 endif # LIBRARY
-endif # ! NO_STATIC_LIB
+endif # BUILD_STATIC_LIBS || FORCE_STATIC_LIB
 ifdef MAPS
 	$(INSTALL) $(IFLAGS1) $(MAPS) $(DIST)/bin
 endif
