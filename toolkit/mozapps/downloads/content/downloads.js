@@ -2,31 +2,7 @@ const kObserverServiceProgID = "@mozilla.org/observer-service;1";
 const NC_NS = "http://home.netscape.com/NC-rdf#";
 
 var gDownloadManager;
-
-const dlObserver = {
-  observe: function(subject, topic, state) {
-    if (topic != "dl-progress") return;
-    var dl = subject.QueryInterface(Components.interfaces.nsIDownload);
-    if (dl.target.path) {
-      var elt = document.getElementById(dl.target.path);
-      
-      var percentComplete = dl.percentComplete;
-      if (percentComplete == -1) {
-        if (!elt.hasAttribute("progressmode"))
-          elt.setAttribute("progressmode", "undetermined");
-        if (elt.hasAttribute("progress"))
-          elt.removeAttribute("progress");
-      }
-      else {
-        elt.setAttribute("progress", percentComplete+"%");
-        if (elt.hasAttribute("progressmode"))
-          elt.removeAttribute("progressmode");
-      }
-      
-      elt.setAttribute("status", "Goaty");
-    }
-  }
-};
+var gDownloadListener;
 
 function onDownloadCancel(aEvent)
 {
@@ -35,12 +11,16 @@ function onDownloadCancel(aEvent)
 
 function onDownloadPause(aEvent)
 {
+  gDownloadManager.pauseDownload(aEvent.target.id);
+}
 
+function onDownloadResume(aEvent)
+{
+  gDownloadManager.resumeDownload(aEvent.target.id);
 }
 
 function onDownloadRemove(aEvent)
 {
-
 }
 
 function onDownloadShow(aEvent)
@@ -68,7 +48,8 @@ function onDownloadRetry(aEvent)
 
 }
 
-function Startup() {
+function Startup() 
+{
   var downloadView = document.getElementById("downloadView");
 
   const dlmgrContractID = "@mozilla.org/download-manager;1";
@@ -77,6 +58,7 @@ function Startup() {
 
   downloadView.addEventListener("download-cancel",  onDownloadCancel, false);
   downloadView.addEventListener("download-pause",   onDownloadPause,  false);
+  downloadView.addEventListener("download-resume",  onDownloadResume, false);
   downloadView.addEventListener("download-remove",  onDownloadRemove, false);
   downloadView.addEventListener("download-show",    onDownloadShow,   false);
   downloadView.addEventListener("download-retry",   onDownloadRetry,  false);
@@ -86,22 +68,48 @@ function Startup() {
 
   downloadView.database.AddDataSource(ds);
   downloadView.builder.rebuild();
-
-  var observerService = Components.classes[kObserverServiceProgID]
-                                  .getService(Components.interfaces.nsIObserverService);
-  observerService.addObserver(dlObserver, "dl-progress", false);
-  observerService.addObserver(dlObserver, "dl-done", false);
-  observerService.addObserver(dlObserver, "dl-cancel", false);
-  observerService.addObserver(dlObserver, "dl-failed", false);
+  
+  var downloadStrings = document.getElementById("downloadStrings");
+  gDownloadListener = new DownloadProgressListener(document, downloadStrings);
+  gDownloadManager.listener = gDownloadListener;
 }
 
-function Shutdown() {
-  var observerService = Components.classes[kObserverServiceProgID]
-                                  .getService(Components.interfaces.nsIObserverService);
-  observerService.removeObserver(dlObserver, "dl-progress");
-  observerService.removeObserver(dlObserver, "dl-done");
-  observerService.removeObserver(dlObserver, "dl-cancel");
-  observerService.removeObserver(dlObserver, "dl-failed");
+function Shutdown() 
+{
+  gDownloadManager.listener = null;
+
+  // Save the status messages.
+  saveStatusMessages();
+  
+  // Assert the current progress for all the downloads in case the window is reopened
+  gDownloadManager.saveState();
+}
+
+function saveStatusMessages()
+{
+  gDownloadManager.startBatchUpdate();
+  
+  var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
+
+  var downloadView = document.getElementById("downloadView");
+  var db = gDownloadManager.datasource;
+  
+  var statusArc = rdf.GetResource(NC_NS + "DownloadStatus");
+  
+  for (var i = downloadView.childNodes.length - 1; i >= 0; --i) {
+    var currItem = downloadView.childNodes[i];
+    if (currItem.getAttribute("state") == "4") {
+      var res = rdf.GetResource(currItem.id);
+      
+      var node = db.GetTarget(res, statusArc, true);
+      if (node)
+        db.Change(res, statusArc, node, rdf.GetLiteral(currItem.getAttribute("status-internal")));
+      else
+        db.Assert(res, statusArc, rdf.GetLiteral(currItem.getAttribute("status-internal")), true);
+    }
+  }
+ 
+  gDownloadManager.endBatchUpdate();
 }
 
 var downloadDNDObserver =
@@ -289,7 +297,8 @@ function cleanUpDownloads()
     var currItem = downloadView.childNodes[i];
     if (currItem.getAttribute("state") == "1" ||
         currItem.getAttribute("state") == "2" ||
-        currItem.getAttribute("state") == "3" )
+        currItem.getAttribute("state") == "3" ||
+        currItem.getAttribute("state") == "4" )
       gDownloadManager.removeDownload(currItem.id);
   }
   

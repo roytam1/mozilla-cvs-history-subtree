@@ -61,7 +61,7 @@
 #include "nsIMIMEInfo.h"
 #include "nsITimer.h"
 
-enum DownloadState { NOTSTARTED = -1, DOWNLOADING, FINISHED, FAILED, CANCELED };
+enum DownloadState { NOTSTARTED = -1, DOWNLOADING, FINISHED, FAILED, CANCELED, PAUSED };
 
 class nsDownloadManager : public nsIDownloadManager,
                           public nsIObserver
@@ -85,8 +85,12 @@ protected:
   nsresult GetDataSource(nsIRDFDataSource** aDataSource);
   nsresult DownloadStarted(const PRUnichar* aPersistentDescriptor);
   nsresult AssertProgressInfoFor(const PRUnichar* aPersistentDescriptor);
+  nsresult GetInternalListener(nsIDownloadProgressListener** aListener);
+  PRBool   NeedsUIUpdate() { return mListener != nsnull; }
+  nsresult PauseResumeDownload(const PRUnichar* aPath, PRBool aPause);
 
 private:
+  nsCOMPtr<nsIDownloadProgressListener> mListener;
   nsCOMPtr<nsIRDFDataSource> mDataSource;
   nsCOMPtr<nsIRDFContainer> mDownloadsContainer;
   nsCOMPtr<nsIRDFContainerUtils> mRDFContainerUtils;
@@ -122,6 +126,10 @@ protected:
   nsresult SetDownloadState(DownloadState aState);
   nsresult SetMIMEInfo(nsIMIMEInfo* aMIMEInfo);
   nsresult SetStartTime(PRInt64 aStartTime);
+
+  void Pause(PRBool aPaused);
+  PRBool IsPaused();
+
   nsDownloadManager* mDownloadManager;
   nsCOMPtr<nsILocalFile> mTarget;
 
@@ -129,7 +137,6 @@ private:
   nsString mDisplayName;
 
   nsCOMPtr<nsIURI> mSource;
-  nsCOMPtr<nsIWebProgressListener> mListener;
   nsCOMPtr<nsIWebProgressListener> mDialogListener;
   nsCOMPtr<nsIWebBrowserPersist> mPersist;
   nsCOMPtr<nsIRequest> mRequest;
@@ -139,6 +146,7 @@ private:
   
   DownloadState mDownloadState;
 
+  PRBool  mPaused;
   PRInt32 mPercentComplete;
   PRInt32 mCurrBytes;
   PRInt32 mMaxBytes;

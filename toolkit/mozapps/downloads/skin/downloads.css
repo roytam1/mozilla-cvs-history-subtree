@@ -6,11 +6,15 @@
   background-color: ThreeDFace;
 }
 
+#downloadViewContainer {
+  -moz-appearance: listbox;
+  margin: 10px;
+}
+
 #downloadView {
   background-color: Window;
+  background-image: url("chrome://mozapps/skin/downloads/viewFader.png");
   padding: 0px;
-  margin: 10px;
-  -moz-appearance: listbox;
 }
 
 #commandBar {
@@ -21,10 +25,9 @@ download {
   padding: 13px 10px 13px 13px;
   min-height: 25px;
   border-bottom: 1px dotted #C0C0C0;
-  background-image: url("chrome://mozapps/skin/downloads/viewFader.png");
 }
 
-download[state="0"], download[state="-1"] {
+download[state="0"], download[state="-1"], download[state="4"] {
   background-color: Window;
   background-image: none;
 }

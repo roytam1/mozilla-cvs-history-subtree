@@ -19,6 +19,7 @@
 <!ENTITY retry.label                      "Retry">
 <!ENTITY remove.label                     "Remove">
 <!ENTITY pause.label                      "Pause">
+<!ENTITY resume.label                     "Resume">
 
 <!ENTITY starting.label                   "Starting...">
 <!ENTITY failed.label                     "Failed">

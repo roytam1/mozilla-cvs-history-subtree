@@ -48,6 +48,7 @@ interface nsIDownload;
 interface nsIWebBrowserPersist;
 interface nsIMIMEInfo;
 interface nsIRDFDataSource;
+interface nsIDownloadProgressListener;
 
 [scriptable, uuid(9be66cc0-1dd1-11b2-8617-e3a3ed26e3b0)]
 interface nsIDownloadManager : nsISupports {
@@ -133,6 +134,11 @@ interface nsIDownloadManager : nsISupports {
 
   void open(in nsIDOMWindow aParent, in wstring aPersistentDescriptor);
 
+  /** 
+   * The Download Manager's progress listener.
+   */
+  attribute nsIDownloadProgressListener listener;
+
   /**
   * Indicate that a batch update (e.g. mass removal) is about to start.
   */
@@ -144,7 +150,24 @@ interface nsIDownloadManager : nsISupports {
   */
   
   void endBatchUpdate();
-  
+
+  /**
+  * Pause the specified download.
+  */
+
+  void pauseDownload(in wstring aPersistentDescriptor);
+
+  /**
+  * Resume the specified download.
+  */
+
+  void resumeDownload(in wstring aPersistentDescriptor);
+
+  /** 
+   * Update the download datasource. 
+   */
+  void saveState();
+
   readonly attribute nsIRDFDataSource datasource;
 };
 

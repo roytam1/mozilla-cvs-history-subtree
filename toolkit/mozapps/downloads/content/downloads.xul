@@ -15,11 +15,16 @@
         persist="width height screenX screenY sizeMode"
         onload="Startup();" onunload="Shutdown();">
       
+  <script type="application/x-javascript" src="chrome://mozapps/content/downloads/DownloadProgressListener.js"/>
   <script type="application/x-javascript" src="chrome://mozapps/content/downloads/downloads.js"/>
   <script type="application/x-javascript" src="chrome://browser/content/contentAreaUtils.js"/>
   <script type="application/x-javascript" src="chrome://global/content/nsDragAndDrop.js"/>
   <script type="application/x-javascript" src="chrome://global/content/nsTransferable.js"/>
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
+  
+  <stringbundleset id="downloadSet">
+    <stringbundle id="downloadStrings" src="chrome://mozapps/locale/downloads/downloads.properties"/>
+  </stringbundleset>
 
   <commandset id="commandUpdate_Downloads"
               commandupdater="true"
@@ -58,16 +63,18 @@
               command="cmd_properties"/>
   </popup>
 
-  <vbox flex="1">
+  <vbox flex="1" id="downloadViewContainer">
     <vbox id="downloadView" flex="3" style="overflow: auto;"
           datasources="rdf:null" ref="NC:DownloadsRoot"
           ondragdrop="nsDragAndDrop.drop(event, downloadDNDObserver);">
       <template>
         <rule>
-            <download uri="rdf:*"
+            <download uri="rdf:*" 
                       image="moz-icon:rdf:http://home.netscape.com/NC-rdf#File"
                       target="rdf:http://home.netscape.com/NC-rdf#Name"
+                      progress="rdf:http://home.netscape.com/NC-rdf#ProgressPercent"
                       state="rdf:http://home.netscape.com/NC-rdf#DownloadState"
+                      status="rdf:http://home.netscape.com/NC-rdf#DownloadStatus"
                       file="rdf:http://home.netscape.com/NC-rdf#File"/>
         </rule>
       </template>

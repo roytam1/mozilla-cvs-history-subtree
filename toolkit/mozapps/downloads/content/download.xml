@@ -58,13 +58,39 @@
 #endif
         <xul:vbox flex="1">
           <xul:label xbl:inherits="value=target" flex="1" crop="middle"/>
-          <xul:hbox flex="1" align="center">
-            <xul:progressmeter mode="normal" value="0" flex="1"
-                              xbl:inherits="value=progress,mode=progressmode"/>
-            <xul:label xbl:inherits="value=progress" class="progressField"/>
-          </xul:hbox>
-          <xul:label value="&pause.label;" class="link" 
-                     onclick="this.parentNode.parentNode.parentNode.fireEvent('pause');"/>          
+          <xul:progressmeter mode="normal" value="0" flex="1"
+                            xbl:inherits="value=progress,mode=progressmode"/>
+          <xul:hbox align="center" flex="1">
+            <xul:label value="&pause.label;" class="link" 
+                      onclick="this.parentNode.parentNode.parentNode.parentNode.fireEvent('pause');"/>          
+            <xul:label xbl:inherits="value=status"/>
+          </xul:hbox>                     
+        </xul:vbox>
+        <xul:vbox pack="start">
+          <xul:label value="&cancel.label;" class="link"
+                     onclick="this.parentNode.parentNode.parentNode.fireEvent('cancel');"/>          
+        </xul:vbox>
+      </xul:hbox>
+    </content>
+  </binding>
+  
+  <binding id="download-paused" extends="chrome://mozapps/content/downloads/download.xml#download-base">
+    <content>
+      <xul:hbox flex="1">
+#ifdef XP_WIN
+        <xul:vbox pack="start">
+          <xul:image style="width: 16px; max-width: 16px; height: 16px; max-height: 16px;" xbl:inherits="src=image"/>
+        </xul:vbox>
+#endif
+        <xul:vbox flex="1">
+          <xul:label xbl:inherits="value=target" flex="1" crop="middle"/>
+          <xul:progressmeter mode="normal" value="0" flex="1"
+                            xbl:inherits="value=progress,mode=progressmode"/>
+          <xul:hbox align="center" flex="1">
+            <xul:label value="&resume.label;" class="link" 
+                      onclick="this.parentNode.parentNode.parentNode.parentNode.fireEvent('resume');"/>          
+            <xul:label xbl:inherits="value=status"/>
+          </xul:hbox>                     
         </xul:vbox>
         <xul:vbox pack="start">
           <xul:label value="&cancel.label;" class="link"
