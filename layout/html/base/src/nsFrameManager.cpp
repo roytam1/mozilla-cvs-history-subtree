@@ -1467,10 +1467,8 @@ FrameManager::ReParentStyleContext(nsIFrame* aFrame,
   NS_ENSURE_TRUE(mPresShell, NS_ERROR_NOT_AVAILABLE);
   nsresult result = NS_ERROR_NULL_POINTER;
   if (aFrame) {
-#ifdef NS_DEBUG
-    DebugVerifyStyleTree(aFrame);
-#endif
-
+    // DO NOT verify the style tree before reparenting.  The frame
+    // tree has already been changed, so this check would just fail.
     nsStyleContext* oldContext = aFrame->GetStyleContext();
     if (oldContext) {
       nsIPresContext *presContext = GetPresContext();
@@ -1483,6 +1481,8 @@ FrameManager::ReParentStyleContext(nsIFrame* aFrame,
           PRInt32 listIndex = 0;
           nsIAtom* childList = nsnull;
           nsIFrame* child;
+          
+          aFrame->SetStyleContext(presContext, newContext);
 
           do {
             child = nsnull;
@@ -1512,8 +1512,6 @@ FrameManager::ReParentStyleContext(nsIFrame* aFrame,
             NS_IF_RELEASE(childList);
             aFrame->GetAdditionalChildListName(listIndex++, &childList);
           } while (childList);
-          
-          aFrame->SetStyleContext(presContext, newContext);
 
           // do additional contexts 
           PRInt32 contextIndex = -1;
@@ -1533,7 +1531,7 @@ FrameManager::ReParentStyleContext(nsIFrame* aFrame,
               break;
             }
           }
-#ifdef NS_DEBUG
+#ifdef DEBUG
           VerifyStyleTree(GetPresContext(), aFrame, aNewParentContext);
 #endif
         }
