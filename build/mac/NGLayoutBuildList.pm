@@ -346,11 +346,15 @@ sub Checkout()
     # activate MacCVS
     ActivateApplication('Mcvs');
 
-    my($nsprpub_tag) = "NSPRPUB_CLIENT_BRANCH";
-    my($nss_tab) = "NSS_30_BRANCH";
-    my($psm_tag) = "SECURITY_MAC_BRANCH";
-    my($ldapsdk_tag) = "LDAPCSDK_40_BRANCH"; 
     my($m17_tag) = "SeaMonkey_M17_BRANCH";
+    my($psm_tag) = "SECURITY_MAC_M17_BRANCH";
+    
+    # trunk tags, for the record:
+    # my($nsprpub_tag) = "NSPRPUB_CLIENT_BRANCH";
+    # my($nss_tab) = "NSS_30_BRANCH";
+    # my($psm_tag) = "SECURITY_MAC_BRANCH";
+    # my($ldapsdk_tag) = "LDAPCSDK_40_BRANCH"; 
+
     
     #//
     #// Checkout commands
@@ -359,7 +363,7 @@ sub Checkout()
     {
         $session->checkout("mozilla/nsprpub", $m17_tag)            || print "checkout of nsprpub failed\n";        
         $session->checkout("mozilla/security/nss", $m17_tag)       || print "checkout of security/nss failed\n";
-        $session->checkout("mozilla/security/psm", $m17_tag)       || print "checkout of security/psm failed\n";
+        $session->checkout("mozilla/security/psm", $psm_tag)       || print "checkout of security/psm failed\n";
         $session->checkout("DirectorySDKSourceC", $m17_tag)        || print "checkout of LDAP C SDK failed\n";
         $session->checkout("SeaMonkeyAll", $m17_tag)               || 
             print "MacCVS reported some errors checking out SeaMonkeyAll, but these are probably not serious.\n";
