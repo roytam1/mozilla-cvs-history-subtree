@@ -1812,8 +1812,11 @@ static NSArray* sToolbarDefaults = nil;
   {
     menuPrototype = mImageMenu;
   }
-  else if ((mContextMenuFlags & nsIContextMenuListener::CONTEXT_DOCUMENT) != 0)
+  else if (!mContextMenuFlags || (mContextMenuFlags & nsIContextMenuListener::CONTEXT_DOCUMENT) != 0)
   {
+    // if there aren't any flags or we're in the background of a page,
+    // show the document menu. This prevents us from failing to find a case
+    // and not showing the context menu.
     menuPrototype = mPageMenu;
     [mBackItem 		setEnabled: [[mBrowserView getBrowserView] canGoBack]];
     [mForwardItem setEnabled: [[mBrowserView getBrowserView] canGoForward]];
