@@ -412,6 +412,21 @@ NS_IMETHODIMP nsMsgDBView::LoadMessageByMsgKey(nsMsgKey aMsgKey)
     NS_ENSURE_SUCCESS(rv,rv);
     mMessengerInstance->OpenURL(uri);
     m_currentlyDisplayedMsgKey = aMsgKey;
+    
+    if (mCommandUpdater)
+    {
+      // get the subject and the folder for the message and inform the front end that
+      // we changed the message we are currently displaying.
+      nsMsgViewIndex viewPosition = FindViewIndex(aMsgKey);
+      if (viewPosition != nsMsgViewIndex_None)
+      {
+        nsCOMPtr <nsIMsgDBHdr> msgHdr;
+        GetMsgHdrForViewIndex(viewPosition, getter_AddRefs(msgHdr));
+        nsXPIDLString subject;
+        FetchSubject(msgHdr, m_flags[viewPosition], getter_Copies(subject));
+        mCommandUpdater->DisplayMessageChanged(m_folder, subject);
+      } // if view position is valid
+    } // if we have an updater
   }
 
   return NS_OK;
