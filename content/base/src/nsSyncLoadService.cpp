@@ -40,6 +40,7 @@
 #include "nsIAppShellService.h"
 #include "nsIDocShellTreeOwner.h"
 #include "nsIInterfaceRequestor.h"
+#include "jsapi.h"
 
 static const char* kLoadAsData = "loadAsData";
 

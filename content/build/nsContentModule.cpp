@@ -25,6 +25,7 @@
 #include "nsCOMPtr.h"
 #include "nsContentModule.h"
 #include "nsContentCID.h"
+#include "nsContentUtils.h"
 #include "nsIComponentManager.h"
 #include "nsNetUtil.h"
 #include "nsICSSStyleSheet.h"
@@ -36,12 +37,9 @@
 #include "nsColorNames.h"   // to addref/release table
 #include "nsLayoutAtoms.h"
 #include "nsDOMCID.h"
-#include "nsIScriptContext.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsINameSpaceManager.h"
-#include "nsIScriptNameSetRegistry.h"
+#include "nsICategoryManager.h"
 #include "nsIScriptNameSpaceManager.h"
-#include "nsIScriptExternalNameSet.h"
 
 #include "nsINodeInfo.h"
 
@@ -59,6 +57,13 @@
 #include "nsContentHTTPStartup.h"
 #include "nsContentPolicyUtils.h"
 #define PRODUCT_NAME "Gecko"
+
+#define NS_HTMLIMGELEMENT_CONTRACTID \
+  "@mozilla.org/content/element/html;1?name=img"
+
+#define NS_HTMLOPTIONELEMENT_CONTRACTID \
+  "@mozilla.org/content/element/html;1?name=option"
+
 
 #ifdef MOZ_XUL
 #include "nsXULAtoms.h"
@@ -94,77 +99,7 @@ extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
 
 //----------------------------------------------------------------------
 
-
-static NS_DEFINE_IID(kCScriptNameSetRegistryCID, NS_SCRIPT_NAMESET_REGISTRY_CID);
-
-class ContentScriptNameSet : public nsIScriptExternalNameSet {
-public:
-  ContentScriptNameSet();
-  virtual ~ContentScriptNameSet();
-
-  NS_DECL_ISUPPORTS
-  
-  NS_IMETHOD InitializeClasses(nsIScriptContext* aScriptContext);
-  NS_IMETHOD AddNameSet(nsIScriptContext* aScriptContext);
-};
-
-ContentScriptNameSet::ContentScriptNameSet()
-{
-  NS_INIT_REFCNT();
-}
-
-ContentScriptNameSet::~ContentScriptNameSet()
-{
-}
-
-NS_IMPL_ISUPPORTS(ContentScriptNameSet, NS_GET_IID(nsIScriptExternalNameSet));
-
-NS_IMETHODIMP 
-ContentScriptNameSet::InitializeClasses(nsIScriptContext* aScriptContext)
-{
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-ContentScriptNameSet::AddNameSet(nsIScriptContext* aScriptContext)
-{
-  nsresult result = NS_OK;
-  nsIScriptNameSpaceManager* manager;
-  static NS_DEFINE_IID(kHTMLImageElementCID, NS_HTMLIMAGEELEMENT_CID);
-  static NS_DEFINE_IID(kHTMLOptionElementCID, NS_HTMLOPTIONELEMENT_CID);
-
-  result = aScriptContext->GetNameSpaceManager(&manager);
-  if (NS_OK == result) {
-    result = manager->RegisterGlobalName(NS_LITERAL_STRING("HTMLImageElement"),
-                                         NS_GET_IID(nsIScriptObjectOwner),
-                                         kHTMLImageElementCID,
-                                         PR_TRUE);
-    if (NS_FAILED(result)) {
-      NS_RELEASE(manager);
-      return result;
-    }
-
-    result = manager->RegisterGlobalName(NS_LITERAL_STRING("HTMLOptionElement"),
-                                         NS_GET_IID(nsIScriptObjectOwner),
-                                         kHTMLOptionElementCID,
-                                         PR_TRUE);
-    if (NS_FAILED(result)) {
-      NS_RELEASE(manager);
-      return result;
-    }
-        
-    NS_RELEASE(manager);
-  }
-  
-  return result;
-}
-
-//----------------------------------------------------------------------
-
-
-nsIScriptNameSetRegistry* nsContentModule::gRegistry;
 nsICSSStyleSheet* nsContentModule::gUAStyleSheet = nsnull;
-
 nsContentModule::nsContentModule()
   : mInitialized(PR_FALSE)
 {
@@ -203,17 +138,6 @@ nsContentModule::Initialize()
   nsXULContentUtils::Init();
 #endif
 
-  // XXX Initialize the script name set thingy-ma-jigger
-  if (!gRegistry) {
-    rv = nsServiceManager::GetService(kCScriptNameSetRegistryCID,
-                                      NS_GET_IID(nsIScriptNameSetRegistry),
-                                      (nsISupports**) &gRegistry);
-    if (NS_SUCCEEDED(rv)) {
-      ContentScriptNameSet* nameSet = new ContentScriptNameSet();
-      gRegistry->AddExternalNameSet(nameSet);
-    }
-  }
-
   return rv;
 }
 
@@ -241,8 +165,9 @@ nsContentModule::Shutdown()
   nsXULAtoms::ReleaseAtoms();
 #endif
 
-  NS_IF_RELEASE(gRegistry);
   NS_IF_RELEASE(gUAStyleSheet);
+
+  nsContentUtils::Shutdown();
 }
 
 NS_IMETHODIMP
@@ -321,10 +246,11 @@ static Components gComponents[] = {
   { "Generated Subtree iterator", NS_GENERATEDSUBTREEITERATOR_CID, nsnull, },
   { "Subtree iterator", NS_SUBTREEITERATOR_CID, nsnull, },
 
-  // XXX ick
-  { "HTML image element", NS_HTMLIMAGEELEMENT_CID, nsnull, },
-  { "HTML option element", NS_HTMLOPTIONELEMENT_CID, nsnull, },
-  // XXX end ick
+  // Needed to support "new Option;" and "new Image;" in JavaScript
+  { "HTML img element", NS_HTMLIMAGEELEMENT_CID,
+    NS_HTMLIMGELEMENT_CONTRACTID, },
+  { "HTML option element", NS_HTMLOPTIONELEMENT_CID,
+    NS_HTMLOPTIONELEMENT_CONTRACTID, },
 
   { "XML document encoder", NS_TEXT_ENCODER_CID,
     NS_DOC_ENCODER_CONTRACTID_BASE "text/xml", },
@@ -411,7 +337,23 @@ nsContentModule::RegisterSelf(nsIComponentManager *aCompMgr,
   nsContentHTTPStartup::RegisterHTTPStartup();
 
   rv = RegisterDocumentFactories(aCompMgr, aPath);
-  
+
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsICategoryManager> catman =
+    do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsXPIDLCString previous;
+  rv = catman->AddCategoryEntry(JAVASCRIPT_GLOBAL_CONSTRUCTOR_CATEGORY,
+                                "Image", NS_HTMLIMGELEMENT_CONTRACTID,
+                                PR_TRUE, PR_TRUE, getter_Copies(previous));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = catman->AddCategoryEntry(JAVASCRIPT_GLOBAL_CONSTRUCTOR_CATEGORY,
+                                "Option", NS_HTMLOPTIONELEMENT_CONTRACTID,
+                                PR_TRUE, PR_TRUE, getter_Copies(previous));
+
   return rv;
 }
 

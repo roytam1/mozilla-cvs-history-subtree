@@ -32,13 +32,12 @@
 
 #include "nsIWebNavigation.h"
 
-static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_CID(kPluginManagerCID, NS_PLUGINMANAGER_CID);
 
-PluginArrayImpl::PluginArrayImpl(nsIDOMNavigator* navigator, nsIDocShell *aDocShell)
+PluginArrayImpl::PluginArrayImpl(nsIDOMNavigator* navigator,
+                                 nsIDocShell *aDocShell)
 {
   NS_INIT_ISUPPORTS();
-  mScriptObject = nsnull;
   mNavigator = navigator; // don't ADDREF here, needed for parent of script object.
 
   if (nsServiceManager::GetService(kPluginManagerCID,
@@ -68,51 +67,11 @@ PluginArrayImpl::~PluginArrayImpl()
 NS_IMPL_ADDREF(PluginArrayImpl)
 NS_IMPL_RELEASE(PluginArrayImpl)
 
-NS_IMETHODIMP
-PluginArrayImpl::QueryInterface(const nsIID& aIID, void** aInstancePtrResult)
-{
-  NS_PRECONDITION(nsnull != aInstancePtrResult, "null pointer");
-  if (nsnull == aInstancePtrResult) {
-    return NS_ERROR_NULL_POINTER;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIScriptObjectOwner))) {
-    *aInstancePtrResult = (void*) ((nsIScriptObjectOwner*)this);
-    AddRef();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIDOMPluginArray))) {
-    *aInstancePtrResult = (void*) ((nsIDOMPluginArray*)this);
-    AddRef();
-    return NS_OK;
-  }
-  if (aIID.Equals(kISupportsIID)) {
-    *aInstancePtrResult = (void*) ((nsIScriptObjectOwner*)this);
-    AddRef();
-    return NS_OK;
-  }
-  return NS_NOINTERFACE;
-}
+NS_INTERFACE_MAP_BEGIN(PluginArrayImpl)
+   NS_INTERFACE_MAP_ENTRY(nsISupports)
+   NS_INTERFACE_MAP_ENTRY(nsIDOMPluginArray)
+NS_INTERFACE_MAP_END
 
-NS_IMETHODIMP
-PluginArrayImpl::SetScriptObject(void *aScriptObject)
-{
-  mScriptObject = aScriptObject;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-PluginArrayImpl::GetScriptObject(nsIScriptContext *aContext,
-                                 void** aScriptObject)
-{
-  NS_PRECONDITION(nsnull != aScriptObject, "null arg");
-  nsresult res = NS_OK;
-  if (nsnull == mScriptObject) {
-    res = NS_NewScriptPluginArray(aContext, (nsISupports*)(nsIDOMPluginArray*)this, mNavigator, &mScriptObject);
-  }
-
-  *aScriptObject = mScriptObject;
-  return res;
-}
 
 NS_IMETHODIMP
 PluginArrayImpl::GetLength(PRUint32* aLength)
@@ -247,7 +206,6 @@ PluginArrayImpl::GetPlugins()
 PluginElementImpl::PluginElementImpl(nsIDOMPlugin* plugin)
 {
   NS_INIT_ISUPPORTS();
-  mScriptObject = nsnull;
   mPlugin = plugin;  // don't AddRef, see PluginArrayImpl::Item.
   mMimeTypeCount = 0;
   mMimeTypeArray = nsnull;
@@ -267,54 +225,11 @@ PluginElementImpl::~PluginElementImpl()
 NS_IMPL_ADDREF(PluginElementImpl)
 NS_IMPL_RELEASE(PluginElementImpl)
 
-NS_IMETHODIMP
-PluginElementImpl::QueryInterface(const nsIID& aIID, void** aInstancePtrResult)
-{
-  NS_PRECONDITION(nsnull != aInstancePtrResult, "null pointer");
-  if (nsnull == aInstancePtrResult) {
-    return NS_ERROR_NULL_POINTER;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIScriptObjectOwner))) {
-    *aInstancePtrResult = (void*) ((nsIScriptObjectOwner*)this);
-    AddRef();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIDOMPlugin))) {
-    *aInstancePtrResult = (void*) ((nsIDOMPlugin*)this);
-    AddRef();
-    return NS_OK;
-  }
-  if (aIID.Equals(kISupportsIID)) {
-    *aInstancePtrResult = (void*) ((nsIScriptObjectOwner*)this);
-    AddRef();
-    return NS_OK;
-  }
-  return NS_NOINTERFACE;
-}
+NS_INTERFACE_MAP_BEGIN(PluginElementImpl)
+   NS_INTERFACE_MAP_ENTRY(nsISupports)
+   NS_INTERFACE_MAP_ENTRY(nsIDOMPlugin)
+NS_INTERFACE_MAP_END
 
-NS_IMETHODIMP
-PluginElementImpl::SetScriptObject(void *aScriptObject)
-{
-  mScriptObject = aScriptObject;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-PluginElementImpl::GetScriptObject(nsIScriptContext *aContext,
-                                   void** aScriptObject)
-{
-  NS_PRECONDITION(nsnull != aScriptObject, "null arg");
-  nsresult res = NS_OK;
-  if (nsnull == mScriptObject) {
-    nsIScriptGlobalObject *global = aContext->GetGlobalObject();
-    res = NS_NewScriptPlugin(aContext, (nsISupports*)(nsIDOMPlugin*)this,
-                             global, &mScriptObject);
-    NS_IF_RELEASE(global);
-  }
-
-  *aScriptObject = mScriptObject;
-  return res;
-}
 
 NS_IMETHODIMP
 PluginElementImpl::GetDescription(nsAWritableString& aDescription)

@@ -22,7 +22,6 @@
 
 #include "nsISupports.idl"
 #include "nsIPrompt.idl"
-#include "domstubs.idl"
 
 %{ C++
 #include "nsString.h"
@@ -37,6 +36,8 @@
 %}
 
 interface nsIPresShell;
+interface nsIDOMNode;
+interface nsIDOMWindowInternal;
 
 native nsAutoString(nsAutoString);
 [ref] native nsAutoStringRef(nsAutoString);

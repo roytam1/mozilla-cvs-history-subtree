@@ -32,7 +32,6 @@ static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 MimeTypeArrayImpl::MimeTypeArrayImpl(nsIDOMNavigator* navigator)
 {
 	NS_INIT_ISUPPORTS();
-	mScriptObject = nsnull;
 	mNavigator = navigator;
 	mMimeTypeCount = 0;
 	mMimeTypeArray = nsnull;
@@ -51,50 +50,14 @@ MimeTypeArrayImpl::~MimeTypeArrayImpl()
 NS_IMPL_ADDREF(MimeTypeArrayImpl)
 NS_IMPL_RELEASE(MimeTypeArrayImpl)
 
-NS_IMETHODIMP MimeTypeArrayImpl::QueryInterface(const nsIID& aIID,
-                              void** aInstancePtrResult)
-{
-	NS_PRECONDITION(nsnull != aInstancePtrResult, "null pointer");
-	if (nsnull == aInstancePtrResult) {
-		return NS_ERROR_NULL_POINTER;
-	}
-	if (aIID.Equals(NS_GET_IID(nsIScriptObjectOwner))) {
-		*aInstancePtrResult = (void*) ((nsIScriptObjectOwner*)this);
-		AddRef();
-		return NS_OK;
-	}
-	if (aIID.Equals(NS_GET_IID(nsIDOMMimeTypeArray))) {
-		*aInstancePtrResult = (void*) ((nsIDOMMimeTypeArray*)this);
-		AddRef();
-		return NS_OK;
-	}
-	if (aIID.Equals(kISupportsIID)) {
-		*aInstancePtrResult = (void*) ((nsIScriptObjectOwner*)this);
-		AddRef();
-		return NS_OK;
-	}
-	return NS_NOINTERFACE;
-}
+NS_INTERFACE_MAP_BEGIN(MimeTypeArrayImpl)
+   NS_INTERFACE_MAP_ENTRY(nsISupports)
+   NS_INTERFACE_MAP_ENTRY(nsIDOMMimeTypeArray)
+NS_INTERFACE_MAP_END
 
-NS_IMETHODIMP MimeTypeArrayImpl::SetScriptObject(void *aScriptObject)
-{
-	mScriptObject = aScriptObject;
-	return NS_OK;
-}
 
-NS_IMETHODIMP MimeTypeArrayImpl::GetScriptObject(nsIScriptContext *aContext, void** aScriptObject)
-{
-	NS_PRECONDITION(nsnull != aScriptObject, "null arg");
-	nsresult res = NS_OK;
-	if (nsnull == mScriptObject) {
-		res = NS_NewScriptMimeTypeArray(aContext, (nsISupports*)(nsIDOMMimeTypeArray*)this, mNavigator, &mScriptObject);
-	}
-
-	*aScriptObject = mScriptObject;
-	return res;
-}
-
-NS_IMETHODIMP MimeTypeArrayImpl::GetLength(PRUint32* aLength)
+NS_IMETHODIMP
+MimeTypeArrayImpl::GetLength(PRUint32* aLength)
 {
 	if (mMimeTypeArray == nsnull) {
 		nsresult rv = GetMimeTypes();
@@ -105,7 +68,8 @@ NS_IMETHODIMP MimeTypeArrayImpl::GetLength(PRUint32* aLength)
 	return NS_OK;
 }
 
-NS_IMETHODIMP MimeTypeArrayImpl::Item(PRUint32 aIndex, nsIDOMMimeType** aReturn)
+NS_IMETHODIMP
+MimeTypeArrayImpl::Item(PRUint32 aIndex, nsIDOMMimeType** aReturn)
 {
 	if (mMimeTypeArray == nsnull) {
 		nsresult rv = GetMimeTypes();
@@ -120,8 +84,9 @@ NS_IMETHODIMP MimeTypeArrayImpl::Item(PRUint32 aIndex, nsIDOMMimeType** aReturn)
 	return NS_ERROR_FAILURE;
 }
 
-NS_IMETHODIMP MimeTypeArrayImpl::NamedItem(const nsAReadableString& aName,
-                                           nsIDOMMimeType** aReturn)
+NS_IMETHODIMP
+MimeTypeArrayImpl::NamedItem(const nsAReadableString& aName,
+                             nsIDOMMimeType** aReturn)
 {
   NS_ENSURE_ARG_POINTER(aReturn);
   *aReturn = nsnull;
@@ -196,10 +161,10 @@ nsresult MimeTypeArrayImpl::GetMimeTypes()
 	return rv;
 }
 
-MimeTypeElementImpl::MimeTypeElementImpl(nsIDOMPlugin* aPlugin, nsIDOMMimeType* aMimeType)
+MimeTypeElementImpl::MimeTypeElementImpl(nsIDOMPlugin* aPlugin,
+                                         nsIDOMMimeType* aMimeType)
 {
 	NS_INIT_ISUPPORTS();
-	mScriptObject = nsnull;
 	mPlugin = aPlugin;
 	mMimeType = aMimeType;
 }
@@ -212,69 +177,34 @@ MimeTypeElementImpl::~MimeTypeElementImpl()
 NS_IMPL_ADDREF(MimeTypeElementImpl)
 NS_IMPL_RELEASE(MimeTypeElementImpl)
 
-NS_IMETHODIMP MimeTypeElementImpl::QueryInterface(const nsIID& aIID,
-                              void** aInstancePtrResult)
-{
-	NS_PRECONDITION(nsnull != aInstancePtrResult, "null pointer");
-	if (nsnull == aInstancePtrResult) {
-		return NS_ERROR_NULL_POINTER;
-	}
-	if (aIID.Equals(NS_GET_IID(nsIScriptObjectOwner))) {
-		*aInstancePtrResult = (void*) ((nsIScriptObjectOwner*)this);
-		AddRef();
-		return NS_OK;
-	}
-	if (aIID.Equals(NS_GET_IID(nsIDOMMimeType))) {
-		*aInstancePtrResult = (void*) ((nsIDOMMimeType*)this);
-		AddRef();
-		return NS_OK;
-	}
-	if (aIID.Equals(kISupportsIID)) {
-		*aInstancePtrResult = (void*) ((nsIScriptObjectOwner*)this);
-		AddRef();
-		return NS_OK;
-	}
-	return NS_NOINTERFACE;
-}
+NS_INTERFACE_MAP_BEGIN(MimeTypeElementImpl)
+   NS_INTERFACE_MAP_ENTRY(nsISupports)
+   NS_INTERFACE_MAP_ENTRY(nsIDOMMimeType)
+NS_INTERFACE_MAP_END
 
-NS_IMETHODIMP MimeTypeElementImpl::SetScriptObject(void *aScriptObject)
-{
-	mScriptObject = aScriptObject;
-	return NS_OK;
-}
 
-NS_IMETHODIMP MimeTypeElementImpl::GetScriptObject(nsIScriptContext *aContext, void** aScriptObject)
-{
-	NS_PRECONDITION(nsnull != aScriptObject, "null arg");
-	nsresult res = NS_OK;
-	if (nsnull == mScriptObject) {
-		nsIScriptGlobalObject *global = aContext->GetGlobalObject();
-		res = NS_NewScriptMimeType(aContext, (nsISupports*)(nsIDOMMimeType*)this, global, &mScriptObject);
-		NS_IF_RELEASE(global);
-	}
-
-	*aScriptObject = mScriptObject;
-	return res;
-}
-
-NS_IMETHODIMP MimeTypeElementImpl::GetDescription(nsAWritableString& aDescription)
+NS_IMETHODIMP
+MimeTypeElementImpl::GetDescription(nsAWritableString& aDescription)
 {
 	return mMimeType->GetDescription(aDescription);
 }
 
-NS_IMETHODIMP MimeTypeElementImpl::GetEnabledPlugin(nsIDOMPlugin** aEnabledPlugin)
+NS_IMETHODIMP
+MimeTypeElementImpl::GetEnabledPlugin(nsIDOMPlugin** aEnabledPlugin)
 {	
 	*aEnabledPlugin = mPlugin;
 	NS_IF_ADDREF(mPlugin);
 	return NS_OK;
 }
 
-NS_IMETHODIMP MimeTypeElementImpl::GetSuffixes(nsAWritableString& aSuffixes)
+NS_IMETHODIMP
+MimeTypeElementImpl::GetSuffixes(nsAWritableString& aSuffixes)
 {
 	return mMimeType->GetSuffixes(aSuffixes);
 }
 
-NS_IMETHODIMP MimeTypeElementImpl::GetType(nsAWritableString& aType)
+NS_IMETHODIMP
+MimeTypeElementImpl::GetType(nsAWritableString& aType)
 {
 	return mMimeType->GetType(aType);
 }

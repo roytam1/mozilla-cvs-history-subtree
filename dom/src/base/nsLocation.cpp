@@ -49,7 +49,6 @@
 LocationImpl::LocationImpl(nsIDocShell *aDocShell)
 {
   NS_INIT_REFCNT();
-  mScriptObject = nsnull;
   mDocShell = aDocShell; // Weak Reference
 }
 
@@ -61,37 +60,9 @@ NS_IMPL_ADDREF(LocationImpl)
 NS_IMPL_RELEASE(LocationImpl)
 
 NS_INTERFACE_MAP_BEGIN(LocationImpl)
-   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMLocation)
+   NS_INTERFACE_MAP_ENTRY(nsISupports)
    NS_INTERFACE_MAP_ENTRY(nsIDOMLocation)
-   NS_INTERFACE_MAP_ENTRY(nsIScriptObjectOwner)
-   NS_INTERFACE_MAP_ENTRY(nsIDOMNSLocation)
-   NS_INTERFACE_MAP_ENTRY(nsIJSScriptObject)
 NS_INTERFACE_MAP_END
-
-nsresult
-LocationImpl::SetScriptObject(void *aScriptObject)
-{
-  mScriptObject = aScriptObject;
-  return NS_OK;
-}
-
-nsresult
-LocationImpl::GetScriptObject(nsIScriptContext *aContext, void** aScriptObject)
-{
-  NS_ENSURE_ARG_POINTER(aScriptObject);
-
-  if (!mScriptObject) {
-    nsCOMPtr<nsIScriptGlobalObject> global(do_GetInterface(mDocShell));
-    NS_ENSURE_TRUE(global, NS_ERROR_FAILURE);
-    NS_ENSURE_SUCCESS(NS_NewScriptLocation(aContext,
-      NS_STATIC_CAST(nsIDOMLocation*, this),global, &mScriptObject),
-      NS_ERROR_FAILURE);
-  }
-
-  *aScriptObject = mScriptObject;
-
-  return NS_OK;
-}
 
 NS_IMETHODIMP_(void) LocationImpl::SetDocShell(nsIDocShell *aDocShell)
 {
@@ -368,31 +339,44 @@ NS_IMETHODIMP
 LocationImpl::SetHref(const nsAReadableString& aHref)
 {
   nsAutoString oldHref;
-  nsresult result = NS_OK;
+  nsresult rv = NS_OK;
 
-  result = GetHref(oldHref);
+  // Get JSContext from stack.
+  nsCOMPtr<nsIJSContextStack>
+    stack(do_GetService("@mozilla.org/js/xpc/ContextStack;1", &rv));
 
-  if (NS_SUCCEEDED(result)) {
-    nsCOMPtr<nsIURI> oldUri;
+  if (NS_FAILED(rv))
+    return NS_ERROR_FAILURE;
 
-    result = NS_NewURI(getter_AddRefs(oldUri), oldHref);
+  JSContext *cx;
 
-    if (oldUri) {
-      result = SetHrefWithBase(aHref, oldUri, PR_FALSE);
+  if (NS_FAILED(stack->Peek(&cx)))
+    return NS_ERROR_FAILURE;
+
+  if (cx) {
+    rv = SetHrefWithContext(cx, aHref);
+  } else {
+    rv = GetHref(oldHref);
+
+    if (NS_SUCCEEDED(rv)) {
+      nsCOMPtr<nsIURI> oldUri;
+
+      rv = NS_NewURI(getter_AddRefs(oldUri), oldHref);
+
+      if (oldUri) {
+        rv = SetHrefWithBase(aHref, oldUri, PR_FALSE);
+      }
     }
   }
 
-  return result;
+  return rv;
 }
 
 nsresult
-LocationImpl::SetHrefWithContext(JSContext* cx, jsval val)
+LocationImpl::SetHrefWithContext(JSContext* cx,
+                                 const nsAReadableString& aHref)
 {
   nsCOMPtr<nsIURI> base;
-  nsAutoString href;
-
-  // Get the parameter passed in
-  nsJSUtils::nsConvertJSValToString(href, cx, val);
 
   // Get the source of the caller
   nsresult result = GetSourceURL(cx, getter_AddRefs(base));
@@ -401,7 +385,7 @@ LocationImpl::SetHrefWithContext(JSContext* cx, jsval val)
     return result;
   }
 
-  return SetHrefWithBase(href, base, PR_FALSE);
+  return SetHrefWithBase(aHref, base, PR_FALSE);
 }
 
 nsresult
@@ -699,6 +683,8 @@ LocationImpl::Replace(const nsAReadableString& aUrl)
 
   result = GetHref(oldHref);
 
+  // XXX: Get current context and base URL!!!
+
   if (NS_SUCCEEDED(result)) {
     nsCOMPtr<nsIURI> oldUri;
 
@@ -734,50 +720,13 @@ LocationImpl::Assign(const nsAReadableString& aUrl)
 }
 
 NS_IMETHODIMP
-LocationImpl::Reload(JSContext *cx, jsval *argv, PRUint32 argc)
-{
-  // XXX Security manager needs to be called
-  JSBool force = JS_FALSE;
-
-  if (argc > 0) {
-    JS_ValueToBoolean(cx, argv[0], &force);
-  }
-
-  return Reload(force ? PR_TRUE : PR_FALSE);
-}
-
-NS_IMETHODIMP
-LocationImpl::Replace(JSContext *cx, jsval *argv, PRUint32 argc)
-{
-  nsresult result = NS_OK;
-
-  if (argc > 0) {
-    nsCOMPtr<nsIURI> base;
-    nsAutoString href;
-
-    // Get the parameter passed in
-    nsJSUtils::nsConvertJSValToString(href, cx, argv[0]);
-
-    // Get the source of the caller
-    result = GetSourceURL(cx, getter_AddRefs(base));
-
-    if (NS_SUCCEEDED(result)) {
-      result = SetHrefWithBase(href, base, PR_TRUE);
-    }
-  }
-
-  return result;
-}
-
-NS_IMETHODIMP
 LocationImpl::ToString(nsAWritableString& aReturn)
 {
   return GetHref(aReturn);
 }
 
 nsresult
-LocationImpl::GetSourceURL(JSContext* cx,
-                           nsIURI** sourceURI)
+LocationImpl::GetSourceURL(JSContext* cx, nsIURI** sourceURI)
 {
   // XXX Code duplicated from nsHTMLDocument
   // XXX Tom said this reminded him of the "Six Degrees of
@@ -818,20 +767,6 @@ LocationImpl::GetSourceURL(JSContext* cx,
   }
 
   return result;
-}
-
-PRBool
-LocationImpl::AddProperty(JSContext *aContext, JSObject *aObj, jsval aID,
-                          jsval *aVp)
-{
-  return JS_TRUE;
-}
-
-PRBool
-LocationImpl::DeleteProperty(JSContext *aContext, JSObject *aObj, jsval aID,
-                             jsval *aVp)
-{
-  return JS_TRUE;
 }
 
 static nsresult
@@ -922,50 +857,4 @@ LocationImpl::SetProperty(JSContext *aContext, JSObject *aObj, jsval aID,
 
   return NS_SUCCEEDED(result);
 }
-
-PRBool
-LocationImpl::EnumerateProperty(JSContext *aContext, JSObject *aObj)
-{
-  return JS_TRUE;
-}
-
-PRBool
-LocationImpl::Resolve(JSContext *aContext, JSObject *aObj, jsval aID,
-                      PRBool* aDidDefineProperty)
-{
-  *aDidDefineProperty = PR_FALSE;
-
-  if (JSVAL_IS_STRING(aID)) {
-    JSString *str;
-
-    str = JSVAL_TO_STRING(aID);
-
-    const jschar *chars = ::JS_GetStringChars(str);
-    const PRUnichar *unichars = NS_REINTERPRET_CAST(const PRUnichar*, chars);
-
-    if (NS_LITERAL_STRING("href").Equals(unichars)) {
-      // properties defined as 'noscript' in the IDL needs to be defined
-      // lazily here so that unqualified lookups of such properties work
-      ::JS_DefineUCProperty(aContext, (JSObject *)mScriptObject,
-                            chars, ::JS_GetStringLength(str),
-                            JSVAL_VOID, nsnull, nsnull, 0);
-
-      *aDidDefineProperty = PR_TRUE;
-    }
-  }
-
-  return JS_TRUE;
-}
-
-PRBool
-LocationImpl::Convert(JSContext *aContext, JSObject *aObj, jsval aID)
-{
-  return JS_TRUE;
-}
-
-void
-LocationImpl::Finalize(JSContext *aContext, JSObject *aObj)
-{
-}
-
 

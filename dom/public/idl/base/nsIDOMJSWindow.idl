@@ -55,4 +55,14 @@ interface nsIDOMJSWindow : nsISupports
   // This is the script version of nsIDOMWindowInternal::open() that
   // takes 3 optional arguments
   nsIDOMWindow              open();
+  nsIDOMWindow              openDialog();
+
+  /**
+   * window.frames in Netscape 4.x and IE is just a reference to the
+   * window itself (i.e. window.frames === window), but this doesn't
+   * make sense from a generic API point of view so that's why this is
+   * JS specific.
+   */
+
+  readonly attribute nsIDOMWindow             frames;
 };

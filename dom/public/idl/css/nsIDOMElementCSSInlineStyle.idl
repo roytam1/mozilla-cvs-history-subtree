@@ -19,10 +19,10 @@
  * Contributor(s):
  */
 
-#include "nsIDOMCSSRule.idl"
+#include "domstubs.idl"
 
 [scriptable, uuid(99715845-95fc-4a56-aa53-214b65c26e22)]
-interface nsIDOMElementCSSInlineStyle : nsIDOMCSSRule
+interface nsIDOMElementCSSInlineStyle : nsISupports
 {
   readonly attribute nsIDOMCSSStyleDeclaration  style;
 };

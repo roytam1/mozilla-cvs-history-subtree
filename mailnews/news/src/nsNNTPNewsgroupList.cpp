@@ -38,7 +38,6 @@
 #include "nsIMsgStatusFeedback.h"
 #include "nsCOMPtr.h"
 #include "nsIDOMWindowInternal.h"
-#include "jsapi.h"	// for JS_PushArguments and JS_PopArguments
 
 #include "nsXPIDLString.h"
 #include "nsIMsgAccountManager.h"
@@ -144,7 +143,8 @@ void	nsNNTPNewsgroupList::OnAnnouncerGoingAway (ChangeAnnouncer *instigator)
 #endif
 
 static nsresult 
-openWindow(nsIMsgWindow *aMsgWindow, const char *chromeURL, nsINewsDownloadDialogArgs *param) 
+openWindow(nsIMsgWindow *aMsgWindow, const char *chromeURL,
+           nsINewsDownloadDialogArgs *param) 
 {
     nsresult rv;
 
@@ -162,34 +162,23 @@ openWindow(nsIMsgWindow *aMsgWindow, const char *chromeURL, nsINewsDownloadDialo
 	globalObjectOwner->GetScriptGlobalObject(getter_AddRefs(globalObject));
 	NS_ENSURE_TRUE(globalObject, NS_ERROR_FAILURE);
 
-	nsCOMPtr<nsIDOMWindowInternal> parentWindow(do_QueryInterface(globalObject));
+	nsCOMPtr<nsIDOMWindowInternalEx> parentWindow =
+        do_QueryInterface(globalObject);
 	NS_ENSURE_TRUE(parentWindow, NS_ERROR_FAILURE);
 
-    nsCOMPtr<nsIScriptContext> context;
-    globalObject->GetContext( getter_AddRefs( context ) );
-    if (!context) return NS_ERROR_FAILURE;
-    JSContext *jsContext = (JSContext*)context->GetNativeContext();
-    
-    void *stackPtr;
-    jsval *argv = JS_PushArguments( jsContext,
-                                    &stackPtr,
-                                    "sss%ip",
-                                    chromeURL,
-                                    "_blank",
-                                    "chrome,modal,titlebar",
-                                    (const nsIID*)(&NS_GET_IID(nsINewsDownloadDialogArgs)), 
-                                    (nsISupports*)param);
+    nsCOMPtr<nsIDOMWindow> dialogWindow;
+    nsCOMPtr<nsISupportsArray> array;
 
-    if (!argv) {
-        return NS_ERROR_FAILURE;
-    }
+    rv = NS_NewISupportsArray(getter_AddRefs(array));
+    NS_ENSURE_SUCCESS(rv, rv);
 
-    nsCOMPtr<nsIDOMWindowInternal> dialogWindow;
-    rv = parentWindow->OpenDialog(jsContext,
-                                  argv,
-                                  4,
-                                  getter_AddRefs(dialogWindow));
-    JS_PopArguments( jsContext, stackPtr );
+    array->AppendElement(param);
+
+    rv = parentWindow->OpenDialog(NS_ConvertASCIItoUCS2(chromeURL),
+                                  NS_LITERAL_STRING("_blank"),
+                                  NS_LITERAL_STRING("chrome,modal,titlebar"),
+                                  array, getter_AddRefs(dialogWindow));
+
     return rv;
 }       
 

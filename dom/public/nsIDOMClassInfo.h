@@ -32,6 +32,8 @@ class nsIDOMClassInfo : public nsIClassInfo
 {
 public:
   enum nsDOMClassInfoID {
+    // Base classes
+    eWindow_id,
 
     // Core classes
     eDocument_id,
@@ -49,6 +51,9 @@ public:
     eNotation_id,
     eNodeList_id,
     eNamedNodeMap_id,
+
+    // StyleSheet classes
+    eDocumentStyleSheetList_id,
 
     // Event classes
     eEvent_id,

@@ -41,116 +41,62 @@ class nsIScriptSecurityManager;
 
 class nsJSUtils {
 public:
-  static NS_EXPORT JSBool nsGetCallingLocation(JSContext* aContext,
-                                               const char* *aFilename,
-                                               PRUint32 *aLineno);
+  static JSBool nsGetCallingLocation(JSContext* aContext,
+                                     const char* *aFilename,
+                                     PRUint32 *aLineno);
 
-  static NS_EXPORT JSBool nsReportError(JSContext* aContext, 
-                                        JSObject* aObj,
-                                        nsresult aResult,
-                                        const char* aMessage=nsnull);
+  static JSBool nsReportError(JSContext* aContext, 
+                              JSObject* aObj,
+                              nsresult aResult,
+                              const char* aMessage=nsnull);
 
-  static NS_EXPORT PRBool nsCallJSScriptObjectGetProperty(nsISupports* aSupports,
-                                                JSContext* aContext,
-                                                JSObject* aObj,
-                                                jsval aId,
-                                                jsval* aReturn);
-
-  static NS_EXPORT PRBool nsCallJSScriptObjectSetProperty(nsISupports* aSupports,
-                                                JSContext* aContext,
-                                                JSObject* aObj,
-                                                jsval aId,
-                                                jsval* aReturn);
-
-  static NS_EXPORT void nsConvertObjectToJSVal(nsISupports* aSupports,
+  static void nsConvertStringToJSVal(const nsString& aProp,
                                      JSContext* aContext,
-                                     JSObject* aObj,
                                      jsval* aReturn);
 
-  static NS_EXPORT void nsConvertXPCObjectToJSVal(nsISupports* aSupports,
-                                                  const nsIID& aIID,
-                                                  JSContext* aContext,
-                                                  JSObject* aScope,
-                                                  jsval* aReturn);
+  static PRBool nsConvertJSValToXPCObject(nsISupports** aSupports,
+                                          REFNSIID aIID,
+                                          JSContext* aContext,
+                                          jsval aValue);
 
-  static NS_EXPORT void nsConvertStringToJSVal(const nsString& aProp,
-                                               JSContext* aContext,
-                                               jsval* aReturn);
+  static void nsConvertJSValToString(nsAWritableString& aString,
+                                     JSContext* aContext,
+                                     jsval aValue);
 
-  static NS_EXPORT PRBool nsConvertJSValToObject(nsISupports** aSupports,
-                                       REFNSIID aIID,
-                                       const nsString& aTypeName,
+  static PRBool nsConvertJSValToUint32(PRUint32* aProp,
                                        JSContext* aContext,
                                        jsval aValue);
 
-  static NS_EXPORT PRBool nsConvertJSValToXPCObject(nsISupports** aSupports,
-                                                    REFNSIID aIID,
-                                                    JSContext* aContext,
-                                                    jsval aValue);
+  static PRBool nsConvertJSValToFunc(nsIDOMEventListener** aListener,
+                                     JSContext* aContext,
+                                     JSObject* aObj,
+                                     jsval aValue);
 
-  static NS_EXPORT void nsConvertJSValToString(nsAWritableString& aString,
-                                               JSContext* aContext,
-                                               jsval aValue);
+  static nsresult nsGetStaticScriptGlobal(JSContext* aContext,
+                                          JSObject* aObj,
+                                          nsIScriptGlobalObject** aGlobal);
 
-  static NS_EXPORT PRBool nsConvertJSValToBool(PRBool* aProp,
-                                               JSContext* aContext,
-                                               jsval aValue);
+  static nsresult nsGetStaticScriptContext(JSContext* aContext,
+                                           JSObject* aObj,
+                                           nsIScriptContext** aScriptContext);
 
-  static NS_EXPORT PRBool nsConvertJSValToUint32(PRUint32* aProp,
-                                                 JSContext* aContext,
-                                                 jsval aValue);
+  static nsresult nsGetDynamicScriptGlobal(JSContext *aContext,
+                                           nsIScriptGlobalObject** aGlobal);
 
-  static NS_EXPORT PRBool nsConvertJSValToFunc(nsIDOMEventListener** aListener,
-                                               JSContext* aContext,
-                                               JSObject* aObj,
-                                               jsval aValue);
+  static nsresult nsGetDynamicScriptContext(JSContext *aContext,
+                                            nsIScriptContext** aScriptContext);
 
-  static NS_EXPORT void PR_CALLBACK nsGenericFinalize(JSContext* aContext,
-                                                      JSObject* aObj);
+  static JSBool PR_CALLBACK nsCheckAccess(JSContext *cx, JSObject *obj,
+                                          jsid id, JSAccessMode mode,
+                                          jsval *vp);
 
-  static NS_EXPORT JSBool nsGenericEnumerate(JSContext* aContext,
-                                             JSObject* aObj,
-                                             JSPropertySpec* aLazyPropSpec);
+  static nsIScriptSecurityManager *nsGetSecurityManager(JSContext *cx,
+                                                        JSObject *obj);
 
-  static NS_EXPORT JSBool nsGlobalResolve(JSContext* aContext,
-                                          JSObject* aObj, 
-                                          jsval aId,
-                                          JSPropertySpec* aLazyPropSpec);
-
-  static NS_EXPORT JSBool nsGenericResolve(JSContext* aContext,
-                                           JSObject* aObj, 
-                                           jsval aId,
-                                           JSPropertySpec* aLazyPropSpec);
-
-  static NS_EXPORT nsISupports* nsGetNativeThis(JSContext* aContext,
-                                                JSObject* aObj);
-  
-  static NS_EXPORT nsresult nsGetStaticScriptGlobal(JSContext* aContext,
-                                    JSObject* aObj,
-                                    nsIScriptGlobalObject** aNativeGlobal);
-
-  static NS_EXPORT nsresult nsGetStaticScriptContext(JSContext* aContext,
-                                    JSObject* aObj,
-                                    nsIScriptContext** aScriptContext);
-
-  static NS_EXPORT nsresult nsGetDynamicScriptGlobal(JSContext *aContext,
-                                    nsIScriptGlobalObject** aNativeGlobal);
-
-  static NS_EXPORT nsresult nsGetDynamicScriptContext(JSContext *aContext,
-                                    nsIScriptContext** aScriptContext);
-
-  static NS_EXPORT JSBool PR_CALLBACK nsCheckAccess(JSContext *cx,
-                                    JSObject *obj, jsid id, JSAccessMode mode,
-	                            jsval *vp);
-
-  static NS_EXPORT nsIScriptSecurityManager *
-                    nsGetSecurityManager(JSContext *cx, JSObject *obj);
-
-  static NS_EXPORT void nsClearCachedSecurityManager();
+  static void nsClearCachedSecurityManager();
 
 protected:
-  static PRBool NameAndFormatForNSResult(nsresult rv,
-                                         const char** name,
+  static PRBool NameAndFormatForNSResult(nsresult rv, const char** name,
                                          const char** format);
 
   static nsIScriptSecurityManager *mCachedSecurityManager;

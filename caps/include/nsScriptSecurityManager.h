@@ -152,9 +152,6 @@ private:
     NS_IMETHOD
     InitPrefs();
 
-    PRBool
-    EnsureNameSetRegistered();
-
     static nsresult 
     PrincipalPrefNames(const char* pref, char** grantedPref, char** deniedPref);
 

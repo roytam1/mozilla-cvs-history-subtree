@@ -21,132 +21,156 @@
  */
 
 #include "nsScriptNameSpaceManager.h"
-#include "prmem.h"
+#include "nsCOMPtr.h"
+#include "nsIComponentManager.h"
+#include "nsICategoryManager.h"
+#include "nsIServiceManager.h"
+#include "nsISupportsPrimitives.h"
+#include "nsIScriptExternalNameSet.h"
+#include "nsIScriptNameSpaceManager.h"
+#include "nsXPIDLString.h"
 #include "nsReadableUtils.h"
 
-typedef struct {
-  nsIID mIID;
-  nsIID mCID;
-  PRBool mIsConstructor;
-} nsGlobalNameStruct;
 
 nsScriptNameSpaceManager::nsScriptNameSpaceManager()
 {
-  NS_INIT_REFCNT();
-  mGlobalNames = nsnull;
 }
 
-PRIntn 
-nsScriptNameSpaceManager::RemoveNames(PLHashEntry *he, PRIntn i, void *arg)
+static PRBool PR_CALLBACK
+NameStructCleanupCallback(nsHashKey *aKey, void *aData, void* closure)
 {
-  char *name = (char*)he->key;
-  nsGlobalNameStruct* gn = (nsGlobalNameStruct*)he->value;
+  nsGlobalNameStruct *s = (nsGlobalNameStruct *)aData;
 
-  nsCRT::free(name);
-  PR_DELETE(gn);
+  delete s;
 
-  return HT_ENUMERATE_REMOVE;
+  return PR_TRUE;
 }
 
 nsScriptNameSpaceManager::~nsScriptNameSpaceManager()
-{  
-  if (nsnull != mGlobalNames) {
-    PL_HashTableEnumerateEntries(mGlobalNames, RemoveNames, nsnull);
-    PL_HashTableDestroy(mGlobalNames);
-    mGlobalNames = nsnull;
-  }
+{
+  mGlobalNames.Reset(NameStructCleanupCallback);
 }
 
-NS_IMPL_ISUPPORTS1(nsScriptNameSpaceManager, nsIScriptNameSpaceManager);
-
-NS_IMETHODIMP 
-nsScriptNameSpaceManager::RegisterGlobalName(const nsAReadableString& aName, 
-                                             const nsIID& aIID,
-                                             const nsIID& aCID,
-                                             PRBool aIsConstructor)
+nsresult
+nsScriptNameSpaceManager::FillHash(nsICategoryManager *aCategoryManager,
+                                   const char *aCategory,
+                                   nsGlobalNameStruct::nametype aType)
 {
-  if (nsnull == mGlobalNames) {
-    mGlobalNames = PL_NewHashTable(4, PL_HashString, PL_CompareStrings,
-                                   PL_CompareValues, nsnull, nsnull);
-  }
-  
-  nsGlobalNameStruct* gn = (nsGlobalNameStruct*)PR_NEW(nsGlobalNameStruct);
-  if (nsnull == gn) {
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
-  gn->mIID = aIID;
-  gn->mCID = aCID;
-  gn->mIsConstructor = aIsConstructor;
+  nsCOMPtr<nsISimpleEnumerator> e;
+  nsresult rv = aCategoryManager->EnumerateCategory(aCategory,
+                                                    getter_AddRefs(e));
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  char* name = ToNewCString(aName);
-  PL_HashTableAdd(mGlobalNames, name, (void *)gn);
+  nsXPIDLCString categoryEntry;
+  nsXPIDLCString contractId;
+  nsCOMPtr<nsISupports> entry;
+
+  while (NS_SUCCEEDED(e->GetNext(getter_AddRefs(entry)))) {
+    nsCOMPtr<nsISupportsString> category(do_QueryInterface(entry));
+
+    if (!category) {
+      NS_WARNING("Category entry not an nsISupportsString!");
+
+      continue;
+    }
+
+    rv = category->GetData(getter_Copies(categoryEntry));
+
+    aCategoryManager->GetCategoryEntry(aCategory, categoryEntry,
+                                       getter_Copies(contractId));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsCID cid;
+
+    rv = nsComponentManager::ContractIDToClassID(contractId, &cid);
+
+    if (NS_FAILED(rv)) {
+      NS_WARNING("Bad contract id registed with the script namespace manager");
+
+      continue;
+    }
+
+    nsGlobalNameStruct *s = new nsGlobalNameStruct;
+    NS_ENSURE_TRUE(s, NS_ERROR_OUT_OF_MEMORY);
+
+    s->mType = aType;
+    s->mCID = cid;
+
+    nsAutoString name;
+    CopyASCIItoUCS2(nsLiteralCString(categoryEntry), name);
+
+    nsStringKey key(name);
+
+    mGlobalNames.Put(&key, s);
+  }
+
+  return rv;
+}
+
+nsresult
+nsScriptNameSpaceManager::Init()
+{
+  nsresult rv = NS_OK;
+
+  nsCOMPtr<nsICategoryManager> cm =
+    do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = FillHash(cm, JAVASCRIPT_GLOBAL_CONSTRUCTOR_CATEGORY,
+                nsGlobalNameStruct::eTypeConstructor);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = FillHash(cm, JAVASCRIPT_GLOBAL_PROPERTY_CATEGORY,
+                nsGlobalNameStruct::eTypeProperty);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = FillHash(cm, JAVASCRIPT_GLOBAL_STATIC_NAMESET_CATEGORY,
+                nsGlobalNameStruct::eTypeStaticNameSet);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = FillHash(cm, JAVASCRIPT_GLOBAL_DYNAMIC_NAMESET_CATEGORY,
+                nsGlobalNameStruct::eTypeDynamicNameSet);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   return NS_OK;
 }
 
-NS_IMETHODIMP 
-nsScriptNameSpaceManager::UnregisterGlobalName(const nsAReadableString& aName)
+static PRBool PR_CALLBACK
+NameSetInitCallback(nsHashKey *aKey, void *aData, void* closure)
 {
-  if (nsnull != mGlobalNames) {
-    char* name = ToNewCString(aName);
-    PLHashNumber hn = PL_HashString(name);
-    PLHashEntry** hep = PL_HashTableRawLookup(mGlobalNames,
-                                              hn,
-                                              name);
-    PLHashEntry* entry = *hep;
+  nsGlobalNameStruct *s = (nsGlobalNameStruct *)aData;
 
-    if (nsnull != entry) {  
-      nsGlobalNameStruct* gn = (nsGlobalNameStruct*)entry->value;
-      char* hname = (char*)entry->key;
-
-      delete gn;
-      PL_HashTableRemove(mGlobalNames, name);
-      nsCRT::free(hname);
-    }
-
-    nsCRT::free(name);
+  if (s->mType != nsGlobalNameStruct::eTypeStaticNameSet) {
+    return PR_TRUE;
   }
+
+  nsresult rv = NS_OK;
+  nsCOMPtr<nsIScriptExternalNameSet> ns(do_CreateInstance(s->mCID, &rv));
+  NS_ENSURE_SUCCESS(rv, PR_TRUE);
+
+  rv = ns->InitializeClasses((nsIScriptContext *)closure);
+  NS_WARN_IF_FALSE(NS_SUCCEEDED(rv),
+                   "Initing external script classes failed!");
+
+  return PR_TRUE;
+}
+
+nsresult
+nsScriptNameSpaceManager::InitForContext(nsIScriptContext *aContext)
+{
+  mGlobalNames.Enumerate(NameSetInitCallback, aContext);
 
   return NS_OK;
 }
 
-NS_IMETHODIMP 
-nsScriptNameSpaceManager::LookupName(const nsAReadableString& aName, 
-                                     PRBool& aIsConstructor,
-                                     nsIID& aIID,
-                                     nsIID& aCID)
+nsresult
+nsScriptNameSpaceManager::LookupName(const nsAReadableString& aName,
+                                     const nsGlobalNameStruct **aNameStruct)
 {
-  if (nsnull != mGlobalNames) {
-    char* name = ToNewCString(aName);
-    nsGlobalNameStruct* gn = (nsGlobalNameStruct*)PL_HashTableLookup(mGlobalNames, name);
-    nsCRT::free(name);
+  nsStringKey key(aName);
 
-    if (nsnull != gn) {
-      aIID = gn->mIID;
-      aCID = gn->mCID;
-      aIsConstructor = gn->mIsConstructor;
-      return NS_OK;
-    }
-  }
+  *aNameStruct = (const nsGlobalNameStruct *)mGlobalNames.Get(&key);
 
-  // XXX Shouldn't return error code to indicate lookup failure
-  return NS_ERROR_INVALID_ARG;
-}
-
-extern "C" NS_DOM nsresult 
-NS_NewScriptNameSpaceManager(nsIScriptNameSpaceManager** aInstancePtr)
-{
-  if (nsnull == aInstancePtr) {  
-    return NS_ERROR_NULL_POINTER;  
-  }  
-
-  *aInstancePtr = NULL;  
-  
-  nsScriptNameSpaceManager *manager = new nsScriptNameSpaceManager();
-  if (nsnull == manager) {
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
-
-  return manager->QueryInterface(NS_GET_IID(nsIScriptNameSpaceManager), (void **)aInstancePtr);
+  return NS_OK;
 }
 

@@ -468,7 +468,7 @@ nsPrefMigration::ShowSpaceDialog(PRInt32 *choice)
     if (NS_FAILED(rv)) return rv;
 
     // Now convert the DocShell to an nsIDOMWindowInternal
-    nsCOMPtr<nsIDOMWindowInternal> PMDOMWindow(do_GetInterface(docShell));
+    nsCOMPtr<nsIDOMWindowInternalEx> PMDOMWindow(do_GetInterface(docShell));
     if (!PMDOMWindow) return NS_ERROR_FAILURE;
 
     // Get the script global object for the window
@@ -498,40 +498,26 @@ nsPrefMigration::ShowSpaceDialog(PRInt32 *choice)
 
     
     if ( NS_SUCCEEDED( rv ) ) 
-        ioParamBlock->SetInt(0,3); //set the Retry, CreateNew and Cancel buttons
+      ioParamBlock->SetInt(0,3); //set the Retry, CreateNew and Cancel buttons
 
- 
-    void* stackPtr;
-    jsval *argv = JS_PushArguments( jsContext,
-                                    &stackPtr,
-                                    "sss%ip",
-                                    PREF_MIGRATION_NO_SPACE_URL,
-                                    "_blank",
-                                    "chrome,modal",
-                                    (const nsIID*)(&NS_GET_IID(nsIDialogParamBlock)),
-                                    (nsISupports*)ioParamBlock);
+    nsCOMPtr<nsISupportsArray> array;
 
-        if (argv)
-        {
-          nsCOMPtr<nsIDOMWindowInternal> newWindow;
-          rv = PMDOMWindow->OpenDialog(jsContext,
-                                       argv,
-                                       4,
-                                       getter_AddRefs(newWindow));
-          if (NS_SUCCEEDED(rv))
-          {
-            JS_PopArguments( jsContext, stackPtr);
+    rv = NS_NewISupportsArray(getter_AddRefs(array));
+    NS_ENSURE_SUCCESS(rv, rv);
 
-            //Now get which button was pressed from the ParamBlock
-            ioParamBlock->GetInt( 0, choice );
-          }
-          else
-            return NS_ERROR_FAILURE;
-        }
-        else
-          return NS_ERROR_FAILURE;      
+    array->AppendElement(ioParamBlock);
+        
+    nsCOMPtr<nsIDOMWindow> newWindow;
+    rv = PMDOMWindow->OpenDialog(NS_ConvertASCIItoUCS2(PREF_MIGRATION_NO_SPACE_URL),
+                                 NS_LITERAL_STRING("_blank"),
+                                 NS_LITERAL_STRING("chrome,modal"),
+                                 array, getter_AddRefs(newWindow));
+    if (NS_SUCCEEDED(rv)) {
+      //Now get which button was pressed from the ParamBlock
+      ioParamBlock->GetInt( 0, choice );
+    }
   
-   return NS_OK;
+    return rv;
 }
 
 

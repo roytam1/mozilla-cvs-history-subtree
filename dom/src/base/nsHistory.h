@@ -32,15 +32,13 @@
 class nsIDocShell;
 
 // Script "History" object
-class HistoryImpl : public nsIScriptObjectOwner, public nsIDOMHistory {
+class HistoryImpl : public nsIDOMHistory
+{
 public:
   HistoryImpl(nsIDocShell* aDocShell);
   virtual ~HistoryImpl();
 
   NS_DECL_ISUPPORTS
-
-  NS_IMETHOD GetScriptObject(nsIScriptContext *aContext, void** aScriptObject);
-  NS_IMETHOD SetScriptObject(void *aScriptObject);
 
   NS_IMETHOD_(void)       SetDocShell(nsIDocShell *aDocShell);
 
@@ -50,14 +48,13 @@ public:
   NS_IMETHOD    GetNext(nsAWritableString& aNext);
   NS_IMETHOD    Back();
   NS_IMETHOD    Forward();
-  NS_IMETHOD    Go(JSContext* cx, jsval* argv, PRUint32 argc);
+  NS_IMETHOD    Go();
   NS_IMETHOD    Item(PRUint32 aIndex, nsAWritableString& aReturn);
 
   NS_IMETHOD    GetSessionHistoryFromDocShell(nsIDocShell * aDocShell, nsISHistory ** aReturn);
 
 protected:
   nsIDocShell* mDocShell;
-  void *mScriptObject;
 };
 
 #endif /* nsHistory_h___ */

@@ -35,19 +35,18 @@
 0xdf31c120, 0xded6, 0x11d1, \
 {0xbd, 0x85, 0x00, 0x80, 0x5f, 0x8a, 0xe3, 0xf4} }
 
-class nsIDOMEventListener : public nsISupports {
-
+class nsIDOMEventListener : public nsISupports
+{
 public:
 
-   NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDOMEVENTLISTENER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDOMEVENTLISTENER_IID)
 
  /**
   * Processes all events excepting mouse and key events. 
   * @param anEvent the event to process. @see nsIDOMEvent.h for event types.
   */
 
-  virtual nsresult HandleEvent(nsIDOMEvent* aEvent) = 0;
-
+  NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent) = 0;
 };
 
 #endif // nsIDOMEventListener_h__

@@ -31,15 +31,18 @@
 #include "jsapi.h"
 
 //nsIDOMMouseListener interface
-class nsJSDOMEventListener : public nsIDOMEventListener, public nsIScriptEventListener {
+class nsJSDOMEventListener : public nsIDOMEventListener,
+                             public nsIScriptEventListener
+{
 public:
-  nsJSDOMEventListener(nsIScriptContext* aContext, JSObject *aTarget, JSObject *aHandler);
+  nsJSDOMEventListener(nsIScriptContext* aContext, JSObject *aTarget,
+                       JSObject *aHandler);
   virtual ~nsJSDOMEventListener();
 
   NS_DECL_ISUPPORTS
 
   //nsIDOMEventListener interface
-  virtual nsresult HandleEvent(nsIDOMEvent* aEvent);
+  NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);
 
   //nsIScriptEventListener interface
   NS_IMETHOD CheckIfEqual(nsIScriptEventListener *aListener, PRBool* aResult);

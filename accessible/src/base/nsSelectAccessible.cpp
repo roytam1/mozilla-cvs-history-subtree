@@ -60,7 +60,7 @@ public:
   NS_IMETHOD Action(nsIDOMEvent* aEvent) { return NS_OK; }
   NS_IMETHOD Broadcast(nsIDOMEvent* aEvent) { return NS_OK; }
   NS_IMETHOD CommandUpdate(nsIDOMEvent* aEvent) { return NS_OK; }
-  nsresult HandleEvent(nsIDOMEvent* aEvent) { return NS_OK; }
+  NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent) { return NS_OK; }
 
   nsCOMPtr<nsIAtom> mPopupAtom;
   nsCOMPtr<nsIContent> mSelectContent;
@@ -88,7 +88,7 @@ public:
   NS_IMETHOD GetAccName(PRUnichar **_retval);
   NS_IMETHOD GetAccRole(PRUnichar **_retval);
   NS_IMETHOD GetAccState(PRUnichar **_retval);
-  
+
   // popup listener
   NS_IMETHOD Create(nsIDOMEvent* aEvent);
   NS_IMETHOD Close(nsIDOMEvent* aEvent);
@@ -96,7 +96,7 @@ public:
   NS_IMETHOD Action(nsIDOMEvent* aEvent) { return NS_OK; }
   NS_IMETHOD Broadcast(nsIDOMEvent* aEvent) { return NS_OK; }
   NS_IMETHOD CommandUpdate(nsIDOMEvent* aEvent) { return NS_OK; }
-  nsresult HandleEvent(nsIDOMEvent* aEvent) { return NS_OK; }
+  NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent) { return NS_OK; }
 
   // helpers
   virtual nsIFrame* GetBoundsFrame();

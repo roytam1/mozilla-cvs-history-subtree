@@ -36,6 +36,7 @@
 #include "nsIDOMNSDocument.h"
 #include "nsIDOMDocumentView.h"
 #include "nsIDOMDocumentXBL.h"
+#include "nsIDOMDocumentRange.h"
 #include "nsISelection.h"
 #include "nsIDOMXULCommandDispatcher.h"
 #include "nsIDOMXULDocument.h"
@@ -44,13 +45,11 @@
 #include "nsIHTMLCSSStyleSheet.h"
 #include "nsIHTMLContentContainer.h"
 #include "nsIHTMLStyleSheet.h"
-#include "nsIJSScriptObject.h"
 #include "nsILineBreakerFactory.h"
 #include "nsINameSpaceManager.h"
 #include "nsIParser.h"
 #include "nsIPrincipal.h"
 #include "nsIRDFDataSource.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsISupportsArray.h"
@@ -95,9 +94,10 @@ class nsXULDocument : public nsIDocument,
                       public nsIDOMDocumentEvent,
                       public nsIDOMDocumentView,
                       public nsIDOMDocumentXBL,
+                      public nsIDOMDocumentRange,
                       public nsIDOMNSDocument,
+                      public nsIDOM3Node,
                       public nsIDOMEventCapturer,
-                      public nsIJSScriptObject,
                       public nsIHTMLContentContainer,
                       public nsIStreamLoaderObserver,
                       public nsSupportsWeakReference
@@ -326,44 +326,31 @@ public:
     NS_IMETHOD DispatchEvent(nsIDOMEvent* aEvent);
 
     // nsIDOMDocument interface
-    NS_DECL_IDOMDOCUMENT
+    NS_DECL_NSIDOMDOCUMENT
 
     // nsIDOMDocumentEvent interface
-    NS_DECL_IDOMDOCUMENTEVENT
+    NS_DECL_NSIDOMDOCUMENTEVENT
 
     // nsIDOMDocumentView interface
-    NS_DECL_IDOMDOCUMENTVIEW
+    NS_DECL_NSIDOMDOCUMENTVIEW
 
     // nsIDOMDocumentXBL interface
-    NS_DECL_IDOMDOCUMENTXBL
+    NS_DECL_NSIDOMDOCUMENTXBL
+
+    // nsIDOMDocumentRange interface
+    NS_DECL_NSIDOMDOCUMENTRANGE
 
     // nsIDOMNSDocument interface
-    NS_DECL_IDOMNSDOCUMENT
+    NS_DECL_NSIDOMNSDOCUMENT
 
     // nsIDOMXULDocument interface
-    NS_DECL_IDOMXULDOCUMENT
+    NS_DECL_NSIDOMXULDOCUMENT
 
     // nsIDOMNode interface
-    NS_DECL_IDOMNODE
+    NS_DECL_NSIDOMNODE
 
-    // nsIJSScriptObject interface
-    virtual PRBool AddProperty(JSContext *aContext, JSObject *aObj, 
-                            jsval aID, jsval *aVp);
-    virtual PRBool DeleteProperty(JSContext *aContext, JSObject *aObj, 
-                            jsval aID, jsval *aVp);
-    virtual PRBool GetProperty(JSContext *aContext, JSObject *aObj, 
-                            jsval aID, jsval *aVp);
-    virtual PRBool SetProperty(JSContext *aContext, JSObject *aObj, 
-                            jsval aID, jsval *aVp);
-    virtual PRBool EnumerateProperty(JSContext *aContext, JSObject *aObj);
-    virtual PRBool Resolve(JSContext *aContext, JSObject *aObj, jsval aID,
-                           PRBool *aDidDefineProperty);
-    virtual PRBool Convert(JSContext *aContext, JSObject *aObj, jsval aID);
-    virtual void   Finalize(JSContext *aContext, JSObject *aObj);
-
-    // nsIScriptObjectOwner interface
-    NS_IMETHOD GetScriptObject(nsIScriptContext *aContext, void** aScriptObject);
-    NS_IMETHOD SetScriptObject(void *aScriptObject);
+    // nsIDOM3Node interface
+    NS_DECL_NSIDOM3NODE
 
     // nsIHTMLContentContainer interface
     NS_IMETHOD GetAttributeStyleSheet(nsIHTMLStyleSheet** aResult);
@@ -475,14 +462,13 @@ protected:
 
     nsCOMPtr<nsIArena>         mArena;
     nsVoidArray                mObservers;
-    nsAutoString               mDocumentTitle;
+    nsString                   mDocumentTitle;
     nsCOMPtr<nsIURI>           mDocumentURL;        // [OWNER] ??? compare with loader
     nsWeakPtr                  mDocumentLoadGroup;  // [WEAK] leads to loader
     nsCOMPtr<nsIPrincipal>     mDocumentPrincipal;  // [OWNER]
     nsCOMPtr<nsIContent>       mRootContent;        // [OWNER]
     nsIDocument*               mParentDocument;     // [WEAK]
     nsIScriptGlobalObject*     mScriptGlobalObject; // [WEAK]
-    void*                      mScriptObject;       // ????
     nsXULDocument*             mNextSrcLoadWaiter;  // [OWNER] but not COMPtr
     nsString                   mCharSetID;
     nsVoidArray                mCharSetObservers;

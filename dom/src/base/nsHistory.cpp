@@ -37,8 +37,7 @@
 //
 //  History class implementation 
 //
-HistoryImpl::HistoryImpl(nsIDocShell* aDocShell) : mDocShell(aDocShell),
-   mScriptObject(nsnull)
+HistoryImpl::HistoryImpl(nsIDocShell* aDocShell) : mDocShell(aDocShell)
 {
   NS_INIT_REFCNT();
 }
@@ -51,33 +50,9 @@ NS_IMPL_ADDREF(HistoryImpl)
 NS_IMPL_RELEASE(HistoryImpl)
 
 NS_INTERFACE_MAP_BEGIN(HistoryImpl)
-   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIScriptObjectOwner)
-   NS_INTERFACE_MAP_ENTRY(nsIScriptObjectOwner)
+   NS_INTERFACE_MAP_ENTRY(nsISupports)
    NS_INTERFACE_MAP_ENTRY(nsIDOMHistory)
 NS_INTERFACE_MAP_END
-
-NS_IMETHODIMP
-HistoryImpl::SetScriptObject(void *aScriptObject)
-{
-  mScriptObject = aScriptObject;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-HistoryImpl::GetScriptObject(nsIScriptContext *aContext, void** aScriptObject)
-{
-  NS_PRECONDITION(nsnull != aScriptObject, "null arg");
-  nsresult res = NS_OK;
-  if (nsnull == mScriptObject) {
-    nsIScriptGlobalObject *global = aContext->GetGlobalObject();
-    res = NS_NewScriptHistory(aContext, NS_STATIC_CAST(nsIDOMHistory *, this),
-                              global, &mScriptObject);
-    NS_IF_RELEASE(global);
-  }
-  
-  *aScriptObject = mScriptObject;
-  return res;
-}
 
 NS_IMETHODIMP_(void)       
 HistoryImpl::SetDocShell(nsIDocShell *aDocShell)
@@ -217,9 +192,10 @@ HistoryImpl::Forward()
 }
 
 NS_IMETHODIMP    
-HistoryImpl::Go(JSContext* cx, jsval* argv, PRUint32 argc)
+HistoryImpl::Go()
 {
   nsresult result = NS_OK;
+#if 0
   nsCOMPtr<nsISHistory>  sHistory;
      
   GetSessionHistoryFromDocShell(mDocShell, getter_AddRefs(sHistory));
@@ -267,6 +243,7 @@ HistoryImpl::Go(JSContext* cx, jsval* argv, PRUint32 argc)
       }
     }
   }
+#endif
   return result;
 }
 

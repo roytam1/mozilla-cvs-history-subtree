@@ -1954,7 +1954,7 @@ nsProfile::ShowProfileWizard(void)
 {
     nsresult rv = NS_OK;
     PRBool hasParentWindow = PR_FALSE;
-    nsCOMPtr<nsIDOMWindowInternal> PMDOMWindow;
+    nsCOMPtr<nsIDOMWindowInternalEx> PMDOMWindow;
 
     // Get the window mediator
     NS_WITH_SERVICE(nsIWindowMediator, windowMediator, kWindowMediatorCID, &rv);
@@ -2016,34 +2016,21 @@ nsProfile::ShowProfileWizard(void)
         if ( NS_SUCCEEDED( rv ) ) 
             ioParamBlock->SetInt(0,4); // standard wizard buttons
 
- 
-        void* stackPtr;
-        jsval *argv = JS_PushArguments( jsContext,
-                                    &stackPtr,
-                                    "sss%ip",
-                                    PROFILE_WIZARD_URL,
-                                    "_blank",
-                                    "chrome,modal",
-                                    (const nsIID*)(&NS_GET_IID(nsIDialogParamBlock)),
-                                    (nsISupports*)ioParamBlock);
+        nsCOMPtr<nsISupportsArray> array;
 
-        if (argv)
-        {
-            nsCOMPtr<nsIDOMWindowInternal> newWindow;
-            rv = PMDOMWindow->OpenDialog(jsContext,
-                                         argv,
-                                         4,
-                                         getter_AddRefs(newWindow));
-            if (NS_SUCCEEDED(rv))
-            {
-                JS_PopArguments( jsContext, stackPtr);
-            }
-            else
-                return NS_ERROR_FAILURE;
+        rv = NS_NewISupportsArray(getter_AddRefs(array));
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        array->AppendElement(ioParamBlock);
+
+        nsCOMPtr<nsIDOMWindow> newWindow;
+        rv = PMDOMWindow->OpenDialog(NS_ConvertUTF8toUCS2(PROFILE_WIZARD_URL),
+                                     NS_LITERAL_STRING("_blank"),
+                                     NS_LITERAL_STRING("chrome,modal"),
+                                     array, getter_AddRefs(newWindow));
+        if (NS_FAILED(rv)) {
+            return rv;
         }
-        else
-            return NS_ERROR_FAILURE;     
-
     }
     else
     {

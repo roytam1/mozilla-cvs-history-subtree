@@ -31,8 +31,8 @@ DIRS = wallet \
 !if defined(MOZ_XSL)
 	transformiix \
 !endif 
-	xml-rpc \
-	xmlextras \
+#	xml-rpc \
+#	xmlextras \
 	$(NULL)
 
 

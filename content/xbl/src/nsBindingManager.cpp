@@ -64,6 +64,7 @@
 #include "nsIXBLPrototypeBinding.h"
 #include "nsIWeakReference.h"
 
+#include "jsapi.h"
 #include "nsIXPConnect.h"
 
 // Static IIDs/CIDs. Try to minimize these.
@@ -182,7 +183,7 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNodeList interface
-  NS_DECL_IDOMNODELIST
+  NS_DECL_NSIDOMNODELIST
 
   // nsIAnonymousContentList
   NS_IMETHOD GetInsertionPointCount(PRUint32* aCount);

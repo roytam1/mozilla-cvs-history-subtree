@@ -47,19 +47,13 @@ class nsIScriptContext;
  */
 class nsIScriptExternalNameSet : public nsISupports {
 public:
-
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCRIPTEXTERNALNAMESET_IID);
+
   /**
    * Called to tell the name set to do any class initialization
    * it needs to
    */
   NS_IMETHOD InitializeClasses(nsIScriptContext* aScriptContext) = 0;
-
-  /**
-   * Called to tell the name set to add its names to the
-   * namespace manager of the context.
-   */
-  NS_IMETHOD AddNameSet(nsIScriptContext* aScriptContext) = 0;
 };
 
 #endif /* nsIScriptExternalNameSet_h__ */

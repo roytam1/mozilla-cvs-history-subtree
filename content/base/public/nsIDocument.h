@@ -61,6 +61,7 @@ class nsIDOMDocumentType;
 class nsIBindingManager;
 class nsIObserver;
 class nsISupportsArray;
+class nsString;
 
 // IID for the nsIDocument interface
 #define NS_IDOCUMENT_IID      \
@@ -285,12 +286,6 @@ public:
                             nsIStyleRule* aStyleRule) = 0;
   NS_IMETHOD StyleRuleRemoved(nsIStyleSheet* aStyleSheet,
                               nsIStyleRule* aStyleRule) = 0;
-
-  /**
-    * Finds text in content
-   */
-  NS_IMETHOD FindNext(const nsAReadableString &aSearchStr, PRBool aMatchCase, PRBool aSearchDown, PRBool &aIsFound) = 0;
-
 
   NS_IMETHOD HandleDOMEvent(nsIPresContext* aPresContext, 
                             nsEvent* aEvent, 

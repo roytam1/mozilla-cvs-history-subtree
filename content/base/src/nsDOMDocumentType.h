@@ -24,7 +24,6 @@
 #define nsDOMDocumentType_h___
 
 #include "nsIDOMDocumentType.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIContent.h"
 #include "nsGenericDOMDataNode.h"
 #include "nsString.h"
@@ -33,7 +32,6 @@
 class nsIDOMNamedNodeMap;
 
 class nsDOMDocumentType : public nsIDOMDocumentType,
-                          public nsIScriptObjectOwner,
                           public nsIContent
 {
 public:
@@ -50,13 +48,10 @@ public:
   NS_DECL_ISUPPORTS
 
   // nsIDOMNode
-  NS_IMPL_IDOMNODE_USING_GENERIC_DOM_DATA(mInner)
+  NS_IMPL_NSIDOMNODE_USING_GENERIC_DOM_DATA(mInner)
 
   // nsIDOMDocumentType
-  NS_DECL_IDOMDOCUMENTTYPE
-
-  // nsIScriptObjectOwner interface
-  NS_IMPL_ISCRIPTOBJECTOWNER_USING_GENERIC_DOM_DATA(mInner);
+  NS_DECL_NSIDOMDOCUMENTTYPE
 
   // nsIContent
   NS_IMPL_ICONTENT_USING_GENERIC_DOM_DATA(mInner)

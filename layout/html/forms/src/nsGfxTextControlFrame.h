@@ -223,29 +223,29 @@ public:
   /** nsIDOMKeyListener interfaces 
     * @see nsIDOMKeyListener
     */
-  virtual nsresult HandleEvent(nsIDOMEvent* aEvent);
-  virtual nsresult KeyDown(nsIDOMEvent* aKeyEvent);
-  virtual nsresult KeyUp(nsIDOMEvent* aKeyEvent);
-  virtual nsresult KeyPress(nsIDOMEvent* aKeyEvent);
+  NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);
+  NS_IMETHOD KeyDown(nsIDOMEvent* aKeyEvent);
+  NS_IMETHOD KeyUp(nsIDOMEvent* aKeyEvent);
+  NS_IMETHOD KeyPress(nsIDOMEvent* aKeyEvent);
   /* END interfaces from nsIDOMKeyListener*/
 
   /** nsIDOMMouseListener interfaces 
     * @see nsIDOMMouseListener
     */
-  virtual nsresult MouseDown(nsIDOMEvent* aMouseEvent);
-  virtual nsresult MouseUp(nsIDOMEvent* aMouseEvent);
-  virtual nsresult MouseClick(nsIDOMEvent* aMouseEvent);
-  virtual nsresult MouseDblClick(nsIDOMEvent* aMouseEvent);
-  virtual nsresult MouseOver(nsIDOMEvent* aMouseEvent);
-  virtual nsresult MouseOut(nsIDOMEvent* aMouseEvent);
+  NS_IMETHOD MouseDown(nsIDOMEvent* aMouseEvent);
+  NS_IMETHOD MouseUp(nsIDOMEvent* aMouseEvent);
+  NS_IMETHOD MouseClick(nsIDOMEvent* aMouseEvent);
+  NS_IMETHOD MouseDblClick(nsIDOMEvent* aMouseEvent);
+  NS_IMETHOD MouseOver(nsIDOMEvent* aMouseEvent);
+  NS_IMETHOD MouseOut(nsIDOMEvent* aMouseEvent);
   /* END interfaces from nsIDOMMouseListener*/
 
   /** nsIDOMFocusListener interfaces 
     * used to propogate focus, blur, and change notifications
     * @see nsIDOMFocusListener
     */
-  virtual nsresult Focus(nsIDOMEvent* aEvent);
-  virtual nsresult Blur (nsIDOMEvent* aEvent);
+  NS_IMETHOD Focus(nsIDOMEvent* aEvent);
+  NS_IMETHOD Blur (nsIDOMEvent* aEvent);
   /* END interfaces from nsIDOMFocusListener*/
 
   /** nsISelectionListener interfaces 
@@ -324,9 +324,9 @@ public:
   NS_DECL_ISUPPORTS
 
   /* nsIDOMFocusListener interfaces */
-  virtual nsresult HandleEvent(nsIDOMEvent* aEvent);
-  virtual nsresult Focus(nsIDOMEvent* aEvent);
-  virtual nsresult Blur (nsIDOMEvent* aEvent);
+  NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);
+  NS_IMETHOD Focus(nsIDOMEvent* aEvent);
+  NS_IMETHOD Blur (nsIDOMEvent* aEvent);
   /* END interfaces from nsIDOMFocusListener*/
 
   NS_IMETHOD SetFrame(nsGfxTextControlFrame *aFrame);
@@ -357,12 +357,12 @@ public:
   /** nsIDOMDragListener interfaces 
     * @see nsIDOMDragListener
     */
-  virtual nsresult HandleEvent(nsIDOMEvent* aEvent);
-  virtual nsresult DragEnter(nsIDOMEvent* aDragEvent);
-  virtual nsresult DragOver(nsIDOMEvent* aDragEvent);
-  virtual nsresult DragExit(nsIDOMEvent* aDragEvent);
-  virtual nsresult DragDrop(nsIDOMEvent* aDragEvent);
-  virtual nsresult DragGesture(nsIDOMEvent* aDragEvent);
+  NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);
+  NS_IMETHOD DragEnter(nsIDOMEvent* aDragEvent);
+  NS_IMETHOD DragOver(nsIDOMEvent* aDragEvent);
+  NS_IMETHOD DragExit(nsIDOMEvent* aDragEvent);
+  NS_IMETHOD DragDrop(nsIDOMEvent* aDragEvent);
+  NS_IMETHOD DragGesture(nsIDOMEvent* aDragEvent);
   /* END interfaces from nsIDOMDragListener*/
 
   NS_IMETHOD SetFrame(nsGfxTextControlFrame *aFrame);

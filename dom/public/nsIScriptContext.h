@@ -29,7 +29,6 @@
 
 class nsIScriptGlobalObject;
 class nsIScriptSecurityManager;
-class nsIScriptNameSpaceManager;
 class nsIScriptContextOwner;
 class nsIPrincipal;
 
@@ -285,12 +284,6 @@ public:
   NS_IMETHOD GC() = 0;
 
   /**
-   * Get the name space manager for this context.
-   * @return NS_OK if the method is successful
-   */
-  NS_IMETHOD GetNameSpaceManager(nsIScriptNameSpaceManager** aInstancePtr) = 0;
-
-  /**
    * Get the security manager for this context.
    * @return NS_OK if the method is successful
    */
@@ -351,12 +344,6 @@ public:
   NS_IMETHOD GetScriptsEnabled(PRBool *aEnabled) = 0;
   NS_IMETHOD SetScriptsEnabled(PRBool aEnabled) = 0;
 };
-
-/**
- * Return a new Context
- *
- */
-extern "C" NS_DOM nsresult NS_CreateScriptContext(nsIScriptGlobalObject *aGlobal, nsIScriptContext **aContext);
 
 #endif // nsIScriptContext_h__
 

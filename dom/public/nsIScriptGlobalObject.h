@@ -35,6 +35,8 @@ class nsIDocShell;
 class nsIDOMWindowInternal;
 class nsIScriptGlobalObjectOwner;
 
+struct JSObject;
+
 #define NS_ISCRIPTGLOBALOBJECT_IID \
 { 0x2b16fc80, 0xfa41, 0x11d1,  \
 { 0x9b, 0xc3, 0x00, 0x60, 0x08, 0x8c, 0xa6, 0xb3} }
@@ -71,14 +73,13 @@ public:
    */
   NS_IMETHOD GetGlobalObjectOwner(nsIScriptGlobalObjectOwner** aOwner) = 0;
 
-
   NS_IMETHOD HandleDOMEvent(nsIPresContext* aPresContext, 
                             nsEvent* aEvent, 
                             nsIDOMEvent** aDOMEvent,
                             PRUint32 aFlags,
                             nsEventStatus* aEventStatus)=0;
-};
 
-extern "C" NS_DOM nsresult NS_NewScriptGlobalObject(nsIScriptGlobalObject **aGlobal);
+  NS_IMETHOD_(JSObject *) GetGlobalJSObject() = 0;
+};
 
 #endif

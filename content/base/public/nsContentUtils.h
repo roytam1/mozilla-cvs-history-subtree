@@ -32,7 +32,7 @@
  * file under either the NPL or the GPL.
  */
 
-/* A namespace class for static layout utilities. */
+/* A namespace class for static content utilities. */
 
 #ifndef nsContentUtils_h___
 #define nsContentUtils_h___
@@ -43,6 +43,7 @@
 
 class nsIScriptContext;
 class nsIScriptGlobalObject;
+class nsVoidArray;
 
 class nsContentUtils
 {
@@ -70,6 +71,13 @@ public:
                                                  PRUint32 aLength);
 
   static PRUint32 CopyNewlineNormalizedUnicodeTo(nsReadingIterator<PRUnichar>& aSrcStart, const nsReadingIterator<PRUnichar>& aSrcEnd, nsAWritableString& aDest);
+
+  static nsresult ReleaseOnShutdown(nsISupports **aPointer);
+
+  static void Shutdown();
+
+private:
+  static nsVoidArray *sKungFuDeathGripArray;
 };
 
 #endif /* nsContentUtils_h___ */

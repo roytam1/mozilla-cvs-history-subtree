@@ -42,7 +42,6 @@
 #include "nsIEventStateManager.h"
 #include "nsPIDOMWindow.h"
 #include "nsIPrivateDOMEvent.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIScriptEventListener.h"
 #include "nsIJSEventListener.h"
 #include "nsDOMEventsIIDs.h"
@@ -60,6 +59,13 @@
 #include "nsIDocument.h"
 #include "nsIPresShell.h"
 #include "nsMutationEvent.h"
+#include "nsIXPConnect.h"
+#include "nsIDOMScriptObjectFactory.h"
+#include "nsDOMCID.h"
+#include "nsIScriptObjectOwner.h" // for nsIScriptEventHandlerOwner
+
+static NS_DEFINE_CID(kDOMScriptObjectFactoryCID,
+                     NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
 
 
 nsEventListenerManager::nsEventListenerManager() 
@@ -227,7 +233,9 @@ void nsEventListenerManager::ReleaseListeners(nsVoidArray** aListeners, PRBool a
   }
 }
 
-nsresult nsEventListenerManager::GetEventListeners(nsVoidArray **aListeners, const nsIID& aIID)
+NS_IMETHODIMP
+nsEventListenerManager::GetEventListeners(nsVoidArray **aListeners,
+                                          const nsIID& aIID)
 {
   nsVoidArray** mListeners = GetListenersByIID(aIID);
 
@@ -240,10 +248,11 @@ nsresult nsEventListenerManager::GetEventListeners(nsVoidArray **aListeners, con
 * Sets events listeners of all types. 
 * @param an event listener
 */
-nsresult nsEventListenerManager::AddEventListener(nsIDOMEventListener *aListener, 
-                                                  const nsIID& aIID, 
-                                                  PRInt32 aFlags,
-                                                  PRInt32 aSubType)
+nsresult
+nsEventListenerManager::AddEventListener(nsIDOMEventListener *aListener, 
+                                         const nsIID& aIID, 
+                                         PRInt32 aFlags,
+                                         PRInt32 aSubType)
 {
   nsVoidArray** listeners = GetListenersByIID(aIID);
 
@@ -331,10 +340,11 @@ nsresult nsEventListenerManager::AddEventListener(nsIDOMEventListener *aListener
   return NS_OK;
 }
 
-nsresult nsEventListenerManager::RemoveEventListener(nsIDOMEventListener *aListener, 
-                                                     const nsIID& aIID, 
-                                                     PRInt32 aFlags,
-                                                     PRInt32 aSubType)
+nsresult
+nsEventListenerManager::RemoveEventListener(nsIDOMEventListener *aListener, 
+                                            const nsIID& aIID, 
+                                            PRInt32 aFlags,
+                                            PRInt32 aSubType)
 {
   nsVoidArray** listeners = GetListenersByIID(aIID);
 
@@ -400,8 +410,10 @@ nsresult nsEventListenerManager::AddEventListenerByIID(nsIDOMEventListener *aLis
   return NS_OK;
 }
 
-nsresult nsEventListenerManager::RemoveEventListenerByIID(nsIDOMEventListener *aListener, 
-                                                          const nsIID& aIID, PRInt32 aFlags)
+NS_IMETHODIMP
+nsEventListenerManager::RemoveEventListenerByIID(nsIDOMEventListener *aListener, 
+                                                 const nsIID& aIID,
+                                                 PRInt32 aFlags)
 {
   RemoveEventListener(aListener, aIID, aFlags, NS_EVENT_BITS_NONE);
   return NS_OK;
@@ -603,8 +615,10 @@ nsresult nsEventListenerManager::GetIdentifiersForType(nsIAtom* aType, nsIID& aI
   return NS_OK;
 }
 
-nsresult nsEventListenerManager::AddEventListenerByType(nsIDOMEventListener *aListener, 
-                                                        const nsAReadableString& aType, PRInt32 aFlags)
+NS_IMETHODIMP
+nsEventListenerManager::AddEventListenerByType(nsIDOMEventListener *aListener, 
+                                               const nsAReadableString& aType,
+                                               PRInt32 aFlags)
 {
   PRInt32 subType;
   nsIID iid;
@@ -623,8 +637,10 @@ nsresult nsEventListenerManager::AddEventListenerByType(nsIDOMEventListener *aLi
   return NS_OK;
 }
 
-nsresult nsEventListenerManager::RemoveEventListenerByType(nsIDOMEventListener *aListener, 
-                                                          const nsAReadableString& aType, PRInt32 aFlags)
+NS_IMETHODIMP
+nsEventListenerManager::RemoveEventListenerByType(nsIDOMEventListener *aListener, 
+                                                  const nsAReadableString& aType,
+                                                  PRInt32 aFlags)
 {
   PRInt32 subType;
   nsIID iid;
@@ -666,33 +682,44 @@ nsEventListenerManager::FindJSEventListener(REFNSIID aIID)
   return nsnull;
 }
 
-nsresult nsEventListenerManager::SetJSEventListener(nsIScriptContext *aContext, 
-                                                    nsIScriptObjectOwner *aOwner, 
-                                                    nsIAtom* aName,
-                                                    PRBool aIsString)
+nsresult
+nsEventListenerManager::SetJSEventListener(nsIScriptContext *aContext, 
+                                           nsISupports *aObject,
+                                           nsIAtom* aName,
+                                           PRBool aIsString)
 {
-  nsresult result = NS_OK;
+  nsresult rv = NS_OK;
   nsListenerStruct *ls;
   PRInt32 flags;
   nsIID iid;
 
-  NS_ENSURE_SUCCESS(GetIdentifiersForType(aName, iid, &flags), NS_ERROR_FAILURE);
-  
+  rv = GetIdentifiersForType(aName, iid, &flags);
+  NS_ENSURE_SUCCESS(rv, rv);
+
   ls = FindJSEventListener(iid);
 
-  if (nsnull == ls) {
-    //If we didn't find a script listener or no listeners existed create and add a new one.
-    nsIDOMEventListener* scriptListener;
-    result = NS_NewJSEventListener(&scriptListener, aContext, aOwner);
-    if (NS_SUCCEEDED(result)) {
-      AddEventListenerByIID(scriptListener, iid, NS_EVENT_FLAG_BUBBLE | NS_PRIV_EVENT_FLAG_SCRIPT);
-      NS_RELEASE(scriptListener);
+  if (!ls) {
+    //If we didn't find a script listener or no listeners existed
+    //create and add a new one.
+    nsCOMPtr<nsIDOMEventListener> scriptListener;
+
+    nsCOMPtr<nsIDOMScriptObjectFactory> factory =
+      do_GetService(kDOMScriptObjectFactoryCID);
+    NS_ENSURE_TRUE(factory, NS_ERROR_FAILURE);
+
+    rv = factory->NewJSEventListener(aContext, aObject,
+                                     getter_AddRefs(scriptListener));
+
+    if (NS_SUCCEEDED(rv)) {
+      AddEventListenerByIID(scriptListener, iid,
+                            NS_EVENT_FLAG_BUBBLE | NS_PRIV_EVENT_FLAG_SCRIPT);
+
       ls = FindJSEventListener(iid);
     }
   }
 
-  if (NS_SUCCEEDED(result) && ls) {
-    //Set flag to indicate possible need for compilation later
+  if (NS_SUCCEEDED(rv) && ls) {
+    // Set flag to indicate possible need for compilation later
     if (aIsString) {
       ls->mHandlerIsString |= flags;
     }
@@ -704,25 +731,37 @@ nsresult nsEventListenerManager::SetJSEventListener(nsIScriptContext *aContext,
     ls->mSubType |= flags;
   }
 
-  return result;
+  return rv;
 }
 
-nsresult
+NS_IMETHODIMP
 nsEventListenerManager::AddScriptEventListener(nsIScriptContext* aContext,
-                                               nsIScriptObjectOwner *aScriptObjectOwner,
+                                               nsISupports *aObject,
                                                nsIAtom *aName,
                                                const nsAReadableString& aBody,
                                                PRBool aDeferCompilation)
 {
-  JSObject *scriptObject;
   nsresult rv;
-  
-  if (!aDeferCompilation) {
-    rv = aScriptObjectOwner->GetScriptObject(aContext, (void**)&scriptObject);
-    if (NS_FAILED(rv))
-      return rv;
 
-    nsCOMPtr<nsIScriptEventHandlerOwner> handlerOwner = do_QueryInterface(aScriptObjectOwner);
+  if (!aDeferCompilation) {
+    nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID()));
+
+    JSContext *cx = (JSContext *)aContext->GetNativeContext();
+
+    nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+
+    rv = xpc->WrapNative(cx, ::JS_GetGlobalObject(cx), aObject,
+                         NS_GET_IID(nsISupports), getter_AddRefs(holder));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    JSObject *scriptObject = nsnull;
+
+    rv = holder->GetJSObject(&scriptObject);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsCOMPtr<nsIScriptEventHandlerOwner> handlerOwner =
+      do_QueryInterface(aObject);
+
     void *handler = nsnull;
     PRBool done = PR_FALSE;
 
@@ -750,45 +789,61 @@ nsEventListenerManager::AddScriptEventListener(nsIScriptContext* aContext,
       if (NS_FAILED(rv)) return rv;
     }
   }
-  return SetJSEventListener(aContext, aScriptObjectOwner, aName, aDeferCompilation);
+
+  return SetJSEventListener(aContext, aObject, aName, aDeferCompilation);
 }
 
-nsresult
-nsEventListenerManager::RegisterScriptEventListener(nsIScriptContext *aContext, 
-                                                             nsIScriptObjectOwner *aScriptObjectOwner, 
-                                                             nsIAtom *aName)
+NS_IMETHODIMP
+nsEventListenerManager::RegisterScriptEventListener(nsIScriptContext *aContext,
+                                                    nsISupports *aObject, 
+                                                    nsIAtom *aName)
 {
-  // Check that we have access to set an event listener. Prevents snooping attacks across 
-  // domains by setting onkeypress handlers, for instance.
-  // You'd think it'd work just to get the JSContext from aContext, but that's actually the
-  // JSContext whose private object parents the object in aScriptObjectOwner.
+  // Check that we have access to set an event listener. Prevents
+  // snooping attacks across domains by setting onkeypress handlers,
+  // for instance.
+  // You'd think it'd work just to get the JSContext from aContext,
+  // but that's actually the JSContext whose private object parents
+  // the object in aObject.
   nsresult rv;
-  NS_WITH_SERVICE(nsIJSContextStack, stack, "@mozilla.org/js/xpc/ContextStack;1", 
-                  &rv);
+  nsCOMPtr<nsIJSContextStack> stack =
+    do_GetService("@mozilla.org/js/xpc/ContextStack;1", &rv);
   if (NS_FAILED(rv))
       return rv;
   JSContext *cx;
   if (NS_FAILED(stack->Peek(&cx)))
       return nsnull;
-  JSObject *jsobj;
-  if (NS_FAILED(rv = aScriptObjectOwner->GetScriptObject(aContext, (void**)&jsobj)))
-    return rv;
-  NS_WITH_SERVICE(nsIScriptSecurityManager, securityManager, 
-                  NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
+
+  JSContext *current_cx = (JSContext *)aContext->GetNativeContext();
+
+  nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+
+  nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID()));
+  rv = xpc->WrapNative(current_cx, ::JS_GetGlobalObject(current_cx), aObject,
+                       NS_GET_IID(nsISupports), getter_AddRefs(holder));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  JSObject *jsobj = nsnull;
+
+  rv = holder->GetJSObject(&jsobj);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIScriptSecurityManager> securityManager =
+    do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
   if (NS_FAILED(rv))
       return rv;
+
   if (NS_FAILED(rv = securityManager->CheckScriptAccess(cx, jsobj,
-                  NS_DOM_PROP_EVENTTARGET_ADDEVENTLISTENER, PR_TRUE)))
-  {
+                  NS_DOM_PROP_EVENTTARGET_ADDEVENTLISTENER, PR_TRUE))) {
     return rv;
   }
-  return SetJSEventListener(aContext, aScriptObjectOwner, aName, PR_FALSE);
+
+  return SetJSEventListener(aContext, aObject, aName, PR_FALSE);
 }
 
 nsresult
 nsEventListenerManager::CompileScriptEventListener(nsIScriptContext *aContext, 
-                                                            nsIScriptObjectOwner *aScriptObjectOwner, 
-                                                            nsIAtom *aName)
+                                                   nsISupports *aObject, 
+                                                   nsIAtom *aName)
 {
   nsresult result = NS_OK;
   nsListenerStruct *ls;
@@ -804,7 +859,8 @@ nsEventListenerManager::CompileScriptEventListener(nsIScriptContext *aContext,
     }
 
     if (ls->mHandlerIsString & subType) {
-      result = CompileEventHandlerInternal(aContext, aScriptObjectOwner, aName, ls, subType);
+      result = CompileEventHandlerInternal(aContext, aObject, aName, ls,
+                                           subType);
     }
   }
 
@@ -813,20 +869,30 @@ nsEventListenerManager::CompileScriptEventListener(nsIScriptContext *aContext,
 
 nsresult
 nsEventListenerManager::CompileEventHandlerInternal(nsIScriptContext *aContext,
-                                                    nsIScriptObjectOwner *aScriptObjectOwner,
+                                                    nsISupports *aObject,
                                                     nsIAtom *aName,
                                                     nsListenerStruct *aListenerStruct,
                                                     PRUint32 aSubType)
 {
   nsresult result = NS_OK;
 
-  JSObject* jsobj;
-  result = aScriptObjectOwner->GetScriptObject(aContext, (void**)&jsobj);
-  if (NS_FAILED(result)) {
-    return NS_ERROR_FAILURE;
-  }
+  nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID()));
 
-  nsCOMPtr<nsIScriptEventHandlerOwner> handlerOwner = do_QueryInterface(aScriptObjectOwner);
+  JSContext *cx = (JSContext *)aContext->GetNativeContext();
+
+  nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+
+  result = xpc->WrapNative(cx, ::JS_GetGlobalObject(cx), aObject,
+                           NS_GET_IID(nsISupports), getter_AddRefs(holder));
+  NS_ENSURE_SUCCESS(result, result);
+
+  JSObject *jsobj = nsnull;
+
+  result = holder->GetJSObject(&jsobj);
+  NS_ENSURE_SUCCESS(result, result);
+
+  nsCOMPtr<nsIScriptEventHandlerOwner> handlerOwner =
+    do_QueryInterface(aObject);
   void* handler = nsnull;
 
   if (handlerOwner) {
@@ -842,7 +908,7 @@ nsEventListenerManager::CompileEventHandlerInternal(nsIScriptContext *aContext,
     // XXX I don't like that we have to reference content
     // from here. The alternative is to store the event handler
     // string on the JS object itself.
-    nsCOMPtr<nsIContent> content = do_QueryInterface(aScriptObjectOwner);
+    nsCOMPtr<nsIContent> content = do_QueryInterface(aObject);
     NS_ASSERTION(content, "only content should have event handler attributes");
     if (content) {
       nsAutoString handlerBody;
@@ -897,9 +963,10 @@ nsEventListenerManager::HandleEventSubType(nsListenerStruct* aListenerStruct,
 
       nsCOMPtr<nsIJSEventListener> jslistener = do_QueryInterface(aListenerStruct->mListener);
       if (jslistener) {
-        nsCOMPtr<nsIScriptObjectOwner> owner;
+        nsCOMPtr<nsISupports> target;
         nsCOMPtr<nsIScriptContext> scriptCX;
-        result = jslistener->GetEventTarget(getter_AddRefs(scriptCX), getter_AddRefs(owner));
+        result = jslistener->GetEventTarget(getter_AddRefs(scriptCX),
+                                            getter_AddRefs(target));
 
         if (NS_SUCCEEDED(result)) {
           nsAutoString eventString;
@@ -907,7 +974,8 @@ nsEventListenerManager::HandleEventSubType(nsListenerStruct* aListenerStruct,
             eventString.InsertWithConversion("on", 0, 2);
             nsCOMPtr<nsIAtom> atom = getter_AddRefs(NS_NewAtom(eventString));
 
-            result = CompileEventHandlerInternal(scriptCX, owner, atom, aListenerStruct, aSubType);
+            result = CompileEventHandlerInternal(scriptCX, target, atom,
+                                                 aListenerStruct, aSubType);
           }
         }
       }
@@ -974,43 +1042,44 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
         if (NS_OK == ret) {
           for (int i=0; mMouseListeners && i<mMouseListeners->Count(); i++) {
             nsListenerStruct *ls;
-            nsIDOMMouseListener *mMouseListener;
 
             ls = (nsListenerStruct*)mMouseListeners->ElementAt(i);
             
             if (ls->mFlags & aFlags) {
-              if (NS_OK == ls->mListener->QueryInterface(kIDOMMouseListenerIID, (void**)&mMouseListener)) {
+              nsCOMPtr<nsIDOMMouseListener> mouseListener =
+                do_QueryInterface(ls->mListener);
+
+              if (mouseListener) {
                 switch(aEvent->message) {
                   case NS_MOUSE_LEFT_BUTTON_DOWN:
                   case NS_MOUSE_MIDDLE_BUTTON_DOWN:
                   case NS_MOUSE_RIGHT_BUTTON_DOWN:
-                    ret = mMouseListener->MouseDown(*aDOMEvent);
+                    ret = mouseListener->MouseDown(*aDOMEvent);
                     break;
                   case NS_MOUSE_LEFT_BUTTON_UP:
                   case NS_MOUSE_MIDDLE_BUTTON_UP:
                   case NS_MOUSE_RIGHT_BUTTON_UP:
-                    ret = mMouseListener->MouseUp(*aDOMEvent);
+                    ret = mouseListener->MouseUp(*aDOMEvent);
                     break;
                   case NS_MOUSE_LEFT_CLICK:
                   case NS_MOUSE_MIDDLE_CLICK:
                   case NS_MOUSE_RIGHT_CLICK:
-                    ret = mMouseListener->MouseClick(*aDOMEvent);
+                    ret = mouseListener->MouseClick(*aDOMEvent);
                     break;
                   case NS_MOUSE_LEFT_DOUBLECLICK:
                   case NS_MOUSE_MIDDLE_DOUBLECLICK:
                   case NS_MOUSE_RIGHT_DOUBLECLICK:
-                    ret = mMouseListener->MouseDblClick(*aDOMEvent);
+                    ret = mouseListener->MouseDblClick(*aDOMEvent);
                     break;
                   case NS_MOUSE_ENTER_SYNTH:
-                    ret = mMouseListener->MouseOver(*aDOMEvent);
+                    ret = mouseListener->MouseOver(*aDOMEvent);
                     break;
                   case NS_MOUSE_EXIT_SYNTH:
-                    ret = mMouseListener->MouseOut(*aDOMEvent);
+                    ret = mouseListener->MouseOut(*aDOMEvent);
                     break;
                   default:
                     break;
                 }
-                NS_RELEASE(mMouseListener);
               }
               else {
                 PRBool correctSubType = PR_FALSE;
@@ -1978,10 +2047,11 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
 * Creates a DOM event
 */
 
-nsresult nsEventListenerManager::CreateEvent(nsIPresContext* aPresContext,
-                                             nsEvent* aEvent,
-                                             const nsAReadableString& aEventType,
-                                             nsIDOMEvent** aDOMEvent)
+NS_IMETHODIMP
+nsEventListenerManager::CreateEvent(nsIPresContext* aPresContext,
+                                    nsEvent* aEvent,
+                                    const nsAReadableString& aEventType,
+                                    nsIDOMEvent** aDOMEvent)
 {
   nsAutoString str(aEventType);
   if (!aEvent && !str.EqualsIgnoreCase("MouseEvent") && !str.EqualsIgnoreCase("KeyEvent") &&
@@ -1999,7 +2069,8 @@ nsresult nsEventListenerManager::CreateEvent(nsIPresContext* aPresContext,
 * @param an event listener
 */
 
-nsresult nsEventListenerManager::CaptureEvent(PRInt32 aEventTypes)
+NS_IMETHODIMP
+nsEventListenerManager::CaptureEvent(PRInt32 aEventTypes)
 {
   return FlipCaptureBit(aEventTypes, PR_TRUE);
 }             
@@ -2009,7 +2080,8 @@ nsresult nsEventListenerManager::CaptureEvent(PRInt32 aEventTypes)
 * @param an event listener
 */
 
-nsresult nsEventListenerManager::ReleaseEvent(PRInt32 aEventTypes)
+NS_IMETHODIMP
+nsEventListenerManager::ReleaseEvent(PRInt32 aEventTypes)
 {
   return FlipCaptureBit(aEventTypes, PR_FALSE);
 }
@@ -2238,7 +2310,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
   return NS_OK;
 }
 
-nsresult nsEventListenerManager::RemoveAllListeners(PRBool aScriptOnly)
+NS_IMETHODIMP
+nsEventListenerManager::RemoveAllListeners(PRBool aScriptOnly)
 {
   ReleaseListeners(&mEventListeners, aScriptOnly);
   ReleaseListeners(&mMouseListeners, aScriptOnly);
@@ -2257,7 +2330,8 @@ nsresult nsEventListenerManager::RemoveAllListeners(PRBool aScriptOnly)
   return NS_OK;
 }
 
-nsresult nsEventListenerManager::SetListenerTarget(nsISupports* aTarget)
+NS_IMETHODIMP
+nsEventListenerManager::SetListenerTarget(nsISupports* aTarget)
 {
   //WEAK reference, must be set back to nsnull when done
   mTarget = aTarget;
@@ -2352,18 +2426,15 @@ nsEventListenerManager::HandleEvent(nsIDOMEvent *aEvent)
   return DispatchEvent(aEvent);
 }
 
-NS_HTML nsresult NS_NewEventListenerManager(nsIEventListenerManager** aInstancePtrResult) 
+nsresult
+NS_NewEventListenerManager(nsIEventListenerManager** aInstancePtrResult) 
 {
   nsIEventListenerManager* l = new nsEventListenerManager();
 
-  if (nsnull == l) {
+  if (!l) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
   
-  if (NS_OK == l->QueryInterface(NS_GET_IID(nsIEventListenerManager), (void**) aInstancePtrResult)) {
-    return NS_OK;
-  }
-
-  return NS_ERROR_FAILURE;
+  return CallQueryInterface(l, aInstancePtrResult);
 }
 

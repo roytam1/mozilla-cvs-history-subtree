@@ -23,7 +23,6 @@
 #include "nsIDOMHTMLTableCellElement.h"
 #include "nsIDOMHTMLTableRowElement.h"
 #include "nsIDOMHTMLCollection.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIHTMLContent.h"
 #include "nsIHTMLAttributes.h"
@@ -48,16 +47,16 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_IDOMNODE_NO_CLONENODE(nsGenericHTMLContainerElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLContainerElement::)
 
   // nsIDOMElement
-  NS_FORWARD_IDOMELEMENT(nsGenericHTMLContainerElement::)
+  NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLContainerElement::)
 
   // nsIDOMHTMLElement
-  NS_FORWARD_IDOMHTMLELEMENT(nsGenericHTMLContainerElement::)
+  NS_FORWARD_NSIDOMHTMLELEMENT(nsGenericHTMLContainerElement::)
 
   // nsIDOMHTMLTableCellElement
-  NS_DECL_IDOMHTMLTABLECELLELEMENT
+  NS_DECL_NSIDOMHTMLTABLECELLELEMENT
 
   // nsIHTMLTableCellElement
   NS_METHOD GetColIndex (PRInt32* aColIndex);
@@ -124,10 +123,21 @@ nsHTMLTableCellElement::~nsHTMLTableCellElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLTableCellElement, nsGenericElement) 
 NS_IMPL_RELEASE_INHERITED(nsHTMLTableCellElement, nsGenericElement) 
 
-NS_IMPL_HTMLCONTENT_QI2(nsHTMLTableCellElement,
-                        nsGenericHTMLContainerElement,
-                        nsIDOMHTMLTableCellElement,
-                        nsIHTMLTableCellElement);
+
+// XPConnect interface list for nsHTMLTableCellElement
+NS_CLASSINFO_MAP_BEGIN(HTMLTableCellElement)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMHTMLTableCellElement)
+  NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASSINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLTableCellElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLTableCellElement,
+                                    nsGenericHTMLContainerElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLTableCellElement)
+  NS_INTERFACE_MAP_ENTRY(nsIHTMLTableCellElement)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLTableCellElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 nsresult

@@ -72,6 +72,8 @@
 #include "nsIMsgMailSession.h"
 #include "nsMsgBaseCID.h"
 #include "nsIPrompt.h"
+#include "nsIScriptGlobalObject.h"
+#include "nsIDOMWindowInternal.h"
 
 #include "nsMsgComposeService.h"
 #include "nsMsgUtils.h"

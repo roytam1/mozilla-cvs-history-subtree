@@ -23,140 +23,17 @@
 #ifndef nsDOMClassInfo_h___
 #define nsDOMClassInfo_h___
 
-#include "nsIClassInfo.h"
+#include "nsIDOMClassInfo.h"
 #include "nsIXPCScriptable.h"
-#include "nsVoidArray.h"
-
-class nsIXPConnect;
 
 
 struct nsDOMClassInfoData;
 typedef void (*GetDOMClassIIDsFnc)(nsVoidArray& aArray);
 
 class nsDOMClassInfo : public nsIXPCScriptable,
-                       public nsIClassInfo
+                       public nsIDOMClassInfo
 {
 public:
-  enum nsDOMClassInfoID {
-
-    // Core classes
-    eDocument_id,
-    eDocumentType_id,
-    eDOMImplementation_id,
-    eDocumentFragment_id,
-    eElement_id,
-    eAttr_id,
-    eText_id,
-    eComment_id,
-    eCDATASection_id,
-    eProcessingInstruction_id,
-    eEntity_id,
-    eEntityReference_id,
-    eNotation_id,
-    eNodeList_id,
-    eNamedNodeMap_id,
-
-    // StyleSheet classes
-    eDocumentStyleSheetList_id,
-
-    // Event classes
-    eEvent_id,
-
-    // HTML classes
-    eHTMLDocument_id,
-    eHTMLCollection_id,
-    eHTMLOptionCollection_id,
-    eHTMLFormControlCollection_id,
-
-    // HTML element classes
-    eHTMLAnchorElement_id,
-    eHTMLAppletElement_id,
-    eHTMLAreaElement_id,
-    eHTMLBRElement_id,
-    eHTMLBaseElement_id,
-    eHTMLBaseFontElement_id,
-    eHTMLBodyElement_id,
-    eHTMLButtonElement_id,
-    eHTMLDListElement_id,
-    eHTMLDelElement_id,
-    eHTMLDirectoryElement_id,
-    eHTMLDivElement_id,
-    eHTMLEmbedElement_id,
-    eHTMLFieldSetElement_id,
-    eHTMLFontElement_id,
-    eHTMLFormElement_id,
-    eHTMLFrameElement_id,
-    eHTMLFrameSetElement_id,
-    eHTMLHRElement_id,
-    eHTMLHeadElement_id,
-    eHTMLHeadingElement_id,
-    eHTMLHtmlElement_id,
-    eHTMLIFrameElement_id,
-    eHTMLImageElement_id,
-    eHTMLInputElement_id,
-    eHTMLInsElement_id,
-    eHTMLIsIndexElement_id,
-    eHTMLLIElement_id,
-    eHTMLLabelElement_id,
-    eHTMLLegendElement_id,
-    eHTMLLinkElement_id,
-    eHTMLMapElement_id,
-    eHTMLMenuElement_id,
-    eHTMLMetaElement_id,
-    eHTMLModElement_id,
-    eHTMLOListElement_id,
-    eHTMLObjectElement_id,
-    eHTMLOptGroupElement_id,
-    eHTMLOptionElement_id,
-    eHTMLParagraphElement_id,
-    eHTMLParamElement_id,
-    eHTMLPreElement_id,
-    eHTMLQuoteElement_id,
-    eHTMLScriptElement_id,
-    eHTMLSelectElement_id,
-    eHTMLSpacerElement_id,
-    eHTMLSpanElement_id,
-    eHTMLStyleElement_id,
-    eHTMLTableCaptionElement_id,
-    eHTMLTableCellElement_id,
-    eHTMLTableColElement_id,
-    eHTMLTableColGroupElement_id,
-    eHTMLTableElement_id,
-    eHTMLTableRowElement_id,
-    eHTMLTableSectionElement_id,
-    eHTMLTextAreaElement_id,
-    eHTMLTitleElement_id,
-    eHTMLUListElement_id,
-    eHTMLUnknownElement_id,
-    eHTMLWBRElement_id,
-
-    // CSS classes
-    eCSSStyleRule_id,
-    eCSSRuleList_id,
-    eMediaList_id,
-    eStyleSheetList_id,
-    eCSSStyleSheet_id,
-    eCSSStyleDeclaration_id,
-    eComputedCSSStyleDeclaration_id,
-    eROCSSPrimitiveValue_id,
-
-    // Range classes
-    eRange_id,
-    eSelection_id,
-
-    // XUL classes
-    eXULDocument_id,
-    eXULElement_id,
-    eXULTreeElement_id,
-    eXULCommandDispatcher_id,
-    eXULNodeList_id,
-    eXULNamedNodeMap_id,
-    eXULAttr_id,
-    eXULPDGlobalObject_id,
-
-    eDOMClassInfoIDCount // This one better be the last one in this list
-  };
-
   nsDOMClassInfo(nsDOMClassInfoID aID);
   virtual ~nsDOMClassInfo();
 
@@ -166,23 +43,23 @@ public:
 
   NS_DECL_NSICLASSINFO
 
-  // Helper class that returns a *non* refcounted pointer to a
+  // Helper method that returns a *non* refcounted pointer to a
   // helper. So please note, don't release this pointer, if you do,
-  // you better make sude you've addreffed before release.
+  // you better make sure you've addreffed before release.
   //
   // Whaaaaa! I wanted to name this method GetClassInfo, but nooo,
   // some of Microsoft devstudio's headers #defines GetClassInfo to
   // GetClassInfoA so I can't, those $%#@^! bastards!!! What gives
   // them the right to do that?
 
+  static nsISupports* GetClassInfoInstance(nsDOMClassInfoID aID,
+                                           GetDOMClassIIDsFnc aGetIIDsFptr,
+                                           const char *aName);
+
   static nsIClassInfo *Create(nsDOMClassInfoID aID)
   {
     return new nsDOMClassInfo(aID);
   }
-
-  static nsISupports* GetClassInfoInstance(nsDOMClassInfoID aID,
-                                           GetDOMClassIIDsFnc aGetIIDsFptr,
-                                           const char *aName);
 
 protected:
   static nsresult Init();
@@ -220,6 +97,28 @@ protected:
   static JSString *sDirectories_id;
   static JSString *sControllers_id;
   static JSString *sLength_id;
+  static JSString *sOnmousedown_id;
+  static JSString *sOnmouseup_id;
+  static JSString *sOnclick_id;
+  static JSString *sOnmouseover_id;
+  static JSString *sOnmouseout_id;
+  static JSString *sOnkeydown_id;
+  static JSString *sOnkeyup_id;
+  static JSString *sOnkeypress_id;
+  static JSString *sOnmousemove_id;
+  static JSString *sOnfocus_id;
+  static JSString *sOnblur_id;
+  static JSString *sOnsubmit_id;
+  static JSString *sOnreset_id;
+  static JSString *sOnchange_id;
+  static JSString *sOnselect_id;
+  static JSString *sOnload_id;
+  static JSString *sOnunload_id;
+  static JSString *sOnabort_id;
+  static JSString *sOnerror_id;
+  static JSString *sOnpaint_id;
+  static JSString *sOnresize_id;
+  static JSString *sOnscroll_id;
 };
 
 
@@ -227,24 +126,7 @@ protected:
  * nsIClassInfo helper macros
  */
 
-#define NS_CLASSINFO_MAP_BEGIN(_class)                                        \
-static void Get##_class##IIDs(nsVoidArray& aArray)                            \
-{
-
-#define NS_CLASSINFO_MAP_BEGIN_EXPORTED(_class)                               \
-void Get##_class##IIDs(nsVoidArray& aArray)                                   \
-{
-
-#define NS_CLASSINFO_MAP_ENTRY(_interface)                                    \
-  aArray.AppendElement((void *)&NS_GET_IID(_interface));
-
-#define NS_CLASSINFO_MAP_ENTRY_FUNCTION(_function)                            \
-  _function(aArray);
-
-#define NS_CLASSINFO_MAP_END                                                  \
-}
-
-#define NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(_class)                      \
+#define NS_INTERFACE_MAP_ENTRY_DOM_CLASSINFO(_class)                          \
   if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {                                \
     foundInterface =                                                          \
       nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfo::e##_class##_id,    \
@@ -252,15 +134,5 @@ void Get##_class##IIDs(nsVoidArray& aArray)                                   \
                                            #_class);                          \
     NS_ENSURE_TRUE(foundInterface, NS_ERROR_OUT_OF_MEMORY);                   \
   } else
-
-#define NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO_WITH_NAME(_class, _name)     \
-  if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {                                \
-    foundInterface =                                                          \
-      nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfo::e##_class##_id,    \
-                                           Get##_class##IIDs,                 \
-                                           #_name);                           \
-    NS_ENSURE_TRUE(foundInterface, NS_ERROR_OUT_OF_MEMORY);                   \
-  } else
-
 
 #endif /* nsDOMClassInfo_h___ */

@@ -51,7 +51,6 @@
 #include "nsIPrivateDOMEvent.h"
 #include "nsDOMCID.h"
 #include "nsIServiceManager.h"
-#include "nsIDOMScriptObjectFactory.h"
 #include "nsIDOMCSSStyleDeclaration.h"
 #include "nsDOMCSSDeclaration.h"
 #include "nsINameSpaceManager.h"
@@ -347,36 +346,9 @@ nsCheapVoidArray::SwitchToVector()
 
 //----------------------------------------------------------------------
 
-// XXX Currently, the script object factory is global. The way we
-// obtain it should, at least, be made thread-safe later. Ideally,
-// we'd find a better way.
-nsIDOMScriptObjectFactory* nsGenericElement::gScriptObjectFactory = nsnull;
-
-static NS_DEFINE_IID(kDOMScriptObjectFactoryCID, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
-
-nsresult
-nsGenericElement::GetScriptObjectFactory(nsIDOMScriptObjectFactory **aResult)
-{
-  nsresult result = NS_OK;
-
-  if (nsnull == gScriptObjectFactory) {
-    result = nsServiceManager::GetService(kDOMScriptObjectFactoryCID,
-                                          NS_GET_IID(nsIDOMScriptObjectFactory),
-                                          (nsISupports **)&gScriptObjectFactory);
-    if (result != NS_OK) {
-      return result;
-    }
-  }
-
-  *aResult = gScriptObjectFactory;
-  NS_ADDREF(gScriptObjectFactory);
-  return result;
-}
-
 /* static */ void
 nsGenericElement::Shutdown()
 {
-  NS_IF_RELEASE(gScriptObjectFactory); // assigns null
 }
 
 nsGenericElement::nsGenericElement() : mDocument(nsnull), mParent(nsnull),
@@ -426,7 +398,6 @@ nsGenericElement::GetDOMSlots()
     if (!mDOMSlots)
       return nsnull;
 
-    mDOMSlots->mScriptObject = nsnull;
     mDOMSlots->mChildNodes = nsnull;
     mDOMSlots->mStyle = nsnull;
     mDOMSlots->mAttributeMap = nsnull;
@@ -442,7 +413,6 @@ void
 nsGenericElement::MaybeClearDOMSlots()
 {
   if (mDOMSlots &&
-      !mDOMSlots->mScriptObject &&
       !mDOMSlots->mChildNodes &&
       !mDOMSlots->mStyle &&
       !mDOMSlots->mAttributeMap &&
@@ -1280,14 +1250,15 @@ nsGenericElement::SetDocument(nsIDocument* aDocument, PRBool aDeep,
     // If we were part of a document, make sure we get rid of the
     // script context reference to our script object so that our
     // script object can be freed (or collected).
-    if (mDocument && mDOMSlots && mDOMSlots->mScriptObject) {
+    if (mDocument) {
       nsCOMPtr<nsIScriptGlobalObject> globalObject;
       mDocument->GetScriptGlobalObject(getter_AddRefs(globalObject));
       if (globalObject) {
         nsCOMPtr<nsIScriptContext> context;
         if (NS_OK == globalObject->GetContext(getter_AddRefs(context)) && context) {
-          context->RemoveReference((void *)&mDOMSlots->mScriptObject,
-                                   mDOMSlots->mScriptObject);
+          // XXX: Remove root!
+          //          context->RemoveReference((void *)&mDOMSlots->mScriptObject,
+          //                                   mDOMSlots->mScriptObject);
         }
       }
     }
@@ -1317,15 +1288,16 @@ nsGenericElement::SetDocument(nsIDocument* aDocument, PRBool aDeep,
     // to a document, make sure that the script context adds a
     // reference to our script object. This will ensure that it
     // won't be freed (or collected) out from under us.
-    if (mDocument && mDOMSlots && mDOMSlots->mScriptObject) {
+    if (mDocument) {
       nsCOMPtr<nsIScriptGlobalObject> globalObject;
       mDocument->GetScriptGlobalObject(getter_AddRefs(globalObject));
       if (globalObject) {
         nsCOMPtr<nsIScriptContext> context;
         if (NS_OK == globalObject->GetContext(getter_AddRefs(context)) && context) {
-          context->AddNamedReference((void *)&mDOMSlots->mScriptObject,
-                                     mDOMSlots->mScriptObject,
-                                     "nsGenericElement::mScriptObject");
+          // XXX: Add root!
+          //          context->AddNamedReference((void *)&mDOMSlots->mScriptObject,
+          //                                     mDOMSlots->mScriptObject,
+          //                                     "nsGenericElement::mScriptObject");
         }
       }
     }
@@ -1834,125 +1806,6 @@ nsGenericElement::RenderFrame(nsIPresContext* aPresContext)
 
 //----------------------------------------------------------------------
 
-// nsIScriptObjectOwner implementation
-
-nsresult
-nsGenericElement::GetScriptObject(nsIScriptContext* aContext,
-                                  void** aScriptObject)
-{
-  nsresult res = NS_OK;
-  nsDOMSlots *slots = GetDOMSlots();
-
-  if (!slots->mScriptObject) {
-    nsIDOMScriptObjectFactory *factory;
-
-    res = GetScriptObjectFactory(&factory);
-    if (NS_OK != res) {
-      return res;
-    }
-
-    nsAutoString tag;
-    mNodeInfo->GetName(tag);
-
-    void* scriptObject;
-    res = factory->NewScriptElement(tag, aContext,
-                                    NS_STATIC_CAST(nsIHTMLContent *, this),
-                                    mParent ? (nsISupports*)mParent : (nsISupports*)mDocument,
-                                    (void**)&scriptObject);
-    NS_RELEASE(factory);
-
-    NS_WARN_IF_FALSE(scriptObject,
-                     "Eeek! Cound't create script object!");
-
-    if (slots->mScriptObject) {
-      // We must have re-entered; discard the newly created
-      // script object and use the one created during the
-      // nesting instead.
-      JSContext* cx = (JSContext*) aContext->GetNativeContext();
-      ::JS_SetPrivate(cx, (JSObject*) scriptObject, nsnull);
-
-      // Since we've eagerly cleared the transient script
-      // object's native pointer, we now need to ``manually''
-      // balance the reference that it had to us
-      Release();
-
-      *aScriptObject = slots->mScriptObject;
-      return NS_OK;
-    }
-
-    slots->mScriptObject = scriptObject;
-
-    if (mDocument && slots->mScriptObject) {
-      aContext->AddNamedReference((void *)&slots->mScriptObject,
-                                  slots->mScriptObject,
-                                  "nsGenericElement::mScriptObject");
-
-      // See if we have a frame.
-      nsCOMPtr<nsIPresShell> shell = getter_AddRefs(mDocument->GetShellAt(0));
-      if (shell) {
-        nsIFrame* frame;
-        shell->GetPrimaryFrameFor(this, &frame);
-        if (!frame) {
-          // We must ensure that the XBL Binding is installed before we hand
-          // back this object.
-          nsCOMPtr<nsIBindingManager> bindingManager;
-          mDocument->GetBindingManager(getter_AddRefs(bindingManager));
-          nsCOMPtr<nsIXBLBinding> binding;
-          bindingManager->GetBinding(this, getter_AddRefs(binding));
-          if (!binding) {
-            nsCOMPtr<nsIScriptGlobalObject> global;
-            mDocument->GetScriptGlobalObject(getter_AddRefs(global));
-            nsCOMPtr<nsIDOMViewCSS> viewCSS(do_QueryInterface(global));
-            if (viewCSS) {
-              nsCOMPtr<nsIDOMCSSStyleDeclaration> cssDecl;
-              nsAutoString empty;
-              nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(NS_STATIC_CAST(nsIHTMLContent *, this)));
-              viewCSS->GetComputedStyle(elt, empty, getter_AddRefs(cssDecl));
-              if (cssDecl) {
-                nsAutoString behavior; behavior.Assign(NS_LITERAL_STRING("-moz-binding"));
-                nsAutoString value;
-                cssDecl->GetPropertyValue(behavior, value);
-                if (!value.IsEmpty()) {
-                  // We have a binding that must be installed.
-                  nsresult rv;
-                  PRBool dummy;
-                  NS_WITH_SERVICE(nsIXBLService, xblService, "@mozilla.org/xbl;1", &rv);
-                  xblService->LoadBindings(this, value, PR_FALSE, getter_AddRefs(binding), &dummy);
-                  if (binding) {
-                    binding->ExecuteAttachedHandler();
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  *aScriptObject = slots->mScriptObject;
-  return res;
-}
-
-nsresult
-nsGenericElement::SetScriptObject(void *aScriptObject)
-{
-  nsDOMSlots *slots = GetDOMSlots();
-
-  slots->mScriptObject = aScriptObject;
-
-  if (!aScriptObject) {
-    if (slots->mListenerManager) {
-      slots->mListenerManager->RemoveAllListeners(PR_TRUE);
-    }
-    MaybeClearDOMSlots();
-  }
-
-  return NS_OK;
-}
-
-//----------------------------------------------------------------------
-
 nsresult
 nsGenericElement::GetListenerManager(nsIEventListenerManager** aResult)
 {
@@ -1974,6 +1827,7 @@ nsGenericElement::GetListenerManager(nsIEventListenerManager** aResult)
 
 //----------------------------------------------------------------------
 
+#if 0
 // nsIJSScriptObject implementation
 
 PRBool
@@ -2082,6 +1936,7 @@ nsGenericElement::InternalRegisterCompileEventHandler(JSContext* aContext, jsval
   }
   return PR_TRUE;
 }
+#endif
 
 // Generic DOMNode implementations
 
@@ -2569,17 +2424,23 @@ nsGenericElement::QueryInterface(REFNSIID aIID, void** aInstancePtr)
     }
 
     return NS_NOINTERFACE;
-  } else if (aIID.Equals(NS_GET_IID(nsIScriptObjectOwner))) {
-    inst = NS_STATIC_CAST(nsIScriptObjectOwner *, this);
-  } else if (aIID.Equals(NS_GET_IID(nsIJSScriptObject))) {
-    inst = NS_STATIC_CAST(nsIJSScriptObject *, this);
-  } 
-  else if (mDOMSlots && mDOMSlots->mScriptObject && mDocument) {
+  }
+  else if (mDOMSlots /* && mDOMSlots->mScriptObject */ && mDocument) {
+#if 0
+
+
+
+    XXX Oh boy, this'll suck now!
+
+
+
     nsCOMPtr<nsIBindingManager> manager;
     mDocument->GetBindingManager(getter_AddRefs(manager));
     if (manager)
       return manager->GetBindingImplementation(NS_STATIC_CAST(nsIStyledContent*, this), mDOMSlots->mScriptObject, 
                                                aIID, aInstancePtr);
+#endif
+
     return NS_NOINTERFACE;
   }
   else {
@@ -2692,11 +2553,8 @@ nsGenericElement::AddScriptEventListener(nsIAtom* aAttribute,
     receiver->GetListenerManager(getter_AddRefs(manager));
 
     if (manager) {
-      nsCOMPtr<nsIScriptObjectOwner> objOwner(do_QueryInterface(global));
-      if (objOwner) {
-        ret = manager->AddScriptEventListener(context, objOwner, aAttribute,
-                                              aValue, PR_FALSE);
-      }
+      ret = manager->AddScriptEventListener(context, global, aAttribute,
+                                            aValue, PR_FALSE);
     }
   }
   else {
@@ -2857,16 +2715,15 @@ nsGenericContainerElement::GetChildNodes(nsIDOMNodeList** aChildNodes)
 {
   nsDOMSlots *slots = GetDOMSlots();
 
-  if (nsnull == slots->mChildNodes) {
+  if (!slots->mChildNodes) {
     slots->mChildNodes = new nsChildContentList(this);
-    if (nsnull == slots->mChildNodes) {
+    if (!slots->mChildNodes) {
       return NS_ERROR_OUT_OF_MEMORY;
     }
     NS_ADDREF(slots->mChildNodes);
   }
 
-  return slots->mChildNodes->QueryInterface(NS_GET_IID(nsIDOMNodeList),
-                                            (void **)aChildNodes);
+  return CallQueryInterface(slots->mChildNodes, aChildNodes);
 }
 
 nsresult

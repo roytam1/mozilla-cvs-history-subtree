@@ -36,6 +36,7 @@
 #include "nsIAppShellService.h"
 #include "nsAppShellCIDs.h"
 #include "nsIURI.h"
+#include "nsISupportsPrimitives.h"
 
 static NS_DEFINE_CID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID);
 static NS_DEFINE_CID(kCMsgMailSessionCID, NS_MSGMAILSESSION_CID); 
@@ -98,35 +99,41 @@ NS_IMETHODIMP nsMessengerBootstrap::GetChromeUrlForTask(char **aChromeUrlForTask
 }
 
 // Utility function to open a messenger window and pass an argument string to it.
-static nsresult openWindow( const PRUnichar *chrome, const PRUnichar *args ) {
-    nsCOMPtr<nsIDOMWindowInternal> hiddenWindow;
-    JSContext *jsContext;
-    nsresult rv;
-    NS_WITH_SERVICE( nsIAppShellService, appShell, kAppShellServiceCID, &rv )
-    if ( NS_SUCCEEDED( rv ) ) {
-        rv = appShell->GetHiddenWindowAndJSContext( getter_AddRefs( hiddenWindow ),
-                                                    &jsContext );
-        if ( NS_SUCCEEDED( rv ) ) {
-            // Set up arguments for "window.openDialog"
-            void *stackPtr;
-            jsval *argv = JS_PushArguments( jsContext,
-                                            &stackPtr,
-                                            "WssW",
-                                            chrome,
-                                            "_blank",
-                                            "chrome,dialog=no,all",
-                                            args );
-            if ( argv ) {
-                nsCOMPtr<nsIDOMWindowInternal> newWindow;
-                rv = hiddenWindow->OpenDialog( jsContext,
-                                               argv,
-                                               4,
-                                               getter_AddRefs( newWindow ) );
-                JS_PopArguments( jsContext, stackPtr );
-            }
-        }
+static nsresult openWindow( const PRUnichar *chrome, const PRUnichar *args )
+{
+  nsCOMPtr<nsIDOMWindowInternal> hiddenWindow;
+  nsresult rv;
+  nsCOMPtr<nsIAppShellService> appShell(do_CreateInstance(kAppShellServiceCID,
+                                                          &rv));
+
+  if ( NS_SUCCEEDED( rv ) ) {
+    rv = appShell->GetHiddenDOMWindow(getter_AddRefs(hiddenWindow));
+
+    nsCOMPtr<nsIDOMWindowInternalEx> win(do_QueryInterface(hiddenWindow));
+
+    if ( NS_SUCCEEDED( rv ) && win ) {
+      nsCOMPtr<nsIDOMWindow> newWindow;
+      nsCOMPtr<nsISupportsArray> array;
+
+      rv = NS_NewISupportsArray(getter_AddRefs(array));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      nsCOMPtr<nsISupportsWString> str =
+        do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID, &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      str->SetData(args);
+
+      array->AppendElement(str);
+
+      rv = win->OpenDialog(nsLiteralString(chrome),
+                           NS_LITERAL_STRING("_blank"),
+                           NS_LITERAL_STRING("chrome,dialog=no,all"),
+                           array, getter_AddRefs(newWindow));
     }
-    return rv;
+  }
+
+  return rv;
 }
 
 NS_IMETHODIMP nsMessengerBootstrap::OpenMessengerWindowWithUri(nsIURI *aURI)

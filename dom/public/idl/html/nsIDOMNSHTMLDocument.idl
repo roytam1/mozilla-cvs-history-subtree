@@ -36,7 +36,6 @@ interface nsIDOMNSHTMLDocument : nsISupports
   readonly attribute nsIDOMHTMLCollection embeds;
 
   DOMString                 getSelection();
-  nsISupports               namedItem(in DOMString name);
 
   nsIDOMDocument            open(/* ... */);
   void                      clear();

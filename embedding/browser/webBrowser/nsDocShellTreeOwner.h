@@ -147,23 +147,23 @@ public:
   ChromeListener ( nsWebBrowser* inBrowser, nsIWebBrowserChrome* inChrome ) ;
   virtual ~ChromeListener ( ) ;
 
-	  // nsIDOMMouseListener
-	virtual nsresult HandleEvent(nsIDOMEvent* aEvent) {	return NS_OK; }
-	virtual nsresult MouseDown(nsIDOMEvent* aMouseEvent);
-	virtual nsresult MouseUp(nsIDOMEvent* aMouseEvent);
-	virtual nsresult MouseClick(nsIDOMEvent* aMouseEvent);
-	virtual nsresult MouseDblClick(nsIDOMEvent* aMouseEvent);
-	virtual nsresult MouseOver(nsIDOMEvent* aMouseEvent);
-	virtual nsresult MouseOut(nsIDOMEvent* aMouseEvent);
+    // nsIDOMMouseListener
+  NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent) {	return NS_OK; }
+  NS_IMETHOD MouseDown(nsIDOMEvent* aMouseEvent);
+  NS_IMETHOD MouseUp(nsIDOMEvent* aMouseEvent);
+  NS_IMETHOD MouseClick(nsIDOMEvent* aMouseEvent);
+  NS_IMETHOD MouseDblClick(nsIDOMEvent* aMouseEvent);
+  NS_IMETHOD MouseOver(nsIDOMEvent* aMouseEvent);
+  NS_IMETHOD MouseOut(nsIDOMEvent* aMouseEvent);
 
     // nsIDOMMouseMotionListener
-  virtual nsresult MouseMove(nsIDOMEvent* aMouseEvent);
-  virtual nsresult DragMove(nsIDOMEvent* aMouseEvent) { return NS_OK; };
+  NS_IMETHOD MouseMove(nsIDOMEvent* aMouseEvent);
+  NS_IMETHOD DragMove(nsIDOMEvent* aMouseEvent) { return NS_OK; };
 
     // nsIDOMKeyListener
-  virtual nsresult KeyDown(nsIDOMEvent* aKeyEvent) ;
-  virtual nsresult KeyUp(nsIDOMEvent* aKeyEvent) ;
-  virtual nsresult KeyPress(nsIDOMEvent* aKeyEvent) ;
+  NS_IMETHOD KeyDown(nsIDOMEvent* aKeyEvent) ;
+  NS_IMETHOD KeyUp(nsIDOMEvent* aKeyEvent) ;
+  NS_IMETHOD KeyPress(nsIDOMEvent* aKeyEvent) ;
 
     // Add/remove the relevant listeners, based on what interfaces
     // the embedding chrome implements.

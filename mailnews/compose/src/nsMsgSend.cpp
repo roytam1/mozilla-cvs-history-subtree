@@ -71,6 +71,7 @@
 #include "nsIDocShell.h"
 #include "nsMimeTypes.h"
 #include "nsISmtpUrl.h"
+#include "nsIDOMWindowInternal.h"
 
 // This will go away once select is passed a prompter interface
 #include "nsAppShellCIDs.h" // TODO remove later

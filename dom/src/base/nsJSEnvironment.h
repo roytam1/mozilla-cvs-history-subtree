@@ -29,18 +29,12 @@
 #include "nsIObserver.h"
 
 class nsIScriptSecurityManager;
-// XXXbe vc5 sucks: must include nsIScriptNameSpaceManager.h to use nsCOMPtr with it
-#if 0
-class nsIScriptNameSpaceManager;
-#else
-#include "nsIScriptNameSpaceManager.h"
-#endif
+
 class nsIPrincipal;
 
 class nsJSContext : public nsIScriptContext {
 private:
   JSContext *mContext;
-  nsCOMPtr<nsIScriptNameSpaceManager> mNameSpaceManager;
   PRBool mIsInitialized;
   PRUint32 mNumEvaluations;
   nsIScriptSecurityManager* mSecurityManager; /* XXXbe nsCOMPtr to service */
@@ -123,7 +117,6 @@ public:
                                    const char *aName);
   NS_IMETHOD     RemoveReference(void *aSlot, void *aScriptObject);
   NS_IMETHOD     GC();
-  NS_IMETHOD GetNameSpaceManager(nsIScriptNameSpaceManager** aInstancePtr);
   NS_IMETHOD GetSecurityManager(nsIScriptSecurityManager** aInstancePtr);
 
   NS_IMETHOD ScriptEvaluated(PRBool aTerminated);
