@@ -369,7 +369,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     // nsFileUtilities specific methods:
 
-    nsFileUtilities(void);
+    nsFileUtilities(nsISupports* outer);
     virtual ~nsFileUtilities(void);
 
     NS_DECL_AGGREGATED
