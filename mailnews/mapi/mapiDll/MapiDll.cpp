@@ -349,11 +349,12 @@ ULONG FAR PASCAL MAPISendMail (LHANDLE lhSession, ULONG ulUIParam, lpnsMapiMessa
     if (bComInitialized)
         ::CoUninitialize();
 
-    // return hr ; 
-    // this is a known problem we are trying to debug, 
-    // although the mapi support interface implementation in SendMail is returning ok,
-    // we are getting an error here. Trying to resolve this currently.
-    return SUCCESS_SUCCESS;
+    // we are seeing a problem when using Word, although we return success from the MAPI support
+    // MS COM interface in mozilla, we are getting this error here. This is a temporary hack !!
+    if (hr == 0x800703e6)
+        return SUCCESS_SUCCESS;
+    
+    return hr ; 
 }
 
 
