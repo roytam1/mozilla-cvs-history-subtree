@@ -409,6 +409,13 @@ nsresult nsDeviceContextWin::CopyLogFontToNSFont(HDC* aHDC, const LOGFONT* ptrLo
   LONG logHeight = LONG((float(ptrLogFont->lfHeight) * mPixelScale) + (ptrLogFont->lfHeight < 0 ? -0.5 : 0.5)); // round up
   int pointSize = -MulDiv(logHeight, 72, ::GetDeviceCaps(*aHDC, LOGPIXELSY));
 
+  // we have problem on Simplified Chinese system because the system report
+  // the default font size is 8. but if we use 8, the text display very
+  // Ugly. force it to be at 9 on that system (cp936), but leave other sizes alone.
+  if ((pointSize == 8) && 
+      (936 == ::GetACP())) 
+    pointSize = 9;
+
   aFont->size = NSIntPointsToTwips(pointSize);
   return NS_OK;
 }
