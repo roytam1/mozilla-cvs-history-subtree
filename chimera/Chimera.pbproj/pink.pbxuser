@@ -15,26 +15,20 @@
 			F5F94B8F0332531601026D5D,
 		);
 		perUserDictionary = {
-			PBXPerProjectTemplateStateSaveDate = 64965638;
+			PBXPerProjectTemplateStateSaveDate = 65051994;
 			PBXWorkspaceContents = (
 				{
 					LeftSlideOut = {
 						Split0 = {
 							Split0 = {
 								NavContent0 = {
-									bookmark = 3F75494903E04BC200026DCE;
 									history = (
 										3FC72CBF03D37DC300026DCE,
-										3F75494603E04BC200026DCE,
-										3F75494703E04BC200026DCE,
-									);
-									prevStack = (
-										3F75494803E04BC200026DCE,
 									);
 								};
 								NavCount = 1;
 								NavGeometry0 = {
-									Frame = "{{0, 0}, {687, 615}}";
+									Frame = "{{0, 0}, {709, 615}}";
 									NavBarVisible = YES;
 								};
 								NavSplitVertical = NO;
@@ -68,12 +62,6 @@
 					LeftSlideOut = {
 						Split0 = {
 							Split0 = {
-								NavContent0 = {
-									bookmark = 3F75494B03E04BC200026DCE;
-									history = (
-										3F75494A03E04BC200026DCE,
-									);
-								};
 								NavCount = 1;
 								NavGeometry0 = {
 									Frame = "{{0, 0}, {685, 215}}";
@@ -147,15 +135,15 @@
 				{
 					ContentSize = "{972, 638}";
 					LeftSlideOut = {
-						ActiveTab = 0;
-						ActiveTabName = PBXGroupTreeModule;
+						ActiveTab = 3;
+						ActiveTabName = PBXTargetTreeModule;
 						Collapsed = NO;
 						Frame = "{{0, 23}, {972, 615}}";
 						Split0 = {
 							Collapsed = NO;
-							Frame = "{{285, 0}, {687, 615}}";
+							Frame = "{{263, 0}, {709, 615}}";
 							Split0 = {
-								Frame = "{{0, 0}, {687, 615}}";
+								Frame = "{{0, 0}, {709, 615}}";
 							};
 							SplitCount = 1;
 							Tab0 = {
@@ -413,7 +401,7 @@
 							Collapsed = YES;
 							Frame = "{{0, 0}, {594, 280}}";
 							Split0 = {
-								Frame = "{{1e+06, 1e+06}, {594, 27}}";
+								Frame = "{{1e+06, 1e+06}, {594, 0}}";
 							};
 							SplitCount = 1;
 							Tab0 = {
@@ -531,15 +519,9 @@
 					WindowLocation = "{1348, 134}";
 				},
 			);
-			PBXWorkspaceStateSaveDate = 64965638;
+			PBXWorkspaceStateSaveDate = 65051994;
 		};
 		perUserProjectItems = {
-			3F75494603E04BC200026DCE = 3F75494603E04BC200026DCE;
-			3F75494703E04BC200026DCE = 3F75494703E04BC200026DCE;
-			3F75494803E04BC200026DCE = 3F75494803E04BC200026DCE;
-			3F75494903E04BC200026DCE = 3F75494903E04BC200026DCE;
-			3F75494A03E04BC200026DCE = 3F75494A03E04BC200026DCE;
-			3F75494B03E04BC200026DCE = 3F75494B03E04BC200026DCE;
 			3FC72CBF03D37DC300026DCE = 3FC72CBF03D37DC300026DCE;
 		};
 		projectwideBuildSettings = {
@@ -552,57 +534,6 @@
 		executables = (
 			F5F94B8E0332531601026D5D,
 		);
-	};
-	3F75494603E04BC200026DCE = {
-		fRef = F5AE04BA0206A4FE01A967DF;
-		isa = PBXTextBookmark;
-		name = "MainController.mm: tag";
-		rLen = 0;
-		rLoc = 31780;
-		rType = 0;
-		vrLen = 1801;
-		vrLoc = 32002;
-	};
-	3F75494703E04BC200026DCE = {
-		fRef = 3F22CC1303DF42A200026DCE;
-		isa = PBXBookmark;
-	};
-	3F75494803E04BC200026DCE = {
-		fRef = F5AE04BA0206A4FE01A967DF;
-		isa = PBXTextBookmark;
-		name = "MainController.mm: tag";
-		rLen = 0;
-		rLoc = 31780;
-		rType = 0;
-		vrLen = 1801;
-		vrLoc = 32002;
-	};
-	3F75494903E04BC200026DCE = {
-		fRef = 3F22CC1303DF42A200026DCE;
-		isa = PBXTextBookmark;
-		name = "Charset.dict: 36";
-		rLen = 0;
-		rLoc = 855;
-		rType = 0;
-		vrLen = 833;
-		vrLoc = 382;
-	};
-	3F75494A03E04BC200026DCE = {
-		fRef = F5AE04BA0206A4FE01A967DF;
-		isa = PBXTextBookmark;
-		rLen = 1;
-		rLoc = 952;
-		rType = 1;
-	};
-	3F75494B03E04BC200026DCE = {
-		fRef = F5AE04BA0206A4FE01A967DF;
-		isa = PBXTextBookmark;
-		name = "MainController.mm: 953";
-		rLen = 0;
-		rLoc = 31864;
-		rType = 0;
-		vrLen = 564;
-		vrLoc = 31432;
 	};
 	3FC72CBF03D37DC300026DCE = {
 		fRef = F5247C2D02289FD9013DD99A;
