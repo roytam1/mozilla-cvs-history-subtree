@@ -33,6 +33,7 @@
 #include "prtime.h"
 #include "nsISupportsUtils.h"
 #include "nsPromiseFlatString.h"
+#include "nsNetSegmentUtils.h"
 #include "netCore.h"
 
 #if defined(PR_LOGGING)
@@ -64,9 +65,8 @@ extern PRLogModuleInfo *gHttpLog;
 #define LOG_ENABLED() LOG4_ENABLED()
 
 // http default buffer geometry
-#define NS_HTTP_SEGMENT_SIZE  4096
-#define NS_HTTP_SEGMENT_COUNT 16   // 64k maximum
-#define NS_HTTP_MAX_ODA_SIZE  (NS_HTTP_SEGMENT_SIZE * 4) // 16k
+#define NS_HTTP_SEGMENT_SIZE  NET_DEFAULT_SEGMENT_SIZE
+#define NS_HTTP_SEGMENT_COUNT NET_DEFAULT_SEGMENT_COUNT
 
 // http version codes
 #define NS_HTTP_VERSION_UNKNOWN  0

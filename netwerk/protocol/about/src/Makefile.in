@@ -39,11 +39,16 @@ REQUIRES	= xpcom \
 CPPSRCS		= \
 		nsAboutProtocolHandler.cpp \
 		nsAboutBlank.cpp \
+		$(NULL)
+
+ifeq ($(filter about,$(MOZ_PROTOCOLS)),about)
+CPPSRCS += \
 		nsAboutBloat.cpp \
 		nsAboutCache.cpp \
 		nsAboutCacheEntry.cpp \
 		nsAboutRedirector.cpp \
 		$(NULL)
+endif
 
 # we don't want the shared lib, but we want to force the creation of a
 # static lib.

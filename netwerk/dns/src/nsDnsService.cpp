@@ -534,7 +534,12 @@ nsDNSLookup::nsDNSLookup()
     , mStatus(NS_OK)
     , mState(LOOKUP_NEW)
     , mProcessingRequests(0)
+#ifdef MOZ_DNS_CACHE
+#error "shut it"
     , mFlags(eCacheableMask)
+#else
+    , mFlags(0) // assume not cacheable
+#endif
     , mExpires(0)
 {
 	MOZ_COUNT_CTOR(nsDNSLookup);
@@ -1240,11 +1245,13 @@ nsDNSService::InstallPrefObserver()
     nsCOMPtr<nsIPrefBranchInternal> prefInternal = do_QueryInterface(prefs, &rv);
     if (NS_FAILED(rv))  return rv;
     
+#ifdef MOZ_DNS_CACHE
     rv  = prefInternal->AddObserver(NETWORK_DNS_CACHE_ENTRIES, this, PR_FALSE);
     if (NS_FAILED(rv))  return rv;
     
     rv = prefInternal->AddObserver(NETWORK_DNS_CACHE_EXPIRATION, this, PR_FALSE);
     if (NS_FAILED(rv))  return rv;
+#endif
     
     rv = prefInternal->AddObserver(NETWORK_ENABLEIDN, this, PR_FALSE);
     if (NS_FAILED(rv))  return rv;
@@ -1253,12 +1260,14 @@ nsDNSService::InstallPrefObserver()
     nsCOMPtr<nsIPrefBranch> prefBranch = do_QueryInterface(prefs, &rv);
     if (NS_FAILED(rv)) return rv;
 
+#ifdef MOZ_DNS_CACHE
     PRInt32 prefVal = 0;
     rv  = prefBranch->GetIntPref(NETWORK_DNS_CACHE_ENTRIES, &prefVal);
     if (NS_SUCCEEDED(rv))  mMaxCachedLookups = prefVal;
     
     rv = prefBranch->GetIntPref(NETWORK_DNS_CACHE_EXPIRATION, &prefVal);
     if (NS_SUCCEEDED(rv))  mExpirationInterval = prefVal;
+#endif
     
     PRBool enableIDN = PR_FALSE;
     rv = prefBranch->GetBoolPref(NETWORK_ENABLEIDN, &enableIDN);
@@ -1274,7 +1283,7 @@ nsDNSService::InstallPrefObserver()
 nsresult
 nsDNSService::RemovePrefObserver()
 {
-    nsresult rv, rv2;
+    nsresult rv;
     
     nsCOMPtr<nsIPrefService> prefs = do_QueryReferent(mPrefService);
     if (!prefs)  return NS_OK;  // no pref service, no need to unregister
@@ -1285,10 +1294,16 @@ nsDNSService::RemovePrefObserver()
     rv = prefInternal->RemoveObserver(NETWORK_ENABLEIDN, this);
     if (NS_FAILED(rv))  return rv;
 
+#ifdef MOZ_DNS_CACHE
+    nsresult rv2;
+
     rv  = prefInternal->RemoveObserver(NETWORK_DNS_CACHE_ENTRIES, this);
     rv2 = prefInternal->RemoveObserver(NETWORK_DNS_CACHE_EXPIRATION, this);
     
     return NS_FAILED(rv) ? rv : rv2;
+#else
+    return NS_OK;
+#endif
 }
 
 
@@ -1313,6 +1328,7 @@ nsDNSService::Observe(nsISupports *      subject,
     if (NS_FAILED(rv))  return rv;
     
     // which preference changed?
+#ifdef MOZ_DNS_CACHE
     if (!nsCRT::strcmp(NETWORK_DNS_CACHE_ENTRIES, NS_ConvertUCS2toUTF8(data).get())) {
         rv = prefs->GetIntPref(NETWORK_DNS_CACHE_ENTRIES, &mMaxCachedLookups);
         if (mMaxCachedLookups < 0)
@@ -1323,7 +1339,10 @@ nsDNSService::Observe(nsISupports *      subject,
         if (mExpirationInterval < 0)
             mExpirationInterval = 0;
     }
-    else if (!nsCRT::strcmp(NETWORK_ENABLEIDN, NS_ConvertUCS2toUTF8(data).get())) {
+    else
+#endif // MOZ_DNS_CACHE
+
+    if (!nsCRT::strcmp(NETWORK_ENABLEIDN, NS_ConvertUCS2toUTF8(data).get())) {
         PRBool enableIDN = PR_FALSE;
         rv = prefs->GetBoolPref(NETWORK_ENABLEIDN, &enableIDN);
 
@@ -1630,6 +1649,7 @@ nsDNSService::EvictLookup(nsDNSLookup * lookup)
 void
 nsDNSService::AddToEvictionQ(nsDNSLookup * lookup)
 {
+#ifdef MOZ_DNS_CACHE
     PR_APPEND_LINK(lookup, &mEvictionQ);
     ++mEvictionQCount;
     
@@ -1647,6 +1667,9 @@ nsDNSService::AddToEvictionQ(nsDNSLookup * lookup)
         --mEvictionQCount;
         EvictLookup(lookup);
     }
+#else
+    NS_NOTREACHED("nsDNSService::AddToEvictionQ");
+#endif
 }
 
 

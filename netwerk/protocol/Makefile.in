@@ -26,6 +26,7 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+# must enter each subdir to export IDL
 DIRS		= about \
               data \
               keyword \

@@ -123,21 +123,57 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsDirIndex)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsStreamListenerTee)
 
 ///////////////////////////////////////////////////////////////////////////////
+// protocols
+///////////////////////////////////////////////////////////////////////////////
 
+// about:blank is mandatory
+#include "nsAboutProtocolHandler.h"
+#include "nsAboutBlank.h"
+
+#ifdef MOZ_PROTOCOL_about
+// about
+#include "nsAboutBloat.h"
+#include "nsAboutCache.h"
+#include "nsAboutRedirector.h"
+#include "nsAboutCacheEntry.h"
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsAboutCacheEntry)
+#endif
+
+#ifdef MOZ_PROTOCOL_file
+// file
+#include "nsFileProtocolHandler.h"
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsFileProtocolHandler, Init)
+#endif
+
+#ifdef MOZ_PROTOCOL_ftp
+// ftp
+#include "nsFtpProtocolHandler.h"
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsFtpProtocolHandler, Init);
+#endif
+
+#ifdef MOZ_PROTOCOL_http
+// http/https
 #include "nsHttpHandler.h"
 #include "nsHttpBasicAuth.h"
 #include "nsHttpDigestAuth.h"
 #undef LOG
-
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsHttpHandler, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsHttpsHandler, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsHttpBasicAuth)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsHttpDigestAuth)
+#endif
 
-///////////////////////////////////////////////////////////////////////////////
+#ifdef MOZ_PROTOCOL_jar
+// jar
+#include "nsJARProtocolHandler.h"
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsJARProtocolHandler, Init)
+#endif
 
+#ifdef MOZ_PROTOCOL_res
+// resource
 #include "nsResProtocolHandler.h"
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsResProtocolHandler, Init)
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -166,25 +202,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsIDNService)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#include "nsFileProtocolHandler.h"
-#include "nsJARProtocolHandler.h"
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsFileProtocolHandler, Init)
-
-#include "nsJARProtocolHandler.h"
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsJARProtocolHandler, Init)
-
-#include "nsAboutProtocolHandler.h"
-#include "nsAboutBlank.h"
-#include "nsAboutBloat.h"
-#include "nsAboutCache.h"
-#include "nsAboutRedirector.h"
-
-#include "nsAboutCacheEntry.h"
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsAboutCacheEntry)
-
-///////////////////////////////////////////////////////////////////////////////
-
-#include "nsFtpProtocolHandler.h"
 #include "nsFTPDirListingConv.h"
 #include "nsGopherDirListingConv.h"
 #include "nsMultiMixedConv.h"
@@ -196,8 +213,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsAboutCacheEntry)
 #ifdef BUILD_BINHEX_DECODER
 #include "nsBinHexDecoder.h"
 #endif
-
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsFtpProtocolHandler, Init);
 
 nsresult NS_NewFTPDirListingConv(nsFTPDirListingConv** result);
 nsresult NS_NewGopherDirListingConv(nsGopherDirListingConv** result);
@@ -784,13 +799,16 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       nsMIMEInfoImplConstructor
     },
 
+#ifdef MOZ_PROTOCOL_file
     // from netwerk/protocol/file:
     { NS_FILEPROTOCOLHANDLER_CLASSNAME,
       NS_FILEPROTOCOLHANDLER_CID,  
       NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "file", 
       nsFileProtocolHandlerConstructor
     },
+#endif
 
+#ifdef MOZ_PROTOCOL_http
     { "HTTP Handler",
       NS_HTTPPROTOCOLHANDLER_CID,
       NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "http",
@@ -810,29 +828,36 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       NS_HTTPDIGESTAUTH_CID,
       NS_HTTP_AUTHENTICATOR_CONTRACTID_PREFIX "digest",
       nsHttpDigestAuthConstructor },
+#endif
 
+#ifdef MOZ_PROTOCOL_ftp
     // from netwerk/protocol/ftp:
     { "The FTP Protocol Handler", 
       NS_FTPPROTOCOLHANDLER_CID,
       NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "ftp",
       nsFtpProtocolHandlerConstructor
     },
+#endif
 
+#ifdef MOZ_PROTOCOL_jar
     // from netwerk/protocol/jar:
     { NS_JARPROTOCOLHANDLER_CLASSNAME,
       NS_JARPROTOCOLHANDLER_CID,
       NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "jar", 
       nsJARProtocolHandlerConstructor
     },
+#endif
 
+#ifdef MOZ_PROTOCOL_res
     // from netwerk/protocol/res:
     { NS_RESPROTOCOLHANDLER_CLASSNAME,
       NS_RESPROTOCOLHANDLER_CID,
       NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "resource",
       nsResProtocolHandlerConstructor
     },
+#endif
 
-    // from netwerk/protocol/about:
+    // from netwerk/protocol/about (about:blank is mandatory):
     { "About Protocol Handler", 
       NS_ABOUTPROTOCOLHANDLER_CID,
       NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "about", 
@@ -843,6 +868,7 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       NS_ABOUT_MODULE_CONTRACTID_PREFIX "blank", 
       nsAboutBlank::Create
     },
+#ifdef MOZ_PROTOCOL_about
     { "about:bloat", 
       NS_ABOUT_BLOAT_MODULE_CID,
       NS_ABOUT_MODULE_CONTRACTID_PREFIX "bloat", 
@@ -884,6 +910,7 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       NS_ABOUT_MODULE_CONTRACTID_PREFIX "cache-entry",
       nsAboutCacheEntryConstructor
     },
+#endif
 
     {  NS_ISOCKSSOCKETPROVIDER_CLASSNAME,
        NS_SOCKSSOCKETPROVIDER_CID,

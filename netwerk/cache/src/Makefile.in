@@ -49,6 +49,10 @@ CPPSRCS		= \
 	nsCacheService.cpp \
 	nsCacheSession.cpp \
 	nsMemoryCacheDevice.cpp \
+	$(NULL)
+
+ifdef MOZ_DISK_CACHE
+CPPSRCS += \
 	nsDiskCacheBinding.cpp \
 	nsDiskCacheBlockFile.cpp \
 	nsDiskCacheDevice.cpp \
@@ -56,6 +60,8 @@ CPPSRCS		= \
 	nsDiskCacheMap.cpp \
 	nsDiskCacheStreams.cpp \
 	$(NULL)
+DEFINES += -DMOZ_DISK_CACHE
+endif
 
 include $(topsrcdir)/config/config.mk
 

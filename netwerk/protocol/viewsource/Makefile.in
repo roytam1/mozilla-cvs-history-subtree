@@ -26,6 +26,10 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS		= public src
+DIRS		= public
+
+ifeq ($(filter viewsource,$(MOZ_PROTOCOLS)),viewsource)
+DIRS += src
+endif
 
 include $(topsrcdir)/config/rules.mk

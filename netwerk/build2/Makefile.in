@@ -41,18 +41,19 @@ REQUIRES	= xpcom \
 
 CPPSRCS		= nsNetModule2.cpp
 
+# secondary necko protocols
+PROTOCOLS = $(filter data keyword gopher viewsource,$(MOZ_PROTOCOLS))
+
+DEFINES		+= $(foreach d,$(PROTOCOLS),-DMOZ_PROTOCOL_${d})
+
 SHARED_LIBRARY_LIBS = \
-		$(DIST)/lib/$(LIB_PREFIX)nkgopher_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)nkviewsource_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)nkdata_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)nkkwd_s.$(LIB_SUFFIX) \
+		$(foreach d,$(PROTOCOLS), \
+			$(DIST)/lib/$(LIB_PREFIX)nk${d}_s.$(LIB_SUFFIX)) \
 		$(NULL)
 
 LOCAL_INCLUDES	= \
-		-I$(srcdir)/../protocol/gopher/src \
-		-I$(srcdir)/../protocol/viewsource/src \
-		-I$(srcdir)/../protocol/keyword/src \
-		-I$(srcdir)/../protocol/data/src \
+		$(foreach d,$(PROTOCOLS), \
+			-I$(srcdir)/../protocol/${d}/src) \
 		$(NULL)
 
 EXTRA_DSO_LDOPTS = \
@@ -60,3 +61,14 @@ EXTRA_DSO_LDOPTS = \
 		$(NULL)
 
 include $(topsrcdir)/config/rules.mk
+
+# make sure we rebuild if protocol list changes
+export::
+	@echo "$(PROTOCOLS)" > tmp_protocol_list
+	@if `cmp -s _protocol_list tmp_protocol_list`; then \
+		rm -f tmp_protocol_list; \
+	else \
+		rm -f _protocol_list; \
+		mv tmp_protocol_list _protocol_list; \
+		touch Makefile; \
+	fi

@@ -28,10 +28,13 @@
 #include "nsCacheEntry.h"
 #include "nsCacheEntryDescriptor.h"
 #include "nsCacheDevice.h"
-#include "nsDiskCacheDevice.h"
 #include "nsMemoryCacheDevice.h"
 #include "nsICacheVisitor.h"
 #include "nsCRT.h"
+
+#ifdef MOZ_DISK_CACHE
+#include "nsDiskCacheDevice.h"
+#endif
 
 #include "nsAutoLock.h"
 #include "nsIEventQueue.h"
@@ -135,7 +138,11 @@ nsCacheProfilePrefObserver::Install()
 
     rv = prefInternal->AddObserver(MEMORY_CACHE_ENABLE_PREF, this, PR_FALSE);
     if (NS_FAILED(rv)) rv2 = rv;
+    
+    rv = prefInternal->AddObserver(MEMORY_CACHE_CAPACITY_PREF, this, PR_FALSE);
+    if (NS_FAILED(rv)) rv2 = rv;
 
+#ifdef MOZ_DISK_CACHE
     rv = prefInternal->AddObserver(DISK_CACHE_ENABLE_PREF, this, PR_FALSE);
     if (NS_FAILED(rv)) rv2 = rv;
     
@@ -144,9 +151,7 @@ nsCacheProfilePrefObserver::Install()
     
     rv = prefInternal->AddObserver(DISK_CACHE_CAPACITY_PREF, this, PR_FALSE);
     if (NS_FAILED(rv)) rv2 = rv;
-    
-    rv = prefInternal->AddObserver(MEMORY_CACHE_CAPACITY_PREF, this, PR_FALSE);
-    if (NS_FAILED(rv)) rv2 = rv;
+#endif
     
     // determine if we have a profile already
     //     if there is only a single profile, or it is specified on the commandline
@@ -192,6 +197,7 @@ nsCacheProfilePrefObserver::Remove()
     nsCOMPtr<nsIPrefBranchInternal> prefInternal = do_QueryInterface(prefService, &rv);
     if (NS_FAILED(rv)) return rv;
 
+#ifdef MOZ_DISK_CACHE
     // remove Disk cache pref observers
     rv  = prefInternal->RemoveObserver(DISK_CACHE_ENABLE_PREF, this);
     if (NS_FAILED(rv)) rv2 = rv;
@@ -201,6 +207,7 @@ nsCacheProfilePrefObserver::Remove()
 
     rv  = prefInternal->RemoveObserver(DISK_CACHE_DIR_PREF, this);
     if (NS_FAILED(rv)) rv2 = rv;
+#endif
     
     // remove Memory cache pref observers
     rv = prefInternal->RemoveObserver(MEMORY_CACHE_ENABLE_PREF, this);
@@ -248,13 +255,13 @@ nsCacheProfilePrefObserver::Observe(nsISupports *     subject,
         if (NS_FAILED(rv))
             return rv;
 
+#ifdef MOZ_DISK_CACHE
         // which preference changed?
         if (!nsCRT::strcmp(DISK_CACHE_ENABLE_PREF, NS_ConvertUCS2toUTF8(data).get())) {
 
             rv = prefBranch->GetBoolPref(DISK_CACHE_ENABLE_PREF, &mDiskCacheEnabled);
             if (NS_FAILED(rv))  return rv;
             nsCacheService::SetDiskCacheEnabled(DiskCacheEnabled());
-            
 
         } else if (!nsCRT::strcmp(DISK_CACHE_CAPACITY_PREF, NS_ConvertUCS2toUTF8(data).get())) {
 
@@ -269,7 +276,10 @@ nsCacheProfilePrefObserver::Observe(nsISupports *     subject,
             // XXX ideally, there should be somekind of user notification that the pref change
             // XXX won't take effect until the next time the profile changes (browser launch)
 #endif            
-        } else if (!nsCRT::strcmp(MEMORY_CACHE_ENABLE_PREF, NS_ConvertUCS2toUTF8(data).get())) {
+        } else
+#endif // !MOZ_DISK_CACHE
+
+        if (!nsCRT::strcmp(MEMORY_CACHE_ENABLE_PREF, NS_ConvertUCS2toUTF8(data).get())) {
 
             rv = prefBranch->GetBoolPref(MEMORY_CACHE_ENABLE_PREF, &mMemoryCacheEnabled);
             if (NS_FAILED(rv))  return rv;
@@ -301,6 +311,7 @@ nsCacheProfilePrefObserver::ReadPrefs()
     nsCOMPtr<nsIPrefBranch> prefBranch = do_QueryInterface(prefService, &rv);
     if (NS_FAILED(rv))  return rv;
 
+#ifdef MOZ_DISK_CACHE
     // read disk cache device prefs
     rv = prefBranch->GetBoolPref(DISK_CACHE_ENABLE_PREF, &mDiskCacheEnabled);
     if (NS_FAILED(rv)) rv2 = rv;
@@ -326,6 +337,7 @@ nsCacheProfilePrefObserver::ReadPrefs()
         if (directory)
             mDiskCacheParentDirectory = do_QueryInterface(directory, &rv);
     }
+#endif // !MOZ_DISK_CACHE
     
     // read memory cache device prefs
     rv = prefBranch->GetBoolPref(MEMORY_CACHE_ENABLE_PREF, &mMemoryCacheEnabled);
@@ -472,8 +484,10 @@ nsCacheService::Shutdown()
         delete mMemoryDevice;
         mMemoryDevice = nsnull;
 
+#ifdef MOZ_DISK_CACHE
         delete mDiskDevice;
         mDiskDevice = nsnull;
+#endif
     }
     return NS_OK;
 }
@@ -537,6 +551,7 @@ nsCacheService::EvictEntriesForClient(const char *          clientID,
     nsAutoLock lock(mCacheServiceLock);
     nsresult rv = NS_OK;
 
+#ifdef MOZ_DISK_CACHE
     if (storagePolicy == nsICache::STORE_ANYWHERE ||
         storagePolicy == nsICache::STORE_ON_DISK) {
 
@@ -549,6 +564,7 @@ nsCacheService::EvictEntriesForClient(const char *          clientID,
             if (NS_FAILED(rv)) return rv;
         }
     }
+#endif
 
     if (storagePolicy == nsICache::STORE_ANYWHERE ||
         storagePolicy == nsICache::STORE_IN_MEMORY) {
@@ -610,6 +626,7 @@ NS_IMETHODIMP nsCacheService::VisitEntries(nsICacheVisitor *visitor)
         if (NS_FAILED(rv)) return rv;
     }
 
+#ifdef MOZ_DISK_CACHE
     if (mEnableDiskDevice) {
         if (!mDiskDevice) {
             rv = CreateDiskDevice();
@@ -618,6 +635,7 @@ NS_IMETHODIMP nsCacheService::VisitEntries(nsICacheVisitor *visitor)
         rv = mDiskDevice->Visit(visitor);
         if (NS_FAILED(rv)) return rv;
     }
+#endif
 
     // XXX notify any shutdown process that visitation is complete for THIS visitor.
     // XXX keep queue of visitors
@@ -638,6 +656,7 @@ NS_IMETHODIMP nsCacheService::EvictEntries(nsCacheStoragePolicy storagePolicy)
 nsresult
 nsCacheService::CreateDiskDevice()
 {
+#ifdef MOZ_DISK_CACHE
     if (!mEnableDiskDevice) return NS_ERROR_NOT_AVAILABLE;
     if (mDiskDevice)        return NS_OK;
 
@@ -661,6 +680,10 @@ nsCacheService::CreateDiskDevice()
         mDiskDevice = nsnull;
     }
     return rv;
+#else
+    NS_NOTREACHED("no disk cache");
+    return NS_ERROR_NOT_IMPLEMENTED;
+#endif
 }
 
 
@@ -933,6 +956,7 @@ nsCacheService::SearchCacheDevices(nsCString * key, nsCacheStoragePolicy policy)
             entry = mMemoryDevice->FindEntry(key);
     }
 
+#ifdef MOZ_DISK_CACHE
     if (!entry && 
         ((policy == nsICache::STORE_ANYWHERE) || (policy == nsICache::STORE_ON_DISK))) {
 
@@ -946,6 +970,7 @@ nsCacheService::SearchCacheDevices(nsCString * key, nsCacheStoragePolicy policy)
             entry = mDiskDevice->FindEntry(key);
         }
     }
+#endif
 
     return entry;
 }
@@ -958,6 +983,7 @@ nsCacheService::EnsureEntryHasDevice(nsCacheEntry * entry)
     if (device)  return device;
     nsresult rv = NS_OK;
 
+#ifdef MOZ_DISK_CACHE
     if (entry->IsStreamData() && entry->IsAllowedOnDisk() && mEnableDiskDevice) {
         // this is the default
         if (!mDiskDevice) {
@@ -972,6 +998,7 @@ nsCacheService::EnsureEntryHasDevice(nsCacheEntry * entry)
                 device = mDiskDevice;
         }
     }
+#endif
      
     // if we can't use mDiskDevice, try mMemoryDevice
     if (!device && mEnableMemoryDevice && entry->IsAllowedInMemory()) {        
@@ -1074,6 +1101,7 @@ nsCacheService::OnProfileShutdown(PRBool cleanse)
     if (!gService)  return;
     nsAutoLock lock(gService->mCacheServiceLock);
 
+#ifdef MOZ_DISK_CACHE
     if (gService->mDiskDevice) {
         if (cleanse)
             gService->mDiskDevice->EvictEntries(nsnull);
@@ -1084,6 +1112,8 @@ nsCacheService::OnProfileShutdown(PRBool cleanse)
         gService->mDiskDevice->Shutdown();
         gService->mEnableDiskDevice = PR_FALSE;
     }
+#endif
+
 #if 0
     if (gService->mMemoryDevice) {
         gService->mMemoryDevice->Shutdown();
@@ -1104,6 +1134,7 @@ nsCacheService::OnProfileChanged()
     gService->mEnableDiskDevice   = gService->mObserver->DiskCacheEnabled();
     gService->mEnableMemoryDevice = gService->mObserver->MemoryCacheEnabled();
 
+#ifdef MOZ_DISK_CACHE
     if (gService->mDiskDevice) {
         gService->mDiskDevice->SetCacheParentDirectory(gService->mObserver->DiskCacheParentDirectory());
         gService->mDiskDevice->SetCapacity(gService->mObserver->DiskCacheCapacity());
@@ -1116,6 +1147,7 @@ nsCacheService::OnProfileChanged()
             // XXX delete mDiskDevice?
         }
     }
+#endif
     
     if (gService->mMemoryDevice) {
         gService->mMemoryDevice->SetCapacity(gService->mObserver->MemoryCacheCapacity());
@@ -1141,6 +1173,7 @@ nsCacheService::SetDiskCacheEnabled(PRBool  enabled)
 void
 nsCacheService::SetDiskCacheCapacity(PRInt32  capacity)
 {
+#ifdef MOZ_DISK_CACHE
     if (!gService)  return;
     nsAutoLock lock(gService->mCacheServiceLock);
 
@@ -1149,6 +1182,7 @@ nsCacheService::SetDiskCacheCapacity(PRInt32  capacity)
     }
     
     gService->mEnableDiskDevice = gService->mObserver->DiskCacheEnabled();
+#endif
 }
 
 

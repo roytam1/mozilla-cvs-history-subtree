@@ -39,7 +39,6 @@ DIRS		= \
 		resources \
 		$(NULL)
 
-
 DIRS            += build2
 
 ifdef ENABLE_TESTS

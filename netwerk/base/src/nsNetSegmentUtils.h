@@ -40,8 +40,13 @@
 
 #include "nsIOService.h"
 
+// XXX need to make this configurable
+/*
 #define NET_DEFAULT_SEGMENT_SIZE  4096
 #define NET_DEFAULT_SEGMENT_COUNT 16
+*/
+#define NET_DEFAULT_SEGMENT_SIZE  2000
+#define NET_DEFAULT_SEGMENT_COUNT 4
 
 /**
  * returns preferred allocator for given segment size.  NULL implies
