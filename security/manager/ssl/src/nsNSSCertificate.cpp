@@ -1242,7 +1242,7 @@ nsNSSCertificate::GetTokenName(PRUnichar **aTokenName)
       if (NS_FAILED(rv)) return rv;
       rv = nssComponent->GetPIPNSSBundleString(
                                 NS_LITERAL_STRING("InternalToken").get(), tok);
-      if (!NS_FAILED(rv))
+      if (NS_SUCCEEDED(rv))
         *aTokenName = ToNewUnicode(tok);
     }
   }
