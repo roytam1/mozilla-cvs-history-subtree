@@ -116,7 +116,6 @@ CPPSRCS		= \
 		nsHTMLTitleElement.cpp \
 		nsHTMLUListElement.cpp \
 		nsHTMLUnknownElement.cpp \
-		nsHTMLUtils.cpp \
 		nsHTMLWBRElement.cpp \
 		$(NULL)
 
