@@ -1458,6 +1458,9 @@ static XP_Bool pref_ValueChanged(PrefValue oldValue, PrefValue newValue, PrefTyp
 		case PREF_BOOL:
 			changed = oldValue.boolVal != newValue.boolVal;
 			break;
+
+		default:
+			break;
 	}
 	return changed;
 }
@@ -2093,7 +2096,7 @@ void pref_Alert(char* msg)
 #if defined (XP_WIN)
 		MessageBox (NULL, msg, "Netscape -- JS Preference Warning", MB_OK);
 #elif defined(XP_OS2)
-      WinMessageBox (HWND_DESKTOP, NULL, msg, "Netscape -- JS Preference Warning", 0, MB_WARNING | MB_OK | MB_APPLMODAL | MB_MOVEABLE);
+      WinMessageBox (HWND_DESKTOP, 0, msg, "Netscape -- JS Preference Warning", 0, MB_WARNING | MB_OK | MB_APPLMODAL | MB_MOVEABLE);
 #endif
 }
 

@@ -213,7 +213,7 @@ png_delay_time_callback(void *closure)
 
     XP_ASSERT(ipng_ptr->state == PNG_DELAY);
 
-    ipng_ptr->delay_time = NULL;
+    ipng_ptr->delay_time = 0;
 
     if (ipng_ptr->ic->state == IC_ABORT_PENDING)
         return;                                        

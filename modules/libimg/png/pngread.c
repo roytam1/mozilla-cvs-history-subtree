@@ -56,7 +56,7 @@ png_create_read_struct(png_charp user_png_ver, png_voidp error_ptr,
    /* initialize zbuf - compression buffer */
    png_ptr->zbuf_size = PNG_ZBUF_SIZE;
    png_ptr->zbuf = png_malloc(png_ptr, png_ptr->zbuf_size);
-   memset(png_ptr->zbuf, NULL, png_ptr->zbuf_size );
+   memset(png_ptr->zbuf, 0, png_ptr->zbuf_size );
 
    png_ptr->zstream.zalloc = png_zalloc;
    png_ptr->zstream.zfree = png_zfree;
