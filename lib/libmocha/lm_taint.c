@@ -1179,11 +1179,6 @@ getPrincipalsCount(JSContext *cx, JSPrincipals *principals)
 {
     void *principalArray;
 
-    JRIEnv* env = LJ_JSJ_CurrentEnv(cx);
-    if (env == NULL) {
-        return 0;
-    }
-
     /* Get array of principals */
     principalArray = getPrincipalArray(cx, principals);
 
@@ -1193,7 +1188,6 @@ getPrincipalsCount(JSContext *cx, JSPrincipals *principals)
 static JSBool
 principalsEqual(JSContext *cx, JSPrincipals *a, JSPrincipals *b)
 {
-    JRIEnv* env;
     JSPrincipalsData *dataA, *dataB;
     void *arrayA;
     void *arrayB;
@@ -1209,11 +1203,6 @@ principalsEqual(JSContext *cx, JSPrincipals *a, JSPrincipals *b)
 
     arrayA = getPrincipalArray(cx, a);
     arrayB = getPrincipalArray(cx, b);
-
-    env = LJ_JSJ_CurrentEnv(cx);
-    if (env == NULL) {
-        return JS_FALSE;
-    }
 
     return (JSBool)(nsCapsComparePrincipalArray(arrayA, arrayB)
                 == nsSetComparisonType_Equal);

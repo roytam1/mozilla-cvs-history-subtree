@@ -27,7 +27,6 @@ DIRS = \
 	libutil \
 	libimg \
 	libfont \
-	libreg \
 	rdf \
 	xml \
 	schedulr \
