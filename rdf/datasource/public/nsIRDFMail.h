@@ -22,22 +22,47 @@
 #include "nscore.h"
 #include "nsISupports.h"
 
+// the UI will interact with the mail data source via the 
+// nsIRDFDataSource interfaces. The following methods are mostly
+// for netlib to talk to the database. It needs to be able to
+// add/delete an account, folder or message. 
+
+// {669F3361-9EAF-11d2-80B4-006097B76B8E}
+#define NS_IRDFMAILDATAOURCE_IID \
+{ 0x669f3361, 0x9eaf, 0x11d2, { 0x80, 0xb4, 0x0, 0x60, 0x97, 0xb7, 0x6b, 0x8e } };
+
+class nsIRDFMailAccount;
+class nsIRDFMailFolder;
+class nsIRDFMailMessage;
+
+class nsIRDFMailDataSource : public nsIRDFDataSource {
+public:
+
+  NS_IMETHOD GetAccountList (nsVoidArray* result) = 0;
+
+  NS_IMETHOD AddAccount (nsIRDFMailAccount* folder) = 0;
+  
+  NS_IMETHOD RemoveAccount (nsIRDFMailAccount* folder) = 0;
+
+};
 
 // {9D2792E0-9EAE-11d2-80B4-006097B76B8E}
 #define NS_IMAILACCOUNT_IID \
 { 0x9d2792e0, 0x9eae, 0x11d2, { 0x80, 0xb4, 0x0, 0x60, 0x97, 0xb7, 0x6b, 0x8e } };
 
 
-
-
 class nsIRDFMailAccount : public nsIRDFResource {
 public:
-    /**
-     * account username and host
-     */
-    NS_IMETHOD GetUserName(char**  result) const = 0;
 
-    NS_IMETHOD GetHostName(char**  result) const = 0;
+    NS_IMETHOD GetUser(nsIRDFLiteral**  result) const = 0;
+
+    NS_IMETHOD GetHost(nsIRDFLiteral**  result) const = 0;
+
+    NS_IMETHOD GetFolderList (nsVoidArray* result) = 0;
+
+    NS_IMETHOD AddFolder (nsIRDFMailFolder* folder) = 0;
+
+    NS_IMETHOD RemoveFolder (nsIRDFMailFolder* folder) = 0;
 };
 
 // {9D2792E1-9EAE-11d2-80B4-006097B76B8E}
@@ -46,14 +71,16 @@ public:
 
 class nsIRDFMailFolder : public nsIRDFResource {
 public:
-    /**
-     * folder name and account 
-     */
-   
+
     NS_IMETHOD GetAccount(nsIRDFMailAccount** account) = 0;
 
-    NS_IMETHOD GetName(char**  result) const = 0;
+    NS_IMETHOD GetName(nsIRDFLiteral**  result) const = 0;
 
+    NS_IMETHOD GetMessageList (nsVoidArray* result) = 0;
+
+    NS_IMETHOD AddMessage (nsIRDFMailMessage* msg) = 0;
+
+    NS_IMETHOD RemoveMessage (nsIRDFMailMessage* msg) = 0;
 };
 
 // {9D2792E2-9EAE-11d2-80B4-006097B76B8E}
@@ -65,13 +92,15 @@ public:
    
     NS_IMETHOD GetFolder(nsIRDFMailFolder** account) = 0;
 
-    NS_IMETHOD GetSubject(char**  result) = 0;
+    NS_IMETHOD GetSubject(nsIRDFLiteral**  result) = 0;
 
     NS_IMETHOD GetSender(nsIRDFResource**  result) = 0;
 
-    NS_IMETHOD GetDate(char**  result) = 0;
+    NS_IMETHOD GetDate(nsIRDFLiteral**  result) = 0;
 
-    NS_IMETHOD GetMessage(char** result) = 0; 
+    NS_IMETHOD GetContent(char** result) = 0; 
+
+    NS_IMETHOD GetMessageID(nsIRDFLiteral** id) = 0;
 
 // XXX this really sucks --- the flags, such as replied, forwarded, read, etc.
 //     should have separate methods
@@ -80,24 +109,6 @@ public:
     NS_IMETHOD SetFlags(const char* result) = 0; 
 };
 
-// {669F3361-9EAF-11d2-80B4-006097B76B8E}
-#define NS_IRDFMAILDATAOURCE_IID \
-{ 0x669f3361, 0x9eaf, 0x11d2, { 0x80, 0xb4, 0x0, 0x60, 0x97, 0xb7, 0x6b, 0x8e } };
-/*
 
-class nsIRDFMailDataSource : public nsIRDFDataSource {
-public:
---- add account
---- add folder
---- add message
---- set message flag
---- update
-}
 
-class nsIRDFMailDatabase
---- initialize account list
---- initialize folder list of account
---- initialize folder
-
-*/
 #endif nsIRDFMail_h
