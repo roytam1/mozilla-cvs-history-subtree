@@ -237,7 +237,10 @@ nsXBLService::LoadBindings(nsIContent* aContent, const nsString& aURL, PRBool aA
       styleBinding->GetBindingURI(uri);
       if (uri.Equals(aURL))
         return NS_OK;
-      else FlushStyleBindings(aContent);
+      else {
+        FlushStyleBindings(aContent);
+        binding = nsnull;
+      }
     }
   }
 
