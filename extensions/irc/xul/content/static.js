@@ -782,7 +782,6 @@ function createHighlightMenu()
                     match(/\.chatzilla-highlight\[name=\"?([^\"]+)\"?\]/i);
                 if (ary)
                 {
-                    dd ("adding " + ary[1]);
                     menuitem = document.createElement("menuitem");
                     menuitem.setAttribute ("class", "highlight-menu-item");
                     menuitem.setAttribute ("label", ary[1]);

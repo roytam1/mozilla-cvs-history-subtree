@@ -596,15 +596,15 @@ function onToggleMunger()
 
 function onMultilineInputKeyPress (e)
 {
-    if (e.ctrlKey && e.keyCode == 13)
+    if (e.metaKey && e.keyCode == 13)
     {
-        /* ctrl-enter, execute buffer */
+        /* meta-enter, execute buffer */
         e.line = e.target.value;
         onInputCompleteLine (e);
     }
     else
-        if (e.ctrlKey && e.keyCode == 40)
-            /* ctrl-down, switch to single line mode */
+        if (e.metaKey && e.keyCode == 40)
+            /* meta-down, switch to single line mode */
             multilineInputMode (false);
 }
 
@@ -622,7 +622,7 @@ function onInputKeyPress (e)
             break;
 
         case 38: /* up */
-            if (e.ctrlKey)  /* ctrl-up, switch to multi line mode */
+            if (e.metaKey)  /* meta-up, switch to multi line mode */
                 multilineInputMode (true);
             else
                 if (client.lastHistoryReferenced <

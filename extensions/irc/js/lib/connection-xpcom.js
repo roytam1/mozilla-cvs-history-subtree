@@ -249,7 +249,7 @@ function sp_datawrite (request, ctxt, ostream, offset, count)
     //dd ("StreamProvider.prototype.onDataWritable");
  
     if (this.isClosed)
-        return Components.results.NS_BASE_STREAM_CLOSED;
+        throw Components.results.NS_BASE_STREAM_CLOSED;
     
     if (!this.pendingData)
     {

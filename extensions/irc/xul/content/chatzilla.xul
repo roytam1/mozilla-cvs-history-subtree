@@ -403,9 +403,9 @@
                 </hbox>
               </hbox>
               <hbox flex="1">
-                <text class="header-label" width="5%" value="&topic.label;"/>
-                <text class="header-data" width="95%" id="channel-topic" value="(none)" crop="right"
-                  onclick="onTopicEditStart()"/>
+                <text class="header-label" flex="5%" value="&topic.label;"/>
+                <text class="header-data" flex="95%" id="channel-topic"
+                  value="(none)" crop="right" onclick="onTopicEditStart()"/>
                 <textbox flex="1" id="channel-topicedit" collapsed="true"
                   onblur="onTopicEditEnd();"/>
               </hbox>
