@@ -431,7 +431,7 @@ protected:
   nsresult Init();
 
   nsIArena* mArena;
-  nsString* mDocumentTitle;
+  nsString mDocumentTitle;
   nsIURI* mDocumentURL;
   nsIPrincipal* mPrincipal;
   nsWeakPtr mDocumentLoadGroup;

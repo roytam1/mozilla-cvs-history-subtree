@@ -46,6 +46,7 @@
 #include "nsIEventStateManager.h"
 #include "nsContentList.h"
 #include "nsIObserver.h"
+#include "nsIBaseWindow.h"
 
 #include "nsIDOMEventListener.h"
 
@@ -501,7 +502,6 @@ nsDocument::nsDocument()
   NS_INIT_REFCNT();
 
   mArena = nsnull;
-  mDocumentTitle = nsnull;
   mDocumentURL = nsnull;
   mCharacterSet.AssignWithConversion("ISO-8859-1");
   mParentDocument = nsnull;
@@ -545,10 +545,6 @@ nsDocument::~nsDocument()
     }
   }
 
-  if (nsnull != mDocumentTitle) {
-    delete mDocumentTitle;
-    mDocumentTitle = nsnull;
-  }
   NS_IF_RELEASE(mDocumentURL);
   NS_IF_RELEASE(mPrincipal);
   mDocumentLoadGroup = null_nsCOMPtr();
@@ -652,10 +648,8 @@ nsDocument::Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup)
 {
   nsresult rv = NS_OK;
 
-  if (nsnull != mDocumentTitle) {
-    delete mDocumentTitle;
-    mDocumentTitle = nsnull;
-  }
+  mDocumentTitle.Truncate();
+
   NS_IF_RELEASE(mDocumentURL);
   NS_IF_RELEASE(mPrincipal);
   mDocumentLoadGroup = null_nsCOMPtr();
@@ -772,7 +766,7 @@ nsDocument::StopDocumentLoad()
 
 const nsString* nsDocument::GetDocumentTitle() const
 {
-  return mDocumentTitle;
+  return &mDocumentTitle;
 }
 
 nsIURI* nsDocument::GetDocumentURL() const
@@ -2207,6 +2201,44 @@ nsDocument::GetLocation(nsIDOMLocation **_retval)
   if(w) {
     return w->GetLocation(_retval);
   }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocument::GetTitle(nsAWritableString& aTitle)
+{
+  aTitle.Assign(mDocumentTitle);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocument::SetTitle(const nsAReadableString& aTitle)
+{
+  for (PRInt32 i = mPresShells.Count() - 1; i >= 0; --i) {
+    nsIPresShell* shell = NS_STATIC_CAST(nsIPresShell*, mPresShells[i]);
+
+    nsCOMPtr<nsIPresContext> context;
+    nsresult rv = shell->GetPresContext(getter_AddRefs(context));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsCOMPtr<nsISupports> container;
+    rv = context->GetContainer(getter_AddRefs(container));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    if (!container)
+      continue;
+
+    nsCOMPtr<nsIBaseWindow> docShellWin = do_QueryInterface(container);
+    if(!docShellWin)
+      continue;
+
+    rv = docShellWin->SetTitle(nsPromiseFlatString(aTitle).get());
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+
+  mDocumentTitle.Assign(aTitle);
 
   return NS_OK;
 }

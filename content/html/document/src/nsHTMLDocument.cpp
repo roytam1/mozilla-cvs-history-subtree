@@ -914,31 +914,7 @@ nsHTMLDocument::EndLoad()
 NS_IMETHODIMP
 nsHTMLDocument::SetTitle(const nsAReadableString& aTitle)
 {
-  if (nsnull == mDocumentTitle) {
-    mDocumentTitle = new nsString(aTitle);
-  }
-  else {
-    mDocumentTitle->Assign(aTitle);
-  }
-
-  // Pass on to any interested containers
-  PRInt32 i, n = mPresShells.Count();
-  for (i = 0; i < n; i++) {
-    nsIPresShell* shell = (nsIPresShell*) mPresShells.ElementAt(i);
-    nsCOMPtr<nsIPresContext> cx;
-    shell->GetPresContext(getter_AddRefs(cx));
-    nsCOMPtr<nsISupports> container;
-    if (NS_OK == cx->GetContainer(getter_AddRefs(container))) {
-      if (container) {
-        nsCOMPtr<nsIBaseWindow> docShell(do_QueryInterface(container));
-        if(docShell) {
-          docShell->SetTitle(mDocumentTitle->GetUnicode());
-        }
-      }
-    }
-  }
-
-  return NS_OK;
+  return nsDocument::SetTitle(aTitle);
 }
 
 NS_IMETHODIMP
@@ -1716,12 +1692,7 @@ nsHTMLDocument::GetBaseURI(nsAWritableString &aURI)
 NS_IMETHODIMP
 nsHTMLDocument::GetTitle(nsAWritableString& aTitle)
 {
-  if (nsnull != mDocumentTitle) {
-    aTitle.Assign(*mDocumentTitle);
-  } else {
-    aTitle.Truncate();
-  }
-  return NS_OK;
+  return nsDocument::GetTitle(aTitle);
 }
 
 NS_IMETHODIMP    

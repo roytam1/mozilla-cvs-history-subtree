@@ -34,6 +34,8 @@ interface nsIDOMNSDocument : nsISupports
 
   readonly attribute nsIDOMLocation       location;
 
+           attribute DOMString            title;
+
   void                      load(in DOMString url);
 
   nsIBoxObject              getBoxObjectFor(in nsIDOMElement elt);

@@ -1954,9 +1954,7 @@ nsXULDocument::SetDefaultStylesheets(nsIURI* aUrl)
 NS_IMETHODIMP
 nsXULDocument::SetTitle(const PRUnichar *aTitle)
 {
-    NS_ASSERTION(0,"not implemented");
-    NS_NOTREACHED("nsXULDocument::SetTitle");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    return SetTitle(nsLiteralString(aTitle));
 }
 
 //----------------------------------------------------------------------
@@ -2766,6 +2764,44 @@ nsXULDocument::GetLocation(nsIDOMLocation** aLocation)
 }
 
 NS_IMETHODIMP
+nsXULDocument::GetTitle(nsAWritableString& aTitle)
+{
+    aTitle.Assign(mDocumentTitle);
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXULDocument::SetTitle(const nsAReadableString& aTitle)
+{
+    for (PRInt32 i = mPresShells.Count() - 1; i >= 0; --i) {
+        nsIPresShell* shell = NS_STATIC_CAST(nsIPresShell*, mPresShells[i]);
+
+        nsCOMPtr<nsIPresContext> context;
+        nsresult rv = shell->GetPresContext(getter_AddRefs(context));
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        nsCOMPtr<nsISupports> container;
+        rv = context->GetContainer(getter_AddRefs(container));
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        if (!container)
+            continue;
+
+        nsCOMPtr<nsIBaseWindow> docShellWin = do_QueryInterface(container);
+        if(!docShellWin)
+            continue;
+
+        rv = docShellWin->SetTitle(nsPromiseFlatString(aTitle).get());
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+
+    mDocumentTitle.Assign(aTitle);
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 nsXULDocument::Load(const nsAReadableString& aUrl)
 {
     NS_NOTREACHED("nsXULDocument::Load");
@@ -3487,44 +3523,6 @@ nsXULDocument::GetBaseURI(nsAWritableString &aURI)
   }
   return NS_OK;
 }
-
-
-#if 0 // XXX move this to the helper
-PRBool
-nsXULDocument::SetProperty(JSContext *aContext, JSObject *aObj, jsval aID, jsval *aVp)
-{
-    nsresult rv;
-
-    if (JSVAL_IS_STRING(aID)) {
-        char* s = JS_GetStringBytes(JS_ValueToString(aContext, aID));
-        if (PL_strcmp("title", s) == 0) {
-            JSString* jsString = JS_ValueToString(aContext, *aVp);
-            if (!jsString)
-                return PR_FALSE;
-            nsAutoString title(NS_REINTERPRET_CAST(const PRUnichar*, JS_GetStringChars(jsString)));
-            for (PRInt32 i = mPresShells.Count() - 1; i >= 0; --i) {
-                nsIPresShell* shell = NS_STATIC_CAST(nsIPresShell*, mPresShells[i]);
-                nsCOMPtr<nsIPresContext> context;
-                rv = shell->GetPresContext(getter_AddRefs(context));
-                if (NS_FAILED(rv)) return PR_FALSE;
-
-                nsCOMPtr<nsISupports> container;
-                rv = context->GetContainer(getter_AddRefs(container));
-                if (NS_FAILED(rv)) return PR_FALSE;
-
-                if (! container) continue;
-
-                nsCOMPtr<nsIBaseWindow> docShellWin = do_QueryInterface(container);
-                if(!docShellWin) continue;
-
-                rv = docShellWin->SetTitle(title.GetUnicode());
-                if (NS_FAILED(rv)) return PR_FALSE;
-            }
-        }
-    }
-    return PR_TRUE;
-}
-#endif
 
 
 //----------------------------------------------------------------------
