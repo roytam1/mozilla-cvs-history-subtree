@@ -188,14 +188,29 @@ sub str2Scope
 
 
 #############################################################################
-# Ask for a password, without displaying it on the TTY. This is very non-
-# portable, we need a better solution (using the term package perhaps?).
+# Ask for a password, without displaying it on the TTY.
 #
 sub askPassword
 {
-  system('/bin/stty -echo');
-  chop($_ = <STDIN>);
-  system('/bin/stty echo');
+  my $prompt = $_[0];
+  my $hasReadKey = 0;
+
+  eval "use Term::ReadKey";
+  $hasReadKey=1 unless ($@);
+
+  print "LDAP password: " if $prompt;
+  if ($hasReadKey)
+    {
+      ReadMode(2);
+      chop($_ = ReadLine(0));
+      ReadMode(0);
+    }
+  else
+    {
+      system('/bin/stty -echo');
+      chop($_ = <STDIN>);
+      system('/bin/stty echo');
+    }
   print "\n";
 
   return $_;
@@ -204,7 +219,8 @@ sub askPassword
 
 #############################################################################
 # Handle some standard LDAP options, and construct a nice little structure
-# that we can use later on.
+# that we can use later on. We really should have some appropriate defaults,
+# perhaps from an Mozilla::LDAP::Config module.
 #
 sub ldapArgs
 {
@@ -226,8 +242,7 @@ sub ldapArgs
 
   if (($ld{"bind"} ne "") && ($ld{"pswd"} eq ""))
     {
-      print "LDAP password: ";
-      $ld{pswd} = askPassword();
+      $ld{pswd} = askPassword(1);
     }
 
   return %ld;
@@ -251,7 +266,7 @@ sub unixCrypt
 
 #############################################################################
 # Try to find a user to bind as, and possibly ask for the password. Pass
-# a pointer to the hash array with parameters to this function.
+# a pointer to the hash array with LDAP parameters to this function.
 #
 sub userCredentials
 {
@@ -269,13 +284,11 @@ sub userCredentials
 
       $conn->close();
       $ld->{"bind"} = $entry->getDN();
-      print "Binding as ", $ld->{"bind"}, "\n\n" if $main::opt_v;
     }
 
   if ($ld->{"pswd"} eq "")
     {
-      print "Enter bind password: ";
-      $ld->{"pswd"} = Mozilla::LDAP::Utils::askPassword();
+      $ld->{"pswd"} = Mozilla::LDAP::Utils::askPassword(1);
     }
 }
 
