@@ -524,8 +524,9 @@ ServiceImpl::UnRegisterResourceFactory(const char* aURIPrefix)
 NS_IMETHODIMP
 ServiceImpl::RegisterNamedDataSource(const char* uri, nsIRDFDataSource* dataSource)
 {
+    //NS_ADDREF(dataSource);
+
     // XXX check for dups, etc.
-    NS_ADDREF(dataSource); // XXX is this the right thing to do?
     PL_HashTableAdd(mNamedDataSources, uri, dataSource);
     return NS_OK;
 }
@@ -540,7 +541,7 @@ ServiceImpl::UnRegisterNamedDataSource(const char* uri)
         return NS_ERROR_ILLEGAL_VALUE;
 
     PL_HashTableRemove(mNamedDataSources, uri);
-    NS_RELEASE(ds);
+    //NS_RELEASE(ds);
     return NS_OK;
 }
 
@@ -550,22 +551,8 @@ ServiceImpl::GetNamedDataSource(const char* uri, nsIRDFDataSource** dataSource)
     nsIRDFDataSource* ds =
         NS_STATIC_CAST(nsIRDFDataSource*, PL_HashTableLookup(mNamedDataSources, uri));
 
-    // XXX if it's not a named data source, and it looks like it might be
-    // a URL, then try to create a stream data source on the URL.
-    if (! ds) {
-		size_t len = strlen(uri);
-		if ((len > 4) && (strcmp(&uri[len-4], ".rdf") == 0)) {
-            extern nsresult NS_NewRDFStreamDataSource(nsIRDFDataSource** result);
-            if (NS_OK != NS_NewRDFStreamDataSource(&ds)) {
-                return NS_ERROR_ILLEGAL_VALUE;
-            } else {
-                ds->Init(uri);
-
-                // XXX do we really want to globally register this datasource?
-                RegisterNamedDataSource(uri, ds);
-            }
-        } else return NS_ERROR_ILLEGAL_VALUE;
-    }
+    if (! ds)
+        return NS_ERROR_ILLEGAL_VALUE;
 
     NS_ADDREF(ds);
     *dataSource = ds;
@@ -671,15 +658,26 @@ ServiceImpl::RegisterBuiltInNamedDataSources(void)
     for (DataSourceTable* entry = gTable; entry->mURI != nsnull; ++entry) {
         nsIRDFDataSource* ds;
 
-        if (NS_FAILED(rv = (entry->mDataSourceConstructor)(&ds)))
+        if (NS_FAILED(rv = (entry->mDataSourceConstructor)(&ds))) {
+#ifdef DEBUG
+            printf("error creating built-in datasource %s\n", entry->mURI);
+#endif
             continue;
+        }
 
         if (NS_SUCCEEDED(rv = ds->Init(entry->mURI))) {
             rv = gRDFService->RegisterNamedDataSource(entry->mURI, ds);
-            PR_ASSERT(NS_SUCCEEDED(rv));
+            NS_ASSERTION(NS_SUCCEEDED(rv), "registration failed");
+        }
+        else {
+#ifdef DEBUG
+            printf("error initializing built-in datasource %s\n", entry->mURI);
+#endif
         }
 
-        NS_RELEASE(ds);
+        // XXX we don't release the data source, because we want it to remain
+        // alive.
+        //NS_RELEASE(ds);
     }
 }
 

@@ -24,7 +24,6 @@
 
  */
 
-#include "nsICSSParser.h"
 #include "nsIContent.h"
 #include "nsIDOMComment.h"
 #include "nsIDocument.h"
@@ -45,14 +44,11 @@
 
 ////////////////////////////////////////////////////////////////////////
 
-static NS_DEFINE_IID(kICSSParserIID,           NS_ICSS_PARSER_IID); // XXX grr..
 static NS_DEFINE_IID(kIDOMCommentIID,          NS_IDOMCOMMENT_IID);
 static NS_DEFINE_IID(kIRDFContentSinkIID,      NS_IRDFCONTENTSINK_IID);
 static NS_DEFINE_IID(kIRDFContentIID,          NS_IRDFCONTENT_IID);
 static NS_DEFINE_IID(kIRDFDocumentIID,         NS_IRDFDOCUMENT_IID);
 static NS_DEFINE_IID(kIScrollableViewIID,      NS_ISCROLLABLEVIEW_IID);
-
-static NS_DEFINE_CID(kCSSParserCID,            NS_CSSPARSER_CID);
 
 
 class nsRDFDocumentContentSink : public nsRDFContentSink
@@ -62,8 +58,7 @@ public:
     virtual ~nsRDFDocumentContentSink(void);
 
     virtual nsresult Init(nsIDocument* aDoc,
-                          nsIURL* aURL,
-                          nsIWebShell* aContainer);
+                          nsIURL* aURL);
 
     // nsIContentSink
     NS_IMETHOD WillBuildModel(void);
@@ -84,7 +79,6 @@ protected:
     // Document, webshell, etc.
     nsIDocument* mDocument;
     nsIContent*  mRootElement;
-    nsIWebShell* mWebShell;
 };
 
 ////////////////////////////////////////////////////////////////////////
@@ -92,7 +86,6 @@ protected:
 nsRDFDocumentContentSink::nsRDFDocumentContentSink(void)
 {
     mDocument = nsnull;
-    mWebShell = nsnull;
     mRootElement = nsnull;
 }
 
@@ -100,18 +93,16 @@ nsRDFDocumentContentSink::nsRDFDocumentContentSink(void)
 nsRDFDocumentContentSink::~nsRDFDocumentContentSink(void)
 {
     NS_IF_RELEASE(mDocument);
-    NS_IF_RELEASE(mWebShell);
     NS_IF_RELEASE(mRootElement);
 }
 
 
 nsresult
 nsRDFDocumentContentSink::Init(nsIDocument* aDoc,
-                               nsIURL* aURL,
-                               nsIWebShell* aContainer)
+                               nsIURL* aURL)
 {
-    NS_PRECONDITION(aDoc && aContainer, "null ptr");
-    if (!aDoc || !aContainer)
+    NS_PRECONDITION(aDoc, "null ptr");
+    if (!aDoc)
         return NS_ERROR_NULL_POINTER;
 
     nsINameSpaceManager* nameSpaceManager = nsnull;
@@ -122,9 +113,6 @@ nsRDFDocumentContentSink::Init(nsIDocument* aDoc,
       if (NS_SUCCEEDED(rv)) {
         mDocument = aDoc;
         NS_ADDREF(aDoc);
-
-        mWebShell = aContainer;
-        NS_ADDREF(aContainer);
       }
       NS_RELEASE(nameSpaceManager);
     }
@@ -133,67 +121,11 @@ nsRDFDocumentContentSink::Init(nsIDocument* aDoc,
 }
 
 
-// XXX Borrowed from HTMLContentSink. Should be shared.
-nsresult
-nsRDFDocumentContentSink::LoadStyleSheet(nsIURL* aURL,
-                                         nsIUnicharInputStream* aUIN)
-{
-    nsresult rv;
-    nsICSSParser* parser;
-    rv = nsRepository::CreateInstance(kCSSParserCID,
-                                      nsnull,
-                                      kICSSParserIID,
-                                      (void**) &parser);
-
-    if (NS_SUCCEEDED(rv)) {
-        nsICSSStyleSheet* sheet = nsnull;
-        // XXX note: we are ignoring rv until the error code stuff in the
-        // input routines is converted to use nsresult's
-        parser->SetCaseSensitive(PR_TRUE);
-        parser->Parse(aUIN, aURL, sheet);
-        if (nsnull != sheet) {
-            mDocument->AddStyleSheet(sheet);
-            NS_RELEASE(sheet);
-            rv = NS_OK;
-        } else {
-            rv = NS_ERROR_OUT_OF_MEMORY;/* XXX */
-        }
-        NS_RELEASE(parser);
-    }
-    return rv;
-}
 
 
 nsresult
 nsRDFDocumentContentSink::StartLayout(void)
 {
-    PRInt32 count = mDocument->GetNumberOfShells();
-    for (PRInt32 i = 0; i < count; i++) {
-        nsIPresShell* shell = mDocument->GetShellAt(i);
-        if (nsnull != shell) {
-            // Resize-reflow this time
-            nsIPresContext* cx = shell->GetPresContext();
-            nsRect r;
-            cx->GetVisibleArea(r);
-            shell->InitialReflow(r.width, r.height);
-            NS_RELEASE(cx);
-
-            // Now trigger a refresh
-            nsIViewManager* vm = shell->GetViewManager();
-            if (nsnull != vm) {
-                vm->EnableRefresh();
-                NS_RELEASE(vm);
-            }
-
-            // Start observing the document _after_ we do the initial
-            // reflow. Otherwise, we'll get into an trouble trying to
-            // creat kids before the root frame is established.
-            shell->BeginObservingDocument();
-
-            NS_RELEASE(shell);
-        }
-    }
-    return NS_OK;
 }
 
 
@@ -251,7 +183,6 @@ static const char kDataSourcePI[] = "<?rdf-datasource";
     
         if (type.Equals(kCSSType)) {
             nsIURL* url = nsnull;
-            nsIUnicharInputStream* uin = nsnull;
             nsAutoString absURL;
             nsIURL* docURL = mDocument->GetDocumentURL();
             nsAutoString emptyURL;
@@ -265,22 +196,6 @@ static const char kDataSourcePI[] = "<?rdf-datasource";
             if (NS_OK != rv) {
                 return rv;
             }
-            nsIInputStream* iin;
-            rv = NS_OpenURL(url, &iin);
-            if (NS_OK != rv) {
-                NS_RELEASE(url);
-                return rv;
-            }
-            rv = NS_NewConverterStream(&uin, nsnull, iin);
-            NS_RELEASE(iin);
-            if (NS_OK != rv) {
-                NS_RELEASE(url);
-                return rv;
-            }
-      
-            rv = LoadStyleSheet(url, uin);
-            NS_RELEASE(uin);
-            NS_RELEASE(url);
         }
     }
     else if (0 == text.Find(kDataSourcePI)) {
@@ -320,7 +235,7 @@ nsRDFDocumentContentSink::OpenObject(const nsIParserNode& aNode)
         return rv;
 
     // Arbitrarily make the document root be the first container
-    // element in the RDF.
+    // element in the serialized RDF/XML.
     if (! mRootElement) {
         nsAutoString uri;
         if (NS_FAILED(rv = GetIdAboutAttribute(aNode, uri)))
@@ -356,8 +271,7 @@ nsRDFDocumentContentSink::OpenObject(const nsIParserNode& aNode)
 nsresult
 NS_NewRDFDocumentContentSink(nsIRDFContentSink** aResult,
                              nsIDocument* aDoc,
-                             nsIURL* aURL,
-                             nsIWebShell* aWebShell)
+                             nsIURL* aURL)
 {
     NS_PRECONDITION(aResult, "null ptr");
     if (! aResult)
@@ -368,7 +282,7 @@ NS_NewRDFDocumentContentSink(nsIRDFContentSink** aResult,
     if (! it)
         return NS_ERROR_OUT_OF_MEMORY;
 
-    nsresult rv = it->Init(aDoc, aURL, aWebShell);
+    nsresult rv = it->Init(aDoc, aURL);
     if (NS_FAILED(rv)) {
         delete it;
         return rv;

@@ -26,12 +26,15 @@ CPP_OBJS=\
         .\$(OBJDIR)\nsEmptyCursor.obj             \
         .\$(OBJDIR)\nsInMemoryDataSource.obj      \
         .\$(OBJDIR)\nsRDFService.obj              \
+        .\$(OBJDIR)\nsRDFContentSink.obj          \
+        .\$(OBJDIR)\nsStreamDataSource.obj        \
         .\$(OBJDIR)\rdfutil.obj                   \
 	$(NULL)
 
 LINCS=  -I$(PUBLIC)\rdf          \
         -I$(PUBLIC)\xpcom        \
         -I$(PUBLIC)\raptor       \
+        -I$(PUBLIC)\netlib       \
         $(NULL)
 
 include <$(DEPTH)\config\rules.mak>
