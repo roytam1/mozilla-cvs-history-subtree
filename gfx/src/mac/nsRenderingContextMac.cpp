@@ -524,6 +524,8 @@ NS_IMETHODIMP nsRenderingContextMac::CreateDrawingSurface(nsRect *aBounds, PRUin
 	if (!surface)
 		return NS_ERROR_OUT_OF_MEMORY;
 
+	NS_ADDREF(surface);
+
 	nsresult rv = surface->Init(depth, macRect.right, macRect.bottom, aSurfFlags);
 	if (NS_SUCCEEDED(rv))
 		aSurface = surface;
@@ -554,8 +556,8 @@ NS_IMETHODIMP nsRenderingContextMac::DestroyDrawingSurface(nsDrawingSurface aSur
 	::UnlockPixels(::GetGWorldPixMap(offscreenGWorld));
 	::DisposeGWorld(offscreenGWorld);
 */
-	// delete the surface
-	delete surface;
+	// release the surface (used to delete when CreateOffscreen didn't AddRef)
+  	NS_IF_RELEASE(surface);
 
 	return NS_OK;
 }
