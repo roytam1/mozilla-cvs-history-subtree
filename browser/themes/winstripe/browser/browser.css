@@ -679,6 +679,7 @@ statusbarpanel#statusbar-display {
 #security-button {
   list-style-image: none;
   width: 20px;
+  -moz-box-direction: reverse;
 }
 
 #security-button[level="high"] {

@@ -3341,15 +3341,24 @@ nsBrowserStatusHandler.prototype =
   onSecurityChange : function(aWebProgress, aRequest, aState)
   {
     const wpl = Components.interfaces.nsIWebProgressListener;
+    this.securityButton.removeAttribute("label");
 
     switch (aState) {
       case wpl.STATE_IS_SECURE | wpl.STATE_SECURE_HIGH:
         this.securityButton.setAttribute("level", "high");
         this.urlBar.setAttribute("level", "high");
+        try {
+          this.securityButton.setAttribute("label",
+            gBrowser.contentWindow.location.host);
+        } catch(exception) {}
         break;
       case wpl.STATE_IS_SECURE | wpl.STATE_SECURE_LOW:
         this.securityButton.setAttribute("level", "low");
         this.urlBar.setAttribute("level", "low");
+        try {
+          this.securityButton.setAttribute("label", 
+            gBrowser.contentWindow.location.host);
+        } catch(exception) {}        
         break;
       case wpl.STATE_IS_BROKEN:
         this.securityButton.setAttribute("level", "broken");

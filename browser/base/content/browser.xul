@@ -440,7 +440,7 @@
     <statusbarpanel class="statusbarpanel-progress" collapsed="true" id="statusbar-progresspanel">
       <progressmeter class="progressmeter-statusbar" id="statusbar-icon" mode="normal" value="0"/>
     </statusbarpanel>
-    <statusbarpanel id="security-button" class="statusbarpanel-iconic" ondblclick="displaySecurityInfo();"/>
+    <statusbarpanel id="security-button" class="statusbarpanel-iconic-text" ondblclick="displaySecurityInfo();"/>
     <statusbarpanel id="page-report-button" type="menu" 
                     class="statusbarpanel-menu-iconic" 
                     tooltiptext="&pageReportIcon.tooltip;">
