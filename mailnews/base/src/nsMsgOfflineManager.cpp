@@ -28,6 +28,15 @@
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
 #include "nsMsgBaseCID.h"
+#include "nsIImapService.h"
+#include "nsMsgImapCID.h"
+#include "nsIMsgSendLater.h"
+#include "nsIMsgAccountManager.h"
+#include "nsMsgCompCID.h"
+
+static NS_DEFINE_CID(kCImapService, NS_IMAPSERVICE_CID);
+static NS_DEFINE_CID(kCMsgAccountManagerCID, NS_MSGACCOUNTMANAGER_CID);
+static NS_DEFINE_CID(kMsgSendLaterCID, NS_MSGSENDLATER_CID); 
 
 NS_IMPL_THREADSAFE_ISUPPORTS5(nsMsgOfflineManager,
                               nsIMsgOfflineManager,
@@ -85,28 +94,57 @@ NS_IMETHODIMP nsMsgOfflineManager::SetInProgress(PRBool aInProgress)
   return NS_OK;
 }
 
-
-nsresult nsMsgOfflineManager::AdvanceToNextState()
+nsresult nsMsgOfflineManager::StopRunning(nsresult exitStatus)
 {
+  m_inProgress = PR_FALSE;
+  return exitStatus;
+}
+
+nsresult nsMsgOfflineManager::AdvanceToNextState(nsresult exitStatus)
+{
+  if (!NS_SUCCEEDED(exitStatus))
+  {
+    return StopRunning(exitStatus);
+  }
   if (m_curOperation == eGoingOnline)
   {
     switch (m_curState)
     {
+    case eNoState:
+
+      if (m_sendUnsentMessage)
+      {
+        m_curState = eSendingUnsent;
+        SendUnsentMessages();
+      }
+      else
+        AdvanceToNextState(NS_OK);
+      break;
     case eSendingUnsent:
 
       m_curState = eSynchronizingOfflineImapChanges;
       if (m_playbackOfflineImapOps)
         return SynchronizeOfflineImapChanges();
       else
-        AdvanceToNextState(); // recurse to next state.
+        AdvanceToNextState(NS_OK); // recurse to next state.
       break;
     case eSynchronizingOfflineImapChanges:
       m_curState = eDone;
-      break;
+      return StopRunning(exitStatus);
+      default:
+        NS_ASSERTION(PR_FALSE, "unhandled current state when going online");
     }
   }
   else if (m_curOperation == eDownloadingForOffline)
   {
+    switch (m_curState)
+    {
+      case eSendingUnsent:
+      break;
+      default:
+        NS_ASSERTION(PR_FALSE, "unhandled current state when downloading for offline");
+    }
+
   }
   return NS_OK;
 }
@@ -114,7 +152,70 @@ nsresult nsMsgOfflineManager::AdvanceToNextState()
 nsresult nsMsgOfflineManager::SynchronizeOfflineImapChanges()
 {
   nsresult rv = NS_OK;
-  return rv;
+	NS_WITH_SERVICE(nsIImapService, imapService, kCImapService, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+  return imapService->PlaybackAllOfflineOperations(m_window, this);
+}
+
+nsresult nsMsgOfflineManager::SendUnsentMessages()
+{
+	nsresult rv;
+	nsCOMPtr<nsIMsgSendLater> pMsgSendLater = do_CreateInstance(kMsgSendLaterCID, &rv); 
+  NS_ENSURE_SUCCESS(rv, rv);
+  NS_WITH_SERVICE(nsIMsgAccountManager,accountManager,kCMsgAccountManagerCID,&rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+  // now we have to iterate over the identities, finding the *unique* unsent messages folder
+  // for each one, determine if they have unsent messages, and if so, add them to the list
+  // of identities to send unsent messages from.
+  // However, I think there's only ever one unsent messages folder at the moment,
+  // so I think we'll go with that for now.
+  nsCOMPtr<nsISupportsArray> identities;
+
+  if (NS_SUCCEEDED(rv) && accountManager) 
+  {
+    rv = accountManager->GetAllIdentities(getter_AddRefs(identities));
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+  nsCOMPtr <nsIMsgIdentity> identityToUse;
+  PRUint32 numIndentities;
+  identities->Count(&numIndentities);
+  for (PRUint32 i = 0; i < numIndentities; i++)
+  {
+    // convert supports->Identity
+    nsCOMPtr<nsISupports> thisSupports;
+    rv = identities->GetElementAt(i, getter_AddRefs(thisSupports));
+    if (NS_FAILED(rv)) continue;
+    
+    nsCOMPtr<nsIMsgIdentity> thisIdentity = do_QueryInterface(thisSupports, &rv);
+
+    if (NS_SUCCEEDED(rv) && thisIdentity)
+    {
+      nsCOMPtr <nsIMsgFolder> outboxFolder;
+      pMsgSendLater->GetUnsentMessagesFolder(thisIdentity, getter_AddRefs(outboxFolder));
+      if (outboxFolder)
+      {
+        PRInt32 numMessages;
+        outboxFolder->GetTotalMessages(PR_FALSE, &numMessages);
+        if (numMessages > 0)
+        {
+          identityToUse = thisIdentity;
+          break;
+        }
+      }
+    }
+  }
+	if (identityToUse) 
+	{ 
+    pMsgSendLater->AddListener(this);
+    pMsgSendLater->SetMsgWindow(m_window);
+    rv = pMsgSendLater->SendUnsentMessages(identityToUse); 
+    // if we succeeded, return - we'll run the next operation when the
+    // send finishes. Otherwise, advance to the next state.
+    if (NS_SUCCEEDED(rv))
+      return rv;
+	} 
+	return AdvanceToNextState(rv);
+
 }
 
 /* void goOnline (in boolean sendUnsentMessages, in boolean playbackOfflineImapOperations, in nsIMsgWindow aMsgWindow); */
@@ -127,6 +228,8 @@ NS_IMETHODIMP nsMsgOfflineManager::GoOnline(PRBool sendUnsentMessages, PRBool pl
   if (!m_sendUnsentMessage && !playbackOfflineImapOperations)
   {
   }
+  else
+    AdvanceToNextState(NS_OK);
   return NS_OK;
 }
 
@@ -148,6 +251,7 @@ nsMsgOfflineManager::OnStartRunningUrl(nsIURI * aUrl)
 NS_IMETHODIMP
 nsMsgOfflineManager::OnStopRunningUrl(nsIURI * aUrl, nsresult aExitCode)
 {
+  AdvanceToNextState(aExitCode);
   return NS_OK;
 }
 
@@ -186,5 +290,5 @@ NS_IMETHODIMP nsMsgOfflineManager::OnStopSending(nsresult aStatus, const PRUnich
     printf("SendLaterListener::OnStopSending: Tried to send %d messages. %d successful.\n",
             aTotalTried, aSuccessful);
 #endif
-  return AdvanceToNextState();
+  return AdvanceToNextState(aStatus);
 }

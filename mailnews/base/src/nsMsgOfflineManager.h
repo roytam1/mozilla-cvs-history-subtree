@@ -72,8 +72,10 @@ public:
   } offlineManagerOperation;
 
 private:
-  nsresult AdvanceToNextState();
+  nsresult AdvanceToNextState(nsresult exitStatus);
   nsresult SynchronizeOfflineImapChanges();
+  nsresult StopRunning(nsresult exitStatus);
+  nsresult SendUnsentMessages();
 
   PRBool m_inProgress;
   PRBool m_sendUnsentMessage;

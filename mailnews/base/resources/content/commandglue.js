@@ -1015,12 +1015,18 @@ function MsgToggleWorkOffline()
   // this is just code for my testing purposes, and doesn't have the proper UI, as in the offline spec.
   // we could use the account manager, or add a new service, the offline manager.
   // what the heck, might as well bite the bullet and add a new service.
+  offlineManager = Components.classes["@mozilla.org/messenger/offline-manager;1"].getService(Components.interfaces.nsIMsgOfflineManager);
   if (ioService.offline)
   {
+    ioService.offline = false;
+    // really want to use a progress window here
+    offlineManager.goOnline(true, true, msgWindow);
     // if we were offline, then we're going online and should playback offline operations
-    accountManager = Components.classes["@mozilla.org/messenger/account-manager;1"].getService(Components.interfaces.nsIMsgAccountManager);
   }
   else // we were online, so we're going offline and should download everything for offline use
   {
+    // should use progress window here. params are:
+    // download news, download mail, send unsent messages, go offline when done, msg window
+    offlineManager.synchronizeForOffline(true, true, true, true, msgWindow);
   } 
 }

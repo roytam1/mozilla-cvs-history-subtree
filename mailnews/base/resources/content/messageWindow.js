@@ -575,6 +575,7 @@ function CommandUpdate_Mail()
 	goUpdateCommand('cmd_markAsFlagged');
   goUpdateCommand('cmd_downloadFlagged');
   goUpdateCommand('cmd_downloadSelected');
+  goUpdateCommand('cmd_toggleWorkOffline');
 	goUpdateCommand('cmd_file');
 
 }

@@ -228,6 +228,7 @@ var DefaultController =
       case "cmd_downloadSelected":
       case "cmd_watchThread":
       case "cmd_killThread":
+      case "cmd_toggleWorkOffline":
 				return true;
 			default:
 				return false;
@@ -343,6 +344,8 @@ var DefaultController =
 				return IsCompactFolderEnabled();
 			case "cmd_setFolderCharset":
 				return IsFolderCharsetEnabled();
+      case "cmd_toggleWorkOffline":
+        return true;
 			default:
 				return false;
 		}
@@ -504,6 +507,9 @@ var DefaultController =
 			case "cmd_compactFolder":
 				MsgCompactFolder();
 				return;
+      case "cmd_toggleWorkOffline":
+        MsgToggleWorkOffline();
+        return;
 		}
 	},
 	
@@ -637,6 +643,7 @@ function ThreadTreeUpdate_Mail(command)
 	goUpdateCommand('cmd_markAsFlagged');
   goUpdateCommand('cmd_downloadSelected');
   goUpdateCommand('cmd_downloadFlagged');
+  goUpdateCommand('cmd_toggleWorkOffline');
 	goUpdateCommand('cmd_file');
 }
 

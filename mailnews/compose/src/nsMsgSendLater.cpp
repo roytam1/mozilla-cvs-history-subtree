@@ -140,7 +140,7 @@ nsMsgSendLater::~nsMsgSendLater()
 }
 
 // Stream is done...drive on!
-nsresult
+NS_IMETHODIMP
 nsMsgSendLater::OnStopRequest(nsIChannel *channel, nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg)
 {
   nsresult    rv;
@@ -259,7 +259,7 @@ nsMsgSendLater::BuildNewBuffer(const char* aBuf, PRUint32 aCount, PRUint32 *tota
 }
 
 // Got data?
-nsresult
+NS_IMETHODIMP
 nsMsgSendLater::OnDataAvailable(nsIChannel *channel, nsISupports *ctxt, nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 count)
 {
   // This is a little bit tricky since we have to chop random 
@@ -315,7 +315,7 @@ nsMsgSendLater::OnDataAvailable(nsIChannel *channel, nsISupports *ctxt, nsIInput
   return rv;
 }
 
-nsresult
+NS_IMETHODIMP
 nsMsgSendLater::OnStartRequest(nsIChannel *channel, nsISupports *ctxt)
 {
   return NS_OK;
@@ -647,7 +647,7 @@ nsMsgSendLater::StartNextMailFileSend()
   return NS_OK;
 }
 
-nsresult 
+NS_IMETHODIMP 
 nsMsgSendLater::GetUnsentMessagesFolder(nsIMsgIdentity *userIdentity, nsIMsgFolder **folder)
 {
   char        *uri = nsnull;
@@ -692,17 +692,12 @@ nsMsgSendLater::GetUnsentMessagesFolder(nsIMsgIdentity *userIdentity, nsIMsgFold
 //            Delete from Outbox folder
 //
 //
-nsresult 
-nsMsgSendLater::SendUnsentMessages(nsIMsgIdentity                   *identity,
-                                   nsIMsgSendLaterListener          **listenerArray)
+NS_IMETHODIMP 
+nsMsgSendLater::SendUnsentMessages(nsIMsgIdentity *identity)
 {
   nsresult rv;
 
   DealWithTheIdentityMojo(identity, PR_FALSE);
-
-  // Set the listener array 
-  if (listenerArray)
-    SetListenerArray(listenerArray);
 
   rv = GetUnsentMessagesFolder(mIdentity, getter_AddRefs(mMessageFolder));
   if (NS_FAILED(rv) || !mMessageFolder)
@@ -712,8 +707,8 @@ nsMsgSendLater::SendUnsentMessages(nsIMsgIdentity                   *identity,
     return NS_ERROR_FAILURE;
   }
 
-  // ### fix me - need an nsIMsgWindow here
-  nsresult ret = mMessageFolder->GetMessages(nsnull, &mEnumerator);
+  // ### fix me - if we need to reparse the folder, this will be asynchronous
+  nsresult ret = mMessageFolder->GetMessages(m_window, &mEnumerator);
 	if (NS_FAILED(ret) || (!mEnumerator))
   {
     NS_IF_RELEASE(mIdentity);
@@ -1095,40 +1090,22 @@ nsMsgSendLater::DeliverQueuedLine(char *line, PRInt32 length)
   return NS_OK;
 }
 
-nsresult
-nsMsgSendLater::SetListenerArray(nsIMsgSendLaterListener **aListenerArray)
+NS_IMETHODIMP
+nsMsgSendLater::SetMsgWindow(nsIMsgWindow *aMsgWindow)
 {
-  nsIMsgSendLaterListener **ptr = aListenerArray;
-  if ( (!aListenerArray) || (!*aListenerArray) )
-    return NS_OK;
-
-  // First, count the listeners passed in...
-  mListenerArrayCount = 0;
-  while (*ptr != nsnull)
-  {
-    mListenerArrayCount++;
-    ++ptr;
-  }
-
-  // now allocate an array to hold the number of entries.
-  mListenerArray = (nsIMsgSendLaterListener **) PR_Malloc(sizeof(nsIMsgSendLaterListener *) * mListenerArrayCount);
-  if (!mListenerArray)
-    return NS_ERROR_OUT_OF_MEMORY;
-
-  nsCRT::memset(mListenerArray, 0, (sizeof(nsIMsgSendLaterListener *) * mListenerArrayCount));
-  
-  // Now assign the listeners...
-  PRInt32 i;
-  for (i=0; i<mListenerArrayCount; i++)
-  {
-    mListenerArray[i] = aListenerArray[i];
-    NS_ADDREF(mListenerArray[i]);
-  }
-
+  m_window = aMsgWindow;
+  return NS_OK;
+}
+NS_IMETHODIMP
+nsMsgSendLater::GetMsgWindow(nsIMsgWindow **aMsgWindow)
+{
+  NS_ENSURE_ARG(aMsgWindow);
+  *aMsgWindow = m_window;
+  NS_IF_ADDREF(*aMsgWindow);
   return NS_OK;
 }
 
-nsresult
+NS_IMETHODIMP
 nsMsgSendLater::AddListener(nsIMsgSendLaterListener *aListener)
 {
   if ( (mListenerArrayCount > 0) || mListenerArray )
@@ -1159,7 +1136,7 @@ nsMsgSendLater::AddListener(nsIMsgSendLaterListener *aListener)
   }
 }
 
-nsresult
+NS_IMETHODIMP
 nsMsgSendLater::RemoveListener(nsIMsgSendLaterListener *aListener)
 {
   PRInt32 i;

@@ -1429,7 +1429,7 @@ nsMessenger::SendUnsentMessages(nsIMsgIdentity *aIdentity)
     NS_ADDREF(sendLaterListener);
     pMsgSendLater->AddListener(sendLaterListener);
 
-    pMsgSendLater->SendUnsentMessages(aIdentity, nsnull); 
+    pMsgSendLater->SendUnsentMessages(aIdentity); 
     NS_RELEASE(sendLaterListener);
 	} 
 	return NS_OK;
