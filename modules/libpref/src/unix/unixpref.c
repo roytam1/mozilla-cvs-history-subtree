@@ -28,7 +28,9 @@
 #include "jsapi.h"
 #include "jsbuffer.h"
 
+#ifndef B1M
 #include <Xm/Xm.h>
+#endif
 
 extern PRLibrary* pref_LoadAutoAdminLib(void);
 extern PRLibrary* m_AutoAdminLib;
@@ -76,7 +78,7 @@ PREF_AlterSplashIcon(struct fe_icon_data* icon)
     }
 }
 
-
+#ifndef B1M
 /*
  * PREF_GetLabelAndMnemonic
  */
@@ -94,7 +96,7 @@ PREF_GetLabelAndMnemonic(char* name, char** str, void* v_xm_str, void* v_mnemoni
     PR_ASSERT(str);
     PR_ASSERT(xm_str);
 
-    if ( name == NULL || str == NULL || xm_str == NULL ) return FALSE;
+    if ( name == NULL || str == NULL || xm_str == NULL ) return PR_FALSE;
 
     _str = NULL;
 	*str = NULL;
@@ -106,7 +108,7 @@ PREF_GetLabelAndMnemonic(char* name, char** str, void* v_xm_str, void* v_mnemoni
 
     PREF_CopyConfigString(buf, &_str);
 
-    if ( _str == NULL || *_str == '\0' ) return FALSE;
+    if ( _str == NULL || *_str == '\0' ) return PR_FALSE;
 
     /* Strip out ampersands */
     if ( strchr(_str, '&') != NULL ) {
@@ -121,7 +123,7 @@ PREF_GetLabelAndMnemonic(char* name, char** str, void* v_xm_str, void* v_mnemoni
 
     return ( *xm_str != NULL );
 }
-
+#endif
 
 /*
  * PREF_GetUrl
@@ -133,7 +135,7 @@ PREF_GetUrl(char* name, char** url)
 
     PR_ASSERT(name);
 
-    if ( name == NULL || url == NULL ) return FALSE;
+    if ( name == NULL || url == NULL ) return PR_FALSE;
 
     strncpy(buf, name, 200);
     strcat(buf, ".url");
