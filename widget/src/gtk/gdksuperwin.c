@@ -294,24 +294,24 @@ gdk_superwin_shell_filter (GdkXEvent *gdk_xevent,
 {
   XEvent *xevent = (XEvent *)gdk_xevent;
   GdkSuperWin *superwin = data;
-
+  
   if (xevent->type == VisibilityNotify)
     {
       switch (xevent->xvisibility.state)
-	{
-	case VisibilityFullyObscured:
-	  superwin->visibility = GDK_VISIBILITY_FULLY_OBSCURED;
-	  break;
-
-	case VisibilityPartiallyObscured:
-	  superwin->visibility = GDK_VISIBILITY_PARTIAL;
-	  break;
-
-	case VisibilityUnobscured:
-	  superwin->visibility = GDK_VISIBILITY_UNOBSCURED;
-	  break;
-	}
-
+        {
+        case VisibilityFullyObscured:
+          superwin->visibility = GDK_VISIBILITY_FULLY_OBSCURED;
+          break;
+          
+        case VisibilityPartiallyObscured:
+          superwin->visibility = GDK_VISIBILITY_PARTIAL;
+          break;
+          
+        case VisibilityUnobscured:
+          superwin->visibility = GDK_VISIBILITY_UNOBSCURED;
+          break;
+        }
+      
       return GDK_FILTER_REMOVE;
     }
   

@@ -37,8 +37,8 @@ typedef struct _GdkSuperWinClass GdkSuperWinClass;
 #define GDK_IS_SUPERWIN_CLASS(klass) (GTK_CHECK_CLASS_TYPE((klass), GDK_TYPE_SUPERWIN))
 
 typedef void (*GdkSuperWinFunc) (GdkSuperWin *super_win,
-				 XEvent      *event,
-				 gpointer     data);
+                                 XEvent      *event,
+                                 gpointer     data);
 
 struct _GdkSuperWin
 {

@@ -28,21 +28,21 @@ GtkType
 gtk_mozarea_get_type (void)
 {
   static GtkType mozarea_type = 0;
-
+  
   if (!mozarea_type)
     {
       static const GtkTypeInfo mozarea_info =
       {
-	"GtkMozArea",
-	sizeof (GtkMozArea),
-	sizeof (GtkMozAreaClass),
-	(GtkClassInitFunc) gtk_mozarea_class_init,
-	(GtkObjectInitFunc) gtk_mozarea_init,
-	/* reserved_1 */ NULL,
+        "GtkMozArea",
+        sizeof (GtkMozArea),
+        sizeof (GtkMozAreaClass),
+        (GtkClassInitFunc) gtk_mozarea_class_init,
+        (GtkObjectInitFunc) gtk_mozarea_init,
+        /* reserved_1 */ NULL,
         /* reserved_2 */ NULL,
         (GtkClassInitFunc) NULL
       };
-
+      
       mozarea_type = gtk_type_unique (GTK_TYPE_WIDGET, &mozarea_info);
     }
 
@@ -93,9 +93,6 @@ gtk_mozarea_size_allocate (GtkWidget    *widget,
 
   mozarea = GTK_MOZAREA (widget);
 
-  g_print("gtk_mozarea_size_allocate to %d %d\n",
-          allocation->width, allocation->height);
-  
   if (GTK_WIDGET_REALIZED (widget))
     {
       gdk_window_move (mozarea->superwin->shell_window,
