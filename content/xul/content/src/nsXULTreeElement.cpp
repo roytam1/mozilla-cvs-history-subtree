@@ -253,6 +253,11 @@ NS_IMETHODIMP
 nsXULTreeElement::RemoveItemFromSelection(nsIDOMXULElement* aTreeItem)
 {
   nsCOMPtr<nsIContent> content = do_QueryInterface(aTreeItem);
+
+  if (!content) {
+    return NS_OK;
+  }
+
   content->UnsetAttribute(kNameSpaceID_None, kSelectedAtom, PR_TRUE);
   if (!mSuppressOnSelect)
     FireOnSelectHandler();

@@ -132,6 +132,7 @@
 #include "nsIMIMEService.h"
 #include "nsNetUtil.h"
 #include "nsMimeTypes.h"
+#include "nsDOMClassInfo.h"
 
 
 //----------------------------------------------------------------------
@@ -580,66 +581,44 @@ NS_NewXULDocument(nsIXULDocument** result)
 // nsISupports interface
 //
 
-NS_IMETHODIMP
-nsXULDocument::QueryInterface(REFNSIID iid, void** result)
-{
-    if (! result)
-        return NS_ERROR_NULL_POINTER;
+NS_IMPL_ADDREF(nsXULDocument) 
+NS_IMPL_RELEASE(nsXULDocument) 
 
-    *result = nsnull;
-    if (iid.Equals(NS_GET_IID(nsIDocument)) ||
-        iid.Equals(NS_GET_IID(nsISupports))) {
-        *result = NS_STATIC_CAST(nsIDocument*, this);
-    }
-    else if (iid.Equals(NS_GET_IID(nsIXULDocument)) ||
-             iid.Equals(NS_GET_IID(nsIXMLDocument))) {
-        *result = NS_STATIC_CAST(nsIXULDocument*, this);
-    }
-    else if (iid.Equals(NS_GET_IID(nsIDOMXULDocument)) ||
-             iid.Equals(NS_GET_IID(nsIDOMDocument)) ||
-             iid.Equals(NS_GET_IID(nsIDOMNode))) {
-        *result = NS_STATIC_CAST(nsIDOMXULDocument*, this);
-    }
-    else if (iid.Equals(NS_GET_IID(nsIDOMNSDocument))) {
-        *result = NS_STATIC_CAST(nsIDOMNSDocument*, this);
-    }
-    else if (iid.Equals(NS_GET_IID(nsIDOMDocumentEvent))) {
-        *result = NS_STATIC_CAST(nsIDOMDocumentEvent*, this);
-    }
-    else if (iid.Equals(NS_GET_IID(nsIDOMDocumentView))) {
-        *result = NS_STATIC_CAST(nsIDOMDocumentView*, this);
-    }
-    else if (iid.Equals(NS_GET_IID(nsIDOMDocumentXBL))) {
-        *result = NS_STATIC_CAST(nsIDOMDocumentXBL*, this);
-    }
-    else if (iid.Equals(NS_GET_IID(nsIHTMLContentContainer))) {
-        *result = NS_STATIC_CAST(nsIHTMLContentContainer*, this);
-    }
-    else if (iid.Equals(NS_GET_IID(nsIDOMEventReceiver))) {
-        *result = NS_STATIC_CAST(nsIDOMEventReceiver*, this);
-    }
-    else if (iid.Equals(NS_GET_IID(nsIDOMEventTarget))) {
-        *result = NS_STATIC_CAST(nsIDOMEventTarget*, this);
-    }
-    else if (iid.Equals(NS_GET_IID(nsIDOMEventCapturer))) {
-        *result = NS_STATIC_CAST(nsIDOMEventCapturer*, this);
-    }
-    else if (iid.Equals(NS_GET_IID(nsISupportsWeakReference))) {
-        *result = NS_STATIC_CAST(nsISupportsWeakReference*, this);
-    }
-    else if (iid.Equals(NS_GET_IID(nsIStreamLoaderObserver))) {
-        *result = NS_STATIC_CAST(nsIStreamLoaderObserver*, this);
-    }
-    else {
-        *result = nsnull;
-        return NS_NOINTERFACE;
-    }
-    NS_ADDREF(this);
-    return NS_OK;
-}
 
-NS_IMPL_ADDREF(nsXULDocument);
-NS_IMPL_RELEASE(nsXULDocument);
+// XPConnect interface list for nsXULDocument
+NS_CLASSINFO_MAP_BEGIN(XULDocument)
+    NS_CLASSINFO_MAP_ENTRY(nsIDOMXULDocument)
+    NS_CLASSINFO_MAP_ENTRY(nsIDOMNSDocument)
+    NS_CLASSINFO_MAP_ENTRY(nsIDOMDocumentEvent)
+    NS_CLASSINFO_MAP_ENTRY(nsIDOMDocumentView)
+    NS_CLASSINFO_MAP_ENTRY(nsIDOMDocumentXBL)
+    NS_CLASSINFO_MAP_ENTRY(nsIDOMEventReceiver)
+    NS_CLASSINFO_MAP_ENTRY(nsIDOMEventTarget)
+NS_CLASSINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLAnchorElement
+NS_INTERFACE_MAP_BEGIN(nsXULDocument)
+    NS_INTERFACE_MAP_ENTRY(nsIDocument)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDocument)
+    NS_INTERFACE_MAP_ENTRY(nsIXULDocument)
+    NS_INTERFACE_MAP_ENTRY(nsIXMLDocument)
+    NS_INTERFACE_MAP_ENTRY(nsIDOMXULDocument)
+    NS_INTERFACE_MAP_ENTRY(nsIDOMDocument)
+    NS_INTERFACE_MAP_ENTRY(nsIDOMNode)
+    NS_INTERFACE_MAP_ENTRY(nsIDOMNSDocument)
+    NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentEvent)
+    NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentView)
+    NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentXBL)
+    NS_INTERFACE_MAP_ENTRY(nsIHTMLContentContainer)
+    NS_INTERFACE_MAP_ENTRY(nsIDOMEventReceiver)
+    NS_INTERFACE_MAP_ENTRY(nsIDOMEventTarget)
+    NS_INTERFACE_MAP_ENTRY(nsIDOMEventCapturer)
+    NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
+    NS_INTERFACE_MAP_ENTRY(nsIStreamLoaderObserver)
+    NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(XULDocument)
+NS_INTERFACE_MAP_END
+
 
 //----------------------------------------------------------------------
 //
