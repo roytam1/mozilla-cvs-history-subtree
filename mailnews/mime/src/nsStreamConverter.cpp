@@ -651,7 +651,9 @@ NS_IMETHODIMP nsStreamConverter::Init(nsIURI *aURI, nsIStreamListener * aOutList
     rv = prefs->GetBoolPref(PREF_MAIL_DISPLAY_GLYPH,&enable_emoticons);
     if (NS_FAILED(rv) || enable_emoticons) 
     {
+#if !defined( XP_UNIX )
     	whattodo = whattodo | mozITXTToHTMLConv::kGlyphSubstitution;
+#endif
     }
     rv = prefs->GetBoolPref(PREF_MAIL_DISPLAY_STRUCT,&enable_structs);
     if (NS_FAILED(rv) || enable_structs) 
@@ -685,7 +687,9 @@ NS_IMETHODIMP nsStreamConverter::Init(nsIURI *aURI, nsIStreamListener * aOutList
         rv = prefs->GetBoolPref(PREF_MAIL_DISPLAY_GLYPH,&enable_emoticons);
         if (NS_FAILED(rv) || enable_emoticons) 
         {
+#if !defined( XP_UNIX )
   	      whattodo = whattodo | mozITXTToHTMLConv::kGlyphSubstitution;
+#endif
         }
         rv = prefs->GetBoolPref(PREF_MAIL_DISPLAY_STRUCT,&enable_structs);
         if (NS_FAILED(rv) || enable_structs) 
