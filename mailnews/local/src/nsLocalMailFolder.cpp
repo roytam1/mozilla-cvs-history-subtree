@@ -1598,6 +1598,31 @@ nsMsgLocalMailFolder::ClearCopyState(PRBool moveCopySucceeded)
   if(NS_SUCCEEDED(result) && haveSemaphore)
     ReleaseSemaphore(NS_STATIC_CAST(nsIMsgLocalMailFolder*, this));
 }
+
+nsresult 
+nsMsgLocalMailFolder::SortMessagesBasedOnKey(nsISupportsArray *messages, nsMsgKeyArray *aKeyArray, nsIMsgFolder *srcFolder)
+{
+  nsresult rv = NS_OK;
+  PRUint32 numMessages = 0;
+  rv = messages->Count(&numMessages);
+  NS_ENSURE_SUCCESS(rv,rv);
+  NS_ASSERTION ((numMessages == aKeyArray->GetSize()), "message array and key array size are not same");
+  rv = messages->Clear();
+  NS_ENSURE_SUCCESS(rv,rv);
+  nsCOMPtr <nsIMsgDBHdr> msgHdr;
+  nsCOMPtr<nsIDBFolderInfo> folderInfo;
+  nsCOMPtr<nsIMsgDatabase> db; 
+  rv = srcFolder->GetDBFolderInfoAndDB(getter_AddRefs(folderInfo), getter_AddRefs(db));
+  if (NS_SUCCEEDED(rv) && db)
+    for (PRUint32 i=0;i < numMessages; i++)
+    {
+      rv = db->GetMsgHdrForKey(aKeyArray->GetAt(i), getter_AddRefs(msgHdr));
+      NS_ENSURE_SUCCESS(rv,rv);
+      if (msgHdr)
+        messages->AppendElement(msgHdr);
+    }
+  return rv;
+}
                 
 NS_IMETHODIMP
 nsMsgLocalMailFolder::CopyMessages(nsIMsgFolder* srcFolder, nsISupportsArray*
@@ -1635,6 +1660,7 @@ nsMsgLocalMailFolder::CopyMessages(nsIMsgFolder* srcFolder, nsISupportsArray*
 
   // don't update the counts in the dest folder until it is all over
   EnableNotifications(allMessageCountNotifications, PR_FALSE);
+  //sort the keys
 
   rv = InitCopyState(srcSupport, messages, isMove, listener, msgWindow, isFolder, allowUndo);
   if (NS_FAILED(rv)) return rv;
@@ -1693,11 +1719,11 @@ nsMsgLocalMailFolder::CopyMessages(nsIMsgFolder* srcFolder, nsISupportsArray*
 	  }
   }
 	  PRUint32 numMsgs = 0;
-	  messages->Count(&numMsgs);
+	  mCopyState->m_messages->Count(&numMsgs);
 	if (numMsgs > 1 && (protocolType.EqualsIgnoreCase("imap") || protocolType.EqualsIgnoreCase("mailbox")))
 	{
 		mCopyState->m_copyingMultipleMessages = PR_TRUE;
-		rv = CopyMessagesTo(messages, msgWindow, this, isMove);
+		rv = CopyMessagesTo(mCopyState->m_messages, msgWindow, this, isMove);
 	}
 	else
 	{
@@ -2027,7 +2053,7 @@ NS_IMETHODIMP nsMsgLocalMailFolder::GetNewMessages(nsIMsgWindow *aWindow)
 nsresult nsMsgLocalMailFolder::WriteStartOfNewMessage()
 {
   mCopyState->m_curDstKey = mCopyState->m_fileStream->tell();
-
+  
   // CopyFileMessage() and CopyMessages() from servers other than pop3
   if (mCopyState->m_parseMsgState)
   {
@@ -2104,7 +2130,7 @@ NS_IMETHODIMP nsMsgLocalMailFolder::BeginCopy(nsIMsgDBHdr *message)
   if (!mCopyState) return NS_ERROR_NULL_POINTER;
   nsresult rv = NS_OK;
   mCopyState->m_fileStream->seek(PR_SEEK_END, 0);
-
+ 
   PRInt32 messageIndex = (mCopyState->m_copyingMultipleMessages) ? mCopyState->m_curCopyIndex - 1 : mCopyState->m_curCopyIndex;
   NS_ASSERTION(!mCopyState->m_copyingMultipleMessages || mCopyState->m_curCopyIndex > 0, "mCopyState->m_curCopyIndex invalid");
   // by the time we get here, m_curCopyIndex is 1 relative because WriteStartOfNewMessage increments it
@@ -2149,7 +2175,6 @@ NS_IMETHODIMP nsMsgLocalMailFolder::CopyData(nsIInputStream *aIStream, PRInt32 a
     mCopyState->m_leftOver += readCount;
     mCopyState->m_dataBuffer[mCopyState->m_leftOver] ='\0';
     start = mCopyState->m_dataBuffer;
-
     end = PL_strstr(start, "\r");
     if (!end)
       	end = PL_strstr(start, "\n");
@@ -2275,7 +2300,10 @@ NS_IMETHODIMP nsMsgLocalMailFolder::EndCopy(PRBool copySucceeded)
     mCopyState->m_fromLineSeen = PR_FALSE;
     // flush the copied message.
     if (mCopyState->m_fileStream)
-      mCopyState->m_fileStream->flush();
+    {
+      rv = mCopyState->m_fileStream->flush();
+      NS_ENSURE_SUCCESS(rv,rv);
+    }
   }
 	//Copy the header to the new database
 	if(copySucceeded && mCopyState->m_message)
@@ -2578,6 +2606,10 @@ nsresult nsMsgLocalMailFolder::CopyMessagesTo(nsISupportsArray *messages,
 		  }
 		}
 	}
+    keyArray.QuickSort();
+    rv = SortMessagesBasedOnKey(messages, &keyArray, srcFolder);
+    NS_ENSURE_SUCCESS(rv,rv);
+
 		nsCOMPtr<nsIStreamListener>
       streamListener(do_QueryInterface(copyStreamListener));
 		if(!streamListener)
