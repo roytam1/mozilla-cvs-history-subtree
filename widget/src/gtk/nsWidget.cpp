@@ -2448,8 +2448,6 @@ nsWidget::FocusInSignal(GtkWidget *      aWidget,
 {
   //  printf("nsWidget::ButtonReleaseSignal(%p)\n",aData);
 
-  g_print("nsWidget::FocusInSignal\n");
-
   NS_ASSERTION( nsnull != aWidget, "widget is null");
   NS_ASSERTION( nsnull != aGdkFocusEvent, "event is null");
 
