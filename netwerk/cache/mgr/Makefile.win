@@ -30,11 +30,11 @@ LLIBS= $(LLIBS) \
 	$(DIST)\lib\xpcom.lib	\
 	$(NULL)
 
-CPP_OBJS=                                    \
-	.\$(OBJDIR)\nsCacheManager.obj       \
-	.\$(OBJDIR)\nsCachedNetData.obj      \
-	.\$(OBJDIR)\nsReplacementPolicy.obj  \
-	.\$(OBJDIR)\nsCacheEntryChannel.obj  \
+CPP_OBJS=                                  \
+	.\$(OBJDIR)\nsCacheManager.obj     \
+	.\$(OBJDIR)\nsMonitorable.obj      \
+	.\$(OBJDIR)\nsCacheBkgThd.obj	   \
+	.\$(OBJDIR)\nsBkgThread.obj        \
 	$(NULL)
 
 LOCAL_INCLUDES=	-I. \

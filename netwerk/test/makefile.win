@@ -26,9 +26,7 @@ PROG5 = .\$(OBJDIR)\TestSocketTransport.exe
 PROG6 = .\$(OBJDIR)\urltest.exe
 PROG7 = .\$(OBJDIR)\TestFileInput2.exe
 PROG8 = .\$(OBJDIR)\TestFileTransport.exe
-PROG9 = .\$(OBJDIR)\TestRawCache.exe
-PROGRAMS = $(PROG1) $(PROG2) $(PROG3) $(PROG4) $(PROG5) $(PROG6) $(PROG7) $(PROG8) \
-           $(PROG9)
+PROGRAMS = $(PROG1) $(PROG2) $(PROG3) $(PROG4) $(PROG5) $(PROG6) $(PROG7) $(PROG8)
 
 LCFLAGS=-DUSE_NSREG -GX
 
@@ -67,6 +65,3 @@ $(PROG6): $(OBJDIR) urltest.cpp
 $(PROG7): $(OBJDIR) TestFileInput2.cpp
 
 $(PROG8): $(OBJDIR) TestFileTransport.cpp
-
-$(PROG9): $(OBJDIR) TestRawCache.cpp
-

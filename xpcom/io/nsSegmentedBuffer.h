@@ -36,13 +36,6 @@ public:
     // returns true if no more segments remain:
     PRBool DeleteFirstSegment();  // pops from beginning
 
-    // returns true if no more segments remain:
-    PRBool DeleteLastSegment();  // pops from beginning
-
-    // Call Realloc() on last segment.  This is used to reduce memory
-    // consumption when data is not an exact multiple of segment size.
-    PRBool ReallocLastSegment(size_t newSize);
-
     void Empty();               // frees all segments
 
     PRUint32 GetSegmentCount() {
@@ -71,7 +64,7 @@ protected:
         return result;
     }
 
-   PRBool IsFull() {
+    PRBool IsFull() {
         return ModSegArraySize(mLastSegmentIndex + 1) == mFirstSegmentIndex;
     }
 

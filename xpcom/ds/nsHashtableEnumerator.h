@@ -33,7 +33,7 @@ typedef NS_CALLBACK(NS_HASH_ENUMERATOR_CONVERTER) (nsHashKey *key, void *data,
                                                    void *convert_data,
                                                    nsISupports **retval);
 
-extern "C" NS_COM nsresult
+extern nsresult
 NS_NewHashtableEnumerator (nsHashtable *aHash, 
                            NS_HASH_ENUMERATOR_CONVERTER aConverter,
                            void *aData, nsIEnumerator **retval);
