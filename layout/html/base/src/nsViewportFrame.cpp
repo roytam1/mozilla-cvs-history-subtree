@@ -515,7 +515,6 @@ ViewportFrame::Reflow(nsIPresContext*          aPresContext,
   // Initialize OUT parameter
   aStatus = NS_FRAME_COMPLETE;
 
-  nsIFrame* nextFrame = nsnull;
   PRBool    isHandled = PR_FALSE;
   
   nsReflowType reflowType = eReflowType_ContentChanged;
@@ -577,7 +576,7 @@ ViewportFrame::Reflow(nsIPresContext*          aPresContext,
         reflowState.mComputedHeight = height;
       
         nsReflowStatus  kidStatus;
-        ReflowFixedFrame(aPresContext, reflowState, nextFrame, PR_FALSE,
+        ReflowFixedFrame(aPresContext, reflowState, *iter, PR_FALSE,
                          kidStatus);
 
       }
