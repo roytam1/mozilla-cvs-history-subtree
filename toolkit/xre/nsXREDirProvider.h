@@ -43,7 +43,7 @@
 #include "nsIProfileMigrator.h"
 #include "nsILocalFile.h"
 
-class nsXREDirProvider : public nsIDirectoryServiceProvider,
+class nsXREDirProvider : public nsIDirectoryServiceProvider2,
                          public nsIProfileStartup
 {
 public:
@@ -53,6 +53,7 @@ public:
   NS_IMETHOD_(nsrefcnt) Release(void);
 
   NS_DECL_NSIDIRECTORYSERVICEPROVIDER
+  NS_DECL_NSIDIRECTORYSERVICEPROVIDER2
   NS_DECL_NSIPROFILESTARTUP
 
   nsXREDirProvider();
@@ -64,6 +65,13 @@ public:
   // We also don't fire profile-changed notifications... that is
   // the responsibility of the apprunner.
   nsresult SetProfileDir(nsIFile* aProfileDir);
+
+  // Causes any attempts to retrieve an enumeration of directories for the
+  // "ComsDL" property to return a list of directories specified in the 
+  // "components.ini" manifest in the profile/application directories.
+  // This results in component registration at those locations during 
+  // XPCOM startup. 
+  void RegisterExtraComponents();
 
   void DoShutdown();
 
@@ -80,6 +88,7 @@ protected:
   nsCOMPtr<nsILocalFile> mAppDir;
   nsCOMPtr<nsIFile>      mProfileDir;
   PRBool                 mProfileNotified;
+  PRBool                 mRegisterExtraComponents;
 };
 
 #endif

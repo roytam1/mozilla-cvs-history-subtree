@@ -54,7 +54,7 @@ interface nsIExtensionDownloadProgressListener : nsISupports
 interface nsIExtensionManager : nsISupports
 {
   // Apprunner hooks
-  void start(in boolean aIsDirty);
+  boolean start(in boolean aIsDirty);
 
   /** 
    * Returns true if mismatches were found and the app needs to restart. 

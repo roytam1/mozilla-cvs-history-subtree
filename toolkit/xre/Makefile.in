@@ -136,7 +136,7 @@ SHARED_LIBRARY_LIBS += ../profile/src/$(LIB_PREFIX)profile_s.$(LIB_SUFFIX)
 
 include $(topsrcdir)/config/rules.mk
 
-LOCAL_INCLUDES +=  -I$(topsrcdir)/xpfe/bootstrap
+LOCAL_INCLUDES +=  -I$(topsrcdir)/xpfe/bootstrap -I$(srcdir)/../profile/src
 CXXFLAGS += $(TK_CFLAGS)
 
 ifdef BUILD_STATIC_LIBS

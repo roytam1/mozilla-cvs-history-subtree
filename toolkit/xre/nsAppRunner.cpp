@@ -90,6 +90,8 @@
 #include "nsXREDirProvider.h"
 #include "nsWindowCreator.h"
 
+#include "nsINIParser.h"
+
 #include "InstallCleanupDefines.h"
 
 #include <stdlib.h>
@@ -1508,6 +1510,49 @@ SelectProfile(nsIProfileLock* *aResult, nsINativeAppSupport* aNative)
   return ShowProfileManager(profileSvc, aNative);
 }
 
+#define FILE_COMPATIBILITY_INFO NS_LITERAL_STRING("compatibility.ini")
+
+static void GetVersion(nsIFile* aProfileDir, char* aVersion, int aVersionLength)
+{
+  nsCOMPtr<nsIFile> compatibilityFile;
+  aProfileDir->Clone(getter_AddRefs(compatibilityFile));
+  compatibilityFile->Append(FILE_COMPATIBILITY_INFO);
+
+  nsINIParser parser;
+  nsCOMPtr<nsILocalFile> lf(do_QueryInterface(compatibilityFile));
+  parser.Init(lf);
+
+  parser.GetString("Compatibility", "Version", aVersion, aVersionLength);
+}
+
+static PRBool ComponentsListChanged(nsIFile* aProfileDir)
+{
+  nsCOMPtr<nsIFile> compatibilityFile;
+  aProfileDir->Clone(getter_AddRefs(compatibilityFile));
+  compatibilityFile->Append(FILE_COMPATIBILITY_INFO);
+
+  nsINIParser parser;
+  nsCOMPtr<nsILocalFile> lf(do_QueryInterface(compatibilityFile));
+  parser.Init(lf);
+
+  char parserBuf[MAXPATHLEN];
+  nsresult rv = parser.GetString("Compatibility", "Components List Changed", parserBuf, MAXPATHLEN);
+  return NS_SUCCEEDED(rv) && !strcmp(parserBuf, "1");
+}
+
+static void RemoveComponentRegistries(nsIFile* aProfileDir)
+{
+  nsCOMPtr<nsIFile> compregFile;
+  aProfileDir->Clone(getter_AddRefs(compregFile));
+  compregFile->Append(NS_LITERAL_STRING("compreg.dat"));
+  compregFile->Remove(PR_FALSE);
+
+  nsCOMPtr<nsIFile> xptiFile;
+  aProfileDir->Clone(getter_AddRefs(xptiFile));
+  xptiFile->Append(NS_LITERAL_STRING("xpti.dat"));
+  xptiFile->Remove(PR_FALSE);
+}
+
 const nsXREAppData* gAppData = nsnull;
 
 #if defined(XP_OS2)
@@ -1712,128 +1757,172 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
   rv = dirProvider.SetProfileDir(lf);
   NS_ENSURE_SUCCESS(rv, 1);
 
-  // OK, we now have a profile, we can now start the real application
-  ScopedXPCOMStartup xpcom;
-  rv = xpcom.Initialize();
-  NS_ENSURE_SUCCESS(rv, 1); 
-  rv = xpcom.DoAutoreg();
-  rv |= xpcom.InitEventQueue();
-  rv |= xpcom.SetWindowCreator(nativeApp);
-  NS_ENSURE_SUCCESS(rv, 1);
+  //////////////////////// NOW WE HAVE A PROFILE ////////////////////////
 
+  // Check for version compatibility with the last version of the app this 
+  // profile was started with.
+  char version[MAXPATHLEN];
+  GetVersion(lf, version, MAXPATHLEN);
+  PRBool upgraded = PR_FALSE;
+  PRBool componentsListChanged = PR_FALSE;
+  if (!strcmp(version, aAppData->appVersion)) {
+    componentsListChanged = ComponentsListChanged(lf);
+    if (componentsListChanged) {
+      // Remove compreg.dat and xpti.dat, forcing component re-registration,
+      // with the new list of additional components directories specified
+      // in "components.ini" which we have just discovered changed since the
+      // last time the application was run. 
+      RemoveComponentRegistries(lf);
+      
+      // Tell the dir provider to supply the list of components locations 
+      // specified in "components.ini" when it is asked for the "ComsDL"
+      // enumeration.
+      dirProvider.RegisterExtraComponents();
+    }
+    // Nothing need be done for the normal startup case.
+  }
+  else {
+    // Remove compreg.dat and xpti.dat, forcing component re-registration
+    // with the default set of components (this disables any potentially
+    // troublesome incompatible XPCOM components). 
+    RemoveComponentRegistries(lf);
+
+    // Tell the Extension Manager it should check for incompatible 
+    // Extensions and re-write the Components manifest ("components.ini")
+    // with a list of XPCOM components for compatible extensions
+    upgraded = PR_TRUE;
+
+    // The Extension Manager will write the Compatibility manifest with
+    // the current app version. 
+  }
+
+  PRBool needsRestart = PR_FALSE;
+  nsCOMPtr<nsIAppShellService> appShellService;
   {
+    // Start the real application
+    ScopedXPCOMStartup xpcom;
+    rv = xpcom.Initialize();
+    NS_ENSURE_SUCCESS(rv, 1); 
+    rv = xpcom.DoAutoreg();
+    rv |= xpcom.InitEventQueue();
+    rv |= xpcom.SetWindowCreator(nativeApp);
+    NS_ENSURE_SUCCESS(rv, 1);
+
     {
-      NS_TIMELINE_ENTER("startupNotifier");
-      nsCOMPtr<nsIObserver> startupNotifier
-        (do_CreateInstance(NS_APPSTARTUPNOTIFIER_CONTRACTID, &rv));
+      {
+        NS_TIMELINE_ENTER("startupNotifier");
+        nsCOMPtr<nsIObserver> startupNotifier
+          (do_CreateInstance(NS_APPSTARTUPNOTIFIER_CONTRACTID, &rv));
+        NS_ENSURE_SUCCESS(rv, 1);
+
+        startupNotifier->Observe(nsnull, APPSTARTUP_TOPIC, nsnull);
+        NS_TIMELINE_LEAVE("startupNotifier");
+      }
+
+      appShellService = do_GetService("@mozilla.org/appshell/appShellService;1");
+      NS_ENSURE_TRUE(appShellService, 1);
+
+      // So we can open and close windows during startup
+      appShellService->EnterLastWindowClosingSurvivalArea();
+
+      NS_TIMELINE_ENTER("appShellService->CreateHiddenWindow");
+      rv = appShellService->CreateHiddenWindow();
+      NS_TIMELINE_LEAVE("appShellService->CreateHiddenWindow");
       NS_ENSURE_SUCCESS(rv, 1);
 
-      startupNotifier->Observe(nsnull, APPSTARTUP_TOPIC, nsnull);
-      NS_TIMELINE_LEAVE("startupNotifier");
-    }
-
-    nsCOMPtr<nsIAppShellService> appShellService
-      (do_GetService("@mozilla.org/appshell/appShellService;1"));
-    NS_ENSURE_TRUE(appShellService, 1);
-
-    // So we can open and close windows during startup
-    appShellService->EnterLastWindowClosingSurvivalArea();
-
-    NS_TIMELINE_ENTER("appShellService->CreateHiddenWindow");
-    rv = appShellService->CreateHiddenWindow();
-    NS_TIMELINE_LEAVE("appShellService->CreateHiddenWindow");
-    NS_ENSURE_SUCCESS(rv, 1);
-
-    if (gDoMigration) {
-      gDoMigration = PR_FALSE;
-      nsCOMPtr<nsIProfileMigrator> pm
-        (do_CreateInstance(NS_PROFILEMIGRATOR_CONTRACTID));
-      if (pm)
-        pm->Migrate(&dirProvider);
-    }
-    dirProvider.DoStartup();
-
-    nsCOMPtr<nsIExtensionManager> em
-      (do_CreateInstance("@mozilla.org/extensions/manager;1"));
-    if (em) {
-      em->Start(PR_TRUE);
-    }
-    else {
-      NS_WARNING("Couldn't create the extension manager!");
-    }
-  
-#if 0 // needs restart-loving
-    nsCOMPtr<nsIExtensionManager> em
-      (do_GetService("@mozilla.org/extensions/manager;1"));
-    if (em) {
-      PRBool restart = PR_FALSE;
-      rv = em->CheckForMismatches(&restart);
-      if (NS_SUCCEEDED(rv) && restart) {
-        continue; // this restarts the while(1) loop above
+      if (gDoMigration) {
+        gDoMigration = PR_FALSE;
+        nsCOMPtr<nsIProfileMigrator> pm
+          (do_CreateInstance(NS_PROFILEMIGRATOR_CONTRACTID));
+        if (pm)
+          pm->Migrate(&dirProvider);
       }
-    }
-#endif
+      dirProvider.DoStartup();
 
-    nsCOMPtr<nsICmdLineService> cmdLineArgs
-      (do_GetService("@mozilla.org/appshell/commandLineService;1"));
-    NS_ENSURE_TRUE(cmdLineArgs, 1);
+      // Extension Compatibility Checking and Startup
+      nsCOMPtr<nsIExtensionManager> em(do_GetService("@mozilla.org/extensions/manager;1"));
+      NS_ENSURE_TRUE(em, 1);
+      
+      if (upgraded)
+        em->CheckForMismatches(&needsRestart);
+      
+      if (!upgraded || !needsRestart)
+        em->Start(componentsListChanged, &needsRestart);
 
-    NS_TIMELINE_ENTER("InstallGlobalLocale");
-    InstallGlobalLocale(cmdLineArgs);
-    NS_TIMELINE_LEAVE("InstallGlobalLocale");
+      if (!upgraded && !needsRestart) {
+        nsCOMPtr<nsICmdLineService> cmdLineArgs
+          (do_GetService("@mozilla.org/appshell/commandLineService;1"));
+        NS_ENSURE_TRUE(cmdLineArgs, 1);
 
-    // This will go away once Components are handling there own commandlines
-    // if we have no command line arguments, we need to heed the
-    // "general.startup.*" prefs
-    // if we had no command line arguments, argc == 1.
+        NS_TIMELINE_ENTER("InstallGlobalLocale");
+        InstallGlobalLocale(cmdLineArgs);
+        NS_TIMELINE_LEAVE("InstallGlobalLocale");
 
-    PRBool windowOpened = PR_FALSE;
-    rv = DoCommandLines(cmdLineArgs, aAppData->useStartupPrefs, &windowOpened);
-    NS_ENSURE_SUCCESS(rv, 1);
-  
-    // Make sure there exists at least 1 window.
-    NS_TIMELINE_ENTER("Ensure1Window");
-    rv = appShellService->Ensure1Window(cmdLineArgs);
-    NS_TIMELINE_LEAVE("Ensure1Window");
-    NS_ENSURE_SUCCESS(rv, 1);
+        // This will go away once Components are handling there own commandlines
+        // if we have no command line arguments, we need to heed the
+        // "general.startup.*" prefs
+        // if we had no command line arguments, argc == 1.
+
+        PRBool windowOpened = PR_FALSE;
+        rv = DoCommandLines(cmdLineArgs, aAppData->useStartupPrefs, &windowOpened);
+        NS_ENSURE_SUCCESS(rv, 1);
+      
+        // Make sure there exists at least 1 window.
+        NS_TIMELINE_ENTER("Ensure1Window");
+        rv = appShellService->Ensure1Window(cmdLineArgs);
+        NS_TIMELINE_LEAVE("Ensure1Window");
+        NS_ENSURE_SUCCESS(rv, 1);
 
 #ifndef XP_MACOSX
-    appShellService->ExitLastWindowClosingSurvivalArea();
+        appShellService->ExitLastWindowClosingSurvivalArea();
 #endif
 
 #ifdef MOZ_ENABLE_XREMOTE
-    // if we have X remote support and we have our one window up and
-    // running start listening for requests on the proxy window.
-    nsCOMPtr<nsIXRemoteService> remoteService;
-    remoteService = do_GetService(NS_IXREMOTESERVICE_CONTRACTID);
-    if (remoteService)
-      remoteService->Startup(aAppData->appName);
+        // if we have X remote support and we have our one window up and
+        // running start listening for requests on the proxy window.
+        nsCOMPtr<nsIXRemoteService> remoteService;
+        remoteService = do_GetService(NS_IXREMOTESERVICE_CONTRACTID);
+        if (remoteService)
+          remoteService->Startup(aAppData->appName);
 #endif /* MOZ_ENABLE_XREMOTE */
 
-    // enable win32 DDE responses and Mac appleevents responses
-    nativeApp->SetShouldShowUI(PR_TRUE);
+        // enable win32 DDE responses and Mac appleevents responses
+        nativeApp->SetShouldShowUI(PR_TRUE);
 
-    // Start main event loop
-    NS_TIMELINE_ENTER("appShell->Run");
-    rv = appShellService->Run();
-    NS_TIMELINE_LEAVE("appShell->Run");
-    NS_ASSERTION(NS_SUCCEEDED(rv), "failed to run appshell");
+        // Start main event loop
+        NS_TIMELINE_ENTER("appShell->Run");
+        rv = appShellService->Run();
+        NS_TIMELINE_LEAVE("appShell->Run");
+        NS_ASSERTION(NS_SUCCEEDED(rv), "failed to run appshell");
 
 #ifdef MOZ_ENABLE_XREMOTE
-    // shut down the x remote proxy window
-    if (remoteService)
-      remoteService->Shutdown();
+        // shut down the x remote proxy window
+        if (remoteService)
+          remoteService->Shutdown();
 #endif /* MOZ_ENABLE_XREMOTE */
 
 #ifdef MOZ_TIMELINE
-    // Make sure we print this out even if timeline is runtime disabled
-    if (NS_FAILED(NS_TIMELINE_LEAVE("main1")))
-      NS_TimelineForceMark("...main1");
+        // Make sure we print this out even if timeline is runtime disabled
+        if (NS_FAILED(NS_TIMELINE_LEAVE("main1")))
+          NS_TimelineForceMark("...main1");
 #endif
+      }
+    }
+
+    profileLock->Unlock();
   }
 
-  if (NS_FAILED(rv))
-    return 1;
+  // Restart the app after XPCOM has been shut down cleanly. 
+  if (needsRestart) {
+    nsCAutoString path;
+    lf->GetNativePath(path);
 
-  return 0;
+    static char kEnvVar[MAXPATHLEN];
+    sprintf(kEnvVar, "XRE_PROFILE_PATH=%s", path.get());
+    PR_SetEnv(kEnvVar);
+
+    return LaunchChild(nativeApp) == NS_ERROR_LAUNCHED_CHILD_PROCESS ? 0 : 1;
+  }
+
+  return NS_FAILED(rv) ? 1 : 0;
 }
