@@ -64,6 +64,25 @@ namespace JavaScript
 #endif
 
 
+    // A checked_cast acts as a static_cast that is checked in DEBUG mode.
+    // It can only be used to downcast a class hierarchy that has at least one virtual function.
+#ifdef DEBUG
+ #ifdef _WIN32
+    // In DEBUG mode checked_cast is a dynamic_cast with no null check due to a Microsoft Visual C++ 6.0 bug.
+  #define checked_cast dynamic_cast
+ #else
+    template <class Target, class Source> inline Target checked_cast(Source *s)
+    {
+        Target t = dynamic_cast<Target>(s);
+        ASSERT(t);
+        return t;
+    }
+ #endif
+#else
+ #define checked_cast static_cast
+#endif
+
+
 //
 // Mathematics
 //
@@ -73,6 +92,15 @@ namespace JavaScript
 
     uint ceilingLog2(uint32 n);
     uint floorLog2(uint32 n);
+
+
+//
+// Flag Bitmaps
+//
+
+    template<class F> inline F setFlag(F flags, F flag) {return static_cast<F>(flags | flag);}
+    template<class F> inline F clearFlag(F flags, F flag) {return static_cast<F>(flags & ~flag);}
+    template<class F> inline bool testFlag(F flags, F flag) {return (flags & flag) != 0;}
 
 
 //
@@ -86,5 +114,6 @@ namespace JavaScript
     inline int32 toInt32(uint32 x) {return static_cast<int32>(x);}
     inline size_t toSize_t(ptrdiff_t x) {return static_cast<size_t>(x);}
     inline ptrdiff_t toPtrdiff_t(size_t x) {return static_cast<ptrdiff_t>(x);}
+
 }
 #endif /* utilities_h___ */
