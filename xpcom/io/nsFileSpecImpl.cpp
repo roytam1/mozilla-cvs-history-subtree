@@ -21,13 +21,21 @@
 #include "nsFileSpec.h"
 #include "nsIFileStream.h"
 #include "nsFileStream.h"
+
+/*
+ * XXX xpcom/ should not depend on widget/public/nsIFileWidget.h
+ * XXX We need to move into widget.
+ */
+#ifdef FILE_WIDGET_DEPENDENCY
 #include "nsIFileWidget.h"
 #include "nsWidgetsCID.h"
+
+static NS_DEFINE_IID(kCFileWidgetCID, NS_FILEWIDGET_CID);
+#endif /* FILE_WIDGET_DEPENDENCY */
+
 #include "nsIComponentManager.h"
 
 #include "prmem.h"
-
-static NS_DEFINE_IID(kCFileWidgetCID, NS_FILEWIDGET_CID);
 
 #ifdef NS_DEBUG
 #define TEST_OUT_PTR(p) \
@@ -47,7 +55,7 @@ class nsFileSpecImpl
 	NS_DECL_ISUPPORTS
 
 	NS_IMETHOD fromFileSpec(const nsIFileSpec *original);
-
+#ifdef FILE_WIDGET_DEPENDENCY
 	NS_IMETHOD chooseOutputFile(const char *windowTitle, const char *suggestedLeafName);
 
 	NS_IMETHOD chooseInputFile(
@@ -56,6 +64,7 @@ class nsFileSpecImpl
 		const char *extraFilterTitle, const char *extraFilter);
 
 	NS_IMETHOD chooseDirectory(const char *title);
+#endif /* FILE_WIDGET_DEPENDENCY */
 
 	NS_IMETHOD GetURLString(char * *aURLString);
 	NS_IMETHOD SetURLString(char * aURLString);
@@ -245,6 +254,7 @@ NS_IMETHODIMP nsFileSpecImpl::fromFileSpec(const nsIFileSpec *original)
 	return mFileSpec.Error();
 }
 
+#ifdef FILE_WIDGET_DEPENDENCY
 //----------------------------------------------------------------------------------------
 NS_IMETHODIMP nsFileSpecImpl::chooseOutputFile(
 	const char *windowTitle,
@@ -357,6 +367,7 @@ NS_IMETHODIMP nsFileSpecImpl::chooseDirectory(const char *title)
 		rv = NS_FILE_FAILURE;
 	return NS_OK;
 } // nsFileSpecImpl::chooseDirectory
+#endif /* FILE_WIDGET_DEPENDENCY */
 
 //----------------------------------------------------------------------------------------
 NS_IMETHODIMP nsFileSpecImpl::GetURLString(char * *aURLString)
