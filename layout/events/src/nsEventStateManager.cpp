@@ -346,7 +346,7 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
             nsCOMPtr<nsIDOMWindowInternal> rootWindow;
             nsCOMPtr<nsPIDOMWindow> ourWindow = do_QueryInterface(ourGlobal);
             if(ourWindow) {
-              ourWindow->GetRootCommandDispatcher(gLastFocusedDocument, getter_AddRefs(commandDispatcher));
+              ourWindow->GetRootCommandDispatcher(getter_AddRefs(commandDispatcher));
               if (commandDispatcher)
                 commandDispatcher->SetSuppressFocus(PR_TRUE);
             }
@@ -882,6 +882,10 @@ nsEventStateManager::PostHandleEvent(nsIPresContext* aPresContext,
         }
 
         nsIFrame* currFrame = mCurrentTarget;
+        nsCOMPtr<nsIContent> activeContent;
+        if (mCurrentTarget)
+          mCurrentTarget->GetContent(getter_AddRefs(activeContent));
+
         // Look for the nearest enclosing focusable frame.
         while (currFrame) {
           const nsStyleUserInterface* ui;
@@ -901,7 +905,21 @@ nsEventStateManager::PostHandleEvent(nsIPresContext* aPresContext,
         else if (!suppressBlur)
           SetContentState(nsnull, NS_EVENT_STATE_FOCUS);
 
-        SetContentState(newFocus, NS_EVENT_STATE_ACTIVE);
+        if (activeContent) {
+          // The nearest enclosing element goes into the
+          // :active state.  If we fail the QI to DOMElement,
+          // then we know we're only a node, and that we need
+          // to obtain our parent element and put it into :active
+          // instead.
+          nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(activeContent));
+          if (!elt) {
+            nsCOMPtr<nsIContent> par;
+            activeContent->GetParent(*getter_AddRefs(par));
+            activeContent = par;
+          }
+          if (activeContent)
+            SetContentState(activeContent, NS_EVENT_STATE_ACTIVE);
+        }
       }
       else {
         // if we're here, the event handler returned false, so stop
@@ -1833,7 +1851,7 @@ nsEventStateManager::CheckForAndDispatchClick(nsIPresContext* aPresContext,
     nsCOMPtr<nsIPresShell> presShell;
     mPresContext->GetShell(getter_AddRefs(presShell));
     if (presShell) {
-      ret = presShell->HandleEventWithTarget(&event, mCurrentTarget, mouseContent, aStatus);
+      ret = presShell->HandleEventWithTarget(&event, mCurrentTarget, mouseContent, NS_EVENT_FLAG_INIT, aStatus);
       if (NS_SUCCEEDED(ret) && aEvent->clickCount == 2) {
         nsMouseEvent event2;
         //fire double click
@@ -1859,7 +1877,7 @@ nsEventStateManager::CheckForAndDispatchClick(nsIPresContext* aPresContext,
         event2.isAlt = aEvent->isAlt;
         event2.isMeta = aEvent->isMeta;
 
-        ret = presShell->HandleEventWithTarget(&event2, mCurrentTarget, mouseContent, aStatus);
+        ret = presShell->HandleEventWithTarget(&event2, mCurrentTarget, mouseContent, NS_EVENT_FLAG_INIT, aStatus);
       }
     }
   }
@@ -2394,8 +2412,13 @@ nsEventStateManager::SetContentState(nsIContent *aContent, PRInt32 aState)
   nsCOMPtr<nsIContent> commonHoverParent = nsnull;
   if ((aState & NS_EVENT_STATE_HOVER) && (aContent != mHoverContent)) {
     if (hHover) {
-      newHover = aContent;
-      oldHover = mHoverContent;
+      nsCOMPtr<nsIDocument> doc;
+      if (aContent && NS_SUCCEEDED(aContent->GetDocument(*getter_AddRefs(doc))) && doc) {
+        newHover = aContent;
+      }
+      if (mHoverContent && NS_SUCCEEDED(mHoverContent->GetDocument(*getter_AddRefs(doc))) && doc) {
+        oldHover = mHoverContent;
+      }
 
       //Find closest common parent
       nsCOMPtr<nsIContent> parent1 = mHoverContent;
@@ -2455,6 +2478,7 @@ nsEventStateManager::SetContentState(nsIContent *aContent, PRInt32 aState)
       NS_IF_RELEASE(gLastFocusedContent);
       gLastFocusedContent = mCurrentFocus;
       NS_IF_ADDREF(gLastFocusedContent);
+      aContent = nsnull;
     } else {
       notifyContent[3] = gLastFocusedContent;
       NS_IF_ADDREF(gLastFocusedContent);
@@ -2647,9 +2671,9 @@ nsEventStateManager::SendFocusBlur(nsIPresContext* aPresContext, nsIContent *aCo
             nsCOMPtr<nsPIDOMWindow> newWindow = do_QueryInterface(newGlobal);
             nsCOMPtr<nsPIDOMWindow> oldWindow = do_QueryInterface(oldGlobal);
             if(newWindow)
-              newWindow->GetRootCommandDispatcher(mDocument, getter_AddRefs(newCommandDispatcher));
+              newWindow->GetRootCommandDispatcher(getter_AddRefs(newCommandDispatcher));
             if(oldWindow)
-			  oldWindow->GetRootCommandDispatcher(gLastFocusedDocument, getter_AddRefs(oldCommandDispatcher));
+			  oldWindow->GetRootCommandDispatcher(getter_AddRefs(oldCommandDispatcher));
             if(oldCommandDispatcher && oldCommandDispatcher != newCommandDispatcher)
               oldCommandDispatcher->SetSuppressFocus(PR_TRUE);
           }
@@ -2697,8 +2721,8 @@ nsEventStateManager::SendFocusBlur(nsIPresContext* aPresContext, nsIContent *aCo
             nsCOMPtr<nsPIDOMWindow> newWindow = do_QueryInterface(newGlobal);
 		    nsCOMPtr<nsPIDOMWindow> oldWindow = do_QueryInterface(oldGlobal);
 
-		    newWindow->GetRootCommandDispatcher(mDocument, getter_AddRefs(newCommandDispatcher));
-		    oldWindow->GetRootCommandDispatcher(gLastFocusedDocument, getter_AddRefs(oldCommandDispatcher));
+		    newWindow->GetRootCommandDispatcher(getter_AddRefs(newCommandDispatcher));
+		    oldWindow->GetRootCommandDispatcher(getter_AddRefs(oldCommandDispatcher));
             if(oldCommandDispatcher && oldCommandDispatcher != newCommandDispatcher)
 			  oldCommandDispatcher->SetSuppressFocus(PR_TRUE);
 		  }

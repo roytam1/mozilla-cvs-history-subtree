@@ -54,6 +54,7 @@
 #include "nsIMessage.h"
 #include "nsIDirectoryService.h"
 #include "nsAppDirectoryServiceDefs.h"
+#include "nsIWebNavigation.h"
 
 #define PREF_MAIL_ROOT_IMAP "mail.root.imap"
 
@@ -607,7 +608,7 @@ nsresult nsImapService::FetchMimePart(nsIImapUrl * aImapUrl,
           loadInfo->SetLoadType(nsIDocShellLoadInfo::loadLink);
         }
         
-        rv = docShell->LoadURI(url, loadInfo);
+        rv = docShell->LoadURI(url, loadInfo, nsIWebNavigation::LOAD_FLAGS_NONE);
       }
       else
       {
@@ -771,7 +772,12 @@ NS_IMETHODIMP nsImapService::Search(nsIMsgSearchSession *aSearchSession, nsIMsgW
 	urlSpec.AppendWithConversion(hierarchySeparator);
     urlSpec.Append((const char *) folderName);
     urlSpec.Append('>');
-    urlSpec.Append(aSearchUri);
+    // escape aSearchUri so that IMAP special characters (i.e. '\')
+    // won't be replaced with '/' in NECKO.
+    // it will be unescaped in nsImapUrl::ParseUrl().
+    char *search_cmd = nsEscape((char *)aSearchUri, url_XAlphas);
+    urlSpec.Append(search_cmd);
+    nsCRT::free(search_cmd);
     rv = mailNewsUrl->SetSpec((char *) urlSpec.GetBuffer());
     if (NS_SUCCEEDED(rv))
     {
@@ -932,7 +938,7 @@ nsImapService::FetchMessage(nsIImapUrl * aImapUrl,
       nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(aDisplayConsumer, &rv));
       if (NS_SUCCEEDED(rv) && docShell)
       {      
-        rv = docShell->LoadURI(url, nsnull);
+        rv = docShell->LoadURI(url, nsnull, nsIWebNavigation::LOAD_FLAGS_NONE);
       }
       else
       {

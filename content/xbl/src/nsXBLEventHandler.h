@@ -26,12 +26,6 @@
 #define nsXBLEventHandler_h__
 
 #include "nsIDOMEventReceiver.h"
-#include "nsIDOMMouseListener.h"
-#include "nsIDOMKeyListener.h"
-#include "nsIDOMMenuListener.h"
-#include "nsIDOMFocusListener.h"
-#include "nsIDOMScrollListener.h"
-#include "nsIDOMFormListener.h"
 
 class nsIXBLBinding;
 class nsIDOMEvent;
@@ -45,56 +39,14 @@ class nsIXBLPrototypeHandler;
 
 // XXX This should be broken up into subclasses for each listener IID type, so we
 // can cut down on the bloat of the handlers.
-class nsXBLEventHandler : public nsIDOMKeyListener, 
-                          public nsIDOMMouseListener,
-                          public nsIDOMMenuListener,
-                          public nsIDOMFocusListener,
-                          public nsIDOMScrollListener,
-                          public nsIDOMFormListener
+class nsXBLEventHandler : public nsISupports
 {
 public:
-  nsXBLEventHandler(nsIDOMEventReceiver* aReceiver, nsIXBLPrototypeHandler* aHandler, nsIAtom* aEventName);
+  nsXBLEventHandler(nsIDOMEventReceiver* aReceiver, nsIXBLPrototypeHandler* aHandler);
   virtual ~nsXBLEventHandler();
   
   NS_IMETHOD BindingAttached();
   NS_IMETHOD BindingDetached();
-
-  // nsIDOMetc.
-  virtual nsresult HandleEvent(nsIDOMEvent* aEvent);
-  
-  virtual nsresult KeyUp(nsIDOMEvent* aMouseEvent);
-  virtual nsresult KeyDown(nsIDOMEvent* aMouseEvent);
-  virtual nsresult KeyPress(nsIDOMEvent* aMouseEvent);
-   
-  virtual nsresult MouseDown(nsIDOMEvent* aMouseEvent);
-  virtual nsresult MouseUp(nsIDOMEvent* aMouseEvent);
-  virtual nsresult MouseClick(nsIDOMEvent* aMouseEvent);
-  virtual nsresult MouseDblClick(nsIDOMEvent* aMouseEvent);
-  virtual nsresult MouseOver(nsIDOMEvent* aMouseEvent);
-  virtual nsresult MouseOut(nsIDOMEvent* aMouseEvent);
-  
-  virtual nsresult Focus(nsIDOMEvent* aMouseEvent);
-  virtual nsresult Blur(nsIDOMEvent* aMouseEvent);
-
-  // menu
-  NS_IMETHOD Create(nsIDOMEvent* aEvent);
-  NS_IMETHOD Close(nsIDOMEvent* aEvent);
-  NS_IMETHOD Destroy(nsIDOMEvent* aEvent);
-  NS_IMETHOD Action(nsIDOMEvent* aEvent);
-  NS_IMETHOD Broadcast(nsIDOMEvent* aEvent);
-  NS_IMETHOD CommandUpdate(nsIDOMEvent* aEvent);
-
-  // scroll
-  NS_IMETHOD Overflow(nsIDOMEvent* aEvent);
-  NS_IMETHOD Underflow(nsIDOMEvent* aEvent);
-  NS_IMETHOD OverflowChanged(nsIDOMEvent* aEvent);
-
-  // form
-  virtual nsresult Submit(nsIDOMEvent* aEvent);
-  virtual nsresult Reset(nsIDOMEvent* aEvent);
-  virtual nsresult Change(nsIDOMEvent* aEvent);
-  virtual nsresult Select(nsIDOMEvent* aEvent);
-  virtual nsresult Input(nsIDOMEvent* aEvent);
   
   NS_DECL_ISUPPORTS
 
@@ -109,10 +61,9 @@ public:
     if (mNextHandler) mNextHandler->MarkForDeath(); mProtoHandler = nsnull; mEventReceiver = nsnull;
   }
 
-protected:
-  NS_IMETHOD GetController(nsIController** aResult);
-  NS_IMETHOD ExecuteHandler(nsIAtom* aEventName, nsIDOMEvent* aEvent);
+  static nsresult GetTextData(nsIContent *aParent, nsString& aResult);
 
+protected:
   static PRUint32 gRefCnt;
   static nsIAtom* kKeyAtom;
   static nsIAtom* kKeyCodeAtom;
@@ -125,51 +76,14 @@ protected:
   static nsIAtom* kBindingDetachedAtom;
   static nsIAtom* kModifiersAtom;
 
-  static nsIAtom* kKeyUpAtom;
-  static nsIAtom* kKeyDownAtom;
-  static nsIAtom* kKeyPressAtom;
-
-  static nsIAtom* kMouseDownAtom;
-  static nsIAtom* kMouseUpAtom;
-  static nsIAtom* kMouseClickAtom;
-  static nsIAtom* kMouseDblClickAtom;
-  static nsIAtom* kMouseOverAtom;
-  static nsIAtom* kMouseOutAtom;
-
-  static nsIAtom* kFocusAtom;
-  static nsIAtom* kBlurAtom;
-
-  static nsIAtom* kCreateAtom;
-  static nsIAtom* kCloseAtom;
-  static nsIAtom* kDestroyAtom;
-  static nsIAtom* kCommandUpdateAtom;
-  static nsIAtom* kBroadcastAtom;
-  
-  static nsIAtom* kOverflowAtom;
-  static nsIAtom* kUnderflowAtom;
-  static nsIAtom* kOverflowChangedAtom;
-
-  static nsIAtom* kSubmitAtom;
-  static nsIAtom* kResetAtom;
-  static nsIAtom* kChangeAtom;
-  static nsIAtom* kSelectAtom;
-  static nsIAtom* kInputAtom;
-
-  static nsresult GetTextData(nsIContent *aParent, nsString& aResult);
-
 protected:
   nsIDOMEventReceiver* mEventReceiver; // Both of these refs are weak.
   nsCOMPtr<nsIXBLPrototypeHandler> mProtoHandler;
 
-  nsCOMPtr<nsIAtom> mEventName;
- 
   nsXBLEventHandler* mNextHandler; // Handlers are chained for easy unloading later.
 };
 
 extern nsresult
 NS_NewXBLEventHandler(nsIDOMEventReceiver* aEventReceiver, nsIXBLPrototypeHandler* aHandlerElement, 
-                      nsIAtom* aEventName,
                       nsXBLEventHandler** aResult);
-
-
 #endif

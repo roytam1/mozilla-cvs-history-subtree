@@ -39,6 +39,7 @@
 #include "nsIDiskDocument.h"
 #include "nsIDocument.h"
 #include "nsIDOMWindowInternal.h"
+#include "nsPIDOMWindow.h"
 #include "nsIDOMNode.h"
 #include "nsIDOMNodeList.h"
 #include "nsICSSLoader.h"
@@ -90,6 +91,8 @@
 
 #include "nsIRefreshURI.h"
 #include "nsIPref.h"
+
+#include "nsILookAndFeel.h"
 
 ///////////////////////////////////////
 // Editor Includes
@@ -630,6 +633,43 @@ nsEditorShell::PrepareDocumentForEditing(nsIDocumentLoader* aLoader, nsIURI *aUr
     // (this also turns on the caret)
     mEditor->SetCaretToDocumentStart();
   }
+
+  // show the caret, if our window is focussed already
+  nsCOMPtr<nsIDOMWindowInternal> contentInternal = do_QueryReferent(mContentWindow);
+  nsCOMPtr<nsPIDOMWindow> privContent(do_QueryInterface(contentInternal));
+  
+  if (privContent)
+  {
+    nsCOMPtr<nsIDOMXULCommandDispatcher> commandDispatcher;
+    privContent->GetRootCommandDispatcher(getter_AddRefs(commandDispatcher));
+    
+    if (commandDispatcher)
+    {
+      nsCOMPtr<nsIDOMWindowInternal> focussedWindow;
+      commandDispatcher->GetFocusedWindow(getter_AddRefs(focussedWindow));
+
+      if (focussedWindow.get() == contentInternal.get())    // now see if we are focussed
+      {
+        nsCOMPtr<nsISelectionController> selCon;
+        editor->GetSelectionController(getter_AddRefs(selCon));
+
+        PRInt32 pixelWidth = 1;
+
+        static NS_DEFINE_CID(kLookAndFeelCID, NS_LOOKANDFEEL_CID);
+
+        nsCOMPtr<nsILookAndFeel> lookNFeel = do_GetService(kLookAndFeelCID);
+        if (lookNFeel)
+          lookNFeel->GetMetric(nsILookAndFeel::eMetric_MultiLineCaretWidth, pixelWidth);
+
+        selCon->SetCaretWidth(pixelWidth);
+        selCon->SetCaretEnabled(PR_FALSE);
+        selCon->SetCaretEnabled(PR_TRUE);   // make damn sure it shows; the last SetVisible
+                                            // may have happened when we didn't have focus.
+        selCon->SetDisplaySelection(nsISelectionController::SELECTION_ON);
+      }
+    }
+  }
+
   return NS_OK;
 }
 
@@ -863,7 +903,7 @@ nsEditorShell::InstantiateEditor(nsIDOMDocument *aDoc, nsIPresShell *aPresShell)
   {
     if (mEditorTypeString.EqualsWithConversion("text"))
     {
-      err = editor->Init(aDoc, aPresShell, nsnull, selCon, nsIHTMLEditor::eEditorPlaintextMask);
+      err = editor->Init(aDoc, aPresShell, nsnull, selCon, nsIHTMLEditor::eEditorPlaintextMask | nsIHTMLEditor::eEditorEnableWrapHackMask);
       mEditorType = ePlainTextEditorType;
     }
     else if (mEditorTypeString.EqualsWithConversion("html") || mEditorTypeString.IsEmpty())  // empty string default to HTML editor
@@ -1503,7 +1543,7 @@ nsEditorShell::LoadUrl(const PRUnichar *url)
   if (NS_FAILED(rv)) return rv;
   
   nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(mContentAreaDocShell));
-  NS_ENSURE_SUCCESS(webNav->LoadURI(url), NS_ERROR_FAILURE);
+  NS_ENSURE_SUCCESS(webNav->LoadURI(url, nsIWebNavigation::LOAD_FLAGS_NONE), NS_ERROR_FAILURE);
 
   return NS_OK;
 }
@@ -1822,6 +1862,10 @@ nsEditorShell::SaveDocument(PRBool saveAs, PRBool saveCopy, PRBool *_retval)
               // Use page title as suggested name for new document
               if (fileName.Length() == 0 && title.Length() > 0)
               {
+                // Strip out quote character
+                PRUnichar quote = (PRUnichar)'\"';
+                title.StripChar(quote);
+
                 //Replace "bad" filename characteres with "_"
                 PRUnichar space = (PRUnichar)' ';
                 PRUnichar dot = (PRUnichar)'.';

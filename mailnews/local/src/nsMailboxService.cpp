@@ -41,6 +41,7 @@
 #include "nsIStreamConverterService.h"
 #include "nsNetUtil.h"
 #include "nsIDocShellLoadInfo.h"
+#include "nsIWebNavigation.h"
 
 static NS_DEFINE_CID(kIStreamConverterServiceCID,
                      NS_STREAMCONVERTERSERVICE_CID);
@@ -164,7 +165,7 @@ nsresult nsMailboxService::FetchMessage(const char* aMessageURI,
         docShell->CreateLoadInfo(getter_AddRefs(loadInfo));
         loadInfo->SetLoadType(nsIDocShellLoadInfo::loadLink);
       }
-	    rv = docShell->LoadURI(url, loadInfo);
+	    rv = docShell->LoadURI(url, loadInfo, nsIWebNavigation::LOAD_FLAGS_NONE);
     }
     else
       rv = RunMailboxUrl(url, aDisplayConsumer); 
@@ -307,7 +308,6 @@ nsresult nsMailboxService::PrepareMessageUrl(const char * aSrcMsgMailboxURI, nsI
 		nsFileSpec folderPath;
 		nsMsgKey msgKey;
         const char *part = PL_strstr(aSrcMsgMailboxURI, "part=");
-		
 		rv = nsParseLocalMessageURI(aSrcMsgMailboxURI, folderURI, &msgKey);
 		rv = nsLocalURI2Path(kMailboxMessageRootURI, folderURI, folderPath);
 

@@ -28,7 +28,6 @@
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
 #include "nsFileStream.h"
-#include "nsIFileSpecWithUI.h"
 #include "nsIStringStream.h"
 #include "nsEscape.h"
 #include "nsXPIDLString.h"
@@ -130,16 +129,17 @@ static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 //
 #include "nsIParser.h"
 #include "nsParserCIID.h"
+#include "nsHTMLToTXTSinkStream.h"
+#include "CNavDTD.h"
 #include "nsICharsetConverterManager.h"
-#include "nsIContentSink.h"
-#include "nsIHTMLToTextSink.h"
+#include "nsIDocumentEncoder.h"
 
 static nsresult
 ConvertBufToPlainText(nsString &aConBuf)
 {
   nsresult    rv;
-  nsAutoString    convertedText;
-  nsCOMPtr<nsIParser> parser;
+  nsString    convertedText;
+  nsIParser   *parser;
 
   if (aConBuf.IsEmpty())
     return NS_OK;
@@ -148,23 +148,32 @@ ConvertBufToPlainText(nsString &aConBuf)
   static NS_DEFINE_IID(kCParserCID, NS_PARSER_IID);
 
   rv = nsComponentManager::CreateInstance(kCParserCID, nsnull, 
-                                          kCParserIID, getter_AddRefs(parser));
+                                          kCParserIID, (void **)&parser);
   if (NS_SUCCEEDED(rv) && parser)
   {
-    nsCOMPtr<nsIContentSink> sink;
+    nsHTMLToTXTSinkStream     *sink = nsnull;
+    PRUint32 converterFlags = 0;
+    PRUint32 wrapWidth = 72;
+    
+    rv = NS_New_HTMLToTXT_SinkStream((nsIHTMLContentSink **)&sink, &convertedText, wrapWidth, converterFlags);
+    if (sink && NS_SUCCEEDED(rv)) 
+    {  
+        sink->DoFragment(PR_TRUE);
+        parser->SetContentSink(sink);
 
-    sink = do_CreateInstance(NS_PLAINTEXTSINK_CONTRACTID);
-    NS_ENSURE_TRUE(sink, NS_ERROR_FAILURE);
+        nsIDTD* dtd = nsnull;
+        rv = NS_NewNavHTMLDTD(&dtd);
+        if (NS_SUCCEEDED(rv)) 
+        {
+          parser->RegisterDTD(dtd);
+          rv = parser->Parse(aConBuf, 0, NS_ConvertASCIItoUCS2("text/html"), PR_FALSE, PR_TRUE);           
+        }
+        NS_IF_RELEASE(dtd);
+        NS_IF_RELEASE(sink);
+    }
 
-    nsCOMPtr<nsIHTMLToTextSink> textSink(do_QueryInterface(sink));
-    NS_ENSURE_TRUE(textSink, NS_ERROR_FAILURE);
+    NS_RELEASE(parser);
 
-    textSink->Initialize(&convertedText, 0, 72);
-
-    parser->SetContentSink(sink);
-
-    nsAutoString contentType;  contentType = NS_LITERAL_STRING("text/html");
-    parser->Parse(aConBuf, 0, contentType, PR_FALSE, PR_TRUE);
     //
     // Now if we get here, we need to get from ASCII text to 
     // UTF-8 format or there is a problem downstream...
@@ -348,6 +357,70 @@ nsMessenger::InitializeDisplayCharset()
   }
 }
 
+
+nsresult
+nsMessenger::PromptIfFileExists(nsFileSpec &fileSpec)
+{
+    nsresult rv = NS_ERROR_FAILURE;
+    if (fileSpec.Exists())
+    {
+        nsCOMPtr<nsIPrompt> dialog(do_GetInterface(mDocShell));
+        if (!dialog) return rv;
+        nsString path;
+        PRBool dialogResult = PR_FALSE;
+        nsXPIDLString errorMessage;
+
+        fileSpec.GetNativePathString(path);
+        const PRUnichar *pathFormatStrings[] = { path.GetUnicode() };
+        NS_NAMED_LITERAL_STRING(fileExistsPropertyTag, "fileExists");
+        const PRUnichar *fpropertyTag = fileExistsPropertyTag.get();
+        if (!mStringBundle)
+        {
+            rv = InitStringBundle();
+            if (NS_FAILED(rv)) return rv;
+        }
+        rv = mStringBundle->FormatStringFromName(fpropertyTag,
+                                                 pathFormatStrings, 1,
+                                                 getter_Copies(errorMessage));
+        if (NS_FAILED(rv)) return rv;
+        rv = dialog->Confirm(nsnull, errorMessage, &dialogResult);
+        if (NS_FAILED(rv)) return rv;
+
+        if (dialogResult)
+        {
+            return NS_OK; // user says okay to replace
+        }
+        else
+        {
+            PRInt16 dialogReturn;
+            nsCOMPtr<nsIFilePicker> filePicker =
+                do_CreateInstance("@mozilla.org/filepicker;1", &rv);
+            if (NS_FAILED(rv)) return rv;
+            NS_NAMED_LITERAL_STRING(saveAttachmentTag, "Save Attachment");
+            const PRUnichar *spropertyTag = saveAttachmentTag.get();
+            filePicker->Init(nsnull, spropertyTag, nsIFilePicker::modeSave);
+            filePicker->SetDefaultString(path.GetUnicode());
+            filePicker->AppendFilters(nsIFilePicker::filterAll);
+            filePicker->Show(&dialogReturn);
+            if (dialogReturn == nsIFilePicker::returnCancel)
+                return NS_ERROR_FAILURE;
+            nsCOMPtr<nsILocalFile> localFile;
+            nsXPIDLCString filePath;
+            rv = filePicker->GetFile(getter_AddRefs(localFile));
+            if (NS_FAILED(rv)) return rv;
+            rv = localFile->GetPath(getter_Copies(filePath));
+            if (NS_FAILED(rv)) return rv;
+            fileSpec = (const char*) filePath;
+            return NS_OK;
+        }
+    }
+    else
+    {
+        return NS_OK;
+    }
+    return rv;
+}
+
 nsresult
 nsMessenger::InitializeSearch( nsIFindComponent *finder )
 {
@@ -453,7 +526,7 @@ nsMessenger::OpenURL(const char * url)
         nsAutoString urlStr; urlStr.AssignWithConversion(unescapedUrl);
         nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(mDocShell));
         if(webNav)
-          webNav->LoadURI(urlStr.GetUnicode());
+          webNav->LoadURI(urlStr.GetUnicode(), nsIWebNavigation::LOAD_FLAGS_NONE);
       }
       PL_strfree(unescapedUrl);
     }
@@ -585,14 +658,18 @@ NS_IMETHODIMP
 nsMessenger::SaveAttachment(const char * url, const char * displayName, 
                             const char * messageUri)
 {
-    // *** for now OpenAttachment is really a SaveAttachment
   nsresult rv = NS_ERROR_OUT_OF_MEMORY;
   char *unescapedUrl = nsnull;
-  nsCOMPtr<nsIFileSpec> aSpec;
-  nsCOMPtr<nsIFileSpecWithUI> fileSpec;
+  nsCOMPtr<nsIFilePicker> filePicker =
+      do_CreateInstance("@mozilla.org/filepicker;1", &rv);
   char * unescapedDisplayName = nsnull;
   nsAutoString tempStr;
+  PRInt16 dialogResult;
+  nsCOMPtr<nsILocalFile> localFile;
+  nsCOMPtr<nsIFileSpec> fileSpec;
+  nsXPIDLCString filePath;
 
+  if (NS_FAILED(rv)) goto done;
   if (!url) goto done;
 
 #ifdef DEBUG_MESSENGER
@@ -603,12 +680,8 @@ nsMessenger::SaveAttachment(const char * url, const char * displayName,
 
   nsUnescape(unescapedUrl);
   
-  fileSpec = getter_AddRefs(NS_CreateFileSpecWithUI());
-
-  if (!fileSpec) goto done;
   unescapedDisplayName = nsCRT::strdup(displayName);
   if (!unescapedDisplayName) goto done;
-  
   nsUnescape(unescapedDisplayName);
     
   /* we need to convert the UTF-8 fileName to platform specific character set.
@@ -618,30 +691,28 @@ nsMessenger::SaveAttachment(const char * url, const char * displayName,
   rv = ConvertToUnicode(NS_ConvertASCIItoUCS2("UTF-8"), unescapedDisplayName, tempStr);
   if (NS_SUCCEEDED(rv))
   {
-    char * tempCStr;
-    rv = ConvertFromUnicode(nsMsgI18NFileSystemCharset(), tempStr, &tempCStr);
-    if (NS_SUCCEEDED(rv))
-    {
-        nsCRT::free(unescapedDisplayName);
-        unescapedDisplayName = tempCStr;
-    }
+      filePicker->Init(
+          nsnull, 
+          GetString(NS_ConvertASCIItoUCS2("Save Attachment").GetUnicode()),
+          nsIFilePicker::modeSave
+          );
+      filePicker->SetDefaultString(tempStr.GetUnicode());
+      filePicker->AppendFilters(nsIFilePicker::filterAll);
   }      
-  rv = fileSpec->ChooseOutputFile("Save Attachment",
-                                  unescapedDisplayName,
-                                  nsIFileSpecWithUI::eAllFiles);
   nsCRT::free(unescapedDisplayName);
-
-  if (rv == NS_ERROR_ABORT)
-  {
-      rv = NS_OK;
+  
+  filePicker->Show(&dialogResult);
+  if (dialogResult == nsIFilePicker::returnCancel)
       goto done;
-  }
-  if (NS_FAILED(rv)) goto done;
-            
-  aSpec = do_QueryInterface(fileSpec, &rv);
-  if (NS_FAILED(rv)) goto done;
 
-  rv = SaveAttachment(aSpec, unescapedUrl, messageUri, nsnull);
+  rv = filePicker->GetFile(getter_AddRefs(localFile));
+  if (NS_FAILED(rv)) goto done;
+  
+  rv = localFile->GetPath(getter_Copies(filePath));
+  fileSpec = do_CreateInstance("@mozilla.org/filespec;1", &rv);
+  if (NS_FAILED(rv)) goto done;
+  fileSpec->SetNativePath(filePath);
+  rv = SaveAttachment(fileSpec, unescapedUrl, messageUri, nsnull);
 
 done:
     PR_FREEIF(unescapedUrl);
@@ -655,24 +726,28 @@ nsMessenger::SaveAllAttachments(PRUint32 count, const char **urlArray,
                                 const char **messageUriArray)
 {
     nsresult rv = NS_ERROR_OUT_OF_MEMORY;
-    nsCOMPtr<nsIFileSpecWithUI> uFileSpec;
+    nsCOMPtr<nsIFilePicker> filePicker =
+        do_CreateInstance("@mozilla.org/filepicker;1", &rv);
+    nsCOMPtr<nsILocalFile> localFile;
     nsCOMPtr<nsIFileSpec> fileSpec;
-    nsFileSpec aFileSpec;
     nsXPIDLCString dirName;
     char *unescapedUrl = nsnull, *unescapedName = nsnull, *tempCStr = nsnull;
     nsAutoString tempStr;
     nsSaveAllAttachmentsState *saveState = nsnull;
+    PRInt16 dialogResult;
 
-    uFileSpec = getter_AddRefs(NS_CreateFileSpecWithUI());
-    if (!uFileSpec) goto done;
-    
-    rv = uFileSpec->ChooseDirectory("Save All Attachments",
-                                    getter_Copies(dirName));
-    if (rv == NS_ERROR_ABORT)
-    {
-        rv = NS_OK;
+    if (NS_FAILED(rv)) goto done;
+    filePicker->Init(
+        nsnull, 
+        GetString(NS_ConvertASCIItoUCS2("Save All Attachments").GetUnicode()),
+        nsIFilePicker::modeGetFolder
+        );
+    filePicker->Show(&dialogResult);
+    if (dialogResult == nsIFilePicker::returnCancel)
         goto done;
-    }
+    rv = filePicker->GetFile(getter_AddRefs(localFile));
+    if (NS_FAILED(rv)) goto done;
+    rv = localFile->GetPath(getter_Copies(dirName));
     if (NS_FAILED(rv)) goto done;
     rv = NS_NewFileSpec(getter_AddRefs(fileSpec));
     if (NS_FAILED(rv)) goto done;
@@ -682,8 +757,7 @@ nsMessenger::SaveAllAttachments(PRUint32 count, const char **urlArray,
                                               messageUriArray, 
                                               (const char*) dirName);
     {
-        nsFileURL fileUrl((const char *) dirName);
-        nsFilePath dirPath(fileUrl);
+        nsFileSpec aFileSpec((const char *) dirName);
         unescapedUrl = PL_strdup(urlArray[0]);
         nsUnescape(unescapedUrl);
         unescapedName = PL_strdup(displayNameArray[0]);
@@ -695,8 +769,9 @@ nsMessenger::SaveAllAttachments(PRUint32 count, const char **urlArray,
         if (NS_FAILED(rv)) goto done;
         PR_FREEIF(unescapedName);
         unescapedName = tempCStr;
-        aFileSpec = dirPath;
         aFileSpec += unescapedName;
+        rv = PromptIfFileExists(aFileSpec);
+        if (NS_FAILED(rv)) return rv;
         fileSpec->SetFromFileSpec(aFileSpec);
         rv = SaveAttachment(fileSpec, unescapedUrl, messageUriArray[0], 
                             (void *)saveState);
@@ -1579,10 +1654,8 @@ nsSaveAsListener::OnStopRequest(nsIChannel* aChannel, nsISupports* aSupport,
           nsAutoString tempStr;
           nsSaveAllAttachmentsState *state = m_saveAllAttachmentsState;
           PRUint32 i = state->m_curIndex;
-          nsFileURL fileUrl(state->m_directoryName);
-          nsFilePath dirPath(fileUrl);
           nsCOMPtr<nsIFileSpec> fileSpec;
-          nsFileSpec aFileSpec;
+          nsFileSpec aFileSpec ((const char *) state->m_directoryName);
 
           rv = NS_NewFileSpec(getter_AddRefs(fileSpec));
           if (NS_FAILED(rv)) goto done;
@@ -1597,8 +1670,9 @@ nsSaveAsListener::OnStopRequest(nsIChannel* aChannel, nsISupports* aSupport,
           if (NS_FAILED(rv)) goto done;
           PR_FREEIF(unescapedName);
           unescapedName = tempCStr;
-          aFileSpec = dirPath;
           aFileSpec += unescapedName;
+          rv = m_messenger->PromptIfFileExists(aFileSpec);
+          if (NS_FAILED(rv)) goto done;
           fileSpec->SetFromFileSpec(aFileSpec);
           rv = m_messenger->SaveAttachment(fileSpec, unescapedUrl,
                                            state->m_messageUriArray[i],
@@ -1680,6 +1754,26 @@ nsSaveAsListener::OnDataAvailable(nsIChannel* aChannel,
 
 #define MESSENGER_STRING_URL       "chrome://messenger/locale/messenger.properties"
 
+nsresult
+nsMessenger::InitStringBundle()
+{
+    nsresult res = NS_OK;
+    if (!mStringBundle)
+    {
+		char    *propertyURL = MESSENGER_STRING_URL;
+
+		NS_WITH_SERVICE(nsIStringBundleService, sBundleService,
+                        kStringBundleServiceCID, &res);
+		if (NS_SUCCEEDED(res) && (nsnull != sBundleService)) 
+		{
+			nsILocale   *locale = nsnull;
+			res = sBundleService->CreateBundle(propertyURL, locale,
+                                               getter_AddRefs(mStringBundle));
+		}
+    }
+    return res;
+}
+
 PRUnichar *
 nsMessenger::GetString(const PRUnichar *aStringName)
 {
@@ -1687,16 +1781,7 @@ nsMessenger::GetString(const PRUnichar *aStringName)
   PRUnichar   *ptrv = nsnull;
 
 	if (!mStringBundle)
-	{
-		char    *propertyURL = MESSENGER_STRING_URL;
-
-		NS_WITH_SERVICE(nsIStringBundleService, sBundleService, kStringBundleServiceCID, &res); 
-		if (NS_SUCCEEDED(res) && (nsnull != sBundleService)) 
-		{
-			nsILocale   *locale = nsnull;
-			res = sBundleService->CreateBundle(propertyURL, locale, getter_AddRefs(mStringBundle));
-		}
-	}
+        res = InitStringBundle();
 
 	if (mStringBundle)
 		res = mStringBundle->GetStringFromName(aStringName, &ptrv);

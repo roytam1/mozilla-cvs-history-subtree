@@ -197,6 +197,23 @@ struct nsKeyConverter nsKeycodes[] = {
   { NS_VK_INSERT,     GDK_Insert },
   { NS_VK_DELETE,     GDK_Delete },
 
+  // keypad keys
+  { NS_VK_LEFT,       GDK_KP_Left },
+  { NS_VK_RIGHT,      GDK_KP_Right },
+  { NS_VK_UP,         GDK_KP_Up },
+  { NS_VK_DOWN,       GDK_KP_Down },
+  { NS_VK_PAGE_UP,    GDK_KP_Page_Up },
+    // Not sure what these are
+    //{ NS_VK_,       GDK_KP_Prior },
+    //{ NS_VK_,        GDK_KP_Next },
+    // GDK_KP_Begin is the 5 on the non-numlock keypad
+    //{ NS_VK_,        GDK_KP_Begin },
+  { NS_VK_PAGE_DOWN,  GDK_KP_Page_Down },
+  { NS_VK_HOME,       GDK_KP_Home },
+  { NS_VK_END,        GDK_KP_End },
+  { NS_VK_INSERT,     GDK_KP_Insert },
+  { NS_VK_DELETE,     GDK_KP_Delete },
+
   { NS_VK_MULTIPLY,   GDK_KP_Multiply },
   { NS_VK_ADD,        GDK_KP_Add },
   { NS_VK_SEPARATOR,  GDK_KP_Separator },
@@ -288,7 +305,7 @@ int nsPlatformToDOMKeyCode(GdkEventKey *aGEK)
     return keysym - GDK_F1 + NS_VK_F1;
 
 #if defined(DEBUG_akkana) || defined(DEBUG_ftang)
-  printf("No match in nsPlatformToDOMKeyCode: keysym is 0x%x, string is %s\n", keysym, aGEK->string);
+  printf("No match in nsPlatformToDOMKeyCode: keysym is 0x%x, string is '%s', keyval = %d\n", keysym, aGEK->string, aGEK->keyval);
 #endif
 
   return((int)0);
@@ -298,33 +315,67 @@ int nsPlatformToDOMKeyCode(GdkEventKey *aGEK)
 
 PRUint32 nsConvertCharCodeToUnicode(GdkEventKey* aGEK)
 {
-  if (aGEK->state & GDK_CONTROL_MASK)
+  // For control key events, aGEK->string is fairly random,
+  // and for alt key it loses capitalization info,
+  // but keyval is reliable for both control and alt.
+  // XXX We need to get meta, too, when/if gtk adds supports for it.
+  if ((aGEK->state & GDK_CONTROL_MASK) || (aGEK->state & GDK_MOD1_MASK))
   {
-    if (isprint(aGEK->string[0]) && !isalpha(aGEK->string[0]))
-      return aGEK->string[0];
+    // Keypad keys are an exception: they return a value different
+    // from their non-keypad equivalents, but mozilla doesn't distinguish.
+    switch (aGEK->keyval)
+    {
+      case GDK_KP_Space:
+        return ' ';
+      case GDK_KP_Tab:
+        return '\t';
+      case GDK_KP_Enter:
+        return 0;
+      case GDK_KP_Equal:
+        return '=';
+      case GDK_KP_Multiply:
+        return '*';
+      case GDK_KP_Add:
+        return '+';
+      case GDK_KP_Separator:
+        return '|';
+      case GDK_KP_Subtract:
+        return '-';
+      case GDK_KP_Decimal:
+        return '.';
+      case GDK_KP_Divide:
+        return '/';
+      case GDK_KP_0:
+        return '0';
+      case GDK_KP_1:
+        return '1';
+      case GDK_KP_2:
+        return '2';
+      case GDK_KP_3:
+        return '3';
+      case GDK_KP_4:
+        return '4';
+      case GDK_KP_5:
+        return '5';
+      case GDK_KP_6:
+        return '6';
+      case GDK_KP_7:
+        return '7';
+      case GDK_KP_8:
+        return '8';
+      case GDK_KP_9:
+        return '9';
+    }
 
-    // For alphabetic control chars, GDK sets string to be the
-    // actual ascii value; it doesn't do this for numeric or
-    // other printable characters.
-    // So we have to map back to the actual character.
-    if (aGEK->state & GDK_SHIFT_MASK)
-      return aGEK->string[0] + 'A' - 1;
-    else
-      return aGEK->string[0] + 'a' - 1;
+    if (!isprint(aGEK->keyval))
+      return 0;
+    return (PRUint32)aGEK->keyval;
   }
 
-  // For now (obviously this will need to change for IME),
+  // For now (will this need to change for IME?),
   // only set a char code if the result is printable:
   if (!isprint(aGEK->string[0]))
     return 0;
-
-  // ALT keys in gdk give the upper case character in string,
-  // but we want the lower case char in char code
-  // unless shift was also pressed.
-  if (((aGEK->state & GDK_MOD1_MASK))
-      && !(aGEK->state & GDK_SHIFT_MASK)
-      && isupper(aGEK->string[0]))
-    return tolower(aGEK->string[0]);
 
   //
   // placeholder for something a little more interesting and correct
@@ -350,7 +401,7 @@ void InitKeyEvent(GdkEventKey *aGEK,
     anEvent.isShift = (aGEK->state & GDK_SHIFT_MASK) ? PR_TRUE : PR_FALSE;
     anEvent.isControl = (aGEK->state & GDK_CONTROL_MASK) ? PR_TRUE : PR_FALSE;
     anEvent.isAlt = (aGEK->state & GDK_MOD1_MASK) ? PR_TRUE : PR_FALSE;
-    // XXX
+    // XXX For meta key, state is 0, and so are keyval and string.  Sigh!
     anEvent.isMeta = PR_FALSE; //(aGEK->state & GDK_MOD2_MASK) ? PR_TRUE : PR_FALSE;
     anEvent.point.x = 0;
     anEvent.point.y = 0;
@@ -376,10 +427,9 @@ void InitKeyPressEvent(GdkEventKey *aGEK,
     // XXX
     anEvent.isMeta = PR_FALSE; //(aGEK->state & GDK_MOD2_MASK) ? PR_TRUE : PR_FALSE;
 
-    if(aGEK->length) {
-       anEvent.charCode = nsConvertCharCodeToUnicode(aGEK);
-    } else  {
-       anEvent.charCode = 0;
+    anEvent.charCode = nsConvertCharCodeToUnicode(aGEK);
+    if (anEvent.charCode == 0)
+    {
        // now, let's handle some keysym which XmbLookupString didn't handle
        // because they are not part of the locale encoding
        if( (aGEK->keyval >= 0xa0 && (aGEK->keyval <= 0xf000) ||
@@ -404,8 +454,10 @@ void InitKeyPressEvent(GdkEventKey *aGEK,
       anEvent.keyCode = nsPlatformToDOMKeyCode(aGEK);
 
 #if defined(DEBUG_akkana_not) || defined (DEBUG_ftang)
-    printf("Key Press event: gtk string = '%s', keyCode = 0x%x, char code = '%c'",
-           aGEK->string, anEvent.keyCode, anEvent.charCode);
+    printf("Key Press event: gtk string = '%s', keyval = '%c' = %d,\n",
+           aGEK->string, aGEK->keyval, aGEK->keyval);
+    printf("    --> keyCode = 0x%x, char code = '%c'",
+           anEvent.keyCode, anEvent.charCode);
     if (anEvent.isShift)
       printf(" [shift]");
     if (anEvent.isControl)
@@ -614,7 +666,7 @@ gint handle_key_press_event(GtkObject *w, GdkEventKey* event, gpointer p)
       if (event->state & GDK_MOD1_MASK)
         return PR_FALSE;
 
-  // Don't pass shift, control and alt as key press events
+  // Don't pass shift and control as key press events
   if (event->keyval == GDK_Shift_L
       || event->keyval == GDK_Shift_R
       || event->keyval == GDK_Control_L

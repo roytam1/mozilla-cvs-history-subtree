@@ -24,11 +24,14 @@
 
 #include "nsCOMPtr.h"
 #include "nsXBLService.h"
+#include "nsIXBLPrototypeHandler.h"
+#include "nsXBLWindowKeyHandler.h"
 #include "nsIInputStream.h"
 #include "nsINameSpace.h"
 #include "nsINameSpaceManager.h"
 #include "nsHashtable.h"
 #include "nsIURI.h"
+#include "nsIDOMElement.h"
 #include "nsIURL.h"
 #include "nsIChannel.h"
 #include "nsIHTTPChannel.h"
@@ -47,8 +50,11 @@
 #include "nsHTMLAtoms.h"
 #include "nsSupportsArray.h"
 #include "nsITextContent.h"
+#include "nsIMemory.h"
+#include "nsIObserverService.h"
 
 #include "nsIXBLBinding.h"
+#include "nsIXBLPrototypeBinding.h"
 #include "nsIXBLDocumentInfo.h"
 
 #include "nsIXBLPrototypeHandler.h"
@@ -338,9 +344,6 @@ nsXBLStreamListener::Load(nsIDOMEvent* aEvent)
     nsCOMPtr<nsIXBLDocumentInfo> info;
     NS_NewXBLDocumentInfo(mBindingDocument, getter_AddRefs(info));
  
-    // Construct our prototype handlers.
-    nsXBLService::ConstructPrototypeHandlers(info);
-
     // If the doc is a chrome URI, then we put it into the XUL cache.
     PRBool cached = PR_FALSE;
     if (IsChromeURI(uri) && gXULUtils->UseXULCache()) {
@@ -481,7 +484,6 @@ PRUint32 nsXBLService::gClassLRUListLength = 0;
 PRUint32 nsXBLService::gClassLRUListQuota = 64;
 
 nsIAtom* nsXBLService::kExtendsAtom = nsnull;
-nsIAtom* nsXBLService::kHandlersAtom = nsnull;
 nsIAtom* nsXBLService::kScrollbarAtom = nsnull;
 nsIAtom* nsXBLService::kInputAtom = nsnull;
 
@@ -492,7 +494,7 @@ static const char kDisableChromeCachePref[] = "nglayout.debug.disable_xul_cache"
 PRInt32 nsXBLService::kNameSpaceID_XBL;
 
 // Implement our nsISupports methods
-NS_IMPL_ISUPPORTS2(nsXBLService, nsIXBLService, nsIMemoryPressureObserver)
+NS_IMPL_ISUPPORTS3(nsXBLService, nsIXBLService, nsIObserver, nsISupportsWeakReference)
 
 // Constructors/Destructors
 nsXBLService::nsXBLService(void)
@@ -521,7 +523,6 @@ nsXBLService::nsXBLService(void)
 
     // Create our atoms
     kExtendsAtom = NS_NewAtom("extends");
-    kHandlersAtom = NS_NewAtom("handlers");
     kScrollbarAtom = NS_NewAtom("scrollbar");
     kInputAtom = NS_NewAtom("input");
 
@@ -531,10 +532,6 @@ nsXBLService::nsXBLService(void)
       prefs->GetBoolPref(kDisableChromeCachePref, &gDisableChromeCache);
 
     gClassTable = new nsHashtable();
-
-    // Register the first (and only) nsXBLService as a memory pressure observer
-    // so it can flush the LRU list in low-memory situations.
-    nsMemory::RegisterObserver(this);
 
     rv = nsServiceManager::GetService("@mozilla.org/rdf/xul-content-utils;1",
                                       NS_GET_IID(nsIXULContentUtils),
@@ -557,12 +554,11 @@ nsXBLService::~nsXBLService(void)
     
     // Release our atoms
     NS_RELEASE(kExtendsAtom);
-    NS_RELEASE(kHandlersAtom);
     NS_RELEASE(kScrollbarAtom);
     NS_RELEASE(kInputAtom);
 
     // Walk the LRU list removing and deleting the nsXBLJSClasses.
-    FlushMemory(REASON_HEAP_MINIMIZE, 0);
+    FlushMemory();
 
     // Any straggling nsXBLJSClass instances held by unfinalized JS objects
     // created for bindings will be deleted when those objects are finalized
@@ -573,8 +569,6 @@ nsXBLService::~nsXBLService(void)
     // XBL class structs held by unfinalized JS binding objects.
     delete gClassTable;
     gClassTable = nsnull;
-
-    nsMemory::UnregisterObserver(this);
 
     if (gXULUtils) {
       nsServiceManager::ReleaseService("@mozilla.org/rdf/xul-content-utils;1", gXULUtils);
@@ -790,7 +784,7 @@ NS_IMETHODIMP
 nsXBLService::GetXBLDocumentInfo(const nsCString& aURLStr, nsIContent* aBoundElement, nsIXBLDocumentInfo** aResult)
 {
   *aResult = nsnull;
-  if (gXULUtils->UseXULCache()) {
+  if (gXULUtils && gXULUtils->UseXULCache()) {
     // The first line of defense is the chrome cache.  
     // This cache crosses the entire product, so any XBL bindings that are
     // part of chrome will be reused across all XUL documents.
@@ -809,7 +803,51 @@ nsXBLService::GetXBLDocumentInfo(const nsCString& aURLStr, nsIContent* aBoundEle
 }
 
 NS_IMETHODIMP
-nsXBLService::FlushMemory(PRUint32 reason, size_t requestedAmount)
+nsXBLService::AttachGlobalKeyHandler(nsIDOMEventReceiver* aReceiver)
+{
+  // Create the key handler
+  nsCOMPtr<nsIDOMEventReceiver> rec = aReceiver;
+  nsCOMPtr<nsIContent> element(do_QueryInterface(aReceiver));
+
+  if (element) {
+    nsCOMPtr<nsIDocument> doc;
+    element->GetDocument(*getter_AddRefs(doc));  
+    if (doc)
+      rec = do_QueryInterface(doc); // We're a XUL keyset. Attach to our document.
+  }
+  
+  if (!rec)
+    return NS_ERROR_FAILURE;
+
+  nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(element));
+
+  nsXBLWindowKeyHandler* handler;
+  NS_NewXBLWindowKeyHandler(elt, rec, &handler); // THis call addrefs us.
+
+  if (!handler)
+    return NS_ERROR_FAILURE;
+
+  rec->AddEventListener(NS_LITERAL_STRING("keydown"), handler, PR_FALSE);
+  rec->AddEventListener(NS_LITERAL_STRING("keyup"), handler, PR_FALSE);
+  rec->AddEventListener(NS_LITERAL_STRING("keypress"), handler, PR_FALSE);
+
+  // Release.  Do this so that only the event receiver holds onto the key handler.
+  NS_RELEASE(handler);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXBLService::Observe(nsISupports* aSubject, const PRUnichar* aTopic, const PRUnichar* aSomeData)
+{
+  if (nsCRT::strcmp(aTopic, NS_MEMORY_PRESSURE_TOPIC) == 0)
+    FlushMemory();
+
+  return NS_OK;
+}
+
+nsresult
+nsXBLService::FlushMemory()
 {
   while (!JS_CLIST_IS_EMPTY(&gClassLRUList)) {
     JSCList* lru = gClassLRUList.next;
@@ -818,12 +856,6 @@ nsXBLService::FlushMemory(PRUint32 reason, size_t requestedAmount)
     JS_REMOVE_AND_INIT_LINK(lru);
     delete c;
     gClassLRUListLength--;
-
-    if (reason == REASON_ALLOC_FAILURE) {
-      if (requestedAmount <= sizeof(nsXBLJSClass))
-        break;
-      requestedAmount -= sizeof(nsXBLJSClass);
-    }
   }
   return NS_OK;
 }
@@ -878,75 +910,112 @@ NS_IMETHODIMP nsXBLService::GetBindingInternal(nsIContent* aBoundElement,
   PRBool allowScripts;
   docInfo->GetScriptAccess(&allowScripts);
 
-  // We have a doc. Obtain our specific binding element.
-  // Walk the children looking for the binding that matches the ref
-  // specified in the URL.
-  nsCOMPtr<nsIContent> root = getter_AddRefs(doc->GetRootContent());
-  if (!root)
-    return NS_ERROR_FAILURE;
+  nsCOMPtr<nsIXBLPrototypeBinding> protoBinding;
+  docInfo->GetPrototypeBinding(ref, getter_AddRefs(protoBinding));
+  nsCOMPtr<nsIContent> child;
+  if (!protoBinding) {
+    // We have a doc. Obtain our specific binding element.
+    // Walk the children looking for the binding that matches the ref
+    // specified in the URL.
+    nsCOMPtr<nsIContent> root = getter_AddRefs(doc->GetRootContent());
+    if (!root)
+      return NS_ERROR_FAILURE;
 
-  nsAutoString bindingName; bindingName.AssignWithConversion( NS_STATIC_CAST(const char*, ref) );
+    nsAutoString bindingName; bindingName.AssignWithConversion( NS_STATIC_CAST(const char*, ref) );
 
-  PRInt32 count;
-  root->ChildCount(count);
+    PRInt32 count;
+    root->ChildCount(count);
 
-  for (PRInt32 i = 0; i < count; i++) {
-    nsCOMPtr<nsIContent> child;
-    root->ChildAt(i, *getter_AddRefs(child));
+    for (PRInt32 i = 0; i < count; i++) {
+      root->ChildAt(i, *getter_AddRefs(child));
 
-    nsAutoString value;
-    child->GetAttribute(kNameSpaceID_None, nsHTMLAtoms::id, value);
+      nsAutoString value;
+      child->GetAttribute(kNameSpaceID_None, nsHTMLAtoms::id, value);
     
-    // If no ref is specified just use this.
-    if ((bindingName.IsEmpty()) || (bindingName == value)) {
-      // Check for the presence of an extends attribute
-      nsAutoString extends;
-      nsCOMPtr<nsIXBLBinding> baseBinding;
-      child->GetAttribute(kNameSpaceID_None, kExtendsAtom, extends);
-      value = extends;
-      if (!extends.IsEmpty()) {
-        nsAutoString prefix;
-        PRInt32 offset = extends.FindChar(':');
-        if (-1 != offset) {
-          extends.Left(prefix, offset);
-          extends.Cut(0, offset+1);
-        }
-        if (prefix.Length() > 0) {
-          // Look up the prefix.
-          nsCOMPtr<nsIAtom> prefixAtom = getter_AddRefs(NS_NewAtom(prefix));
-          nsCOMPtr<nsINameSpace> nameSpace;
-          nsCOMPtr<nsIXMLContent> xmlContent(do_QueryInterface(child));
-          if (xmlContent) {
-            xmlContent->GetContainingNameSpace(*getter_AddRefs(nameSpace));
-            if (nameSpace) {
-              nsCOMPtr<nsINameSpace> tagSpace;
-              nameSpace->FindNameSpace(prefixAtom, *getter_AddRefs(tagSpace));
-              if (!tagSpace) {
-                // We have a base class binding. Load it right now.
-                nsCAutoString urlCString; urlCString.AssignWithConversion(value);
-                GetBindingInternal(aBoundElement, urlCString, aPeekOnly, aIsReady, getter_AddRefs(baseBinding));
-                if (!*aIsReady)
-                  return NS_ERROR_FAILURE; // Binding not yet ready or an error occurred.
+      // If no ref is specified just use this.
+      if ((bindingName.IsEmpty()) || (bindingName == value)) {
+        // Construct a prototype binding.
+        NS_NewXBLPrototypeBinding(ref, child, docInfo, getter_AddRefs(protoBinding));
+        docInfo->SetPrototypeBinding(ref, protoBinding);
+        break;
+      }
+    }
+  }
+  else
+    protoBinding->GetBindingElement(getter_AddRefs(child));
+
+  // If our prototype already has a base, then don't check for an "extends" attribute.
+  nsCOMPtr<nsIXBLBinding> baseBinding;
+  nsCOMPtr<nsIXBLPrototypeBinding> baseProto;
+  PRBool hasBase;
+  protoBinding->HasBasePrototype(&hasBase);
+  protoBinding->GetBasePrototype(getter_AddRefs(baseProto));
+  if (baseProto) {
+    nsCAutoString url;
+    baseProto->GetBindingURI(url);
+    if (NS_FAILED(GetBindingInternal(aBoundElement, url, aPeekOnly, aIsReady, getter_AddRefs(baseBinding))))
+      return NS_ERROR_FAILURE; // We aren't ready yet.
+    if (!aPeekOnly) {
+      // Make sure to set the base prototype.
+      baseBinding->GetPrototypeBinding(getter_AddRefs(baseProto));
+      protoBinding->SetBasePrototype(baseProto);
+    }
+  }
+  else if (hasBase) {
+    // Check for the presence of an extends attribute
+    nsAutoString extends;
+    child->GetAttribute(kNameSpaceID_None, kExtendsAtom, extends);
+    nsAutoString value(extends);
+    if (extends.IsEmpty())
+      protoBinding->SetHasBasePrototype(PR_FALSE);
+    else {
+      nsAutoString prefix;
+      PRInt32 offset = extends.FindChar(':');
+      if (-1 != offset) {
+        extends.Left(prefix, offset);
+        extends.Cut(0, offset+1);
+      }
+      if (prefix.Length() > 0) {
+        // Look up the prefix.
+        nsCOMPtr<nsIAtom> prefixAtom = getter_AddRefs(NS_NewAtom(prefix));
+        nsCOMPtr<nsINameSpace> nameSpace;
+        nsCOMPtr<nsIXMLContent> xmlContent(do_QueryInterface(child));
+        if (xmlContent) {
+          xmlContent->GetContainingNameSpace(*getter_AddRefs(nameSpace));
+          if (nameSpace) {
+            nsCOMPtr<nsINameSpace> tagSpace;
+            nameSpace->FindNameSpace(prefixAtom, *getter_AddRefs(tagSpace));
+            if (tagSpace) {
+              // We extend some widget/frame. We don't really have a base binding.
+              protoBinding->SetHasBasePrototype(PR_FALSE);
+              PRInt32 nameSpaceID;
+              tagSpace->GetNameSpaceID(nameSpaceID);
+              nsCOMPtr<nsIAtom> tagName = getter_AddRefs(NS_NewAtom(extends));
+              protoBinding->SetBaseTag(nameSpaceID, tagName);
+            }
+            else {
+              // We have a base class binding. Load it right now.
+              nsCAutoString urlCString; urlCString.AssignWithConversion(value);
+              if (NS_FAILED(GetBindingInternal(aBoundElement, urlCString, aPeekOnly, aIsReady, getter_AddRefs(baseBinding))))
+                return NS_ERROR_FAILURE; // Binding not yet ready or an error occurred.
+              if (!aPeekOnly) {
+                // Make sure to set the base prototype.
+                baseBinding->GetPrototypeBinding(getter_AddRefs(baseProto));
+                protoBinding->SetBasePrototype(baseProto);
               }
             }
           }
         }
       }
-
-      *aIsReady = PR_TRUE;
-      if (!aPeekOnly) {
-        // Make a new binding
-        NS_NewXBLBinding(uri, ref, aResult);
-
-        // Initialize its bound element.
-        (*aResult)->SetBindingElement(child);
-        (*aResult)->SetAllowScripts(allowScripts);
-
-        if (baseBinding)
-          (*aResult)->SetBaseBinding(baseBinding);
-      }
-      break;
     }
+  }
+
+  *aIsReady = PR_TRUE;
+  if (!aPeekOnly) {
+    // Make a new binding
+    NS_NewXBLBinding(protoBinding, aResult);
+    if (baseBinding)
+      (*aResult)->SetBaseBinding(baseBinding);
   }
 
   return NS_OK;
@@ -963,7 +1032,7 @@ nsXBLService::LoadBindingDocumentInfo(nsIContent* aBoundElement, nsIDocument* aB
   
   // We've got a file.  Check our XBL document cache.
   nsCOMPtr<nsIXBLDocumentInfo> info;
-  if (gXULUtils->UseXULCache()) {
+  if (gXULUtils && gXULUtils->UseXULCache()) {
     // The first line of defense is the chrome cache.  
     // This cache crosses the entire product, so that any XBL bindings that are
     // part of chrome will be reused across all XUL documents.
@@ -973,20 +1042,24 @@ nsXBLService::LoadBindingDocumentInfo(nsIContent* aBoundElement, nsIDocument* aB
   if (!info) {
     // The second line of defense is the binding manager's document table.
     nsCOMPtr<nsIBindingManager> bindingManager;
-    aBoundDocument->GetBindingManager(getter_AddRefs(bindingManager));
-    bindingManager->GetXBLDocumentInfo(aURLStr, getter_AddRefs(info));
+
+    if (aBoundDocument) {
+      aBoundDocument->GetBindingManager(getter_AddRefs(bindingManager));
+      bindingManager->GetXBLDocumentInfo(aURLStr, getter_AddRefs(info));
+    }
 
     nsCOMPtr<nsIAtom> tagName;
     if (aBoundElement)
       aBoundElement->GetTag(*getter_AddRefs(tagName));
-    if (!info && (tagName.get() != kScrollbarAtom) && (tagName.get() != kInputAtom) 
+    if (!info && bindingManager && (tagName.get() != kScrollbarAtom) && (tagName.get() != kInputAtom) 
         && !aForceSyncLoad) {
       // The third line of defense is to investigate whether or not the
       // document is currently being loaded asynchronously.  If so, there's no
       // document yet, but we need to glom on our request so that it will be
       // processed whenever the doc does finish loading.
       nsCOMPtr<nsIStreamListener> listener;
-      bindingManager->GetLoadingDocListener(aURLStr, getter_AddRefs(listener));
+      if (bindingManager)
+        bindingManager->GetLoadingDocListener(aURLStr, getter_AddRefs(listener));
       if (listener) {
         nsIStreamListener* ilist = listener.get();
         nsXBLStreamListener* xblListener = NS_STATIC_CAST(nsXBLStreamListener*, ilist);
@@ -1016,13 +1089,10 @@ nsXBLService::LoadBindingDocumentInfo(nsIContent* aBoundElement, nsIDocument* aB
    
       if (document) {
         NS_NewXBLDocumentInfo(document, getter_AddRefs(info));
-
-        // Construct our prototype handlers.
-        ConstructPrototypeHandlers(info);
-        
+ 
         // If the doc is a chrome URI, then we put it into the XUL cache.
         PRBool cached = PR_FALSE;
-        if (IsChromeURI(uri) && gXULUtils->UseXULCache()) {
+        if (IsChromeURI(uri) && gXULUtils && gXULUtils->UseXULCache()) {
           cached = PR_TRUE;
           gXULCache->PutXBLDocumentInfo(info);
 
@@ -1035,10 +1105,8 @@ nsXBLService::LoadBindingDocumentInfo(nsIContent* aBoundElement, nsIDocument* aB
           }
         }
         
-        if (!cached) {
+        if (!cached && bindingManager) {
           // Otherwise we put it in our binding manager's document table.
-          nsCOMPtr<nsIBindingManager> bindingManager;
-          aBoundDocument->GetBindingManager(getter_AddRefs(bindingManager));
           bindingManager->PutXBLDocumentInfo(info);
         }
       }
@@ -1077,7 +1145,8 @@ nsXBLService::FetchBindingDocument(nsIContent* aBoundElement, nsIDocument* aBoun
   // Now we have to synchronously load the binding file.
   // Create an XML content sink and a parser. 
   nsCOMPtr<nsILoadGroup> loadGroup;
-  aBoundDocument->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
+  if (aBoundDocument)
+    aBoundDocument->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
   
   nsCOMPtr<nsIChannel> channel;
   rv = NS_OpenURI(getter_AddRefs(channel), aURI, nsnull, loadGroup);
@@ -1221,53 +1290,30 @@ static void GetImmediateChild(nsIAtom* aTag, nsIContent* aParent, nsIContent** a
   }
 }
 
-nsresult 
-nsXBLService::ConstructPrototypeHandlers(nsIXBLDocumentInfo* aInfo)
+nsresult
+nsXBLService::BuildHandlerChain(nsIContent* aContent, nsIXBLPrototypeHandler** aResult)
 {
-  nsCOMPtr<nsIDocument> doc;
-  aInfo->GetDocument(getter_AddRefs(doc));
-  nsCOMPtr<nsIContent> bindings = getter_AddRefs(doc->GetRootContent());
-  PRInt32 childCount;
-  bindings->ChildCount(childCount);
-  for (PRInt32 i = 0; i < childCount; i++) {
-    nsCOMPtr<nsIContent> binding;
-    bindings->ChildAt(i, *getter_AddRefs(binding));
-
-    // See if this binding has a handler elt.
-    nsCOMPtr<nsIContent> handlers;
-    GetImmediateChild(kHandlersAtom, binding, getter_AddRefs(handlers));
-    if (handlers) {
-      nsCOMPtr<nsIXBLPrototypeHandler> firstHandler;
-      nsCOMPtr<nsIXBLPrototypeHandler> currHandler;
-
-      PRInt32 handlerCount;
-      handlers->ChildCount(handlerCount);
-      for (PRInt32 j = 0; j < handlerCount; j++) {
-        nsCOMPtr<nsIContent> handler;
-        handlers->ChildAt(j, *getter_AddRefs(handler));
-        
-        nsCOMPtr<nsIXBLPrototypeHandler> newHandler;
-        NS_NewXBLPrototypeHandler(handler, getter_AddRefs(newHandler));
-        if (newHandler) {
-          if (currHandler)
-            currHandler->SetNextHandler(newHandler);
-          else firstHandler = newHandler;
-          currHandler = newHandler;
-        }
-      }
-
-      if (firstHandler) {
-        nsAutoString ref;
-        binding->GetAttribute(kNameSpaceID_None, nsHTMLAtoms::id, ref);
-        
-        nsCAutoString cref;
-        cref.AssignWithConversion(ref);
-
-        aInfo->SetPrototypeHandler(cref, firstHandler);
-      }
+  nsCOMPtr<nsIXBLPrototypeHandler> firstHandler;
+  nsCOMPtr<nsIXBLPrototypeHandler> currHandler;
+  PRInt32 handlerCount;
+  aContent->ChildCount(handlerCount);
+  for (PRInt32 j = 0; j < handlerCount; j++) {
+    nsCOMPtr<nsIContent> handler;
+    aContent->ChildAt(j, *getter_AddRefs(handler));
+    
+    nsCOMPtr<nsIXBLPrototypeHandler> newHandler;
+    NS_NewXBLPrototypeHandler(handler, getter_AddRefs(newHandler));
+    if (newHandler) {
+      if (currHandler)
+        currHandler->SetNextHandler(newHandler);
+      else firstHandler = newHandler;
+      currHandler = newHandler;
     }
   }
 
+  *aResult = firstHandler;
+  NS_IF_ADDREF(*aResult);
+ 
   return NS_OK;
 }
 
@@ -1276,10 +1322,18 @@ nsXBLService::ConstructPrototypeHandlers(nsIXBLDocumentInfo* aInfo)
 nsresult
 NS_NewXBLService(nsIXBLService** aResult)
 {
-  *aResult = new nsXBLService;
-  if (!*aResult)
+  nsXBLService* result = new nsXBLService;
+  if (! result)
     return NS_ERROR_OUT_OF_MEMORY;
-  NS_ADDREF(*aResult);
+
+  NS_ADDREF(*aResult = result);
+
+  // Register the first (and only) nsXBLService as a memory pressure observer
+  // so it can flush the LRU list in low-memory situations.
+  nsCOMPtr<nsIObserverService> os = do_GetService(NS_OBSERVERSERVICE_CONTRACTID);
+  if (os)
+    os->AddObserver(result, NS_MEMORY_PRESSURE_TOPIC);
+
   return NS_OK;
 }
 

@@ -25,13 +25,15 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 
 #include "nsIXBLService.h"
-#include "nsIMemory.h"
+#include "nsIObserver.h"
+#include "nsWeakReference.h"
 #include "jsapi.h"              // nsXBLJSClass derives from JSClass
 #include "jsclist.h"            // nsXBLJSClass derives from JSCList
 #include "nsFixedSizeAllocator.h"
 
 class nsIXBLBinding;
 class nsIXBLDocumentInfo;
+class nsIXBLPrototypeHandler;
 class nsINameSpaceManager;
 class nsIContent;
 class nsIDocument;
@@ -43,7 +45,7 @@ class nsHashtable;
 class nsIXULPrototypeCache;
 class nsIXULContentUtils;
 
-class nsXBLService : public nsIXBLService, public nsIMemoryPressureObserver
+class nsXBLService : public nsIXBLService, public nsIObserver, public nsSupportsWeakReference
 {
   NS_DECL_ISUPPORTS
 
@@ -76,12 +78,17 @@ class nsXBLService : public nsIXBLService, public nsIMemoryPressureObserver
                                      const nsCString& aURI, const nsCString& aRef,
                                      PRBool aForceSyncLoad, nsIXBLDocumentInfo** aResult);
 
-  NS_DECL_NSIMEMORYPRESSUREOBSERVER
+  // Used by XUL key bindings and for window XBL.
+  NS_IMETHOD AttachGlobalKeyHandler(nsIDOMEventReceiver* aElement);
+
+  NS_DECL_NSIOBSERVER
 
 public:
   nsXBLService();
   virtual ~nsXBLService();
 
+  // Release any memory that we can
+  nsresult FlushMemory();
   
   // This method synchronously loads and parses an XBL file.
   NS_IMETHOD FetchBindingDocument(nsIContent* aBoundElement, nsIDocument* aBoundDocument,
@@ -96,7 +103,7 @@ public:
   // This method walks a binding document and removes any text nodes
   // that contain only whitespace.
   static nsresult StripWhitespaceNodes(nsIContent* aContent);
-  static nsresult ConstructPrototypeHandlers(nsIXBLDocumentInfo* aInfo);
+  static nsresult BuildHandlerChain(nsIContent* aContent, nsIXBLPrototypeHandler** aResult);
 
 // MEMBER VARIABLES
 public:
@@ -118,7 +125,6 @@ public:
 
   // XBL Atoms
   static nsIAtom* kExtendsAtom;
-  static nsIAtom* kHandlersAtom;
   static nsIAtom* kScrollbarAtom;
   static nsIAtom* kInputAtom;
 

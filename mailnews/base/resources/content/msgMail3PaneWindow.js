@@ -141,9 +141,27 @@ var folderListener = {
 		}
         } else if (event.GetUnicode() == "DeleteOrMoveMsgCompleted") {
 			HandleDeleteOrMoveMsgCompleted(folder);
-		}     
+        }     
+          else if (event.GetUnicode() == "DeleteOrMoveMsgFailed") {
+                        HandleDeleteOrMoveMsgFailed(folder);
+        }
+
     }
 }
+
+function HandleDeleteOrMoveMsgFailed(folder)
+{
+
+        if(IsCurrentLoadedFolder(folder))
+        {
+                if(gNextMessageAfterDelete)
+                {
+                        gNextMessageAfterDelete = null;
+		}
+        }
+
+}
+
 
 function HandleDeleteOrMoveMsgCompleted(folder)
 {
@@ -265,6 +283,9 @@ function OnLoadMessenger()
 
 	gHaveLoadedMessage = false;
 
+	//Set focus to the Thread Pane the first time the window is opened.
+	SetFocusThreadPane();
+
 	var afterLoadMessenger = new Date();
 
 	var timeToLoad = (afterLoadMessenger.getTime() - beforeLoadMessenger.getTime())/1000;
@@ -272,7 +293,7 @@ function OnLoadMessenger()
 	{
 	  dump("Time in OnLoadMessger is " +  timeToLoad + " seconds\n");
 	}
-
+	
 }
 
 function OnUnloadMessenger()

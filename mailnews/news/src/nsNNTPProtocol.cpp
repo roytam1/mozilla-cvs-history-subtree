@@ -544,7 +544,7 @@ NS_IMETHODIMP nsNNTPProtocol::Initialize(nsIURI * aURL, nsIMsgWindow *aMsgWindow
         if (NS_FAILED(rv)) return rv;
     }
 
-	NS_PRECONDITION(m_url, "invalid URL passed into NNTP Protocol");
+	NS_PRECONDITION(m_url , "invalid URL passed into NNTP Protocol");
 
 	// Right now, we haven't written an nsNNTPURL yet. When we do, we'll pull the event sink
 	// data out of it and set our event sink member variables from it. For now, just set them
@@ -697,16 +697,10 @@ nsresult nsNNTPProtocol::LoadUrl(nsIURI * aURL, nsISupports * aConsumer)
   nsresult rv = NS_OK;
 
   // if this connection comes from the cache, we need to initialize the
-  // load group here, by generating the start request notification.
+  // load group here, by generating the start request notification. nsMsgProtocol::OnStartRequest
+  // ignores the first parameter (which is supposed to be the channel) so we'll pass in null.
   if (m_fromCache)
-  {
-	  if (m_channelListener)
-	  {
-          if (!m_channelContext)
-	          m_channelContext = do_QueryInterface(aURL);
-		  rv = m_channelListener->OnStartRequest(this, m_channelContext);
-	  }
-  }
+    nsMsgProtocol::OnStartRequest(nsnull, aURL);
 
   m_articleNumber = -1;
   rv = aURL->GetHost(getter_Copies(m_hostName));
@@ -868,10 +862,19 @@ nsresult nsNNTPProtocol::LoadUrl(nsIURI * aURL, nsISupports * aConsumer)
 		m_typeWanted = LIST_WANTED;
 	  }
 	  else {
-		nsXPIDLCString newsgroupURI;
-		rv = aURL->GetSpec(getter_Copies(newsgroupURI));
+
+		nsXPIDLCString	username;
+		rv = aURL->GetUsername(getter_Copies(username));
 		if (NS_FAILED(rv)) return(rv);
-    
+		
+		nsXPIDLCString	hostname;
+		rv = aURL->GetHost(getter_Copies(hostname));
+		if (NS_FAILED(rv)) return(rv);
+		
+		nsXPIDLCString newsgroupURI;
+		rv = CreateNewsFolderURI((const char *)username,(const char *)hostname,(const char *)m_currentGroup,getter_Copies(newsgroupURI));
+		if (NS_FAILED(rv)) return rv;
+		
 		PRBool containsGroup = PR_TRUE;
 		NS_ASSERTION(m_nntpServer,"no nntp server");
 		if (m_nntpServer) {
@@ -2304,7 +2307,7 @@ PRInt32 nsNNTPProtocol::ReadArticle(nsIInputStream * inputStream, PRUint32 lengt
 
 		rv = m_runningURL->GetMessageHeader(getter_AddRefs(msgHdr));
 
-		if (NS_SUCCEEDED(rv)) {
+		if (NS_SUCCEEDED(rv) && msgHdr) {
 			msgHdr->MarkRead(PR_TRUE);
 		}
 
@@ -2409,27 +2412,44 @@ nsNNTPProtocol::SetNewsFolder()
 	// xxx todo:  I need to fix this so this is passed in when I create the nsNNTPProtocol
 
     if (!m_newsFolder) {
-        nsCAutoString folderURI("news://");
-
-		if ((const char *)m_userName) {
-			folderURI += (const char *)m_userName;
-			folderURI += "@";
-		}
-        folderURI += (const char *)m_hostName;
-
+		nsXPIDLCString folderURI;
         nsXPIDLCString newsgroupName;
         rv = m_runningURL->GetNewsgroupName(getter_Copies(newsgroupName));
 		if (NS_FAILED(rv)) return rv;
 
-        if ((const char *)newsgroupName) {
-        	folderURI += "/";
-            folderURI += (const char *)newsgroupName;
-		}
+		rv = CreateNewsFolderURI((const char *)m_userName,(const char *)m_hostName, (const char *)newsgroupName, getter_Copies(folderURI));
+		if (NS_FAILED(rv)) return rv;
 
         rv = InitializeNewsFolderFromUri((const char *)folderURI);
 		if (NS_FAILED(rv)) return rv;
     }
 	return NS_OK;
+}
+
+nsresult
+nsNNTPProtocol::CreateNewsFolderURI(const char *username, const char *hostname, const char *newsgroupname, char **uri)
+{		
+		nsCAutoString folderURI("news://");
+
+		if ((const char *)username) {
+			folderURI += (const char *)username;
+			folderURI += "@";
+		}
+        folderURI += (const char *)hostname;
+
+		if ((const char *)newsgroupname) {
+			folderURI += "/";
+            folderURI += (const char *)newsgroupname;
+		}
+		
+		if (!uri) return NS_ERROR_NULL_POINTER; 
+	
+		*uri = PL_strdup((const char *)folderURI);
+		if (!*uri) return NS_ERROR_OUT_OF_MEMORY;
+#ifdef DEBUG_sspitzer
+		printf("news uri=%s\n",*uri);
+#endif /* DEBUG_sspitzer */
+		return NS_OK;
 }
 
 PRInt32 nsNNTPProtocol::BeginAuthorization()
@@ -3872,6 +3892,7 @@ PRBool nsNNTPProtocol::CheckIfAuthor(nsISupports *aElement, void *data)
 PRInt32 nsNNTPProtocol::DoCancel()
 {
     int status = 0;
+    PRBool failure = PR_FALSE;
     nsresult rv = NS_OK;
     char *id = nsnull;
     char *subject = nsnull;
@@ -3971,6 +3992,7 @@ PRInt32 nsNNTPProtocol::DoCancel()
           status = MK_NNTP_CANCEL_DISALLOWED;
           m_nextState = NEWS_ERROR; /* even though it worked */
           ClearFlag(NNTP_PAUSE_FOR_READ);
+          failure = PR_TRUE;
           goto FAIL;
       }
       else {
@@ -3997,11 +4019,13 @@ PRInt32 nsNNTPProtocol::DoCancel()
   if (confirmCancelResult != 1) {
       // they cancelled the cancel
       status = MK_NNTP_NOT_CANCELLED;
+      failure = PR_TRUE;
       goto FAIL;
   }  
   
   if (!subject || !other_random_headers || !body) {
 	  status = MK_OUT_OF_MEMORY;
+          failure = PR_TRUE;
 	  goto FAIL;
   }
   
@@ -4051,6 +4075,7 @@ PRInt32 nsNNTPProtocol::DoCancel()
 		nsCAutoString errorText;
 		errorText.AppendInt(status);
 		AlertError(MK_TCP_WRITE_ERROR,(const char *)errorText);
+                failure = PR_TRUE;
 		goto FAIL;
 	}
 
@@ -4082,7 +4107,10 @@ PRInt32 nsNNTPProtocol::DoCancel()
 FAIL:
   NS_ASSERTION(m_newsFolder,"no news folder");
   if (m_newsFolder) {
-  	rv = m_newsFolder->CancelComplete();
+        if ( failure )
+             rv = m_newsFolder->CancelFailed();
+        else
+             rv = m_newsFolder->CancelComplete();
   }
   PR_FREEIF (id);
   PR_FREEIF (cancelInfo.old_from);
@@ -5059,9 +5087,16 @@ nsresult nsNNTPProtocol::CleanupAfterRunningUrl()
   
   nsresult rv = NS_OK;
 
+
+  m_connectionBusy = PR_FALSE;
+  // send StopRequest notification after we've cleaned up the protocol
+  // because it can synchronously causes a new url to get run in the
+  // protocol - truly evil, but we're stuck at the moment.
+	if (m_channelListener)
+		rv = m_channelListener->OnStopRequest(this, m_channelContext, NS_OK, nsnull);
+
 	if (m_loadGroup)
 		m_loadGroup->RemoveChannel(NS_STATIC_CAST(nsIChannel *, this), nsnull, NS_OK, nsnull);
-
 	if (m_newsgroupList)
 	{
 		int status;
@@ -5076,40 +5111,30 @@ nsresult nsNNTPProtocol::CleanupAfterRunningUrl()
       /* NS_RELEASE(m_newsgroup->GetNewsgroupList()); */
 	}
 
-    PR_FREEIF(m_path);
-    PR_FREEIF(m_responseText);
-    PR_FREEIF(m_dataBuf);
+  PR_FREEIF(m_path);
+  PR_FREEIF(m_responseText);
+  PR_FREEIF(m_dataBuf);
 
-    PR_FREEIF(m_cancelNewsgroups);
-    m_cancelNewsgroups = nsnull;
-    PR_FREEIF(m_cancelDistribution);
-    m_cancelDistribution = nsnull;
-    PR_FREEIF(m_cancelFromHdr);
-    m_cancelFromHdr = nsnull;
-    PR_FREEIF(m_cancelID);  
-    m_cancelID = nsnull;
-    
-  mDisplayInputStream = nsnull;
-  mDisplayOutputStream = nsnull;
-  m_loadGroup = nsnull;
-  mProgressEventSink = nsnull;
-  SetOwner(nsnull);
-
-	m_runningURL = null_nsCOMPtr();
-  m_url = null_nsCOMPtr();
-  m_originalUrl = null_nsCOMPtr();
-
-  nsCOMPtr <nsISupports> saveChannelContext = m_channelContext;
-  nsCOMPtr<nsIStreamListener> saveChannelListener = m_channelListener;
-  m_channelContext = nsnull;
-  m_channelListener = nsnull;
-  // send StopRequest notification after we've cleaned up the protocol
-  // because it can synchronously causes a new url to get run in the
-  // protocol - truly evil, but we're stuck at the moment.
-	if (saveChannelListener)
-		rv = saveChannelListener->OnStopRequest(this, saveChannelContext, NS_OK, nsnull);
+  PR_FREEIF(m_cancelNewsgroups);
+  m_cancelNewsgroups = nsnull;
+  PR_FREEIF(m_cancelDistribution);
+  m_cancelDistribution = nsnull;
+  PR_FREEIF(m_cancelFromHdr);
+  m_cancelFromHdr = nsnull;
+  PR_FREEIF(m_cancelID);  
+  m_cancelID = nsnull;
   
-  m_connectionBusy = PR_FALSE;
+  if (!m_connectionBusy)
+  {
+    mDisplayInputStream = nsnull;
+    mDisplayOutputStream = nsnull;
+    mProgressEventSink = nsnull;
+    SetOwner(nsnull);
+
+    m_channelContext = nsnull;
+    m_channelListener = nsnull;
+    m_loadGroup = nsnull;
+  }
   return NS_OK;
 }
 

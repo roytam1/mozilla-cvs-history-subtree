@@ -46,7 +46,7 @@
 	<!ENTITY findAgainCmd.key "G">
 	<!ENTITY findAgainCmd.accesskey "g">
 <!ENTITY accountManagerCmd.label "Mail/News Account Settings...">
-	<!ENTITY accountManagerCmd.accesskey "a">
+	<!ENTITY accountManagerCmd.accesskey "m">
 
 <!-- View menu items -->
 <!ENTITY showComposeToolbarCmd.label "Mail Toolbar">
@@ -115,7 +115,7 @@
 <!ENTITY highestPriorityCmd.label "Highest">
 
 <!ENTITY outputFormatMenu.label "Format">
-<!ENTITY askmeFormatCmd.label "Auto Detect">
+<!ENTITY autoFormatCmd.label "Auto-Detect">
 <!ENTITY plainTextFormatCmd.label "Plain Text Only">
 <!ENTITY htmlFormatCmd.label "Rich Text (HTML) Only">
 <!ENTITY bothFormatCmd.label "Plain and Rich (HTML) Text">

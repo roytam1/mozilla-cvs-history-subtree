@@ -96,6 +96,9 @@ nsPresContext::nsPresContext()
   mCompatibilityLocked = PR_FALSE;
   mWidgetRenderingMode = eWidgetRendering_Gfx; 
   mImageAnimationMode = eImageAnimation_Normal;
+
+  mStopped = PR_FALSE;
+  mStopChrome = PR_TRUE;
   
   mShell = nsnull;
 
@@ -111,6 +114,7 @@ nsPresContext::nsPresContext()
   mDefaultBackgroundImageRepeat = NS_STYLE_BG_REPEAT_XY;
   mDefaultBackgroundImageOffsetX = mDefaultBackgroundImageOffsetY = 0;
   mDefaultDirection = NS_STYLE_DIRECTION_LTR;
+  mLanguageSpecificTransformType = eLanguageSpecificTransformType_Unknown;
 }
 
 nsPresContext::~nsPresContext()
@@ -351,9 +355,7 @@ nsPresContext::SetShell(nsIPresShell* aShell)
           nsAutoString charset;
           doc->AddCharSetObserver(this);
           doc->GetDocumentCharacterSet(charset);
-          mLangService->LookupCharSet(charset.GetUnicode(),
-                                      getter_AddRefs(mLanguage));
-          GetFontPreferences();
+          UpdateCharSet(charset.GetUnicode());
         }
       }
     }
@@ -373,14 +375,44 @@ nsPresContext::GetShell(nsIPresShell** aResult)
   return NS_OK;
 }
 
+void
+nsPresContext::UpdateCharSet(const PRUnichar* aCharSet)
+{
+  if (mLangService) {
+    mLangService->LookupCharSet(aCharSet, getter_AddRefs(mLanguage));
+    GetFontPreferences();
+    if (mLanguage) {
+      nsCOMPtr<nsIAtom> langGroupAtom;
+      mLanguage->GetLanguageGroup(getter_AddRefs(langGroupAtom));
+      NS_ASSERTION(langGroupAtom, "non-NULL language group atom expected");
+      if (langGroupAtom.get() == nsLayoutAtoms::Japanese) {
+        mLanguageSpecificTransformType =
+        eLanguageSpecificTransformType_Japanese;
+      }
+      else if (langGroupAtom.get() == nsLayoutAtoms::Korean) {
+        mLanguageSpecificTransformType =
+        eLanguageSpecificTransformType_Korean;
+      }
+      else {
+        mLanguageSpecificTransformType =
+        eLanguageSpecificTransformType_None;
+      }
+    }
+  }
+}
+
 NS_IMETHODIMP
 nsPresContext::Observe(nsISupports* aSubject, const PRUnichar* aTopic,
                        const PRUnichar* aData)
 {
-  if (mLangService) {
-    mLangService->LookupCharSet(aData, getter_AddRefs(mLanguage));
-    GetFontPreferences();
+  if (nsAutoString(aTopic).EqualsWithConversion("charset")) {
+    UpdateCharSet(aData);
   }
+  else {
+    NS_WARNING("unrecognized topic in nsPresContext::Observe");
+    return NS_ERROR_FAILURE;
+  }
+
   return NS_OK;
 }
 
@@ -884,10 +916,16 @@ nsPresContext::StartLoadImage(const nsString& aURL,
                               nsIFrameImageLoader** aResult)
 {
   if (mStopped) {
-    if (aResult) {
-      *aResult = nsnull;
-    }
-    return NS_OK;
+      // if we are stopped and the image is not chrome
+      // don't load.
+      // If we are chrome don't load if we 
+      // were told to stop chrome
+      if (!aURL.EqualsWithConversion("chrome:", PR_TRUE, 7) || mStopChrome) {
+          if (aResult) {
+            *aResult = nsnull;
+          }    
+          return NS_OK;
+      }
   }
 
   // Allow for a null target frame argument (for precached images)
@@ -982,16 +1020,19 @@ nsPresContext::StartLoadImage(const nsString& aURL,
 }
 
 NS_IMETHODIMP
-nsPresContext::Stop(void)
+nsPresContext::Stop(PRBool aStopChrome)
 {
+  mStopChrome = aStopChrome;
   PRInt32 n = mImageLoaders.Count();
-  for (PRInt32 i = 0; i < n; i++) {
+  for (PRInt32 i = n-1; i >= 0; i--) {
     nsIFrameImageLoader* loader;
     loader = (nsIFrameImageLoader*) mImageLoaders.ElementAt(i);
-    loader->StopImageLoad();
-    NS_RELEASE(loader);
+    if (NS_SUCCEEDED(loader->StopImageLoad(aStopChrome))) {
+       mImageLoaders.RemoveElementAt(i);
+       NS_RELEASE(loader);
+    }  
   }
-  mImageLoaders.Clear();
+
   mStopped = PR_TRUE;
   return NS_OK;
 }
@@ -1132,6 +1173,15 @@ nsPresContext::GetLanguage(nsILanguageAtom** aLanguage)
   *aLanguage = mLanguage;
   NS_IF_ADDREF(*aLanguage);
 
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsPresContext::GetLanguageSpecificTransformType(
+                nsLanguageSpecificTransformType* aType)
+{
+  NS_ENSURE_ARG_POINTER(aType);
+  *aType = mLanguageSpecificTransformType;
   return NS_OK;
 }
 
