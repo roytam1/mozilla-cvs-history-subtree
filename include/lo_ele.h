@@ -496,6 +496,9 @@ struct LO_ImageStruct_struct {
     LO_AnchorData *anchor_href;
     PA_Block image_url;
     PA_Block lowres_image_url;
+/*	ebb - begin	*/
+    PA_Block icc_profile_url;
+/*	ebb - end	*/
     LO_ImageAttr *image_attr;
     LO_TextAttr *text_attr;
     int32 border_width;
