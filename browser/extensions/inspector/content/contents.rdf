@@ -22,7 +22,6 @@
     <RDF:li resource="chrome://inspector/content/commandOverlay.xul"/>
     <RDF:li resource="chrome://inspector/content/keysetOverlay.xul"/>
     <RDF:li resource="chrome://inspector/content/popupOverlay.xul"/>
-    <RDF:li resource="chrome://inspector/content/inspector.xul"/>
   </RDF:Seq>
 
   <!-- mozilla/browser Overlays -->
@@ -45,10 +44,6 @@
     <RDF:li>chrome://inspector/content/viewers/dom/popupOverlay.xul</RDF:li>
     <RDF:li>chrome://inspector/content/viewers/styleRules/popupOverlay.xul</RDF:li>
     <RDF:li>chrome://inspector/content/search/modules/popupOverlay.xul</RDF:li>
-  </RDF:Seq>
-
-  <RDF:Seq about="chrome://inspector/content/inspector.xul">
-    <RDF:li>chrome://inspector/content/inspectorFirefoxOverlay.xul</RDF:li>
   </RDF:Seq>
 
 </RDF:RDF>
