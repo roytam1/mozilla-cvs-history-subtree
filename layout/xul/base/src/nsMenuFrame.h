@@ -64,7 +64,7 @@ public:
   NS_IMETHOD GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
 
   // The nsITimerCallback interface
-  NS_IMETHOD_(void) Notify(nsITimer *timer);
+  NS_IMETHOD Notify(nsITimer *timer);
 
   NS_IMETHOD Init(nsIPresContext*  aPresContext,
                   nsIContent*      aContent,

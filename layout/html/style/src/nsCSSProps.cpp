@@ -24,7 +24,7 @@
 #include "nsCSSKeywords.h"
 #include "nsStyleConsts.h"
 
-#include "nsILookAndFeel.h" // for system colors
+#include "nsISystemLook.h" // for system colors
 
 #include "nsString.h"
 #include "nsStaticNameTable.h"
@@ -198,35 +198,35 @@ const PRInt32 nsCSSProps::kClearKTable[] = {
 };
 
 const PRInt32 nsCSSProps::kColorKTable[] = {
-  eCSSKeyword_activeborder, nsILookAndFeel::eColor_activeborder,
-  eCSSKeyword_activecaption, nsILookAndFeel::eColor_activecaption,
-  eCSSKeyword_appworkspace, nsILookAndFeel::eColor_appworkspace,
-  eCSSKeyword_background, nsILookAndFeel::eColor_background,
-  eCSSKeyword_buttonface, nsILookAndFeel::eColor_buttonface,
-  eCSSKeyword_buttonhighlight, nsILookAndFeel::eColor_buttonhighlight,
-  eCSSKeyword_buttonshadow, nsILookAndFeel::eColor_buttonshadow,
-  eCSSKeyword_buttontext, nsILookAndFeel::eColor_buttontext,
-  eCSSKeyword_captiontext, nsILookAndFeel::eColor_captiontext,
-  eCSSKeyword_graytext, nsILookAndFeel::eColor_graytext,
-  eCSSKeyword_highlight, nsILookAndFeel::eColor_highlight,
-  eCSSKeyword_highlighttext, nsILookAndFeel::eColor_highlighttext,
-  eCSSKeyword_inactiveborder, nsILookAndFeel::eColor_inactiveborder,
-  eCSSKeyword_inactivecaption, nsILookAndFeel::eColor_inactivecaption,
-  eCSSKeyword_inactivecaptiontext, nsILookAndFeel::eColor_inactivecaptiontext,
-  eCSSKeyword_infobackground, nsILookAndFeel::eColor_infobackground,
-  eCSSKeyword_infotext, nsILookAndFeel::eColor_infotext,
-  eCSSKeyword_menu, nsILookAndFeel::eColor_menu,
-  eCSSKeyword_menutext, nsILookAndFeel::eColor_menutext,
-  eCSSKeyword_scrollbar, nsILookAndFeel::eColor_scrollbar,
-  eCSSKeyword_threeddarkshadow, nsILookAndFeel::eColor_threeddarkshadow,
-  eCSSKeyword_threedface, nsILookAndFeel::eColor_threedface,
-  eCSSKeyword_threedhighlight, nsILookAndFeel::eColor_threedhighlight,
-  eCSSKeyword_threedlightshadow, nsILookAndFeel::eColor_threedlightshadow,
-  eCSSKeyword_threedshadow, nsILookAndFeel::eColor_threedshadow,
-  eCSSKeyword_window, nsILookAndFeel::eColor_window,
-  eCSSKeyword_windowframe, nsILookAndFeel::eColor_windowframe,
-  eCSSKeyword_windowtext, nsILookAndFeel::eColor_windowtext,
-  eCSSKeyword__moz_field, nsILookAndFeel::eColor__moz_field,
+  eCSSKeyword_activeborder, nsISystemLook::color_ActiveBorder,
+  eCSSKeyword_activecaption, nsISystemLook::color_ActiveCaption,
+  eCSSKeyword_appworkspace, nsISystemLook::color_AppWorkspace,
+  eCSSKeyword_background, nsISystemLook::color_Background,
+  eCSSKeyword_buttonface, nsISystemLook::color_ButtonFace,
+  eCSSKeyword_buttonhighlight, nsISystemLook::color_ButtonHighlight,
+  eCSSKeyword_buttonshadow, nsISystemLook::color_ButtonShadow,
+  eCSSKeyword_buttontext, nsISystemLook::color_ButtonText,
+  eCSSKeyword_captiontext, nsISystemLook::color_CaptionText,
+  eCSSKeyword_graytext, nsISystemLook::color_GrayText,
+  eCSSKeyword_highlight, nsISystemLook::color_Highlight,
+  eCSSKeyword_highlighttext, nsISystemLook::color_HighlightText,
+  eCSSKeyword_inactiveborder, nsISystemLook::color_InactiveBorder,
+  eCSSKeyword_inactivecaption, nsISystemLook::color_InactiveCaption,
+  eCSSKeyword_inactivecaptiontext, nsISystemLook::color_InactiveCaptionText,
+  eCSSKeyword_infobackground, nsISystemLook::color_InfoBackground,
+  eCSSKeyword_infotext, nsISystemLook::color_InfoText,
+  eCSSKeyword_menu, nsISystemLook::color_Menu,
+  eCSSKeyword_menutext, nsISystemLook::color_MenuText,
+  eCSSKeyword_scrollbar, nsISystemLook::color_Scrollbar,
+  eCSSKeyword_threeddarkshadow, nsISystemLook::color_ThreeDDarkShadow,
+  eCSSKeyword_threedface, nsISystemLook::color_ThreeDFace,
+  eCSSKeyword_threedhighlight, nsISystemLook::color_ThreeDHighlight,
+  eCSSKeyword_threedlightshadow, nsISystemLook::color_ThreeDLightShadow,
+  eCSSKeyword_threedshadow, nsISystemLook::color_ThreeDShadow,
+  eCSSKeyword_window, nsISystemLook::color_Window,
+  eCSSKeyword_windowframe, nsISystemLook::color_WindowFrame,
+  eCSSKeyword_windowtext, nsISystemLook::color_WindowText,
+  eCSSKeyword__moz_field, nsISystemLook::color_moz_Field,
   -1,-1
 };
 

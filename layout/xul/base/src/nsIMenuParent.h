@@ -30,6 +30,7 @@
 { 0xd407bf61, 0x3efa, 0x11d3, { 0x97, 0xfa, 0x0, 0x40, 0x5, 0x53, 0xee, 0xf0 } }
 
 class nsIMenuFrame;
+class nsIWindow;
 
 class nsIMenuParent : public nsISupports {
 
@@ -43,7 +44,7 @@ public:
 
   NS_IMETHOD SetActive(PRBool aActiveFlag) = 0;
   NS_IMETHOD GetIsActive(PRBool& isActive) = 0;
-  NS_IMETHOD GetWidget(nsIWidget **aWidget) = 0;
+  NS_IMETHOD GetWidget(nsIWindow **aWidget) = 0;
   
   NS_IMETHOD IsMenuBar(PRBool& isMenuBar) = 0;
 

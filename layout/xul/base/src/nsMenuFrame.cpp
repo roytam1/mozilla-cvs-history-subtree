@@ -1187,7 +1187,7 @@ nsMenuFrame::IsMenu()
   return mIsMenu;
 }
 
-NS_IMETHODIMP_(void)
+NS_IMETHODIMP
 nsMenuFrame::Notify(nsITimer* aTimer)
 {
   // Our timer has fired.
@@ -1207,6 +1207,8 @@ nsMenuFrame::Notify(nsITimer* aTimer)
   }
   
   mOpenTimer = nsnull;
+
+  return NS_OK;
 }
 
 PRBool 

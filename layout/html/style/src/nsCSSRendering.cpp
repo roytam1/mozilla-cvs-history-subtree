@@ -33,8 +33,7 @@
 #include "nsStyleUtil.h"
 #include "nsIScrollableView.h"
 #include "nsLayoutAtoms.h"
-#include "nsIDrawingSurface.h"
-#include "nsTransform2D.h"
+#include "nsIDrawable.h"
 #include "nsIContent.h"
 #include "nsHTMLAtoms.h"
 #include "nsIDocument.h"
@@ -62,7 +61,7 @@ enum ePathTypes{
   eCalcRev
 };
 
-static void GetPath(nsFloatPoint aPoints[],nsPoint aPolyPath[],PRInt32 *aCurIndex,ePathTypes  aPathType,PRInt32 &aC1Index,float aFrac=0);
+static void GetPath(nsPoint aPoints[],nsPoint aPolyPath[],PRInt32 *aCurIndex,ePathTypes  aPathType,PRInt32 &aC1Index,float aFrac=0);
 static void TileImage(nsIDrawable* drawable,nsIDrawable *aDest,nsRect &aSrcRect,PRInt16 aWidth,PRInt16 aHeight);
 static PRBool GetBGColorForHTMLElement(nsIPresContext *aPresContext,const nsStyleColor *&aBGColor);
 static nsresult GetFrameForBackgroundUpdate(nsIPresContext *aPresContext,nsIFrame *aFrame, nsIFrame **aBGFrame);
@@ -317,7 +316,9 @@ PRIntn nsCSSRendering::MakeSide(nsPoint aPoints[],
   }
 
   // Base our thickness check on the segment being less than a pixel and 1/2
-  twipsPerPixel += twipsPerPixel >> 2;
+  // XXX pav
+  //  twipsPerPixel += twipsPerPixel >> 2;
+  twipsPerPixel = 1.5;  // 1.5 pixels (name not acurate.. 1 "twip" == 1 pixel as of gfx2)
 
   // find the thickness of the piece being drawn
   if ((whichSide == NS_SIDE_TOP) || (whichSide == NS_SIDE_LEFT)) {
@@ -835,15 +836,15 @@ PRBool  skippedSide = PR_FALSE;
 
           currRect = dashRect;
 
-          if((temp1%2)==0){
-            adjust = (dashRect.height-(temp%dashRect.height))/2; // adjust back
+          if (drem(temp1,2) == 0) {
+            adjust = (dashRect.height - drem(temp,dashRect.height))/2; // adjust back
             // draw in the left and right
             aDrawable->FillRectangle(dashRect.x, borderOutside.y,dashRect.width, dashRect.height-adjust);
             aDrawable->FillRectangle(dashRect.x,(borderOutside.YMost()-(dashRect.height-adjust)),dashRect.width, dashRect.height-adjust);
             currRect.y += (dashRect.height-adjust);
             temp = temp-= (dashRect.height-adjust);
           } else {
-            adjust = (temp%dashRect.width)/2;                   // adjust a tad longer
+            adjust = ( drem(temp, dashRect.width) ) / 2;                   // adjust a tad longer
             // draw in the left and right
             aDrawable->FillRectangle(dashRect.x, borderOutside.y,dashRect.width, dashRect.height+adjust);
             aDrawable->FillRectangle(dashRect.x,(borderOutside.YMost()-(dashRect.height+adjust)),dashRect.width, dashRect.height+adjust);
@@ -856,9 +857,9 @@ PRBool  skippedSide = PR_FALSE;
 
           // get the currRect's x into the view before we start
           if( currRect.y < aDirtyRect.y){
-            temp1 = NSToCoordFloor((float)((aDirtyRect.y-currRect.y)/dashRect.height));
+            temp1 = GFXCoordFloor((aDirtyRect.y-currRect.y)/dashRect.height);
             currRect.y += temp1*dashRect.height;
-            if((temp1%2)==1){
+            if (drem(temp1,2) == 1) {
               bSolid = PR_TRUE;
             }
          }
@@ -901,15 +902,15 @@ PRBool  skippedSide = PR_FALSE;
 
           currRect = dashRect;
 
-          if((temp1%2)==0){
-            adjust = (dashRect.width-(temp%dashRect.width))/2;     // even, adjust back
+          if (drem(temp1,2) == 0) {
+            adjust = (dashRect.width - drem(temp, dashRect.width))/2;     // even, adjust back
             // draw in the left and right
             aContext.FillRect(borderOutside.x,dashRect.y,dashRect.width-adjust,dashRect.height);
             aContext.FillRect((borderOutside.XMost()-(dashRect.width-adjust)),dashRect.y,dashRect.width-adjust,dashRect.height);
             currRect.x += (dashRect.width-adjust);
             temp = temp-= (dashRect.width-adjust);
           } else {
-            adjust = (temp%dashRect.width)/2;
+            adjust = (drem(temp,dashRect.width))/2;
             // draw in the left and right
             aContext.FillRect(borderOutside.x,dashRect.y,dashRect.width+adjust,dashRect.height);
             aContext.FillRect((borderOutside.XMost()-(dashRect.width+adjust)),dashRect.y,dashRect.width+adjust,dashRect.height);
@@ -923,9 +924,9 @@ PRBool  skippedSide = PR_FALSE;
 
           // get the currRect's x into the view before we start
           if( currRect.x < aDirtyRect.x){
-            temp1 = NSToCoordFloor((float)((aDirtyRect.x-currRect.x)/dashRect.width));
+            temp1 = GFXCoordFloor((aDirtyRect.x-currRect.x)/dashRect.width);
             currRect.x += temp1*dashRect.width;
-            if((temp1%2)==1){
+            if(drem(temp1,2)==1){
               bSolid = PR_TRUE;
             }
           }
@@ -1609,11 +1610,7 @@ void nsCSSRendering::PaintBorder(nsIPresContext* aPresContext,
   // Draw all the other sides
 
   /* Get our conversion values */
-  nscoord twipsPerPixel;
-  float p2t;
-  aPresContext->GetScaledPixelsToTwips(&p2t);
-  twipsPerPixel = NSIntPixelsToTwips(1,p2t);
-
+  nscoord twipsPerPixel = 1.0;
 
   nscolor sideColor;
   if (0 == (aSkipSides & (1<<NS_SIDE_BOTTOM))) {
@@ -1768,10 +1765,7 @@ nscoord width;
   // Draw all the other sides
 
   /* XXX something is misnamed here!!!! */
-  nscoord twipsPerPixel;/* XXX */
-  float p2t;/* XXX */
-  aPresContext->GetPixelsToTwips(&p2t);/* XXX */
-  twipsPerPixel = (nscoord) p2t;/* XXX */
+  nscoord twipsPerPixel = 1;/* XXX */
 
   nscolor outlineColor;
 
@@ -1844,10 +1838,7 @@ void nsCSSRendering::PaintBorderEdges(nsIPresContext* aPresContext,
   DrawDashedSegments(aDrawable, aBorderArea, aBorderEdges, aSkipSides, aGap);
 
   // Draw all the other sides
-  nscoord twipsPerPixel;
-  float p2t;
-  aPresContext->GetPixelsToTwips(&p2t);
-  twipsPerPixel = (nscoord) p2t;/* XXX huh!*/
+  nscoord twipsPerPixel = 1;
 
   if (0 == (aSkipSides & (1<<NS_SIDE_TOP))) {
     PRInt32 segmentCount = aBorderEdges->mEdges[NS_SIDE_TOP].Count();
@@ -1996,11 +1987,11 @@ ComputeBackgroundAnchorPoint(const nsStyleColor& aColor,
         // Some joker gave us max-negative-integer.
         x = 0;
       }
-      x %= aTileWidth;
+      x = drem(x, aTileWidth); // x %= aTileWidth;
       x = -x;
     }
     else if (x != 0) {
-      x %= aTileWidth;
+      x = drem(x, aTileWidth); // x %= aTileWidth;
       if (x > 0) {
         x = x - aTileWidth;
       }
@@ -2032,11 +2023,11 @@ ComputeBackgroundAnchorPoint(const nsStyleColor& aColor,
         // Some joker gave us max-negative-integer.
         y = 0;
       }
-      y %= aTileHeight;
+      y = drem(y, aTileHeight); // y %= aTileHeight;
       y = -y;
     }
     else if (y != 0) {
-      y %= aTileHeight;
+      y = drem(y, aTileHeight); // y %= aTileHeight;
       if (y > 0) {
         y = y - aTileHeight;
       }
@@ -2394,7 +2385,6 @@ nsCSSRendering::PaintBackground(nsIPresContext* aPresContext,
     aRenderingContext.GetDrawingSurface((void**)&theSurface);
     aPresContext->GetVisibleArea(srcRect);
     tvrect.SetRect(0,0,x1-x0,y1-y0);
-    aPresContext->GetTwipsToPixels(&t2p);
 
     // check to see if the background image has a mask
     hasMask = image->GetHasAlphaMask();
@@ -2435,6 +2425,7 @@ nsCSSRendering::PaintBackground(nsIPresContext* aPresContext,
       aRenderingContext.SetClipRect(srcRect, nsClipCombine_kReplace, clip);
 #endif
 
+#endif
 
 #ifndef XP_UNIX
     // Restore clipping
@@ -2535,15 +2526,10 @@ RoundedRect   outerPath;
 QBCurve       cr1,cr2,cr3,cr4;
 QBCurve       UL,UR,LL,LR;
 PRInt32       curIndex,c1Index;
-nsFloatPoint  thePath[MAXPATHSIZE];
+nsPoint  thePath[MAXPATHSIZE];
 nsPoint       polyPath[MAXPOLYPATHSIZE];
 PRInt16       np;
-nscoord       twipsPerPixel;
-float         p2t;
-
-  // needed for our border thickness
-  aPresContext->GetPixelsToTwips(&p2t);
-  twipsPerPixel = NSToCoordRound(p2t);
+nscoord       twipsPerPixel = 1;
 
   // XXX pav background?
   aDrawable->SetForegroundColor(aColor.mBackgroundColor);
@@ -2564,8 +2550,8 @@ float         p2t;
   thePath[np++].MoveTo(cr3.mCon.x, cr3.mCon.y);
   thePath[np++].MoveTo(cr3.mAnc2.x, cr3.mAnc2.y);
 
-  polyPath[0].x = NSToCoordRound(thePath[0].x);
-  polyPath[0].y = NSToCoordRound(thePath[0].y);
+  polyPath[0].x = thePath[0].x;
+  polyPath[0].y = thePath[0].y;
   curIndex = 1;
   GetPath(thePath,polyPath,&curIndex,eOutside,c1Index);
 
@@ -2630,10 +2616,10 @@ nsCSSRendering::PaintRoundedBorder(nsIPresContext* aPresContext,
   QBCurve       IUL,ILL,IUR,ILR;
   QBCurve       cr1,cr2,cr3,cr4;
   QBCurve       Icr1,Icr2,Icr3,Icr4;
-  nsFloatPoint  thePath[MAXPATHSIZE];
+  nsPoint  thePath[MAXPATHSIZE];
   PRInt16       np;
   nsMargin      border;
-  nscoord       twipsPerPixel,qtwips;
+  nscoord       twipsPerPixel=1,qtwips;
   float         p2t;
 
 
@@ -2655,12 +2641,9 @@ nsCSSRendering::PaintRoundedBorder(nsIPresContext* aPresContext,
   }
 
   // needed for our border thickness
-  aPresContext->GetPixelsToTwips(&p2t);
-  twipsPerPixel = NSToCoordRound(p2t);
 
   // Base our thickness check on the segment being less than a pixel and 1/2
-  qtwips = twipsPerPixel >> 2;
-  //qtwips = twipsPerPixel;
+  qtwips = 1.5;
 
   outerPath.Set(aBorderArea.x,aBorderArea.y,aBorderArea.width,aBorderArea.height,aBorderRadius,twipsPerPixel);
   outerPath.GetRoundedBorders(UL,UR,LL,LR);
@@ -2757,7 +2740,7 @@ nsCSSRendering::PaintRoundedBorder(nsIPresContext* aPresContext,
  *	@update 3/26/99 dwc
  */
 void 
-nsCSSRendering::RenderSide(nsFloatPoint aPoints[],nsIDrawable* aDrawable,
+nsCSSRendering::RenderSide(nsPoint aPoints[],nsIDrawable* aDrawable,
                         const nsStyleSpacing& aBorderStyle,nsIStyleContext* aStyleContext,
                         PRUint8 aSide,nsMargin  &aBorThick,nscoord aTwipsPerPixel,
                         PRBool aIsOutline)
@@ -2824,17 +2807,17 @@ nsCSSRendering::RenderSide(nsFloatPoint aPoints[],nsIDrawable* aDrawable,
         // be moved when it is supported so that the above outset and inset will fall into the 
         // solid code below....
       case NS_STYLE_BORDER_STYLE_SOLID:
-        polypath[0].x = NSToCoordRound(aPoints[0].x);
-        polypath[0].y = NSToCoordRound(aPoints[0].y);
+        polypath[0].x = aPoints[0].x;
+        polypath[0].y = aPoints[0].y;
         curIndex = 1;
         GetPath(aPoints,polypath,&curIndex,eOutside,c1Index);
         c2Index = curIndex;
-        polypath[curIndex].x = NSToCoordRound(aPoints[6].x);
-        polypath[curIndex].y = NSToCoordRound(aPoints[6].y);
+        polypath[curIndex].x = aPoints[6].x;
+        polypath[curIndex].y = aPoints[6].y;
         curIndex++;
         GetPath(aPoints,polypath,&curIndex,eInside,junk);
-        polypath[curIndex].x = NSToCoordRound(aPoints[0].x);
-        polypath[curIndex].y = NSToCoordRound(aPoints[0].y);
+        polypath[curIndex].x = aPoints[0].x;
+        polypath[curIndex].y = aPoints[0].y;
         curIndex++;
         {
           const nsPoint *pts = polyPath;
@@ -2843,16 +2826,16 @@ nsCSSRendering::RenderSide(nsFloatPoint aPoints[],nsIDrawable* aDrawable,
 
        break;
       case NS_STYLE_BORDER_STYLE_DOUBLE:
-        polypath[0].x = NSToCoordRound(aPoints[0].x);
-        polypath[0].y = NSToCoordRound(aPoints[0].y);
+        polypath[0].x = aPoints[0].x;
+        polypath[0].y = aPoints[0].y;
         curIndex = 1;
         GetPath(aPoints,polypath,&curIndex,eOutside,c1Index);
         {
           const nsPoint *pts = polypath;
           aDrawable->DrawPolygon(&pts,curIndex);
         }
-        polypath[0].x = NSToCoordRound(aPoints[6].x);
-        polypath[0].y = NSToCoordRound(aPoints[6].y);
+        polypath[0].x = aPoints[6].x;
+        polypath[0].y = aPoints[6].y;
         curIndex = 1;
         GetPath(aPoints,polypath,&curIndex,eInside,c1Index);
         {
@@ -2872,16 +2855,16 @@ nsCSSRendering::RenderSide(nsFloatPoint aPoints[],nsIDrawable* aDrawable,
         // XXX pav background?
         aDrawable->SetForegroundColor( MakeBevelColor (aSide, border_Style, bgColor->mBackgroundColor,sideColor, PR_TRUE));
 
-        polypath[0].x = NSToCoordRound(aPoints[0].x);
-        polypath[0].y = NSToCoordRound(aPoints[0].y);
+        polypath[0].x = aPoints[0].x;
+        polypath[0].y = aPoints[0].y;
         curIndex = 1;
         GetPath(aPoints,polypath,&curIndex,eOutside,c1Index);
-        polypath[curIndex].x = NSToCoordRound((aPoints[5].x + aPoints[6].x)/2.0f);
-        polypath[curIndex].y = NSToCoordRound((aPoints[5].y + aPoints[6].y)/2.0f);
+        polypath[curIndex].x = (aPoints[5].x + aPoints[6].x)/2.0f;
+        polypath[curIndex].y = (aPoints[5].y + aPoints[6].y)/2.0f;
         curIndex++;
         GetPath(aPoints,polypath,&curIndex,eCalcRev,c1Index,.5);
-        polypath[curIndex].x = NSToCoordRound(aPoints[0].x);
-        polypath[curIndex].y = NSToCoordRound(aPoints[0].y);
+        polypath[curIndex].x = aPoints[0].x;
+        polypath[curIndex].y = aPoints[0].y;
         curIndex++;
         {
           const nsPoint *pts = polyPath;
@@ -2895,16 +2878,16 @@ nsCSSRendering::RenderSide(nsFloatPoint aPoints[],nsIDrawable* aDrawable,
                                                          NS_STYLE_BORDER_STYLE_RIDGE), 
                                                         bgColor->mBackgroundColor,sideColor, PR_TRUE));
        
-        polypath[0].x = NSToCoordRound((aPoints[0].x + aPoints[11].x)/2.0f);
-        polypath[0].y = NSToCoordRound((aPoints[0].y + aPoints[11].y)/2.0f);
+        polypath[0].x = (aPoints[0].x + aPoints[11].x)/2.0f;
+        polypath[0].y = (aPoints[0].y + aPoints[11].y)/2.0f;
         curIndex = 1;
         GetPath(aPoints,polypath,&curIndex,eCalc,c1Index,.5);
-        polypath[curIndex].x = NSToCoordRound(aPoints[6].x) ;
-        polypath[curIndex].y = NSToCoordRound(aPoints[6].y);
+        polypath[curIndex].x = aPoints[6].x;
+        polypath[curIndex].y = aPoints[6].y;
         curIndex++;
         GetPath(aPoints,polypath,&curIndex,eInside,c1Index);
-        polypath[curIndex].x = NSToCoordRound(aPoints[0].x);
-        polypath[curIndex].y = NSToCoordRound(aPoints[0].y);
+        polypath[curIndex].x = aPoints[0].x;
+        polypath[curIndex].y = aPoints[0].y;
         curIndex++;
         {
           const nsPoint *pts = polyPath;
@@ -3093,7 +3076,7 @@ RoundedRect::GetRoundedBorders(QBCurve &aULCurve,QBCurve &aURCurve,QBCurve &aLLC
  *  @param aFrac -- the inset amount for a eCalc type path
  */
 static void 
-GetPath(nsFloatPoint aPoints[],nsPoint aPolyPath[],PRInt32 *aCurIndex,ePathTypes  aPathType,PRInt32 &aC1Index,float aFrac)
+GetPath(nsPoint aPoints[],nsPoint aPolyPath[],PRInt32 *aCurIndex,ePathTypes  aPathType,PRInt32 &aC1Index,float aFrac)
 {
   QBCurve thecurve;
 
@@ -3200,7 +3183,7 @@ void
 QBCurve::MidPointDivide(QBCurve *A,QBCurve *B)
 {
 float         c1x,c1y,c2x,c2y;
-nsFloatPoint	a1;
+ nsPoint	a1;
 
   c1x = (mAnc1.x+mCon.x)/2.0f;
   c1y = (mAnc1.y+mCon.y)/2.0f;

@@ -4302,8 +4302,8 @@ nsCSSFrameConstructor::ConstructSelectFrame(nsIPresShell*        aPresShell,
             listFrame->GetView(aPresContext, &listView);
             NS_ASSERTION(nsnull != listView,"ListFrame's view is nsnull");
 #if 0
-            nsIWidget * viewWidget;
-            listView->GetWidget(viewWidget);
+            nsCOMPtr<nsIWindow> window;
+            listView->GetWidget(getter_AddRefs(viewWidget));
             //viewWidget->SetOverrideShow(PR_TRUE);
             NS_RELEASE(viewWidget);
 #endif
@@ -9434,11 +9434,10 @@ SyncAndInvalidateView(nsIPresContext* aPresContext,
   }
   else if (NS_STYLE_VISIBILITY_HIDDEN == disp->mVisible) {
     // If it has a widget, hide the view because the widget can't deal with it
-    nsIWindow* window = nsnull;
-    aView->GetWidget(window);
+    nsCOMPtr<nsIWindow> window;
+    aView->GetWidget(getter_AddRefs(window));
     if (window) {
       viewIsVisible = PR_FALSE;
-      NS_RELEASE(window);
     }
     else {
       // If it's a scroll frame, then hide the view. This means that
