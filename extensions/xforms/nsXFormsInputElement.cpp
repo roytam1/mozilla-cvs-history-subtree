@@ -52,6 +52,10 @@
 #include "nsXFormsAtoms.h"
 #include "nsAutoPtr.h"
 #include "nsIDOMXPathResult.h"
+#include "nsIDOMFocusListener.h"
+#include "nsIDOM3EventTarget.h"
+#include "nsIDOMEventReceiver.h"
+#include "nsIDOMEventGroup.h"
 
 static const nsIID sScriptingIIDs[] = {
   NS_IDOMELEMENT_IID,
@@ -59,13 +63,21 @@ static const nsIID sScriptingIIDs[] = {
   NS_IDOM3NODE_IID
 };
 
-class nsXFormsInputElement : public nsIXTFXMLVisual,
-                             public nsXFormsControl
+class nsXFormsInputElement : public nsXFormsControl,
+                             public nsIXTFXMLVisual,
+                             public nsIDOMFocusListener
 {
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIXTFXMLVISUAL
   NS_DECL_NSIXTFELEMENT
+
+  // nsIDOMEventListener
+  NS_IMETHOD HandleEvent(nsIDOMEvent *aEvent);
+
+  // nsIDOMFocusListener
+  NS_IMETHOD Focus(nsIDOMEvent *aEvent);
+  NS_IMETHOD Blur(nsIDOMEvent *aEvent);
 
   // nsXFormsControl
   virtual NS_HIDDEN_(void) Refresh();
@@ -74,7 +86,16 @@ private:
   nsCOMPtr<nsIDOMHTMLInputElement> mInput;
 };
 
-NS_IMPL_ISUPPORTS2(nsXFormsInputElement, nsIXTFXMLVisual, nsIXTFElement)
+NS_IMPL_ADDREF(nsXFormsInputElement)
+NS_IMPL_RELEASE(nsXFormsInputElement)
+
+NS_INTERFACE_MAP_BEGIN(nsXFormsInputElement)
+  NS_INTERFACE_MAP_ENTRY(nsIXTFXMLVisual)
+  NS_INTERFACE_MAP_ENTRY(nsIXTFElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMEventListener)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMFocusListener)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIXTFXMLVisual)
+NS_INTERFACE_MAP_END
 
 // nsIXTFXMLVisual
 
@@ -95,6 +116,14 @@ nsXFormsInputElement::OnCreated(nsIXTFXMLVisualWrapper *aWrapper)
 
   mInput = do_QueryInterface(inputElement);
   NS_ENSURE_TRUE(mInput, NS_ERROR_FAILURE);
+
+  nsCOMPtr<nsIDOMEventReceiver> receiver = do_QueryInterface(mInput);
+  nsCOMPtr<nsIDOMEventGroup> group;
+  receiver->GetSystemEventGroup(getter_AddRefs(group));
+
+  nsCOMPtr<nsIDOM3EventTarget> targ = do_QueryInterface(mInput);
+  targ->AddGroupedEventListener(NS_LITERAL_STRING("blur"), this,
+                                PR_FALSE, group);
 
   return NS_OK;
 }
@@ -118,6 +147,17 @@ nsXFormsInputElement::GetDisplayType(PRUint32 *aDisplayType)
 NS_IMETHODIMP
 nsXFormsInputElement::OnDestroyed()
 {
+  if (!mInput)
+    return NS_OK;
+
+  nsCOMPtr<nsIDOMEventReceiver> receiver = do_QueryInterface(mInput);
+  nsCOMPtr<nsIDOMEventGroup> group;
+  receiver->GetSystemEventGroup(getter_AddRefs(group));
+
+  nsCOMPtr<nsIDOM3EventTarget> targ = do_QueryInterface(mInput);
+  targ->RemoveGroupedEventListener(NS_LITERAL_STRING("blur"), this,
+                                   PR_FALSE, group);
+
   return NS_OK;
 }
 
@@ -251,6 +291,67 @@ nsXFormsInputElement::DoneAddingChildren()
 {
   return NS_OK;
 }
+
+// nsIDOMEventListener
+
+NS_IMETHODIMP
+nsXFormsInputElement::HandleEvent(nsIDOMEvent *aEvent)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsInputElement::Focus(nsIDOMEvent *aEvent)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsInputElement::Blur(nsIDOMEvent *aEvent)
+{
+  if (!mInput)
+    return NS_OK;
+
+  nsRefPtr<nsXFormsModelElement> model;
+  nsCOMPtr<nsIDOMElement> bindElement;
+  nsCOMPtr<nsIDOMXPathResult> result =
+    EvaluateBinding(nsIDOMXPathResult::FIRST_ORDERED_NODE_TYPE,
+                    getter_AddRefs(model), getter_AddRefs(bindElement));
+
+  if (!result)
+    return NS_OK;
+
+  nsCOMPtr<nsIDOMNode> singleNode;
+  result->GetSingleNodeValue(getter_AddRefs(singleNode));
+
+  if (!singleNode)
+    return NS_OK;
+
+  nsAutoString value;
+  mInput->GetValue(value);
+
+  PRUint16 nodeType = 0;
+  singleNode->GetNodeType(&nodeType);
+
+  switch (nodeType) {
+  case nsIDOMNode::ATTRIBUTE_NODE:
+  case nsIDOMNode::TEXT_NODE:
+    singleNode->SetNodeValue(value);
+    break;
+  case nsIDOMNode::ELEMENT_NODE:
+    {
+      nsCOMPtr<nsIDOM3Node> node = do_QueryInterface(singleNode);
+      NS_ASSERTION(node, "DOM Nodes must support DOM3 interfaces");
+
+      node->SetTextContent(value);
+      break;
+    }
+  }
+
+  return NS_OK;
+}
+
+// other methods
 
 void
 nsXFormsInputElement::Refresh()
