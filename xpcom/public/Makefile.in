@@ -28,6 +28,7 @@ EXPORTS		= \
 		  nsCom.h \
 		  nsAgg.h \
 		  nsDebug.h \
+		  nsEnumeratorUtils.h \
 		  nsError.h \
 		  nsHashtable.h \
 		  nsIAllocator.h \

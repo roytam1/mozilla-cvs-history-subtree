@@ -53,6 +53,7 @@ C_OBJS =                              \
 
 CPPSRCS =                             \
         nsDebug.cpp                   \
+        nsEnumeratorUtils.cpp         \
         nsHashtable.cpp               \
         nsID.cpp                      \
         nsCOMPtr.cpp                  \

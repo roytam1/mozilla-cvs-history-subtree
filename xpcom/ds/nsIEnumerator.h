@@ -26,6 +26,19 @@ struct JSObject;
 struct JSContext;
 #endif
 
+
+// {D1899240-F9D2-11d2-BDD6-000064657374}
+#define NS_ISIMPLEENUMERATOR_IID \
+{ 0xd1899240, 0xf9d2, 0x11d2, { 0xbd, 0xd6, 0x0, 0x0, 0x64, 0x65, 0x73, 0x74 } }
+
+class nsISimpleEnumerator : public nsISupports {
+  static const nsIID& GetIID(void) { static nsIID iid = NS_ISIMPLEENUMERATOR_IID; return iid; }
+  NS_IMETHOD HasMoreElements(PRBool* aResult) = 0;
+  NS_IMETHOD GetNext(nsISupports** aResult) = 0;
+};
+
+
+
 #define NS_IENUMERATOR_IID                           \
 { /* ad385286-cbc4-11d2-8cca-0060b0fc14a3 */         \
     0xad385286,                                      \
@@ -33,6 +46,7 @@ struct JSContext;
     0x11d2,                                          \
     {0x8c, 0xca, 0x00, 0x60, 0xb0, 0xfc, 0x14, 0xa3} \
 }
+
 
 class nsIEnumerator : public nsISupports {
 public:
@@ -57,19 +71,6 @@ public:
    *  @param aItem return value
    */
   NS_IMETHOD IsDone(void) = 0;
-
-#if defined(XPIDL_JS_STUBS)
-  // XXX Scriptability hack...
-  static NS_EXPORT_(JSObject*) InitJSClass(JSContext* cx) {
-    NS_NOTYETIMPLEMENTED("nsIEnumerator isn't XPIDL scriptable yet");
-    return 0;
-  }
-
-  static NS_EXPORT_(JSObject*) GetJSObject(JSContext* cx, nsIEnumerator* priv) {
-    NS_NOTYETIMPLEMENTED("nsIEnumerator isn't XPIDL scriptable yet");
-    return 0;
-  }
-#endif
 };
 
 #define NS_IBIDIRECTIONALENUMERATOR_IID              \

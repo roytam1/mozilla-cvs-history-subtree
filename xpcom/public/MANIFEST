@@ -6,6 +6,7 @@ nsCOMPtr.h
 nsCom.h
 nsAgg.h
 nsDebug.h
+nsEnumeratorUtils.h
 nsError.h
 nsHashtable.h
 nsID.h
