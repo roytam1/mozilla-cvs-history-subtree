@@ -209,7 +209,7 @@ private:
     }
 
     static PRIntn
-    ReleaseContentList(PLHashEntry* he, PRIntn index, void* closure);
+    ReleaseContentList(PLHashEntry* aHashEntry, PRIntn aIndex, void* aClosure);
 
 public:
     nsElementMap(void);
@@ -251,15 +251,15 @@ nsElementMap::~nsElementMap()
 
 
 PRIntn
-nsElementMap::ReleaseContentList(PLHashEntry* he, PRIntn index, void* closure)
+nsElementMap::ReleaseContentList(PLHashEntry* aHashEntry, PRIntn aIndex, void* aClosure)
 {
     nsIRDFResource* resource =
-        NS_REINTERPRET_CAST(nsIRDFResource*, NS_CONST_CAST(void*, he->key));
+        NS_REINTERPRET_CAST(nsIRDFResource*, NS_CONST_CAST(void*, aHashEntry->key));
 
     NS_RELEASE(resource);
         
     ContentListItem* head =
-        (ContentListItem*) he->value;
+        (ContentListItem*) aHashEntry->value;
 
     while (head) {
         ContentListItem* doomed = head;
@@ -791,10 +791,9 @@ XULDocumentImpl::XULDocumentImpl(void)
     : mParentDocument(nsnull),
       mScriptContextOwner(nsnull),
       mScriptObject(nsnull),
-      mDisplaySelection(PR_FALSE),
       mCharSetID("UTF-8"),
+      mDisplaySelection(PR_FALSE),
       mContentViewerContainer(nsnull),
-      mCommand(""),
       mIsPopup(PR_FALSE)
 {
     NS_INIT_REFCNT();
@@ -838,17 +837,19 @@ XULDocumentImpl::~XULDocumentImpl()
 {
     // mParentDocument is never refcounted
     // Delete references to sub-documents
-    PRInt32 index = mSubDocuments.Count();
-    while (--index >= 0) {
-        nsIDocument* subdoc = (nsIDocument*) mSubDocuments.ElementAt(index);
-        NS_RELEASE(subdoc);
+    {
+        PRInt32 i = mSubDocuments.Count();
+        while (--i >= 0) {
+            nsIDocument* subdoc = (nsIDocument*) mSubDocuments.ElementAt(i);
+            NS_RELEASE(subdoc);
+        }
     }
 
     // Delete references to style sheets but only if we aren't a popup document.
     if (!mIsPopup) {
-        index = mStyleSheets.Count();
-        while (--index >= 0) {
-            nsIStyleSheet* sheet = (nsIStyleSheet*) mStyleSheets.ElementAt(index);
+        PRInt32 i = mStyleSheets.Count();
+        while (--i >= 0) {
+            nsIStyleSheet* sheet = (nsIStyleSheet*) mStyleSheets.ElementAt(i);
             sheet->SetOwningDocument(nsnull);
             NS_RELEASE(sheet);
         }
@@ -876,7 +877,7 @@ XULDocumentImpl::~XULDocumentImpl()
 		if (! builder)
 		    continue;
 
-		nsresult rv = builder->SetDocument(nsnull);
+		rv = builder->SetDocument(nsnull);
 		NS_ASSERTION(NS_SUCCEEDED(rv), "error creating content");
 		// XXX ignore error code?
 
@@ -1221,9 +1222,9 @@ XULDocumentImpl::PrepareStyleSheets(nsIURL* anURL)
     nsresult rv;
     
     // Delete references to style sheets - this should be done in superclass...
-    PRInt32 index = mStyleSheets.Count();
-    while (--index >= 0) {
-        nsIStyleSheet* sheet = (nsIStyleSheet*) mStyleSheets.ElementAt(index);
+    PRInt32 i = mStyleSheets.Count();
+    while (--i >= 0) {
+        nsIStyleSheet* sheet = (nsIStyleSheet*) mStyleSheets.ElementAt(i);
         sheet->SetOwningDocument(nsnull);
         NS_RELEASE(sheet);
     }
@@ -1613,7 +1614,7 @@ XULDocumentImpl::AddStyleSheet(nsIStyleSheet* aSheet)
     if (!aSheet)
         return;
 
-    if (aSheet == mAttrStyleSheet) {  // always first
+    if (aSheet == mAttrStyleSheet.get()) {  // always first
       mStyleSheets.InsertElementAt(aSheet, 0);
     }
     else if (aSheet == (nsIHTMLCSSStyleSheet*)mInlineStyleSheet) {  // always last
@@ -1636,11 +1637,11 @@ XULDocumentImpl::AddStyleSheet(nsIStyleSheet* aSheet)
     aSheet->GetEnabled(enabled);
 
     if (enabled) {
-        PRInt32 count, index;
+        PRInt32 count, i;
 
         count = mPresShells.Count();
-        for (index = 0; index < count; index++) {
-            nsIPresShell* shell = NS_STATIC_CAST(nsIPresShell*, mPresShells[index]);
+        for (i = 0; i < count; i++) {
+            nsIPresShell* shell = NS_STATIC_CAST(nsIPresShell*, mPresShells[i]);
             nsCOMPtr<nsIStyleSet> set;
             shell->GetStyleSet(getter_AddRefs(set));
             if (set) {
@@ -1649,11 +1650,11 @@ XULDocumentImpl::AddStyleSheet(nsIStyleSheet* aSheet)
         }
 
         // XXX should observers be notified for disabled sheets??? I think not, but I could be wrong
-        for (index = 0; index < mObservers.Count(); index++) {
-            nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(index);
+        for (i = 0; i < mObservers.Count(); i++) {
+            nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(i);
             observer->StyleSheetAdded(this, aSheet);
-            if (observer != (nsIDocumentObserver*)mObservers.ElementAt(index)) {
-              index--;
+            if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
+              i--;
             }
         }
     }
@@ -1672,11 +1673,11 @@ XULDocumentImpl::InsertStyleSheetAt(nsIStyleSheet* aSheet, PRInt32 aIndex, PRBoo
   aSheet->GetEnabled(enabled);
 
   PRInt32 count;
-  PRInt32 index;
+  PRInt32 i;
   if (enabled) {
     count = mPresShells.Count();
-    for (index = 0; index < count; index++) {
-      nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(index);
+    for (i = 0; i < count; i++) {
+      nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(i);
       nsCOMPtr<nsIStyleSet> set;
       shell->GetStyleSet(getter_AddRefs(set));
       if (set) {
@@ -1685,11 +1686,11 @@ XULDocumentImpl::InsertStyleSheetAt(nsIStyleSheet* aSheet, PRInt32 aIndex, PRBoo
     }
   }
   if (aNotify) {  // notify here even if disabled, there may have been others that weren't notified
-    for (index = 0; index < mObservers.Count(); index++) {
-      nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(index);
+    for (i = 0; i < mObservers.Count(); i++) {
+      nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(i);
       observer->StyleSheetAdded(this, aSheet);
-      if (observer != (nsIDocumentObserver*)mObservers.ElementAt(index)) {
-        index--;
+      if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
+        i--;
       }
     }
   }
@@ -1702,13 +1703,13 @@ XULDocumentImpl::SetStyleSheetDisabledState(nsIStyleSheet* aSheet,
 {
     NS_PRECONDITION(nsnull != aSheet, "null arg");
     PRInt32 count;
-    PRInt32 index = mStyleSheets.IndexOf((void *)aSheet);
+    PRInt32 i;
+
     // If we're actually in the document style sheet list
-    if (-1 != index) {
+    if (-1 != mStyleSheets.IndexOf((void *)aSheet)) {
         count = mPresShells.Count();
-        PRInt32 index;
-        for (index = 0; index < count; index++) {
-            nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(index);
+        for (i = 0; i < count; i++) {
+            nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(i);
             nsCOMPtr<nsIStyleSet> set;
             shell->GetStyleSet(getter_AddRefs(set));
             if (set) {
@@ -1722,11 +1723,11 @@ XULDocumentImpl::SetStyleSheetDisabledState(nsIStyleSheet* aSheet,
         }
     }  
 
-    for (index = 0; index < mObservers.Count(); index++) {
-        nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(index);
+    for (i = 0; i < mObservers.Count(); i++) {
+        nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(i);
         observer->StyleSheetDisabledStateChanged(this, aSheet, aDisabled);
-        if (observer != (nsIDocumentObserver*)mObservers.ElementAt(index)) {
-          index--;
+        if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
+          i--;
         }
     }
 }
@@ -2174,11 +2175,11 @@ XULDocumentImpl::GetPrevContent(const nsIContent *aContent) const
         nsIContent* parent; 
         aContent->GetParent(parent);
 
-        if (parent != nsnull && parent != mRootContent) {
-            PRInt32 index;
-            parent->IndexOf((nsIContent*)aContent, index);
-            if (index > 0)
-                parent->ChildAt(index-1, result);
+        if (parent && parent != mRootContent.get()) {
+            PRInt32 i;
+            parent->IndexOf((nsIContent*)aContent, i);
+            if (i > 0)
+                parent->ChildAt(i - 1, result);
             else
                 result = GetPrevContent(parent);
         }
@@ -2197,14 +2198,14 @@ XULDocumentImpl::GetNextContent(const nsIContent *aContent) const
         nsIContent* parent;
         aContent->GetParent(parent);
 
-        if (parent != nsnull && parent != mRootContent) {
-            PRInt32 index;
-            parent->IndexOf((nsIContent*)aContent, index);
+        if (parent != nsnull && parent != mRootContent.get()) {
+            PRInt32 i;
+            parent->IndexOf((nsIContent*)aContent, i);
 
             PRInt32 count;
             parent->ChildCount(count);
-            if (index+1 < count) {
-                parent->ChildAt(index+1, result);
+            if (i + 1 < count) {
+                parent->ChildAt(i + 1, result);
                 // Get first child down the tree
                 for (;;) {
                     PRInt32 n;
@@ -2347,12 +2348,12 @@ XULDocumentImpl::SplitProperty(nsIRDFResource* aProperty,
     aProperty->GetValue( getter_Copies(p) );
     nsAutoString uri(p);
 
-    PRInt32 index;
+    PRInt32 i;
 
     // First try to split the namespace using the rightmost '#' or '/'
     // character.
-    if ((index = uri.RFind('#')) < 0) {
-        if ((index = uri.RFind('/')) < 0) {
+    if ((i = uri.RFind('#')) < 0) {
+        if ((i = uri.RFind('/')) < 0) {
             *aNameSpaceID = kNameSpaceID_None;
             *aTag = NS_NewAtom(uri);
             return NS_OK;
@@ -2363,9 +2364,9 @@ XULDocumentImpl::SplitProperty(nsIRDFResource* aProperty,
     // prefix (that includes the trailing '#' or '/' character) and a
     // tag.
     nsAutoString tag;
-    PRInt32 count = uri.Length() - (index + 1);
+    PRInt32 count = uri.Length() - (i + 1);
     uri.Right(tag, count);
-    uri.Cut(index + 1, count);
+    uri.Cut(i + 1, count);
 
     // XXX XUL atoms seem to all be in lower case. HTML atoms are in
     // upper case. This sucks.
@@ -2497,7 +2498,7 @@ XULDocumentImpl::CreateContents(nsIContent* aElement)
         if (! builder)
             continue;
 
-        nsresult rv = builder->CreateContents(aElement);
+        rv = builder->CreateContents(aElement);
         NS_ASSERTION(NS_SUCCEEDED(rv), "error creating content");
         // XXX ignore error code?
 
@@ -3118,7 +3119,7 @@ XULDocumentImpl::CreatePopupDocument(nsIContent* aPopupElement, nsIDocument** aR
 NS_IMETHODIMP 
 XULDocumentImpl::SetFragmentRoot(nsIRDFResource* aFragmentRoot)
 {
-    if (aFragmentRoot != mFragmentRoot) {
+    if (aFragmentRoot != mFragmentRoot.get()) {
         mFragmentRoot = dont_QueryInterface(aFragmentRoot);
     }
     return NS_OK;
@@ -3724,10 +3725,10 @@ XULDocumentImpl::FindContent(const nsIContent* aStartNode,
     PRInt32 count;
     aStartNode->ChildCount(count);
 
-    PRInt32 index;
-    for(index = 0; index < count;index++) {
+    PRInt32 i;
+    for(i = 0; i < count; i++) {
         nsIContent* child;
-        aStartNode->ChildAt(index, child);
+        aStartNode->ChildAt(i, child);
         nsIContent* content = FindContent(child,aTest1,aTest2);
         if (content != nsnull) {
             NS_IF_RELEASE(child);
