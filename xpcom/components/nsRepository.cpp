@@ -25,6 +25,13 @@
 #include <iostream.h>
 #endif
 
+#ifdef	XP_MAC
+#include <Files.h>
+#include <Memory.h>
+#include <Processes.h>
+#include <TextUtils.h>
+#endif
+
 #include "plstr.h"
 #include "prlink.h"
 #include "prsystem.h"
@@ -100,7 +107,7 @@ public:
 	nsIFactory *factory;
 
 	FactoryEntry(const nsCID &aClass, const char *aLibrary,
-		PRTime lastModTime, PRUint64 fileSize);
+		PRTime lastModTime, PRUint32 fileSize);
 	FactoryEntry(const nsCID &aClass, nsIFactory *aFactory);
 	~FactoryEntry();
 	// DO NOT DELETE THIS. Many FactoryEntry(s) could be sharing the same Dll.
@@ -110,7 +117,7 @@ public:
 };
 
 FactoryEntry::FactoryEntry(const nsCID &aClass, const char *aLibrary,
-						   PRTime lastModTime, PRUint64 fileSize)
+						   PRTime lastModTime, PRUint32 fileSize)
 						   : cid(aClass), factory(NULL), dll(NULL)
 {
 	nsDllStore *dllCollection = nsRepository::dllStore;
@@ -387,11 +394,17 @@ static nsresult platformUnregister(NSQuickRegisterData regd, const char *aLibrar
 	
 	RKEY key;
 	NR_RegAddKey(hreg, classesKey, "CLSID", &key);
+	RKEY cidKey;
+	NR_RegAddKey(hreg, key, (char *)regd->CIDString, &cidKey);
+	char progID[MAXREGNAMELEN];
+	uint32 plen = sizeof(progID);
+	if (NR_RegGetEntryString(hreg, cidKey, "ProgID", progID, plen) == REGERR_OK)
+	{
+		NR_RegDeleteKey(hreg, classesKey, progID);
+	}
+
 	NR_RegDeleteKey(hreg, key, (char *)regd->CIDString);
 	
-	if (regd->progID)
-		NR_RegDeleteKey(hreg, classesKey, (char *)regd->progID);
-
 	RKEY xpcomKey;
 	if (NR_RegAddKey(hreg, ROOTKEY_COMMON, "Software/Netscape/XPCOM", &xpcomKey) != REGERR_OK)
 	{
@@ -613,6 +626,67 @@ nsresult nsRepository::FindFactory(const nsCID &aClass,
 	return res;
 }
 
+
+nsresult nsRepository::ProgIDToCLSID(const char *aProgID,
+                                   nsCID *aClass) 
+{
+	nsresult res = NS_ERROR_FACTORY_NOT_REGISTERED;
+#ifdef USE_REGISTRY
+	HREG hreg;
+
+	checkInitialized();
+	if (PR_LOG_TEST(logmodule, PR_LOG_ALWAYS))
+	{
+		PR_LogPrint("nsRepository: ProgIDToCLSID(%s)", aProgID);
+	}
+	
+	PR_ASSERT(aClass != NULL);
+	
+	REGERR err = NR_RegOpen(NULL, &hreg);
+	if (err != REGERR_OK)
+	{
+		return (NS_ERROR_FAILURE);
+	}
+
+	RKEY classesKey;
+	if (NR_RegAddKey(hreg, ROOTKEY_COMMON, "Classes", &classesKey) != REGERR_OK)
+	{
+		NR_RegClose(hreg);
+		return (NS_ERROR_FAILURE);
+	}
+
+	RKEY key;
+	err = NR_RegGetKey(hreg, classesKey, (char *)aProgID, &key);
+	if (err != REGERR_OK)
+	{
+		NR_RegClose(hreg);
+		return (NS_ERROR_FAILURE);
+	}
+
+	char cidString[MAXREGNAMELEN];
+	err = NR_RegGetEntryString(hreg, key, "CLSID", cidString, MAXREGNAMELEN);
+	if (err != REGERR_OK)
+	{
+		NR_RegClose(hreg);
+		return (NS_ERROR_FAILURE);
+	}
+
+	NR_RegClose(hreg);
+
+	if (!(aClass->Parse(cidString)))
+	{
+		return (NS_ERROR_FAILURE);
+	}
+	res = NS_OK;
+#endif /* USE_REGISTRY */
+
+	PR_LOG(logmodule, PR_LOG_WARNING, ("nsRepository: ProgIDToCLSID() %s",
+		res == NS_OK ? "succeeded" : "FAILED"));
+	
+	return res;
+}
+
+
 nsresult nsRepository::checkInitialized(void) 
 {
 	nsresult res = NS_OK;
@@ -684,6 +758,7 @@ nsresult nsRepository::CreateInstance(const nsCID &aClass,
 	PR_LOG(logmodule, PR_LOG_ALWAYS, ("\t\tCreateInstance() FAILED."));
 	return NS_ERROR_FACTORY_NOT_REGISTERED;
 }
+
 
 #if 0
 /*
@@ -840,6 +915,75 @@ nsresult nsRepository::RegisterFactory(const nsCID &aClass,
 	return NS_OK;
 }
 
+
+nsresult nsRepository::RegisterComponent(const nsCID &aClass,
+                                       const char *aClassName,
+                                       const char *aProgID,
+                                       const char *aLibrary,
+                                       PRBool aReplace,
+                                       PRBool aPersist)
+{
+	checkInitialized();
+	if (PR_LOG_TEST(logmodule, PR_LOG_ALWAYS))
+	{
+		char *buf = aClass.ToString();
+		PR_LogPrint("nsRepository: RegisterComponent(%s, %s, %s, %s), replace = %d, persist = %d.", buf, aClassName, aProgID, aLibrary, (int)aReplace, (int)aPersist);
+		delete [] buf;
+	}
+
+	nsIFactory *old = NULL;
+	FindFactory(aClass, &old);
+	
+	if (old != NULL)
+	{
+		old->Release();
+		if (!aReplace)
+		{
+			PR_LOG(logmodule, PR_LOG_WARNING,("\t\tFactory already registered."));
+			return NS_ERROR_FACTORY_EXISTS;
+		}
+		else
+		{
+			PR_LOG(logmodule, PR_LOG_WARNING,("\t\tdeleting registered Factory."));
+		}
+	}
+	
+	PR_EnterMonitor(monitor);
+	
+#ifdef USE_REGISTRY
+	if (aPersist == PR_TRUE)
+	{
+		// Add it to the registry
+		nsDll *dll = new nsDll(aLibrary);
+		// XXX temp hack until we get the dll to give us the entire
+		// XXX NSQuickRegisterClassData
+		NSQuickRegisterClassData cregd = {0};
+		cregd.CIDString = aClass.ToString();
+		cregd.className = aClassName;
+		cregd.progID = aProgID;
+		platformRegister(&cregd, dll);
+		delete [] (char *)cregd.CIDString;
+		delete dll;
+	} 
+	else
+#endif
+	{
+		nsDll *dll = new nsDll(aLibrary);
+		nsIDKey key(aClass);
+		factories->Put(&key, new FactoryEntry(aClass, aLibrary,
+			dll->GetLastModifiedTime(), dll->GetSize()));
+		delete dll;
+	}
+	
+	PR_ExitMonitor(monitor);
+	
+	PR_LOG(logmodule, PR_LOG_WARNING,
+		("\t\tFactory register succeeded."));
+	
+	return NS_OK;
+}
+
+
 nsresult nsRepository::UnregisterFactory(const nsCID &aClass,
                                          nsIFactory *aFactory)
 {
@@ -875,6 +1019,60 @@ nsresult nsRepository::UnregisterFactory(const nsCID &aClass,
 	
 	return res;
 }
+
+
+nsresult nsRepository::UnregisterComponent(const nsCID &aClass,
+                                         const char *aLibrary)
+{
+	checkInitialized();
+	if (PR_LOG_TEST(logmodule, PR_LOG_ALWAYS))
+	{
+		char *buf = aClass.ToString();
+		PR_LogPrint("nsRepository: Unregistering Factory.");
+		PR_LogPrint("nsRepository: + %s in \"%s\".", buf, aLibrary);
+		delete [] buf;
+	}
+	
+	nsIDKey key(aClass);
+	FactoryEntry *old = (FactoryEntry *) factories->Get(&key);
+	
+	nsresult res = NS_ERROR_FACTORY_NOT_REGISTERED;
+	
+	PR_EnterMonitor(monitor);
+	
+	if (old != NULL && old->dll != NULL)
+	{
+		if (old->dll->GetFullPath() != NULL &&
+#ifdef XP_UNIX
+			PL_strcasecmp(old->dll->GetFullPath(), aLibrary)
+#else
+			PL_strcmp(old->dll->GetFullPath(), aLibrary)
+#endif
+			)
+		{
+			FactoryEntry *entry = (FactoryEntry *) factories->Remove(&key);
+			delete entry;
+			res = NS_OK;
+		}
+#ifdef USE_REGISTRY
+		// XXX temp hack until we get the dll to give us the entire
+		// XXX NSQuickRegisterClassData
+		NSQuickRegisterClassData cregd = {0};
+		cregd.CIDString = aClass.ToString();
+		res = platformUnregister(&cregd, aLibrary);
+		delete [] (char *)cregd.CIDString;
+#endif
+	}
+	
+	PR_ExitMonitor(monitor);
+	
+	PR_LOG(logmodule, PR_LOG_WARNING,
+		("nsRepository: ! Factory unregister %s.", 
+		res == NS_OK ? "succeeded" : "failed"));
+	
+	return res;
+}
+
 
 nsresult nsRepository::UnregisterFactory(const nsCID &aClass,
                                          const char *aLibrary)
@@ -928,6 +1126,7 @@ nsresult nsRepository::UnregisterFactory(const nsCID &aClass,
 	return res;
 }
 
+
 static PRBool freeLibraryEnum(nsHashKey *aKey, void *aData, void* closure) 
 {
 	FactoryEntry *entry = (FactoryEntry *) aData;
@@ -980,15 +1179,71 @@ nsresult nsRepository::FreeLibraries(void)
 nsresult nsRepository::AutoRegister(NSRegistrationInstant when,
 									const char* pathlist)
 {
+#ifdef	XP_MAC
+	CInfoPBRec		catInfo;
+	Handle			pathH;
+	OSErr			err;
+	ProcessSerialNumber	psn;
+	ProcessInfoRec		pInfo;
+	FSSpec			appFSSpec;
+	long			theDirID, oldLen, newLen;
+	Str255			name;
+#endif
+
 	if (pathlist != NULL)
 	{
 		SyncComponentsInPathList(pathlist);
 	}
 	
+#ifdef	XP_MAC
+	// get info for the the current process to determine the directory its located in
+	if (!(err = GetCurrentProcess(&psn)))
+	{
+		if (!(err = GetProcessInformation(&psn, &pInfo)))
+		{
+			appFSSpec = *(pInfo.processAppSpec);
+			if ((pathH = NewHandle(1)) != NULL)
+			{
+				**pathH = '\0';						// initially null terminate the string
+				HNoPurge(pathH);
+				HUnlock(pathH);
+				theDirID = appFSSpec.parID;
+				do
+				{
+					catInfo.dirInfo.ioCompletion = NULL;
+					catInfo.dirInfo.ioNamePtr = (StringPtr)&name;
+					catInfo.dirInfo.ioVRefNum = appFSSpec.vRefNum;
+					catInfo.dirInfo.ioDrDirID = theDirID;
+					catInfo.dirInfo.ioFDirIndex = -1;		// -1 = query dir in ioDrDirID
+					if (!(err = PBGetCatInfoSync(&catInfo)))
+					{
+						// build up a Unix style pathname due to NSPR
+						// XXX Note: this breaks if any of the parent
+						// directories contain a "slash" (blame NSPR)
+
+						Munger(pathH, 0L, NULL, 0L, (const void *)&name[1], (long)name[0]);	// prepend dir name
+						Munger(pathH, 0L, NULL, 0L, "/", 1);					// prepend slash
+
+						// move up to parent directory
+						theDirID = catInfo.dirInfo.ioDrParID;
+					}
+				} while ((!err) && (catInfo.dirInfo.ioDrDirID != 2));	// 2 = root
+				if (!err)
+				{
+					HLock(pathH);
+					SyncComponentsInPathList((const char *)(*pathH));
+					HUnlock(pathH);
+				}
+				DisposeHandle(pathH);
+			}
+		}
+	}
+#else
 	//XXX get default pathlist from registry
 	//XXX Temporary hack. Registering components from current directory
 	const char *defaultPathList = ".";
 	SyncComponentsInPathList(defaultPathList);
+#endif
 	return (NS_OK);
 }
 
@@ -1031,7 +1286,11 @@ nsresult nsRepository::SyncComponentsInDir(const char *dir)
 	unsigned int n = strlen(fullname);
 	if (n+1 < sizeof(fullname))
 	{
+#ifdef	XP_WIN
 		fullname[n] = PR_GetDirectorySeparator();
+#else
+		fullname[n] = '/';
+#endif
 		n++;
 	}
 	char *filepart = fullname + n;
@@ -1058,18 +1317,19 @@ nsresult nsRepository::SyncComponentsInFile(const char *fullname)
 		".dso",	/* Unix */
 		".so",	/* Unix */
 		".sl",	/* Unix: HP */
-		"_dll",	/* Mac ? */
+		".shlb",	/* Mac ? */
 		".dlm",	/* new for all platforms */
 		NULL
 	};
 	
 	
-	PRFileInfo64 statbuf;
-	if (PR_GetFileInfo64(fullname, &statbuf) != PR_SUCCESS)
+	PRFileInfo statbuf;
+	if (PR_GetFileInfo(fullname,&statbuf) != PR_SUCCESS)
 	{
 		// Skip files that cannot be stat
 		return (NS_ERROR_FAILURE);
 	}
+
 	if (statbuf.type == PR_FILE_DIRECTORY)
 	{
 		// Cant register a directory
@@ -1129,7 +1389,7 @@ nsresult nsRepository::SyncComponentsInFile(const char *fullname)
 		
 		// We already have seen this dll. Check if this dll changed
 		if (LL_EQ(dll->GetLastModifiedTime(), statbuf.modifyTime) &&
-			LL_EQ(dll->GetSize(), statbuf.size))
+			(dll->GetSize() == statbuf.size))
 		{
 			// Dll hasn't changed. Skip.
 			PR_LOG(logmodule, PR_LOG_ALWAYS, 
@@ -1249,6 +1509,8 @@ nsresult nsRepository::SelfRegisterDll(nsDll *dll)
 {
 	// Precondition: dll is not loaded already
 	PR_ASSERT(dll->IsLoaded() == PR_FALSE);
+
+    nsresult res = NS_ERROR_FAILURE;
 	
 	if (dll->Load() == PR_FALSE)
 	{
@@ -1257,8 +1519,7 @@ nsresult nsRepository::SelfRegisterDll(nsDll *dll)
 	}
 	
 	nsRegisterProc regproc = (nsRegisterProc)dll->FindSymbol("NSRegisterSelf");
-	nsresult res;
-	
+
 	if (regproc == NULL)
 	{
 		// Smart registration
@@ -1266,15 +1527,20 @@ nsresult nsRepository::SelfRegisterDll(nsDll *dll)
 			NS_QUICKREGISTER_DATA_SYMBOL);
 		if (qr == NULL)
 		{
-			return(NS_ERROR_NO_INTERFACE);
+			res = NS_ERROR_NO_INTERFACE;
 		}
-		// XXX register the quick registration data on behalf of the dll
+        else
+        {
+            // XXX register the quick registration data on behalf of the dll
+         	// XXX for now return failure
+        	res = NS_ERROR_FAILURE;
+        }
 	}
 	else
 	{
 		// Call the NSRegisterSelfProc to enable dll registration
 		nsIServiceManager* serviceMgr = NULL;
-		nsresult res = nsServiceManager::GetGlobalServiceManager(&serviceMgr);
+		res = nsServiceManager::GetGlobalServiceManager(&serviceMgr);
 		if (res == NS_OK)
 		{
 			res = regproc(/* serviceMgr, */ dll->GetFullPath());
