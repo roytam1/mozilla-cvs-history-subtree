@@ -172,6 +172,7 @@ and to ensure that no more events will be delivered for that owner.
 
 /* For HWND */
 #if defined(_WIN32) && !defined(__MINGW32__)
+#include <windef.h>
 #elif defined(WIN16) || defined(__MINGW32__)
 #include <windows.h>
 #elif defined(XP_OS2)
