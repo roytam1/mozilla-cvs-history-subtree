@@ -21,7 +21,10 @@
 #define TH_UNICODE
 
 #include <stdlib.h>
+#if !defined(WINCE)
+/* XXX:  this include is not needed */
 #include <assert.h>
+#endif
 #include "th_char.h"
 #define th_isalpha(c)   (((c)>='a'&&(c)<='z')||((c)>='A'&&(c)<='Z'))
 #define th_isspace(c)   ((c)==' '||(c)=='\t')
