@@ -72,7 +72,6 @@ private:
   nsString    mLocale;
   nsString    mAppLocale;
   nsCString   mCharset;
-  nsCString   mSystemCharset;
   short       mScriptcode;
   short       mLangcode;
   short       mRegioncode;
