@@ -24,28 +24,28 @@ nsTime::nsTime(void)
 }
 
 
-nsTime::nsTime(PRTime t)
+nsTime::nsTime(const PRTime t)
     : fValue(t)
 {
 }
 
 
-nsTime::nsTime(nsTime& t)
+nsTime::nsTime(const nsTime& t)
     : fValue(t.fValue)
 {
 }
 
 
-nsTime&
-nsTime::operator =(nsTime& t)
+const nsTime&
+nsTime::operator =(const nsTime& t)
 {
     fValue = t.fValue;
     return *this;
 }
 
 
-nsTime&
-nsTime::operator =(PRTime t)
+const nsTime&
+nsTime::operator =(const PRTime t)
 {
     fValue = t;
     return *this;
@@ -68,8 +68,8 @@ nsTime::ToMSec(void)
 }
 
 
-nsTime
-operator +(nsTime& t1, nsTime& t2)
+const nsTime
+operator +(const nsTime& t1, const nsTime& t2)
 {
     nsTime result;
     LL_ADD(result.fValue, t1.fValue, t2.fValue);
@@ -78,8 +78,8 @@ operator +(nsTime& t1, nsTime& t2)
 
 
 
-nsTime
-operator -(nsTime& t1, nsTime& t2)
+const nsTime
+operator -(const nsTime& t1, const nsTime& t2)
 {
     nsTime result;
     LL_SUB(result.fValue, t1.fValue, t2.fValue);
@@ -89,7 +89,7 @@ operator -(nsTime& t1, nsTime& t2)
 
 
 
-nsTime
+const nsTime
 nsTime::FromMSec(PRUint32 msec)
 {
     PRTime usec;
@@ -104,16 +104,16 @@ nsTime::FromMSec(PRUint32 msec)
 }
 
 
-nsTime&
-nsTime::operator -=(nsTime& t)
+const nsTime&
+nsTime::operator -=(const nsTime& t)
 {
     LL_SUB(fValue, fValue, t.fValue);
     return *this;
 }
 
 
-nsTime&
-nsTime::operator -=(PRTime t)
+const nsTime&
+nsTime::operator -=(const PRTime t)
 {
     LL_SUB(fValue, fValue, t);
     return *this;
@@ -121,16 +121,16 @@ nsTime::operator -=(PRTime t)
 
 
 
-nsTime&
-nsTime::operator +=(nsTime& t)
+const nsTime&
+nsTime::operator +=(const nsTime& t)
 {
     LL_ADD(fValue, fValue, t.fValue);
     return *this;
 }
 
 
-nsTime&
-nsTime::operator +=(PRTime t)
+const nsTime&
+nsTime::operator +=(const PRTime t)
 {
     LL_ADD(fValue, fValue, t);
     return *this;
