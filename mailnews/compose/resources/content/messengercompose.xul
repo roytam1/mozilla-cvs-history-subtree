@@ -406,7 +406,7 @@
        <spacer flex="1"/>
        <hbox id="throbber-box" align="center">
          <button id="navigator-throbber" 
-               oncommand="goClickThrobber('compose.throbber.url')" tooltiptext="&throbber.tooltip;">
+               oncommand="loadThrobberUrl('compose.throbber.url')" tooltiptext="&throbber.tooltip;">
            <observes element="broadcaster_throbber" attribute="busy"/>
          </button>
        </hbox>

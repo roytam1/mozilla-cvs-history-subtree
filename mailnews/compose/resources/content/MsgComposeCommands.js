@@ -2886,3 +2886,12 @@ function SwitchElementFocus(event)
   }
 }
 
+function loadThrobberUrl(urlPref)
+{
+  var url;
+  url = sPrefs.getComplexValue(urlPref, Components.interfaces.nsIPrefLocalizedString).data;
+  var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance();
+  messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
+  messenger.loadURL(window, url);
+}
+
