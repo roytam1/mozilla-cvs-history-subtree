@@ -45,6 +45,7 @@ REQUIRES	= xpcom \
 		  necko \
 		  appshell \
 		  rdf \
+		  exthandler \
 		  $(NULL)
 
 CPPSRCS		= \

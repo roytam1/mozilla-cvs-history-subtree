@@ -92,6 +92,13 @@ SHARED_LIBRARY_LIBS += \
 	$(DIST)/lib/$(LIB_PREFIX)history_s.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)urlbarhistory_s.$(LIB_SUFFIX) \
   $(NULL)
+
+ifeq ($(OS_ARCH),WINNT)
+SHARED_LIBRARY_LIBS += \
+	$(DIST)/lib/$(LIB_PREFIX)alerts_s.$(LIB_SUFFIX) \
+	$(NULL)
+endif
+
 endif
 
 LOCAL_INCLUDES	= \
@@ -110,6 +117,13 @@ LOCAL_INCLUDES += \
 	-I$(srcdir)/../urlbarhistory/src \
   -I$(srcdir)/../download-manager/src \
   $(NULL)
+
+ifeq ($(OS_ARCH),WINNT)
+LOCAL_INCLUDES += \
+	-I$(srcdir)/../alerts/src \
+  $(NULL)
+endif
+
 endif
 
 ifeq ($(OS_ARCH),WINNT)
@@ -117,7 +131,6 @@ ifeq ($(OS_ARCH),WINNT)
 SHARED_LIBRARY_LIBS += \
 	$(DIST)/lib/$(LIB_PREFIX)winhooks_s.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)urlwidgt_s.$(LIB_SUFFIX) \
-	$(DIST)/lib/$(LIB_PREFIX)alerts_s.$(LIB_SUFFIX) \
 	$(NULL)
 
 
@@ -126,7 +139,6 @@ OS_LIBS	+= $(call EXPAND_LIBNAME,ole32 shell32)
 LOCAL_INCLUDES	+= \
 	-I$(srcdir)/../urlwidget \
 	-I$(srcdir)/../winhooks \
-        -I$(srcdir)/../alerts/src \
 	$(NULL)
 endif
 

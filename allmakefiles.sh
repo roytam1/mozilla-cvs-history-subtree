@@ -875,7 +875,6 @@ extensions/transformiix/source/base/Makefile
 extensions/transformiix/source/main/Makefile
 extensions/transformiix/source/xml/dom/standalone/Makefile
 extensions/transformiix/source/xml/dom/Makefile
-extensions/transformiix/source/xml/dom/mozImpl/Makefile
 extensions/transformiix/source/xml/parser/Makefile
 extensions/transformiix/source/xml/Makefile
 extensions/transformiix/source/xpath/Makefile
@@ -936,7 +935,10 @@ chrome/src/Makefile
 chrome/tools/Makefile
 chrome/tools/chromereg/Makefile
 toolkit/Makefile
+toolkit/content/Makefile
 toolkit/content/buildconfig.html
+toolkit/locale/Makefile
+toolkit/obsolete/Makefile
 toolkit/components/autocomplete/Makefile
 toolkit/components/autocomplete/public/Makefile
 toolkit/components/autocomplete/src/Makefile
@@ -1324,6 +1326,11 @@ for extension in $MOZ_EXTENSIONS; do
             extensions/spellcheck/myspell/Makefile
             extensions/spellcheck/myspell/dictionaries/Makefile
             extensions/spellcheck/src/Makefile
+            " ;;
+        tasks ) MAKEFILES_extensions="$MAKEFILES_extensions
+            extensions/tasks/Makefile
+            extensions/tasks/resources/content/contents.rdf
+            extensions/tasks/resources/locale/en-US/contents.rdf
             " ;;
         transformiix ) MAKEFILES_extensions="$MAKEFILES_extensions
             $MAKEFILES_transformiix"

@@ -42,12 +42,12 @@ FILES		= \
 	dmoz.src            \
 	google.gif          \
 	google.src          \
+	jeeves.gif          \
+	jeeves.src          \
 	lxrmozilla.gif      \
 	lxrmozilla.src      \
 	mozilla.gif         \
 	mozilla.src         \
-	NetscapeSearch.gif  \
-	NetscapeSearch.src  \
 	$(NULL)
 endif
 
