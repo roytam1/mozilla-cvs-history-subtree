@@ -543,6 +543,12 @@ nsBlockFrame::IsContainingBlock() const
 //////////////////////////////////////////////////////////////////////
 // Reflow methods
 
+#define LINE_REFLOW_OK        0
+#define LINE_REFLOW_STOP      1
+#define LINE_REFLOW_REDO      2
+// a frame was complete, but truncated and not at the top of a page
+#define LINE_REFLOW_TRUNCATED 3
+
 /* virtual */ void
 nsBlockFrame::MarkIntrinsicWidthsDirty()
 {
@@ -600,29 +606,20 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
           break;
       }
 
-      nsLineLayout ll(GetPresContext(), nsnull /*space manager*/,
-                      &iro->rs, PR_TRUE);
-      ll.Init(&iro->brs, iro->brs.mMinLineHeight, lineNumber);
-      ll.BeginLineReflow(0, 0, NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE,
-                         PR_FALSE, PR_FALSE);
+      iro->brs.mLineNumber = lineNumber;
 
-      // XXX Unfortunately we need to know this before reflowing the first
-      // inline frame in the line. FIX ME.
-      if ((0 == ll.GetLineNumber()) &&
-          (NS_BLOCK_HAS_FIRST_LETTER_STYLE & mState)) {
-        ll.SetFirstLetterStyleOK(PR_TRUE);
-      }
-      nsIFrame *frame = line->mFirstChild;
-      for (PRInt32 i = 0; i < line->GetChildCount();
-           i++, frame = frame->GetNextSibling()) {
-        nsReflowStatus frameReflowStatus;
-        PRBool pushedFrame;
-        nsresult rv = ll.ReflowFrame(frame, frameReflowStatus,
-                                     nsnull, pushedFrame);
-        if (NS_FAILED(rv)) {
-          break;
-        }
-      }
+      PRBool keepGoing = PR_FALSE;
+      PRUint8 lineReflowStatus = LINE_REFLOW_REDO;
+      nsLineLayout ll(iro->brs.mPresContext, nsnull /* space manager */,
+                              &iro->rs, PR_TRUE);
+      ll.Init(&iro->brs, iro->brs.mMinLineHeight, lineNumber);
+      nsresult rv = DoReflowInlineFrames(iro->brs, ll, line,
+                                         &keepGoing, &lineReflowStatus);
+      ll.EndLineReflow();
+      NS_ASSERTION(NS_SUCCEEDED(rv), "DoReflowInlineFrames failed");
+      NS_ASSERTION(keepGoing, "got !keepGoing on intrinsic width pass");
+      NS_ASSERTION(lineReflowStatus == LINE_REFLOW_OK,
+                   "bad line reflow status for intrinsic width pass");
 
       line_min = ll.GetLineMaxElementWidth(line);
       line_pref = line->mBounds.XMost();
@@ -2835,12 +2832,6 @@ nsBlockFrame::ReflowBlockFrame(nsBlockReflowState& aState,
   return rv;
 }
 
-#define LINE_REFLOW_OK        0
-#define LINE_REFLOW_STOP      1
-#define LINE_REFLOW_REDO      2
-// a frame was complete, but truncated and not at the top of a page
-#define LINE_REFLOW_TRUNCATED 3
-
 nsresult
 nsBlockFrame::ReflowInlineFrames(nsBlockReflowState& aState,
                                  line_iterator aLine,
@@ -2911,45 +2902,51 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
                                    PRBool* aKeepReflowGoing,
                                    PRUint8* aLineReflowStatus)
 {
-  // Forget all of the floats on the line
-  aLine->FreeFloats(aState.mFloatCacheFreeList);
-  aState.mFloatCombinedArea.SetRect(0, 0, 0, 0);
+  if (!aLineLayout.GetIntrinsicWidthPass()) {
+    // Forget all of the floats on the line
+    aLine->FreeFloats(aState.mFloatCacheFreeList);
+    aState.mFloatCombinedArea.SetRect(0, 0, 0, 0);
 
-  // Setup initial coordinate system for reflowing the inline frames
-  // into. Apply a previous block frame's bottom margin first.
-  if (ShouldApplyTopMargin(aState, aLine)) {
-    aState.mY += aState.mPrevBottomMargin.get();
-  }
-  aState.GetAvailableSpace();
-  PRBool impactedByFloats = aState.IsImpactedByFloat() ? PR_TRUE : PR_FALSE;
-  aLine->SetLineIsImpactedByFloat(impactedByFloats);
+    // Setup initial coordinate system for reflowing the inline frames
+    // into. Apply a previous block frame's bottom margin first.
+    if (ShouldApplyTopMargin(aState, aLine)) {
+      aState.mY += aState.mPrevBottomMargin.get();
+    }
+    aState.GetAvailableSpace();
+    PRBool impactedByFloats = aState.IsImpactedByFloat() ? PR_TRUE : PR_FALSE;
+    aLine->SetLineIsImpactedByFloat(impactedByFloats);
 #ifdef REALLY_NOISY_REFLOW
-  printf("nsBlockFrame::DoReflowInlineFrames %p impacted = %d\n",
-         this, impactedByFloats);
+    printf("nsBlockFrame::DoReflowInlineFrames %p impacted = %d\n",
+           this, impactedByFloats);
 #endif
 
-  const nsMargin& borderPadding = aState.BorderPadding();
-  nscoord x = aState.mAvailSpaceRect.x + borderPadding.left;
-  nscoord availWidth = aState.mAvailSpaceRect.width;
-  nscoord availHeight;
-  if (aState.GetFlag(BRS_UNCONSTRAINEDHEIGHT)) {
-    availHeight = NS_UNCONSTRAINEDSIZE;
-  }
-  else {
-    /* XXX get the height right! */
-    availHeight = aState.mAvailSpaceRect.height;
-  }
+    const nsMargin& borderPadding = aState.BorderPadding();
+    nscoord x = aState.mAvailSpaceRect.x + borderPadding.left;
+    nscoord availWidth = aState.mAvailSpaceRect.width;
+    nscoord availHeight;
+    if (aState.GetFlag(BRS_UNCONSTRAINEDHEIGHT)) {
+      availHeight = NS_UNCONSTRAINEDSIZE;
+    }
+    else {
+      /* XXX get the height right! */
+      availHeight = aState.mAvailSpaceRect.height;
+    }
 #ifdef IBMBIDI
-  nscoord rightEdge = aState.mReflowState.mRightEdge;
-  if ( (rightEdge != NS_UNCONSTRAINEDSIZE)
-       && (availWidth < rightEdge) ) {
-    availWidth = rightEdge;
-  }
+    nscoord rightEdge = aState.mReflowState.mRightEdge;
+    if ( (rightEdge != NS_UNCONSTRAINEDSIZE)
+         && (availWidth < rightEdge) ) {
+      availWidth = rightEdge;
+    }
 #endif // IBMBIDI
-  aLineLayout.BeginLineReflow(x, aState.mY,
-                              availWidth, availHeight,
-                              impactedByFloats,
-                              PR_FALSE /*XXX isTopOfPage*/);
+    aLineLayout.BeginLineReflow(x, aState.mY,
+                                availWidth, availHeight,
+                                impactedByFloats,
+                                PR_FALSE /*XXX isTopOfPage*/);
+  } else {
+    aLineLayout.BeginLineReflow(0, 0,
+                                NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE,
+                                PR_FALSE, PR_FALSE);
+  }
 
   // XXX Unfortunately we need to know this before reflowing the first
   // inline frame in the line. FIX ME.
@@ -3424,6 +3421,9 @@ nsBlockFrame::PlaceLine(nsBlockReflowState& aState,
   // Trim extra white-space from the line before placing the frames
   aLineLayout.TrimTrailingWhiteSpace();
 
+  if (aLineLayout.GetIntrinsicWidthPass())
+    return PR_FALSE;
+
   // Vertically align the frames on this line.
   //
   // According to the CSS2 spec, section 12.6.1, the "marker" box
@@ -3543,11 +3543,6 @@ nsBlockFrame::PlaceLine(nsBlockReflowState& aState,
 
   // See if the line fit. If it doesn't we need to push it. Our first
   // line will always fit.
-
-  // If we're just updating the maximum width then we don't care if it
-  // fits; we'll assume it does, so that the maximum width will get
-  // updated below. The line will be reflowed again and pushed then
-  // if necessary.
   if (mLines.front() != aLine &&
       newY > aState.mBottomEdge &&
       aState.mBottomEdge != NS_UNCONSTRAINEDSIZE) {

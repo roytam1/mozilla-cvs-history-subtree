@@ -92,6 +92,8 @@ public:
     return mLineNumber;
   }
 
+  PRBool GetIntrinsicWidthPass() const { return mIntrinsicWidthPass; }
+
   void BeginLineReflow(nscoord aX, nscoord aY,
                        nscoord aWidth, nscoord aHeight,
                        PRBool aImpactedByFloats,
