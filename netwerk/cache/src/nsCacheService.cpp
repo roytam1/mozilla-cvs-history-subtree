@@ -53,7 +53,7 @@
 #endif
 
 #define DISK_CACHE_ENABLE_PREF      "browser.cache.disk.enable"
-#define DISK_CACHE_DIR_PREF         "browser.cache.disk.directory"
+#define DISK_CACHE_DIR_PREF         "browser.cache.disk.parent_directory"
 #define DISK_CACHE_CAPACITY_PREF    "browser.cache.disk.capacity"
 
 #define MEMORY_CACHE_ENABLE_PREF    "browser.cache.memory.enable"
