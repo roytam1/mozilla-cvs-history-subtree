@@ -91,9 +91,8 @@ nsHTMLReflowState::ReasonToString(nsReflowReason aReason)
 
 // Initialize a <b>root</b> reflow state with a rendering context to
 // use for measuring things.
-nsHTMLReflowState::nsHTMLReflowState(nsPresContext*      aPresContext,
+nsHTMLReflowState::nsHTMLReflowState(nsPresContext*       aPresContext,
                                      nsIFrame*            aFrame,
-                                     nsReflowReason       aReason,
                                      nsIRenderingContext* aRenderingContext,
                                      const nsSize&        aAvailableSpace)
   : mReflowDepth(0)
@@ -101,8 +100,6 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*      aPresContext,
   NS_PRECONDITION(nsnull != aRenderingContext, "no rendering context");
   parentReflowState = nsnull;
   frame = aFrame;
-  reason = aReason;
-  path = nsnull;
   availableWidth = aAvailableSpace.width;
   availableHeight = aAvailableSpace.height;
   rendContext = aRenderingContext;
@@ -120,40 +117,6 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*      aPresContext,
   mFlags.mVisualBidiFormControl = IsBidiFormControl(aPresContext);
   mRightEdge = NS_UNCONSTRAINEDSIZE;
 #endif
-}
-
-// Initialize a <b>root</b> reflow state for an <b>incremental</b>
-// reflow.
-nsHTMLReflowState::nsHTMLReflowState(nsPresContext*      aPresContext,
-                                     nsIFrame*            aFrame,
-                                     nsReflowPath*        aReflowPath,
-                                     nsIRenderingContext* aRenderingContext,
-                                     const nsSize&        aAvailableSpace)
-  : mReflowDepth(0)
-{
-  NS_PRECONDITION(nsnull != aRenderingContext, "no rendering context");  
-
-  reason = eReflowReason_Incremental;
-  path = aReflowPath;
-  parentReflowState = nsnull;
-  frame = aFrame;
-  availableWidth = aAvailableSpace.width;
-  availableHeight = aAvailableSpace.height;
-  rendContext = aRenderingContext;
-  mSpaceManager = nsnull;
-  mLineLayout = nsnull;
-  mFlags.mSpecialHeightReflow = PR_FALSE;
-  mFlags.mIsTopOfPage = PR_FALSE;
-  mFlags.mNextInFlowUntouched = PR_FALSE;
-  mFlags.mHasClearance = PR_FALSE;
-  mDiscoveredClearance = nsnull;
-  mPercentHeightObserver = nsnull;
-  mPercentHeightReflowInitiator = nsnull;
-  Init(aPresContext);
-#ifdef IBMBIDI
-  mFlags.mVisualBidiFormControl = IsBidiFormControl(aPresContext);
-  mRightEdge = NS_UNCONSTRAINEDSIZE;
-#endif // IBMBIDI
 }
 
 static PRBool CheckNextInFlowParenthood(nsIFrame* aFrame, nsIFrame* aParent)

@@ -249,15 +249,6 @@ struct nsHTMLReflowState {
   // use for measuring things.
   nsHTMLReflowState(nsPresContext*          aPresContext,
                     nsIFrame*                aFrame,
-                    nsReflowReason           aReason,
-                    nsIRenderingContext*     aRenderingContext,
-                    const nsSize&            aAvailableSpace);
-
-  // Initialize a <b>root</b> reflow state for an <b>incremental</b>
-  // reflow.
-  nsHTMLReflowState(nsPresContext*          aPresContext,
-                    nsIFrame*                aFrame,
-                    nsReflowPath*            aReflowPath,
                     nsIRenderingContext*     aRenderingContext,
                     const nsSize&            aAvailableSpace);
 
