@@ -49,7 +49,6 @@ LIBS		= \
 		-lxpcom \
 		-lneckoutil_s \
 		-lxp \
-		-ljsurl \
 		-lmozdbm \
 		$(LOST_SYM_LIBS) \
 		$(NSPR_LIBS) \
