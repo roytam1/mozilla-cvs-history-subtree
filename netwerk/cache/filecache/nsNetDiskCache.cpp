@@ -126,20 +126,26 @@ nsNetDiskCache::Init(void)
   if(pref) {
     PRInt32 nTemp = 0 ;
 
+    /*
     if(NS_SUCCEEDED(pref->GetIntPref(DISK_CACHE_PREF, &nTemp))) {
-      printf("cache size is %d\n", nTemp) ;
-      m_Capacity = 1024*nTemp ;
-    } else {
+      printf("cache size is %d bytes\n", nTemp) ;
+      m_Capacity = nTemp;
+    } else
+    */
+
+    {
       m_Capacity = DISK_CACHE_SIZE_DEFAULT ;
       printf("using default capacity value, %d bytes\n", m_Capacity) ;
     }
 
+    /*
     rv = pref->CopyCharPref(CACHE_DIR_PREF, &tempPref) ;
     if (NS_SUCCEEDED(rv)) {
       printf("cache dir is %s\n", tempPref) ;
       m_pDiskCacheFolder->SetUnixStyleFilePath(tempPref) ;
 	  PR_Free(tempPref) ;
-    } else {
+    } else */
+    {
       m_pDiskCacheFolder->SetUnixStyleFilePath("/tmp") ;
       printf("using default folder, /tmp\n") ;
     }
@@ -456,8 +462,8 @@ nsNetDiskCache::GetStorageInUse(PRUint32 *aStorageInUse)
   // or even every ten written records.
 
   // add the size of the db.
-  m_DBFile->GetFileSize(&len) ;
-  total_size += len ;
+  //  m_DBFile->GetFileSize(&len) ;
+  //  total_size += len ;
 
   // we need size in kB
   total_size = total_size >> 10 ;
