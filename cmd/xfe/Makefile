@@ -281,26 +281,16 @@ BASIC_LIBS	+= \
 
 ifdef MOZ_MAIL_NEWS
 BASIC_LIBS	+= \
-		  $(DIST)/lib/libaddr.a \
-		  $(NULL)
-endif
-
-ifdef MOZ_MAIL_NEWS
-BASIC_LIBS	+= \
-		  $(DIST)/lib/libmime.a \
-		  $(DIST)/lib/libnet.a \
 		  $(DIST)/lib/libmozmsg.a \
 		  $(DIST)/lib/libmsg.a \
+		  $(DIST)/lib/libmime.a \
+		  $(DIST)/lib/libnet.a \
 		  $(DIST)/lib/libjulian.a \
 		  $(DIST)/lib/libnscnv30.a \
 		  $(DIST)/lib/libnsuni30.a \
 		  $(DIST)/lib/libnsfmt30.a \
-		  $(NULL)
-endif
-
-ifdef MOZ_MAIL_NEWS
-BASIC_LIBS	+= \
 		  $(DIST)/lib/libneo.a \
+		  $(DIST)/lib/libaddr.a \
 		  $(NULL)
 endif
 
