@@ -22,6 +22,7 @@
    For more information on RDF, look at the RDF section of www.mozilla.org
 */
 
+#include "atalk.h"
 #include "fs2rdf.h"
 #include "glue.h"
 
@@ -33,87 +34,51 @@ extern	int	RDF_UNABLETODELETEFILE, RDF_UNABLETODELETEFOLDER;
 char *
 getVolume(int volNum)
 {
-	char		*buffer = NULL;
-#ifdef XP_WIN
-	UINT driveType;
-#endif
-
-#ifdef	XP_MAC
-	ParamBlockRec		pb;
-	Str32			str;
-#endif
-
-	if ((buffer = getMem(64L)) == NULL)
-	{
-		return(NULL);
-	}
+	char			*url = NULL;
 
 #ifdef	XP_MAC	
+	ParamBlockRec		pb;
+	Str255			str;
+	char			*encoded;
+
 	pb.volumeParam.ioCompletion = NULL;
 	pb.volumeParam.ioVolIndex = volNum + 1;
 	pb.volumeParam.ioNamePtr = (void *)str;
 	if (!PBGetVInfo(&pb,FALSE))	{
-		str[1+(unsigned)str[0]] = '\0';
-		strcpy(buffer, "file:///");
-		strcat(buffer, NET_Escape((char *)&str[1], URL_XALPHAS));  /* URL_PATH */
-		strcat(buffer,"/");
-		return(buffer);
+		/* network volumes (via AFP) shouldn't be represented by file URLs */
+		if (!isAFPVolume(pb.volumeParam.ioVRefNum) == PR_TRUE)
+		{
+			str[1+(unsigned)str[0]] = '\0';
+			if ((encoded = NET_Escape((char *)&str[1], URL_XALPHAS)) != NULL)
+			{
+				url = PR_smprintf("file:///%s/", encoded);
+				XP_FREE(encoded);
+			}
 		}
+	}
 #endif
 
 #ifdef	XP_WIN
+	UINT			driveType;
+	char			str[32];
+
 	/* Windows-specific method for getting drive info without touching the drives (Dave H.) */
-	sprintf(buffer, "%c:\\", volNum + 'A');
-	driveType = GetDriveType(buffer);
+	sprintf(str, "%c:\\", volNum + 'A');
+	driveType = GetDriveType(str);
 	if (driveType != DRIVE_UNKNOWN && driveType != DRIVE_NO_ROOT_DIR)
 	{
-		sprintf( buffer, "file:///%c:/", volNum + 'A');
-		return buffer;
+		url = PR_smprintf("file:///%c:/", volNum + 'A');
 	}
 #endif
 
 #ifdef  XP_UNIX
-    if(volNum == 0) {
-      sprintf(buffer, "file:///");
-      return buffer;
-    }
+	if (volNum == 0)
+	{
+		url = PR_smprintf("file:///");
+	}
 #endif
 
-	if (buffer != NULL)
-	{
-		freeMem(buffer);
-	}
-	return(NULL);
-}
-
-
-
-void
-buildVolumeList(RDF_Resource fs)
-{
-	RDF_Resource	vol;
-	char		*volName;
-	int		volNum=0;
-
-	while (volNum < 26)
-	{
-		if ((volName = getVolume(volNum++)) != NULL)
-		{
-			if ((vol = RDF_GetResource(NULL, volName, 1)) != NULL)
-			{
-				setContainerp(vol, 1);
-				setResourceType(vol, LFS_RT);
-				remoteStoreAdd(gRemoteStore, vol, gCoreVocab->RDF_parent,
-					fs, RDF_RESOURCE_TYPE, 1);
-			}
-		}
-	}
-
-#ifdef	XP_MAC
-	remoteStoreAdd(gRemoteStore, gNavCenter->RDF_Appletalk,
-		gCoreVocab->RDF_parent, fs, RDF_RESOURCE_TYPE, 1);
-#endif
-
+	return(url);
 }
 
 
@@ -121,15 +86,13 @@ buildVolumeList(RDF_Resource fs)
 PRDir *
 OpenDir(char *name)
 {
+	PRDir		*d = NULL;
+
 	if (startsWith("file:///", name))
 	{
-		/* return PR_OpenDir(&name[FS_URL_OFFSET]); */
-		return CallPROpenDirUsingFileURL(name);
+		d = CallPROpenDirUsingFileURL(name);
 	}
-	else
-	{
-		return(NULL);
-	}
+	return(d);
 }
 
 
@@ -137,18 +100,20 @@ OpenDir(char *name)
 RDFT
 MakeLFSStore (char* url)
 {
-  int		volNum=0;
-  RDFT ntr = (RDFT)getMem(sizeof(struct RDF_TranslatorStruct));
-  ntr->assert = NULL;
-  ntr->unassert = fsUnassert;
-  ntr->getSlotValue = fsGetSlotValue;
-  ntr->getSlotValues = fsGetSlotValues;
-  ntr->hasAssertion = fsHasAssertion;
-  ntr->nextValue = fsNextValue;
-  ntr->disposeCursor = fsDisposeCursor;
-  buildVolumeList(gNavCenter->RDF_LocalFiles);
-  ntr->url = copyString(url);
-  return ntr;
+	RDFT		ntr;
+
+	if ((ntr = (RDFT)getMem(sizeof(struct RDF_TranslatorStruct))) != NULL)
+	{
+		ntr->assert = NULL;
+		ntr->unassert = fsUnassert;
+		ntr->getSlotValue = fsGetSlotValue;
+		ntr->getSlotValues = fsGetSlotValues;
+		ntr->hasAssertion = fsHasAssertion;
+		ntr->nextValue = fsNextValue;
+		ntr->disposeCursor = fsDisposeCursor;
+		ntr->url = copyString(url);
+	}
+	return(ntr);
 }
 
 
@@ -346,7 +311,6 @@ fsHasAssertion (RDFT rdf, RDF_Resource u, RDF_Resource s, void* v,
 			return(0);
 		}
 
-
 		while (de = PR_ReadDir(d, n++))
 		{
 			if (strcmp(name, de->name) == 0)
@@ -372,123 +336,100 @@ fsHasAssertion (RDFT rdf, RDF_Resource u, RDF_Resource s, void* v,
 void *
 fsGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, PRBool inversep,  PRBool tv)
 {
-  if ((s == gCoreVocab->RDF_parent) && (type == RDF_RESOURCE_TYPE) && (fsUnitp(u)) && tv) {
-    if (inversep) {
-      char* filePathname =  resourceID(u);
-      size_t n = revCharSearch(XP_DIRECTORY_SEPARATOR, filePathname);
-      char nname[100];
-      PRDir *d;
-      PRBool ans = 0;
-      memcpy((char*)nname, filePathname, n);
-      d = OpenDir(nname);
-      ans = (d != NULL);
-      PR_CloseDir(d);
-      if (ans) {
-	RDF_Resource r = RDF_GetResource(NULL, nname, 1);
-	setResourceType(r, LFS_RT);
-	setContainerp(r, 1);
-	return r;
-      } else return NULL;
-    } else {
-      PRDir* d = OpenDir(resourceID(u));
-      PRDirEntry* de = PR_ReadDir(d, PR_SKIP_BOTH);
-      if (de != NULL) {
-	char nname[512];
+	PRBool			ans = PR_FALSE;
+	PRDir			*d;
+	PRFileInfo		fn;
+	PRStatus		err;
+	PRTime			oneMillion, dateVal;
+	RDF_Resource		r;
+	char			buffer[128], *pathname, *url;
+	void			*retVal = NULL;
+	int			len,n;
+	int32			creationTime, modifyTime;
+	struct tm		*time;
 
+	if (!startsWith("file://", resourceID(u)))	return(NULL);
 
-	sprintf(nname, "%s%c%s",  resourceID(u), XP_DIRECTORY_SEPARATOR, de->name);
-	PR_CloseDir(d);
-	return CreateFSUnit(nname, false);
-      } else {
-	PR_CloseDir(d);
-	return NULL;
-      }
-    }
-  } else if ((s == gCoreVocab->RDF_name) && (type == RDF_STRING_TYPE) && (tv) && (fsUnitp(u))) {
-    char *pathname, *name = NULL;
-    int16 n,len;
-
-  	if (pathname = copyString(resourceID(u))) {
-  	  len = strlen(pathname);
-  	  if (pathname[len-1] == '/')  pathname[--len] = '\0';
-  	  n = revCharSearch('/', pathname);
-  	  name = unescapeURL(&pathname[n+1]);
-  	  freeMem(pathname);
-  	}
-    return(name);
-  } else if ((s == gWebData->RDF_size) && (type == RDF_INT_TYPE) && (tv) && (fsUnitp(u))) {
-    PRFileInfo fn;
-    PRStatus err;
-    char* filePathname =  resourceID(u);
-    err=PR_GetFileInfo(&filePathname[FS_URL_OFFSET], &fn);
-    if (err != -1) return (void *)fn.size;
-    else return NULL;
-  } else if ((s == gWebData->RDF_lastModifiedDate) && (type == RDF_STRING_TYPE) && (tv) && (fsUnitp(u))) {
-
-    PRFileInfo fn;
-    PRStatus err;
-    char* filePathname =  resourceID(u);
-    err = PR_GetFileInfo(&filePathname[FS_URL_OFFSET], &fn);
-    if (err != -1)
+	if ((s == gCoreVocab->RDF_name) && (type == RDF_STRING_TYPE) && (tv))
 	{
-		char			buffer[128];
-		struct tm		*time;
-		PRTime			oneMillion, dateVal;
-		int32			modifyTime;
-
-	LL_I2L(oneMillion, PR_USEC_PER_SEC);
-	LL_DIV(dateVal, fn.modifyTime, oneMillion);
-	LL_L2I(modifyTime, dateVal);
-
-	if ((time = localtime((time_t *) &modifyTime)) != NULL)
+		if ((pathname = copyString(resourceID(u))) != NULL)
+		{
+			if ((len = strlen(pathname)) > 0)
+			{
+				if (pathname[len-1] == '/')  pathname[--len] = '\0';
+				n = revCharSearch('/', pathname);
+				retVal = (void *)unescapeURL(&pathname[n+1]);
+				freeMem(pathname);
+			}
+		}
+	}
+	else if ((s == gWebData->RDF_size) && (type == RDF_INT_TYPE) && (tv))
 	{
+		if ((pathname = resourceID(u)) != NULL)
+		{
+			if ((url = unescapeURL(&pathname[FS_URL_OFFSET])) != NULL)
+			{
+				err=PR_GetFileInfo(url, &fn);
+				if (!err)	retVal = (void *)fn.size;
+				XP_FREE(url);
+			}
+		}
+	}
+	else if ((s == gWebData->RDF_lastModifiedDate) && (type == RDF_STRING_TYPE) && (tv))
+	{
+		if ((pathname = resourceID(u)) != NULL)
+		{
+			if ((url = unescapeURL(&pathname[FS_URL_OFFSET])) != NULL)
+			{
+				err = PR_GetFileInfo(url, &fn);
+				if (!err)
+				{
+					LL_I2L(oneMillion, PR_USEC_PER_SEC);
+					LL_DIV(dateVal, fn.modifyTime, oneMillion);
+					LL_L2I(modifyTime, dateVal);
+					if ((time = localtime((time_t *) &modifyTime)) != NULL)
+					{
 #ifdef	XP_MAC
-		time->tm_year += 4;
-		strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_MACDATE),time);
+						time->tm_year += 4;
+						strftime(buffer, sizeof(buffer), XP_GetString(RDF_HTML_MACDATE), time);
 #else
-		strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_WINDATE),time);
+						strftime(buffer, sizeof(buffer), XP_GetString(RDF_HTML_WINDATE), time);
 #endif
-		return copyString(buffer);
+						retVal = copyString(buffer);
+					}
+				}
+				XP_FREE(url);
+			}
+		}
 	}
-	else	return NULL;
-	
-	}
-    else
-
-	return NULL;
-  } else if ((s == gWebData->RDF_creationDate) && (type == RDF_STRING_TYPE) && (tv) && (fsUnitp(u))) {
-
-    PRFileInfo fn;
-    PRStatus err;
-    char* filePathname =  resourceID(u);
-    err = PR_GetFileInfo(&filePathname[FS_URL_OFFSET], &fn);
-    if (err != -1)
+	else if ((s == gWebData->RDF_creationDate) && (type == RDF_STRING_TYPE) && (tv))
 	{
-		char			buffer[128];
-		struct tm		*time;
-		PRTime			oneMillion, dateVal;
-		uint32			creationTime;
-
-	LL_I2L(oneMillion, PR_USEC_PER_SEC);
-	LL_DIV(dateVal, fn.creationTime, oneMillion);
-	LL_L2I(creationTime, dateVal);
-	if ((time = localtime((time_t *) &creationTime)) != NULL)
-	{
+		if ((pathname = resourceID(u)) != NULL)
+		{
+			if ((url = unescapeURL(&pathname[FS_URL_OFFSET])) != NULL)
+			{
+				err = PR_GetFileInfo(url, &fn);
+				if (!err)
+				{
+					LL_I2L(oneMillion, PR_USEC_PER_SEC);
+					LL_DIV(dateVal, fn.creationTime, oneMillion);
+					LL_L2I(creationTime, dateVal);
+					if ((time = localtime((time_t *) &creationTime)) != NULL)
+					{
 #ifdef	XP_MAC
-		time->tm_year += 4;
-		strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_MACDATE),time);
+						time->tm_year += 4;
+						strftime(buffer, sizeof(buffer), XP_GetString(RDF_HTML_MACDATE), time);
 #else
-		strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_WINDATE),time);
+						strftime(buffer, sizeof(buffer), XP_GetString(RDF_HTML_WINDATE), time);
 #endif
-		return copyString(buffer);
+						retVal = copyString(buffer);
+					}
+				}
+				XP_FREE(url);
+			}
+		}
 	}
-	else	return NULL;
-	}
-    else
-
-	return NULL;
-  }
-  return NULL;
+	return(retVal);
 }
 
 
@@ -496,33 +437,66 @@ fsGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, PR
 PRBool
 fileDirectoryp(RDF_Resource u)
 {
-  if (startsWith("file:",  resourceID(u))) {
-    PRDir *d = OpenDir(resourceID(u));
-    PRBool ans = (d != NULL);
-    if (ans) PR_CloseDir(d);
-    return ans;
-  } else return 0;
+	PRBool		retVal = PR_FALSE;
+	PRDir		*d;
+
+	if (startsWith("file:",  resourceID(u)))
+	{
+		if ((d = OpenDir(resourceID(u))) != NULL)
+		{
+			PR_CloseDir(d);
+			retVal = PR_TRUE;
+		}
+	}
+	return(retVal);
 }
 
 
 
 RDF_Cursor
-fsGetSlotValues (RDFT rdf, RDF_Resource u, RDF_Resource s, 
-				     RDF_ValueType type,  PRBool inversep, PRBool tv)
+fsGetSlotValues (RDFT rdf, RDF_Resource u, RDF_Resource s,
+		RDF_ValueType type,  PRBool inversep, PRBool tv)
 {
-  if ((s == gCoreVocab->RDF_parent) && (type == RDF_RESOURCE_TYPE) && (fsUnitp(u))
-      && (inversep) && (tv)) {
-    
-    PRDir *d = OpenDir(resourceID(u));
-    RDF_Cursor c;
-    if (d == NULL) return NULL;
-    c = (RDF_Cursor) getMem(sizeof(struct RDF_CursorStruct));
-    c->u = u;
-    c->count = PR_SKIP_BOTH;
-    c->pdata = d;
-    c->type = type;
-    return c;
-  } else return NULL;
+	PRDir			*d = NULL;
+	RDF_Cursor		c = NULL;
+
+	if ((((s == gCoreVocab->RDF_child) && (!inversep)) || ((s == gCoreVocab->RDF_parent) && (inversep))) &&
+		(type == RDF_RESOURCE_TYPE) && (tv))
+	{
+		if ((c = getMem(sizeof(struct RDF_CursorStruct))) != NULL)
+		{
+			if (u == gNavCenter->RDF_LocalFiles)
+			{
+				c->u = u;
+				c->s = s;
+				c->type = type;
+				c->count = 0;
+				c->pdata = NULL;
+			}
+			else if (startsWith("file://", resourceID(u)))
+			{
+				if ((d = OpenDir(resourceID(u))) != NULL)
+				{
+					c->u = u;
+					c->s = s;
+					c->type = type;
+					c->count = PR_SKIP_BOTH;
+					c->pdata = d;
+				}
+				else
+				{
+					freeMem(c);
+					c = NULL;
+				}
+			}
+			else
+			{
+				freeMem(c);
+				c = NULL;
+			}
+		}
+	}
+	return(c);
 }
 
 
@@ -530,52 +504,82 @@ fsGetSlotValues (RDFT rdf, RDF_Resource u, RDF_Resource s,
 void *
 fsNextValue (RDFT rdf, RDF_Cursor c)
 {
-    PRFileInfo fn;
-    char *encoded = NULL;
+	PRBool			isDirectoryFlag = false, sep;
+	PRDirEntry		*de;
+	PRFileInfo		fn;
+	RDF_Resource		vol;
+	char			*base, *encoded = NULL, *url, *url2;
+	void			*retVal = NULL;
+	int			len;
 
-  if (c == NULL) {
-    return NULL;
-  } else {
+	XP_ASSERT(c != NULL);
+	if (c == NULL)				return(NULL);
+	if (c->type != RDF_RESOURCE_TYPE)	return(NULL);
 
-    PRDirEntry* de = PR_ReadDir((PRDir*)c->pdata, c->count++);
-    if (de == NULL) {
-
-      PR_CloseDir((PRDir*)c->pdata);
-      c->pdata = NULL;
-      return NULL;
-    } else {
-      char nname[512], *base;
-      PRBool isDirectoryFlag = false, sep = ((resourceID(c->u))[strlen(resourceID(c->u))-1] == XP_DIRECTORY_SEPARATOR);
-      int len;
-
-
-      base = NET_Escape(de->name, URL_XALPHAS);		/* URL_PATH */
-      if (base != NULL)	{
-        if (sep) {
-        sprintf(nname, "%s%s",  resourceID(c->u), base);
-        } else
-        sprintf(nname, "%s/%s",  resourceID(c->u), base);
-        XP_FREE(base);
-      }
-
-      encoded = unescapeURL(&nname[FS_URL_OFFSET]);
-      if (encoded != NULL) {
-#ifdef  XP_WIN
-            if (encoded[1] == '|') encoded[1] = ':';
-#endif
-
-	    PR_GetFileInfo(encoded, &fn);
-		if (fn.type == PR_FILE_DIRECTORY)	{
-		    isDirectoryFlag = TRUE; 
- 			len=strlen(nname);
-			nname[len] = '/';
-			nname[len+1] = '\0';
+	if (c->u == gNavCenter->RDF_LocalFiles)
+	{
+		do
+		{
+			if ((url = getVolume(c->count++)) != NULL)
+			{
+				if ((vol = RDF_GetResource(NULL, url, 1)) != NULL)
+				{
+					setContainerp(vol, 1);
+					setResourceType(vol, LFS_RT);
+					retVal = (void *)vol;
+				}
+				XP_FREE(url);
 			}
-		freeMem(encoded);
-      }
-      return CreateFSUnit(nname, isDirectoryFlag);
-    } 
-  }
+		} while((retVal == NULL) && (c->count <= 26));
+	}
+	else if (c->pdata != NULL)
+	{
+		if ((de = PR_ReadDir((PRDir*)c->pdata, c->count++)) != NULL)
+		{
+			if ((base = NET_Escape(de->name, URL_XALPHAS)) != NULL)		/* URL_PATH */
+			{
+				sep = ((resourceID(c->u))[strlen(resourceID(c->u))-1] == XP_DIRECTORY_SEPARATOR);
+				if (sep)
+				{
+					url = PR_smprintf("%s%s",  resourceID(c->u), base);
+				}
+				else
+				{
+					url = PR_smprintf("%s/%s",  resourceID(c->u), base);
+				}
+				XP_FREE(base);
+
+				if (url != NULL)
+				{
+					encoded = unescapeURL(&url[FS_URL_OFFSET]);
+					if (encoded != NULL)
+					{
+#ifdef  XP_WIN
+						if (encoded[1] == '|') encoded[1] = ':';
+#endif
+						PR_GetFileInfo(encoded, &fn);
+						if (fn.type == PR_FILE_DIRECTORY)
+						{
+							isDirectoryFlag = TRUE;
+							url2 = PR_smprintf("%s/", url);
+							XP_FREE(url);
+							url = url2;
+						}
+						freeMem(encoded);
+					}
+					retVal = (void *)CreateFSUnit(url, isDirectoryFlag);
+					XP_FREE(url);
+				}
+			}
+
+		}
+		else
+		{
+			PR_CloseDir((PRDir*)c->pdata);
+			c->pdata = NULL;
+		}
+	}
+	return(retVal);
 }
 
 
@@ -583,39 +587,37 @@ fsNextValue (RDFT rdf, RDF_Cursor c)
 RDF_Error
 fsDisposeCursor (RDFT rdf, RDF_Cursor c)
 {
-  if (c != NULL) {
-    if (c->pdata) PR_CloseDir((PRDir*)c->pdata);
-    freeMem(c);
-  }
-  return 0;
+	XP_ASSERT(c != NULL);
+
+	if (c != NULL)
+	{
+		if (c->pdata != NULL)
+		{
+			PR_CloseDir((PRDir*)c->pdata);
+			c->pdata = NULL;
+		}
+		freeMem(c);
+	}
+	return 0;
 }
 
 
 
 RDF_Resource
-CreateFSUnit (char* nname, PRBool isDirectoryFlag)
+CreateFSUnit (char *nname, PRBool isDirectoryFlag)
 {
-  char *name;
-  PRBool newName = 0;
-  RDF_Resource existing;
-  if (startsWith("file:///", nname)) {
-    name = nname;
-  } else {
-    name = (char*) getMem(strlen(nname) + 8);
-    memcpy(name,  "file:///", 8);
-    memcpy(&name[8], nname, strlen(nname));
-    newName = 1;
-  }
-  existing = RDF_GetResource(NULL, name, 0);
+	RDF_Resource		r = NULL;
 
-  if (existing != NULL) {
-    if (newName) freeMem(name);
-    return existing;
-  } else {
-    existing = RDF_GetResource(NULL, name, 1);
-    setResourceType(existing, LFS_RT);
-    setContainerp(existing, isDirectoryFlag);
-    if (newName) freeMem(name);
-    return existing;
-  }
+	if (startsWith("file:///", nname))
+	{
+		if ((r = RDF_GetResource(NULL, nname, 0)) == NULL)
+		{
+			if ((r = RDF_GetResource(NULL, nname, 1)) != NULL)
+			{
+				setResourceType(r, LFS_RT);
+				setContainerp(r, isDirectoryFlag);
+			}
+		}	
+	}
+	return(r);
 }

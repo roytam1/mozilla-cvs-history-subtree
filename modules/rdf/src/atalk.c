@@ -36,6 +36,39 @@ static RDFT		gRDFDB = NULL;
 
 
 
+#ifdef	XP_MAC
+PRBool
+isAFPVolume(short ioVRefNum)
+{
+	QHdrPtr		queueHeader;
+	OSErr		err;
+	PRBool		retVal = PR_FALSE;
+	VCBPtr		vcb;
+	short		afpDRefNum;
+
+	if ((err = OpenDriver("\p.AFPTranslator", &afpDRefNum)) == noErr)
+	{
+		queueHeader = GetVCBQHdr();
+		if (queueHeader != NULL)
+		{
+			vcb = (VCBPtr)(queueHeader->qHead);
+			while(vcb != NULL)
+			{
+				if ((vcb->vcbDRefNum == afpDRefNum) && (vcb->vcbVRefNum == ioVRefNum))
+				{
+					retVal = PR_TRUE;
+					break;
+				}
+				vcb = (VCBPtr)(vcb->qLink);
+			}
+		}
+	}
+	return(retVal);
+}
+#endif
+
+
+
 void
 getZones()
 {
@@ -687,6 +720,9 @@ MakeAtalkStore (char* url)
 
 			setAtalkResourceName(gNavCenter->RDF_Appletalk);
 			getZones();
+			remoteStoreAdd(gRemoteStore, gNavCenter->RDF_Appletalk,
+				gCoreVocab->RDF_parent, gNavCenter->RDF_LocalFiles,
+				RDF_RESOURCE_TYPE, 1);
 		}
 	       
 	}

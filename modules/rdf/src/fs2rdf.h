@@ -27,6 +27,7 @@
 #include "prlong.h"
 
 #ifdef	XP_MAC
+#include <Devices.h>
 #include <Files.h>
 #endif
 
@@ -52,7 +53,6 @@
 XP_BEGIN_PROTOS
 
 char *		getVolume(int volNum);
-void		buildVolumeList(RDF_Resource fs);
 PRDir *		OpenDir(char *name);
 RDFT		MakeLFSStore (char* url);
 PRBool		fsRemoveFile(char *filePathname, PRBool justCheckWriteAccess);

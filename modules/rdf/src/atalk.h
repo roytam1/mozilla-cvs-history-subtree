@@ -22,6 +22,7 @@
 #ifdef	XP_MAC
 
 #include <Appletalk.h>
+#include <Devices.h>
 #include <Gestalt.h>
 #include "rdf.h"
 #include "rdf-int.h"
@@ -44,6 +45,10 @@ extern	int	RDF_APPLETALK_TOP_NAME;
 /* atalk.c function prototypes */
 
 XP_BEGIN_PROTOS
+
+#ifdef	XP_MAC
+PRBool		isAFPVolume(short ioVRefNum);
+#endif
 
 void		getZones();
 void		processZones(char *zones, uint16 numZones);
