@@ -213,11 +213,14 @@ foreach $_ ("config.ini", "install.ini") {
 }
 
 # copy license file for the installer
-copy("$topsrcdir/LICENSE", "$gDirDistInstall/license.txt") ||
-  die "copy $topsrcdir/LICENSE $gDirDistInstall/license.txt: $!\n";
-copy("$topsrcdir/LICENSE", "$gDirDistInstall/setup/license.txt") ||
-  die "copy $topsrcdir/LICENSE $gDirDistInstall/setup/license.txt: $!\n";
-
+$licenseLocation = "$topsrcdir/LICENSE";
+if ($ENV{WIZ_licenseFile} ne "") {
+  $licenseLocation = $ENV{WIZ_licenseFile};
+}
+copy("$topsrcdir/$licenseLocation", "$gDirDistInstall/license.txt") ||
+  die "copy $topsrcdir/$licenseLocation $gDirDistInstall/license.txt: $!\n";
+copy("$topsrcdir/$licenseLocation", "$gDirDistInstall/setup/license.txt") ||
+  die "copy $licenseLocation $gDirDistInstall/setup/license.txt: $!\n";
 
 BuildPlatformInstaller() && die;
 

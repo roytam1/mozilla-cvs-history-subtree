@@ -149,11 +149,6 @@ function createShortcuts()
     File.windowsShortcut(fileExe, fDefShortcuts,    scExeDesc,      fProgram, "",               fileExe, 0);
     File.windowsShortcut(fileExe, fDefShortcuts,    scSafeModeDesc, fProgram, scSafeModeParam,  fileExe, 0);
 
-    // Clean up after ourselves
-    winreg.deleteValue(subkey, "Create Desktop Shortcut");
-    winreg.deleteValue(subkey, "Create Quick Launch Shortcut");
-    winreg.deleteValue(subkey, "Create Start Menu Shortcut");
-
     if(!restrictedAccess) {
       winreg.setRootKey(winreg.HKEY_LOCAL_MACHINE);
       registerProgramFolderKey(winreg, fFolderPrograms);

@@ -203,6 +203,9 @@ sub ParseInstallerCfg
       elsif ($prop eq "GREVersion") {
         $ENV{WIZ_greVersion} = $value;
       }
+      elsif ($prop eq "LicenseFile") {
+        $ENV{WIZ_licenseFile} = $value;
+      }
     }
 
     close(fpInstallCfg);
