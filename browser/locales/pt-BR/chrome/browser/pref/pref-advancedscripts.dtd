@@ -1,0 +1,9 @@
+<!ENTITY allowScripts.label "Scripts têm permissão para:">
+<!ENTITY allowControlContextMenu.label "Desabilitar/substituir menu de contexto">
+<!ENTITY allowWindowOpen.label "Abrir popups">
+<!ENTITY allowWindowStatusChange.label "Alterar o texto da barra de status">
+<!ENTITY allowWindowFlip.label "Alterar a disposição entre as janelas">
+<!ENTITY allowWindowMoveResize.label "Mover/dimensionar janelas existentes">
+<!ENTITY allowScripts.title "Opções de JavaScript">
+<!ENTITY allowHideStatusBar.label "Ocultar a barra de status">
+<!ENTITY allowWindowImageSrcChange.label "Alterar imagens">

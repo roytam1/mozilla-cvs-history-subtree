@@ -1,0 +1,15 @@
+<!ENTITY resetpassword.text "Se você remover a senha mestre todas as suas senhas de sites e email, dados de formulários, certificados particulares e chaves públicas serão perdidas.">
+<!ENTITY lheader "Senha mestre">
+<!ENTITY changepassword.text "Sua senha mestre protege informações confidenciais tais como certificados e senhas de sites.">
+<!ENTITY managepassword.asktimeout "Se a senha não for usada por">
+<!ENTITY managepassword.askfirsttime "Quando precisar pela primeira vez">
+<!ENTITY changepassword.label "Alterar senha mestre">
+<!ENTITY resetpassword.accesskey "x">
+<!ENTITY managepassword.timeout.unit "minutos ou mais">
+<!ENTITY managepassword.text "O &brandShortName; perguntará a senha mestre para você:">
+<!ENTITY changepassword.accesskey "A">
+<!ENTITY resetpassword.button "Excluir...">
+<!ENTITY managepassword.askeverytime "Sempre que ela for necessária">
+<!ENTITY resetpassword.label "Excluir a senha mestre">
+<!ENTITY managepassword.label "Consulta da senha mestre">
+<!ENTITY changepassword.button "Alterar...">

@@ -1,0 +1,35 @@
+<!ENTITY menu_textReduce.label "Diminuir texto">
+<!ENTITY textEnlarge.commandkey "+">
+<!ENTITY savePageCmd.label "Salvar como...">
+<!ENTITY menu_textEnlarge.label "Aumentar texto">
+<!ENTITY goToLineCmd.commandkey "l">
+<!ENTITY menu_textEnlarge.accesskey "A">
+<!ENTITY printCmd.label "Imprimir...">
+<!ENTITY mainWindow.title "&brandFullName;">
+<!ENTITY savePageCmd.accesskey "l">
+<!ENTITY fileMenu.accesskey "A">
+<!ENTITY closeCmd.label "Fechar">
+<!ENTITY printPreviewCmd.label "Visualizar impressão">
+<!ENTITY goToLineCmd.label "Ir para linha...">
+<!ENTITY printPreviewCmd.accesskey "z">
+<!ENTITY mainWindow.preface "Código-fonte: ">
+<!ENTITY pageSetupCmd.accesskey "C">
+<!ENTITY menu_highlightSyntax.accesskey "R">
+<!ENTITY menu_textReduce.accesskey "D">
+<!ENTITY printCmd.commandkey "P">
+<!ENTITY menu_wrapLongLines.title "Quebrar linhas">
+<!ENTITY menu_highlightSyntax.label "Realçar sintaxe">
+<!ENTITY textReduce.commandkey "-">
+<!ENTITY closeCmd.accesskey "F">
+<!ENTITY menu_wrapLongLines.accesskey "Q">
+<!ENTITY printCmd.accesskey "I">
+<!ENTITY goToLineCmd.accesskey "I">
+<!ENTITY closeCmd.commandkey "W">
+<!ENTITY textReset.commandkey "0">
+<!ENTITY fileMenu.label "Arquivo">
+<!ENTITY mainWindow.titlemodifier "&brandFullName;">
+<!ENTITY savePageCmd.commandkey "S">
+<!ENTITY viewMenu.accesskey "x">
+<!ENTITY viewMenu.label "Exibir">
+<!ENTITY pageSetupCmd.label "Configurar página...">
+<!ENTITY mainWindow.titlemodifierseparator " - ">

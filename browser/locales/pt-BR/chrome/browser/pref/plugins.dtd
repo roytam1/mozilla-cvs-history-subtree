@@ -1,0 +1,6 @@
+<!ENTITY pluginInfo2.label "Desativar o plugin para um tipo de arquivo fará com que o arquivo seja baixado em vez de ser visualizado pelo plugin.">
+<!ENTITY typeHeader.label "Tipo de arquivo">
+<!ENTITY enabledHeader.label "Ativo">
+<!ENTITY extensionsHeader.label "Extensão">
+<!ENTITY plugins.title "Plugins">
+<!ENTITY pluginInfo.label "Há plugins disponíveis para estes tipos de arquivo:">

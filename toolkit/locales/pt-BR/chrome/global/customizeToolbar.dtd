@@ -1,0 +1,11 @@
+<!ENTITY dialog.title "Personalizar barras de ferramentas">
+<!ENTITY undoChanges.label "Desfazer alterações">
+<!ENTITY addNewToolbar.label "Nova barra...">
+<!ENTITY text.label "Texto">
+<!ENTITY restoreDefaultSet.label "Restaurar as barras padrão">
+<!ENTITY show.label "Exibir como:">
+<!ENTITY instructions.description "Adicione (exclua) itens arrastando-os para as (das) barras de ferramentas.">
+<!ENTITY icons.label "Ícones">
+<!ENTITY saveChanges.label "Fechar">
+<!ENTITY useSmallIcons.label "Ícones pequenos">
+<!ENTITY iconsAndText.label "Ícones e texto">

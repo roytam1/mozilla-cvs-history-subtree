@@ -1,0 +1,64 @@
+<!ENTITY mediaAltHeader "Texto substituto">
+<!ENTITY frameAddress "Endereço">
+<!ENTITY linkName "Nome">
+<!ENTITY linkType "Tipo">
+<!ENTITY formEncoding "Codificação:">
+<!ENTITY mediaURL "Endereço:">
+<!ENTITY formName "Nome">
+<!ENTITY mediaAlt "Texto substituto:">
+<!ENTITY formType "Tipo">
+<!ENTITY mediaCharset "Codificação:">
+<!ENTITY generalExpires "Válido até:">
+<!ENTITY mediaAddress "Endereço">
+<!ENTITY generalType "Tipo:">
+<!ENTITY formNo "Número">
+<!ENTITY generalTitle "Title:">
+<!ENTITY mediaEncryption "Criptografia:">
+<!ENTITY generalReferrer "Página de origem:">
+<!ENTITY generalMeta "Meta:">
+<!ENTITY formCValue "Valor atual">
+<!ENTITY pageInfoWindow.width "425">
+<!ENTITY mediaNo "Número">
+<!ENTITY title "Propriedades da página">
+<!ENTITY mediaBase "Endereço base:">
+<!ENTITY mediaHeader "Imagens nesta página">
+<!ENTITY formFields "Campos:">
+<!ENTITY linkNo "Número">
+<!ENTITY generalEncoding "Codificação:">
+<!ENTITY formAction "Ação">
+<!ENTITY generalMetaName "Nome">
+<!ENTITY linkAccessKey "Tecla de acesso">
+<!ENTITY framesTab "Frames">
+<!ENTITY mediaTitle "Descrição:">
+<!ENTITY unknown "(Desconhecido)">
+<!ENTITY description "Informações da página atual">
+<!ENTITY generalSource "Código-fonte:">
+<!ENTITY formMethod "Método">
+<!ENTITY linkAddress "Endereço">
+<!ENTITY generalTab "Geral">
+<!ENTITY mediaSaveAsAccesskey "l">
+<!ENTITY generalMode "Renderização:">
+<!ENTITY preface "Informação para:">
+<!ENTITY linksTab "Links">
+<!ENTITY mediaLongdesc "Descrição longa em:">
+<!ENTITY closeWindow "w">
+<!ENTITY generalMetaContent "Valor">
+<!ENTITY helpButton "Ajuda">
+<!ENTITY formsTab "Formulários">
+<!ENTITY generalSize "Tamanho:">
+<!ENTITY generalURL "Endereço:">
+<!ENTITY mediaName "Nome">
+<!ENTITY generalModified "Modificado em:">
+<!ENTITY mediaType "Tipo">
+<!ENTITY mediaPlugin "Plugin:">
+<!ENTITY linkTarget "Abre em">
+<!ENTITY formTarget "Abre em:">
+<!ENTITY frameType "Tipo">
+<!ENTITY frameName "Nome">
+<!ENTITY formLabel "Label">
+<!ENTITY mediaTab "Mídia">
+<!ENTITY mediaSaveAs "Salvar como...">
+<!ENTITY generalSent "Enviado:">
+<!ENTITY mediaDimensions "Dimensões:">
+<!ENTITY pageInfoWindow.height "470">
+<!ENTITY formFName "Nome">

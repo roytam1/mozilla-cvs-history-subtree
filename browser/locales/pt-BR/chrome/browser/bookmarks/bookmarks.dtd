@@ -1,0 +1,68 @@
+<!ENTITY viewMenu.label "Exibir">
+<!ENTITY menuitem.newBookmark.label "Novo bookmark...">
+<!ENTITY closeCmd.accesskey "F">
+<!ENTITY menuitem.newFolder.label "Nova pasta...">
+<!ENTITY menuitem.view.ascending.accesskey "O">
+<!ENTITY menuitem.view.show_columns.label "Colunas">
+<!ENTITY command.rename.accesskey "R">
+<!ENTITY menuitem.personaltoolbarfolder.accesskey "x">
+<!ENTITY menuitem.view.descending.accesskey "D">
+<!ENTITY treecol.lastmod.label "Modificado">
+<!ENTITY viewMenu.accesskey "x">
+<!ENTITY menuitem.view.command.toolbar.label "Barra de ferramentas">
+<!ENTITY bookmarksWindowTitle.label "Bookmark Manager">
+<!ENTITY search.label "Localizar nome:">
+<!ENTITY menuitem.import.label "Importar...">
+<!ENTITY menuitem.export.label "Exportar...">
+<!ENTITY menuitem.newSeparator.accesskey "s">
+<!ENTITY menuitem.find.accesskey "S">
+<!ENTITY command.properties.label "Propriedades">
+<!ENTITY menuitem.view.ascending.label "Ordem crescente">
+<!ENTITY closeCmd.commandkey "W">
+<!ENTITY command.manageBookmarks.label "Manage">
+<!ENTITY menuitem.newFolder.accesskey "v">
+<!ENTITY command.delete.label "Excluir">
+<!ENTITY menuitem.export.accesskey "x">
+<!ENTITY edit.properties.keybinding "i">
+<!ENTITY treecol.lastmod.accesskey "M">
+<!ENTITY command.addBookmark.label "Adicionar...">
+<!ENTITY command.rename.label "Renomear">
+<!ENTITY menuitem.find.label "Search Bookmarks...">
+<!ENTITY treecol.lastvisit.label "Última visita">
+<!ENTITY selectBookmark.title "Definir página inicial">
+<!ENTITY treecol.name.label "Nome">
+<!ENTITY treecol.lastvisit.accesskey "v">
+<!ENTITY fileMenu.label "Arquivo">
+<!ENTITY closeCmd.label "Fechar">
+<!ENTITY treecol.shortcut.accesskey "P">
+<!ENTITY menuitem.view.unsorted.label "Não ordenar">
+<!ENTITY menuitem.newSeparator.label "Novo separador">
+<!ENTITY treecol.addedon.label "Criado">
+<!ENTITY menuitem.view.command.toolbar.accesskey "B">
+<!ENTITY command.moveBookmark.label "Mover bookmarks...">
+<!ENTITY search.accesskey "z">
+<!ENTITY command.properties.accesskey "P">
+<!ENTITY command.delete.accesskey "c">
+<!ENTITY treecol.url.label "Endereço">
+<!ENTITY treecol.description.label "Descrição">
+<!ENTITY treecol.name.accesskey "N">
+<!ENTITY fileMenu.accesskey "A">
+<!ENTITY treecol.addedon.accesskey "C">
+<!ENTITY command.moveBookmark.accesskey "M">
+<!ENTITY menuitem.view.show_columns.accesskey "u">
+<!ENTITY menuitem.personaltoolbarfolder.label "Exibir a pasta na barra de bookmarks">
+<!ENTITY menuitem.view.descending.label "Ordem decrescente">
+<!ENTITY menuitem.newBookmark.accesskey "N">
+<!ENTITY menuitem.view.unsorted.accesskey "N">
+<!ENTITY edit.find.keybinding "f">
+<!ENTITY treecol.shortcut.label "Palavra-chave">
+<!ENTITY treecol.url.accesskey "E">
+<!ENTITY command.moveBookmarkShort.label "Mover">
+<!ENTITY menuitem.import.accesskey "I">
+<!ENTITY selectBookmark.label "Selecione um bookmark para ser a sua página inicial. Se escolher uma pasta, os bookmarks da pasta serão abertos em abas.">
+<!ENTITY command.findBookmarks.label "Search...">
+<!ENTITY treecol.description.accesskey "D">
+<!ENTITY command.refreshLivemark.label "Atualizar Live Bookmark">
+<!ENTITY bookmarksRoot.label "Bookmarks">
+<!ENTITY menuitem.newLivemark.label "Novo Live Bookmark...">
+<!ENTITY menuitem.newLivemark.accesskey "L">

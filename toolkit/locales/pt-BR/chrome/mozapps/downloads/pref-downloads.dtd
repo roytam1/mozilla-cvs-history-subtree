@@ -1,0 +1,21 @@
+<!ENTITY neverAsk.label "Sempre salvar na pasta:">
+<!ENTITY fileTypes.label "Tipos de arquivo">
+<!ENTITY showWhenStarting.label "Abrir ao iniciar um download">
+<!ENTITY closeWhenDone.label "Fechar ao concluir todos os downloads">
+<!ENTITY removeFileHandler.label "Excluir...">
+<!ENTITY plugins.accesskey "P">
+<!ENTITY fileTypesDescription.label "Executar automaticamente a ação associada a cada um destes tipos de arquivo:">
+<!ENTITY plugins.label "Plugins...">
+<!ENTITY editFileHandler.label "Editar...">
+<!ENTITY showFolder.label "Abrir pasta">
+<!ENTITY editFileHandler.accesskey "E">
+<!ENTITY downloads.label "Meus Downloads">
+<!ENTITY downloadManagerWindow.label "Gerenciador de downloads">
+<!ENTITY choose.label "Outra pasta...">
+<!ENTITY fileTypeColName.label "Tipos de arquivo">
+<!ENTITY removeFileHandler.accesskey "x">
+<!ENTITY alwaysAsk.label "Perguntar para cada arquivo">
+<!ENTITY askOnSave.label "Salvar em">
+<!ENTITY lHeader "Downloads">
+<!ENTITY fileHandlerColName.label "Aplicação">
+<!ENTITY desktop.label "Área de trabalho">

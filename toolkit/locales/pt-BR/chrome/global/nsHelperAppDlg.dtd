@@ -1,0 +1,20 @@
+<!ENTITY chooseAppFilePickerTitle "Selecione o programa auxiliar">
+<!ENTITY badApp.title "Programa não localizado">
+<!ENTITY chooseApp.accesskey "S">
+<!ENTITY intro.noDesc.label "O arquivo &quot;#3&quot; é do tipo #2. O #4 não sabe como manipulá-lo. O arquivo está localizado em:">
+<!ENTITY openUsing.accesskey "c">
+<!ENTITY alwaysHandle.accesskey "M">
+<!ENTITY useSystemDefault.accesskey "A">
+<!ENTITY intro.label "O arquivo &quot;#3&quot; é do tipo #2 (#1). O #4 não sabe como manipulá-lo. O arquivo está localizado em:">
+<!ENTITY prompt.label "O que o #1 deve fazer com este arquivo?">
+<!ENTITY saveToDisk.label "Salvar">
+<!ENTITY intro.attachment.label "O site recomendou que &quot;#3&quot; seja tratado como um anexo. É do tipo #2 (#1) e localizado em:">
+<!ENTITY saveToDisk.accesskey "v">
+<!ENTITY useSystemDefault.label 'Abrir com "#1" (o programa padrão)'>
+<!ENTITY intro.attachment.noDesc.label "O site recomendou que &quot;#3&quot; seja tratado como um anexo. É do tipo #2 e localizado em:">
+<!ENTITY alwaysHandle.label "Memorizar a decisão para este tipo de arquivo">
+<!ENTITY openUsing.label "Abrir com">
+<!ENTITY useSystemDefault.noDesc.label "Abrir com o programa padrão">
+<!ENTITY badApp "O programa que você selecionou (&quot;#1&quot;) não foi encontrado. Verifique o nome do arquivo ou escolha outro programa.">
+<!ENTITY chooseApp.label "Selecionar...">
+<!ENTITY caption.label 'Abrindo "#1"'>

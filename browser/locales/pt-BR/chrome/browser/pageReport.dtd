@@ -1,0 +1,6 @@
+<!ENTITY unblock.accesskey "D">
+<!ENTITY done.accesskey "F">
+<!ENTITY unblock.label "Desbloquear site">
+<!ENTITY done.label "Fechar">
+<!ENTITY intro.label "Estas páginas foram impedidas de exibir janelas não solicitadas:">
+<!ENTITY caption.label "Popups bloqueados">

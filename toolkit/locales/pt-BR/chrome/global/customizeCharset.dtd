@@ -1,0 +1,6 @@
+<!ENTITY add.label "Adicionar">
+<!ENTITY current.label "Codificações ativas:">
+<!ENTITY additional.label "Codificações disponíveis:">
+<!ENTITY left.header "Codificação">
+<!ENTITY remove.label "Excluir">
+<!ENTITY title.label "Personalizar codificações">

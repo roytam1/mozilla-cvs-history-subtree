@@ -1,0 +1,9 @@
+<!ENTITY getnew.url "http://texturizer.net/firefox/extensions/">
+<!ENTITY disableExtension.label "Desativar extensão">
+<!ENTITY getNewExtensions.label "Baixar novas extensões">
+<!ENTITY uninstallExtension.label "Desinstalar extensão">
+<!ENTITY lHeader "Extensões">
+<!ENTITY extensionTitle.label "Estas extensões estão instaladas:">
+<!ENTITY author.tooltip "Fechar a janela de opções e abrir a página do autor">
+<!ENTITY getnew.tooltip "Fechar as opções e visitar a página de extensões do Firefox">
+<!ENTITY extensionSettings.label "Opções da extensão...">

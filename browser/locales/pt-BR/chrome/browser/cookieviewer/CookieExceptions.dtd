@@ -1,0 +1,9 @@
+<!ENTITY allow.label "Permitir">
+<!ENTITY removeallpermissions.label "Excluir todos">
+<!ENTITY addpermission.label "Novo site">
+<!ENTITY window.title "Permissões para cookies">
+<!ENTITY address.label "Endereço do site:">
+<!ENTITY treehead.sitename.label "Site">
+<!ENTITY block.label "Bloquear">
+<!ENTITY removepermission.label "Excluir o site">
+<!ENTITY treehead.status.label "Status">

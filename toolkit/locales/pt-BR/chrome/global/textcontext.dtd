@@ -1,0 +1,14 @@
+<!ENTITY copyCmd.label "Copiar">
+<!ENTITY redoCmd.label "Refazer">
+<!ENTITY cutCmd.accesskey "t">
+<!ENTITY deleteCmd.accesskey "x">
+<!ENTITY selectAllCmd.label "Selecionar tudo">
+<!ENTITY selectAllCmd.accesskey "S">
+<!ENTITY pasteCmd.label "Colar">
+<!ENTITY undoCmd.label "Desfazer">
+<!ENTITY copyCmd.accesskey "C">
+<!ENTITY redoCmd.accesskey "R">
+<!ENTITY undoCmd.accesskey "D">
+<!ENTITY cutCmd.label "Recortar">
+<!ENTITY deleteCmd.label "Excluir">
+<!ENTITY pasteCmd.accesskey "o">

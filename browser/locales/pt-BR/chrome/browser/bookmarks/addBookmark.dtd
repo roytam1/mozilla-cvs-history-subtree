@@ -1,0 +1,28 @@
+<!ENTITY alwayscreateinfolder.label "Não mostrar mais este aviso">
+<!ENTITY name.accesskey "N">
+<!ENTITY button.defaultfolder.accesskey "U">
+<!ENTITY acceptButton.label "Adicionar">
+<!ENTITY newFolder.label "Nova pasta...">
+<!ENTITY expanderDown.tooltip "Exibir todas as pastas de bookmarks">
+<!ENTITY selectFolder.label "Selecionar a pasta">
+<!ENTITY expanderUp.tooltip "Ocultar as pastas de bookmarks">
+<!ENTITY createin.label "Criar em:">
+<!ENTITY button.createin.label "Criar em &gt;&gt;">
+<!ENTITY createin.accesskey "C">
+<!ENTITY url.label "Endereço:">
+<!ENTITY newbookmark.label "O &brandShortName; criará um bookmark para esta página.">
+<!ENTITY keyword.label "Palavra-chave:">
+<!ENTITY newBookmark.title "Novo bookmark">
+<!ENTITY button.createin2.label "Criar em &lt;&lt;">
+<!ENTITY newFolder.accesskey "v">
+<!ENTITY button.defaultfolder.label "Usar a pasta padrão">
+<!ENTITY button.createin.accesskey "C">
+<!ENTITY button.newfolder.label "Nova pasta...">
+<!ENTITY addGroup.accesskey "t">
+<!ENTITY name.label "Nome:">
+<!ENTITY button.newfolder.accesskey "v">
+<!ENTITY dontshowmessage.tooltip "Se a opção estiver marcada, novos bookmarks serão criados usando o título fornecido pela página">
+<!ENTITY url.accesskey "E">
+<!ENTITY keyword.accesskey "P">
+<!ENTITY addGroup.label "Criar pasta com bookmarks de todas as abas da janela">
+<!ENTITY alwayscreateinfolder.accesskey "N">

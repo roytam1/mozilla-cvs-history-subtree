@@ -1,0 +1,39 @@
+<!ENTITY manualTypeRadio.accesskey "x">
+<!ENTITY socks.accesskey "S">
+<!ENTITY SSLport.accesskey "o">
+<!ENTITY directTypeRadio.accesskey "d">
+<!ENTITY noproxyExplain.label "Examplo: .mozilla.org, .net.nz, 192.168.1.0/24">
+<!ENTITY socks.label "SOCKS:">
+<!ENTITY gopher.accesskey "G">
+<!ENTITY reload.label "Recarregar">
+<!ENTITY configAutoconfigText.accesskey "E">
+<!ENTITY gopher.label "Gopher:">
+<!ENTITY gopherPort.accesskey "">
+<!ENTITY manualTypeRadio.label "Usar um servidor proxy:">
+<!ENTITY socks4.label "SOCKS v4">
+<!ENTITY configAutoconfigText.label "Endereço para configuração:">
+<!ENTITY port.label "Porta:">
+<!ENTITY autoTypeRadio.label "Endereço para configuração automática de proxy:">
+<!ENTITY ftp.label "FTP:">
+<!ENTITY socks4.accesskey "K">
+<!ENTITY ssl.accesskey "L">
+<!ENTITY autoTypeRadio.accesskey "E">
+<!ENTITY noproxy.accesskey "m">
+<!ENTITY noproxy.label "Sem proxy para:">
+<!ENTITY FTPport.accesskey "r">
+<!ENTITY reload.accesskey "c">
+<!ENTITY SOCKSport.accesskey "a">
+<!ENTITY http.accesskey "H">
+<!ENTITY ftp.accesskey "F">
+<!ENTITY lHeader "Servidor proxy">
+<!ENTITY http.label "HTTP:">
+<!ENTITY directTypeRadio.label "Conectar-se diretamente">
+<!ENTITY socks5.accesskey "v">
+<!ENTITY proxyTitle.label "Acesso a internet">
+<!ENTITY socks5.label "SOCKS v5">
+<!ENTITY ssl.label "SSL:">
+<!ENTITY HTTPport.accesskey "P">
+<!ENTITY shareproxy.label "Use the same proxy for all protocols">
+<!ENTITY WPADTypeRadio.accesskey "w">
+<!ENTITY WPADTypeRadio.label "Auto-detect proxy settings for this network">
+<!ENTITY shareproxy.accesskey "x">

@@ -1,0 +1,8 @@
+<!ENTITY printWindow.title "Imprimindo">
+<!ENTITY title "Título:">
+<!ENTITY percentPrint "#1&#037;">
+<!ENTITY preparing "Preparando...">
+<!ENTITY printComplete "A impressão está concluída.">
+<!ENTITY dialogCancel.label "Cancelar">
+<!ENTITY dialogClose.label "Fechar">
+<!ENTITY progress "Andamento:">

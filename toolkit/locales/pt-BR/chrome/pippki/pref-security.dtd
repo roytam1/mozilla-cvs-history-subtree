@@ -1,0 +1,16 @@
+<!ENTITY security.label "Privacidade e segurança">
+<!ENTITY managecerts.accesskey "A">
+<!ENTITY managedevices.label "Gerenciador de dispositivos de segurança">
+<!ENTITY security.description "Configurações para privacidade e segurança">
+<!ENTITY managedevices.accesskey "G">
+<!ENTITY managecerts.button "Abrir...">
+<!ENTITY managecerts.label "Gerenciador de certificados">
+<!ENTITY managedevices.button "Abrir...">
+<!ENTITY certs.title "Certificados">
+<!ENTITY managedevices.text "Use este botão para gerenciar seus dispositivos de segurança, como smart cards.">
+<!ENTITY certs.label "Certificados">
+<!ENTITY ssl.label "SSL">
+<!ENTITY resetsettings.label "Restaurar configurações">
+<!ENTITY managecerts.text "Use o gerenciador de certificados para gerenciar seus certificados particulares, como também de outras pessoas e autoridades certificadoras.">
+<!ENTITY security.title "Preferências de segurança">
+<!ENTITY resetpreferences.label "Restaurar preferências padrão...">

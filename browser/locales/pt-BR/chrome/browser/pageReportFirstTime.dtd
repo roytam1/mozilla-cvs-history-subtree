@@ -1,0 +1,4 @@
+<!ENTITY startDescription.label "Um site tentou abrir uma janela popup sem sua permissão. O &brandShortName; fechou-a automaticamente. Sempre que o &brandShortName; bloquear um popup, você verá um ícone na barra de status.">
+<!ENTITY done.label "Concluído">
+<!ENTITY endDescription.label "Você pode dar um duplo clique no ícone para verificar quais sites estão bloqueados. Se o popup for necessário, é possível desbloquear o site.">
+<!ENTITY caption.label "Bloqueio de popups">

@@ -1,0 +1,23 @@
+<!ENTITY netOffline.longDesc "O Firefox está no modo offline e não pôde conectar-se à página. Saia do modo offline e tente de novo.">
+<!ENTITY netTimeout.longDesc "O tempo máximo de espera para conectar-se ao site foi atingido. O servidor pode estar lento devido a muitos acessos. Ou problemas de rede estão impedindo que dados sejam recebidos no tempo correto. Caso o site esteja ocupado, aguarde alguns instantes antes de repetir o pedido.">
+<!ENTITY connectionFailure.title "Falha de conexão">
+<!ENTITY dnsNotFound.longDesc "O endereço não corresponde a um site conhecido e não pôde ser carregado. O endereço pode ter sido digitado incorretamente ou a página pode não existir. Se o endereço estiver correto ou se este problema ocorrer em muitos sites, a causa pode ser devido a problemas com o proxy (se estiver usando um) ou com a pesquisa no DNS. Nestes casos você deve consultar a documentação do sistema, o administrador ou o provedor internet.">
+<!ENTITY loadError.label "Erro no carregamento da página">
+<!ENTITY malformedURI.longDesc "O endereço não possui um formato correto e não pôde ser lido. Um endereço típico começa com &quot;http://&quot;, seguido por um endereço (por exemplo, www.mozilla.org), seguido por um caminho para o conteúdo (ou apenas &quot;/&quot;). Uma causa comum para este problema é o uso da barra invertida (\) no lugar da barra (/).">
+<!ENTITY dnsNotFound.title "Endereço não localizado">
+<!ENTITY netReset.title "Net Reset Error">
+<!ENTITY protocolNotFound.title "Protocolo desconhecido">
+<!ENTITY retry.label "Tentar novamente">
+<!ENTITY unknownSocketType.title "Socket desconhecido">
+<!ENTITY netOffline.title "Erro do modo offline">
+<!ENTITY malformedURI.title "Endereço inválido">
+<!ENTITY generic.longDesc "A página não pôde ser carregada. Possivelmente ela não existe ou o endereço está incorreto.<br/>Verifique se o endereço é válido e está corretamente formatado.">
+<!ENTITY fileNotFound.longDesc "O arquivo especificado pelo endereço não pôde ser localizado. Verifique se o arquivo existe e se você possui permissões suficientes para exibí-lo.">
+<!ENTITY protocolNotFound.longDesc "O endereço inicia com um protocolo não reconhecido. O protocolo situa-se no início do endereço, tais como http: ou ftp:, e indica ao browser como conectar-se ao site. Neste caso, o protocolo não é conhecido. Verifique se o endereço está correto antes de continuar.">
+<!ENTITY redirectLoop.title "Erro de redirecionamento">
+<!ENTITY fileNotFound.title "Arquivo não encontrado">
+<!ENTITY connectionFailure.longDesc "Não foi possível conectar-se ao site especificado, embora ele exista. Isto pode ocorrer porque o servidor não aceita conexões do seu computador, o serviço pode estar fora do ar ou o site não suporta o serviço ou porta pela qual você está tentando conectar-se.">
+<!ENTITY netTimeout.title "Tempo limite atingido">
+<!ENTITY netReset.longDesc "O link para o site caiu de maneira inesperada enquanto negociava a conexão ou transferia dados. Isto pode ser devido a uma falha de conexão em algum lugar entre o site e o seu computador. Se o problema persistir, consulte a documentação do sistema, o administrador ou o provedor internet.">
+<!ENTITY redirectLoop.longDesc "A conexão foi interrompida porque o site está redirecionando-se para si mesmo de uma maneira que impede a conclusão.">
+<!ENTITY unknownSocketType.longDesc "O site respondeu ao pedido de rede de um modo inesperado. Isto pode ocorrer devido ao endereço estar usando o protocolo errado para a porta especificada. Ou uma configuração não padrão no site, que está executando serviços diferentes dos esperados.">

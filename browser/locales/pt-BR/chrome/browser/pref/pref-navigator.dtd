@@ -1,0 +1,30 @@
+<!ENTITY useCurrent.accesskey "U">
+<!ENTITY location.label "Endereço(s):">
+<!ENTITY showFontsAndColors.label "Fontes e cores...">
+<!ENTITY showFontsAndColors.accesskey "F">
+<!ENTITY useBookmark.label "Usar bookmark...">
+<!ENTITY connectionsInfo.caption "Conexão">
+<!ENTITY header2.label "Páginas iniciais">
+<!ENTITY useBookmark.accesskey "b">
+<!ENTITY languagesInfo.label "Selecionar os idiomas e a codificação padrão para páginas web.">
+<!ENTITY checkNow.label "Verificar agora">
+<!ENTITY useCurrentMultiple.label "Usar as abas atuais">
+<!ENTITY proxiesInfo.label "Definir os proxies para acessar a internet.">
+<!ENTITY showConnections.label "Proxy...">
+<!ENTITY checkForDefault.accesskey "A">
+<!ENTITY fonts.caption "Fontes e cores padrão">
+<!ENTITY useCurrent.label "Usar a página atual">
+<!ENTITY makeDefaultText "Tornar o &brandShortName; o browser padrão.">
+<!ENTITY languages.caption "Idiomas">
+<!ENTITY location.accesskey "E">
+<!ENTITY defaultBrowserButton.label "Definir como browser padrão">
+<!ENTITY useBlank.accesskey "s">
+<!ENTITY useBlank.label "Usar página em branco">
+<!ENTITY lHeader "Geral">
+<!ENTITY checkNow.accesskey "V">
+<!ENTITY showLanguages.accesskey "I">
+<!ENTITY defaultBrowserGroup.label "Browser padrão">
+<!ENTITY showConnections.accesskey "P">
+<!ENTITY fontsInfo.label "Selecionar as fontes e as cores padrão usadas pelas páginas.">
+<!ENTITY checkForDefault.label "Ao iniciar, o &brandShortName; deve verificar se é o browser padrão">
+<!ENTITY showLanguages.label "Idiomas...">

@@ -1,0 +1,17 @@
+<!ENTITY advancedJavaScript.accesskey "v">
+<!ENTITY forOriginatingSiteOnly.accesskey "z">
+<!ENTITY enableJavaScript.accesskey "J">
+<!ENTITY advancedJavaScript.label "Avançado...">
+<!ENTITY enableJavaScript.label "Permitir JavaScript">
+<!ENTITY forOriginatingSiteOnly.label "Apenas se localizadas no site visitado">
+<!ENTITY enbJavaCheck.label "Permitir Java">
+<!ENTITY popupReject.accesskey "B">
+<!ENTITY popupReject.label "Bloquear popups">
+<!ENTITY enableImages.accesskey "C">
+<!ENTITY lHeader "Facilidades">
+<!ENTITY enableImages.label "Carregar imagens">
+<!ENTITY enbJavaCheck.accesskey "a">
+<!ENTITY enableSoftwareUpdate.label "Allow web sites to install software">
+<!ENTITY exceptions.label "Exceptions">
+<!ENTITY enableSoftwareUpdate.accesskey "i">
+<!ENTITY allowedSites.label "Allowed Sites">

@@ -1,0 +1,25 @@
+<!ENTITY sortFirst.label "Ordem crescente">
+<!ENTITY clear.accesskey "L">
+<!ENTITY sortLast.accesskey "d">
+<!ENTITY errLine.label "Linha:">
+<!ENTITY focus2.commandkey "d">
+<!ENTITY messages.label "Mensagens">
+<!ENTITY closeCmd.commandkey "w">
+<!ENTITY focus1.commandkey "l">
+<!ENTITY copyCmd.accesskey "C">
+<!ENTITY copyCmd.label "Copiar">
+<!ENTITY sortLast.label "Ordem decrescente">
+<!ENTITY warnings.label "Avisos">
+<!ENTITY warnings.accesskey "v">
+<!ENTITY evaluate.label "Executar">
+<!ENTITY errColumn.label "Coluna:">
+<!ENTITY clear.label "Limpar">
+<!ENTITY all.accesskey "T">
+<!ENTITY messages.accesskey "M">
+<!ENTITY all.label "Tudo">
+<!ENTITY copyCmd.commandkey "C">
+<!ENTITY errors.label "Erros">
+<!ENTITY sortFirst.accesskey "O">
+<!ENTITY errFile.label "Arquivo fonte:">
+<!ENTITY console.title "Console do JavaScript">
+<!ENTITY errors.accesskey "r">

@@ -1,0 +1,37 @@
+<!ENTITY shrinkToFit.label "Diminuir para caber na largura da página">
+<!ENTITY marginTop.label "Superior:">
+<!ENTITY hfURL.code "[&amp;U]">
+<!ENTITY basic.tab "Geral">
+<!ENTITY hfPage.code "[&amp;P]">
+<!ENTITY customPrompt.prompt "Forneça o texto do cabeçalho/rodapé:">
+<!ENTITY formatGroup.label "Formato">
+<!ENTITY marginLeft.label "Esquerda:">
+<!ENTITY marginRight.label "Direita:">
+<!ENTITY landscape "Paisagem">
+<!ENTITY headerFooter.label "Cabeçalho e rodapé">
+<!ENTITY printSetup.title "Configurar página">
+<!ENTITY hfPage "Página #">
+<!ENTITY portrait "Retrato">
+<!ENTITY hfTitle "Título">
+<!ENTITY hfTitle.code "[&amp;T]">
+<!ENTITY hfBlank "--em branco--">
+<!ENTITY marginBottom.label "Inferior:">
+<!ENTITY hfPageAndTotal "Página # de #">
+<!ENTITY advanced.tab "Margens">
+<!ENTITY hfLeft.label "Esquerda:">
+<!ENTITY scalePercent "&#037;">
+<!ENTITY hfPageAndTotal.code "[&amp;PT]">
+<!ENTITY marginUnits.metric "milímetros">
+<!ENTITY printBG.label "Imprimir cores e imagens do plano de fundo">
+<!ENTITY hfDateAndTime.code "&amp;D">
+<!ENTITY hfRight.label "Direita:">
+<!ENTITY hfURL "Endereço">
+<!ENTITY marginUnits.inches "polegadas">
+<!ENTITY scale.label "Escala:">
+<!ENTITY hfCenter.label "Centro:">
+<!ENTITY optionsGroup.label "Opções">
+<!ENTITY customPrompt.title "Personalizar">
+<!ENTITY marginGroup.label "Margens (em #1)">
+<!ENTITY hfCustom "Personalizar...">
+<!ENTITY orientation.label "Orientação:">
+<!ENTITY hfDateAndTime "Data/Hora">

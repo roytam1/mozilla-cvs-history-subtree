@@ -1,0 +1,38 @@
+<!ENTITY selectProfile.label "Estes perfils estão disponíveis para importação:">
+<!ENTITY importFromCamino.label "Camino">
+<!ENTITY importFromEpiphany.accesskey "E">
+<!ENTITY importFromSafari.accesskey "Safari">
+<!ENTITY importFrom.label "Importar opções, bookmarks, histórico, senhas e outras informações do:">
+<!ENTITY importFromIE.label "Microsoft Internet Explorer">
+<!ENTITY importFromKonqueror.label "Konqueror">
+<!ENTITY importFromSeamonkey.accesskey "N">
+<!ENTITY importItems.label "Importar este itens:">
+<!ENTITY importFromEpiphany.label "Epiphany">
+<!ENTITY importFromOmniWeb.accesskey "W">
+<!ENTITY done.title "Importação concluída">
+<!ENTITY migrating.title "Importando...">
+<!ENTITY importFromNetscape4.accesskey "4">
+<!ENTITY importFromNothing.label "Não importar nada">
+<!ENTITY importFromICab.label "iCab">
+<!ENTITY importFromNetscape4.label "Netscape 4.x">
+<!ENTITY importFromNothing.accesskey "d">
+<!ENTITY importFromOpera.accesskey "O">
+<!ENTITY importFromKonqueror.accesskey "K">
+<!ENTITY importFromSafari.label "Safari">
+<!ENTITY selectProfile.title "Selecione o perfil">
+<!ENTITY done.label "Estes itens foram importados com sucesso:">
+<!ENTITY importFromIE.accesskey "M">
+<!ENTITY migrating.label "Estes itens estão sendo importados...">
+<!ENTITY importItems.title "Itens">
+<!ENTITY importFromICab.accesskey "i">
+<!ENTITY importFromGaleon.label "Galeon">
+<!ENTITY migrationWizard.title "Assistente de importação">
+<!ENTITY importFromSeamonkey.label "Netscape 6, 7 ou Mozilla 1.x">
+<!ENTITY importFromCamino.accesskey "Camino">
+<!ENTITY importSource.title "Browser">
+<!ENTITY importFromOpera.label "Opera">
+<!ENTITY importFromUnix.label "Importar preferências, bookmarks, histórico, senhas e outras informações do:">
+<!ENTITY importFromPhoenix.label "Firefox 0.8, Firebird ou Phoenix">
+<!ENTITY importFromGaleon.accesskey "G">
+<!ENTITY importFromPhoenix.accesskey "F">
+<!ENTITY importFromOmniWeb.label "OmniWeb">

@@ -1,0 +1,9 @@
+<!ENTITY newTab.label "Nova aba">
+<!ENTITY enter.label "Forneça um endereço ou selecione o arquivo que você quer abrir:">
+<!ENTITY topWindow.label "Janela atual">
+<!ENTITY openWhere.label "Abrir em:">
+<!ENTITY openBtn.label "Abrir">
+<!ENTITY example.label "Exemplo: &vendorURL;">
+<!ENTITY newWindow.label "Nova janela">
+<!ENTITY chooseFile.label "Arquivo...">
+<!ENTITY caption.label "Abrir">
