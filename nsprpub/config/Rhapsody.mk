@@ -54,7 +54,7 @@ endif
 # definitions so that the linker can catch multiply-defined symbols.
 # Also, common symbols are not allowed with Rhapsody dynamic libraries.
 
-OS_CFLAGS		= $(DSO_CFLAGS) $(OS_REL_CFLAGS) -Wmost -fno-common -pipe -DRHAPSODY -DHAVE_STRERROR -DHAVE_BSD_FLOCK
+OS_CFLAGS		= $(DSO_CFLAGS) $(OS_REL_CFLAGS) -Wmost -fno-common -pipe -DRHAPSODY -DHAVE_STRERROR -DHAVE_BSD_FLOCK -DMACOSX
 
 ARCH			= rhapsody
 
