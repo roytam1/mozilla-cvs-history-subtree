@@ -153,6 +153,26 @@ nsTableRowFrame::Init(nsIPresContext*  aPresContext,
   return rv;
 }
 
+NS_IMETHODIMP
+nsTableRowFrame::SetInitialChildList(nsIPresContext* aPresContext,
+                                     nsIAtom*        aListName,
+                                     nsIFrame*       aChildList)
+{
+  nsresult rv = nsHTMLContainerFrame::SetInitialChildList(aPresContext, aListName, aChildList);
+  // see if the row has a cell with a row span > 1
+  for (nsIFrame* kidFrame = mFrames.FirstChild(); 
+       kidFrame && !(mState & NS_FRAME_OUTSIDE_CHILDREN); 
+       kidFrame->GetNextSibling(&kidFrame)) {
+    nsCOMPtr<nsIAtom> frameType;
+    kidFrame->GetFrameType(getter_AddRefs(frameType));
+    if (nsLayoutAtoms::tableCellFrame == frameType.get()) {
+      if (((nsTableCellFrame*)kidFrame)->GetRowSpan() > 1) {
+        mState |= NS_FRAME_OUTSIDE_CHILDREN;
+      }
+    }
+  }
+  return rv;
+}
 
 NS_IMETHODIMP
 nsTableRowFrame::AppendFrames(nsIPresContext* aPresContext,

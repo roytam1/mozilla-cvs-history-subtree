@@ -57,6 +57,10 @@ public:
                   nsIStyleContext* aContext,
                   nsIFrame*        aPrevInFlow);
 
+  NS_IMETHOD SetInitialChildList(nsIPresContext* aPresContext,
+                                 nsIAtom*        aListName,
+                                 nsIFrame*       aChildList);
+
   NS_IMETHOD AppendFrames(nsIPresContext* aPresContext,
                           nsIPresShell&   aPresShell,
                           nsIAtom*        aListName,
