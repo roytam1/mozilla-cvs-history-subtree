@@ -2032,7 +2032,9 @@ nsresult nsProfileLock::Lock(nsILocalFile* aFile)
         {
             if (errno == EAGAIN || errno == EACCES)
                 return NS_ERROR_FILE_ACCESS_DENIED;
-            return NS_ERROR_FAILURE;
+            // Allow other errors - probably tried to use F_SETLK
+            // on a file system which doesn't support it.
+            rv = NS_ERROR_PROFILE_SETLOCK_FAILED;
         }
     }
 #ifdef USE_SYMLINK_LOCKING

@@ -1203,11 +1203,11 @@ nsProfile::SetCurrentProfile(const PRUnichar * aCurrentProfile)
     nsProfileLock localLock;
     nsCOMPtr<nsILocalFile> localProfileDir(do_QueryInterface(profileDir, &rv));
     if (NS_FAILED(rv)) return rv;
-    rv = localLock.Lock(localProfileDir);
-    if (NS_FAILED(rv))
+    nsresult lock_rv = localLock.Lock(localProfileDir);
+    if (NS_FAILED(lock_rv))
     {
         NS_ERROR("Could not get profile directory lock.");
-        return rv;
+        return lock_rv;
     }
 
     nsCOMPtr<nsIObserverService> observerService = 
@@ -1246,7 +1246,6 @@ nsProfile::SetCurrentProfile(const PRUnichar * aCurrentProfile)
     gProfileDataAccess->UpdateRegistry(nsnull);
     mCurrentProfileLock = localLock;
             
-    if (NS_FAILED(rv)) return rv;
     mCurrentProfileAvailable = PR_TRUE;
     
     if (isSwitch)
@@ -1275,7 +1274,7 @@ nsProfile::SetCurrentProfile(const PRUnichar * aCurrentProfile)
     rv = DefineLocaleDefaultsDir();
     NS_ASSERTION(NS_SUCCEEDED(rv), "nsProfile::DefineLocaleDefaultsDir failed");
       
-    return NS_OK;
+    return lock_rv; // Any other error would have been returned already.
 }
 
 

@@ -53,6 +53,11 @@
 
 #define NS_PROFILE_STARTUP_CATEGORY \
         "profile-startup-category"
+
+// We could not get the lock but we don't know that another process has it.        
+#define NS_ERROR_PROFILE_SETLOCK_FAILED \
+  NS_ERROR_GENERATE_SUCCESS(NS_ERROR_MODULE_PROFILE, 2)
+
 %}
 
 /**
