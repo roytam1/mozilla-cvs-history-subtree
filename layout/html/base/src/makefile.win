@@ -32,6 +32,9 @@ EXPORTS =				\
 	nsIHTMLContent.h		\
 	nsILineIterator.h		\
 	nsHTMLParts.h			\
+!ifdef IBMBIDI
+	nsTextTransformer.h		\
+!endif        
 	$(NULL)
 
 CPPSRCS=				\

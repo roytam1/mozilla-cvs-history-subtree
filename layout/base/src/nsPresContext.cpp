@@ -29,7 +29,7 @@
  * identified per MPL Section 3.3
  *
  * Date         Modified by     Description of modification
- * 03/20/2000   IBM Corp.       BiDi - ability to change the default direction of the browser
+ * 03/20/2000   IBM Corp.       Bidi - ability to change the default direction of the browser
  *
  */
 #include "nsCOMPtr.h"
@@ -372,10 +372,11 @@ nsPresContext::SetShell(nsIPresShell* aShell)
 #ifdef IBMBIDI
           PRBool isVisual = PR_FALSE;
           PRUint8 textType;
-          GetDocumentBidi(IBMBIDI_TEXTTYPE, &textType);
-
-          if (IBMBIDI_TEXTTYPE_VISUAL == textType) {
-            isVisual = PR_TRUE;
+  //ahmed
+	nsBidiOptions mBidioptions;
+          GetBidi(&mBidioptions);
+          if (IBMBIDI_TEXTTYPE_VISUAL == mBidioptions.mtexttype) {
+	  isVisual = PR_TRUE;
           }
           else if (textType != IBMBIDI_TEXTTYPE_LOGICAL) {
             // XXX shouldn't be hard-coded.

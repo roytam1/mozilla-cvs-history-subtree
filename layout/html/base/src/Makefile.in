@@ -78,6 +78,12 @@ EXPORTS		= \
 		nsILineIterator.h \
 		nsHTMLParts.h \
 		$(NULL)
+                
+ifdef IBMBIDI
+EXPORTS		+= \
+		nsTextTransformer.h \
+		$(NULL)
+endif
 
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))
 
