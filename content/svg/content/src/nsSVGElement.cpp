@@ -68,9 +68,7 @@ nsSVGElement::~nsSVGElement()
   PRInt32 count = mChildren.Count();
   PRInt32 index;
   for (index = 0; index < count; index++) {
-    nsIContent* kid = (nsIContent *)mChildren.ElementAt(index);
-    kid->SetParent(nsnull);
-    NS_RELEASE(kid);
+    mChildren[index]->SetParent(nsnull);
   }
 
   if (mAttributes)
@@ -147,7 +145,7 @@ nsSVGElement::GetChildCount() const
 nsIContent *
 nsSVGElement::GetChildAt(PRUint32 aIndex) const
 {
-  return (nsIContent *)mChildren.SafeElementAt(aIndex);
+  return mChildren.SafeObjectAt(aIndex);
 }
 
 PRInt32
@@ -162,49 +160,28 @@ nsSVGElement::GetIDAttributeName() const
   return nsSVGAtoms::id;
 }
 
-already_AddRefed<nsINodeInfo>
-nsSVGElement::GetExistingAttrNameFromQName(const nsAString& aStr) const
+const nsAttrName*
+nsSVGElement::InternalGetExistingAttrNameFromQName(const nsAString& aStr) const
 {
   return mAttributes->GetExistingAttrNameFromQName(aStr);
 }
 
 nsresult
-nsSVGElement::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
+nsSVGElement::SetAttr(PRInt32 aNamespaceID, nsIAtom* aName, nsIAtom* aPrefix,
                       const nsAString& aValue,
                       PRBool aNotify)
 {
-    nsCOMPtr<nsINodeInfo> ni;
-    mNodeInfo->NodeInfoManager()->GetNodeInfo(aName, nsnull, aNameSpaceID,
-                                              getter_AddRefs(ni));
-
-    return SetAttr(ni, aValue, aNotify);
-}
-
-nsresult
-nsSVGElement::SetAttr(nsINodeInfo* aNodeInfo,
-                      const nsAString& aValue,
-                      PRBool aNotify)
-{
-  return mAttributes->SetAttr(aNodeInfo, aValue, aNotify);  
+  return mAttributes->SetAttr(aNamespaceID, aName, aPrefix, aValue, aNotify);  
 }
 
 nsresult
 nsSVGElement::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
                            nsAString& aResult) const
 {
-  nsCOMPtr<nsIAtom> prefix;
-  return GetAttr(aNameSpaceID, aName, getter_AddRefs(prefix), aResult);
-}
-
-nsresult
-nsSVGElement::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                      nsIAtom** aPrefix,
-                      nsAString& aResult) const
-{
   NS_ASSERTION(aNameSpaceID != kNameSpaceID_Unknown,
                "must have a real namespace ID!");
 
-  return mAttributes->GetAttr(aNameSpaceID, aName, aPrefix, aResult);
+  return mAttributes->GetAttr(aNameSpaceID, aName, aResult);
 }
 
 nsresult
@@ -370,10 +347,11 @@ nsSVGElement::GetChildNodes(nsIDOMNodeList** aChildNodes)
 NS_IMETHODIMP
 nsSVGElement::GetFirstChild(nsIDOMNode** aNode)
 {
-  if (mChildren.Count() > 0) {
-    nsIContent *child = (nsIContent *)mChildren.ElementAt(0);
-    if (child) // is this necessary?
-      return CallQueryInterface(child, aNode);
+  nsIContent *child = mChildren.SafeObjectAt(0);
+  if (child) {
+    nsresult res = CallQueryInterface(child, aNode);
+    NS_ASSERTION(NS_SUCCEEDED(res), "Must be a DOM Node"); // must be a DOM Node
+    return res;
   }
 
   *aNode = nsnull;
@@ -383,10 +361,11 @@ nsSVGElement::GetFirstChild(nsIDOMNode** aNode)
 NS_IMETHODIMP
 nsSVGElement::GetLastChild(nsIDOMNode** aNode)
 {
-  if (mChildren.Count() > 0) {
-    nsIContent *child = (nsIContent *)mChildren.ElementAt(mChildren.Count()-1);
-    if (child) // is this necessary?
-    return CallQueryInterface(child, aNode);
+  PRInt32 count = mChildren.Count();
+  if (count) {
+    nsresult res = CallQueryInterface(mChildren[count - 1], aNode);
+    NS_ASSERTION(NS_SUCCEEDED(res), "Must be a DOM Node"); // must be a DOM Node
+    return res;
   }
 
   *aNode = nsnull;
@@ -637,7 +616,7 @@ nsSVGElement::CopyNode(nsSVGElement* dest, PRBool deep)
     // copy children:
     PRInt32 count = mChildren.Count();
     for (PRInt32 i = 0; i < count; ++i) {
-      nsIContent* child = NS_STATIC_CAST(nsIContent*, mChildren[i]);
+      nsIContent* child = mChildren[i];
       
       NS_ASSERTION(child != nsnull, "null ptr");
       if (!child)

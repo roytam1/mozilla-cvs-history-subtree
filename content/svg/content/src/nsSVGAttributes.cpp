@@ -54,21 +54,21 @@
 #include "nsIURI.h"
 #include "nsSVGAtoms.h"
 #include "nsISVGContent.h"
+#include "nsDOMError.h"
 
 ////////////////////////////////////////////////////////////////////////
 // nsSVGAttribute implementation
 
 nsresult
-nsSVGAttribute::Create(nsINodeInfo* aNodeInfo,
+nsSVGAttribute::Create(const nsAttrName& aName,
                        nsISVGValue* value,
                        nsSVGAttributeFlags flags,
                        nsSVGAttribute** aResult)
 {
-  NS_ENSURE_ARG_POINTER(aNodeInfo);
   NS_PRECONDITION(aResult != nsnull, "null ptr");
   if (! aResult) return NS_ERROR_NULL_POINTER;
   
-  *aResult = (nsSVGAttribute*) new nsSVGAttribute(aNodeInfo, value, flags);
+  *aResult = new nsSVGAttribute(aName, value, flags);
   if(!*aResult) return NS_ERROR_OUT_OF_MEMORY;
   
   NS_ADDREF(*aResult);
@@ -80,7 +80,7 @@ nsSVGAttribute::Create(nsINodeInfo* aNodeInfo,
 }
 
 nsresult
-nsSVGAttribute::Create(nsINodeInfo* aNodeInfo,
+nsSVGAttribute::Create(const nsAttrName& aName,
                        const nsAString& value,
                        nsSVGAttribute** aResult)
 {
@@ -88,16 +88,16 @@ nsSVGAttribute::Create(nsINodeInfo* aNodeInfo,
   NS_CreateSVGGenericStringValue(value, getter_AddRefs(svg_value));
   if(!svg_value) return NS_ERROR_OUT_OF_MEMORY;
  
-  return nsSVGAttribute::Create(aNodeInfo, svg_value, 0, aResult);
+  return nsSVGAttribute::Create(aName, svg_value, 0, aResult);
 }
 
 
-nsSVGAttribute::nsSVGAttribute(nsINodeInfo* aNodeInfo,
+nsSVGAttribute::nsSVGAttribute(const nsAttrName& aName,
                                nsISVGValue* value,
                                nsSVGAttributeFlags flags)
     : mFlags(flags),
       mOwner(0),
-      mNodeInfo(aNodeInfo),
+      mName(aName),
       mValue(value)
 {
 }
@@ -211,13 +211,21 @@ nsSVGAttribute::GetOwnerDocument(nsIDOMDocument** aOwnerDocument)
 NS_IMETHODIMP
 nsSVGAttribute::GetNamespaceURI(nsAString& aNamespaceURI)
 {
-  return mNodeInfo->GetNamespaceURI(aNamespaceURI);
+  if (mName.IsAtom()) {
+    SetDOMStringToNull(aNamespaceURI);
+  }
+  else {
+    mName.NodeInfo()->GetNamespaceURI(aNamespaceURI);
+  }
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP
 nsSVGAttribute::GetPrefix(nsAString& aPrefix)
 {
-  mNodeInfo->GetPrefix(aPrefix);
+  mName.GetPrefix(aPrefix);
+
   return NS_OK;
 }
 
@@ -225,6 +233,12 @@ NS_IMETHODIMP
 nsSVGAttribute::SetPrefix(const nsAString& aPrefix)
 {
   // XXX: Validate the prefix string!
+
+  if (mName.IsAtom()) {
+    // This must be a non-namespaced attribute which, according to the
+    // dom-core spec, is not allowed to have a prefix.
+    return NS_ERROR_DOM_NAMESPACE_ERR;
+  }
   
   nsCOMPtr<nsINodeInfo> newNodeInfo;
   nsCOMPtr<nsIAtom> prefix;
@@ -234,11 +248,11 @@ nsSVGAttribute::SetPrefix(const nsAString& aPrefix)
     NS_ENSURE_TRUE(prefix, NS_ERROR_OUT_OF_MEMORY);
   }
   
-  nsresult rv = mNodeInfo->PrefixChanged(prefix,
-                                         getter_AddRefs(newNodeInfo));
+  nsresult rv = mName.NodeInfo()->PrefixChanged(prefix,
+                                                getter_AddRefs(newNodeInfo));
   NS_ENSURE_SUCCESS(rv, rv);
   
-  mNodeInfo = newNodeInfo;
+  mName.SetTo(newNodeInfo);
   
   return NS_OK;
 }
@@ -246,7 +260,7 @@ nsSVGAttribute::SetPrefix(const nsAString& aPrefix)
 NS_IMETHODIMP
 nsSVGAttribute::GetLocalName(nsAString& aLocalName)
 {
-  mNodeInfo->GetLocalName(aLocalName);
+  mName.LocalName()->ToString(aLocalName);
   return NS_OK;
 }
 
@@ -340,7 +354,8 @@ NS_IMETHODIMP
 nsSVGAttribute::SetValue(const nsAString& aValue)
 {
   if (mOwner) {
-    return mOwner->SetAttr(mNodeInfo, aValue, PR_TRUE);
+    return mOwner->SetAttr(mName.NamespaceID(), mName.LocalName(),
+                           mName.GetPrefix(), aValue, PR_TRUE);
   }
 
   return GetValue()->SetValueString(aValue);
@@ -398,7 +413,7 @@ nsSVGAttribute::DidModifySVGObservable (nsISVGValue* observable)
 void
 nsSVGAttribute::GetQualifiedName(nsAString& aQualifiedName)const
 {
-  mNodeInfo->GetQualifiedName(aQualifiedName);
+  mName.GetQualifiedName(aQualifiedName);
 }
 
 
@@ -464,13 +479,14 @@ nsSVGAttributes::ReleaseMappedAttributes()
 }  
 
 PRBool
-nsSVGAttributes::GetMappedAttribute(nsINodeInfo* aNodeInfo, nsSVGAttribute** attrib)
+nsSVGAttributes::GetMappedAttribute(PRInt32 aNamespaceID, nsIAtom* aName,
+                                    nsSVGAttribute** attrib)
 {
   PRInt32 count = mMappedAttributes.Count();
   PRInt32 index;
   for (index = 0; index < count; index++) {
     *attrib = (nsSVGAttribute*)mMappedAttributes.ElementAt(index);
-    if ((*attrib)->GetNodeInfo()->NameAndNamespaceEquals(aNodeInfo)) { 
+    if ((*attrib)->Name()->Equals(aName, aNamespaceID)) {
       NS_ADDREF(*attrib);
       return PR_TRUE;
     }
@@ -565,7 +581,7 @@ nsSVGAttributes::UpdateContentStyleRule()
 
   for (int i = 0; i< mAttributes.Count(); ++i) {
     nsSVGAttribute* attr = (nsSVGAttribute*) mAttributes[i];
-    nsIAtom* nameatom = attr->GetNodeInfo()->NameAtom();
+    nsIAtom* nameatom = attr->Name()->LocalName();
 
     if (!AffectsContentStyleRule(nameatom)) continue;
 
@@ -601,7 +617,6 @@ nsSVGAttributes::Count() const
 
 nsresult
 nsSVGAttributes::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                         nsIAtom** aPrefix,
                          nsAString& aResult)
 {
   NS_ASSERTION(nsnull != aName, "must have attribute name");
@@ -615,10 +630,7 @@ nsSVGAttributes::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
   PRInt32 index;
   for (index = 0; index < count; index++) {
     nsSVGAttribute *attr = ElementAt(index);
-    if ((aNameSpaceID == kNameSpaceID_Unknown ||
-         attr->GetNodeInfo()->NamespaceEquals(aNameSpaceID)) &&
-        (attr->GetNodeInfo()->Equals(aName))) {
-      NS_IF_ADDREF(*aPrefix = attr->GetNodeInfo()->GetPrefixAtom());
+    if (attr->Name()->Equals(aName, aNameSpaceID)) {
       attr->GetValue()->GetValueString(aResult);
       if (!aResult.IsEmpty()) {
         rv = NS_CONTENT_ATTR_HAS_VALUE;
@@ -635,7 +647,6 @@ nsSVGAttributes::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
     // Since we are returning a success code we'd better do
     // something about the out parameters (someone may have
     // given us a non-empty string).
-    *aPrefix = nsnull;
     aResult.Truncate();
   }
   
@@ -643,11 +654,11 @@ nsSVGAttributes::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
 }
 
 nsresult
-nsSVGAttributes::SetAttr(nsINodeInfo* aNodeInfo,
-                         const nsAString& aValue,
+nsSVGAttributes::SetAttr(PRInt32 aNamespaceID, nsIAtom* aName,
+                         nsIAtom* aPrefix, const nsAString& aValue,
                          PRBool aNotify)
 {
-  NS_ENSURE_ARG_POINTER(aNodeInfo);
+  NS_ENSURE_ARG_POINTER(aName);
   nsAutoString oldValue;
 
   nsCOMPtr<nsIDocument> document;
@@ -661,10 +672,11 @@ nsSVGAttributes::SetAttr(nsINodeInfo* aNodeInfo,
   count = Count();
   for (index = 0; index < count; index++) {
     attr = ElementAt(index);
-    if (attr->GetNodeInfo()->NameAndNamespaceEquals(aNodeInfo)) {
+    if (attr->Name()->Equals(aName,
+                             aNamespaceID)) {
       attr->GetValue()->GetValueString(oldValue);
-      NS_ASSERTION(attr->GetNodeInfo()==aNodeInfo, "svg attribute's prefix changed. XXX is this allowed to happen?");
-      if (oldValue.Equals(aValue)) {
+      if (oldValue.Equals(aValue) &&
+          attr->Name()->GetPrefix() == aPrefix) {
         // Do nothing if the value is not changing
         return NS_OK;
       }
@@ -672,22 +684,10 @@ nsSVGAttributes::SetAttr(nsINodeInfo* aNodeInfo,
     }
   }
 
-  PRInt32 nameSpaceID = aNodeInfo->NamespaceID();
-  nsIAtom *name = aNodeInfo->NameAtom();
-
-#ifdef DEBUG
-//   {
-//     nsAutoString str;
-//     name->ToString(str);
-//     printf("nsSVGAttributes(%p)::SetAttr(%s, %s)\n", this,
-//            NS_ConvertUCS2toUTF8(str).get(),NS_ConvertUCS2toUTF8(aValue).get());
-//   }
-#endif
-
   // Send the notification before making any updates
   mozAutoDocUpdate updateBatch(document, UPDATE_CONTENT_MODEL, aNotify);
   if (aNotify && document) {
-    document->AttributeWillChange(mContent, nameSpaceID, name);
+    document->AttributeWillChange(mContent, aNamespaceID, aName);
   }
 
   nsresult rv = NS_OK;
@@ -702,15 +702,25 @@ nsSVGAttributes::SetAttr(nsINodeInfo* aNodeInfo,
     // GetMappedAttribute and nsSVGAttribute::Create both addref, so we release
     // after this if block.  It's safe to use attr after the Release(), since
     // AppendElement also addrefs it.
-    if (GetMappedAttribute(aNodeInfo, &attr)) {
-      if (attr->GetNodeInfo()!=aNodeInfo) {
-        attr->mNodeInfo = aNodeInfo;
-      }
+    if (GetMappedAttribute(aNamespaceID, aName, &attr)) {
       attr->GetValue()->SetValueString(aValue);
     }
     else {
-      rv = nsSVGAttribute::Create(aNodeInfo, aValue, &attr);
-      NS_ENSURE_TRUE(attr, rv);
+      if (aNamespaceID == kNameSpaceID_None) {
+        rv = nsSVGAttribute::Create(nsAttrName(aName), aValue, &attr);
+        NS_ENSURE_TRUE(attr, rv);
+      }
+      else {
+        NS_ENSURE_TRUE(mContent, NS_ERROR_FAILURE);
+
+        nsCOMPtr<nsINodeInfo> ni;
+        nsresult rv = mContent->GetNodeInfo()->NodeInfoManager()->GetNodeInfo(
+            aName, nsnull, aNamespaceID, getter_AddRefs(ni));
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        rv = nsSVGAttribute::Create(nsAttrName(ni), aValue, &attr);
+        NS_ENSURE_TRUE(attr, rv);
+      }
     }
     AppendElement(attr);
     attr->Release();
@@ -721,7 +731,7 @@ nsSVGAttributes::SetAttr(nsINodeInfo* aNodeInfo,
   // XXX For some reason incremental mapping doesn't work, so for now
   // just delete the style rule and lazily reconstruct it in
   // GetContentStyleRule()
-  if(AffectsContentStyleRule(name)) 
+  if(AffectsContentStyleRule(aName)) 
     mContentStyleRule = nsnull;
 
   
@@ -730,7 +740,7 @@ nsSVGAttributes::SetAttr(nsINodeInfo* aNodeInfo,
     nsCOMPtr<nsIXBLBinding> binding;
     bindingManager->GetBinding(mContent, getter_AddRefs(binding));
     if (binding)
-      binding->AttributeChanged(name, nameSpaceID, PR_FALSE, aNotify);
+      binding->AttributeChanged(aName, aNamespaceID, PR_FALSE, aNotify);
 
     if (nsGenericElement::HasMutationListeners(mContent, NS_EVENT_BITS_MUTATION_ATTRMODIFIED)) {
       nsCOMPtr<nsIDOMEventTarget> node(do_QueryInterface(mContent));
@@ -739,13 +749,13 @@ nsSVGAttributes::SetAttr(nsINodeInfo* aNodeInfo,
       CallQueryInterface(attr,
                          NS_STATIC_CAST(nsIDOMNode**,
                                         getter_AddRefs(mutation.mRelatedNode)));
-      mutation.mAttrName = name;
+      mutation.mAttrName = aName;
       if (!oldValue.IsEmpty())
         mutation.mPrevAttrValue = do_GetAtom(oldValue);
       if (!aValue.IsEmpty())
         mutation.mNewAttrValue = do_GetAtom(aValue);
       mutation.mAttrChange = modification ? nsIDOMMutationEvent::MODIFICATION :
-                                             nsIDOMMutationEvent::ADDITION;
+                                            nsIDOMMutationEvent::ADDITION;
       nsEventStatus status = nsEventStatus_eIgnore;
       nsCOMPtr<nsIDOMEvent> domEvent;
       mContent->HandleDOMEvent(nsnull, &mutation, getter_AddRefs(domEvent),
@@ -755,7 +765,7 @@ nsSVGAttributes::SetAttr(nsINodeInfo* aNodeInfo,
     if (aNotify) {
       PRInt32 modHint = modification ? PRInt32(nsIDOMMutationEvent::MODIFICATION)
                                      : PRInt32(nsIDOMMutationEvent::ADDITION);
-      document->AttributeChanged(mContent, nameSpaceID, name,
+      document->AttributeChanged(mContent, aNamespaceID, aName,
                                  modHint);
     }
   }
@@ -782,9 +792,7 @@ nsSVGAttributes::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
   nsSVGAttribute* attr = nsnull;
   for (index = 0; index < count; index++) {
     attr = ElementAt(index);
-    if ((aNameSpaceID == kNameSpaceID_Unknown ||
-         attr->GetNodeInfo()->NamespaceEquals(aNameSpaceID)) &&
-        attr->GetNodeInfo()->Equals(aName) &&
+    if (attr->Name()->Equals(aName, aNameSpaceID) &&
         !attr->IsRequired() &&
         !attr->IsFixed()) {
       found = PR_TRUE;
@@ -847,27 +855,22 @@ nsSVGAttributes::HasAttr(PRInt32 aNameSpaceID, nsIAtom* aName) const
   PRInt32 index;
   for (index = 0; index < count; index++) {
     nsSVGAttribute *attr = ElementAt(index);
-    if ((aNameSpaceID == kNameSpaceID_Unknown ||
-         attr->GetNodeInfo()->NamespaceEquals(aNameSpaceID)) &&
-        (attr->GetNodeInfo()->Equals(aName))) {
+    if (attr->Name()->Equals(aName, aNameSpaceID)) {
       return PR_TRUE;
     }
   }
   return PR_FALSE;
 }
 
-NS_IMETHODIMP_(already_AddRefed<nsINodeInfo>)
+const nsAttrName*
 nsSVGAttributes::GetExistingAttrNameFromQName(const nsAString& aStr)
 {
   PRInt32 indx, count = Count();
   NS_ConvertUCS2toUTF8 utf8String(aStr);
   for (indx = 0; indx < count; indx++) {
-    nsSVGAttribute* attr = ElementAt(indx);
-    nsINodeInfo* ni = attr->GetNodeInfo();
-    if (ni->QualifiedNameEquals(utf8String)) {
-      NS_ADDREF(ni);
-
-      return ni;
+    const nsAttrName* name = ElementAt(indx)->Name();
+    if (name->QualifiedNameEquals(utf8String)) {
+      return name;
     }
   }
 
@@ -882,9 +885,9 @@ nsSVGAttributes::GetAttrNameAt(PRInt32 aIndex,
 {
   nsSVGAttribute* attr = ElementAt(aIndex);
   if (attr) {
-    *aNameSpaceID = attr->GetNodeInfo()->NamespaceID();
-    NS_ADDREF(*aName = attr->GetNodeInfo()->NameAtom());
-    NS_IF_ADDREF(*aPrefix = attr->GetNodeInfo()->GetPrefixAtom());
+    *aNameSpaceID = attr->Name()->NamespaceID();
+    NS_ADDREF(*aName = attr->Name()->LocalName());
+    NS_IF_ADDREF(*aPrefix = attr->Name()->GetPrefix());
 
     return NS_OK;
   }
@@ -913,7 +916,7 @@ nsSVGAttributes::AddMappedSVGValue(nsIAtom* name, nsISupports* value,
   NS_ENSURE_TRUE(ni, NS_ERROR_FAILURE);
 
   nsSVGAttribute* attrib = nsnull;
-  nsSVGAttribute::Create(ni, svg_value, NS_SVGATTRIBUTE_FLAGS_MAPPED, &attrib);
+  nsSVGAttribute::Create(nsAttrName(ni), svg_value, NS_SVGATTRIBUTE_FLAGS_MAPPED, &attrib);
   NS_ENSURE_TRUE(attrib, NS_ERROR_FAILURE);
   attrib->mOwner = this;
   mMappedAttributes.AppendElement((void*)attrib);
@@ -931,7 +934,8 @@ nsSVGAttributes::CopyAttributes(nsSVGAttributes* dest)
     nsAutoString value;
     rv = attr->GetValue()->GetValueString(value);
     NS_ENSURE_SUCCESS(rv,rv);
-    rv = dest->SetAttr(attr->GetNodeInfo(), value, PR_FALSE);
+    rv = dest->SetAttr(attr->Name()->NamespaceID(), attr->Name()->LocalName(),
+                       attr->Name()->GetPrefix(), value, PR_FALSE);
     NS_ENSURE_SUCCESS(rv,rv);
   }
   return NS_OK;
@@ -992,9 +996,9 @@ nsSVGAttributes::GetNamedItem(const nsAString& aName,
 
   for (PRInt32 i = mAttributes.Count() - 1; i >= 0; --i) {
     nsSVGAttribute* attr = (nsSVGAttribute*) mAttributes[i];
-    nsINodeInfo *ni = attr->GetNodeInfo();
     
-    if (inpNodeInfo->Equals(ni)) {
+    if (attr->Name()->Equals(inpNodeInfo->NameAtom(),
+                             inpNodeInfo->NamespaceID())) {
       NS_ADDREF(attr);
       *aReturn = attr;
       break;

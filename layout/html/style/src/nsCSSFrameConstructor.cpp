@@ -9897,9 +9897,6 @@ nsCSSFrameConstructor::ProcessRestyledFrames(nsStyleChangeList& aChangeList,
         continue;
     }
 
-    if (hint & nsChangeHint_ReconstructDoc) {
-      NS_ERROR("This shouldn't happen");
-    }
     if (hint & nsChangeHint_ReconstructFrame) {
       RecreateFramesForContent(aPresContext, content);
     } else {
@@ -9971,11 +9968,7 @@ nsCSSFrameConstructor::RestyleLaterSiblings(nsIPresContext *aPresContext,
                                           changeList, NS_STYLE_HINT_NONE,
                                           frameChange);
 
-      if (frameChange & nsChangeHint_ReconstructDoc) {
-        ReconstructDocElementHierarchy(aPresContext);
-        return; // No need to worry about anything else.
-      }
-      else if (frameChange & nsChangeHint_ReconstructFrame) {
+      if (frameChange & nsChangeHint_ReconstructFrame) {
         RecreateFramesForContent(aPresContext, child);
         changeList.Clear();
       } else {
@@ -10045,11 +10038,7 @@ nsCSSFrameConstructor::DoContentStateChanged(nsIPresContext* aPresContext,
                                               changeList, NS_STYLE_HINT_NONE,
                                               frameChange);
 
-          if (frameChange & nsChangeHint_ReconstructDoc) {
-            return ReconstructDocElementHierarchy(aPresContext);
-            // No need to worry about anything else.
-          }
-          else if (frameChange & nsChangeHint_ReconstructFrame) {
+          if (frameChange & nsChangeHint_ReconstructFrame) {
             result = RecreateFramesForContent(aPresContext, aContent);
             changeList.Clear();
           } else {
@@ -10100,8 +10089,7 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
     styledContent->GetAttributeChangeHint(aAttribute, aModType, hint);
   } 
 
-  PRBool reconstruct = (hint & nsChangeHint_ReconstructDoc) != 0;
-  PRBool reframe = (hint & (nsChangeHint_ReconstructDoc | nsChangeHint_ReconstructFrame)) != 0;
+  PRBool reframe = (hint & nsChangeHint_ReconstructFrame) != 0;
 
 #ifdef MOZ_XUL
   // The following listbox widget trap prevents offscreen listbox widget
@@ -10152,11 +10140,6 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
     }
   }
 
-  // apply changes
-  if (reconstruct) {
-    return ReconstructDocElementHierarchy(aPresContext);
-  }
-
   nsIFrameManager *frameManager = shell->GetFrameManager();
   nsReStyleHint rshint = nsReStyleHint(0);
   frameManager->HasAttributeDependentStyle(aContent,
@@ -10176,10 +10159,7 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
     }
 
     // hint is for primary only
-    if (hint & nsChangeHint_ReconstructDoc) {
-      return ReconstructDocElementHierarchy(aPresContext);
-      // No need to worry about anything else.
-    } else if (hint & nsChangeHint_ReconstructFrame) {
+    if (hint & nsChangeHint_ReconstructFrame) {
       result = RecreateFramesForContent(aPresContext, aContent);
       changeList.Clear();
     } else {
