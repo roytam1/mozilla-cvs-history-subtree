@@ -9,6 +9,7 @@ nsReflowTree::Node::Create(nsIFrame *forFrame)
     node->mFrame = forFrame;
     node->mFlags = 0;
     node->mKidU.mChild = 0;
+    node->mTargetCount = 0;
     return node;
 }
 
@@ -193,12 +194,14 @@ nsReflowTree::Node::Iterator::NextChild()
 void
 nsReflowTree::Node::Dump(int depth)
 {
-    fprintf(stderr, "%*s|\n%*s+-- %p%s\n", depth, "", depth, "", (void *)mFrame,
-            IsTarget() ? " (T)" : "");
+    fprintf(stderr, "%*s|\n%*s+-- %p", depth, "", depth, "", (void *)mFrame);
+    if (IsTarget())
+        fprintf(stderr, " (T: %d)", mTargetCount);
+    putc('\n', stderr);
 
     Iterator iter(this);
     Node *child;
-    while (child = iter.NextChild())
+    while ((child = iter.NextChild()))
         child->Dump(depth + 2);
 }
 

@@ -62,7 +62,7 @@ public:
             friend class nsReflowTree;
         };
 
-        void MakeTarget(PRBool isTarget = PR_TRUE);
+        void MakeTarget();
         PRBool IsTarget() { return mFlags & NODE_IS_TARGET; }
         void Dump(int depth);
                 
@@ -76,6 +76,7 @@ public:
             ChildChunk *mChunk;
         } mKidU;
         PRUint32 mFlags;
+        PRUint32 mTargetCount;
 
         static const int KIDS_CHUNKED = 1;
         static const int NODE_IS_TARGET = 2;
@@ -97,10 +98,8 @@ private:
 };
 
 inline void
-nsReflowTree::Node::MakeTarget(PRBool isTarget)
+nsReflowTree::Node::MakeTarget()
 {
-    if (isTarget)
-        mFlags |= NODE_IS_TARGET;
-    else
-        mFlags &= NODE_IS_TARGET;
+    mFlags |= NODE_IS_TARGET;
+    mTargetCount++;
 }
