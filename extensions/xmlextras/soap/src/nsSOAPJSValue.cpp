@@ -373,18 +373,32 @@ nsSOAPJSValue::ConvertValueToJSVal(JSContext* aContext,
 
       *vp = OBJECT_TO_JSVAL(arrayobj);
 
-  } else if (nsAutoString(aType).RFind(nsSOAPUtils::kStructTypePrefix, false, 0) >= 0) {
+  } 
+  else {
       
-      nsCOMPtr<nsISOAPJSValue> jsvalue = do_QueryInterface(aValue);
-      if (!jsvalue) return NS_ERROR_FAILURE;
+    nsCOMPtr<nsISOAPJSValue> jsvalue = do_QueryInterface(aValue);
+    if (jsvalue) {
 
       JSObject* data;
       jsvalue->GetObject(&data);
-      
+    
       *vp = OBJECT_TO_JSVAL(data);
-  }
-  else {
-    return NS_ERROR_FAILURE;
+    }
+    else {
+//  Just wrap the value if all else failed.  If it is a DOM node, it will
+//  have everything it needs in the class info.
+      nsresult rv;
+      NS_WITH_SERVICE(nsIXPConnect, xpc, nsIXPConnect::GetCID(), &rv);
+      if (NS_FAILED(rv)) return rv;
+       nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+      JSObject* obj;
+      rv = xpc->WrapNative(aContext, ::JS_GetGlobalObject(aContext),
+	aValue, NS_GET_IID(nsISupports), getter_AddRefs(holder));
+      if (NS_FAILED(rv)) return rv;
+      rv = holder->GetJSObject(&obj);
+      if (!obj) return NS_ERROR_FAILURE;
+      *vp = OBJECT_TO_JSVAL(obj);
+    }
   }
   return NS_OK;
 }
