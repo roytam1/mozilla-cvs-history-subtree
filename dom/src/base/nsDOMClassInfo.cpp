@@ -164,11 +164,11 @@ static NS_DEFINE_IID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
   CLASSINFO_INTERFACES_ONLY
 
 #define NODE_SCRIPTABLE_FLAGS                                                 \
-  DEFAULT_SCRIPTABLE_FLAGS |                                                  \
-  WANT_PRECREATE |                                                            \
-  WANT_NEWRESOLVE |                                                           \
-  WANT_ADDPROPERTY |                                                          \
-  WANT_SETPROPERTY
+  (DEFAULT_SCRIPTABLE_FLAGS |                                                 \
+   WANT_PRECREATE |                                                           \
+   WANT_NEWRESOLVE |                                                          \
+   WANT_ADDPROPERTY |                                                         \
+   WANT_SETPROPERTY) & ~USE_JSSTUB_FOR_ADDPROPERTY
 
 #define ELEMENT_SCRIPTABLE_FLAGS                                              \
   NODE_SCRIPTABLE_FLAGS |                                                     \
@@ -1738,48 +1738,48 @@ nsEventRecieverSH::RegisterCompileHandler(nsIXPConnectWrappedNative *wrapper,
   *did_compile = PR_FALSE;
 
   JSString *str = JSVAL_TO_STRING(id);
-  nsresult rv = NS_OK;
 
-  if (IsEventName(str)) {
-    nsCOMPtr<nsIScriptContext> script_cx;
-    rv = nsJSUtils::GetStaticScriptContext(cx, obj, getter_AddRefs(script_cx));
-    NS_ENSURE_SUCCESS(rv, rv);
+  if (!IsEventName(str)) {
+    return NS_OK;
+  }
 
-    nsCOMPtr<nsISupports> native;
-    wrapper->GetNative(getter_AddRefs(native));
-    NS_ABORT_IF_FALSE(native, "No native!");
+  nsCOMPtr<nsIScriptContext> script_cx;
+  nsresult rv = nsJSUtils::GetStaticScriptContext(cx, obj,
+                                                  getter_AddRefs(script_cx));
+  NS_ENSURE_SUCCESS(rv, rv);
 
-    nsCOMPtr<nsIDOMEventReceiver> receiver(do_QueryInterface(native));
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
+  NS_ABORT_IF_FALSE(native, "No native!");
 
-    if (receiver) {
-      nsCOMPtr<nsIEventListenerManager> manager;
+  nsCOMPtr<nsIDOMEventReceiver> receiver(do_QueryInterface(native));
+  NS_ENSURE_TRUE(receiver, NS_ERROR_UNEXPECTED);
 
-      receiver->GetListenerManager(getter_AddRefs(manager));
+  nsCOMPtr<nsIEventListenerManager> manager;
 
-      if (manager) {
-        const PRUnichar *ustr =
-          NS_REINTERPRET_CAST(const PRUnichar *, ::JS_GetStringChars(str));
+  receiver->GetListenerManager(getter_AddRefs(manager));
+  NS_ENSURE_TRUE(manager, NS_ERROR_UNEXPECTED);
 
-        nsCOMPtr<nsIAtom> atom(getter_AddRefs(NS_NewAtom(ustr)));
-        NS_ENSURE_TRUE(atom, NS_ERROR_OUT_OF_MEMORY);
+  const PRUnichar *ustr = NS_REINTERPRET_CAST(const PRUnichar *,
+                                              ::JS_GetStringChars(str));
 
-        if (compile) {
-          rv = manager->CompileScriptEventListener(script_cx, receiver, atom,
-                                                   did_compile);
-        } else {
-          rv = manager->RegisterScriptEventListener(script_cx, receiver, atom);
-        }
-      }
-    }
+  nsCOMPtr<nsIAtom> atom(getter_AddRefs(NS_NewAtom(ustr)));
+  NS_ENSURE_TRUE(atom, NS_ERROR_OUT_OF_MEMORY);
+
+  if (compile) {
+    rv = manager->CompileScriptEventListener(script_cx, receiver, atom,
+                                             did_compile);
+  } else {
+    rv = manager->RegisterScriptEventListener(script_cx, receiver, atom);
   }
 
   return rv;
 }
 
 NS_IMETHODIMP
-nsEventRecieverSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                              JSObject *obj, jsval id, PRUint32 flags,
-                              JSObject **objp, PRBool *_retval)
+nsEventRecieverSH::NewResolve(nsIXPConnectWrappedNative *wrapper,
+                              JSContext *cx, JSObject *obj, jsval id,
+                              PRUint32 flags, JSObject **objp, PRBool *_retval)
 {
   if (!JSVAL_IS_STRING(id)) {
     return NS_OK;
@@ -1803,13 +1803,13 @@ nsEventRecieverSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
                                JSContext *cx, JSObject *obj, jsval id,
                                jsval *vp, PRBool *_retval)
 {
-  if (::JS_TypeOfValue(cx, *vp) == JSTYPE_FUNCTION || JSVAL_IS_STRING(id)) {
-    PRBool did_compile; // Ignored here.
-
-    return RegisterCompileHandler(wrapper, cx, obj, id, PR_FALSE, &did_compile);
+  if (::JS_TypeOfValue(cx, *vp) != JSTYPE_FUNCTION || !JSVAL_IS_STRING(id)) {
+    return NS_OK;
   }
 
-  return NS_OK;
+  PRBool did_compile; // Ignored here.
+
+  return RegisterCompileHandler(wrapper, cx, obj, id, PR_FALSE, &did_compile);
 }
 
 /*
@@ -2024,7 +2024,7 @@ nsNamedNodeMapSH::GetNamedItem(nsISupports *aNative, nsAReadableString& aName,
   NS_ENSURE_TRUE(map, NS_ERROR_UNEXPECTED);
 
   nsIDOMNode *node = nsnull; // Weak, transfer the ownership over to aResult
-  nsresult rv =  map->GetNamedItem(aName, &node);
+  nsresult rv = map->GetNamedItem(aName, &node);
 
   *aResult = node;
 
@@ -2057,7 +2057,7 @@ nsHTMLCollectionSH::GetNamedItem(nsISupports *aNative, nsAReadableString& aName,
   NS_ENSURE_TRUE(collection, NS_ERROR_UNEXPECTED);
 
   nsIDOMNode *node = nsnull; // Weak, transfer the ownership over to aResult
-  nsresult rv =  collection->NamedItem(aName, &node);
+  nsresult rv = collection->NamedItem(aName, &node);
 
   *aResult = node;
 
