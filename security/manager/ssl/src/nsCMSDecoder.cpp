@@ -83,6 +83,31 @@ nsCMSMessage::~nsCMSMessage()
 {
 }
 
+NS_IMETHODIMP nsCMSMessage::VerifySignature()
+{
+  return  NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsCMSMessage::GetSignerEmailAddress(char * * aEmail)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsCMSMessage::GetSignerCommonName(char ** aName)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsCMSMessage::ContentIsEncrypted(int *)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsCMSMessage::ContentIsSigned(int *)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 NS_IMETHODIMP nsCMSMessage::VerifyDetachedSignature()
 {
   return  NS_ERROR_NOT_IMPLEMENTED;
