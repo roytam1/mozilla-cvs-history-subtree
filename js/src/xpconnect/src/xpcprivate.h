@@ -287,7 +287,7 @@ public:
         return mStrings[index];
     }
 
-    static JSBool GCCallback(JSContext *cx, JSGCStatus status);
+    static JSBool JS_DLL_CALLBACK GCCallback(JSContext *cx, JSGCStatus status);
 
     void DebugDump(PRInt16 depth);
 
