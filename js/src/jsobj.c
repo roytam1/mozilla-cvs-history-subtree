@@ -292,6 +292,7 @@ js_EnterSharpObject(JSContext *cx, JSObject *obj, JSIdArray **idap,
 	    if (!he)
 		JS_ReportOutOfMemory(cx);
 	    *sp = NULL;
+            sharpid = 0;
 	    goto out;
 	}
     }
@@ -391,16 +392,16 @@ js_obj_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     /* Allocate 2 + 1 for "{}" and the terminator. */
     if (!chars) {
 	chars = malloc((2 + 1) * sizeof(jschar));
-	if (!chars)
-	    goto done;
 	nchars = 0;
+	if (!chars)
+	    goto error;
     } else {
 	MAKE_SHARP(he);
 	nchars = js_strlen(chars);
 	chars = realloc((ochars = chars), (nchars + 2 + 1) * sizeof(jschar));
 	if (!chars) {
 	    free(ochars);
-	    goto done;
+	    goto error;
 	}
     }
     chars[nchars++] = '{';
@@ -412,14 +413,14 @@ js_obj_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 	id = ida->vector[i];
 	ok = OBJ_GET_PROPERTY(cx, obj, id, &val);
 	if (!ok)
-	    goto done;
+	    goto error;
 
 	/* Convert id to a jsval and then to a string. */
 	id = js_IdToValue(id);
 	idstr = js_ValueToString(cx, id);
 	if (!idstr) {
 	    ok = JS_FALSE;
-	    goto done;
+	    goto error;
 	}
 	argv[0] = STRING_TO_JSVAL(idstr);
 
@@ -428,7 +429,7 @@ js_obj_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 	    idstr = js_QuoteString(cx, idstr, '\'');
 	    if (!idstr) {
 		ok = JS_FALSE;
-		goto done;
+		goto error;
 	    }
 	    argv[0] = STRING_TO_JSVAL(idstr);
 	}
@@ -437,7 +438,7 @@ js_obj_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 	valstr = js_ValueToSource(cx, val);
 	if (!valstr) {
 	    ok = JS_FALSE;
-	    goto done;
+	    goto error;
 	}
 	argv[1] = STRING_TO_JSVAL(valstr);
 	vchars = valstr->chars;
@@ -451,7 +452,7 @@ js_obj_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 	    he = js_EnterSharpObject(cx, JSVAL_TO_OBJECT(val), NULL, &vsharp);
 	    if (!he) {
 		ok = JS_FALSE;
-		goto done;
+		goto error;
 	    }
 	    if (IS_SHARP(he)) {
 		vchars = vsharp;
@@ -475,7 +476,7 @@ js_obj_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 	    /* Save code space on error: let JS_free ignore null vsharp. */
 	    JS_free(cx, vsharp);
 	    free(ochars);
-	    goto done;
+	    goto error;
 	}
 
 	if (comma) {
@@ -499,11 +500,12 @@ js_obj_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 	    JS_free(cx, vsharp);
     }
 
-  done:
     if (chars) {
 	chars[nchars++] = '}';
 	chars[nchars] = 0;
     }
+
+error:
     js_LeaveSharpObject(cx, &ida);
 
     if (!ok) {
@@ -589,6 +591,7 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 #endif
 
     caller = cx->fp->down;
+    implicitWith = JS_FALSE; /* Unnecessary init to kill gcc warning */
 
     if ((cx->version == JSVERSION_DEFAULT || cx->version >= JSVERSION_1_4)
             && (*caller->pc != JSOP_CALLSPECIAL)) {
@@ -1288,7 +1291,7 @@ js_FreeSlot(JSContext *cx, JSObject *obj, uint32 slot)
 	    {                                                                 \
 		jsuint _index = JS7_UNDEC(*_cp++);                            \
 		jsuint _oldIndex = 0;                                         \
-		jsuint _c;                                                    \
+		jsuint _c = 0;                                                \
 		if (_index != 0) {                                            \
 		    while (JS7_ISDEC(*_cp)) {                                 \
 			_oldIndex = _index;                                   \
@@ -1474,6 +1477,7 @@ js_FindProperty(JSContext *cx, jsid id, JSObject **objp, JSObject **pobjp,
 
     rt = cx->runtime;
 
+    lastobj = NULL;             /* Suppress gcc warning */
     for (obj = cx->fp->scopeChain; obj; obj = parent) {
 	/* Try the property cache and return immediately on cache hit. */
 	PROPERTY_CACHE_TEST(&rt->propertyCache, obj, id, prop);
@@ -1653,6 +1657,8 @@ js_SetProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
 
     rt = cx->runtime;
     JS_LOCK_OBJ(cx, obj);
+    protoid = protoattrs = 0;   /* Suppress use-before-set gcc warning */
+    protogetter = protosetter = NULL; /* Suppress use-before-set gcc warning */
 
     scope = js_GetMutableScope(cx, obj);
     if (!scope) {
