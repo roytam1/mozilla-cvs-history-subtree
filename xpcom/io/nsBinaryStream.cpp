@@ -17,12 +17,23 @@
  */
 
 /**
+ * This file contains implementations of the nsIBinaryInputStream and
+ * nsIBinaryOutputStream interfaces.  Together, these interfaces allows reading
+ * and writing of primitive data types (integers, floating-point values,
+ * booleans, etc.) to a stream in a binary, untagged, fixed-endianness format.
+ * This might be used, for example, to implement network protocols or to
+ * produce architecture-neutral binary disk files, i.e. ones that can be read
+ * and written by both big-endian and little-endian platforms.  Output is
+ * written in big-endian order (high-order byte first), as this is traditional
+ * network order.
  *
+ * @See nsIBinaryInputStream
+ * @See nsIBinaryOutputStream
  */
-
 #include "nsBinaryStream.h"
 #include "nsIAllocator.h"
 
+// Swap macros, used to convert to/from canonical (big-endian) format
 #ifdef IS_LITTLE_ENDIAN
 #    define SWAP16(x) ((((x) & 0xff) << 8) | (((x) >> 8) & 0xff))
 #    define SWAP32(x) ((SWAP16((x) & 0xffff) << 16) | (SWAP16((x) >> 16)))
@@ -34,7 +45,10 @@
 #    define SWAP32(x) (x)
 #endif
 
-nsBinaryOutputStream::nsBinaryOutputStream(nsIOutputStream* aStream): mOutputStream(aStream) { NS_INIT_REFCNT(); }
+nsBinaryOutputStream::nsBinaryOutputStream(nsIOutputStream* aStream): mOutputStream(aStream)
+{
+    NS_INIT_REFCNT();
+}
 
 NS_IMPL_ISUPPORTS(nsBinaryOutputStream, NS_GET_IID(nsIBinaryOutputStream))
 
@@ -136,19 +150,19 @@ nsBinaryOutputStream::WriteDouble(double aDouble)
 }
 
 NS_IMETHODIMP
-nsBinaryOutputStream::WriteString(const char *aString)
+nsBinaryOutputStream::WriteStringZ(const char *aString)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsBinaryOutputStream::WriteWString(const PRUnichar* aString)
+nsBinaryOutputStream::WriteWStringZ(const PRUnichar* aString)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsBinaryOutputStream::WriteUtf8(const PRUnichar* aString)
+nsBinaryOutputStream::WriteUtf8Z(const PRUnichar* aString)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -163,6 +177,12 @@ nsBinaryOutputStream::WriteBytes(const char *aString, PRUint32 aLength)
     if (bytesWritten != aLength)
         return NS_ERROR_FAILURE;
     return rv;
+}
+
+NS_IMETHODIMP
+nsBinaryOutputStream::WriteString(nsString* aString)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 nsBinaryInputStream::nsBinaryInputStream(nsIInputStream* aStream): mInputStream(aStream) { NS_INIT_REFCNT(); }
@@ -270,19 +290,19 @@ nsBinaryInputStream::ReadDouble(double* aDouble)
 }
 
 NS_IMETHODIMP
-nsBinaryInputStream::ReadString(char* *aString)
+nsBinaryInputStream::ReadStringZ(char* *aString)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsBinaryInputStream::ReadWString(PRUnichar* *aString)
+nsBinaryInputStream::ReadWStringZ(PRUnichar* *aString)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsBinaryInputStream::ReadUtf8(PRUnichar* *aString)
+nsBinaryInputStream::ReadUtf8Z(PRUnichar* *aString)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -305,6 +325,12 @@ nsBinaryInputStream::ReadBytes(char* *aString, PRUint32 aLength)
 
     *aString = s;
     return NS_OK;
+}
+
+NS_IMETHODIMP
+nsBinaryInputStream::ReadString(nsString* *aString)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_COM nsresult

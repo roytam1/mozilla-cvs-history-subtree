@@ -16,15 +16,22 @@
  * Reserved.
  */
 
+[ptr] native nsString(nsString); 
+%{ C++
+#include "nsString.h"
+%}
+
 #include "nsIOutputStream.idl"
 #include "nsrootidl.idl"
 
 /**
- * This interface enables creation of a binary stream containing
- * endian-independent binary data.  This might be used, for example, to
- * implement network protocols or to produce architecture-neutral disk files.
- * Output is written in big-endian order (high-order byte first), as this is
- * traditional network order.
+ * This interface allows writing of primitive data types (integers,
+ * floating-point values, booleans, etc.) to a stream in a binary, untagged,
+ * fixed-endianness format.  This might be used, for example, to implement
+ * network protocols or to produce architecture-neutral binary disk files,
+ * i.e. ones that can be read and written by both big-endian and little-endian
+ * platforms.  Output is written in big-endian order (high-order byte first),
+ * as this is traditional network order.
  *
  * @See nsIBinaryInputStream
  */
@@ -43,10 +50,31 @@ interface nsIBinaryOutputStream : nsIOutputStream {
     void writeFloat(in float aFloat);
     void writeDouble(in double aDouble);
 
-    void writeString(in string aString);
-    void writeWString(in wstring aString);
+    /**
+     * Write a NUL-terminated 8-bit char* string to a binary stream.
+     */
+    void writeStringZ(in string aString);
+
+    /**
+     * Write a NUL-terminated 16-bit PRUnichar* string to a binary stream.
+     */
+    void writeWStringZ(in wstring aString);
+
+    /**
+     * Write a NUL-terminated UTF8-encoded string to a binary stream, produced
+     * from a NUL-terminated 16-bit PRUnichar* string argument.
+     */
+    void writeUtf8Z(in wstring aString);
+
+    /**
+     * Write an opaque byte array to a binary stream.
+     */
     void writeBytes([size_is(aLength)] in string aString, in PRUint32 aLength);
-    void writeUtf8(in wstring aString);
+
+    /**
+     * Write a string (possibly containing embedded NULs) to a binary stream.
+     */
+    [noscript] void writeString(in nsString aString);
 };
 
 %{C++

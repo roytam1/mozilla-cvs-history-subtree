@@ -16,14 +16,21 @@
  * Reserved.
  */
 
+[ptr] native nsString(nsString); 
+%{ C++
+#include "nsString.h"
+%}
+
 #include "nsIOutputStream.idl"
 #include "nsrootidl.idl"
 
 /**
- * This interface allows consumption of a binary stream containing
- * endian-independent binary data.  This might be used, for example,
- * to implement network protocols or to produce architecture-neutral
- * disk files.
+ * This interface allows consumption of primitive data types from a "binary
+ * stream" containing untagged, big-endian binary data, i.e. as produced by an
+ * implementation of nsIBinaryOutputStream.  This might be used, for example,
+ * to implement network protocols or to read from architecture-neutral disk
+ * files, i.e. ones that can be read and written by both big-endian and
+ * little-endian platforms.
  *
  * @See nsIBinaryOutputStream
  */
@@ -42,10 +49,31 @@ interface nsIBinaryInputStream : nsIInputStream {
     float readFloat();
     double readDouble();
 
-    string readString();
-    wstring readWString();
+    /**
+     * Read a NUL-terminated 8-bit char* string from a binary stream.
+     */
+    string readStringZ();
+
+    /**
+     * Read a NUL-terminated 16-bit PRUnichar* string from a binary stream.
+     */
+    wstring readWStringZ();
+
+    /**
+     * Read a NUL-terminated UTF8-encoded string from a binary stream, producing
+     * a NUL-terminated 16-bit PRUnichar* string argument as a result.
+     */
+    wstring readUtf8Z();
+
+    /**
+     * Read an opaque byte array from a binary stream.
+     */
     void readBytes([size_is(aLength)] out string aString, in PRUint32 aLength);
-    wstring readUtf8();
+
+    /**
+     * Read a string (possibly containing embedded NULs) from a binary stream.
+     */
+    [noscript] nsString readString();
 };
 
 %{C++
