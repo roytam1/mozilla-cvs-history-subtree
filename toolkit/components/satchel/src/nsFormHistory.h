@@ -44,6 +44,7 @@
 #include "nsString.h"
 #include "nsCOMPtr.h"
 #include "nsIObserver.h"
+#include "nsIPrefBranch.h"
 #include "nsWeakReference.h"
 #include "mdb.h"
 
@@ -105,6 +106,7 @@ protected:
   static PRBool gPrefsInitialized;
 
   nsCOMPtr<nsIMdbFactory> mMdbFactory;
+  nsCOMPtr<nsIPrefBranch> mPrefBranch;
   nsIMdbEnv* mEnv;
   nsIMdbStore* mStore;
   nsIMdbTable* mTable;
