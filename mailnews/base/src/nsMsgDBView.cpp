@@ -590,6 +590,8 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, P
     else
       return rv;
   }
+  if (!msgHdr)
+    return NS_MSG_INVALID_DBVIEW_INDEX;
 
   // just a hack
   nsXPIDLCString dbString;
@@ -2513,7 +2515,7 @@ NS_IMETHODIMP nsMsgDBView::OnKeyChange(nsMsgKey aKeyChanged, PRUint32 aOldFlags,
     nsMsgViewIndex index = FindViewIndex(aKeyChanged);
     if (index != nsMsgViewIndex_None)
     {
-      PRUint32 viewOnlyFlags = m_flags[index] & MSG_VIEW_FLAGS;
+      PRUint32 viewOnlyFlags = m_flags[index] & (MSG_VIEW_FLAGS | MSG_FLAG_ELIDED);
 
       // ### what about saving the old view only flags, like IsThread and HasChildren?
       // I think we'll want to save those away.
@@ -2594,7 +2596,7 @@ void	nsMsgDBView::NoteChange(nsMsgViewIndex firstLineChanged, PRInt32 numChanged
     switch (changeType)
     {
     case nsMsgViewNotificationCode::changed:
-      mOutliner->InvalidateRange(firstLineChanged, firstLineChanged + numChanged);
+      mOutliner->InvalidateRange(firstLineChanged, firstLineChanged + numChanged - 1);
       break;
     case nsMsgViewNotificationCode::insertOrDelete:
       mOutliner->RowCountChanged(firstLineChanged, numChanged);

@@ -499,16 +499,16 @@ nsresult nsMsgThreadedDBView::RemoveByIndex(nsMsgViewIndex index)
 			// it might have been deleted from the view but not the db yet.
       PRUint32 numThreadChildren;
       threadHdr->GetNumChildren(&numThreadChildren);
-			if (threadHdr == nextThreadHdr && numThreadChildren > 1)
+			if (threadHdr == nextThreadHdr && numThreadChildren > 0)
 			{
 				// unreadOnly
 				nsCOMPtr <nsIMsgDBHdr> msgHdr;
-        rv = threadHdr->GetChildHdrAt(1, getter_AddRefs(msgHdr));
+        rv = threadHdr->GetChildHdrAt(0, getter_AddRefs(msgHdr));
 				if (msgHdr != nsnull)
 				{
 					PRUint32 flag = 0;
           msgHdr->GetFlags(&flag);
-					if (numThreadChildren > 2)
+					if (numThreadChildren > 1)
 						flag |= MSG_VIEW_FLAG_ISTHREAD | MSG_VIEW_FLAG_HASCHILDREN;
 					m_flags.SetAtGrow(index, flag);
 					m_levels.SetAtGrow(index, 0);
@@ -528,13 +528,13 @@ nsresult nsMsgThreadedDBView::RemoveByIndex(nsMsgViewIndex index)
   PRUint32 numThreadChildren;
   if (threadHdr)
     threadHdr->GetNumChildren(&numThreadChildren);
-	if (threadHdr && numThreadChildren > 1)
+	if (threadHdr && numThreadChildren > 0) // header has aleady been deleted from thread
 	{
 		// change the id array and flags array to reflect the child header.
 		// If we're not deleting the header, we want the second header,
 		// Otherwise, the first one (which just got promoted).
 		nsCOMPtr <nsIMsgDBHdr> msgHdr;
-    rv = threadHdr->GetChildHdrAt(1, getter_AddRefs(msgHdr));
+    rv = threadHdr->GetChildHdrAt(0, getter_AddRefs(msgHdr));
 		if (msgHdr != nsnull)
 		{
       nsMsgKey msgKey;
@@ -547,7 +547,7 @@ nsresult nsMsgThreadedDBView::RemoveByIndex(nsMsgViewIndex index)
 //			if (msgHdr->GetArticleNum() == msgHdr->GetThreadId())
 				flag |= MSG_VIEW_FLAG_ISTHREAD;
 
-			if (numThreadChildren == 2)	// if only hdr in thread (with one about to be deleted)
+			if (numThreadChildren == 1)	// if only hdr in thread (with one about to be deleted)
 													// adjust flags.
 			{
 				flag &=  ~MSG_VIEW_FLAG_HASCHILDREN;
@@ -565,7 +565,7 @@ nsresult nsMsgThreadedDBView::RemoveByIndex(nsMsgViewIndex index)
 		}
 		else
 			NS_ASSERTION(PR_FALSE, "couldn't find thread child");	
-		NoteChange(index, 0, nsMsgViewNotificationCode::insertOrDelete);	// horrible hack to tell fe that the key has changed
+		NoteChange(index, 1, nsMsgViewNotificationCode::changed);	
 	}
 	else
 		rv = nsMsgDBView::RemoveByIndex(index);
