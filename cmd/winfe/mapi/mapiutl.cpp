@@ -899,26 +899,31 @@ HWND
 GetTheValidWindow(void)
 {
   HWND  hWnd = NULL;
+  DWORD waitTime = GetPauseTime(STARTUP);
+  DWORD timeCount = 0;
 
-  while ((hWnd = FindWindow("aHiddenFrameClass", NULL)) != NULL)
+  while ( ((hWnd = FindWindow("aHiddenFrameClass", NULL)) != NULL) &&
+                        (timeCount < ( (ONE_SEC * waitTime) / 2) ) )
   {
     if (SendMessage(hWnd, msg_IPCStatus, 0, 0) == 19)
     {
       if (SendMessage(hWnd, msg_ExitStatus, 0, 0) == EXITING)
         return NULL;
       else
-        break;
+      {
+        return hWnd;
+      }
     }
-    else
+    else  
     {
-        return NULL;
+      timeCount++;
     }
 
     FlushIt();
-    Sleep(200);
+    Sleep(50);
   }
 
-  return hWnd;
+  return NULL;
 }
 
 //
