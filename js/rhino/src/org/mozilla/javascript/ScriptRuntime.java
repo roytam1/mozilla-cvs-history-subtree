@@ -42,7 +42,6 @@ package org.mozilla.javascript;
 
 import java.util.*;
 import java.lang.reflect.*;
-import org.mozilla.classfile.DefiningClassLoader;
 
 /**
  * This is the class that implements the runtime.
@@ -395,7 +394,7 @@ public class ScriptRuntime {
             // cool idiom courtesy Shaver.
             result.append("\\u");
             for (int l = hex.length(); l < 4; l++)
-                result.append('0');
+                result.append("0");
             result.append(hex);
         }
 
@@ -432,13 +431,6 @@ public class ScriptRuntime {
         return (index < args.length) ? toString(args[index]) : "undefined";
     }
 
-    /**
-     * Optimized version of toString(Object) for numbers.
-     */
-    public static String toString(double val) {
-        return numberToString(val, 10);
-    }
-    
     public static String numberToString(double d, int base) {
         if (d != d)
             return "NaN";
@@ -674,17 +666,6 @@ public class ScriptRuntime {
      */
     public static Object unwrapJavaScriptException(JavaScriptException jse) {
         return jse.value;
-    }
-
-    /**
-     * Check a WrappedException. Unwrap a JavaScriptException and return
-     * the value, otherwise rethrow.
-     */
-    public static Object unwrapWrappedException(WrappedException we) {
-        Throwable t = we.getWrappedException();
-        if (t instanceof JavaScriptException)
-            return ((JavaScriptException) t).value;
-        throw we;
     }
 
     public static Object getProp(Object obj, String id, Scriptable scope) {
@@ -932,7 +913,7 @@ public class ScriptRuntime {
             index = (int) d;
             s = ((double) index) == d ? null : toString(id);
         } else {
-            s = (id instanceof String) ? (String)id : toString(id);
+            s = toString(id);
             long indexTest = indexFromString(s);
             if (indexTest >= 0) {
                 index = (int)indexTest;
@@ -941,27 +922,25 @@ public class ScriptRuntime {
                 index = 0;
             }                
         }
-    
         Scriptable start = obj instanceof Scriptable
                            ? (Scriptable) obj
                            : toObject(scope, obj);
+        Scriptable m = start;
         if (s != null) {
-            return getStrIdElem(start, s);
+            if (s.equals("__proto__"))
+                return start.getPrototype();
+            if (s.equals("__parent__"))
+                return start.getParentScope();
+            while (m != null) {
+                Object result = m.get(s, start);
+                if (result != Scriptable.NOT_FOUND)
+                    return result;
+                m = m.getPrototype();
+            }
+            return Undefined.instance;
         }
-        else {
-            return getElem(start, index);
-        }
-    }
-
-
-    /*
-     * A cheaper and less general version of the above for well-known argument
-     * types.
-     */
-    public static Object getElem(Scriptable obj, int index) {
-        Scriptable m = obj;
         while (m != null) {
-            Object result = m.get(index, obj);
+            Object result = m.get(index, start);
             if (result != Scriptable.NOT_FOUND)
                 return result;
             m = m.getPrototype();
@@ -969,17 +948,16 @@ public class ScriptRuntime {
         return Undefined.instance;
     }
 
-    static Object getStrIdElem(Scriptable obj, String id) {
-        int l = id.length();
-        if (l == 9) {
-            if (id.equals("__proto__")) { return obj.getPrototype(); }
-        }
-        else if (l == 10) {
-            if (id.equals("__parent__")) { return obj.getParentScope(); }
-        }
+
+    /*
+     * A cheaper and less general version of the above for well-known argument
+     * types.
+     */
+    public static Object getElem(Scriptable obj, int index)
+    {
         Scriptable m = obj;
         while (m != null) {
-            Object result = m.get(id, obj);
+            Object result = m.get(index, obj);
             if (result != Scriptable.NOT_FOUND)
                 return result;
             m = m.getPrototype();
@@ -997,7 +975,7 @@ public class ScriptRuntime {
             index = (int) d;
             s = ((double) index) == d ? null : toString(id);
         } else {
-            s = (id instanceof String) ? (String)id : toString(id);
+            s = toString(id);
             long indexTest = indexFromString(s);
             if (indexTest >= 0) {
                 index = (int)indexTest;
@@ -1010,19 +988,41 @@ public class ScriptRuntime {
         Scriptable start = obj instanceof Scriptable
                      ? (Scriptable) obj
                      : toObject(scope, obj);
+        Scriptable m = start;
         if (s != null) {
-            return setStrIdElem(start, s, value, scope);
-        }
-        else {
-            return setElem(start, index, value);
-        }
+            if (s.equals("__proto__"))
+                return setProto(obj, value, scope);
+            if (s.equals("__parent__"))
+                return setParent(obj, value, scope);
+
+            do {
+                if (m.has(s, start)) {
+                    m.put(s, start, value);
+                    return value;
+                }
+                m = m.getPrototype();
+            } while (m != null);
+            start.put(s, start, value);
+            return value;
+       }
+
+        do {
+            if (m.has(index, start)) {
+                m.put(index, start, value);
+                return value;
+            }
+            m = m.getPrototype();
+        } while (m != null);
+        start.put(index, start, value);
+        return value;
     }
 
     /*
      * A cheaper and less general version of the above for well-known argument
      * types.
      */
-    public static Object setElem(Scriptable obj, int index, Object value) {
+    public static Object setElem(Scriptable obj, int index, Object value)
+    {
         Scriptable m = obj;
         do {
             if (m.has(index, obj)) {
@@ -1032,28 +1032,6 @@ public class ScriptRuntime {
             m = m.getPrototype();
         } while (m != null);
         obj.put(index, obj, value);
-        return value;
-    }
-
-    static Object setStrIdElem(Scriptable obj, String id, Object value,
-                               Scriptable scope)
-    {
-        int l = id.length();
-        if (l == 9) {
-            if (id.equals("__proto__")) return setProto(obj, value, scope);
-        }
-        else if (l == 10) {
-            if (id.equals("__parent__")) return setParent(obj, value, scope);
-        }
-        Scriptable m = obj;
-        do {
-            if (m.has(id, obj)) {
-                m.put(id, obj, value);
-                return value;
-            }
-            m = m.getPrototype();
-        } while (m != null);
-        obj.put(id, obj, value);
         return value;
     }
 
@@ -1226,41 +1204,34 @@ public class ScriptRuntime {
     }
 
     private static Object callOrNewSpecial(Context cx, Scriptable scope,
-                                           Object fun, Object jsThis, 
-                                           Object thisArg,
+                                           Object fun, Object jsThis, Object thisArg,
                                            Object[] args, boolean isCall,
                                            String filename, int lineNumber)
         throws JavaScriptException
     {
         if (fun instanceof IdFunction) {
             IdFunction f = (IdFunction)fun;
-            String name = f.getFunctionName();
-            if (name.length() == 4) {
-                if (name.equals("eval")) {
-                    if (f.master.getClass() == NativeGlobal.class) {
-                        return NativeGlobal.evalSpecial(cx, scope, 
-                                                        thisArg, args,
-                                                        filename, lineNumber);
-                    }
-                }
-                else if (name.equals("With")) {
-                    if (f.master.getClass() == NativeWith.class) {
-                        return NativeWith.newWithSpecial(cx, args, f, !isCall);
-                    }
-                }
-                else if (name.equals("exec")) {
-                    if (f.master.getClass() == NativeScript.class) {
-                        return ((NativeScript)jsThis).
-                            exec(cx, ScriptableObject.getTopLevelScope(scope));
-                    }
-                    else {
-                        RegExpProxy proxy = cx.getRegExpProxy();
-                        if (proxy != null && proxy.isRegExp(jsThis)) {
-                            return call(cx, fun, jsThis, args, scope);
-                        }
-                    }
-                }
+            String name = f.methodName;
+            Class cl = f.master.getClass();
+            if (name.equals("eval") && cl == NativeGlobal.class) {
+                return NativeGlobal.evalSpecial(cx, scope, thisArg, args,
+                                                filename, lineNumber);
             }
+            if (name.equals("With") && cl == NativeWith.class) {
+                return NativeWith.newWithSpecial(cx, args, f, !isCall);
+            }
+        }
+        else if (fun instanceof FunctionObject) {
+            FunctionObject fo = (FunctionObject) fun;
+            Member m = fo.method;
+            Class cl = m.getDeclaringClass();
+            String name = m.getName();
+            if (name.equals("jsFunction_exec") && cl == NativeScript.class)
+                return ((NativeScript)jsThis).exec(cx, ScriptableObject.getTopLevelScope(scope));
+            if (name.equals("exec")
+                        && (cx.getRegExpProxy() != null)
+                        && (cx.getRegExpProxy().isRegExp(jsThis)))
+                return call(cx, fun, jsThis, args, scope);
         }
         else    // could've been <java>.XXX.exec() that was re-directed here
             if (fun instanceof NativeJavaMethod)
@@ -1916,9 +1887,8 @@ public class ScriptRuntime {
             script.exec(cx, global);
         } catch (JavaScriptException e) {
             throw new Error(e.toString());
-        } finally {
-            Context.exit();
         }
+        Context.exit();
         return global;
     }
 
@@ -1998,14 +1968,14 @@ public class ScriptRuntime {
         result.setPrototype(ScriptableObject.getClassPrototype(scope, "Function"));
         result.setParentScope(scope);
 
-        String fnName = result.getFunctionName();
+        String fnName = result.jsGet_name();
         if (setName && fnName != null && fnName.length() != 0 && 
             !fnName.equals("anonymous"))
         {
             setProp(scope, fnName, result, scope);
         }
 
-        return result;
+         return result;
     }
 
     static void checkDeprecated(Context cx, String name) {
@@ -2051,14 +2021,42 @@ public class ScriptRuntime {
         cx.currentActivation = activation;
     }
 
+    private static Method getContextClassLoaderMethod;
+    static {
+        try {
+            // We'd like to use "getContextClassLoader", but 
+            // that's only available on Java2. 
+            getContextClassLoaderMethod = 
+                Thread.class.getDeclaredMethod("getContextClassLoader", 
+                                               new Class[0]);
+        } catch (NoSuchMethodException e) {
+            // ignore exceptions; we'll use Class.forName instead.
+        } catch (SecurityException e) {
+            // ignore exceptions; we'll use Class.forName instead.
+        }
+    }
+        
     public static Class loadClassName(String className) 
         throws ClassNotFoundException
     {
         try {
-            ClassLoader cl = DefiningClassLoader.getContextClassLoader();
-            if (cl != null)
-                return cl.loadClass(className);
+            if (getContextClassLoaderMethod != null) {
+                ClassLoader cl = (ClassLoader) 
+                                  getContextClassLoaderMethod.invoke(
+                                    Thread.currentThread(), 
+                                    new Object[0]);
+                if (cl != null)
+                    return cl.loadClass(className);
+            } else {
+                ClassLoader cl = ScriptRuntime.class.getClassLoader();
+                if (cl != null)
+                    return cl.loadClass(className);
+            }
         } catch (SecurityException e) {
+            // fall through...
+        } catch (IllegalAccessException e) {
+            // fall through...
+        } catch (InvocationTargetException e) {
             // fall through...
         } catch (ClassNotFoundException e) {
             // Rather than just letting the exception propagate

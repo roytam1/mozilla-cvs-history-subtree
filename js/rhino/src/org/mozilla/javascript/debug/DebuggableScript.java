@@ -65,10 +65,11 @@ public interface DebuggableScript {
     public String getSourceName();
     
     /**
-     * Get array containing the line numbers that 
+     * Get an enumeration containing the line numbers that 
      * can have breakpoints placed on them.
+     * XXX - array?
      */
-    public int[] getLineNumbers();
+    public Enumeration getLineNumbers();
     
     /**
      * Place a breakpoint at the given line.

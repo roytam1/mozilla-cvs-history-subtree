@@ -33,7 +33,6 @@
  * $Id$
  */
 
-#include "prinit.h"
 #include "prerr.h"
 #include "secerr.h"
 
@@ -41,34 +40,20 @@
 #include "blapi.h"
 #include "rijndael.h"
 
-/*
- * There are currently five ways to build this code, varying in performance
- * and code size.
- *
- * RIJNDAEL_INCLUDE_TABLES         Include all tables from rijndael32.tab
- * RIJNDAEL_GENERATE_TABLES        Generate tables on first 
- *                                 encryption/decryption, then store them;
- *                                 use the function gfm
- * RIJNDAEL_GENERATE_TABLES_MACRO  Same as above, but use macros to do
- *                                 the generation
- * RIJNDAEL_GENERATE_VALUES        Do not store tables, generate the table
- *                                 values "on-the-fly", using gfm
- * RIJNDAEL_GENERATE_VALUES_MACRO  Same as above, but use macros
- *
- * The default is RIJNDAEL_INCLUDE_TABLES.
- */
-
-/*
- * When building RIJNDAEL_INCLUDE_TABLES, includes S**-1, Rcon, T[0..4], 
- *                                                 T**-1[0..4], IMXC[0..4]
- * When building anything else, includes S, S**-1, Rcon
- */
+#ifndef RIJNDAEL_NO_TABLES
+/* includes S**-1, Rcon, T0, T1, T2, T3, T0**-1, T1**-1, T2**-1, T3**-1 */
 #include "rijndael32.tab"
+#endif
 
-#if defined(RIJNDAEL_INCLUDE_TABLES)
-/*
- * RIJNDAEL_INCLUDE_TABLES
- */
+#ifdef IS_LITTLE_ENDIAN
+#define SBOX(b)    ((PRUint8)_T3[b])
+#else
+#define SBOX(b)    ((PRUint8)_T1[b])
+#endif
+#define SBOXINV(b) (_SInv[b])
+
+#ifndef RIJNDAEL_NO_TABLES
+/* index the tables directly */
 #define T0(i)    _T0[i]
 #define T1(i)    _T1[i]
 #define T2(i)    _T2[i]
@@ -77,24 +62,19 @@
 #define TInv1(i) _TInv1[i]
 #define TInv2(i) _TInv2[i]
 #define TInv3(i) _TInv3[i]
+#define ME(i)    _ME[i]
+#define M9(i)    _M9[i]
+#define MB(i)    _MB[i]
+#define MD(i)    _MD[i]
 #define IMXC0(b) _IMXC0[b]
 #define IMXC1(b) _IMXC1[b]
 #define IMXC2(b) _IMXC2[b]
 #define IMXC3(b) _IMXC3[b]
-/* The S-box can be recovered from the T-tables */
-#ifdef IS_LITTLE_ENDIAN
-#define SBOX(b)    ((PRUint8)_T3[b])
 #else
-#define SBOX(b)    ((PRUint8)_T1[b])
-#endif
-#define SINV(b) (_SInv[b])
-
-#else /* not RIJNDAEL_INCLUDE_TABLES */
-
-/*
- * Code for generating T-table values.
- */
-
+/* generate the tables on the fly */
+/* XXX not finished, just here for fun */
+#define XTIME(a) \
+    ((a & 0x80) ? ((a << 1) ^ 0x1b) : (a << 1))
 #ifdef IS_LITTLE_ENDIAN
 #define WORD4(b0, b1, b2, b3) \
     (((b3) << 24) | ((b2) << 16) | ((b1) << 8) | (b0))
@@ -102,244 +82,15 @@
 #define WORD4(b0, b1, b2, b3) \
     (((b0) << 24) | ((b1) << 16) | ((b2) << 8) | (b3))
 #endif
-
-/*
- * Define the S and S**-1 tables (both have been stored)
- */
-#define SBOX(b)    (_S[b])
-#define SINV(b) (_SInv[b])
-
-/*
- * The function xtime, used for Galois field multiplication
- */
-#define XTIME(a) \
-    ((a & 0x80) ? ((a << 1) ^ 0x1b) : (a << 1))
-
-/* Choose GFM method (macros or function) */
-#if defined(RIJNDAEL_GENERATE_TABLES_MACRO) ||  \
-    defined(RIJNDAEL_GENERATE_VALUES_MACRO)
-
-/*
- * Galois field GF(2**8) multipliers, in macro form
- */
-#define GFM01(a) \
-    (a)                                 /* a * 01 = a, the identity */
-#define GFM02(a) \
-    (XTIME(a) & 0xff)                   /* a * 02 = xtime(a) */
-#define GFM04(a) \
-    (GFM02(GFM02(a)))                   /* a * 04 = xtime**2(a) */
-#define GFM08(a) \
-    (GFM02(GFM04(a)))                   /* a * 08 = xtime**3(a) */
-#define GFM03(a) \
-    (GFM01(a) ^ GFM02(a))               /* a * 03 = a * (01 + 02) */
-#define GFM09(a) \
-    (GFM01(a) ^ GFM08(a))               /* a * 09 = a * (01 + 08) */
-#define GFM0B(a) \
-    (GFM01(a) ^ GFM02(a) ^ GFM08(a))    /* a * 0B = a * (01 + 02 + 08) */
-#define GFM0D(a) \
-    (GFM01(a) ^ GFM04(a) ^ GFM08(a))    /* a * 0D = a * (01 + 04 + 08) */
-#define GFM0E(a) \
-    (GFM02(a) ^ GFM04(a) ^ GFM08(a))    /* a * 0E = a * (02 + 04 + 08) */
-
-#else  /* RIJNDAEL_GENERATE_TABLES or RIJNDAEL_GENERATE_VALUES */
-
-/* GF_MULTIPLY
- *
- * multiply two bytes represented in GF(2**8), mod (x**4 + 1)
- */
-PRUint8 gfm(PRUint8 a, PRUint8 b)
-{
-    PRUint8 res = 0;
-    while (b > 0) {
-	res = (b & 0x01) ? res ^ a : res;
-	a = XTIME(a);
-	b >>= 1;
-    }
-    return res;
-}
-
-#define GFM01(a) \
-    (a)                                 /* a * 01 = a, the identity */
-#define GFM02(a) \
-    (XTIME(a) & 0xff)                   /* a * 02 = xtime(a) */
-#define GFM03(a) \
-    (gfm(a, 0x03))                      /* a * 03 */
-#define GFM09(a) \
-    (gfm(a, 0x09))                      /* a * 09 */
-#define GFM0B(a) \
-    (gfm(a, 0x0B))                      /* a * 0B */
-#define GFM0D(a) \
-    (gfm(a, 0x0D))                      /* a * 0D */
-#define GFM0E(a) \
-    (gfm(a, 0x0E))                      /* a * 0E */
-
-#endif /* choosing GFM function */
-
-/*
- * The T-tables
- */
-#define G_T0(i) \
-    ( WORD4( GFM02(SBOX(i)), GFM01(SBOX(i)), GFM01(SBOX(i)), GFM03(SBOX(i)) ) )
-#define G_T1(i) \
-    ( WORD4( GFM03(SBOX(i)), GFM02(SBOX(i)), GFM01(SBOX(i)), GFM01(SBOX(i)) ) )
-#define G_T2(i) \
-    ( WORD4( GFM01(SBOX(i)), GFM03(SBOX(i)), GFM02(SBOX(i)), GFM01(SBOX(i)) ) )
-#define G_T3(i) \
-    ( WORD4( GFM01(SBOX(i)), GFM01(SBOX(i)), GFM03(SBOX(i)), GFM02(SBOX(i)) ) )
-
-/*
- * The inverse T-tables
- */
-#define G_TInv0(i) \
-    ( WORD4( GFM0E(SINV(i)), GFM09(SINV(i)), GFM0D(SINV(i)), GFM0B(SINV(i)) ) )
-#define G_TInv1(i) \
-    ( WORD4( GFM0B(SINV(i)), GFM0E(SINV(i)), GFM09(SINV(i)), GFM0D(SINV(i)) ) )
-#define G_TInv2(i) \
-    ( WORD4( GFM0D(SINV(i)), GFM0B(SINV(i)), GFM0E(SINV(i)), GFM09(SINV(i)) ) )
-#define G_TInv3(i) \
-    ( WORD4( GFM09(SINV(i)), GFM0D(SINV(i)), GFM0B(SINV(i)), GFM0E(SINV(i)) ) )
-
-/*
- * The inverse mix column tables
- */
-#define G_IMXC0(i) \
-    ( WORD4( GFM0E(i), GFM09(i), GFM0D(i), GFM0B(i) ) )
-#define G_IMXC1(i) \
-    ( WORD4( GFM0B(i), GFM0E(i), GFM09(i), GFM0D(i) ) )
-#define G_IMXC2(i) \
-    ( WORD4( GFM0D(i), GFM0B(i), GFM0E(i), GFM09(i) ) )
-#define G_IMXC3(i) \
-    ( WORD4( GFM09(i), GFM0D(i), GFM0B(i), GFM0E(i) ) )
-
-/* Now choose the T-table indexing method */
-#if defined(RIJNDAEL_GENERATE_VALUES)
-/* generate values for the tables with a function*/
-static PRUint32 gen_TInvXi(PRUint8 tx, PRUint8 i)
-{
-    PRUint8 si01, si02, si03, si04, si08, si09, si0B, si0D, si0E;
-    si01 = SINV(i);
-    si02 = XTIME(si01);
-    si04 = XTIME(si02);
-    si08 = XTIME(si04);
-    si03 = si02 ^ si01;
-    si09 = si08 ^ si01;
-    si0B = si08 ^ si03;
-    si0D = si09 ^ si04;
-    si0E = si08 ^ si04 ^ si02;
-    switch (tx) {
-    case 0:
-	return WORD4(si0E, si09, si0D, si0B);
-    case 1:
-	return WORD4(si0B, si0E, si09, si0D);
-    case 2:
-	return WORD4(si0D, si0B, si0E, si09);
-    case 3:
-	return WORD4(si09, si0D, si0B, si0E);
-    }
-    return -1;
-}
-#define T0(i)    G_T0(i)
-#define T1(i)    G_T1(i)
-#define T2(i)    G_T2(i)
-#define T3(i)    G_T3(i)
-#define TInv0(i) gen_TInvXi(0, i)
-#define TInv1(i) gen_TInvXi(1, i)
-#define TInv2(i) gen_TInvXi(2, i)
-#define TInv3(i) gen_TInvXi(3, i)
-#define IMXC0(b) G_IMXC0(b)
-#define IMXC1(b) G_IMXC1(b)
-#define IMXC2(b) G_IMXC2(b)
-#define IMXC3(b) G_IMXC3(b)
-#elif defined(RIJNDAEL_GENERATE_VALUES_MACRO)
-/* generate values for the tables with macros */
-#define T0(i)    G_T0(i)
-#define T1(i)    G_T1(i)
-#define T2(i)    G_T2(i)
-#define T3(i)    G_T3(i)
-#define TInv0(i) G_TInv0(i)
-#define TInv1(i) G_TInv1(i)
-#define TInv2(i) G_TInv2(i)
-#define TInv3(i) G_TInv3(i)
-#define IMXC0(b) G_IMXC0(b)
-#define IMXC1(b) G_IMXC1(b)
-#define IMXC2(b) G_IMXC2(b)
-#define IMXC3(b) G_IMXC3(b)
-#else  /* RIJNDAEL_GENERATE_TABLES or RIJNDAEL_GENERATE_TABLES_MACRO */
-/* Generate T and T**-1 table values and store, then index */
-/* The inverse mix column tables are still generated */
-#define T0(i)    rijndaelTables->T0[i]
-#define T1(i)    rijndaelTables->T1[i]
-#define T2(i)    rijndaelTables->T2[i]
-#define T3(i)    rijndaelTables->T3[i]
-#define TInv0(i) rijndaelTables->TInv0[i]
-#define TInv1(i) rijndaelTables->TInv1[i]
-#define TInv2(i) rijndaelTables->TInv2[i]
-#define TInv3(i) rijndaelTables->TInv3[i]
-#define IMXC0(b) G_IMXC0(b)
-#define IMXC1(b) G_IMXC1(b)
-#define IMXC2(b) G_IMXC2(b)
-#define IMXC3(b) G_IMXC3(b)
-#endif /* choose T-table indexing method */
-
-#endif /* not RIJNDAEL_INCLUDE_TABLES */
-
-#if defined(RIJNDAEL_GENERATE_TABLES) ||  \
-    defined(RIJNDAEL_GENERATE_TABLES_MACRO)
-
-/* Code to generate and store the tables */
-
-struct rijndael_tables_str {
-    PRUint32 T0[256];
-    PRUint32 T1[256];
-    PRUint32 T2[256];
-    PRUint32 T3[256];
-    PRUint32 TInv0[256];
-    PRUint32 TInv1[256];
-    PRUint32 TInv2[256];
-    PRUint32 TInv3[256];
-};
-
-static struct rijndael_tables_str *rijndaelTables = NULL;
-static PRCallOnceType coRTInit = { 0, 0, 0 };
-static PRStatus 
-init_rijndael_tables(void)
-{
-    PRUint32 i;
-    PRUint8 si01, si02, si03, si04, si08, si09, si0B, si0D, si0E;
-    struct rijndael_tables_str *rts;
-    rts = (struct rijndael_tables_str *)
-                   PORT_Alloc(sizeof(struct rijndael_tables_str));
-    if (!rts) return PR_FAILURE;
-    for (i=0; i<256; i++) {
-	/* The forward values */
-	si01 = SBOX(i);
-	si02 = XTIME(si01);
-	si03 = si02 ^ si01;
-	rts->T0[i] = WORD4(si02, si01, si01, si03);
-	rts->T1[i] = WORD4(si03, si02, si01, si01);
-	rts->T2[i] = WORD4(si01, si03, si02, si01);
-	rts->T3[i] = WORD4(si01, si01, si03, si02);
-	/* The inverse values */
-	si01 = SINV(i);
-	si02 = XTIME(si01);
-	si04 = XTIME(si02);
-	si08 = XTIME(si04);
-	si03 = si02 ^ si01;
-	si09 = si08 ^ si01;
-	si0B = si08 ^ si03;
-	si0D = si09 ^ si04;
-	si0E = si08 ^ si04 ^ si02;
-	rts->TInv0[i] = WORD4(si0E, si09, si0D, si0B);
-	rts->TInv1[i] = WORD4(si0B, si0E, si09, si0D);
-	rts->TInv2[i] = WORD4(si0D, si0B, si0E, si09);
-	rts->TInv3[i] = WORD4(si09, si0D, si0B, si0E);
-    }
-    /* wait until all the values are in to set */
-    rijndaelTables = rts;
-    return PR_SUCCESS;
-}
-
-#endif /* code to generate tables */
+#define T0(i) \
+    (WORD4( XTIME(SBOX(i)), SBOX(i), SBOX(i), XTIME(SBOX(i)) ^ SBOX(i) ))
+#define T1(i) \
+    (WORD4( XTIME(SBOX(i)) ^ SBOX(i), XTIME(SBOX(i)), SBOX(i), SBOX(i) ))
+#define T2(i) \
+    (WORD4( SBOX(i), XTIME(SBOX(i)) ^ SBOX(i), XTIME(SBOX(i)), SBOX(i) ))
+#define T3(i) \
+    (WORD4( SBOX(i), SBOX(i), XTIME(SBOX(i)) ^ SBOX(i), XTIME(SBOX(i)) ))
+#endif
 
 /**************************************************************************
  *
@@ -550,86 +301,60 @@ rijndael_encryptBlock128(AESContext *cx,
     unsigned int r;
     PRUint32 *roundkeyw;
     PRUint8 clone[RIJNDAEL_MAX_STATE_SIZE];
-#if defined(_X86_)
-#define pIn input
-#define pOut output
-#else
-    unsigned char * pIn, *pOut;
-    PRUint32 inBuf[4], outBuf[4];
 
-    if ((ptrdiff_t)input & 0x3) {
-	memcpy(inBuf, input, sizeof inBuf);
-	pIn = (unsigned char *)inBuf;
-    } else {
-	pIn = (unsigned char *)input;
-    }
-    if ((ptrdiff_t)output & 0x3) {
-	pOut = (unsigned char *)outBuf;
-    } else {
-	pOut = (unsigned char *)output;
-    }
-#endif
     roundkeyw = cx->expandedKey;
     /* Step 1: Add Round Key 0 to initial state */
-    COLUMN_0(clone) = COLUMN_0(pIn) ^ *roundkeyw++;
-    COLUMN_1(clone) = COLUMN_1(pIn) ^ *roundkeyw++;
-    COLUMN_2(clone) = COLUMN_2(pIn) ^ *roundkeyw++;
-    COLUMN_3(clone) = COLUMN_3(pIn) ^ *roundkeyw++;
+    COLUMN_0(clone) = COLUMN_0(input) ^ *roundkeyw++;
+    COLUMN_1(clone) = COLUMN_1(input) ^ *roundkeyw++;
+    COLUMN_2(clone) = COLUMN_2(input) ^ *roundkeyw++;
+    COLUMN_3(clone) = COLUMN_3(input) ^ *roundkeyw++;
     /* Step 2: Loop over rounds [1..NR-1] */
     for (r=1; r<cx->Nr; ++r) {
         /* Do ShiftRow, ByteSub, and MixColumn all at once */
-	COLUMN_0(pOut  ) = T0(STATE_BYTE(0))  ^
+	COLUMN_0(output) = T0(STATE_BYTE(0))  ^
 	                   T1(STATE_BYTE(5))  ^
 	                   T2(STATE_BYTE(10)) ^
 	                   T3(STATE_BYTE(15));
-	COLUMN_1(pOut  ) = T0(STATE_BYTE(4))  ^
+	COLUMN_1(output) = T0(STATE_BYTE(4))  ^
 	                   T1(STATE_BYTE(9))  ^
 	                   T2(STATE_BYTE(14)) ^
 	                   T3(STATE_BYTE(3));
-	COLUMN_2(pOut  ) = T0(STATE_BYTE(8))  ^
+	COLUMN_2(output) = T0(STATE_BYTE(8))  ^
 	                   T1(STATE_BYTE(13)) ^
 	                   T2(STATE_BYTE(2))  ^
 	                   T3(STATE_BYTE(7));
-	COLUMN_3(pOut  ) = T0(STATE_BYTE(12)) ^
+	COLUMN_3(output) = T0(STATE_BYTE(12)) ^
 	                   T1(STATE_BYTE(1))  ^
 	                   T2(STATE_BYTE(6))  ^
 	                   T3(STATE_BYTE(11));
 	/* Round key addition */
-	COLUMN_0(clone) = COLUMN_0(pOut  ) ^ *roundkeyw++;
-	COLUMN_1(clone) = COLUMN_1(pOut  ) ^ *roundkeyw++;
-	COLUMN_2(clone) = COLUMN_2(pOut  ) ^ *roundkeyw++;
-	COLUMN_3(clone) = COLUMN_3(pOut  ) ^ *roundkeyw++;
+	COLUMN_0(clone) = COLUMN_0(output) ^ *roundkeyw++;
+	COLUMN_1(clone) = COLUMN_1(output) ^ *roundkeyw++;
+	COLUMN_2(clone) = COLUMN_2(output) ^ *roundkeyw++;
+	COLUMN_3(clone) = COLUMN_3(output) ^ *roundkeyw++;
     }
     /* Step 3: Do the last round */
     /* Final round does not employ MixColumn */
-    COLUMN_0(pOut  ) = ((BYTE0WORD(T2(STATE_BYTE(0))))   |
+    COLUMN_0(output) = ((BYTE0WORD(T2(STATE_BYTE(0))))   |
                         (BYTE1WORD(T3(STATE_BYTE(5))))   |
                         (BYTE2WORD(T0(STATE_BYTE(10))))  |
                         (BYTE3WORD(T1(STATE_BYTE(15)))))  ^
 	                *roundkeyw++;
-    COLUMN_1(pOut  ) = ((BYTE0WORD(T2(STATE_BYTE(4))))   |
+    COLUMN_1(output) = ((BYTE0WORD(T2(STATE_BYTE(4))))   |
                         (BYTE1WORD(T3(STATE_BYTE(9))))   |
                         (BYTE2WORD(T0(STATE_BYTE(14))))  |
                         (BYTE3WORD(T1(STATE_BYTE(3)))))   ^
 	                *roundkeyw++;
-    COLUMN_2(pOut  ) = ((BYTE0WORD(T2(STATE_BYTE(8))))   |
+    COLUMN_2(output) = ((BYTE0WORD(T2(STATE_BYTE(8))))   |
                         (BYTE1WORD(T3(STATE_BYTE(13))))  |
                         (BYTE2WORD(T0(STATE_BYTE(2))))   |
                         (BYTE3WORD(T1(STATE_BYTE(7)))))   ^
 	                *roundkeyw++;
-    COLUMN_3(pOut  ) = ((BYTE0WORD(T2(STATE_BYTE(12))))  |
+    COLUMN_3(output) = ((BYTE0WORD(T2(STATE_BYTE(12))))  |
                         (BYTE1WORD(T3(STATE_BYTE(1))))   |
                         (BYTE2WORD(T0(STATE_BYTE(6))))   |
                         (BYTE3WORD(T1(STATE_BYTE(11)))))  ^
 	                *roundkeyw++;
-#if defined(_X86_)
-#undef pIn
-#undef pOut
-#else
-    if ((ptrdiff_t)output & 0x3) {
-	memcpy(output, outBuf, sizeof outBuf);
-    }
-#endif
     return SECSuccess;
 }
 
@@ -641,87 +366,60 @@ rijndael_decryptBlock128(AESContext *cx,
     int r;
     PRUint32 *roundkeyw;
     PRUint8 clone[RIJNDAEL_MAX_STATE_SIZE];
-#if defined(_X86_)
-#define pIn input
-#define pOut output
-#else
-    unsigned char * pIn, *pOut;
-    PRUint32 inBuf[4], outBuf[4];
-
-    if ((ptrdiff_t)input & 0x3) {
-	memcpy(inBuf, input, sizeof inBuf);
-	pIn = (unsigned char *)inBuf;
-    } else {
-	pIn = (unsigned char *)input;
-    }
-    if ((ptrdiff_t)output & 0x3) {
-	pOut = (unsigned char *)outBuf;
-    } else {
-	pOut = (unsigned char *)output;
-    }
-#endif
 
     roundkeyw = cx->expandedKey + cx->Nb * cx->Nr + 3;
     /* reverse the final key addition */
-    COLUMN_3(clone) = COLUMN_3(pIn) ^ *roundkeyw--;
-    COLUMN_2(clone) = COLUMN_2(pIn) ^ *roundkeyw--;
-    COLUMN_1(clone) = COLUMN_1(pIn) ^ *roundkeyw--;
-    COLUMN_0(clone) = COLUMN_0(pIn) ^ *roundkeyw--;
+    COLUMN_3(clone) = COLUMN_3(input) ^ *roundkeyw--;
+    COLUMN_2(clone) = COLUMN_2(input) ^ *roundkeyw--;
+    COLUMN_1(clone) = COLUMN_1(input) ^ *roundkeyw--;
+    COLUMN_0(clone) = COLUMN_0(input) ^ *roundkeyw--;
     /* Loop over rounds in reverse [NR..1] */
     for (r=cx->Nr; r>1; --r) {
 	/* Invert the (InvByteSub*InvMixColumn)(InvShiftRow(state)) */
-	COLUMN_0(pOut)   = TInv0(STATE_BYTE(0))  ^
+	COLUMN_0(output) = TInv0(STATE_BYTE(0))  ^
 	                   TInv1(STATE_BYTE(13)) ^
 	                   TInv2(STATE_BYTE(10)) ^
 	                   TInv3(STATE_BYTE(7));
-	COLUMN_1(pOut)   = TInv0(STATE_BYTE(4))  ^
+	COLUMN_1(output) = TInv0(STATE_BYTE(4))  ^
 	                   TInv1(STATE_BYTE(1))  ^
 	                   TInv2(STATE_BYTE(14)) ^
 	                   TInv3(STATE_BYTE(11));
-	COLUMN_2(pOut)   = TInv0(STATE_BYTE(8))  ^
+	COLUMN_2(output) = TInv0(STATE_BYTE(8))  ^
 	                   TInv1(STATE_BYTE(5))  ^
 	                   TInv2(STATE_BYTE(2))  ^
 	                   TInv3(STATE_BYTE(15));
-	COLUMN_3(pOut)   = TInv0(STATE_BYTE(12)) ^
+	COLUMN_3(output) = TInv0(STATE_BYTE(12)) ^
 	                   TInv1(STATE_BYTE(9))  ^
 	                   TInv2(STATE_BYTE(6))  ^
 	                   TInv3(STATE_BYTE(3));
 	/* Invert the key addition step */
-	COLUMN_3(clone) = COLUMN_3(pOut) ^ *roundkeyw--;
-	COLUMN_2(clone) = COLUMN_2(pOut) ^ *roundkeyw--;
-	COLUMN_1(clone) = COLUMN_1(pOut) ^ *roundkeyw--;
-	COLUMN_0(clone) = COLUMN_0(pOut) ^ *roundkeyw--;
+	COLUMN_3(clone) = COLUMN_3(output) ^ *roundkeyw--;
+	COLUMN_2(clone) = COLUMN_2(output) ^ *roundkeyw--;
+	COLUMN_1(clone) = COLUMN_1(output) ^ *roundkeyw--;
+	COLUMN_0(clone) = COLUMN_0(output) ^ *roundkeyw--;
     }
     /* inverse sub */
-    pOut[ 0] = SINV(clone[ 0]);
-    pOut[ 1] = SINV(clone[13]);
-    pOut[ 2] = SINV(clone[10]);
-    pOut[ 3] = SINV(clone[ 7]);
-    pOut[ 4] = SINV(clone[ 4]);
-    pOut[ 5] = SINV(clone[ 1]);
-    pOut[ 6] = SINV(clone[14]);
-    pOut[ 7] = SINV(clone[11]);
-    pOut[ 8] = SINV(clone[ 8]);
-    pOut[ 9] = SINV(clone[ 5]);
-    pOut[10] = SINV(clone[ 2]);
-    pOut[11] = SINV(clone[15]);
-    pOut[12] = SINV(clone[12]);
-    pOut[13] = SINV(clone[ 9]);
-    pOut[14] = SINV(clone[ 6]);
-    pOut[15] = SINV(clone[ 3]);
+    output[ 0] = SBOXINV(clone[ 0]);
+    output[ 1] = SBOXINV(clone[13]);
+    output[ 2] = SBOXINV(clone[10]);
+    output[ 3] = SBOXINV(clone[ 7]);
+    output[ 4] = SBOXINV(clone[ 4]);
+    output[ 5] = SBOXINV(clone[ 1]);
+    output[ 6] = SBOXINV(clone[14]);
+    output[ 7] = SBOXINV(clone[11]);
+    output[ 8] = SBOXINV(clone[ 8]);
+    output[ 9] = SBOXINV(clone[ 5]);
+    output[10] = SBOXINV(clone[ 2]);
+    output[11] = SBOXINV(clone[15]);
+    output[12] = SBOXINV(clone[12]);
+    output[13] = SBOXINV(clone[ 9]);
+    output[14] = SBOXINV(clone[ 6]);
+    output[15] = SBOXINV(clone[ 3]);
     /* final key addition */
-    COLUMN_3(pOut) ^= *roundkeyw--;
-    COLUMN_2(pOut) ^= *roundkeyw--;
-    COLUMN_1(pOut) ^= *roundkeyw--;
-    COLUMN_0(pOut) ^= *roundkeyw--;
-#if defined(_X86_)
-#undef pIn
-#undef pOut
-#else
-    if ((ptrdiff_t)output & 0x3) {
-	memcpy(output, outBuf, sizeof outBuf);
-    }
-#endif
+    COLUMN_3(output) ^= *roundkeyw--;
+    COLUMN_2(output) ^= *roundkeyw--;
+    COLUMN_1(output) ^= *roundkeyw--;
+    COLUMN_0(output) ^= *roundkeyw--;
     return SECSuccess;
 }
 
@@ -743,8 +441,6 @@ rijndael_encryptBlock(AESContext *cx,
                       unsigned char *output,
                       const unsigned char *input)
 {
-    return SECFailure;
-#ifdef rijndael_large_blocks_fixed
     unsigned int j, r, Nb;
     unsigned int c2, c3;
     PRUint32 *roundkeyw;
@@ -777,7 +473,6 @@ rijndael_encryptBlock(AESContext *cx,
 	                     *roundkeyw++;
     }
     return SECSuccess;
-#endif
 }
 
 SECStatus 
@@ -785,8 +480,6 @@ rijndael_decryptBlock(AESContext *cx,
                       unsigned char *output,
                       const unsigned char *input)
 {
-    return SECFailure;
-#ifdef rijndael_large_blocks_fixed
     int j, r, Nb;
     int c2, c3;
     PRUint32 *roundkeyw;
@@ -813,14 +506,13 @@ rijndael_decryptBlock(AESContext *cx,
     }
     /* inverse sub */
     for (j=0; j<4*Nb; ++j) {
-	output[j] = SINV(clone[j]);
+	output[j] = SBOXINV(clone[j]);
     }
     /* final key addition */
     for (j=4*Nb; j>=0; j-=4) {
 	COLUMN(output, j) ^= *roundkeyw--;
     }
     return SECSuccess;
-#endif
 }
 
 /**************************************************************************
@@ -1075,15 +767,6 @@ AES_Encrypt(AESContext *cx, unsigned char *output,
 	return SECFailure;
     }
     *outputLen = inputLen;
-#if defined(RIJNDAEL_GENERATE_TABLES) ||  \
-    defined(RIJNDAEL_GENERATE_TABLES_MACRO)
-    if (rijndaelTables == NULL) {
-	if (PR_CallOnce(&coRTInit, init_rijndael_tables) 
-	      != PR_SUCCESS) {
-	    return PR_FAILURE;
-	}
-    }
-#endif
     return (*cx->worker)(cx, output, outputLen, maxOutputLen,	
                              input, inputLen, blocksize);
 }
@@ -1115,16 +798,6 @@ AES_Decrypt(AESContext *cx, unsigned char *output,
 	return SECFailure;
     }
     *outputLen = inputLen;
-#if defined(RIJNDAEL_GENERATE_TABLES) ||  \
-    defined(RIJNDAEL_GENERATE_TABLES_MACRO)
-    if (rijndaelTables == NULL) {
-	if (PR_CallOnce(&coRTInit, init_rijndael_tables) 
-	      != PR_SUCCESS) {
-	    return PR_FAILURE;
-	}
-    }
-#endif
     return (*cx->worker)(cx, output, outputLen, maxOutputLen,	
                              input, inputLen, blocksize);
 }
-

@@ -56,7 +56,6 @@ typedef enum {
 	FIPS_COMMAND,
 	JAR_COMMAND,
 	LIST_COMMAND,
-	RAW_LIST_COMMAND,
 	UNDEFAULT_COMMAND
 } Command;
 
@@ -73,7 +72,6 @@ static char *commandNames[] = {
 	"-fips",
 	"-jar",
 	"-list",
-	"-rawlist",
 	"-undefault"
 };
 
@@ -95,7 +93,6 @@ typedef enum {
 	JAR_ARG,
 	LIBFILE_ARG,
 	LIST_ARG,
-	RAW_LIST_ARG,
 	MECHANISMS_ARG,
 	NEWPWFILE_ARG,
 	PWFILE_ARG,
@@ -103,7 +100,6 @@ typedef enum {
 	UNDEFAULT_ARG,
 	INSTALLDIR_ARG,
 	TEMPDIR_ARG,
-	SECMOD_ARG,
 	NOCERTDB_ARG,
 
 	NUM_ARGS	/* must be last */
@@ -126,7 +122,6 @@ static char *optionStrings[] = {
 	"-jar",
 	"-libfile",
 	"-list",
-	"-rawlist",
 	"-mechanisms",
 	"-newpwfile",
 	"-pwfile",
@@ -134,7 +129,6 @@ static char *optionStrings[] = {
 	"-undefault",
 	"-installdir",
 	"-tempdir",
-	"-secmod",
 	"-nocertdb"
 };
 
@@ -151,7 +145,6 @@ static char* pwFile = NULL;
 static char* newpwFile = NULL;
 static char* moduleName = NULL;
 static char* slotName = NULL;
-static char* secmodName = NULL;
 static char* tokenName = NULL;
 static char* libFile = NULL;
 static char* dbdir = NULL;
@@ -387,17 +380,6 @@ parse_args(int argc, char *argv[])
 					moduleName = argv[++i];
 			}
 			break;
-		case RAW_LIST_ARG:
-			if(command != NO_COMMAND) {
-				PR_fprintf(PR_STDERR, errStrings[MULTIPLE_COMMAND_ERR], arg);
-				return MULTIPLE_COMMAND_ERR;
-			}
-			command = RAW_LIST_COMMAND;
-			/* This option may or may not have an argument */
-			if( (i+1 < argc) && (argv[i+1][0] != '-') ) {
-					moduleName = argv[++i];
-			}
-			break;
 		case MECHANISMS_ARG:
 			if(mechanisms != NULL) {
 				PR_fprintf(PR_STDERR, errStrings[DUPLICATE_OPTION_ERR], arg);
@@ -441,17 +423,6 @@ parse_args(int argc, char *argv[])
 				return OPTION_NEEDS_ARG_ERR;
 			}
 			slotName = argv[i];
-			break;
-		case SECMOD_ARG:
-			if(secmodName != NULL) {
-				PR_fprintf(PR_STDERR, errStrings[DUPLICATE_OPTION_ERR], arg);
-				return DUPLICATE_OPTION_ERR;
-			}
-			if(TRY_INC(i, argc)) {
-				PR_fprintf(PR_STDERR, errStrings[OPTION_NEEDS_ARG_ERR], arg);
-				return OPTION_NEEDS_ARG_ERR;
-			}
-			secmodName = argv[i];
 			break;
 		}
 	}
@@ -498,7 +469,6 @@ verify_params()
 		}
 		break;
 	case LIST_COMMAND:
-	case RAW_LIST_COMMAND:
 		break;
 	case UNDEFAULT_COMMAND:
 	case DEFAULT_COMMAND:
@@ -538,9 +508,6 @@ init_crypto(PRBool create, PRBool readOnly)
 	SECStatus rv;
 	PRUint32 flags = 0;
 
-	if (secmodName == NULL) {
-	    secmodName = "secmod.db";
-	}
 
 	if(SECU_ConfigDirectory(dbdir)[0] == '\0') {
 		PR_fprintf(PR_STDERR, errStrings[NO_DBDIR_ERR]);
@@ -655,7 +622,7 @@ init_crypto(PRBool create, PRBool readOnly)
 	if (readOnly) flags |= NSS_INIT_READONLY;
 	if (nocertdb) flags |= NSS_INIT_NOCERTDB;
 	rv = NSS_Initialize(SECU_ConfigDirectory(NULL), dbprefix, dbprefix,
-	               secmodName, flags);
+	               "secmod.db", flags);
 	if (rv != SECSuccess) {
 	    SECU_PrintPRandOSError(progName);
 	    retval=NSS_INITIALIZE_FAILED_ERR;
@@ -726,7 +693,6 @@ usage()
 "-dbprefix prefix                 Prefix for the security databases\n"
 "-nocertdb                        Do not load certificate or key databases. No\n"
 "                                 verification will be performed on JAR files.\n"
-"-secmod secmodName               Name of the security modules file\n"
 "---------------------------------------------------------------------------\n"
 "\n"
 "Mechanism lists are colon-separated.  The following mechanisms are recognized:\n"
@@ -775,20 +741,6 @@ main(int argc, char *argv[])
 		usage();
 		errcode = INVALID_USAGE_ERR;
 		goto loser;
-	}
-
-        if (command == RAW_LIST_COMMAND) {
-	    if(!moduleName) {
-		if (!secmodName) secmodName="secmod.db";
-		if (!dbprefix) dbprefix = "";
-		SECU_ConfigDirectory(dbdir);
-
-		moduleName=PR_smprintf("name=\"NSS default Module DB\" parameters=\"configdir=%s certPrefix=%s keyPrefix=%s secmod=%s flags=readOnly%s\" NSS=\"flags=internal,moduleDB,moduleDBOnly,critical\"",
-			SECU_ConfigDirectory(NULL),dbprefix,
-				dbprefix,secmodName, nocertdb?",noCertDB":"");
-	    }
-	    errcode = RawListModule(moduleName);
-	    goto loser;
 	}
 
 	/* Set up crypto stuff */

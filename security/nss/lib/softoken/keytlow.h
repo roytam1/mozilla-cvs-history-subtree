@@ -36,18 +36,41 @@
 #include "blapit.h"
 
 typedef enum { 
-    lowNullKey = 0, 
-    lowRSAKey = 1, 
-    lowDSAKey = 2, 
-    lowDHKey = 4
-} LowKeyType;
+    nullKey = 0, 
+    rsaKey = 1, 
+    dsaKey = 2, 
+    fortezzaKey = 3,
+    dhKey = 4, 
+    keaKey = 5
+} KeyType;
+
+struct FortezzaPublicKeyStr {
+    int      KEAversion;
+    int      DSSversion;
+    unsigned char    KMID[8];
+    SECItem clearance;
+    SECItem KEApriviledge;
+    SECItem DSSpriviledge;
+    SECItem KEAKey;
+    SECItem DSSKey;
+    PQGParams params;
+    PQGParams keaParams;
+};
+typedef struct FortezzaPublicKeyStr FortezzaPublicKey;
+
+struct FortezzaPrivateKeyStr {
+     int certificate;
+     unsigned char serial[8];
+     int socket;
+};
+typedef struct FortezzaPrivateKeyStr FortezzaPrivateKey;
 
 /*
 ** An RSA public key object.
 */
 struct SECKEYLowPublicKeyStr {
     PLArenaPool *arena;
-    LowKeyType keyType ;
+    KeyType keyType ;
     union {
         RSAPublicKey rsa;
 	DSAPublicKey dsa;
@@ -63,11 +86,13 @@ typedef struct SECKEYLowPublicKeyStr SECKEYLowPublicKey;
 */
 struct SECKEYLowPrivateKeyStr {
     PLArenaPool *arena;
-    LowKeyType keyType;
+    KeyType keyType;
     union {
         RSAPrivateKey rsa;
 	DSAPrivateKey dsa;
 	DHPrivateKey  dh;
+        FortezzaPrivateKey fortezza; /* includes DSA and KEA private
+                                        keys used with fortezza      */
     } u;
 };
 typedef struct SECKEYLowPrivateKeyStr SECKEYLowPrivateKey;

@@ -38,7 +38,6 @@
 #include "p12plcy.h"
 #include "pk12util.h"
 #include "nss.h"
-#include "secport.h"
 
 #define PKCS12_IN_BUFFER_SIZE	200
 
@@ -95,6 +94,10 @@ p12u_DestroyExportFileInfo(p12uContext **exp_ptr, PRBool removeFile)
 	PR_Close((*exp_ptr)->file);
     }
 
+    if((*exp_ptr)->data != NULL) {
+	SECITEM_ZfreeItem((*exp_ptr)->data, PR_FALSE);
+    }
+
     if((*exp_ptr)->filename != NULL) {
 	if(removeFile) {
 	    PR_Delete((*exp_ptr)->filename);
@@ -134,6 +137,139 @@ p12u_InitFile(PRBool fileImport, char *filename)
     }
 
     return p12cxt;
+}
+
+#define TEMPFILE "Pk12uTemp"
+
+static p12uContext *
+p12u_CreateTemporaryDigestFile(void)
+{
+    p12uContext *p12cxt;
+#if defined(_WIN32) || defined(_WINDOWS) || defined(XP_OS2)
+    char *tmpdir,*filename,*last;
+    int len;
+#endif
+
+    p12cxt = (p12uContext *)PR_CALLOC(sizeof(p12uContext));
+    if(!p12cxt) {
+	PR_SetError(SEC_ERROR_NO_MEMORY, 0);
+	return NULL;
+    }
+#if defined(_WIN32) || defined(_WINDOWS) || defined(XP_OS2)
+    tmpdir = getenv("TMP");
+    if (!tmpdir)
+	tmpdir = getenv("TMPDIR");
+    if (!tmpdir)
+	tmpdir = getenv("TEMP");
+    if (!tmpdir)
+	tmpdir = ".";
+    len = strlen(tmpdir);
+    filename = PORT_Alloc(len+sizeof(TEMPFILE)+2);
+    if (filename == NULL) {
+	PR_SetError(SEC_ERROR_NO_MEMORY, 0);
+	p12u_DestroyExportFileInfo(&p12cxt, PR_FALSE);
+	return NULL;
+    }
+    strcpy(filename, tmpdir);
+    len = strlen(filename);
+    last = tmpdir[len - 1];
+    if ((last != '/') && (last != '\\')) {
+	strcat(filename,"\\");
+    }
+    strcat(filename,TEMPFILE);
+    p12cxt->filename = filename;
+#else
+    p12cxt->filename = strdup("/tmp/"TEMPFILE); 
+#endif
+
+    if (!p12cxt->filename) {
+	PR_SetError(SEC_ERROR_NO_MEMORY, 0);
+	p12u_DestroyExportFileInfo(&p12cxt, PR_FALSE);
+	return NULL;
+    }
+
+    return p12cxt;
+}
+
+static SECStatus
+p12u_DigestOpen(void *arg, PRBool readData)
+{
+    p12uContext *p12cxt = arg;
+
+
+    if(!p12cxt || p12cxt->error || !p12cxt->filename) {
+	return SECFailure;
+    }
+
+    if(readData) {
+	p12cxt->file = PR_Open(p12cxt->filename, PR_RDONLY, 0400);
+    } else {
+	p12cxt->file = PR_Open(p12cxt->filename,
+				   PR_CREATE_FILE | PR_RDWR | PR_TRUNCATE,
+				   0600);
+    }
+
+    if(p12cxt->file == NULL) {
+	p12cxt->error = PR_TRUE;
+	return SECFailure;
+    }
+
+    return SECSuccess;
+}
+
+static SECStatus
+p12u_DigestClose(void *arg, PRBool removeFile)
+{
+    p12uContext *p12cxt = arg;
+    if(!p12cxt || p12cxt->error ||
+       !p12cxt->filename || !p12cxt->file) {
+	return SECFailure;
+    }
+
+    PR_Close(p12cxt->file);
+    p12cxt->file = NULL;
+
+    if(removeFile) {
+	PR_Delete(p12cxt->filename);
+	PR_Free(p12cxt->filename);
+	p12cxt->filename = NULL;
+    }
+
+    return SECSuccess;
+}
+
+static int
+p12u_DigestRead(void *arg, unsigned char *buf, unsigned long len)
+{
+    p12uContext *p12cxt = arg;
+
+    if(!p12cxt || p12cxt->error ||
+       !p12cxt->filename || !p12cxt->file) {
+	return -1;
+    }
+
+    if(!buf || len == 0) {
+	return -1;
+    }
+
+    return PR_Read(p12cxt->file, buf, len);
+}
+
+static int
+p12u_DigestWrite(void *arg, unsigned char *buf, unsigned long len)
+{
+    p12uContext *p12cxt = arg;
+
+    if(!p12cxt || p12cxt->error ||
+       !p12cxt->filename || !p12cxt->file) {
+	return -1;
+    }
+
+    if(!buf || len == 0) {
+	return -1;
+    }
+
+    return PR_Write(p12cxt->file, buf, len);
 }
 
 SECItem *
@@ -360,7 +496,7 @@ PRIntn
 P12U_ImportPKCS12Object(char *in_file, PK11SlotInfo *slot,
 			secuPWData *slotPw, secuPWData *p12FilePw)
 {
-    p12uContext *p12cxt = NULL;
+    p12uContext *p12cxt = NULL, *tmpcxt = NULL;
     unsigned char inBuf[PKCS12_IN_BUFFER_SIZE];
     SEC_PKCS12DecoderContext *p12dcx = NULL;
     SECItem *pwitem = NULL, uniPwitem = { 0 };
@@ -402,9 +538,18 @@ P12U_ImportPKCS12Object(char *in_file, PK11SlotInfo *slot,
 	goto loser;
     }
 
+    tmpcxt = p12u_CreateTemporaryDigestFile();
+    if(!tmpcxt) {
+	SECU_PrintError(progName,"Create Temporary digest file failed");
+	pk12uErrno = PK12UERR_TMPDIGCREATE;
+	goto loser;
+    }
+
     /* init the decoder context */
-    p12dcx = SEC_PKCS12DecoderStart(&uniPwitem, slot, slotPw,
-				    NULL, NULL, NULL, NULL, NULL);
+    p12dcx = SEC_PKCS12DecoderStart(&uniPwitem, slot, NULL,
+				    p12u_DigestOpen, p12u_DigestClose,
+				    p12u_DigestRead, p12u_DigestWrite,
+				    tmpcxt);
     if(!p12dcx) {
 	SECU_PrintError(progName,"PKCS12 decoder start failed");
 	pk12uErrno = PK12UERR_PK12DECODESTART;
@@ -550,7 +695,7 @@ p12u_WriteToExportFile(void *arg, const char *buf, unsigned long len)
 }
 
 void
-P12U_ExportPKCS12Object(char *nn, char *outfile, PK11SlotInfo *inSlot,
+P12U_ExportPKCS12Object(char *nn, char *outfile,
 			secuPWData *slotPw, secuPWData *p12FilePw)
 {
     SEC_PKCS12ExportContext *p12ecx = NULL;
@@ -560,13 +705,7 @@ P12U_ExportPKCS12Object(char *nn, char *outfile, PK11SlotInfo *inSlot,
     p12uContext *p12cxt = NULL;
     CERTCertificate *cert;
 
-    if (P12U_InitSlot(inSlot, slotPw) != SECSuccess) {
-	SECU_PrintError(progName,"Failed to authenticate to \"%s\"",
-			  PK11_GetSlotName(inSlot));
-	pk12uErrno = PK12UERR_PK11GETSLOT;
-	goto loser;
-    }
-    cert = PK11_FindCertFromNickname(nn, slotPw);
+    cert = PK11_FindCertFromNickname(nn, NULL);
     if(!cert) {
 	SECU_PrintError(progName,"find cert by nickname failed");
 	pk12uErrno = PK12UERR_FINDCERTBYNN;
@@ -578,6 +717,12 @@ P12U_ExportPKCS12Object(char *nn, char *outfile, PK11SlotInfo *inSlot,
 	pk12uErrno = PK12UERR_FINDCERTBYNN;
 	goto loser;
     }
+    if (P12U_InitSlot(cert->slot, slotPw) != SECSuccess) {
+	SECU_PrintError(progName,"Failed to authenticate to \"%s\"",
+			  PK11_GetSlotName(cert->slot));
+	pk12uErrno = PK12UERR_PK11GETSLOT;
+	goto loser;
+    }
 
     /*	Password to use for PKCS12 file.  */
     pwitem = P12U_GetP12FilePassword(PR_TRUE, p12FilePw);
@@ -585,7 +730,7 @@ P12U_ExportPKCS12Object(char *nn, char *outfile, PK11SlotInfo *inSlot,
 	goto loser;
     }
 
-    p12ecx = SEC_PKCS12CreateExportContext(NULL, NULL, cert->slot, slotPw);
+    p12ecx = SEC_PKCS12CreateExportContext(NULL, NULL, cert->slot, NULL);
     if(!p12ecx) {
 	SECU_PrintError(progName,"export context creation failed");
 	pk12uErrno = PK12UERR_EXPORTCXCREATE;
@@ -807,25 +952,26 @@ main(int argc, char **argv)
     }
     P12U_Init(SECU_ConfigDirectory(NULL),dbprefix);
 
-    if (!slotname || PL_strcmp(slotname, "internal") == 0)
-	slot = PK11_GetInternalKeySlot();
-    else
-	slot = PK11_FindSlotByName(slotname);
-
-    if (!slot) {
-	SECU_PrintError(progName,"Invalid slot \"%s\"", slotname);
-	goto done;
-    }
-
     if (pk12util.options[opt_Import].activated) {
+
+	if (!slotname || PL_strcmp(slotname, "internal") == 0)
+	    slot = PK11_GetInternalKeySlot();
+	else
+	    slot = PK11_FindSlotByName(slotname);
+
+	if (!slot) {
+	    SECU_PrintError(progName,"Invalid slot \"%s\"", slotname);
+	    goto done;
+	}
 
 	if ((ret = P12U_ImportPKCS12Object(import_file, slot, &slotPw,
 					   &p12FilePw)) != 0)
 	    goto done;
 
     } else if (pk12util.options[opt_Export].activated) {
+
 	P12U_ExportPKCS12Object(pk12util.options[opt_Nickname].arg,
-				export_file, slot, &slotPw, &p12FilePw);
+				export_file, &slotPw, &p12FilePw);
     } else {
 	Usage(progName);
 	pk12uErrno = PK12UERR_USAGE;

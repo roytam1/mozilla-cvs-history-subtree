@@ -41,14 +41,17 @@ import java.util.*;
 
 public class InterpretedScript extends NativeScript implements DebuggableScript {
 
-    InterpretedScript(Context cx,
-                      InterpreterData theData, 
-                      String[] argNames, short argCount)
+    InterpretedScript(InterpreterData theData, Context cx)
     {
         itsData = theData;
-        this.argNames = argNames;
-        this.argCount = argCount;
         functionName = "";
+        int N = itsData.itsVariableTable.size();
+        if (N != 0) {
+            argNames = new String[N];
+            for (int i = 0; i != N; i++) {
+                argNames[i] = itsData.itsVariableTable.getName(i);
+            }
+        }
         nestedFunctions = itsData.itsNestedFunctions;
         version = (short)cx.getLanguageVersion();   
     }
@@ -80,8 +83,8 @@ public class InterpretedScript extends NativeScript implements DebuggableScript 
         return itsData.itsSourceFile;
     }
     
-    public int[] getLineNumbers() {
-        return itsData.itsLineNumberTable.getKeys();
+    public Enumeration getLineNumbers() {
+        return itsData.itsLineNumberTable.keys();
     }
     
     public boolean placeBreakpoint(int line) { // XXX throw exn?

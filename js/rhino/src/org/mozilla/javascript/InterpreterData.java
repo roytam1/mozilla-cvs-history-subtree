@@ -36,19 +36,17 @@
 
 package org.mozilla.javascript;
 
-import java.io.Serializable;
+import java.util.Vector;
 
-class InterpreterData implements Serializable {
-
-    static final long serialVersionUID = 4815333329084415557L;
+class InterpreterData {
     
     static final int INITIAL_MAX_ICODE_LENGTH = 1024;
     static final int INITIAL_STRINGTABLE_SIZE = 64;
     static final int INITIAL_NUMBERTABLE_SIZE = 64;
     
     InterpreterData(int lastICodeTop, int lastStringTableIndex, 
-                    Object securityDomain,
-                    boolean useDynamicScope, boolean checkThis)
+                    int lastNumberTableIndex, Object securityDomain,
+                    boolean useDynamicScope)
     {
         itsICodeTop = lastICodeTop == 0 
                       ? INITIAL_MAX_ICODE_LENGTH
@@ -59,8 +57,11 @@ class InterpreterData implements Serializable {
                                     ? INITIAL_STRINGTABLE_SIZE
                                     : lastStringTableIndex * 2];
 
+        itsNumberTable = new Number[lastNumberTableIndex == 0
+                                    ? INITIAL_NUMBERTABLE_SIZE
+                                    : lastNumberTableIndex * 2];
+        
         itsUseDynamicScope = useDynamicScope;
-        itsCheckThis = checkThis;
         if (securityDomain == null)
             Context.checkSecurityDomainRequired();
         this.securityDomain = securityDomain;
@@ -88,12 +89,18 @@ class InterpreterData implements Serializable {
     }
     
     private int getOffset(int line) {
-        int offset = itsLineNumberTable.getInt(line, -1);
-        if (0 <= offset && offset <= itsICode.length) {
-            return offset;
+        Object offset = itsLineNumberTable.get(new Integer(line));
+        if (offset != null && offset instanceof Integer) {
+            int i = ((Integer)offset).intValue();
+            if (i >= 0 && i < itsICode.length)
+            {
+                return i;
+            }
         }
         return -1;
     }    
+    
+    VariableTable itsVariableTable;
     
     String itsName;
     String itsSource;
@@ -101,14 +108,13 @@ class InterpreterData implements Serializable {
     boolean itsNeedsActivation;
     boolean itsFromEvalCode;
     boolean itsUseDynamicScope;
-    boolean itsCheckThis;
     byte itsFunctionType;
 
     String[] itsStringTable;
     int itsStringTableIndex;
 
-    double[] itsDoubleTable;
-    int itsDoubleTableIndex;
+    Number[] itsNumberTable;
+    int itsNumberTableIndex;
     
     InterpretedFunction[] itsNestedFunctions;
     
@@ -122,7 +128,7 @@ class InterpreterData implements Serializable {
     int itsMaxStack;
     int itsMaxTryDepth;
     
-    UintMap itsLineNumberTable;
+    java.util.Hashtable itsLineNumberTable;
 
     Object securityDomain;
 }

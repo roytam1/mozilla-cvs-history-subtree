@@ -60,11 +60,6 @@
 #include "nsslocks.h"
 #include "cdbhdl.h"
 
-#ifndef NSS_3_4_CODE
-#define NSS_3_4_CODE
-#endif /* NSS_3_4_CODE */
-#include "pkit.h"
-
 /*
  * Certificate database handling code
  */
@@ -1193,7 +1188,6 @@ CERT_GetDefaultCertDB(void)
 SECStatus
 CERT_OpenVolatileCertDB(CERTCertDBHandle *handle)
 {
-#ifndef STAN_CERT_DB
 #define DBM_DEFAULT 0
     static const HASHINFO hashInfo = {
         DBM_DEFAULT,    /* bucket size */
@@ -1244,7 +1238,6 @@ loser:
 	handle->tempCertDB = 0;
     }
 
-#endif
     return(SECFailure);
 }
 
@@ -1713,7 +1706,7 @@ CERT_IsCADERCert(SECItem *derCert, unsigned int *type) {
 
     cert = CERT_NewTempCertificate(CERT_GetDefaultCertDB(), derCert, NULL,
 	                                   PR_FALSE, PR_TRUE);
-    if (cert == NULL) return PR_FALSE;
+    if (cert == NULL) return NULL;
 
     isCA = CERT_IsCACert(cert,type);
     CERT_DestroyCertificate (cert);
@@ -1951,7 +1944,7 @@ CERT_ImportCerts(CERTCertDBHandle *certdb, SECCertUsage usage,
     int i;
     CERTCertificate **certs = NULL;
     SECStatus rv;
-    int fcerts = 0;
+    int fcerts;
 
     if ( ncerts ) {
 	certs = (CERTCertificate**)PORT_ZAlloc(sizeof(CERTCertificate *) * ncerts );
@@ -1988,9 +1981,7 @@ CERT_ImportCerts(CERTCertDBHandle *certdb, SECCertUsage usage,
     if ( retCerts ) {
 	*retCerts = certs;
     } else {
-	if (certs) {
-	    CERT_DestroyCertArray(certs, fcerts);
-	}
+	CERT_DestroyCertArray(certs, fcerts);
     }
 
     return(SECSuccess);
@@ -2091,7 +2082,7 @@ loser:
 SECStatus
 CERT_AddCertToListTail(CERTCertList *certs, CERTCertificate *cert)
 {
-    return CERT_AddCertToListTailWithData(certs, cert, NULL);
+    CERT_AddCertToListTailWithData(certs, cert, NULL);
 }
 
 SECStatus
@@ -2326,16 +2317,14 @@ loser:
  * This lock is currently used for the following operations:
  *	adding or deleting a cert to either the temp or perm databases
  *	converting a temp to perm or perm to temp
- *	changing(maybe just adding !?) the trust of a cert
+ *	changing(maybe just adding????) the trust of a cert
  *      chaning the DB status checking Configuration
  */
 void
 CERT_LockDB(CERTCertDBHandle *handle)
 {
-#ifndef STAN_CERT_DB
     PZ_EnterMonitor(handle->dbMon);
     return;
-#endif
 }
 
 /*
@@ -2344,7 +2333,6 @@ CERT_LockDB(CERTCertDBHandle *handle)
 void
 CERT_UnlockDB(CERTCertDBHandle *handle)
 {
-#ifndef STAN_CERT_DB
     PRStatus prstat;
     
     prstat = PZ_ExitMonitor(handle->dbMon);
@@ -2352,7 +2340,6 @@ CERT_UnlockDB(CERTCertDBHandle *handle)
     PORT_Assert(prstat == PR_SUCCESS);
     
     return;
-#endif
 }
 
 static PZLock *certRefCountLock = NULL;

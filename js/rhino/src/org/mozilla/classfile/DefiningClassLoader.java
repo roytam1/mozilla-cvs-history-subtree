@@ -21,7 +21,6 @@
  * Norris Boyd
  * Roger Lawrence
  * Patrick Beard
- * Igor Bukanov
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -35,10 +34,8 @@
  * file under either the NPL or the GPL.
  */
 
-package org.mozilla.classfile;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.InvocationTargetException;
+package org.mozilla.classfile;
 
 /**
  * Load generated classes.
@@ -47,21 +44,6 @@ import java.lang.reflect.InvocationTargetException;
  */
 public class DefiningClassLoader extends ClassLoader {
 
-    public static ClassLoader getContextClassLoader() {
-        try {
-            if (getContextClassLoaderMethod != null) {
-                return (ClassLoader) getContextClassLoaderMethod.invoke(
-                                    Thread.currentThread(), 
-                                    new Object[0]);
-            }
-        } catch (IllegalAccessException e) {
-            // fall through...
-        } catch (InvocationTargetException e) {
-            // fall through...
-        }
-        return DefiningClassLoader.class.getClassLoader();
-    }
-        
     public Class defineClass(String name, byte data[]) {
         return super.defineClass(name, data, 0, data.length);
     }
@@ -71,37 +53,16 @@ public class DefiningClassLoader extends ClassLoader {
     {
         Class clazz = findLoadedClass(name);
         if (clazz == null) {
-            ClassLoader loader = getContextClassLoader();
+            ClassLoader loader = getClass().getClassLoader();
             if (loader != null) {
-                clazz = loader.loadClass(name);
-            } else {
-                clazz = findSystemClass(name);
+                clazz = ClassManager.loadClass(loader, name, resolve);
+                if (clazz != null)
+                    return clazz;
             }
+            clazz = findSystemClass(name);
         }
         if (resolve)
             resolveClass(clazz);
         return clazz;
     }
-
-    private static Method getContextClassLoaderMethod;
-    static {
-        try {
-            // Don't use "Thread.class": that performs the lookup
-            // in the class initializer, which doesn't allow us to
-            // catch possible security exceptions.
-            Class threadClass = Class.forName("java.lang.Thread");
-            // We'd like to use "getContextClassLoader", but 
-            // that's only available on Java2. 
-            getContextClassLoaderMethod = 
-                threadClass.getDeclaredMethod("getContextClassLoader", 
-                                               new Class[0]);
-        } catch (ClassNotFoundException e) {
-            // ignore exceptions; we'll use Class.forName instead.
-        } catch (NoSuchMethodException e) {
-            // ignore exceptions; we'll use Class.forName instead.
-        } catch (SecurityException e) {
-            // ignore exceptions; we'll use Class.forName instead.
-        }
-    }
-
 }

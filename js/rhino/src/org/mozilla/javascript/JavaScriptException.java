@@ -58,6 +58,15 @@ public class JavaScriptException extends Exception {
         this.value = value;
     }
 
+    /**
+     * Get the exception message.
+     *
+     * <p>Will just convert the wrapped exception to a string.
+     */
+    public String getMessage() {
+        return ScriptRuntime.toString(value);
+    }
+
     static JavaScriptException wrapException(Scriptable scope,
                                              Throwable exn)
     {

@@ -43,7 +43,6 @@ import java.io.*;
 import java.lang.reflect.*;
 import org.mozilla.javascript.*;
 import org.mozilla.javascript.tools.ToolErrorReporter;
-import org.mozilla.javascript.serialize.*;
 
 /**
  * This class provides for sharing functions across multiple threads.
@@ -59,8 +58,7 @@ public class Global extends ImporterTopLevel {
         // that these functions are not part of ECMA.
         super(cx);
         String[] names = { "print", "quit", "version", "load", "help",
-                           "loadClass", "defineClass", "spawn", "sync",
-                           "serialize", "deserialize" };
+                           "loadClass", "defineClass", "spawn", "sync" };
         try {
             defineFunctionProperties(names, Global.class,
                                            ScriptableObject.DONTENUM);
@@ -240,41 +238,6 @@ public class Global extends ImporterTopLevel {
                 "msg.class.not.found",
                 className));
         }
-    }
-
-    public static void serialize(Context cx, Scriptable thisObj,
-                                 Object[] args, Function funObj)
-        throws IOException
-    {
-        if (args.length < 2) {
-            throw Context.reportRuntimeError(
-                "Expected an object to serialize and a filename to write " +
-                "the serialization to");
-        }
-        Object obj = args[0];
-        String filename = cx.toString(args[1]);
-        FileOutputStream fos = new FileOutputStream(filename);
-        Scriptable scope = ScriptableObject.getTopLevelScope(thisObj);
-        ScriptableOutputStream out = new ScriptableOutputStream(fos, scope);
-        out.writeObject(obj);
-        out.close();
-    }
-
-    public static Object deserialize(Context cx, Scriptable thisObj,
-                                     Object[] args, Function funObj)
-        throws IOException, ClassNotFoundException
-    {
-        if (args.length < 1) {
-            throw Context.reportRuntimeError(
-                "Expected a filename to read the serialization from");
-        }
-        String filename = cx.toString(args[0]); 
-        FileInputStream fis = new FileInputStream(filename);
-        Scriptable scope = ScriptableObject.getTopLevelScope(thisObj);
-        ObjectInputStream in = new ScriptableInputStream(fis, scope);
-        Object deserialized = in.readObject();
-        in.close();
-        return cx.toObject(deserialized, scope);
     }
 
     /**

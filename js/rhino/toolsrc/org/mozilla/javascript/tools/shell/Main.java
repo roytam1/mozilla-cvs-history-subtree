@@ -39,8 +39,6 @@
 package org.mozilla.javascript.tools.shell;
 
 import java.io.*;
-import java.net.URL;
-import java.net.MalformedURLException;
 import java.util.*;
 import java.lang.reflect.*;
 import org.mozilla.javascript.*;
@@ -82,29 +80,20 @@ public class Main {
 
         args = processOptions(cx, args);
 
-        int skip = 0;
-        if (fileList.size() == 0 && args.length > 0) {
-            skip = 1;
-            fileList.addElement(args[0]);
-        }
-        if (processStdin)
-            fileList.addElement(null);
-
         // get the command line arguments after the name of the script,
         // and define "arguments" array in the top-level object
         Object[] array = args;
         if (args.length > 0) {
-            int length = args.length - skip;
+            int length = args.length - 1;
             array = new Object[length];
-            System.arraycopy(args, skip, array, 0, length);
+            System.arraycopy(args, 1, array, 0, length);
         }
         Scriptable argsObj = cx.newArray(global, array);
         global.defineProperty("arguments", argsObj,
-                              ScriptableObject.DONTENUM);
+                             ScriptableObject.DONTENUM);
         
-        for (int i=0; i < fileList.size(); i++) {
-            processSource(cx, (String) fileList.get(i));
-        }
+        if (processStdin)
+            processSource(cx, args.length == 0 ? null : args[0]);
 
         cx.exit();
         return exitCode;
@@ -118,9 +107,9 @@ public class Main {
         for (int i=0; i < args.length; i++) {
             String arg = args[i];
             if (!arg.startsWith("-")) {
-                processStdin = false;
                 String[] result = new String[args.length - i];
-                System.arraycopy(args, i, result, 0, args.length - i);
+                for (int j=i; j < args.length; j++)
+                    result[j-i] = args[j];
                 return result;
             }
             if (arg.equals("-version")) {
@@ -157,7 +146,9 @@ public class Main {
                 processStdin = false;
                 if (++i == args.length)
                     usage(arg);
-                fileList.addElement(args[i].equals("-") ? null : args[i]);
+                if (args[i].equals("-"))
+                    processStdin = false;
+                processSource(cx, args[i]);
                 continue;
             }
             usage(arg);
@@ -246,24 +237,7 @@ public class Main {
     public static void processFile(Context cx, Scriptable scope,
                                    String filename)
     {
-        Reader in = null;
-        // Try filename first as URL
-        try {
-            URL url = new URL(filename);
-            InputStream is = url.openStream();
-            in = new BufferedReader(new InputStreamReader(is));
-        }  catch (MalformedURLException mfex) {
-            // fall through to try it as a file
-            in = null;
-        } catch (IOException ioex) {
-            Context.reportError(ToolErrorReporter.getMessage(
-                "msg.couldnt.open.url", filename, ioex.toString()));
-            exitCode = EXITCODE_FILE_NOT_FOUND;
-            return;
-        }
-
-        if (in == null) {
-            // Try filename as file
+            Reader in = null;
             try {
                 in = new PushbackReader(new FileReader(filename));
                 int c = in.read();
@@ -296,11 +270,11 @@ public class Main {
             } catch (IOException ioe) {
                 global.getErr().println(ioe.toString());
             }
-        }            
-        // Here we evalute the entire contents of the file as
-        // a script. Text is printed only if the print() function
-        // is called.
-        evaluateReader(cx, scope, in, filename, 1);
+            
+            // Here we evalute the entire contents of the file as
+            // a script. Text is printed only if the print() function
+            // is called.
+            evaluateReader(cx, scope, in, filename, 1);
     }
 
     public static Object evaluateReader(Context cx, Scriptable scope, 
@@ -395,5 +369,4 @@ public class Main {
     static private final int EXITCODE_FILE_NOT_FOUND = 4;
     //static private DebugShell debugShell;
     static boolean processStdin = true;
-    static Vector fileList = new Vector(5);
 }

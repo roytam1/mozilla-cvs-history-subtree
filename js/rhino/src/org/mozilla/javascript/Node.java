@@ -37,6 +37,8 @@
 
 package org.mozilla.javascript;
 
+import java.util.*;
+
 /**
  * This class implements the root of the intermediate representation.
  *
@@ -73,38 +75,9 @@ public class Node implements Cloneable {
         right.next = null;
     }
 
-    public Node(int nodeType, int value) {
+    public Node(int nodeType, Object datum) {
         type = nodeType;
-        this.datum = new Integer(value);
-    }
-
-    public Node(int nodeType, double value) {
-        type = nodeType;
-        int ivalue = (int)value;
-        if (ivalue == value) {
-            if ((byte)ivalue == ivalue) {
-                this.datum = new Byte((byte)ivalue);
-            }
-            else if ((short)ivalue == ivalue) {
-                this.datum = new Short((short)ivalue);
-            }
-            else {
-                this.datum = new Integer(ivalue);
-            }
-        }
-        else {
-            this.datum = new Double(value);
-        }
-    }
-
-    public Node(int nodeType, String str) {
-        type = nodeType;
-        this.datum = str;
-    }
-
-    public Node(int nodeType, Node child, int value) {
-        this(nodeType, child);
-        this.datum = new Integer(value);
+        this.datum = datum;
     }
 
     public Node(int nodeType, Node child, Object datum) {
@@ -159,6 +132,10 @@ public class Node implements Cloneable {
             n = n.next;
         }
         return n;
+    }
+
+    public ShallowNodeIterator getChildIterator() {
+        return new ShallowNodeIterator(first);
     }
 
     public PreorderNodeIterator getPreorderIterator() {
@@ -249,15 +226,6 @@ public class Node implements Cloneable {
             Node prev = getChildBefore(child);
             prev.next = newChild;
         }
-        if (child == last)
-            last = newChild;
-        child.next = null;
-    }
-
-    public void replaceChildAfter(Node prevChild, Node newChild) {
-        Node child = prevChild.next;
-        newChild.next = child.next;
-        prevChild.next = newChild;
         if (child == last)
             last = newChild;
         child.next = null;
@@ -362,41 +330,16 @@ public class Node implements Cloneable {
     public Object getProp(int propType) {
         if (props == null)
             return null;
-        return props.getObject(propType);
-    }
-
-    public int getIntProp(int propType, int defaultValue) {
-        if (props == null)
-            return defaultValue;
-        return props.getInt(propType, defaultValue);
-    }
-
-    public int getExistingIntProp(int propType) {
-        return props.getExistingInt(propType);
+        return props.get(new Integer(propType));
     }
 
     public void putProp(int propType, Object prop) {
-        if (prop == null) {
-            removeProp(propType);
-        }
-        else {
-            if (props == null) {
-                props = new UintMap(2);
-            }
-            props.put(propType, prop);
-        }
-    }
-
-    public void putIntProp(int propType, int prop) {
         if (props == null)
-            props = new UintMap(2);
-        props.put(propType, prop);
-    }
-    
-    public void removeProp(int propType) {
-        if (props != null) {
-            props.remove(propType);
-        }
+            props = new Hashtable(2);
+        if (prop == null)
+            props.remove(new Integer(propType));
+        else
+            props.put(new Integer(propType), prop);
     }
 
     public Object getDatum() {
@@ -405,10 +348,6 @@ public class Node implements Cloneable {
 
     public void setDatum(Object datum) {
         this.datum = datum;
-    }
-
-    public Number getNumber() {
-        return (Number)datum;
     }
 
     public int getInt() {
@@ -445,7 +384,7 @@ public class Node implements Cloneable {
         if (Context.printTrees) {
             StringBuffer sb = new StringBuffer(TokenStream.tokenToName(type));
             if (type == TokenStream.TARGET) {
-                sb.append(' ');
+                sb.append(" ");
                 sb.append(hashCode());
             }
             if (datum != null) {
@@ -455,13 +394,15 @@ public class Node implements Cloneable {
             if (props == null)
                 return sb.toString();
 
-            int[] keys = props.getKeys();
-            for (int i = 0; i != keys.length; ++i) {
-                int key = keys[i];
+            Enumeration keys = props.keys();
+            Enumeration elems = props.elements();
+            while (keys.hasMoreElements()) {
+                Integer key = (Integer) keys.nextElement();
+                Object elem = elems.nextElement();
                 sb.append(" [");
-                sb.append(propToString(key));
+                sb.append(propToString(key.intValue()));
                 sb.append(": ");
-                switch (key) {
+                switch (key.intValue()) {
                     case FIXUPS_PROP :      // can't add this as it recurses
                         sb.append("fixups property");
                         break;
@@ -475,15 +416,10 @@ public class Node implements Cloneable {
                         sb.append("last use property");
                         break;
                     default :
-                        if (props.isObjectType(key)) {
-                            sb.append(props.getObject(key).toString());
-                        }
-                        else {
-                            sb.append(props.getExistingInt(key));
-                        }
+                        sb.append(elem.toString());
                         break;
                 }
-                sb.append(']');
+                sb.append("]");
             }
             return sb.toString();
         }
@@ -503,16 +439,17 @@ public class Node implements Cloneable {
             }
             s.append(toString());
             s.append('\n');
-            for (Node cursor = getFirstChild(); cursor != null;
-                 cursor = cursor.getNextSibling()) 
-            {
-                Node n = cursor;
-                if (cursor.getType() == TokenStream.FUNCTION) {
-                    Node p = (Node) cursor.getProp(Node.FUNCTION_PROP);
-                    if (p != null)
-                        n = p;
+            ShallowNodeIterator iterator = getChildIterator();
+            if (iterator != null) {
+                while (iterator.hasMoreElements()) {
+                    Node n = (Node) iterator.nextElement();
+                    if (n.getType() == TokenStream.FUNCTION) {
+                        Node p = (Node) n.getProp(Node.FUNCTION_PROP);
+                        if (p != null)
+                            n = p;
+                    }
+                    s.append(n.toStringTreeHelper(level+1));
                 }
-                s.append(n.toStringTreeHelper(level+1));
             }
             return s.toString();
         }
@@ -526,7 +463,7 @@ public class Node implements Cloneable {
     protected Node next;        // next sibling
     protected Node first;       // first element of a linked list of children
     protected Node last;        // last element of a linked list of children
-    protected UintMap props;
+    protected Hashtable props;
     protected Object datum;     // encapsulated data; depends on type
 }
 

@@ -41,7 +41,6 @@ package org.mozilla.javascript;
 
 import java.lang.reflect.*;
 import java.util.Hashtable;
-import java.io.*;
 
 /**
  * This is the default implementation of the Scriptable interface. This
@@ -57,9 +56,7 @@ import java.io.*;
  * @author Norris Boyd
  */
 
-public abstract class ScriptableObject implements Scriptable, Serializable {
-
-    static final long serialVersionUID = 2762574228534679611L;
+public abstract class ScriptableObject implements Scriptable {
 
     /**
      * The empty property attribute.
@@ -216,17 +213,14 @@ public abstract class ScriptableObject implements Scriptable, Serializable {
      * @param value value to set the property to
      */
     public void put(String name, Scriptable start, Object value) {
-        Slot slot = lastAccess; // Get local copy
-        if (name != slot.stringKey || slot.wasDeleted != 0) {
-            int hash = name.hashCode();
-            slot = getSlot(name, hash, false);
-            if (slot == null) {
-                if (start != this) {
-                    start.put(name, start, value);
-                    return;
-                }
-                slot = getSlotToSet(name, hash, false);
+        int hash = name.hashCode();
+        Slot slot = getSlot(name, hash, false);
+        if (slot == null) {
+            if (start != this) {
+                start.put(name, start, value);
+                return;
             }
+            slot = getSlotToSet(name, hash, false);
         }
         if ((slot.attributes & ScriptableObject.READONLY) != 0)
             return;
@@ -612,11 +606,11 @@ public abstract class ScriptableObject implements Scriptable, Serializable {
     /**
      * Defines JavaScript objects from a Java class that implements Scriptable.
      *
-     * If the given class has a method
-     * <pre>
-     * static void init(Context cx, Scriptable scope, boolean sealed);</pre>
+     * If the given class implements the <code>ScopeInitializer</code>
+     * interface, then its instance is constructed and <code>scopeInit</code>
+     * is called upon it and no further initialization is done.
      *
-     * or its compatibility form 
+     * If the given class has a method
      * <pre>
      * static void init(Scriptable scope);</pre>
      *
@@ -746,32 +740,26 @@ public abstract class ScriptableObject implements Scriptable, Serializable {
                InvocationTargetException, ClassDefinitionException,
                PropertyException
     {
+        if (ScopeInitializerClass.isAssignableFrom(clazz)) {
+            ScopeInitializer setup = (ScopeInitializer)clazz.newInstance();
+            Context cx = Context.getContext();
+            setup.scopeInit(cx, scope, sealed);
+            return;
+        }
+        
         Method[] methods = FunctionObject.getMethodList(clazz);
         for (int i=0; i < methods.length; i++) {
-            Method method = methods[i];
-            if (!method.getName().equals("init"))
+            if (!methods[i].getName().equals("init"))
                 continue;
-            Class[] parmTypes = method.getParameterTypes();
-            if (parmTypes.length == 3 &&
-                parmTypes[0] == ContextClass &&
-                parmTypes[1] == ScriptRuntime.ScriptableClass &&
-                parmTypes[2] == Boolean.TYPE &&
-                Modifier.isStatic(method.getModifiers()))
-            {
-                Object args[] = { Context.getContext(), scope, 
-                                  sealed ? Boolean.TRUE : Boolean.FALSE };
-                method.invoke(null, args);
-                return;
-            }
+            Class[] parmTypes = methods[i].getParameterTypes();
             if (parmTypes.length == 1 &&
                 parmTypes[0] == ScriptRuntime.ScriptableClass &&
-                Modifier.isStatic(method.getModifiers()))
+                Modifier.isStatic(methods[i].getModifiers()))
             {
                 Object args[] = { scope };
-                method.invoke(null, args);
+                methods[i].invoke(null, args);
                 return;
             }
-            
         }
 
         // If we got here, there isn't an "init" method with the right
@@ -1544,7 +1532,7 @@ public abstract class ScriptableObject implements Scriptable, Serializable {
         try {
             Object fun = getProperty(obj, methodName);
             if (fun == NOT_FOUND)
-                fun = methodName;
+                fun = Undefined.instance;
             return ScriptRuntime.call(cx, fun, obj, args, getTopLevelScope(obj));
         } finally {
           Context.exit();
@@ -1622,16 +1610,13 @@ public abstract class ScriptableObject implements Scriptable, Serializable {
     }
 
     private Slot getSlotToSet(String id, int index, boolean getterSlot) {
-        // Get stable reference
-        Slot[] array = slots;
-        if (array == null) {
-            return addSlot(id, index, getterSlot);
-        }
-        int start = (index & 0x7fffffff) % array.length;
+        if (slots == null)
+            slots = new Slot[5];
+        int start = (index & 0x7fffffff) % slots.length;
         boolean sawRemoved = false;
         int i = start;
         do {
-            Slot slot = array[i];
+            Slot slot = slots[i];
             if (slot == null) {
                 return addSlot(id, index, getterSlot);
             }
@@ -1643,14 +1628,16 @@ public abstract class ScriptableObject implements Scriptable, Serializable {
             {
                 return slot;
             }
-            if (++i == array.length)
+            if (++i == slots.length)
                 i = 0;
         } while (i != start);
-        if (Context.check && !sawRemoved) Context.codeBug();
-        // Table could be full, but with some REMOVED elements. 
-        // Call to addSlot will use a slot currently taken by 
-        // a REMOVED.
-        return addSlot(id, index, getterSlot);
+        if (sawRemoved) {
+            // Table could be full, but with some REMOVED elements. 
+            // Call to addSlot will use a slot currently taken by 
+            // a REMOVED.
+            return addSlot(id, index, getterSlot);
+        }
+        throw new RuntimeException("Hashtable internal error");
     }
 
     /**
@@ -1665,9 +1652,6 @@ public abstract class ScriptableObject implements Scriptable, Serializable {
     {
         if (count == -1)
             throw Context.reportRuntimeError0("msg.add.sealed");
-        
-        if (slots == null) { slots = new Slot[5]; }
-
         int start = (index & 0x7fffffff) % slots.length;
         int i = start;
         do {
@@ -1693,9 +1677,7 @@ public abstract class ScriptableObject implements Scriptable, Serializable {
             if (++i == slots.length)
                 i = 0;
         } while (i != start);
-        // Unreachable code
-        if (Context.check) Context.codeBug();
-        return null;
+        throw new RuntimeException("Hashtable internal error");
     }
 
     /**
@@ -1775,12 +1757,6 @@ public abstract class ScriptableObject implements Scriptable, Serializable {
         return result;
     }
 
-    private void readObject(ObjectInputStream in) 
-        throws IOException, ClassNotFoundException
-    {
-        in.defaultReadObject();
-        lastAccess = REMOVED;
-    }
     
     /**
      * The prototype of this object.
@@ -1800,9 +1776,9 @@ public abstract class ScriptableObject implements Scriptable, Serializable {
     private int count;
 
     // cache; may be removed for smaller memory footprint
-    transient private Slot lastAccess = REMOVED;
+    private Slot lastAccess = REMOVED;
 
-    private static class Slot implements Serializable {
+    private static class Slot {
         static final int HAS_GETTER  = 0x01;
         static final int HAS_SETTER  = 0x02;
         
@@ -1821,5 +1797,5 @@ public abstract class ScriptableObject implements Scriptable, Serializable {
         boolean setterReturnsValue;
     }
 
-    private static final Class ContextClass = Context.class;
+    private static final Class ScopeInitializerClass = ScopeInitializer.class;
 }

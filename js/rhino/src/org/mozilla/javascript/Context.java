@@ -22,7 +22,6 @@
  *
  * Patrick Beard
  * Norris Boyd
- * Igor Bukanov
  * Brendan Eich
  * Roger Lawrence
  * Mike McCabe
@@ -83,8 +82,8 @@ import org.mozilla.javascript.debug.*;
  */
 
 public class Context {
-    public static final String languageVersionProperty = "language version";
-    public static final String errorReporterProperty   = "error reporter";
+    public static String languageVersionProperty = "language version";
+    public static String errorReporterProperty   = "error reporter";
     
     /**
      * Create a new Context.
@@ -595,9 +594,7 @@ public class Context {
      * as a global object as in ECMA 15.1.<p>
      *
      * This method must be called to initialize a scope before scripts
-     * can be evaluated in that scope.<p>
-     *
-     * This method does not affect the Context it is called upon.
+     * can be evaluated in that scope.
      *
      * @param scope the scope to initialize, or null, in which case a new
      *        object will be created to serve as the scope
@@ -616,8 +613,6 @@ public class Context {
      *
      * This method must be called to initialize a scope before scripts
      * can be evaluated in that scope.<p>
-     *
-     * This method does not affect the Context it is called upon.<p>
      * 
      * This form of the method also allows for creating "sealed" standard
      * objects. An object that is sealed cannot have properties added or
@@ -633,78 +628,105 @@ public class Context {
      * @return the initialized scope
      * @since 1.4R3
      */
-    public ScriptableObject initStandardObjects(ScriptableObject scope,
-                                                boolean sealed)
+    public ScriptableObject initStandardObjects(ScriptableObject scope, 
+                                                boolean sealed) 
     {
-        if (scope == null)
-            scope = new NativeObject();
-
-        BaseFunction.init(this, scope, sealed);
-        NativeObject.init(this, scope, sealed);
-
-        Scriptable objectProto = ScriptableObject.getObjectPrototype(scope);
-
-        // Function.prototype.__proto__ should be Object.prototype
-        Scriptable functionProto = ScriptableObject.getFunctionPrototype(scope);
-        functionProto.setPrototype(objectProto);
-
-        // Set the prototype of the object passed in if need be
-        if (scope.getPrototype() == null)
-            scope.setPrototype(objectProto);
-
-        // must precede NativeGlobal since it's needed therein
-        NativeError.init(this, scope, sealed);
-        NativeGlobal.init(this, scope, sealed);
-
-        NativeArray.init(this, scope, sealed);
-        NativeString.init(this, scope, sealed);
-        NativeBoolean.init(this, scope, sealed);
-        NativeNumber.init(this, scope, sealed);
-        NativeDate.init(this, scope, sealed);
-        NativeMath.init(this, scope, sealed);
-
-        NativeWith.init(this, scope, sealed);
-        NativeCall.init(this, scope, sealed);
-        NativeScript.init(this, scope, sealed);
-
-        new LazilyLoadedCtor(scope, 
-                             "RegExp",
-                             "org.mozilla.javascript.regexp.NativeRegExp",
-                             sealed);
-
-        // This creates the Packages and java package roots.
-        new LazilyLoadedCtor(scope, 
-                             "Packages",
-                             "org.mozilla.javascript.NativeJavaPackage",
-                             sealed);
-        new LazilyLoadedCtor(scope, 
-                             "java", 
-                             "org.mozilla.javascript.NativeJavaPackage",
-                             sealed);
-        new LazilyLoadedCtor(scope, 
-                             "getClass",
-                             "org.mozilla.javascript.NativeJavaPackage",
-                             sealed);
- 
-        // Define the JavaAdapter class, allowing it to be overridden.
-        String adapterClass = "org.mozilla.javascript.JavaAdapter";
-        String adapterProperty = "JavaAdapter";
+        final String omj = "org.mozilla.javascript.";
         try {
-            adapterClass = System.getProperty(adapterClass, adapterClass);
-            adapterProperty = System.getProperty
-                ("org.mozilla.javascript.JavaAdapterClassName",
-                 adapterProperty);
-        }
-        catch (SecurityException e) {
-            // We may not be allowed to get system properties. Just
-            // use the default adapter in that case.
-        }
+            if (scope == null)
+                scope = new NativeObject();
+            ScriptableObject.defineClass(scope, NativeFunction.class, sealed);
+            (new NativeObject()).scopeInit(this, scope, sealed);
 
-        new LazilyLoadedCtor(scope, adapterProperty, adapterClass, sealed);
+            Scriptable objectProto = ScriptableObject.
+                                      getObjectPrototype(scope);
+
+            // Function.prototype.__proto__ should be Object.prototype
+            Scriptable functionProto = ScriptableObject.
+                                        getFunctionPrototype(scope);
+            functionProto.setPrototype(objectProto);
+
+            // Set the prototype of the object passed in if need be
+            if (scope.getPrototype() == null)
+                scope.setPrototype(objectProto);
+            
+            // must precede NativeGlobal since it's needed therein
+            (new NativeError()).scopeInit(this, scope, sealed);
+            (new NativeGlobal()).scopeInit(this, scope, sealed);
+
+            (new NativeArray()).scopeInit(this, scope, sealed);
+            (new NativeString()).scopeInit(this, scope, sealed);
+            (new NativeBoolean()).scopeInit(this, scope, sealed);
+            (new NativeNumber()).scopeInit(this, scope, sealed);
+            (new NativeDate()).scopeInit(this, scope, sealed);
+            (new NativeMath()).scopeInit(this, scope, sealed);
+            (new NativeWith()).scopeInit(this, scope, sealed);
+                                
+            String[] classes = { "NativeCall",          "Call",
+                                 "regexp.NativeRegExp", "RegExp",
+                                 "NativeScript",        "Script",
+                               };
+            for (int i=0; i < classes.length; i+=2) {
+                try {
+                    if (sealed) {
+                        Class c = Class.forName(omj + classes[i]);
+                        ScriptableObject.defineClass(scope, c, sealed);
+                    } else {
+                        String s = omj + classes[i];
+                        new LazilyLoadedCtor(scope, classes[i+1], s, 
+                                             ScriptableObject.DONTENUM);
+                    }
+                } catch (ClassNotFoundException e) {
+                    continue;
+                }
+            }
+            
+            // Define the JavaAdapter class, allowing it to be overridden.
+            String adapterName = "org.mozilla.javascript.JavaAdapter";
+            try {
+                adapterName = System.getProperty(adapterName, adapterName);
+            } catch (SecurityException e) {
+                // We may not be allowed to get system properties. Just
+                // use the default adapter in that case.
+            }
+            try {
+                Class adapterClass = Class.forName(adapterName);
+                ScriptableObject.defineClass(scope, adapterClass, sealed);
+                
+                // This creates the Packages and java package roots.
+                Class c = Class.forName(omj + "NativeJavaPackage");
+                ScriptableObject.defineClass(scope, c, sealed);
+            } catch (ClassNotFoundException e) {
+                // If the class is not found, proceed without it.
+            } catch (SecurityException e) {
+                // Ignore AccessControlExceptions that may occur if a
+                //    SecurityManager is installed:
+                //  java.lang.RuntimePermission createClassLoader
+                //  java.util.PropertyPermission 
+                //        org.mozilla.javascript.JavaAdapter read
+            }
+        }
+        // All of these exceptions should not occur since we are initializing
+        // from known classes
+        catch (IllegalAccessException e) {
+            throw WrappedException.wrapException(e);
+        }
+        catch (InstantiationException e) {
+            throw WrappedException.wrapException(e);
+        }
+        catch (InvocationTargetException e) {
+            throw WrappedException.wrapException(e);
+        }
+        catch (ClassDefinitionException e) {
+            throw WrappedException.wrapException(e);
+        }
+        catch (PropertyException e) {
+            throw WrappedException.wrapException(e);
+        }
 
         return scope;
     }
-    
+
     /**
      * Get the singleton object that represents the JavaScript Undefined value.
      */
@@ -906,7 +928,7 @@ public class Context {
     {
         NativeScript ns = (NativeScript) script;
         ns.initScript(scope);
-        return ns.decompile(this, indent, false);
+        return ns.decompile(indent, true, false);
     }
 
     /**
@@ -923,8 +945,8 @@ public class Context {
      * @return a string representing the function source
      */
     public String decompileFunction(Function fun, int indent) {
-        if (fun instanceof BaseFunction)
-            return ((BaseFunction)fun).decompile(this, indent, false);
+        if (fun instanceof NativeFunction)
+            return ((NativeFunction)fun).decompile(indent, true, false);
         else
             return "function " + fun.getClassName() +
                    "() {\n\t[native code]\n}\n";
@@ -944,8 +966,8 @@ public class Context {
      * @return a string representing the function body source.
      */
     public String decompileFunctionBody(Function fun, int indent) {
-        if (fun instanceof BaseFunction)
-            return ((BaseFunction)fun).decompile(this, indent, true);
+        if (fun instanceof NativeFunction)
+            return ((NativeFunction)fun).decompile(indent, true, true);
         else
             // not sure what the right response here is.  JSRef currently
             // dumps core.
@@ -1558,86 +1580,7 @@ public class Context {
             debuggableEngine = new DebuggableEngineImpl(this);
         return debuggableEngine;
     }
-    
-    
-    /**
-     * if hasFeature(FEATURE_NON_ECMA_GET_YEAR) returns true,
-     * Date.prototype.getYear subtructs 1900 only if 1900 <= date < 2000
-     * in deviation with Ecma B.2.4
-     */
-    public static final int FEATURE_NON_ECMA_GET_YEAR = 1;
-    
-    /**
-     * if hasFeature(FEATURE_MEMBER_EXPR_AS_FUNCTION_NAME) returns true,
-     * allow 'function <MemberExpression>(...) { ... }' to be syntax sugar for 
-     * '<MemberExpression> = function(...) { ... }', when <MemberExpression> 
-     * is not simply identifier. 
-     * See Ecma-262, section 11.2 for definition of <MemberExpression>
-     */
-    public static final int FEATURE_MEMBER_EXPR_AS_FUNCTION_NAME = 2;
-    
-    /**
-     * Controls certain aspects of script semantics. 
-     * Should be overwritten to alter default behavior.
-     * @param featureIndex feature index to check
-     * @return true if the <code>featureIndex</code> feature is turned on
-     * @see #FEATURE_NON_ECMA_GET_YEAR
-     * @see #FEATURE_MEMBER_EXPR_AS_FUNCTION_NAME
-     */
-    public boolean hasFeature(int featureIndex) {
-        if (featureIndex == FEATURE_NON_ECMA_GET_YEAR) {
-           /*
-            * During the great date rewrite of 1.3, we tried to track the
-            * evolving ECMA standard, which then had a definition of
-            * getYear which always subtracted 1900.  Which we
-            * implemented, not realizing that it was incompatible with
-            * the old behavior...  now, rather than thrash the behavior
-            * yet again, we've decided to leave it with the - 1900
-            * behavior and point people to the getFullYear method.  But
-            * we try to protect existing scripts that have specified a
-            * version...
-            */
-            return (version == Context.VERSION_1_0 
-                    || version == Context.VERSION_1_1
-                    || version == Context.VERSION_1_2);
-        }
-        else if (featureIndex == FEATURE_MEMBER_EXPR_AS_FUNCTION_NAME) {
-            return false;
-        }
-        // Unreachable code
-        if (Context.check) Context.codeBug();
-        return false;
-    }
 
-    /**
-     * Get/Set threshold of executed instructions counter that triggers call to
-     * <code>observeInstructionCount()</code>.
-     * When the threshold is zero, instruction counting is disabled, 
-     * otherwise each time the run-time executes at least the threshold value
-     * of script instructions, <code>observeInstructionCount()</code> will 
-     * be called.
-     */
-    public int getInstructionObserverThreshold() {
-        return instructionThreshold;
-    }
-    
-    public void setInstructionObserverThreshold(int threshold) {
-        instructionThreshold = threshold;
-    }
-    
-    /** 
-     * Allow application to monitor counter of executed script instructions
-     * in Context subclasses.
-     * Run-time calls this when instruction counting is enabled and the counter
-     * reaches limit set by <code>setInstructionObserverThreshold()</code>.
-     * The method is useful to observe long running scripts and if necessary
-     * to terminate them.
-     * @param instructionCount amount of script instruction executed since 
-     * last call to <code>observeInstructionCount</code> 
-     * @throws Error to terminate the script
-     */
-    protected void observeInstructionCount(int instructionCount) {}
-    
     /********** end of API **********/
     
     void pushFrame(DebugFrame frame) {
@@ -1774,7 +1717,9 @@ public class Context {
     }
     
     private Interpreter getCompiler() {
-        if (codegenClass != null) {
+        if (codegenClass == null) {
+            return new Interpreter();
+        } else {
             try {
                 return (Interpreter) codegenClass.newInstance();
             }
@@ -1786,9 +1731,8 @@ public class Context {
             }
             catch (IllegalAccessException x) {
             }
-            // fall through
+            throw new RuntimeException("Malformed optimizer package");
         }
-        return new Interpreter();
     }
     
     private Object compile(Scriptable scope, TokenStream ts, 
@@ -1859,11 +1803,9 @@ public class Context {
                 open = i;
             else if (c == ')')
                 close = i;
-            else if (c == '\n' && open != -1 && close != -1 && colon != -1 && 
-                     open < colon && colon < close) 
-            {
+            else if (c == '\n' && open != -1 && close != -1 && colon != -1) {
                 String fileStr = s.substring(open + 1, colon);
-                if (!fileStr.endsWith(".java")) {
+                if (fileStr.endsWith(".js")) {
                     String lineStr = s.substring(colon + 1, close);
                     try {
                         linep[0] = Integer.parseInt(lineStr);
@@ -1982,51 +1924,6 @@ public class Context {
         return generatingDebugChanged;
     }
     
-
-    /**
-     * Add a name to the list of names forcing the creation of real
-     * activation objects for functions.
-     *
-     * @param name the name of the object to add to the list
-     */
-    public void addActivationName(String name) {
-        if (activationNames == null) 
-            activationNames = new Hashtable(5);
-        activationNames.put(name, name);
-    }
-
-    /**
-     * Check whether the name is in the list of names of objects
-     * forcing the creation of activation objects.
-     *
-     * @param name the name of the object to test
-     *
-     * @return true if an function activation object is needed.
-     */
-    public boolean isActivationNeeded(String name) {
-        if ("arguments".equals(name))
-            return true;
-        return activationNames != null && activationNames.containsKey(name);
-    }
-
-    /**
-     * Remove a name from the list of names forcing the creation of real
-     * activation objects for functions.
-     *
-     * @param name the name of the object to remove from the list
-     */
-    public void removeActivationName(String name) {
-        if (activationNames != null)
-            activationNames.remove(name);
-    }
-
-// Rudimentary support for Design-by-Contract
-    static void codeBug() {
-        throw new RuntimeException("FAILED ASSERTION");
-    }
-
-    static final boolean check = true;
-
     static final boolean useJSObject = false;
 
     /** 
@@ -2039,6 +1936,7 @@ public class Context {
     Hashtable iterating;
             
     Object interpreterSecurityDomain;
+    Scriptable ctorScope;
 
     int version;
     int errorCount;
@@ -2064,12 +1962,6 @@ public class Context {
     private Object[] listeners;
     private Hashtable hashtable;
 
-    /**
-     * This is the list of names of objects forcing the creation of
-     * function activation records.
-     */
-    private Hashtable activationNames;
-
     // Private lock for static fields to avoid a possibility of denial
     // of service via synchronized (Context.class) { while (true) {} }
     private static final Object staticDataLock = new Object();
@@ -2078,8 +1970,4 @@ public class Context {
     // For the interpreter to indicate line/source for error reports.
     int interpreterLine;
     String interpreterSourceFile;
-
-    // For instruction counting (interpreter only)
-    int instructionCount;
-    int instructionThreshold;
 }

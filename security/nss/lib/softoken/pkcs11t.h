@@ -338,7 +338,6 @@ typedef CK_ULONG          CK_KEY_TYPE;
 #define CKK_AES             0x0000001F
 
 #define CKK_VENDOR_DEFINED  0x80000000
-#define CKK_INVALID_KEY_TYPE 0xffffffff
 
 
 /* CK_CERTIFICATE_TYPE is a value that identifies a certificate
@@ -860,7 +859,6 @@ typedef struct CK_C_INITIALIZE_ARGS {
   CK_LOCKMUTEX LockMutex;
   CK_UNLOCKMUTEX UnlockMutex;
   CK_FLAGS flags;
-  CK_CHAR_PTR *LibraryParameters;
   CK_VOID_PTR pReserved;
 } CK_C_INITIALIZE_ARGS;
 
@@ -1126,12 +1124,6 @@ typedef CK_EXTRACT_PARAMS CK_PTR CK_EXTRACT_PARAMS_PTR;
 /* define used to pass in the database key for DSA private keys */
 #define CKA_NETSCAPE_DB				0xD5A0DB00L
 #define CKA_NETSCAPE_TRUST			0x80000001L
-
-#define SECMOD_MODULE_DB_FUNCTION_FIND	0
-#define SECMOD_MODULE_DB_FUNCTION_ADD	1
-#define SECMOD_MODULE_DB_FUNCTION_DEL	2
-typedef char ** (PR_CALLBACK *SECMODModuleDBFunc)(unsigned long function, 
-					char *parameters, char *moduleSpec);
 
 /* undo packing */
 #include "pkcs11u.h"

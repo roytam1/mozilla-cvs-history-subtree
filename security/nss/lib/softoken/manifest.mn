@@ -40,6 +40,10 @@ LIBRARY_NAME = softoken
 
 
 EXPORTS = \
+	keydbt.h \
+	keylow.h \
+	keytboth.h \
+	keytlow.h \
 	secpkcs5.h \
 	pkcs11.h \
 	pkcs11f.h \
@@ -51,7 +55,8 @@ EXPORTS = \
 PRIVATE_EXPORTS = \
 	alghmac.h \
 	pkcs11i.h \
-	pk11pars.h \
+	softoken.h \
+	softoknt.h \
 	$(NULL)
 
 CSRCS = \
@@ -67,8 +72,6 @@ CSRCS = \
 	fipstest.c \
 	fipstokn.c \
 	rawhash.c \
-	dbinit.c \
-	pk11db.c \
 	$(NULL)
 
 

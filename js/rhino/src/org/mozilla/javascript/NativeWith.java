@@ -43,29 +43,27 @@ import java.lang.reflect.Method;
  * It simply delegates every action to its prototype except
  * for operations on its parent.
  */
-public class NativeWith implements Scriptable, IdFunctionMaster { 
-    
-    public static void init(Context cx, Scriptable scope, boolean sealed) {
-        NativeWith obj = new NativeWith();
-        obj.prototypeFlag = true;
-
-        IdFunction ctor = new IdFunction(obj, "constructor", Id_constructor);
-        ctor.initAsConstructor(scope, obj);
-        if (sealed) { ctor.sealObject(); }
-        
-        obj.setParentScope(ctor);
-        obj.setPrototype(ScriptableObject.getObjectPrototype(scope));
-        
-        ScriptableObject.defineProperty(scope, "With", ctor,
-                                        ScriptableObject.DONTENUM);
-    }
-
+public class NativeWith
+    implements Scriptable, IdFunctionMaster, ScopeInitializer
+{ 
     public NativeWith() {
     }
 
     public NativeWith(Scriptable parent, Scriptable prototype) {
         this.parent = parent;
         this.prototype = prototype;
+    }
+
+    public void scopeInit(Context cx, Scriptable scope, boolean sealed) {
+        IdFunction ctor = new IdFunction(this, "constructor", Id_constructor);
+        ctor.initAsConstructor(scope, this);
+        if (sealed) { ctor.sealObject(); }
+        
+        setParentScope(ctor);
+        setPrototype(ScriptableObject.getObjectPrototype(scope));
+        
+        ScriptableObject.defineProperty(scope, getClassName(), this,
+                                        ScriptableObject.DONTENUM);
     }
 
     public String getClassName() {
@@ -149,19 +147,14 @@ public class NativeWith implements Scriptable, IdFunctionMaster {
                              Object[] args)
         throws JavaScriptException
     {
-        if (prototypeFlag) {
-            if (methodId == Id_constructor) {
-                throw Context.reportRuntimeError1
-                    ("msg.cant.call.indirect", "With");
-            }
+        if (methodId == Id_constructor) {
+            throw Context.reportRuntimeError1("msg.cant.call.indirect", "With");
         }
         throw IdFunction.onBadMethodId(this, methodId);
     }
     
     public int methodArity(int methodId) {
-        if (prototypeFlag) {
-            if (methodId == Id_constructor) { return 0; }
-        }
+        if (methodId == Id_constructor) { return 0; }
         return -1;
     }
 
@@ -184,12 +177,14 @@ public class NativeWith implements Scriptable, IdFunctionMaster {
         return thisObj;
     }
     
+    protected int getMinimumId() { return 0; }
+    protected int getMaximumId() { return MAX_ID; }
+
     private static final int    
-        Id_constructor = 1;
+        Id_constructor = 1,
+        MAX_ID         = 1;
 
     private Scriptable prototype;
     private Scriptable parent;
     private Scriptable constructor;
-
-    private boolean prototypeFlag;
 }

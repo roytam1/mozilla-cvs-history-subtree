@@ -26,15 +26,23 @@
 # in order to build LDAP.
 #
 
+LDAP_DEPTH	= .
+NSPR_TREE	= ../nsprpub
+MOD_DEPTH	= ../nsprpub
+DEPTH		= ..
 
-LDAP_DEPTH = ..
-DEPTH = ..
-
-include $(LDAP_DEPTH)/config/rules.mk
+include $(NSPR_TREE)/config/rules.mk
 
 all export::	FORCE
-	@if [ -d $(LDAP_DEPTH)/directory/c-sdk/ldap ]; then \
-		cd $(LDAP_DEPTH)/directory/c-sdk/ldap; \
+	@if [ -d $(NSPR_TREE)/config ]; then \
+		cd $(NSPR_TREE)/config; \
+		$(MAKE); \
+	else \
+		echo "No NSPR directory found"; \
+		exit 0; \
+	fi
+	@if [ -d $(LDAP_DEPTH)/c-sdk/ldap ]; then \
+		cd $(LDAP_DEPTH)/c-sdk/ldap; \
 		$(MAKE) -f Makefile.client $(MFLAGS) export; \
 	else \
 		echo "No LDAP directory -- skipping"; \
@@ -42,8 +50,8 @@ all export::	FORCE
 	fi
 
 libs install::	FORCE
-	@if [ -d $(LDAP_DEPTH)/directory/c-sdk/ldap ]; then \
-		cd $(LDAP_DEPTH)/directory/c-sdk/ldap; \
+	@if [ -d $(LDAP_DEPTH)/c-sdk/ldap ]; then \
+		cd $(LDAP_DEPTH)/c-sdk/ldap; \
 		$(MAKE) -f Makefile.client $(MFLAGS) install; \
 	else \
 		echo "No LDAP directory -- skipping"; \
@@ -51,17 +59,18 @@ libs install::	FORCE
 	fi
 
 clean clobber::	FORCE
-	@if [ -d $(LDAP_DEPTH)/directory/c-sdk/ldap ]; then \
-		cd $(LDAP_DEPTH)/directory/c-sdk/ldap; \
+	@if [ -d $(LDAP_DEPTH)/c-sdk/ldap ]; then \
+		cd $(LDAP_DEPTH)/c-sdk/ldap; \
 		$(MAKE) -f Makefile.client $(MFLAGS) clean; \
 	else \
 		echo "No LDAP directory -- skipping"; \
 		exit 0; \
 	fi
+	rm -rf ../dist 
 
 realclean clobber_all::	FORCE
-	@if [ -d $(LDAP_DEPTH)/directory/c-sdk/ldap ]; then \
-		cd $(LDAP_DEPTH)/directory/c-sdk/ldap; \
+	@if [ -d $(LDAP_DEPTH)/c-sdk/ldap ]; then \
+		cd $(LDAP_DEPTH)/c-sdk/ldap; \
 		$(MAKE) -f Makefile.client $(MFLAGS) realclean; \
 	else \
 		echo "No LDAP directory -- skipping"; \

@@ -42,12 +42,34 @@ ldap_unbind( LDAP *ld )
 {
 	LDAPDebug( LDAP_DEBUG_TRACE, "ldap_unbind\n", 0, 0, 0 );
 
-	return( ldap_ld_free( ld, 1 ) );
+	return( ldap_ld_free( ld, NULL, NULL, 1 ) );
 }
 
 
 int
-ldap_ld_free( LDAP *ld, int close )
+LDAP_CALL
+ldap_unbind_s( LDAP *ld )
+{
+	return( ldap_ld_free( ld, NULL, NULL, 1 ));
+}
+
+
+int
+LDAP_CALL
+ldap_unbind_ext( LDAP *ld, LDAPControl **serverctrls,
+    LDAPControl **clientctrls )
+{
+	return( ldap_ld_free( ld, serverctrls, clientctrls, 1 ));
+}
+
+
+/*
+ * Dispose of the LDAP session ld, including all associated connections
+ * and resources.  If close is non-zero, an unbind() request is sent as well.
+ */
+int
+ldap_ld_free( LDAP *ld, LDAPControl **serverctrls,
+    LDAPControl **clientctrls, int close )
 {
 	int		i;
 	LDAPMessage	*lm, *next;
@@ -70,7 +92,8 @@ ldap_ld_free( LDAP *ld, int close )
 		/* free and unbind from all open connections */
 		LDAP_MUTEX_LOCK( ld, LDAP_CONN_LOCK );
 		while ( ld->ld_conns != NULL ) {
-			nsldapi_free_connection( ld, ld->ld_conns, 1, close );
+			nsldapi_free_connection( ld, ld->ld_conns, serverctrls,
+			    clientctrls, 1, close );
 		}
 		LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );
 
@@ -139,16 +162,11 @@ ldap_ld_free( LDAP *ld, int close )
 	return( err );
 }
 
-int
-LDAP_CALL
-ldap_unbind_s( LDAP *ld )
-{
-	return( ldap_ld_free( ld, 1 ));
-}
 
 
 int
-nsldapi_send_unbind( LDAP *ld, Sockbuf *sb )
+nsldapi_send_unbind( LDAP *ld, Sockbuf *sb, LDAPControl **serverctrls,
+    LDAPControl **clientctrls )
 {
 	BerElement	*ber;
 	int		err, msgid;
@@ -173,7 +191,7 @@ nsldapi_send_unbind( LDAP *ld, Sockbuf *sb )
 		return( err );
 	}
 
-	if (( err = nsldapi_put_controls( ld, NULL, 1, ber ))
+	if (( err = nsldapi_put_controls( ld, serverctrls, 1, ber ))
 	    != LDAP_SUCCESS ) {
 		ber_free( ber, 1 );
 		return( err );

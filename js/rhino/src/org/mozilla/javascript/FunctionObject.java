@@ -49,8 +49,6 @@ import java.lang.reflect.InvocationTargetException;
 
 public class FunctionObject extends NativeFunction {
 
-    static final long serialVersionUID = -4074285335521944312L;
-
     /**
      * Create a JavaScript function object from a Java method.
      *
@@ -197,16 +195,53 @@ public class FunctionObject extends NativeFunction {
     }
 
     /**
-     * Return the value defined by  the method used to construct the object
-     * (number of parameters of the method, or 1 if the method is a "varargs"
-     * form), unless setLength has been called with a new value.
-     * Overrides getLength in BaseFunction.
+     * Override ScriptableObject's has, get, and set in order to define
+     * the "length" property of the function. <p>
+     *
+     * We could also have defined the property using ScriptableObject's
+     * defineProperty method, but that would have consumed a slot in every
+     * FunctionObject. Most FunctionObjects typically don't have any
+     * properties anyway, so having the "length" property would cause us
+     * to allocate an array of slots. <p>
+     *
+     * In particular, this method will return true for 
+     * <code>name.equals("length")</code>
+     * and will delegate to the superclass for all other
+     * values of <code>name</code>.
+     */
+    public boolean has(String name, Scriptable start) {
+        return name.equals("length") || super.has(name, start);
+    }
+
+    /**
+     * Override ScriptableObject's has, get, and set in order to define
+     * the "length" property of the function. <p>
+     *
+     * In particular, this method will return the value defined by
+     * the method used to construct the object (number of parameters
+     * of the method, or 1 if the method is a "varargs" form), unless
+     * setLength has been called with a new value.
      *
      * @see org.mozilla.javascript.FunctionObject#setLength
-     * @see org.mozilla.javascript.BaseFunction#getLength
      */
-    public int getLength() {
-        return lengthPropertyValue;
+    public Object get(String name, Scriptable start) {
+        if (name.equals("length"))
+            return new Integer(lengthPropertyValue);
+        return super.get(name, start);
+    }
+
+    /**
+     * Override ScriptableObject's has, get, and set in order to define
+     * the "length" property of the function. <p>
+     *
+     * In particular, this method will ignore all attempts to set the
+     * "length" property and forward all other requests to ScriptableObject.
+     *
+     * @see org.mozilla.javascript.FunctionObject#setLength
+     */
+    public void put(String name, Scriptable start, Object value) {
+        if (!name.equals("length"))
+            super.put(name, start, value);
     }
 
     /**
@@ -334,13 +369,12 @@ public class FunctionObject extends NativeFunction {
     public void addAsConstructor(Scriptable scope, Scriptable prototype) {
         setParentScope(scope);
         setPrototype(getFunctionPrototype(scope));
-        setImmunePrototypeProperty(prototype);
-
         prototype.setParentScope(this);
-        
         final int attr = ScriptableObject.DONTENUM  |
                          ScriptableObject.PERMANENT |
                          ScriptableObject.READONLY;
+        defineProperty("prototype", prototype, attr);
+
         defineProperty(prototype, "constructor", this, attr);
 
         String name = prototype.getClassName();
@@ -396,7 +430,14 @@ public class FunctionObject extends NativeFunction {
         throws JavaScriptException
     {
         if (parmsLength < 0) {
-            return callVarargs(cx, thisObj, args, false);
+            // Ugly: allow variable-arg constructors that need access to the 
+            // scope to get it from the Context. Cleanest solution would be
+            // to modify the varargs form, but that would require users with 
+            // the old form to change their code.
+            cx.ctorScope = scope;
+            Object result = callVarargs(cx, thisObj, args, false);
+            cx.ctorScope = null;
+            return result;
         }
         if (!isStatic) {
             // OPT: cache "clazz"?
@@ -468,7 +509,13 @@ public class FunctionObject extends NativeFunction {
         if (method == null || parmsLength == VARARGS_CTOR) {
             Scriptable result;
             if (method != null) {
+                // Ugly: allow variable-arg constructors that need access to the 
+                // scope to get it from the Context. Cleanest solution would be
+                // to modify the varargs form, but that would require users with 
+                // the old form to change their code.
+                cx.ctorScope = scope;
                 result = (Scriptable) callVarargs(cx, null, args, true);
+                cx.ctorScope = null;
             } else {
                 result = (Scriptable) call(cx, scope, null, args);
             }
@@ -517,7 +564,7 @@ public class FunctionObject extends NativeFunction {
             }
             try {
                 return invoker.invoke(thisObj, args);
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 throw new InvocationTargetException(e);
             }
         } 
@@ -578,7 +625,7 @@ public class FunctionObject extends NativeFunction {
     /** Get default master implementation or null if not available */
     private static Invoker newInvokerMaster() {
         try {
-            Class cl = ScriptRuntime.loadClassName(INVOKER_MASTER_CLASS);
+            Class cl = Class.forName(INVOKER_MASTER_CLASS);
             return (Invoker)cl.newInstance();
         }
         catch (ClassNotFoundException ex) {}

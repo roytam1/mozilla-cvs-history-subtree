@@ -57,7 +57,7 @@
 /* no platform seem to agree on where this function is defined */
 static char *local_index(char *source, char target) {
    while ((*source != target) && (*source != 0)) {
-	source++;
+	*source++;
    }
    return (*source != 0) ? source : NULL;
 }
@@ -203,25 +203,24 @@ fort_CopyUnsigned(PRArenaPool *arena, SECItem *to, const SECItem *from)
  * any of your callees do not try to extract the public value as well).
  * Also -- the token must be logged in before this function is called.
  */
-FORTEZZAPrivateKey *
-fort_GetPrivKey(FORTSWToken *token,FORTEZZAKeyType keyType,
-						fortSlotEntry *certEntry)
+SECKEYLowPrivateKey *
+fort_GetPrivKey(FORTSWToken *token,KeyType keyType,fortSlotEntry *certEntry)
 {
-    FORTEZZAPrivateKey *returnKey = NULL;
+    SECKEYLowPrivateKey *returnKey = NULL;
     SECStatus rv = SECFailure;
     PRArenaPool *poolp;
-    fortKeyInformation *keyInfo = NULL;
+    fortKeyInformation *keyInfo;
     unsigned char *keyData;
     int len, ret;
 
 
     /* select the right keyinfo */
     switch (keyType) {
-    case fortezzaDSAKey:
+    case dsaKey:
 	keyInfo = certEntry->signatureKeyInformation;
 	if (keyInfo ==  NULL) keyInfo = certEntry->exchangeKeyInformation;
 	break;
-    case fortezzaDHKey:
+    case dhKey:
 	keyInfo = certEntry->exchangeKeyInformation;
 	if (keyInfo == NULL) keyInfo = certEntry->signatureKeyInformation;
 	break;
@@ -235,7 +234,7 @@ fort_GetPrivKey(FORTSWToken *token,FORTEZZAKeyType keyType,
 	return NULL;
     }
 
-    returnKey = (FORTEZZAPrivateKey*)PORT_ArenaZAlloc(poolp, sizeof(FORTEZZAPrivateKey));
+    returnKey = (SECKEYLowPrivateKey*)PORT_ArenaZAlloc(poolp, sizeof(SECKEYLowPrivateKey));
     if(!returnKey) {
 	rv = SECFailure;
 	goto loser;
@@ -304,13 +303,6 @@ loser:
 }
 
 
-void
-fort_DestroyPrivateKey(FORTEZZAPrivateKey *key)
-{
-    if (key && key->arena) {
-	PORT_FreeArena(key->arena, PR_TRUE);
-    }
-}
 
 /*
  * find a particulare certificate entry from the config

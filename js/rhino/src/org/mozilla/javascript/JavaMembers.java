@@ -91,15 +91,7 @@ class JavaMembers {
         try {
             if (member instanceof BeanProperty) {
                 BeanProperty bp = (BeanProperty) member;
-                try {
-                    rval = bp.getter.invoke(javaObject, null);
-                } catch (IllegalAccessException e) {
-                    rval = NativeJavaMethod.retryIllegalAccessInvoke(
-                            bp.getter,
-                            javaObject,
-                            null,
-                            e);
-                }
+                rval = bp.getter.invoke(javaObject, ScriptRuntime.emptyArgs);
                 type = bp.getter.getReturnType();
             } else {
                 Field field = (Field) member;
@@ -110,8 +102,7 @@ class JavaMembers {
             throw new RuntimeException("unexpected IllegalAccessException "+
                                        "accessing Java field");
         } catch (InvocationTargetException e) {
-            throw WrappedException.wrapException(
-                JavaScriptException.wrapException(scope, e));
+            throw new WrappedException(e.getTargetException());
         }
         // Need to wrap the object before we return it.
         scope = ScriptableObject.getTopLevelScope(scope);
@@ -192,8 +183,8 @@ class JavaMembers {
     }
 
 
-    public void put(Scriptable scope, String name, Object javaObject, 
-                    Object value, boolean isStatic)
+    public void put(String name, Object javaObject, Object value,
+                    boolean isStatic)
     {
         Hashtable ht = isStatic ? staticMembers : members;
         Object member = ht.get(name);
@@ -221,8 +212,7 @@ class JavaMembers {
                 throw new RuntimeException("unexpected IllegalAccessException " +
                                            "accessing Java field");
             } catch (InvocationTargetException e) {
-                throw WrappedException.wrapException(
-                    JavaScriptException.wrapException(scope, e));
+                throw new WrappedException(e.getTargetException());
             }
         }
         else {
@@ -492,20 +482,16 @@ class JavaMembers {
             Modifier.isPublic(staticType.getModifiers()))
         {
             cl = staticType;
-
-            // If the static type is an interface, use it
-            if( !cl.isInterface() )
+            
+            // We can use the static type, and that is OK, but we'll trace
+            // back the java class chain here to look for something more suitable.
+            for (Class parentType = dynamicType; 
+                 parentType != null && parentType != ScriptRuntime.ObjectClass;
+                 parentType = parentType.getSuperclass())
             {
-                // We can use the static type, and that is OK, but we'll trace
-                // back the java class chain here to look for something more suitable.
-                for (Class parentType = dynamicType; 
-                     parentType != null && parentType != ScriptRuntime.ObjectClass;
-                     parentType = parentType.getSuperclass())
-                {
-                    if (Modifier.isPublic(parentType.getModifiers())) {
-                        cl = parentType;
-                        break;
-                    }
+                if (Modifier.isPublic(parentType.getModifiers())) {
+                   cl = parentType;
+                   break;
                 }
             }
         }

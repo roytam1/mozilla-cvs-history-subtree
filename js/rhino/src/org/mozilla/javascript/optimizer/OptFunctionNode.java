@@ -110,8 +110,13 @@ public class OptFunctionNode extends FunctionNode {
     }
 
     public void incrementLocalCount() {
-        int localCount = getIntProp(Node.LOCALCOUNT_PROP, 0);
-        putIntProp(Node.LOCALCOUNT_PROP, localCount + 1);
+        Integer localCount = (Integer)(getProp(Node.LOCALCOUNT_PROP));
+        if (localCount == null) {
+            putProp(Node.LOCALCOUNT_PROP, new Integer(1));
+        } else {
+            putProp(Node.LOCALCOUNT_PROP, 
+                        new Integer(localCount.intValue() + 1));
+        }
     }
     
     private String itsClassName;

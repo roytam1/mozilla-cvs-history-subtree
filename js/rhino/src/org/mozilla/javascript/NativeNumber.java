@@ -48,12 +48,6 @@ public class NativeNumber extends IdScriptable {
 
     private static final int MAX_PRECISION = 100;
 
-    public static void init(Context cx, Scriptable scope, boolean sealed) {
-        NativeNumber obj = new NativeNumber();
-        obj.prototypeFlag = true;
-        obj.addAsPrototype(MAX_PROTOTYPE_ID, cx, scope, sealed);
-    }
-
     /**
      * Zero-parameter constructor: just used to create Number.prototype
      */
@@ -76,28 +70,27 @@ public class NativeNumber extends IdScriptable {
                          ScriptableObject.PERMANENT |
                          ScriptableObject.READONLY;
 
-        ctor.defineProperty("NaN", wrap_double(ScriptRuntime.NaN), attr);
-        ctor.defineProperty("POSITIVE_INFINITY",
-                            wrap_double(Double.POSITIVE_INFINITY), attr);
-        ctor.defineProperty("NEGATIVE_INFINITY",
-                            wrap_double(Double.NEGATIVE_INFINITY), attr);
-        ctor.defineProperty("MAX_VALUE", wrap_double(Double.MAX_VALUE), attr);
-        ctor.defineProperty("MIN_VALUE", wrap_double(Double.MIN_VALUE), attr);
+        String[] names = { "NaN", "POSITIVE_INFINITY", "NEGATIVE_INFINITY",
+                           "MAX_VALUE", "MIN_VALUE" };
+        double[] values = { ScriptRuntime.NaN, Double.POSITIVE_INFINITY,
+                            Double.NEGATIVE_INFINITY, Double.MAX_VALUE,
+                            Double.MIN_VALUE };
+        for (int i=0; i < names.length; i++) {
+            ctor.defineProperty(names[i], new Double(values[i]), attr);
+        }
 
         super.fillConstructorProperties(cx, ctor, sealed);
     }
-    
+
     public int methodArity(int methodId) {
-        if (prototypeFlag) {
-            switch (methodId) {
-                case Id_constructor:     return 1; 
-                case Id_toString:        return 1; 
-                case Id_valueOf:         return 0; 
-                case Id_toLocaleString:  return 1; 
-                case Id_toFixed:         return 1;
-                case Id_toExponential:   return 1;
-                case Id_toPrecision:     return 1;
-            }
+        switch (methodId) {
+        case Id_constructor:     return 1; 
+        case Id_toString:        return 1; 
+        case Id_valueOf:         return 0; 
+        case Id_toLocaleString:  return 1; 
+        case Id_toFixed:         return 1;
+        case Id_toExponential:   return 1;
+        case Id_toPrecision:     return 1;
         }
         return super.methodArity(methodId);
     }
@@ -107,30 +100,31 @@ public class NativeNumber extends IdScriptable {
          Context cx, Scriptable scope, Scriptable thisObj, Object[] args)
         throws JavaScriptException
     {
-        if (prototypeFlag) {
-            switch (methodId) {
-                case Id_constructor:
-                    return jsConstructor(args, thisObj == null);
+        switch (methodId) {
 
-                case Id_toString: return realThis(thisObj, f).
-                    jsFunction_toString(toBase(args, 0));
+        case Id_constructor:
+            return jsConstructor(args, thisObj == null);
 
-                case Id_valueOf: return wrap_double(realThis(thisObj, f).
-                    jsFunction_valueOf());
+        case Id_toString: return realThis(thisObj, f).
+            jsFunction_toString(toBase(args, 0));
 
-                case Id_toLocaleString: return realThis(thisObj, f).
-                    jsFunction_toLocaleString(toBase(args, 0));
+        case Id_valueOf: return wrap_double(realThis(thisObj, f).
+            jsFunction_valueOf());
 
-                case Id_toFixed: return realThis(thisObj, f).
-                    jsFunction_toFixed(cx, args);
+        case Id_toLocaleString: return realThis(thisObj, f).
+            jsFunction_toLocaleString(toBase(args, 0));
 
-                case Id_toExponential: return realThis(thisObj, f).
-                    jsFunction_toExponential(cx, args);
+        case Id_toFixed:
+            return realThis(thisObj, f).jsFunction_toFixed(cx, args);
 
-                case Id_toPrecision:return realThis(thisObj, f).
-                    jsFunction_toPrecision(cx, args);
-            }
+        case Id_toExponential:
+            return realThis(thisObj, f).jsFunction_toExponential(cx, args);
+
+        case Id_toPrecision:
+            return realThis(thisObj, f).jsFunction_toPrecision(cx, args);
+
         }
+
         return super.execMethod(methodId, f, cx, scope, thisObj, args);
     }
 
@@ -220,17 +214,17 @@ public class NativeNumber extends IdScriptable {
         return result.toString();
     }
 
+    protected int getMaximumId() { return MAX_ID; }
+
     protected String getIdName(int id) {
-        if (prototypeFlag) {
-            switch (id) {
-                case Id_constructor:     return "constructor"; 
-                case Id_toString:        return "toString"; 
-                case Id_valueOf:         return "valueOf"; 
-                case Id_toLocaleString:  return "toLocaleString"; 
-                case Id_toFixed:         return "toFixed";
-                case Id_toExponential:   return "toExponential";
-                case Id_toPrecision:     return "toPrecision";
-            }
+        switch (id) {
+        case Id_constructor:     return "constructor"; 
+        case Id_toString:        return "toString"; 
+        case Id_valueOf:         return "valueOf"; 
+        case Id_toLocaleString:  return "toLocaleString"; 
+        case Id_toFixed:         return "toFixed";
+        case Id_toExponential:   return "toExponential";
+        case Id_toPrecision:     return "toPrecision";
         }
         return null;        
     }
@@ -238,7 +232,6 @@ public class NativeNumber extends IdScriptable {
 // #string_id_map#
 
     protected int mapNameToId(String s) {
-        if (!prototypeFlag) { return 0; }
         int id;
 // #generated# Last update: 2001-04-23 10:40:45 CEST
         L0: { id = 0; String X = null; int c;
@@ -269,12 +262,10 @@ public class NativeNumber extends IdScriptable {
         Id_toFixed               = 5,
         Id_toExponential         = 6,
         Id_toPrecision           = 7,
-        MAX_PROTOTYPE_ID         = 7;
+        MAX_ID                   = 7;
 
 // #/string_id_map#
 
     private static final double defaultValue = +0.0;
     private double doubleValue;
-
-    private boolean prototypeFlag;
 }

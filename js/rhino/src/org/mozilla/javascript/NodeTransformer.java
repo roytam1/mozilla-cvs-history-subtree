@@ -101,18 +101,12 @@ public class NodeTransformer {
                     }
 
                 } else {
+                    if (inFunction) {
+                        // Nested functions require activation  objects.
+                        ((FunctionNode) tree).setRequiresActivation(true);
+                    }
                     FunctionNode fnNode = (FunctionNode)
                                           node.getProp(Node.FUNCTION_PROP);
-                    if (inFunction) {
-                        // Functions containing other functions require 
-                        //  activation objects 
-                        ((FunctionNode) tree).setRequiresActivation(true);
-
-                        // Nested functions must check their 'this' value to
-                        //  insure it is not an activation object:
-                        //  see 10.1.6 Activation Object
-                        fnNode.setCheckThis(true);
-                    }
                     addParameters(fnNode);
                     NodeTransformer inner = newInstance();
                     fnNode = (FunctionNode) 
@@ -215,8 +209,15 @@ public class NodeTransformer {
               }
 
               case TokenStream.NEWLOCAL : {
-                    int localCount = tree.getIntProp(Node.LOCALCOUNT_PROP, 0);
-                    tree.putIntProp(Node.LOCALCOUNT_PROP, localCount + 1);
+                    Integer localCount
+                            = (Integer)(tree.getProp(Node.LOCALCOUNT_PROP));
+                    if (localCount == null) {
+                        tree.putProp(Node.LOCALCOUNT_PROP, new Integer(1));
+                    }
+                    else {
+                        tree.putProp(Node.LOCALCOUNT_PROP,
+                                        new Integer(localCount.intValue() + 1));
+                    }
                 }
                 break;
 
@@ -248,8 +249,15 @@ public class NodeTransformer {
                     loops.push(node);
                     loopEnds.push(finallytarget);
                 }
-                int localCount = tree.getIntProp(Node.LOCALCOUNT_PROP, 0);
-                tree.putIntProp(Node.LOCALCOUNT_PROP, localCount + 1);
+                Integer localCount
+                        = (Integer)(tree.getProp(Node.LOCALCOUNT_PROP));
+                if (localCount == null) {
+                    tree.putProp(Node.LOCALCOUNT_PROP, new Integer(1));
+                }
+                else {
+                    tree.putProp(Node.LOCALCOUNT_PROP,
+                                 new Integer(localCount.intValue() + 1));
+                }
                 break;
               }
 
@@ -407,12 +415,10 @@ public class NodeTransformer {
 
               case TokenStream.VAR:
               {
+                ShallowNodeIterator i = node.getChildIterator();
                 Node result = new Node(TokenStream.BLOCK);
-                for (Node cursor = node.getFirstChild(); cursor != null;) {
-                    // Move cursor to next before createAssignment get chance
-                    // to change n.next
-                    Node n = cursor;
-                    cursor = cursor.getNextSibling();
+                while (i.hasMoreElements()) {
+                    Node n = i.nextNode();
                     if (!n.hasChildren())
                         continue;
                     Node init = n.getFirstChild();
@@ -436,8 +442,7 @@ public class NodeTransformer {
                 if (bind == null || bind.getType() != TokenStream.BINDNAME)
                     break;
                 String name = bind.getString();
-                Context cx = Context.getCurrentContext();
-                if (cx != null && cx.isActivationNeeded(name)) {
+                if (name.equals("arguments")) {
                     // use of "arguments" requires an activation object.
                     ((FunctionNode) tree).setRequiresActivation(true);
                 }
@@ -449,7 +454,7 @@ public class NodeTransformer {
                     } else {
                         // Local variables are by definition permanent
                         Node n = new Node(TokenStream.PRIMARY,
-                                          TokenStream.FALSE);
+                                          new Integer(TokenStream.FALSE));
                         iterator.replaceCurrent(n);
                     }
                 }
@@ -460,8 +465,7 @@ public class NodeTransformer {
                 if (inFunction) {
                     Node n = node.getFirstChild().getNextSibling();
                     String name = n == null ? "" : n.getString();
-                    Context cx = Context.getCurrentContext();
-                    if ((cx != null && cx.isActivationNeeded(name)) ||
+                    if (name.equals("arguments") || 
                         (name.equals("length") && 
                          Context.getContext().getLanguageVersion() == 
                          Context.VERSION_1_2))
@@ -478,8 +482,7 @@ public class NodeTransformer {
                 if (!inFunction || inWithStatement())
                     break;
                 String name = node.getString();
-                Context cx = Context.getCurrentContext();
-                if (cx != null && cx.isActivationNeeded(name)) {
+                if (name.equals("arguments")) {
                     // Use of "arguments" requires an activation object.
                     ((FunctionNode) tree).setRequiresActivation(true);
                 }
@@ -521,14 +524,14 @@ public class NodeTransformer {
             }
             if (nodeType != TokenStream.VAR)
                 continue;
-            for (Node cursor = node.getFirstChild(); cursor != null;
-                 cursor = cursor.getNextSibling()) 
-            {
-                if (ht == null || ht.get(cursor.getString()) == null)
-                    vars.addLocal(cursor.getString());
+            ShallowNodeIterator i = node.getChildIterator();
+            while (i.hasMoreElements()) {
+                Node n = i.nextNode();
+                if (ht == null || ht.get(n.getString()) == null)
+                    vars.addLocal(n.getString());
             }
         }
-        String name = tree.getString();
+        String name = (String) tree.getDatum();
         if (inFunction && ((FunctionNode) tree).getFunctionType() ==
                           FunctionNode.FUNCTION_EXPRESSION &&
             name != null && name.length() > 0 &&
@@ -545,7 +548,7 @@ public class NodeTransformer {
                             new Node(TokenStream.SETVAR,
                                 new Node(TokenStream.STRING, name),
                                 new Node(TokenStream.PRIMARY,
-                                         TokenStream.THISFN)));
+                                    new Integer(TokenStream.THISFN))));
             block.addChildrenToFront(setFn);
         }
     }
@@ -556,10 +559,10 @@ public class NodeTransformer {
         if (args.getType() == TokenStream.LP && vars.getParameterCount() == 0)
         {
             // Add parameters
-            for (Node cursor = args.getFirstChild(); cursor != null;
-                 cursor = cursor.getNextSibling()) 
-            {
-                String arg = cursor.getString();
+            ShallowNodeIterator i = args.getChildIterator();
+            while (i.hasMoreElements()) {
+                Node n = i.nextNode();
+                String arg = n.getString();
                 vars.addParameter(arg);
             }
         }

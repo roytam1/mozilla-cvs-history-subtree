@@ -103,7 +103,7 @@ public class NativeJavaObject implements Scriptable, Wrapper {
         // prototype. Since we can't add a property to a Java object,
         // we modify it in the prototype rather than copy it down.
         if (prototype == null || members.has(name, false))
-            members.put(this, name, javaObject, value, false);
+            members.put(name, javaObject, value, false);
         else
             prototype.put(name, prototype, value);
     }
@@ -214,7 +214,7 @@ public class NativeJavaObject implements Scriptable, Wrapper {
     {
         Function f = (Function) converterFunction;
         return f.call(Context.getContext(), f.getParentScope(),
-                      this, ScriptRuntime.emptyArgs);
+                      this, new Object[0]);
     }
 
     Object callConverter(String converterName)
@@ -222,7 +222,10 @@ public class NativeJavaObject implements Scriptable, Wrapper {
     {
         Function converter = getConverter(converterName);
         if (converter == null) {
-            return javaObject.toString();
+            String className = javaObject.getClass().getName();
+            throw Context.reportRuntimeError2
+                ("msg.java.conversion.implicit_method",
+                 converterName, className);
         }
         return callConverter(converter);
     }

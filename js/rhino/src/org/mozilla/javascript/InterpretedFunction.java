@@ -35,28 +35,30 @@
 
 package org.mozilla.javascript;
 
-import java.io.Serializable;
+import java.util.*;
 import org.mozilla.javascript.debug.DebuggableScript;
 
-class InterpretedFunction extends NativeFunction 
-                          implements DebuggableScript, Serializable 
-{
-
-    static final long serialVersionUID = -6235150451107527319L;
+class InterpretedFunction extends NativeFunction implements DebuggableScript {
     
-    InterpretedFunction(Context cx,
-                        InterpreterData theData, 
-                        String[] argNames, short argCount)
-    {
+    InterpretedFunction(InterpreterData theData, Context cx) {
         itsData = theData;
-        this.argNames = argNames;
-        this.argCount = argCount;
         init(cx);
     }
     
     void init(Context cx)
     {
+// probably too much copying going on from theData to the InterpretedFunction object
+// should pass them as parameters - unless we need them in the data block anyway?
+
         functionName = itsData.itsName;
+        int N = itsData.itsVariableTable.size();
+        if (N != 0) {
+            argNames = new String[N];
+            for (int i = 0; i != N; i++) {
+                argNames[i] = itsData.itsVariableTable.getName(i);
+            }
+        }
+        argCount = (short)itsData.itsVariableTable.getParameterCount();
         source = itsData.itsSource;
         nestedFunctions = itsData.itsNestedFunctions;
         if (cx != null)
@@ -67,8 +69,6 @@ class InterpretedFunction extends NativeFunction
                         Scriptable theScope, Context cx)
     {
         itsData = theOther.itsData;
-        this.argNames = theOther.argNames;
-        this.argCount = theOther.argCount;
         itsClosure = theScope;
         init(cx);
     }
@@ -81,22 +81,9 @@ class InterpretedFunction extends NativeFunction
             scope = itsClosure;
         else if (!itsData.itsUseDynamicScope)
             scope = getParentScope();
-
-        if (itsData.itsCheckThis) 
-            thisObj = ScriptRuntime.getThis(thisObj);
-        
-        if (itsData.itsNeedsActivation) {
+        if (itsData.itsNeedsActivation)
             scope = ScriptRuntime.initVarObj(cx, scope, this, thisObj, args);
-        }
-        try {
-            return Interpreter.interpret(cx, scope, thisObj, args, this,
-                                         itsData);
-        }
-        finally {
-            if (itsData.itsNeedsActivation) {
-                ScriptRuntime.popActivation(cx);
-            }
-        }
+        return Interpreter.interpret(cx, scope, thisObj, args, this, itsData);
     }
     
     public boolean isFunction() {
@@ -111,8 +98,8 @@ class InterpretedFunction extends NativeFunction
         return itsData.itsSourceFile;
     }
     
-    public int[] getLineNumbers() { 
-        return itsData.itsLineNumberTable.getKeys();
+    public Enumeration getLineNumbers() { 
+        return itsData.itsLineNumberTable.keys();
     }
     
     public boolean placeBreakpoint(int line) { // XXX throw exn?
@@ -126,4 +113,4 @@ class InterpretedFunction extends NativeFunction
     InterpreterData itsData;
     Scriptable itsClosure;
 }
- 
+    

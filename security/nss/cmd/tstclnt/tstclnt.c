@@ -92,17 +92,6 @@ int ssl3CipherSuites[] = {
     TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA,	/* l */
     TLS_RSA_EXPORT1024_WITH_RC4_56_SHA,	        /* m */
     SSL_RSA_WITH_RC4_128_SHA,			/* n */
-    TLS_DHE_DSS_WITH_RC4_128_SHA,		/* o */
-    SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA,		/* p */
-    SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA,		/* q */
-    SSL_DHE_RSA_WITH_DES_CBC_SHA,		/* r */
-    SSL_DHE_DSS_WITH_DES_CBC_SHA,		/* s */
-    TLS_DHE_DSS_WITH_AES_128_CBC_SHA, 	    	/* t */
-    TLS_DHE_RSA_WITH_AES_128_CBC_SHA,       	/* u */
-    TLS_RSA_WITH_AES_128_CBC_SHA,     	    	/* v */
-    TLS_DHE_DSS_WITH_AES_256_CBC_SHA, 	    	/* w */
-    TLS_DHE_RSA_WITH_AES_256_CBC_SHA,       	/* x */
-    TLS_RSA_WITH_AES_256_CBC_SHA,     	    	/* y */
     0
 };
 
@@ -128,44 +117,30 @@ char * ownPasswd( PK11SlotInfo *slot, PRBool retry, void *arg)
 
 void printSecurityInfo(PRFileDesc *fd)
 {
-    CERTCertificate * cert;
+    char * cp;	/* bulk cipher name */
+    char * ip;	/* cert issuer DN */
+    char * sp;	/* cert subject DN */
+    int    op;	/* High, Low, Off */
+    int    kp0;	/* total key bits */
+    int    kp1;	/* secret key bits */
+    int    result;
     SSL3Statistics * ssl3stats = SSL_GetStatistics();
-    SECStatus result;
-    SSLChannelInfo info;
 
-    result = SSL_GetChannelInfo(fd, &info, sizeof info);
+    result = SSL_SecurityStatus(fd, &op, &cp, &kp0, &kp1, &ip, &sp);
     if (result != SECSuccess)
     	return;
-    if (info.length >= offsetof(SSLChannelInfo, reserved)) {
-	fprintf(stderr, 
-	       "SSL version %d.%d using %d-bit %s with %d-bit %s MAC\n",
-	       info.protocolVersion >> 8, info.protocolVersion & 0xff,
-	       info.effectiveKeyBits, info.symCipherName, 
-	       info.macBits, info.macAlgorithmName);
-	fprintf(stderr, 
-	       "Server Authentication: %d-bit %s, Key Exchange: %d-bit %s\n",
-	       info.authKeyBits, info.authAlgorithmName,
-	       info.keaKeyBits,  info.keaTypeName);
-    }
-    cert = SSL_RevealCert(fd);
-    if (cert) {
-	char * ip = CERT_NameToAscii(&cert->issuer);
-	char * sp = CERT_NameToAscii(&cert->subject);
-        if (sp) {
-	    fprintf(stderr, "subject DN: %s\n", sp);
-	    PR_Free(sp);
-	}
-        if (ip) {
-	    fprintf(stderr, "issuer  DN: %s\n", ip);
-	    PR_Free(ip);
-	}
-	CERT_DestroyCertificate(cert);
-	cert = NULL;
-    }
+    fprintf(stderr,
+           "bulk cipher %s, %d secret key bits, %d key bits, status: %d\n"
+           "subject DN: %s\n"
+	   "issuer  DN: %s\n", cp, kp1, kp0, op, sp, ip);
+    PR_Free(cp);
+    PR_Free(ip);
+    PR_Free(sp);
+
     fprintf(stderr,
     	"%ld cache hits; %ld cache misses, %ld cache not reusable\n",
-    	ssl3stats->hsh_sid_cache_hits, ssl3stats->hsh_sid_cache_misses,
-	ssl3stats->hsh_sid_cache_not_ok);
+    	ssl3stats->hch_sid_cache_hits, ssl3stats->hch_sid_cache_misses,
+	ssl3stats->hch_sid_cache_not_ok);
 
 }
 
@@ -215,17 +190,6 @@ static void Usage(const char *progName)
 "l    SSL3 RSA EXPORT WITH DES CBC SHA\t(new)\n"
 "m    SSL3 RSA EXPORT WITH RC4 56 SHA\t(new)\n"
 "n    SSL3 RSA WITH RC4 128 SHA\n"
-"o    TLS  DHE DSS WITH RC4 128 SHA\n"
-"p    SSL3 DHE RSA WITH 3DES EDE CBC SHA\n"
-"q    SSL3 DHE DSS WITH 3DES EDE CBC SHA\n"
-"r    SSL3 DHE RSA WITH DES CBC SHA\n"
-"s    SSL3 DHE DSS WITH DES CBC SHA\n"
-"t    TLS_DHE_DSS_WITH_AES_128_CBC_SHA\n"
-"u    TLS_DHE_RSA_WITH_AES_128_CBC_SHA\n"
-"v    TLS_RSA_WITH_AES_128_CBC_SHA\n"
-"w    TLS_DHE_DSS_WITH_AES_256_CBC_SHA\n"
-"x    TLS_DHE_RSA_WITH_AES_256_CBC_SHA\n"
-"y    TLS_RSA_WITH_AES_256_CBC_SHA\n"
 	);
     exit(1);
 }
@@ -300,6 +264,7 @@ int main(int argc, char **argv)
     PRBool             useCommandLinePassword = PR_FALSE;
     PRBool             pingServerFirst = PR_FALSE;
     int                error=0;
+    int                iter;
     PLOptState *optstate;
     PLOptStatus optstatus;
     PRStatus prStatus;
@@ -352,7 +317,7 @@ int main(int argc, char **argv)
 	  case 'v': verbose++;	 			break;
 
 	  case 'w':
-		password = PORT_Strdup(optstate->value);
+		password = optstate->value;
 		useCommandLinePassword = PR_TRUE;
 		break;
 
@@ -557,9 +522,9 @@ int main(int argc, char **argv)
 	    if (verbose)
 		SECU_PrintError(progName, "connect");
 	    milliPause(50 * multiplier);
+	    pollset[0].fd = s;
 	    pollset[0].in_flags = PR_POLL_WRITE | PR_POLL_EXCEPT;
 	    pollset[0].out_flags = 0;
-	    pollset[0].fd = s;
 	    while(1) {
 		PRINTF("%s: about to call PR_Poll for connect completion!\n", progName);
 		filesReady = PR_Poll(pollset, 1, PR_INTERVAL_NO_TIMEOUT);

@@ -50,25 +50,6 @@ import java.text.SimpleDateFormat;
  */
 public class NativeDate extends IdScriptable {
 
-    public static void init(Context cx, Scriptable scope, boolean sealed) {
-        NativeDate obj = new NativeDate();
-        obj.prototypeFlag = true;
-        
-        // Set the value of the prototype Date to NaN ('invalid date');
-        obj.date = ScriptRuntime.NaN;
-
-        obj.addAsPrototype(MAX_PROTOTYPE_ID, cx, scope, sealed);
-    }
-    
-    public NativeDate() {
-        if (thisTimeZone == null) {
-            // j.u.TimeZone is synchronized, so setting class statics from it
-            // should be OK.
-            thisTimeZone = java.util.TimeZone.getDefault();
-            LocalTZA = thisTimeZone.getRawOffset();
-        }
-    }
-
     public String getClassName() {
         return "Date";
     }
@@ -77,6 +58,21 @@ public class NativeDate extends IdScriptable {
         if (typeHint == null)
             typeHint = ScriptRuntime.StringClass;
         return super.getDefaultValue(typeHint);
+    }
+
+    public void scopeInit(Context cx, Scriptable scope, boolean sealed) {
+
+        // Set the value of the prototype Date to NaN ('invalid date');
+        date = ScriptRuntime.NaN;
+
+        if (thisTimeZone == null) {
+            // j.u.TimeZone is synchronized, so setting class statics from it
+            // should be OK.
+            thisTimeZone = java.util.TimeZone.getDefault();
+            LocalTZA = thisTimeZone.getRawOffset();
+        }
+
+        super.scopeInit(cx, scope, sealed);
     }
 
     protected void fillConstructorProperties
@@ -88,55 +84,54 @@ public class NativeDate extends IdScriptable {
     }
 
     public int methodArity(int methodId) {
-        if (prototypeFlag) {
-            switch (methodId) {
-                case ConstructorId_UTC:     return 1;
-                case ConstructorId_parse:   return 1;
-                case Id_constructor:        return 1; 
-                case Id_toString:           return 0;
-                case Id_toTimeString:       return 0;
-                case Id_toDateString:       return 0;
-                case Id_toLocaleString:     return 0;
-                case Id_toLocaleTimeString: return 0;
-                case Id_toLocaleDateString: return 0;
-                case Id_toUTCString:        return 0;
-                case Id_valueOf:            return 0;
-                case Id_getTime:            return 0;
-                case Id_getYear:            return 0;
-                case Id_getFullYear:        return 0;
-                case Id_getUTCFullYear:     return 0;
-                case Id_getMonth:           return 0;
-                case Id_getUTCMonth:        return 0;
-                case Id_getDate:            return 0;
-                case Id_getUTCDate:         return 0;
-                case Id_getDay:             return 0;
-                case Id_getUTCDay:          return 0;
-                case Id_getHours:           return 0;
-                case Id_getUTCHours:        return 0;
-                case Id_getMinutes:         return 0;
-                case Id_getUTCMinutes:      return 0;
-                case Id_getSeconds:         return 0;
-                case Id_getUTCSeconds:      return 0;
-                case Id_getMilliseconds:    return 0;
-                case Id_getUTCMilliseconds: return 0;
-                case Id_getTimezoneOffset:  return 0;
-                case Id_setTime:            return 1;
-                case Id_setMilliseconds:    return 1;
-                case Id_setUTCMilliseconds: return 1;
-                case Id_setSeconds:         return 2;
-                case Id_setUTCSeconds:      return 2;
-                case Id_setMinutes:         return 3;
-                case Id_setUTCMinutes:      return 3;
-                case Id_setHours:           return 4;
-                case Id_setUTCHours:        return 4;
-                case Id_setDate:            return 1;
-                case Id_setUTCDate:         return 1;
-                case Id_setMonth:           return 2;
-                case Id_setUTCMonth:        return 2;
-                case Id_setFullYear:        return 3;
-                case Id_setUTCFullYear:     return 3;
-                case Id_setYear:            return 1;
-            }
+        switch (methodId) {
+        case ConstructorId_UTC:     return 1;
+        case ConstructorId_parse:   return 1;
+        case Id_constructor:        return 1; 
+        case Id_toString:           return 0;
+        case Id_toTimeString:       return 0;
+        case Id_toDateString:       return 0;
+        case Id_toLocaleString:     return 0;
+        case Id_toLocaleTimeString: return 0;
+        case Id_toLocaleDateString: return 0;
+        case Id_toGMTString:        return 0;
+        case Id_toUTCString:        return 0;
+        case Id_valueOf:            return 0;
+        case Id_getTime:            return 0;
+        case Id_getYear:            return 0;
+        case Id_getFullYear:        return 0;
+        case Id_getUTCFullYear:     return 0;
+        case Id_getMonth:           return 0;
+        case Id_getUTCMonth:        return 0;
+        case Id_getDate:            return 0;
+        case Id_getUTCDate:         return 0;
+        case Id_getDay:             return 0;
+        case Id_getUTCDay:          return 0;
+        case Id_getHours:           return 0;
+        case Id_getUTCHours:        return 0;
+        case Id_getMinutes:         return 0;
+        case Id_getUTCMinutes:      return 0;
+        case Id_getSeconds:         return 0;
+        case Id_getUTCSeconds:      return 0;
+        case Id_getMilliseconds:    return 0;
+        case Id_getUTCMilliseconds: return 0;
+        case Id_getTimezoneOffset:  return 0;
+        case Id_setTime:            return 1;
+        case Id_setMilliseconds:    return 1;
+        case Id_setUTCMilliseconds: return 1;
+        case Id_setSeconds:         return 2;
+        case Id_setUTCSeconds:      return 2;
+        case Id_setMinutes:         return 3;
+        case Id_setUTCMinutes:      return 3;
+        case Id_setHours:           return 4;
+        case Id_setUTCHours:        return 4;
+        case Id_setDate:            return 1;
+        case Id_setUTCDate:         return 1;
+        case Id_setMonth:           return 2;
+        case Id_setUTCMonth:        return 2;
+        case Id_setFullYear:        return 3;
+        case Id_setUTCFullYear:     return 3;
+        case Id_setYear:            return 1;
         }
         return super.methodArity(methodId);
     }
@@ -146,232 +141,162 @@ public class NativeDate extends IdScriptable {
          Context cx, Scriptable scope, Scriptable thisObj, Object[] args)
         throws JavaScriptException
     {
-        if (prototypeFlag) {
-            switch (methodId) {
-                case ConstructorId_UTC: 
-                    return wrap_double(jsStaticFunction_UTC(args));
+        switch (methodId) {
+        case ConstructorId_UTC: return wrap_double
+            (jsStaticFunction_UTC(args));
 
-                case ConstructorId_parse: 
-                    return wrap_double(jsStaticFunction_parse
-                        (ScriptRuntime.toString(args, 0)));
+        case ConstructorId_parse: return wrap_double
+            (jsStaticFunction_parse(ScriptRuntime.toString(args, 0)));
 
-                case Id_constructor:
-                    return jsConstructor(args, thisObj == null);
+        case Id_constructor:
+            return jsConstructor(args, thisObj == null);
 
-                case Id_toString: {
-                    double t = realThis(thisObj, f, true).date;
-                    return date_format(t, FORMATSPEC_FULL);
-                }
+        case Id_toString: return realThis(thisObj, f, true).
+            jsFunction_toString();
 
-                case Id_toTimeString: {
-                    double t = realThis(thisObj, f, true).date;
-                    return date_format(t, FORMATSPEC_TIME);
-                }
+        case Id_toTimeString: return realThis(thisObj, f, true).
+            jsFunction_toTimeString();
 
-                case Id_toDateString: {
-                    double t = realThis(thisObj, f, true).date;
-                    return date_format(t, FORMATSPEC_DATE);
-                }
+        case Id_toDateString: return realThis(thisObj, f, true).
+            jsFunction_toDateString();
 
-                case Id_toLocaleString: {
-                    double t = realThis(thisObj, f, true).date;
-                    return jsFunction_toLocaleString(t);
-                }
+        case Id_toLocaleString: return realThis(thisObj, f, true).
+            jsFunction_toLocaleString();
 
-                case Id_toLocaleTimeString: {
-                    double t = realThis(thisObj, f, true).date;
-                    return jsFunction_toLocaleTimeString(t);
-                }
+        case Id_toLocaleTimeString: return realThis(thisObj, f, true).
+            jsFunction_toLocaleTimeString();
 
-                case Id_toLocaleDateString: {
-                    double t = realThis(thisObj, f, true).date;
-                    return jsFunction_toLocaleDateString(t);
-                }
+        case Id_toLocaleDateString: return realThis(thisObj, f, true).
+            jsFunction_toLocaleDateString();
 
-                case Id_toUTCString: {
-                    double t = realThis(thisObj, f, true).date;
-                    if (t == t) { return jsFunction_toUTCString(t); }
-                    return jsFunction_NaN_date_str;
-                }
+        case Id_toGMTString:
+        case Id_toUTCString: return realThis(thisObj, f, true).
+            jsFunction_toUTCString();
 
-                case Id_valueOf: 
-                    return wrap_double(realThis(thisObj, f, true).date);
+        case Id_valueOf: return wrap_double(realThis(thisObj, f, true).
+            jsFunction_valueOf());
 
-                case Id_getTime: 
-                    return wrap_double(realThis(thisObj, f, true).date);
+        case Id_getTime: return wrap_double(realThis(thisObj, f, true).
+            jsFunction_getTime());
 
-                case Id_getYear: {
-                    double t = realThis(thisObj, f, true).date;
-                    if (t == t) { t = jsFunction_getYear(cx, t); }
-                    return wrap_double(t);
-                }
+        case Id_getYear: return wrap_double(realThis(thisObj, f, true).
+            jsFunction_getYear(cx));
 
-                case Id_getFullYear: {
-                    double t = realThis(thisObj, f, true).date;
-                    if (t == t) { t = YearFromTime(LocalTime(t)); }
-                    return wrap_double(t);
-                }
+        case Id_getFullYear: return wrap_double(realThis(thisObj, f, true).
+            jsFunction_getFullYear());
 
-                case Id_getUTCFullYear: {
-                    double t = realThis(thisObj, f, true).date;
-                    if (t == t) { t = YearFromTime(t); }
-                    return wrap_double(t);
-                }
+        case Id_getUTCFullYear: return wrap_double(realThis(thisObj, f, true).
+            jsFunction_getUTCFullYear());
 
-                case Id_getMonth: {
-                    double t = realThis(thisObj, f, true).date;
-                    if (t == t) { t = MonthFromTime(LocalTime(t)); }
-                    return wrap_double(t);
-                }
-                
-                case Id_getUTCMonth: {
-                    double t = realThis(thisObj, f, true).date;
-                    if (t == t) { t = MonthFromTime(t); }
-                    return wrap_double(t);
-                }
+        case Id_getMonth: return wrap_double(realThis(thisObj, f, true).
+            jsFunction_getMonth());
 
-                case Id_getDate: {
-                    double t = realThis(thisObj, f, true).date;
-                    if (t == t) { t = DateFromTime(LocalTime(t)); }
-                    return wrap_double(t);
-                }
+        case Id_getUTCMonth: return wrap_double(realThis(thisObj, f, true).
+            jsFunction_getUTCMonth());
 
-                case Id_getUTCDate: {
-                    double t = realThis(thisObj, f, true).date;
-                    if (t == t) { t = DateFromTime(t); }
-                    return wrap_double(t);
-                } 
+        case Id_getDate: return wrap_double(realThis(thisObj, f, true).
+            jsFunction_getDate());
 
-                case Id_getDay: {
-                    double t = realThis(thisObj, f, true).date;
-                    if (t == t) { t = WeekDay(LocalTime(t)); }
-                    return wrap_double(t);
-                }
+        case Id_getUTCDate: return wrap_double(realThis(thisObj, f, true).
+            jsFunction_getUTCDate());
 
-                case Id_getUTCDay: {
-                    double t = realThis(thisObj, f, true).date;
-                    if (t == t) { t = WeekDay(t); }
-                    return wrap_double(t);
-                } 
+        case Id_getDay: return wrap_double(realThis(thisObj, f, true).
+            jsFunction_getDay());
 
-                case Id_getHours: {
-                    double t = realThis(thisObj, f, true).date;
-                    if (t == t) { t = HourFromTime(LocalTime(t)); }
-                    return wrap_double(t);
-                } 
+        case Id_getUTCDay: return wrap_double(realThis(thisObj, f, true).
+            jsFunction_getUTCDay());
 
-                case Id_getUTCHours: {
-                    double t = realThis(thisObj, f, true).date;
-                    if (t == t) { t = HourFromTime(t); }
-                    return wrap_double(t);
-                }
+        case Id_getHours: return wrap_double(realThis(thisObj, f, true).
+            jsFunction_getHours());
 
-                case Id_getMinutes: {
-                    double t = realThis(thisObj, f, true).date;
-                    if (t == t) { t = MinFromTime(LocalTime(t)); }
-                    return wrap_double(t);
-                } 
+        case Id_getUTCHours: return wrap_double(realThis(thisObj, f, true).
+            jsFunction_getUTCHours());
 
-                case Id_getUTCMinutes: {
-                    double t = realThis(thisObj, f, true).date;
-                    if (t == t) { t = MinFromTime(t); }
-                    return wrap_double(t);
-                } 
+        case Id_getMinutes: return wrap_double(realThis(thisObj, f, true).
+            jsFunction_getMinutes());
 
-                case Id_getSeconds: {
-                    double t = realThis(thisObj, f, true).date;
-                    if (t == t) { t = SecFromTime(LocalTime(t)); }
-                    return wrap_double(t);
-                }
+        case Id_getUTCMinutes: return wrap_double(realThis(thisObj, f, true).
+            jsFunction_getUTCMinutes());
 
-                case Id_getUTCSeconds: {
-                    double t = realThis(thisObj, f, true).date;
-                    if (t == t) { t = SecFromTime(t); }
-                    return wrap_double(t);
-                }
-                
-                case Id_getMilliseconds: {
-                    double t = realThis(thisObj, f, true).date;
-                    if (t == t) { t = msFromTime(LocalTime(t)); }
-                    return wrap_double(t);
-                }
+        case Id_getSeconds: return wrap_double(realThis(thisObj, f, true).
+            jsFunction_getSeconds());
 
-                case Id_getUTCMilliseconds: {
-                    double t = realThis(thisObj, f, true).date;
-                    if (t == t) { t = msFromTime(t); }
-                    return wrap_double(t);
-                }
-                
-                case Id_getTimezoneOffset: {
-                    double t = realThis(thisObj, f, true).date;
-                    if (t == t) { t = jsFunction_getTimezoneOffset(t); }
-                    return wrap_double(t);
-                }
+        case Id_getUTCSeconds: return wrap_double(realThis(thisObj, f, true).
+            jsFunction_getUTCSeconds());
 
-                case Id_setTime: 
-                    return wrap_double(realThis(thisObj, f, true).
-                        jsFunction_setTime(ScriptRuntime.toNumber(args, 0)));
+        case Id_getMilliseconds: 
+            return wrap_double(realThis(thisObj, f, true).
+                jsFunction_getMilliseconds());
 
-                case Id_setMilliseconds: 
-                    return wrap_double(realThis(thisObj, f, false).
-                        makeTime(args, 1, true));
+        case Id_getUTCMilliseconds: 
+            return wrap_double(realThis(thisObj, f, true).
+                jsFunction_getUTCMilliseconds());
 
-                case Id_setUTCMilliseconds: 
-                    return wrap_double(realThis(thisObj, f, false).
-                        makeTime(args, 1, false));
+        case Id_getTimezoneOffset: 
+            return wrap_double(realThis(thisObj, f, true).
+                jsFunction_getTimezoneOffset());
 
-                case Id_setSeconds: 
-                    return wrap_double(realThis(thisObj, f, false).
-                        makeTime(args, 2, true));
+        case Id_setTime: return wrap_double(realThis(thisObj, f, true).
+            jsFunction_setTime(ScriptRuntime.toNumber(args, 0)));
 
-                case Id_setUTCSeconds: 
-                    return wrap_double(realThis(thisObj, f, false).
-                        makeTime(args, 2, false));
+        case Id_setMilliseconds: 
+            return wrap_double(realThis(thisObj, f, false).
+                jsFunction_setMilliseconds(args));
 
-                case Id_setMinutes: 
-                    return wrap_double(realThis(thisObj, f, false).
-                        makeTime(args, 3, true));
+        case Id_setUTCMilliseconds: 
+            return wrap_double(realThis(thisObj, f, false).
+                jsFunction_setUTCMilliseconds(args));
 
-                case Id_setUTCMinutes: 
-                    return wrap_double(realThis(thisObj, f, false).
-                        makeTime(args, 3, false));
+        case Id_setSeconds: 
+            return wrap_double(realThis(thisObj, f, false).
+                jsFunction_setSeconds(args));
 
-                case Id_setHours: 
-                    return wrap_double(realThis(thisObj, f, false).
-                        makeTime(args, 4, true));
+        case Id_setUTCSeconds: 
+            return wrap_double(realThis(thisObj, f, false).
+                jsFunction_setUTCSeconds(args));
 
-                case Id_setUTCHours: 
-                    return wrap_double(realThis(thisObj, f, false).
-                        makeTime(args, 4, false));
+        case Id_setMinutes: 
+            return wrap_double(realThis(thisObj, f, false).
+                jsFunction_setMinutes(args));
 
-                case Id_setDate: 
-                    return wrap_double(realThis(thisObj, f, false).
-                        makeDate(args, 1, true));
+        case Id_setUTCMinutes: 
+            return wrap_double(realThis(thisObj, f, false).
+                jsFunction_setUTCMinutes(args));
 
-                case Id_setUTCDate: 
-                    return wrap_double(realThis(thisObj, f, false).
-                        makeDate(args, 1, false));
+        case Id_setHours: 
+            return wrap_double(realThis(thisObj, f, false).
+                jsFunction_setHours(args));
 
-                case Id_setMonth: 
-                    return wrap_double(realThis(thisObj, f, false).
-                        makeDate(args, 2, true));
+        case Id_setUTCHours: 
+            return wrap_double(realThis(thisObj, f, false).
+                jsFunction_setUTCHours(args));
 
-                case Id_setUTCMonth: 
-                    return wrap_double(realThis(thisObj, f, false).
-                        makeDate(args, 2, false));
+        case Id_setDate: 
+            return wrap_double(realThis(thisObj, f, false).
+                jsFunction_setDate(args));
 
-                case Id_setFullYear: 
-                    return wrap_double(realThis(thisObj, f, false).
-                        makeDate(args, 3, true));
+        case Id_setUTCDate: 
+            return wrap_double(realThis(thisObj, f, false).
+                jsFunction_setUTCDate(args));
 
-                case Id_setUTCFullYear: 
-                    return wrap_double(realThis(thisObj, f, false).
-                        makeDate(args, 3, false));
+        case Id_setMonth: 
+            return wrap_double(realThis(thisObj, f, false).
+                jsFunction_setMonth(args));
 
-                case Id_setYear: 
-                    return wrap_double(realThis(thisObj, f, false).
-                        jsFunction_setYear(ScriptRuntime.toNumber(args, 0)));
-            }
+        case Id_setUTCMonth: 
+            return wrap_double(realThis(thisObj, f, false).
+                jsFunction_setUTCMonth(args));
+
+        case Id_setFullYear: 
+            return wrap_double(realThis(thisObj, f, false).
+                jsFunction_setFullYear(args));
+
+        case Id_setUTCFullYear: 
+            return wrap_double(realThis(thisObj, f, false).
+                jsFunction_setUTCFullYear(args));
+
+        case Id_setYear: return wrap_double(realThis(thisObj, f, true).
+            jsFunction_setYear(ScriptRuntime.toNumber(args, 0)));
         }
 
         return super.execMethod(methodId, f, cx, scope, thisObj, args);
@@ -1047,36 +972,36 @@ public class NativeDate extends IdScriptable {
 
         if (format != FORMATSPEC_TIME) {
             result.append(days[WeekDay(local)]);
-            result.append(' ');
+            result.append(" ");
             result.append(months[MonthFromTime(local)]);
             if (dateStr.length() == 1)
                 result.append(" 0");
             else
-                result.append(' ');
+                result.append(" ");
             result.append(dateStr);
-            result.append(' ');
+            result.append(" ");
         }
 
         if (format != FORMATSPEC_DATE) {
             if (hourStr.length() == 1)
-                result.append('0');
+                result.append("0");
             result.append(hourStr);
             if (minStr.length() == 1)
                 result.append(":0");
             else
-                result.append(':');
+                result.append(":");
             result.append(minStr);
             if (secStr.length() == 1)
                 result.append(":0");
             else
-                result.append(':');
+                result.append(":");
             result.append(secStr);
             if (offset > 0)
                 result.append(" GMT+");
             else
                 result.append(" GMT-");
             for (int i = offsetStr.length(); i < 4; i++)
-                result.append('0');
+                result.append("0");
             result.append(offsetStr);
 
             if (timeZoneFormatter == null)
@@ -1086,17 +1011,17 @@ public class NativeDate extends IdScriptable {
                 result.append(" (");
                 java.util.Date date = new Date((long) t);
                 result.append(timeZoneFormatter.format(date));
-                result.append(')');
+                result.append(")");
             }
             if (format != FORMATSPEC_TIME)
-                result.append(' ');
+                result.append(" ");
         }
 
         if (format != FORMATSPEC_TIME) {
             if (year < 0)
-                result.append('-');
+                result.append("-");
             for (int i = yearStr.length(); i < 4; i++)
-                result.append('0');
+                result.append("0");
             result.append(yearStr);
         }
 
@@ -1185,6 +1110,18 @@ public class NativeDate extends IdScriptable {
         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
     };
 
+    private String jsFunction_toString() {
+        return date_format(this.date, FORMATSPEC_FULL);
+    }
+
+    private String jsFunction_toTimeString() {
+        return date_format(this.date, FORMATSPEC_TIME);
+    }
+
+    private String jsFunction_toDateString() {
+        return date_format(this.date, FORMATSPEC_DATE);
+    }
+
     private static String toLocale_helper(double t,
                                           java.text.DateFormat formatter)
     {
@@ -1195,91 +1132,215 @@ public class NativeDate extends IdScriptable {
         return formatter.format(tempdate);
     }
 
-    private static String jsFunction_toLocaleString(double date) {
+    private String jsFunction_toLocaleString() {
         if (localeDateTimeFormatter == null)
             localeDateTimeFormatter =
                 DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.LONG);
 
-        return toLocale_helper(date, localeDateTimeFormatter);
+        return toLocale_helper(this.date, localeDateTimeFormatter);
     }
 
-    private static String jsFunction_toLocaleTimeString(double date) {
+    private String jsFunction_toLocaleTimeString() {
         if (localeTimeFormatter == null)
             localeTimeFormatter = DateFormat.getTimeInstance(DateFormat.LONG);
 
-        return toLocale_helper(date, localeTimeFormatter);
+        return toLocale_helper(this.date, localeTimeFormatter);
     }
 
-    private static String jsFunction_toLocaleDateString(double date) {
+    private String jsFunction_toLocaleDateString() {
         if (localeDateFormatter == null)
             localeDateFormatter = DateFormat.getDateInstance(DateFormat.LONG);
 
-        return toLocale_helper(date, localeDateFormatter);
+        return toLocale_helper(this.date, localeDateFormatter);
     }
 
-    private static String jsFunction_toUTCString(double date) {
+    private String jsFunction_toUTCString() {
+        if (this.date != this.date)
+            return jsFunction_NaN_date_str;
+
         StringBuffer result = new StringBuffer(60);
 
-        String dateStr = Integer.toString(DateFromTime(date));
-        String hourStr = Integer.toString(HourFromTime(date));
-        String minStr = Integer.toString(MinFromTime(date));
-        String secStr = Integer.toString(SecFromTime(date));
-        int year = YearFromTime(date);
+        String dateStr = Integer.toString(DateFromTime(this.date));
+        String hourStr = Integer.toString(HourFromTime(this.date));
+        String minStr = Integer.toString(MinFromTime(this.date));
+        String secStr = Integer.toString(SecFromTime(this.date));
+        int year = YearFromTime(this.date);
         String yearStr = Integer.toString(year > 0 ? year : -year);
 
-        result.append(days[WeekDay(date)]);
+        result.append(days[WeekDay(this.date)]);
         result.append(", ");
         if (dateStr.length() == 1)
-            result.append('0');
+            result.append("0");
         result.append(dateStr);
-        result.append(' ');
-        result.append(months[MonthFromTime(date)]);
+        result.append(" ");
+        result.append(months[MonthFromTime(this.date)]);
         if (year < 0)
             result.append(" -");
         else
-            result.append(' ');
+            result.append(" ");
         int i;
         for (i = yearStr.length(); i < 4; i++)
-            result.append('0');
+            result.append("0");
         result.append(yearStr);
 
         if (hourStr.length() == 1)
             result.append(" 0");
         else
-            result.append(' ');
+            result.append(" ");
         result.append(hourStr);
         if (minStr.length() == 1)
             result.append(":0");
         else
-            result.append(':');
+            result.append(":");
         result.append(minStr);
         if (secStr.length() == 1)
             result.append(":0");
         else
-            result.append(':');
+            result.append(":");
         result.append(secStr);
 
         result.append(" GMT");
         return result.toString();
     }
 
-    private static double jsFunction_getYear(Context cx, double date) {
+    private double jsFunction_valueOf() {
+        return this.date;
+    }
 
-        int result = YearFromTime(LocalTime(date));
+    private double jsFunction_getTime() {
+        return this.date;
+    }
 
-        if (cx.hasFeature(Context.FEATURE_NON_ECMA_GET_YEAR)) {
-            if (result >= 1900 && result < 2000) {
+    private double jsFunction_getYear(Context cx) {
+        if (this.date != this.date)
+            return this.date;
+
+        int result = YearFromTime(LocalTime(this.date));
+
+        /*
+         * During the great date rewrite of 1.3, we tried to track the
+         * evolving ECMA standard, which then had a definition of
+         * getYear which always subtracted 1900.  Which we
+         * implemented, not realizing that it was incompatible with
+         * the old behavior...  now, rather than thrash the behavior
+         * yet again, we've decided to leave it with the - 1900
+         * behavior and point people to the getFullYear method.  But
+         * we try to protect existing scripts that have specified a
+         * version...
+         */
+        int version = cx.getLanguageVersion();
+        if (version == Context.VERSION_1_0 ||
+            version == Context.VERSION_1_1 ||
+            version == Context.VERSION_1_2)
+        {
+            if (result >= 1900 && result < 2000)
                 result -= 1900;
-            }
-        } 
-        else {
+        } else {
             result -= 1900;
         }
         return result;
     }
 
-    private static double jsFunction_getTimezoneOffset(double date) {
-        return (date - LocalTime(date)) / msPerMinute;
+    private double jsFunction_getFullYear() {
+        if (this.date != this.date)
+            return this.date;
+        return YearFromTime(LocalTime(this.date));
+    }
+
+    private double jsFunction_getUTCFullYear() {
+        if (this.date != this.date)
+            return this.date;
+        return YearFromTime(this.date);
+    }
+
+    private double jsFunction_getMonth() {
+        if (this.date != this.date)
+            return this.date;
+        return MonthFromTime(LocalTime(this.date));
+    }
+
+    private double jsFunction_getUTCMonth() {
+        if (this.date != this.date)
+            return this.date;
+        return MonthFromTime(this.date);
+    }
+
+    private double jsFunction_getDate() {
+        if (this.date != this.date)
+            return this.date;
+        return DateFromTime(LocalTime(this.date));
+    }
+
+    private double jsFunction_getUTCDate() {
+        if (this.date != this.date)
+            return this.date;
+        return DateFromTime(this.date);
+    }
+
+    private double jsFunction_getDay() {
+        if (this.date != this.date)
+            return this.date;
+        return WeekDay(LocalTime(this.date));
+    }
+
+    private double jsFunction_getUTCDay() {
+        if (this.date != this.date)
+            return this.date;
+        return WeekDay(this.date);
+    }
+
+    private double jsFunction_getHours() {
+        if (this.date != this.date)
+            return this.date;
+        return HourFromTime(LocalTime(this.date));
+    }
+
+    private double jsFunction_getUTCHours() {
+        if (this.date != this.date)
+            return this.date;
+        return HourFromTime(this.date);
+    }
+
+    private double jsFunction_getMinutes() {
+        if (this.date != this.date)
+            return this.date;
+        return MinFromTime(LocalTime(this.date));
+    }
+
+    private double jsFunction_getUTCMinutes() {
+        if (this.date != this.date)
+            return this.date;
+        return MinFromTime(this.date);
+    }
+
+    private double jsFunction_getSeconds() {
+        if (this.date != this.date)
+            return this.date;
+        return SecFromTime(LocalTime(this.date));
+    }
+
+    private double jsFunction_getUTCSeconds() {
+        if (this.date != this.date)
+            return this.date;
+        return SecFromTime(this.date);
+    }
+
+    private double jsFunction_getMilliseconds() {
+        if (this.date != this.date)
+            return this.date;
+        return msFromTime(LocalTime(this.date));
+    }
+
+    private double jsFunction_getUTCMilliseconds() {
+        if (this.date != this.date)
+            return this.date;
+        return msFromTime(this.date);
+    }
+
+    private double jsFunction_getTimezoneOffset() {
+        if (this.date != this.date)
+            return this.date;
+        return (this.date - LocalTime(this.date)) / msPerMinute;
     }
 
     private double jsFunction_setTime(double time) {
@@ -1363,6 +1424,30 @@ public class NativeDate extends IdScriptable {
         return date;
     }
 
+    private double jsFunction_setMilliseconds(Object[] args) {
+        return makeTime(args, 1, true);
+    }
+
+    private double jsFunction_setUTCMilliseconds(Object[] args) {
+        return makeTime(args, 1, false);
+    }
+
+    private double jsFunction_setSeconds(Object[] args) {
+        return makeTime(args, 2, true);
+    }
+
+    private double jsFunction_setUTCSeconds(Object[] args) {
+        return makeTime(args, 2, false);
+    }
+
+    private double jsFunction_setMinutes(Object[] args) {
+        return makeTime(args, 3, true);
+    }
+
+    private double jsFunction_setUTCMinutes(Object[] args) {
+        return makeTime(args, 3, false);
+    }
+
     private double jsFunction_setHours(Object[] args) {
         return makeTime(args, 4, true);
     }
@@ -1440,6 +1525,30 @@ public class NativeDate extends IdScriptable {
         return date;
     }
 
+    private double jsFunction_setDate(Object[] args) {
+        return makeDate(args, 1, true);
+    }
+
+    private double jsFunction_setUTCDate(Object[] args) {
+        return makeDate(args, 1, false);
+    }
+
+    private double jsFunction_setMonth(Object[] args) {
+        return makeDate(args, 2, true);
+    }
+
+    private double jsFunction_setUTCMonth(Object[] args) {
+        return makeDate(args, 2, false);
+    }
+
+    private double jsFunction_setFullYear(Object[] args) {
+        return makeDate(args, 3, true);
+    }
+
+    private double jsFunction_setUTCFullYear(Object[] args) {
+        return makeDate(args, 3, false);
+    }
+
     private double jsFunction_setYear(double year) {
         double day, result;
         if (year != year || Double.isInfinite(year)) {
@@ -1464,56 +1573,59 @@ public class NativeDate extends IdScriptable {
         return this.date;
     }
 
+    protected int getMinimumId() { return MIN_ID; }
+
+    protected int getMaximumId() { return MAX_ID; }
+
     protected String getIdName(int id) {
-        if (prototypeFlag) {
-            switch (id) {
-                case ConstructorId_UTC:     return "UTC";
-                case ConstructorId_parse:   return "parse";
-                case Id_constructor:        return "constructor"; 
-                case Id_toString:           return "toString";
-                case Id_toTimeString:       return "toTimeString";
-                case Id_toDateString:       return "toDateString";
-                case Id_toLocaleString:     return "toLocaleString";
-                case Id_toLocaleTimeString: return "toLocaleTimeString";
-                case Id_toLocaleDateString: return "toLocaleDateString";
-                case Id_toUTCString:        return "toUTCString";
-                case Id_valueOf:            return "valueOf";
-                case Id_getTime:            return "getTime";
-                case Id_getYear:            return "getYear";
-                case Id_getFullYear:        return "getFullYear";
-                case Id_getUTCFullYear:     return "getUTCFullYear";
-                case Id_getMonth:           return "getMonth";
-                case Id_getUTCMonth:        return "getUTCMonth";
-                case Id_getDate:            return "getDate";
-                case Id_getUTCDate:         return "getUTCDate";
-                case Id_getDay:             return "getDay";
-                case Id_getUTCDay:          return "getUTCDay";
-                case Id_getHours:           return "getHours";
-                case Id_getUTCHours:        return "getUTCHours";
-                case Id_getMinutes:         return "getMinutes";
-                case Id_getUTCMinutes:      return "getUTCMinutes";
-                case Id_getSeconds:         return "getSeconds";
-                case Id_getUTCSeconds:      return "getUTCSeconds";
-                case Id_getMilliseconds:    return "getMilliseconds";
-                case Id_getUTCMilliseconds: return "getUTCMilliseconds";
-                case Id_getTimezoneOffset:  return "getTimezoneOffset";
-                case Id_setTime:            return "setTime";
-                case Id_setMilliseconds:    return "setMilliseconds";
-                case Id_setUTCMilliseconds: return "setUTCMilliseconds";
-                case Id_setSeconds:         return "setSeconds";
-                case Id_setUTCSeconds:      return "setUTCSeconds";
-                case Id_setMinutes:         return "setMinutes";
-                case Id_setUTCMinutes:      return "setUTCMinutes";
-                case Id_setHours:           return "setHours";
-                case Id_setUTCHours:        return "setUTCHours";
-                case Id_setDate:            return "setDate";
-                case Id_setUTCDate:         return "setUTCDate";
-                case Id_setMonth:           return "setMonth";
-                case Id_setUTCMonth:        return "setUTCMonth";
-                case Id_setFullYear:        return "setFullYear";
-                case Id_setUTCFullYear:     return "setUTCFullYear";
-                case Id_setYear:            return "setYear";
-            }
+        switch (id) {
+        case ConstructorId_UTC:     return "UTC";
+        case ConstructorId_parse:   return "parse";
+        case Id_constructor:        return "constructor"; 
+        case Id_toString:           return "toString";
+        case Id_toTimeString:       return "toTimeString";
+        case Id_toDateString:       return "toDateString";
+        case Id_toLocaleString:     return "toLocaleString";
+        case Id_toLocaleTimeString: return "toLocaleTimeString";
+        case Id_toLocaleDateString: return "toLocaleDateString";
+        case Id_toGMTString:        return "toGMTString";
+        case Id_toUTCString:        return "toUTCString";
+        case Id_valueOf:            return "valueOf";
+        case Id_getTime:            return "getTime";
+        case Id_getYear:            return "getYear";
+        case Id_getFullYear:        return "getFullYear";
+        case Id_getUTCFullYear:     return "getUTCFullYear";
+        case Id_getMonth:           return "getMonth";
+        case Id_getUTCMonth:        return "getUTCMonth";
+        case Id_getDate:            return "getDate";
+        case Id_getUTCDate:         return "getUTCDate";
+        case Id_getDay:             return "getDay";
+        case Id_getUTCDay:          return "getUTCDay";
+        case Id_getHours:           return "getHours";
+        case Id_getUTCHours:        return "getUTCHours";
+        case Id_getMinutes:         return "getMinutes";
+        case Id_getUTCMinutes:      return "getUTCMinutes";
+        case Id_getSeconds:         return "getSeconds";
+        case Id_getUTCSeconds:      return "getUTCSeconds";
+        case Id_getMilliseconds:    return "getMilliseconds";
+        case Id_getUTCMilliseconds: return "getUTCMilliseconds";
+        case Id_getTimezoneOffset:  return "getTimezoneOffset";
+        case Id_setTime:            return "setTime";
+        case Id_setMilliseconds:    return "setMilliseconds";
+        case Id_setUTCMilliseconds: return "setUTCMilliseconds";
+        case Id_setSeconds:         return "setSeconds";
+        case Id_setUTCSeconds:      return "setUTCSeconds";
+        case Id_setMinutes:         return "setMinutes";
+        case Id_setUTCMinutes:      return "setUTCMinutes";
+        case Id_setHours:           return "setHours";
+        case Id_setUTCHours:        return "setUTCHours";
+        case Id_setDate:            return "setDate";
+        case Id_setUTCDate:         return "setUTCDate";
+        case Id_setMonth:           return "setMonth";
+        case Id_setUTCMonth:        return "setUTCMonth";
+        case Id_setFullYear:        return "setFullYear";
+        case Id_setUTCFullYear:     return "setUTCFullYear";
+        case Id_setYear:            return "setYear";
         }
         return null;        
     }
@@ -1521,7 +1633,6 @@ public class NativeDate extends IdScriptable {
 // #string_id_map#
 
     protected int mapNameToId(String s) {
-        if (!prototypeFlag) { return 0; }
         int id;
 // #generated# Last update: 2001-04-22 23:46:59 CEST
         L0: { id = 0; String X = null; int c;
@@ -1637,6 +1748,8 @@ public class NativeDate extends IdScriptable {
     }
 
     private static final int
+        MIN_ID                  = -2,
+
         ConstructorId_UTC       = -2,
         ConstructorId_parse     = -1,
 
@@ -1647,48 +1760,47 @@ public class NativeDate extends IdScriptable {
         Id_toLocaleString       =  5,
         Id_toLocaleTimeString   =  6,
         Id_toLocaleDateString   =  7,
-        Id_toUTCString          =  8,
-        Id_valueOf              =  9,
-        Id_getTime              = 10,
-        Id_getYear              = 11,
-        Id_getFullYear          = 12,
-        Id_getUTCFullYear       = 13,
-        Id_getMonth             = 14,
-        Id_getUTCMonth          = 15,
-        Id_getDate              = 16,
-        Id_getUTCDate           = 17,
-        Id_getDay               = 18,
-        Id_getUTCDay            = 19,
-        Id_getHours             = 20,
-        Id_getUTCHours          = 21,
-        Id_getMinutes           = 22,
-        Id_getUTCMinutes        = 23,
-        Id_getSeconds           = 24,
-        Id_getUTCSeconds        = 25,
-        Id_getMilliseconds      = 26,
-        Id_getUTCMilliseconds   = 27,
-        Id_getTimezoneOffset    = 28,
-        Id_setTime              = 29,
-        Id_setMilliseconds      = 30,
-        Id_setUTCMilliseconds   = 31,
-        Id_setSeconds           = 32,
-        Id_setUTCSeconds        = 33,
-        Id_setMinutes           = 34,
-        Id_setUTCMinutes        = 35,
-        Id_setHours             = 36,
-        Id_setUTCHours          = 37,
-        Id_setDate              = 38,
-        Id_setUTCDate           = 39,
-        Id_setMonth             = 40,
-        Id_setUTCMonth          = 41,
-        Id_setFullYear          = 42,
-        Id_setUTCFullYear       = 43,
-        Id_setYear              = 44,
+        Id_toGMTString          =  8,
+        Id_toUTCString          =  9,
+        Id_valueOf              = 10,
+        Id_getTime              = 11,
+        Id_getYear              = 12,
+        Id_getFullYear          = 13,
+        Id_getUTCFullYear       = 14,
+        Id_getMonth             = 15,
+        Id_getUTCMonth          = 16,
+        Id_getDate              = 17,
+        Id_getUTCDate           = 18,
+        Id_getDay               = 19,
+        Id_getUTCDay            = 20,
+        Id_getHours             = 21,
+        Id_getUTCHours          = 22,
+        Id_getMinutes           = 23,
+        Id_getUTCMinutes        = 24,
+        Id_getSeconds           = 25,
+        Id_getUTCSeconds        = 26,
+        Id_getMilliseconds      = 27,
+        Id_getUTCMilliseconds   = 28,
+        Id_getTimezoneOffset    = 29,
+        Id_setTime              = 30,
+        Id_setMilliseconds      = 31,
+        Id_setUTCMilliseconds   = 32,
+        Id_setSeconds           = 33,
+        Id_setUTCSeconds        = 34,
+        Id_setMinutes           = 35,
+        Id_setUTCMinutes        = 36,
+        Id_setHours             = 37,
+        Id_setUTCHours          = 38,
+        Id_setDate              = 39,
+        Id_setUTCDate           = 40,
+        Id_setMonth             = 41,
+        Id_setUTCMonth          = 42,
+        Id_setFullYear          = 43,
+        Id_setUTCFullYear       = 44,
+        Id_setYear              = 45,
 
-        MAX_PROTOTYPE_ID        = 44;
+        MAX_ID                  = 45;
 
-    private static final int
-        Id_toGMTString  =  Id_toUTCString; // Alias, see Ecma B.2.6
 // #/string_id_map#
 
     /* cached values */
@@ -1700,8 +1812,6 @@ public class NativeDate extends IdScriptable {
     private static java.text.DateFormat localeTimeFormatter;
 
     private double date;
-
-    private boolean prototypeFlag;
 }
 
 
