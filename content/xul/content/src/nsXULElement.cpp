@@ -4935,7 +4935,7 @@ nsXULPrototypeScript::Deserialize(nsIObjectInputStream* aStream,
             // the JSXDRState.  So we steal it back, nulling xdr's buffer so it
             // doesn't get passed to ::JS_free by ::JS_XDRDestroy.
 
-            data = (void*) ::JS_XDRMemGetData(xdr, &size);
+            data = (char*) ::JS_XDRMemGetData(xdr, &size);
             if (data)
                 ::JS_XDRMemSetData(xdr, NULL, 0);
             ::JS_XDRDestroy(xdr);
