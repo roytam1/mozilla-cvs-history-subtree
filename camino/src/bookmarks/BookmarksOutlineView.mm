@@ -39,7 +39,8 @@
 
 - (void)draggedImage:(NSImage *)anImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)operation
 {
-  if (operation == NSDragOperationDelete) {
+  if (operation == NSDragOperationDelete)
+  {
     NSArray* contentIds = nil;
     NSPasteboard* pboard = [NSPasteboard pasteboardWithName:NSDragPboard];
     contentIds = [pboard propertyListForType: @"MozBookmarkType"];
@@ -53,12 +54,12 @@
   }
 }
 
-- (unsigned int)draggingSourceOperationMaskForLocal:(BOOL)flag
+- (unsigned int)draggingSourceOperationMaskForLocal:(BOOL)localFlag
 {
-  unsigned int result = [super draggingSourceOperationMaskForLocal:flag];
-  if (flag == NO)
-    result &= NSDragOperationDelete;
-  return result;
+  if (localFlag)
+    return (NSDragOperationCopy | NSDragOperationGeneric | NSDragOperationMove);
+  
+	return (NSDragOperationDelete | NSDragOperationGeneric);
 }
 
 @end

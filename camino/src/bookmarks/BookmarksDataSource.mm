@@ -656,8 +656,8 @@
 {
   NSArray*      types  = [[info draggingPasteboard] types];
   BookmarkItem* parent = (item) ? item : BookmarksService::GetRootItem();
-  BOOL          isCopy = ([info draggingSourceOperationMask] & NSDragOperationCopy) != 0;
-  
+  BOOL          isCopy = ([info draggingSourceOperationMask] == NSDragOperationCopy);
+    
   BookmarkItem* beforeItem = [self outlineView:ov child:index ofItem:item];
   if ([types containsObject: @"MozBookmarkType"])
   {

@@ -451,8 +451,8 @@
   }
 
   BOOL dropHandled = NO;
-  BOOL isCopy = ([sender draggingSourceOperationMask] & NSDragOperationCopy) != 0;
-  
+  BOOL isCopy = ([sender draggingSourceOperationMask] == NSDragOperationCopy);
+    
   NSArray	*draggedTypes = [[sender draggingPasteboard] types];
 
   nsCOMPtr<nsIContent> beforeContent;

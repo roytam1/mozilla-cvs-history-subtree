@@ -260,11 +260,10 @@
 
 - (unsigned int)draggingSourceOperationMaskForLocal:(BOOL)localFlag
 {
-  unsigned int result = NSDragOperationGeneric | NSDragOperationCopy;
-  if (localFlag == NO)
-    result &= NSDragOperationDelete;
-
-  return result;
+  if (localFlag)
+    return (NSDragOperationCopy | NSDragOperationGeneric | NSDragOperationMove);
+  
+	return (NSDragOperationDelete | NSDragOperationGeneric);
 }
 
 - (void) mouseDragged: (NSEvent*) aEvent
