@@ -86,7 +86,30 @@
 #include <windows.h>
 #include <signal.h>
 #elif defined(XP_MAC)
-#include <Processes.h>
+	   #include <MacTypes.h>
+	   #include <Processes.h>
+	   #include <string.h>
+
+	   // TEMPORARY UNTIL WE HAVE MACINTOSH ENVIRONMENT VARIABLES THAT CAN TURN ON
+	   // LOGGING ON MACINTOSH
+	   // At this moment, NSPR's logging is a no-op on Macintosh.
+
+	   #include <stdarg.h>
+	   #include <stdio.h>
+	 
+	   static void dprintf(const char *format, ...)
+	   {
+	      va_list ap;
+	      Str255 buffer;
+	      
+	      va_start(ap, format);
+	      buffer[0] = std::vsnprintf((char *)buffer + 1, sizeof(buffer) - 1, format, ap);
+	      va_end(ap);
+	      if (PL_strcasestr((char *)&buffer[1], "warning"))
+	 	      printf("еее%s\n", (char*)buffer + 1);
+	 	  else
+	 	      DebugStr(buffer);
+	   }
 #elif defined(XP_UNIX)
 #include<stdlib.h>
 #endif
@@ -159,7 +182,9 @@ NS_COM void nsDebug::Assertion(const char* aStr, const char* aExpr,
    ASSERT_PRINTF("%s", buf);
    ASSERT_FLUSH();
 
-#if defined(_WIN32)
+#if defined(XP_MAC)
+   dprintf("ASSERT: %s", buf);
+#elif defined(_WIN32)
    if(!InDebugger())
    {
      char msg[1200];
@@ -214,9 +239,13 @@ NS_COM void nsDebug::Assertion(const char* aStr, const char* aExpr,
 
 NS_COM void nsDebug::Break(const char* aFile, PRIntn aLine)
 {
-#ifndef TEMP_MAC_HACK
+#ifdef XP_MAC
+    dprintf("BREAK: at file %s, line %d", aFile, aLine);
+#else
+
     BREAK_PRINTF("at file %s, line %d", aFile, aLine);
     BREAK_FLUSH();
+
 #if defined(_WIN32)
 #ifdef _M_IX86
     ::DebugBreak();
@@ -280,7 +309,7 @@ NS_COM void nsDebug::Break(const char* aFile, PRIntn aLine)
 #else
   Abort(aFile, aLine);
 #endif
-#endif // TEMP_MAC_HACK
+#endif // XP_MAC
 }
 
 NS_COM void nsDebug::Warning(const char* aMessage,
@@ -318,6 +347,7 @@ NS_COM void nsDebug::Abort(const char* aFile, PRIntn aLine)
   PR_Abort();
 #endif
 #elif defined(XP_MAC)
+  dprintf("ABORT: at file %s, line %d", aFile, aLine);
   ExitToShell();
 #elif defined(XP_UNIX)
   PR_Abort();
