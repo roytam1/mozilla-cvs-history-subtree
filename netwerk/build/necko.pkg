@@ -5,6 +5,7 @@ dist/bin/components/@SHARED_LIBRARY@
 !xpt dist/bin/components/necko.xpt
 !xpt dist/bin/components/necko_about.xpt
 !xpt dist/bin/components/necko_dns.xpt
+!xpt dist/bin/components/necko_file.xpt
 !xpt dist/bin/components/necko_ftp.xpt
 !xpt dist/bin/components/necko_http.xpt
 !xpt dist/bin/components/necko_jar.xpt

@@ -1,6 +1,5 @@
-# XXXbsmedberg -- forked chromeservice creates problems
-
 [gecko]
 #if SHARED_LIBRARY
 dist/bin/components/@SHARED_LIBRARY@
 #endif
+!xpt dist/bin/components/imgicon.xpt

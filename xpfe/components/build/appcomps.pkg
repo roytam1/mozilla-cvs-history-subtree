@@ -1,0 +1,28 @@
+# this file packages seamonkey and firebird appcomps...
+# be careful when you make changes
+
+[xpfe-browser browser]
+#if SHARED_LIBRARY
+dist/bin/components/@SHARED_LIBRARY@
+#endif
+
+!xpt dist/bin/components/directory.xpt
+!xpt dist/bin/components/related.xpt
+!xpt dist/bin/components/search.xpt
+!xpt dist/bin/components/timebomb.xpt
+!xpt dist/bin/components/windowds.xpt
+!xpt dist/bin/components/mozbrwsr.xpt
+
+#if OS_ARCH==WINNT
+!xpt dist/bin/components/winhooks.xpt
+!xpt dist/bin/components/urlwidgt.xpt
+!xpt dist/bin/components/alerts.xpt
+#endif
+
+[xpfe-browser]
+!xpt dist/bin/components/bookmarks.xpt
+!xpt dist/bin/components/downloadmanager.xpt
+!xpt dist/bin/components/autocomplete.xpt
+!xpt dist/bin/components/history.xpt
+!xpt dist/bin/components/urlbarhistory.xpt
+

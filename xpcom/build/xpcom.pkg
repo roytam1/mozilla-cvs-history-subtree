@@ -8,12 +8,11 @@ dist/bin/@DLLP@xpcom@DLLS@
 !xpt components/xpcom_thread.xpt
 !xpt components/xpcom_xpti.xpt
 
-[xpi-bootstrap]
-dist/bin/@DLLP@xpistub@DLLS@
-dist/bin/components/@DLLP@xpinstal@DLLS@
-dist/bin/@DLLP@mozreg@DLLS@
+[gecko xpi-bootstrap]
 dist/bin/@DLLP@xpcom_compat@DLLS@
 dist/bin/components/@DLLP@xpcom_compat_c@DLLS@
+
+[gecko]
 !xpt dist/bin/components/xpcom_obsolete.xpt
 
 # we put NSPR here, because hacking the NSPR build system is too painful

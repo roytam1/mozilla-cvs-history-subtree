@@ -1,0 +1,7 @@
+# This is not part of embedding, but it is part of the GRE.
+# Make that make sense.
+
+[gre]
+#if SHARED_LIBRARY
+dist/bin/components/@SHARED_LIBRARY@
+#endif

@@ -11,3 +11,7 @@ dist/bin/components/@DLLP@pipboot@DLLS@
 !xpt dist/bin/components/pipboot.xpt
 dist/bin/components/@DLLP@pipnss@DLLS@
 !xpt dist/bin/components/pipnss.xpt
+
+[psm-support]
+dist/bin/chrome/pipnss.jar
+dist/bin/default/pref/security-prefs.js

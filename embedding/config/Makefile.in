@@ -51,6 +51,7 @@ endif
 endif
 endif
 
+PACKAGE_FILE = embed.pkg
 
 embed_chrome: embed-jar.mn
 ifneq (jar,$(MOZ_CHROME_FILE_FORMAT))

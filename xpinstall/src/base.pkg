@@ -1,6 +1,12 @@
-[xpi-bootstrap]
-dist/bin/@DLLP@xpistub@DLLS@
+[gecko xpi-bootstrap]
 dist/bin/components/@SHARED_LIBRARY@
-dist/bin/defaults/pref/xpinstall.js
+dist/bin/res/cmessage.txt
+
+[gecko]
 !xpt dist/bin/components/xpinstall.xpt
 
+[xpi-bootstrap]
+dist/bin/@DLLP@xpistub@DLLS@
+
+[gecko-support]
+dist/bin/defaults/pref/xpinstall.js
