@@ -33,6 +33,10 @@ HEADERS		= \
 		  disptmpl.h \
 		  lber.h \
 		  ldap.h \
+		  ldap-standard.h \
+		  ldap-extension.h \
+		  ldap-to-be-deprecated.h \
+		  ldap-deprecated.h \
 		  ldap_ssl.h \
 		  iutil.h \
 		  srchpref.h \

@@ -92,6 +92,10 @@ endif
 	$(NSINSTALL) $(INCDIR)/iutil.h $(INSTDIR)/include
 	$(NSINSTALL) $(INCDIR)/lber.h $(INSTDIR)/include
 	$(NSINSTALL) $(INCDIR)/ldap.h $(INSTDIR)/include
+	$(NSINSTALL) $(INCDIR)/ldap-standard.h $(INSTDIR)/include
+	$(NSINSTALL) $(INCDIR)/ldap-extension.h $(INSTDIR)/include
+	$(NSINSTALL) $(INCDIR)/ldap-deprecated.h $(INSTDIR)/include
+	$(NSINSTALL) $(INCDIR)/ldap-to-be-deprecated.h $(INSTDIR)/include
 	$(NSINSTALL) $(INCDIR)/ldap_ssl.h $(INSTDIR)/include
 	$(NSINSTALL) $(INCDIR)/srchpref.h $(INSTDIR)/include
 		

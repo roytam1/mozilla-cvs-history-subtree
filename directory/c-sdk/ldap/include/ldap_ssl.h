@@ -120,32 +120,6 @@ const char * LDAP_CALL ldapssl_err2string( const int prerrno );
 int LDAP_CALL ldapssl_enable_clientauth( LDAP *ld, char *keynickname,
 	char *keypasswd, char *certnickname );
 
-
-typedef int (LDAP_C LDAP_CALLBACK LDAP_PKCS_GET_TOKEN_CALLBACK)(void *context, char **tokenname);
-typedef int (LDAP_C LDAP_CALLBACK LDAP_PKCS_GET_PIN_CALLBACK)(void *context, const char *tokenname, char **tokenpin);
-typedef int (LDAP_C LDAP_CALLBACK LDAP_PKCS_GET_CERTPATH_CALLBACK)(void *context, char **certpath);
-typedef int (LDAP_C LDAP_CALLBACK LDAP_PKCS_GET_KEYPATH_CALLBACK)(void *context,char **keypath);
-typedef int (LDAP_C LDAP_CALLBACK LDAP_PKCS_GET_MODPATH_CALLBACK)(void *context, char **modulepath);
-typedef int (LDAP_C LDAP_CALLBACK LDAP_PKCS_GET_CERTNAME_CALLBACK)(void *context, char **certname);
-typedef int (LDAP_C LDAP_CALLBACK LDAP_PKCS_GET_DONGLEFILENAME_CALLBACK)(void *context, char **filename);
-
-#define PKCS_STRUCTURE_ID 1
-struct ldapssl_pkcs_fns {
-    int local_structure_id;
-    void *local_data;
-    LDAP_PKCS_GET_CERTPATH_CALLBACK *pkcs_getcertpath;
-    LDAP_PKCS_GET_CERTNAME_CALLBACK *pkcs_getcertname;
-    LDAP_PKCS_GET_KEYPATH_CALLBACK *pkcs_getkeypath;
-    LDAP_PKCS_GET_MODPATH_CALLBACK *pkcs_getmodpath;
-    LDAP_PKCS_GET_PIN_CALLBACK *pkcs_getpin;
-    LDAP_PKCS_GET_TOKEN_CALLBACK *pkcs_gettokenname;
-    LDAP_PKCS_GET_DONGLEFILENAME_CALLBACK *pkcs_getdonglefilename;
-    
-};
-
-
-LDAP_API(int) LDAP_CALL ldapssl_pkcs_init( const struct ldapssl_pkcs_fns *pfns);
-
 #ifdef __cplusplus
 }
 #endif
