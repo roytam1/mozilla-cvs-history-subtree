@@ -1391,27 +1391,28 @@ PRIntn  whichSide=0;
 }
 
 
-
-nscolor 
+// Method to transform the a light color.. to a darker color.. this is 
+// used to darken text that had a dark background but is now going out to
+// a printer with the background turned off
+nscolor
 nsCSSRendering::TransformColor(nscolor  aMapColor,PRBool aNoBackGround)
 {
-PRInt32 brightness;
-nscolor newcolor;
+PRUint16  hue,sat,value;
+nscolor   newcolor;
 
   newcolor = aMapColor;
-  if (PR_TRUE == aNoBackGround){
-    // convert the RBG to a brightness value (HSV scale)
-    brightness = NS_GetBrightness(NS_GET_R(aMapColor),NS_GET_G(aMapColor),NS_GET_B(aMapColor));
-
-    if(brightness > 64){
-      newcolor = NS_RGB(64,64,64);
+  if (PR_TRUE == aNoBackGround) {
+    // convert the RBG to HSV so we can get the lightness (which is the v)
+    NS_RGB2HSV(newcolor,hue,sat,value);
+    // if the value is lighter than 192, bring it back down.
+    if (value > 192) {
+      value = 192;
+      // convert this color back into the RGB color space.
+      NS_HSV2RGB(newcolor,hue,sat,value);
     }
   }
-
- return newcolor;
+  return newcolor;
 }
-
-
 
 
 // method GetBGColorForHTMLElement
