@@ -421,11 +421,7 @@ ConvertToPlatformPathList(const char* cp)
         result[0] = '\0';
         path = c;
         strtok_path = path;
-#ifndef NSPR20
-        while ((path = XP_STRTOK(strtok_path, PATH_SEPARATOR_STR)))
-#else
         while ((path = XP_STRTOK(strtok_path, PR_PATH_SEPARATOR_STR)))
-#endif
         {
             const char* macPath;
             OSErr err = ConvertUnixPathToMacPath(path, &macPath);

@@ -31,11 +31,7 @@
 #include <string.h>
 #include "prtypes.h"
 #include "prlog.h"
-#ifndef NSPR20
-#include "prhash.h"
-#else
 #include "plhash.h"
-#endif
 #include "prprf.h"
 #include "jsapi.h"
 #include "jsarray.h"

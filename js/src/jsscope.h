@@ -22,11 +22,7 @@
  * JS symbol tables.
  */
 #include "prtypes.h"
-#ifndef NSPR20
-#include "prhash.h"
-#else
 #include "plhash.h"
-#endif
 #include "jsobj.h"
 #include "jsprvtd.h"
 #include "jspubtd.h"
