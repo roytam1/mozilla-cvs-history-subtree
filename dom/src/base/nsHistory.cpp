@@ -32,7 +32,9 @@
 #include "nsIWebNavigation.h"
 #include "nsIHistoryEntry.h"
 #include "nsIURI.h"
+#include "nsIServiceManager.h"
 #include "nsXPIDLString.h"
+#include "nsReadableUtils.h"
 #include "nsDOMClassInfo.h"
 
 //
@@ -50,7 +52,7 @@ HistoryImpl::~HistoryImpl()
 
 // XPConnect interface list for HistoryImpl
 NS_CLASSINFO_MAP_BEGIN(History)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMHistory)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMNSHistory)
 NS_CLASSINFO_MAP_END
 
 
@@ -58,6 +60,7 @@ NS_CLASSINFO_MAP_END
 NS_INTERFACE_MAP_BEGIN(HistoryImpl)
   NS_INTERFACE_MAP_ENTRY(nsISupports)
   NS_INTERFACE_MAP_ENTRY(nsIDOMHistory)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNSHistory)
   NS_INTERFACE_MAP_ENTRY_DOM_CLASSINFO(History)
 NS_INTERFACE_MAP_END
 
@@ -66,7 +69,7 @@ NS_IMPL_ADDREF(HistoryImpl)
 NS_IMPL_RELEASE(HistoryImpl)
 
 
-NS_IMETHODIMP_(void)       
+void
 HistoryImpl::SetDocShell(nsIDocShell *aDocShell)
 {
   mDocShell = aDocShell; // Weak Reference
@@ -76,7 +79,7 @@ NS_IMETHODIMP
 HistoryImpl::GetLength(PRInt32* aLength)
 {
   nsCOMPtr<nsISHistory>   sHistory;
-	
+
   // Get session History from docshell
   GetSessionHistoryFromDocShell(mDocShell, getter_AddRefs(sHistory));
   NS_ENSURE_TRUE(sHistory, NS_ERROR_FAILURE);
@@ -109,7 +112,7 @@ HistoryImpl::GetCurrent(nsAWritableString& aCurrent)
   uri->GetSpec(&curURL);
   aCurrent.Assign(NS_ConvertASCIItoUCS2(curURL));
   nsCRT::free(curURL);
- 
+
   return NS_OK;
 }
 
@@ -169,7 +172,7 @@ HistoryImpl::GetNext(nsAWritableString& aNext)
   uri->GetSpec(&nextURL); 
   aNext.Assign(NS_ConvertASCIItoUCS2(nextURL));
   nsCRT::free(nextURL);
-  
+
   return NS_OK;
 }
 
@@ -185,6 +188,7 @@ HistoryImpl::Back()
   nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(sHistory));
   NS_ENSURE_TRUE(webNav, NS_ERROR_FAILURE);
   webNav->GoBack();
+
   return NS_OK;
 }
 
@@ -192,108 +196,172 @@ NS_IMETHODIMP
 HistoryImpl::Forward()
 {
   nsCOMPtr<nsISHistory>  sHistory;
-  
+
   GetSessionHistoryFromDocShell(mDocShell, getter_AddRefs(sHistory));
   NS_ENSURE_TRUE(sHistory, NS_ERROR_FAILURE);
-  
+
   //QI SHistory to WebNavigation
   nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(sHistory));
   NS_ENSURE_TRUE(webNav, NS_ERROR_FAILURE);
   webNav->GoForward();
+
   return NS_OK;
 }
 
-NS_IMETHODIMP    
-HistoryImpl::Go()
+NS_IMETHODIMP
+HistoryImpl::GoIndex(PRInt32 aDelta)
 {
-  nsresult result = NS_OK;
-#if 0
-  nsCOMPtr<nsISHistory>  sHistory;
-     
-  GetSessionHistoryFromDocShell(mDocShell, getter_AddRefs(sHistory));
-  NS_ENSURE_TRUE(sHistory, NS_ERROR_FAILURE);
+  nsCOMPtr<nsISHistory> session_history;
+
+  GetSessionHistoryFromDocShell(mDocShell, getter_AddRefs(session_history));
+  NS_ENSURE_TRUE(session_history, NS_ERROR_FAILURE);
 
   // QI SHistory to nsIWebNavigation
-  nsCOMPtr<nsIWebNavigation> shWebnav(do_QueryInterface(sHistory));
-  NS_ENSURE_TRUE(shWebnav, NS_ERROR_FAILURE);
- 
-  if (argc > 0) {
-    if (JSVAL_IS_INT(argv[0])) {
-      PRInt32 delta = JSVAL_TO_INT(argv[0]);
-      PRInt32 curIndex=-1;
- 
-      result = sHistory->GetIndex(&curIndex);
-      result = shWebnav->GotoIndex(curIndex + delta);     
-    }
-    else {
-      JSString* jsstr = JS_ValueToString(cx, argv[0]);
-      PRInt32 i, count;
-       
-      if (nsnull != jsstr) {
-        nsAutoString substr; substr.AssignWithConversion(JS_GetStringBytes(jsstr));
-        result = sHistory->GetCount(&count);
-        for (i = 0; (i < count) && NS_SUCCEEDED(result); i++) {
-          nsCOMPtr<nsIHistoryEntry>   shEntry;
-          nsCOMPtr<nsIURI>   uri;
+  nsCOMPtr<nsIWebNavigation> webnav(do_QueryInterface(session_history));
+  NS_ENSURE_TRUE(webnav, NS_ERROR_FAILURE);
 
-          result = sHistory->GetEntryAtIndex(i, PR_FALSE, getter_AddRefs(shEntry));
-          if (!shEntry)
-            continue;
-          result = shEntry->GetURI(getter_AddRefs(uri));
-          if (!uri)
-            continue;          
-          nsAutoString url;
-          nsXPIDLCString   urlCString;
-          result = uri->GetSpec(getter_Copies(urlCString));
-          url.AssignWithConversion(urlCString);
- 
-          if (-1 != url.Find(substr)) {
-            result = shWebnav->GotoIndex(i);
-            break;
-          }
-        }   //for
+  PRInt32 curIndex=-1;
+
+  nsresult rv = session_history->GetIndex(&curIndex);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return webnav->GotoIndex(curIndex + aDelta);
+}
+
+NS_IMETHODIMP
+HistoryImpl::GoUri(const nsAReadableString& aUriSubstring)
+{
+  nsCOMPtr<nsISHistory> session_history;
+
+  GetSessionHistoryFromDocShell(mDocShell, getter_AddRefs(session_history));
+  NS_ENSURE_TRUE(session_history, NS_ERROR_FAILURE);
+
+  // QI SHistory to nsIWebNavigation
+  nsCOMPtr<nsIWebNavigation> webnav(do_QueryInterface(session_history));
+  NS_ENSURE_TRUE(webnav, NS_ERROR_FAILURE);
+
+  nsresult rv = NS_OK;
+  PRInt32 i, count;
+
+  rv = session_history->GetCount(&count);
+
+  for (i = 0; (i < count) && NS_SUCCEEDED(rv); i++) {
+    nsCOMPtr<nsIHistoryEntry> sh_entry;
+
+    rv = session_history->GetEntryAtIndex(i, PR_FALSE,
+                                          getter_AddRefs(sh_entry));
+    if (sh_entry) {
+      nsCOMPtr<nsIURI> uri;
+
+      rv = sh_entry->GetURI(getter_AddRefs(uri));
+
+      if (uri) {
+        nsXPIDLCString   urlCString;
+        rv = uri->GetSpec(getter_Copies(urlCString));
+
+        nsAutoString url;
+        url.AssignWithConversion(urlCString);
+
+        nsReadingIterator<PRUnichar> start;
+        nsReadingIterator<PRUnichar> end;
+
+        url.BeginReading(start);
+        url.EndReading(end);
+
+        if (FindInReadable(aUriSubstring, start, end)) {
+          rv = webnav->GotoIndex(i);
+
+          break;
+        }
       }
     }
   }
-#endif
-  return result;
+
+  return rv;
 }
 
+NS_IMETHODIMP
+HistoryImpl::Go()
+{
+  nsresult rv;
+  nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIXPCNativeCallContext> ncc;
+
+  rv = xpc->GetCurrentNativeCallContext(getter_AddRefs(ncc));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (!ncc)
+    return NS_ERROR_NOT_AVAILABLE;
+
+  PRBool force_get = PR_FALSE;
+
+  PRUint32 argc;
+
+  ncc->GetArgc(&argc);
+
+  if (argc == 0) {
+    return NS_OK;
+  }
+
+  jsval *argv = nsnull;
+
+  ncc->GetArgvPtr(&argv);
+  NS_ENSURE_TRUE(argv, NS_ERROR_UNEXPECTED);
+
+  JSContext *cx = nsnull;
+
+  rv = ncc->GetJSContext(&cx);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (JSVAL_IS_INT(argv[0])) {
+    PRInt32 delta = JSVAL_TO_INT(argv[0]);
+ 
+    return GoIndex(delta);
+  }
+
+  JSString* jsstr = JS_ValueToString(cx, argv[0]);
+
+  return GoUri(nsLiteralString(NS_REINTERPRET_CAST(const PRUnichar *,
+                                                   ::JS_GetStringChars(jsstr)),
+                               ::JS_GetStringLength(jsstr)));
+}
 
 NS_IMETHODIMP
 HistoryImpl::Item(PRUint32 aIndex, nsAWritableString& aReturn)
 {
   aReturn.Truncate();
 
-  nsresult result = NS_OK;
-  nsCOMPtr<nsISHistory>  sHistory;
+  nsresult rv = NS_OK;
+  nsCOMPtr<nsISHistory>  session_history;
 
-  GetSessionHistoryFromDocShell(mDocShell, getter_AddRefs(sHistory));
-  NS_ENSURE_TRUE(sHistory, NS_ERROR_FAILURE);
+  GetSessionHistoryFromDocShell(mDocShell, getter_AddRefs(session_history));
+  NS_ENSURE_TRUE(session_history, NS_ERROR_FAILURE);
 
- 	nsCOMPtr<nsIHistoryEntry> shEntry;
+ 	nsCOMPtr<nsIHistoryEntry> sh_entry;
  	nsCOMPtr<nsIURI> uri;
 
-  result = sHistory->GetEntryAtIndex(aIndex, PR_FALSE, getter_AddRefs(shEntry));
-  
-  if (!shEntry)
-    return NS_OK;
+  rv = session_history->GetEntryAtIndex(aIndex, PR_FALSE,
+                                        getter_AddRefs(sh_entry));
 
-  result = shEntry->GetURI(getter_AddRefs(uri));
-  if (!uri)
-    return NS_OK;
+  if (sh_entry) {
+    rv = sh_entry->GetURI(getter_AddRefs(uri));
+  }
 
-  nsXPIDLCString   urlCString;
-  result = uri->GetSpec(getter_Copies(urlCString));
+  if (uri) {
+    nsXPIDLCString   urlCString;
+    rv = uri->GetSpec(getter_Copies(urlCString));
 
-  aReturn.Assign(NS_ConvertASCIItoUCS2(urlCString));
+    aReturn.Assign(NS_ConvertASCIItoUCS2(urlCString));
+  }
 
-  return NS_OK;
+  return rv;
 }
 
-NS_IMETHODIMP
+nsresult
 HistoryImpl::GetSessionHistoryFromDocShell(nsIDocShell * aDocShell, 
-nsISHistory ** aReturn)
+                                           nsISHistory ** aReturn)
 {
 
   NS_ENSURE_TRUE(aDocShell, NS_ERROR_FAILURE);

@@ -23,7 +23,7 @@
 #define nsHistory_h___
 
 #include "nsIScriptObjectOwner.h"
-#include "nsIDOMHistory.h"
+#include "nsIDOMNSHistory.h"
 #include "nsISupports.h"
 #include "nscore.h"
 #include "nsIScriptContext.h"
@@ -32,28 +32,27 @@
 class nsIDocShell;
 
 // Script "History" object
-class HistoryImpl : public nsIDOMHistory
+class HistoryImpl : public nsIDOMNSHistory
 {
 public:
   HistoryImpl(nsIDocShell* aDocShell);
   virtual ~HistoryImpl();
 
+  // nsISupports
   NS_DECL_ISUPPORTS
 
-  NS_IMETHOD_(void)       SetDocShell(nsIDocShell *aDocShell);
+  // nsIDOMHistory
+  NS_DECL_NSIDOMHISTORY
 
-  NS_IMETHOD    GetLength(PRInt32* aLength);
-  NS_IMETHOD    GetCurrent(nsAWritableString& aCurrent);
-  NS_IMETHOD    GetPrevious(nsAWritableString& aPrevious);
-  NS_IMETHOD    GetNext(nsAWritableString& aNext);
-  NS_IMETHOD    Back();
-  NS_IMETHOD    Forward();
-  NS_IMETHOD    Go();
-  NS_IMETHOD    Item(PRUint32 aIndex, nsAWritableString& aReturn);
+  // nsIDOMNSHistory
+  NS_DECL_NSIDOMNSHISTORY
 
-  NS_IMETHOD    GetSessionHistoryFromDocShell(nsIDocShell * aDocShell, nsISHistory ** aReturn);
+  void SetDocShell(nsIDocShell *aDocShell);
 
 protected:
+  nsresult GetSessionHistoryFromDocShell(nsIDocShell * aDocShell,
+                                         nsISHistory ** aReturn);
+
   nsIDocShell* mDocShell;
 };
 

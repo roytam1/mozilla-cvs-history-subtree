@@ -271,8 +271,7 @@ protected:
 
 public:
   NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                         JSObject *obj, jsval id, jsval *vp,
-                         PRBool *_retval);
+                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval);
 
   static nsIClassInfo *Create(nsDOMClassInfoID aID)
   {
@@ -299,8 +298,7 @@ protected:
 
 public:
   NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                         JSObject *obj, jsval id, jsval *vp,
-                         PRBool *_retval);
+                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval);
 };
 
 
@@ -518,6 +516,100 @@ public:
   static nsIClassInfo *Create(nsDOMClassInfoID aID)
   {
     return new nsMimeTypeArraySH(aID);
+  }
+};
+
+
+// History helper
+
+class nsStringArraySH : public nsDOMClassInfo
+{
+protected:
+  nsStringArraySH(nsDOMClassInfoID aID) : nsDOMClassInfo(aID)
+  {
+  }
+
+  virtual ~nsStringArraySH()
+  {
+  }
+
+  virtual nsresult GetStringAt(nsISupports *aNative, PRInt32 aIndex,
+                               nsAWritableString& aResult) = 0;
+
+public:
+  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval);
+};
+
+
+// History helper
+
+class nsHistorySH : public nsDOMClassInfo
+{
+protected:
+  nsHistorySH(nsDOMClassInfoID aID) : nsDOMClassInfo(aID)
+  {
+  }
+
+  virtual ~nsHistorySH()
+  {
+  }
+
+  virtual nsresult GetStringAt(nsISupports *aNative, PRInt32 aIndex,
+                               nsAWritableString& aResult);
+
+public:
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsHistorySH(aID);
+  }
+};
+
+
+// MediaList helper
+
+class nsMediaListSH : public nsDOMClassInfo
+{
+protected:
+  nsMediaListSH(nsDOMClassInfoID aID) : nsDOMClassInfo(aID)
+  {
+  }
+
+  virtual ~nsMediaListSH()
+  {
+  }
+
+  virtual nsresult GetStringAt(nsISupports *aNative, PRInt32 aIndex,
+                               nsAWritableString& aResult);
+
+public:
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsMediaListSH(aID);
+  }
+};
+
+
+// CSSStyleDeclaration helper
+
+class nsCSSStyleDeclSH : public nsDOMClassInfo
+{
+protected:
+  nsCSSStyleDeclSH(nsDOMClassInfoID aID) : nsDOMClassInfo(aID)
+  {
+  }
+
+  virtual ~nsCSSStyleDeclSH()
+  {
+  }
+
+  virtual nsresult GetStringAt(nsISupports *aNative, PRInt32 aIndex,
+                               nsAWritableString& aResult);
+
+public:
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsCSSStyleDeclSH(aID);
   }
 };
 

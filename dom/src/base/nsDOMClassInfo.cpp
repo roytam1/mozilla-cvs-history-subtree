@@ -51,21 +51,23 @@
 #include "nsScriptNameSpaceManager.h"
 #include "nsIScriptObjectOwner.h"
 #include "nsIJSNativeInitializer.h"
-#include "nsIDOMWindowCollection.h"
 
 // DOM base includes
 #include "nsIDOMPluginArray.h"
 #include "nsIDOMPlugin.h"
 #include "nsIDOMMimeTypeArray.h"
 #include "nsIDOMMimeType.h"
-#include "nsIFormControl.h"
+#include "nsIDOMLocation.h"
+#include "nsIDOMWindowInternal.h"
+#include "nsIDOMWindowCollection.h"
+#include "nsIDOMHistory.h"
+#include "nsIDOMMediaList.h"
 
 // DOM core includes
 #include "nsDOMError.h"
 #include "nsIDOMNode.h"
 #include "nsIDOMNodeList.h"
-#include "nsIDOMWindowInternal.h"
-#include "nsIDOMLocation.h"
+#include "nsIFormControl.h"
 
 // HTMLFormElement helper includes
 #include "nsIForm.h"
@@ -81,6 +83,9 @@
 // Event related includes
 #include "nsIEventListenerManager.h"
 #include "nsIDOMEventReceiver.h"
+
+// CSS related includes
+#include "nsIDOMCSSStyleDeclaration.h"
 
 // XBL related includes.
 #include "nsIXBLService.h"
@@ -380,8 +385,8 @@ nsDOMClassInfo::Init()
                            ARRAY_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(BarProp, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(History, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(History, nsHistorySH::Create,
+                           ARRAY_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Screen, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
 
@@ -567,13 +572,13 @@ nsDOMClassInfo::Init()
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(CSSRuleList, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(MediaList, nsDOMGenericSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(MediaList, nsMediaListSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(StyleSheetList, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(CSSStyleSheet, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(CSSStyleDeclaration, nsDOMGenericSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(CSSStyleDeclaration, nsCSSStyleDeclSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(ComputedCSSStyleDeclaration, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
@@ -2189,6 +2194,84 @@ nsMimeTypeArraySH::GetNamedItem(nsISupports *aNative, jsval id,
   *aResult = mime_type;
 
   return rv;
+}
+
+
+// StringArray helper
+
+NS_IMETHODIMP
+nsStringArraySH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                             JSObject *obj, jsval id, jsval *vp,
+                             PRBool *_retval)
+{
+  if (JSVAL_IS_NUMBER(id)) {
+    nsCOMPtr<nsISupports> native;
+    wrapper->GetNative(getter_AddRefs(native));
+
+    nsAutoString val;
+
+    nsresult rv = GetStringAt(native, JSVAL_TO_INT(id), val);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    // XXX: Null strings?
+
+    JSString *str =
+      ::JS_NewUCStringCopyN(cx, NS_REINTERPRET_CAST(const jschar *, val.get()),
+                            val.Length());
+    NS_ENSURE_TRUE(str, NS_ERROR_OUT_OF_MEMORY);
+
+    *vp = STRING_TO_JSVAL(str);
+  }
+
+  return NS_OK;
+}
+
+
+// History helper
+
+nsresult
+nsHistorySH::GetStringAt(nsISupports *aNative, PRInt32 aIndex,
+                         nsAWritableString& aResult)
+{
+  if (aIndex < 0) {
+    return NS_ERROR_DOM_INDEX_SIZE_ERR;
+  }
+
+  nsCOMPtr<nsIDOMHistory> history(do_QueryInterface(aNative));
+
+  return history->Item(PRUint32(aNative), aResult);
+}
+
+
+// MediaList helper
+
+nsresult
+nsMediaListSH::GetStringAt(nsISupports *aNative, PRInt32 aIndex,
+                           nsAWritableString& aResult)
+{
+  if (aIndex < 0) {
+    return NS_ERROR_DOM_INDEX_SIZE_ERR;
+  }
+
+  nsCOMPtr<nsIDOMMediaList> media_list(do_QueryInterface(aNative));
+
+  return media_list->Item(PRUint32(aNative), aResult);
+}
+
+
+// CSSStyleDeclaration helper
+
+nsresult
+nsCSSStyleDeclSH::GetStringAt(nsISupports *aNative, PRInt32 aIndex,
+                              nsAWritableString& aResult)
+{
+  if (aIndex < 0) {
+    return NS_ERROR_DOM_INDEX_SIZE_ERR;
+  }
+
+  nsCOMPtr<nsIDOMMediaList> style_decl(do_QueryInterface(aNative));
+
+  return style_decl->Item(PRUint32(aNative), aResult);
 }
 
 
