@@ -40,6 +40,7 @@
 #include "baseutils.h"
 #include "MITREObject.h"
 #include "primitives.h"
+#include "NamespaceResolver.h"
 
 /*
   XPath class definitions.
@@ -58,7 +59,7 @@ class NodeSet;
 /**
  * The expression context and state class used when evaluating XPath Expressions.
 **/
-class ContextState : public ErrorObserver {
+class ContextState : public NamespaceResolver, public ErrorObserver {
 
 public:
 
@@ -103,6 +104,7 @@ public:
      * <B>Note:</B> I will be moving this functionality elsewhere soon
     **/
     virtual void sortByDocumentOrder(NodeSet* nodes) = 0;
+
 
 }; //-- ContextState
 
@@ -639,7 +641,15 @@ public:
 
 private:
 
+    static const String WILD_CARD;
+
     String name;
+
+    MBool isNamespaceWild;
+
+    MBool isNameWild;
+
+    String prefix;
 
 }; //-- ElementExpr
 
