@@ -67,7 +67,7 @@ nsHTTPSOAPTransport::~nsHTTPSOAPTransport()
 }
 
 NS_IMPL_ISUPPORTS1_CI(nsHTTPSOAPTransport, nsISOAPTransport)
-#ifdef DEBUG
+#ifdef DEBUG2
 #define DEBUG_DUMP_DOCUMENT(message,doc) \
   { \
           nsresult rcc;\

@@ -975,86 +975,99 @@ nsSchemaLoader::ProcessSchemaElement(nsIDOMElement* aElement,
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  nsChildElementIterator iterator(aElement, 
-                                  kSchemaNamespaces, kSchemaNamespacesLength);
-  nsCOMPtr<nsIDOMElement> childElement;
-  nsCOMPtr<nsIAtom> tagName;
-
-  while (NS_SUCCEEDED(iterator.GetNextChild(getter_AddRefs(childElement),
-                                            getter_AddRefs(tagName))) &&
-         childElement) {
-    if (tagName == nsSchemaAtoms::sElement_atom) {
-      nsCOMPtr<nsISchemaElement> schemaElement;
-      rv = ProcessElement(schemaInst, childElement,  
-                          getter_AddRefs(schemaElement));
-      if (NS_SUCCEEDED(rv)) {
-        rv = schemaInst->AddElement(schemaElement);
-      }
-    }
-    else if (tagName == nsSchemaAtoms::sComplexType_atom) {
-      nsCOMPtr<nsISchemaComplexType> complexType;
-      rv = ProcessComplexType(schemaInst, childElement,
-                              getter_AddRefs(complexType));
-      if (NS_SUCCEEDED(rv)) {
-        rv = schemaInst->AddType(complexType);
-      }
-    }
-    else if (tagName == nsSchemaAtoms::sSimpleType_atom) {
-      nsCOMPtr<nsISchemaSimpleType> simpleType;
-      rv = ProcessSimpleType(schemaInst, childElement,
-                             getter_AddRefs(simpleType));
-      if (NS_SUCCEEDED(rv)) {
-        rv = schemaInst->AddType(simpleType);
-      }
-    }
-    else if (tagName == nsSchemaAtoms::sAttribute_atom) {
-      nsCOMPtr<nsISchemaAttribute> attribute;
-      rv = ProcessAttribute(schemaInst, childElement,
-                            getter_AddRefs(attribute));
-      if (NS_SUCCEEDED(rv)) {
-        rv = schemaInst->AddAttribute(attribute);
-      }
-    }
-    else if (tagName == nsSchemaAtoms::sAttributeGroup_atom) {
-      nsCOMPtr<nsISchemaAttributeGroup> attributeGroup;
-      rv = ProcessAttributeGroup(schemaInst, childElement,
-                                 getter_AddRefs(attributeGroup));
-      if (NS_SUCCEEDED(rv)) {
-        rv = schemaInst->AddAttributeGroup(attributeGroup);
-      }
-    }
-    else if (tagName == nsSchemaAtoms::sModelGroup_atom) {
-      nsCOMPtr<nsISchemaModelGroup> modelGroup;
-      rv = ProcessModelGroup(schemaInst, childElement,
-                             tagName, nsnull, getter_AddRefs(modelGroup));
-      if (NS_SUCCEEDED(rv)) {
-        rv = schemaInst->AddModelGroup(modelGroup);
-      }
-    }
-    // For now, ignore the following
-    // annotations
-    // include
-    // import
-    // redefine
-    // notation
-    // identity-constraint elements
-    if (NS_FAILED(rv)) {
-      return rv;
-    }
-  }
-
-  // Resolve all forward references 
-  rv = schemaInst->Resolve();
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
   nsAutoString targetNamespace;
   schema->GetTargetNamespace(targetNamespace);
   nsStringKey key(targetNamespace);
-  mSchemas.Put(&key, schema);
+  
+  nsCOMPtr<nsISupports> old = getter_AddRefs(mSchemas.Get(&key));
+  nsCOMPtr<nsISchema> os = do_QueryInterface(old);
 
-  *_retval = schema;
+  // Schema for given target namespace has already been 
+  if (os) {
+    *_retval = os;
+  } // end of if
+  
+  // Load schema for this new target namespace
+  else {
+    nsChildElementIterator iterator(aElement, 
+                                    kSchemaNamespaces, kSchemaNamespacesLength);
+    nsCOMPtr<nsIDOMElement> childElement;
+    nsCOMPtr<nsIAtom> tagName;
+    
+    while (NS_SUCCEEDED(iterator.GetNextChild(getter_AddRefs(childElement),
+                                              getter_AddRefs(tagName))) &&
+           childElement) {
+      if (tagName == nsSchemaAtoms::sElement_atom) {
+        nsCOMPtr<nsISchemaElement> schemaElement;
+        rv = ProcessElement(schemaInst, childElement,  
+                            getter_AddRefs(schemaElement));
+        if (NS_SUCCEEDED(rv)) {
+          rv = schemaInst->AddElement(schemaElement);
+        }
+      }
+      else if (tagName == nsSchemaAtoms::sComplexType_atom) {
+        nsCOMPtr<nsISchemaComplexType> complexType;
+        rv = ProcessComplexType(schemaInst, childElement,
+                                getter_AddRefs(complexType));
+        if (NS_SUCCEEDED(rv)) {
+          rv = schemaInst->AddType(complexType);
+        }
+      }
+      else if (tagName == nsSchemaAtoms::sSimpleType_atom) {
+        nsCOMPtr<nsISchemaSimpleType> simpleType;
+        rv = ProcessSimpleType(schemaInst, childElement,
+                               getter_AddRefs(simpleType));
+        if (NS_SUCCEEDED(rv)) {
+          rv = schemaInst->AddType(simpleType);
+        }
+      }
+      else if (tagName == nsSchemaAtoms::sAttribute_atom) {
+        nsCOMPtr<nsISchemaAttribute> attribute;
+        rv = ProcessAttribute(schemaInst, childElement,
+                              getter_AddRefs(attribute));
+        if (NS_SUCCEEDED(rv)) {
+          rv = schemaInst->AddAttribute(attribute);
+        }
+      }
+      else if (tagName == nsSchemaAtoms::sAttributeGroup_atom) {
+        nsCOMPtr<nsISchemaAttributeGroup> attributeGroup;
+        rv = ProcessAttributeGroup(schemaInst, childElement,
+                                   getter_AddRefs(attributeGroup));
+        if (NS_SUCCEEDED(rv)) {
+          rv = schemaInst->AddAttributeGroup(attributeGroup);
+        }
+      }
+      else if (tagName == nsSchemaAtoms::sModelGroup_atom) {
+        nsCOMPtr<nsISchemaModelGroup> modelGroup;
+        rv = ProcessModelGroup(schemaInst, childElement,
+                               tagName, nsnull, getter_AddRefs(modelGroup));
+        if (NS_SUCCEEDED(rv)) {
+          rv = schemaInst->AddModelGroup(modelGroup);
+        }
+      }
+      // For now, ignore the following
+      // annotations
+      // include
+      // import
+      // redefine
+      // notation
+      // identity-constraint elements
+      if (NS_FAILED(rv)) {
+        return rv;
+      }
+    }
+    
+    // Resolve all forward references 
+    rv = schemaInst->Resolve();
+    if (NS_FAILED(rv)) {
+      return rv;
+    }
+    
+    mSchemas.Put(&key, schema);
+
+    *_retval = schema;
+  } // end of else
+
   NS_ADDREF(*_retval);
 
   return NS_OK;

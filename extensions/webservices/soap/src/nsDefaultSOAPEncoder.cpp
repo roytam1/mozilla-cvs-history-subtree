@@ -2340,6 +2340,7 @@ NS_IMETHODIMP
   rc = mutator->GetPropertyBag(getter_AddRefs(bag));
   if (NS_FAILED(rc))
     return rc;
+
   nsCOMPtr < nsIWritableVariant > p =
       do_CreateInstance(NS_VARIANT_CONTRACTID, &rc);
   if (NS_FAILED(rc))
