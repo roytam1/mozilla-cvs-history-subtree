@@ -22,7 +22,6 @@
 CC = xlC_r
 CCC = xlC_r
 CFLAGS += -qarch=com -qnoansialias -qinline+$(INLINES) -DXP_UNIX -DAIX -DAIXV3 -DSYSV
-OPTIMIZER = -O
 
 RANLIB = ranlib
 
@@ -36,7 +35,7 @@ INLINES = js_compare_and_swap:js_fast_lock1:js_fast_unlock1:js_lock_get_slot:js_
 XLDFLAGS += -lbsd -lsvld -lm -lc_r
 #-lpthreads -lc_r
 
-MKSHLIB = $(LD) -brtl -bM:SRE -bnoentry -bexpall -berok
+MKSHLIB = /usr/lpp/xlC/bin/makeC++SharedLib_r -p 0 -brtl -berok
 
 ifdef JS_THREADSAFE
 XLDFLAGS += -ldl
