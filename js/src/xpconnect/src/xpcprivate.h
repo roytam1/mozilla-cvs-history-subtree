@@ -1762,7 +1762,7 @@ public:
     XPCNativeScriptableInfo* GetScriptableInfo()   {return mScriptableInfo;}
     void**                   GetSecurityInfoAddr() {return &mSecurityInfo;}
 
-    JSBool                   IsShared() const {return nsnull != mClassInfo;}
+    JSBool                   IsShared() const {return nsnull != mClassInfo.get();}
     void                     AddRef();
     void                     Release();
 
@@ -1797,7 +1797,7 @@ private:
 private:
     XPCWrappedNativeScope*   mScope;
     JSObject*                mJSProtoObject;
-    nsIClassInfo*            mClassInfo;
+    nsCOMPtr<nsIClassInfo>   mClassInfo;
     XPCNativeSet*            mSet;
     void*                    mSecurityInfo;
     XPCNativeScriptableInfo* mScriptableInfo;

@@ -67,6 +67,7 @@ XPCWrappedNativeProto::~XPCWrappedNativeProto()
     PR_AtomicDecrement(&gDEBUG_LiveProtoCount);
 #endif
 
+    delete mScriptableInfo;    
 }
 
 JSBool

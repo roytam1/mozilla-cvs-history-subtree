@@ -434,14 +434,14 @@ XPCWrappedNative::SystemIsBeingShutDown(XPCCallContext& ccx)
     JS_SetPrivate(ccx.GetJSContext(), mFlatJSObject, nsnull);
     mFlatJSObject = nsnull; // This makes 'IsValid()' return false.
     
-    if(mScriptableInfo && mScriptableInfo != mProto->GetScriptableInfo())
-    {
-        delete mScriptableInfo;
-        mScriptableInfo = nsnull;
-    }
+    // We *must* leak mScriptableInfo (if in use and not shared) because it
+    // may hold a dynamically allocated JSClass that the JS engine can 
+    // reference when manipulating the (leaked) mFlatJSObject. That would crash! 
     
+
     mProto->SystemIsBeingShutDown(ccx);
-    mProto->Release();
+    // We *must* leak the proto (i.e. don't call Release). This is
+    // necessary because it *also* may hold a dynamically allocated JSClass.
     mProto = nsnull;
 
     // cleanup the tearoffs...
