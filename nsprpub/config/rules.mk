@@ -48,8 +48,25 @@
 #
 ################################################################################
 
+ifndef topsrcdir
+topsrcdir=$(MOD_DEPTH)
+endif
+
+ifndef srcdir
+srcdir=.
+endif
+
 ifndef NSPR_CONFIG_MK
-include $(MOD_DEPTH)/config/config.mk
+include $(topsrcdir)/config/config.mk
+endif
+
+ifdef USE_AUTOCONF
+ifdef INTERNAL_TOOLS
+CC=$(HOSTCC)
+CCC=$(HOSTCXX)
+CFLAGS=$(HOSTCFLAGS)
+CXXFLAGS=$(HOSTCXXFLAGS)
+endif
 endif
 
 #
@@ -120,8 +137,8 @@ endif
 #
 
 ifndef OBJS
-OBJS		= $(addprefix $(OBJDIR)/,$(CSRCS:.c=.$(OBJ_SUFFIX))) \
-		  $(addprefix $(OBJDIR)/,$(ASFILES:.s=.$(OBJ_SUFFIX)))
+OBJS		= $(addprefix $(srcdir)/$(OBJDIR)/,$(CSRCS:.c=.$(OBJ_SUFFIX))) \
+		  $(addprefix $(srcdir)/$(OBJDIR)/,$(ASFILES:.s=.$(OBJ_SUFFIX)))
 endif
 
 ifeq ($(OS_TARGET), WIN16)
@@ -146,7 +163,7 @@ endif
 endif
 endif
 
-ALL_TRASH		= $(TARGETS) $(OBJS) $(OBJDIR) LOGS TAGS $(GARBAGE) \
+ALL_TRASH		= $(TARGETS) $(OBJS) $(filter-out . .., $(OBJDIR)) LOGS TAGS $(GARBAGE) \
 			  $(NOSUCHFILE) \
 			  so_locations
 
@@ -182,7 +199,7 @@ clean::
 	+$(LOOP_OVER_DIRS)
 
 clobber::
-	rm -rf $(OBJS) $(TARGETS) $(OBJDIR) $(GARBAGE) so_locations $(NOSUCHFILE)
+	rm -rf $(OBJS) $(TARGETS) $(filter-out . ..,$(OBJDIR)) $(GARBAGE) so_locations $(NOSUCHFILE)
 	+$(LOOP_OVER_DIRS)
 
 realclean clobber_all::
@@ -388,7 +405,7 @@ $(OBJDIR)/%.$(OBJ_SUFFIX): %.s
 	$(CC) -C -E $(CFLAGS) $< > $*.i
 
 %: %.pl
-	rm -f $@; cp $*.pl $@; chmod +x $@
+	rm -f $@; cp $< $@; chmod +x $@
 
 ################################################################################
 # Special gmake rules.
