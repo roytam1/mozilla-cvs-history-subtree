@@ -40,7 +40,7 @@ interface nsMimeOutput
     const long nsMimeMessageBodyDisplay = 2;
 	  const long nsMimeMessageQuoting = 3;
 	  const long nsMimeMessageRaw = 4;
-	  const long nsMimeMessageDraft = 5;
+	  const long nsMimeMessageDraftOrTemplate = 5;
 	  const long nsMimeUnknown = 6;
 }; 
 
