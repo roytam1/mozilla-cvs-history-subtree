@@ -280,9 +280,9 @@ void ModifyPref(char *buffer, CString entity, CString newvalue, BOOL bLockPref)
 
 	if (bLockPref)
 	{
-		// If it's not LockPref( already.
-		if (buf.Find("lockpref(") < 0)
-			buf.Replace("pref(", "lockpref(");
+		// If it's not lock_pref( already.
+		if (buf.Find("lock_pref(") < 0)
+			buf.Replace("pref(", "lock_pref(");
 	}
 
 	strcpy(buffer, (char *)(LPCTSTR) buf);
@@ -497,8 +497,8 @@ void ModifyEntity1(char *buffer, CString entity, CString newvalue, BOOL bLockPre
 	if (bLockPref)
 	{
 		// If it's not LockPref( already, change Pref( to LockPref(.
-		if (buf.Find("lockpref(") < 0)
-			buf.Replace("pref(", "lockpref(");
+		if (buf.Find("lock_pref(") < 0)
+			buf.Replace("pref(", "lock_pref(");
 	}
 
 	strcpy(buffer, (char *)(LPCTSTR) buf);
@@ -566,8 +566,8 @@ void ModifyEntity2(char *buffer, CString entity, CString newvalue, BOOL bLockPre
 	if (bLockPref)
 	{
 		// If it's not LockPref( already.
-		if (buf.Find("lockpref(") < 0)
-			buf.Replace("pref(", "lockpref(");
+		if (buf.Find("lock_pref(") < 0)
+			buf.Replace("pref(", "lock_pref(");
 	}
 
 	strcpy(buffer, (char *)(LPCTSTR) buf);
