@@ -203,7 +203,7 @@ sub getErrorCode
   return LDAP_SUCCESS unless defined($self->{"ld"});
   return ldap_get_lderrno($self->{"ld"}, $match, $msg);
 }
-*getError = \*getErrorCode;
+*getError = \&getErrorCode;
 
 
 #############################################################################
@@ -464,7 +464,7 @@ sub nextEntry
   return bless \%entry, 'Mozilla::LDAP::Entry';
 }
 # This is deprecated...
-*entry = \*nextEntry;
+*entry = \&nextEntry;
 
 
 #############################################################################
