@@ -31,11 +31,12 @@
  * GPL.
  */
 
-package org.mozilla.jss.pkcs11;
+package org.mozilla.jss.tests;
 
 import org.mozilla.jss.util.*;
 import org.mozilla.jss.crypto.*;
 import org.mozilla.jss.*;
+import org.mozilla.jss.pkcs11.*;
 import java.io.*;
 import java.awt.*;
 import java.security.cert.*;
@@ -53,8 +54,6 @@ public class SelfTest {
 		char[] passchar1 = {'f', 'o', 'o', 'b', 'a', 'r'};
 		char[] passchar2 = {'n', 'e', 't', 's', 'c', 'a', 'p', 'e'};
 
-        Debug.setLevel(Debug.OBNOXIOUS);
-
         if(args.length != 1) {
             System.err.println("Usage: java ...SelfTest <dbdir>");
             return;
@@ -69,6 +68,7 @@ public class SelfTest {
             System.out.println("CryptoManager not initialized");
             return;
         }
+        Debug.setLevel(Debug.OBNOXIOUS);
 
         try {
             tok = manager.getTokenByName("asdffda");

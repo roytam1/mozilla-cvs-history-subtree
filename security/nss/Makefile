@@ -109,3 +109,7 @@ endif
 endif
 
 nss_RelEng_bld: build_coreconf import all
+
+package:
+	$(MAKE) -C pkg publish
+

@@ -57,6 +57,14 @@ CPU_ARCH		= hppa
 OS_CFLAGS		+= $(DSO_CFLAGS) -DHPUX -D$(CPU_ARCH) -D_HPUX_SOURCE
 
 #
+# OSF1 and HPUX report the POLLHUP event for a socket when the
+# shutdown(SHUT_WR) operation is called for the remote end, even though
+# the socket is still writeable. Use select(), instead of poll(), to
+# workaround this problem.
+#
+OS_CFLAGS		+= -D_PR_POLL_WITH_SELECT -D_USE_BIG_FDS
+
+#
 # The header netdb.h on HP-UX 9 does not declare h_errno.
 # On 10.10 and 10.20, netdb.h declares h_errno only if
 # _XOPEN_SOURCE_EXTENDED is defined.  So we need to declare
@@ -73,8 +81,13 @@ endif
 ifeq (,$(filter-out B.10.10 B.10.20,$(OS_RELEASE)))
 OS_CFLAGS		+= -DHAVE_INT_LOCALTIME_R
 endif
-ifeq (,$(filter-out B.10.30 B.11.00,$(OS_RELEASE)))
+ifeq (,$(filter-out B.10.30 B.11.%,$(OS_RELEASE)))
 OS_CFLAGS		+= -DHAVE_POINTER_LOCALTIME_R
+endif
+
+# HP-UX B.11.11 or higher has the IPv6 socket interface.
+ifeq (B.11.11,$(firstword $(sort B.11.11 $(OS_RELEASE))))
+USE_IPV6 = 1
 endif
 
 #
@@ -131,8 +144,8 @@ OS_CFLAGS		+= -DHPUX10 -DHPUX10_30
 DEFAULT_IMPL_STRATEGY = _PTH
 endif
 
-# 11.00 is similar to 10.30.
-ifeq ($(OS_RELEASE),B.11.00)
+# 11.00 and 11.11 are similar to 10.30.
+ifeq (,$(filter-out B.11.%,$(OS_RELEASE)))
 	ifndef NS_USE_GCC
 		CCC			        = /opt/aCC/bin/aCC -ext
 		ifeq ($(USE_64), 1)

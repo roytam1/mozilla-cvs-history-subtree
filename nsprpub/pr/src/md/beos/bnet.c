@@ -71,6 +71,7 @@ static PRInt32 socket_io_wait(PRInt32 osfd, PRInt32 fd_type,
 	struct timeval tv, *tvp;
 	PRThread *me = _PR_MD_CURRENT_THREAD();
 	PRIntervalTime epoch, now, elapsed, remaining;
+	PRBool wait_for_remaining;
 	PRInt32 syserror;
 	fd_set rd_wr;
 
@@ -121,8 +122,10 @@ static PRInt32 socket_io_wait(PRInt32 osfd, PRInt32 fd_type,
 				 * so that there is an upper limit on the delay
 				 * before the interrupt bit is checked.
 				 */
+				wait_for_remaining = PR_TRUE;
 				tv.tv_sec = PR_IntervalToSeconds(remaining);
 				if (tv.tv_sec > _PR_INTERRUPT_CHECK_INTERVAL_SECS) {
+					wait_for_remaining = PR_FALSE;
 					tv.tv_sec = _PR_INTERRUPT_CHECK_INTERVAL_SECS;
 					tv.tv_usec = 0;
 				} else {
@@ -162,7 +165,9 @@ static PRInt32 socket_io_wait(PRInt32 osfd, PRInt32 fd_type,
 					 * we spent in blocking, so we can avoid a
 					 * PR_IntervalNow() call.
 					 */
-					if (rv == 0) {
+					if (wait_for_remaining) {
+						now += remaining;
+					} else {
 						now += PR_SecondsToInterval(tv.tv_sec)
 							+ PR_MicrosecondsToInterval(tv.tv_usec);
 					} else {

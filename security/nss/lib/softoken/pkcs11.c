@@ -406,6 +406,9 @@ static struct mechanismList mechanisms[] = {
      {CKM_PBE_SHA1_RC2_128_CBC,		     {128,128, CKF_GENERATE}, PR_TRUE},
      {CKM_PBE_SHA1_RC4_40,		     {40,40, CKF_GENERATE}, PR_TRUE},
      {CKM_PBE_SHA1_RC4_128,		     {128,128, CKF_GENERATE}, PR_TRUE},
+     {CKM_NETSCAPE_PBE_SHA1_HMAC_KEY_GEN,    {1,32, CKF_GENERATE}, PR_TRUE},
+     {CKM_NETSCAPE_PBE_MD5_HMAC_KEY_GEN,     {1,32, CKF_GENERATE}, PR_TRUE},
+     {CKM_NETSCAPE_PBE_MD2_HMAC_KEY_GEN,     {1,32, CKF_GENERATE}, PR_TRUE},
 };
 static CK_ULONG mechanismCount = sizeof(mechanisms)/sizeof(mechanisms[0]);
 /* load up our token database */
@@ -413,7 +416,7 @@ static CK_RV pk11_importKeyDB(PK11Slot *slot);
 
 
 static char *
-pk11_setStringName(char *inString, char *buffer, int buffer_length) {
+pk11_setStringName(const char *inString, char *buffer, int buffer_length) {
     int full_length, string_length;
 
     full_length = buffer_length -1;
@@ -421,15 +424,16 @@ pk11_setStringName(char *inString, char *buffer, int buffer_length) {
     if (string_length > full_length) string_length = full_length;
     PORT_Memset(buffer,' ',full_length);
     buffer[full_length] = 0;
-    PORT_Memcpy(buffer,inString,full_length);
+    PORT_Memcpy(buffer,inString,string_length);
     return buffer;
 }
 /*
  * Configuration utils
  */
 void
-PK11_ConfigurePKCS11(char *man, char *libdes, char *tokdes, char *ptokdes,
-	char *slotdes, char *pslotdes, char *fslotdes, char *fpslotdes,
+PK11_ConfigurePKCS11(const char *man, const char *libdes, const char *tokdes,
+	const char *ptokdes, const char *slotdes, const char *pslotdes,
+	const char *fslotdes, const char *fpslotdes,
 	int minPwd, int pwRequired) 
 {
 
@@ -651,12 +655,7 @@ pk11_handleCertObject(PK11Session *session,PK11Object *object)
 	/* Temporary for PKCS 12 */
 	if(cert->nickname == NULL) {
 	    /* use the arena so we at least don't leak memory  */
-	    cert->nickname = (char *)PORT_ArenaAlloc(cert->arena,
-							PORT_Strlen(label)+1);
-	    if(cert->nickname == NULL) {
-		return CKR_HOST_MEMORY;
-	    }
-	    PORT_Memcpy(cert->nickname, label, PORT_Strlen(label));
+	    cert->nickname = PORT_ArenaStrdup(cert->arena, label);
 	}
 
 	/* only add certs that have a private key */
@@ -664,8 +663,12 @@ pk11_handleCertObject(PK11Session *session,PK11Object *object)
 							!= SECSuccess) {
 	    return CKR_ATTRIBUTE_VALUE_INVALID;
 	}
-	if (CERT_AddTempCertToPerm(cert, label, &trust) != SECSuccess) {
-	    return CKR_HOST_MEMORY;
+	if (!cert->isperm) {
+	    if (CERT_AddTempCertToPerm(cert, label, &trust) != SECSuccess) {
+		return CKR_HOST_MEMORY;
+	    }
+	} else {
+	    CERT_ChangeCertTrust(cert->dbhandle,cert,&trust);
 	}
 	if(certUsage) {
 	    if(CERT_ChangeCertTrustByUsage(CERT_GetDefaultCertDB(),
@@ -974,6 +977,8 @@ pk11_handlePrivateKeyObject(PK11Object *object,CK_KEY_TYPE key_type)
 						&ckfalse,sizeof(CK_BBOOL));
     if (crv != CKR_OK)  return crv; 
 
+    /* should we check the non-token RSA private keys? */
+
     if (pk11_isTrue(object,CKA_TOKEN)) {
 	SECKEYLowPrivateKey *privKey;
 	char *label;
@@ -982,6 +987,13 @@ pk11_handlePrivateKeyObject(PK11Object *object,CK_KEY_TYPE key_type)
 
 	privKey=pk11_mkPrivKey(object,key_type);
 	if (privKey == NULL) return CKR_HOST_MEMORY;
+
+        if (key_type == CKK_RSA) {
+	    rv = RSA_PrivateKeyCheck(&privKey->u.rsa);
+	    if (rv == SECFailure) {
+		goto fail;
+	    }
+	}
 	label = object->label = pk11_getString(object,CKA_LABEL);
 
 	crv = pk11_Attribute2SecItem(NULL,&pubKey,object,CKA_NETSCAPE_DB);
@@ -1001,6 +1013,7 @@ pk11_handlePrivateKeyObject(PK11Object *object,CK_KEY_TYPE key_type)
 	    rv = SECFailure;
 	}
 
+fail:
 	SECKEY_LowDestroyPrivateKey(privKey);
 	if (rv != SECSuccess) return CKR_DEVICE_ERROR;
 	object->inDB = PR_TRUE;
@@ -1943,9 +1956,13 @@ SECKEYLowPublicKey *pk11_GetPubKey(PK11Object *object,CK_KEY_TYPE key_type)
 	pubKey->keyType = rsaKey;
 	crv = pk11_Attribute2SSecItem(arena,&pubKey->u.rsa.modulus,
 							object,CKA_MODULUS);
+	if (pubKey->u.rsa.modulus.len == 0)
+	    crv = CKR_ARGUMENTS_BAD;
     	if (crv != CKR_OK) break;
     	crv = pk11_Attribute2SSecItem(arena,&pubKey->u.rsa.publicExponent,
 						object,CKA_PUBLIC_EXPONENT);
+	if (pubKey->u.rsa.publicExponent.len == 0)
+	    crv = CKR_ARGUMENTS_BAD;
 	break;
     case CKK_DSA:
 	pubKey->keyType = dsaKey;
@@ -2108,6 +2125,18 @@ pk11_GetPrivKey(PK11Object *object,CK_KEY_TYPE key_type)
 	priv=SECKEY_FindKeyByPublicKey(SECKEY_GetDefaultKeyDB(),&pubKey,
 				       (SECKEYGetPasswordKey) pk11_givePass,
 				       object->slot);
+	if (!priv && pubKey.data[0] == 0) {
+	    /* Because of legacy code issues, sometimes the public key has
+	     * a '0' prepended to it, forcing it to be unsigned.  The database
+	     * may not store that '0', so remove it and try again.
+	     */
+	    SECItem tmpPubKey;
+	    tmpPubKey.data = pubKey.data + 1;
+	    tmpPubKey.len = pubKey.len - 1;
+	    priv=SECKEY_FindKeyByPublicKey(SECKEY_GetDefaultKeyDB(),&tmpPubKey,
+				           (SECKEYGetPasswordKey) pk11_givePass,
+				           object->slot);
+	}
 	if (pubKey.data) PORT_Free(pubKey.data);
 
 	/* don't 'cache' DB private keys */
@@ -2365,12 +2394,19 @@ PK11_SlotInit(CK_SLOT_ID slotID, PRBool needLogin)
     int i;
     PK11Slot *slot = pk11_SlotFromID(slotID);
 #ifdef PKCS11_USE_THREADS
-    slot->sessionLock = PZ_NewLock(nssILockSession);
-    if (slot->sessionLock == NULL) return CKR_HOST_MEMORY;
+    slot->slotLock = PZ_NewLock(nssILockSession);
+    if (slot->slotLock == NULL) return CKR_HOST_MEMORY;
+    for (i=0; i < NUMBER_OF_SESSION_LOCKS; i++) {
+        slot->sessionLock[i] = PZ_NewLock(nssILockSession);
+        if (slot->sessionLock[i] == NULL) return CKR_HOST_MEMORY;
+    }
     slot->objectLock = PZ_NewLock(nssILockObject);
     if (slot->objectLock == NULL) return CKR_HOST_MEMORY;
 #else
-    slot->sessionLock = NULL;
+    slot->slotLock = NULL;
+    for (i=0; i < NUMBER_OF_SESSION_LOCKS; i++) {
+        slot->sessionLock[i] = NULL;
+    }
     slot->objectLock = NULL;
 #endif
     for(i=0; i < SESSION_HASH_SIZE; i++) {
@@ -2381,7 +2417,8 @@ PK11_SlotInit(CK_SLOT_ID slotID, PRBool needLogin)
     }
     slot->password = NULL;
     slot->hasTokens = PR_FALSE;
-    slot->sessionIDCount = 1;
+    slot->sessionIDCount = 0;
+    slot->sessionIDConflict = 0;
     slot->sessionCount = 0;
     slot->rwSessionCount = 0;
     slot->tokenIDCount = 1;
@@ -2689,6 +2726,7 @@ CK_RV NSC_InitToken(CK_SLOT_ID slotID,CK_CHAR_PTR pPin,
 	    if (object) pk11_FreeObject(object);
 	} while (object != NULL);
     }
+    slot->DB_loaded = PR_FALSE;
     PK11_USE_THREADS(PZ_Unlock(slot->objectLock);)
 
     /* then clear out the key database */
@@ -2872,6 +2910,7 @@ CK_RV NSC_OpenSession(CK_SLOT_ID slotID, CK_FLAGS flags,
     PK11Slot *slot;
     CK_SESSION_HANDLE sessionID;
     PK11Session *session;
+    PK11Session *sameID;
 
     slot = pk11_SlotFromID(slotID);
     if (slot == NULL) return CKR_SLOT_ID_INVALID;
@@ -2881,30 +2920,41 @@ CK_RV NSC_OpenSession(CK_SLOT_ID slotID, CK_FLAGS flags,
 						 flags | CKF_SERIAL_SESSION);
     if (session == NULL) return CKR_HOST_MEMORY;
 
-    PK11_USE_THREADS(PZ_Lock(slot->sessionLock);)
-    sessionID = slot->sessionIDCount++;
-    if (slotID == PRIVATE_KEY_SLOT_ID) {
-	sessionID |= PK11_PRIVATE_KEY_FLAG;
-    } else if (slotID == FIPS_SLOT_ID) {
-	sessionID |= PK11_FIPS_FLAG;
-    } else if (flags & CKF_RW_SESSION) {
+    if (slotID == NETSCAPE_SLOT_ID && (flags & CKF_RW_SESSION)) {
 	/* NETSCAPE_SLOT_ID is Read ONLY */
 	session->info.flags &= ~CKF_RW_SESSION;
     }
-
-    session->handle = sessionID;
-    pk11_update_state(slot, session);
-    pk11queue_add(session, sessionID, slot->head, SESSION_HASH_SIZE);
-    slot->sessionCount++;
+    PK11_USE_THREADS(PZ_Lock(slot->slotLock);)
+    ++slot->sessionCount;
+    PK11_USE_THREADS(PZ_Unlock(slot->slotLock);)
     if (session->info.flags & CKF_RW_SESSION) {
-	slot->rwSessionCount++;
+	PR_AtomicIncrement(&slot->rwSessionCount);
     }
-    PK11_USE_THREADS(PZ_Unlock(slot->sessionLock);)
+
+    do {
+	do {
+	    sessionID = (slot->sessionIDCount++ & MAX_SESSION_ID);
+	} while (sessionID == CK_INVALID_HANDLE);
+	if (slotID == PRIVATE_KEY_SLOT_ID) {
+	    sessionID |= PK11_PRIVATE_KEY_FLAG;
+	} else if (slotID == FIPS_SLOT_ID) {
+	    sessionID |= PK11_FIPS_FLAG;
+	}
+        PK11_USE_THREADS(PZ_Lock(PK11_SESSION_LOCK(slot,sessionID));)
+	pk11queue_find(sameID, sessionID, slot->head, SESSION_HASH_SIZE);
+	if (sameID == NULL) {
+	    session->handle = sessionID;
+	    pk11_update_state(slot, session);
+	    pk11queue_add(session, sessionID, slot->head, SESSION_HASH_SIZE);
+	} else {
+	    slot->sessionIDConflict++; /* for debugging */
+	}
+        PK11_USE_THREADS(PZ_Unlock(PK11_SESSION_LOCK(slot,sessionID));)
+    } while (sameID != NULL);
 
     *phSession = sessionID;
     return CKR_OK;
 }
-
 
 /* NSC_CloseSession closes a session between an application and a token. */
 CK_RV NSC_CloseSession(CK_SESSION_HANDLE hSession)
@@ -2912,27 +2962,35 @@ CK_RV NSC_CloseSession(CK_SESSION_HANDLE hSession)
     PK11Slot *slot;
     PK11Session *session;
     SECItem *pw = NULL;
+    PRBool sessionFound;
 
     session = pk11_SessionFromHandle(hSession);
     if (session == NULL) return CKR_SESSION_HANDLE_INVALID;
     slot = pk11_SlotFromSession(session);
+    sessionFound = PR_FALSE;
 
     /* lock */
-    PK11_USE_THREADS(PZ_Lock(slot->sessionLock);)
+    PK11_USE_THREADS(PZ_Lock(PK11_SESSION_LOCK(slot,hSession));)
     if (pk11queue_is_queued(session,hSession,slot->head,SESSION_HASH_SIZE)) {
+	sessionFound = PR_TRUE;
 	pk11queue_delete(session,hSession,slot->head,SESSION_HASH_SIZE);
 	session->refCount--; /* can't go to zero while we hold the reference */
-	slot->sessionCount--;
+	PORT_Assert(session->refCount > 0);
+    }
+    PK11_USE_THREADS(PZ_Unlock(PK11_SESSION_LOCK(slot,hSession));)
+
+    if (sessionFound) {
+	PK11_USE_THREADS(PZ_Lock(slot->slotLock);)
+	if (--slot->sessionCount == 0) {
+	    pw = slot->password;
+	    slot->isLoggedIn = PR_FALSE;
+	    slot->password = NULL;
+	}
+	PK11_USE_THREADS(PZ_Unlock(slot->slotLock);)
 	if (session->info.flags & CKF_RW_SESSION) {
-	    slot->rwSessionCount--;
+	    PR_AtomicDecrement(&slot->rwSessionCount);
 	}
     }
-    if (slot->sessionCount == 0) {
-	pw = slot->password;
-	slot->isLoggedIn = PR_FALSE;
-	slot->password = NULL;
-    }
-    PK11_USE_THREADS(PZ_Unlock(slot->sessionLock);)
 
     pk11_FreeSession(session);
     if (pw) SECITEM_ZfreeItem(pw, PR_TRUE);
@@ -2952,11 +3010,11 @@ CK_RV NSC_CloseAllSessions (CK_SLOT_ID slotID)
     if (slot == NULL) return CKR_SLOT_ID_INVALID;
 
     /* first log out the card */
-    PK11_USE_THREADS(PZ_Lock(slot->sessionLock);)
+    PK11_USE_THREADS(PZ_Lock(slot->slotLock);)
     pw = slot->password;
     slot->isLoggedIn = PR_FALSE;
     slot->password = NULL;
-    PK11_USE_THREADS(PZ_Unlock(slot->sessionLock);)
+    PK11_USE_THREADS(PZ_Unlock(slot->slotLock);)
     if (pw) SECITEM_ZfreeItem(pw, PR_TRUE);
 
     /* now close all the current sessions */
@@ -2966,7 +3024,7 @@ CK_RV NSC_CloseAllSessions (CK_SLOT_ID slotID)
      * will guarrenteed be close, and no session will be partially closed */
     for (i=0; i < SESSION_HASH_SIZE; i++) {
 	do {
-	    PK11_USE_THREADS(PZ_Lock(slot->sessionLock);)
+	    PK11_USE_THREADS(PZ_Lock(PK11_SESSION_LOCK(slot,i));)
 	    session = slot->head[i];
 	    /* hand deque */
 	    /* this duplicates function of NSC_close session functions, but 
@@ -2976,12 +3034,16 @@ CK_RV NSC_CloseAllSessions (CK_SLOT_ID slotID)
 		slot->head[i] = session->next;
 		if (session->next) session->next->prev = NULL;
 		session->next = session->prev = NULL;
-		slot->sessionCount--;
+		PK11_USE_THREADS(PZ_Unlock(PK11_SESSION_LOCK(slot,i));)
+		PK11_USE_THREADS(PZ_Lock(slot->slotLock);)
+		--slot->sessionCount;
+		PK11_USE_THREADS(PZ_Unlock(slot->slotLock);)
 		if (session->info.flags & CKF_RW_SESSION) {
-		    slot->rwSessionCount--;
+		    PR_AtomicDecrement(&slot->rwSessionCount);
 		}
+	    } else {
+		PK11_USE_THREADS(PZ_Unlock(PK11_SESSION_LOCK(slot,i));)
 	    }
-	    PK11_USE_THREADS(PZ_Unlock(slot->sessionLock);)
 	    if (session) pk11_FreeSession(session);
 	} while (session != NULL);
     }
@@ -3053,12 +3115,12 @@ CK_RV NSC_Login(CK_SESSION_HANDLE hSession, CK_USER_TYPE userType,
 	    /* should this be a fixed password? */
 	    if (ulPinLen == 0) {
 		SECItem *pw;
-    		PK11_USE_THREADS(PZ_Lock(slot->sessionLock);)
+    		PK11_USE_THREADS(PZ_Lock(slot->slotLock);)
 		pw = slot->password;
 		slot->password = NULL;
 		slot->isLoggedIn = PR_TRUE;
 		slot->ssoLoggedIn = (PRBool)(userType == CKU_SO);
-		PK11_USE_THREADS(PZ_Unlock(slot->sessionLock);)
+		PK11_USE_THREADS(PZ_Unlock(slot->slotLock);)
 		pk11_update_all_states(slot);
 		SECITEM_ZfreeItem(pw,PR_TRUE);
 		return CKR_OK;
@@ -3078,11 +3140,11 @@ CK_RV NSC_Login(CK_SESSION_HANDLE hSession, CK_USER_TYPE userType,
 
     if (SECKEY_CheckKeyDBPassword(handle,pin) == SECSuccess) {
 	SECItem *tmp;
-	PK11_USE_THREADS(PZ_Lock(slot->sessionLock);)
+	PK11_USE_THREADS(PZ_Lock(slot->slotLock);)
 	tmp = slot->password;
 	slot->isLoggedIn = PR_TRUE;
 	slot->password = pin;
-	PK11_USE_THREADS(PZ_Unlock(slot->sessionLock);)
+	PK11_USE_THREADS(PZ_Unlock(slot->slotLock);)
         if (tmp) SECITEM_ZfreeItem(tmp, PR_TRUE);
 
 	/* update all sessions */
@@ -3108,12 +3170,12 @@ CK_RV NSC_Logout(CK_SESSION_HANDLE hSession)
 
     if (!slot->isLoggedIn) return CKR_USER_NOT_LOGGED_IN;
 
-    PK11_USE_THREADS(PZ_Lock(slot->sessionLock);)
+    PK11_USE_THREADS(PZ_Lock(slot->slotLock);)
     pw = slot->password;
     slot->isLoggedIn = PR_FALSE;
     slot->ssoLoggedIn = PR_FALSE;
     slot->password = NULL;
-    PK11_USE_THREADS(PZ_Unlock(slot->sessionLock);)
+    PK11_USE_THREADS(PZ_Unlock(slot->slotLock);)
     if (pw) SECITEM_ZfreeItem(pw, PR_TRUE);
 
     pk11_update_all_states(slot);

@@ -82,7 +82,7 @@ OS_INCLUDES		=
 G++INCLUDES		= -I/usr/include/g++
 
 PLATFORM_FLAGS		= -ansi -Wall -pipe -DLINUX -Dlinux
-PORT_FLAGS		= -D_POSIX_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -DHAVE_STRERROR -DHAVE_FCNTL_FILE_LOCKING
+PORT_FLAGS		= -D_POSIX_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -DHAVE_STRERROR -DHAVE_FCNTL_FILE_LOCKING -D_LARGEFILE64_SOURCE
 
 OS_CFLAGS		= $(DSO_CFLAGS) $(PLATFORM_FLAGS) $(PORT_FLAGS)
 
@@ -115,8 +115,6 @@ endif
 MKSHLIB			= $(LD) $(DSO_LDOPTS) -soname $(notdir $@)
 ifdef BUILD_OPT
 OPTIMIZER		= -O2
-#   invoke 'strip' on *.so files in optimized builds
-STRIP = strip
 endif
 
 ######################################################################

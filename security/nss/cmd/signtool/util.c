@@ -284,10 +284,17 @@ void
 VerifyCertDir(char *dir, char *keyName)
 {
   char fn [FNSIZE];
+  PRStatus hasDB;
 
-  sprintf (fn, "%s/cert7.db", dir);
+  sprintf (fn, "%s/cert8.db", dir);
+  hasDB = PR_Access (fn, PR_ACCESS_EXISTS);
 
-  if (PR_Access (fn, PR_ACCESS_EXISTS))
+  if (hasDB == PR_FAILURE) {
+    sprintf (fn, "%s/cert7.db", dir);
+    hasDB = PR_Access (fn, PR_ACCESS_EXISTS);
+  }
+
+  if (hasDB == PR_FAILURE)
     {
     PR_fprintf(errorFD, "%s: No certificate database in \"%s\"\n", PROGRAM_NAME,
 		dir);
@@ -352,8 +359,12 @@ foreach(char *dirname, char *prefix,
 	if (!dir) return -1;
 
 	for (entry = PR_ReadDir (dir,0); entry; entry = PR_ReadDir (dir,0)) {
-		if (*entry->name == '.' || *entry->name == '#')
-			continue;
+		if ( strcmp(entry->name, ".")==0   ||
+                     strcmp(entry->name, "..")==0 )
+                {
+                    /* no infinite recursion, please */   
+		    continue;
+                }
 
 		/* can't sign self */
 		if (!strcmp (entry->name, "META-INF"))

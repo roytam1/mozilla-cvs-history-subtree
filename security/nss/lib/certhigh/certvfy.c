@@ -1356,7 +1356,7 @@ CERT_GetCertNicknameWithValidity(PRArenaPool *arena, CERTCertificate *cert,
 				 char *expiredString, char *notYetGoodString)
 {
     SECCertTimeValidity validity;
-    char *nickname, *tmpstr;
+    char *nickname = NULL, *tmpstr = NULL;
     
     validity = CERT_CheckCertValidTimes(cert, PR_Now(), PR_FALSE);
 
@@ -1379,11 +1379,15 @@ CERT_GetCertNicknameWithValidity(PRArenaPool *arena, CERTCertificate *cert,
 	if ( validity == secCertTimeExpired ) {
 	    tmpstr = PR_smprintf("%s%s", cert->nickname,
 				 expiredString);
-	} else {
+	} else if ( validity == secCertTimeNotValidYet ) {
 	    /* not yet valid */
 	    tmpstr = PR_smprintf("%s%s", cert->nickname,
 				 notYetGoodString);
-	}
+        } else {
+            /* undetermined */
+	    tmpstr = PR_smprintf("%s",
+                        "(NULL) (Validity Unknown)");
+        }
 	if ( tmpstr == NULL ) {
 	    goto loser;
 	}
@@ -1556,20 +1560,41 @@ loser:
 CERTCertList *
 CERT_GetCertChainFromCert(CERTCertificate *cert, int64 time, SECCertUsage usage)
 {
-    CERTCertList *chain;
+    CERTCertList *chain = NULL;
 
-    if (cert != NULL) {
-	chain = CERT_NewCertList();
-	cert = CERT_DupCertificate(cert);
-	while (SECITEM_CompareItem(&cert->derIssuer, &cert->derSubject) 
-	       != SECEqual) {
-	    CERT_AddCertToListTail(chain, cert);
-	    cert = CERT_FindCertIssuer(cert, time, usage);
-	}
-	CERT_AddCertToListTail(chain, cert);
-	return chain;
+    if (NULL == cert) {
+        return NULL;
     }
-    return NULL;
+    
+    cert = CERT_DupCertificate(cert);
+    if (NULL == cert) {
+        PORT_SetError(SEC_ERROR_NO_MEMORY);
+        return NULL;
+    }
+
+    chain = CERT_NewCertList();
+    if (NULL == chain) {
+        PORT_SetError(SEC_ERROR_NO_MEMORY);
+        return NULL;
+    }
+
+    while (cert != NULL) {
+	if (SECSuccess != CERT_AddCertToListTail(chain, cert)) {
+            /* return partial chain */
+            PORT_SetError(SEC_ERROR_NO_MEMORY);
+            return chain;
+        }
+
+	if (SECITEM_CompareItem(&cert->derIssuer, &cert->derSubject)
+	    == SECEqual) {
+            /* return complete chain */
+	    return chain;
+	}
+
+	cert = CERT_FindCertIssuer(cert, time, usage);
+    }
+
+    /* return partial chain */
+    PORT_SetError(SEC_ERROR_UNKNOWN_ISSUER);
+    return chain;
 }
-
-

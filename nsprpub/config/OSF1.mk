@@ -40,7 +40,7 @@
 # which we use to stop LOOP_OVER_DIRS submakes as soon as any
 # submake fails.  So we use the Korn shell instead.
 #
-SHELL			:= /usr/bin/ksh
+SHELL			= /usr/bin/ksh
 
 include $(MOD_DEPTH)/config/UNIX.mk
 
@@ -91,6 +91,14 @@ endif
 NON_LD_FLAGS		= -ieee_with_inexact
 
 OS_CFLAGS		= -DOSF1 -D_REENTRANT
+
+#
+# OSF1 and HPUX report the POLLHUP event for a socket when the
+# shutdown(SHUT_WR) operation is called for the remote end, even though
+# the socket is still writeable. Use select(), instead of poll(), to
+# workaround this problem.
+#
+OS_CFLAGS		+= -D_PR_POLL_WITH_SELECT
 
 ifneq (,$(filter-out V2.0 V3.2,$(OS_RELEASE)))
 OS_CFLAGS		+= -DOSF1_HAVE_MACHINE_BUILTINS_H

@@ -178,12 +178,21 @@ typedef struct sec_ASN1Template_struct {
 #define SEC_ASN1_SKIP_REST	0x80000	/* skip all following fields;
 					   only for decoding */
 #define SEC_ASN1_CHOICE        0x100000 /* pick one from a template */
+#define SEC_ASN1_NO_STREAM     0X200000 /* This entry will not stream
+                                           even if the sub-template says
+                                           streaming is possible.  Helps
+                                           to solve ambiguities with potential
+                                           streaming entries that are 
+                                           optional */
+                                          
 
 /* Shorthand/Aliases */
 #define SEC_ASN1_SEQUENCE_OF	(SEC_ASN1_GROUP | SEC_ASN1_SEQUENCE)
 #define SEC_ASN1_SET_OF		(SEC_ASN1_GROUP | SEC_ASN1_SET)
 #define SEC_ASN1_ANY_CONTENTS	(SEC_ASN1_ANY | SEC_ASN1_INNER)
 
+/* Maximum depth of nested SEQUENCEs and SETs */
+#define SEC_ASN1D_MAX_DEPTH 32
 
 /*
 ** Function used for SEC_ASN1_DYNAMIC.
