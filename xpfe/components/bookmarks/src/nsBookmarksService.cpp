@@ -2844,21 +2844,28 @@ nsBookmarksService::IsBookmarkedInternal(nsIRDFResource *bookmark, PRBool *isBoo
 }
 
 NS_IMETHODIMP
-nsBookmarksService::IsBookmarked(const char *aURI, PRBool *isBookmarkedFlag)
+nsBookmarksService::IsBookmarked(const char* aURL, PRBool* aIsBookmarked)
 {
-    if (!aURI)      return NS_ERROR_UNEXPECTED;
-    if (!isBookmarkedFlag)  return NS_ERROR_UNEXPECTED;
-    if (!mInner)        return NS_ERROR_UNEXPECTED;
+    NS_ENSURE_ARG(aURL);
+    NS_ENSURE_ARG_POINTER(aIsBookmarked);
 
-    *isBookmarkedFlag = PR_FALSE;
+    if (!mInner)
+        return NS_ERROR_UNEXPECTED;
 
-    nsresult            rv;
-    nsCOMPtr<nsIRDFResource>    bookmark;
-    if (NS_FAILED(rv = gRDF->GetResource(nsDependentCString(aURI), getter_AddRefs(bookmark))))
+    *aIsBookmarked = PR_FALSE;
+
+    nsCOMPtr<nsIRDFLiteral> urlLiteral;
+    nsresult rv = gRDF->GetLiteral(NS_ConvertUTF8toUCS2(aURL).get(),
+                                   getter_AddRefs(urlLiteral));
+    if (NS_FAILED(rv))
         return rv;
 
-    rv = IsBookmarkedInternal(bookmark, isBookmarkedFlag);
-    return rv;
+    nsCOMPtr<nsIRDFResource> bookmark;
+    rv = GetSource(kNC_URL, urlLiteral, PR_TRUE, getter_AddRefs(bookmark));
+    if (NS_FAILED(rv))
+        return rv;
+
+    return IsBookmarkedInternal(bookmark, aIsBookmarked);
 }
 
 NS_IMETHODIMP
