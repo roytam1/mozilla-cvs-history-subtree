@@ -499,11 +499,44 @@ FixupCatchJumps(JSContext *cx, JSCodeGenerator *cg, ptrdiff_t tryStart,
 
 #endif /* JS_HAS_EXCEPTIONS */
 
+
+/* a macro for inlining at the top of js_EmitTree (from whence it came) */
+#define UPDATE_LINENO_NOTES(cx, cg, pn)                                     \
+    JS_BEGIN_MACRO                                                          \
+    uintN lineno, delta;                                                    \
+    lineno = pn->pn_pos.begin.lineno;                                       \
+    delta = lineno - cg->currentLine;                                       \
+    cg->currentLine = lineno;                                               \
+    if (delta) {                                                            \
+	/*                                                                  \
+	 * Encode any change in the current source line number by using     \
+	 * either several SRC_NEWLINE notes or one SRC_SETLINE note,        \
+	 * whichever consumes less space.                                   \
+	 */                                                                 \
+	if (delta >= (uintN)(2 + ((lineno > SN_3BYTE_OFFSET_MASK) << 1))) { \
+	    if (js_NewSrcNote2(cx, cg, SRC_SETLINE, (ptrdiff_t)lineno) < 0) \
+		return JS_FALSE;                                            \
+	} else {                                                            \
+	    do {                                                            \
+		if (js_NewSrcNote(cx, cg, SRC_NEWLINE) < 0)                 \
+		    return JS_FALSE;                                        \
+	    } while (--delta != 0);                                         \
+	}                                                                   \
+    }                                                                       \
+    JS_END_MACRO
+
+/* a function so that we can make the (few) less frequent calls */
+static JSBool
+UpdateLinenoNotes(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
+{
+    UPDATE_LINENO_NOTES(cx, cg, pn);
+    return JS_TRUE;
+}
+
 JSBool
 js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 {
     JSBool ok;
-    uintN lineno, delta;
     JSCodeGenerator cg2;
     JSStmtInfo *stmt, stmtInfo;
     ptrdiff_t top, off, tmp, beq, jmp;
@@ -518,25 +551,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
     pn->pn_offset = top = CG_OFFSET(cg);
 
     /* Emit notes to tell the current bytecode's source line number. */
-    lineno = pn->pn_pos.begin.lineno;
-    delta = lineno - cg->currentLine;
-    cg->currentLine = lineno;
-    if (delta) {
-	/*
-	 * Encode any change in the current source line number by using either
-	 * several SRC_NEWLINE notes or one SRC_SETLINE note, whichever
-	 * consumes less space.
-	 */
-	if (delta >= (uintN)(2 + ((lineno > SN_3BYTE_OFFSET_MASK) << 1))) {
-	    if (js_NewSrcNote2(cx, cg, SRC_SETLINE, (ptrdiff_t)lineno) < 0)
-		return JS_FALSE;
-	} else {
-	    do {
-		if (js_NewSrcNote(cx, cg, SRC_NEWLINE) < 0)
-		    return JS_FALSE;
-	    } while (--delta != 0);
-	}
-    }
+    UPDATE_LINENO_NOTES(cx, cg, pn);
 
     switch (pn->pn_type) {
       case TOK_FUNCTION:
@@ -1333,6 +1348,9 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 		iter = iter->pn_kid2;
 		disc = iter->pn_kid1;
 
+                if (!UpdateLinenoNotes(cx, cg, iter))
+                    return JS_FALSE;
+
 		if (catchjmp != -1) {
 		    /* fix up and clean up previous catch block */
 		    CHECK_AND_SET_JUMP_OFFSET_AT(cx, cg, catchjmp);
@@ -1427,7 +1445,6 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 	 */
 	if (pn->pn_kid3 ||
 	    (catchjmp != -1 && iter->pn_kid1->pn_expr)) {
-
 	    /*
 	     * Emit another stack fix, because the catch could itself
 	     * throw an exception in an unbalanced state, and the finally
@@ -1467,6 +1484,8 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 	    if (!FixupFinallyJumps(cx, cg, start, finallyIndex))
 		return JS_FALSE;
 	    js_PopStatementCG(cx, cg);
+            if (!UpdateLinenoNotes(cx, cg, pn->pn_kid3))
+                return JS_FALSE;
 	    if (js_NewSrcNote2(cx, cg, SRC_TRYFIN, 1) < 0 ||
 		js_Emit1(cx, cg, JSOP_NOP) < 0 ||
 		!js_EmitTree(cx, cg, pn->pn_kid3) ||
