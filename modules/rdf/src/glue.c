@@ -61,9 +61,9 @@ void
 rdf_complete(NET_StreamClass *stream)
 {
   RDFFile f = (RDFFile)stream->data_object;
-  if (strcmp(f->url, gNavCntrUrl) == 0) {
+  if (RDF_STRCMP(f->url, gNavCntrUrl) == 0) {
     if (f->resourceCount == 0) {
-      parseNextRDFXMLBlob(stream, gDefaultNavcntr, strlen(gDefaultNavcntr));
+      parseNextRDFXMLBlob(stream, gDefaultNavcntr, RDF_STRLEN(gDefaultNavcntr));
     } else {
       RDF_Resource browser = RDF_GetResource(NULL, "netscape:browser", 1);
       RDF_Resource updateFrom = RDF_GetResource(NULL, "updateURL", 1);
@@ -112,8 +112,8 @@ void
 rdf_abort(NET_StreamClass *stream, int status)
 {
   RDFFile f = (RDFFile)stream->data_object;
-  if (strcmp(f->url, gNavCntrUrl) == 0) {
-    parseNextRDFXMLBlob(stream, gDefaultNavcntr, strlen(gDefaultNavcntr));
+  if (RDF_STRCMP(f->url, gNavCntrUrl) == 0) {
+    parseNextRDFXMLBlob(stream, gDefaultNavcntr, RDF_STRLEN(gDefaultNavcntr));
   }
     
   if (f) {
@@ -200,10 +200,10 @@ rdf_GetUrlExitFunc (URL_Struct *urls, int status, MWContext *cx)
 		/* if unable to read in navcntr.rdf file, create some default views */
 		if ((f = (RDFFile) urls->fe_data) != NULL)
 		{
-			if (strcmp(f->url, gNavCntrUrl) == 0)
+			if (RDF_STRCMP(f->url, gNavCntrUrl) == 0)
 			{
 				parseNextRDFXMLBlobInt(f, gDefaultNavcntr,
-						strlen(gDefaultNavcntr));
+						RDF_STRLEN(gDefaultNavcntr));
 			}
 		}
 	}
@@ -266,7 +266,7 @@ rdf_GetURL (MWContext *cx,  int method, Net_GetUrlExitFunc *exit_routine, RDFFil
         } else {
           url = rdfFile->url;
         }
-        if (strcmp(url, gNavCntrUrl) == 0) {
+        if (RDF_STRCMP(url, gNavCntrUrl) == 0) {
           urls = NET_CreateURLStruct(url,  NET_CACHE_ONLY_RELOAD);
 #ifdef NU_CACHE
           if (!CacheManager_Contains(url)) {
@@ -430,7 +430,7 @@ CallDBOpenUsingFileURL(char *fileURL, int flags,int mode, DBTYPE type, const voi
 
 #ifdef XP_MAC
 	path = WH_FilePlatformName(convertFileURLToNSPRCopaceticPath(fileURL));
-	XP_ASSERT(path != NULL);
+	PR_ASSERT(path != NULL);
 #else
 	
 	path = convertFileURLToNSPRCopaceticPath(escapedPath);

@@ -41,7 +41,7 @@ extern	int	RDF_FTP_NAME_STR, RDF_APPLETALK_TOP_NAME;
 
 /* vocab.c function prototypes */
 
-
+NSPR_BEGIN_EXTERN_C
 
 void			createVocabs ();
 void			createCoreVocab ();
@@ -50,6 +50,7 @@ void			createWebDataVocab ();
 RDF_Resource		newResource(char *id, int optionalNameStrID);
 char			*getResourceDefaultName(RDF_Resource r);
 
-
+NSPR_END_EXTERN_C
 
 #endif
+

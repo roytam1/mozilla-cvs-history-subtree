@@ -35,7 +35,7 @@ parseResourceIntoFindTokens(RDF_Resource u, findTokenStruct *tokens)
 	char		*id, *token, *value;
 	int		loop;
 
-	if ((id = copyString(resourceID(u) + strlen("find:"))) != NULL)
+	if ((id = copyString(resourceID(u) + RDF_STRLEN("find:"))) != NULL)
 	{
 		/* parse ID, build up token list */
 		if ((token = strtok(id, "&")) != NULL)
@@ -48,7 +48,7 @@ parseResourceIntoFindTokens(RDF_Resource u, findTokenStruct *tokens)
 				}
 				for (loop=0; tokens[loop].token != NULL; loop++)
 				{
-					if (!strcmp(token, tokens[loop].token))
+					if (!RDF_STRCMP(token, tokens[loop].token))
 					{
 						tokens[loop].value = copyString(value);
 						break;
@@ -183,7 +183,7 @@ FindNextValue(RDFT rdf, RDF_Cursor c)
 	PRBool			passThru = PR_TRUE;
 	void			*retVal = NULL;
 
-	XP_ASSERT(c != NULL);
+	PR_ASSERT(c != NULL);
 	if (c == NULL)		return(NULL);
 
 	if ((c->u != NULL) && (((c->s == gCoreVocab->RDF_child) && (!(c->inversep))) ||
@@ -225,7 +225,7 @@ FindGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s,
 	{
 		retVal = remoteStoreGetSlotValue(rdf, u, s, type, inversep, tv);
 	}
-	XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char*) retVal)));
+	PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char*) retVal)));
 	return(retVal);
 }
 

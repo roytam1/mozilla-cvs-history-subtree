@@ -59,7 +59,7 @@ extern	int	RDF_HTML_WINDATE, RDF_HTML_MACDATE;
 
 /* hist2rdf.c function prototypes */
 
-XP_BEGIN_PROTOS
+NSPR_BEGIN_EXTERN_C
 
 void		collateHistory (RDFT r, RDF_Resource u, PRBool byDateFlag);
 void		collateOneHist (RDFT r, RDF_Resource u, char* url, char* title, time_t lastAccessDate, time_t firstAccessDate, uint32 numAccesses, PRBool byDateFlag);
@@ -79,6 +79,6 @@ PRBool		historyStoreHasAssertion (RDFT mcf, RDF_Resource u, RDF_Resource s, void
 RDFT		MakeHistoryStore (char* url);
 void		dumpHist ();
 
-XP_END_PROTOS
+NSPR_END_EXTERN_C
 
 #endif

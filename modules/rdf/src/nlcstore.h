@@ -22,10 +22,7 @@
 
 #include "rdf-int.h"
 #include "rdf.h"
-#include "xp.h"
 #include "mcom_ndbm.h"
-#include "xpassert.h"
-#include "xpgetstr.h"
 
 
 #if !defined(IS_LITTLE_ENDIAN) && !defined(IS_BIG_ENDIAN)
@@ -87,7 +84,7 @@ typedef struct _DBMRDFStruct {
 
 /* nlcstore.c function prototypes */
 
-XP_BEGIN_PROTOS
+NSPR_BEGIN_EXTERN_C
 
 PRBool		compareUnalignedUINT32Ptrs(void *v1, void *v2);
 char *		makeRDFDBURL(char* directory, char* name);
@@ -120,6 +117,6 @@ RDF_Resource 	nlcStoreArcsInOutNextValue (RDFT rdf, RDF_Cursor c);
 RDFT		MakeLocalStore (char* url);
 RDF_Resource  nlcStoreArcsInOutNextValue (RDFT rdf, RDF_Cursor c) ;
 
-XP_END_PROTOS
+NSPR_END_EXTERN_C
 
 #endif

@@ -47,10 +47,10 @@ MakeRemoteStore (char* url)
 RDFT
 MakeFileDB (char* url)
 {
-  if (strchr(url, ':')) {
+  if (RDF_STRCHR(url, ':')) {
     RDFT ntr = NewRemoteStore(url);
     ntr->possiblyAccessFile = RDFFilePossiblyAccessFile ;
-    if (strcmp(gNavCntrUrl, url) == 0) 
+    if (RDF_STRCMP(gNavCntrUrl, url) == 0) 
       readRDFFile(url, RDF_GetResource(NULL, url, 1), 0, ntr); 
     return ntr;
   } else return NULL;
@@ -64,7 +64,7 @@ asEqual(RDFT r, Assertion as, RDF_Resource u, RDF_Resource s, void* v,
 {
   return ((as->db == r) && (as->u == u) && (as->s == s) && (as->type == type) && 
 	  ((as->value == v) || 
-	   ((type == RDF_STRING_TYPE) && ((strcmp(v, as->value) == 0) || (((char *)v)[0] =='\0')))));
+	   ((type == RDF_STRING_TYPE) && ((RDF_STRCMP(v, as->value) == 0) || (((char *)v)[0] =='\0')))));
 }
 
 
@@ -80,7 +80,7 @@ makeNewAssertion (RDFT r, RDF_Resource u, RDF_Resource s, void* v,
   newAs->type = type;
   newAs->tv = tv;
   newAs->db = r;
-  if (strcmp(r->url, "rdf:history")) {
+  if (RDF_STRCMP(r->url, "rdf:history")) {
     int n = 0;
   }
   return newAs;
@@ -764,9 +764,9 @@ MakeLocalStore (char* url)
 void
 addToRDFTOut (RDFTOut out)
 {
-  int32 len = strlen(out->temp);
+  int32 len = RDF_STRLEN(out->temp);
   if (len + out->bufferPos < out->bufferSize) {
-    PL_strcat(out->buffer, out->temp);
+    RDF_STRCAT(out->buffer, out->temp);
     out->bufferPos = out->bufferPos + len;
     memset(out->temp, '\0', 1000);
   } else {

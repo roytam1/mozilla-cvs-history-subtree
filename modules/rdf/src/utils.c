@@ -46,7 +46,7 @@ extern	char	*profileDirURL;
 int
 compareStrings(char *s1, char *s2)
 {
-   return XP_STRCASECMP(s1, s2);
+   return RDF_STRCASECMP(s1, s2);
 }
 
 
@@ -57,8 +57,8 @@ makeRDFDBURL(char* directory, char* name)
   size_t		s;
   
   if (profileDirURL == NULL) return NULL;
-  if ((ans = (char*) getMem(strlen(profileDirURL) + strlen(directory) + strlen(name) + 3)) != NULL) {
-    s = strlen(profileDirURL);
+  if ((ans = (char*) getMem(RDF_STRLEN(profileDirURL) + strlen(directory) + strlen(name) + 3)) != NULL) {
+    s = RDF_STRLEN(profileDirURL);
     memcpy(ans, profileDirURL, s);
     if (ans[s-1] != '/') {
       ans[s++] = '/';
@@ -83,7 +83,7 @@ getMCFFrtop (char* furl)
 
 char*
 copyString (const char* url) {
-  int32 len = strlen(url);
+  int32 len = RDF_STRLEN(url);
   char* newStr = (char*)getMem(len+1);
   if (newStr != NULL) {
     memcpy(newStr, url, len);
@@ -179,7 +179,7 @@ ht_fprintf(PRFileDesc *file, const char *fmt, ...)
     buf = PR_smprintf(fmt, ap);
     va_end(ap);
     if(buf) {
-      	PR_Write(file, buf, strlen(buf));
+      	PR_Write(file, buf, RDF_STRLEN(buf));
 	free(buf);
     }
 }
@@ -193,7 +193,7 @@ ht_rjcprintf(PRFileDesc *file, const char *fmt, const char *data)
 
 	buf = PR_smprintf(fmt, data);
 	if(buf) {
-		PR_Write(file, buf, strlen(buf));
+		PR_Write(file, buf, RDF_STRLEN(buf));
 		free(buf);
 	}
 }
@@ -206,13 +206,13 @@ makeDBURL(char* name)
   size_t		s;
   
   if (profileDirURL == NULL) return NULL;
-  if ((ans = (char*) getMem(strlen(profileDirURL) + strlen(name) + 3)) != NULL) {
-    s = strlen(profileDirURL);
+  if ((ans = (char*) getMem(RDF_STRLEN(profileDirURL) + strlen(name) + 3)) != NULL) {
+    s = RDF_STRLEN(profileDirURL);
     memcpy(ans, profileDirURL, s);
     if (ans[s-1] != '/') {
       ans[s++] = '/';
     }
-    memcpy(&ans[s], name, strlen(name));
+    memcpy(&ans[s], name, RDF_STRLEN(name));
     
 #ifdef	XP_WIN
     if (ans[9] == '|') ans[9] = ':';
@@ -251,8 +251,8 @@ inverseTV (PRBool tv)
 char *
 append2Strings (const char* str1, const char* str2)
 {
-  int32 l1 = strlen(str1);
-  int32 len = l1 + strlen(str2);
+  int32 l1 = RDF_STRLEN(str1);
+  int32 len = l1 + RDF_STRLEN(str2);
   char* ans = (char*) getMem(len+1);
   memcpy(ans, str1, l1);
   memcpy(&ans[l1], str2, len-l1);
@@ -264,8 +264,8 @@ append2Strings (const char* str1, const char* str2)
 void
 stringAppendBase (char* dest, const char* addition)
 {
-  int32 l1 = strlen(dest);
-  int32 l2 = strlen(addition);
+  int32 l1 = RDF_STRLEN(dest);
+  int32 l2 = RDF_STRLEN(addition);
   int32 l3 = charSearch('#', addition);
   if (l3 != -1) l2 = l3;
   memcpy(&dest[l1], addition, l2);
@@ -276,8 +276,8 @@ stringAppendBase (char* dest, const char* addition)
 void
 stringAppend (char* dest, const char* addition)
 {
-  int32 l1 = strlen(dest);
-  int32 l2 = strlen(addition);
+  int32 l1 = RDF_STRLEN(dest);
+  int32 l2 = RDF_STRLEN(addition);
   memcpy(&dest[l1], addition, l2);
 }
 
@@ -286,7 +286,7 @@ stringAppend (char* dest, const char* addition)
 int16
 charSearch (const char c, const char* data)
 {
-  char* ch = strchr(data, c);
+  char* ch = RDF_STRCHR(data, c);
 
   if (ch) {
     return (ch - data);
@@ -301,8 +301,8 @@ charSearch (const char c, const char* data)
 PRBool
 endsWith (const char* pattern, const char* uuid)
 {
-  short l1 = strlen(pattern);
-  short l2 = strlen(uuid);
+  short l1 = RDF_STRLEN(pattern);
+  short l2 = RDF_STRLEN(uuid);
   short index;
   
   if (l2 < l1) return false;
@@ -319,10 +319,10 @@ endsWith (const char* pattern, const char* uuid)
 PR_PUBLIC_API(PRBool)
 startsWith (const char* pattern, const char* uuid)
 {
-  short l1 = strlen(pattern);
-  short l2 = strlen(uuid);
+  short l1 = RDF_STRLEN(pattern);
+  short l2 = RDF_STRLEN(uuid);
   if (l2 < l1) return false;
-  return (XP_STRNCASECMP(pattern, uuid, l1)  == 0);
+  return (RDF_STRNCASECMP(pattern, uuid, l1)  == 0);
 }
 
 
@@ -330,7 +330,7 @@ startsWith (const char* pattern, const char* uuid)
 PRBool
 substring (const char* pattern, const char* data)
 {
-  char *p = XP_STRCASESTR(data, pattern);
+  char *p = RDF_STRCASESTR(data, pattern);
   return p != NULL;
 }
 
@@ -339,7 +339,7 @@ substring (const char* pattern, const char* data)
 int16
 revCharSearch (const char c, const char* data)
 {
-  char *p = strrchr(data, c);
+  char *p = RDF_STRRCHR(data, c);
   return p ? p-data : -1;
 }
 
@@ -351,11 +351,11 @@ urlEquals (const char* url1, const char* url2)
   int16 n1 = charSearch('#', url1);
   int16 n2 = charSearch('#',  url2);
   if ((n1 == -1) && (n2 == -1)) {    
-    return (strcmp(url1, url2) == 0);
+    return (RDF_STRCMP(url1, url2) == 0);
   } else if ((n2 == -1) && (n1 > 0)) {
-    return ((strlen(url2) == (size_t)(n1)) && (strncmp(url1, url2, n1) == 0));
+    return ((RDF_STRLEN(url2) == (size_t)(n1)) && (strncmp(url1, url2, n1) == 0));
   } else if ((n1 == -1) && (size_t) (n2 > 0)) {
-    return ((strlen(url1) == (size_t)(n2)) && (strncmp(url1, url2, n2) == 0));
+    return ((RDF_STRLEN(url1) == (size_t)(n2)) && (strncmp(url1, url2, n2) == 0));
   } else return 0;
 }
 
@@ -668,7 +668,7 @@ char* MCDepFileURL (char* url) {
 	char* baz = "\\";
 	int32 n = 0; 
 	furl = convertFileURLToNSPRCopaceticPath(unescapeURL(url));
-	len = strlen(furl);
+	len = RDF_STRLEN(furl);
 #ifdef XP_WIN
 	while (n < len) {
 		if (furl[n] == '/') furl[n] = baz[0];

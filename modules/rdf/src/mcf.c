@@ -111,7 +111,7 @@ RDF_AddDataSource(RDF rdf, char* dataSource)
   int32 n = 0;
   RDFT next;
   while (((next = rdf->translators[n++]) != NULL) && (n < rdf->numTranslators)) {
-    if (strcmp(next->url, dataSource) == 0) return next;
+    if (RDF_STRCMP(next->url, dataSource) == 0) return next;
   }
   if (rdf->numTranslators >= rdf->translatorArraySize) {
     RDFT* tmp = (RDFT*)getMem((rdf->numTranslators+5)*(sizeof(RDFT)));
@@ -426,7 +426,7 @@ resourceTypeFromID (char* id)
 RDF_Resource
 specialUrlResource (char* id)
 {
-	if (strcmp(id, "NC:PersonalToolbar") == 0)
+	if (RDF_STRCMP(id, "NC:PersonalToolbar") == 0)
 		return RDFUtil_GetPTFolder();
 	return NULL;
 }
@@ -573,7 +573,7 @@ RDFTNamed (RDF rdf, char* name)
   int32 n = 0;
   while (n < size) {
     char* nn = (*((RDFT*)rdf->translators + n))->url;
-    if (strcmp(nn, name) == 0) return  (*((RDFT*)rdf->translators + n));
+    if (RDF_STRCMP(nn, name) == 0) return  (*((RDFT*)rdf->translators + n));
     n = n + 1;
   }
   return NULL;

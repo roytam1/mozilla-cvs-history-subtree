@@ -38,8 +38,8 @@ parseNextMCFBlob(NET_StreamClass *stream, char* blob, int32 size)
     m = 0;
     memset(f->line, '\0', f->lineSize);
     if (f->holdOver[0] != '\0') {
-      memcpy(f->line, f->holdOver, strlen(f->holdOver));
-      m = strlen(f->holdOver);
+      memcpy(f->line, f->holdOver, RDF_STRLEN(f->holdOver));
+      m = RDF_STRLEN(f->holdOver);
       memset(f->holdOver, '\0', RDF_BUF_SIZE);
     }
     while ((m < f->lineSize) && (c != '\r') && (c != '\n') && (n < size)) {
@@ -88,9 +88,9 @@ parseNextMCFLine (RDFFile f, char* line)
     if (!(nullp(f->currentResource))) resourceTransition(f);
     getFirstToken(&line[offset], nextToken, &offset);
     f->currentResource = resolveReference(nextToken, f); 
-  } else if (nextToken[strlen(nextToken)-1] == ':') {
+  } else if (nextToken[RDF_STRLEN(nextToken)-1] == ':') {
     memset(f->currentSlot, '\0', 100);
-    memcpy(f->currentSlot, nextToken, strlen(nextToken)-1);
+    memcpy(f->currentSlot, nextToken, RDF_STRLEN(nextToken)-1);
     while (getFirstToken(&line[offset], nextToken, &offset) == noRDFErr) {
       if (f->status == HEADERS) {
 	assignHeaderSlot(f, f->currentSlot, nextToken);
@@ -154,7 +154,7 @@ getFirstToken (char* line, char* nextToken, int16* l)
   
   memset(nextToken, '\0', 200);
   
-  for (index = 0; index < strlen(line); index++) {
+  for (index = 0; index < RDF_STRLEN(line); index++) {
     char c = line[index];
     
     if ((c == '\n') || (c == '\0') || (c == '\r')) {
@@ -233,7 +233,7 @@ assignSlot (RDF_Resource u, char* slot, char* value, RDFFile f)
   if (value[0] == '(') {
     tv = false;
     value = &value[1];
-    value[strlen(value)-1] = '\0';
+    value[RDF_STRLEN(value)-1] = '\0';
   } 
 
   if (tv) {
@@ -243,7 +243,7 @@ assignSlot (RDF_Resource u, char* slot, char* value, RDFFile f)
   if (startsWith("default_genl", slot)) return;
   
   if (startsWith("name", slot) || (startsWith("local-name", slot))) { 
-    value[strlen(value)-1] = '\0';
+    value[RDF_STRLEN(value)-1] = '\0';
     addSlotValue(f, u, gCoreVocab->RDF_name, copyString(&value[1]), RDF_STRING_TYPE, tvstr);  
   }  else if (startsWith("specs", slot) || (startsWith("child", slot))) {
     RDF_Resource spec = resolveReference(value, f);  
@@ -270,7 +270,7 @@ RDF_Error
 parseSlotValue (RDFFile f, RDF_Resource s, char* value, void** parsed_value, RDF_ValueType* data_type)
 {
   if (value[0] == '"') {
-    int32 size = strlen(value)-1;
+    int32 size = RDF_STRLEN(value)-1;
     *parsed_value = getMem(size);
     value[size]  = '\0';
     *parsed_value = &value[1];
@@ -278,7 +278,7 @@ parseSlotValue (RDFFile f, RDF_Resource s, char* value, void** parsed_value, RDF
     return noRDFErr;
   } else if (value[0] == '#') {
     if (value[1] == '"') {
-      value[strlen(value)-1] = '\0';
+      value[RDF_STRLEN(value)-1] = '\0';
       value = &value[2];
     } else {
       value = &value[1];
@@ -311,7 +311,7 @@ derelativizeURL (char* tok, char* url, RDFFile f)
     stringAppend(url, "#");
     stringAppend(url, tok);
   } else {
-    memcpy(url, tok, strlen(tok));
+    memcpy(url, tok, RDF_STRLEN(tok));
   }
 }
 
@@ -323,15 +323,15 @@ resolveReference (char *tok, RDFFile f)
   RDF_Resource existing;
   char* url = getMem(MAX_URL_SIZE);
   if (tok[0] == '#') tok = &tok[1];
-  if (tok[strlen(tok)-1] == '"') tok[strlen(tok)-1] = '\0';
+  if (tok[RDF_STRLEN(tok)-1] == '"') tok[strlen(tok)-1] = '\0';
   if (tok[0] == '"') tok = &tok[1];
   memset(url, '\0', 200);
   if (charSearch(':', tok) == -1) { 
     derelativizeURL(tok, url, f);
   } else {
-    memcpy(url, tok, strlen(tok));
+    memcpy(url, tok, RDF_STRLEN(tok));
   }
-  if (strcmp(url,"this") == 0) {
+  if (RDF_STRCMP(url,"this") == 0) {
     existing = f->top;
   } else {
     existing = RDF_GetResource(NULL, url, false);

@@ -53,8 +53,8 @@ RDFJSec_ClosePrivilegeDB()
 char *
 RDFJSec_GetPrincipalURLString(char *principalID)
 {
-  size_t size = strlen(principalID);
-  char* url = getMem(size+strlen(JSEC_PRINCIPAL_URL)+1);
+  size_t size = RDF_STRLEN(principalID);
+  char* url = getMem(size+RDF_STRLEN(JSEC_PRINCIPAL_URL)+1);
   if (url == NULL) {
     return NULL;
   }
@@ -151,7 +151,7 @@ char *
 RDFJSec_PrincipalID(JSec_Principal pr)
 {
   char *url = resourceID(pr);
-  char *ans = getMem(strlen(url)+1);
+  char *ans = getMem(RDF_STRLEN(url)+1);
   int n;
   if (ans == NULL) {
     return NULL;
@@ -212,7 +212,7 @@ RDFJSec_NewPrincipalUse(JSec_Principal pr, JSec_Target tr, char* priv)
   RDF_Resource principalUseUnit;
   char *targetID = resourceID(tr);
   char *principalID = resourceID(pr);
-  char *principalUseID = getMem(strlen(principalID)  + strlen(targetID) + 2);
+  char *principalUseID = getMem(RDF_STRLEN(principalID)  + strlen(targetID) + 2);
   if (principalUseID == NULL) {
     return NULL;
   }
@@ -350,7 +350,7 @@ RDFJSec_NewTarget(char* targetName, JSec_Principal pr)
   RDF_Resource tr;
   /* RDF_Resource prResource; */
   char *principalID = RDFJSec_PrincipalID(pr);
-  char *targetID = getMem(strlen(targetName) + strlen(principalID) + 2);
+  char *targetID = getMem(RDF_STRLEN(targetName) + strlen(principalID) + 2);
   if (targetID == NULL) {
     return NULL;
   }

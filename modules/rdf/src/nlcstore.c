@@ -106,7 +106,7 @@ DBM_OpenDBMStore (DBMRDF store, char* directory)
   freeMem(dbPathname);
   CHECK_VAR1(store->invPropDB);
   
-  if (strcmp(directory, "NavCen") == 0) {
+  if (RDF_STRCMP(directory, "NavCen") == 0) {
   } 
   
 }
@@ -134,14 +134,14 @@ char *
 makeUSKey (RDF_Resource u, RDF_Resource s, PRBool inversep, size_t *size)
 {
   if ((s == gCoreVocab->RDF_name) || (inversep && (s == gCoreVocab->RDF_parent))) {
-    *size = strlen(resourceID(u));
+    *size = RDF_STRLEN(resourceID(u));
     return  resourceID(u);
   } else {
     char* ans;
-    *size =  strlen(resourceID(u)) + strlen(resourceID(s));
+    *size =  RDF_STRLEN(resourceID(u)) + strlen(resourceID(s));
     ans = getMem(*size);  
-    memcpy(ans, resourceID(u), strlen(resourceID(u)));
-    memcpy(&ans[strlen(resourceID(u))],  resourceID(s), strlen(resourceID(s)));
+    memcpy(ans, resourceID(u), RDF_STRLEN(resourceID(u)));
+    memcpy(&ans[RDF_STRLEN(resourceID(u))],  resourceID(s), strlen(resourceID(s)));
     return ans;
   }
 }
@@ -244,7 +244,7 @@ nlocalStoreHasAssertion (RDFT rdf, RDF_Resource u, RDF_Resource s, void* v, RDF_
   PRBool ans = 0;
   PRBool invp = (s == gCoreVocab->RDF_parent);
 
-  XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
+  PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
   data =  (invp ? DBM_GetSlotValue(rdf, (RDF_Resource)v, s, 1, &size) : 
 	   DBM_GetSlotValue(rdf, u, s, 0, &size));
   if (data == NULL) return 0;
@@ -287,7 +287,7 @@ nlocalStoreGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s,
         memcpy((char*)&ans, dataOfDBMAs(nas), sizeof(uint32));
       }
       freeMem(data);
-      XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )ans)));
+      PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )ans)));
       return ans;
     }
     n =  dbmasSize(nas) + n;
@@ -392,11 +392,11 @@ makeAsBlock (void* v, RDF_ValueType type, PRBool tv,  size_t *size)
 /*
   ldiv_t  cdiv ;
 */
-  XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
+  PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
   if (type == RDF_STRING_TYPE) {
-    vsize = strlen(v);
+    vsize = RDF_STRLEN(v);
   } else if (type == RDF_RESOURCE_TYPE) {
-    vsize = strlen( resourceID((RDF_Resource)v));
+    vsize = RDF_STRLEN( resourceID((RDF_Resource)v));
   } else if (type == RDF_INT_TYPE) {
     vsize = 4;
   }
@@ -447,7 +447,7 @@ nlocalStoreAssert (RDFT rdf, RDF_Resource u, RDF_Resource s, void* v,
     uint16  n    = 0;
     size_t tsize;
     PRBool ans = 0;
-    XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
+    PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
     
     /* don't store RDF Commands in the local store */
     if (s == gNavCenter->RDF_Command)	return 0;
@@ -515,7 +515,7 @@ PRBool
 nlocalStoreAssert1 (RDFFile f, RDFT rdf, RDF_Resource u, RDF_Resource s, void* v, 
 			 RDF_ValueType type, PRBool tv)
 {
-        XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
+        PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
 	return nlocalStoreAssert(rdf, u, s, v, type, tv);
 }
 
@@ -532,7 +532,7 @@ nlocalStoreUnassert (RDFT rdf, RDF_Resource u, RDF_Resource s, void* v,
   size_t tsize;
   PRBool ans = 0;
   DBMAs nas;
-  XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
+  PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
   data =  DBM_GetSlotValue(rdf, u, s, 0, &size);
   if (data == NULL) return 1;
   while (n < size) {

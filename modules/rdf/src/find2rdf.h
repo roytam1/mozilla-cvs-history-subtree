@@ -19,9 +19,6 @@
 #ifndef	_RDF_FIND_H_
 #define	_RDF_FIND_H_
 
-#include "xp.h"
-#include "xpassert.h"
-#include "xpgetstr.h"
 #include "rdf-int.h"
 #include "utils.h"
 
@@ -36,7 +33,7 @@ typedef	struct	_findTokenStruct	{
 
 /* find.c function prototypes */
 
-XP_BEGIN_PROTOS
+NSPR_BEGIN_EXTERN_C
 
 void			parseResourceIntoFindTokens(RDF_Resource u, findTokenStruct *tokens);
 RDF_Cursor		parseFindURL(RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type,  PRBool inversep, PRBool tv);
@@ -50,6 +47,6 @@ void			findPossiblyAddName(RDFT rdf, RDF_Resource u);
 PRBool			FindAssert (RDFT rdf, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type, PRBool tv);
 RDFT			MakeFindStore (char* url);
 
-XP_END_PROTOS
+NSPR_END_EXTERN_C
 
 #endif

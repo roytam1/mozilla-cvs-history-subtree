@@ -59,7 +59,7 @@ typedef	ourNBPUserDataStruct *ourNBPUserDataPtr;
 
 /* atalk.c function prototypes */
 
-XP_BEGIN_PROTOS
+NSPR_BEGIN_EXTERN_C
 
 #ifdef	XP_MAC
 PRBool		isAFPVolume(short ioVRefNum);
@@ -80,7 +80,7 @@ void *		AtalkNextValue (RDFT rdf, RDF_Cursor c);
 RDF_Resource	CreateAFPFSUnit (char *nname, PRBool isDirectoryFlag);
 RDFT		MakeAtalkStore (char* url);
 
-XP_END_PROTOS
+NSPR_END_EXTERN_C
 
 #endif
 

@@ -54,7 +54,7 @@ extern char* gBookmarkURL;
 
 /* glue.c prototypes */
 
-XP_BEGIN_PROTOS
+NSPR_BEGIN_EXTERN_C
 
 void ht_fprintf(PRFileDesc *file, const char *fmt, ...);
 
@@ -85,6 +85,6 @@ int32			CallPRMkDirUsingFileURL(char *dirURL, int mode);
 DB			*CallDBOpenUsingFileURL(char *fileURL, int flags,int mode,
 						DBTYPE type, const void *openinfo);
 
-XP_END_PROTOS
+NSPR_END_EXTERN_C
 
 #endif

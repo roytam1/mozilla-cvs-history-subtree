@@ -40,7 +40,7 @@ typedef SCookDBStruct* SCookDB;
 
 /* scook.c function prototypes */
 
-XP_BEGIN_PROTOS
+NSPR_BEGIN_EXTERN_C
 
 char *		makeSCookPathname(char* name);
 PRBool		SCookAssert1 (RDFT mcf,   RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type, PRBool tv);
@@ -64,6 +64,6 @@ void		SCookDisposeDB (RDFT rdf);
 void		possiblyAccessSCookFile (RDFT mcf, RDF_Resource u, RDF_Resource s, PRBool inversep);
 RDFT		MakeSCookDB (char* url);
 
-XP_END_PROTOS
+NSPR_END_EXTERN_C
 
 #endif

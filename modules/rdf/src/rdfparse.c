@@ -50,7 +50,7 @@ decodeEntityRef (char* string, int32* stringIndexPtr, int32 len)
 char *
 copyStringIgnoreWhiteSpace(char* string)
 {
-   int32 len = strlen(string);
+   int32 len = RDF_STRLEN(string);
    char* buf = (char*)getMem(len + 1);
    PRBool inWhiteSpace = 1;
    int32 buffIndex = 0;
@@ -102,8 +102,8 @@ int parseNextRDFXMLBlobInt(RDFFile f, char* blob, int32 size) {
     somethingseenp = 0;
     memset(f->line, '\0', RDF_BUF_SIZE-1);
     if (f->holdOver[0] != '\0') {
-      memcpy(f->line, f->holdOver, strlen(f->holdOver));
-      m = strlen(f->holdOver);
+      memcpy(f->line, f->holdOver, RDF_STRLEN(f->holdOver));
+      m = RDF_STRLEN(f->holdOver);
       somethingseenp = 1;
       memset(f->holdOver, '\0', RDF_BUF_SIZE-1);
     }   
@@ -140,12 +140,12 @@ parseRDFProcessingInstruction (RDFFile f, char* token)
   char* attlist[2*MAX_ATTRIBUTES+1];
   char* elementName;  
   tokenizeElement(token, attlist, &elementName);
-  if (strcmp(elementName, "?xml:namespace") == 0) {
+  if (RDF_STRCMP(elementName, "?xml:namespace") == 0) {
     char* as = getAttributeValue(attlist, "prefix");
     char* url = getAttributeValue(attlist, "ns");
     if ((as != NULL) && (url != NULL)) {
       XMLNameSpace ns = (XMLNameSpace)getMem(sizeof(struct XMLNameSpaceStruct));
-      size_t urln = strlen(url);
+      size_t urln = RDF_STRLEN(url);
       PRBool addSlash = (url[urln-1] != '/');
       if(addSlash) urln++;
       ns->url = (char*)getMem(sizeof(char) * (urln + 1));
@@ -181,7 +181,7 @@ getAttributeValue (char** attlist, char* elName)
   size_t n = 0;
   if (!attlist) return NULL;
   while ((n < 2*MAX_ATTRIBUTES) && (*(attlist + n) != NULL)) {
-    if (strcmp(*(attlist + n), elName) == 0) return *(attlist + n + 1);
+    if (RDF_STRCMP(*(attlist + n), elName) == 0) return *(attlist + n + 1);
     n = n + 2;
   }
   return NULL;
@@ -192,7 +192,7 @@ getAttributeValue (char** attlist, char* elName)
 PRBool
 tagEquals (RDFFile f, char* tag1, char* tag2)
 {
-	return (strcmp(tag1, tag2) == 0);
+	return (RDF_STRCMP(tag1, tag2) == 0);
 }
 
 
@@ -219,7 +219,7 @@ addElementProps (char** attlist, char* elementName, RDFFile f, RDF_Resource obj)
 PRBool
 knownObjectElement (char* eln)
 {
-	return (strcmp(eln, "RDF:Description") == 0);
+	return (RDF_STRCMP(eln, "RDF:Description") == 0);
 }
 
 
@@ -227,10 +227,10 @@ knownObjectElement (char* eln)
 char *
 possiblyMakeAbsolute (RDFFile f, char* url)
 {
-	if (strchr(url, ':') != NULL) {
+	if (RDF_STRCHR(url, ':') != NULL) {
     return copyString(url);
   } else {
-    char* ans = getMem(strlen(f->url) + strlen(url)+2);
+    char* ans = getMem(RDF_STRLEN(f->url) + strlen(url)+2);
     sprintf(ans, "%s#%s", f->url, url);
     return ans;
   }
@@ -252,21 +252,21 @@ containerTagp (RDFFile f, char* elementName)
 RDF_Resource
 ResourceFromElementName (RDFFile f, char* elementName)
 {
-  if(!elementName || (strchr(elementName, ':') == NULL) ) {
+  if(!elementName || (RDF_STRCHR(elementName, ':') == NULL) ) {
     return RDF_GetResource(NULL, elementName, 1);
   } else {
     XMLNameSpace ns = f->namespaces;
     while (ns) {
       if (startsWith(ns->as, elementName)) {
         RDF_Resource ans;
-        size_t asn =  strlen(ns->as);
-        size_t urln = strlen(ns->url);
-        char* url = getMem(strlen(ns->url) + strlen(elementName)-asn);
+        size_t asn =  RDF_STRLEN(ns->as);
+        size_t urln = RDF_STRLEN(ns->url);
+        char* url = getMem(RDF_STRLEN(ns->url) + strlen(elementName)-asn);
         memcpy(url, ns->url, urln);
-        strcat(url, &elementName[asn+1]);
-		if (strcmp(url, DC_TITLE) == 0) {
+        RDF_STRCAT(url, &elementName[asn+1]);
+		if (RDF_STRCMP(url, DC_TITLE) == 0) {
           ans = gCoreVocab->RDF_name;
-        } else if (strcmp(url, SM_CHILD) == 0) {
+        } else if (RDF_STRCMP(url, SM_CHILD) == 0) {
           ans = gCoreVocab->RDF_child;
         } else  
           ans = RDF_GetResource(NULL, url, 1);
@@ -311,12 +311,12 @@ parseNextRDFToken (RDFFile f, char* token)
     if (update) f->updateURL = copyString(update);
     if (post) f->postURL = copyString(post);
     status = getAttributeValue(attlist, "status");
-    if (status && (strcmp(status, "replace"))) gcRDFFileInt(f);
+    if (status && (RDF_STRCMP(status, "replace"))) gcRDFFileInt(f);
   } else if (startsWith("<RelatedLinks", token)) {
 	f->stack[f->depth++] = f->top;
 	f->status = EXPECTING_PROPERTY;
   } else {
-    PRBool emptyElementp = (token[strlen(token)-2] == '/');  
+    PRBool emptyElementp = (token[RDF_STRLEN(token)-2] == '/');  
     if ((f->status != EXPECTING_OBJECT) && (f->status != EXPECTING_PROPERTY)) return;
     tokenizeElement(token, attlist, &elementName);
     if ((f->status == EXPECTING_PROPERTY) && (knownObjectElement(elementName))) return;
@@ -362,8 +362,8 @@ parseNextRDFToken (RDFFile f, char* token)
         addToResourceList(f, obj);
         addSlotValue(f, f->stack[f->depth-1], eln,obj,RDF_RESOURCE_TYPE,  
                      getAttributeValue(attlist, "tv"));
-      } else if ((strcmp(elementName, "child") == 0) && attlist[0] && 
-                 (strcmp(attlist[0], "instanceOf") == 0) &&
+      } else if ((RDF_STRCMP(elementName, "child") == 0) && attlist[0] && 
+                 (RDF_STRCMP(attlist[0], "instanceOf") == 0) &&
                  attlist[1] && startsWith("Separator", attlist[1])) {
         RDF_Resource sep = createSeparator();
         RDF_Resource eln = ResourceFromElementName(f, elementName);
@@ -385,7 +385,7 @@ void
 tokenizeElement (char* attr, char** attlist, char** elementName)
 {
   size_t n = 1;
-  size_t s = strlen(attr); 
+  size_t s = RDF_STRLEN(attr); 
   char c ;
   size_t m = 0;
   size_t atc = 0;
@@ -450,7 +450,7 @@ outputRDFTreeInt (RDF rdf, PRFileDesc *fp, RDF_Resource node, uint32 depth, PRBo
   if ((buf == NULL) || (space == NULL)) return;
   if (depth > 0) memset(space, ' ', depth);
   
-  if (!strchr(url, ':') || (depth == 0)) {
+  if (!RDF_STRCHR(url, ':') || (depth == 0)) {
 	  hrefid = "id";
   } else {
 	  hrefid = "rdf:href";
@@ -461,10 +461,10 @@ outputRDFTreeInt (RDF rdf, PRFileDesc *fp, RDF_Resource node, uint32 depth, PRBo
   if (containerp(node)) {
     if (depth > 0) {
       sprintf(buf, "%s<child>\n", space);  
-	  PR_Write(fp, buf, strlen(buf)); 
+	  PR_Write(fp, buf, RDF_STRLEN(buf)); 
     }
     sprintf(buf, "%s<Topic %s=\"%s\"\n%s       name=\"%s\">\n", space, hrefid, url, space,   name);  
-	PR_Write(fp, buf, strlen(buf));
+	PR_Write(fp, buf, RDF_STRLEN(buf));
     
     while ((next = RDF_NextValue(c)) != NULL) {
     
@@ -480,14 +480,14 @@ outputRDFTreeInt (RDF rdf, PRFileDesc *fp, RDF_Resource node, uint32 depth, PRBo
 	}
     }
     sprintf(buf, "%s</Topic>\n", space);
-	PR_Write(fp, buf, strlen(buf));
+	PR_Write(fp, buf, RDF_STRLEN(buf));
     if (depth > 0) {
       sprintf(buf, "%s</child>\n", space);
-	  PR_Write(fp, buf, strlen(buf));
+	  PR_Write(fp, buf, RDF_STRLEN(buf));
     } 
   } else {
     sprintf(buf, "%s<child %s=\"%s\"\n%s       name=\"%s\"/>\n", space, hrefid, url, space,   name); 
-	PR_Write(fp, buf, strlen(buf));
+	PR_Write(fp, buf, RDF_STRLEN(buf));
   }
   RDF_DisposeCursor(c);
   freeMem(buf);
@@ -522,11 +522,11 @@ addSlotValue (RDFFile f, RDF_Resource u, RDF_Resource s, void* v,
    }
    if (op == NULL) {
      tv = 1;
-   } else if (strcmp(op, "true") == 0) {
+   } else if (RDF_STRCMP(op, "true") == 0) {
      tv = 1;
-   } else if (strcmp(op, "false") == 0) {
+   } else if (RDF_STRCMP(op, "false") == 0) {
      tv = 0;
-   } else if (strcmp(op, "delete") == 0) {
+   } else if (RDF_STRCMP(op, "delete") == 0) {
       if (f->unassert)  (*f->unassert)(f, f->db, u, s, v, type);
       return;
    }

@@ -59,6 +59,7 @@ ColumnsGetSlotValue(RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type
 	if ((s == gCoreVocab->RDF_name) && (type == RDF_STRING_TYPE)
 		&& (!inversep) && (tv))
 	{
+#ifdef XXX
 		if (u == gCoreVocab->RDF_name)			val = copyString(XP_GetString(RDF_NAME_STR));
 		else if (u == gNavCenter->RDF_URLShortcut)	val = copyString(XP_GetString(RDF_SHORTCUT_STR));
 		else if (u == gWebData->RDF_URL)		val = copyString(XP_GetString(RDF_URL_STR));
@@ -70,6 +71,7 @@ ColumnsGetSlotValue(RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type
 		else if (u == gWebData->RDF_lastModifiedDate)	val = copyString(XP_GetString(RDF_LAST_MOD_STR));
 		else if (u == gWebData->RDF_size)		val = copyString(XP_GetString(RDF_SIZE_STR));
 		else if (u == gNavCenter->RDF_bookmarkAddDate)	val = copyString(XP_GetString(RDF_ADDED_ON_STR));
+#endif
 	}
 	else if ((s == gNavCenter->RDF_ColumnDataType) &&
 		(type == RDF_INT_TYPE) && (!inversep) && (tv))
@@ -112,7 +114,7 @@ ColumnsNextValue (RDFT rdf, RDF_Cursor c)
 {
 	void			*arc = NULL;
 
-	XP_ASSERT(c != NULL);
+	PR_ASSERT(c != NULL);
 	if (c == NULL)		return(NULL);
 
 	switch( resourceType(c->u) )

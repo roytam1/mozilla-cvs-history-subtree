@@ -39,7 +39,7 @@
 
 /* ldap2rdf.c function prototypes */
 
-XP_BEGIN_PROTOS
+NSPR_BEGIN_EXTERN_C
 
 RDFT		MakeLdapStore (char* url);
 RDF_Error	LdapInit (RDFT ntr);
@@ -64,6 +64,6 @@ PRBool		ldapRemoveChild (RDFT rdf, RDF_Resource parent, RDF_Resource child);
 void		possiblyAccessldap(RDFT rdf, RDF_Resource u, RDF_Resource s, PRBool inversep);
 PRBool		ldapContainerp (RDF_Resource u);
 
-XP_END_PROTOS
+NSPR_END_EXTERN_C
 
 #endif

@@ -39,7 +39,7 @@
 #include "nspr.h"
 #include "plhash.h"
 
-
+#include "rdfstr.h"
 
 
 
@@ -75,8 +75,8 @@
 #define JSEC_RT 15
 #define PMF_RT  16
 
-#define CHECK_VAR(var, return_value) {if (var == NULL) {/*xxx XP_ASSERT(var); */ return return_value;}}
-#define CHECK_VAR1(var) {if (var == NULL) {/*xxx XP_ASSERT(var);*/ return;}}
+#define CHECK_VAR(var, return_value) {if (var == NULL) {/*xxx PR_ASSERT(var); */ return return_value;}}
+#define CHECK_VAR1(var) {if (var == NULL) {/*xxx PR_ASSERT(var);*/ return;}}
 
 
 #ifdef	XP_WIN
@@ -95,7 +95,7 @@
        (charsetid) , 				\
        CS_UTF8, 				\
        (unsigned char*)(s),			\
-       strlen(s)				\
+       RDF_STRLEN(s)				\
     ) : NULL)
 	
 #define stringEquals(x, y) (strcasecomp(x, y) ==0)
@@ -366,7 +366,7 @@ char* convertFileURLToNSPRCopaceticPath(char* inURL);
 PRFileDesc* CallPROpenUsingFileURL(char *fileURL, PRIntn flags, PRIntn mode);
 /* DB *CallDBOpenUsingFileURL(char *fileURL, int flags,int mode, DBTYPE type, const void *openinfo); */
 
-char* copyString (char* url);
+char* copyString (const char* url);
 PRBool nlocalStoreAssert (RDFT rdf, RDF_Resource u, RDF_Resource s, void* v, 
 			 RDF_ValueType type, PRBool tv) ;
 char* MCDepFileURL (char* url) ;

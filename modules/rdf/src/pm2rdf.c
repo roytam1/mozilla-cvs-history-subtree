@@ -43,7 +43,7 @@ GetPopToRDF (RDFT rdf)
   if (endsWith("/inbox", rdf->url)) {
     char* popurl = getMem(100);
     int n = 10;
-    int l = strlen(rdf->url);
+    int l = RDF_STRLEN(rdf->url);
     URL_Struct *urls ;
     memcpy(popurl, "pop3://", 7);
     while (n < l) {
@@ -238,7 +238,7 @@ setMessageFlag (RDFT rdf, RDF_Resource r, char* newFlag)
 RDFT 
 getBFTranslator (char* url) {
 	if (startsWith("mailbox://folder/", url)) {
-		char* temp = getMem(strlen(url));
+		char* temp = getMem(RDF_STRLEN(url));
 		RDFT ans = NULL;
 		sprintf(temp, "mailbox://%s", &url[17]);
 	    ans = getTranslator(temp);
@@ -293,9 +293,9 @@ readSummaryFile (RDFT rdf)
   if (startsWith("mailbox://", rdf->url)) {
     char* url = rdf->url;
     char* folderURL = &url[10];
-	int32 flen = strlen(profileDirURL) + strlen(folderURL) + 4;
+	int32 flen = RDF_STRLEN(profileDirURL) + strlen(folderURL) + 4;
     char* fileurl = getMem(flen);
-    char* nurl = getMem(strlen(url) + 20);
+    char* nurl = getMem(RDF_STRLEN(url) + 20);
     FILE *f; 
     char* buff = getMem(BUFF_SIZE);
     MF folder = (MF) getMem(sizeof(struct MailFolder));
@@ -368,10 +368,10 @@ readSummaryFile (RDFT rdf)
       if (folder->sfile) fflush(folder->sfile);
     }
 	memset(fileurl, '\0', flen);
-	memcpy(fileurl, rdf->url, strlen(rdf->url));
-    aclen = strchr(&fileurl[10], '/');
+	memcpy(fileurl, rdf->url, RDF_STRLEN(rdf->url));
+    aclen = RDF_STRCHR(&fileurl[10], '/');
 	fileurl[aclen-fileurl] = '\0';
-	strcat(fileurl, "/trash"); 
+	RDF_STRCAT(fileurl, "/trash"); 
     folder->trash = fileurl;
     freeMem(buff);
     freeMem(nurl);
@@ -388,10 +388,10 @@ pmGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type,
   if ((resourceType(u) == PM_RT) && tv && (!inversep) && (type == RDF_STRING_TYPE) && (u->pdata)) {
     MM msg = (MM) u->pdata;
     if (s == gNavCenter->from) {
-      XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )msg->from)));
+      PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )msg->from)));
       return copyString(msg->from);
     } else if (s == gNavCenter->subject) {
-      XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )msg->subject)));
+      PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )msg->subject)));
       return copyString(msg->subject);
     } else if (s == gNavCenter->date) {
       return copyString(msg->date);
@@ -471,7 +471,7 @@ pmHasAssertion (RDFT mcf, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType
 PRBool
 pmRemove (RDFT rdf, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type)
 {
-  XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
+  PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
   if ((startsWith("mailbox://", rdf->url)) && (resourceType(u) == PM_RT) && (s == gCoreVocab->RDF_parent)
       && (type == RDF_RESOURCE_TYPE)) {
     RDF_Resource mbox = (RDF_Resource) v;
@@ -498,7 +498,7 @@ MakePopDB (char* url)
       PRDir* dir ; 
       char* aclen;
       sprintf(fileurl, "%s%s", profileDirURL, &url[10]);
-      aclen = strchr(&fileurl[strlen(profileDirURL)+1], '/');
+      aclen = RDF_STRCHR(&fileurl[RDF_STRLEN(profileDirURL)+1], '/');
       fileurl[aclen-fileurl] = '\0';
       dir = OpenDir(fileurl);
       if (dir == NULL) {

@@ -167,8 +167,8 @@ RDF_Query parseQuery(RDF rdf, char* blob, int32 size) {
 		somethingseenp = false;
 		memset(line, '\0', LINE_SIZE);
 		if (holdOver[0] != '\0') {
-		  memcpy(line, holdOver, strlen(holdOver));
-		  m = strlen(holdOver);
+		  memcpy(line, holdOver, RDF_STRLEN(holdOver));
+		  m = RDF_STRLEN(holdOver);
 		  somethingseenp = true;
 		  memset(holdOver, '\0', LINE_SIZE);
 		}

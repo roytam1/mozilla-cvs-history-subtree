@@ -31,7 +31,7 @@
 
 /* mcff2mcf.c function prototypes */
 
-XP_BEGIN_PROTOS
+NSPR_BEGIN_EXTERN_C
 
 RDF_Resource		getMCFFrtop (char* furl);
 RDFFile			makeRDFFile (char* url, RDF_Resource top, PRBool localp);
@@ -56,6 +56,6 @@ RDF_Resource		resolveGenlPosReference(char* tok,  RDFFile f);
 char *			getRelURL (RDF_Resource u, RDF_Resource top);
 PRBool			bookmarkSlotp (RDF_Resource s);
 
-XP_END_PROTOS
+NSPR_END_EXTERN_C
 
 #endif

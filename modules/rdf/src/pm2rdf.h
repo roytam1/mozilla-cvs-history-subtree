@@ -65,7 +65,7 @@ typedef struct MailMessage* MM;
 
 /* pm2rdf.c function prototypes */
 
-XP_BEGIN_PROTOS
+NSPR_BEGIN_EXTERN_C
 
 void		Pop_GetUrlExitFunc (URL_Struct *urls, int status, MWContext *cx);
 void 		GetPopToRDF (RDFT rdf);
@@ -95,7 +95,7 @@ RDFT		MakeMailAccountDB (char* url);
 
 
 
-XP_END_PROTOS
+NSPR_END_EXTERN_C
 
 #endif
 

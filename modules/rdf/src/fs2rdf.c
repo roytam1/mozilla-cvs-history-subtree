@@ -111,9 +111,9 @@ GuessIEBookmarks (void)
 		n = PR_SKIP_BOTH;
 		while (de = PR_ReadDir(profileDir, n++))
 		{
-			if (strcmp(de->name, "Administrator") &&
-				strcmp(de->name, "Default User") && 
-				strcmp(de->name, "All Users"))
+			if (RDF_STRCMP(de->name, "Administrator") &&
+				RDF_STRCMP(de->name, "Default User") && 
+				RDF_STRCMP(de->name, "All Users"))
 			{
 				importForProfile(nativePath, uname);
 			}
@@ -263,17 +263,17 @@ getVolume(int16 volNum, PRBool afpVols)
 				strncpy((void *)temp2, &afpInfo.AFPData[afpInfo.serverNameOffset-30+1],
 					(unsigned int)afpInfo.AFPData[afpInfo.serverNameOffset-30]);
 				temp2[(unsigned int)afpInfo.AFPData[afpInfo.serverNameOffset-30]] = '\0';
-				strcat(temp1, (void *)NET_Escape((void *)temp2, URL_XALPHAS));
-				strcat(temp1, ":");
+				RDF_STRCAT(temp1, (void *)NET_Escape((void *)temp2, URL_XALPHAS));
+				RDF_STRCAT(temp1, ":");
 				/* zone name */
 				strncpy((void *)temp2, &afpInfo.AFPData[afpInfo.zoneNameOffset-30+1],
 					(unsigned int)afpInfo.AFPData[afpInfo.zoneNameOffset-30]);
 				temp2[(unsigned int)afpInfo.AFPData[afpInfo.zoneNameOffset-30]] = '\0';
-				strcat(temp1, (void *)NET_Escape((void *)temp2, URL_XALPHAS));
-				strcat(temp1, "/");
+				RDF_STRCAT(temp1, (void *)NET_Escape((void *)temp2, URL_XALPHAS));
+				RDF_STRCAT(temp1, "/");
 				/* volume name */
-				strcat(temp1, NET_Escape((char *)&str[1], URL_XALPHAS));
-				strcat(temp1,"/");
+				RDF_STRCAT(temp1, NET_Escape((char *)&str[1], URL_XALPHAS));
+				RDF_STRCAT(temp1,"/");
 				url = copyString(temp1);
 				
 				freeMem(temp1);
@@ -410,11 +410,11 @@ nativeMacPathname(char *fileURL, FSSpec *fss)
 	OSErr		err = paramErr;
 	char		*macURL = NULL, *token, *url, *escapedURL, *temp, *pascalStr;
 
-	XP_ASSERT(fileURL != NULL);
+	PR_ASSERT(fileURL != NULL);
 	if (fileURL == NULL)	return(NULL);
 
 	if (!startsWith("file:///", fileURL))	return(NULL);
-	if (!(url = copyString(fileURL + strlen("file:///"))))	return(NULL);
+	if (!(url = copyString(fileURL + RDF_STRLEN("file:///"))))	return(NULL);
 
 	token = strtok(url, "/");
 	while (token != NULL)
@@ -461,9 +461,9 @@ nativeMacPathname(char *fileURL, FSSpec *fss)
 	freeMem(url);
 	if (macURL != NULL)
 	{
-		if ((pascalStr = getMem(strlen(macURL) + 3)) != NULL)
+		if ((pascalStr = getMem(RDF_STRLEN(macURL) + 3)) != NULL)
 		{
-			pascalStr[0] = strlen(macURL);
+			pascalStr[0] = RDF_STRLEN(macURL);
 			strcpy(&pascalStr[1], macURL);
 			err = FSMakeFSSpec(0, 0L, (void *)pascalStr, fss);
 			freeMem(pascalStr);
@@ -582,7 +582,7 @@ fsRemoveDir(char *filePathname, PRBool justCheckWriteAccess)
 	{
 		if ((dirStr = copyString(filePathname)) != NULL)
 		{
-			len = strlen(dirStr)-1;
+			len = RDF_STRLEN(dirStr)-1;
 			if (dirStr[len] == '/')
 			{
 				dirStr[len] = '\0';
@@ -623,7 +623,7 @@ fsUnassert (RDFT mcf, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType typ
 		(startsWith(resourceID((RDF_Resource)v),  resourceID(u))))
 	{
 		filePathname =  resourceID((RDF_Resource)u);
-		if (filePathname[strlen(filePathname)-1] == '/')
+		if (filePathname[RDF_STRLEN(filePathname)-1] == '/')
 		{
 			if (!fsRemoveDir(filePathname, true))
 			{
@@ -683,7 +683,7 @@ fsHasAssertion (RDFT rdf, RDF_Resource u, RDF_Resource s, void* v,
 			return(0);
 		}
 
-		len = strlen(filePathname)-1;
+		len = RDF_STRLEN(filePathname)-1;
 		if (filePathname[len] == '/')
 		{
 			filePathname[len] = '\0';
@@ -698,7 +698,7 @@ fsHasAssertion (RDFT rdf, RDF_Resource u, RDF_Resource s, void* v,
 
 		while ((de = PR_ReadDir(d, (PRDirFlags)(n++))) != NULL)
 		{
-			if (strcmp(name, de->name) == 0)
+			if (RDF_STRCMP(name, de->name) == 0)
 			{
 				ans = 1;
 				break;
@@ -742,7 +742,7 @@ fsGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, PR
 	{
 		if ((pathname = copyString(resourceID(u))) != NULL)
 		{
-			if ((len = strlen(pathname)) > 0)
+			if ((len = RDF_STRLEN(pathname)) > 0)
 			{
 				if (pathname[len-1] == '/')  pathname[--len] = '\0';
 				n = revCharSearch('/', pathname);
@@ -887,7 +887,7 @@ fsGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, PR
 			}
 		}
 	}
-	XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char*) retVal)));
+	PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char*) retVal)));
 	return(retVal);
 }
 
@@ -998,10 +998,10 @@ isFileVisible(char *fileURL)
 #endif
 
 #ifdef	XP_WIN
-	if ((p = strrchr(fileURL, '/')) != NULL)
+	if ((p = RDF_STRRCHR(fileURL, '/')) != NULL)
 	{
 		++p;
-		if ((!strcmp(p, ".")) || (!strcmp(p, "..")))
+		if ((!RDF_STRCMP(p, ".")) || (!strcmp(p, "..")))
 		{
 			retVal = PR_FALSE;
 		}
@@ -1023,7 +1023,7 @@ fsNextValue (RDFT rdf, RDF_Cursor c)
 	char			*base, *encoded = NULL, *url, *url2;
 	void			*retVal = NULL;
 
-	XP_ASSERT(c != NULL);
+	PR_ASSERT(c != NULL);
 	if (c == NULL)				return(NULL);
 	if (c->type != RDF_RESOURCE_TYPE)	return(NULL);
 
@@ -1049,7 +1049,7 @@ fsNextValue (RDFT rdf, RDF_Cursor c)
 		{
 			if ((base = NET_Escape(de->name, URL_XALPHAS)) != NULL)		/* URL_PATH */
 			{
-				sep = ((resourceID(c->u))[strlen(resourceID(c->u))-1] == XP_DIRECTORY_SEPARATOR);
+				sep = ((resourceID(c->u))[RDF_STRLEN(resourceID(c->u))-1] == XP_DIRECTORY_SEPARATOR);
 				if (sep)
 				{
 					url = PR_smprintf("%s%s",  resourceID(c->u), base);
@@ -1107,7 +1107,7 @@ fsNextValue (RDFT rdf, RDF_Cursor c)
 RDF_Error
 fsDisposeCursor (RDFT rdf, RDF_Cursor c)
 {
-	XP_ASSERT(c != NULL);
+	PR_ASSERT(c != NULL);
 
 	if (c != NULL)
 	{

@@ -121,7 +121,7 @@ PRBool
 ldapAssert (RDFT rdf, RDF_Resource u, RDF_Resource s, void* v, 
 		   RDF_ValueType type, PRBool tv)
 {
-  XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v));
+  PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v));
   if (!ldap2rdfInitedp) ldap2rdfInit(rdf);
   if ((s == gCoreVocab->RDF_parent) && (type == RDF_RESOURCE_TYPE)  &&
       (tv) && (ldapContainerp(v))) {
@@ -138,7 +138,7 @@ ldapUnassert (RDFT rdf, RDF_Resource u, RDF_Resource s, void* v,
 		   RDF_ValueType type)
 {
 
-  XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
+  PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
   if (!ldap2rdfInitedp) ldap2rdfInit(rdf);
   if ((s == gCoreVocab->RDF_parent) && (type == RDF_RESOURCE_TYPE)  &&
       (ldapContainerp(v))) {
@@ -154,7 +154,7 @@ PRBool
 ldapDBAdd (RDFT rdf, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type)
 {
   Assertion nextAs, prevAs, newAs; 
-  XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
+  PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
   if ((s == gCoreVocab->RDF_instanceOf) && (v == gWebData->RDF_Container)) {
     setContainerp(u, true);
     return 1;
@@ -195,7 +195,7 @@ ldapDBRemove (RDFT rdf, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType t
 {
   Assertion nextAs, prevAs,  ans;
   PRBool found = false;
-  XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
+  PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
   nextAs = prevAs = ldaparg1(u);
   while (nextAs != null) {
     if (asEqual(nextAs, u, s, v, type)) {
@@ -236,7 +236,7 @@ PRBool
 ldapHasAssertion (RDFT rdf, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type, PRBool tv)
 {
   Assertion nextAs;
-  XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
+  PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
   if (!ldap2rdfInitedp) ldap2rdfInit(rdf);
 
   nextAs = ldaparg1(u);
@@ -267,7 +267,7 @@ ldapGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, 
   while (nextAs != null) {
     if ((nextAs->s == s) && (nextAs->tv == tv) && (nextAs->type == type)) {
       void * retVal =  (inversep ? nextAs->u : nextAs->value);
-      XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )retVal)));
+      PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )retVal)));
       return retVal	
     }
     nextAs = (inversep ? nextAs->invNext : nextAs->next);
@@ -279,7 +279,7 @@ ldapGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, 
   while (nextAs != null) {
     if ((nextAs->s == s) && (nextAs->tv == tv) && (nextAs->type == type)) {
       void * retVal = (inversep ? nextAs->u : nextAs->value);
-      XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )retVal)));
+      PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )retVal)));
       return retVal	
     }
     nextAs = (inversep ? nextAs->invNext : nextAs->next);

@@ -63,7 +63,7 @@ ESAssert (RDFT rdf, RDF_Resource u, RDF_Resource s, void* v,
 		   RDF_ValueType type, PRBool tv)
 {
 	PRBool		retVal;
-  XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char*) v)));	
+  PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char*) v)));	
 
   if ((s == gCoreVocab->RDF_parent) && (type == RDF_RESOURCE_TYPE)  &&
       (ESFTPRT((RDF_Resource)v)) &&
@@ -84,7 +84,7 @@ ESUnassert (RDFT rdf, RDF_Resource u, RDF_Resource s, void* v,
 {
 	PRBool		retVal;
 
-  XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char*) v)));	
+  PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char*) v)));	
   if ((s == gCoreVocab->RDF_parent) && (type == RDF_RESOURCE_TYPE)  &&
       (ESFTPRT((RDF_Resource)v)) &&
       (containerp((RDF_Resource)v))) {
@@ -115,7 +115,7 @@ es_GetUrlExitFunc (URL_Struct *urls, int status, MWContext *cx)
 			switch(feData->method)
 			{
 				case	URL_POST_METHOD:
-				if (((p = strrchr(resourceID(child), '/')) != NULL) && (*++p != '\0'))
+				if (((p = RDF_STRRCHR(resourceID(child), '/')) != NULL) && (*++p != '\0'))
 				{
 					if ((newURL = append2Strings(resourceID(parent), p)) != NULL)
 					{
@@ -303,7 +303,7 @@ parseNextESFTPLine (RDFFile f, char* line)
 	if (f->fileType != FTP_RT && f->fileType != ES_RT)	return;
 
 	/* work around bug where linefeeds are actually encoded as %0A */
-	if (endsWith("%0A", line))	line[strlen(line)-3] = '\0';
+	if (endsWith("%0A", line))	line[RDF_STRLEN(line)-3] = '\0';
 
 	if ((token = strtok(line, " ")) != NULL)
 	{
@@ -317,28 +317,28 @@ parseNextESFTPLine (RDFFile f, char* line)
 		{
 			while ((token != NULL) && (tokenNum < RDF_MAX_NUM_FILE_TOKENS))
 			{
-				if (!strcmp(token, "Filename"))
+				if (!RDF_STRCMP(token, "Filename"))
 				{
 					f->tokens[f->numFileTokens].token = gCoreVocab->RDF_name;
 					f->tokens[f->numFileTokens].type = RDF_STRING_TYPE;
 					f->tokens[f->numFileTokens].tokenNum = tokenNum;
 					++(f->numFileTokens);
 				}
-				else if (!strcmp(token, "Content-Length"))
+				else if (!RDF_STRCMP(token, "Content-Length"))
 				{
 					f->tokens[f->numFileTokens].token = gWebData->RDF_size;
 					f->tokens[f->numFileTokens].type = RDF_INT_TYPE;
 					f->tokens[f->numFileTokens].tokenNum = tokenNum;
 					++(f->numFileTokens);
 				}
-				else if (!strcmp(token, "File-type"))
+				else if (!RDF_STRCMP(token, "File-type"))
 				{
 					f->tokens[f->numFileTokens].token = gWebData->RDF_description;
 					f->tokens[f->numFileTokens].type = RDF_STRING_TYPE;
 					f->tokens[f->numFileTokens].tokenNum = tokenNum;
 					++(f->numFileTokens);
 				}
-				else if (!strcmp(token, "Last-Modified"))
+				else if (!RDF_STRCMP(token, "Last-Modified"))
 				{
 					f->tokens[f->numFileTokens].token = gWebData->RDF_lastModifiedDate;
 					f->tokens[f->numFileTokens].type = RDF_STRING_TYPE;
@@ -346,7 +346,7 @@ parseNextESFTPLine (RDFFile f, char* line)
 					++(f->numFileTokens);
 				}
 /*
-				else if (!strcmp(token, "Permissions"))
+				else if (!RDF_STRCMP(token, "Permissions"))
 				{
 					f->tokens[f->numFileTokens].token = NULL;
 					f->tokens[f->numFileTokens].type = RDF_STRING_TYPE;
@@ -466,8 +466,8 @@ parseNextESFTPBlob(NET_StreamClass *stream, char* blob, int32 size)
     m = 0;
     memset(f->line, '\0', f->lineSize);
     if (f->holdOver[0] != '\0') {
-      memcpy(f->line, f->holdOver, strlen(f->holdOver));
-      m = strlen(f->holdOver);
+      memcpy(f->line, f->holdOver, RDF_STRLEN(f->holdOver));
+      m = RDF_STRLEN(f->holdOver);
       memset(f->holdOver, '\0', RDF_BUF_SIZE);
     }
     while ((m < f->lineSize) && (c != '\r') && (c != '\n') && (n < size)) {

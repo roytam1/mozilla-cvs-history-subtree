@@ -114,7 +114,7 @@ processZones(RDFT rdf, char *zones, uint16 numZones, XP_Bool noHierarchyFlag)
 	char			*escapedURL, url[1024], virtualURL[1024], *p;
 	uint16			loop;
 
-	XP_ASSERT(zones != NULL);
+	PR_ASSERT(zones != NULL);
 	if (zones == NULL)	return;
 
 	for (loop=0; loop<numZones; loop++)
@@ -129,16 +129,16 @@ processZones(RDFT rdf, char *zones, uint16 numZones, XP_Bool noHierarchyFlag)
 			p = url;
 			while (p != NULL)
 			{
-				p = XP_STRCHR(p, ' ');
+				p = RDF_STRCHR(p, ' ');
 				if (p != NULL)	*p = '\0';
 				escapedURL = NET_Escape(url, URL_XALPHAS);	/* URL_PATH */
 				if (escapedURL == NULL)	return;
 				if (p != NULL)	*p++ = ' ';
 	
 				virtualURL[0] = '\0';
-				if (p != NULL)	XP_STRCAT(virtualURL, "virtual");
-				XP_STRCAT(virtualURL, "at://");
-				XP_STRCAT(virtualURL, escapedURL);
+				if (p != NULL)	RDF_STRCAT(virtualURL, "virtual");
+				RDF_STRCAT(virtualURL, "at://");
+				RDF_STRCAT(virtualURL, escapedURL);
 				XP_FREE(escapedURL);
 	
 				if ((r = RDF_GetResource(NULL, virtualURL, PR_TRUE)) != NULL)
@@ -169,8 +169,8 @@ processZones(RDFT rdf, char *zones, uint16 numZones, XP_Bool noHierarchyFlag)
 			escapedURL = NET_Escape(url, URL_XALPHAS);	/* URL_PATH */
 			if (escapedURL == NULL)	return;
 			virtualURL[0] = 0;
-			XP_STRCAT(virtualURL, "at://");
-			XP_STRCAT(virtualURL, escapedURL);
+			RDF_STRCAT(virtualURL, "at://");
+			RDF_STRCAT(virtualURL, escapedURL);
 			XP_FREE(escapedURL);
 			if ((r = RDF_GetResource(NULL, virtualURL, PR_TRUE)) != NULL)
 			{
@@ -222,13 +222,13 @@ checkServerLookup (MPPParamBlock *nbp)
 					if (escapedURL != NULL)
 					{
 						strcpy(afpUrl, "afp:/at/");
-						strcat(afpUrl, escapedURL);
-						/* strcat(afpUrl, ":AFPServer@"); */
-						strcat(afpUrl, ":");
+						RDF_STRCAT(afpUrl, escapedURL);
+						/* RDF_STRCAT(afpUrl, ":AFPServer@"); */
+						RDF_STRCAT(afpUrl, ":");
 
 						if ((ourNBPData = (ourNBPUserDataPtr)nbp->NBP.userData) != NULL)
 						{
-							strcat(afpUrl, ourNBPData->parentID + strlen("at://"));
+							RDF_STRCAT(afpUrl, ourNBPData->parentID + RDF_STRLEN("at://"));
 							if ((parent = RDF_GetResource(NULL, (char *)(ourNBPData->parentID), PR_TRUE)) != NULL)
 							{
 								if ((r = RDF_GetResource(NULL, afpUrl, PR_TRUE)) != NULL)
@@ -280,7 +280,7 @@ getServers(RDFT rdf, RDF_Resource parent)
 	entity = (EntityName *)getMem(sizeof(EntityName));
 	buffer = getMem(10240);
 	ourNBPData = getMem(sizeof(ourNBPUserDataStruct));
-	zone = unescapeURL(resourceID(parent)+strlen("at://"));
+	zone = unescapeURL(resourceID(parent)+RDF_STRLEN("at://"));
 	parentID = copyString(resourceID(parent));
 
 	if ((nbp != NULL) && (entity != NULL) && (buffer != NULL) &&
@@ -289,7 +289,7 @@ getServers(RDFT rdf, RDF_Resource parent)
 		ourNBPData->rdf = rdf;
 		ourNBPData->parentID = parentID;
 	
-		url[0] = strlen(zone);
+		url[0] = RDF_STRLEN(zone);
 		strcpy(&url[1], zone);
 		NBPSetEntity((char *)entity, "\p=", "\pAFPServer", (void *)url);
 		nbp->MPPioCompletion = NULL;
@@ -379,12 +379,12 @@ AtalkAssert (RDFT rdf, RDF_Resource u, RDF_Resource s, void *v, RDF_ValueType ty
 
 			if (startsWith("afp:/at/", resourceID(u)))
 			{
-				url = unescapeURL(resourceID(u) + strlen("afp:/at/"));
+				url = unescapeURL(resourceID(u) + RDF_STRLEN("afp:/at/"));
 			}
 			else if (startsWith("afp:/tcp/", resourceID(u)))
 			{
 				/* if AFP URL indicates TCP, AppleShare Client 3.7 or later is needed */
-				url = unescapeURL(resourceID(u) + strlen("afp:/tcp/"));
+				url = unescapeURL(resourceID(u) + RDF_STRLEN("afp:/tcp/"));
 				if ((err = Gestalt(kAppleShareVerGestalt, &result)) != noErr)
 				{
 					return(retVal);
@@ -399,7 +399,7 @@ AtalkAssert (RDFT rdf, RDF_Resource u, RDF_Resource s, void *v, RDF_ValueType ty
 			if (url == NULL)	return(retVal);
 
 			server = url;
-			if ((at = XP_STRCHR(url, '@')) != NULL)
+			if ((at = RDF_STRCHR(url, '@')) != NULL)
 			{
 				user = server;
 				*at = '\0';
@@ -407,25 +407,25 @@ AtalkAssert (RDFT rdf, RDF_Resource u, RDF_Resource s, void *v, RDF_ValueType ty
 			}
 			else
 			{
-				if ((slash = XP_STRCHR(server, '/')) != NULL)
+				if ((slash = RDF_STRCHR(server, '/')) != NULL)
 				{
 					*slash = '\0';
 					volume = ++slash;
-					if ((colon = XP_STRCHR(volume, ':')) != NULL)
+					if ((colon = RDF_STRCHR(volume, ':')) != NULL)
 					{
 						*colon = '\0';
 						/* no support for folder/file references at end of AFP URLs */
 					}
 				}
 			}
-			if ((colon = XP_STRRCHR(server, ':')) != NULL)
+			if ((colon = RDF_STRRCHR(server, ':')) != NULL)
 			{
 				*colon = '\0';
 				zone = ++colon;
 			}
 			if (user != NULL)
 			{
-				if ((colon = XP_STRCHR(user, ':')) != NULL)
+				if ((colon = RDF_STRCHR(user, ':')) != NULL)
 				{
 					*colon = '\0';
 					password = ++colon;
@@ -442,7 +442,7 @@ AtalkAssert (RDFT rdf, RDF_Resource u, RDF_Resource s, void *v, RDF_ValueType ty
 			{
 				if (server != NULL && zone != NULL)
 				{
-					msg = getMem(strlen(server) + strlen("\'\' @ ") + strlen(zone));
+					msg = getMem(RDF_STRLEN(server) + strlen("\'\' @ ") + strlen(zone));
 					if (msg != NULL)
 					{
 						sprintf(msg, "\'%s\' @ %s", server, zone);
@@ -450,7 +450,7 @@ AtalkAssert (RDFT rdf, RDF_Resource u, RDF_Resource s, void *v, RDF_ValueType ty
 				}
 				else if (server != NULL)
 				{
-					msg = getMem(strlen(server) + strlen("\'\':"));
+					msg = getMem(RDF_STRLEN(server) + strlen("\'\':"));
 					if (msg != NULL)
 					{
 						sprintf(msg, "\'%s\':", server);
@@ -476,37 +476,37 @@ AtalkAssert (RDFT rdf, RDF_Resource u, RDF_Resource s, void *v, RDF_ValueType ty
 				afpXInfo.uamType = ((password != NULL) && (*password != '\0')) ? 
 						kEncryptPassword : kNoUserAuthentication;
 
-				len = (zone != NULL) ? strlen(zone) : 0;
+				len = (zone != NULL) ? RDF_STRLEN(zone) : 0;
 				afpXInfo.zoneNameOffset = BASE_AFPX_OFFSET;
 				afpXInfo.AFPData[pBlockSize++] = len;
 				strncpy(&afpXInfo.AFPData[pBlockSize], (zone) ? zone : "", len);
 				pBlockSize += len;     
 
-				len = (server != NULL) ? strlen(server) : 0;
+				len = (server != NULL) ? RDF_STRLEN(server) : 0;
 				afpXInfo.serverNameOffset = BASE_AFPX_OFFSET + pBlockSize;
 				afpXInfo.AFPData[pBlockSize++] = len;
 				strncpy(&afpXInfo.AFPData[pBlockSize], (server) ? server : "", len);
 				pBlockSize += len;                   
 
-				len = (volume != NULL) ? strlen(volume) : 0;
+				len = (volume != NULL) ? RDF_STRLEN(volume) : 0;
 				afpXInfo.volNameOffset = BASE_AFPX_OFFSET + pBlockSize;
 				afpXInfo.AFPData[pBlockSize++] = len;
 				strncpy(&afpXInfo.AFPData[pBlockSize], (volume) ? volume : "", len);
 				pBlockSize += len;
 
-				len = (user != NULL) ? strlen(user) : 0;
+				len = (user != NULL) ? RDF_STRLEN(user) : 0;
 				afpXInfo.userNameOffset = BASE_AFPX_OFFSET + pBlockSize;
 				afpXInfo.AFPData[pBlockSize++] = len;
 				strncpy(&afpXInfo.AFPData[pBlockSize], (user) ? user : "", len);
 				pBlockSize += len;
 
-				len = (password != NULL) ? strlen(password) : 0;
+				len = (password != NULL) ? RDF_STRLEN(password) : 0;
 				afpXInfo.userPasswordOffset = BASE_AFPX_OFFSET + pBlockSize;
 				afpXInfo.AFPData[pBlockSize++] = len;
 				strncpy(&afpXInfo.AFPData[pBlockSize], (password) ? password : "", len);
 				pBlockSize += len;
 
-				len = (volPassword != NULL) ? strlen(volPassword) : 0;
+				len = (volPassword != NULL) ? RDF_STRLEN(volPassword) : 0;
 				afpXInfo.volPasswordOffset = BASE_AFPX_OFFSET + pBlockSize;
 				afpXInfo.AFPData[pBlockSize++] = len;
 				strncpy(&afpXInfo.AFPData[pBlockSize], (volPassword) ? volPassword : "", len);
@@ -553,37 +553,37 @@ AtalkAssert (RDFT rdf, RDF_Resource u, RDF_Resource s, void *v, RDF_ValueType ty
 						kEncryptPassword : kNoUserAuthentication;
 
 
-				len = (zone != NULL) ? strlen(zone) : 0;
+				len = (zone != NULL) ? RDF_STRLEN(zone) : 0;
 				afpInfo.zoneNameOffset = BASE_AFP_OFFSET;
 				afpInfo.AFPData[pBlockSize++] = len;
 				strncpy(&afpInfo.AFPData[pBlockSize], (zone) ? zone : "", len);
 				pBlockSize += len;     
 
-				len = (server != NULL) ? strlen(server) : 0;
+				len = (server != NULL) ? RDF_STRLEN(server) : 0;
 				afpInfo.serverNameOffset = BASE_AFP_OFFSET + pBlockSize;
 				afpInfo.AFPData[pBlockSize++] = len;
 				strncpy(&afpInfo.AFPData[pBlockSize], (server) ? server : "", len);
 				pBlockSize += len;                   
 
-				len = (volume != NULL) ? strlen(volume) : 0;
+				len = (volume != NULL) ? RDF_STRLEN(volume) : 0;
 				afpInfo.volNameOffset = BASE_AFP_OFFSET + pBlockSize;
 				afpInfo.AFPData[pBlockSize++] = len;
 				strncpy(&afpInfo.AFPData[pBlockSize], (volume) ? volume : "", len);
 				pBlockSize += len;
 
-				len = (user != NULL) ? strlen(user) : 0;
+				len = (user != NULL) ? RDF_STRLEN(user) : 0;
 				afpInfo.userNameOffset = BASE_AFP_OFFSET + pBlockSize;
 				afpInfo.AFPData[pBlockSize++] = len;
 				strncpy(&afpInfo.AFPData[pBlockSize], (user) ? user : "", len);
 				pBlockSize += len;
 
-				len = (password != NULL) ? strlen(password) : 0;
+				len = (password != NULL) ? RDF_STRLEN(password) : 0;
 				afpInfo.userPasswordOffset = BASE_AFP_OFFSET + pBlockSize;
 				afpInfo.AFPData[pBlockSize++] = len;
 				strncpy(&afpInfo.AFPData[pBlockSize], (password) ? password : "", len);
 				pBlockSize += len;
 
-				len = (volPassword != NULL) ? strlen(volPassword) : 0;
+				len = (volPassword != NULL) ? RDF_STRLEN(volPassword) : 0;
 				afpInfo.volPasswordOffset = BASE_AFP_OFFSET + pBlockSize;
 				afpInfo.AFPData[pBlockSize++] = len;
 				strncpy(&afpInfo.AFPData[pBlockSize], (volPassword) ? volPassword : "", len);
@@ -630,7 +630,7 @@ AtalkAssert (RDFT rdf, RDF_Resource u, RDF_Resource s, void *v, RDF_ValueType ty
 					break;
 				}
 				sprintf(errorNum, XP_GetString(RDF_AFP_ERROR_NUM_STR), err);
-				strcat (errorMsg, errorNum);
+				RDF_STRCAT (errorMsg, errorNum);
 				FE_Alert(NULL, errorMsg);
 			}
 
@@ -711,7 +711,7 @@ convertAFPtoUnescapedFile(char *id)
 {
 	char		*url = NULL, *slash, *temp;
 
-	XP_ASSERT(id != NULL);
+	PR_ASSERT(id != NULL);
 
 	if (id != NULL)
 	{
@@ -769,7 +769,7 @@ AtalkGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type,
 			{
 				if ((pathname = copyString(slash)) != NULL)
 				{
-					if ((len = strlen(pathname)) > 0)
+					if ((len = RDF_STRLEN(pathname)) > 0)
 					{
 						if (pathname[len-1] == '/')  pathname[--len] = '\0';
 						n = revCharSearch('/', pathname);
@@ -891,7 +891,7 @@ AtalkGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type,
 		if ((s == gCoreVocab->RDF_name) && (type == RDF_STRING_TYPE) && (tv))
 		{
 			passThru = PR_FALSE;
-			if ((url = unescapeURL(resourceID(u) + strlen("at://"))) != NULL)
+			if ((url = unescapeURL(resourceID(u) + RDF_STRLEN("at://"))) != NULL)
 			{
 				noHierarchyFlag = false;
 				PREF_GetBoolPref(ATALK_NOHIERARCHY_PREF, &noHierarchyFlag);
@@ -901,7 +901,7 @@ AtalkGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type,
 				}
 				else
 				{
-					if ((retVal = XP_STRRCHR(url, ' ')) != NULL)
+					if ((retVal = RDF_STRRCHR(url, ' ')) != NULL)
 					{
 						retVal = copyString(((char *)retVal) + 1);
 					}
@@ -919,9 +919,9 @@ AtalkGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type,
 		if ((s == gCoreVocab->RDF_name) && (type == RDF_STRING_TYPE) && (tv))
 		{
 			passThru = PR_FALSE;
-			if ((url = unescapeURL(resourceID(u) + strlen("virtualat://"))) != NULL)
+			if ((url = unescapeURL(resourceID(u) + RDF_STRLEN("virtualat://"))) != NULL)
 			{
-				if ((retVal = XP_STRRCHR(url, ' ')) != NULL)
+				if ((retVal = RDF_STRRCHR(url, ' ')) != NULL)
 				{
 					retVal = copyString(((char *)retVal) + 1);
 				}
@@ -937,7 +937,7 @@ AtalkGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type,
 		(type == RDF_STRING_TYPE) && (!inversep) && (tv))
 	{
 		passThru = PR_FALSE;
-		retVal = (void *)copyString(resourceID(u) + strlen(ATALK_CMD_PREFIX));
+		retVal = (void *)copyString(resourceID(u) + RDF_STRLEN(ATALK_CMD_PREFIX));
 	}
 
 	if (passThru == PR_TRUE)
@@ -1051,7 +1051,7 @@ AtalkNextValue (RDFT rdf, RDF_Cursor c)
 	char			*base, *slash, *temp = NULL, *encoded = NULL, *url, *url2;
 	void			*retVal = NULL;
 
-	XP_ASSERT(c != NULL);
+	PR_ASSERT(c != NULL);
 	if (c == NULL)		return(NULL);
 
 	if ((((c->s == gCoreVocab->RDF_child) && (!c->inversep)) ||
@@ -1084,7 +1084,7 @@ AtalkNextValue (RDFT rdf, RDF_Cursor c)
 			{
 				if ((base = NET_Escape(de->name, URL_XALPHAS)) != NULL)		/* URL_PATH */
 				{
-					sep = ((resourceID(c->u))[strlen(resourceID(c->u))-1] == XP_DIRECTORY_SEPARATOR);
+					sep = ((resourceID(c->u))[RDF_STRLEN(resourceID(c->u))-1] == XP_DIRECTORY_SEPARATOR);
 					if (sep)
 					{
 						url = PR_smprintf("%s%s",  resourceID(c->u), base);

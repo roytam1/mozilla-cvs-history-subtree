@@ -54,7 +54,7 @@ extern	int	RDF_VOLUME_DESC_STR, RDF_DIRECTORY_DESC_STR, RDF_FILE_DESC_STR;
 
 /* fs2rdf.c function prototypes */
 
-XP_BEGIN_PROTOS
+NSPR_BEGIN_EXTERN_C
 
 #ifdef	XP_MAC
 OSErr		nativeMacPathname(char *fileURL, FSSpec *fss);
@@ -79,6 +79,6 @@ PRBool		isFileVisible(char *fileURL);
 RDF_Error	fsDisposeCursor (RDFT rdf, RDF_Cursor c);
 RDF_Resource	CreateFSUnit (char* nname, PRBool isDirectoryFlag);
 
-XP_END_PROTOS
+NSPR_END_EXTERN_C
 
 #endif

@@ -118,7 +118,7 @@ RDF_Init(RDF_InitParams params)
   PREF_CopyCharPref("browser.NavCenter", &navCenterURL);
   */
   navCenterURL = copyString("http://rdf.netscape.com/rdf/navcntr.rdf");
-  if (!strchr(navCenterURL, ':')) {
+  if (!RDF_STRCHR(navCenterURL, ':')) {
     navCenterURL = makeDBURL(navCenterURL);
   }
    gNavCntrUrl = copyString(navCenterURL);

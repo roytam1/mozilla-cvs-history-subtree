@@ -36,7 +36,7 @@ typedef struct  {
 
 /* es2mcf.c function prototypes */
 
-XP_BEGIN_PROTOS
+NSPR_BEGIN_EXTERN_C
 
 RDFT		MakeESFTPStore (char* url);
 _esFEData *     esMakeFEData(RDF_Resource parent, RDF_Resource child, int method);
@@ -61,7 +61,7 @@ void		possiblyAccessES(RDFT rdf, RDF_Resource u, RDF_Resource s, PRBool inversep
 void		parseNextESFTPLine (RDFFile f, char* line);
 int		parseNextESFTPBlob(NET_StreamClass *stream, char* blob, int32 size);
 
-XP_END_PROTOS
+NSPR_END_EXTERN_C
 
 #endif
 

@@ -253,7 +253,7 @@ typedef struct _HT_URLSiteMapAssoc {
 
 /* HT function prototypes */
 
-XP_BEGIN_PROTOS
+NSPR_BEGIN_EXTERN_C
 
 void				HT_Startup();
 void				HT_Shutdown();
@@ -361,6 +361,6 @@ void				cleanupInt (HT_Pane htPane, HT_URLSiteMapAssoc *nsmp, RDF_Resource paren
 HT_Pane				newTemplatePane(char* templateName);
 void				PaneDeleteSBPCleanup (HT_Pane htPane);
 
-XP_END_PROTOS
+NSPR_END_EXTERN_C
 
 #endif

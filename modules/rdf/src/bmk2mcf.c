@@ -121,8 +121,8 @@ parseNextBkBlob (RDFFile f, char* blob, int32 size)
     somethingseenp = false;
     memset(f->line, '\0', f->lineSize);
     if (f->holdOver[0] != '\0') {
-      memcpy(f->line, f->holdOver, strlen(f->holdOver));
-      m = strlen(f->holdOver);
+      memcpy(f->line, f->holdOver, RDF_STRLEN(f->holdOver));
+      m = RDF_STRLEN(f->holdOver);
       somethingseenp = true;
       memset(f->holdOver, '\0', RDF_BUF_SIZE);
     }
@@ -264,7 +264,7 @@ newLeafBkItem (RDFFile f, char* token)
   char* lastVisit = NULL;
   char* lastModified = NULL;
   uint8 current = 0;
-  int32 len = strlen(token); 
+  int32 len = RDF_STRLEN(token); 
   int32 n = 0;
   char c = token[n++];
   PRBool inString = false;

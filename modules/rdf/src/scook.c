@@ -39,8 +39,8 @@ makeSCookPathname(char* name)
   char		*ans ;
   size_t		s;
 
-  if ((ans = (char*) getMem(strlen(profileDirURL) + strlen(name) + 8)) != NULL) {
-    s = strlen(profileDirURL);
+  if ((ans = (char*) getMem(RDF_STRLEN(profileDirURL) + strlen(name) + 8)) != NULL) {
+    s = RDF_STRLEN(profileDirURL);
     memcpy(ans, profileDirURL, s);
     if (ans[s-1] != '/') {
       ans[s++] = '/';
@@ -53,7 +53,7 @@ makeSCookPathname(char* name)
 #endif
 
     CallPRMkDirUsingFileURL(ans, 00700);  
-    memcpy(&ans[s], name, strlen(name));
+    memcpy(&ans[s], name, RDF_STRLEN(name));
   }
   return(ans);
 }
@@ -411,7 +411,7 @@ possiblyAccessSCookFile (RDFT mcf, RDF_Resource u, RDF_Resource s, PRBool invers
 }
 
 void  SCookPossiblyAccessFile1 (RDFT rdf, RDF_Resource u, RDF_Resource s, PRBool inversep) {
-	if ((resourceType(u) == RDF_RT) && (strcmp(rdf->url, "rdf:ht") ==0) &&
+	if ((resourceType(u) == RDF_RT) && (RDF_STRCMP(rdf->url, "rdf:ht") ==0) &&
 	  (strstr(resourceID(u), ".rdf") || strstr(resourceID(u), ".mcf")) &&
 	     (s == gCoreVocab->RDF_parent) && 
         (containerp(u))) {

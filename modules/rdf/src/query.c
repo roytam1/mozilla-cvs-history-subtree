@@ -23,7 +23,7 @@
 */
 
 #ifdef XP_PC
-#define strcasecomp strcmp
+#define strcasecomp RDF_STRCMP
 #endif
 
 #include "query.h"

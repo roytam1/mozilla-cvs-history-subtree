@@ -20,9 +20,6 @@
 #define	_RDF_COLUMNS_H_
 
 
-#include "xp.h"
-#include "xpassert.h"
-#include "xpgetstr.h"
 #include "rdf-int.h"
 #include "htrdf.h"
 #include "utils.h"
@@ -38,7 +35,7 @@ extern	int		RDF_CREATED_ON_STR, RDF_LAST_MOD_STR, RDF_SIZE_STR, RDF_ADDED_ON_STR
 
 /* columns.c function prototypes */
 
-XP_BEGIN_PROTOS
+NSPR_BEGIN_EXTERN_C
 
 RDF_Cursor	ColumnsGetSlotValues (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type,  PRBool inversep, PRBool tv);
 void *		ColumnsGetSlotValue(RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, PRBool inversep, PRBool tv);
@@ -46,6 +43,6 @@ void *		ColumnsNextValue (RDFT rdf, RDF_Cursor c);
 RDF_Error	ColumnsDisposeCursor (RDFT rdf, RDF_Cursor c);
 RDFT		MakeColumnStore (char* url);
 
-XP_END_PROTOS
+NSPR_END_EXTERN_C
 
 #endif

@@ -118,7 +118,7 @@ collateOneHist (RDFT r, RDF_Resource u, char* url, char* title, time_t lastAcces
   urlUnit  = HistCreate(url, 1);
   existingName = remoteStoreGetSlotValue(gLocalStore, urlUnit, gCoreVocab->RDF_name, RDF_STRING_TYPE, 0, 1);
 
-  XP_ASSERT( IsUTF8String((const char* )existingName));
+  PR_ASSERT( IsUTF8String((const char* )existingName));
 
   if (existingName == NULL) {
   if (title[0] != '\0')  remoteAddName(urlUnit, title);	  
@@ -144,7 +144,7 @@ collateOneHist (RDFT r, RDF_Resource u, char* url, char* title, time_t lastAcces
 #else
 	strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_WINDATE),time);
 #endif
-  	XP_ASSERT( IsUTF8String((const char* )buffer));
+  	PR_ASSERT( IsUTF8String((const char* )buffer));
 	remoteStoreAdd(gRemoteStore, urlUnit, gWebData->RDF_lastVisitDate,
 		 (void *)copyString(buffer), RDF_STRING_TYPE, 1);
   }
@@ -158,7 +158,7 @@ collateOneHist (RDFT r, RDF_Resource u, char* url, char* title, time_t lastAcces
 #else
 	strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_WINDATE),time);
 #endif
-  	XP_ASSERT( IsUTF8String((const char* )buffer));
+  	PR_ASSERT( IsUTF8String((const char* )buffer));
 	remoteStoreAdd(gRemoteStore, urlUnit, gWebData->RDF_firstVisitDate,
 		 (void *)copyString(buffer), RDF_STRING_TYPE, 1);
   }
@@ -181,7 +181,7 @@ hostUnitOfURL (RDFT r, RDF_Resource top, RDF_Resource nu, char* title)
   char* url =  resourceID(nu);
   int16 s1, s2, s3;
   RDF_Resource hostResource, existing;
-  if (strlen(url) > 100) return NULL;
+  if (RDF_STRLEN(url) > 100) return NULL;
   if (startsWith("file", url)) {
     return RDF_GetResource(NULL, "Local Files", 1);
   } else { 
@@ -189,7 +189,7 @@ hostUnitOfURL (RDFT r, RDF_Resource top, RDF_Resource nu, char* title)
     s1 = charSearch(':', url)+3;
     s2 = charSearch('/', &url[s1]);
     s3 = charSearch(':', &url[s1]);
-    if (s2 == -1) s2 = strlen(url)-s1;
+    if (s2 == -1) s2 = RDF_STRLEN(url)-s1;
     if ((s3 != -1) && (s2 > s3)) s2 = s3;
     if (startsWith("www", &url[s1])) {s1 = s1+4; s2 = s2-4;}
     if (s2<1) return(NULL);
@@ -335,7 +335,7 @@ hostUnitOfDate (RDFT r, RDF_Resource u, time_t lastAccessDate)
 		setResourceType(node, HISTORY_RT);
 		remoteStoreAdd(gHistoryStore, node, gCoreVocab->RDF_parent,
 				parentNode, RDF_RESOURCE_TYPE, 1);
-  		XP_ASSERT( IsUTF8String((const char* )weekBuffer));
+  		PR_ASSERT( IsUTF8String((const char* )weekBuffer));
 		remoteStoreAdd(gHistoryStore, node, gCoreVocab->RDF_name,
 				copyString(weekBuffer), RDF_STRING_TYPE, 1);
 		parentNode = node;
@@ -354,7 +354,7 @@ hostUnitOfDate (RDFT r, RDF_Resource u, time_t lastAccessDate)
 		setResourceType(node, HISTORY_RT);
 		histAddParent(node, parentNode);
 		sprintf(bigBuffer,"%s - %s",weekBuffer,dayBuffer);
-  		XP_ASSERT( IsUTF8String((const char* )dayBuffer));
+  		PR_ASSERT( IsUTF8String((const char* )dayBuffer));
 		remoteStoreAdd(gHistoryStore, node, gCoreVocab->RDF_name,
 				copyString(dayBuffer), RDF_STRING_TYPE, 1);
 		parentNode = node;
@@ -371,7 +371,7 @@ hostUnitOfDate (RDFT r, RDF_Resource u, time_t lastAccessDate)
 		setResourceType(node, HISTORY_RT);
 		remoteStoreAdd(gHistoryStore, node, gCoreVocab->RDF_parent,
 				parentNode, RDF_RESOURCE_TYPE, 1);
-  		XP_ASSERT( IsUTF8String((const char* )hourBuffer));
+  		PR_ASSERT( IsUTF8String((const char* )hourBuffer));
 		remoteStoreAdd(gHistoryStore, node, gCoreVocab->RDF_name,
 				copyString(hourBuffer), RDF_STRING_TYPE, 1);
 		parentNode = node;
@@ -391,7 +391,7 @@ saveHistory ()
   if (file != NULL) {
     hist = RDF_SerializeRDFStore(gHistoryStore) ;
     if (hist != NULL) {
-      PR_Write(file, hist, strlen(hist));
+      PR_Write(file, hist, RDF_STRLEN(hist));
     }
   }
   freeMem(path);
@@ -459,13 +459,13 @@ displayHistoryItem (char* url)
 RDF_Resource
 HistCreate (char* url, PRBool createp)
 {
-  size_t size = strlen(url);
+  size_t size = RDF_STRLEN(url);
   char* nurl = getMem(size+8);
   RDF_Resource ans;
   if (charSearch(':', url) == -1) {    
     if (url[size-1] == '/') {
       sprintf(nurl, "http://%s", url);
-      nurl[strlen(nurl)-1] = '\0';
+      nurl[RDF_STRLEN(nurl)-1] = '\0';
     } else {
     sprintf(nurl, "http://%s/", url);
     }
@@ -528,7 +528,7 @@ histAddParent (RDF_Resource child, RDF_Resource parent)
     }
     while (nextAs != null) {
 		char* nid =  resourceID(nextAs->u);
-        if (strcmp(resourceID(child),  resourceID(nextAs->u)) > 0) {
+        if (RDF_STRCMP(resourceID(child),  resourceID(nextAs->u)) > 0) {
           if (prevAs == nextAs) {
             newAs->invNext = prevAs;
             parent->rarg2  = newAs;
@@ -559,7 +559,7 @@ historyUnassert (RDFT hst,  RDF_Resource u, RDF_Resource s, void* v,
 		       RDF_ValueType type)
 {
 
-  XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
+  PR_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
   if ((type == RDF_RESOURCE_TYPE) && (resourceType((RDF_Resource)v) == HISTORY_RT) &&
       (s == gCoreVocab->RDF_parent)) {
     RDF_Resource parents[5];

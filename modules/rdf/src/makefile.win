@@ -28,7 +28,6 @@ C_OBJS=.\$(OBJDIR)\vocab.obj \
        .\$(OBJDIR)\remstore.obj \
        .\$(OBJDIR)\utils.obj \
        .\$(OBJDIR)\rdfparse.obj \
-       .\$(OBJDIR)\jsec2rdf.obj \
        .\$(OBJDIR)\bmk2mcf.obj \
 	.\$(OBJDIR)\columns.obj \
        .\$(OBJDIR)\rdfht.obj \
