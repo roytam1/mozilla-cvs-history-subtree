@@ -95,14 +95,14 @@ NS_IMETHODIMP nsImageRequestProxy::GetImageStatus(PRUint32 *aStatus)
 
 /** nsIImageContainerObserver methods **/
 
-
-/* [noscript] void frameChanged (in nsIImageContainer container, in nsIImageFrame newframe, in nsRect dirtyRect); */
-NS_IMETHODIMP nsImageRequestProxy::FrameChanged(nsIImageContainer *container, nsIImageFrame *newframe, nsRect * dirtyRect)
+/* [noscript] void frameChanged (in nsIImageContainer container, in nsISupports cx, in nsIImageFrame newframe, in nsRect dirtyRect); */
+NS_IMETHODIMP nsImageRequestProxy::FrameChanged(nsIImageContainer *container, nsISupports *cx, nsIImageFrame *newframe, nsRect * dirtyRect)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  if (mObserver)
+    mObserver->FrameChanged(container, mContext, newframe, dirtyRect);
+
+  return NS_OK;
 }
-
-
 
 /** nsIImageDecoderObserver methods **/
 

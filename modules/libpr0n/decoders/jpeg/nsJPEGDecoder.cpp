@@ -230,8 +230,7 @@ NS_IMETHODIMP nsJPEGDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PR
 
     mObserver->OnStartDecode(nsnull, nsnull);
 
-    nsCOMPtr<nsIImageContainerObserver> conObserver(do_QueryInterface(mObserver));
-    mImage->Init(mInfo.image_width, mInfo.image_height, conObserver);
+    mImage->Init(mInfo.image_width, mInfo.image_height, mObserver);
     mObserver->OnStartContainer(nsnull, nsnull, mImage);
 
     mFrame = do_CreateInstance("@mozilla.org/gfx/image/frame;2");

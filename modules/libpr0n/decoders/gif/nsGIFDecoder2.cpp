@@ -232,9 +232,7 @@ int BeginGIF(
   if (decoder->mObserver)
     decoder->mObserver->OnStartDecode(nsnull, nsnull);
 
-  nsCOMPtr<nsIImageContainerObserver> conObserver(do_QueryInterface(decoder->mObserver));
-
-  decoder->mImageContainer->Init(aLogicalScreenWidth, aLogicalScreenHeight, conObserver);
+  decoder->mImageContainer->Init(aLogicalScreenWidth, aLogicalScreenHeight, decoder->mObserver);
 
   if (decoder->mObserver)
     decoder->mObserver->OnStartContainer(nsnull, nsnull, decoder->mImageContainer);

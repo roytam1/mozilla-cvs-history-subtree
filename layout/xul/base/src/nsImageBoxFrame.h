@@ -44,6 +44,7 @@ public:
 
   NS_DECL_ISUPPORTS
   NS_DECL_NSIIMAGEDECODEROBSERVER
+  NS_DECL_NSIIMAGECONTAINEROBSERVER
 
   void SetFrame(nsImageBoxFrame *frame) { mFrame = frame; }
 
@@ -103,6 +104,7 @@ public:
   NS_IMETHOD OnStopFrame(nsIImageRequest *request, nsIPresContext *cx, nsIImageFrame *frame);
   NS_IMETHOD OnStopContainer(nsIImageRequest *request, nsIPresContext *cx, nsIImageContainer *image);
   NS_IMETHOD OnStopDecode(nsIImageRequest *request, nsIPresContext *cx, nsresult status, const PRUnichar *statusArg);
+  NS_IMETHOD FrameChanged(nsIImageContainer *container, nsIPresContext *cx, nsIImageFrame *newframe, nsRect * dirtyRect);
 #endif
 
 

@@ -331,8 +331,7 @@ nsPNGDecoder::info_callback(png_structp png_ptr, png_infop info_ptr)
     decoder->mObserver->OnStartDecode(nsnull, nsnull);
 
   // since the png is only 1 frame, initalize the container to the width and height of the frame
-  nsCOMPtr<nsIImageContainerObserver> conObserver(do_QueryInterface(decoder->mObserver));
-  decoder->mImage->Init(width, height, conObserver);
+  decoder->mImage->Init(width, height, decoder->mObserver);
 
   if (decoder->mObserver)
     decoder->mObserver->OnStartContainer(nsnull, nsnull, decoder->mImage);

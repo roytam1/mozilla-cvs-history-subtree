@@ -346,6 +346,20 @@ NS_IMETHODIMP nsImageFrame::OnStopDecode(nsIImageRequest *request, nsIPresContex
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
+
+NS_IMETHODIMP nsImageFrame::FrameChanged(nsIImageContainer *container, nsIPresContext *aPresContext, nsIImageFrame *newframe, nsRect * dirtyRect)
+{
+  float p2t;
+  aPresContext->GetPixelsToTwips(&p2t);
+  nsRect r(*dirtyRect);
+  r *= p2t; // convert to twips
+
+  mTransform.TransformCoord(&r.x, &r.y, &r.width, &r.height);
+
+  Invalidate(aPresContext, r, PR_FALSE);
+
+  return NS_OK;
+}
 #endif
 
 #ifndef USE_IMG2
@@ -1574,6 +1588,12 @@ NS_IMETHODIMP nsImageListener::OnStopDecode(nsIImageRequest *request, nsISupport
 {
   nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
   return mFrame->OnStopDecode(request, pc, status, statusArg);
+}
+
+NS_IMETHODIMP nsImageListener::FrameChanged(nsIImageContainer *container, nsISupports *cx, nsIImageFrame *newframe, nsRect * dirtyRect)
+{
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->FrameChanged(container, pc, newframe, dirtyRect);
 }
 
 #endif

@@ -21,7 +21,7 @@
  *   Stuart Parmenter <pavlov@netscape.com>
  */
 
-#include "nsISupports.idl"
+#include "nsIImageContainerObserver.idl"
 #include "gfxtypes.idl"
 
 interface nsIImageRequest;
@@ -40,7 +40,7 @@ interface nsIImageFrame;
  * @see imagelib2
  */
 [scriptable, uuid(350163d2-1dd2-11b2-9e69-89959ecec1f3)]
-interface nsIImageDecoderObserver : nsISupports
+interface nsIImageDecoderObserver : nsIImageContainerObserver
 {
   /**
    * called as soon as the image begins getting decoded

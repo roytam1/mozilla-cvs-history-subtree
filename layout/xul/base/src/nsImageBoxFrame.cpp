@@ -633,6 +633,11 @@ NS_IMETHODIMP nsImageBoxFrame::OnStopDecode(nsIImageRequest *request, nsIPresCon
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
+
+NS_IMETHODIMP nsImageBoxFrame::FrameChanged(nsIImageContainer *container, nsIPresContext *aPresContext, nsIImageFrame *newframe, nsRect * dirtyRect)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
 #endif
 
 
@@ -689,6 +694,12 @@ NS_IMETHODIMP nsImgListener::OnStopDecode(nsIImageRequest *request, nsISupports 
 {
   nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
   return mFrame->OnStopDecode(request, pc, status, statusArg);
+}
+
+NS_IMETHODIMP nsImgListener::FrameChanged(nsIImageContainer *container, nsISupports *cx, nsIImageFrame *newframe, nsRect * dirtyRect)
+{
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->FrameChanged(container, pc, newframe, dirtyRect);
 }
 
 #endif

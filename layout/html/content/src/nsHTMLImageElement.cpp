@@ -98,6 +98,7 @@ public:
   
 #ifdef USE_IMG2
   NS_DECL_NSIIMAGEDECODEROBSERVER
+  NS_DECL_NSIIMAGECONTAINEROBSERVER
 #endif
 
 
@@ -970,6 +971,11 @@ NS_IMETHODIMP nsHTMLImageElement::OnStopDecode(nsIImageRequest *request, nsISupp
                       &estatus);
 
   return NS_OK;
+}
+
+NS_IMETHODIMP nsHTMLImageElement::FrameChanged(nsIImageContainer *container, nsISupports *cx, nsIImageFrame *newframe, nsRect * dirtyRect)
+{
+  return NS_ERROR_FAILURE;
 }
 
 #else

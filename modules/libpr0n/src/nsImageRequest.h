@@ -30,7 +30,6 @@
 
 #include "nsIChannel.h"
 #include "nsIImageContainer.h"
-#include "nsIImageContainerObserver.h"
 #include "nsIImageDecoder.h"
 #include "nsIImageDecoderObserver.h"
 #include "nsIStreamListener.h"
@@ -55,7 +54,6 @@ enum {
 };
 
 class nsImageRequest : public nsIImageRequest,
-                       public nsIImageContainerObserver,
                        public nsIImageDecoderObserver, 
                        public nsIStreamListener
 {

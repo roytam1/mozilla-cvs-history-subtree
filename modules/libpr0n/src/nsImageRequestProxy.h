@@ -25,7 +25,6 @@
 #include "nsIImageDecoderObserver.h"
 
 #include "nsIImageContainer.h"
-#include "nsIImageContainerObserver.h"
 #include "nsIImageDecoder.h"
 #include "nsCOMPtr.h"
 
@@ -38,20 +37,19 @@
 }
 
 class nsImageRequestProxy : public nsIImageRequest,
-                            public nsIImageContainerObserver,
                             public nsIImageDecoderObserver
 {
 public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIIMAGEREQUEST
+  NS_DECL_NSIIMAGEDECODEROBSERVER
+  NS_DECL_NSIIMAGECONTAINEROBSERVER
+
   nsImageRequestProxy();
   virtual ~nsImageRequestProxy();
 
   /* additional members */
   nsresult Init(nsImageRequest *request, nsIImageDecoderObserver *aObserver, nsISupports *cx);
-
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIIMAGEREQUEST
-  NS_DECL_NSIIMAGECONTAINEROBSERVER
-  NS_DECL_NSIIMAGEDECODEROBSERVER
 
 private:
   nsCOMPtr<nsIImageDecoderObserver> mObserver;
