@@ -2436,7 +2436,7 @@ void CFrontApp::FindCommandStatus( CommandT command, Boolean& enabled,
 #ifdef MOZ_MAIL_NEWS
 		case cmd_MailNewsFolderWindow:
 		case cmd_NewsGroups:
-		case cmd_GetNewMail:
+	//	case cmd_GetNewMail:
 		case cmd_Inbox:
 		case cmd_MailNewsSearch:
 		case cmd_MailFilters:

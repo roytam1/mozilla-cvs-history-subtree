@@ -310,6 +310,7 @@ CStandardFlexTable::~CStandardFlexTable()
 {
 	if (mClickTimer)
 		mClickTimer->NoteSingleClick();
+	delete mClickTimer;
 } // CStandardFlexTable::~CStandardFlexTable
 
 //----------------------------------------------------------------------------------------
@@ -500,7 +501,7 @@ void CStandardFlexTable::DrawSelf()
 } // CStandardFlexTable::DrawSelf
 
 //----------------------------------------------------------------------------------------
-TableIndexT CStandardFlexTable::CountExtraRowsControlledByCell(const STableCell&) const
+TableIndexT CStandardFlexTable::CountExtraRowsControlledByCell(const STableCell& /*inCell*/) const
 //----------------------------------------------------------------------------------------
 {
 	return 0;

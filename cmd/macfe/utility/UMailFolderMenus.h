@@ -20,6 +20,7 @@
 #define __H_UMailFolderMenus
 #pragma once
 /*======================================================================================
+	AUTHOR:			Ted Morris - 12 DEC 96
 
 	DESCRIPTION:	Mixin classes for displaying a UI menu containing a list of current 
 					mail folders.
