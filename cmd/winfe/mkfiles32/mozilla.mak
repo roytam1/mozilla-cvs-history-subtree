@@ -269,7 +269,7 @@ CFLAGS_LIBMISC_C=       $(CFLAGS_DEFAULT)
 CFLAGS_LIBNET_C=        $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/netc.pch" /YX"mkutils.h"
 CFLAGS_LIBNET_CPP=      $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/netcpp.pch" /YX"mkutils.h"
 CFLAGS_LIBMSG_C=        $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/netc.pch" /YX"mkutils.h"
-CFLAGS_LIBMSG_CPP=      $(CFLAGS_DEFAULT) /I$(DEPTH)\lib\libaddr /I$(DEPTH)\lib\libmsg /Fp"$(OUTDIR)/netcpp.pch" /YX"mkutils.h"
+CFLAGS_LIBMSG_CPP=      $(CFLAGS_DEFAULT) /I$(DEPTH)\dist\public\msg /I$(DEPTH)\lib\libaddr /I$(DEPTH)\lib\libmsg /Fp"$(OUTDIR)/netcpp.pch" /YX"mkutils.h"
 CFLAGS_LIBPARSE_C=      $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/pa_parse.pch" /YX"pa_parse.h"
 CFLAGS_XP_C=            $(CFLAGS_DEFAULT)
 CFLAGS_LIBPICS_C=       $(CFLAGS_DEFAULT)
@@ -394,7 +394,6 @@ LINK_LIBS= \
 !endif
 !ifdef MOZ_MAIL_NEWS
     $(DIST)\lib\mime.lib \
-    $(DIST)\lib\net.lib \
     $(DIST)\lib\msg.lib \
     $(DIST)\lib\addr.lib \
     $(DIST)\lib\neo.lib \
