@@ -48,6 +48,8 @@
 
 #include "npglue.h"
 #include "nsIEventHandler.h"
+#include "nsIServiceManager.h"
+#include "nsPluginManager.h"
 
 #ifdef LAYERS
 #include "layers.h"
@@ -424,20 +426,16 @@ OSErr CPluginHandler::InitCodeResource(NPNetscapeFuncs* funcs, _np_handle* handl
 			// PCB:  Let's factor this into an XP function, please!
 			nsFactoryProc nsGetFactory = (nsFactoryProc) PR_FindSymbol(fLibrary, "NSGetFactory");
 			if (nsGetFactory != NULL) {
-				nsresult res = NS_OK;
-			    if (thePluginManager == NULL) {
-			    	// For now, create the plugin manager on demand.
-			        static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
-			        res = nsPluginManager::Create(NULL, kIPluginManagerIID, (void**)&thePluginManager);
-			    	ThrowIf_(res != NS_OK || thePluginManager == NULL);
-			    }
+		        nsIServiceManager* serviceMgr = NULL;
+		        nsresult res = nsServiceManager::GetGlobalServiceManager(&serviceMgr);
+		        ThrowIf_(res != NS_OK);
 				static NS_DEFINE_IID(kIPluginIID, NS_IPLUGIN_IID);
 				nsIPlugin* plugin = NULL;
-				res = nsGetFactory(kIPluginIID, (nsIFactory**)&plugin);
+				res = nsGetFactory(kIPluginIID, serviceMgr, (nsIFactory**)&plugin);
 			    ThrowIf_(res != NS_OK || plugin == NULL);
 			    // beard: establish the primary reference.
 			    plugin->AddRef();
-			    res = plugin->Initialize((nsIPluginManager2*)thePluginManager);
+			    res = plugin->Initialize();
 			    ThrowIf_(res != NS_OK);
 				handle->userPlugin = plugin;
 			} else {
@@ -1172,12 +1170,21 @@ Boolean CPluginWindow::IsPluginCommand(CommandT inCommand)
 	// Since only one plugin can have menus in the menu bar at a time,
 	// the test only checks to see if this plugin has any menus, and
 	// whether the command is synthetic and is from one of the plugin's menus.
-	if (thePluginManager != NULL) {
-		short menuID, menuItem;
-		if (LCommander::IsSyntheticCommand(inCommand, menuID, menuItem)) {
-			PRBool hasAllocated = PR_FALSE;
-			if (thePluginManager->HasAllocatedMenuID(mEventHandler, menuID, &hasAllocated) == NS_OK)
-				return hasAllocated;
+    nsIServiceManager* serviceMgr = NULL;
+    nsresult res = nsServiceManager::GetGlobalServiceManager(&serviceMgr);
+    if (res == NS_OK) {
+    	NS_DEFINE_CID(kPluginManagerCID, NS_PLUGINMANAGER_CID);
+    	NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
+    	nsPluginManager* pluginManager = NULL;
+		res = serviceMgr->GetService(kPluginManagerCID, kIPluginManagerIID, (nsISupports**)&pluginManager);
+		if (res == NS_OK) {
+			short menuID, menuItem;
+			if (LCommander::IsSyntheticCommand(inCommand, menuID, menuItem)) {
+				PRBool hasAllocated = PR_FALSE;
+				if (pluginManager->HasAllocatedMenuID(mEventHandler, menuID, &hasAllocated) == NS_OK)
+					return hasAllocated;
+			}
+			serviceMgr->ReleaseService(kPluginManagerCID, pluginManager);
 		}
 	}
 	return false;
