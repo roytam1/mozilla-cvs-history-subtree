@@ -48,6 +48,7 @@
 #include "nsIRemoteBookmarks.h"
 #include "nsString.h"
 #include "nsIRDFResource.h"
+#include "nsIRDFLiteral.h"
 #include "nsIRDFContainer.h"
 #include "nsIRDFDataSource.h"
 #include "nsIRDFRemoteDataSource.h"
@@ -108,6 +109,8 @@ protected:
   nsCOMPtr<nsIRDFResource>    mProperty;
   nsCOMPtr<nsIRDFNode>        mOldTarget;
   nsCOMPtr<nsIRDFNode>        mNewTarget;
+  nsCOMPtr<nsIRDFLiteral>     mNameLiteral;
+  nsCOMPtr<nsIRDFLiteral>     mURLLiteral;
   nsCOMPtr<nsITimer>          mTimer;
   nsString                    mPassword;
   PRUint32                    mOpcode;

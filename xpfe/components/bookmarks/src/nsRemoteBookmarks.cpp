@@ -50,6 +50,7 @@
 #include "nsString.h"
 #include "nsXPIDLString.h"
 #include "prprf.h"
+#include "prlong.h"
 #include "rdf.h"
 #include "nsIRDFContainer.h"
 #include "nsIRDFContainerUtils.h"
@@ -924,8 +925,7 @@ nsRemoteBookmarks::IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSourc
 NS_IMETHODIMP
 nsRemoteBookmarks::DoCommand(nsISupportsArray/*<nsIRDFResource>*/* aSources,
                              nsIRDFResource* aCommand,
-    
-                         nsISupportsArray/*<nsIRDFResource>*/* aArguments)
+                             nsISupportsArray/*<nsIRDFResource>*/* aArguments)
 {
   nsresult		rv = NS_OK;
   PRInt32			loop;
@@ -1300,13 +1300,125 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
             nsILDAPURL::SCOPE_ONELEVEL, NS_ConvertUTF8toUCS2(filter).get(),
             3,                            /* attributes.GetSize () */
             (const char **)attrs,         /* attributes.GetArray () */
-            nsILDAPOperation::NO_LIMIT,   /* TimeOut*/
-            nsILDAPOperation::NO_LIMIT ); /* ResultLimit*/
+            nsILDAPOperation::NO_LIMIT,   /* TimeOut */
+            nsILDAPOperation::NO_LIMIT ); /* ResultLimit */
           NS_ENSURE_SUCCESS(rv, rv);
         }
         break;
 
 #ifdef  LDAP_MOD_SUPPORT
+
+        case nsRemoteBookmarks::LDAP_ADD:
+        {
+          nsCOMPtr<nsIRDFResource> containerRes;
+          rv = mContainer->GetResource(getter_AddRefs(containerRes));
+          NS_ENSURE_SUCCESS(rv, rv);
+          nsCOMPtr<nsIRDFResource> rdfRes = getLDAPUrl(containerRes);
+          if (!rdfRes)
+            return(NS_ERROR_NULL_POINTER);
+
+          nsresult rv;
+          const char *uri = nsnull;
+          rv = rdfRes->GetValueConst(&uri);
+          NS_ENSURE_SUCCESS(rv, rv);
+          if (!uri)
+            return(NS_ERROR_NULL_POINTER);
+
+          nsCAutoString dn(uri);
+
+          nsCAutoString randomNum;
+          PRTime now64 = PR_Now();
+      		PRInt32 now32;
+      		LL_L2I(now32, now64);
+      		randomNum.Truncate();
+          randomNum.AppendInt(now32);
+          
+          // XXX searching for "cn=" is bogus, perhaps should munge into a nsIURI, get
+          // the DN, munge that, set the DN back. then get the complete URI from nsIURI
+          PRInt32 offset = dn.Find("cn=");  // XXX bogus
+          dn.Insert(",", offset);
+          dn.Insert(randomNum, offset);
+          dn.Insert("cn=bookmark", offset);
+
+          // get a fully-qualified (with REMOTE_BOOKMARK_PREFIX) node
+          // then chop off everything before the start of the DN
+          rv = gRDF->GetResource(dn.get(), getter_AddRefs(mNode));
+          NS_ENSURE_SUCCESS(rv, rv);
+          dn.Cut(0, offset);                // cut off REMOTE_BOOKMARK_PREFIX and everything up to dn start
+
+          // keep these in scope
+          nsCOMPtr<nsILDAPModification> ldapModObjClass;
+          nsCOMPtr<nsILDAPModification> ldapModName;
+          nsCOMPtr<nsILDAPModification> ldapModURL;
+
+          // set up objectclass
+          ldapModObjClass = do_CreateInstance(NS_LDAPMODIFICATION_CONTRACTID, &rv);
+          NS_ENSURE_SUCCESS(rv, rv);
+
+          rv = ldapModObjClass->SetType(MOZ_SCHEMA_OBJ_CLASS);
+          NS_ENSURE_SUCCESS(rv, rv);
+
+          const char *classValue = nsnull;
+          if (mProperty == kNC_Bookmark)
+            classValue = MOZ_SCHEMA_BMK_CLASS;
+          else if (mProperty == kNC_Folder)
+            classValue = MOZ_SCHEMA_FOLDER_CLASS;
+          else
+            return NS_ERROR_UNEXPECTED;
+          rv = ldapModObjClass->SetValues(1, &classValue);
+          NS_ENSURE_SUCCESS(rv, rv);
+
+          // add all ldapMods into operation
+          // need to grow array size if/when new attributes are added
+          nsILDAPModification *mods[4];
+          PRInt32 numLDAPMods = 0;
+          mods[numLDAPMods++] = ldapModObjClass;
+          mods[1] = nsnull;
+          mods[2] = nsnull;
+          mods[3] = nsnull;
+
+          // set up default name (if we have one)
+          if (mNameLiteral)
+          {
+            const PRUnichar *nameUni = nsnull;
+            mNameLiteral->GetValueConst(&nameUni);
+
+            ldapModName = do_CreateInstance(NS_LDAPMODIFICATION_CONTRACTID, &rv);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            rv = ldapModName->SetType(MOZ_SCHEMA_NAME);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            const char *nameValue = NS_ConvertUCS2toUTF8(nameUni).get();
+            rv = ldapModName->SetValues(1, &nameValue);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            mods[numLDAPMods++] = ldapModName;
+          }
+
+          // set up URL (if bookmark, and if we have one)
+          if ((mProperty == kNC_Bookmark) && (mURLLiteral))
+          {
+            const PRUnichar *urlUni = nsnull;
+            mURLLiteral->GetValueConst(&urlUni);
+
+            ldapModURL = do_CreateInstance(NS_LDAPMODIFICATION_CONTRACTID, &rv);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            rv = ldapModURL->SetType(MOZ_SCHEMA_URL);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            const char *urlValue = NS_ConvertUCS2toUTF8(urlUni).get();
+            rv = ldapModURL->SetValues(1, &urlValue);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            mods[numLDAPMods++] = ldapModURL;
+          }
+
+          rv = mLDAPOperation->AddExt(NS_ConvertUTF8toUCS2(dn).get(), numLDAPMods, mods);
+          NS_ENSURE_SUCCESS(rv, rv);
+        }
+        break;
 
         case nsRemoteBookmarks::LDAP_MODIFY:
         {
@@ -1350,6 +1462,7 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
           values[0] = utf8Value.get();
           values[1] = nsnull;
           rv = ldapMod->SetValues(1, values);
+          NS_ENSURE_SUCCESS(rv, rv);
 
           nsILDAPModification *mods[2];
           mods[0] = ldapMod;
@@ -1561,11 +1674,8 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
         rv = doLDAPRebind();
         return(rv);
       }
-      if (errorCode != nsILDAPErrors::NO_SUCH_OBJECT)
-      {
-        showLDAPError(aMessage);
-        return(NS_ERROR_FAILURE);
-      }
+      showLDAPError(aMessage);
+      return(NS_ERROR_FAILURE);
     }
 
     // success, update the internal graph
@@ -1588,6 +1698,43 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
 
     // node added
     case nsILDAPMessage::RES_ADD:
+    {
+    if (errorCode != nsILDAPErrors::SUCCESS)
+    {
+      if ( errorCode == nsILDAPErrors::INAPPROPRIATE_AUTH ||
+           errorCode == nsILDAPErrors::INVALID_CREDENTIALS ||
+           errorCode == nsILDAPErrors::INSUFFICIENT_ACCESS)
+      {
+        rv = doLDAPRebind();
+        return(rv);
+      }
+      showLDAPError(aMessage);
+      return(NS_ERROR_FAILURE);
+    }
+    // success, update the internal graph
+    if (mNameLiteral)
+    {
+      rv = mInner->Assert(mNode, kNC_Name, mNameLiteral, PR_TRUE);
+      mNameLiteral = nsnull;
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
+    if (mURLLiteral)
+    {
+      rv = mInner->Assert(mNode, kNC_URL, mURLLiteral, PR_TRUE);
+      mURLLiteral = nsnull;
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
+
+    if (mProperty)
+    {
+      nsCOMPtr<nsIRDFContainer> ldapContainer;
+      rv = gRDFC->MakeSeq(mInner, mNode, getter_AddRefs(ldapContainer));
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
+
+    rv = mContainer->AppendElement(mNode);
+    NS_ENSURE_SUCCESS(rv, rv);
+    }
     break;
 
     // node deleted
@@ -1602,15 +1749,13 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
         rv = doLDAPRebind();
         return(rv);
       }
-      if (errorCode != nsILDAPErrors::NO_SUCH_OBJECT)
-      {
-        showLDAPError(aMessage);
-        return(NS_ERROR_FAILURE);
-      }
+      showLDAPError(aMessage);
+      return(NS_ERROR_FAILURE);
     }
     // success, update the internal graph
     // XXX need to recursively handle containers being deleted
-    mContainer->RemoveElement(mNode, PR_TRUE);
+    rv = mContainer->RemoveElement(mNode, PR_TRUE);
+    NS_ENSURE_SUCCESS(rv, rv);
     }
     break;
 
@@ -1727,7 +1872,8 @@ nsRemoteBookmarks::doLDAPQuery(nsILDAPConnection *ldapConnection,
     NS_ENSURE_SUCCESS(rv, rv);
   }
 
-  if (ldapOpcode == nsRemoteBookmarks::LDAP_SEARCH)
+  if ((ldapOpcode == nsRemoteBookmarks::LDAP_ADD) ||
+      (ldapOpcode == nsRemoteBookmarks::LDAP_SEARCH))
   {
     aParent->GetValueConst(&srcURI);
   }
@@ -1876,7 +2022,7 @@ nsRemoteBookmarks::doAuthentication(nsIRDFResource *aSource,
   }
 
   // get authentication password, prompting the user if necessary
-  //
+  // XXX localization
   nsAutoString authPromptTitle(NS_LITERAL_STRING("Remote Bookmark Server Authentication"));
   nsAutoString authPromptText;
   authPromptText.AssignWithConversion(host.get());
@@ -1975,11 +2121,59 @@ nsRemoteBookmarks::GetLDAPExtension(nsIRDFResource *aNode, const char *name,
 
 
 nsresult
-nsRemoteBookmarks::insertLDAPBookmarkItem(nsIRDFResource *aRelativeNode, 
+nsRemoteBookmarks::insertLDAPBookmarkItem(nsIRDFResource *aNode, 
                                           nsISupportsArray *aArguments, 
                                           nsIRDFResource *aItemType)
 {
-  return(NS_OK);
+  nsresult rv;
+  nsCOMPtr<nsIRDFNode> argNode;
+  if (NS_FAILED(rv = getArgumentN(aArguments, kNC_Parent,
+    0, getter_AddRefs(argNode))))
+    return(rv);
+  nsCOMPtr<nsIRDFResource> argParent = do_QueryInterface(argNode);
+  if (!argParent)
+    return(NS_ERROR_NO_INTERFACE);
+
+  nsCOMPtr<nsIRDFResource> rdfRes;
+  PRBool isContainerFlag = PR_FALSE;
+  if (NS_SUCCEEDED(rv = gRDFC->IsSeq(mInner, aNode, &isContainerFlag)) &&
+    (isContainerFlag == PR_TRUE))
+  {
+    rdfRes = getLDAPUrl(aNode);
+  }
+  else
+  {
+    rdfRes = getLDAPUrl(argParent);
+  }
+  if (!rdfRes)
+    return(NS_OK);
+  if (!isRemoteBookmarkURI(rdfRes))
+    return(NS_OK);
+
+  // XXX broken
+  mProperty = aItemType;
+
+  nsCOMPtr<nsIRDFNode> nameNode;
+  getArgumentN(aArguments, kNC_Name, 0, getter_AddRefs(nameNode));
+  mNameLiteral = do_QueryInterface(nameNode);
+
+  mURLLiteral = nsnull;
+  if (aItemType == kNC_Bookmark)
+  {
+    nsCOMPtr<nsIRDFNode> urlNode;
+    getArgumentN(aArguments, kNC_URL, 0, getter_AddRefs(urlNode));
+    mURLLiteral = do_QueryInterface(urlNode);
+  }
+
+  // Get the ldap connection
+  nsCOMPtr<nsILDAPConnection> ldapConnection;
+  ldapConnection = do_CreateInstance(NS_LDAPCONNECTION_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsAutoString dummy;
+  rv = doLDAPQuery(ldapConnection, rdfRes, aNode, dummy, dummy,
+    nsRemoteBookmarks::LDAP_ADD);
+  return(rv);
 }
 
 
