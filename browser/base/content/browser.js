@@ -3645,7 +3645,7 @@ nsBrowserAccess.prototype =
         break;
       case nsCI.nsIBrowserDOMWindow.OPEN_NEWTAB :
         var newTab = gBrowser.addTab(url);
-        if (!gPrefService.getBoolPref("browser.tabs.loadInBackground"))
+        if (!gPrefService.getBoolPref("browser.tabs.loadDivertedInBackground"))
           gBrowser.selectedTab = newTab;
         newWindow = gBrowser.getBrowserForTab(newTab).docShell
                             .QueryInterface(nsCI.nsIInterfaceRequestor)
