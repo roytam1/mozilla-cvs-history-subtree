@@ -47,6 +47,7 @@
 
 class nsXFormsModelElement;
 class nsIDOMElement;
+class nsIDOMXPathResult;
 
 #define NS_XFORMSCONTROL_IID \
 {0x49bad098, 0xaa62, 0x49be, {0x98, 0x7b, 0xdb, 0x32, 0x66, 0x92, 0x1e, 0x0a}}
@@ -64,11 +65,12 @@ public:
   virtual NS_HIDDEN_(void) Refresh() = 0;
 
   NS_HIDDEN_(nsXFormsModelElement*) GetModelAndBind(nsIDOMElement **aBindElement);
-  NS_HIDDEN_(already_AddRefed<nsIDOMNode>) FindInstanceNode();
+  NS_HIDDEN_(already_AddRefed<nsIDOMXPathResult>)
+    EvaluateBinding(PRUint16 aResultType,
+                    nsXFormsModelElement **aModel, nsIDOMElement **aBind);
 
 protected:
   nsCOMPtr<nsIXTFXMLVisualWrapper> mWrapper;
-  nsCOMPtr<nsIDOMNode>             mInstanceNode;
 };
 
 #endif

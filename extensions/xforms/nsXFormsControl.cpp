@@ -124,25 +124,28 @@ nsXFormsControl::GetModelAndBind(nsIDOMElement **aBindElement)
                         NS_STATIC_CAST(nsIXFormsModelElement*, modelRaw));
 }
 
-already_AddRefed<nsIDOMNode>
-nsXFormsControl::FindInstanceNode()
+already_AddRefed<nsIDOMXPathResult>
+nsXFormsControl::EvaluateBinding(PRUint16               aResultType,
+                                 nsXFormsModelElement **aModel,
+                                 nsIDOMElement        **aBind)
 {
   // A control may be attached to a model by either using the 'bind'
   // attribute to give the id of a bind element, or using the 'model'
   // attribute to give the id of a model.  If neither of these are given,
   // the control belongs to the first model in the document.
 
-  nsCOMPtr<nsIDOMElement> bindElement;
-  nsXFormsModelElement *model = GetModelAndBind(getter_AddRefs(bindElement));
-  if (!model)
+  *aBind = nsnull;
+
+  NS_IF_ADDREF(*aModel = GetModelAndBind(aBind));
+  if (!*aModel)
     return nsnull;
 
   nsCOMPtr<nsIDOMElement> resolverNode;
   nsAutoString expr;
 
-  if (bindElement) {
-    resolverNode = bindElement;
-    bindElement->GetAttribute(NS_LITERAL_STRING("nodeset"), expr);
+  if (*aBind) {
+    resolverNode = *aBind;
+    resolverNode->GetAttribute(NS_LITERAL_STRING("nodeset"), expr);
   } else {
     mWrapper->GetElementNode(getter_AddRefs(resolverNode));
     resolverNode->GetAttribute(NS_LITERAL_STRING("ref"), expr);
@@ -154,8 +157,8 @@ nsXFormsControl::FindInstanceNode()
   // Get the instance data and evaluate the xpath expression.
   // XXXfixme when xpath extensions are implemented (instance())
   nsCOMPtr<nsIDOMDocument> instanceDoc;
-  model->GetInstanceDocument(NS_LITERAL_STRING(""),
-                             getter_AddRefs(instanceDoc));
+  (*aModel)->GetInstanceDocument(NS_LITERAL_STRING(""),
+                                 getter_AddRefs(instanceDoc));
 
   if (!instanceDoc)
     return nsnull;
@@ -168,15 +171,13 @@ nsXFormsControl::FindInstanceNode()
   nsCOMPtr<nsIDOMElement> docElement;
   instanceDoc->GetDocumentElement(getter_AddRefs(docElement));
 
-  nsCOMPtr<nsIDOMXPathResult> result;
-  eval->Evaluate(expr, docElement, resolver,
-                 nsIDOMXPathResult::FIRST_ORDERED_NODE_TYPE, nsnull,
+  nsCOMPtr<nsISupports> result;
+  eval->Evaluate(expr, docElement, resolver, aResultType, nsnull,
                  getter_AddRefs(result));
 
-  nsIDOMNode *resultNode = nsnull;
-
+  nsIDOMXPathResult *xpResult = nsnull;
   if (result)
-    result->GetSingleNodeValue(&resultNode); // addrefs
+    CallQueryInterface(result, &xpResult); // addrefs
 
-  return resultNode;
+  return xpResult;
 }

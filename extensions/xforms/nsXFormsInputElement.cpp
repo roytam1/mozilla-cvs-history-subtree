@@ -50,6 +50,8 @@
 #include "nsXFormsModelElement.h"
 #include "nsIDOMHTMLInputElement.h"
 #include "nsXFormsAtoms.h"
+#include "nsAutoPtr.h"
+#include "nsIDOMXPathResult.h"
 
 static const nsIID sScriptingIIDs[] = {
   NS_IDOMELEMENT_IID,
@@ -226,7 +228,6 @@ NS_IMETHODIMP
 nsXFormsInputElement::AttributeSet(nsIAtom *aName, const nsAString &aValue)
 {
   if (aName == nsXFormsAtoms::bind || aName == nsXFormsAtoms::ref) {
-    mInstanceNode = FindInstanceNode();
     Refresh();
   }
 
@@ -254,26 +255,21 @@ nsXFormsInputElement::DoneAddingChildren()
 void
 nsXFormsInputElement::Refresh()
 {
-  if (!mInstanceNode)
-    mInstanceNode = FindInstanceNode();
-
   if (!mInput)
     return;
 
+  nsRefPtr<nsXFormsModelElement> model;
   nsCOMPtr<nsIDOMElement> bindElement;
-  nsXFormsModelElement *model = GetModelAndBind(getter_AddRefs(bindElement));
+  nsCOMPtr<nsIDOMXPathResult> result =
+    EvaluateBinding(nsIDOMXPathResult::STRING_TYPE,
+                    getter_AddRefs(model), getter_AddRefs(bindElement));
 
   if (model) {
     model->AddFormControl(this);
 
-    if (mInstanceNode) {
-      // Fetch our value from the instance data
-      nsCOMPtr<nsIDOMNode> childNode;
-      mInstanceNode->GetFirstChild(getter_AddRefs(childNode));
-
+    if (result) {
       nsAutoString nodeValue;
-      if (childNode)
-        childNode->GetNodeValue(nodeValue);
+      result->GetStringValue(nodeValue);
 
       nsCOMPtr<nsISchemaType> type = model->GetTypeForControl(this);
       nsCOMPtr<nsISchemaBuiltinType> biType = do_QueryInterface(type);
