@@ -59,13 +59,13 @@ public:
   NS_DECL_NSIWEBFORMSOUTPUTELEMENT
 
   // nsIDOMNode
-  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLFormElement::)
 
   // nsIDOMElement
-  NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLElement::)
+  NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLFormElement::)
 
   // nsIDOMHTMLElement
-  NS_FORWARD_NSIDOMHTMLELEMENT(nsGenericHTMLElement::)
+  NS_FORWARD_NSIDOMHTMLELEMENT(nsGenericHTMLFormElement::)
 
   // nsIFormControl
   NS_IMETHOD_(PRInt32) GetType()
@@ -97,7 +97,8 @@ NS_IMPL_RELEASE_INHERITED(nsHTMLOutputElement, nsGenericElement)
 
 
 // QueryInterface implementation for nsHTMLOutputElement
-NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLOutputElement, nsGenericHTMLElement)
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLOutputElement,
+                                    nsGenericHTMLFormElement)
   NS_INTERFACE_MAP_ENTRY(nsIWebFormsOutputElement)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLOutputElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
@@ -110,43 +111,54 @@ NS_IMPL_HTML_DOM_CLONENODE(Output)
 NS_IMETHODIMP
 nsHTMLOutputElement::GetDefaultValue(nsAString & aDefaultValue)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 NS_IMETHODIMP
 nsHTMLOutputElement::SetDefaultValue(const nsAString & aDefaultValue)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* readonly attribute nsIDOMHTMLFormElement form; */
 NS_IMETHODIMP
 nsHTMLOutputElement::GetForm(nsIDOMHTMLFormElement * *aForm)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* attribute DOMString name; */
 NS_IMETHODIMP
 nsHTMLOutputElement::GetName(nsAString & aName)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 NS_IMETHODIMP
 nsHTMLOutputElement::SetName(const nsAString & aName)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* attribute DOMString value; */
 NS_IMETHODIMP
 nsHTMLOutputElement::GetValue(nsAString & aValue)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  nsresult rv;
+  nsCOMPtr<nsIDOM3Node> node3 =
+    do_QueryInterface(NS_STATIC_CAST(nsIWebFormsOutputElement *, this), &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return node3->GetTextContent(aValue);
 }
+
 NS_IMETHODIMP
 nsHTMLOutputElement::SetValue(const nsAString & aValue)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  nsresult rv;
+  nsCOMPtr<nsIDOM3Node> node3 =
+    do_QueryInterface(NS_STATIC_CAST(nsIWebFormsOutputElement *, this), &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return node3->SetTextContent(aValue);
 }
 
 NS_IMETHODIMP
