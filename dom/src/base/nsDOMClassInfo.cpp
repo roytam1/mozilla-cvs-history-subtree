@@ -2273,7 +2273,8 @@ nsHTMLPluginObjElementSH::Create(nsIXPConnectWrappedNative *wrapper,
   // use it to get the scriptable peer object (possibly the plugin
   // object itself) and the scriptable interface to expose it with.
 
-  nsIID scriptableIID;
+  // default to nsISupports's IID
+  nsIID scriptableIID = NS_GET_IID(nsISupports);
   nsCOMPtr<nsISupports> scriptablePeer;
 
   nsCOMPtr<nsIScriptablePlugin> spi(do_QueryInterface(pi));
@@ -2291,18 +2292,25 @@ nsHTMLPluginObjElementSH::Create(nsIXPConnectWrappedNative *wrapper,
     }
   }
 
-  if (!scriptablePeer) {
-    // This plugin doesn't wanto be scriptable.
+  nsCOMPtr<nsIClassInfo> ci(do_QueryInterface(pi));
 
-    return NS_OK;
+  if (!scriptablePeer) {
+    if (!ci) {
+      // This plugin doesn't support nsIScriptablePlugin, nor does it
+      // have classinfo, this plugin doesn't wanto be scriptable.
+
+      return NS_OK;
+    }
+
+    // The plugin instance has classinfo, use it as the scriptable
+    // plugin
+    scriptablePeer = pi;
   }
 
   // Check if the plugin can be safely scriptable, the plugin wrapper
   // must not have a shared prototype for this to work since we'll end
   // up setting it's prototype here, and we want this change to affect
   // this plugin object only.
-
-  nsCOMPtr<nsIClassInfo> ci(do_QueryInterface(pi));
 
   if (ci) {
     // If we have class info we must make sure that the "share my
