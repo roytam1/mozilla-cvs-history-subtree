@@ -842,7 +842,7 @@ RemoveFragComments(nsCString & aStr)
 }
 
 nsresult
-nsHTMLEditor::ParseCFHTML(nsCString & aCfhtml, nsAString & aStuffToPaste, nsAString & aCfcontext)
+nsHTMLEditor::ParseCFHTML(nsCString & aCfhtml, PRUnichar **aStuffToPaste, PRUnichar **aCfcontext)
 {
   // first obtain offsets from cfhtml str
   PRInt32 startHTML     = FindPositiveIntegerAfterString("StartHTML:", aCfhtml);
@@ -854,11 +854,9 @@ nsHTMLEditor::ParseCFHTML(nsCString & aCfhtml, nsAString & aStuffToPaste, nsAStr
     return NS_ERROR_FAILURE;
  
   // create context string
-  nsCAutoString contextUTF8(Substring(aCfhtml, startHTML, endHTML-startHTML));
+  nsCAutoString contextUTF8(Substring(aCfhtml, startHTML, startFragment - startHTML) +
+                            Substring(aCfhtml, endFragment, endHTML - endFragment));
   
-  // cut fragment string out of context
-  contextUTF8.Cut(startFragment-startHTML, endFragment-startFragment);
-
   // create fragment string
   nsCAutoString fragmentUTF8(Substring(aCfhtml, startFragment, endFragment-startFragment));
   
@@ -869,41 +867,31 @@ nsHTMLEditor::ParseCFHTML(nsCString & aCfhtml, nsAString & aStuffToPaste, nsAStr
   RemoveFragComments(contextUTF8);
 
   // convert both strings to usc2
-  aStuffToPaste.Assign(NS_ConvertUTF8toUCS2(fragmentUTF8));
-  aCfcontext.Assign(NS_ConvertUTF8toUCS2(contextUTF8));
+  const nsAFlatString& fragUcs2Str = NS_ConvertUTF8toUCS2(fragmentUTF8);
+  const nsAFlatString& cntxtUcs2Str = NS_ConvertUTF8toUCS2(contextUTF8);
   
   // translate platform linebreaks for fragment
-  PRUnichar* newStr=0;
-  PRInt32 oldLengthInChars=aStuffToPaste.Length();
-  PRInt32 newLengthInChars=0;
-  newStr = nsLinebreakConverter::ConvertUnicharLineBreaks( PromiseFlatString(aStuffToPaste).get(),
+  PRUnichar* newStr = 0;
+  PRInt32 oldLengthInChars = fragUcs2Str.Length() + 1;  // +1 to include null terminator
+  PRInt32 newLengthInChars = 0;
+  *aStuffToPaste = nsLinebreakConverter::ConvertUnicharLineBreaks(fragUcs2Str.get(),
                                                            nsLinebreakConverter::eLinebreakAny, 
                                                            nsLinebreakConverter::eLinebreakContent, 
-                                                           oldLengthInChars, &newLengthInChars );
-  if (newStr)
-  {
-    aStuffToPaste.Assign(newStr, newLengthInChars);
-    nsMemory::Free (newStr);
-  }
-  else
+                                                           oldLengthInChars, &newLengthInChars);
+  if (!aStuffToPaste)
   {
     return NS_ERROR_FAILURE;
   }
   
   // translate platform linebreaks for context
-  newStr=0;
-  oldLengthInChars=aCfcontext.Length();
-  newLengthInChars=0;
-  newStr = nsLinebreakConverter::ConvertUnicharLineBreaks( PromiseFlatString(aCfcontext).get(),
+  newStr = 0;
+  oldLengthInChars = cntxtUcs2Str.Length() + 1;  // +1 to include null terminator
+  newLengthInChars = 0;
+  *aCfcontext = nsLinebreakConverter::ConvertUnicharLineBreaks(cntxtUcs2Str.get(),
                                                            nsLinebreakConverter::eLinebreakAny, 
                                                            nsLinebreakConverter::eLinebreakContent, 
-                                                           oldLengthInChars, &newLengthInChars );
-  if (newStr)
-  {
-    aCfcontext.Assign(newStr, newLengthInChars);
-    nsMemory::Free (newStr);
-  }
-  // else --- it's ok for context to be empty.  frag might be whole doc and contain all it's context.
+                                                           oldLengthInChars, &newLengthInChars);
+  // it's ok for context to be empty.  frag might be whole doc and contain all it's context.
   
   // we're done!  
   return NS_OK;
@@ -929,52 +917,31 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
     if (flavor.Equals(NS_LITERAL_STRING(kNativeHTMLMime)))
     {
       // note cf_html uses utf8, hence use length = len, not len/2 as in flavors below
-      nsCOMPtr<nsISupportsCString> textDataObj ( do_QueryInterface(genericDataObj) );
+      nsCOMPtr<nsISupportsCString> textDataObj(do_QueryInterface(genericDataObj));
       if (textDataObj && len > 0)
       {
-        nsCAutoString cfhtml;        
-        textDataObj->GetData(cfhtml);        
-
+        nsCAutoString cfhtml;
+        textDataObj->GetData(cfhtml);
         NS_ASSERTION(cfhtml.Length() <= (len), "Invalid length!");
-        nsAutoString cfcontext, cfselection; // cfselection left emtpy for now
-        rv = ParseCFHTML(cfhtml, stuffToPaste, cfcontext);
-        if ( NS_SUCCEEDED(rv) && !stuffToPaste.IsEmpty() )
+        nsXPIDLString cfcontext, cffragment, cfselection; // cfselection left emtpy for now
+         
+        rv = ParseCFHTML(cfhtml, getter_Copies(cffragment), getter_Copies(cfcontext));
+        if (NS_SUCCEEDED(rv) && !cffragment.IsEmpty())
         {
           nsAutoEditBatch beginBatching(this);
-          rv = InsertHTMLWithContext(stuffToPaste, cfcontext, cfselection);
+          rv = InsertHTMLWithContext(cffragment, cfcontext, cfselection);
         }
       }
     }
     else if (flavor.Equals(NS_LITERAL_STRING(kHTMLMime)))
     {
-      // note cf_html uses utf8, hence use length = len, not len/2 as in flavors below
-      nsCOMPtr<nsISupportsCString> textDataObj ( do_QueryInterface(genericDataObj) );
-      if (textDataObj && len > 0)
-      {
-        nsCAutoString cfhtml;        
-        textDataObj->GetData(cfhtml);        
-
-        NS_ASSERTION(cfhtml.Length() <= (len), "Invalid length!");
-        nsAutoString cfcontext, cfselection; // cfselection left emtpy for now
-        rv = ParseCFHTML(cfhtml, stuffToPaste, cfcontext);
-        if ( NS_SUCCEEDED(rv) && !stuffToPaste.IsEmpty() )
-        {
-          nsAutoEditBatch beginBatching(this);
-          rv = InsertHTMLWithContext(stuffToPaste, cfcontext, cfselection);
-        }
-      }
-    }
-    else if (flavor.Equals(NS_LITERAL_STRING(kHTMLMime)))
-    {         
-      nsCOMPtr<nsISupportsString> textDataObj ( do_QueryInterface(genericDataObj) );
+      nsCOMPtr<nsISupportsString> textDataObj(do_QueryInterface(genericDataObj));
       if (textDataObj && len > 0)
       {
         nsAutoString text;
-;
-        textDataObj->GetData ( text );
-
+        textDataObj->GetData(text);
         NS_ASSERTION(text.Length() <= (len/2), "Invalid length!");
-        stuffToPaste.Assign ( text.get(), len / 2 );
+        stuffToPaste.Assign(text.get(), len / 2);
         nsAutoEditBatch beginBatching(this);
         rv = InsertHTMLWithContext(stuffToPaste, aContextStr, aInfoStr);
       }
@@ -989,8 +956,6 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
         NS_ASSERTION(text.Length() <= (len/2), "Invalid length!");
         stuffToPaste.Assign ( text.get(), len / 2 );
         nsAutoEditBatch beginBatching(this);
-        // pasting does not inherit local inline styles
-        RemoveAllInlineProperties();
         rv = InsertText(stuffToPaste);
       }
     }
@@ -1509,21 +1474,28 @@ NS_IMETHODIMP nsHTMLEditor::DoDrag(nsIDOMEvent *aDragEvent)
 }
 
 
-PRBool nsHTMLEditor::HavePrivateHTMLFlavor( nsIClipboard *aClipboard )
+PRBool nsHTMLEditor::HavePrivateHTMLFlavor(nsIClipboard *aClipboard)
 {
   // check the clipboard for our special kHTMLContext flavor.  If that is there, we know
   // we have our own internal html format on clipboard.
+  
   if (!aClipboard) return PR_FALSE;
   PRBool bHavePrivateHTMLFlavor = PR_FALSE;
   nsCOMPtr<nsISupportsArray> flavArray;
+  
   nsresult res = NS_NewISupportsArray(getter_AddRefs(flavArray));
   if (NS_FAILED(res)) return PR_FALSE;
-  nsCOMPtr<nsISupportsCString> contextString = do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID);
+  
+  nsCOMPtr<nsISupportsCString> contextString = do_CreateInstance(NS_SUPPORTS_CSTRING_CONTRACTID);
   if (!contextString) return PR_FALSE;
+  
   contextString->SetData(NS_LITERAL_CSTRING(kHTMLContext));
+  
   flavArray->AppendElement(contextString);
+  
   if (NS_SUCCEEDED(aClipboard->HasDataMatchingFlavors (flavArray, nsIClipboard::kGlobalClipboard, &bHavePrivateHTMLFlavor )))
     return bHavePrivateHTMLFlavor;
+    
   return PR_FALSE;
 }
 

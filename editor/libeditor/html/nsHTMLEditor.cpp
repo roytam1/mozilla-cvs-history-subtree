@@ -5403,7 +5403,7 @@ nsHTMLEditor::IsEmptyNodeImpl( nsIDOMNode *aNode,
             return NS_OK;
           }
           
-          PRBool isEmptyNode;
+          PRBool isEmptyNode = PR_TRUE;
           res = IsEmptyNodeImpl(node, &isEmptyNode, aSingleBRDoesntCount, 
                                 aListOrCellNotEmpty, aSafeToAskFrames, aSeenBR);
           if (NS_FAILED(res)) return res;

@@ -289,6 +289,31 @@ nsHTMLEditRules::BeforeEdit(PRInt32 action, nsIEditor::EDirection aDirection)
   
   if (!mActionNesting)
   {
+    // remember where our selection was before edit action took place:
+    
+    // get selection
+    nsCOMPtr<nsISelection>selection;
+    nsresult res = mHTMLEditor->GetSelection(getter_AddRefs(selection));
+    if (NS_FAILED(res)) return res;
+  
+    // get the selection start location
+    nsCOMPtr<nsIDOMNode> selNode;
+    PRInt32 selOffset;
+    res = mHTMLEditor->GetStartNodeAndOffset(selection, address_of(selNode), &selOffset);
+    if (NS_FAILED(res)) return res;
+    mRangeItem.startNode = selNode;
+    mRangeItem.startOffset = selOffset;
+
+    // get the selection end location
+    res = mHTMLEditor->GetEndNodeAndOffset(selection, address_of(selNode), &selOffset);
+    if (NS_FAILED(res)) return res;
+    mRangeItem.endNode = selNode;
+    mRangeItem.endOffset = selOffset;
+
+    // register this range with range updater to track this as we perturb the doc
+    (mHTMLEditor->mRangeUpdater).RegisterRangeItem(&mRangeItem);
+
+    // clear out mDocChangeRange and mUtilRange
     nsCOMPtr<nsIDOMNSRange> nsrange;
     if(mDocChangeRange)
     {
@@ -304,6 +329,7 @@ nsHTMLEditRules::BeforeEdit(PRInt32 action, nsIEditor::EDirection aDirection)
         return NS_ERROR_FAILURE;
       nsrange->NSDetach();  // ditto for mUtilRange.  
     }
+    
     // turn off caret
     nsCOMPtr<nsISelectionController> selCon;
     mHTMLEditor->GetSelectionController(getter_AddRefs(selCon));
@@ -331,6 +357,10 @@ nsHTMLEditRules::AfterEdit(PRInt32 action, nsIEditor::EDirection aDirection)
   {
     // do all the tricky stuff
     res = AfterEditInner(action, aDirection);
+
+    // free up selectionState range item
+    (mHTMLEditor->mRangeUpdater).DropRangeItem(&mRangeItem);
+
     // turn on caret
     nsCOMPtr<nsISelectionController> selCon;
     mHTMLEditor->GetSelectionController(getter_AddRefs(selCon));
@@ -417,11 +447,38 @@ nsHTMLEditRules::AfterEditInner(PRInt32 action, nsIEditor::EDirection aDirection
     res = RemoveEmptyNodes();
     if (NS_FAILED(res)) return res;
 
-    // attempt to transform any uneeded nbsp's into spaces after doing deletions
-    if (action == nsEditor::kOpDeleteSelection)
+    // attempt to transform any uneeded nbsp's into spaces after doing various operations
+    if ((action == nsEditor::kOpInsertText) || 
+        (action == nsEditor::kOpInsertIMEText) ||
+        (action == nsEditor::kOpDeleteSelection) ||
+        (action == nsEditor::kOpInsertBreak) || 
+        (action == nsHTMLEditor::kOpHTMLPaste ||
+        (action == nsHTMLEditor::kOpLoadHTML)))
     {
       res = AdjustWhitespace(selection);
       if (NS_FAILED(res)) return res;
+      
+      // also do this for original selection endpoints.  The checks for the remembered
+      // selection endpoints are a performance fidgit.  Otherwise 
+      // nsRangeUpdater::SelAdjDeleteNode() would have to do much more expensive
+      // work (see comment in that routine in nsSelection.cpp)
+      nsCOMPtr<nsIDOMElement> bodyNode; 
+      PRInt32 unused;
+      res = mHTMLEditor->GetRootElement(getter_AddRefs(bodyNode));
+      if (NS_FAILED(res)) return res;
+      if (nsHTMLEditUtils::IsDescendantOf(mRangeItem.startNode, bodyNode, &unused))
+      {
+        nsWSRunObject(mHTMLEditor, mRangeItem.startNode, mRangeItem.startOffset).AdjustWhitespace();
+      }
+      // we only need to handle old selection endpoint if it was different from start
+      if ((mRangeItem.startNode != mRangeItem.endNode) || (mRangeItem.startOffset != mRangeItem.endOffset))
+      {
+        if (nsHTMLEditUtils::IsDescendantOf(mRangeItem.endNode, bodyNode, &unused))
+        {
+          nsWSRunObject(mHTMLEditor, mRangeItem.endNode, mRangeItem.endOffset).AdjustWhitespace();
+        }
+      }
+     
     }
     
     // if we created a new block, make sure selection lands in it
@@ -1502,6 +1559,7 @@ nsHTMLEditRules::WillInsertBreak(nsISelection *aSelection, PRBool *aCancel, PRBo
   {
     nsCOMPtr<nsIDOMNode> brNode;
     PRBool bAfterBlock = PR_FALSE;
+    PRBool bBeforeBlock = PR_FALSE;
     
     if (bPlaintext)
     {
@@ -1515,17 +1573,23 @@ nsHTMLEditRules::WillInsertBreak(nsISelection *aSelection, PRBool *aCancel, PRBo
       PRInt16 wsType;
       res = wsObj.PriorVisibleNode(node, offset, address_of(visNode), &visOffset, &wsType);
       if (NS_FAILED(res)) return res;
-      if (wsType==nsWSRunObject::eOtherBlock)
+      if (wsType & nsWSRunObject::eBlock)
         bAfterBlock = PR_TRUE;
+      res = wsObj.NextVisibleNode(node, offset, address_of(visNode), &visOffset, &wsType);
+      if (NS_FAILED(res)) return res;
+      if (wsType & nsWSRunObject::eBlock)
+        bBeforeBlock = PR_TRUE;
+      
       res = wsObj.InsertBreak(address_of(node), &offset, address_of(brNode), nsIEditor::eNone);
     }
     if (NS_FAILED(res)) return res;
     res = nsEditor::GetNodeLocation(brNode, address_of(node), &offset);
     if (NS_FAILED(res)) return res;
-    if (bAfterBlock)
+    if (bAfterBlock && bBeforeBlock)
     {
-      // we just placed a br after a block.  This is the one case where we want the 
-      // selection to be before the br we just placed, as the br will be on a new line,
+      // we just placed a br between block boundaries.  
+      // This is the one case where we want the selection to be before 
+      // the br we just placed, as the br will be on a new line,
       // rather than at end of prior line.
       selPriv->SetInterlinePosition(PR_TRUE);
       res = aSelection->Collapse(node, offset);
@@ -1533,6 +1597,29 @@ nsHTMLEditRules::WillInsertBreak(nsISelection *aSelection, PRBool *aCancel, PRBo
     }
     else
     {
+      nsWSRunObject wsObj(mHTMLEditor, node, offset+1);
+      nsCOMPtr<nsIDOMNode> secondBR;
+      PRInt32 visOffset=0;
+      PRInt16 wsType;
+      res = wsObj.NextVisibleNode(node, offset+1, address_of(secondBR), &visOffset, &wsType);
+      if (NS_FAILED(res)) return res;
+      if (wsType==nsWSRunObject::eBreak)
+      {
+        // the next thing after the break we inserted is another break.  Move the 2nd 
+        // break to be the first breaks sibling.  This will prevent them from being
+        // in different inline nodes, which would break SetInterlinePosition().  It will
+        // also assure that if the user clicks away and then clicks back on their new
+        // blank line, they will still get the style from the line above.  
+        nsCOMPtr<nsIDOMNode> brParent;
+        PRInt32 brOffset;
+        res = nsEditor::GetNodeLocation(secondBR, address_of(brParent), &brOffset);
+        if (NS_FAILED(res)) return res;
+        if ((brParent != node) || (brOffset != (offset+1)))
+        {
+          res = mHTMLEditor->MoveNode(secondBR, node, offset+1);
+          if (NS_FAILED(res)) return res;
+        }
+      }
       // SetInterlinePosition(PR_TRUE) means we want the caret to stick to the content on the "right".
       // We want the caret to stick to whatever is past the break.  This is
       // because the break is on the same line we were on, but the next content
@@ -5999,18 +6086,44 @@ nsHTMLEditRules::ReturnInListItem(nsISelection *aSelection,
       res = CreateMozBR(prevItem, 0, address_of(brNode));
       if (NS_FAILED(res)) return res;
     }
-    else {
+    else 
+    {
       res = mHTMLEditor->IsEmptyNode(aListItem, &bIsEmptyNode, PR_TRUE);
       if (NS_FAILED(res)) return res;
-      if (bIsEmptyNode) {
+      if (bIsEmptyNode) 
+      {
         nsCOMPtr<nsIDOMNode> brNode;
         res = mHTMLEditor->CopyLastEditableChildStyles(prevItem, aListItem, getter_AddRefs(brNode));
         if (NS_FAILED(res)) return res;
-        if (brNode) {
+        if (brNode) 
+        {
           nsCOMPtr<nsIDOMNode> brParent;
           PRInt32 offset;
           res = nsEditor::GetNodeLocation(brNode, address_of(brParent), &offset);
           return aSelection->Collapse(brParent, offset);
+        }
+      }
+      else
+      {
+        nsWSRunObject wsObj(mHTMLEditor, aListItem, 0);
+        nsCOMPtr<nsIDOMNode> visNode;
+        PRInt32 visOffset = 0;
+        PRInt16 wsType;
+        res = wsObj.NextVisibleNode(aListItem, 0, address_of(visNode), &visOffset, &wsType);
+        if (NS_FAILED(res)) return res;
+        if ( (wsType==nsWSRunObject::eSpecial)  || 
+              (wsType==nsWSRunObject::eBreak)   ||
+              nsHTMLEditUtils::IsHR(visNode) ) 
+        {
+          nsCOMPtr<nsIDOMNode> parent;
+          PRInt32 offset;
+          res = nsEditor::GetNodeLocation(visNode, address_of(parent), &offset);
+          if (NS_FAILED(res)) return res;
+          return aSelection->Collapse(parent, offset);
+        }
+        else
+        {
+          return aSelection->Collapse(visNode, visOffset);
         }
       }
     }
@@ -6847,17 +6960,19 @@ nsHTMLEditRules::AdjustSelection(nsISelection *aSelection, nsIEditor::EDirection
     }
   }
 
-  // we aren't in a textnode: are we adjacent to a break or an image?
-  res = mHTMLEditor->GetPriorHTMLSibling(selNode, selOffset, address_of(nearNode));
+  // we aren't in a textnode: are we adjacent to text or a break or an image?
+  res = mHTMLEditor->GetPriorHTMLNode(selNode, selOffset, address_of(nearNode), PR_TRUE);
   if (NS_FAILED(res)) return res;
   if (nearNode && (nsTextEditUtils::IsBreak(nearNode)
+                   || nsEditor::IsTextNode(nearNode)
                    || nsHTMLEditUtils::IsImage(nearNode)
                    || nsHTMLEditUtils::IsHR(nearNode)))
     return NS_OK; // this is a good place for the caret to be
-  res = mHTMLEditor->GetNextHTMLSibling(selNode, selOffset, address_of(nearNode));
+  res = mHTMLEditor->GetNextHTMLNode(selNode, selOffset, address_of(nearNode), PR_TRUE);
   if (NS_FAILED(res)) return res;
   if (nearNode && (nsTextEditUtils::IsBreak(nearNode)
-                   || nsHTMLEditUtils::IsImage(nearNode)
+                  || nsEditor::IsTextNode(nearNode)
+                  || nsHTMLEditUtils::IsImage(nearNode)
                    || nsHTMLEditUtils::IsHR(nearNode)))
     return NS_OK; // this is a good place for the caret to be
 

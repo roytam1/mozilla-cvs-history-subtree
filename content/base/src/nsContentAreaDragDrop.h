@@ -110,10 +110,12 @@ private:
                                   nsIPresShell *aPresShell, nsIImageFrame** aImageFrame);
 
   PRBool BuildDragData(nsIDOMEvent* inMouseEvent, nsAString & outURLString, nsAString & outTitleString,
-                        nsAString & outHTMLString, nsIImage** outImage, PRBool* outIsAnchor);
+                       nsAString & outHTMLString, nsAString & outContextString, nsAString & outInfoString, 
+                       nsIImage** outImage, PRBool* outIsAnchor);
   nsresult CreateTransferable(const nsAString & inURLString, const nsAString & inTitleString, 
-                                const nsAString & inHTMLString, nsIImage* inImage, PRBool inIsAnchor, 
-                                nsITransferable** outTrans);
+                              const nsAString & inHTMLString, const nsAString & inContextString,
+                              const nsAString & inInfoString, nsIImage* inImage, PRBool inIsAnchor,
+                              nsITransferable** outTrans);
   void ExtractURLFromData(const nsACString & inFlavor, nsISupports* inDataWrapper, PRUint32 inDataLen,
                            nsAString & outURL);
 

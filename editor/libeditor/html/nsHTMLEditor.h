@@ -651,7 +651,7 @@ protected:
                                     const nsAString & aContextStr,
                                     const nsAString & aInfoStr);
   PRBool HavePrivateHTMLFlavor( nsIClipboard *clipboard );
-  nsresult   ParseCFHTML(nsCString & cfhtml, nsAString & stuffToPaste, nsAString & cfcontext);
+  nsresult   ParseCFHTML(nsCString & aCfhtml, PRUnichar **aStuffToPaste, PRUnichar **aCfcontext);
   nsresult   InsertHTMLWithContext(const nsAString & aInputString, 
                                    const nsAString & aContextStr, 
                                    const nsAString & aInfoStr);
