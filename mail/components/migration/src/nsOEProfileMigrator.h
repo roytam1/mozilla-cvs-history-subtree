@@ -12,14 +12,14 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is The Browser Profile Migrator.
+ * The Original Code is The Outlook Express Migrator.
  *
- * The Initial Developer of the Original Code is Ben Goodger.
+ * The Initial Developer of the Original Code is Scott MacGregor.
  * Portions created by the Initial Developer are Copyright (C) 2004
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *  Ben Goodger <ben@bengoodger.com>
+ *  Scott MacGregor <mscott@mozilla.org>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,61 +35,40 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef seamonkeyprofilemigrator___h___
-#define seamonkeyprofilemigrator___h___
+#ifndef oeprofilemigrator___h___
+#define oeprofilemigrator___h___
 
 #include "nsIMailProfileMigrator.h"
 #include "nsILocalFile.h"
 #include "nsIObserverService.h"
 #include "nsISupportsArray.h"
-#include "nsNetscapeProfileMigratorBase.h"
 #include "nsString.h"
 #include "nsITimer.h"
+#include "nsIImportGeneric.h"
+#include "nsIImportModule.h"
+#include "nsIMsgAccount.h"
+#include "nsProfileMigratorBase.h"
 
 class nsIFile;
 class nsIPrefBranch;
 class nsIPrefService;
+class nsVoidArray;
 
-class nsSeamonkeyProfileMigrator : public nsNetscapeProfileMigratorBase, 
-                                   public nsIMailProfileMigrator,
-                                   public nsITimerCallback
+class nsOEProfileMigrator : public nsIMailProfileMigrator,
+                            public nsITimerCallback,
+                            public nsProfileMigratorBase
 {
 public:
   NS_DECL_NSIMAILPROFILEMIGRATOR
   NS_DECL_ISUPPORTS
   NS_DECL_NSITIMERCALLBACK
 
-  nsSeamonkeyProfileMigrator();
-  virtual ~nsSeamonkeyProfileMigrator();
+  nsOEProfileMigrator();
+  virtual ~nsOEProfileMigrator();
 
-protected:
-  nsresult FillProfileDataFromSeamonkeyRegistry();
-  nsresult GetSourceProfile(const PRUnichar* aProfile);
-
-  nsresult CopyPreferences(PRBool aReplace);
-  nsresult TransformPreferences(const nsAString& aSourcePrefFileName,
-                                const nsAString& aTargetPrefFileName);
-
-  nsresult DummyCopyRoutine(PRBool aReplace);
-  nsresult CopyJunkTraining(PRBool aReplace);  
-  nsresult CopyPasswords(PRBool aReplace);
-  nsresult CopyMailFolders(nsVoidArray* aMailServers, nsIPrefService* aPrefBranch);
-  nsresult CopyAddressBookDirectories(nsVoidArray* aLdapServers, nsIPrefService* aPrefService);
-
-  void ReadBranch(const char * branchName,  nsIPrefService* aPrefService, nsVoidArray* aPrefs);
-  void WriteBranch(const char * branchName, nsIPrefService* aPrefService, nsVoidArray* aPrefs);
-
-  void CopyNextFolder();
-  void EndCopyFolders();
+  virtual nsresult ContinueImport();
 
 private:
-  nsCOMPtr<nsISupportsArray> mProfileNames;
-  nsCOMPtr<nsISupportsArray> mProfileLocations;
-  nsCOMPtr<nsIObserverService> mObserverService;
-  nsCOMPtr<nsITimer> mFileIOTimer;
-
-  PRInt64 mMaxProgress;
-  PRInt64 mCurrentProgress;
 };
  
 #endif

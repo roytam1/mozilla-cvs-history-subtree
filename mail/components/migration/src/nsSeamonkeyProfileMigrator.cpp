@@ -51,8 +51,8 @@
 #include "nsSeamonkeyProfileMigrator.h"
 #include "nsIRelativeFilePref.h"
 #include "nsAppDirectoryServiceDefs.h"
-#include "nsVoidArray.h"
 #include "prprf.h"
+#include "nsVoidArray.h"
 
 static PRUint32 StringHash(const char *ubuf);
 nsresult NS_MsgHashIfNecessary(nsCString &name);
@@ -87,21 +87,12 @@ struct PrefBranchStruct {
   };
 };
 
-struct fileTransactionEntry {
-  nsCOMPtr<nsIFile> srcFile;
-  nsCOMPtr<nsIFile> destFile;
-};
-
 NS_IMPL_ISUPPORTS2(nsSeamonkeyProfileMigrator, nsIMailProfileMigrator, nsITimerCallback)
 
 
 nsSeamonkeyProfileMigrator::nsSeamonkeyProfileMigrator()
 {
   mObserverService = do_GetService("@mozilla.org/observer-service;1");
-
-  // create the array we'll be using to keep track of the asynchronous file copy routines
-  mFileCopyTransactions = new nsVoidArray();
-  mFileCopyTransactionIndex = 0;
   mMaxProgress = LL_ZERO;
   mCurrentProgress = LL_ZERO;
 }
@@ -810,77 +801,6 @@ nsSeamonkeyProfileMigrator::CopyPasswords(PRBool aReplace)
   else {
     // don't do anything right now
   }
-  return rv;
-}
-
-// helper function, copies the contents of srcDir into destDir.
-// destDir will be created if it doesn't exist.
-
-nsresult nsSeamonkeyProfileMigrator::RecursiveCopy(nsIFile* srcDir, nsIFile* destDir)
-{
-  nsresult rv;
-  PRBool isDir;
-  
-  rv = srcDir->IsDirectory(&isDir);
-  if (NS_FAILED(rv)) return rv;
-  if (!isDir) return NS_ERROR_INVALID_ARG;
-  
-  PRBool exists;
-  rv = destDir->Exists(&exists);
-  if (NS_SUCCEEDED(rv) && !exists)
-    rv = destDir->Create(nsIFile::DIRECTORY_TYPE, 0775);
-  if (NS_FAILED(rv)) return rv;
-  
-  PRBool hasMore = PR_FALSE;
-  nsCOMPtr<nsISimpleEnumerator> dirIterator;
-  rv = srcDir->GetDirectoryEntries(getter_AddRefs(dirIterator));
-  if (NS_FAILED(rv)) return rv;
-  
-  rv = dirIterator->HasMoreElements(&hasMore);
-  if (NS_FAILED(rv)) return rv;
-  
-  nsCOMPtr<nsIFile> dirEntry;
-  
-  while (hasMore)
-  {
-    rv = dirIterator->GetNext((nsISupports**)getter_AddRefs(dirEntry));
-    if (NS_SUCCEEDED(rv))
-    {
-      rv = dirEntry->IsDirectory(&isDir);
-      if (NS_SUCCEEDED(rv))
-      {
-        if (isDir)
-        {
-          nsCOMPtr<nsIFile> destClone;
-          rv = destDir->Clone(getter_AddRefs(destClone));
-          if (NS_SUCCEEDED(rv))
-          {
-            nsCOMPtr<nsILocalFile> newChild(do_QueryInterface(destClone));
-            nsAutoString leafName;
-            dirEntry->GetLeafName(leafName);
-            newChild->AppendRelativePath(leafName);
-            rv = newChild->Exists(&exists);
-            if (NS_SUCCEEDED(rv) && !exists)
-              rv = newChild->Create(nsIFile::DIRECTORY_TYPE, 0775);
-            rv = RecursiveCopy(dirEntry, newChild);
-          }
-        }
-        else
-        {
-          // we aren't going to do any actual file copying here. Instead, add this to our
-          // file transaction list so we can copy files asynchronously...
-          fileTransactionEntry* fileEntry = new fileTransactionEntry;
-          fileEntry->srcFile = dirEntry;
-          fileEntry->destFile = destDir;
-
-          mFileCopyTransactions->AppendElement((void*) fileEntry);
-        }
-      }      
-    }
-    rv = dirIterator->HasMoreElements(&hasMore);
-    if (NS_FAILED(rv)) return rv;
-  }
-  
   return rv;
 }
 

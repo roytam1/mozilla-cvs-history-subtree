@@ -45,6 +45,14 @@
 
 class nsIFile;
 class nsIPrefBranch;
+class nsVoidArray;
+
+struct fileTransactionEntry {
+  nsCOMPtr<nsIFile> srcFile;  // the src path including leaf name
+  nsCOMPtr<nsIFile> destFile; // the destination path
+  nsString newName; // only valid if the file should be renamed after getting copied
+};
+
 
 class nsNetscapeProfileMigratorBase
 {
@@ -78,6 +86,8 @@ public:
   static nsresult GetInt(void* aTransform, nsIPrefBranch* aBranch);
   static nsresult SetInt(void* aTransform, nsIPrefBranch* aBranch);
 
+  nsresult RecursiveCopy(nsIFile* srcDir, nsIFile* destDir); // helper routine
+
 protected:
   nsresult GetProfileDataFromRegistry(nsILocalFile* aRegistryFile,
                                       nsISupportsArray* aProfileNames,
@@ -91,8 +101,10 @@ protected:
 protected:
   nsCOMPtr<nsILocalFile> mSourceProfile;
   nsCOMPtr<nsIFile> mTargetProfile;
-
   nsCOMPtr<nsIStringBundle> mBundle;
+
+  nsVoidArray * mFileCopyTransactions; // list of src/destination files we still have to copy into the new profile directory
+  PRUint32 mFileCopyTransactionIndex;
 };
  
 #endif

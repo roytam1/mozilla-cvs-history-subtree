@@ -54,7 +54,6 @@ var MigrationWizard = {
       var suffix = group.childNodes[i].id;
       if (suffix != "nothing") {
         var contractID = kProfileMigratorContractIDPrefix + suffix;
-        dump('contractID: ' + contractID + '\n');
         var migrator = Components.classes[contractID].createInstance(kIMig);
         if (!migrator.sourceExists)
           group.childNodes[i].hidden = true;

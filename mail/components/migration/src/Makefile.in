@@ -25,6 +25,10 @@ REQUIRES = \
 	libreg \
 	necko \
 	intl \
+	uconv \
+	import \
+	msgbase \
+	mailnews \
 	$(NULL)
 
 EXPORTS = nsMailMigrationCID.h
@@ -34,7 +38,16 @@ CPPSRCS = \
 	nsMailProfileMigratorUtils.cpp \
 	nsNetscapeProfileMigratorBase.cpp \
 	nsSeamonkeyProfileMigrator.cpp \
+	nsDogbertProfileMigrator.cpp \
 	$(NULL)
+
+ifeq ($(OS_ARCH),WINNT)
+CPPSRCS += \
+	nsProfileMigratorBase.cpp \
+	nsOEProfileMigrator.cpp \
+	nsOutlookProfileMigrator.cpp \
+	$(NULL)
+endif
 
 EXTRA_DSO_LDOPTS += \
 	$(MOZ_XPCOM_OBSOLETE_LIBS) \

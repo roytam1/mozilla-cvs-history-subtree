@@ -10,6 +10,10 @@
 <!ENTITY importFromSeamonkey.accesskey  "N">
 <!ENTITY importFromNetscape4.label      "Netscape 4.x">
 <!ENTITY importFromNetscape4.accesskey  "4">
+<!ENTITY importFromOExpress.label       "Outlook Express">
+<!ENTITY importFromOExpress.accesskey   "u">
+<!ENTITY importFromOutlook.label        "Outlook">
+<!ENTITY importFromOutlook.accesskey    "O">
 
 <!ENTITY importSource.title             "Import Settings and Data From">
 <!ENTITY importItems.title              "Items to Import">
@@ -23,4 +27,3 @@
 
 <!ENTITY done.title                     "Import Complete">
 <!ENTITY done.label                     "The following items were successfully imported:">
-

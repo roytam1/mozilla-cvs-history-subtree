@@ -57,6 +57,7 @@
 #include "nsXPIDLString.h"
 #include "prtime.h"
 #include "prprf.h"
+#include "nsVoidArray.h"
 
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 
@@ -70,6 +71,10 @@ nsNetscapeProfileMigratorBase::nsNetscapeProfileMigratorBase()
 {
   nsCOMPtr<nsIStringBundleService> bundleService(do_GetService(kStringBundleServiceCID));
   bundleService->CreateBundle(MIGRATION_BUNDLE, getter_AddRefs(mBundle));
+
+  // create the array we'll be using to keep track of the asynchronous file copy routines
+  mFileCopyTransactions = new nsVoidArray();
+  mFileCopyTransactionIndex = 0;
 }
 
 nsresult
@@ -327,5 +332,76 @@ nsNetscapeProfileMigratorBase::LocateSignonsFile(char** aResult)
   *aResult = ToNewCString(fileName);
 
   return NS_OK;
+}
+
+// helper function, copies the contents of srcDir into destDir.
+// destDir will be created if it doesn't exist.
+
+nsresult nsNetscapeProfileMigratorBase::RecursiveCopy(nsIFile* srcDir, nsIFile* destDir)
+{
+  nsresult rv;
+  PRBool isDir;
+  
+  rv = srcDir->IsDirectory(&isDir);
+  if (NS_FAILED(rv)) return rv;
+  if (!isDir) return NS_ERROR_INVALID_ARG;
+  
+  PRBool exists;
+  rv = destDir->Exists(&exists);
+  if (NS_SUCCEEDED(rv) && !exists)
+    rv = destDir->Create(nsIFile::DIRECTORY_TYPE, 0775);
+  if (NS_FAILED(rv)) return rv;
+  
+  PRBool hasMore = PR_FALSE;
+  nsCOMPtr<nsISimpleEnumerator> dirIterator;
+  rv = srcDir->GetDirectoryEntries(getter_AddRefs(dirIterator));
+  if (NS_FAILED(rv)) return rv;
+  
+  rv = dirIterator->HasMoreElements(&hasMore);
+  if (NS_FAILED(rv)) return rv;
+  
+  nsCOMPtr<nsIFile> dirEntry;
+  
+  while (hasMore)
+  {
+    rv = dirIterator->GetNext((nsISupports**)getter_AddRefs(dirEntry));
+    if (NS_SUCCEEDED(rv))
+    {
+      rv = dirEntry->IsDirectory(&isDir);
+      if (NS_SUCCEEDED(rv))
+      {
+        if (isDir)
+        {
+          nsCOMPtr<nsIFile> destClone;
+          rv = destDir->Clone(getter_AddRefs(destClone));
+          if (NS_SUCCEEDED(rv))
+          {
+            nsCOMPtr<nsILocalFile> newChild(do_QueryInterface(destClone));
+            nsAutoString leafName;
+            dirEntry->GetLeafName(leafName);
+            newChild->AppendRelativePath(leafName);
+            rv = newChild->Exists(&exists);
+            if (NS_SUCCEEDED(rv) && !exists)
+              rv = newChild->Create(nsIFile::DIRECTORY_TYPE, 0775);
+            rv = RecursiveCopy(dirEntry, newChild);
+          }
+        }
+        else
+        {
+          // we aren't going to do any actual file copying here. Instead, add this to our
+          // file transaction list so we can copy files asynchronously...
+          fileTransactionEntry* fileEntry = new fileTransactionEntry;
+          fileEntry->srcFile = dirEntry;
+          fileEntry->destFile = destDir;
+
+          mFileCopyTransactions->AppendElement((void*) fileEntry);
+        }
+      }      
+    }
+    rv = dirIterator->HasMoreElements(&hasMore);
+    if (NS_FAILED(rv)) return rv;
+  }
+  
+  return rv;
 }
 

@@ -296,9 +296,22 @@ cleanup:
 
 #include "nsSeamonkeyProfileMigrator.h"
 
-
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsProfileMigrator)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSeamonkeyProfileMigrator)
+
+#include "nsDogbertProfileMigrator.h"
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsDogbertProfileMigrator)
+
+#ifdef XP_WIN32
+
+#include "nsOEProfileMigrator.h"
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsOEProfileMigrator)
+
+#include "nsOutlookProfileMigrator.h"
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsOutlookProfileMigrator)
+
+#endif
+
 
 static const nsModuleComponentInfo components[] =
 {
@@ -310,6 +323,20 @@ static const nsModuleComponentInfo components[] =
     NS_SEAMONKEYPROFILEMIGRATOR_CID,
     NS_MAILPROFILEMIGRATOR_CONTRACTID_PREFIX "seamonkey",
     nsSeamonkeyProfileMigratorConstructor },
+  { "Netscape Communicator 4.x",
+    NS_DOGBERTPROFILEMIGRATOR_CID,
+    NS_MAILPROFILEMIGRATOR_CONTRACTID_PREFIX "dogbert",
+    nsDogbertProfileMigratorConstructor },
+#ifdef XP_WIN32
+  { "Outlook Express Profile Migrator",
+    NS_OEXPRESSPROFILEMIGRATOR_CID,
+    NS_MAILPROFILEMIGRATOR_CONTRACTID_PREFIX "oexpress",
+    nsOEProfileMigratorConstructor },
+  { "Outlook Profile Migrator",
+    NS_OUTLOOKPROFILEMIGRATOR_CID,
+    NS_MAILPROFILEMIGRATOR_CONTRACTID_PREFIX "outlook",
+    nsOutlookProfileMigratorConstructor },
+#endif
 };
 
 NS_IMPL_NSGETMODULE(nsMailProfileMigratorModule, components)

@@ -68,9 +68,9 @@
     
     <radiogroup id="importSourceGroup">
       <radio id="seamonkey" label="&importFromSeamonkey.label;" accesskey="&importFromSeamonkey.accesskey;"/>
-<!--
+      <radio id="oexpress"  label="&importFromOExpress.label;"  accesskey="&importFromOExpress.accesskey;"/>
+      <radio id="outlook"   label="&importFromOutlook.label;"   accesskey="&importFromOutlook.accesskey;"/>
       <radio id="dogbert"   label="&importFromNetscape4.label;" accesskey="&importFromNetscape4.accesskey;"/>
--->
       <radio id="nothing"   label="&importFromNothing.label;"   accesskey="&importFromNothing.accesskey;" hidden="true"/>
     </radiogroup>
   </wizardpage>
