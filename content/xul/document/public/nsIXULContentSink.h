@@ -23,8 +23,7 @@
 
 #include "nsIXMLContentSink.h"
 
-class nsIDocument;
-class nsIRDFDataSource;
+class nsIXULPrototypeDocument;
 
 // {E49AA620-C16C-11d2-A6AA-00104BDE6048}
 #define NS_IXULCONTENTSINK_IID \
@@ -36,11 +35,7 @@ class nsIXULContentSink : public nsIXMLContentSink
 public:
     static const nsIID& GetIID() { static nsIID iid = NS_IXULCONTENTSINK_IID; return iid; }
 
-    NS_IMETHOD Init(nsIDocument* aDocument) = 0;
-
-    NS_IMETHOD UnblockNextOverlay() = 0;
-
-    NS_IMETHOD UpdateOverlayCounters(PRInt32 aDelta) = 0;
+    NS_IMETHOD Init(nsIXULPrototypeDocument* aDocument) = 0;
 };
 
 
