@@ -207,6 +207,10 @@ protected:
   nsCOMPtr <nsIMsgDBHdr>  m_cachedHdr;
   nsMsgKey                m_cachedMsgKey;
 
+  // we need to store the message key for the message we are currenty displaying to ensure we
+  // don't try to redisplay the same message just because the selection changed (i.e. after a sort)
+  nsMsgKey                m_currentlyDisplayedMsgKey;
+
   nsCOMPtr <nsIMsgFolder> m_folder;
   nsCOMPtr <nsIMsgDatabase> m_db;
   PRBool		m_sortValid;

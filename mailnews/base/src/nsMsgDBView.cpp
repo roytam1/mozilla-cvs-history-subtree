@@ -68,6 +68,7 @@ nsMsgDBView::nsMsgDBView()
   m_sortOrder = nsMsgViewSortOrder::none;
   m_viewFlags = nsMsgViewFlagsType::kNone;
   m_cachedMsgKey = nsMsgKey_None;
+  m_currentlyDisplayedMsgKey = nsMsgKey_None;
 
   // initialize any static atoms or unicode strings
   if (gInstanceCount == 0) 
@@ -295,13 +296,26 @@ nsresult nsMsgDBView::RestoreSelection(nsMsgKeyArray * aMsgKeyArray)
   
   // second, turn our message keys into corresponding view indices
   PRInt32 arraySize = aMsgKeyArray->GetSize();
+  nsMsgViewIndex	currentViewPosition = nsMsgViewIndex_None;
   nsMsgViewIndex	newViewPosition;
+  // first, make sure the currentView was preserved....
+  if (m_currentlyDisplayedMsgKey != nsMsgKey_None)
+  {
+    currentViewPosition = FindKey(m_currentlyDisplayedMsgKey, PR_FALSE);
+    if (currentViewPosition != nsMsgViewIndex_None)
+    {
+      mOutlinerSelection->SetCurrentIndex(currentViewPosition);
+      mOutlinerSelection->RangedSelect(currentViewPosition, currentViewPosition, PR_TRUE /* augment */);
+    }
+  }
+
   for (PRInt32 index = 0; index < arraySize; index ++)
   {
     newViewPosition = FindKey(aMsgKeyArray->GetAt(index), PR_FALSE);  
     // check to make sure newViewPosition is valid.
     // add the index back to the selection.
-    mOutlinerSelection->RangedSelect(newViewPosition, newViewPosition, PR_TRUE /* augment */);
+    if (newViewPosition != currentViewPosition) // don't re-add the current view
+      mOutlinerSelection->RangedSelect(newViewPosition, newViewPosition, PR_TRUE /* augment */);
   }
 
   return NS_OK;
@@ -397,10 +411,14 @@ NS_IMETHODIMP nsMsgDBView::SelectionChanged()
     {
       // get the msgkey for the message
       nsMsgKey msgkey = m_keys.GetAt(startRange);
-      nsXPIDLCString uri;
-      rv = GenerateURIForMsgKey(msgkey, m_folder, getter_Copies(uri));
-      NS_ENSURE_SUCCESS(rv,rv);
-      mMessengerInstance->OpenURL(uri);
+      if (m_currentlyDisplayedMsgKey != msgkey)
+      {
+        nsXPIDLCString uri;
+        rv = GenerateURIForMsgKey(msgkey, m_folder, getter_Copies(uri));
+        NS_ENSURE_SUCCESS(rv,rv);
+        mMessengerInstance->OpenURL(uri);
+        m_currentlyDisplayedMsgKey = msgkey;
+      }
     }
   }
 
