@@ -86,13 +86,13 @@ NS_IMETHODIMP nsSOAPJSValue::SetObject(JSObject * aObject)
   return NS_OK;
 }
 
-class nsSOAPJSStructEnumerator : public nsIEnumerator
+class nsSOAPJSStructEnumerator : public nsISimpleEnumerator
 {
 public:
     NS_DECL_ISUPPORTS
 
-    // nsIEnumerator methods:
-    NS_DECL_NSIENUMERATOR
+    // nsISimpleEnumerator methods:
+    NS_DECL_NSISIMPLEENUMERATOR
 
     // nsSOAPJSStructEnumerator methods:
 
@@ -126,44 +126,17 @@ nsSOAPJSStructEnumerator::~nsSOAPJSStructEnumerator()
   }
 }
 
-NS_IMPL_ISUPPORTS1(nsSOAPJSStructEnumerator, nsIEnumerator)
+NS_IMPL_ISUPPORTS1(nsSOAPJSStructEnumerator, nsISimpleEnumerator)
 
-NS_IMETHODIMP nsSOAPJSStructEnumerator::First(void)
+NS_IMETHODIMP nsSOAPJSStructEnumerator::GetNext(nsISupports** aItem)
 {
-  mCurrent = -1;
-  return Next();
-}
-
-NS_IMETHODIMP nsSOAPJSStructEnumerator::Next(void)
-{
-  if (mCurrent >= mMembers->length)
-      return NS_ERROR_FAILURE;
-  for (;;) {
-    mCurrent++;
-    if (mCurrent >= mMembers->length)
-      return NS_ERROR_FAILURE;
+  for (;mCurrent < mMembers->length;) {
     JSContext* context;
     mValue->GetContext(&context);
     jsval idval;
-    if (!JS_IdToValue(context, mMembers->vector[mCurrent], &idval))
+    if (!JS_IdToValue(context, mMembers->vector[mCurrent++], &idval))
       continue;
     JSString* str = JS_ValueToString(context, idval);
-    if (str) return NS_OK;
-  }
-}
-
-NS_IMETHODIMP nsSOAPJSStructEnumerator::CurrentItem(nsISupports **aItem)
-{
-  *aItem = nsnull;
-  if (mCurrent < mMembers->length) {
-    jsval idval;
-    JSContext* context;
-    mValue->GetContext(&context);
-    JSObject* object;
-    mValue->GetObject(&object);
-    if (!JS_IdToValue(context, mMembers->vector[mCurrent], &idval))
-      return NS_ERROR_FAILURE;
-    JSString* str = JS_ValueToString(context, idval);       
     if (str) {
       nsCOMPtr<nsISOAPParameter> param;
       nsresult rc = mStruct->GetMember(nsDependentString(JS_GetStringChars(str)), getter_AddRefs(param));
@@ -175,13 +148,14 @@ NS_IMETHODIMP nsSOAPJSStructEnumerator::CurrentItem(nsISupports **aItem)
   return NS_ERROR_FAILURE;
 }
 
-NS_IMETHODIMP nsSOAPJSStructEnumerator::IsDone(void)
+NS_IMETHODIMP nsSOAPJSStructEnumerator::HasMoreElements(PRBool* result)
 {
-  return mCurrent >= mMembers->length ? NS_OK : NS_ERROR_FAILURE;
+  *result = mCurrent < mMembers->length;
+  return NS_OK;
 }
 
-/* readonly attribute nsIEnumerator members; */
-NS_IMETHODIMP nsSOAPJSValue::GetMembers(nsIEnumerator * *aMembers)
+/* readonly attribute nsISimpleEnumerator members; */
+NS_IMETHODIMP nsSOAPJSValue::GetMembers(nsISimpleEnumerator * *aMembers)
 {
   if (mContext == 0
     || mObject == 0) {

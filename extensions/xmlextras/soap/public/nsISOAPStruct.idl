@@ -39,7 +39,7 @@ interface nsISOAPStruct : nsISupports {
    * be used to get the values of members,
    * but never to set the values of members.
    */
-  readonly attribute nsIEnumerator members;
+  readonly attribute nsISimpleEnumerator members;
 
   /**
    * Get the value of a nsISOAPStruct member
