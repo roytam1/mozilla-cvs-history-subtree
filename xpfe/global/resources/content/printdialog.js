@@ -30,8 +30,8 @@ var printOptions       = null;
 var gOriginalNumCopies = 1;
 
 var paramBlock;
-var gPrintSettings = null;
-var gPrinterName   = "";
+var gPrefs             = null;
+var gPrintSettings     = null;
 var gWebBrowserPrint   = null;
 var default_file       = "mozilla.ps";
 var gPrintSetInterface = Components.interfaces.nsIPrintSettings;
@@ -194,21 +194,16 @@ function getPrinters()
 // update gPrintSettings with the defaults for the selected printer
 function setPrinterDefaultsForSelectedPrinter()
 {
-  /* FixMe: We should save the old printer's values here... */
+  gPrintSettings.printerName = dialog.printerList.value;
 
-  if ( gPrintSettings.printerName != dialog.printerList.value ) {
-    gPrintSettings.printerName = dialog.printerList.value;
-  
-    // First get any defaults from the printer 
-    printService.initPrintSettingsFromPrinter(gPrintSettings.printerName, gPrintSettings);
+  // First get any defaults from the printer 
+  printService.initPrintSettingsFromPrinter(gPrintSettings.printerName, gPrintSettings);
 
-    var flags = gPrintSetInterface.kInitSavePaperSizeType | gPrintSetInterface.kInitSavePaperSizeUnit |
-                gPrintSetInterface.kInitSavePaperWidth | gPrintSetInterface.kInitSavePaperHeight |
-                gPrintSetInterface.kInitSavePaperName |
-                gPrintSetInterface.kInitSavePrintCommand;
- 
-    // now augment them with any values from last time
-    printService.initPrintSettingsFromPrefs(gPrintSettings, true, flags);    
+  // now augment them with any values from last time
+  printService.initPrintSettingsFromPrefs(gPrintSettings, true, gPrintSetInterface.kInitSaveAll);
+
+  if (doDebug) {
+    dump("setPrinterDefaultsForSelectedPrinter: printerName='"+gPrintSettings.printerName+"', paperName='"+gPrintSettings.paperName+"'\n");
   }
 }
 
@@ -254,6 +249,8 @@ function loadDialog()
   var print_tofile        = "";
 
   try {
+    gPrefs = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch);
+
     printService = Components.classes["@mozilla.org/gfx/printsettings-service;1"];
     if (printService) {
       printService = printService.getService();
@@ -264,8 +261,10 @@ function loadDialog()
     }
   } catch(e) {}
 
+  // Note: getPrinters sets up the PrintToFile radio buttons and initalises gPrintSettings
+  getPrinters();
+
   if (gPrintSettings) {
-    gPrinterName        = gPrintSettings.printerName;
     print_tofile        = gPrintSettings.printToFile;
     gOriginalNumCopies  = gPrintSettings.numCopies;
 
@@ -309,9 +308,6 @@ function loadDialog()
   dialog.numCopiesInput.value = 1;
 
   dialog.fileInput.value   = print_file;
-
-  // NOTE: getPRinters sets up the PrintToFile radio buttons
-  getPrinters();
 
   if (gPrintSettings.toFileName != "") {
     dialog.fileInput.value = gPrintSettings.toFileName;
@@ -433,15 +429,16 @@ function onAccept()
   }
 
   var saveToPrefs = false;
-  var prefs = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch);
-  if (prefs) {
-    saveToPrefs = prefs.getBoolPref("print.save_print_settings");
-  }
+
+  saveToPrefs = gPrefs.getBoolPref("print.save_print_settings");
 
   if (saveToPrefs && printService != null) {
-    var flags = gPrintSetInterface.kInitSavePaperSizeType | gPrintSetInterface.kInitSavePaperSizeUnit |
-                gPrintSetInterface.kInitSavePaperWidth | gPrintSetInterface.kInitSavePaperHeight |
-                gPrintSetInterface.kInitSavePaperName |
+    var flags = gPrintSetInterface.kInitSavePaperSizeType | 
+                gPrintSetInterface.kInitSavePaperSizeUnit |
+                gPrintSetInterface.kInitSavePaperWidth    | 
+                gPrintSetInterface.kInitSavePaperHeight   |
+                gPrintSetInterface.kInitSavePaperName     | 
+                gPrintSetInterface.kInitSaveInColor       |
                 gPrintSetInterface.kInitSavePrintCommand;
     printService.savePrintSettingsToPrefs(gPrintSettings, true, flags);
   }
