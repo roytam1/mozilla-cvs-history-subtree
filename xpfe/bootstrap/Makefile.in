@@ -36,7 +36,7 @@ endif
 
 EXTRA_DSO_LIBS	= gkgfx
 
-ifeq ($(MOZ_WIDGET_TOOLKIT),os2)
+ifeq ($(OS_ARCH),OS2)
 EXTRA_DSO_LIBS	+= xpfelocation_s mpfilelocprovider_s
 else
 SHARED_LIBRARY_LIBS = -lxpfelocation_s -lmpfilelocprovider_s
@@ -87,10 +87,6 @@ ifdef GC_LEAK_DETECTOR
 LIBS += -lboehm
 endif
 
-ifeq ($(MOZ_OS2_TOOLS),EMX)
-BIN_FLAGS	:= -Zlinker /PM:PM -Zlinker /Stack:0x30000
-endif
-
 ifeq ($(MOZ_WIDGET_TOOLKIT),beos)
 BEOS_PROGRAM_RESOURCE = $(srcdir)/apprunner-beos.rsrc
 endif
@@ -113,6 +109,30 @@ endif
 
 include $(topsrcdir)/config/rules.mk
 
+# This code removes the console from release builds
+# (unless you've set MOZ_WINCONSOLE=1).
+ifndef MOZ_WINCONSOLE
+ifdef MOZ_DEBUG
+MOZ_WINCONSOLE=1
+else
+MOZ_WINCONSOLE=0
+endif
+endif
+
+# Set link flags according to whether we want a console.
+ifeq ($(MOZ_WINCONSOLE),1)
+ifeq ($(MOZ_OS2_TOOLS),EMX)
+BIN_FLAGS	:= -Zlinker /PM:VIO -Zlinker /Stack:0x30000
+endif
+else
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+LDFLAGS += /PM:PM
+endif
+ifeq ($(MOZ_OS2_TOOLS),EMX)
+BIN_FLAGS	:= -Zlinker /PM:PM -Zlinker /Stack:0x30000
+endif
+endif
+
 XP_DIST_DEP_LIBS := $(filter-out -L$(DIST)/bin -L$(DIST)/lib, $(XP_DIST_LIBS))
 
 ifneq ($(MOZ_WIDGET_TOOLKIT),os2)
@@ -123,8 +143,10 @@ endif
 
 CXXFLAGS	+= $(MOZ_TOOLKIT_REGISTRY_CFLAGS)
 
+ifneq ($(MOZ_WIDGET_TOOLKIT),os2)
 install:: $(srcdir)/mozilla
 	$(INSTALL) $< $(DIST)/bin
+endif
 
 ifeq ($(MOZ_WIDGET_TOOLKIT),photon)
 install:: $(srcdir)/splash.bmp
