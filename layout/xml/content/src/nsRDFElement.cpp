@@ -146,6 +146,37 @@ done:
 }
 
 
+// A complete hack that looks at the string value of a node and
+// guesses if it's a resource
+static PRBool
+rdf_IsResource(nsIRDFNode* node)
+{
+    nsresult rv;
+    nsAutoString v;
+
+    if (NS_FAILED(rv = node->GetStringValue(v)))
+        return PR_FALSE;
+
+    PRInt32 index;
+
+    // A URI needs a colon. 
+    index = v.Find(':');
+    if (index < 0)
+        return PR_FALSE;
+
+    // Assume some sane maximum for protocol specs
+#define MAX_PROTOCOL_SPEC 10
+    if (index > MAX_PROTOCOL_SPEC)
+        return PR_FALSE;
+
+    // It can't have spaces or newlines or tabs
+    if (v.Find(' ') > 0 || v.Find('\n') > 0 || v.Find('\t') > 0)
+        return PR_FALSE;
+
+    return PR_TRUE;
+}
+
+
 
 ////////////////////////////////////////////////////////////////////////
 // RDFDOMNodeListImpl
@@ -1344,8 +1375,8 @@ nsRDFElement::CreateChild(nsIRDFNode* property,
 {
     nsresult rv;
     nsRDFElement* child = NULL;
-    nsIHTMLContent* grandchild = NULL; // XXX should just be regular nsIContent
-    nsRDFElement* grandchild2 = NULL;
+    nsRDFElement* grandchild = NULL;
+    nsIHTMLContent* grandchild2 = NULL; // XXX should just be regular nsIContent
     nsITextContent* text = NULL;
     nsIDocument* doc = NULL;
     nsAutoString v;
@@ -1368,53 +1399,54 @@ nsRDFElement::CreateChild(nsIRDFNode* property,
     if (NS_FAILED(rv = NS_NewISupportsArray(&child->mChildren)))
         goto error;
 
-    // now construct the first grandchild, which is just a vanilla text node.
-    if (NS_FAILED(rv = value->GetStringValue(v)))
-        goto error;
+    // If this is NOT a resource, then construct a grandchild which is
+    // just a vanilla text node.
+    if (! rdf_IsResource(value)) {
+        if (NS_FAILED(rv = value->GetStringValue(v)))
+            goto error;
 
-    if (NS_FAILED(rv = NS_NewTextNode(&grandchild)))
-        goto error;
+        if (NS_FAILED(rv = NS_NewTextNode(&grandchild2)))
+            goto error;
 
-    if (NS_FAILED(rv = mDocument->QueryInterface(kIDocumentIID, (void**) &doc)))
-        goto error;
+        if (NS_FAILED(rv = mDocument->QueryInterface(kIDocumentIID, (void**) &doc)))
+            goto error;
 
-    if (NS_FAILED(rv = grandchild->SetDocument(doc, PR_FALSE)))
-        goto error;
+        if (NS_FAILED(rv = grandchild2->SetDocument(doc, PR_FALSE)))
+            goto error;
 
-    NS_RELEASE(doc);
+        NS_RELEASE(doc);
 
-    if (NS_FAILED(rv = grandchild->QueryInterface(kITextContentIID, (void**) &text)))
-        goto error;
+        if (NS_FAILED(rv = grandchild2->QueryInterface(kITextContentIID, (void**) &text)))
+            goto error;
 
-    if (NS_FAILED(rv = text->SetText(v.GetUnicode(), v.Length(), PR_FALSE)))
-        goto error;
+        if (NS_FAILED(rv = text->SetText(v.GetUnicode(), v.Length(), PR_FALSE)))
+            goto error;
 
-    NS_RELEASE(text);
+        NS_RELEASE(text);
 
-    // hook it up to the child
-    if (NS_FAILED(rv = grandchild->SetParent(child)))
-        goto error;
+        // hook it up to the child
+        if (NS_FAILED(rv = grandchild2->SetParent(child)))
+            goto error;
 
-    child->mChildren->AppendElement(static_cast<nsIContent*>(grandchild));
+        child->mChildren->AppendElement(static_cast<nsIContent*>(grandchild2));
+    }
 
-    // ...and construct the second grandchild, which is another RDF
-    // node.
-
-    grandchild2 = new nsRDFElement();
-    if (! grandchild2) {
+    // Construct a grandchild which is another RDF node.
+    grandchild = new nsRDFElement();
+    if (! grandchild) {
         rv = NS_ERROR_OUT_OF_MEMORY;
         goto error;
     }
 
-    grandchild2->mDocument = mDocument;
-    grandchild2->mResource = value;
-    grandchild2->mParent   = static_cast<nsIContent*>(const_cast<nsRDFElement*>(child));
+    grandchild->mDocument = mDocument;
+    grandchild->mResource = value;
+    grandchild->mParent   = static_cast<nsIContent*>(const_cast<nsRDFElement*>(child));
 
-    NS_ADDREF(grandchild2->mDocument);
-    NS_ADDREF(grandchild2->mResource);
-    NS_ADDREF(grandchild2->mParent);
+    NS_ADDREF(grandchild->mDocument);
+    NS_ADDREF(grandchild->mResource);
+    NS_ADDREF(grandchild->mParent);
 
-    child->mChildren->AppendElement(static_cast<nsIContent*>(grandchild2));
+    child->mChildren->AppendElement(static_cast<nsIContent*>(grandchild));
 
     // whew!
     result = child;
