@@ -2802,29 +2802,35 @@ nsAbSync::AddNewUsers()
     for (j = 0; j < mNewRecordTags->Count(); j++)
     {
       nsString *val = mNewRecordValues->StringAt((i*(mNewRecordTags->Count())) + j);
-      if ( (val) && (!val->IsEmpty()) )
+
+      // Don't have to process empty fields for new cards.
+      if ( isNewCard && (!val || val->IsEmpty()) )
+        continue;
+
+      // See if this is the record_id, keep it around for later...
+      nsString *tagVal = mNewRecordTags->StringAt(j);
+      if (tagVal->Equals(NS_LITERAL_STRING("record_id")))
       {
-        // See if this is the record_id, keep it around for later...
-        nsString *tagVal = mNewRecordTags->StringAt(j);
-        if (tagVal->Equals(NS_LITERAL_STRING("record_id")))
-        {
-          PRInt32 errorCode;
+        PRInt32 errorCode;
+        if ( val && !val->IsEmpty() )
           serverID = val->ToInteger(&errorCode);
 
 #ifdef DEBUG_ABSYNC
-  printf("ABSYNC: ADDING Card: %d\n", serverID);
+printf("ABSYNC: ADDING Card: %d\n", serverID);
 #endif
-        }
+      }
 
-        // Ok, "val" could still be URL Encoded, so we need to decode
-        // first and then pass into the call...
-        //
+      // Ok, "val" could still be URL Encoded, so we need to decode
+      // first and then pass into the call...
+      //
+      if ( val && !val->IsEmpty() )
+      {
         NS_ConvertUCS2toUTF8 utf8Str(*val);
         char *ret = nsUnescape(NS_CONST_CAST(char *, utf8Str.get()));
         if (ret)
           *val = NS_ConvertUTF8toUCS2(ret);
-        AddValueToNewCard(newCard, mNewRecordTags->StringAt(j), val);
       }
+      AddValueToNewCard(newCard, mNewRecordTags->StringAt(j), val);
     }
 
     // Now do the phone numbers...they are special???

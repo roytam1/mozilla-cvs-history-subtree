@@ -1495,9 +1495,9 @@ nsAbSync::DeleteMailingLists()
             // Reset server id so we don't save it to history table later.
             if (NS_SUCCEEDED(LocateExistingListRecord(listLocalID, &listRecord)))
             {
-            listRecord->serverID = 0;
-            // Now delete cards associated with email members.
-            DeleteAllEmailMemberCards(listRecord);
+              listRecord->serverID = 0;
+              // Now delete cards associated with email members.
+              DeleteAllEmailMemberCards(listRecord);
             }
           }
         }
@@ -1598,24 +1598,29 @@ nsresult nsAbSync::AddNewGroups()
     for (j = 0; j < mNewRecordTags->Count(); j++)
     {
       nsString *val = mNewRecordValues->StringAt((i*(mNewRecordTags->Count())) + j);
-      if ( (val) && (!val->IsEmpty()) )
-      {
-        // See if this is the record_id, keep it around for later...
-        nsString *tagVal = mNewRecordTags->StringAt(j);
-        if (tagVal->Equals(NS_LITERAL_STRING("record_id")))
-        {
-          PRInt32 errorCode;
-          serverID = val->ToInteger(&errorCode);
-        }
+      // Don't have to process empty fields for new cards.
+      if ( isNewCard && (!val || val->IsEmpty()) )
+        continue;
 
-        // Ok, "val" could still be URL Encoded, so we need to decode it first.
+      // See if this is the record_id, keep it around for later...
+      nsString *tagVal = mNewRecordTags->StringAt(j);
+      if (tagVal->Equals(NS_LITERAL_STRING("record_id")))
+      {
+        PRInt32 errorCode;
+        if ( val && !val->IsEmpty() )
+          serverID = val->ToInteger(&errorCode);
+      }
+
+      // Ok, "val" could still be URL Encoded, so we need to decode it first.
+      if ( val && !val->IsEmpty() )
+      {
         NS_ConvertUCS2toUTF8 utf8Str(*val);
         char *ret = nsUnescape(NS_CONST_CAST(char *, utf8Str.get()));
         if (ret)
           *val = NS_ConvertUTF8toUCS2(ret);
-
-        AddGroupsValueToNewCard(newCard, mNewRecordTags->StringAt(j), val);
       }
+
+      AddGroupsValueToNewCard(newCard, mNewRecordTags->StringAt(j), val);
     }
 
     // Set default email to other email #1.
