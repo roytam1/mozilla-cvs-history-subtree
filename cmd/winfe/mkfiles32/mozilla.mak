@@ -849,6 +849,7 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libnet\mkautocf.c
 	$(DEPTH)\lib\libnet\mkcache.c
 	$(DEPTH)\lib\libnet\mkconect.c
+    $(DEPTH)\lib\libnet\mkcburl.c
 	$(DEPTH)\lib\libnet\mkdaturl.c
 	$(DEPTH)\lib\libnet\mkextcac.c
 	$(DEPTH)\lib\libnet\mkfile.c
