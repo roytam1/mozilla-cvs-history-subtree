@@ -215,7 +215,7 @@
         <searchbar id="searchbar"/>
       </toolbaritem>
       
-      <toolbaritem id="go-container" align="center" class="chromeclass-toolbar">
+      <toolbaritem id="go-container" align="center" class="chromeclass-toolbar-additional">
         <toolbarbutton id="go-button"
                        label="&goButton.label;"
                        oncommand="handleURLBarCommand(event);"
