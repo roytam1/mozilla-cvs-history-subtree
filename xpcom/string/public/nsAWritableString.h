@@ -21,6 +21,8 @@
  *   Scott Collins <scc@mozilla.org> (original author)
  */
 
+/* nsAWritableString.h --- a compatibility header for clients still using the names |nsAWritable[C]String| */
+
 #ifndef nsAWritableString_h___
 #define nsAWritableString_h___
 

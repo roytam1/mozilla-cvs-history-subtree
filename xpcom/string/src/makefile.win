@@ -35,6 +35,7 @@ CPP_OBJS =                                      \
         .\$(OBJDIR)\nsLocalString.obj           \
         .\$(OBJDIR)\nsFragmentedString.obj      \
         .\$(OBJDIR)\nsPrintfCString.obj         \
+        .\$(OBJDIR)\nsPromiseSubstring.obj      \
         .\$(OBJDIR)\nsReadableUtils.obj         \
         .\$(OBJDIR)\nsSharedBufferList.obj      \
         .\$(OBJDIR)\nsSlidingString.obj         \

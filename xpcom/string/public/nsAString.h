@@ -764,6 +764,9 @@ nsACString::Left( nsACString& aResult, size_type aLengthToCopy ) const
     return Mid(aResult, 0, aLengthToCopy);
   }
 
-
+  // Once you've got strings, you shouldn't need to do anything else to have concatenation
+#ifndef nsPromiseConcatenation_h___
+#include "nsPromiseConcatenation.h"
+#endif
 
 #endif // !defined(nsAString_h___)

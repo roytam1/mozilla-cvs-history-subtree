@@ -52,6 +52,16 @@
 
 #include "nsAString.h"
 
+/* this file will one day be _only_ a compatibility header for clients using the names
+     |ns[C]String| et al ... which we probably want to support forever.
+   In the mean time, people are used to getting the names |nsAReadable[C]String| and friends
+     from here as well; so we must continue to include the other compatibility headers
+     even though we don't use them ourself.
+ */
+
+#include "nsAWritableString.h"
+  // for compatibility
+
 
 class NS_COM nsSubsumeCStr;
 

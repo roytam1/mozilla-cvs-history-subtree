@@ -21,6 +21,8 @@
  *   Scott Collins <scc@mozilla.org> (original author)
  */
 
+/* nsAReadableString.h --- a compatibility header for clients still using the names |nsAReadable[C]String| et al */
+
 #ifndef nsAReadableString_h___
 #define nsAReadableString_h___
 
@@ -31,25 +33,22 @@
 typedef const nsAString   nsAReadableString;
 typedef const nsACString  nsAReadableCString;
 
-#ifdef NEED_CPP_TEMPLATE_CAST_TO_BASE
-#define NS_READABLE_CAST(CharT, expr)  (NS_STATIC_CAST(const nsStringTraits<CharT>::abstract_string_type&, (expr)))
-#else
-#define NS_READABLE_CAST(CharT, expr)  (expr)
+#ifndef nsLiteralString_h___
+#include "nsLiteralString.h"
 #endif
-
-
 
 #ifndef nsPromiseSubstring_h___
 #include "nsPromiseSubstring.h"
-#endif
-
-#ifndef nsPromiseConcatenation_h___
-#include "nsPromiseConcatenation.h"
 #endif
 
 #ifndef nsPromiseFlatString_h___
 #include "nsPromiseFlatString.h"
 #endif
 
+#ifdef NEED_CPP_TEMPLATE_CAST_TO_BASE
+#define NS_READABLE_CAST(CharT, expr)  (NS_STATIC_CAST(const nsStringTraits<CharT>::abstract_string_type&, (expr)))
+#else
+#define NS_READABLE_CAST(CharT, expr)  (expr)
+#endif
 
 #endif // !defined(nsAReadableString_h___)
