@@ -24,6 +24,7 @@
 
 #include "nsBoxFrame.h"
 #include "nsIOutlinerColFrame.h"
+#include "nsIOutlinerBoxObject.h"
 
 class nsSupportsHashtable;
 
@@ -45,8 +46,18 @@ public:
                               nsFramePaintLayer aWhichLayer,
                               nsIFrame**     aFrame);
 
+  NS_IMETHOD AttributeChanged(nsIPresContext* aPresContext,
+                              nsIContent* aChild,
+                              PRInt32 aNameSpaceID,
+                              nsIAtom* aAttribute,
+                              PRInt32 aHint);
+
+
 protected:
   nsOutlinerColFrame(nsIPresShell* aPresShell, PRBool aIsRoot = nsnull, nsIBoxLayout* aLayoutManager = nsnull, PRBool aDefaultHorizontal = PR_TRUE);
   virtual ~nsOutlinerColFrame();
 
+protected:
+  // Members.
+  nsCOMPtr<nsIOutlinerBoxObject> mOutliner;
 }; // class nsOutlinerColFrame

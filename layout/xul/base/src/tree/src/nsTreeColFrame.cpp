@@ -25,9 +25,14 @@
 #include "nsCOMPtr.h"
 #include "nsOutlinerColFrame.h"
 #include "nsXULAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsIContent.h"
 #include "nsIStyleContext.h"
 #include "nsINameSpaceManager.h" 
+#include "nsIDOMNSDocument.h"
+#include "nsIDocument.h"
+#include "nsIBoxObject.h"
+#include "nsIDOMElement.h"
 
 //
 // NS_NewOutlinerColFrame
@@ -144,3 +149,35 @@ nsOutlinerColFrame::GetFrameForPoint(nsIPresContext* aPresContext,
   return NS_ERROR_FAILURE;
 }
 
+NS_IMETHODIMP
+nsOutlinerColFrame::AttributeChanged(nsIPresContext* aPresContext,
+                                     nsIContent* aChild,
+                                     PRInt32 aNameSpaceID,
+                                     nsIAtom* aAttribute,
+                                     PRInt32 aHint)
+{
+  nsresult rv = nsBoxFrame::AttributeChanged(aPresContext, aChild,
+                                               aNameSpaceID, aAttribute, aHint);
+
+  if (aAttribute == nsHTMLAtoms::width) {
+    // Invalidate the outliner.
+    if (!mOutliner) {
+      // Get our parent node.
+      nsCOMPtr<nsIContent> parent;
+      mContent->GetParent(*getter_AddRefs(parent));
+      nsCOMPtr<nsIDocument> doc;
+      mContent->GetDocument(*getter_AddRefs(doc));
+      nsCOMPtr<nsIDOMNSDocument> nsDoc(do_QueryInterface(doc));
+      nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(parent));
+  
+      nsCOMPtr<nsIBoxObject> boxObject;
+      nsDoc->GetBoxObjectFor(elt, getter_AddRefs(boxObject));
+
+      mOutliner = do_QueryInterface(boxObject);
+    }
+
+    mOutliner->Invalidate();
+  }
+
+  return rv;
+}

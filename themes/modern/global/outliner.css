@@ -51,6 +51,8 @@ outlinerbody:-moz-outliner-cell(selected)
 outlinerbody:-moz-outliner-cell-text
 {
   color: inherit;
+  padding-left: 2px;
+  padding-right: 2px;
 }
 
 outlinerbody:-moz-outliner-cell-text(selected)

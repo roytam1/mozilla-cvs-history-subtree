@@ -568,6 +568,16 @@ nsRect nsOutlinerBodyFrame::GetInnerBox()
   return r;
 }
 
+static void 
+AdjustForBorderPadding(nsIStyleContext* aContext, nsRect& aRect)
+{
+  nsMargin m(0,0,0,0);
+  nsStyleBorderPadding  bPad;
+  aContext->GetStyle(eStyleStruct_BorderPaddingShortcut, (nsStyleStruct&)bPad);
+  bPad.GetBorderPadding(m);
+  aRect.Deflate(m);
+}
+
 // Painting routines
 NS_IMETHODIMP nsOutlinerBodyFrame::Paint(nsIPresContext*      aPresContext,
                                          nsIRenderingContext& aRenderingContext,
@@ -720,6 +730,9 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintRow(int aRowIndex, const nsRect& aRowRec
   if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer)
     PaintBackgroundLayer(rowContext, aPresContext, aRenderingContext, rowRect, aDirtyRect);
 
+  // Adjust the rect for its border and padding.
+  AdjustForBorderPadding(rowContext, rowRect);
+
   // Now loop over our cells. Only paint a cell if it intersects with our dirty rect.
   nscoord currX = rowRect.x;
   for (nsOutlinerColumn* currCol = mColumns; currCol && currX < mInnerBox.x+mInnerBox.width; 
@@ -768,6 +781,9 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int aRowIndex,
   // row rect.
   if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer)
     PaintBackgroundLayer(cellContext, aPresContext, aRenderingContext, cellRect, aDirtyRect);
+
+  // Adjust the rect for its border and padding.
+  AdjustForBorderPadding(cellContext, cellRect);
 
   nscoord currX = cellRect.x;
   nscoord remainingWidth = cellRect.width;
@@ -833,6 +849,8 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintText(int aRowIndex,
     PaintBackgroundLayer(textContext, aPresContext, aRenderingContext, textRect, aDirtyRect);
   else {
     // Time to paint our text. 
+    // Adjust the rect for its border and padding.
+    AdjustForBorderPadding(textContext, textRect);
     
     // Compute our text size.
     const nsStyleFont* fontStyle = (const nsStyleFont*)textContext->GetStyleData(eStyleStruct_Font);
