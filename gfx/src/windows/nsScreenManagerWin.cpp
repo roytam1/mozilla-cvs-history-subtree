@@ -57,11 +57,12 @@
 
 
 #if _MSC_VER >= 1200
+#include <multimon.h>
 typedef HMONITOR (WINAPI *MonitorFromRectProc)(LPCRECT inRect, DWORD inFlag); 
 typedef BOOL (WINAPI *EnumDisplayMonitorsProc)(HDC, LPCRECT, MONITORENUMPROC, LPARAM);
 
 BOOL CALLBACK CountMonitors ( HMONITOR, HDC, LPRECT, LPARAM ioCount ) ;
-#else
+#elif !defined(__MINGW32__)
 typedef void* HMONITOR;
 #endif
 

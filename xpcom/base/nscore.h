@@ -37,6 +37,10 @@
 #ifndef nscore_h___
 #define nscore_h___
 
+#ifndef _MOZILLA_CONFIG_H_
+#include "mozilla-config.h"
+#endif
+
 /**
  * Incorporate the core NSPR data types which XPCOM uses.
  */
