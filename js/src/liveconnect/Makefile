@@ -63,8 +63,8 @@ endif
 
 ifdef JAVA_OR_OJI
 EXPORTS		= jsjava.h \
-		  $(JRI_GEN_DIR)/netscape_javascript_JSObject.h \
-		  $(JRI_GEN_DIR)/netscape_javascript_JSException.h \
+		  $(JNI_GEN_DIR)/netscape_javascript_JSObject.h \
+		  $(JNI_GEN_DIR)/netscape_javascript_JSException.h \
 		  $(NULL)
 
 else
@@ -89,14 +89,12 @@ endif
 
 ifdef JAVA_OR_OJI
 $(OBJDIR)/stubs.o:					 \
-	$(JRI_GEN_DIR)/netscape_javascript_JSObject.c	 \
-	$(JRI_GEN_DIR)/netscape_javascript_JSException.c \
+	$(JNI_GEN_DIR)/netscape_javascript_JSObject.c	 \
+	$(JNI_GEN_DIR)/netscape_javascript_JSException.c \
 	$(NULL)
 else
 $(OBJDIR)/stubs.o:
 endif
-
-export:: install
 
 ifndef REGENERATE
 
