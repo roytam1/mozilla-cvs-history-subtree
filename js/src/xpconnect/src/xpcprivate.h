@@ -186,6 +186,9 @@ public:
     static void ReleaseXPConnectSingleton();
     virtual ~nsXPConnect();
 
+    JSBool IsShuttingDown() const {return mShutingDown;}
+
+
 protected:
     nsXPConnect();
 
@@ -203,6 +206,7 @@ private:
     nsIThreadJSContextStack* mContextStack;
     nsIXPCSecurityManager* mDefaultSecurityManager;
     PRUint16 mDefaultSecurityManagerFlags;
+    JSBool mShutingDown;
 #ifdef XPC_TOOLS_SUPPORT
     nsCOMPtr<nsIXPCToolsProfiler> mProfiler;
     nsCOMPtr<nsILocalFile> mProfilerOutputFile;
@@ -471,6 +475,8 @@ public:
 
     inline nsISupports*                 GetIdentityObject() const ;
     inline XPCWrappedNative*            GetWrapper() const ;
+    
+    inline JSBool                       CanGetTearOff() const ;
     inline XPCWrappedNativeTearOff*     GetTearOff() const ;
 
     inline XPCNativeScriptableInfo*     GetScriptableInfo() const ;
@@ -608,6 +614,9 @@ public:
     static void
     ASSERT_NoInterfaceSetsAreMarked();
 #endif
+
+    static void
+    SweepAllWrappedNativeTearOffs();
 
     static void
     FinshedGC(JSContext* cx);
@@ -1170,6 +1179,10 @@ public:
     void Cleanup();
 
     PRBool IsValid() const {return mJSContextStack != nsnull;}
+
+    static PRLock* GetLock() {return gLock;}
+    // Must be called with the threads locked.
+    static XPCPerThreadData* IterateThreads(XPCPerThreadData** iteratorp);
 
 private:
     XPCPerThreadData();
@@ -1822,7 +1835,12 @@ public:
 
     XPCWrappedNativeTearOff()
         : mJSObject(nsnull), mNative(nsnull), mInterface(nsnull) {}
-    ~XPCWrappedNativeTearOff() {}
+    ~XPCWrappedNativeTearOff() 
+        {NS_ASSERTION(!(mInterface||mNative||mJSObject), "tearoff not empty in dtor");}
+
+    void Mark()       {mJSObject = (JSObject*)(((jsword)mJSObject) | 1);}
+    void Unmark()     {mJSObject = (JSObject*)(((jsword)mJSObject) & ~1);}
+    JSBool IsMarked() const {return (JSBool)(((jsword)mJSObject) & 1);}
 
 private:
     XPCWrappedNativeTearOff(const XPCWrappedNativeTearOff& r); // not implemented
@@ -1943,6 +1961,8 @@ public:
         {mSet->ASSERT_NotMarked(); 
          if(HasMutatedSet()) GetProto()->GetSet()->ASSERT_NotMarked();}
 #endif
+
+    inline void SweepTearOffs();
 
 private:
     XPCWrappedNative(nsISupports* aIdentity,

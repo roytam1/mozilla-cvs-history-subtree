@@ -167,6 +167,7 @@ XPCWrappedNative::XPCWrappedNative(nsISupports* aIdentity,
       mScriptableInfo(nsnull)
 {
     NS_INIT_ISUPPORTS();
+    NS_ADDREF(mIdentity);
 }
 
 XPCWrappedNative::~XPCWrappedNative()
@@ -408,9 +409,19 @@ XPCWrappedNative::FlatJSObjectFinalized(JSContext *cx, JSObject *obj)
             JSObject* jso = to->GetJSObject();
             if(jso)
             {
-                to->JSObjectFinalized();
                 JS_SetPrivate(cx, jso, nsnull);
+                to->JSObjectFinalized();
             }
+
+            // We also need to release any native pointers held...
+            nsISupports* obj = to->GetNative();
+            if(obj)
+            {
+                obj->Release();    
+                to->SetNative(nsnull);
+            }
+
+            to->SetInterface(nsnull);
         }
     }
 

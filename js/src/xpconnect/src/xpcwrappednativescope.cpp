@@ -220,6 +220,21 @@ XPCWrappedNativeScope::ASSERT_NoInterfaceSetsAreMarked()
 }
 #endif
 
+JS_STATIC_DLL_CALLBACK(intN)
+WrappedNativeTearoffSweeper(JSHashEntry *he, intN i, void *arg)
+{
+    ((XPCWrappedNative*) he->value)->SweepTearOffs();
+    return HT_ENUMERATE_NEXT;
+}
+
+// static 
+void
+XPCWrappedNativeScope::SweepAllWrappedNativeTearOffs()
+{
+    for(XPCWrappedNativeScope* cur = gScopes; cur; cur = cur->mNext)
+        cur->mWrappedNativeMap->Enumerate(WrappedNativeTearoffSweeper, nsnull);
+}        
+
 // static 
 void 
 XPCWrappedNativeScope::KillDyingScopes()

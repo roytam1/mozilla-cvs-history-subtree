@@ -477,3 +477,11 @@ XPCPerThreadData::CleanupAllThreads()
         PR_SetThreadPrivate(gTLSIndex, nsnull);
 }
 
+// static 
+XPCPerThreadData* 
+XPCPerThreadData::IterateThreads(XPCPerThreadData** iteratorp)
+{
+    *iteratorp = (*iteratorp == nsnull) ? gThreads : (*iteratorp)->mNextThread;
+    return *iteratorp;
+}        
+

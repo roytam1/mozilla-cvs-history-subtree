@@ -189,8 +189,10 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                 if(!ccx.IsValid())
                     break;
 
+                // Do the marking...
                 XPCWrappedNativeScope::MarkAllInterfaceSets();
                 
+                // Do the sweeping...
                 self->mClassInfo2NativeSetMap->Enumerate(
                     NativeUnMarkedSetRemover, nsnull);
 
@@ -203,6 +205,57 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
 #ifdef DEBUG
                 XPCWrappedNativeScope::ASSERT_NoInterfaceSetsAreMarked();
 #endif
+
+                // Now we are going to recycle any unused WrappedNativeTearoffs.
+                // We do this by iterating all the live callcontexts (on all 
+                // threads!) and marking the tearoffs in use. And then we 
+                // iterate over all the WrappedNative wrappers and sweep their
+                // tearoffs.
+                //
+                // This allows us to perhaps minimize the growth of the 
+                // tearoffs. And also makes us not hold references to interfaces
+                // on our wrapped natives that we are not actually using.
+                //
+                // XXX We may decide to not do this on *every* gc cycle.
+
+
+                // Skip this part if XPConnect is shutting down. We get into
+                // bad locking problems with the thread iteration otherwise.
+                if(ccx.GetXPConnect()->IsShuttingDown())
+                    break;
+
+                // Do the marking...
+
+                { // scoped lock
+                    nsAutoLock lock(XPCPerThreadData::GetLock());
+                    
+                    XPCPerThreadData* iterp = nsnull;
+                    XPCPerThreadData* thread;
+
+                    while(nsnull != (thread = 
+                                     XPCPerThreadData::IterateThreads(&iterp)))
+                    {
+                        XPCCallContext* ccxp = thread->GetCallContext();
+                        while(ccxp)
+                        {
+                            // Deal with the strictness of callcontext that
+                            // complains if you ask for a tearoff when
+                            // it is in a state where the tearoff could not 
+                            // possibly be valid.
+                            if(ccxp->CanGetTearOff())
+                            {
+                                XPCWrappedNativeTearOff* to = ccxp->GetTearOff();
+                                if(to)
+                                    to->Mark();
+                            }
+                            ccxp = ccxp->GetPrevCallContext();    
+                        }    
+                    }
+                }
+
+                // Do the sweeping...
+                XPCWrappedNativeScope::SweepAllWrappedNativeTearOffs();
+
                 break;
             }
             case JSGC_END:

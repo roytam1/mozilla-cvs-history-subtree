@@ -50,7 +50,8 @@ nsXPConnect::nsXPConnect()
         mInterfaceInfoManager(nsnull),
         mContextStack(nsnull),
         mDefaultSecurityManager(nsnull),
-        mDefaultSecurityManagerFlags(0)
+        mDefaultSecurityManagerFlags(0),
+        mShutingDown(JS_FALSE)
 {
     NS_INIT_REFCNT();
 
@@ -94,6 +95,7 @@ nsXPConnect::nsXPConnect()
 
 nsXPConnect::~nsXPConnect()
 {
+    mShutingDown = JS_TRUE;
     { // scoped callcontext
         XPCCallContext ccx(NATIVE_CALLER);
         if(ccx.IsValid())
