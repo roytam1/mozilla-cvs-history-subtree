@@ -21,6 +21,16 @@
 
 /* temporary outliner styles */
 
+outliner:focus > outlinerbody
+{
+  border: 1px solid black;
+}
+
+outliner > outlinerbody
+{
+  border: 1px solid transparent;
+}
+
 outlinercol.threadColumnHeader {
   list-style-image: url("chrome://messenger/skin/unthreadcol.gif");
 }
