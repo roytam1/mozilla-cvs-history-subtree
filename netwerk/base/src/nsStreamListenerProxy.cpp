@@ -188,11 +188,15 @@ nsOnDataAvailableEvent::HandleEvent()
 #endif
 
         //
-        // We must honor the listener's desire to suspend the channel.
+        // XXX Need to suspend the underlying channel... must consider
+        //     other pending events (such as OnStopRequest). These
+        //     should not be forwarded to the listener if the channel
+        //     is suspended. Also, handling the Resume could be tricky.
         //
         if (rv == NS_BASE_STREAM_WOULD_BLOCK) {
-            mChannel->Suspend();
-            rv = NS_OK;
+            NS_NOTREACHED("listener returned NS_BASE_STREAM_WOULD_BLOCK"
+                          " -- functionality not implemented");
+            rv = NS_ERROR_NOT_IMPLEMENTED;
         }
 
         //
@@ -262,6 +266,7 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
                                        PRUint32 aCount)
 {
     nsresult rv;
+    PRUint32 bytesWritten=0;
 
     PRINTF("nsStreamListenerProxy::OnDataAvailable [offset=%u, count=%u]\n",
             aOffset, aCount);
@@ -296,8 +301,6 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
         // ChannelToResume monitor ensures that the resume will follow
         // the suspend.
         //
-        PRUint32 bytesWritten=0;
-
         PRINTF("Writing to the pipe...\n");FLUSH();
         rv = mPipeOut->WriteFrom(aSource, aCount, &bytesWritten);
 
