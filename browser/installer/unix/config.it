@@ -236,14 +236,13 @@ Description Long=@TYPE_CUSTOM_DESC@
 ; this Setup Type is selected.
 C0=Component XPCOM
 C1=Component Browser
-C2=Component ABE
-C3=Component ADT
-;C4=Component Uninstaller
-C4=Component Langpack
-C5=Component Help
+C2=Component ADT
+;C3=Component Uninstaller
+C3=Component Langpack
+C4=Component Help
 ; Make sure Component QFA is LAST so 3rd party developers who might not want
 ; this component can easily remove it.
-C6=Component QFA
+C5=Component QFA
 
 [Dialog Select Components]
 Show Dialog=TRUE
@@ -579,16 +578,6 @@ $InstallSizeSystem$
 $InstallSizeArchive$:browser.xpi
 Attributes=SELECTED|INVISIBLE|FORCE_UPGRADE|MAIN_COMPONENT
 Force Upgrade File0=[SETUP PATH]\$MainExeFile$
-FileCount=$FileCount$
-
-[Component ABE]
-Description Short=@ABE_SHORT@
-Description Long=@ABE_LONG@
-Archive=abe.xpi
-$InstallSize$:abe
-$InstallSizeSystem$
-$InstallSizeArchive$:abe.xpi
-Attributes=VISIBLE|DISABLED
 FileCount=$FileCount$
 
 [Component ADT]

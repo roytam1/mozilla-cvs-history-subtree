@@ -110,11 +110,8 @@
 #define UNINSTALL_SHORT $CompanyName$ Uninstaller
 #define LANGPACK_TITLE Language Pack
 
-#define ABE_SHORT Additional Browsing Enhancements
-#define ABE_LONG Additional tools including mouse-gesture navigation, a site navigation bar and other enhanced functionality.
-
 #define ADT_SHORT Developer Tools
-#define ADT_LONG Tools for web developers including an error console, the Document Inspector and a JavaScript Debugger.
+#define ADT_LONG The Document Inspector - a tool for web developers.
 
 #define QFA_SHORT Quality Feedback Agent
 #define QFA_LONG for reporting $ProductShortName$ crash information
