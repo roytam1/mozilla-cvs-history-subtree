@@ -1,0 +1,6 @@
+<!ENTITY pluginInfo2.label "Hvis du slår av tilleggsprogrammet for en filtype, vil den filtypen bli lastet ned isteden for å bli vist i tilleggsprogrammet.">
+<!ENTITY typeHeader.label "Filtype">
+<!ENTITY enabledHeader.label "Påslått">
+<!ENTITY extensionsHeader.label "Utvidelse">
+<!ENTITY plugins.title "Tilleggsprogrammer">
+<!ENTITY pluginInfo.label "Tilleggsprogrammer er tilgjengelig for disse filtypene:">

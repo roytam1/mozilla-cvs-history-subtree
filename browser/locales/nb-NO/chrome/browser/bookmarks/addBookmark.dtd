@@ -1,0 +1,28 @@
+<!ENTITY name.accesskey "N">
+<!ENTITY alwayscreateinfolder.label "Ikke vis denne skjermen igjen">
+<!ENTITY button.defaultfolder.accesskey "s">
+<!ENTITY selectFolder.label "Velg mappe">
+<!ENTITY createin.label "Opprett i:">
+<!ENTITY button.createin.label "Opprett i &gt;&gt;">
+<!ENTITY createin.accesskey "O">
+<!ENTITY url.label "Plassering:">
+<!ENTITY newbookmark.label "&brandShortName; vil opprette et bokmerke for denne siden.">
+<!ENTITY newBookmark.title "Legg til bokmerke">
+<!ENTITY button.createin2.label "Opprett i &lt;&lt;">
+<!ENTITY button.defaultfolder.label "Bruk standardverdi">
+<!ENTITY button.createin.accesskey "p">
+<!ENTITY button.newfolder.label "Ny mappe ...">
+<!ENTITY addGroup.accesskey "f">
+<!ENTITY name.label "Navn:">
+<!ENTITY button.newfolder.accesskey "N">
+<!ENTITY dontshowmessage.tooltip "Når dette valget er påslått, vil nye bokmerker bli lagt til med tittelen som nettsiden har.">
+<!ENTITY url.accesskey "P">
+<!ENTITY addGroup.label "Legg alle faner i bokmerker">
+<!ENTITY alwayscreateinfolder.accesskey "I">
+<!ENTITY newFolder.label "Ny mappe ...">
+<!ENTITY newFolder.accesskey "N">
+<!ENTITY acceptButton.label "Legg til">
+<!ENTITY expanderDown.tooltip "Vis alle bokmerkemappene">
+<!ENTITY expanderUp.tooltip "Skjul">
+<!ENTITY keyword.label "Nøkkelord:">
+<!ENTITY keyword.accesskey "N">

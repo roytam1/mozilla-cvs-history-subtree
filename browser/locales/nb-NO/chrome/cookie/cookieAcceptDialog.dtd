@@ -1,0 +1,17 @@
+<!ENTITY dialog.title "Bekreft">
+<!ENTITY button.deny.label "Avslå">
+<!ENTITY props.path.label "Bane:">
+<!ENTITY props.value.label "Innhold:">
+<!ENTITY props.domain.label "Tjener">
+<!ENTITY props.name.label "Navn:">
+<!ENTITY props.policy.label "Valg:">
+<!ENTITY dialog.remember.label "Bruk dette valget for alle informasjonskapsler fra dette nettstedet">
+<!ENTITY props.secure.label "Send til:">
+<!ENTITY button.allow.label "Tillat">
+<!ENTITY props.box.label "Om denne informasjonskapselen">
+<!ENTITY dialog.remember.accesskey "B">
+<!ENTITY props.expires.label "Utløper:">
+<!ENTITY button.allow.accesskey "A">
+<!ENTITY button.deny.accesskey "A">
+<!ENTITY button.session.accesskey "T">
+<!ENTITY button.session.label "Tillat for programøkta">

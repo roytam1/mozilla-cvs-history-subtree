@@ -1,0 +1,14 @@
+<!ENTITY treehead.cookiedomain.label "Nettsted">
+<!ENTITY props.domain.label "Vert:">
+<!ENTITY props.name.label "Navn:">
+<!ENTITY props.value.label "Innhold:">
+<!ENTITY treehead.cookiename.label "Navn på informasjonskapsel">
+<!ENTITY button.removecookie.label "Fjern informasjonskapsel">
+<!ENTITY treehead.infoselected.label "Informasjon om den valgte informasjonskapselen">
+<!ENTITY button.removeallcookies.label "Fjern alle informasjonskapsler">
+<!ENTITY window.title "Informasjonskapselbehandling">
+<!ENTITY props.expires.label "Utgår:">
+<!ENTITY props.secure.label "Send til:">
+<!ENTITY div.cookiesonsystem.label "Vis og fjern informasjonskapsler som er lagret på datamaskinen din.">
+<!ENTITY props.path.label "Bane:">
+<!ENTITY checkbox.label "Ikke tillat nettsted som satte fjernede informasjonskapsler å sette fremtidige informasjonskapsler">

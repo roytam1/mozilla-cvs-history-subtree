@@ -1,0 +1,73 @@
+<!ENTITY alwaysUseMy.label "Alltid bruk min:">
+<!ENTITY backgroundColor.accesskey "B">
+<!ENTITY backgroundColor.label "Bakgrunn:">
+<!ENTITY sans-serif.label "Sans-serif:">
+<!ENTITY font.langGroup.japanese "Japansk">
+<!ENTITY resolution.accesskey "j">
+<!ENTITY underlineLinks.label "Understrek lenker">
+<!ENTITY newLanguages.label "Nye språk kan stilles inn fra språkpanelet">
+<!ENTITY useSystemColors.accesskey "s">
+<!ENTITY typefaces.label "Skrifttype">
+<!ENTITY useSystemColors.label "Bruk systemfarger">
+<!ENTITY font.langGroup.thai "Thai">
+<!ENTITY proportional.label "Proporsjonal:">
+<!ENTITY visitedLinkColor.accesskey "B">
+<!ENTITY font.langGroup.hebrew "Hebraisk">
+<!ENTITY units.centimetres "centimeter">
+<!ENTITY useDefaultFontSerif.label "Serif">
+<!ENTITY sizes.label "Størrelse (piksler)">
+<!ENTITY resolution.system.label "Systeminnstillinger">
+<!ENTITY resolution.other "Annet ...">
+<!ENTITY minSize.accesskey "M">
+<!ENTITY useMyColors.label "Farger">
+<!ENTITY links "Lenkefarger">
+<!ENTITY textColor.accesskey "T">
+<!ENTITY serif.accesskey "S">
+<!ENTITY calibrateDialog.title "Kalibrer oppløsning">
+<!ENTITY resolution.dpival "$val &resolution.dpi;">
+<!ENTITY font.langGroup.trad-chinese "Tradisjonell Kinesisk (Taiwan)">
+<!ENTITY monospace.accesskey "m">
+<!ENTITY color "Tekst og bakgrunn">
+<!ENTITY calibrate.instructions "Lengden på linja ovenfor er:">
+<!ENTITY visitedLinkColor.label "Besøkte lenker:">
+<!ENTITY serif.label "Serif:">
+<!ENTITY font.langGroup.cyrillic "Kyrillisk">
+<!ENTITY someProvColors "Når en nettside har sine egne farger og bakgrunn">
+<!ENTITY language.label "Skrifttyper for:">
+<!ENTITY fantasy.label "Fantasy:">
+<!ENTITY header2 "Når en nettside velger sine egne skrifttyper">
+<!ENTITY minSize.none "Ingen">
+<!ENTITY underlineLinks.accesskey "U">
+<!ENTITY resolution.label "Skjermoppløsning:">
+<!ENTITY font.langGroup.arabic "Arabisk">
+<!ENTITY useMyColors.accesskey "F">
+<!ENTITY cursive.label "Kursiv:">
+<!ENTITY useMyFonts.label "Skrifttyper">
+<!ENTITY font.langGroup.unicode "Unicode">
+<!ENTITY font.langGroup.turkish "Tyrkisk">
+<!ENTITY units.inches "tommer">
+<!ENTITY font.langGroup.user-def "Brukerdefinert">
+<!ENTITY fantasy.accesskey "F">
+<!ENTITY cursive.accesskey "K">
+<!ENTITY monospace.label "Skrift med fast tegnavstand:">
+<!ENTITY language.accesskey "k">
+<!ENTITY textColor.label "Tekst:">
+<!ENTITY useDefaultFontSansSerif.label "Sans Serif">
+<!ENTITY font.langGroup.baltic "Baltisk">
+<!ENTITY font.langGroup.el "Gresk">
+<!ENTITY resolution.dpi "dpi">
+<!ENTITY proportional.accesskey "P">
+<!ENTITY fontsize.units "piksler">
+<!ENTITY sans-serif.accesskey "n">
+<!ENTITY font.langGroup.simpl-chinese "Forenklet kinesisk">
+<!ENTITY font.langGroup.korean "Koreansk">
+<!ENTITY linkColor.label "Ubesøkte lenker:">
+<!ENTITY font.langGroup.latin2 "Sentraleuropeisk">
+<!ENTITY font.langGroup.latin1 "Vestlig">
+<!ENTITY minSize.label "Minimum skriftstørrelse:">
+<!ENTITY useMyFonts.accesskey "p">
+<!ENTITY linkColor.accesskey "U">
+<!ENTITY prefFontsDialog.title "Skrifttyper og farger">
+<!ENTITY font.langGroup.devanagari "Devanagari">
+<!ENTITY font.langGroup.tamil "Tamilsk">
+<!ENTITY font.langGroup.trad-chinese-hk "Tradisjonell Kinesisk (Hong Kong)">

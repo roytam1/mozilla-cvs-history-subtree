@@ -1,0 +1,13 @@
+<!ENTITY preview.label "Forhåndsvis bilde">
+<!ENTITY general.label "Generelt">
+<!ENTITY selectSkin.accesskey "B">
+<!ENTITY lHeader "Temaer">
+<!ENTITY installedThemes.label "Temaer du kan bruke:">
+<!ENTITY author.tooltip "Lukk Innstillinger og gå til forfatterens nettside">
+<!ENTITY getnew.tooltip "Lukk Innstillinger og gå til Mozilla Firefox' hjelpeside om temaer.">
+<!ENTITY getNewThemes.label "Hent fler temaer">
+<!ENTITY uninstallSkin.label "Fjern tema">
+<!ENTITY skinIntro.label "Ved å velge et annet tema, kan du forandre hvordan knapper, skjermer, menyer, verktøylinjer og andre elementer skal se ut.">
+<!ENTITY selectSkin.label "Bruk tema">
+<!ENTITY uninstallSkin.accesskey "F">
+<!ENTITY getnew.url "http://texturizer.net/firefox/themes/">

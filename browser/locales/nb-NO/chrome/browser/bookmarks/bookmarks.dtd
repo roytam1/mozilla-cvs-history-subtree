@@ -1,0 +1,89 @@
+# The contents of this file are subject to the Mozilla Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/MPL/
+# 
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
+# 
+# The Original Code is Mozilla Communicator.
+# 
+# The Initial Developer of the Original Code is Netscape
+# Communications Corp. Portions created by Netscape Communications
+# Corp. are Copyright (C) 1999 Netscape Communications Corp. All
+# Rights Reserved.
+# 
+# Contributor(s):
+#   Stephen Lamm <slamm@netscape.com>
+#   Blake Ross <blaker@netscape.com>
+
+<!ENTITY treecol.lastvisit.accesskey "S">
+<!ENTITY command.manageBookmarks.label "Behandle">
+<!ENTITY menuitem.find.label "Søk i bokmerker ...">
+<!ENTITY treecol.shortcut.label "Nøkkelord">
+<!ENTITY treecol.lastmod.label "Sist endret">
+<!ENTITY menuitem.view.descending.accesskey "Z">
+<!ENTITY search.label "Søk:">
+<!ENTITY treecol.shortcut.accesskey "N">
+<!ENTITY command.delete.label "Slett">
+<!ENTITY treecol.name.accesskey "N">
+<!ENTITY menuitem.view.ascending.accesskey "A">
+<!ENTITY menuitem.view.ascending.label "A > Z sorteringsrekkefølge">
+<!ENTITY edit.find.keybinding "f">
+<!ENTITY treecol.url.accesskey "P">
+<!ENTITY menuitem.personaltoolbarfolder.label "Sett som mappe for verktøylinje for bokmerker">
+<!ENTITY fileMenu.accesskey "F">
+<!ENTITY treecol.description.accesskey "B">
+<!ENTITY treecol.addedon.accesskey "L">
+<!ENTITY command.rename.accesskey "r">
+<!ENTITY menuitem.newBookmark.accesskey "B">
+<!ENTITY treecol.lastmod.accesskey "e">
+<!ENTITY menuitem.personaltoolbarfolder.accesskey "m">
+<!ENTITY menuitem.view.command.toolbar.accesskey "V">
+<!ENTITY menuitem.newSeparator.label "Ny skillelinje">
+<!ENTITY menuitem.view.descending.label "Z > A sorteringsrekkefølge">
+<!ENTITY command.moveBookmark.accesskey "y">
+<!ENTITY menuitem.import.label "Importer ...">
+<!ENTITY command.properties.accesskey "E">
+<!ENTITY treecol.description.label "Beskrivelse">
+<!ENTITY menuitem.view.show_columns.label "Vis kolonner">
+<!ENTITY command.findBookmarks.label "Søk ...">
+<!ENTITY command.rename.label "Endre navn ...">
+<!ENTITY command.properties.label "Egenskaper">
+<!ENTITY menuitem.view.command.toolbar.label "Verktøylinje">
+<!ENTITY menuitem.newSeparator.accesskey "S">
+<!ENTITY edit.properties.keybinding "i">
+<!ENTITY menuitem.newFolder.label "Ny mappe ...">
+<!ENTITY command.moveBookmark.label "Flytt bokmerke(r) ...">
+<!ENTITY treecol.lastvisit.label "Sist besøkt">
+<!ENTITY menuitem.view.show_columns.accesskey "k">
+<!ENTITY command.delete.accesskey "S">
+<!ENTITY menuitem.newBookmark.label "Nytt bokmerke ...">
+<!ENTITY bookmarksWindowTitle.label "Bokmerkebehandler">
+<!ENTITY command.moveBookmarkShort.label "Flytt ...">
+<!ENTITY fileMenu.label "Fil">
+<!ENTITY treecol.addedon.label "Lagt til">
+<!ENTITY treecol.name.label "Navn">
+<!ENTITY menuitem.newFolder.accesskey "N">
+<!ENTITY menuitem.import.accesskey "I">
+<!ENTITY menuitem.view.unsorted.label "Usortert">
+<!ENTITY treecol.url.label "Plassering">
+<!ENTITY menuitem.find.accesskey "S">
+<!ENTITY search.accesskey "S">
+<!ENTITY menuitem.export.accesskey "E">
+<!ENTITY command.addBookmark.label "Legg til ...">
+<!ENTITY menuitem.export.label "Eksporter">
+<!ENTITY selectBookmark.title "Sett startside">
+<!ENTITY menuitem.view.unsorted.accesskey "U">
+<!ENTITY selectBookmark.label "Velg et bokmerke som skal være startsiden din. Hvis du velger en mappe, vil bokmerkene i den mappen bli åpnet som faner.">
+<!ENTITY viewMenu.label "Vis">
+<!ENTITY closeCmd.accesskey "L">
+<!ENTITY viewMenu.accesskey "V">
+<!ENTITY closeCmd.commandkey "W">
+<!ENTITY closeCmd.label "Lukk">
+<!ENTITY menuitem.newLivemark.label    "Nytt levende bokmerke ...">
+<!ENTITY menuitem.newLivemark.accesskey "L">
+<!ENTITY command.refreshLivemark.label "Oppdater levende bokmerke">
+<!ENTITY bookmarksRoot.label            "Bokmerker">

@@ -1,0 +1,38 @@
+<!ENTITY selectProfile.label "Du kan importere fra følgende profiler:">
+<!ENTITY importFromCamino.label "Camino">
+<!ENTITY importFromEpiphany.accesskey "E">
+<!ENTITY importFromSafari.accesskey "Safari">
+<!ENTITY importFrom.label "Importer innstillinger, bokmerker, historikk, passord og annen data fra:">
+<!ENTITY importFromIE.label "Microsoft Internet Explorer">
+<!ENTITY importFromKonqueror.label "Konqueror">
+<!ENTITY importFromSeamonkey.accesskey "N">
+<!ENTITY importItems.label "Velg hvilke elementer som skal importeres:">
+<!ENTITY importFromEpiphany.label "Epiphany">
+<!ENTITY importFromOmniWeb.accesskey "W">
+<!ENTITY done.title "Importering fullført">
+<!ENTITY migrating.title "Importerer ...">
+<!ENTITY importFromNetscape4.accesskey "4">
+<!ENTITY importFromICab.label "iCab">
+<!ENTITY importFromNetscape4.label "Netscape 4.x">
+<!ENTITY importFromOpera.accesskey "O">
+<!ENTITY importFromKonqueror.accesskey "K">
+<!ENTITY importFromSafari.label "Safari">
+<!ENTITY selectProfile.title "Velg profil">
+<!ENTITY done.label "Følgende elementer ble importert:">
+<!ENTITY importFromIE.accesskey "M">
+<!ENTITY migrating.label "Følgende elementer blir nå importert ...">
+<!ENTITY importItems.title "Elementer som skal importeres">
+<!ENTITY importFromICab.accesskey "i">
+<!ENTITY importFromGaleon.label "Galeon">
+<!ENTITY migrationWizard.title "Importveiviser">
+<!ENTITY importFromSeamonkey.label "Netscape 6, 7 eller Mozilla 1.x">
+<!ENTITY importFromCamino.accesskey "Camino">
+<!ENTITY importSource.title "Importer innstillinger og data fra">
+<!ENTITY importFromOpera.label "Opera">
+<!ENTITY importFromUnix.label "Importer innstillinger, bokmerker, historikk, passord og andre data fra:">
+<!ENTITY importFromPhoenix.label "Firefox 0.8, Firebird eller Phoenix">
+<!ENTITY importFromGaleon.accesskey "G">
+<!ENTITY importFromPhoenix.accesskey "P">
+<!ENTITY importFromOmniWeb.label "OmniWeb">
+<!ENTITY importFromNothing.label "Ikke importer noe">
+<!ENTITY importFromNothing.accesskey "I">

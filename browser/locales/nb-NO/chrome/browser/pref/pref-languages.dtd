@@ -1,0 +1,17 @@
+<!ENTITY languages.customize.selectLanguage.accesskey "S">
+<!ENTITY languages.customize.DefaultCharset.accesskey "t">
+<!ENTITY languages.customize.DefaultCharset.label "Standard tegnkoding">
+<!ENTITY languages.customize.label "Språk">
+<!ENTITY languages.customize.selectLanguage.label "Velg et språk som skal legges til ...">
+<!ENTITY languages.customize.moveDown.accesskey "F">
+<!ENTITY languages.customize.prefLangDescript "Nettsider er av og til tilgjengelige i mer enn ett språk. Velg hvilke språk du vil se nettsider i, i foretrukket rekkefølge.">
+<!ENTITY languages.customize.Header "Språk og tegnkoding">
+<!ENTITY languages.customize.active.label "Språk i foretrukket rekkefølge:">
+<!ENTITY languages.customize.moveUp.accesskey "o">
+<!ENTITY languages.customize.Charset.grouplabel "Tegnkoding">
+<!ENTITY languages.customize.addButton.accesskey "L">
+<!ENTITY languages.customize.moveUp.label "Flytt opp">
+<!ENTITY languages.customize.moveDown.label "Flytt ned">
+<!ENTITY languages.customize.deleteButton.label "Fjern">
+<!ENTITY languages.customize.addButton.label "Legg til">
+<!ENTITY languages.customize.deleteButton.accesskey "F">

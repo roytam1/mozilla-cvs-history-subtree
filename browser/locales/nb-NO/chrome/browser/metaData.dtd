@@ -1,0 +1,25 @@
+<!ENTITY quote-cite.label "Info:">
+<!ENTITY insdel-cite.label "Info:">
+<!ENTITY misc-tblsummary.label "Tabellsammendrag:">
+<!ENTITY misc-lang.label "Tekstspråk:">
+<!ENTITY insdel-sec.label "Sett inn/slett egenskaper">
+<!ENTITY quote-sec.label "Siteringsinnstillinger">
+<!ENTITY image-height.label "Høyde:">
+<!ENTITY link-url.label "Adresse:">
+<!ENTITY link-target.label "Åpnes i:">
+<!ENTITY link-rev.label "Reversert relasjon:">
+<!ENTITY link-type.label "Måltype:">
+<!ENTITY no-properties.label "Ingen egenskaper er satt">
+<!ENTITY image-url.label "Plassering:">
+<!ENTITY insdel-date.label "Dato:">
+<!ENTITY link-sec.label "Lenkeegenskaper">
+<!ENTITY image-width.label "Bredde:">
+<!ENTITY image-desc.label "Beskrivelse:">
+<!ENTITY image-sec.label "Bildeegenskaper">
+<!ENTITY image-alt.label "Alternativ tekst:">
+<!ENTITY image-filesize.label "Filstørrelse:">
+<!ENTITY link-lang.label "Målspråk:">
+<!ENTITY link-rel.label "Relasjon:">
+<!ENTITY misc-title.label "Tittel:">
+<!ENTITY misc-sec.label "Diverse innstillinger">
+<!ENTITY caption.label "Elementegenskaper">

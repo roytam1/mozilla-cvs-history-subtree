@@ -1,0 +1,19 @@
+<!ENTITY lHeader "Nettegenskaper">
+
+<!ENTITY enbJavaCheck.label "Tillat Java">
+
+<!ENTITY advancedJavaScript.accesskey "A">
+<!ENTITY forOriginatingSiteOnly.accesskey "b">
+<!ENTITY enableJavaScript.accesskey "J">
+<!ENTITY advancedJavaScript.label "Avansert ...">
+<!ENTITY enableJavaScript.label "Tillat JavaScript">
+<!ENTITY forOriginatingSiteOnly.label "bare for det opprinnelige nettstedet">
+<!ENTITY popupReject.accesskey "B">
+<!ENTITY popupReject.label "Blokker hurtigvinduer">
+<!ENTITY enableImages.accesskey "L">
+<!ENTITY enableImages.label "Last inn bilder">
+<!ENTITY enbJavaCheck.accesskey "T">
+<!ENTITY  enableSoftwareUpdate.label        "Tillat nettsider å installere programmer">
+<!ENTITY  enableSoftwareUpdate.accesskey    "i">
+
+<!ENTITY  exceptions.label                  "Unntak">

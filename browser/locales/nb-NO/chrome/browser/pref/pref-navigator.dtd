@@ -1,0 +1,30 @@
+<!ENTITY useCurrent.accesskey "a">
+<!ENTITY location.label "Plassering(er):">
+<!ENTITY useBookmark.label "Bruk bokmerke ...">
+<!ENTITY header2.label "Startside">
+<!ENTITY useBookmark.accesskey "B">
+<!ENTITY useCurrentMultiple.label "Bruk aktiv side">
+<!ENTITY useCurrent.label "Bruk aktiv side">
+<!ENTITY makeDefaultText "Bruk &brandShortName; som standard nettleser.">
+<!ENTITY location.accesskey "P">
+<!ENTITY defaultBrowserButton.label "Sett som standard nettleser">
+<!ENTITY useBlank.accesskey "t">
+<!ENTITY useBlank.label "Bruk tom side">
+<!ENTITY lHeader "Generelt">
+<!ENTITY defaultBrowserGroup.label "Standard nettleser">
+<!ENTITY connectionsInfo.caption "Tilkobling">
+<!ENTITY proxiesInfo.label "Sett opp proxier for tilgang til Internett.">
+<!ENTITY showConnections.label "Tilkoblingsinnstillinger ...">
+<!ENTITY showConnections.accesskey "o">
+<!ENTITY showFontsAndColors.label "Skrifttyper og farger ...">
+<!ENTITY showFontsAndColors.accesskey "S">
+<!ENTITY fontsInfo.label "Velg standard skrifttyper og farger for nettsider.">
+<!ENTITY languagesInfo.label "Velg standard språk og tegnkodinger for nettsider.">
+<!ENTITY checkNow.label "Sjekk nå">
+<!ENTITY checkForDefault.accesskey "s">
+<!ENTITY fonts.caption "Skrifttyper og farger">
+<!ENTITY languages.caption "Språk">
+<!ENTITY checkNow.accesskey "n">
+<!ENTITY showLanguages.accesskey "r">
+<!ENTITY checkForDefault.label "&brandShortName; skal sjekke om den er satt som standard nettleser ved oppstart.">
+<!ENTITY showLanguages.label "Språk ...">

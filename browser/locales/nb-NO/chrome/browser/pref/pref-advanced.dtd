@@ -1,0 +1,86 @@
+<!ENTITY enableAutoImageResizing.label "Endre størrelse på store bilder for å passe i nettleservinduet">
+<!ENTITY multimedia.label "Multimedia">
+<!ENTITY SSLClientAuthMethod "Valg  av klientsertifikat">
+<!ENTITY validation.crllastupdate.label "Siste oppdatering">
+<!ENTITY accessibility.label "Tilgjengelighet">
+<!ENTITY managedevices.accesskey "S">
+<!ENTITY validation.managecrls.button "Behandle CRL-er ...">
+<!ENTITY validation.title "Validering">
+<!ENTITY crl.autoupdate.fail.cnt.label "Tidligere feilede oppdateringer:">
+<!ENTITY crl.issuer.org.label "Organisasjon:">
+<!ENTITY validation.crl.autoupdate.enable.label "Slå på automatisk oppdatering for denne CRL-en">
+<!ENTITY managedevices.button "Behandle sikkerhetsenheter ...">
+<!ENTITY serviceURL.label "Service-URL:">
+<!ENTITY help.button "Hjelp">
+<!ENTITY validation.crlautoupdatestatus.label "Automatisk oppdatering -status">
+<!ENTITY disableOCSP.label "Ikke bruk OCSP for sertifikatvalidering">
+<!ENTITY useTLS1.label "Bruk TLS 1.0">
+<!ENTITY browsing.label "Nettlesing">
+<!ENTITY securityUIDisclaimer.label "Denne seksjonen er MIDLERTIDIG og vil endres eller forsvinne i fremtidige utgivelser. Den er her bare for å tilby funksjonalitet som ikke er tilgjengelig fra andre steder.">
+<!ENTITY validation.updatecrl.label "Oppdater">
+<!ENTITY crl.import.status.title "CRL importstatus:">
+<!ENTITY certselect.description "Avgjør hvordan &brandShortName; velger et sikkerhetssertifikat for å presentere nettsider som krever et:">
+<!ENTITY validation.crl.autoupdate.time.label2 "Dag(er) til neste oppdatering">
+<!ENTITY validation.crl.autoupdate.time.label1 "Oppdater">
+<!ENTITY loadInBackground.label "Legg faner som åpnes fra lenker, i forgrunnen">
+<!ENTITY signingCA.accesskey "R">
+<!ENTITY validation.deletecrl.label "Slett">
+<!ENTITY cancel.button "Avbryt">
+<!ENTITY validation.ocsp.description "&brandShortName; kan bruke Online Certificate Status Protocol (OCSP) for å kontrollere sertifikater. Sett &brandShortName; til å bruke OCSP på denne måten:">
+<!ENTITY useTypeAheadFind.label "Søk mens du skriver">
+<!ENTITY useAutoScrolling.label "Bruk autorulling">
+<!ENTITY crl.autoupdate.fail.reason.label "Detaljer om siste feilede oppdatering:">
+<!ENTITY validation.crl.label "CRL">
+<!ENTITY managecerts.button "Behandle sertifikater ...">
+<!ENTITY validation.crlautoupdateenabled.label "Automatisk oppdater">
+<!ENTITY certs.label "Sertifikater">
+<!ENTITY edit.button "Innstillinger">
+<!ENTITY crl.issuer.label "CRL ustedt av:">
+<!ENTITY certOCSP.label "Bruk OCSP for å validere bare sertifikater som spesifiserer en OCSP service-URL">
+<!ENTITY crl.issuer.orgunit.label "Enhet:">
+<!ENTITY validation.crl.autoupdate.title "Automatisk CRL oppdater innstillinger">
+<!ENTITY validation.managecrls.accesskey "B">
+<!ENTITY ok.button "OK">
+<!ENTITY validation.crlname.label "Navn">
+<!ENTITY validation.label "Validering">
+<!ENTITY managedevices.label "Behandle sikkerhetsenheter">
+<!ENTITY validation.crlmanager.label "Behandle CRL-er">
+<!ENTITY useSSL2.label "Bruk SSL 2.0">
+<!ENTITY validation.advanced.label "Innstillinger">
+<!ENTITY validation.crl.autoupdate.url.label "CRL vil bli importert fra:">
+<!ENTITY serviceURL.accesskey "S">
+<!ENTITY managecerts.label "Behandle sertifikater">
+<!ENTITY linksOnlyTypeAheadFind.label "for bare å søke i lenker">
+<!ENTITY validation.crlnextupdate.label "Neste oppdatering">
+<!ENTITY proxyOCSP.label "Bruk OCSP for å validere alle sertifikater med denne URL-en og signerer:">
+<!ENTITY certselect.auto "Velg automatisk">
+<!ENTITY security.label "Sikkerhet">
+<!ENTITY lHeader "Avansert">
+<!ENTITY certselect.ask "Spør hver gang">
+<!ENTITY useSSL3.label "Bruk SSL 3.0">
+<!ENTITY validation.crl.autoupdate.freq.label2 "Dag(er)">
+<!ENTITY validation.crl.autoupdate.freq.label1 "Oppdater hver">
+<!ENTITY validation.ocsp.label "OCSP">
+<!ENTITY validation.crl.description "Bruk CRL-behandling for å behandle lista over opphevede sertifikater (CRL) som er lagret i sertifikatdatabasen.">
+<!ENTITY managecerts.accesskey "B">
+<!ENTITY moveSystemCaret.label "Flytt systemmarkøren ved endringer i fouks og markeringer.">
+<!ENTITY useSmoothScrolling.label "Bruk jevn rulling">
+<!ENTITY signingCA.label "Responssignerer:">
+<!ENTITY crl.import.success.message "Lista over opphevede sertifikater (CRL) ble importert.">
+<!ENTITY crl.import.nextupdate.label "Neste oppdatering:">
+<!ENTITY hideTabBar.label "Skjul fanelinja bare når en nettside er åpen">
+<!ENTITY managecerts.text "Bruk Seritikatsbehandling for å behandle dine personlige sertifikater og andre personer og sertifikatautoriteters sertifikater.">
+<!ENTITY managedevices.text "Bruk denne knappen for å behandle sikkerhetsenheter, som f.eks. smart card.">
+<!ENTITY checkNow.accesskey "n">
+<!ENTITY softwareupdateinfo.label "Sjekk etter oppdateringer med jevne mellomrom til:">
+<!ENTITY enableExtensionUpdate.accesskey "M">
+<!ENTITY enableAutoInstall.label "Automatisk last ned og installer oppdateringer til utvidelser.">
+<!ENTITY checkNow.label "Sjekk nå">
+<!ENTITY softwareupdate.label "Programvareoppdatering">
+<!ENTITY enableExtensionUpdate.label "Mine utvidelser">
+<!ENTITY enableSmartUpdate.label "&brandShortName;">
+<!ENTITY enableSmartUpdate.accesskey "F">
+<!ENTITY enableAutoInstall.accesskey "A">
+
+<!ENTITY xpinstall.allowedSites.label     "Tillatte nettsted">
+<!ENTITY xpinstall.allowedSites.accesskey "S">

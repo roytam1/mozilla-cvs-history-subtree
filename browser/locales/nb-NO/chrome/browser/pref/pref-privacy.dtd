@@ -1,0 +1,50 @@
+<!ENTITY clearHistory.label "Tøm">
+<!ENTITY enableCookies.label "Tillat informasjonskapsler">
+<!ENTITY viewPasswords.label "Vis lagrede passord ...">
+<!ENTITY pageHis.accesskey "H">
+<!ENTITY cookies.label "Informasjonskapsler">
+<!ENTITY formfill.label "Lagrede skjemadata">
+<!ENTITY passwordsEnable.accesskey "p">
+<!ENTITY formfillEnable.accesskey "g">
+<!ENTITY clearAllDescription.label "Fjerner all informasjon som er lagret under nettlesing:">
+<!ENTITY clearCache.label "Tøm">
+<!ENTITY pageHis.label "Husk nettsider som er besøkt de siste">
+<!ENTITY downloads.label "Historikk for nedlastingsbehandling">
+<!ENTITY forCurrentSessionOnly.accesskey "r">
+<!ENTITY clearAll.label "Tøm alt">
+<!ENTITY history.label "Historikk">
+<!ENTITY passwords.label "Lagrede passord">
+<!ENTITY cache.label "Mellomlager">
+<!ENTITY kbytes "KB diskplass for mellomlager.">
+<!ENTITY passwordsDescription.label "Innloggingsinformasjon for nettsider kan lagres i Passordbehandling, slik at du ikke trenger å skrive inn innloggingsinformasjonen hver gang du besøker.">
+<!ENTITY viewCookies.label "Behandle ...">
+<!ENTITY diskCache.label "Bruk opptil:">
+<!ENTITY passwordsEnable.label "Husk passord">
+<!ENTITY cacheExplanation.label "Sider som du laster ned blir lagret i mellomlageret for raskere sidevisning senere.">
+<!ENTITY forCurrentSessionOnly.label "bare for denne programøkta">
+<!ENTITY forOriginatingSiteOnly.accesskey "n">
+<!ENTITY clearDownloads.label "Tøm">
+<!ENTITY diskCache.accesskey "B">
+<!ENTITY enableCookies.accesskey "i">
+<!ENTITY privacyDescription.label "Mens du surfer Internett, vil informasjon om hvor du har vært, handlinger du har foretatt, osv. bli lagret her.">
+<!ENTITY cookieExplanation.label "F.eks. brukerinnstillinger for ulike nettsted.">
+<!ENTITY downloadsDescription.label "Nedlastingsbehandling holder orden på filer som er lastet ned i det siste.">
+<!ENTITY clearPasswords.label "Tøm">
+<!ENTITY clearCookies.label "Tøm">
+<!ENTITY clearFormfill.label "Tøm">
+<!ENTITY lHeader "Personvern">
+<!ENTITY days.label "dager">
+<!ENTITY forOriginatingSiteOnly.label "Bare for det opprinnelige nettstedet">
+<!ENTITY formfillDescription.label "Informasjon skrevet inn i skjema i nettsider og søkeverktøylinjen blir lagret for å gjøre utfylling av skjemaer og søking raskere.">
+<!ENTITY butAskFirst.label "men spør før akseptering av">
+<!ENTITY formfillEnable.label "Lagre informasjon som jeg skriver inn i nettsideskjemaer og søkeverktøylinjen.">
+<!ENTITY butAskFirst.accesskey "m">
+<!ENTITY downloadsRemoveManually.label "Manuelt">
+<!ENTITY downloadsRetentionPolicy.label "Fjern filer fra nedlastingsbehandling:">
+<!ENTITY downloadsRemoveExit.label "Når &brandShortName; avslutter">
+<!ENTITY exceptions.label "Unntak ...">
+<!ENTITY downloadsRemoveImmediately.label "Ved fullført nedlasting">
+<!ENTITY cookieRetention.label             "Behold informasjonskapsler:">
+<!ENTITY acceptNormally.label "Aksepter informasjonskapsler vanlig">
+<!ENTITY askAboutCookies.label "Spør for hver informasjonskapsel">
+<!ENTITY acceptForSession.label "Aksepter bare for denne programøkta">

@@ -1,0 +1,9 @@
+<!ENTITY allowScripts.label "Gi skript tillatelse til:">
+<!ENTITY allowWindowOpen.label "Åpne ikke forespurte vinduer">
+<!ENTITY allowWindowStatusChange.label "Endre statuslinjetekst">
+<!ENTITY allowWindowFlip.label "Minimere eller maksimere vinduer">
+<!ENTITY allowWindowMoveResize.label "Flytte eller endre størrelse på vinduer">
+<!ENTITY allowScripts.title "Avanserte JavaScript-innstillinger">
+<!ENTITY allowHideStatusBar.label "Skjul statuslinjen">
+<!ENTITY allowWindowImageSrcChange.label "Endre bilder">
+<!ENTITY allowControlContextMenu.label "Slå av eller erstatt kontekstmenyer">

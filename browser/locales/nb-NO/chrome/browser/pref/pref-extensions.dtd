@@ -1,0 +1,9 @@
+<!ENTITY disableExtension.label "Slå av utvidelse">
+<!ENTITY getNewExtensions.label "Hent flere utvidelser">
+<!ENTITY uninstallExtension.label "Fjern utvidelse">
+<!ENTITY lHeader "Utvidelser">
+<!ENTITY extensionTitle.label "Disse utvidelsene er installert:">
+<!ENTITY author.tooltip "Lukk Innstillinger og gå til forfatterens nettside">
+<!ENTITY getnew.tooltip 'Lukk Innstillinger og gå til Mozilla Firefox-hjelp sin "Utvidelser"-side'>
+<!ENTITY extensionSettings.label "Innstillinger ...">
+<!ENTITY getnew.url "http://texturizer.net/firefox/extensions/">

@@ -1,0 +1,6 @@
+<!ENTITY unblock.accesskey "O">
+<!ENTITY done.accesskey "F">
+<!ENTITY unblock.label "Opphev blokkering av nettsted">
+<!ENTITY done.label "Fullført">
+<!ENTITY intro.label "Følgende nettsider ble hindret fra å vise ikke forespurte hurtigvinduer:">
+<!ENTITY caption.label "Blokkerte hurtigvinduer">

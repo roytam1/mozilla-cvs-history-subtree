@@ -1,0 +1,4 @@
+<!ENTITY startDescription.label "Et nettsted har forsøkt å åpne et hurtigvindu uten at du har bedt om det. &brandShortName; har automatisk lukket hurtigvinduet. Når &brandShortName; blokkerer disse hurtigvinduene, vil du se et ikon i statuslinja.">
+<!ENTITY done.label "Fullført">
+<!ENTITY endDescription.label "Du kan trykke på dette ikonet for å se hvilke nettsteder &brandShortName; blokkerte, og for å tillate disse nettsidene å åpne hurtigvinduer hvis de kreves for at nettstedet skal fungere som det skal.">
+<!ENTITY caption.label "Om hurtigvindublokkering">

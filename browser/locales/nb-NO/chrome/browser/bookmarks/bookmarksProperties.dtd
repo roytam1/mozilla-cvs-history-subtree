@@ -1,0 +1,62 @@
+<!ENTITY PMnine.label "21:00">
+<!ENTITY PMfour.label "16:00">
+<!ENTITY AMeleven.label "11:00">
+<!ENTITY generalInfo.accesskey "i">
+<!ENTITY bookmarks.location.label "Sted:">
+<!ENTITY bookmarks.feedurl.label      "Sted (feed):">
+<!ENTITY checkfridays.label "Fredager">
+<!ENTITY generalInfo.label "Info">
+<!ENTITY checknever.label "Aldri">
+<!ENTITY bookmarks.information.label "Informasjon:">
+<!ENTITY checkthursdays.label "Torsdager">
+<!ENTITY checkweekdays.label "Ukedager">
+<!ENTITY AMfive.label "05:00">
+<!ENTITY AMone.label "01:00">
+<!ENTITY AMnine.label "09:00">
+<!ENTITY AMfour.label "04:00">
+<!ENTITY every.label "hver">
+<!ENTITY PMone.label "13:00">
+<!ENTITY when.label "Når:">
+<!ENTITY bookmarks.windowtitle.label "Egenskaper for &quot;**bm_title**&quot;">
+<!ENTITY notification.alert.label "Vis en melding">
+<!ENTITY checkmondays.label "Mandager">
+<!ENTITY bookmarks.shortcut.label "Nøkkelord:">
+<!ENTITY AMten.label "10:00">
+<!ENTITY schedule.description "&brandShortName; kan se etter oppdateringer på denne nettsiden, og gi deg melding når den oppdateres. Bruk disse innstillingene for å endre planen for når dette bokmerket skal sjekkes.">
+<!ENTITY notification.sound.label "Spill av lydsignal">
+<!ENTITY AMsix.label "06:00">
+<!ENTITY checksundays.label "Søndager">
+<!ENTITY PMten.label "22:00">
+<!ENTITY minutes.label "minutt(er)">
+<!ENTITY bookmarks.name.label "Navn:">
+<!ENTITY PMsix.label "18:00">
+<!ENTITY checkweekends.label "Helger">
+<!ENTITY checkforupdates.legend.label "Sjekk denne plasseringen for oppdateringer:">
+<!ENTITY notifications.legend.label "Varsler:">
+<!ENTITY noon.label "Midt på dagen">
+<!ENTITY PMthree.label "15:00">
+<!ENTITY PMeight.label "20:00">
+<!ENTITY AMtwo.label "02:00">
+<!ENTITY notification.icon.label "Endre ikonet til bokmerket">
+<!ENTITY PMeleven.label "23:00">
+<!ENTITY to.label "til:">
+<!ENTITY notification.window.label "Åpne nettsiden i et nytt vindu">
+<!ENTITY PMseven.label "19:00">
+<!ENTITY checksaturdays.label "Lørdager">
+<!ENTITY PMtwo.label "14:00">
+<!ENTITY AMthree.label "03:00">
+<!ENTITY AMeight.label "08:00">
+<!ENTITY notification.label "Varsle">
+<!ENTITY schedule.label "Plan">
+<!ENTITY from.label "fra:">
+<!ENTITY schedule.accesskey "P">
+<!ENTITY notification.accesskey "V">
+<!ENTITY AMseven.label "07:00">
+<!ENTITY notification.description "&brandShortName; vil varsle deg når dette nettstedet endres. Bruk disse innstillingene for å angi hvordan varsling skal skje.">
+<!ENTITY checkwednesdays.label "Onsdager">
+<!ENTITY bookmarks.description.label "Beskrivelse:">
+<!ENTITY midnight.label "Midnatt">
+<!ENTITY checkeveryday.label "Hver dag">
+<!ENTITY PMfive.label "17:00">
+<!ENTITY checktuesdays.label "Tirsdager">
+<!ENTITY bookmarks.webpanels.label "Last inn dette bokmerket i sidestolpen">

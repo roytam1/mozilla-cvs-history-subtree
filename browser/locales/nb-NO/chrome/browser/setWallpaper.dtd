@@ -1,0 +1,7 @@
+<!ENTITY position.label "Posisjon:">
+<!ENTITY preview.label "Forhåndsvisning">
+<!ENTITY tile.label "Horisontal deling">
+<!ENTITY color.label "Farge:">
+<!ENTITY stretch.label "Strekk">
+<!ENTITY center.label "Midtstill">
+<!ENTITY setWallpaper.title "Sett skrivebordsbakgrunn">

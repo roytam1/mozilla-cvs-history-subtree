@@ -1,0 +1,64 @@
+<!ENTITY generalType "Type:">
+<!ENTITY mediaType "Type:">
+<!ENTITY formTarget "Mål:">
+<!ENTITY generalSent "Sendt:">
+<!ENTITY generalMetaContent "Innhold">
+<!ENTITY mediaURL "URL:">
+<!ENTITY linkTarget "Mål">
+<!ENTITY frameName "Navn">
+<!ENTITY linkType "Type">
+<!ENTITY generalMetaName "Navn">
+<!ENTITY generalURL "URL:">
+<!ENTITY generalModified "Endret:">
+<!ENTITY closeWindow "l">
+<!ENTITY mediaAddress "Adresse">
+<!ENTITY generalSource "Kilde:">
+<!ENTITY formType "Type">
+<!ENTITY formNo "Nr.">
+<!ENTITY mediaLongdesc "Lang beskrivelse:">
+<!ENTITY generalTitle "Tittel:">
+<!ENTITY mediaSaveAs "Lagre som ...">
+<!ENTITY generalEncoding "Koding:">
+<!ENTITY formEncoding "Koding:">
+<!ENTITY generalSize "Størrelse">
+<!ENTITY linksTab "Lenker">
+<!ENTITY formCValue "Nåværende verdi">
+<!ENTITY mediaPlugin "Plug-in:">
+<!ENTITY mediaAltHeader "Alternativ tekst">
+<!ENTITY mediaBase "Base-URL:">
+<!ENTITY mediaDimensions "Dimensjoner:">
+<!ENTITY mediaAlt "Alternativ tekst:">
+<!ENTITY formsTab "Skjemaer">
+<!ENTITY linkNo "Nr.">
+<!ENTITY frameType "Type">
+<!ENTITY mediaName "Navn">
+<!ENTITY mediaNo "Nr.">
+<!ENTITY generalExpires "Utgår:">
+<!ENTITY generalMeta "Meta:">
+<!ENTITY mediaCharset "Koding:">
+<!ENTITY generalReferrer "Refererende URL:">
+<!ENTITY formMethod "Metode">
+<!ENTITY linkName "Navn">
+<!ENTITY generalMode "Opptegningsmodus:">
+<!ENTITY frameAddress "Adresse:">
+<!ENTITY mediaHeader "Bilder på denne siden">
+<!ENTITY mediaTitle "Tittelattributt:">
+<!ENTITY formFName "Feltnavn">
+<!ENTITY linkAddress "Adresse">
+<!ENTITY formName "Navn">
+<!ENTITY mediaSaveAsAccesskey "s">
+<!ENTITY mediaTab "Media">
+<!ENTITY framesTab "Rammer">
+<!ENTITY mediaEncryption "Kryptering:">
+<!ENTITY formAction "Skjemahandling">
+<!ENTITY generalTab "Generelt">
+<!ENTITY formFields "Felt:">
+<!ENTITY formLabel "Merkelapp">
+<!ENTITY pageInfoWindow.width "425">
+<!ENTITY pageInfoWindow.height "470">
+<!ENTITY title "Sideinformasjon">
+<!ENTITY linkAccessKey "Tilgangstast">
+<!ENTITY unknown "Ukjent">
+<!ENTITY description "Informasjon om denne siden">
+<!ENTITY preface "Info for:">
+<!ENTITY helpButton "Hjelp">

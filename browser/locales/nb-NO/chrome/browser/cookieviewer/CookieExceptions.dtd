@@ -1,0 +1,9 @@
+<!ENTITY allow.label "Tillat">
+<!ENTITY removeallpermissions.label "Fjern alle nettsted">
+<!ENTITY addpermission.label "Nytt nettsted">
+<!ENTITY window.title "Unntak">
+<!ENTITY address.label "Adressen til nettstedet:">
+<!ENTITY treehead.sitename.label "Nettsted">
+<!ENTITY block.label "Blokker">
+<!ENTITY removepermission.label "Fjern nettsted">
+<!ENTITY treehead.status.label "Status">

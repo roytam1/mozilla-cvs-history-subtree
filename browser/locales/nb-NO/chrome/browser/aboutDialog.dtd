@@ -1,0 +1,5 @@
+<!ENTITY copyright "Anerkjennelser:">
+<!ENTITY aboutDialog.title "Om &brandFullName;">
+<!ENTITY aboutVersion "versjon &version;">
+<!ENTITY copyrightText "©1998-2004 Bidragsytere. Alle rettigheter forbeholdt. Firefox og                                   Firefox-logoene er varemerker tilhørende The Mozilla Foundation.  Alle rettigheter                                  forbeholdt. Noen varemerkerettigheter er brukt under lisens fra The                                   Charlton Group. ">
+<!ENTITY aboutLink "&lt; Om &brandFullName;">

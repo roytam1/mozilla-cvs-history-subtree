@@ -1,0 +1,39 @@
+<!ENTITY manualTypeRadio.accesskey "M">
+<!ENTITY socks.accesskey "O">
+<!ENTITY SSLport.accesskey "o">
+<!ENTITY directTypeRadio.accesskey "D">
+<!ENTITY noproxyExplain.label "Eksempel: .mozilla.org, .net.nz">
+<!ENTITY socks.label "SOCKS-vert:">
+<!ENTITY gopher.accesskey "G">
+<!ENTITY reload.label "Oppdater">
+<!ENTITY configAutoconfigText.accesskey "K">
+<!ENTITY gopher.label "Gopher-proxy:">
+<!ENTITY gopherPort.accesskey "">
+<!ENTITY manualTypeRadio.label "Manuell proxy-konfigurasjon">
+<!ENTITY socks4.label "SOCKS v4">
+<!ENTITY configAutoconfigText.label "Konfigurasjonsplassering (URL):">
+<!ENTITY port.label "Port:">
+<!ENTITY autoTypeRadio.label "Automatisk proxy-konfigurasjons-URL:">
+<!ENTITY ftp.label "FTP-proxy:">
+<!ENTITY socks4.accesskey "C">
+<!ENTITY ssl.accesskey "S">
+<!ENTITY autoTypeRadio.accesskey "A">
+<!ENTITY noproxy.accesskey "I">
+<!ENTITY noproxy.label "Ingen proxy for:">
+<!ENTITY FTPport.accesskey "r">
+<!ENTITY reload.accesskey "O">
+<!ENTITY SOCKSport.accesskey "t">
+<!ENTITY http.accesskey "H">
+<!ENTITY ftp.accesskey "F">
+<!ENTITY lHeader "Tilkoblingsinnstillinger">
+<!ENTITY http.label "HTTP-proxy:">
+<!ENTITY directTypeRadio.label "Direkte tilkobling til Internett">
+<!ENTITY socks5.accesskey "v">
+<!ENTITY proxyTitle.label "Konfigurer proxier for tilgang til Internett">
+<!ENTITY socks5.label "SOCKS v5">
+<!ENTITY ssl.label "SSL-proxy:">
+<!ENTITY HTTPport.accesskey "p">
+<!ENTITY  WPADTypeRadio.label           "Automatisk gjenkjenning av proxy-innstillinger for dette nettverket">
+<!ENTITY  WPADTypeRadio.accesskey       "g">
+<!ENTITY  shareproxy.label              "Bruk den samme proxien for alle protokoller">
+<!ENTITY  shareproxy.accesskey          "B">
