@@ -269,9 +269,10 @@ function highlight(range, node)
 
 function getSelectionController(ds)
 {
-  return ds.QueryInterface(Components.interfaces.nsIInterfaceRequestor)
-    .getInterface(Components.interfaces.nsISelectionDisplay)
-    .QueryInterface(Components.interfaces.nsISelectionController);
+  var display = ds.QueryInterface(Components.interfaces.nsIInterfaceRequestor).getInterface(Components.interfaces.nsISelectionDisplay);
+  if (!display)
+    return null;
+  return display.QueryInterface(Components.interfaces.nsISelectionController);
 }
 
 function changeSelectionColor(aAttention)
@@ -282,9 +283,11 @@ function changeSelectionColor(aAttention)
   while (dsEnum.hasMoreElements()) {
     ds = dsEnum.getNext().QueryInterface(Components.interfaces.nsIDocShell);
     var controller = getSelectionController(ds);
+    if (!controller)
+      continue;
     const selCon = Components.interfaces.nsISelectionController;
     controller.setDisplaySelection(aAttention? selCon.SELECTION_ATTENTION : selCon.SELECTION_ON);
-  }                                      
+  }
 }
 
 function openFindBar()

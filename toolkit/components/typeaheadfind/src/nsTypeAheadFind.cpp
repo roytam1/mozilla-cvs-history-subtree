@@ -449,7 +449,7 @@ nsTypeAheadFind::FindItNow(nsIPresShell *aPresShell,
                                         aIsFirstVisiblePreferred, PR_FALSE,
                                         getter_AddRefs(presShell),
                                         getter_AddRefs(presContext)))) {
-        return NS_ERROR_FAILURE;
+        continue;
       }
 
       if (mRepeatingMode == eRepeatingCharReverse || mRepeatingMode == eRepeatingReverse) {
