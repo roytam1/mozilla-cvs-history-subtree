@@ -31,4 +31,5 @@ jpeg_set_marker_processor
 jpeg_start_decompress
 jpeg_start_output
 jpeg_std_error
+jpeg_save_markers
 #jpeg_stdio_dest
