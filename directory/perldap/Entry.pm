@@ -582,7 +582,6 @@ sub setValues
 
   $self->{$attr} = [ @vals ];
   $self->{"_${attr}_modified_"} = 1;
-  $self->{"_${attr}_replaced_"} = 1;
 
   delete $self->{"_${attr}_deleted_"}
     if defined($self->{"_${attr}_deleted_"});
