@@ -992,4 +992,75 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   return NO;
 }
 
+#pragma mark -
+
+// ******** services support *************** //
+
+// this needs to be efficient.
+- (id)validRequestorForSendType:(NSString *)sendType returnType:(NSString *)returnType
+{
+  if (!sendType || [sendType isEqual:NSStringPboardType])
+    return self;
+
+  BOOL canPaste = NO;
+ 	// need to somehow test if we can insert here
+  if (canPaste && !returnType || [returnType isEqual:NSStringPboardType])
+    return self;
+
+  return [super validRequestorForSendType:sendType returnType:returnType];
+}
+
+- (BOOL)writeSelectionToPasteboard:(NSPasteboard *)pboard types:(NSArray *)types
+{
+  if ([types containsObject:NSStringPboardType] == NO)
+    return NO;
+
+  nsCOMPtr<nsICommandManager> cmdManager = do_GetInterface(_webBrowser);
+  if (!cmdManager) return NO;
+  
+  nsCOMPtr<nsICommandParams> params = do_CreateInstance(NS_COMMAND_PARAMS_CONTRACTID);
+  if (!params) return NO;
+  
+  params->SetStringValue(NS_LITERAL_STRING("cmd_name"), NS_LITERAL_STRING("cmd_getContents"));
+  params->SetStringValue(NS_LITERAL_STRING("format"),   NS_LITERAL_STRING("text/plain"));
+  params->SetBooleanValue(NS_LITERAL_STRING("selection_only"), PR_TRUE);
+  
+  nsresult rv = cmdManager->DoCommand(params);
+  if (NS_FAILED(rv))
+    return NO;
+ 
+  nsAutoString selectedText;
+  params->GetStringValue(NS_LITERAL_STRING("result"), selectedText);
+
+  NSString* seletedText = [NSString stringWith_nsAString:selectedText];
+  
+  NSArray* typesDeclared = [NSArray arrayWithObject:NSStringPboardType];
+  [pboard declareTypes:typesDeclared owner:nil];
+    
+  return [pboard setString:seletedText forType:NSStringPboardType];
+}
+
+- (BOOL)readSelectionFromPasteboard:(NSPasteboard *)pboard
+{
+  NSArray* types = [pboard types];
+  if (![types containsObject:NSStringPboardType])
+    return NO;
+
+  NSString* theText = [pboard stringForType:NSStringPboardType];
+  nsAutoString textString;
+  [theText assignTo_nsAString:textString];
+  
+  nsCOMPtr<nsICommandManager> cmdManager = do_GetInterface(_webBrowser);
+  if (!cmdManager) return NO;
+
+  nsCOMPtr<nsICommandParams> params = do_CreateInstance(NS_COMMAND_PARAMS_CONTRACTID);
+  if (!params) return NO;
+  
+  params->SetStringValue(NS_LITERAL_STRING("cmd_name"), NS_LITERAL_STRING("cmd_insertText"));
+  params->SetStringValue(NS_LITERAL_STRING("data"), textString);
+  nsresult rv = cmdManager->DoCommand(params);
+  
+  return (BOOL)NS_SUCCEEDED(rv);
+}
+
 @end

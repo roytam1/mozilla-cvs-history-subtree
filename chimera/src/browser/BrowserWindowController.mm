@@ -69,6 +69,7 @@
 #include "nsIWebBrowserChrome.h"
 
 #include "nsIClipboardCommands.h"
+#include "nsICommandManager.h"
 #include "nsIWebBrowser.h"
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsIPrefBranch.h"
@@ -148,6 +149,44 @@ static NSArray* sToolbarDefaults = nil;
 
 @implementation BrowserWindowController
 
+- (id)initWithWindowNibName:(NSString *)windowNibName
+{
+  if ( (self = [super initWithWindowNibName:(NSString *)windowNibName]) )
+  {
+    // we cannot rely on the OS to correctly cascade new windows (RADAR bug 2972893)
+    // so we turn off the cascading. We do it at the end of |windowDidLoad|
+    [self setShouldCascadeWindows:NO];
+    mInitialized = NO;
+    mMoveReentrant = NO;
+    mShouldAutosave = YES;
+    mShouldLoadHomePage = YES;
+    mChromeMask = 0;
+    mContextMenuFlags = 0;
+    mContextMenuEvent = nsnull;
+    mContextMenuNode = nsnull;
+    mThrobberImages = nil;
+    mThrobberHandler = nil;
+    mURLFieldEditor = nil;
+    mProgressSuperview = nil;
+    mBookmarkToolbarItem = nil;
+    mSidebarToolbarItem = nil;
+  
+    // register for services
+    NSArray* sendTypes = [NSArray arrayWithObjects:NSStringPboardType, nil];
+    NSArray* returnTypes = [NSArray arrayWithObjects:NSStringPboardType, nil];
+    [NSApp registerServicesMenuSendTypes:sendTypes returnTypes:returnTypes];
+    
+    nsCOMPtr<nsIBrowserHistory> globalHist = do_GetService("@mozilla.org/browser/global-history;1");
+    mGlobalHistory = globalHist;
+    if ( mGlobalHistory )
+      NS_ADDREF(mGlobalHistory);
+    nsCOMPtr<nsIURIFixup> fixer ( do_GetService("@mozilla.org/docshell/urifixup;1") );
+    mURIFixer = fixer;
+    if ( fixer )
+      NS_ADDREF(mURIFixer);
+  }
+  return self;
+}
 
 - (BOOL)isResponderGeckoView:(NSResponder*) responder
 {
@@ -208,39 +247,6 @@ static NSArray* sToolbarDefaults = nil;
     [view mouseMoved: aEvent];
     [super mouseMoved: aEvent];
     mMoveReentrant = NO;
-}
-
-- (id)initWithWindowNibName:(NSString *)windowNibName
-{
-    if ( (self = [super initWithWindowNibName:(NSString *)windowNibName]) ) {
-        // we cannot rely on the OS to correctly cascade new windows (RADAR bug 2972893)
-        // so we turn off the cascading. We do it at the end of |windowDidLoad|
-        [self setShouldCascadeWindows:NO];
-        mInitialized = NO;
-        mMoveReentrant = NO;
-        mShouldAutosave = YES;
-        mShouldLoadHomePage = YES;
-        mChromeMask = 0;
-        mContextMenuFlags = 0;
-        mContextMenuEvent = nsnull;
-        mContextMenuNode = nsnull;
-        mThrobberImages = nil;
-        mThrobberHandler = nil;
-        mURLFieldEditor = nil;
-        mProgressSuperview = nil;
-        mBookmarkToolbarItem = nil;
-        mSidebarToolbarItem = nil;
-
-        nsCOMPtr<nsIBrowserHistory> globalHist = do_GetService("@mozilla.org/browser/global-history;1");
-        mGlobalHistory = globalHist;
-        if ( mGlobalHistory )
-          NS_ADDREF(mGlobalHistory);
-        nsCOMPtr<nsIURIFixup> fixer ( do_GetService("@mozilla.org/docshell/urifixup;1") );
-        mURIFixer = fixer;
-        if ( fixer )
-          NS_ADDREF(mURIFixer);
-    }
-    return self;
 }
 
 -(void)autosaveWindowFrame
@@ -741,19 +747,23 @@ static NSArray* sToolbarDefaults = nil;
    
 - (void)updateToolbarItems
 {
-    [[[self window] toolbar] validateVisibleItems];
+  [[[self window] toolbar] validateVisibleItems];
 }
 
 - (void)performAppropriateLocationAction
 {
   NSToolbar *toolbar = [[self window] toolbar];
-  if ( [toolbar isVisible] ) {
+  if ( [toolbar isVisible] )
+  {
     if ( ([[[self window] toolbar] displayMode] == NSToolbarDisplayModeIconAndLabel) ||
-          ([[[self window] toolbar] displayMode] == NSToolbarDisplayModeIconOnly) ) {
+          ([[[self window] toolbar] displayMode] == NSToolbarDisplayModeIconOnly) )
+    {
       NSArray *itemsWeCanSee = [toolbar visibleItems];
       
-      for (unsigned int i=0;i<[itemsWeCanSee count];i++) {
-        if ([[[itemsWeCanSee objectAtIndex:i] itemIdentifier] isEqual:LocationToolbarItemIdentifier]) {
+      for (unsigned int i = 0; i < [itemsWeCanSee count]; i++)
+      {
+        if ([[[itemsWeCanSee objectAtIndex:i] itemIdentifier] isEqual:LocationToolbarItemIdentifier])
+        {
           [self focusURLBar];
           return;
         }
@@ -1807,12 +1817,7 @@ static NSArray* sToolbarDefaults = nil;
 
 - (IBAction)copyImageLocation:(id)sender
 {
-  CHBrowserView* view = [[self getBrowserWrapper] getBrowserView];
-  if (!view) return;
-
-  nsCOMPtr<nsIWebBrowser> webBrowser = getter_AddRefs([view getWebBrowser]);
-  if (!webBrowser) return;
-
+  nsCOMPtr<nsIWebBrowser> webBrowser = getter_AddRefs([[[self getBrowserWrapper] getBrowserView] getWebBrowser]);
   nsCOMPtr<nsIClipboardCommands> clipboard(do_GetInterface(webBrowser));
   if (clipboard)
     clipboard->CopyImageLocation();
@@ -1820,12 +1825,7 @@ static NSArray* sToolbarDefaults = nil;
 
 - (IBAction)copyLinkLocation:(id)aSender
 {
-  CHBrowserView* view = [[self getBrowserWrapper] getBrowserView];
-  if (!view) return;
-
-  nsCOMPtr<nsIWebBrowser> webBrowser = getter_AddRefs([view getWebBrowser]);
-  if (!webBrowser) return;
-
+  nsCOMPtr<nsIWebBrowser> webBrowser = getter_AddRefs([[[self getBrowserWrapper] getBrowserView] getWebBrowser]);
   nsCOMPtr<nsIClipboardCommands> clipboard(do_GetInterface(webBrowser));
   if (clipboard)
     clipboard->CopyLinkLocation();
