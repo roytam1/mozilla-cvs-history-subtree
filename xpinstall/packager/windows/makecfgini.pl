@@ -53,7 +53,7 @@
 #               Either ftp:// or http:// can be used
 #               ie: ftp://ftp.netscape.com/pub/seamonkey/xpi
 #
-#   ie: perl makecfgini.pl config.it 5.0.0.1999120608 k:\windows\32bit\5.0 d:\builds\mozilla\dist\win32_o.obj\install\xpi ftp://ftp.netscape.com/pub/seamonkey/windows/32bit/x86/1999-09-13-10-M10 ftp://ftp.netscape.com/pub/seamonkey/windows/32bit/x86/1999-09-13-10-M10/xpi
+#   ie: perl makecfgini.pl config.it 5.0.0.1999120608 "5.0b1 (en)" k:\windows\32bit\5.0 d:\builds\mozilla\dist\win32_o.obj\install\xpi ftp://ftp.netscape.com/pub/seamonkey/windows/32bit/x86/1999-09-13-10-M10 ftp://ftp.netscape.com/pub/seamonkey/windows/32bit/x86/1999-09-13-10-M10/xpi
 #
 #
 
