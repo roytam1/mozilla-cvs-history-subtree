@@ -41,25 +41,19 @@ MOZ_OBJDIR = WIN32_O.OBJ
 #//------------------------------------------------------------------------
 # uncomment these, modify branch tag, and check in to branch for milestones
 
-# yes, we're building mozilla with svg:
-MOZ_SVG=1
 
-# this SVG mini-branch is based off the 0.9.6 milestone
-MOZ_BRANCH=MOZILLA_0_9_6_RELEASE
-NSPR_CO_TAG=MOZILLA_0_9_6_RELEASE
-PSM_CO_TAG=MOZILLA_0_9_6_RELEASE
-NSS_CO_TAG=MOZILLA_0_9_6_RELEASE
-LDAPCSDK_CO_TAG=MOZILLA_0_9_6_RELEASE
-ACCESSIBLE_CO_TAG=MOZILLA_0_9_6_RELEASE
-IMGLIB2_CO_TAG=MOZILLA_0_9_6_RELEASE
-GFX2_CO_TAG=MOZILLA_0_9_6_RELEASE
+MOZ_BRANCH=SVG_0_9_6_BRANCH
+NSPR_CO_TAG=SVG_0_9_6_BRANCH
+PSM_CO_TAG=SVG_0_9_6_BRANCH
+NSS_CO_TAG=SVG_0_9_6_BRANCH
+LDAPCSDK_CO_TAG=SVG_0_9_6_BRANCH
+ACCESSIBLE_CO_TAG=SVG_0_9_6_BRANCH
+IMGLIB2_CO_TAG=SVG_0_9_6_BRANCH
+GFX2_CO_TAG=SVG_0_9_6_BRANCH
 
-
-SVG_BRANCH=SVG_0_9_6_BRANCH
-MOZ_INTERNAL_LIBART_CO_DATE=2001-11-21
-
-# list of all tagged files on the svg mini-branch.
-# we pull these files on SVG_0_9_6_BRANCH
+# list of all files modified on our branch. used for the 'minibranch' targets below.
+# all other files/directories should be identical to MOZ_0_9_6_RELEASE
+# please add files here and in client.mk when you modify new files
 SVG_BRANCH_FILES = \
 	mozilla/content/svg \
 	mozilla/layout/svg \
@@ -194,11 +188,6 @@ MOZ_CO_FLAGS = -P
 !endif
 
 CVSCO = cvs $(CVS_FLAGS) co $(MOZ_CO_FLAGS) $(CVS_BRANCH)
-
-#//------------------------------------------------------------------------
-#// Figure out how to pull the minibranch files.
-#//------------------------------------------------------------------------
-CVSCO_SVG_MINIBRANCH = cvs $(CVS_FLAGS) co -r $(SVG_BRANCH)
 
 #//------------------------------------------------------------------------
 #// Figure out how to pull NSPR.
@@ -340,8 +329,8 @@ in explicitly.)
 MOZ_INTERNAL_LIBART_CO_FLAGS=$(MOZ_CO_FLAGS)
 !endif
 
-!if "$(MOZ_INTERNAL_LIBART_CO_DATE)" != ""
-MOZ_INTERNAL_LIBART_CO_FLAGS=$(MOZ_INTERNAL_LIBART_CO_FLAGS) -D $(MOZ_INTERNAL_LIBART_CO_DATE)
+!if "$(MOZ_INTERNAL_LIBART_CO_TAG)" != ""
+MOZ_INTERNAL_LIBART_CO_FLAGS=$(MOZ_INTERNAL_LIBART_CO_FLAGS) -r $(MOZ_INTERNAL_LIBART_CO_TAG)
 !else
 MOZ_INTERNAL_LIBART_CO_FLAGS=$(MOZ_INTERNAL_LIBART_CO_FLAGS) $(CVS_BRANCH)
 !endif
@@ -362,7 +351,11 @@ pull_and_build_all: pull_all build_all_dep
 
 pull_clobber_and_build_all: pull_all clobber_all build_all
 
-pull_all: pull_nspr pull_psm pull_ldapcsdk pull_accessible pull_gfx2 pull_imglib2 pull_seamonkey pull_svg_mini_branch
+!if !defined(MOZ_INTERNAL_LIBART_LGPL)
+pull_all: pull_nspr pull_psm pull_ldapcsdk pull_accessible pull_gfx2 pull_imglib2 pull_seamonkey
+!else
+pull_all: pull_nspr pull_psm pull_ldapcsdk pull_accessible pull_gfx2 pull_imglib2 pull_moz_internal_libart pull_seamonkey
+!endif
 
 pull_nspr: pull_clientmak
       cd $(MOZ_SRC)\.
@@ -423,11 +416,7 @@ pull_seamonkey: pull_clientmak
 
 pull_clientmak:
     cd $(MOZ_SRC)\.
-    $(CVSCO_SVG_MINIBRANCH) mozilla/client.mak
-
-pull_svg_mini_branch:
-	cd $(MOZ_SRC)\.
-	$(CVSCO_SVG_MINIBRANCH) $(SVG_BRANCH_FILES)
+    $(CVSCO) mozilla/client.mak
 
 
 ############################################################
@@ -566,7 +555,7 @@ deliver::
 	nmake /f makefile.win splitsymbols
 
 
-# svg mini-branch maintenance targets:
+# svg 'mini-branch' targets:
 
 commit_local:
 	cvs -z3 ci $(SVG_BRANCH_FILES_P1)
@@ -580,8 +569,9 @@ diff_devel_branch:
 diff_milestone:
 	cvs -z3 diff -u -r MOZILLA_0_9_6_RELEASE $(SVG_BRANCH_FILES_P1)
 
-tag_branch:
-	cvs -z3 tag -b SVG_0_9_6_BRANCH $(SVG_BRANCH_FILES_P1)
+quick_update:
+	cd $(MOZ_SRC)\.
+	$(CVSCO) $(SVG_BRANCH_FILES)
 
 
 #//------------------------------------------------------------------------
