@@ -1933,6 +1933,13 @@ js_Interpret(JSContext *cx, jsval *result)
 		parent = OBJ_GET_PARENT(cx, obj2);
 	    }
 
+#if 1
+	    /* If there is no class prototype, use js_ObjectClass. */
+	    if (!proto)
+		obj = js_NewObject(cx, &js_ObjectClass, NULL, parent);
+	    else
+		obj = js_NewObject(cx, OBJ_GET_CLASS(cx, proto), proto, parent);
+#else
             clasp = &js_ObjectClass;
             if (!JSVAL_IS_PRIMITIVE(lval)) {
                 /* 
@@ -1951,6 +1958,7 @@ js_Interpret(JSContext *cx, jsval *result)
                 }
             }
 	    obj = js_NewObject(cx, clasp, proto, parent);
+#endif
 	    if (!obj) {
 		ok = JS_FALSE;
 		goto out;
