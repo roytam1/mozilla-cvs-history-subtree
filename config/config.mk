@@ -155,7 +155,8 @@ RANLIB		= /bin/true
 SDKINSTALL	= $(NSINSTALL) -t
 UNZIP_PROG	= $(LOCAL_BIN)/unzip
 ZIP_PROG	= $(LOCAL_BIN)/zip
-ZIP_FLAGS	= -0rq
+ZIP_COMPR	= 9
+ZIP_FLAGS	= -$(ZIP_COMPR)r
 
 ifeq ($(OS_ARCH),OS2)
 EMPTY		:=
