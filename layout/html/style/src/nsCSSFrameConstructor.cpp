@@ -58,7 +58,6 @@
 #include "nsIDOMHTMLTableColElement.h"
 #include "nsIDOMHTMLTableCaptionElem.h"
 #include "nsTableCellFrame.h" // to get IS_CELL_FRAME
-#include "nsIStyleFrameConstruction.h"
 #include "nsHTMLParts.h"
 #include "nsIPresShell.h"
 #include "nsStyleSet.h"
@@ -198,6 +197,10 @@ NS_NewSVGTSpanFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame* pa
 
 // Global object maintenance
 nsIXBLService * nsCSSFrameConstructor::gXBLService = nsnull;
+
+// Global prefs
+static PRBool gGotXBLFormPrefs = PR_FALSE;
+static PRBool gUseXBLForms = PR_FALSE;
 
 #ifdef DEBUG
 // Set the environment variable GECKO_FRAMECTOR_DEBUG_FLAGS to one or
@@ -1228,13 +1231,24 @@ GetChildListNameFor(nsIPresContext* aPresContext,
 
 //----------------------------------------------------------------------
 
-nsCSSFrameConstructor::nsCSSFrameConstructor(void)
-  : mDocument(nsnull),
+nsCSSFrameConstructor::nsCSSFrameConstructor(nsIDocument *aDocument)
+  : mDocument(aDocument),
     mInitialContainingBlock(nsnull),
     mFixedContainingBlock(nsnull),
     mDocElementContainingBlock(nsnull),
     mGfxScrollFrame(nsnull)
 {
+  if (!gGotXBLFormPrefs) {
+    gGotXBLFormPrefs = PR_TRUE;
+
+    nsCOMPtr<nsIPrefBranch> prefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID));
+    if (prefBranch) {
+      prefBranch->GetBoolPref("nglayout.debug.enable_xbl_forms",
+                              &gUseXBLForms);
+
+    }
+  }
+
 #ifdef DEBUG
   static PRBool gFirstTime = PR_TRUE;
   if (gFirstTime) {
@@ -1284,34 +1298,6 @@ nsCSSFrameConstructor::nsCSSFrameConstructor(void)
     }
   }
 #endif
-}
-
-nsCSSFrameConstructor::~nsCSSFrameConstructor(void)
-{
-}
-
-NS_IMPL_ISUPPORTS2(nsCSSFrameConstructor, nsIStyleFrameConstruction,nsICSSFrameConstructor)
-
-NS_IMETHODIMP 
-nsCSSFrameConstructor::Init(nsIDocument* aDocument)
-{
-  NS_PRECONDITION(aDocument, "null ptr");
-  if (! aDocument)
-    return NS_ERROR_NULL_POINTER;
-
-  if (mDocument)
-    return NS_ERROR_ALREADY_INITIALIZED;
-
-  mDocument = aDocument; // not refcounted!
-
-  // This initializes the Prefs booleans
-  mGotGfxPrefs = PR_FALSE;
-  mGotXBLFormPrefs = PR_FALSE;
-  mUseXBLForms = PR_FALSE;
-
-  UseXBLForms();
-
-  return NS_OK;
 }
 
 nsIXBLService * nsCSSFrameConstructor::GetXBLService()
@@ -1635,17 +1621,17 @@ nsCSSFrameConstructor::CreateInputFrame(nsIPresShell    *aPresShell,
     case NS_FORM_INPUT_SUBMIT:
     case NS_FORM_INPUT_RESET:
     case NS_FORM_INPUT_BUTTON:
-      if (UseXBLForms())
+      if (gUseXBLForms)
         return NS_OK;
       return NS_NewGfxButtonControlFrame(aPresShell, &aFrame);
 
     case NS_FORM_INPUT_CHECKBOX:
-      if (UseXBLForms())
+      if (gUseXBLForms)
         return NS_OK;
       return ConstructCheckboxControlFrame(aPresShell, aPresContext, aFrame, aContent, aStyleContext);
 
     case NS_FORM_INPUT_RADIO:
-      if (UseXBLForms())
+      if (gUseXBLForms)
         return NS_OK;
       return ConstructRadioControlFrame(aPresShell, aPresContext, aFrame, aContent, aStyleContext);
 
@@ -3487,7 +3473,7 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
 }
 
 
-NS_IMETHODIMP
+nsresult
 nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell, 
                                           nsIPresContext* aPresContext,
                                           nsIContent*     aDocElement,
@@ -3857,7 +3843,7 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
   return NS_OK;  
 }
 
-NS_IMETHODIMP
+nsresult
 nsCSSFrameConstructor::ConstructPageFrame(nsIPresShell*   aPresShell,
                                           nsIPresContext* aPresContext,
                                           nsIFrame*       aParentFrame,
@@ -3990,22 +3976,6 @@ nsCSSFrameConstructor::ConstructCheckboxControlFrame(nsIPresShell*    aPresShell
     NS_RELEASE(checkbox);
   }
   return rv;
-}
-
-PRBool
-nsCSSFrameConstructor::UseXBLForms()
-{
-  if (!mGotXBLFormPrefs) {
-    nsCOMPtr<nsIPrefBranch> prefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID));
-    if (prefBranch) {
-      PRBool useXBLForms = PR_FALSE; // use a temp since we have a PRPackedBool
-      prefBranch->GetBoolPref("nglayout.debug.enable_xbl_forms", &useXBLForms);
-      mUseXBLForms = useXBLForms;
-      mGotXBLFormPrefs = PR_TRUE;
-    }
-  }
-
-  return mUseXBLForms;
 }
 
 nsresult
@@ -4563,7 +4533,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsIPresShell*            aPresShell,
     rv = NS_NewTextControlFrame(aPresShell, &newFrame);
   }
   else if (nsHTMLAtoms::select == aTag) {
-    if (!UseXBLForms()) {
+    if (!gUseXBLForms) {
       if (!aState.mPseudoFrames.IsEmpty()) { // process pending pseudo frames
         ProcessPseudoFrames(aPresContext, aState.mPseudoFrames, aFrameItems); 
       }
@@ -7200,7 +7170,7 @@ IsRootBoxFrame(nsIFrame *aFrame)
   return (aFrame->GetType() == nsLayoutAtoms::rootFrame);
 }
 
-NS_IMETHODIMP
+nsresult
 nsCSSFrameConstructor::ReconstructDocElementHierarchy(nsIPresContext* aPresContext)
 {
   NS_PRECONDITION(aPresContext, "null pres context argument");
@@ -8050,7 +8020,7 @@ InsertOutOfFlowFrames(nsFrameConstructorState& aState,
   return NS_OK;
 }
 
-NS_IMETHODIMP
+nsresult
 nsCSSFrameConstructor::ContentAppended(nsIPresContext* aPresContext,
                                        nsIContent*     aContainer,
                                        PRInt32         aNewIndexInContainer)
@@ -8079,7 +8049,7 @@ nsCSSFrameConstructor::ContentAppended(nsIPresContext* aPresContext,
     if (tag == nsXULAtoms::treechildren ||
         tag == nsXULAtoms::treeitem ||
         tag == nsXULAtoms::treerow ||
-        (namespaceID == kNameSpaceID_XUL && UseXBLForms() &&
+        (namespaceID == kNameSpaceID_XUL && gUseXBLForms &&
          ShouldIgnoreSelectChild(aContainer)))
       return NS_OK;
 
@@ -8690,7 +8660,7 @@ PRBool NotifyListBoxBody(nsIPresContext*    aPresContext,
 }
 #endif // MOZ_XUL
 
-NS_IMETHODIMP
+nsresult
 nsCSSFrameConstructor::ContentInserted(nsIPresContext*        aPresContext,
                                        nsIContent*            aContainer,
                                        nsIFrame*              aContainerFrame,
@@ -8718,7 +8688,7 @@ nsCSSFrameConstructor::ContentInserted(nsIPresContext*        aPresContext,
 
 #ifdef MOZ_XUL
   if (NotifyListBoxBody(aPresContext, aContainer, aChild, aIndexInContainer, 
-                        mDocument, nsnull, UseXBLForms(), CONTENT_INSERTED))
+                        mDocument, nsnull, gUseXBLForms, CONTENT_INSERTED))
     return NS_OK;
 #endif // MOZ_XUL
   
@@ -9059,7 +9029,7 @@ nsCSSFrameConstructor::ContentInserted(nsIPresContext*        aPresContext,
   return NS_OK;
 }
 
-NS_IMETHODIMP
+nsresult
 nsCSSFrameConstructor::ContentReplaced(nsIPresContext* aPresContext,
                                        nsIContent*     aContainer,
                                        nsIContent*     aOldChild,
@@ -9258,7 +9228,7 @@ DeletingFrameSubtree(nsIPresContext*  aPresContext,
   return NS_OK;
 }
 
-NS_IMETHODIMP
+nsresult
 nsCSSFrameConstructor::RemoveMappingsForFrameSubtree(nsIPresContext* aPresContext,
                                                      nsIFrame* aRemovedFrame, 
                                                      nsILayoutHistoryState* aFrameState)
@@ -9273,7 +9243,7 @@ nsCSSFrameConstructor::RemoveMappingsForFrameSubtree(nsIPresContext* aPresContex
   return DeletingFrameSubtree(aPresContext, presShell, frameManager, aRemovedFrame);
 }
 
-NS_IMETHODIMP
+nsresult
 nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
                                       nsIContent*     aContainer,
                                       nsIContent*     aChild,
@@ -9333,7 +9303,7 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
 
 #ifdef MOZ_XUL
   if (NotifyListBoxBody(aPresContext, aContainer, aChild, aIndexInContainer, 
-                        mDocument, childFrame, UseXBLForms(), CONTENT_REMOVED))
+                        mDocument, childFrame, gUseXBLForms, CONTENT_REMOVED))
     return NS_OK;
 
 #endif // MOZ_XUL
@@ -9789,7 +9759,7 @@ nsCSSFrameConstructor::StyleChangeReflow(nsIPresContext* aPresContext,
   return NS_OK;
 }
 
-NS_IMETHODIMP
+nsresult
 nsCSSFrameConstructor::ContentChanged(nsIPresContext* aPresContext,
                                       nsIContent*  aContent,
                                       nsISupports* aSubContent)
@@ -9857,7 +9827,7 @@ nsCSSFrameConstructor::ContentChanged(nsIPresContext* aPresContext,
 }
 
 
-NS_IMETHODIMP 
+nsresult
 nsCSSFrameConstructor::ProcessRestyledFrames(nsStyleChangeList& aChangeList, 
                                              nsIPresContext* aPresContext)
 {
@@ -9987,7 +9957,7 @@ nsCSSFrameConstructor::RestyleLaterSiblings(nsIPresContext *aPresContext,
   }
 }
 
-NS_IMETHODIMP
+nsresult
 nsCSSFrameConstructor::ContentStatesChanged(nsIPresContext* aPresContext, 
                                             nsIContent* aContent1,
                                             nsIContent* aContent2,
@@ -10039,7 +10009,7 @@ nsCSSFrameConstructor::DoContentStateChanged(nsIPresContext* aPresContext,
   }
 }
 
-NS_IMETHODIMP
+nsresult
 nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
                                         nsIContent* aContent,
                                         PRInt32 aNameSpaceID,
@@ -10048,9 +10018,8 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
 {
   nsresult  result = NS_OK;
 
-  nsCOMPtr<nsIStyleFrameConstruction> kungFuDeathGrip(this);
-
-  nsIPresShell *shell = aPresContext->PresShell();
+  // Hold onto the PresShell to prevent ourselves from being destroyed.
+  nsCOMPtr<nsIPresShell> shell = aPresContext->PresShell();
 
   // Get the frame associated with the content which is the highest in the frame tree
   nsIFrame* primaryFrame;
@@ -10319,7 +10288,7 @@ HasDisplayableChildren(nsIPresContext* aPresContext, nsIFrame* aContainerFrame)
 
 
 
-NS_IMETHODIMP
+nsresult
 nsCSSFrameConstructor::CantRenderReplacedElement(nsIPresShell* aPresShell, 
                                                  nsIPresContext* aPresContext,
                                                  nsIFrame*       aFrame)
@@ -10683,7 +10652,7 @@ nsCSSFrameConstructor::CreateContinuingTableFrame(nsIPresShell* aPresShell,
   return rv;
 }
 
-NS_IMETHODIMP
+nsresult
 nsCSSFrameConstructor::CreateContinuingFrame(nsIPresContext* aPresContext,
                                              nsIFrame*       aFrame,
                                              nsIFrame*       aParentFrame,
@@ -11062,7 +11031,7 @@ nsCSSFrameConstructor::FindFrameWithContent(nsIPresContext*  aPresContext,
 // Request to find the primary frame associated with a given content object.
 // This is typically called by the pres shell when there is no mapping in
 // the pres shell hash table
-NS_IMETHODIMP
+nsresult
 nsCSSFrameConstructor::FindPrimaryFrameFor(nsIPresContext*  aPresContext,
                                            nsIFrameManager* aFrameManager,
                                            nsIContent*      aContent,
@@ -11161,7 +11130,7 @@ nsCSSFrameConstructor::FindPrimaryFrameFor(nsIPresContext*  aPresContext,
   return NS_OK;
 }
 
-NS_IMETHODIMP
+nsresult
 nsCSSFrameConstructor::GetInsertionPoint(nsIPresShell* aPresShell,
                                          nsIFrame*     aParentFrame,
                                          nsIContent*   aChildContent,
@@ -12429,7 +12398,7 @@ nsCSSFrameConstructor::RecoverLetterFrames(nsIPresShell* aPresShell, nsIPresCont
 
 // listbox Widget Routines
 
-NS_IMETHODIMP
+nsresult
 nsCSSFrameConstructor::CreateListBoxContent(nsIPresContext* aPresContext,
                                             nsIFrame*       aParentFrame,
                                             nsIFrame*       aPrevFrame,
