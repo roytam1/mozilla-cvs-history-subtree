@@ -29,10 +29,10 @@
 #include "nsXPIDLString.h"
 
 #include "nsContentHTTPStartup.h"
-#include "nsIHTTPProtocolHandler.h"
+#include "nsIHttpProtocolHandler.h"
 #include "gbdate.h"
 
-#define PRODUCT_NAME NS_LITERAL_STRING("Gecko").get()
+#define PRODUCT_NAME "Gecko"
 
 NS_IMPL_ISUPPORTS1(nsContentHTTPStartup,nsIObserver)
 
@@ -46,7 +46,7 @@ nsContentHTTPStartup::Observe( nsISupports *aSubject,
     
     nsresult rv = nsnull;
 
-    nsCOMPtr<nsIHTTPProtocolHandler> http(do_QueryInterface(aSubject));
+    nsCOMPtr<nsIHttpProtocolHandler> http(do_QueryInterface(aSubject));
     if (NS_FAILED(rv)) return rv;
     
     rv = http->SetProduct(PRODUCT_NAME);
