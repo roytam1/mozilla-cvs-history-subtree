@@ -1141,7 +1141,7 @@ extern Bool CACHE_Put(char *filename, URL_Struct *url_s);
 /* returns 0 if the url is not found, non-zero otherwise.  It
  * fills in URL_Struct as needed
  */
-extern int CACHE_FindURLInCache(URL_Struct *URL_s, MWContext *ctxt);
+extern char *CACHE_FindURLInCache(URL_Struct *URL_s, MWContext *ctxt);
 
 /* Flushes the caches data to disk */
 extern void CACHE_FlushCache(ExtCacheDBInfo *db_info);
