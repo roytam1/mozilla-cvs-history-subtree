@@ -183,6 +183,20 @@ var folderListener = {
     }
 }
 
+var folderObserver = {
+    canDropOn: function(index) {
+        dump("canDropOn: index="+index+"\n");
+        return true;
+    },
+    canDropBeforeAfter: function(index, before) {
+        dump("canDropBeforeAfter: index="+index+" before="+before+"\n");
+        return false;
+    },
+    onDrop: function(row, orientation) {
+        dump("onDrop: row="+row+" orientation="+orientation+"\n");
+    }
+}
+
 function HandleDeleteOrMoveMsgFailed(folder)
 {
   if(IsCurrentLoadedFolder(folder)) {
@@ -565,6 +579,9 @@ function OnLoadFolderPane()
     database.AddDataSource(folderDataSource);
     var folderOutliner = GetFolderOutliner();
     folderOutliner.outlinerBoxObject.outlinerBody.setAttribute("ref", "msgaccounts:/");
+
+    var folderOutlinerBuilder = folderOutliner.outlinerBoxObject.outlinerBody.builder.QueryInterface(Components.interfaces.nsIXULOutlinerBuilder);
+    folderOutlinerBuilder.addObserver(folderObserver);
 }
 
 function GetFolderDatasource()
