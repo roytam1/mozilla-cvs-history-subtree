@@ -427,9 +427,12 @@ function ViewPageSource(messages)
   
 		// Now, we need to get a URL from a URI
 		url = mailSession.ConvertMsgURIToMsgURL(uri, msgWindow);
-		if (url)
+		if (url) {
+            // XXX what if there already is a "?", like "?part=0"
+            // XXX shouldn't this be "&header=src" in that case?
 			url += "?header=src";
-
+        }
+    
 		// Use a browser window to view source
 		window.openDialog( getBrowserURL(),
 						   "_blank",
