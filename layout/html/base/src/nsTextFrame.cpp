@@ -5752,6 +5752,17 @@ nsTextFrame::ComputeWordFragmentDimensions(nsIPresContext* aPresContext,
         aRunningWordLen += wordLen;
     }
   }
+  else {
+    // Even if the previous text fragment is not breakable, the connected pieces 
+    // can be breakable in between. This especially true for CJK.
+    PRBool canBreak;
+    nsresult lres = aLineBreaker->BreakInBetween(aWordBuf, aRunningWordLen, bp, wordLen, &canBreak);
+    if (NS_SUCCEEDED(lres) && canBreak) {
+      wordLen = 0;
+      *aStop = PR_TRUE;
+    }
+  }
+
   if((*aStop) && (wordLen == 0))
     return dimensions; // 0;
 
