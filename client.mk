@@ -52,7 +52,7 @@
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG = Netscape_20001027_RELEASE
+MOZ_CO_TAG = Netscape_20001027_BRANCH
 NSPR_CO_TAG = Netscape_20001027_RELEASE
 PSM_CO_TAG = Netscape_20001027_RELEASE
 LDAPCSDK_CO_TAG = Netscape_20001027_RELEASE
