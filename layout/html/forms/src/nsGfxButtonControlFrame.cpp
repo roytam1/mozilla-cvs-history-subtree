@@ -306,7 +306,7 @@ nsGfxButtonControlFrame::DoNavQuirksReflow(nsIPresContext*          aPresContext
     desiredSize.height = aReflowState.mComputedMaxHeight - (aReflowState.mComputedBorderPadding.top + aReflowState.mComputedBorderPadding.bottom);
   }
 
-  // now reflow the first child (genertaed content)
+  // now reflow the first child (generated content)
   nsHTMLReflowState reflowState(aPresContext, aReflowState, firstKid, desiredSize);
   reflowState.mComputedWidth  = desiredSize.width;
   reflowState.mComputedHeight = desiredSize.height;
