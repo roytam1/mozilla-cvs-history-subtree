@@ -73,16 +73,12 @@ DIRS=                   \
 !endif
 	rdf				\
     schedulr	\
-<<<<<<< makefile.win
 	xml	\
 	oji
-=======
-	libnls		\
 !ifdef MOZ_CALENDAR
     calendar \
 !endif
-	xml
->>>>>>> 3.4.6.1
+	libnls
 
 #//------------------------------------------------------------------------
 #//
