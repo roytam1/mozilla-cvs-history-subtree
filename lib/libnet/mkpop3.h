@@ -21,6 +21,7 @@
 extern void NET_InitPop3Protocol(void);
 
 MODULE_PRIVATE XP_Bool NET_GetAllowAtSignInMailUserName();
+MODULE_PRIVATE int32 net_ProcessPop3 (ActiveEntry *ce);
 MODULE_PRIVATE void NET_SetAllowAtSignInMailUserName(XP_Bool allow);
 
 #endif /* not MKPOP3_H */
