@@ -83,71 +83,22 @@ typedef enum REOp {
     REOP_UCFLAT1i   = 35, /* case-independent REOP_UCFLAT1 */
     REOP_ANCHOR1    = 36, /* first-char discriminating REOP_ANCHOR */
     REOP_NCCLASS    = 37, /* negated 8-bit character class */
-    REOP_QUANTMIN   = 38, /* ungreedy version of REOP_QUANT */
-    REOP_STARMIN    = 39, /* ungreedy version of REOP_STAR */
-    REOP_PLUSMIN    = 40, /* ungreedy version of REOP_PLUS */
-    REOP_DOTSTARMIN = 41, /* ungreedy version of REOP_DOTSTAR */
-    REOP_LPARENNON  = 42, /* non-capturing version of REOP_LPAREN */
-    REOP_RPARENNON  = 43, /* non-capturing version of REOP_RPAREN */
+    REOP_DOTSTARMIN = 38, /* ungreedy version of REOP_DOTSTAR */
+    REOP_LPARENNON  = 39, /* non-capturing version of REOP_LPAREN */
+    REOP_RPARENNON  = 40, /* non-capturing version of REOP_RPAREN */
+    REOP_ASSERT     = 41, /* zero width positive lookahead assertion */
+    REOP_ASSERT_NOT = 42, /* zero width negative lookahead assertion */
     REOP_END
 } REOp;
-
-#define CCLASS_CHARSET_SIZE 256 /* ISO-Latin-1 */
-
-uint8 reopsize[] = {
-    /* EMPTY */         1,
-    /* ALT */           3,
-    /* BOL */           1,
-    /* EOL */           1,
-    /* WBDRY */         1,
-    /* WNONBDRY */      1,
-    /* QUANT */         7,
-    /* STAR */          1,
-    /* PLUS */          1,
-    /* OPT */           1,
-    /* LPAREN */        3,
-    /* RPAREN */        3,
-    /* DOT */           1,
-    /* CCLASS */        1 + (CCLASS_CHARSET_SIZE / JS_BITS_PER_BYTE),
-    /* DIGIT */         1,
-    /* NONDIGIT */      1,
-    /* ALNUM */         1,
-    /* NONALNUM */      1,
-    /* SPACE */         1,
-    /* NONSPACE */      1,
-    /* BACKREF */       2,
-    /* FLAT */          2,	/* (2 = op + len) + [len bytes] */
-    /* FLAT1 */         2,
-    /* JUMP */          3,
-    /* DOTSTAR */       1,
-    /* ANCHOR */        1,
-    /* EOLONLY */       1,
-    /* UCFLAT */        2,	/* (2 = op + len) + [len 2-byte chars] */
-    /* UCFLAT1 */       3,      /* op + hibyte + lobyte */
-    /* UCCLASS */       3,      /* (3 = op + 2-byte len) + [len bytes] */
-    /* NUCCLASS */      3,      /* (3 = op + 2-byte len) + [len bytes] */
-    /* BACKREFi */      2,
-    /* FLATi */         2,	/* (2 = op + len) + [len bytes] */
-    /* FLAT1i */        2,
-    /* UCFLATi */       2,	/* (2 = op + len) + [len 2-byte chars] */
-    /* UCFLAT1i */      3,      /* op + hibyte + lobyte */
-    /* ANCHOR1 */       1,
-    /* NCCLASS */       1 + (CCLASS_CHARSET_SIZE / JS_BITS_PER_BYTE),
-    /* QUANTMIN */      7,
-    /* STARMIN */       1,
-    /* PLUSMIN */       1,
-    /* DOTSTARMIN */    1,
-    /* LPARENNON */     1,
-    /* RPARENNON */     1,
-    /* END */           0,
-};
 
 #define REOP_FLATLEN_MAX 255    /* maximum length of FLAT string */
 
 struct RENode {
     uint8           op;         /* packed r.e. op bytecode */
     uint8           flags;      /* flags, see below */
+#ifdef DEBUG
     uint16          offset;     /* bytecode offset */
+#endif
     RENode          *next;      /* next in concatenation order */
     void            *kid;       /* first operand */
     union {
@@ -186,29 +137,6 @@ typedef struct CompilerState {
     uintN           parenCount;
     size_t          progLength;
 } CompilerState;
-
-static gOffset = 0;
-
-static RENode *
-NewRENode(CompilerState *state, REOp op, void *kid)
-{
-    JSContext *cx;
-    RENode *ren;
-
-    cx = state->context;
-    ren = JS_malloc(cx, sizeof *ren);
- //   JS_ARENA_ALLOCATE(ren, &cx->tempPool, sizeof *ren);
-    if (!ren) {
-	JS_ReportOutOfMemory(cx);
-	return NULL;
-    }
-    ren->op = (uint8)op;
-    ren->flags = 0;
-    ren->offset = gOffset++;//0;
-    ren->next = NULL;
-    ren->kid = kid;
-    return ren;
-}
 
 #ifdef DEBUG
 
@@ -256,9 +184,12 @@ static char *reopname[] = {
     "quant_min",
     "star_min",
     "plus_min",
+    "opt_min",
     "dotstar_min",
     "lparen_non",
     "rparen_non",
+    "assert",
+    "assert_not",
     "end"
 };
 
@@ -275,6 +206,8 @@ PrintChar(jschar c)
 	printf("%c", c);
 #endif
 }
+
+static gOffset = 0;
 
 static JSBool
 DumpRegExp(JSContext *cx, RENode *ren)
@@ -311,11 +244,11 @@ DumpRegExp(JSContext *cx, RENode *ren)
 	    break;
 
 	  case REOP_STAR:
-	  case REOP_STARMIN:
 	  case REOP_PLUS:
-	  case REOP_PLUSMIN:
 	  case REOP_OPT:
 	  case REOP_ANCHOR1:
+	  case REOP_ASSERT:
+	  case REOP_ASSERT_NOT:
 	    printf("\n");
 	    ok = DumpRegExp(cx, ren->kid);
 	    if (!ok)
@@ -323,7 +256,6 @@ DumpRegExp(JSContext *cx, RENode *ren)
 	    break;
 
 	  case REOP_QUANT:
-	  case REOP_QUANTMIN:
 	    printf(" next %d min %d max %d\n",
 		   ren->next->offset, ren->u.range.min, ren->u.range.max);
 	    ok = DumpRegExp(cx, ren->kid);
@@ -420,6 +352,29 @@ out:
 
 #endif /* DEBUG */
 
+static RENode *
+NewRENode(CompilerState *state, REOp op, void *kid)
+{
+    JSContext *cx;
+    RENode *ren;
+
+    cx = state->context;
+    ren = JS_malloc(cx, sizeof *ren);
+//   JS_ARENA_ALLOCATE(ren, &cx->tempPool, sizeof *ren);
+    if (!ren) {
+	JS_ReportOutOfMemory(cx);
+	return NULL;
+    }
+    ren->op = (uint8)op;
+    ren->flags = 0;
+#ifdef DEBUG
+    ren->offset = gOffset++;
+#endif
+    ren->next = NULL;
+    ren->kid = kid;
+    return ren;
+}
+
 static JSBool
 FixNext(CompilerState *state, RENode *ren1, RENode *ren2, RENode *oldnext)
 {
@@ -479,9 +434,6 @@ FixNext(CompilerState *state, RENode *ren1, RENode *ren2, RENode *oldnext)
       case REOP_QUANT:
       case REOP_STAR:
       case REOP_PLUS:
-      case REOP_QUANTMIN:
-      case REOP_STARMIN:
-      case REOP_PLUSMIN:
       case REOP_OPT:
       case REOP_LPAREN:
       case REOP_LPARENNON:
@@ -854,16 +806,28 @@ ParseAtom(CompilerState *state)
 
     switch (*cp) {
       case '(':
-        if (cp[1] == '?' && cp[2] == ':') {
-            op = REOP_LPARENNON;
-            state->cp = cp + 3;
-            num = -1;   /* suppress warning */
+        num = -1;   /* suppress warning */
+        op = REOP_END;
+        if (cp[1] == '?') {
+            switch (cp[2]) {
+                case ':' :
+                    op = REOP_LPARENNON;
+                    break;
+                case '=' :
+                    op = REOP_ASSERT;
+                    break;
+                case '!' :
+                    op = REOP_ASSERT_NOT;
+                    break;
+            }
         }
-        else {
+        if (op == REOP_END) {
 	    num = state->parenCount++;	/* \1 is numbered 0, etc. */
             op = REOP_LPAREN;
 	    state->cp = cp + 1;
         }
+        else
+            state->cp = cp + 3;
 	ren2 = ParseRegExp(state);
 	if (!ren2)
 	    return NULL;
@@ -879,11 +843,14 @@ ParseAtom(CompilerState *state)
 	    return NULL;
 	ren->flags = ren2->flags & (RENODE_ANCHORED | RENODE_NONEMPTY);
 	ren->u.num = num;
-	ren2 = NewRENode(state, (REOp)(op + 1), NULL);
-	if (!ren2 || !SetNext(state, ren, ren2))
-	    return NULL;
-	ren2->u.num = num;
-	break;
+        if ((op == REOP_LPAREN) || (op == REOP_LPARENNON)) {
+                /* Assume RPAREN ops immediately succeed LPAREN ops */
+	    ren2 = NewRENode(state, (REOp)(op + 1), NULL);  
+	    if (!ren2 || !SetNext(state, ren, ren2))
+	        return NULL;
+	    ren2->u.num = num;
+        }
+        break;
 
       case '.':
 	cp++;
@@ -1601,8 +1568,13 @@ static const jschar *matchRENodes(MatchState *state, RENode *ren, RENode *stop,
                 break;
             case REOP_OPT: {
                     num = state->parenCount;
+                    if (ren->flags & RENODE_MINIMAL) {
+                        const jschar *restMatch = matchRENodes(state, ren->next,
+                                                    stop, cp);
+                        if (restMatch != NULL) return restMatch;
+                    }                        
                     kidMatch = matchRENodes(state, (RENode *)ren->kid,
-                                                    ren->next, cp);
+                                                ren->next, cp);
                     if (kidMatch == NULL)
                         break;
                     else {
@@ -1635,6 +1607,18 @@ static const jschar *matchRENodes(MatchState *state, RENode *ren, RENode *stop,
                     num = ren->u.num;
 	            parsub = &state->parens[num];
                     parsub->length = cp - parsub->chars;
+                    break;
+                }
+            case REOP_ASSERT: {
+                    kidMatch = matchRENodes(state, (RENode *)ren->kid,
+                                                    ren->next, cp);
+                    if (kidMatch == NULL) return NULL;
+                    break;
+                }
+            case REOP_ASSERT_NOT: {
+                    kidMatch = matchRENodes(state, (RENode *)ren->kid,
+                                                    ren->next, cp);
+                    if (kidMatch != NULL) return NULL;
                     break;
                 }
             case REOP_BACKREF: {
