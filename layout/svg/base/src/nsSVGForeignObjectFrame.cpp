@@ -494,7 +494,7 @@ nsSVGForeignObjectFrame::Paint(nsISVGRendererCanvas* canvas, const nsRect& dirty
   nsSVGForeignObjectFrameBase::Paint(presContext,
                                      *ctx,
                                      dirtyRect,
-                                     NS_FRAME_PAINT_LAYER_FLOATERS,
+                                     NS_FRAME_PAINT_LAYER_FLOATS,
                                      0);
   
   nsSVGForeignObjectFrameBase::Paint(presContext,
@@ -528,7 +528,7 @@ nsSVGForeignObjectFrame::GetFrameForPoint(float x, float y, nsIFrame** hit)
   if (NS_SUCCEEDED(rv) && *hit) return rv;
 
   rv = nsSVGForeignObjectFrameBase::GetFrameForPoint(presContext, p,
-                                                     NS_FRAME_PAINT_LAYER_FLOATERS, hit);
+                                                     NS_FRAME_PAINT_LAYER_FLOATS, hit);
   if (NS_SUCCEEDED(rv) && *hit) return rv;
 
   return nsSVGForeignObjectFrameBase::GetFrameForPoint(presContext, p,

@@ -388,6 +388,9 @@ netwerk/build2/Makefile
 netwerk/cache/Makefile
 netwerk/cache/public/Makefile
 netwerk/cache/src/Makefile
+netwerk/cookie/Makefile
+netwerk/cookie/public/Makefile
+netwerk/cookie/src/Makefile
 netwerk/dns/Makefile
 netwerk/dns/public/Makefile
 netwerk/dns/src/Makefile
@@ -614,6 +617,8 @@ MAKEFILES_string="$MAKEFILES_xpcom"
 MAKEFILES_xpinstall="
 xpinstall/Makefile
 xpinstall/packager/Makefile
+xpinstall/packager/unix/Makefile
+xpinstall/packager/windows/Makefile
 xpinstall/public/Makefile
 xpinstall/res/Makefile
 xpinstall/src/Makefile
@@ -622,6 +627,7 @@ xpinstall/wizard/libxpnet/Makefile
 xpinstall/wizard/libxpnet/src/Makefile
 xpinstall/wizard/libxpnet/test/Makefile
 xpinstall/wizard/unix/src2/Makefile
+xpinstall/wizard/windows/builder/Makefile
 xpinstall/wizard/windows/nsinstall/Makefile
 xpinstall/wizard/windows/nsztool/Makefile
 xpinstall/wizard/windows/uninstall/Makefile

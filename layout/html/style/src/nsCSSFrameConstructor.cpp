@@ -752,13 +752,13 @@ public:
   nsFrameConstructorState(nsIPresContext*        aPresContext,
                           nsIFrame*              aFixedContainingBlock,
                           nsIFrame*              aAbsoluteContainingBlock,
-                          nsIFrame*              aFloaterContainingBlock,
+                          nsIFrame*              aFloatContainingBlock,
                           nsILayoutHistoryState* aHistoryState);
   // Get the history state from the pres context's pres shell.
   nsFrameConstructorState(nsIPresContext*        aPresContext,
                           nsIFrame*              aFixedContainingBlock,
                           nsIFrame*              aAbsoluteContainingBlock,
-                          nsIFrame*              aFloaterContainingBlock);
+                          nsIFrame*              aFloatContainingBlock);
 
   // Function to push the existing absolute containing block state and
   // create a new scope
@@ -766,9 +766,9 @@ public:
                                    nsIFrame* aNewAbsoluteContainingBlock,
                                    nsFrameConstructorSaveState& aSaveState);
 
-  // Function to push the existing floater containing block state and
+  // Function to push the existing float containing block state and
   // create a new scope
-  void PushFloaterContainingBlock(nsIFrame* aNewFloaterContainingBlock,
+  void PushFloatContainingBlock(nsIFrame* aNewFloatContainingBlock,
                                   nsFrameConstructorSaveState& aSaveState,
                                   PRBool aFirstLetterStyle,
                                   PRBool aFirstLineStyle);
@@ -777,11 +777,11 @@ public:
 nsFrameConstructorState::nsFrameConstructorState(nsIPresContext*        aPresContext,
                                                  nsIFrame*              aFixedContainingBlock,
                                                  nsIFrame*              aAbsoluteContainingBlock,
-                                                 nsIFrame*              aFloaterContainingBlock,
+                                                 nsIFrame*              aFloatContainingBlock,
                                                  nsILayoutHistoryState* aHistoryState)
   : mFixedItems(aFixedContainingBlock),
     mAbsoluteItems(aAbsoluteContainingBlock),
-    mFloatedItems(aFloaterContainingBlock),
+    mFloatedItems(aFloatContainingBlock),
     mFirstLetterStyle(PR_FALSE),
     mFirstLineStyle(PR_FALSE),
     mFrameState(aHistoryState),
@@ -794,10 +794,10 @@ nsFrameConstructorState::nsFrameConstructorState(nsIPresContext*        aPresCon
 nsFrameConstructorState::nsFrameConstructorState(nsIPresContext*        aPresContext,
                                                  nsIFrame*              aFixedContainingBlock,
                                                  nsIFrame*              aAbsoluteContainingBlock,
-                                                 nsIFrame*              aFloaterContainingBlock)
+                                                 nsIFrame*              aFloatContainingBlock)
   : mFixedItems(aFixedContainingBlock),
     mAbsoluteItems(aAbsoluteContainingBlock),
-    mFloatedItems(aFloaterContainingBlock),
+    mFloatedItems(aFloatContainingBlock),
     mFirstLetterStyle(PR_FALSE),
     mFirstLineStyle(PR_FALSE),
     mPseudoFrames()
@@ -843,7 +843,7 @@ nsFrameConstructorState::PushAbsoluteContainingBlock(nsIPresContext* aPresContex
 }
 
 void
-nsFrameConstructorState::PushFloaterContainingBlock(nsIFrame* aNewFloaterContainingBlock,
+nsFrameConstructorState::PushFloatContainingBlock(nsIFrame* aNewFloatContainingBlock,
                                                     nsFrameConstructorSaveState& aSaveState,
                                                     PRBool aFirstLetterStyle,
                                                     PRBool aFirstLineStyle)
@@ -854,7 +854,7 @@ nsFrameConstructorState::PushFloaterContainingBlock(nsIFrame* aNewFloaterContain
   aSaveState.mSavedItems = mFloatedItems;
   aSaveState.mSavedFirstLetterStyle = mFirstLetterStyle;
   aSaveState.mSavedFirstLineStyle = mFirstLineStyle;
-  mFloatedItems = nsAbsoluteItems(aNewFloaterContainingBlock);
+  mFloatedItems = nsAbsoluteItems(aNewFloatContainingBlock);
   mFirstLetterStyle = aFirstLetterStyle;
   mFirstLineStyle = aFirstLineStyle;
 }
@@ -903,12 +903,12 @@ GetRealFrame(nsIFrame* aFrame)
   // We may be a placeholder.  If we are, go to the real frame.
   nsCOMPtr<nsIAtom>  frameType;
   
-  // See if it's a placeholder frame for a floater.
+  // See if it's a placeholder frame for a float.
   aFrame->GetFrameType(getter_AddRefs(frameType));
   PRBool isPlaceholder = (nsLayoutAtoms::placeholderFrame == frameType.get());
   if (isPlaceholder) {
     // Get the out-of-flow frame that the placeholder points to.
-    // This is the real floater that we should examine.
+    // This is the real float that we should examine.
     result = NS_STATIC_CAST(nsPlaceholderFrame*,aFrame)->GetOutOfFlowFrame();
     NS_ASSERTION(result, "No out of flow frame found for placeholder!\n");
   }
@@ -933,7 +933,7 @@ AdjustOutOfFlowFrameParentPtrs(nsIPresContext*          aPresContext,
   if (outOfFlowFrame && outOfFlowFrame != aFrame) {
 
     // Get the display data for the outOfFlowFrame so we can
-    // figure out if it is a floater or absolutely positioned element.
+    // figure out if it is a float or absolutely positioned element.
 
     const nsStyleDisplay* display = outOfFlowFrame->GetStyleDisplay();
 
@@ -981,7 +981,7 @@ AdjustOutOfFlowFrameParentPtrs(nsIPresContext*          aPresContext,
     return;
   }
 
-  // XXX_kin: Since we're only handling floaters at the moment,
+  // XXX_kin: Since we're only handling floats at the moment,
   // XXX_kin: we don't need to cross block boundaries.
 
   if (IsBlockFrame(aPresContext, aFrame))
@@ -998,7 +998,7 @@ AdjustOutOfFlowFrameParentPtrs(nsIPresContext*          aPresContext,
     // XXX_kin: Once we add support for adjusting absolutely positioned
     // XXX_kin: frames, we will be crossing block boundaries, we/ll need
     // XXX_kin: to update aState's containingBlock info to avoid incorrectly
-    // XXX_kin: reparenting floaters, etc.
+    // XXX_kin: reparenting floats, etc.
     // XXX_kin:
     // XXX_kin: Do we need to prevent descent into anonymous content here?
 
@@ -1225,7 +1225,7 @@ GetChildListNameFor(nsIPresContext* aPresContext,
     } else {
       NS_ASSERTION(aChildFrame->GetStyleDisplay()->IsFloating(),
                    "not a floated frame");
-      listName = nsLayoutAtoms::floaterList;
+      listName = nsLayoutAtoms::floatList;
     }
 
   } else {
@@ -2942,9 +2942,9 @@ nsCSSFrameConstructor::ConstructTableCellFrame(nsIPresShell*            aPresShe
     HaveSpecialBlockStyle(aPresContext, aContent, aStyleContext,
                           &haveFirstLetterStyle, &haveFirstLineStyle);
 
-    // The block frame is a floater container
-    nsFrameConstructorSaveState floaterSaveState;
-    aState.PushFloaterContainingBlock(aNewCellInnerFrame, floaterSaveState,
+    // The block frame is a float container
+    nsFrameConstructorSaveState floatSaveState;
+    aState.PushFloatContainingBlock(aNewCellInnerFrame, floatSaveState,
                                       haveFirstLetterStyle, haveFirstLineStyle);
 
     // Process the child content
@@ -2956,7 +2956,7 @@ nsCSSFrameConstructor::ConstructTableCellFrame(nsIPresShell*            aPresShe
 
     aNewCellInnerFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
     if (aState.mFloatedItems.childList) {
-      aNewCellInnerFrame->SetInitialChildList(aPresContext, nsLayoutAtoms::floaterList,
+      aNewCellInnerFrame->SetInitialChildList(aPresContext, nsLayoutAtoms::floatList,
                                              aState.mFloatedItems.childList);
     }
 
@@ -3502,7 +3502,7 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
   if (!docElemIsTable) {
     // Process the child content
     nsFrameConstructorSaveState absoluteSaveState;
-    nsFrameConstructorSaveState floaterSaveState;
+    nsFrameConstructorSaveState floatSaveState;
     nsFrameItems                childItems;
 
     if (isBlockFrame) {
@@ -3510,7 +3510,7 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
       HaveSpecialBlockStyle(aPresContext, aDocElement, styleContext,
                             &haveFirstLetterStyle, &haveFirstLineStyle);
       aState.PushAbsoluteContainingBlock(aPresContext, contentFrame, absoluteSaveState);
-      aState.PushFloaterContainingBlock(contentFrame, floaterSaveState,
+      aState.PushFloatContainingBlock(contentFrame, floatSaveState,
                                         haveFirstLetterStyle,
                                         haveFirstLineStyle);
     }
@@ -3538,7 +3538,7 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
         }
         if (aState.mFloatedItems.childList) {
           contentFrame->SetInitialChildList(aPresContext,
-                                         nsLayoutAtoms::floaterList,
+                                         nsLayoutAtoms::floatList,
                                          aState.mFloatedItems.childList);
         }
     }
@@ -4308,12 +4308,12 @@ nsCSSFrameConstructor::InitializeSelectFrame(nsIPresShell*        aPresShell,
     aState.mFrameManager->RestoreFrameStateFor(scrollFrame, aState.mFrameState);
   }
 
-  // The area frame is a floater container
+  // The area frame is a float container
   PRBool haveFirstLetterStyle, haveFirstLineStyle;
   HaveSpecialBlockStyle(aPresContext, aContent, aStyleContext,
                         &haveFirstLetterStyle, &haveFirstLineStyle);
-  nsFrameConstructorSaveState floaterSaveState;
-  aState.PushFloaterContainingBlock(scrolledFrame, floaterSaveState,
+  nsFrameConstructorSaveState floatSaveState;
+  aState.PushFloatContainingBlock(scrolledFrame, floatSaveState,
                                     haveFirstLetterStyle,
                                     haveFirstLineStyle);
 
@@ -4357,7 +4357,7 @@ nsCSSFrameConstructor::InitializeSelectFrame(nsIPresShell*        aPresShell,
 
   if (aState.mFloatedItems.childList) {
     scrolledFrame->SetInitialChildList(aPresContext,
-                                       nsLayoutAtoms::floaterList,
+                                       nsLayoutAtoms::floatList,
                                        aState.mFloatedItems.childList);
   }
 
@@ -4417,12 +4417,12 @@ nsCSSFrameConstructor::ConstructFieldSetFrame(nsIPresShell*            aPresShel
 
   
 
-  // The area frame is a floater container
+  // The area frame is a float container
   PRBool haveFirstLetterStyle, haveFirstLineStyle;
   HaveSpecialBlockStyle(aPresContext, aContent, aStyleContext,
                         &haveFirstLetterStyle, &haveFirstLineStyle);
-  nsFrameConstructorSaveState floaterSaveState;
-  aState.PushFloaterContainingBlock(areaFrame, floaterSaveState,
+  nsFrameConstructorSaveState floatSaveState;
+  aState.PushFloatContainingBlock(areaFrame, floatSaveState,
                                     haveFirstLetterStyle,
                                     haveFirstLineStyle);
 
@@ -4478,7 +4478,7 @@ nsCSSFrameConstructor::ConstructFieldSetFrame(nsIPresShell*            aPresShel
 
   if (aState.mFloatedItems.childList) {
     areaFrame->SetInitialChildList(aPresContext,
-                                   nsLayoutAtoms::floaterList,
+                                   nsLayoutAtoms::floatList,
                                    aState.mFloatedItems.childList);
   }
 
@@ -4569,7 +4569,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsIPresShell*            aPresShell,
   nsIFrame* newFrame = nsnull;  // the frame we construct
   PRBool    isReplaced = PR_FALSE;
   PRBool    addToHashTable = PR_TRUE;
-  PRBool    isFloaterContainer = PR_FALSE;
+  PRBool    isFloatContainer = PR_FALSE;
   PRBool    isPositionedContainingBlock = PR_FALSE;
   nsresult  rv = NS_OK;
 
@@ -4865,24 +4865,24 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsIPresShell*            aPresShell,
                                           aState.mAbsoluteItems.childList);
           }
         }
-        else if (isFloaterContainer) {
-          // If the frame can contain floaters, then push a floater
+        else if (isFloatContainer) {
+          // If the frame can contain floats, then push a float
           // containing block
           PRBool haveFirstLetterStyle, haveFirstLineStyle;
           HaveSpecialBlockStyle(aPresContext, aContent, aStyleContext,
                                 &haveFirstLetterStyle, &haveFirstLineStyle);
-          nsFrameConstructorSaveState floaterSaveState;
-          aState.PushFloaterContainingBlock(newFrame, floaterSaveState,
+          nsFrameConstructorSaveState floatSaveState;
+          aState.PushFloatContainingBlock(newFrame, floatSaveState,
                                             PR_FALSE, PR_FALSE);
         
           // Process the child frames
           rv = ProcessChildren(aPresShell, aPresContext, aState, aContent, newFrame,
                                PR_TRUE, childItems, PR_FALSE);
         
-          // Set the frame's floater list if there were any floated children
+          // Set the frame's float list if there were any floated children
           if (aState.mFloatedItems.childList) {
             newFrame->SetInitialChildList(aPresContext,
-                                          nsLayoutAtoms::floaterList,
+                                          nsLayoutAtoms::floatList,
                                           aState.mFloatedItems.childList);
           }
 
@@ -6205,12 +6205,12 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
     
     //-----
 
-    // The area frame is a floater container
+    // The area frame is a float container
     PRBool haveFirstLetterStyle, haveFirstLineStyle;
     HaveSpecialBlockStyle(aPresContext, aContent, aStyleContext,
                           &haveFirstLetterStyle, &haveFirstLineStyle);
-    nsFrameConstructorSaveState floaterSaveState;
-    aState.PushFloaterContainingBlock(scrolledFrame, floaterSaveState,
+    nsFrameConstructorSaveState floatSaveState;
+    aState.PushFloatContainingBlock(scrolledFrame, floatSaveState,
                                       haveFirstLetterStyle,
                                       haveFirstLineStyle);
 
@@ -6245,7 +6245,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
 
     if (aState.mFloatedItems.childList) {
       scrolledFrame->SetInitialChildList(aPresContext,
-                                         nsLayoutAtoms::floaterList,
+                                         nsLayoutAtoms::floatList,
                                          aState.mFloatedItems.childList);
     }
     ///------
@@ -6279,7 +6279,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
     // Process the child content. The area frame becomes a container for child
     // frames that are absolutely positioned
     nsFrameConstructorSaveState absoluteSaveState;
-    nsFrameConstructorSaveState floaterSaveState;
+    nsFrameConstructorSaveState floatSaveState;
     nsFrameItems                childItems;
 
     PRBool haveFirstLetterStyle = PR_FALSE, haveFirstLineStyle = PR_FALSE;
@@ -6288,7 +6288,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
                             &haveFirstLetterStyle, &haveFirstLineStyle);
     }
     aState.PushAbsoluteContainingBlock(aPresContext, newFrame, absoluteSaveState);
-    aState.PushFloaterContainingBlock(newFrame, floaterSaveState,
+    aState.PushFloatContainingBlock(newFrame, floatSaveState,
                                       haveFirstLetterStyle,
                                       haveFirstLineStyle);
     ProcessChildren(aPresShell, aPresContext, aState, aContent, newFrame, PR_TRUE,
@@ -6307,7 +6307,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
     }
     if (aState.mFloatedItems.childList) {
       newFrame->SetInitialChildList(aPresContext,
-                                    nsLayoutAtoms::floaterList,
+                                    nsLayoutAtoms::floatList,
                                     aState.mFloatedItems.childList);
     }
   }
@@ -6634,6 +6634,15 @@ nsCSSFrameConstructor::ResolveStyleContext(nsIPresContext*   aPresContext,
   // Resolve the style context based on the content object and the parent
   // style context
   nsStyleContext* parentStyleContext = aParentFrame->GetStyleContext();
+
+  // skip past any parents that are scrolled-content. We want to inherit directly
+  // from the outer scroll frame.
+  nsCOMPtr<nsIAtom> pseudo;
+  while (parentStyleContext && (pseudo = parentStyleContext->GetPseudoType()) ==
+         nsCSSAnonBoxes::scrolledContent) {
+    parentStyleContext = parentStyleContext->GetParent();
+  }
+
   if (aContent->IsContentOfType(nsIContent::eELEMENT)) {
     return aPresContext->ResolveStyleContextFor(aContent, parentStyleContext);
   } else {
@@ -7522,7 +7531,7 @@ nsCSSFrameConstructor::GetAbsoluteContainingBlock(nsIPresContext* aPresContext,
 }
 
 nsIFrame*
-nsCSSFrameConstructor::GetFloaterContainingBlock(nsIPresContext* aPresContext,
+nsCSSFrameConstructor::GetFloatContainingBlock(nsIPresContext* aPresContext,
                                                  nsIFrame*       aFrame)
 {
   NS_PRECONDITION(mInitialContainingBlock, "no initial containing block");
@@ -8274,7 +8283,7 @@ nsCSSFrameConstructor::ContentAppended(nsIPresContext* aPresContext,
   nsFrameItems            frameItems;
   nsFrameConstructorState state(aPresContext, mFixedContainingBlock,
                                 GetAbsoluteContainingBlock(aPresContext, parentFrame),
-                                GetFloaterContainingBlock(aPresContext, parentFrame));
+                                GetFloatContainingBlock(aPresContext, parentFrame));
 
   // See if the containing block has :first-letter style applied.
   PRBool haveFirstLetterStyle, haveFirstLineStyle;
@@ -8433,7 +8442,7 @@ nsCSSFrameConstructor::ContentAppended(nsIPresContext* aPresContext,
     // determine where in the list they should be inserted...
     if (state.mFloatedItems.childList) {
       state.mFloatedItems.containingBlock->AppendFrames(aPresContext, *shell,
-                                                        nsLayoutAtoms::floaterList,
+                                                        nsLayoutAtoms::floatList,
                                                         state.mFloatedItems.childList);
     }
 
@@ -8939,7 +8948,7 @@ nsCSSFrameConstructor::ContentInserted(nsIPresContext*        aPresContext,
   nsFrameItems            frameItems;
   nsFrameConstructorState state(aPresContext, mFixedContainingBlock,
                                 GetAbsoluteContainingBlock(aPresContext, parentFrame),
-                                GetFloaterContainingBlock(aPresContext, parentFrame),
+                                GetFloatContainingBlock(aPresContext, parentFrame),
                                 aFrameState);
 
   // Recover state for the containing block - we need to know if
@@ -9121,7 +9130,7 @@ nsCSSFrameConstructor::ContentInserted(nsIPresContext*        aPresContext,
     // determine where in the list they should be inserted...
     if (state.mFloatedItems.childList) {
       state.mFloatedItems.containingBlock->AppendFrames(aPresContext, *shell,
-                                                        nsLayoutAtoms::floaterList,
+                                                        nsLayoutAtoms::floatList,
                                                         state.mFloatedItems.childList);
     }
 
@@ -9494,7 +9503,7 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
     // Examine the containing-block for the removed content and see if
     // :first-letter style applies.
     nsIFrame* containingBlock =
-      GetFloaterContainingBlock(aPresContext, parentFrame);
+      GetFloatContainingBlock(aPresContext, parentFrame);
     nsStyleContext* blockSC = containingBlock->GetStyleContext();
     nsIContent* blockContent = containingBlock->GetContent();
     PRBool haveFLS = HaveFirstLetterStyle(aPresContext, blockContent, blockSC);
@@ -9611,11 +9620,11 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
 
       // XXX has to be done first for now: the blocks line list
       // contains an array of pointers to the placeholder - we have to
-      // remove the floater first (which gets rid of the lines
-      // reference to the placeholder and floater) and then remove the
+      // remove the float first (which gets rid of the lines
+      // reference to the placeholder and float) and then remove the
       // placeholder
       rv = frameManager->RemoveFrame(parentFrame,
-                                     nsLayoutAtoms::floaterList, childFrame);
+                                     nsLayoutAtoms::floatList, childFrame);
 
       // Remove the placeholder frame first (XXX second for now) (so
       // that it doesn't retain a dangling pointer to memory)
@@ -9670,8 +9679,8 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
       nsFrameConstructorState state(aPresContext, mFixedContainingBlock,
                                     GetAbsoluteContainingBlock(aPresContext,
                                                                parentFrame),
-                                    GetFloaterContainingBlock(aPresContext,
-                                                              parentFrame));
+                                    GetFloatContainingBlock(aPresContext,
+                                                            parentFrame));
       RecoverLetterFrames(shell, aPresContext, state, containingBlock);
     }
 
@@ -9956,7 +9965,7 @@ nsCSSFrameConstructor::ContentChanged(nsIPresContext* aPresContext,
     nsCOMPtr<nsITextContent> textContent(do_QueryInterface(aContent));
     if (textContent) {
       // Ok, it's text content. Now do some real work...
-      nsIFrame* block = GetFloaterContainingBlock(aPresContext, frame);
+      nsIFrame* block = GetFloatContainingBlock(aPresContext, frame);
       if (block) {
         // See if the block has first-letter style applied to it.
         nsIContent* blockContent = block->GetContent();
@@ -10609,7 +10618,7 @@ nsCSSFrameConstructor::CantRenderReplacedElement(nsIPresShell* aPresShell,
         // new frame
         frameManager->RegisterPlaceholderFrame(placeholderFrame);
 
-        // XXX Work around a bug in the block code where the floater won't get
+        // XXX Work around a bug in the block code where the float won't get
         // reflowed unless the line containing the placeholder frame is reflowed...
         placeholderFrame->GetParent()->
           ReflowDirtyChild(aPresShell, placeholderFrame);
@@ -10622,34 +10631,34 @@ nsCSSFrameConstructor::CantRenderReplacedElement(nsIPresShell* aPresShell,
     // It's an OBJECT, EMBED, or APPLET, so we should display the contents
     // instead
     nsIFrame* absoluteContainingBlock;
-    nsIFrame* floaterContainingBlock;
+    nsIFrame* floatContainingBlock;
     nsIFrame* inFlowParent = parentFrame;
 
     // If the OBJECT frame is out-of-flow, then get the placeholder frame's
     // parent and use that when determining the absolute containing block and
-    // floater containing block
+    // float containing block
     if (placeholderFrame) {
       inFlowParent = placeholderFrame->GetParent();
     }
 
     absoluteContainingBlock = GetAbsoluteContainingBlock(aPresContext, inFlowParent);
-    floaterContainingBlock = GetFloaterContainingBlock(aPresContext, inFlowParent);
+    floatContainingBlock = GetFloatContainingBlock(aPresContext, inFlowParent);
 
 #ifdef NS_DEBUG
     // Verify that we calculated the same containing block
     if (listName.get() == nsLayoutAtoms::absoluteList) {
       NS_ASSERTION(absoluteContainingBlock == parentFrame,
                    "wrong absolute containing block");
-    } else if (listName.get() == nsLayoutAtoms::floaterList) {
-      NS_ASSERTION(floaterContainingBlock == parentFrame,
-                   "wrong floater containing block");
+    } else if (listName.get() == nsLayoutAtoms::floatList) {
+      NS_ASSERTION(floatContainingBlock == parentFrame,
+                   "wrong float containing block");
     }
 #endif
 
     // Now initialize the frame construction state
     nsFrameConstructorState state(aPresContext, mFixedContainingBlock,
                                   absoluteContainingBlock,
-                                  floaterContainingBlock);
+                                  floatContainingBlock);
     nsFrameItems            frameItems;
     const nsStyleDisplay* display = styleContext->GetStyleDisplay();
 
@@ -10724,7 +10733,7 @@ nsCSSFrameConstructor::CantRenderReplacedElement(nsIPresShell* aPresShell,
       } else if (listName.get() == nsLayoutAtoms::fixedList) {
         newFrame = state.mFixedItems.childList;
         state.mFixedItems.childList = nsnull;
-      } else if (listName.get() == nsLayoutAtoms::floaterList) {
+      } else if (listName.get() == nsLayoutAtoms::floatList) {
         newFrame = state.mFloatedItems.childList;
         state.mFloatedItems.childList = nsnull;
       }
@@ -10763,7 +10772,7 @@ nsCSSFrameConstructor::CantRenderReplacedElement(nsIPresShell* aPresShell,
       if (state.mFloatedItems.childList) {
         rv = state.mFloatedItems.containingBlock->AppendFrames(aPresContext,
                                                     *presShell,
-                                                    nsLayoutAtoms::floaterList,
+                                                    nsLayoutAtoms::floatList,
                                                     state.mFloatedItems.childList);
       }
     }
@@ -10843,7 +10852,7 @@ nsCSSFrameConstructor::CreateContinuingOuterTableFrame(nsIPresShell* aPresShell,
         // XXX Deal with absolute and fixed frames...
         if (state.mFloatedItems.childList) {
           captionFrame->SetInitialChildList(aPresContext,
-                                            nsLayoutAtoms::floaterList,
+                                            nsLayoutAtoms::floatList,
                                             state.mFloatedItems.childList);
         }
         newChildFrames.AddChild(captionFrame);
@@ -12503,19 +12512,19 @@ nsCSSFrameConstructor::RemoveFloatingFirstLetterFrames(
   nsIFrame* aBlockFrame,
   PRBool* aStopLooking)
 {
-  // First look for the floater frame that is a letter frame
-  nsIFrame* floater;
-  aBlockFrame->FirstChild(aPresContext, nsLayoutAtoms::floaterList, &floater);
-  while (floater) {
+  // First look for the float frame that is a letter frame
+  nsIFrame* floatFrame;
+  aBlockFrame->FirstChild(aPresContext, nsLayoutAtoms::floatList, &floatFrame);
+  while (floatFrame) {
     // See if we found a floating letter frame
     nsCOMPtr<nsIAtom> frameType;
-    floater->GetFrameType(getter_AddRefs(frameType));
+    floatFrame->GetFrameType(getter_AddRefs(frameType));
     if (nsLayoutAtoms::letterFrame == frameType.get()) {
       break;
     }
-    floater = floater->GetNextSibling();
+    floatFrame = floatFrame->GetNextSibling();
   }
-  if (!floater) {
+  if (!floatFrame) {
     // No such frame
     return NS_OK;
   }
@@ -12523,7 +12532,7 @@ nsCSSFrameConstructor::RemoveFloatingFirstLetterFrames(
   // Take the text frame away from the letter frame (so it isn't
   // destroyed when we destroy the letter frame).
   nsIFrame* textFrame;
-  floater->FirstChild(aPresContext, nsnull, &textFrame);
+  floatFrame->FirstChild(aPresContext, nsnull, &textFrame);
   if (!textFrame) {
     return NS_OK;
   }
@@ -12531,7 +12540,8 @@ nsCSSFrameConstructor::RemoveFloatingFirstLetterFrames(
   // Discover the placeholder frame for the letter frame
   nsIFrame* parentFrame;
   nsPlaceholderFrame* placeholderFrame;
-  aFrameManager->GetPlaceholderFrameFor(floater, (nsIFrame**)&placeholderFrame);
+  aFrameManager->GetPlaceholderFrameFor(floatFrame,
+                                        (nsIFrame**)&placeholderFrame);
   if (!placeholderFrame) {
     // Somethings really wrong
     return NS_OK;
@@ -12598,10 +12608,10 @@ nsCSSFrameConstructor::RemoveFloatingFirstLetterFrames(
   // and skip this call?
   aFrameManager->UnregisterPlaceholderFrame(placeholderFrame);
 
-  // Remove the floater frame
-  DeletingFrameSubtree(aPresContext, aPresShell, aFrameManager, floater);
-  aFrameManager->RemoveFrame(aBlockFrame, nsLayoutAtoms::floaterList,
-                             floater);
+  // Remove the float frame
+  DeletingFrameSubtree(aPresContext, aPresShell, aFrameManager, floatFrame);
+  aFrameManager->RemoveFrame(aBlockFrame, nsLayoutAtoms::floatList,
+                             floatFrame);
 
   // Remove placeholder frame
   aFrameManager->RemoveFrame(parentFrame, nsnull, placeholderFrame);
@@ -12730,10 +12740,10 @@ nsCSSFrameConstructor::RecoverLetterFrames(nsIPresShell* aPresShell, nsIPresCont
     parentFrame->InsertFrames(aPresContext, *aState.mPresShell.get(),
                               nsnull, prevFrame, letterFrames.childList);
 
-    // Insert in floaters too if needed
+    // Insert in floats too if needed
     if (aState.mFloatedItems.childList) {
       aBlockFrame->AppendFrames(aPresContext, *aState.mPresShell.get(),
-                                nsLayoutAtoms::floaterList,
+                                nsLayoutAtoms::floatList,
                                 aState.mFloatedItems.childList);
     }
   }
@@ -12764,7 +12774,7 @@ nsCSSFrameConstructor::CreateListBoxContent(nsIPresContext* aPresContext,
     nsFrameItems            frameItems;
     nsFrameConstructorState state(aPresContext, mFixedContainingBlock,
                                   GetAbsoluteContainingBlock(aPresContext, aParentFrame),
-                                  GetFloaterContainingBlock(aPresContext, aParentFrame), 
+                                  GetFloatContainingBlock(aPresContext, aParentFrame), 
                                   mTempFrameTreeState);
 
     nsRefPtr<nsStyleContext> styleContext;
@@ -12827,7 +12837,7 @@ nsCSSFrameConstructor::CreateListBoxContent(nsIPresContext* aPresContext,
       // determine where in the list they should be inserted...
       if (state.mFloatedItems.childList) {
         rv = state.mFloatedItems.containingBlock->AppendFrames(aPresContext, *shell,
-                                                    nsLayoutAtoms::floaterList,
+                                                    nsLayoutAtoms::floatList,
                                                     state.mFloatedItems.childList);
       }
     }
@@ -12863,7 +12873,7 @@ nsCSSFrameConstructor::ConstructBlock(nsIPresShell*            aPresShell,
 
   // If we're the first block to be created (e.g., because we're
   // contained inside a XUL document), then make sure that we've got a
-  // space manager so we can handle floaters...
+  // space manager so we can handle floats...
   if (! aState.mFloatedItems.containingBlock) {
     aNewFrame->AddStateBits(NS_BLOCK_SPACE_MGR | NS_BLOCK_MARGIN_ROOT);
   }
@@ -12882,8 +12892,8 @@ nsCSSFrameConstructor::ConstructBlock(nsIPresShell*            aPresShell,
 
   // Process the child content
   nsFrameItems childItems;
-  nsFrameConstructorSaveState floaterSaveState;
-  aState.PushFloaterContainingBlock(aNewFrame, floaterSaveState,
+  nsFrameConstructorSaveState floatSaveState;
+  aState.PushFloatContainingBlock(aNewFrame, floatSaveState,
                                     haveFirstLetterStyle,
                                     haveFirstLineStyle);
   nsresult rv = ProcessChildren(aPresShell, aPresContext, aState, aContent,
@@ -12897,10 +12907,10 @@ nsCSSFrameConstructor::ConstructBlock(nsIPresShell*            aPresShell,
   // Set the frame's initial child list
   aNewFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
 
-  // Set the frame's floater list if there were any floated children
+  // Set the frame's float list if there were any floated children
   if (aState.mFloatedItems.childList) {
     aNewFrame->SetInitialChildList(aPresContext,
-                                   nsLayoutAtoms::floaterList,
+                                   nsLayoutAtoms::floatList,
                                    aState.mFloatedItems.childList);
   }
   // and the same for absolutely positioned children.
@@ -12978,7 +12988,7 @@ nsCSSFrameConstructor::ConstructInline(nsIPresShell*            aPresShell,
       }
       if (aState.mFloatedItems.childList) {
         aNewFrame->SetInitialChildList(aPresContext,
-                                       nsLayoutAtoms::floaterList,
+                                       nsLayoutAtoms::floatList,
                                        aState.mFloatedItems.childList);
       }
     }
@@ -13031,7 +13041,7 @@ nsCSSFrameConstructor::ConstructInline(nsIPresShell*            aPresShell,
     }
     if (aState.mFloatedItems.childList) {
       aNewFrame->SetInitialChildList(aPresContext,
-                                     nsLayoutAtoms::floaterList,
+                                     nsLayoutAtoms::floatList,
                                      aState.mFloatedItems.childList);
     }
   }
@@ -13072,7 +13082,7 @@ nsCSSFrameConstructor::ConstructInline(nsIPresShell*            aPresShell,
 
   nsFrameConstructorState state(aPresContext, mFixedContainingBlock,
                                 GetAbsoluteContainingBlock(aPresContext, blockFrame),
-                                GetFloaterContainingBlock(aPresContext, blockFrame));
+                                GetFloatContainingBlock(aPresContext, blockFrame));
 
   MoveChildrenTo(aPresContext, blockSC, blockFrame, list2, &state);
 
@@ -13658,9 +13668,9 @@ nsCSSFrameConstructor::ReframeContainingBlock(nsIPresContext* aPresContext, nsIF
     // wraps some of its content in an anonymous block; see
     // ConstructInline)
    
-    // NOTE: We used to get the FloaterContainingBlock here, but it was often wrong.
+    // NOTE: We used to get the FloatContainingBlock here, but it was often wrong.
     // GetIBContainingBlock works much better and provides the correct container in all cases
-    // so GetFloaterContainingBlock(aPresContext, aFrame) has been removed
+    // so GetFloatContainingBlock(aPresContext, aFrame) has been removed
 
     // And get the containingBlock's content
     nsCOMPtr<nsIContent> blockContent = containingBlock->GetContent();
