@@ -39,13 +39,11 @@ nsMsgThreadedDBView::~nsMsgThreadedDBView()
   /* destructor code */
 }
 
-NS_IMETHODIMP nsMsgThreadedDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue viewType, PRInt32 *pCount)
+NS_IMETHODIMP nsMsgThreadedDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder, nsMsgViewFlagsTypeValue viewFlags, PRInt32 *pCount)
 {
 	nsresult rv;
-  m_sortType = viewType;
-  m_sortOrder = nsMsgViewSortOrder::ascending;
-	rv = nsMsgDBView::Open(folder, viewType, pCount);
-  NS_ENSURE_SUCCESS(rv, rv);
+	rv = nsMsgDBView::Open(folder, sortType, sortOrder, viewFlags, pCount);
+    NS_ENSURE_SUCCESS(rv, rv);
 
 	if (pCount)
 		*pCount = 0;

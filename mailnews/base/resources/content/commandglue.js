@@ -297,7 +297,9 @@ function RerootFolder(uri, newFolder, isThreaded, sortID, sortDirection, viewTyp
 
   var column = FindThreadPaneColumnBySortResource(sortID);
 
-  CreateDBView(newFolder, isThreaded, viewType);
+
+  // null this out, so we don't try sort.
+  gDBView = null;
 
   if(column)
 	SortThreadPane(column, sortID, "http://home.netscape.com/NC-rdf#Date", false, sortDirection, false);
@@ -305,6 +307,9 @@ function RerootFolder(uri, newFolder, isThreaded, sortID, sortDirection, viewTyp
 	SortThreadPane("DateColumn", "http://home.netscape.com/NC-rdf#Date", "", false, null, false);
 
   SetSentFolderColumns(IsSpecialFolder(newFolder, [ "Sent", "Drafts", "Unsent Messages" ]));
+
+  // now create the db view, which will sort it.
+  CreateDBView(newFolder, isThreaded, sortID, sortDirection);
 
   // Since SetSentFolderColumns() may alter the template's structure,
   // we need to explicitly force the builder to recompile its rules.
@@ -547,66 +552,91 @@ function SortThreadPane(column, sortKey, secondarySortKey, toggleCurrentDirectio
 
 var nsMsgViewSortType = Components.interfaces.nsMsgViewSortType;
 var nsMsgViewSortOrder = Components.interfaces.nsMsgViewSortOrder;
-var gDBView;
+var nsMsgViewFlagsType = Components.interfaces.nsMsgViewFlagsType;
 
-function CreateDBView(msgFolder, isThreaded, viewType)
+var gDBView = null;
+
+function CreateDBView(msgFolder, isThreaded, sortKey, sortDirection)
 {
-    dump("XXX CreateDBView(" + msgFolder + "," + isThreaded + "," + viewType +")\n");
-    var count = new Object;
+    dump("XXX CreateDBView(" + msgFolder + "," + isThreaded + "," + sortKey + "," + sortDirection +")\n");
+
     gDBView = Components.classes["@mozilla.org/messenger/msgdbview;1?type=threaded"].createInstance(Components.interfaces.nsIMsgDBView);
-    gDBView.open(msgFolder, nsMsgViewSortType.bySubject, count);
+
+    var sortType = ConvertSortKey(sortKey);
+    var sortOrder = ConvertSortDirection(sortDirection)
+
+    var viewFlags;
+    if (isThreaded) {
+        viewFlags = nsMsgViewFlagsType.kOutlineDisplay;
+    }
+    else {  
+        viewFlags = nsMsgViewFlagsType.kFlatDisplay;
+    }
+
+    var count = new Object;
+    gDBView.open(msgFolder, sortType, sortOrder, viewFlags, count);
     dump("XXX count = " + count.value + "\n");
+}
+
+function SetViewFlags(viewFlags)
+{
+    if (!gDBView) return;
+    dump("XXX SetViewFlags(" + viewFlags + ")\n");
+    gDBView.viewFlags = viewFlags;
 }
 
 function SortDBView(sortKey, direction)
 {
+    if (!gDBView) return;
+
     dump("XXX SortDBView(" + sortKey + "," + direction + ")\n");
 
-    var sortOrder;
+    var sortOrder = ConvertSortDirection(direction);
+    var sortType = ConvertSortKey(sortKey);
+
+    gDBView.sort(sortType,sortOrder);
+}
+
+function ConvertSortDirection(direction)
+{
     if (direction == "ascending") {
-        sortOrder = nsMsgViewSortOrder.ascending;
+        return nsMsgViewSortOrder.ascending;
     }
     else {
-        sortOrder = nsMsgViewSortOrder.descending;
+        return nsMsgViewSortOrder.descending;
     }
+}
+
+function ConvertSortKey(sortKey)
+{
     switch (sortKey) {
         case 'http://home.netscape.com/NC-rdf#Date':
-            gDBView.sort(nsMsgViewSortType.byDate,sortOrder);
-            break;
+            return nsMsgViewSortType.byDate;
         case 'http://home.netscape.com/NC-rdf#Subject':
-            gDBView.sort(nsMsgViewSortType.bySubject,sortOrder);
-            break;
+            return nsMsgViewSortType.bySubject;
         case 'http://home.netscape.com/NC-rdf#Sender':
-            gDBView.sort(nsMsgViewSortType.byAuthor,sortOrder);
-            break;
+            return nsMsgViewSortType.byAuthor;
         case 'http://home.netscape.com/NC-rdf#ID':
-            gDBView.sort(nsMsgViewSortType.byId,sortOrder);
-            break;
+            return nsMsgViewSortType.byId;
         case 'http://home.netscape.com/NC-rdf#Thread':
-            gDBView.sort(nsMsgViewSortType.byThread,sortOrder);
-            break;
+            return nsMsgViewSortType.byThread;
         case 'http://home.netscape.com/NC-rdf#Priority':
-            gDBView.sort(nsMsgViewSortType.byPriority,sortOrder);
-            break;
+            return nsMsgViewSortType.byPriority;
         case 'http://home.netscape.com/NC-rdf#Status':
-            gDBView.sort(nsMsgViewSortType.byStatus,sortOrder);
-            break;
+            return nsMsgViewSortType.byStatus;
         case 'http://home.netscape.com/NC-rdf#Size':
-            gDBView.sort(nsMsgViewSortType.bySize,sortOrder);
-            break;
+            return nsMsgViewSortType.bySize;
         case 'http://home.netscape.com/NC-rdf#Flagged':
-            gDBView.sort(nsMsgViewSortType.byFlagged,sortOrder);
-            break;
+            return nsMsgViewSortType.byFlagged;
         case 'http://home.netscape.com/NC-rdf#IsUnread':
-            gDBView.sort(nsMsgViewSortType.byUnread,sortOrder);
-            break;
+            return nsMsgViewSortType.byUnread;
         case 'http://home.netscape.com/NC-rdf#Recipient':
-            gDBView.sort(nsMsgViewSortType.byRecipient,sortOrder);
-            break;
+            return nsMsgViewSortType.byRecipient;
         default:
             dump("unexpected\n");
             break;
     }
+    return nsMsgViewSortType.byDate;
 }
 
 function DumpView()
@@ -982,6 +1012,15 @@ function ShowThreads(showThreads)
 			}
 		}
 	}
+    
+    var viewFlags;
+    if (showThreads) {
+        viewFlags = nsMsgViewFlagsType.kOutlineDisplay;
+    }
+    else {
+        viewFlags = nsMsgViewFlagsType.kFlatDisplay;
+    }
+    SetViewFlags(viewFlags);
 }
 
 

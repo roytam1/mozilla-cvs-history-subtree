@@ -52,10 +52,14 @@ nsMsgDBView::~nsMsgDBView()
   /* destructor code */
 }
 
-NS_IMETHODIMP nsMsgDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue viewType, PRInt32 *pCount)
+NS_IMETHODIMP nsMsgDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder, nsMsgViewFlagsTypeValue viewFlags, PRInt32 *pCount)
 {
   NS_ENSURE_ARG(folder);
   nsCOMPtr <nsIDBFolderInfo> folderInfo;
+
+  m_viewFlags = viewFlags;
+  m_sortOrder = sortOrder;
+  m_sortType = sortType;
 
   nsresult rv = folder->GetDBFolderInfoAndDB(getter_AddRefs(folderInfo), getter_AddRefs(m_db));
   NS_ENSURE_SUCCESS(rv,rv);
@@ -72,6 +76,7 @@ NS_IMETHODIMP nsMsgDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue vie
 
 	CacheAdd ();
 #endif
+
 	return NS_OK;
 }
 
@@ -210,7 +215,7 @@ NS_IMETHODIMP nsMsgDBView::DumpView()
         PRUint32 flags = m_flags.GetAt(i);
         PRUint32 level = m_levels.GetAt(i);
         printf("[%d]\t",i);
-        if (m_sortType == nsMsgViewSortType::byThread) {
+        if (m_viewFlags == nsMsgViewFlagsType::kOutlineDisplay) {
             if (flags | MSG_FLAG_ELIDED) {
                 printf("+");
             }
@@ -220,9 +225,6 @@ NS_IMETHODIMP nsMsgDBView::DumpView()
             for (j=0;j<level;j++) {
                 printf(".");
             }
-        }
-        else {
-            printf(" ");
         }
         
         nsMsgKey key = m_keys.GetAt(i);
@@ -715,7 +717,7 @@ nsMsgViewIndex nsMsgDBView::ThreadIndexOfMsg(nsMsgKey msgKey,
 		if (msgIndex == nsMsgViewIndex_None)	// key is not in view, need to find by thread
 		{
 			msgIndex = GetIndexOfFirstDisplayedKeyInThread(threadHdr);
-			nsMsgKey		threadKey = (msgIndex == nsMsgViewIndex_None) ? nsMsgKey_None : GetAt(msgIndex);
+			//nsMsgKey		threadKey = (msgIndex == nsMsgViewIndex_None) ? nsMsgKey_None : GetAt(msgIndex);
 			if (pFlags)
 				threadHdr->GetFlags(pFlags);
 		}
@@ -828,7 +830,7 @@ nsresult nsMsgDBView::ExpansionDelta(nsMsgViewIndex index, PRInt32 *expansionDel
 	nsresult	rv;
 
 	*expansionDelta = 0;
-	if ((int) index > m_keys.GetSize())
+	if ( index > ((nsMsgViewIndex) m_keys.GetSize()))
 		return NS_MSG_MESSAGE_NOT_FOUND;
 	char	flags = m_flags[index];
 
@@ -894,7 +896,10 @@ nsresult nsMsgDBView::ExpandAll()
 nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded)
 {
 	char			flags = m_flags[index];
-	nsMsgKey		firstIdInThread, startMsg = nsMsgKey_None;
+	nsMsgKey		firstIdInThread;
+#ifdef HAVE_PORT
+    nsMsgKey        startMsg = nsMsgKey_None;
+#endif
 	nsresult		rv = NS_OK;
 	PRUint32			numExpanded = 0;
 

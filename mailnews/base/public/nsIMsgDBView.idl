@@ -180,7 +180,7 @@ interface nsMsgDBViewType
 [scriptable, uuid(704c7d28-fd1a-11d4-a5be-0060b0fc04b7)]
 interface nsIMsgDBView : nsISupports
 {
-    void open(in nsIMsgFolder folder, in nsMsgViewSortTypeValue viewType, out long count);
+    void open(in nsIMsgFolder folder, in nsMsgViewSortTypeValue sortType, in nsMsgViewSortOrderValue sortOrder, in nsMsgViewFlagsTypeValue viewFlags, out long count);
     void close();
 
     void init(out long pCount);

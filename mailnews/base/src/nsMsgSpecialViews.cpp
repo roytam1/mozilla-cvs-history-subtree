@@ -32,9 +32,9 @@ nsMsgThreadsWithUnreadDBView::~nsMsgThreadsWithUnreadDBView()
 {
 }
 
-NS_IMETHODIMP nsMsgThreadsWithUnreadDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue viewType, PRInt32 *count)
+NS_IMETHODIMP nsMsgThreadsWithUnreadDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder, nsMsgViewFlagsTypeValue viewFlags, PRInt32 *pCount)
 {
-  return nsMsgThreadedDBView::Open(folder, viewType, count);
+  return nsMsgThreadedDBView::Open(folder, sortType, sortOrder, viewFlags, pCount);
 }
 
 PRBool nsMsgThreadsWithUnreadDBView::WantsThisThread(nsIMsgThread *threadHdr)
