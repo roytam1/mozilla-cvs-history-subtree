@@ -54,6 +54,8 @@ sub readDTD
     my $contents = <DTD>;
     close DTD;
 
+    $contents =~ s/<!--.*?-->//gs; # strip SGML comments
+
     return $contents =~ /<!ENTITY\s+([\w\.]+)\s+(?:\"[^\"]*\"|\'[^\']*\')\s*>/g;
 }
 
