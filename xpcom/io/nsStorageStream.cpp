@@ -109,7 +109,8 @@ nsStorageStream::Close()
     if (segmentOffset)
         mSegmentedBuffer->ReallocLastSegment(segmentOffset);
     
-    Seek(0);
+    mWriteCursor = 0;
+    mSegmentEnd = 0;
 
     return NS_OK;
 }
@@ -186,6 +187,7 @@ nsStorageStream::SetLength(PRUint32 aLength)
         mLastSegmentNum--;
     }
 
+    mLogicalLength = aLength;
     return NS_OK;
 }
 
@@ -204,8 +206,13 @@ nsStorageStream::Seek(PRInt32 aPosition)
     // An argument of -1 means "seek to end of stream"
     if (aPosition == -1)
         aPosition = mLogicalLength;
+
+    // Seeking ahead of the stream end is illegal
     if ((PRUint32)aPosition > mLogicalLength)
         return NS_ERROR_INVALID_ARG;
+
+    // Seeking backwards in the write stream results in truncation
+    SetLength(aPosition);
 
     if (aPosition == 0) {
         mWriteCursor = 0;
@@ -213,15 +220,9 @@ nsStorageStream::Seek(PRInt32 aPosition)
         return NS_OK;
     }
 
-    PRUint32 segmentNum = SegNum(aPosition);
-    PRUint32 segmentOffset = SegOffset(aPosition);
-    if (!segmentOffset) {
-        segmentNum--;
-        segmentOffset = mSegmentSize;
-    }
-
     mWriteCursor = mSegmentedBuffer->GetSegment(mLastSegmentNum);
     mSegmentEnd = mWriteCursor + mSegmentSize;
+    PRInt32 segmentOffset = SegOffset(aPosition);
     mWriteCursor += segmentOffset;
     
     return NS_OK;
