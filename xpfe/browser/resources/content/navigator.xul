@@ -164,6 +164,7 @@ Contributor(s): ______________________________________. -->
                  showCommentColumn="true"
                  inputtooltiptext="&locationBar.tooltip;"
                  oninput="window.XULBrowserWindow.userTyped.value=true;"
+                 ondragdrop="window.XULBrowserWindow.userTyped.value=true;alert('foo');"
                  ontextcommand="return handleURLBarCommand(eventParam, domEvent);"
                  ontextrevert="return handleURLBarRevert();"
                  onfocus="URLBarFocusHandler(event);"
@@ -200,7 +201,7 @@ Contributor(s): ______________________________________. -->
 
         <button id="search-button" class="button-toolbar chromeclass-location"
                 label="&searchButton.label;" persist="hidden"
-                oncommand="OpenSearch('internet',false, document.getElementById('urlbar').value);" 
+                oncommand="OpenSearch('internet',false, QualifySearchTerm());" 
                 ondragover="nsDragAndDrop.dragOver(event, searchButtonObserver);"
                 ondragdrop="nsDragAndDrop.drop(event, searchButtonObserver);"
                 ondragexit="nsDragAndDrop.dragExit(event, searchButtonObserver);"
@@ -264,13 +265,15 @@ Contributor(s): ______________________________________. -->
                      ondragover="nsDragAndDrop.dragOver(event, folderObserver);"
                      template="bookmarksMenuTemplate">
         <menupopup onpopuphiding="gDidOpen = false;"
-                   onpopupshowing="checkBookmarksMenuTemplateBuilder();"
+                   onpopupshowing="checkBookmarksMenuTemplateBuilder(); updateGroupmarkMenuitem('PT_bookmarks_groupmark');">
                    ondragdrop="nsDragAndDrop.drop(event, menuDNDObserver); event.preventBubble();"
                    ondragexit="nsDragAndDrop.dragExit(event, menuDNDObserver); event.preventBubble();"
                    ondragover="nsDragAndDrop.dragOver(event, menuDNDObserver); event.preventBubble();">
           <menuitem accesskey="&addCurPageCmd.accesskey;" key="addBookmarkKb" observes="Browser:AddBookmark"
                     ondragover="event.preventBubble(); return false;"/>
           <menuitem accesskey="&addCurPageAsCmd.accesskey;" key="addBookmarkAsKb" observes="Browser:AddBookmarkAs"
+                    ondragover="event.preventBubble(); return false;"/>
+          <menuitem id="PT_bookmarks_groupmark" observes="Browser:AddGroupmarkAs"
                     ondragover="event.preventBubble(); return false;"/>
           <menuseparator ondragover="event.preventBubble(); return false;"/>
           <menuitem accesskey="&manBookmarksCmd.accesskey;" key="manBookmarkKb" observes="Browser:ManageBookmark"
@@ -342,6 +345,16 @@ Contributor(s): ______________________________________. -->
                            statustext="rdf:http://home.netscape.com/NC-rdf#URL"
                            tooltip="ptTooltip"
                            label="rdf:http://home.netscape.com/NC-rdf#Name"/>
+          </rule>
+
+          <rule nc:FolderGroup="true" iscontainer="true">
+            <menupopup>
+              <menuitem class="menuitem-iconic bookmark-group" 
+                        label="rdf:http://home.netscape.com/NC-rdf#Name"
+                        group="true"
+                        uri="rdf:*"
+                        xulcontentsgenerated="true"/>
+            </menupopup>
           </rule>
 
           <rule iscontainer="true" isempty="true"

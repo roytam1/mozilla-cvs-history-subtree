@@ -472,10 +472,19 @@
 }
 
 #PersonalToolbar > toolbargrippy,
+#PersonalToolbar > .toolbar-prefix,
 #PersonalToolbar > .toolbar-holder {
   border-top: 1px solid #CED6DD;
+}
+
+#PersonalToolbar > toolbargrippy,
+#PersonalToolbar > .toolbar-holder {
   border-right: 1px solid #95A0AD;
   border-bottom: 1px solid #95A0AD;
+}
+
+#PersonalToolbar > toolbargrippy,
+#PersonalToolbar > .toolbar-prefix {
   border-left: 1px solid #DAE3ED;
 }
 
@@ -493,6 +502,10 @@
 }
 
 /* ::::: content area ::::: */
+
+#appcontent {
+  border-top: 1px solid #494F5D;
+}
 
 #content {
   border-bottom: 1px solid #494F5D;

@@ -37,6 +37,7 @@
 
 <!ENTITY  title                 "Page Info"> 
 <!ENTITY  description           "Information about the current page"> 
+<!ENTITY  helpButton            "Help">
 
 <!ENTITY  unknown               "Unknown">
 <!ENTITY  closeWindow           "w">

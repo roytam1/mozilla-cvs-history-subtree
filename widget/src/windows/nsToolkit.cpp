@@ -56,6 +56,7 @@ static PRUintn gToolkitTLSIndex = 0;
 HINSTANCE nsToolkit::mDllInstance = 0;
 PRBool    nsToolkit::mUseImeApiW  = PR_FALSE;
 PRBool    nsToolkit::mW2KXP_CP936 = PR_FALSE;
+PRBool    nsToolkit::mIsWinXP     = PR_FALSE;
 
 #ifdef MOZ_AIMM
 IActiveIMMApp* nsToolkit::gAIMMApp   = NULL;
@@ -248,6 +249,7 @@ nsToolkit::Startup(HMODULE hModule)
     if (nsToolkit::mUseImeApiW)  {
       // XXX Hack for stopping the crash (125573)
       if (osversion.dwMajorVersion == 5 && (osversion.dwMinorVersion == 0 || osversion.dwMinorVersion == 1))  { 
+        nsToolkit::mIsWinXP = (osversion.dwMinorVersion == 1);
         // "Microsoft Windows 2000 " or "Microsoft Windows XP "
         if (936 == ::GetACP())  {  // Chinese (PRC, Singapore)
           nsToolkit::mUseImeApiW = PR_FALSE;
@@ -368,6 +370,21 @@ LRESULT CALLBACK nsToolkit::WindowProc(HWND hWnd, UINT msg, WPARAM wParam,
             MethodInfo *info = (MethodInfo *)lParam;
             return info->Invoke();
         }
+
+        case WM_SYSCOLORCHANGE:
+        {
+          // WM_SYSCOLORCHANGE messages are only dispatched to top
+          // level windows but NS_SYSCOLORCHANGE messages must be dispatched
+          // to all windows including child windows. We dispatch these messages 
+          // from the nsToolkit because if we are running embedded we may not 
+          // have a top-level nsIWidget window.
+          
+          // On WIN32 all windows are automatically invalidated after the 
+          // WM_SYSCOLORCHANGE is dispatched so the window is drawn using
+          // the current system colors.
+          nsWindow::GlobalMsgWindowProc(hWnd, msg, wParam, lParam);
+        }
+
     }
 
 #ifdef MOZ_AIMM
