@@ -122,14 +122,18 @@
 
 // Print Options
 #include "nsIPrintSettings.h"
+#include "nsIPrintSettingsService.h"
 #include "nsIPrintOptions.h"
 #include "nsGfxCIID.h"
 #include "nsIServiceManager.h"
 #include "nsHTMLAtoms.h" // XXX until atoms get factored into nsLayoutAtoms
 #include "nsISimpleEnumerator.h"
 #include "nsISupportsPrimitives.h"
-static NS_DEFINE_CID(kPrintOptionsCID, NS_PRINTOPTIONS_CID);
 static NS_DEFINE_IID(kPrinterEnumeratorCID, NS_PRINTER_ENUMERATOR_CID);
+
+// PrintOptions is now implemented by PrintSettingsService
+static const char  sPrintOptionsContractID[] = "@mozilla.org/gfx/printsettings-service;1";
+static const char  kPrintOptionsCID[]        = "@mozilla.org/gfx/printsettings-service;1";
 
 // Printing Events
 #include "nsIEventQueue.h"
@@ -6037,28 +6041,31 @@ DocumentViewerImpl::PrintPreview(nsIPrintSettings* aPrintSettings,
     mDeviceContext->GetCanonicalPixelScale(mPrt->mOrigDCScale);
   }
 
-  // You have to have both a PrintOptions and a PrintSetting to call CheckForPrinters. 
-  // The user can pass in a null PrintSettings, 
-  // but you can only create one if you have a PrintOptions.
-  // So we we might as check to if we have a PrintOptions first, 
-  // because we can't do anything below without it
-  // then inside we check to se if the printSettings is null to know if we need to create on.  
+  // You have to have both a PrintOptions and a PrintSetting to call
+  // CheckForPrinters.
+  // The user can pass in a null PrintSettings, but you can only
+  // create one if you have a PrintOptions.  So we we might as check
+  // to if we have a PrintOptions first, because we can't do anything
+  // below without it then inside we check to se if the printSettings
+  // is null to know if we need to create on.
+  // if they don't pass in a PrintSettings, then get the Global PS
   mPrt->mPrintSettings = aPrintSettings;
-  mPrt->mPrintOptions  = do_GetService(kPrintOptionsCID, &rv);
-  if (NS_SUCCEEDED(rv) && mPrt->mPrintOptions) {
-    // if they don't pass in a PrintSettings, then make one
-    if (mPrt->mPrintSettings == nsnull) {
-      mPrt->mPrintOptions->CreatePrintSettings(getter_AddRefs(mPrt->mPrintSettings));
-    }
-    NS_ASSERTION(mPrt->mPrintSettings, "You can't PrintPreview without a PrintSettings!");
+  if (!mPrt->mPrintSettings) {
+    GetGlobalPrintSettings(getter_AddRefs(mPrt->mPrintSettings));
+  }
 
+  mPrt->mPrintOptions = do_GetService(sPrintOptionsContractID, &rv);
+  if (NS_SUCCEEDED(rv) && mPrt->mPrintOptions && mPrt->mPrintSettings) {
     // Get the default printer name and set it into the PrintSettings
-    if (NS_FAILED(CheckForPrinters(mPrt->mPrintOptions, mPrt->mPrintSettings, NS_ERROR_GFX_PRINTER_PRINTPREVIEW, PR_FALSE))) {
-      delete mPrt;
-      mPrt = nsnull;
-      PRINT_DEBUG_MSG1("NS_ERROR_FAILURE - CheckForPrinters failed");
-      return NS_ERROR_FAILURE;
-    }
+    rv = CheckForPrinters(mPrt->mPrintOptions, mPrt->mPrintSettings, NS_ERROR_GFX_PRINTER_NO_PRINTER_AVAILABLE, PR_TRUE);
+  } else {
+    NS_ASSERTION(mPrt->mPrintSettings, "You can't Print without a PrintSettings!");
+    rv = NS_ERROR_FAILURE;
+  }
+  if (NS_FAILED(rv)) {
+    delete mPrt;
+    mPrt = nsnull;
+    return NS_ERROR_FAILURE;
   }
   
   // Let's print ...
@@ -6158,7 +6165,7 @@ DocumentViewerImpl::PrintPreview(nsIPrintSettings* aPrintSettings,
   if (factory) {
     nsCOMPtr<nsIDeviceContextSpec> devspec;
     nsCOMPtr<nsIDeviceContext> dx;
-    nsresult rv = factory->CreateDeviceContextSpec(mWindow, aPrintSettings, *getter_AddRefs(devspec), PR_TRUE);
+    nsresult rv = factory->CreateDeviceContextSpec(mWindow, mPrt->mPrintSettings, *getter_AddRefs(devspec), PR_TRUE);
     if (NS_SUCCEEDED(rv)) {
       rv = mDeviceContext->GetDeviceContextFor(devspec, *getter_AddRefs(ppDC)); 
       if (NS_SUCCEEDED(rv)) {
@@ -6422,24 +6429,31 @@ DocumentViewerImpl::Print(nsIPrintSettings*       aPrintSettings,
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  // if they don't pass in a PrintSettings, then make one
-  // it will have all the default values
+  // You have to have both a PrintOptions and a PrintSetting to call
+  // CheckForPrinters.
+  // The user can pass in a null PrintSettings, but you can only
+  // create one if you have a PrintOptions.  So we we might as check
+  // to if we have a PrintOptions first, because we can't do anything
+  // below without it then inside we check to se if the printSettings
+  // is null to know if we need to create on.
+  // if they don't pass in a PrintSettings, then get the Global PS
   mPrt->mPrintSettings = aPrintSettings;
-  mPrt->mPrintOptions  = do_GetService(kPrintOptionsCID, &rv);
-  if (NS_SUCCEEDED(rv) && mPrt->mPrintOptions) {
-    // if they don't pass in a PrintSettings, then make one
-    if (mPrt->mPrintSettings == nsnull) {
-      mPrt->mPrintOptions->CreatePrintSettings(getter_AddRefs(mPrt->mPrintSettings));
-    }
-    NS_ASSERTION(mPrt->mPrintSettings, "You can't PrintPreview without a PrintSettings!");
+  if (!mPrt->mPrintSettings) {
+    GetGlobalPrintSettings(getter_AddRefs(mPrt->mPrintSettings));
+  }
 
+  mPrt->mPrintOptions = do_GetService(sPrintOptionsContractID, &rv);
+  if (NS_SUCCEEDED(rv) && mPrt->mPrintOptions && mPrt->mPrintSettings) {
     // Get the default printer name and set it into the PrintSettings
-    if (NS_FAILED(CheckForPrinters(mPrt->mPrintOptions, mPrt->mPrintSettings, NS_ERROR_GFX_PRINTER_NO_PRINTER_AVAILABLE, PR_TRUE))) {
-      delete mPrt;
-      mPrt = nsnull;
-      PRINT_DEBUG_MSG1("NS_ERROR_FAILURE - CheckForPrinters failed");
-      return NS_ERROR_FAILURE;
-    }
+    rv = CheckForPrinters(mPrt->mPrintOptions, mPrt->mPrintSettings, NS_ERROR_GFX_PRINTER_NO_PRINTER_AVAILABLE, PR_TRUE);
+  } else {
+    NS_ASSERTION(mPrt->mPrintSettings, "You can't Print without a PrintSettings!");
+    rv = NS_ERROR_FAILURE;
+  }
+  if (NS_FAILED(rv)) {
+    delete mPrt;
+    mPrt = nsnull;
+    return NS_ERROR_FAILURE;
   }
   mPrt->mPrintSettings->SetIsCancelled(PR_FALSE);
   mPrt->mPrintSettings->GetShrinkToFit(&mPrt->mShrinkToFit);
@@ -6578,7 +6592,7 @@ DocumentViewerImpl::Print(nsIPrintSettings*       aPrintSettings,
         // NS_ERROR_NOT_IMPLEMENTED indicates they want default behavior
         // Any other error code means we must bail out
         //
-        rv = printPromptService->ShowPrintDialog(domWin, this, aPrintSettings);
+        rv = printPromptService->ShowPrintDialog(domWin, this, mPrt->mPrintSettings);
         if (rv == NS_ERROR_NOT_IMPLEMENTED) {
           // This means the Dialog service was there, 
           // but they choose not to implement this dialog and 
@@ -7834,57 +7848,6 @@ DocumentViewerImpl::EnumerateDocumentNames(PRUint32* aCount,
 
 }
 
-/* readonly attribute nsIPrintSettings newPrintSettings; */
-NS_IMETHODIMP 
-DocumentViewerImpl::GetNewPrintSettings(nsIPrintSettings * *aNewPrintSettings)
-{
-  NS_ENSURE_ARG_POINTER(aNewPrintSettings);
-
-  nsresult rv = NS_ERROR_FAILURE;
-  nsCOMPtr<nsIPrintOptions> printService = do_GetService(kPrintOptionsCID, &rv);
-  if (NS_SUCCEEDED(rv)) {
-    rv = printService->CreatePrintSettings(aNewPrintSettings);
-    InitPrintSettingsFromPrinter(nsnull, *aNewPrintSettings);
-  }
-  return rv;
-}
-
-/* readonly attribute wstring defaultPrinterName; */
-NS_IMETHODIMP 
-DocumentViewerImpl::GetDefaultPrinterName(PRUnichar * *aDefaultPrinterName)
-{
-  NS_ENSURE_ARG_POINTER(aDefaultPrinterName);
-
-  nsresult rv;
-  nsCOMPtr<nsIPrinterEnumerator> prtEnum = do_GetService(kPrinterEnumeratorCID, &rv);
-  if (prtEnum) {
-    prtEnum->GetDefaultPrinterName(aDefaultPrinterName);
-  }
-  return rv;
-}
-
-/* void initPrintSettingsFromPrinter (in wstring aPrinterName, in nsIPrintSettings aPrintSettings); */
-NS_IMETHODIMP 
-DocumentViewerImpl::InitPrintSettingsFromPrinter(const PRUnichar *aPrinterName, nsIPrintSettings *aPrintSettings)
-{
-  NS_ENSURE_ARG_POINTER(aPrintSettings);
-
-  PRUnichar* printerName = nsnull;
-  if (!aPrinterName) {
-    GetDefaultPrinterName(&printerName);
-    if (!printerName || !*printerName) return NS_OK;
-  }
-  nsresult rv;
-  nsCOMPtr<nsIPrinterEnumerator> prtEnum = do_GetService(kPrinterEnumeratorCID, &rv);
-  if (prtEnum) {
-    prtEnum->InitPrintSettingsFromPrinter(aPrinterName?aPrinterName:printerName, aPrintSettings);
-  }
-  if (printerName) {
-    nsMemory::Free(printerName);
-  }
-  return NS_OK;
-}
-
 /* readonly attribute nsIPrintSettings globalPrintSettings; */
 NS_IMETHODIMP 
 DocumentViewerImpl::GetGlobalPrintSettings(nsIPrintSettings * *aGlobalPrintSettings)
@@ -7892,9 +7855,9 @@ DocumentViewerImpl::GetGlobalPrintSettings(nsIPrintSettings * *aGlobalPrintSetti
   NS_ENSURE_ARG_POINTER(aGlobalPrintSettings);
 
   nsresult rv = NS_ERROR_FAILURE;
-  nsCOMPtr<nsIPrintOptions> printService = do_GetService(kPrintOptionsCID, &rv);
+  nsCOMPtr<nsIPrintSettingsService> printSettingsService = do_GetService(sPrintOptionsContractID, &rv);
   if (NS_SUCCEEDED(rv)) {
-    rv = printService->GetGlobalPrintSettings(aGlobalPrintSettings);
+    rv = printSettingsService->GetGlobalPrintSettings(aGlobalPrintSettings);
   }
   return rv;
 }
@@ -7935,30 +7898,6 @@ DocumentViewerImpl::Cancel()
     return mPrt->mPrintSettings->SetIsCancelled(PR_TRUE);
   }
   return NS_ERROR_FAILURE;
-}
-
-/* void initPrintSettingsFromPrefs (in nsIPrintSettings aPrintSettings, in boolean aUsePrinterNamePrefix, in unsigned long aFlags); */
-NS_IMETHODIMP 
-DocumentViewerImpl::InitPrintSettingsFromPrefs(nsIPrintSettings *aPrintSettings, PRBool aUsePrinterNamePrefix, PRUint32 aFlags)
-{
-  nsresult rv;
-  nsCOMPtr<nsIPrintOptions> printService = do_GetService(kPrintOptionsCID, &rv);
-  if (NS_SUCCEEDED(rv) && printService) {
-    return printService->InitPrintSettingsFromPrefs(aPrintSettings, aUsePrinterNamePrefix, aFlags);
-  }
-  return NS_OK;
-}
-
-/* void savePrintSettingsToPrefs (in nsIPrintSettings aPrintSettings, in boolean aUsePrinterNamePrefix, in unsigned long aFlags); */
-NS_IMETHODIMP 
-DocumentViewerImpl::SavePrintSettingsToPrefs(nsIPrintSettings *aPrintSettings, PRBool aUsePrinterNamePrefix, PRUint32 aFlags)
-{
-  nsresult rv;
-  nsCOMPtr<nsIPrintOptions> printService = do_GetService(kPrintOptionsCID, &rv);
-  if (NS_SUCCEEDED(rv) && printService) {
-    return printService->SavePrintSettingsToPrefs(aPrintSettings, aUsePrinterNamePrefix, aFlags);
-  }
-  return NS_OK;
 }
 
 /** ---------------------------------------------------

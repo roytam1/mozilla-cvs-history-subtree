@@ -80,7 +80,8 @@ static NS_DEFINE_CID(kLocaleServiceCID, NS_LOCALESERVICE_CID);
 #include "nsIPrintOptions.h"
 #include "nsGfxCIID.h"
 #include "nsIServiceManager.h"
-static NS_DEFINE_CID(kPrintOptionsCID, NS_PRINTOPTIONS_CID);
+static const char sPrintOptionsContractID[] = "@mozilla.org/gfx/printsettings-service;1";
+
 //
 static NS_DEFINE_CID(kRegionCID, NS_REGION_CID);
 
@@ -169,7 +170,7 @@ nsSimplePageSequenceFrame::nsSimplePageSequenceFrame() :
   // XXX this code and the object data member "mIsPrintingSelection" is only needed
   // for the hack for printing selection where we make the page the max size
   nsresult rv;
-  mPageData->mPrintOptions = do_GetService(kPrintOptionsCID, &rv);
+  mPageData->mPrintOptions = do_GetService(sPrintOptionsContractID, &rv);
   if (NS_SUCCEEDED(rv) && mPageData->mPrintOptions) {
     // now get the default font form the print options
     mPageData->mPrintOptions->GetDefaultFont(*mPageData->mHeadFootFont);
