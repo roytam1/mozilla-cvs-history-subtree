@@ -768,7 +768,7 @@ statusbarpanel#statusbar-display {
 
 #livemark-button {
   list-style-image: none;
-  width: 20px;
+  width: 32px;
 }
 
 #livemark-button[livemarks] {
