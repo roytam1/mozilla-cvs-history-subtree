@@ -18,11 +18,10 @@
 
 #include "nsWinReg.h"
 #include "nsWinRegItem.h"
+
 #ifdef WIN32
-//#include <windows.h> /* is this needed? */
+#include <windows.h> /* is this needed? */
 #endif
-#include "xp.h"
-//#include "xp_str.h"
 
 /* Public Methods */
 

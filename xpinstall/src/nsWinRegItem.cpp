@@ -17,9 +17,11 @@
  */
 
 #include "nsWinRegItem.h"
-#include "xp.h"
-//#include "xp_str.h"
-//#include <windows.h>
+#include "nspr.h"
+
+#ifdef WIN32
+#include <windows.h> /* is this needed? */
+#endif
 
 /* Public Methods */
 
@@ -158,6 +160,7 @@ nsString* nsWinRegItem::keystr(PRInt32 root, nsString* subkey, nsString* name)
 {
 	nsString* rootstr;
 	nsString* finalstr;
+  char*     istr;
 
 	switch(root)
 	{
@@ -174,9 +177,11 @@ nsString* nsWinRegItem::keystr(PRInt32 root, nsString* subkey, nsString* name)
 		rootstr = new nsString("\\HKEY_USERS\\");
 		break;
 	default:
+    istr = itoa(root);
     rootstr = new nsString("\\#");
-    rootstr->Append(itoa(root));
+    rootstr->Append(istr);
     rootstr->Append("\\");
+    PR_DELETE(istr);
 		break;
 	}
 
@@ -201,18 +206,18 @@ char* nsWinRegItem::itoa(PRInt32 n)
 		n = -n;
 	i = 0;
 	
-	s = (char*)XP_ALLOC(sizeof(char));
+	s = (char*)PR_CALLOC(sizeof(char));
 
 	do
 		{
-		s = (char*)XP_REALLOC(s, (i+1)*sizeof(char));
+		s = (char*)PR_REALLOC(s, (i+1)*sizeof(char));
 		s[i++] = n%10 + '0';
 		s[i] = '\0';
 		} while ((n/=10) > 0);
 		
 	if(sign < 0)
 	{
-		s = (char*)XP_REALLOC(s, (i+1)*sizeof(char));
+		s = (char*)PR_REALLOC(s, (i+1)*sizeof(char));
 		s[i++] = '-';
 	}
 	s[i]  = '\0';
