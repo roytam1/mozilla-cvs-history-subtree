@@ -48,13 +48,19 @@ protected:
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsStaticComponentLoader, nsIComponentLoader);
 
+NSGetStaticModuleInfoFunc NSGetStaticModuleInfo;
+
 NS_IMETHODIMP
 nsStaticComponentLoader::GetModuleInfo()
 {
     if (!mInfo) {
+        NS_PRECONDITION(NSGetStaticModuleInfo, "NSGetStaticModuleInfo must initialized");
+        if (! NSGetStaticModuleInfo)
+            return NS_ERROR_NOT_INITIALIZED;
+
         nsStaticModuleInfo *info;
         nsresult rv;
-        if (NS_FAILED(rv = NSGetStaticModuleInfo(&info, &mCount)))
+        if (NS_FAILED(rv = (*NSGetStaticModuleInfo)(&info, &mCount)))
             return rv;
         mInfo = new StaticModuleInfo[mCount];
         if (!mInfo)

@@ -24,6 +24,8 @@ struct nsStaticModuleInfo {
 
 // Must be implemented by some part of the app, if we're building the
 // static component loader.
-extern "C" nsresult
-NSGetStaticModuleInfo(nsStaticModuleInfo **info, PRUint32 *count);
+extern "C" {
+typedef nsresult (*NSGetStaticModuleInfoFunc)(nsStaticModuleInfo **info, PRUint32 *count);
+extern NSGetStaticModuleInfoFunc NSGetStaticModuleInfo;
+};
      
