@@ -46,7 +46,7 @@
 #include <gtk/gtkbindings.h>
 #include <gdk/gdkkeysyms.h>
 
-static nsINativeKeyBindings::DoCommandCallback gCurrentCallback;
+static nsINativeKeyBindings::doCommandCallback gCurrentCallback;
 static void *gCurrentCallbackData;
 
 // Common GtkEntry and GtkTextView signals
@@ -247,14 +247,14 @@ NS_IMPL_ISUPPORTS1(nsNativeKeyBindings, nsINativeKeyBindings)
 
 PRBool
 nsNativeKeyBindings::KeyDown(const nsNativeKeyEvent& aEvent,
-                             DoCommandCallback aCallback, void *aCallbackData)
+                             doCommandCallback aCallback, void *aCallbackData)
 {
   return PR_FALSE;
 }
 
 PRBool
 nsNativeKeyBindings::KeyPress(const nsNativeKeyEvent& aEvent,
-                              DoCommandCallback aCallback, void *aCallbackData)
+                              doCommandCallback aCallback, void *aCallbackData)
 {
   PRUint32 keyCode;
 
@@ -290,7 +290,7 @@ nsNativeKeyBindings::KeyPress(const nsNativeKeyEvent& aEvent,
 
 PRBool
 nsNativeKeyBindings::KeyUp(const nsNativeKeyEvent& aEvent,
-                           DoCommandCallback aCallback, void *aCallbackData)
+                           doCommandCallback aCallback, void *aCallbackData)
 {
   return PR_FALSE;
 }

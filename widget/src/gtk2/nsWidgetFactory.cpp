@@ -50,6 +50,7 @@
 #include "nsDragService.h"
 #include "nsSound.h"
 #include "nsBidiKeyboard.h"
+#include "nsNativeKeyBindings.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsWindow)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsChildWindow)
@@ -63,6 +64,50 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsHTMLFormatConverter)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsClipboard, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDragService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSound)
+
+static NS_IMETHODIMP
+nsNativeKeyBindingsConstructor(nsISupports *aOuter, REFNSIID aIID,
+                               void **aResult,
+                               NativeKeyBindingsType aKeyBindingsType)
+{
+    nsresult rv;
+
+    nsNativeKeyBindings *inst;
+
+    *aResult = NULL;
+    if (NULL != aOuter) {
+        rv = NS_ERROR_NO_AGGREGATION;
+        return rv;
+    }
+
+    NS_NEWXPCOM(inst, nsNativeKeyBindings);
+    if (NULL == inst) {
+        rv = NS_ERROR_OUT_OF_MEMORY;
+        return rv;
+    }
+    NS_ADDREF(inst);
+    inst->Init(aKeyBindingsType);
+    rv = inst->QueryInterface(aIID, aResult);
+    NS_RELEASE(inst);
+
+    return rv;
+}
+
+static NS_IMETHODIMP
+nsNativeKeyBindingsInputConstructor(nsISupports *aOuter, REFNSIID aIID,
+                                    void **aResult)
+{
+    return nsNativeKeyBindingsConstructor(aOuter, aIID, aResult,
+                                          eKeyBindings_Input);
+}
+
+static NS_IMETHODIMP
+nsNativeKeyBindingsTextAreaConstructor(nsISupports *aOuter, REFNSIID aIID,
+                                       void **aResult)
+{
+    return nsNativeKeyBindingsConstructor(aOuter, aIID, aResult,
+                                          eKeyBindings_TextArea);
+}
 
 static const nsModuleComponentInfo components[] =
 {
@@ -114,6 +159,14 @@ static const nsModuleComponentInfo components[] =
     NS_BIDIKEYBOARD_CID,
     "@mozilla.org/widget/bidikeyboard;1",
     nsBidiKeyboardConstructor },
+  { "Input Native Keybindings",
+    NS_NATIVEKEYBINDINGSINPUT_CID,
+    NS_NATIVEKEYBINDINGSINPUT_CONTRACTID,
+    nsNativeKeyBindingsInputConstructor },
+  { "TextArea Native Keybindings",
+    NS_NATIVEKEYBINDINGSTEXTAREA_CID,
+    NS_NATIVEKEYBINDINGSTEXTAREA_CONTRACTID,
+    nsNativeKeyBindingsTextAreaConstructor }
 };
 
 PR_STATIC_CALLBACK(void)
