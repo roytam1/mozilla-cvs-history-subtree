@@ -185,6 +185,8 @@ interface nsIRDFService : nsISupports {
     nsIRDFResource GetResource(in string aURI);
     nsIRDFResource GetUnicodeResource(in wstring aURI);
     nsIRDFLiteral  GetLiteral(in wstring aValue);
+    nsIRDFDate     GetDateLiteral(in time aValue);
+    nsIRDFInt      GetIntLiteral(in long aValue);
 
     void RegisterResource(in nsIRDFResource aResource, in boolean aReplace);
     void UnregisterResource(in nsIRDFResource aResource);

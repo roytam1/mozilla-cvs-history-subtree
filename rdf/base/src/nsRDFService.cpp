@@ -82,11 +82,10 @@ public:
 
     // nsIRDFService
     NS_IMETHOD GetResource(const char* uri, nsIRDFResource** resource);
-    NS_IMETHOD FindResource(const char* uri, nsIRDFResource** resource, PRBool *found);
     NS_IMETHOD GetUnicodeResource(const PRUnichar* uri, nsIRDFResource** resource);
     NS_IMETHOD GetLiteral(const PRUnichar* value, nsIRDFLiteral** literal);
-    NS_IMETHOD GetDateLiteral(const PRTime value, nsIRDFDate** date) ;
-    NS_IMETHOD GetIntLiteral(const int32 value, nsIRDFInt** intLiteral);
+    NS_IMETHOD GetDateLiteral(PRTime value, nsIRDFDate** date) ;
+    NS_IMETHOD GetIntLiteral(PRInt32 value, nsIRDFInt** intLiteral);
     NS_IMETHOD RegisterResource(nsIRDFResource* aResource, PRBool replace = PR_FALSE);
     NS_IMETHOD UnregisterResource(nsIRDFResource* aResource);
     NS_IMETHOD RegisterDataSource(nsIRDFDataSource* dataSource, PRBool replace = PR_FALSE);
@@ -580,21 +579,6 @@ ServiceImpl::GetResource(const char* aURI, nsIRDFResource** aResource)
 }
 
 NS_IMETHODIMP
-ServiceImpl::FindResource(const char* uri, nsIRDFResource** resource, PRBool *found)
-{
-    nsIRDFResource* result =
-        NS_STATIC_CAST(nsIRDFResource*, PL_HashTableLookup(mResources, uri));
-
-    if (result) {
-        *resource = result;
-        *found = 1;
-    } else {
-        *found = 0;
-    }
-    return NS_OK;
-}
-
-NS_IMETHODIMP
 ServiceImpl::GetUnicodeResource(const PRUnichar* aURI, nsIRDFResource** aResource)
 {
     nsString uriStr(aURI);
@@ -647,7 +631,7 @@ ServiceImpl::GetLiteral(const PRUnichar* aValue, nsIRDFLiteral** aLiteral)
 }
 
 NS_IMETHODIMP
-ServiceImpl::GetDateLiteral(const PRTime time, nsIRDFDate** literal)
+ServiceImpl::GetDateLiteral(PRTime time, nsIRDFDate** literal)
 {
     // XXX how do we cache these? should they live in their own hashtable?
     DateImpl* result = new DateImpl(time);
@@ -660,7 +644,7 @@ ServiceImpl::GetDateLiteral(const PRTime time, nsIRDFDate** literal)
 }
 
 NS_IMETHODIMP
-ServiceImpl::GetIntLiteral(const int32 value, nsIRDFInt** literal)
+ServiceImpl::GetIntLiteral(PRInt32 value, nsIRDFInt** literal)
 {
     // XXX how do we cache these? should they live in their own hashtable?
     IntImpl* result = new IntImpl(value);

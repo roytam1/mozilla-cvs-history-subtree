@@ -1869,6 +1869,48 @@ nsIRDFService_GetLiteral(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, 
   return JS_TRUE;
 }
 
+/* nsIRDFDate GetDateLiteral (in time aValue); */
+static JSBool
+nsIRDFService_GetDateLiteral(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+  nsIRDFService *priv = (nsIRDFService *)JS_GetPrivate(cx, obj);
+  if (!priv)
+    return JS_TRUE;
+  PRTime aValue;
+  if (!JS_ConvertArguments(cx, argc, argv, "o", &aValue))
+    return JS_FALSE;
+  nsIRDFDate * retval;
+  nsresult rv = priv->GetDateLiteral(aValue, &retval);
+  if (NS_FAILED(rv)) {
+    JS_ReportError(cx, XXXnsresult2string(rv));
+    return JS_FALSE;
+  }
+  *rval = OBJECT_TO_JSVAL(nsIRDFDate::GetJSObject(cx, retval));
+  NS_RELEASE(retval);
+  return JS_TRUE;
+}
+
+/* nsIRDFInt GetIntLiteral (in long aValue); */
+static JSBool
+nsIRDFService_GetIntLiteral(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+  nsIRDFService *priv = (nsIRDFService *)JS_GetPrivate(cx, obj);
+  if (!priv)
+    return JS_TRUE;
+  PRInt32 aValue;
+  if (!JS_ConvertArguments(cx, argc, argv, "i", &aValue))
+    return JS_FALSE;
+  nsIRDFInt * retval;
+  nsresult rv = priv->GetIntLiteral(aValue, &retval);
+  if (NS_FAILED(rv)) {
+    JS_ReportError(cx, XXXnsresult2string(rv));
+    return JS_FALSE;
+  }
+  *rval = OBJECT_TO_JSVAL(nsIRDFInt::GetJSObject(cx, retval));
+  NS_RELEASE(retval);
+  return JS_TRUE;
+}
+
 /* void RegisterResource (in nsIRDFResource aResource, in boolean aReplace); */
 static JSBool
 nsIRDFService_RegisterResource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
@@ -1968,6 +2010,8 @@ static JSFunctionSpec nsIRDFService_funcs[] = {
   {"GetResource", nsIRDFService_GetResource, 1},
   {"GetUnicodeResource", nsIRDFService_GetUnicodeResource, 1},
   {"GetLiteral", nsIRDFService_GetLiteral, 1},
+  {"GetDateLiteral", nsIRDFService_GetDateLiteral, 1},
+  {"GetIntLiteral", nsIRDFService_GetIntLiteral, 1},
   {"RegisterResource", nsIRDFService_RegisterResource, 2},
   {"UnregisterResource", nsIRDFService_UnregisterResource, 1},
   {"RegisterDataSource", nsIRDFService_RegisterDataSource, 2},

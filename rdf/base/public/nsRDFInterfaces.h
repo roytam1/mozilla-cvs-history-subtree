@@ -451,6 +451,12 @@ class nsIRDFService : public nsISupports {
   /* nsIRDFLiteral GetLiteral (in wstring aValue); */
   NS_IMETHOD GetLiteral(const PRUnichar *aValue, nsIRDFLiteral **_retval) = 0;
 
+  /* nsIRDFDate GetDateLiteral (in time aValue); */
+  NS_IMETHOD GetDateLiteral(PRTime aValue, nsIRDFDate **_retval) = 0;
+
+  /* nsIRDFInt GetIntLiteral (in long aValue); */
+  NS_IMETHOD GetIntLiteral(PRInt32 aValue, nsIRDFInt **_retval) = 0;
+
   /* void RegisterResource (in nsIRDFResource aResource, in boolean aReplace); */
   NS_IMETHOD RegisterResource(nsIRDFResource *aResource, PRBool aReplace) = 0;
 
