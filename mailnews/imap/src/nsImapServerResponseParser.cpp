@@ -722,8 +722,10 @@ void nsImapServerResponseParser::PostProcessEndOfLine()
 	// also check and be sure that there was a UID in the current response
 	if (fCurrentLineContainedFlagInfo && CurrentResponseUID())
 	{
+          nsXPIDLCString keywords;
 		fCurrentLineContainedFlagInfo = PR_FALSE;
-		fServerConnection.NotifyMessageFlags(fSavedFlagInfo, CurrentResponseUID());
+          fFlagState->GetCustomFlags(CurrentResponseUID(), getter_Copies(keywords));
+	  fServerConnection.NotifyMessageFlags(fSavedFlagInfo, CurrentResponseUID(), keywords.get());
 	}
 }
 
