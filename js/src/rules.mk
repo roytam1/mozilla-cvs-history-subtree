@@ -50,9 +50,9 @@ $(LIBRARY): $(LIB_OBJS)
 else
 ifdef USE_MSVC
 $(SHARED_LIBRARY): $(LIB_OBJS)
-	link.exe fdlibm/$(OBJDIR)/fdlibm.lib $(LIB_LINK_FLAGS) /base:0x61000000 $(OTHER_LIBS) \
+	link.exe $(LIB_LINK_FLAGS) /base:0x61000000 $(OTHER_LIBS) \
 	    /out:"$@" /pdb:"$(OBJDIR)/$(@F:.dll=.pdb)" \
-	    /implib:"$(OBJDIR)/$(@F:.dll=.lib)" $?
+	    /implib:"$(OBJDIR)/$(@F:.dll=.lib)" $^
 else
 $(LIBRARY): $(LIB_OBJS)
 	$(AR) rv $@ $?

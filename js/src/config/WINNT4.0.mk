@@ -45,10 +45,6 @@ EXE_LINK_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
  /subsystem:console /incremental:yes /debug\
  /machine:I386
 
-ifdef JS_THREADSAFE
-LIB_LINK_FLAGS += $(DIST)/lib/libnspr21.lib
-endif
-
 CAFEDIR = t:/cafe
 JCLASSPATH = $(CAFEDIR)/Java/Lib/classes.zip
 JAVAC = $(CAFEDIR)/Bin/sj.exe
