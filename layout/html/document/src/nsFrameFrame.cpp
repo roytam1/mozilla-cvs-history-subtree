@@ -827,7 +827,7 @@ nsHTMLFrameInnerFrame::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 NS_IMETHODIMP
 nsHTMLFrameInnerFrame::OnStateChange(nsIWebProgress *aWebProgress,
                                      nsIRequest *aRequest,
-                                     PRInt32 aStateFlags, PRUint32 aStatus)
+                                     PRUint32 aStateFlags, nsresult aStatus)
 {
   if (!((~aStateFlags) & (nsIWebProgressListener::STATE_IS_DOCUMENT |
                           nsIWebProgressListener::STATE_TRANSFERRING))) {
@@ -873,7 +873,7 @@ nsHTMLFrameInnerFrame::OnStatusChange(nsIWebProgress *aWebProgress,
 
 NS_IMETHODIMP
 nsHTMLFrameInnerFrame::OnSecurityChange(nsIWebProgress *aWebProgress,
-                                        nsIRequest *aRequest, PRInt32 state)
+                                        nsIRequest *aRequest, PRUint32 state)
 {
   return NS_OK;
 }
@@ -1226,7 +1226,7 @@ nsHTMLFrameInnerFrame::DoLoadURL(nsIPresContext* aPresContext)
   nsCOMPtr<nsIWebProgress> webProgress(do_GetInterface(mSubShell));
 
   if (webProgress) {
-    webProgress->AddProgressListener(this);
+    webProgress->AddProgressListener(this, nsIWebProgress::NOTIFY_STATE_DOCUMENT);
   }
 
   rv = docShell->LoadURI(uri, loadInfo, nsIWebNavigation::LOAD_FLAGS_NONE, PR_FALSE);

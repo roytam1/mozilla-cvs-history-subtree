@@ -789,7 +789,7 @@ nsHTMLFormElement::DoSubmit(nsIPresContext* aPresContext, nsEvent* aEvent)
   if (docShell) {
     nsCOMPtr<nsIWebProgress> webProgress = do_GetInterface(docShell);
     NS_ASSERTION(webProgress, "nsIDocShell not converted to nsIWebProgress!");
-    rv = webProgress->AddProgressListener(this);
+    rv = webProgress->AddProgressListener(this, nsIWebProgress::NOTIFY_STATE_ALL);
     NS_ENSURE_SUBMIT_SUCCESS(rv);
   }
   else {
@@ -1200,7 +1200,7 @@ nsHTMLFormElement::GetLength(PRInt32* aLength)
 NS_IMETHODIMP
 nsHTMLFormElement::OnStateChange(nsIWebProgress* aWebProgress,
                                  nsIRequest* aRequest,
-                                 PRInt32 aStateFlags,
+                                 PRUint32 aStateFlags,
                                  PRUint32 aStatus)
 {
   // If STATE_STOP is never fired for any reason (redirect?  Failed state
@@ -1225,6 +1225,7 @@ nsHTMLFormElement::OnProgressChange(nsIWebProgress* aWebProgress,
                                     PRInt32 aCurTotalProgress,
                                     PRInt32 aMaxTotalProgress)
 {
+  NS_NOTREACHED("notification excluded in AddProgressListener(...)");
   return NS_OK;
 }
 
@@ -1233,6 +1234,7 @@ nsHTMLFormElement::OnLocationChange(nsIWebProgress* aWebProgress,
                                     nsIRequest* aRequest,
                                     nsIURI* location)
 {
+  NS_NOTREACHED("notification excluded in AddProgressListener(...)");
   return NS_OK;
 }
 
@@ -1242,14 +1244,16 @@ nsHTMLFormElement::OnStatusChange(nsIWebProgress* aWebProgress,
                                   nsresult aStatus,
                                   const PRUnichar* aMessage)
 {
+  NS_NOTREACHED("notification excluded in AddProgressListener(...)");
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsHTMLFormElement::OnSecurityChange(nsIWebProgress* aWebProgress,
                                     nsIRequest* aRequest,
-                                    PRInt32 state)
+                                    PRUint32 state)
 {
+  NS_NOTREACHED("notification excluded in AddProgressListener(...)");
   return NS_OK;
 }
 

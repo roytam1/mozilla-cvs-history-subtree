@@ -651,7 +651,10 @@ nsEditorShell::SetContentWindow(nsIDOMWindowInternal* aWin)
   // Attach a WebProgress listener to the new docShell
   webProgress = do_GetInterface(docShell, &rv);
   if (webProgress) {
-    rv = webProgress->AddProgressListener(this);
+    rv = webProgress->AddProgressListener(this,
+                                          (nsIWebProgress::NOTIFY_STATE_NETWORK  | 
+                                           nsIWebProgress::NOTIFY_STATE_DOCUMENT |
+                                           nsIWebProgress::NOTIFY_LOCATION));
   }
   if (NS_FAILED(rv)) return rv;
 
@@ -4389,7 +4392,7 @@ nsEditorShell::OnProgressChange(nsIWebProgress *aProgress,
 NS_IMETHODIMP
 nsEditorShell::OnStateChange(nsIWebProgress *aProgress,
                              nsIRequest *aRequest,
-                             PRInt32 aStateFlags,
+                             PRUint32 aStateFlags,
                              nsresult aStatus)
 {
   NS_ENSURE_ARG_POINTER(aProgress);
@@ -4501,14 +4504,16 @@ nsEditorShell::OnStatusChange(nsIWebProgress* aWebProgress,
                               nsresult aStatus,
                               const PRUnichar* aMessage)
 {
+  NS_NOTREACHED("notification excluded in AddProgressListener(...)");
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsEditorShell::OnSecurityChange(nsIWebProgress *aWebProgress,
                                 nsIRequest *aRequest,
-                                PRInt32 state)
+                                PRUint32 state)
 {
+  NS_NOTREACHED("notification excluded in AddProgressListener(...)");
   return NS_OK;
 }
 

@@ -1851,7 +1851,8 @@ nsDocShell::SetTreeOwner(nsIDocShellTreeOwner * aTreeOwner)
             }
 
             if (newListener) {
-                webProgress->AddProgressListener(newListener);
+                webProgress->AddProgressListener(newListener,
+                                                 nsIWebProgress::NOTIFY_ALL);
             }
         }
     }
@@ -3738,7 +3739,7 @@ nsDocShell::OnProgressChange(nsIWebProgress * aProgress,
 
 NS_IMETHODIMP
 nsDocShell::OnStateChange(nsIWebProgress * aProgress, nsIRequest * aRequest,
-                          PRInt32 aStateFlags, nsresult aStatus)
+                          PRUint32 aStateFlags, nsresult aStatus)
 {
     nsresult rv;
 
@@ -3791,14 +3792,11 @@ nsDocShell::OnStateChange(nsIWebProgress * aProgress, nsIRequest * aRequest,
             mainWidget->SetCursor(eCursor_standard);
         }
     }
-
     if ((~aStateFlags & (STATE_IS_DOCUMENT | STATE_STOP)) == 0) {
         nsCOMPtr<nsIWebProgress> webProgress(do_QueryInterface(mLoadCookie));
-
         // Is the document stop notification for this document?
         if (aProgress == webProgress.get()) {
             nsCOMPtr<nsIChannel> channel(do_QueryInterface(aRequest));
-
             EndPageLoad(aProgress, channel, aStatus);
         }
     }
@@ -3845,6 +3843,7 @@ NS_IMETHODIMP
 nsDocShell::OnLocationChange(nsIWebProgress * aProgress,
                              nsIRequest * aRequest, nsIURI * aURI)
 {
+    NS_NOTREACHED("notification excluded in AddProgressListener(...)");
     return NS_OK;
 }
 
@@ -3853,14 +3852,16 @@ nsDocShell::OnStatusChange(nsIWebProgress * aWebProgress,
                            nsIRequest * aRequest,
                            nsresult aStatus, const PRUnichar * aMessage)
 {
+    NS_NOTREACHED("notification excluded in AddProgressListener(...)");
     return NS_OK;
 }
 
 NS_IMETHODIMP
 nsDocShell::OnSecurityChange(nsIWebProgress * aWebProgress,
-                             nsIRequest * aRequest, PRInt32 state)
+                             nsIRequest * aRequest, PRUint32 state)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_NOTREACHED("notification excluded in AddProgressListener(...)");
+    return NS_OK;
 }
 
 
@@ -5949,7 +5950,9 @@ nsDocShell::SetLoadCookie(nsISupports * aCookie)
         nsCOMPtr<nsIWebProgress> webProgress(do_QueryInterface(mLoadCookie));
 
         if (webProgress) {
-            webProgress->AddProgressListener(this);
+            webProgress->AddProgressListener(this,
+                                     nsIWebProgress::NOTIFY_STATE_DOCUMENT |
+                                     nsIWebProgress::NOTIFY_STATE_NETWORK);
         }
 
         nsCOMPtr<nsILoadGroup> loadGroup(do_GetInterface(mLoadCookie));
