@@ -18,6 +18,7 @@
 DEPTH=..\..\..\.. 
 
 EXPORTS =				\
+        nsIRDFContent.h                 \
 	nsIXMLContent.h			\
         $(NULL)
 
