@@ -310,7 +310,6 @@ CStandardFlexTable::~CStandardFlexTable()
 {
 	if (mClickTimer)
 		mClickTimer->NoteSingleClick();
-	delete mClickTimer;
 } // CStandardFlexTable::~CStandardFlexTable
 
 //----------------------------------------------------------------------------------------
