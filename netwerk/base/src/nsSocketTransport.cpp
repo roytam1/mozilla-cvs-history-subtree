@@ -1148,7 +1148,6 @@ NS_IMETHODIMP
 nsSocketTransport::SetProgressEventSink(nsIProgressEventSink *aEventSink)
 {
     mEventSink = nsnull;
-  
     if (aEventSink) {
         nsresult rv;
         // Now generate a proxied event sink-

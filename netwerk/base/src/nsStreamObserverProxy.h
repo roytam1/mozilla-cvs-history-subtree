@@ -48,6 +48,8 @@ public:
     nsresult SetEventQueue(nsIEventQueue *);
 
     nsresult SetReceiver(nsIStreamObserver *aReceiver) {
+        PRBool same = ::SameCOMIdentity(aReceiver, this);
+        NS_ASSERTION((!same), "aReceiver is self"); 
         mReceiver = aReceiver;
         return NS_OK;
     }

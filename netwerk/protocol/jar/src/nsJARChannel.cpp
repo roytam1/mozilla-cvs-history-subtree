@@ -360,10 +360,12 @@ nsJARChannel::AsyncReadJARElement()
 
     if (mCallbacks) {
         nsCOMPtr<nsIProgressEventSink> sink = do_GetInterface(mCallbacks);
-        if (sink)
-            jarTransport->SetProgressEventSink(sink);
+        if (sink) {
+            // don't think that this is not needed anymore 
+            // jarTransport->SetProgressEventSink(sink);
+        }
     }
-    
+
 #ifdef PR_LOGGING
     nsXPIDLCString jarURLStr;
     mURI->GetSpec(getter_Copies(jarURLStr));
@@ -372,6 +374,8 @@ nsJARChannel::AsyncReadJARElement()
 #endif
 
     rv = jarTransport->AsyncRead(this, nsnull, 0, -1, 0, getter_AddRefs(mJarExtractionTransport));
+    mJarExtractionTransport = 0;
+    jarTransport = 0;
     return rv;
 }
 
@@ -597,6 +601,7 @@ nsJARChannel::OnStopRequest(nsIRequest* jarExtractionTransport, nsISupports* con
 #endif
 
     rv = mUserListener->OnStopRequest(this, mUserContext, aStatus, aStatusArg);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "OnStopRequest failed");
 
     if (mLoadGroup)
         mLoadGroup->RemoveRequest(this, context, aStatus, aStatusArg);

@@ -258,7 +258,7 @@ nsFileTransport::Init(nsFileTransportService *aService, nsIStreamIO* io)
     mStreamName = NS_STATIC_CAST(const char*, name);
     NS_ASSERTION(NS_SUCCEEDED(rv), "GetName failed");
 
-    mService = aService;
+    NS_ADDREF(mService = aService);
     PR_AtomicIncrement(&mService->mTotalTransports);
 
     return rv;
@@ -269,24 +269,27 @@ nsFileTransport::~nsFileTransport()
     if (mXferState != CLOSED)
         DoClose();
 
-    NS_ASSERTION(mSource == nsnull, "transport not closed");
     NS_ASSERTION(mSourceWrapper == nsnull, "transport not closed");
     NS_ASSERTION(mSink == nsnull, "transport not closed");
     NS_ASSERTION(mSinkWrapper == nsnull, "transport not closed");
 
-    if (mLock)
+    if (mLock) {
         PR_DestroyLock(mLock);
-    if (mContentType)
+        mLock = nsnull;
+    }
+    if (mContentType) {
         nsCRT::free(mContentType);
+        mContentType = nsnull;
+    }
 
-    PR_AtomicDecrement(&mService->mTotalTransports);
+    NS_IF_RELEASE(mService);
 }
 
 NS_IMPL_THREADSAFE_ISUPPORTS4(nsFileTransport, 
-                              nsITransport, 
-                              nsITransportRequest,
-                              nsIRequest, 
-                              nsIRunnable)
+                         nsITransport, 
+                         nsITransportRequest,
+                         nsIRequest, 
+                         nsIRunnable)
 
 NS_METHOD
 nsFileTransport::Create(nsISupports* aOuter, const nsIID& aIID, void* *aResult)
@@ -356,6 +359,7 @@ nsFileTransport::Suspend()
     if (mRunState != CANCELED) {
         LOG(("nsFileTransport: Suspend [this=%x %s]\n", this, mStreamName.GetBuffer()));
         PR_AtomicIncrement(&mSuspendCount);
+        mService->AddSuspendedTransport(this);
     }
     return NS_OK;
 }
@@ -368,7 +372,7 @@ nsFileTransport::Resume()
         LOG(("nsFileTransport: Resume [this=%x %s]\n", this, mStreamName.GetBuffer()));
         // Allow negative suspend count
         PR_AtomicDecrement(&mSuspendCount);
-
+        mService->RemoveSuspendedTransport(this);
         // Only dispatch a new thread, if there isn't one currently active.
         if (!mActive && (mSuspendCount == 0)) {
             mRunState = RUNNING;
@@ -515,7 +519,7 @@ nsFileTransport::AsyncWrite(nsIStreamProvider *aProvider,
     NS_ADDREF(*aResult = this);
     return NS_OK;
 }
-
+    
 ////////////////////////////////////////////////////////////////////////////////
 // nsIRunnable methods:
 ////////////////////////////////////////////////////////////////////////////////
@@ -532,6 +536,9 @@ nsFileTransport::Run(void)
     PRIntervalTime now = PR_IntervalNow();
     printf("nsFileTransport: latency=%u ticks\n", now - mStartTime);
 #endif
+    
+    if (mRunState == SUSPENDED && NS_FAILED(mCancelStatus))
+        mRunState = CANCELED;
 
     while (mXferState != CLOSED && mRunState != SUSPENDED) {
         //
@@ -561,8 +568,10 @@ nsFileTransport::Run(void)
         //
         // Were we suspended ?
         //
-        else if (mSuspendCount > 0)
+        else if (mSuspendCount > 0) {
             mRunState = SUSPENDED;
+            mService->AddSuspendedTransport(this);
+        }
     }
 
     LOG(("nsFileTransport: Leaving Run [xferState=%d runState=%d]\n",
@@ -578,10 +587,9 @@ nsFileTransport::Process(void)
 {
     LOG(("nsFileTransport: Inside Process [this=%x state=%x status=%x]\n",
         this, mXferState, mStatus));
-
+    
     switch (mXferState) {
       case OPEN_FOR_READ: { 
-        LOG(("nsFileTransport: OPEN_FOR_READ [this=%x %s]\n", this, mStreamName.GetBuffer()));
         mStatus = mStreamIO->Open(&mContentType, &mTotalAmount);
         LOG(("nsFileTransport: OPEN_FOR_READ [this=%x %s] status=%x\n", this, mStreamName.GetBuffer(), mStatus));
         if (mListener) {
@@ -598,8 +606,9 @@ nsFileTransport::Process(void)
         LOG(("nsFileTransport: START_READ [this=%x %s]\n", this, mStreamName.GetBuffer()));
 
         PR_AtomicIncrement(&mService->mInUseTransports);
-
-        mStatus = mStreamIO->GetInputStream(getter_AddRefs(mSource));
+    
+        nsCOMPtr<nsIInputStream> source;
+        mStatus = mStreamIO->GetInputStream(getter_AddRefs(source));
         if (NS_FAILED(mStatus)) {
             LOG(("nsFileTransport: mStreamIO->GetInputStream() failed [this=%x rv=%x]\n",
                 this, mStatus));
@@ -610,7 +619,7 @@ nsFileTransport::Process(void)
         if (mOffset > 0) {
             // if we need to set a starting offset, QI for the nsISeekableStream
             // and set it
-            nsCOMPtr<nsISeekableStream> ras = do_QueryInterface(mSource, &mStatus);
+            nsCOMPtr<nsISeekableStream> ras = do_QueryInterface(source, &mStatus);
             if (NS_FAILED(mStatus)) {
                 mXferState = END_READ;
                 return;
@@ -627,7 +636,7 @@ nsFileTransport::Process(void)
         if (!mSourceWrapper) {
             //
             // Allocate an input stream wrapper to capture the number of bytes
-            // read from mSource.
+            // read from source.
             //
             NS_NEWXPCOM(mSourceWrapper, nsFileTransportSourceWrapper);
             if (!mSourceWrapper) {
@@ -636,7 +645,7 @@ nsFileTransport::Process(void)
                 return;
             }
             NS_ADDREF(mSourceWrapper);
-            mSourceWrapper->SetSource(mSource);
+            mSourceWrapper->SetSource(source);
         }
 
         // capture the total amount for progress information
@@ -755,7 +764,6 @@ nsFileTransport::Process(void)
         mContext = 0;
 
         // close the data source
-        mSource = 0;
         NS_IF_RELEASE(mSourceWrapper);
         mSourceWrapper = nsnull;
         mXferState = CLOSING;
@@ -962,152 +970,6 @@ nsFileTransport::DoClose(void)
     PR_AtomicDecrement(&mService->mConnectedTransports);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// other nsIChannel methods:
-////////////////////////////////////////////////////////////////////////////////
-
-#if 0
-NS_IMETHODIMP
-nsFileTransport::GetOriginalURI(nsIURI* *aURI)
-{
-    NS_NOTREACHED("GetOriginalURI");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsFileTransport::SetOriginalURI(nsIURI* aURI)
-{
-    NS_NOTREACHED("SetOriginalURI");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsFileTransport::GetURI(nsIURI* *aURI)
-{
-//    NS_NOTREACHED("GetURI");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsFileTransport::SetURI(nsIURI* aURI)
-{
-    NS_NOTREACHED("SetURI");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsFileTransport::GetLoadAttributes(nsLoadFlags *aLoadAttributes)
-{
-    *aLoadAttributes = mLoadAttributes;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::SetLoadAttributes(nsLoadFlags aLoadAttributes)
-{
-    mLoadAttributes = aLoadAttributes;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::GetContentType(char * *aContentType)
-{
-    *aContentType = nsCRT::strdup(mContentType);
-    if (*aContentType == nsnull)
-        return NS_ERROR_OUT_OF_MEMORY;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::SetContentType(const char *aContentType)
-{
-    if (mContentType) {
-      nsCRT::free(mContentType);
-    }
-    mContentType = nsCRT::strdup(aContentType);
-    if (!mContentType) return NS_ERROR_OUT_OF_MEMORY;
-
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::GetContentLength(PRInt32 *aContentLength)
-{
-    *aContentLength = mTotalAmount;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::SetContentLength(PRInt32 aContentLength)
-{
-    NS_NOTREACHED("SetContentLength");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsFileTransport::GetOwner(nsISupports * *aOwner)
-{
-    NS_NOTREACHED("GetOwner");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsFileTransport::SetOwner(nsISupports * aOwner)
-{
-    NS_NOTREACHED("SetOwner");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsFileTransport::GetLoadGroup(nsILoadGroup * *aLoadGroup)
-{
-    NS_NOTREACHED("GetLoadGroup");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsFileTransport::SetLoadGroup(nsILoadGroup* aLoadGroup)
-{
-    NS_NOTREACHED("SetLoadGroup");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsFileTransport::GetNotificationCallbacks(nsIInterfaceRequestor* *aNotificationCallbacks)
-{
-    *aNotificationCallbacks = mCallbacks.get();
-    NS_IF_ADDREF(*aNotificationCallbacks);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::SetNotificationCallbacks(nsIInterfaceRequestor* aNotificationCallbacks)
-{
-    mCallbacks = aNotificationCallbacks;
-
-    // Get a nsIProgressEventSink so that we can fire status/progress on it-
-    if (mCallbacks) {
-        nsCOMPtr<nsISupports> sink;
-        nsresult rv = mCallbacks->GetInterface(NS_GET_IID(nsIProgressEventSink),
-                                               getter_AddRefs(sink));
-        if (NS_FAILED(rv)) return NS_OK;        // don't need a progress event sink
-
-        // Now generate a proxied event sink
-        NS_WITH_SERVICE(nsIProxyObjectManager,
-                        proxyMgr, kProxyObjectManagerCID, &rv);
-        if (NS_FAILED(rv)) return rv;
-        
-        rv = proxyMgr->GetProxyForObject(NS_UI_THREAD_EVENTQ, // primordial thread - should change?
-                                      NS_GET_IID(nsIProgressEventSink),
-                                      sink,
-                                      PROXY_ASYNC | PROXY_ALWAYS,
-                                      getter_AddRefs(mProgress));
-    }
-    return NS_OK;
-}
-
-#endif
-
 NS_IMETHODIMP 
 nsFileTransport::GetSecurityInfo(nsISupports * *aSecurityInfo)
 {
@@ -1128,7 +990,7 @@ NS_IMETHODIMP
 nsFileTransport::SetProgressEventSink(nsIProgressEventSink *aProgress)
 {
     mProgress = nsnull;
-
+    
     if (aProgress) {
         // Now generate a proxied event sink
         nsresult rv;

@@ -54,6 +54,14 @@ nsresult
 nsIOService::Init()
 {
     nsresult rv = NS_OK;
+    
+    // Hold onto the eventQueue service.  We do not want any eventqueues to go away
+    // when we shutdown until we process all remaining transports
+
+    if (NS_SUCCEEDED(rv))
+        mEventQueueService = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
+  
+    
     // We need to get references to these services so that we can shut them
     // down later. If we wait until the nsIOService is being shut down,
     // GetService will fail at that point.
@@ -98,7 +106,9 @@ nsIOService::Init()
 nsIOService::~nsIOService()
 {
     (void)SetOffline(PR_TRUE);
-}
+    if (mFileTransportService)
+        (void)mFileTransportService->Shutdown();
+}   
 
 NS_METHOD
 nsIOService::Create(nsISupports *aOuter, REFNSIID aIID, void **aResult)

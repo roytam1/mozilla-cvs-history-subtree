@@ -156,12 +156,6 @@ nsSocketTransportService::Init(void)
     }
   }
 
-  // Hold onto the eventQueue service.  We do not want any eventqueues to go away
-  // when we shutdown until we process all remaining transports
-
-  if (NS_SUCCEEDED(rv))
-    mEventQueueService = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
-  
   //
   // Create the transport thread...
   //

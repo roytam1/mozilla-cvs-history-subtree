@@ -130,7 +130,6 @@ protected:
 
     // reading state variables:
     nsCOMPtr<nsIStreamListener>         mListener;
-    nsCOMPtr<nsIInputStream>            mSource;
     nsFileTransportSourceWrapper       *mSourceWrapper;
 
     // writing state variables:
