@@ -35,7 +35,6 @@
 
 #include "nscore.h"
 #include "nsCOMPtr.h"
-#include "nsIRDFCursor.h"
 #include "nsIRDFDataSource.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFService.h"
@@ -183,7 +182,8 @@ ContainerEnumeratorImpl::HasMoreElements(PRBool* aResult)
     }
 
     // If we get here, we ran out of elements. The cursor is empty.
-    return NS_RDF_CURSOR_EMPTY;
+    *aResult = PR_FALSE;
+    return NS_OK;
 }
 
 
