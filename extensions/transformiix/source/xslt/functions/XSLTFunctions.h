@@ -47,7 +47,7 @@ public:
     /**
      * Creates a new document() function call
     **/
-    DocumentFunctionCall(Document* xslDocument);
+    DocumentFunctionCall(ProcessorState* ps, Document* xslDocument);
 
     /**
      * Evaluates this Expr based on the given context node and processor state
@@ -60,8 +60,9 @@ public:
     virtual ExprResult* evaluate(Node* context, ContextState* cs);
 
 private:
-    void retrieveDocument(String& uri,String& baseUri, NodeSet &resultNodeSet, ContextState* cs);
+    void retrieveDocument(const String& uri,const String& baseUri, NodeSet &resultNodeSet, ContextState* cs);
     Document* xslDocument;
+    ProcessorState* processorState;
 };
 
 /**
