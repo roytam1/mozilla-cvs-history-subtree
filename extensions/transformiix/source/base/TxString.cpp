@@ -398,7 +398,7 @@ String& String::operator = (const char* aSource)
 {
   if (!aSource) {
     mLength = 0;
-    return;
+    return 0;
   }
 
   PRUint32 length = strlen(aSource);
