@@ -164,10 +164,10 @@ nsResProtocolHandler::Init()
     rv = AddSpecialDir(NS_GRE_DIR, NS_LITERAL_CSTRING("gre"));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    return AddSpecialDir("AppletD", NS_LITERAL_CSTRING("app"));
-
     //XXXbsmedberg Neil wants a resource://pchrome/ for the profile chrome dir...
     // but once I finish multiple chrome registration I'm not sure that it is needed
+
+    return rv;
 }
 
 //----------------------------------------------------------------------------
@@ -268,7 +268,26 @@ nsResProtocolHandler::GetSubstitution(const nsACString& root, nsIURI **result)
 {
     NS_ENSURE_ARG_POINTER(result);
 
-    return mSubstitutions.Get(root, result) ? NS_OK : NS_ERROR_NOT_AVAILABLE;
+    nsresult rv = mSubstitutions.Get(root, result);
+    if (NS_SUCCEEDED(rv))
+        return NS_OK;
+
+    // try invoking the directory service for "resource:root"
+
+    nsCAutoString key;
+    key.AppendLiteral("resource:");
+    key.Append(root);
+
+    nsCOMPtr<nsIFile> file;
+    rv = NS_GetSpecialDirectory(key.get(), getter_AddRefs(file));
+    if (NS_FAILED(rv))
+        return NS_ERROR_NOT_AVAILABLE;
+        
+    rv = mIOService->NewFileURI(file, result);
+    if (NS_FAILED(rv))
+        return NS_ERROR_NOT_AVAILABLE;
+
+    return NS_OK;
 }
 
 NS_IMETHODIMP

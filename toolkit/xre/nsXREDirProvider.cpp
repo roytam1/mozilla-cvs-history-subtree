@@ -265,17 +265,8 @@ nsXREDirProvider::GetFile(const char* aProperty, PRBool* aPersistent,
     // We must create the profile directory here if it does not exist.
     rv |= EnsureDirectoryExists(file);
   }
-  // XXX this needs to go away, but we keep it around until we have
-  // a better way of expressing resource:// URLs that point into the
-  // applet directory.  maybe we modify resource:/// to be that.
-  else if (mAppletDir && !strcmp(aProperty, "AppletD")) {
+  else if (mAppletDir && !strcmp(aProperty, "resource:app")) {
     rv = mAppletDir->Clone(getter_AddRefs(file));
-  }
-  // XXX this needs to go away until we teach widget code to find
-  // icons using NS_APP_CHROME_DIR_LIST.
-  else if (mAppletDir && !strcmp(aProperty, "AppletChrom")) {
-    rv = mAppletDir->Clone(getter_AddRefs(file));
-    rv |= file->AppendNative(NS_LITERAL_CSTRING("chrome"));
   }
   else if (mProfileDir) {
     if (!strcmp(aProperty, NS_XPCOM_COMPONENT_REGISTRY_FILE)) {
