@@ -43,7 +43,7 @@
 #include "msgMapi.h"
 #include "msgMapiMain.h"
 
-nsIMapi *pNsMapi = NULL;
+nsIMapi *pMainReference = NULL;
 BOOL bUnInitialize = FALSE;
 
 #define MAX_RECIPS  100
@@ -67,7 +67,7 @@ BOOL StartMozilla()
     bUnInitialize = (hRes == S_OK);
 
     hRes = ::CoCreateInstance(CLSID_nsMapiImp, NULL, CLSCTX_LOCAL_SERVER,
-                              IID_nsIMapi, (LPVOID *)&pNsMapi);
+                              IID_nsIMapi, (LPVOID *)&pMainReference);
     if (hRes != 0)
     {
         SetLastError(hRes);
@@ -76,11 +76,11 @@ BOOL StartMozilla()
 
     // initialize the server side stuff
 
-    hRes = pNsMapi->Initialize();
+    hRes = pMainReference->Initialize();
     if (hRes != 0)
     {
-        pNsMapi->Release();
-        pNsMapi = NULL;
+        pMainReference->Release();
+        pMainReference = NULL;
         SetLastError(hRes);
         return FALSE;
     }
@@ -93,11 +93,11 @@ void ShutDownMozilla()
     // releases the interface.
 
     WaitForSingleObject(hMutex, INFINITE);
-    if (pNsMapi != NULL)
+    if (pMainReference != NULL)
     {
-        pNsMapi->CleanUp();
-        pNsMapi->Release();
-        pNsMapi = NULL;
+        pMainReference->CleanUp();
+        pMainReference->Release();
+        pMainReference = NULL;
     }
     ReleaseMutex(hMutex);
     if (bUnInitialize)
@@ -113,7 +113,7 @@ BOOL CheckMozilla()
     BOOL bRetValue = TRUE;
 
     WaitForSingleObject(hMutex, INFINITE);
-    if (pNsMapi == NULL)
+    if (pMainReference == NULL)
         bRetValue = StartMozilla();
 
     ReleaseMutex(hMutex);
@@ -142,6 +142,39 @@ BOOL WINAPI DllMain(HINSTANCE aInstance, DWORD aReason, LPVOID aReserved)
     return TRUE;
 }
 
+BOOL GetMozillaReference(nsIMapi **retValue)
+{
+    HRESULT hRes = 0;
+    BOOL bInit = FALSE;
+
+    if (!CheckMozilla())
+        return FALSE;
+
+    hRes = ::CoInitialize(NULL);
+    if (hRes == S_OK)
+    {
+        // Its a different apartment.  So need get the 
+        // reference to nsIMapi again
+
+        hRes = ::CoCreateInstance(CLSID_nsMapiImp, NULL, CLSCTX_LOCAL_SERVER, \
+                              IID_nsIMapi, (LPVOID *)retValue);
+        if (*retValue == NULL)
+            ::CoUninitialize();
+        else
+            bInit = TRUE;
+    }
+    else
+    {
+	if (pMainReference)
+	{
+        	*retValue = pMainReference;
+        	(*retValue)->AddRef();
+	}
+    }   
+
+    return bInit;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////
 // The MAPILogon function begins a Simple MAPI session, loading the default message ////
 // store and address book providers                            ////
@@ -154,8 +187,9 @@ ULONG FAR PASCAL MAPILogon(ULONG aUIParam, LPTSTR aProfileName,
     HRESULT hr = 0;
     ULONG nSessionId = 0;
 
-    if (CheckMozilla() == FALSE)
-        return MAPI_E_FAILURE;
+    nsIMapi *pNsMapi = NULL;
+    BOOL bComInitialized = FALSE;
+    ULONG retValue = SUCCESS_SUCCESS;
 
     if (!(aFlags & MAPI_UNICODE))
     {
@@ -181,35 +215,58 @@ ULONG FAR PASCAL MAPILogon(ULONG aUIParam, LPTSTR aProfileName,
                 return MAPI_E_FAILURE;
         }
 
+        bComInitialized = GetMozillaReference(&pNsMapi);
+        if (pNsMapi == NULL)
+            return MAPI_E_FAILURE;
+
         hr = pNsMapi->Login(aUIParam, ProfileName, PassWord, aFlags,
                                                         &nSessionId);
     }
     else
+    {
+        bComInitialized = GetMozillaReference(&pNsMapi);
+        if (pNsMapi == NULL)
+            return MAPI_E_FAILURE;
+
         hr = pNsMapi->Login(aUIParam, aProfileName, aPassword,
                                                 aFlags, &nSessionId);
-
-
-    if (hr != 0)
-    {
-        return nSessionId;
     }
 
-    *aSession = (LHANDLE) nSessionId;
-    return SUCCESS_SUCCESS;
+    if (hr == S_OK)
+        (*aSession) = (LHANDLE) nSessionId;
+    else
+        retValue = nSessionId;
+
+    pNsMapi->Release();
+
+    if (bComInitialized)
+        ::CoUninitialize();
+
+    return retValue;
 }
 
-ULONG FAR PASCAL MAPILogoff(LHANDLE aSession, ULONG aUIParam,
+ULONG FAR PASCAL MAPILogoff (LHANDLE aSession, ULONG aUIParam,
                                             FLAGS aFlags, ULONG aReserved)
 {
     HRESULT hr = 0;
+    nsIMapi *pNsMapi = NULL;
+    BOOL bComInitialized = FALSE;
+    ULONG retValue = SUCCESS_SUCCESS;
+
+    bComInitialized = GetMozillaReference(&pNsMapi);
+    if (pNsMapi == NULL)
+        return MAPI_E_FAILURE;
 
     hr = pNsMapi->Logoff((ULONG) aSession);
     if (hr != 0)
-    {
-        return MAPI_E_INVALID_SESSION;
-    }
+        retValue = MAPI_E_INVALID_SESSION;
 
-    return SUCCESS_SUCCESS;
+    pNsMapi->Release();
+
+    if (bComInitialized)
+        ::CoUninitialize();
+
+    return retValue;
 }
 
 ULONG FAR PASCAL MAPISendMail (LHANDLE lhSession, ULONG ulUIParam, lpnsMapiMessage lpMessage,
@@ -218,8 +275,7 @@ ULONG FAR PASCAL MAPISendMail (LHANDLE lhSession, ULONG ulUIParam, lpnsMapiMessa
     HRESULT hr = 0;
     BOOL bTempSession = FALSE ;
 
-    if (CheckMozilla() == FALSE)
-        return MAPI_E_FAILURE;
+    BOOL bCoUnInit = FALSE;
 
     if (lpMessage->nRecipCount > MAX_RECIPS)
         return MAPI_E_TOO_MANY_RECIPIENTS ;
@@ -244,13 +300,54 @@ ULONG FAR PASCAL MAPISendMail (LHANDLE lhSession, ULONG ulUIParam, lpnsMapiMessa
         bTempSession = TRUE ;
     }
 
+    // we need to deal with null data passed in by MAPI clients, specially when MAPI_DIALOG is set.
+    // The MS COM type lib code generated by MIDL for the MS COM interfaces checks for these parameters
+    // to be non null, although null is a valid value for them here. 
+    nsMapiRecipDesc * lpRecips ;
+    nsMapiFileDesc * lpFiles ;
+
+    nsMapiMessage Message ;
+	memset (&Message, 0, sizeof (nsMapiMessage) ) ;
+    nsMapiRecipDesc Recipient ;
+	memset (&Recipient, 0, sizeof (nsMapiRecipDesc) );
+    nsMapiFileDesc Files ;
+	memset (&Files, 0, sizeof (nsMapiFileDesc) ) ;
+
+    if(!lpMessage)
+    {
+       lpMessage = &Message ;
+    }
+    if(!lpMessage->lpRecips)
+    {
+        lpRecips = &Recipient ;
+    }
+    else
+        lpRecips = lpMessage->lpRecips ;
+    if(!lpMessage->lpFiles)
+    {
+        lpFiles = &Files ;
+    }
+    else
+        lpFiles = lpMessage->lpFiles ;
+
+    nsIMapi *pNsMapi = NULL;
+    BOOL bComInitialized = FALSE;
+
+    bComInitialized = GetMozillaReference(&pNsMapi);
+    if (pNsMapi == NULL)
+        return MAPI_E_FAILURE;
+
     hr = pNsMapi->SendMail (lhSession, lpMessage, 
-                            (short) lpMessage->nRecipCount, lpMessage->lpRecips,
-                            (short) lpMessage->nFileCount, lpMessage->lpFiles,
+                            (short) lpMessage->nRecipCount, lpRecips,
+                            (short) lpMessage->nFileCount, lpFiles,
                             flFlags, ulReserved);
-    
+
     if (bTempSession)
         MAPILogoff (lhSession, ulUIParam, 0,0) ;
+
+    pNsMapi->Release();
+    if (bComInitialized)
+        ::CoUninitialize();
 
     return hr ;
 }
@@ -264,11 +361,18 @@ ULONG FAR PASCAL MAPISendDocuments(ULONG ulUIParam, LPTSTR lpszDelimChar, LPTSTR
     if (result != SUCCESS_SUCCESS)
         return MAPI_E_LOGIN_FAILURE ;
 
-    HRESULT hr ;
+    HRESULT hr;
+    nsIMapi *pNsMapi = NULL;
+    BOOL bComInitialized = FALSE;
+
     hr = pNsMapi->SendDocuments(lhSession, (LPTSTR) lpszDelimChar, (LPTSTR) lpszFilePaths, 
                                     (LPTSTR) lpszFileNames, ulReserved) ;
 
     MAPILogoff (lhSession, ulUIParam, 0,0) ;
+
+    pNsMapi->Release();
+    if (bComInitialized)
+        ::CoUninitialize();
 
     return hr ;
 }
