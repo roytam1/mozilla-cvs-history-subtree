@@ -651,7 +651,9 @@ ns4xPlugin::CreatePlugin(nsIServiceManagerObsolete* aServiceMgr,
   short appRefNum = ::CurResFile();
   short pluginRefNum;
   
-  nsFileSpec pluginPath(aFullPath);
+  nsCOMPtr<nsILocalFile> pluginPath = do_CreateInstance("@mozilla.org/file/local;1");
+  pluginPath->InitWithNativePath(nsDependentCString(aFullPath));
+  
   nsPluginFile pluginFile(pluginPath);
   pluginRefNum = pluginFile.OpenPluginResource();
   if (pluginRefNum == -1)

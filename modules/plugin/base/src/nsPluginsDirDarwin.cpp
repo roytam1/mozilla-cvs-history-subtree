@@ -84,23 +84,27 @@ static CFBundleRef getPluginBundle(const char* path)
     return bundle;
 }
 
-static OSErr toFSSpec(const nsFileSpec& inFileSpec, FSSpec& outSpec)
+static OSErr toFSSpec(nsIFile* inFile, FSSpec& outSpec)
 {
     FSRef ref;
-    OSErr err = FSPathMakeRef((const UInt8*)inFileSpec.GetCString(), &ref, NULL);
+    nsCAutoString nativePath;
+    inFile->GetNativePath(nativePath);
+    OSErr err = FSPathMakeRef((const UInt8*)nativePath.get(), &ref, NULL);
     if (err == noErr)
         err = FSGetCatalogInfo(&ref, kFSCatInfoNone, NULL, NULL, &outSpec, NULL);
     return err;
 }
 
-PRBool nsPluginsDir::IsPluginFile(const nsFileSpec& fileSpec)
+PRBool nsPluginsDir::IsPluginFile(nsIFile* file)
 {
+    nsCAutoString nativePath;
+    file->GetNativePath(nativePath);
 #ifdef DEBUG
-    printf("nsPluginsDir::IsPluginFile:  checking %s\n", fileSpec.GetCString());
+    printf("nsPluginsDir::IsPluginFile:  checking %s\n", nativePath.get());
 #endif
     // look at file's creator/type and make sure it is a code fragment, etc.
     FSSpec spec;
-    OSErr err = toFSSpec(fileSpec, spec);
+    OSErr err = toFSSpec(file, spec);
     if (err != noErr)
         return PR_FALSE;
 
@@ -109,7 +113,7 @@ PRBool nsPluginsDir::IsPluginFile(const nsFileSpec& fileSpec)
     if (err == noErr && ((info.fdType == 'shlb' && info.fdCreator == 'MOSS') ||
                          info.fdType == 'NSPL')) {
 #ifdef DEBUG
-        printf("found plugin '%s'.\n", fileSpec.GetCString());
+        printf("found plugin '%s'.\n", nativePath.get());
 #endif
         return PR_TRUE;
     }
@@ -119,7 +123,7 @@ PRBool nsPluginsDir::IsPluginFile(const nsFileSpec& fileSpec)
         return PR_TRUE;
 
     // for Mac OS X bundles.
-    CFBundleRef bundle = getPluginBundle(fileSpec.GetCString());
+    CFBundleRef bundle = getPluginBundle(nativePath.get());
     if (bundle) {
         UInt32 packageType, packageCreator;
         CFBundleGetPackageInfo(bundle, &packageType, &packageCreator);
@@ -129,7 +133,7 @@ PRBool nsPluginsDir::IsPluginFile(const nsFileSpec& fileSpec)
         case 'IEPL':
         case 'NSPL':
 #ifdef DEBUG
-            printf("found bundled plugin '%s'.\n", fileSpec.GetCString());
+            printf("found bundled plugin '%s'.\n", nativePath.get());
 #endif
             return PR_TRUE;
         }
@@ -138,8 +142,8 @@ PRBool nsPluginsDir::IsPluginFile(const nsFileSpec& fileSpec)
     return PR_FALSE;
 }
 
-nsPluginFile::nsPluginFile(const nsFileSpec& spec)
-    : nsFileSpec(spec)
+nsPluginFile::nsPluginFile(nsIFile* file)
+    : mPlugin(file)
 {
 }
 
@@ -151,14 +155,15 @@ nsPluginFile::~nsPluginFile() {}
  */
 nsresult nsPluginFile::LoadPlugin(PRLibrary* &outLibrary)
 {
-    const char* path = this->GetCString();
-    outLibrary = PR_LoadLibrary(path);
+    nsCAutoString path;
+    mPlugin->GetNativePath(path);
+    outLibrary = PR_LoadLibrary(path.get());
     pLibrary = outLibrary;
     if (!outLibrary) {
         return NS_ERROR_FAILURE;
     }
 #ifdef DEBUG
-    printf("[loaded plugin %s]\n", path);
+    printf("[loaded plugin %s]\n", path.get());
 #endif
     return NS_OK;
 }
@@ -193,13 +198,15 @@ static char* GetPluginString(short id, short index)
 short nsPluginFile::OpenPluginResource()
 {
     FSSpec spec;
-    OSErr err = toFSSpec(*this, spec);
+    OSErr err = toFSSpec(mPlugin, spec);
     Boolean targetIsFolder, wasAliased;
     err = ::ResolveAliasFile(&spec, true, &targetIsFolder, &wasAliased);
     short refNum = ::FSpOpenResFile(&spec, fsRdPerm);
   
     if (refNum == -1) {
-        CFBundleRef bundle = getPluginBundle(this->GetCString());
+        nsCAutoString nativePath;
+        mPlugin->GetNativePath(nativePath);
+        CFBundleRef bundle = getPluginBundle(nativePath.get());
         if (bundle) {
             refNum = CFBundleOpenBundleResourceMap(bundle);
             CFRelease(bundle);
@@ -229,11 +236,14 @@ nsresult nsPluginFile::GetPluginInfo(nsPluginInfo& info)
             info.fDescription = GetPluginString(126, 1);
       
             FSSpec spec;
-            toFSSpec(*this, spec);
+            toFSSpec(mPlugin, spec);
             info.fFileName = p2cstrdup(spec.name);
-            info.fFullPath = PL_strdup(this->GetCString());
+            
+            nsCAutoString nativePath;
+            mPlugin->GetNativePath(nativePath);
+            info.fFullPath = PL_strdup(nativePath.get());
       
-            CFBundleRef bundle = getPluginBundle(this->GetCString());
+            CFBundleRef bundle = getPluginBundle(nativePath.get());
             if (bundle) {
                 info.fBundle = PR_TRUE;
                 CFRelease(bundle);
