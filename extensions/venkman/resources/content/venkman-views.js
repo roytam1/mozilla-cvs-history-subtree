@@ -2499,8 +2499,10 @@ function s2v_removeindex (index)
     sourceTab.content = null;
     sourceTab.stopNode = null;
     arrayRemoveAt (this.sourceTabList, index);
-    this.tabs.removeItemAt(index);
-    this.deck.removeChild(this.deck.childNodes[index]);
+    if (this.tabs)
+        this.tabs.removeItemAt(index);
+    if (this.deck)
+        this.deck.removeChild(this.deck.childNodes[index]);
     if (lastIndex >= this.sourceTabList.length)
         lastIndex = this.sourceTabList.length - 1;
     if (lastIndex >= 0)
