@@ -235,7 +235,7 @@ doc_getProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
         return JS_TRUE;
 
       case DOC_APPLETS:
-#ifdef JAVA
+#if defined(JAVA) || defined(OJI)
         if (LM_MOJA_OK != ET_InitMoja(context)) {
             LO_UnlockLayout();
             return JS_FALSE;
@@ -254,7 +254,7 @@ doc_getProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 #endif
 
       case DOC_EMBEDS:
-#ifdef JAVA
+#if defined(JAVA) || defined(OJI)
         if (LM_MOJA_OK != ET_InitMoja(context)) {
             LO_UnlockLayout();
             return JS_FALSE;
