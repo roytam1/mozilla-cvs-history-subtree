@@ -1223,6 +1223,11 @@ NS_IMETHODIMP nsMsgFolder::Rename(const PRUnichar *name, nsIMsgWindow *msgWindow
 
 }
 
+NS_IMETHODIMP nsMsgFolder::RenameSubFolders(nsIMsgFolder *oldFolder)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 NS_IMETHODIMP nsMsgFolder::ContainsChildNamed(const char *name, PRBool* containsChild)
 {
 	nsCOMPtr<nsISupports> child;

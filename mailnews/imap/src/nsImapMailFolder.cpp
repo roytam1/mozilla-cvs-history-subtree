@@ -5727,37 +5727,32 @@ NS_IMETHODIMP nsImapMailFolder::RenameClient( nsIMsgFolder *msgFolder, const cha
              nsAutoString unicodeOnlineName; unicodeOnlineName.AssignWithConversion(onlineName);
              folderInfo->SetMailboxName(&unicodeOnlineName);
            }
-           msgFolder->ChangeFilterDestination(child, PR_FALSE /*caseInsensitive*/, nsnull);
+           PRBool changed = PR_FALSE;
+           msgFolder->ChangeFilterDestination(child, PR_FALSE /*caseInsensitive*/, &changed);
         }
         unusedDB->SetSummaryValid(PR_TRUE);
         unusedDB->Commit(nsMsgDBCommitType::kLargeCommit);
         unusedDB->Close(PR_TRUE);
-	    imapFolder->RenameSubfolders(msgFolder);
-	  }
-    }
-
-	nsCOMPtr<nsIFolder> parent;
-	msgFolder->GetParent(getter_AddRefs(parent));
-	nsCOMPtr<nsIMsgFolder> msgParent = do_QueryInterface(parent);
-    msgFolder->SetParent(nsnull);
-	msgParent->PropagateDelete(msgFolder,PR_FALSE, nsnull);
-
-    if(NS_SUCCEEDED(rv) && child)
-    {
-       nsCOMPtr<nsISupports> childSupports(do_QueryInterface(child));
-       nsCOMPtr<nsISupports> folderSupports;
-       rv = QueryInterface(NS_GET_IID(nsISupports), getter_AddRefs(folderSupports));
-       if(childSupports && NS_SUCCEEDED(rv))
-	   {
+        nsCOMPtr<nsISupports> childSupports(do_QueryInterface(child));
+        nsCOMPtr<nsISupports> folderSupports;
+        rv = QueryInterface(NS_GET_IID(nsISupports), getter_AddRefs(folderSupports));
+        if(childSupports && NS_SUCCEEDED(rv))
           NotifyItemAdded(folderSupports, childSupports, "folderView");
-	   }
+
+	    child->RenameSubFolders(msgFolder);
+	  }
 	}
        
-  return rv;
+    nsCOMPtr<nsIFolder> parent;
+    msgFolder->GetParent(getter_AddRefs(parent));
+    nsCOMPtr<nsIMsgFolder> msgParent = do_QueryInterface(parent);
+    msgFolder->SetParent(nsnull);
+    msgParent->PropagateDelete(msgFolder,PR_FALSE, nsnull);
 
+    return rv;
 }
 
-NS_IMETHODIMP nsImapMailFolder::RenameSubfolders(nsIMsgFolder *oldFolder)
+NS_IMETHODIMP nsImapMailFolder::RenameSubFolders(nsIMsgFolder *oldFolder)
 {
   nsresult rv = NS_OK;
   
@@ -5812,38 +5807,44 @@ NS_IMETHODIMP nsImapMailFolder::RenameSubfolders(nsIMsgFolder *oldFolder)
 
      nsCOMPtr<nsIFileSpec> dbFileSpec;
      NS_NewFileSpecWithSpec(newPath, getter_AddRefs(dbFileSpec));
+
      nsCOMPtr<nsIMsgFolder> child;
 				
-     char *leafName;
-     leafName = newPath.GetLeafName();
-     nsAutoString currentFolderNameStr;
-     currentFolderNameStr.AssignWithConversion(leafName);
-     nsAutoString utf7LeafName = currentFolderNameStr;
-     nsXPIDLString unicodeName;
+     nsXPIDLString folderName;
+     rv = msgFolder->GetName(getter_Copies(folderName));
+     if (!folderName || NS_FAILED(rv)) return rv;
+     nsAutoString utf7LeafName(folderName.get());
 
      rv = AddSubfolderWithPath(&utf7LeafName, dbFileSpec, getter_AddRefs(child));
      
      if (!child || NS_FAILED(rv)) return rv;
-     rv = CreateUnicodeStringFromUtf7(leafName, getter_Copies(unicodeName));
-     if (NS_SUCCEEDED(rv) && unicodeName)
-       child->SetName(unicodeName);
+
+     child->SetName(folderName);
      nsCOMPtr <nsIMsgImapMailFolder> imapFolder = do_QueryInterface(child);
      nsXPIDLCString onlineName;
      GetOnlineName(getter_Copies(onlineName));
      nsCAutoString onlineCName(onlineName);
      onlineCName.AppendWithConversion(hierarchyDelimiter);
-     onlineCName.Append(leafName);
-     imapFolder->SetVerifiedAsOnlineFolder(verified);
-     imapFolder->SetOnlineName(onlineCName.get());
-     imapFolder->SetHierarchyDelimiter(hierarchyDelimiter);
-     imapFolder->SetBoxFlags(boxflags);
-     msgFolder->ChangeFilterDestination(child, PR_FALSE /*caseInsensitive*/, nsnull);
+     onlineCName.AppendWithConversion(utf7LeafName);
+     if (imapFolder)
+     {
+       imapFolder->SetVerifiedAsOnlineFolder(verified);
+       imapFolder->SetOnlineName(onlineCName.get());
+       imapFolder->SetHierarchyDelimiter(hierarchyDelimiter);
+       imapFolder->SetBoxFlags(boxflags);
+       m_initialized = PR_TRUE;
 
-     rv = aEnumerator->Next();
+       PRBool changed = PR_FALSE;
+       msgFolder->ChangeFilterDestination(child, PR_FALSE /*caseInsensitive*/, &changed);
+
+       nsCOMPtr <nsISupports> parentSupport = do_QueryInterface(NS_STATIC_CAST(nsIMsgImapMailFolder*, this));
+       nsCOMPtr <nsISupports> childSupport = do_QueryInterface(child);
+       if (parentSupport && childSupport)
+         NotifyItemAdded(parentSupport, childSupport, "folderView");
 	
-     imapFolder->RenameSubfolders(msgFolder);
-     m_initialized = PR_TRUE; 
-     PL_strfree(leafName);
+       child->RenameSubFolders(msgFolder);
+     }
+     rv = aEnumerator->Next();
 
   }
   return rv;
