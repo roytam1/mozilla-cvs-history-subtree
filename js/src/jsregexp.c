@@ -353,15 +353,17 @@ DumpRegExp(JSContext *cx, RENode *ren)
 	    len = (jschar *)ren->u.kid2 - cp;
 	    for (i = 0; i < len; i++)
 		PrintChar(cp[i]);
+            printf("\n");
 	    break;
 
 	  case REOP_UCFLAT1:
 	    PrintChar(ren->u.chr);
+            printf("\n");
 	    break;
 
 	  case REOP_UCCLASS:
 	    cp = ren->kid;
-	    len = (jschar *)ren->u.kid2 - cp;
+	    len = ren->u.ucclass.kidlen;
 	    printf(" [");
 	    for (i = 0; i < len; i++)
 		PrintChar(cp[i]);
@@ -2379,7 +2381,9 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
 		bit = 1 << bit;                                               \
 		matched = pc[3 + byte] & bit;                                 \
 	    }                                                                 \
-	    matchlen = 1;                                                     \
+            if (matched)                                                      \
+                pc2 = pc + size + reopsize[op];                               \
+            matchlen = 1;                                                     \
 	    break;                                                            \
 /* END NONDOT_SINGLE_CASES */
 
