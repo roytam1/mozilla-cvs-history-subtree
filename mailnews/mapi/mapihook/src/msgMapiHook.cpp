@@ -567,18 +567,7 @@ nsresult nsMapiHook::HandleAttachments (nsIMsgCompFields * aCompFields, PRInt32 
 
 
             nsAutoString leafName ;
-            // convert to Unicode using Platform charset
-            // leafName already contains a unicode leafName from lpszPathName. If we were given
-            // a value for lpszFileName, use it. Otherwise stick with leafName
-            if (aFiles[i].lpszFileName) 
-            {
-              if (aIsUnicode)
-                leafName.Assign(aFiles[i].lpszFileName);
-              else
-                ConvertToUnicode(nsMsgI18NFileSystemCharset(), (char *) aFiles[i].lpszFileName, leafName);
-            }
-            else 
-              pFile->GetLeafName (leafName);
+            pFile->GetLeafName (leafName);
 
             nsCOMPtr <nsIFile> pTempFile;
             rv = pTempDir->Clone(getter_AddRefs(pTempFile));
@@ -591,7 +580,6 @@ nsresult nsMapiHook::HandleAttachments (nsIMsgCompFields * aCompFields, PRInt32 
             {
               rv = pTempFile->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 0777);
               NS_ENSURE_SUCCESS(rv, rv);
-              pTempFile->GetLeafName(leafName);
               pTempFile->Remove(PR_FALSE); // remove so we can copy over it.
             }
             // copy the file to its new location and file name
