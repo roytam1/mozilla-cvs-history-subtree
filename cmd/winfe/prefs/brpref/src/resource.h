@@ -119,7 +119,6 @@
 #define IDS_EXT_IN_USE                  137
 #define IDS_FILTER_PROGRAM              138
 #define IDS_SAVE_TO_DISK                139
-<<<<<<< resource.h
 #define IDS_DISK_SPACE                  140
 #define IDS_NUMERIC_ONLY                141
 #define IDS_MORE_DISK_SPACE             142
@@ -130,8 +129,6 @@
 #define IDS_ERROR_UNINSTALL             146
 #endif /* MOZ_SMARTUPDATE */
 #define IDD_SMARTBROWSING               147
-=======
->>>>>>> 3.1.16.1
 #define IDC_EXTENSION                   309
 #define IDC_ICON1                       316
 #define IDC_ICON2                       317

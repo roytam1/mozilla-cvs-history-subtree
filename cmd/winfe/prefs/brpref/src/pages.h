@@ -331,7 +331,6 @@ class CProxiesPrefs : public CBrowserPropertyPage {
 		void	EnableControls();
 };
 
-<<<<<<< pages.h
 /////////////////////////////////////////////////////////////////////////////
 // CDiskSpacePrefs
 
@@ -387,7 +386,5 @@ class CSmartUpdatePrefs : public CBrowserPropertyPage {
 
 #endif /* MOZ_SMARTUPDATE */
 
-=======
->>>>>>> 3.1.16.1
 #endif /* __PAGES_H_ */
 

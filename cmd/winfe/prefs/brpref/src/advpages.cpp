@@ -572,7 +572,6 @@ CProxiesPrefs::OnCommand(int id, HWND hwndCtl, UINT notifyCode)
 	return CBrowserPropertyPage::OnCommand(id, hwndCtl, notifyCode);
 }
 
-<<<<<<< advpages.cpp
 /////////////////////////////////////////////////////////////////////////////
 // CDiskSpacePrefs implementation
 
@@ -987,4 +986,3 @@ CSmartUpdatePrefs::OnCommand(int id, HWND hwndCtl, UINT notifyCode)
 }
 
 #endif /* MOZ_SMARTUPDATE */=======
->>>>>>> 3.1.18.1
