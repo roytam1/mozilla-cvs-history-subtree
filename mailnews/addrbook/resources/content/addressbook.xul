@@ -194,7 +194,7 @@ Contributor(s):
 					</menupopup>
 				</menu>
         <menu label="&sortMenu.label;" accesskey="&sortMenu.accesskey;">
-				    <menupopup onpopupshowing="InitViewSortByMenu()">
+				    <menupopup id="sortMenuPopup" onpopupshowing="InitViewSortByMenu()">
             <menuitem label="&GeneratedName.label;" 
 								  id="cmd_SortByGeneratedName"
 								  accesskey="&GeneratedName.accesskey;"
