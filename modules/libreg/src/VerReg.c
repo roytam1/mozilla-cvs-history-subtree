@@ -42,10 +42,6 @@
 #include <string.h>
 #include <assert.h>
 
-#include "reg.h"
-#include "NSReg.h"
-#include "VerReg.h"
-
 #ifndef STANDALONE_REGISTRY
 #ifdef NSPR20
 #include "prio.h"
@@ -53,6 +49,10 @@
 #include "prfile.h"
 #endif
 #endif
+
+#include "reg.h"
+#include "NSReg.h"
+#include "VerReg.h"
 
 #ifdef XP_MAC
 #include <Folders.h>
@@ -156,6 +156,7 @@ static REGERR vr_Init(void)
 
     if (!isInited)
     {
+#ifndef STANDALONE_REGISTRY
 #ifdef XP_UNIX
         /* need browser directory to find the correct registry */
         if (app_dir != NULL) {
@@ -170,7 +171,7 @@ static REGERR vr_Init(void)
         } 
         if (bGlobalRegistry)
             regname = regbuf;
-#endif
+#endif /* XP_UNIX */
 
         if ( app_dir == NULL ) {
             /* Must be set by yourbefore using registry */
@@ -178,6 +179,7 @@ static REGERR vr_Init(void)
         }
         if ( err != REGERR_OK )
             goto done;
+#endif /* !STANDALONE_REGISTRY */
 
         /* Open version registry */
 		err = NR_RegOpen( regname, &vreg );
@@ -752,8 +754,7 @@ VR_INTERFACE(REGERR) VR_CreateRegistry( char *installation, char *programPath, c
 {
 	FILEHANDLE  fh;
 	REGERR      err;
-	XP_StatStruct st;
-    char *      regname = "";
+        char *      regname = "";
 #if !defined(STANDALONE_REGISTRY) && defined(XP_UNIX)
     char *      regbuf = NULL;
 #endif
@@ -774,16 +775,7 @@ VR_INTERFACE(REGERR) VR_CreateRegistry( char *installation, char *programPath, c
     }
 #endif
 
-#ifdef STANDALONE_REGISTRY
-    /* standalone registry automatically creates it if not found */
     fh = XP_FileOpen( regname, xpRegistry, XP_FILE_UPDATE_BIN );
-#else
-	if ( ( XP_Stat ( regname, &st, xpRegistry ) == 0) )
-		fh = XP_FileOpen( regname, xpRegistry, XP_FILE_UPDATE_BIN );
-	else
-		/* create a new empty registry */
-		fh = XP_FileOpen( regname, xpRegistry, XP_FILE_WRITE_BIN );
-#endif
 
 	if (fh == NULL) {
         err = REGERR_FAIL;
@@ -1079,6 +1071,9 @@ VR_INTERFACE(REGERR) VR_ValidateComponent(char *component_path)
     HREG hreg;
 	char path[MAXREGPATHLEN];
     char *url = NULL;
+#ifdef STANDALONE_REGISTRY
+    VR_StatStruct st;
+#endif
 
 
 #ifdef USE_CHECKSUM
@@ -1108,10 +1103,14 @@ VR_INTERFACE(REGERR) VR_ValidateComponent(char *component_path)
         return err;
     }
 
+#ifndef STANDALONE_REGISTRY
 #ifndef NSPR20
     if ( PR_AccessFile( path, PR_AF_EXISTS ) != 0 ) {
 #else
     if ( PR_Access( path, PR_ACCESS_EXISTS ) == PR_FAILURE ) {
+#endif
+#else
+    if ( VR_Stat( path, &st ) != 0 ) {
 #endif
         err = REGERR_NOFILE;
     }

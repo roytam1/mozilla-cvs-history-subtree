@@ -20,7 +20,9 @@
 #ifndef _NSREG_H_
 #define _NSREG_H_
 
+#ifndef STANDALONE_REGISTRY
 #include "xp_core.h"
+#endif
 
 typedef int32   REGERR;
 typedef int32   RKEY;
