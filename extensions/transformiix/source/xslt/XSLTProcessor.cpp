@@ -142,6 +142,7 @@ void XSLTProcessor::print
     MBool indent = MB_FALSE;
     if (format->isMethodExplicit()) {
         if (format->isHTMLOutput()) xmlPrinter = new HTMLPrinter(*target);
+	else if (format->isTextOutput()) xmlPrinter = new TEXTPrinter(*target);
         else xmlPrinter = new XMLPrinter(*target);
         indent = format->getIndent();
     }

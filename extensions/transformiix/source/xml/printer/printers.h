@@ -321,4 +321,61 @@ private:
 
 }; //-- HTMLPrinter
 
+/**
+ * A class for printing an XML node as text
+ * @author Axel Hecht
+**/
+class TEXTPrinter : public XMLPrinter {
+
+public:
+
+      //---------------/
+     //- Contructors -/
+    //---------------/
+
+    /**
+     * Default constructor uses cout as the default ostream
+    **/
+    TEXTPrinter();
+
+    /**
+     * Creates a new XML Printer using the given PrintWriter
+     * for output
+     * @param writer the PrintWriter to use for output
+    **/
+    TEXTPrinter(ostream& os);
+
+    /**
+     * Creates a new XML Printer using the given PrintWriter
+     * for output, and nodes are indenting using the specified
+     * indent size
+     * @param os the out stream to use for output
+     * @param indent the number of spaces to indent
+    **/
+    TEXTPrinter (ostream& os, int indent);
+
+    /**
+     * Prints the given Node
+     * @param node the Node to print
+    **/
+    virtual void print(Node* node);
+
+private:
+
+    /**
+     * The out stream to print results to
+    **/
+    ostream* ostreamPtr;
+
+      //-------------------/
+     //- Private Methods -/
+    //-------------------/
+
+    /**
+     * Called by Constructor to initialize Object instance
+    **/
+    void initialize(ostream& os);
+
+}; //-- TEXTPrinter
+
 #endif
