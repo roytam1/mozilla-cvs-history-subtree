@@ -266,6 +266,9 @@ sub GetSystemInfo {
         $host =~ tr/A-Z/a-z/;
         $Settings::TieStderr = "" if $Settings::OS eq 'WIN98';
     }
+    if ($Settings::OS eq 'OS/2') {
+        $Settings::OS = 'OS2';
+    }
 
     $Settings::DirName = "${Settings::OS}_${os_ver}_$build_type";
     $Settings::BuildName = "$Settings::OS ${os_ver} $host $build_type";
