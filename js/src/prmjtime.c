@@ -25,6 +25,20 @@
 #include <string.h>
 #include <time.h>
 #include "prtypes.h"
+
+/*
+ * Not sure if prosdep is required on any platform but, for now,
+ * we're including it on non-Unix platforms.
+ */
+#ifndef NSPR20
+#include "prosdep.h"
+#else
+#ifdef XP_MAC
+#include "prosdep.h"
+#elif defined(XP_WIN)
+#include "md/prosdep.h"
+#endif
+#endif
 #include "prprf.h"
 #include "prmjtime.h"
 
@@ -279,7 +293,7 @@ PRMJ_DSTOffset(PRInt64 time)
     PRInt64  maxtimet;
     struct tm tm;
     PRMJTime prtm;
-#if defined( XP_PC ) || defined( FREEBSD ) || defined ( HPUX9 ) || defined ( SNI ) || defined ( NETBSD ) || defined ( OPENBSD ) || defined( RHAPSODY )
+#if defined( XP_PC ) || defined( FREEBSD ) || defined ( HPUX9 ) || defined ( SNI ) || defined ( NETBSD ) || defined ( OPENBSD )
     struct tm *ptm;
 #endif
 
@@ -298,7 +312,7 @@ PRMJ_DSTOffset(PRInt64 time)
     }
     LL_L2UI(local,time);
     PRMJ_basetime(time,&prtm);
-#if defined( XP_PC ) || defined( FREEBSD ) || defined ( HPUX9 ) || defined ( SNI ) || defined ( NETBSD ) || defined ( OPENBSD ) || defined( RHAPSODY )
+#if defined( XP_PC ) || defined( FREEBSD ) || defined ( HPUX9 ) || defined ( SNI ) || defined ( NETBSD ) || defined ( OPENBSD )
     ptm = localtime(&local);
     if(!ptm){
       return LL_ZERO;

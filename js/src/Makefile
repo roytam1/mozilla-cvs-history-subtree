@@ -165,7 +165,8 @@ JSJAVA_CFLAGS	= -I$(DEPTH)/sun-java/md-include \
 		  -I$(DEPTH)/sun-java/include \
 		  $(JSJAVA_STUBHEADERS)
 
-# LIBNSPR abstracts nspr version, etc. nicely.
+# LIBNSPR includes unneeded libmsgc21.a, but abstracts nspr version,
+# etc. nicely.
 LDFLAGS 	= $(LIBNSPR) -lm
 
 ifeq ($(OS_ARCH), OSF1)

@@ -44,7 +44,7 @@
 #endif
 
 #ifdef XP_MAC
-#include "macstdlibextras.h"  /* for strdup() */
+#    include "prosdep.h"
 #endif
 
 #include "jsj_hash.h"        /* Hash tables */

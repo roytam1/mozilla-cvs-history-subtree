@@ -30,6 +30,10 @@
 #include "prlog.h"
 PR_BEGIN_EXTERN_C
 
+#ifdef XP_MAC
+#include "prosdep.h"
+#endif
+
 #include "jsj_private.h"
 #include "jsjava.h"
 
@@ -95,7 +99,7 @@ nsCLiveconnect::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
  *                     wrapped up as java wrapper netscape.javascript.JSObject.
  */
 NS_METHOD	
-nsCLiveconnect::GetMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize length, jobject *pjobj)
+nsCLiveconnect::GetMember(JNIEnv *jEnv, jsobject obj, const char *name, jobject *pjobj)
 {
     JSContext         *cx             = NULL;
     JSJavaThreadState *jsj_env        = NULL;
@@ -122,7 +126,7 @@ nsCLiveconnect::GetMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize l
     }
 
     
-    if (!JS_GetUCProperty(cx, js_obj, name, length, &js_val))
+    if (!JS_GetProperty(cx, js_obj, name, &js_val))
         goto done;
 
     jsj_ConvertJSValueToJavaObject(cx, jEnv, js_val, jsj_get_jlObject_descriptor(cx, jEnv),
@@ -148,7 +152,7 @@ done:
  *                     the member. 
  */
 NS_METHOD	
-nsCLiveconnect::GetSlot(JNIEnv *jEnv, jsobject obj, jint slot, jobject *pjobj)
+nsCLiveconnect::GetSlot(JNIEnv *jEnv, jsobject obj, int slot, jobject *pjobj)
 {
     JSContext         *cx             = NULL;
     JSJavaThreadState *jsj_env        = NULL;
@@ -195,7 +199,7 @@ done:
  *                     then a internal mapping is consulted to convert to a NJSObject.
  */
 NS_METHOD	
-nsCLiveconnect::SetMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize length, jobject java_obj)
+nsCLiveconnect::SetMember(JNIEnv *jEnv, jsobject obj, const char *name, jobject java_obj)
 {
     JSContext         *cx             = NULL;
     JSJavaThreadState *jsj_env        = NULL;
@@ -222,7 +226,7 @@ nsCLiveconnect::SetMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize l
     if (!jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_obj, &js_val))
         goto done;
 
-    JS_SetUCProperty(cx, js_obj, name, length, &js_val);
+    JS_SetProperty(cx, js_obj, name, &js_val);
 
 done:
     jsj_exit_js(cx, jsj_env, &saved_state);
@@ -241,7 +245,7 @@ done:
  *                     then a internal mapping is consulted to convert to a NJSObject.
  */
 NS_METHOD	
-nsCLiveconnect::SetSlot(JNIEnv *jEnv, jsobject obj, jint slot, jobject java_obj)
+nsCLiveconnect::SetSlot(JNIEnv *jEnv, jsobject obj, int slot, jobject java_obj)
 {
     JSContext         *cx             = NULL;
     JSJavaThreadState *jsj_env        = NULL;
@@ -276,7 +280,7 @@ done:
  * @param name       - Name of a member.
  */
 NS_METHOD	
-nsCLiveconnect::RemoveMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize length)
+nsCLiveconnect::RemoveMember(JNIEnv *jEnv, jsobject obj, const char *name)
 {
     JSContext         *cx             = NULL;
     JSJavaThreadState *jsj_env        = NULL;
@@ -297,7 +301,7 @@ nsCLiveconnect::RemoveMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsiz
         JS_ReportError(cx, "illegal null member name");
         goto done;
     }
-    JS_DeleteUCProperty2(cx, js_obj, name, length, &js_val);
+    JS_DeleteProperty2(cx, js_obj, name, &js_val);
 
 done:
     jsj_exit_js(cx, jsj_env, &saved_state);
@@ -315,7 +319,7 @@ done:
  * @param pjobj      - return value.
  */
 NS_METHOD	
-nsCLiveconnect::Call(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize length, jobjectArray java_args, jobject *pjobj)
+nsCLiveconnect::Call(JNIEnv *jEnv, jsobject obj, const char *name, jobjectArray java_args, jobject *pjobj)
 {
     int                i              = 0;
     int                argc           = 0;
@@ -368,7 +372,7 @@ nsCLiveconnect::Call(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize length
         JS_AddRoot(cx, &argv[arg_num]);
     }
 
-    if (!JS_GetUCProperty(cx, js_obj, name, length, &function_val))
+    if (!JS_GetProperty(cx, js_obj, name, &function_val))
         goto cleanup_argv;
 
     if (!JS_CallFunctionValue(cx, js_obj, function_val, argc, argv, &js_val))
@@ -405,7 +409,7 @@ done:
  * @param pjobj              - return value.
  */
 NS_METHOD	
-nsCLiveconnect::Eval(JNIEnv *jEnv, jsobject obj, const jchar *script, jsize length, jobject *pjobj)
+nsCLiveconnect::Eval(JNIEnv *jEnv, jsobject obj, const char *script, jobject *pjobj)
 {
     JSContext         *cx             = NULL;
     JSJavaThreadState *jsj_env        = NULL;
@@ -444,8 +448,8 @@ nsCLiveconnect::Eval(JNIEnv *jEnv, jsobject obj, const jchar *script, jsize leng
     codebase = principals ? principals->codebase : NULL;
 
     /* Have the JS engine evaluate the unicode string */
-    eval_succeeded = JS_EvaluateUCScriptForPrincipals(cx, js_obj, principals,
-                                                      script, length,
+    eval_succeeded = JS_EvaluateScriptForPrincipals(cx, js_obj, principals,
+                                                      script, strlen(script),
                                                       codebase, 0, &js_val);
     if (!eval_succeeded)
         goto done;
