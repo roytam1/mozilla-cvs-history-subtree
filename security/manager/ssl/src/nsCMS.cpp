@@ -169,8 +169,14 @@ NS_IMETHODIMP nsCMSMessage::VerifyDetachedSignature(unsigned char* aDigestData, 
   nsigners = NSS_CMSSignedData_SignerInfoCount(sigd);
   PR_ASSERT(nsigners > 0);
 
-  si = NSS_CMSSignedData_GetSignerInfo(sigd, 0);
+  // We verify the first signer info,  only //
   if (NSS_CMSSignedData_VerifySignerInfo(sigd, 0, CERT_GetDefaultCertDB(), certUsageEmailSigner) != SECSuccess) {
+    goto loser;
+  }
+
+  // Save the profile //
+  si = NSS_CMSSignedData_GetSignerInfo(sigd, 0);
+  if (NSS_SMIMESignerInfo_SaveSMIMEProfile(si) != SECSuccess) {
     goto loser;
   }
 
