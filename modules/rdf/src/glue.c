@@ -101,7 +101,7 @@ rdf_complete(NET_StreamClass *stream)
         autoupdt = AutoUpdate_Setup(FE_GetRDFContext(), 
                                     id, uf, fSize, 
                                     "http://warp/u/raman/docs/js/download.html");
-        autoupdate_Resume(autoupdt);
+        Autoupdate_Resume(autoupdt);
 #endif /* MOZ_SMARTUPDATE */
         freeMem(uf);
         freeMem(id);
