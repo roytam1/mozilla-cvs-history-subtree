@@ -403,8 +403,8 @@ js_AtomizeDouble(JSContext *cx, jsdouble d, uintN flags)
     JSAtom *atom;
 #define AlignNum (1<<JSVAL_TAGBITS)
     char alignbuf[2*AlignNum];
-    int alignint = (int)alignbuf;
-    int xtra = AlignNum-(alignint%AlignNum);
+    JSUint32 alignint = (JSUint32)alignbuf;
+    JSUint32 xtra = AlignNum-(alignint%AlignNum);
     JS_ASSERT(AlignNum >= sizeof(double));
 #undef AlignNum
     dp = (jsdouble *)&alignbuf[xtra];
@@ -513,8 +513,8 @@ js_Atomize(JSContext *cx, const char *bytes, size_t length, uintN flags)
     JSAtom *atom;
 #define AlignNum (1<<JSVAL_TAGBITS)
     char alignbuf[2*AlignNum];
-    int alignint = (int)alignbuf;
-    int xtra = AlignNum-(alignint%AlignNum);
+    JSUint32 alignint = (JSUint32)alignbuf;
+    JSUint32 xtra = AlignNum-(alignint%AlignNum);
     JS_ASSERT(AlignNum >= sizeof(double));
 #undef AlignNum
     str = (JSString *)&alignbuf[xtra];
@@ -535,8 +535,8 @@ js_AtomizeChars(JSContext *cx, const jschar *chars, size_t length, uintN flags)
     JSString *str;
 #define AlignNum (1<<JSVAL_TAGBITS)
     char alignbuf[2*AlignNum];
-    int alignint = (int)alignbuf;
-    int xtra = AlignNum-(alignint%AlignNum);
+    JSUint32 alignint = (JSUint32)alignbuf;
+    JSUint32 xtra = AlignNum-(alignint%AlignNum);
     JS_ASSERT(AlignNum >= sizeof(double));
 #undef AlignNum
     str = (JSString *)&alignbuf[xtra];
