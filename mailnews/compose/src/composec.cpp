@@ -276,7 +276,7 @@ mime_init_multipart_signed(mime_crypto_closure *state, PRBool outer_p)
 	 on the object which we are signing.
    */
 
-  state->hash_type = nsIHash.HASH_AlgSHA1;
+  state->hash_type = nsIHash::HASH_AlgSHA1;
 
   PR_SetError(0,0);
   state->data_hash_context = do_CreateInstance(NS_HASH_CONTRACTID, &rv);
@@ -511,7 +511,7 @@ mime_finish_multipart_signed (mime_crypto_closure *state, PRBool outer_p)
   /* Create the signature...
    */
 
-  PR_ASSERT(state->hash_type == nsIHash.HASH_AlgSHA1);
+  PR_ASSERT(state->hash_type == nsIHash::HASH_AlgSHA1);
 
   PR_ASSERT (state->self_signing_cert);
   PR_SetError(0,0);

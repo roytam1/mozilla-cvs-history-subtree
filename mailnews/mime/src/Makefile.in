@@ -71,6 +71,9 @@ CPPSRCS		= \
 		nsStreamConverter.cpp \
 		mimedrft.cpp \
 		nsMimeHeaders.cpp \
+                mimecryp.cpp \
+                mimecms.cpp \
+                mimemcms.cpp \
 		$(NULL)
 
 EXPORTS		= \

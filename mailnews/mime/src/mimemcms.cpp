@@ -122,22 +122,22 @@ MimeMultCMS_init (MimeObject *obj)
   if (!micalg) return 0; /* #### bogus message?  out of memory? */
 
   if (!nsCRT::strcasecmp(micalg, PARAM_MICALG_MD5))
-	hash_type = nsIHash.HASH_AlgMD5;
+	hash_type = nsIHash::HASH_AlgMD5;
   else if (!nsCRT::strcasecmp(micalg, PARAM_MICALG_SHA1) ||
 		   !nsCRT::strcasecmp(micalg, PARAM_MICALG_SHA1_2) ||
 		   !nsCRT::strcasecmp(micalg, PARAM_MICALG_SHA1_3) ||
 		   !nsCRT::strcasecmp(micalg, PARAM_MICALG_SHA1_4) ||
 		   !nsCRT::strcasecmp(micalg, PARAM_MICALG_SHA1_5))
-	hash_type = nsIHash.HASH_AlgSHA1;
+	hash_type = nsIHash::HASH_AlgSHA1;
   else if (!nsCRT::strcasecmp(micalg, PARAM_MICALG_MD2))
-	hash_type = nsIHash.HASH_AlgMD2;
+	hash_type = nsIHash::HASH_AlgMD2;
   else
-	hash_type = nsIHash.HASH_AlgNULL;
+	hash_type = nsIHash::HASH_AlgNULL;
 
   PR_Free(micalg);
   micalg = 0;
 
-  if (hash_type == nsIHash.HASH_AlgNULL) return 0; /* #### bogus message? */
+  if (hash_type == nsIHash::HASH_AlgNULL) return 0; /* #### bogus message? */
 
   data = (MimeMultCMSdata *) PR_MALLOC(sizeof(*data));
   if (!data) return 0;
