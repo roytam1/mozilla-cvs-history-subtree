@@ -53,6 +53,8 @@
 #include "nsIObserver.h"
 #include "nsCOMArray.h"
 #include "nsWeakReference.h"
+#include "nsIPrompt.h"
+#include "nsEventQueueUtils.h"
 
 class nsExternalAppHandler;
 class nsIMIMEInfo;
@@ -66,7 +68,7 @@ class nsIDownload;
 class nsExternalHelperAppService
 : public nsIExternalHelperAppService,
   public nsPIExternalAppLauncher,
-  public nsIExternalProtocolService,
+  public nsPIExternalProtocolService,
   public nsIMIMEService,
   public nsIObserver,
   public nsSupportsWeakReference
@@ -76,6 +78,7 @@ public:
   NS_DECL_NSIEXTERNALHELPERAPPSERVICE
   NS_DECL_NSPIEXTERNALAPPLAUNCHER
   NS_DECL_NSIEXTERNALPROTOCOLSERVICE
+  NS_DECL_NSPIEXTERNALPROTOCOLSERVICE
   NS_DECL_NSIMIMESERVICE
   NS_DECL_NSIOBSERVER
 
@@ -265,6 +268,16 @@ protected:
    * Array for the files that should be deleted
    */
   nsCOMArray<nsILocalFile> mTemporaryFilesList;
+
+  /**
+   * OS-specific loading of external URLs
+   */
+  virtual NS_HIDDEN_(nsresult) LoadUriInternal(nsIURI * aURL) = 0;
+  NS_HIDDEN_(PRBool) isExternalLoadOK(nsIURI* aURI, nsIPrompt* aPrompt);
+  NS_HIDDEN_(PRBool) promptForScheme(nsIURI* aURI, nsIPrompt* aPrompt, PRBool *aRemember);
+
+  // friend event handler that accesses the external loading functions
+  friend void *PR_CALLBACK handleExternalLoadEvent(PLEvent *event);
 };
 
 /**
