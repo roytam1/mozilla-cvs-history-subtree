@@ -195,7 +195,7 @@ exn_finalize(JSContext *cx, JSObject *obj)
     }
 }
 
-JSErrorReport *
+static JSErrorReport *
 js_ErrorFromException(JSContext *cx, jsval exn)
 {
     JSObject *obj;
@@ -214,53 +214,6 @@ js_ErrorFromException(JSContext *cx, jsval exn)
     
     JS_ASSERT(privateData->errorReport);
     return privateData->errorReport;
-}
-
-extern JSBool
-js_ReportUncaughtException(JSContext *cx)
-{
-    JSObject *exnObject;
-    JSString *str;
-    jsval exn;
-    JSErrorReport *reportp;
-    
-    if (!JS_IsExceptionPending(cx))
-        return JS_FALSE;
-    
-    if (!JS_GetPendingException(cx, &exn))
-        return JS_FALSE;
-
-    /*
-     * Because js_ValueToString below could error and an exception object
-     * could become unrooted, we root it here.
-     */
-    if (JSVAL_IS_OBJECT(exn)) {
-        exnObject = JSVAL_TO_OBJECT(exn);
-        if (!js_AddRoot(cx, exnObject, "exn.report.root"))
-            return JS_FALSE;
-    } else {
-        exnObject = NULL;
-    }
-    str = js_ValueToString(cx, exn);
-
-    reportp = js_ErrorFromException(cx, exn);
-    if (reportp == NULL) {
-        /*
-         * XXXmccabe todo: Instead of doing this, synthesize an error report
-         * struct that includes the filename, lineno where the exception was
-         * originally thrown.
-         */
-        JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-                             JSMSG_UNCAUGHT_EXCEPTION, js_GetStringBytes(str));
-    } else {
-        /* Flag the error as an exception. */
-        reportp->flags |= JSREPORT_EXCEPTION;
-        js_ReportErrorAgain(cx, js_GetStringBytes(str), reportp);
-    }
-
-    if (exnObject != NULL)
-        js_RemoveRoot(cx, exnObject);
-    return JS_TRUE;
 }
 
 /* This must be kept in synch with the exceptions array below. */
@@ -609,3 +562,58 @@ js_ErrorToException(JSContext *cx, const char *message, JSErrorReport *reportp)
 }
 #endif /* JS_HAS_ERROR_EXCEPTIONS */
 
+#if JS_HAS_EXCEPTIONS
+
+extern JSBool
+js_ReportUncaughtException(JSContext *cx)
+{
+    JSObject *exnObject;
+    JSString *str;
+    jsval exn;
+    JSErrorReport *reportp;
+    
+    if (!JS_IsExceptionPending(cx))
+        return JS_FALSE;
+    
+    if (!JS_GetPendingException(cx, &exn))
+        return JS_FALSE;
+
+    /*
+     * Because js_ValueToString below could error and an exception object
+     * could become unrooted, we root it here.
+     */
+    if (JSVAL_IS_OBJECT(exn)) {
+        exnObject = JSVAL_TO_OBJECT(exn);
+        if (!js_AddRoot(cx, exnObject, "exn.report.root"))
+            return JS_FALSE;
+    } else {
+        exnObject = NULL;
+    }
+    str = js_ValueToString(cx, exn);
+
+#if JS_HAS_ERROR_EXCEPTIONS
+    reportp = js_ErrorFromException(cx, exn);
+#else
+    reportp = NULL;
+#endif
+
+    if (reportp == NULL) {
+        /*
+         * XXXmccabe todo: Instead of doing this, synthesize an error report
+         * struct that includes the filename, lineno where the exception was
+         * originally thrown.
+         */
+        JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
+                             JSMSG_UNCAUGHT_EXCEPTION, js_GetStringBytes(str));
+    } else {
+        /* Flag the error as an exception. */
+        reportp->flags |= JSREPORT_EXCEPTION;
+        js_ReportErrorAgain(cx, js_GetStringBytes(str), reportp);
+    }
+
+    if (exnObject != NULL)
+        js_RemoveRoot(cx, exnObject);
+    return JS_TRUE;
+}
+
+#endif	    /* JS_HAS_EXCEPTIONS */
