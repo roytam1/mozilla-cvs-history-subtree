@@ -279,6 +279,7 @@ mime_dump_attachments ( attachmentList );
     PRInt32 i = msgURI.FindChar('?');
     if (i != kNotFound)
       msgURI.Truncate(i);
+    NS_UnescapeURL(msgURI);
     pMsgComposeParams->SetOriginalMsgURI(msgURI.get());
     
     rv = msgComposeService->OpenComposeWindowWithParams(nsnull /* default chrome */, pMsgComposeParams);
