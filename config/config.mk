@@ -409,6 +409,10 @@ BUILD_EDITOR_UI	= 1
 BUILD_EDT	= 1
 endif
 
+ifdef MOZ_JAVA
+MOZ_SMARTUPDATE = 1
+endif
+
 # Build layers by default
 ifndef NO_LAYERS
 DEFINES		+= -DLAYERS
