@@ -71,7 +71,7 @@ private:
         {
         }
 
-        ~evalContextImpl()
+        ~EvalContextImpl()
         {
         }
 

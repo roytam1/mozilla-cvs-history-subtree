@@ -109,10 +109,10 @@ ExprResult* NodeSetFunctionCall::evaluate(txIEvalContext* aContext) {
                 return 0;
             }
 
-            Document* contextDoc;
+            Document* contextDoc = 0;
             Node* contextNode = aContext->getContextNode();
             if (contextNode->getNodeType() == Node::DOCUMENT_NODE)
-                contextDoc = (Document*)aContext;
+                contextDoc = (Document*)contextNode;
             else
                 contextDoc = contextNode->getOwnerDocument();
             
@@ -125,7 +125,9 @@ ExprResult* NodeSetFunctionCall::evaluate(txIEvalContext* aContext) {
                     txTokenizer tokenizer(idList);
                     while (tokenizer.hasMoreTokens()) {
                         tokenizer.nextToken(id);
-                        resultSet->add(contextDoc->getElementById(id));
+                        Node* idNode = contextDoc->getElementById(id);
+                        if (idNode)
+                            resultSet->add(idNode);
                     }
                 }
             }
