@@ -175,7 +175,8 @@ Process(JSContext *cx, JSObject *obj, char *filename)
 	    if (script) {
                 JSErrorReporter older;
                 
-		if ((ok = JS_ExecuteScript(cx, obj, script, &result)) &&
+		ok = JS_ExecuteScript(cx, obj, script, &result);
+		if (ok &&
 		    (ts->flags & TSF_INTERACTIVE) &&
 		    result != JSVAL_VOID) {
                     /*
@@ -1301,7 +1302,7 @@ my_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
     }
 
     /* embedded newlines -- argh! */
-    while ((tmp = strchr(message, '\n'))) {
+    while ((tmp = strchr(message, '\n')) != 0) {
 	tmp++;
 	if (prefix) fputs(prefix, stderr);
 	fwrite(message, 1, tmp - message, stderr);

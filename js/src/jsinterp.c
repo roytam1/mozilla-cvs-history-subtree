@@ -1939,7 +1939,7 @@ js_Interpret(JSContext *cx, jsval *result)
 		parent = OBJ_GET_PARENT(cx, obj2);
 
                 if ((OBJ_GET_CLASS(cx, obj2) == &js_FunctionClass) && 
-                    (cl = ((JSFunction *)JS_GetPrivate(cx, obj2))->clasp))
+                    (cl = ((JSFunction *)JS_GetPrivate(cx, obj2))->clasp) != 0)
                 {
                     clasp = cl;
                 }
