@@ -21,16 +21,8 @@
 
 DEPTH=..\..
 MODULE=accessibility
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-MAKE_OBJ_TYPE=LIB
 LIBRARY_NAME=accessibility
-LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
-!else
-MAKE_OBJ_TYPE=DLL
-DLLNAME=accessibility
-DLL=.\$(OBJDIR)\$(DLLNAME).dll
-!endif
+COMPONENT_NAME=nsAccessibilityModule
 
 CPP_OBJS=\
         .\$(OBJDIR)\nsAccessibilityFactory.obj    \
@@ -38,21 +30,15 @@ CPP_OBJS=\
 
 LINCS = $(LINCS) -I..\src         # for implementation headers
 
+SUB_LIBRARIES=\
+ $(DIST)\lib\accessibility_s.lib \
+ $(NULL)
+
 LLIBS=\
- $(DIST)\lib\xpcom.lib         \
- $(DIST)\lib\accessibility_s.lib      \
- $(DIST)\lib\timer_s.lib       \
+ $(DIST)\lib\xpcom.lib    \
+ $(DIST)\lib\timer_s.lib  \
  $(DIST)\lib\gkgfxwin.lib \
  $(LIBNSPR)  
 
 include <$(DEPTH)\config\rules.mak>
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-	$(MAKE_INSTALL) $(LIB) $(DIST)\bin\components
-	$(MAKE_INSTALL) $(LIB) $(DIST)\lib
-!else
-install:: $(DLL)
- 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
- 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
-!endif

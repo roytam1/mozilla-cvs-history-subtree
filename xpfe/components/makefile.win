@@ -42,9 +42,6 @@ DIRS= \
     winhooks \
     urlwidget \
     build \
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-    ucth \
-!endif
     $(NULL)
 
 include <$(DEPTH)\config\rules.mak>

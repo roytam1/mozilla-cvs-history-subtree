@@ -28,12 +28,15 @@
 #
 #------------------------------------------------------------------------
 
+MODULE=img 
+LIBRARY_NAME=nsgif
+COMPONENT_NAME=nsGIFModule
+
+DEPTH=..\..\.. 
+
 !ifdef MOZ_JAVA
 LOCAL_JMC_SUBDIR = .
 !endif
-
-
-LIBRARY_NAME = nsgif
 
 #
 # Make sure we have MOZILLA_CLIENT defined so we get the
@@ -55,28 +58,11 @@ LLIBS= $(LIBNSPR)  \
 !endif
 	$(NULL)
 
-LIBRARY= .\$(OBJDIR)\$(LIBRARY_NAME).lib
-#LIBRARY_SUFFIX = $(MOZ_BITS)$(VERSION_NUMBER)
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-MAKE_OBJ_TYPE=LIB
-!else
-MAKE_OBJ_TYPE=DLL
-!endif
 #//------------------------------------------------------------------------
 #//
 #// Define any Public Make Variables here: (ie. PDFFILE, MAPFILE, ...)
 #//
 #//------------------------------------------------------------------------
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-LIBRARY_NAME=nsgif$(MOZ_BITS)$(VERSION_NUMBER)
-LIBRARY_1NAME=nsgif
-!else
-DLLNAME=nsgif
-DLL1NAME=nsgif
-!endif
-PDBFILE=$(DLLNAME).pdb
-MAPFILE=$(DLLNAME).map
 DEFFILE=nsgif.def
 
 
@@ -86,32 +72,9 @@ DEFFILE=nsgif.def
 #// (these must be defined before the common makefiles are included)
 #//
 #//------------------------------------------------------------------------
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib 
-MAPFILE= $(LIBRARY_NAME).map
-!else
-DLL=.\$(OBJDIR)\$(DLLNAME).dll 
-MAPFILE= $(DLLNAME).map
-!endif
-
-
-MODULE=img 
-DEPTH=..\..\.. 
-
 LINCS=-I$(DEPTH)/dist/public/xpcom -I. -I$(DEPTH)/dist/public/raptor
 CPPSRCS= nsGIFModule.cpp nsGIFDecoder.cpp gif.cpp 
 CPP_OBJS=   .\$(OBJDIR)\nsGIFModule.obj .\$(OBJDIR)\nsGIFDecoder.obj \
            .\$(OBJDIR)\gif.obj
 
 include <$(DEPTH)\config\rules.mak> 
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-    $(MAKE_INSTALL) $(LIB) $(DIST)\bin\components
-    $(MAKE_INSTALL) $(LIB) $(DIST)\lib
-!else
-install:: $(DLL)
-    $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
-    $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
-!endif
-

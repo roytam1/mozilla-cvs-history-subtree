@@ -22,15 +22,9 @@
 DEPTH=..\..
 MODULE=AcctIdl
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-AKE_OBJ_TYPE=LIB
-LIBRARY_NAME=$(MODULE)
-LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
-!else
 MAKE_OBJ_TYPE=DLL
 DLLNAME=$(MODULE)
 DLL=.\$(OBJDIR)\$(DLLNAME).dll
-!endif
 
 XPIDLSRCS=      .\nsIAccountServices.idl                  \
                 $(NULL)
@@ -53,13 +47,8 @@ LINCS=\
 
 include <$(DEPTH)\config\rules.mak>
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-        $(MAKE_INSTALL) $(LIB) $(DIST)\bin\components
-!else
 install:: $(DLL)
         $(MAKE_INSTALL) $(DLL) $(DIST)\bin\components
-!endif
         $(MAKE_INSTALL) Account.html $(DIST)\bin\res\acct
         $(MAKE_INSTALL) am.xul $(DIST)\bin\res\acct
         $(MAKE_INSTALL) am2.xul $(DIST)\bin\res\acct

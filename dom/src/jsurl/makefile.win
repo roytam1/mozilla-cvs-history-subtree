@@ -23,14 +23,10 @@ DEPTH=..\..\..
 MODULE=jsurl
 include <$(DEPTH)/config/config.mak>
 
-IS_COMPONENT=1
-!ifdef MOZ_STATIC_COMPONENT_LIBS
+MODULE=jsurl
 LIBRARY_NAME=jsurl
-LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
-!else
-DLLNAME=jsurl
-DLL=.\$(OBJDIR)\$(DLLNAME).dll
-!endif
+COMPONENT_NAME= javascript__protocol
+
 #------------------------------------------------------------------------
 #
 # Makefile to build the javascript: URL handler
@@ -69,11 +65,3 @@ XPIDLSRCS = \
 
 
 include <$(DEPTH)\config\rules.mak> 
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-	$(MAKE_INSTALL) $(LIB) $(DIST)\bin\components
-!else
-install:: $(DLL)
-	$(MAKE_INSTALL) $(DLL) $(DIST)\bin\components
-!endif

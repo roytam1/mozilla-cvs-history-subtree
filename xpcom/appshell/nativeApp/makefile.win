@@ -20,17 +20,12 @@
 #   Travis Bogard <travis@netscape.com>
 
 DEPTH=..\..\..
-MODULE=xpcom_nativeapp
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-MAKE_OBJ_TYPE=LIB
+include <$(DEPTH)\config\config.mak>
+
+MODULE=xpcom_nativeapp
 LIBRARY_NAME=nativapp
-LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
-!else
-MAKE_OBJ_TYPE=DLL
-DLLNAME=nativapp
-DLL=.\$(OBJDIR)\$(DLLNAME).dll
-!endif
+COMPONENT_NAME=nsCNativeAppModule
 
 XPIDLSRCS=						\
 		.\nsCNativeApp.idl	\
@@ -47,14 +42,4 @@ LLIBS=                              \
         $(LIBNSPR)  
 
 include <$(DEPTH)\config\rules.mak>
-include <$(DEPTH)\config\config.mak>
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
-!else
-install:: $(DLL)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
-!endif

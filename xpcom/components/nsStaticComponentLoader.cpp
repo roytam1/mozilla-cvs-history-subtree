@@ -50,7 +50,7 @@ protected:
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsStaticComponentLoader, nsIComponentLoader);
 
-NSGetStaticModuleInfoFunc NSGetStaticModuleInfo;
+NS_COM NSGetStaticModuleInfoFunc NSGetStaticModuleInfo;
 
 nsresult
 nsStaticComponentLoader::GetModuleInfo()

@@ -26,7 +26,10 @@
 #
 
 DEPTH=..\..\..\..
-MODULE=emitter
+MODULE          = emitter
+LIBRARY_NAME    = emitter
+META_COMPONENT  = mail
+COMPONENT_NAME  = nsMimeEmitterModule
 
 ################################################################################
 ## exports
@@ -38,36 +41,20 @@ EXPORTS =              			\
 
 ################################################################################
 ## library
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-LIBRARY_NAME = emitter
-LIB = .\$(OBJDIR)\$(LIBRARY_NAME).lib
-!else
-LIBNAME = .\$(OBJDIR)\emitter
-DLL = $(LIBNAME).dll
-!endif
-
 DEFINES= -NS_DEBUG
 
 OBJS=										\
 		.\$(OBJDIR)\nsEmitterFactory.obj	\
 		$(NULL)
 
+SUB_LIBRARIES=						\
+			$(DIST)\lib\emitterutils_s.lib  \
+			$(NULL)
+
 LLIBS=										\
 			$(LLIBS)						\
 			$(LIBNSPR)						\
 			$(DIST)\lib\xpcom.lib       	\
-			$(DIST)\lib\emitterutils_s.lib  \
 			$(NULL)
 
 include <$(DEPTH)\config\rules.mak>
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-	$(MAKE_INSTALL)  $(LIB) $(DIST)\bin\components
-	$(MAKE_INSTALL)  $(LIB) $(DIST)\lib
-!else
-install:: $(DLL)
-	$(MAKE_INSTALL)  $(LIBNAME).$(DLL_SUFFIX) $(DIST)\bin\components
-	$(MAKE_INSTALL)  $(LIBNAME).$(LIB_SUFFIX) $(DIST)\lib
-!endif

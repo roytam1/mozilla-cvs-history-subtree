@@ -21,18 +21,9 @@
 
 DEPTH=..\..
 
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-MAKE_OBJ_TYPE	= LIB
-LIBRARY_NAME = gkview
-LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
-!else
-MAKE_OBJ_TYPE	= DLL
-DLLNAME = gkview
-DLL=.\$(OBJDIR)\$(DLLNAME).dll
-!endif
-
-MODULE=raptor 
+MODULE		= view
+LIBRARY_NAME	= gkview
+COMPONENT_NAME	= nsViewModule
 
 DEFINES =-D_IMPL_NS_VIEW -DWIN32_LEAN_AND_MEAN
 
@@ -64,17 +55,3 @@ LLIBS=				\
  $(LIBNSPR)  
 
 include <$(DEPTH)\config\rules.mak>
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
-
-clobber::
-	rm -f $(DIST)\bin\$(LBRARY_NAME).lib
-!else
-install:: $(DLL)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
- 
-clobber::
-	rm -f $(DIST)\bin\$(DLLNAME).dll
-!endif

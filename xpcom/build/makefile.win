@@ -26,15 +26,9 @@ MODULE = xpcom
 
 include <$(DEPTH)\config\config.mak>
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-MAKE_OBJ_TYPE=LIB
-LIBRARY_NAME = xpcom
-LIB = .\$(OBJDIR)\$(LIBRARY_NAME).lib
-!else
 MAKE_OBJ_TYPE=DLL
 LIBNAME = .\$(OBJDIR)\xpcom
 DLL = $(LIBNAME).dll
-!endif
 
 # if we ever add a .def file for x86 we need to deal with this.
 !if "$(CPU)" == "ALPHA"
@@ -67,21 +61,24 @@ CPP_OBJS =                             \
         .\$(OBJDIR)\dlldeps.obj        \
         $(NULL)
 
-LLIBS =                                \
+SUB_LIBRARIES =                           \
+        $(DIST)\lib\xpcombase_s.lib       \
+        $(DIST)\lib\xpcomds_s.lib         \
+        $(DIST)\lib\xpcomio_s.lib         \
+        $(DIST)\lib\xpcomcomp_s.lib       \
+        $(DIST)\lib\xpcomthreads_s.lib    \
+        $(DIST)\lib\xpcomxpt_s.lib        \
+        $(DIST)\lib\xpcomxptcall_s.lib    \
+        $(DIST)\lib\xpcomxptcmd_s.lib     \
+        $(DIST)\lib\xpcomxptinfo_s.lib    \
+        $(DIST)\lib\xpcomproxy_s.lib      \
+        $(DIST)\lib\string_s.lib          \
+        $(DIST)\lib\string_obsolete_s.lib \
+        $(DIST)\lib\mozreg.lib            \
+        $(NULL)
+
+LLIBS = $(SUB_LIBRARIES)               \
         $(LIBNSPR)                     \
-        $(DIST)\lib\xpcombase_s.lib    \
-        $(DIST)\lib\xpcomds_s.lib      \
-        $(DIST)\lib\xpcomio_s.lib      \
-        $(DIST)\lib\xpcomcomp_s.lib    \
-        $(DIST)\lib\xpcomthreads_s.lib \
-        $(DIST)\lib\xpcomxpt_s.lib     \
-        $(DIST)\lib\xpcomxptcall_s.lib \
-        $(DIST)\lib\xpcomxptcmd_s.lib  \
-        $(DIST)\lib\xpcomxptinfo_s.lib \
-        $(DIST)\lib\xpcomproxy_s.lib   \
-        $(DIST)\lib\string_s.lib       \
-        $(DIST)\lib\string_obsolete_s.lib   \
-        $(DIST)\lib\mozreg.lib         \
         $(NULL)
 
 WIN_LIBS =                             \
@@ -97,12 +94,6 @@ WIN_LIBS =                             \
 
 include <$(DEPTH)\config\rules.mak>
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-	$(MAKE_INSTALL) $(LIB) $(DIST)\bin
-	$(MAKE_INSTALL) $(LIB) $(DIST)\lib
-!else
 install:: $(DLL)
 	$(MAKE_INSTALL) $(LIBNAME).$(DLL_SUFFIX) $(DIST)\bin
 	$(MAKE_INSTALL) $(LIBNAME).$(LIB_SUFFIX) $(DIST)\lib
-!endif

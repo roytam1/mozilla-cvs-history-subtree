@@ -92,6 +92,76 @@ OBJS=$(OBJS) $(C_OBJS) $(CPP_OBJS)
 
 include <$(DEPTH)/config/config.mak>
 
+!if "$(WINOS)" == "WIN95"
+_NO_FLOCK=-l
+!else
+_NO_FLOCK=-l
+!endif
+
+#//------------------------------------------------------------------------
+#//
+#// Definitions for building components
+#//
+#//------------------------------------------------------------------------
+!if defined(COMPONENT_NAME)
+# We're building a component
+!if defined(EXPORT_LIBRARY)
+!error "Can't define both COMPONENT_NAME and EXPORT_LIBRARY."
+!endif
+
+!if defined(MOZ_STATIC_COMPONENT_LIBS)
+MAKE_OBJ_TYPE=$(NULL)
+
+!if defined(META_COMPONENT)
+META_LINK_COMPS=$(DIST)\$(META_COMPONENT)-link-comps
+META_LINK_COMP_NAMES=$(DIST)\$(META_COMPONENT)-link-comp-names
+!endif
+
+LIBRARY=.\$(OBJDIR)\$(LIBRARY_NAME).lib
+
+!else
+
+# Build the component as a standalone DLL
+MAKE_OBJ_TYPE=DLL
+
+DLL=.\$(OBJDIR)\$(LIBRARY_NAME).dll
+LIBRARY=.\$(OBJDIR)\$(LIBRARY_NAME).lib
+
+LLIBS=$(SUB_LIBRARIES) $(LLIBS)
+!endif
+
+!endif
+
+#//------------------------------------------------------------------------
+#//
+#// Definitions for building top-level export libraries
+#//
+#//------------------------------------------------------------------------
+!if defined(EXPORT_LIBRARY)
+# We're building a top-level, non-component library
+
+!if defined(MOZ_STATIC_COMPONENT_LIBS)
+
+# Build it as a static lib, not a DLL
+MAKE_OBJ_TYPE=$(NULL)
+
+!if defined(META_COMPONENT)
+META_LINK_LIBS=$(DIST)\$(META_COMPONENT)\link-libs
+!endif
+
+LIBRARY=.\$(OBJDIR)\$(LIBRARY_NAME).lib
+!else
+# Build the library as a standalone DLL
+MAKE_OBJ_TYPE=DLL
+
+DLL=.\$(OBJDIR)\$(LIBRARY_NAME).dll
+LIBRARY=.\$(OBJDIR)\$(LIBRARY_NAME).lib
+
+LLIBS=$(SUB_LIBRARIES) $(LLIBS)
+!endif
+
+!endif
+
 #//------------------------------------------------------------------------
 #//
 #// Specify a default target if non was set...
@@ -110,7 +180,6 @@ W95MAKE=$(DEPTH)\config\w95make.exe
 W32OBJS = $(OBJS:.obj=.obj, )
 W32LOBJS = $(OBJS: .= +-.)
 !endif
-
 
 all::
     $(NMAKE) -f makefile.win export
@@ -423,6 +492,105 @@ $(OBJDIR):
 	@echo +++ make: Creating directory: $(OBJDIR)
     -mkdir $(OBJDIR)
 
+
+#//------------------------------------------------------------------------
+#//
+#// Rules for building components
+#//
+#//------------------------------------------------------------------------
+!if defined(COMPONENT_NAME)
+# We're building a component
+!if defined(EXPORT_LIBRARY)
+!error "Can't define both COMPONENT_NAME and EXPORT_LIBRARY."
+!endif
+
+!if defined(MOZ_STATIC_COMPONENT_LIBS)
+
+# We're building this component as a static lib
+!if defined(META_COMPONENT)
+
+# It's to be linked into a meta-component. Add the component name to
+# the meta component's list
+export::
+        $(PERL) $(DEPTH)\config\build-list.pl $(_NO_FLOCK) $(META_LINK_COMPS:\=/) $(LIBRARY_NAME)
+        $(PERL) $(DEPTH)\config\build-list.pl $(_NO_FLOCK) $(META_LINK_COMP_NAMES:\=/) $(COMPONENT_NAME)
+
+!else # defined(META_COMPONENT)
+# Otherwise, it's to be linked into the main executable. Add the component
+# name to the list of components, and the library name to the list of
+# static libs.
+export::
+        $(PERL) $(DEPTH)\config\build-list.pl $(_NO_FLOCK) $(FINAL_LINK_COMPS:\=/) $(LIBRARY_NAME)
+        $(PERL) $(DEPTH)\config\build-list.pl $(_NO_FLOCK) $(FINAL_LINK_COMP_NAMES:\=/) $(COMPONENT_NAME)
+
+!endif # defined(META_COMPONENT)
+
+install:: $(LIBRARY)
+        $(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
+
+clobber::
+        $(RM) $(DIST)\lib\$(LIBRARY)
+
+!else
+
+# Build the component as a standalone DLL
+install:: $(DLL)
+        $(MAKE_INSTALL) $(DLL) $(DIST)\bin\components
+
+clobber::
+        $(RM) $(DIST)\bin\components\$(DLL)
+
+!endif
+
+!endif
+
+#//------------------------------------------------------------------------
+#//
+#// Rules for building top-level export libraries
+#//
+#//------------------------------------------------------------------------
+!if defined(EXPORT_LIBRARY)
+# We're building a top-level, non-component library
+
+!if defined(MOZ_STATIC_COMPONENT_LIBS)
+
+!if defined(META_COMPONENT)
+# It's to be linked into a meta-component. Add the library to the
+# meta component's list
+META_LINK_LIBS=$(DIST)\$(META_COMPONENT)\link-libs
+
+export::
+        $(PERL) $(DEPTH)\config\build-list.pl $(_NO_FLOCK) $(META_LINK_LIBS:\=/) $(LIBRARY_NAME)
+
+!else # defined(META_COMPONENT)
+# Otherwise, it's to be linked into the main executable. Add the
+# library to the list of static libs.
+
+export::
+        $(PERL) $(DEPTH)\config\build-list.pl $(_NO_FLOCK) $(FINAL_LINK_LIBS:\=/) $(LIBRARY_NAME)
+
+!endif # defined(META_COMPONENT)
+
+install:: $(LIBRARY)
+        $(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
+
+clobber::
+        $(RM) $(DIST)\lib\$(LIBRARY)
+
+!else
+# Build the library as a standalone DLL
+install:: $(DLL) $(LIBRARY)
+        $(MAKE_INSTALL) $(DLL) $(DIST)\bin
+        $(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
+
+clobber::
+        $(RM) $(DIST)\bin\$(DLL)
+        $(RM) $(DIST)\lib\$(LIB)
+
+!endif
+
+!endif
+
 #//------------------------------------------------------------------------
 #//
 #// Include the makefile for building the various targets...
@@ -582,6 +750,24 @@ clobber_all::
 !endif
 !endif
 
+#//----------------------------------------------------------------------
+#//
+#// Component packaging rules
+#//
+#//----------------------------------------------------------------------
+$(FINAL_LINK_COMPS):
+        @echo +++ make: creating file: $(FINAL_LINK_COMPS)
+        @echo. > $(FINAL_LINK_COMPS)
+
+$(FINAL_LINK_COMP_NAMES):
+        @echo +++ make: creating file: $(FINAL_LINK_COMP_NAMES)
+        @echo. > $(FINAL_LINK_COMP_NAMES)
+
+$(FINAL_LINK_LIBS):
+        @echo +++ make: creating file: $(FINAL_LINK_LIBS)
+        @echo. > $(FINAL_LINK_LIBS)
+
+
 ################################################################################
 ## CHROME PACKAGING
 
@@ -610,12 +796,6 @@ _CHROME_FILE_FORMAT=jar
 _JAR_REGCHROME_DISABLE_JAR=0
 !endif
 
-!endif
-
-!if "$(WINOS)" == "WIN95"
-_NO_FLOCK=-l
-!else
-_NO_FLOCK=
 !endif
 
 REGCHROME = @perl -I$(DEPTH)\config $(DEPTH)\config\add-chrome.pl $(_NO_FLOCK) $(DIST)\bin\chrome\installed-chrome.txt $(_JAR_REGCHROME_DISABLE_JAR)

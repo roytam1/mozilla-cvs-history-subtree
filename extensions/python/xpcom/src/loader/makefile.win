@@ -21,13 +21,8 @@
 DEPTH=..\..\..\..\..
 include <$(DEPTH)/config/config.mak>
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
+MODULE=pyloader
 LIBRARY_NAME=pyloader
-LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
-!else
-DLLNAME=pyloader
-DLL=.\$(OBJDIR)\$(DLLNAME).dll
-!endif
 
 CPP_OBJS= \
 	.\$(OBJDIR)\pyloader.obj \
@@ -60,11 +55,3 @@ include <$(DEPTH)\config\rules.mak>
 
 #clobber::
 #    echo write me
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-		$(MAKE_INSTALL) $(LIB) $(DIST)\bin\components\.
-!else
-install:: $(DLL)
-		$(MAKE_INSTALL) $(DLL) $(DIST)\bin\components\.
-!endif

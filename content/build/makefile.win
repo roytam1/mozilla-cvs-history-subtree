@@ -24,9 +24,6 @@ include <$(DEPTH)/config/config.mak>
 
 DEFINES=-D_IMPL_NS_HTML 
 
-MODULE=raptor 
-IS_COMPONENT = 1
-
 CPP_OBJS=				\
 	.\$(OBJDIR)\dlldeps.obj		\
 	.\$(OBJDIR)\nsContentDLF.obj	\
@@ -37,15 +34,9 @@ CPP_OBJS=				\
 
 EXPORTS=nsContentCID.h
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-MAKE_OBJ_TYPE = LIB
-LIBRARY_NAME = gkcontent
-LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
-!else
-MAKE_OBJ_TYPE = DLL
-DLLNAME = gkcontent
-DLL=.\$(OBJDIR)\$(DLLNAME).dll
-!endif
+MODULE=layout
+LIBRARY_NAME=gkcontent
+COMPONENT_NAME=nsContentModule
 
 LCFLAGS = \
         $(LCFLAGS) \
@@ -62,23 +53,26 @@ LINCS=-I$(PUBLIC)\xpcom -I$(PUBLIC)\raptor -I$(PUBLIC)\dom \
   -I$(PUBLIC)\rdf
 
 # These are the libraries we need to link with to create the dll
-LLIBS=					\
+SUB_LIBRARIES=\
  $(DIST)\lib\contentbase_s.lib		\
- $(DIST)\lib\contenthtmlcontent_s.lib		\
+ $(DIST)\lib\contenthtmlcontent_s.lib	\
  $(DIST)\lib\contenthtmldoc_s.lib	\
  $(DIST)\lib\contenthtmlstyle_s.lib	\
  $(DIST)\lib\contentxmlcontent_s.lib	\
- $(DIST)\lib\contentxmldoc_s.lib		\
- $(DIST)\lib\contentxsldoc_s.lib		\
+ $(DIST)\lib\contentxmldoc_s.lib	\
+ $(DIST)\lib\contentxsldoc_s.lib	\
  $(DIST)\lib\contentxulcontent_s.lib	\
  $(DIST)\lib\contentxuldocument_s.lib   \
  $(DIST)\lib\contentxultemplates_s.lib  \
- $(DIST)\lib\contentxbl_s.lib \
- $(DIST)\lib\contentevents_s.lib		\
- $(DIST)\lib\contentshared_s.lib		\
- $(DIST)\lib\xpcom.lib		\
+ $(DIST)\lib\contentxbl_s.lib           \
+ $(DIST)\lib\contentevents_s.lib	\
+ $(DIST)\lib\contentshared_s.lib	\
+ $(NULL)
+
+LLIBS=\
+ $(DIST)\lib\xpcom.lib		        \
  $(DIST)\lib\gkgfxwin.lib		\
- $(DIST)\lib\timer_s.lib \
+ $(DIST)\lib\timer_s.lib                \
  $(DIST)\lib\js32$(VERSION_NUMBER).lib	\
 !if defined(MOZ_PERF)
  $(DIST)\lib\util.lib		        \
@@ -86,27 +80,6 @@ LLIBS=					\
  $(LIBNSPR)
 
 include <$(DEPTH)\config\rules.mak>
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: gbdate.h $(LIB)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
-
-clobber::
-	rm -f $(DIST)\bin\components\$(LIBRARY_NAME).lib
-	rm -f $(DIST)\lib\$(LIBRARY_NAME).lib
-	rm -f gbdate.h
-
-!else
-install:: gbdate.h $(DLL)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
-
-clobber::
-	rm -f $(DIST)\bin\components\$(DLLNAME).dll
-	rm -f $(DIST)\lib\$(DLLNAME).lib
-	rm -f gbdate.h
-!endif
 
 gbdate.h:: gbdate.pl
 	$(PERL) gbdate.pl > gbdate.h

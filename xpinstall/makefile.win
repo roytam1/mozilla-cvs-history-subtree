@@ -25,10 +25,6 @@
 
 DEPTH=..
 
-DIRS= public res src stub wizard\libxpnet wizard\windows 
-
-!if !defined(MOZ_STATIC_COMPONENT_LIBS)
-DIRS= $(DIRS) cleanup
-!endif
+DIRS= public res src stub wizard\libxpnet wizard\windows cleanup
 
 include <$(DEPTH)\config\rules.mak>

@@ -24,7 +24,7 @@ DEPTH=..\..\..
 include <$(DEPTH)/config/config.mak>
 
 MODULE       = editor 
-IS_COMPONENT = 1
+LIBRARY_NAME = texteditor
 
 # Uncomment the line below, or define MOZ_BUILD_PLAINTEXT_EDITOR_CORE_ONLY
 # in your environment, to build only the plain text editor core files:
@@ -41,12 +41,6 @@ CPP_OBJS =                                 \
            $(CPP_OBJS)                     \
            .\$(OBJDIR)\nsTextEditorReg.obj \
            $(NULL)
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-LIBRARY_NAME       = texteditor
-!else
-DLLNAME            = texteditor
-!endif
 
 !else
 
@@ -67,8 +61,6 @@ ENABLE_EDITOR_API_LOG=1
 DEFINES = -DENABLE_EDITOR_API_LOG $(DEFINES)
 !endif
 
-LIBRARY_NAME       = editor
-
 !endif
 
 LINCS =                      \
@@ -77,14 +69,6 @@ LINCS =                      \
         -I..\text\src        \
         $(NULL)
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-MAKE_OBJ_TYPE = LIB
-LIB           = .\$(OBJDIR)\$(LIBRARY_NAME).lib
-!else
-MAKE_OBJ_TYPE = DLL
-DLL           = .\$(OBJDIR)\$(DLLNAME).dll
-!endif
-
 LCFLAGS =            \
           $(LCFLAGS) \
           $(DEFINES) \
@@ -92,7 +76,7 @@ LCFLAGS =            \
 
 # These are the base editor libraries we need to link with to create the dll
 
-LLIBS =                                  \
+SUB_LIBRARIES =                          \
         $(DIST)\lib\libbaseeditor_s.lib  \
         $(DIST)\lib\libtexteditor_s.lib  \
         $(NULL)
@@ -106,8 +90,7 @@ LINCS =               \
 
 # These are the html editor libraries we need to link with to create the dll
 
-LLIBS =                                  \
-        $(LLIBS)                         \
+SUB_LIBRARIES =                          \
         $(DIST)\lib\libhtmleditor_s.lib  \
         $(NULL)
 
@@ -123,35 +106,3 @@ LLIBS =                                  \
 
 include <$(DEPTH)\config\rules.mak>
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-build:: $(LIB)
-!else
-build:: $(DLL)
-!endif
-
-!if !defined(MOZ_BUILD_PLAINTEXT_EDITOR_CORE_ONLY)
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
-	set MOZ_BUILD_PLAINTEXT_EDITOR_CORE_ONLY=1
-	nmake -f makefile.win build
-!else
-install:: $(DLL)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
-	set MOZ_BUILD_PLAINTEXT_EDITOR_CORE_ONLY=1
-	nmake -f makefile.win build
-!endif
-
-clobber::
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-	rm -f $(DIST)\bin\$(LIBRARY_NAME).lib
-	rm -f $(DIST)\lib\$(LIBRARY_NAME).lib
-!else
-	rm -f $(DIST)\bin\$(DLLNAME).lib
-	rm -f $(DIST)\lib\$(DLLNAME).lib
-!endif
-
-!endif

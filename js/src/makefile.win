@@ -91,7 +91,8 @@ DEFFILE		= $(LIBRARY_NAME).def
 
 FDLIBM_LIBRARY	=	fdlibm\$(OBJDIR)\fdlibm.lib
 
-LLIBS=$(LIBNSPR) $(FDLIBM_LIBRARY)
+SUB_LIBRARIES=$(FDLIBM_LIBRARY)
+LLIBS=$(LIBNSPR)
 LCFLAGS= $(LCFLAGS) -DEXPORT_JS_API
 
 #//------------------------------------------------------------------------

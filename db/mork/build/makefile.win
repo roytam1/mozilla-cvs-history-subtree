@@ -20,7 +20,9 @@
 # Contributor(s): 
 
 DEPTH=..\..\..
-MODULE=msgmork 
+MODULE          = mork
+LIBRARY_NAME    = mork
+COMPONENT_NAME  = nsMorkModule
 
 ################################################################################
 ## exports
@@ -33,22 +35,17 @@ EXPORTS=					\
 ################################################################################
 ## library
 
-LIBRARY_NAME = mork
-LIB = .\$(OBJDIR)\$(LIBRARY_NAME).lib
-
 CPP_OBJS=									\
 			.\$(OBJDIR)\nsMorkFactory.obj	\
 			$(NULL)
 
+SUB_LIBRARIES=					\
+	$(DIST)\lib\msgmork_s.lib		\
+	$(NULL)
+
 LLIBS=								\
 	$(DIST)\lib\xpcom.lib			\
-	$(DIST)\lib\msgmork_s.lib		\
     $(LIBNSPR)						\
 	$(NULL)
 
 include <$(DEPTH)\config\rules.mak>
-
-install:: $(LIB)
-	$(MAKE_INSTALL)  $(LIB) $(DIST)\bin\components
-	$(MAKE_INSTALL)  $(LIB) $(DIST)\lib
-

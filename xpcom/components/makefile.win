@@ -27,14 +27,15 @@ MODULE = xpcom_components
 ################################################################################
 ## exports
 
-EXPORTS =                     \
+EXPORTS =                         \
 	nsComponentManagerUtils.h \
-        nsIGenericFactory.h   \
-        nsIRegistryUtils.h         \
-        nsIServiceManager.h   \
-        nsRepository.h        \
-        nsXPComFactory.h      \
+        nsIGenericFactory.h       \
+        nsIRegistryUtils.h        \
+        nsIServiceManager.h       \
+        nsRepository.h            \
+        nsXPComFactory.h          \
 	nsNativeComponentLoader.h \
+        nsStaticComponent.h       \
 	xcDll.h \
         $(NULL)			
 
@@ -62,10 +63,10 @@ LINCS =                    \
         -I..\io       \
 	$(NULL)
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-LCFLAGS = -DUSE_NSREG -D_IMPL_NS_COM -D_IMPL_NS_BASE -DWIN32_LEAN_AND_MEAN -DMOZ_STATIC_COMPONENT_LIBS -DENABLE_STATIC_COMPONENT_LOADER
-!else
 LCFLAGS = -DUSE_NSREG -D_IMPL_NS_COM -D_IMPL_NS_BASE -DWIN32_LEAN_AND_MEAN
+
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LCFLAGS = $(LCFLAGS) -DENABLE_STATIC_COMPONENT_LOADER
 !endif
 
 CPP_OBJS =                                 \

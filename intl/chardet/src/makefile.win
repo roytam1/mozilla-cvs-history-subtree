@@ -60,41 +60,14 @@ CPP_OBJS= \
 	$(NULL)
 
 MODULE=chardet
-
+LIBARARY_NAME=chardet
+COMPONENT_NAME=nsCharDetModule
 
 INCS=-I$(PUBLIC)\xpcom -I$(PUBLIC)\chardet -I$(PUBLIC)\raptor \
      -I$(PUBLIC)\netlib -I$(PUBLIC)\uconv -I$(PUBLIC)\webshell
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-MAKE_OBJ_TYPE=LIB
-LIBARARY_NAME=chardet
-LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
-!else
-MAKE_OBJ_TYPE=DLL
-DLLNAME=chardet
-DLL=.\$(OBJDIR)\$(DLLNAME).dll
-!endif
 
 LLIBS= \
 	$(DIST)\lib\xpcom.lib	\
 	$(LIBNSPR)	
 
 include <$(DEPTH)\config\rules.mak>
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
-
-clobber::
-	rm -f $(DIST)\bin\components\$(LIBRARY_NAME).lib
-	rm -f $(DIST)\bin\$(LIBRARY_NAME).lib
-!else
-install:: $(DLL)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
- 
-clobber::
-	rm -f $(DIST)\bin\components\$(DLLNAME).dll
-	rm -f $(DIST)\bin\$(DLLNAME).lib
-!endif

@@ -23,14 +23,8 @@
 
 DEPTH=..\..\..
 MODULE = walletviewers
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
 LIBRARY_NAME = wlltvwrs
-LIB = .\$(OBJDIR)\$(LIBRARY_NAME).lib 
-!else
-LIBNAME = .\$(OBJDIR)\wlltvwrs
-DLL = $(LIBNAME).dll
-!endif
+COMPONENT_NAME = nsWalletViewerModule
 
 LINCS = \
         -I..\editor             \
@@ -42,10 +36,13 @@ CPP_OBJS =                             \
         .\$(OBJDIR)\nsWalletViewerFactory.obj        \
        $(NULL)
 
-LLIBS =                               \
+SUB_LIBRARIES =                         \
         $(DIST)\lib\signonviewer_s.lib  \
         $(DIST)\lib\walletpreview_s.lib \
         $(DIST)\lib\walleteditor_s.lib  \
+        $(NULL)
+
+LLIBS =                        \
         $(DIST)\lib\xpcom.lib  \
         $(NULL)
 
@@ -54,11 +51,3 @@ WIN_LIBS =                            \
 	$(NULL)
 
 include <$(DEPTH)\config\rules.mak>
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-	$(MAKE_INSTALL) $(LIB) $(DIST)\bin\components
-!else
-install:: $(DLL)
-	$(MAKE_INSTALL) $(LIBNAME).$(DLL_SUFFIX) $(DIST)\bin\components
-!endif

@@ -41,11 +41,7 @@ DEPTH= ..\..\..
 USE_NON_MT_LIBS=1
 
 !ifndef MAKE_OBJ_TYPE
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-MAKE_OBJ_TYPE=LIB
-!else
 MAKE_OBJ_TYPE=DLL
-!endif
 !endif
 
 #//------------------------------------------------------------------------
@@ -68,15 +64,9 @@ OBJS=                                       \
 #//------------------------------------------------------------------------
 
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-LIBRARY_NAME=nsreg
-LIB=$(OBJDIR)\$(LIBRARY_NAME).lib
-LIBRARY=$(OBJDIR)\$(LIBRARY_NAME)_s.lib
-!else
 LIBNAME=nsreg
 DLL=$(OBJDIR)\$(LIBNAME).dll
 LIBRARY=$(OBJDIR)\$(LIBNAME)_s.lib
-!endif
 
 #//------------------------------------------------------------------------
 #//
@@ -102,21 +92,6 @@ docopy:
     $(MAKE_INSTALL) ..\src\*.c .
 
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-export:: docopy $(LIB) $(LIBRARY)
-    
-    $(MAKE_INSTALL) $(LIB)                    $(DIST)\bin
-    $(MAKE_INSTALL) $(LIBRARY)                $(DIST)\lib
-    $(MAKE_INSTALL) $(OBJDIR)\$(LIBRARY_NAME).lib  $(DIST)\lib
-     
-
-clobber_all::
-    
-    $(RM) $(DIST)\bin\$(LIBRARY_NAME).lib
-    $(RM) $(DIST)\lib\$(LIBRARY_NAME).lib
-    $(RM) $(DIST)\lib\$(LIBRARY_NAME)_s.lib
-    $(RM) *.[hc]
-!else
 export:: docopy $(DLL) $(LIBRARY)
     
     $(MAKE_INSTALL) $(DLL)                    $(DIST)\bin
@@ -126,11 +101,10 @@ export:: docopy $(DLL) $(LIBRARY)
 
 clobber_all::
     
-    $(RM) $(DIST)\bin\$(LIBNAME).lib
+    $(RM) $(DIST)\bin\$(LIBNAME).dll
     $(RM) $(DIST)\lib\$(LIBNAME).lib
     $(RM) $(DIST)\lib\$(LIBNAME)_s.lib
     $(RM) *.[hc]
-!endif
 
 clobber::
     $(RM) *.[hc]

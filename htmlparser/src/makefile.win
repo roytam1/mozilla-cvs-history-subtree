@@ -26,8 +26,9 @@ include <$(DEPTH)\config\config.mak>
 LIBRARY_NAME=raptorhtmlpars 
 DEFINES=-D_IMPL_NS_HTMLPARS -DWIN32_LEAN_AND_MEAN -DXML_DTD
 
-MODULE=raptor 
-IS_COMPONENT = 1
+MODULE         = htmlparser
+LIBRARY_NAME   = gkparser
+COMPONENT_NAME = nsParserModule
 
 CPPSRCS=					\
 	nsDTDUtils.cpp				\
@@ -120,27 +121,20 @@ LINCS=  -I$(PUBLIC)\xpcom  \
         -I$(PUBLIC)\uconv  \
         -I$(PUBLIC)\expat
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-MAKE_OBJ_TYPE = LIB
-LIBRARY_NAME = gkparser
-LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
-!else
-MAKE_OBJ_TYPE = DLL
-DLLNAME = gkparser
-DLL=.\$(OBJDIR)\$(DLLNAME).dll
-!endif
-
 LCFLAGS = \
         $(LCFLAGS) \
         $(DEFINES) \
         $(NULL)
 
 # These are the libraries we need to link with to create the dll
-LLIBS=        \
+SUB_LIBRARIES=         \
+ $(DIST)\lib\expat.lib \
+ $(NULL)
+
+LLIBS=                  \
  $(DIST)\lib\xpcom.lib  \
- $(DIST)\lib\expat.lib			\
 !ifdef MOZ_PERF
- $(DIST)\lib\util.lib			\
+ $(DIST)\lib\util.lib   \
 !endif
  $(LIBNSPR)  
 
@@ -150,24 +144,3 @@ LLFLAGS= /NODEFAULTLIB msvcirt.lib msvcrt.lib
 !endif
 
 include <$(DEPTH)\config\rules.mak>
-
-#export:: $(XPDIST)\include
-#	$(MAKE_INSTALL) $(XPDIST)\include
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
-
-clobber::
-	rm -f $(DIST)\bin\$(LIBRARY_NAME).lib
-	rm -f $(DIST)\lib\$(LIBRARY_NAME).lib
-!else
-install:: $(DLL)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
- 
-clobber::
-	rm -f $(DIST)\bin\$(DLLNAME).dll
-	rm -f $(DIST)\lib\$(DLLNAME).lib
-!endif

@@ -20,7 +20,10 @@
 # Contributor(s): 
 
 DEPTH=..\..\..\..
-MODULE=msgdb 
+MODULE          = msgdb 
+LIBRARY_NAME    = msgdb
+META_COMPONENT  = mail
+COMPONENT_NAME  = nsMsgDBModule
 
 ################################################################################
 ## exports
@@ -32,33 +35,18 @@ EXPORTS=					\
 ################################################################################
 ## library
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-LIBRARY_NAME = msgdb
-LIB = .\$(OBJDIR)\$(LIBRARY_NAME).lib
-!else
-LIBNAME = .\$(OBJDIR)\msgdb
-DLL = $(LIBNAME).dll
-!endif
-
 CPP_OBJS=									\
 			.\$(OBJDIR)\nsMsgDBFactory.obj	\
 			$(NULL)
 
+SUB_LIBRARIES=					\
+	$(DIST)\lib\msgdb_s.lib			\
+	$(NULL)
+
 LLIBS=								\
 	$(DIST)\lib\xpcom.lib			\
 	$(DIST)\lib\msgbsutl.lib		\
-	$(DIST)\lib\msgdb_s.lib			\
     $(LIBNSPR)						\
 	$(NULL)
 
 include <$(DEPTH)\config\rules.mak>
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-	$(MAKE_INSTALL)  $(LIB) $(DIST)\bin\components
-	$(MAKE_INSTALL)  $(LIB) $(DIST)\lib
-!else
-install:: $(DLL)
-	$(MAKE_INSTALL)  $(LIBNAME).$(DLL_SUFFIX) $(DIST)\bin\components
-	$(MAKE_INSTALL)  $(LIBNAME).$(LIB_SUFFIX) $(DIST)\lib
-!endif

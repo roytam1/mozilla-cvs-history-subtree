@@ -19,17 +19,9 @@
 #
 
 DEPTH=..\..\..
-MODULE=nkcache
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-MAKE_OBJ_TYPE=LIB
-LIBRARY_NAME=nkcache
-LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
-!else
-MAKE_OBJ_TYPE=DLL
-DLLNAME=nkcache
-DLL=.\$(OBJDIR)\$(DLLNAME).dll
-!endif
+MODULE		= nkcache
+LIBRARY_NAME	= nkcache
+COMPONENT_NAME	= Network_Data_Cache
 
 CPP_OBJS=                                    \
         .\$(OBJDIR)\nsNetDataCacheModule.obj \
@@ -46,13 +38,3 @@ INCS = $(INCS)                             \
         $(NULL)
 
 include <$(DEPTH)\config\rules.mak>
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
-!else
-install:: $(DLL)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
-!endif

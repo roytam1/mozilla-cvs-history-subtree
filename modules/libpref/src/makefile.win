@@ -37,17 +37,10 @@ DEPTH = ..\..\..
 #//
 #//------------------------------------------------------------------------
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-LIBRARY_NAME		= xppref$(MOZ_BITS)
-LIB		=.\$(OBJDIR)\$(LIBRARY_NAME).lib
-MAKE_OBJ_TYPE	= LIB
-!else
-DLLNAME		= xppref$(MOZ_BITS)
-DLL		=.\$(OBJDIR)\$(DLLNAME).dll
-MAKE_OBJ_TYPE	= DLL
-!endif
+MODULE		= pref
+LIBRARY_NAME	= xppref$(MOZ_BITS)
+COMPONENT_NAME	= nsPrefModule
 
-IS_COMPONENT=1
 LINCS = -I$(PUBLIC)/js \
 	-I$(PUBLIC)/pref \
 	-I$(PUBLIC)/java \
@@ -100,24 +93,10 @@ LIBRARY=.\$(OBJDIR)\$(LIBNAME).lib
 #//------------------------------------------------------------------------
 include <$(DEPTH)\config\rules.mak>
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)	
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
+install::
     $(MAKE_INSTALL) .\initpref.js $(DIST)\bin\defaults\pref
     $(MAKE_INSTALL) .\init\all.js $(DIST)\bin\defaults\pref
     $(MAKE_INSTALL) .\init\mailnews.js $(DIST)\bin\defaults\pref
     $(MAKE_INSTALL) .\init\editor.js $(DIST)\bin\defaults\pref
     $(MAKE_INSTALL) .\init\config.js $(DIST)\bin\defaults\pref
     $(MAKE_INSTALL) .\win\winpref.js $(DIST)\bin\defaults\pref
-!else
-install:: $(DLL)	
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
-    $(MAKE_INSTALL) .\initpref.js $(DIST)\bin\defaults\pref
-    $(MAKE_INSTALL) .\init\all.js $(DIST)\bin\defaults\pref
-    $(MAKE_INSTALL) .\init\mailnews.js $(DIST)\bin\defaults\pref
-    $(MAKE_INSTALL) .\init\editor.js $(DIST)\bin\defaults\pref
-    $(MAKE_INSTALL) .\init\config.js $(DIST)\bin\defaults\pref
-    $(MAKE_INSTALL) .\win\winpref.js $(DIST)\bin\defaults\pref
-!endif

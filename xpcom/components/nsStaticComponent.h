@@ -26,6 +26,6 @@ struct nsStaticModuleInfo {
 // static component loader.
 extern "C" {
 typedef nsresult (*NSGetStaticModuleInfoFunc)(nsStaticModuleInfo **info, PRUint32 *count);
-extern NSGetStaticModuleInfoFunc NSGetStaticModuleInfo;
+extern NS_COM NSGetStaticModuleInfoFunc NSGetStaticModuleInfo;
 };
      

@@ -19,17 +19,12 @@
 # Contributor(s):
 
 DEPTH=..\..\..
-MODULE=embedcomponents
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-MAKE_OBJ_TYPE=LIB
+include <$(DEPTH)\config\config.mak>
+
+MODULE=embedcomponents
 LIBRARY_NAME=embedcomponents
-LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
-!else
-MAKE_OBJ_TYPE=DLL
-DLLNAME=embedcomponents
-DLL=.\$(OBJDIR)\$(DLLNAME).dll
-!endif
+COMPONENT_NAME=embedcomponents
 
 LCFLAGS = -DWIN32_LEAN_AND_MEAN
 
@@ -37,14 +32,17 @@ CPP_OBJS = \
 	.\$(OBJDIR)\nsModule.obj \
 	$(NULL)
 
-LLIBS = \
-	$(LIBNSPR) \
-        $(DIST)\lib\js3250.lib \
-	$(DIST)\lib\xpcom.lib \
+SUB_LIBRARIES = \
 	$(DIST)\lib\windowwatcher_s.lib \
 	$(DIST)\lib\jsconsole_s.lib \
 	$(DIST)\lib\appstartupnotifier_s.lib \
 	$(DIST)\lib\find_s.lib \
+	$(NULL)
+
+LLIBS = \
+	$(LIBNSPR) \
+        $(DIST)\lib\js3250.lib \
+	$(DIST)\lib\xpcom.lib \
 	$(NULL)
 
 INCS = $(INCS) \
@@ -55,17 +53,3 @@ INCS = $(INCS) \
 	$(NULL)
 
 include <$(DEPTH)\config\rules.mak>
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
-!else
-install:: $(DLL)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
-!endif
-
-clobber::
-	$(RM) $(DIST)\bin\components\$(LIBRARY_NAME).lib
-	$(RM) $(DIST)\lib\$(LIBRARY_NAME).lib 

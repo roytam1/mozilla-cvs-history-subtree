@@ -25,16 +25,8 @@ include <$(DEPTH)/config/config.mak>
 DEFINES=-D_IMPL_NS_INTL -DWIN32_LEAN_AND_MEAN
 
 MODULE=uconv
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-MAKE_OBJ_TYPE = LIB
-LIBRARY_NAME = uconv
-LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
-!else
-MAKE_OBJ_TYPE = DLL
-DLLNAME = uconv
-DLL=.\$(OBJDIR)\$(DLLNAME).dll
-!endif
+LIBRARY_NAME=uconv
+COMPONENT_NAME=nsUConvModule
 
 CPPSRCS =				\
 	nsTextToSubURI.cpp		\
@@ -120,30 +112,15 @@ LCFLAGS = \
 
 include <$(DEPTH)\config\rules.mak>
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
-!else
-install:: $(DLL)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
-!endif
+install::
 	$(MAKE_INSTALL) .\charsetalias.properties $(DIST)\bin\res
 	$(MAKE_INSTALL) .\wincharset.properties $(DIST)\bin\res
 	$(MAKE_INSTALL) charsetData.properties $(DIST)\bin\res
-  $(MAKE_INSTALL) .\acceptlanguage.properties $(DIST)\bin\res
+        $(MAKE_INSTALL) .\acceptlanguage.properties $(DIST)\bin\res
 
 clobber::
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-	rm -f $(DIST)\bin\components\$(LIBRARY_NAME).lib
-	rm -f $(DIST)\lib\$(LIBRARY_NAME).lib
-!else
-	rm -f $(DIST)\bin\components\$(DLLNAME).dll
-	rm -f $(DIST)\lib\$(DLLNAME).lib
-!endif
 	rm -f $(DIST)\bin\res\charsetalias.properties
 	rm -f $(DIST)\bin\res\wincharset.properties
 	rm -f $(DIST)\bin\res\charsetData.properties
-  rm -f $(DIST)\bin\res\acceptlanguage.properties
+        rm -f $(DIST)\bin\res\acceptlanguage.properties
     

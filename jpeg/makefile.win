@@ -46,23 +46,12 @@ DEPTH= ..\
 #// Define any Public Make Variables here: (ie. PDFFILE, MAPFILE, ...)
 #//
 #//------------------------------------------------------------------------
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-MAKE_OBJ_TYPE=LIB
+EXPORT_LIBRARY=1
 LIBRARY_NAME=jpeg$(MOZ_BITS)$(VERSION_NUMBER)
-LIBRARY_1NAME=jpg$(MOZ_BITS)$(VERSION_NUMBER)
 PDBFILE=$(LIBRARY_NAME).pdb
 MAPFILE=$(LIBRARY_NAME).map
 !if "$(MOZ_BITS)" == "16"
-DEFFILE=$(LIBRARY_1NAME).def
-!endif
-!else
-DLLNAME=jpeg$(MOZ_BITS)$(VERSION_NUMBER)
-DLL1NAME=jpg$(MOZ_BITS)$(VERSION_NUMBER)
-PDBFILE=$(DLLNAME).pdb
-MAPFILE=$(DLLNAME).map
-!if "$(MOZ_BITS)" == "16"
-DEFFILE=$(DLL1NAME).def
-!endif
+DEFFILE=jpg$(MOZ_BIGS)$(VERSION_NUMBER).def
 !endif
 
 #//------------------------------------------------------------------------
@@ -136,13 +125,8 @@ OBJS=                         \
 #// (these must be defined before the common makefiles are included)
 #//
 #//------------------------------------------------------------------------
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
-MAPFILE= $(LIBRARY_NAME).map
-!else
-DLL=.\$(OBJDIR)\$(DLLNAME).dll
 MAPFILE= $(DLLNAME).map
-!endif
+
 
 
 #//------------------------------------------------------------------------
@@ -151,17 +135,3 @@ MAPFILE= $(DLLNAME).map
 #//
 #//------------------------------------------------------------------------
 include <$(DEPTH)/config/rules.mak>
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-    $(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin
-    $(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
-!else
-install:: $(DLL)
-    $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin
-    $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
-!endif
-
-clobber::
-	$(RM) $(JPEG_OBJS)
-

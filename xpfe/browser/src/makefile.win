@@ -23,25 +23,11 @@ DEPTH=..\..\..
 
 IGNORE_MANIFEST=1
 
-MODULE=mozbrwsr
+MODULE		= mozbrwsr
+LIBRARY_NAME	= mozbrwsr
+COMPONENT_NAME	= nsBrowserModule
 
 DEFINES=-DWIN32_LEAN_AND_MEAN
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-LIBRARY_NAME	      = mozbrwsr
-LIBRARY_1NAME      = mozbrwsr
-PDBFILE	      = $(LIBRARY_NAME).pdb
-MAPFILE	      = $(LIBRARY_NAME).map
-LIB	          =.\$(OBJDIR)\$(LIBRARY_NAME).lib
-MAKE_OBJ_TYPE = LIB
-!else
-DLLNAME	      = mozbrwsr
-DLL1NAME      = mozbrwsr
-PDBFILE	      = $(DLLNAME).pdb
-MAPFILE	      = $(DLLNAME).map
-DLL	          =.\$(OBJDIR)\$(DLLNAME).dll
-MAKE_OBJ_TYPE = DLL
-!endif
 
 LINCS = \
 	-I$(PUBLIC)/xpcom \
@@ -60,17 +46,3 @@ OBJS =	\
 	$(NULL)
 
 include <$(DEPTH)\config\rules.mak>
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
-
-clobber::
-    rm -f $(DIST)\bin\components\$(LIBRARY_NAME).lib
-!else
-install:: $(DLL)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
- 
-clobber::
-    rm -f $(DIST)\bin\components\$(DLLNAME).dll
-!endif

@@ -32,6 +32,8 @@
 
 DEPTH=..\..\..
 
+# XXXwaterson should we create the shell if MOZ_STATIC_COMPONENT_LIBS?
+
 DIRS=public idl src \
 !if !defined(DISABLE_TESTS)
      tests \

@@ -27,7 +27,8 @@ DEFINES= $(DEFINES) -DMOZ_XSL
 !endif
 
 MODULE=transformiix
-IS_COMPONENT = 1
+LIBRARY_NAME=transformiix
+COMPONENT_NAME=TransformiixModule
 
 CPPSRCS=						\
 	XSLTProcessorModule.cpp		\
@@ -125,16 +126,6 @@ CPP_OBJS=							\
 	.\$(OBJDIR)\XSLTProcessorModule.obj \
 	$(NULL)
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-MAKE_OBJ_TYPE = LIB
-LIBRARY_NAME = transformiix
-LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
-!else
-MAKE_OBJ_TYPE = DLL
-DLLNAME = transformiix
-DLL=.\$(OBJDIR)\$(DLLNAME).dll
-!endif
-
 LCFLAGS = \
         $(LCFLAGS) \
         $(DEFINES) \
@@ -160,20 +151,3 @@ WIN_LIBS =                            \
 
 include <$(DEPTH)\config\rules.mak>
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
-
-clobber::
-	rm -f $(DIST)\bin\components\$(LIBRARY_NAME).dll
-	rm -f $(DIST)\lib\$(LIBRARY_NAME).lib
-!else
-install:: $(DLL)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
-
-clobber::
-	rm -f $(DIST)\bin\$(DLLNAME).dll
-	rm -f $(DIST)\lib\$(DLLNAME).lib
-!endif

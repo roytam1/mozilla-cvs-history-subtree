@@ -1,4 +1,4 @@
-# -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+|# -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
 #
 # The contents of this file are subject to the Netscape Public
 # License Version 1.1 (the "License"); you may not use this file
@@ -42,21 +42,13 @@ JDIRS = .
 #        java.lang.Object       \
 #	netscape.plugin.Plugin \
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-MAKE_OBJ_TYPE=LIB
-!else
 MAKE_OBJ_TYPE=DLL
-!endif
 #//------------------------------------------------------------------------
 #//
 #// Define any Public Make Variables here: (ie. PDFFILE, MAPFILE, ...)
 #//
 #//------------------------------------------------------------------------
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-LIBRARY_NAME=npsimple.lib
-!else
 DLLNAME=npsimple.dll
-!endif
 PDBFILE=npsimple.pdb
 MAPFILE=npsimple.map
 
@@ -67,11 +59,7 @@ MAPFILE=npsimple.map
 #//
 #//------------------------------------------------------------------------
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-LIB=.\$(OBJDIR)\$(LIBRARY_NAME)
-!else
 DLL=.\$(OBJDIR)\$(DLLNAME)
-!endif
 MAPFILE= npsimple.map
 
 
@@ -98,13 +86,7 @@ LINCS=$(LINCS) -I$(PUBLIC)\plugin -I$(PUBLIC)\xpcom -I$(PUBLIC)\java -I$(PUBLIC)
 LCFLAGS = $(LCFLAGS) -DNEW_PLUGIN_STREAM_API
 !endif
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-        $(MAKE_INSTALL) $(OBJDIR)\npsimple.lib $(DIST)\bin\components
-!else
 install:: $(DLL)
-        $(MAKE_INSTALL) $(OBJDIR)\npsimple.dll $(DIST)\bin\components
-!endif
-
 #        $(MAKE_INSTALL) $(XPDIST)\classes11\Simple.class $(DEPTH)\cmd\winfe\mkfiles32\x86dbg\plugins\simple
 #        $(MAKE_INSTALL) Simple.class $(DEPTH)\cmd\winfe\mkfiles32\x86dbg\plugins\simple
+        $(MAKE_INSTALL) $(OBJDIR)\npsimple.dll $(DIST)\bin\components

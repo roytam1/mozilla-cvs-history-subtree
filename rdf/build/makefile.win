@@ -21,19 +21,9 @@
 
 DEPTH=..\..
 include <$(DEPTH)/config/config.mak>
-MODULE=rdf 
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-MAKE_OBJ_TYPE=LIB
+MODULE=rdf
 LIBRARY_NAME=rdf
-MAPFILE=$(LIBRARY_NAME).map
-LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
-!else
-MAKE_OBJ_TYPE=DLL
-DLLNAME=rdf
-MAPFILE=$(DLLNAME).map
-DLL=.\$(OBJDIR)\$(DLLNAME).dll
-!endif
+COMPONENT_NAME=nsRDFModule
 
 EXPORTS=\
         nsRDFCID.h                      \
@@ -43,11 +33,14 @@ CPP_OBJS=\
         .\$(OBJDIR)\nsRDFModule.obj    \
 	$(NULL)
 
-LLIBS=\
+SUB_LIBRARIES=\
  $(DIST)\lib\rdfbase_s.lib       \
  $(DIST)\lib\rdfutil_s.lib       \
  $(DIST)\lib\rdfdatasource_s.lib \
- $(DIST)\lib\xpcom.lib         \
+ $(NULL)
+
+LLIBS=\
+ $(DIST)\lib\xpcom.lib   \
  $(DIST)\lib\timer_s.lib \
  $(LIBNSPR)  
 
@@ -60,12 +53,3 @@ LINCS=  -I$(DEPTH)\rdf\base\src         \
 
 include <$(DEPTH)\config\rules.mak>
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
-!else
-install:: $(DLL)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
-!endif

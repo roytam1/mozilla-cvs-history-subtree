@@ -20,11 +20,8 @@
 # Contributor(s): 
 
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-MAKE_OBJ_TYPE	= LIB
-!else
+
 MAKE_OBJ_TYPE	= DLL
-!endif
 
 DEPTH=..\..\..\..
 
@@ -48,11 +45,7 @@ WIN_LIBS=   \
 
 
 LIBNAME = .\$(OBJDIR)\ngprefs
-!ifdef MOZ_STATIC_COMPONENT_LIBS
 DLL = $(LIBNAME).dll
-!else
-LIB = $(LIBNAME).lib
-!endif
 DEFFILE=ngprefs.def
 
 LCFLAGS = -D_IMPL_NS_COM -DUSE_NSREG -DWIN32_LEAN_AND_MEAN -UEDITOR
@@ -71,14 +64,8 @@ MODULE =  ngprefs
 
 include <$(DEPTH)\config\rules.mak>
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-	$(MAKE_INSTALL) $(LIBNAME).$(LIB_SUFFIX) $(DIST)\bin
-	$(MAKE_INSTALL) $(LIBNAME).$(LIB_SUFFIX) $(DIST)\lib
-!else
 install:: $(DLL)
 	$(MAKE_INSTALL) $(LIBNAME).$(DLL_SUFFIX) $(DIST)\bin
 	$(MAKE_INSTALL) $(LIBNAME).$(LIB_SUFFIX) $(DIST)\lib
-!endif
 
 

@@ -28,12 +28,15 @@
 #
 #------------------------------------------------------------------------
 
+MODULE=img 
+LIBRARY_NAME=nsmng
+COMPONENT_NAME=nsMNGModule
+
+DEPTH=..\..\.. 
+
 !ifdef MOZ_JAVA
 LOCAL_JMC_SUBDIR = .
 !endif
-
-
-LIBRARY_NAME = nsmng
 
 #
 # Make sure we have MOZILLA_CLIENT defined so we get the
@@ -58,33 +61,12 @@ LLIBS= $(LIBNSPR)  \
 !endif
 	$(NULL)
 
-LIBRARY= .\$(OBJDIR)\$(LIBNAME).lib
-#LIBRARY_SUFFIX = $(MOZ_BITS)$(VERSION_NUMBER)
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-MAKE_OBJ_TYPE=LIB
-!else
-MAKE_OBJ_TYPE=DLL
-!endif
 #//------------------------------------------------------------------------
 #//
 #// Define any Public Make Variables here: (ie. PDFFILE, MAPFILE, ...)
 #//
 #//------------------------------------------------------------------------
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-LIBRARY_NAME=nsmng$(MOZ_BITS)$(VERSION_NUMBER)
-LIBRARY_1NAME=nsmng
-PDBFILE=$(LIBRARY_NAME).pdb
-MAPFILE=$(LIBRARY_NAME).map
 DEFFILE=nsmng.def
-!else
-DLLNAME=nsmng
-DLL1NAME=nsmng
-PDBFILE=$(DLLNAME).pdb
-MAPFILE=$(DLLNAME).map
-DEFFILE=nsmng.def
-!endif
-
 
 #//------------------------------------------------------------------------
 #//
@@ -92,19 +74,6 @@ DEFFILE=nsmng.def
 #// (these must be defined before the common makefiles are included)
 #//
 #//------------------------------------------------------------------------
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib 
-MAPFILE= $(LIBRARY_NAME).map
-!else
-DLL=.\$(OBJDIR)\$(DLLNAME).dll 
-MAPFILE= $(DLLNAME).map
-!endif
-
-
-
-MODULE=img 
-DEPTH=..\..\.. 
-
 LINCS=-I$(DEPTH)/dist/public/xpcom -I. -I$(DEPTH)/dist/public/raptor \
       -I$(DEPTH)/dist/public/jpeg -I$(DEPTH)/dist/public/zlib -I$(DEPTH)/dist/public/img
 
@@ -115,14 +84,3 @@ CPP_OBJS= \
 
 
 include <$(DEPTH)\config\rules.mak> 
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-    $(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
-    $(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
-!else
-install:: $(DLL)
-    $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
-    $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
-!endif
-
