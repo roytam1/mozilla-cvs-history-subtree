@@ -229,7 +229,7 @@ nsDocShell::LoadURI(nsIURI* aURI, nsIDocShellLoadInfo* aLoadInfo)
     aLoadInfo->GetSHEntry(getter_AddRefs(shEntry));
   }
 
-  if (!shEntry) {
+  if (!shEntry && loadType != nsIDocShellLoadInfo::loadNormalReplace) {
     /* Check if we are in the middle of loading a subframe whose parent
      * was originally loaded thro' Session History. ie., you were in a frameset
      * page, went somewhere else and clicked 'back'. The loading of the root page
