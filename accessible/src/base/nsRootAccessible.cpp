@@ -312,7 +312,10 @@ nsresult nsRootAccessible::Change(nsIDOMEvent* aEvent)
   return HandleEvent(aEvent);
 }
 
-nsresult nsRootAccessible::Select(nsIDOMEvent* aEvent) { return NS_OK; }
+nsresult nsRootAccessible::Select(nsIDOMEvent* aEvent) 
+{ 
+  return NS_OK; 
+}
 
 nsresult nsRootAccessible::Input(nsIDOMEvent* aEvent)
 {

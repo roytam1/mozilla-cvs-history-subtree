@@ -213,7 +213,7 @@ protected:
   nsresult MouseClickForAltText(nsIPresContext* aPresContext);
   //Helper method
   nsresult FireEventForAccessibility(nsIPresContext* aPresContext,
-			    		             nsString& aEventType);
+			    		                       const nsAReadableString& aEventType);
 
   void SelectAll(nsIPresContext* aPresContext);
   PRBool IsImage() const
@@ -931,10 +931,10 @@ nsHTMLInputElement::MouseClickForAltText(nsIPresContext* aPresContext)
 
 NS_IMETHODIMP
 nsHTMLInputElement::HandleDOMEvent(nsIPresContext* aPresContext,
-                            nsEvent* aEvent,
-                            nsIDOMEvent** aDOMEvent,
-                            PRUint32 aFlags,
-                            nsEventStatus* aEventStatus)
+                                   nsEvent* aEvent,
+                                   nsIDOMEvent** aDOMEvent,
+                                   PRUint32 aFlags,
+                                   nsEventStatus* aEventStatus)
 {
   NS_ENSURE_ARG_POINTER(aEventStatus);
   if ((aEvent->message == NS_FOCUS_CONTENT && mSkipFocusEvent) ||
@@ -1054,10 +1054,10 @@ nsHTMLInputElement::HandleDOMEvent(nsIPresContext* aPresContext,
           PRBool checked;
           GetChecked(&checked);
           SetChecked(!checked);
-		  // Fire an event to notify accessibility
-		  nsString checkboxStateChange(NS_LITERAL_STRING("CheckboxStateChange"));
-		  FireEventForAccessibility( aPresContext, checkboxStateChange);  
-		}
+          // Fire an event to notify accessibility
+          nsLocalString checkboxStateChange(NS_LITERAL_STRING("CheckboxStateChange"));
+          FireEventForAccessibility( aPresContext, checkboxStateChange);  
+        }
         break;
 
       case NS_FORM_INPUT_RADIO:
@@ -1073,9 +1073,11 @@ nsHTMLInputElement::HandleDOMEvent(nsIPresContext* aPresContext,
             }
           }
           SetChecked(PR_TRUE);
-		  // Fire an event to notify accessibility
-		  nsString radiobuttonStateChange(NS_LITERAL_STRING("RadiobuttonStateChange"));
-		  FireEventForAccessibility( aPresContext, radiobuttonStateChange);
+          // Fire an event to notify accessibility
+          if ( selectedRadiobtn != this ) {
+            nsLocalString radiobuttonStateChange(NS_LITERAL_STRING("RadiobuttonStateChange"));
+            FireEventForAccessibility( aPresContext, radiobuttonStateChange);
+          }
         }
         break;
 
@@ -1659,24 +1661,21 @@ nsHTMLInputElement::GetSelectionRange(PRInt32* aSelectionStart,
 
 nsresult
 nsHTMLInputElement::FireEventForAccessibility(nsIPresContext* aPresContext,
-								              nsString& aEventType)
+                                              const nsAReadableString& aEventType)
 {
-  nsCOMPtr<nsIDOMEvent> domEvent;
   nsCOMPtr<nsIEventListenerManager> listenerManager;
 
   nsresult rv = GetListenerManager(getter_AddRefs(listenerManager));
-  if ( NS_FAILED(rv) )
+  if ( !listenerManager )
     return rv;
 
   // Create the DOM event
-  nsMutationEvent* event = nsnull;
-  nsString mutationEvent(NS_LITERAL_STRING("MutationEvent"));
-  rv = listenerManager->CreateEvent(aPresContext, 
-	                                event, 
-	                                mutationEvent,
-									getter_AddRefs(domEvent) );
-  if ( NS_FAILED(rv) )
-    return rv;
+  nsCOMPtr<nsIDOMEvent> domEvent;
+  nsLocalString mutationEvent(NS_LITERAL_STRING("MutationEvent"));
+  rv = listenerManager->CreateEvent(aPresContext,
+                                    nsnull, 
+                                    mutationEvent,
+                                    getter_AddRefs(domEvent) );
   if ( !domEvent )
     return NS_ERROR_FAILURE;
 
@@ -1695,7 +1694,7 @@ nsHTMLInputElement::FireEventForAccessibility(nsIPresContext* aPresContext,
   if ( ! targ )
     return NS_ERROR_FAILURE;
   privEvent->SetTarget(targ);
-		  
+
   // Dispatch the event
   nsCOMPtr<nsIDOMEventReceiver> eventReceiver(do_QueryInterface(listenerManager));
   if ( ! eventReceiver )
