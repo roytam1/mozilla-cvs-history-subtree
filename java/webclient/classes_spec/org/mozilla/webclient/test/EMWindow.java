@@ -993,6 +993,10 @@ public void actionPerformed(ActionEvent event) {
 }
 }
 
+public BrowserControl getBrowserControl()
+{
+    return browserControl;
+}
 
 //
 // Package methods
@@ -1002,6 +1006,7 @@ Navigation getNavigation()
 {
     return navigation;
 }
+
 
 }
 
