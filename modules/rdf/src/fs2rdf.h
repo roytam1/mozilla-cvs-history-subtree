@@ -36,6 +36,8 @@
 
 /* fs2rdf.c data structures and defines */
 
+extern	int	RDF_VOLUME_DESC_STR, RDF_DIRECTORY_DESC_STR, RDF_FILE_DESC_STR;
+
 #define fsUnitp(u) (resourceType(u) == LFS_RT)
 
 #define XP_DIRECTORY_SEPARATOR '/'

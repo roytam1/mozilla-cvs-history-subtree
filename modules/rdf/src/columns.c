@@ -205,6 +205,16 @@ ColumnsNextValue (RDFT rdf, RDF_Cursor c)
 		}
 		break;
 
+		case	SEARCH_RT:
+		switch(c->count)
+		{
+			case	0:	arc = gCoreVocab->RDF_name;		break;
+			case	1:	arc = gNavCenter->RDF_URLShortcut;	break;
+			case	2:	arc = gWebData->RDF_URL;		break;
+			case	3:	arc = gWebData->RDF_description;	break;
+		}
+		break;
+
 		default:
 		switch(c->count)
 		{

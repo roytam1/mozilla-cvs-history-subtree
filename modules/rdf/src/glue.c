@@ -160,6 +160,8 @@ rdf_GetUrlExitFunc (URL_Struct *urls, int status, MWContext *cx)
 						gNavCenter->RDF_Top, RDF_RESOURCE_TYPE, 1);
 					remoteStoreAdd(gRemoteStore, gNavCenter->RDF_LocalFiles, gCoreVocab->RDF_parent,
 						gNavCenter->RDF_Top, RDF_RESOURCE_TYPE, 1);
+					remoteStoreAdd(gRemoteStore, gNavCenter->RDF_Search, gCoreVocab->RDF_parent,
+						gNavCenter->RDF_Top, RDF_RESOURCE_TYPE, 1);
 				}
 			}
 			freeMem(navCenterURL);
@@ -187,13 +189,13 @@ rdfRetrievalType (RDFFile f)
 		}
 		else
 		{
-			type = NET_DONT_RELOAD;
+			type = NET_NORMAL_RELOAD;
 		}
 		if (urls != NULL)	NET_FreeURLStruct(urls);
 	}
 	else
 	{
-		type = NET_DONT_RELOAD;
+		type = NET_NORMAL_RELOAD;
 	}
 	return(type);
 }
@@ -206,16 +208,19 @@ rdf_GetURL (MWContext *cx,  int method, Net_GetUrlExitFunc *exit_routine, RDFFil
 	URL_Struct                      *urls;
 
 	if (cx == NULL)  return 0;
-	urls = NET_CreateURLStruct(rdfFile->url, NET_DONT_RELOAD);
+	urls = NET_CreateURLStruct(rdfFile->url, rdfRetrievalType(rdfFile));
 	if (urls == NULL) return 0;
         /*	urls->use_local_copy = rdfFile->localp;*/
 	urls->fe_data = rdfFile;
-	if (method) urls->method = method;  
+	if (method) urls->method = method;
+/*
 	if (rdfFile->localp) {
           NET_GetURLQuick(urls, FO_CACHE_AND_RDF, cx, rdf_GetUrlExitFunc);
         } else {
           NET_GetURLQuick(urls, FO_CACHE_AND_RDF, cx, rdf_GetUrlExitFunc);
         }
+*/
+	NET_GetURL(urls, FO_CACHE_AND_RDF, cx, rdf_GetUrlExitFunc);
 	return 1;
 }
 #endif /* MOZILLA_CLIENT */

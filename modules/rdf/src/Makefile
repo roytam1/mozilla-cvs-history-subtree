@@ -43,6 +43,7 @@ CSRCS		= \
 ifndef RDF_STANDALONE
 CSRCS		+= \
 		  nlcstore.c \
+		  find2rdf.c \
 		  fs2rdf.c \
 		  hist2rdf.c \
 		  pm2rdf.c \

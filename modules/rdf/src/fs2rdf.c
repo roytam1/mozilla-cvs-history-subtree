@@ -428,13 +428,11 @@ fsGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, PR
 					switch(fn.type)
 					{
 						case	PR_FILE_FILE:
-						/* XXX localization */
-						retVal = (void *)copyString("File");
+						retVal = (void *)copyString(XP_GetString(RDF_FILE_DESC_STR));
 						break;
 
 						case	PR_FILE_DIRECTORY:
-						/* XXX localization */
-						retVal = (void *)copyString("Directory");
+						retVal = (void *)copyString(XP_GetString(RDF_DIRECTORY_DESC_STR));
 						break;
 					}
 				}
@@ -592,6 +590,12 @@ fsNextValue (RDFT rdf, RDF_Cursor c)
 	char			*base, *encoded = NULL, *url, *url2;
 	void			*retVal = NULL;
 
+#ifdef	XP_MAC
+	FInfo			finfo;
+	FSSpec			fsspec;
+	OSErr			err;
+#endif
+
 	XP_ASSERT(c != NULL);
 	if (c == NULL)				return(NULL);
 	if (c->type != RDF_RESOURCE_TYPE)	return(NULL);
@@ -614,7 +618,7 @@ fsNextValue (RDFT rdf, RDF_Cursor c)
 	}
 	else if (c->pdata != NULL)
 	{
-		if ((de = PR_ReadDir((PRDir*)c->pdata, c->count++)) != NULL)
+		while ((de = PR_ReadDir((PRDir*)c->pdata, c->count++)) != NULL)
 		{
 			if ((base = NET_Escape(de->name, URL_XALPHAS)) != NULL)		/* URL_PATH */
 			{
@@ -647,13 +651,24 @@ fsNextValue (RDFT rdf, RDF_Cursor c)
 						}
 						freeMem(encoded);
 					}
-					retVal = (void *)CreateFSUnit(url, isDirectoryFlag);
-					XP_FREE(url);
+#ifdef	XP_WIN
+					if ((!strcmp(url, ".")) || (!strcmp(url, "..")))
+					{
+						XP_FREE(url);
+						url = NULL;
+					}
+#endif
+					if (url != NULL)
+					{
+						retVal = (void *)CreateFSUnit(url, isDirectoryFlag);
+						XP_FREE(url);
+						break;
+					}
 				}
 			}
 
 		}
-		else
+		if (de == NULL)
 		{
 			PR_CloseDir((PRDir*)c->pdata);
 			c->pdata = NULL;

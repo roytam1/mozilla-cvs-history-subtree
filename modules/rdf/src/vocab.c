@@ -84,8 +84,11 @@ createCoreVocab ()
   gCoreVocab->RDF_greaterThan = RDF_GetResource(gCoreDB, "greaterThan", 1);
   gCoreVocab->RDF_lessThanOrEqual = RDF_GetResource(gCoreDB, "lessThanOrEqualTo", 1);
   gCoreVocab->RDF_greaterThanOrEqual = RDF_GetResource(gCoreDB, "greaterThanOrEqualTo", 1);
-  gCoreVocab->RDF_stringEquals = RDF_GetResource(gCoreDB, "stringEquals", 1);
-  gCoreVocab->RDF_substring = RDF_GetResource(gCoreDB, "substring", 1);
+  gCoreVocab->RDF_stringEquals = newResource("stringEquals", RDF_IS_STR);
+  gCoreVocab->RDF_stringNotEquals = newResource("stringNotEquals", RDF_IS_NOT_STR);
+  gCoreVocab->RDF_substring = newResource("substring", RDF_CONTAINS_STR);
+  gCoreVocab->RDF_stringStartsWith = newResource("stringStartsWith", RDF_STARTS_WITH_STR);
+  gCoreVocab->RDF_stringEndsWith = newResource("stringEndsWith", RDF_ENDS_WITH_STR);
   gCoreVocab->RDF_child = RDF_GetResource(gCoreDB, "child", 1);
   gCoreVocab->RDF_content = RDF_GetResource(gCoreDB, "content", 1);
   gCoreVocab->RDF_summary = RDF_GetResource(gCoreDB, "summary", 1);
@@ -105,6 +108,7 @@ createNavCenterVocab () {
   gNavCenter->RDF_Top = createContainer("NC:NavCenter"); 
   setResourceType(gNavCenter->RDF_Top, RDF_RT);
   gNavCenter->RDF_Search = createContainer("NC:Search");
+  setResourceType(gNavCenter->RDF_Search, SEARCH_RT);  
   gNavCenter->RDF_Sitemaps = createContainer("NC:Sitemaps");
   gNavCenter->RDF_BreadCrumbCategory = createContainer("BreadCrumbs");
   gNavCenter->RDF_BookmarkFolderCategory = createContainer("NC:Bookmarks");
@@ -128,7 +132,9 @@ createNavCenterVocab () {
   gNavCenter->RDF_HTMLHeight = newResource("htmlHeight", RDF_HTML_HEIGHT_STR);
   gNavCenter->RDF_LocalFiles = RDF_GetResource(gCoreDB, "NC:LocalFiles", true);
   gNavCenter->RDF_FTP = createContainer("NC:FTP");
-  gNavCenter->RDF_Appletalk = createContainer("at:");
+  gNavCenter->RDF_FTP = newResource("NC:FTP", RDF_FTP_NAME_STR);
+  gNavCenter->RDF_Appletalk = createContainer("NC:Appletalk");
+  gNavCenter->RDF_Appletalk = newResource("NC:Appletalk", RDF_APPLETALK_TOP_NAME);
   setResourceType(gNavCenter->RDF_Appletalk, ATALKVIRTUAL_RT);
   gNavCenter->RDF_Mail = RDF_GetResource(gCoreDB, "NC:Mail", true);
   gNavCenter->RDF_Guide = RDF_GetResource(gCoreDB, "NC:Guide", true);

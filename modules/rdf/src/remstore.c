@@ -321,6 +321,10 @@ void *
 remoteStoreGetSlotValue (RDFT mcf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, PRBool inversep,  PRBool tv)
 {
   Assertion nextAs;
+
+  if ((s == gWebData->RDF_URL) && (tv) && (!inversep) && (type == RDF_STRING_TYPE))
+    return copyString(resourceID(u));         
+
   nextAs = (inversep ? u->rarg2 : u->rarg1);
   while (nextAs != null) {
     if ((nextAs->db == mcf) && (nextAs->s == s) && (nextAs->tv == tv) && (nextAs->type == type)) {

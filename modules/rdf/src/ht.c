@@ -136,7 +136,10 @@ possiblyUpdateView(HT_View view)
 		{
 			if (HT_IsContainer(node) && HT_IsContainerOpen(node))
 			{
-				if (startsWith("file://", resourceID(node->node)))
+				/* update "file", "find", and "at" containers */
+				if (startsWith("file://", resourceID(node->node)) ||
+				    startsWith("find:", resourceID(node->node)) ||
+				    startsWith("at:", resourceID(node->node)))
 				{
 					updateViewItem(node);
 				}
@@ -1059,6 +1062,7 @@ HT_AddToContainer (HT_Resource container, char *url, char *optionalTitle)
 			RDF_Assert(db, r, gCoreVocab->RDF_name, 
 				   optionalTitle, RDF_STRING_TYPE);
 		}
+		htSetBookmarkAddDateToNow(r);
 		RDF_Assert(db, r, gCoreVocab->RDF_parent, container->node, RDF_RESOURCE_TYPE);
 	}
 }
@@ -1081,7 +1085,43 @@ HT_AddBookmark (char *url, char *optionalTitle)
 				RDF_Assert(gNCDB, r, gCoreVocab->RDF_name, 
 					   optionalTitle, RDF_STRING_TYPE);
 			}
+			htSetBookmarkAddDateToNow(r);
 			RDF_Assert(gNCDB, r, gCoreVocab->RDF_parent, nbFolder, RDF_RESOURCE_TYPE);
+		}
+	}
+}
+
+
+
+void
+htSetBookmarkAddDateToNow(RDF_Resource r)
+{
+	char		buffer[128], *temp;
+	struct tm	*time;
+	uint32		now;
+
+	XP_ASSERT(r != NULL);
+	if (r == NULL)	return;
+
+	if ((temp = RDF_GetSlotValue(gNCDB, r, gNavCenter->RDF_bookmarkAddDate,
+		RDF_STRING_TYPE, PR_FALSE, PR_TRUE)) != NULL)
+	{
+		/* already has an add date */
+		freeMem(temp);
+	}
+	else
+	{
+		time((time_t *)&now);
+		if ((time = localtime((time_t *) &now)) != NULL)
+		{
+#ifdef	XP_MAC
+			time->tm_year += 4;
+			strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_MACDATE),time);
+#else
+			strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_WINDATE),time);
+#endif
+			RDF_Assert(gNCDB, r, gNavCenter->RDF_bookmarkAddDate,
+				(void *)copyString(buffer), RDF_STRING_TYPE);
 		}
 	}
 }
@@ -1108,7 +1148,7 @@ gNavCenterDataSources1[15] =
 #endif
 
 	"rdf:lfs",  "rdf:ht",
-	"rdf:columns", "rdf:CookieStore", NULL
+	"rdf:columns", "rdf:CookieStore", "rdf:find", NULL
 };
 
 
@@ -2635,7 +2675,8 @@ menus[] = {
 	HT_CMD_DELETE_FOLDER,
 	HT_CMD_SEPARATOR,
 
-	HT_CMD_REFRESH,	
+	HT_CMD_REFRESH,
+	HT_CMD_FIND,
 	HT_CMD_PROPERTIES,
 	HT_CMD_SEPARATOR,
 
@@ -2990,12 +3031,14 @@ htIsMenuCmdEnabled(HT_Pane pane, HT_MenuCmd menuCmd,
 			if (node->parent->node == NULL)		return(false);
 			if ((resourceType(node->parent->node) != RDF_RT) &&
 				(resourceType(node->parent->node) != HISTORY_RT) &&
-				(resourceType(node->parent->node) != COOKIE_RT))
+				(resourceType(node->parent->node) != COOKIE_RT) &&
+				(resourceType(node->parent->node) != SEARCH_RT))
 								return(false);
 			if (HT_IsContainer(node))
 			{
 				if (node->node == gNavCenter->RDF_HistoryBySite ||
-				    node->node == gNavCenter->RDF_HistoryByDate)
+				    node->node == gNavCenter->RDF_HistoryByDate ||
+				    node->node == gNavCenter->RDF_Search)
 				    				return(false);
 				if ((ptFolder = RDFUtil_GetPTFolder()) != NULL)
 				{
@@ -3110,7 +3153,8 @@ htIsMenuCmdEnabled(HT_Pane pane, HT_MenuCmd menuCmd,
 			if (rNode == NULL)			return(false);
 			if (rNode == gNavCenter->RDF_BookmarkFolderCategory ||
 			    rNode == gNavCenter->RDF_LocalFiles ||
-			    rNode == gNavCenter->RDF_History)
+			    rNode == gNavCenter->RDF_History ||
+			    rNode == gNavCenter->RDF_Search)
 								return(false);
 			if (htIsOpLocked(pane->selectedView->top, gNavCenter->RDF_DeleteLock))
 								return(false);
@@ -3163,6 +3207,10 @@ htIsMenuCmdEnabled(HT_Pane pane, HT_MenuCmd menuCmd,
 			{
 				if (!HT_IsContainer(node))	return(false);
 			}
+			break;
+
+			case	HT_CMD_FIND:
+			if (multSelection == true)		return(false);
 			break;
 
 			case	HT_CMD_EXPORT:
@@ -3690,7 +3738,9 @@ HT_DoMenuCmd(HT_Pane pane, HT_MenuCmd menuCmd)
 					{
 						RDF_Assert(pane->db, rNode,
 							gCoreVocab->RDF_name,
-							XP_GetString(RDF_DATA_1), RDF_STRING_TYPE);
+							XP_GetString(RDF_DATA_1),
+							RDF_STRING_TYPE);
+						htSetBookmarkAddDateToNow(rNode);
 					}
 					else if (menuCmd == HT_CMD_NEW_FOLDER)
 					{
@@ -3703,8 +3753,10 @@ HT_DoMenuCmd(HT_Pane pane, HT_MenuCmd menuCmd)
 						{
 							RDF_Assert(pane->db, rNode,
 								gCoreVocab->RDF_name,
-								XP_GetString(RDF_DATA_2), RDF_STRING_TYPE);
+								XP_GetString(RDF_DATA_2),
+								RDF_STRING_TYPE);
 						}
+						htSetBookmarkAddDateToNow(rNode);
 					}
 					if (node != NULL)
 					{
@@ -3759,6 +3811,10 @@ HT_DoMenuCmd(HT_Pane pane, HT_MenuCmd menuCmd)
 				}
 				HT_NewWorkspace(pane, resourceID(node->node), NULL);
 				error = HT_NoErr;
+				break;
+
+				case	HT_CMD_FIND:
+				HT_Find((node != NULL) ? HT_GetNodeName(node): NULL);
 				break;
 
 				case	HT_CMD_PROPERTIES:
@@ -4369,7 +4425,8 @@ ht_isURLReal(HT_Resource node)
 */
 	if (HT_IsContainer(node))
 	{
-		if (type == RDF_RT || type == HISTORY_RT || type == SEARCH_RT || type == PM_RT || type == IM_RT || type == ATALKVIRTUAL_RT)
+		if (type == RDF_RT || type == HISTORY_RT || type == SEARCH_RT ||
+			type == PM_RT || type == IM_RT || type == ATALKVIRTUAL_RT)
 		{
 			validFlag = false;
 		}
@@ -4459,7 +4516,7 @@ htVerifyUniqueToken(HT_Resource node, void *token, uint32 tokenType, char *data)
 	RDF_Cursor		c;
 	RDF_Resource		r;
 	char			*msg;
-	PRBool			ok = PR_FALSE, oldFindMode;
+	PRBool			ok = PR_FALSE;
 
 	XP_ASSERT(node != NULL);
 	if (node == NULL)	return(PR_FALSE);
@@ -4468,35 +4525,29 @@ htVerifyUniqueToken(HT_Resource node, void *token, uint32 tokenType, char *data)
 	XP_ASSERT(data != NULL);
 	if (data == NULL)	return(PR_FALSE);
 
-	oldFindMode = setFindExactStringMatchingMode(PR_TRUE);
-	if ((c = RDF_Find(gNavCenter->RDF_URLShortcut, data,
-		RDF_STRING_TYPE)) != NULL)
+	if ((c = RDF_Find(gNavCenter->RDF_URLShortcut, gCoreVocab->RDF_stringEquals,
+		data, RDF_STRING_TYPE)) != NULL)
 	{
 		if ((r = RDF_NextValue(c)) == NULL)
 		{
 			ok = PR_TRUE;
 		}
+		else if (node->node == r)
+		{
+			ok = PR_TRUE;
+		}
 		else
 		{
-			/* XXX localization */
-			msg = PR_smprintf("'%s' is assigned as a shortcut for '%s'. Reassign it?",
+			msg = PR_smprintf(XP_GetString(RDF_SHORTCUT_CONFLICT_STR),
 				data, resourceID(r));
 			if (msg != NULL)
 			{
-				if (FE_Confirm(((MWContext *)gRDFMWContext()), msg))
-				{
-					RDF_Unassert(gNCDB, r, gNavCenter->RDF_URLShortcut,
-						(void *)data, RDF_STRING_TYPE);
-					RDF_Assert(gNCDB, node->node, gNavCenter->RDF_URLShortcut,
-						(void *)data, RDF_STRING_TYPE);
-				}
+				ok = FE_Confirm(((MWContext *)gRDFMWContext()), msg);
 				XP_FREE(msg);
 			}
 		}
 		RDF_DisposeCursor(c);
 	}
-	setFindExactStringMatchingMode(oldFindMode);
-
 	return(ok);
 }
 
@@ -4519,16 +4570,17 @@ HT_SetNodeData (HT_Resource node, void *token, uint32 tokenType, void *data)
 			switch(tokenType)
 			{
 			case	HT_COLUMN_STRING:
-				if (data != NULL && oldData != NULL)
+				if ((token == gNavCenter->RDF_URLShortcut) && (data != NULL) &&
+					((*(char *)data) != '\0'))
+				{
+					dirty = htVerifyUniqueToken(node, token,
+						tokenType, (char *)data);
+				}
+				else if (data != NULL && oldData != NULL)
 				{
 					if (!strcmp(data, oldData))
 					{
 						dirty = PR_FALSE;
-					}
-					else if (token == gNavCenter->RDF_URLShortcut)
-					{
-						dirty = htVerifyUniqueToken(node, token,
-							tokenType, (char *)data);
 					}
 				}
 				if (dirty == PR_TRUE)
@@ -5614,6 +5666,205 @@ htIsOpLocked(HT_Resource node, RDF_Resource token)
 
 
 
+static PRBool
+rdfFindDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned int button)
+{
+	char			*url = NULL, *temp;
+	PRBool			retVal = PR_TRUE;
+	int			loop;
+
+	switch(button)
+	{
+		case    XP_DIALOG_OK_BUTTON:
+		if ((argv != NULL) && (argc>6))
+		{
+			/* build up find URL */
+			for (loop=4; loop<argc; loop+=2)
+			{
+				temp = PR_smprintf("%s%s%s=%s",
+					(url != NULL ) ? url:"",
+					(url != NULL) ? "&":"",
+					argv[loop], argv[loop+1]);
+				if (url != NULL)
+				{
+					XP_FREE(url);
+				}
+				url = temp;
+			}
+		}
+		if (url != NULL)
+		{
+			temp = append2Strings("find:", url);
+			if (url != NULL)
+			{
+				XP_FREE(url);
+			}
+			url = temp;
+			
+			if (url != NULL)
+			{
+				/* save away url */
+				HT_LaunchURL(gHTTop, url, NULL);
+
+				XP_FREE(url);
+				url = NULL;
+			}
+		}
+		retVal = PR_FALSE;
+		break;
+
+		case    XP_DIALOG_CANCEL_BUTTON:
+		retVal = PR_FALSE;
+		break;
+	}
+	return(retVal);
+}
+
+
+
+static XPDialogInfo rdfFindDialogInfo = {
+	(XP_DIALOG_OK_BUTTON | XP_DIALOG_CANCEL_BUTTON),
+	rdfFindDialogHandler,
+	500, 120
+};
+
+
+
+char *
+constructBasicHTML(char *dynStr, int strID, char *data1, char *data2)
+{
+	char		*newDynStr = dynStr, *html, *temp;
+
+	if ((html=XP_GetString(strID)) != NULL)
+	{
+		temp = PR_smprintf(html, ((data1 != NULL) ? data1:""),
+				((data2 != NULL) ? data2:""));
+		if (temp != NULL)
+		{
+			if (dynStr != NULL)
+			{
+				newDynStr = append2Strings(dynStr, temp);
+				XP_FREE(dynStr);
+				XP_FREE(temp);
+			}
+			else
+			{
+				newDynStr = temp;
+			}
+		}
+	}
+	return(newDynStr);
+}
+
+
+
+PR_PUBLIC_API(void)
+HT_Find(char *hint)
+{
+	XPDialogStrings		*strings = NULL;
+	char			*dynStr = NULL, *postHTMLdynStr = NULL;
+
+	dynStr = constructBasicHTML(dynStr, RDF_FIND_STR1, "", "");
+
+	/* build location select */
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_START, "location", "");
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION, "local",
+				XP_GetString(RDF_LOCAL_LOCATION_STR));
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION, "remote",
+				XP_GetString(RDF_REMOTE_LOCATION_STR));
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION, "all",
+				XP_GetString(RDF_ALL_LOCATION_STR));
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_END, "", "");
+
+	dynStr = constructBasicHTML(dynStr, RDF_FIND_STR2, "", "");
+
+	/* build attribute select */
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_START, "attribute", "");
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION,
+				resourceID(gCoreVocab->RDF_name),
+				RDF_GetResourceName(gNCDB, gCoreVocab->RDF_name));
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION,
+				resourceID(gWebData->RDF_URL),
+				RDF_GetResourceName(gNCDB, gWebData->RDF_URL));
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION,
+				resourceID(gNavCenter->RDF_URLShortcut),
+				RDF_GetResourceName(gNCDB, gNavCenter->RDF_URLShortcut));
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION,
+				resourceID(gWebData->RDF_description),
+				RDF_GetResourceName(gNCDB, gWebData->RDF_description));
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION,
+				resourceID(gWebData->RDF_size),
+				RDF_GetResourceName(gNCDB, gWebData->RDF_size));
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION,
+				resourceID(gWebData->RDF_firstVisitDate),
+				RDF_GetResourceName(gNCDB, gWebData->RDF_firstVisitDate));
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION,
+				resourceID(gWebData->RDF_lastVisitDate),
+				RDF_GetResourceName(gNCDB, gWebData->RDF_lastVisitDate));
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION,
+				resourceID(gWebData->RDF_creationDate),
+				RDF_GetResourceName(gNCDB, gWebData->RDF_creationDate));
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION,
+				resourceID(gWebData->RDF_lastModifiedDate),
+				RDF_GetResourceName(gNCDB, gWebData->RDF_lastModifiedDate));
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION,
+				resourceID(gNavCenter->RDF_bookmarkAddDate),
+				RDF_GetResourceName(gNCDB, gNavCenter->RDF_bookmarkAddDate));
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_END, "", "");
+
+	/* build method select */
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_START, "method", "");
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION,
+				resourceID(gCoreVocab->RDF_substring),
+				RDF_GetResourceName(gNCDB, gCoreVocab->RDF_substring));
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION,
+				resourceID(gCoreVocab->RDF_stringEquals),
+				RDF_GetResourceName(gNCDB, gCoreVocab->RDF_stringEquals));
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION,
+				resourceID(gCoreVocab->RDF_stringNotEquals),
+				RDF_GetResourceName(gNCDB, gCoreVocab->RDF_stringNotEquals));
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION,
+				resourceID(gCoreVocab->RDF_stringStartsWith),
+				RDF_GetResourceName(gNCDB, gCoreVocab->RDF_stringStartsWith));
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_OPTION,
+				resourceID(gCoreVocab->RDF_stringEndsWith),
+				RDF_GetResourceName(gNCDB, gCoreVocab->RDF_stringEndsWith));
+	dynStr = constructBasicHTML(dynStr, RDF_SELECT_END, "", "");
+
+	/* build find text input field */
+	if (hint != NULL)
+	{
+		/* XXX should really use NET_EscapeHTML here! */
+		hint = NET_Escape(hint, URL_XALPHAS);
+	}
+	dynStr = constructBasicHTML(dynStr, RDF_FIND_INPUT_STR, "value",
+		((hint != NULL) ? hint : ""));
+	if (hint != NULL)
+	{
+		XP_FREE(hint);
+		hint = NULL;
+	}
+
+	strings = XP_GetDialogStrings(RDF_HTML_STR);
+	if (strings != NULL)
+	{
+		if (dynStr != NULL)
+		{
+			XP_CopyDialogString(strings, 0, dynStr);
+		}
+		if (postHTMLdynStr != NULL)
+		{
+			XP_CopyDialogString(strings, 1, postHTMLdynStr);
+		}
+		XP_MakeHTMLDialog(NULL, &rdfFindDialogInfo, RDF_FIND_TITLE,
+			strings, NULL, PR_FALSE);
+	}
+	if (dynStr != NULL)	XP_FREE(dynStr);
+	if (strings != NULL)	XP_FreeDialogStrings(strings);
+}
+
+
+
 PR_PUBLIC_API(void)
 HT_Properties (HT_Resource node)
 {
@@ -6232,23 +6483,115 @@ HT_Launch(HT_Resource node, MWContext *context)
 
 
 
+void
+htSetFindResourceName(RDF db, RDF_Resource u)
+{
+	RDF_Resource	searchOn, matchOn;
+	char		*attribute = NULL, *method = NULL;
+	char		*temp, *value, *name, *id, *p;
+
+	XP_ASSERT(u != NULL);
+	if (u == NULL)	return;
+
+	if ((temp = copyString(resourceID(u))) != NULL)
+	{
+		if ((value = strcasestr(temp, "attribute=")) != NULL)
+		{
+			value += strlen("attribute=");
+			if (p = strstr(value, "&"))	*p = '\0';
+			if ((name = unescapeURL(value)) != NULL)
+			{
+				if ((searchOn = RDF_GetResource(NULL, name, 0)) != NULL)
+				{
+					if ((id = RDF_GetResourceName(db, searchOn)) != NULL)
+					{
+						attribute = copyString(id);
+						freeMem(id);
+					}
+				}
+				XP_FREE(name);
+			}
+		}
+		freeMem(temp);
+	}
+	if ((temp = copyString(resourceID(u))) != NULL)
+	{
+		if ((value = strcasestr(temp, "method=")) != NULL)
+		{
+			value += strlen("method=");
+			if (p = strstr(value, "&"))	*p = '\0';
+			if ((name = unescapeURL(value)) != NULL)
+			{
+				if ((matchOn = RDF_GetResource(NULL, name, 0)) == NULL)
+				{
+					matchOn = gCoreVocab->RDF_substring;
+				}
+				XP_FREE(name);
+				if ((name = RDF_GetResourceName(db, matchOn)) != NULL)
+				{
+					method = copyString(name);
+					freeMem(name);
+				}
+			}
+		}
+		freeMem(temp);
+	}
+	if ((temp = copyString(resourceID(u))) != NULL)
+	{
+		if ((value = strcasestr(temp, "value=")) != NULL)
+		{
+			value += strlen("value=");
+			if (p = strstr(value, "&"))	*p = '\0';
+			if ((name = unescapeURL(value)) != NULL)
+			{
+				if ((id = PR_smprintf(XP_GetString(RDF_FIND_FULLNAME_STR),
+					((attribute != NULL) ? attribute : ""),
+					((method != NULL) ? method : ""),
+					name)) != NULL)
+				{
+					nlocalStoreAssert(*(db->translators), u,
+						gCoreVocab->RDF_name, id,
+						RDF_STRING_TYPE, PR_TRUE);
+					XP_FREE(id);
+				}
+				XP_FREE(name);
+			}
+		}
+	freeMem(temp);
+	}
+	if (attribute != NULL)
+	{
+		XP_FREE(attribute);
+		attribute = NULL;
+	}
+	if (method != NULL)
+	{
+		XP_FREE(method);
+		method = NULL;
+	}
+}
+
+
+
 PR_PUBLIC_API(PRBool)
 HT_LaunchURL(HT_Pane pane, char *url, MWContext *context)
 {
-	HT_View			view;
+	HT_View			view = NULL;
 	URL_Struct		*urls;
 	RDF_Cursor		c;
-	RDF_Resource		u = NULL, r;
-	PRBool			isShortcut = PR_FALSE, oldFindMode, retVal = PR_FALSE;
+	RDF_Resource		u = NULL, parent = NULL, r;
+	PRBool			isShortcut = PR_FALSE, retVal = PR_FALSE;
 
 	XP_ASSERT(url != NULL);
 
-	/* Note: if pane is NULL, bypass trying to load info into Aurora but DO try shortcut matching */
+	/* Note: if pane is NULL, bypass trying to load info into Aurora
+	   but DO try shortcut matching */
 
 	if (url != NULL)
 	{
-		oldFindMode = setFindExactStringMatchingMode(PR_TRUE);
-		if ((c = RDF_Find(gNavCenter->RDF_URLShortcut, url, RDF_STRING_TYPE)) != NULL)
+		if ((c = RDF_Find(gNavCenter->RDF_URLShortcut,
+			gCoreVocab->RDF_stringEquals,
+			url, RDF_STRING_TYPE)) != NULL)
 		{
 			if ((r = RDF_NextValue(c)) != NULL)
 			{
@@ -6256,7 +6599,6 @@ HT_LaunchURL(HT_Pane pane, char *url, MWContext *context)
 			}
 			RDF_DisposeCursor(c);
 		}
-		setFindExactStringMatchingMode(oldFindMode);
 	}
 
 	if (isShortcut == PR_TRUE)
@@ -6265,7 +6607,9 @@ HT_LaunchURL(HT_Pane pane, char *url, MWContext *context)
 	}
 	else
 	{
-		url = NET_Escape(url, URL_PATH);
+		/* XXX should NET_Escape() this, but not the protocol part
+		   (otherwise the colon is escaped) */
+		url = copyString(url);
 	}
 	if (url != NULL)
 	{
@@ -6274,26 +6618,43 @@ HT_LaunchURL(HT_Pane pane, char *url, MWContext *context)
 			if (startsWith("ftp://", url) && endsWith("/", url))
 			{
 				u = RDF_GetResource(pane->db, url, 1);
+				parent = gNavCenter->RDF_FTP;
+				view = HT_GetViewType(pane, HT_VIEW_FILES);
+			}
+			else if (startsWith("find:", url))
+			{
+				if ((u = RDF_GetResource(pane->db, url, 1)) != NULL)
+				{
+					  setContainerp(u, PR_TRUE);
+					  setResourceType(u, SEARCH_RT);
+					  htSetFindResourceName(pane->db, u);
+				}
+				parent = gNavCenter->RDF_Search;
+				view = HT_GetViewType(pane, HT_VIEW_SEARCH);
 			}
 		}
-		if ((pane != NULL) && (iscontainerp(u)))
+		if (pane != NULL)
 		{
-			if ((view = HT_GetViewType(pane, HT_VIEW_FILES)) != NULL)
+			if ((view != NULL) && (parent != NULL))
 			{
-				if (!remoteStoreHasAssertion(*(pane->db->translators), gNavCenter->RDF_FTP,
-					gCoreVocab->RDF_parent, gNavCenter->RDF_LocalFiles, RDF_RESOURCE_TYPE,
-					PR_TRUE))
+				if (startsWith("ftp://", resourceID(u)))
 				{
-					gAutoOpenPane = pane;
-					remoteStoreAdd (*(pane->db->translators), gNavCenter->RDF_FTP,
+					if (!RDF_HasAssertion(pane->db, gNavCenter->RDF_FTP,
 						gCoreVocab->RDF_parent, gNavCenter->RDF_LocalFiles,
-						RDF_RESOURCE_TYPE, PR_TRUE);
-					gAutoOpenPane = NULL;
+						RDF_RESOURCE_TYPE, PR_TRUE))
+					{
+						gAutoOpenPane = pane;
+						RDF_Assert(pane->db, gNavCenter->RDF_FTP,
+							gCoreVocab->RDF_parent, gNavCenter->RDF_LocalFiles,
+							RDF_RESOURCE_TYPE);
+						gAutoOpenPane = NULL;
+					}
 				}
 				gAutoOpenPane = pane;
-				remoteStoreAdd (*(pane->db->translators), u, gCoreVocab->RDF_parent,
-					gNavCenter->RDF_FTP, RDF_RESOURCE_TYPE, PR_TRUE);
+				RDF_Assert(pane->db, u, gCoreVocab->RDF_parent,
+					parent, RDF_RESOURCE_TYPE);
 				gAutoOpenPane = NULL;
+				htSetBookmarkAddDateToNow(u);
 
 				HT_SetSelectedView (pane, view);
 				retVal = PR_TRUE;
@@ -6972,6 +7333,10 @@ HT_GetViewType (HT_Pane pane, HT_ViewType viewType)
 
 		case	HT_VIEW_FILES:
 		resToFind = gNavCenter->RDF_LocalFiles;
+		break;
+
+		case	HT_VIEW_SEARCH:
+		resToFind = gNavCenter->RDF_Search;
 		break;
 
 		default:

@@ -380,7 +380,7 @@ AtalkAssert (RDFT mcf, RDF_Resource u, RDF_Resource s, void *v, RDF_ValueType ty
 	char			*user = NULL, *password = NULL;
 	short			len, pBlockSize = 0;
 	long			result;
-	char			errorMsg[256], errorNum[64];
+	char			errorMsg[256], errorNum[256];
 	PRHostEnt		hpbuf;
 	char			dbbuf[PR_NETDB_BUF_SIZE];
 
@@ -406,8 +406,7 @@ AtalkAssert (RDFT mcf, RDF_Resource u, RDF_Resource s, void *v, RDF_ValueType ty
 				if ((err = Gestalt(kAppleShareVerGestalt, &result)))	return(retVal);
 				if ((result & 0x0000FFFF) < kAppleShareVer_3_7)
 				{
-					/* XXX localization */
-					FE_Alert(NULL, "Please install AppleShare Client version 3.7 or later.");
+					FE_Alert(NULL, XP_GetString(RDF_AFP_CLIENT_37_STR));
 					return(retVal);
 				}
 				useTCP = true;
@@ -617,37 +616,35 @@ AtalkAssert (RDFT mcf, RDF_Resource u, RDF_Resource s, void *v, RDF_ValueType ty
 			}
 			if (err != noErr)
 			{
-				/* XXX localization */
-
 				errorMsg[0] = '\0';
 				switch(err)
 				{
 					case	afpUserNotAuth:
 					case	afpParmErr:
-					sprintf(errorMsg, "User authentication failed.");
+					sprintf(errorMsg, XP_GetString(RDF_AFP_AUTH_FAILED_STR));
 					break;
 
 					case	afpPwdExpiredErr:
-					sprintf(errorMsg, "Password expired.");
+					sprintf(errorMsg, XP_GetString(RDF_AFP_PW_EXPIRED_STR));
 					break;
 
 					case	afpAlreadyMounted:
-					sprintf(errorMsg, "Volume already mounted.");
+					sprintf(errorMsg, XP_GetString(RDF_AFP_ALREADY_MOUNTED_STR));
 					break;
 
 					case	afpCantMountMoreSrvre:
-					sprintf(errorMsg, "Maximum number of volumes has been mounted.");
+					sprintf(errorMsg, XP_GetString(RDF_AFP_MAX_SERVERS_STR));
 					break;
 
 					case	afpNoServer:
-					sprintf(errorMsg, "Server is not responding.");
+					sprintf(errorMsg, XP_GetString(RDF_AFP_NOT_RESPONDING_STR));
 					break;
 
 					case	afpSameNodeErr:
-					sprintf(errorMsg, "Failed to log on to a server running on this machine.");
+					sprintf(errorMsg, XP_GetString(RDF_AFP_SAME_NODE_STR));
 					break;
 				}
-				sprintf(errorNum, "\rError %d", err);
+				sprintf(errorNum, XP_GetString(RDF_AFP_ERROR_NUM_STR), err);
 				strcat (errorMsg, errorNum);
 				FE_Alert(NULL, errorMsg);
 			}
@@ -800,13 +797,11 @@ AtalkGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type,
 			passThru = PR_FALSE;
 			if (endsWith("/", resourceID(u)))
 			{
-				/* XXX localization */
-				retVal = (void *)copyString("Directory");
+				retVal = (void *)copyString(XP_GetString(RDF_DIRECTORY_DESC_STR));
 			}
 			else
 			{
-				/* XXX localization */
-				retVal = (void *)copyString("File");
+				retVal = (void *)copyString(XP_GetString(RDF_FILE_DESC_STR));
 			}
 		}
 		else if ((s == gWebData->RDF_size) && (type == RDF_INT_TYPE) && (tv))
@@ -1114,7 +1109,7 @@ MakeAtalkStore (char* url)
 			ntr->url = copyString(url);
 			gRDFDB  = ntr;
 
-			setAtalkResourceName(gNavCenter->RDF_Appletalk);
+			/* setAtalkResourceName(gNavCenter->RDF_Appletalk); */
 			getZones();
 			remoteStoreAdd(gRemoteStore, gNavCenter->RDF_Appletalk,
 				gCoreVocab->RDF_parent, gNavCenter->RDF_LocalFiles,

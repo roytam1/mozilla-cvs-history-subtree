@@ -25,6 +25,7 @@
 
 #include "mcf.h"
 #include "columns.h"
+#include "find2rdf.h"
 #include "fs2rdf.h"
 #include "hist2rdf.h"
 #include "nlcstore.h"
@@ -37,7 +38,6 @@
 
 	/* globals */
 RDFL		gAllDBs = 0;
-PRBool		gExactStringMatchMode = PR_FALSE;
 
 
 
@@ -75,6 +75,8 @@ getTranslator (char* url)
     return MakeSCookDB(url);
   } else if (startsWith("rdf:CookieStore", url)) {
     return MakeCookieStore(url);
+  } else if (startsWith("rdf:find", url)) {
+    return MakeFindStore(url);
   } 
 #endif
   else return NULL;
@@ -114,7 +116,11 @@ RDF_GetDB (const char** dataSources)
   return r;
 }
 
-PR_PUBLIC_API(RDFT) RDF_AddDataSource(RDF rdf, char* dataSource) {
+
+
+PR_PUBLIC_API(RDFT)
+RDF_AddDataSource(RDF rdf, char* dataSource)
+{
   RDFT newDB;
   if (rdf->numTranslators == rdf->translatorArraySize) {
     RDFT* tmp = (RDFT*)getMem((rdf->numTranslators+5)*(sizeof(RDFT)));
@@ -136,7 +142,11 @@ PR_PUBLIC_API(RDFT) RDF_AddDataSource(RDF rdf, char* dataSource) {
   }	
 }
 
-PR_PUBLIC_API(RDF_Error) RDF_ReleaseDataSource(RDF rdf, RDFT dataSource) {
+
+
+PR_PUBLIC_API(RDF_Error)
+RDF_ReleaseDataSource(RDF rdf, RDFT dataSource)
+{
   RDFT* temp = (RDFT*)getMem((rdf->numTranslators-1)*(sizeof(RDFT)));
   int16 m = 0;
   int16 n= 0;
@@ -152,6 +162,7 @@ PR_PUBLIC_API(RDF_Error) RDF_ReleaseDataSource(RDF rdf, RDFT dataSource) {
   deleteFromRDFList(dataSource->rdf, rdf);
   return 0;
 }
+
 
 
 RDFL
@@ -377,6 +388,8 @@ iscontainerp (RDF_Resource u)
     return 1;
   } else if (startsWith("cache:container", id)) {
     return 1;
+  } else if (startsWith("find:", id)) {
+    return 1;
   }
 #endif   
   else  return 0; 
@@ -480,7 +493,7 @@ RDF_GetSlotValue (RDF rdf, RDF_Resource u, RDF_Resource s,
 {
   uint16 size =  rdf->numTranslators; 
   uint16 n = 0;
-  if (s == gWebData->RDF_URL && tv && !inversep && type == RDF_STRING_TYPE) 
+  if ((s == gWebData->RDF_URL) && (tv) && (!inversep) && (type == RDF_STRING_TYPE))
     return  copyString(resourceID(u));         
   while (n < size) {
     void*  ans = callGetSlotValue(n, rdf, u, s, type, inversep, tv);
@@ -495,8 +508,11 @@ RDF_GetSlotValue (RDF rdf, RDF_Resource u, RDF_Resource s,
   return NULL; 
 }
 
+
+
 RDFT
-RDFTNamed (RDF rdf, char* name) {
+RDFTNamed (RDF rdf, char* name)
+{
   uint16 size =  rdf->numTranslators; 
   uint16 n = 0;
   while (n < size) {
@@ -506,6 +522,8 @@ RDFTNamed (RDF rdf, char* name) {
   }
   return NULL;
 }
+
+
 
 RDF_Cursor
 getSlotValues (RDF rdf, RDF_Resource u, RDF_Resource s, 
@@ -718,7 +736,7 @@ findEnumerator (PLHashEntry *he, PRIntn i, void *arg)
 {
   RDF_Cursor c = (RDF_Cursor) arg;
   RDF_Resource u = (RDF_Resource)he->value;
-  if (itemMatchesFind(c->rdf, u, c->s, c->value, c->type)) {
+  if (itemMatchesFind(c->rdf, u, c->s, c->value, c->match, c->type)) {
     /* if (c->size <= c->count) */ {
       RDF_Resource* newBlock = getMem(c->size + sizeof(RDF_Resource *));
       if (newBlock == NULL) return  HT_ENUMERATE_STOP;
@@ -738,10 +756,11 @@ findEnumerator (PLHashEntry *he, PRIntn i, void *arg)
 
 
 PR_PUBLIC_API(RDF_Cursor)
-RDF_Find (RDF_Resource s, void* v, RDF_ValueType type)
+RDF_Find (RDF_Resource s, RDF_Resource match, void* v, RDF_ValueType type)
 {
   RDF_Cursor c = (RDF_Cursor) getMem(sizeof(struct RDF_CursorStruct));
   c->s = s;
+  c->match = match;
   c->value = v;
   c->type = type;
   c->queryType =  RDF_FIND_QUERY;
@@ -754,24 +773,63 @@ RDF_Find (RDF_Resource s, void* v, RDF_ValueType type)
 
 
 PRBool
-itemMatchesFind (RDF r, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type)
+matchStrings(RDF_Resource match, char *data, char *pattern)
 {
-  void* val;
-  RDF_Cursor c = RDF_GetTargets(r, u, s, type, 1);
+	PRBool		ok = 0;
+
+	if (match == NULL)	match = gCoreVocab->RDF_substring;
+
+	if (match == gCoreVocab->RDF_substring)
+	{
+		ok = (substring(pattern, data) != NULL);
+	}
+	else if (match == gCoreVocab->RDF_stringEquals)
+	{
+		ok = (!compareStrings(data, pattern));
+	}
+	else if (match == gCoreVocab->RDF_stringNotEquals)
+	{
+		ok = compareStrings(data, pattern);
+	}
+	else if (match == gCoreVocab->RDF_stringStartsWith)
+	{
+		ok = startsWith(pattern, data);
+	}
+	else if (match == gCoreVocab->RDF_stringEndsWith)
+	{
+		ok = endsWith(pattern, data);
+	}
+	return(ok);
+}
+
+
+
+PRBool
+itemMatchesFind (RDF r, RDF_Resource u, RDF_Resource s, void* v,
+				RDF_Resource match, RDF_ValueType type)
+{
+	RDF_Cursor	c;
+	void		*val;
+    PRBool		ok = 0;
+
+  if ((s == gWebData->RDF_URL) && (type == RDF_STRING_TYPE))
+  {
+	val = resourceID(u);
+	ok = matchStrings(match, val, v);
+	return(ok);
+  }
+
+  c = RDF_GetTargets(r, u, s, type, 1);
   if (c != NULL) {
     while (val = RDF_NextValue(c)) {
-      PRBool ok = 0;
       if (type == RDF_RESOURCE_TYPE) {
         ok = (u == v);
       } else if (type == RDF_STRING_TYPE) {
-        if (gExactStringMatchMode == PR_TRUE)
-        {
-          ok = (!compareStrings(val, v));
-        }
-        else
-        {
-          ok = (strstr(val, v) != NULL);
-        }
+      	if (s == gWebData->RDF_URL)
+      	{
+      		val = resourceID(u);
+      	}
+      	ok = matchStrings(match, val, v);
       }
       if (ok) {
         RDF_DisposeCursor(c);
@@ -785,25 +843,15 @@ itemMatchesFind (RDF r, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType t
 
 
 
-PRBool
-setFindExactStringMatchingMode(PRBool exactFlag)
-{
-	PRBool		oldMode;
-
-	oldMode = gExactStringMatchMode;
-	gExactStringMatchMode = exactFlag;
-	return(oldMode);
-}
-
-
-
 RDF_Resource
 nextFindValue (RDF_Cursor c)
 {
 	RDF_Resource ans = NULL;
 
-  if (((c->count*sizeof(RDF_Resource *)) < c->size) && (*((RDF_Resource*)c->pdata + c->count) != NULL)) {
-    ans = (RDF_Resource)*((RDF_Resource*)c->pdata + (c->count*sizeof(RDF_Resource *)));
+  if (((c->count*sizeof(RDF_Resource *)) < c->size) &&
+  	(*((char *)c->pdata + (c->count*sizeof(RDF_Resource *))) != NULL))
+  {
+    ans = *(RDF_Resource *)((char *)c->pdata + (c->count*sizeof(RDF_Resource *)));
     c->count++;
   }
   return ans;

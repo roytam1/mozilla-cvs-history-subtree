@@ -27,7 +27,9 @@
 #include "mcff2mcf.h"
 
 
-char* copyStringIgnoreWhiteSpace(char* string)
+
+char *
+copyStringIgnoreWhiteSpace(char* string)
 {
    char* buf = (char*)malloc(strlen(string) + 1);
    char* token = strtok(string, " \t\n\r");
@@ -41,9 +43,10 @@ char* copyStringIgnoreWhiteSpace(char* string)
       if(token)
          strcpy(p++, " ");
    }
-
    return buf;
 }
+
+
 
 char *
 getHref(char** attlist)
@@ -245,6 +248,7 @@ ResourceFromElementName (RDFFile f, char* elementName)
   }
 }
         
+
 
 void
 parseNextRDFToken (RDFFile f, char* token)

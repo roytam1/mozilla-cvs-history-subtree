@@ -61,6 +61,7 @@ C_OBJS=.\$(OBJDIR)\vocab.obj \
 !ifndef RDF_STANDALONE
 C_OBJS = $(C_OBJS) \
        .\$(OBJDIR)\ht.obj \
+       .\$(OBJDIR)\find2rdf.obj \
        .\$(OBJDIR)\fs2rdf.obj \
        .\$(OBJDIR)\hist2rdf.obj \
        .\$(OBJDIR)\es2mcf.obj \

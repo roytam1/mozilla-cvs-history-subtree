@@ -47,7 +47,7 @@
 
 #define ITEM_LIST_SIZE		500		/* XXX ITEM_LIST_SIZE should be dynamic */
 #define ITEM_LIST_ELEMENT_SIZE	20
-#define NUM_MENU_CMDS           38
+#define NUM_MENU_CMDS           39
 
 
 
@@ -67,6 +67,11 @@ extern	int	RDF_MISSION_CONTROL_TITLE, RDF_TREE_COLORS_TITLE, RDF_SELECTION_COLOR
 extern	int	RDF_COLUMN_COLORS_TITLE, RDF_TITLEBAR_COLORS_TITLE, RDF_HTML_MAININFOHEADER_STR;
 extern	int	RDF_HTML_EMPTYHEADER_STR, RDF_HTML_COLOR_STR, RDF_SETCOLOR_JS, RDF_DEFAULTCOLOR_JS;
 extern	int	RDF_COLOR_LAYER, RDF_HTMLCOLOR_STR;
+extern	int	RDF_SELECT_START, RDF_SELECT_END, RDF_SELECT_OPTION;
+extern	int	RDF_FIND_STR1, RDF_FIND_STR2, RDF_FIND_INPUT_STR;
+extern	int	RDF_LOCAL_LOCATION_STR, RDF_REMOTE_LOCATION_STR, RDF_ALL_LOCATION_STR;
+extern	int	RDF_CONTAINS_STR, RDF_IS_STR, RDF_IS_NOT_STR, RDF_STARTS_WITH_STR, RDF_ENDS_WITH_STR;
+extern	int	RDF_FIND_TITLE, RDF_FIND_FULLNAME_STR, RDF_SHORTCUT_CONFLICT_STR, RDF_FTP_NAME_STR;
 
 #ifdef	HT_PASSWORD_RTNS
 extern	int	RDF_NEWPASSWORD, RDF_CONFIRMPASSWORD;
@@ -243,6 +248,7 @@ uint32				refreshItemList1(HT_View view, HT_Resource node);
 void				refreshItemList (HT_Resource node, HT_Event whatHappened);
 void				refreshPanes();
 HT_Pane				paneFromResource(RDF_Resource resource, HT_Notification notify, PRBool autoFlushFlag, PRBool autoOpenFlag);
+void				htSetBookmarkAddDateToNow(RDF_Resource r);
 RDF				newHTPaneDB();
 RDF				HTRDF_GetDB();
 PRBool				initViews (HT_Pane pane);
@@ -282,7 +288,10 @@ char *				constructHTMLTagData(char *dynStr, int strID, char *data);
 char *				constructHTML(char *dynStr, HT_Resource node, void *token, uint32 tokenType);
 char *				constructHTMLPermission(char *dynStr, HT_Resource node, RDF_Resource token, char *permText);
 PRBool				htIsOpLocked(HT_Resource node, RDF_Resource token);
+static PRBool			rdfFindDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned int button);
+char *				constructBasicHTML(char *dynStr, int strID, char *data1, char *data2);
 void				setHiddenState (HT_Resource node);
+void				htSetFindResourceName(RDF db, RDF_Resource r);
 PRBool				mutableContainerp (RDF_Resource node);
 void				possiblyCleanUpTitle (char* title);
 PRBool				htRemoveChild(HT_Resource parent, HT_Resource child, PRBool moveToTrash);

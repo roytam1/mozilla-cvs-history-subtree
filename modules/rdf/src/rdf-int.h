@@ -78,7 +78,6 @@ XP_BEGIN_PROTOS
 #define	ATALK_RT 12
 #define	ATALKVIRTUAL_RT 13
 #define COOKIE_RT       14
-#define WILDCARD_RT 15
 
 
 #define CHECK_VAR(var, return_value) {if (var == NULL) {XP_ASSERT(var); return return_value;}}
@@ -110,15 +109,16 @@ struct RDF_ResourceStruct {
 struct RDF_CursorStruct {
   RDF_Resource u;
   RDF_Resource s;
+  RDF_Resource match;
+  void *value;
+  struct RDF_CursorStruct* current;
+  RDF    rdf;
+  void* pdata;
   PRBool tv;
   PRBool inversep;
-  void* value;
   RDF_ValueType type;
-  struct RDF_CursorStruct* current;
   int16 count;
-  void* pdata;
   uint16 size;
-  RDF    rdf;
   uint8 queryType;
 };
 

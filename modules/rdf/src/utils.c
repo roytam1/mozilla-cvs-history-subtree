@@ -42,14 +42,11 @@ compareStrings(char *s1, char *s2)
 {
 #ifdef	XP_WIN
 	return(stricmp(s1,s2));		/* case insignificant string compare */
-#endif
-
-#ifdef	XP_MAC
+#else
 	return(strcasecmp(s1,s2));
 #endif
-
-	return(strcmp(s1,s2));
 }
+
 
 
 RDF_Resource
@@ -269,7 +266,7 @@ endsWith (const char* pattern, const char* uuid)
   if (l2 < l1) return false;
   
   for (index = 1; index <= l1; index++) {
-    if (pattern[l1-index] != uuid[l2-index]) return false;
+    if (toupper(pattern[l1-index]) != toupper(uuid[l2-index])) return false;
   }
   
   return true;
@@ -283,7 +280,7 @@ startsWith (const char* pattern, const char* uuid)
   short l1 = strlen(pattern);
   short l2 = strlen(uuid);
   if (l2 < l1) return false;
-  return strncmp(pattern, uuid, l1)  == 0;
+  return strncasecmp(pattern, uuid, l1)  == 0;
 }
 
 
@@ -291,7 +288,7 @@ startsWith (const char* pattern, const char* uuid)
 PRBool
 substring (const char* pattern, const char* data)
 {
-  char *p = strstr(data, pattern);
+  char *p = strcasestr(data, pattern);
   return p != NULL;
 }
 
