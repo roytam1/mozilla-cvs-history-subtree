@@ -1162,9 +1162,20 @@ MyCallbackForCreateAddressBook(
   server->description = strdup(createPtr->abookName);
  
   result = AB_UpdateDIRServerForContainerPane(srcPane, server);
+
   if ( (server->fileName != NULL) && (server->fileName[0] != '\0') )
   {
-    lstrcpy((LPSTR) createPtr->abookFileName, (LPSTR)server->fileName);
+    char *fullName;
+    DIR_GetServerFileName(&fullName, server->fileName);
+
+    if ( (fullName != NULL) && (fullName[0] != '\0') )
+    {
+      lstrcpy((LPSTR) createPtr->abookFileName, fullName);
+    }
+    else
+    {
+      lstrcpy((LPSTR) createPtr->abookFileName, (LPSTR)server->fileName);
+    } 
   }
 
   return(0);
