@@ -1935,23 +1935,24 @@ NS_IMETHODIMP nsExternalHelperAppService::GetTypeFromURI(nsIURI *aURI, char **aC
   nsCOMPtr<nsIURL> url = do_QueryInterface(aURI, &rv);
     
 #if defined(XP_MAC) || defined (XP_MACOSX)
- 	if (NS_SUCCEEDED(rv))
- 	{
-    nsCAutoString fileExt;
-    url->GetFileExtension(fileExt);
-    
-    nsresult rv2;
-    nsCOMPtr<nsIFileURL> fileurl = do_QueryInterface( url, &rv2 );
-    if ( NS_SUCCEEDED ( rv2 ) )
+  if (NS_SUCCEEDED(rv))
+  {
+    PRBool isFile;
+    if (NS_SUCCEEDED(aURI->SchemeIs("file", &isFile)) && isFile)
     {
-    	nsCOMPtr <nsIFile> file;
-    	rv2 = fileurl->GetFile( getter_AddRefs( file ) );
-    	if ( NS_SUCCEEDED( rv2 ) )
-    	{
-    		rv2 = GetTypeFromFile( file, aContentType );
-				if( NS_SUCCEEDED ( rv2 ) )
-					return rv2;
-			}			
+      nsresult rv2;
+      nsCOMPtr<nsIFileURL> fileurl = do_QueryInterface( url, &rv2 );
+      if ( NS_SUCCEEDED ( rv2 ) )
+      {
+        nsCOMPtr <nsIFile> file;
+        rv2 = fileurl->GetFile( getter_AddRefs( file ) );
+        if ( NS_SUCCEEDED( rv2 ) )
+        {
+          rv2 = GetTypeFromFile( file, aContentType );
+          if( NS_SUCCEEDED ( rv2 ) )
+            return rv2;
+        }     
+      }
     }
   }
 #endif
@@ -2018,16 +2019,16 @@ NS_IMETHODIMP nsExternalHelperAppService::GetTypeFromFile( nsIFile* aFile, char 
   macFile = do_QueryInterface( aFile, &rv );
   if ( NS_SUCCEEDED( rv ) && fileExt.IsEmpty())
   {
-	PRUint32 type, creator;
-	macFile->GetFileType( (OSType*)&type );
-	macFile->GetFileCreator( (OSType*)&creator );   
-  	nsCOMPtr<nsIInternetConfigService> icService (do_GetService(NS_INTERNETCONFIGSERVICE_CONTRACTID));
+    PRUint32 type, creator;
+    macFile->GetFileType( (OSType*)&type );
+    macFile->GetFileCreator( (OSType*)&creator );   
+    nsCOMPtr<nsIInternetConfigService> icService (do_GetService(NS_INTERNETCONFIGSERVICE_CONTRACTID));
     if (icService)
     {
-      rv = icService->GetMIMEInfoFromTypeCreator(type, creator, fileExt.get(), getter_AddRefs(info));		 							
+      rv = icService->GetMIMEInfoFromTypeCreator(type, creator, fileExt.get(), getter_AddRefs(info));                                   
       if ( NS_SUCCEEDED( rv) )
-	    return info->GetMIMEType(aContentType);
-	}
+        return info->GetMIMEType(aContentType);
+    }
   }
 #endif
   // Windows, unix and mac when no type match occured.   
