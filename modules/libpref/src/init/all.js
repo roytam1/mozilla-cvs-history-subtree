@@ -678,10 +678,22 @@ pref("mousewheel.withcontrolkey.numlines",1);
 pref("mousewheel.withcontrolkey.sysnumlines",true);
 pref("mousewheel.withshiftkey.action",0);
 pref("mousewheel.withshiftkey.numlines",1);
-pref("mousewheel.withshiftkey.sysnumlines",false);
+pref("mousewheel.withshiftkey.sysnumlines",true);
 pref("mousewheel.withaltkey.action",2);
 pref("mousewheel.withaltkey.numlines",1);
 pref("mousewheel.withaltkey.sysnumlines",false);
+pref("mousewheel.horizscroll.withnokey.action",2);
+pref("mousewheel.horizscroll.withnokey.numlines",-1);
+pref("mousewheel.horizscroll.withnokey.sysnumlines",false);
+pref("mousewheel.horizscroll.withcontrolkey.action",2);
+pref("mousewheel.horizscroll.withcontrolkey.numlines",-1);
+pref("mousewheel.horizscroll.withcontrolkey.sysnumlines",false);
+pref("mousewheel.horizscroll.withshiftkey.action",2);
+pref("mousewheel.horizscroll.withshiftkey.numlines",-1);
+pref("mousewheel.horizscroll.withshiftkey.sysnumlines",false);
+pref("mousewheel.horizscroll.withaltkey.action",2);
+pref("mousewheel.horizscroll.withaltkey.numlines",-1);
+pref("mousewheel.horizscroll.withaltkey.sysnumlines",false);
 
 pref("profile.confirm_automigration",true);
 // profile.migration_behavior determines how the profiles root is set
