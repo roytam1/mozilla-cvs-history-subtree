@@ -468,7 +468,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                         pc = mCurModule->mCodeBase;
                         endPC = mCurModule->mCodeBase + mCurModule->mLength;
                         mArgumentBase = argBase;
-                        delete mLocals;
+                        delete[] mLocals;
                         mLocals = new JSValue[mCurModule->mLocalsCount];
                     }
                     else {
