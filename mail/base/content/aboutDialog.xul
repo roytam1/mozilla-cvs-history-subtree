@@ -64,7 +64,7 @@
       function onLoad() {
         var versionField = document.getElementById("versionField");      
         versionField.value = document.documentElement.getAttribute("versionlabel") + ' ' 
-                             + navigator.vendorSub + ' (' + navigator.productSub + ')';
+                             + navigator.vendorSub + 'RC1' + ' (' + navigator.productSub + ')';
 
         var button = document.documentElement.getButton("extra2");
         button.setAttribute("label", document.documentElement.getAttribute("creditslabel"));

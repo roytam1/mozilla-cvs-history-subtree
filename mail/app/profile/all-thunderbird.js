@@ -36,9 +36,9 @@
  * ***** END LICENSE BLOCK ***** */
 
 pref("general.useragent.vendor", "Thunderbird");
-pref("general.useragent.vendorSub",
-#expand __APP_VERSION__
-);
+pref("general.useragent.vendorSub", "1.0RC1");
+//#expand __APP_VERSION__
+//);
 
 // This is this application's unique identifier used by the Extension System to identify
 // this application as an extension target, and by the SmartUpdate system to identify
@@ -50,7 +50,7 @@ pref("app.version",
 pref("app.build_id", 
 #expand __BUILD_ID__
 );
-pref("app.extensions.version", "0.9");
+pref("app.extensions.version", "1.0");
 
 #ifdef XP_MACOSX
 pref("mail.biff.animate_dock_icon", false);
