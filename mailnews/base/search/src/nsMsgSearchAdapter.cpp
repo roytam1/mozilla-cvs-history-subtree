@@ -641,7 +641,7 @@ nsresult nsMsgSearchAdapter::EncodeImapTerm (nsIMsgSearchTerm *term, PRBool real
 	int len = strlen(whichMnemonic) + strlen(value) + (useNot ? strlen(m_kImapNot) : 0) + 
 		(useQuotes ? 2 : 0) + strlen(m_kImapHeader) + 
 		(orHeaderMnemonic ? (strlen(m_kImapHeader) + strlen(m_kImapOr) + (useNot ? strlen(m_kImapNot) : 0) + 
-		strlen(orHeaderMnemonic) + strlen(value) + 2 /*""*/) : 0) + 1;
+		strlen(orHeaderMnemonic) + strlen(value) + 2 /*""*/) : 0) + 10;
 	char *encoding = new char[len];
 	if (encoding)
 	{
@@ -687,23 +687,32 @@ nsresult nsMsgSearchAdapter::EncodeImapTerm (nsIMsgSearchTerm *term, PRBool real
 
 nsresult nsMsgSearchAdapter::EncodeImapValue(char *encoding, const char *value, PRBool useQuotes, PRBool reallyDredd)
 {
-	// By NNTP RFC, SEARCH HEADER SUBJECT "" is legal and means 'find messages without a subject header'
-	if (!reallyDredd)
-	{
-		// By IMAP RFC, SEARCH HEADER SUBJECT "" is illegal and will generate an error from the server
-		if (!value || !value[0])
-			return NS_ERROR_NULL_POINTER;
-	}
-	
-	if (useQuotes)
-		PL_strcat(encoding, "\"");
-	PL_strcat (encoding, value);
-	if (useQuotes)
-		PL_strcat(encoding, "\"");
-
-	return NS_OK;
+  // By NNTP RFC, SEARCH HEADER SUBJECT "" is legal and means 'find messages without a subject header'
+  if (!reallyDredd)
+  {
+    // By IMAP RFC, SEARCH HEADER SUBJECT "" is illegal and will generate an error from the server
+    if (!value || !value[0])
+      return NS_ERROR_NULL_POINTER;
+  }
+  
+  if (!nsCRT::IsAscii(value))
+  {
+    nsCAutoString lengthStr;
+    PL_strcat(encoding, "{");
+    lengthStr.AppendInt((PRInt32) strlen(value));
+    PL_strcat(encoding, lengthStr.get());
+    PL_strcat(encoding, "}"CRLF);
+    PL_strcat(encoding, value);
+    return NS_OK;
+  }
+  if (useQuotes)
+    PL_strcat(encoding, "\"");
+  PL_strcat (encoding, value);
+  if (useQuotes)
+    PL_strcat(encoding, "\"");
+  
+  return NS_OK;
 }
-
 
 nsresult nsMsgSearchAdapter::EncodeImap (char **ppOutEncoding, nsISupportsArray *searchTerms, const PRUnichar *srcCharset, const PRUnichar *destCharset, PRBool reallyDredd)
 {
