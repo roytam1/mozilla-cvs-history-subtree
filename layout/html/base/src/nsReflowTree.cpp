@@ -1,3 +1,42 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* ***** BEGIN LICENSE BLOCK *****
+ * Version: NPL 1.1/GPL 2.0/LGPL 2.1
+ *
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is 
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 2002
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *    Mike Shaver <shaver@mozilla.org>
+ *    Randell Jesup <rjesup@wgate.com>
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * either the GNU General Public License Version 2 or later (the "GPL"), or 
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the GPL or the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of either the GPL or the LGPL, and not to allow others to
+ * use your version of this file under the terms of the NPL, indicate your
+ * decision by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL or the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the NPL, the GPL or the LGPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
+
 #include "nsReflowTree.h"
 #include "nsIFrame.h"
 #include "nsHTMLReflowCommand.h"
@@ -53,22 +92,22 @@ nsReflowTree::Node::GetChild(nsIFrame *forFrame)
     if (!mKidU.mChild)
         // no kids yet, this becomes one
         return mKidU.mChild = Create(forFrame);
-
+  
     if (HasSingleChild()) {
         // our child is this frame, all done
         if (forFrame == mKidU.mChild->GetFrame())
             return mKidU.mChild;
-
+        
         // make a chunk for the existing kid...
         mKidU.mChunk = ChildChunk::Create(mKidU.mChild);
         if (!mKidU.mChunk)
             return nsnull;
         mFlags |= KIDS_CHUNKED;
-                
+        
         // ...and add a new one
         return mKidU.mChunk->mKids[1] = Create(forFrame);
     }
-
+    
     return mKidU.mChunk->GetChild(forFrame);
 }
 
@@ -79,7 +118,7 @@ nsReflowTree::Node::ChildChunk::Create(nsReflowTree::Node *node)
     memset(&chunk->mKids[1], 0, sizeof(chunk->mKids)-sizeof(chunk->mKids[0]));
     chunk->mKids[0] = node;
     chunk->mNext = 0;
-
+    
     return chunk;
 }
 
@@ -96,7 +135,7 @@ nsReflowTree::Node::ChildChunk::~ChildChunk()
             break;
         delete mKids[i];
     }
-
+  
     Destroy(mNext);
 }
 
@@ -105,24 +144,24 @@ nsReflowTree::Node::ChildChunk::GetChild(nsIFrame *forFrame)
 {
     Node *n;
     int i = 0;
-
+    
     for (; i < KIDS_CHUNK_SIZE && (n = mKids[i]); i++) {
         if (forFrame == n->GetFrame())
             return n;
     }
-
+    
     if (i < KIDS_CHUNK_SIZE)
         // didn't find it, and have space here
         return mKids[i] = Node::Create(forFrame);
-
+    
     // ask the next guy, if there is one
     if (mNext)
         return mNext->GetChild(forFrame);
-
+    
     // if we're full but have no next chunk, make one for the new child
     n = Node::Create(forFrame);
     mNext = Create(n);
-
+    
     if (!mNext) {
         Node::Destroy(n);
         return nsnull;
@@ -182,7 +221,7 @@ nsReflowTree::Node *
 nsReflowTree::Node::Iterator::NextChild()
 {
     if (!mNode)
-      return nsnull;
+        return nsnull;
 
     if (!mPos) {
         if (mNode->HasSingleChild()) {
@@ -220,7 +259,7 @@ nsReflowTree::Node::Iterator::NextChild(nsIFrame **aChildIFrame)
 {
   nsReflowTree::Node *result = NextChild();
   *aChildIFrame = (mPos && *mPos) ?
-    NS_STATIC_CAST(nsReflowTree::Node*, *mPos)->GetFrame() : nsnull;
+      NS_STATIC_CAST(nsReflowTree::Node*, *mPos)->GetFrame() : nsnull;
   return result;
 }
 
@@ -231,31 +270,30 @@ nsReflowTree::Node::Iterator::SelectChild(nsIFrame *aChildIFrame)
     ChildChunk *aCurrentChunk;
 
     if (!mNode)
-      return nsnull;
-
+        return nsnull;
+    
     if (mNode->HasSingleChild()) {
-      aPos = &mNode->mKidU.mChild;
+        aPos = &mNode->mKidU.mChild;
     } else {
-      aCurrentChunk = mNode->mKidU.mChunk;
-      aPos = &aCurrentChunk->mKids[0];
+        aCurrentChunk = mNode->mKidU.mChunk;
+        aPos = &aCurrentChunk->mKids[0];
     }
     if (*aPos && (*aPos)->mFrame == aChildIFrame)
-      return *aPos;
+        return *aPos;
 
-    while (aPos && *aPos)
-    {
-      if (aPos < &aCurrentChunk->mKids[ChildChunk::KIDS_CHUNK_SIZE]) {
-        aPos++;
-      } else {
-        aCurrentChunk = aCurrentChunk->mNext;
-        if (!aCurrentChunk) {
-            return nsnull;
+    while (aPos && *aPos) {
+        if (aPos < &aCurrentChunk->mKids[ChildChunk::KIDS_CHUNK_SIZE]) {
+            aPos++;
         } else {
-            aPos = &mCurrentChunk->mKids[0];
+            aCurrentChunk = aCurrentChunk->mNext;
+            if (!aCurrentChunk) {
+                return nsnull;
+            } else {
+                aPos = &mCurrentChunk->mKids[0];
+            }
         }
-      }
-      if ((*aPos)->mFrame == aChildIFrame)
-	return *aPos;
+        if ((*aPos)->mFrame == aChildIFrame)
+            return *aPos;
     }
 
     return nsnull;
