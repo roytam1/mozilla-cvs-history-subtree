@@ -175,8 +175,18 @@ JavaClass_getPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
         JSFunction *function;
         
         /* TODO - eliminate JSFUN_BOUND_METHOD */
-        JS_IdToValue(cx, id, &idval);
-        member_name = JS_GetStringBytes(JSVAL_TO_STRING(idval));
+        if (member_descriptor->methods->is_alias) {
+            /* If this is an explicit resolution of an overloaded method,
+               use the fully-qualified method name as the name of the
+               resulting JS function, i.e. "myMethod(int,long)" */
+            JS_IdToValue(cx, id, &idval);
+            member_name = JS_GetStringBytes(JSVAL_TO_STRING(idval));
+        } else {
+            /* Either not explicit resolution of overloaded method or
+               explicit resolution was unnecessary because method was
+               not overloaded. */
+            member_name = member_descriptor->name;
+        }
         function = JS_NewFunction(cx, jsj_JavaStaticMethodWrapper, 0,
                                   JSFUN_BOUND_METHOD, obj, member_name);
         if (!function)
