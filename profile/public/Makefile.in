@@ -38,7 +38,6 @@ SDK_XPIDLSRCS	= \
 XPIDLSRCS	= \
 		nsIProfileInternal.idl \
 		nsIProfileStartupListener.idl \
-		nsIProfileChangeStatus.idl \
 		$(NULL)
 
 ifeq ($(OS_ARCH),WINNT)
