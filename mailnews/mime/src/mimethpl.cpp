@@ -92,16 +92,22 @@ MimeInlineTextHTMLAsPlaintext_parse_begin (MimeObject *obj)
 static int
 MimeInlineTextHTMLAsPlaintext_parse_eof (MimeObject *obj, PRBool abort_p)
 {
+  if (obj->closed_p)
+    return 0;
+
+  // This is a hack. We need to call parse_eof() of the super class to flush out any buffered data.
+  // We can't call it yet for our direct super class, because it would "close" the output 
+  // (write tags such as </pre> and </div>). We'll do that after parsing the buffer.
+  int status = ((MimeObjectClass*)&MIME_SUPERCLASS)->superclass->parse_eof(obj, abort_p);
+  if (status < 0)
+    return status;
+  
   MimeInlineTextHTMLAsPlaintext *textHTMLPlain =
                                        (MimeInlineTextHTMLAsPlaintext *) obj;
 
-  /* This closed_p prevents a crash, but also prevents the display of messages
-     with only "text/html" (without charset) as Content-type. See the comment
-     about call sequence below. */
-  if (obj->closed_p || !textHTMLPlain || !textHTMLPlain->complete_buffer)
-    // This actually *does* happen. See below.
+  if (!textHTMLPlain || !textHTMLPlain->complete_buffer)
   {
-    return -1;
+    return 0;
   }
   nsString& cb = *(textHTMLPlain->complete_buffer);
   nsString asPlaintext;
@@ -116,18 +122,19 @@ MimeInlineTextHTMLAsPlaintext_parse_eof (MimeObject *obj, PRBool abort_p)
 
   nsCAutoString resultCStr = NS_ConvertUCS2toUTF8(asPlaintext);
   // TODO parse each line independently
-  int status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_line(
+  status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_line(
                              NS_CONST_CAST(char*, resultCStr.get()),
                              resultCStr.Length(),
                              obj);
+
+  cb.Truncate();
+
   if (status < 0)
     return status;
 
-  /* libmime likes to call |eof| several times. :-( Filed bug 126887.
-     To prevent writing the same message several times, I delete the
-     buffer content here. */
-  cb.Truncate();
-
+  // Second part of the flush hack. Pretend obj wasn't closed yet, so that our super class 
+  // gets a chance to write the closing.
+  obj->closed_p = PR_FALSE;
   return ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_eof(obj, abort_p);
 }
 
@@ -174,7 +181,11 @@ printf("Can't output: %s\n", line);
     I don't know, which odd circumstances might arise and how libmime
     will behave then. It's not worth the trouble for me to figure this all out.
    */
-  (textHTMLPlain->complete_buffer)->Append(NS_ConvertUTF8toUCS2(line));
+  nsCString linestr(line, length);
+  NS_ConvertUTF8toUCS2 line_ucs2(linestr.get());
+  if (length && line_ucs2.IsEmpty())
+    line_ucs2.AssignWithConversion(linestr.get());
+  (textHTMLPlain->complete_buffer)->Append(line_ucs2);
 
   return 0;
 }
