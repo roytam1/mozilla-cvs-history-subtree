@@ -3225,7 +3225,7 @@ dnl ========================================================
 dnl = Enable compilation of specific extension modules
 dnl ========================================================
 
-MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs pref transformiix inspector sroaming irc spellcheck"
+MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs pref transformiix inspector irc spellcheck"
 dnl MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc xmlextras help pref transformiix venkman inspector irc universalchardet"
 
 dnl Check if Thai Rendering Extension needs to be enabled
@@ -3233,7 +3233,7 @@ if test -n "$SUNCTL"; then
   MOZ_EXTENSIONS_DEFAULT="$MOZ_EXTENSIONS_DEFAULT ctl"
 fi
 
-MOZ_EXTENSIONS_ALL="$MOZ_EXTENSIONS_DEFAULT xmlterm access-builtin ctl p3p interfaceinfo" 
+MOZ_EXTENSIONS_ALL="$MOZ_EXTENSIONS_DEFAULT sroaming xmlterm access-builtin ctl p3p interfaceinfo"
 
 MOZ_ARG_ENABLE_STRING(extensions,
 [  --enable-extensions     Enable extensions],

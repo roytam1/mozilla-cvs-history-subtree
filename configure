@@ -11159,13 +11159,13 @@ fi
 
 
 
-MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs pref transformiix inspector sroaming irc spellcheck"
+MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs pref transformiix inspector irc spellcheck"
 
 if test -n "$SUNCTL"; then
   MOZ_EXTENSIONS_DEFAULT="$MOZ_EXTENSIONS_DEFAULT ctl"
 fi
 
-MOZ_EXTENSIONS_ALL="$MOZ_EXTENSIONS_DEFAULT xmlterm access-builtin ctl p3p interfaceinfo" 
+MOZ_EXTENSIONS_ALL="$MOZ_EXTENSIONS_DEFAULT sroaming xmlterm access-builtin ctl p3p interfaceinfo"
 
 # Check whether --enable-extensions or --disable-extensions was given.
 if test "${enable_extensions+set}" = set; then
