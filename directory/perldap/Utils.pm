@@ -212,8 +212,9 @@ sub ldapArgs
   my %ld;
 
   $main::opt_v = $main::opt_n if defined($main::opt_n);
-  $main::opt_p = LDAPS_PORT unless (defined($main::opt_p) ||
-				    ($main::opt_P eq ""));
+  $main::opt_p = LDAPS_PORT if (!defined($main::opt_p) &&
+				defined($main::opt_P) &&
+				($main::opt_P ne ""));
 
   $ld{"host"} = $main::opt_h || "ldap";
   $ld{"port"} = $main::opt_p || LDAP_PORT;
