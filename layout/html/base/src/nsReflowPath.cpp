@@ -52,6 +52,10 @@ nsReflowPath::~nsReflowPath()
         delete NS_STATIC_CAST(nsReflowPath *, mChildren[i]);
 
     delete mReflowCommand;
+
+#ifdef DEBUG
+    ::memset(this, 0xdd, sizeof(*this));
+#endif
 }
 
 nsReflowPath::iterator
@@ -93,7 +97,24 @@ nsReflowPath::EnsureSubtreeFor(nsIFrame *aFrame)
     return subtree;
 }
 
+void
+nsReflowPath::Remove(iterator &aIterator)
+{
+    NS_ASSERTION(aIterator.mNode == this, "inconsistent iterator");
+    NS_ASSERTION(aIterator.mIndex >= 0 && aIterator.mIndex < mChildren.Count(),
+                 "iterator out of range");
+
+    delete NS_STATIC_CAST(nsReflowPath *, mChildren[aIterator.mIndex]);
+    mChildren.RemoveElementAt(aIterator.mIndex);
+}
+
 #ifdef DEBUG
+void
+DebugListReflowPath(nsIPresContext *aPresContext, nsReflowPath *aReflowPath)
+{
+    aReflowPath->Dump(aPresContext, stdout, 0);
+}
+
 void
 nsReflowPath::Dump(nsIPresContext *aPresContext, FILE *aFile, int depth)
 {

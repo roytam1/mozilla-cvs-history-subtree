@@ -150,9 +150,7 @@ public:
     EnsureSubtreeFor(nsIFrame *aFrame);
 
     void
-    Remove(iterator &aIterator) {
-        NS_ASSERTION(aIterator.mNode == this, "inconsistent iterator");
-        mChildren.RemoveElementAt(aIterator.mIndex); }
+    Remove(iterator &aIterator);
 
 #ifdef DEBUG
     void
