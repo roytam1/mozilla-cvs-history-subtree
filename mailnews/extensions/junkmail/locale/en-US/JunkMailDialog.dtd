@@ -1,0 +1,17 @@
+<!ENTITY window.title "Junk Mail Controls">
+<!ENTITY account.label "Account:">
+<!ENTITY account.accesskey "A">
+
+<!ENTITY description.label "Junk Mail Controls evaluate your incoming messages, and identify those which are mostly likely to be &quot;junk&quot;.">
+
+<!ENTITY sliderDescription.label "Choose a level of control below.  A high level will identify more junk mail but may identify some valid messages as junk, while a low level will identify less junk mail, but is less likely to identify some valid messages as junk.">
+
+<!ENTITY junkFolder.label "When messages are identified as &quot;junk&quot;, move them to a folder: ">
+
+<!ENTITY off.label "Off">
+<!ENTITY lowest.label "Lowest">
+<!ENTITY low.label "Low">
+<!ENTITY medium.label "Medium">
+<!ENTITY high.label "High">
+<!ENTITY highest.label "Highest">
+

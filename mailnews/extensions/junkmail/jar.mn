@@ -1,0 +1,8 @@
+messenger.jar:
+    content/messenger-junkmail/contents.rdf
+    content/messenger-junkmail/JunkMailDialog.xul
+    content/messenger-junkmail/JunkMailDialog.js
+
+en-US.jar:
+    locale/en-US/messenger-junkmail/contents.rdf (locale/en-US/contents.rdf)
+    locale/en-US/messenger-junkmail/JunkMailDialog.dtd (locale/en-US/JunkMailDialog.dtd)

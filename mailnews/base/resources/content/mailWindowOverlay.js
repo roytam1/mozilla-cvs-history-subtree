@@ -1184,6 +1184,17 @@ function MsgCanFindAgain()
   return canFindAgainInPage();
 }
 
+function JunkMailFilters()
+{
+    var preselectedFolder = GetFirstSelectedMsgFolder();
+    var args = { folder: preselectedFolder };
+
+    window.openDialog(
+        "chrome://messenger-junkmail/content/JunkMailDialog.xul", "", 
+        "chrome,resizable,centerscreen,dialog=yes", args);
+    return;
+}
+
 function MsgFilters(emailAddress)
 {
     var preselectedFolder = GetFirstSelectedMsgFolder();

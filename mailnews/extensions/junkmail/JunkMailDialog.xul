@@ -1,0 +1,128 @@
+<?xml version="1.0"?>
+<!-- ***** BEGIN LICENSE BLOCK *****
+   - Version: MPL 1.1/GPL 2.0/LGPL 2.1
+   -
+   - The contents of this file are subject to the Mozilla Public License Version
+   - 1.1 (the "License"); you may not use this file except in compliance with
+   - the License. You may obtain a copy of the License at
+   - http://www.mozilla.org/MPL/
+   -
+   - Software distributed under the License is distributed on an "AS IS" basis,
+   - WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+   - for the specific language governing rights and limitations under the
+   - License.
+   -
+   - The Original Code is mozilla.org code.
+   -
+   - The Initial Developer of the Original Code is
+   - Netscape Communications Corporation.
+   - Portions created by the Initial Developer are Copyright (C) 2002
+   - the Initial Developer. All Rights Reserved.
+   -
+   - Contributor(s):
+   -    Dan Mosedale <dmose@netscape.com>
+   -
+   - Alternatively, the contents of this file may be used under the terms of
+   - either the GNU General Public License Version 2 or later (the "GPL"), or
+   - the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+   - in which case the provisions of the GPL or the LGPL are applicable instead
+   - of those above. If you wish to allow use of your version of this file only
+   - under the terms of either the GPL or the LGPL, and not to allow others to
+   - use your version of this file under the terms of the MPL, indicate your
+   - decision by deleting the provisions above and replace them with the notice
+   - and other provisions required by the LGPL or the GPL. If you do not delete
+   - the provisions above, a recipient may use your version of this file under
+   - the terms of any one of the MPL, the GPL or the LGPL.
+   -
+   - ***** END LICENSE BLOCK ***** -->
+
+<?xml-stylesheet href="chrome://messenger/skin/" type="text/css"?> 
+<?xml-stylesheet href="chrome://messenger/skin/folderMenus.css" type="text/css"?>
+
+<?xul-overlay href="chrome://messenger/content/msgFolderPickerOverlay.xul"?>
+
+<!DOCTYPE window SYSTEM "chrome://messenger-junkmail/locale/JunkMailDialog.dtd">
+
+<dialog id="JunkMailDialog"
+	xmlns:nc="http://home.netscape.com/NC-rdf#"
+	xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+	title="&window.title;"
+	onload="onLoad();"
+	ondialogaccept="return onOk();"
+	ondialogcancel="return onCancel();"
+	ondialoghelp="return doHelpButton();"
+	persist="width height screenX screenY"
+	buttons="accept,cancel,help">
+
+  <!-- XXX what does this do? -->
+  <keyset id="dialogKeys"/>
+
+  <script type="application/x-javascript"
+	  src="chrome://messenger-junkmail/content/JunkMailDialog.js"/>
+
+  <script type="application/x-javascript"
+	  src="chrome://help/content/contextHelp.js"/>
+
+  <!-- XXX necessary? -->
+  <script type="application/x-javascript" src="chrome://global/content/strres.js"/>
+  <script type="application/x-javascript" src="chrome://messenger/content/mailWindowOverlay.js"/>
+  <script type="application/x-javascript" src="chrome://messenger/content/mailCommands.js"/>
+  <script type="application/x-javascript" src="chrome://messenger/content/widgetglue.js"/>
+
+
+  <hbox align="center">
+    <label value="&account.label;" accesskey="&account.accesskey;"
+           control="serverMenu"/>
+      <menulist oncommand="onServerClick(event);" id="serverMenu">
+        <menupopup datasources="rdf:msgaccountmanager rdf:mailnewsfolders"
+                   containment="http://home.netscape.com/NC-rdf#child"
+		   ref="msgaccounts:/">
+          <template>
+            <rule nc:SupportsFilters="true">
+              <menuitem uri="..." value="..."
+                 class="folderMenuItem menuitem-iconic"
+                 IsServer="rdf:http://home.netscape.com/NC-rdf#IsServer"
+                 IsSecure="rdf:http://home.netscape.com/NC-rdf#IsSecure"
+                 ServerType="rdf:http://home.netscape.com/NC-rdf#ServerType"
+                 label="rdf:http://home.netscape.com/NC-rdf#Name"/>
+            </rule>
+          </template>
+        </menupopup>
+      </menulist>
+  </hbox>
+
+  <spacer flex="1"/>
+
+  <description>&description.label;</description>
+
+  <spacer flex="1"/>
+
+  <description>&sliderDescription.label;</description>
+
+  <spacer flex="1"/>
+
+  <radiogroup id="threshhold" align="center">
+      <hbox>
+          <radio value="255.0" label="&off.label;"/>
+          <radio value="6.0" label="&lowest.label;"/>
+          <radio value="5.0" label="&low.label;"/>
+          <radio value="4.0" label="&medium.label;"/>
+          <radio value="3.0" label="&high.label;"/>
+          <radio value="2.0" label="&highest.label;"/>
+      </hbox>
+  </radiogroup>
+
+  <spacer flex="2"/>
+
+  <hbox>
+      <checkbox label="&junkFolder.label;"/>
+
+      <!-- note that the id "actionTargetFolder" is magic, and causes 
+           msgFolderPickerOverlay to set things up in a specific way.  -->
+      <menulist id="actionTargetFolder"/>
+  </hbox>
+
+  <spacer flex="6"/>
+
+</dialog>
+

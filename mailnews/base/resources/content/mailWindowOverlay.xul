@@ -1415,6 +1415,9 @@ Rights Reserved.
     <menuitem label="&filtersCmd.label;"
               accesskey="&filtersCmd.accesskey;"
               oncommand="MsgFilters(null);"/>
+    <menuitem label="&spamFiltersCmd.label;"
+              accesskey="&spamFiltersCmd.accesskey;"
+              oncommand="JunkMailFilters(null);"/>
     <menuitem label="&importCmd.label;" 
               accesskey="&importCmd.accesskey;" 
               oncommand="toImport();"/>
