@@ -1286,7 +1286,8 @@ sub print_test_errors {
 sub send_startup_results_to_server () {
     my ($avg, $data, $tbox) = @_;
     $data =~ s/ /:/g;
-    my $url = 'http://cowtools.mcom.com/cgi-bin/startup/tinderbox/collect.pl';
+    # my $url = 'http://cowtools.mcom.com/cgi-bin/startup/tinderbox/collect.pl';
+	my $url = 'http://tegu.mozilla.org/graph/startup/collect.cgi';
     $url .= "?avg=$avg&data=$data&tbox=$tbox";
     my $res = eval q{
         use LWP::UserAgent;
@@ -1307,8 +1308,6 @@ sub send_startup_results_to_server () {
     }
 
 }
-
-
 
 
 sub print_logfile {
