@@ -582,9 +582,9 @@ js_ReportUncaughtException(JSContext *cx)
      * Because js_ValueToString below could error and an exception object
      * could become unrooted, we root it here.
      */
-    if (JSVAL_IS_OBJECT(exn)) {
+    if (JSVAL_IS_OBJECT(exn) && exn != JSVAL_NULL) {
         exnObject = JSVAL_TO_OBJECT(exn);
-        if (!js_AddRoot(cx, exnObject, "exn.report.root"))
+        if (!js_AddRoot(cx, &exnObject, "exn.report.root"))
             return JS_FALSE;
     } else {
         exnObject = NULL;
@@ -612,7 +612,7 @@ js_ReportUncaughtException(JSContext *cx)
     }
 
     if (exnObject != NULL)
-        js_RemoveRoot(cx, exnObject);
+        js_RemoveRoot(cx, &exnObject);
     return JS_TRUE;
 }
 
