@@ -23,6 +23,9 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+# Indicate that this directory builds build tools.
+INTERNAL_TOOLS	= 1
+
 HSRCS		= pathsub.h
 CSRCS		= nsinstall.c pathsub.c
 
