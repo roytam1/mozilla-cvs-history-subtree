@@ -25,13 +25,14 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "prtypes.h"
-#include "prprf.h"
-#include "prlog.h"
-PR_BEGIN_EXTERN_C
+#include "jstypes.h"
+#include "jsprf.h"
+/* Removed by JSIFY: #include "prlog.h" */
+#include "jsutil.h" /* Added by JSIFY */
+JS_BEGIN_EXTERN_C
 
 #ifdef XP_MAC
-#include "prosdep.h"
+#include "jsosdep.h"
 #endif
 
 #include "jsj_private.h"
@@ -51,7 +52,7 @@ struct CapturedJSError {
     jthrowable          java_exception; /* Java exception, error, or null */
     CapturedJSError *   next;                   /* Next oldest captured JS error */
 };
-PR_END_EXTERN_C
+JS_END_EXTERN_C
 
 #include "nsCLiveconnect.h"
 
@@ -108,7 +109,7 @@ nsCLiveconnect::GetMember(JNIEnv *jEnv, jsobject obj, const char *name, jobject 
     jobject            member         = NULL;
     jsval              js_val         = NULL;
     int                dummy_cost     = 0;
-    JSBool             dummy_bool     = PR_FALSE;
+    JSBool             dummy_bool     = JS_FALSE;
     JavaToJSSavedState saved_state    = {NULL,NULL};
 
     if(jEnv == NULL)
@@ -161,7 +162,7 @@ nsCLiveconnect::GetSlot(JNIEnv *jEnv, jsobject obj, int slot, jobject *pjobj)
     jobject            member         = NULL;
     jsval              js_val         = NULL;
     int                dummy_cost     = 0;
-    JSBool             dummy_bool     = PR_FALSE;
+    JSBool             dummy_bool     = JS_FALSE;
     JavaToJSSavedState saved_state    = {NULL,NULL};
 
     if(jEnv == NULL)
@@ -333,7 +334,7 @@ nsCLiveconnect::Call(JNIEnv *jEnv, jsobject obj, const char *name, jobjectArray 
     jsval              js_val         = NULL;
     jsval              function_val   = NULL;
     int                dummy_cost     = 0;
-    JSBool             dummy_bool     = PR_FALSE;
+    JSBool             dummy_bool     = JS_FALSE;
     JavaToJSSavedState saved_state    = {NULL,NULL};
     jobject            result         = NULL;
 
@@ -419,12 +420,12 @@ nsCLiveconnect::Eval(JNIEnv *jEnv, jsobject obj, const char *script, jobject *pj
     jsval              js_val         = NULL;
     jsval              function_val   = NULL;
     int                dummy_cost     = 0;
-    JSBool             dummy_bool     = PR_FALSE;
+    JSBool             dummy_bool     = JS_FALSE;
     JavaToJSSavedState saved_state    = {NULL,NULL};
     jobject            result         = NULL;
 	   const char		      *codebase       = NULL;
     JSPrincipals      *principals     = NULL;
-    JSBool             eval_succeeded = PR_FALSE;
+    JSBool             eval_succeeded = JS_FALSE;
 
     if(jEnv == NULL)
     {
@@ -485,7 +486,7 @@ nsCLiveconnect::GetWindow(JNIEnv *jEnv, void *pJavaObject, jsobject *pobj)
     JSObject          *js_obj         = NULL;
     jsval              js_val         = NULL;
     int                dummy_cost     = 0;
-    JSBool             dummy_bool     = PR_FALSE;
+    JSBool             dummy_bool     = JS_FALSE;
     JavaToJSSavedState saved_state    = {NULL,NULL};
     jobject            java_obj         = NULL;
     JSJavaThreadState *jsj_env        = NULL;

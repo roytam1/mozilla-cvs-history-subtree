@@ -163,4 +163,4 @@ public:
 protected:
 };
 
-#endif // nsCLiveconnect_h___
+#endif /* // nsCLiveconnect_h___ */
