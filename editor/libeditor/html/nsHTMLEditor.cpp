@@ -149,12 +149,6 @@ static NS_DEFINE_CID(kParserServiceCID, NS_PARSERSERVICE_CID);
 static NS_DEFINE_CID(kCTransitionalDTDCID,  NS_CTRANSITIONAL_DTD_CID);
 static NS_DEFINE_CID(kCSSParserCID, NS_CSSPARSER_CID);
 
-#if defined(NS_DEBUG) && defined(DEBUG_buster)
-static PRBool gNoisy = PR_FALSE;
-#else
-static const PRBool gNoisy = PR_FALSE;
-#endif
-
 // Some utilities to handle annoying overloading of "A" tag for link and named anchor
 static char hrefText[] = "href";
 static char anchorTxt[] = "anchor";
@@ -223,6 +217,9 @@ nsHTMLEditor::~nsHTMLEditor()
 
   if (mHTMLCSSUtils)
     delete mHTMLCSSUtils;
+  
+  // free any default style propItems
+  RemoveAllDefaultProperties();
 }
 
 NS_IMPL_ADDREF_INHERITED(nsHTMLEditor, nsEditor)
@@ -909,8 +906,6 @@ nsHTMLEditor::GetBlockSection(nsIDOMNode *aChild,
     result = (*aRightNode)->GetNextSibling(getter_AddRefs(sibling)); 
   }
   NS_ADDREF((*aRightNode));
-  if (gNoisy) { printf("GetBlockSection returning %p %p\n", 
-                       (void*)(*aLeftNode), (void*)(*aRightNode)); }
 
   return result;
 }
@@ -966,7 +961,6 @@ nsHTMLEditor::GetBlockSectionsForRange(nsIDOMRange *aRange,
             result = GetBlockSection(currentNode,
                                      getter_AddRefs(leftNode),
                                      getter_AddRefs(rightNode));
-            if (gNoisy) {printf("currentNode %p has block content (%p,%p)\n", (void*)currentNode.get(), (void*)leftNode.get(), (void*)rightNode.get());}
             if ((NS_SUCCEEDED(result)) && leftNode && rightNode)
             {
               // add range to the list if it doesn't overlap with the previous range
@@ -979,12 +973,10 @@ nsHTMLEditor::GetBlockSectionsForRange(nsIDOMRange *aRange,
                 blockParentOfLastStartNode = do_QueryInterface(GetBlockNodeParent(lastStartNode));
                 if (blockParentOfLastStartNode)
                 {
-                  if (gNoisy) {printf("lastStartNode %p has block parent %p\n", (void*)lastStartNode.get(), (void*)blockParentOfLastStartNode.get());}
                   nsCOMPtr<nsIDOMElement> blockParentOfLeftNode;
                   blockParentOfLeftNode = do_QueryInterface(GetBlockNodeParent(leftNode));
                   if (blockParentOfLeftNode)
                   {
-                    if (gNoisy) {printf("leftNode %p has block parent %p\n", (void*)leftNode.get(), (void*)blockParentOfLeftNode.get());}
                     if (blockParentOfLastStartNode==blockParentOfLeftNode) {
                       addRange = PR_FALSE;
                     }
@@ -993,7 +985,6 @@ nsHTMLEditor::GetBlockSectionsForRange(nsIDOMRange *aRange,
               }
               if (PR_TRUE==addRange) 
               {
-                if (gNoisy) {printf("adding range, setting lastRange with start node %p\n", (void*)leftNode.get());}
                 nsCOMPtr<nsIDOMRange> range;
                 result = nsComponentManager::CreateInstance(kCRangeCID, nsnull, 
                                                             NS_GET_IID(nsIDOMRange), getter_AddRefs(range));
@@ -2602,7 +2593,7 @@ nsHTMLEditor::GetHTMLBackgroundColorState(PRBool *aMixed, nsAString &aOutColor)
     if (NS_FAILED(res)) return res;
 
     // Done if we have a color explicitly set
-    if (aOutColor.Length() > 0)
+    if (!aOutColor.IsEmpty())
       return NS_OK;
 
     // Once we hit the body, we're done
@@ -2995,7 +2986,7 @@ nsHTMLEditor::Align(const nsAString& aAlignType)
 NS_IMETHODIMP
 nsHTMLEditor::GetElementOrParentByTagName(const nsAString& aTagName, nsIDOMNode *aNode, nsIDOMElement** aReturn)
 {
-  if (aTagName.Length() == 0 || !aReturn )
+  if (aTagName.IsEmpty() || !aReturn )
     return NS_ERROR_NULL_POINTER;
   
   nsresult res = NS_OK;
@@ -3525,7 +3516,7 @@ nsHTMLEditor::SetHTMLBackgroundColor(const nsAString& aColor)
                                                  getter_AddRefs(element));
   if (NS_FAILED(res)) return res;
 
-  PRBool setColor = (aColor.Length() > 0);
+  PRBool setColor = !aColor.IsEmpty();
 
   NS_NAMED_LITERAL_STRING(bgcolor, "bgcolor");
   if (element)
@@ -4585,7 +4576,7 @@ void nsHTMLEditor::IsTextPropertySetByContent(nsIDOMNode        *aNode,
                                               const nsAString   *aValue, 
                                               PRBool            &aIsSet,
                                               nsIDOMNode       **aStyleNode,
-                                              nsAString *outValue) const
+                                              nsAString *outValue)
 {
   nsresult result;
   aIsSet = PR_FALSE;  // must be initialized to false for code below to work
@@ -4608,7 +4599,7 @@ void nsHTMLEditor::IsTextPropertySetByContent(nsIDOMNode        *aNode,
         {
           element->GetAttribute(*aAttribute, value);
           if (outValue) *outValue = value;
-          if (value.Length())
+          if (!value.IsEmpty())
           {
             if (!aValue) {
               found = PR_TRUE;
@@ -4834,7 +4825,6 @@ nsCOMPtr<nsIDOMElement> nsHTMLEditor::FindPreElement()
 
 void nsHTMLEditor::HandleEventListenerError()
 {
-  if (gNoisy) { printf("failed to add event listener\n"); }
   // null out the nsCOMPtrs
   mKeyListenerP = nsnull;
   mMouseListenerP = nsnull;

@@ -678,7 +678,7 @@ protected:
                                           const nsAString   *aValue,
                                           PRBool            &aIsSet,
                                           nsIDOMNode       **aStyleNode,
-                                          nsAString *outValue = nsnull) const;
+                                          nsAString *outValue = nsnull);
 
   void ResetTextSelectionForRange(nsIDOMNode *aParent,
                                   PRInt32     aStartOffset,
@@ -813,6 +813,7 @@ protected:
                                 const nsAString *aAttribute,
                                 nsCOMPtr<nsIDOMNode> *outLeftNode = nsnull,
                                 nsCOMPtr<nsIDOMNode> *outRightNode = nsnull);
+  nsresult ApplyDefaultProperties();
   nsresult RemoveStyleInside(nsIDOMNode *aNode, 
                              nsIAtom *aProperty, 
                              const nsAString *aAttribute, 
@@ -856,7 +857,8 @@ protected:
                              PRBool *aFirst, 
                              PRBool *aAny, 
                              PRBool *aAll,
-                             nsAString *outValue);
+                             nsAString *outValue,
+                             PRBool aCheckDefaults = PR_TRUE);
   nsresult HasStyleOrIdOrClass(nsIDOMElement * aElement, PRBool *aHasStyleOrIdOrClass);
   nsresult RemoveElementIfNoStyleOrIdOrClass(nsIDOMElement * aElement, nsIAtom * aTag);
 
@@ -898,6 +900,9 @@ protected:
   nsStringArray mStyleSheetURLs;
   nsCOMArray<nsICSSStyleSheet> mStyleSheets;
   PRInt32 mNumStyleSheets;
+  
+  // an array for holding default style settings
+  nsVoidArray mDefaultStyles;
 
   // Maintain a static parser service ...
   static nsCOMPtr<nsIParserService> sParserService;

@@ -66,11 +66,58 @@
 static NS_DEFINE_CID(kCContentIteratorCID, NS_CONTENTITERATOR_CID);
 static NS_DEFINE_IID(kSubtreeIteratorCID, NS_SUBTREEITERATOR_CID);
 
-#if defined(NS_DEBUG) && defined(DEBUG_buster)
-static PRBool gNoisy = PR_FALSE;
-#else
-static const PRBool gNoisy = PR_FALSE;
-#endif
+
+NS_IMETHODIMP nsHTMLEditor::AddDefaultProperty(nsIAtom *aProperty, 
+                                            const nsAString & aAttribute, 
+                                            const nsAString & aValue)
+{
+  nsresult res = NS_OK;
+  nsString outValue;
+  PRInt32 index;
+  nsString attr(aAttribute);
+  if (TypeInState::FindPropInList(aProperty, attr, &outValue, mDefaultStyles, index))
+  {
+    PropItem *item = (PropItem*)mDefaultStyles[index];
+    item->value = aValue;
+  }
+  else
+  {
+    nsString value(aValue);
+    PropItem *propItem = new PropItem(aProperty, attr, value);
+    mDefaultStyles.AppendElement((void*)propItem);
+  }
+  return res;
+}
+
+NS_IMETHODIMP nsHTMLEditor::RemoveDefaultProperty(nsIAtom *aProperty, 
+                                   const nsAString & aAttribute, 
+                                   const nsAString & aValue)
+{
+  nsresult res = NS_OK;
+  nsString outValue;
+  PRInt32 index;
+  nsString attr(aAttribute);
+  if (TypeInState::FindPropInList(aProperty, attr, &outValue, mDefaultStyles, index))
+  {
+    PropItem *item = (PropItem*)mDefaultStyles[index];
+    if (item) delete item;
+    mDefaultStyles.RemoveElementAt(index);
+  }
+  return res;
+}
+
+NS_IMETHODIMP nsHTMLEditor::RemoveAllDefaultProperties()
+{
+  PRInt32 j, defcon = mDefaultStyles.Count();
+  for (j=0; j<defcon; j++)
+  {
+    PropItem *item = (PropItem*)mDefaultStyles[j];
+    if (item) delete item;
+  }
+  mDefaultStyles.Clear();
+  return NS_OK;
+}
+
 
 
 NS_IMETHODIMP nsHTMLEditor::AddDefaultProperty(nsIAtom *aProperty, 
@@ -590,7 +637,6 @@ nsresult nsHTMLEditor::SplitStyleAboveRange(nsIDOMRange *inRange,
   
   origStartNode = startNode;
   origStartOffset = startOffset;
-  PRBool sameNode = (startNode==endNode);
   
   // split any matching style nodes above the start of range
   {
@@ -665,6 +711,21 @@ PRBool nsHTMLEditor::NodeIsProperty(nsIDOMNode *aNode)
   if (IsBlockNode(aNode))   return PR_FALSE;
   if (NodeIsType(aNode, nsEditProperty::a)) return PR_FALSE;
   return PR_TRUE;
+}
+
+nsresult nsHTMLEditor::ApplyDefaultProperties()
+{
+  nsresult res = NS_OK;
+  PRInt32 j, defcon = mDefaultStyles.Count();
+  for (j=0; j<defcon; j++)
+  {
+    PropItem *propItem = (PropItem*)mDefaultStyles[j];
+    if (!propItem) 
+      return NS_ERROR_NULL_POINTER;
+    res = SetInlineProperty(propItem->tag, propItem->attr, propItem->value);
+    if (NS_FAILED(res)) return res;
+  }
+  return res;
 }
 
 nsresult nsHTMLEditor::RemoveStyleInside(nsIDOMNode *aNode, 
@@ -991,20 +1052,12 @@ nsHTMLEditor::GetInlinePropertyBase(nsIAtom *aProperty,
                              PRBool *aFirst, 
                              PRBool *aAny, 
                              PRBool *aAll,
-                             nsAString *outValue)
+                             nsAString *outValue,
+                             PRBool aCheckDefaults)
 {
   if (!aProperty)
     return NS_ERROR_NULL_POINTER;
-/*
-  if (gNoisy) 
-  { 
-    nsAutoString propString;
-    aProperty->ToString(propString);
-    char *propCString = ToNewCString(propString);
-    if (gNoisy) { printf("nsTextEditor::GetTextProperty %s\n", propCString); }
-    nsCRT::free(propCString);
-  }
-*/
+
   nsresult result;
   *aAny=PR_FALSE;
   *aAll=PR_TRUE;
@@ -1066,6 +1119,19 @@ nsHTMLEditor::GetInlinePropertyBase(nsIAtom *aProperty,
         IsTextPropertySetByContent(collapsedNode, aProperty, aAttribute, aValue,
                                    isSet, getter_AddRefs(resultNode), outValue);
         *aFirst = *aAny = *aAll = isSet;
+        
+        if (!isSet && aCheckDefaults) 
+        {
+          // style not set, but if it is a default then it will appear if 
+          // content is inserted, so we should report it as set (analogous to TypeInState).
+          PRInt32 index;
+          if (TypeInState::FindPropInList(aProperty, *aAttribute, outValue, mDefaultStyles, index))
+          {
+            *aFirst = *aAny = *aAll = PR_TRUE;
+            if (outValue)
+              outValue->Assign(((PropItem*)mDefaultStyles[index])->value);
+          }
+        }
         return NS_OK;
       }
     }
@@ -1092,7 +1158,6 @@ nsHTMLEditor::GetInlinePropertyBase(nsIAtom *aProperty,
       if (node && nsTextEditUtils::IsBody(node))
         break;
 
-      //if (gNoisy) { printf("  checking node %p\n", content.get()); }
       nsCOMPtr<nsIDOMCharacterData>text;
       text = do_QueryInterface(content);
       
@@ -1114,7 +1179,6 @@ nsHTMLEditor::GetInlinePropertyBase(nsIAtom *aProperty,
           text->GetLength(&count);
           if (startOffset==(PRInt32)count) 
           {
-            //if (gNoisy) { printf("  skipping node %p\n", content.get()); }
             skipNode = PR_TRUE;
           }
         }
@@ -1129,11 +1193,7 @@ nsHTMLEditor::GetInlinePropertyBase(nsIAtom *aProperty,
         content->CanContainChildren(canContainChildren);
         if (canContainChildren)
         {
-          //if (gNoisy) { printf("  skipping non-leaf node %p\n", content.get()); }
           skipNode = PR_TRUE;
-        }
-        else {
-          //if (gNoisy) { printf("  testing non-text leaf node %p\n", content.get()); }
         }
       }
       if (!skipNode)
@@ -1198,7 +1258,6 @@ nsHTMLEditor::GetInlinePropertyBase(nsIAtom *aProperty,
   { // make sure that if none of the selection is set, we don't report all is set
     *aAll = PR_FALSE;
   }
-  //if (gNoisy) { printf("  returning first=%d any=%d all=%d\n", *aFirst, *aAny, *aAll); }
   return result;
 }
 
@@ -1213,10 +1272,10 @@ NS_IMETHODIMP nsHTMLEditor::GetInlineProperty(nsIAtom *aProperty,
   if (!aProperty || !aFirst || !aAny || !aAll)
     return NS_ERROR_NULL_POINTER;
   const nsAString *att = nsnull;
-  if (aAttribute.Length())
+  if (!aAttribute.IsEmpty())
     att = &aAttribute;
   const nsAString *val = nsnull;
-  if (aValue.Length())
+  if (!aValue.IsEmpty())
     val = &aValue;
   return GetInlinePropertyBase( aProperty, att, val, aFirst, aAny, aAll, nsnull);
 }
@@ -1233,10 +1292,10 @@ NS_IMETHODIMP nsHTMLEditor::GetInlinePropertyWithAttrValue(nsIAtom *aProperty,
   if (!aProperty || !aFirst || !aAny || !aAll)
     return NS_ERROR_NULL_POINTER;
   const nsAString *att = nsnull;
-  if (aAttribute.Length())
+  if (!aAttribute.IsEmpty())
     att = &aAttribute;
   const nsAString *val = nsnull;
-  if (aValue.Length())
+  if (!aValue.IsEmpty())
     val = &aValue;
   return GetInlinePropertyBase( aProperty, att, val, aFirst, aAny, aAll, &outValue);
 }
@@ -1244,7 +1303,12 @@ NS_IMETHODIMP nsHTMLEditor::GetInlinePropertyWithAttrValue(nsIAtom *aProperty,
 
 NS_IMETHODIMP nsHTMLEditor::RemoveAllInlineProperties()
 {
-  return RemoveInlinePropertyImpl(nsnull, nsnull);
+  nsAutoEditBatch batchIt(this);
+  nsAutoRules beginRulesSniffing(this, kOpResetTextProperties, nsIEditor::eNext);
+
+  nsresult res = RemoveInlinePropertyImpl(nsnull, nsnull);
+  if (NS_FAILED(res)) return res;
+  return ApplyDefaultProperties();
 }
 
 NS_IMETHODIMP nsHTMLEditor::RemoveInlineProperty(nsIAtom *aProperty, const nsAString &aAttribute)
@@ -1932,7 +1996,7 @@ nsHTMLEditor::HasStyleOrIdOrClass(nsIDOMElement * aElement, PRBool *aHasStyleOrI
   *aHasStyleOrIdOrClass = PR_TRUE;
   nsresult res = GetAttributeValue(aElement,  NS_LITERAL_STRING("style"), styleVal, &isStyleSet);
   if (NS_FAILED(res)) return res;
-  if (!isStyleSet || (0 == styleVal.Length())) {
+  if (!isStyleSet || styleVal.IsEmpty()) {
     res = mHTMLCSSUtils->HasClassOrID(aElement, *aHasStyleOrIdOrClass);
     if (NS_FAILED(res)) return res;
   }
