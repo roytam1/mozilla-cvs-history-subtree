@@ -103,7 +103,6 @@ private:
     nsCOMPtr<nsIRequest>            mWriteRequest;
     nsCOMPtr<nsIRequest>            mReadRequest;
 
-    nsCOMPtr<nsIInterfaceRequestor> mCallbacks;
     nsCOMPtr<nsIProgressEventSink>  mProgressSink;
 
     nsHttpTransaction              *mTransaction;    // hard ref

@@ -623,46 +623,14 @@ nsHttpHandler::CountActiveConnections(nsHttpConnectionInfo *ci)
 PRUint32
 nsHttpHandler::CountIdleConnections(nsHttpConnectionInfo *ci)
 {
-    //PRUint32 count = mIdleConnections.Count();
-
-#if 0
-    LOG(("nsHttpHandler::CountIdleConnections [host=%s:%d]\n",
-        ci->Host(), ci->Port()));
-
-    nsHttpConnection *conn = 0;
-    PRCList *node = PR_LIST_HEAD(&mIdleConnections);
-    while (node != &mIdleConnections) {
-        conn = (nsHttpConnection *) node; 
-
-        if (node == PR_NEXT_LINK(node)) {
-            NS_NOTREACHED("infinite loop detected");
-            break;
-        }
-            
-        node = PR_NEXT_LINK(node);
-
-        LOG(("checking conn @%x\n", conn));
-
-        // only include a matching connection in the count if it
-        // can still be reused.
-        if (conn->ConnectionInfo()->Equals(ci)) {
-            count++;
-            /* WE NEED SOMETHING LIKE THIS
-            if (conn->CanReuse())
-                count++;
-            else {
-                LOG(("dropping stale connection: [conn=%x]\n", conn));
-                PR_REMOVE_LINK(conn);
-                NS_RELEASE(conn);
-                conn = nsnull;
-            }
-            */
-        }
-    }
-#endif
-
     PRUint32 count = 0;
     nsHttpConnection *conn = 0;
+
+    if (!ci)
+        return 0;
+
+    LOG(("nsHttpHandler::CountIdleConnections [host=%s:%d]\n",
+        ci->Host(), ci->Port()));
 
     PRInt32 i;
     for (i=0; i<mIdleConnections.Count(); ++i) {
@@ -680,9 +648,7 @@ nsHttpHandler::CountIdleConnections(nsHttpConnectionInfo *ci)
         }
     }
 
-    LOG(("nsHttpHandler::CountIdleConnections [host=%s:%d] found %u\n",
-        ci->Host(), ci->Port(), count));
-
+    LOG(("found count=%u\n", count));
     return count;
 }
 

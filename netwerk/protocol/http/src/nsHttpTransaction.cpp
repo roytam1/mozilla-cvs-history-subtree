@@ -308,6 +308,17 @@ nsHttpTransaction::HandleContent(char *buf,
                 val = mResponseHead->PeekHeader(nsHttp::Trailer);
                 NS_ASSERTION(!val, "FIXME: unhandled trailer header present!");
             }
+            // check if this is a no-content response
+            else if (mContentLength == -1) {
+                // unless the server is going to explicitly close the connection
+                // when all of the data has arrived, we have no way of determining
+                // EOF, so just assume a no-content response.
+                val = mResponseHead->PeekHeader(nsHttp::Connection);
+                if (!PL_strcasestr(val, "close")) {
+                    LOG(("assuming a no-content response\n"));
+                    mContentLength = 0;
+                }
+            }
         }
 
         LOG(("nsHttpTransaction [this=%x] sending OnStartRequest\n", this));
@@ -326,7 +337,7 @@ nsHttpTransaction::HandleContent(char *buf,
         rv = mChunkedDecoder->HandleChunkedContent(buf, count, countRead);
         if (NS_FAILED(rv)) return rv;
     }
-    else
+    else if (mContentLength >= 0)
         *countRead = PR_MIN(count, mContentLength - mContentRead);
 
     if (*countRead) {
@@ -496,18 +507,20 @@ nsHttpTransaction::Read(char *buf, PRUint32 bufSize, PRUint32 *bytesWritten)
         offset += bytesConsumed;
 
         // see if we're done reading headers
-        if (mHaveAllHeaders)
+        if (mHaveAllHeaders) {
+            LOG(("have all response headers\n"));
             break;
+        }
     }
 
     if (count) {
         // buf has some content in it; shift bytes to top of buf.
         memmove(buf, buf + offset, count);
-
-        return HandleContent(buf, count, bytesWritten);
     }
 
-    return NS_OK;
+    // even though count may be 0, we still want to call HandleContent
+    // so it can complete the transaction if this is a "no body" response.
+    return HandleContent(buf, count, bytesWritten);
 }
 
 NS_IMETHODIMP

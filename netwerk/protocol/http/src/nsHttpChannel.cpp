@@ -48,6 +48,7 @@ static NS_DEFINE_CID(kStreamListenerTeeCID, NS_STREAMLISTENERTEE_CID);
 nsHttpChannel::nsHttpChannel()
     : mResponseHead(nsnull)
     , mTransaction(nsnull)
+    , mPrevTransaction(nsnull)
     , mConnectionInfo(nsnull)
     , mLoadFlags(LOAD_NORMAL)
     , mCapabilities(0)
@@ -81,6 +82,8 @@ nsHttpChannel::~nsHttpChannel()
     }
 
     NS_IF_RELEASE(mConnectionInfo);
+    NS_IF_RELEASE(mTransaction);
+    NS_IF_RELEASE(mPrevTransaction);
 }
 
 nsresult
@@ -413,10 +416,8 @@ nsHttpChannel::ProcessNotModified()
 
     // drop our reference to the current transaction... ie. let it finish
     // in the background.
-    // XXX we shouldn't have to cancel the transaction
-    mTransaction->Cancel(NS_BINDING_ABORTED);
-    NS_RELEASE(mTransaction);
-    mTransaction = 0;
+    mPrevTransaction = mTransaction;
+    mTransaction = nsnull;
 
     // notify nsIHttpNotify implementations as response headers may have changed
     nsHttpHandler::get()->OnExamineResponse(this);
@@ -686,6 +687,7 @@ nsHttpChannel::CheckCache()
     // delay checking this flag until we've verified that the above flags are
     // not set.
     if (mLoadFlags & VALIDATE_NEVER) {
+        LOG(("Not validating based on VALIDATE_NEVER flag\n"));
         doValidation = PR_FALSE;
         goto end;
     }
@@ -708,8 +710,9 @@ nsHttpChannel::CheckCache()
             rv = mCachedResponseHead->ComputeFreshnessLifetime(&time);
             if (NS_FAILED(rv)) return rv;
 
-            if (time == 0)
+            if (time == 0) {
                 doValidation = PR_TRUE;
+            } 
             else {
                 rv = mCacheEntry->GetLastModified(&time);
                 if (NS_FAILED(rv)) return rv;
@@ -717,9 +720,12 @@ nsHttpChannel::CheckCache()
                 // has been accessed in this session, and validate if so.
                 doValidation = (nsHttpHandler::get()->SessionStartTime() > time);
             }
+
         }
         else
             doValidation = PR_TRUE;
+
+        LOG(("%salidating based on expiration time\n", doValidation ? "V" : "Not v"));
     }
 
 end:
@@ -741,7 +747,7 @@ end:
             mRequestHead.SetHeader(nsHttp::If_None_Match, val);
     }
 
-    LOG(("CheckCache [this=%x doValidation=%d\n", this, doValidation));
+    LOG(("CheckCache [this=%x doValidation=%d]\n", this, doValidation));
     return NS_OK;
 }
 
@@ -1042,15 +1048,14 @@ nsHttpChannel::ProcessAuthentication(PRUint32 httpStatus)
 
     // kill off the current transaction
     mTransaction->Cancel(NS_BINDING_REDIRECTED);
-    NS_RELEASE(mTransaction);
-    mTransaction = 0;
+    mPrevTransaction = mTransaction;
+    mTransaction = nsnull;
 
     // and create a new one...
     rv = SetupTransaction();
     if (NS_FAILED(rv)) return rv;
 
-    rv = nsHttpHandler::get()->
-            InitiateTransaction(mTransaction, mConnectionInfo);
+    rv = nsHttpHandler::get()->InitiateTransaction(mTransaction, mConnectionInfo);
     if (NS_FAILED(rv)) return rv;
 
     return NS_OK;
@@ -1550,22 +1555,7 @@ nsHttpChannel::SetNotificationCallbacks(nsIInterfaceRequestor *callbacks)
 
     mHttpEventSink = do_GetInterface(mCallbacks);
     mProgressSink = do_GetInterface(mCallbacks);
-
-    nsresult rv = NS_OK;
-    if (mProgressSink) {
-        nsCOMPtr<nsIProgressEventSink> temp = mProgressSink;
-        nsCOMPtr<nsIProxyObjectManager> mgr;
-
-        rv = nsHttpHandler::get()->GetProxyObjectManager(getter_AddRefs(mgr));
-
-        if (mgr)
-            rv = mgr->GetProxyForObject(NS_CURRENT_EVENTQ,
-                                        NS_GET_IID(nsIProgressEventSink),
-                                        temp,
-                                        PROXY_ASYNC | PROXY_ALWAYS,
-                                        getter_AddRefs(mProgressSink));
-    }
-    return rv;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -1851,6 +1841,11 @@ nsHttpChannel::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
 NS_IMETHODIMP
 nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult status)
 {
+    if (request == mPrevTransaction) {
+        NS_RELEASE(mPrevTransaction);
+        mPrevTransaction = nsnull;
+    }
+
     // if the request is for something we no longer reference, then simply 
     // drop this event.
     if ((request != mTransaction) && (request != mCacheReadRequest))
@@ -1858,6 +1853,7 @@ nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult st
 
     LOG(("nsHttpChannel::OnStopRequest [this=%x status=%x]\n",
         this, status));
+
     mIsPending = PR_FALSE;
     mStatus = status;
 

@@ -24,6 +24,7 @@
 #include "nsHttpConnection.h"
 #include "nsHttpTransaction.h"
 #include "nsHttpResponseHead.h"
+#include "nsHttpHandler.h"
 #include "nsISocketTransportService.h"
 #include "nsISocketTransport.h"
 #include "nsIServiceManager.h"
@@ -79,6 +80,7 @@ nsHttpConnection::Init(nsHttpConnectionInfo *info)
     return NS_OK;
 }
 
+// never called from the socket thread
 nsresult
 nsHttpConnection::SetTransaction(nsHttpTransaction *transaction)
 {
@@ -91,12 +93,20 @@ nsHttpConnection::SetTransaction(nsHttpTransaction *transaction)
     mTransaction = transaction;
     NS_ADDREF(mTransaction); // XXX may want to make this weak
 
-    // use this transactions notification callbacks
-    mCallbacks = transaction->Callbacks();
-
     mProgressSink = 0;
-    if (mCallbacks)
-        mProgressSink = do_GetInterface(mCallbacks);
+    if (mTransaction->Callbacks()) {
+        nsCOMPtr<nsIProgressEventSink> temp =
+                do_GetInterface(mTransaction->Callbacks());
+        nsCOMPtr<nsIProxyObjectManager> mgr;
+
+        nsHttpHandler::get()->GetProxyObjectManager(getter_AddRefs(mgr));
+        if (mgr)
+            mgr->GetProxyForObject(NS_CURRENT_EVENTQ,
+                                   NS_GET_IID(nsIProgressEventSink),
+                                   temp,
+                                   PROXY_ASYNC | PROXY_ALWAYS,
+                                   getter_AddRefs(mProgressSink));
+    }
 
     // assign ourselves to the transaction
     mTransaction->SetConnection(this);
@@ -361,7 +371,6 @@ nsHttpConnection::OnStopRequest(nsIRequest *request, nsISupports *ctxt,
         mTransaction = 0;
 
         // don't need these anymore
-        mCallbacks = 0;
         mProgressSink = 0;
     }
     return NS_OK;
@@ -421,8 +430,8 @@ nsHttpConnection::GetInterface(const nsIID &iid, void **result)
     if (iid.Equals(NS_GET_IID(nsIProgressEventSink)))
         return QueryInterface(iid, result);
 
-    if (mCallbacks)
-        return mCallbacks->GetInterface(iid, result);
+    if (mTransaction && mTransaction->Callbacks())
+        return mTransaction->Callbacks()->GetInterface(iid, result);
 
     return NS_ERROR_NO_INTERFACE;
 }

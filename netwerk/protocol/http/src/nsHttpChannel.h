@@ -123,8 +123,9 @@ private:
     nsHttpRequestHead                 mRequestHead;
     nsHttpResponseHead               *mResponseHead;
 
-    nsHttpTransaction                *mTransaction;    // hard ref
-    nsHttpConnectionInfo             *mConnectionInfo; // hard ref
+    nsHttpTransaction                *mTransaction;     // hard ref
+    nsHttpTransaction                *mPrevTransaction; // hard ref
+    nsHttpConnectionInfo             *mConnectionInfo;  // hard ref
 
     nsXPIDLCString                    mSpec;
 
