@@ -40,6 +40,8 @@ $QATest                   = 0;
 $XULWindowOpenTest        = 0;  # Txul
 $StartupPerformanceTest   = 0;  # Ts
 
+$ReleaseBuild             = 0;  # Make a release build?
+
 $TestsPhoneHome           = 0;  # Should test report back to server?
 $results_server           = "axolotl.mozilla.org"; # was tegu
 $pageload_server          = "spider";  # localhost
@@ -95,6 +97,9 @@ $moz_cvsroot   = $ENV{CVSROOT};
 
 #- Set these proper values for your tinderbox server
 $Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
+
+# Allow for non-client builds, e.g. camino.
+$moz_client_mk = 'client.mk';
 
 # Allow for non-client builds, e.g. camino.
 $moz_client_mk = 'client.mk';

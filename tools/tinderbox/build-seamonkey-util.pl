@@ -318,6 +318,11 @@ sub SetupEnv {
     # avoid human error from setting this manually.
     $Settings::BaseDir = get_system_cwd();
 
+    if ($Settings::ReleaseBuild) {
+        $ENV{BUILD_OFFICIAL}   = 1;
+        $ENV{MOZILLA_OFFICIAL} = 1;
+    }
+
     my $topsrcdir = "$Settings::BaseDir/$Settings::DirName/mozilla";
     $objdir = "$topsrcdir/${Settings::ObjDir}";
 
@@ -782,7 +787,6 @@ sub BuildIt {
 
 
         my $build_status = 'none';
-        my $binary_url   = '';
 
         # Allow skipping of mozilla phase.
         unless ($Settings::SkipMozilla) {
@@ -877,8 +881,14 @@ sub BuildIt {
         #  Run (optional) external, post-mozilla build here.
         #
         my $external_build = "$Settings::BaseDir/post-mozilla.pl";
-        if (((-e $external_build) and ($build_status eq 'success')) || 
+        print_log $external_build;
+        my $binary_url = '';
+        if (-e "$external_build") {print_log "$external_build build exists\n";}
+        if ($build_status eq 'success') { print_log "success!\n";}
+        if ($Settings::SkipMozilla) { print_log "SkipMozilla set\n";}
+        if (((-e $external_build) and ($build_status eq 'success')) or 
             ($Settings::SkipMozilla)) {
+            print_log "running post-mozilla.pl build\n";
             ($build_status, $binary_url) = PostMozilla::main($build_dir);
         }
 
