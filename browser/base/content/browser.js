@@ -192,7 +192,7 @@ function highlightDoc(color, word, win)
     win = window._content; 
 
   for (var i = 0; win.frames && i < win.frames.length; i++) {
-    highlightDoc(word, color, win.frames[i]);
+    highlightDoc(color, word, win.frames[i]);
   }
 
   var doc = win.document;
@@ -455,7 +455,7 @@ function onFindBarKeyPress(evt)
     closeFindBar();
     evt.preventDefault();
   }
-}
+} 
 
 function enableFindButtons(aEnable)
 {
@@ -5138,6 +5138,7 @@ function ShowWindowFromResource( node )
 }
 #endif
 
+#ifdef SHOW_ALT_SS_UI
 /* Begin Page Theme Functions */
 function getStyleSheetArray(frame)
 {
@@ -5294,6 +5295,7 @@ function updatePageTheme(evt)
   browser.userTypedClear = userTypedClear;
 }
 /* End of the Page Theme functions */
+#endif
 
 function clearObsoletePrefs()
 {  
