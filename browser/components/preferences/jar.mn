@@ -5,6 +5,8 @@ browser.jar:
 *   content/browser/preferences/changeaction.xul
 *   content/browser/preferences/changeaction.js
 *   content/browser/preferences/colors.xul
+*   content/browser/preferences/cookies.xul
+*   content/browser/preferences/cookies.js
 *   content/browser/preferences/content.xul
 *   content/browser/preferences/content.js
 *   content/browser/preferences/connection.xul

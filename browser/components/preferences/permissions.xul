@@ -42,12 +42,13 @@
 
 <!DOCTYPE dialog SYSTEM "chrome://browser/locale/preferences/permissions.dtd" >
 
-<window id="PermissionsDialog"
+<window id="PermissionsDialog" class="windowDialog"
         windowtype="Browser:Permissions"
         title="&window.title;"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         style="width: 30em;"
         onload="gPermissionManager.onLoad();"
+        onunload="gPermissionManager.uninit();"
         persist="screenX screenY width height">
 
   <script src="chrome://browser/content/preferences/permissionsutils.js"/>
@@ -60,18 +61,20 @@
     <key key="&windowClose.key;" modifiers="accel" oncommand="window.close();"/>
   </keyset>
   
-  <vbox id="permissionsContent" flex="1">
+  <vbox class="contentPane" flex="1">
     <description id="permissionsText"/>
     <separator class="thin"/>
     <label value="&address.label;"/>
     <hbox align="start">
-      <textbox id="url" flex="1" oninput="gPermissionManager.onHostInput(event.target);"/>
+      <textbox id="url" flex="1" 
+               oninput="gPermissionManager.onHostInput(event.target);"
+               onkeypress="gPermissionManager.onHostKeyPress(event);"/>
     </hbox>
     <hbox pack="end">      <button id="btnBlock" disabled="true" label="&block.label;" 
               oncommand="gPermissionManager.addPermission(nsIPermissionManager.DENY_ACTION);"/>
       <button id="btnSession" disabled="true" label="&session.label;" 
               oncommand="gPermissionManager.addPermission(nsICookiePermission.ACCESS_SESSION);"/>
-      <button id="btnAllow" disabled="true" label="&allow.label;" 
+      <button id="btnAllow" disabled="true" label="&allow.label;" default="true"
               oncommand="gPermissionManager.addPermission(nsIPermissionManager.ALLOW_ACTION);"/>
     </hbox>
     <separator class="thin"/>
@@ -90,7 +93,7 @@
     </tree>
   </vbox>
   <hbox align="end">
-    <hbox id="permissionsActionsButtons" flex="1">
+    <hbox class="actionButtons" flex="1">
       <button id="removePermission" disabled="true" label="&removepermission.label;" 
               oncommand="gPermissionManager.onPermissionDeleted();"/>
       <button id="removeAllPermissions" label="&removeallpermissions.label;" 

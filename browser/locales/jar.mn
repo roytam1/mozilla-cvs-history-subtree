@@ -36,6 +36,7 @@
     locale/browser/preferences/advancedScript.dtd     (@AB_CD@/chrome/browser/preferences/advancedScript.dtd)
     locale/browser/preferences/changeaction.dtd       (@AB_CD@/chrome/browser/preferences/changeaction.dtd)
     locale/browser/preferences/colors.dtd             (@AB_CD@/chrome/browser/preferences/colors.dtd)
+    locale/browser/preferences/cookies.dtd            (@AB_CD@/chrome/browser/preferences/cookies.dtd)
     locale/browser/preferences/content.dtd            (@AB_CD@/chrome/browser/preferences/content.dtd)
     locale/browser/preferences/connection.dtd         (@AB_CD@/chrome/browser/preferences/connection.dtd)
     locale/browser/preferences/downloads.dtd          (@AB_CD@/chrome/browser/preferences/downloads.dtd)

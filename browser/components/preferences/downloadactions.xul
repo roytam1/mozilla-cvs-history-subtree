@@ -46,7 +46,8 @@
   %downloadactionsDTD;
 ]>
 
-<prefwindow id="DownloadActionsDialog" windowtype="Preferences:DownloadActions"
+<prefwindow id="DownloadActionsDialog" class="windowDialog"
+            windowtype="Preferences:DownloadActions"
             xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
             dlgbuttons="accept"
             onload="gDownloadActionsDialog.init();"
@@ -63,7 +64,7 @@
              than one built with treebuilder but for some reason treebuilder is
              throwing "can't do open ended queries like that!" assertions for
              no discernible reason -->
-    <tree id="fileHandlersList" flex="1"
+    <tree id="fileHandlersList" flex="1" class="contentPane"
           datasources="rdf:null" lastSelected="0" persist="lastSelected"
           onselect="gDownloadActionsDialog.onSelectionChanged();">
       <template>
@@ -134,7 +135,7 @@
     </tree>
     <separator class="thin"/>
     <hbox>
-      <hbox flex="1" id="downloadActionsButtons">
+      <hbox flex="1" class="actionButtons">
         <button id="removeFileHandler"
                 label="&remove.label;" accesskey="&remove.accesskey;"
                 oncommand="gDownloadActionsDialog.removeFileHandler();"/>

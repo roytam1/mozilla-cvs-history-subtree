@@ -147,7 +147,6 @@ function HelperApps()
       this._availableTypes[currType] = { mimeURI: MIME_URI(currType),
                                          pluginAvailable: true,
                                          pluginEnabled: disabled.indexOf("currType") == -1 };
-      dump("*** added = " + this._availableTypes[currType].toSource() + "\n");
     }
   }
 }

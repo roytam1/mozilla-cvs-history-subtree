@@ -157,6 +157,12 @@ var gPermissionManager = {
     document.getElementById("btnAllow").disabled = !aSiteField.value;
   },
   
+  onHostKeyPress: function (aEvent)
+  {
+    if (aEvent.keyCode == 13)
+      gPermissionManager.addPermission(nsIPermissionManager.ALLOW_ACTION);
+  },
+  
   onLoad: function ()
   {
     this._bundle = document.getElementById("bundlePreferences");
@@ -183,10 +189,26 @@ var gPermissionManager = {
     urlField.value = aParams.prefilledHost;
     
     this.onHostInput(urlField);
+    
+    var os = Components.classes["@mozilla.org/observer-service;1"]
+                       .getService(Components.interfaces.nsIObserverService);
+    os.addObserver(this, "perm-changed", false);
 
     this._loadPermissions();
     
     urlField.focus();
+  },
+  
+  uninit: function ()
+  {
+    var os = Components.classes["@mozilla.org/observer-service;1"]
+                       .getService(Components.interfaces.nsIObserverService);
+    os.removeObserver(this, "perm-changed");
+  },
+  
+  observe: function (aSubject, aTopic, aData)
+  {
+    if (aTopic == "perm-changed") ;
   },
   
   onPermissionSelected: function ()
@@ -199,18 +221,22 @@ var gPermissionManager = {
   
   onPermissionDeleted: function ()
   {
+    if (!this._view.rowCount)
+      return;
     var removedPermissions = [];
     gTreeUtils.deleteSelectedItems(this._tree, this._view, this._permissions, removedPermissions);
     for (var i = 0; i < removedPermissions.length; ++i) {
       var p = removedPermissions[i];
       this._pm.remove(p.host, p.type);
     }    
-    document.getElementById("removePermission").disabled = this._permissions.length;
-    document.getElementById("removeAllPermissions").disabled = this._permissions.length;
+    document.getElementById("removePermission").disabled = !this._permissions.length;
+    document.getElementById("removeAllPermissions").disabled = !this._permissions.length;
   },
   
   onAllPermissionsDeleted: function ()
   {
+    if (!this._view.rowCount)
+      return;
     var removedPermissions = [];
     gTreeUtils.deleteAll(this._tree, this._view, this._permissions, removedPermissions);
     for (var i = 0; i < removedPermissions.length; ++i) {

@@ -37,9 +37,9 @@
 var gTreeUtils = {
   deleteAll: function (aTree, aView, aItems, aDeletedItems)
   {
-    aDeletedItems = [];
     for (var i = 0; i < aItems.length; ++i)
       aDeletedItems.push(aItems[i]);
+    dump("*** di = " + aDeletedItems.length + "\n");
     aItems = [];
     var oldCount = aView.rowCount;
     aView._rowCount = 0;
@@ -51,24 +51,24 @@ var gTreeUtils = {
     var selection = aTree.view.selection;
     selection.selectEventsSuppressed = true;
     
-    var nextSelection = 0;
     var rc = selection.getRangeCount();
     for (var i = 0; i < rc; ++i) {
       var min = { }; var max = { };
       selection.getRangeAt(i, min, max);
-      for (var j = min.value; i < max.value; ++j) {
+      for (var j = min.value; j <= max.value; ++j) {
         aDeletedItems.push(aItems[j]);
         aItems[j] = null;
-        nextSelection = j <= aView.rowCount ? j : j - 1;
       }
     }
     
+    var nextSelection = 0;
     for (i = 0; i < aItems.length; ++i) {
       if (!aItems[i]) {
         var j = i;
         while (j < aItems.length && !aItems[j])
           ++j;
         aItems.splice(i, j - i);
+        nextSelection = j < aView.rowCount ? j - 1 : j - 2;
         aView._rowCount -= j - i;
         aTree.treeBoxObject.rowCountChanged(i, i - j);
       }
@@ -77,6 +77,7 @@ var gTreeUtils = {
     if (aItems.length) {
       selection.select(nextSelection);
       aTree.treeBoxObject.ensureRowIsVisible(nextSelection);
+      aTree.focus();
     }
     selection.selectEventsSuppressed = false;
   },

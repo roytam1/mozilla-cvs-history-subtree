@@ -70,7 +70,6 @@ prefwindow[type="child"] .prefWindow-dlgbuttons {
 radio[pane] {
   border: 1px solid transparent;
   margin: 0px 1px 0px 1px;
-  list-style-image: url("chrome://browser/skin/pref/Options.png");
 }
 
 .paneSelector {

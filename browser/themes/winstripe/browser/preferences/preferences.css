@@ -37,6 +37,9 @@
 */
 
 /* Global Styles */
+#BrowserPreferences radio[pane] {
+  list-style-image: url("chrome://browser/skin/pref/Options.png"); 
+}
 
 radio[pane=paneGeneral] {
 	-moz-image-region: rect(0px, 32px,  32px, 0px)
@@ -74,13 +77,11 @@ radio[pane=paneAdvanced]:hover, radio[pane=paneAdvanced][selected="true"] {
 }
 
 /* General Pane */
-
 #browserStartupHomepage {
   padding: 2px 2px 3px 4px;
 }
 
 /* File Field Widget */
-
 filefield {
   margin: 2px 4px 2px 4px;
   -moz-appearance: textfield;
@@ -114,32 +115,21 @@ filefield[disabled="true"] .fileFieldIcon {
   margin: 0px;
 }
 
-/* Permissions Manager */
-#PermissionsDialog {
+/* Modeless Window Dialogs */
+.windowDialog,
+.windowDialog prefpane {
   padding: 0px;
 }
 
-#permissionsContent {
+.contentPane {
   margin: 9px 8px 5px 8px;
 }
 
-#permissionsActionsButtons {
+.actionButtons {
   margin: 0px 3px 6px 3px !important;
 }
 
 /* Download Actions Manager */
-#DownloadActionsDialogPane {
-  padding: 0px; 
-}
-
-#fileHandlersList {
-  margin: 9px 8px 5px 8px;
-}
-
-#downloadActionsButtons {
-  margin: 0px 3px 6px 3px !important;
-}
-
 #fileExtension {
   width: 5em; 
 }
@@ -176,4 +166,4 @@ filefield[disabled="true"] .fileFieldIcon {
 #defaultAppName {
   margin-left: 6px !important; 
   font-weight: bold;
-}
+}

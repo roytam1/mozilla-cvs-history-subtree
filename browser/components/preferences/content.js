@@ -140,7 +140,7 @@ var gContentPane = {
     params.introText = bundlePreferences.getString(aPermissionType + "permissionstext");
     document.documentElement.openWindow("Browser:Permissions",
                                         "chrome://browser/content/preferences/permissions.xul",
-                                        "resizable,dialog=no", params);
+                                        "", params);
   },
   
   updateButtons: function (aButtonID, aPreferenceID)

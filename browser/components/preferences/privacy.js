@@ -145,20 +145,21 @@ var gPrivacyPane = {
   
   viewCookies: function (aCategory) 
   {
-    document.documentElement.openSubDialog("chrome://browser/content/cookieviewer/CookieViewer.xul",
-                                           "resizable", "cookieManager");
+    document.documentElement.openWindow("Browser:Cookies",
+                                        "chrome://browser/content/preferences/cookies.xul",
+                                        "", "cookieManager");
   },
   viewDownloads: function (aCategory) 
   {
     document.documentElement.openWindow("Download:Manager", 
                                         "chrome://mozapps/content/downloads/downloads.xul",
-                                        "dialog=no,resizable", null);
+                                        "", null);
   },
   viewPasswords: function (aCategory) 
   {
     document.documentElement.openWindow("Toolkit:PasswordManager",
                                         "chrome://passwordmgr/content/passwordManager.xul",
-                                        "resizable,dialog=no", "8");
+                                        "", "8");
   },
   
   viewCookieExceptions: function ()
@@ -173,7 +174,7 @@ var gPrivacyPane = {
                    introText      : bundlePreferences.getString("cookiepermissionstext") };
     document.documentElement.openWindow("Browser:Permissions",
                                         "chrome://browser/content/preferences/permissions.xul",
-                                        "resizable,dialog=no", params);
+                                        "", params);
   },
   
   changeMasterPassword: function ()
