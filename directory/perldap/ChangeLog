@@ -1,5 +1,7 @@
 1999-08-06  Leif Hedstrom  <leif@netscape.com> and Kevin McCarthy 
 
+	* API.xs: Added some more tests around free() statements.
+
 	* Conn.pm (browse): Added this function, to make it easy to browse
 	an entry.
 	(compare): Compare an attribute value against a DN/entry, without
