@@ -164,18 +164,24 @@ Process(JSContext *cx, JSObject *obj, char *filename)
 	    }
 	} while (ok && !(ts->flags & TSF_EOF) && CG_OFFSET(&cg) == 0);
 	if (ok) {
-	    /*
-	     * Clear any pending exception, either from previous failed
-	     * compiles, or from the last round of execution.
-	     */
+	    /* Clear any pending exception from previous failed compiles.  */
 	    JS_ClearPendingException(cx);
 
 	    script = js_NewScriptFromCG(cx, &cg, NULL);
 	    if (script) {
+                JSErrorReporter older;
+                
 		if (JS_ExecuteScript(cx, obj, script, &result) &&
 		    (ts->flags & TSF_INTERACTIVE) &&
 		    result != JSVAL_VOID) {
+                    /*
+                     * If JS_ValueToString generates an error, suppress
+                     * the report and print the exception below.
+                     */
+                    older = JS_SetErrorReporter(cx, NULL);
 		    str = JS_ValueToString(cx, result);
+                    JS_SetErrorReporter(cx, older);
+
 		    if (str)
 			printf("%s\n", JS_GetStringBytes(str));
 		}
@@ -187,10 +193,9 @@ Process(JSContext *cx, JSObject *obj, char *filename)
 		     * Calling JS_ValueToString could cause another error (and
 		     * throw an associated exception) - so we disable the error
 		     * reporter so nothing gets reported, and we always clear
-		     * the pending exception... which might be different than
-		     * the one we just got in &result.
+		     * the pending exception.
 		     */
-		    JSErrorReporter older;
+                    JS_ClearPendingException(cx);
 		    older = JS_SetErrorReporter(cx, NULL);
 		    str = JS_ValueToString(cx, result);
 		    JS_SetErrorReporter(cx, older);
@@ -333,12 +338,14 @@ Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 	errno = 0;
 	script = JS_CompileFile(cx, obj, filename);
 	if (!script)
-	    continue;
-	ok = JS_ExecuteScript(cx, obj, script, &result);
+            ok = JS_FALSE;
+        else
+            ok = JS_ExecuteScript(cx, obj, script, &result);
 	JS_DestroyScript(cx, script);
 	if (!ok)
 	    return JS_FALSE;
     }
+
     return JS_TRUE;
 }
 
@@ -1259,7 +1266,7 @@ my_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
      * a toplevel compile.
      */
     if ((JSREPORT_IS_WARNING(report->flags) && !reportWarnings) ||
-	(JSREPORT_IS_EXCEPTION(report->flags) && cx->interpLevel > 0)) {
+	(JSREPORT_IS_EXCEPTION(report->flags))) {
 	return;
     }
 
