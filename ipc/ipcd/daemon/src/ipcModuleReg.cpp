@@ -184,7 +184,8 @@ IPC_InitModuleReg(const char *exePath)
             // 
             // locate extension, and check if dynamic library
             //
-            char *p = strrchr(ent->name, '.');
+
+            const char *p = strrchr(ent->name, '.');
             if (p && PL_strcasecmp(p, MOZ_DLL_SUFFIX) == 0)
                 InitModuleFromLib(modulesDir, ent->name);
         }
