@@ -569,7 +569,6 @@ public void actionPerformed (ActionEvent evt)
             }
         }
         else if (command.equals("POST")) {
-            System.out.println("debug: edburns: post");
             navigation.post(urlField.getText(),
                             null,
                             "TESTDATA\r\n",
