@@ -66,6 +66,10 @@
 #include "nsPrintfCString.h"
 #include "prlink.h"
 
+#ifdef MOZ_PROFILESHARING
+#include "nsSharedPrefHandler.h"
+#endif
+
 #ifdef XP_OS2
 #define INCL_DOS
 #include <os2.h>
@@ -1080,6 +1084,11 @@ PrefResult pref_HashPref(const char *key, PrefValue value, PrefType type, PrefAc
             if (result2 < 0)
                 result = result2;
         }
+#ifdef MOZ_PROFILESHARING
+        if (gSharedPrefHandler) {
+            gSharedPrefHandler->OnPrefChanged(action, key, value, pref->flags);
+        }
+#endif
     }
     return result;
 }

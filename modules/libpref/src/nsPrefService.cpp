@@ -63,11 +63,20 @@
 
 #include "nsITimelineService.h"
 
+#ifdef MOZ_PROFILESHARING
+#include "nsIProfileSharingSetup.h"
+#include "nsSharedPrefHandler.h"
+#endif
+
 // Definitions
 #define INITIAL_MAX_DEFAULT_PREF_FILES 10
 
 
 // Prototypes
+#ifdef MOZ_PROFILESHARING
+static PRBool isSharingEnabled();
+#endif
+
 static nsresult openPrefFile(nsIFile* aFile, PRBool aIsErrorFatal,
                              PRBool aIsGlobalContext, PRBool aSkipFirstLine);
 
@@ -75,6 +84,7 @@ static nsresult openPrefFile(nsIFile* aFile, PRBool aIsErrorFatal,
   // needed so we can still get the JS Runtime Service during XPCOM shutdown
 static nsIJSRuntimeService* gJSRuntimeService = nsnull; // owning reference
 
+//-----------------------------------------------------------------------------
 
 /*
  * Constructor/Destructor
@@ -87,7 +97,6 @@ nsPrefService::nsPrefService()
 
   rootBranch = new nsPrefBranch("", PR_FALSE); 
   mRootBranch = (nsIPrefBranch *)rootBranch;
-
 }
 
 nsPrefService::~nsPrefService()
@@ -95,6 +104,10 @@ nsPrefService::~nsPrefService()
   PREF_Cleanup();
   NS_IF_RELEASE(mCurrentFile);
   NS_IF_RELEASE(gJSRuntimeService);
+  
+#ifdef MOZ_PROFILESHARING
+  NS_IF_RELEASE(gSharedPrefHandler);
+#endif
 }
 
 
@@ -149,6 +162,7 @@ nsresult nsPrefService::Init()
       rv = observerService->AddObserver(this, "profile-do-change", PR_TRUE);
     }
   }
+
   return(rv);
 }
 
@@ -164,10 +178,24 @@ NS_IMETHODIMP nsPrefService::Observe(nsISupports *aSubject, const char *aTopic, 
       }
     } else {
       rv = SavePrefFile(nsnull);
+#ifdef MOZ_PROFILESHARING
+      if (gSharedPrefHandler)
+        rv = gSharedPrefHandler->OnSessionEnd();
+#endif
     }
   } else if (!nsCRT::strcmp(aTopic, "profile-do-change")) {
-    ResetUserPrefs();
-    rv = ReadUserPrefs(nsnull);
+  
+#ifdef MOZ_PROFILESHARING
+    if (isSharingEnabled() && !gSharedPrefHandler)
+      NS_CreateSharedPrefHandler(this);
+    if (gSharedPrefHandler)
+      rv = gSharedPrefHandler->OnSessionBegin();
+    else
+#endif
+    {
+      ResetUserPrefs();
+      rv = ReadUserPrefs(nsnull);
+    }
   }
   return rv;
 }
@@ -218,19 +246,11 @@ NS_IMETHODIMP nsPrefService::ResetUserPrefs()
 
 NS_IMETHODIMP nsPrefService::SavePrefFile(nsIFile *aFile)
 {
-  if (nsnull == aFile) {
-    // the gDirty flag tells us if we should write to mCurrentFile
-    // we only check this flag when the caller wants to write to the default
-    if (!gDirty) {
-      NS_WARNING("not writing prefs because they haven't changed");
-      return NS_OK;
-    }
-    
-    // It's possible that we never got a prefs file.
-    return mCurrentFile ? WritePrefFile(mCurrentFile) : NS_OK;
-  } else {
-    return WritePrefFile(aFile);
-  }
+#ifdef MOZ_PROFILESHARING
+  if (gSharedPrefHandler)
+    return gSharedPrefHandler->EnsurePendingFlush();
+#endif
+  return SavePrefFileInternal(aFile);
 }
 
 NS_IMETHODIMP nsPrefService::GetBranch(const char *aPrefRoot, nsIPrefBranch **_retval)
@@ -308,8 +328,15 @@ nsresult nsPrefService::UseDefaultPrefFile()
   nsresult rv;
   nsCOMPtr<nsIFile> aFile;
 
-  // Anything which calls NS_InitXPCOM will have this
-  rv = NS_GetSpecialDirectory(NS_APP_PREFS_50_FILE, getter_AddRefs(aFile));
+#ifdef MOZ_PROFILESHARING
+  nsCAutoString prefsFileProp(NS_APP_PREFS_50_FILE);
+  if (isSharingEnabled())
+    prefsFileProp.Insert(NS_SHARED, 0); // Prepend modifier so we get shared file
+#else
+  nsDependentCString prefsFileProp(NS_APP_PREFS_50_FILE);
+#endif
+
+  rv = NS_GetSpecialDirectory(prefsFileProp.get(), getter_AddRefs(aFile));
 
   if (!aFile) {
     // We know we have XPCOM directory services, but we might not have a provider which
@@ -326,8 +353,8 @@ nsresult nsPrefService::UseDefaultPrefFile()
   }
 
   // need to save the prefs now
-  SavePrefFile(aFile); 
-
+  SavePrefFile(aFile);
+  
   return rv;
 }
 
@@ -336,7 +363,15 @@ nsresult nsPrefService::UseUserPrefFile()
   nsresult rv = NS_OK;
   nsCOMPtr<nsIFile> aFile;
 
-  rv = NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(aFile));
+#ifdef MOZ_PROFILESHARING
+  nsCAutoString prefsFileProp(NS_APP_PREFS_50_DIR);
+  if (isSharingEnabled())
+    prefsFileProp.Insert(NS_SHARED, 0); // Prepend modifier so we get shared file
+#else
+  nsDependentCString prefsFileProp(NS_APP_PREFS_50_DIR);
+#endif
+
+  rv = NS_GetSpecialDirectory(prefsFileProp.get(), getter_AddRefs(aFile));
   if (NS_SUCCEEDED(rv) && aFile) {
     rv = aFile->AppendNative(NS_LITERAL_CSTRING("user.js"));
     if (NS_SUCCEEDED(rv)) {
@@ -344,6 +379,23 @@ nsresult nsPrefService::UseUserPrefFile()
     }
   }
   return rv;
+}
+
+nsresult nsPrefService::SavePrefFileInternal(nsIFile *aFile)
+{
+  if (nsnull == aFile) {
+    // the gDirty flag tells us if we should write to mCurrentFile
+    // we only check this flag when the caller wants to write to the default
+    if (!gDirty) {
+      NS_WARNING("not writing prefs because they haven't changed");
+      return NS_OK;
+    }
+    
+    // It's possible that we never got a prefs file.
+    return mCurrentFile ? WritePrefFile(mCurrentFile) : NS_OK;
+  } else {
+    return WritePrefFile(aFile);
+  }
 }
 
 nsresult nsPrefService::WritePrefFile(nsIFile* aFile)
@@ -417,6 +469,20 @@ nsresult nsPrefService::WritePrefFile(nsIFile* aFile)
   if (NS_SUCCEEDED(rv))
     gDirty = PR_FALSE;
   return rv;
+}
+
+static PRBool isSharingEnabled()
+{
+  static PRBool gSharingEnabled = PR_FALSE;
+  
+  // If FALSE, query again. It may not have been set yet.
+  if (!gSharingEnabled) {
+    nsCOMPtr<nsIProfileSharingSetup> sharingSetup =
+        do_GetService("@mozilla.org/embedcomp/profile-sharing-setup;1");
+    if (sharingSetup)
+      sharingSetup->GetSharingEnabled(&gSharingEnabled);
+  }
+  return gSharingEnabled;
 }
 
 static nsresult openPrefFile(nsIFile* aFile, PRBool aIsErrorFatal,

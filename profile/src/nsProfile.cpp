@@ -298,7 +298,6 @@ NS_INTERFACE_MAP_BEGIN(nsProfile)
     NS_INTERFACE_MAP_ENTRY(nsIProfile)
     NS_INTERFACE_MAP_ENTRY(nsIProfileInternal)
     NS_INTERFACE_MAP_ENTRY(nsIProfileChangeStatus)
-    NS_INTERFACE_MAP_ENTRY(nsIProfileSharing)
 NS_INTERFACE_MAP_END
 
 /*
@@ -2477,17 +2476,6 @@ NS_IMETHODIMP nsProfile::VetoChange()
 {
     mProfileChangeVetoed = PR_TRUE;
     return NS_OK;
-}
-
-/*
- * nsIProfileSharing Implementation
- */
-
-NS_IMETHODIMP nsProfile::InitSharing(const nsAString& aClientName)
-{
-    if (!gDirServiceProvider)
-        return NS_ERROR_NULL_POINTER;
-    return gDirServiceProvider->InitSharing(aClientName);
 }
 
 

@@ -3596,7 +3596,6 @@ then
     AC_MSG_ERROR([Cannot enable ActiveX scripting support when ActiveX support is disabled.])
 fi
 
-
 dnl ========================================================
 dnl build the tests by default
 dnl ========================================================

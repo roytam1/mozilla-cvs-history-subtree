@@ -111,7 +111,8 @@ components/libgklayout.dylib
 components/libhtmlpars.dylib                 
 components/libgkview.dylib                   
 components/layout_base.xpt              
-components/layout_xul.xpt               
+components/layout_xul.xpt
+components/layout_xul_tree.xpt               
 components/content_base.xpt
 
 ; netwerk
@@ -189,6 +190,7 @@ components/libuconv.dylib
 components/libi18n.dylib
 components/uconv.xpt
 components/unicharutil.xpt
+components/intl.xpt
 
 res/language.properties
 res/langGroups.properties

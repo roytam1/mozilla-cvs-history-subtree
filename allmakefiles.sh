@@ -934,6 +934,12 @@ modules/transactionmngr/common/Makefile
 modules/transactionmngr/module/Makefile
 "
 
+MAKEFILES_profilesharingsetup="
+embedding/components/profilesharingsetup/Makefile
+embedding/components/profilesharingsetup/public/Makefile
+embedding/components/profilesharingsetup/src/Makefile
+"
+
     MAKEFILES_libpr0n="
         modules/libpr0n/Makefile
         modules/libpr0n/public/Makefile
@@ -1328,6 +1334,7 @@ fi
 
 if test -n "$MOZ_PROFILESHARING"; then
     add_makefiles "$MAKEFILES_transactionmngr"
+    add_makefiles "$MAKEFILES_profilesharingsetup"
 fi
 
 else

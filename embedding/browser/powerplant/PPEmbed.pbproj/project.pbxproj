@@ -141,6 +141,7 @@
 				05952DFCFFF02D1B11CA0E50,
 				05952DFDFFF02D1B11CA0E50,
 			);
+			hasScannedForEncodings = 1;
 			isa = PBXProject;
 			mainGroup = 20286C29FDCF999611CA2CEA;
 			projectDirPath = "";
@@ -155,8 +156,6 @@
 				20286C32FDCF999611CA2CEA,
 				F5A63F7E03A53D2501202892,
 				195DF8C9FE9D4F0611CA2CBB,
-				F5C468B40406ABC801202892,
-				F5C468BA0406C7F201202892,
 			);
 			isa = PBXGroup;
 			name = "¬´PROJECTNAME¬ª";
@@ -244,7 +243,7 @@
 			buildSettings = {
 				DSTROOT = ../../../dist;
 				FRAMEWORK_SEARCH_PATHS = ../../../lib/mac/PowerPlant/build;
-				HEADER_SEARCH_PATHS = "../../../dist/include/nspr ../../../dist/include/xpcom ../../../dist/include/string ../../../dist/include/necko ../../../dist/include/dom ../../../dist/include/pref ../../../dist/include/windowwatcher ../../../dist/include/embed_base ../../../dist/include/docshell ../../../dist/include/webshell ../../../dist/include/webbrwsr ../../../dist/include/webbrowserpersist ../../../dist/include/gfx ../../../dist/include/widget ../../../dist/include/uriloader ../../../dist/include/exthandler ../../../dist/include/helperAppDlg ../../../dist/include/profile ../../../dist/include/profdirserviceprovider ../../../dist/include/content ../../../dist/include/wallet ../../../dist/include/shistory ../../../dist/include/find ../../../dist/include/mimetype ../../../ ../../../lib/mac/PowerPlant/build/PowerPlant.framework/Versions/A/Headers \"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon\"";
+				HEADER_SEARCH_PATHS = "../../../dist/include/nspr ../../../dist/include/xpcom ../../../dist/include/string ../../../dist/include/necko ../../../dist/include/dom ../../../dist/include/pref ../../../dist/include/windowwatcher ../../../dist/include/embed_base ../../../dist/include/docshell ../../../dist/include/webshell ../../../dist/include/webbrwsr ../../../dist/include/webbrowserpersist ../../../dist/include/gfx ../../../dist/include/widget ../../../dist/include/uriloader ../../../dist/include/exthandler ../../../dist/include/helperAppDlg ../../../dist/include/profile ../../../dist/include/profilesharingsetup ../../../dist/include/profdirserviceprovider ../../../dist/include/content ../../../dist/include/wallet ../../../dist/include/shistory ../../../dist/include/find ../../../dist/include/mimetype ../../../ ../../../lib/mac/PowerPlant/build/PowerPlant.framework/Versions/A/Headers \"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon\"";
 				INSTALL_PATH = /;
 				LIBRARY_SEARCH_PATHS = "../../../dist/Embed ../../../dist/Embed/components ../../../dist/lib /Users/conrad/Development/PROFILE_SHARING_1_BRANCH/mozilla/modules/ipc/build /Users/conrad/Development/PROFILE_SHARING_1_BRANCH/mozilla/modules/transactionmngr/build /Users/conrad/Development/PROFILE_SHARING_1_BRANCH/mozilla/modules/transactionmngr/module";
 				OPTIMIZATION_CFLAGS = "-O0";
@@ -299,7 +298,6 @@
 </dict>
 </plist>
 ";
-			shouldUseHeadermap = 0;
 		};
 		20286C35FDCF999611CA2CEA = {
 			buildActionMask = 2147483647;
@@ -883,10 +881,12 @@
 				F5A63FC903A5C05D01202892,
 				F5A63FCA03A5C05D01202892,
 				F5A63FCB03A5C05D01202892,
+				F5DF23830416EF9601202892,
 				F5A63FCC03A5C05D01202892,
 				F5A63FCD03A5C05D01202892,
 				F5A63FCE03A5C05D01202892,
 				F5A63FCF03A5C05D01202892,
+				F5DF23840416EF9601202892,
 				F5A63FD003A5C05D01202892,
 				F5A63FD103A5C05D01202892,
 				F5A63FD203A5C05D01202892,
@@ -936,6 +936,7 @@
 				F5A63FFE03A5C05D01202892,
 				F5A63FFF03A5C05D01202892,
 				F5A6400003A5C05D01202892,
+				F5DF23850416EF9601202892,
 				F5A6400103A5C05D01202892,
 				F5A6400203A5C05D01202892,
 				F5A6400303A5C05D01202892,
@@ -1416,10 +1417,12 @@
 				F5A6407A03A5C15B01202892,
 				F5A6407B03A5C15B01202892,
 				F5A6407C03A5C15B01202892,
+				F5DF238A0416F07201202892,
 				F5A6407D03A5C15B01202892,
 				F5A6407E03A5C15B01202892,
 				F5A6407F03A5C15B01202892,
 				F5A6408003A5C15B01202892,
+				F5DF238B0416F08601202892,
 				F5A6408103A5C15B01202892,
 				F5A6408203A5C15B01202892,
 				F5A6408303A5C15B01202892,
@@ -1469,6 +1472,7 @@
 				F5A640AF03A5C15B01202892,
 				F5A640B003A5C15B01202892,
 				F5A640B103A5C15B01202892,
+				F5DF238C0416F0A601202892,
 				F5A640B203A5C15B01202892,
 				F5A640B303A5C15B01202892,
 				F5A640B403A5C15B01202892,
@@ -2639,19 +2643,40 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "DIST_BIN=../../../dist/bin\nEXECUTABLES_DIR=\"${SYMROOT}/${PRODUCT_NAME}.${WRAPPER_EXTENSION}/Contents/MacOS\"\n\nif [ -n \"$PROFILESHARING\" ]; then\n  rsync -a -L $DIST_BIN/ipc \"$EXECUTABLES_DIR\" || exit 1\n  rsync -a -L $DIST_BIN/mozipcd \"$EXECUTABLES_DIR\" || exit 1\n  rsync -a -L $DIST_BIN/components/libipc.dylib \"$EXECUTABLES_DIR\"/components/ || exit 1\n  rsync -a -L $DIST_BIN/components/libtransmngr_client.dylib \"$EXECUTABLES_DIR\"/components/ || exit 1\nfi\n";
+			shellScript = "DIST_BIN=../../../dist/bin\nEXECUTABLES_DIR=\"${SYMROOT}/${PRODUCT_NAME}.${WRAPPER_EXTENSION}/Contents/MacOS\"\n\nif [ -n \"$PROFILESHARING\" ]; then\n  rsync -a -L $DIST_BIN/ipc \"$EXECUTABLES_DIR\" || exit 1\n  rsync -a -L $DIST_BIN/mozipcd \"$EXECUTABLES_DIR\" || exit 1\n  rsync -a -L $DIST_BIN/components/libipcdc.dylib \"$EXECUTABLES_DIR\"/components/ || exit 1\n  rsync -a -L $DIST_BIN/components/libtransmngr_client.dylib \"$EXECUTABLES_DIR\"/components/ || exit 1\nfi\n";
 		};
-		F5C468B40406ABC801202892 = {
+		F5DF23830416EF9601202892 = {
 			isa = PBXFileReference;
-			name = nsProfileDirServiceProvider.cpp;
-			path = ../../../profile/dirserviceprovider/src/nsProfileDirServiceProvider.cpp;
-			refType = 2;
+			path = intl.xpt;
+			refType = 4;
 		};
-		F5C468BA0406C7F201202892 = {
+		F5DF23840416EF9601202892 = {
 			isa = PBXFileReference;
-			name = nsPrefService.cpp;
-			path = ../../../modules/libpref/src/nsPrefService.cpp;
-			refType = 2;
+			path = layout_xul_tree.xpt;
+			refType = 4;
+		};
+		F5DF23850416EF9601202892 = {
+			isa = PBXFileReference;
+			path = txtsvc.xpt;
+			refType = 4;
+		};
+		F5DF238A0416F07201202892 = {
+			fileRef = F5DF23830416EF9601202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5DF238B0416F08601202892 = {
+			fileRef = F5DF23840416EF9601202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5DF238C0416F0A601202892 = {
+			fileRef = F5DF23850416EF9601202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
 		};
 	};
 	rootObject = 20286C28FDCF999611CA2CEA;

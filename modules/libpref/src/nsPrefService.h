@@ -51,6 +51,8 @@ class nsPrefService : public nsIPrefService,
                       public nsIPrefBranchInternal,
                       public nsSupportsWeakReference
 {
+  friend class nsSharedPrefHandler; 
+  
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIPREFSERVICE
@@ -67,11 +69,16 @@ protected:
   nsresult NotifyServiceObservers(const char *aSubject);
   nsresult UseDefaultPrefFile();
   nsresult UseUserPrefFile();
+  nsresult SavePrefFileInternal(nsIFile* aFile);
   nsresult WritePrefFile(nsIFile* aFile);
 
 private:
   nsCOMPtr<nsIPrefBranch> mRootBranch;
   nsIFile*                mCurrentFile;
-    
+  
+#ifdef MOZ_PROFILESHARING
+  PRBool									IsSharingEnabled();
+#endif
+
 };
 

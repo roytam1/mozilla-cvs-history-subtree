@@ -45,11 +45,12 @@ MODULE		= profdirserviceprovider
 LIBRARY_NAME	= profdirserviceprovider_s
 REQUIRES	= xpcom \
 		  string \
-#		  profile \
 		  $(NULL)
       
 ifdef MOZ_PROFILESHARING
-REQUIRES	+= transaction_manager
+REQUIRES	+= transaction_manager \
+		  profilesharingsetup \
+		  $(NULL)
 endif
 
 CPPSRCS		= nsProfileDirServiceProvider.cpp \

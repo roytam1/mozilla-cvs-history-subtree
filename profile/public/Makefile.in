@@ -32,7 +32,6 @@ GRE_MODULE	= 1
 SDK_XPIDLSRCS	= \
 		nsIProfile.idl \
 		nsIProfileChangeStatus.idl \
-		nsIProfileSharing.idl \
 		$(NULL)
 
 XPIDLSRCS	= \

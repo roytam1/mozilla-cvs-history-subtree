@@ -47,6 +47,7 @@
 #include "nsIObserverService.h"
 
 #ifdef MOZ_PROFILESHARING
+#include "nsIProfileSharingSetup.h"
 #include "tmITransactionService.h"
 #endif
 
@@ -90,7 +91,8 @@ nsIAtom*   nsProfileDirServiceProvider::sApp_MessengerFolderCache50;
 //*****************************************************************************   
 
 nsProfileDirServiceProvider::nsProfileDirServiceProvider(PRBool aNotifyObservers) :
-  mNotifyObservers(aNotifyObservers), mProfileDirLock(nsnull)
+  mNotifyObservers(aNotifyObservers), mProfileDirLock(nsnull),
+  mSharingEnabled(PR_FALSE)
 {
 }
 
@@ -114,29 +116,6 @@ nsProfileDirServiceProvider::~nsProfileDirServiceProvider()
   NS_IF_RELEASE(sApp_MessengerFolderCache50);
   
   delete mProfileDirLock;
-}
-
-nsresult
-nsProfileDirServiceProvider::InitSharing(const nsAString& aClientName)
-{
-  // This must be called BEFORE SetProfileDir
-  if (mProfileDir) {
-    NS_ERROR("InitSharing must be called before setting a profile dir.");
-    return NS_ERROR_FAILURE;
-  }
-  NS_ENSURE_STATE(!aClientName.IsEmpty());
-  mNonSharedDirName = aClientName;
-  
-#ifdef MOZ_PROFILESHARING
-  nsCOMPtr<tmITransactionService> transServ =
-      do_GetService("@mozilla.org/transaction/service;1");
-  if (!transServ) {
-    NS_ERROR("Failed to get transServ");
-    return NS_ERROR_FAILURE;
-  }
-#endif    
-  
-  return NS_OK;
 }
 
 nsresult
@@ -175,7 +154,7 @@ nsProfileDirServiceProvider::SetProfileDir(nsIFile* aProfileDir)
   // Lock the non-shared sub-dir if we are sharing,
   // the whole profile dir if we are not.
   nsCOMPtr<nsILocalFile> dirToLock;
-  if (!mNonSharedDirName.IsEmpty())   
+  if (mSharingEnabled)
     dirToLock = do_QueryInterface(mNonSharedProfileDir);
   else
     dirToLock = do_QueryInterface(mProfileDir);
@@ -253,7 +232,7 @@ nsProfileDirServiceProvider::GetFile(const char *prop, PRBool *persistant, nsIFi
 
   nsIFile* profileDir = mProfileDir;
   PRBool bUseShared = PR_FALSE;  
-  nsDependentCString sharedPrefix("SHARED");
+  nsDependentCString sharedPrefix(NS_SHARED);
   nsCAutoString actualProp(prop);
   if (Substring(actualProp, 0, sharedPrefix.Length()).Equals(sharedPrefix)) {
     actualProp.Cut(0, sharedPrefix.Length());
@@ -357,8 +336,14 @@ nsProfileDirServiceProvider::GetFile(const char *prop, PRBool *persistant, nsIFi
   
   NS_RELEASE(inAtom);
   
-  if (localFile && NS_SUCCEEDED(rv))
+  if (localFile && NS_SUCCEEDED(rv)) {
+#ifdef DEBUG_conrad
+    nsCAutoString path;
+    localFile->GetNativePath(path);
+    printf("nsProfileDirServiceProvider::GetFile: prop = %s, path = %s\n", prop, path.get());
+#endif
     return CallQueryInterface(localFile, _retval);
+  }
   
   return rv;
 }
@@ -406,7 +391,19 @@ nsProfileDirServiceProvider::Initialize()
   sApp_ImapMailDirectory50      = NS_NewAtom(NS_APP_IMAP_MAIL_50_DIR);
   sApp_NewsDirectory50          = NS_NewAtom(NS_APP_NEWS_50_DIR);
   sApp_MessengerFolderCache50   = NS_NewAtom(NS_APP_MESSENGER_FOLDER_CACHE_50_DIR);
-  
+
+#ifdef MOZ_PROFILESHARING
+  nsCOMPtr<nsIProfileSharingSetup> sharingSetup =
+      do_GetService("@mozilla.org/embedcomp/profile-sharing-setup;1");
+  if (sharingSetup) {
+    PRBool tempBool;
+    if (NS_SUCCEEDED(sharingSetup->GetSharingEnabled(&tempBool)))
+      mSharingEnabled = tempBool;
+    if (mSharingEnabled)
+      sharingSetup->GetClientName(mNonSharedDirName);
+  }
+#endif
+
   return NS_OK;
 }
 
@@ -486,6 +483,12 @@ nsProfileDirServiceProvider::InitNonSharedProfileDir()
   rv = localDir->Append(mNonSharedDirName);
   if (NS_FAILED(rv))
     return rv;
+    
+#ifdef DEBUG_conrad
+  nsCAutoString path;
+  localDir->GetNativePath(path);
+  printf("mNonSharedProfileDir = %s\n", path.get());
+#endif
     
   PRBool exists;
   rv = localDir->Exists(&exists);

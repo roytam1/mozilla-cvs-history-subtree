@@ -46,7 +46,9 @@ REQUIRES	= xpcom \
 		  $(NULL)
       
 ifdef MOZ_PROFILESHARING
-REQUIRES	+= transaction_manager
+REQUIRES	+= transaction_manager \
+		  profilesharingsetup \
+		  $(NULL)
 endif
 
 include $(topsrcdir)/config/config.mk
@@ -58,6 +60,10 @@ CPPSRCS		= nsPref.cpp \
 			  nsSafeSaveFile.cpp	\
 			  prefapi.cpp \
 			 $(NULL)
+
+ifdef MOZ_PROFILESHARING
+CPPSRCS	+= nsSharedPrefHandler.cpp
+endif
 
 PREF_JS_EXPORTS	= \
 		$(srcdir)/init/all.js \

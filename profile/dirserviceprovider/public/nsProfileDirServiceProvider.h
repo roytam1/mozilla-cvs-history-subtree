@@ -60,22 +60,6 @@ class nsProfileDirServiceProvider: public nsIDirectoryServiceProvider
 public:
 
    /**
-    * InitSharing
-    *
-    * Initializes profile sharing and activates it for this session.
-    * If used, this must be called before SetProfileDir.
-    * This is a no-op unless MOZ_PROFILESHARING is defined.
-    *
-    * @param aClientName   A generic identifier of the current client
-    *											 within the suite of applications which share
-    *											 this profile. It is used to separate the client's
-    * 										 non-shared data from shared data within
-    *											 the profile directory.
-    */
-
-   virtual nsresult        InitSharing(const nsAString& aClientName);
-
-   /**
     * SetProfileDir
     *
     * @param aProfileDir   The directory containing the profile files.
@@ -102,7 +86,7 @@ public:
    * Must be called before shutting down XPCOM.
    */
   
-  virtual nsresult				 Shutdown();
+  virtual nsresult         Shutdown();
 
 protected:
                            nsProfileDirServiceProvider(PRBool aNotifyObservers = PR_TRUE);
@@ -110,7 +94,7 @@ protected:
 
   nsresult                 Initialize();
   nsresult                 InitProfileDir(nsIFile* profileDir);
-  nsresult								 InitNonSharedProfileDir();
+  nsresult                 InitNonSharedProfileDir();
   nsresult                 EnsureProfileFileExists(nsIFile *aFile, nsIFile *destDir);
   nsresult                 UndefineFileLocations();
 
@@ -135,10 +119,11 @@ protected:
 
   PRPackedBool             mNotifyObservers;
   nsCOMPtr<nsIFile>        mProfileDir;
-  nsProfileLock*					 mProfileDirLock;
-  
-  nsCOMPtr<nsIFile>				 mNonSharedProfileDir;
-  nsString								 mNonSharedDirName;
+  nsProfileLock*           mProfileDirLock;
+
+  PRPackedBool             mSharingEnabled;
+  nsString                 mNonSharedDirName;
+  nsCOMPtr<nsIFile>        mNonSharedProfileDir;
 };
 
 

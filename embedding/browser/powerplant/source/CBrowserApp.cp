@@ -90,12 +90,11 @@
 #endif
 
 #ifdef SHARED_PROFILE
-#include "nsIProfileSharing.h"
+#include "nsIProfileSharingSetup.h"
 #define kAppDataFolderName NS_LITERAL_STRING("PPEmbed Suite")
 #else
 #define kAppDataFolderName NS_LITERAL_STRING("PPEmbed")
 #endif
-
 
 // ===========================================================================
 //      ¥ Main Program
@@ -146,6 +145,33 @@ int main()
 }
 
 
+// ===========================================================================
+//  class CStartupTask
+// 
+//  A one-shot repeater which calls the application method to handle startup.
+// ===========================================================================
+
+class CStartUpTask : public LPeriodical
+{
+public:
+    CStartUpTask(CBrowserApp *aBrowserApp) :
+        mBrowserApp(aBrowserApp)
+    {
+        StartRepeating();
+    }
+    
+    ~CStartUpTask() { }
+    
+    void SpendTime(const EventRecord& inMacEvent)
+    {
+        StopRepeating();
+        mBrowserApp->OnStartUp();
+        delete this;
+    }
+private:
+    CBrowserApp     *mBrowserApp;
+};
+
 // ---------------------------------------------------------------------------
 //      ¥ CBrowserApp
 // ---------------------------------------------------------------------------
@@ -156,10 +182,12 @@ CBrowserApp::CBrowserApp()
 
 #ifdef USE_PROFILES
     mRefCnt = 1;
+#else
+    mProfDirServiceProvider = nsnull;
 #endif
 
 #if TARGET_CARBON
-  InstallCarbonEventHandlers();
+    InstallCarbonEventHandlers();
 #endif
 
     if ( PP_PowerPlant::UEnvironment::HasFeature( PP_PowerPlant::env_HasAppearance ) ) {
@@ -233,7 +261,6 @@ CBrowserApp::CBrowserApp()
    InitializeEmbedEventHandling(this);
 }
 
-
 // ---------------------------------------------------------------------------
 //      ¥ ~CBrowserApp
 // ---------------------------------------------------------------------------
@@ -242,89 +269,19 @@ CBrowserApp::CBrowserApp()
 
 CBrowserApp::~CBrowserApp()
 {
-   nsresult rv;
-   nsCOMPtr<nsIPrefService> prefs(do_GetService(NS_PREFSERVICE_CONTRACTID, &rv));
-   if (NS_SUCCEEDED(rv) && prefs)
-      prefs->SavePrefFile(nsnull);
+#ifdef USE_PROFILES    
+    nsCOMPtr<nsIProfile> profileService = 
+        do_GetService(NS_PROFILE_CONTRACTID, &rv);
+    if (profileService)
+      profileService->ShutDownCurrentProfile(nsIProfile::SHUTDOWN_PERSIST);
+#else
+    if (mProfDirServiceProvider) {
+      mProfDirServiceProvider->Shutdown();
+      NS_RELEASE(mProfDirServiceProvider);
+    }
+#endif
 
    NS_TermEmbedding();
-}
-
-// ---------------------------------------------------------------------------
-//      ¥ StartUp
-// ---------------------------------------------------------------------------
-//  This method lets you do something when the application starts up
-//  without a document. For example, you could issue your own new command.
-
-void
-CBrowserApp::StartUp()
-{
-    nsresult rv;
-
-#ifdef SHARED_PROFILE    
-    CFBundleRef appBundle = CFBundleGetMainBundle();
-    ThrowIfNil_(appBundle);
-
-    nsAutoString suiteMemberStr;
-    // We don't get an owning reference here, so no CFRelease.
-    CFStringRef bundleStrRef = (CFStringRef)CFBundleGetValueForInfoDictionaryKey(
-                                appBundle, CFSTR("ProfilesSuiteMemberName"));
-                                
-    if (bundleStrRef && (CFGetTypeID(bundleStrRef) == CFStringGetTypeID())) {
-        UniChar buffer[256];
-        CFIndex strLen = CFStringGetLength(bundleStrRef);
-        ThrowIf_(strLen >= (sizeof(buffer) / sizeof(buffer[0])));
-        CFStringGetCharacters(bundleStrRef, CFRangeMake(0, strLen), buffer);
-        buffer[strLen] = 0;
-        suiteMemberStr.Assign(static_cast<PRUnichar*>(buffer));
-    }
-    ThrowIf_(suiteMemberStr.IsEmpty());
-#endif
-        
-#ifdef USE_PROFILES
-
-    // Register for profile changes    
-    nsCOMPtr<nsIObserverService> observerService = 
-             do_GetService(NS_OBSERVERSERVICE_CONTRACTID, &rv);
-    ThrowIfNil_(observerService);
-    observerService->AddObserver(this, "profile-approve-change", PR_FALSE);
-    observerService->AddObserver(this, "profile-change-teardown", PR_FALSE);
-    observerService->AddObserver(this, "profile-after-change", PR_FALSE);
-
-    CProfileManager *profileMgr = new CProfileManager;
-    profileMgr->StartUp();
-    AddAttachment(profileMgr);
-
-#else
-    
-    // If we don't want different user profiles, all that's needed is
-    // to make an nsProfileDirServiceProvider. This will provide the same file
-    // locations as the profile service but always within the specified folder.
-    
-    nsCOMPtr<nsIFile> appDataDir;
-    rv = NS_GetSpecialDirectory(NS_APP_APPLICATION_REGISTRY_DIR, getter_AddRefs(appDataDir));
-    ThrowIfNil_(appDataDir);
-    
-    nsCOMPtr<nsProfileDirServiceProvider> locProvider;
-    NS_NewProfileDirServiceProvider(PR_TRUE, getter_AddRefs(locProvider));
-    ThrowIfNil_(locProvider);
-    // Directory service holds a strong reference to any
-    // provider that is registered with it. Let it hold the
-    // only ref. locProvider won't die when we leave this scope.
-    rv = locProvider->Register();
-    ThrowIfError_(rv);
-
-#ifdef SHARED_PROFILE
-    locProvider->InitSharing(suiteMemberStr);
-#endif
-    
-    nsCOMPtr<nsILocalFile> localAppDataDir(do_QueryInterface(appDataDir));
-    rv = locProvider->SetProfileDir(localAppDataDir);
-    ThrowIfError_(rv);
-#endif
-
-
-    ObeyCommand(PP_PowerPlant::cmd_New, nil);   // EXAMPLE, create a new window
 }
 
 nsresult
@@ -373,6 +330,84 @@ CBrowserApp::MakeMenuBar()
     // some LMenu in order to get the text for a contextual menu item.
     
     LMenuBar::GetCurrentMenuBar()->InstallMenu(new LMenu(menu_Buzzwords), hierMenu);
+}
+
+// ---------------------------------------------------------------------------
+//      ¥ Initialize
+// ---------------------------------------------------------------------------
+//  Initializes profile manager or directory service provider. If the user has
+//  chosen to be prompted to choose a profile at startup so the profile dialog
+//  appears and they cancel from that dialog, startup will terminate.
+
+void
+CBrowserApp::Initialize()
+{
+    nsresult rv;
+
+#ifdef SHARED_PROFILE    
+    CFBundleRef appBundle = CFBundleGetMainBundle();
+    ThrowIfNil_(appBundle);
+
+    nsAutoString suiteMemberStr;
+    // We don't get an owning reference here, so no CFRelease.
+    CFStringRef bundleStrRef = (CFStringRef)CFBundleGetValueForInfoDictionaryKey(
+                                appBundle, CFSTR("ProfilesSuiteMemberName"));
+                                
+    if (bundleStrRef && (CFGetTypeID(bundleStrRef) == CFStringGetTypeID())) {
+        UniChar buffer[256];
+        CFIndex strLen = CFStringGetLength(bundleStrRef);
+        ThrowIf_(strLen >= (sizeof(buffer) / sizeof(buffer[0])));
+        CFStringGetCharacters(bundleStrRef, CFRangeMake(0, strLen), buffer);
+        buffer[strLen] = 0;
+        suiteMemberStr.Assign(static_cast<PRUnichar*>(buffer));
+    }
+    ThrowIf_(suiteMemberStr.IsEmpty());
+    
+    nsCOMPtr<nsIProfileSharingSetup> sharingSetup =
+        do_GetService("@mozilla.org/embedcomp/profile-sharing-setup;1");
+    ThrowIfNil_(sharingSetup);
+    rv = sharingSetup->EnableSharing(suiteMemberStr);
+    ThrowIfError_(rv);
+#endif
+        
+#ifdef USE_PROFILES
+
+    // Register for profile changes    
+    nsCOMPtr<nsIObserverService> observerService = 
+             do_GetService(NS_OBSERVERSERVICE_CONTRACTID, &rv);
+    ThrowIfNil_(observerService);
+    observerService->AddObserver(this, "profile-approve-change", PR_FALSE);
+    observerService->AddObserver(this, "profile-change-teardown", PR_FALSE);
+    observerService->AddObserver(this, "profile-after-change", PR_FALSE);
+
+    CProfileManager *profileMgr = new CProfileManager;
+    profileMgr->StartUp();
+    AddAttachment(profileMgr);
+
+#else
+    
+    // If we don't want different user profiles, all that's needed is
+    // to make an nsProfileDirServiceProvider. This will provide the same file
+    // locations as the profile service but always within the specified folder.
+    
+    nsCOMPtr<nsIFile> appDataDir;
+    rv = NS_GetSpecialDirectory(NS_APP_APPLICATION_REGISTRY_DIR, getter_AddRefs(appDataDir));
+    ThrowIfNil_(appDataDir);
+    
+    nsCOMPtr<nsProfileDirServiceProvider> profDirServiceProvider;
+    NS_NewProfileDirServiceProvider(PR_TRUE, getter_AddRefs(profDirServiceProvider));
+    ThrowIfNil_(profDirServiceProvider);
+    rv = profDirServiceProvider->Register();
+    ThrowIfError_(rv);
+    
+    nsCOMPtr<nsILocalFile> localAppDataDir(do_QueryInterface(appDataDir));
+    rv = profDirServiceProvider->SetProfileDir(localAppDataDir);
+    ThrowIfError_(rv);
+    NS_ADDREF(mProfDirServiceProvider = profDirServiceProvider);
+#endif
+
+    // Now that we know profile selection wasn't canceled and we're gonna run...
+    CStartUpTask *startupTask = new CStartUpTask(this);
 }
 
 // ---------------------------------------------------------------------------
@@ -704,6 +739,20 @@ nsresult CBrowserApp::InitializePrefs()
         branch->SetIntPref(kFixedFontSizePref, 13);
         
     return NS_OK;
+}
+
+// ---------------------------------------------------------------------------
+//  CBrowserApp::DoStartUp
+//
+//  Called from CStartUpTask. We must use this INSTEAD of LApplication::StartUp.
+//  Reason is, LApplication::StartUp happens in response to the open application AE
+//  which is processed as soon as we process any events - as in while the profile
+//  manager dialog is up :-/ 
+// ---------------------------------------------------------------------------
+
+void CBrowserApp::OnStartUp()
+{
+    ObeyCommand(PP_PowerPlant::cmd_New, nil);
 }
 
 Boolean CBrowserApp::SelectFileObject(PP_PowerPlant::CommandT   inCommand,
