@@ -85,8 +85,6 @@ nsHttpHandler::nsHttpHandler()
     , mActiveConnections(0)
     , mIdleConnections(0)
     , mTransactionQ(0)
-    , mNumActiveConnections(0)
-    , mNumIdleConnections(0)
     , mUserAgentIsDirty(PR_TRUE)
 {
     NS_INIT_ISUPPORTS();
@@ -281,7 +279,7 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *trans,
     NS_ENSURE_ARG_POINTER(trans);
     NS_ENSURE_ARG_POINTER(ci);
 
-    if (mNumActiveConnections == PRUint32(mMaxConnections)) {
+    if (mActiveConnections.Count() == mMaxConnections) {
         LOG(("unable to perform the transaction at this time [trans=%x]\n", trans));
         if (failIfBusy) return NS_ERROR_FAILURE;
         return EnqueueTransaction(trans, ci);
@@ -302,7 +300,6 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *trans,
             mIdleConnections.RemoveElementAt(i);
 
             i--;
-            mNumIdleConnections--;
 
             if (conn->CanReuse()) {
                 LOG(("reusing connection [conn=%x]\n", conn));
@@ -338,7 +335,6 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *trans,
     if (NS_FAILED(rv)) goto failed;
 
     mActiveConnections.AppendElement(conn);
-    mNumActiveConnections++;
     return NS_OK;
 
 failed:
@@ -372,7 +368,6 @@ nsHttpHandler::ReclaimConnection(nsHttpConnection *conn)
             // to the end of the list so as to ensure that we'll visit
             // older connections first before getting to this one.
             mIdleConnections.AppendElement(conn);
-            mNumIdleConnections++;
         }
     }
     else {
@@ -381,7 +376,6 @@ nsHttpHandler::ReclaimConnection(nsHttpConnection *conn)
     }
 
     // process the pending transaction queue...
-    mNumActiveConnections--;
     if (mTransactionQ.Count() > 0)
         ProcessTransactionQ();
 
@@ -1341,21 +1335,20 @@ nsHttpHandler::NewURI(const char *aSpec, nsIURI *aBaseURI, nsIURI **aURI)
 }
 
 NS_IMETHODIMP
-nsHttpHandler::NewChannel(nsIURI *aURI, nsIChannel **aChannel)
+nsHttpHandler::NewChannel(nsIURI *uri, nsIChannel **result)
 {
     LOG(("nsHttpHandler::NewChannel\n"));
 
-    NS_ENSURE_ARG_POINTER(aURI);
-    NS_ENSURE_ARG_POINTER(aChannel);
+    NS_ENSURE_ARG_POINTER(uri);
+    NS_ENSURE_ARG_POINTER(result);
 
-    nsHttpChannel *httpChannel = nsnull;
     PRBool isHttp = PR_FALSE, isHttps = PR_FALSE;
 
     // Verify that we have been given a valid scheme
-    nsresult rv = aURI->SchemeIs("http", &isHttp);
+    nsresult rv = uri->SchemeIs("http", &isHttp);
     if (NS_FAILED(rv)) return rv;
     if (!isHttp) {
-        rv = aURI->SchemeIs("https", &isHttps);
+        rv = uri->SchemeIs("https", &isHttps);
         if (NS_FAILED(rv)) return rv;
         if (!isHttps) {
             NS_WARNING("Invalid URI scheme");
@@ -1363,30 +1356,29 @@ nsHttpHandler::NewChannel(nsIURI *aURI, nsIChannel **aChannel)
         }
     }
 
-    NS_NEWXPCOM(httpChannel, nsHttpChannel);
-    if (!httpChannel)
+    // we'll use this object to capture the proxy settings for the given uri
+    nsProxyQuery *query = nsnull;
+    NS_NEWXPCOM(query, nsProxyQuery);
+    if (!query)
         return NS_ERROR_OUT_OF_MEMORY;
-    NS_ADDREF(httpChannel);
+    NS_ADDREF(query);
 
-    rv = httpChannel->Init(aURI, mCapabilities);
-
-    /* XXX implement NewProxyChannel
+    // check if this channel requires a proxy
+    rv = NS_OK;
     if (mProxySvc) {
         PRBool checkForProxy = PR_FALSE;
         rv = mProxySvc->GetProxyEnabled(&checkForProxy);
-        if (NS_FAILED(rv)) goto failed;
-        if (checkForProxy) {
-            rv = mProxySvc->ExamineForProxy(aURI, httpChannel);
-            if (NS_FAILED(rv)) goto failed;
-        }
+        if (NS_SUCCEEDED(rv) && checkForProxy)
+            rv = mProxySvc->ExamineForProxy(uri, query);
     }
-    */
 
     if (NS_SUCCEEDED(rv))
-        rv = httpChannel->QueryInterface(NS_GET_IID(nsIChannel),
-                                         (void **) aChannel);
-
-    NS_RELEASE(httpChannel);
+        rv = NewProxyChannel(uri,
+                             query->Host(),
+                             query->Port(),
+                             query->Type(),
+                             result);
+    NS_RELEASE(query);
     return rv;
 }
 
@@ -1399,9 +1391,30 @@ nsHttpHandler::NewProxyChannel(nsIURI *uri,
                                const char *proxyHost,
                                PRInt32 proxyPort,
                                const char *proxyType,
-                               nsIChannel **)
+                               nsIChannel **result)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsHttpChannel *httpChannel = nsnull;
+
+    LOG(("nsHttpHandler::NewProxyChannel [proxy=%s:%d type=%s]\n",
+        proxyHost, proxyPort, proxyType));
+
+    NS_NEWXPCOM(httpChannel, nsHttpChannel);
+    if (!httpChannel)
+        return NS_ERROR_OUT_OF_MEMORY;
+    NS_ADDREF(httpChannel);
+
+    nsresult rv = httpChannel->Init(uri,
+                               mCapabilities,
+                               proxyHost,
+                               proxyPort,
+                               proxyType);
+
+    if (NS_SUCCEEDED(rv))
+        rv = httpChannel->
+                QueryInterface(NS_GET_IID(nsIChannel), (void **) result);
+
+    NS_RELEASE(httpChannel);
+    return rv;
 }
 
 NS_IMETHODIMP
@@ -1555,6 +1568,50 @@ nsHttpHandler::Observe(nsISupports *subject,
             authEngine->Logout();
     }
     */
+    return NS_OK;
+}
+
+//-----------------------------------------------------------------------------
+// nsHttpHandler::nsProxyQuery
+//-----------------------------------------------------------------------------
+
+NS_IMPL_ISUPPORTS1(nsHttpHandler::nsProxyQuery, nsIProxy)
+
+NS_IMETHODIMP nsHttpHandler::
+nsProxyQuery::GetProxyHost(char **value)
+{
+    return DupString(mHost, value);
+}
+NS_IMETHODIMP nsHttpHandler::
+nsProxyQuery::SetProxyHost(const char *value)
+{
+    mHost = value;
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsHttpHandler::
+nsProxyQuery::GetProxyPort(PRInt32 *value)
+{
+    NS_ENSURE_ARG_POINTER(value);
+    *value = mPort;
+    return NS_OK;
+}
+NS_IMETHODIMP nsHttpHandler::
+nsProxyQuery::SetProxyPort(PRInt32 value)
+{
+    mPort = value;
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsHttpHandler::
+nsProxyQuery::GetProxyType(char **value)
+{
+    return DupString(mType, value);
+}
+NS_IMETHODIMP nsHttpHandler::
+nsProxyQuery::SetProxyType(const char *value)
+{
+    mType = value;
     return NS_OK;
 }
 

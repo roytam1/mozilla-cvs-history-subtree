@@ -294,13 +294,16 @@ nsHttpTransaction::HandleContent(char *buf,
             // decoding is done when the channel receives the content data
             // so as not to block the socket transport thread too much.
             const char *val =
-                mResponseHead->PeekHeader(nsHttp::Transfer_Encoding);
+                    mResponseHead->PeekHeader(nsHttp::Transfer_Encoding);
             if (val) {
                 // we only support the "chunked" transfer encoding right now.
                 mChunkedDecoder = new nsHttpChunkedDecoder();
                 if (!mChunkedDecoder)
                     return NS_ERROR_OUT_OF_MEMORY;
                 LOG(("chunked decoder created\n"));
+
+                val = mResponseHead->PeekHeader(nsHttp::Trailer);
+                NS_ASSERTION(!val, "FIXME: unhandled trailer header present!");
             }
         }
 

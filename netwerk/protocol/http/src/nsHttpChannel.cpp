@@ -31,8 +31,6 @@
 #include "nsString2.h"
 #include "nsReadableUtils.h"
 
-static NS_DEFINE_CID(kStreamListenerProxyCID, NS_STREAMLISTENERPROXY_CID);
-
 //-----------------------------------------------------------------------------
 // nsHttpChannel <public>
 //-----------------------------------------------------------------------------
@@ -161,7 +159,10 @@ nsHttpChannel::SetupTransaction()
     NS_ENSURE_TRUE(!mTransaction, NS_ERROR_ALREADY_INITIALIZED);
 
     nsCOMPtr<nsIStreamListener> listenerProxy;
-    nsresult rv = BuildStreamListenerProxy(getter_AddRefs(listenerProxy));
+    nsresult rv = NS_NewStreamListenerProxy(getter_AddRefs(listenerProxy),
+                                            this, nsnull,
+                                            NS_HTTP_SEGMENT_SIZE,
+                                            NS_HTTP_BUFFER_SIZE);
     if (NS_FAILED(rv)) return rv;
 
     // Create the transaction object
@@ -184,27 +185,15 @@ nsHttpChannel::SetupTransaction()
 }
 
 nsresult
-nsHttpChannel::BuildStreamListenerProxy(nsIStreamListener **result)
-{
-    nsresult rv;
-    nsCOMPtr<nsIStreamListenerProxy> proxy
-        = do_CreateInstance(kStreamListenerProxyCID, &rv);
-    if (NS_FAILED(rv)) return rv;
-
-    // Setup proxy back to this thread with default buffer size.
-    rv = proxy->Init(this, nsnull, NS_HTTP_SEGMENT_SIZE, NS_HTTP_BUFFER_SIZE);
-    if (NS_FAILED(rv)) return rv;
-
-    return CallQueryInterface(proxy, result);
-}
-
-nsresult
 nsHttpChannel::ProcessResponse()
 {
     NS_ENSURE_TRUE(mResponseHead, NS_ERROR_NOT_INITIALIZED);
 
     nsresult rv = NS_OK;
     PRUint32 httpStatus = mResponseHead->Status();
+
+    LOG(("nsHttpChannel::ProcessResponse [this=%x httpStatus=%u]\n",
+        this, httpStatus));
 
     // handle different server response categories
     switch (httpStatus) {
@@ -238,6 +227,8 @@ nsHttpChannel::ProcessResponse()
     case 407:
         // XXX doom cache entry
         rv = ProcessAuthentication(httpStatus);
+        if (NS_FAILED(rv))
+            rv = ProcessNormal();
         break;
     default:
         // XXX doom cache entry
@@ -268,9 +259,6 @@ nsHttpChannel::ProcessRedirection(PRUint32 redirectType)
     LOG(("nsHttpChannel::ProcessRedirection [this=%x type=%u]\n",
         this, redirectType));
 
-    NS_PRECONDITION(mResponseHead, "wtf");
-    NS_PRECONDITION(mTransaction, "wtf");
-
     const char *location = mResponseHead->PeekHeader(nsHttp::Location);
 
     // if a location header was not given, then we can't perform the redirect,
@@ -278,54 +266,68 @@ nsHttpChannel::ProcessRedirection(PRUint32 redirectType)
     if (!location)
         return NS_ERROR_FAILURE;
 
-    // create a new URI using the location header and the current URL
-    // as a base...
-    nsresult rv;
-    nsCOMPtr<nsIURI> newURI;
+    LOG(("redirecting to: %s\n", location));
 
-    nsCOMPtr<nsIIOService> serv = do_GetIOService(&rv);
-    if (NS_FAILED(rv)) return rv;
+    nsresult rv;
+    nsCOMPtr<nsIChannel> newChannel;
 
     if (redirectType == 305) {
-        // XXX create a new http proxy channel
-        NS_NOTREACHED("not implemented");
-        return NS_ERROR_NOT_IMPLEMENTED;
+        // we must repeat the request via the proxy specified by location
+ 
+        PRInt32 proxyPort;
+        
+        // location is of the form "host:port"
+        char *p = PL_strchr(location, ':');
+        if (p) {
+            *p = 0;
+            proxyPort = atoi(p+1);
+        }
+        else
+            proxyPort = 80;
+
+        // talk to the http handler directly for this case
+        rv = nsHttpHandler::get()->
+                NewProxyChannel(mURI, location, proxyPort, "http",
+                                getter_AddRefs(newChannel));
+        if (NS_FAILED(rv)) return rv;
     }
     else {
+        //
+        // this redirect could be to ANY uri, so we need to talk to the
+        // IO service to create the new channel.
+        //
+        nsCOMPtr<nsIIOService> serv = do_GetIOService(&rv);
+        if (NS_FAILED(rv)) return rv;
+
+        // create a new URI using the location header and the current URL
+        // as a base...
+        nsCOMPtr<nsIURI> newURI;
         rv = serv->NewURI(location, mURI, getter_AddRefs(newURI));
+        if (NS_FAILED(rv)) return rv;
+
+        // move the reference of the old location to the new one if the new
+        // one has none.
+        nsCOMPtr<nsIURL> newURL = do_QueryInterface(newURI, &rv);
+        if (NS_SUCCEEDED(rv)) {
+            nsXPIDLCString ref;
+            rv = newURL->GetRef(getter_Copies(ref));
+            if (NS_SUCCEEDED(rv) && !ref) {
+                nsCOMPtr<nsIURL> baseURL = do_QueryInterface(mURI, &rv);
+                if (NS_SUCCEEDED(rv)) {
+                    baseURL->GetRef(getter_Copies(ref));
+                    if (ref)
+                        newURL->SetRef(ref);
+                }
+            }
+        }
+
+        // build the new channel
+        rv = NS_OpenURI(getter_AddRefs(newChannel), newURI, serv, mLoadGroup,
+                        mCallbacks, mLoadFlags | LOAD_REPLACE);
         if (NS_FAILED(rv)) return rv;
     }
 
-    // move the reference of the old location to the new one if the new
-    // one has none.
-    nsCOMPtr<nsIURL> newURL = do_QueryInterface(newURI, &rv);
-    if (NS_SUCCEEDED(rv)) {
-        nsXPIDLCString ref;
-        rv = newURL->GetRef(getter_Copies(ref));
-        if (NS_SUCCEEDED(rv) && !ref) {
-            nsCOMPtr<nsIURL> baseURL = do_QueryInterface(mURI, &rv);
-            if (NS_SUCCEEDED(rv)) {
-                baseURL->GetRef(getter_Copies(ref));
-                if (ref)
-                    newURL->SetRef(ref);
-            }
-        }
-    }
-
-#if defined(PR_LOGGING)
-    {
-        nsXPIDLCString spec;
-        newURI->GetSpec(getter_Copies(spec));
-        LOG(("nsHttpChannel::ProcessRedirection [this=%x newURL=%s]\n",
-            this, (const char *) spec));
-    }
-#endif
-
-    // build the new channel
-    nsCOMPtr<nsIChannel> newChannel;
-    rv = NS_OpenURI(getter_AddRefs(newChannel), newURI, serv, mLoadGroup,
-                    mCallbacks, mLoadFlags | LOAD_REPLACE);
-    if (NS_FAILED(rv)) return rv;
+    // convey the original uri
     rv = newChannel->SetOriginalURI(mOriginalURI);
     if (NS_FAILED(rv)) return rv;
 
@@ -537,8 +539,6 @@ nsHttpChannel::GetSecurityInfo(nsISupports **securityInfo)
 NS_IMETHODIMP
 nsHttpChannel::GetContentType(char **value)
 {
-    NS_ENSURE_ARG_POINTER(value);
-
     if (!mResponseHead)
         return NS_ERROR_NOT_AVAILABLE;
 
@@ -664,9 +664,14 @@ nsHttpChannel::SetRequestHeader(const char *header, const char *value)
 {
     NS_ENSURE_TRUE(!mIsPending, NS_ERROR_IN_PROGRESS);
 
+    LOG(("nsHttpChannel::SetRequestHeader [this=%x header=%s value=%s]\n",
+        this, header, value));
+
     nsHttpAtom atom = nsHttp::ResolveAtom(header);
-    if (!atom)
+    if (!atom) {
+        NS_WARNING("failed to resolve atom");
         return NS_ERROR_NOT_AVAILABLE;
+    }
 
     return mRequestHead.SetHeader(atom, value);
 }
@@ -846,9 +851,9 @@ nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult st
     if (mLoadGroup)
         mLoadGroup->RemoveRequest(this, nsnull, status);
 
-    mCallbacks = 0;
-    mProgressSink = 0;
-    mHttpEventSink = 0;
+    //mCallbacks = 0;
+    //mProgressSink = 0;
+    //mHttpEventSink = 0;
 
     return NS_OK;
 }

@@ -75,7 +75,6 @@ private:
     nsresult Connect();
     nsresult SetupTransaction();
     nsresult BuildConnectionInfo(nsHttpConnectionInfo **);
-    nsresult BuildStreamListenerProxy(nsIStreamListener **);
     nsresult ProcessResponse();
     nsresult ProcessNormal();
     nsresult ProcessNotModified();

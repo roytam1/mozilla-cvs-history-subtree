@@ -97,6 +97,7 @@ HTTP_ATOM(Version,                   "Version")
 HTTP_ATOM(Warning,                   "Warning")
 HTTP_ATOM(WWW_Authenticate,          "WWW-Authenticate")
 HTTP_ATOM(Set_Cookie,                "Set-Cookie")
+HTTP_ATOM(Cookie,                    "Cookie")
 
 // methods are atoms too.
 //

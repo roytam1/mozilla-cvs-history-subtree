@@ -30,6 +30,7 @@
 #include "nsIObserver.h"
 #include "nsIProxyObjectManager.h"
 #include "nsINetModuleMgr.h"
+#include "nsIProxy.h"
 #include "nsXPIDLString.h"
 #include "nsString.h"
 #include "nsCOMPtr.h"
@@ -118,6 +119,29 @@ public:
     nsresult OnAsyncExamineResponse(nsIHttpChannel *);
 
 private:
+    // 
+    // We instantiate an object of this class for talking to the proxy
+    // service on behalf of a channel we are about to create.
+    //
+    class nsProxyQuery : public nsIProxy
+    {
+    public:
+        NS_DECL_ISUPPORTS
+        NS_DECL_NSIPROXY
+
+        nsProxyQuery() : mPort(-1) { NS_INIT_ISUPPORTS(); }
+        virtual ~nsProxyQuery() {}
+
+        const char *Host() { return mHost; }
+        PRInt32     Port() { return mPort; }
+        const char *Type() { return mType; }
+
+    private:
+        nsXPIDLCString mHost;
+        PRInt32        mPort;
+        nsXPIDLCString mType;
+    };
+
     //
     // Transactions that have not yet been assigned to a connection are kept
     // in a queue of nsPendingTransaction objects.  nsPendingTransaction 
@@ -199,8 +223,6 @@ private:
     nsVoidArray mActiveConnections;    // list of nsHttpConnection objects
     nsVoidArray mIdleConnections;      // list of nsHttpConnection objects
     nsVoidArray mTransactionQ;         // list of nsPendingTransaction objects
-    PRUint32    mNumActiveConnections;
-    PRUint32    mNumIdleConnections;
 
     // useragent components
     nsXPIDLCString mAppName;

@@ -24,10 +24,10 @@
 #ifndef nsHttp_h__
 #define nsHttp_h__
 
-#include "nsError.h"
 #include "plstr.h"
 #include "prlog.h"
 #include "prtime.h"
+#include "nsISupportsUtils.h"
 
 #if defined(PR_LOGGING)
 //
@@ -64,7 +64,7 @@ struct nsHttpAtom
     operator const char *() { return _val; }
     const char *get() { return _val; }
 
-    // don't access this directly
+    // private
     const char *_val;
 };
 
@@ -93,6 +93,7 @@ struct nsHttp
 static inline nsresult
 DupString(const char *src, char **dst)
 {
+    NS_ENSURE_ARG_POINTER(dst);
     *dst = PL_strdup(src);
     return *dst ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }

@@ -268,6 +268,8 @@ nsHttpConnection::CreateTransport()
             do_GetService(kSocketTransportServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
+    // XXX need to set socket type(s)
+
     nsCOMPtr<nsITransport> transport;
     rv = sts->CreateTransport(mConnectionInfo->Host(),
                               mConnectionInfo->Port(),
