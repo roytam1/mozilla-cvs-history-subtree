@@ -1520,7 +1520,7 @@ nsresult
 nsMsgMessageDataSource::createPriorityString(nsMsgPriorityValue priority, nsAutoString &priorityStr)
 {
 	nsresult rv = NS_OK;
-	PRUnichar *prustr;
+	PRUnichar *prustr = nsnull;
 	priorityStr.Assign(NS_LITERAL_STRING(" "));
 	switch (priority)
 	{
