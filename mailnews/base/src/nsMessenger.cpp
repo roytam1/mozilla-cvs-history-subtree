@@ -134,6 +134,10 @@
 // Find / Find Again 
 #include "nsIFindComponent.h"
 
+#include "nsIURILoader.h"
+#include "nsCURILoader.h"
+#include "nsNetUtil.h"
+
 static NS_DEFINE_CID(kIStreamConverterServiceCID, NS_STREAMCONVERTERSERVICE_CID);
 static NS_DEFINE_CID(kCMsgMailSessionCID, NS_MSGMAILSESSION_CID); 
 static NS_DEFINE_CID(kRDFServiceCID,	NS_RDFSERVICE_CID);
@@ -646,14 +650,25 @@ nsMessenger::OpenURL(const char * url)
       //If it's not something we know about, then just load the url.
       else
       {
-        nsAutoString urlStr; urlStr.AssignWithConversion(unescapedUrl);
-        nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(mDocShell));
-        if(webNav)
-          webNav->LoadURI(urlStr.get(),                       // URI string
-                          nsIWebNavigation::LOAD_FLAGS_NONE,  // Load flags
-                          nsnull,                             // Refering URI
-                          nsnull,                             // Post stream
-                          nsnull);                            // Extra headers
+        nsCOMPtr<nsIURILoader> loader;
+        loader = do_GetService(NS_URI_LOADER_CONTRACTID);
+        if (!loader)
+          return NS_ERROR_FAILURE;
+        
+        // create our uri object
+        nsCOMPtr<nsIURI> uri;
+        rv = NS_NewURI(getter_AddRefs(uri), url);
+        if (NS_FAILED(rv))
+          return NS_ERROR_FAILURE;
+    
+        // open a channel
+        nsCOMPtr<nsIChannel> channel;
+        rv = NS_NewChannel(getter_AddRefs(channel), uri);
+        if (NS_FAILED(rv))
+          return NS_ERROR_FAILURE;
+    
+        // load it
+        rv = loader->OpenURI(channel, PR_TRUE, nsnull);
       }
       PL_strfree(unescapedUrl);
     }
