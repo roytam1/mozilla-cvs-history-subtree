@@ -3606,7 +3606,6 @@ nsresult nsMsgCompose::NotifyStateListeners(TStateListenerNotification aNotifica
 nsresult nsMsgCompose::AttachmentPrettyName(const char* url, const char* charset, nsAString& _retval)
 {
   nsresult rv;
-  nsCAutoString unescapedURL;
 
   nsCOMPtr<nsIUTF8ConverterService> utf8Cvt (do_GetService(NS_UTF8CONVERTERSERVICE_CONTRACTID));
 
@@ -3614,26 +3613,31 @@ nsresult nsMsgCompose::AttachmentPrettyName(const char* url, const char* charset
  
   if (PL_strncasestr(url, "file:", 5)) 
   {
-    rv = utf8Cvt->ConvertURISpecToUTF8(nsDependentCString(url), 
-         nsMsgI18NFileSystemCharset(), unescapedURL);
+     nsFileURL fileUrl(url);
+     nsFileSpec fileSpec(fileUrl);
+     char* leafName = fileSpec.GetLeafName();
+     NS_ENSURE_TRUE(leafName && *leafName, NS_ERROR_UNEXPECTED);
+
+    nsCAutoString utf8Name;
+    rv = utf8Cvt->ConvertStringToUTF8(nsDependentCString(leafName), 
+         nsMsgI18NFileSystemCharset(), PR_FALSE, utf8Name);
     if (NS_FAILED(rv))
     {
-      rv = utf8Cvt->ConvertURISpecToUTF8(nsDependentCString(url), 
-           (!charset || !*charset) ? "UTF-8" : charset, unescapedURL);
+       rv = utf8Cvt->ConvertStringToUTF8(nsDependentCString(leafName), 
+            (!charset || !*charset) ? "UTF-8" : charset, PR_FALSE, utf8Name);
       if (NS_FAILED(rv)) {
-        NS_WARNING("URL unescaping/charset conversion failed.");
-        unescapedURL = url;
+        NS_WARNING("filename conversion failed.");
+        // this is rather lame, but maybe better than nothing.
+        utf8Name = leafName;   
       }
     }
-    nsFileURL fileUrl(unescapedURL.get());
-    nsFileSpec fileSpec(fileUrl);
-    char* leafName = fileSpec.GetLeafName();
-    NS_ENSURE_TRUE(leafName && *leafName, NS_ERROR_UNEXPECTED);
-    CopyUTF8toUTF16(nsDependentCString(leafName), _retval);
+    
+    CopyUTF8toUTF16(utf8Name, _retval);
     nsCRT::free(leafName);
     return NS_OK;
   }
-
+  
+  nsCAutoString unescapedURL;
   rv = utf8Cvt->ConvertURISpecToUTF8(nsDependentCString(url), 
     (!charset || !*charset) ? "UTF-8" : charset, unescapedURL);
   if (NS_FAILED(rv))
