@@ -80,7 +80,8 @@ var gDownloadObserver = {
         
         rdfc.Init(db, rdf.GetResource("NC:DownloadsRoot"));
 
-        var dlRes = rdf.GetUnicodeResource(dl.target.persistentDescriptor);
+        var id = dl.target.persistentDescriptor;
+        var dlRes = rdf.GetUnicodeResource(id);
         rdfc.RemoveElement(dlRes, true);
         
         var elts = rdfc.GetElements();
@@ -98,10 +99,17 @@ var gDownloadObserver = {
           rdfc.AppendElement(dlRes);
         else
           rdfc.InsertElementAt(dlRes, insertIndex, true);      
+
+        if (gDownloadPercentages[id]) {
+          gDownloadPercentages[id] = false;
+          --gDownloadPercentagesMeta.count;
+        }
+        
+        if (gDownloadPercentagesMeta.count == 0)
+          window.title = document.documentElement.getAttribute("statictitle");    
       }
       catch (e) {
       }
-            
       break;
     case "dl-start":
       // Add this download to the percentage average tally
@@ -242,10 +250,12 @@ function onUpdateProgress()
   for (var download in gDownloadPercentages) {
     if (gDownloadPercentages[download]) {
       var dl = document.getElementById(download);
-      var progress = parseInt(dl.getAttribute("progress"));
-      if (progress < 100) {
-        ++count;
-        mean += progress;
+      if (dl) { 
+        var progress = parseInt(dl.getAttribute("progress"));
+        if (progress < 100) {
+          ++count;
+          mean += progress;
+        }
       }
     }
   }

@@ -923,7 +923,10 @@ nsDownloadManager::Observe(nsISupports* aSubject, const char* aTopic, const PRUn
       else
         bundle->GetStringFromName(NS_LITERAL_STRING("quitCancelDownloadsAlertMsgMac").get(), getter_Copies(message));
 #endif
-      bundle->FormatStringFromName(NS_LITERAL_STRING("quitCancelDownloadsOKText").get(), strings, 1, getter_Copies(quitButton));
+      if (currDownloadCount > 1)
+        bundle->FormatStringFromName(NS_LITERAL_STRING("quitCancelDownloadsOKTextMultiple").get(), strings, 1, getter_Copies(quitButton));
+      else
+        bundle->GetStringFromName(NS_LITERAL_STRING("quitCancelDownloadsOKText").get(), getter_Copies(quitButton));
     }
 
     // Get Download Manager window, to be parent of alert.
