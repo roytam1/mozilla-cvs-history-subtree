@@ -225,7 +225,8 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
     nsCOMPtr<nsIChromeEventHandler> chromeHandler;
     piWindow->GetChromeEventHandler(getter_AddRefs(chromeHandler));
     nsCOMPtr<nsIDOMEventReceiver> rec(do_QueryInterface(chromeHandler));
-    rec->AddEventListenerByIID(clickListener, NS_GET_IID(nsIDOMMouseListener));
+    if ( rec )
+      rec->AddEventListenerByIID(clickListener, NS_GET_IID(nsIDOMMouseListener));
   }
 }
 
