@@ -124,6 +124,7 @@
 #include "nsITreeBoxObject.h"
 #include "nsContentUtils.h"
 #include "nsIXPConnect.h"
+#include "nsGenericElement.h"
 
 #include "nsMutationEvent.h"
 #include "nsIDOMMutationEvent.h"
@@ -748,6 +749,10 @@ nsXULElement::QueryInterface(REFNSIID iid, void** result)
       }
       else
         return NS_NOINTERFACE;
+    }
+    else if (iid.Equals(NS_GET_IID(nsIDOM3Node))) {
+        *result = new nsNode3Tearoff(this);
+        NS_ENSURE_TRUE(*result, NS_ERROR_OUT_OF_MEMORY);
     }
     else if (iid.Equals(NS_GET_IID(nsIClassInfo))) {
         nsISupports *inst = nsnull;

@@ -123,6 +123,24 @@ typedef struct {
                               // that created us. [Weak]
 } nsDOMSlots;
 
+
+class nsNode3Tearoff : public nsIDOM3Node
+{
+  NS_DECL_ISUPPORTS
+
+  NS_DECL_NSIDOM3NODE
+
+  nsNode3Tearoff(nsIContent *aContent) : mContent(aContent)
+  {
+    NS_INIT_ISUPPORTS();
+  }
+  virtual ~nsNode3Tearoff() {};
+
+private:
+  nsCOMPtr<nsIContent> mContent;
+};
+
+
 class nsGenericElement : public nsIHTMLContent
 {
 public:
@@ -244,7 +262,6 @@ public:
   NS_IMETHOD IsSupported(const nsAReadableString& aFeature,
                          const nsAReadableString& aVersion, PRBool* aReturn);
   NS_IMETHOD HasAttributes(PRBool* aHasAttributes);
-  NS_IMETHOD GetBaseURI(nsAWritableString& aURI);
 
   // nsIDOMElement method implementation
   NS_IMETHOD GetTagName(nsAWritableString& aTagName);
@@ -441,7 +458,12 @@ protected:
   NS_IMETHOD    CloneNode(PRBool aDeep, nsIDOMNode** aReturn);  \
   NS_IMETHOD    Normalize() { return _to Normalize(); }  \
   NS_IMETHOD    IsSupported(const nsAReadableString& aFeature, const nsAReadableString& aVersion, PRBool* aReturn) { return _to IsSupported(aFeature, aVersion, aReturn); }  \
-  NS_IMETHOD    HasAttributes(PRBool* aReturn) { return _to HasAttributes(aReturn); }  \
-  NS_IMETHOD    GetBaseURI(nsAWritableString& aURI) { return _to GetBaseURI(aURI); }  \
+  NS_IMETHOD    HasAttributes(PRBool* aReturn) { return _to HasAttributes(aReturn); }
+
+#define NS_INTERFACE_MAP_ENTRY_TEAROFF(_iid, _tearoff)                        \
+  if (aIID.Equals(NS_GET_IID(_iid))) {                                        \
+    foundInterface = new _tearoff;                                            \
+    NS_ENSURE_TRUE(foundInterface, NS_ERROR_OUT_OF_MEMORY);                   \
+  } else
 
 #endif /* nsGenericElement_h___ */

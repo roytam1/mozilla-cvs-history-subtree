@@ -29,10 +29,8 @@
 #include "nsString.h"
 #include "nsISizeOfHandler.h"
 
-class nsIDOMNamedNodeMap;
-
-class nsDOMDocumentType : public nsIDOMDocumentType,
-                          public nsIContent
+class nsDOMDocumentType : public nsIContent,
+                          public nsIDOMDocumentType
 {
 public:
   nsDOMDocumentType(const nsAReadableString& aName,
@@ -72,12 +70,13 @@ protected:
   nsString mInternalSubset;
 };
 
-extern nsresult NS_NewDOMDocumentType(nsIDOMDocumentType** aDocType,
-                                      const nsAReadableString& aName,
-                                      nsIDOMNamedNodeMap *aEntities,
-                                      nsIDOMNamedNodeMap *aNotations,
-                                      const nsAReadableString& aPublicId,
-                                      const nsAReadableString& aSystemId,
-                                      const nsAReadableString& aInternalSubset);
+extern nsresult
+NS_NewDOMDocumentType(nsIDOMDocumentType** aDocType,
+                      const nsAReadableString& aName,
+                      nsIDOMNamedNodeMap *aEntities,
+                      nsIDOMNamedNodeMap *aNotations,
+                      const nsAReadableString& aPublicId,
+                      const nsAReadableString& aSystemId,
+                      const nsAReadableString& aInternalSubset);
 
 #endif // nsDOMDocument_h___

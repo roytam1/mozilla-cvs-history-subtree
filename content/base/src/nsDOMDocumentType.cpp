@@ -39,8 +39,8 @@ NS_NewDOMDocumentType(nsIDOMDocumentType** aDocType,
 {
   NS_ENSURE_ARG_POINTER(aDocType);
 
-  *aDocType = new nsDOMDocumentType(aName, aEntities, aNotations,
-                                    aPublicId, aSystemId, aInternalSubset);
+  *aDocType = new nsDOMDocumentType(aName, aEntities, aNotations, aPublicId,
+                                    aSystemId, aInternalSubset);
   if (!*aDocType) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
@@ -80,16 +80,18 @@ nsDOMDocumentType::~nsDOMDocumentType()
 // XPConnect interface list for nsDOMDocumentType
 NS_CLASSINFO_MAP_BEGIN(DocumentType)
   NS_CLASSINFO_MAP_ENTRY(nsIDOMDocumentType)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOM3Node)
 NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsDOMDocumentType
 NS_INTERFACE_MAP_BEGIN(nsDOMDocumentType)
-   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMDocumentType)
-   NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentType)
-   NS_INTERFACE_MAP_ENTRY(nsIDOMNode)
-   NS_INTERFACE_MAP_ENTRY(nsIContent)
-NS_INTERFACE_MAP_END_THREADSAFE
+  NS_INTERFACE_MAP_ENTRY(nsIContent)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNode)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentType)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIContent)
+  NS_INTERFACE_MAP_ENTRY_TEAROFF(nsIDOM3Node, nsNode3Tearoff(this))
+NS_INTERFACE_MAP_END
 
 
 NS_IMPL_ADDREF(nsDOMDocumentType)

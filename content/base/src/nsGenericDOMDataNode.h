@@ -32,6 +32,7 @@
 #include "nsITextContent.h"
 #include "nsDOMError.h"
 #include "nsIEventListenerManager.h"
+#include "nsGenericElement.h"
 
 
 class nsIDOMAttr;
@@ -590,6 +591,7 @@ struct nsGenericDOMDataNode {
     }                                                                         \
     return NS_NOINTERFACE;                                                    \
   } else                                                                      \
-  NS_INTERFACE_MAP_ENTRY(nsIContent)
+  NS_INTERFACE_MAP_ENTRY(nsIContent)                                          \
+  NS_INTERFACE_MAP_ENTRY_TEAROFF(nsIDOM3Node, nsNode3Tearoff(this))
 
 #endif /* nsGenericDOMDataNode_h___ */

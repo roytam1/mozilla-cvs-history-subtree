@@ -344,6 +344,84 @@ nsCheapVoidArray::SwitchToVector()
   return vector;
 }
 
+
+NS_IMETHODIMP
+nsNode3Tearoff::QueryInterface(REFNSIID aIID, void** aInstancePtr)
+{
+  if (aIID.Equals(NS_GET_IID(nsIDOM3Node))) {
+    nsISupports *inst = this;
+
+    NS_ADDREF(inst);
+
+    *aInstancePtr = inst;
+
+    return NS_OK;
+  }
+
+  return mContent->QueryInterface(aIID, aInstancePtr);
+}
+
+
+NS_IMPL_ADDREF(nsNode3Tearoff)
+NS_IMPL_RELEASE(nsNode3Tearoff)
+
+
+NS_IMETHODIMP
+nsNode3Tearoff::GetBaseURI(nsAWritableString& aURI)
+{
+  nsCOMPtr<nsIURI> uri;
+
+  nsCOMPtr<nsIDocument> doc;
+
+  mContent->GetDocument(*getter_AddRefs(doc));
+
+  nsCOMPtr<nsIXMLDocument> xmlDoc(do_QueryInterface(doc));
+
+  aURI.Truncate();
+
+  if (xmlDoc) {
+    // XML documents can use the XML Base (W3C spec) way of setting
+    // the base per element. We look at this node and its ancestors
+    // until we find the first XML content and get it's base.
+    nsCOMPtr<nsIContent> content(mContent);
+
+    while (content) {
+      nsCOMPtr<nsIXMLContent> xmlContent(do_QueryInterface(content));
+
+      if (xmlContent) {
+        xmlContent->GetXMLBaseURI(getter_AddRefs(uri));
+
+        break;
+      }
+
+      nsCOMPtr<nsIContent> tmp(content);
+      tmp->GetParent(*getter_AddRefs(content));
+    }
+  }
+
+  if (!uri && doc) {
+    // HTML document or for some reason there was no XML content in
+    // XML document
+
+    doc->GetBaseURL(*getter_AddRefs(uri));
+
+    if (!uri) {
+      uri = dont_AddRef(doc->GetDocumentURL());
+    }
+  }
+
+  if (uri) {
+    nsXPIDLCString spec;
+
+    uri->GetSpec(getter_Copies(spec));
+
+    CopyASCIItoUCS2(nsLiteralCString(spec), aURI);
+  }
+  
+  return NS_OK;
+}
+
+
 //----------------------------------------------------------------------
 
 /* static */ void
@@ -674,48 +752,6 @@ nsGenericElement::GetXMLBaseURI(nsIURI **aURI)
 {
   NS_ENSURE_ARG_POINTER(aURI);
   aURI=nsnull;
-  return NS_OK;
-}
-
-
-NS_IMETHODIMP
-nsGenericElement::GetBaseURI(nsAWritableString& aURI)
-{
-  aURI.Truncate();
-  nsCOMPtr<nsIURI> uri;
-  nsCOMPtr<nsIXMLDocument> xmlDoc(do_QueryInterface(mDocument));
-  if (xmlDoc) {
-    // XML documents can use the XML Base (W3C spec) way of setting the base
-    // per element. We look at this node and its ancestors until we find
-    // the first XML content and get it's base.
-    nsCOMPtr<nsIContent> content(do_QueryInterface(NS_STATIC_CAST(nsIContent*,this)));
-    while (content) {
-      nsCOMPtr<nsIXMLContent> xmlContent(do_QueryInterface(content));
-      if (xmlContent) {
-        xmlContent->GetXMLBaseURI(getter_AddRefs(uri));
-        break;
-      }
-      nsCOMPtr<nsIContent> tmp(content);
-      tmp->GetParent(*getter_AddRefs(content));
-    }
-  }
-
-  if (!uri && mDocument) {
-    // HTML document or for some reason there was no XML content in XML document
-    mDocument->GetBaseURL(*getter_AddRefs(uri));
-    if (!uri) {
-      uri = dont_AddRef(mDocument->GetDocumentURL());
-    }
-  }
-
-  if (uri) {
-    nsXPIDLCString spec;
-    uri->GetSpec(getter_Copies(spec));
-    if (spec) {
-      CopyASCIItoUCS2(nsLiteralCString(spec), aURI);
-    }
-  }
-  
   return NS_OK;
 }
 

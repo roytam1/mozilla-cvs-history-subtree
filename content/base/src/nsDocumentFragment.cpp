@@ -33,7 +33,8 @@
 
 
 class nsDocumentFragment : public nsGenericContainerElement,
-                           public nsIDOMDocumentFragment
+                           public nsIDOMDocumentFragment,
+                           public nsIDOM3Node
 {
 public:
   nsDocumentFragment(nsIDocument* aOwnerDocument);
@@ -99,9 +100,12 @@ public:
                             PRBool* aReturn)
   { return nsGenericContainerElement::IsSupported(aFeature, aVersion,
                                                   aReturn); }
-  NS_IMETHOD    GetBaseURI(nsAWritableString& aURI)
-  { return nsGenericContainerElement::GetBaseURI(aURI); }
 
+  // nsIDOM3Node
+  NS_IMETHOD    GetBaseURI(nsAWritableString& aURI)
+  { aURI.Truncate(); return NS_OK; }
+
+  // nsIContent
   NS_IMETHOD SetParent(nsIContent* aParent)
     { return NS_OK; }
   NS_IMETHOD SetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName,
@@ -213,6 +217,7 @@ nsDocumentFragment::~nsDocumentFragment()
 // XPConnect interface list for nsDocumentFragment
 NS_CLASSINFO_MAP_BEGIN(DocumentFragment)
   NS_CLASSINFO_MAP_ENTRY(nsIDOMDocumentFragment)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOM3Node)
 NS_CLASSINFO_MAP_END
 
 
@@ -220,6 +225,7 @@ NS_CLASSINFO_MAP_END
 NS_INTERFACE_MAP_BEGIN(nsDocumentFragment)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentFragment)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNode)
+  NS_INTERFACE_MAP_ENTRY(nsIDOM3Node)
   NS_INTERFACE_MAP_ENTRY(nsIContent)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIContent)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(DocumentFragment)
