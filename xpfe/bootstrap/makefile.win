@@ -176,23 +176,23 @@ libs:: $(PROGRAM)
 	$(MAKE_INSTALL) $(PROGRAM) $(DIST)\bin
 
 install::
-	$(MAKE_INSTALL) abcardWindow.ico $(DIST)\bin\chrome\icons\default
-	$(MAKE_INSTALL) addressbookWindow.ico $(DIST)\bin\chrome\icons\default
-	$(MAKE_INSTALL) bmPropsWindow.ico $(DIST)\bin\chrome\icons\default
-	$(MAKE_INSTALL) bookmark-window.ico $(DIST)\bin\chrome\icons\default
-	$(MAKE_INSTALL) calendar-window.ico $(DIST)\bin\chrome\icons\default
-	$(MAKE_INSTALL) chatzilla-window.ico $(DIST)\bin\chrome\icons\default
-	$(MAKE_INSTALL) downloadManager.ico $(DIST)\bin\chrome\icons\default
-	$(MAKE_INSTALL) editorWindow.ico $(DIST)\bin\chrome\icons\default
-	$(MAKE_INSTALL) findBookmarkWindow.ico $(DIST)\bin\chrome\icons\default
-	$(MAKE_INSTALL) findHistoryWindow.ico $(DIST)\bin\chrome\icons\default
-	$(MAKE_INSTALL) history-window.ico $(DIST)\bin\chrome\icons\default
-	$(MAKE_INSTALL) jsconsoleWindow.ico $(DIST)\bin\chrome\icons\default
-	$(MAKE_INSTALL) main-window.ico $(DIST)\bin\chrome\icons\default
-	$(MAKE_INSTALL) messengerWindow.ico $(DIST)\bin\chrome\icons\default
-	$(MAKE_INSTALL) msgcomposeWindow.ico $(DIST)\bin\chrome\icons\default
-	$(MAKE_INSTALL) venkman-window.ico $(DIST)\bin\chrome\icons\default
-	$(MAKE_INSTALL) winInspectorMain.ico $(DIST)\bin\chrome\icons\default
+	$(MAKE_INSTALL) .\icons\windows\abcardWindow.ico $(DIST)\bin\chrome\icons\default
+	$(MAKE_INSTALL) .\icons\windows\addressbookWindow.ico $(DIST)\bin\chrome\icons\default
+	$(MAKE_INSTALL) .\icons\windows\bmPropsWindow.ico $(DIST)\bin\chrome\icons\default
+	$(MAKE_INSTALL) .\icons\windows\bookmark-window.ico $(DIST)\bin\chrome\icons\default
+	$(MAKE_INSTALL) .\icons\windows\calendar-window.ico $(DIST)\bin\chrome\icons\default
+	$(MAKE_INSTALL) .\icons\windows\chatzilla-window.ico $(DIST)\bin\chrome\icons\default
+	$(MAKE_INSTALL) .\icons\windows\downloadManager.ico $(DIST)\bin\chrome\icons\default
+	$(MAKE_INSTALL) .\icons\windows\editorWindow.ico $(DIST)\bin\chrome\icons\default
+	$(MAKE_INSTALL) .\icons\windows\findBookmarkWindow.ico $(DIST)\bin\chrome\icons\default
+	$(MAKE_INSTALL) .\icons\windows\findHistoryWindow.ico $(DIST)\bin\chrome\icons\default
+	$(MAKE_INSTALL) .\icons\windows\history-window.ico $(DIST)\bin\chrome\icons\default
+	$(MAKE_INSTALL) .\icons\windows\jsconsoleWindow.ico $(DIST)\bin\chrome\icons\default
+	$(MAKE_INSTALL) .\icons\windows\main-window.ico $(DIST)\bin\chrome\icons\default
+	$(MAKE_INSTALL) .\icons\windows\messengerWindow.ico $(DIST)\bin\chrome\icons\default
+	$(MAKE_INSTALL) .\icons\windows\msgcomposeWindow.ico $(DIST)\bin\chrome\icons\default
+	$(MAKE_INSTALL) .\icons\windows\venkman-window.ico $(DIST)\bin\chrome\icons\default
+	$(MAKE_INSTALL) .\icons\windows\winInspectorMain.ico $(DIST)\bin\chrome\icons\default
 
 clobber::
 	$(RM) $(DIST)\bin\mozilla.exe
