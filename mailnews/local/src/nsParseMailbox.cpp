@@ -17,6 +17,7 @@
  */
 
 #include "msgCore.h"
+#include "nsIURI.h"
 #include "nsParseMailbox.h"
 #include "nsIMsgHdr.h"
 #include "nsIMsgDatabase.h"
@@ -57,7 +58,7 @@ NS_IMETHODIMP nsMsgMailboxParser::OnDataAvailable(nsISupports *ctxt, nsIInputStr
 {
 	// right now, this really just means turn around and process the url
 	nsresult rv = NS_OK;
-	nsCOMPtr<nsIURL> url = do_QueryInterface(ctxt, &rv);
+	nsCOMPtr<nsIURI> url = do_QueryInterface(ctxt, &rv);
 	if (NS_SUCCEEDED(rv))
 		rv = ProcessMailboxInputStream(url, aIStream, aLength);
 	return rv;
