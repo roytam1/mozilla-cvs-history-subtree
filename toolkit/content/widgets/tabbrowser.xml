@@ -277,6 +277,9 @@
               const nsIWebProgressListener = Components.interfaces.nsIWebProgressListener;
               const nsIChannel = Components.interfaces.nsIChannel;
 
+              if (aStateFlags & nsIWebProgressListener.STATE_START)
+                  this.mBrowser.mFavIconURL = null;
+
               if (aStateFlags & nsIWebProgressListener.STATE_START && 
                   aStateFlags & nsIWebProgressListener.STATE_IS_NETWORK) {
                 // It's okay to clear what the user typed when we start

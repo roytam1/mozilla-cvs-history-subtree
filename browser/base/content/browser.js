@@ -3320,6 +3320,15 @@ nsBrowserStatusHandler.prototype =
         // stray request (the first request outside of the document load),
         // initialize the throbber and his friends.
 
+        // always reset the favicon
+        if (gBrowser.mTabbedMode) {
+          var browserIndex = gBrowser.getBrowserIndexForDocument(aWebProgress.DOMWindow);
+          if (browserIndex != -1)
+            gBrowser.getBrowserAtIndex(browserIndex).mFavIconURL = null;
+        }
+        else
+          gBrowser.mCurrentBrowser.mFavIconURL = null;
+
         // Call start document load listeners (only if this is a network load)
         if (aStateFlags & nsIWebProgressListener.STATE_IS_NETWORK &&
             aRequest && aWebProgress.DOMWindow == content)
