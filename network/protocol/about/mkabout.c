@@ -906,7 +906,10 @@ net_AboutStub(ActiveEntry *ce)
 PRIVATE void
 net_CleanupAbout(void)
 {
-    PL_HashTableDestroy(net_AboutTable);
+	if (net_AboutTable != NULL) {
+	    PL_HashTableDestroy(net_AboutTable);
+	    net_AboutTable = NULL;
+	}
 }
 
 PUBLIC void
