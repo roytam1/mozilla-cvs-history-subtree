@@ -23,6 +23,42 @@
  *
  * Revision history:
  * $Log$
+ * Revision 1.1  1999/05/18 22:32:25  norris%netscape.com
+ * Add submission:
+ * Subject:
+ *             Re: Modified Context.java
+ *        Date:
+ *             Sat, 15 May 1999 08:01:37 +0000
+ *       From:
+ *             "Ian D. Stewart" <idstewart@softhome.net>
+ *         To:
+ *             Norris Boyd <norris@netscape.com>
+ *  References:
+ *             1 , 2 , 3 , 4 , 5
+ *
+ *
+ *
+ *
+ * Ian D. Stewart wrote:
+ *
+ *   Norris Boyd wrote:
+ *
+ *
+ *
+ *
+ *     Can I help with EventListener collector?
+ *
+ *   Actually, I have a working implementation complete (attatched), but by all means, feel free to add any functionality you feel
+ *   may be missing, or to tweak the code .
+ *
+ * Norris,
+ *
+ * After I sent I my last e-mail, I noticed some potential issues using Object[] in ListenerCollection.getListeners(Class iface).
+ * I'm attatching a new version, which uses a Vector object.  This should resolve those issues.
+ *
+ *
+ * Ian
+ *
  * 
  *    KNOWN BUGS/FRUSTRATIONS:
  *      - None, currently.
@@ -96,7 +132,9 @@ public class ListenerCollection extends Vector {
                 array.addElement(listener);
             }
         }
-        return array.toArray();
+        Object[] result = new Object[array.size()];
+        array.copyInto(result);
+        return result;
     }
 } // ListenerCollection
 
