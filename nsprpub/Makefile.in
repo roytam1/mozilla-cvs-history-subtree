@@ -51,10 +51,12 @@ ifdef PR_CLIENT_BUILD_UNIX
 endif
 endif
 
-# Delete config/autoconf.mk last because it is included by every makefile.
 distclean realclean clobber_all::
 	@echo "cd pr/tests; $(MAKE) $@"
 	@$(MAKE) -C pr/tests $@
+
+# Delete config/autoconf.mk last because it is included by every makefile.
+distclean::
 	rm -f config/autoconf.mk
 
 release::
