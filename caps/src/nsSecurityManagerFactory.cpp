@@ -27,7 +27,10 @@
 #include "nsIScriptSecurityManager.h"
 #include "nsScriptSecurityManager.h"
 #include "nsIPrincipal.h"
+#include "nsAggregatePrincipal.h"
+#include "nsCertificatePrincipal.h"
 #include "nsCodebasePrincipal.h"
+#include "nsSystemPrincipal.h"
 #include "nsIScriptNameSpaceManager.h"
 #include "nsIScriptExternalNameSet.h"
 #include "nsIScriptContext.h"
@@ -315,7 +318,10 @@ nsSecurityNameSet::InitializeNameSet(nsIScriptContext* aScriptContext)
 
 
 
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsAggregatePrincipal)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsCertificatePrincipal)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCodebasePrincipal)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsSystemPrincipal)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSecurityNameSet)
 
 static NS_IMETHODIMP
@@ -369,10 +375,28 @@ static nsModuleComponentInfo components[] =
       RegisterSecurityNameSet
     },
 
+    { NS_AGGREGATEPRINCIPAL_CLASSNAME, 
+      NS_AGGREGATEPRINCIPAL_CID, 
+      NS_AGGREGATEPRINCIPAL_CONTRACTID,
+      nsAggregatePrincipalConstructor
+    },
+
+    { NS_CERTIFICATEPRINCIPAL_CLASSNAME, 
+      NS_CERTIFICATEPRINCIPAL_CID, 
+      NS_CERTIFICATEPRINCIPAL_CONTRACTID,
+      nsCertificatePrincipalConstructor
+    },
+
     { NS_CODEBASEPRINCIPAL_CLASSNAME, 
       NS_CODEBASEPRINCIPAL_CID, 
       NS_CODEBASEPRINCIPAL_CONTRACTID,
       nsCodebasePrincipalConstructor
+    },
+
+    { NS_SYSTEMPRINCIPAL_CLASSNAME, 
+      NS_SYSTEMPRINCIPAL_CID, 
+      NS_SYSTEMPRINCIPAL_CONTRACTID,
+      nsSystemPrincipalConstructor
     },
 
     { "Security Script Name Set",

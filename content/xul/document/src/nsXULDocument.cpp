@@ -428,6 +428,8 @@ nsXULDocument::nsXULDocument(void)
 #endif // IBMBIDI
 }
 
+nsIFastLoadService* nsXULDocument::gFastLoadService = nsnull;
+
 nsXULDocument::~nsXULDocument()
 {
     NS_ASSERTION(mNextSrcLoadWaiter == nsnull,
@@ -505,6 +507,11 @@ nsXULDocument::~nsXULDocument()
         if (gXULCache) {
             nsServiceManager::ReleaseService(kXULPrototypeCacheCID, gXULCache);
             gXULCache = nsnull;
+        }
+
+        if (gFastLoadService) {
+            NS_RELEASE(gFastLoadService); // don't need ReleaseService nowadays!
+            gFastLoadService = nsnull;
         }
     }
 
@@ -682,7 +689,6 @@ nsXULDocument::StartDocumentLoad(const char* aCommand,
                                  PRBool aReset)
 {
     nsresult rv;
-    mCommand.AssignWithConversion(aCommand);
 
     mDocumentLoadGroup = getter_AddRefs(NS_GetWeakReference(aLoadGroup));
 
@@ -725,6 +731,30 @@ nsXULDocument::StartDocumentLoad(const char* aCommand,
             return NS_ERROR_OUT_OF_MEMORY;
     }
     else {
+        // Try to open a FastLoad file for reading, or create one for writing.
+        // If one exists and looks valid, mObjectInputStream will be non-null
+        // and we'll deserialize saved objects from that stream.  Else we will
+        // serialize to mObjectOutputStream.
+        if (nsCRT::strcmp(aCommand, "view-source") != 0) {
+            InitFastLoad(mDocumentURL);
+            if (mObjectInputStream) {
+                // XXXbe skip the prototype document header so we can pull
+                //       scripts from the stream as we sink content
+                nsCOMPtr<nsIXULPrototypeDocument> dummy;
+                rv = mObjectInputStream->ReadObject(PR_TRUE,
+                                                    getter_AddRefs(dummy));
+                if (NS_FAILED(rv)) return rv;
+
+#ifdef NS_DEBUG
+                nsCOMPtr<nsIURI> dummyURL;
+                dummy->GetURI(getter_AddRefs(dummyURL));
+                PRBool equals = PR_FALSE;
+                dummyURL->Equals(mDocumentURL, &equals);
+                NS_ASSERTION(equals, "bad URI in object stream!");
+#endif
+            }
+        }
+
         // It's just a vanilla document load. Create a parser to deal
         // with the stream n' stuff.
         nsCOMPtr<nsIParser> parser;
@@ -4248,6 +4278,70 @@ nsXULDocument::CreateElement(nsINodeInfo *aNodeInfo, nsIContent** aResult)
 
 
 nsresult
+nsXULDocument::InitFastLoad(nsIURI* aURI)
+{
+    nsCOMPtr<nsIFastLoadService> fastLoadService = gFastLoadService;
+    if (! fastLoadService) {
+        fastLoadService = do_GetService(NS_FAST_LOAD_SERVICE_CONTRACTID);
+        if (! fastLoadService)
+            return NS_ERROR_FAILURE;
+        NS_ADDREF(gFastLoadService = fastLoadService);
+    }
+
+    nsCOMPtr<nsIURL> url(do_QueryInterface(aURI));
+    if (! url)
+        return NS_ERROR_UNEXPECTED;
+
+    nsresult rv;
+    nsXPIDLCString name;
+    rv = url->GetFileBaseName(getter_Copies(name));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsIFile> file;
+    rv = fastLoadService->NewFastLoadFile(name, getter_AddRefs(file));
+    if (NS_FAILED(rv)) return rv;
+
+    PRBool exists = PR_FALSE;
+    if (NS_SUCCEEDED(file->Exists(&exists)) && exists) {
+        // XXXbe wrap with a buffering stream
+        nsCOMPtr<nsIInputStream> fileInput;
+        rv = NS_NewLocalFileInputStream(getter_AddRefs(fileInput), file);
+        if (NS_FAILED(rv)) return rv;
+
+        nsCOMPtr<nsIObjectInputStream> objectInput;
+        PRUint32 checksum;
+        rv = fastLoadService->NewInputStream(fileInput, &checksum,
+                                             getter_AddRefs(objectInput));
+        if (NS_FAILED(rv)) return rv;
+
+        // XXXbe verify checksum, clear exists if bad
+        // XXXbe check dependencies, clear exists if any are newer
+        // else
+
+        fastLoadService->SetCurrentInputStream(objectInput);
+        mObjectInputStream = objectInput;
+    }
+    
+    if (! exists) {
+        // XXXbe wrap with a buffering stream
+        nsCOMPtr<nsIOutputStream> fileOutput;
+        rv = NS_NewLocalFileOutputStream(getter_AddRefs(fileOutput), file);
+        if (NS_FAILED(rv)) return rv;
+
+        nsCOMPtr<nsIObjectOutputStream> objectOutput;
+        rv = fastLoadService->NewOutputStream(fileOutput,
+                                              getter_AddRefs(objectOutput));
+        if (NS_FAILED(rv)) return rv;
+
+        fastLoadService->SetCurrentOutputStream(objectOutput);
+        mObjectOutputStream = objectOutput;
+    }
+
+    return NS_OK;
+}
+
+
+nsresult
 nsXULDocument::PrepareToLoad(nsISupports* aContainer,
                              const char* aCommand,
                              nsIChannel* aChannel,
@@ -4275,40 +4369,15 @@ nsXULDocument::PrepareToLoadPrototype(nsIURI* aURI, const char* aCommand,
     nsresult rv;
 
     // Create a new prototype document
-    rv = NS_NewXULPrototypeDocument(nsnull, NS_GET_IID(nsIXULPrototypeDocument), getter_AddRefs(mCurrentPrototype));
+    rv = NS_NewXULPrototypeDocument(nsnull,
+                                    NS_GET_IID(nsIXULPrototypeDocument),
+                                    getter_AddRefs(mCurrentPrototype));
     if (NS_FAILED(rv)) return rv;
 
-    // Bootstrap the master document prototype.
-    //
-    // Also try to open an object output stream in order to save a FastLoad
-    // file.  We open this stream early to allow file including code to add
-    // makefile-like dependencies to it via nsIFastLoadService.
+    // Bootstrap the master document prototype
     if (! mMasterPrototype) {
         mMasterPrototype = mCurrentPrototype;
         mMasterPrototype->SetDocumentPrincipal(aDocumentPrincipal);
-
-        nsCOMPtr<nsIFastLoadService>
-            fastLoadService(do_GetService(NS_FAST_LOAD_SERVICE_CONTRACTID));
-        if (fastLoadService) {
-            nsCOMPtr<nsIURL> url(do_QueryInterface(aURI));
-            nsXPIDLCString name;
-            url->GetFileBaseName(getter_Copies(name));
-            nsCOMPtr<nsIFile> file;
-            fastLoadService->NewFastLoadFile(name, getter_AddRefs(file));
-            if (file) {
-                nsCOMPtr<nsIOutputStream> fileStream;
-                NS_NewLocalFileOutputStream(getter_AddRefs(fileStream), file);
-                if (fileStream) {
-                    nsCOMPtr<nsIObjectOutputStream> objStream;
-                    fastLoadService->NewOutputStream(fileStream,
-                                                     getter_AddRefs(objStream));
-                    if (objStream) {
-                        fastLoadService->SetCurrentOutputStream(objStream);
-                        mObjectOutputStream = objStream;
-                    }
-                }
-            }
-        }
     }
 
     rv = mCurrentPrototype->SetURI(aURI);
@@ -5016,15 +5085,14 @@ nsXULDocument::ResumeWalk()
 
     // Since we've bothered to load and parse all this fancy XUL, let's try to
     // save a condensed serialization of it for faster loading next time.
-    if (mObjectOutputStream) {
-        mObjectOutputStream->WriteObject(mMasterPrototype, PR_TRUE);
-        mObjectOutputStream->Close();
+    nsCOMPtr<nsIObjectOutputStream> objectOutput = mObjectOutputStream;
+    if (objectOutput) {
+        if (gFastLoadService)
+            gFastLoadService->SetCurrentOutputStream(nsnull);
         mObjectOutputStream = nsnull;
 
-        nsCOMPtr<nsIFastLoadService>
-            fastLoadService(do_GetService(NS_FAST_LOAD_SERVICE_CONTRACTID));
-        if (fastLoadService)
-            fastLoadService->SetCurrentOutputStream(nsnull);
+        objectOutput->WriteObject(mMasterPrototype, PR_TRUE);
+        objectOutput->Close();
     }
 
     for (PRInt32 i = 0; i < mObservers.Count(); i++) {

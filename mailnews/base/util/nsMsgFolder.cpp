@@ -174,10 +174,10 @@ nsMsgFolder::~nsMsgFolder(void)
 }
 
 NS_IMPL_ISUPPORTS_INHERITED4(nsMsgFolder, nsRDFResource,
-                                   nsIMsgFolder,
-                                   nsIFolder,
-                                   nsISupportsWeakReference,
-                                   nsISerializable)
+                             nsIMsgFolder,
+                             nsIFolder,
+                             nsISupportsWeakReference,
+                             nsISerializable)
 
 nsresult
 nsMsgFolder::initializeStrings()

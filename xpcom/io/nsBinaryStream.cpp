@@ -276,11 +276,11 @@ nsBinaryOutputStream::WriteID(const nsIID& aIID)
 }
 
 NS_IMETHODIMP_(char*)
-nsBinaryOutputStream::GetBuffer(PRUint32 aLength, PRUint32 aAlign)
+nsBinaryOutputStream::GetBuffer(PRUint32 aLength, PRUint32 aAlignMask)
 {
     nsCOMPtr<nsIStreamBufferAccess> sba(do_QueryInterface(this));
     if (sba)
-        return sba->GetBuffer(aLength, aAlign);
+        return sba->GetBuffer(aLength, aAlignMask);
     return nsnull;
 }
 
@@ -533,11 +533,11 @@ nsBinaryInputStream::ReadID(nsID *aResult)
 }
 
 NS_IMETHODIMP_(char*)
-nsBinaryInputStream::GetBuffer(PRUint32 aLength, PRUint32 aAlign)
+nsBinaryInputStream::GetBuffer(PRUint32 aLength, PRUint32 aAlignMask)
 {
     nsCOMPtr<nsIStreamBufferAccess> sba(do_QueryInterface(this));
     if (sba)
-        return sba->GetBuffer(aLength, aAlign);
+        return sba->GetBuffer(aLength, aAlignMask);
     return nsnull;
 }
 

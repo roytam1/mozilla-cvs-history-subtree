@@ -29,7 +29,7 @@ interface nsIObjectOutputStream;
 [uuid(ac923b72-ac87-4892-ac7a-ca385d429435)]
 interface nsIStreamBufferAccess : nsISupports
 {
-    [notxpcom] charPtr getBuffer(in PRUint32 aLength, in PRUint32 aAlign);
+    [notxpcom] charPtr getBuffer(in PRUint32 aLength, in PRUint32 aAlignMask);
     [notxpcom] void putBuffer(in charPtr aBuffer, in PRUint32 aLength);
 };
 

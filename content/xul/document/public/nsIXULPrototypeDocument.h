@@ -76,6 +76,12 @@ public:
 };
 
 
+// CID for factory-based creation, used only for deserialization.
+#define NS_XULPROTOTYPEDOCUMENT_CLASSNAME "XUL Prototype Document"
+#define NS_XULPROTOTYPEDOCUMENT_CID \
+    {0xa08101ae,0xc0e8,0x4464,{0x99,0x9e,0xe5,0xa4,0xd7,0x09,0xa9,0x28}}
+
+
 extern NS_IMETHODIMP
 NS_NewXULPrototypeDocument(nsISupports* aOuter, REFNSIID aIID, void** aResult);
 

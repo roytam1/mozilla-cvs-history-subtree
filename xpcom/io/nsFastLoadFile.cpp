@@ -86,9 +86,10 @@ static const char magic[] = MFL_FILE_MAGIC;
 
 // -------------------------- nsFastLoadFileReader --------------------------
 
-NS_IMPL_ISUPPORTS2(nsFastLoadFileReader,
-                   nsIObjectInputStream,
-                   nsISeekableStream)
+NS_IMPL_ISUPPORTS_INHERITED2(nsFastLoadFileReader,
+                             nsBinaryInputStream,
+                             nsIObjectInputStream,
+                             nsISeekableStream)
 
 nsresult
 nsFastLoadFileReader::ReadHeader(nsFastLoadHeader *aHeader)
@@ -332,26 +333,34 @@ nsFastLoadFileReader::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
         object = entry->mObject;
 
         if (!object) {
-            // We skipped deserialization of this object from its position
-            // earlier in the input stream, presumably due to the reference
-            // there being an nsFastLoadPtr or some such thing.  Seek back
-            // and read it now.
             nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mInputStream));
             PRUint32 saveOffset;
 
             rv = seekable->Tell(&saveOffset);
             if (NS_FAILED(rv)) return rv;
-            NS_ASSERTION(entry->mCIDOffset < saveOffset, "out of order object?!");
 
-            rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
-                                entry->mCIDOffset);
-            if (NS_FAILED(rv)) return rv;
+            if (entry->mCIDOffset != saveOffset) {
+                // We skipped deserialization of this object from its position
+                // earlier in the input stream, presumably due to the reference
+                // there being an nsFastLoadPtr or some such thing.  Seek back
+                // and read it now.
+                NS_ASSERTION(entry->mCIDOffset < saveOffset,
+                             "out of order object?!");
+
+                rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
+                                    entry->mCIDOffset);
+                if (NS_FAILED(rv)) return rv;
+            }
 
             rv = DeserializeObject(getter_AddRefs(object));
             if (NS_FAILED(rv)) return rv;
 
-            rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, saveOffset);
-            if (NS_FAILED(rv)) return rv;
+            if (entry->mCIDOffset != saveOffset) {
+                // Restore offset in case we're still reading forward to get
+                // object definitions eagerly.
+                rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, saveOffset);
+                if (NS_FAILED(rv)) return rv;
+            }
 
             // Save object until all refs have been deserialized.
             entry->mObject = object;
@@ -436,9 +445,10 @@ NS_NewFastLoadFileReader(nsIObjectInputStream* *aResult,
 
 // -------------------------- nsFastLoadFileWriter --------------------------
 
-NS_IMPL_ISUPPORTS2(nsFastLoadFileWriter,
-                   nsIObjectOutputStream,
-                   nsISeekableStream)
+NS_IMPL_ISUPPORTS_INHERITED2(nsFastLoadFileWriter,
+                             nsBinaryOutputStream,
+                             nsIObjectOutputStream,
+                             nsISeekableStream)
 
 struct nsIDMapEntry : public PLDHashEntryHdr {
     NSFastLoadID    mFastID;            // 1 + nsFastLoadFooter::mIDMap index
@@ -642,53 +652,52 @@ nsresult
 nsFastLoadFileWriter::WriteFooter()
 {
     nsresult rv;
-    PRUint32 i, length, count;
+    PRUint32 i, count;
+
+    PRUint32 numIDs = mIDMap.entryCount;
+    rv = Write32(numIDs);
+    if (NS_FAILED(rv)) return rv;
+
+    PRUint32 numSharpObjects = mObjectMap.entryCount;
+    rv = Write32(numSharpObjects);
+    if (NS_FAILED(rv)) return rv;
+
+    PRUint32 dependencyCount = mDependencies.Count();
+    rv = Write32(dependencyCount);
+    if (NS_FAILED(rv)) return rv;
 
     // Enumerate mIDMap into a vector indexed by mFastID and write it.
-    length = mIDMap.entryCount;
-    nsID* idvec = new nsID[length];
+    nsID* idvec = new nsID[numIDs];
     if (!idvec)
         return NS_ERROR_OUT_OF_MEMORY;
 
     count = PL_DHashTableEnumerate(&mIDMap, IDMapEnumerate, idvec);
-    NS_ASSERTION(count == length, "bad mIDMap enumeration!");
-
-    rv = Write32(length);
-    if (NS_SUCCEEDED(rv)) {
-        for (i = 0; i < length; i++) {
-            rv = WriteSlowID(idvec[i]);
-            if (NS_FAILED(rv)) break;
-        }
+    NS_ASSERTION(count == numIDs, "bad mIDMap enumeration!");
+    for (i = 0; i < count; i++) {
+        rv = WriteSlowID(idvec[i]);
+        if (NS_FAILED(rv)) break;
     }
 
     delete idvec;
     if (NS_FAILED(rv)) return rv;
 
     // Enumerate mObjectMap into a vector indexed by mOID and write it.
-    length = mObjectMap.entryCount;
-    nsFastLoadSharpObjectInfo* infovec = new nsFastLoadSharpObjectInfo[length];
+    nsFastLoadSharpObjectInfo* infovec =
+        new nsFastLoadSharpObjectInfo[numSharpObjects];
     if (!infovec)
         return NS_ERROR_OUT_OF_MEMORY;
 
     count = PL_DHashTableEnumerate(&mObjectMap, ObjectMapEnumerate, infovec);
-    NS_ASSERTION(count == length, "bad mObjectMap enumeration!");
-
-    rv = Write32(length);
-    if (NS_SUCCEEDED(rv)) {
-        for (i = 0; i < length; i++) {
-            rv = WriteSharpObjectInfo(infovec[i]);
-            if (NS_FAILED(rv)) break;
-        }
+    NS_ASSERTION(count == numSharpObjects, "bad mObjectMap enumeration!");
+    for (i = 0; i < count; i++) {
+        rv = WriteSharpObjectInfo(infovec[i]);
+        if (NS_FAILED(rv)) break;
     }
 
     delete infovec;
     if (NS_FAILED(rv)) return rv;
 
-    count = mDependencies.Count();
-    rv = Write32(count);
-    if (NS_FAILED(rv)) return rv;
-
-    for (i = 0; i < count; i++) {
+    for (i = 0; i < dependencyCount; i++) {
         rv = WriteStringZ(NS_REINTERPRET_CAST(const char*,
                                               mDependencies.ElementAt(PRInt32(i))));
         if (NS_FAILED(rv)) return rv;

@@ -64,6 +64,8 @@
 #include "nsIRDFCompositeDataSource.h"
 #include "nsIRDFService.h"
 #include "nsIScriptContext.h"
+#include "nsIScriptGlobalObject.h"
+#include "nsIScriptGlobalObjectOwner.h"
 #include "nsIServiceManager.h"
 #include "nsITextContent.h"
 #include "nsIURL.h"
@@ -84,6 +86,9 @@
 #include "prlog.h"
 #include "prmem.h"
 #include "jsapi.h"  // for JSVERSION_*, JS_VersionToString, etc.
+
+#include "nsIFastLoadService.h"         // XXXbe temporary
+#include "nsIObjectInputStream.h"       // XXXbe temporary
 
 #include "nsHTMLTokens.h" // XXX so we can use nsIParserNode::GetTokenType()
 
@@ -698,7 +703,7 @@ XULContentSinkImpl::CloseContainer(const nsIParserNode& aNode)
             NS_STATIC_CAST(nsXULPrototypeScript*, node);
 
         // If given a src= attribute, we must ignore script tag content.
-        if (! script->mSrcURI) {
+        if (! script->mSrcURI && ! script->mJSObject) {
             nsCOMPtr<nsIDocument> doc = do_QueryReferent(mDocument);
 
             rv = script->Compile(mText, mTextLength, mDocumentURL,
@@ -1532,6 +1537,36 @@ XULContentSinkImpl::OpenScript(const nsIParserNode& aNode)
         if (! script)
             return NS_ERROR_OUT_OF_MEMORY;
 
+        // XXXbe temporary, until we serialize/deserialize everything from the
+        //       nsXULPrototypeDocument on down...
+        nsCOMPtr<nsIFastLoadService> fastLoadService(do_GetService(NS_FAST_LOAD_SERVICE_CONTRACTID));
+        nsCOMPtr<nsIObjectInputStream> objectInput;
+        fastLoadService->GetCurrentInputStream(getter_AddRefs(objectInput));
+        if (objectInput) {
+            nsCOMPtr<nsIScriptGlobalObjectOwner> globalOwner(do_QueryInterface(mPrototype));
+            nsCOMPtr<nsIScriptGlobalObject> globalObject;
+            globalOwner->GetScriptGlobalObject(getter_AddRefs(globalObject));
+            NS_ASSERTION(globalObject != nsnull, "no prototype global object!");
+
+            nsCOMPtr<nsIScriptContext> scriptContext;
+            globalObject->GetContext(getter_AddRefs(scriptContext));
+            NS_ASSERTION(scriptContext != nsnull, "no prototype script context!");
+
+            // XXXbe we should deserialize everything, including line-number...
+            rv = script->Deserialize(objectInput, scriptContext);
+        } else {
+            // If there is a SRC attribute...
+            if (src.Length() > 0) {
+                // Use the SRC attribute value to load the URL
+                rv = NS_NewURI(getter_AddRefs(script->mSrcURI), src,
+                               mDocumentURL);
+            }
+        }
+        if (NS_FAILED(rv)) {
+            delete script;
+            return rv;
+        }
+
         nsVoidArray* children;
         rv = mContextStack.GetTopChildren(&children);
         if (NS_FAILED(rv)) {
@@ -1540,16 +1575,6 @@ XULContentSinkImpl::OpenScript(const nsIParserNode& aNode)
         }
 
         children->AppendElement(script);
-
-        // If there is a SRC attribute...
-        if (src.Length() > 0) {
-            // Use the SRC attribute value to load the URL
-            nsCOMPtr<nsIURI> url;
-            rv = NS_NewURI(getter_AddRefs(url), src, mDocumentURL);
-            if (NS_FAILED(rv)) return rv;
-
-            script->mSrcURI = url;
-        }
 
         mConstrainSize = PR_FALSE;
 

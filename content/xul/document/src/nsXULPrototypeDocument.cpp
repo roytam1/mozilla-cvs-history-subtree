@@ -97,9 +97,6 @@ protected:
     static JSClass gSharedGlobalClass;
 };
 
-#define NS_XUL_PROTOTYPE_DOCUMENT_CID \
-    {0xa08101ae,0xc0e8,0x4464,{0x99,0x9e,0xe5,0xa4,0xd7,0x09,0xa9,0x28}}
-
 class nsXULPrototypeDocument : public nsIXULPrototypeDocument,
                                public nsIScriptGlobalObjectOwner
 {
@@ -135,7 +132,7 @@ public:
     // nsIScriptGlobalObjectOwner methods
     NS_DECL_NSISCRIPTGLOBALOBJECTOWNER
 
-    NS_DEFINE_STATIC_CID_ACCESSOR(NS_XUL_PROTOTYPE_DOCUMENT_CID);
+    NS_DEFINE_STATIC_CID_ACCESSOR(NS_XULPROTOTYPEDOCUMENT_CID);
 
 protected:
     nsCOMPtr<nsIURI> mURI;
@@ -230,8 +227,8 @@ nsXULPrototypeDocument::~nsXULPrototypeDocument()
 
 NS_IMPL_ISUPPORTS3(nsXULPrototypeDocument,
                    nsIXULPrototypeDocument,
-                   nsISerializable,
-                   nsIScriptGlobalObjectOwner)
+                   nsIScriptGlobalObjectOwner,
+                   nsISerializable)
 
 NS_IMETHODIMP
 NS_NewXULPrototypeDocument(nsISupports* aOuter, REFNSIID aIID, void** aResult)
@@ -264,11 +261,31 @@ NS_NewXULPrototypeDocument(nsISupports* aOuter, REFNSIID aIID, void** aResult)
 // nsISerializable methods
 //
 
+#define XUL_FAST_LOAD_VERSION   0
+
 NS_IMETHODIMP
 nsXULPrototypeDocument::Read(nsIObjectInputStream* aStream)
 {
-    NS_NOTREACHED("nsXULPrototypeDocument::Read");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsresult rv;
+
+    PRUint32 version;
+    rv = aStream->Read32(&version);
+    if (NS_FAILED(rv)) return rv;
+
+    if (version != XUL_FAST_LOAD_VERSION)
+        return NS_ERROR_FAILURE;
+
+    rv = aStream->ReadObject(PR_TRUE, getter_AddRefs(mURI));
+    if (NS_FAILED(rv)) return rv;
+
+    // XXXbe inline prefix of nsXULPrototypeElement::Deserialize, to skip the
+    // unused numChildren so that scripts can be deserialized one by one.
+    PRUint32 numChildren;
+    rv = aStream->Read32(&numChildren);
+    if (NS_FAILED(rv)) return rv;
+
+    // XXXbe more to come
+    return NS_OK;
 }
 
 
@@ -276,6 +293,9 @@ NS_IMETHODIMP
 nsXULPrototypeDocument::Write(nsIObjectOutputStream* aStream)
 {
     nsresult rv;
+
+    rv = aStream->Write32(XUL_FAST_LOAD_VERSION);
+    if (NS_FAILED(rv)) return rv;
 
     rv = aStream->WriteCompoundObject(mURI, NS_GET_IID(nsIURI), PR_TRUE);
     if (NS_FAILED(rv)) return rv;

@@ -89,6 +89,8 @@ class nsIXULPrototypeScript;
 struct JSObject;
 struct PRLogModuleInfo;
 
+class nsIFastLoadService;
+
 /**
  * The XUL document class
  */
@@ -424,6 +426,10 @@ protected:
 
     nsresult CreateElement(nsINodeInfo *aNodeInfo, nsIContent** aResult);
 
+    nsresult InitFastLoad(nsIURI* aURI);
+
+    static nsIFastLoadService* gFastLoadService;
+
     nsresult PrepareToLoad(nsISupports* aContainer,
                            const char* aCommand,
                            nsIChannel* aChannel,
@@ -509,7 +515,6 @@ protected:
     nsCOMPtr<nsIRDFDataSource>          mLocalStore;
     nsCOMPtr<nsILineBreaker>            mLineBreaker;    // [OWNER] 
     nsCOMPtr<nsIWordBreaker>            mWordBreaker;    // [OWNER] 
-    nsString                   mCommand;
     nsVoidArray                mSubDocuments;     // [OWNER] of subelements
     PRBool                     mIsPopup;
     nsCOMPtr<nsIDOMXULCommandDispatcher>     mCommandDispatcher; // [OWNER] of the focus tracker
@@ -798,7 +803,7 @@ private:
 
     nsresult GetFocusController(nsIFocusController** aController);
 
-    nsCOMPtr<nsIObjectOutputStream> mObjectInputStream;
+    nsCOMPtr<nsIObjectInputStream>  mObjectInputStream;
     nsCOMPtr<nsIObjectOutputStream> mObjectOutputStream;
 };
 

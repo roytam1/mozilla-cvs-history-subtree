@@ -191,7 +191,7 @@ class NS_COM nsFastLoadFileReader
 
   private:
     // nsISupports methods
-    NS_DECL_ISUPPORTS
+    NS_DECL_ISUPPORTS_INHERITED
 
     // overridden nsIObjectInputStream methods
     NS_IMETHOD ReadObject(PRBool aIsStrongRef, nsISupports* *_retval);
@@ -224,8 +224,9 @@ class NS_COM nsFastLoadFileReader
         }
 
         const nsID& GetID(NSFastLoadID aFastId) const {
-            NS_ASSERTION(aFastId < mNumIDs, "aFastId out of range");
-            return mIDMap[aFastId];
+            PRUint32 index = aFastId - 1;
+            NS_ASSERTION(index < mNumIDs, "aFastId out of range");
+            return mIDMap[index];
         }
 
         nsFastLoadSharpObjectEntry&
@@ -313,7 +314,7 @@ class NS_COM nsFastLoadFileWriter
 
   private:
     // nsISupports methods
-    NS_DECL_ISUPPORTS
+    NS_DECL_ISUPPORTS_INHERITED
 
     // overridden nsIObjectOutputStream methods
     NS_IMETHOD WriteObject(nsISupports* aObject, PRBool aIsStrongRef);
