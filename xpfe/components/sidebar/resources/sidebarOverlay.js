@@ -39,7 +39,7 @@ var sidebar = new Object;
 function debug(msg)
 {
   // uncomment for noise
-  dump(msg);
+  //dump(msg);
 }
 
 
@@ -231,9 +231,9 @@ function sidebarSaveState(splitter) {
   /* Do nothing for now */
   return;
   if (splitter.getAttribute('state') == "collapse") {
-    dump("Expanding the sidebar\n")
+    debug("Expanding the sidebar\n")
   } else {
-    dump("Collapsing the sidebar\n")
+    debug("Collapsing the sidebar\n")
   }
   dumpStats()
 }
@@ -246,7 +246,7 @@ function dumpAttributes(node) {
   }
   for (var ii=0; ii < attributes.length; ii++) {
     var attr = attributes.item(ii)
-    dump("attr "+ii+": "+ attr.name +"="+attr.value+"\n")
+    debug("attr "+ii+": "+ attr.name +"="+attr.value+"\n")
   }
 }
 
@@ -259,24 +259,24 @@ function dumpStats() {
   if (visibility) {
     visibility = visibility[1]
   }
-  dump("sidebar-box.style="+style+"\n")
-  dump("sidebar-box.visibility="+visibility+"\n")
-  dump('sidebar-box.width='+box.getAttribute('width')+'\n')
-  dump('sidebar-box attrs\n---------------------\n')
+  debug("sidebar-box.style="+style+"\n")
+  debug("sidebar-box.visibility="+visibility+"\n")
+  debug('sidebar-box.width='+box.getAttribute('width')+'\n')
+  debug('sidebar-box attrs\n---------------------\n')
   dumpAttributes(box)
-  dump('sidebar-splitter attrs\n--------------------------\n')
+  debug('sidebar-splitter attrs\n--------------------------\n')
   dumpAttributes(splitter)
 }
 
 function dumpTree(node, depth) {
   var indent = "| | | | | | | | | | | | | | | | | | | | | | | | | | | | | + "
   var kids = node.childNodes
-  dump(indent.substr(indent.length - depth*2))
+  debug(indent.substr(indent.length - depth*2))
 
   // Print your favorite attributes here
-  dump(node.nodeName)
-  dump(" "+node.getAttribute('id'))
-  dump("\n")
+  debug(node.nodeName)
+  debug(" "+node.getAttribute('id'))
+  debug("\n")
 
   for (var ii=0; ii < kids.length; ii++) {
     dumpTree(kids[ii], depth + 1)
