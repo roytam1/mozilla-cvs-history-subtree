@@ -675,7 +675,7 @@ JSValue ScopeChain::getCompileTimeValue(const String& name, NamespaceList *names
 
 
 
-Reference *ParameterBarrel::genReference(bool hasBase, const String& name, NamespaceList *names, Access acc, uint32 /*depth*/)
+Reference *ParameterBarrel::genReference(bool /* hasBase */, const String& name, NamespaceList *names, Access acc, uint32 /*depth*/)
 {
     PropertyIterator i;
     if (hasProperty(name, names, acc, &i)) {
@@ -1290,7 +1290,7 @@ void Activation::defineTempVariable(Reference *&readRef, Reference *&writeRef, J
     mVariableCount++;
 }
 
-Reference *Activation::genReference(bool hasBase, const String& name, NamespaceList *names, Access acc, uint32 depth)
+Reference *Activation::genReference(bool /* hasBase */, const String& name, NamespaceList *names, Access acc, uint32 depth)
 {
     PropertyIterator i;
     if (hasProperty(name, names, acc, &i)) {
