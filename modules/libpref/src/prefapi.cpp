@@ -1441,7 +1441,9 @@ void pref_Alert(char* msg)
 #endif
     fputs(msg, stderr);
 #endif
-#if defined(XP_WIN)
+#if defined(WINCE)
+      MessageBox (NULL, NS_ConvertASCIItoUCS2(msg).get(), L"Configuration Warning", MB_OK);
+#elif defined(XP_WIN)
       MessageBox (NULL, msg, "Configuration Warning", MB_OK);
 #elif defined(XP_OS2)
       WinMessageBox (HWND_DESKTOP, 0, msg, "Configuration Warning", 0, MB_WARNING | MB_OK | MB_APPLMODAL | MB_MOVEABLE);
