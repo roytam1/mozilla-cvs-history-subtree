@@ -53,7 +53,9 @@ enum FEDragType {
 
 #ifdef MOZ_NGLAYOUT
 #include "nsIWebWidget.h"
-#endif
+#include "nsIDocumentLoader.h"
+#include "nsIDocumentObserver.h"
+#endif /* MOZ_NGLAYOUT */
 
 /////////////////////////////////////////////////////////////////////////////
 // Mostly default behavior, but override the type of cursor used 
@@ -108,9 +110,16 @@ BOOL FE_PrepareTempFileUrl(MWContext * pMWContext, URL_Struct *pUrl);
 // All stuff specific to the main document viewing area (i.e. NOT ledge stuff)
 //
 class CPrintCX;
+#ifdef MOZ_NGLAYOUT
+class CWebWidgetObserver;
+#endif /* MOZ_NGLAYOUT */
 
 class CNetscapeView : public CGenericView
 {
+#ifdef MOZ_NGLAYOUT
+friend class CWebWidgetObserver;
+#endif /* MOZ_NGLAYOUT */
+
 //	Properties
 public:
    CWnd * m_pChild;
@@ -300,12 +309,69 @@ protected:
 private:
   void checkCreateWebWidget();
   BOOL m_bNoWebWidgetHack;
+  // m_pWWObserver has the same lifetime as CNetscapeView, containment.
+  CWebWidgetObserver* m_pWWObserver;
 
 public:
   void NoWebWidgetHack() {m_bNoWebWidgetHack = TRUE;}
   // Hack to disable it for the RDF window.
 #endif /* MOZ_NGLAYOUT */
 };
+
+#ifdef MOZ_NGLAYOUT
+// The view uses this to observe all NGLayout related stuff.
+// Don't use the view itself because its not worth the trouble
+// of making it derived from nsISupports.
+//
+// This may or may not be the right thing to do, but the
+// CWebWidgetObserver currently takes responsibility for 
+// creating/freeing the WebWidget pointed to by MWContext.
+class CWebWidgetObserver: public nsIViewerContainer,
+                         public nsIDocumentObserver {
+public:
+  CWebWidgetObserver(CNetscapeView *aView);
+  ~CWebWidgetObserver();
+  
+  NS_DECL_ISUPPORTS
+
+  // For nsIViewContainer
+  NS_IMETHOD Embed(nsIDocumentWidget* aDocViewer, 
+                   const char* aCommand,
+                   nsISupports* aExtraInfo);
+  // End nsIViewContainer
+
+  // For nsIDocumentObserver
+  NS_IMETHOD SetTitle(const nsString& aTitle);
+  NS_IMETHOD BeginUpdate();
+  NS_IMETHOD EndUpdate();
+  NS_IMETHOD BeginLoad();
+  NS_IMETHOD EndLoad();
+  NS_IMETHOD BeginReflow(nsIPresShell* aShell);
+  NS_IMETHOD EndReflow(nsIPresShell* aShell);
+  NS_IMETHOD ContentChanged(nsIContent* aContent,
+                            nsISupports* aSubContent);
+  NS_IMETHOD ContentAppended(nsIContent* aContainer);
+  NS_IMETHOD ContentInserted(nsIContent* aContainer,
+                             nsIContent* aChild,
+                             PRInt32 aIndexInContainer);
+  NS_IMETHOD ContentReplaced(nsIContent* aContainer,
+                             nsIContent* aOldChild,
+                             nsIContent* aNewChild,
+                             PRInt32 aIndexInContainer);
+  NS_IMETHOD ContentWillBeRemoved(nsIContent* aContainer,
+                                  nsIContent* aChild,
+                                  PRInt32 aIndexInContainer);
+  NS_IMETHOD ContentHasBeenRemoved(nsIContent* aContainer,
+                                   nsIContent* aChild,
+                                   PRInt32 aIndexInContainer);
+  NS_IMETHOD StyleSheetAdded(nsIStyleSheet* aStyleSheet);
+  // End nsIDocumentObserver
+
+
+private:
+  CNetscapeView *mView;
+};
+#endif /* MOZ_NGLAYOUT */
 
 #ifdef _DEBUG_HUH_JEM  // debug version in netsvw.cpp
 inline CNetscapeDoc* CNetscapeView::GetDocument()

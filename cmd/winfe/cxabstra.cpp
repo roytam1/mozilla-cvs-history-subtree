@@ -44,6 +44,9 @@
 #include "edt.h"
 #endif /* EDITOR */
 #include "mozilla.h"
+#ifdef MOZ_NGLAYOUT
+#include "nsIWebWidget.h"
+#endif
 
 CAbstractCX::CAbstractCX()  {
 //	Purpose:    Constructor for the abstract base class.
@@ -429,6 +432,21 @@ CWnd *CAbstractCX::GetDialogOwner() const	{
 	//	As a default, we'll be returning the desktop window.
 	return(CWnd::GetDesktopWindow());
 }
+
+#ifdef MOZ_NGLAYOUT
+nsIWebWidget *CAbstractCX::GetWebWidget() const {
+  nsIWebWidget *ret = (nsIWebWidget*)m_pXPCX->fe.webWidget;
+  NS_IF_ADDREF(ret);
+  return ret;
+} 
+
+void CAbstractCX::SetWebWidget(nsIWebWidget *pWW) {
+  nsIWebWidget *oldWW = (nsIWebWidget*)m_pXPCX->fe.webWidget;
+  NS_IF_RELEASE(oldWW);
+  m_pXPCX->fe.webWidget = pWW;
+  NS_IF_ADDREF(pWW);
+}
+#endif /* MOZ_NGLAYOUT */
 
 // This routine changes the context of the specified URL structure to be
 // a browser context. Returns the new context if successful and NULL otherwise

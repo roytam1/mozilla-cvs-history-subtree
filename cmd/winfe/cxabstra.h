@@ -209,13 +209,12 @@ public:
 	virtual CFrameGlue *GetFrame() const { return NULL; }
 
 #ifdef MOZ_NGLAYOUT
-    // Convenience to get/set WebWidget from MWContext.
-    nsIWebWidget *GetWebWidget() const {        
-        return((nsIWebWidget*)m_pXPCX->fe.webWidget);
-    } 
-    void SetWebWidget(nsIWebWidget *pWW) {
-        m_pXPCX->fe.webWidget = pWW;
-    }
+    // Get/set WebWidget from MWContext.
+    // This should be the only way to get the WebWidget out of 
+    // the MWContext.
+    // Handles ref counting magic.
+    nsIWebWidget *GetWebWidget() const;
+    void SetWebWidget(nsIWebWidget *pWW);
 #endif
 
 	//	Named contexts and grid stuff.

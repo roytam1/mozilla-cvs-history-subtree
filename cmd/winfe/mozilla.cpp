@@ -100,6 +100,8 @@ BOOL bIsGold = FALSE;
 #include "nsWidgetsCID.h"
 #include "nsGfxCIID.h"
 #include "nsViewsCID.h"
+#include "nsIWebWidget.h"
+#include "nsIDocumentLoader.h"
 #endif
 
 
@@ -260,6 +262,8 @@ BOOL CNetscapeApp::InitApplication()
 #define WIDGET_DLL "raptorwidget.dll"
 #define GFXWIN_DLL "raptorgfxwin.dll"
 #define VIEW_DLL   "raptorview.dll"
+#define WEB_DLL    "raptorweb.dll"
+
 
 static void InitializeNGLayout() {
   NS_DEFINE_IID(kCWindowIID, NS_WINDOW_CID);
@@ -307,6 +311,11 @@ static void InitializeNGLayout() {
   NSRepository::RegisterFactory(kCViewManagerCID, VIEW_DLL, PR_FALSE, PR_FALSE);
   NSRepository::RegisterFactory(kCViewCID, VIEW_DLL, PR_FALSE, PR_FALSE);
   NSRepository::RegisterFactory(kCScrollingViewCID, VIEW_DLL, PR_FALSE, PR_FALSE);
+
+  NS_DEFINE_IID(kCWebWidgetCID, NS_WEBWIDGET_CID);
+  NS_DEFINE_IID(kCDocumentLoaderCID, NS_DOCUMENTLOADER_CID);
+  NSRepository::RegisterFactory(kCWebWidgetCID, WEB_DLL, PR_FALSE, PR_FALSE);
+  NSRepository::RegisterFactory(kCDocumentLoaderCID, WEB_DLL, PR_FALSE, PR_FALSE);
 }
 #endif /* MOZ_NGLAYOUT */
 

@@ -1782,7 +1782,7 @@ BOOL CNetscapeApp::OnIdle(LONG lCount)
 
     // This is a hack, we never release netlib.dll.
   }
-  TRACE("Calling NGL_NET_PollSockets\n");
+//  TRACE("Calling NGL_NET_PollSockets\n");
   NGL_NET_PollSockets();
 #endif
 

@@ -57,6 +57,7 @@
 #include "nsString.h"
 #define SAMPLES_BASE_URL "resource:/res/samples"
 #define START_URL SAMPLES_BASE_URL "/test0.html"
+#include "nsRepository.h"
 #endif
 
 #ifdef _DEBUG
@@ -148,6 +149,9 @@ CNetscapeView::CNetscapeView()
 
 #ifdef MOZ_NGLAYOUT
     m_bNoWebWidgetHack = FALSE;
+    // Should the CWebWidgetObserver be created in a factory??
+    m_pWWObserver = new CWebWidgetObserver(this);
+    NS_ADDREF(m_pWWObserver);
 #endif
 
 #ifdef EDITOR
@@ -227,11 +231,8 @@ CNetscapeView::~CNetscapeView()
     }
 
 #ifdef MOZ_NGLAYOUT
-    nsIWebWidget *ww = GetContext()->GetWebWidget();
-    if (nsnull != ww) {
-      NS_RELEASE(ww);
-      GetContext()->SetWebWidget(nsnull);
-    }
+    // This will also free the webwidget if set.
+    NS_IF_RELEASE(m_pWWObserver);
 #endif
 
 #ifdef EDITOR
@@ -690,20 +691,39 @@ void CNetscapeView::checkCreateWebWidget() {
         return;
     }
 
-    // Dont' create if our CAbstractCX hasn't been created yet, 
-    // or if we already have a web widget.
-    if (!GetContext() || GetContext()->GetWebWidget()) {
-        return;
+    // Don't create WebWidget if our CAbstractCX hasn't been created yet, 
+    // or if we already created a web widget.
+    nsIWebWidget *ww = GetContext() ? GetContext()->GetWebWidget() : (nsIWebWidget*)nsnull;
+    if (ww) {
+      NS_RELEASE(ww);
+      return;
     }
 
+    static NS_DEFINE_IID(kDocumentLoaderCID, NS_DOCUMENTLOADER_CID);
+    static NS_DEFINE_IID(kDocumentLoaderIID, NS_IDOCUMENTLOADER_IID);
     nsresult rv;
+    // Don't start load if view doesn't have a size yet.
     RECT r;
     ::GetClientRect(m_hWnd, &r);
     nsRect rr(r.left,r.top,PRInt32(r.right - r.left),PRInt32(r.bottom - r.top));
-    nsIWebWidget* ww = nsnull;
+//    nsIWebWidget* ww = nsnull;
+    nsIDocumentLoader *docLoader = nsnull;
     if (rr.IsEmpty()) {
         goto chCrFail;
     }
+
+// Now, with DocumentLoader.
+   rv = NSRepository::CreateInstance(kDocumentLoaderCID,nsnull,kDocumentLoaderIID,(void**)&docLoader);
+   if (!NS_SUCCEEDED(rv)) {
+      goto chCrFail;
+   }
+
+  docLoader->LoadURL(START_URL,nsnull,m_pWWObserver);
+
+  // Fall through to release docLoader.
+
+// Old way
+#if 0
     rv = NS_NewWebWidget(&ww);
     if (!NS_SUCCEEDED(rv)) {
         goto chCrFail;
@@ -716,9 +736,11 @@ void CNetscapeView::checkCreateWebWidget() {
     GetContext()->SetWebWidget(ww);
     GetContext()->NormalGetUrl(START_URL);
     return;  
+#endif
 
     chCrFail:
-      NS_IF_RELEASE(ww);    
+//    NS_IF_RELEASE(ww);    
+      NS_IF_RELEASE(docLoader);    
 }
 #endif /* MOZ_NGLAYOUT */
 
@@ -1055,6 +1077,150 @@ void CNetscapeView::OnCopyCurrentURL()
 }
 #endif /* MOZ_NGLAYOUT */
 
+#ifdef MOZ_NGLAYOUT
+nsresult CWebWidgetObserver::QueryInterface(REFNSIID aIID, void** aInstancePtr)
+{
+  if (NULL == aInstancePtr) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
+  static NS_DEFINE_IID(kIViewerContainerIID, NS_IVIEWERCONTAINER_IID);
+  static NS_DEFINE_IID(kIDocumentObserverIID, NS_IDOCUMENT_OBSERVER_IID);
+  if (aIID.Equals(kIViewerContainerIID)) {
+    *aInstancePtr = (void*)(nsIViewerContainer*)this;
+    AddRef();
+    return NS_OK;
+  }
+  if (aIID.Equals(kIDocumentObserverIID)) {
+    *aInstancePtr = (void*)(nsIDocumentObserver*)this;
+    AddRef();
+    return NS_OK;
+  }
+  if (aIID.Equals(kISupportsIID)) {
+    *aInstancePtr = (void*)(nsISupports*)(nsIWebWidget*)this;
+    AddRef();
+    return NS_OK;
+  }
+  return NS_NOINTERFACE;
+}
+
+NS_IMPL_ADDREF(CWebWidgetObserver)
+NS_IMPL_RELEASE(CWebWidgetObserver)
+
+
+NS_IMETHODIMP
+CWebWidgetObserver::Embed(nsIDocumentWidget* aDocViewer, 
+                          const char*, 
+                          nsISupports*)
+{
+  static NS_DEFINE_IID(kIWebWidgetIID, NS_IWEBWIDGET_IID);
+
+  nsIWebWidget* ww;
+  nsresult rv = NS_ERROR_FAILURE;
+  rv = aDocViewer->QueryInterface(kIWebWidgetIID, (void**)&ww);
+  NS_ASSERTION(NS_SUCCEEDED(rv),"DocViewer isn't a WebWidget");
+
+  RECT r;
+  ::GetClientRect(mView->m_hWnd, &r);
+  nsRect rr(r.left,r.top,PRInt32(r.right - r.left),PRInt32(r.bottom - r.top));
+  if (rr.IsEmpty()) {
+    NS_ASSERTION(0,"Doc load shouldn't have been started before window has non-zero size.");
+    goto embedFailed;
+  }
+
+  // Initialize and show the webwidget.
+  rv = ww->Init(mView->m_hWnd, rr);
+  if (!NS_SUCCEEDED(rv)) {
+    goto embedFailed;
+  }
+  ww->Show();
+
+  // Add pointer in MWContext to the WebWidget.
+  mView->GetContext()->SetWebWidget(ww);
+
+  // Set document observer.
+  ww->SetContainer((nsIDocumentObserver*)this);
+
+
+embedFailed:
+  NS_IF_RELEASE(ww);  
+  return rv;
+}
+
+CWebWidgetObserver::CWebWidgetObserver(CNetscapeView* aView) {
+  NS_ASSERTION(aView,"Passed-in view is NULL");
+  NS_INIT_REFCNT();
+  mView = aView;
+}
+
+CWebWidgetObserver::~CWebWidgetObserver() {
+  // Will free webwidget if set.
+  mView->GetContext()->SetWebWidget(nsnull);
+}
+
+NS_IMETHODIMP CWebWidgetObserver::SetTitle(const nsString& aTitle){
+  char *cstr = aTitle.ToNewCString();
+
+  // Set the title in the chrome.
+  FE_SetDocTitle(mView->GetContext()->GetContext(),cstr);
+
+  delete [] cstr;
+  return NS_OK;
+}
+
+NS_IMETHODIMP CWebWidgetObserver::BeginUpdate(){
+  return NS_OK;
+}
+NS_IMETHODIMP CWebWidgetObserver::EndUpdate(){
+  return NS_OK;
+}
+NS_IMETHODIMP CWebWidgetObserver::BeginLoad(){
+  return NS_OK;
+}
+NS_IMETHODIMP CWebWidgetObserver::EndLoad(){
+  return NS_OK;
+}
+NS_IMETHODIMP CWebWidgetObserver::BeginReflow(nsIPresShell* aShell){
+  return NS_OK;
+}
+NS_IMETHODIMP CWebWidgetObserver::EndReflow(nsIPresShell* aShell){
+  return NS_OK;
+}
+NS_IMETHODIMP CWebWidgetObserver::ContentChanged(nsIContent* aContent,
+                          nsISupports* aSubContent){
+  return NS_OK;
+}
+NS_IMETHODIMP CWebWidgetObserver::ContentAppended(nsIContent* aContainer){
+  return NS_OK;
+}
+NS_IMETHODIMP CWebWidgetObserver::ContentInserted(nsIContent* aContainer,
+                           nsIContent* aChild,
+                           PRInt32 aIndexInContainer){
+  return NS_OK;
+}
+NS_IMETHODIMP CWebWidgetObserver::ContentReplaced(nsIContent* aContainer,
+                           nsIContent* aOldChild,
+                           nsIContent* aNewChild,
+                           PRInt32 aIndexInContainer){
+  return NS_OK;
+}
+NS_IMETHODIMP CWebWidgetObserver::ContentWillBeRemoved(nsIContent* aContainer,
+                                nsIContent* aChild,
+                                PRInt32 aIndexInContainer){
+  return NS_OK;
+}
+NS_IMETHODIMP CWebWidgetObserver::ContentHasBeenRemoved(nsIContent* aContainer,
+                                 nsIContent* aChild,
+                                 PRInt32 aIndexInContainer){
+  return NS_OK;
+}
+NS_IMETHODIMP CWebWidgetObserver::StyleSheetAdded(nsIStyleSheet* aStyleSheet){
+  return NS_OK;
+}
+#endif /* MOZ_NGLAYOUT */
+
+
+
 /////////////////////////////////////////////////////////////////////////
 CViewDropSource::CViewDropSource(UINT nDragType)
     : m_nDragType(nDragType) 
@@ -1111,12 +1277,16 @@ void CNetscapeView::OnSize ( UINT nType, int cx, int cy )
     }
     // Actually update the size.
 #ifdef MOZ_NGLAYOUT
-    if (GetContext() && GetContext()->GetWebWidget()) {
-      RECT r;
-      ::GetClientRect(m_hWnd, &r);      
-      nsRect rr(r.left,r.top,PRInt32(r.right - r.left),PRInt32(r.bottom - r.top));
-      if (!rr.IsEmpty()) {
-        GetContext()->GetWebWidget()->SetBounds(rr);
+    if (GetContext()) {
+      nsIWebWidget* ww = GetContext()->GetWebWidget();
+      if (ww) {
+        RECT r;
+        ::GetClientRect(m_hWnd, &r);      
+        nsRect rr(r.left,r.top,PRInt32(r.right - r.left),PRInt32(r.bottom - r.top));
+        if (!rr.IsEmpty()) {
+          ww->SetBounds(rr);
+        }
+        NS_RELEASE(ww);
       }
     }
 #endif
