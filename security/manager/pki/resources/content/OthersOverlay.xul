@@ -24,6 +24,10 @@
                    class="outlinercol-header outlinercell-inset-header" 
                    flex="1"/>
       <splitter class="tree-splitter"/>
+      <outlinercol id="emailcol" label="&certmgr.email;"
+                   class="outlinercol-header outlinercell-inset-header" 
+                   flex="1"/>
+      <splitter class="tree-splitter"/>
       <outlinercol id="tokencol" label="&certmgr.tokenname;"
                    class="outlinercol-header outlinercell-inset-header" 
                    flex="1"/>
