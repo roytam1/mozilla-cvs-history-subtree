@@ -1916,6 +1916,20 @@ nsSocketTransport::Resume(void)
 
 // 
 // -------------------------------------------------------------------------- 
+// nsITransportRequest implementation...
+// -------------------------------------------------------------------------- 
+// 
+
+NS_IMETHODIMP
+nsSocketTransport::GetTransport(nsITransport **result)
+{
+    NS_ENSURE_ARG_POINTER(result);
+    NS_ADDREF(*result = this);
+    return NS_OK;
+}
+
+// 
+// -------------------------------------------------------------------------- 
 // nsIInputStreamObserver/nsIOutputStreamObserver implementation... 
 // -------------------------------------------------------------------------- 
 // 
