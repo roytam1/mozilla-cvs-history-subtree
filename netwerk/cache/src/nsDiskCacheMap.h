@@ -30,7 +30,7 @@ class nsIInputStream;
 class nsIOutputStream;
 
 struct nsDiskCacheHeader {
-    enum { kCurrentVersion = 0x00010001 };
+    enum { kCurrentVersion = 0x00010002 };
 
     PRUint32    mVersion;                           // cache version.
     PRUint32    mDataSize;                          // size of cache in bytes.
@@ -88,11 +88,9 @@ public:
     
     PRUint32 GetBucketIndex(PRUint32 hashNumber)
     {
-        PRUint32 index = (hashNumber & (kBucketsPerTable - 1));
-        if (!index) index = (kBucketsPerTable - 1);
-        return index;
+        return (hashNumber & (kBucketsPerTable - 1));
     }
-        
+    
     PRUint32 GetBucketIndex(nsDiskCacheRecord* record)
     {
         return GetBucketIndex(record->HashNumber());
