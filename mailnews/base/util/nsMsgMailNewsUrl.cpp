@@ -812,3 +812,5 @@ NS_IMETHODIMP nsMsgMailNewsUrl::GetFolder(nsIMsgFolder ** /* aFolder */)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
+
+
