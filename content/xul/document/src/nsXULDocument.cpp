@@ -4276,6 +4276,9 @@ nsXULDocument::ResumeWalk()
 
                     rv = AddElementToMap(child);
                     if (NS_FAILED(rv)) return rv;
+
+                    rv = CheckBroadcasterHookup(child);
+                    if (NS_FAILED(rv)) return rv;
                 }
                 else {
                     // We're in the "first ply" of an overlay: the
@@ -4777,6 +4780,50 @@ nsXULDocument::CreateTemplateBuilder(nsIContent* aElement,
     if (NS_FAILED(rv)) return rv;
 
     *aResult = builder;
+    return NS_OK;
+}
+
+
+nsresult
+nsXULDocument::CheckBroadcasterHookup(nsIContent* aElement)
+{
+    nsresult rv;
+
+    PRBool doHookup = PR_FALSE;
+
+    PRInt32 nameSpaceID;
+    rv = aElement->GetNameSpaceID(nameSpaceID);
+    if (NS_FAILED(rv)) return rv;
+
+    if (nameSpaceID == kNameSpaceID_XUL) {
+        nsCOMPtr<nsIAtom> tag;
+        rv = aElement->GetTag(*getter_AddRefs(tag));
+        if (NS_FAILED(rv)) return rv;
+
+        if (tag.get() == kObservesAtom) {
+            doHookup = PR_TRUE;
+        }
+    }
+
+    if (! doHookup) {
+        nsAutoString value;
+        rv = aElement->GetAttribute(kNameSpaceID_None, kObservesAtom, value);
+        if (NS_FAILED(rv)) return rv;
+
+        if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
+            doHookup = PR_TRUE;
+        }
+    }
+
+    if (doHookup) {
+        BroadcasterHookup* hookup = new BroadcasterHookup(aElement);
+        if (! hookup)
+            return NS_ERROR_OUT_OF_MEMORY;
+
+        rv = AddForwardReference(hookup);
+        if (NS_FAILED(rv)) return rv;
+    }
+
     return NS_OK;
 }
 

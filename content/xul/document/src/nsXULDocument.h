@@ -620,6 +620,8 @@ protected:
                                    const nsString& aDataSources,
                                    nsCOMPtr<nsIRDFContentModelBuilder>* aResult);
 
+    nsresult CheckBroadcasterHookup(nsIContent* aElement);
+
     /**
      * Used to resolve broadcaster references
      */
