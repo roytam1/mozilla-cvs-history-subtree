@@ -13,19 +13,31 @@
 #
 # The Initial Developer of the Original Code is Netscape
 # Communications Corporation.  Portions created by Netscape are
-# Copyright (C) 1998 Netscape Communications Corporation. All
+# Copyright (C) 2001 Netscape Communications Corporation. All
 # Rights Reserved.
 #
 # Contributor(s): 
 #
 
-DEPTH		= ../..
+DEPTH		= ../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS		= public src
+MODULE		= necko
+LIBRARY_NAME	= neckocookie_s
+FORCE_STATIC_LIB = 1
+REQUIRES	= xpcom \
+		  string \
+		  necko \
+		  pref \
+		  $(NULL)
+
+CPPSRCS		= \
+	nsCookie.cpp \
+	nsCookieService.cpp \
+	$(NULL)
 
 include $(topsrcdir)/config/rules.mk
