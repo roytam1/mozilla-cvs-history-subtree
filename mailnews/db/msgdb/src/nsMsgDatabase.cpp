@@ -1650,14 +1650,40 @@ NS_IMETHODIMP
 nsMsgDatabase::MarkThreadIgnored(nsIMsgThread *thread, nsMsgKey threadKey, PRBool bIgnored,
                                  nsIDBChangeListener *instigator)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  NS_ENSURE_ARG(thread);
+  PRUint32 threadFlags;
+  thread->GetFlags(&threadFlags);
+  PRUint32 oldThreadFlags = threadFlags; // not quite right, since we probably want msg hdr flags.
+	if (bIgnored)
+	{
+    threadFlags |= MSG_FLAG_IGNORED;
+		threadFlags &= ~MSG_FLAG_WATCHED;	// ignore is implicit un-watch
+	}
+	else
+		threadFlags &= ~MSG_FLAG_IGNORED;
+  thread->SetFlags(threadFlags);
+	NotifyKeyChangeAll(threadKey, oldThreadFlags, threadFlags, instigator);
+  return NS_OK;
 }
 
 NS_IMETHODIMP
 nsMsgDatabase::MarkThreadWatched(nsIMsgThread *thread, nsMsgKey threadKey, PRBool bWatched,
                                  nsIDBChangeListener *instigator)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  NS_ENSURE_ARG(thread);
+  PRUint32 threadFlags;
+  thread->GetFlags(&threadFlags);
+  PRUint32 oldThreadFlags = threadFlags; // not quite right, since we probably want msg hdr flags.
+	if (bWatched)
+	{
+		threadFlags |= MSG_FLAG_WATCHED;
+		threadFlags &= ~MSG_FLAG_IGNORED;	// watch is implicit un-ignore
+	}
+	else
+		threadFlags &= ~MSG_FLAG_WATCHED;
+	NotifyKeyChangeAll(threadKey, oldThreadFlags, threadFlags, instigator);
+  thread->SetFlags(threadFlags);
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDatabase::MarkMarked(nsMsgKey key, PRBool mark,
