@@ -202,13 +202,13 @@ ifneq (,$(findstring sparc,$(OS_TEST)))
 CPPSRCS		:= xptcinvoke_sparc_solaris.cpp xptcstubs_sparc_solaris.cpp
 ASFILES		:= xptcinvoke_asm_sparc_linux.s xptcstubs_asm_sparc_solaris.s
 endif
+endif
 #
 # NetBSD/SPARC
 #
 ifeq ($(OS_ARCH)$(OS_TEST),NetBSDsparc)
 CPPSRCS		:= xptcinvoke_sparc_netbsd.cpp xptcstubs_sparc_netbsd.cpp
 ASFILES		:= xptcinvoke_asm_sparc_netbsd.s xptcstubs_asm_sparc_netbsd.s
-endif
 endif
 #
 # Solaris/SPARC
