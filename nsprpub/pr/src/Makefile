@@ -145,6 +145,10 @@ OS_LIBS		= advapi32.lib wsock32.lib winmm.lib
 endif
 endif
 
+ifdef GC_LEAK_DETECTOR
+OS_LIBS		+= -L$(DIST)/lib -lboehm
+endif
+
 #
 # Define platform-dependent OBJS
 #
@@ -240,6 +244,10 @@ OBJS += \
 	cplus/$(OBJDIR)/rcnetio.$(OBJ_SUFFIX) \
 	cplus/$(OBJDIR)/rcthread.$(OBJ_SUFFIX) \
 	cplus/$(OBJDIR)/rctime.$(OBJ_SUFFIX)
+endif
+
+ifdef GC_LEAK_DETECTOR
+OBJS += memory/$(OBJDIR)/prgcleak.$(OBJ_SUFFIX)
 endif
 
 ifeq ($(OS_ARCH), WINNT)
