@@ -185,7 +185,8 @@ nsABDirectoryDataSource::~nsABDirectoryDataSource (void)
 	DIR_ShutDown();
 }
 
-NS_IMETHODIMP nsABDirectoryDataSource::Init()
+nsresult
+nsABDirectoryDataSource::Init()
 {
 	if (mInitialized)
 		return NS_ERROR_ALREADY_INITIALIZED;

@@ -132,7 +132,8 @@ nsMessageViewDataSource::~nsMessageViewDataSource (void)
 }
 
 
-NS_IMETHODIMP nsMessageViewDataSource::Init()
+nsresult
+nsMessageViewDataSource::Init()
 {
 	if (mInitialized)
 		return NS_ERROR_ALREADY_INITIALIZED;

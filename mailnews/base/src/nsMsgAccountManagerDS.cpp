@@ -137,8 +137,8 @@ nsMsgAccountManagerDataSource::~nsMsgAccountManagerDataSource()
                                                     this);
 
 }
-/* void Init (in string uri); */
-NS_IMETHODIMP
+
+nsresult
 nsMsgAccountManagerDataSource::Init()
 {
     nsresult rv=NS_OK;
