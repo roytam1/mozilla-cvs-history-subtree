@@ -129,7 +129,7 @@ important that a module or method doesn't work without it). The oustanding
     mozilla.org SDK libraries. I think the library "find" function should
     be version independant, i.e. it should find the "best" libraries
     available. The more that's hardcoded, the more problems in the
-    future. <B><I>[clayton]</I></B>
+    future. <B><I>[clayton, fixed 09/23]</I></B>
 
     <LI><B>Conn.pm</B>: The delete() method does not work as documented,
     it should handle taking an Entry:: object as argument. Reported by 
@@ -156,22 +156,22 @@ important that a module or method doesn't work without it). The oustanding
     <LI>Strange 'Out of Memory' bug in PerLDAP, as reported by
     richard_jones@my-dejanews.com. Could this be a problem in API.xs, as
     suggested by Clayton (in string conversion code)?
-    <B><I>[clayton]</I></B>
+    <B><I>[clayton, fixed 09/20]</I></B>
 
     <LI><B>Makefile.PL</B>: The version "check" isn't done properly, it
     needs to do string compare (using eq) instead of numerical. Reported
-    by david d zuhn <dzuhn@netscape.com>. <B><I>[clayton]</I></B>
+    by david d zuhn <dzuhn@netscape.com>. <B><I>[clayton, fixed 9/12]</I></B>
 
     <LI><B>Makefile.PL</B>: Include/merge patch from ActiveState, to fix
     problems with Perl-5.005 and Win/NT. We need to verify that this
     builds and runs with both the ActiveState port, and a native Perl/NT
-    build. <B><I>[clayton]</I></B>
+    build. <B><I>[clayton, added 9/12]</I></B>
 
     <LI>Remove all error print statements in the library modules
     (*.pm). [leif]
 
     <LI>Problems reported using SSL on NT, giving a Dr Watson. Could this
-    be related to the bug in API.xs? [clayton???]
+    be related to the bug in API.xs? [clayton]
 
   </UL>
 
