@@ -101,6 +101,7 @@ nsHttpHandler::~nsHttpHandler()
     mGlobalInstance = nsnull;
 }
 
+#if 0
 NS_METHOD
 nsHttpHandler::Create(nsISupports *outer, REFNSIID iid, void **result)
 {
@@ -127,6 +128,7 @@ nsHttpHandler::Create(nsISupports *outer, REFNSIID iid, void **result)
     NS_RELEASE(handler);
     return rv;
 }
+#endif
 
 nsresult
 nsHttpHandler::Init()
@@ -374,6 +376,8 @@ nsHttpHandler::OnModifyRequest(nsIHttpChannel *chan)
 {
     nsresult rv;
 
+    LOG(("nsHttpHandler::OnModifyRequest [chan=%x]\n", chan));
+
     if (!mNetModuleMgr) {
         mNetModuleMgr = do_GetService(kNetModuleMgrCID, &rv);
         if (NS_FAILED(rv)) return rv;
@@ -386,19 +390,17 @@ nsHttpHandler::OnModifyRequest(nsIHttpChannel *chan)
     if (NS_FAILED(rv)) return rv;
 
     nsCOMPtr<nsISupports> sup;
-    nsCOMPtr<nsINetModRegEntry> entry;
-    nsCOMPtr<nsINetNotify> netNotify;
-    nsCOMPtr<nsIHttpNotify> httpNotify;
 
     // notify each module...
     while (NS_SUCCEEDED(modules->GetNext(getter_AddRefs(sup)))) {
-        entry = do_QueryInterface(sup, &rv);
+        nsCOMPtr<nsINetModRegEntry> entry = do_QueryInterface(sup, &rv);
         if (NS_FAILED(rv)) return rv;
 
+        nsCOMPtr<nsINetNotify> netNotify;
         rv = entry->GetSyncProxy(getter_AddRefs(netNotify));
         if (NS_FAILED(rv)) return rv;
 
-        httpNotify = do_QueryInterface(netNotify, &rv);
+        nsCOMPtr<nsIHttpNotify> httpNotify = do_QueryInterface(netNotify, &rv);
         if (NS_FAILED(rv)) return rv;
 
         // fire off the notification, ignore the return code.
@@ -412,6 +414,8 @@ nsresult
 nsHttpHandler::OnAsyncExamineResponse(nsIHttpChannel *chan)
 {
     nsresult rv;
+
+    LOG(("nsHttpHandler::OnAsyncExamineResponse [chan=%x]\n", chan));
 
     // XXX would need to be made thread safe
 
@@ -916,10 +920,8 @@ nsHttpHandler::CreateServicesFromCategory(const char *category)
             continue;
         }
 
-#ifdef DEBUG_HTTP_STARTUP_CATEGORY
-        printf("HttpHandler: Instantiating contractid %s \
-                in http startup category.\n", (const char *)contractID);
-#endif
+        LOG(("nsHttpHandler: instantiating [%s]\n", (const char *)contractID));
+
         nsCOMPtr<nsISupports> instance = do_GetService(contractID, &rv);
         if (NS_FAILED(rv))
             nFailed++;
@@ -1219,7 +1221,9 @@ nsHttpHandler::NewChannel(nsIURI *aURI, nsIChannel **aChannel)
     }
 
     NS_NEWXPCOM(httpChannel, nsHttpChannel);
-    if (!httpChannel) return NS_ERROR_OUT_OF_MEMORY;
+    if (!httpChannel)
+        return NS_ERROR_OUT_OF_MEMORY;
+    NS_ADDREF(httpChannel);
 
     rv = httpChannel->Init(aURI, mCapabilities);
     if (NS_FAILED(rv)) goto failed;
@@ -1235,10 +1239,10 @@ nsHttpHandler::NewChannel(nsIURI *aURI, nsIChannel **aChannel)
         }
     }
     */
-    return httpChannel->QueryInterface(NS_GET_IID(nsIChannel), (void **) aChannel);
+    rv = httpChannel->QueryInterface(NS_GET_IID(nsIChannel), (void **) aChannel);
 
 failed:
-    delete httpChannel;
+    NS_RELEASE(httpChannel);
     return rv;
 }
 

@@ -43,7 +43,7 @@ public:
 
     // Implement our own create function so we can register ourselves as both
     // the HTTP and HTTPS handler.
-    static NS_METHOD Create(nsISupports *outer, REFNSIID iid, void **result);
+    //static NS_METHOD Create(nsISupports *outer, REFNSIID iid, void **result);
 
     // Returns a pointer to the one and only HTTP handler
     static nsHttpHandler *get() { return mGlobalInstance; }
