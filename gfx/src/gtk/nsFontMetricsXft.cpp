@@ -1015,6 +1015,8 @@ nsFontMetricsXft::CacheFontMetrics(void)
     if (os2 && os2->ySubscriptYOffset) {
         val = CONVERT_DESIGN_UNITS_TO_PIXELS(os2->ySubscriptYOffset,
                                              face->size->metrics.y_scale);
+        // some fonts have the incorrect sign.
+        val = (val < 0) ? -val : val;
         mSubscriptOffset = nscoord(PR_MAX(f, NSToIntRound(val * f)));
     }
     else {
@@ -1033,7 +1035,7 @@ nsFontMetricsXft::CacheFontMetrics(void)
 }
 
 nsFontXft *
-nsFontMetricsXft::FindFont(PRUnichar aChar)
+nsFontMetricsXft::FindFont(PRUint32 aChar)
 {
 
     // If mPattern is null, set up the base bits of it so we can
@@ -1064,7 +1066,7 @@ nsFontMetricsXft::FindFont(PRUnichar aChar)
     }
 
     nsFontXft *font = (nsFontXft *)mLoadedFonts.ElementAt(0);
-    if (font->HasChar(PRUint32(aChar)))
+    if (font->HasChar(aChar))
         return font;
 
     // We failed to find the character in the best-match font, so load
@@ -1077,7 +1079,7 @@ nsFontMetricsXft::FindFont(PRUnichar aChar)
 
     for (PRInt32 i = 1, end = mLoadedFonts.Count(); i < end; ++i) {
         nsFontXft *font = (nsFontXft *)mLoadedFonts.ElementAt(i);
-        if (font->HasChar(PRUint32(aChar)))
+        if (font->HasChar(aChar))
             return font;
     }
 

@@ -79,9 +79,8 @@ NS_IMETHODIMP nsMsgSearchDBView::Close()
 	PRInt32 count = m_dbToUseList.Count();
 
 	for(PRInt32 i = 0; i < count; i++)
-	{
 		m_dbToUseList[i]->RemoveListener(this);
-	}
+
 	return NS_OK;
 }
 
@@ -201,9 +200,9 @@ nsMsgSearchDBView::OnNewSearch()
   PRInt32 oldSize = GetSize();
 
   PRInt32 count = m_dbToUseList.Count();
-  for(PRInt32 j = 0; j < count; j++) {
+  for(PRInt32 j = 0; j < count; j++) 
     m_dbToUseList[j]->RemoveListener(this);
-  }
+
   m_dbToUseList.Clear();
 
   m_folders->Clear();
@@ -230,7 +229,7 @@ NS_IMETHODIMP
 nsMsgSearchDBView::DoCommandWithFolder(nsMsgViewCommandTypeValue command, nsIMsgFolder *destFolder)
 {
     mCommand = command;
-    mDestFolder = getter_AddRefs(destFolder);
+    mDestFolder = destFolder;
 
     return nsMsgDBView::DoCommandWithFolder(command, destFolder);
 }

@@ -1790,10 +1790,15 @@ nsFontMetricsOS2::FindWesternFont()
   mWesternFont = font;
 }
 
+
 #define IS_SPECIAL(x) ((x == 0x20AC) ||  /* euro */ \
                        (x == 0x2022) ||  /* bull */ \
                        (x == 0x201C) ||  /* ldquo */ \
                        (x == 0x201D) ||  /* rdquo */ \
+                       (x == 0x2018) ||  /* lsquo */ \
+                       (x == 0x2019) ||  /* rsquo */ \
+                       (x == 0x2026) ||  /* hellip */ \
+                       (x == 0x2013) ||  /* ndash */ \
                        (x == 0x2014))    /* mdash */
 
 nsresult
