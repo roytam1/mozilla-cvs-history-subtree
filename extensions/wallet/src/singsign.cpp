@@ -2156,6 +2156,24 @@ SINGSIGN_RestoreSignonData(nsIPrompt* dialog, const char* passwordRealm, const P
   nsXPIDLCString strippedRealm;
   nsCOMPtr<nsIIOService> ioService = do_GetService(NS_IOSERVICE_CONTRACTID);
   if (!ioService) return;
+
+
+  /* Hacky security check: If address is of a scheme that
+      doesn't support hostnames, we have no host to get the signon data from,
+      so we must not attempt to restore the signon data (bug 159484)
+  */
+  nsCOMPtr<nsIURI> uri;
+  nsresult result = ioService->NewURI(passwordRealm,
+                                      nsnull, getter_AddRefs(uri));
+  if (NS_FAILED(result)) {
+      return;
+  }
+  nsXPIDLCString tempHost;
+  result = uri->GetHost(getter_Copies(tempHost));
+  if (NS_FAILED(result)) {
+      return;
+  }
+
   ioService->ExtractUrlPart(passwordRealm, nsIIOService::url_Host, 0, 0, getter_Copies(strippedRealm));
   si_RestoreSignonData(dialog, strippedRealm, name, value, elementNumber);
 }
