@@ -1005,6 +1005,7 @@ nsWebShell::OnEndDocumentLoad(nsIDocumentLoader* loader,
             NS_ERROR_FAILURE);
          
          // we should only perform a keyword search under the following conditions:
+         // (0) Keywords are enabled
          // (1) the url scheme is http (or https)
          // (2) the url does not have a protocol scheme
          // If we don't enforce such a policy, then we end up doing keyword searchs on urls
@@ -1013,11 +1014,10 @@ nsWebShell::OnEndDocumentLoad(nsIDocumentLoader* loader,
          // Someone needs to clean up keywords in general so we can determine on a per url basis
          // if we want keywords enabled...this is just a bandaid...
          static const char httpSchemeName[] = "http";
-
-         if (schemeStr.IsEmpty()  || !schemeStr.Find(httpSchemeName) )
-           keywordsEnabled = PR_TRUE; // keep keywors enabled for this url
-         else
-           keywordsEnabled = PR_FALSE; // all other cases, disable keywords for this url.
+         if (keywordsEnabled) {
+            if (!schemeStr.IsEmpty() && ((schemeStr.Find(httpSchemeName)) != 0))
+               keywordsEnabled = PR_FALSE;
+         }
 
          if(keywordsEnabled && (-1 == dotLoc))
             {
