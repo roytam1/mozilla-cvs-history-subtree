@@ -35,6 +35,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#ifndef __nsParserDataListener_h__
+#define __nsParserDataListener_h__
+
 /*
  * Include this header if you're implementing a parser data
  * listener. To make a component a parser data listener you'll need to
@@ -82,3 +85,5 @@
  * PARSER_DATA_LISTENER_CATEGORY, defined here.
  */
 #define PARSER_DATA_LISTENER_CATEGORY "Parser data listener"
+
+#endif // __nsParserDataListener_h__
