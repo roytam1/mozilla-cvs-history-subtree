@@ -20,8 +20,12 @@ Rights Reserved.
 
 <!ENTITY Contact.tab "Contact"> 
 	<!ENTITY Name.box				"Name"> 
-		<!ENTITY FirstName.label		"First:"> 
-		<!ENTITY LastName.label			"Last:"> 
+		<!-- LOCALIZATION NOTE (NameField1.id) : DONT_TRANSLATE -->
+		<!ENTITY NameField1.id			"FirstName"> 
+		<!-- LOCALIZATION NOTE (NameField2.id) : DONT_TRANSLATE -->
+		<!ENTITY NameField2.id			"LastName"> 
+		<!ENTITY NameField1.label		"First:"> 
+		<!ENTITY NameField2.label		"Last:"> 
 		<!ENTITY DisplayName.label		"Display:"> 
 		<!ENTITY NickName.label			"Nickname:"> 
 	<!ENTITY Internet.box			"Internet"> 
