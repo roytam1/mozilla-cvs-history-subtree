@@ -28,7 +28,11 @@
 
 #define wsCharp(c) ((c == '\r') || (c == '\t') || (c == ' ') || (c == '\n'))
 
-char decodeEntityRef (char* string, int32* stringIndexPtr, int32 len) {
+
+
+char
+decodeEntityRef (char* string, int32* stringIndexPtr, int32 len)
+{
   if (startsWith("lt;", string)) {
     *stringIndexPtr = *stringIndexPtr + 3;
     return '<';
