@@ -32,7 +32,7 @@ endif
 ifdef STANDALONE_IMAGE_LIB
 EXPORTS		= il_types.h ni_pixmp.h libimg.h il_icons.h il_strm.h il_util.h \
     ilINetContext.h ilIURL.h ilINetReader.h ilIImageRenderer.h \
-    ilISystemServices.h
+    ilISystemServices.h dummy_nc.h
 else
 EXPORTS		= il_types.h \
 		  ni_pixmp.h \
