@@ -290,15 +290,22 @@ nsresult nsDocumentOpenInfo::DispatchContent(nsIRequest *request, nsISupports * 
     nsCOMPtr<nsIURL> url = do_QueryInterface(uri);
     if (url)
     {
-      nsCAutoString theFileName;
-      url->GetFileName(theFileName);
-      PRInt32 extPosition = theFileName.RFind(".dmg");
-      PRInt32 nameLength = theFileName.Length();
-      if (extPosition > 0 &&
-          ((extPosition == nameLength - 4) || (extPosition == nameLength - 7)))
-      {
-        aChannel->SetContentType(nsDependentCString("application/octet-stream"));
-        rv = aChannel->GetContentType(contentType);
+      nsCAutoString tempString;
+      url->GetQuery(tempString);
+      if (tempString.IsEmpty())
+      { // Only if there's no query portion to the URL do we look for .dmg
+        url->GetFileName(tempString);
+        PRInt32 extPosition = tempString.RFind(".dmg");
+        if (extPosition > 0)
+        { // If we found a .dmg look to see if it's the end of the name
+          // or if it might be followed by a .gz suffix (but we don't explicitly test for .gz)
+          PRInt32 nameLength = tempString.Length();
+          if ((extPosition == nameLength - 4) || (extPosition == nameLength - 7))
+          {
+            aChannel->SetContentType(nsDependentCString("application/octet-stream"));
+            rv = aChannel->GetContentType(contentType);
+          }
+        }
       }
     }
   }
