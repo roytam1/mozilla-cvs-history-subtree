@@ -512,8 +512,17 @@ nsresult nsMessengerWinIntegration::ShowAlertMessage(const PRUnichar * aAlertTex
     {
       nsCOMPtr<nsIAlertListener> alertListener (do_QueryInterface(NS_STATIC_CAST(nsIMessengerOSIntegration*, this)));
   
-      rv = alertsService->ShowAlertNotification(NEW_MAIL_ALERT_ICON, NS_LITERAL_STRING("New Messages").get(), aAlertText, PR_TRUE, 
-      NS_ConvertASCIItoUCS2(aFolderURI).get(), alertListener); 
+      nsCOMPtr<nsIStringBundle> bundle; 
+      GetStringBundle(getter_AddRefs(bundle));
+      if (bundle)
+      {
+        nsXPIDLString alertTitle;
+        bundle->GetStringFromName(NS_LITERAL_STRING("newMail_Alert_Title").get(), getter_Copies(alertTitle));
+        rv = alertsService->ShowAlertNotification(NEW_MAIL_ALERT_ICON, alertTitle, aAlertText, PR_TRUE, 
+         NS_ConvertASCIItoUCS2(aFolderURI).get(), alertListener); 
+      }
+      else
+        rv = NS_ERROR_FAILURE;
     }
   }
 
