@@ -28,10 +28,10 @@ GLOBAL_IDLSRC = Window.idl
 
 XPCOM_DESTDIR=$(DEPTH)\dom\public
 JSSTUB_DESTDIR=$(DEPTH)\dom\src
-IIDDIRS=$(DIRS: =/genx )/$(GENXDIR) $(GENXDIR) 
-
 GENXDIR=genx
 GENJSDIR=genjs
+
+IIDDIRS=$(DIRS: =/genx )/$(GENXDIR) $(GENXDIR) 
 
 !include <$(DEPTH)\config\rules.mak>
 
