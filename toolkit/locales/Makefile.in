@@ -41,10 +41,12 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+# For the moment, just hardcode en-US... more automation coming later.
+
 # We need a way to make a localized build and a langpack-extension from the
 # same jar.mn
 
-AB_CD = $(MOZ_UI_LOCALE)
+AB_CD = en-US
 
 DEFINES += -DAB_CD=$(AB_CD)
 
