@@ -498,11 +498,11 @@
       <menuitem name="Software Updates" onclick="BrowserReload();"/>
       <menuitem name="Technical Support" onclick="BrowserReload();"/>
       <menuitem name="Release Notes" 
-	            onclick="window.frames[0].location.href='http://www.mozilla.org/projects/seamonkey/release-notes/index.html'"/>
+	            onclick="window.frames[0].location.href='http://www.mozilla.org/releases/'"/>
       
       <separator />
       <menuitem name="About Communicator Prototype" 
-	            onclick="window.frames[0].location.href='http://www.mozilla.org/projects/seamonkey/release-notes/index.html'"/>
+	            onclick="window.frames[0].location.href='http://www.mozilla.org/releases/'"/>
     </menu>
 
     // Menu for testing.
