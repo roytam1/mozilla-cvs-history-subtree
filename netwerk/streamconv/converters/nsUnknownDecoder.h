@@ -59,7 +59,7 @@ public:
 protected:
   virtual ~nsUnknownDecoder();
 
-  void DetermineContentType(nsIChannel *aChannel);
+  void DetermineContentType();
   nsresult FireListenerNotifications(nsIChannel *aChannel, nsISupports *aCtxt);
 
 protected:
@@ -67,7 +67,6 @@ protected:
 
   char *mBuffer;
   PRUint32 mBufferLen;
-  PRBool mRequireHTMLsuffix;
 
   nsCString mContentType;
 };
