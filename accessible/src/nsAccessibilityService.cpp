@@ -351,7 +351,7 @@ NS_IMETHODIMP nsAccessibilityService::GetInfo(nsISupports* aFrame, nsIFrame** aR
   NS_ASSERTION(shells > 0,"Error no shells!");
 #endif
 
-  // XXX need to change to the following on merge:
+  // XXX jgaunt need to change to the following on merge:
   //  nsCOMPtr<nsIPresShell> tempShell;
   //  document->GetShellAt(0, getter_AddRefs(tempShell));
   //  *aShell = do_GetWeakReference(tempShell);
