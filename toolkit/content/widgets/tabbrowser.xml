@@ -195,7 +195,7 @@
         <parameter name="aIconURL"/>
         <parameter name="aMessage"/>
         <parameter name="aButtonLabel"/>
-        <parameter name="aURI"/>
+        <parameter name="aDocShell"/>
         <parameter name="aSource"/>
         <parameter name="aPopup"/>
         <parameter name="aTopBottom"/>
@@ -214,7 +214,7 @@
               message.popup = aPopup;
               message.source = null;
             }
-            message.uri = aURI;
+            message.docShell = aDocShell;
             
             aBrowser.isShowingMessage = true;
           ]]>

@@ -841,7 +841,7 @@
         </setter>
       </property>
       
-      <field name="uri">
+      <field name="docShell">
         null;
       </field>
       <field name="source">
@@ -914,7 +914,7 @@
         if (event.originalTarget.getAttribute("anonid") == "messageButton") {
           var os = Components.classes["@mozilla.org/observer-service;1"]
                              .getService(Components.interfaces.nsIObserverService);
-          var subject = this.uri ? this.uri : null;
+          var subject = this.docShell ? this.docShell : null;
           os.notifyObservers(subject, this.source, "");
         }
       </handler>
