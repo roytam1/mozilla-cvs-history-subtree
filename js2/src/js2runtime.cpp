@@ -1635,12 +1635,47 @@ JSValue String_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 a
 JSValue String_split(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
     ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
+    JSValue S = thisValue->toString(cx);
 
     JSInstance *arrInst = Array_Type->newInstance(cx);
-    JSValue v = JSValue((String *)(thisObj->mPrivate));
-    arrInst->setProperty(cx, widenCString("0"), NULL, v);
+    JSValue separatorV;
+    JSValue limitV;
+    uint32 limit;
+
+    if (argc > 1)
+        separatorV = argv[1];
+    if (argc > 2)
+        limitV = argv[2];
+    
+    if (limitV.isUndefined())
+        limit = two32minus1;
+    else
+        limit = (uint32)(limitV.toUInt32(cx).f64);
+
+    uint32 s = S.string->size();
+
+    uint32 p = 0;
+
+    // if separatorV.isRegExp() -->
+
+    const String *R = separatorV.toString(cx).string;
+
+    if (limit == 0) 
+        return JSValue(arrInst);
+
+    if (separatorV.isUndefined()) {
+        //step 33
+        arrInst->setProperty(cx, widenCString("0"), NULL, S);
+        return JSValue(arrInst);
+    }
+
+    if (s == 0) {
+        // step 31
+    }
+    
+    
     return JSValue(arrInst);
+    
 }
 
 JSValue String_length(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
@@ -1681,10 +1716,6 @@ JSValue Array_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 ar
     return kUndefinedValue;
 }
 
-// XXX This is the Array::push/pop member functions, called on array instances
-// - the prototype versions are different, they need to gen up a bytecode
-// sequence for getting the length and accessing/assigning the elements in case 
-// that functionality is overridden. XXX don't believe everything you read
 
 JSValue Array_push(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {

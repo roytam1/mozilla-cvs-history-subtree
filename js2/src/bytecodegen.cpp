@@ -1505,6 +1505,29 @@ BinaryOpEquals:
             }
         }
         break;
+    case ExprNode::arrayLiteral:
+        {
+            addByte(LoadTypeOp);
+            addPointer(Array_Type);
+            addByte(NewInstanceOp);
+            addByte(PopOp);
+            PairListExprNode *plen = static_cast<PairListExprNode *>(p);
+            ExprPairList *e = plen->pairs;
+            int index = 0;
+            while (e) {
+                if (e->value) {
+                    addByte(DupOp);
+                    addByte(LoadConstantNumberOp);
+                    addNumberRef(index);
+                    genExpr(e->value);
+                    addByte(SetElementOp);
+                    addByte(PopOp);
+                }
+                index++;
+                e = e->next;
+            }
+        }
+        break;
     default:
         NOT_REACHED("Not Implemented Yet");
     }
