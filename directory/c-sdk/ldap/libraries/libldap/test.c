@@ -88,6 +88,7 @@ static void free_list( char **list );
 static int entry2textwrite( void *fp, char *buf, int len );
 static void bprint( char *data, int len );
 static char **string2words( char *str, char *delims );
+static const char * url_parse_err2string( int e );
 
 char *dnsuffix;
 
@@ -1102,7 +1103,8 @@ main(
 		case 'p':	/* parse LDAP URL */
 			getline( line, sizeof(line), stdin, "LDAP URL? " );
 			if (( i = ldap_url_parse( line, &ludp )) != 0 ) {
-			    fprintf( stderr, "ldap_url_parse: error %d\n", i );
+			    fprintf( stderr, "ldap_url_parse: error %d (%s)\n", i,
+						url_parse_err2string( i ));
 			} else {
 			    printf( "\t  host: " );
 			    if ( ludp->lud_host == NULL ) {
@@ -1275,10 +1277,8 @@ main(
 				}
 			}
 
-#ifdef LDAP_SSLIO_HOOKS
 			ldap_set_option( ld, LDAP_OPT_SSL,
 			    optval ? LDAP_OPT_ON : LDAP_OPT_OFF );
-#endif
 #endif
 
 			getline( line, sizeof(line), stdin, "Reconnect?" );
@@ -1768,6 +1768,36 @@ string2words( char *str, char *delims )
     }
 
     return( words );
+}
+
+
+static const char *
+url_parse_err2string( int e )
+{
+    const char	*s = "unknown";
+
+    switch( e ) {
+    case LDAP_URL_ERR_NOTLDAP:
+	s = "URL doesn't begin with \"ldap://\"";
+	break;
+    case LDAP_URL_ERR_NODN:
+	s = "URL has no DN (required)";
+	break;
+    case LDAP_URL_ERR_BADSCOPE:
+	s = "URL scope string is invalid";
+	break;
+    case LDAP_URL_ERR_MEM:
+	s = "can't allocate memory space";
+	break;
+    case LDAP_URL_ERR_PARAM:
+	s = "bad parameter to an URL function";
+	break;
+    case LDAP_URL_UNRECOGNIZED_CRITICAL_EXTENSION:
+	s = "unrecognized critical URL extension";
+	break;
+    }
+
+    return( s );
 }
 
 
