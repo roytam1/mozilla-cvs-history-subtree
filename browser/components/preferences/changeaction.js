@@ -35,6 +35,9 @@
 # 
 # ***** END LICENSE BLOCK *****
 
+const kPluginHandlerContractID = "@mozilla.org/content/plugin/document-loader-factory;1";
+const kDisabledPluginTypesPref = "browser.download.pluginOverrideTypes";
+
 var gChangeActionDialog = {
   _rdf            : null,
   _itemRes        : null,
@@ -96,6 +99,7 @@ var gChangeActionDialog = {
           lf.initWithPath(path);
           customApp.file = lf;
           customApp.label = this._getDisplayNameForFile(lf);
+          dump("*** intergoat = " + this._getDisplayNameForFile(lf) + "\n");
           customApp.image = this._getIconURLForFile(lf);
         }
         catch (e) {
@@ -107,7 +111,7 @@ var gChangeActionDialog = {
       var defaultApp = document.getElementById("defaultApp");
       var mimeInfo = this._helperApps.getMIMEInfo(this._itemRes);
       defaultApp.label = mimeInfo.defaultDescription;
-      dump("*** mimeInfo.defaultDescription = " + this._getDisplayNameForFile(mimeInfo.defaultApplicationHandler) + "\n");
+      dump("*** goatinter = " + mimeInfo.defaultDescription + "\n");
       defaultApp.image = this._getIconURLForFile(mimeInfo.defaultApplicationHandler); 
       
       var pluginName = document.getElementById("pluginName");
@@ -175,14 +179,61 @@ var gChangeActionDialog = {
       this._helperApps.Assert(aResource, prop, val, true);
   },
   
+  _ensureTypeIsInDisabledList: function (aContentType)
+  {
+    var pluginAvailable = this._helperApps.getLiteralValue(this._itemRes.Value, 
+                                                           "FilePluginAvailable") == "true";
+    if (pluginAvailable) {
+      var prefs = Components.classes["@mozilla.org/preferences-service;1"]
+                            .getService(Components.interfaces.nsIPrefBranch);
+      var disabled = aContentType;
+      if (prefs.prefHasUserValue(kDisabledPluginTypesPref)) {
+        disabled = prefs.getCharPref(kDisabledPluginTypesPref);
+        if (disabled.indexOf(aContentType) == -1) 
+          disabled += "," + aContentType;
+      }
+      prefs.setCharPref(kDisabledPluginTypesPref, disabled);   
+      
+      var catman = Components.classes["@mozilla.org/categorymanager;1"]
+                             .getService(Components.interfaces.nsICategoryManager);
+      catman.deleteCategoryEntry("Gecko-Content-Viewers", aContentType, false);     
+    }    
+  },
+  
   onAccept: function ()
   {
+    var mimeInfo = this._helperApps.getMIMEInfo(this._itemRes);
+    var handlerGroup = document.getElementById("handlerGroup");
+    if (handlerGroup.selectedItem.value == "plugin") {
+      var prefs = Components.classes["@mozilla.org/preferences-service;1"]
+                            .getService(Components.interfaces.nsIPrefBranch);
+      if (prefs.prefHasUserValue(kDisabledPluginTypesPref)) {
+        var disabled = prefs.getCharPref(kDisabledPluginTypesPref);
+        if (disabled == mimeInfo.MIMEType)
+          prefs.clearUserPref(kDisabledPluginTypesPref);
+        else {
+          var disabledTypes = disabled.split(",");
+          for (var i = 0; i < disabledTypes.length; ++i) {
+            if (mimeInfo.MIMEType != disabledTypes[i])
+              disabled += disabledTypes[i] + (i == disabledTypes.length - 1 ? "" : ",");
+          }
+          prefs.setCharPref(kDisabledPluginTypesPref, disabled);
+        }
+ 
+        var catman = Components.classes["@mozilla.org/categorymanager;1"]
+                               .getService(Components.interfaces.nsICategoryManager);
+        catman.addCategoryEntry("Gecko-Content-Viewers", mimeInfo.MIMEType,
+                                kPluginHandlerContractID, false, true);
+      }
+      return;
+    }
+    
+    this._ensureTypeIsInDisabledList(mimeInfo.MIMEType);
+    
     var dirty = false;
     
     if (this._handlerRes) {  
-      var handlerGroup = document.getElementById("handlerGroup");
-      var value = handlerGroup.selectedItem.getAttribute("value");
-      switch (value) {
+      switch (handlerGroup.selectedItem.value) {
       case "system":
         this._setLiteralValue(this._handlerRes, "saveToDisk", "false");
         this._setLiteralValue(this._handlerRes, "useSystemDefault", "true");

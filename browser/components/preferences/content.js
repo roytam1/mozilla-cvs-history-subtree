@@ -106,4 +106,10 @@ var gContentPane = {
     document.documentElement.openSubDialog("chrome://browser/content/preferences/fonts.xul",
                                            "", null);  
   },
+
+  showColors: function ()
+  {
+    document.documentElement.openSubDialog("chrome://browser/content/preferences/colors.xul",
+                                           "", null);  
+  }
 };

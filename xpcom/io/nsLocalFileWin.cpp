@@ -24,6 +24,7 @@
  *   Doug Turner <dougt@netscape.com>
  *   Dean Tessman <dean_tessman@hotmail.com>
  *   Brodie Thiesfield <brofield@jellycan.com>
+ *   Ben Goodger <ben@mozilla.org>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -1009,6 +1010,8 @@ nsLocalFile::GetVersionInfoField(const nsACString &aField, nsAString& _retval)
 
                     NS_CopyNativeToUnicode(Substring((const char *)value, (const char *)value + size), 
                                            _retval);
+                    if (!_retval.IsEmpty())
+                        break;
                 }
             }
             free(ver);

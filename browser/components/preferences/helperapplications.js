@@ -117,6 +117,7 @@ function HelperApps()
   this._fileTypeArc         = gRDF.GetResource(NC_URI("FileType"));
   this._fileMimeTypeArc     = gRDF.GetResource(NC_URI("FileMIMEType"));
   this._fileHandlerArc      = gRDF.GetResource(NC_URI("FileHandler"));
+  this._filePluginAvailable = gRDF.GetResource(NC_URI("FilePluginAvailable"));
   this._fileHandledByPlugin = gRDF.GetResource(NC_URI("FileHandledByPlugin"));
   this._fileIconArc         = gRDF.GetResource(NC_URI("FileIcon"));
   this._largeFileIconArc    = gRDF.GetResource(NC_URI("LargeFileIcon"));
@@ -144,8 +145,9 @@ function HelperApps()
     var contractid = catman.getCategoryEntry("Gecko-Content-Viewers", currType);
     if (contractid == kPluginHandlerContractID) {
       this._availableTypes[currType] = { mimeURI: MIME_URI(currType),
-                                         isHandledByPlugin: true,
-                                         isPluginEnabled: disabled.indexOf("currType") == -1 };
+                                         pluginAvailable: true,
+                                         pluginEnabled: disabled.indexOf("currType") == -1 };
+      dump("*** added = " + this._availableTypes[currType].toSource() + "\n");
     }
   }
 }
@@ -286,8 +288,8 @@ HelperApps.prototype = {
           return gRDF.GetLiteral(typeInfo.MIMEType);
         else if (aProperty.EqualsNode(this._fileHandlerArc)) {
           // Look for a plugin handler first
-          if (this._availableTypes[typeInfo.MIMEType].isHandledByPlugin && 
-              this._availableTypes[typeInfo.MIMEType].isPluginEnabled) {
+          if (this._availableTypes[typeInfo.MIMEType].pluginAvailable && 
+              this._availableTypes[typeInfo.MIMEType].pluginEnabled) {
             for (var i = 0; i < navigator.plugins.length; ++i) {
               var plugin = navigator.plugins[i];
               for (var j = 0; j < plugin.length; ++j) {
@@ -316,9 +318,13 @@ HelperApps.prototype = {
           var openWith2 = bundleUCT.getFormattedString("openWith", [typeInfo.defaultDescription]);
           return gRDF.GetLiteral(openWith2);
         }
+        else if (aProperty.EqualsNode(this._filePluginAvailable)) {
+          var pluginAvailable = this._availableTypes[typeInfo.MIMEType].pluginAvailable;
+          return gRDF.GetLiteral(pluginAvailable ? "true" : "false");
+        }
         else if (aProperty.EqualsNode(this._fileHandledByPlugin)) {
-          var handledByPlugin = (this._availableTypes[typeInfo.MIMEType].isHandledByPlugin && 
-                                 this._availableTypes[typeInfo.MIMEType].isPluginEnabled);
+          var handledByPlugin = (this._availableTypes[typeInfo.MIMEType].pluginAvailable && 
+                                 this._availableTypes[typeInfo.MIMEType].pluginEnabled);
           return gRDF.GetLiteral(handledByPlugin ? "true" : "false");
         }
         else if (aProperty.EqualsNode(this._fileIconArc)) {
@@ -381,8 +387,8 @@ HelperApps.prototype = {
           var mi = this.getMIMEInfo(type);
           if (!(mi.MIMEType in this._availableTypes)) {
             this._availableTypes[mi.MIMEType] = { mimeURI: MIME_URI(mi.MIMEType),
-                                                  isHandledByPlugin: false,
-                                                  isPluginEnabled: false };
+                                                  pluginAvailable: false,
+                                                  pluginEnabled: false };
           }
         }
         var types = [];

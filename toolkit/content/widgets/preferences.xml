@@ -222,10 +222,10 @@
         </getter>
         <setter>
         <![CDATA[
-          dump("*** writing " + this.name +"\n");
           if (this.valueFromPreferences == val)
             return val;
             
+          dump("*** writing " + this.name +" = " + this.value + "\n");
           // Force a resync of preferences with value.
           switch (this.type) {
           case "int":
@@ -340,6 +340,7 @@
         <![CDATA[
           switch (aElement.localName) {
           case "checkbox":
+          case "colorpicker":
           case "radiogroup":
           case "textbox":
           case "listitem":
@@ -828,6 +829,12 @@
         // This "command" event handler tracks changes made to preferences by 
         // the user in this window. 
         this.userChangedValue(event.target);
+      </handler>
+      <handler event="select">
+        // This "select" event handler tracks changes made to colorpicker 
+        // preferences by the user in this window.
+        if (event.target.localName == "colorpicker") 
+          this.userChangedValue(event.target);
       </handler>
       <handler event="change">
         // This "change" event handler tracks changes made to preferences by 
