@@ -135,12 +135,6 @@ interface nsIInterfaceInfo;
 interface nsIXPCSecurityManager;
 
 /***************************************************************************/
-
-/* See nsIXPCScriptable.h for the declarations of these non-xpcom classes */
-[ptr] native nsIXPCNativeInterface(nsIXPCNativeInterface);
-[ptr] native nsIXPCWrappedNativeTearOff(nsIXPCWrappedNativeTearOff);
-
-/***************************************************************************/
 [uuid(8916a320-d118-11d3-8f3a-0010a4e73d9a)]
 interface nsIXPConnectJSObjectHolder : nsISupports
 {
@@ -391,12 +385,22 @@ interface nsIXPConnect : nsISupports
            [iid_is(aIID),retval] out nsQIResult result);
 
     /**
-    * This only succeeds if the JSObject is a nsIXPConnectWrappedNative. A
-    * new wrapper is *never* constructed.
+    * This only succeeds if the JSObject is a nsIXPConnectWrappedNative. 
+    * A new wrapper is *never* constructed.
     */
     nsIXPConnectWrappedNative
     getWrappedNativeOfJSObject(in JSContextPtr aJSContext,
                                in JSObjectPtr  aJSObj);
+
+    /**
+    * This only succeeds if the native object is already wrapped by xpconnect. 
+    * A new wrapper is *never* constructed.
+    */
+    nsIXPConnectWrappedNative
+    getWrappedNativeOfNativeObject(in JSContextPtr aJSContext,
+                                   in JSObjectPtr  aScope,
+                                   in nsISupports  aCOMObj,
+                                   in nsIIDRef     aIID);
 
     void setSecurityManagerForJSContext(in JSContextPtr aJSContext,
                                         in nsIXPCSecurityManager aManager,

@@ -44,13 +44,17 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
                                XPCWrappedNativeScope* Scope,
                                XPCNativeInterface* Interface)
 {
+    // XXX should support null Interface IFF the object has an nsIClassInfo?
+
+    nsCOMPtr<nsISupports> identity(do_QueryInterface(Object));
+    if(!identity)
+        return nsnull;
+
     Native2WrappedNativeMap* map = Scope->GetWrappedNativeMap();
 
     // XXX add locking
 
-    // XXX should support null Interface IFF the object has an nsIClassInfo
-
-    XPCWrappedNative* wrapper = map->Find(Object);
+    XPCWrappedNative* wrapper = map->Find(identity);
     if(wrapper)
     {
         if(!wrapper->FindTearOff(Interface))
@@ -58,7 +62,6 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         NS_ADDREF(wrapper);
         return wrapper;
     }
-
 
     XPCWrappedNativeProto* proto;
 
@@ -102,6 +105,35 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
 
     map->Add(wrapper);
     return wrapper;
+}
+
+// static 
+XPCWrappedNative*
+XPCWrappedNative::GetUsedOnly(XPCCallContext& ccx,
+                              nsISupports* Object,
+                              XPCWrappedNativeScope* Scope,
+                              XPCNativeInterface* Interface)
+{
+    // XXX should support null Interface IFF the object has an nsIClassInfo?
+    
+    nsCOMPtr<nsISupports> identity(do_QueryInterface(Object));
+    if(!identity)
+        return nsnull;
+
+    Native2WrappedNativeMap* map = Scope->GetWrappedNativeMap();
+
+    // XXX add locking
+
+    XPCWrappedNative* wrapper = map->Find(identity);
+    if(wrapper)
+    {
+        if(!wrapper->FindTearOff(Interface))
+            return nsnull;
+        NS_ADDREF(wrapper);
+        return wrapper;
+    }
+
+    return nsnull;
 }
 
 XPCWrappedNative::XPCWrappedNative(nsISupports* aIdentity,

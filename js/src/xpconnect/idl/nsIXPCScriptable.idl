@@ -136,40 +136,13 @@ interface nsIXPCScriptable : nsISupports
 %{ C++
 
 /*
- * These two classes are *not* xpcom interfaces. They have no virtual methods
- * and are not reference counted. They exist only as a way to expose a little
+ * This class is *not* an xpcom interfaces. It has no virtual methods
+ * and is not reference counted. It exists only as a way to expose a little
  * of the XPConnect interals to implementors of nsIXPCScriptable and users of
  * nsIXPCNativeCallContext interfaces. In the places where a pointer to a
- * nsIXPCWrappedNativeTearOff object is available it should be used only for
- * the lifetime of the call in question. Same story for nsIXPCNativeInterface.
+ * nsIXPCNativeInterface object is available it should be used only for
+ * the lifetime of the call in question.
  */
-
-// no virtuals
-class nsIXPCWrappedNativeTearOff
-    {
-public:
-    inline nsIXPConnectWrappedNative* GetWrapper()   const {return mWrapper;}
-    inline JSObject*                  GetJSObject()  const {return mJSObject;}
-    inline nsISupports*               GetNative()    const {return mNative;}
-    inline nsIXPCNativeInterface*     GetInterface() const {return mInterface;}
-
-    inline JSBool IsFlattenedObject() const {return nsnull == mInterface;}
-
-protected:
-    nsIXPCWrappedNativeTearOff()
-        : mWrapper(nsnull), mJSObject(nsnull), 
-          mNative(nsnull), mInterface(nsnull) {}
-    ~nsIXPCWrappedNativeTearOff() {}
-
-    nsIXPCWrappedNativeTearOff(const nsIXPCWrappedNativeTearOff& r); // not implemented
-    nsIXPCWrappedNativeTearOff& operator= (const nsIXPCWrappedNativeTearOff& r); // not implemented
-
-protected:
-    nsIXPConnectWrappedNative*  mWrapper;
-    JSObject*                   mJSObject;
-    nsISupports*                mNative;
-    nsIXPCNativeInterface*      mInterface;
-};
 
 // no virtuals
 

@@ -524,6 +524,40 @@ nsXPConnect::GetWrappedNativeOfJSObject(JSContext * aJSContext, JSObject * aJSOb
     return NS_ERROR_FAILURE;
 }        
 
+/* nsIXPConnectWrappedNative getWrappedNativeOfNativeObject (in JSContextPtr aJSContext, in JSObjectPtr aScope, in nsISupports aCOMObj, in nsIIDRef aIID); */
+NS_IMETHODIMP 
+nsXPConnect::GetWrappedNativeOfNativeObject(JSContext * aJSContext, JSObject * aScope, nsISupports *aCOMObj, const nsIID & aIID, nsIXPConnectWrappedNative **_retval)
+{
+    NS_ENSURE_ARG_POINTER(aJSContext);
+    NS_ENSURE_ARG_POINTER(aScope);
+    NS_ENSURE_ARG_POINTER(aCOMObj);
+    NS_ENSURE_ARG_POINTER(_retval);
+
+    *_retval = nsnull;
+
+    XPCCallContext ccx(NATIVE_CALLER, aJSContext);
+    if(!ccx.IsValid())
+        return NS_ERROR_FAILURE;
+
+    XPCWrappedNativeScope* scope =
+        XPCWrappedNativeScope::FindInJSObjectScope(ccx, aScope);
+    if(!scope)
+        return NS_ERROR_FAILURE;
+
+    XPCNativeInterface* iface =
+        XPCNativeInterface::GetNewOrUsed(ccx, &aIID);
+    if(!iface)
+        return NS_ERROR_FAILURE;
+
+    XPCWrappedNative* wrapper = 
+        XPCWrappedNative::GetUsedOnly(ccx, aCOMObj, scope, iface);
+    if(!wrapper)
+        return NS_ERROR_FAILURE;
+
+    *_retval = wrapper;
+    return NS_OK;
+}
+
 /* void setSecurityManagerForJSContext (in JSContextPtr aJSContext, in nsIXPCSecurityManager aManager, in PRUint16 flags); */
 NS_IMETHODIMP
 nsXPConnect::SetSecurityManagerForJSContext(JSContext * aJSContext, nsIXPCSecurityManager *aManager, PRUint16 flags)

@@ -145,9 +145,6 @@ extern const char XPC_ARG_FORMATTER_FORMAT_STR[]; // format string
     *dest = result; \
     return (result || !src) ? NS_OK : NS_ERROR_OUT_OF_MEMORY
 
-#define XPC_NOT_HANDLED(rv) ((rv) == NS_ERROR_XPC_OP_NOT_HANDLED_BY_SCRIPTABLE)
-#define XPC_HANDLED(rv) ((rv) != NS_ERROR_XPC_OP_NOT_HANDLED_BY_SCRIPTABLE)
-
 /***************************************************************************/
 
 class nsXPConnect : public nsIXPConnect
@@ -202,7 +199,7 @@ private:
 
 /***************************************************************************/
 
-// In the current xpconnect systen there can only be one XPCJSRuntime.
+// In the current xpconnect system there can only be one XPCJSRuntime.
 // So, xpconnect can only be used on one JSRuntime within the process.
 
 // no virtuals. no refcounting.
@@ -410,6 +407,39 @@ private:
 
 
 /***************************************************************************/
+// XXX This class was abstracted out of XPCWrappedNativeTearOff because I
+// thought I nneded to expose it via nsIXPCScriptable. It looks like that
+// will not be necessay. I'm moving it back here to privateland. It could
+// probably be merged back into XPCWrappedNativeTearOff (and users fixed!)
+
+// no virtuals
+class nsIXPCWrappedNativeTearOff
+    {
+public:
+    inline nsIXPConnectWrappedNative* GetWrapper()   const {return mWrapper;}
+    inline JSObject*                  GetJSObject()  const {return mJSObject;}
+    inline nsISupports*               GetNative()    const {return mNative;}
+    inline nsIXPCNativeInterface*     GetInterface() const {return mInterface;}
+
+    inline JSBool IsFlattenedObject() const {return nsnull == mInterface;}
+
+protected:
+    nsIXPCWrappedNativeTearOff()
+        : mWrapper(nsnull), mJSObject(nsnull), 
+          mNative(nsnull), mInterface(nsnull) {}
+    ~nsIXPCWrappedNativeTearOff() {}
+
+    nsIXPCWrappedNativeTearOff(const nsIXPCWrappedNativeTearOff& r); // not implemented
+    nsIXPCWrappedNativeTearOff& operator= (const nsIXPCWrappedNativeTearOff& r); // not implemented
+
+protected:
+    nsIXPConnectWrappedNative*  mWrapper;
+    JSObject*                   mJSObject;
+    nsISupports*                mNative;
+    nsIXPCNativeInterface*      mInterface;
+};
+
+/***********************************************/
 
 class XPCWrappedNativeTearOff : public nsIXPCWrappedNativeTearOff
 {
@@ -1001,10 +1031,9 @@ private:
 
 /***************************************************************************/
 
-// XXX fix this
 extern JSClass XPC_WN_NoHelper_JSClass;
-extern JSClass XPC_WN_Tearoff_JSClass;
 extern JSClass XPC_WN_Proto_JSClass;
+extern JSClass XPC_WN_Tearoff_JSClass;
 
 extern JSObjectOps * JS_DLL_CALLBACK
 XPC_WN_GetObjectOpsStub(JSContext *cx, JSClass *clazz);
@@ -1017,7 +1046,8 @@ extern JSBool JS_DLL_CALLBACK
 XPC_WN_GetterSetter(JSContext *cx, JSObject *obj,
                     uintN argc, jsval *argv, jsval *vp);
 
-extern JSBool xpc_InitWrappedNativeJSOps();
+extern JSBool 
+xpc_InitWrappedNativeJSOps();
 
 /***************************************************************************/
 /*
@@ -1419,15 +1449,6 @@ private:
 
 
 /***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
-// XXX new parts to be distributed above...
-
-/***************************************************************************/
-
-
-/***************************************************************************/
 
 // Tight. No virtual methods.
 class XPCCallableInfo
@@ -1576,7 +1597,7 @@ private:
     // jsid              mNameID;
 
     PRUint16          mMemberCount;
-    XPCNativeMember   mMembers[1]; // always last - we grow object for array
+    XPCNativeMember   mMembers[1]; // always last - object sized for array
 };
 
 /***************************************************************************/
@@ -1637,7 +1658,7 @@ private:
 
 private:
     PRUint16                mInterfaceCount;
-    XPCNativeInterface*     mInterfaces[1]; // always last - we grow object for array
+    XPCNativeInterface*     mInterfaces[1];  // always last - object sized for array
 };
 
 /***************************************************************************/
@@ -1777,6 +1798,12 @@ public:
                  XPCNativeInterface* Interface);
 
     static XPCWrappedNative*
+    GetUsedOnly(XPCCallContext& ccx,
+                nsISupports* Object,
+                XPCWrappedNativeScope* Scope,
+                XPCNativeInterface* Interface);
+
+    static XPCWrappedNative*
     GetWrappedNativeOfJSObject(JSContext* cx, JSObject* obj,
                                JSObject** pobj2 = nsnull,
                                XPCWrappedNativeTearOff** pTearOff = nsnull);
@@ -1857,17 +1884,13 @@ private:
     XPCWrappedNativeTearOffChunk mFirstChunk;
 };
 
-
 /***************************************************************************/
-/***************************************************************************/
-
-/***************************************************************************/
+// Inlines use the above - include last.
 
 #include "xpcinlines.h"
 
 /***************************************************************************/
-// the include of declarations of the maps comes last because they have
-// inlines which call methods on classes above.
+// Maps have inlines that use the above - include last.
 
 #include "xpcmaps.h"
 
