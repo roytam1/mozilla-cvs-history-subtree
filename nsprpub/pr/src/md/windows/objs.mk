@@ -63,7 +63,6 @@ CSRCS =	ntmisc.c \
 	w32rng.c \
 	w32shm.c \
 	w95dllmain.c \
-	w32time.c \
 	w32unicode.c \
 	w32netdb.c
 else

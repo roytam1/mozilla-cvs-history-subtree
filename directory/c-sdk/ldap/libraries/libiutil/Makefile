@@ -23,8 +23,8 @@
 
 
 MOD_DEPTH	= ../../..
-srcdir		= .
-topsrcdir 	= ../../..
+srcdir		= /cygdrive/c/home/blythe/wce_debug/1/mozilla/directory/c-sdk/ldap/libraries/libiutil
+topsrcdir 	= /cygdrive/c/home/blythe/wce_debug/1/mozilla/directory/c-sdk
 
 include $(MOD_DEPTH)/config/autoconf.mk
 include $(topsrcdir)/build.mk
