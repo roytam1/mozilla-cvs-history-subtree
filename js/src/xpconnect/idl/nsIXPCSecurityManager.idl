@@ -36,7 +36,7 @@
 #include "nsISupports.idl"
 
 [ptr] native JSContext(JSContext);
-native jsid(jsid);
+      native JSVal(jsval);
 [ref] native MethodInfo(MethodInfo);
 
 // forward decl...
@@ -73,7 +73,8 @@ interface nsIXPCSecurityManager : nsISupports
 
     void CanCreateWrapper(in JSContext aJSContext,
                           in nsIIDRef aIID,
-                          in nsISupports aObj);
+                          in nsISupports aObj,
+                          inout voidPtr aPolicy);
 
     void CanCreateInstance(in JSContext aJSContext,
                            in nsCIDRef aCID);
@@ -86,19 +87,22 @@ interface nsIXPCSecurityManager : nsISupports
                        in nsISupports aObj,
                        in nsIInterfaceInfo aInterfaceInfo,
                        in PRUint16 aMethodIndex,
-                       [const] in jsid aName);
+                       in JSVal aName,
+                       inout voidPtr aPolicy);
 
     void CanGetProperty(in JSContext aJSContext,
                         in nsIIDRef aIID,
                         in nsISupports aObj,
                         in nsIInterfaceInfo aInterfaceInfo,
                         in PRUint16 aMethodIndex,
-                        [const] in jsid aName);
+                        in JSVal aName,
+                        inout voidPtr aPolicy);
 
     void CanSetProperty(in JSContext aJSContext,
                         in nsIIDRef aIID,
                         in nsISupports aObj,
                         in nsIInterfaceInfo aInterfaceInfo,
                         in PRUint16 aMethodIndex,
-                        [const] in jsid aName);
+                        in JSVal aName,
+                        inout voidPtr aPolicy);
 };

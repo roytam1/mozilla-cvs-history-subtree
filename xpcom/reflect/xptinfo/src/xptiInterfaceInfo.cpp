@@ -242,6 +242,18 @@ xptiInterfaceInfo::IsScriptable(PRBool* result)
 }
 
 NS_IMETHODIMP
+xptiInterfaceInfo::IsFunction(PRBool* result)
+{
+    NS_ASSERTION(result, "bad bad caller!");
+
+    if(!EnsureResolved())
+        return NS_ERROR_UNEXPECTED;
+
+    *result = XPT_ID_IS_FUNCTION(mInterface->mDescriptor->flags);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 xptiInterfaceInfo::GetParent(nsIInterfaceInfo** parent)
 {
     NS_PRECONDITION(parent, "bad param");
@@ -638,3 +650,27 @@ xptiInterfaceInfo::IsIID(const nsIID * IID, PRBool *_retval)
     *_retval = mIID.Equals(*IID);
     return NS_OK;
 }
+
+/* void getNameShared ([shared, retval] out string name); */
+NS_IMETHODIMP 
+xptiInterfaceInfo::GetNameShared(const char **name)
+{
+    NS_PRECONDITION(name, "bad param");
+
+    if(!mName)
+        return NS_ERROR_UNEXPECTED;
+
+    *name = mName;
+    return NS_OK;
+}
+
+/* void getIIDShared ([shared, retval] out nsIIDPtrShared iid); */
+NS_IMETHODIMP 
+xptiInterfaceInfo::GetIIDShared(const nsIID * *iid)
+{
+    NS_PRECONDITION(iid, "bad param");
+
+    *iid = &mIID;
+    return NS_OK;
+}
+

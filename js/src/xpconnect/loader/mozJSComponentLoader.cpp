@@ -321,7 +321,7 @@ class BackstagePass : public nsIScriptObjectPrincipal, public nsIXPCScriptable
 {
 public:
   NS_DECL_ISUPPORTS
-  XPC_DECLARE_IXPCSCRIPTABLE
+  NS_DECL_NSIXPCSCRIPTABLE
   
   NS_IMETHOD GetPrincipal(nsIPrincipal **aPrincipal) {
     NS_ADDREF(*aPrincipal = mPrincipal);
@@ -348,7 +348,7 @@ class BackstagePass : public nsIXPCScriptable
 {
 public:
   NS_DECL_ISUPPORTS
-  XPC_DECLARE_IXPCSCRIPTABLE
+  NS_DECL_NSIXPCSCRIPTABLE
 
   BackstagePass()
   {
@@ -362,22 +362,32 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(BackstagePass, nsIXPCScriptable);
 
 #endif
 
-XPC_IMPLEMENT_IGNORE_CREATE(BackstagePass)
-XPC_IMPLEMENT_IGNORE_GETFLAGS(BackstagePass);
-XPC_IMPLEMENT_FORWARD_LOOKUPPROPERTY(BackstagePass)
-XPC_IMPLEMENT_FORWARD_DEFINEPROPERTY(BackstagePass)
-XPC_IMPLEMENT_FORWARD_GETPROPERTY(BackstagePass)
-XPC_IMPLEMENT_FORWARD_SETPROPERTY(BackstagePass)
-XPC_IMPLEMENT_FORWARD_GETATTRIBUTES(BackstagePass)
-XPC_IMPLEMENT_FORWARD_SETATTRIBUTES(BackstagePass)
-XPC_IMPLEMENT_FORWARD_DELETEPROPERTY(BackstagePass)
-XPC_IMPLEMENT_FORWARD_DEFAULTVALUE(BackstagePass)
-XPC_IMPLEMENT_FORWARD_ENUMERATE(BackstagePass)
-XPC_IMPLEMENT_FORWARD_CHECKACCESS(BackstagePass)
-XPC_IMPLEMENT_FORWARD_CALL(BackstagePass)
-XPC_IMPLEMENT_FORWARD_CONSTRUCT(BackstagePass)
-XPC_IMPLEMENT_FORWARD_HASINSTANCE(BackstagePass);
-XPC_IMPLEMENT_FORWARD_FINALIZE(BackstagePass)
+// The nsIXPCScriptable map declaration that will generate stubs for us...
+#define XPC_MAP_CLASSNAME           BackstagePass
+#define XPC_MAP_QUOTED_CLASSNAME   "BackstagePass"
+#define                             XPC_MAP_WANT_NEWRESOLVE
+#define XPC_MAP_FLAGS       nsIXPCScriptable::USE_JSSTUB_FOR_ADDPROPERTY   | \
+                            nsIXPCScriptable::USE_JSSTUB_FOR_DELPROPERTY   | \
+                            nsIXPCScriptable::USE_JSSTUB_FOR_SETPROPERTY
+#include "xpc_map_end.h" /* This will #undef the above */
+
+/* PRBool newResolve (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSVal id, in PRUint32 flags, out JSObjectPtr objp); */
+NS_IMETHODIMP
+BackstagePass::NewResolve(nsIXPConnectWrappedNative *wrapper,
+                          JSContext * cx, JSObject * obj,
+                          jsval id, PRUint32 flags, 
+                          JSObject * *objp, PRBool *_retval)
+{
+    JSBool resolved;
+    if(JS_ResolveStandardClass(cx, obj, id, &resolved))
+    {
+        if(resolved)
+            *objp = obj;
+    }
+    else
+        *_retval = JS_FALSE;
+    return NS_OK;
+}
 
 mozJSComponentLoader::mozJSComponentLoader()
     : mCompMgr(nsnull),
@@ -1101,6 +1111,7 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
     nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
     rv = xpc->InitClassesWithNewWrappedGlobal(cx, backstagePass,
                                               NS_GET_IID(nsISupports),
+                                              PR_FALSE,
                                               getter_AddRefs(holder));
     if (NS_FAILED(rv))
         return nsnull;
@@ -1109,8 +1120,7 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
     if (NS_FAILED(rv))
         return nsnull;
 
-    if (!JS_InitStandardClasses(cx, global) ||
-        !JS_DefineFunctions(cx, global, gGlobalFun)) {
+    if (!JS_DefineFunctions(cx, global, gGlobalFun)) {
         return nsnull;
     }
 
