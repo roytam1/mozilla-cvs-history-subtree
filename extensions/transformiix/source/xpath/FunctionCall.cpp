@@ -142,7 +142,7 @@ NodeSet* FunctionCall::evaluateToNodeSet(Expr* aExpr, txIEvalContext* aContext)
 
     if (exprResult->getResultType() != ExprResult::NODESET) {
         String err("NodeSet expected as argument");
-        aContext->receiveError(err, NS_ERROR_XPATH_EVAL_FAILED);
+        aContext->receiveError(err, NS_ERROR_XPATH_INVALID_ARG);
         delete exprResult;
         return 0;
     }

@@ -385,9 +385,9 @@ void txIdPattern::toString(String& aDest)
     #ifdef DEBUG
     aDest.append("txIdPattern{");
     #endif
-    aDest.append("id(");
+    aDest.append("id('");
     aDest.append(mIds);
-    aDest.append(")");
+    aDest.append("')");
     #ifdef DEBUG
     aDest.append("}");
     #endif
@@ -431,11 +431,11 @@ void txKeyPattern::toString(String& aDest)
     #ifdef DEBUG
     aDest.append("txKeyPattern{");
     #endif
-    aDest.append("key(");
+    aDest.append("key('");
     aDest.append(mName);
     aDest.append(", ");
     aDest.append(mValue);
-    aDest.append(")");
+    aDest.append("')");
     #ifdef DEBUG
     aDest.append("}");
     #endif

@@ -71,6 +71,8 @@ ExprResult* AttributeValueTemplate::evaluate(txIEvalContext* aContext)
     while (iter.hasNext()) {
         Expr* expr = (Expr*)iter.next();
         ExprResult* exprResult = expr->evaluate(aContext);
+        if (!exprResult)
+            return 0;
         exprResult->stringValue(result);
         delete exprResult;
     }
