@@ -130,7 +130,13 @@ sub BuildMozilla()
 						BuildProject(":cmd:macfe:MailNews:build:MailNews.mcp",						"MailNews$D.o");
 						BuildProject(":directory:c-sdk:ldap:libraries:macintosh:LDAPClient.mcp",	"LDAPClient$D.o");
 					}
-				
+				else
+					{
+						BuildProject("cmd:macfe:projects:dummies:MakeDummies.mcp",				"MsgLib$D.o");
+						BuildProject("cmd:macfe:projects:dummies:MakeDummies.mcp",				"MailNews$D.o");
+						BuildProject("cmd:macfe:projects:dummies:MakeDummies.mcp",				"LDAPClient$D.o");
+					}
+
 				# Build the appropriate resources target
 				BuildProject(":cmd:macfe:projects:client:Client.mcp", 						"Moz_Resources");
 			}
@@ -224,25 +230,28 @@ sub DistMozilla()
 		InstallFromManifest(":mozilla:modules:schedulr:public:MANIFEST",		":mozilla:dist:schedulr:");
 		
 		#NETWORK
-		InstallFromManifest(":mozilla:network:cache:MANIFEST",						":mozilla:dist:network:");
-		InstallFromManifest(":mozilla:network:client:MANIFEST",						":mozilla:dist:network:");
-		InstallFromManifest(":mozilla:network:cnvts:MANIFEST",						":mozilla:dist:network:");
-		InstallFromManifest(":mozilla:network:cstream:MANIFEST",					":mozilla:dist:network:");
-		InstallFromManifest(":mozilla:network:main:MANIFEST",							":mozilla:dist:network:");
-		InstallFromManifest(":mozilla:network:protocol:about:MANIFEST",		":mozilla:dist:network:");
-		InstallFromManifest(":mozilla:network:protocol:certld:MANIFEST",	":mozilla:dist:network:");
-		InstallFromManifest(":mozilla:network:protocol:dataurl:MANIFEST",	":mozilla:dist:network:");
-		InstallFromManifest(":mozilla:network:protocol:file:MANIFEST",		":mozilla:dist:network:");
-		InstallFromManifest(":mozilla:network:protocol:ftp:MANIFEST",			":mozilla:dist:network:");
-		InstallFromManifest(":mozilla:network:protocol:gopher:MANIFEST",	":mozilla:dist:network:");
-		InstallFromManifest(":mozilla:network:protocol:http:MANIFEST",		":mozilla:dist:network:");
-		InstallFromManifest(":mozilla:network:protocol:js:MANIFEST",			":mozilla:dist:network:");
-		InstallFromManifest(":mozilla:network:protocol:mailbox:MANIFEST",	":mozilla:dist:network:");
-		InstallFromManifest(":mozilla:network:protocol:marimba:MANIFEST",	":mozilla:dist:network:");
-		InstallFromManifest(":mozilla:network:protocol:nntp:MANIFEST",		":mozilla:dist:network:");
-		InstallFromManifest(":mozilla:network:protocol:pop3:MANIFEST",		":mozilla:dist:network:");
-		InstallFromManifest(":mozilla:network:protocol:remote:MANIFEST",	":mozilla:dist:network:");
-		InstallFromManifest(":mozilla:network:protocol:smtp:MANIFEST",		":mozilla:dist:network:");
+		# On Normandy, this is all still in libNet
+		#InstallFromManifest(":mozilla:network:cache:MANIFEST",						":mozilla:dist:network:");
+		#InstallFromManifest(":mozilla:network:client:MANIFEST",						":mozilla:dist:network:");
+		#InstallFromManifest(":mozilla:network:cnvts:MANIFEST",						":mozilla:dist:network:");
+		#InstallFromManifest(":mozilla:network:cstream:MANIFEST",					":mozilla:dist:network:");
+		#InstallFromManifest(":mozilla:network:main:MANIFEST",							":mozilla:dist:network:");
+		#InstallFromManifest(":mozilla:network:protocol:about:MANIFEST",		":mozilla:dist:network:");
+		#InstallFromManifest(":mozilla:network:protocol:certld:MANIFEST",	":mozilla:dist:network:");
+		#InstallFromManifest(":mozilla:network:protocol:dataurl:MANIFEST",	":mozilla:dist:network:");
+		#InstallFromManifest(":mozilla:network:protocol:file:MANIFEST",		":mozilla:dist:network:");
+		#InstallFromManifest(":mozilla:network:protocol:ftp:MANIFEST",			":mozilla:dist:network:");
+		#InstallFromManifest(":mozilla:network:protocol:gopher:MANIFEST",	":mozilla:dist:network:");
+		#InstallFromManifest(":mozilla:network:protocol:http:MANIFEST",		":mozilla:dist:network:");
+		#InstallFromManifest(":mozilla:network:protocol:js:MANIFEST",			":mozilla:dist:network:");
+		#InstallFromManifest(":mozilla:network:protocol:mailbox:MANIFEST",	":mozilla:dist:network:");
+		#InstallFromManifest(":mozilla:network:protocol:marimba:MANIFEST",	":mozilla:dist:network:");
+		#InstallFromManifest(":mozilla:network:protocol:nntp:MANIFEST",		":mozilla:dist:network:");
+		#InstallFromManifest(":mozilla:network:protocol:pop3:MANIFEST",		":mozilla:dist:network:");
+		#InstallFromManifest(":mozilla:network:protocol:remote:MANIFEST",	":mozilla:dist:network:");
+		#InstallFromManifest(":mozilla:network:protocol:smtp:MANIFEST",		":mozilla:dist:network:");
+
+		InstallFromManifest(":mozilla:lib:libnet:MANIFEST",					":mozilla:dist:libnet:");
 		
 		#HTML_DIALOGS
 		InstallFromManifest(":mozilla:lib:htmldlgs:MANIFEST",							":mozilla:dist:htmldlgs:");
@@ -260,7 +269,8 @@ sub DistMozilla()
 		InstallFromManifest(":mozilla:lib:libstyle:MANIFEST",							":mozilla:dist:libstyle:");
 		
 		#PLUGIN
-		InstallFromManifest(":mozilla:lib:plugin:MANIFEST",								":mozilla:dist:plugin:");
+		# Not needed for normandy?
+		#InstallFromManifest(":mozilla:lib:plugin:MANIFEST",								":mozilla:dist:plugin:");
 		
 		#LIBHOOK
 		InstallFromManifest(":mozilla:modules:libhook:public:MANIFEST",		":mozilla:dist:libhook:");
