@@ -66,10 +66,10 @@ public:
    CNetscapeStatusBar();
    ~CNetscapeStatusBar();
 #ifdef MOZ_OFFLINE
-   BOOL Create( CWnd *pParent, BOOL bSecurityStatus = TRUE, BOOL bTaskbar = TRUE,
+   BOOL Create( CWnd *pParent, BOOL bxxx = TRUE, BOOL bTaskbar = TRUE,
 				BOOL bOnline = TRUE);
 #else //MOZ_OFFLINE
-   BOOL Create( CWnd *pParent, BOOL bSecurityStatus = TRUE, BOOL bTaskbar = TRUE );
+   BOOL Create( CWnd *pParent, BOOL bxxx = TRUE, BOOL bTaskbar = TRUE );
 #endif //MOZ_OFFLINE
    BOOL SetIndicators( const UINT* lpIDArray, int nIDCount );
    BOOL ResetPanes( EStatBarMode enStatBarMode, BOOL bForce = FALSE );

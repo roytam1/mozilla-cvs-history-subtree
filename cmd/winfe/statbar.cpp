@@ -31,6 +31,8 @@
 
 /**	INCLUDE	**/
 #include "stdafx.h"
+
+#include "rosetta.h"
 #include "statbar.h"
 #include "ssl.h"
 #include "tooltip.h"
@@ -67,7 +69,7 @@ static const int nSEC_KEY_WIDTH = 34;
 // status bar format
 static const UINT BASED_CODE pPaneIndicators[] =
 {
-    IDS_SECURITY_STATUS,
+    HG21326
     IDS_TRANSFER_STATUS,
     ID_SEPARATOR
 #ifdef MOZ_OFFLINE
@@ -129,15 +131,7 @@ CNetscapeStatusBar::CNetscapeStatusBar()
 
     m_pProxy2Frame = NULL;
     
-    if( !sm_hbmpSecure )
-    { 
-    	VERIFY( sm_hbmpSecure = ::LoadBitmap( AfxGetResourceHandle(), MAKEINTRESOURCE( IDB_SECURE_STATUS ) ));
-        
-    	BITMAP bm;
-    	::GetObject( sm_hbmpSecure, sizeof(bm), &bm );
-    	sm_sizeSecure.cx = bm.bmWidth / 3;
-    	sm_sizeSecure.cy = bm.bmHeight;
-    }
+    HG22121
 	sm_iRefCount++;
 #ifdef MOZ_OFFLINE
    if( !sm_hbmpOnline )
@@ -166,7 +160,7 @@ CNetscapeStatusBar::~CNetscapeStatusBar()
 	delete [] m_anIDSaved;
 
 	if (!--sm_iRefCount) {
-		VERIFY(::DeleteObject(sm_hbmpSecure));
+		HG28363
 		sm_hbmpSecure = NULL;
 	}
 
@@ -180,11 +174,11 @@ CNetscapeStatusBar::~CNetscapeStatusBar()
 
 //------------------------------------------------------------------------------
 #ifdef MOZ_OFFLINE
-BOOL CNetscapeStatusBar::Create( CWnd *pParent, BOOL bSecurityStatus /*=TRUE*/, BOOL bTaskbar /*=TRUE*/,
+BOOL CNetscapeStatusBar::Create( CWnd *pParent, BOOL bxxx /*=TRUE*/, BOOL bTaskbar /*=TRUE*/,
 								BOOL bOnlineStatus /*TRUE*/)
 {
     m_bTaskbar = bTaskbar;
-	m_bSecurityStatus = bSecurityStatus;
+	HG26545
 	m_bOnlineStatus = bOnlineStatus;
     
 	if( !CNetscapeStatusBarBase::Create( pParent ) )
@@ -199,11 +193,7 @@ BOOL CNetscapeStatusBar::Create( CWnd *pParent, BOOL bSecurityStatus /*=TRUE*/, 
         }
         
         m_pTooltip->Create( this );
-		if(m_bSecurityStatus)
-		{
-	        m_pTooltip->AddTool( this, IDS_STATBAR_SECURITY, CRect(0,0,0,0), IDS_SECURITY_STATUS );
-		    m_pTooltip->AddTool( this, IDS_STATBAR_SECURITY, CRect(0,0,0,0), IDS_SIGNED_STATUS );
-		}
+		HG12421
 
 		if(m_bOnlineStatus)
 		{
@@ -233,11 +223,11 @@ BOOL CNetscapeStatusBar::Create( CWnd *pParent, BOOL bSecurityStatus /*=TRUE*/, 
 	return TRUE;
 }
 #else //MOZ_OFFLINE
-BOOL CNetscapeStatusBar::Create( CWnd *pParent, BOOL bSecurityStatus /*=TRUE*/, BOOL bTaskbar /*=TRUE*/ )
+BOOL CNetscapeStatusBar::Create( CWnd *pParent, BOOL bxxx /*=TRUE*/, BOOL bTaskbar /*=TRUE*/ )
 
 {
     m_bTaskbar = bTaskbar;
-	m_bSecurityStatus = bSecurityStatus;
+	m_bSecurityStatus = bxxx;
     
 	if( !CNetscapeStatusBarBase::Create( pParent ) )
         return FALSE;
@@ -251,8 +241,7 @@ BOOL CNetscapeStatusBar::Create( CWnd *pParent, BOOL bSecurityStatus /*=TRUE*/, 
         }
         
         m_pTooltip->Create( this );
-        m_pTooltip->AddTool( this, IDS_STATBAR_SECURITY, CRect(0,0,0,0), IDS_SECURITY_STATUS );
-        m_pTooltip->AddTool( this, IDS_STATBAR_SECURITY, CRect(0,0,0,0), IDS_SIGNED_STATUS );
+        HG17231
     }
 
 	if (!CreateDefaultPanes())
@@ -431,24 +420,8 @@ void CNetscapeStatusBar::SetupMode()
             
 			RECT rcTool;
 
-			int idx = CommandToIndex(IDS_SECURITY_STATUS);
-			if (idx > -1) {
-	            SetPaneInfo(idx, IDS_SECURITY_STATUS, SBPS_DISABLED, sm_sizeSecure.cx - iFudge);
-
-				if (m_pTooltip) {
-	                GetItemRect(idx, &rcTool);
-		            m_pTooltip->SetToolRect(this, IDS_SECURITY_STATUS, &rcTool);
-				}
-			}
-			idx = CommandToIndex(IDS_SIGNED_STATUS);
-			if (idx > -1) {
-	            SetPaneInfo(idx, IDS_SIGNED_STATUS, SBPS_DISABLED, sm_sizeSecure.cx - iFudge);       
-
-				if (m_pTooltip) {
-	                GetItemRect(idx, &rcTool);
-		            m_pTooltip->SetToolRect(this, IDS_SIGNED_STATUS, &rcTool);
-				}
-			}	
+			HG26576
+			
             
             //
             // Set common pane info (size, style, etc).
@@ -728,20 +701,7 @@ void CNetscapeStatusBar::OnSize( UINT nType, int cx, int cy )
 #endif /* MOZ_TASKBAR */
 		RECT rcTool;
 
-		int idx = CommandToIndex(IDS_SECURITY_STATUS);
-		if (idx > -1) {
-			if (m_pTooltip) {
-	            GetItemRect(idx, &rcTool);
-		        m_pTooltip->SetToolRect(this, IDS_SECURITY_STATUS, &rcTool);
-			}
-		}
-		idx = CommandToIndex(IDS_SIGNED_STATUS);
-		if (idx > -1) {
-			if (m_pTooltip) {
-	            GetItemRect(idx, &rcTool);
-		        m_pTooltip->SetToolRect(this, IDS_SIGNED_STATUS, &rcTool);
-			}
-		}
+		HG26522
 #ifdef MOZ_OFFLINE
 		idx = CommandToIndex(IDS_ONLINE_STATUS);
 		if (idx > -1) {
@@ -813,6 +773,7 @@ void CNetscapeStatusBar::DrawSecureStatus(HDC hdc)
  	if (idx < 0) 
         return;
 
+	HG87236
 	UINT nID, nStyle;
 	int cxWidth;
 	GetPaneInfo(idx, nID, nStyle, cxWidth);
@@ -837,6 +798,7 @@ void CNetscapeStatusBar::DrawSignedStatus(HDC hdc)
  	if (idx < 0) 
         return;
 
+	HG17236
 	UINT nID, nStyle;
 	int cxWidth;
 	GetPaneInfo(idx, nID, nStyle, cxWidth);

@@ -5,6 +5,8 @@
 //  November 1997
 //
 #include "stdafx.h"
+
+#include "rosetta.h"
 #include "template.h"
 #include "msgcom.h"
 #include "wfemsg.h"
@@ -154,11 +156,7 @@ CString                 csDefault;
     lstrcat(ptr, (LPSTR) tempString);
   }
 
-  BOOL    bEncrypt = FALSE;
-  BOOL    bSign    = FALSE;
-
-  PREF_GetBoolPref("mail.crypto_sign_outgoing_mail", &bSign);
-  PREF_GetBoolPref("mail.encrypt_outgoing_mail", &bEncrypt);
+  HG27129
   MSG_CompositionFields *fields =
       MSG_CreateCompositionFields(real_addr, real_addr, 
                   toString, 
@@ -168,8 +166,7 @@ CString                 csDefault;
 									"", subject, "",
 									"", "", "",
 									"", 
-                  bEncrypt,
-                  bSign);
+                  HG21198);
   if (!fields)
   {
     return(MAPI_E_FAILURE);
@@ -407,12 +404,7 @@ CGenericDoc             *pDocument;
   //
   // Now, build the fields object w/o much info...
   //
-  BOOL    bEncrypt = FALSE;
-  BOOL    bSign    = FALSE;
-
-  PREF_GetBoolPref("mail.crypto_sign_outgoing_mail", &bSign);
-  PREF_GetBoolPref("mail.encrypt_outgoing_mail", &bEncrypt);
-
+  HG26726
   MSG_CompositionFields *fields =
       MSG_CreateCompositionFields(real_addr, real_addr, NULL, 
                   "", "",
@@ -420,8 +412,7 @@ CGenericDoc             *pDocument;
 									"", "", "",
 									"", "", "",
 									"", 
-                  bEncrypt,
-                  bSign);
+                  HG21892);
   if (!fields)
   {
     return(MAPI_E_FAILURE);

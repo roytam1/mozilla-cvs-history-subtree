@@ -994,8 +994,10 @@ FONT 8, "MS Sans Serif"
 BEGIN
     LTEXT           "&Port:",IDC_STATIC,7,29,25,10
     EDITTEXT        IDC_EDIT_PORT,35,28,83,12,ES_AUTOHSCROLL
+#if MOZ_SECURITY
     CONTROL         "Se&cure",IDC_SECURE,"Button",BS_AUTOCHECKBOX | 
                     WS_TABSTOP,35,47,49,13
+#endif
     DEFPUSHBUTTON   "OK",IDOK,21,79,50,14
     PUSHBUTTON      "Cancel",IDCANCEL,76,79,50,14
     CONTROL         "&Always use name and password",IDC_USE_NAME,"Button",
@@ -1065,8 +1067,10 @@ BEGIN
     LTEXT           "&Maximum Number of Hits:",IDC_STATIC_MAX_HITS,8,68,83,
                     11
     EDITTEXT        IDC_EDIT_MAX_HITS,95,66,32,12,ES_AUTOHSCROLL
+#if MOZ_SECURITY
     CONTROL         "Se&cure",IDC_SECURE,"Button",BS_AUTOCHECKBOX | 
                     WS_TABSTOP,155,55,55,10
+#endif
     CONTROL         "S&ave Password",IDC_SAVE_PASSWORD,"Button",
                     BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_TABSTOP,155,68,75,
                     10
@@ -1831,9 +1835,11 @@ BEGIN
     CONTROL         "Set &new folders for offline download",
                     IDC_CHECK_IMAP_LOCAL,"Button",BS_AUTOCHECKBOX | 
                     WS_TABSTOP,11,7,200,10
+#if MOZ_SECURITY
     CONTROL         "&Server supports encrypted connections (SSL)",
                     IDC_CHECK_IMAP_SSL,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
                     11,22,200,10
+#endif
     CONTROL         "&Empty Trash on exit",IDC_CHECK_EMPTY_TRASH,"Button",
                     BS_AUTOCHECKBOX | WS_TABSTOP,11,36,212,13
     CONTROL         "&Clean up Inbox on exit",IDC_CHECK_EMPTY_INBOX,"Button",

@@ -21,6 +21,8 @@
 //
 
 #include "stdafx.h"
+
+#include "rosetta.h"
 #include "intl_csi.h"
 #include "netsvw.h"
 #include "cxsave.h"
@@ -3067,55 +3069,12 @@ void CMailNewsFrame::OnUpdatePriority(CCmdUI *pCmdUI)
 
 void CMailNewsFrame::OnUpdateSecurity(CCmdUI *pCmdUI)
 {
-	XP_Bool bSigned = FALSE;
-	XP_Bool bEncrypted = FALSE;
-
-	MIME_GetMessageCryptoState(GetMainContext()->GetContext(),
-							   0, 0,
-							   &bSigned,
-							   &bEncrypted);
-
-	if (m_bNews) {
-		int status = XP_GetSecurityStatus(GetMainContext()->GetContext());	
-		if (status == SSL_SECURITY_STATUS_ON_LOW || status == SSL_SECURITY_STATUS_ON_HIGH)
-			bEncrypted = TRUE;
-	}
-
-	LPNSTOOLBAR pIToolBar;
-	m_pChrome->QueryInterface( IID_INSToolBar, (LPVOID *) &pIToolBar );
-	if ( pIToolBar ) {
-		CCommandToolbar *pToolBar = (CCommandToolbar *) CWnd::FromHandlePermanent( pIToolBar->GetHWnd() );
-		
-		int index = bEncrypted ? 
-					(bSigned ? SEC_SIGNED_INDEX : SECURE_INDEX) :
-				    (bSigned ? UNSEC_SIGNED_INDEX : UNSECURE_INDEX);
-
-		pToolBar->ReplaceButtonBitmapIndex(ID_SECURITY, index);
-		pIToolBar->Release();
-	}
-	pCmdUI->Enable(TRUE);
+	HG92611
 }
 
 void CMailNewsFrame::OnUpdateSecureStatus(CCmdUI *pCmdUI)
 {
-	XP_Bool bSigned = FALSE;
-	XP_Bool bEncrypted = FALSE;
-
-	MIME_GetMessageCryptoState(GetMainContext()->GetContext(),
-							   0, 0,
-							   &bSigned,
-							   &bEncrypted);
-
-	if (m_bNews) {
-		int status = XP_GetSecurityStatus(GetMainContext()->GetContext());	
-		if (status == SSL_SECURITY_STATUS_ON_LOW || status == SSL_SECURITY_STATUS_ON_HIGH)
-			bEncrypted = TRUE;
-	}
-
-	if (pCmdUI->m_nID == IDS_SECURITY_STATUS)
-		pCmdUI->Enable(bEncrypted);
-	else
-		pCmdUI->Enable(bSigned);
+	HG11173
 }
 
 void CMailNewsFrame::SetCSID( int csid ) {

@@ -17,6 +17,8 @@
  */
 
 #include "stdafx.h"
+
+#include "rosetta.h"
 #include "msgcom.h"
 #include "wfemsg.h"
 #include "dspppage.h"
@@ -395,18 +397,7 @@ BOOL CNewsHostGeneralPropertyPage::OnInitDialog()
 	int32 nPort = MSG_GetNewsHostPort(m_pNewsHost);
 	if (widget)
 		widget->SetWindowText(itoa(nPort,buffer,10));
-	//set the security type
-	widget = GetDlgItem( IDC_SECURITY_TYPE );	
-	if ( MSG_IsNewsHostSecure(m_pNewsHost))
-	{
-		strItemText.LoadString(IDS_IS_ENCRYPTED);
-	}
-	else
-	{
-		strItemText.LoadString(IDS_NOT_ENCRYPTED);
-	}
-	if (widget)
-		widget->SetWindowText(strItemText);
+	HG21215
 
 	//set the authentication type.
 	//We are transposing values here because the radio buttons are in reverse  
