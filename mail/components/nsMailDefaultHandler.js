@@ -104,7 +104,7 @@ var nsMailDefaultHandler = {
     // sometimes is not run when it is supposed to, and other badness. Fix
     // this for 1.1!
 
-    if (!uri && cmdLine.state != STATE_INITIAL_LAUNCH) {
+    if (!uri && cmdLine.state != nsICommandLine.STATE_INITIAL_LAUNCH) {
       try {
         var wmed = Components.classes["@mozilla.org/appshell/window-mediator;1"]
                              .getService(nsIWindowMediator);
@@ -124,14 +124,13 @@ var nsMailDefaultHandler = {
     var wwatch = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
                            .getService(nsIWindowWatcher);
 
-    var argstring;
-    if (uri) {
-      argstring = Components.classes["@mozilla.org/supports-string;1"]
-                            .createInstance(nsISupportsString);
+    var argstring = Components.classes["@mozilla.org/supports-string;1"]
+                              .createInstance(nsISupportsString);
+    if (uri)
       argstring.data = uri;
-    }
+
     wwatch.openWindow(null, "chrome://messenger/content/", "_blank",
-                      "chrome,modal=no,all", argstring);
+                      "chrome,dialog=no,all", argstring);
   },
 
   helpInfo : "",
@@ -158,7 +157,7 @@ var Module = {
 
   QueryInterface : function QI(iid) {
     if (iid.equals(Components.interfaces.nsIModule) &&
-        iid.equals(Components.interfaces.nsISupports)
+        iid.equals(Components.interfaces.nsISupports))
       return this;
 
     throw Components.results.NS_ERROR_NO_INTERFACE;
