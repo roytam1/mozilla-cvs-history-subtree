@@ -342,7 +342,7 @@ void HyperStyle::FinishHyperStyle()
 
 int HyperStyle::SetUnderlineLinks(const char * /*newpref*/, void * /*stuff*/)
 {
-	XP_Bool value;
+	PRBool value;
 	PREF_GetBoolPref(sUnderlineLinksPref, &value);
 	sUnderlineLinks = value;
 	return 0;

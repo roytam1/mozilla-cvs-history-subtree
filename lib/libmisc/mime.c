@@ -154,7 +154,7 @@ MISC_ValidateReturnAddress (MWContext *context, const char *addr)
   char *at;
   char *dot;
   char *fmt = 0;
-  XP_Bool validate;
+  PRBool validate = PR_FALSE;
 
   PREF_GetBoolPref("mail.identity.validate_addr", &validate);
 

@@ -1626,7 +1626,7 @@ CHTMLView::PrefInvalidateCachedPreference(const char *inPrefString, void * /*inC
 	int	returnValue = 0;
 	 
 	if (!XP_STRCMP(inPrefString, "general.always_load_images")) {
-		XP_Bool	prefValue;
+		PRBool	prefValue;
 		returnValue = PREF_GetBoolPref(inPrefString, &prefValue);
 		if (returnValue != PREF_OK && returnValue != PREF_NOERROR)
 			sCachedAlwaysLoadImages = true;

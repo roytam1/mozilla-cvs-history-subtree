@@ -1068,7 +1068,7 @@ lo_ProcessScriptTag(MWContext *context, lo_DocState *state, PA_Tag *tag, JSObjec
              */
 	    buff = lo_FetchParamValue(context, tag, PARAM_SRC);  /* XXX overloaded rv */
             if (buff != NULL) {
-		XP_Bool allowFileSrc = FALSE;
+		PRBool allowFileSrc = PR_FALSE;
                 char *absUrl;
 
                 PA_LOCK(str, char *, buff);

@@ -2128,7 +2128,7 @@ char * FE_GetNetHelpDir()
 Boolean CPrefs::GetBoolean(PrefEnum id)
 {
 	if ( IsNewPrefFormat(id) ) {
-		XP_Bool value;
+		PRBool value;
 		PREF_GetBoolPref( prefLoc[id].prefName, &value );
 		return value;
 	}
@@ -2170,7 +2170,7 @@ CStr255	CPrefs::GetString(PrefEnum id)
 		// override is requested and the user hasn't seen it yet,
 		// load the override page instead.
 		if (id == HomePage) {
-			XP_Bool override = false;
+			PRBool override = false;
 			PREF_GetBoolPref("browser.startup.homepage_override", &override);
 			if (override) {
 				char* url = NULL;

@@ -3112,8 +3112,8 @@ lo_view_title( MWContext *context, char *title_str ){
 #define FORCE_LOAD_ALL_IMAGES ((char *)1)
 
 static char *force_load_images = NULL;
-static XP_Bool autoload_images = TRUE;
-static XP_Bool pref_initialized = FALSE;
+static PRBool autoload_images = PR_TRUE;
+static PRBool pref_initialized = PR_FALSE;
 
 /* remove Mac warning about missing prototype */
 MODULE_PRIVATE int PR_CALLBACK lo_AutoloadPrefChangedFunc(const char *pref,

@@ -231,7 +231,7 @@ Bool pics_java_capabilities_enabled = TRUE;
 int PR_CALLBACK
 pics_pref_change(const char *pref_name, void *closure)
 {
-    XP_Bool bool_rv;
+    PRBool bool_rv = PR_FALSE;
 
     if(!PREF_GetBoolPref(PICS_ENABLED_PREF, &bool_rv))
         pics_ratings_enabled = bool_rv;
@@ -560,9 +560,9 @@ PUBLIC PICS_PassFailReturnVal
 PICS_CompareToUserSettings(PICS_RatingsStruct *rs, char *cur_page_url)
 {
 	int32 int_pref;
-	XP_Bool bool_pref;
+	PRBool bool_pref = PR_FALSE;
 	char * pref_prefix;
-	char * pref_string=NULL;
+	char * pref_string = NULL;
 	char * escaped_service;
 	PICS_PassFailReturnVal rv = PICS_RATINGS_PASSED;
     XP_List *list_ptr;

@@ -279,7 +279,7 @@ void CMimeMapper::ReadMimePrefs()
 		fFileFlags =  intvalue;
 	}
 	
-	XP_Bool boolvalue;
+	PRBool boolvalue;
 	err = PREF_GetBoolPref( CPrefs::Concat(fBasePref, Pref_LatentPlugin), &boolvalue );
 	if (PREF_NOERROR == err)
 	{

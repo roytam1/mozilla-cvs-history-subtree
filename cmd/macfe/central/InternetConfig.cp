@@ -214,7 +214,7 @@ Boolean
 CInternetConfig::CurrentlyUsingIC()
 {
 	
-	XP_Bool	result;
+	PRBool	result;
 	const char	*useICPrefName = "browser.mac.use_internet_config";
 	if (PREF_NOERROR != PREF_GetBoolPref(useICPrefName, &result))
 	{

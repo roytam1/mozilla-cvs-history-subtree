@@ -296,7 +296,7 @@ void 	FormsPopup::DrawTruncTextBox (CStr255 text, const Rect& box)
 
 Boolean	FormsPopup::NeedCustomPopup() const
 {
-	XP_Bool	useGrayscaleFormControls = false;
+	PRBool	useGrayscaleFormControls = PR_FALSE;
 	int		prefResult = PREF_GetBoolPref("browser.mac.use_grayscale_form_controls", &useGrayscaleFormControls);
 
 	return (prefResult != PREF_NOERROR || !useGrayscaleFormControls || NeedDrawTextInOurOwn());

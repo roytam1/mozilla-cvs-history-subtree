@@ -3036,7 +3036,7 @@ NET_EnableUrlMatchPrefChanged(const char *pref, void *data);
 MODULE_PRIVATE int PR_CALLBACK
 NET_EnableUrlMatchPrefChanged(const char *pref, void *data)
 {
-	Bool x;
+	PRBool x = PR_FALSE;
 
 	PREF_GetBoolPref("network.enableUrlMatch", &x);
 	NET_SetEnableUrlMatchPref(x);
@@ -3046,7 +3046,7 @@ NET_EnableUrlMatchPrefChanged(const char *pref, void *data)
 PUBLIC void
 NET_RegisterEnableUrlMatchCallback(void)
 {
-	Bool x;
+	PRBool x = PR_FALSE;
 
 	PREF_GetBoolPref("network.enableUrlMatch", &x);
 	NET_SetEnableUrlMatchPref(x);

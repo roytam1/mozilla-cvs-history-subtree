@@ -339,31 +339,31 @@ enum // what the ordinal means in this case:
 };
 
 //----------------------------------------------------------------------------------------
-XP_Bool MPreference<LControl,XP_Bool>::GetPaneValue() const
+PRBool MPreference<LControl,PRBool>::GetPaneValue() const
 //----------------------------------------------------------------------------------------
 {
 	return ((LControl*)mPaneSelf)->GetValue();
-} // MPreference<LControl,XP_Bool>::GetPaneValue
+} // MPreference<LControl,PRBool>::GetPaneValue
 
 //----------------------------------------------------------------------------------------
-void MPreference<LControl,XP_Bool>::SetPaneValue(XP_Bool inData)
+void MPreference<LControl,PRBool>::SetPaneValue(PRBool inData)
 //----------------------------------------------------------------------------------------
 {
 	((LControl*)mPaneSelf)->SetValue(inData);
-} // MPreference<LControl,XP_Bool>::SetPaneValue
+} // MPreference<LControl,PRBool>::SetPaneValue
 
 //----------------------------------------------------------------------------------------
-Boolean MPreference<LControl, XP_Bool>::Changed() const
+Boolean MPreference<LControl, PRBool>::Changed() const
 //----------------------------------------------------------------------------------------
 {
 	return GetPaneValue() != mInitialControlValue;
-} // MPreference<LControl,XP_Bool>::Changed
+} // MPreference<LControl,PRBool>::Changed
 
 //----------------------------------------------------------------------------------------
-void MPreference<LControl,XP_Bool>::InitializeUsing(PrefReadFunc inFunc)
+void MPreference<LControl,PRBool>::InitializeUsing(PrefReadFunc inFunc)
 //----------------------------------------------------------------------------------------
 {
-	XP_Bool value;
+	PRBool value;
 	int	prefResult;
 	if (mOrdinal & kOrdinalIntBit)
 	{
@@ -376,10 +376,10 @@ void MPreference<LControl,XP_Bool>::InitializeUsing(PrefReadFunc inFunc)
 		prefResult = inFunc(GetValidPrefName(), &value);
 	if (prefResult == PREF_NOERROR)
 		SetPaneValue(value ^ (mOrdinal & kOrdinalXORBit));
-} // MPreference<LControl,XP_Bool>::InitializeUsing
+} // MPreference<LControl,PRBool>::InitializeUsing
 
 //----------------------------------------------------------------------------------------
-void MPreference<LControl,XP_Bool>::ReadSelf()
+void MPreference<LControl,PRBool>::ReadSelf()
 //----------------------------------------------------------------------------------------
 {
 	if (mOrdinal & kOrdinalIntBit) // this bit indicates it's an int conversion
@@ -387,10 +387,10 @@ void MPreference<LControl,XP_Bool>::ReadSelf()
 	else
 		InitializeUsing(PREF_GetBoolPref);
 	mInitialControlValue = GetPaneValue();
-} // MPreference<LControl,XP_Bool>::ReadSelf
+} // MPreference<LControl,PRBool>::ReadSelf
 
 //----------------------------------------------------------------------------------------
-void MPreference<LControl,XP_Bool>::ReadDefaultSelf()
+void MPreference<LControl,PRBool>::ReadDefaultSelf()
 //----------------------------------------------------------------------------------------
 {
 	if (!IsLocked())
@@ -398,10 +398,10 @@ void MPreference<LControl,XP_Bool>::ReadDefaultSelf()
 			InitializeUsing((PrefReadFunc)PREF_GetDefaultIntPref);
 		else
 			InitializeUsing(PREF_GetDefaultBoolPref);
-} // MPreference<LControl,XP_Bool>::ReadDefaultSelf
+} // MPreference<LControl,PRBool>::ReadDefaultSelf
 
 //----------------------------------------------------------------------------------------
-void MPreference<LControl,XP_Bool>::WriteSelf()
+void MPreference<LControl,PRBool>::WriteSelf()
 //----------------------------------------------------------------------------------------
 {
 	if (ShouldWrite())
@@ -411,17 +411,17 @@ void MPreference<LControl,XP_Bool>::WriteSelf()
 		else
 			PREF_SetBoolPref(GetPrefName(), GetPrefValue());
 	}
-} // MPreference<LControl,XP_Bool>::WriteSelf
+} // MPreference<LControl,PRBool>::WriteSelf
 
 //----------------------------------------------------------------------------------------
-XP_Bool MPreference<LControl,XP_Bool>::GetPrefValue() const
+PRBool MPreference<LControl,PRBool>::GetPrefValue() const
 //----------------------------------------------------------------------------------------
 {
 	// xor the boolean value with the low-order bit of the ordinal
-	return (XP_Bool)(mPaneSelf->GetValue() ^ (mOrdinal & kOrdinalXORBit));
-} // MPreference<LControl,XP_Bool>::GetPrefValue
+	return (PRBool)(mPaneSelf->GetValue() ^ (mOrdinal & kOrdinalXORBit));
+} // MPreference<LControl,PRBool>::GetPrefValue
 
-template class MPreference<LControl,XP_Bool>;
+template class MPreference<LControl,PRBool>;
 
 #pragma mark -
 
@@ -430,61 +430,61 @@ template class MPreference<LControl,XP_Bool>;
 // CSpecialFolderCaption is derived from this.
 
 //----------------------------------------------------------------------------------------
-XP_Bool MPreference<LGACaption,XP_Bool>::GetPaneValue() const
+PRBool MPreference<LGACaption,PRBool>::GetPaneValue() const
 //----------------------------------------------------------------------------------------
 {
 	return false;
-} // MPreference<LGACaption,XP_Bool>::GetPaneValue
+} // MPreference<LGACaption,PRBool>::GetPaneValue
 
 //----------------------------------------------------------------------------------------
-void MPreference<LGACaption,XP_Bool>::SetPaneValue(XP_Bool)
+void MPreference<LGACaption,PRBool>::SetPaneValue(PRBool)
 //----------------------------------------------------------------------------------------
 {
-} // MPreference<LGACaption,XP_Bool>::SetPaneValue
+} // MPreference<LGACaption,PRBool>::SetPaneValue
 
 //----------------------------------------------------------------------------------------
-Boolean MPreference<LGACaption, XP_Bool>::Changed() const
+Boolean MPreference<LGACaption, PRBool>::Changed() const
 //----------------------------------------------------------------------------------------
 {
 	return false;
-} // MPreference<LGACaption,XP_Bool>::Changed
+} // MPreference<LGACaption,PRBool>::Changed
 
 //----------------------------------------------------------------------------------------
-void MPreference<LGACaption,XP_Bool>::InitializeUsing(PrefReadFunc)
+void MPreference<LGACaption,PRBool>::InitializeUsing(PrefReadFunc)
 //----------------------------------------------------------------------------------------
 {
-} // MPreference<LGACaption,XP_Bool>::InitializeUsing
+} // MPreference<LGACaption,PRBool>::InitializeUsing
 
 //----------------------------------------------------------------------------------------
-void MPreference<LGACaption,XP_Bool>::ReadSelf()
+void MPreference<LGACaption,PRBool>::ReadSelf()
 //----------------------------------------------------------------------------------------
 {
 	InitializeUsing(PREF_GetBoolPref);
 	mInitialControlValue = false;
-} // MPreference<LGACaption,XP_Bool>::ReadSelf
+} // MPreference<LGACaption,PRBool>::ReadSelf
 
 //----------------------------------------------------------------------------------------
-void MPreference<LGACaption,XP_Bool>::ReadDefaultSelf()
+void MPreference<LGACaption,PRBool>::ReadDefaultSelf()
 //----------------------------------------------------------------------------------------
 {
 	if (!IsLocked())
 		InitializeUsing(PREF_GetDefaultBoolPref);
-} // MPreference<LGACaption,XP_Bool>::ReadDefaultSelf
+} // MPreference<LGACaption,PRBool>::ReadDefaultSelf
 
 //----------------------------------------------------------------------------------------
-void MPreference<LGACaption,XP_Bool>::WriteSelf()
+void MPreference<LGACaption,PRBool>::WriteSelf()
 //----------------------------------------------------------------------------------------
 {
-} // MPreference<LGACaption,XP_Bool>::WriteSelf
+} // MPreference<LGACaption,PRBool>::WriteSelf
 
 //----------------------------------------------------------------------------------------
-XP_Bool MPreference<LGACaption,XP_Bool>::GetPrefValue() const
+PRBool MPreference<LGACaption,PRBool>::GetPrefValue() const
 //----------------------------------------------------------------------------------------
 {
 	return false;
-} // MPreference<LGACaption,XP_Bool>::GetPrefValue
+} // MPreference<LGACaption,PRBool>::GetPrefValue
 
-template class MPreference<LGACaption,XP_Bool>;
+template class MPreference<LGACaption,PRBool>;
 
 #pragma mark -
 

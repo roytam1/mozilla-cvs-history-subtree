@@ -42,12 +42,12 @@
 class CPrefCheckbox
 //======================================
 :	public LGACheckbox
-,	public MPreference<LControl,XP_Bool>
+,	public MPreference<LControl,PRBool>
 {
 public:
 	CPrefCheckbox(LStream* inStream)
 		:	LGACheckbox(inStream)
-		,	MPreference<LControl,XP_Bool>(this, inStream)
+		,	MPreference<LControl,PRBool>(this, inStream)
 		{
 		}
 	virtual ~CPrefCheckbox()
@@ -71,12 +71,12 @@ class CBoolPrefRadio
 // needs to be a CBoolPrefRadio.  The other one can be just a LGARadioButton.
 //======================================
 :	public LGARadioButton
-,	public MPreference<LControl,XP_Bool>
+,	public MPreference<LControl,PRBool>
 {
 public:
 	CBoolPrefRadio(LStream* inStream)
 		:	LGARadioButton(inStream)
-		,	MPreference<LControl,XP_Bool>(this, inStream)
+		,	MPreference<LControl,PRBool>(this, inStream)
 		{
 		}
 	virtual ~CBoolPrefRadio()
@@ -538,7 +538,7 @@ class CSpecialFolderCaption
 // there.
 //======================================
 :	public LGACaption
-,	public MPreference<LGACaption,XP_Bool>
+,	public MPreference<LGACaption,PRBool>
 ,	public MSpecialFolderMixin
 {
 private:

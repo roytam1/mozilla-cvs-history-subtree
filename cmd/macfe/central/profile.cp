@@ -610,7 +610,7 @@ ProfileErr CUserProfile::HandleProfileDialog(
 
 	if ( remoteButton )
 	{
-		XP_Bool daBool = FALSE;;
+		PRBool daBool = FALSE;
 		PREF_GetBoolPref("li.ui.enabled", &daBool);
 		if (!daBool)
 		{

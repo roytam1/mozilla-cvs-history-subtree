@@ -723,7 +723,7 @@ LPane* UFormElementFactory::MakeButton(
 		switch (buttonData->type)	{
 			case FORM_TYPE_SUBMIT:
 				{
-					XP_Bool	useGrayscaleFormControls;
+					PRBool	useGrayscaleFormControls;
 					int		prefResult = PREF_GetBoolPref("browser.mac.use_grayscale_form_controls", &useGrayscaleFormControls);
 					
 					if (prefResult == PREF_NOERROR && useGrayscaleFormControls)
@@ -740,7 +740,7 @@ LPane* UFormElementFactory::MakeButton(
 				break;
 			case FORM_TYPE_RESET:
 				{
-					XP_Bool	useGrayscaleFormControls;
+					PRBool	useGrayscaleFormControls;
 					int		prefResult = PREF_GetBoolPref("browser.mac.use_grayscale_form_controls", &useGrayscaleFormControls);
 					
 					if (prefResult == PREF_NOERROR && useGrayscaleFormControls)
@@ -757,7 +757,7 @@ LPane* UFormElementFactory::MakeButton(
 				break;
 			case FORM_TYPE_BUTTON:
 				{
-					XP_Bool	useGrayscaleFormControls;
+					PRBool	useGrayscaleFormControls;
 					int		prefResult = PREF_GetBoolPref("browser.mac.use_grayscale_form_controls", &useGrayscaleFormControls);
 					
 					if (prefResult == PREF_NOERROR && useGrayscaleFormControls)
@@ -902,7 +902,7 @@ LPane* UFormElementFactory::MakeToggle(
 		{
 			case FORM_TYPE_RADIO:
 				{
-					XP_Bool	useGrayscaleFormControls;
+					PRBool	useGrayscaleFormControls;
 					int		prefResult = PREF_GetBoolPref("browser.mac.use_grayscale_form_controls", &useGrayscaleFormControls);
 					
 					if (prefResult == PREF_NOERROR && useGrayscaleFormControls)
@@ -917,7 +917,7 @@ LPane* UFormElementFactory::MakeToggle(
 				break;
 			case FORM_TYPE_CHECKBOX:
 				{
-					XP_Bool	useGrayscaleFormControls;
+					PRBool	useGrayscaleFormControls;
 					int		prefResult = PREF_GetBoolPref("browser.mac.use_grayscale_form_controls", &useGrayscaleFormControls);
 					
 					if (prefResult == PREF_NOERROR && useGrayscaleFormControls)

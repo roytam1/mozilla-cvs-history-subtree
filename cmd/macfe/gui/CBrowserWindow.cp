@@ -176,7 +176,7 @@ void CBrowserWindow::FinishCreateSelf(void)
 	mToolbarContainer = dynamic_cast<CRDFToolbarContainer*>(FindPaneByID('DbCt'));
 		
 	// Show/hide toolbars based on preference settings
-	XP_Bool	value;
+	PRBool	value;
 	PREF_GetBoolPref(Pref_ShowToolbar, &value);
 	mToolbarShown[eNavigationBar] = value;
 	ShowOneDragBar(Button_Bar_PaneID, value);

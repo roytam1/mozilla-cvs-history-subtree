@@ -1123,11 +1123,11 @@ lo_background_rect_func(void *inclosure,
         (context->type == MWContextPostScript)) {
 #ifdef XP_MAC
 		/* the Mac does print background images, if requested */
-		XP_Bool backgroundPref;
+		PRBool backgroundPref = PR_FALSE;
 		if (PREF_GetBoolPref("browser.mac.print_background", &backgroundPref) != PREF_OK || !backgroundPref)
 			backdrop = NULL;
 #elif defined(XP_WIN32)
-		XP_Bool backgroundPref = FALSE;
+		PRBool backgroundPref = PR_FALSE;
 		PREF_GetBoolPref("browser.print_background",&backgroundPref);
 		if (!backgroundPref)
 			backdrop = NULL;

@@ -1391,7 +1391,7 @@ lo_process_div_tag(MWContext *context, lo_DocState *state, PA_Tag *tag)
   lo_AppendToLineList(context, state, (LO_Element*)div, 0);
 }
 
-PRIVATE Bool lo_do_underline = TRUE;
+PRIVATE PRBool lo_do_underline = PR_TRUE;
 
 #ifdef XP_MAC
 PRIVATE

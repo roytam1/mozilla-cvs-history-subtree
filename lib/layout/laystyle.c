@@ -370,7 +370,7 @@ Bool lo_style_sheets_enabled = TRUE;
 int PR_CALLBACK
 lo_ss_enabled_changed(const char *domain, void *closure)
 {
-    Bool rv;
+    PRBool rv = PR_FALSE;
 
     /* the scaling factor should increase things by 10% */
     if(!PREF_GetBoolPref(SS_ENABLED_PREF, &rv))
@@ -388,7 +388,7 @@ LO_StyleSheetsEnabled(MWContext *context)
 
     if(first_time)
     {
-        Bool    rv;
+        PRBool    rv = PR_FALSE;
         /* the scaling factor should increase things by 10% */
         if(!PREF_GetBoolPref(SS_ENABLED_PREF, &rv))
            lo_style_sheets_enabled = rv;

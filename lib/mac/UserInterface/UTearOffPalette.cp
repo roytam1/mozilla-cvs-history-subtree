@@ -947,7 +947,7 @@ CTearOffWindow * CTearOffManager::AssertBarWindowExists(ResIDT inWinID,
 				((CTearOffWindow*)newWindow)->HandleModeChange(toolbarStyle);
 			}
 
-		XP_Bool is_vertical = true;
+		PRBool is_vertical = true;
 		if ( (PREF_GetBoolPref("taskbar.mac.is_vertical", &is_vertical) == PREF_NOERROR)
 			&& !is_vertical )
 			{

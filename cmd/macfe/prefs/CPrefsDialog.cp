@@ -93,7 +93,7 @@ void CPrefsDialog::EditPrefs(
 	{
 		sThis = new CPrefsDialog();
 	}
-	XP_Bool	attachVCard;
+	PRBool	attachVCard;
 	const	char *	const	usePABCPrefName = "mail.attach_vcard";	// fix me
 	int	prefResult = PREF_GetBoolPref(usePABCPrefName, &attachVCard);
 #ifdef MOZ_MAIL_NEWS
@@ -102,7 +102,7 @@ void CPrefsDialog::EditPrefs(
 									!PREF_PrefIsLocked(usePABCPrefName));
 #endif // MOZ_MAIL_NEWS
 	const	char *	const	useInternetConfigPrefName = "browser.mac.use_internet_config";	// fix me
-	XP_Bool	useIC;
+	PRBool	useIC;
 	prefResult = PREF_GetBoolPref(useInternetConfigPrefName, &useIC);
 	CPrefsMediator::UseIC(useIC);
 
@@ -118,7 +118,7 @@ void CPrefsDialog::CheckForVCard()
 //-----------------------------------
 {
 	const	char *	const	usePABCPrefName = "mail.attach_vcard";	// fix me
-	XP_Bool	attachVCard;
+	PRBool	attachVCard;
 	PREF_GetBoolPref(usePABCPrefName, &attachVCard);
 	if (attachVCard)
 	{
