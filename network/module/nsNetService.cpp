@@ -1638,3 +1638,14 @@ BOOL WINAPI DllMain(HINSTANCE hDllInst,
 
 
 #endif /* XP_PC */
+
+#ifdef XP_MAC
+// Build order hack. Add this stub here because nsTimer is defined in gfx, which on Macintosh
+// is built after Netlib.
+#include <Processes.h>
+extern nsresult NS_NewTimer(nsITimer** aTimer)
+{
+	NS_ASSERTION(PR_FALSE, "You have to link with Network BEFORE gfx to get timer to work");
+	ExitToShell();
+}
+#endif // XP_MAC
