@@ -113,6 +113,9 @@
                        xbl:inherits="onfocus,onblur,value,disabled,rows,cols,readonly,wrap"/>
       </xul:hbox>
     </content>
+    <handlers>
+      <handler event="keypress" action="if (event.keyCode == 13) { event.preventDefault(); event.preventBubble(); }"/>
+    </handlers>
   </binding>
 
   <binding id="input-box">
