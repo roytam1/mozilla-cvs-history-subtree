@@ -114,4 +114,4 @@ MOZILLA_FIVE_HOME="/usr/lib/mozilla"
 
 export MOZILLA_FIVE_HOME
 
-exec ./$MOZ_PROGRAM ${1+"$@"}
+exec $MOZ_PROGRAM ${1+"$@"}
