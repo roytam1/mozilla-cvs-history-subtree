@@ -253,7 +253,7 @@ NS_METHOD
 nsLocalFile::nsLocalFileConstructor(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
 {
     NS_ENSURE_ARG_POINTER(aInstancePtr);
-    NS_ENSURE_PROPER_AGGREGATION(outer, aIID);
+    NS_ENSURE_NO_AGGREGATION(outer);
 
     nsLocalFile* inst = new nsLocalFile();
     if (inst == NULL)
@@ -1704,10 +1704,19 @@ nsLocalFile::GetDirectoryEntries(nsISimpleEnumerator * *entries)
 }
 
 
-NS_COM nsresult NS_NewLocalFile(nsILocalFile** result)
+NS_COM nsresult 
+NS_NewLocalFile(const char* path, nsILocalFile* *result)
 {
-    *result = new nsLocalFile();
-    if (*result)
-        return NS_OK;
-    return NS_ERROR_FAILURE;
+    nsLocalFile* file = new nsLocalFile();
+    if (file == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+    NS_ADDREF(file);
+
+    nsresult rv = file->InitWithPath(path);
+    if (NS_FAILED(rv)) {
+        NS_RELEASE(file);
+        return rv;
+    }
+    *result = file;
+    return NS_OK;
 }

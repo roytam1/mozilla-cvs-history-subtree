@@ -26,15 +26,7 @@
 #include "nsIProperties.h"
 #include "nsHashtable.h"
 #include "nsAgg.h"
-
-
-#define NS_DIRECTORY_SERVICE_CID                     \
-{ /* f00152d0-b40b-11d3-8c9c-000064657374 */         \
-    0xf00152d0,                                      \
-    0xb40b,                                          \
-    0x11d3,                                          \
-    {0x8c, 0x9c, 0x00, 0x00, 0x64, 0x65, 0x73, 0x74} \
-}
+#include "nsIFile.h"
 
 #define NS_DIRECTORY_SERVICE_PROGID    "component://netscape/file/directory_service"
 #define NS_DIRECTORY_SERVICE_CLASSNAME "nsIFile Directory Service"
