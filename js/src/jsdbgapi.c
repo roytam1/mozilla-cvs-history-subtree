@@ -847,7 +847,7 @@ JS_SetExecuteHook(JSRuntime *rt, JSInterpreterHook hook, void *closure)
     return JS_TRUE;
 }        
 
-extern JS_PUBLIC_API(JSBool)
+JS_PUBLIC_API(JSBool)
 JS_SetCallHook(JSRuntime *rt, JSInterpreterHook hook, void *closure)
 {
     rt->callHook = hook;
@@ -855,4 +855,10 @@ JS_SetCallHook(JSRuntime *rt, JSInterpreterHook hook, void *closure)
     return JS_TRUE;
 }        
 
-
+JS_PUBLIC_API(JSBool)
+JS_SetObjectHook(JSRuntime *rt, JSObjectHook hook, void *closure)
+{
+    rt->objectHook = hook;
+    rt->objectHookData = closure;
+    return JS_TRUE;
+}        

@@ -146,4 +146,9 @@ typedef void *
 (* CRT_CALL JSInterpreterHook)(JSContext *cx, JSStackFrame *fp, JSBool before,
                                JSBool *ok, void *closure);
 
+typedef void
+(* CRT_CALL JSObjectHook)(JSContext *cx, JSObject *obj, JSBool isNew, 
+                          void *closure);
+
+
 #endif /* jsprvtd_h___ */

@@ -1049,6 +1049,11 @@ js_NewObject(JSContext *cx, JSClass *clasp, JSObject *proto, JSObject *parent)
     obj->slots[JSSLOT_CLASS] = PRIVATE_TO_JSVAL(clasp);
     for (i = JSSLOT_CLASS+1; i < JS_INITIAL_NSLOTS; i++)
 	obj->slots[i] = JSVAL_VOID;
+
+    if (cx->runtime->objectHook) {
+        cx->runtime->objectHook(cx, obj, JS_TRUE, cx->runtime->objectHookData);
+    }
+
     return obj;
 
 bad:
@@ -1163,6 +1168,10 @@ js_FinalizeObject(JSContext *cx, JSObject *obj)
     map = obj->map;
     if (!map)
 	return;
+
+    if (cx->runtime->objectHook) {
+        cx->runtime->objectHook(cx, obj, JS_FALSE, cx->runtime->objectHookData);
+    }
 
 #if JS_HAS_OBJ_WATCHPOINT
     /* Remove all watchpoints with weak links to obj. */
