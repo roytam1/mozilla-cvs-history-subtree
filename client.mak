@@ -32,7 +32,7 @@ MOZ_TOP=mozilla
 #// Figure out how to do the pull.
 #//------------------------------------------------------------------------
 # uncomment these, modify branch tag, and check in to branch for milestones
-#MOZ_BRANCH=SeaMonkey_M17_BRANCH
+MOZ_BRANCH=DARIN_AsyncWrite_20001227_BRANCH
 #NSPR_CO_TAG=SeaMonkey_M17_BRANCH
 #PSM_CO_TAG=SeaMonkey_M17_BRANCH
 #LDAPCSDK_CO_TAG=SeaMonkey_M17_BRANCH
