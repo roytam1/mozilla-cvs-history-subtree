@@ -47,7 +47,7 @@ CPPSRCS	= nsCacheObject.cpp 	\
 		  nsBkgThread.cpp		\
 		  nsCacheBkgThd.cpp		\
 		  CacheStubs.cpp		\
-		  nsFileStream.cpp		\
+		  nsCacheFileStream.cpp		\
 		  nsMemStream.cpp		\
 		  nsMonitorable.cpp		\
 	 	  $(NULL)
