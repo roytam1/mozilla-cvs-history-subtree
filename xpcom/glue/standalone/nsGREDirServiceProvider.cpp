@@ -20,6 +20,7 @@
  *
  * Contributor(s):
  *   Sean Su <ssu@netscape.com>
+ *   Benjamin Smedberg <bsmedberg@covad.net>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -275,7 +276,6 @@ char* GetCurrentProcessDirectory()
     return nsnull;
 }
 
-
 // Get the location of the GRE version we're compatible with from 
 // the registry
 //
@@ -303,7 +303,12 @@ nsGREDirServiceProvider::GetGREDirectoryPath()
     }
     free(cpd);
   }
-  
+
+  // if GRE_HOME is in the environment, use that GRE
+  const char* env = PR_GetEnv("GRE_HOME");
+  if (env && *env)
+    return strdup(env);
+
   // the Gecko bits that sit next to the application or in the LD_LIBRARY_PATH
   if (PR_GetEnv("USE_LOCAL_GRE"))
     return nsnull;

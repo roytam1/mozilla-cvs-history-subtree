@@ -566,18 +566,13 @@ nsresult NS_COM NS_InitXPCOM2(nsIServiceManager* *result,
 
     if ( NS_FAILED(rv) || CheckAndRemoveUpdateFile()) {
         // if we find no persistent registry, we will try to autoregister
-        // the default components directory.
-        nsComponentManagerImpl::gComponentManager->AutoRegister(nsnull);        
-
-        // If the application is using a GRE, then, 
-        // auto register components in the GRE directory as well.
-        //
-        // The application indicates that it's using an GRE by
-        // returning a valid nsIFile when queried (via appFileLocProvider)
-        // for the NS_GRE_DIR atom as shown below
-        //
+        // 1) the GRE (if using a GRE)
+        // 2) the default components directory
 
         if ( appFileLocationProvider ) {
+            // The application indicates that it's using an GRE by
+            // returning a valid nsIFile when queried (via appFileLocProvider)
+            // for the NS_GRE_DIR atom as shown below
             nsCOMPtr<nsIFile> greDir;
             PRBool persistent = PR_TRUE;
 
@@ -597,14 +592,7 @@ nsresult NS_COM NS_InitXPCOM2(nsIServiceManager* *result,
                     return rv;
                 }
 
-                // If the GRE contains any loaders, we want to know about it so that we can cause another
-                // autoregistration of the applications component directory.
-                int loaderCount = nsComponentManagerImpl::gComponentManager->GetLoaderCount();
                 rv = nsComponentManagerImpl::gComponentManager->AutoRegister(greDir);
-                
-                if (loaderCount != nsComponentManagerImpl::gComponentManager->GetLoaderCount()) 
-                    nsComponentManagerImpl::gComponentManager->AutoRegisterNonNativeComponents(nsnull);        
-
 #ifdef DEBUG_dougt
 	printf("end - Registering GRE components\n");
 #endif          
@@ -615,6 +603,8 @@ nsresult NS_COM NS_InitXPCOM2(nsIServiceManager* *result,
                 }
             }
         }
+
+        nsComponentManagerImpl::gComponentManager->AutoRegister(nsnull);        
     }
     
     // Pay the cost at startup time of starting this singleton.
