@@ -637,7 +637,7 @@ function restoreItemAttributes(aAttributeList, aSavedAttrList)
 
 function updateIconSize(aUseSmallIcons)
 {
-  gToolboxIconSize = aUseSmallIcons ? "small" : null;
+  gToolboxIconSize = aUseSmallIcons ? "small" : "large";
   
   setAttribute(gToolbox, "iconsize", gToolboxIconSize);
   gToolboxDocument.persist(gToolbox.id, "iconsize");
