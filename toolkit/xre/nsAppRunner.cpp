@@ -1401,14 +1401,14 @@ static nsresult DumpVersion(char *appname)
 }
 
 /* Temporary hack until quicklaunch is removed for real.
- * This prevents firebird from getting into a broken
+ * This prevents Firefox from getting into a broken
  * state from which you can't quit.
  */
 static nsresult DumpTurbo(char *appname)
 {
   nsresult rv = NS_OK;
 
-  printf("Quick Launch is not supported in Mozilla Firebird.");
+  printf("Quick Launch is not supported in Firefox.");
 
   return rv;
 }

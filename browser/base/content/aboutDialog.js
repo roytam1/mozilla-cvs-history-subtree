@@ -1,5 +1,3 @@
-<?xml version="1.0"?> <!-- -*- Mode: HTML -*- --> 
-
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
@@ -36,40 +34,45 @@
 #
 # ***** END LICENSE BLOCK ***** -->
 
-<?xml-stylesheet href="chrome://global/skin/" type="text/css"?> 
-<?xml-stylesheet href="chrome://browser/skin/aboutDialog.css" type="text/css"?> 
+function init(aEvent) 
+{
+  if (aEvent.target != document)
+    return;
+  var userAgentField = document.getElementById("userAgent");
+  userAgentField.value = navigator.userAgent;
+  
+  var button = document.documentElement.getButton("extra2");
+  button.setAttribute("label", document.documentElement.getAttribute("creditslabel"));
+  gSelectedPage = 0;
+  button.addEventListener("command", switchPage, false);
+}
 
-<!DOCTYPE window [
-<!ENTITY % brandDTD SYSTEM "chrome://global/locale/brand.dtd" >
-%brandDTD;
-<!ENTITY % aboutDialogDTD SYSTEM "chrome://browser/locale/aboutDialog.dtd" >
-%aboutDialogDTD;
-]>
+function uninit(aEvent)
+{
+  if (aEvent.target != document)
+    return;
+  var iframe = document.getElementById("creditsIframe");
+  iframe.setAttribute("src", "");
+}
 
-<dialog xmlns:html="http://www.w3.org/1999/xhtml"
-        xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-        id="aboutDialog"
-        buttons="accept,extra2" 
-        onload="init(event);" onunload="uninit(event);"
-        title="&aboutDialog.title;" creditslabel="&copyright;" aboutlabel="&aboutLink;" 
-        style="width: 299px">
-    
-  <script type="application/x-javascript" src="chrome://browser/content/aboutDialog.js"/>
+function switchPage(aEvent)
+{
+  var button = aEvent.target;
+  if (button.localName != "button")
+    return;
 
-  <deck id="modes" flex="1">
-    <vbox flex="1" id="clientBox">
-      <label id="version" value="&aboutVersion;"/>
-      <description id="copyright">&copyrightText;</description>
-      <vbox id="detailsBox" align="center" flex="1">
-        <spacer flex="1"/>
-        <textbox id="userAgent" multiline="true" readonly="true" cols="60"/>
-      </vbox>
-    </vbox>
-    <vbox flex="1" id="creditsBox">
-      <html:iframe style="border: 0px;" id="creditsIframe" src="chrome://browser/locale/credits.html" flex="1"/>
-    </vbox>    
-  </deck>
-  <separator class="groove" id="groove"/>
-
-</dialog>
+  var iframe = document.getElementById("creditsIframe");
+  if (gSelectedPage == 0) { 
+    iframe.setAttribute("src", "chrome://browser/locale/credits.html");
+    button.setAttribute("label", document.documentElement.getAttribute("aboutlabel"));
+    gSelectedPage = 1;
+  }
+  else {
+    iframe.setAttribute("src", ""); 
+    button.setAttribute("label", document.documentElement.getAttribute("creditslabel"));
+    gSelectedPage = 0;
+  }
+  var modes = document.getElementById("modes");
+  modes.setAttribute("selectedIndex", gSelectedPage);
+}
 

@@ -657,7 +657,7 @@ SOURCE=..\..\..\..\..\browser\installer\windows\editor.jst
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\..\..\..\..\browser\installer\windows\firebird-win32-stub-installer.jst"
+SOURCE="..\..\..\..\..\..\browser\installer\windows\firefox-win32-stub-installer.jst"
 
 !IF  "$(CFG)" == "installer - Win32 Release"
 

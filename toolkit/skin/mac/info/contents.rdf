@@ -10,7 +10,7 @@
 
   <!-- classic/1.0 Information -->
   <RDF:Description about="urn:mozilla:skin:classic/1.0"
-        chrome:displayName="Mozilla Firebird Default"
+        chrome:displayName="Firefox (default)"
         chrome:accessKey="S"
         chrome:author="webmail@kmgerich.com"
         chrome:description=""
