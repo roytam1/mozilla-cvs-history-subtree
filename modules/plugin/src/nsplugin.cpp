@@ -46,7 +46,8 @@ static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
 static NS_DEFINE_IID(kIPluginManager2IID, NS_IPLUGINMANAGER2_IID);
 static NS_DEFINE_IID(kIJNIEnvIID, NS_IJNIENV_IID); 
-static NS_DEFINE_IID(kILiveConnectPluginInstancePeerIID, NS_ILIVECONNECTPLUGININSTANCEPEER_IID); 
+static NS_DEFINE_IID(kILiveConnectPluginInstancePeerIID, NS_ILIVECONNECTPLUGININSTANCEPEER_IID);
+static NS_DEFINE_IID(kIWindowlessPluginInstancePeerIID, NS_IWINDOWLESSPLUGININSTANCEPEER_IID);
 static NS_DEFINE_IID(kPluginInstancePeerCID, NS_PLUGININSTANCEPEER_CID);
 static NS_DEFINE_IID(kIPluginInstancePeerIID, NS_IPLUGININSTANCEPEER_IID); 
 static NS_DEFINE_IID(kIPluginInstancePeer2IID, NS_IPLUGININSTANCEPEER2_IID); 
@@ -424,19 +425,32 @@ nsPluginInstancePeer::~nsPluginInstancePeer(void)
 NS_IMPL_AGGREGATED(nsPluginInstancePeer);
 
 NS_METHOD
-nsPluginInstancePeer::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr) 
+nsPluginInstancePeer::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
 {
     if (NULL == aInstancePtr) {                                            
         return NS_ERROR_NULL_POINTER;                                        
     }                                                                      
-    if (aIID.Equals(kILiveConnectPluginInstancePeerIID) ||
-        aIID.Equals(kIPluginInstancePeer2IID) ||
+    if (aIID.Equals(kIPluginInstancePeer2IID) ||
         aIID.Equals(kIPluginInstancePeerIID) ||
         aIID.Equals(kPluginInstancePeerCID) ||
         aIID.Equals(kISupportsIID)) {
-        *aInstancePtr = (void*)(nsISupports*)(nsIPluginInstancePeer*)this; 
-        AddRef(); 
-        return NS_OK; 
+        // *aInstancePtr = (void*) (nsISupports*) (nsIPluginInstancePeer*)this; 
+        *aInstancePtr = (nsIPluginInstancePeer2*) this;
+        AddRef();
+        return NS_OK;
+    }
+    // beard:  check for interfaces that aren't on the left edge of the inheritance graph.
+    // this is required so that the proper offsets are applied to this, and so the proper
+    // vtable is used.
+    if (aIID.Equals(kILiveConnectPluginInstancePeerIID)) {
+        *aInstancePtr = (nsILiveConnectPluginInstancePeer*) this;
+        AddRef();
+        return NS_OK;
+    }
+    if (aIID.Equals(kIWindowlessPluginInstancePeerIID)) {
+        *aInstancePtr = (nsIWindowlessPluginInstancePeer*) this;
+        AddRef();
+        return NS_OK;
     }
     return fTagInfo->QueryInterface(aIID, aInstancePtr);
 }
