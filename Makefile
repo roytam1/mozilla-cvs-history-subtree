@@ -47,6 +47,11 @@ ifeq ($(STAND_ALONE_JAVA),1)
 DIRS		= config lib/xp $(NSPRDIR) jpeg modules/zlib sun-java ifc js ifc/tools sun-java/java
 endif
 
+ifeq ($(subst /,,$(shell uname -s)),OS2)
+# OS/2 don't need generated about-box stuff from l10n.
+DIRS        := $(filter-out l10n,$(DIRS))
+endif
+
 include $(DEPTH)/config/rules.mk
 
 export:: $(OBJS)
