@@ -85,9 +85,20 @@ nsHttpsProxyListener::OnDataAvailable(nsIRequest *req, nsISupports *ctx,
                                       nsIInputStream *stream,
                                       PRUint32 offset, PRUint32 count)
 {
-    LOG(("nsHttpsProxyListener::OnDataAvailable [this=%x req=%x] "
-         "proxy connect response contains an entity body\n", this, req));
+    LOG(("nsHttpsProxyListener::OnDataAvailable [this=%x req=%x]\n", this, req));
+
+    // we need to just eat whatever data there may be in the stream.
+    // XXX would be nice to not eat an error message!
+
+    char buf[256];
+    while (count) {
+        PRUint32 n = PR_MIN(256, count);
+
+        nsresult rv = stream->Read(buf, n, &n);
+        if (NS_FAILED(rv)) return rv;
+
+        count -= n;
+    }
     
-    // this should cause the connection to be cancelled.
-    return NS_BASE_STREAM_CLOSED;
+    return NS_OK;
 }
