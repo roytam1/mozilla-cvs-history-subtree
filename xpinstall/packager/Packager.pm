@@ -50,8 +50,6 @@ my($flat)             = 0;    # copy everything into the package dir, not into s
 sub Copy {
   ($srcdir, $destdir, $package, $os, $flat, $help, $debug, @components) = @_;
   
-  $srcdir =~ s/\\/\//g; // convert win to unix paths
-
   check_arguments();
   open (MANIFEST,"<$package") ||
   	die "Error: couldn't open file $package for reading: $!.  Exiting...\n";
