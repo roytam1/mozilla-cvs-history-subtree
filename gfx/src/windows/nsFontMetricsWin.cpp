@@ -1964,7 +1964,9 @@ nsFontMetricsWin::LoadGlobalFont(HDC aDC, nsGlobalFont* aGlobalFontItem)
   LOGFONT logFont;
   HFONT hfont;
 
-  FillLogFont(&logFont, aGlobalFontItem->logFont.lfWeight);
+  PRUint16 weightTable = LookForFontWeightTable(aDC, aGlobalFontItem->name);
+  PRInt32 weight = GetFontWeight(mFont->weight, weightTable);
+  FillLogFont(&logFont, weight);
   logFont.lfCharSet = aGlobalFontItem->logFont.lfCharSet;
   logFont.lfPitchAndFamily = aGlobalFontItem->logFont.lfPitchAndFamily;
   strcpy(logFont.lfFaceName, aGlobalFontItem->logFont.lfFaceName);;
@@ -4215,7 +4217,9 @@ nsFontMetricsWinA::LoadGlobalFont(HDC aDC, nsGlobalFont* aGlobalFontItem)
   LOGFONT logFont;
   HFONT hfont;
 
-  FillLogFont(&logFont, aGlobalFontItem->logFont.lfWeight);
+  PRUint16 weightTable = LookForFontWeightTable(aDC, aGlobalFontItem->name);
+  PRInt32 weight = GetFontWeight(mFont->weight, weightTable);
+  FillLogFont(&logFont, weight);
   logFont.lfCharSet = aGlobalFontItem->logFont.lfCharSet;
   logFont.lfPitchAndFamily = aGlobalFontItem->logFont.lfPitchAndFamily;
   strcpy(logFont.lfFaceName, aGlobalFontItem->logFont.lfFaceName);;
