@@ -464,3 +464,35 @@ nsLayoutUtils::CombineBreakType(PRUint8 aOrigBreakType,
   }
   return breakType;
 }
+
+// Mark the intrinsic widths as dirty on the frame, all of its ancestors,
+// and all of its descendants.
+/* static */ void
+nsLayoutUtils::MarkIntrinsicWidthsDirty(nsIFrame* aFrame)
+{
+  // Mark argument and all ancestors dirty
+  for (nsIFrame *a = aFrame; a; a = a->GetParent())
+    a->MarkIntrinsicWidthsDirty();
+
+  // Mark all descendants dirty (using an nsVoidArray stack rather than
+  // recursion).
+  nsVoidArray stack;
+  stack.AppendElement(aFrame);
+
+  while (stack.Count() != 0) {
+    nsIFrame *f =
+      NS_STATIC_CAST(nsIFrame*, stack.FastElementAt[stack.Count() - 1]);
+    stack.RemoveElementAt(stack.Count() - 1);
+
+    PRInt32 childListIndex = 0;
+    nsIAtom *childListName;
+    do {
+      childListName = f->GetAdditionalChildListName(childListIndex++);
+      for (nsIFrame *kid = f->GetFirstChild(childListName); kid;
+           kid = kid->GetNextSibling()) {
+        kid->MarkIntrinsicWidthsDirty();
+        stack.AppendElement(kid);
+      }
+    } while (childListName);
+  }
+}
