@@ -83,11 +83,6 @@
 #define NS_MSGCOMPOSESECURE_CONTRACTID \
   "@mozilla.org/messengercompose/composesecure;1"
 
-#define NS_MSGCOMPOSESECURE_CID						  \
-{ /* dd753201-9a23-4e08-957f-b3616bf7e012 */      \
- 0xdd753201, 0x9a23, 0x4e08,                  \
- {0x95, 0x7f, 0xb3, 0x61, 0x6b, 0xf7, 0xe0, 0x12 }}
-
 //
 // nsMsgComposeParams
 //
