@@ -26,7 +26,7 @@
 
 
 #include "if.h"
-#ifdef STANDALONE_IMAGE_LIB
+#ifdef XP_MAC
 #include "xpcompat.h"
 #else
 #include "xp_qsort.h"
