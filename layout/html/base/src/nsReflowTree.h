@@ -97,6 +97,7 @@ public:
 
         bool HasSingleChild() { return !(mFlags & KIDS_CHUNKED); }
         
+        friend class ChildChunk;
         friend class Iterator;
         friend class nsReflowTree;
     };
