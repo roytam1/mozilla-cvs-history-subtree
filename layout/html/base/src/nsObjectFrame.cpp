@@ -724,9 +724,12 @@ nsObjectFrame::Init(nsIPresContext*  aPresContext,
       }
       else
         aNewFrame->Destroy(aPresContext);
-
-      return rv;
     }
+
+    // Return early here as we don't want to render the "default
+    // plugin" since this object tag may have children that we'll load
+    // correctly.
+    return rv;
   }
 
   nsCAutoString type;
@@ -738,18 +741,10 @@ nsObjectFrame::Init(nsIPresContext*  aPresContext,
     embed->GetType(tmp);
     CopyUTF16toUTF8(tmp, type);
   } else {
-    nsCOMPtr<nsIDOMHTMLObjectElement> object(do_QueryInterface(mContent));
+    NS_ASSERTION(aContent->Tag() == nsHTMLAtoms::applet,
+                 "Huh, aContent should be an applet tag here!");
 
-    if (object) {
-      nsAutoString tmp;
-      object->GetType(tmp);
-      CopyUTF16toUTF8(tmp, type);
-    } else {
-      NS_ASSERTION(aContent->Tag() == nsHTMLAtoms::applet,
-                   "Huh, aContent should be an applet tag here!");
-
-      type.Assign("application/x-java-vm");
-    }
+    type.Assign("application/x-java-vm");
   }
 
   nsCOMPtr<nsIPluginInstance> inst;
