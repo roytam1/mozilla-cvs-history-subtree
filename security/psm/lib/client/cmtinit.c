@@ -37,7 +37,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <sys/stat.h>
+#ifndef XP_BEOS
 #include <netinet/tcp.h>
+#endif
 #else
 #ifdef XP_MAC
 #else /* Windows */
