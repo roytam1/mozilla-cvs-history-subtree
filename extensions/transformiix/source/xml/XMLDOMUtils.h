@@ -27,6 +27,7 @@
 
 #include "dom.h"
 #include "NamespaceResolver.h"
+#include "baseutils.h"
 
 #ifndef TRANSFRMX_XMLDOMUTILS_H
 #define TRANSFRMX_XMLDOMUTILS_H
@@ -50,6 +51,10 @@ public:
     **/
    static void getNodeValue(Node* node, String* target);
 
+   /**
+    * Returns the Namespace associated with the given prefix
+   **/
+   static MBool getNameSpace(const String& prefix, Element* element, String& dest);
 
 }; //-- XMLDOMUtils
 

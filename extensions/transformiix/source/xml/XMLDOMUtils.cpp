@@ -176,3 +176,38 @@ void XMLDOMUtils::getNodeValue(Node* node, String* target) {
 
 } //-- getNodeValue
 
+/**
+ * Resolves the namespace for the given prefix. The namespace is put
+ * into the dest argument.
+ *
+ * @return true if the namespace was found
+**/
+MBool XMLDOMUtils::getNameSpace
+    (const String& prefix, Element* element, String& dest)
+{
+    String attName("xmlns");
+    if (prefix.length() > 0) {
+        attName.append(':');
+        attName.append(prefix);
+    }
+
+    dest.clear();
+
+    Element* elem = element;
+    while( elem ) {
+        NamedNodeMap* atts = elem->getAttributes();
+        if ( atts ) {
+            Node* attr = atts->getNamedItem(attName);
+            if (attr) {
+                dest.append(attr->getNodeValue());
+                return MB_TRUE;
+             }
+        }
+        Node* node = elem->getParentNode();
+        if ((!node) || (node->getNodeType() != Node::ELEMENT_NODE)) break;
+        elem = (Element*) node;
+    }
+    return MB_FALSE;
+
+} //-- getNameSpace
+
