@@ -368,7 +368,7 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
   if (![[mStatus stringValue] isEqualToString:aStatusString])
   {
     [mStatus setStringValue: aStatusString];
-    [mStatus displayIfNeeded];
+    //[mStatus displayIfNeeded];  // XXX expensive; slows page load
   }
 }
 
