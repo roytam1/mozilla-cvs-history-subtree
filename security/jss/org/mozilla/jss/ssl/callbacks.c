@@ -275,8 +275,9 @@ JSSL_CallCertSelectionCallback(    void * arg,
         goto loser;
     }
 
-        privkey = PK11_FindKeyByAnyCert(cert, NULL /*pinarg*/);
-        if ( privkey == NULL )  {
+    privkey = PK11_FindKeyByAnyCert(cert, NULL /*pinarg*/);
+    if ( privkey == NULL )  {
+        CERT_DestroyCertificate(cert);
         rv = SECFailure;
         goto loser;
     }
@@ -456,7 +457,7 @@ JSSL_JavaCertAuthCallback(void *arg, PRFileDesc *fd, PRBool checkSig,
     /* initialize logging structures */
     log.arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
     if (log.arena == NULL) return SECFailure;
-    
+
     log.head = NULL;
     log.tail = NULL;
     log.count = 0;
