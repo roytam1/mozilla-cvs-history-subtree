@@ -173,19 +173,16 @@ function CycleWindow( inType, inChromeURL )
 function toEditor()
 {
   //TODO: Find and existing editor window using CycleWindow()
-  // For now, this opens a new blank window
-    window.openDialog( "chrome://editor/content/EditorAppShell.xul",
-                       "_blank",
-                       "chrome,dialog=no,all",
-                       "resource:/res/html/empty_doc.html" );
+  // For now, just start a new blank document
+  window.openDialog( "chrome://editor/content", "_blank", "chrome,all,dialog=no", "about:blank");
 }
 
 function toNewTextEditorWindow()
 {
-    window.openDialog( "chrome://editor/content/TextEditorAppShell.xul",
-                       "_blank",
-                       "chrome,dialog=no,all",
-                       "resource:/res/html/empty_doc.html");
+  window.openDialog( "chrome://editor/content/TextEditorAppShell.xul",
+                     "_blank",
+                     "chrome,dialog=no,all",
+                     "about:blank");
 }
 
 function ShowWindowFromResource( node )
