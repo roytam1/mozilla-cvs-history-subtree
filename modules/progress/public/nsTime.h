@@ -32,23 +32,23 @@ private:
 
 public:
     nsTime(void);
-    nsTime(PRTime t);
-    nsTime(nsTime& t);
-    nsTime& operator =(nsTime& t);
-    nsTime& operator =(PRTime t);
+    nsTime(const PRTime t);
+    nsTime(const nsTime& t);
+    const nsTime& operator =(const nsTime& t);
+    const nsTime& operator =(const PRTime t);
 
-    nsTime& operator -=(nsTime& t);
-    nsTime& operator -=(PRTime t);
+    const nsTime& operator -=(const nsTime& t);
+    const nsTime& operator -=(const PRTime t);
 
-    nsTime& operator +=(nsTime& t);
-    nsTime& operator +=(PRTime t);
+    const nsTime& operator +=(const nsTime& t);
+    const nsTime& operator +=(const PRTime t);
 
     PRUint32 ToMSec(void);
 
-    friend nsTime operator +(nsTime& t1, nsTime& t2);
-    friend nsTime operator -(nsTime& t1, nsTime& t2);
+    friend const nsTime operator +(const nsTime& t1, const nsTime& t2);
+    friend const nsTime operator -(const nsTime& t1, const nsTime& t2);
 
-    static nsTime FromMSec(PRUint32 msec);
+    static const nsTime FromMSec(PRUint32 msec);
 };
 
 
