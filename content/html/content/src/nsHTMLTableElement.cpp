@@ -1403,7 +1403,7 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
            (value.GetPixelValue() > 0)) ||
           (value.GetUnit() == eHTMLUnit_Empty)) {
         
-        nsCSSValue widthVal((float)value.GetPixelValue(), eCSSUnit_Pixel);
+        nsCSSValue widthVal(1.0f, eCSSUnit_Pixel);
         if (aData->mMarginData->mBorderWidth->mLeft.GetUnit() == eCSSUnit_Null)
           aData->mMarginData->mBorderWidth->mLeft = widthVal;
         if (aData->mMarginData->mBorderWidth->mRight.GetUnit() == eCSSUnit_Null)
