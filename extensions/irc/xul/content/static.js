@@ -1932,20 +1932,22 @@ function __display(message, msgtype, sourceObj, destObj)
     else
     {
         if (!client.debugMode && msgtype in client.responseCodeMap)
+        {
             code = client.responseCodeMap[msgtype];
+        }
         else
-            code = "[" + msgtype + "]";
-
+        {
+            if (!client.debugMode && client.HIDE_CODES)
+                code = client.DEFAULT_RESPONSE_CODE;
+            else
+                code = "[" + msgtype + "]";
+        }
+        
         /* Display the message code */
         var msgType = document.createElementNS("http://www.w3.org/1999/xhtml",
                                                "html:td");
         setAttribs (msgType, "msg-type", {title: dateString});
 
-        if (!code)
-            if (client.HIDE_CODES)
-                code = client.DEFAULT_RESPONSE_CODE;
-            else
-                code = "[" + msgtype + "]";
         msgType.appendChild (newInlineText (code));
         msgRow.appendChild (msgType);
     }

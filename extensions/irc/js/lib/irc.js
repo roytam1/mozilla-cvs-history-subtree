@@ -286,7 +286,7 @@ function CIRCServer (parent, connection, password)
     
 }
 
-CIRCServer.prototype.MAX_LINES_PER_SEND = 5;
+CIRCServer.prototype.MAX_LINES_PER_SEND = 0; /* unlimited */
 CIRCServer.prototype.MS_BETWEEN_SENDS = 1500;
 CIRCServer.prototype.READ_TIMEOUT = 100;
 CIRCServer.prototype.TOO_MANY_LINES_MSG = "\01ACTION has said too much\01";
@@ -434,7 +434,8 @@ function serv_messto (code, target, msg, ctcpCode)
     var sendable = 0, i;
     var pfx = "", sfx = "";
 
-    if (this.sendsThisRound > this.MAX_LINES_PER_SEND)
+    if (this.MAX_LINES_PER_SEND &&
+        this.sendsThisRound > this.MAX_LINES_PER_SEND)
         return false;
 
     if (ctcpCode)
@@ -448,9 +449,10 @@ function serv_messto (code, target, msg, ctcpCode)
 
     for (i in lines)
     {
-        if (((this.sendsThisRound == this.MAX_LINES_PER_SEND - 1) &&
+        if (this.MAX_LINES_PER_SEND && (
+            ((this.sendsThisRound == this.MAX_LINES_PER_SEND - 1) &&
              (sendable > this.MAX_LINES_PER_SEND)) ||
-            (this.sendsThisRound == this.MAX_LINES_PER_SEND))
+            this.sendsThisRound == this.MAX_LINES_PER_SEND))
         {
             this.sendData ("PRIVMSG " + target + " :" +
                            this.TOO_MANY_LINES_MSG + "\n");
