@@ -51,7 +51,8 @@
 #define JS_USE_FDLIBM_MATH 1
 
 #elif defined(OSF1)
-#define JS_USE_FDLIBM_MATH 1
+/* Want to use some fdlibm functions but fdlibm broken on OSF1/alpha. */
+#define JS_USE_FDLIBM_MATH 0
 
 #else
 #define JS_USE_FDLIBM_MATH 0
