@@ -1277,6 +1277,9 @@ restart:
     /* Terminate the new freelist. */
     *flp = NULL;
 
+    if (rt->gcCallback)
+        (void) rt->gcCallback(cx, JSGC_FINALIZE_END);
+
 out:
     JS_LOCK_GC(rt);
     if (rt->gcLevel > 1) {
