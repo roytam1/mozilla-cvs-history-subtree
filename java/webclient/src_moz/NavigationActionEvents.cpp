@@ -237,3 +237,22 @@ wsRefreshEvent::handleEvent ()
         return nsnull;
 } // handleEvent()
 
+
+
+wsSetPromptEvent::wsSetPromptEvent(wcIBrowserContainer* aBrowserContainer,
+                                   jobject aUserPrompt) :
+        nsActionEvent(),
+        mBrowserContainer(aBrowserContainer),
+        mUserPrompt(aUserPrompt)
+{
+
+}
+
+void *
+wsSetPromptEvent::handleEvent ()
+{
+        if (mBrowserContainer && mUserPrompt) {
+            mBrowserContainer->SetPrompt(mUserPrompt);
+        }
+        return nsnull;
+} // handleEvent()

@@ -35,6 +35,7 @@
 #include "nsActions.h"
 #include "nsIWebNavigation.h"
 #include "nsString.h"
+#include "ns_util.h"
 
 struct WebShellInitContext;
 class InputStreamShim;
@@ -95,6 +96,19 @@ protected:
         nsIWebNavigation *   mWebNavigation;
         PRInt32 mReloadType;
 };
+
+
+class wsSetPromptEvent : public nsActionEvent {
+public:
+                        wsSetPromptEvent (wcIBrowserContainer* aBrowserContainer, jobject aUserPrompt);
+        void    *       handleEvent    (void);
+
+protected:
+        wcIBrowserContainer *   mBrowserContainer;
+        jobject mUserPrompt;
+};
+
+
 
 #endif /* NavigationActionEvents_h___ */
 

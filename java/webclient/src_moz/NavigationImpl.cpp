@@ -218,6 +218,10 @@ Java_org_mozilla_webclient_wrapper_1native_NavigationImpl_nativeSetPrompt
     
     PR_ASSERT(initContext->browserContainer);
     
-    initContext->browserContainer->SetPrompt(userPrompt);
+
+    wsSetPromptEvent		* actionEvent = new wsSetPromptEvent(initContext->browserContainer, userPrompt);
+    PLEvent			* event       = (PLEvent*) *actionEvent;
+    ::util_PostEvent(initContext, event);
+
 }
 
