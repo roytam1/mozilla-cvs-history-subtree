@@ -185,3 +185,46 @@ loser:
 
   return rv; /* need return value */
 }
+
+CMTStatus
+CMT_SDRChangePassword(PCMT_CONTROL control, void *ctx)
+{
+  CMTStatus rv = CMTSuccess;
+  CMTItem message;
+  SingleItemMessage request;
+  SingleNumMessage reply;
+
+  /* Fill in the request */
+  request.item = CMT_CopyPtrToItem(ctx);
+
+  message.data = 0;
+  message.len = 0;
+
+  /* Encode */
+  rv = CMT_EncodeMessage(SingleItemMessageTemplate, &message, &request);
+  if (rv != CMTSuccess) {
+    goto loser;
+  }
+
+  message.type = (SSM_REQUEST_MESSAGE|SSM_MISC_ACTION|SSM_MISC_UI|SSM_UI_CHANGE_PASSWORD);
+
+  /* Send */
+  rv = CMT_SendMessage(control, &message);
+  if (rv != CMTSuccess) goto loser;
+
+  if (message.type != 
+     (SSM_REPLY_OK_MESSAGE|SSM_MISC_ACTION|SSM_MISC_UI|SSM_UI_CHANGE_PASSWORD)) { 
+    rv = CMTFailure;
+    goto loser; 
+  }
+
+  rv = CMT_DecodeMessage(SingleNumMessageTemplate, &reply, &message);
+  if (rv != CMTSuccess)
+    goto loser;
+
+loser:
+  if (request.item.data) free(request.item.data);
+  if (message.data) free(message.data);
+
+  return rv; /* need return value */
+}

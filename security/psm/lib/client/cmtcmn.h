@@ -2231,6 +2231,23 @@ CMTStatus CMT_SDRDecrypt(PCMT_CONTROL control,
                const unsigned char *data, CMUint32 dataLen,
                unsigned char **result, CMUint32 *resultLen);
 
+/*
+ * FUNCTION: CMT_SDRChangePassword
+ * ----------------------------------
+ * INPUTS
+ *    control
+ *        A control connection that has been established with the psm server.
+ *    ctx
+ *        A context pointer that may be provided in callbacks
+ * NOTES
+ *
+ * RETURN
+ *     CMTSuccess - the operation completed normally.
+ *     CMTFailure - some (unspecified) error occurred. (probably not useful)
+ */
+CMTStatus CMT_SDRChangePassword(PCMT_CONTROL control, void *ctx);
+
+
 /* Lock operations */
 void CMT_LockConnection(PCMT_CONTROL control);
 void CMT_UnlockConnection(PCMT_CONTROL control);
