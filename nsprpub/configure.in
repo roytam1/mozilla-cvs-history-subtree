@@ -1279,7 +1279,6 @@ mips-sony-newsos*)
     AC_DEFINE(XP_UNIX)
     AC_DEFINE(RHAPSODY)
     AC_DEFINE(MACOSX)
-    AC_DEFINE(USE_DLFCN)
     AC_DEFINE(HAVE_BSD_FLOCK)
     CFLAGS="$CFLAGS -Wmost -traditional-cpp -fno-common -pipe"
     if echo $OS_TEST | grep -c 86 2>/dev/null; then
