@@ -493,7 +493,7 @@ static JSJCallbacks jsj_callbacks = {
     exit_js_impl,
     NULL,       // error_print
     get_java_wrapper_impl,
-    NULL /*unwrap_java_wrapper_impl*/, /* enable when implemented by plugin. */
+    unwrap_java_wrapper_impl,
     create_java_vm_impl,
     destroy_java_vm_impl,
     attach_current_thread_impl,
