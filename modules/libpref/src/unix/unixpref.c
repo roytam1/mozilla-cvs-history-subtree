@@ -20,6 +20,8 @@
  unixpref.c
  **********************************************************************/
 
+#include <stdio.h>
+#include <assert.h>
 #include "prefapi.h"
 #include "prlink.h"
 #include "jsapi.h"
@@ -83,7 +85,7 @@ PREF_AlterSplashIcon(struct fe_icon_data* icon)
 /*
  * PREF_GetLabelAndMnemonic
  */
-XP_Bool
+PRBool
 PREF_GetLabelAndMnemonic(char* name, char** str, void* v_xm_str, void* v_mnemonic)
 {
     XmString *xm_str = (XmString*)v_xm_str;
@@ -129,7 +131,7 @@ PREF_GetLabelAndMnemonic(char* name, char** str, void* v_xm_str, void* v_mnemoni
 /*
  * PREF_GetUrl
  */
-XP_Bool
+PRBool
 PREF_GetUrl(char* name, char** url)
 {
     char buf[256];
