@@ -115,6 +115,7 @@ typedef struct _HT_PaneStruct {
 	SBProvider			smartBrowsingProviders;
 	PRBool				dirty;
 	PRBool				personaltoolbar;
+	PRBool				toolbar;
 	PRBool				bookmarkmenu;
 	PRBool				special;
 	char				*windowURL;

@@ -212,6 +212,8 @@ void CRDFToolbarButton::FillInOleDataSource(COleDataSource *pDataSource)
     pDataSource->CacheGlobalData(cfHTNode, hString);
 
 	// Need to "select" the button in the view.  Hack.
+	HT_View theView = HT_GetView(m_Node);
+	HT_SetSelectedView(HT_GetPane(theView), theView); // Make sure this view is selected in the pane.
 	HT_SetSelection(m_Node);
 
 	// Now the view is sufficient
@@ -387,8 +389,10 @@ BOOL CRDFToolbarButton::CreateRightMouseMenu(void)
 	if (m_bShouldShowRMMenu)
 	{
 		m_MenuCommandMap.Clear();
-		HT_SetSelection(m_Node); // Make sure the node is the selection in the view.
 		HT_View theView = HT_GetView(m_Node);
+		HT_SetSelectedView(HT_GetPane(theView), theView); // Make sure this view is selected in the pane.
+		HT_SetSelection(m_Node); // Make sure the node is the selection in the view.
+		
 		HT_Cursor theCursor = HT_NewContextualMenuCursor(theView, PR_FALSE, PR_FALSE);
 		if (theCursor != NULL)
 		{

@@ -415,7 +415,18 @@ htrdfNotifFunc (RDF_Event ns, void* pdata)
 		if (aev->s == gCoreVocab->RDF_parent)
 		{
 			vu = (RDF_Resource)aev->v;
-			if (vu == gNavCenter->RDF_Top)
+			if (vu == gNavCenter->RDF_Toolbar && pane->toolbar)
+			{
+				if (aev->tv)
+				{
+					addWorkspace(pane, aev->u, NULL);
+				}
+				else
+				{
+					deleteWorkspace(pane, aev->u);
+				}
+			}
+			else if (vu == gNavCenter->RDF_Top && !pane->toolbar)
 			{
 				if (aev->tv)
 				{
@@ -996,6 +1007,7 @@ HT_NewToolbarPane(HT_Notification notify)
 			break;
 		}
 		
+		pane->toolbar = true;
 		pane->ns = notify;
 		pane->mask = HT_EVENT_DEFAULT_NOTIFICATION_MASK ;
         if ((ev = (RDF_Event)getMem(sizeof(struct RDF_EventStruct))) == NULL) 
@@ -1006,7 +1018,7 @@ HT_NewToolbarPane(HT_Notification notify)
 
 		ev->eventType = HT_EVENT_DEFAULT_NOTIFICATION_MASK;
 		pane->db = HTRDF_GetDB(pane);
-		pane->rns = RDF_AddNotifiable(gNCDB, htrdfNotifFunc, ev, pane);
+		pane->rns = RDF_AddNotifiable(pane->db, htrdfNotifFunc, ev, pane);
 		freeMem(ev);
 
 		if ((pane->hash = PL_NewHashTable(500, idenHash, PL_CompareValues,
