@@ -28,23 +28,7 @@ CSRCS		= \
 		  xp_stub.c \
 		  xp_error.c \
 		  xp_file.c \
-<<<<<<< Makefile
-		  xp_hash.c \
-		  xp_list.c \
-		  xp_ncent.c \
-		  xp_reg.c \
-		  xp_rgb.c \
-		  xp_qsort.c \
-		  xp_str.c \
-		  xp_thrmo.c \
-		  xp_time.c \
-		  xp_trace.c \
-		  xp_wrap.c \
-		  xpassert.c \
-		  xplocale.c \
-=======
 		  allxpstr.c \
->>>>>>> 3.1.10.2
 		  $(NULL)
 
 REQUIRES	= js nspr dbm security img util jtools layer java lay style pref rdf
