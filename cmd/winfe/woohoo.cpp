@@ -34,12 +34,10 @@
 #include "java.h"
 #endif
 
-<<<<<<< woohoo.cpp
 void WFE_LJ_StartDebugger(void);
-=======
+#ifdef MOZ_MAIL_NEWS
 extern "C" void WFE_StartCalendar();
->>>>>>> 3.1.16.1
-
+#endif
 //
 // Parse the command line for component launch arguments
 // Set bRemove to TRUE if you want to remove the switch from pszCommandLine

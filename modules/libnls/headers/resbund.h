@@ -598,11 +598,7 @@ private:
 	static Transition& getTransition(ENode row, short col);
 
 public:
-<<<<<<< resbund.h
 #if 0
-=======
-#ifdef 0
->>>>>>> 1.1.2.1
 	// This is used for debugging
 	friend ostream& operator<<(ostream&, const ResourceBundle&);
 #endif
