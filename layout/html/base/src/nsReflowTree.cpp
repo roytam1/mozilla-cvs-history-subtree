@@ -218,7 +218,7 @@ nsReflowTree::Node::Iterator::SelectChild(nsIFrame *aChildIFrame)
       aCurrentChunk = mNode->mKidU.mChunk;
       aPos = &aCurrentChunk->mKids[0];
     }
-    if ((*aPos)->mFrame == aChildIFrame)
+    if (*aPos && (*aPos)->mFrame == aChildIFrame)
       return *aPos;
 
     while (aPos && *aPos)
