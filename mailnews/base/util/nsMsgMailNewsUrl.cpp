@@ -12,444 +12,182 @@
  *
  * The Initial Developer of this code under the NPL is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1999 Netscape Communications Corporation.  All Rights
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
  * Reserved.
  */
 
 #include "msgCore.h"
-#include "nsMsgMailNewsUrl.h"
-#include "nsMsgBaseCID.h"
+#include "nsMsgProtocol.h"
+#include "nsIMsgMailNewsUrl.h"
+#include "nsISocketTransportService.h"
+#include "nsIFileTransportService.h"
 
-#ifdef XP_PC
-#include <windows.h>    // for InterlockedIncrement
-#endif
+static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
+static NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
 
-static NS_DEFINE_CID(kUrlListenerManagerCID, NS_URLLISTENERMANAGER_CID);
+NS_IMPL_ISUPPORTS(nsMsgProtocol, nsCOMTypeInfo<nsIStreamListener>::GetIID())
 
-nsMsgMailNewsUrl::nsMsgMailNewsUrl()
+nsMsgProtocol::nsMsgProtocol()
 {
-    NS_INIT_REFCNT();
-
-	// nsINetLibUrl specific state
-    m_URL_s = nsnull;
- 
-	// nsIURI specific state
-    m_protocol = nsnull;
-    m_host = nsnull;
-    m_file = nsnull;
-    m_ref = nsnull;
-    m_port = 0;
-    m_spec = nsnull;
-    m_search = nsnull;
-	m_errorMessage = nsnull;
-	m_runningUrl = PR_FALSE;
-	nsComponentManager::CreateInstance(kUrlListenerManagerCID, nsnull, nsCOMTypeInfo<nsIUrlListenerManager>::GetIID(), (void **) getter_AddRefs(m_urlListeners));
- 
-    m_container = nsnull;
+	NS_INIT_REFCNT();
+	m_flags = 0;
+	m_socketIsOpen = PR_FALSE;
 }
- 
-nsMsgMailNewsUrl::~nsMsgMailNewsUrl()
-{
-    NS_IF_RELEASE(m_container);
-	PR_FREEIF(m_errorMessage);
 
-    PR_FREEIF(m_spec);
-    PR_FREEIF(m_protocol);
-    PR_FREEIF(m_host);
-    PR_FREEIF(m_file);
-    PR_FREEIF(m_ref);
-    PR_FREEIF(m_search);
-}
-  
-NS_IMPL_THREADSAFE_ADDREF(nsMsgMailNewsUrl);
-NS_IMPL_THREADSAFE_RELEASE(nsMsgMailNewsUrl);
+nsMsgProtocol::~nsMsgProtocol()
+{}
 
-nsresult nsMsgMailNewsUrl::QueryInterface(const nsIID &aIID, void** aInstancePtr)
+nsresult nsMsgProtocol::OpenNetworkSocket(nsIURI * aURL) // open a connection on this url
 {
-    if (NULL == aInstancePtr) {
-        return NS_ERROR_NULL_POINTER;
-    }
-    if (aIID.Equals(nsCOMTypeInfo<nsIURI>::GetIID())) {
-        *aInstancePtr = (void*) ((nsIURI*)this);
-        AddRef();
-        return NS_OK;
-    }
-    if (aIID.Equals(nsCOMTypeInfo<nsINetlibURL>::GetIID())) {
-        *aInstancePtr = (void*) ((nsINetlibURL*)this);
-        AddRef();
-        return NS_OK;
-    }
-	if (aIID.Equals(nsCOMTypeInfo<nsIMsgMailNewsUrl>::GetIID()))
+	nsresult rv = NS_OK;
+	char * hostName = nsnull;
+	PRInt32 port = 0;
+
+    NS_WITH_SERVICE(nsISocketTransportService, socketService, kSocketTransportServiceCID, &rv);
+
+	if (NS_SUCCEEDED(rv) && aURL)
 	{
-		*aInstancePtr = (void *) ((nsIMsgMailNewsUrl*) this);
-		AddRef();
-		return NS_OK;
-	}
- 
-  if (aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID()))    
-	{
-		*aInstancePtr = (void *) ((nsIMsgMailNewsUrl*) this);
-		AddRef();
-		return NS_OK;
-	}
-#if defined(NS_DEBUG)
-    /*
-     * Check for the debug-only interface indicating thread-safety
-     */
-    static NS_DEFINE_IID(kIsThreadsafeIID, NS_ISTHREADSAFE_IID);
-    if (aIID.Equals(kIsThreadsafeIID)) {
-        return NS_OK;
-    }
-#endif
-    return NS_NOINTERFACE;
-}
+		aURL->GetPort(&port);
+		aURL->GetHost(&hostName);
 
-////////////////////////////////////////////////////////////////////////////////////
-// Begin nsIMsgMailNewsUrl specific support
-////////////////////////////////////////////////////////////////////////////////////
-
-nsresult nsMsgMailNewsUrl::GetUrlState(PRBool * aRunningUrl)
-{
-	if (aRunningUrl)
-		*aRunningUrl = m_runningUrl;
-
-	return NS_OK;
-}
-
-nsresult nsMsgMailNewsUrl::SetUrlState(PRBool aRunningUrl, nsresult aExitCode)
-{
-	m_runningUrl = aRunningUrl;
-	if (m_urlListeners)
-	{
-		if (m_runningUrl)
-			m_urlListeners->OnStartRunningUrl(this);
-		else
-			m_urlListeners->OnStopRunningUrl(this, aExitCode);
+		rv = socketService->CreateTransport(hostName, port, getter_AddRefs(m_channel));
+		nsCRT::free(hostName);
+		if (NS_SUCCEEDED(rv) && m_channel)
+		{
+			m_socketIsOpen = PR_FALSE;
+			rv = SetupTransportState();
+		}
 	}
 
-	return NS_OK;
+	return rv;
 }
 
-nsresult nsMsgMailNewsUrl::RegisterListener (nsIUrlListener * aUrlListener)
+nsresult nsMsgProtocol::OpenFileSocket(nsIURI * aURL, const nsFileSpec * aFileSpec)
 {
-	if (m_urlListeners)
-		m_urlListeners->RegisterListener(aUrlListener);
-	return NS_OK;
-}
+	// mscott - file needs to be encoded directly into aURL. I should be able to get
+	// rid of this method completely.
 
-nsresult nsMsgMailNewsUrl::UnRegisterListener (nsIUrlListener * aUrlListener)
-{
-	if (m_urlListeners)
-		m_urlListeners->UnRegisterListener(aUrlListener);
-	return NS_OK;
-}
+	nsresult rv = NS_OK;
+    NS_WITH_SERVICE(nsIFileTransportService, fileService, kFileTransportServiceCID, &rv);
 
-nsresult nsMsgMailNewsUrl::SetErrorMessage (char * errorMessage)
-{
-	NS_LOCK_INSTANCE();
-	if (errorMessage)
+	if (NS_SUCCEEDED(rv) && aURL)
 	{
-		PR_FREEIF(m_errorMessage);
-		m_errorMessage = errorMessage;
+
+		rv = fileService->CreateTransport((const char *) *aFileSpec, getter_AddRefs(m_channel));
+
+		if (NS_SUCCEEDED(rv) && m_channel)
+		{
+			m_socketIsOpen = PR_FALSE;
+			rv = SetupTransportState();
+		}
 	}
-	NS_UNLOCK_INSTANCE();
-	return NS_OK;
+
+	return rv;
 }
 
-// caller must free using PR_FREE
-nsresult nsMsgMailNewsUrl::GetErrorMessage (char ** errorMessage) const
+nsresult nsMsgProtocol::SetupTransportState()
 {
-	NS_LOCK_INSTANCE();
-	if (errorMessage)
+	nsresult rv = NS_OK;
+
+	if (!m_socketIsOpen && m_channel)
 	{
-		if (m_errorMessage)
-			*errorMessage = nsCRT::strdup(m_errorMessage);
-		else
-			*errorMessage = nsnull;
-	}
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-////////////////////////////////////////////////////////////////////////////////////
-// End nsIMsgMailNewsUrl specific support
-////////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////////
-// Begin nsINetlibURL support
-////////////////////////////////////////////////////////////////////////////////////
-
-NS_METHOD nsMsgMailNewsUrl::SetURLInfo(URL_Struct *URL_s)
-{
-    nsresult result = NS_OK;
-  
-    /* Hook us up with the world. */
-    m_URL_s = URL_s;
-    return result;
-}
-  
-NS_METHOD nsMsgMailNewsUrl::GetURLInfo(URL_Struct_** aResult) const
-{
-  nsresult rv;
-
-  if (nsnull == aResult)
-    rv = NS_ERROR_NULL_POINTER;
-  else 
-  {
-    *aResult = m_URL_s;
-    rv = NS_OK;
-  }
-
-  return rv;
-}
-
-////////////////////////////////////////////////////////////////////////////////////
-// End nsINetlibURL support
-////////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////////
-// Begin nsIURI support
-////////////////////////////////////////////////////////////////////////////////////
-
-nsresult nsMsgMailNewsUrl::GetProtocol(const char* *result) const
-{
-    NS_LOCK_INSTANCE();
-    *result = m_protocol;
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-nsresult nsMsgMailNewsUrl::SetProtocol(const char *aNewProtocol)
-{
-    NS_ASSERTION(m_URL_s == nsnull, "URL has already been opened");
-    NS_LOCK_INSTANCE();
-    m_protocol = nsCRT::strdup(aNewProtocol);
-    ReconstructSpec();
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-nsresult nsMsgMailNewsUrl::GetHost(const char* *result) const
-{
-    NS_LOCK_INSTANCE();
-    *result = m_host;
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-nsresult nsMsgMailNewsUrl::SetHost(const char *aNewHost)
-{
-    NS_ASSERTION(m_URL_s == nsnull, "URL has already been opened");
-    NS_LOCK_INSTANCE();
-    m_host = nsCRT::strdup(aNewHost);
-    ReconstructSpec();
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-nsresult nsMsgMailNewsUrl::GetFile(const char* *result) const
-{
-    NS_LOCK_INSTANCE();
-    *result = m_file;
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-nsresult nsMsgMailNewsUrl::SetFile(const char *aNewFile)
-{
-    NS_ASSERTION(m_URL_s == nsnull, "URL has already been opened");
-    NS_LOCK_INSTANCE();
-    m_file = nsCRT::strdup(aNewFile);
-    ReconstructSpec();
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-nsresult nsMsgMailNewsUrl::GetSpec(const char* *result) const
-{
-    NS_LOCK_INSTANCE();
-    *result = m_spec;
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-nsresult nsMsgMailNewsUrl::SetSpec(const char *aNewSpec)
-{
-    // XXX is this right, or should we call ParseURL?
-    nsresult rv = NS_OK;
-//    NS_ASSERTION(m_URL_s == nsnull, "URL has already been opened");
-    NS_LOCK_INSTANCE();
-    rv = ParseUrl(aNewSpec);
 #if 0
-    PR_FREEIF(m_spec);
-    m_spec = nsCRT::strdup(aNewSpec);
+		rv = m_channel->OpenOutputStream(0 /* start position */, getter_AddRefs(m_outputStream));
 #endif
-    NS_UNLOCK_INSTANCE();
-    return rv;
+
+		NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create an output stream");
+		// we want to open the stream 
+	} // if m_transport
+
+	return rv;
 }
 
-nsresult nsMsgMailNewsUrl::GetRef(const char* *result) const
+nsresult nsMsgProtocol::CloseSocket()
 {
-    NS_LOCK_INSTANCE();
-    *result = m_ref;
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
+	// release all of our socket state
+	m_socketIsOpen = PR_FALSE;
+	m_outputStream = null_nsCOMPtr();
+	m_channel = null_nsCOMPtr();
 
-nsresult nsMsgMailNewsUrl::SetRef(const char *aNewRef)
-{
-    NS_ASSERTION(m_URL_s == nsnull, "URL has already been opened");
-    NS_LOCK_INSTANCE();
-    m_ref = nsCRT::strdup(aNewRef);
-    ReconstructSpec();
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-nsresult nsMsgMailNewsUrl::GetHostPort(PRUint32 *result) const
-{
-    NS_LOCK_INSTANCE();
-    *result = m_port;
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-nsresult nsMsgMailNewsUrl::SetHostPort(PRUint32 aNewPort)
-{
-    NS_ASSERTION(m_URL_s == nsnull, "URL has already been opened");
-    NS_LOCK_INSTANCE();
-    m_port = aNewPort;
-    ReconstructSpec();
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-nsresult nsMsgMailNewsUrl::GetSearch(const char* *result) const
-{
-    NS_LOCK_INSTANCE();
-    *result = m_search;
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-nsresult nsMsgMailNewsUrl::SetSearch(const char *aNewSearch)
-{
-    NS_ASSERTION(m_URL_s == nsnull, "URL has already been opened");
-    NS_LOCK_INSTANCE();
-    m_search = nsCRT::strdup(aNewSearch);
-    ReconstructSpec();
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-nsresult nsMsgMailNewsUrl::GetContainer(nsISupports* *result) const
-{
-    NS_LOCK_INSTANCE();
-    *result = m_container;
-    NS_IF_ADDREF(m_container);
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-  
-nsresult nsMsgMailNewsUrl::SetContainer(nsISupports* container)
-{
-    NS_ASSERTION(m_URL_s == nsnull, "URL has already been opened");
-    NS_LOCK_INSTANCE();
-    NS_IF_RELEASE(m_container);
-    m_container = container;
-    NS_IF_ADDREF(m_container);
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-nsresult nsMsgMailNewsUrl::GetContentLength(PRInt32 *len)
-{
-    NS_LOCK_INSTANCE();
-    *len = m_URL_s->content_length;
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-nsresult nsMsgMailNewsUrl::SetPostHeader(const char* name, const char* value)
-{
-    NS_LOCK_INSTANCE();
-    // XXX
-    PR_ASSERT(0);
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-nsresult nsMsgMailNewsUrl::SetPostData(nsIInputStream* input)
-{
-    return NS_OK;
-}
-
-
-PRBool nsMsgMailNewsUrl::Equals(const nsIURI* aURL) const 
-{
-    PRBool bIsEqual;
-    nsIMsgMailNewsUrl * other;
-    NS_LOCK_INSTANCE();
-	// for now just compare the pointers until 
-	// I figure out if we need to check any of the guts for equality....
-    if (((nsIURI*)aURL)->QueryInterface(nsCOMTypeInfo<nsIMsgMailNewsUrl>::GetIID(), (void**)&other) == NS_OK) {
-        bIsEqual = other == (nsIMsgMailNewsUrl *) this; // compare the pointers...
-    }
-    else
-        bIsEqual = PR_FALSE;
-    NS_UNLOCK_INSTANCE();
-    return bIsEqual;
-}
-
-////////////////////////////////////////////////////////////////////////////////////
-// End of nsIURI support
-////////////////////////////////////////////////////////////////////////////////////
- 
-////////////////////////////////////////////////////////////////////////////////////
-// The following set of functions should become obsolete once we take them out of
-// nsIURI.....
-////////////////////////////////////////////////////////////////////////////////////
-nsresult nsMsgMailNewsUrl::GetLoadAttribs(nsILoadAttribs* *result) const
-{
-    NS_LOCK_INSTANCE();
-    *result = NULL;
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-  
-nsresult nsMsgMailNewsUrl::SetLoadAttribs(nsILoadAttribs* aLoadAttribs)
-{
-    NS_ASSERTION(m_URL_s == nsnull, "URL has already been opened");
-    return NS_OK;
-}
-
-nsresult nsMsgMailNewsUrl::GetLoadGroup(nsILoadGroup* *result) const
-{
-    return NS_OK;
-}
-  
-nsresult nsMsgMailNewsUrl::SetLoadGroup(nsILoadGroup* group)
-{
-    NS_ASSERTION(m_URL_s == nsnull, "URL has already been opened");
-    return NS_OK;
-}
-
-nsresult nsMsgMailNewsUrl::GetServerStatus(PRInt32 *status)
-{
-    NS_LOCK_INSTANCE();
-    *status = m_URL_s->server_status;
-    NS_UNLOCK_INSTANCE();
-    return NS_OK;
-}
-
-nsresult nsMsgMailNewsUrl::ToString(PRUnichar* *aString) const
-{ 
-	if (aString)
-		*aString = nsnull; 
 	return NS_OK;
 }
 
-////////////////////////////////////////////////////////////////////////////////////
-// End of functions which should be made obsolete after modifying nsIURI
-////////////////////////////////////////////////////////////////////////////////////
+/*
+ * Writes the data contained in dataBuffer into the current output stream. It also informs
+ * the transport layer that this data is now available for transmission.
+ * Returns a positive number for success, 0 for failure (not all the bytes were written to the
+ * stream, etc). We need to make another pass through this file to install an error system (mscott)
+ */
+
+PRInt32 nsMsgProtocol::SendData(nsIURI * aURL, const char * dataBuffer)
+{
+	PRUint32 writeCount = 0; 
+	PRInt32 status = 0; 
+
+//	NS_PRECONDITION(m_outputStream, "oops....we don't have an output stream...how did that happen?");
+	if (dataBuffer /*  && m_outputStream */)
+	{
+//		if (!m_outputStream)
+			m_channel->OpenOutputStream(0 /* start position */, getter_AddRefs(m_outputStream));
+		nsresult rv = m_outputStream->Write(dataBuffer, PL_strlen(dataBuffer), &writeCount);
+		// due to a necko bug...we must close the stream as soon as we are done writing.
+		m_outputStream->Close();
+	}
+
+	return status;
+}
+
+// Whenever data arrives from the connection, core netlib notifices the protocol by calling
+// OnDataAvailable. We then read and process the incoming data from the input stream. 
+NS_IMETHODIMP nsMsgProtocol::OnDataAvailable(nsISupports *ctxt, nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 count)
+{
+	// right now, this really just means turn around and churn through the state machine
+	nsCOMPtr<nsIURI> uri = do_QueryInterface(ctxt);
+	return ProcessProtocolState(uri, inStr, sourceOffset, count);
+}
+
+NS_IMETHODIMP nsMsgProtocol::OnStartRequest(nsISupports *ctxt)
+{
+	nsresult rv = NS_OK;
+	nsCOMPtr <nsIMsgMailNewsUrl> aMsgUrl = do_QueryInterface(ctxt, &rv);
+	if (NS_SUCCEEDED(rv) && aMsgUrl)
+		return aMsgUrl->SetUrlState(PR_TRUE, NS_OK);
+	else
+		return NS_ERROR_NO_INTERFACE;
+}
+
+// stop binding is a "notification" informing us that the stream associated with aURL is going away. 
+NS_IMETHODIMP nsMsgProtocol::OnStopRequest(nsISupports *ctxt, nsresult aStatus, const PRUnichar* aMsg)
+{
+	nsresult rv = NS_OK;
+	nsCOMPtr <nsIMsgMailNewsUrl> aMsgUrl = do_QueryInterface(ctxt, &rv);
+	if (NS_SUCCEEDED(rv) && aMsgUrl)
+		return aMsgUrl->SetUrlState(PR_FALSE, aStatus);
+	else
+		return NS_ERROR_NO_INTERFACE;
+}
+
+nsresult nsMsgProtocol::LoadUrl(nsIURI * aURL, nsISupports * /* aConsumer */)
+{
+	// okay now kick us off to the next state...
+	// our first state is a process state so drive the state machine...
+	nsresult rv = NS_OK;
+	nsCOMPtr <nsIMsgMailNewsUrl> aMsgUrl = do_QueryInterface(aURL);
+
+	if (NS_SUCCEEDED(rv))
+	{
+		rv = aMsgUrl->SetUrlState(PR_TRUE, NS_OK); // set the url as a url currently being run...
+
+		if (!m_socketIsOpen)
+		{
+			// put us in a state where we are always notified of incoming data
+			m_channel->AsyncRead(0, -1, aURL,this /* stream observer */ );
+			m_socketIsOpen = PR_TRUE; // mark the channel as open
+		} // if we got an event queue service
+		else  // the connection is already open so we should begin processing our new url...
+			rv = ProcessProtocolState(aURL, nsnull, 0, 0); 
+	}
+
+	return rv;
+}
 
