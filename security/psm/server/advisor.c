@@ -47,6 +47,7 @@
 #include "messages.h"
 #include "secerr.h"
 #include "sslerr.h"
+#include "base64.h"
 
 /*
  * This is the structure used to gather all of the CA's that can be used
@@ -77,6 +78,26 @@ SSMStatus SSM_SetSelectedItemInfo(SSMSecurityAdvisorContext* cx);
 
 char * SSM_ConvertStringToHTMLString(char * string);
 char * SSMUI_GetPKCS12Error(PRIntn error, PRBool isBackup);
+
+PRBool
+SSM_IsCRLPresent(SSMControlConnection *ctrl)
+{
+    SECStatus rv = SECFailure;
+    CERTCrlHeadNode *head = NULL;
+    PRBool retVal = PR_FALSE;
+    
+    rv = SEC_LookupCrls(ctrl->m_certdb, &head, -1);
+    if (rv != SECSuccess) {
+        goto done;
+    }
+    if (head == NULL) {
+        goto done;
+    }
+    retVal = (head->first == NULL) ? PR_FALSE : PR_TRUE;
+    PORT_FreeArena(head->arena, PR_FALSE);
+ done:
+    return retVal;
+}
 
 SSMStatus 
 SSMSecurityAdvisorContext_Create(SSMControlConnection *ctrl, 
@@ -1071,6 +1092,125 @@ SSMStatus SSMSecurityAdvisorContext_DoPKCS12Backup(
     return SSM_FAILURE;
 }
 
+char *
+ssm_packb64_name(char *b64Name)
+{
+    char *htmlString = NULL;
+    int numPercentSigns = 0;
+    char *cursor, *retString;
+    int i, newLen, origHTMLStrLen; 
+
+    htmlString = SSM_ConvertStringToHTMLString(b64Name);
+    /*
+     * Now let's see if there are any '%' characters that need
+     * to be escaped so that printf statements succeed.
+     */
+    cursor = htmlString;
+    while ((cursor = PL_strchr(cursor, '%')) != NULL) {
+        numPercentSigns++;
+        cursor++;
+    }
+    if (numPercentSigns == 0) {
+        htmlString;
+    }
+    origHTMLStrLen = PL_strlen(htmlString);
+    newLen = origHTMLStrLen + numPercentSigns + 1;
+    retString = SSM_NEW_ARRAY(char, newLen);
+    for (i=0,cursor=retString; i<origHTMLStrLen+1; i++,cursor++) {
+        if (htmlString[i] == '%') {
+            char *dollarSign, *placeHolder;
+            /*
+             * Let's see if this a urlencoded escape or a printf parameter.
+             */
+            placeHolder = &htmlString[i];
+            dollarSign = PL_strchr(placeHolder, '$');
+            if (dollarSign && ((dollarSign - placeHolder) < 2)) {
+                /*
+                 * OK, this is a numbered parameter for printf
+                 */
+                *cursor = htmlString[i];
+            } else {
+                /*
+                 * This is an escape for url encoding.  Escape it so printf
+                 * doesn't blow up.
+                 */
+                *cursor = '%';
+                cursor++;
+                *cursor = '%';
+            }
+        } else {
+            *cursor = htmlString[i];
+        }
+    }
+    PR_Free(htmlString);
+    return retString;
+}
+
+SSMStatus
+SSMSecurityAdvisorContext_ProcessCRLDialog (HTTPRequest *req)
+{
+    SSMHTTPParamMultValues crlNames={NULL, NULL, 0};
+    CERTSignedCrl *realCrl;
+    SECItem crlDERName;
+    PRBool flushSSLCache = PR_FALSE;
+    SSMStatus rv;
+    SECStatus srv;
+    int i, type;
+
+    rv = SSM_HTTPParamValueMultiple(req, "crlNames", &crlNames);
+    if (rv != SSM_SUCCESS || crlNames.numValues == 0) {
+        goto loser;
+    }
+    memset (&crlDERName, 0, sizeof(SECItem));
+    for (i=0; i<crlNames.numValues; i++) {
+        /*
+         * The first character in the value string represents the type,
+         * either 1 (SEC_CRL_TYPE) or 0 (SEC_KRL_TYPE)
+         */
+        srv = ATOB_ConvertAsciiToItem(&crlDERName, crlNames.values[i]+1);
+        if (srv != SECSuccess) {
+            goto loser;
+        }
+        type = (crlNames.values[i][0] == '1') ? SEC_CRL_TYPE : SEC_KRL_TYPE;
+        realCrl = SEC_FindCrlByName(req->ctrlconn->m_certdb, 
+                                    &crlDERName, type);
+        SECITEM_FreeItem(&crlDERName, PR_FALSE);
+        if (realCrl) {
+            SEC_DeletePermCRL(realCrl);
+            SEC_DestroyCrl(realCrl);
+            flushSSLCache = PR_TRUE;            
+        }
+    }
+    if (flushSSLCache) {
+        SSL_ClearSessionCache();
+    }
+    if (!SSM_IsCRLPresent(req->ctrlconn)) {
+        /*
+         * In this case, there are no more CRLs in the database,
+         * so we'll replace the baseRef with one that will cause
+         * the security advisor to refresh itself and elminate the
+         * "Delete CRLs" button.
+         */
+        for (i=0; i<req->numParams; i++) {
+            char *crlCloseKey = "crlclose_doclose_js";
+            if (PL_strcmp(req->paramNames[i], "baseRef") == 0) {
+                memcpy (req->paramValues[i], crlCloseKey, 
+                        PL_strlen(crlCloseKey)+1);
+                break;
+            }
+        }
+    }
+
+    if (SSM_HTTPDefaultCommandHandler(req) != SSM_SUCCESS) {
+        goto loser;
+    }
+    PR_FREEIF(crlNames.values);
+    return SSM_SUCCESS;
+ loser:
+    PR_FREEIF(crlNames.values);
+    return SSM_FAILURE;
+}
+
 SSMStatus SSMSecurityAdvisorContext_Process_cert_mine_form(
                                                 SSMSecurityAdvisorContext *res,
                                                 HTTPRequest *req)
@@ -1103,6 +1243,10 @@ SSMStatus SSMSecurityAdvisorContext_Process_cert_mine_form(
         if (button != NULL) {
             rv = SSMSecurityAdvisorContext_BackupAllMineCerts(res, req);
         }
+    } else if (SSM_HTTPParamValue(req, "crlButton", &button) == SSM_SUCCESS) {
+        if (button != NULL) {
+	    rv = SSM_HTTPReportError(req, HTTP_NO_CONTENT);
+	}
     }
     return rv;
 }
@@ -1234,9 +1378,11 @@ SSMStatus SSMSecurityAdvisorContext_FormSubmitHandler(SSMResource *res,
     } else if (!strcmp(formName, "set_db_password")) {
       rv = SSM_SetDBPasswordHandler(req);
     } else if (!strcmp(formName, "configureOCSPForm")){
-        rv = SSMSecurityAdvisorContext_ProcessOCSPForm
-                                        ((SSMSecurityAdvisorContext*)res, req);
-    } else {
+      rv = SSMSecurityAdvisorContext_ProcessOCSPForm
+                                       ((SSMSecurityAdvisorContext*)res, req);
+    } else if (!strcmp(formName, "crlDialog")){
+        rv = SSMSecurityAdvisorContext_ProcessCRLDialog(req);
+    }else {
       rv = SSM_ERR_BAD_REQUEST; 
       SSM_HTTPReportSpecificError(req, "Do not know how to process form %s",
                                   formName);
@@ -1716,11 +1862,39 @@ SSM_IsOCSPEnabled(SSMControlConnection *connection)
     PRBool isOCSPEnabled = PR_FALSE;
 
     rv = PREF_GetBoolPref(connection->m_prefs, "security.OCSP.enabled",
-			  &isOCSPEnabled);
+                          &isOCSPEnabled);
     return (rv == SSM_SUCCESS) ? isOCSPEnabled : PR_FALSE; 
 }
 
+char *
+SSM_GetGenericOCSPWarning(SSMControlConnection *ctrl,
+                          CERTCertificate *cert)
+{
+    char *retString = NULL;
+    char *responderURL = NULL;
+    SSMTextGenContext *cx = NULL;
+    SSMStatus rv;
 
+    retString = PL_strdup("");
+    if (SSM_IsOCSPEnabled(ctrl)) {
+        responderURL = SSM_GetOCSPURL(cert, ctrl->m_prefs);
+        if (responderURL == NULL) {
+            goto done;
+        }
+        rv = SSMTextGen_NewTopLevelContext(NULL, &cx);
+        if (rv != SSM_SUCCESS) {
+            goto done;
+        }
+        SSM_GetAndExpandTextKeyedByString(cx, "ocsp_fail_message_generic",
+                                          &retString);
+    } 
+ done:
+    PR_FREEIF(responderURL);
+    if (cx) {
+        SSMTextGen_DestroyContext(cx);
+    }
+    return retString;
+}
 
 SSMStatus sa_message(SSMTextGenContext *cx)
 {
@@ -1728,6 +1902,7 @@ SSMStatus sa_message(SSMTextGenContext *cx)
     SSMResource *target = NULL;
     SSMSecurityAdvisorContext* res = NULL;
 	char *fmt = NULL, *fmtSigned = NULL, *fmtEncrypted = NULL;
+    char *genericOCSPWarning = NULL;
 
     /* get the connection object */
     target = SSMTextGen_GetTargetObject(cx);
@@ -1779,50 +1954,60 @@ SSMStatus sa_message(SSMTextGenContext *cx)
 			fmtSigned = PR_smprintf(fmt, signer_email, target->m_id, signerCertResID);
 			PR_Free(fmt);
 		} else {
+            CERTCertificate *signerCert;
+
+            /* Get the signing certificate */
+            signerCert = get_signer_cert(res);
+            if (!signerCert) {
+                goto loser;
+            }
+
+            genericOCSPWarning = 
+                SSM_GetGenericOCSPWarning(target->m_connection,
+                                          signerCert);
 			switch(res->verifyError) {
 				case SEC_ERROR_PKCS7_BAD_SIGNATURE:
 					{
-						rv = SSM_GetAndExpandTextKeyedByString(cx, "sa_message_signed_bad_signature", &fmtSigned);
+						rv = SSM_GetAndExpandTextKeyedByString(cx, "sa_message_signed_bad_signature", &fmt);
 						if (rv != SSM_SUCCESS) {
 							goto loser;
 						}
+                        fmtSigned = PR_smprintf(fmt, genericOCSPWarning);
+                        PR_FREEIF(fmt);
 					}
 					break;
 
 				/* This case handles both expired and not yet valid certs */
 				case SEC_ERROR_EXPIRED_CERTIFICATE:
 					{
-						rv = SSM_GetAndExpandTextKeyedByString(cx, "sa_message_signed_expired_signing_cert", &fmtSigned);
+						rv = SSM_GetAndExpandTextKeyedByString(cx, "sa_message_signed_expired_signing_cert", &fmt);
 						if (rv != SSM_SUCCESS) {
 							goto loser;
 						}
+                        fmtSigned = PR_smprintf(fmt, genericOCSPWarning);
+                        PR_FREEIF(fmt);
 					}
 					break;
 
 				case SEC_ERROR_REVOKED_CERTIFICATE:
 					{
-						rv = SSM_GetAndExpandTextKeyedByString(cx, "sa_message_signed_revoked_signing_cert", &fmtSigned);
+						rv = SSM_GetAndExpandTextKeyedByString(cx, "sa_message_signed_revoked_signing_cert", &fmt);
 						if (rv != SSM_SUCCESS) {
 							goto loser;
 						}
+                        fmtSigned = PR_smprintf(fmt, genericOCSPWarning);
+                        PR_FREEIF(fmt);
 					}
 					break;
 
 				case SEC_ERROR_UNKNOWN_ISSUER:
 					{
-						CERTCertificate *signerCert;
 						SSMResourceCert *signerCertRes;
 						PRUint32 signerCertResID;
 						char *fmt;
 
 						rv = SSM_GetAndExpandTextKeyedByString(cx, "sa_message_signed_unknown_issuer", &fmt);
 						if (rv != SSM_SUCCESS) {
-							goto loser;
-						}
-
-						/* Get the signing certificate */
-						signerCert = get_signer_cert(res);
-						if (!signerCert) {
 							goto loser;
 						}
 
@@ -1835,8 +2020,9 @@ SSMStatus sa_message(SSMTextGenContext *cx)
 						if (rv != PR_SUCCESS) {
 							goto loser;
 						}
-
-						fmtSigned = PR_smprintf(fmt, target->m_id, signerCertResID);
+						fmtSigned = PR_smprintf(fmt, target->m_id, 
+                                                signerCertResID, 
+                                                genericOCSPWarning);
 						PR_Free(fmt);
 					}
 					break;
@@ -1844,19 +2030,13 @@ SSMStatus sa_message(SSMTextGenContext *cx)
 				case SEC_ERROR_CA_CERT_INVALID:
 				case SEC_ERROR_UNTRUSTED_ISSUER:
 					{
-						CERTCertificate * signerCert, *issuerCert;
+						CERTCertificate *issuerCert;
 						SSMResourceCert * signerCertRes, issuerCertRes;
 						PRInt32 signerCertResID, issuerCertResID;
 						char *fmt = NULL;
 
 						rv = SSM_GetAndExpandTextKeyedByString(cx, "sa_message_signed_untrusted_issuer", &fmt);
 						if (rv != SSM_SUCCESS) {
-							goto loser;
-						}
-
-						/* Get the signer cert */
-						signerCert = get_signer_cert(res);
-						if (!signerCert) {
 							goto loser;
 						}
 
@@ -1885,7 +2065,10 @@ SSMStatus sa_message(SSMTextGenContext *cx)
 							goto loser;
 						}
 
-						fmtSigned = PR_smprintf(fmt, target->m_id, signerCertResID, issuerCertResID);
+						fmtSigned = PR_smprintf(fmt, target->m_id, 
+                                                signerCertResID, 
+                                                issuerCertResID,
+                                                genericOCSPWarning);
 						PR_Free(fmt);
 					}
 					break;
@@ -1893,10 +2076,12 @@ SSMStatus sa_message(SSMTextGenContext *cx)
 				/* This case handles both expired and not yet valid certs */
 				case SEC_ERROR_EXPIRED_ISSUER_CERTIFICATE:
 					{
-						rv = SSM_GetAndExpandTextKeyedByString(cx, "sa_message_signed_expired_issuer_cert", &fmtSigned);
+						rv = SSM_GetAndExpandTextKeyedByString(cx, "sa_message_signed_expired_issuer_cert", &fmt);
 						if (rv != SSM_SUCCESS) {
 							goto loser;
 						}
+                        fmtSigned = PR_smprintf(fmt, genericOCSPWarning);
+                        PR_FREEIF(fmt);
 					}
 					break;
 
@@ -1985,7 +2170,7 @@ SSMStatus sa_message(SSMTextGenContext *cx)
 			}
 		}
 	}
-
+    PR_FREEIF(genericOCSPWarning);
 	/* Now deal with the encrypted part */
 	if (!res->encrypted_b) {
 		rv = SSM_GetAndExpandTextKeyedByString(cx, "sa_message_not_encrypted", &fmtEncrypted);
@@ -3035,5 +3220,68 @@ SSM_OCSPResponderList(SSMTextGenContext *cx)
     if (potentialResponders.respondersWithoutAIA) {
         SSMSortedList_Destroy(potentialResponders.respondersWithoutAIA);
     }
+    return SSM_FAILURE;
+}
+
+SSMStatus
+SSM_DisplayCRLButton(SSMTextGenContext *cx)
+{
+    SSMControlConnection *ctrl;
+    char *crlHTML = NULL;
+    SSMStatus rv;
+
+    ctrl = SSMTextGen_GetControlConnection(cx);
+    if (ctrl == NULL) {
+        goto loser;
+    }
+    if (SSM_IsCRLPresent(ctrl)) {
+        rv = SSM_GetAndExpandTextKeyedByString(cx, "crlButtonHTML", &crlHTML);
+        if (rv == SSM_SUCCESS) {
+            PR_FREEIF(cx->m_result);
+            cx->m_result = crlHTML;
+        }
+    }
+    return SSM_SUCCESS;
+ loser:
+    return SSM_FAILURE;
+}
+
+SSMStatus
+SSM_ListCRLs(SSMTextGenContext *cx)
+{
+    SECStatus srv;
+    CERTCrlHeadNode *head = NULL;
+    CERTCrlNode *node;
+    SSMControlConnection *ctrl;
+    char *retString = NULL;
+    char *currString ;
+    char *emptyString = "";
+    char *currCRLName = NULL;
+    char *name = NULL;
+    char *b64Name = NULL, *b64HTMLName;
+    
+    ctrl = SSMTextGen_GetControlConnection(cx);
+    srv = SEC_LookupCrls(ctrl->m_certdb, &head, -1);
+    if (srv != SECSuccess || head == NULL) {
+        goto loser;
+    }
+    currString = emptyString;
+    for (node=head->first; node != NULL; node = node->next) {
+        name = CERT_GetCommonName(&(node->crl->crl.name));
+        b64Name = BTOA_ConvertItemToAscii(&node->crl->crl.derName);
+        b64HTMLName = ssm_packb64_name(b64Name);
+        retString = PR_smprintf("%1$s\n<option value=\"%4$d%2$s\">%3$s", 
+                                currString, b64HTMLName, name, node->type);
+        PR_Free(name);
+        PR_Free(b64Name);
+        PR_Free(b64HTMLName);
+        if (currString != emptyString)
+            PR_Free(currString);
+        currString = retString;
+    }
+    PR_FREEIF(cx->m_result);
+    cx->m_result = retString;
+    return SSM_SUCCESS;
+ loser:
     return SSM_FAILURE;
 }

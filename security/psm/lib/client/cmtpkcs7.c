@@ -202,6 +202,9 @@ CMTStatus CMT_PKCS7DecoderFinish(PCMT_CONTROL control, CMUint32 connectionID,
     long nbytes;
     char buf[128];
     CMTSocket sock, ctrlsock, selSock, sockArr[2];
+#ifndef XP_MAC
+    int numTries = 0;
+#endif
 
     /* Do some parameter checking */
     if (!control) {
@@ -223,8 +226,12 @@ CMTStatus CMT_PKCS7DecoderFinish(PCMT_CONTROL control, CMUint32 connectionID,
     sockArr[1] = ctrlsock;
     /* Let's see if doing a poll first gets rid of a weird bug where we
      * lock up the client.
+     * There are some cases where the server doesn't put up data fast 
+     * enough, so we should loop on this poll instead of just trying it
+     * once.
      */
 #ifndef XP_MAC
+ poll_sockets:
     if (control->sockFuncs.select(sockArr,2,1) != NULL)
 #endif
 	{
@@ -239,10 +246,28 @@ CMTStatus CMT_PKCS7DecoderFinish(PCMT_CONTROL control, CMUint32 connectionID,
                 } else if (nbytes == 0) {
                     break;
                 }
-                priv->cb(priv->cb_arg, buf, nbytes);
+                if (priv->cb)
+                    priv->cb(priv->cb_arg, buf, nbytes);
             }
         }
     }
+#ifndef XP_MAC
+    else {
+#ifdef WIN32
+        if (numTries < 20) {
+            Sleep(100);
+            numTries++;
+            goto poll_sockets;
+        }
+#endif
+#ifdef XP_UNIX
+	if (numTries < 25) {
+	  numTries += sleep(1);
+	  goto poll_sockets;
+	}
+#endif
+    }
+#endif
     
     if (CMT_CloseDataConnection(control, connectionID) == CMTFailure) {
         goto loser;
@@ -343,9 +368,10 @@ CMTStatus CMT_CreateSigned(PCMT_CONTROL control, CMUint32 scertRID,
     CMTItem message;
     CreateSignedRequest request;
     CreateContentInfoReply reply;
+    char checkMessageForError = 0;
 
     /* Do some parameter checking */
-    if (!control || !scertRID || !ecertRID || !digest || !ciRID) {
+    if (!control || !scertRID || !digest || !ciRID) {
         goto loser;
     }
 
@@ -367,7 +393,7 @@ CMTStatus CMT_CreateSigned(PCMT_CONTROL control, CMUint32 scertRID,
     if (CMT_SendMessage(control, &message) == CMTFailure) {
         goto loser;
     }
-
+    checkMessageForError = 1;
     /* Validate the message reply type */
     if (message.type != (SSM_REPLY_OK_MESSAGE | SSM_OBJECT_SIGNING | SSM_CREATE_SIGNED)) {
         goto loser;
@@ -384,7 +410,9 @@ CMTStatus CMT_CreateSigned(PCMT_CONTROL control, CMUint32 scertRID,
 	} 
 
 loser:
-    if (CMT_DecodeMessage(CreateContentInfoReplyTemplate, &reply, &message) == CMTSuccess) {
+    if (checkMessageForError && 
+	CMT_DecodeMessage(SingleNumMessageTemplate, 
+			  &reply, &message) == CMTSuccess) {
         *errCode = reply.errorCode;
     } else {
         *errCode = 0;

@@ -61,6 +61,7 @@
 #include "profile.h"
 #include "prefs.h"
 #include "ocsp.h"
+#include "msgthread.h"
 
 #ifdef XP_MAC
 #include "macshell.h"
@@ -1357,6 +1358,9 @@ static SSMStatus ssm_enable_security_prefs(SSMControlConnection* ctrl)
     }
     SSL_EnableDefault(SSL_ENABLE_SSL3, prefval);
 
+    /* We need to disable TLS because some servers (e.g. IBM Domino) have */        /* implemented version rollback incorrectly */
+    SSL_EnableDefault(SSL_ENABLE_TLS, PR_FALSE);
+
     /* set password values */
     if (PREF_GetIntPref(ctrl->m_prefs, "security.ask_for_password", &ask) !=
         PR_SUCCESS) {
@@ -2018,6 +2022,56 @@ SSMControlConnection_ProcessResourceRequest(SSMControlConnection * ctrl,
     return rv;
 }
 
+static SSMStatus ssm_verifydetachedthread(SSMControlConnection *ctrl,
+                                          SECItem *msg)
+{
+    VerifyDetachedSigRequest request;
+    SingleNumMessage reply;
+	SSMP7ContentInfo *ci;
+    SSMStatus rv;
+    
+    SSM_DEBUG("Processing Verify Detached Signature request.\n");
+    if (CMT_DecodeMessage(VerifyDetachedSigRequestTemplate, &request, 
+                          (CMTItem*)msg) != CMTSuccess) {
+        rv = SSM_FAILURE;
+    } else {
+        rv = SSM_SUCCESS;
+    }
+    msg->data = NULL;
+    
+    if (rv == SSM_SUCCESS) {
+        
+        /* Get the content info resource, if it exists. */
+        rv = SSMControlConnection_GetResource(ctrl, request.pkcs7ContentID,
+                                              (SSMResource **) &ci);
+    }
+    
+    if (rv == SSM_SUCCESS) {
+        
+        PR_ASSERT(SSM_IsAKindOf(&ci->super, SSM_RESTYPE_PKCS7_CONTENT_INFO));
+        SSM_DEBUG("Found content info (%s at %ld).\n",
+                  SSM_ResourceClassName(&ci->super),
+                  ci->super.m_id);
+        rv = SSMP7ContentInfo_VerifyDetachedSignature(ci,
+                                             (SECCertUsage)request.certUsage,
+                                             (HASH_HashType) request.hashAlgID,
+                                             (PRBool) request.keepCert, 
+                                             (PRIntn) request.hash.len,
+											 (char *)request.hash.data);
+        SSM_DEBUG("VerifyDetachedSig rv = %d.\n", rv);
+    }
+    msg->type = (SECItemType) (SSM_OBJECT_SIGNING | SSM_VERIFY_DETACHED_SIG |
+                               SSM_REPLY_OK_MESSAGE);
+    if (rv != SSM_SUCCESS) {
+        reply.value = PR_GetError();
+    } else {
+        reply.value = 0;
+    }
+    CMT_EncodeMessage(SingleNumMessageTemplate, (CMTItem*)msg, &reply);
+    ssmcontrolconnection_send_message_to_client(ctrl, msg);
+    return SSM_SUCCESS;
+}
+
 SSMStatus
 SSMControlConnection_ProcessSigningRequest(SSMControlConnection *ctrl, 
 										   SECItem *msg)
@@ -2035,48 +2089,22 @@ SSMControlConnection_ProcessSigningRequest(SSMControlConnection *ctrl,
 	{
 	case SSM_VERIFY_DETACHED_SIG:
         {
-        VerifyDetachedSigRequest request;
-        SingleNumMessage reply;
-
-        SSM_DEBUG("Processing Verify Detached Signature request.\n");
-        if (CMT_DecodeMessage(VerifyDetachedSigRequestTemplate, &request, (CMTItem*)msg) != CMTSuccess) {
-            rv = PR_FAILURE;
-        } else {
-            rv = PR_SUCCESS;
-        }
-		msg->data = NULL;
-
-		if (rv == PR_SUCCESS)
-		{
-			/* Get the content info resource, if it exists. */
-			rv = SSMControlConnection_GetResource(ctrl, request.pkcs7ContentID,
-                                                  (SSMResource **) &ci);
-		}
-
-		if (rv == PR_SUCCESS)
-		{
-			PR_ASSERT(SSM_IsAKindOf(&ci->super, SSM_RESTYPE_PKCS7_CONTENT_INFO));
-            SSM_DEBUG("Found content info (%s at %ld).\n",
-                      SSM_ResourceClassName(&ci->super),
-                      ci->super.m_id);
-			rv = SSMP7ContentInfo_VerifyDetachedSignature(ci,
-														  (SECCertUsage) request.certUsage,
-														  (HASH_HashType) request.hashAlgID,
-														  (PRBool) request.keepCert, 
-														  (PRIntn) request.hash.len,
-														  (char *)request.hash.data);
-            SSM_DEBUG("VerifyDetachedSig rv = %d.\n", rv);
-		}
-        msg->type = (SECItemType) (SSM_OBJECT_SIGNING | SSM_VERIFY_DETACHED_SIG
-               | SSM_REPLY_OK_MESSAGE);
-		if (rv != SSM_SUCCESS) {
-			reply.value = PR_GetError();
-		} else {
-			reply.value = 0;
-		}
-        CMT_EncodeMessage(SingleNumMessageTemplate, (CMTItem*)msg, &reply);
-
-		return SSM_SUCCESS;
+            if (PK11_IsFIPS()) {
+                /*
+                 * When FIPS is enabled, we want to do the verification on a
+                 * separate thread so that we don't block the front end 
+                 * thread when the password response comes back
+                 */
+                rv = SSM_ProcessMsgOnThread(ssm_verifydetachedthread,
+                                            ctrl, msg);
+            } else {
+                rv = ssm_verifydetachedthread(ctrl, msg);
+            }
+            if (rv == SSM_SUCCESS) {
+                return SSM_ERR_DEFER_RESPONSE;
+            } else {
+                return SSM_FAILURE;
+            }
         }
 		break;
     case SSM_CREATE_SIGNED:
@@ -2097,11 +2125,13 @@ SSMControlConnection_ProcessSigningRequest(SSMControlConnection *ctrl,
             goto create_signed_loser;
         rv = SSMControlConnection_GetResource(ctrl, request.ecertRID,
                                               (SSMResource **)&ecert);
-        if (rv != PR_SUCCESS)
+        if (rv == PR_SUCCESS && 
+	    !SSM_IsAKindOf(&ecert->super, SSM_RESTYPE_CERTIFICATE))
             goto create_signed_loser;
-        if (!SSM_IsAKindOf(&ecert->super, SSM_RESTYPE_CERTIFICATE))
-            goto create_signed_loser;
-        cinfo = SECMIME_CreateSigned(scert->cert, ecert->cert, ctrl->m_certdb,
+
+        cinfo = SECMIME_CreateSigned(scert->cert,
+				     (ecert) ? ecert->cert : NULL, 
+				     ctrl->m_certdb,
                                      (SECOidTag) request.dig_alg, 
                                      (SECItem*)&request.digest, 
                                      (SECKEYGetPasswordKey) NULL, NULL);
