@@ -187,7 +187,7 @@ nsresult nsMsgProtocol::LoadUrl(nsIURI * aURL, nsISupports * /* aConsumer */)
 		if (!m_socketIsOpen)
 		{
 			// put us in a state where we are always notified of incoming data
-			m_channel->AsyncRead(m_startPosition, m_readCount, aURL,this /* stream observer */, nsnull /* load group */ );
+			m_channel->AsyncRead(m_startPosition, m_readCount, aURL,this /* stream observer */);
 			m_socketIsOpen = PR_TRUE; // mark the channel as open
 		} // if we got an event queue service
 		else  // the connection is already open so we should begin processing our new url...
