@@ -41,10 +41,9 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsNetDiskCache, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsCacheManager, Init)
 
 static nsModuleComponentInfo components[] = {
-    { NS_MEM_CACHE_FACTORY_CID,  nsMemCacheConstructor,     NS_NETWORK_MEMORY_CACHE_PROGID, "Memory Cache"},
-    { NS_NETDISKCACHE_CID,       nsNetDiskCacheConstructor, NS_NETWORK_FILE_CACHE_PROGID,   "File Cache"},
-    { NS_CACHE_MANAGER_CID,      nsCacheManagerConstructor, NS_NETWORK_CACHE_MANAGER_PROGID,"Cache Manager"}
+    { "Memory Cache", NS_MEM_CACHE_FACTORY_CID, NS_NETWORK_MEMORY_CACHE_PROGID, nsMemCacheConstructor },
+    { "File Cache",   NS_NETDISKCACHE_CID,      NS_NETWORK_FILE_CACHE_PROGID,   nsNetDiskCacheConstructor },
+    { "Cache Manager",NS_CACHE_MANAGER_CID,     NS_NETWORK_CACHE_MANAGER_PROGID,nsCacheManagerConstructor }
 };
 
-NS_IMPL_MODULE(nsNetDataCacheModule, components)
-NS_IMPL_NSGETMODULE(nsNetDataCacheModule)
+NS_IMPL_NSGETMODULE("Network Data Cache", components)
