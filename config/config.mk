@@ -230,6 +230,10 @@ NO_SHARED_LIB=1
 endif
 endif
 
+ifdef BUILD_OFFICIAL
+DEFINES	+= -DBUILD_OFFICIAL
+endif
+
 #
 # Personal makefile customizations go in these optional make include files.
 #
@@ -378,7 +382,7 @@ endif
 
 DEPENDENCIES	= .md
 
-MOZ_COMPONENT_LIBS=$(MOZ_COMPONENT_NSPR_LIBS) $(MOZ_COMPONENT_XPCOM_LIBS)
+MOZ_COMPONENT_LIBS=$(MOZ_COMPONENT_XPCOM_LIBS) $(MOZ_COMPONENT_NSPR_LIBS)
 
 ifdef GC_LEAK_DETECTOR
 MOZ_COMPONENT_XPCOM_LIBS += -lboehm

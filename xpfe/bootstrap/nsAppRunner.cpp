@@ -1233,7 +1233,16 @@ int main(int argc, char* argv[])
   // They should% return quick, so we deal with them here.
   if (HandleDumpArguments(argc, argv))
     return 0;
- 
+
+#ifdef BUILD_OFFICIAL
+#if defined(XP_UNIX) || defined(XP_BEOS)
+  /* Redirect stdin, stdout, and stderr to /dev/null. */
+  freopen("/dev/null", "r", stdin);
+  freopen("/dev/null", "w", stdout);
+  freopen("/dev/null", "w", stderr);
+#endif
+#endif
+
 #ifdef NS_TRACE_MALLOC
   argc = NS_TraceMallocStartupArgs(argc, argv);
 #endif
