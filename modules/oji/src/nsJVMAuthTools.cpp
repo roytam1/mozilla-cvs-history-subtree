@@ -153,29 +153,32 @@ nsJVMAuthTools::GetAuthenticationInfo(const char* protocol,
     if (!authManager)
         return NS_ERROR_FAILURE;
     
+    nsDependentCString protocolString(protocol);
     nsDependentCString hostString(host);
+    nsDependentCString schemeString(scheme);
     nsDependentCString realmString(realm);
     nsAutoString       domainString, username, password;
     
-    nsresult rv = authManager->GetAuthIdentity(hostString,
+    nsresult rv = authManager->GetAuthIdentity(protocolString,
+                                               hostString,
                                                port,
+                                               schemeString,
                                                realmString,
-                                               nsCString(), 
+                                               NS_LITERAL_CSTRING(""), 
                                                domainString,
                                                username,
                                                password);
     if (NS_FAILED(rv))
         return NS_ERROR_FAILURE;
-    else {
-        nsAuthenticationInfoImp* authInfo = new nsAuthenticationInfoImp(
-                                                ToNewUTF8String(username),
-                                                ToNewUTF8String(password));
-        NS_ENSURE_TRUE(authInfo, NS_ERROR_OUT_OF_MEMORY);
-        NS_ADDREF(authInfo);
-        *_retval = authInfo;
-        
-        return NS_OK;
-    }
+
+    nsAuthenticationInfoImp* authInfo = new nsAuthenticationInfoImp(
+                                            ToNewUTF8String(username),
+                                            ToNewUTF8String(password));
+    NS_ENSURE_TRUE(authInfo, NS_ERROR_OUT_OF_MEMORY);
+    NS_ADDREF(authInfo);
+    *_retval = authInfo;
+    
+    return NS_OK;
 }
 
 NS_METHOD
@@ -197,13 +200,17 @@ nsJVMAuthTools::SetAuthenticationInfo(const char* protocol,
     if (!authManager)
         return NS_ERROR_FAILURE;
     
+    nsDependentCString protocolString(protocol);
     nsDependentCString hostString(host);
+    nsDependentCString schemeString(scheme);
     nsDependentCString realmString(realm);
     
-    nsresult rv = authManager->SetAuthIdentity(hostString,
+    nsresult rv = authManager->SetAuthIdentity(protocolString,
+                                               hostString,
                                                port,
+                                               schemeString,
                                                realmString,
-                                               nsCString(),
+                                               NS_LITERAL_CSTRING(""),
                                                nsString(), 
                                                NS_ConvertUTF8toUCS2(username),
                                                NS_ConvertUTF8toUCS2(password));
