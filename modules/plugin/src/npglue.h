@@ -23,10 +23,14 @@
 extern "C" {
 #endif
 
-#include "net.h"
+#ifdef XP_UNIX
+#undef Bool
+#endif
+#include "xp_core.h"
 #include "np.h"
 #include "nppg.h"
 #include "client.h"
+#include "net.h"
 #include "xpassert.h" 
 #include "ntypes.h"
 #include "fe_proto.h"

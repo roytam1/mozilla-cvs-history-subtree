@@ -235,7 +235,7 @@ nsJVMManager::GetJavaErrorString(JNIEnv* env)
     jboolean isCopy;
     const char* msg = env->GetStringUTFChars(excString, &isCopy);
     if (msg != NULL) {
-        const char* dupmsg = (msg == NULL ? NULL : strdup(msg));
+        const char* dupmsg = (msg == NULL ? (const char*)NULL : strdup(msg));
     	env->ReleaseStringUTFChars(excString, msg);
     	msg = dupmsg;
     }

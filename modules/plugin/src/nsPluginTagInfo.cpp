@@ -26,7 +26,9 @@
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID); 
 static NS_DEFINE_IID(kIPluginTagInfoIID, NS_IPLUGINTAGINFO_IID); 
 static NS_DEFINE_IID(kIPluginTagInfo2IID, NS_IPLUGINTAGINFO2_IID); 
+#ifdef OJI
 static NS_DEFINE_IID(kIJVMPluginTagInfoIID, NS_IJVMPLUGINTAGINFO_IID); 
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // Plugin Tag Info Interface

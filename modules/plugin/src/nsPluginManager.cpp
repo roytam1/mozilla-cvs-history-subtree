@@ -105,7 +105,7 @@ nsPluginManager* thePluginManager = NULL;
 #endif // PRE_SERVICE_MANAGER
 
 nsPluginManager::nsPluginManager(nsISupports* outer)
-    : fAllocatedMenuIDs(NULL), fWaiting(0), fOldCursor(NULL)
+    : fWaiting(0), fOldCursor(NULL), fAllocatedMenuIDs(NULL)
 #ifdef PRE_SERVICE_MANAGER
     , fJVMMgr(NULL), fMalloc(NULL), fFileUtils(NULL), fCapsManager(NULL), fLiveconnect(NULL)
 #endif
