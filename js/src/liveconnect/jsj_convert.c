@@ -284,8 +284,8 @@ conversion_error:
                                                                          \
             /* Unrepresentably large numbers, including infinities, */   \
             /* cause an error. */                                        \
-            else if ((dval > member_type ## _MAX_VALUE) ||               \
-                     (dval < member_type ## _MIN_VALUE)) {               \
+            else if ((dval >= member_type ## _MAX_VALUE + 1) ||          \
+                     (dval <= member_type ## _MIN_VALUE - 1)) {          \
                 goto numeric_conversion_error;                           \
             } else                                                       \
                 member_name = (member_type) dval;                        \
@@ -354,8 +354,8 @@ if (!JSVAL_IS_NUMBER(jsvalue)) {                                         \
                                                                          \
             /* Unrepresentably large numbers, including infinities, */   \
             /* cause an error. */                                        \
-            else if ((dval > member_type ## _MAX_VALUE) ||               \
-                     (dval < member_type ## _MIN_VALUE)) {               \
+            else if ((dval >= member_type ## _MAX_VALUE + 1) ||          \
+                     (dval <= member_type ## _MIN_VALUE - 1)) {          \
                 goto numeric_conversion_error;                           \
             } else                                                       \
                 member_name = jdouble_to_jlong(dval);                    \
