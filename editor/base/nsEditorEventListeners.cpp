@@ -160,10 +160,6 @@ nsTextEditorKeyListener::KeyUp(nsIDOMEvent* aKeyEvent)
 nsresult
 nsTextEditorKeyListener::KeyPress(nsIDOMEvent* aKeyEvent)
 {
-  nsAutoString key;
-  PRUint32     charCode;
-  PRUint32     keyCode;
-
   nsCOMPtr<nsIDOMUIEvent>uiEvent;
   uiEvent = do_QueryInterface(aKeyEvent);
   if (!uiEvent) 
@@ -171,11 +167,6 @@ nsTextEditorKeyListener::KeyPress(nsIDOMEvent* aKeyEvent)
     //non-key event passed to keydown.  bad things.
     return NS_OK;
   }
-   //
-   // look at the keyCode if it is return or backspace, process it
-   //   we handle these two special characters here because it makes windows integration
-   //   eaiser
-   //
 
   PRBool keyProcessed;
   // we should check a flag here to see if we should be using built-in key bindings
@@ -184,19 +175,15 @@ nsTextEditorKeyListener::KeyPress(nsIDOMEvent* aKeyEvent)
   ProcessShortCutKeys(aKeyEvent, keyProcessed);
   if (PR_FALSE==keyProcessed)
   {
-    PRBool ctrlKey, altKey, metaKey;
-    uiEvent->GetCtrlKey(&ctrlKey);
-    uiEvent->GetAltKey(&altKey);
-    uiEvent->GetMetaKey(&metaKey);
+    PRUint32     keyCode;
     uiEvent->GetKeyCode(&keyCode);
-    uiEvent->GetCharCode(&charCode);
 
     nsCOMPtr<nsIHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
     if (!htmlEditor) return NS_ERROR_NO_INTERFACE;
 
     // if there is no charCode, then it's a key that doesn't map to a character,
     // so look for special keys using keyCode
-    if (0==charCode)
+    if (0 != keyCode)
     {
       if (nsIDOMUIEvent::DOM_VK_BACK==keyCode) 
       {
@@ -240,16 +227,16 @@ nsTextEditorKeyListener::KeyPress(nsIDOMEvent* aKeyEvent)
       }
     }
     
-    if ((PR_FALSE==altKey) && (PR_FALSE==ctrlKey))
-    {
+#if 0    
       // XXX: this must change.  DOM_VK_tab must be handled here, not in keyDown
       if (nsIDOMUIEvent::DOM_VK_TAB==keyCode) 
       {
         return NS_OK; // ignore tabs here, they're handled in keyDown if at all
       }
-      htmlEditor->EditorKeyPress(uiEvent);
-      ScrollSelectionIntoView();
-    }
+#endif
+
+    htmlEditor->EditorKeyPress(uiEvent);
+    ScrollSelectionIntoView();
   }
   else
     ScrollSelectionIntoView();
@@ -274,7 +261,6 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
   }
 
   if (NS_SUCCEEDED(uiEvent->GetCharCode(&charCode)) && 
-//  if (NS_SUCCEEDED(uiEvent->GetKeyCode(&keyCode)) && 
       NS_SUCCEEDED(uiEvent->GetCtrlKey(&ctrlKey)) ) 
   {
 #ifdef XP_MAC
@@ -284,7 +270,8 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
     // (even though the control key might also be pressed)
     PRBool isMetaKey;
     if (NS_SUCCEEDED(uiEvent->GetMetaKey(&isMetaKey)) && PR_TRUE==isMetaKey) {
-      ctrlKey = PR_TRUE;
+      ctrlKey = !ctrlKey; /* if controlKey is pressed, we shouldn't execute code below */
+                          /* if it's not set and cmdKey is, then we should proceed to code below */
     }
 #endif
     
