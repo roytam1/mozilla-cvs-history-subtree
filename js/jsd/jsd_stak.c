@@ -297,8 +297,7 @@ jsd_EvaluateScriptInStackFrame(JSDContext* jsdc,
 {
     JSBool retval;
     JSBool valid;
-    JSBool throwing;
-    jsval  exception;
+    JSExceptionState* exceptionState;
     JSContext* cx;
 
     JS_ASSERT(JSD_CURRENT_THREAD() == jsdthreadstate->thread);
@@ -313,12 +312,12 @@ jsd_EvaluateScriptInStackFrame(JSDContext* jsdc,
     cx = jsdthreadstate->context;
     JS_ASSERT(cx);
 
-    JSD_SAVE_EXCEPTION_STATE(cx, throwing, exception);
+    exceptionState = JS_SaveExceptionState(cx);
     jsd_StartingEvalUsingFilename(jsdc, filename);
     retval = JS_EvaluateInStackFrame(cx, jsdframe->fp, bytes, length, 
                                      filename, lineno, rval);
     jsd_FinishedEvalUsingFilename(jsdc, filename);
-    JSD_RESTORE_EXCEPTION_STATE(cx, throwing, exception);
+    JS_RestoreExceptionState(cx, exceptionState);
 
     return retval;
 }
@@ -331,8 +330,7 @@ jsd_ValToStringInStackFrame(JSDContext* jsdc,
 {
     JSBool valid;
     JSString* retval;
-    JSBool throwing;
-    jsval  exception;
+    JSExceptionState* exceptionState;
     JSContext* cx;
 
     JSD_LOCK_THREADSTATES(jsdc);
@@ -345,9 +343,9 @@ jsd_ValToStringInStackFrame(JSDContext* jsdc,
     cx = jsdthreadstate->context;
     JS_ASSERT(cx);
 
-    JSD_SAVE_EXCEPTION_STATE(cx, throwing, exception);
+    exceptionState = JS_SaveExceptionState(cx);
     retval = JS_ValueToString(cx, val);
-    JSD_RESTORE_EXCEPTION_STATE(cx, throwing, exception);
+    JS_RestoreExceptionState(cx, exceptionState);
 
     return retval;
 }

@@ -129,17 +129,16 @@ jsd_IsValueNative(JSDContext* jsdc, JSDValue* jsdval)
     JSContext* cx = jsdc->dumbContext;
     jsval val = jsdval->val;
     JSFunction* fun;
-    JSBool throwing;
-    jsval  exception;
+    JSExceptionState* exceptionState;
 
     if(!JSVAL_IS_OBJECT(val))
         return JS_FALSE;
 
     if(JSVAL_IS_FUNCTION(cx, val))
     {
-        JSD_SAVE_EXCEPTION_STATE(cx, throwing, exception);
+        exceptionState = JS_SaveExceptionState(cx);
         fun = JS_ValueToFunction(cx, val);
-        JSD_RESTORE_EXCEPTION_STATE(cx, throwing, exception);
+        JS_RestoreExceptionState(cx, exceptionState);
         if(!fun)
         {
             JS_ASSERT(0);
@@ -183,8 +182,7 @@ JSString*
 jsd_GetValueString(JSDContext* jsdc, JSDValue* jsdval)
 {
     JSContext* cx = jsdc->dumbContext;
-    JSBool throwing;
-    jsval  exception;
+    JSExceptionState* exceptionState;
 
     if(!jsdval->string)
     {
@@ -193,9 +191,9 @@ jsd_GetValueString(JSDContext* jsdc, JSDValue* jsdval)
             jsdval->string = JSVAL_TO_STRING(jsdval->val);
         else
         {
-            JSD_SAVE_EXCEPTION_STATE(cx, throwing, exception);
+            exceptionState = JS_SaveExceptionState(cx);
             jsdval->string = JS_ValueToString(cx, jsdval->val);
-            JSD_RESTORE_EXCEPTION_STATE(cx, throwing, exception);
+            JS_RestoreExceptionState(cx, exceptionState);
             if(jsdval->string)
             {
                 if(!JS_AddRoot(cx, &jsdval->string))
@@ -212,14 +210,13 @@ jsd_GetValueFunctionName(JSDContext* jsdc, JSDValue* jsdval)
     JSContext* cx = jsdc->dumbContext;
     jsval val = jsdval->val;
     JSFunction* fun;
-    JSBool throwing;
-    jsval  exception;
+    JSExceptionState* exceptionState;
 
     if(!jsdval->funName && JSVAL_IS_FUNCTION(cx, val))
     {
-        JSD_SAVE_EXCEPTION_STATE(cx, throwing, exception);
+        exceptionState = JS_SaveExceptionState(cx);
         fun = JS_ValueToFunction(cx, val);
-        JSD_RESTORE_EXCEPTION_STATE(cx, throwing, exception);
+        JS_RestoreExceptionState(cx, exceptionState);
         if(!fun)
             return NULL;
         jsdval->funName = JS_GetFunctionName(fun);

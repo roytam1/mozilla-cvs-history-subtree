@@ -93,6 +93,42 @@ jsd_DebuggerHandler(JSContext *cx, JSScript *script, jsbytecode *pc,
                                  hook, hookData, rval);
 }
 
+
+JSTrapStatus JS_DLL_CALLBACK
+jsd_ThrowHandler(JSContext *cx, JSScript *script, jsbytecode *pc,
+                 jsval *rval, void *closure)
+{
+    JSDScript*      jsdscript;
+    JSDContext*     jsdc = (JSDContext*) closure;
+    JSD_ExecutionHookProc hook;
+    void*                 hookData;
+
+    JS_GetPendingException(cx, rval);
+
+    if( ! jsdc || ! jsdc->inited )
+        return JSD_HOOK_RETURN_CONTINUE_THROW;
+
+    if( JSD_IS_DANGEROUS_THREAD(jsdc) )
+        return JSD_HOOK_RETURN_CONTINUE_THROW;
+
+    jsd_JSContextUsed(jsdc, cx);
+
+    JSD_LOCK_SCRIPTS(jsdc);
+    jsdscript = jsd_FindJSDScript(jsdc, script);
+    JSD_UNLOCK_SCRIPTS(jsdc);
+    if( ! jsdscript )
+        return JSD_HOOK_RETURN_CONTINUE_THROW;
+
+    /* local in case jsdc->throwHook gets cleared on another thread */
+    JSD_LOCK();
+    hook     = jsdc->throwHook;
+    hookData = jsdc->throwHookData;
+    JSD_UNLOCK();
+
+    return jsd_CallExecutionHook(jsdc, cx, JSD_HOOK_THROW,
+                                 hook, hookData, rval);
+}
+
 JSTrapStatus
 jsd_CallExecutionHook(JSDContext* jsdc,
                       JSContext *cx,
@@ -121,6 +157,10 @@ jsd_CallExecutionHook(JSDContext* jsdc,
             return JSTRAP_THROW;
         case JSD_HOOK_RETURN_CONTINUE:
             break;
+        case JSD_HOOK_RETURN_CONTINUE_THROW:
+            /* only makes sense for jsd_ThrowHandler (which init'd rval) */
+            JS_ASSERT(JSD_HOOK_THROW == type);
+            return JSTRAP_THROW;
         default:
             JS_ASSERT(0);
             break;
@@ -198,3 +238,27 @@ jsd_ClearDebuggerHook(JSDContext* jsdc)
 
     return JS_TRUE;
 }
+
+JSBool
+jsd_SetThrowHook(JSDContext*           jsdc,
+                 JSD_ExecutionHookProc hook,
+                 void*                 callerdata)
+{
+    JSD_LOCK();
+    jsdc->throwHookData  = callerdata;
+    jsdc->throwHook      = hook;
+    JSD_UNLOCK();
+
+    return JS_TRUE;
+}
+
+JSBool
+jsd_ClearThrowHook(JSDContext* jsdc)
+{
+    JSD_LOCK();
+    jsdc->throwHook      = NULL;
+    JSD_UNLOCK();
+
+    return JS_TRUE;
+}
+

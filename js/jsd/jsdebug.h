@@ -507,6 +507,7 @@ JSD_AddFullSourceText(JSDContext* jsdc,
 #define JSD_HOOK_BREAKPOINT             1
 #define JSD_HOOK_DEBUG_REQUESTED        2
 #define JSD_HOOK_DEBUGGER_KEYWORD       3
+#define JSD_HOOK_THROW                  4
 
 /* legal return values for JSD_ExecutionHookProc */
 #define JSD_HOOK_RETURN_HOOK_ERROR      0
@@ -514,6 +515,7 @@ JSD_AddFullSourceText(JSDContext* jsdc,
 #define JSD_HOOK_RETURN_ABORT           2
 #define JSD_HOOK_RETURN_RET_WITH_VAL    3
 #define JSD_HOOK_RETURN_THROW_WITH_VAL  4
+#define JSD_HOOK_RETURN_CONTINUE_THROW  5
 
 /*
 * Implement a callback of this form in order to hook execution.
@@ -604,6 +606,20 @@ JSD_SetDebuggerHook(JSDContext*           jsdc,
 */
 extern JSD_PUBLIC_API(JSBool)
 JSD_ClearDebuggerHook(JSDContext* jsdc);
+
+/*
+* Set the hook that should be called when a JS exception is thrown.
+* NOTE: the 'do default' return value is: JSD_HOOK_RETURN_CONTINUE_THROW
+*/
+extern JSD_PUBLIC_API(JSBool)
+JSD_SetThrowHook(JSDContext*           jsdc,
+                 JSD_ExecutionHookProc hook,
+                 void*                 callerdata);
+/*
+* Clear the throw hook
+*/
+extern JSD_PUBLIC_API(JSBool)
+JSD_ClearThrowHook(JSDContext* jsdc);
 
 /***************************************************************************/
 /* Stack Frame functions */

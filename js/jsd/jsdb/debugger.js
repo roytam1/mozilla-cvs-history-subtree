@@ -110,6 +110,8 @@ function execHook(type)
             break;
         case jsd.JSD_HOOK_DEBUGGER_KEYWORD:
             break;
+        case jsd.JSD_HOOK_THROW:
+            break;
         default:
             print("hit unknown hook type!")
             return jsd.JSD_HOOK_RETURN_CONTINUE;
@@ -305,8 +307,10 @@ addHelp("untrap    untrap([url],lineno)   Clear a breakpoint");
 addHelp("safeEval  safeEval('expr'[,url,lineno]) Eval w/o terminate on failure");
 addHelp("gets      gets()                 Get string from console");
 addHelp("prompt    prompt(str)            Show string and return user input");
-addHelp("returnVal returnVal(val)         resume and force script to return this val");
-addHelp("throwVal  throwVal(val)          resume and force script to throw this val");
+addHelp("returnVal returnVal(val)         Resume and force script to return this val");
+addHelp("throwVal  throwVal(val)          Resume and force script to throw this val");
+addHelp("locals    locals()               Show function local variables");
+addHelp("args      args()                 Show function arguments");
 
 /* More can be added anywhere */
 
@@ -454,6 +458,9 @@ function why()
             break;
         case jsd.JSD_HOOK_DEBUGGER_KEYWORD:
             print("hit debugger keyword hook");
+            break;
+        case jsd.JSD_HOOK_THROW:
+            print("hit throw hook");
             break;
         default:
             print("hit unknown hook type!")
@@ -776,15 +783,17 @@ function resume(code)
 {
     if(arguments.length &&
        code >= jsd.JSD_HOOK_RETURN_HOOK_ERROR &&
-       code <= jsd.JSD_HOOK_RETURN_THROW_WITH_VAL) {
+       code <= jsd.JSD_HOOK_RETURN_CONTINUE_THROW) {
         resumeCode = code;
     }
     else {
-        resumeCode = jsd.JSD_HOOK_RETURN_CONTINUE;
+        if(hookType == jsd.JSD_HOOK_THROW)
+            resumeCode = jsd.JSD_HOOK_RETURN_CONTINUE_THROW;
+        else
+            resumeCode = jsd.JSD_HOOK_RETURN_CONTINUE;
     }
     return "";
 }
-
 
 /***************************************************************************/
 /* property and value objects */
@@ -912,6 +921,58 @@ function JSDProperty(handle)
 }
 
 JSDProperty.prototype = new JSDPropertyProto;
+
+/***************************************************************************/
+
+function locals()
+{
+    _localsOrArgs(true);
+    return "";
+}        
+
+function args()
+{
+    _localsOrArgs(false);
+    return "";
+}        
+
+function _localsOrArgs(loc)
+{
+    var found = 0;
+    var frameHandle = stack[currentFrame].handle;
+    var callObjHandle = jsd.GetCallObjectForStackFrame(frameHandle);
+
+    if(callObjHandle)
+    {
+        var callObj = new JSDValue(callObjHandle);
+        if(callObj)
+        {
+            var props = callObj.GetProperties();
+            if(props)
+            {
+                for(var i = 0; i < props.length; i++)
+                {
+                    var prop = props[i];
+                    var doit = loc ? 
+                            prop.GetPropertyFlags() & jsd.JSDPD_VARIABLE :
+                            prop.GetPropertyFlags() & jsd.JSDPD_ARGUMENT ;
+                    if(doit)
+                    {
+                        var name = prop.GetPropertyName();
+                        var val  = prop.GetPropertyValue();
+                        print(name.GetValueString()+" : "+val.GetValueString());
+                        found++ ;
+                    }
+                }
+            }
+        }
+    }
+
+    if(!found)
+        print(loc ? "no locals" : "no args");
+}
+
+
 
 /***************************************************************************/
 /* User defined... can use load() ! */

@@ -213,6 +213,7 @@ jsd_DebuggerOnForUser(JSRuntime*         jsrt,
     JS_SetExecuteHook(jsdc->jsrt, jsd_InterpreterHook, jsdc);
     JS_SetCallHook(jsdc->jsrt, jsd_InterpreterHook, jsdc);
     JS_SetObjectHook(jsdc->jsrt, jsd_ObjectHook, jsdc);
+    JS_SetThrowHook(jsdc->jsrt, jsd_ThrowHandler, jsdc);
 #ifdef LIVEWIRE
     LWDBG_SetNewScriptHookProc(jsd_NewScriptHookProc, jsdc);
 #endif
@@ -245,6 +246,7 @@ jsd_DebuggerOff(JSDContext* jsdc)
     JS_SetExecuteHook(jsdc->jsrt, NULL, NULL);
     JS_SetCallHook(jsdc->jsrt, NULL, NULL);
     JS_SetObjectHook(jsdc->jsrt, NULL, NULL);
+    JS_SetThrowHook(jsdc->jsrt, NULL, NULL);
 #ifdef LIVEWIRE
     LWDBG_SetNewScriptHookProc(NULL,NULL);
 #endif

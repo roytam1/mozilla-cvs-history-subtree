@@ -91,27 +91,6 @@ JS_BEGIN_EXTERN_C
 #undef  CLEAR_BIT_FLAG
 #define CLEAR_BIT_FLAG(f,b) ((f)&=(~(b)))
 
-/*
-* requires (name them what you will):
-*  JSContext cx;
-*  JSBool t;
-*  jsval e;
-*/
-#define JSD_SAVE_EXCEPTION_STATE(cx,t,e) \
-    JS_BEGIN_MACRO                       \
-    t = JS_GetPendingException(cx, &e);  \
-    if(t)                                \
-        JS_ClearPendingException(cx);    \
-    JS_END_MACRO
-
-#define JSD_RESTORE_EXCEPTION_STATE(cx,t,e) \
-    JS_BEGIN_MACRO                          \
-    if(t)                                   \
-        JS_SetPendingException(cx, e);      \
-    else                                    \
-        JS_ClearPendingException(cx);       \
-    JS_END_MACRO
-
 /***************************************************************************/
 /* Our structures */
 
@@ -138,6 +117,8 @@ typedef struct JSDContext
     void*                   debugBreakHookData;
     JSD_ExecutionHookProc   debuggerHook;
     void*                   debuggerHookData;
+    JSD_ExecutionHookProc   throwHook;
+    void*                   throwHookData;
     JSContext*              dumbContext;
     JSObject*               glob;
     JSD_UserCallbacks       userCallbacks;
@@ -523,9 +504,20 @@ jsd_CallExecutionHook(JSDContext* jsdc,
                       void* hookData,
                       jsval* rval);
 
+extern JSBool
+jsd_SetThrowHook(JSDContext*           jsdc,
+                 JSD_ExecutionHookProc hook,
+                 void*                 callerdata);
+extern JSBool
+jsd_ClearThrowHook(JSDContext* jsdc);
+
 extern JSTrapStatus JS_DLL_CALLBACK
 jsd_DebuggerHandler(JSContext *cx, JSScript *script, jsbytecode *pc,
                     jsval *rval, void *closure);
+
+extern JSTrapStatus JS_DLL_CALLBACK
+jsd_ThrowHandler(JSContext *cx, JSScript *script, jsbytecode *pc,
+                 jsval *rval, void *closure);
 
 /***************************************************************************/
 /* Stack Frame functions */

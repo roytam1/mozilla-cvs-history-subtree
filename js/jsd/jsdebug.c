@@ -437,6 +437,22 @@ JSD_ClearDebuggerHook(JSDContext* jsdc)
     return jsd_ClearDebuggerHook(jsdc);
 }
 
+JSD_PUBLIC_API(JSBool)
+JSD_SetThrowHook(JSDContext*           jsdc,
+                 JSD_ExecutionHookProc hook,
+                 void*                 callerdata)
+{
+    JSD_ASSERT_VALID_CONTEXT(jsdc);
+    return jsd_SetThrowHook(jsdc, hook, callerdata);
+}
+
+JSD_PUBLIC_API(JSBool)
+JSD_ClearThrowHook(JSDContext* jsdc)
+{
+    JSD_ASSERT_VALID_CONTEXT(jsdc);
+    return jsd_ClearThrowHook(jsdc);
+}
+
 /***************************************************************************/
 /* Stack Frame functions */
 

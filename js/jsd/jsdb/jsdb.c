@@ -119,7 +119,7 @@ jsdb_ExecHookHandler(JSDContext*     jsdc,
         }
 
         if(answer >= JSD_HOOK_RETURN_HOOK_ERROR &&
-           answer <= JSD_HOOK_RETURN_THROW_WITH_VAL)
+           answer <= JSD_HOOK_RETURN_CONTINUE_THROW)
             ourRetVal = answer;
         else
             ourRetVal = JSD_HOOK_RETURN_CONTINUE;
@@ -432,6 +432,7 @@ JSDB_InitDebugger(JSRuntime* rt, JSDContext* jsdc, int depth)
 
     JSD_SetScriptHook(jsdc, jsdb_ScriptHookProc, data);
     JSD_SetDebuggerHook(jsdc, jsdb_ExecHookHandler, data);
+    JSD_SetThrowHook(jsdc, jsdb_ExecHookHandler, data);
     JSD_SetDebugBreakHook(jsdc, jsdb_ExecHookHandler, data);
     JSD_SetErrorReporter(jsdc, jsdb_ErrorReporter, data);
 

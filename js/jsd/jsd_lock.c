@@ -183,8 +183,7 @@ jsd_CurrentThread()
 
 /*
  * NOTE: 'Real' versions of these locks must be reentrant in the sense that 
- * they support nested calls to lock and unlock. Look at 
- * mozilla/js/jsd/jsd_lock.c for an example using NSPR 2.0 locking.
+ * they support nested calls to lock and unlock. 
  */
 
 void*
