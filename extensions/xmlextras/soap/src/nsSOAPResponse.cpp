@@ -32,8 +32,6 @@
 
 nsSOAPResponse::nsSOAPResponse()
 {
-  NS_INIT_ISUPPORTS();
-  /* member initializers and constructor code */
 }
 
 nsSOAPResponse::~nsSOAPResponse()
@@ -41,7 +39,7 @@ nsSOAPResponse::~nsSOAPResponse()
   /* destructor code */
 }
 
-NS_IMPL_ISUPPORTS3(nsSOAPResponse, nsISOAPMessage, nsISOAPResponse, nsISecurityCheckedComponent)
+NS_IMPL_ISUPPORTS_INHERITED1(nsSOAPResponse, nsSOAPMessage, nsISOAPResponse)
 
 /* attribute nsISOAPMessage respondingTo; */
 NS_IMETHODIMP nsSOAPResponse::GetRespondingTo(nsISOAPMessage * *aRespondingTo)
@@ -72,6 +70,7 @@ NS_IMETHODIMP nsSOAPResponse::GetFault(nsISOAPFault * *aFault)
       *aFault = new nsSOAPFault(body);
       if (!*aFault)
         return NS_ERROR_OUT_OF_MEMORY;
+      NS_ADDREF(*aFault);
     }
   }
   else {

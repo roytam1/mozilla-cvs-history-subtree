@@ -32,14 +32,13 @@
 #include "nsCOMPtr.h"
 
 class nsSOAPResponse : public nsSOAPMessage,
-                       public nsISOAPResponse,
-                       public nsISecurityCheckedComponent
+                       public nsISOAPResponse
 {
 public:
   NS_DECL_ISUPPORTS
 
   // nsISOAPResponse
-  NS_FORWARD_NSISOAPMESSAGE(nsISOAPMessage::)
+  NS_FORWARD_NSISOAPMESSAGE(nsSOAPMessage::)
 
   // nsISOAPResponse
   NS_DECL_NSISOAPRESPONSE

@@ -461,6 +461,7 @@ nsSOAPUtils::ConvertJSValToValue(JSContext* aContext,
                                  JSObject** aJSValue,
                                  PRInt32* aType)
 {
+        nsCOMPtr<nsISOAPJSValue> value = do_CreateInstance(NS_SOAPJSVALUE_CONTRACTID, &rc);
   *aValue = nsnull;
   *aJSValue = nsnull;
   if (JSVAL_IS_NULL(val)) {

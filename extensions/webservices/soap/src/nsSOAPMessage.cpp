@@ -41,9 +41,8 @@
 //
 /////////////////////////////////////////////
   
-nsCOMPtr<nsISOAPTypeRegistry> nsSOAPMessage::mDefaultTypes = do_GetService(NS_SOAPDEFAULTTYPEREGISTRY_CONTRACTID);
-
 nsSOAPMessage::nsSOAPMessage()
+ : mDefaultTypes(do_GetService(NS_SOAPDEFAULTTYPEREGISTRY_CONTRACTID))
 {
   NS_INIT_ISUPPORTS();
   mStatus = 0;
@@ -52,6 +51,10 @@ nsSOAPMessage::nsSOAPMessage()
 nsSOAPMessage::~nsSOAPMessage()
 {
 }
+
+NS_IMPL_ISUPPORTS2(nsSOAPMessage, 
+                   nsISOAPMessage, 
+                   nsISecurityCheckedComponent)
 
 /* attribute nsIDOMDocument message; */
 NS_IMETHODIMP nsSOAPMessage::GetMessage(nsIDOMDocument * *aMessage)
@@ -256,11 +259,7 @@ NS_IMETHODIMP nsSOAPMessage::Marshall(const nsAReadableString & aName, const nsA
     rc = type->GetMarshaller(getter_AddRefs(marshaller));
     if (marshaller)
     {
-      nsCOMPtr<nsISOAPMessage> message;
-      nsresult rc = QueryInterface(NS_GET_IID(nsISOAPMessage), getter_AddRefs(message));
-      if (NS_FAILED(rc))
-        return rc;
-      return marshaller->Marshall(aName, aEncodingStyleURI, aType, namespaceURI, name, aSource, message, configuration, _retval);
+      return marshaller->Marshall(aName, aEncodingStyleURI, aType, namespaceURI, name, aSource, this, configuration, _retval);
     }
   }
   return NS_ERROR_FAILURE;
@@ -286,11 +285,7 @@ NS_IMETHODIMP nsSOAPMessage::Unmarshall(nsAWritableString & aName, const nsARead
     rc = type->GetUnmarshaller(getter_AddRefs(unmarshaller));
     if (unmarshaller)
     {
-      nsCOMPtr<nsISOAPMessage> message;
-      nsresult rc = QueryInterface(NS_GET_IID(nsISOAPMessage), getter_AddRefs(message));
-      if (NS_FAILED(rc))
-        return rc;
-      return unmarshaller->Unmarshall(aName, aEncodingStyleURI, ptype, aNamespace, aLocalname, aSource, message, configuration, _retval);
+      return unmarshaller->Unmarshall(aName, aEncodingStyleURI, ptype, aNamespace, aLocalname, aSource, this, configuration, _retval);
     }
   }
   return NS_ERROR_FAILURE;

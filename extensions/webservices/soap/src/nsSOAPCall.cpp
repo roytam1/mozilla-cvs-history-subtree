@@ -44,18 +44,15 @@
 
 nsSOAPCall::nsSOAPCall()
 {
-  NS_INIT_ISUPPORTS();
 }
 
 nsSOAPCall::~nsSOAPCall()
 {
 }
 
-NS_IMPL_ISUPPORTS3(nsSOAPCall, 
-                   nsISOAPMessage, 
-                   nsISOAPCall, 
-                   nsISecurityCheckedComponent)
-
+NS_IMPL_ISUPPORTS_INHERITED1(nsSOAPCall, 
+                   nsSOAPMessage,
+                   nsISOAPCall)
 
 /* attribute DOMString transportURI; */
 NS_IMETHODIMP nsSOAPCall::GetTransportURI(nsAWritableString & aTransportURI)
@@ -111,11 +108,11 @@ NS_IMETHODIMP nsSOAPCall::Invoke(nsISOAPResponse **_retval)
   if (NS_FAILED(rv)) return rv;
   
   nsCOMPtr<nsISOAPResponse> response;
-  response = dont_AddRef(new nsSOAPResponse());
+  response = new nsSOAPResponse();
   if (!response) return NS_ERROR_OUT_OF_MEMORY;
 
   rv = transport->SyncCall(mTransportURI,
-                           this,
+                           NS_STATIC_CAST(nsSOAPMessage*, this),
                            response);
   if (NS_FAILED(rv)) return rv;
 
@@ -136,11 +133,11 @@ NS_IMETHODIMP nsSOAPCall::AsyncInvoke(nsISOAPResponseListener *listener)
   if (NS_FAILED(rv)) return rv;
   
   nsCOMPtr<nsISOAPResponse> response;
-  response = dont_AddRef(new nsSOAPResponse());
+  response = new nsSOAPResponse();
   if (!response) return NS_ERROR_OUT_OF_MEMORY;
 
   rv = transport->AsyncCall(mTransportURI,
-                           this,
+                           NS_STATIC_CAST(nsSOAPMessage*, this),
                            listener,
                            response);
   return rv;

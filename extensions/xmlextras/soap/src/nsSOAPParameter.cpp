@@ -20,8 +20,10 @@
  * Contributor(s): 
  */
 
+#include "nsString.h"
 #include "nsReadableUtils.h"
 #include "nsSOAPParameter.h"
+#include "nsSOAPJSValue.h"
 #include "nsSOAPUtils.h"
 #include "nsIXPConnect.h"
 #include "nsIServiceManager.h"
@@ -181,8 +183,10 @@ NS_IMETHODIMP nsSOAPParameter::SetAsArray(nsISupportsArray *aValue)
 /* void setAsInterface (in nsIIDRef aIID, in nsISupports aValue); */
 NS_IMETHODIMP nsSOAPParameter::SetAsInterface(const nsIID & aIID, nsISupports *aValue)
 {
+    nsAutoString iid = NS_ConvertASCIItoUCS2(aIID.ToString());
     mType.Assign(nsSOAPUtils::kIIDObjectType);
     mType.Append(nsSOAPUtils::kTypeSeparator);
+    mType.Append(iid);
     mValue = aValue;
     return NS_OK;
 }
@@ -269,11 +273,22 @@ nsSOAPParameter::Initialize(JSContext *cx, JSObject *obj,
     if (namestr) {
       SetName(nsString(NS_REINTERPRET_CAST(PRUnichar*, JS_GetStringChars(namestr))));
       if (argc > 1) {
-        SetValue(cx, argv[1]);
+        nsCOMPtr<nsISupports> value;
+        nsAutoString type;
+#if 0
+        nsresult rc = nsSOAPUtils::ConvertJSValToValue(cx,
+                                          argv[1],
+                                          getter_AddRefs(value),
+                                          type);
+#else
+        nsresult rc = 0;
+#endif
+        mType = type;
+        mValue = value;
+        return rc;
       }
     }
   }
-
   return NS_OK;
 }
 
@@ -303,11 +318,13 @@ nsSOAPParameter::GetProperty(JSContext *cx, JSObject *obj,
   jsval val;
   if (JS_IdToValue(cx, id, &val)) {
     if (JSVAL_IS_STRING(val)) {
+#if 0
       JSString* str = JSVAL_TO_STRING(val);
       char* name = JS_GetStringBytes(str);
       if (nsCRT::strcmp(name, "value") == 0) {
         return GetValue(cx, vp);
       }
+#endif
     }
   }
   return NS_OK;
@@ -323,11 +340,13 @@ nsSOAPParameter::SetProperty(JSContext *cx, JSObject *obj, jsid id,
   jsval val;
   if (JS_IdToValue(cx, id, &val)) {
     if (JSVAL_IS_STRING(val)) {
+#if 0
       JSString* str = JSVAL_TO_STRING(val);
       char* name = JS_GetStringBytes(str);
       if (nsCRT::strcmp(name, "value") == 0) {
         return SetValue(cx, *vp);
       }
+#endif
     }
   }
   return NS_OK;

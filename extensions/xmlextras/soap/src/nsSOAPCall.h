@@ -32,8 +32,7 @@
 #include "nsCOMPtr.h"
 
 class nsSOAPCall : public nsSOAPMessage,
-                   public nsISOAPCall,
-                   public nsISecurityCheckedComponent
+                   public nsISOAPCall
 {
 public:
   nsSOAPCall();
@@ -41,7 +40,7 @@ public:
 
   NS_DECL_ISUPPORTS
 
-  // nsISOAPMessage
+  // nsISOAPCall
   NS_FORWARD_NSISOAPMESSAGE(nsSOAPMessage::)
 
   // nsISOAPCall

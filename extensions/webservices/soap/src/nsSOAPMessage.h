@@ -32,7 +32,8 @@
 #include "nsISupportsArray.h"
 #include "nsCOMPtr.h"
 
-class nsSOAPMessage
+class nsSOAPMessage : public nsISOAPMessage, 
+  public nsISecurityCheckedComponent
 {
 public:
   nsSOAPMessage();
@@ -51,7 +52,7 @@ protected:
   nsCOMPtr<nsIDOMDocument> mMessage;
   nsCOMPtr<nsISupportsArray> mProtocol;
   nsCOMPtr<nsISOAPTypeRegistry> mTypes;
-  static nsCOMPtr<nsISOAPTypeRegistry> mDefaultTypes;
+  nsCOMPtr<nsISOAPTypeRegistry> mDefaultTypes;
   nsString mActionURI;
   nsString mEncodingStyleURI;
   nsString mTargetObjectURI;
