@@ -4805,7 +4805,7 @@ GlobalWindowImpl::OpenInternal(const nsAString& aUrl,
       if (bwin) {
         // open the tab with the URL
         // discard features (meaningless in this case)
-        bwin->OpenURI(tabURI,
+        bwin->OpenURI(tabURI, this,
               containerPref, nsIBrowserDOMWindow::OPEN_NEW,
               getter_AddRefs(domReturn));
         if (domReturn) {
