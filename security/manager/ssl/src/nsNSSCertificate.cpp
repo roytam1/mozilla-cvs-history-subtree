@@ -54,6 +54,7 @@
 #include "nsDateTimeFormatCID.h"
 #include "nsILocaleService.h"
 
+extern "C" {
 #include "pk11func.h"
 #include "certdb.h"
 #include "cert.h"
@@ -61,6 +62,7 @@
 #include "nssb64.h"
 #include "secasn1.h"
 #include "secder.h"
+}
 
 #ifdef PR_LOGGING
 extern PRLogModuleInfo* gPIPNSSLog;
