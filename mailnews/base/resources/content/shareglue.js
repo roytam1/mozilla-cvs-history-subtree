@@ -97,7 +97,7 @@ function Newsgroups() {}
 function AddressBook() 
 {
 	var wind = window.open("chrome://addressbook/content/addressbook.xul",
-							 "AddressBook");
+							 "addressbook", "chrome");
 	return wind;
 }
 
