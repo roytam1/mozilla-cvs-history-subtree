@@ -26,6 +26,7 @@
 #include "nsString.h"
 
 #include "nsIDOMEvent.h"
+#include "nsIDOMNSEvent.h"
 #include "nsIDOMDocument.h"
 #include "nsIDocument.h"
 #include "nsIPresShell.h"
@@ -427,9 +428,14 @@ nsTextEditorMouseListener::MouseClick(nsIDOMEvent* aMouseEvent)
         else
           editor->Paste(clipboard);
 
-        // Prevent the event from bubbling up to be possibly handled
-        // again by the containing window:
-        mouseEvent->PreventBubble();
+        nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(mouseEvent));
+
+        if (nsevent) {
+          // Prevent the event from bubbling up to be possibly handled
+          // again by the containing window:
+          nsevent->PreventBubble();
+        }
+
         mouseEvent->PreventDefault();
 
         // We processed the event, whether drop/paste succeeded or not
@@ -725,8 +731,13 @@ nsTextEditorDragListener::DragDrop(nsIDOMEvent* aMouseEvent)
     nsCOMPtr<nsIDOMNSUIEvent> nsuiEvent (do_QueryInterface(aMouseEvent));
     if (!nsuiEvent) return NS_OK;
 
-    //some day we want to use another way to stop this from bubbling.
-    aMouseEvent->PreventBubble();
+    nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aMouseEvent));
+
+    if (nsevent) {
+      //some day we want to use another way to stop this from bubbling.
+      nsevent->PreventBubble();
+    }
+
     aMouseEvent->PreventDefault();
 
     /* for bug 47399, when dropping a drag session, if you are over your original
@@ -1061,7 +1072,13 @@ nsTextEditorFocusListener::Focus(nsIDOMEvent* aEvent)
   if (mEditor)
   {
     PRUint32 flags;
-    aEvent->PreventBubble();
+
+    nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aEvent));
+
+    if (nsevent) {
+      nsevent->PreventBubble();
+    }
+
     mEditor->GetFlags(&flags);
     if (! (flags & nsIPlaintextEditor::eEditorDisabledMask))
     { // only enable caret and selection if the editor is not disabled
@@ -1122,7 +1139,13 @@ nsTextEditorFocusListener::Blur(nsIDOMEvent* aEvent)
   if (mEditor)
   {
     PRUint32 flags;
-    aEvent->PreventBubble();
+
+    nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aEvent));
+
+    if (nsevent) {
+      nsevent->PreventBubble();
+    }
+
     mEditor->GetFlags(&flags);
     nsCOMPtr<nsIEditor>editor = do_QueryInterface(mEditor);
     if (editor)

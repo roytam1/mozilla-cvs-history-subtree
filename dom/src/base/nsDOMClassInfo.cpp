@@ -43,6 +43,7 @@
 #include "nsIDOMDocument.h"
 #include "nsIDOMNSDocument.h"
 #include "nsIDOMEvent.h"
+#include "nsIDOMNSEvent.h"
 #include "nsIDOMKeyEvent.h"
 #include "nsIDOMEventListener.h"
 
@@ -1051,6 +1052,7 @@ nsDOMClassInfo::Init()
   DOM_CLASSINFO_MAP_END
 
   DOM_CLASSINFO_MAP_BEGIN(Event, nsIDOMEvent)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSEvent)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMKeyEvent)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMMouseEvent)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSUIEvent)
@@ -2618,6 +2620,14 @@ nsWindowSH::GlobalResolve(nsISupports *native, JSContext *cx, JSObject *obj,
     if (!primary_iid.Equals(NS_GET_IID(nsISupports))) {
       rv = DefineInterfaceConstants(cx, cfnc_obj, &primary_iid);
       NS_ENSURE_SUCCESS(rv, rv);
+
+      // Special case for |Event|, Event needs constants from NSEvent
+      // too for backwards compatibility.
+      if (primary_iid.Equals(NS_GET_IID(nsIDOMEvent))) {
+        rv = DefineInterfaceConstants(cx, cfnc_obj,
+                                      &NS_GET_IID(nsIDOMNSEvent));
+        NS_ENSURE_SUCCESS(rv, rv);
+      }
 
       nsCOMPtr<nsIInterfaceInfoManager> iim =
         dont_AddRef(XPTI_GetInterfaceInfoManager());

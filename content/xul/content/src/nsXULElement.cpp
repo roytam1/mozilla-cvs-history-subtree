@@ -2008,8 +2008,10 @@ nsXULElement::RemoveEventListener(const nsAReadableString& aType,
 }
 
 NS_IMETHODIMP
-nsXULElement::DispatchEvent(nsIDOMEvent* aEvent)
+nsXULElement::DispatchEvent(nsIDOMEvent* aEvent, PRBool *aRetVal)
 {
+  *aRetVal = PR_TRUE;
+
   // Obtain a presentation context
   PRInt32 count = mDocument->GetNumberOfShells();
   if (count == 0)
@@ -2052,7 +2054,8 @@ nsXULElement::GetListenerManager(nsIEventListenerManager** aResult)
 NS_IMETHODIMP
 nsXULElement::HandleEvent(nsIDOMEvent *aEvent)
 {
-  return DispatchEvent(aEvent);
+    PRBool noDefault;
+    return DispatchEvent(aEvent, &noDefault);
 }
 
 

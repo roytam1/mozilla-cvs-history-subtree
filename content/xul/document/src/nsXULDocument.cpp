@@ -4265,8 +4265,10 @@ nsXULDocument::RemoveEventListener(const nsAReadableString& aType,
 }
 
 NS_IMETHODIMP
-nsXULDocument::DispatchEvent(nsIDOMEvent* aEvent)
+nsXULDocument::DispatchEvent(nsIDOMEvent* aEvent, PRBool *aRetVal)
 {
+  *aRetVal = PR_TRUE;
+
   // Obtain a presentation context
   PRInt32 count = GetNumberOfShells();
   if (count == 0)
@@ -4335,7 +4337,8 @@ nsXULDocument::GetListenerManager(nsIEventListenerManager** aResult)
 NS_IMETHODIMP
 nsXULDocument::HandleEvent(nsIDOMEvent *aEvent)
 {
-  return DispatchEvent(aEvent);
+    PRBool noDefault;
+    return DispatchEvent(aEvent, &noDefault);
 }
 
 nsresult

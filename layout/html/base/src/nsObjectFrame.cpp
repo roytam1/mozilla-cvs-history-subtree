@@ -64,6 +64,7 @@
 #include "nsIDOMMouseMotionListener.h"
 #include "nsIDOMFocusListener.h"
 #include "nsIDOMEventReceiver.h"
+#include "nsIDOMNSEvent.h"
 #include "nsIPrivateDOMEvent.h"
 #include "nsIDocumentEncoder.h"
 #include "nsXPIDLString.h"
@@ -3007,7 +3008,13 @@ nsresult nsPluginInstanceOwner::DispatchFocusToPlugin(nsIDOMEvent* aFocusEvent)
       nsEventStatus rv = ProcessEvent(focusEvent);
       if (nsEventStatus_eConsumeNoDefault == rv) {
         aFocusEvent->PreventDefault();
-        aFocusEvent->PreventBubble();
+
+        nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aFocusEvent));
+
+        if (nsevent) {
+          nsevent->PreventBubble();
+        }
+
         return NS_ERROR_FAILURE; // means consume event
       }
     }
@@ -3037,7 +3044,13 @@ nsresult nsPluginInstanceOwner::KeyPress(nsIDOMEvent* aKeyEvent)
     // If this event is going to the plugin, we want to kill it.
     // Not actually sending keypress to the plugin, since we didn't before.
     aKeyEvent->PreventDefault();
-    aKeyEvent->PreventBubble();
+
+    nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aKeyEvent));
+
+    if (nsevent) {
+      nsevent->PreventBubble();
+    }
+
     return NS_ERROR_FAILURE; // means consume event
   }
   return NS_OK;
@@ -3055,7 +3068,13 @@ nsresult nsPluginInstanceOwner::DispatchKeyToPlugin(nsIDOMEvent* aKeyEvent)
         nsEventStatus rv = ProcessEvent(*keyEvent);
         if (nsEventStatus_eConsumeNoDefault == rv) {
           aKeyEvent->PreventDefault();
-          aKeyEvent->PreventBubble();
+
+          nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aKeyEvent));
+
+          if (nsevent) {
+            nsevent->PreventBubble();
+          }
+
           return NS_ERROR_FAILURE; // means consume event
         }
       }
@@ -3171,7 +3190,13 @@ nsresult nsPluginInstanceOwner::DispatchMouseToPlugin(nsIDOMEvent* aMouseEvent)
       nsEventStatus rv = ProcessEvent(*mouseEvent);
       if (nsEventStatus_eConsumeNoDefault == rv) {
         aMouseEvent->PreventDefault();
-        aMouseEvent->PreventBubble();
+
+        nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aMouseEvent));
+
+        if (nsevent) {
+          nsevent->PreventBubble();
+        }
+
         return NS_ERROR_FAILURE; // means consume event
       }
     }

@@ -2690,8 +2690,11 @@ GlobalWindowImpl::RemoveEventListener(const nsAReadableString& aType,
   return NS_ERROR_FAILURE;
 }
 
-NS_IMETHODIMP GlobalWindowImpl::DispatchEvent(nsIDOMEvent* aEvent)
+NS_IMETHODIMP GlobalWindowImpl::DispatchEvent(nsIDOMEvent* aEvent,
+                                              PRBool *aRetVal)
 {
+  *aRetVal = PR_TRUE;
+
   if (mDocument) {
     nsCOMPtr<nsIDocument> idoc(do_QueryInterface(mDocument));
     if (idoc) {
@@ -2770,7 +2773,8 @@ GlobalWindowImpl::GetNewListenerManager(nsIEventListenerManager **aResult)
 
 NS_IMETHODIMP GlobalWindowImpl::HandleEvent(nsIDOMEvent *aEvent)
 {
-  return DispatchEvent(aEvent);
+  PRBool noDefault;
+  return DispatchEvent(aEvent, &noDefault);
 }
 
 //*****************************************************************************

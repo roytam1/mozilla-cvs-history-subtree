@@ -34,6 +34,7 @@
 #include "nsIDOMAttr.h"
 #include "nsIDocument.h"
 #include "nsIDOMEventReceiver.h" 
+#include "nsIDOMNSEvent.h"
 #include "nsIDOMKeyEvent.h"
 #include "nsIDOMKeyListener.h" 
 #include "nsIDOMMouseListener.h"
@@ -923,8 +924,16 @@ NS_IMETHODIMP nsHTMLEditor::CanDrag(nsIDOMEvent *aDragEvent, PRBool *aCanDrag)
     return NS_OK;
 
   nsCOMPtr<nsIDOMEventTarget> eventTarget;
-  res = aDragEvent->GetOriginalTarget(getter_AddRefs(eventTarget));
-  if (NS_FAILED(res)) return res;
+
+  nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aDragEvent));
+
+  if (nsevent) {
+    res = nsevent->GetOriginalTarget(getter_AddRefs(eventTarget));
+    if (NS_FAILED(res)) {
+      return res;
+    }
+  }
+
   if ( eventTarget )
   {
     nsCOMPtr<nsIDOMNode> eventTargetDomNode = do_QueryInterface(eventTarget);
@@ -1056,7 +1065,11 @@ NS_IMETHODIMP nsHTMLEditor::DoDrag(nsIDOMEvent *aDragEvent)
       rv = dragService->InvokeDragSession( domnode, transferableArray, nsnull, flags);
       if (NS_FAILED(rv)) return rv;
 
-      aDragEvent->PreventBubble();
+      nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aDragEvent));
+
+      if (nsevent) {
+        nsevent->PreventBubble();
+      }
     }
   }
 

@@ -30,6 +30,7 @@
 #include "nsIFrame.h"
 #include "nsIDOMEventTarget.h"
 #include "nsIDOMElement.h"
+#include "nsIDOMNSEvent.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsReadableUtils.h"
 #include "nsILink.h"
@@ -293,7 +294,12 @@ NS_IMETHODIMP nsRootAccessible::HandleEvent(nsIDOMEvent* aEvent)
 NS_IMETHODIMP nsRootAccessible::GetTargetNode(nsIDOMEvent *aEvent, nsCOMPtr<nsIDOMNode>& aTargetNode)
 {
   nsCOMPtr<nsIDOMEventTarget> domEventTarget;
-  aEvent->GetOriginalTarget(getter_AddRefs(domEventTarget));
+
+  nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aEvent));
+
+  if (nsevent) {
+    nsevent->GetOriginalTarget(getter_AddRefs(domEventTarget));
+  }
 
   nsresult rv;
   aTargetNode = do_QueryInterface(domEventTarget, &rv);

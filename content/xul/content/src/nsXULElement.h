@@ -443,11 +443,7 @@ public:
     NS_DECL_NSIDOMXULELEMENT
 
     // nsIDOMEventTarget interface (from nsIDOMEventReceiver)
-    NS_IMETHOD AddEventListener(const nsAReadableString& aType, nsIDOMEventListener* aListener, 
-                                PRBool aUseCapture);
-    NS_IMETHOD RemoveEventListener(const nsAReadableString& aType, nsIDOMEventListener* aListener, 
-                                   PRBool aUseCapture);
-    NS_IMETHOD DispatchEvent(nsIDOMEvent* aEvent);
+    NS_DECL_NSIDOMEVENTTARGET
 
     // nsIDOMEventReceiver
     NS_IMETHOD AddEventListenerByIID(nsIDOMEventListener *aListener, const nsIID& aIID);

@@ -355,13 +355,7 @@ public:
     NS_IMETHOD HandleEvent(nsIDOMEvent *aEvent);
 
     // nsIDOMEventTarget interface
-    NS_IMETHOD AddEventListener(const nsAReadableString& aType,
-                                nsIDOMEventListener* aListener,
-                                PRBool aUseCapture);
-    NS_IMETHOD RemoveEventListener(const nsAReadableString& aType,
-                                   nsIDOMEventListener* aListener,
-                                   PRBool aUseCapture);
-    NS_IMETHOD DispatchEvent(nsIDOMEvent* aEvent);
+    NS_DECL_NSIDOMEVENTTARGET
 
     // nsIDOMDocument interface
     NS_DECL_NSIDOMDOCUMENT

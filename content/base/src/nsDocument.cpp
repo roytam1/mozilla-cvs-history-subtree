@@ -1566,7 +1566,8 @@ nsDocument::EndLoad()
               getter_AddRefs(event));
   if (event) {
     event->InitEvent(NS_LITERAL_STRING("DOMContentLoaded"), PR_TRUE, PR_TRUE);
-    DispatchEvent(event);
+    PRBool noDefault;
+    DispatchEvent(event, &noDefault);
   }
 
   return NS_OK;
@@ -2917,7 +2918,8 @@ nsresult nsDocument::GetListenerManager(nsIEventListenerManager **aInstancePtrRe
 
 nsresult nsDocument::HandleEvent(nsIDOMEvent *aEvent)
 {
-  return DispatchEvent(aEvent);
+  PRBool noDefault;
+  return DispatchEvent(aEvent, &noDefault);
 } 
 
 nsresult nsDocument::HandleDOMEvent(nsIPresContext* aPresContext, 
@@ -3040,8 +3042,10 @@ nsresult nsDocument::RemoveEventListener(const nsAReadableString& aType, nsIDOME
 }
 
 NS_IMETHODIMP
-nsDocument::DispatchEvent(nsIDOMEvent* aEvent)
+nsDocument::DispatchEvent(nsIDOMEvent* aEvent, PRBool *aRetVal)
 {
+  *aRetVal = PR_TRUE;
+
   // Obtain a presentation context
   PRInt32 count = GetNumberOfShells();
   if (count == 0)

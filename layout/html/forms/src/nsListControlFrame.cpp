@@ -59,6 +59,7 @@
 #include "nsVoidArray.h"
 #include "nsIScrollableFrame.h"
 #include "nsIDOMEventTarget.h"
+#include "nsIDOMNSEvent.h"
 #include "nsGUIEvent.h"
 #ifdef ACCESSIBILITY
 #include "nsIAccessibilityService.h"
@@ -3363,8 +3364,13 @@ nsListControlFrame::MouseUp(nsIDOMEvent* aMouseEvent)
     if (IsInDropDownMode() == PR_TRUE) {
       if (!IsClickingInCombobox(aMouseEvent)) {
         aMouseEvent->PreventDefault();
-        aMouseEvent->PreventCapture();
-        aMouseEvent->PreventBubble();
+
+        nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aMouseEvent));
+
+        if (nsevent) {
+          nsevent->PreventCapture();
+          nsevent->PreventBubble();
+        }
       } else {
         mButtonDown = PR_FALSE;
         CaptureMouseEvents(mPresContext, PR_FALSE);
@@ -3547,8 +3553,13 @@ nsListControlFrame::MouseDown(nsIDOMEvent* aMouseEvent)
     if (IsInDropDownMode()) {
       if (!IsClickingInCombobox(aMouseEvent)) {
         aMouseEvent->PreventDefault();
-        aMouseEvent->PreventCapture();
-        aMouseEvent->PreventBubble();
+
+        nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aMouseEvent));
+
+        if (nsevent) {
+          nsevent->PreventCapture();
+          nsevent->PreventBubble();
+        }
       } else {
         return NS_OK;
       }
@@ -3988,8 +3999,13 @@ nsListControlFrame::KeyPress(nsIDOMEvent* aKeyEvent)
           mComboboxFrame->IsDroppedDown(&isDroppedDown);
           mComboboxFrame->ShowDropDown(!isDroppedDown);
           aKeyEvent->PreventDefault();
-          aKeyEvent->PreventCapture();
-          aKeyEvent->PreventBubble();
+
+          nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aKeyEvent));
+
+          if (nsevent) {
+            nsevent->PreventCapture();
+            nsevent->PreventBubble();
+          }
         }
       }
 #endif
@@ -4013,9 +4029,14 @@ nsListControlFrame::KeyPress(nsIDOMEvent* aKeyEvent)
   } else {
     return rv;
   }
-      
-  // We are handling this so don't let it bubble up
-  aKeyEvent->PreventBubble();
+
+  nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aKeyEvent));
+
+  if (nsevent) {
+    // We are handling this so don't let it bubble up
+
+    nsevent->PreventBubble();
+  }
 
   // this tells us whether we need to process the new index that was set
   // DOM_VK_RETURN & DOM_VK_ESCAPE will leave this false

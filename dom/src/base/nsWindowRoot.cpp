@@ -84,7 +84,7 @@ nsWindowRoot::RemoveEventListener(const nsAReadableString& aType, nsIDOMEventLis
 }
 
 NS_IMETHODIMP
-nsWindowRoot::DispatchEvent(nsIDOMEvent* aEvt)
+nsWindowRoot::DispatchEvent(nsIDOMEvent* aEvt, PRBool *aRetVal)
 {
   // Obtain a presentation context
   nsCOMPtr<nsIDOMDocument> domDoc;
@@ -153,7 +153,8 @@ nsWindowRoot::GetListenerManager(nsIEventListenerManager** aResult)
 NS_IMETHODIMP
 nsWindowRoot::HandleEvent(nsIDOMEvent *aEvent)
 {
-  return DispatchEvent(aEvent);
+  PRBool noDefault;
+  return DispatchEvent(aEvent, &noDefault);
 }
 
 NS_IMETHODIMP nsWindowRoot::HandleChromeEvent(nsIPresContext* aPresContext,
