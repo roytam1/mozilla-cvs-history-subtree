@@ -43,8 +43,6 @@
 
 #include "stdio.h"
 
-//#define USE_GTK_FIXED
-
 //-------------------------------------------------------------------------
 //
 // nsWindow constructor
@@ -602,11 +600,8 @@ NS_METHOD nsWindow::CreateNative(GtkObject *parentWidget)
 
 NS_METHOD nsWindow::CreateNative(GtkObject *parentWidget)
 {
-#ifndef USE_GTK_FIXED
   mWidget = gtk_layout_new(PR_FALSE, PR_FALSE);
-#else
-  mWidget = gtk_fixed_new();
-#endif
+
   GTK_WIDGET_SET_FLAGS(mWidget, GTK_CAN_FOCUS);
   gtk_widget_set_app_paintable(mWidget, PR_TRUE);
 
@@ -744,11 +739,7 @@ void * nsWindow::GetNativeData(PRUint32 aDataType)
     // All the action happens on that window - called the 'bin_window'
     if (mWidget)
     {
-#ifndef USE_GTK_FIXED
       return (void *) GTK_LAYOUT(mWidget)->bin_window;
-#else
-      return (void *) mWidget->window;
-#endif
     }
   }
 #endif /* USE_SUPERWIN */
@@ -794,11 +785,7 @@ NS_IMETHODIMP nsWindow::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
   GdkWindow *window = nsnull;
   GdkGC *gc = nsnull;
 
-#ifndef USE_GTK_FIXED
   window = GTK_LAYOUT(mWidget)->bin_window;
-#else
-  window = mWidget->window;
-#endif
 
   gc = gdk_gc_new(window);
 
@@ -921,7 +908,6 @@ NS_IMETHODIMP nsWindow::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
 
 #else
 
-#ifndef USE_GTK_FIXED
   if (GTK_IS_LAYOUT(mWidget)) {
     GtkAdjustment* horiz = gtk_layout_get_hadjustment(GTK_LAYOUT(mWidget));
     GtkAdjustment* vert = gtk_layout_get_vadjustment(GTK_LAYOUT(mWidget));
@@ -930,9 +916,6 @@ NS_IMETHODIMP nsWindow::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
     gtk_adjustment_value_changed(horiz);
     gtk_adjustment_value_changed(vert);
   }
-#else
-  printf("uhh, you don't use good scrolling and you arn't using gtklayouts.. no srcolling for you.\n");
-#endif
 
 #endif
 
@@ -948,11 +931,7 @@ NS_IMETHODIMP nsWindow::ScrollRect(nsRect &aSrcRect, PRInt32 aDx, PRInt32 aDy)
   GdkWindow *window = nsnull;
   GdkGC *gc = nsnull;
 
-#ifndef USE_GTK_FIXED
   window = GTK_LAYOUT(mWidget)->bin_window;
-#else
-  window = mWidget->window;
-#endif
 
   gc = gdk_gc_new(window);
 
@@ -1603,7 +1582,6 @@ NS_IMETHODIMP nsWindow::Move(PRInt32 aX, PRInt32 aY)
   }
   else if (mWidget) 
   {
-#ifndef USE_GTK_FIXED
     GtkWidget *    layout = mWidget->parent;
 
     GtkAdjustment* ha = gtk_layout_get_hadjustment(GTK_LAYOUT(layout));
@@ -1617,10 +1595,6 @@ NS_IMETHODIMP nsWindow::Move(PRInt32 aX, PRInt32 aY)
                       mWidget, 
                       aX + x_correction, 
                       aY + y_correction);
-#else
-    gtk_fixed_move(GTK_FIXED(mWidget->parent), mWidget, aX, aY);
-#endif
-    
   }
 
   return NS_OK;
