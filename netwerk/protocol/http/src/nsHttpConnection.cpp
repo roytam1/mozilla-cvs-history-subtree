@@ -134,6 +134,8 @@ nsHttpConnection::OnHeadersAvailable(nsHttpTransaction *trans)
     // inspect the connection headers for keep-alive info provided the
     // transaction completed successfully.
     const char *val = trans->ResponseHead()->PeekHeader(nsHttp::Connection);
+    if (!val)
+        val = trans->ResponseHead()->PeekHeader(nsHttp::Proxy_Connection);
     if (val) {
         // be pesimistic
         mKeepAlive = PR_FALSE;
@@ -148,10 +150,14 @@ nsHttpConnection::OnHeadersAvailable(nsHttpTransaction *trans)
             const char *cp = PL_strstr(val, "max=");
             if (cp)
                 mMaxReuseCount = (PRUint32) atoi(cp + 4);
+            else
+                mMaxReuseCount = 100;
 
             cp = PL_strstr(val, "timeout=");
             if (cp)
                 mIdleTimeout = (PRUint32) atoi(cp + 8);
+            else
+                mIdleTimeout = 10;
             
             LOG(("Connection can be reused [this=%x max-reuse=%u "
                  "keep-alive-timeout=%u\n", this, mMaxReuseCount, mIdleTimeout));
@@ -367,14 +373,17 @@ nsHttpConnection::OnStopRequest(nsIRequest *request, nsISupports *ctxt,
         // break the cycle between the socket transport and this
         if (mSocketTransport)
             mSocketTransport->SetNotificationCallbacks(nsnull, 0);
-
-        mTransaction->OnStopTransaction(status);
-
-        NS_RELEASE(mTransaction);
-        mTransaction = 0;
-
-        // don't need these anymore
+        
+        // don't need this anymore
         mProgressSink = 0;
+
+        // make sure mTransaction is clear before calling OnStopTransaction
+		nsHttpTransaction *trans = mTransaction;
+		mTransaction = nsnull;
+
+        trans->OnStopTransaction(status);
+
+        NS_RELEASE(trans);
     }
     return NS_OK;
 }

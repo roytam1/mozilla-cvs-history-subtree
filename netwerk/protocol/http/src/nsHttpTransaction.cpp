@@ -169,14 +169,18 @@ nsHttpTransaction::OnStopTransaction(nsresult status)
     LOG(("nsHttpTransaction::OnStopTransaction [this=%x status=%x]\n",
         this, status));
 
-    if (!mFiredOnStart) {
-        mFiredOnStart = PR_TRUE;
-        mListener->OnStartRequest(this, nsnull); 
-    }
+    // make sure that this flag is set.
+    mTransactionDone = PR_TRUE;
 
-    mListener->OnStopRequest(this, nsnull, status);
+	if (mListener) {
+		if (!mFiredOnStart) {
+			mFiredOnStart = PR_TRUE;
+			mListener->OnStartRequest(this, nsnull); 
+		}
 
-    mListener = 0;
+		mListener->OnStopRequest(this, nsnull, status);
+		mListener = 0;
+	}
     mCallbacks = 0;
 
     return NS_OK;
@@ -314,7 +318,9 @@ nsHttpTransaction::HandleContent(char *buf,
                 // when all of the data has arrived, we have no way of determining
                 // EOF, so just assume a no-content response.
                 val = mResponseHead->PeekHeader(nsHttp::Connection);
-                if (!PL_strcasestr(val, "close")) {
+                if (!val)
+                    val = mResponseHead->PeekHeader(nsHttp::Proxy_Connection);
+                if (val && !PL_strcasestr(val, "close")) {
                     LOG(("assuming a no-content response\n"));
                     mContentLength = 0;
                 }
@@ -338,7 +344,11 @@ nsHttpTransaction::HandleContent(char *buf,
         if (NS_FAILED(rv)) return rv;
     }
     else if (mContentLength >= 0)
+        // when a content length has been specified...
         *countRead = PR_MIN(count, mContentLength - mContentRead);
+    else
+        // when we are just waiting for the server to close the connection...
+        *countRead = count;
 
     if (*countRead) {
         // update count of content bytes read..
