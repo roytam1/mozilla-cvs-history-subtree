@@ -355,6 +355,8 @@
 
   if (minSize)
     [self setPref:[minSizePref cString] toInt:minSize];
+  else
+    [self clearPref:[minSizePref cString]];
 }
 
 #pragma mark -
@@ -592,11 +594,9 @@ const int kDefaultFontSansSerifTag = 1;
   [self getFontFromPopup:fantasyFontPopup   forType:@"fantasy"    intoDict:regionDict];
 
   int minSize = [[minFontSizePopup selectedItem] tag];
-  if (minSize != 0)
-  {
-    NSMutableDictionary	*fontSizeDict = [regionDict objectForKey:@"fontsize"];
-    [fontSizeDict setObject:[NSNumber numberWithInt:(int)minSize] forKey:@"minimum"];
-  }
+  // a value of 0 indicates 'none'; we'll clear the pref on save
+  NSMutableDictionary	*fontSizeDict = [regionDict objectForKey:@"fontsize"];
+  [fontSizeDict setObject:[NSNumber numberWithInt:(int)minSize] forKey:@"minimum"];
     
   // save the default font
   [defaultFontType release];

@@ -129,6 +129,12 @@
   }
 }
 
+- (void)clearPref: (const char*)prefName
+{
+  if (mPrefService) {
+    mPrefService->ClearUserPref(prefName);
+  }
+}
 
 - (NSString*)getLocalizedString:(NSString*)key
 {
