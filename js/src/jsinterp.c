@@ -1935,10 +1935,13 @@ js_Interpret(JSContext *cx, jsval *result)
                 JSObject *funobj;
 
                 funobj = JSVAL_TO_OBJECT(lval);
-                if ((OBJ_GET_CLASS(cx, funobj)->flags & JSCLASS_HAS_PRIVATE) &&
+                clasp = OBJ_GET_CLASS(cx, funobj);
+                if (clasp == &js_FunctionClass &&
                     ((JSFunction *)JS_GetPrivate(cx, funobj))->call == 
                         OBJ_GET_CLASS(cx, proto)->construct)
+                {
                     clasp = OBJ_GET_CLASS(cx, proto);
+                }
             }
 	    obj = js_NewObject(cx, clasp, proto, parent);
 	    if (!obj) {
