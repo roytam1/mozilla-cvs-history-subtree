@@ -44,6 +44,13 @@ bin/components/libxpinstall.so
 bin/components/libjar50.so
 bin/components/libunicharutil.so
 bin/components/libuconv.so
+bin/components/libucvcn.so
+bin/components/libucvja.so
+bin/components/libucvko.so
+bin/components/libucvlatin.so
+bin/components/libucvtw.so
+bin/components/libucvtw2.so
+bin/res/unixcharset.properties
 
 [browser]
 bin/mozilla
@@ -148,13 +155,7 @@ bin/components/libshistory.so
 bin/components/libstrres.so
 bin/components/libtxmgr.so
 bin/components/libtxtsvc.so
-bin/components/libucvcn.so
 bin/components/libucvibm.so
-bin/components/libucvja.so
-bin/components/libucvko.so
-bin/components/libucvlatin.so
-bin/components/libucvtw.so
-bin/components/libucvtw2.so
 bin/components/libucvmath.so
 bin/components/liburiloader.so
 bin/components/libwebbrwsr.so
@@ -291,7 +292,6 @@ bin/res/arrow.gif
 bin/res/loading-image.gif
 bin/res/broken-image.gif
 bin/res/charsetalias.properties
-bin/res/unixcharset.properties
 bin/res/charsetData.properties
 bin/res/langGroups.properties
 bin/res/language.properties
