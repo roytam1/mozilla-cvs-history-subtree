@@ -28,7 +28,6 @@
 #include "X11/Xlib.h"
 #include "X11/Xutil.h"
 #include <gdk/gdk.h>
-#include "nsRegion.h"
 
 #undef Bool
 
@@ -83,7 +82,6 @@ public:
                       PRInt32 aSXOffset, PRInt32 aSYOffset,
                       const nsRect &aTileRect);
 
-  void UpdateCachedImage();
   virtual void ImageUpdated(nsIDeviceContext *aContext,
                             PRUint8 aFlags, nsRect *aUpdateRect);
   virtual nsresult    Init(PRInt32 aWidth, PRInt32 aHeight,
@@ -107,12 +105,7 @@ public:
    * @update - lordpixel 2001/05/16
    * @return  the alpha mask depth for the image, ie, 0, 1 or 8
    */
-  virtual PRInt8 GetAlphaDepth() { 
-    if (mTrueAlphaBits)
-      return mTrueAlphaDepth;
-    else
-      return mAlphaDepth;
-  }
+  virtual PRInt8 GetAlphaDepth() {return(mAlphaDepth);}  
   virtual void  MoveAlphaMask(PRInt32 aX, PRInt32 aY);
 
   NS_IMETHOD   LockImagePixels(PRBool aMaskPixels);
@@ -178,7 +171,6 @@ private:
 
   PRUint8      *mImageBits;
   GdkPixmap    *mImagePixmap;
-  PRUint8      *mTrueAlphaBits;
   PRUint8      *mAlphaBits;
   GdkPixmap    *mAlphaPixmap;
 
@@ -195,17 +187,13 @@ private:
   PRInt32       mDecodedX2;
   PRInt32       mDecodedY2;
 
-  nsRegion      mUpdateRegion;
-
   // alpha layer members
   PRInt16       mAlphaRowBytes;     // alpha bytes per row
-  PRInt16       mTrueAlphaRowBytes; // alpha bytes per row
   PRInt16       mAlphaWidth;        // alpha layer width
   PRInt16       mAlphaHeight;       // alpha layer height
   PRInt8        mAlphaDepth;        // alpha layer depth
-  PRInt8        mTrueAlphaDepth;    // alpha layer depth
+  PRPackedBool  mAlphaValid;
   PRPackedBool  mIsSpacer;
-  PRPackedBool  mPendingUpdate;
 
   PRPackedBool  mIsTopToBottom;
   PRInt8        mNumBytesPixel;

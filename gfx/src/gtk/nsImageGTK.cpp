@@ -33,9 +33,6 @@
 
 #define IsFlagSet(a,b) ((a) & (b))
 
-#define NS_GET_BIT(rowptr, x) (rowptr[(x)>>3] &  (1<<(7-(x)&0x7)))
-#define NS_SET_BIT(rowptr, x) (rowptr[(x)>>3] |= (1<<(7-(x)&0x7)))
-
 // Defining this will trace the allocation of images.  This includes
 // ctor, dtor and update.
 //#define TRACE_IMAGE_ALLOCATION
@@ -64,18 +61,18 @@ nsImageGTK::nsImageGTK()
   mWidth = 0;
   mHeight = 0;
   mDepth = 0;
-  mAlphaBits = mTrueAlphaBits = nsnull;
+  mAlphaBits = nsnull;
   mAlphaPixmap = nsnull;
   mImagePixmap = nsnull;
-  mAlphaDepth = mTrueAlphaDepth = 0;
+  mAlphaDepth = 0;
   mRowBytes = 0;
   mSizeImage = 0;
   mAlphaHeight = 0;
   mAlphaWidth = 0;
   mNaturalWidth = 0;
   mNaturalHeight = 0;
+  mAlphaValid = PR_FALSE;
   mIsSpacer = PR_TRUE;
-  mPendingUpdate = PR_FALSE;
 
 #ifdef TRACE_IMAGE_ALLOCATION
   printf("nsImageGTK::nsImageGTK(this=%p)\n",
@@ -95,11 +92,6 @@ nsImageGTK::~nsImageGTK()
   if (nsnull != mAlphaBits) {
     delete[] (PRUint8*)mAlphaBits;
     mAlphaBits = nsnull;
-  }
-
-  if (nsnull != mTrueAlphaBits) {
-    delete[] (PRUint8*)mTrueAlphaBits;
-    mTrueAlphaBits = nsnull;
   }
 
   if (mAlphaPixmap) {
@@ -131,11 +123,6 @@ nsresult nsImageGTK::Init(PRInt32 aWidth, PRInt32 aHeight,
   if (nsnull != mAlphaBits) {
     delete[] (PRUint8*)mAlphaBits;
     mAlphaBits = nsnull;
-  }
-
-  if (nsnull != mTrueAlphaBits) {
-    delete[] (PRUint8*)mTrueAlphaBits;
-    mTrueAlphaBits = nsnull;
   }
 
   if (nsnull != mAlphaPixmap) {
@@ -189,16 +176,6 @@ nsresult nsImageGTK::Init(PRInt32 aWidth, PRInt32 aHeight,
       mAlphaHeight = 0;
       break;
 
-    case nsMaskRequirements_kNeeds8Bit:
-      mTrueAlphaRowBytes = aWidth;
-      mTrueAlphaDepth = 8;
-
-      // 32-bit align each row
-      mTrueAlphaRowBytes = (mTrueAlphaRowBytes + 3) & ~0x3;
-      mTrueAlphaBits = new PRUint8[mTrueAlphaRowBytes * aHeight];
-
-      // FALL THROUGH
-
     case nsMaskRequirements_kNeeds1Bit:
       mAlphaRowBytes = (aWidth + 7) / 8;
       mAlphaDepth = 1;
@@ -207,14 +184,21 @@ nsresult nsImageGTK::Init(PRInt32 aWidth, PRInt32 aHeight,
       mAlphaRowBytes = (mAlphaRowBytes + 3) & ~0x3;
 
       mAlphaBits = new PRUint8[mAlphaRowBytes * aHeight];
-      memset(mAlphaBits, 0, mAlphaRowBytes*aHeight);
+      mAlphaWidth = aWidth;
+      mAlphaHeight = aHeight;
+      break;
+
+    case nsMaskRequirements_kNeeds8Bit:
+      mAlphaRowBytes = aWidth;
+      mAlphaDepth = 8;
+
+      // 32-bit align each row
+      mAlphaRowBytes = (mAlphaRowBytes + 3) & ~0x3;
+      mAlphaBits = new PRUint8[mAlphaRowBytes * aHeight];
       mAlphaWidth = aWidth;
       mAlphaHeight = aHeight;
       break;
   }
-
-  if (aMaskRequirements == nsMaskRequirements_kNeeds8Bit)
-    mAlphaDepth = 0;
 
   return NS_OK;
 }
@@ -258,10 +242,7 @@ PRBool nsImageGTK::IsOptimized()
 
 PRUint8 *nsImageGTK::GetAlphaBits()
 {
-  if (mTrueAlphaBits)
-    return mTrueAlphaBits;
-  else
-    return mAlphaBits;
+  return mAlphaBits;
 }
 
 PRInt32 nsImageGTK::GetAlphaWidth()
@@ -277,10 +258,7 @@ PRInt32 nsImageGTK::GetAlphaHeight()
 PRInt32
 nsImageGTK::GetAlphaLineStride()
 {
-  if (mTrueAlphaBits)
-    return mTrueAlphaRowBytes;
-  else
-    return mAlphaRowBytes;
+  return mAlphaRowBytes;
 }
 
 nsIImage *nsImageGTK::DuplicateImage()
@@ -301,15 +279,12 @@ void nsImageGTK::MoveAlphaMask(PRInt32 aX, PRInt32 aY)
 {
 }
 
+//------------------------------------------------------------
+
+// set up the palette to the passed in color array, RGB only in this array
 void nsImageGTK::ImageUpdated(nsIDeviceContext *aContext,
                               PRUint8 aFlags,
                               nsRect *aUpdateRect)
-{
-  mPendingUpdate = PR_TRUE;
-  mUpdateRegion.Or(mUpdateRegion, *aUpdateRect);
-}
-
-void nsImageGTK::UpdateCachedImage()
 {
 #ifdef TRACE_IMAGE_ALLOCATION
   printf("nsImageGTK::ImageUpdated(this=%p,%d)\n",
@@ -317,135 +292,105 @@ void nsImageGTK::UpdateCachedImage()
          aFlags);
 #endif
 
-  nsRegionRectIterator ri(mUpdateRegion);
-  const nsRect *rect;
-
-  while (rect = ri.Next()) {
-
 //  fprintf(stderr, "ImageUpdated %p x,y=(%d %d) width,height=(%d %d)\n",
-//          this, rect->x, rect->y, rect->width, rect->height);
+//          this, aUpdateRect->x, aUpdateRect->y, aUpdateRect->width,
+//          aUpdateRect->height);
 
-    unsigned bottom, left, right;
-    bottom = rect->y + rect->height;
-    left   = rect->x;
-    right  = left + rect->width;
+  unsigned bottom, left, right;
+  bottom = aUpdateRect->y + aUpdateRect->height;
+  left   = aUpdateRect->x;
+  right  = left + aUpdateRect->width;
 
-    // check if the image has an all-opaque 8-bit alpha mask
-    if ((mTrueAlphaDepth==8) && (mAlphaDepth<mTrueAlphaDepth)) {
-      for (unsigned y=rect->y; 
-           (y<bottom) && (mAlphaDepth<mTrueAlphaDepth); 
-           y++) {
-        unsigned char *alpha = mTrueAlphaBits + mTrueAlphaRowBytes*y + left;
-        unsigned char *mask = mAlphaBits + mAlphaRowBytes*y;
-        for (unsigned x=left; x<right; x++) {
-          switch (*(alpha++)) {
-          case 255:
-            NS_SET_BIT(mask,x);
-            break;
-          case 0:
-            if (mAlphaDepth != 8)
-              mAlphaDepth=1;
-            break;
-          default:
-            mAlphaDepth=8;
-            break;
-          }
+  // check if the image has an all-opaque 8-bit alpha mask
+  if ((mAlphaDepth==8) && !mAlphaValid) {
+    for (unsigned y=aUpdateRect->y; (y<bottom) && !mAlphaValid; y++) {
+      unsigned char *alpha = mAlphaBits + mAlphaRowBytes*y + left;
+      for (unsigned x=left; x<right; x++) {
+        if (*(alpha++)!=255) {
+          mAlphaValid=PR_TRUE;
+          break;
         }
       }
-      
-      if (mAlphaDepth==8) {
-        if (mImagePixmap) {
-          gdk_pixmap_unref(mImagePixmap);
-          mImagePixmap = 0;
-        }
-        if (mAlphaPixmap) {
-          gdk_pixmap_unref(mAlphaPixmap);
-          mAlphaPixmap = 0;
-        }
-        if (mAlphaBits) {
-          delete [] mAlphaBits;
-          mAlphaBits = mTrueAlphaBits;
-          mAlphaRowBytes = mTrueAlphaRowBytes;
-          mTrueAlphaBits = 0;
-        }
-      }
-    }
-
-    // check if the image is a spacer
-    if ((mAlphaDepth==1) && mIsSpacer) {
-      // mask of the leading/trailing bits in the update region
-      PRUint8  leftmask   = 0xff  >> (left & 0x7);
-      PRUint8  rightmask  = 0xff  << (7 - ((right-1) & 0x7));
-
-      // byte where the first/last bits of the update region are located
-      PRUint32 leftindex  = left      >> 3;
-      PRUint32 rightindex = (right-1) >> 3;
-
-      // first/last bits in the same byte - combine mask into leftmask
-      // and fill rightmask so we don't try using it
-      if (leftindex == rightindex) {
-        leftmask &= rightmask;
-        rightmask = 0xff;
-      }
-
-      // check the leading bits
-      if (leftmask != 0xff) {
-        PRUint8 *ptr = mAlphaBits + mAlphaRowBytes * rect->y + leftindex;
-        for (unsigned y=rect->y; y<bottom; y++, ptr+=mAlphaRowBytes) {
-          if (*ptr & leftmask) {
-            mIsSpacer = PR_FALSE;
-            break;
-          }
-        }
-        // move to first full byte
-        leftindex++;
-      }
-
-      // check the trailing bits
-      if (mIsSpacer && (rightmask != 0xff)) {
-        PRUint8 *ptr = mAlphaBits + mAlphaRowBytes * rect->y + rightindex;
-        for (unsigned y=rect->y; y<bottom; y++, ptr+=mAlphaRowBytes) {
-          if (*ptr & rightmask) {
-            mIsSpacer = PR_FALSE;
-            break;
-          }
-        }
-        // move to last full byte
-        rightindex--;
-      }
-    
-      // check the middle bytes
-      if (mIsSpacer && (leftindex <= rightindex)) {
-        for (unsigned y=rect->y; (y<bottom) && mIsSpacer; y++) {
-          unsigned char *alpha = mAlphaBits + mAlphaRowBytes*y + leftindex;
-          for (unsigned x=left; x<right; x++) {
-            if (*(alpha++)!=0) {
-              mIsSpacer = PR_FALSE;
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    if (mAlphaDepth != 8) {
-      CreateOffscreenPixmap(mWidth, mHeight);
-      if (!sXbitGC)
-        sXbitGC = gdk_gc_new(mImagePixmap);
-
-      gdk_draw_rgb_image_dithalign(mImagePixmap, sXbitGC, 
-                                   rect->x, rect->y,
-                                   rect->width, rect->height,
-                                   GDK_RGB_DITHER_MAX,
-                                   mImageBits + mRowBytes*rect->y + 3*rect->x,
-                                   mRowBytes,
-                                   rect->x, rect->y);
     }
   }
-  
-  mUpdateRegion.Empty();
-  mPendingUpdate = PR_FALSE;
-  mFlags = nsImageUpdateFlags_kBitsChanged; // this should be 0'd out by Draw()
+
+  // check if the image is a spacer
+  if ((mAlphaDepth==1) && mIsSpacer) {
+    // mask of the leading/trailing bits in the update region
+    PRUint8  leftmask   = 0xff  >> (left & 0x7);
+    PRUint8  rightmask  = 0xff  << (7 - ((right-1) & 0x7));
+
+    // byte where the first/last bits of the update region are located
+    PRUint32 leftindex  = left      >> 3;
+    PRUint32 rightindex = (right-1) >> 3;
+
+    // first/last bits in the same byte - combine mask into leftmask
+    // and fill rightmask so we don't try using it
+    if (leftindex == rightindex) {
+      leftmask &= rightmask;
+      rightmask = 0xff;
+    }
+
+    // check the leading bits
+    if (leftmask != 0xff) {
+      PRUint8 *ptr = mAlphaBits + mAlphaRowBytes * aUpdateRect->y + leftindex;
+      for (unsigned y=aUpdateRect->y; y<bottom; y++, ptr+=mAlphaRowBytes) {
+        if (*ptr & leftmask) {
+          mIsSpacer = PR_FALSE;
+          break;
+        }
+      }
+      // move to first full byte
+      leftindex++;
+    }
+
+    // check the trailing bits
+    if (mIsSpacer && (rightmask != 0xff)) {
+      PRUint8 *ptr = mAlphaBits + mAlphaRowBytes * aUpdateRect->y + rightindex;
+      for (unsigned y=aUpdateRect->y; y<bottom; y++, ptr+=mAlphaRowBytes) {
+        if (*ptr & rightmask) {
+          mIsSpacer = PR_FALSE;
+          break;
+        }
+      }
+      // move to last full byte
+      rightindex--;
+    }
+    
+    // check the middle bytes
+    if (mIsSpacer && (leftindex <= rightindex)) {
+      for (unsigned y=aUpdateRect->y; (y<bottom) && mIsSpacer; y++) {
+        unsigned char *alpha = mAlphaBits + mAlphaRowBytes*y + leftindex;
+        for (unsigned x=left; x<right; x++) {
+          if (*(alpha++)!=0) {
+            mIsSpacer = PR_FALSE;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (mAlphaValid && mImagePixmap) {
+    gdk_pixmap_unref(mImagePixmap);
+    mImagePixmap = 0;
+  }
+
+  if (!mAlphaValid) {
+    CreateOffscreenPixmap(mWidth, mHeight);
+    if (!sXbitGC)
+      sXbitGC = gdk_gc_new(mImagePixmap);
+
+    gdk_draw_rgb_image_dithalign(mImagePixmap, sXbitGC, 
+                 aUpdateRect->x, aUpdateRect->y,
+                 aUpdateRect->width, aUpdateRect->height,
+                 GDK_RGB_DITHER_MAX,
+                 mImageBits + mRowBytes*aUpdateRect->y + 3*aUpdateRect->x,
+                 mRowBytes,
+                 aUpdateRect->x, aUpdateRect->y);
+  }
+
+  mFlags = aFlags; // this should be 0'd out by Draw()
 }
 
 #ifdef CHEAP_PERFORMANCE_MEASURMENT
@@ -499,7 +444,7 @@ nsImageGTK::DrawScaled(nsIRenderingContext &aContext,
     CreateAlphaBitmap(mWidth, mHeight);
   }
 
-  if (mAlphaDepth==8) {
+  if ((mAlphaDepth==8) && mAlphaValid) {
     DrawComposited(aContext, aSurface, 
                    aSX, aSY, aSWidth, aSHeight, 
                    aDX, aDY, aDWidth, aDHeight);
@@ -598,9 +543,6 @@ nsImageGTK::Draw(nsIRenderingContext &aContext, nsDrawingSurface aSurface,
 {
   g_return_val_if_fail ((aSurface != nsnull), NS_ERROR_FAILURE);
 
-  if (mPendingUpdate)
-    UpdateCachedImage();
-
   if ((mAlphaDepth==1) && mIsSpacer)
     return NS_OK;
 
@@ -649,7 +591,7 @@ nsImageGTK::Draw(nsIRenderingContext &aContext, nsDrawingSurface aSurface,
   if (aDWidth <= 0 || aDHeight <= 0 || aSWidth <= 0 || aSHeight <= 0)
     return NS_OK;
 
-  if (mAlphaDepth==8) {
+  if ((mAlphaDepth==8) && mAlphaValid) {
     DrawComposited(aContext, aSurface, 
                    aSX, aSY, aSWidth, aSHeight, 
                    aDX, aDY, aSWidth, aSHeight);
@@ -1299,13 +1241,10 @@ nsImageGTK::Draw(nsIRenderingContext &aContext,
 {
   g_return_val_if_fail ((aSurface != nsnull), NS_ERROR_FAILURE);
 
-  if (mPendingUpdate)
-    UpdateCachedImage();
-
   if ((mAlphaDepth==1) && mIsSpacer)
     return NS_OK;
 
-  if (mAlphaDepth==8) {
+  if ((mAlphaDepth==8) && mAlphaValid) {
     DrawComposited(aContext, aSurface, 0, 0, aWidth, aHeight, aX, aY, aWidth, aHeight);
     return NS_OK;
   }
@@ -1472,12 +1411,6 @@ NS_IMETHODIMP nsImageGTK::DrawTile(nsIRenderingContext &aContext,
          aTileRect.width, aTileRect.height, this);
 #endif
 
-  if (mPendingUpdate)
-    UpdateCachedImage();
-
-  if (mPendingUpdate)
-    UpdateCachedImage();
-
   if ((mAlphaDepth==1) && mIsSpacer)
     return NS_OK;
 
@@ -1516,7 +1449,7 @@ NS_IMETHODIMP nsImageGTK::DrawTile(nsIRenderingContext &aContext,
     return NS_OK;
   }
 
-  if (partial || (mAlphaDepth == 8)) {
+  if (partial || ((mAlphaDepth == 8) && mAlphaValid)) {
 #ifdef DEBUG_TILING
     printf("Warning: using slow tiling\n");
 #endif
@@ -1644,9 +1577,6 @@ NS_IMETHODIMP nsImageGTK::DrawToImage(nsIImage* aDstImage,
   PRInt32 ValidWidth = ( aDWidth < ( dest->mWidth - aDX ) ) ? aDWidth : ( dest->mWidth - aDX ); 
   PRInt32 ValidHeight = ( aDHeight < ( dest->mHeight - aDY ) ) ? aDHeight : ( dest->mHeight - aDY );
 
-  if (mPendingUpdate)
-    UpdateCachedImage();
-
   if (!dest->mImagePixmap) {
     dest->CreateOffscreenPixmap(dest->mWidth, dest->mHeight);
   }
@@ -1742,6 +1672,9 @@ NS_IMETHODIMP nsImageGTK::DrawToImage(nsIImage* aDstImage,
       PRUint8 *src = rgbPtr + y*rgbStride; 
       PRUint8 *alpha = alphaPtr + y*alphaStride;
       for (int x=0; x<ValidWidth; x++, dst+=3, src+=3) {
+#define NS_GET_BIT(rowptr, x) (rowptr[(x)>>3] &  (1<<(7-(x)&0x7)))
+#define NS_SET_BIT(rowptr, x) (rowptr[(x)>>3] |= (1<<(7-(x)&0x7)))
+
         // if this pixel is opaque then copy into the destination image
         if (NS_GET_BIT(alpha, x)) {
           dst[0] = src[0];
@@ -1749,6 +1682,9 @@ NS_IMETHODIMP nsImageGTK::DrawToImage(nsIImage* aDstImage,
           dst[2] = src[2];
           NS_SET_BIT(dstAlpha, aDX+x);
         }
+
+#undef NS_GET_BIT
+#undef NS_SET_BIT
       }
     }
     break;
