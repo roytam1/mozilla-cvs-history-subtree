@@ -774,7 +774,7 @@ function DropOnAddressingWidget(event)
 function DropRecipient(target, recipient)
 {
   // break down and add each address
-  return parseAndAddAddresses(recipient);
+  return parseAndAddAddresses(recipient, awGetPopupElement(top.MAX_RECIPIENTS).selectedItem.getAttribute("value"));
 }
 
 function _awSetAutoComplete(selectElem, inputElem)
@@ -852,7 +852,7 @@ function awRecipientKeyPress(event, element)
     {
       var addresses = element.value;
       element.value = ""; // clear out the current line so we don't try to autocomplete it..
-      parseAndAddAddresses(addresses);
+      parseAndAddAddresses(addresses, awGetPopupElement(awGetRowByInputElement(element)).selectedItem.getAttribute("value"));
       return;
     }
     
@@ -1035,7 +1035,7 @@ function awRecipientInputCommand(event, inputElement)
 
 var gAutomatedAutoCompleteListener = null;
 
-function parseAndAddAddresses(addressText)
+function parseAndAddAddresses(addressText, recipientType)
 {
   var fullNames;
 
@@ -1056,7 +1056,7 @@ function parseAndAddAddresses(addressText)
     if (!gAutomatedAutoCompleteListener)
       gAutomatedAutoCompleteListener = new AutomatedAutoCompleteHandler();
 
-    gAutomatedAutoCompleteListener.init(fullNames, numAddresses);
+    gAutomatedAutoCompleteListener.init(fullNames, numAddresses, recipientType);
   }
 }
 
@@ -1078,13 +1078,16 @@ AutomatedAutoCompleteHandler.prototype =
 
   numSessionsToSearch: 0,
   numSessionsSearched: 0,
+  recipientType: null,
   searchResults: null,
 
-  init:function(namesToComplete, numNamesToComplete)
+  init:function(namesToComplete, numNamesToComplete, recipientType)
   {
     this.indexIntoNames = 0;
     this.numNamesToComplete = numNamesToComplete;
     this.namesToComplete = namesToComplete;
+
+    this.recipientType = recipientType;
 
     // set up the auto complete sessions to use
     setupAutocomplete();
@@ -1105,7 +1108,7 @@ AutomatedAutoCompleteHandler.prototype =
         if (gAutocompleteSession) 
           this.numSessionsToSearch++;
 
-        if (gLDAPSession)
+        if (gLDAPSession && gCurrentAutocompleteDirectory)
           this.numSessionsToSearch++;
 
         if (gAutocompleteSession)
@@ -1116,13 +1119,13 @@ AutomatedAutoCompleteHandler.prototype =
            // if we WERE going to also do an LDAP lookup, then check to see if we have a valid match in the AB, if we do
            // don't bother with the LDAP search too just return
 
-           if (gLDAPSession && this.searchResults[0] && this.searchResults[0].defaultItemIndex != -1)
+           if (gLDAPSession && gCurrentAutocompleteDirectory && this.searchResults[0] && this.searchResults[0].defaultItemIndex != -1)
            {
              return this.processAllResults();
            }
         }
 
-        if (gLDAPSession)
+        if (gLDAPSession && gCurrentAutocompleteDirectory)
           gLDAPSession.onStartLookup(this.namesToComplete[this.indexIntoNames], null, this);
       }
 
@@ -1185,7 +1188,7 @@ AutomatedAutoCompleteHandler.prototype =
       addressToAdd = this.namesToComplete[this.indexIntoNames];
 
     // that will automatically set the focus on a new available row, and make sure it is visible
-    awAddRecipient("addr_to", addressToAdd);  
+    awAddRecipient(this.recipientType ? this.recipientType : "addr_to", addressToAdd);  
     
     this.indexIntoNames++;
     this.autoCompleteNextAddress();
