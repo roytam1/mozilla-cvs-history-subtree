@@ -190,7 +190,7 @@ struct nsDOMClassInfoData
   GetDOMClassIIDsFnc mGetIIDsFptr;
   nsDOMClassInfoConstructorFnc mConstructorFptr;
   nsIClassInfo *mCachedClassInfo;
-  PRUint32 mScriptableFlags; // Do we need this here?
+  PRUint32 mScriptableFlags;
 };
 
 
