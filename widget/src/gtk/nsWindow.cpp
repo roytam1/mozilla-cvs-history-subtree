@@ -1936,7 +1936,6 @@ NS_IMETHODIMP nsWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
       mIsTooSmall = PR_FALSE;
     }
   }
-
   if (mSuperWin) {
     // toplevel window?  if so, we should resize it as well.
     if (mIsToplevel && mShell)
@@ -1945,8 +1944,28 @@ NS_IMETHODIMP nsWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
     }
     gdk_superwin_resize(mSuperWin, aWidth, aHeight);
   }
-
   // XXX chris
+  if (mIsToplevel || mListenForResizes) {
+    //g_print("sending resize event\n");
+    nsSizeEvent sevent;
+    sevent.message = NS_SIZE;
+    sevent.widget = this;
+    sevent.eventStructType = NS_SIZE_EVENT;
+    sevent.windowSize = new nsRect (0, 0, aWidth, aHeight);
+    sevent.point.x = 0;
+    sevent.point.y = 0;
+    sevent.mWinWidth = aWidth;
+    sevent.mWinHeight = aHeight;
+    // XXX fix this
+    sevent.time = 0;
+    AddRef();
+    OnResize(sevent);
+    Release();
+    delete sevent.windowSize;
+  }
+  else {
+    //g_print("not sending resize event\n");
+  }
 #if 0
   // XXX pav
   // call the size allocation handler directly to avoid code duplication
@@ -2316,7 +2335,7 @@ nsWindow::HandleXlibConfigureNotifyEvent(XEvent *event)
 
   gdk_superwin_clear_translate_queue(mSuperWin, event->xany.serial);
 
-  if (mIsToplevel || mListenForResizes) {
+  if (mIsToplevel) {
     nsSizeEvent sevent;
     sevent.message = NS_SIZE;
     sevent.widget = this;
