@@ -20,6 +20,9 @@
 
 DEPTH = ..
 
+# Create JAR file
+DIRS += classes
+
 #
 # XCFLAGS may be set in the environment or on the gmake command line
 #

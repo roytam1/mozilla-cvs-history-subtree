@@ -1,0 +1,17 @@
+DEPTH = ../..
+
+include $(DEPTH)/config.mk
+include $(DEPTH)/liveconnect/config/$(OS_CONFIG).mk
+
+JARS     = js14lc30.jar
+
+JARS    := $(addprefix $(CLASSDIR)/$(OBJDIR)/, $(JARS))
+
+PREDIRS  = netscape
+TARGETS += $(JARS)
+
+include $(DEPTH)/rules.mk
+
+$(CLASSDIR)/$(OBJDIR)/js14lc30.jar:
+	cd $(CLASSDIR)/$(OBJDIR) ; \
+	  jar cvf js14lc30.jar netscape

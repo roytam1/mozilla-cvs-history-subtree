@@ -12,14 +12,16 @@ OBJS   = $(LIB_OBJS) $(PROG_OBJS)
 
 ifdef USE_MSVC
 # TARGETS = $(LIBRARY)   # $(PROGRAM) not supported for MSVC yet
-TARGETS = $(SHARED_LIBRARY) $(PROGRAM)  # it is now
+TARGETS += $(SHARED_LIBRARY) $(PROGRAM)  # it is now
 else
-TARGETS = $(LIBRARY) $(SHARED_LIBRARY) $(PROGRAM) 
+TARGETS += $(LIBRARY) $(SHARED_LIBRARY) $(PROGRAM) 
 endif
 
 all:
 	+$(LOOP_OVER_PREDIRS) 
+ifneq "$(strip $(TARGETS))" ""
 	$(MAKE) -f Makefile.ref $(TARGETS)
+endif
 	+$(LOOP_OVER_DIRS)
 
 $(OBJDIR)/%: %.c
@@ -63,6 +65,11 @@ $(SHARED_LIBRARY): $(LIB_OBJS)
 endif
 endif
 
+# Java stuff
+$(CLASSDIR)/$(OBJDIR)/%.class: %.java
+	$(MAKE_OBJDIR)
+	$(JAVAC) $(JAVAC_FLAGS) $<
+
 define MAKE_OBJDIR
 if test ! -d $(@D); then rm -rf $(@D); mkdir $(@D); fi
 endef
@@ -98,10 +105,21 @@ endif
 export:
 	+$(LOOP_OVER_PREDIRS)	
 	mkdir -p $(DIST)/include $(DIST)/lib $(DIST)/bin
+ifneq "$(strip $(HFILES))" ""
 	$(CP) $(HFILES) $(DIST)/include
+endif
+ifneq "$(strip $(LIBRARY))" ""
 	$(CP) $(LIBRARY) $(DIST)/lib
+endif
+ifneq "$(strip $(JARS))" ""
+	$(CP) $(JARS) $(DIST)/lib
+endif
+ifneq "$(strip $(SHARED_LIBRARY))" ""
 	$(CP) $(SHARED_LIBRARY) $(DIST)/lib
+endif
+ifneq "$(strip $(PROGRAM))" ""
 	$(CP) $(PROGRAM) $(DIST)/bin
+endif
 	+$(LOOP_OVER_DIRS)
 
 clean:

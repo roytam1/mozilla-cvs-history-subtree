@@ -76,6 +76,7 @@ ifeq ($(OS_ARCH), WINNT)
     SHIP_LIBS += jsj.dll jsj.lib
   endif
 endif
+SHIP_LIBS     += js14lc30.jar
 SHIP_LIBS     := $(addprefix $(SHIP_DIST)/lib/, $(SHIP_LIBS))
 
 SHIP_INCS      = js*.h prmjtime.h resource.h *.msg *.tbl
