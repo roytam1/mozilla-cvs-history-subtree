@@ -4194,6 +4194,28 @@ nsBlockFrame::DrainOverflowLines(nsIPresContext* aPresContext)
         // When pushing and pulling frames we need to check for whether any
         // views need to be reparented
         nsHTMLContainerFrame::ReparentFrameView(aPresContext, frame, prevBlock, this);
+        // If the frame we are looking at is a placeholder for a floater, we
+        // need to reparent both it's out-of-flow frame and any views it has.
+        //
+        // Note: A floating table (example: style="position: relative; float: right")
+        //       is an example of an out-of-flow frame with a view
+
+        nsCOMPtr<nsIAtom> frameType;
+        frame->GetFrameType(getter_AddRefs(frameType));
+
+        if (nsLayoutAtoms::placeholderFrame == frameType.get()) {
+          nsIFrame *outOfFlowFrame = NS_STATIC_CAST(nsPlaceholderFrame*, frame)->GetOutOfFlowFrame();
+          if (outOfFlowFrame) {
+            const nsStyleDisplay*  display = nsnull;
+            outOfFlowFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&)display);
+            if (display && !display->IsAbsolutelyPositioned()) {
+              // It's not an absolute or fixed positioned frame, so it
+              // must be a floater!
+              outOfFlowFrame->SetParent(this);
+              nsHTMLContainerFrame::ReparentFrameView(aPresContext, outOfFlowFrame, prevBlock, this);
+            }
+          }
+        }
 
         // Get the next frame
         lastFrame = frame;
