@@ -16,7 +16,7 @@
  * Reserved.
 */
 #include "nsISupports.idl"
-#include "nsIStreamListener2.idl"
+#include "nsIStreamListener.idl"
 
 %{ C++
 %}
