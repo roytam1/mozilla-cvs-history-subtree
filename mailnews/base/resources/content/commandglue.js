@@ -140,6 +140,7 @@ function GetFolderAttribute(source, attribute)
         return target.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
 }
 
+// test
 function ChangeFolderByIndex(index)
 {
     dump('In ChangeFolderByIndex\n');
