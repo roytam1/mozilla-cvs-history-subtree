@@ -21,10 +21,22 @@
 
 #include "nsIProtocolInstance.h"
 
+typedef enum {
+    HTTP_ZERO_NINE, // HTTP/0.9
+    HTTP_ONE_ZERO,  // HTTP/1.0
+    HTTP_ONE_ONE    // HTTP/1.1
+} HTTPVersion;
+
 /* 
     The nsIHTTPInstance class is the interface to an intance
     of the HTTP that acts on a per URL basis.
 
+    There are a ton of things that an instance should hold
+    but due to the lack of time I am letting those things
+    be used from the old code base. Someday someone will
+    step in and get rid of old code and put things here
+    like socket, other connection data, etc. 
+    -Gagan Saksena 03/06/99
 */
 
 class nsIHTTPInstance : public nsIProtocolInstance
@@ -32,21 +44,60 @@ class nsIHTTPInstance : public nsIProtocolInstance
 
 public:
     
-    /*
-        Request functions-
-        These functions set parameters on the outbound request and may only
-        be set before a connect/open function gets called. Calling them after 
-        a connect method will result in a NS_ERROR_ALREADY_CONNECTED
-    */
-    NS_IMETHOD          SetHeader(const char* i_Header, const char* i_Value)=0;
+#if 0 // TODO Past N2 things. As much as I want it now.... so much
+    // to do and so little resources. Argh...!
+    // Will have to write nsIHTTPRequest and nsIHTTPResponse classes
+    // both derived from nsIHeader. The response's setheader should
+    // return NS_ERROR_ARE_YOU_NUTS?
+
+    // TODO think if the Request/Response should move out in 
+    // its own interface. Would other protocols like to 
+    // share this interface?
 
     /*
-        Response functions-
-        These function can read off the information from the available response
-        of the HTTP Connection. Any call/attempt to read will implicitly call
-        connect on this protocol instance.Thats why its not const.
+        Request functions-
+        These functions set/get parameters on the outbound request and may only
+        be set before Load() function gets called. Calling them after 
+        the Load() method will result in a NS_ERROR_ALREADY_CONNECTED
     */
-    NS_IMETHOD          GetHeader(const char* i_Header, const char* *o_Value)=0;
+    NS_IMETHOD          GetRequest(nsIHTTPRequest* *o_Request) const = 0;
+    NS_IMETHOD          SetRequest(nsIHTTPRequest* i_Request) = 0;
+
+    /* 
+        Response funtion. A call to this implicitly calls Load() on this
+        protocol instance. Thats why it's not const.
+    */
+    NS_IMETHOD          GetResponse(nsIHTTPResponse* *o_Response) = 0;
+#endif // Past N2 things...
+
+    // All request functions before the Load gets called. These 
+    // should move to nsIHTTPRequest
+
+    /*
+        I am not describing each since most are obvious and then
+        it would be better to describe them in nsIHTTPRequest
+        For most of these headers there is a default that gets
+        set in a default HTTP request which can be modified from the 
+        nsIHTTPHandler. 
+
+        This is definitely not the complete set. But nsIHTTPRequest will
+        have it. TODO...
+    */
+    NS_IMETHOD              SetAccept(const char* i_AcceptHeader) = 0;
+    //NS_IMETHOD            SetAcceptType() = 0;
+    NS_IMETHOD              SetCookie(const char* i_Cookie) = 0;
+    NS_IMETHOD              SetUserAgent(const char* i_UserAgent) = 0;
+    NS_IMETHOD              SetHTTPVersion(HTTPVersion i_Version = HTTP_ONE_ONE) = 0;
+
+    // All response functions which if called, will call Load implicitly.
+    // Should move these to nsIHTTPResponse.
+
+    NS_IMETHOD_(PRInt32)    GetContentLength(void) const = 0;
+    NS_IMETHOD              GetContentType(const char* *o_Type) const = 0;
+    //NS_IMETHOD_(PRTime)   GetDate(void) const = 0;
+    NS_IMETHOD_(PRInt32)    GetResponseStatus(void) const = 0;
+    NS_IMETHOD              GetResponseString(const char* *o_String) const = 0;
+    NS_IMETHOD              GetServer(const char* *o_String) const = 0;
 
     static const nsIID& GetIID() { 
         // {843D1020-D0DF-11d2-B013-006097BFC036}
@@ -59,6 +110,6 @@ public:
 };
 
 //Possible errors
-//#define NS_ERROR_ NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_NETWORK, 400);
+//#define NS_ERROR_WHATEVER NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_NETWORK, 400);
 
 #endif /* _nsIHTTPInstance_h_ */

@@ -42,12 +42,35 @@ public:
     */
     NS_IMETHOD          GetInputStream( nsIInputStream* *o_Stream) = 0;
 
+    /* 
+        The interrupt function for stopping an active instance.
+    */
+    NS_IMETHOD          Interrupt(void) = 0;
+
+    /*
+        The load function that makes the actual attempt to starts the 
+        retrieval process. Depending upon the protocol's implementation
+        this function may open the network connection.
+    */
+    NS_IMETHOD          Load(void) = 0;
+
+
     static const nsIID& GetIID() { 
         // {3594D180-CB85-11d2-A1BA-444553540000}
 		static const nsIID NS_IProtocolInstance_IID = 
             { 0x3594d180, 0xcb85, 0x11d2, { 0xa1, 0xba, 0x44, 0x45, 0x53, 0x54, 0x0, 0x0 } };
 		return NS_IProtocolInstance_IID; 
 	};
+
+protected:
+
+    /*
+        Protocol's check for connection status. Once Load is called, this 
+        should return true. TODO THINK
+
+    NS_IMETHOD_(PRBool) IsConnected(void) = 0;
+    */
+
 
 };
 
