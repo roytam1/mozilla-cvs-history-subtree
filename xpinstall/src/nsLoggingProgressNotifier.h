@@ -32,6 +32,8 @@
 #include "nsFileStream.h"
 #include "nsIFile.h"
 
+#define OPEN_INSTALL_LOG   0x2
+#define OPEN_UNINSTALL_LOG 0x4
 
 class nsLoggingProgressListener : public nsIXPIListener
 {
@@ -47,7 +49,9 @@ class nsLoggingProgressListener : public nsIXPIListener
    
      private:
         void GetTime(char** aString);
+        nsresult OpenOutputStream(PRInt32 aLogType);
         nsOutputFileStream  *mLogStream;
+        nsOutputFileStream  *mUninstallLogStream;
 };
 
 nsresult Convert_nsIFile_To_nsFileSpec(nsIFile     *aInIFile, 

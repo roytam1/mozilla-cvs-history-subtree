@@ -35,6 +35,7 @@
 #include "nsInstallBitwise.h"
 #include "nsXPIDLString.h"
 #include "nsReadableUtils.h"
+#include "nsSoftwareUninstall.h"
 
 /* Public Methods */
 
@@ -322,6 +323,10 @@ char* nsInstallFile::toString()
     {
         if(mMode & WIN_SHARED_FILE)
         {
+// I have a bad feeling about this.....
+// This means I'm going to have to understand resourced strings in the uninstaller parser too
+// or uninstalls will be broken in intl systems.....
+// Why can't everyone just use my charset???? ;)
             rsrcVal = mInstall->GetResourcedString(NS_LITERAL_STRING("ReplaceSharedFile"));
         }
         else
@@ -344,12 +349,20 @@ char* nsInstallFile::toString()
     if (rsrcVal)
     {
         char*    interimCStr = nsnull;
-        nsString interimStr;
+//        nsString interimStr;
+        nsCString interimStr;
 
         if(mMode & DO_NOT_UNINSTALL)
-          interimStr.Assign(NS_LITERAL_STRING("(*dnu*) "));
+          interimStr.Append(NS_LITERAL_CSTRING(KEY_DO_NOT_UNINSTALL));
 
-        interimStr.AppendWithConversion(rsrcVal);
+        if(mMode & SHARED_FILE)
+          interimStr.Append(NS_LITERAL_CSTRING(KEY_SHARED_FILE));
+
+        if(mMode & XPCOM_COMPONENT)
+          interimStr.Append(NS_LITERAL_CSTRING(KEY_XPCOM_COMPONENT));
+
+//        interimStr.AppendWithConversion(rsrcVal);
+        interimStr.Append(rsrcVal);
         interimCStr = ToNewCString(interimStr);
 
         if(interimCStr)

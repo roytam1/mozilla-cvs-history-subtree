@@ -71,6 +71,18 @@
 #define MAX_FILENAME 1024
 #endif
 
+#ifdef XP_MAC
+#define INSTALL_LOG NS_LITERAL_CSTRING("Install Log")
+#else
+#define INSTALL_LOG NS_LITERAL_CSTRING("install.log")
+#endif
+
+#ifdef XP_MAC
+#define UNINSTALL_LOG NS_LITERAL_CSTRING("Installed Components")
+#else
+#define UNINSTALL_LOG NS_LITERAL_CSTRING("installed-components.txt")
+#endif
+
 class nsInstallInfo
 {
   public:
@@ -118,9 +130,11 @@ class nsInstallInfo
 #endif
 
 // not using 0x1 in this bitfield because it causes problems with legacy code
-#define DO_NOT_UNINSTALL  0x2
-#define WIN_SHARED_FILE   0x4
-#define WIN_SYSTEM_FILE   0x8
+#define DO_NOT_UNINSTALL  0x00000002
+#define WIN_SHARED_FILE   0x00000004
+#define WIN_SYSTEM_FILE   0x00000008
+#define SHARED_FILE       0x00000010
+#define XPCOM_COMPONENT   0x00000020
 
 class nsInstall
 {
@@ -236,7 +250,7 @@ class nsInstall
         PRInt32    RefreshPlugins(PRBool aReloadPages);
         PRInt32    ResetError(PRInt32 aError);
         PRInt32    SetPackageFolder(nsInstallFolder& aFolder);
-        PRInt32    StartInstall(const nsString& aUserPackageName, const nsString& aPackageName, const nsString& aVersion, PRInt32* aReturn);
+        PRInt32    StartInstall(const nsString& aUserPackageName, const nsString& aPackageName, const nsString& aVersion, PRInt32 aFlags, PRInt32* aReturn);
         PRInt32    Uninstall(const nsString& aPackageName, PRInt32* aReturn);
 
         PRInt32    FileOpDirCreate(nsInstallFolder& aTarget, PRInt32* aReturn);
@@ -264,6 +278,8 @@ class nsInstall
         PRInt32    FileOpWinRegisterServer(nsInstallFolder& aTarget, PRInt32* aReturn);
 
         void       LogComment(nsString& aComment);
+        void       LogUninstallComment(nsString& aComment);
+        void       RegisterUninstallCommand(nsInstallFolder *folderSpec, const nsString& aArgString);
 
         PRInt32    ExtractFileFromJar(const nsString& aJarfile, nsIFile* aSuggestedName, nsIFile** aRealName);
         char*      GetResourcedString(const nsAString& aResName);
@@ -319,6 +335,7 @@ class nsInstall
         PRBool              mUserCancelled;
         PRUint32            mFinalStatus;
 
+        PRBool              mLogUninstall;
         PRBool              mUninstallPackage;
         PRBool              mRegisterPackage;
         PRBool              mStartInstallCompleted;

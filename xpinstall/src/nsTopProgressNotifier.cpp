@@ -128,6 +128,25 @@ nsTopProgressListener::OnPackageNameSet(const PRUnichar *URL, const PRUnichar* U
 }
 
 NS_IMETHODIMP
+nsTopProgressListener::OnUninstallNameSet(const PRUnichar *aRegName, const PRUnichar *aUIName)
+{
+    if (mActive)
+        mActive->OnUninstallNameSet(aRegName, aUIName);
+
+    if (mListeners)
+    {
+        PRInt32 i=0;
+        for (; i < mListeners->Count(); i++)
+        {
+            nsIXPIListener* element = (nsIXPIListener*)mListeners->ElementAt(i);
+            if (element != NULL)
+                element->OnUninstallNameSet(aRegName, aUIName);
+        }
+    }
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 nsTopProgressListener::OnItemScheduled( const PRUnichar* message )
 {
     long rv = 0;
@@ -201,6 +220,26 @@ nsTopProgressListener::OnLogComment(const PRUnichar* comment)
             nsIXPIListener* element = (nsIXPIListener*)mListeners->ElementAt(i);
             if (element != NULL)
                 element->OnLogComment(comment);
+        }
+    }
+   return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsTopProgressListener::OnLogUninstallComment(const PRUnichar* comment)
+{
+    if (mActive)
+        mActive->OnLogUninstallComment(comment);
+
+   if (mListeners)
+    {
+        PRInt32 i=0;
+        for (; i < mListeners->Count(); i++)
+        {
+            nsIXPIListener* element = (nsIXPIListener*)mListeners->ElementAt(i);
+            if (element != NULL)
+                element->OnLogUninstallComment(comment);
         }
     }
    return NS_OK;

@@ -967,6 +967,16 @@ nsXPInstallManager::OnInstallStart(const PRUnichar *URL)
     return NS_OK;
 }
 
+
+NS_IMETHODIMP
+nsXPInstallManager::OnUninstallNameSet(const PRUnichar *aRegName, const PRUnichar *aUIName)
+{
+    // Don't need to do anything
+    return NS_OK;
+}
+
+
+
 NS_IMETHODIMP
 nsXPInstallManager::OnPackageNameSet(const PRUnichar *URL, const PRUnichar *UIPackageName)
 {
@@ -1013,3 +1023,9 @@ nsXPInstallManager::OnLogComment(const PRUnichar* comment)
     return NS_OK;
 }
 
+NS_IMETHODIMP
+nsXPInstallManager::OnLogUninstallComment(const PRUnichar* comment)
+{
+    // Don't need to do anything
+    return NS_OK;
+}

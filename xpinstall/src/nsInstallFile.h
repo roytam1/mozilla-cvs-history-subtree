@@ -98,7 +98,6 @@ class nsInstallFile : public nsInstallObject
         PRInt32     CompleteFileMove();
         void        CreateAllFolders(nsInstall *inInstall, nsIFile *inFolderPath, PRInt32 *error);
     
-
 };
 
 #endif /* nsInstallFile_h__ */

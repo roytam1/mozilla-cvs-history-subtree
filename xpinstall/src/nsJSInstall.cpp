@@ -1484,6 +1484,7 @@ InstallStartInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
   nsAutoString b0;
   nsAutoString b1;
   nsAutoString b2;
+  PRInt32 flags = 0;
 
   *rval = INT_TO_JSVAL(nsInstall::UNEXPECTED_ERROR);
 
@@ -1501,11 +1502,16 @@ InstallStartInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
     ConvertJSValToStr(b0, cx, argv[0]);
     ConvertJSValToStr(b1, cx, argv[1]);
     ConvertJSvalToVersionString(b2, cx, argv[2]);
+    if(argc == 4)
+    {
+      if(JSVAL_IS_INT(argv[3]))
+        flags = JSVAL_TO_INT(argv[3]);
+    }
 
     jsrefcount saveDepth;
     saveDepth = JS_SuspendRequest(cx);//Need to suspend use of thread or deadlock occurs
 
-    nsresult rv = nativeThis->StartInstall(b0, b1, b2, &nativeRet);
+    nsresult rv = nativeThis->StartInstall(b0, b1, b2, flags, &nativeRet);
 
     JS_ResumeRequest(cx, saveDepth); //Resume the suspened thread
     if (NS_FAILED(rv))
@@ -1615,6 +1621,52 @@ InstallLogComment(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *
   {
     JS_ReportError(cx, "Function LogComment requires 1 parameter");
     return JS_FALSE;
+  }
+
+  return JS_TRUE;
+}
+
+//
+// Native method RegisterUninstallCommand
+//
+PR_STATIC_CALLBACK(JSBool)
+InstallRegisterUninstallCommand(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+  nsInstall        *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
+  nsAutoString     b1;
+  JSObject         *jsObj;
+  nsInstallFolder  *folder;
+
+  *rval = JSVAL_NULL;
+
+  // If there's no private data, this must be the prototype, so ignore
+  if(nsnull == nativeThis)
+  {
+    return JS_TRUE;
+  }
+
+  if(argc >= 1)
+  {
+    //  public int LogComment (String aComment);
+
+    jsObj = JSVAL_TO_OBJECT(argv[0]);
+    if (!JS_InstanceOf(cx, jsObj, &FileSpecObjectClass, nsnull))
+    {
+      *rval = INT_TO_JSVAL(nsInstall::INVALID_ARGUMENTS);
+      nativeThis->SaveError(nsInstall::INVALID_ARGUMENTS);
+      return JS_TRUE;
+    }
+    folder = (nsInstallFolder*)JS_GetPrivate(cx, jsObj);
+
+    if(argc == 2)
+      ConvertJSValToStr(b1, cx, argv[1]);
+
+    nativeThis->RegisterUninstallCommand(folder,b1);
+  }
+  else
+  {
+    JS_ReportWarning(cx, "Function registerUninstallCommand requires 2 parameter");
+    return JS_TRUE;
   }
 
   return JS_TRUE;
@@ -1793,6 +1845,8 @@ static JSConstDoubleSpec install_constants[] =
     { DO_NOT_UNINSTALL,                      "DO_NOT_UNINSTALL"             },
     { WIN_SHARED_FILE,                       "WIN_SHARED_FILE"              },
     { WIN_SYSTEM_FILE,                       "WIN_SYSTEM_FILE"              },
+    { SHARED_FILE,                           "SHARED_FILE"                  },
+    { XPCOM_COMPONENT,                       "XPCOM_COMPONENT"              },
 
     { CHROME_SKIN,                           "SKIN"                         },
     { CHROME_LOCALE,                         "LOCALE"                       },
@@ -1816,29 +1870,30 @@ static JSFunctionSpec InstallMethods[] =
   {"TRACE",                     InstallTRACE,                   1},
 /*END HACK FOR DEBUGGING UNTIL ALERTS WORK*/
   // -- new forms that match prevailing javascript style --
-  {"addDirectory",              InstallAddDirectory,            6},
-  {"addFile",                   InstallAddSubcomponent,         6},
-  {"alert",                     InstallAlert,                   1},
-  {"cancelInstall",             InstallAbortInstall,            1},
-  {"confirm",                   InstallConfirm,                 2},
-  {"execute",                   InstallExecute,                 2},
-  {"gestalt",                   InstallGestalt,                 1},
-  {"getComponentFolder",        InstallGetComponentFolder,      2},
-  {"getFolder",                 InstallGetFolder,               2},
-  {"getLastError",              InstallGetLastError,            0},
-  {"getWinProfile",             InstallGetWinProfile,           2},
-  {"getWinRegistry",            InstallGetWinRegistry,          0},
-  {"initInstall",               InstallStartInstall,            4},
-  {"loadResources",             InstallLoadResources,           1},
-  {"logComment",                InstallLogComment,              1},
-  {"patch",                     InstallPatch,                   5},
-  {"performInstall",            InstallFinalizeInstall,         0},
-  {"registerChrome",            InstallRegisterChrome,          2},
-  {"refreshPlugins",            InstallRefreshPlugins,          1},
-  {"resetError",                InstallResetError,              1},
-//  {"selectChrome",              InstallSelectChrome,            2},
-  {"setPackageFolder",          InstallSetPackageFolder,        1},
-  {"uninstall",                 InstallUninstall,               1},
+  {"addDirectory",              InstallAddDirectory,             6},
+  {"addFile",                   InstallAddSubcomponent,          6},
+  {"alert",                     InstallAlert,                    1},
+  {"cancelInstall",             InstallAbortInstall,             1},
+  {"confirm",                   InstallConfirm,                  2},
+  {"execute",                   InstallExecute,                  2},
+  {"gestalt",                   InstallGestalt,                  1},
+  {"getComponentFolder",        InstallGetComponentFolder,       2},
+  {"getFolder",                 InstallGetFolder,                2},
+  {"getLastError",              InstallGetLastError,             0},
+  {"getWinProfile",             InstallGetWinProfile,            2},
+  {"getWinRegistry",            InstallGetWinRegistry,           0},
+  {"initInstall",               InstallStartInstall,             4},
+  {"loadResources",             InstallLoadResources,            1},
+  {"logComment",                InstallLogComment,               1},
+  {"patch",                     InstallPatch,                    5},
+  {"performInstall",            InstallFinalizeInstall,          0},
+  {"registerChrome",            InstallRegisterChrome,           2},
+  {"refreshPlugins",            InstallRefreshPlugins,           1},
+  {"resetError",                InstallResetError,               1},
+//  {"selectChrome",              InstallSelectChrome,             2},
+  {"setPackageFolder",          InstallSetPackageFolder,         1},
+  {"uninstall",                 InstallUninstall,                1},
+  {"registerUninstallCommand",  InstallRegisterUninstallCommand, 2},
 
   // the raw file methods are deprecated, use the File object instead
   {"dirCreate",                 InstallFileOpDirCreate,                1},

@@ -21,11 +21,12 @@ class nsInstallInfo;
 #include "nsIObserver.h"
 #include "nsPIXPIStubHook.h"
 #include "nsTopProgressNotifier.h"
-
+#include "nsISoftwareUninstall.h"
 
 class nsSoftwareUpdate: public nsISoftwareUpdate,
                         public nsPIXPIStubHook,
-                        public nsIObserver
+                        public nsIObserver,
+                        public nsISoftwareUninstall
 {
     public:
 
@@ -44,11 +45,17 @@ class nsSoftwareUpdate: public nsISoftwareUpdate,
          */
         static char*    GetLogName() { return mLogName; }
 
+        /** GetUninstallLogName
+         *  Optional log name for uninstall information.
+         */
+        static char*    GetUninstallLogName() { return mUninstallLogName; }
+
         static void     NeedCleanup() { mNeedCleanup = PR_TRUE; }
 
         NS_DECL_ISUPPORTS
         NS_DECL_NSPIXPISTUBHOOK
         NS_DECL_NSIOBSERVER
+        NS_DECL_NSISOFTWAREUNINSTALL
 
         NS_IMETHOD InstallJar( nsIFile* localFile,
                                const PRUnichar* URL,
@@ -79,11 +86,14 @@ class nsSoftwareUpdate: public nsISoftwareUpdate,
         static   nsSoftwareUpdate*  mInstance;
         static   nsCOMPtr<nsIFile>  mProgramDir;
         static   char*              mLogName;
+        static   char*              mUninstallLogName;
 
         nsresult RunNextInstall();
         nsresult RegisterNameset();
         void     CreateMasterListener();
         void     Shutdown();
+
+
 
         PRLock*               mLock;
         PRBool                mInstalling;

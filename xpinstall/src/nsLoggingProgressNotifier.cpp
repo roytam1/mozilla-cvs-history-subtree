@@ -37,15 +37,9 @@
 
 #include "nspr.h"
 
-#ifdef XP_MAC
-#define INSTALL_LOG NS_LITERAL_CSTRING("Install Log")
-#else
-#define INSTALL_LOG NS_LITERAL_CSTRING("install.log")
-#endif
-
-
 nsLoggingProgressListener::nsLoggingProgressListener()
-    : mLogStream(0)
+    : mLogStream(0),
+      mUninstallLogStream(0)
 {
     NS_INIT_ISUPPORTS();
 }
@@ -57,14 +51,20 @@ nsLoggingProgressListener::~nsLoggingProgressListener()
         NS_WARN_IF_FALSE(PR_FALSE, "We're being destroyed before script finishes!");
         mLogStream->close();
         delete mLogStream;
-        mLogStream = 0;
+        mLogStream = nsnull;
+    }
+    if (mUninstallLogStream)
+    {
+        mUninstallLogStream->close();
+        delete mUninstallLogStream;
+        mUninstallLogStream = nsnull;
     }
 }
 
 NS_IMPL_ISUPPORTS1(nsLoggingProgressListener, nsIXPIListener)
 
-NS_IMETHODIMP
-nsLoggingProgressListener::OnInstallStart(const PRUnichar *URL)
+nsresult 
+nsLoggingProgressListener::OpenOutputStream(PRInt32 aLogType)
 {
     nsCOMPtr<nsIFile> iFile;
     nsFileSpec *logFile = nsnull;
@@ -88,10 +88,22 @@ nsLoggingProgressListener::OnInstallStart(const PRUnichar *URL)
 
     if (NS_FAILED(rv)) return rv;
 
-    if (!nsSoftwareUpdate::GetLogName())
-        rv = iFile->AppendNative(INSTALL_LOG);
-    else
-        rv = iFile->AppendNative(nsDependentCString(nsSoftwareUpdate::GetLogName()));
+    switch (aLogType) {
+        case OPEN_INSTALL_LOG:
+            if (!nsSoftwareUpdate::GetLogName())
+                rv = iFile->AppendNative(INSTALL_LOG);
+            else
+                rv = iFile->AppendNative(nsDependentCString(nsSoftwareUpdate::GetLogName()));
+        break;
+        case OPEN_UNINSTALL_LOG:
+            if (!nsSoftwareUpdate::GetUninstallLogName())
+                rv = iFile->AppendNative(UNINSTALL_LOG);
+            else
+                rv = iFile->AppendNative(nsDependentCString(nsSoftwareUpdate::GetUninstallLogName()));
+        break;
+        default:
+            return NS_ERROR_FAILURE;
+    }
 
     if (NS_FAILED(rv)) return rv;
 
@@ -133,10 +145,22 @@ nsLoggingProgressListener::OnInstallStart(const PRUnichar *URL)
                     getter_AddRefs(iFile));
         if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
 
-        if (!nsSoftwareUpdate::GetLogName())
-            rv = iFile->AppendNative(INSTALL_LOG);
-        else
-            rv = iFile->AppendNative(nsDependentCString(nsSoftwareUpdate::GetLogName()));
+        switch (aLogType) {
+            case OPEN_INSTALL_LOG:
+                if (!nsSoftwareUpdate::GetLogName())
+                    rv = iFile->AppendNative(INSTALL_LOG);
+                else
+                    rv = iFile->AppendNative(nsDependentCString(nsSoftwareUpdate::GetLogName()));
+            break;
+            case OPEN_UNINSTALL_LOG:
+                if (!nsSoftwareUpdate::GetUninstallLogName())
+                    rv = iFile->AppendNative(UNINSTALL_LOG);
+                else
+                    rv = iFile->AppendNative(nsDependentCString(nsSoftwareUpdate::GetUninstallLogName()));
+            break;
+            default:
+                return NS_ERROR_FAILURE;
+        }
 
         if (NS_FAILED(rv)) return rv;
 
@@ -164,14 +188,47 @@ nsLoggingProgressListener::OnInstallStart(const PRUnichar *URL)
     if (NS_FAILED(rv)) return rv;
     if (!logFile) return NS_ERROR_NULL_POINTER;
 
-    mLogStream = new nsOutputFileStream(*logFile, PR_WRONLY | PR_CREATE_FILE | PR_APPEND, 0744 );
-    if (!mLogStream)
+    nsOutputFileStream *tmpLogStream;
+    tmpLogStream = new nsOutputFileStream(*logFile, PR_WRONLY | PR_CREATE_FILE | PR_APPEND, 0744 );
+
+    if (!tmpLogStream)
         return NS_ERROR_NULL_POINTER;
+
+    switch (aLogType) {
+        case OPEN_INSTALL_LOG:
+            mLogStream = tmpLogStream;
+            mLogStream->seek(logFile->GetFileSize());
+        break;
+        case OPEN_UNINSTALL_LOG:
+            mUninstallLogStream = tmpLogStream;
+            if (logFile->GetFileSize() == 0)
+                // if the file is new, we need to add a header.
+                *mUninstallLogStream << "# Installed Components - Generated file DO NOT EDIT" << nsEndl << "# V=1" << nsEndl;
+            else
+                mUninstallLogStream->seek(logFile->GetFileSize());
+        break;
+        default:
+            return NS_ERROR_FAILURE;
+    }
+
+    if (logFile)
+        delete logFile;
+
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsLoggingProgressListener::OnInstallStart(const PRUnichar *URL)
+{
+    nsresult rv;
+
+    rv = OpenOutputStream(OPEN_INSTALL_LOG);
+    if (NS_FAILED(rv))
+        return rv;
 
     char* time;
     GetTime(&time);
-
-    mLogStream->seek(logFile->GetFileSize());
 
     *mLogStream << "-------------------------------------------------------------------------------" << nsEndl;
     *mLogStream << NS_ConvertUCS2toUTF8(URL).get() << "  --  " << time << nsEndl;
@@ -179,9 +236,6 @@ nsLoggingProgressListener::OnInstallStart(const PRUnichar *URL)
     *mLogStream << nsEndl;
 
     PL_strfree(time);
-    if (logFile)
-        delete logFile;
-
     return NS_OK;
 }
 
@@ -226,7 +280,33 @@ nsLoggingProgressListener::OnInstallDone(const PRUnichar *aURL, PRInt32 aStatus)
     delete mLogStream;
     mLogStream = nsnull;
 
+// have to write out the close of the section
+// [section name -- end]
+    if (mUninstallLogStream)
+    {
+        mUninstallLogStream->close();
+        delete mUninstallLogStream;
+        mUninstallLogStream = nsnull;
+    }
+
+
     return NS_OK;
+}
+
+NS_IMETHODIMP
+nsLoggingProgressListener::OnUninstallNameSet(const PRUnichar *aRegName, const PRUnichar *aPrettyName)
+{
+    nsresult rv = NS_OK;
+
+    rv = OpenOutputStream(OPEN_UNINSTALL_LOG);
+    if (NS_FAILED(rv))
+        return rv;
+
+    *mUninstallLogStream << "[" << NS_ConvertUCS2toUTF8(aRegName).get() << 
+                          "***" << NS_ConvertUCS2toUTF8(aPrettyName).get() << "]" << nsEndl;
+
+    return NS_OK;
+
 }
 
 NS_IMETHODIMP
@@ -270,6 +350,9 @@ nsLoggingProgressListener::OnFinalizeProgress(const PRUnichar* message, PRInt32 
     if (mLogStream == nsnull) return NS_ERROR_NULL_POINTER;
 
     *mLogStream << "     [" << (itemNum) << "/" << totNum << "]\t" << messageConverted.get() << nsEndl;
+
+    if (mUninstallLogStream)
+      *mUninstallLogStream << messageConverted.get() << nsEndl;
     return NS_OK;
 }
 
@@ -284,6 +367,19 @@ nsLoggingProgressListener::GetTime(char** aString)
 }
 
 NS_IMETHODIMP
+nsLoggingProgressListener::OnLogUninstallComment(const PRUnichar* comment)
+{
+    nsCString commentConverted;
+    commentConverted.AssignWithConversion(comment);
+
+    if (mUninstallLogStream == nsnull) return NS_ERROR_NULL_POINTER;
+
+    *mUninstallLogStream << commentConverted.get() << nsEndl;
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 nsLoggingProgressListener::OnLogComment(const PRUnichar* comment)
 {
     nsCString commentConverted;
@@ -292,6 +388,11 @@ nsLoggingProgressListener::OnLogComment(const PRUnichar* comment)
     if (mLogStream == nsnull) return NS_ERROR_NULL_POINTER;
 
     *mLogStream << "     ** " << commentConverted.get() << nsEndl;
+
+/*  I don't think we need to log install comments in the uninstall log
+    if (mUninstallLogStream)
+        *mUninstallLogStream << "     ** " << commentConverted.get() << nsEndl;
+*/
     return NS_OK;
 }
 

@@ -74,6 +74,9 @@
 
 #include "nsCURILoader.h"
 
+#include "nsEnumeratorUtils.h"
+#include "nsSoftwareUninstall.h"
+
 extern "C" void RunChromeInstallOnThread(void *data);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -83,7 +86,8 @@ static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 
 static NS_DEFINE_CID(kCScriptNameSetRegistryCID, NS_SCRIPT_NAMESET_REGISTRY_CID);
 static NS_DEFINE_CID(kInstallTrigger_CID, NS_SoftwareUpdateInstallTrigger_CID);
-
+static NS_DEFINE_CID(kSoftwareUninstall_CID, NS_SoftwareUninstall_CID);
+static NS_DEFINE_CID(kXPInstallPackageInfo_CID, NS_XPInstallPackageInfo_CID);
 static NS_DEFINE_CID(kInstallVersion_CID, NS_SoftwareUpdateInstallVersion_CID);
 
 static NS_DEFINE_CID(knsRegistryCID, NS_REGISTRY_CID);
@@ -93,6 +97,7 @@ static NS_DEFINE_CID(kIProcessCID, NS_PROCESS_CID);
 nsSoftwareUpdate* nsSoftwareUpdate::mInstance = nsnull;
 nsCOMPtr<nsIFile> nsSoftwareUpdate::mProgramDir = nsnull;
 char*             nsSoftwareUpdate::mLogName = nsnull;
+char*             nsSoftwareUpdate::mUninstallLogName = nsnull;
 PRBool            nsSoftwareUpdate::mNeedCleanup = PR_FALSE;
 
 
@@ -105,8 +110,6 @@ nsSoftwareUpdate::GetInstance()
     NS_IF_ADDREF(mInstance);
     return mInstance;
 }
-
-
 
 nsSoftwareUpdate::nsSoftwareUpdate()
 : mInstalling(PR_FALSE),
@@ -181,10 +184,11 @@ nsSoftwareUpdate::~nsSoftwareUpdate()
 //  nsISupports implementation
 //------------------------------------------------------------------------
 
-NS_IMPL_THREADSAFE_ISUPPORTS3(nsSoftwareUpdate,
+NS_IMPL_THREADSAFE_ISUPPORTS4(nsSoftwareUpdate,
                               nsISoftwareUpdate,
                               nsPIXPIStubHook,
-                              nsIObserver);
+                              nsIObserver,
+                              nsISoftwareUninstall);
 
 void
 nsSoftwareUpdate::Shutdown()
@@ -550,6 +554,48 @@ nsSoftwareUpdate::StubInitialize(nsIFile *aDir, const char* logName)
     return rv;
 }
 
+NS_IMETHODIMP 
+nsSoftwareUpdate::GetInstalledPackages(nsISimpleEnumerator **aResult)
+{
+    nsresult rv;
+    nsSoftwareUninstall *uninstall = new nsSoftwareUninstall(nsnull, nsnull);
+
+    if (uninstall)
+        rv = uninstall->GetInstalledPackages(&(*aResult));
+
+    delete uninstall;
+
+    if (NS_FAILED(rv))
+        return NS_ERROR_FAILURE;
+    else
+        return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsSoftwareUpdate::RemovePackage(const nsACString &packageRegName, 
+                                const nsACString &packagePrettyName, 
+                                PRBool *_retval)
+{
+// this should be adding uninstall requests into the queue of install requests and 
+// let a different class do the work of uninstalling
+
+    nsCString *regName = new nsCString();
+    nsCString *prettyName = new nsCString();
+    regName->Assign(packageRegName);
+    prettyName->Assign(packagePrettyName);
+
+    nsSoftwareUninstall *softwareUninstall = new nsSoftwareUninstall(regName, prettyName);
+
+    nsresult rv =  softwareUninstall->PerformUninstall();
+
+    if (NS_FAILED(rv))
+        *_retval = PR_FALSE;
+    else
+        *_retval = PR_TRUE;
+
+    return NS_OK;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // nsSoftwareUpdateNameSet
@@ -601,6 +647,9 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsSoftwareUpdateNameSet);
 #define NS_SOFTWAREUPDATENAMESET_CONTRACTID \
   "@mozilla.org/xpinstall/softwareupdatenameset;1"
 
+#define NS_SOFTWAREUNINSTALL_CONTRACTID \
+  "@mozilla.org/xpinstall/software-uninstall;1"
+
 static NS_METHOD
 RegisterSoftwareUpdate( nsIComponentManager *aCompMgr,
                         nsIFile *aPath,
@@ -624,6 +673,18 @@ RegisterSoftwareUpdate( nsIComponentManager *aCompMgr,
   rv = catman->AddCategoryEntry(JAVASCRIPT_GLOBAL_PROPERTY_CATEGORY,
                                 "InstallTrigger",
                                 NS_INSTALLTRIGGERCOMPONENT_CONTRACTID,
+                                PR_TRUE, PR_TRUE, getter_Copies(previous));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = catman->AddCategoryEntry(JAVASCRIPT_GLOBAL_PROPERTY_CATEGORY,
+                                "SoftwareUninstall",
+                                NS_SOFTWAREUNINSTALL_CONTRACTID,
+                                PR_TRUE, PR_TRUE, getter_Copies(previous));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = catman->AddCategoryEntry(JAVASCRIPT_GLOBAL_PROPERTY_CATEGORY,
+                                "XPInstallPackageInfo",
+                                NS_XPINSTALLPACKAGEINFO_CONTRACTID,
                                 PR_TRUE, PR_TRUE, getter_Copies(previous));
   NS_ENSURE_SUCCESS(rv, rv);
 
@@ -663,7 +724,22 @@ static const nsModuleComponentInfo components[] =
       NS_SOFTWAREUPDATENAMESET_CID,
       NS_SOFTWAREUPDATENAMESET_CONTRACTID,
       nsSoftwareUpdateNameSetConstructor
+    },
+
+    { "SoftwareUninstall Component",
+       NS_SoftwareUninstall_CID,
+       NS_SOFTWAREUNINSTALL_CONTRACTID,
+       nsSoftwareUpdateConstructor,
+       RegisterSoftwareUpdate
+    },
+
+    { "XPInstall PackageInfo Component",
+      NS_XPInstallPackageInfo_CID,
+      NS_XPINSTALLPACKAGEINFO_CONTRACTID,
+      nsSoftwareUpdateConstructor,
+      RegisterSoftwareUpdate
     }
+
 };
 
 

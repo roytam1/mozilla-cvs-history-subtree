@@ -62,6 +62,7 @@
 #include "nsRegisterItem.h"
 #include "nsNetUtil.h"
 #include "ScheduledTasks.h"
+#include "nsSoftwareUninstall.h"
 
 #include "nsIProxyObjectManager.h"
 #include "nsProxiedService.h"
@@ -145,6 +146,7 @@ nsInstall::nsInstall(nsIZipReader * theJARFile)
 //  mRegistryPackageName    = "";               // this is the name that we will add into the registry for the component we are installing
 //  mUIName                 = "";               // this is the name that will be displayed in UI.
     mPatchList              = nsnull;
+    mLogUninstall           = PR_TRUE;
     mUninstallPackage       = PR_FALSE;
     mRegisterPackage        = PR_FALSE;
     mFinalStatus            = SUCCESS;
@@ -857,6 +859,16 @@ nsInstall::FinalizeInstall(PRInt32* aReturn)
         mFinalStatus = *aReturn;
     }
 
+    if (mLogUninstall) // I don't know if I really need this at all
+    {
+        nsString comment;
+        comment.Assign(NS_LITERAL_STRING("["));
+        comment.Append(mRegistryPackageName);
+        comment.Append(NS_LITERAL_STRING("--end]\n\n"));
+        mListener->OnLogUninstallComment(comment.get());
+    }
+
+
     CleanUp();
 
     return NS_OK;
@@ -1379,7 +1391,7 @@ nsInstall::SetPackageFolder(nsInstallFolder& aFolder)
 
 
 PRInt32
-nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aRegistryPackageName, const nsString& aVersion, PRInt32* aReturn)
+nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aRegistryPackageName, const nsString& aVersion, PRInt32 aFlags, PRInt32* aReturn)
 {
     if ( aUserPackageName.IsEmpty() )
     {
@@ -1450,6 +1462,13 @@ nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aRegis
             }
         }
     }
+
+    if (aFlags & DO_NOT_UNINSTALL) 
+        mLogUninstall = PR_FALSE;
+    else
+        if (mListener)
+            mListener->OnUninstallNameSet(mRegistryPackageName.get(),mUIName.get());  
+            // toss info into installed-components.txt
 
     // We've correctly initialized an install transaction
     // - note that for commands that are only valid within one
@@ -2184,11 +2203,36 @@ nsInstall::FileOpWinRegisterServer(nsInstallFolder& aTarget, PRInt32* aReturn)
   return NS_OK;
 }
 
+void 
+nsInstall::LogUninstallComment(nsString& aComment)
+{
+  if(mListener)
+    mListener->OnLogUninstallComment(aComment.get());
+}
+
 void
 nsInstall::LogComment(nsString& aComment)
 {
   if(mListener)
     mListener->OnLogComment(aComment.get());
+}
+
+void   
+nsInstall::RegisterUninstallCommand(nsInstallFolder *folderSpec, const nsString& aArgString)
+{
+
+  nsCString path;
+  folderSpec->GetDirectoryPath(path);
+  nsString comment;
+
+  comment.Assign(NS_LITERAL_STRING(KEY_REGISTER_UNINSTALL_COMMAND));
+  comment.Append(NS_LITERAL_STRING("\""));
+  comment.Append(NS_ConvertUTF8toUCS2(path));
+  comment.Append(NS_LITERAL_STRING("\" "));
+  comment.Append(aArgString.get());
+
+  if(mListener)
+    mListener->OnLogUninstallComment(comment.get());
 }
 
 /////////////////////////////////////////////////////////////////////////
