@@ -29,7 +29,7 @@ var MigrationWizard = {
     
     const nsIBPM = Components.interfaces.nsIBrowserProfileMigrator;
     var bpm = Components.classes[contractID].createInstance(nsIBPM);
-    bpm.migrate(nsIBPM.HISTORY, false);
+    bpm.migrate(nsIBPM.SETTINGS, true);
   },
   
   observe: function (aSubject, aTopic, aData)

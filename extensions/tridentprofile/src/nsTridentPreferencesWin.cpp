@@ -93,6 +93,8 @@ static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 #define TRIDENTPROFILE_BUNDLE       "chrome://tridentprofile/locale/tridentProfile.properties"
 #endif
 
+#define LARGE_BUFFER 1024
+
 #define MIGRATION_ITEMBEFOREMIGRATE "Migration:ItemBeforeMigrate"
 #define MIGRATION_ITEMAFTERMIGRATE  "Migration:ItemAfterMigrate"
 #define MIGRATION_STARTED           "Migration:Started"
@@ -146,6 +148,40 @@ TranslateYNtoFT(unsigned char *aRegValue, DWORD aRegValueLength,
     // strcmp is safe; it's bounded by its second parameter
     prefIntValue = strcmp(NS_REINTERPRET_CAST(char *, aRegValue), "yes") != 0;
     prefs->SetBoolPref(aPrefKeyName, prefIntValue);
+  }
+}
+
+void
+TranslateYNtoImageBehavior(unsigned char *aRegValue, DWORD aRegValueLength,
+                           DWORD aRegValueType,
+                           nsIPrefBranch *prefs, char *aPrefKeyName) {
+  // input type is a string, lowercase "yes" or "no"
+  if (aRegValueType != REG_SZ)
+    NS_WARNING("unexpected yes/no data type");
+
+  if (aRegValueType == REG_SZ && aRegValue[0] != 0) {
+    // strcmp is safe; it's bounded by its second parameter
+    if (!strcmp(NS_REINTERPRET_CAST(char *, aRegValue), "yes"))
+      prefs->SetIntPref(aPrefKeyName, 0);
+    else
+      prefs->SetIntPref(aPrefKeyName, 2);
+  }
+}
+
+void
+TranslateDWORDtoHTTPVersion(unsigned char *aRegValue, DWORD aRegValueLength,
+                            DWORD aRegValueType,
+                            nsIPrefBranch *prefs, char *aPrefKeyName) {
+  // input type is a string, lowercase "yes" or "no"
+  if (aRegValueType != REG_DWORD)
+    NS_WARNING("unexpected signed int data type");
+
+  if (aRegValueType == REG_DWORD) {
+    DWORD val = *(NS_REINTERPRET_CAST(DWORD *, aRegValue));
+    if (val & 0x1) 
+      prefs->SetCharPref(aPrefKeyName, "1.1");
+    else
+      prefs->SetCharPref(aPrefKeyName, "1.0");
   }
 }
 
@@ -333,10 +369,17 @@ struct regEntry gRegEntries[] = {
     "Use_DlgBox_Colors",
     "browser.display.use_system_colors",
     TranslateYNtoTF },
+#ifdef MOZ_PHOENIX
+  { 0,
+    "Use FormSuggest",
+    "browser.formfill.enable",
+    TranslateYNtoTF },
+#else
   { 0,
     "Use FormSuggest",
     "wallet.captureForms",
     TranslateYNtoTF },
+#endif
   { 0,
     "FormSuggest Passwords",
     "signon.rememberSignons",
@@ -345,6 +388,43 @@ struct regEntry gRegEntries[] = {
     "Start Page",
     "browser.startup.homepage",
     TranslateHomepage },
+  { 0, 
+    "Anchor Underline",
+    "browser.underline_anchors",
+    TranslateYNtoTF },
+  { 0,
+    "Display Inline Images",
+    "network.image.imageBehavior",
+    TranslateYNtoImageBehavior },
+  { 0,
+    "Enable AutoImageResize",
+    "browser.enable_automatic_image_resizing",
+    TranslateYNtoTF },
+  { 0,
+    "Move System Caret",
+    "accessibility.browsewithcaret",
+    TranslateYNtoTF },
+  { 0,
+    "NotifyDownloadComplete",
+    "browser.download.manager.showAlertOnComplete",
+    TranslateYNtoTF },
+  { 0,
+    "SmoothScroll",
+    "general.smoothScroll",
+    TranslateYNtoTF },
+  { "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
+    "EnableHttp1_1",
+    "network.http.version",
+    TranslateDWORDtoHTTPVersion },
+  { 0,
+    "ProxyHttp1.1",
+    "network.http.proxy.version",
+    TranslateDWORDtoHTTPVersion },
+// SecureProtocols
+  { "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\Url History",
+    "DaysToKeep",
+    "browser.history_expire_days",
+    TranslateDWORDtoPRInt32 },
   { "Software\\Microsoft\\Internet Explorer\\Settings",
     "Always Use My Colors",
     "browser.display.use_document_colors",
@@ -1060,8 +1140,8 @@ nsTridentPreferencesWin::CopySmartKeywords(nsIRDFResource* aParentFolder)
       if (::RegOpenKeyEx(HKEY_CURRENT_USER, 
                         smartKeywordKey.get(),
                         0, KEY_READ, &skey) == ERROR_SUCCESS) {
-        LONG length;
-        char url[MAX_PATH];
+        LONG length = LARGE_BUFFER;
+        char url[LARGE_BUFFER];
         if (::RegQueryValue(skey, NULL, (char*)url, &length) == ERROR_SUCCESS) {
           uri->SetSpec(nsDependentCString((char*)url));
           nsCAutoString hostCStr;
@@ -1329,6 +1409,12 @@ nsTridentPreferencesWin::CopyPreferences(PRBool aReplace) {
 
   if (regKeyOpen)
     ::RegCloseKey(regKey);
+
+  nsresult rv = CopySecurityPrefs(prefs);
+  if (NS_FAILED(rv)) return rv;
+
+  rv = CopyProxyPreferences(prefs);
+  if (NS_FAILED(rv)) return rv;
 
   return CopyStyleSheet(aReplace);
 }
@@ -1664,3 +1750,141 @@ nsTridentPreferencesWin::GetUserStyleSheetFile(nsIFile **aUserFile) {
   }
 }
 
+nsresult
+nsTridentPreferencesWin::CopySecurityPrefs(nsIPrefBranch* aPrefs)
+{
+  HKEY key;
+  if (::RegOpenKeyEx(HKEY_CURRENT_USER, 
+                     "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
+                     0, KEY_READ, &key) == ERROR_SUCCESS) {
+    DWORD length, value, type; 
+    if (::RegQueryValueEx(key, "SecureProtocols", 0, &type, (LPBYTE)&value, &length) == ERROR_SUCCESS) {
+      aPrefs->SetBoolPref("security.enable_ssl2", value & 0x08);
+      aPrefs->SetBoolPref("security.enable_ssl3", value & 0x20);
+      aPrefs->SetBoolPref("security.enable_tls",  value & 0x80);
+    }
+  }
+
+  return NS_OK;
+}
+
+typedef struct {
+  char*   prefix;
+  PRInt32 prefixLength;
+  PRBool  proxyConfigured;
+  char*   hostPref;
+  char*   portPref;
+} PROXYDATA;
+
+nsresult
+nsTridentPreferencesWin::CopyProxyPreferences(nsIPrefBranch* aPrefs)
+{
+  HKEY key;
+  if (::RegOpenKeyEx(HKEY_CURRENT_USER, 
+                     "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
+                     0, KEY_READ, &key) == ERROR_SUCCESS) {
+    DWORD type, length = LARGE_BUFFER;
+    char buf[LARGE_BUFFER];
+    // If there's an autoconfig URL specified in the registry at all, it is being used. 
+    if (::RegQueryValueEx(key, "AutoConfigURL", 0, &type, (LPBYTE)&buf, &length) == ERROR_SUCCESS) {      
+      aPrefs->SetCharPref("network.proxy.autoconfig_url", buf);
+      aPrefs->SetIntPref("network.proxy.type", 2);
+    }
+    // ProxyEnable
+    DWORD enabled;
+    length = LARGE_BUFFER;
+    if (::RegQueryValueEx(key, "ProxyEnable", 0, &type, (LPBYTE)&enabled, &length) == ERROR_SUCCESS) {
+      if (enabled & 0x1) 
+        aPrefs->SetIntPref("network.proxy.type", 1);
+      else
+        aPrefs->SetIntPref("network.proxy.type", 0);
+    }
+    
+    length = LARGE_BUFFER;
+    LONG r = ::RegQueryValueEx(key, "ProxyOverride", 0, &type, (LPBYTE)&buf, &length);
+    if (r == ERROR_SUCCESS) {
+      // First check to see if the value is "<local>", if so, set the field to 
+      // "localhost,127.0.0.1"
+      nsCAutoString override; override = (char*)buf;
+      if (override.Equals("<local>")) {
+        aPrefs->SetCharPref("network.proxy.no_proxies_on", "localhost,127.0.0.1");
+      }
+      else {
+        // If it's not, then replace every ";" character with ","
+        PRInt32 offset = 0, temp = 0;
+        while (offset != -1) {
+          offset = override.FindChar(';', offset);
+          const nsACString& host = Substring(override, temp, offset < 0 ? override.Length() - temp : offset - temp);
+          if (host.Equals("<local>"))
+            override.Replace(temp, 7, NS_LITERAL_CSTRING("localhost,127.0.0.1"));
+          temp = offset + 1;
+          if (offset != -1)
+            override.Replace(offset, 1, NS_LITERAL_CSTRING(","));
+        }
+        aPrefs->SetCharPref("network.proxy.no_proxies_on", override.get());
+      }
+    }
+
+    length = LARGE_BUFFER;
+    r = ::RegQueryValueEx(key, "ProxyServer", 0, &type, (LPBYTE)&buf, &length);
+    if (r == ERROR_SUCCESS) {
+      nsCAutoString bufStr; bufStr = (char*)buf;
+
+      PROXYDATA data[] = {
+        { "ftp=",     4, PR_FALSE, "network.proxy.ftp",     "network.proxy.ftp_port"    },
+        { "gopher=",  7, PR_FALSE, "network.proxy.gopher",  "network.proxy.gopher_port" },
+        { "http=",    5, PR_FALSE, "network.proxy.http",    "network.proxy.http_port"   },
+        { "https=",   6, PR_FALSE, "network.proxy.ssl",     "network.proxy.ssl_port"    },
+        { "socks=",   6, PR_FALSE, "network.proxy.socks",   "network.proxy.socks_port"  },
+      };
+
+      PRInt32 startIndex = 0, count = 0;
+      PRBool foundSpecificProxy = PR_FALSE;
+      for (PRUint32 i = 0; i < 5; ++i) {
+        PRInt32 offset = bufStr.Find(data[i].prefix);
+        if (offset >= 0) {
+          foundSpecificProxy = PR_TRUE;
+
+          data[i].proxyConfigured = PR_TRUE;
+
+          startIndex = offset + data[i].prefixLength;
+
+          PRInt32 terminal = bufStr.FindChar(';', offset);
+          count = terminal > startIndex ? terminal - startIndex : bufStr.Length() - startIndex;
+
+          // hostPort now contains host:port
+          SetProxyPref(Substring(bufStr, startIndex, count), data[i].hostPref, data[i].portPref, aPrefs);
+        }
+      }
+
+      if (!foundSpecificProxy) {
+        // No proxy config for any specific type was found, assume the ProxyServer value
+        // is of the form host:port and that it applies to all protocols.
+        for (PRUint32 i = 0; i < 5; ++i)
+          SetProxyPref(bufStr, data[i].hostPref, data[i].portPref, aPrefs);
+      }
+    }
+
+  }
+
+  return NS_OK;
+}
+
+void
+nsTridentPreferencesWin::SetProxyPref(const nsACString& aHostPort, 
+                                      const char* aPref, 
+                                      const char* aPortPref,
+                                      nsIPrefBranch* aPrefs) {
+  nsCAutoString hostPort(aHostPort);  
+  PRInt32 portDelimOffset = hostPort.RFindChar(':');
+  if (portDelimOffset) {
+    nsCAutoString host(Substring(aHostPort, 0, portDelimOffset));    
+    nsCAutoString port(Substring(aHostPort, portDelimOffset + 1, aHostPort.Length() - portDelimOffset + 1));
+    
+    aPrefs->SetCharPref(aPref, host.get());
+    aPrefs->SetCharPref(aPortPref, port.get());
+  }
+  else {
+    aPrefs->SetCharPref(aPref, hostPort.get());
+  }
+}

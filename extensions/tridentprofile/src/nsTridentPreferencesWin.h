@@ -50,6 +50,7 @@ class nsIFile;
 class nsICookieManager2;
 class nsIRDFResource;
 class nsIBookmarksService;
+class nsIPrefBranch;
 
 #import "c:\windows\system32\pstorec.dll"
 using namespace PSTORECLib;
@@ -63,10 +64,12 @@ public:
   virtual nsresult MigrateTridentPreferences(PRUint32 aItems, PRBool aReplace);
 
 private:
-
   nsresult CopyPreferences(PRBool aReplace);
   nsresult CopyStyleSheet(PRBool aReplace);
   nsresult CopyCookies(PRBool aReplace);
+  nsresult CopyProxyPreferences(nsIPrefBranch* aPrefs);
+  nsresult CopySecurityPrefs(nsIPrefBranch* aPrefs);
+  void     SetProxyPref(const nsACString& aHostPort, const char* aPref, const char* aPortPref, nsIPrefBranch* aPrefs);
 
 #ifdef MOZ_PHOENIX
   nsresult CopyHistory(PRBool aReplace);
