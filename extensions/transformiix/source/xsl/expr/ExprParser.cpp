@@ -448,6 +448,20 @@ FunctionCall* ExprParser::createFunctionCall(ExprLexer& lexer) {
     else if ( XPathNames::TRUE_FN.isEqual(tok->value) ) {
         fnCall = new BooleanFunctionCall(BooleanFunctionCall::TRUE);
     }
+    // OG+
+    else if ( XPathNames::NUMBER_FN.isEqual(tok->value) ) {
+        fnCall = new NumberFunctionCall(NumberFunctionCall::NUMBER);
+    }
+    else if ( XPathNames::ROUND_FN.isEqual(tok->value) ) {
+        fnCall = new NumberFunctionCall(NumberFunctionCall::ROUND);
+    }
+    else if ( XPathNames::CEILING_FN.isEqual(tok->value) ) {
+        fnCall = new NumberFunctionCall(NumberFunctionCall::CEILING);
+    }
+    else if ( XPathNames::FLOOR_FN.isEqual(tok->value) ) {
+        fnCall = new NumberFunctionCall(NumberFunctionCall::FLOOR);
+    }
+    // OG-
     else {
         //-- create error function() for now, should be ext function
         String err = "not a valid function: ";

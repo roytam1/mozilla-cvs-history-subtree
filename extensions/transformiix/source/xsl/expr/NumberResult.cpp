@@ -99,7 +99,11 @@ void NumberResult::stringValue(String& str)  {
 } //-- stringValue
 
 MBool NumberResult::booleanValue() {
-   return (MBool)(this->value != 0.0);
+  // OG+
+  // As per the XPath spec, the boolean value of a number is true if and only if
+  // it is neither positive 0 nor negative 0 nor NaN
+  return (MBool)(this->value != 0.0 && this->value != -0.0 && ! isNaN());
+  // OG-
 } //-- booleanValue
 
 double NumberResult::numberValue() {

@@ -52,6 +52,12 @@ const String XPathNames::SUBSTRING_AFTER_FN      = "substring-after";
 const String XPathNames::SUBSTRING_BEFORE_FN     = "substring-before";
 const String XPathNames::TRANSLATE_FN            = "translate";
 const String XPathNames::TRUE_FN                 = "true";
+// OG+
+const String XPathNames::NUMBER_FN               = "number";
+const String XPathNames::ROUND_FN                = "round";
+const String XPathNames::CEILING_FN              = "ceiling";
+const String XPathNames::FLOOR_FN                = "floor";
+// OG-
 
 //-- internal XSL processor functions
 const String XPathNames::ERROR_FN                = "error";
