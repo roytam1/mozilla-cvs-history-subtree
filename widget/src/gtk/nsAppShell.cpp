@@ -416,28 +416,25 @@ NS_IMETHODIMP nsAppShell::Exit()
   return NS_OK;
 }
 
+/* The next three methods are used exclusively in tight, private event
+   loops for halting execution until certain events happen by (modal
+   dialogs and the loading of content URLs). They correspond to an XP
+   interface for accomplishing this feat. Taken individually, each
+   method does not do what its name promises. Taken as a group as they're
+   being used, they do. This current version is an M11 branch-specific
+   change to alleviate bug 14131, and should not be merged into the trunk.
+*/
 NS_IMETHODIMP nsAppShell::GetNativeEvent(PRBool &aRealEvent, void *& aEvent)
 {
-  GdkEvent *event;
-
   aEvent = 0;
   aRealEvent = PR_FALSE;
-  event = gdk_event_peek();
-
-  if ((GdkEvent *) nsnull != event ) { 
-    aRealEvent = PR_TRUE;
-    aEvent = event;
-  } else 
-    g_main_iteration (PR_TRUE);
-
   return NS_OK;
 }
 
 NS_IMETHODIMP nsAppShell::DispatchNativeEvent(PRBool aRealEvent, void *aEvent)
 {
-	if ( aRealEvent == PR_TRUE )
-    g_main_iteration (PR_TRUE);
-	return NS_OK;
+  g_main_iteration (PR_TRUE);
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsAppShell::EventIsForModalWindow(PRBool aRealEvent,
@@ -445,48 +442,7 @@ NS_IMETHODIMP nsAppShell::EventIsForModalWindow(PRBool aRealEvent,
                                                 nsIWidget *aWidget,
                                                 PRBool *aForWindow)
 {
-  PRBool isInWindow, isMouseEvent;
-  GdkEventAny *msg = (GdkEventAny *) aEvent;
-
-  if (aRealEvent == PR_FALSE) {
-    *aForWindow = PR_FALSE;
-    return NS_OK;
-  }
-
-  isInWindow = PR_FALSE;
-  if (aWidget != nsnull) {
-    // Get Native Window for dialog window
-    GdkWindow *win;
-    win = (GdkWindow *)aWidget->GetNativeData(NS_NATIVE_WINDOW);
-
-    // Find top most window of event window
-    GdkWindow *eWin = msg->window;
-    if (nsnull != eWin) {
-      if (win == eWin) {
-        isInWindow = PR_TRUE;
-      }
-    }
-  }
-
-  isMouseEvent = PR_FALSE;
-  switch (msg->type)
-  {
-    case GDK_MOTION_NOTIFY:
-    case GDK_BUTTON_PRESS:
-    case GDK_2BUTTON_PRESS:
-    case GDK_3BUTTON_PRESS:
-    case GDK_BUTTON_RELEASE:
-      isMouseEvent = PR_TRUE;
-      break;
-    default:
-      isMouseEvent = PR_FALSE;
-      break;
-  }
-
-  *aForWindow = isInWindow == PR_TRUE || 
-    isMouseEvent == PR_FALSE ? PR_TRUE : PR_FALSE;
-
-  gdk_event_free( (GdkEvent *) aEvent );
+  *aForWindow = PR_TRUE;
   return NS_OK;
 }
 
