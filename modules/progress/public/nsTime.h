@@ -16,8 +16,15 @@
  * Reserved.
  */
 
+#ifndef nsTime_h__
+#define nsTime_h__
+
 #include "prtime.h"
 
+/**
+ * This class encapsulates full 64-bit time functionality and
+ * provides simple arithmetic and conversion operations.
+ */
 class nsTime
 {
 private:
@@ -43,3 +50,6 @@ public:
 
     static nsTime FromMSec(PRUint32 msec);
 };
+
+
+#endif // nsTime_h__
