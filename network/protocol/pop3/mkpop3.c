@@ -2710,10 +2710,16 @@ net_ProcessPop3 (ActiveEntry *ce)
 					StrAllocCat(usernameAndHost, host);
 					FREEIF (host);
 
+					if (cd->password_failed) {
+					    SI_RemoveUser
+						(usernameAndHost, 
+						usernameAndHost, 
+						TRUE);
+					}
+
 					password = SI_PromptPassword
-					    (ce->window_id,
-					    prompt, usernameAndHost,
-					    FALSE, !cd->password_failed);
+					    (ce->window_id, prompt,
+					    usernameAndHost, FALSE);
 					cd->password_failed = FALSE;
 					XP_FREE(usernameAndHost);
 #else

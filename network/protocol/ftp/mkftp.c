@@ -3716,8 +3716,7 @@ net_get_ftp_password(ActiveEntry *ce)
 #if defined(SingleSignon)
 		cd->password = (char *)SI_PromptPassword(ce->window_id,
 				cd->output_buffer, host_string,
-				FALSE /* pickFirstUser */,
-				TRUE /* useLastPassword */);
+				FALSE /* pickFirstUser */);
 #else
             	cd->password = (char *)PC_PromptPassword(ce->window_id,
 				cd->output_buffer, &cd->store_password,
