@@ -120,14 +120,14 @@ function LoadElements()
 
   // download
   var direction = params.GetInt(0);
-  ddump("Passing in: Int 0 (direction) is " + direction);
+  //ddump("Passing in: Int 0 (direction) is " + direction);
   if (direction != 1 && direction != 2)
     dumpError("Bad direction param");
   gIsDownload = direction == 1;
 
   // count
   gCount = params.GetInt(1);
-  ddump("Passing in: Int 1 (count) is " + gCount);
+  //ddump("Passing in: Int 1 (count) is " + gCount);
   if (gCount < 1)
     dumpError("Bad count param");
 
@@ -135,7 +135,7 @@ function LoadElements()
   for (var i = 0; i < gCount; i++)
   {
     var value = params.GetString(i + 1);
-    ddump("Passing in: String " + (i + 1) + " is " + value);
+    //ddump("Passing in: String " + (i + 1) + " is " + value);
     var values = value.split(",");
     if (values.length != 1 && values.length != 5)
       dumpError("Bad file param");
@@ -164,7 +164,7 @@ function ClearParam()
 
 function onOK()
 {
-  ddump("onOK()");
+  //ddump("onOK()");
   params.SetInt(0, 3); // OK
   for (var i = 0; i < gCount; i++)
   {
@@ -177,14 +177,14 @@ function onOK()
       onCancel();
     }
     params.SetInt(i + 1, choice);
-    ddump("Passing back: Int " + (i + 1) + " is " + choice);
+    //ddump("Passing back: Int " + (i + 1) + " is " + choice);
   }
   return true;
 }
 
 function onCancel()
 {
-  ddump("onCancel()");
+  //ddump("onCancel()");
   params.SetInt(0, 4); // Cancel
   return true;
 }

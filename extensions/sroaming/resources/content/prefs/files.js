@@ -162,7 +162,6 @@ function UIToData()
    and use them as labels */
 function FileLabels()
 {
-  ddump("filelabels()");
   var children = E("filesList").childNodes;
   for (var i = 0; i < children.length; i++)
   {

@@ -89,13 +89,13 @@ mozSRoaming::~mozSRoaming()
 NS_IMETHODIMP
 mozSRoaming::BeginSession()
 {
-printf("\n\n\n!!!! beginsession\n\n\n\n");
+    //printf("\n\n\n!!!! beginsession\n\n\n\n");
     nsresult rv = NS_OK;
 
     if (!mHavePrefs)
         rv = ReadRoamingPrefs();
     if (NS_FAILED(rv))
-        printf("count not get prefs - error 0x%x\n", rv);
+        return rv;
 
     if (!mIsRoaming)
         return NS_OK;
@@ -107,7 +107,7 @@ printf("\n\n\n!!!! beginsession\n\n\n\n");
     rv = proto->Init(this);
     if (NS_FAILED(rv))
     {
-        printf("error 0x%x\n", rv);
+        //printf("error 0x%x\n", rv);
         return rv;
     }
 
@@ -116,7 +116,7 @@ printf("\n\n\n!!!! beginsession\n\n\n\n");
     rv = proto->Download();
     if (NS_FAILED(rv))
     {
-        printf("error 0x%x\n", rv);
+        //printf("error 0x%x\n", rv);
         return rv;
     }
 
@@ -127,13 +127,13 @@ printf("\n\n\n!!!! beginsession\n\n\n\n");
 NS_IMETHODIMP
 mozSRoaming::EndSession()
 {
-printf("\n\n\n!!!! endsession\n\n\n\n");
+    //printf("\n\n\n!!!! endsession\n\n\n\n");
     nsresult rv = NS_OK;
 
     if (!mHavePrefs)
         rv = ReadRoamingPrefs();
     if (NS_FAILED(rv))
-        printf("count not get prefs - error 0x%x\n", rv);
+        return rv;
 
     if (!mIsRoaming)
         return NS_OK;
@@ -145,7 +145,7 @@ printf("\n\n\n!!!! endsession\n\n\n\n");
     rv = proto->Init(this);
     if (NS_FAILED(rv))
     {
-        printf("error 0x%x\n", rv);
+        //printf("error 0x%x\n", rv);
         return rv;
     }
 
@@ -156,7 +156,7 @@ printf("\n\n\n!!!! endsession\n\n\n\n");
     rv = proto->Upload();
     if (NS_FAILED(rv))
     {
-        printf("error 0x%x\n", rv);
+        //printf("error 0x%x\n", rv);
         return rv;
     }
 
@@ -210,14 +210,13 @@ nsresult
 mozSRoaming::ConflictResolveUI(PRBool download, const nsCStringArray& files,
                                nsCStringArray* result)
 {
-    printf("mozSRoaming::CheckConflicts\n");
+    //printf("mozSRoaming::CheckConflicts\n");
     //nsCStringArray* result = new nsCStringArray();
     if (files.Count() < 1)
         return NS_OK;
 
     nsresult rv;
     nsCOMPtr<nsIWindowWatcher> windowWatcher
-      //       (do_GetService("@mozilla.org/embedcomp/window-watcher;1", &rv));
                              (do_GetService(NS_WINDOWWATCHER_CONTRACTID, &rv));
     if (NS_FAILED(rv))
         return rv;
@@ -273,15 +272,15 @@ mozSRoaming::ConflictResolveUI(PRBool download, const nsCStringArray& files,
 
     PRInt32 value = 0;
     ioParamBlock->GetInt(0, &value);
-    printf("got back: %s - %d\n", files.CStringAt(i)->get(), value);
+    //printf("got back: %s - %d\n", files.CStringAt(i)->get(), value);
     if (value != 3 && value != 4)
       return NS_ERROR_INVALID_ARG;
     if (value == 4) // cancel
     {
-      printf("Cancel clicked\n");
+      //printf("Cancel clicked\n");
       return NS_ERROR_ABORT;
     }
-    printf("OK clicked\n");
+    //printf("OK clicked\n");
 
     /* I am assuming that the sequence of iteration here is the same as in the
        last |for| statement. If that is not true, the indices gotten from
@@ -290,7 +289,7 @@ mozSRoaming::ConflictResolveUI(PRBool download, const nsCStringArray& files,
     for (i = files.Count() - 1; i >= 0; i--)
     {
         ioParamBlock->GetInt(i + 1, &value);
-        printf("got back: %s - %d\n", files.CStringAt(i)->get(), value);
+        //printf("got back: %s - %d\n", files.CStringAt(i)->get(), value);
         if (value != 1 && value != 2)
             return NS_ERROR_INVALID_ARG;
         if (download
@@ -300,7 +299,7 @@ mozSRoaming::ConflictResolveUI(PRBool download, const nsCStringArray& files,
     }
 
     //*result = files;
-    printf("CheckConflicts done\n");
+    //printf("CheckConflicts done\n");
     return NS_OK;
 }
 
@@ -340,7 +339,7 @@ nsRegistryKey mozSRoaming::RegistryTree()
                           &regkey);
     if (NS_FAILED(rv))
     {
-        printf("registry read of Profiles failed: error 0x%x\n", rv);
+        //printf("registry read of Profiles failed: error 0x%x\n", rv);
         return 0;
     }
     rv = registry->GetKey(regkey,
@@ -348,7 +347,7 @@ nsRegistryKey mozSRoaming::RegistryTree()
                           &regkey);
     if (NS_FAILED(rv))
     {
-        printf("registry read of current profile failed: error 0x%x\n", rv);
+        //printf("registry read of current profile failed: error 0x%x\n", rv);
         return 0;
     }
     rv = registry->GetKey(regkey,
@@ -356,7 +355,7 @@ nsRegistryKey mozSRoaming::RegistryTree()
                           &regkey);
     if (NS_FAILED(rv))
     {
-        printf("Roaming not set up for this profile\n");
+        //printf("Roaming not set up for this profile\n");
         return 0;
     }
     return regkey;
@@ -369,7 +368,7 @@ nsRegistryKey mozSRoaming::RegistryTree()
 
 nsresult mozSRoaming::ReadRoamingPrefs()
 {
-    printf("mozSRoaming::ReadRoamingPrefs\n");
+    //printf("mozSRoaming::ReadRoamingPrefs\n");
     nsresult rv = NS_OK;
     nsCOMPtr<nsIRegistry> registry = Registry();
     if (!registry)
@@ -387,14 +386,14 @@ nsresult mozSRoaming::ReadRoamingPrefs()
                               &enabled);
         if (NS_FAILED(rv))
         {
-            printf("registry read of Enabled failed: error 0x%x\n", rv);
+            //printf("registry read of Enabled failed: error 0x%x\n", rv);
             mIsRoaming = PR_FALSE;
             return rv;
         }
         mIsRoaming = enabled == 0 ? PR_FALSE : PR_TRUE;
     }
 
-    printf("roaming enabled: %s\n", mIsRoaming?"Yes":"No");
+    //printf("roaming enabled: %s\n", mIsRoaming?"Yes":"No");
     if (!mIsRoaming)
       return rv;
 
@@ -404,14 +403,14 @@ nsresult mozSRoaming::ReadRoamingPrefs()
                              getter_Copies(proto));
     if (NS_FAILED(rv))
     {
-        printf("registry read of Method failed: error 0x%x\n", rv);
+        //printf("registry read of Method failed: error 0x%x\n", rv);
         return rv;
     }
     if (proto == kRegValMethodStream)
         mMethod = 1;
     else if (proto == kRegValMethodCopy)
         mMethod = 2;
-    printf("method: %d\n", mMethod);
+    //printf("method: %d\n", mMethod);
 
     // Files
     nsXPIDLString files_reg;
@@ -419,22 +418,15 @@ nsresult mozSRoaming::ReadRoamingPrefs()
                              getter_Copies(files_reg));
     if (NS_FAILED(rv))
     {
-        printf("registry read of Files failed: error 0x%x\n", rv);
+        //printf("registry read of Files failed: error 0x%x\n", rv);
         return rv;
     }
     NS_ConvertUCS2toUTF8 files_pref(files_reg);
-    printf("files pref: -%s-\n", files_pref.get());
+    //printf("files pref: -%s-\n", files_pref.get());
 
     mFiles.ParseString(files_pref.get(), ",");
 
-    nsCStringArray* files = FilesToRoam();
-    for (PRInt32 i = files->Count() - 1; i >= 0; i--)
-    {
-        nsCString& file = *files->CStringAt(i);
-        printf(" have file -%s-\n", file.get());
-    }
-
-    printf("leaving readprefs\n");
+    //printf("leaving readprefs\n");
     return NS_OK;
 }
 
@@ -446,7 +438,7 @@ void mozSRoaming::PrefsDone()
 
 mozSRoamingProtocol* mozSRoaming::CreateMethodHandler()
 {
-    printf("mozSRoaming::CreateMethodHandler\n");
+    //printf("mozSRoaming::CreateMethodHandler\n");
     if (mMethod == 1)
         return new mozSRoamingStream;
     else if (mMethod == 2)
@@ -466,7 +458,7 @@ nsresult mozSRoaming::RestoreCloseNet(PRBool restore)
 {
   const char* topic = restore ? "profile-change-net-restore"
                               : "profile-change-net-teardown";
-  printf("%s...\n", topic);
+  //printf("%s...\n", topic);
   nsresult rv;
   nsCOMPtr<nsIObserverService> observerService
                        (do_GetService("@mozilla.org/observer-service;1", &rv));
@@ -477,6 +469,6 @@ nsresult mozSRoaming::RestoreCloseNet(PRBool restore)
 
   rv = observerService->NotifyObservers(subject, topic,
                                         NS_LITERAL_STRING("switch").get());
-  printf("%s done\n", topic);
+  //printf("%s done\n", topic);
   return rv;
 }

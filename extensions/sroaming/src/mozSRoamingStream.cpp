@@ -71,12 +71,12 @@ void AppendElements(nsCStringArray& target, nsCStringArray& source)
 
 mozSRoamingStream::mozSRoamingStream()
 {
-    printf("mozSRoamingStream ctor\n");
+    //printf("mozSRoamingStream ctor\n");
 }
 
 mozSRoamingStream::~mozSRoamingStream()
 {
-    printf("mozSRoamingStream dtor\n");
+    //printf("mozSRoamingStream dtor\n");
 }
 
 
@@ -87,7 +87,7 @@ mozSRoamingStream::~mozSRoamingStream()
 
 nsresult mozSRoamingStream::Init(mozSRoaming* aController)
 {
-    printf("mozSRoamingStream::Init\n");
+    //printf("mozSRoamingStream::Init\n");
     nsresult rv;
     mController = aController;
     if (!mController)
@@ -103,8 +103,7 @@ nsresult mozSRoamingStream::Init(mozSRoaming* aController)
                           &regkey);
     if (NS_FAILED(rv))
     {
-        printf("ERROR: Streaming (FTP, HTTP etc.) method for roaming "
-               "not set up for this profile\n");
+        //printf("ERROR: FTP, HTTP etc. method for roaming not set up\n");
         return rv;
     }
     mRegkeyStream = regkey;
@@ -114,7 +113,7 @@ nsresult mozSRoamingStream::Init(mozSRoaming* aController)
                              getter_Copies(remoteUrlPref));
     if (NS_FAILED(rv))
     {
-        printf("registry read of base URL failed: error 0x%x\n", rv);
+        //printf("registry read of base URL failed: error 0x%x\n", rv);
         return rv;
     }
     mRemoteBaseUrl = remoteUrlPref;
@@ -179,24 +178,24 @@ nsresult mozSRoamingStream::Init(mozSRoaming* aController)
 
     nsXPIDLCString path;
     mProfileDir->GetSpec(path);
-    printf("profile dir: -%s-\n", path.get());
-    printf("remote dir: -%s-\n", NS_ConvertUCS2toUTF8(mRemoteBaseUrl).get());
-    printf("password: -%s-\n", NS_ConvertUCS2toUTF8(mPassword).get());
-    printf("save password: -%s-\n", mSavePassword?"yes":"no");
+    //printf("profile dir: -%s-\n", path.get());
+    //printf("remote dir: -%s-\n", NS_ConvertUCS2toUTF8(mRemoteBaseUrl).get());
+    //printf("password: -%s-\n", NS_ConvertUCS2toUTF8(mPassword).get());
+    //printf("save password: -%s-\n", mSavePassword?"yes":"no");
 
     return NS_OK;
 }
 
 nsresult mozSRoamingStream::Download()
 {
-    printf("mozSRoamingStream::Download\n");
+    //printf("mozSRoamingStream::Download\n");
     return DownUpLoad(PR_TRUE);
 
 }
 
 nsresult mozSRoamingStream::Upload()
 {
-    printf("mozSRoamingStream::Upload\n");
+    //printf("mozSRoamingStream::Upload\n");
     return DownUpLoad(PR_FALSE);
 }
 
@@ -273,7 +272,7 @@ nsresult mozSRoamingStream::DownUpLoad(PRBool download)
     ioParamBlock->SetInt(1, 2);
 
     nsCStringArray* files = mController->FilesToRoam();
-    printf("got %d files\n", files->Count());
+    //printf("got %d files\n", files->Count());
     ioParamBlock->SetInt(2, files->Count());
 
     ioParamBlock->SetInt(3, mSavePassword ? 1 : 0);
@@ -289,13 +288,13 @@ nsresult mozSRoamingStream::DownUpLoad(PRBool download)
     // filenames
     for (PRInt32 i = files->Count() - 1; i >= 0; i--)
     {
-      printf("want to transfer file %s\n", (*files->CStringAt(i)).get());
+      //printf("want to transfer file %s\n", (*files->CStringAt(i)).get());
       NS_ConvertASCIItoUCS2 filename(*files->CStringAt(i));
       ioParamBlock->SetString(i + 4, filename.get());
                                                 // filenames start at item 4
     }
 
-    printf("Opening window...\n");
+    //printf("Opening window...\n");
     nsCOMPtr<nsIDOMWindow> window;
     rv = windowWatcher->OpenWindow(nsnull,
                                    kXferDlg,
@@ -306,22 +305,22 @@ nsresult mozSRoamingStream::DownUpLoad(PRBool download)
     if (NS_FAILED(rv))
         return rv;
 
-    printf("Back from dialog\n");
+    //printf("Back from dialog\n");
 
     PRInt32 savepw = 0;
     ioParamBlock->GetInt(0, &savepw);
-    printf("got save password: -%d-\n", savepw);
+    //printf("got save password: -%d-\n", savepw);
    	
     if (savepw == 1)
     {    
       nsXPIDLString password, username;
       ioParamBlock->GetString(0, getter_Copies(username));
       ioParamBlock->GetString(1, getter_Copies(password));
-      printf("got username: -%s-\n", NS_ConvertUCS2toUTF8(username).get());
-      printf("got password: -%s-\n", NS_ConvertUCS2toUTF8(password).get());
+      //printf("got username: -%s-\n", NS_ConvertUCS2toUTF8(username).get());
+      //printf("got password: -%s-\n", NS_ConvertUCS2toUTF8(password).get());
 
       mPassword = password;
-      printf("will save password:-%s-\n",NS_ConvertUCS2toUTF8(password).get());
+      //printf("will save passw:-%s-\n",NS_ConvertUCS2toUTF8(password).get());
       nsCOMPtr<nsIRegistry> registry = mController->Registry();
       rv = registry->SetInt(mRegkeyStream, kRegKeySavePassword.get(),  1);
       rv = registry->SetString(mRegkeyStream, kRegKeyUsername.get(),
@@ -331,7 +330,7 @@ nsresult mozSRoamingStream::DownUpLoad(PRBool download)
       // failure is not fatal. then it's not saved *shrug*. ;-)
     }
 
-    printf("Done\n");
+    //printf("Done\n");
     
     return NS_OK;
 }

@@ -32,3 +32,4 @@
   <RDF:Seq about="chrome://communicator/content/pref/preftree.xul">
     <RDF:li>chrome://sroaming/content/prefs/prefsOverlay.xul</RDF:li>
   </RDF:Seq>
+</RDF:RDF>

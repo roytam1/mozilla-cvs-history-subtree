@@ -61,7 +61,7 @@ var gAllowEnterKey = false;
 
 function Startup()
 {
-  ddump("In sroaming/transfer/progressDialog::Startup()");
+  //ddump("In sroaming/transfer/progressDialog::Startup()");
 
   gDialog.FileList           = document.getElementById("FileList");
   gDialog.StatusMessage      = document.getElementById("StatusMessage");
@@ -112,14 +112,14 @@ function GetParams()
 
   // download
   var direction = params.GetInt(0);
-  ddump("Passing in: Int 0 (direction) is " + direction);
+  //ddump("Passing in: Int 0 (direction) is " + direction);
   if (direction != 1 && direction != 2)
     throw "Error: Bad direction param";
   var download = direction == 1;
 
   // serial/parallel
   var serial_param = params.GetInt(1);
-  ddump("Passing in: Int 1 (serial) is " + serial_param);
+  //ddump("Passing in: Int 1 (serial) is " + serial_param);
   if (serial_param != 1 && serial_param != 2)
     throw "Error: Bad serial param";
   var serial = serial_param == 1;
@@ -127,7 +127,7 @@ function GetParams()
 
   // files count
   var count = params.GetInt(2);
-  ddump("Passing in: Int 2 (files count) is " + count);
+  //ddump("Passing in: Int 2 (files count) is " + count);
   if (count == 0)
     throw GetString("NoFilesSelected");
   if (count < 0)
@@ -135,26 +135,26 @@ function GetParams()
 
   // save pw
   var savepw_param = params.GetInt(3);
-  ddump("Passing in: Int 3 (save pw) is " + savepw_param);
+  //ddump("Passing in: Int 3 (save pw) is " + savepw_param);
   var savepw = false;
   if (savepw_param == 1)
     savepw = true;
 
   // profile dir
   var profileDir = params.GetString(1);
-  ddump("Passing in: String 1 (profile dir) is " + profileDir);
+  //ddump("Passing in: String 1 (profile dir) is " + profileDir);
   if (profileDir == null || profileDir == "")
     throw "Error: Bad profile dir param";
 
   // remote dir
   var remoteDir = params.GetString(2);
-  ddump("Passing in: String 2 (remote dir) is " + remoteDir);
+  //ddump("Passing in: String 2 (remote dir) is " + remoteDir);
   if (remoteDir == null || remoteDir == "")
     throw "Error: Bad remote dir param";
 
   // password
   var password = params.GetString(3);
-  ddump("Passing in: String 3 (password) is " + password);
+  //ddump("Passing in: String 3 (password) is " + password);
   // ignore errors
 
   // filenames
@@ -162,8 +162,8 @@ function GetParams()
   for (var i = 0; i < count; i++)
   {
     var filename = params.GetString(i + 4);  // filenames start at item 4
-    ddumpCont("Passing in: String " + (i + 4));
-    ddump(" (file " + i + ") is " + filename);
+    //ddumpCont("Passing in: String " + (i + 4));
+    //ddump(" (file " + i + ") is " + filename);
     if (filename == null || filename == "")
       throw "Error: Bad filename";
     files[i] = new Object();
@@ -182,19 +182,19 @@ function GetParams()
 
 function PassBackParams()
 {
-  ddump("PassBackParam()");
+  //ddump("PassBackParam()");
   var params = window.arguments[0].QueryInterface(
                                     Components.interfaces.nsIDialogParamBlock);
   if (gTransfer)
   {
     params.SetInt(0, gTransfer.getSaveLogin());
-    ddump(" int0: " + gTransfer.getSaveLogin());
+    //ddump(" int0: " + gTransfer.getSaveLogin());
     if (gTransfer.getSaveLogin() == 1)
     {
       params.SetString(0, gTransfer.getUsername());
       params.SetString(1, gTransfer.getPassword());
-      ddump(" string0: " + gTransfer.getUsername());
-      ddump(" string1: " + gTransfer.getPassword());
+      //ddump(" string0: " + gTransfer.getUsername());
+      //ddump(" string1: " + gTransfer.getPassword());
     }
   }
   else /* e.g. if we didn't get good prefs and couldn't create a transfer
@@ -205,7 +205,7 @@ function PassBackParams()
     params.SetString(1, "");
   }
   // XXX call gTransfer.done()?
-  ddump(" done");
+  //ddump(" done");
 }
 
 
@@ -218,7 +218,7 @@ function PassBackParams()
 */
 function SetProgressStatus(filenr)
 {
-  ddumpCont("SetProgressStatus(" + filenr + "): ");
+  //ddumpCont("SetProgressStatus(" + filenr + "): ");
   if (!gTransfer || !gTransfer.files[filenr])
   {
     dumpError("no such file");
@@ -227,7 +227,7 @@ function SetProgressStatus(filenr)
   var file = gTransfer.files[filenr];
   var filename = file.filename;
   var status = file.status;
-  ddump(filename + ", " + status + ", " + NameForStatusCode(file.statusCode));
+  //ddump(filename + ", " + status + ", " + NameForStatusCode(file.statusCode));
 
   if (status == "busy")
     SetStatusMessage(GetString("Transfering"));
@@ -244,7 +244,7 @@ function SetProgressStatus(filenr)
       if (li.getAttribute("progress") != status)
       {
         var oldstat = li.getAttribute("progress");
-        ddump("  Setting "+filename+" from "+oldstat+" to "+status); 
+        //ddump("  Setting "+filename+" from "+oldstat+" to "+status); 
         li.setAttribute("progress", status);
       }
       found = true;
@@ -296,18 +296,18 @@ function SetProgressFinishedAll()
  */
 function CheckDone(close)
 {
-  ddump("CheckDone()");
+  //ddump("CheckDone()");
   for (var i = 0; i < gTransfer.files.length; i++)
   {
     var file = gTransfer.files[i];
-    ddumpCont("  Checking " + i + ", " + file.filename + ", ");
-    ddump(file.status);
+    //ddumpCont("  Checking " + i + ", " + file.filename + ", ");
+    //ddump(file.status);
     if (file.status == "failed")
       gTransferFailed = true;
     else if (file.status != "done")
       return;
   }
-  ddump("  Yes, we're done");
+  //ddump("  Yes, we're done");
   gFinished = true;
 
   // Finish progress messages, settings buttons etc.
@@ -315,7 +315,7 @@ function CheckDone(close)
 
   if (!close || gTransferFailed)
     return;
-  ddump("  Closing");
+  //ddump("  Closing");
 
   if (gTimeout > 0)
     // Leave window open a minimum amount of time 

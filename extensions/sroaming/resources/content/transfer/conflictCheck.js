@@ -205,14 +205,14 @@ var gLocalDir;
  */
 function checkAndTransfer(transfer, listingProgress)
 {
-  ddump("checking deps");
+  //ddump("checking deps");
 
   gLocalDir = transfer.localDir;
 
   /* A few nested callbacks follow. Asyncronous processing fun... :-/
      Some need local vars, I don't want to use global vars for that. */
 
-  ddump("Step 1: Downloading listing file from server");
+  //ddump("Step 1: Downloading listing file from server");
   remove(kListingTransferFilename);
   var filesListing = new Array();
   filesListing[0] = new Object();
@@ -236,16 +236,16 @@ function checkAndTransfer(transfer, listingProgress)
     transfer.password = listingTransfer.password;
     transfer.savePassword = listingTransfer.savePassword;
     transfer.saveLogin = listingTransfer.saveLogin;
-    ddump("loading remote listing file");
+    //ddump("loading remote listing file");
 
     var remoteListingResult = loadAndReadListingFile(success
                                                      ? kListingTransferFilename
                                                      : null,
                                                      function()
     {
-      dumpObject(remoteListingResult, "remoteListingResult");
+      //dumpObject(remoteListingResult, "remoteListingResult");
       var remoteListing = remoteListingResult.value;
-      dumpObject(remoteListing, "remoteListing");
+      //dumpObject(remoteListing, "remoteListing");
       if (transfer.download)
         download(transfer, remoteListing);
       else
@@ -263,7 +263,7 @@ function checkAndTransfer(transfer, listingProgress)
 // download part of checkAndTransfer
 function download(transfer, remoteListing)
 {
-  ddump("loading listing-uploaded file");
+  //ddump("loading listing-uploaded file");
   var listingUploadedResult = loadAndReadListingFile(kListingUploadedFilename,
                                                      function()
   {
@@ -271,15 +271,15 @@ function download(transfer, remoteListing)
     var keepLocalVersionFiles = null;
     var listingUploaded = listingUploadedResult.value;
 
-    ddump("Step 2: Comparing these listing files");
+    //ddump("Step 2: Comparing these listing files");
     var comparisonStep2 = compareFiles(transfer.files,
                                        remoteListing,
                                        listingUploaded);
     if (comparisonStep2.mismatches.length == 0)
       // Match: files didn't change on the server since our last upload
     {
-      ddump("Server files didn't change since last upload from here, so");
-      ddump("we're done, no need to actually download.");
+      //ddump("Server files didn't change since last upload from here, so");
+      //ddump("we're done, no need to actually download.");
       move(kListingTransferFilename, kListingDownloadedFilename);
       onCancel();
       return;
@@ -297,18 +297,18 @@ function download(transfer, remoteListing)
          mismatch, so if a few match and a few mismatch, there is something
          goofy going on. XXX is this also true, if local files didn't exist
          yet? */
-      ddump("Step 2a: Comparing local files with listing-uploaded");
+      //ddump("Step 2a: Comparing local files with listing-uploaded");
       var comparisonStep2a = compareFiles(transfer.files,
                                           localFiles,
                                           listingUploaded);
       if (comparisonStep2a.mismatches.length == 0)
       {
-        ddump("Step 3: Skipped, because no conflict found");
+        //ddump("Step 3: Skipped, because no conflict found");
         // no conflict, but we need to download
       }
       else
       {
-        ddump("Step 2aa: Comparing remote listing with local files");
+        //ddump("Step 2aa: Comparing remote listing with local files");
         var comparisonStep2aa = compareFiles(transfer.files,
                                              remoteListing,
                                              localFiles);
@@ -319,7 +319,7 @@ function download(transfer, remoteListing)
 
         if (conflicts.length > 0)
         {
-          ddump("Step 3: Asking user which version to use");
+          //ddump("Step 3: Asking user which version to use");
           var answer = conflictAsk(true,
                                    conflicts,
                                    remoteListing,
@@ -341,17 +341,17 @@ function download(transfer, remoteListing)
       transfer.filesChanged();
     }
 
-    ddump("Step 4: Downloading profile files");
+    //ddump("Step 4: Downloading profile files");
     transfer.finishedCallbacks.push(function(success)
     {
       /*
-      ddumpCont("Step 5: Check local files (incl. downloaded one) against ");
-      ddump("server listing");
+      //ddumpCont("Step 5: Check local files (incl. downloaded one) against ");
+      //ddump("server listing");
       var localFiles = localFilesStats(remoteListing);
       checkFailedFiles(transfer);
       */
 
-      ddump("Step 5");
+      //ddump("Step 5");
       if (success)
         /* Profile files should now match the listing.xml from the server.
            Move listing.xml from server to listing-downloaded, to prevent
@@ -359,7 +359,7 @@ function download(transfer, remoteListing)
            last version we got from the server, for future checks. */
         move(kListingTransferFilename, kListingDownloadedFilename);
 
-      ddump("transfer done");
+      //ddump("transfer done");
 
       CheckDone(true); // progress dialog - close it, if possible
     });
@@ -372,7 +372,7 @@ function download(transfer, remoteListing)
 // upload part of checkAndTransfer
 function upload(transfer, remoteListing)
 {
-  ddump("loading listing-downloaded file");
+  //ddump("loading listing-downloaded file");
   var listingDownloadedResult = loadAndReadListingFile(
                                                kListingDownloadedFilename,
                                                function()
@@ -380,14 +380,14 @@ function upload(transfer, remoteListing)
     var listingDownloaded = listingDownloadedResult.value;
     var localFiles = localFilesStats(transfer.files);
 
-    ddump("Step 2: Comparing these listing files");
+    //ddump("Step 2: Comparing these listing files");
     var comparisonStep2 = compareFiles(transfer.files,
                                        remoteListing,
                                        listingDownloaded);
     if (comparisonStep2.mismatches.length == 0)
       // Match: files didn't change on the server since our last download
     {
-      ddump("Step 3: Skipped, because no conflict found");
+      //ddump("Step 3: Skipped, because no conflict found");
       uploadStep4(transfer, localFiles, remoteListing, null);
     }
     else // Mismatch
@@ -397,8 +397,8 @@ function upload(transfer, remoteListing)
          mismatch, so if a few match and a few mismatch, there is something
          goofy going on. XXX is this also true, if local files didn't exist
          yet? */
-      ddump("Step 2a: Comparing listing from server with listing-uploaded");
-      ddump("loading listing-uploaded file");
+      //ddump("Step 2a: Comparing listing from server with listing-uploaded");
+      //ddump("loading listing-uploaded file");
       var listingUploadedResult = loadAndReadListingFile(
                                                    kListingUploadedFilename,
                                                    function()
@@ -418,7 +418,7 @@ function upload(transfer, remoteListing)
 
         if (conflicts.length == 0)
         {
-          ddump("Step 3: Skipped, because no conflict found");
+          //ddump("Step 3: Skipped, because no conflict found");
           /* no conflict (we were the last ones who uploaded),
              but we need to upload. */
           // upload all files, so no need to change transfer.files.
@@ -426,7 +426,7 @@ function upload(transfer, remoteListing)
         }
         else
         {
-          ddump("Step 3: Asking user which version to use");
+          //ddump("Step 3: Asking user which version to use");
           var answer = conflictAsk(false,
                                    conflicts,
                                    remoteListing,
@@ -454,17 +454,17 @@ function uploadStep4(transfer, localFiles, remoteFiles, keepServerVersionFiles)
     transfer.filesChanged();
   }
 
-  ddump("Step 4: Uploading profile files");
+  //ddump("Step 4: Uploading profile files");
   transfer.finishedCallbacks.push(function(success)
   {
-    ddump("Step 5: Generating listing file based on facts");
+    //ddump("Step 5: Generating listing file based on facts");
     var filesDone = extractFiles(transfer.filesWithStatus("done"),
                                  localFiles);
     createListingFile(addFiles(filesDone,
                                substractFiles(remoteFiles, filesDone)),
                       kListingTransferFilename);
 
-    ddump("Step 6: Uploading listing file to server");
+    //ddump("Step 6: Uploading listing file to server");
     var filesListing = new Array();
     filesListing[0] = new Object();
     filesListing[0].filename = kListingTransferFilename;
@@ -482,12 +482,12 @@ function uploadStep4(transfer, localFiles, remoteFiles, keepServerVersionFiles)
       addFileStatus(listingTransfer.files[0]);
       SetListingTransfer(false);
 
-      ddump("Step 7: Generate listing-uploaded");
+      //ddump("Step 7: Generate listing-uploaded");
       remove(kListingTransferFilename);
       createListingFile(substractFiles(localFiles, keepServerVersionFiles),
                         kListingUploadedFilename);
 
-      ddump("transfer done");
+      //ddump("transfer done");
 
       CheckDone(true);
     }, function()
@@ -516,10 +516,10 @@ function uploadStep4(transfer, localFiles, remoteFiles, keepServerVersionFiles)
 */
 function compareFiles(filesList, files1, files2)
 {
-  ddump("comparing file lists");
-  dumpObject(filesList, "  filesList", 1);
-  dumpObject(files1, "  files1", 1);
-  dumpObject(files2, "  files2", 1);
+  //ddump("comparing file lists");
+  //dumpObject(filesList, "  filesList", 1);
+  //dumpObject(files1, "  files1", 1);
+  //dumpObject(files2, "  files2", 1);
 
   var result = new Object();
   result.matches = new Array();
@@ -550,7 +550,7 @@ function compareFiles(filesList, files1, files2)
     //if (!f1 && !f2) needed? Would break current conflict logic (|missing*|)
     //  matches = true;
 
-    ddump(filename + (matches ? " matches" : " doesn't match"));
+    //ddump(filename + (matches ? " matches" : " doesn't match"));
     if (matches)
       result.matches.push(filesList[i]);
     else
@@ -687,7 +687,7 @@ function loadAndReadListingFile(filename, loadedCallback)
                                  by reference, because it will be filled,
                                  as described above. */
   var domdoc = document.implementation.createDocument("", filename, null);
-  ddump("loading and reading " + filename);
+  //ddump("loading and reading " + filename);
 
   var loaded = function()
   {
@@ -705,19 +705,19 @@ function loadAndReadListingFile(filename, loadedCallback)
     }
     catch(e)
     {
-      ddump("error during load: " + e);
+      //ddump("error during load: " + e);
       setTimeout(loaded, 0); // see below
     }
   }
   else
   {
-    ddump("no filename");
+    //ddump("no filename");
     setTimeout(loaded, 0);
       /* using timeout, so that we first return (to deliver domdoc to the
          caller) before we invoke loadedCallback, so that loadedCallback
          can use domdoc. */
   }
-  dumpObject(result, "result");
+  //dumpObject(result, "result");
   return result;
 }
 
@@ -730,7 +730,7 @@ function loadAndReadListingFile(filename, loadedCallback)
  */
 function readListingFile(listingFileDOM)
 {
-  ddump("will interpret listing file");
+  //ddump("will interpret listing file");
   var files = new Array();
 
   if (!listingFileDOM || !listingFileDOM.childNodes)
@@ -781,12 +781,14 @@ function readListingFile(listingFileDOM)
     dumpError("Error while reading listing file: " + e);
   }
 
-  dumpObject(files, "files");
+  //dumpObject(files, "files");
   return files;
 }
 
 function printtree(domnode, indent)
 {
+  return;
+
   if (!indent)
     indent = 1;
   for (var i = 0; i < indent; i++)
@@ -983,7 +985,7 @@ function conflictAsk(download, filesList, serverFiles, localFiles)
   }
   catch (e)
   {
-    ddump(e);
+    //ddump(e);
   }
   return result;
 }
@@ -1005,7 +1007,7 @@ function makeNSIFileFromRelFilename(filename)
  */
 function move(from, to)
 {
-  ddump("move " + from + " to " + to);
+  //ddump("move " + from + " to " + to);
   var lf = makeNSIFileFromRelFilename(from);
   if (lf && lf.exists())
     lf.moveTo(null, to);
@@ -1016,7 +1018,7 @@ function move(from, to)
  */
 function remove(filename)
 {
-  ddump("remove " + filename);
+  //ddump("remove " + filename);
   var lf = makeNSIFileFromRelFilename(filename);
   if (lf && lf.exists())
     lf.remove(false);

@@ -2,7 +2,6 @@ todo:
 - nsresult for internal functions, clean up interfaces
 - warn before saving pw
 - experimental warning
-- remove printfs
 - XXXs
 - firebird/thunderbird extension
 

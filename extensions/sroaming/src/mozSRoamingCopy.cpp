@@ -77,18 +77,18 @@ nsresult CopyFile(nsCOMPtr<nsIFile> fromDir,
     nsXPIDLCString path1, path2;
     fromFile->GetNativePath(path1);
     toFileOld->GetNativePath(path2);
-    printf("trying to copy from -%s- to -%s-\n", path1.get(), path2.get());
+    //printf("trying to copy from -%s- to -%s-\n", path1.get(), path2.get());
 
     if (exists)
     {
         rv = toFileOld->Remove(PR_FALSE);  // XXX needed?
-        if (NS_FAILED(rv))
-            printf("couldn't remove\n");
+        //if (NS_FAILED(rv))
+        //    printf("couldn't remove\n");
         rv = fromFile->CopyTo(toDir, fileSubPath);
     }
     else
     {
-        printf("source file not found\n");
+        //printf("source file not found\n");
         rv = NS_ERROR_FILE_NOT_FOUND;
     }
     return rv;
@@ -103,12 +103,12 @@ void AppendElementsToStrArray(nsCStringArray& target, nsCStringArray& source)
 
 mozSRoamingCopy::mozSRoamingCopy()
 {
-    printf("mozSRoamingCopy ctor\n");
+    //printf("mozSRoamingCopy ctor\n");
 }
 
 mozSRoamingCopy::~mozSRoamingCopy()
 {
-    printf("mozSRoamingCopy dtor\n");
+    //printf("mozSRoamingCopy dtor\n");
 }
 
 
@@ -119,7 +119,7 @@ mozSRoamingCopy::~mozSRoamingCopy()
 
 nsresult mozSRoamingCopy::Init(mozSRoaming* aController)
 {
-    printf("mozSRoamingCopy::Init\n");
+    //printf("mozSRoamingCopy::Init\n");
     nsresult rv;
     mController = aController;
     if (!mController)
@@ -135,8 +135,7 @@ nsresult mozSRoamingCopy::Init(mozSRoaming* aController)
                           &regkey);
     if (NS_FAILED(rv))
     {
-        printf("ERROR: File copy method for roaming "
-               "not set up for this profile\n");
+        //printf("ERROR: File copy method for roaming not set up\n");
         return rv;
     }
 
@@ -145,7 +144,7 @@ nsresult mozSRoamingCopy::Init(mozSRoaming* aController)
                              getter_Copies(remoteDirPref));
     if (NS_FAILED(rv))
     {
-        printf("registry read of remote dir failed: error 0x%x\n", rv);
+        //printf("registry read of remote dir failed: error 0x%x\n", rv);
         return rv;
     }
 
@@ -162,27 +161,27 @@ nsresult mozSRoamingCopy::Init(mozSRoaming* aController)
     rv = lf->GetNativePath(path);
     if (NS_FAILED(rv))
         return rv;
-    printf("remote dir: -%s-\n", path.get());
+    //printf("remote dir: -%s-\n", path.get());
 
     mProfileDir = mController->ProfileDir();
     if (!mProfileDir)
         return NS_ERROR_FILE_NOT_FOUND;
 
     mProfileDir->GetNativePath(path);
-    printf("profile dir: -%s-\n", path.get());
+    //printf("profile dir: -%s-\n", path.get());
 
     return NS_OK;
 }
 
 nsresult mozSRoamingCopy::Download()
 {
-    printf("mozSRoamingCopy::Download\n");
+    //printf("mozSRoamingCopy::Download\n");
     return DownUpLoad(PR_TRUE);
 }
 
 nsresult mozSRoamingCopy::Upload()
 {
-    printf("mozSRoamingCopy::Upload\n");
+    //printf("mozSRoamingCopy::Upload\n");
     return DownUpLoad(PR_FALSE);
 }
 
@@ -191,7 +190,7 @@ nsresult mozSRoamingCopy::DownUpLoad(PRBool download)
     nsresult rv = NS_OK;
 
     nsCStringArray* files = mController->FilesToRoam();
-    printf("got %d files\n", files->Count());
+    //printf("got %d files\n", files->Count());
 
     // Check for conflicts
     nsCStringArray conflicts(10);
@@ -200,7 +199,7 @@ nsresult mozSRoamingCopy::DownUpLoad(PRBool download)
     for (i = files->Count() - 1; i >= 0; i--)
     {
         nsCString& file = *files->CStringAt(i);
-        printf("checking file -%s-\n", file.get());
+        //printf("checking file -%s-\n", file.get());
         NS_ConvertASCIItoUCS2 fileL(file);
 
         nsCOMPtr<nsIFile> profileFile;
@@ -258,7 +257,7 @@ nsresult mozSRoamingCopy::DownUpLoad(PRBool download)
             ? profileTime > remoteTime
             : profileTime < remoteTime )
         {
-            printf("conflict found!\n");
+            //printf("conflict found!\n");
             conflicts.AppendCString(file);
         }
         else
@@ -274,18 +273,18 @@ nsresult mozSRoamingCopy::DownUpLoad(PRBool download)
     AppendElementsToStrArray(copyfiles, copyfiles_conflicts);
 
     // Copy
-    printf("copying %d files\n", copyfiles.Count());
+    //printf("copying %d files\n", copyfiles.Count());
     for (i = copyfiles.Count() - 1; i >= 0; i--)
     {
         nsCString& file = *copyfiles.CStringAt(i);
-        printf("copying file -%s-\n", file.get());
+        //printf("copying file -%s-\n", file.get());
         NS_ConvertASCIItoUCS2 fileL(file);
         if (download)
             rv = CopyFile(mRemoteDir, mProfileDir, fileL);
         else
             rv = CopyFile(mProfileDir, mRemoteDir, fileL);
-        if (NS_FAILED(rv))
-            printf("Copy of file -%s- failed!\n", file.get());
+        //if (NS_FAILED(rv))
+        //    printf("Copy of file -%s- failed!\n", file.get());
     }
 
     return rv;
