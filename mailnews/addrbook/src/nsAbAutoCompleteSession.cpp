@@ -473,24 +473,22 @@ nsresult nsAbAutoCompleteSession::SearchCards(nsIAbDirectory* directory, nsAbAut
 }
 
 
-nsresult nsAbAutoCompleteSession::SearchDirectory(nsString& fileName, nsAbAutoCompleteSearchString* searchStr, nsIAutoCompleteResults* results, PRBool searchSubDirectory)
+nsresult nsAbAutoCompleteSession::SearchDirectory(const char *fileName, nsAbAutoCompleteSearchString* searchStr, nsIAutoCompleteResults* results, PRBool searchSubDirectory)
 {
     nsresult rv = NS_OK;
     nsCOMPtr<nsIRDFService> rdfService(do_GetService("@mozilla.org/rdf/rdf-service;1", &rv));
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr <nsIRDFResource> resource;
-    char * strFileName = ToNewCString(fileName);
-    rv = rdfService->GetResource(strFileName, getter_AddRefs(resource));
-    Recycle(strFileName);
+    rv = rdfService->GetResource(fileName, getter_AddRefs(resource));
     NS_ENSURE_SUCCESS(rv, rv);
 
     // query interface 
     nsCOMPtr<nsIAbDirectory> directory(do_QueryInterface(resource, &rv));
     NS_ENSURE_SUCCESS(rv, rv);
     
-    if (!fileName.EqualsWithConversion(kAllDirectoryRoot))
-        rv = SearchCards(directory, searchStr, results);
+    if (nsCRT::strcmp(kAllDirectoryRoot, fileName))
+       rv = SearchCards(directory, searchStr, results);
     
     if (!searchSubDirectory)
         return rv;
@@ -513,9 +511,7 @@ nsresult nsAbAutoCompleteSession::SearchDirectory(nsString& fileName, nsAbAutoCo
 		                    {
 		                        nsXPIDLCString URI;
 		                        subResource->GetValue(getter_Copies(URI));
-		                        nsAutoString subURI;
-		                        subURI.AssignWithConversion(URI);
-		                        rv = SearchDirectory(subURI, searchStr, results, PR_TRUE);
+		                        rv = SearchDirectory(URI.get(), searchStr, results, PR_TRUE);
 		                    }
                     }
                 }
@@ -631,8 +627,7 @@ NS_IMETHODIMP nsAbAutoCompleteSession::OnStartLookup(const PRUnichar *uSearchStr
     if (NS_SUCCEEDED(rv))
 		  if (NS_FAILED(SearchPreviousResults(&searchStrings, previousSearchResult, results)))
 		  {
-			  nsAutoString root; root.AssignWithConversion(kAllDirectoryRoot);
-			  rv = SearchDirectory(root, &searchStrings, results, PR_TRUE);
+			  rv = SearchDirectory(kAllDirectoryRoot, &searchStrings, results, PR_TRUE);
 		  }
                 
     AutoCompleteStatus status = nsIAutoCompleteStatus::failed;
