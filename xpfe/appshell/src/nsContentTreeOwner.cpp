@@ -638,7 +638,8 @@ NS_IMETHODIMP nsContentTreeOwner::SetTitle(const PRUnichar* aTitle)
       title = docTitle;
     }
 
-    title += mTitleSeparator + mWindowTitleModifier;
+    if (!mWindowTitleModifier.IsEmpty())
+      title += mTitleSeparator + mWindowTitleModifier;
   }
   else
     title.Assign(mWindowTitleModifier); // Title will just be plain "Mozilla"
@@ -797,9 +798,8 @@ void nsContentTreeOwner::XULWindow(nsXULWindow* aXULWindow)
                 mTitleDefault = mWindowTitleModifier;
                 mWindowTitleModifier.Truncate();
             }
-#else
-            docShellElement->GetAttribute(NS_LITERAL_STRING("titlemenuseparator"), mTitleSeparator);
 #endif
+            docShellElement->GetAttribute(NS_LITERAL_STRING("titlemenuseparator"), mTitleSeparator);
             }
          }
       else
