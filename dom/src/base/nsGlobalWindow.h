@@ -438,14 +438,16 @@ class nsIContentViewerEdit;
 
 class nsISelectionController;
 
-class nsDOMWindowController : public nsIController
+class nsDOMWindowController : public nsIController,
+                              public nsICommandController
 {
 public:
-	nsDOMWindowController( nsIDOMWindowInternal* aWindow );
-  ~nsDOMWindowController();
+  nsDOMWindowController( nsIDOMWindowInternal* aWindow );
+  virtual ~nsDOMWindowController();
   NS_DECL_ISUPPORTS
   NS_DECL_NSICONTROLLER
-
+  NS_DECL_NSICOMMANDCONTROLLER
+  
 private:
   nsresult GetEventStateManager(nsIEventStateManager **esm);
   static int PR_CALLBACK BrowseWithCaretPrefCallback(const char* aPrefName, void* instance_data);

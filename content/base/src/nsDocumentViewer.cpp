@@ -47,6 +47,7 @@
 #include "nsIContent.h"
 #include "nsIContentViewerContainer.h"
 #include "nsIDocumentViewer.h"
+#include "nsIDocumentEncoder.h"
 #include "nsIDOMWindowInternal.h"
 
 #include "nsIDocument.h"
@@ -5149,6 +5150,29 @@ NS_IMETHODIMP DocumentViewerImpl::Paste()
 NS_IMETHODIMP DocumentViewerImpl::GetPasteable(PRBool *aPasteable)
 {
   *aPasteable = PR_FALSE;
+  return NS_OK;
+}
+
+/* AString getContents (in string mimeType, in boolean selectionOnly); */
+NS_IMETHODIMP DocumentViewerImpl::GetContents(const char *mimeType, PRBool selectionOnly, nsAString & _retval)
+{
+  NS_ENSURE_TRUE(mPresShell, NS_ERROR_NOT_INITIALIZED);
+  nsAutoString mimeTypeString; mimeTypeString.AssignWithConversion(mimeType);
+  return mPresShell->DoGetContents(mimeTypeString, 0, selectionOnly, _retval);
+}
+
+/* readonly attribute boolean canGetContents; */
+NS_IMETHODIMP DocumentViewerImpl::GetCanGetContents(PRBool *aCanGetContents)
+{
+  nsCOMPtr<nsISelection> selection;
+  nsresult rv;
+  rv = GetDocumentSelection(getter_AddRefs(selection));
+  if (NS_FAILED(rv)) return rv;
+  
+  PRBool isCollapsed;
+  selection->GetIsCollapsed(&isCollapsed);
+  
+  *aCanGetContents = !isCollapsed;
   return NS_OK;
 }
 

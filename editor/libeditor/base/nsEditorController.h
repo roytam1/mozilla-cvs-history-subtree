@@ -61,6 +61,7 @@ class nsIEditor;
 // commands in composer. The refCon that gets passed to its commands is an nsIEditor.
 
 class nsEditorController :  public nsIController,
+                            public nsICommandController,
                             public nsIEditorController,
                             public nsIInterfaceRequestor
 {
@@ -75,6 +76,9 @@ public:
   // nsIController
   NS_DECL_NSICONTROLLER
 
+  // nsICommandController
+  NS_DECL_NSICOMMANDCONTROLLER
+  
   /** init the controller */
   NS_IMETHOD Init(nsISupports *aCommandRefCon);
 

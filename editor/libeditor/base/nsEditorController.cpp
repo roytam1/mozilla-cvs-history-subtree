@@ -51,6 +51,7 @@ NS_IMPL_RELEASE(nsEditorController)
 
 NS_INTERFACE_MAP_BEGIN(nsEditorController)
 	NS_INTERFACE_MAP_ENTRY(nsIController)
+	NS_INTERFACE_MAP_ENTRY(nsICommandController)
 	NS_INTERFACE_MAP_ENTRY(nsIEditorController)
 	NS_INTERFACE_MAP_ENTRY(nsIInterfaceRequestor)
 	NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIEditorController)
@@ -143,6 +144,7 @@ nsresult nsEditorController::RegisterEditorCommands(nsIControllerCommandManager 
   NS_REGISTER_ONE_COMMAND(nsSelectAllCommand, "cmd_selectAll");
   
   NS_REGISTER_ONE_COMMAND(nsPasteCommand, "cmd_paste");
+  NS_REGISTER_ONE_COMMAND(nsInsertTextCommand, "cmd_insertText");
   
   NS_REGISTER_FIRST_COMMAND(nsDeleteCommand, "cmd_delete");
   NS_REGISTER_NEXT_COMMAND(nsDeleteCommand, "cmd_deleteCharBackward");
@@ -212,6 +214,17 @@ NS_IMETHODIMP nsEditorController::OnEvent(const nsAString & aEventName)
   return NS_OK;
 }
 
+/* void getCommandState (in nsICommandParams aCommandParams); */
+NS_IMETHODIMP nsEditorController::GetCommandState(nsICommandParams *aCommandParams)
+{
+  return mCommandManager->GetCommandState(aCommandParams, mCommandRefCon);
+}
+
+/* void doCommand (in nsICommandParams aCommandParams); */
+NS_IMETHODIMP nsEditorController::DoCommand(nsICommandParams *aCommandParams)
+{
+  return mCommandManager->DoCommandParams(aCommandParams, mCommandRefCon);
+}
 
 nsWeakPtr nsEditorController::sEditorCommandManager = NULL;
 
@@ -239,4 +252,5 @@ nsresult nsEditorController::GetEditorCommandManager(nsIControllerCommandManager
   NS_ADDREF(*outCommandManager = cmdManager);
   return NS_OK;
 }
+
 

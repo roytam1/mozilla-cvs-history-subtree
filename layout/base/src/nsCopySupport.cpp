@@ -333,3 +333,36 @@ nsresult nsCopySupport::IsPlainTextContext(nsISelection *aSel, nsIDocument *aDoc
 
   return NS_OK;
 }
+
+
+nsresult
+nsCopySupport::GetContents(const nsAString& aMimeType, PRUint32 aFlags, nsISelection *aSel, nsIDocument *aDoc, nsAString& outdata)
+{
+  nsresult rv = NS_OK;
+  
+  nsCOMPtr<nsIDocumentEncoder> docEncoder;
+
+  nsCAutoString encoderContractID(NS_DOC_ENCODER_CONTRACTID_BASE);
+  encoderContractID.AppendWithConversion(aMimeType);
+    
+  docEncoder = do_CreateInstance(encoderContractID.get());
+  NS_ENSURE_TRUE(docEncoder, NS_ERROR_FAILURE);
+
+  PRUint32 flags = aFlags;
+  
+  if (aMimeType.Equals(NS_LITERAL_STRING("text/plain")))
+    flags |= nsIDocumentEncoder::OutputPreformatted;
+
+  rv = docEncoder->Init(aDoc, aMimeType, flags);
+  if (NS_FAILED(rv)) return rv;
+  
+  if (aSel)
+  {
+    rv = docEncoder->SetSelection(aSel);
+    if (NS_FAILED(rv)) return rv;
+  } 
+  
+  // encode the selection
+  return docEncoder->EncodeToString(outdata);
+}
+

@@ -46,5 +46,11 @@ class nsCopySupport
   // class of static helper functions for copy support
   public:
     static nsresult HTMLCopy(nsISelection *aSel, nsIDocument *aDoc, PRInt16 aClipboardID);
+
     static nsresult IsPlainTextContext(nsISelection *aSel, nsIDocument *aDoc, PRBool *aIsPlainTextContext);
+
+    // Get the selection, or entire document, in the format specified by the mime type
+    // (text/html or text/plain). If aSel is non-null, use it, otherwise get the entire
+    // doc.
+    static nsresult GetContents(const nsAString& aMimeType, PRUint32 aFlags, nsISelection *aSel, nsIDocument *aDoc, nsAString& outdata);
 };

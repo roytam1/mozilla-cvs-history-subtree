@@ -42,6 +42,7 @@
 
 #include "nsIEditor.h"
 #include "nsIEditorMailSupport.h"
+#include "nsIPlaintextEditor.h"
 #include "nsISelectionController.h"
 #include "nsIPresShell.h"
 #include "nsIClipboard.h"
@@ -377,7 +378,53 @@ nsPasteCommand::GetCommandState(nsICommandParams *aParams, nsISupports *aCommand
   return aParams->SetBooleanValue(STATE_ENABLED,canUndo);
 }
 
+#pragma mark -
 
+NS_IMETHODIMP
+nsInsertTextCommand::IsCommandEnabled(const nsAString & aCommandName, nsISupports *aCommandRefCon, PRBool *outCmdEnabled)
+{
+  nsCOMPtr<nsIPlaintextEditor> aEditor = do_QueryInterface(aCommandRefCon);
+  *outCmdEnabled = PR_FALSE;
+  if (aEditor)
+    return aEditor->CanInsertText(outCmdEnabled);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsInsertTextCommand::DoCommand(const nsAString & aCommandName, nsISupports *aCommandRefCon)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP 
+nsInsertTextCommand::DoCommandParams(nsICommandParams *aParams, nsISupports *aCommandRefCon)
+{
+  nsAutoString tString;
+  aParams->GetStringValue(COMMAND_NAME, tString);
+
+  nsAutoString value;
+  aParams->GetStringValue(NS_LITERAL_STRING("data"), value);
+
+  nsCOMPtr<nsIPlaintextEditor> aEditor = do_QueryInterface(aCommandRefCon);
+  if (!aEditor)
+    return NS_ERROR_FAILURE;
+  
+  return aEditor->InsertText(value);
+}
+
+NS_IMETHODIMP 
+nsInsertTextCommand::GetCommandState(nsICommandParams *aParams, nsISupports *aCommandRefCon)
+{
+  nsString tString;
+  aParams->GetStringValue(COMMAND_NAME,tString);
+  PRBool canUndo;
+  IsCommandEnabled(tString, aCommandRefCon, &canUndo);
+  return aParams->SetBooleanValue(STATE_ENABLED,canUndo);
+}
+
+#pragma mark -
+ 
 NS_IMETHODIMP
 nsDeleteCommand::IsCommandEnabled(const nsAString & aCommandName, nsISupports *aCommandRefCon, PRBool *outCmdEnabled)
 {

@@ -129,6 +129,7 @@
 #include "nsIJSNativeInitializer.h"
 #include "nsIFullScreen.h"
 #include "nsIStringBundle.h"
+#include "nsICommandParams.h"
 
 #include "plbase64.h"
 
@@ -5709,6 +5710,7 @@ const char * const sSelectNoneString = "cmd_selectNone";
 const char * const sCopyLinkString = "cmd_copyLink";
 const char * const sCopyImageLocationString = "cmd_copyImageLocation";
 const char * const sCopyImageContentsString = "cmd_copyImageContents";
+const char * const sGetContentsString = "cmd_getContents";
 
 const char * const sScrollTopString = "cmd_scrollTop";
 const char * const sScrollBottomString = "cmd_scrollBottom";
@@ -5750,6 +5752,7 @@ NS_IMPL_RELEASE(nsDOMWindowController)
 NS_INTERFACE_MAP_BEGIN(nsDOMWindowController)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIController)
   NS_INTERFACE_MAP_ENTRY(nsIController)
+  NS_INTERFACE_MAP_ENTRY(nsICommandController)
 NS_INTERFACE_MAP_END
 
 
@@ -5909,6 +5912,9 @@ nsDOMWindowController::IsCommandEnabled(const nsAString& aCommand,
   else if (commandName.Equals(sCopyImageContentsString)) {
     rv = editInterface->GetInImage(aResult);
   }
+  else if (commandName.Equals(sGetContentsString)) {
+    rv = editInterface->GetCanGetContents(aResult);
+  }
 
   return rv;
 }
@@ -5934,6 +5940,7 @@ nsDOMWindowController::SupportsCommand(const nsAString& aCommand,
       commandName.Equals(sCopyLinkString) ||
       commandName.Equals(sCopyImageLocationString) ||
       commandName.Equals(sCopyImageContentsString) ||
+      commandName.Equals(sGetContentsString) ||
       commandName.Equals(sScrollPageUpString) ||
       commandName.Equals(sScrollPageDownString) ||
       commandName.Equals(sScrollLineUpString) ||
@@ -5962,12 +5969,63 @@ nsDOMWindowController::SupportsCommand(const nsAString& aCommand,
   return NS_OK;
 }
 
+/* void getCommandState (in nsICommandParams aCommandParams); */
+NS_IMETHODIMP
+nsDOMWindowController::GetCommandState(nsICommandParams *aCommandParams)
+{
+  // we don't have any commands that support this yet
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void doCommand (in nsICommandParams aCommandParams); */
+NS_IMETHODIMP
+nsDOMWindowController::DoCommand(nsICommandParams *aCommandParams)
+{
+  nsresult rv = NS_ERROR_FAILURE;
+
+  if (!aCommandParams)
+    return rv;
+  
+  // get the command name
+  nsAutoString commandName;
+  aCommandParams->GetStringValue(NS_LITERAL_STRING("cmd_name"), commandName);
+  if (commandName.EqualsWithConversion(sGetContentsString))
+  {
+    // get edit interface...
+    nsCOMPtr<nsIContentViewerEdit> editInterface;
+    rv = GetEditInterface(getter_AddRefs(editInterface));
+    // if we can't get an edit interface, that's bad
+    NS_ENSURE_SUCCESS(rv, rv);
+    NS_ENSURE_TRUE(editInterface, NS_ERROR_NOT_INITIALIZED);
+
+    // get the command params
+    nsCAutoString mimeType("text/plain");
+
+    nsAutoString format;
+    if (NS_SUCCEEDED(aCommandParams->GetStringValue(NS_LITERAL_STRING("format"), format)))
+      mimeType.AssignWithConversion(format);
+    
+    PRBool selectionOnly = PR_FALSE;
+    aCommandParams->GetBooleanValue(NS_LITERAL_STRING("selection_only"), &selectionOnly);
+    
+    nsAutoString contents;
+    rv = editInterface->GetContents(mimeType.get(), selectionOnly, contents);
+    if (NS_FAILED(rv))
+      return rv;
+      
+    rv = aCommandParams->SetStringValue(NS_LITERAL_STRING("result"), contents);
+  }
+
+  return rv;
+}
+
 NS_IMETHODIMP
 nsDOMWindowController::DoCommand(const nsAString & aCommand)
 {
   nsresult rv = NS_ERROR_FAILURE;
   nsCAutoString commandName;
   commandName.AssignWithConversion(aCommand);
+
 
   if (commandName.Equals(sCopyString) ||
       commandName.Equals(sSelectAllString) ||

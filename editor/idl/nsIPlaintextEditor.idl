@@ -108,6 +108,12 @@ interface nsIPlaintextEditor : nsISupports
    void insertText(in DOMString aStringToInsert);
 
   /**
+   * Returns true if text can be inserted
+   *
+   */
+   boolean canInsertText();
+
+  /**
    * Insert a line break into the content model.
    * The interpretation of a break is up to the implementation:
    * it may enter a character, split a node in the tree, etc.

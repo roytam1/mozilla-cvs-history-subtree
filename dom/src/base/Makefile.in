@@ -53,6 +53,7 @@ REQUIRES	= xpcom \
 		  shistory \
 		  plugin \
 		  windowwatcher \
+		  commandhandler  \
 		  htmlparser \
 		  chardet \
 		  find \
