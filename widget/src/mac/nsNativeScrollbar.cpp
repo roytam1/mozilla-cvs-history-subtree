@@ -48,8 +48,26 @@
 #include "nsIDOMElement.h"
 #include "nsIScrollbarMediator.h"
 
-#include "Sound.h"
 
+#if 0
+void DumpControlState(ControlHandle inControl, const char* message)
+{
+  if (!message) message = "gdb called";
+  
+  CGrafPtr curPort;
+  ::GetPort((GrafPtr*)&curPort);
+  Rect portBounds;
+  ::GetPortBounds(curPort, &portBounds);
+
+  Rect controlBounds = {0, 0, 0, 0};
+  if (inControl)
+    ::GetControlBounds(inControl, &controlBounds);
+    
+  printf("%20s -- port %p bounds %d, %d, %d, %d, control bounds %d, %d, %d, %d\n", message, curPort,
+    portBounds.left, portBounds.top, portBounds.right, portBounds.bottom,
+    controlBounds.left, controlBounds.top, controlBounds.right, controlBounds.bottom);
+}
+#endif
 
 //
 // StControlActionProcOwner
@@ -429,7 +447,7 @@ nsNativeScrollbar::SetViewSize(PRUint32 aSize)
   
   if ( GetControl() )  {
     StartDraw();
-    SetControlViewSize(GetControl(), mVisibleImageSize);
+    ::SetControlViewSize(GetControl(), mVisibleImageSize);
     EndDraw();
   }
   return NS_OK;

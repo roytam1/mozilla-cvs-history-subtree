@@ -165,6 +165,7 @@ public:
 
     virtual void          StartDraw(nsIRenderingContext* aRenderingContext = nsnull);
     virtual void          EndDraw();
+    PRBool                IsDrawing() { return mDrawing; }
     NS_IMETHOD            Update();
     virtual void          UpdateWidget(nsRect& aRect, nsIRenderingContext* aContext);
     
