@@ -53,11 +53,11 @@ public final class JSObject {
      */
     private static native void initClass();
     static {
-        SecurityManager.enablePrivilege("UniversalLinkAccess");
-        SecurityManager.enablePrivilege("UniversalPropertyRead");
-        System.loadLibrary(System.getProperty("netscape.jsj.dll", "jsj"));
-        SecurityManager.revertPrivilege();
-        initClass();
+    	// Currently, MRJ loads this library again, which is useless to us.
+    	if (System.getProperty("mrj.version", null) == null) {
+			System.loadLibrary("LiveConnect");
+			initClass();
+		}
     }
 
     /**
@@ -131,4 +131,17 @@ public final class JSObject {
      * JavaScript object.
      */
     protected native void	finalize();
+
+    /**
+     * Override java.lang.Object.equals() because identity is not preserved
+     * with instances of JSObject.
+     */
+    public boolean equals(Object obj) {
+        JSObject jsobj;
+
+        if (!(obj instanceof JSObject))
+            return false;
+        jsobj = (JSObject)obj;
+	return (internal == jsobj.internal);
+    }
 }
