@@ -3612,20 +3612,25 @@ nsresult nsMsgCompose::AttachmentPrettyName(const char* scheme, const char* char
     do_GetService(NS_UTF8CONVERTERSERVICE_CONTRACTID);
   NS_ENSURE_TRUE(utf8Cvt, NS_ERROR_UNEXPECTED);
  
+  nsCAutoString unescapedUtf8Scheme;
   nsCAutoString utf8Scheme;
 
   if (PL_strncasestr(scheme, "file:", 5)) 
   {
     // first try, filesystem character encoding
     rv = utf8Cvt->ConvertURISpecToUTF8(nsDependentCString(scheme), 
-         nsMsgI18NFileSystemCharset(), utf8Scheme);
+         nsMsgI18NFileSystemCharset(), unescapedUtf8Scheme);
     if (NS_FAILED(rv))
     {
       // try |charset| if it's set. otherwise, UTF-8. 
       rv = utf8Cvt->ConvertURISpecToUTF8(nsDependentCString(scheme), 
-           (!charset || !*charset) ? "UTF-8" : charset, utf8Scheme);
+           (!charset || !*charset) ? "UTF-8" : charset, unescapedUtf8Scheme);
       NS_ENSURE_SUCCESS(rv, rv);
     }
+
+    // re-escape the url since the utf8 converter unescaped us
+    NS_EscapeURL(unescapedUtf8Scheme.get(), unescapedUtf8Scheme.Length(),
+                 esc_OnlyASCII | esc_AlwaysCopy | esc_FilePath, utf8Scheme);
 
     nsCOMPtr<nsIURI> uri;  
     rv = NS_NewURI(getter_AddRefs(uri), utf8Scheme);
