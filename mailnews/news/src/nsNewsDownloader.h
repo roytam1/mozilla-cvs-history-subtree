@@ -101,7 +101,7 @@ class DownloadMatchingNewsArticlesToNewsDB : public DownloadNewsArticlesToOfflin
 public:
 	DownloadMatchingNewsArticlesToNewsDB(nsIMsgWindow *window, nsIMsgFolder *folder, nsIMsgDatabase *newsDB,  nsISupportsArray *termArray);
 	virtual ~DownloadMatchingNewsArticlesToNewsDB();
-static PRInt32	SaveMatchingMessages(nsIMsgWindow *window, nsIMsgFolder *folder, nsIMsgDatabase *newsDB, nsISupportsArray *terms);
+static nsresult	SaveMatchingMessages(nsIMsgWindow *window, nsIMsgFolder *folder, nsIMsgDatabase *newsDB, nsISupportsArray *terms);
 protected:
 };
 

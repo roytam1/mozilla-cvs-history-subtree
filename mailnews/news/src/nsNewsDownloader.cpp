@@ -28,6 +28,9 @@
 #include "nsNewsDownloader.h"
 #include "nsINntpService.h"
 #include "nsMsgNewsCID.h"
+#include "nsIMsgSearchSession.h"
+#include "nsIMsgSearchTerm.h"
+
 // This file contains the news article download state machine.
 
 static NS_DEFINE_CID(kNntpServiceCID,	NS_NNTPSERVICE_CID);
@@ -92,8 +95,6 @@ NS_IMETHODIMP nsNewsDownloader::OnStopRunningUrl(nsIURI* url, nsresult exitCode)
 
   return rv;
 }
-
-
 
 nsresult nsNewsDownloader::DownloadNext(PRBool firstTimeP)
 {
@@ -293,32 +294,28 @@ DownloadNewsArticlesToOfflineStore::~DownloadNewsArticlesToOfflineStore()
 {
 }
 
-/*static*/ int DownloadMatchingNewsArticlesToNewsDB::SaveMatchingMessages(nsIMsgWindow *window, nsIMsgFolder *folder, nsIMsgDatabase *newsDB,
+/*static*/ nsresult DownloadMatchingNewsArticlesToNewsDB::SaveMatchingMessages(nsIMsgWindow *window, nsIMsgFolder *folder, nsIMsgDatabase *newsDB,
 							nsISupportsArray *termArray)
 {
-#ifdef HAVE_PORT
-	MSG_OfflineNewsSearchPane *searchPane = new MSG_OfflineNewsSearchPane(context, folder->GetMaster());
+  nsresult rv;
+  NS_ENSURE_ARG(termArray);
+  nsCOMPtr <nsIMsgSearchSession> searchSession = do_CreateInstance(NS_MSGSEARCHSESSION_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
 	DownloadMatchingNewsArticlesToNewsDB *downloadState = 
-		new DownloadMatchingNewsArticlesToNewsDB(pane, folder, newsDB, searchPane, termArray);
+		new DownloadMatchingNewsArticlesToNewsDB(window, folder, newsDB, termArray);
 
-	MSG_SearchAlloc(searchPane);
-	MSG_AddScopeTerm(searchPane, scopeOfflineNewsgroup, folder);
-	for (int i = 0; i < termArray.GetSize(); i++)
+  searchSession->RegisterListener(downloadState);
+  searchSession->AddScopeTerm(nsMsgSearchScope::OfflineNewsgroup, folder);
+  PRUint32 termCount;
+  termArray->Count(&termCount);
+	for (PRUint32 i = 0; i < termCount; i++)
 	{
-		MSG_SearchTerm * term = (MSG_SearchTerm *) termArray.GetAt(i);
-		MSG_AddSearchTerm(searchPane, term->m_attribute, term->m_operator, &term->m_value, term->m_booleanOp, term->m_arbitraryHeader);
+    nsCOMPtr<nsIMsgSearchTerm> term;
+    termArray->QueryElementAt(i, NS_GET_IID(nsIMsgSearchTerm),
+                               (void **)getter_AddRefs(term));
+		searchSession->AppendTerm(term);
 	}
-
-
-	searchPane->SetExitFunc(DownloadNewsArticlesToOfflineStore::DoIt, downloadState);
-	searchPane->SetReportHitFunction(nsNewsDownloader::AddKeyToDownload, downloadState);
-	if (MSG_Search(searchPane) != SearchError_Success)	// we got a search error, but we should try to go on.
-	{
-		XP_ASSERT(PR_FALSE);
-		return 0;	
-	}
-#endif
-	return 0;
+	return searchSession->Search(window);
 }
 
 DownloadMatchingNewsArticlesToNewsDB::DownloadMatchingNewsArticlesToNewsDB
