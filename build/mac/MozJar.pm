@@ -159,9 +159,9 @@ sub safeSaveJarFile($$)
 #
 #-------------------------------------------------------------------------------
 
-sub addToJarFile($$$$$$)
+sub addToJarFile($$$$$$$)
 {
-    my($jar_id, $jar_man_dir, $file_src, $jar_path, $file_jar_path, $jars) = @_;
+    my($jar_id, $jar_man_dir, $file_src, $jar_path, $file_jar_path, $override, $jars) = @_;
 
     # print "addToJarFile with:\n  $jar_man_dir\n  $file_src\n  $jar_path\n  $file_jar_path\n";
 
@@ -206,14 +206,30 @@ sub addToJarFile($$$$$$)
         }
 
         my($old_member) = $zip->memberNamed($file_jar_path);
-        if ($old_member)
-        {
-            print "Replaced $file_jar_path in jar file $jar_id\n";
-            # need to compare mod dates or use the + here
-            $zip->removeMember($old_member);
-        }
         
-        $zip->addMember($member);
+        if ($override)
+        {
+            if ($old_member)
+            {
+                print "Overriding $file_jar_path in jar file $jar_id\n";
+                # need to compare mod dates or use the + here
+                $zip->removeMember($old_member);
+            }
+        
+            $zip->addMember($member);
+        }
+        else
+        {
+            if ($old_member)
+            {
+                #compare dates here?
+                print "$file_jar_path already exists in $jar_id. Use '+' in jar.mn to override. File is not being replaced.\n";
+            }
+            else
+            {
+                $zip->addMember($member);
+            }
+        }
     }
     
     if ($main::options{chrome_files})  # we install raw files too
@@ -454,11 +470,12 @@ sub CreateJarFromManifest($$$)
             setupJarFile($jar_id, $dest_path, $jars);
 
         }
-        elsif ($line =~ /^\s+([\w\d.\-\_\\\/]+)\s*(\([\w\d.\-\_\\\/]+\))?$\s*/)     # jar file entry
+        elsif ($line =~ /^(\+?)\s+([\w\d.\-\_\\\/]+)\s*(\([\w\d.\-\_\\\/]+\))?$\s*/)     # jar file entry
         {
-            my($file_dest) = $1;
-            my($file_src) = $2;
- 
+            my($override) = ($1 eq "+");
+            my($file_dest) = $2;
+            my($file_src) = $3;
+             
             if ($file_src) {  
                 $file_src = substr($file_src, 1, -1);      #strip the ()
             } else {
@@ -476,7 +493,7 @@ sub CreateJarFromManifest($$$)
                     registerChromePackage($jar_file, $file_dest, $dest_path, $jars, $chrome_type, $pkg_name);
                 }
                 
-                addToJarFile($jar_id, $jar_man_dir, $file_src, $full_jar_path, $file_dest, $jars);
+                addToJarFile($jar_id, $jar_man_dir, $file_src, $full_jar_path, $file_dest, $override, $jars);
             }
             else
             {
