@@ -126,13 +126,17 @@ pref("mail.addr_book.mapit_url.format", "chrome://messenger-region/locale/region
 //
 // note, changing this might require a change to SearchNameOrEmail.label
 // in messenger.dtd
-pref("mail.addr_book.quicksearchquery.format","?(or(PrimaryEmail,c,@V)(DisplayName,c,@V)(FirstName,c,@V)(LastName,c,@V))");
+//
+// LOCALIZATION NOTE: 
+// PhoneticFirstName and PhoneticLastName can be removed for non Japanese build.
+//
+pref("mail.addr_book.quicksearchquery.format","?(or(PrimaryEmail,c,@V)(DisplayName,c,@V)(FirstName,c,@V)(LastName,c,@V)(PhoneticFirstName,c,@V)(PhoneticLastName,c,@V))");
 
 // values for "mail.addr_book.lastnamefirst" are:
 //0=displayname, 1=lastname first, 2=firstname first
 pref("mail.addr_book.lastnamefirst", 0); 
 pref("mail.addr_book.displayName.autoGeneration", true);
-pref("mail.addr_book.displayName.lastnamefirst", false); // generate display names in last first order
+pref("mail.addr_book.displayName.lastnamefirst", true); // generate display names in last first order
 pref("mail.attach_vcard",                   false);
 pref("mail.html_compose",                   true);
 pref("mail.compose.other.header",	    "");

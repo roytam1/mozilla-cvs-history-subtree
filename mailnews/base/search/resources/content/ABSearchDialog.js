@@ -193,7 +193,11 @@ function onSearch()
      switch (searchTerm.attrib) {
        case nsMsgSearchAttrib.Name:
          // when doing an "and" search, we'll use the first one
-         attrs = ["DisplayName","FirstName","LastName"];
+         //
+         // LOCALIZATION NOTE: 
+         // PhoneticFirstName and PhoneticLastName can be removed for non Japanese build.
+         //
+         attrs = ["DisplayName","FirstName","LastName","PhoneticFirstName","PhoneticLastName"];
          break;
        case nsMsgSearchAttrib.Email:
          attrs = ["PrimaryEmail"];
