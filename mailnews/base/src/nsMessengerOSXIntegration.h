@@ -56,6 +56,7 @@ public:
 private:
   nsCOMPtr<nsISupportsArray> mFoldersWithNewMail;  // keep track of all the root folders with pending new mail
   nsCOMPtr<nsIAtom> mBiffStateAtom;
+  PRInt32 CountNewMessages();
   nsresult OnAlertFinished(const PRUnichar * aAlertCookie);
 
   PRPackedBool mBiffIconVisible;

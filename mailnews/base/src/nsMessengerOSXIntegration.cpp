@@ -150,6 +150,37 @@ nsMessengerOSXIntegration::OnItemRemoved(nsISupports *, nsISupports *, const cha
   return NS_OK;
 }
 
+PRInt32 nsMessengerOSXIntegration::CountNewMessages()
+{
+
+  // iterate over all the folders in mFoldersWithNewMail
+  nsCOMPtr<nsISupports> supports;
+  nsCOMPtr<nsIMsgFolder> folder;
+  nsCOMPtr<nsIWeakReference> weakReference;
+  PRInt32 numNewMessages = 0;
+  PRInt32 totalNewMessages = 0;
+  
+  PRUint32 count = 0;
+  mFoldersWithNewMail->Count(&count);
+
+  for (PRUint32 index = 0; index < count; index++)
+  {
+    supports = getter_AddRefs(mFoldersWithNewMail->ElementAt(index));
+    weakReference = do_QueryInterface(supports);
+    folder = do_QueryReferent(weakReference);
+    if (folder)
+    {
+
+      numNewMessages = 0;   
+      folder->GetNumNewMessages(PR_TRUE, &numNewMessages);
+      totalNewMessages += numNewMessages;
+    } // if we got a folder
+  } // for each folder
+
+  return totalNewMessages;
+  
+}
+
 nsresult nsMessengerOSXIntegration::OnAlertFinished(const PRUnichar * aAlertCookie)
 {
   nsresult rv = NS_OK;
@@ -182,32 +213,124 @@ nsresult nsMessengerOSXIntegration::OnAlertFinished(const PRUnichar * aAlertCook
     
     // use OverlayApplicationDockTileImage
     // -- you'll have to pass it a CGImage, and somehow we have to
-    // create the CGImage with the numbers. tricky.
+    // create the CGImage with the numbers. tricky    
+    PRInt32 totalNewMessages = CountNewMessages();
+    CGContextRef context = ::BeginCGContextForApplicationDockTile();
     
-    CFBundleRef appBundle = CFBundleGetMainBundle();
-    CGDataProviderRef   provider;
-    if (appBundle)
-    {
-      CFStringRef fileName = CFStringCreateWithCString( NULL, kBiffBadgeIcon, kCFStringEncodingASCII );
-      if (fileName)
-      {
-        CFURLRef url = CFBundleCopyResourceURL( appBundle, fileName, NULL, NULL );
-        provider = CGDataProviderCreateWithURL( url );
+    // Draw a circle.
 
-        CGImageRef iOverlayIcon = NULL;
+    ::CGContextBeginPath(context);
+    ::CGContextAddArc(context, 95.0, 95.0, 25.0, 0.0, 2 * M_PI, true);
+    ::CGContextClosePath(context);
 
-        iOverlayIcon = CGImageCreateWithPNGDataProvider( provider, NULL, false,  kCGRenderingIntentDefault );
-        if (iOverlayIcon)
-        {
-          OverlayApplicationDockTileImage(iOverlayIcon);
-          mBiffIconVisible = PR_TRUE;
+    // use #2fc600 for the color.
+    ::CGContextSetRGBFillColor(context, 0.184, 0.776, 0.0, 1);
+
+    //::CGContextSetRGBFillColor(context, 1.0, 1.0, 1.0, 0.7);
+    ::CGContextFillPath(context);
+
+    // Draw the number.
+    nsAutoString total;
+    total.AppendInt(totalNewMessages);
+
+    // Use a system font (kThemeUtilityWindowTitleFont)
+    ScriptCode sysScript = ::GetScriptManagerVariable(smSysScript);
+
+    Str255 fontName;
+    SInt16 fontSize;
+    Style fontStyle;
+    ::GetThemeFont(kThemeSmallEmphasizedSystemFont, sysScript, fontName,
+                   &fontSize, &fontStyle);
+
+    FMFontFamily family = ::FMGetFontFamilyFromName(fontName);
+    FMFont fmFont;
+    OSStatus err = ::FMGetFontFromFontFamilyInstance(family, fontStyle, &fmFont,
+                                                     nsnull);
+    if (err != noErr) {
+        NS_WARNING("FMGetFontFromFontFamilyInstance failed");
+        ::EndCGContextForApplicationDockTile(context);
+        return NS_ERROR_FAILURE;
+    }
+
+    ATSUStyle style;
+    err = ::ATSUCreateStyle(&style);
+    if (err != noErr) {
+        NS_WARNING("ATSUCreateStyle failed");
+        ::EndCGContextForApplicationDockTile(context);
+
+        return NS_ERROR_FAILURE;
         }
         
-        CGDataProviderRelease( provider );
-        CFRelease( url );
-        CFRelease(fileName);
+    Fixed size = Long2Fix(24);
+    RGBColor black = { 0x0, 0x0, 0x0 };
+    RGBColor white = { 0xFFFF, 0xFFFF, 0xFFFF };
+    
+    ATSUAttributeTag tags[3] = { kATSUFontTag, kATSUSizeTag, kATSUColorTag };
+    ByteCount valueSizes[3] = { sizeof(ATSUFontID), sizeof(Fixed),
+                                sizeof(RGBColor) };
+    ATSUAttributeValuePtr values[3] = { &fmFont, &size, &white };
+
+    err = ::ATSUSetAttributes(style, 3, tags, valueSizes, values);
+    if (err != noErr) {
+        NS_WARNING("ATSUSetAttributes failed");
+        ::ATSUDisposeStyle(style);
+        ::EndCGContextForApplicationDockTile(context);
+
+        return NS_ERROR_FAILURE;
       }
+
+    UniCharCount runLengths = kATSUToTextEnd;
+    ATSUTextLayout textLayout;
+    err = ::ATSUCreateTextLayoutWithTextPtr(total.get(),
+                                            kATSUFromTextBeginning,
+                                            kATSUToTextEnd, total.Length(), 1,
+                                            &runLengths, &style, &textLayout);
+    if (err != noErr) {
+        NS_WARNING("ATSUCreateTextLayoutWithTextPtr failed");
+        ::ATSUDisposeStyle(style);
+        ::EndCGContextForApplicationDockTile(context);
+
+        return NS_ERROR_FAILURE;
     }
+
+    ATSUAttributeTag layoutTags[1] = { kATSUCGContextTag };
+    ByteCount layoutValueSizes[1] = { sizeof(CGContextRef) };
+    ATSUAttributeValuePtr layoutValues[1] = { &context };
+
+    err = ::ATSUSetLayoutControls(textLayout, 1, layoutTags, layoutValueSizes,
+                                  layoutValues);
+    if (err != noErr) {
+        NS_WARNING("ATSUSetLayoutControls failed");
+        ::ATSUDisposeStyle(style);
+        ::EndCGContextForApplicationDockTile(context);
+
+        return NS_ERROR_FAILURE;
+    }
+
+    Rect boundingBox;
+    err = ::ATSUMeasureTextImage(textLayout, kATSUFromTextBeginning,
+                                 kATSUToTextEnd, Long2Fix(0), Long2Fix(0),
+                                 &boundingBox);
+    if (err != noErr) {
+        NS_WARNING("ATSUMeasureTextImage failed");
+        ::ATSUDisposeStyle(style);
+        ::EndCGContextForApplicationDockTile(context);
+
+        return NS_ERROR_FAILURE;
+    }
+
+    // Center text inside circle
+    err = ::ATSUDrawText(textLayout, kATSUFromTextBeginning, kATSUToTextEnd,
+                         Long2Fix(90 - (boundingBox.right - boundingBox.left) / 2),
+                         Long2Fix(95 - (boundingBox.bottom - boundingBox.top) / 2));
+
+    ::ATSUDisposeStyle(style);
+    ::ATSUDisposeTextLayout(textLayout);
+
+    ::CGContextFlush(context);
+
+    ::EndCGContextForApplicationDockTile(context);
+    mBiffIconVisible = PR_TRUE;
   }
 
   mSuppressBiffIcon = PR_FALSE;
@@ -220,7 +343,7 @@ nsMessengerOSXIntegration::OnItemPropertyFlagChanged(nsISupports *item, nsIAtom 
 {
   nsresult rv = NS_OK;
    
-  // if we got new mail show a icon in the system tray
+  // if we got new mail bounce the Dock icon and/or apply badge to Dock icon
 	if (mBiffStateAtom == property && mFoldersWithNewMail)
 	{
     nsCOMPtr<nsIMsgFolder> folder = do_QueryInterface(item);
