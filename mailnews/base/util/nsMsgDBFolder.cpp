@@ -623,7 +623,7 @@ NS_IMETHODIMP nsMsgDBFolder::GetOfflineFileStream(nsMsgKey msgKey, PRUint32 *off
     if (NS_SUCCEEDED(rv))
     {
 
-      nsresult rv = GetDatabase(nsnull);
+      rv = GetDatabase(nsnull);
       NS_ENSURE_SUCCESS(rv, NS_OK);
         nsCOMPtr<nsIMsgDBHdr> hdr;
         rv = mDatabase->GetMsgHdrForKey(msgKey, getter_AddRefs(hdr));
