@@ -145,6 +145,7 @@ public:
   const PRUnichar* GetID() { return mID.GetUnicode(); };
 
   PRBool IsPrimary() { return mIsPrimaryCol; };
+  PRBool IsCycler() { return mIsCyclerCol; };
 
   PRInt32 GetCropStyle() { return mCropStyle; };
 };

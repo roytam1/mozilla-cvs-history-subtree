@@ -867,11 +867,14 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int aRowIndex,
 
   // XXX Now paint the various images.
 
-  // Now paint our text.
-  nsRect textRect(currX, cellRect.y, remainingWidth, cellRect.height);
-  nsRect dirtyRect;
-  if (dirtyRect.IntersectRect(aDirtyRect, textRect))
-    PaintText(aRowIndex, aColumn, textRect, aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  // Now paint our text, but only if we aren't a cycler column.
+  if (!aColumn->IsCycler()) {
+    nsRect textRect(currX, cellRect.y, remainingWidth, cellRect.height);
+    nsRect dirtyRect;
+    if (dirtyRect.IntersectRect(aDirtyRect, textRect))
+      PaintText(aRowIndex, aColumn, textRect, aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  }
+
   return NS_OK;
 }
 
@@ -888,6 +891,9 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintText(int aRowIndex,
   mView->GetCellText(aRowIndex, aColumn->GetID(), getter_Copies(text));
 
   nsAutoString realText(text);
+
+  if (realText.Length() == 0)
+    return NS_OK; // Don't paint an empty string. XXX What about background/borders? Still paint?
 
   // Resolve style for the text.  It contains all the info we need to lay ourselves
   // out and to paint.
