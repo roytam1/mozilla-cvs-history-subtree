@@ -38,20 +38,16 @@
 
 <?xml-stylesheet href="chrome://messenger/skin/" type="text/css"?> 
 <?xml-stylesheet href="chrome://messenger/skin/folderMenus.css" type="text/css"?>
-
+ 
 <?xul-overlay href="chrome://messenger/content/msgFolderPickerOverlay.xul"?>
 
 <!DOCTYPE window SYSTEM "chrome://messenger-junkmail/locale/JunkMailDialog.dtd">
-
 
 <page id="JunkMailPane"
       xmlns:nc="http://home.netscape.com/NC-rdf#"
       xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
       title="&window.title;"
-      onload="var substObj = new Object();
-                  substObj['serverkey'] = 'foo';
-                  dump('ook ook ook ook\n');
-                  parent.initPanel(null, substObj);"
+      onload="return onLoad();"
       ondialogaccept="return onOk();"
       ondialogcancel="return onCancel();"
       ondialoghelp="return doHelpButton();"
@@ -75,7 +71,7 @@
        (as opposed to wsm_persist, which is slow) -->
   <script type="application/x-javascript">
   <![CDATA[
-    var _elementIDs = ["useJunkFolder"];
+    var _elementIDs = ["useJunkFolder", "threshhold"];
   ]]>
   </script>  
 
@@ -87,7 +83,11 @@
 
   <spacer flex="1"/>
 
-  <radiogroup id="threshhold" align="center">
+  <!-- need to explicitly use a preftype of "string", and then convert 
+       to float later, since these are not integers-->
+  <radiogroup id="threshhold" align="center" preftype="string"
+	      prefstring="mail.%serverkey%.junkmail.threshhold"
+	      prefdefval="255.0">
       <hbox>
           <radio value="255.0" label="&off.label;"/>
           <radio value="6.0" label="&lowest.label;"/>
@@ -100,9 +100,12 @@
 
   <spacer flex="2"/>
 
+  <!-- XXX this stuff should be greyed out when the threshhold is set to
+       off (255.0) -->
   <hbox>
       <checkbox id="useJunkFolder" label="&useJunkFolder.label;"
-		prefstring="mail.%serverkey%.junkmail.move"/>
+		prefstring="mail.%serverkey%.junkmail.move"
+		prefdefval="true"/>
   </hbox>
 
   <spacer flex="6"/>

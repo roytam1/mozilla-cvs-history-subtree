@@ -18,6 +18,11 @@
  * Rights Reserved.
  */
 
+function onload()
+{
+    parent.initPanel(null, null);
+}
+
 function onOk()
 {
     window.close();
@@ -30,5 +35,6 @@ function onCancel()
 
 function doHelpButton()
 {
-  openHelp("spam-filters");
+    openHelp("spam-filters");
 }
+

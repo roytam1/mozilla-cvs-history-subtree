@@ -18,9 +18,14 @@
  * Rights Reserved.
  */
 
-var gRdfService;
-var gSelectedServer;
+var gAccountManager = Components.classes
+                      ["@mozilla.org/messenger/account-manager;1"].
+                      getService(Components.interfaces.nsIMsgAccountManager);
 
+var gRDFService = Components.classes["@mozilla.org/rdf/rdf-service;1"]
+                  .getService(Components.interfaces.nsIRDFService);
+
+var gSelectedServer;
 var hPrefWindow = null;
 
 function Startup()
@@ -32,9 +37,6 @@ function Startup()
 
     // If this call worked, we could center the window here:
     // centerWindowOnScreen();
-
-    gRdfService = Components.classes["@mozilla.org/rdf/rdf-service;1"]
-        .getService(Components.interfaces.nsIRDFService);
 
     // XXX why do we care about this?
     //
@@ -59,8 +61,10 @@ function Startup()
         // tell the nsPrefsWindow code to use the data associated with this
         // server (the server URI is used as the page tag)
         //
-        document.getElementById("junkMailFrame") 
-            .setAttribute("tag", gSelectedServer); 
+        var frame = document.getElementById("junkMailFrame");
+
+        frame.setAttribute("tag", gSelectedServer); 
+        frame.substObj = createSubstObj(gSelectedServer);
     }
 
     hPrefWindow.init();
@@ -83,6 +87,23 @@ function onServerClick(event)
     hPrefWindow.switchPage(
         "chrome://messenger-junkmail/content/JunkMailPane.xul", 
         event.target.id);
+}
+
+/**
+ * Create a substitution object for the appropriate account from a 
+ * given server URI.
+ * 
+ * @return  a JS object with properties for %percent% substitutions.
+ *          In this case, "%serverkey%" will be set.
+ */
+function createSubstObj(aURI)
+{
+    var account = getAccountFromServerId(aURI);
+
+    var substObj = new Object();
+    substObj['serverkey'] = account.incomingServer.key;
+
+    return substObj;
 }
 
 /**
@@ -139,11 +160,7 @@ function getServerThatCanHaveFilters()
 {
     var firstItem = null;
 
-    var accountManager
-        = Components.classes["@mozilla.org/messenger/account-manager;1"].
-            getService(Components.interfaces.nsIMsgAccountManager);
-
-    var defaultAccount = accountManager.defaultAccount;
+    var defaultAccount = gAccountManager.defaultAccount;
     var defaultIncomingServer = defaultAccount.incomingServer;
 
     // check to see if default server can have filters
@@ -154,7 +171,7 @@ function getServerThatCanHaveFilters()
     // that can have filters
     else
     {
-        var allServers = accountManager.allServers;
+        var allServers = gAccountManager.allServers;
         var numServers = allServers.Count();
         var index = 0;
         for (index = 0; index < numServers; index++)
@@ -173,7 +190,25 @@ function getServerThatCanHaveFilters()
     return firstItem;
 }
 
+/**
+ * Get the account associated with this serverId.
+ * 
+ * @return  nsIMsgAccount object
+ *
+ */
+function getAccountFromServerId(aServerURI) {
+
+    // get the nsIMsgIncomingServer object for this server
+    // 
+    var incomingServer = gRDFService.GetResource(aServerURI)
+        .QueryInterface(Components.interfaces.nsIMsgFolder).server;
+
+    // and use it to look up the nsIMsgAccount
+    //
+    return gAccountManager.FindAccountForServer(incomingServer);
+}
+
 function doHelpButton()
 {
-  openHelp("spam-filters");
+    openHelp("spam-filters");
 }
