@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 /*
@@ -43,7 +27,7 @@
 #include "prmem.h"
 #include "prbit.h"
 #include "prlog.h"
-#include "prlock.h"
+#include "prmon.h"
 #include "prinit.h"
 
 static PLArena *arena_freelist;
@@ -58,7 +42,7 @@ static PLArenaStats *arena_stats_list;
 
 #define PL_ARENA_DEFAULT_ALIGN  sizeof(double)
 
-static PRLock    *arenaLock;
+static PRMonitor    *arenaLock;
 static PRCallOnceType once;
 
 /*
@@ -78,7 +62,7 @@ static PRCallOnceType once;
 static PRStatus InitializeArenas( void )
 {
     PR_ASSERT( arenaLock == NULL );
-    arenaLock = PR_NewLock();
+    arenaLock = PR_NewMonitor();
     if ( arenaLock == NULL )
         return PR_FAILURE;
     else
@@ -90,13 +74,13 @@ static PRStatus LockArena( void )
     PRStatus rc = PR_CallOnce( &once, InitializeArenas );
 
     if ( PR_FAILURE != rc )
-        PR_Lock( arenaLock );
+        PR_EnterMonitor( arenaLock );
     return(rc);
 } /* end LockArena() */
 
 static void UnlockArena( void )
 {
-    PR_Unlock( arenaLock );
+    PR_ExitMonitor( arenaLock );
     return;
 } /* end UnlockArena() */
 
@@ -114,7 +98,7 @@ PR_IMPLEMENT(void) PL_InitArenaPool(
     pool->first.base = pool->first.avail = pool->first.limit =
         (PRUword)PL_ARENA_ALIGN(pool, &pool->first + 1);
     pool->current = &pool->first;
-    pool->arenasize = size;                                  
+    pool->arenasize = size;
 #ifdef PL_ARENAMETER
     memset(&pool->stats, 0, sizeof pool->stats);
     pool->stats.name = strdup(name);
@@ -123,112 +107,56 @@ PR_IMPLEMENT(void) PL_InitArenaPool(
 #endif
 }
 
-
-/*
-** PL_ArenaAllocate() -- allocate space from an arena pool
-** 
-** Description: PL_ArenaAllocate() allocates space from an arena
-** pool. 
-**
-** First, try to satisfy the request from arenas starting at
-** pool->current.
-**
-** If there is not enough space in the arena pool->current, try
-** to claim an arena, on a first fit basis, from the global
-** freelist (arena_freelist).
-** 
-** If no arena in arena_freelist is suitable, then try to
-** allocate a new arena from the heap.
-**
-** Returns: pointer to allocated space or NULL
-** 
-** Notes: The original implementation had some difficult to
-** solve bugs; the code was difficult to read. Sometimes it's
-** just easier to rewrite it. I did that. larryh.
-**
-** See also: bugzilla: 45343.
-**
-*/
-
 PR_IMPLEMENT(void *) PL_ArenaAllocate(PLArenaPool *pool, PRUint32 nb)
 {
-    PLArena *a;   
-    char *rp;     /* returned pointer */
+    PLArena **ap, *a, *b;
+    PRUint32 sz;
+    void *p;
 
     PR_ASSERT((nb & pool->mask) == 0);
-    
-    nb = (PRUword)PL_ARENA_ALIGN(pool, nb); /* force alignment */
-
-    /* attempt to allocate from arenas at pool->current */
-    {
-        a = pool->current;
-        do {
-            if ( a->avail +nb <= a->limit )  {
-                pool->current = a;
-                rp = (void *)a->avail;
-                a->avail += nb;
-                return rp;
-            }
-        } while( NULL != (a = a->next) );
-    }
-
-    /* attempt to allocate from arena_freelist */
-    {
-        PLArena *p; /* previous pointer, for unlinking from freelist */
-
-        /* lock the arena_freelist. Make access to the freelist MT-Safe */
-        if ( PR_FAILURE == LockArena())
-            return(0);
-
-        for ( a = p = arena_freelist; a != NULL ; p = a, a = a->next ) {
-            if ( a->base +nb <= a->limit )  {
-                if ( p == arena_freelist )
-                    arena_freelist = a->next;
-                else
-                    p->next = a->next;
-                UnlockArena();
-                a->avail = a->base;
-                rp = (void *)a->avail;
-                a->avail += nb;
-                /* the newly allocated arena is linked after pool->current 
-                *  and becomes pool->current */
-                a->next = pool->current->next;
-                pool->current->next = a;
-                pool->current = a;
-                if ( NULL == pool->first.next )
-                    pool->first.next = a;
-                return(rp);
-            }
+#if defined(WIN16)
+    if (nb >= 60000U)
+        return 0;
+#endif  /* WIN16 */
+    if ( PR_FAILURE == LockArena())
+        return(0);
+    ap = &arena_freelist;
+    for (a = pool->current; a->avail + nb > a->limit; pool->current = a) {
+        if (a->next) {                          /* move to next arena */
+            a = a->next;
+            continue;
         }
-        UnlockArena();
-    }
-
-    /* attempt to allocate from the heap */ 
-    {  
-        PRUint32 sz = PR_MAX(pool->arenasize, nb);
-        sz += (PRUword)PL_ARENA_ALIGN(pool, sizeof(*a)); /* force alignment */
-        a = (PLArena*)PR_MALLOC(sz);
-        if ( NULL != a )  {
-            a->limit = (PRUword)a + sz;
-            a->base = a->avail = (PRUword)PL_ARENA_ALIGN(pool, a + 1);
-            rp = (void *)a->avail;
-            a->avail += nb;
-            /* the newly allocated arena is linked after pool->current 
-            *  and becomes pool->current */
-            a->next = pool->current->next;
-            pool->current->next = a;
-            pool->current = a;
-            if ( NULL == pool->first.next )
-                pool->first.next = a;
-            PL_COUNT_ARENA(pool,++);
-            COUNT(pool, nmallocs);
-            return(rp);
+        while ((b = *ap) != 0) {                /* reclaim a free arena */
+            if (b->limit - b->base == pool->arenasize) {
+                *ap = b->next;
+                b->next = 0;
+                a = a->next = b;
+                COUNT(pool, nreclaims);
+                goto claim;
+            }
+            ap = &b->next;
         }
+        sz = PR_MAX(pool->arenasize, nb);        /* allocate a new arena */
+        sz += sizeof *a + pool->mask;           /* header and alignment slop */
+        b = (PLArena*)PR_MALLOC(sz);
+        if (!b)
+        {
+            UnlockArena();
+            return 0;
+        }
+        a = a->next = b;
+        a->next = 0;
+        a->limit = (PRUword)a + sz;
+        PL_COUNT_ARENA(pool,++);
+        COUNT(pool, nmallocs);
+    claim:
+        a->base = a->avail = (PRUword)PL_ARENA_ALIGN(pool, a + 1);
     }
-
-    /* we got to here, and there's no memory to allocate */
-    return(NULL);
-} /* --- end PL_ArenaAllocate() --- */
+    UnlockArena();
+    p = (void *)a->avail;
+    a->avail += nb;
+    return p;
+}
 
 PR_IMPLEMENT(void *) PL_ArenaGrow(
     PLArenaPool *pool, void *p, PRUint32 size, PRUint32 incr)
@@ -292,7 +220,7 @@ PR_IMPLEMENT(void) PL_ArenaRelease(PLArenaPool *pool, char *mark)
     for (a = pool->first.next; a; a = a->next) {
         if (PR_UPTRDIFF(mark, a->base) < PR_UPTRDIFF(a->avail, a->base)) {
             a->avail = (PRUword)PL_ARENA_ALIGN(pool, mark);
-            FreeArenaList(pool, a, PR_FALSE);
+            FreeArenaList(pool, a, PR_TRUE);
             return;
         }
     }

@@ -169,6 +169,7 @@ extern const SEC_ASN1Template *
 SEC_ASN1GetSubtemplate (const SEC_ASN1Template *inTemplate, void *thing,
 			PRBool encoding);
 
+SEC_END_PROTOS
 /************************************************************************/
 
 /*
@@ -277,5 +278,4 @@ SEC_ASN1_CHOOSER_DECLARE(SEC_PointerToOctetStringTemplate)
 
 SEC_ASN1_CHOOSER_DECLARE(SEC_SetOfAnyTemplate)
 
-SEC_END_PROTOS
 #endif /* _SECASN1_H_ */
