@@ -168,6 +168,15 @@ do_decrement:
 }
 
 NS_IMETHODIMP
+nsXPCWrappedJS::GetWeakReference(nsIWeakReference** aInstancePtr)
+{
+    if(mRoot != this)
+        return mRoot->GetWeakReference(aInstancePtr);
+
+    return nsSupportsWeakReference::GetWeakReference(aInstancePtr);
+}
+
+NS_IMETHODIMP
 nsXPCWrappedJS::GetJSObject(JSObject** aJSObj)
 {
     NS_PRECONDITION(aJSObj, "bad param");

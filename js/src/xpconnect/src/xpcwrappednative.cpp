@@ -539,6 +539,9 @@ XPCWrappedNative::Release(void)
 void
 XPCWrappedNative::FlatJSObjectFinalized(JSContext *cx, JSObject *obj)
 {
+    if(!IsValid())
+        return;
+
     // Iterate the tearoffs and null out each of their JSObject's privates.
     // This will keep them from trying to access their pointers to the
     // dying tearoff object. We can safely assume that those remaining 
