@@ -149,7 +149,7 @@ InstallTriggerGlobalUpdateEnabled(JSContext *cx, JSObject *obj, uintN argc, jsva
 
   PRBool nativeRet = PR_FALSE;
   if (globalObject)
-    nativeThis->UpdateEnabled(globalObject, &nativeRet);
+    nativeThis->UpdateEnabled(globalObject, XPI_GLOBAL, &nativeRet);
 
   *rval = BOOLEAN_TO_JSVAL(nativeRet);
   return JS_TRUE;
@@ -176,7 +176,7 @@ InstallTriggerGlobalInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
       globalObject = scriptContext->GetGlobalObject();
 
   PRBool enabled = PR_FALSE;
-  nativeThis->UpdateEnabled(globalObject, &enabled);
+  nativeThis->UpdateEnabled(globalObject, XPI_WHITELIST, &enabled);
   if (!enabled || !globalObject) {
       nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
       if (os) {
@@ -321,7 +321,7 @@ PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalInstallChrome(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)JS_GetPrivate(cx, obj);
-  uint32       chromeType;
+  uint32       chromeType = NOT_CHROME;
   nsAutoString sourceURL;
   nsAutoString name;
 
@@ -331,6 +331,9 @@ InstallTriggerGlobalInstallChrome(JSContext *cx, JSObject *obj, uintN argc, jsva
     return JS_TRUE;
   }
 
+  // get chromeType first, the update enabled check for skins skips whitelisting
+  if (argc >=1)
+      JS_ValueToECMAUint32(cx, argv[0], &chromeType);
 
   // make sure XPInstall is enabled, return if not
   nsIScriptGlobalObject *globalObject = nsnull;
@@ -339,7 +342,8 @@ InstallTriggerGlobalInstallChrome(JSContext *cx, JSObject *obj, uintN argc, jsva
       globalObject = scriptContext->GetGlobalObject();
 
   PRBool enabled = PR_FALSE;
-  nativeThis->UpdateEnabled(globalObject, &enabled);
+  PRBool useWhitelist = ( chromeType != CHROME_SKIN );
+  nativeThis->UpdateEnabled(globalObject, useWhitelist, &enabled);
   if (!enabled || !globalObject) {
       nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
       if (os) {
@@ -368,7 +372,6 @@ InstallTriggerGlobalInstallChrome(JSContext *cx, JSObject *obj, uintN argc, jsva
 
   if ( argc >= 3 )
   {
-    JS_ValueToECMAUint32(cx, argv[0], &chromeType);
     ConvertJSValToStr(sourceURL, cx, argv[1]);
     ConvertJSValToStr(name, cx, argv[2]);
 
@@ -433,7 +436,7 @@ InstallTriggerGlobalStartSoftwareUpdate(JSContext *cx, JSObject *obj, uintN argc
       globalObject = scriptContext->GetGlobalObject();
 
   PRBool enabled = PR_FALSE;
-  nativeThis->UpdateEnabled(globalObject, &enabled);
+  nativeThis->UpdateEnabled(globalObject, XPI_WHITELIST, &enabled);
   if (!enabled || !globalObject)
       return JS_TRUE;
 
@@ -526,7 +529,7 @@ InstallTriggerGlobalCompareVersion(JSContext *cx, JSObject *obj, uintN argc, jsv
       globalObject = scriptContext->GetGlobalObject();
 
   PRBool enabled = PR_FALSE;
-  nativeThis->UpdateEnabled(globalObject, &enabled);
+  nativeThis->UpdateEnabled(globalObject, XPI_WHITELIST, &enabled);
   if (!enabled)
       return JS_TRUE;
 
@@ -624,7 +627,7 @@ InstallTriggerGlobalGetVersion(JSContext *cx, JSObject *obj, uintN argc, jsval *
       globalObject = scriptContext->GetGlobalObject();
 
   PRBool enabled = PR_FALSE;
-  nativeThis->UpdateEnabled(globalObject, &enabled);
+  nativeThis->UpdateEnabled(globalObject, XPI_WHITELIST, &enabled);
   if (!enabled)
       return JS_TRUE;
 
