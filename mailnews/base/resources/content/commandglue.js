@@ -297,6 +297,8 @@ function RerootFolder(uri, newFolder, isThreaded, sortID, sortDirection, viewTyp
 
   var column = FindThreadPaneColumnBySortResource(sortID);
 
+  CreateDBView(newFolder, isThreaded, viewType);
+
   if(column)
 	SortThreadPane(column, sortID, "http://home.netscape.com/NC-rdf#Date", false, sortDirection, false);
   else
@@ -316,7 +318,6 @@ function RerootFolder(uri, newFolder, isThreaded, sortID, sortDirection, viewTyp
     msgNavigationService.EnsureDocumentIsLoaded(document);
 
   UpdateStatusMessageCounts(newFolder);
- 
 }
 
 function SetSentFolderColumns(isSentFolder)
@@ -539,7 +540,79 @@ function SortThreadPane(column, sortKey, secondarySortKey, toggleCurrentDirectio
     }
 
 	RestoreThreadPaneSelection(selection);
+
+    SortDBView(sortKey,direction);
 	return result;
+}
+
+var nsMsgViewSortType = Components.interfaces.nsMsgViewSortType;
+var nsMsgViewSortOrder = Components.interfaces.nsMsgViewSortOrder;
+var gDBView;
+
+function CreateDBView(msgFolder, isThreaded, viewType)
+{
+    dump("XXX CreateDBView(" + msgFolder + "," + isThreaded + "," + viewType +")\n");
+    var count = new Object;
+    gDBView = Components.classes["@mozilla.org/messenger/msgdbview;1?type=threaded"].createInstance(Components.interfaces.nsIMsgDBView);
+    gDBView.open(msgFolder, nsMsgViewSortType.bySubject, count);
+    dump("XXX count = " + count.value + "\n");
+}
+
+function SortDBView(sortKey, direction)
+{
+    dump("XXX SortDBView(" + sortKey + "," + direction + ")\n");
+
+    var sortOrder;
+    if (direction == "ascending") {
+        sortOrder = nsMsgViewSortOrder.ascending;
+    }
+    else {
+        sortOrder = nsMsgViewSortOrder.descending;
+    }
+    switch (sortKey) {
+        case 'http://home.netscape.com/NC-rdf#Date':
+            gDBView.sort(nsMsgViewSortType.byDate,sortOrder);
+            break;
+        case 'http://home.netscape.com/NC-rdf#Subject':
+            gDBView.sort(nsMsgViewSortType.bySubject,sortOrder);
+            break;
+        case 'http://home.netscape.com/NC-rdf#Sender':
+            gDBView.sort(nsMsgViewSortType.byAuthor,sortOrder);
+            break;
+        case 'http://home.netscape.com/NC-rdf#ID':
+            gDBView.sort(nsMsgViewSortType.byId,sortOrder);
+            break;
+        case 'http://home.netscape.com/NC-rdf#Thread':
+            gDBView.sort(nsMsgViewSortType.byThread,sortOrder);
+            break;
+        case 'http://home.netscape.com/NC-rdf#Priority':
+            gDBView.sort(nsMsgViewSortType.byPriority,sortOrder);
+            break;
+        case 'http://home.netscape.com/NC-rdf#Status':
+            gDBView.sort(nsMsgViewSortType.byStatus,sortOrder);
+            break;
+        case 'http://home.netscape.com/NC-rdf#Size':
+            gDBView.sort(nsMsgViewSortType.bySize,sortOrder);
+            break;
+        case 'http://home.netscape.com/NC-rdf#Flagged':
+            gDBView.sort(nsMsgViewSortType.byFlagged,sortOrder);
+            break;
+        case 'http://home.netscape.com/NC-rdf#IsUnread':
+            gDBView.sort(nsMsgViewSortType.byUnread,sortOrder);
+            break;
+        case 'http://home.netscape.com/NC-rdf#Recipient':
+            gDBView.sort(nsMsgViewSortType.byRecipient,sortOrder);
+            break;
+        default:
+            dump("unexpected\n");
+            break;
+    }
+}
+
+function DumpView()
+{
+    dump("XXX DumpView()\n");
+    gDBView.dumpView();
 }
 
 //------------------------------------------------------------

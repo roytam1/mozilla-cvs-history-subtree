@@ -1166,8 +1166,9 @@ Rights Reserved.
                   crop="right" observes="cmd_print" tooltip="aTooltip" buttontooltiptext="&printButton.tooltip;">  
      	  <menupopup id="printMenu">
     			<menuitem value="&printCmd.label;" accesskey="&printCmd.accesskey;" default="true"/>
-        </menupopup>
+          </menupopup>
   	  </menubutton>
+			<button class="button-toolbar-2 top" id="button-next" value="Dump View" oncommand="DumpView()"/>
 			<button class="button-toolbar-2 top" id="button-stop" value="&stopButton.label;"  tooltip="aTooltip" tooltiptext="&stopButton.tooltip;" oncommand="MsgStop();"/>
 			<spring flex="1"/>
             <box id="throbber-box" autostretch="never">
