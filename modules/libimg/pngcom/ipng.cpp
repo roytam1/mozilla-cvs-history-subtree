@@ -51,7 +51,7 @@ static void PR_CALLBACK row_callback(png_structp png_ptr, png_bytep new_row,
 static void PR_CALLBACK end_callback(png_structp png_ptr, png_infop info);
 static void PR_CALLBACK il_png_error_handler(png_structp png_ptr, png_const_charp msg);
 
-#ifdef XP_PC
+#if defined(XP_PC) || defined(XP_MAC)
 int il_debug;
 PRLogModuleInfo *il_log_module = NULL;
 #else

@@ -77,7 +77,7 @@ mailing address.
 #define HOWMANY(x, r)     (((x) + ((r) - 1)) / (r))
 #define ROUNDUP(x, r)     (HOWMANY(x, r) * (r))
 
-#ifdef XP_PC
+#if defined(XP_PC) || defined(XP_MAC)
 int il_debug;
 PRLogModuleInfo *il_log_module = NULL;
 #else
