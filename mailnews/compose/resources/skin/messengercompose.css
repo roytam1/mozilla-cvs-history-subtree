@@ -60,3 +60,31 @@ tree[class="addressingWidget"] treeitem > treerow {
 	background-color: inherit;
 }
 
+
+#button_send {
+	list-style-image:url("chrome://messengercompose/skin/send.gif");
+}
+
+#button_address {
+	list-style-image:url("chrome://messengercompose/skin/address.gif");
+}
+
+#button_attach {
+	list-style-image:url("chrome://messengercompose/skin/attach.gif");
+}
+
+#button_quote {
+	list-style-image:url("chrome://messengercompose/skin/quote.gif");
+}
+
+#button_spelling {
+	list-style-image:url("chrome://messengercompose/skin/spelling.gif");
+}
+
+#button_save {
+	list-style-image:url("chrome://messengercompose/skin/save.gif");
+}
+
+#button_stop {
+	list-style-image:url("chrome://global/skin/stop.gif");
+}

@@ -75,7 +75,7 @@ Rights Reserved.
 	<broadcaster id="cmd_selectAll"/>
 	<broadcaster id="cmd_preferences"/>
 
-	<broadcaster id="Messenger:Throbber" busy="false"/>
+	<broadcaster id="broadcaster_throbber"/>
 	<broadcaster id="Messenger:Status"/>
 	<broadcaster id="Messenger:LoadingProgress"/>
 </broadcasterset>
@@ -97,8 +97,6 @@ Rights Reserved.
 	<key id="key_preferences"/>
 </keyset>
 
-  <!-- The main mail three pane frame -->
-      <toolbox>
         <menubar>
           <menu id="menu_File">
             <menupopup id="menu_FilePopup">
@@ -471,33 +469,37 @@ Rights Reserved.
 	<spring flex="100%"/>
   </menubar>
 
-        <toolbar id="msgToolbar" persist="collapsed">
-		  <titledbutton src="&getMsgButton.img;" align="top" value="&getMsgButton.label;" onclick="MsgGetMessage()"/>
-		  <titledbutton src="&newMsgButton.img;" align="top" value="&newMsgButton.label;" onclick="MsgNewMessage(event)"/>
-		  <html:div class="separator" align="vertical"/> 
-		  <titledbutton src="&replyButton.img;" align="top" value="&replyButton.label;" onclick="MsgReplyMessage(event)"/>
-		  <titledbutton src="&replyAllButton.img;" align="top" value="&replyAllButton.label;" onclick="MsgReplyToAllMessage(event)"/>
-		  <titledbutton src="&forwardButton.img;" align="top" value="&forwardButton.label;" onclick="MsgForwardMessage(event)"/>
-		  <titledbutton src="&nextButton.img;" align="top" value="&nextButton.label;" onclick="MsgNextUnreadMessage()"/>
-		  <titledbutton src="&deleteButton.img;" align="top" value="&deleteButton.label;" onclick="MsgDeleteMessage(true)"/>
-		  <html:div class="separator" align="vertical"/> 
-		  <titledbutton src="&printButton.img;" align="top" value="&printButton.label;" onclick="Print()"/>
-		  <titledbutton src="&stopButton.img;" align="top" value="&stopButton.label;" onclick="MsgStop();"/>
-		  <spring flex="100%"/>
-		  <titledbutton id="Throbber" onclick="window.open('&throbber.url;');">
-			 <observes element="Messenger:Throbber" attribute="busy"/>
-		  </titledbutton>
-
-		  </toolbar>
-		</toolbox>
+  <!-- The main mail three pane frame -->
 
 
         <box align="horizontal" style="height:100px" flex="1">
+          
           <box id="sidebar-box">
             <html:div id="folder-panel"/>
-           </box>
+          </box>
+          
           <splitter id="sidebar-splitter" collapse="before" persist="state"/>
+          
           <box align="vertical"  flex="1"  style="border-left:solid black 1px">
+     
+      <toolbox>
+        <toolbar id="msgToolbar" class="standard" persist="collapsed">
+          <box id="toolbar_button_box">
+            <titledbutton id="button_getmsg" class="button28" align="top" value="&getMsgButton.label;" onclick="MsgGetMessage()"/>
+            <titledbutton id="button_newmsg" class="button28" align="top" value="&newMsgButton.label;" onclick="MsgNewMessage(event)"/>
+            <titledbutton id="button_reply" class="button28" align="top" value="&replyButton.label;" onclick="MsgReplyMessage(event)"/>
+            <titledbutton id="button_replyall" class="button28" align="top" value="&replyAllButton.label;" onclick="MsgReplyToAllMessage(event)"/>
+            <titledbutton id="button_forward" class="button28" align="top" value="&forwardButton.label;" onclick="MsgForwardMessage(event)"/>
+            <titledbutton id="button_next" align="top" value="&nextButton.label;" onclick="MsgNextUnreadMessage()"/>
+            <titledbutton id="button_delete" align="top" value="&deleteButton.label;" onclick="MsgDeleteMessage(true)"/>
+            <titledbutton id="button_print" align="top" value="&printButton.label;" onclick="Print()"/>
+            <titledbutton id="button_stop" align="top" value="&stopButton.label;" onclick="MsgStop();"/>
+            <spring flex="100%"/>
+          </box>
+
+		  <box id="toolbar_throbber_box"/>
+		</toolbar>
+      </toolbox>
 
 
 		<html:div style="width:100px;height:0px" flex="2" >
@@ -518,7 +520,7 @@ Rights Reserved.
 			<progressmeter id="statusbar-icon" mode="normal" value="0" onclick="dumpProgress()">
 				<observes element="Messenger:LoadingProgress" attribute="mode"/>
 				<observes element="Messenger:LoadingProgress" attribute="value"/>
-				<observes element="Messenger:Throbber" attribute="busy" onbroadcast="onProgress()"/>
+				<observes element="broadcaster_throbber" attribute="busy" onbroadcast="onProgress()"/>
 			</progressmeter>
 			<spring flex="100%"/>
 		  </box>

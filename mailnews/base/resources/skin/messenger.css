@@ -173,3 +173,39 @@ iframe {
     list-style-image: url("chrome://messenger/skin/server-news.gif");
 }
 
+
+#button_getmsg {
+	list-style-image:url("chrome://messenger/skin/getmsg.gif");
+}
+
+#button_newmsg {
+	list-style-image:url("chrome://messenger/skin/newmsg.gif");
+}
+
+#button_reply {
+	list-style-image:url("chrome://messenger/skin/reply.gif");
+}
+
+#button_replyall {
+	list-style-image:url("chrome://messenger/skin/replyall.gif");
+}
+
+#button_forward {
+	list-style-image:url("chrome://messenger/skin/forward.gif");
+}
+
+#button_next {
+	list-style-image:url("chrome://messenger/skin/next.gif");
+}
+
+#button_delete {
+	list-style-image:url("chrome://messenger/skin/trash.gif");
+}
+
+#button_print {
+	list-style-image:url("chrome://global/skin/print.gif");
+}
+
+#button_stop {
+	list-style-image:url("chrome://global/skin/stop.gif");
+}

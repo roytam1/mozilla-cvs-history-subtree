@@ -133,7 +133,10 @@
 	</box>
 	
 	<box id="toolbar_throbber_box" align="vertical" width="59px">
-		<titledbutton id="Throbber" onclick="MsgHome('http://www.mozilla.org/')"/>
+		<titledbutton id="Throbber" onclick="MsgHome('http://www.mozilla.org/')">
+			<observes element="broadcaster_throbber" attribute="busy"/>
+		</titledbutton>
 	</box>
 	
+	<broadcaster id="broadcaster_throbber" busy="false"/>
 </overlay>		

@@ -21,8 +21,6 @@
    - Contributor(s):
   -->
 
-<?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
-
 <!DOCTYPE window SYSTEM "chrome://editor/locale/editorOverlay.dtd">
 
 <overlay id="editorOverlay"
