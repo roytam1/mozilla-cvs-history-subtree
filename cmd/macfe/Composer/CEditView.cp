@@ -2887,6 +2887,11 @@ CEditView::ReceiveDragItem( DragReference inDragRef, DragAttributes inDragAttr,
 					   Unfortunately, I couldn't find any Apple documentation that
 					   verified this.  The actual pasting is done below.
 					*/
+					
+					/* ??? If someone drags in a text clipping, we should receive a
+						TEXT flavor drag. Opening the Clipping file like this is not good,
+						and probably unecessary.
+					*/
 					short resnum = ::FSpOpenResFile( &fileData.fileSpec, fsRdPerm );
 					if ( -1 != resnum )
 					{

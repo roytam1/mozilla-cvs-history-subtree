@@ -18,6 +18,7 @@
 
 #include "Netscape_Constants.h"
 #include "CBrowserWindow.h"
+#include "MailNewsgroupWindow_Defines.h" // for the offline button id 
 
 #include "CAutoPtrXP.h"
 
@@ -39,6 +40,7 @@
 #include "CDragBarContainer.h"		// need for SetChromeInfo, using CDragBarContainer::class_ID
 #include "CHyperScroller.h" // need for SetChromeInfo
 #include "CPaneEnabler.h"
+#include "UDeferredTask.h"
 
 #include "CSpinningN.h"
 #include "CBrowserSecurityButton.h"
@@ -143,7 +145,7 @@ CBrowserWindow::~CBrowserWindow()
 
 void CBrowserWindow::FinishCreateSelf(void)
 {
-	CNetscapeWindow::FinishCreateSelf();
+	Inherited::FinishCreateSelf();
 	
 	mHTMLView = dynamic_cast<CHTMLView*>(FindPaneByID(CHTMLView::pane_ID));
 	ThrowIfNil_(mHTMLView);
@@ -151,140 +153,8 @@ void CBrowserWindow::FinishCreateSelf(void)
 	mNavCenterParent = dynamic_cast<CRDFCoordinator*>(FindPaneByID(CRDFCoordinator::pane_ID));
 		
 	if (HasAttribute(windAttr_Regular) && HasAttribute(windAttr_Resizable))
-	{
 		FinishCreateWindow();
-		
-		Rect structureBounds = UWindows::GetWindowStructureRect(mMacWindowP);
-		
-		GDHandle windowDevice = UWindows::FindDominantDevice(structureBounds);
-		GDHandle mainDevice = ::GetMainDevice();
-		
-		Rect staggerBounds;
-		
-		if (windowDevice && (windowDevice != mainDevice))
-			staggerBounds = (*windowDevice)->gdRect;
-		else
-		{
-			staggerBounds = (*mainDevice)->gdRect;
-			staggerBounds.top += LMGetMBarHeight();
-		}
-		::InsetRect(&staggerBounds, 4, 4);	//	Same as zoom limit
-		
-		Rect contentBounds = UWindows::GetWindowContentRect(mMacWindowP);
-		
-		Rect windowBorder;
-		windowBorder.top = contentBounds.top - structureBounds.top;
-		windowBorder.left = contentBounds.left - structureBounds.left;
-		windowBorder.bottom = structureBounds.bottom - contentBounds.bottom;
-		windowBorder.right = structureBounds.right - contentBounds.right;
-		
-		Point maxTopLeft;
-		maxTopLeft.v = staggerBounds.bottom
-			- (windowBorder.top + mMinMaxSize.top + windowBorder.bottom);
-		maxTopLeft.h = staggerBounds.right
-			- (windowBorder.left + mMinMaxSize.left + windowBorder.right);
-		
-		UInt16 vStaggerOffset = windowBorder.top;
-		
-		if (vStaggerOffset > 12)
-			vStaggerOffset -= 4;	//	Tweak it up
-		
-		const int maxStaggerPositionsCount = 10;
-		Point staggerPositions[maxStaggerPositionsCount];
-		UInt16 usedStaggerPositions[maxStaggerPositionsCount];
-		int staggerPositionsCount;
-		
-		for (	staggerPositionsCount = 0;
-				staggerPositionsCount < maxStaggerPositionsCount;
-				++staggerPositionsCount)
-		{
-			staggerPositions[staggerPositionsCount].v
-				= staggerBounds.top + (vStaggerOffset * staggerPositionsCount);
-			staggerPositions[staggerPositionsCount].h
-				= staggerBounds.left + (4 * staggerPositionsCount);
-			
-			if ((staggerPositions[staggerPositionsCount].v > maxTopLeft.v)
-				|| (staggerPositions[staggerPositionsCount].h > maxTopLeft.h))
-				break;
-			
-			usedStaggerPositions[staggerPositionsCount] = 0;
-		}
-		unsigned int windowCount = 0;
-		CMediatedWindow *foundWindow = NULL;
-		CWindowIterator windowIterator(WindowType_Browser);
-		
-		for (windowIterator.Next(foundWindow); foundWindow; windowIterator.Next(foundWindow))
-		{
-			CBrowserWindow *browserWindow = dynamic_cast<CBrowserWindow*>(foundWindow);
-			
-			if (browserWindow && (browserWindow != this)
-				&& browserWindow->HasAttribute(windAttr_Regular))
-			{
-				++windowCount;
-				Rect bounds = UWindows::GetWindowStructureRect(browserWindow->mMacWindowP);
-				
-				for (int index = 0; index < staggerPositionsCount; ++index)
-				{
-					Boolean matchTop = (bounds.top == staggerPositions[index].v);
-					Boolean matchLeft = (bounds.left == staggerPositions[index].h);
-					
-					if ((matchTop) && (matchLeft))
-						usedStaggerPositions[index] += 1;
-					
-					if ((matchTop) || (matchLeft))
-						break;
-				}
-			}
-		}
-		Point structureSize;
-		structureSize.v = structureBounds.bottom - structureBounds.top;
-		structureSize.h = structureBounds.right - structureBounds.left;
-		
-		if (windowCount)
-		{
-			Boolean foundStaggerPosition = false;
-			
-			for (UInt16 minCount = 0; (minCount < 100) && !foundStaggerPosition; ++minCount)
-			{
-				for (int index = 0; index < staggerPositionsCount; ++index)
-				{
-					if (usedStaggerPositions[index] == minCount)
-					{
-						structureBounds.top = staggerPositions[index].v;
-						structureBounds.left = staggerPositions[index].h;
-						foundStaggerPosition = true;
-						break;
-					}
-				}
-			}
-			if (!foundStaggerPosition)
-			{
-				structureBounds.top = staggerBounds.top;
-				structureBounds.left = staggerBounds.left;
-			}
-			structureBounds.bottom = structureBounds.top + structureSize.v;
-			structureBounds.right = structureBounds.left + structureSize.h;
-		}
-		if ((structureBounds.top > maxTopLeft.v) || (structureBounds.left > maxTopLeft.h))
-		{
-			structureBounds.top = staggerBounds.top;
-			structureBounds.left = staggerBounds.left;
-			structureBounds.bottom = structureBounds.top + structureSize.v;
-			structureBounds.right = structureBounds.left + structureSize.h;
-		}
-		if (structureBounds.bottom > staggerBounds.bottom)
-			structureBounds.bottom = staggerBounds.bottom;
-		
-		if (structureBounds.right > staggerBounds.right)
-			structureBounds.right = staggerBounds.right;
-		
-		contentBounds.top = structureBounds.top + windowBorder.top;
-		contentBounds.left = structureBounds.left + windowBorder.left;
-		contentBounds.bottom = structureBounds.bottom - windowBorder.bottom;
-		contentBounds.right = structureBounds.right - windowBorder.right;
-		
-		DoSetBounds(contentBounds);
-	}
+	AdjustStagger(WindowType_Browser); // <--- I moved this down to CNetscapeWindow - jrm 98/04/14
 	UReanimator::LinkListenerToControls(this, this, mPaneID);
 	
 	// Show/hide toolbars based on preference settings
@@ -380,6 +250,7 @@ void CBrowserWindow::SetWindowContext(CBrowserContext* inContext)
 	{
 		mContext->SetRequiresClone(true);
 		mContext->AddListener(this);
+		
 		try {
 			// Let there be a progress listener, placed in my firmament,
 			// which shall listen to the context
@@ -419,6 +290,12 @@ void CBrowserWindow::SetWindowContext(CBrowserContext* inContext)
 		if (miniSecurityButton)
 			mContext->AddListener(miniSecurityButton);
 		
+		// hook up the offline icon
+		LBroadcaster* offlineButton 
+				= dynamic_cast<LBroadcaster*>(FindPaneByID(kOfflineButtonPaneID)); 
+		if (offlineButton) 
+			offlineButton->AddListener(CFrontApp::GetApplication()); 
+
 		// setup navCenter for sitemaps
 		if ( mNavCenterParent && !HasAttribute(windAttr_Floating))
 			mNavCenterParent->RegisterNavCenter ( *inContext );
@@ -636,7 +513,7 @@ void CBrowserWindow::FindCommandStatus(
 				GetHTMLView()->FindCommandStatus(inCommand, outEnabled, outUsesMark, outMark, outName);
 			}
 			else
-				CNetscapeWindow::FindCommandStatus(inCommand, outEnabled, outUsesMark, outMark, outName);
+				Inherited::FindCommandStatus(inCommand, outEnabled, outUsesMark, outMark, outName);
 		}
 	}
 }
@@ -734,7 +611,7 @@ Boolean	CBrowserWindow::ObeyCommand(
 				SendAEGo(AE_www_go_home);
 				
 				// еее what the hell is this?	deeje 97-03-06
-				// cmdHandled = CNetscapeWindow::ObeyCommand(inCommand, ioParam);
+				// cmdHandled = Inherited::ObeyCommand(inCommand, ioParam);
 				break;
 				
 			case cmd_NetSearch:
@@ -828,7 +705,7 @@ Boolean	CBrowserWindow::ObeyCommand(
 					cmdHandled = true;
 				}
 				else
-					cmdHandled = CNetscapeWindow::ObeyCommand(inCommand, ioParam);
+					cmdHandled = Inherited::ObeyCommand(inCommand, ioParam);
 				break;
 			}
 			
@@ -846,6 +723,29 @@ void CBrowserWindow::ListenToMessage(MessageT inMessage, void* ioParam)
 {
 	switch (inMessage)
 		{
+		case msg_NSCConfirmLoadNewURL:
+			long response = 0;
+			// kludge alert:
+			// expand windowshaded floating windows to work around bug reported with system 7.6.1 (and probably earlier) 
+			// which breaks the window when a new url is loaded. 
+			if (IsVisible() && 
+				HasAttribute(windAttr_TitleBar) && 
+				HasAttribute(windAttr_Floating) && 
+				::EmptyRgn(((WindowPeek)GetMacPort())->contRgn) &&
+				(noErr == ::Gestalt (gestaltSystemVersion, &response)) &&
+				(response < 0x800))
+			{
+				GrafPtr	savePort;		//   get the port rectangle and convert
+				::GetPort(&savePort);	//   to global coordinates
+				::SetPort(GetMacPort());
+				Rect expandedRect = GetMacPort()->portRect;
+				::LocalToGlobal(&topLeft(expandedRect));
+				::LocalToGlobal(&botRight(expandedRect));
+				::SetPort(savePort);
+				DoSetBounds(expandedRect);		
+			}
+			break;
+			
 		case msg_NSCDocTitleChanged:
 			NoteDocTitleChanged((const char*)ioParam);
 			break;
@@ -864,16 +764,16 @@ void CBrowserWindow::ListenToMessage(MessageT inMessage, void* ioParam)
 		
 		case msg_UserSubmittedURL:
 			// user hit enter or return in URL edit field
-			CStr255* urlString = (CStr255*)ioParam;
-			if (urlString && mContext)
+			const char* urlString = (const char*)ioParam;
+			
+			if (urlString && *urlString && mContext)
 			{
 			/*		old way
 				URL_Struct* theURL =
 					NET_CreateURLStruct(*urlString, NET_DONT_RELOAD);
 				mContext->SwitchLoadURL(theURL, FO_CACHE_AND_PRESENT);
 			*/
-				if (!urlString->IsEmpty())
-					SendAEGetURL(*urlString);
+				SendAEGetURL(urlString);
 			}
 			break;
 		
@@ -893,49 +793,64 @@ void CBrowserWindow::ListenToMessage(MessageT inMessage, void* ioParam)
 		}
 }
 
+//----------------------------------------------------------------------------------------
+void CBrowserWindow::DoClose()
+//----------------------------------------------------------------------------------------
+{
+	AttemptCloseWindow();
+	Inherited::DoClose();
+}
 
+//----------------------------------------------------------------------------------------
+Boolean CBrowserWindow::AttemptQuitSelf(Int32 /* inSaveOption */)
+// Derived classes should be careful to call DeferredClose if they override this fn.
+//----------------------------------------------------------------------------------------
+{
+	CDeferredCloseTask::DeferredClose(this);
+	return true;
+}
 
-
-
+//----------------------------------------------------------------------------------------
 void CBrowserWindow::AttemptClose()
 {
 	if (HasProcess(fCloseNotifier))	// If someone has registered for window closing, notify them
-	Try_
 	{
-		AEAddressDesc 	closeApp;
-		AppleEvent	 	closeEvent;
-		Int32			aWindowID = mContext->GetContextUniqueID();
-		
-		OSErr err = ::AECreateDesc(typeProcessSerialNumber, &fCloseNotifier, 
-							 sizeof(fCloseNotifier), &closeApp);
-		ThrowIfOSErr_(err);
-		err = ::AECreateAppleEvent(AE_spy_send_suite, AE_spy_winClosed,
-									&closeApp,
-									kAutoGenerateReturnID,
-									kAnyTransactionID,
-									&closeEvent);
-		ThrowIfOSErr_(err);
-		
-			// windowID is the direct object
-		err = ::AEPutParamPtr(&closeEvent, keyDirectObject,
-					typeLongInteger, &aWindowID, sizeof(aWindowID));
-		ThrowIfOSErr_(err);
-		
-		// Are we quitting is another parameter
-		Boolean quitting = (CFrontApp::GetApplication()->GetState() == programState_Quitting);
-		err =::AEPutParamPtr(&closeEvent, AE_spy_winClosedExiting, typeBoolean,
-				&quitting, sizeof(quitting));
-		ThrowIfOSErr_(err);
-		
-			// send the event
-		AppleEvent reply;
-		::AESend(&closeEvent,&reply,kAENoReply,kAENormalPriority,0,nil, nil);
+		try
+		{
+			AEAddressDesc 	closeApp;
+			AppleEvent	 	closeEvent;
+			Int32			aWindowID = mContext->GetContextUniqueID();
+			
+			OSErr err = ::AECreateDesc(typeProcessSerialNumber, &fCloseNotifier, 
+								 sizeof(fCloseNotifier), &closeApp);
+			ThrowIfOSErr_(err);
+			err = ::AECreateAppleEvent(AE_spy_send_suite, AE_spy_winClosed,
+										&closeApp,
+										kAutoGenerateReturnID,
+										kAnyTransactionID,
+										&closeEvent);
+			ThrowIfOSErr_(err);
+			
+				// windowID is the direct object
+			err = ::AEPutParamPtr(&closeEvent, keyDirectObject,
+						typeLongInteger, &aWindowID, sizeof(aWindowID));
+			ThrowIfOSErr_(err);
+			
+			// Are we quitting is another parameter
+			Boolean quitting = (CFrontApp::GetApplication()->GetState() == programState_Quitting);
+			err =::AEPutParamPtr(&closeEvent, AE_spy_winClosedExiting, typeBoolean,
+					&quitting, sizeof(quitting));
+			ThrowIfOSErr_(err);
+			
+				// send the event
+			AppleEvent reply;
+			::AESend(&closeEvent,&reply,kAENoReply,kAENormalPriority,0,nil, nil);
+		}
+		catch(...)
+		{
+		}
 	}
-	Catch_(inErr){}
-	EndCatch_
-
-	AttemptCloseWindow();
-	CMediatedWindow::AttemptClose();
+	CDeferredCloseTask::DeferredClose(this);
 }
 
 
@@ -962,7 +877,7 @@ CBrowserWindow::Select()
 void
 CBrowserWindow::ActivateSelf ( )
 {
-	super::ActivateSelf();
+	Inherited::ActivateSelf();
 	if ( mNavCenterParent && !HasAttribute(windAttr_Floating) )
 		XP_SetLastActiveContext ( *GetWindowContext() );
 }
@@ -976,9 +891,9 @@ CBrowserWindow::ClickInDrag(const EventRecord &inMacEvent)
 	{
 		EventRecord filterMacEvent = inMacEvent;
 		filterMacEvent.modifiers = filterMacEvent.modifiers | cmdKey; // command-key modifier disables select
-		super::ClickInDrag(filterMacEvent);
+		Inherited::ClickInDrag(filterMacEvent);
 	}
-	else super::ClickInDrag(inMacEvent);
+	else Inherited::ClickInDrag(inMacEvent);
 }
 
 // Allow us to restrict user from growing the window by setting the Resizable attribute,
@@ -987,7 +902,7 @@ void
 CBrowserWindow::ClickInGrow(const EventRecord &inMacEvent)
 {
 	if (HasAttribute(windAttr_Resizable))
-		super::ClickInGrow(inMacEvent);
+		Inherited::ClickInGrow(inMacEvent);
 }
 
 // Return the window for the top-level context of the one passed in.
@@ -1049,7 +964,7 @@ CBrowserWindow::IsRestrictedTarget(void)
 void	
 CBrowserWindow::DoSetPosition(Point inPosition)
 {
-	super::DoSetPosition(inPosition);
+	Inherited::DoSetPosition(inPosition);
 
 	if (mContext != NULL) 
 	{
@@ -1060,7 +975,7 @@ CBrowserWindow::DoSetPosition(Point inPosition)
 }
 
 void	
-CBrowserWindow::DoSetBounds(const Rect &inBounds)
+CBrowserWindow::DoSetBounds(const Rect &inGlobalBounds)
 {
 									// inBounds is in global coordinates
 									
@@ -1068,20 +983,20 @@ CBrowserWindow::DoSetBounds(const Rect &inBounds)
 									//   really changed.
 	Rect bounds = UWindows::GetWindowContentRect(GetMacPort());
 	
-	if (::EqualRect(&bounds, &inBounds))
+	if (::EqualRect(&bounds, &inGlobalBounds))
 		return;
 	
-	Boolean didMove = (bounds.top != inBounds.top) || (bounds.left != inBounds.left);
+	Boolean didMove = (bounds.top != inGlobalBounds.top) || (bounds.left != inGlobalBounds.left);
 	
 									// Set size and location of Toolbox
 									//   WindowRecord
-	::SizeWindow(mMacWindowP, inBounds.right - inBounds.left,
-				inBounds.bottom - inBounds.top, false);
-	::MoveWindow(mMacWindowP, inBounds.left, inBounds.top, false);
+	::SizeWindow(mMacWindowP, inGlobalBounds.right - inGlobalBounds.left,
+				inGlobalBounds.bottom - inGlobalBounds.top, false);
+	::MoveWindow(mMacWindowP, inGlobalBounds.left, inGlobalBounds.top, false);
 	
 									// Set our Frame
-	ResizeFrameTo(inBounds.right - inBounds.left,
-				inBounds.bottom - inBounds.top, true);
+	ResizeFrameTo(inGlobalBounds.right - inGlobalBounds.left,
+				inGlobalBounds.bottom - inGlobalBounds.top, true);
 
 	SDimension16	frameSize;		// For Windows, Image is always the
 	GetFrameSize(frameSize);		//   same size as its Frame
@@ -1221,7 +1136,7 @@ CBrowserWindow::CalcStandardBoundsForScreen(
 	
 	// Calculate standard bounds given standard size
 	
-	super::CalcStandardBoundsForScreen(inScreenBounds, outStdBounds);
+	Inherited::CalcStandardBoundsForScreen(inScreenBounds, outStdBounds);
 }
 
 // dynamically show/hide the status bar - mjc
@@ -1832,7 +1747,7 @@ Boolean CBrowserWindow::HandleKeyPress(const EventRecord &inKeyEvent)
 				return GetHTMLView()->HandleKeyPress( inKeyEvent );
 	}
 	
-	return CNetscapeWindow::HandleKeyPress(inKeyEvent);
+	return Inherited::HandleKeyPress(inKeyEvent);
 }
 
 //
@@ -2023,7 +1938,7 @@ void CBrowserWindow::GetAEProperty(DescType inProperty,
 		
 			
 		default:
-			super::GetAEProperty(inProperty, inRequestedType, outPropertyDesc);
+			Inherited::GetAEProperty(inProperty, inRequestedType, outPropertyDesc);
 			break;
 	}
 }
@@ -2216,18 +2131,9 @@ void CBrowserWindow::HandleGetURLEvent(const AppleEvent		&inAppleEvent,
 	MoreExtractFromAEDesc::GetCString(inAppleEvent, keyDirectObject, url);
 
 	// Extract the referer, if possible
-	Try_
-	{
-		MoreExtractFromAEDesc::GetCString(inAppleEvent, AE_url_getURLrefererer, refererer);
-	}
-	Catch_(inErr){}
-	EndCatch_
-	Try_
-	{
-		MoreExtractFromAEDesc::GetCString(inAppleEvent, AE_url_getURLname, winName);
-	}
-	Catch_(inErr){}
-	EndCatch_
+	MoreExtractFromAEDesc::GetCString(inAppleEvent, AE_url_getURLrefererer, refererer, false);
+	MoreExtractFromAEDesc::GetCString(inAppleEvent, AE_url_getURLname, winName, false);
+
 	// See if we are doing load-to-disk.
 	// If the descriptor is of typeNull, we should load to disk
 	// but we have to file spec
@@ -2511,7 +2417,7 @@ void CBrowserWindow::HandleOpenURLEvent(const AppleEvent	&inAppleEvent,
 void	
 CBrowserWindow::SendAESetPosition(Point inPosition, Boolean inExecuteAE)
 {
-	CNetscapeWindow::SendAESetPosition(inPosition, inExecuteAE);
+	Inherited::SendAESetPosition(inPosition, inExecuteAE);
 	if (mContext != NULL)
 	{
 		Rect bounds;
@@ -2533,7 +2439,6 @@ History_entry* CBrowserWindow::GetBookmarksEntry()
 	return mContext->GetCurrentHistoryEntry();
 }
 #endif // 0
-
 
 #pragma mark -- Helper functions for ObeyCommand --
 

@@ -43,6 +43,8 @@ class CRDFCoordinator;
 
 class CBrowserWindow : public CNetscapeWindow, public CSaveWindowStatus, public LListener
 {
+	private:
+		typedef CNetscapeWindow Inherited; // VERY dangerous to make this public! - jrm
 	public:
 		enum { class_ID = 'BrWn', 
 				res_ID = 1010, 
@@ -57,7 +59,6 @@ class CBrowserWindow : public CNetscapeWindow, public CSaveWindowStatus, public 
 			kDontSelect	= false
 		};
 		
-		typedef CNetscapeWindow super;
 						
 								CBrowserWindow(LStream* inStream);
 		virtual					~CBrowserWindow();
@@ -83,13 +84,9 @@ class CBrowserWindow : public CNetscapeWindow, public CSaveWindowStatus, public 
 										MessageT			inMessage,
 										void* 				ioParam);
 		
-		virtual void			AttemptClose(void);
-								
-		virtual void			DoClose(void)
-								{
-									AttemptCloseWindow();
-									CMediatedWindow::DoClose();
-								}
+		virtual void			AttemptClose();
+		virtual void			DoClose();
+		virtual Boolean			AttemptQuitSelf(Int32 inSaveOption);
 								
 									// deeje 1997-01-13
 								// inFirstTime can be specified when setting chrome info on a window for the first time.
@@ -158,7 +155,7 @@ class CBrowserWindow : public CNetscapeWindow, public CSaveWindowStatus, public 
 		// enable/disable subview's context-sensitive popup menus
 		void			AllowSubviewPopups (Boolean inAllow)
 							{ mAllowSubviewPopups = inAllow; }
-		Boolean			AllowSubviewPopups (void)
+		Boolean			AllowSubviewPopups ()
 							{ return mAllowSubviewPopups; }
 								
 		Boolean			IsRootDocInfo() { return mIsRootDocInfo; }
@@ -170,8 +167,8 @@ class CBrowserWindow : public CNetscapeWindow, public CSaveWindowStatus, public 
 		virtual void	SendAESetPosition(Point inPosition, Boolean inExecuteAE);
 		
 		// I18N stuff
-		virtual Int16			DefaultCSIDForNewWindow(void);
-		virtual Int16 			GetDefaultCSID(void) const;
+		virtual Int16			DefaultCSIDForNewWindow();
+		virtual Int16 			GetDefaultCSID() const;
 		
 		
 			// better bookmarks support
@@ -184,7 +181,7 @@ class CBrowserWindow : public CNetscapeWindow, public CSaveWindowStatus, public 
 
 		
 	protected:
-		virtual	void				FinishCreateSelf(void);
+		virtual	void				FinishCreateSelf();
 		const CHTMLView*			GetHTMLView() const { return mHTMLView; }
 		CHTMLView*					GetHTMLView() { return mHTMLView; }
 		const CRDFCoordinator*		GetNavCenterParentView() const { return mNavCenterParent; }
@@ -193,12 +190,12 @@ class CBrowserWindow : public CNetscapeWindow, public CSaveWindowStatus, public 
 		virtual void			HandleNetSearchCommand();
 
 		virtual	void			NoteDocTitleChanged(const char* inTitle);
-		virtual void			NoteBeginLayout(void);
-		virtual	void			NoteFinishedLayout(void);
-		virtual void			NoteAllConnectionsComplete(void);
+		virtual void			NoteBeginLayout();
+		virtual	void			NoteFinishedLayout();
+		virtual void			NoteAllConnectionsComplete();
 
-		virtual ResIDT			GetStatusResID(void) const { return res_ID; }
-		virtual UInt16			GetValidStatusVersion(void) const { return 0x0113; }
+		virtual ResIDT			GetStatusResID() const { return res_ID; }
+		virtual UInt16			GetValidStatusVersion() const { return 0x0114; }
 		
 		virtual void			ShowStatus(Chrome* inChromeInfo); // 97-05-12 pkc -- pass in Chrome struct
 		
