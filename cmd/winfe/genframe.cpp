@@ -2362,7 +2362,7 @@ void CGenericFrame::OnDisplayPrivacyReceipts()
 void CGenericFrame::OnDisplayPrivacyTutorial()
 {
     // GetMainContext()->NormalGetUrl("file:///c|/My Documents");
-    GetMainContext()->NormalGetUrl("http://people.netscape.com/morse/privacy");
+    GetMainContext()->NormalGetUrl(PRVCY_TutorialURL());
 }
 //////////////////////////////////////////////////////////////////////////////
 
