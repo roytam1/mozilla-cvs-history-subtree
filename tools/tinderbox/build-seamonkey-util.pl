@@ -1628,6 +1628,11 @@ sub run_all_tests {
         }
       }
 
+      # Call get_profile_dir again, so it can find the extension-salted
+      # profile directory under the profile root.
+
+      $profile_dir = get_profile_dir($build_dir);
+
       #
       # Find the prefs file, remember we have that random string now
       # e.g. <build-dir>/.mozilla/default/uldx6pyb.slt/prefs.js
