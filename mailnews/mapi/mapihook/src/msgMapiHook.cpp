@@ -567,11 +567,8 @@ nsresult nsMapiHook::HandleAttachments (nsIMsgCompFields * aCompFields, PRInt32 
                     {
                         nsAutoString RealFileName ;
                         RealFileName.Assign (aFiles[i].lpszFileName) ;
-                        // move to our mapi temp dir with real name
-                        if (LeafName != RealFileName)
-                           rv = pFile->MoveToUnicode(pTempDir, RealFileName.get()) ;
-                        else  // in case if the real filename is same, the real file could be in temp dir
-                           rv = pFile->CopyToUnicode(pTempDir, RealFileName.get()) ;
+                        // copy to our mapi temp dir with real name
+                        rv = pFile->CopyToUnicode(pTempDir, RealFileName.get()) ;
                         if (NS_FAILED(rv)) return rv ;
                         pFile->InitWithUnicodePath(strTempDir.get()) ;
                         pFile->AppendUnicode (RealFileName.get()) ;
@@ -582,11 +579,8 @@ nsresult nsMapiHook::HandleAttachments (nsIMsgCompFields * aCompFields, PRInt32 
                         asciiRealFileName.Assign((char *) aFiles[i].lpszFileName) ;
                         nsCAutoString asciiLeafName ;
                         asciiLeafName.AssignWithConversion (pLeafName.get());
-                        // move to our mapi temp dir with real name
-                        if (asciiLeafName != asciiRealFileName)
-                            rv = pFile->MoveTo(pTempDir, asciiRealFileName.get()) ;
-                        else  // in case if the real filename is same, the real file could be in temp dir
-                            rv = pFile->CopyTo(pTempDir, asciiRealFileName.get()) ;
+                        // copy to our mapi temp dir with real name
+                        rv = pFile->CopyTo(pTempDir, asciiRealFileName.get()) ;
                         if (NS_FAILED(rv)) return rv ;
                         pFile->InitWithUnicodePath(strTempDir.get()) ;
                         pFile->Append (asciiRealFileName.get()) ;
