@@ -157,7 +157,7 @@ function CanDropOnFolderTree(index)
           var url = sourceUri.split("\n")[0];
           uri.spec = url;
 
-          if (uri.schemeIs("http") && targetServer && targetServer.type == 'rss')
+          if ( (uri.schemeIs("http") || uri.schemeIs("https")) && targetServer && targetServer.type == 'rss')
             return true;
         }
     }
@@ -276,7 +276,7 @@ function DropOnFolderTree(row, orientation)
             var url = sourceUri.split("\n")[0];
             uri.spec = url;
             
-            if (uri.schemeIs("http") && targetServer && targetServer.type == 'rss')
+            if ( (uri.schemeIs("http") || uri.schemeIs("https")) && targetServer && targetServer.type == 'rss')
             {
               var rssService = Components.classes["@mozilla.org/newsblog-feed-downloader;1"].getService().
                                QueryInterface(Components.interfaces.nsINewsBlogFeedDownloader);
