@@ -1278,6 +1278,11 @@ nsTableRowGroupFrame::IncrementalReflow(nsIPresContext*        aPresContext,
   if (command)
     IR_TargetIsMe(aPresContext, aDesiredSize, aReflowState, aStatus);
 
+  // XXXwaterson Note that this will cause us to RecoverState (which
+  // is O(n) in the number of child rows) once for each reflow
+  // target. It'd probably be better to invert the loops; i.e., walk
+  // the rows, checking each to see if it's an IR target (which could
+  // be done in O(1) if we do hashing in the reflow path).
   nsReflowPath::iterator iter = aReflowState.reflowState.path->FirstChild();
   nsReflowPath::iterator end = aReflowState.reflowState.path->EndChildren();
 
@@ -1509,6 +1514,8 @@ nsTableRowGroupFrame::RecoverState(nsRowGroupReflowState& aReflowState,
   nsTableFrame* tableFrame = nsnull;
   nsTableFrame::GetTableFrame(this, tableFrame);
   nscoord cellSpacingY = tableFrame->GetCellSpacingY();
+
+  aReflowState.y = 0;
 
   // Walk the list of children up to aKidFrame
   for (nsIFrame* frame = mFrames.FirstChild(); frame && (frame != aKidFrame); frame->GetNextSibling(&frame)) {
