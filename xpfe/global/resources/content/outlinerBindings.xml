@@ -40,10 +40,14 @@
 		   var b = this.parentNode.outlinerBoxObject;
 		   b.getCellAt(event.clientX, event.clientY, row, col);
            
-		   // XXX Check the col to see if it's a cycler.  If so,
-		   // don't select.
-		   if (!b.selection.isSelected(row.value))
-             b.selection.select(row.value);
+		   var column = document.getElementById(col.value);
+		   var cycler = column.getAttribute('cycler') == 'true';
+
+		   if (cycler)
+		     b.view.cycleCell(row.value, col.value);
+		   else
+		     if (!b.selection.isSelected(row.value))
+               b.selection.select(row.value);
 			 
 		   b.selection.currentIndex = row.value;
          }
@@ -54,7 +58,6 @@
            except this item. -->
       <handler event="click">
       <![CDATA[
-	     // XXX Check for cycler.
          if (event.button != 1) return;
          var row = {};
 	     var col = {};
@@ -75,7 +78,10 @@
             in click rather than mousedown so that you can drag a
             selected group of items */
 
-		   if (event.button == 1)
+           var column = document.getElementById(col.value);
+		   var cycler = column.getAttribute('cycler') == 'true';
+
+		   if (!cycler && event.button == 1)
 		     b.selection.select(row.value);  
          }
       ]]>

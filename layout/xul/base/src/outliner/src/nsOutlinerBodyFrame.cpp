@@ -456,7 +456,20 @@ NS_IMETHODIMP nsOutlinerBodyFrame::GetCellAt(PRInt32 aX, PRInt32 aY, PRInt32* aR
   // Now just mod by our total inner box height and add to our top row index.
   *aRow = (y/mRowHeight)+mTopRowIndex;
 
-  // XXX Determine the column hit!
+  // Determine the column hit.
+  nscoord currX = mInnerBox.x;
+  for (nsOutlinerColumn* currCol = mColumns; currCol && currX < mInnerBox.x+mInnerBox.width; 
+       currCol = currCol->GetNext()) {
+    nsRect colRect(currX, mInnerBox.y, currCol->GetWidth(), mInnerBox.height);
+    PRInt32 overflow = colRect.x+colRect.width-(mInnerBox.x+mInnerBox.width);
+    if (overflow > 0)
+      colRect.width -= overflow;
+
+    if (x >= colRect.x && x < colRect.x + colRect.width)
+      *aColID = nsXPIDLString::Copy(currCol->GetID());
+
+    currX += colRect.width;
+  }
   return NS_OK;
 }
 
