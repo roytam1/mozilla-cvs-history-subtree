@@ -46,17 +46,6 @@ txList::txList() {
    itemCount  = 0;
 } //-- txList;
 
-txList::txList(const txList& aOther) {
-    firstItem  = 0;
-    lastItem   = 0;
-    itemCount  = 0;
-    ListItem* item = aOther.firstItem;
-    while (item) {
-        add(item->objPtr);
-        item = item->nextItem;
-    }
-} //-- txList;
-
 /**
  * txList destructor, cleans up ListItems, but will not delete the Object
  * references
@@ -429,12 +418,3 @@ void txListIterator::resetToEnd() {
    atEndOfList = MB_TRUE;
    currentItem = 0;
 } //-- moveToEnd
-
-/**
- * Sets value at current position
- */
-void txListIterator::setValue(void* aValue)
-{
-    NS_PRECONDITION(currentItem, "can't set value outside of list");
-    currentItem->objPtr = aValue;
-}
