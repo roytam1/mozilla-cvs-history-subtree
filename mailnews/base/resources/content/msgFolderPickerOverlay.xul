@@ -326,7 +326,7 @@ Rights Reserved.
         datasources="rdf:msgaccountmanager rdf:mailnewsfolders" 
         ref="msgaccounts:/">
     <template>
-      <rule nc:IsServer="true" nc:CanCreateFoldersOnServer="true">
+      <rule nc:IsServer="true" nc:CanCreateFoldersOnServer="true" nc:CanFileMessagesOnServer="true">
         <menupopup>
           <menuitem uri="..." class="folderMenuItem menuitem-iconic" 
                     label="rdf:http://home.netscape.com/NC-rdf#Name"
@@ -348,7 +348,7 @@ Rights Reserved.
         datasources="rdf:msgaccountmanager rdf:mailnewsfolders" 
         ref="msgaccounts:/">
     <template>
-      <rule nc:IsServer="true" nc:CanCreateFoldersOnServer="true">
+      <rule nc:IsServer="true" nc:CanCreateFoldersOnServer="true" nc:CanFileMessagesOnServer="true">
         <menupopup>
           <menuitem uri="..." class="folderMenuItem menuitem-iconic" 
                     label="rdf:http://home.netscape.com/NC-rdf#Name"
@@ -370,7 +370,7 @@ Rights Reserved.
         datasources="rdf:msgaccountmanager rdf:mailnewsfolders" 
         ref="msgaccounts:/">
     <template>
-      <rule nc:IsServer="true" nc:CanCreateFoldersOnServer="true">
+      <rule nc:IsServer="true" nc:CanCreateFoldersOnServer="true" nc:CanFileMessagesOnServer="true">
          <menupopup>
           <menuitem uri="..." class="folderMenuItem menuitem-iconic" 
                     label="rdf:http://home.netscape.com/NC-rdf#Name"
