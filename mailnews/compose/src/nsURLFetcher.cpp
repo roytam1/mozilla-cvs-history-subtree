@@ -29,12 +29,9 @@
 #include "nsIURI.h"
 #include "nsString.h"
 #include "nsURLFetcher.h"
-#include "nsIEventQueueService.h"
-#include "nsIEventQueue.h"
 #include "nsIIOService.h"
 #include "nsIChannel.h"
 
-static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 /* 
@@ -186,15 +183,7 @@ nsURLFetcher::FireURLRequest(nsIURI *aURL, nsOutputFileStream *fOut,
   rv = service->NewChannelFromURI("load", aURL, nsnull, getter_AddRefs(channel));
   if (NS_FAILED(rv)) return rv;
 
-  // Create the Event Queue for this thread...
-  NS_WITH_SERVICE(nsIEventQueueService, eventQService, kEventQueueServiceCID, &rv);
-  if (NS_FAILED(rv)) return rv;
-
-  nsCOMPtr<nsIEventQueue> eventQ;
-  rv = eventQService->GetThreadEventQueue(PR_CurrentThread(), getter_AddRefs(eventQ));
-  if (NS_FAILED(rv)) return rv;
-
-  rv = channel->AsyncRead(0, -1, nsnull, eventQ, this);
+  rv = channel->AsyncRead(0, -1, nsnull, this);
   if (NS_FAILED(rv)) return rv;
 
   mURL = dont_QueryInterface(aURL);
