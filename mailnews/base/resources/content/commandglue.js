@@ -290,8 +290,6 @@ function RerootFolder(uri, newFolder, isThreaded, sortID, sortDirection, viewTyp
    else
        SetNewsFolderColumns(false);
 
-
-
   // null this out, so we don't try sort.
   gDBView = null;
   // fix me
@@ -338,12 +336,12 @@ function SwitchView(command)
             nsMsgViewSortType.byThread, nsMsgViewSortOrder.ascending);
     break;
     case "cmd_viewThreadsWithUnread":
-      CreateDBView(msgWindow.openFolder, nsMsgViewType.eShowThreadsWithUnread, nsMsgViewFlagsType.kOutlineDisplay, 
+      CreateDBView(msgWindow.openFolder, nsMsgViewType.eShowThreadsWithUnread, nsMsgViewFlagsType.kThreadedDisplay, 
             nsMsgViewSortType.byThread, nsMsgViewSortOrder.ascending);
 
     break;
     case "cmd_viewWatchedThreadsWithUnread":
-      CreateDBView(msgWindow.openFolder, nsMsgViewType.eShowWatchedThreadsWithUnread, nsMsgViewFlagsType.kOutlineDisplay, 
+      CreateDBView(msgWindow.openFolder, nsMsgViewType.eShowWatchedThreadsWithUnread, nsMsgViewFlagsType.kThreadedDisplay, 
             nsMsgViewSortType.byThread, nsMsgViewSortOrder.ascending);
    break;
     case "cmd_viewKilledThreads":
@@ -387,7 +385,7 @@ function SetSentFolderColumns(isSentFolder)
 
 function SetNewsFolderColumns(isNewsFolder)
 {
-  // mscott - i don't know what this does but it's going to need to be re-written...
+  dump("fix me, I need to show lines instead of size when reading news\n");
 /* 
 	var sizeColumn = document.getElementById("SizeColumnHeader");
   var sizeColumnTemplate = document.getElementById("SizeColumnTemplate");
@@ -488,62 +486,6 @@ function FindThreadPaneColumnBySortResource(sortID)
 	return null;
 }
 
-//If toggleCurrentDirection is true, then get current direction and flip to opposite.
-//If it's not true then use the direction passed in.
-function SortThreadPane(column, sortKey, secondarySortKey, toggleCurrentDirection, direction, changeCursor)
-{
-	//dump("In SortThreadPane, toggleCurrentDirection = " + toggleCurrentDirection + "\n");
-	var node = document.getElementById(column);
-	if(!node)
-		return false;
-
-	if(!direction)
-	{
-		direction = "ascending";
-		//If we just clicked on the same column, then change the direction
-		if(toggleCurrentDirection)
-		{
-			var currentDirection = node.getAttribute('sortDirection');
-			if (currentDirection == "ascending")
-					direction = "descending";
-			else if (currentDirection == "descending")
-					direction = "ascending";
-		}
-	}
-
-	UpdateSortIndicator(column, direction);
-	UpdateSortMenu(column);
-
-   var folder = GetSelectedFolder();
-	if(folder)
-	{
-		folder.setAttribute("sortResource", sortKey);
-		folder.setAttribute("sortDirection", direction);
-	}
-
-	SetActiveThreadPaneSortColumn(column);
-
-	var beforeSortTime;
-	if(showPerformance) {
-        beforeSortTime = new Date();
-    }
-
-	if(changeCursor)
-		SetBusyCursor(window, true);
-	var result = SortColumn(node, sortKey, secondarySortKey, direction);
-	if(changeCursor)
-		SetBusyCursor(window, false);
-
-	if(showPerformance) {
-	    var afterSortTime = new Date();
-	    var timeToSort = (afterSortTime.getTime() - beforeSortTime.getTime())/1000;
-		dump("timeToSort is " + timeToSort + " seconds\n");
-    }
-
-  SortDBView(sortKey,direction);
-	return result;
-}
-
 var nsMsgViewSortType = Components.interfaces.nsMsgViewSortType;
 var nsMsgViewSortOrder = Components.interfaces.nsMsgViewSortOrder;
 var nsMsgViewFlagsType = Components.interfaces.nsMsgViewFlagsType;
@@ -557,7 +499,7 @@ function CreateDBViewWithOldViewType(msgFolder, isThreaded, viewType, sortKey, s
   var dbViewType = ConvertViewType(viewType);
   var viewFlags;
     if (isThreaded) 
-      viewFlags = nsMsgViewFlagsType.kOutlineDisplay;
+      viewFlags = nsMsgViewFlagsType.kThreadedDisplay;
     else   
       viewFlags = nsMsgViewFlagsType.kFlatDisplay;
   CreateDBView(msgFolder, dbViewType, viewFlags, sortKey, sortDirection);
@@ -584,16 +526,27 @@ function CreateDBView(msgFolder, viewType, viewFlags, sortKey, sortDirection)
             break;
     }
 
-    dump("XXX creating " + dbviewContractId + "\n");
+    dump("XXX creating " + dbviewContractId + " with: " + viewType + "," + sortKey + "," + sortDirection + "\n");
     gDBView = Components.classes[dbviewContractId].createInstance(Components.interfaces.nsIMsgDBView);
 
     var sortType = ConvertSortKey(sortKey);
     var sortOrder = ConvertSortDirection(sortDirection)
 
+    dump("XXX which is: " + viewFlags + "," + sortType + "," + sortOrder + "\n");
+
     gCurViewFlags = viewFlags;
     var count = new Object;
     gDBView.init(messenger, msgWindow);
     gDBView.open(msgFolder, sortType, sortOrder, viewFlags, count);
+
+    if (viewFlags == nsMsgViewFlagsType.kThreadedDisplay) {
+      // threaded
+      SetHiddenAttributeOnThreadOnlyColumns("");
+    }
+    else {
+      // not threaded
+      SetHiddenAttributeOnThreadOnlyColumns("true");
+    }
 
     var colID = FindOutlinerColumnBySortType(sortType);
     if (colID)
@@ -945,7 +898,7 @@ function ShowThreads(showThreads)
 */    
     var viewFlags;
     if (showThreads) {
-        viewFlags = nsMsgViewFlagsType.kOutlineDisplay;
+        viewFlags = nsMsgViewFlagsType.kThreadedDisplay;
     }
     else {
         viewFlags = nsMsgViewFlagsType.kFlatDisplay;
@@ -1020,3 +973,15 @@ function MsgToggleWorkOffline()
     offlineManager.synchronizeForOffline(true, true, true, true, msgWindow);
   } 
 }
+
+/* 
+	UpdateSortMenu(column);
+
+  var folder = GetSelectedFolder();
+	if(folder)
+	{
+		folder.setAttribute("sortResource", sortKey);
+		folder.setAttribute("sortDirection", direction);
+	}
+
+*/
