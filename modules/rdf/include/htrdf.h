@@ -144,6 +144,12 @@ PR_PUBLIC_API(HT_Pane) HT_PaneFromResource(RDF_Resource r, HT_Notification n, PR
 
 PR_PUBLIC_API(HT_Pane) HT_NewQuickFilePane (HT_Notification notify);
 
+/* NewToolbarPane
+ * Added by Dave 
+ * Create a pane consisting of multiple views.  Each view corresponds to a single toolbar.
+ */
+PR_PUBLIC_API(HT_Pane) HT_NewToolbarPane (HT_Notification notify);
+
 /* NewPersonalToolbarPane
  * Creates a pane consisting of one view.  This view has the RDF resource
  * corresponding to the Personal Toolbar folder as its root.

@@ -953,7 +953,91 @@ HT_GetCountVisibleChildren(HT_Resource node)
 	return(count);
 }
 
+PRBool
+initToolbars (HT_Pane pane)
+{
+	HT_View			view;
+	RDF_Cursor		c;
+	RDF_Resource		n;
+	PRBool			err = false;
 
+	XP_ASSERT(pane != NULL);
+
+	if ((c = RDF_GetSources(pane->db, gNavCenter->RDF_Toolbar, gCoreVocab->RDF_parent,
+				RDF_RESOURCE_TYPE, 1)) != NULL)
+	{
+		while ((n = RDF_NextValue(c)) != NULL)
+		{
+			if ((view = HT_NewView(n, pane, PR_TRUE, NULL, PR_FALSE)) == NULL)
+			{
+				err = true;
+				break;
+			}
+		}
+		RDF_DisposeCursor(c);
+	}
+	return(err);
+}
+
+HT_Pane
+HT_NewToolbarPane(HT_Notification notify)
+{
+	HT_Pane			pane;
+	RDF_Event               ev;
+	PRBool			err = false;
+	RDF_Resource resource;
+	resource = gNavCenter->RDF_Toolbar;
+
+	do
+	{
+		if ((pane = (HT_Pane)getMem(sizeof(HT_PaneStruct))) == NULL)
+		{
+			err = true;
+			break;
+		}
+		pane->special = true;
+		pane->ns = notify;
+		pane->mask = HT_EVENT_DEFAULT_NOTIFICATION_MASK ;
+                if ((ev = (RDF_Event)getMem(sizeof(struct RDF_EventStruct))) == NULL) 
+		{
+			err = true; 
+			break;
+		}
+
+		ev->eventType = HT_EVENT_DEFAULT_NOTIFICATION_MASK;
+
+		pane->rns = RDF_AddNotifiable(gNCDB, bmkNotifFunc, ev, pane);
+		freeMem(ev);
+
+		if ((pane->hash = PL_NewHashTable(500, idenHash, PL_CompareValues,
+						PL_CompareValues,  NULL, NULL)) == NULL)
+		{
+			err = true;
+			break;
+		}
+		pane->db =  newNavCenterDB();
+		pane->autoFlushFlag = true;
+		
+		pane->next = gHTTop;
+		gHTTop = pane;
+
+		if ((err = initToolbars(pane)) == true)
+		{
+			break;
+		}
+
+	} while (false);
+
+	if (err == true)
+	{
+		if (pane != NULL)
+		{
+			htDeletePane(pane,PR_FALSE);
+			pane = NULL;
+		}
+	}
+	return(pane);
+}
 
 HT_Pane
 paneFromResource(RDF_Resource resource, HT_Notification notify, PRBool autoFlushFlag, PRBool autoOpenFlag)
