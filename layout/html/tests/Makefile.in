@@ -64,6 +64,7 @@ LIBS		= \
 		$(EXTRA_DSO_LIBS) \
 		$(TK_LIBS) \
 		$(MOZ_COMPONENT_LIBS) \
+		$(MOZ_UNICHARUTIL_LIBS) \
 		$(NULL)
 
 ifeq ($(OS_TARGET),WINCE)

@@ -102,7 +102,11 @@ endif
 # STATIC_EXTRA_LIBS	+= $(TK_LIBS)
 
 ifeq ($(OS_ARCH),WINNT)
+ifneq ($(OS_TARGET),WINCE)
 STATIC_EXTRA_LIBS += comctl32.lib comdlg32.lib uuid.lib shell32.lib ole32.lib oleaut32.lib version.lib winspool.lib
+else
+STATIC_EXTRA_LIBS += ole32.lib ceshell.lib
+endif
 endif
 
 
