@@ -1,0 +1,657 @@
+﻿<?xml version="1.0" ?>
+<bindings id="bookmarksBindings" 
+          xmlns="http://www.mozilla.org/xbl" 
+          xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" 
+          xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+
+  <binding id="bookmarksBase">
+    <implementation>
+      <!-- RDF Namespace URIs -->
+      <property name="RDF_NS">"http://www.w3.org/1999/02/22-rdf-syntax-ns#"</property>
+      <property name="NC_NS">"http://home.netscape.com/NC-rdf#"</property>
+      <property name="rdfContainer">
+        <getter><![CDATA[
+          const kRDFCContractID = "@mozilla.org/rdf/container;1";
+          const kRDFCIID = Components.interfaces.nsIRDFContainer;
+          return Components.classes[kRDFCContractID].getService(kRDFCIID);
+        ]]></getter>
+      </property>
+      <property name="_rdf">null</property>
+      <property name="rdf">
+        <getter><![CDATA[
+          if (!this._rdf) {
+            const kRDFContractID = "@mozilla.org/rdf/rdf-service;1";
+            const kRDFIID = Components.interfaces.nsIRDFService;
+            this._rdf = Components.classes[kRDFContractID].getService(kRDFIID);
+          }
+          return this._rdf;
+        ]]></getter>
+      </property>
+      <property name="_bookmarks">null</property>
+      <property name="bookmarks">
+        <getter><![CDATA[
+          if (!this._bookmarks)
+            this._bookmarks = this.rdf.GetDataSource("rdf:bookmarks");
+          return this._bookmarks;
+        ]]></getter>
+      </property>
+      <method name="resolveType">
+        <parameter name="aResource" />
+        <body><![CDATA[
+          var res = aResource;
+          if (!aResource.QueryInterface(Components.interfaces.nsIRDFResource))
+            // Not actually a resource, assume resource URI
+            aResouce = this.rdf.GetResource(aResource);
+          var typeArc = this.rdf.GetResource(this.RDF_NS + "type");
+          var type = this.db.GetTarget(res, typeArc, true);
+          try {
+            return type.QueryInterface(Components.interfaces.nsIRDFResource).Value;
+          }
+          catch (e) {
+            try { 
+              return type.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
+            }
+            catch (e) {
+              return null;
+            }
+          }
+        ]]></body>
+      </method>
+      <method name="flushDatasource">
+        <body><![CDATA[
+          const kBMDS = this.rdf.GetDataSource("rdf:bookmarks");
+          var remoteDS = kBMDS.QueryInterface(Components.interfaces.nsIRDFRemoteDataSource);
+          remoteDS.Flush();
+        ]]></body>
+      </method>
+      <method name="copySelection">
+        <parameter name="aSelection" />
+        <body><![CDATA[
+          const kSuppArrayContractID = "@mozilla.org/supports-array;1";
+          const kSuppArrayIID = Components.interfaces.nsISupportsArray;
+          var itemArray = Components.classes[kSuppArrayContractID].createInstance(kSuppArrayIID);
+      
+          const kSuppWStringContractID = "@mozilla.org/supports-wstring;1";
+          const kSuppWStringIID = Components.interfaces.nsISupportsWString;
+          var bmstring = Components.classes[kSuppWStringContractID].createInstance(kSuppWStringIID);
+          var unicodestring = Components.classes[kSuppWStringContractID].createInstance(kSuppWStringIID);
+          var htmlstring = Components.classes[kSuppWStringContractID].createInstance(kSuppWStringIID);
+        
+          var sBookmarkItem = ""; var sTextUnicode = ""; var sTextHTML = "";
+          for (var i = 0; i < aSelection.length; ++i) {
+            var url = LITERAL(this.db, aSelection[i], NC_NS + "URL");
+            var name = LITERAL(this.db, aSelection[i], NC_NS + "Name");
+            // XXXben is "\n" the best delimiter here? I think not. 
+            sBookmarkItem += NODE_ID(aSelection[i]) + "\n";
+            sTextUnicode += url + "\n";
+            sTextHTML += "<A HREF=\"" + url + "\">" + name + "</A>";
+          }    
+          
+          const kXferableContractID = "@mozilla.org/widget/transferable;1";
+          const kXferableIID = Components.interfaces.nsITransferable;
+          var xferable = Components.classes[kXferableContractID].createInstance(kXferableIID);
+      
+          xferable.addDataFlavor("moz/bookmarkclipboarditem");
+          bmstring.data = sBookmarkItem;
+          xferable.setTransferData("moz/bookmarkclipboarditem", bmstring, sBookmarkItem.length*2)
+          
+          xferable.addDataFlavor("text/html");
+          htmlstring.data = sTextHTML;
+          xferable.setTransferData("text/html", htmlstring, sTextHTML.length*2)
+          
+          xferable.addDataFlavor("text/unicode");
+          unicodestring.data = sTextUnicode;
+          xferable.setTransferData("text/unicode", unicodestring, sTextUnicode.length*2)
+          
+          const kClipboardContractID = "@mozilla.org/widget/clipboard;1";
+          const kClipboardIID = Components.interfaces.nsIClipboard;
+          var clipboard = Components.classes[kClipboardContractID].getService(kClipboardIID);
+          clipboard.setData(xferable, null, kClipboardIID.kGlobalClipboard);
+        ]]></body>
+      </method>
+    </implementation>
+  </binding>
+
+  <binding id="bookmarks-outliner" display="xul:hbox" 
+           extends="chrome://communicator/content/bookmarks/bookmarks.xml#bookmarksBase">
+    <implementation>
+      <constructor><![CDATA[
+        // We implement nsIController
+        this.outliner.controllers.appendController(this.controller);
+        var olb = document.getAnonymousElementByAttribute(this, "anonid", "bookmarks-outlinerbody");
+        olb = olb.builder.QueryInterface(Components.interfaces.nsIXULOutlinerBuilder);
+        olb.addObserver(this.builderObserver);
+        
+        // Attach event handlers
+        this.outlinerBody.addEventListener("select", this.selectionChanged, false);
+        // ...
+      ]]></constructor>
+      <destructor><![CDATA[
+      ]]></destructor>
+
+      <property name="outlinerBoxObject">
+        <getter><![CDATA[
+          return this.outliner.boxObject.QueryInterface(Components.interfaces.nsIOutlinerBoxObject);
+        ]]></getter>
+      </property>
+
+      <property name="outlinerBuilder">
+        <getter><![CDATA[
+          return this.outlinerBoxObject.outlinerBody.builder.QueryInterface(Components.interfaces.nsIXULOutlinerBuilder);
+        ]]></getter>
+      </property>
+
+      <property name="outliner">
+        <getter><![CDATA[
+          return document.getAnonymousElementByAttribute(this, "anonid", "bookmarks-outliner");
+        ]]></getter>
+      </property>
+
+      <property name="outlinerBody">
+        <getter><![CDATA[
+          return document.getAnonymousElementByAttribute(this, "anonid", "bookmarks-outlinerbody");
+        ]]></getter>
+      </property>
+
+      <property name="firstSelectedIndex">
+        <getter><![CDATA[
+          var boxObject = this.outlinerBoxObject;
+          var first = { };
+          boxObject.selection.getRangeAt(0, first, { });
+          return first.value;
+        ]]></getter>
+      </property>
+
+      <property name="lastSelectedIndex">
+        <getter><![CDATA[
+          var bo = this.outlinerBoxObject;
+          var last = { };
+          var rangeCount = bo.selection.getRangeCount();
+          bo.selection.getRangeAt(rangeCount - 1, { }, last);
+          return last.value;
+        ]]></getter>
+      </property>
+      
+      <!-- Returns the row index of the best row at which to perform an operation
+           relative to the current selection, e.g. creating a new bookmark 
+           adjacent to the current selection. -->
+      <method name="getNextRowIndex">
+        <body><![CDATA[
+          var bo = this.outlinerBoxObject;
+          var rangeCount = bo.selection.getRangeCount();
+          var currLevel, lastIndex = 0;
+          if (!rangeCount) 
+            currLevel = 0;
+          else
+            currLevel = bo.view.getLevel(this.firstSelectedIndex);
+
+          // Walk the selection. If the level for the current item is less than
+          // our running minimum, assume it is higher in the hierarchy than any
+          // previous. In this case, or in the case with a selected item of same
+          // hierarchy, set the lastIndex.
+          // XXXben - erk this comment sort of sucks. A diagram might help. 
+          for (var i = 0; i < rangeCount; ++i) {
+            var rangeMin = { };
+            var rangeMax = { };
+            bo.selection.getRangeAt(i, rangeMin, rangeMax);
+            for (var j = rangeMin.value; j <= rangeMax.value; ++j) {
+              var level = bo.view.getLevel(j);
+              if (level <= currLevel) {
+                currLevel = level;
+                lastIndex = j;
+              }
+            } 
+          }
+          return lastIndex;
+        ]]></body>
+      </method>
+
+      <method name="getTypeAtIndex">
+        <parameter name="aIndex" />
+        <body><![CDATA[
+          return this.resolveType(this.outlinerBuilder.getResourceAtIndex(aIndex));
+        ]]></body>
+      </method>
+
+      <!-- nsIController -->
+      <property name="controller" readonly="true"><![CDATA[
+      ({
+        mOuter: this,
+        
+        supportsCommand: function BMOLController_supportsCommand(aCommand) 
+        {
+          switch (aCommand) {
+          case "cmd_bm_undo":
+          case "cmd_bm_redo":
+            return false;
+          case "cmd_bm_cut":
+          case "cmd_bm_copy":
+          case "cmd_bm_paste":
+          case "cmd_bm_delete":
+          case "cmd_bm_selectAll":
+          case "cmd_bm_open":
+          case "cmd_bm_openfolder":
+          case "cmd_bm_openfolderinnewwindow":
+          case "cmd_bm_newbookmark":
+          case "cmd_bm_newfolder":
+          case "cmd_bm_newseparator":
+          case "cmd_bm_find":
+          case "cmd_bm_properties":
+          case "cmd_bm_rename":
+          case "cmd_bm_setnewbookmarkfolder":
+          case "cmd_bm_setpersonaltoolbarfolder":
+          case "cmd_bm_setnewsearchfolder":
+          case "cmd_bm_import":
+          case "cmd_bm_export":
+          case "cmd_bm_fileBookmark":
+            return true;
+          default:
+            return false;
+          }
+        },
+        
+        isCommandEnabled: function BMOLController_isCommandEnabled(aCommand)
+        {
+          var bo = this.mOuter.outlinerBoxObject;
+          var i, j;
+          var type;   // The bookmark's RDF:type arc
+          
+          switch (aCommand) {
+          case "cmd_bm_undo":
+          case "cmd_bm_redo":
+            return false;
+          case "cmd_bm_openfolder":
+            // 'Expand' is only available if one item is selected and that item is a
+            // container item.
+            return bo.selection.count == 1 && bo.view.isContainer(this.mOuter.firstSelectedIndex);
+          case "cmd_bm_open":
+            if (bo.selection.count != 1) 
+              return false;
+            return this.mOuter.getTypeAtIndex(this.mOuter.firstSelectedIndex) == this.mOuter.NC_NS + "Bookmark";
+          case "cmd_bm_rename":
+          case "cmd_bm_properties":
+            if (bo.selection.count != 1)  
+              return false;
+            type = this.mOuter.getTypeAtIndex(this.mOuter.firstSelectedIndex);
+            return type == this.mOuter.NC_NS + "Bookmark" || type == this.mOuter.NC_NS + "Folder";
+          case "cmd_bm_cut":
+            return bo.selection.count > 0;
+          case "cmd_bm_find":
+            return true;
+          case "cmd_bm_newbookmark":
+          case "cmd_bm_newfolder":
+          case "cmd_bm_newseparator":
+            // This is not really correct because it gives the false impression
+            // that it is possible to create an item as a child of some immutable folders
+            // like IE Favorites, but it will do for now. 
+            return true;
+          case "cmd_bm_delete":
+            // Determining whether or not the selection is mutable is handled by
+            // the deletion routine. 
+            return bo.selection.count >= 1;
+          case "cmd_bm_selectAll":
+            // "Select All" is disabled when all visible rows are selected.
+            // XXXben this could be cleverer. 
+            return bo.view.rowCount != bo.selection.count;
+          case "cmd_bm_copy":
+            return bo.selection.count >= 1;
+          case "cmd_bm_paste":
+            return this.mOuter.canPaste();
+          case "cmd_bm_openfolderinnewwindow":
+          case "cmd_bm_setnewbookmarkfolder":
+          case "cmd_bm_setpersonaltoolbarfolder":
+          case "cmd_bm_setnewsearchfolder":
+            if (bo.selection.count != 1) 
+              return false;
+            return this.mOuter.getTypeAtIndex(this.mOuter.firstSelectedIndex) == NC_NS + "Folder";
+          case "cmd_bm_import":
+          case "cmd_bm_export":
+            return true;
+          case "cmd_bm_fileBookmark":
+            if (bo.selection.count < 1) 
+              return false;
+            type = this.mOuter.getTypeAtIndex(this.mOuter.firstSelectedIndex);
+            return type == this.mOuter.NC_NS + "Folder" || type == this.mOuter.NC_NS + "Bookmark";
+          default:
+            return false;
+          }
+        },
+
+        doCommand: function BMOLController_doCommand(aCommand)
+        {
+          switch (aCommand) {
+          case "cmd_bm_cut":
+            this.mOuter.copySelection(selection);
+            this.mOuter.deleteSelection(selection);
+            break;
+          case "cmd_bm_copy":
+          case "cmd_bm_paste":
+            break;
+          case "cmd_bm_delete":
+            this.mOuter.deleteSelection();
+            break;
+          case "cmd_bm_selectAll":
+          case "cmd_bm_open":
+          case "cmd_bm_openfolder":
+          case "cmd_bm_openfolderinnewwindow":
+          case "cmd_bm_newbookmark":
+          case "cmd_bm_newfolder":
+          case "cmd_bm_newseparator":
+          case "cmd_bm_find":
+          case "cmd_bm_properties":
+          case "cmd_bm_rename":
+          case "cmd_bm_setnewbookmarkfolder":
+          case "cmd_bm_setpersonaltoolbarfolder":
+          case "cmd_bm_setnewsearchfolder":
+          case "cmd_bm_import":
+          case "cmd_bm_export":
+          case "cmd_bm_fileBookmark":
+            break;
+          default:
+          }
+        }
+      })
+      ]]></property>
+
+      <method name="onCommandUpdate">
+        <body><![CDATA[
+          var commands = ["cmd_bm_properties", "cmd_bm_rename", "cmd_bm_copy",
+                          "cmd_bm_paste", "cmd_bm_cut", "cmd_bm_delete",
+                          "cmd_bm_setpersonaltoolbarfolder", 
+                          "cmd_bm_setnewbookmarkfolder",
+                          "cmd_bm_setnewsearchfolder", "cmd_bm_fileBookmark", 
+                          "cmd_bm_openfolderinnewwindow", "cmd_bm_openfolder"];
+          for (var i = 0; i < commands.length; ++i) {
+            var enabled = this.controller.isCommandEnabled(commands[i]);
+            var commandNode = document.getElementById(commands[i]);
+            if (commandNode) { 
+              if (enabled) 
+                commandNode.removeAttribute("disabled");
+              else 
+                commandNode.setAttribute("disabled", "true");
+            }
+          }
+        ]]></body>
+      </method>
+
+      <method name="selectionChanged">
+        <parameter name="aEvent" />
+        <body><![CDATA[
+          document.commandDispatcher.updateCommands("outliner-select");
+        ]]></body>
+      </method>
+
+      <!-- nsIXULOutlinerBuilderObserver -->
+      <property name="builderObserver"><![CDATA[
+      ({
+        mOuter: this,
+        
+        onToggleOpenState: function BMOLBuilderObserver_onToggleOpenState(aItemIndex)
+        {
+        },
+        
+        onCycleHeader: function BMOLBuilderObserver_onCycleHeader(aColumnID, aHeaderElement)
+        {
+        },
+    
+        onCycleCell: function BMOLBuilderObserver_onCycleCell(aItemIndex, aColumnID)
+        {
+        },
+        
+        onSelectionChanged: function BMOLBuilderObserver_onSelectionChanged()
+        {
+          this.mOuter.onCommandUpdate();
+        },
+        
+        isEditable: function BMOLBuilderObserver_isEditable(aItemIndex, aColumnID)
+        {
+        },
+        
+        onSetCellText: function BMOLBuilderObserver_onSetCellText(aItemIndex, aColumnID, aValue)
+        {
+        },
+        
+        onPerformAction: function BMOLBuilderObserver_onPerformAction(aAction)
+        {
+        },
+        
+        onPerformActionOnRow: function BMOLBuilderObserver_onPerformActionOnRow(aAction, aItemIndex)
+        {
+        },
+        
+        onPerformActionOnCell: function BMOLBuilderObserver_onPerformActionOnCell(aAction, aItemIndex, aColumnID)
+        {
+        }
+      })
+      ]]></property>
+
+      <!-- RDF utility functions required by base binding -->
+      <property name="db">
+        <getter><![CDATA[
+          return this.outlinerBody.database;
+        ]]></getter>
+      </property>
+
+      <!-- Bookmarks utility functions -->
+      <method name="deleteSelection">
+        <body><![CDATA[
+          const kRDFCContractID = "@mozilla.org/rdf/container;1";
+          const kRDFCIID = Components.interfaces.nsIRDFContainer;
+          const ksRDFC = Components.classes[kRDFCContractID].getService(kRDFCIID);
+
+          var nextIndex = 0; // Used to determine which item to select after the deletion
+                             // is performed.
+
+          // Whether or not the selection contains items which cannot be deleted.                             
+          var selectionContainsImmutableItems = false;
+
+          var boxObject = this.outlinerBoxObject;
+          var outlinerBuilder = this.outlinerBuilder;
+          var rangeCount = this.outlinerBoxObject.selection.getRangeCount();
+          
+          var rangeMax = { };
+          var rangeMin = { };
+          
+          // First, walk the selection and see if there's anything we /can't/ 
+          // delete. If so, present a warning dialog listing the items that 
+          // we can't remove. 
+          const kIMDSContractID = "@mozilla.org/rdf/datasource;1?name=in-memory-datasource";
+          const kIMDSIID = Components.interfaces.nsIRDFDataSource;
+          var imDS = Components.classes[kIMDSContractID].getService(kIMDSIID);
+
+          const kRDFCUContractID = "@mozilla.org/rdf/container-utils;1";
+          const kRDFCUIID = Components.interfaces.nsIRDFContainerUtils;
+          const kRDFCU = Components.classes[kRDFCUContractID].getService(kRDFCUIID);
+
+          var immutableList = this.rdf.GetResource("NC:ImmutableBookmarkList");
+          var container = kRDFCU.MakeSeq(imDS, immutableList);
+          for (var i = 0; i < rangeCount; ++i) {
+            boxObject.selection.getRangeAt(i, rangeMin, rangeMax);
+            for (var j = rangeMin.value; j <= rangeMax.value; ++j) {
+              var resource = outlinerBuilder.getResourceAtIndex(j);
+              var type = this.getTypeAtIndex(j);
+              if (resource.Value == "NC:BookmarksRoot" || type == this.NC_NS + "IEFavoriteFolder")
+                continue;
+              
+              if (type != this.NC_NS + "Bookmark" && type != this.NC_NS + "Folder") {
+                // This delete operation contains items which cannot be deleted
+                // for one reason or another. Make a list of the items which
+                // we can't delete, and show a dialog. 
+                container.AppendElement(resource);
+                selectionContainsImmutableItems = true;
+                
+                // Now we need to ensure that this item's parent chain is not
+                // part of the current selection so that we don't delete that. We
+                // preserve selection on any deletable items in the folder chain
+                // however, and these are removed. 
+                for (var parentIndex = boxObject.view.getParentIndex(j);
+                     parentIndex != -1;
+                     parentIndex = boxObject.view.getParentIndex(parentIndex)) {
+                  // Note that we don't combine this with the check in the 
+                  // |while| above, as this would mean that if you had a folder 
+                  // hierarchy consisting of:
+                  // 
+                  //   Folder ->    [ selected ]
+                  //        Folder ->    [ not selected ]
+                  //             Immutable item [ selected ]
+                  //
+                  // This code would not work and the containing folder would be
+                  // deleted. 
+                  if (boxObject.selection.isSelected(parentIndex))
+                    boxObject.selection.toggleSelect(parentIndex);
+                }
+              }
+            }
+          }
+          
+          // Present a dialog showing any items that we can't delete. 
+          if (selectionContainsImmutableItems) {
+            openDialog("chrome://communicator/content/bookmarks/deleteBookmark.xul", "", "modal=yes,resizable=no", imDS);
+            
+            // Now clear the list of immutable items. 
+            ksRDFC.Init(imDS, immutableList);
+            var count = ksRDFC.GetCount();
+            for (var i = 0; i < count; ++i)
+              ksRDFC.RemoveElementAt(i, false);
+          }
+          
+          for (var i = 0; i < rangeCount; ++i) {
+            var rangeMax = { };
+            var rangeMin = { };
+            boxObject.selection.getRangeAt(i, rangeMin, rangeMax);
+            for (var j = rangeMin.value; j < rangeMax.value; ++j) {
+              var resource = outlinerBuilder.getResourceAtIndex(j);
+              if (resource.Value == "NC:BookmarksRoot")
+                continue;
+              
+              var currType = this.getTypeAtIndex(j);
+              if (currType == this.NC_NS + "IEFavoriteFolder") {
+                const kPrefSvcContractID = "@mozilla.org/preferences;1";
+                const kPrefSvcIID = Components.interfaces.nsIPref;
+                const kPrefSvc = Components.classes[kPrefSvcContractID].getService(kPrefSvcIID);
+                kPrefSvc.SetBoolPref("browser.bookmarks.import_system_favorites", false);
+              }
+              else if (currType != this.NC_NS + "Bookmark" &&
+                       currType != this.NC_NS + "Folder")
+                continue;
+
+              var parentIndex = boxObject.view.getParentIndex(j);
+              var parent = outlinerBuilder.getResourceAtIndex(parentIndex);
+              ksRDFC.Init(this.bookmarks, parent);
+              ksRDFC.RemoveElement(krBookmark, true);
+              
+              nextIndex = j + 1;
+            }
+          }
+
+          // Select the next row          
+          boxObject.selection.select(nextIndex);
+        ]]></body>
+      </method>
+     
+      <method name="canPaste">
+        <body><![CDATA[
+          // XXXben
+          return true;
+        ]]></body>
+      </method>
+      
+      <method name="newBookmark">
+        <body><![CDATA[
+          var insertAt = this.getNextRowIndex();
+          openDialog("chrome://communicator/content/bookmarks/addBookmark.xul", "", 
+                     "centerscreen,chrome,modal=yes,dialog=yes,resizable=no", null, null, folder, null, "newBookmark");
+          
+        ]]></body>
+      </method>
+    </implementation>
+  </binding>
+  <!-- Full Bookmarks Outliner, multi-columned -->
+  <binding id="bookmarks-outliner-full" extends="chrome://communicator/content/bookmarks/bookmarks.xml#bookmarks-outliner">
+    <xbl:content xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" xmlns:xbl="http://www.mozilla.org/xbl">
+      <!-- XXXben need focus event handler for cmd update -->
+      <outliner flex="1" flags="dont-test-empty" anonid="bookmarks-outliner">
+        <outlinercol id="Name" label="Name" flex="1" primary="true" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" persist="width hidden sortActive sortDirection" sortActive="true" sort="rdf:http://home.netscape.com/NC-rdf#Name" />
+        <splitter class="tree-splitter" />
+        <outlinercol id="URL" label="Location" flex="1" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" sort="rdf:http://home.netscape.com/NC-rdf#URL" persist="width hidden sortActive sortDirection" />
+        <splitter class="tree-splitter" />
+        <outlinercol id="AddDate" label="Add Date" flex="1" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" sort="rdf:http://home.netscape.com/NC-rdf#BookmarkAddDate" persist="width hidden sortActive sortDirection" />
+        <splitter class="tree-splitter" />
+        <outlinercol id="LastModDate" label="Last Modified Date" flex="1" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" sort="rdf:http://home.netscape.com/NC-rdf#LaskModifiedDate" persist="width hidden sortActive sortDirection" />
+        <!-- XXXben need to add event handlers for:
+                  - select
+                  - click
+                  - mousedown
+          -->
+        <outlinerbody anonid="bookmarks-outlinerbody" datasources="rdf:bookmarks rdf:internetsearch rdf:files" flex="1" ref="NC:BookmarksRoot" context="bmContext">
+          <template>
+            <rule rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator">
+              <outlinerrow uri="rdf:*" properties="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type separator" />
+            </rule>
+            <rule>
+              <outlinerrow uri="rdf:*" properties="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type rdf:http://home.netscape.com/NC-rdf#loading rdf:http://home.netscape.com/WEB-rdf#status">
+                <outlinercell ref="Name" label="rdf:http://home.netscape.com/NC-rdf#Name" />
+                <outlinercell ref="URL" label="rdf:http://home.netscape.com/NC-rdf#URL" />
+                <outlinercell ref="AddDate" label="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type" />
+                <outlinercell ref="LastModDate" label="rdf:http://home.netscape.com/NC-rdf#LastModifiedDate" />
+              </outlinerrow>
+            </rule>
+          </template>
+        </outlinerbody>
+      </outliner>
+    </xbl:content>
+  </binding>
+  <!-- Single column outliner -->
+  <binding id="bookmarks-outliner-name" extends="chrome://communicator/content/bookmarks/bookmarks.xml#bookmarks-outliner">
+    <xbl:content xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" xmlns:xbl="http://www.mozilla.org/xbl">
+      <outliner flex="1" flags="dont-test-empty" anonid="bookmarks-outliner" inherits="class=outlinerclass">
+        <outlinercol id="Name" label="Name" flex="1" primary="true" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" persist="width hidden sortActive sortDirection" sortActive="true" sort="rdf:http://home.netscape.com/NC-rdf#Name" />
+        <outlinerbody anonid="bookmarks-outlinerbody" datasources="rdf:bookmarks rdf:internetsearch rdf:files" flex="1" ref="NC:BookmarksRoot" context="bmContext">
+          <template>
+            <rule rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator">
+              <outlinerrow uri="rdf:*" properties="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type separator" />
+            </rule>
+            <rule>
+              <outlinerrow uri="rdf:*" properties="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type rdf:http://home.netscape.com/NC-rdf#loading rdf:http://home.netscape.com/WEB-rdf#status">
+                <outlinercell ref="Name" label="rdf:http://home.netscape.com/NC-rdf#Name" />
+              </outlinerrow>
+            </rule>
+          </template>
+        </outlinerbody>
+      </outliner>
+    </xbl:content>
+  </binding>
+</bindings>
+<!--
+
+API:
+  - root ref
+  - datasources
+  - columns
+  - click count
+  - sort
+  - selection
+  - default action oncommand
+  - context menu
+  - insert, remove bookmarks
+  - 
+
+//-->
+<!-- 
+  ILE: 
+    - impl ILE on outliner.xml
+//-->
+<!--
+  Command handling:
+    - impl |nsIController| 
+    - actual controller implemented by client which intercepts commands and provides
+      special handling for things like open in new browser etc. 
+    - client can alternatively use the built in controller for default functionality.
+    - decisions:
+        Implementation pattern:
+        client: 
+        (A) bookmarksUIElement.prototype.doCommand = function () { .. }
+          OR
+        (B) var ctrlr = { doCommand: function () { bookmarksUIElement.doCommand(); }
+          Tend to prefer (B) as it supports delegation
+//-->

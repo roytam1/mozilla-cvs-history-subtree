@@ -52,10 +52,10 @@ function NODE_ID (aElement)
   return aElement.getAttribute("ref") || aElement.id;
 }
 
-function LITERAL (aDB, aElement, aPropertyID)
+function LITERAL (aDB, aElementURI, aPropertyID)
 {
   var RDF = BookmarksUIElement.prototype.RDF;
-  var rSource = RDF.GetResource(NODE_ID(aElement));
+  var rSource = RDF.GetResource(aElementURI);
   var rProperty = RDF.GetResource(aPropertyID);
   var node = aDB.GetTarget(rSource, rProperty, true);
   return node ? node.QueryInterface(Components.interfaces.nsIRDFLiteral).Value : "";
@@ -324,10 +324,11 @@ BookmarksUIElement.prototype = {
       openDialog("chrome://communicator/content/bookmarks/addBookmark.xul", "", 
                  "centerscreen,chrome,modal=yes,dialog=yes,resizable=yes", null, null, folder, null, "selectFolder", rv);
       if (rv.selectedFolder) {
-        for (var k = 0; k < selection.length; ++k) {
-          if (NODE_ID(selection[k]) == rv.selectedFolder) 
+        for (var k = 0; k < selection.length; ++k) {                            
+          if (NODE_ID(selection[k]) == rv.selectedFolder)                       
             return; // Selection contains the target folder. Just fail silently.
-        }
+        }                                                                       
+        
         var additiveFlag = false;
         var selectedItems = [].concat(this.getSelection())
         for (var i = 0; i < selectedItems.length; ++i) {
@@ -551,12 +552,12 @@ BookmarksUIElement.prototype = {
       kSuppString.data = flavours[i];
       flavourArray.AppendElement(kSuppString);
     }
-    var hasFlavours = clipboard.hasDataMatchingFlavors(flavourArray, kClipboardIID.kGlobalClipboard);
-    return hasFlavours;
+    var hasFlavors = clipboard.hasDataMatchingFlavors(flavourArray, kClipboardIID.kGlobalClipboard);
+    return hasFlavors;
   },
   
-  /////////////////////////////////////////////////////////////////////////////
-  // aSelection is a mutable array, not a NodeList. 
+  ///////////////////////////////////////////////////////////////////////////// 
+  // aSelection is a mutable array, not a NodeList.                             
   deleteSelection: function (aSelection)
   {
     const kRDFCContractID = "@mozilla.org/rdf/container;1";
@@ -604,6 +605,7 @@ BookmarksUIElement.prototype = {
       }
       catch (e) {
       }
+      
       // Manipulate the selection array ourselves. 
       aSelection.splice(count,1);
     }
@@ -800,7 +802,7 @@ var BookmarksUtils = {
   {
     const krBMDS = this.RDF.GetDataSource("rdf:bookmarks");
     const kBMSvc = krBMDS.QueryInterface(Components.interfaces.nsIBookmarksService);
-    const krAnonymous = kBMSvc.GetAnonymousResource();
+    const krAnonymous = kBMSvc.getAnonymousResource();
     
     var args = [{ property: NC_NS + "parent", resource: aParentFolder },
                 { property: NC_NS + "Name",   literal:  aTitle },
@@ -842,7 +844,7 @@ var BookmarksUtils = {
       var fw = document.commandDispatcher.focusedWindow;
       aCharset = fw.document.characterSet;
     }
-
+  
     if (aShowDialog)
       openDialog("chrome://communicator/content/bookmarks/addBookmark.xul", "", 
                  "centerscreen,chrome,dialog=yes,resizable,dependent", aTitle, aURL, null, aCharset);
@@ -852,7 +854,7 @@ var BookmarksUtils = {
       const kBMSvcContractID = "@mozilla.org/browser/bookmarks-service;1";
       const kBMSvcIID = Components.interfaces.nsIBookmarksService;
       const kBMSvc = Components.classes[kBMSvcContractID].getService(kBMSvcIID);
-      kBMSvc.AddBookmark(aURL, aTitle, kBMSvcIID.BOOKMARK_DEFAULT_TYPE, aCharset);
+      kBMSvc.addBookmark(aURL, aTitle, kBMSvcIID.BOOKMARK_DEFAULT_TYPE, aCharset);
     }
   }
 };
@@ -869,9 +871,5 @@ var ContentUtils = {
     return null;
   }
 };
-
-
-
-
 
 

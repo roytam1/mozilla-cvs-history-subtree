@@ -1,0 +1,20 @@
+
+
+bookmarks-outliner
+  {
+    -moz-binding          : url("chrome://communicator/content/bookmarks/bookmarks.xml#bookmarks-outliner-full");
+  }
+  
+bookmarks-outliner.single-name
+  {
+    -moz-binding          : url("chrome://communicator/content/bookmarks/bookmarks.xml#bookmarks-outliner-name");
+  }
+  
+/*
+bookmarks-outliner.no-header > outliner > .outliner-columns
+  {
+    visibility            : collapse;
+  } 
+ */
+ 
+ 

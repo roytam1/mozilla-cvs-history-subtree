@@ -2494,17 +2494,6 @@ NS_IMPL_QUERY_INTERFACE8(nsBookmarksService,
 
 ////////////////////////////////////////////////////////////////////////
 // nsIBookmarksService
-
-NS_IMETHODIMP
-nsBookmarksService::AddBookmarkToFolder(const char *aURI,
-                                        nsIRDFResource *aFolder,
-                                        const PRUnichar* aTitle,
-                                        const PRUnichar *aCharset)
-{
-  return InsertBookmarkInFolder(aURI, aTitle, aCharset, aFolder, -1);
-}
-
-
 NS_IMETHODIMP
 nsBookmarksService::InsertBookmarkInFolder(const char *aURI,
                                            const PRUnichar* aTitle,
@@ -2574,7 +2563,7 @@ nsBookmarksService::AddBookmark(const char *aURI,
   rv = getFolderViaHint(bookmarkFolder, PR_TRUE, getter_AddRefs(destinationFolder));
   if (NS_FAILED(rv)) return rv;
 
-  return AddBookmarkToFolder(aURI, destinationFolder, aTitle, aCharset);
+  return InsertBookmarkInFolder(aURI, aTitle, aCharset, destinationFolder, -1);
 }
 
 
@@ -2665,7 +2654,7 @@ nsBookmarksService::GetLastCharset(const char *aURI,  PRUnichar **aLastCharset)
 
 
 NS_IMETHODIMP
-nsBookmarksService::UpdateBookmarkLastVisitedDate(const char *aURL, const PRUnichar *aCharset)
+nsBookmarksService::UpdateLastVisitedDate(const char *aURL, const PRUnichar *aCharset)
 {
 	nsCOMPtr<nsIRDFResource>	bookmark;
 	nsresult			rv;

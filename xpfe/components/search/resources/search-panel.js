@@ -904,7 +904,7 @@ function saveSearch()
   var searchTitle = "Search: '" + lastSearchText + "'";  // using " + gSites;
 
   var bmks = Components.classes[BMARKS_CONTRACTID].getService(nsIBookmarksService);
-  bmks.AddBookmark(lastSearchURI, searchTitle, bmks.BOOKMARK_SEARCH_TYPE, null);
+  bmks.addBookmark(lastSearchURI, searchTitle, bmks.BOOKMARK_SEARCH_TYPE, null);
 }
 
 function doCustomize()

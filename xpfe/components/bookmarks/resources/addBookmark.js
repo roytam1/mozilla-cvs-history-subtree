@@ -44,11 +44,13 @@
  *                        field (if visible).
  *   window.arguments[2]: Bookmark Folder. The RDF Resource URI of the
  *                        folder that this bookmark should be created in.
- *   window.arguments[3]: Bookmark Charset. The charset that should be
+ *   window.arguments[3]: Bookmark Folder Index. the bookmark is created at
+ *                        this index within the selected folder. 
+ *   window.arguments[4]: Bookmark Charset. The charset that should be
  *                        used when adding a bookmark to the specified
  *                        URL. (Usually the charset of the current 
  *                        document when launching this window). 
- *   window.arguments[4]: The mode of operation. See notes for details.
+ *   window.arguments[5]: The mode of operation. See notes for details.
  *
  * Mode of Operation Notes:
  * ------------------------
@@ -73,7 +75,13 @@ var gFld_Name   = null;
 var gFld_URL    = null; 
 var gFolderTree = null;
 
-var gBookmarkCharset = null;
+var gBookmarkName         = null;
+var gBookmarkURL          = null;
+var gBookmarkFolder       = null;
+var gBookmarkFolderIndex  = -1;
+var gBookmarkCharset      = null;
+var gDialogMode           = null;
+var gSelectedFolder       = null;
 
 const kRDFSContractID = "@mozilla.org/rdf/rdf-service;1";
 const kRDFSIID = Components.interfaces.nsIRDFService;
@@ -90,9 +98,17 @@ function Startup()
   gFld_URL = document.getElementById("url");
   gFolderTree = document.getElementById("folders");
   
+  gBookmarkName         = window.arguments[0];
+  gBookmarkURL          = window.arguments[1];
+  gBookmarkFolder       = window.arguments[2];
+  gBookmarkFolderIndex  = window.arguments[3];
+  gBookmarkCharset      = window.arguments[4];
+  gDialogMode           = window.arguments[5];
+  gSelectedFolder       = window.arguments[6];    // ref
+  
   var shouldSetOKButton = true;
   if ("arguments" in window) {
-    switch (window.arguments[4]) {
+    switch (gDialogMode) {
     case "selectFolder":
       // If we're being opened as a folder selection window
       document.getElementById("bookmarknamegrid").setAttribute("hidden", "true");
@@ -102,14 +118,14 @@ function Startup()
       var windowNode = document.getElementById("newBookmarkWindow");
       windowNode.setAttribute("title", windowNode.getAttribute("title-selectFolder"));
       shouldSetOKButton = false;
-      var folderItem = document.getElementById(window.arguments[2]);
+      var folderItem = document.getElementById(gBookmarkFolder);
       if (folderItem)
         gFolderTree.selectItem(folderItem);
       break;
     case "newBookmark":
       setupFields();
-      if (window.arguments[2])
-        gCreateInFolder = window.arguments[2];
+      if (gBookmarkFolder)
+        gCreateInFolder = gBookmarkFolder;
       document.getElementById("folderbox").setAttribute("hidden", "true");
       windowNode = document.getElementById("newBookmarkWindow");
       windowNode.removeAttribute("persist");
@@ -121,9 +137,8 @@ function Startup()
     default:
       // Regular Add Bookmark
       setupFields();
-      if (window.arguments[2]) {
-        gCreateInFolder = window.arguments[2];
-        var folderItem = document.getElementById(gCreateInFolder);
+      if (gBookmarkFolder) {
+        var folderItem = document.getElementById(gBookmarkFolder);
         if (folderItem)
           gFolderTree.selectItem(folderItem);
       }
@@ -139,12 +154,12 @@ function Startup()
 function setupFields()
 {
   // New bookmark in predetermined folder. 
-  gFld_Name.value = window.arguments[0] || "";
-  gFld_URL.value = window.arguments[1] || "";
+  gFld_Name.value = gBookmarkName || "";
+  gFld_URL.value = gBookmarkURL || "";
   onLocationInput();
   gFld_Name.select();
   gFld_Name.focus();
-  gBookmarkCharset = window.arguments [3] || null;
+  gBookmarkCharset = gBookmarkCharset || null;
 }
 
 function onLocationInput ()
@@ -157,8 +172,8 @@ function onOK()
 {
   // In Select Folder Mode, do nothing but tell our caller what
   // folder was selected. 
-  if (window.arguments[4] == "selectFolder")
-    window.arguments[5].selectedFolder = gCreateInFolder;
+  if (gDialogMode == "selectFolder")
+    gSelectedFolder.selectedFolder = gBookmarkFolder;
   else {
     // Otherwise add a bookmark to the selected folder. 
 
@@ -166,7 +181,7 @@ function onOK()
     const kBMSContractID = "@mozilla.org/browser/bookmarks-service;1";
     const kBMSIID = Components.interfaces.nsIBookmarksService;
     const kBMS = Components.classes[kBMSContractID].getService(kBMSIID);
-    var rFolder = kRDF.GetResource(gCreateInFolder, true);
+    var rFolder = kRDF.GetResource(gBookmarkFolder, true);
     const kRDFCContractID = "@mozilla.org/rdf/container;1";
     const kRDFIID = Components.interfaces.nsIRDFContainer;
     const kRDFC = Components.classes[kRDFCContractID].getService(kRDFIID);
@@ -193,8 +208,8 @@ function onOK()
     }
     catch (e) {
     }
-    
-    kBMS.AddBookmarkToFolder(url, rFolder, gFld_Name.value, gBookmarkCharset);
+
+    kBMS.insertBookmarkInFolder(url, gFld_Name.value, gBookmarkCharset, rFolder, gFolderIndex);
   }
   close();
 }
@@ -202,10 +217,10 @@ function onOK()
 function onTreeSelect ()
 {
   if (gFolderTree.selectedItems.length < 1) 
-    gCreateInFolder = "NC:NewBookmarkFolder";
+    gBookmarkFolder = "NC:NewBookmarkFolder";
   else {
     var selectedItem = gFolderTree.selectedItems[0];
-    gCreateInFolder = selectedItem.id;
+    gBookmarkFolder = selectedItem.id;
   }
 }
 
@@ -228,11 +243,11 @@ function useDefaultFolder ()
   var newBookmarkFolder = document.getElementById("NC:NewBookmarkFolder");
   if (newBookmarkFolder) {
     gFolderTree.selectItem(newBookmarkFolder);
-    gCreateInFolder = "NC:NewBookmarkFolder";
+    gBookmarkFolder = "NC:NewBookmarkFolder";
   }
   else {
     gFolderTree.clearItemSelection();
-    gCreateInFolder = "NC:BookmarksRoot";
+    gBookmarkFolder = "NC:BookmarksRoot";
   }
 }
 
