@@ -98,7 +98,6 @@ typedef PRUint32  nsCSSFrameType;
   ((_ft) & ~NS_CSS_FRAME_TYPE_REPLACED)
 
 #define NS_INTRINSICSIZE    NS_UNCONSTRAINEDSIZE
-#define NS_SHRINKWRAPWIDTH  NS_UNCONSTRAINEDSIZE
 #define NS_AUTOHEIGHT       NS_UNCONSTRAINEDSIZE
 #define NS_AUTOMARGIN       NS_UNCONSTRAINEDSIZE
 #define NS_AUTOOFFSET       NS_UNCONSTRAINEDSIZE
@@ -156,9 +155,6 @@ struct nsHTMLReflowState {
   //
   // For block-level frames, the computed width is based on the width of the
   // containing block, the margin/border/padding areas, and the min/max width.
-  // A value of NS_SHRINKWRAPWIDTH means that you should choose a width based
-  // on your content. The width may be as large as the specified maximum width
-  // (see mComputedMaxWidth).
   nscoord          mComputedWidth; 
 
   // The computed height specifies the frame's content height, and it does
