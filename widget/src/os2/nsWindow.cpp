@@ -63,6 +63,7 @@
 static int WINDOWCOUNT = 0;
 #endif
 
+#define kWindowPositionSlop 20
 static const char *sScreenManagerContractID = "@mozilla.org/gfx/screenmanager;1";
 
 // HWNDs are mapped to nsWindow objects using a custom presentation parameter,
@@ -104,7 +105,8 @@ PRBool              gRollupConsumeRollupEvent = PR_FALSE;
 
 PRBool gJustGotActivate = PR_FALSE;
 PRBool gJustGotDeactivate = PR_FALSE;
-PRBool gIsDestroyingAny = PR_FALSE;
+
+HWND   gHwndBeingDestroyed = NULLHANDLE;
 
 ////////////////////////////////////////////////////
 // Mouse Clicks - static variable defintions 
@@ -115,10 +117,6 @@ static LONG   gLastMsgTime    = 0;
 static LONG   gLastClickCount = 0;
 ////////////////////////////////////////////////////
 
-#ifdef DEBUG_FOCUS
-static int currentWindowIdentifier = 0;
-#endif
-
 //-------------------------------------------------------------------------
 //
 // nsWindow constructor
@@ -128,7 +126,6 @@ nsWindow::nsWindow() : nsBaseWidget()
 {
     NS_INIT_REFCNT();
     mWnd                = 0;
-    mFrameWnd           = 0;
     mPrevWndProc        = NULL;
     mParent             = 0;
     mNextID             = 1;
@@ -151,7 +148,8 @@ nsWindow::nsWindow() : nsBaseWidget()
     mBorderStyle        = eBorderStyle_default;
     mFont               = nsnull;
     mOS2Toolkit         = nsnull;
-    mIsScrollBar         = FALSE;
+    mMenuBar            = nsnull;
+//    mActiveMenu        = nsnull;
 
   mIsTopWidgetWindow = PR_FALSE;
 }
@@ -656,13 +654,6 @@ MRESULT EXPENTRY fnwpNSWindow( HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
       }
    }
 
-    // hold on to the window for the life of this method, in case it gets
-    // deleted during processing. yes, it's a double hack, since someWindow
-    // is not really an interface.
-    nsCOMPtr<nsISupports> kungFuDeathGrip;
-    if (!wnd->mIsDestroying) // not if we're in the destructor!
-      kungFuDeathGrip = do_QueryInterface((nsBaseWidget*)wnd);
-
    MRESULT mRC = 0;
 
    if( wnd)
@@ -784,8 +775,6 @@ void nsWindow::RealDoCreate( HWND              hwndP,
          style &= ~WS_CLIPSIBLINGS;
    }
 
-   mIsScrollBar = (!(strcmp( WindowClass(), WC_SCROLLBAR_STRING )));
-
    if( hwndP != HWND_DESKTOP)
    {
       // For pop-up menus, the parent is the desktop, but use the "parent" as owner
@@ -800,22 +789,14 @@ void nsWindow::RealDoCreate( HWND              hwndP,
       // For scrollbars, the parent is the owner, for notification purposes
       else if(!hwndOwner )
       {
-         if( mIsScrollBar )
+         BOOL bHwndIsScrollBar = 
+                           (!(strcmp( WindowClass(), WC_SCROLLBAR_STRING )));
+         if( bHwndIsScrollBar )
          {
             hwndOwner = hwndP;
          }
       }
    }
-
-#ifdef DEBUG_FOCUS
-   mWindowIdentifier = currentWindowIdentifier;
-   currentWindowIdentifier++;
-   if (aInitData && (aInitData->mWindowType == eWindowType_toplevel)) {
-      printf("[%x] Create Frame Window (%d)\n", this, mWindowIdentifier);
-   } else {
-     printf("[%x] Create Window  (%d)\n", this, mWindowIdentifier);
-   }
-#endif
 
    // Create a window: create hidden & then size to avoid swp_noadjust problems
    // owner == parent except for 'borderless top-level' -- see nsCanvas.cpp
@@ -830,17 +811,6 @@ void nsWindow::RealDoCreate( HWND              hwndP,
                            0, 0);      // ctldata, presparams
 
    NS_ASSERTION( mWnd, "Couldn't create window");
-
-   // This is ugly. The Thinkpad TrackPoint driver checks to see whether or not a window
-   // actually has a scroll bar as a child before sending it scroll messages. Needless to
-   // say, no Mozilla window has real scroll bars. So if you have the "os2.trackpoint"
-   // preference set, we put an invisible scroll bar on every child window so we can
-   // scroll. Woohoo!
-   if (gWidgetModuleData->bIsTrackPoint && mWindowType == eWindowType_child && !mIsScrollBar) {
-     WinCreateWindow(mWnd, WC_SCROLLBAR, 0, SBS_VERT,
-                     0, 0, 0, 0, mWnd, HWND_TOP,
-                     FID_VERTSCROLL, NULL, NULL);
-   }
 
 #if DEBUG_sobotka
    printf("\n+++++++++++In nsWindow::RealDoCreate created 0x%lx, %d x %d\n",
@@ -991,16 +961,9 @@ NS_METHOD nsWindow::Destroy()
 
       if( mWnd)
       {
-         HWND hwndBeingDestroyed = mFrameWnd ? mFrameWnd : mWnd;
-         gIsDestroyingAny = PR_TRUE;
-#ifdef DEBUG_FOCUS
-         printf("[%x] Destroy (%d)\n", this, mWindowIdentifier);
-#endif
-         if (hwndBeingDestroyed == WinQueryFocus(HWND_DESKTOP)) {
-           WinSetFocus(HWND_DESKTOP, WinQueryWindow(hwndBeingDestroyed, QW_PARENT));
-         }
-         WinDestroyWindow(hwndBeingDestroyed);
-         gIsDestroyingAny = PR_FALSE;
+         gHwndBeingDestroyed = (mHackDestroyWnd ? mHackDestroyWnd : mWnd);
+         WinDestroyWindow( gHwndBeingDestroyed);
+         gHwndBeingDestroyed = NULLHANDLE;
       }
    }
    return NS_OK;
@@ -1248,8 +1211,6 @@ NS_METHOD nsWindow::ConstrainPosition(PRBool aAllowSlop,
     }
   }
 
-#define kWindowPositionSlop 100
-
   if (doConstrain) {
     if (aAllowSlop) {
       if (*aX < screenRect.xLeft - mBounds.width + kWindowPositionSlop)
@@ -1257,8 +1218,8 @@ NS_METHOD nsWindow::ConstrainPosition(PRBool aAllowSlop,
       else if (*aX >= screenRect.xRight - kWindowPositionSlop)
         *aX = screenRect.xRight - kWindowPositionSlop;
   
-      if (*aY < screenRect.yTop)
-        *aY = screenRect.yTop;
+      if (*aY < screenRect.yTop - mBounds.height + kWindowPositionSlop)
+        *aY = screenRect.yTop - mBounds.height + kWindowPositionSlop;
       else if (*aY >= screenRect.yBottom - kWindowPositionSlop)
         *aY = screenRect.yBottom - kWindowPositionSlop;
   
@@ -1389,10 +1350,8 @@ NS_METHOD nsWindow::SetFocus(PRBool aRaise)
         mOS2Toolkit->CallMethod(&info);
     }
     else
-    if (mWnd) {
-#ifdef DEBUG_FOCUS
-        printf("[%x] SetFocus (%d)\n", this, mWindowIdentifier);
-#endif
+    if (mWnd && 
+        (!gHwndBeingDestroyed || !WinIsChild(mWnd, gHwndBeingDestroyed))) {
         WinSetFocus( HWND_DESKTOP, mWnd);
     }
     return NS_OK;
@@ -2134,7 +2093,6 @@ void nsWindow::ConstrainZLevel(HWND *aAfter) {
 PRBool nsWindow::ProcessMessage( ULONG msg, MPARAM mp1, MPARAM mp2, MRESULT &rc)
 {
     PRBool result = PR_FALSE; // call the default window procedure
-    PRBool isMozWindowTakingFocus = PR_TRUE;
 
     switch (msg) {
 #if 0
@@ -2336,76 +2294,48 @@ PRBool nsWindow::ProcessMessage( ULONG msg, MPARAM mp1, MPARAM mp2, MRESULT &rc)
           result = OnScroll( msg, mp1, mp2);
           break;
 
-       case WM_ACTIVATE:
-#ifdef DEBUG_FOCUS
-          printf("[%x] WM_ACTIVATE (%d)\n", this, mWindowIdentifier);
-#endif
-          if (mp1) {
-            /* The window is being activated */
-            gJustGotActivate = PR_TRUE;
-#ifdef DEBUG_FOCUS
-            printf("[%x] NS_GOTFOCUS (%d)\n", this, mWindowIdentifier);
-#endif
-            result = DispatchFocus(NS_GOTFOCUS, isMozWindowTakingFocus);
-          } else {
-            /* The window is being deactivated */
-            gJustGotDeactivate = PR_TRUE;
-          }
-          break;
-
         case WM_FOCUSCHANGED:
-#ifdef DEBUG_FOCUS
-          printf("[%x] WM_FOCUSCHANGED (%d)\n", this, mWindowIdentifier);
-#endif
-          if (SHORT1FROMMP(mp2)) {
-            /* We are receiving focus */
-            if (!gIsDestroyingAny) {
-#ifdef DEBUG_FOCUS
-              printf("[%x] NS_GOTFOCUS (%d)\n", this, mWindowIdentifier);
-#endif
-              result = DispatchFocus(NS_GOTFOCUS, isMozWindowTakingFocus);
-              if (gJustGotActivate) {
-                gJustGotActivate = PR_FALSE;
-                gJustGotDeactivate = PR_FALSE;
-#ifdef DEBUG_FOCUS
-                printf("[%x] NS_ACTIVATE (%d)\n", this, mWindowIdentifier);
-#endif
-                result = DispatchFocus(NS_ACTIVATE, isMozWindowTakingFocus);
-              }
-              if ( WinIsChild( mWnd, HWNDFROMMP(mp1)) && mNextID == 1) {
-#ifdef DEBUG_FOCUS
-                printf("[%x] NS_PLUGIN_ACTIVATE (%d)\n", this, mWindowIdentifier);
-#endif
-                result = DispatchFocus(NS_PLUGIN_ACTIVATE, isMozWindowTakingFocus);
-                WinSetFocus(HWND_DESKTOP, mWnd);
-              }
-            } else {
-              nsToolkit *toolkit = NS_STATIC_CAST(nsToolkit *, mToolkit);
-              WinPostMsg(toolkit->GetDispatchWindow(), WM_FOCUSCHANGED, mp1, mp2);
-            }
-
-          } else {
-            /* We are losing focus */
-            char className[19];
-            ::WinQueryClassName((HWND)mp1, 19, className);
-            if (strcmp(className, WindowClass()) != 0 && 
-                strcmp(className, WC_SCROLLBAR_STRING) != 0) {
-               isMozWindowTakingFocus = PR_FALSE;
-            }
-            if (gJustGotDeactivate) {
-               gJustGotDeactivate = PR_FALSE;
-#ifdef DEBUG_FOCUS
-               printf("[%x] NS_DEACTIVATE (%d)\n", this, mWindowIdentifier);
-#endif
-               result = DispatchFocus(NS_DEACTIVATE, isMozWindowTakingFocus);
-            }
-#ifdef DEBUG_FOCUS
-            printf("[%x] NS_LOSTFOCUS (%d)\n", this, mWindowIdentifier);
-#endif
-            result = DispatchFocus(NS_LOSTFOCUS, isMozWindowTakingFocus);
+          /* Make a test to see if we are in the process of closing, deleting
+           * or destroying this nsWindow.  If we are, then we've already
+           * gotten rid of our nsDocShell->mScriptGlobal.  To handle focus
+           * events when there is no mScriptGlobal is apparently a bad thing.
+           */
+          if(!(mWindowState & nsWindowState_eClosing))
+          {
+             PRBool isMozWindowTakingFocus = PR_TRUE;
+             if( SHORT1FROMMP( mp2 ) || mWnd == WinQueryFocus(HWND_DESKTOP) )
+             {
+               result = DispatchFocus( NS_GOTFOCUS, isMozWindowTakingFocus );
+               // Only sending an Activate event when we get a WM_ACTIVATE message
+               // isn't good enough; need to do this every time we gain focus.
+               if( !gJustGotActivate )
+               {
+                 gJustGotActivate = PR_TRUE;
+                 if ( WinIsChild( mWnd, HWNDFROMMP(mp1)) && mNextID == 1)
+                    result = DispatchFocus( NS_PLUGIN_ACTIVATE, isMozWindowTakingFocus );
+                 else
+                    result = DispatchFocus( NS_ACTIVATE, isMozWindowTakingFocus );
+                 gJustGotActivate = PR_FALSE;
+               }
+             }
+             else
+             {
+               char className[19];
+               ::WinQueryClassName((HWND)mp1, 19, className);
+               if (strcmp(className, WindowClass()) != 0 && 
+                   strcmp(className, WC_SCROLLBAR_STRING) != 0)
+                  isMozWindowTakingFocus = PR_FALSE;
+   
+               if( gJustGotDeactivate )
+               {
+                 gJustGotDeactivate = PR_FALSE;
+                 result = DispatchFocus( NS_DEACTIVATE, isMozWindowTakingFocus );
+               }
+               result = DispatchFocus( NS_LOSTFOCUS, isMozWindowTakingFocus );
+             }
           }
           break;
-
+    
         case WM_WINDOWPOSCHANGED: 
           result = OnReposition( (PSWP) mp1);
           break;
@@ -2563,6 +2493,9 @@ void nsWindow::OnDestroy()
 
    // kill font
    delete mFont;
+
+   // release menubar
+//   NS_IF_RELEASE(mMenuBar);
 
    // dispatching of the event may cause the reference count to drop to 0
    // and result in this object being deleted. To avoid that, add a
@@ -3091,12 +3024,8 @@ NS_METHOD nsWindow::SetTitle(const nsString& aTitle)
    }
    else if( mWnd)
    {
-      /* On OS/2, if you pass a titlebar > 512 characters, it doesn't display at all. */
-      /* We are going to limit our titlebars to 256 just to be on the safe side */
-      nsAutoString left;
-      aTitle.Left(left, 256);
       WinSetWindowText( GetMainWindow(),
-                        gWidgetModuleData->ConvertFromUcs(left));
+                        gWidgetModuleData->ConvertFromUcs( aTitle));
    }
    return NS_OK;
 } 

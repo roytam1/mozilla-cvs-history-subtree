@@ -863,7 +863,7 @@ var BookmarksUtils = {
   },
 
 
-  addBookmarkForTabBrowser: function( aTabBrowser, aSelect )
+  addBookmarkForTabBrowser: function( aTabBrowser )
   {
     var tabsInfo = [];
     var currentTabInfo = { name: "", url: "", charset: null };
@@ -892,7 +892,7 @@ var BookmarksUtils = {
     openDialog("chrome://communicator/content/bookmarks/addBookmark.xul", "",
                "centerscreen,chrome,dialog=yes,resizable,dependent",
                currentTabInfo.name, currentTabInfo.url, null,
-               currentTabInfo.charset, "addGroup" + (aSelect ? ",group" : ""), tabsInfo);
+               currentTabInfo.charset, "addGroup", tabsInfo);
   },
 
   addBookmarkForBrowser: function (aDocShell, aShowDialog)

@@ -991,10 +991,10 @@ NS_IMETHODIMP nsRenderingContextWin :: GetLineStyle(nsLineStyle &aLineStyle)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsRenderingContextWin :: SetFont(const nsFont& aFont, nsIAtom* aLangGroup)
+NS_IMETHODIMP nsRenderingContextWin :: SetFont(const nsFont& aFont)
 {
   NS_IF_RELEASE(mFontMetrics);
-  mContext->GetMetricsFor(aFont, aLangGroup, mFontMetrics);
+  mContext->GetMetricsFor(aFont, mFontMetrics);
 
   return NS_OK;
 }
@@ -2641,12 +2641,7 @@ NS_IMETHODIMP nsRenderingContextWin :: CopyOffScreenBits(nsDrawingSurface aSrcSu
 
       if (palInfo.isPaletteDevice && palInfo.palette){
         ::SelectPalette(destdc, (HPALETTE)palInfo.palette, PR_TRUE);
-        // this is called to many times here.. taking this out because it breaks
-        // embedding.. its like fighting palettes.  All the palette stuff should
-        // be taken out.. but its so late in the beta cycle... I am taking the safe
-        // road until I can get all this figured out.. and completed correctly.
-        // Opened bug #153367 to take care of this palette issue.
-        //::RealizePalette(destdc);
+        ::RealizePalette(destdc);
         ::UpdateColors(destdc);
       }
 

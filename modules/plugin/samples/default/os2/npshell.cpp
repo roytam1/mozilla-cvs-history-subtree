@@ -104,9 +104,7 @@ NPError NP_LOADDS NPP_New(NPMIMEType pluginType,
   if(buf != NULL)
   {
     buf = strrchr(buf, '.');
-    if (buf) {
-      szFileExtension = ++buf;
-    }
+    szFileExtension = ++buf;
   }
 
   CPlugin * pPlugin = new CPlugin(hInst, 

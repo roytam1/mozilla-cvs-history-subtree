@@ -39,14 +39,14 @@
 #ifndef __CWindowCreator__
 #define __CWindowCreator__
 
-#include "nsIWindowCreator2.h"
+#include "nsIWindowCreator.h"
 #include "nsIWebBrowserChrome.h"
 
 // ---------------------------------------------------------------------------
 //  CWindowCreator
 // ---------------------------------------------------------------------------
 
-class CWindowCreator : public nsIWindowCreator2
+class CWindowCreator : public nsIWindowCreator
 {
   public:
                         CWindowCreator();
@@ -54,7 +54,6 @@ class CWindowCreator : public nsIWindowCreator2
     
     NS_DECL_ISUPPORTS
     NS_DECL_NSIWINDOWCREATOR
-    NS_DECL_NSIWINDOWCREATOR2
 
     // Call at startup time.
     static nsresult     Initialize();

@@ -83,9 +83,6 @@ class nsIMM
     typedef LONG (CALLBACK *SetCStatusPtr)  (HIMC,DWORD,DWORD);
     typedef LONG (CALLBACK *NotifyIMEPtr)   (HIMC,DWORD,DWORD,DWORD);
     typedef LONG (CALLBACK *SetCandWindowPtr)  (HIMC,LPCANDIDATEFORM);
-    typedef LONG (CALLBACK *SetCompWindowPtr)  (HIMC,LPCOMPOSITIONFORM);
-    typedef LONG (CALLBACK *GetCompFontPtr)  (HIMC, PLOGFONT);
-    typedef LONG (CALLBACK *SetCompFontPtr)  (HIMC, PLOGFONT);
     typedef LONG (CALLBACK *GetCompWindowPtr)  (HIMC,LPCOMPOSITIONFORM);
     typedef LONG (CALLBACK *GetPropertyPtr)  (HKL, DWORD);
 
@@ -126,21 +123,6 @@ public:
       
 	    mGetCompositionWindow=(mInstance) ? (GetCompWindowPtr)GetProcAddress(mInstance,"ImmGetCompositionWindow") : 0;
 	    NS_ASSERTION(mGetCompositionWindow!=NULL,"nsIMM.ImmGetCompositionWindow failed.");
-      
-	    mGetCompositionFontA=(mInstance) ? (GetCompFontPtr)GetProcAddress(mInstance,"ImmGetCompositionFontA") : 0;
-	    NS_ASSERTION(mGetCompositionFontA!=NULL,"nsIMM.ImmGetCompositionFontA failed.");
-
-	    mGetCompositionFontW=(mInstance) ? (GetCompFontPtr)GetProcAddress(mInstance,"ImmGetCompositionFontW") : 0;
-	    NS_ASSERTION(mGetCompositionFontW!=NULL,"nsIMM.ImmGetCompositionFontW failed.");
-
-	    mSetCompositionFontA=(mInstance) ? (SetCompFontPtr)GetProcAddress(mInstance,"ImmSetCompositionFontA") : 0;
-	    NS_ASSERTION(mSetCompositionFontA!=NULL,"nsIMM.ImmSetCompositionFontA failed.");
-
-	    mSetCompositionFontW=(mInstance) ? (SetCompFontPtr)GetProcAddress(mInstance,"ImmSetCompositionFontW") : 0;
-	    NS_ASSERTION(mSetCompositionFontW!=NULL,"nsIMM.ImmSetCompositionFontW failed.");
-
-	    mSetCompositionWindow=(mInstance) ? (SetCompWindowPtr)GetProcAddress(mInstance,"ImmSetCompositionWindow") : 0;
-	    NS_ASSERTION(mSetCompositionWindow!=NULL,"nsIMM.ImmSetCompositionWindow failed.");
 
 	    mGetProperty=(mInstance) ? (GetPropertyPtr)GetProcAddress(mInstance,"ImmGetProperty") : 0;
 	    NS_ASSERTION(mGetProperty!=NULL,"nsIMM.ImmGetProperty failed.");
@@ -159,11 +141,6 @@ public:
       mNotifyIME=0;
       mSetCandiateWindow=0;
       mGetCompositionWindow=0;
-      mSetCompositionWindow=0;
-      mGetCompositionFontA=0;
-      mGetCompositionFontA=0;
-      mSetCompositionFontW=0;
-      mSetCompositionFontW=0;
       mGetProperty=0;
     }
 
@@ -199,26 +176,6 @@ public:
       return (mSetCandiateWindow) ? mSetCandiateWindow(h,l) : 0L;
     }
 
-    LONG SetCompositionWindow(HIMC h,LPCOMPOSITIONFORM l) {
-      return (mSetCompositionWindow) ? mSetCompositionWindow(h,l) : 0L;
-    }
-
-    LONG GetCompositionFontA(HIMC h, PLOGFONT l) {
-      return (mGetCompositionFontA) ? mGetCompositionFontA(h,l) : 0L;
-    }
-
-    LONG GetCompositionFontW(HIMC h, PLOGFONT l) {
-      return (mGetCompositionFontW) ? mGetCompositionFontW(h,l) : 0L;
-    }
-
-    LONG SetCompositionFontA(HIMC h, PLOGFONT l) {
-      return (mSetCompositionFontA) ? mSetCompositionFontA(h,l) : 0L;
-    }
-
-    LONG SetCompositionFontW(HIMC h, PLOGFONT l) {
-      return (mSetCompositionFontW) ? mSetCompositionFontW(h,l) : 0L;
-    }
-
     LONG GetCompositionWindow(HIMC h,LPCOMPOSITIONFORM l) {
       return (mGetCompositionWindow) ? mGetCompositionWindow(h,l) : 0L;
     }
@@ -238,11 +195,6 @@ private:
     SetCStatusPtr  mSetConversionStatus;
     NotifyIMEPtr   mNotifyIME;  
     SetCandWindowPtr  mSetCandiateWindow;   
-    SetCompWindowPtr  mSetCompositionWindow;   
-    GetCompFontPtr  mGetCompositionFontA;   
-    GetCompFontPtr  mGetCompositionFontW;   
-    SetCompFontPtr  mSetCompositionFontA;   
-    SetCompFontPtr  mSetCompositionFontW;   
     GetCompWindowPtr  mGetCompositionWindow;   
     GetPropertyPtr  mGetProperty;
 };
@@ -460,7 +412,7 @@ protected:
 
     void GetNonClientBounds(nsRect &aRect);
     void HandleTextEvent(HIMC hIMEContext, PRBool aCheckAttr=PR_TRUE);
-    BOOL HandleStartComposition(HIMC hIMEContext);
+    void HandleStartComposition(HIMC hIMEContext);
     void HandleEndComposition(void);
     void MapDBCSAtrributeArrayToUnicodeOffsets(PRUint32* textRangeListLengthResult, nsTextRangeArray* textRangeListResult);
 
@@ -477,29 +429,22 @@ private:
 protected:
     nsSize      mLastSize;
     static      nsWindow* gCurrentWindow;
+    PRBool      mIsTopWidgetWindow;
     nsPoint     mLastPoint;
     HWND        mWnd;
 #if 0
     HPALETTE    mPalette;
 #endif
     WNDPROC     mPrevWndProc;
+
+    PRBool      mHas3DBorder;
     HBRUSH      mBrush;
-
-    PRPackedBool  mIsTopWidgetWindow;
-    PRPackedBool  mHas3DBorder;
-    PRPackedBool  mIsShiftDown;
-    PRPackedBool  mIsControlDown;
-    PRPackedBool  mIsAltDown;
-    PRPackedBool  mIsDestroying;
-    PRPackedBool  mOnDestroyCalled;
-    PRPackedBool  mIsVisible;
-    PRPackedBool  mIMEIsComposing;
-    PRPackedBool  mIMEIsStatusChanged;
-    PRPackedBool  mIsInMouseCapture;
-    PRPackedBool  mIsInMouseWheelProcessing;
-
-    char        mLeadByte;
-
+    PRBool      mIsShiftDown;
+    PRBool      mIsControlDown;
+    PRBool      mIsAltDown;
+    PRBool      mIsDestroying;
+    PRBool      mOnDestroyCalled;
+    PRBool      mIsVisible;
     // XXX Temporary, should not be caching the font
     nsFont *    mFont;
 
@@ -514,6 +459,8 @@ protected:
 
 	// For Input Method Support
 	DWORD		mIMEProperty;
+	PRBool		mIMEIsComposing;
+  PRBool    mIMEIsStatusChanged;
 	nsCString*	mIMECompString;
 	nsString*	mIMECompUnicode;
 	PRUint8*	mIMEAttributeString;
@@ -528,6 +475,9 @@ protected:
 
 	static UINT		gCurrentKeyboardCP;
 	static HKL		gKeyboardLayout;
+
+    PRBool  mIsInMouseCapture;
+    PRBool  mIsInMouseWheelProcessing;
 
     // Drag & Drop
     nsNativeDragTarget * mNativeDragTarget;
@@ -563,11 +513,6 @@ protected:
     IAccessible* mRootAccessible;
     static BOOL gIsAccessibilityOn;
 #endif
-
-   static BOOL CALLBACK BroadcastMsgToChildren(HWND aWnd, LPARAM aMsg);
-   static BOOL CALLBACK BroadcastMsg(HWND aTopWindow, LPARAM aMsg);
-public:
-   static void GlobalMsgWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 };
 
 //

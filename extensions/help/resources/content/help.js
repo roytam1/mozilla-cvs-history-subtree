@@ -24,9 +24,6 @@
 var helpBrowser;
 var helpWindow;
 var helpSearchPanel;
-var emptySearch;
-var emptySearchText
-var emptySearchLink
 var helpTocPanel;
 var helpIndexPanel;
 var helpGlossaryPanel;
@@ -42,12 +39,9 @@ var RDF = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Compon
 var RDF_ROOT = RDF.GetResource("urn:root");
 var NC_PANELLIST = RDF.GetResource(NC + "panellist");
 var NC_PANELID = RDF.GetResource(NC + "panelid");
-var NC_EMPTY_SEARCH_TEXT = RDF.GetResource(NC + "emptysearchtext");
-var NC_EMPTY_SEARCH_LINK = RDF.GetResource(NC + "emptysearchlink");
 var NC_DATASOURCES = RDF.GetResource(NC + "datasources");
 var NC_SUBHEADINGS = RDF.GetResource(NC + "subheadings");
 var NC_NAME = RDF.GetResource(NC + "name");
-var NC_CHILD = RDF.GetResource(NC + "child");
 var NC_LINK = RDF.GetResource(NC + "link");
 var NC_TITLE = RDF.GetResource(NC + "title");
 var NC_BASE = RDF.GetResource(NC + "base"); 
@@ -81,8 +75,6 @@ function displayTopic(topic) {
   if (!topic)
     topic = defaultTopic;
   var uri = getLink(topic);
-  if (!uri) // Topic not found - revert to default.
-      uri = getLink(defaultTopic); 
   loadURI(uri);
 }
 
@@ -180,8 +172,6 @@ function loadHelpRDF() {
         datasources = normalizeLinks(helpBaseURI, datasources);
         // cache additional datsources to augment search datasources.
         if (panelID == "search") {
-	       emptySearchText = getAttribute(helpFileDS, panelDef, NC_EMPTY_SEARCH_TEXT, null) || "No search items found." ;        
-	       emptySearchLink = getAttribute(helpFileDS, panelDef, NC_EMPTY_SEARCH_LINK, null) || "about:blank";        
           searchDatasources = datasources;
           datasources = "rdf:null"; // but don't try to display them yet!
         }  
@@ -416,7 +406,7 @@ function find(again)
   if (again)
     findAgainInPage(helpBrowser, window._content, focusedWindow);
   else
-    findInPage(helpBrowser, window._content, focusedWindow)
+    findInPage(browser, window._content, focusedWindow)
 }
 
 function getMarkupDocumentViewer()
@@ -522,14 +512,9 @@ function doFind() {
   for (var i=0; i < RE.length; ++i) {
     if (RE[i] == "")
       continue;
-    if (RE[i].length > 3) {
-        RE[i] = new RegExp(RE[i].substring(0, RE[i].length-1) +"\w?", "i");
-    } else {
-        RE[i] = new RegExp(RE[i], "i");
-    }
-
+    RE[i] = new RegExp(RE[i].substring(0, RE[i].length-1) +"\w?", "i");
   }
- emptySearch = true; 	
+
   // search TOC
   var resultsDS =  Components.classes["@mozilla.org/rdf/datasource;1?name=in-memory-datasource"].createInstance(Components.interfaces.nsIRDFDataSource);
   var tree = document.getElementById("help-toc-tree");
@@ -549,9 +534,7 @@ function doFind() {
   if (!sourceDS) // If the glossary has never been displayed this will be null (sigh!).
     sourceDS = loadCompositeDS(tree.datasources);
   doFindOnDatasource(resultsDS, sourceDS, RDF_ROOT, 0);
-  
-  if (emptySearch)
-		assertSearchEmpty(resultsDS);
+
   // Add the datasource to the search tree
   searchTree.database.AddDataSource(resultsDS);
   searchTree.builder.rebuild();
@@ -616,27 +599,10 @@ function doFindOnSeq(resultsDS, sourceDS, resource, level) {
              RDF.GetResource("http://home.netscape.com/NC-rdf#link"),
              link,
              true);
-  		emptySearch = false; 	
-             
     }
     // process any nested rdf:seq elements.
     doFindOnDatasource(resultsDS, sourceDS, target, level+1);       
     }  
-}
-function assertSearchEmpty(resultsDS) {
-	var resSearchEmpty = RDF.GetResource("urn:emptySearch");
-	resultsDS.Assert(RDF_ROOT,
-			 NC_CHILD,
-			 resSearchEmpty,
-			 true);
-	resultsDS.Assert(resSearchEmpty,
-			 NC_NAME,
-			 RDF.GetLiteral(emptySearchText),
-			 true);
-	resultsDS.Assert(resSearchEmpty,
-			 NC_LINK,
-			 RDF.GetLiteral(emptySearchLink),
-			 true);
 }
 
 function isMatch(text) {
@@ -696,11 +662,11 @@ function log(aText) {
 // open the ones at the top-level (i.e., expose the headings underneath
 // the letters in the list.
 function displayIndex() {
-  if (!helpIndexPanel.view)
-    helpIndexPanel.view = helpIndexPanel.builder;
-  var treeview = helpIndexPanel.view;
-  var i = treeview.rowCount;
-  while (i--)
-    if (!treeview.getLevel(i) && !treeview.isContainerOpen(i))
-      treeview.toggleOpenState(i);
+    var outliner = document.getElementById("help-index-outliner");
+    var oview = outliner.outlinerBoxObject.view;    
+    for ( i = 0; i < 500; ++i ) {
+      if ( !oview.isContainerOpen(i) && oview.getLevel(i) == 0 ) {
+        oview.toggleOpenState(i);
+      }
+    }
 }

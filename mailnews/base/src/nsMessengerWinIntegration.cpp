@@ -346,7 +346,7 @@ void nsMessengerWinIntegration::InitializeBiffStatusIcon()
   // initialize our biff status bar icon 
   nsresult rv = NS_OK; 
   MessageWindow msgWindow;
-
+ 
   if (mUseWideCharBiffIcon)
   {
     mWideBiffIconData.hWnd = (HWND) msgWindow;
@@ -709,30 +709,22 @@ void nsMessengerWinIntegration::DestroyBiffIcon()
 PRUint32 nsMessengerWinIntegration::GetToolTipSize()
 {
   if (mUseWideCharBiffIcon)
-    return (sizeof(mWideBiffIconData.szTip)/sizeof(mWideBiffIconData.szTip[0]));
+    return (sizeof mWideBiffIconData.szTip - 1);
   else
-    return (sizeof(mAsciiBiffIconData.szTip));
+    return (sizeof mAsciiBiffIconData.szTip - 1) * 2;
 }
 
 void nsMessengerWinIntegration::SetToolTipStringOnIconData(const PRUnichar * aToolTipString)
 {
   if (!aToolTipString) return;
   
-  PRUint32 toolTipBufSize = GetToolTipSize();
-
   if (mUseWideCharBiffIcon)
-  {
-    ::wcsncpy( mWideBiffIconData.szTip, aToolTipString, GetToolTipSize() );
-    if (wcslen(aToolTipString) >= toolTipBufSize)
-      mWideBiffIconData.szTip[toolTipBufSize - 1] = 0;
-  }
+    ::wcsncpy( mWideBiffIconData.szTip, aToolTipString, sizeof mWideBiffIconData.szTip - 1 );
   else
   {
     nsCString asciiToolTip;
     asciiToolTip.AssignWithConversion(aToolTipString);
-    ::strncpy( mAsciiBiffIconData.szTip, asciiToolTip.get(), GetToolTipSize() );
-    if (asciiToolTip.Length() >= toolTipBufSize)
-      mAsciiBiffIconData.szTip[toolTipBufSize - 1] = 0;
+    ::strncpy( mAsciiBiffIconData.szTip, asciiToolTip.get(), sizeof mAsciiBiffIconData.szTip - 1 );
   }
 }
 

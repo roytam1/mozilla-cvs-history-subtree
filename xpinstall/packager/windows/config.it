@@ -84,13 +84,6 @@ url=$ArchiveUrl$
 ;   Setup Type 3 - fourth radio button (usually the Custom option)
 Default Setup Type=Setup Type 1
 
-; Forces the icons on the system to be refreshed.
-; Default value is FALSE.
-; Possible values:
-;   FALSE
-;   TRUE
-Refresh Icons=FALSE
-
 ; This section contains info on how to send error information in case of
 ; either a download or xpinstall error.
 ; By default, this feature is enabled, unless disabled.
@@ -310,7 +303,7 @@ Proxy Password=
 ;   FTP
 ;   HTTP
 ; Default is FTP if key is not set.
-Use Protocol=HTTP
+Use Protocol=FTP
 ; Use Protocol Settings key shows or hides the
 ; Use FTP/Use HTTP radio buttons in the Download Dialog.
 ; Default value is ENABLED unless DISABLED is specified.
@@ -494,14 +487,6 @@ $InstallSizeArchive$:xpcom.xpi
 ;                            will be ignored.  If the .xpi file is not to be
 ;                            installed, then this attribute is ignored.
 ;
-;   SUPERSEDE     - Component is to be shown as disabled and unselected
-;                   if a file exists.
-;                   Use SupersedeType=File Exists to specify the type of comparison
-;                   Use SupersedeFileX=File Name to specify the file
-;                   Use SupersedeMinVersionX=a.b.c.d to specify the minimum version
-;                   of the file.  If the file version is greater than the
-;                   SupersedeMinVersion it will be superseded
-;
 Attributes=SELECTED|INVISIBLE|FORCE_UPGRADE
 Force Upgrade File0=[SETUP PATH]\xpcom.dll
 
@@ -528,7 +513,7 @@ Decrypt Name Value=FALSE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=post archive
-OS=NT5
+OS=NT51
 
 [Component Navigator-Windows Registry1]
 Root Key=HKEY_LOCAL_MACHINE
@@ -542,7 +527,7 @@ Decrypt Name Value=TRUE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=post archive
-OS=NT5
+OS=NT51
 
 [Component Navigator-Windows Registry2]
 Root Key=HKEY_LOCAL_MACHINE
@@ -556,7 +541,7 @@ Decrypt Name Value=TRUE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=post archive
-OS=NT5
+OS=NT51
 
 [Component Navigator-Windows Registry3]
 Root Key=HKEY_LOCAL_MACHINE
@@ -570,7 +555,7 @@ Decrypt Name Value=TRUE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=post archive
-OS=NT5
+OS=NT51
 
 [Component Navigator-Windows Registry4]
 Root Key=HKEY_LOCAL_MACHINE
@@ -584,7 +569,7 @@ Decrypt Name Value=TRUE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=post archive
-OS=NT5
+OS=NT51
 
 
 
@@ -611,7 +596,7 @@ Decrypt Name Value=TRUE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=post archive
-OS=NT5
+OS=NT51
 
 [Component MailNews-Windows Registry1]
 Root Key=HKEY_LOCAL_MACHINE
@@ -625,7 +610,7 @@ Decrypt Name Value=TRUE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=post archive
-OS=NT5
+OS=NT51
 
 [Component MailNews-Windows Registry2]
 Root Key=HKEY_LOCAL_MACHINE
@@ -639,7 +624,7 @@ Decrypt Name Value=TRUE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=post archive
-OS=NT5
+OS=NT51
 
 [Component MailNews-Windows Registry3]
 Root Key=HKEY_LOCAL_MACHINE
@@ -653,7 +638,7 @@ Decrypt Name Value=TRUE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=post archive
-OS=NT5
+OS=NT51
 
 [Component MailNews-Windows Registry4]
 Root Key=HKEY_LOCAL_MACHINE
@@ -667,7 +652,7 @@ Decrypt Name Value=TRUE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=post archive
-OS=NT5
+OS=NT51
 
 
 
@@ -1114,17 +1099,6 @@ Decrypt Name Value=TRUE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=pre smartupdate
-
-[Cleanup Previous Product RegKeys]
-Reg Key Root0=HKEY_LOCAL_MACHINE
-Product Name0=Mozilla
-Product Reg Key0=Software\Mozilla.org\Mozilla
-Current Version0=$UserAgent$
-;
-Reg Key Root1=HKEY_CURRENT_USER
-Product Name1=Mozilla
-Product Reg Key1=Software\Mozilla.org\Mozilla
-Current Version1=$UserAgent$
 
 
 

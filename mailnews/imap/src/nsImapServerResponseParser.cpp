@@ -2552,12 +2552,6 @@ PRInt32 nsImapServerResponseParser::FolderUID()
 	return fFolderUIDValidity;
 }
 
-void nsImapServerResponseParser::SetCurrentResponseUID(PRUint32 uid)
-{
-  if (uid > 0)
-    fCurrentResponseUID = uid;
-}
-
 PRUint32 nsImapServerResponseParser::CurrentResponseUID()
 {
 	return fCurrentResponseUID;

@@ -221,11 +221,7 @@ void nsMsgDatabase::ClearCachedObjects(PRBool dbGoingAway)
     printf("leaking %d headers in %s\n", m_headersInUse->entryCount, (const char *) m_dbName);
   }
 #endif
-  // We should only clear the use hdr cache when the db is going away, or we could
-  // end up with multiple copies of the same logical msg hdr, which will lead to 
-  // ref-counting problems.
-  if (dbGoingAway)
-    ClearUseHdrCache();
+  ClearUseHdrCache(dbGoingAway);
   m_cachedThread = nsnull;
   m_cachedThreadId = nsMsgKey_None;
 }
@@ -391,13 +387,16 @@ nsresult nsMsgDatabase::AddHdrToUseCache(nsIMsgDBHdr *hdr, nsMsgKey key)
 	return NS_ERROR_OUT_OF_MEMORY;
 }
 
-nsresult nsMsgDatabase::ClearUseHdrCache()
+nsresult nsMsgDatabase::ClearUseHdrCache(PRBool dbGoingAway)
 {
   if (m_headersInUse)
   {
+    if (dbGoingAway)
+    {
       // clear mdb row pointers of any headers still in use, because the
       // underlying db is going away.
       PL_DHashTableEnumerate(m_headersInUse, ClearHeaderEnumerator, nsnull);
+    }
     PL_DHashTableDestroy(m_headersInUse);
     m_headersInUse = nsnull;
   }

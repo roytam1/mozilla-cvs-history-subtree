@@ -126,7 +126,7 @@ bin\components\gfx2.dll
 bin\components\gkcontent.dll
 bin\components\content_base.xpt
 bin\components\content_html.xpt
-bin\components\content_xslt.xpt
+bin\components\content_xsl.xpt
 bin\components\xuldoc.xpt
 bin\components\xultmpl.xpt
 bin\components\gklayout.dll
@@ -137,7 +137,6 @@ bin\components\imggif.dll
 bin\components\imgjpeg.dll
 bin\components\imgbmp.dll
 bin\components\imgmng.dll
-bin\components\imgxbm.dll
 bin\components\imglib2.dll
 bin\components\imglib2.xpt
 bin\components\imgpng.dll
@@ -264,13 +263,6 @@ bin\components\transformiix.xpt
 bin\components\transformiix.dll
 bin\ISimpleDOMNodeMarshal.dll
 bin\ISimpleDOMDocumentMarshal.dll
-bin\components\nsSetDefaultBrowser.js
-
-; LDAP components need to be in the browser for AutoConfig
-bin\components\mozldap.dll
-bin\components\mozldap.xpt
-bin\nsldap32v50.dll
-bin\nsldappr32v50.dll
 
 ; chrome stuff
 bin\chrome\help.jar
@@ -302,7 +294,7 @@ bin\chrome\chromelist.txt
 ; all the pref files must be part of base
 ; to prevent migration bugs
 bin\defaults\pref\*
-bin\defaults\autoconfig\*
+bin\defaults\autoconfig\prefcalls.js
 bin\res\ua.css
 bin\res\html.css
 bin\res\quirk.css
@@ -374,6 +366,10 @@ bin\components\impComm4xMail.xpt
 bin\components\absyncsv.dll
 bin\components\absync.xpt
 bin\components\nsLDAPPrefsService.js
+bin\components\mozldap.dll
+bin\components\mozldap.xpt
+bin\nsldap32v50.dll
+bin\nsldappr32v50.dll
 bin\chrome\messenger.jar
 bin\chrome\messenger\*
 bin\components\msgsmime.dll
@@ -386,8 +382,6 @@ bin\components\mapihook.xpt
 bin\components\msgmdn.dll
 bin\components\msgmdn.xpt
 bin\components\mdn-service.js
-bin\components\nsSetDefaultMail.js
-bin\components\nsUnsetDefaultMail.js
 
 [chatzilla]
 bin\components\chatzilla-service.js

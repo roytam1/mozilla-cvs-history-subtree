@@ -89,7 +89,6 @@ protected:
 public:
     static HINSTANCE mDllInstance;
     // OS flag
-    static PRBool    mIsWinXP;
     static PRBool    mUseImeApiW;
     static PRBool    mW2KXP_CP936;
 

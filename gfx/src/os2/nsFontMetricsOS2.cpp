@@ -1610,12 +1610,9 @@ nsFontMetricsOS2::ResolveForwards(HPS                  aPS,
   {
     while( running && firstChar < lastChar )
     {
-      if(( *currChar > 0x00FF ) && (*currChar != 0x20AC))
+      if( *currChar > 0x00FF )
       { 
         fh = GetUnicodeFont(aPS);
-        NS_ASSERTION(fh, "GetUnicodeFont failed");
-        if (!fh)
-           fh = FindGlobalFont(aPS);
         fontSwitch.mFont = fh;
         while( ++currChar < lastChar )
         {
@@ -1633,7 +1630,7 @@ nsFontMetricsOS2::ResolveForwards(HPS                  aPS,
         fontSwitch.mFont = fh;
         while( ++currChar < lastChar )
         {
-          if( (*currChar > 0x00FF) && (*currChar != 0x20AC) )
+          if( *currChar > 0x00FF )
             break;
         }
 
@@ -1647,7 +1644,7 @@ nsFontMetricsOS2::ResolveForwards(HPS                  aPS,
   {
     while( running && firstChar < lastChar )
     {
-      if( (*currChar >= 0x0080 && *currChar <= 0x00FF) || (*currChar == 0x20AC)  )
+      if( *currChar >= 0x0080 && *currChar <= 0x00FF )
       { 
         fh = new nsFontOS2();
         *fh = *mFontHandle;
@@ -1655,7 +1652,7 @@ nsFontMetricsOS2::ResolveForwards(HPS                  aPS,
         fontSwitch.mFont = fh;
         while( ++currChar < lastChar )
         {
-          if(( *currChar < 0x0080 || *currChar > 0x00FF) && (*currChar != 0x20AC) )
+          if( *currChar < 0x0080 || *currChar > 0x00FF )
             break;
         }
 
@@ -1669,7 +1666,7 @@ nsFontMetricsOS2::ResolveForwards(HPS                  aPS,
         fontSwitch.mFont = fh;
         while( ++currChar < lastChar )
         {
-          if( (*currChar >= 0x0080 && *currChar <= 0x00FF) || (*currChar == 0x20AC)  )
+          if( *currChar >= 0x0080 && *currChar <= 0x00FF )
             break;
         }
 
@@ -1704,12 +1701,9 @@ nsFontMetricsOS2::ResolveBackwards(HPS                  aPS,
   {
     while( running && firstChar > lastChar )
     {
-      if(( *currChar > 0x00FF ) && (*currChar != 0x20AC))
+      if( *currChar > 0x00FF )
       { 
         fh = GetUnicodeFont(aPS);
-        NS_ASSERTION(fh, "GetUnicodeFont failed");
-        if (!fh)
-           fh = FindGlobalFont(aPS);
         fontSwitch.mFont = fh;
         while( --currChar > lastChar )
         {
@@ -1727,7 +1721,7 @@ nsFontMetricsOS2::ResolveBackwards(HPS                  aPS,
         fontSwitch.mFont = fh;
         while( --currChar > lastChar )
         {
-          if(( *currChar > 0x00FF ) && (*currChar != 0x20AC))
+          if( *currChar > 0x00FF )
             break;
         }
 
@@ -1741,7 +1735,7 @@ nsFontMetricsOS2::ResolveBackwards(HPS                  aPS,
   {
     while( running && firstChar > lastChar )
     {
-      if( (*currChar >= 0x0080 && *currChar <= 0x00FF) || (*currChar == 0x20AC)  )
+      if( *currChar >= 0x0080 && *currChar <= 0x00FF )
       { 
         fh = new nsFontOS2();
         *fh = *mFontHandle;
@@ -1749,7 +1743,7 @@ nsFontMetricsOS2::ResolveBackwards(HPS                  aPS,
         fontSwitch.mFont = fh;
         while( --currChar > lastChar )
         {
-          if(( *currChar < 0x0080 || *currChar > 0x00FF) && (*currChar != 0x20AC) )
+          if( *currChar < 0x0080 || *currChar > 0x00FF )
             break;
         }
 
@@ -1763,7 +1757,7 @@ nsFontMetricsOS2::ResolveBackwards(HPS                  aPS,
         fontSwitch.mFont = fh;
         while( --currChar > lastChar )
         {
-          if( (*currChar >= 0x0080 && *currChar <= 0x00FF) || (*currChar == 0x20AC)  )
+          if( *currChar >= 0x0080 && *currChar <= 0x00FF )
             break;
         }
 
@@ -1888,7 +1882,11 @@ nsFontMetricsOS2::InitializeGlobalFonts()
     char* fontptr;
     if( font->metrics.fsType & FM_TYPE_DBCS )
     {
-      fontptr = font->metrics.szFacename;
+      if( PL_strcmp( font->metrics.szFamilyname, "GOTHIC" ) == 0 ||
+          PL_strcmp( font->metrics.szFamilyname, "MINCHO" ) == 0 )
+        fontptr = font->metrics.szFacename;
+      else
+        fontptr = font->metrics.szFamilyname;
       if ((ulSystemCodePage != 1386) &&
           (ulSystemCodePage != 1381) &&
           (ulSystemCodePage != 950)) {
@@ -2014,14 +2012,17 @@ nsFontOS2*
 nsFontMetricsOS2::FindGlobalFont( HPS aPS )
 {
   nsFontOS2* fh = nsnull;
-  nsAutoString fontname;
-  if (!IsDBCS())
-    fontname = NS_LITERAL_STRING("Helv");
-  else
-    fontname = NS_LITERAL_STRING("Helv Combined");
-  fh = LoadFont( aPS, &fontname );
-  NS_ASSERTION(fh, "Couldn't load default font - BAD things are happening");
-  return fh;
+  int count = gGlobalFonts->Count();
+  int limit = count + gCachedIndex;
+  for( int i = gCachedIndex; i < limit; i++)
+  {
+    nsGlobalFont* font = (nsGlobalFont*)gGlobalFonts->ElementAt(i%count);
+    fh = LoadFont( aPS, &font->name );
+    if( fh )
+      return fh;
+  }
+
+  return nsnull;
 }
 
 

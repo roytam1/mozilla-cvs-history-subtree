@@ -27,12 +27,12 @@
 <overlay id="EdDialogOverlay"
      xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
-<vbox id="AdvancedEdit">
+<vbox id="AdvancedEdit" flex="1">
   <hbox flex="1" style="margin-top: 0.2em" align="center">
     <!-- This will right-align the button -->
     <spacer flex="1"/>
     <button id="AdvancedEditButton1" oncommand="onAdvancedEdit()" label="&AdvancedEditButton.label;"
-            accesskey="&AdvancedEditButton.accessKey;" tooltiptext="&AdvancedEditButton.tooltip;"/>
+            tooltiptext="&AdvancedEditButton.tooltip;"/>
   </hbox>
   <separator class="groove"/>
 </vbox>
@@ -45,32 +45,39 @@
   id        = "AdvancedEditButton"
   oncommand = "onAdvancedEdit();"
   label     = "&AdvancedEditButton.label;"
-  accesskey = "&AdvancedEditButton.accessKey;"
   tooltiptext="&AdvancedEditButton.tooltip;"/>
 
 <button 
   id        = "AdvancedEditButton2" 
   oncommand = "onAdvancedEdit()" 
   label     = "&AdvancedEditButton.label;"
-  accesskey = "&AdvancedEditButton.accessKey;"
   tooltiptext="&AdvancedEditButton.tooltip;"/>
 
 <button 
   id        = "ChooseFile" 
   oncommand = "chooseFile()"
-  label     = "&chooseButton.label;"
-  accesskey = "&chooseFile.accessKey;"/>
+  label     = "&chooseButton.label;"/>
+
+<button
+  id        = "ChooseLink"
+  oncommand = "chooseLink();"
+  label     = "&chooseButton.label;"/>
 
 <checkbox
   id        = "MakeRelativeCheckbox"
   label     = "&makeUrlRelative.label;"
-  accesskey = "&makeUrlRelative.accessKey;"
+  oncommand = "MakeInputValueRelativeOrAbsolute(this);"
+  tooltiptext = "&makeUrlRelative.tooltip;"/>
+
+<checkbox
+  id        = "MakeRelativeLink"
+  label     = "&makeUrlRelative.label;"
   oncommand = "MakeInputValueRelativeOrAbsolute(this);"
   tooltiptext = "&makeUrlRelative.tooltip;"/>
 
 <vbox id="LinkLocationBox">
-  <label control="hrefInput" accesskey="&LinkURLEditField.accessKey;" width="1">&LinkURLEditField.label;</label>
-  <menulist editable="true" id="hrefInput" style="min-width: 30em" oninput="ChangeLinkLocation();">
+  <description width="1">&LinkURLEditField.label;</description>
+  <menulist editable="true" class="minWidth20em" id="hrefInput" oninput="ChangeLinkLocation();">
     <menupopup/>
   </menulist>
   <hbox align="center">
@@ -78,11 +85,10 @@
     <checkbox id="MakeRelativeLink"
               for="hrefInput"
               label="&makeUrlRelative.label;"
-              accesskey="&makeUrlRelative.accessKey;"
               oncommand="MakeInputValueRelativeOrAbsolute(this);"
               tooltiptext="&makeUrlRelative.tooltip;"/>
     <spacer flex="1"/>
-    <button label="&chooseButton.label;" accesskey="&chooseFileLink.accessKey;" oncommand="chooseLinkFile();"/>
+    <button label="&chooseButton.label;" oncommand="chooseLinkFile();"/>
   </hbox>
 </vbox>  
 

@@ -51,6 +51,7 @@ nsDeviceContextSpecFactoryWin :: ~nsDeviceContextSpecFactoryWin()
 
 static NS_DEFINE_IID(kIDeviceContextSpecIID, NS_IDEVICE_CONTEXT_SPEC_IID);
 static NS_DEFINE_IID(kDeviceContextSpecCID, NS_DEVICE_CONTEXT_SPEC_CID);
+static NS_DEFINE_CID(kPrintOptionsCID, NS_PRINTOPTIONS_CID);
 
 NS_IMPL_ISUPPORTS1(nsDeviceContextSpecFactoryWin, nsIDeviceContextSpecFactory)
 
@@ -65,7 +66,7 @@ NS_IMETHODIMP nsDeviceContextSpecFactoryWin :: Init(void)
 NS_IMETHODIMP nsDeviceContextSpecFactoryWin :: CreateDeviceContextSpec(nsIWidget *aWidget,
                                                                        nsIPrintSettings* aPrintSettings,
                                                                        nsIDeviceContextSpec *&aNewSpec,
-                                                                       PRBool aIsPrintPreview)
+                                                                       PRBool aQuiet)
 {
   NS_ENSURE_ARG_POINTER(aWidget);
 
@@ -76,7 +77,7 @@ NS_IMETHODIMP nsDeviceContextSpecFactoryWin :: CreateDeviceContextSpec(nsIWidget
 
   if (nsnull != devspec){
     nsDeviceContextSpecWin* specWin = NS_STATIC_CAST(nsDeviceContextSpecWin*, devspec);
-    rv = specWin->Init(aWidget, aPrintSettings, aIsPrintPreview);
+    rv = specWin->Init(aWidget, aPrintSettings, aQuiet);
     if (NS_SUCCEEDED(rv)) {
       aNewSpec = devspec;
     } else {

@@ -1136,9 +1136,9 @@ nsMsgDBFolder::MarkAllMessagesRead(void)
   
   if(NS_SUCCEEDED(rv))
   {
-    EnableNotifications(allMessageCountNotifications, PR_FALSE, PR_TRUE /*dbBatching*/);
+    EnableNotifications(allMessageCountNotifications, PR_FALSE);
     rv = mDatabase->MarkAllRead(nsnull);
-    EnableNotifications(allMessageCountNotifications, PR_TRUE, PR_TRUE /*dbBatching*/);
+    EnableNotifications(allMessageCountNotifications, PR_TRUE);
     mDatabase->SetSummaryValid(PR_TRUE);
     mDatabase->Commit(nsMsgDBCommitType::kLargeCommit);
   }
@@ -1370,7 +1370,17 @@ nsresult nsMsgDBFolder::CompactOfflineStore(nsIMsgWindow *inWindow)
   nsresult rv;
   nsCOMPtr <nsIMsgFolderCompactor> folderCompactor =  do_CreateInstance(NS_MSGOFFLINESTORECOMPACTOR_CONTRACTID, &rv);
   if (NS_SUCCEEDED(rv) && folderCompactor)
-      rv = folderCompactor->Compact(this, inWindow);
+  {
+    GetDatabase(nsnull);
+    if (NS_SUCCEEDED(rv)) 
+    {
+      nsCOMPtr<nsIFileSpec> pathSpec;
+      rv = GetPath(getter_AddRefs(pathSpec));
+      rv = folderCompactor->Init(this, mBaseMessageURI, mDatabase, pathSpec, inWindow);
+      if (NS_SUCCEEDED(rv))
+        rv = folderCompactor->StartCompacting();
+    }
+  }
   return rv;
 }
 
@@ -1503,7 +1513,7 @@ nsMsgDBFolder::CompactAllOfflineStores(nsIMsgWindow *aWindow, nsISupportsArray *
   folderCompactor = do_CreateInstance(NS_MSGOFFLINESTORECOMPACTOR_CONTRACTID, &rv);
 
   if (NS_SUCCEEDED(rv) && folderCompactor)
-    rv = folderCompactor->CompactAll(aOfflineFolderArray, aWindow, PR_FALSE, nsnull);
+    rv = folderCompactor->StartCompactingAll(aOfflineFolderArray, aWindow, PR_FALSE, nsnull);
   return rv;
 }
 

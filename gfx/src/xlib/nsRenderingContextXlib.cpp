@@ -552,9 +552,9 @@ void nsRenderingContextXlib::UpdateGC()
    values.foreground = color;
    valuesMask |= GCForeground;
 
-   if (mCurrentFont && mCurrentFont->GetXFontStruct()) {
+   if (mCurrentFont && XFontStructPtr(*mCurrentFont)) {
      valuesMask |= GCFont;
-     values.font = mCurrentFont->GetXFontStruct()->fid;
+     values.font = XFontStructPtr(*mCurrentFont)->fid;
    }
  
    values.line_style = mLineStyle;
@@ -600,11 +600,10 @@ nsRenderingContextXlib::GetColor(nscolor &aColor) const
 }
 
 NS_IMETHODIMP
-nsRenderingContextXlib::SetFont(const nsFont& aFont, nsIAtom* aLangGroup)
+nsRenderingContextXlib::SetFont(const nsFont& aFont)
 {
   nsCOMPtr<nsIFontMetrics> newMetrics;
-  nsresult rv = mContext->GetMetricsFor( aFont, aLangGroup, *getter_AddRefs(newMetrics) );
-
+  nsresult rv = mContext->GetMetricsFor(aFont, *getter_AddRefs(newMetrics));
   if (NS_SUCCEEDED(rv)) {
     rv = SetFont(newMetrics);
   }

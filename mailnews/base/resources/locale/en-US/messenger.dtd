@@ -106,7 +106,7 @@ Rights Reserved.
 <!ENTITY spamFiltersCmd.label ".Junk Mail Filter">
 <!ENTITY spamFiltersCmd.accesskey "J">
 <!ENTITY filtersCmd.label "Message Filters...">
-<!ENTITY filtersCmd.accesskey "F">
+<!ENTITY filtersCmd.accesskey "i">
 <!ENTITY folderPropsCmd.label "Properties...">
 <!ENTITY folderPropsFolderCmd.label "Folder Properties...">
 <!ENTITY folderPropsNewsgroupCmd.label "Newsgroup Properties...">
@@ -536,11 +536,8 @@ Rights Reserved.
 <!---SearchBar-->
 <!-- also used by addressbook -->
 <!ENTITY SearchSubjectOrSender.label "Subject or Sender contains:">
-<!ENTITY SearchSubjectOrSender.accesskey "S">
 <!ENTITY SearchNameOrEmail.label "Name or Email contains:">
 <!ENTITY advancedButton.label "Advanced...">
-<!ENTITY advancedButton.accesskey "A">
-
 <!ENTITY clearButton.label "Clear">
 <!ENTITY clearButton.accesskey "C">
 

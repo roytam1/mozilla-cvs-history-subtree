@@ -23,12 +23,6 @@ DEPTH=..\..\..\..
 REQUIRES	= string \
 		  xpcom \
 		  necko \
-		  dom \
-		  caps \
-		  xpconnect \
-		  js \
-		  content \
-		  widget \
 		  $(NULL)
 include <$(DEPTH)/config/config.mak>
 

@@ -466,6 +466,7 @@ function SearchPanelStartup()
     else
       switchTab(1);
   }
+  focusTextBox();
 }
 
 function haveSearchResults()
@@ -571,6 +572,12 @@ function loadEngines(aCategory)
   }
 }
 
+function focusTextBox()
+{
+  var textBox = document.getElementById("sidebar-search-text");
+  textBox.focus();
+}
+
 function SearchPanelShutdown()
 {
   var tree = document.getElementById("resultList");
@@ -668,16 +675,10 @@ function doStop()
 
 function doSearch()
 {
-  var navWindow = getNavigatorWindow(true);
-  if (navWindow._content)
-    return onNavWindowLoad();
-  navWindow.addEventListener("load", onNavWindowLoad, false);
-}
-
-function onNavWindowLoad() {
-  var navWindow = getNavigatorWindow(true);
+  var searchMode = nsPreferences.getIntPref("browser.search.mode", 0);
 
   // hide various columns
+  var navWindow = getNavigatorWindow(false);
   if (navWindow && "_content" in navWindow && "isMozillaSearchWindow" in navWindow._content) {
     colNode = navWindow._content.document.getElementById("RelevanceColumn");
     if (colNode)
@@ -700,7 +701,6 @@ function onNavWindowLoad() {
     return;
   }
 
-  var searchMode = nsPreferences.getIntPref("browser.search.mode", 0);
   var engineURIs = [];
   if (searchMode > 0) {
     var foundEngine = false;

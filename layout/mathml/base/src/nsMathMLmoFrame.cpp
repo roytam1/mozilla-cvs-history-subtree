@@ -606,7 +606,7 @@ nsMathMLmoFrame::Stretch(nsIPresContext*      aPresContext,
   const nsStyleFont *font = NS_STATIC_CAST(const nsStyleFont*,
     mStyleContext->GetStyleData(eStyleStruct_Font));
   nsCOMPtr<nsIFontMetrics> fm;
-  aRenderingContext.SetFont(font->mFont, nsnull);
+  aRenderingContext.SetFont(font->mFont);
   aRenderingContext.GetFontMetrics(*getter_AddRefs(fm));
   nscoord leading = 0, axisHeight, height;
   GetAxisHeight(aRenderingContext, fm, axisHeight);

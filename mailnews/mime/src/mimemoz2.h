@@ -136,11 +136,6 @@ struct mime_stream_data {           /* This struct is the state we pass around
 //
 struct mime_draft_data 
 {
-  /* WARNING: You cannot use a c++ object, in that structure, which is dependent on its constructor or 
-           destructor as mime_draft_data is not created using the new operator. nsCOMPtr however are ok
-           to use as long you set it to null before the structure get freed.
-  */
-
   char                *url_name;           // original url name */
   nsMimeOutputType    format_out;          // intended output format; should be FO_OPEN_DRAFT */
   nsMIMESession       *stream;             // not used for now 
@@ -159,7 +154,6 @@ struct mime_draft_data
   char                *mailcharset;        // get it from CHARSET of Content-Type 
   PRBool              forwardInline;
   nsCOMPtr<nsIMsgIdentity>      identity;
-  char                *originalMsgURI;     // the original URI of the message we are currently processing
 };
 
 ////////////////////////////////////////////////////////////////

@@ -829,16 +829,16 @@ NS_IMETHODIMP nsDeviceContextOS2 :: GetDeviceContextFor(nsIDeviceContextSpec *aD
   NS_ADDREF(aDevice);
   
   int numCopies = 0;
-  int printerDest = 0;
+  int toPrinter = 0;
   char *file = nsnull;
 
   ((nsDeviceContextSpecOS2 *)aDevice)->GetPRTQUEUE(pq);
   ((nsDeviceContextSpecOS2 *)aDevice)->GetCopies(numCopies);
-  ((nsDeviceContextSpecOS2 *)aDevice)->GetDestination(printerDest);
-  if (!printerDest) 
+  ((nsDeviceContextSpecOS2 *)aDevice)->GetToPrinter(toPrinter);
+  if (!toPrinter) 
      ((nsDeviceContextSpecOS2 *)aDevice)->GetPath(&file);
 
-  HDC dc = PrnOpenDC(pq, "Mozilla", numCopies, printerDest, file);
+  HDC dc = PrnOpenDC(pq, "Mozilla", numCopies, toPrinter, file);
 
   if (!dc) {
      return NS_ERROR_FAILURE; //PMERROR("DevOpenDC");
@@ -884,7 +884,7 @@ nsresult nsDeviceContextOS2::CreateFontAliasTable()
 }
 
 // Printing ------------------------------------------------------------------
-nsresult nsDeviceContextOS2::PrepareDocument(PRUnichar * aTitle, PRUnichar* aPrintToFileName)
+nsresult nsDeviceContextOS2::BeginDocument(PRUnichar * aTitle)
 {
   nsresult rv = NS_OK;
 
@@ -913,12 +913,6 @@ nsresult nsDeviceContextOS2::PrepareDocument(PRUnichar * aTitle, PRUnichar* aPri
   }
 
   return rv;
-}
-
-nsresult nsDeviceContextOS2::BeginDocument(PRUnichar * aTitle, PRUnichar* aPrintToFileName, PRInt32 aStartPage, PRInt32 aEndPage)
-{
-  // Everything is done in PrepareDocument
-  return NS_OK;
 }
 
 nsresult nsDeviceContextOS2::EndDocument()

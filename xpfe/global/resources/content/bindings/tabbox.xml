@@ -339,10 +339,7 @@
   <binding id="tabs-closebutton" 
            extends="chrome://global/content/bindings/tabbox.xml#tabs">
     <content>
-      <xul:stack>
-        <xul:spacer class="tabs-left"/>
-        <xul:toolbarbutton class="tabs-newbutton" xbl:inherits="oncommand=onnewtab,tooltiptext=tooltiptextnew"/>
-      </xul:stack>
+      <xul:spacer class="tabs-left"/>
       <children/>
       <xul:stack flex="1">
         <xul:spacer class="tabs-right"/>

@@ -43,6 +43,7 @@ class nsFrameWindow : public nsWindow
    HWND GetMainWindow() const { return mFrameWnd; }
 
  protected:
+   HWND mFrameWnd;
    PFNWP  fnwpDefFrame;
    nsSize mSizeClient;
    nsSize mSizeBorder;

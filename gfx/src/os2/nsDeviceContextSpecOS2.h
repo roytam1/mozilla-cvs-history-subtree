@@ -79,7 +79,7 @@ public:
   ~PRINTDLG ();
    int GetNumPrinters ();
    int GetDefaultPrinter ();
-   GetPrinter (int numPrinter, char** printerName);
+   char* GetPrinter (int numPrinter);
    PRTQUEUE* SetPrinterQueue (int numPrinter);
    HDC GetDCHandle (int numPrinter);
    PLONG GetPrintDriverSize (int printer);
@@ -102,7 +102,7 @@ private:
 BOOL PrnClosePrinter( PRTQUEUE *pPrintQueue);
 
 // Get a DC for the selected printer.  Must supply the application name.
-HDC PrnOpenDC( PRTQUEUE *pPrintQueue, PSZ pszApplicationName, int copies, int destination, char *file);
+HDC PrnOpenDC( PRTQUEUE *pPrintQueue, PSZ pszApplicationName, int copies, int toPrinter, char *file);
 
 // Get the hardcopy caps for the selected form
 BOOL PrnQueryHardcopyCaps( HDC hdc, PHCINFO pHCInfo);
@@ -132,14 +132,18 @@ public:
 /**
  * Initialize the nsDeviceContextSpecMac for use.  This will allocate a printrecord for use
  * @update   dc 2/16/98
-   * @param aIsPrintPreview if PR_TRUE, creating Spec for PrintPreview
+ * @param aQuiet if PR_TRUE, prevent the need for user intervention
+ *        in obtaining device context spec. if nsnull is passed in for
+ *        the aOldSpec, this will typically result in getting a device
+ *        context spec for the default output device (i.e. default
+ *        printer).
  * @return error status
  */
-  NS_IMETHOD Init(nsIPrintSettings* aPS, PRBool	aIsPrintPreview);
+  NS_IMETHOD Init(nsIPrintSettings* aPS, PRBool	aQuiet);
   
   NS_IMETHOD ClosePrintManager();
 
-  NS_IMETHOD GetDestination( int &aDestination ); 
+  NS_IMETHOD GetToPrinter( PRBool &aToPrinter ); 
 
   NS_IMETHOD GetPrinterName ( char **aPrinter );
 

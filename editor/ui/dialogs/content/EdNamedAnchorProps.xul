@@ -46,9 +46,7 @@
 
   <spacer id="location" offsetY="50" persist="offsetX offsetY"/>
 
-  <label control="nameInput"
-         value="&anchorNameEditField.label;"
-         accesskey="&anchorNameEditField.accessKey;"/>
+  <label control="nameInput" value="&anchorNameEditField.label;"/>
   <textbox class="MinWidth20em" id="nameInput" oninput="ChangeName()" 
              tooltiptext="&nameInput.tooltip;"/>
   <spacer class="spacer"/>

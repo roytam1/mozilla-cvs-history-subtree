@@ -54,12 +54,9 @@
 
   <hbox id="status-bar-end-box">
     <statusbarpanel insertbefore="offline-status" class="statusbarpanel-iconic"
-      id="signed-status" collapsed="true" oncommand="showMessageReadSecurityInfo();"/>
+      id="signed-status" oncommand="showMessageReadSecurityInfo();"/>
     <statusbarpanel insertbefore="offline-status" class="statusbarpanel-iconic"
-      id="encrypted-status" collapsed="true" oncommand="showMessageReadSecurityInfo();"/>
-
-    <stringbundle id="bundle_read_smime" src="chrome://messenger-smime/locale/msgReadSMIMEOverlay.properties"/>
-    <stringbundle id="bundle_brand" src="chrome://global/locale/brand.properties"/>
+      id="encrypted-status" oncommand="showMessageReadSecurityInfo();"/>
   </hbox>
 
 </overlay>

@@ -313,7 +313,7 @@ nsBrowserStatusHandler.prototype =
     }
 
     // Disable menu entries for images, enable otherwise
-    if (content.document && this.mimeTypeIsTextBased(content.document.contentType))
+    if (this.mimeTypeIsTextBased(content.document.contentType))
       this.isImage.removeAttribute('disabled');
     else
       this.isImage.setAttribute('disabled', 'true');

@@ -41,6 +41,12 @@
 
 @namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
 
+/* ::::: toolbox ::::: */
+
+toolbox {
+  border-bottom: 1px solid #494F5D;
+}
+ 
 /* ::::: toolbar ::::: */
 
 toolbar {
@@ -50,15 +56,11 @@ toolbar {
   color: #000000;
 }
 
-toolbar > .toolbar-prefix {
-  border-top: 1px solid #EEF0F3;
-  border-left: 1px solid #EEF0F3;
-}
-
 toolbar > .toolbar-holder {
   border-top: 1px solid #EEF0F3;
   border-right: 1px solid #86929E;
   border-bottom: 1px solid #86929E;
+  border-left: 1px solid #EEF0F3;
 }
 
 /* ::::: menubar ::::: */

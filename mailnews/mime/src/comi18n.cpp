@@ -307,8 +307,7 @@ PRInt32 generate_encodedwords(char *pUTF8, const char *charset, char method, cha
       }
       const PRUnichar *charsetName;
       charsetAtom->GetUnicode(&charsetName);
-      strncpy(_charset, NS_ConvertUCS2toUTF8(charsetName).get(), sizeof(_charset)-1);
-      _charset[sizeof(_charset)-1] = '\0';
+      strcpy(_charset, NS_ConvertUCS2toUTF8(charsetName).get());
       if (_charset[0])
         charset = _charset;
     }
@@ -498,11 +497,8 @@ process_lastline:
           linelen = 1;
           if (foldingonly) {
             pUTF8Head = nsnull;
-            if (*pUTF8 == ' ' || *pUTF8 == TAB) {
+            if (*pUTF8 == ' ' || *pUTF8 == TAB)
               ++pUTF8;
-              if (!*pUTF8)
-                return 0;
-            }
           }
         }
         else {
@@ -1071,8 +1067,7 @@ char *intl_decode_mime_part2_str(const char *header,
 
     // Override charset if requested.  Never override labeled UTF-8.
     if (override_charset && 0 != nsCRT::strcasecmp(charset, "UTF-8")) {
-      PL_strncpy(charset, default_charset, sizeof(charset)-1);
-      charset[sizeof(charset)-1] = '\0';
+      PL_strcpy(charset, default_charset);
     }
 
     if (NS_SUCCEEDED(ConvertToUnicode(charset, decoded_text, tempUnicodeString))) {

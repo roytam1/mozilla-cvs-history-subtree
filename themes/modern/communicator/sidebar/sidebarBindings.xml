@@ -55,22 +55,10 @@
 
   <binding id="sidebarheader">
     <content>
-      <xul:stack flex="1">
-        <xul:hbox flex="1">
-          <xul:hbox class="grippy-aligner"/>
-          <xul:hbox class="toolbar-button-aligner" xbl:inherits="prefixhidden"/>
-          <xul:hbox class="sidebar-header-body" flex="1"/>
-        </xul:hbox>
-        <xul:hbox flex="1">
-          <xul:hbox flex="1" align="center">
-            <xul:label class="sidebar-header-text"
-              xbl:inherits="value=label,crop" crop="right" flex="1"/>
-          </xul:hbox>
-          <xul:hbox class="sidebar-header-body" pack="end">
-            <children/>
-          </xul:hbox>
-        </xul:hbox>
-      </xul:stack>
+      <xul:label class="sidebar-header-text" xbl:inherits="value=label,crop" crop="right" flex="1"/>
+      <xul:hbox>
+        <children/>
+      </xul:hbox>
     </content>
   </binding>
     

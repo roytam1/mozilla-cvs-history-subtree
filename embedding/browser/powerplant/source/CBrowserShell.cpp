@@ -47,8 +47,6 @@
 #include "nsIDOMHTMLCollection.h"
 #include "nsIDOMHTMLLinkElement.h"
 #include "nsIDOMHTMLAnchorElement.h"
-#include "nsIDOMNSDocument.h"
-#include "nsIDOMLocation.h"
 #include "nsIWebBrowserFind.h"
 #include "nsIWebBrowserFocus.h"
 #include "nsIWebBrowserPersist.h"
@@ -64,7 +62,6 @@
 #include "nsIWebBrowserPrint.h"
 #include "nsIMacTextInputEventSink.h"
 #include "nsCRT.h"
-#include "nsNetUtil.h"
 
 // Local
 #include "ApplIDs.h"
@@ -86,7 +83,6 @@
 
 static NS_DEFINE_IID(kWindowCID, NS_WINDOW_CID);
 
-const nsCString CBrowserShell::kEmptyCString;
 nsCOMPtr<nsIDragHelperService> CBrowserShell::sDragHelper;
 
 //*****************************************************************************
@@ -433,24 +429,6 @@ void CBrowserShell::MoveBy(SInt32	inHorizDelta,
 }
 
 
-void CBrowserShell::ActivateSelf()
-{
-    EventRecord osEvent;
-    osEvent.what = activateEvt;
-    osEvent.modifiers = activeFlag;
-    PRBool handled = PR_FALSE;
-    mEventSink->DispatchEvent(&osEvent, &handled);
-}
-
-void CBrowserShell::DeactivateSelf()
-{
-    EventRecord osEvent;
-    osEvent.what = activateEvt;
-    osEvent.modifiers = 0;
-    PRBool handled = PR_FALSE;
-    mEventSink->DispatchEvent(&osEvent, &handled);
-}
-
 void CBrowserShell::ShowSelf()
 {
     mWebBrowserAsBaseWin->SetVisibility(PR_TRUE);
@@ -488,13 +466,36 @@ void CBrowserShell::EventMouseUp(const EventRecord	&inMacEvent)
         dispatcher->UpdateMenus();
 }
 
+#if __PowerPlant__ >= 0x02200000
 void CBrowserShell::AdjustMouseSelf(Point				inPortPt,
                                     const EventRecord&	inMacEvent,
                                     RgnHandle			outMouseRgn)
 {
+    static Point	lastWhere = {0, 0};
+
+    if ((*(long*)&lastWhere != *(long*)&inMacEvent.where))
+    {
+        HandleMouseMoved(inMacEvent);
+        lastWhere = inMacEvent.where;
+    }
     Rect cursorRect = { inPortPt.h, inPortPt.v, inPortPt.h + 1, inPortPt.v + 1 };
     ::RectRgn(outMouseRgn, &cursorRect);
 }
+
+#else
+
+void CBrowserShell::AdjustCursorSelf(Point				/* inPortPt */,
+                                     const EventRecord&	inMacEvent)
+{
+    static Point	lastWhere = {0, 0};
+
+    if ((*(long*)&lastWhere != *(long*)&inMacEvent.where))
+    {
+        HandleMouseMoved(inMacEvent);
+        lastWhere = inMacEvent.where;
+    }
+}
+#endif
 
 //*****************************************************************************
 //***    CBrowserShell: LCommander overrides
@@ -597,38 +598,16 @@ Boolean CBrowserShell::ObeyCommand(PP_PowerPlant::CommandT inCommand, void* ioPa
             {               
                 // Get the URL from the link
                 ThrowIfNil_(mContextMenuDOMNode);
-                nsCOMPtr<nsIDOMHTMLAnchorElement> linkElement(do_QueryInterface(mContextMenuDOMNode));
-                // If that failed and, if the context of a click was in an image, find the parent
-                // node of the image which CAN be QI'd to an nsIDOMHTMLAnchorElement.
-                if (!linkElement && (mContextMenuContext & nsIContextMenuListener::CONTEXT_IMAGE))
-                {
-                    nsCOMPtr<nsIDOMNode> curr;
-                    mContextMenuDOMNode->GetParentNode(getter_AddRefs(curr));
-                    while (curr)
-                    {
-                        nsCOMPtr<nsIDOMElement> content = do_QueryInterface(curr);
-                        if (!content)
-                            break;
-                        linkElement = do_QueryInterface(content);
-                        if (linkElement)
-                            break;
-
-                        nsCOMPtr<nsIDOMNode> temp = curr;
-                        temp->GetParentNode(getter_AddRefs(curr));
-                    }
-                }
-                ThrowIfNil_(linkElement);
-                
-                nsAutoString temp;
-                rv = linkElement->GetHref(temp);
+                nsCOMPtr<nsIDOMHTMLAnchorElement> linkElement(do_QueryInterface(mContextMenuDOMNode, &rv));
                 ThrowIfError_(rv);
                 
-                nsCAutoString urlSpec = NS_ConvertUCS2toUTF8(temp);
-                nsCAutoString referrer;
-                rv = GetFocusedWindowURL(temp);
-                if (NS_SUCCEEDED(rv))
-                    referrer = NS_ConvertUCS2toUTF8(temp);
-                PostOpenURLEvent(urlSpec, referrer);
+                nsAutoString href;
+                rv = linkElement->GetHref(href);
+                ThrowIfError_(rv);
+                
+                nsCAutoString urlSpec;
+                CopyUCS2toASCII(href, urlSpec);
+                PostOpenURLEvent(urlSpec);
             }
             break;
             
@@ -673,7 +652,7 @@ Boolean CBrowserShell::ObeyCommand(PP_PowerPlant::CommandT inCommand, void* ioPa
                 rv = GetCurrentURL(currentURL);
                 ThrowIfError_(rv);
                 currentURL.Insert("view-source:", 0);
-                PostOpenURLEvent(currentURL, nsCString());
+                PostOpenURLEvent(currentURL);
             }
             break;
 
@@ -803,24 +782,18 @@ void CBrowserShell::SpendTime(const EventRecord&		inMacEvent)
 {
     switch (inMacEvent.what)
     {
-        case nullEvent:
-            HandleMouseMoved(inMacEvent);
-            break;
-        
         case osEvt:
-            {
-                // The event sink will not set the cursor if we are in the background - which is right.
-                // We have to feed it suspendResumeMessages for it to know
+        {
+            // The event sink will not set the cursor if we are in the background - which is right.
+            // We have to feed it suspendResumeMessages for it to know
 
-                unsigned char eventType = ((inMacEvent.message >> 24) & 0x00ff);
-                if (eventType == suspendResumeMessage) {
-                    PRBool handled = PR_FALSE;
-                    mEventSink->DispatchEvent(&const_cast<EventRecord&>(inMacEvent), &handled);
-                }
-                else if (eventType == mouseMovedMessage)
-                    HandleMouseMoved(inMacEvent);
+            unsigned char eventType = ((inMacEvent.message >> 24) & 0x00ff);
+            if (eventType == suspendResumeMessage) {
+              PRBool handled = PR_FALSE;
+              mEventSink->DispatchEvent(&const_cast<EventRecord&>(inMacEvent), &handled);
             }
-            break;
+        }
+        break;
     }
 }
 
@@ -906,30 +879,6 @@ NS_METHOD CBrowserShell::GetContentViewer(nsIContentViewer** aViewer)
     return ourDocShell->GetContentViewer(aViewer);
 }
 
-NS_METHOD CBrowserShell::GetFocusedWindowURL(nsAString& outURL)
-{
-    nsCOMPtr<nsIWebBrowserFocus> wbf(do_GetInterface(mWebBrowser));
-    if (!wbf)
-        return NS_ERROR_FAILURE;
-    nsCOMPtr<nsIDOMWindow> domWindow;
-    wbf->GetFocusedWindow(getter_AddRefs(domWindow));
-    if (!domWindow)
-        mWebBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
-    if (!domWindow)
-        return NS_ERROR_FAILURE;
-    nsCOMPtr<nsIDOMDocument> domDocument;
-    domWindow->GetDocument(getter_AddRefs(domDocument));
-    if (!domDocument)
-        return NS_ERROR_FAILURE;
-    nsCOMPtr<nsIDOMNSDocument> nsDoc(do_QueryInterface(domDocument));
-    if (!nsDoc)
-        return NS_ERROR_FAILURE;
-    nsCOMPtr<nsIDOMLocation> location;
-    nsDoc->GetLocation(getter_AddRefs(location));
-    if (!location)
-        return NS_ERROR_FAILURE;
-    return location->GetHref(outURL);
-}
 
 NS_METHOD CBrowserShell::GetPrintSettings(nsIPrintSettings** aSettings)
 {
@@ -940,7 +889,7 @@ NS_METHOD CBrowserShell::GetPrintSettings(nsIPrintSettings** aSettings)
         // If we don't have print settings yet, make new ones.
         nsCOMPtr<nsIWebBrowserPrint> wbPrint(do_GetInterface(mWebBrowser));
         NS_ENSURE_TRUE(wbPrint, NS_ERROR_NO_INTERFACE);
-        wbPrint->GetGlobalPrintSettings(getter_AddRefs(mPrintSettings));
+        wbPrint->GetNewPrintSettings(getter_AddRefs(mPrintSettings));
     }
     if (mPrintSettings) {
         *aSettings = mPrintSettings;
@@ -1023,16 +972,13 @@ NS_METHOD CBrowserShell::Reload()
 //*****************************************************************************
 
 
-NS_METHOD CBrowserShell::LoadURL(const nsACString& urlText, const nsACString& referrer)
-{    
-    nsCOMPtr<nsIURI> referrerURI;
-    if (referrer.Length()) {
-        nsresult rv = NS_NewURI(getter_AddRefs(referrerURI), referrer);
-        NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to make URI for referrer.");
-    }
-    return mWebBrowserAsWebNav->LoadURI(NS_ConvertUTF8toUCS2(urlText).get(),
+NS_METHOD CBrowserShell::LoadURL(const nsACString& urlText)
+{
+    nsAutoString unicodeURL;
+    CopyASCIItoUCS2(urlText, unicodeURL);
+    return mWebBrowserAsWebNav->LoadURI(unicodeURL.get(),
                                         nsIWebNavigation::LOAD_FLAGS_NONE,
-                                        referrerURI,
+                                        nsnull,
                                         nsnull,
                                         nsnull);
 }
@@ -1263,9 +1209,9 @@ Boolean CBrowserShell::FindNext()
 }
 
 
-NS_IMETHODIMP CBrowserShell::OnShowContextMenu(PRUint32 aContextFlags,
-                                               nsIDOMEvent *aEvent,
-                                               nsIDOMNode *aNode)
+NS_METHOD CBrowserShell::OnShowContextMenu(PRUint32 aContextFlags,
+                                           nsIDOMEvent *aEvent,
+                                           nsIDOMNode *aNode)
 {
     // Find our CWebBrowserCMAttachment, if any
     CWebBrowserCMAttachment *aCMAttachment = nsnull;
@@ -1298,68 +1244,26 @@ NS_IMETHODIMP CBrowserShell::OnShowContextMenu(PRUint32 aContextFlags,
     return NS_OK;
 }
                                           
-NS_IMETHODIMP CBrowserShell::OnShowTooltip(PRInt32 aXCoords,
-                                           PRInt32 aYCoords,
-                                           const PRUnichar *aTipText)
+NS_METHOD CBrowserShell::OnShowTooltip(PRInt32 aXCoords,
+                                       PRInt32 aYCoords,
+                                       const PRUnichar *aTipText)
 {
-    nsresult rv = NS_ERROR_NOT_IMPLEMENTED;
-    
-#if TARGET_CARBON
-    if ((Ptr)HMDisplayTag != (Ptr)kUnresolvedCFragSymbolAddress &&
-        (Ptr)HMHideTag != (Ptr)kUnresolvedCFragSymbolAddress)
-    {
-        HMHelpContentRec contentRec;
-        Point location;
-
-        location.h = aXCoords; location.v = aYCoords;
-        FocusDraw();
-        LocalToPortPoint(location);
-        PortToGlobalPoint(location);
-        
-        contentRec.version = kMacHelpVersion;
-        contentRec.absHotRect.top = contentRec.absHotRect.bottom = location.v;
-        contentRec.absHotRect.left = contentRec.absHotRect.right = location.h;
-        ::InsetRect(&contentRec.absHotRect, -4, -4);
-        contentRec.tagSide = kHMOutsideBottomScriptAligned;
-        contentRec.content[kHMMinimumContentIndex].contentType = kHMCFStringContent;
-        contentRec.content[kHMMinimumContentIndex].u.tagCFString = 
-            ::CFStringCreateWithCharactersNoCopy(NULL, (const UniChar *)aTipText, nsCRT::strlen(aTipText), kCFAllocatorNull);
-        contentRec.content[kHMMaximumContentIndex].contentType = kHMNoContent;
-        
-        ::HMDisplayTag(&contentRec);
-        rv = NS_OK;
-    }
-#endif
-
-    return rv;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP CBrowserShell::OnHideTooltip()
+NS_METHOD CBrowserShell::OnHideTooltip()
 {
-    nsresult rv = NS_ERROR_NOT_IMPLEMENTED;
-    
-#if TARGET_CARBON
-    if ((Ptr)HMHideTag != (Ptr)kUnresolvedCFragSymbolAddress)
-    {
-        ::HMHideTag();
-        rv = NS_OK;
-    }
-#endif
-
-    return rv;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 void CBrowserShell::HandleMouseMoved(const EventRecord& inMacEvent)
 {
-    static Point	lastWhere = {0, 0};
-
-    if (IsActive() && (*(long*)&lastWhere != *(long*)&inMacEvent.where))
+    if (IsActive())
     {
         FocusDraw();
         PRBool handled = PR_FALSE;
         mEventSink->DispatchEvent(&const_cast<EventRecord&>(inMacEvent), &handled);
-        lastWhere = inMacEvent.where;
     }
 }
 
@@ -1497,7 +1401,7 @@ Boolean CBrowserShell::HasFormElements()
     return false;
 }
 
-void CBrowserShell::PostOpenURLEvent(const nsACString& url, const nsACString& referrer)
+void CBrowserShell::PostOpenURLEvent(const nsACString& url)
 {    
     // Send an AppleEvent to ourselves to open a new window with the given URL
     
@@ -1533,15 +1437,6 @@ void CBrowserShell::PostOpenURLEvent(const nsACString& url, const nsACString& re
     if (err) {
         ::AEDisposeDesc(&getURLEvent);
         Throw_(err);
-    }
-    if (referrer.Length() != 0) {
-        const nsPromiseFlatCString& flatReferrer = PromiseFlatCString(referrer);  
-        StAEDescriptor referrerDesc(typeChar, flatReferrer.get(), flatReferrer.Length());
-        err = ::AEPutParamDesc(&getURLEvent, keyGetURLReferrer, referrerDesc);
-        if (err) {
-            ::AEDisposeDesc(&getURLEvent);
-            Throw_(err);
-        }
     }
     UAppleEventsMgr::SendAppleEvent(getURLEvent);
 }

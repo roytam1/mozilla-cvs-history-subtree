@@ -55,23 +55,17 @@
       </columns>
       <rows>
         <row align="center">
-          <label control="rowsInput" class="align-right"
-                 value="&numRowsEditField.label;"
-                 accesskey="&numRowsEditField.accessKey;"/>
+          <label class="align-right" value="&numRowsEditField.label;" />
           <textbox class="narrow" id="rowsInput" oninput="ChangeRowOrColumn(this.id)" />
           <spacer/>
         </row>
         <row align="center">
-          <label control="columnsInput" class="align-right"
-                 value="&numColumnsEditField.label;"
-                 accesskey="&numColumnsEditField.accessKey;"/>
+          <label class="align-right" value="&numColumnsEditField.label;" />
           <textbox class="narrow" id="columnsInput" oninput="ChangeRowOrColumn(this.id)" />
           <spacer/>
         </row>
         <row align="center">
-          <label control="widthInput" class="align-right"
-                 value="&widthEditField.label;"
-                 accesskey="&widthEditField.accessKey;"/>
+          <label class="align-right" value="&widthEditField.label;" />
           <textbox class="narrow" id="widthInput" oninput="forceInteger(this.id)" />
           <menulist id="widthPixelOrPercentMenulist" flex="1"/>
             <!-- child elements are appended by JS -->
@@ -82,9 +76,7 @@
   </groupbox>
   <spacer class="spacer"/>
   <hbox align="center">
-    <label control="borderInput" class="align-right"
-        value="&borderEditField.label;"
-        accesskey="&borderEditField.accessKey;"
+    <label class="align-right" value="&borderEditField.label;"
         tooltiptext="&borderEditField.tooltip;" />
     <textbox class="narrow" id="borderInput" oninput="forceInteger(this.id)" />
     <label value="&pixels.label;"/>  

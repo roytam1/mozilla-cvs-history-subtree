@@ -319,17 +319,14 @@ void NodeSet::reverse()
  * @param  aNode the Node to get the index for
  * @return index of specified node or -1 if the node does not exist
  */
-int NodeSet::indexOf(Node* aNode) const
+MBool NodeSet::indexOf(Node* aNode) const
 {
-    // XXX this doesn't fully work since attribute-nodes are broken
-    // and can't be pointer-compared. However it's the best we can
-    // do for now.
-    int i;
-    for (i = 0; i < mElementCount; ++i) {
-        if (mElements[i] == aNode)
-            return i;
-    }
-    return -1;
+    // XXX evaluate cost of this
+    // Workaround to fix the fact that attributes can't be
+    // pointer-compared
+    MBool nonDup;
+    int pos = findPosition(aNode, 0, mElementCount - 1, nonDup);
+    return nonDup ? -1 : pos;
 }
 
 /*

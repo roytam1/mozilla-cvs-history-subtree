@@ -185,7 +185,7 @@ menuitem[checked="true"][type="radio"][disabled="true"] {
 menulist > menupopup > menuitem,
 .menulist-menupopup > menuitem {
   max-width: none;
-  padding: 0px 20px 0px 0px;
+  padding: 0;
   font: message-box;
 }
 

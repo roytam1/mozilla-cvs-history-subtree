@@ -23,6 +23,7 @@
 
 function mailnewsOverlayStartup() {
     mailnewsOverlayInit();
+parent.hPrefWindow.registerOKCallbackFunc( onOK );
     if (!("mapiPref" in parent)) {
         parent.mapiPref = new Object;
         parent.mapiPref.isDefaultMailClient = 
@@ -36,15 +37,6 @@ function mailnewsOverlayStartup() {
             mailnewsEnableMapi.setAttribute("checked", "true");
         else
             mailnewsEnableMapi.setAttribute("checked", "false");
-    }
-}
-
-function registerCallback(){
-    if ("mapiCallback" in parent && parent.mapiCallback)
-        return;
-    if ("hPrefWindow" in parent && parent.hPrefWindow) {
-        parent.hPrefWindow.registerOKCallbackFunc( onOK );
-        parent.mapiCallback = true;
     }
 }
 

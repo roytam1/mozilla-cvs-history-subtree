@@ -60,7 +60,6 @@
 #include "nsICategoryManager.h"
 #include "nsISupportsPrimitives.h"
 #include "nsIPrefService.h"
-#include "nsIPrefBranchInternal.h" 
 
 // turn this on to see useful output
 #undef DEBUG_amds
@@ -79,7 +78,6 @@
 
 
 #define NC_RDF_ACCOUNTROOT "msgaccounts:/"
-#define PREF_SHOW_FAKE_ACCOUNT "mailnews.fakeaccount.show"
 
 typedef struct _serverCreationParams {
   nsISupportsArray *serverArray;
@@ -189,17 +187,6 @@ nsMsgAccountManagerDataSource::nsMsgAccountManagerDataSource()
       
       kDefaultServerAtom = NS_NewAtom("DefaultServer");
     }
-
-    nsCOMPtr<nsIPrefBranchInternal> prefBranchInternal;
-    nsCOMPtr<nsIPrefService> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID);
-    if (prefs) {
-      nsCOMPtr<nsIPrefBranch> prefBranch;
-      prefs->GetBranch(nsnull, getter_AddRefs(prefBranch));
-      if (prefBranch) {
-       prefBranchInternal = do_QueryInterface(prefBranch);
-       prefBranchInternal->AddObserver(PREF_SHOW_FAKE_ACCOUNT, this, PR_FALSE);
-      }
-   }
 }
 
 nsMsgAccountManagerDataSource::~nsMsgAccountManagerDataSource()
@@ -344,15 +331,14 @@ nsMsgAccountManagerDataSource::GetTarget(nsIRDFResource *source,
         if (NS_SUCCEEDED(rv))
           rv = prefs->GetBranch(nsnull, getter_AddRefs(prefBranch));
         PRBool showFakeAccount;
-        rv = prefBranch->GetBoolPref(PREF_SHOW_FAKE_ACCOUNT, &showFakeAccount);
+        rv = prefBranch->GetBoolPref("mailnews.fakeaccount.show", &showFakeAccount);
         if (showFakeAccount) {
           nsCOMPtr<nsIStringBundleService> strBundleService = do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv);
           if (NS_FAILED(rv)) return rv;
-          nsCOMPtr<nsIStringBundle> bundle;
           rv = strBundleService->CreateBundle("chrome://messenger/locale/fakeAccount.properties",
-                                               getter_AddRefs(bundle));
+                                               getter_AddRefs(mStringBundle));
           if (NS_SUCCEEDED(rv))
-              bundle->GetStringFromName(NS_LITERAL_STRING("prefPanel-fake-account").get(), 
+              mStringBundle->GetStringFromName(NS_LITERAL_STRING("prefPanel-fake-account").get(), 
                                                getter_Copies(pageTitle));
         }
       }
@@ -416,8 +402,6 @@ nsMsgAccountManagerDataSource::GetTarget(nsIRDFResource *source,
       str = NS_LITERAL_STRING("am-advanced.xul");
     else if (source == kNC_PageTitleSMTP) 
       str = NS_LITERAL_STRING("am-smtp.xul");
-    else if (source == kNC_PageTitleFakeAccount) 
-      str = NS_LITERAL_STRING("am-fakeaccount.xul");     
     else {
       nsCOMPtr<nsIMsgFolder> folder = do_QueryInterface(source, &rv);
       if (NS_SUCCEEDED(rv) && folder) {
@@ -625,8 +609,6 @@ nsMsgAccountManagerDataSource::createRootResources(nsIRDFResource *property,
         // for the "settings" arc, we also want to do an SMTP tag
         if (property == kNC_Settings) {
             aNodeArray->AppendElement(kNC_PageTitleSMTP);
-            if (IsFakeAccountRequired())
-              aNodeArray->AppendElement(kNC_PageTitleFakeAccount);            
         }
         else if (property == kNC_Child && IsFakeAccountRequired()) {
             aNodeArray->AppendElement(kNC_PageTitleFakeAccount);
@@ -1192,11 +1174,9 @@ nsMsgAccountManagerDataSource::OnServerLoaded(nsIMsgIncomingServer* aServer)
   PRBool fakeAccountServer;
   IsIncomingServerForFakeAccount(aServer, &fakeAccountServer);
 
-  if (fakeAccountServer) {
+  if (fakeAccountServer)
     NotifyObservers(kNC_AccountRoot, kNC_Child, kNC_PageTitleFakeAccount, PR_FALSE, PR_FALSE);
-    NotifyObservers(kNC_AccountRoot, kNC_Settings, kNC_PageTitleFakeAccount, PR_FALSE, PR_FALSE);
-  }
-   
+  
   return NS_OK;
 }
 
@@ -1309,7 +1289,7 @@ nsMsgAccountManagerDataSource::IsFakeAccountRequired()
     rv = prefs->GetBranch(nsnull, getter_AddRefs(prefBranch));
 
   PRBool showFakeAccount;
-  rv = prefBranch->GetBoolPref(PREF_SHOW_FAKE_ACCOUNT, &showFakeAccount);
+  rv = prefBranch->GetBoolPref("mailnews.fakeaccount.show", &showFakeAccount);
 
   if (!showFakeAccount)
     return PR_FALSE;
@@ -1369,32 +1349,5 @@ nsMsgAccountManagerDataSource::GetFakeAccountHostName(char **aHostName)
     rv = prefs->GetBranch(nsnull, getter_AddRefs(prefBranch));
   rv = prefBranch->GetCharPref("mailnews.fakeaccount.server", aHostName);
 
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsMsgAccountManagerDataSource::Observe(nsISupports *aSubject, const char *aTopic, const PRUnichar *aData)
-{
-  nsMsgRDFDataSource::Observe(aSubject, aTopic, aData);
-  
-  if (!strcmp(aTopic, NS_PREFBRANCH_PREFCHANGE_TOPIC_ID)) {
-    nsDependentString prefName(aData);
-    if (prefName.Equals(NS_LITERAL_STRING(PREF_SHOW_FAKE_ACCOUNT))) {
-      NotifyObservers(kNC_AccountRoot, kNC_Child, kNC_PageTitleFakeAccount, PR_FALSE, PR_FALSE);
-      NotifyObservers(kNC_AccountRoot, kNC_Settings, kNC_PageTitleFakeAccount, PR_FALSE, PR_FALSE);
-    }
-  }
-  else if (!strcmp(aTopic, NS_XPCOM_SHUTDOWN_OBSERVER_ID)) {
-    nsCOMPtr<nsIPrefBranchInternal> prefBranchInternal;
-    nsCOMPtr<nsIPrefService> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID);
-    if (prefs) {
-      nsCOMPtr<nsIPrefBranch> prefBranch;
-      prefs->GetBranch(nsnull, getter_AddRefs(prefBranch));
-      if (prefBranch) {
-        prefBranchInternal = do_QueryInterface(prefBranch);
-        prefBranchInternal->RemoveObserver(PREF_SHOW_FAKE_ACCOUNT, this);
-      }
-    }
-  }
   return NS_OK;
 }

@@ -46,7 +46,6 @@ extern LPSTR            szUninstallDir;
 extern LPSTR            szTempDir;
 extern LPSTR            szOSTempDir;
 extern LPSTR            szFileIniUninstall;
-extern LPSTR            szFileIniDefaultsInfo;
 extern LPSTR            gszSharedFilename;
 
 extern ULONG            ulOSType;

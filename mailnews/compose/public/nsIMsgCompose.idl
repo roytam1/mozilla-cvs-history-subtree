@@ -187,7 +187,7 @@ interface nsIMsgCompose : nsISupports {
 
   /* Check if the composing mail headers (and identity) can be converted to a mail charset.
   */
-  boolean checkCharsetConversion(in nsIMsgIdentity identity, out string fallbackCharset);
+  boolean checkCharsetConversion(in nsIMsgIdentity identity);
 
   /* Retreive the message send object */
   readonly attribute nsIMsgSend messageSend;
@@ -258,8 +258,6 @@ interface nsIMsgCompose : nsISupports {
   
  	/* ... */
  	attribute boolean recycledWindow;
-  
-  readonly attribute string originalMsgURI;
 };
 
 /* send listener interface */

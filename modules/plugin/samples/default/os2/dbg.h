@@ -40,7 +40,7 @@
 
 #ifdef _DEBUG
 
-void dbgOut(PSZ format, ...);
+void __cdecl dbgOut(LPSTR format, ...);
 #define dbgOut1(x)        dbgOut(x)
 #define dbgOut2(x,y)      dbgOut(x, y)
 #define dbgOut3(x,y,z)      dbgOut(x, y, z)

@@ -109,13 +109,18 @@ function SetFolderDisplay(pickerMode, disableMode,
     var selectAccountRadioElem = document.getElementById(selectAccountRadioId);
     var selectFolderRadioId = radioElemPrefix + "_selectFolder";
     var selectFolderRadioElem = document.getElementById(selectFolderRadioId);
-    var accountPicker = document.getElementById(accountPickerId);
-    var folderPicker = document.getElementById(folderPickerId);
     var rg = selectAccountRadioElem.radioGroup;
     switch (pickerMode) 
     {
         case "0" :
             rg.selectedItem = selectAccountRadioElem;
+            if (disableMode) {
+              selectAccountRadioElem.setAttribute("disabled","true");
+              selectFolderRadioElem.setAttribute("disabled","true");
+            } else {
+              selectAccountRadioElem.removeAttribute("disabled");
+              selectFolderRadioElem.removeAttribute("disabled");
+            }
 
             var folderPickedElement = document.getElementById(folderPickedField);
             var uri = folderPickedElement.getAttribute("value");
@@ -130,6 +135,13 @@ function SetFolderDisplay(pickerMode, disableMode,
 
         case "1"  :
             rg.selectedItem = selectFolderRadioElem;
+            if (disableMode) {
+              selectAccountRadioElem.setAttribute("disabled","true");
+              selectFolderRadioElem.setAttribute("disabled","true");
+            } else {
+              selectAccountRadioElem.removeAttribute("disabled");
+              selectFolderRadioElem.removeAttribute("disabled");
+            }
 		    	
             InitFolderDisplay(folderPickedField, folderPickerId);
             SetPickerEnabling(folderPickerId, accountPickerId);
@@ -137,20 +149,6 @@ function SetFolderDisplay(pickerMode, disableMode,
         default :
             dump("Error in setting initial folder display on pickers\n");
             break;
-    }
-
-    // Check to see if we need to lock page elements. Disable radio buttons
-    // and account/folder pickers when locked.
-    if (disableMode) {
-      selectAccountRadioElem.setAttribute("disabled","true");
-      selectFolderRadioElem.setAttribute("disabled","true");
-      accountPicker.setAttribute("disabled","true");
-      folderPicker.setAttribute("disabled","true");
-    } else {
-      selectAccountRadioElem.removeAttribute("disabled");
-      selectFolderRadioElem.removeAttribute("disabled");
-      accountPicker.removeAttribute("disabled");
-      folderPicker.removeAttribute("disabled");
     }
 }
 

@@ -127,6 +127,7 @@
 #include "nsIWebBrowserFocus.h"
 
 // Printer Includes
+#include "nsIPrintOptions.h"
 #include "nsIWebBrowserPrint.h"
 #include "nsIDOMWindow.h"
 

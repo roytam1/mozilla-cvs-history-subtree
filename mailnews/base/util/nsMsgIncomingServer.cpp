@@ -77,7 +77,6 @@
 #include "nsCPasswordManager.h"
 #include "nsIMsgMdnGenerator.h"
 #include "nsMsgFolderFlags.h"
-#include "nsMsgUtils.h"
 
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
@@ -818,10 +817,6 @@ nsMsgIncomingServer::StorePassword()
     nsCOMPtr<nsIURI> uri;
     NS_NewURI(getter_AddRefs(uri), serverSpec);
 
-    //this is need to make sure wallet service has been loaded
-    rv = CreateServicesForPasswordManager();
-    NS_ENSURE_SUCCESS(rv, rv);
-
     rv = observerService->NotifyObservers(uri, "login-succeeded", NS_ConvertUTF8toUCS2(pwd).get());
     NS_ENSURE_SUCCESS(rv,rv);
     return rv;
@@ -841,10 +836,6 @@ nsMsgIncomingServer::ForgetPassword()
 
     nsCOMPtr<nsIURI> uri;
     NS_NewURI(getter_AddRefs(uri), serverSpec);
-
-    //this is need to make sure wallet service has been loaded
-    rv = CreateServicesForPasswordManager();
-    NS_ENSURE_SUCCESS(rv, rv);
 
     rv = observerService->NotifyObservers(uri, "login-failed", nsnull);
     NS_ENSURE_SUCCESS(rv,rv);

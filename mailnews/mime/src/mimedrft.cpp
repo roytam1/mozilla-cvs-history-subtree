@@ -199,12 +199,11 @@ mime_dump_attachments ( nsMsgAttachmentData *attachData )
 #endif
 
 nsresult
-CreateTheComposeWindow(nsIMsgCompFields *   compFields,
-                       nsMsgAttachmentData *attachmentList,
-                       MSG_ComposeType      composeType,
+CreateTheComposeWindow(nsIMsgCompFields     *compFields,
+                       nsMsgAttachmentData  *attachmentList,
+                       MSG_ComposeType    composeType,
                        MSG_ComposeFormat    composeFormat,
-                       nsIMsgIdentity *     identity,
-                       const char *         originalMsgURI
+                       nsIMsgIdentity *       identity
                        )
 {
 nsresult            rv;
@@ -272,9 +271,7 @@ mime_dump_attachments ( attachmentList );
     pMsgComposeParams->SetType(composeType);
     pMsgComposeParams->SetFormat(format);
     pMsgComposeParams->SetIdentity(identity);
-    pMsgComposeParams->SetComposeFields(compFields);
-    if (originalMsgURI)
-      pMsgComposeParams->SetOriginalMsgURI(originalMsgURI);
+    pMsgComposeParams->SetComposeFields(compFields);    
     
     rv = msgComposeService->OpenComposeWindowWithParams(nsnull /* default chrome */, pMsgComposeParams);
   }
@@ -1259,7 +1256,7 @@ mime_parse_stream_complete (nsMIMESession *stream)
         mdd->mailcharset = nsCRT::strdup(mdd->options->default_charset);
       }
 
-      // mscott: aren't we leaking a bunch of strings here like the charset strings and such?
+      // mscott: aren't we leaking a bunch of trings here like the charset strings and such?
       delete mdd->options;
       mdd->options = 0;
     }
@@ -1491,7 +1488,7 @@ mime_parse_stream_complete (nsMIMESession *stream)
 #ifdef NS_DEBUG
         printf("RICHIE: Time to create the EDITOR with this template - HAS a body!!!!\n");
 #endif
-        CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::Template, composeFormat, mdd->identity, nsnull);
+        CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::Template, composeFormat, mdd->identity);
       }
       else
       {
@@ -1499,11 +1496,11 @@ mime_parse_stream_complete (nsMIMESession *stream)
         printf("Time to create the composition window WITH a body!!!!\n");
 #endif
         if (mdd->forwardInline)
-          CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::ForwardInline, composeFormat, mdd->identity, mdd->originalMsgURI);
+          CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::ForwardInline, composeFormat, mdd->identity);
         else
         {
           fields->SetDraftId(mdd->url_name);
-          CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::Draft, composeFormat, mdd->identity, nsnull);
+          CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::Draft, composeFormat, mdd->identity);
         }
       }
     }
@@ -1518,7 +1515,7 @@ mime_parse_stream_complete (nsMIMESession *stream)
 #ifdef NS_DEBUG
         printf("RICHIE: Time to create the EDITOR with this template - NO body!!!!\n");
 #endif
-        CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::Template, nsIMsgCompFormat::Default, mdd->identity, nsnull);
+        CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::Template, nsIMsgCompFormat::Default, mdd->identity);
       }
       else
       {
@@ -1526,11 +1523,11 @@ mime_parse_stream_complete (nsMIMESession *stream)
         printf("Time to create the composition window WITHOUT a body!!!!\n");
 #endif
         if (mdd->forwardInline)
-          CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::ForwardInline, nsIMsgCompFormat::Default, mdd->identity, mdd->originalMsgURI);
+          CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::ForwardInline, nsIMsgCompFormat::Default, mdd->identity);
         else
         {
           fields->SetDraftId(mdd->url_name);
-          CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::Draft, nsIMsgCompFormat::Default, mdd->identity, nsnull);
+          CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::Draft, nsIMsgCompFormat::Default, mdd->identity);
         }
       }
     }    
@@ -1544,7 +1541,7 @@ mime_parse_stream_complete (nsMIMESession *stream)
       mdd->mailcharset,
       getter_AddRefs(fields));
     if (fields)
-      CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::New, nsIMsgCompFormat::Default, mdd->identity, nsnull);
+      CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::New, nsIMsgCompFormat::Default, mdd->identity);
   }
   
   if ( mdd->headers )
@@ -1589,8 +1586,6 @@ mime_parse_stream_complete (nsMIMESession *stream)
     nsServiceManager::ReleaseService(kPrefCID, obj->options->prefs);
   
   mdd->identity = nsnull;
-  PR_Free(mdd->url_name);
-  PR_Free(mdd->originalMsgURI);
   PR_Free (mdd);
   
   PR_FREEIF(host);
@@ -1784,14 +1779,7 @@ mime_decompose_file_init_fn ( void *stream_closure, MimeHeaders *headers )
   newAttachment->type =  MimeHeaders_get ( headers, HEADER_CONTENT_TYPE, PR_FALSE, PR_FALSE );
 
   if (PL_strstr(newAttachment->type, MESSAGE_RFC822))
-  {
-    char *newName = PR_smprintf("%s.eml", newAttachment->real_name);
-    if (newName)
-    {
-      PR_Free(newAttachment->real_name);
-      newAttachment->real_name = newName;
-    }
-  }      
+     PL_strcat(newAttachment->real_name, ".eml");      
   
   //
   // This is to handle the degenerated Apple Double attachment.
@@ -1987,7 +1975,7 @@ mime_bridge_create_draft_stream(
   int                     status = 0;
   nsMIMESession           *stream = nsnull;
   struct mime_draft_data  *mdd = nsnull;
-  MimeObject              *obj = nsnull;
+  MimeObject              *obj;
 
   if ( !uri ) 
     return nsnull;
@@ -1996,38 +1984,42 @@ mime_bridge_create_draft_stream(
   if (!mdd) 
     return nsnull;
 
-  nsCAutoString turl;
-  nsCOMPtr <nsIMsgMessageService> msgService;
-  nsCOMPtr<nsIURI> aURL;
-  nsCAutoString urlString;
-  nsresult rv;
-
   // first, convert the rdf msg uri into a url that represents the message...
+  nsCAutoString turl;
   if (NS_FAILED(uri->GetSpec(turl)))
-    goto FAIL;
+    return nsnull;
 
-  rv = GetMessageServiceFromURI(turl.get(), getter_AddRefs(msgService));
+  nsCOMPtr <nsIMsgMessageService> msgService;
+  nsresult rv = GetMessageServiceFromURI(turl.get(), getter_AddRefs(msgService));
   if (NS_FAILED(rv)) 
-    goto FAIL;
+    return nsnull;
 
+  nsCOMPtr<nsIURI> aURL;
   rv = msgService->GetUrlForUri(turl.get(), getter_AddRefs(aURL), nsnull);
   if (NS_FAILED(rv)) 
-    goto FAIL;
+    return nsnull;
 
+  nsCAutoString urlString;
   if (NS_SUCCEEDED(aURL->GetSpec(urlString)))
   {
     mdd->url_name = ToNewCString(urlString);
     if (!(mdd->url_name))
-      goto FAIL;
+    {
+      PR_FREEIF(mdd);
+      return nsnull;
+    }
   }
 
   newPluginObj2->GetForwardInline(&mdd->forwardInline);
   newPluginObj2->GetIdentity(getter_AddRefs(mdd->identity));
-  newPluginObj2->GetOriginalMsgURI(&mdd->originalMsgURI);
   mdd->format_out = format_out;
   mdd->options = new  MimeDisplayOptions ;
   if ( !mdd->options ) 
-    goto FAIL;
+  {
+    PR_FREEIF(mdd->url_name);
+    PR_FREEIF(mdd);
+    return nsnull;
+  }
 
   mdd->options->url = nsCRT::strdup(mdd->url_name);
   mdd->options->format_out = format_out;     // output format
@@ -2041,7 +2033,10 @@ mime_bridge_create_draft_stream(
 
   rv = nsServiceManager::GetService(kPrefCID, NS_GET_IID(nsIPref), (nsISupports**)&(mdd->options->prefs));
   if (! (mdd->options->prefs && NS_SUCCEEDED(rv)))
-    goto FAIL;
+  {
+    PR_FREEIF(mdd);
+    return nsnull;
+  }
 
 #ifdef FO_MAIL_MESSAGE_TO
   /* If we're attaching a message (for forwarding) then we must eradicate all
@@ -2054,14 +2049,25 @@ mime_bridge_create_draft_stream(
 
   obj = mime_new ( (MimeObjectClass *) &mimeMessageClass, (MimeHeaders *) NULL, MESSAGE_RFC822 );
   if ( !obj ) 
-    goto FAIL;
+  {
+    PR_FREEIF(mdd->url_name);
+    delete mdd->options;
+    PR_FREEIF(mdd );
+    return nsnull;
+  }
   
   obj->options = mdd->options;
   mdd->obj = obj;
 
   stream = PR_NEWZAP ( nsMIMESession );
   if ( !stream ) 
-    goto FAIL;
+  {
+    PR_FREEIF(mdd->url_name);
+    delete mdd->options;
+    PR_FREEIF ( mdd );
+    PR_FREEIF ( obj );
+    return nsnull;
+  }
 
   stream->name = "MIME To Draft Converter Stream";
   stream->complete = mime_parse_stream_complete;
@@ -2073,21 +2079,14 @@ mime_bridge_create_draft_stream(
   if ( status >= 0 )
     status = obj->clazz->parse_begin ( obj );
   if ( status < 0 ) 
-    goto FAIL;
+  {
+    PR_FREEIF(mdd->url_name);
+    PR_FREEIF ( stream );
+    delete mdd->options;
+    PR_FREEIF ( mdd );
+    PR_FREEIF ( obj );
+    return nsnull;
+  }
 
   return stream;
-
-FAIL:
-  if (mdd)
-  {
-    PR_Free(mdd->url_name);
-    PR_Free(mdd->originalMsgURI);
-    if (mdd->options)
-    delete mdd->options;
-    PR_Free ( mdd );
-  }
-  PR_Free ( stream );
-  PR_Free ( obj );
-
-  return nsnull;
 }

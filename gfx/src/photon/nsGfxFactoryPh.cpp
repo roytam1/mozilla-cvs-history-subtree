@@ -54,7 +54,6 @@
 #include "nsDeviceContextPh.h"
 #include "nsPrintOptionsPh.h"
 #include "nsFontList.h"
-#include "nsPrintSession.h"
 
 // objects that just require generic constructors
 
@@ -71,7 +70,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsFontList)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsScreenManagerPh)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsPrinterEnumeratorPh)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsPrintOptionsPh)
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsPrintSession, Init)
 
 // our custom constructors
 
@@ -161,10 +159,10 @@ static const nsModuleComponentInfo components[] =
     "@mozilla.org/gfx/devicecontextspecfactory;1",
     //"@mozilla.org/gfx/device_context_spec_factory/Ph;1",
     nsDeviceContextSpecFactoryPhConstructor },
-  { "PrintSettings Service",
-    NS_PRINTSETTINGSSERVICE_CID,
-    //    "@mozilla.org/gfx/printsettings-service;1",
-    "@mozilla.org/gfx/printsettings-service;1",
+  { "Print Options",
+    NS_PRINTOPTIONS_CID,
+    //    "@mozilla.org/gfx/printoptions;1",
+    "@mozilla.org/gfx/printoptions;1",
     nsPrintOptionsPhConstructor },
    { "Ph Font Enumerator",
     NS_FONT_ENUMERATOR_CID,
@@ -185,10 +183,6 @@ static const nsModuleComponentInfo components[] =
 	  //    "@mozilla.org/gfx/printer_enumerator/win;1",
 	"@mozilla.org/gfx/printerenumerator;1",
 	nsPrinterEnumeratorPhConstructor },
-  { "Print Session",
-    NS_PRINTSESSION_CID,
-    "@mozilla.org/gfx/printsession;1",
-    nsPrintSessionConstructor }
 };
 
 NS_IMPL_NSGETMODULE(nsGfxPhModule, components)

@@ -49,13 +49,7 @@ var gHistoryStatus;
 var gHistoryGrouping = "";
 var gWindowManager = null;
 
-function HistoryWindowInit()
-{
-    HistoryCommonInit();
-    gHistoryTree.focus();
-}
-
-function HistoryCommonInit()
+function HistoryInit()
 {
     gHistoryTree =  document.getElementById("historyTree");
     gDeleteByHostname = document.getElementById("menu_deleteByHostname");
@@ -108,7 +102,7 @@ function HistoryCommonInit()
             pbi.addObserver("browser.history.grouping", groupObserver, false);
         }
     } 
-
+    gHistoryTree.focus();
     gHistoryTree.treeBoxObject.view.selection.select(0);
 }
 
@@ -128,17 +122,18 @@ function historyOnClick(aEvent)
     var col = { };
     var elt = { };
     gHistoryTree.treeBoxObject.getCellAt(aEvent.clientX, aEvent.clientY, row, col, elt);
-    if (row.value >= 0 && col.value) {
-      if (!isContainer(gHistoryTree, row.value))
-        OpenURL(false);
-      else if (elt.value != "twisty")
-        gHistoryTree.treeBoxObject.view.toggleOpenState(row.value);
-    }
+    if (row.value >= 0 && col.value && elt.value != "twisty" && isContainer(gHistoryTree, row.value))
+      gHistoryTree.treeBoxObject.view.toggleOpenState(row.value);
   }
 }
 
 function historyOnSelect()
 {
+    if (!gHistoryStatus) {
+      OpenURL(false);
+      return;
+    }
+
     // every time selection changes, save the last hostname
     gLastHostname = "";
     gLastDomain = "";

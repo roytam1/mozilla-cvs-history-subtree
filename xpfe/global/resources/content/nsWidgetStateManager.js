@@ -87,8 +87,6 @@ function nsWidgetStateManager ( aFrameID )
           {  get: wsm.get_Textbox,     set: wsm.set_Textbox       },
         listitem:
           {  get: wsm.get_Listitem,    set: wsm.set_Listitem      },
-        data:
-          {  get: wsm.get_Data,        set: wsm.set_Data          },
         default_handler:
           {  get: wsm.get_Default,     set: wsm.set_Default       }
       }
@@ -165,12 +163,8 @@ nsWidgetStateManager.prototype =
           var pageData = this.dataManager.getPageData( aPageTag );
           if( 'SetFields' in this.contentArea )
             {
-              if ( !this.contentArea.SetFields( pageData ) )
-              {
-                // If the function returns false (or null/undefined) then it
-                // doesn't want *us* to process the page data.
-                return;
-              }
+              this.contentArea.SetFields( pageData );
+              return;
             }
 
           for( var elementID in pageData )
@@ -200,7 +194,7 @@ nsWidgetStateManager.prototype =
                 {
                   if (property == "localname")
                     continue;
-                  if ( !aDataObject[property] && typeof aDataObject[property] == "boolean")
+                  if ( !aDataObject[property] )
                     aElement.removeAttribute( property );
                   else
                     aElement.setAttribute( property, aDataObject[property] );
@@ -362,32 +356,6 @@ nsWidgetStateManager.prototype =
                 {
                   dataObject.checked = element.checked;
                 }
-              return dataObject;
-            }
-          return null;
-        },
-
-    // <data>
-    set_Data:
-      function ( aElementID, aDataObject )
-        {
-
-          var element = wsm.contentArea.document.getElementById( aElementID );
-          wsm.generic_Set( element, aDataObject );
-          if( 'value' in aDataObject )
-            {
-              element.setAttribute("value", aDataObject.value);
-            }
-        },
-
-    get_Data:
-      function ( aElementID )
-        {
-          var element = wsm.contentArea.document.getElementById( aElementID );
-          var dataObject = wsm.generic_Get( element );
-          if( dataObject )
-            {
-              dataObject.value = element.getAttribute( "value" );
               return dataObject;
             }
           return null;

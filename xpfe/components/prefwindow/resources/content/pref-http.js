@@ -40,24 +40,32 @@
 function checkPipelining()
 {
   try {
-    var enableHTTP11 = document.getElementById("httpVersion11");
-    var enableKeepAlive = document.getElementById("enableKeepAlive");
-    var enablePipelining = document.getElementById("enablePipelining");
+    var browserEnableHTTP11 = document.getElementById("httpVersion11");
+    var browserEnableKeepAlive = document.getElementById("browserEnableKeepAlive");
+    var browserEnablePipelining = document.getElementById("browserEnablePipelining");
 
-    var doDisable = !(enableHTTP11.selected && enableKeepAlive.checked);
-    enablePipelining.disabled = doDisable;
+    if (browserEnableHTTP11.selected && browserEnableKeepAlive.checked) {
+      browserEnablePipelining.removeAttribute("disabled");
+    } else {
+      browserEnablePipelining.setAttribute("disabled", "true");
+      browserEnablePipelining.setAttribute("checked", "false");
+    }
   } catch(e) {}
 }
 
-function checkPipeliningProxy()
+/* Function to restore pref values to application defaults */
+function restoreAcceptEncoding()
 {
   try {
-    var enableHTTP11 = document.getElementById("httpVersion11Proxy");
-    var enableKeepAlive = document.getElementById("enableKeepAliveProxy");
-    var enablePipelining = document.getElementById("enablePipeliningProxy");
+    var prefService = Components.classes["@mozilla.org/preferences-service;1"]
+                                .getService(Components.interfaces.nsIPrefService);
+    var prefs = prefService.getDefaultBranch(null);
 
-    var doDisable = !(enableHTTP11.selected && enableKeepAlive.checked);
-    enablePipelining.disabled = doDisable;
-  } catch(e) {}
+    /* get the current pref setting */
+    var prefValue = prefs.getCharPref("network.http.accept-encoding");
+    var editfield = document.getElementById("acceptEncodingString");
+    if (editfield)
+      editfield.value = prefValue;
+  } catch (e) {}
 }
 

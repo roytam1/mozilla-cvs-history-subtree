@@ -104,10 +104,8 @@ const gTabStripPrefListener =
       return;
 
     var stripVisibility = !pref.getBoolPref(prefName);
-    if (gBrowser.mTabContainer.childNodes.length == 1) {
+    if (gBrowser.mTabContainer.childNodes.length == 1)
       gBrowser.setStripVisibilityTo(stripVisibility);
-      pref.setBoolPref("browser.tabs.forceHide", false);
-    }
   }
 };
 
@@ -294,23 +292,6 @@ function allLeftButtonsAreHidden()
   return true;
 }
 
-function RegisterTabOpenObserver()
-{
-  const observer = {
-    observe: function(subject, topic, data)
-    {
-      if (topic != "open-new-tab-request" || subject != window)
-        return;
-
-      delayedOpenTab(data);
-    }
-  };
-
-  const service = Components.classes["@mozilla.org/observer-service;1"]
-    .getService(Components.interfaces.nsIObserverService);
-  service.addObserver(observer, "open-new-tab-request", false);
-}
-
 function Startup()
 {
   // init globals
@@ -468,8 +449,6 @@ function Startup()
       remoteService = Components.classes[XREMOTESERVICE_CONTRACTID]
                                 .getService(Components.interfaces.nsIXRemoteService);
       remoteService.addBrowserInstance(window);
-
-      RegisterTabOpenObserver();
     }
   }
   
@@ -666,12 +645,16 @@ function OpenBookmarkGroupFromResource(resource, datasource, rdf) {
   var tabPanels = gBrowser.mPanelContainer.childNodes;
   var tabCount = tabPanels.length;
   var index = 0;
-  for (; containerChildren.hasMoreElements(); ++index) {
+  while (containerChildren.hasMoreElements()) {
     var resource = containerChildren.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
     var target = datasource.GetTarget(resource, urlResource, true);
     if (target) {
       var uri = target.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
-      gBrowser.addTab(uri);
+      if (index < tabCount)
+        tabPanels[index].loadURI(uri, null, nsIWebNavigation.LOAD_FLAGS_NONE);
+      else
+        gBrowser.addTab(uri);
+      index++;
     }
   }  
   
@@ -680,7 +663,11 @@ function OpenBookmarkGroupFromResource(resource, datasource, rdf) {
      
   // Select the first tab in the group.
   var tabs = gBrowser.mTabContainer.childNodes;
-  gBrowser.selectedTab = tabs[tabCount];
+  gBrowser.selectedTab = tabs[0];
+  
+  // Close any remaining open tabs that are left over.
+  for (var i = tabCount-1; i >= index; i--)
+    gBrowser.removeTab(tabs[i]);
 }
 
 function OpenBookmarkURL(node, datasources)
@@ -732,17 +719,6 @@ function addBookmarkAs()
     BookmarksUtils.addBookmarkForTabBrowser(gBrowser);
   else
     BookmarksUtils.addBookmarkForBrowser(gBrowser.webNavigation, true);
-}
-
-function addGroupmarkAs()
-{
-  BookmarksUtils.addBookmarkForTabBrowser(gBrowser, true);
-}
-
-function updateGroupmarkMenuitem(id)
-{
-  const disabled = gBrowser.browsers.length == 1;
-  document.getElementById(id).setAttribute("disabled", disabled);
 }
 
 function readRDFString(aDS,aRes,aProp)
@@ -797,15 +773,6 @@ function getSearchUrl(attr)
   return searchURL;
 }
 
-function QualifySearchTerm()
-{
-  // If the text in the URL bar is the same as the currently loaded
-  // page's URL then treat this as an empty search term.  This way
-  // the user is taken to the search page where s/he can enter a term.
-  if (window.XULBrowserWindow.userTyped.value)
-    return document.getElementById("urlbar").value;
-  return "";
-}
 
 function OpenSearch(tabName, forceDialogFlag, searchStr, newWindowFlag)
 {
@@ -1682,45 +1649,29 @@ function updateComponentBarBroadcaster()
 
 function updateToolbarStates(toolbarMenuElt)
 {
-  if (!gHaveUpdatedToolbarState) {
-    var mainWindow = document.getElementById("main-window");
-    if (mainWindow.hasAttribute("chromehidden")) {
-      gHaveUpdatedToolbarState = true;
-      var i;
-      for (i = 0; i < toolbarMenuElt.childNodes.length; ++i)
-        document.getElementById(toolbarMenuElt.childNodes[i].getAttribute("observes")).removeAttribute("checked");
-      var toolbars = document.getElementsByTagName("toolbar");
-      for (i = 0; i < toolbars.length; ++i) {
-        if (toolbars[i].getAttribute("class").indexOf("chromeclass") != -1)
-          toolbars[i].setAttribute("hidden", "true");
-      }
-      var statusbars = document.getElementsByTagName("statusbar");
-      for (i = 0; i < statusbars.length; ++i) {
-        if (statusbars[i].getAttribute("class").indexOf("chromeclass") != -1)
-          statusbars[i].setAttribute("hidden", "true");
-      }
-      mainWindow.removeAttribute("chromehidden");
+  if (gHaveUpdatedToolbarState) {
+    updateComponentBarBroadcaster();
+    return;
+  }
+  var mainWindow = document.getElementById("main-window");
+  if (mainWindow.hasAttribute("chromehidden")) {
+    gHaveUpdatedToolbarState = true;
+    var i;
+    for (i = 0; i < toolbarMenuElt.childNodes.length; ++i)
+      document.getElementById(toolbarMenuElt.childNodes[i].getAttribute("observes")).removeAttribute("checked");
+    var toolbars = document.getElementsByTagName("toolbar");
+    for (i = 0; i < toolbars.length; ++i) {
+      if (toolbars[i].getAttribute("class").indexOf("chromeclass") != -1)
+        toolbars[i].setAttribute("hidden", "true");
     }
+    var statusbars = document.getElementsByTagName("statusbar");
+    for (i = 0; i < statusbars.length; ++i) {
+      if (statusbars[i].getAttribute("class").indexOf("chromeclass") != -1)
+        statusbars[i].setAttribute("hidden", "true");
+    }
+    mainWindow.removeAttribute("chromehidden");
   }
   updateComponentBarBroadcaster();
-
-  const tabbarMenuItem = document.getElementById("menuitem_showhide_tabbar");
-  // Make show/hide menu item reflect current state
-  const visibility = gBrowser.getStripVisibility();
-  tabbarMenuItem.setAttribute("checked", visibility);
-
-  // Don't allow the tab bar to be shown/hidden when more than one tab is open
-  // or when we have 1 tab and the autoHide pref is set
-  const disabled = gBrowser.browsers.length > 1 ||
-                   pref.getBoolPref("browser.tabs.autoHide");
-  tabbarMenuItem.setAttribute("disabled", disabled);
-}
-
-function showHideTabbar()
-{
-  const visibility = gBrowser.getStripVisibility();
-  pref.setBoolPref("browser.tabs.forceHide", visibility);
-  gBrowser.setStripVisibilityTo(!visibility);
 }
 
 // Fill in tooltips for personal toolbar

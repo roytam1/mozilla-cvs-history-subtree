@@ -61,7 +61,7 @@ function menu_new_init()
     nsPrefBranch = prefService.getBranch(null);
   }
   var newAccountItem = document.getElementById('newAccountMenuItem');
-  if (nsPrefBranch.prefIsLocked("mail.disable_new_account_addition"))
+  if (nsPrefBranch.prefIsLocked("mail.accountmanager.accounts"))
     newAccountItem.setAttribute("disabled","true");
 }
 
@@ -1025,7 +1025,7 @@ function MsgMarkAsFlagged(markFlagged)
 function MsgMarkAllRead()
 {
     var compositeDataSource = GetCompositeDataSource("MarkAllMessagesRead");
-    var folder = GetMsgFolderFromUri(GetSelectedFolderURI(), true);
+    var folder = GetLoadedMsgFolder();
 
     if(folder)
         MarkAllMessagesRead(compositeDataSource, folder);
@@ -1074,34 +1074,11 @@ function MsgCanFindAgain()
 function MsgFilters(emailAddress)
 {
     var preselectedFolder = GetFirstSelectedMsgFolder();
-    var args;
+    var args = { folder: preselectedFolder };
     if (emailAddress)
-    {
-      /* we have to do prefill filter so we are going to launch the filterEditor dialog
-         and prefill that with the emailAddress */
-         
-      var curFilterList = preselectedFolder.getFilterList(msgWindow);
-      args = {filterList: curFilterList};
-      args.filterName = emailAddress;
-      window.openDialog("chrome://messenger/content/FilterEditor.xul", "", 
-                        "chrome, modal, resizable,centerscreen,dialog=yes", args);
-
-      /* if the user hits ok in the filterEditor dialog we set args.refresh=true there
-         we check this here in args to show filterList dialog */
-
-      if ("refresh" in args && args.refresh)
-      {
-         args = { folder: preselectedFolder };
+      args.prefillValue = emailAddress;
     window.openDialog("chrome://messenger/content/FilterListDialog.xul", "", 
                         "chrome,modal,resizable,centerscreen,dialog=yes", args);
-}
-    }
-    else  //just launch filterList dialog
-    {
-      args = { folder: preselectedFolder };
-      window.openDialog("chrome://messenger/content/FilterListDialog.xul", "", 
-                       "chrome,modal,resizable,centerscreen,dialog=yes", args);
-    }
 }
 
 function MsgViewAllHeaders()
@@ -1169,12 +1146,12 @@ function GetPrintSettings()
 
       // I would rather be using nsIWebBrowserPrint API
       // but I really don't have a document at this point
-      var printSettingsService = Components.classes["@mozilla.org/gfx/printsettings-service;1"]
-                                           .getService(Components.interfaces.nsIPrintSettingsService);
+      var printOptionsService = Components.classes["@mozilla.org/gfx/printoptions;1"]
+                                           .getService(Components.interfaces.nsIPrintOptions);
       if (useGlobalPrintSettings) {
-        gPrintSettings = printSettingsService.globalPrintSettings;
+        gPrintSettings = printOptionsService.globalPrintSettings;
       } else {
-        gPrintSettings = printSettingsService.CreatePrintSettings();
+        gPrintSettings = printOptionsService.CreatePrintSettings();
       }
     }
   } catch (e) {

@@ -52,7 +52,7 @@ var gNextMessageViewIndexAfterDelete = -2;
 var gCurrentlyDisplayedMessage=nsMsgViewIndex_None;
 var gStartFolderUri = null;
 var gStartMsgKey = -1;
-var gRightMouseButtonDown = false;
+
 // Global var to keep track of which row in the thread pane has been selected
 // This is used to make sure that the row with the currentIndex has the selection
 // after a Delete or Move of a message that has a row index less than currentIndex.
@@ -502,10 +502,6 @@ function OnLoadMessenger()
 function OnUnloadMessenger()
 {
   accountManager.removeIncomingServerListener(gThreePaneIncomingServerListener);
-
-  // FIX ME - later we will be able to use onload from the overlay
-  OnUnloadMsgHeaderPane();
-
   OnMailWindowUnload();
 }
 
@@ -548,7 +544,6 @@ function loadStartFolder(initialUri)
     var isLoginAtStartUpEnabled = false;
     var enabledNewMailCheckOnce = false;
     var mailCheckOncePref = "mail.startup.enabledMailCheckOnce";
-    dump ("load start folder with " + initialUri + "\n");
 
     //First get default account
     try
@@ -623,7 +618,6 @@ function loadStartFolder(initialUri)
 
     if (!initialUri) 
     {
-      dump ("MsgGetMessagesForAllServers" + "\n");
         MsgGetMessagesForAllServers(defaultServer);
     }
 }
@@ -703,12 +697,14 @@ function OnLoadFolderPane()
 
     var folderUnreadCol = document.getElementById("folderUnreadCol");
     var hidden = folderUnreadCol.getAttribute("hidden");
-    if (hidden != "true")
+    if (!hidden)
     {
         var folderNameCell = document.getElementById("folderNameCell");
         folderNameCell.setAttribute("label", "?folderTreeSimpleName");
     }
     folderUnreadCol.addEventListener("DOMAttrModified", OnFolderUnreadColAttrModified, false);
+
+    SortFolderPane("folderNameCol");
 
     //Add folderDataSource and accountManagerDataSource to folderPane
     accountManagerDataSource = accountManagerDataSource.QueryInterface(Components.interfaces.nsIRDFDataSource);
@@ -926,12 +922,7 @@ function TreeOnMouseDown(event)
     // where the click happened without loading the message headers in
     // the Folder or Thread Pane.
     if (event.button == 2)
-    {
-      gRightMouseButtonDown = true;
       ChangeSelectionWithoutContentLoad(event, event.target.parentNode);
-    }
-    else
-      gRightMouseButtonDown = false;
 }
 
 function FolderPaneOnClick(event)
@@ -1209,11 +1200,6 @@ function SelectMessage(messageUri)
   var msgHdr = messenger.messageServiceFromURI(messageUri).messageURIToMsgHdr(messageUri);
   if (msgHdr)
     gDBView.selectMsgByKey(msgHdr.messageKey);
-}
-
-function ReloadWithAllParts()
-{
-  gDBView.reloadMessageWithAllParts();
 }
 
 function ReloadMessage()

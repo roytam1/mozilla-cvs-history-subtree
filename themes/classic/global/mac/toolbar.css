@@ -47,13 +47,8 @@ menubar {
     Prevents hiding of scrollbars in browser when window is made smaller.*/
 }
 
-.toolbar-prefix {
-  border-left: 1px solid ThreeDHighlight;
-  border-top: 1px solid ThreeDHighlight;
-  border-bottom: 1px solid ThreeDShadow;
-}
-
 .toolbar-holder {
+  border-left: 1px solid ThreeDHighlight;
   border-top: 1px solid ThreeDHighlight;
   border-right: 1px solid ThreeDShadow;
   border-bottom: 1px solid ThreeDShadow;

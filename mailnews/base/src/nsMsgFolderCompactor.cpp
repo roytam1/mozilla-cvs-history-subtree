@@ -158,7 +158,7 @@ nsFolderCompactState::InitDB(nsIMsgDatabase *db)
   return rv;
 }
 
-NS_IMETHODIMP nsFolderCompactState::CompactAll(nsISupportsArray *aArrayOfFoldersToCompact, nsIMsgWindow *aMsgWindow, PRBool aCompactOfflineAlso, nsISupportsArray *aOfflineFolderArray)
+NS_IMETHODIMP nsFolderCompactState::StartCompactingAll(nsISupportsArray *aArrayOfFoldersToCompact, nsIMsgWindow *aMsgWindow, PRBool aCompactOfflineAlso, nsISupportsArray *aOfflineFolderArray)
 {
   nsresult rv = NS_OK;
   if (aArrayOfFoldersToCompact)  
@@ -167,6 +167,7 @@ NS_IMETHODIMP nsFolderCompactState::CompactAll(nsISupportsArray *aArrayOfFolders
   if (NS_FAILED(rv) || !m_folderArray)
     return rv;
   
+  m_window = aMsgWindow;
   m_compactAll = PR_TRUE;
   m_compactOfflineAlso = aCompactOfflineAlso;
   if (m_compactOfflineAlso)
@@ -177,21 +178,20 @@ NS_IMETHODIMP nsFolderCompactState::CompactAll(nsISupportsArray *aArrayOfFolders
   nsCOMPtr<nsIMsgFolder> firstFolder = do_QueryInterface(supports, &rv);
 
   if (NS_SUCCEEDED(rv) && firstFolder)
-    Compact(firstFolder, aMsgWindow);   //start with first folder from here.
+    CompactHelper(firstFolder);   //start with first folder from here.
   
   return rv;
 }
 
-NS_IMETHODIMP
-nsFolderCompactState::Compact(nsIMsgFolder *folder, nsIMsgWindow *aMsgWindow)
+nsresult 
+nsFolderCompactState::CompactHelper(nsIMsgFolder *folder)
 {
-   m_window = aMsgWindow;
-   nsresult rv;
+   nsresult rv = NS_ERROR_FAILURE;
    nsCOMPtr<nsIMsgDatabase> db;
    nsCOMPtr<nsIDBFolderInfo> folderInfo;
    nsCOMPtr<nsIMsgDatabase> mailDBFactory;
    nsCOMPtr<nsIFileSpec> pathSpec;
-   nsXPIDLCString baseMessageURI;
+   char *baseMessageURI;
 
    nsCOMPtr <nsIMsgLocalMailFolder> localFolder = do_QueryInterface(folder, &rv);
    if (NS_SUCCEEDED(rv) && localFolder)
@@ -207,19 +207,6 @@ nsFolderCompactState::Compact(nsIMsgFolder *folder, nsIMsgWindow *aMsgWindow)
        }
        return rv;
      }
-     else
-     {
-       PRBool valid;  
-       rv = db->GetSummaryValid(&valid); 
-       if (!valid) //we are probably parsing the folder because we selected it.
-       {
-         folder->NotifyCompactCompleted();
-         if (m_compactAll)
-           return CompactNextFolder();
-         else
-           return NS_OK;
-       }
-     }
    }
    else
    {
@@ -229,13 +216,16 @@ nsFolderCompactState::Compact(nsIMsgFolder *folder, nsIMsgWindow *aMsgWindow)
    rv = folder->GetPath(getter_AddRefs(pathSpec));
    NS_ENSURE_SUCCESS(rv,rv);
 
-   rv = folder->GetBaseMessageURI(getter_Copies(baseMessageURI));
+   rv = folder->GetBaseMessageURI(&baseMessageURI);
    NS_ENSURE_SUCCESS(rv,rv);
     
    rv = Init(folder, baseMessageURI, db, pathSpec, m_window);
    if (NS_SUCCEEDED(rv))
       rv = StartCompacting();
 
+   if (baseMessageURI)
+     nsCRT::free(baseMessageURI);
+     
    return rv;
 }
 
@@ -309,14 +299,14 @@ NS_IMETHODIMP nsFolderCompactState::OnStopRunningUrl(nsIURI *url, nsresult statu
   {
     m_parsingFolder=PR_FALSE;
     if (NS_SUCCEEDED(status))
-      status=Compact(m_folder, m_window);
+      status=CompactHelper(m_folder);
     else if (m_compactAll)
       CompactNextFolder();
   }
   return NS_OK;
 }
 
-nsresult nsFolderCompactState::StartCompacting()
+NS_IMETHODIMP nsFolderCompactState::StartCompacting()
 {
   nsresult rv = NS_OK;
   PRBool isLocked;
@@ -463,7 +453,7 @@ nsFolderCompactState::CompactNextFolder()
    nsCOMPtr<nsIMsgFolder> folder = do_QueryInterface(supports, &rv);
 
    if (NS_SUCCEEDED(rv) && folder)
-     rv = Compact(folder, m_window);                    
+     rv = CompactHelper(folder);                    
    return rv;
 }
 
@@ -743,7 +733,7 @@ nsFolderCompactState::EndCopy(nsISupports *url, nsresult aStatus)
   return NS_OK;
 }
 
-nsresult nsOfflineStoreCompactState::StartCompacting()
+NS_IMETHODIMP nsOfflineStoreCompactState::StartCompacting()
 {
   nsresult rv = NS_OK;
   if (m_size > 0 && m_curIndex == 0)

@@ -529,11 +529,10 @@ NS_IMETHODIMP nsRenderingContextPh :: GetLineStyle( nsLineStyle &aLineStyle )
 }
 
 
-NS_IMETHODIMP nsRenderingContextPh :: SetFont( const nsFont& aFont, nsIAtom* aLangGroup ) 
+NS_IMETHODIMP nsRenderingContextPh :: SetFont( const nsFont& aFont ) 
 {
 	nsIFontMetrics* newMetrics;
-  nsresult rv = mContext->GetMetricsFor( aFont, aLangGroup, newMetrics );
-
+	nsresult rv = mContext->GetMetricsFor( aFont, newMetrics );
 	if( NS_SUCCEEDED( rv ) ) {
 		rv = SetFont( newMetrics );
 		NS_RELEASE( newMetrics );

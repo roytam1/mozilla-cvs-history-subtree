@@ -152,7 +152,6 @@ public:
 	// Generated message map functions
 protected:
 	nsCOMPtr<nsIPrintSettings> m_PrintSettings;
-  BOOL                       m_InPrintPreview;
 
 	//{{AFX_MSG(CBrowserView)
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);

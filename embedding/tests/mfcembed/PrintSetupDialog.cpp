@@ -4,7 +4,6 @@
 #include "stdafx.h"
 #include "mfcembed.h"
 #include "PrintSetupDialog.h"
-#include "nsIPrintSettings.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW

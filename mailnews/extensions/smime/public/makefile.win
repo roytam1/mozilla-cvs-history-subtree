@@ -26,7 +26,6 @@ XPIDLSRCS =										    \
 				.\nsIMsgSMIMECompFields.idl	        \
                 .\nsIMsgSMIMEHeaderSink.idl         \
 				.\nsISMimeJSHelper.idl	        \
-				.\nsIEncryptedSMIMEURIsSrvc.idl	        \
 				$(NULL)
 
 ################################################################################

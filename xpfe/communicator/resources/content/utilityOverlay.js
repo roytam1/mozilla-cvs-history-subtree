@@ -135,12 +135,11 @@ function goPageSetup(domwin, printSettings)
     // This code calls the printoptions service to bring up the printoptions
     // dialog.  This will be an xp dialog if the platform did not override
     // the ShowPrintSetupDialog method.
-    var printingPromptService = Components.classes["@mozilla.org/embedcomp/printingprompt-service;1"]
-                                             .getService(Components.interfaces.nsIPrintingPromptService);
-    printingPromptService.showPageSetup(domwin, printSettings, null);
-    return true;
+    var printOptionsService = Components.classes["@mozilla.org/gfx/printoptions;1"]
+                                             .getService(Components.interfaces.nsIPrintOptions);
+    printOptionsService.ShowPrintSetupDialog(printSettings);
   } catch(e) {
-    return false; 
+    return false;
   }
   return true;
 }
@@ -227,17 +226,6 @@ function goHelpMenu( url )
   window.openDialog( getBrowserURL(), "_blank", "chrome,all,dialog=no", url );
 }
 
-function getTopWin()
-{
-    var windowManager = Components.classes['@mozilla.org/appshell/window-mediator;1'].getService();
-    var windowManagerInterface = windowManager.QueryInterface( Components.interfaces.nsIWindowMediator);
-    var topWindowOfType = windowManagerInterface.getMostRecentWindow( "navigator:browser" );
-
-    if (topWindowOfType) {
-        return topWindowOfType;
-    }
-    return null;
-}
 
 function openTopWin( url )
 {
@@ -260,14 +248,20 @@ function openTopWin( url )
         url = "about:blank";
     }
 
-    var topWindowOfType = getTopWin();
+    var windowManager = Components.classes['@mozilla.org/rdf/datasource;1?name=window-mediator'].getService();
+    var windowManagerInterface = windowManager.QueryInterface( Components.interfaces.nsIWindowMediator);
+
+    var topWindowOfType = windowManagerInterface.getMostRecentWindow( "navigator:browser" );
     if ( topWindowOfType )
     {
         topWindowOfType.focus();
         topWindowOfType.loadURI(url);
         return topWindowOfType;
     }
-    return window.openDialog( getBrowserURL(), "_blank", "chrome,all,dialog=no", url );
+    else
+    {
+        return window.openDialog( getBrowserURL(), "_blank", "chrome,all,dialog=no", url );
+    }
 }
 
 function goAboutDialog()

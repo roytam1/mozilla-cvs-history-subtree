@@ -27,9 +27,6 @@ REQUIRES	= string \
 		  dom \
 		  content \
 		  widget \
- 		  caps \
- 		  xpconnect \
- 		  js \
 		  $(NULL)
 
 include <$(DEPTH)/config/config.mak>

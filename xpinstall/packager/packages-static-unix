@@ -53,9 +53,6 @@ bin/mozilla-xremote-client
 bin/xpicleanup
 bin/res/cmessage.txt
 
-bin/libldap50.so
-bin/libprldap50.so
-bin/liblber50.so
 
 bin/components/bookmarks.xpt
 bin/components/directory.xpt
@@ -95,7 +92,7 @@ bin/components/jar.xpt
 bin/components/jsconsole-clhandler.js
 bin/components/content_base.xpt
 bin/components/content_html.xpt
-bin/components/content_xslt.xpt
+bin/components/content_xsl.xpt
 bin/components/webBrowser_core.xpt
 bin/components/locale.xpt
 bin/components/mozbrwsr.xpt
@@ -172,7 +169,6 @@ bin/components/progressDlg.xpt
 bin/components/nsDownloadProgressListener.js
 bin/components/transformiix.xpt
 bin/components/filepicker.xpt
-bin/components/mozldap.xpt
 
 bin/chrome/help.jar
 bin/chrome/toolkit.jar
@@ -197,7 +193,7 @@ bin/chrome/chromelist.txt
 ; all the pref files must be part of base
 ; to prevent migration bugs
 bin/defaults/pref/*
-bin/defaults/autoconfig/*
+bin/defaults/autoconfig/prefcalls.js
 ; this is only here if you have plugins -blizzard
 ; bin/plugins/*
 bin/res/entityTables/*
@@ -238,9 +234,13 @@ bin/res/builtin/platformHTMLBindings.xml
 
 [mail]
 bin/components/libmeta_mail.so
+bin/libldap50.so
+bin/liblber50.so
+bin/libprldap50.so
 bin/components/addrbook.xpt
 bin/components/mailnews.xpt
 bin/components/mime.xpt
+bin/components/mozldap.xpt
 bin/components/msgbase.xpt
 bin/components/msgcompose.xpt
 bin/components/msgdb.xpt

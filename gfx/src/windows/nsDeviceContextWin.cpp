@@ -47,7 +47,10 @@
 #include "nsGfxCIID.h"
 #include "nsReadableutils.h"
 
+// Print Options
+#include "nsIPrintOptions.h"
 #include "nsString.h"
+static NS_DEFINE_CID(kPrintOptionsCID, NS_PRINTOPTIONS_CID);
 
 // Size of the color cube
 #define COLOR_CUBE_SIZE       216
@@ -408,13 +411,6 @@ nsresult nsDeviceContextWin::CopyLogFontToNSFont(HDC* aHDC, const LOGFONT* ptrLo
   // round, but take into account whether it is negative
   LONG logHeight = LONG((float(ptrLogFont->lfHeight) * mPixelScale) + (ptrLogFont->lfHeight < 0 ? -0.5 : 0.5)); // round up
   int pointSize = -MulDiv(logHeight, 72, ::GetDeviceCaps(*aHDC, LOGPIXELSY));
-
-  // we have problem on Simplified Chinese system because the system report
-  // the default font size is 8. but if we use 8, the text display very
-  // Ugly. force it to be at 9 on that system (cp936), but leave other sizes alone.
-  if ((pointSize == 8) && 
-      (936 == ::GetACP())) 
-    pointSize = 9;
 
   aFont->size = NSIntPointsToTwips(pointSize);
   return NS_OK;
@@ -974,6 +970,7 @@ NS_IMETHODIMP nsDeviceContextWin :: GetDeviceContextFor(nsIDeviceContextSpec *aD
   if (devmode) {
     dc = ::CreateDC(drivername, devicename, NULL, devmode);
   }
+  devSpecWin->UnlockDevMode();
 
   return devConWin->Init(dc, this); // take ownership of the DC
 }
@@ -1003,7 +1000,7 @@ static void DisplayLastError()
 #endif
 
 
-NS_IMETHODIMP nsDeviceContextWin :: BeginDocument(PRUnichar * aTitle, PRUnichar* aPrintToFileName, PRInt32 aStartPage, PRInt32 aEndPage)
+NS_IMETHODIMP nsDeviceContextWin :: BeginDocument(PRUnichar * aTitle)
 {
   nsresult rv = NS_ERROR_GFX_PRINTER_STARTDOC;
 
@@ -1019,15 +1016,27 @@ NS_IMETHODIMP nsDeviceContextWin :: BeginDocument(PRUnichar * aTitle, PRUnichar*
     char *title = GetACPString(titleStr);
 
     char* docName = nsnull;
-    nsAutoString str(aPrintToFileName);
-    if (str.Length() > 0) {
-      docName = ToNewCString(str);
+    nsCOMPtr<nsIPrintOptions> printService = do_GetService(kPrintOptionsCID, &rv);
+    if (printService) {
+      PRBool printToFile = PR_FALSE;
+      printService->GetPrintToFile(&printToFile);
+      if (printToFile) {
+        PRUnichar* uStr;
+        printService->GetToFileName(&uStr);
+        if (uStr != nsnull) {
+          nsAutoString str(uStr);
+          if (str.Length() > 0) {
+            docName = ToNewCString(str);
+          }
+          nsMemory::Free(uStr);
+        }
+      }
     }
     docinfo.cbSize = sizeof(docinfo);
     docinfo.lpszDocName = title != nsnull?title:"Mozilla Document";
 
 #ifdef DEBUG_rods
-    docinfo.lpszOutput = "\\p.ps";
+    docinfo.lpszOutput = "p.ps";
 #else
     docinfo.lpszOutput = docName;
 #endif

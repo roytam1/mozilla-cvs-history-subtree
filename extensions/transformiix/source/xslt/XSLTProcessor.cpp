@@ -64,7 +64,6 @@
 #include "nsNetUtil.h"
 #include "nsIDOMClassInfo.h"
 #include "nsIConsoleService.h"
-#include "nsDOMError.h"
 #else
 #include "TxLog.h"
 #include "txHTMLOutput.h"
@@ -2341,16 +2340,11 @@ NS_IMETHODIMP
 XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
                                  nsIDOMNode* aStyleDOM,
                                  nsIDOMDocument* aOutputDoc,
-                                 nsITransformObserver* aObserver)
+                                 nsIObserver* aObserver)
 {
+    // We need source and result documents but no stylesheet.
     NS_ENSURE_ARG(aSourceDOM);
-    NS_ENSURE_ARG(aStyleDOM);
     NS_ENSURE_ARG(aOutputDoc);
-    
-    if (!URIUtils::CanCallerAccess(aSourceDOM) ||
-        !URIUtils::CanCallerAccess(aStyleDOM) ||
-        !URIUtils::CanCallerAccess(aOutputDoc))
-        return NS_ERROR_DOM_SECURITY_ERR;
 
     // Create wrapper for the source document.
     nsCOMPtr<nsIDOMDocument> sourceDOMDocument;
@@ -2474,7 +2468,7 @@ XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
         document->ContentInserted(nsnull, root, 0);
     }
 
-    mObserver = do_GetWeakReference(aObserver);
+    mObserver = aObserver;
     SignalTransformEnd();
 
     return NS_OK;
@@ -2514,8 +2508,7 @@ XSLTProcessor::ScriptEvaluated(nsresult aResult,
 void
 XSLTProcessor::SignalTransformEnd()
 {
-    nsCOMPtr<nsITransformObserver> observer = do_QueryReferent(mObserver);
-    if (!observer)
+    if (!mObserver)
         return;
 
     if (!mOutputHandler || !mOutputHandler->isDone())
@@ -2526,21 +2519,15 @@ XSLTProcessor::SignalTransformEnd()
         mScriptLoader = nsnull;
     }
 
+    nsresult rv;
+    nsCOMPtr<nsIObserverService> anObserverService = do_GetService("@mozilla.org/observer-service;1", &rv);
+    if (NS_SUCCEEDED(rv)) {
+        nsCOMPtr<nsIContent> rootContent;
+        mOutputHandler->getRootContent(getter_AddRefs(rootContent));
+        anObserverService->AddObserver(mObserver, "xslt-done", PR_TRUE);
+        anObserverService->NotifyObservers(rootContent, "xslt-done", nsnull);
+    }
     mObserver = nsnull;
-
-    // XXX Need a better way to determine transform success/failure
-    nsCOMPtr<nsIContent> rootContent;
-    mOutputHandler->getRootContent(getter_AddRefs(rootContent));
-    nsCOMPtr<nsIDOMNode> root = do_QueryInterface(rootContent);
-    if (root) {
-      nsCOMPtr<nsIDOMDocument> resultDoc;
-      root->GetOwnerDocument(getter_AddRefs(resultDoc));
-      observer->OnTransformDone(NS_OK, resultDoc);
-    }
-    else {
-      // XXX Need better error message and code.
-      observer->OnTransformDone(NS_ERROR_FAILURE, nsnull);
-    }
 }
 
 // XXX

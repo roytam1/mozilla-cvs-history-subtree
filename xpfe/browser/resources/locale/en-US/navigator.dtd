@@ -41,8 +41,6 @@
 <!ENTITY navbarCmd.accesskey "N">
 <!ENTITY personalbarCmd.label "Personal Toolbar">
 <!ENTITY personalbarCmd.accesskey "p">
-<!ENTITY tabbarCmd.label "Tab Bar">
-<!ENTITY tabbarCmd.accesskey "T">
 <!ENTITY taskbarCmd.label "Status Bar">
 <!ENTITY taskbarCmd.accesskey "S">
 <!ENTITY componentbarCmd.label "Component Bar">
@@ -142,13 +140,11 @@
 
 <!ENTITY bookmarksMenu.label "Bookmarks">
 <!ENTITY bookmarksMenu.accesskey "B">
-<!ENTITY addCurPageCmd.label "Bookmark This Page">
+<!ENTITY addCurPageCmd.label "Add to Bookmarks">
 <!ENTITY addCurPageCmd.accesskey "B">
 <!ENTITY addCurPageCmd.commandkey "d">
 <!ENTITY addCurPageAsCmd.label "File Bookmark...">
-<!ENTITY addCurPageAsCmd.accesskey "F">
-<!ENTITY addCurTabsAsCmd.label "Bookmark This Group of Tabs...">
-<!ENTITY addCurTabsAsCmd.accesskey "G">
+<!ENTITY addCurPageAsCmd.accesskey "f">
 <!ENTITY manBookmarksCmd.label "Manage Bookmarks...">
 <!ENTITY manBookmarksCmd.accesskey "M">
 <!ENTITY manBookmarksCmd.commandkey "b">

@@ -148,9 +148,6 @@
     <command id="Browser:AddBookmarkAs" label="&addCurPageAsCmd.label;"
              accesskey="&addCurPageAsCmd.accesskey;"
              oncommand="addBookmarkAs();"/>
-    <command id="Browser:AddGroupmarkAs" label="&addCurTabsAsCmd.label;"
-             accesskey="&addCurTabsAsCmd.accesskey;"
-             oncommand="addGroupmarkAs(); event.preventBubble();"/>
     <command id="Browser:ManageBookmark" label="&manBookmarksCmd.label;" accesskey="&manBookmarksCmd.accesskey;" 
              oncommand="BrowserEditBookmarks();" />
   
@@ -220,7 +217,7 @@
         <menuitem id="menu_find" label="&findOnCmd.label;" accesskey="&findOnCmd.accesskey;" key="key_find" command="Browser:Find"/>
         <menuitem id="menu_findAgain" label="&findAgainCmd.label;" accesskey="&findAgainCmd.accesskey;" key="key_findAgain" command="Browser:FindAgain"/>
         <menuseparator id="menu_PrefsSeparator"/> 
-        <menuitem id="menu_preferences" oncommand="goPreferences('navigator', 'chrome://communicator/content/pref/pref-navigator.xul', 'navigator')"/>
+        <menuitem id="menu_preferences" oncommand="goPreferences('navigator.xul', 'chrome://communicator/content/pref/pref-navigator.xul', 'navigator')"/>
       </menupopup>
     </menu>
 
@@ -230,7 +227,6 @@
           <menupopup id="view_toolbars_popup" onpopupshowing="updateToolbarStates(this);"> 
             <menuitem label="&navbarCmd.label;" accesskey="&navbarCmd.accesskey;" class="menuitem-iconic" type="checkbox" observes="cmd_viewnavbar"  />
             <menuitem label="&personalbarCmd.label;" accesskey="&personalbarCmd.accesskey;" class="menuitem-iconic" type="checkbox" observes="cmd_viewpersonaltoolbar" />
-            <menuitem id="menuitem_showhide_tabbar" label="&tabbarCmd.label;" accesskey="&tabbarCmd.accesskey;" class="menuitem-iconic" type="checkbox" oncommand="showHideTabbar();" checked="true"/>
             <menuitem label="&taskbarCmd.label;" accesskey="&taskbarCmd.accesskey;" class="menuitem-iconic" type="checkbox" observes="cmd_viewtaskbar" />
             <menuitem label="&componentbarCmd.label;" accesskey="&componentbarCmd.accesskey;" class="menuitem-iconic" type="checkbox" observes="cmd_viewcomponentbar"/>
           </menupopup>
@@ -260,7 +256,7 @@
         <menu label="&applyTheme.label;" accesskey="&applyTheme.accesskey;">
           <menupopup datasources="rdf:chrome" ref="urn:mozilla:skin:root" oncommand="applyTheme(event.target)">
             <menuitem label="&themePreferencesCmd.label;" accesskey="&themePreferencesCmd.accesskey;"
-                      oncommand="goPreferences('appearance','chrome://communicator/content/pref/pref-themes.xul', 'themes-panel')"/>
+                      oncommand="goPreferences('pref-themes.xul','chrome://communicator/content/pref/pref-themes.xul')"/>
             <menuitem label="&getNewThemesCmd.label;" accesskey="&getNewThemesCmd.accesskey;" oncommand="getNewThemes();"/>
             <menuseparator/>
             <template>
@@ -333,11 +329,10 @@
           </menupopup>
         </rule>
       </template>
-      <menupopup onpopupshowing="updateGroupmarkMenuitem('bookmarks_groupmark');">
+      <menupopup>
         <!-- for some reason these don't work as command="" -->
         <menuitem key="addBookmarkKb"   observes="Browser:AddBookmark"/>
         <menuitem key="addBookmarkAsKb" observes="Browser:AddBookmarkAs"/>
-        <menuitem id="bookmarks_groupmark" observes="Browser:AddGroupmarkAs"/>
         <menuitem key="manBookmarkKb"   observes="Browser:ManageBookmark"/>
         <menuseparator/>
       </menupopup>

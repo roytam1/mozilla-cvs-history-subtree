@@ -79,9 +79,10 @@ const char * nsMapiRegistryUtils::thisApplication()
     return m_thisApp.get() ;
 }
 
-void nsMapiRegistryUtils::getVarValue(const PRUnichar * varName, nsAutoString & result)
+const PRUnichar * nsMapiRegistryUtils::brandName() 
 {
     nsresult rv;
+    if (m_brand.IsEmpty()) {
         nsCOMPtr<nsIStringBundleService> bundleService(do_GetService(
                                          kStringBundleServiceCID, &rv));
         if (NS_SUCCEEDED(rv) && bundleService) {
@@ -90,28 +91,18 @@ void nsMapiRegistryUtils::getVarValue(const PRUnichar * varName, nsAutoString & 
                         "chrome://global/locale/brand.properties",
                         getter_AddRefs(brandBundle));
             if (NS_SUCCEEDED(rv)) {
-            nsXPIDLString value;
+                nsXPIDLString brandName;
                 rv = brandBundle->GetStringFromName(
-                       varName,
-                       getter_Copies(value));
-            if (NS_SUCCEEDED(rv))
-                result = value;
+                           NS_LITERAL_STRING("brandShortName").get(),
+                           getter_Copies(brandName));
+                if (NS_SUCCEEDED(rv)) {
+                    m_brand = brandName ;
+                }
             }
         }
     }
 
-const PRUnichar * nsMapiRegistryUtils::brandName() 
-{
-    if (m_brand.IsEmpty())
-        getVarValue(NS_LITERAL_STRING("brandShortName").get(), m_brand);
     return m_brand.get()  ;
-}
-
-const PRUnichar * nsMapiRegistryUtils::vendorName() 
-{
-    if (m_vendor.IsEmpty())
-        getVarValue(NS_LITERAL_STRING("vendorShortName").get(), m_vendor);
-    return m_vendor.get();
 }
 
 const PRUnichar * nsMapiRegistryUtils::versionNo()
@@ -482,27 +473,25 @@ nsresult nsMapiRegistryUtils::setDefaultMailClient()
         NS_FAILED(rv)) return NS_ERROR_FAILURE;
     nsCAutoString keyName("Software\\Clients\\Mail\\");
 
-    nsCAutoString appName (NS_ConvertUCS2toUTF8(vendorName()).get());
+    nsCAutoString appName (NS_ConvertUCS2toUTF8(brandName()).get());
     if (!appName.IsEmpty()) {
         keyName.Append(appName.get());
 
-    nsCOMPtr<nsIStringBundle> bundle;
-    rv = MakeMapiStringBundle (getter_AddRefs (bundle)) ;
-    if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+ nsCOMPtr<nsIStringBundle> bundle;
+ rv = MakeMapiStringBundle (getter_AddRefs (bundle)) ;
+ if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
 
-    nsXPIDLString defaultMailTitle;
-    // Use vendorName instead of brandname since brandName is product name
-    // and has more than just the name of the application
-    const PRUnichar *keyValuePrefixStr[] = { vendorName(), versionNo() };
-    NS_NAMED_LITERAL_STRING(defaultMailTitleTag, "defaultMailDisplayTitle");
-    rv = bundle->FormatStringFromName(defaultMailTitleTag.get(),
-    keyValuePrefixStr, 2,
-    getter_Copies(defaultMailTitle));
-    if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+ nsXPIDLString defaultMailTitle;
+ const PRUnichar *keyValuePrefixStr[] = { brandName(), versionNo() };
+ NS_NAMED_LITERAL_STRING(defaultMailTitleTag, "defaultMailDisplayTitle");
+ rv = bundle->FormatStringFromName(defaultMailTitleTag.get(),
+ keyValuePrefixStr, 2,
+ getter_Copies(defaultMailTitle));
+ if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
 
         rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
                         keyName.get(), 
-             "", NS_CONST_CAST(char *, NS_ConvertUCS2toUTF8(defaultMailTitle).get()) ) ; 
+ "", NS_CONST_CAST(char *, NS_ConvertUCS2toUTF8(defaultMailTitle).get()) ) ; 
     }
     else
         rv = NS_ERROR_FAILURE;
@@ -589,9 +578,7 @@ nsresult nsMapiRegistryUtils::unsetDefaultMailClient() {
     nsCAutoString name ;
     GetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Mozilla\\Desktop", 
                                       "HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail", name);
-    // Use vendorName instead of brandname since brandName is product name
-    // and has more than just the name of the application
-    nsCAutoString appName (NS_ConvertUCS2toUTF8(vendorName()).get());
+    nsCAutoString appName (NS_ConvertUCS2toUTF8(brandName()).get());
 
     if (!name.IsEmpty() && !appName.IsEmpty() && name.Equals(appName)) {
         nsCAutoString keyName("HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\");

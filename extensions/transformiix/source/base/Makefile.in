@@ -34,9 +34,6 @@ REQUIRES	= string \
 		  dom \
 		  content \
 		  widget \
- 		  caps \
- 		  xpconnect \
- 		  js \
 		  $(NULL)
 endif
 

@@ -178,24 +178,6 @@ char *GetErrorString(DWORD dwError, char *szErrorString, DWORD dwErrorStringSize
   return(szErrorString);
 }
 
-/* function that clears the file progress bar of the xpinstall progress
- * dialog.
- */
-void InvalidateBarberBarArea()
-{
-  HWND	hWndGauge;
-  RECT	rect;
-
-  /* get the file progress bar gauge */
-  hWndGauge = GetDlgItem(dlgInfo.hWndDlg, IDC_GAUGE_FILE);
-  /* get the dimensions of the gauge */
-  GetClientRect(hWndGauge, &rect);
-  /* invalidate the rect area of the gauge */
-  InvalidateRect(hWndGauge, &rect, FALSE);
-  /* update the dialog */
-  UpdateWindow(dlgInfo.hWndDlg);
-}
-
 HRESULT SmartUpdateJars()
 {
   DWORD     dwIndex0;
@@ -380,7 +362,6 @@ void cbXPIProgress(const char* msg, PRInt32 val, PRInt32 max)
         dlgInfo.nFileBars = 0;
         ++dwCurrentArchive;
         UpdateGaugeArchiveProgressBar((unsigned)(((double)(dwCurrentArchive)/(double)dwTotalArchives)*(double)100));
-        InvalidateBarberBarArea();
         bBarberBar = FALSE;
       }
 
@@ -453,7 +434,7 @@ UpdateGaugeFileBarber()
 	  hWndGauge = GetDlgItem(dlgInfo.hWndDlg, IDC_GAUGE_FILE);
     if(dwBarberDirection == BDIR_RIGHT)
     {
-      if(lBarberCounter < 121)
+      if(lBarberCounter < 151)
         ++lBarberCounter;
       else
         dwBarberDirection = BDIR_LEFT;

@@ -409,9 +409,3 @@ function ViewPageSource(messages)
 	}
         return true;
 }
-
-
-function doHelpButton() 
-{
-    openHelp("mail-offline-items");
-}

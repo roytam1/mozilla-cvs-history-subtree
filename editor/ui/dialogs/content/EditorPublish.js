@@ -27,6 +27,7 @@ var gPublishSiteData;
 var gReturnData;
 var gDefaultSiteIndex = -1;
 var gDefaultSiteName;
+var gPreviousDefaultSite;
 var gPreviousDefaultDir;
 var gPreviousTitle;
 var gSettingsChanged = false;
@@ -81,6 +82,7 @@ function Startup()
   
   gPublishSiteData = GetPublishSiteData();
   gDefaultSiteName = GetDefaultPublishSiteName();
+  gPreviousDefaultSite = gDefaultSiteName;
 
   var addNewSite = false;
   if (gPublishSiteData)
@@ -112,7 +114,7 @@ function Startup()
       {
         var dirObj = {};
         var siteIndex = FindSiteIndexAndDocDir(gPublishSiteData, docUrl, dirObj);
-
+        
         // Select this site only if the same as user's intended site, or there wasn't one
         if (siteIndex != -1 && (gInitialSiteIndex == -1 || siteIndex == gInitialSiteIndex))
         {
@@ -203,7 +205,11 @@ function FillSiteList()
   for (i = 0; i < count; i++)
   {
     var name = gPublishSiteData[i].siteName;
-    var menuitem = AppendStringToMenulist(gDialog.SiteList, name);
+    // XXX Bug 131481: Using "max-width" style and "crop" attribute 
+    //     don't constrain grid width properly, resulting in cut-off buttons
+    //     We'll truncate label strings to prevent this problem
+    var menuitem = AppendLabelAndValueToMenulist(gDialog.SiteList, 
+                        TruncateStringAtWordEnd(name, 30, true), name);
     // Highlight the default site
     if (name == gDefaultSiteName)
     {
@@ -262,6 +268,9 @@ function SelectSiteList()
         AppendStringToMenulist(gDialog.OtherDirList, gPublishSiteData[selectedSiteIndex].dirList[i]);
       }
     }
+    gDialog.DocDirList.value = gPublishSiteData[selectedSiteIndex].docDir;
+    gDialog.OtherDirList.value = gPublishSiteData[selectedSiteIndex].otherDir;
+
     gDialog.DocDirList.value = FormatDirForPublishing(gPublishSiteData[selectedSiteIndex].docDir);
     gDialog.OtherDirList.value = FormatDirForPublishing(gPublishSiteData[selectedSiteIndex].otherDir);
     publishOtherFiles = gPublishSiteData[selectedSiteIndex].publishOtherFiles;
@@ -337,6 +346,10 @@ function SwitchPanel(panel)
       gDialog.SettingsTab.selected = null;
     }
     gCurrentPanel = panel;
+
+    // XXX Another hack to workaround bug 131481
+    // Resize dialog to be sure buttons are not cut off the right
+    window.sizeToContent();
   }
 }
 
@@ -455,7 +468,6 @@ function ValidateSettings()
     gPublishSiteData[siteIndex].otherDir = "";
     gPublishSiteData[siteIndex].dirList = [""];
     gPublishSiteData[siteIndex].publishOtherFiles = true;
-    gPublishSiteData[siteIndex].previousSiteName = siteName;
     newSite = true;
   }
   gPublishSiteData[siteIndex].siteName = siteName;
@@ -492,17 +504,16 @@ function ValidateSettings()
   {
     // Update selected item if sitename changed 
     var selectedItem = gDialog.SiteList.selectedItem;
-    if (selectedItem)
+    if (selectedItem && selectedItem.getAttribute("label") != siteName)
     {
-      var oldName = selectedItem.getAttribute("label");
-      if (oldName != siteName)
-      {
-        selectedItem.setAttribute("label", siteName);
-        gDialog.SiteList.setAttribute("label", siteName);
-        gSettingsChanged = true;
-        if (oldName == gDefaultSiteName)
-          gDefaultSiteName = siteName;
-      }
+      // XXX More hacks to workaround bug 131481
+      // The real sitename
+      selectedItem.setAttribute("value", siteName);
+
+      // Truncate string to show in the menulist
+      var truncatedName = TruncateStringAtWordEnd(siteName, 30, true);
+      selectedItem.setAttribute("label", truncatedName);
+      gDialog.SiteList.setAttribute("label", truncatedName);
     }
   }
   
@@ -522,7 +533,6 @@ function ValidateSettings()
 
   // Fill return data object
   gReturnData.siteName = siteName;
-  gReturnData.previousSiteName = gPublishSiteData[siteIndex].previousSiteName;
   gReturnData.publishUrl = publishUrl;
   gReturnData.browseUrl = browseUrl;
   gReturnData.username = username;

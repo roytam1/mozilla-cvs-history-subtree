@@ -565,19 +565,24 @@ nsresult nsMsgMdnGenerator::CreateFirstPart()
     nsXPIDLCString subject;
     m_headers->ExtractHeader(HEADER_SUBJECT, PR_FALSE,
                              getter_Copies(subject));
+    parm = PR_smprintf ("%s - %s", 
+                        (receipt_string ? 
+                         NS_LossyConvertUCS2toASCII(receipt_string).get() :
+                         "Return Receipt"), (subject ? subject.get()  : ""));
     convbuf = nsMsgI18NEncodeMimePartIIStr(
-        subject.Length() ? subject.get() : "[no subject]", 
-        PR_TRUE, NS_LossyConvertUCS2toASCII(m_charset).get(), 0,
+        parm ? parm : "Return Receipt", 
+        PR_FALSE, NS_LossyConvertUCS2toASCII(m_charset).get(), 0,
         conformToStandard);
-    tmpBuffer = PR_smprintf("Subject: %s - %s" CRLF, 
-                            (receipt_string ? 
-                             NS_LossyConvertUCS2toASCII(receipt_string).get() :
-                             "Return Receipt"),
+    tmpBuffer = PR_smprintf("Subject: %s" CRLF, 
                             (convbuf ? convbuf : 
-                             (subject.Length() ? subject.get() : 
-                              "[no subject]")));
+                             (parm ? parm : "Return Receipt")));
 
     PUSH_N_FREE_STRING(tmpBuffer);
+    if (parm)
+    {
+        PR_smprintf_free(parm);
+        parm = 0;
+    }
     PR_Free(convbuf);
 
     convbuf = nsMsgI18NEncodeMimePartIIStr(

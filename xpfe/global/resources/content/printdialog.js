@@ -26,7 +26,6 @@
 
 var dialog;
 var printService       = null;
-var printOptions       = null;
 var gOriginalNumCopies = 1;
 
 var paramBlock;
@@ -177,7 +176,7 @@ listElement.prototype =
 //---------------------------------------------------
 function getPrinters()
 {
-  var printerEnumerator = printOptions.availablePrinters();
+  var printerEnumerator = printService.availablePrinters();
 
   var selectElement = new listElement(dialog.printerList);
   selectElement.clearList();
@@ -197,9 +196,11 @@ function setPrinterDefaultsForSelectedPrinter()
   /* FixMe: We should save the old printer's values here... */
 
   gPrintSettings.printerName  = dialog.printerList.value;
+  var ifreq = window.QueryInterface(Components.interfaces.nsIInterfaceRequestor);
+  gWebBrowserPrint = ifreq.getInterface(Components.interfaces.nsIWebBrowserPrint);
  
   // First get any defaults from the printer 
-  printService.initPrintSettingsFromPrinter(gPrintSettings.printerName, gPrintSettings);
+  gWebBrowserPrint.initPrintSettingsFromPrinter(gPrintSettings.printerName, gPrintSettings);
 
   var flags = gPrintSetInterface.kInitSavePaperSizeType | gPrintSetInterface.kInitSavePaperSizeUnit |
               gPrintSetInterface.kInitSavePaperWidth | gPrintSetInterface.kInitSavePaperHeight |
@@ -207,23 +208,26 @@ function setPrinterDefaultsForSelectedPrinter()
               gPrintSetInterface.kInitSavePrintCommand;
 
   // now augment them with any values from last time
-  printService.initPrintSettingsFromPrefs(gPrintSettings, true, flags);
+  gWebBrowserPrint.initPrintSettingsFromPrefs(gPrintSettings, true, flags);
 
 }
 
 //---------------------------------------------------
 function displayPropertiesDialog()
 {
+  var displayed = new Object;
+  displayed.value = false;
   gPrintSettings.numCopies = dialog.numCopiesInput.value;
-  try {
-    var printingPromptService = Components.classes["@mozilla.org/embedcomp/printingprompt-service;1"]
-                                                 .getService(Components.interfaces.nsIPrintingPromptService);
-    if (printingPromptService) {
-      printingPromptService.showPrinterProperties(null, dialog.printerList.value, gPrintSettings);
-    }
-  } catch(e) {
-    dump("problems getting printingPromptService\n");
-  }
+   
+  printService.displayJobProperties(dialog.printerList.value, gPrintSettings, displayed);
+  dialog.numCopiesInput.value = gPrintSettings.numCopies;
+
+  if (doDebug) {
+    if (displayed.value)
+      dump("\nproperties dlg came up. displayed = "+displayed.value+"\n");
+    else
+      dump("\nproperties dlg didn't come up. displayed = "+displayed.value+"\n");
+  }    
 }
 
 //---------------------------------------------------
@@ -253,12 +257,11 @@ function loadDialog()
   var print_tofile        = "";
 
   try {
-    printService = Components.classes["@mozilla.org/gfx/printsettings-service;1"];
+    printService = Components.classes["@mozilla.org/gfx/printoptions;1"];
     if (printService) {
       printService = printService.getService();
       if (printService) {
-        printService = printService.QueryInterface(Components.interfaces.nsIPrintSettingsService);
-        printOptions = printService.QueryInterface(Components.interfaces.nsIPrintOptions);
+        printService = printService.QueryInterface(Components.interfaces.nsIPrintOptions);
       }
     }
   } catch(e) {}
@@ -360,9 +363,27 @@ function onLoad()
   // param[0]: nsIPrintSettings object
   // param[1]: container for return value (1 = print, 0 = cancel)
 
-  gPrintSettings   = window.arguments[0].QueryInterface(gPrintSetInterface);
-  gWebBrowserPrint = window.arguments[1].QueryInterface(Components.interfaces.nsIWebBrowserPrint);
-  paramBlock       = window.arguments[2].QueryInterface(Components.interfaces.nsIDialogParamBlock);
+  var ps = window.arguments[0].QueryInterface(gPrintSetInterface);
+  if (ps != null) {
+    gPrintSettings = ps;
+    paramBlock = window.arguments[1].QueryInterface(Components.interfaces.nsIDialogParamBlock);
+  } else {
+    var suppsArray = window.arguments[0].QueryInterface(Components.interfaces.nsISupportsArray);
+    if (suppsArray) {
+      var supps = suppsArray.ElementAt(0);
+      gPrintSettings = supps.QueryInterface(gPrintSetInterface);
+      if(!gPrintSettings) {
+        return;
+      }
+      supps = suppsArray.ElementAt(1);
+      paramBlock = supps.QueryInterface(Components.interfaces.nsIDialogParamBlock);
+      if(!paramBlock) {
+        return;
+      }
+    } else {
+      return;
+    }
+  }
 
   // default return value is "cancel"
   paramBlock.SetInt(0, 0);
@@ -437,12 +458,12 @@ function onAccept()
     saveToPrefs = prefs.getBoolPref("print.save_print_settings");
   }
 
-  if (saveToPrefs && printService != null) {
+  if (saveToPrefs && gWebBrowserPrint != null) {
     var flags = gPrintSetInterface.kInitSavePaperSizeType | gPrintSetInterface.kInitSavePaperSizeUnit |
                 gPrintSetInterface.kInitSavePaperWidth | gPrintSetInterface.kInitSavePaperHeight |
                 gPrintSetInterface.kInitSavePaperName |
                 gPrintSetInterface.kInitSavePrintCommand;
-    printService.savePrintSettingsToPrefs(gPrintSettings, true, flags);
+    gWebBrowserPrint.savePrintSettingsToPrefs(gPrintSettings, true, flags);
   }
 
   // set return value to "print"
@@ -454,19 +475,6 @@ function onAccept()
 
   return true;
 
-}
-
-//---------------------------------------------------
-function onCancel()
-{
-  // set return value to "cancel"
-  if (paramBlock) {
-    paramBlock.SetInt(0, 0);
-  } else {
-    dump("*** FATAL ERROR: No paramBlock\n");
-  }
-
-  return true;
 }
 
 //---------------------------------------------------

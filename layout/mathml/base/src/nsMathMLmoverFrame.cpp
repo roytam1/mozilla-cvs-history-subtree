@@ -302,7 +302,7 @@ nsMathMLmoverFrame::Place(nsIPresContext*      aPresContext,
 
   const nsStyleFont* font =
     (const nsStyleFont*) mStyleContext->GetStyleData (eStyleStruct_Font);
-  aRenderingContext.SetFont(font->mFont, nsnull);
+  aRenderingContext.SetFont(font->mFont);
   nsCOMPtr<nsIFontMetrics> fm;
   aRenderingContext.GetFontMetrics(*getter_AddRefs(fm));
 

@@ -322,70 +322,20 @@ static PRBool is_vk_down(int vk)
 #define NS_IMM_SETCANDIDATEWINDOW(hIMC, candForm) \
   { \
     if (nsToolkit::gAIMMApp) \
-      nsToolkit::gAIMMApp->SetCandidateWindow(hIMC, candForm); \
+      (nsToolkit::gAIMMApp->SetCandidateWindow(hIMC, candForm) == S_OK); \
     else { \
       nsIMM &theIMM = nsIMM::LoadModule(); \
       theIMM.SetCandidateWindow(hIMC, candForm); \
     } \
   }
 
-#define NS_IMM_SETCOMPOSITIONWINDOW(hIMC, compForm) \
-  { \
-    if (nsToolkit::gAIMMApp) \
-      nsToolkit::gAIMMApp->SetCompositionWindow(hIMC, compForm); \
-    else { \
-      nsIMM &theIMM = nsIMM::LoadModule(); \
-      theIMM.SetCompositionWindow(hIMC, compForm); \
-    } \
-  }
-
 #define NS_IMM_GETCOMPOSITIONWINDOW(hIMC, compForm) \
   { \
     if (nsToolkit::gAIMMApp) \
-      nsToolkit::gAIMMApp->GetCompositionWindow(hIMC, compForm); \
+      (nsToolkit::gAIMMApp->GetCompositionWindow(hIMC, compForm) == S_OK); \
     else { \
       nsIMM &theIMM = nsIMM::LoadModule(); \
       theIMM.GetCompositionWindow(hIMC, compForm); \
-    } \
-  }
-
-#define NS_IMM_GETCOMPOSITIONFONT(hIMC, lf) \
-  { \
-    if (nsToolkit::gAIMMApp) \
-      nsToolkit::gAIMMApp->GetCompositionFontA(hIMC, lf); \
-    else { \
-      nsIMM &theIMM = nsIMM::LoadModule(); \
-      theIMM.GetCompositionFontA(hIMC, lf); \
-    } \
-  }
-
-#define NS_IMM_SETCOMPOSITIONFONT(hIMC, lf) \
-  { \
-    if (nsToolkit::gAIMMApp) \
-      nsToolkit::gAIMMApp->SetCompositionFontA(hIMC, lf); \
-    else { \
-      nsIMM &theIMM = nsIMM::LoadModule(); \
-      theIMM.SetCompositionFontA(hIMC, lf); \
-    } \
-  }
-
-#define NS_IMM_GETCOMPOSITIONFONTW(hIMC, lf) \
-  { \
-    if (nsToolkit::gAIMMApp) \
-      nsToolkit::gAIMMApp->GetCompositionFontW(hIMC, lf); \
-    else { \
-      nsIMM &theIMM = nsIMM::LoadModule(); \
-      theIMM.GetCompositionFontW(hIMC, lf); \
-    } \
-  }
-
-#define NS_IMM_SETCOMPOSITIONFONTW(hIMC, lf) \
-  { \
-    if (nsToolkit::gAIMMApp) \
-      nsToolkit::gAIMMApp->SetCompositionFontW(hIMC, lf); \
-    else { \
-      nsIMM &theIMM = nsIMM::LoadModule(); \
-      theIMM.SetCompositionFontW(hIMC, lf); \
     } \
   }
 
@@ -452,36 +402,6 @@ static PRBool is_vk_down(int vk)
   { \
     nsIMM &theIMM = nsIMM::LoadModule(); \
     theIMM.SetCandidateWindow(hIMC, candForm); \
-  }
-
-#define NS_IMM_SETCOMPOSITIONWINDOW(hIMC, compForm) \
-  { \
-    nsIMM &theIMM = nsIMM::LoadModule(); \
-    theIMM.SetCompositionWindow(hIMC, compForm); \
-  }
-
-#define NS_IMM_GETCOMPOSITIONFONT(hIMC, lf) \
-  { \
-    nsIMM &theIMM = nsIMM::LoadModule(); \
-    theIMM.GetCompositionFont(hIMC, lf); \
-  }
-
-#define NS_IMM_GETCOMPOSITIONFONTW(hIMC, lf) \
-  { \
-    nsIMM &theIMM = nsIMM::LoadModule(); \
-    theIMM.GetCompositionFontW(hIMC, lf); \
-  }
-
-#define NS_IMM_SETCOMPOSITIONFONT(hIMC, lf) \
-  { \
-    nsIMM &theIMM = nsIMM::LoadModule(); \
-    theIMM.SetCompositionFont(hIMC, lf); \
-  }
-
-#define NS_IMM_SETCOMPOSITIONFONTW(hIMC, lf) \
-  { \
-    nsIMM &theIMM = nsIMM::LoadModule(); \
-    theIMM.SetCompositionFontW(hIMC, lf); \
   }
 
 #define NS_IMM_SETCONVERSIONSTATUS(hIMC, lpfdwConversion, lpfdwSentence) \
@@ -644,67 +564,6 @@ private:
 
 static nsAttentionTimerMonitor *gAttentionTimerMonitor = 0;
 
-PRBool gIsDestroyingAny = PR_FALSE;
-
-
-// Code to dispatch WM_SYSCOLORCHANGE message to all child windows.
-// WM_SYSCOLORCHANGE is only sent to top-level windows, but the 
-// cross platform API requires that NS_SYSCOLORCHANGE message be sent to
-// all child windows as well. When running in an embedded application
-// we may not receive a WM_SYSCOLORCHANGE message because the top 
-// level window is owned by the embeddor. Note: this code can be used to
-// dispatch other global messages (i.e messages that must be sent to all 
-// nsIWidget instances. 
-
-// Enumerate all child windows sending aMsg to each of them
-
-BOOL CALLBACK nsWindow::BroadcastMsgToChildren(HWND aWnd, LPARAM aMsg) 
-{
-  LONG proc = ::GetWindowLong(aWnd, GWL_WNDPROC);
-  if (proc == (LONG)&nsWindow::WindowProc) {
-    // its one of our windows so go ahead and send a message to it
-    WNDPROC winProc = (WNDPROC)GetWindowLong(aWnd, GWL_WNDPROC);
-    ::CallWindowProc(winProc, aWnd, aMsg, 0, 0);
-  }
-  // Send message to children of this window
-  ::EnumChildWindows(aWnd, nsWindow::BroadcastMsgToChildren, aMsg);
-  return TRUE;
-}
-
-// Enumerate all top level windows specifying that the children of each
-// top level window should be enumerated. Do *not* send the message to 
-// each top level window since it is assumed that the toolkit will send 
-// aMsg to them directly. 
-
-BOOL CALLBACK nsWindow::BroadcastMsg(HWND aTopWindow, LPARAM aMsg)
-{
-  // Iterate each of aTopWindows child windows sending the aMsg
-  // to each of them.
-  EnumChildWindows(aTopWindow, nsWindow::BroadcastMsgToChildren, aMsg);
-  return TRUE;
-}
-
-// This method is called from nsToolkit::WindowProc to forward global
-// messages which need to be dispatched to all child windows.
-
-void nsWindow::GlobalMsgWindowProc(HWND hWnd, UINT msg, 
-                                   WPARAM wParam, LPARAM lParam)
-
-{
-  switch (msg) {
-    case WM_SYSCOLORCHANGE:
-      // System color changes are posted to top-level windows only.
-      // The NS_SYSCOLORCHANGE must be dispatched to all child 
-      // windows as well.  
-     ::EnumThreadWindows(GetCurrentThreadId(), nsWindow::BroadcastMsg, msg);
-    break;
-  }
-}
-
-// End of the methods to dispatch global messages
-
-
-
 //-------------------------------------------------------------------------
 //
 // nsISupport stuff
@@ -779,7 +638,6 @@ nsWindow::nsWindow() : nsBaseWidget()
 	  mIMECompClauseStringSize = 0;
 	  mIMECompClauseStringLength = 0;
 	  mIMEReconvertUnicode = NULL;
-	  mLeadByte = '\0';
 
   static BOOL gbInitGlobalValue = FALSE;
   if(! gbInitGlobalValue) {
@@ -1551,11 +1409,7 @@ NS_METHOD nsWindow::Destroy()
     mEventCallback = nsnull;
     if (gAttentionTimerMonitor)
       gAttentionTimerMonitor->KillTimer(mWnd);
-
-    gIsDestroyingAny = PR_TRUE;
     VERIFY(::DestroyWindow(mWnd));
-    gIsDestroyingAny = PR_FALSE;
- 
     mWnd = NULL;
     //our windows can be subclassed by
     //others and these namless, faceless others
@@ -2871,10 +2725,7 @@ BOOL nsWindow::OnKeyDown( UINT aVirtualKeyCode, UINT aScanCode, LPARAM aKeyData)
     DispatchKeyEvent(NS_KEY_PRESS, 0, NS_VK_TAB, aKeyData);
   }
   else if (mIsControlDown && !mIsShiftDown && aVirtualKeyCode == NS_VK_SUBTRACT) {
-    DispatchKeyEvent(NS_KEY_PRESS, '-', 0, aKeyData);
-  }
-  else if (mIsControlDown && !mIsShiftDown && aVirtualKeyCode == NS_VK_ADD) {
-    DispatchKeyEvent(NS_KEY_PRESS, '+', 0, aKeyData);
+    DispatchKeyEvent(NS_KEY_PRESS, aVirtualKeyCode-64, 0, aKeyData);
   }
   else if ((mIsControlDown && !mIsShiftDown) &&
            ((( NS_VK_0 <= aVirtualKeyCode) && (aVirtualKeyCode <= NS_VK_9)) ||
@@ -2931,13 +2782,19 @@ BOOL nsWindow::OnKeyUp( UINT aVirtualKeyCode, UINT aScanCode, LPARAM aKeyData)
 BOOL nsWindow::OnChar( UINT mbcsCharCode, UINT virtualKeyCode, bool isMultiByte )
 {
   wchar_t uniChar;
-  char    charToConvert[3];
+  char    charToConvert[2];
   size_t  length;
 
   if (mIMEIsComposing)  {
     HandleEndComposition();
   }
 
+  {
+    charToConvert[0] = LOBYTE(mbcsCharCode);
+    length=1;
+  }
+
+  
   if(mIsControlDown && (virtualKeyCode <= 0x1A)) // Ctrl+A Ctrl+Z, see Programming Windows 3.1 page 110 for details  
   { 
     // need to account for shift here.  bug 16486 
@@ -2963,31 +2820,8 @@ BOOL nsWindow::OnChar( UINT mbcsCharCode, UINT virtualKeyCode, bool isMultiByte 
     } 
     else 
     {
-      if (!isMultiByte)	{
-        if (mLeadByte)  {	// mLeadByte is used for keeping the lead-byte of CJK char
-          charToConvert[0] = mLeadByte;
-          charToConvert[1] = LOBYTE(mbcsCharCode);
-          mLeadByte = '\0';
-          length=2;
-        } 
-        else {
-          charToConvert[0] = LOBYTE(mbcsCharCode);
-          if (::IsDBCSLeadByteEx(gCurrentKeyboardCP, charToConvert[0])) {
-            mLeadByte = charToConvert[0];
-            return TRUE;
-          }
-          length=1;
-        }
-      } else  {
-        // SC double-byte punctuation mark in Windows-English is 0x0000aca3
-        uniChar = LOWORD(mbcsCharCode);
-        charToConvert[0] = LOBYTE(uniChar);
-        charToConvert[1] = HIBYTE(uniChar);
-        mLeadByte = '\0';
-        length=2;
-      }
       ::MultiByteToWideChar(gCurrentKeyboardCP,MB_PRECOMPOSED,charToConvert,length,
-	    &uniChar, 1);
+	    &uniChar,sizeof(uniChar));
       virtualKeyCode = 0;
       mIsShiftDown = PR_FALSE;
     }
@@ -3504,15 +3338,6 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
         case WM_DISPLAYCHANGE:
           DispatchStandardEvent(NS_DISPLAYCHANGED);
         break;
-
-        case WM_SYSCOLORCHANGE:
-          // Note: This is sent for child windows as well as top-level windows.
-          // The Win32 toolkit normally only sends these events to top-level windows.
-          // But we cycle through all of the childwindows and send it to them as well
-          // so all presentations get notified properly. 
-          // See nsWindow::GlobalMsgWindowProc.
-          DispatchStandardEvent(NS_SYSCOLORCHANGED);
-        break;
         
         case WM_NOTIFY:
             // TAB change
@@ -3621,6 +3446,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             }
 
             unsigned char    ch = (unsigned char)wParam;
+            UINT            char_result;
   
             // <ctrl><enter> and <ctrl>J and generate exactly the same char code
             // but we want to "eat" the event for <ctrl><enter> because
@@ -3635,10 +3461,15 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             //
             if ((wParam <= 0xff) && (ch==0x0d || ch==0x08)) {
 
-                result = OnChar(wParam, ch==0x0d ? VK_RETURN : VK_BACK, false);
+                result = OnChar(ch,ch==0x0d ? VK_RETURN : VK_BACK,true);
                 break;
             }
-            result = OnChar(wParam, ch, (wParam > 0xff));
+  
+            {
+                char_result = ch;
+                result = OnChar(char_result,ch,false);
+            }
+  
             break;
         }
         case WM_SYSKEYUP:
@@ -3921,23 +3752,16 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
         }
 
       case WM_SETFOCUS:
-
-        if(!gIsDestroyingAny) { 
-          result = DispatchFocus(NS_GOTFOCUS, isMozWindowTakingFocus);
-          if(gJustGotActivate) {
-            gJustGotActivate = PR_FALSE;
-            gJustGotDeactivate = PR_FALSE;
-            result = DispatchFocus(NS_ACTIVATE, isMozWindowTakingFocus);
-          }
-#ifdef ACCESSIBILITY
-          if (nsWindow::gIsAccessibilityOn && !mRootAccessible && mIsTopWidgetWindow) 
-            CreateRootAccessible();
-#endif
-        } else {
-          nsToolkit *toolkit = NS_STATIC_CAST(nsToolkit *, mToolkit);
-          VERIFY(::PostMessage(toolkit->GetDispatchWindow(), WM_SETFOCUS,
-                     wParam, lParam));
+        result = DispatchFocus(NS_GOTFOCUS, isMozWindowTakingFocus);
+        if(gJustGotActivate) {
+          gJustGotActivate = PR_FALSE;
+          result = DispatchFocus(NS_ACTIVATE, isMozWindowTakingFocus);
         }
+#ifdef ACCESSIBILITY
+        if (nsWindow::gIsAccessibilityOn && !mRootAccessible && mIsTopWidgetWindow) 
+          CreateRootAccessible();
+#endif
+
         break;
 
       case WM_KILLFOCUS:
@@ -4026,7 +3850,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
                because in testing it seems an accurate harbinger of
                an impending min/max/restore change (WM_NCCALCSIZE would
                also work, but it's also sent when merely resizing.)) */
-            if (wp->flags & SWP_FRAMECHANGED && ::IsWindowVisible(mWnd)) {
+            if (wp->flags & SWP_FRAMECHANGED) {
               WINDOWPLACEMENT pl;
               pl.length = sizeof(pl);
               ::GetWindowPlacement(mWnd, &pl);
@@ -4042,22 +3866,6 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
               InitEvent(event, NS_SIZEMODE);
 
               result = DispatchWindowEvent(&event);
-
-              if (pl.showCmd == SW_SHOWMINIMIZED) {
-                // Deactivate
-                char className[19];
-                ::GetClassName((HWND)wParam, className, 19);
-                if(strcmp(className, WindowClass()))
-                  isMozWindowTakingFocus = PR_FALSE;
-
-                gJustGotDeactivate = PR_FALSE;
-                result = DispatchFocus(NS_DEACTIVATE, isMozWindowTakingFocus);
-              } else if (pl.showCmd == SW_SHOWNORMAL){
-                // Make sure we're active
-                result = DispatchFocus(NS_GOTFOCUS, PR_TRUE);
-                result = DispatchFocus(NS_ACTIVATE, PR_TRUE);
-              }
-
               NS_RELEASE(event.widget);
             }
             break;
@@ -4120,8 +3928,6 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 					break;
 
 				case WM_IME_CHAR: 
-					// We receive double byte char code. No need to worry about the <Shift>
-					mIsShiftDown = PR_FALSE;
 					result = OnIMEChar((BYTE)(wParam>>8), 
 						(BYTE) (wParam & 0x00FF), 
 						lParam);
@@ -5339,10 +5145,6 @@ NS_METHOD nsWindow::SetPreferredSize(PRInt32 aWidth, PRInt32 aHeight)
 }
 
 #define ZH_CN_INTELLEGENT_ABC_IME ((HKL)0xe0040804L)
-#define ZH_CN_MS_PINYIN_IME_3_0 ((HKL)0xe00e0804L)
-#define ZH_CN_NEIMA_IME ((HKL)0xe0050804L)
-#define USE_OVERTHESPOT_IME(kl) ((nsToolkit::mIsWinXP) \
-          && (ZH_CN_MS_PINYIN_IME_3_0 == (kl)))
 
 void
 nsWindow::HandleTextEvent(HIMC hIMEContext,PRBool aCheckAttr)
@@ -5440,7 +5242,7 @@ nsWindow::HandleTextEvent(HIMC hIMEContext,PRBool aCheckAttr)
 
 }
 
-BOOL
+void
 nsWindow::HandleStartComposition(HIMC hIMEContext)
 {
 	NS_ASSERTION( !mIMEIsComposing, "conflict state");
@@ -5459,27 +5261,6 @@ nsWindow::HandleStartComposition(HIMC hIMEContext)
 	//
 	// Post process event
 	//
-  if (USE_OVERTHESPOT_IME(gKeyboardLayout))  {
-    LOGFONT lf;
-    NS_IMM_GETCOMPOSITIONFONT(hIMEContext, &lf);
-    lf.lfHeight = event.theReply.mCursorPosition.height;
-    NS_IMM_SETCOMPOSITIONFONT(hIMEContext, &lf);
-
-    COMPOSITIONFORM cf;
-    memset(&cf, NULL, sizeof(COMPOSITIONFORM));
-    cf.dwStyle = CFS_POINT;       
-    cf.ptCurrentPos.x = event.theReply.mCursorPosition.x + IME_X_OFFSET;
-    cf.ptCurrentPos.y = event.theReply.mCursorPosition.y + IME_Y_OFFSET;
-    NS_IMM_SETCOMPOSITIONWINDOW(hIMEContext, &cf);
-
-    InitEvent(event,NS_COMPOSITION_END,&point);
-    event.eventStructType = NS_COMPOSITION_END;
-    event.compositionMessage = NS_COMPOSITION_END;
-    (void)DispatchWindowEvent(&event);
-    NS_RELEASE(event.widget);
-    return PR_FALSE;
-  }
-
   if((0 != event.theReply.mCursorPosition.width) ||
      (0 != event.theReply.mCursorPosition.height) )
   {
@@ -5509,7 +5290,6 @@ nsWindow::HandleStartComposition(HIMC hIMEContext)
 		mIMECompUnicode = new nsAutoString();
 	mIMEIsComposing = PR_TRUE;
 
-	return PR_TRUE;
 }
 
 void
@@ -5679,58 +5459,14 @@ BOOL nsWindow::OnIMEChar(BYTE aByte1, BYTE aByte2, LPARAM aKeyState)
 #ifdef DEBUG_IME
 	printf("OnIMEChar\n");
 #endif
-  wchar_t uniChar;
-  char    charToConvert[3];
-  size_t  length;
-  int err = 0;
+	NS_ASSERTION(PR_TRUE, "should not got an WM_IME_CHAR");
 
-  if (aByte1) {
-    charToConvert[0] = aByte1;
-    charToConvert[1] = aByte2;
-    length=2;
-  }
-  else  {
-    charToConvert[0] = aByte2;
-    length=1;
-  }
-  err = ::MultiByteToWideChar(gCurrentKeyboardCP, MB_PRECOMPOSED, charToConvert, length,
-	  &uniChar, 1);
-
-#ifdef DEBUG_IME
-  if (!err) {
-    DWORD lastError = ::GetLastError();
-    switch (lastError)
-    {
-      case ERROR_INSUFFICIENT_BUFFER:
-    	  printf("ERROR_INSUFFICIENT_BUFFER\n");
-        break;
-
-      case ERROR_INVALID_FLAGS:
-    	  printf("ERROR_INVALID_FLAGS\n");
-        break;
-
-      case ERROR_INVALID_PARAMETER:
-    	  printf("ERROR_INVALID_PARAMETER\n");
-        break;
-
-      case ERROR_NO_UNICODE_TRANSLATION:
-    	  printf("ERROR_NO_UNICODE_TRANSLATION\n");
-        break;
-    }
-  }
-#endif
-
-  // We need to return TRUE here so that Windows doesnt'
-  // send two WM_CHAR msgs
-  DispatchKeyEvent(NS_KEY_PRESS, uniChar, 0, 0);
-  return PR_TRUE;
+	// not implement yet
+	return PR_FALSE;
 }
 //==========================================================================
 BOOL nsWindow::OnIMEComposition(LPARAM  aGCS)			
 {
-	if (USE_OVERTHESPOT_IME(gKeyboardLayout))
-		return PR_FALSE;
-
 #ifdef DEBUG_IME
 	printf("OnIMEComposition\n");
 #endif
@@ -5984,9 +5720,6 @@ BOOL nsWindow::OnIMECompositionFull()
 //==========================================================================
 BOOL nsWindow::OnIMEEndComposition()			
 {
-	if (USE_OVERTHESPOT_IME(gKeyboardLayout))
-		return PR_FALSE;
-
 #ifdef DEBUG_IME
 	printf("OnIMEEndComposition\n");
 #endif
@@ -6221,9 +5954,7 @@ BOOL nsWindow::OnIMESetContext(BOOL aActive, LPARAM& aISC)
 	if(! aActive)
 		ResetInputState();
 
-	if (!USE_OVERTHESPOT_IME(gKeyboardLayout))
-		aISC &= ~ ISC_SHOWUICOMPOSITIONWINDOW;
-
+	aISC &= ~ ISC_SHOWUICOMPOSITIONWINDOW;
 	// We still return false here because we need to pass the 
 	// aISC w/ ISC_SHOWUICOMPOSITIONWINDOW clear to the default
 	// window proc so it will draw the candidcate window for us...
@@ -6245,9 +5976,9 @@ BOOL nsWindow::OnIMEStartComposition()
 	if (hIMEContext==NULL) 
 		return PR_TRUE;
 
-	PRBool rtn = HandleStartComposition(hIMEContext);
+	HandleStartComposition(hIMEContext);
 	NS_IMM_RELEASECONTEXT(mWnd, hIMEContext);
-	return rtn;
+	return PR_TRUE;
 }
 
 //==========================================================================

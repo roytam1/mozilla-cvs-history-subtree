@@ -93,7 +93,6 @@ NS_IMETHOD GetCanUndoDeleteOnServer(PRBool *canUndoDeleteOnServer);
   NS_IMETHOD GetServerRequiresPasswordForBiff(PRBool *_retval);
   NS_IMETHOD OnUserOrHostNameChanged(const char *oldName, const char *newName);
   NS_IMETHOD GetNumIdleConnections(PRInt32 *aNumIdleConnections);
-  NS_IMETHOD ForgetSessionPassword();
 protected:
 	nsresult GetFolder(const char* name, nsIMsgFolder** pFolder);
   nsresult ResetFoldersToUnverified(nsIFolder *parentFolder);

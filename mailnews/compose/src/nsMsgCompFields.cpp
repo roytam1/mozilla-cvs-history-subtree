@@ -796,7 +796,7 @@ NS_IMETHODIMP nsMsgCompFields::GetDefaultCharacterSet(char * *aDefaultCharacterS
   return *aDefaultCharacterSet ? NS_OK : NS_ERROR_OUT_OF_MEMORY; 
 }
 
-NS_IMETHODIMP nsMsgCompFields::CheckCharsetConversion(char **fallbackCharset, PRBool *_retval)
+NS_IMETHODIMP nsMsgCompFields::CheckCharsetConversion(PRBool *_retval)
 {
   NS_ENSURE_ARG_POINTER(_retval);
 
@@ -805,8 +805,7 @@ NS_IMETHODIMP nsMsgCompFields::CheckCharsetConversion(char **fallbackCharset, PR
     headers.Append(m_headers[i]);
 
   // charset conversion check
-  *_retval = nsMsgI18Ncheck_data_in_charset_range(GetCharacterSet(), NS_ConvertUTF8toUCS2(headers.get()).get(),
-                                                  fallbackCharset);
+  *_retval = nsMsgI18Ncheck_data_in_charset_range(GetCharacterSet(), NS_ConvertUTF8toUCS2(headers.get()).get());
 
   return NS_OK;
 }

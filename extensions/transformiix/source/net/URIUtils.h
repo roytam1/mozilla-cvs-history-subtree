@@ -40,13 +40,8 @@
 #include "baseutils.h"
 #ifdef TX_EXE
 #include <fstream.h>
-#else
-#include "nsIDOMNode.h"
-
-class nsIScriptSecurityManager;
-extern nsIScriptSecurityManager *gTxSecurityManager;
-
 #endif
+
 
 /**
  * A utility class for URI handling
@@ -91,15 +86,7 @@ public:
      * The document base will be appended to the given dest String
     **/
     static void getDocumentBase(const String& href, String& dest);
-
-#else /* TX_EXE */
-
-    /*
-     * Checks if a caller is allowed to access a given node
-     */
-    static PRBool CanCallerAccess(nsIDOMNode *aNode);
-
-#endif /* TX_EXE */
+#endif
 
     /**
      * Resolves the given href argument, using the given documentBase

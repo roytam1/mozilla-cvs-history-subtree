@@ -38,7 +38,6 @@
 #include "nsIServiceManager.h"
 #include "nsIMsgIdentity.h"
 #include "nsIMsgCompFields.h"
-#include "nsReadableUtils.h"
 #include "nsCRT.h"
 
 // String bundle for smime. Class static.
@@ -548,7 +547,7 @@ nsresult nsMsgComposeSecure::MimeInitMultipartSigned(PRBool aOuter, nsIMsgSendRe
 										&mMultipartSignedBoundary);
   if (NS_FAILED(rv)) goto FAIL;
 
-  L = strlen(header);
+  L = nsCRT::strlen(header);
 
   if (aOuter){
 	  /* If this is the outer block, write it to the file. */
@@ -602,7 +601,7 @@ nsresult nsMsgComposeSecure::MimeInitEncryption(PRBool aSign, nsIMsgSendReport *
 				MIME_SMIME_ENCRYPTED_CONTENT_DESCRIPTION);
   PRInt32 L;
   if (!s) return NS_ERROR_OUT_OF_MEMORY;
-  L = strlen(s);
+  L = nsCRT::strlen(s);
   if (PRInt32(mStream->write(s, L)) < L) {
 	  return NS_ERROR_FAILURE;
   }
@@ -714,7 +713,7 @@ nsresult nsMsgComposeSecure::MimeFinishMultipartSigned (PRBool aOuter, nsIMsgSen
 		goto FAIL;
 	}
 
-	L = strlen(header);
+	L = nsCRT::strlen(header);
 	if (aOuter) {
 		/* If this is the outer block, write it to the file. */
     if (PRInt32(mStream->write(header, L)) < L) {
@@ -790,7 +789,7 @@ nsresult nsMsgComposeSecure::MimeFinishMultipartSigned (PRBool aOuter, nsIMsgSen
 		rv = NS_ERROR_OUT_OF_MEMORY;
 		goto FAIL;
 	}
-	L = strlen(header);
+	L = nsCRT::strlen(header);
 	if (aOuter) {
 		/* If this is the outer block, write it to the file. */
 		if (PRInt32(mStream->write(header, L)) < L)
@@ -899,16 +898,12 @@ nsresult nsMsgComposeSecure::MimeCryptoHackCerts(const char *aRecipients,
 
   pHeader->ExtractHeaderAddressMailboxes(nsnull,aRecipients, &all_mailboxes);
   pHeader->RemoveDuplicateAddresses(nsnull, all_mailboxes, 0, PR_FALSE /*removeAliasesToMe*/, &mailboxes);
-  if (all_mailboxes) {
-    nsMemory::Free(all_mailboxes);
-    all_mailboxes = nsnull;
-  }
+  PR_FREEIF(all_mailboxes);
 
   if (mailboxes) {
 	  pHeader->ParseHeaderAddresses (nsnull, mailboxes, 0, &mailbox_list, &count);
-    nsMemory::Free(mailboxes);
-    mailboxes = nsnull;
   }
+  PR_FREEIF(mailboxes);
   if (count < 0) return count;
 
   /* If the message is to be encrypted, then get the recipient certs */
@@ -918,26 +913,12 @@ nsresult nsMsgComposeSecure::MimeCryptoHackCerts(const char *aRecipients,
     PRBool already_added_self_cert = PR_FALSE;
 
 	  for (; count > 0; count--) {
-	    nsCString mailbox_lowercase;
-	    ToLowerCase(nsDependentCString(mailbox), mailbox_lowercase);
       nsCOMPtr<nsIX509Cert> cert;
-      certdb->GetCertByEmailAddress(nsnull, mailbox_lowercase.get(), getter_AddRefs(cert));
-      PRBool foundValidCert = PR_FALSE;
-
-		  if (cert) {
-        PRUint32 verification_result;
-
-        if (NS_SUCCEEDED(
-            cert->VerifyForUsage(nsIX509Cert::CERT_USAGE_EmailRecipient, &verification_result))
-            &&
-            nsIX509Cert::VERIFIED_OK == verification_result)
-        {
-          foundValidCert = PR_TRUE;
-        }
-      }
-      
-      if (!foundValidCert) {
-        // Failure to find a valid encryption cert is fatal.
+		  certdb->GetCertByEmailAddress(nsnull, mailbox, getter_AddRefs(cert));
+		  if (!cert) {
+        // failure to find an encryption cert is
+        // fatal for now. We won't be able to encrypt anyway
+        // ssaux 12/03/2001.
         // here I assume that mailbox contains ascii rather than utf8.
         SetErrorWithParam(sendReport, NS_LITERAL_STRING("MissingRecipientEncryptionCert").get(), mailbox);
         res = NS_ERROR_FAILURE;
@@ -958,9 +939,7 @@ nsresult nsMsgComposeSecure::MimeCryptoHackCerts(const char *aRecipients,
       }
 
       mCerts->AppendElement(cert);
-      // To understand this loop, especially the "+= strlen +1", look at the documentation
-      // of ParseHeaderAddresses. Basically, it returns a list of zero terminated strings.
-      mailbox += strlen(mailbox) + 1;
+		  mailbox += nsCRT::strlen(mailbox) + 1;
 	  }
     
     if (!already_added_self_cert) {
@@ -968,9 +947,7 @@ nsresult nsMsgComposeSecure::MimeCryptoHackCerts(const char *aRecipients,
     }
 	}
 FAIL:
-  if (mailbox_list) {
-    nsMemory::Free(mailbox_list);
-  }
+  PR_FREEIF(mailbox_list);
   return res;
 }
 

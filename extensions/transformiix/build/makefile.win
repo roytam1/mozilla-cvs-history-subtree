@@ -25,6 +25,7 @@ REQUIRES	= xpcom \
 		  string \
 		  dom \
 		  widget \
+		  content_xsl \
 		  necko \
 		  content \
 		  xpconnect \
@@ -33,7 +34,6 @@ REQUIRES	= xpcom \
 		  webshell \
 		  docshell \
 		  pref \
- 		  caps \
 		  $(NULL)
 include <$(DEPTH)/config/config.mak>
 

@@ -59,30 +59,18 @@ nsPrintSettingsWin::nsPrintSettingsWin() :
  *  See documentation in nsPrintSettingsWin.h
  *	@update 
  */
-nsPrintSettingsWin::nsPrintSettingsWin(const nsPrintSettingsWin& aPS) :
-  mDeviceName(nsnull),
-  mDriverName(nsnull),
-  mDevMode(nsnull)
-{
-  *this = aPS;
-}
-
-/** ---------------------------------------------------
- *  See documentation in nsPrintSettingsWin.h
- *	@update 
- */
 nsPrintSettingsWin::~nsPrintSettingsWin()
 {
-  if (mDeviceName) nsMemory::Free(mDeviceName);
-  if (mDriverName) nsMemory::Free(mDriverName);
-  if (mDevMode) ::HeapFree(::GetProcessHeap(), 0, mDevMode);
+  if (mDeviceName) nsCRT::free(mDeviceName);
+  if (mDriverName) nsCRT::free(mDriverName);
+  if (mDevMode) free(mDevMode);
 }
 
 /* [noscript] attribute charPtr deviceName; */
 NS_IMETHODIMP nsPrintSettingsWin::SetDeviceName(char * aDeviceName)
 {
   if (mDeviceName) {
-    nsMemory::Free(mDeviceName);
+    nsCRT::free(mDeviceName);
   }
   mDeviceName = aDeviceName?nsCRT::strdup(aDeviceName):nsnull;
   return NS_OK;
@@ -98,7 +86,7 @@ NS_IMETHODIMP nsPrintSettingsWin::GetDeviceName(char * *aDeviceName)
 NS_IMETHODIMP nsPrintSettingsWin::SetDriverName(char * aDriverName)
 {
   if (mDriverName) {
-    nsMemory::Free(mDriverName);
+    nsCRT::free(mDriverName);
   }
   mDriverName = aDriverName?nsCRT::strdup(aDriverName):nsnull;
   return NS_OK;
@@ -110,162 +98,31 @@ NS_IMETHODIMP nsPrintSettingsWin::GetDriverName(char * *aDriverName)
   return NS_OK;
 }
 
-void nsPrintSettingsWin::CopyDevMode(DEVMODE* aInDevMode, DEVMODE *& aOutDevMode)
-{
-  aOutDevMode = nsnull;
-  size_t size = aInDevMode->dmSize + aInDevMode->dmDriverExtra;
-  aOutDevMode = (LPDEVMODE)::HeapAlloc (::GetProcessHeap(), HEAP_ZERO_MEMORY, size);
-  if (aOutDevMode) {
-    memcpy(aOutDevMode, aInDevMode, size);
-  }
-
-}
-
 /* [noscript] attribute nsDevMode devMode; */
 NS_IMETHODIMP nsPrintSettingsWin::GetDevMode(DEVMODE * *aDevMode)
 {
   NS_ENSURE_ARG_POINTER(aDevMode);
 
   if (mDevMode) {
-    CopyDevMode(mDevMode, *aDevMode);
+    size_t size = sizeof(*mDevMode);
+    *aDevMode = (LPDEVMODE)malloc(size);
+    memcpy(*aDevMode, mDevMode, size);
   } else {
     *aDevMode = nsnull;
   }
   return NS_OK;
 }
-
 NS_IMETHODIMP nsPrintSettingsWin::SetDevMode(DEVMODE * aDevMode)
 {
   if (mDevMode) {
-    ::HeapFree(::GetProcessHeap(), 0, mDevMode);
+    free(mDevMode);
     mDevMode = NULL;
   }
 
   if (aDevMode) {
-    CopyDevMode(aDevMode, mDevMode);
+    size_t size = sizeof(*aDevMode);
+    mDevMode = (LPDEVMODE)malloc(size);
+    memcpy(mDevMode, aDevMode, size);
   }
   return NS_OK;
 }
-
-//-------------------------------------------
-nsresult 
-nsPrintSettingsWin::_Clone(nsIPrintSettings **_retval)
-{
-  nsPrintSettingsWin* printSettings = new nsPrintSettingsWin(*this);
-  return printSettings->QueryInterface(NS_GET_IID(nsIPrintSettings), (void**)_retval); // ref counts
-}
-
-//-------------------------------------------
-nsPrintSettingsWin& nsPrintSettingsWin::operator=(const nsPrintSettingsWin& rhs)
-{
-  if (this == &rhs) {
-    return *this;
-  }
-
-  ((nsPrintSettings&) *this) = rhs;
-
-  if (mDeviceName) {
-    nsCRT::free(mDeviceName);
-  }
-
-  if (mDriverName) {
-    nsCRT::free(mDriverName);
-  }
-
-  // Use free because we used the native malloc to create the memory
-  if (mDevMode) {
-    ::HeapFree(::GetProcessHeap(), 0, mDevMode);
-  }
-
-  mDeviceName = rhs.mDeviceName?nsCRT::strdup(rhs.mDeviceName):nsnull;
-  mDriverName = rhs.mDriverName?nsCRT::strdup(rhs.mDriverName):nsnull;
-
-  if (rhs.mDevMode) {
-    CopyDevMode(rhs.mDevMode, mDevMode);
-  } else {
-    mDevMode = nsnull;
-  }
-
-  return *this;
-}
-
-//-------------------------------------------
-/* void assign (in nsIPrintSettings aPS); */
-nsresult 
-nsPrintSettingsWin::_Assign(nsIPrintSettings *aPS)
-{
-  nsPrintSettingsWin *psWin = NS_STATIC_CAST(nsPrintSettingsWin*, aPS);
-  *this = *psWin;
-  return NS_OK;
-}
-
-//----------------------------------------------------------------------
-// Testing of assign and clone
-// This define turns on the testing module below
-// so at start up it writes and reads the prefs.
-#ifdef DEBUG_rodsX
-#include "nsIPrintOptions.h"
-#include "nsIServiceManager.h"
-class Tester {
-public:
-  Tester();
-};
-Tester::Tester()
-{
-  nsCOMPtr<nsIPrintSettings> ps;
-  nsresult rv;
-  nsCOMPtr<nsIPrintOptions> printService = do_GetService("@mozilla.org/gfx/printsettings-service;1", &rv);
-  if (NS_SUCCEEDED(rv)) {
-    rv = printService->CreatePrintSettings(getter_AddRefs(ps));
-  }
-
-  if (ps) {
-    ps->SetPrintOptions(nsIPrintSettings::kPrintOddPages,  PR_TRUE);
-    ps->SetPrintOptions(nsIPrintSettings::kPrintEvenPages,  PR_FALSE);
-    ps->SetMarginTop(1.0);
-    ps->SetMarginLeft(1.0);
-    ps->SetMarginBottom(1.0);
-    ps->SetMarginRight(1.0);
-    ps->SetScaling(0.5);
-    ps->SetPrintBGColors(PR_TRUE);
-    ps->SetPrintBGImages(PR_TRUE);
-    ps->SetPrintRange(15);
-    ps->SetHeaderStrLeft(NS_ConvertUTF8toUCS2("Left").get());
-    ps->SetHeaderStrCenter(NS_ConvertUTF8toUCS2("Center").get());
-    ps->SetHeaderStrRight(NS_ConvertUTF8toUCS2("Right").get());
-    ps->SetFooterStrLeft(NS_ConvertUTF8toUCS2("Left").get());
-    ps->SetFooterStrCenter(NS_ConvertUTF8toUCS2("Center").get());
-    ps->SetFooterStrRight(NS_ConvertUTF8toUCS2("Right").get());
-    ps->SetPaperName(NS_ConvertUTF8toUCS2("Paper Name").get());
-    ps->SetPaperSizeType(10);
-    ps->SetPaperData(1);
-    ps->SetPaperWidth(100.0);
-    ps->SetPaperHeight(50.0);
-    ps->SetPaperSizeUnit(nsIPrintSettings::kPaperSizeMillimeters);
-    ps->SetPrintReversed(PR_TRUE);
-    ps->SetPrintInColor(PR_TRUE);
-    ps->SetPaperSize(5);
-    ps->SetOrientation(nsIPrintSettings::kLandscapeOrientation);
-    ps->SetPrintCommand(NS_ConvertUTF8toUCS2("Command").get());
-    ps->SetNumCopies(2);
-    ps->SetPrinterName(NS_ConvertUTF8toUCS2("Printer Name").get());
-    ps->SetPrintToFile(PR_TRUE);
-    ps->SetToFileName(NS_ConvertUTF8toUCS2("File Name").get());
-    ps->SetPrintPageDelay(1000);
-
-    nsCOMPtr<nsIPrintSettings> ps2;
-    if (NS_SUCCEEDED(rv)) {
-      rv = printService->CreatePrintSettings(getter_AddRefs(ps2));
-    }
-
-    ps2->Assign(ps);
-
-    nsCOMPtr<nsIPrintSettings> psClone;
-    ps2->Clone(getter_AddRefs(psClone));
-
-  }
-
-}
-Tester gTester;
-#endif
-

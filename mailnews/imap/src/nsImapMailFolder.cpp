@@ -1635,9 +1635,9 @@ nsImapMailFolder::MarkAllMessagesRead(void)
   if(NS_SUCCEEDED(rv))
   {
     nsMsgKeyArray thoseMarked;
-    EnableNotifications(allMessageCountNotifications, PR_FALSE, PR_TRUE /*dbBatching*/);
+    EnableNotifications(allMessageCountNotifications, PR_FALSE);
     rv = mDatabase->MarkAllRead(&thoseMarked);
-    EnableNotifications(allMessageCountNotifications, PR_TRUE, PR_TRUE /*dbBatching*/);
+    EnableNotifications(allMessageCountNotifications, PR_TRUE);
     if (NS_SUCCEEDED(rv))
     {
       rv = StoreImapFlags(kImapMsgSeenFlag, PR_TRUE, thoseMarked.GetArray(), thoseMarked.GetSize());
@@ -2008,9 +2008,9 @@ NS_IMETHODIMP nsImapMailFolder::DeleteMessages(nsISupportsArray *messages,
         }
         else
         {
-          EnableNotifications(allMessageCountNotifications, PR_FALSE, PR_TRUE /*dbBatching*/);  //"remove it immediately" model
+          EnableNotifications(allMessageCountNotifications, PR_FALSE);  //"remove it immediately" model
           mDatabase->DeleteMessages(&srcKeyArray,nsnull);
-          EnableNotifications(allMessageCountNotifications, PR_TRUE, PR_TRUE /*dbBatching*/);
+          EnableNotifications(allMessageCountNotifications, PR_TRUE);
           NotifyFolderEvent(mDeleteOrMoveMsgCompletedAtom);            
         }    
       }   
@@ -4206,14 +4206,14 @@ nsImapMailFolder::OnStopRunningUrl(nsIURI *aUrl, nsresult aExitCode)
                   else
                     MarkMessagesImapDeleted(&srcKeyArray, PR_TRUE, srcDB);
                 }
-                srcFolder->EnableNotifications(allMessageCountNotifications, PR_TRUE, PR_TRUE/* dbBatching*/);
+                srcFolder->EnableNotifications(allMessageCountNotifications, PR_TRUE);
                 // even if we're showing deleted messages, 
                 // we still need to notify FE so it will show the imap deleted flag
                 srcFolder->NotifyFolderEvent(mDeleteOrMoveMsgCompletedAtom);      
               }
               else
               {
-                srcFolder->EnableNotifications(allMessageCountNotifications, PR_TRUE, PR_TRUE/* dbBatching*/);
+                srcFolder->EnableNotifications(allMessageCountNotifications, PR_TRUE);
                 srcFolder->NotifyFolderEvent(mDeleteOrMoveMsgFailedAtom);  
               }
                 
@@ -6078,7 +6078,7 @@ nsImapMailFolder::CopyMessages(nsIMsgFolder* srcFolder,
   m_copyState->m_curIndex = m_copyState->m_totalCount;
 
   if (isMove)
-    srcFolder->EnableNotifications(allMessageCountNotifications, PR_FALSE, PR_TRUE/* dbBatching*/);  //disable message count notification 
+    srcFolder->EnableNotifications(allMessageCountNotifications, PR_FALSE);  //disable message count notification 
 
   copySupport = do_QueryInterface(m_copyState);
   if (imapService)
@@ -6118,7 +6118,7 @@ nsImapMailFolder::CopyMessages(nsIMsgFolder* srcFolder,
 done:
     if (NS_FAILED(rv) && isMove)
     {
-      srcFolder->EnableNotifications(allMessageCountNotifications, PR_TRUE, PR_TRUE/* dbBatching*/);  //enable message count notification 
+      srcFolder->EnableNotifications(allMessageCountNotifications, PR_TRUE);  //enable message count notification 
       NotifyFolderEvent(mDeleteOrMoveMsgFailedAtom);
     }
     return rv;
@@ -6879,14 +6879,10 @@ NS_IMETHODIMP nsImapMailFolder::RenameSubFolders(nsIMsgWindow *msgWindow, nsIMsg
 				
      nsXPIDLString folderName;
      rv = msgFolder->GetName(getter_Copies(folderName));
-     if (folderName.IsEmpty() || NS_FAILED(rv)) return rv;
+     if (!folderName || NS_FAILED(rv)) return rv;
+     nsAutoString utf7LeafName(folderName.get());
 
-     nsXPIDLCString utf7LeafName;
-     utf7LeafName.Adopt(CreateUtf7ConvertedStringFromUnicode(folderName.get()));
-     nsAutoString unicodeLeafName;
-     unicodeLeafName.AssignWithConversion(utf7LeafName.get());
-
-     rv = AddSubfolderWithPath(&unicodeLeafName, dbFileSpec, getter_AddRefs(child));
+     rv = AddSubfolderWithPath(&utf7LeafName, dbFileSpec, getter_AddRefs(child));
      
      if (!child || NS_FAILED(rv)) return rv;
 
@@ -6896,7 +6892,7 @@ NS_IMETHODIMP nsImapMailFolder::RenameSubFolders(nsIMsgWindow *msgWindow, nsIMsg
      GetOnlineName(getter_Copies(onlineName));
      nsCAutoString onlineCName(onlineName);
      onlineCName.Append(char(hierarchyDelimiter));
-     onlineCName.Append(utf7LeafName.get());
+     onlineCName.AppendWithConversion(utf7LeafName);
      if (imapFolder)
      {
        imapFolder->SetVerifiedAsOnlineFolder(verified);

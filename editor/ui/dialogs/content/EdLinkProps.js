@@ -141,7 +141,6 @@ function Startup()
 
     // Message above input field:
     gDialog.linkTextMessage.setAttribute("value", GetString("EnterLinkText"));
-    gDialog.linkTextMessage.setAttribute("accesskey", GetString("EnterLinkTextAccessKey"));
   }
   else
   {

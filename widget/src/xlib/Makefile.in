@@ -31,7 +31,7 @@ MODULE		= widget
 LIBRARY_NAME	= widget_xlib
 EXPORT_LIBRARY = 1
 IS_COMPONENT	= 1
-MODULE_NAME	= nsWidgetXLIBModule
+MODULE_NAME	= nsWidgetXLibModule
 REQUIRES	= xpcom \
 		  string \
 		  appshell \

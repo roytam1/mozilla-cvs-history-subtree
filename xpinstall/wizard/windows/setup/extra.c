@@ -40,7 +40,6 @@
 #define HIDWORD(l)   ((DWORD) (((ULONG) (l) >> 32) & 0xFFFF))
 #define LODWORD(l)   ((DWORD) (l))
 
-#define DEFAULT_ICON_SIZE   32
 #define INDEX_STR_LEN       10
 #define PN_PROCESS          TEXT("Process")
 #define PN_THREAD           TEXT("Thread")
@@ -666,9 +665,6 @@ HRESULT Initialize(HINSTANCE hInstance)
   DeleteInstallLogFile(FILE_INSTALL_STATUS_LOG);
   LogISTime(W_START);
   DetermineOSVersionEx();
-
-  SystemParametersInfo(SPI_GETSCREENREADER, 0, &(gSystemInfo.bScreenReader), 0);
-
   return(0);
 }
 
@@ -2499,7 +2495,6 @@ HRESULT InitSetupGeneral()
 {
   char szBuf[MAX_BUF];
 
-  gSystemInfo.bRefreshIcons      = FALSE; 
   sgProduct.dwMode               = NORMAL;
   sgProduct.dwCustomType         = ST_RADIO0;
   sgProduct.dwNumberOfComponents = 0;
@@ -2846,14 +2841,10 @@ HRESULT SiCNodeGetAttributes(DWORD dwIndex, BOOL bIncludeInvisible, DWORD dwACFl
   return(-1);
 }
 
-void SiCNodeSetAttributes(DWORD dwIndex, DWORD dwAttributes, BOOL bSet, BOOL bIncludeInvisible, DWORD dwACFlag, HWND hwndListBox)
+void SiCNodeSetAttributes(DWORD dwIndex, DWORD dwAttributes, BOOL bSet, BOOL bIncludeInvisible, DWORD dwACFlag)
 {
-  DWORD dwCount        = 0;
-  DWORD dwVisibleIndex = 0;
-  siC   *siCTemp       = siComponents;
-
-  LPSTR szTmpString;
-  TCHAR tchBuffer[MAX_BUF];
+  DWORD dwCount  = 0;
+  siC   *siCTemp = siComponents;
 
   if(siCTemp != NULL)
   {
@@ -2868,29 +2859,9 @@ void SiCNodeSetAttributes(DWORD dwIndex, DWORD dwAttributes, BOOL bSet, BOOL bIn
           siCTemp->dwAttributes |= dwAttributes;
         else
           siCTemp->dwAttributes &= ~dwAttributes;
-
-        if((!(siCTemp->dwAttributes & SIC_INVISIBLE))
-           && (dwAttributes == SIC_SELECTED) 
-           && gSystemInfo.bScreenReader 
-           && hwndListBox)
-        {
-          szTmpString = SiCNodeGetDescriptionShort(dwVisibleIndex, FALSE, dwACFlag);
-          lstrcpy(tchBuffer, szTmpString);
-          lstrcat(tchBuffer, " - ");
-          if(bSet)
-            lstrcat(tchBuffer, sgInstallGui.szChecked);
-          else
-            lstrcat(tchBuffer, sgInstallGui.szUnchecked);
-
-          //We've got to actually change the text in the listbox for the screen reader to see it.
-          SendMessage(hwndListBox, LB_INSERTSTRING, 0, (LPARAM)tchBuffer);
-          SendMessage(hwndListBox, LB_DELETESTRING, 1, 0);
-        }
       }
 
       ++dwCount;
-      if(!(siCTemp->dwAttributes & SIC_INVISIBLE))
-        ++dwVisibleIndex;
     }
 
     siCTemp = siCTemp->Next;
@@ -2907,29 +2878,9 @@ void SiCNodeSetAttributes(DWORD dwIndex, DWORD dwAttributes, BOOL bSet, BOOL bIn
             siCTemp->dwAttributes |= dwAttributes;
           else
             siCTemp->dwAttributes &= ~dwAttributes;
-
-          if((!(siCTemp->dwAttributes & SIC_INVISIBLE))
-             && (dwAttributes == SIC_SELECTED) 
-             && gSystemInfo.bScreenReader 
-             && hwndListBox)
-          {
-            szTmpString = SiCNodeGetDescriptionShort(dwVisibleIndex, FALSE, dwACFlag);
-            lstrcpy(tchBuffer, szTmpString);
-            lstrcat(tchBuffer, " - ");
-            if(bSet)
-              lstrcat(tchBuffer, sgInstallGui.szChecked);
-            else
-              lstrcat(tchBuffer, sgInstallGui.szUnchecked);
-
-            //We've got to actually change the text in the listbox for the screen reader to see it.
-            SendMessage(hwndListBox, LB_INSERTSTRING, dwVisibleIndex, (LPARAM)tchBuffer);
-            SendMessage(hwndListBox, LB_DELETESTRING, dwVisibleIndex+1, 0);
-          }
         }
 
         ++dwCount;
-        if(!(siCTemp->dwAttributes & SIC_INVISIBLE))
-          ++dwVisibleIndex;
       }
 
       siCTemp = siCTemp->Next;
@@ -2959,7 +2910,7 @@ void RestoreInvisibleFlag(siC *siCNode)
   lstrcpy(szAttribute, szBuf);
   strupr(szAttribute);
 
-  if(strstr(szAttribute, "INVISIBLE") || siCNode->bSupersede)
+  if(strstr(szAttribute, "INVISIBLE"))
     siCNode->dwAttributes |= SIC_INVISIBLE;
   else
     siCNode->dwAttributes &= ~SIC_INVISIBLE;
@@ -3019,7 +2970,7 @@ void SiCNodeSetItemsSelected(DWORD dwSetupType)
      * selected the destination path for the product.  The destination path is
      * critical to the checking of the Force Upgrade. */
     ResolveForceUpgrade(siCNode);
-    ResolveSupersede(siCNode);
+    ResolveSupercede(siCNode);
     siCNode = siCNode->Next;
   } while((siCNode != NULL) && (siCNode != siComponents));
 
@@ -3055,14 +3006,14 @@ void SiCNodeSetItemsSelected(DWORD dwSetupType)
         /* Setup Type other than custom detected, so
          * make sure all components from this Setup Type
          * is selected (regardless if it's DISABLED or not). 
-         * Don't select components that are Superseded */
-        if(!siCNode->bSupersede)
+         * Don't select components that are superceded */
+        if(!siCNode->bSupercede)
           siCNode->dwAttributes |= SIC_SELECTED;
 
         if(*szOverrideAttributes != '\0')
           siCNode->dwAttributes = ParseComponentAttributes(szOverrideAttributes, siCNode->dwAttributes, TRUE);
       }
-      else if(!(siCNode->dwAttributes & SIC_DISABLED) && !siCNode->bForceUpgrade && !siCNode->bSupersede)
+      else if(!(siCNode->dwAttributes & SIC_DISABLED) && !siCNode->bForceUpgrade && !siCNode->bSupercede)
       {
         /* Custom setup type detected and the component is
          * not DISABLED and FORCE_UPGRADE.  Reset the component's 
@@ -4011,10 +3962,10 @@ HRESULT ParseComponentAttributes(char *szAttribute, DWORD dwAttributes, BOOL bOv
   else if(strstr(szBuf, "ADDITIONAL"))
     dwAttributes |= SIC_ADDITIONAL;
 
-  if(strstr(szBuf, "NOTSUPERSEDE"))
-    dwAttributes &= ~SIC_SUPERSEDE;
-  else if(strstr(szBuf, "SUPERSEDE"))
-    dwAttributes |= SIC_SUPERSEDE;
+  if(strstr(szBuf, "NOTSUPERCEDE"))
+    dwAttributes &= ~SIC_SUPERCEDE;
+  else if(strstr(szBuf, "SUPERCEDE"))
+    dwAttributes |= SIC_SUPERCEDE;
    
 
   return(dwAttributes);
@@ -4047,66 +3998,45 @@ siC *SiCNodeFind(siC *siCHeadNode, char *szInReferenceName)
   return(NULL);
 }
 
-BOOL ResolveSupersede(siC *siCObject)
+BOOL ResolveSupercede(siC *siCObject)
 {
   DWORD dwIndex;
   char  szFilePath[MAX_BUF];
-  char  szSupersedeFile[MAX_BUF];
-  char  szSupersedeVersion[MAX_BUF];
+  char  szSupercedeFile[MAX_BUF];
   char  szType[MAX_BUF_TINY];
   char  szKey[MAX_BUF_TINY];
-  verBlock  vbVersionNew;
-  verBlock  vbVersionOld;
 
-  siCObject->bSupersede = FALSE;
-  if(siCObject->dwAttributes & SIC_SUPERSEDE)
+  siCObject->bSupercede = FALSE;
+  if(siCObject->dwAttributes & SIC_SUPERCEDE)
   {
     dwIndex = 0;
-    GetPrivateProfileString(siCObject->szReferenceName, "SupersedeType", "", szType, sizeof(szType), szFileIniConfig);
+    GetPrivateProfileString(siCObject->szReferenceName, "SupercedeType", "", szType, sizeof(szType), szFileIniConfig);
     if(*szType !='\0')
     {
       if(lstrcmpi(szType, "File Exists") == 0)
       {
-        wsprintf(szKey, "SupersedeFile%d", dwIndex);        
-        GetPrivateProfileString(siCObject->szReferenceName, szKey, "", szSupersedeFile, sizeof(szSupersedeFile), szFileIniConfig);
-        while(*szSupersedeFile != '\0')
+        wsprintf(szKey, "SupercedeFile%d", dwIndex);        
+        GetPrivateProfileString(siCObject->szReferenceName, szKey, "", szSupercedeFile, sizeof(szSupercedeFile), szFileIniConfig);
+        while(*szSupercedeFile != '\0')
         {
-          DecryptString(szFilePath, szSupersedeFile);
+          DecryptString(szFilePath, szSupercedeFile);
           if(FileExists(szFilePath))
           {
-            wsprintf(szKey, "SupersedeMinVersion%d",dwIndex);
-            GetPrivateProfileString(siCObject->szReferenceName, szKey, "", szSupersedeVersion, sizeof(szSupersedeVersion), szFileIniConfig);
-            if(*szSupersedeVersion != '\0')
-            {
-              if (GetFileVersion(szFilePath,&vbVersionOld))
-              {
-                /* If we can get the version, and it is greater than or equal to the SupersedeVersion
-                 * set supersede.  If we cannot get the version, do not supersede the file. */
-                TranslateVersionStr(szSupersedeVersion, &vbVersionNew);
-                if ( CompareVersion(vbVersionOld,vbVersionNew) >= 0)
-                {  
-                  siCObject->bSupersede = TRUE;
-                  break;  /* Found at least one file, so break out of while loop */
-                }
-              }
-            }
-            else
-            { /* The file exists, and there's no version to check.  set Supersede */
-              siCObject->bSupersede = TRUE;
-              break;  /* Found at least one file, so break out of while loop */
-            }
+            siCObject->bSupercede = TRUE;
+
+            /* Found at least one file, so break out of while loop */
+            break;
           }
-          wsprintf(szKey, "SupersedeFile%d", ++dwIndex);        
-          GetPrivateProfileString(siCObject->szReferenceName, szKey, "", szSupersedeFile, sizeof(szSupersedeFile), szFileIniConfig);
+          wsprintf(szKey, "SupercedeFile%d", ++dwIndex);        
+          GetPrivateProfileString(siCObject->szReferenceName, szKey, "", szSupercedeFile, sizeof(szSupercedeFile), szFileIniConfig);
         }
       }
     }
 
-    if(siCObject->bSupersede)
+    if(siCObject->bSupercede)
     {
       siCObject->dwAttributes &= ~SIC_SELECTED;
       siCObject->dwAttributes |= SIC_DISABLED;
-      siCObject->dwAttributes |= SIC_INVISIBLE;
     }
     else
       /* Make sure to unset the DISABLED bit.  If the Setup Type is other than
@@ -4115,10 +4045,10 @@ BOOL ResolveSupersede(siC *siCObject)
        *
        * If the Setup Type is Custom and this component is DISABLED by default
        * via the config.ini, it's default value will be restored in the
-       * SiCNodeSetItemsSelected() function that called ResolveSupersede(). */
+       * SiCNodeSetItemsSelected() function that called ResolveSupercede(). */
       siCObject->dwAttributes &= ~SIC_DISABLED;
   }
-  return(siCObject->bSupersede);
+  return(siCObject->bSupercede);
 }
 
 BOOL ResolveForceUpgrade(siC *siCObject)
@@ -4750,7 +4680,7 @@ void DeInitDSNode(dsN **dsnComponentDSRequirement)
   DsNodeDelete(dsnComponentDSRequirement);
 }
 
-BOOL ResolveComponentDependency(siCD *siCDInDependency, HWND hwndListBox)
+BOOL ResolveComponentDependency(siCD *siCDInDependency)
 {
   int     dwIndex;
   siCD    *siCDepTemp = siCDInDependency;
@@ -4765,7 +4695,7 @@ BOOL ResolveComponentDependency(siCD *siCDInDependency, HWND hwndListBox)
       if(!(dwAttrib & SIC_SELECTED) && !(dwAttrib & SIC_DISABLED))
       {
         bMoreToResolve = TRUE;
-        SiCNodeSetAttributes(dwIndex, SIC_SELECTED, TRUE, TRUE, AC_ALL, hwndListBox);
+        SiCNodeSetAttributes(dwIndex, SIC_SELECTED, TRUE, TRUE, AC_ALL);
       }
     }
 
@@ -4778,7 +4708,7 @@ BOOL ResolveComponentDependency(siCD *siCDInDependency, HWND hwndListBox)
         if(!(dwAttrib & SIC_SELECTED) && !(dwAttrib & SIC_DISABLED))
         {
           bMoreToResolve = TRUE;
-          SiCNodeSetAttributes(dwIndex, SIC_SELECTED, TRUE, TRUE, AC_ALL, hwndListBox);
+          SiCNodeSetAttributes(dwIndex, SIC_SELECTED, TRUE, TRUE, AC_ALL);
         }
       }
 
@@ -4788,7 +4718,7 @@ BOOL ResolveComponentDependency(siCD *siCDInDependency, HWND hwndListBox)
   return(bMoreToResolve);
 }
 
-BOOL ResolveDependencies(DWORD dwIndex, HWND hwndListBox)
+BOOL ResolveDependencies(DWORD dwIndex)
 {
   BOOL  bMoreToResolve  = FALSE;
   DWORD dwCount         = 0;
@@ -4801,7 +4731,7 @@ BOOL ResolveDependencies(DWORD dwIndex, HWND hwndListBox)
     {
       if(SiCNodeGetAttributes(dwCount, TRUE, AC_ALL) & SIC_SELECTED)
       {
-         bMoreToResolve = ResolveComponentDependency(siCTemp->siCDDependencies, hwndListBox);
+         bMoreToResolve = ResolveComponentDependency(siCTemp->siCDDependencies);
          if(dwIndex == dwCount)
          {
            return(bMoreToResolve);
@@ -4818,7 +4748,7 @@ BOOL ResolveDependencies(DWORD dwIndex, HWND hwndListBox)
       {
         if(SiCNodeGetAttributes(dwCount, TRUE, AC_ALL) & SIC_SELECTED)
         {
-           bMoreToResolve = ResolveComponentDependency(siCTemp->siCDDependencies, hwndListBox);
+           bMoreToResolve = ResolveComponentDependency(siCTemp->siCDDependencies);
            if(dwIndex == dwCount)
            {
              return(bMoreToResolve);
@@ -4884,7 +4814,7 @@ ssi* SsiGetNode(LPSTR szDescription)
   return(NULL);
 }
 
-void ResolveDependees(LPSTR szToggledReferenceName, HWND hwndListBox)
+void ResolveDependees(LPSTR szToggledReferenceName)
 {
   BOOL  bAtLeastOneSelected;
   BOOL  bMoreToResolve  = FALSE;
@@ -4908,7 +4838,7 @@ void ResolveDependees(LPSTR szToggledReferenceName, HWND hwndListBox)
           dwAttrib = SiCNodeGetAttributes(dwIndex, TRUE, AC_ALL);
           if((dwAttrib & SIC_SELECTED) && !(dwAttrib & SIC_DISABLED))
           {
-            SiCNodeSetAttributes(dwIndex, SIC_SELECTED, FALSE, TRUE, AC_ALL, hwndListBox);
+            SiCNodeSetAttributes(dwIndex, SIC_SELECTED, FALSE, TRUE, AC_ALL);
             bMoreToResolve = TRUE;
           }
         }
@@ -4920,7 +4850,7 @@ void ResolveDependees(LPSTR szToggledReferenceName, HWND hwndListBox)
           dwAttrib = SiCNodeGetAttributes(dwIndex, TRUE, AC_ALL);
           if(!(dwAttrib & SIC_SELECTED) && !(dwAttrib & SIC_DISABLED))
           {
-            SiCNodeSetAttributes(dwIndex, SIC_SELECTED, TRUE, TRUE, AC_ALL, hwndListBox);
+            SiCNodeSetAttributes(dwIndex, SIC_SELECTED, TRUE, TRUE, AC_ALL);
             bMoreToResolve = TRUE;
           }
         }
@@ -4931,7 +4861,7 @@ void ResolveDependees(LPSTR szToggledReferenceName, HWND hwndListBox)
   } while((siCTemp != NULL) && (siCTemp != siComponents));
 
   if(bMoreToResolve == TRUE)
-    ResolveDependees(szToggledReferenceName, hwndListBox);
+    ResolveDependees(szToggledReferenceName);
 }
 
 void PrintUsage(void)
@@ -5515,58 +5445,6 @@ int CompareVersion(verBlock vbVersionOld, verBlock vbVersionNew)
   return(0);
 }
 
-void RefreshIcons()
-{
-  char subKey[MAX_BUF];
-  char iconConstraint[MAX_BUF];
-  BYTE iconConstraintNew[MAX_BUF];
-  HKEY hkResult;
-  DWORD dwValueType;
-  long iconConstraintSize;
-  long rv;
-
-  // Get the size of the icon from the windows registry.
-  // When this registry value is changed, the OS can flush the
-  // icon cache and thus update the icons.
-  iconConstraintSize = sizeof(iconConstraint);
-  strcpy(subKey, "Control Panel\\Desktop\\WindowMetrics");
-  RegOpenKeyEx(HKEY_CURRENT_USER, subKey, 0, KEY_ALL_ACCESS, &hkResult);
-  rv = RegQueryValueEx(hkResult, "Shell Icon Size", 0, &dwValueType, iconConstraint, &iconConstraintSize);
-  if(rv != ERROR_SUCCESS || iconConstraintSize == 0)
-  {
-    // Key not found or value not found, so use default OS value.
-    int iIconSize = GetSystemMetrics(SM_CXICON);
-    if(iIconSize == 0)
-      // Getting default OS value failed, use hard coded value
-      iIconSize = DEFAULT_ICON_SIZE;
-
-    sprintf(iconConstraint, "%d", iIconSize);
-  }
-
-  // decrease the size of the icon by 1
-  // and tell the system to refresh the icons
-  sprintf(iconConstraintNew, "%d", atoi(iconConstraint) - 1);
-  iconConstraintSize = lstrlen(iconConstraintNew);
-  RegSetValueEx(hkResult, "Shell Icon Size", 0, dwValueType, iconConstraintNew, iconConstraintSize);
-  SendMessageTimeout(HWND_BROADCAST,
-                     WM_SETTINGCHANGE,
-                     SPI_SETNONCLIENTMETRICS,
-                     (LPARAM)"WindowMetrics",
-                     SMTO_NORMAL|SMTO_ABORTIFHUNG, 
-                     10000, NULL); 
-
-  // reset the original size of the icon
-  // and tell the system to refresh the icons
-  iconConstraintSize = lstrlen(iconConstraint);
-  RegSetValueEx(hkResult, "Shell Icon Size", 0, dwValueType, iconConstraint, iconConstraintSize);
-  SendMessageTimeout(HWND_BROADCAST,
-                     WM_SETTINGCHANGE,
-                     SPI_SETNONCLIENTMETRICS,
-                     (LPARAM)"WindowMetrics",
-                     SMTO_NORMAL|SMTO_ABORTIFHUNG, 
-                     10000, NULL); 
-}
-
 int CRCCheckArchivesStartup(char *szCorruptedArchiveList, DWORD dwCorruptedArchiveListSize, BOOL bIncludeTempPath)
 {
   DWORD dwIndex0;
@@ -5882,10 +5760,6 @@ HRESULT ParseConfigIni(LPSTR lpszCmdLine)
   /* get main program folder name */
   GetPrivateProfileString("General", "Program Folder Name", "", szBuf, sizeof(szBuf), szFileIniConfig);
   DecryptString(sgProduct.szProgramFolderName, szBuf);
-
-  GetPrivateProfileString("General", "Refresh Icons", "", szBuf, sizeof(szBuf), szFileIniConfig);
-  if(lstrcmpi(szBuf, "TRUE") == 0)
-    gSystemInfo.bRefreshIcons = TRUE;
 
   /* Welcome dialog */
   GetPrivateProfileString("Dialog Welcome",             "Show Dialog",     "", szShowDialog,                  sizeof(szShowDialog), szFileIniConfig);
@@ -6326,8 +6200,6 @@ HRESULT ParseInstallIni()
   GetPrivateProfileString("General", "README", "", sgInstallGui.szReadme_, sizeof(sgInstallGui.szReadme_), szFileIniInstall);
   GetPrivateProfileString("General", "PAUSE_", "", sgInstallGui.szPause_, sizeof(sgInstallGui.szPause_), szFileIniInstall);
   GetPrivateProfileString("General", "RESUME_", "", sgInstallGui.szResume_, sizeof(sgInstallGui.szResume_), szFileIniInstall);
-  GetPrivateProfileString("General", "CHECKED", "",   sgInstallGui.szChecked,   sizeof(sgInstallGui.szChecked),   szFileIniInstall);
-  GetPrivateProfileString("General", "UNCHECKED", "", sgInstallGui.szUnchecked, sizeof(sgInstallGui.szUnchecked), szFileIniInstall);
 
   return(0);
 }

@@ -91,7 +91,8 @@ nsFTPConn::Open()
     if (!mCntlSock)
         return E_MEM;
     ERR_CHECK(mCntlSock->Open());
-    FlushCntlSock(mCntlSock);
+    ERR_CHECK(mCntlSock->Recv((unsigned char *)resp, &respBufSize));
+    DUMP(resp);
 
     /* issue USER command on control connection */
     err = IssueCmd("USER anonymous\r\n", resp, kRespBufSize, mCntlSock);

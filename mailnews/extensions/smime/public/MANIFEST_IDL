@@ -3,4 +3,3 @@
 #
 
 nsIMsgSMIMEHeaderSink.idl
-nsIEncryptedSMIMEURIsSrvc.idl

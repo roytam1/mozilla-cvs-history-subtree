@@ -341,15 +341,10 @@ var nsSaveCommand =
 {
   isCommandEnabled: function(aCommand, dummy)
   {
-    // Always allow saving when editing a remote document,
-    //  otherwise the document modified state would prevent that
-    //  when you first open a remote file.
-    try {
-      var docUrl = GetDocumentUrl();
-      return window.editorShell && window.editorShell.documentEditable &&
-        (window.editorShell.documentModified || window.gHTMLSourceChanged ||
-         IsUrlAboutBlank(docUrl) || GetScheme(docUrl) != "file");
-    } catch (e) {return false;}
+    return window.editorShell && window.editorShell.documentEditable &&
+      (window.editorShell.documentModified || 
+       IsUrlAboutBlank(GetDocumentUrl()) ||
+       window.gHTMLSourceChanged);
   },
   
   doCommand: function(aCommand)
@@ -357,8 +352,18 @@ var nsSaveCommand =
     var result = false;
     if (window.editorShell)
     {
+      // XXX Switching keybinding from Save to Publish isn't working now :(
+      //     so do publishing if editing remote url
+      var docUrl = GetDocumentUrl();
+      var scheme = GetScheme(docUrl);
+      if (scheme && scheme != "file")
+      {
+        goDoCommand("cmd_publish");
+        return true;
+      }
+
       FinishHTMLSource();
-      result = SaveDocument(IsUrlAboutBlank(GetDocumentUrl()), false, editorShell.contentsMIMEType);
+      result = SaveDocument(IsUrlAboutBlank(docUrl), false, editorShell.contentsMIMEType);
       window._content.focus();
     }
     return result;
@@ -451,11 +456,10 @@ var nsPublishCommand =
       // Always allow publishing when editing a local document,
       //  otherwise the document modified state would prevent that
       //  when you first open any local file.
-      try {
-        var docUrl = GetDocumentUrl();
-        return window.editorShell.documentModified || window.gHTMLSourceChanged
-               || IsUrlAboutBlank(docUrl) || GetScheme(docUrl) == "file";
-      } catch (e) {return false;}
+      var docUrl = GetDocumentUrl();
+      return window.editorShell.documentModified || window.gHTMLSourceChanged
+             || IsUrlAboutBlank(docUrl) || GetScheme(docUrl) == "file";
+             
     }
     return false;
   },
@@ -751,14 +755,7 @@ function OutputFileWithPersistAPI(editorDoc, aDestinationLocation, aRelatedFiles
     // for 4.x parity as well as improving readability of file locally on server
     // this will always send crlf for upload (http/ftp)
     if (!isLocalFile) // if we aren't saving locally then send both cr and lf
-    {
       outputFlags |= webPersist.ENCODE_FLAGS_CR_LINEBREAKS | webPersist.ENCODE_FLAGS_LF_LINEBREAKS;
-
-      // we want to serialize the output for all remote publishing
-      // some servers can handle only one connection at a time
-      // some day perhaps we can make this user-configurable per site?
-      persistObj.persistFlags = persistObj.persistFlags | webPersist.PERSIST_FLAGS_SERIALIZE_OUTPUT;
-    }
 
     // note: we always want to set the replace existing files flag since we have
     // already given user the chance to not replace an existing file (file picker)
@@ -805,8 +802,6 @@ function GetOutputFlags(aMimeType, aWrapColumn)
 
 // returns number of column where to wrap
 const nsIPlaintextEditor = Components.interfaces.nsIPlaintextEditor;
-const nsIHTMLEditor = Components.interfaces.nsIHTMLEditor;
-const nsIWebBrowserPersist = Components.interfaces.nsIWebBrowserPersist;
 function GetWrapColumn()
 {
   var wrapCol = 72;
@@ -839,10 +834,6 @@ const gShowDebugOutputSecurityChange = false;
 
 const nsIWebProgressListener = Components.interfaces.nsIWebProgressListener;
 const nsIChannel = Components.interfaces.nsIChannel;
-
-const kErrorBindingAborted = 2152398850;
-const kErrorBindingRedirected = 2152398851;
-const kFileNotFound = 2152857618;
 
 var gEditorOutputProgressListener =
 {
@@ -878,24 +869,25 @@ var gEditorOutputProgressListener =
 
       DumpDebugStatus(aStatus);
     }
-    // The rest only concerns publishing, so bail out if no dialog
-    if (!gProgressDialog)
-      return;
 
     // Detect start of file upload of any file:
-    // (We ignore any START messages after gPersistObj says publishing is finished
     if ((aStateFlags & nsIWebProgressListener.STATE_START)
-         && gPersistObj && requestSpec
-         && (gPersistObj.currentState != gPersistObj.PERSIST_STATE_FINISHED))
+         && requestSpec && gProgressDialog)
     {
       try {
         // Add url to progress dialog's list showing each file uploading
+        // Note that even though we create dialog before calling OutputFileWithPersistAPI,
+        //  we can get here before dialog is initialized.
+        //  This will cause exception calling AddProgressListitem,
+        //  But we'll add any missed files in dialog later
         gProgressDialog.SetProgressStatus(GetFilename(requestSpec), "busy");
-      } catch(e) {}
+      } catch(e) {
+        dump(" Exception error calling SetProgressStatus\n");
+      }
     }
 
     // Detect end of file upload of any file:
-    if (aStateFlags & nsIWebProgressListener.STATE_STOP)
+    if ((aStateFlags & nsIWebProgressListener.STATE_STOP))
     {
       // ignore aStatus == kErrorBindingAborted; check http response for possible errors
       try {
@@ -916,131 +908,108 @@ var gEditorOutputProgressListener =
           aStatus = 0;
       }
 
-      // We abort publishing for all errors except if image src file is not found
-      var abortPublishing = (aStatus != 0 && aStatus != kFileNotFound);
-
       // Notify progress dialog when we receive the STOP
       //  notification for a file if there was an error 
-      //  or a successful finish
-      //  (Check requestSpec to be sure message is for destination url)
-      if (aStatus != 0 
-           || (requestSpec && requestSpec.indexOf(GetScheme(gPublishData.publishUrl)) == 0))
+      //  or for a successful finish only if 
+      //  destination url is contains the publishing location
+      if (gProgressDialog &&
+          (aStatus != 0 
+           || requestSpec && requestSpec.indexOf(gPublishData.publishUrl) == 0))
       {
         try {
           gProgressDialog.SetProgressFinished(GetFilename(requestSpec), aStatus);
         } catch(e) {}
       }
 
-
-      if (abortPublishing)
+      if (aStatus)
       {
-        // Cancel publishing
+        // Cancel the publish 
         gPersistObj.cancelSave();
+        gProgressDialog.SetProgressStatusCancel();
 
-        // Don't do any commands after failure
+        //XXX TODO: we should provide more meaningful errors (if possible)
+        var failedStr = GetString("PublishFailed");
+        
+        // XXX We don't have error codes in IDL !!!
+        // Give better error messages for cases we know about:
+        if (aStatus == 2152398868)  // Bad directory
+        {
+          var requestFilename = requestSpec ? GetFilename(requestSpec) : "";
+          var dir = (gPublishData.filename == requestFilename) ? 
+                       gPublishData.docDir : gPublishData.otherDir;
+
+          failedStr = GetString("PublishDirFailed").replace(/%dir%/, gPublishData.docDir);
+          if (gProgressDialog)
+            gProgressDialog.SetStatusMessage(failedStr);
+
+          // Remove directory from saved prefs
+          RemovePublishSubdirectoryFromPrefs(gPublishData, dir);
+        }
+
+        // Do not do any commands after failure
         gCommandAfterPublishing = null;
 
-        // Restore original document to undo image src url adjustments
-        if (gRestoreDocumentSource)
+        // Show error in progress dialog and let user close it
+        if (gProgressDialog)
         {
           try {
-            var htmlEditor = window.editorShell.editor.QueryInterface(nsIHTMLEditor);
-            htmlEditor.rebuildDocumentFromSource(gRestoreDocumentSource);
-
-            // Clear transaction cache since we just did a potentially 
-            //  very large insert and this will eat up memory
-            window.editorShell.editor.transactionManager.clear();
+            // Tell dialog final status value so it can show appropriate message
+            gProgressDialog.SetProgressFinished(null, aStatus);
+          } catch (e) { 
+            dump(" **** EXCEPTION ERROR CALLING ProgressDialog.SetProgressFinished\n");
+            AlertWithTitle(GetString("Publish"), failedStr); 
           }
-          catch (e) {}
-        }
-
-        // Notify progress dialog that we're finished
-        //  and keep open to show error
-        gProgressDialog.SetProgressFinished(null,0);
-
-        // We don't want to change location or reset mod count, etc.
-        return;
-      }
-
-      //XXX HACK: "file://" protocol is not supported in network code
-      //    nsIWebBrowserPersist *does* copy the file(s), but we don't 
-      //    get normal onStatus messages.
-
-      // Case 1: If images are included, we get fairly normal
-      //    STATE_START/STATE_STOP & STATE_IS_NETWORK messages associated with the image files,
-      //    thus we must finish HTML file progress below
-
-      // Case 2: If just HTML file is uploaded, we get STATE_START and STATE_STOP
-      //    notification with a null "requestSpec", and 
-      //    the gPersistObj is destroyed before we get here!
-      //    So create an new object so we can flow through normal processing below
-      if (!requestSpec && GetScheme(gPublishData.publishUrl) == "file"
-          && (!gPersistObj || gPersistObj.currentState == nsIWebBrowserPersist.PERSIST_STATE_FINISHED))
-      {
-        aStateFlags |= nsIWebProgressListener.STATE_IS_NETWORK;
-        if (!gPersistObj)
-        {          
-          gPersistObj =
-          {
-            result : aStatus,
-            currentState : nsIWebBrowserPersist.PERSIST_STATE_FINISHED
-          }
-        }
-      }
-
-      // STATE_IS_NETWORK signals end of publishing, as does the gPersistObj.currentState
-      if (aStateFlags & nsIWebProgressListener.STATE_IS_NETWORK
-          && gPersistObj.currentState == nsIWebBrowserPersist.PERSIST_STATE_FINISHED)
-      {
-        if (GetScheme(gPublishData.publishUrl) == "file")
-        {
-          //XXX "file://" hack: We don't get notified about the HTML file, so end progress for it
-          // (This covers both "Case 1 and 2" described above)
-          gProgressDialog.SetProgressFinished(gPublishData.filename, gPersistObj.result);
-        }
-
-        if (gPersistObj.result == 0)
-        {
-          // All files are finished and publishing succeeded (some images may have failed)
-          try {
-            // Get the new docUrl from the "browse location" in case "publish location" was FTP
-            var urlstring = GetDocUrlFromPublishData(gPublishData);
-
-            window.editorShell.doAfterSave(true, urlstring);  // we need to update the url before notifying listeners
-            var editor = window.editorShell.editor.QueryInterface(Components.interfaces.nsIEditor);
-            // this should cause notification to listeners that doc has changed
-            editor.resetModificationCount();
-
-            // Set UI based on whether we're editing a remote or local url
-            SetSaveAndPublishUI(urlstring);
-
-          } catch (e) {}
-
-          // Save publishData to prefs
-          if (gPublishData)
-          {
-            if (gPublishData.savePublishData)
-            {
-              // We published successfully, so we can safely
-              //  save docDir and otherDir to prefs
-              gPublishData.saveDirs = true;
-              SavePublishDataToPrefs(gPublishData);
-            }
-            else
-              SavePassword(gPublishData);
-          }
-
-          // Ask progress dialog to close, but it may not
-          // if user checked checkbox to keep it open
-          gProgressDialog.RequestCloseDialog();
         }
         else
         {
-          // We previously aborted publishing because of error:
-          //   Calling gPersistObj.cancelSave() resulted in a non-zero gPersistObj.result,
-          //   so notify progress dialog we're finished
-          gProgressDialog.SetProgressFinished(null,0);
+          // In case we ever get final alert with no dialog
+          AlertWithTitle(GetString("Publish"), failedStr);
+
+          // Final cleanup
+          FinishPublishing();
         }
+        return;  // we don't want to change location or reset mod count, etc.
+      }
+
+      if ((aStateFlags & nsIWebProgressListener.STATE_IS_NETWORK))
+      {
+        // All files are finished uploading
+        
+        // Publishing succeeded...
+        try {
+          // Get the new docUrl from the "browse location" in case "publish location" was FTP
+          var urlstring = GetDocUrlFromPublishData(gPublishData);
+
+          window.editorShell.doAfterSave(true, urlstring);  // we need to update the url before notifying listeners
+          var editor = window.editorShell.editor.QueryInterface(Components.interfaces.nsIEditor);
+          editor.resetModificationCount();
+          // this should cause notification to listeners that doc has changed
+
+          // Set UI based on whether we're editing a remote or local url
+          SetSaveAndPublishUI(urlstring);
+
+        } catch (e) {}
+
+        // Save publishData to prefs
+        if (gPublishData)
+        {
+          if (gPublishData.savePublishData)
+          {
+            // We published successfully, so we can safely
+            //  save docDir and otherDir to prefs
+            gPublishData.saveDirs = true;
+            SavePublishDataToPrefs(gPublishData);
+          }
+          else
+            SavePassword(gPublishData);
+        }
+
+        // Ask progress dialog to close, but it may not
+        // if user checked checkbox to keep it open
+        if (gProgressDialog)
+          gProgressDialog.RequestCloseDialog();
+        else
+          FinishPublishing();
       }
     }
   },
@@ -1048,12 +1017,8 @@ var gEditorOutputProgressListener =
   onProgressChange : function(aWebProgress, aRequest, aCurSelfProgress,
                               aMaxSelfProgress, aCurTotalProgress, aMaxTotalProgress)
   {
-    if (!gPersistObj)
-      return;
-
     if (gShowDebugOutputProgress)
     {
-      dump("\n onProgressChange: gPersistObj.result="+gPersistObj.result+"\n");
       try {
       var channel = aRequest.QueryInterface(nsIChannel);
       dump("***** onProgressChange request: " + channel.URI.spec + "\n");
@@ -1062,12 +1027,17 @@ var gEditorOutputProgressListener =
       dump("*****       self:  "+aCurSelfProgress+" / "+aMaxSelfProgress+"\n");
       dump("*****       total: "+aCurTotalProgress+" / "+aMaxTotalProgress+"\n\n");
 
-      if (gPersistObj.currentState == gPersistObj.PERSIST_STATE_READY)
-        dump(" Persister is ready to save data\n\n");
-      else if (gPersistObj.currentState == gPersistObj.PERSIST_STATE_SAVING)
-        dump(" Persister is saving data.\n\n");
-      else if (gPersistObj.currentState == gPersistObj.PERSIST_STATE_FINISHED)
-        dump(" PERSISTER HAS FINISHED SAVING DATA\n\n\n");
+      if (gPersistObj)
+      {
+        if(gPersistObj.currentState == gPersistObj.PERSIST_STATE_READY)
+          dump(" Persister is ready to save data\n\n");
+        else if(gPersistObj.currentState == gPersistObj.PERSIST_STATE_SAVING)
+          dump(" Persister is saving data.\n\n");
+        else if(gPersistObj.currentState == gPersistObj.PERSIST_STATE_FINISHED)
+        {
+          dump(" PERSISTER HAS FINISHED SAVING DATA\n\n\n");
+        }
+      }
     }
   },
 
@@ -1302,82 +1272,45 @@ function PromptUsernameAndPassword(dlgTitle, text, savePW, userObj, pwObj)
   return ret;
 }
 
+const kErrorBindingAborted = 2152398850;
+const kErrorBindingRedirected = 2152398851;
+
 function DumpDebugStatus(aStatus)
 {
-  // see nsError.h and netCore.h and ftpCore.h
-
   if (aStatus == kErrorBindingAborted)
-    dump("***** status is NS_BINDING_ABORTED\n");
+    dump("*****        status is NS_BINDING_ABORTED\n");
   else if (aStatus == kErrorBindingRedirected)
-    dump("***** status is NS_BINDING_REDIRECTED\n");
-  else if (aStatus == 2152398859) // in netCore.h 11
-    dump("***** status is ALREADY_CONNECTED\n");
-  else if (aStatus == 2152398860) // in netCore.h 12
-    dump("***** status is NOT_CONNECTED\n");
-  else if (aStatus == 2152398861) //  in nsISocketTransportService.idl 13
-    dump("***** status is CONNECTION_REFUSED\n");
-  else if (aStatus == 2152398862) // in nsISocketTransportService.idl 14
-    dump("***** status is NET_TIMEOUT\n");
-  else if (aStatus == 2152398863) // in netCore.h 15
-    dump("***** status is IN_PROGRESS\n");
-  else if (aStatus == 2152398864) // 0x804b0010 in netCore.h 16
-    dump("***** status is OFFLINE\n");
-  else if (aStatus == 2152398865) // in netCore.h 17
-    dump("***** status is NO_CONTENT\n");
-  else if (aStatus == 2152398866) // in netCore.h 18
-    dump("***** status is UNKNOWN_PROTOCOL\n");
-  else if (aStatus == 2152398867) // in netCore.h 19
-    dump("***** status is PORT_ACCESS_NOT_ALLOWED\n");
-  else if (aStatus == 2152398868) // in nsISocketTransportService.idl 20
-    dump("***** status is NET_RESET\n");
-  else if (aStatus == 2152398869) // in ftpCore.h 21
-    dump("***** status is FTP_LOGIN\n");
-  else if (aStatus == 2152398870) // in ftpCore.h 22
-    dump("***** status is FTP_CWD\n");
-  else if (aStatus == 2152398871) // in ftpCore.h 23
-    dump("***** status is FTP_PASV\n");
-  else if (aStatus == 2152398872) // in ftpCore.h 24
-    dump("***** status is FTP_PWD\n");
-  else if (aStatus == 2152857601)
-    dump("***** status is UNRECOGNIZED_PATH\n");
-  else if (aStatus == 2152857602)
-    dump("***** status is UNRESOLABLE SYMLINK\n");
-  else if (aStatus == 2152857604)
-    dump("***** status is UNKNOWN_TYPE\n");
-  else if (aStatus == 2152857605)
-    dump("***** status is DESTINATION_NOT_DIR\n");
-  else if (aStatus == 2152857606)
-    dump("***** status is TARGET_DOES_NOT_EXIST\n");
-  else if (aStatus == 2152857608)
-    dump("***** status is ALREADY_EXISTS\n");
-  else if (aStatus == 2152857609)
-    dump("***** status is INVALID_PATH\n");
-  else if (aStatus == 2152857610)
-    dump("***** status is DISK_FULL\n");
-  else if (aStatus == 2152857612)
-    dump("***** status is NOT_DIRECTORY\n");
-  else if (aStatus == 2152857613)
-    dump("***** status is IS_DIRECTORY\n");
-  else if (aStatus == 2152857614)
-    dump("***** status is IS_LOCKED\n");
-  else if (aStatus == 2152857615)
-    dump("***** status is TOO_BIG\n");
-  else if (aStatus == 2152857616)
-    dump("***** status is NO_DEVICE_SPACE\n");
-  else if (aStatus == 2152857617)
-    dump("***** status is NAME_TOO_LONG\n");
-  else if (aStatus == 2152857618) // 80520012
-    dump("***** status is FILE_NOT_FOUND\n");
-  else if (aStatus == 2152857619)
-    dump("***** status is READ_ONLY\n");
-  else if (aStatus == 2152857620)
-    dump("***** status is DIR_NOT_EMPTY\n");
-  else if (aStatus == 2152857621)
-    dump("***** status is ACCESS_DENIED\n");
-  else if (aStatus == 2152398878)
-    dump("***** status is ? (No connection or time out?)\n");
+    dump("*****        status is NS_BINDING_REDIRECTED\n");
+  else if (aStatus == 2152398852)
+    dump("*****        status is UNKNOWN_TYPE\n");
+  else if (aStatus == 2152398853)
+    dump("*****        status is DESTINATION_NOT_DIR\n");
+  else if (aStatus == 2152398854)
+    dump("*****        status is TARGET_DOES_NOT_EXIST\n");
+  else if (aStatus == 2152398856)
+    dump("*****        status is ALREADY_EXISTS\n");
+  else if (aStatus == 2152398858)
+    dump("*****        status is DISK_FULL\n");
+  else if (aStatus == 2152398860)
+    dump("*****        status is NOT_DIRECTORY\n");
+  else if (aStatus == 2152398861)
+    dump("*****        status is IS_DIRECTORY\n");
+  else if (aStatus == 2152398862)
+    dump("*****        status is IS_LOCKED\n");
+  else if (aStatus == 2152398863)
+    dump("*****        status is TOO_BIG\n");
+  else if (aStatus == 2152398865)
+    dump("*****        status is NAME_TOO_LONG\n");
+  else if (aStatus == 2152398866)
+    dump("*****        status is NOT_FOUND\n");
+  else if (aStatus == 2152398867)
+    dump("*****        status is READ_ONLY\n");
+  else if (aStatus == 2152398868)
+    dump("*****        status is DIR_NOT_EMPTY\n");
+  else if (aStatus == 2152398869)
+    dump("*****        status is ACCESS_DENIED\n");
   else
-    dump("***** status is " + aStatus + "\n");
+    dump("*****        status is " + aStatus + "\n");
 }
 
 // Update any data that the user supplied in a prompt dialog
@@ -1426,9 +1359,12 @@ function SaveDocument(aSaveAs, aSaveCopy, aMimeType)
   var urlstring = GetDocumentUrl();
   var mustShowFileDialog = (aSaveAs || IsUrlAboutBlank(urlstring) || (urlstring == ""));
 
-  // If editing a remote URL, force SaveAs dialog
+  // If not doing "Save As" and editing a remote URL, do publishing instead
   if (!mustShowFileDialog && GetScheme(urlstring) != "file")
-    mustShowFileDialog = true;
+  {
+    goDoCommand("cmd_publish");
+    return true;
+  }
 
   var replacing = !aSaveAs;
   var titleChanged = false;
@@ -1567,7 +1503,6 @@ function SaveDocument(aSaveAs, aSaveCopy, aMimeType)
 var gPublishData;
 var gProgressDialog;
 var gCommandAfterPublishing = null;
-var gRestoreDocumentSource;
 
 function Publish(publishData)
 {
@@ -1596,7 +1531,8 @@ function Publish(publishData)
     dump("\n *** publishData: PublishUrl="+publishData.publishUrl+", BrowseUrl="+publishData.browseUrl+
       ", Username="+publishData.username+", Dir="+publishData.docDir+
       ", Filename="+publishData.filename+"\n");
-    dump(" * gPublishData.docURI.spec w/o pass="+StripPassword(gPublishData.docURI.spec)+", PublishOtherFiles="+gPublishData.publishOtherFiles+"\n");
+//    dump(" * gPublishData.docURI.spec w/o pass="+StripPassword(gPublishData.docURI.spec)+", PublishOtherFiles="+gPublishData.publishOtherFiles+"\n");
+    dump(" * gPublishData.docURI.spec w/o pass="+gPublishData.docURI.spec+", PublishOtherFiles="+gPublishData.publishOtherFiles+"\n");
   }
 
   // XXX Missing username will make FTP fail 
@@ -1644,31 +1580,16 @@ function Publish(publishData)
 
 function StartPublishing()
 {
-  if (gPublishData && gPublishData.docURI && gProgressDialog)
-  {
-    gRestoreDocumentSource = null;
-
-    // Save backup document since nsIWebBrowserPersist changes image src urls
-    // but we only need to do this if publishing images and other related files
-    if (gPublishData.otherFilesURI)
-    {
-      try {
-        // (256 = Output encoded entities)
-        gRestoreDocumentSource = 
-          window.editorShell.editor.outputToString(window.editorShell.contentsMIMEType, 256);
-      } catch (e) {}
-    }
-
+  if (gPublishData && gPublishData.docURI)
     OutputFileWithPersistAPI(window.editorShell.editorDocument, 
                              gPublishData.docURI, gPublishData.otherFilesURI, 
                              window.editorShell.contentsMIMEType);
-  }
 }
 
 function CancelPublishing()
 {
   try {
-    gPersistObj.cancelSave();
+    gPersistObj.cancelSave(); // Cancel all networking transactions
     gProgressDialog.SetProgressStatusCancel();
   } catch (e) {}
 
@@ -1690,7 +1611,6 @@ function FinishPublishing()
   SetDocumentEditable(true);
   gProgressDialog = null;
   gPublishData = null;
-  gRestoreDocumentSource = null;
 
   if (gCommandAfterPublishing)
   {
@@ -1754,11 +1674,61 @@ function GetDocUrlFromPublishData(publishData)
   return url;
 }
 
+// Depending on editing local vs. remote files:
+//   * Switch the "Save" and "Publish" buttons on toolbars,
+//   * Shift accel+S keybinding to Save or Publish commands
+// Note: A new, unsaved file is treated as a local file
+//     (XXX Have a pref to treat as remote for user's who mostly edit remote?)
 function SetSaveAndPublishUI(urlstring)
 {
-  // Be sure enabled state of toolbar buttons are correct
-  goUpdateCommand("cmd_save");
-  goUpdateCommand("cmd_publish");
+  // Associate the "save" keybinding with Save for local files, 
+  //   or with Publish for remote files
+  var scheme = GetScheme(urlstring);
+  var menuItem1;
+  var menuItem2;
+  var saveButton = document.getElementById("saveButton");
+  var publishButton = document.getElementById("publishButton");
+  var command;
+
+  if (!scheme || scheme == "file")
+  {
+    // Editing a new or local file
+    menuItem1 = document.getElementById("publishMenuitem");
+    menuItem2 = document.getElementById("saveMenuitem");
+    command = "cmd_save";
+
+    // Hide "Publish". Show "Save" toolbar and menu items
+    SetElementHidden(publishButton, true);
+    SetElementHidden(saveButton, false);
+  }
+  else
+  {
+    // Editing a remote file
+    menuItem1 = document.getElementById("saveMenuitem");
+    menuItem2 = document.getElementById("publishMenuitem");
+    command = "cmd_publish";
+
+    // Hide "Save", show "Publish" toolbar and menuitems
+    SetElementHidden(saveButton, true);
+    SetElementHidden(publishButton, false);
+  }
+
+//  Use this to hide "Save" menuitem if editing remote, Hide "Publish" if editing local
+//  SetElementHidden(menuItem1, true);
+//  SetElementHidden(menuItem2, false);
+
+  var key = document.getElementById("savekb");
+  if (key && command)
+    key.setAttribute("observes", command);
+
+  if (menuItem1 && menuItem2)
+  {
+    menuItem1.removeAttribute("key");
+    menuItem2.setAttribute("key","savekb");
+  }
+
+  // Be sure enabled state of toolbar button is correct
+  goUpdateCommand(command);
 }
 
 function SetDocumentEditable(isDocEditable)
@@ -1928,16 +1898,18 @@ var nsPreviewCommand =
 
       // If none found, open a new browser
       if (!browser)
-      {
         browser = window.openDialog(getBrowserURL(), "_blank", "chrome,all,dialog=no", window._content.location);
-      }
-      else
-      {
-        try {
-          browser.BrowserReloadSkipCache();
+
+      try {
+        if (browser)
+        {
+          // Be sure browser contains real source content, not cached
+          // setTimeout is needed because the "browser" created by openDialog 
+          //    needs time to finish else BrowserReloadSkipCache doesn't exist
+          setTimeout( function(browser) { browser.BrowserReloadSkipCache(); }, 10, browser );
           browser.focus();
-        } catch (ex) {}
-      }
+        }
+      } catch (ex) {}
     }
   }
 };
@@ -3238,7 +3210,7 @@ var nsPreferencesCommand =
   },
   doCommand: function(aCommand)
   {
-    goPreferences('editor', 'chrome://editor/content/pref-composer.xul','editor');
+    goPreferences('navigator.xul', 'chrome://editor/content/pref-composer.xul','editor');
     window._content.focus();
   }
 };

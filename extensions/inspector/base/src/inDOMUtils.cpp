@@ -99,11 +99,14 @@ inDOMUtils::GetStyleRules(nsIDOMElement *aElement, nsISupportsArray **_retval)
   styleContext->GetRuleNode(&ruleNode);
   
   nsCOMPtr<nsIStyleRule> srule;
-  for (PRBool isRoot; mCSSUtils->IsRuleNodeRoot(ruleNode, &isRoot), !isRoot;
-       mCSSUtils->GetRuleNodeParent(ruleNode, &ruleNode)) {
+  PRBool isRoot;
+  do {
     mCSSUtils->GetRuleNodeRule(ruleNode, getter_AddRefs(srule));
     rules->InsertElementAt(srule, 0);
-  }
+    
+    mCSSUtils->GetRuleNodeParent(ruleNode, &ruleNode);
+    mCSSUtils->IsRuleNodeRoot(ruleNode, &isRoot);
+  } while (!isRoot);
 
   *_retval = rules;
   NS_IF_ADDREF(*_retval);

@@ -109,12 +109,11 @@ void CBrowserChrome::SetBrowserShell(CBrowserShell *aShell)
 // CBrowserChrome::nsISupports
 //*****************************************************************************   
 
-NS_IMPL_ISUPPORTS8(CBrowserChrome,
+NS_IMPL_ISUPPORTS7(CBrowserChrome,
                    nsIWebBrowserChrome,
                    nsIInterfaceRequestor,
                    nsIWebBrowserChromeFocus,
                    nsIEmbeddingSiteWindow,
-                   nsIEmbeddingSiteWindow2,
                    nsIContextMenuListener,
                    nsITooltipListener,
                    nsISupportsWeakReference);
@@ -341,7 +340,7 @@ NS_IMETHODIMP CBrowserChrome::GetDimensions(PRUint32 flags, PRInt32 *x, PRInt32 
 
 NS_IMETHODIMP CBrowserChrome::SetFocus()
 {
-    mBrowserWindow->Select();
+    // We're driving focus through CBrowserShell::BeTarget()
     return NS_OK;
 }
 
@@ -416,26 +415,6 @@ NS_IMETHODIMP CBrowserChrome::GetSiteWindow(void * *aSiteWindow)
     return NS_OK;
 }
 
-
-//*****************************************************************************
-// CBrowserChrome::nsIEmbeddingSiteWindow2
-//*****************************************************************************   
-
-NS_IMETHODIMP CBrowserChrome::Blur(void)
-{    
-    WindowPtr   currWindow = ::GetWindowList();
-    WindowPtr   nextWindow;
-
-    // Find the rearmost window and put ourselves behind it
-    while (currWindow && ((nextWindow = ::MacGetNextWindow(currWindow)) != nsnull))
-        currWindow = nextWindow;
-
-    WindowPtr ourWindow = mBrowserWindow->GetMacWindow();
-    if (ourWindow != currWindow)
-        ::SendBehind(ourWindow, currWindow);
-    
-    return NS_OK;
-}
 
 //*****************************************************************************
 // CBrowserChrome::nsIContextMenuListener

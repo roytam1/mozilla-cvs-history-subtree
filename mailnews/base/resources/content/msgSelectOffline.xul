@@ -33,12 +33,10 @@ Contributors:
         id="select-offline" 
         title="&MsgSelect.label;"
         width="450" height="400"
-        buttons="accept,cancel,help"
         persist="width height"
         onload="selectOnLoad();"
         ondialogaccept="return selectOkButton();"
-        ondialogcancel="return selectCancelButton();"
-        ondialoghelp="return doHelpButton();">
+        ondialogcancel="return selectCancelButton();">
 		
 <script src="chrome://global/content/strres.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/mailWindowOverlay.js"/>
@@ -49,8 +47,7 @@ Contributors:
 <script type="application/x-javascript" src="chrome://messenger/content/mailWindow.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/msgMail3PaneWindow.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/msgSynchronize.js"/>
-<script type="application/x-javascript" src="chrome://help/content/contextHelp.js"/>	
-
+	
     <keyset id="keyset"/>
     <description class="desc">&MsgSelectDesc.label;</description>
 

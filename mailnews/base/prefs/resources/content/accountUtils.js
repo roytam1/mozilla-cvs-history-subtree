@@ -39,14 +39,13 @@
 var returnmycall=false;
 var accountManagerContractID   = "@mozilla.org/messenger/account-manager;1";
 var messengerMigratorContractID   = "@mozilla.org/messenger/migrator;1";
-var gAnyValidIdentity = false; //If there are no valid identities for any account
+
 // returns the first account with an invalid server or identity
 
 function getInvalidAccounts(accounts)
 {
     var numAccounts = accounts.Count();
     var invalidAccounts = new Array;
-    var numIdentities = 0;
     for (var i=0; i<numAccounts; i++) {
         var account = accounts.QueryElementAt(i, Components.interfaces.nsIMsgAccount);
         try {
@@ -61,18 +60,17 @@ function getInvalidAccounts(accounts)
         }
 
         var identities = account.identities;
-        numIdentities = identities.Count();
+        var numIdentities = identities.Count();
 
         for (var j=0; j<numIdentities; j++) {
             var identity = identities.QueryElementAt(j, Components.interfaces.nsIMsgIdentity);
-            if (identity.valid) {
-              gAnyValidIdentity = true;
-            }
-            else {
-              invalidAccounts[invalidAccounts.length] = account;
+            if (!identity.valid) {
+                invalidAccounts[invalidAccounts.length] = account;
+                continue;
             }
         }
     }
+
     return invalidAccounts;
 }
 
@@ -165,17 +163,7 @@ function verifyAccounts(wizardcallback) {
             }
         }
 
-        //We are doing openWizard if  MessengerMigration returns some kind of error
-        //(including those cases where there is nothing to migrate).
-        //prefillAccount is valid, if there is an invalid account already 
-        //gAnyValidIdentity is true when you've got at least one *valid* identity,
-        //Since local folders is an identity-less account, if you only have
-        //local folders, it will be false.
-        //wizardcallback is true only when verifyaccounts is called from compose window.
-        //the last condition in the if is so that we call account wizard only when the user
-        //has only a local folder and tries to compose mail.
-
-        if (openWizard || prefillAccount || ((!gAnyValidIdentity) && wizardcallback)) {
+        if (openWizard || prefillAccount) {
             MsgAccountWizard(prefillAccount);
 		        ret = false;
         }

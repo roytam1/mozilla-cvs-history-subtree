@@ -952,9 +952,8 @@ nsresult nsMsgCompose::SendMsg(MSG_DeliverMode deliverMode,  nsIMsgIdentity *ide
 
       // Convert body to mail charset not to utf-8 (because we don't manipulate body text)
       char *outCString = nsnull;
-      nsXPIDLCString fallbackCharset;
       rv = nsMsgI18NSaveAsCharset(contentType, m_compFields->GetCharacterSet(), 
-                                  msgBody.get(), &outCString, getter_Copies(fallbackCharset));
+                                  msgBody.get(), &outCString);
       SET_SIMULATED_ERROR(SIMULATED_SEND_ERROR_14, rv, NS_ERROR_UENC_NOMAPPING);
       if (NS_SUCCEEDED(rv) && nsnull != outCString) 
       {
@@ -967,9 +966,6 @@ nsresult nsMsgCompose::SendMsg(MSG_DeliverMode deliverMode,  nsIMsgIdentity *ide
             return NS_ERROR_MSG_MULTILINGUAL_SEND;
           }
         }
-        // re-label to the fallback charset
-        else if (fallbackCharset)
-          m_compFields->SetCharacterSet(fallbackCharset.get());
         m_compFields->SetBody(outCString);
         entityConversionDone = PR_TRUE;
         PR_Free(outCString);
@@ -1412,10 +1408,6 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
   // mark any disposition flags like replied or forwarded on the message.
   mOriginalMsgURI = originalMsgURI;
 
-  // If we are forwarding inline, mime did already setup the compose fields therefore we should stop now
-  if (type == nsIMsgCompType::ForwardInline )
-    return rv;
-  
   char *uriList = PL_strdup(originalMsgURI);
   if (!uriList)
     return NS_ERROR_OUT_OF_MEMORY;
@@ -1434,25 +1426,10 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
   }
 
   PRBool isFirstPass = PR_TRUE;
-  char *uri = uriList;
-  char *nextUri;
-  do 
+  char *newStr = uriList;
+  char *uri;
+  while (nsnull != (uri = nsCRT::strtok(newStr, ",", &newStr)))
   {
-    nextUri = strstr(uri, "://");
-    if (nextUri)
-    {
-      // look for next ://, and then back up to previous ','
-      nextUri = strstr(nextUri + 1, "://");
-      if (nextUri)
-      {
-        *nextUri = '\0';
-        char *saveNextUri = nextUri;
-        nextUri = strrchr(uri, ',');
-        if (nextUri)
-          *nextUri = '\0';
-        *saveNextUri = ':';
-      }
-    }
     nsCOMPtr <nsIMsgDBHdr> msgHdr;
     rv = GetMsgDBHdrFromURI(uri, getter_AddRefs(msgHdr));
     NS_ENSURE_SUCCESS(rv,rv);
@@ -1563,9 +1540,7 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
       }
     }
     isFirstPass = PR_FALSE;
-    uri = nextUri + 1;
   }
-  while (nextUri);
   PR_Free(uriList);
   return rv;
 }
@@ -1611,13 +1586,6 @@ NS_IMETHODIMP nsMsgCompose::GetSavedFolderURI(char ** folderURI)
   NS_ENSURE_ARG_POINTER(folderURI);
   *folderURI = ToNewCString(m_folderName);
   return (*folderURI) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
-}
-
-NS_IMETHODIMP nsMsgCompose::GetOriginalMsgURI(char ** originalMsgURI)
-{
-  NS_ENSURE_ARG_POINTER(originalMsgURI);
-  *originalMsgURI = ToNewCString(mOriginalMsgURI);
-  return (*originalMsgURI) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
 
@@ -2153,42 +2121,9 @@ NS_IMETHODIMP QuotingOutputStreamListener::OnDataAvailable(nsIRequest *request,
           unichars = mUnicodeConversionBuffer;
         }
 
-        PRInt32 consumedInputLength = 0;
-        PRInt32 originalInputLength = inputLength;
-        char *inputBuffer = newBuf;
-        PRInt32 convertedOutputLength = 0;
-        PRInt32 outputBufferLength = unicharLength;
-        PRUnichar *originalOutputBuffer = unichars;
-        do 
-        {
-          rv = mUnicodeDecoder->Convert(inputBuffer, &inputLength, unichars, &unicharLength);
-          if (NS_SUCCEEDED(rv)) 
-          {
-            convertedOutputLength += unicharLength;
-            break;
-          }
-
-          // if we failed, we consume one byte, replace it with a question mark
-          // and try the conversion again.
-          unichars += unicharLength;
-          *unichars = (PRUnichar)'?';
-          unichars++;
-          unicharLength++;
-
-          mUnicodeDecoder->Reset();
-
-          inputBuffer += ++inputLength;
-          consumedInputLength += inputLength;
-          inputLength = originalInputLength - consumedInputLength;  // update input length to convert
-          convertedOutputLength += unicharLength;
-          unicharLength = outputBufferLength - unicharLength;       // update output length
-
-        } while (NS_FAILED(rv) &&
-                 (originalInputLength > consumedInputLength) && 
-                 (outputBufferLength > convertedOutputLength));
-
-        if (convertedOutputLength > 0)
-          mMsgBody.Append(originalOutputBuffer, convertedOutputLength);
+        rv = mUnicodeDecoder->Convert(newBuf, &inputLength, unichars, &unicharLength);
+        if (NS_SUCCEEDED(rv))
+          mMsgBody.Append(unichars, unicharLength);
       }
     }
   }
@@ -4562,12 +4497,12 @@ nsresult nsMsgCompose::ResetNodeEventHandlers(nsIDOMNode *node)
     return rv;
 }
 
-NS_IMETHODIMP nsMsgCompose::CheckCharsetConversion(nsIMsgIdentity *identity, char **fallbackCharset, PRBool *_retval)
+NS_IMETHODIMP nsMsgCompose::CheckCharsetConversion(nsIMsgIdentity *identity, PRBool *_retval)
 {
   NS_ENSURE_ARG_POINTER(identity);
   NS_ENSURE_ARG_POINTER(_retval);
 
-  nsresult rv = m_compFields->CheckCharsetConversion(fallbackCharset, _retval);
+  nsresult rv = m_compFields->CheckCharsetConversion(_retval);
   NS_ENSURE_SUCCESS(rv, rv);
 
   if (*_retval) 
@@ -4587,12 +4522,7 @@ NS_IMETHODIMP nsMsgCompose::CheckCharsetConversion(nsIMsgIdentity *identity, cha
       identityStrings.Append(organization.get());
 
     if (!identityStrings.IsEmpty())
-    {
-      // use fallback charset if that's already set
-      const char *charset = (fallbackCharset && *fallbackCharset) ? *fallbackCharset : m_compFields->GetCharacterSet();
-      *_retval = nsMsgI18Ncheck_data_in_charset_range(charset, identityStrings.get(),
-                                                      fallbackCharset);
-    }
+      *_retval = nsMsgI18Ncheck_data_in_charset_range(m_compFields->GetCharacterSet(), identityStrings.get());
   }
 
   return NS_OK;

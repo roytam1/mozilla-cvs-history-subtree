@@ -164,22 +164,6 @@ NS_IMETHODIMP nsDragService::StartInvokingDragSession(IDataObject * aDataObj, PR
 }
 
 //-------------------------------------------------------------------------
-// Make Sure we have the right kind of object
-nsDataObjCollection* nsDragService::GetDataObjCollection(IDataObject* aDataObj)
-{
-  nsDataObjCollection * dataObjCol = nsnull;
-  if (aDataObj) {
-    nsIDataObjCollection* dataObj;
-    if (aDataObj->QueryInterface(IID_IDataObjCollection, (void**)&dataObj) == S_OK) {
-      dataObjCol = NS_STATIC_CAST(nsDataObjCollection*, aDataObj);
-      dataObj->Release();
-    }
-  }
-
-  return dataObjCol;
-}
-
-//-------------------------------------------------------------------------
 NS_IMETHODIMP nsDragService::GetNumDropItems (PRUint32 * aNumItems)
 {
   if ( !mDataObject ) {
@@ -188,8 +172,7 @@ NS_IMETHODIMP nsDragService::GetNumDropItems (PRUint32 * aNumItems)
   }
 
   if ( IsCollectionObject(mDataObject) ) {
-    
-    nsDataObjCollection * dataObjCol = GetDataObjCollection(mDataObject);
+    nsDataObjCollection * dataObjCol = NS_STATIC_CAST(nsDataObjCollection*, mDataObject);
     if ( dataObjCol )
       *aNumItems = dataObjCol->GetNumDataObjects();
   }
@@ -228,7 +211,7 @@ NS_IMETHODIMP nsDragService::GetData (nsITransferable * aTransferable, PRUint32 
 
   if ( IsCollectionObject(mDataObject) ) {
     // multiple items, use |anItem| as an index into our collection
-    nsDataObjCollection * dataObjCol = GetDataObjCollection(mDataObject);
+    nsDataObjCollection * dataObjCol = NS_STATIC_CAST(nsDataObjCollection*, mDataObject);
     PRUint32 cnt = dataObjCol->GetNumDataObjects();   
     if (anItem >= 0 && anItem < cnt) {
       IDataObject * dataObj = dataObjCol->GetDataObjectAt(anItem);
@@ -288,7 +271,7 @@ NS_IMETHODIMP nsDragService::IsDataFlavorSupported(const char *aDataFlavor, PRBo
     SET_FORMATETC(fe, format, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL | TYMED_FILE | TYMED_GDI);
 
     // See if any one of the IDataObjects in the collection supports this data type
-    nsDataObjCollection* dataObjCol = GetDataObjCollection(mDataObject);
+    nsDataObjCollection* dataObjCol = NS_STATIC_CAST(nsDataObjCollection*, mDataObject);
     if ( dataObjCol ) {
       PRUint32 cnt = dataObjCol->GetNumDataObjects();
       for (PRUint32 i=0;i<cnt;++i) {

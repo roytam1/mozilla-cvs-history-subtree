@@ -406,19 +406,10 @@ function onRemoveAccount(event) {
     if (event.target.getAttribute("disabled") == "true") return;
 
   var result = getServerIdAndPageIdFromTree(accounttree);
-  if (!result) 
-    return;
-
-  if (result.serverId == "http://home.netscape.com/NC-rdf#PageTitleFakeAccount") {
-    nsPrefBranch.setBoolPref("mailnews.fakeaccount.show", false);
-
-    // select the default account
-    selectServer(null, null); 
-  }
+    if (!result) return;
 
     var account = getAccountFromServerId(result.serverId);
-    if (!account) 
-      return;
+    if (!account) return;
 
     var server = account.incomingServer;
     var type = server.type;
@@ -428,13 +419,11 @@ function onRemoveAccount(event) {
     if (!canDelete) {
         canDelete = server.canDelete;
     }
-    if (!canDelete) 
-      return;
+    if (!canDelete) return;
 
     var confirmRemoveAccount =
       gPrefsBundle.getString("confirmRemoveAccount");
-    if (!window.confirm(confirmRemoveAccount)) 
-      return;
+    if (!window.confirm(confirmRemoveAccount)) return;
 
     try {
       // clear cached data out of the account array
@@ -443,7 +432,7 @@ function onRemoveAccount(event) {
       currentServerId = currentPageId = null;
 
       accountManager.removeAccount(account);
-      selectServer(null, null);
+      selectServer(null);
     }
     catch (ex) {
       dump("failure to remove account: " + ex + "\n");
@@ -566,12 +555,12 @@ function updateButtons(tree,serverId) {
     }
   }
   else {
-    // HACK
-    // if account is null, we have either selected a SMTP server, or there is a problem
-    // either way, we don't want the user to be able to delete it or duplicate it
+  // HACK
+  // if account is null, we have either selected a SMTP server, or there is a problem
+  // either way, we don't want the user to be able to delete it or duplicate it
     canSetDefault = false;
-    canDelete = (serverId == "http://home.netscape.com/NC-rdf#PageTitleFakeAccount");
-    canDuplicate = false;
+  canDelete = false;
+  canDuplicate = false;
   }
 
   if (tree.treeBoxObject.selection.count < 1)
@@ -582,6 +571,8 @@ function updateButtons(tree,serverId) {
   //  under the IFRAME
   if (nsPrefBranch.prefIsLocked(addAccountButton.getAttribute("prefstring")))
     canCreate = false;
+  //if (nsPrefBranch.prefIsLocked(duplicateButton.getAttribute("prefstring")))
+  //  canDuplicate = false;
   if (nsPrefBranch.prefIsLocked(setDefaultButton.getAttribute("prefstring")))
     canSetDefault = false;
   if (nsPrefBranch.prefIsLocked(removeButton.getAttribute("prefstring")))

@@ -40,35 +40,26 @@
     <columns><column style="width: 15em" flex="1"/><column flex="1"/></columns>
     <rows>
       <row>
-        <label value="&wordEditField.label;"
-               control="WordInput"
-               accesskey="&wordEditField.accessKey;"/>
+        <label value="&wordEditField.label;"/>
         <spacer/>
       </row>
       <row>
         <textbox id="WordInput" flex="1"/>
-        <button id="AddWord" oncommand="AddWord()" label="&AddButton.label;"
-                accesskey="&AddButton.accessKey;"/>
+        <button id="AddWord" oncommand="AddWord()" label="&AddButton.label;"/>
       </row>
       <row>
-        <label value="&DictionaryList.label;"
-               control="DictionaryList"
-               accesskey="&DictionaryList.accessKey;"/>
+        <label value="&DictionaryList.label;"/>
         <spacer/>
       </row>
       <row>
         <listbox rows="8" id="DictionaryList" flex="1"/>
         <vbox flex="1">
-          <button  id="ReplaceWord" oncommand="ReplaceWord()" label="&ReplaceButton.label;"
-                   accesskey="&ReplaceButton.accessKey;"/>
+          <button  id="ReplaceWord" oncommand="ReplaceWord()" label="&ReplaceButton.label;"/>
           <spacer class="spacer"/>
-          <button  id="RemoveWord" oncommand="RemoveWord()" label="&RemoveButton.label;"
-                   accesskey="&RemoveButton.accessKey;"/>
+          <button  id="RemoveWord" oncommand="RemoveWord()" label="&RemoveButton.label;"/>
           <spacer class="spacer"/>
           <spacer flex="1"/>
-          <button dlgtype="cancel" class="exit-dialog" id="close" label="&CloseButton.label;" 
-                  default="true" oncommand="onClose();"
-                  accesskey="&CloseButton.accessKey;"/>
+          <button dlgtype="cancel" class="exit-dialog" id="close" label="&CloseButton.label;" default="true" oncommand="onClose();"/>  
         </vbox>
       </row>
     </rows>

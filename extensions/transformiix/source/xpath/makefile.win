@@ -85,7 +85,7 @@ EXPORTS = \
 
 LINCS=-I$(PUBLIC)\xpcom \
       -I..\base -I..\xml -I..\xml\dom -I..\xslt \
-      -I..\xslt\functions -I..\xslt\util -I..\net
+      -I..\xslt\functions -I..\xslt\util
 
 LCFLAGS = \
         $(LCFLAGS) \

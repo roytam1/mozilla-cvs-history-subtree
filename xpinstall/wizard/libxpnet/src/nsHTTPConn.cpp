@@ -35,8 +35,8 @@ const char kFTPProto[8] = "ftp://";
 const int kHTTPPort = 80;
 const int kFTPPort = 21;
 const int kRespBufSize = 1024;
-const int kReqBufSize = 4096;
-const int kHdrBufSize = 4096;
+const int kReqBufSize = 1024;
+const int kHdrBufSize = 256;
 const char kCRLF[3] = "\r\n";
 const char kHdrBodyDelim[5] = "\r\n\r\n";
 const char kDefaultDestFile[11] = "index.html";
@@ -91,8 +91,7 @@ nsHTTPConn::nsHTTPConn(char *aURL, int (*aEventPumpCB)(void)) :
     mProxyPswd(NULL),
     mDestFile(NULL),
     mHostPathAllocd(FALSE),
-    mSocket(NULL),
-    mResponseCode(0)
+    mSocket(NULL)
 {
     // parse URL
     if (ParseURL(kHTTPProto, aURL, &mHost, &mPort, &mPath) == OK)
@@ -116,8 +115,7 @@ nsHTTPConn::nsHTTPConn(char *aURL) :
     mProxyPswd(NULL),
     mDestFile(NULL),
     mHostPathAllocd(FALSE),
-    mSocket(NULL),
-    mResponseCode(0)
+    mSocket(NULL)
 {
     // parse URL
     if (ParseURL(kHTTPProto, aURL, &mHost, &mPort, &mPath) == OK)
@@ -252,7 +250,7 @@ nsHTTPConn::Request(int aResumePos)
     char req[kReqBufSize];
     char hdr[kHdrBufSize];
     int rv;
-
+    
     memset(req, 0, kReqBufSize);
 
     // format header buf:
@@ -261,35 +259,28 @@ nsHTTPConn::Request(int aResumePos)
     memset(hdr, 0, kHdrBufSize);
     if (mProxiedURL)
     {
-        char *host = NULL, *path = NULL;
-        char proto[8];
-        int port;
-#ifdef DEBUG
-        assert(sizeof hdr > (strlen(mProxiedURL) + 15 ));
-#endif
         sprintf(hdr, "GET %s HTTP/1.0%s", mProxiedURL, kCRLF);
         strcpy(req, hdr);
-        if (strncmp(mProxiedURL, kFTPProto, strlen(kFTPProto)) == 0) 
+
+        memset(hdr, 0, kHdrBufSize);
+        if (strncmp(mProxiedURL, kFTPProto, strlen(kFTPProto)) == 0)
         {
-            strcpy(proto,kFTPProto);
-            port = kFTPPort;
-        } 
-        else 
-        {
-            strcpy(proto,kHTTPProto);
-            port = kHTTPPort;
+            char *ftpHost, *ftpPath;
+            int ftpPort = kFTPPort;
+            rv = ParseURL(kFTPProto, mProxiedURL, 
+                          &ftpHost, &ftpPort, &ftpPath);
+
+            if (rv == OK)
+                sprintf(hdr, "Host: %s:%d%s", ftpHost, ftpPort, kCRLF);
+
+            if (ftpHost)
+                free(ftpHost);
+            if (ftpPath)
+                free(ftpPath);
         }
-        rv = ParseURL(proto, mProxiedURL,
-                      &host, &port, &path);
-        if (rv == OK) {
-            memset(hdr, 0, kHdrBufSize);
-            sprintf(hdr, "Host: %s:%d%s", host, port, kCRLF);
-            strcat(req, hdr);
-        }
-        if (host)
-            free(host);
-        if (path)
-            free(path);
+        else
+            sprintf(hdr, "Host: %s%s", mHost, kCRLF);
+        strcat(req, hdr);
     }
     else
     {
@@ -414,16 +405,6 @@ nsHTTPConn::Response(HTTPGetCB aCallback, char *aDestFile, int aResumePos)
             }
             else
             {
-                ParseResponseCode((const char *)resp, &mResponseCode);
-                
-                if ( mResponseCode < 200 || mResponseCode >=300 )
-                {
-                  // if we don't get a response code in the 200 range then fail
-                  // TODO: handle the response codes in the 300 range
-                  rv = nsHTTPConn::E_HTTP_RESPONSE;
-                  break;
-                }
-
                 ParseContentLength((const char *)resp, &expectedSize);
 
                 // move past hdr-body delimiter
@@ -453,9 +434,9 @@ nsHTTPConn::Response(HTTPGetCB aCallback, char *aDestFile, int aResumePos)
         if ( mEventPumpCB )
             mEventPumpCB();
 
-    } while ( rv == nsSocket::E_READ_MORE || rv == nsSocket::OK);
-    
-    if ( bytesWritten == expectedSize && rv != nsHTTPConn::E_HTTP_RESPONSE)
+    } while (bytesWritten < expectedSize && (rv == nsSocket::E_READ_MORE || rv == nsSocket::OK));
+
+    if ( bytesWritten == expectedSize )
         rv = nsSocket::E_EOF_FOUND;
         
     if (rv == nsSocket::E_EOF_FOUND)
@@ -556,26 +537,6 @@ nsHTTPConn::ParseURL(const char *aProto, char *aURL, char **aHost,
     strncpy(*aPath, pos, end - pos);
 
     return OK;
-}
-
-void
-nsHTTPConn::ParseResponseCode(const char *aBuf, int *aCode)
-{
-  char codeStr[4];
-  const char *pos;
-
-  if (!aBuf || !aCode)
-    return;
-
-  // make sure the beginning of the buffer is the HTTP status code
-  if (strncmp(aBuf,"HTTP/",5) == 0)
-  {
-    pos = strstr(aBuf," ");  // find the space before the code
-    ++pos;                   // move to the beginning of the code
-    strncpy((char *)codeStr,pos, 3);
-    codeStr[3] = '\0';
-    *aCode = atoi(codeStr);
-  }
 }
 
 void

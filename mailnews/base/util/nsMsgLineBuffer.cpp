@@ -286,8 +286,8 @@ PRInt32 nsMsgLineBuffer::FlushLastLine()
 // read but unprocessed stream data in a buffer. 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-nsMsgLineStreamBuffer::nsMsgLineStreamBuffer(PRUint32 aBufferSize, PRBool aAllocateNewLines, PRBool aEatCRLFs, char aLineToken) 
-	         : m_eatCRLFs(aEatCRLFs), m_allocateNewLines(aAllocateNewLines), m_lineToken(aLineToken)
+nsMsgLineStreamBuffer::nsMsgLineStreamBuffer(PRUint32 aBufferSize, PRBool aAllocateNewLines, PRBool aEatCRLFs) 
+											: m_eatCRLFs(aEatCRLFs), m_allocateNewLines(aAllocateNewLines)
 {
 	NS_PRECONDITION(aBufferSize > 0, "invalid buffer size!!!");
 	m_dataBuffer = nsnull;
@@ -339,7 +339,7 @@ char * nsMsgLineStreamBuffer::ReadNextLine(nsIInputStream * aInputStream, PRUint
     char * startOfLine = m_dataBuffer+m_startPos;
 
 	if (m_numBytesInBuffer > 0) // any data in our internal buffer?
-		endOfLine = PL_strchr(startOfLine, m_lineToken); // see if we already have a line ending...
+		endOfLine = PL_strchr(startOfLine, '\n'); // see if we already have a line ending...
 
 	// it's possible that we got here before the first time we receive data from the server
 	// so aInputStream will be nsnull...
@@ -407,18 +407,19 @@ char * nsMsgLineStreamBuffer::ReadNextLine(nsIInputStream * aInputStream, PRUint
 
 		// okay, now that we've tried to read in more data from the stream, look for another end of line 
 		// character 
-		endOfLine = PL_strchr(startOfLine, m_lineToken);
+		endOfLine = PL_strchr(startOfLine, '\n');
+
 	}
 
 	// okay, now check again for endOfLine.
 	if (endOfLine)
 	{
 		if (!m_eatCRLFs)
-			endOfLine += 1; // count for LF or CR
+			endOfLine += 1; // count for LF
 
         aNumBytesInLine = endOfLine - startOfLine;
 
-    if (m_eatCRLFs && m_lineToken == '\n' && aNumBytesInLine > 0 && startOfLine[aNumBytesInLine-1] == '\r') // Remove the CR in a CRLF sequence
+        if (startOfLine[aNumBytesInLine-1] == '\r')
           aNumBytesInLine--;
 
 		// PR_CALLOC zeros out the allocated line
@@ -433,7 +434,7 @@ char * nsMsgLineStreamBuffer::ReadNextLine(nsIInputStream * aInputStream, PRUint
 		memcpy(newLine, startOfLine, aNumBytesInLine); // copy the string into the new line buffer
 
 		if (m_eatCRLFs)
-			endOfLine += 1; // advance past LF or CR if we haven't already done so...
+			endOfLine += 1; // advance past LF if we haven't already done so...
 
 		// now we need to update the data buffer to go past the line we just read out. 
         m_numBytesInBuffer -= (endOfLine - startOfLine);

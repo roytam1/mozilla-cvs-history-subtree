@@ -1521,9 +1521,8 @@ function oninputHTMLSource()
 {
   gHTMLSourceChanged = true;
 
-  // Trigger update of "Save" and "Publish" buttons
+  // Trigger update of "Save" button
   goUpdateCommand("cmd_save");
-  goUpdateCommand("cmd_publish");
 
   // We don't need to call this again, so remove handler
   gSourceContentWindow.removeEventListener("input", oninputHTMLSource, false);

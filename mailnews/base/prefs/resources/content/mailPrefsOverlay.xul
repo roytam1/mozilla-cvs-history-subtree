@@ -16,7 +16,6 @@
       {
       case "chrome://communicator/content/pref/pref-scripts.xul":
         _elementIDs.push("javascriptAllowMailNews");
-        _elementIDs.push("pluginAllowMailNews");
         break;
       case "chrome://communicator/content/pref/pref-appearance.xul":
         _elementIDs.push("generalStartupMail");
@@ -24,29 +23,18 @@
       case "chrome://cookie/content/pref-cookies.xul":
         _elementIDs.push("networkDisableCookieForMailNews");
         break;
-      case "chrome://cookie/content/pref-images.xul":
-        _elementIDs.push("networkImageDisableImagesInMailNews");
-        break;
       }
     }
   ]]>
   </script>         
 
   <!-- javascript toggle for mail/news -->
-  <groupbox id="javascriptPreferences">
+  <page id="scriptsAndWindowPanel">
     <checkbox id="javascriptAllowMailNews"
               label="&enbJsCheckMailNews.label;" accesskey="&enbJsCheckMailNews.accesskey;"
               pref="true" preftype="bool" prefstring="javascript.allow.mailnews"
               prefattribute="checked" oncommand="javascriptEnabledChange();" insertafter="javascriptAllowNavigator"/>
-  </groupbox>
-  <!-- plugin toggle for mail/news -->
-  <groupbox id="pluginPreferences">
-    <checkbox id="pluginAllowMailNews"
-              label="&enbPluginCheckMailNews.label;" accesskey="&enbPluginCheckMailNews.accesskey;"
-              pref="true" preftype="bool" prefstring="mailnews.message_display.allow.plugins"
-              prefattribute="checked"/>
-  </groupbox>
-
+  </page>
   <!-- mail startup toggle -->
   <groupbox id="generalStartupPreferences">           
     <checkbox id="generalStartupMail" wsm_persist="true" position="3"
@@ -58,18 +46,9 @@
   <page id="cookiesPanel">
     <checkbox id="networkDisableCookieForMailNews"
               label="&disableCookieForMailNews.label;" accesskey="&disableCookieForMailNews.accesskey;"
-              preftype="bool" prefstring="network.cookie.disableCookieForMailNews"
-              insertafter="networkCookieBehaviorSeparator"/>
+              pref="true" preftype="bool" prefstring="network.cookie.disableCookieForMailNews"
+              prefattribute="checked" insertafter="networkCookieBehaviorSeparator"/>
   </page>
-  <!--- image toggle for mail/news -->
-  <groupbox id="imagesArea">
-    <checkbox id="networkImageDisableImagesInMailNews"
-              label="&disableImageInMailNews.label;" accesskey="&disableImageInMailNews.accesskey;"
-              pref="true" preftype="bool" prefstring="mailnews.message_display.disable_remote_image"
-              prefattribute="checked" insertafter="networkImagesBehaviorSeparator"/>
-  </groupbox>
-
-
 
   <!-- category tree entries for mail/news -->
   <treechildren id="panelChildren">
@@ -83,7 +62,7 @@
             <treecell url="chrome://messenger/content/pref-viewing_messages.xul" label="&viewingMessages.label;"/> 
           </treerow>
         </treeitem>
-        <treeitem id="mailcomposepref">
+        <treeitem>
           <treerow>
             <treecell url="chrome://messenger/content/messengercompose/pref-composing_messages.xul" label="&composingMessages.label;"/> 
           </treerow>
@@ -93,7 +72,7 @@
             <treecell url="chrome://messenger/content/messengercompose/pref-formatting.xul" label="&format.label;"/> 
           </treerow>
         </treeitem>
-        <treeitem id="mailaddressbookpref">
+        <treeitem>
           <treerow>
             <treecell url="chrome://messenger/content/addressbook/pref-addressing.xul" label="&address.label;"/> 
           </treerow>

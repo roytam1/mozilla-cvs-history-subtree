@@ -577,13 +577,11 @@ sub ProcessJarManifests()
     CreateJarFromManifest(":mozilla:embedding:browser:chrome:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:embedding:browser:chrome:locale:en-US:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:extensions:cookie:jar.mn", $chrome_dir, \%jars);
-    CreateJarFromManifest(":mozilla:extensions:pref:autoconfig:resources:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:extensions:irc:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:extensions:wallet:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:intl:uconv:src:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:htmlparser:src:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:layout:html:forms:resources:jar.mn", $chrome_dir, \%jars);
-    CreateJarFromManifest(":mozilla:layout:html:document:src:xbl-marquee:resources:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:layout:html:forms:src:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:layout:html:base:src:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:mailnews:jar.mn", $chrome_dir, \%jars);
@@ -709,7 +707,6 @@ sub BuildRuntimeDist()
     InstallFromManifest(":mozilla:lib:mac:NSRuntime:include:MANIFEST",             "$distdirectory:mac:common:");
     InstallFromManifest(":mozilla:lib:mac:NSStdLib:include:MANIFEST",              "$distdirectory:mac:common:");
     InstallFromManifest(":mozilla:lib:mac:MoreFiles:MANIFEST",                     "$distdirectory:mac:common:morefiles:");
-    InstallFromManifest(":mozilla:lib:mac:NSStartup:MANIFEST",                     "$distdirectory:mac:common:");
 
     #GC_LEAK_DETECTOR
     InstallFromManifest(":mozilla:gc:boehm:MANIFEST",                              "$distdirectory:gc:");
@@ -939,8 +936,7 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:content:xbl:public:MANIFEST",                    "$distdirectory:content:");
     InstallFromManifest(":mozilla:content:xml:content:public:MANIFEST",            "$distdirectory:content:");
     InstallFromManifest(":mozilla:content:xml:document:public:MANIFEST",           "$distdirectory:content:");
-    InstallFromManifest(":mozilla:content:xsl:document:public:MANIFEST",           "$distdirectory:content:");
-    InstallFromManifest(":mozilla:content:xsl:document:public:MANIFEST_IDL",       "$distdirectory:idl:");
+    InstallFromManifest(":mozilla:content:xsl:document:src:MANIFEST_IDL",          "$distdirectory:idl:");
     InstallFromManifest(":mozilla:content:xul:content:public:MANIFEST",            "$distdirectory:content:");
     InstallFromManifest(":mozilla:content:xul:document:public:MANIFEST",           "$distdirectory:content:");
     InstallFromManifest(":mozilla:content:xul:document:public:MANIFEST_IDL",       "$distdirectory:idl:");
@@ -1690,7 +1686,6 @@ sub BuildImglib2Projects()
         BuildOneProject(":mozilla:modules:libpr0n:macbuild:jpegdecoder2.xml",       "jpegdecoder2$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
         BuildOneProject(":mozilla:modules:libpr0n:macbuild:icondecoder.xml",        "icondecoder$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
         BuildOneProject(":mozilla:modules:libpr0n:macbuild:bmpdecoder.xml",         "bmpdecoder$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
-        BuildOneProject(":mozilla:modules:libpr0n:macbuild:xbmdecoder.xml",         "xbmdecoder$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
         
         # MNG
         if ($main::options{mng})
@@ -2121,11 +2116,6 @@ sub BuildEmbeddingProjects()
 
     StartBuildModule("embedding");
 
-    # Since there are separate Carbon targets, but the name is the same.
-    unlink ":mozilla:embedding:components:printingui:macbuild:printingUI$D.o";
-    BuildProject(":mozilla:embedding:components:printingui:macbuild:printingUI.xml", "printingUI$C$D.o");
-    MakeAlias(":mozilla:embedding:components:printingui:macbuild:printingUI$D.o", ":mozilla:dist:embedding:components:");
-
     BuildOneProject(":mozilla:embedding:components:build:macbuild:EmbedComponents.xml",       "EmbedComponents$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
     BuildOneProject(":mozilla:embedding:browser:macbuild:webBrowser.xml",       "webBrowser$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
 
@@ -2305,26 +2295,22 @@ sub BuildPluginsProjects()
 
     # as a temporary measure, make sure that the folder "MacOS Support:JNIHeaders" exists,
     # before we attempt to build the MRJ plugin. This will allow a gradual transition.
-    if ($main::options{carbon} || -e GetCodeWarriorRelativePath("Java_Support:VM_Support:MRJ_Support"))
+    if (!$main::options{carbon} && -e GetCodeWarriorRelativePath("Java_Support:VM_Support:MRJ_Support"))
     {
-	    my($plugin_path) = ":mozilla:plugin:oji:MRJ$C:plugin:";
+	    my($plugin_path) = ":mozilla:plugin:oji:MRJ:plugin:";
 
 	    # Build MRJPlugin
-	    BuildProject($plugin_path . "MRJPlugin$C.xml", "MRJPlugin$C");
+	    BuildProject($plugin_path . "MRJPlugin.xml", "MRJPlugin");
 	    # Build MRJPlugin.jar (if Java tools exist)
 	    my($linker_path) = GetCodeWarriorRelativePath("CodeWarrior Plugins:Linkers:Java Linker");
 	    if (-e $linker_path) {
 	        print("CodeWarrior Java tools detected, building MRJPlugin.jar.\n");
-	        BuildProject($plugin_path . "MRJPlugin$C.xml", "MRJPlugin.jar");
+	        BuildProject($plugin_path . "MRJPlugin.xml", "MRJPlugin.jar");
 	    }
 	    # Copy MRJPlugin, MRJPlugin.jar to appropriate plugins folder.
 	    my($plugin_dist) = GetBinDirectory() . "Plug-ins:";
-	    MakeAlias($plugin_path . "MRJPlugin$C", $plugin_dist);
+	    MakeAlias($plugin_path . "MRJPlugin", $plugin_dist);
 	    MakeAlias($plugin_path . "MRJPlugin.jar", $plugin_dist);
-	    if ($main::options{carbon}) {
-            MakeAlias($plugin_path . "MRJPlugin.policy", $plugin_dist);
-            MakeAlias($plugin_path . "MRJPlugin.properties", $plugin_dist);
-	    }
 	}
 
     # Build the Default Plug-in and place an alias in the appropriate plugins folder.

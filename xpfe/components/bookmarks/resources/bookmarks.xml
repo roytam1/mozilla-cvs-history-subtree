@@ -835,30 +835,26 @@
                 return;
             }
 
-            var dropIndex;
-            if (orientation == Components.interfaces.nsITreeView.inDropAfter &&
-                this.mOuter.treeBoxObject.view.isContainer(row)     &&
-                this.mOuter.treeBoxObject.view.isContainerOpen(row) &&
-               !this.mOuter.treeBoxObject.view.isContainerEmpty(row)) {
-              rContainer = rTarget;
-              dropIndex = 1;        
-            } 
-            else {
-              RDFC.Init(kBMDS, rContainer);
-              dropIndex = RDFC.IndexOf(rTarget);
-              if (dropIndex == -1)
-                break;
-              if (orientation == Components.interfaces.nsITreeView.inDropAfter) {
-                ++dropIndex;
-              }
-            }
-
+            RDFC.Init(kBMDS, rContainer);
+            var dropIx = RDFC.IndexOf(rTarget);
+            // XXX if any of the following fails, the nodes are gone for good!
             const kDSIID = Components.interfaces.nsIDragService;
             const kCopyAction = kDSIID.DRAGDROP_ACTION_COPY + kDSIID.DRAGDROP_ACTION_LINK;
             if (rParent) {
               if (!(dragSession.dragAction & kCopyAction)) {
-                RDFC.Init(kBMDS, rParent);
-                RDFC.RemoveElement(rSource, false);
+                try {
+                  RDFC.Init(kBMDS, rParent);
+                  ix = RDFC.IndexOf(rSource);
+                  if (ix >= 1) {
+                    var index = this.mOuter.treeBuilder.getIndexOfResource(rSource);
+                    RDFC.RemoveElementAt(ix, true);
+                    // only need to decrement the target row if the index of the resource
+                    // we're removing is before it 
+                    if (index < row)
+                      --row;
+                  }
+                }
+                catch (ex) { }
               }
             }
     
@@ -868,15 +864,17 @@
               if (dragSession.dragAction & kCopyAction)
                 rSource = BookmarksUtils.cloneFolder(rSource, rContainer, rTarget);
             }
-            if (orientation != Components.interfaces.nsITreeView.inDropOn) {
+            if (orientation == Components.interfaces.nsITreeView.inDropBefore ||
+                orientation == Components.interfaces.nsITreeView.inDropAfter) {
+              if (dropIx == -1) break;
               RDFC.Init(kBMDS, rContainer);
-              RDFC.InsertElementAt(rSource, dropIndex, true);
+              RDFC.InsertElementAt(rSource, rParent ? dropIx : (orientation == Components.interfaces.nsITreeView.inDropAfter ? ++dropIx : dropIx), true);
             }
             else {
-              RDFC.Init(kBMDS, rTarget);
-              RDFC.AppendElement(rSource);
+              var cont = this.mOuter.treeBuilder.getResourceAtIndex(row);
+              RDFC.Init(kBMDS, cont);
+              RDFC.AppendElement(rSource); // drop on
             }
-
             dirty = true;
 
             //if (rParent) {
@@ -1831,7 +1829,7 @@
             return;
           }
           
-          var urlRes, urlValue, w;
+          var urlRes, urlValue;
           if (aEvent && aEvent.altKey)
             this.openPropertiesForItem();
           else if (aInNewWindow) {
@@ -1854,7 +1852,7 @@
                 else 
                   urlValue = "about:blank";
                 
-                w = openDialog(this._browserURL, "_blank", "chrome,all,dialog=no", urlValue);
+                var w = openDialog(this._browserURL, "_blank", "chrome,all,dialog=no", urlValue);
                 if (groupTarget)
                   w.OpenBookmarkGroupFromResource(this.treeBuilder.getResourceAtIndex(k),
                                                   this.db, this.rdf);
@@ -1872,14 +1870,9 @@
             else 
               urlValue = "about:blank";
               
-            if (groupTarget) {
-              w = getTopWin();
-              w.focus();
+            var w = openTopWin(urlValue);
+            if (groupTarget)
               w.OpenBookmarkGroupFromResource(this.currentRes, this.db, this.rdf);
-            }
-            else {
-              openTopWin(urlValue);
-            }
           }
           if (aEvent) 
             aEvent.preventBubble();

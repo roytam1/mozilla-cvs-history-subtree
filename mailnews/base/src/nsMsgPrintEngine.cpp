@@ -97,22 +97,6 @@ nsMsgPrintEngine::OnStateChange(nsIWebProgress* aWebProgress,
     }
 
     if (progressStateFlags & nsIWebProgressListener::STATE_STOP) {
-      nsCOMPtr<nsIDocumentLoader> docLoader(do_QueryInterface(aWebProgress));
-      if (docLoader) 
-      {
-        // Check to see if the document DOMWin that is finished loading is the same
-        // one as the mail msg that we started to load.
-        // We only want to print when the entire msg and all of its attachments
-        // have finished loading.
-        // The mail msg doc is the last one to receive the STATE_STOP notification
-        nsCOMPtr<nsISupports> container;
-        docLoader->GetContainer(getter_AddRefs(container));
-        nsCOMPtr<nsIDOMWindow> domWindow(do_GetInterface(container));
-        if (domWindow.get() != mMsgDOMWin.get()) {
-          return NS_OK;
-        }
-      }
-
       PRBool isPrintingCancelled = PR_FALSE;
       if (mPrintSettings)
       {
@@ -122,6 +106,7 @@ nsMsgPrintEngine::OnStateChange(nsIWebProgress* aWebProgress,
         // if aWebProgress is a documentloader than the notification from
         // loading the documents. If it is NULL (or not a DocLoader) then it 
         // it coming from Printing
+        nsCOMPtr<nsIDocumentLoader> docLoader(do_QueryInterface(aWebProgress));
         if (docLoader) {
           // Now, fire off the print operation!
           rv = NS_ERROR_FAILURE;
@@ -217,6 +202,7 @@ nsMsgPrintEngine::OnProgressChange(nsIWebProgress *aWebProgress,
                                      PRInt32 aCurTotalProgress,
                                      PRInt32 aMaxTotalProgress)
 {
+    NS_NOTREACHED("notification excluded in AddProgressListener(...)");
     return NS_OK;
 }
 
@@ -236,6 +222,7 @@ nsMsgPrintEngine::OnStatusChange(nsIWebProgress* aWebProgress,
                     nsresult aStatus,
                     const PRUnichar* aMessage)
 {
+    NS_NOTREACHED("notification excluded in AddProgressListener(...)");
     return NS_OK;
 }
 
@@ -489,11 +476,6 @@ nsMsgPrintEngine::SetupObserver()
       (void) progress->AddProgressListener((nsIWebProgressListener *)this,
                                         nsIWebProgress::NOTIFY_STATE_DOCUMENT);
     }
-
-    // Cache a pointer to the mail message's DOMWindow 
-    // so later we know when we can print when the 
-    // document "loaded" msgs come thru via the Progress listener
-    mMsgDOMWin = do_GetInterface(mDocShell);
   }
 }
 

@@ -50,7 +50,6 @@ function Startup()
   {
     okButton.removeAttribute("default");
     okButton.setAttribute("label",GetString("Insert"));
-    okButton.setAttribute("accesskey",GetString("InsertAccessKey"));
   }
   // Create dialog object to store controls for easy access
   srcInput = document.getElementById("srcInput");

@@ -51,13 +51,9 @@ class nsMapiRegistryUtils
 private :
     nsCAutoString m_thisApp ;
     nsAutoString m_brand ;
-    nsAutoString m_vendor ;
-    nsAutoString m_versionNo ;
+ nsAutoString m_versionNo ;
 
     nsCOMPtr<nsIStringBundle> m_mapiStringBundle ;
-
-    // sets result to the value of varName (as defined in brand.properties)
-    void getVarValue(const PRUnichar * varName, nsAutoString & result);
 public :
     nsMapiRegistryUtils() ;
 
@@ -70,10 +66,8 @@ public :
     const char * thisApplication() ; 
     // This returns the brand name for this application
     const PRUnichar * brandName() ;
-    // This returns the vendor name of this application
-    const PRUnichar * vendorName();
-    // This returns the version no for this application
-    const PRUnichar * versionNo() ;
+ // This returns the version no for this application
+ const PRUnichar * versionNo() ;
     // verifyRestrictedAccess - Returns PR_TRUE if this user only has restricted access
     // to the registry keys we need to modify.
     PRBool verifyRestrictedAccess() ;

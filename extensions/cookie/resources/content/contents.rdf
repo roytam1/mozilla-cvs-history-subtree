@@ -12,15 +12,19 @@
         chrome:displayName="Cookie Manager"
         chrome:author="mozilla.org"
         chrome:name="cookie"
- 	chrome:localeVersion="1.0.1rc1">
+ 	chrome:localeVersion="1.0.0final">
   </RDF:Description>
 
   <!-- overlay information -->
   <RDF:Seq about="urn:mozilla:overlays">
+    <RDF:li resource="chrome://communicator/content/tasksOverlay.xul"/>
     <RDF:li resource="chrome://communicator/content/contentAreaContextOverlay.xul"/>
     <RDF:li resource="chrome://communicator/content/pref/preftree.xul"/>
     <RDF:li resource="chrome://navigator/content/navigatorOverlay.xul"/>
-    <RDF:li resource="chrome://messenger/content/mailWindowOverlay.xul"/>
+  </RDF:Seq>
+
+  <RDF:Seq about="chrome://communicator/content/tasksOverlay.xul">
+    <RDF:li>chrome://cookie/content/cookieTasksOverlay.xul</RDF:li>
   </RDF:Seq>
 
   <RDF:Seq about="chrome://communicator/content/contentAreaContextOverlay.xul">
@@ -33,11 +37,6 @@
   
   <RDF:Seq about="chrome://navigator/content/navigatorOverlay.xul">
     <RDF:li>chrome://cookie/content/cookieNavigatorOverlay.xul</RDF:li>
-    <RDF:li>chrome://cookie/content/cookieTasksOverlay.xul</RDF:li>
   </RDF:Seq>
 
-  <RDF:Seq about="chrome://messenger/content/mailWindowOverlay.xul">
-    <RDF:li>chrome://cookie/content/cookieContextOverlay.xul</RDF:li>
-  </RDF:Seq>
-  
 </RDF:RDF>

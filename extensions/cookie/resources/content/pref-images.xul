@@ -30,7 +30,7 @@
 %prefImagesDTD;
 ]>
 
-<page id="imagesPanel" xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+<page xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
       onload="init();"
       headertitle="&lHeader;">
           
@@ -39,7 +39,6 @@
   <script type="application/x-javascript">
   <![CDATA[
   
-  var panel = "chrome://cookie/content/pref-images.xul";
   var _elementIDs = ["accOrgImages", "networkImageBehaviour", "networkImageWarnAboutImages", "imageLooping"];
 
   function init()
@@ -47,7 +46,9 @@
     parent.initPanel('chrome://cookie/content/pref-images.xul');
 
     imageBlockingEnabled();
-    setDisables();
+
+    var enabled = document.getElementById("networkImageBehaviour").value != "2";
+    setWarnAboutImagesEnabled(enabled);
   }
 
   // Present finer control over image loading to the user.
@@ -62,40 +63,21 @@
       enabled = false;
     }
     if (!enabled)
-    {
       document.getElementById("haveImageBlocking").setAttribute("hidden", "true");
-      if (!document.getElementById("networkImageDisableImagesInMailNews"))
-        document.getElementById("haveImageBlockingOrMailnews").setAttribute("hidden", "true");
-    }
   }
-
-  function setDisables()
-  {
-    var imageBehavior = document.getElementById("networkImageBehaviour");
-    setWarnAboutImagesEnabled(imageBehavior.value != "2");
-
-    // if mailnews is installed then we will have networkImageDisableImagesInMailNews checkbox
-      var networkImageDisableImagesInMailNews = document.getElementById("networkImageDisableImagesInMailNews");
-    if (networkImageDisableImagesInMailNews)
-      networkImageDisableImagesInMailNews.disabled = (imageBehavior.value == 2); 
-    }
 
   function setWarnAboutImagesEnabled(aEnabled)
   {
     var warnCheckbox = document.getElementById("networkImageWarnAboutImages");
-    if (warnCheckbox)
-    {
     warnCheckbox.disabled = !aEnabled;
     if (parent.hPrefWindow.getPrefIsLocked(warnCheckbox.getAttribute("prefstring")) )
       warnCheckbox.disabled = true;
-  }
   }
  
   ]]>
   </script>
 
   <broadcaster id="haveImageBlocking"/>
-  <broadcaster id="haveImageBlockingOrMailnews"/>
 
   <groupbox id="imagesArea">
     <caption label="&imageBlocking.label;"/>
@@ -106,23 +88,23 @@
                 prefstring="network.image.imageBehavior">
       <radio value="2" label="&disableImages.label;"
              accesskey="&disableImages.accesskey;"
-             oncommand="setDisables();"/>
+             oncommand="setWarnAboutImagesEnabled(false);"/>
       <radio value="1" label="&accOrgImagesRadio.label;"
              accesskey="&accOrgImagesRadio.accesskey;"
              id="accOrgImages" observes="haveImageBlocking"
-             oncommand="setDisables();"/>
+             oncommand="setWarnAboutImagesEnabled(true);"/>
       <radio value="0" label="&accAllImagesRadio.label;"
              accesskey="&accAllImagesRadio.accesskey;"
-             oncommand="setDisables();"/>
+             oncommand="setWarnAboutImagesEnabled(true);"/>
     </radiogroup>
 
-    <separator id="networkImagesBehaviorSeparator" observes="haveImageBlockingOrMailnews"/>
+    <separator observes="haveImageBlocking"/>
 
-    <vbox align="start">
+    <hbox align="start">
       <checkbox id="networkImageWarnAboutImages" label="&warnAboutImages.label;"
                 accesskey="&warnAboutImages.accesskey;" observes="haveImageBlocking"
                 prefstring="network.image.warnAboutImages"/>
-    </vbox>
+    </hbox>
 
     <separator observes="haveImageBlocking"/>
 

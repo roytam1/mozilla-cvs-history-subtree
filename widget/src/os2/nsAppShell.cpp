@@ -164,15 +164,12 @@ nsresult nsAppShell::Run()
             if (mDispatchListener)
                mDispatchListener->AfterDispatch();
          } else {
-            if ((mQmsg.hwnd) && (mQmsg.mp1 || mQmsg.mp2)) {
+            if( mQmsg.hwnd) {
                // send WM_SYSCOMMAND, SC_CLOSE to window (tasklist close)
                WinSendMsg( mQmsg.hwnd, WM_SYSCOMMAND, MPFROMSHORT(SC_CLOSE), 0);
             } else {
-               // Don't want to close the app when a window  
-               // is closed, just when our `Exit' is called or
-               // shutdown is invoked.
-               if (mQuitNow || ((mQmsg.mp1 == 0) && (mQmsg.mp2 == 0)))
-                  keepGoing = 0;
+               if( mQuitNow)     // Don't want to close the app when a window 
+                  keepGoing = 0; // is closed, just when our `Exit' is called.
             }
          }
 

@@ -283,9 +283,6 @@ function HideMenus()
 
 function OnUnloadMessageWindow()
 {
-	// FIX ME - later we will be able to use onunload from the overlay
-	OnUnloadMsgHeaderPane();
-
 	OnMailWindowUnload();
 }
 
@@ -335,20 +332,6 @@ function GetSelectedMessages()
 		messageArray[0] = message;	
 	}
 	return messageArray;
-}
-
-function GetSelectedIndices(dbView)
-{
-  try {
-    var indicesArray = {}; 
-    var length = {};
-    dbView.getIndicesForSelection(indicesArray,length);
-    return indicesArray.value;
-  }
-  catch (ex) {
-    dump("ex = " + ex + "\n");
-    return null;
-  }
 }
 
 function GetLoadedMsgFolder()
@@ -475,12 +458,6 @@ var MessageWindowController =
 			case "cmd_markAllRead":
 			case "cmd_markThreadAsRead":
 			case "cmd_markAsFlagged":
-      case "cmd_label0":
-      case "cmd_label1":
-      case "cmd_label2":
-      case "cmd_label3":
-      case "cmd_label4":
-      case "cmd_label5":
       case "button_file":
 			case "cmd_file":
 			case "cmd_settingsOffline":
@@ -538,13 +515,6 @@ var MessageWindowController =
 			case "cmd_markAsRead":
 			case "cmd_markAllRead":
 			case "cmd_markThreadAsRead":
-      case "cmd_label0":
-      case "cmd_label1":
-      case "cmd_label2":
-      case "cmd_label3":
-      case "cmd_label4":
-      case "cmd_label5":
-        return(true);
 			case "cmd_markAsFlagged":
       case "button_file":
 			case "cmd_file":
@@ -692,24 +662,6 @@ var MessageWindowController =
 			case "cmd_markAsFlagged":
 				MsgMarkAsFlagged(null);
 				return;
-      case "cmd_label0":
-        gDBView.doCommand(nsMsgViewCommandType.label0);
- 				return;
-      case "cmd_label1":
-        gDBView.doCommand(nsMsgViewCommandType.label1);
-        return; 
-      case "cmd_label2":
-        gDBView.doCommand(nsMsgViewCommandType.label2);
-        return; 
-      case "cmd_label3":
-        gDBView.doCommand(nsMsgViewCommandType.label3);
-        return; 
-      case "cmd_label4":
-        gDBView.doCommand(nsMsgViewCommandType.label4);
-        return; 
-      case "cmd_label5":
-        gDBView.doCommand(nsMsgViewCommandType.label5);
-        return; 
       case "cmd_downloadFlagged":
         MsgDownloadFlagged();
         return;

@@ -51,7 +51,7 @@ public:
 
   NS_DECL_ISUPPORTS
 
-  NS_IMETHOD Init(nsIWidget* aWidget, nsIPrintSettings* aPS, PRBool aIsPrintPreview);
+  NS_IMETHOD Init(nsIWidget* aWidget, nsIPrintSettings* aPS, PRBool aQuiet);
 
   void GetDriverName(char *&aDriverName) const   { aDriverName = mDriverName;     }
   void GetDeviceName(char *&aDeviceName) const   { aDeviceName = mDeviceName;     }
@@ -61,6 +61,7 @@ public:
   // To get the DevMode from the Global memory Handle it must lock it 
   // So this call must be paired with a call to UnlockGlobalHandle
   void GetDevMode(LPDEVMODE &aDevMode);
+  void UnlockDevMode()  { if (mIsDEVMODEGlobalHandle && mGlobalDevMode) ::GlobalUnlock(mGlobalDevMode); }
 
   // helper functions
   nsresult GetDataFromPrinter(const PRUnichar * aName, nsIPrintSettings* aPS = nsnull);
@@ -69,9 +70,16 @@ public:
                                               LPDEVMODE         aDevMode);
 
 protected:
+  nsresult ShowXPPrintDialog(PRBool aQuiet);
+  nsresult ShowNativePrintDialog(nsIWidget* aWidget, PRBool aQuiet);
+
+#ifdef MOZ_REQUIRE_CURRENT_SDK
+  nsresult ShowNativePrintDialogEx(nsIWidget* aWidget, PRBool aQuiet);
+#endif
 
   void SetDeviceName(char* aDeviceName);
   void SetDriverName(char* aDriverName);
+  void SetGlobalDevMode(HGLOBAL aHGlobal);
   void SetDevMode(LPDEVMODE aDevMode);
 
   void SetupPaperInfoFromSettings();
@@ -80,9 +88,14 @@ protected:
 
   char*     mDriverName;
   char*     mDeviceName;
+  HGLOBAL   mGlobalDevMode;
   LPDEVMODE mDevMode;
+  PRBool    mIsDEVMODEGlobalHandle;
 
   nsCOMPtr<nsIPrintSettings> mPrintSettings;
+
+  // For PrintDlgEx
+  FARPROC mUseExtendedPrintDlg;
 };
 
 

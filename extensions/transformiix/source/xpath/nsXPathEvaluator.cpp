@@ -45,9 +45,6 @@
 #include "nsXPathNSResolver.h"
 #include "nsXPathResult.h"
 #include "ProcessorState.h"
-#include "nsDOMError.h"
-#include "URIUtils.h"
-
 
 NS_IMPL_ADDREF(nsXPathEvaluator)
 NS_IMPL_RELEASE(nsXPathEvaluator)
@@ -92,9 +89,6 @@ nsXPathEvaluator::CreateNSResolver(nsIDOMNode *aNodeResolver,
                                    nsIDOMXPathNSResolver **aResult)
 {
     NS_ENSURE_ARG(aNodeResolver);
-    if (!URIUtils::CanCallerAccess(aNodeResolver))
-        return NS_ERROR_DOM_SECURITY_ERR;
-
     *aResult = new nsXPathNSResolver(aNodeResolver);
     NS_ENSURE_TRUE(*aResult, NS_ERROR_OUT_OF_MEMORY);
 

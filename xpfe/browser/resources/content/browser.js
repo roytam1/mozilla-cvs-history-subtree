@@ -39,8 +39,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 const nsIWebNavigation = Components.interfaces.nsIWebNavigation;
-var gPrintSettingsAreGlobal = true;
-var gSavePrintSettings = true;
 var gPrintSettings = null;
 var gChromeState = null; // chrome state before we went into print preview
 var gOldCloseHandler = null; // close handler before we went into print preview
@@ -198,28 +196,23 @@ function BrowserExitPrintPreview()
   mainWin.setAttribute("onclose", gOldCloseHandler);
 }
 
-function GetPrintSettings()
+function GetPrintSettings(webBrowserPrint)
 {
   var prevPS = gPrintSettings;
 
   try {
     if (gPrintSettings == null) {
+      var useGlobalPrintSettings = true;
       var pref = Components.classes["@mozilla.org/preferences-service;1"]
                            .getService(Components.interfaces.nsIPrefBranch);
       if (pref) {
-        gPrintSettingsAreGlobal = pref.getBoolPref("print.use_global_printsettings", false);
-        gSavePrintSettings = pref.getBoolPref("print.save_print_settings", false);
+        useGlobalPrintSettings = pref.getBoolPref("print.use_global_printsettings", false);
       }
 
-      var psService = Components.classes["@mozilla.org/gfx/printsettings-service;1"]
-                                        .getService(Components.interfaces.nsIPrintSettingsService);
-      if (gPrintSettingsAreGlobal) {
-        gPrintSettings = psService.globalPrintSettings;        
-        if (gSavePrintSettings) {
-          psService.initPrintSettingsFromPrefs(gPrintSettings, false, gPrintSettings.kInitSaveNativeData);
-        }
+      if (useGlobalPrintSettings) {
+        gPrintSettings = webBrowserPrint.globalPrintSettings;
       } else {
-        gPrintSettings = psService.newPrintSettings;
+        gPrintSettings = webBrowserPrint.newPrintSettings;
       }
     }
   } catch (e) {
@@ -251,8 +244,8 @@ function BrowserPrintPreview()
     var webBrowserPrint = ifreq.getInterface(
       Components.interfaces.nsIWebBrowserPrint);     
     if (webBrowserPrint) {
-      gPrintSettings = GetPrintSettings();
-      webBrowserPrint.printPreview(gPrintSettings, null, null);
+      gPrintSettings = GetPrintSettings(webBrowserPrint);
+      webBrowserPrint.printPreview(gPrintSettings);
     }
 
     // show the toolbar after we go into print preview mode so
@@ -276,22 +269,18 @@ function BrowserPrintSetup()
     var ifreq = _content.QueryInterface(Components.interfaces.nsIInterfaceRequestor);
     var webBrowserPrint = ifreq.getInterface(Components.interfaces.nsIWebBrowserPrint);     
     if (webBrowserPrint) {
-      gPrintSettings = GetPrintSettings();
+      gPrintSettings = GetPrintSettings(webBrowserPrint);
     }
 
     didOK = goPageSetup(window, gPrintSettings);  // from utilityOverlay.js
     if (didOK) {
       if (webBrowserPrint) {
-        if (gPrintSettingsAreGlobal && gSavePrintSettings) {
-          var psService = Components.classes["@mozilla.org/gfx/printsettings-service;1"]
-                                            .getService(Components.interfaces.nsIPrintSettingsService);
-          psService.savePrintSettingsToPrefs(gPrintSettings, false, gPrintSettings.kInitSaveNativeData);
-        }
         if (webBrowserPrint.doingPrintPreview) {
-          webBrowserPrint.printPreview(gPrintSettings, null, null);
+          webBrowserPrint.printPreview(gPrintSettings);
         }
       }
     }
+
   } catch (e) {
     dump("BrowserPrintSetup "+e);
   }
@@ -304,7 +293,7 @@ function BrowserPrint()
     var ifreq = _content.QueryInterface(Components.interfaces.nsIInterfaceRequestor);
     var webBrowserPrint = ifreq.getInterface(Components.interfaces.nsIWebBrowserPrint);     
     if (webBrowserPrint) {
-      gPrintSettings = GetPrintSettings();
+      gPrintSettings = GetPrintSettings(webBrowserPrint);
       webBrowserPrint.print(gPrintSettings, null);
     }
   } catch (e) {

@@ -322,7 +322,9 @@ nsMathMLmactionFrame::Reflow(nsIPresContext*          aPresContext,
   mBoundingMetrics.Clear();
   nsIFrame* childFrame = GetSelectedFrame();
   if (childFrame) {
-    nsReflowReason reason = aReflowState.reason;
+    nsSize availSize(aReflowState.mComputedWidth, aReflowState.mComputedHeight);
+    nsHTMLReflowState childReflowState(aPresContext, aReflowState,
+                                       childFrame, availSize);
     if (mWasRestyled) {
       mWasRestyled = PR_FALSE;
       // If we have just been restyled, make sure to reflow our
@@ -332,12 +334,8 @@ nsMathMLmactionFrame::Reflow(nsIPresContext*          aPresContext,
       // MouseClick() below). But that reason can be (and usually, it is)
       // changed in the reflow chain and we don't have much control other
       // than making sure that the right value is reset here.
-      reason = eReflowReason_StyleChange;
+      childReflowState.reason = eReflowReason_StyleChange;
     }
-
-    nsSize availSize(aReflowState.mComputedWidth, aReflowState.mComputedHeight);
-    nsHTMLReflowState childReflowState(aPresContext, aReflowState,
-                                       childFrame, availSize, reason);
     rv = ReflowChild(childFrame, aPresContext, aDesiredSize,
                      childReflowState, aStatus);
     childFrame->SetRect(aPresContext,

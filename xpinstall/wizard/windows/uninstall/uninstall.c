@@ -47,7 +47,6 @@ LPSTR           szUninstallDir;
 LPSTR           szTempDir;
 LPSTR           szOSTempDir;
 LPSTR           szFileIniUninstall;
-LPSTR           szFileIniDefaultsInfo;
 LPSTR           gszSharedFilename;
 
 ULONG           ulOSType;
@@ -97,11 +96,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmd
     {
       if(diUninstall.bShowDialog == TRUE)
         hDlgUninstall = InstantiateDialog(hWndMain, DLG_UNINSTALL, diUninstall.szTitle, DlgProcUninstall);
-      // Assumes that SHOWICONS, HIDEICONS, and SETDEFAULT never show dialogs
-      else if((ugUninstall.dwMode == SHOWICONS) || (ugUninstall.dwMode == HIDEICONS))
-        ParseDefaultsInfo();
-      else if(ugUninstall.dwMode == SETDEFAULT)
-        SetDefault();
       else
         ParseAllUninstallLogs();
     }

@@ -30,7 +30,6 @@
 #include <nsWidgetsCID.h>
 #include <nsIXRemoteWidgetHelper.h>
 #include <nsIServiceManager.h>
-#include <nsIObserverService.h>
 #include <nsRect.h>
 #include <nsString.h>
 #include <nsCRT.h>
@@ -597,18 +596,15 @@ XRemoteService::OpenURL(nsCString &aArgument,
   // the eventual toplevel target of the load
   nsCOMPtr<nsIDOMWindowInternal> finalWindow = aParent;
 
-  // see if there's a new-window or new-tab argument on the end
+  // see if there's a new window argument on the end
   nsCString lastArgument;
-  PRBool    newWindow = PR_FALSE, newTab = PR_FALSE;
+  PRBool    newWindow = PR_FALSE;
   PRUint32  index = 0;
   FindLastInList(aArgument, lastArgument, &index);
-
-  newTab = lastArgument.EqualsIgnoreCase("new-tab");
-
-  if (newTab || lastArgument.EqualsIgnoreCase("new-window")) {
+  if (lastArgument.EqualsIgnoreCase("new-window")) {
     aArgument.Truncate(index);
     // only open new windows if it's OK to do so
-    if (!newTab && aOpenBrowser)
+    if (aOpenBrowser)
       newWindow = PR_TRUE;
     // recheck for a possible noraise argument since it might have
     // been before the new-window argument
@@ -619,11 +615,8 @@ XRemoteService::OpenURL(nsCString &aArgument,
 
   // If it's OK to open a new browser window and a new window flag
   // wasn't passed in then try to find a current window.  If that's
-  // not found then go ahead and open a new window.
-  // If we're trying to open a new tab, we'll fall back to opening
-  // a new window if there's no browser window open, so look for it
-  // here.
-  if (aOpenBrowser && (!newWindow || newTab)) {
+  // not found then go ahead and open a new window/
+  if (aOpenBrowser && !newWindow) {
     nsCOMPtr<nsIDOMWindowInternal> lastUsedWindow;
     FindWindow(NS_LITERAL_STRING("navigator:browser").get(),
 	       getter_AddRefs(lastUsedWindow));
@@ -635,6 +628,7 @@ XRemoteService::OpenURL(nsCString &aArgument,
   }
 
   // try to fixup the argument passed in
+
   nsString url;
   url.AssignWithConversion(aArgument.get());
 
@@ -694,22 +688,6 @@ XRemoteService::OpenURL(nsCString &aArgument,
 
     // load it
     rv = loader->OpenURI(channel, PR_TRUE, listenerRef);
-  }
-
-  else if (newTab) {
-    // We open new tabs simply by broadcasting a request to all interested
-    // observers, which will typically be all open windows.  The observers
-    // can check the notification subject against themselves (in the case of
-    // a browser window observer, anyway) to determine if they should be
-    // opening the tab.
-    nsCOMPtr<nsIObserverService>
-      obsServ(do_GetService("@mozilla.org/observer-service;1"));
-
-    if (!obsServ)
-      return NS_ERROR_FAILURE;
-
-    return obsServ->NotifyObservers(finalWindow, "open-new-tab-request",
-                                    url.get());
   }
 
   else {

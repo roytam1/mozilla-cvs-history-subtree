@@ -105,9 +105,6 @@
 #ifdef XP_WIN
 #include "nsMessengerWinIntegration.h"
 #endif
-#ifdef XP_OS2
-#include "nsMessengerOS2Integration.h"
-#endif
 
 // private factory declarations for each component we know how to produce
 
@@ -148,9 +145,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgOfflineManager);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgProgress);
 #ifdef XP_WIN
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMessengerWinIntegration, Init);
-#endif
-#ifdef XP_OS2
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMessengerOS2Integration, Init);
 #endif
 
 // The list of components we register
@@ -324,12 +318,6 @@ static const nsModuleComponentInfo gComponents[] = {
     { "Windows OS Integration", NS_MESSENGERWININTEGRATION_CID,
       NS_MESSENGEROSINTEGRATION_CONTRACTID,
       nsMessengerWinIntegrationConstructor,
-    },
-#endif
-#ifdef XP_OS2
-    { "OS/2 OS Integration", NS_MESSENGEROS2INTEGRATION_CID,
-      NS_MESSENGEROSINTEGRATION_CONTRACTID,
-      nsMessengerOS2IntegrationConstructor,
     },
 #endif
 };

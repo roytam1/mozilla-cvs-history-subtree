@@ -62,7 +62,6 @@ Rights Reserved.
   <script src="chrome://messenger/content/commandglue.js"/>
   <script src="chrome://messenger/content/ABSearchDialog.js"/>
   <script src="chrome://messenger/content/addressbook/abCommon.js"/>
-  <script type="application/x-javascript" src="chrome://help/content/contextHelp.js"/>
 
   <dummy class="usesMailWidgets"/>
     
@@ -93,11 +92,6 @@ Rights Reserved.
              <spacer flex="1"/>
              <button label="&resetButton.label;" oncommand="onAbSearchReset(event);" accesskey="&resetButton.accesskey;"/>
          </hbox>
-
-         <hbox align="center">
-           <spacer flex="2"/>
-           <button label="&helpButton.label;" align="end" oncommand="openHelp('mail_advanced_ab_search');" accesskey="&helpButton.accesskey;"/> 
-         </hbox>  
       </vbox>
 
       <hbox flex="1">

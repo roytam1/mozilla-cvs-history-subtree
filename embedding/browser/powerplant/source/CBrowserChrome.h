@@ -48,7 +48,6 @@
 #include "nsIWebBrowserChrome.h"
 #include "nsIWebBrowserChromeFocus.h"
 #include "nsIEmbeddingSiteWindow.h"
-#include "nsIEmbeddingSiteWindow2.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsIContextMenuListener.h"
@@ -65,7 +64,7 @@ class CBrowserShell;
 
 class CBrowserChrome : public nsIWebBrowserChrome,
                        public nsIWebBrowserChromeFocus,
-                       public nsIEmbeddingSiteWindow2,
+                       public nsIEmbeddingSiteWindow,
                        public nsIInterfaceRequestor,
                        public nsIContextMenuListener,
                        public nsITooltipListener,
@@ -79,7 +78,6 @@ public:
     NS_DECL_NSIWEBBROWSERCHROME
     NS_DECL_NSIWEBBROWSERCHROMEFOCUS
     NS_DECL_NSIEMBEDDINGSITEWINDOW
-    NS_DECL_NSIEMBEDDINGSITEWINDOW2
     NS_DECL_NSIINTERFACEREQUESTOR
     NS_DECL_NSICONTEXTMENULISTENER
     NS_DECL_NSITOOLTIPLISTENER

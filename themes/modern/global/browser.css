@@ -72,7 +72,7 @@ tab[busy] {
 
 .tabs-closebutton {
   margin: 0px 4px;
-  padding: 3px 2px;
+  padding: 4px 2px 4px 2px;
   border: none;
   list-style-image: url("chrome://global/skin/icons/close.gif");
 }
@@ -84,19 +84,3 @@ tab[busy] {
 .tabs-closebutton:hover:active {
   list-style-image: url("chrome://global/skin/icons/close-act.gif");
 }
-
-.tabs-newbutton {
-  margin: 0px;
-  padding: 2px 0px 3px 2px;
-  border: none;
-  list-style-image: url("chrome://global/skin/icons/tab-new.gif");
-}
-
-.tabs-newbutton:hover {
-  list-style-image: url("chrome://global/skin/icons/tab-new-hov.gif");
-}
-
-.tabs-newbutton:hover:active {
-  list-style-image: url("chrome://global/skin/icons/tab-new-act.gif");
-}
-

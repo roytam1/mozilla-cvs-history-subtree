@@ -108,7 +108,6 @@ char *SetupFileList[] = {"setuprsc.dll",
                          "config.ini",
                          "setup.ini",
                          "install.ini",
-                         "license.txt",
                          ""};
 
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLine, int nCmdShow)

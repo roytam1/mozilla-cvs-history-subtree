@@ -843,23 +843,13 @@ NS_IMETHODIMP nsMsgDBView::SetSelection(nsITreeSelection * aSelection)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgDBView::ReloadMessageWithAllParts()
-{
-  return ReloadMessageHelper(PR_TRUE);
-}
-
 NS_IMETHODIMP nsMsgDBView::ReloadMessage()
-{
-  return ReloadMessageHelper(PR_FALSE);
-}
-
-nsresult nsMsgDBView::ReloadMessageHelper(PRBool forceAllParts)
 {
   if (!mSuppressMsgDisplay && m_currentlyDisplayedMsgKey != nsMsgKey_None)
   {
     nsMsgKey currentMsgToReload = m_currentlyDisplayedMsgKey;
     m_currentlyDisplayedMsgKey = nsMsgKey_None;
-    LoadMessageByMsgKeyHelper(currentMsgToReload, forceAllParts);
+    LoadMessageByMsgKey(currentMsgToReload);
   }
 
   return NS_OK;
@@ -889,11 +879,6 @@ nsresult nsMsgDBView::UpdateDisplayMessage(nsMsgKey aMsgKey)
 // given a msg key, we will load the message for it.
 NS_IMETHODIMP nsMsgDBView::LoadMessageByMsgKey(nsMsgKey aMsgKey)
 {
-  return LoadMessageByMsgKeyHelper(aMsgKey, PR_FALSE);
-}
-
-nsresult nsMsgDBView::LoadMessageByMsgKeyHelper(nsMsgKey aMsgKey, PRBool forceAllParts)
-{
   NS_ASSERTION(aMsgKey != nsMsgKey_None,"trying to load nsMsgKey_None");
   if (aMsgKey == nsMsgKey_None) return NS_ERROR_UNEXPECTED;
 
@@ -902,10 +887,6 @@ nsresult nsMsgDBView::LoadMessageByMsgKeyHelper(nsMsgKey aMsgKey, PRBool forceAl
     nsXPIDLCString uri;
     nsresult rv = GenerateURIForMsgKey(aMsgKey, m_folder, getter_Copies(uri));
     NS_ENSURE_SUCCESS(rv,rv);
-    if (forceAllParts)
-    {
-      uri.Append("?fetchCompleteMessage=true");
-    }
     mMessengerInstance->OpenURL(uri);
     m_currentlyDisplayedMsgKey = aMsgKey;
     UpdateDisplayMessage(aMsgKey);
