@@ -45,6 +45,8 @@ $(PLUGLET).jar: $(CLASSES) manifest
 clobber:
 	rm -f *.class *.jar
 
+clobber_all: clobber
+
 clean : clobber
 
 ifneq ($(PLUGLET),)
