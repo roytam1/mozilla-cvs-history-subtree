@@ -167,6 +167,18 @@ PRBool test_equals_ic()
     return !r;
   }
 
+PRBool test_cbufdesc()
+  {
+    const char text[] = "hello world";
+    CBufDescriptor bufdesc(text, PR_TRUE, sizeof(text)-1);
+    nsCAutoString s(bufdesc);
+    if (strcmp(s.get(), text) == 0)
+      return PR_TRUE;
+    
+    printf("[s=%s]\n", s.get());
+    return PR_FALSE;
+  }
+
 //----
 
 typedef PRBool (*TestFunc)();
@@ -191,6 +203,7 @@ tests[] =
     { "test_replace_substr", test_replace_substr },
     { "test_strip_ws", test_strip_ws },
     { "test_equals_ic", test_equals_ic },
+    { "test_cbufdesc", test_cbufdesc },
     { nsnull, nsnull }
   };
 
