@@ -187,6 +187,91 @@ XPC_WN_Shared_ToSource(JSContext *cx, JSObject *obj,
 
 /***************************************************************************/
 
+static JSObject*
+GetDoubleWrappedJSObject(XPCCallContext& ccx, XPCWrappedNative* wrapper)
+{
+    JSObject* obj = nsnull;
+    nsCOMPtr<nsIXPConnectWrappedJS>
+        underware = do_QueryInterface(wrapper->GetIdentityObject());
+    if(underware)
+    {
+        JSObject* mainObj = nsnull;
+        if(NS_SUCCEEDED(underware->GetJSObject(&mainObj)) && mainObj)
+        {
+            jsid id = ccx.GetRuntime()->
+                    GetStringID(XPCJSRuntime::IDX_WRAPPED_JSOBJECT);
+
+            jsval val;
+            if(OBJ_GET_PROPERTY(ccx.GetJSContext(), mainObj, id,
+                                &val) && !JSVAL_IS_PRIMITIVE(val))
+            {
+                obj = JSVAL_TO_OBJECT(val);
+            }
+        }
+    }
+    return obj;
+}
+
+// This is the getter native function we use to handle 'wrappedJSObject' for
+// double wrapped JSObjects.
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+XPC_WN_DoubleWrappedGetter(JSContext *cx, JSObject *obj,
+                           uintN argc, jsval *argv, jsval *vp)
+{
+    XPCCallContext ccx(JS_CALLER, cx, obj);
+    XPCWrappedNative* wrapper = ccx.GetWrapper();
+    THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
+
+    NS_ASSERTION(JS_TypeOfValue(cx, argv[-2]) == JSTYPE_FUNCTION, "bad function");
+
+    JSObject* realObject = GetDoubleWrappedJSObject(ccx, wrapper);
+    if(!realObject)
+    {
+        // This is pretty unexpected at this point. The object originally 
+        // responded to this get property call and now gives no object.
+        // XXX Should this throw something at the caller?
+        *vp = JSVAL_NULL;
+        return JS_TRUE;    
+    }
+
+    // It is a double wrapped object. Figure out if the caller
+    // is allowed to see it.
+    
+    nsIXPCSecurityManager* sm;
+    XPCContext* xpcc = ccx.GetXPCContext();
+
+    sm = xpcc->GetAppropriateSecurityManager(
+                    nsIXPCSecurityManager::HOOK_GET_PROPERTY);
+    if(sm)
+    {
+        jsval idval = ccx.GetRuntime()->
+                        GetStringJSVal(XPCJSRuntime::IDX_WRAPPED_JSOBJECT);
+
+        nsCOMPtr<nsIInterfaceInfoManager> iimgr =
+                dont_AddRef(nsXPConnect::GetInterfaceInfoManager());
+        if(iimgr)
+        {
+            const nsIID& iid = NS_GET_IID(nsIXPCWrappedJSObjectGetter);
+            nsCOMPtr<nsIInterfaceInfo> info;
+            if(NS_SUCCEEDED(iimgr->GetInfoForIID(&iid, getter_AddRefs(info))))
+            {
+                if(NS_FAILED(sm->CanGetProperty(cx, iid,
+                                                wrapper->GetIdentityObject(),
+                                                info, 3, idval)))
+                {
+                    // The SecurityManager should have set an exception.
+                    return JS_FALSE;
+                }
+            }
+        }
+    }
+    *vp = OBJECT_TO_JSVAL(realObject);
+    return JS_TRUE;
+}
+
+/***************************************************************************/
+
 /*
  * We *never* set the tearoff names (e.g. nsIFoo) as JS_ENUMERATE.
  * We *never* set toString or toSource as JS_ENUMERATE.
@@ -200,6 +285,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
                       XPCWrappedNativeScope* scope,
                       JSBool reflectToStringAndToSource,
                       XPCWrappedNative* wrapperToReflectInterfaceNames,
+                      XPCWrappedNative* wrapperToReflectDoubleWrap,
                       XPCNativeScriptableInfo* scriptableInfo,
                       uintN propFlags) 
 {
@@ -207,6 +293,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
     XPCJSRuntime* rt = ccx.GetRuntime();
     XPCNativeMember* member;
     JSBool found;
+    const char* name;
     jsid id;
 
     if(set)
@@ -221,7 +308,6 @@ DefinePropertyIfFound(XPCCallContext& ccx,
         if(reflectToStringAndToSource)
         {
             JSNative call;
-            const char* name;
 
             if(idval == rt->GetStringJSVal(XPCJSRuntime::IDX_TO_STRING))
             {
@@ -282,6 +368,38 @@ DefinePropertyIfFound(XPCCallContext& ccx,
                                                propFlags & ~JSPROP_ENUMERATE, 
                                                nsnull);
                 }
+            }
+            
+            // This *might* be a double wrapped JSObject
+            if(wrapperToReflectDoubleWrap && 
+               idval == rt->GetStringJSVal(XPCJSRuntime::IDX_WRAPPED_JSOBJECT) &&
+               GetDoubleWrappedJSObject(ccx, wrapperToReflectDoubleWrap))
+            {
+                // We build and add a getter function. 
+                // A security is done on a per-get basis.
+
+                JSFunction* fun;
+
+                id = rt->GetStringID(XPCJSRuntime::IDX_WRAPPED_JSOBJECT);
+                name = rt->GetStringName(XPCJSRuntime::IDX_WRAPPED_JSOBJECT);
+
+                fun = JS_NewFunction(cx, XPC_WN_DoubleWrappedGetter, 
+                                     0, JSFUN_GETTER, obj, name); 
+
+                if(!fun)
+                    return JS_FALSE;
+
+                JSObject* funobj = JS_GetFunctionObject(fun);
+                if(!funobj)
+                    return JS_FALSE;
+
+                propFlags |= JSPROP_GETTER;
+                propFlags &= ~JSPROP_ENUMERATE;
+
+                AutoResolveName arn(ccx, idval);
+                return OBJ_DEFINE_PROPERTY(cx, obj, id, JSVAL_VOID,
+                                           (JSPropertyOp) funobj, nsnull,
+                                           propFlags, nsnull);
             }
         }
         return JS_TRUE;    
@@ -345,15 +463,11 @@ DefinePropertyIfFound(XPCCallContext& ccx,
     // else...
 
     NS_ASSERTION(member->IsAttribute(), "way broken!");
-
-    // Avoid infinite recursion on getter/setter re-lookup.
-    if(ccx.GetResolveName() == idval)
-        return JS_TRUE;
     
-    propFlags |= JSPROP_GETTER | JSPROP_SHARED;
+    propFlags |= JSPROP_GETTER;
     if(member->IsWritableAttribute())
     {
-        propFlags |= JSPROP_SETTER;
+        propFlags |= JSPROP_SETTER | JSPROP_SHARED;
         propFlags &= ~JSPROP_READONLY;
     }
 
@@ -377,6 +491,7 @@ XPC_WN_OnlyIWrite_PropertyStub(JSContext *cx, JSObject *obj, jsval idval, jsval 
     XPCWrappedNative* wrapper = ccx.GetWrapper();
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
     
+    // Avoid infinite recursion on getter/setter re-lookup.
     if(ccx.GetResolveName() == idval)
         return JS_TRUE;
 
@@ -540,9 +655,13 @@ XPC_WN_NoHelper_Resolve(JSContext *cx, JSObject *obj, jsval idval)
     if(ccx.GetInterface() && !ccx.GetStaticMemberIsLocal())
         return JS_TRUE;
 
+    // Avoid infinite recursion on getter/setter re-lookup.
+    if(ccx.GetResolveName() == idval)
+        return JS_TRUE;
+
     return DefinePropertyIfFound(ccx, obj, idval, 
                                  set, nsnull, wrapper->GetScope(),
-                                 JS_TRUE, wrapper, nsnull,
+                                 JS_TRUE, wrapper, wrapper, nsnull,
                                  JSPROP_ENUMERATE |
                                  JSPROP_READONLY |
                                  JSPROP_PERMANENT);
@@ -721,10 +840,7 @@ XPC_WN_Helper_NewResolve(JSContext *cx, JSObject *obj, jsval idval, uintN flags,
     XPCWrappedNative* wrapper = ccx.GetWrapper();
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
 
-    // XXX This nonsense is here because the JS engine will call my resolve
-    // if I try to define a property with a getter or setter. This is a
-    // problem since I'm already servicing resolve and we risk infinite
-    // recursion.
+    // Avoid infinite recursion on getter/setter re-lookup.
     if(ccx.GetResolveName() == idval)
         return JS_TRUE;
 
@@ -1130,12 +1246,16 @@ XPC_WN_ModsAllowed_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
     if(!ccx.IsValid())
         return JS_FALSE;
 
+    // Avoid infinite recursion on getter/setter re-lookup.
+    if(ccx.GetResolveName() == idval)
+        return JS_TRUE;
+
     XPCNativeScriptableInfo* si = self->GetScriptableInfo();
     uintN enumFlag = si && si->DontEnumStaticProps() ? 0 : JSPROP_ENUMERATE;
 
     return DefinePropertyIfFound(ccx, obj, idval, 
                                  self->GetSet(), nsnull, self->GetScope(),
-                                 JS_TRUE, nsnull, si,
+                                 JS_TRUE, nsnull, nsnull, si,
                                  enumFlag);
 }
 
@@ -1208,12 +1328,16 @@ XPC_WN_NoMods_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
     if(!ccx.IsValid())
         return JS_FALSE;
 
+    // Avoid infinite recursion on getter/setter re-lookup.
+    if(ccx.GetResolveName() == idval)
+        return JS_TRUE;
+
     XPCNativeScriptableInfo* si = self->GetScriptableInfo();
     uintN enumFlag = si && si->DontEnumStaticProps() ? 0 : JSPROP_ENUMERATE;
 
     return DefinePropertyIfFound(ccx, obj, idval, 
                                  self->GetSet(), nsnull, self->GetScope(),
-                                 JS_TRUE, nsnull, si,
+                                 JS_TRUE, nsnull, nsnull, si,
                                  JSPROP_READONLY |
                                  JSPROP_PERMANENT |
                                  enumFlag);
@@ -1293,11 +1417,15 @@ XPC_WN_TearOff_Resolve(JSContext *cx, JSObject *obj, jsval idval)
     XPCNativeInterface* iface;
     
     if(!to || nsnull == (iface = to->GetInterface()))    
-        return Throw(NS_ERROR_XPC_BAD_OP_ON_WN_PROTO, cx);                   \
+        return Throw(NS_ERROR_XPC_BAD_OP_ON_WN_PROTO, cx);
+
+    // Avoid infinite recursion on getter/setter re-lookup.
+    if(ccx.GetResolveName() == idval)
+        return JS_TRUE;
 
     return DefinePropertyIfFound(ccx, obj, idval, nsnull, iface, 
                                  wrapper->GetScope(),
-                                 JS_TRUE, nsnull, nsnull,
+                                 JS_TRUE, nsnull, nsnull, nsnull,
                                  JSPROP_READONLY |
                                  JSPROP_PERMANENT |
                                  JSPROP_ENUMERATE);
@@ -1338,80 +1466,3 @@ JSClass XPC_WN_Tearoff_JSClass = {
     nsnull                          // spare;
 };
 
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
-
-#if 0
-
-// XXX snipets of code that I may use to restore removed functionality
-
-static JSObject*
-GetDoubleWrappedJSObject(XPCWrappedNativeCallContext& ccx)
-{
-    JSObject* obj = nsnull;
-    nsCOMPtr<nsIXPConnectWrappedJS>
-        underware = do_QueryInterface(ccx.GetIdentityObject());
-    if(underware)
-    {
-        JSObject* mainObj = nsnull;
-        if(NS_SUCCEEDED(underware->GetJSObject(&mainObj)) && mainObj)
-        {
-            jsval val;
-            if(OBJ_GET_PROPERTY(ccx.GetJSContext(), mainObj, ccx.GetJSID(),
-                                &val) && !JSVAL_IS_PRIMITIVE(val))
-            {
-                obj = JSVAL_TO_OBJECT(val);
-            }
-        }
-    }
-    return obj;
-}
-
-    else if(wrapper->GetNative() &&
-            id == clazz->GetRuntime()->
-                            GetStringID(XPCJSRuntime::IDX_WRAPPED_JSOBJECT))
-    {
-        JSObject* realObject = GetDoubleWrappedJSObject(cx, wrapper, id);
-        if(realObject)
-        {
-            // It is a double wrapped object. Figure out if the caller
-            // is allowed to see it.
-
-            XPCContext* xpcc = nsXPConnect::GetContext(cx);
-            if(xpcc)
-            {
-                nsIXPCSecurityManager* sm;
-
-                sm = xpcc->GetAppropriateSecurityManager(
-                                nsIXPCSecurityManager::HOOK_GET_PROPERTY);
-                if(sm)
-                {
-                    nsCOMPtr<nsIInterfaceInfoManager> iimgr =
-                            dont_AddRef(nsXPConnect::GetInterfaceInfoManager());
-                    if(iimgr)
-                    {
-                        const nsIID& iid =
-                            NS_GET_IID(nsIXPCWrappedJSObjectGetter);
-                        nsCOMPtr<nsIInterfaceInfo> info;
-                        if(NS_SUCCEEDED(iimgr->GetInfoForIID(&iid,
-                                                    getter_AddRefs(info))))
-                        {
-                            if(NS_OK != sm->CanGetProperty(cx, iid,
-                                                    wrapper->GetNative(),
-                                                    info, 3, id))
-                            {
-                                // The SecurityManager should have set an exception.
-                                return JS_FALSE;
-                            }
-                        }
-                    }
-                }
-                *vp = OBJECT_TO_JSVAL(realObject);
-                return JS_TRUE;
-            }
-        }
-    }
-
-/***************************************************************************/
-#endif
