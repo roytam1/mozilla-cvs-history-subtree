@@ -161,7 +161,7 @@ si_SetSignonRememberingPref(Bool x)
 MODULE_PRIVATE int PR_CALLBACK
 si_SignonRememberingPrefChanged(const char * newpref, void * data)
 {
-        Bool x;
+        PRBool x;
         PREF_GetBoolPref(pref_rememberSignons, &x);
         si_SetSignonRememberingPref(x);
         return PREF_NOERROR;
@@ -170,7 +170,7 @@ si_SignonRememberingPrefChanged(const char * newpref, void * data)
 void
 si_RegisterSignonPrefCallbacks(void)
 {
-    Bool x;
+    PRBool x;
     static Bool first_time = TRUE;
 
     if(first_time)

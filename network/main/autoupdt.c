@@ -418,7 +418,7 @@ AutoUpdate_Setup(MWContext* cx, char* id, char* url, int32 file_size,
   char *slash;
   PRInt32 cur_size;
   AutoUpdateConnnection autoupdt;
-  XP_Bool enabled;
+  PRBool enabled;
   char *autoupdt_dir;
 
   

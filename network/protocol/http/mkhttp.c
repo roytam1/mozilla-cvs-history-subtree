@@ -367,9 +367,9 @@ net_check_for_company_hostname(ActiveEntry *ce)
     HTTPConData * cd = (HTTPConData *)ce->con_data;
     Bool add_www = FALSE;
     Bool add_com = FALSE;
-    Bool goBrowsing = FALSE;
+    PRBool goBrowsing = PR_FALSE;
    
-    if (PREF_GetBoolPref(pref_goBrowsingEnabled, &goBrowsing) != PREF_OK) goBrowsing = 0;
+    if (PREF_GetBoolPref(pref_goBrowsingEnabled, &goBrowsing) != PREF_OK) goBrowsing = PR_FALSE;
 
     if(!cd->orig_host) {
         char *dot=NULL;
@@ -3780,9 +3780,9 @@ net_CleanupHTTP(void)
 PRIVATE void
 HTTP_ReadPrefs(void)
 {
-    XP_Bool b;
+    PRBool b;
      if ( (PREF_OK != PREF_GetBoolPref(pref_sendRefererHeader, &b)) ) {
-        b = TRUE;
+        b = PR_TRUE;
     }
     NET_SetSendRefererHeader(b);
 }

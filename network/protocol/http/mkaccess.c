@@ -1588,7 +1588,7 @@ NET_CookieBehaviorPrefChanged(const char * newpref, void * data)
 MODULE_PRIVATE int PR_CALLBACK
 NET_CookieWarningPrefChanged(const char * newpref, void * data)
 {
-	Bool	x;
+	PRBool	x;
     if ( (PREF_OK != PREF_GetBoolPref(pref_warnAboutCookies, &x)) ) {
         x = FALSE;
     }
@@ -1682,7 +1682,7 @@ PUBLIC void
 NET_RegisterCookiePrefCallbacks(void)
 {
 	int32	n;
-	Bool	x;
+	PRBool	x;
     char    s[64];
     int len = sizeof(s);
     *s = '\0';

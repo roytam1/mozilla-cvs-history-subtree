@@ -104,7 +104,7 @@ NET_DownloadAutoAdminCfgFile()
 {
 #ifndef MODULAR_NETLIB
 	static XP_Bool first_time = TRUE;
-	XP_Bool append_email;
+	PRBool append_email;
 	char* email_addr;
 	char* url = NULL;
     MWContext* context;
@@ -129,11 +129,11 @@ NET_DownloadAutoAdminCfgFile()
 	}
  
   	if ( !PREF_IsAutoAdminEnabled() ) {
-		XP_Bool failover = FALSE;
+		PRBool failover = PR_FALSE;
         if (PREF_OK != PREF_GetConfigBool("autoadmin.failover_to_cached", &failover)) {
             return;
         }
-		if ( failover == FALSE ) {
+		if ( failover == PR_FALSE ) {
 			NET_DisableGetURL();
 		}
 		FE_Alert(context, XP_GetString(XP_AUTOADMIN_MISSING));
@@ -205,7 +205,7 @@ jsc_save_config(char* bytes, int32 num_bytes)
 PRIVATE int
 jsc_try_failover(MWContext* w)
 {
-	XP_Bool failover;
+	PRBool failover;
 	char* bytes = NULL;
 	int32 num_bytes;
 	XP_StatStruct st;
@@ -215,7 +215,7 @@ jsc_try_failover(MWContext* w)
         goto failed;
     }
 
-	if ( failover == FALSE ) {
+	if ( failover == PR_FALSE ) {
 		FE_Alert(w, XP_GetString(XP_BAD_AUTOCONFIG_NO_FAILOVER));
 		NET_DisableGetURL();
 		return -1;
