@@ -71,7 +71,7 @@ namespace JavaScript
         const Token &peek(bool preferRegExp);
         void redesignate(bool preferRegExp);
         void unget();
-        uint32 getPos() const;
+        size_t getPos() const;
 
       private:
         void syntaxError(const char *message, uint backUp = 1);
@@ -95,7 +95,7 @@ namespace JavaScript
 #endif
 
     // Return the position of the first character of the next token, which must have been peeked.
-    inline uint32 Lexer::getPos() const
+    inline size_t Lexer::getPos() const
     {
         ASSERT(nTokensFwd);
         return nextToken->getPos();

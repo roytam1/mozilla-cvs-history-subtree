@@ -97,8 +97,8 @@ namespace JavaScript {
         }
 #endif
         static StringExprNode *
-        LiteralString(uint32 pos, ExprNode::Kind kind, String &str) {
-            return new(getArena()) StringExprNode(pos,kind,str);
+        LiteralString(size_t pos, ExprNode::Kind kind, String &str) {
+            return new(getArena()) StringExprNode(pos, kind, str);
         }
 #if 0
         static LiteralTypeNode

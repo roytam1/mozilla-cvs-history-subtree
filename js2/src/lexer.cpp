@@ -333,7 +333,7 @@ bool JS::Lexer::lexNumeral()
         reader.recordChar('0');
         ch = getChar();
         if ((ch&~0x20) == 'X') {
-            uint32 pos = reader.getPos();
+            size_t pos = reader.getPos();
             char16 ch2 = getChar();
             if (isASCIIHexDigit(ch2, digit)) {
                 reader.recordChar(ch);
@@ -354,7 +354,7 @@ bool JS::Lexer::lexNumeral()
         ch = getChar();
     }
     if ((ch&~0x20) == 'E') {
-        uint32 pos = reader.getPos();
+        size_t pos = reader.getPos();
         char16 ch2 = getChar();
         char16 sign = 0;
         if (ch2 == '+' || ch2 == '-') {

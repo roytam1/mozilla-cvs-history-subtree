@@ -229,7 +229,7 @@ namespace JavaScript
 #endif
         Kind kind;              // The token's kind
         bool lineBreak;         // True if line break precedes this token
-        uint32 pos;             // Source position of this token
+        size_t pos;             // Source position of this token
         const StringAtom *id;   // The token's characters; non-nil for identifiers, keywords, and regular expressions only
         String chars;           // The token's characters; valid for strings, units, numbers, and regular expression flags only
         float64 value;          // The token's value (numbers only)
@@ -247,7 +247,7 @@ namespace JavaScript
         bool hasIdentifierKind() const {ASSERT(nonreservedEnd == identifier && kindsEnd == identifier+1); return kind >= nonreservedBegin;}
         bool getFlag(Flag f) const {ASSERT(valid); return (kindFlags[kind] & 1<<f) != 0;}
         bool getLineBreak() const {ASSERT(valid); return lineBreak;}
-        uint32 getPos() const {ASSERT(valid); return pos;}
+        size_t getPos() const {ASSERT(valid); return pos;}
         const StringAtom &getIdentifier() const {ASSERT(valid && id); return *id;}
         const String &getChars() const {ASSERT(valid && kind >= kindsWithCharsBegin && kind < kindsWithCharsEnd); return chars;}
         float64 getValue() const {ASSERT(valid && kind == number); return value;}
