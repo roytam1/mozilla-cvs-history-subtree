@@ -26,6 +26,7 @@ var msgNavigationService;
 
 var gFolderTree; 
 var gThreadTree;
+var gThreadOutliner;
 var gMessagePane;
 var gMessagePaneFrame;
 
