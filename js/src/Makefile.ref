@@ -69,6 +69,20 @@ CFLAGS += $(PERLCFLAGS)
 LDFLAGS += $(PERLLDFLAGS)
 endif
 
+#
+# Line editing support.
+#
+ifdef JS_READLINE
+DEFINES += -DEDITLINE
+OTHER_LIBS += -lreadline
+else
+ifdef JS_EDITLINE
+PREDIRS += editline
+DEFINES += -DEDITLINE
+OTHER_LIBS += -Leditline/$(OBJDIR) -ledit
+endif
+endif
+
 # For purify
 PURE_CFLAGS     = -DXP_UNIX $(OPTIMIZER) $(PURE_OS_CFLAGS) $(DEFINES) \
                   $(INCLUDES) $(XCFLAGS)

@@ -104,13 +104,14 @@ export:
 	+$(LOOP_OVER_DIRS)
 
 clean:
+	+$(LOOP_OVER_PREDIRS)
 	rm -rf $(OBJS)
-	cd fdlibm; $(MAKE) -f Makefile.ref clean
-
+	+$(LOOP_OVER_DIRS)
 
 clobber:
+	+$(LOOP_OVER_PREDIRS)
 	rm -rf $(OBJS) $(TARGETS) $(DEPENDENCIES)
-	cd fdlibm; $(MAKE) -f Makefile.ref clobber
+	+$(LOOP_OVER_DIRS)
 
 depend:
 	gcc -MM $(CFLAGS) $(LIB_CFILES)

@@ -483,9 +483,6 @@ js_ReportCompileError(JSContext *cx, JSTokenStream *ts, uintN flags,
 	(*onError)(cx, message, &report);
 #if !defined XP_PC || !defined _MSC_VER || _MSC_VER > 800
     } else {
-	if (!(ts->flags & TSF_INTERACTIVE))
-	    fprintf(stderr, "JavaScript %s: ",
-		    JSREPORT_IS_WARNING(flags) ? "warning" : "error");
 	if (ts->filename)
 	    fprintf(stderr, "%s, ", ts->filename);
 	if (ts->lineno)
@@ -586,12 +583,9 @@ js_ReportCompileErrorNumber(JSContext *cx, JSTokenStream *ts, uintN flags,
         }
         if (onError)
             (*onError)(cx, message, &report);
-
+#if 0
 #if !defined XP_PC || !defined _MSC_VER || _MSC_VER > 800
     } else {
-	if (!(ts->flags & TSF_INTERACTIVE))
-	    fprintf(stderr, "JavaScript %s: ",
-		    JSREPORT_IS_WARNING(flags) ? "warning" : "error");
 	if (ts->filename)
 	    fprintf(stderr, "%s, ", ts->filename);
 	if (ts->lineno)
@@ -599,6 +593,7 @@ js_ReportCompileErrorNumber(JSContext *cx, JSTokenStream *ts, uintN flags,
 	fprintf(stderr, "%s:\n%s\n",message,
 		js_DeflateString(cx, ts->linebuf.base,
 				 ts->linebuf.limit - ts->linebuf.base));
+#endif
 #endif
     }
     if (lastc == '\n')
@@ -623,15 +618,11 @@ js_PeekToken(JSContext *cx, JSTokenStream *ts)
 JSTokenType
 js_PeekTokenSameLine(JSContext *cx, JSTokenStream *ts)
 {
-    uintN newlines;
     JSTokenType tt;
 
-    newlines = ts->flags & TSF_NEWLINES;
-    if (!newlines)
-	SCAN_NEWLINES(ts);
+    SCAN_NEWLINES(ts);
     tt = js_PeekToken(cx, ts);
-    if (!newlines)
-	HIDE_NEWLINES(ts);
+    HIDE_NEWLINES(ts);
     return tt;
 }
 

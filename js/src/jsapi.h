@@ -771,9 +771,27 @@ JS_CompileUCScriptForPrincipals(JSContext *cx, JSObject *obj,
 				const jschar *chars, size_t length,
 				const char *filename, uintN lineno);
 
+/*
+ * Given a buffer, return JS_FALSE if the buffer might become a valid
+ * javascript statement with the addition of more lines.  Otherwise return
+ * JS_TRUE.  The intended use is to support interactive compilation, by
+ * accumulating lines in a buffer until JS_BufferIsCompilableUnit is true, then
+ * passing it to the compiler.
+ */
+extern JS_PUBLIC_API(JSBool)
+JS_BufferIsCompilableUnit(JSContext *cx, JSObject *obj,
+                          const char *bytes, size_t length);
+
 #ifdef JSFILE
 extern JS_PUBLIC_API(JSScript *)
 JS_CompileFile(JSContext *cx, JSObject *obj, const char *filename);
+
+/* for FILE */
+#include <stdio.h>
+
+extern JS_PUBLIC_API(JSScript *)
+JS_CompileFileHandle(JSContext *cx, JSObject *obj, const char *filename,
+                     FILE *fh);
 #endif
 
 extern JS_PUBLIC_API(JSObject *)

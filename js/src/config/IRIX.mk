@@ -56,3 +56,6 @@ OS_CFLAGS = $(PURE_OS_CFLAGS) -MDupdate $(DEPENDENCIES)
 
 BSDECHO	= echo
 MKSHLIB = $(LD) -shared
+
+# Use the editline library to provide line-editing support.
+JS_EDITLINE = 1

@@ -1941,11 +1941,10 @@ JS_DefineFunction(JSContext *cx, JSObject *obj, const char *name, JSNative call,
 
 static JSScript *
 CompileTokenStream(JSContext *cx, JSObject *obj, JSTokenStream *ts,
-		   void *tempMark)
+		   void *tempMark, JSBool *eofp)
 {
     JSCodeGenerator cg;
     JSScript *script;
-    uintN lineno;
 
     CHECK_REQUEST(cx);
     if (!js_InitCodeGenerator(cx, &cg, ts->filename, ts->lineno,
@@ -1953,9 +1952,10 @@ CompileTokenStream(JSContext *cx, JSObject *obj, JSTokenStream *ts,
 	script = NULL;
 	goto out;
     }
-    lineno = ts->lineno;
     if (!js_CompileTokenStream(cx, obj, ts, &cg)) {
 	script = NULL;
+        if (eofp)
+            *eofp = (ts->flags & TSF_EOF) != 0;
 	goto out;
     }
     script = js_NewScriptFromCG(cx, &cg, NULL);
@@ -2030,7 +2030,56 @@ JS_CompileUCScriptForPrincipals(JSContext *cx, JSObject *obj,
     ts = js_NewTokenStream(cx, chars, length, filename, lineno, principals);
     if (!ts)
 	return NULL;
-    return CompileTokenStream(cx, obj, ts, mark);
+    return CompileTokenStream(cx, obj, ts, mark, NULL);
+}
+
+extern JS_PUBLIC_API(JSBool)
+JS_BufferIsCompilableUnit(JSContext *cx, JSObject *obj,
+                          const char *bytes, size_t length)
+{
+    jschar *chars;
+    JSScript *script;
+    void *mark;
+    JSTokenStream *ts;
+    JSErrorReporter older;
+    JSBool hitEOF;
+    JSBool result;
+    JSExceptionState *exnState;
+
+    CHECK_REQUEST(cx);
+    mark = JS_ARENA_MARK(&cx->tempPool);
+    chars = js_InflateString(cx, bytes, length);
+    if (!chars)
+	return JS_TRUE;
+    exnState = JS_SaveExceptionState(cx);
+    ts = js_NewTokenStream(cx, chars, length, NULL, 0, NULL);
+    if (!ts) {
+        result = JS_TRUE;
+        goto out;
+    }
+
+    hitEOF = JS_FALSE;
+    older = JS_SetErrorReporter(cx, NULL);
+    script = CompileTokenStream(cx, obj, ts, mark, &hitEOF);
+    JS_SetErrorReporter(cx, older);
+
+    if (script == NULL) {
+        /*
+         * We ran into an error, but it was because we ran out of source,
+         * and not for some other reason.  For this case (and this case
+         * only) we return false, so the calling function knows to try to
+         * collect more source.
+         */
+        result = hitEOF ? JS_FALSE : JS_TRUE;
+    } else {
+        result = JS_TRUE;
+        js_DestroyScript(cx, script);
+    }        
+
+out:
+    JS_free(cx, chars);
+    JS_RestoreExceptionState(cx, exnState);
+    return result;
 }
 
 #ifdef JSFILE
@@ -2045,7 +2094,23 @@ JS_CompileFile(JSContext *cx, JSObject *obj, const char *filename)
     ts = js_NewFileTokenStream(cx, filename, stdin);
     if (!ts)
 	return NULL;
-    return CompileTokenStream(cx, obj, ts, mark);
+    return CompileTokenStream(cx, obj, ts, mark, NULL);
+}
+
+JS_PUBLIC_API(JSScript *)
+JS_CompileFileHandle(JSContext *cx, JSObject *obj, const char *filename,
+                     FILE *fh)
+{
+    void *mark;
+    JSTokenStream *ts;
+
+    CHECK_REQUEST(cx);
+    mark = JS_ARENA_MARK(&cx->tempPool);
+    ts = js_NewFileTokenStream(cx, NULL, fh);
+    if (!ts)
+	return NULL;
+    ts->filename = filename;
+    return CompileTokenStream(cx, obj, ts, mark, NULL);
 }
 #endif
 
