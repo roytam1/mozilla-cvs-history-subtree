@@ -1,3 +1,8 @@
+1998-09-18  Leif Hedstrom  <leif@netscape.com>
+
+	* Conn.pm (init): Changed call to ldapssl_client_init() to pass a
+	0 value as the handle pointer. This avoids a Perl compiler warning.
+
 1998-09-12  Leif Hedstrom  <leif@netscape.com>
 
 	* LDIF.pm (readEntries): Changed tests for empty arguments, to use
