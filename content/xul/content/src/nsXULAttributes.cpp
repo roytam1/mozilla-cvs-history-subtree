@@ -727,7 +727,7 @@ nsresult nsXULAttributes::UpdateStyleRule(nsIURI* aDocURL, const nsAReadableStri
     }
 
     nsCOMPtr<nsIStyleRule> rule;
-    result = css->ParseDeclarations(aValue, aDocURL, *getter_AddRefs(rule));
+    result = css->ParseStyleAttribute(aValue, aDocURL, getter_AddRefs(rule));
     
     if ((NS_OK == result) && rule) {
       mStyleRule = rule;
