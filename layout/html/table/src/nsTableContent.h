@@ -77,6 +77,13 @@ public:
     **/
   void SetTable (nsTablePart *aTable);
 
+
+  /** Set the children of this piece of content to
+    * be aTable 
+    **/
+  void SetTableForChildren(nsTablePart *aTable);
+
+
   /** @see nsITableContent::IsImplicit */
   virtual PRBool IsImplicit () const;
 
