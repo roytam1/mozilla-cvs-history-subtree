@@ -545,11 +545,11 @@ NS_IMETHODIMP
 nsSVGElement::GetParentNode(nsIDOMNode** aParentNode)
 {
   if (mParent) {
-    return mParent->QueryInterface(NS_GET_IID(nsIDOMNode), (void**) aParentNode);
+    return CallQueryInterface(mParent, aParentNode);
   }
-  else if (mDocument) {
+  if (mDocument) {
     // we're the root content
-    return mDocument->QueryInterface(NS_GET_IID(nsIDOMNode), (void**)aParentNode);
+    return CallQueryInterface(mDocument, aParentNode);
   }
 
   // A standalone element (i.e. one without a parent or a document)
@@ -562,16 +562,15 @@ nsSVGElement::GetChildNodes(nsIDOMNodeList** aChildNodes)
 {
   nsDOMSlots *slots = GetDOMSlots();
 
-  if (nsnull == slots->mChildNodes) {
+  if (!slots->mChildNodes) {
     slots->mChildNodes = new nsChildContentList(this);
-    if (nsnull == slots->mChildNodes) {
+    if (!slots->mChildNodes) {
       return NS_ERROR_OUT_OF_MEMORY;
     }
     NS_ADDREF(slots->mChildNodes);
   }
-  
-  return slots->mChildNodes->QueryInterface(NS_GET_IID(nsIDOMNodeList),
-                                            (void **)aChildNodes);
+
+  return CallQueryInterface(slots->mChildNodes, aChildNodes);
 }
 
 NS_IMETHODIMP
@@ -580,7 +579,7 @@ nsSVGElement::GetFirstChild(nsIDOMNode** aNode)
   if (mChildren.Count() > 0) {
     nsIContent *child = (nsIContent *)mChildren.ElementAt(0);
     if (child) // is this necessary?
-      return child->QueryInterface(NS_GET_IID(nsIDOMNode), (void**)aNode);
+      return CallQueryInterface(child, aNode);
   }
 
   *aNode = nsnull;
@@ -593,7 +592,7 @@ nsSVGElement::GetLastChild(nsIDOMNode** aNode)
   if (mChildren.Count() > 0) {
     nsIContent *child = (nsIContent *)mChildren.ElementAt(mChildren.Count()-1);
     if (child) // is this necessary?
-      return child->QueryInterface(NS_GET_IID(nsIDOMNode), (void**)aNode);
+    return CallQueryInterface(child, aNode);
   }
 
   *aNode = nsnull;

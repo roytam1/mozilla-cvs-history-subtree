@@ -145,7 +145,8 @@ case "$target" in
     AC_CHECK_PROGS(CXX, cl)
     AC_CHECK_PROGS(LD, link)
     AC_CHECK_PROGS(MIDL, midl)    
-    
+    AC_PATH_PROGS(AS, ml)
+
     # Make sure compilers are valid
     CFLAGS="$CFLAGS -TC"
     CXXFLAGS="$CXXFLAGS -TP"
@@ -502,10 +503,6 @@ if test -n "$CROSS_COMPILE"; then
     case "${target_os}" in
         linux*)       OS_ARCH=Linux ;;
         solaris*)     OS_ARCH=SunOS OS_RELEASE=5 ;;
-        openvms*)     OS_TARGET=`uname -s`
-                      OS_ARCH=`uname -s | sed -e 's|/|_|g'`
-                      OS_RELEASE=`uname -r`
-                      OS_TEST=`uname -Wh`;;
     esac
 else
     OS_TARGET=`uname -s`
@@ -1187,16 +1184,18 @@ case "$target" in
     ;;
 
 *-openvms*) 
-    if test "$OS_TARGET" = "POSIX_for_OpenVMS_AXP"; then
-	dnl Hack...
-	_OPENVMS_CROSS_COMPILE=1
-    fi
     AC_DEFINE(NO_PW_GECOS)
     AC_DEFINE(NO_UDSOCK)
     AC_DEFINE(POLL_WITH_XCONNECTIONNUMBER)
     USE_PTHREADS=1
     MKSHLIB_FORCE_ALL='-all'
     MKSHLIB_UNFORCE_ALL='-none'
+    AS='as'
+    AS_DASH_C_FLAG='-Wc/names=as_is'
+    AR_FLAGS='c $@'
+    DSO_LDOPTS='-shared -auto_symvec'
+    DSO_PIC_CFLAGS=
+    COMPAQ_CXX=1
     ;;
 
 
@@ -3187,10 +3186,10 @@ MOZ_ARG_HEADER(Components and Features)
 dnl =========================================================
 dnl = Calendar client
 dnl =========================================================
-MOZ_CALENDAR=
 MOZ_ARG_ENABLE_BOOL(calendar,
 [  --enable-calendar       Enable building of the calendar client],
-    MOZ_CALENDAR=1 )
+    MOZ_CALENDAR=1,
+    MOZ_CALENDAR= )
 AC_SUBST(MOZ_CALENDAR)
 
 dnl =========================================================
@@ -3209,16 +3208,6 @@ MOZ_LDAP_XPCOM=1
 MOZ_ARG_DISABLE_BOOL(ldap,
 [  --disable-ldap          Disable LDAP support],
     MOZ_LDAP_XPCOM=)
-
-dnl =========================================================
-dnl = Calendar
-dnl =========================================================
-if test "$MOZ_CALENDAR"; then
-    AC_CHECK_LIB(ical, icalproperty_new_location, [_dummy=foo],
-        AC_MSG_ERROR([Calendar requires libical]))
-fi
-
-AC_SUBST(MOZ_CALENDAR)
 
 dnl ========================================================
 dnl = Phoenix
@@ -3312,10 +3301,17 @@ fi
 dnl ========================================================
 dnl = Build Personal Security Manager
 dnl ========================================================
-MOZ_PSM=
 MOZ_ARG_ENABLE_BOOL(crypto,
 [  --enable-crypto         Enable crypto support (Personal Security Manager)],
-    MOZ_PSM=1 )
+    MOZ_PSM=1,
+    MOZ_PSM= )
+case $target in
+*-cygwin*|*-mingw*|*-msvc*|*-mksnt*)
+    if test -n "$MOZ_PSM" -a ! -e "$AS_BIN"; then
+        AC_MSG_ERROR([Building crypto support requires a valid version of the standalone assembler, ml.exe.])
+    fi
+    ;;
+esac
 
 dnl ========================================================
 dnl = JS Debugger XPCOM component (js/jsd)
@@ -4473,10 +4469,6 @@ if test -n "$CROSS_COMPILE"; then
         HOST_LIBIDL_CFLAGS="$LIBIDL_CFLAGS"
         HOST_LIBIDL_LIBS="$LIBIDL_LIBS"
     fi
-    if test "$OS_TARGET" = "POSIX_for_OpenVMS_AXP"; then
-      LIBIDL_CFLAGS=`${LIBIDL_CONFIG}-VMS --cflags`
-      LIBIDL_LIBS=`${LIBIDL_CONFIG}-VMS --libs`
-    fi
 fi
 
 if test -z "$SKIP_PATH_CHECKS" && test -z "$MOZ_ENABLE_GTK2"; then
@@ -4870,7 +4862,7 @@ elif test "$OS_ARCH" = "Darwin"; then
   AC_DEFINE(UNIX_EMBED)
   AC_DEFINE(UNIX_LDAP)
   AC_DEFINE(UNIX_ASYNC_DNS)
-elif test "$OS_ARCH" = "POSIX_for_OpenVMS_AXP"; then
+elif test "$OS_ARCH" = "OpenVMS"; then
   AC_DEFINE(XP_UNIX)
   AC_DEFINE(UNIX_ASYNC_DNS)
 else

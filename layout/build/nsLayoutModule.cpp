@@ -144,6 +144,7 @@ Shutdown(nsIModule* self)
   nsRepeatService::Shutdown();
   nsSprocketLayout::Shutdown();
   nsStackLayout::Shutdown();
+  nsBox::Shutdown();
 #endif
 
   // Release all of our atoms

@@ -293,18 +293,16 @@ CNavDTD::~CNavDTD(){
  * @param 
  * @return
  */
-nsresult CNavDTD::CreateNewInstance(nsIDTD** aInstancePtrResult){
+nsresult CNavDTD::CreateNewInstance(nsIDTD** aInstancePtrResult)
+{
+  nsresult result = NS_NewNavHTMLDTD(aInstancePtrResult);
+  NS_ENSURE_SUCCESS(result, result);
 
-  nsresult result=NS_NewNavHTMLDTD(aInstancePtrResult);
-
-  if(aInstancePtrResult) {
-    CNavDTD *theOtherDTD=(CNavDTD*)*aInstancePtrResult;
-    if(theOtherDTD) {
-      theOtherDTD->mDTDMode=mDTDMode;
-      theOtherDTD->mParserCommand=mParserCommand;
-      theOtherDTD->mDocType=mDocType;
-    }
-  }
+  CNavDTD* dtd = NS_STATIC_CAST(CNavDTD*, *aInstancePtrResult);
+    
+  dtd->mDTDMode = mDTDMode;
+  dtd->mParserCommand = mParserCommand;
+  dtd->mDocType = mDocType;
 
   return result;
 }
@@ -802,14 +800,13 @@ nsresult CNavDTD::HandleToken(CToken* aToken,nsIParser* aParser){
     }
     else if(mFlags & NS_DTD_FLAG_MISPLACED_CONTENT) {
       // Included TD & TH to fix Bug# 20797
-      static eHTMLTags gLegalElements[] = {eHTMLTag_table, eHTMLTag_tr, eHTMLTag_td,
-                                           eHTMLTag_th, eHTMLTag_caption, eHTMLTag_colgroup,
-                                           eHTMLTag_col, eHTMLTag_tbody, eHTMLTag_thead,
-                                           eHTMLTag_tfoot};
-      if (theToken) {
-        eHTMLTags theParentTag = mBodyContext->Last();
-        theTag = (eHTMLTags)theToken->GetTypeID();
-        if (FindTagInSet(theTag,gLegalElements,sizeof(gLegalElements)/sizeof(theTag))) { 
+      static eHTMLTags gLegalElements[]={eHTMLTag_table,eHTMLTag_thead,eHTMLTag_tbody,
+                                         eHTMLTag_tr,eHTMLTag_td,eHTMLTag_th,eHTMLTag_tfoot};
+      if(theToken) {
+        eHTMLTags theParentTag=mBodyContext->Last();
+        theTag=(eHTMLTags)theToken->GetTypeID();
+        if((FindTagInSet(theTag,gLegalElements,sizeof(gLegalElements)/sizeof(theTag))) ||
+          (gHTMLElements[theParentTag].CanContain(theTag)) && (theTag!=eHTMLTag_comment)) { // Added comment -> bug 40855
             
           mFlags &= ~NS_DTD_FLAG_MISPLACED_CONTENT; // reset the state since all the misplaced tokens are about to get handled.
 
@@ -843,7 +840,6 @@ nsresult CNavDTD::HandleToken(CToken* aToken,nsIParser* aParser){
 
       switch(theTag) {
         case eHTMLTag_html:
-        case eHTMLTag_iframe:
         case eHTMLTag_noframes:
         case eHTMLTag_noscript:
         case eHTMLTag_script:

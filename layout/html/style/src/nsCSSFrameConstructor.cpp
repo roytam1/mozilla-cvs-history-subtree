@@ -93,7 +93,8 @@
 #include "nsIAnonymousContentCreator.h"
 #include "nsIFrameManager.h"
 #include "nsIAttributeContent.h"
-#include "nsIPref.h"
+#include "nsIPrefBranch.h"
+#include "nsIPrefService.h"
 #include "nsLegendFrame.h"
 #include "nsIContentIterator.h"
 #include "nsBoxLayoutState.h"
@@ -1622,6 +1623,8 @@ nsCSSFrameConstructor::CreateGeneratedContentFrame(nsIPresShell*        aPresShe
         }        
         InitAndRestoreFrame(aPresContext, aState, aContent, 
                             aFrame, pseudoStyleContext, nsnull, containerFrame);
+        nsHTMLContainerFrame::CreateViewForFrame(aPresContext, containerFrame,
+                                                 pseudoStyleContext, nsnull, PR_FALSE);
 
         // Mark the frame as being associated with generated content
         nsFrameState  frameState;
@@ -1646,6 +1649,7 @@ nsCSSFrameConstructor::CreateGeneratedContentFrame(nsIPresShell*        aPresShe
           result = CreateGeneratedFrameFor(aPresContext, mDocument, containerFrame,
                                            aContent, textStyleContext,
                                            styleContent, contentIndex, &frame);
+          // Non-elements can't possibly have a view, so don't bother checking
           if (NS_SUCCEEDED(result) && frame) {
             // Add it to the list of child frames
             childFrames.AddChild(frame);
@@ -2622,6 +2626,8 @@ nsCSSFrameConstructor::ConstructTableCaptionFrame(nsIPresShell*            aPres
   if (NS_FAILED(rv)) return rv;
   InitAndRestoreFrame(aPresContext, aState, aContent, 
                       parentFrame, aStyleContext, nsnull, aNewFrame);
+  nsHTMLContainerFrame::CreateViewForFrame(aPresContext, aNewFrame,
+                                           aStyleContext, nsnull, PR_FALSE);
 
   nsFrameItems childItems;
   // pass in aTableCreator so ProcessChildren will call TableProcessChildren
@@ -2683,6 +2689,8 @@ nsCSSFrameConstructor::ConstructTableRowGroupFrame(nsIPresShell*            aPre
     if (NS_FAILED(rv)) return rv;
     InitAndRestoreFrame(aPresContext, aState, aContent, parentFrame, 
                         aStyleContext, nsnull, aNewFrame);
+    nsHTMLContainerFrame::CreateViewForFrame(aPresContext, aNewFrame,
+                                             aStyleContext, nsnull, PR_FALSE);
   }
 
   if (!aIsPseudo) {
@@ -2794,6 +2802,8 @@ nsCSSFrameConstructor::ConstructTableRowFrame(nsIPresShell*            aPresShel
   if (NS_FAILED(rv)) return rv;
   InitAndRestoreFrame(aPresContext, aState, aContent, 
                       parentFrame, aStyleContext, nsnull, aNewFrame);
+  nsHTMLContainerFrame::CreateViewForFrame(aPresContext, aNewFrame,
+                                           aStyleContext, nsnull, PR_FALSE);
   if (!aIsPseudo) {
     nsFrameItems childItems;
     nsIFrame* captionFrame;
@@ -2923,6 +2933,9 @@ nsCSSFrameConstructor::ConstructTableCellFrame(nsIPresShell*            aPresShe
   // Initialize the table cell frame
   InitAndRestoreFrame(aPresContext, aState, aContent, 
                       parentFrame, aStyleContext, nsnull, aNewCellOuterFrame);
+  nsHTMLContainerFrame::CreateViewForFrame(aPresContext, aNewCellOuterFrame,
+                                           aStyleContext, nsnull, PR_FALSE);
+
   // Create a block frame that will format the cell's content
   rv = aTableCreator.CreateTableCellInnerFrame(&aNewCellInnerFrame);
 
@@ -4226,10 +4239,10 @@ nsCSSFrameConstructor::HasGfxScrollbars()
 #endif
   // Get the Prefs
   if (!mGotGfxPrefs) {
-    nsCOMPtr<nsIPref> pref(do_GetService(NS_PREF_CONTRACTID));
-    if (pref) {
+    nsCOMPtr<nsIPrefBranch> prefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID));
+    if (prefBranch) {
       PRBool hasGfxScroll = PR_FALSE; // use a temp since we have a PRPackedBool
-      pref->GetBoolPref("nglayout.widget.gfxscrollbars", &hasGfxScroll);
+      prefBranch->GetBoolPref("nglayout.widget.gfxscrollbars", &hasGfxScroll);
       mHasGfxScrollbars = hasGfxScroll;
       mGotGfxPrefs = PR_TRUE;
     } else {
@@ -4246,10 +4259,10 @@ PRBool
 nsCSSFrameConstructor::UseXBLForms()
 {
   if (!mGotXBLFormPrefs) {
-    nsCOMPtr<nsIPref> pref(do_GetService(NS_PREF_CONTRACTID));
-    if (pref) {
+    nsCOMPtr<nsIPrefBranch> prefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID));
+    if (prefBranch) {
       PRBool useXBLForms = PR_FALSE; // use a temp since we have a PRPackedBool
-      pref->GetBoolPref("nglayout.debug.enable_xbl_forms", &useXBLForms);
+      prefBranch->GetBoolPref("nglayout.debug.enable_xbl_forms", &useXBLForms);
       mUseXBLForms = useXBLForms;
       mGotXBLFormPrefs = PR_TRUE;
     }
@@ -6530,48 +6543,8 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
       NS_NewRelativeItemWrapperFrame(aPresShell, &newFrame);
       isBlockFrame = PR_TRUE;
 
-      // Initialize the frame    
-      InitAndRestoreFrame(aPresContext, aState, aContent, 
-                          adjParentFrame, aStyleContext, nsnull, newFrame);
-
-      // Create a view
-      nsHTMLContainerFrame::CreateViewForFrame(aPresContext, newFrame,
-                                               aStyleContext, nsnull, PR_FALSE);
-
-      // Process the child content. Relatively positioned frames becomes a
-      // container for child frames that are positioned
-      nsFrameConstructorSaveState absoluteSaveState;
-      nsFrameConstructorSaveState floaterSaveState;
-      nsFrameItems                childItems;
-
-      aState.PushAbsoluteContainingBlock(newFrame, absoluteSaveState);
-    
-      PRBool haveFirstLetterStyle, haveFirstLineStyle;
-      HaveSpecialBlockStyle(aPresContext, aContent, aStyleContext,
-                            &haveFirstLetterStyle, &haveFirstLineStyle);
-      aState.PushFloaterContainingBlock(newFrame, floaterSaveState,
-                                        haveFirstLetterStyle,
-                                        haveFirstLineStyle);
-
-      ProcessChildren(aPresShell, aPresContext, aState, aContent, newFrame, PR_TRUE,
-                      childItems, isBlockFrame);
-
-      nsCOMPtr<nsIAtom> tag;
-      aContent->GetTag(*getter_AddRefs(tag));
-      CreateAnonymousFrames(aPresShell, aPresContext, tag, aState, aContent, newFrame,
-                            childItems);
-
-      // Set the frame's initial child list
-      newFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
-      if (aState.mAbsoluteItems.childList) {
-        newFrame->SetInitialChildList(aPresContext, nsLayoutAtoms::absoluteList,
-                                      aState.mAbsoluteItems.childList);
-      }
-      if (aState.mFloatedItems.childList) {
-        newFrame->SetInitialChildList(aPresContext,
-                                      nsLayoutAtoms::floaterList,
-                                      aState.mFloatedItems.childList);
-      }
+      ConstructBlock(aPresShell, aPresContext, aState, aDisplay, aContent,
+                     adjParentFrame, aStyleContext, newFrame, PR_TRUE);
     } else {
       // Create a positioned inline frame
       NS_NewPositionedInlineFrame(aPresShell, &newFrame);
@@ -6595,7 +6568,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
       nsPseudoFrames savePseudo;
       aState.mPseudoFrames.Reset(&savePseudo);
       rv = ConstructBlock(aPresShell, aPresContext, aState, aDisplay, aContent,
-                          adjParentFrame, aStyleContext, newFrame);
+                          adjParentFrame, aStyleContext, newFrame, PR_FALSE);
       if (!aState.mPseudoFrames.IsEmpty()) { // process pending pseudo frames
         ProcessPseudoFrames(aPresContext, aState.mPseudoFrames, aFrameItems); 
       }
@@ -11513,7 +11486,7 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsIPresShell*   aPresShell,
     }
   
   } else if (nsLayoutAtoms::areaFrame == frameType) {
-    rv = NS_NewAreaFrame(aPresShell, &newFrame);
+    rv = NS_NewAreaFrame(aPresShell, &newFrame, 0);
     if (NS_SUCCEEDED(rv)) {
       newFrame->Init(aPresContext, content, aParentFrame, styleContext,
                      aFrame);
@@ -13377,14 +13350,15 @@ nsCSSFrameConstructor::CreateListBoxContent(nsIPresContext* aPresContext,
 //----------------------------------------
 
 nsresult
-nsCSSFrameConstructor::ConstructBlock(nsIPresShell* aPresShell, 
+nsCSSFrameConstructor::ConstructBlock(nsIPresShell*            aPresShell, 
                                       nsIPresContext*          aPresContext,
                                       nsFrameConstructorState& aState,
                                       const nsStyleDisplay*    aDisplay,
                                       nsIContent*              aContent,
                                       nsIFrame*                aParentFrame,
                                       nsIStyleContext*         aStyleContext,
-                                      nsIFrame*                aNewFrame)
+                                      nsIFrame*                aNewFrame,
+                                      PRBool                   aRelPos)
 {
   InitAndRestoreFrame(aPresContext, aState, aContent, 
                       aParentFrame, aStyleContext, nsnull, aNewFrame);
@@ -13405,8 +13379,10 @@ nsCSSFrameConstructor::ConstructBlock(nsIPresShell* aPresShell,
 
   // ...and that we're the absolute containing block.
   nsFrameConstructorSaveState absoluteSaveState;
-  if (! aState.mAbsoluteItems.containingBlock)
+  if (aRelPos || !aState.mAbsoluteItems.containingBlock) {
+    NS_ASSERTION(aRelPos, "should have made area frame for this");
     aState.PushAbsoluteContainingBlock(aNewFrame, absoluteSaveState);
+  }
 
   // See if the block has first-letter style applied to it...
   PRBool haveFirstLetterStyle, haveFirstLineStyle;
@@ -13435,6 +13411,11 @@ nsCSSFrameConstructor::ConstructBlock(nsIPresShell* aPresShell,
     aNewFrame->SetInitialChildList(aPresContext,
                                    nsLayoutAtoms::floaterList,
                                    aState.mFloatedItems.childList);
+  }
+  // and the same for absolutely positioned children.
+  if (aRelPos && aState.mAbsoluteItems.childList) {
+    aNewFrame->SetInitialChildList(aPresContext, nsLayoutAtoms::absoluteList,
+                                   aState.mAbsoluteItems.childList);
   }
 
   return rv;
@@ -13540,11 +13521,12 @@ nsCSSFrameConstructor::ConstructInline(nsIPresShell*            aPresShell,
   nsFrameConstructorSaveState absoluteSaveState;  // definition cannot be inside next block
                                                   // because the object's destructor is significant
                                                   // this is part of the fix for bug 42372
-  if (aIsPositioned) {                            
-    // Relatively positioned frames need a view
-    nsHTMLContainerFrame::CreateViewForFrame(aPresContext, aNewFrame,
-                                             aStyleContext, nsnull, PR_FALSE);
 
+  // Any inline frame might need a view (because of opacity, or fixed background)
+  nsHTMLContainerFrame::CreateViewForFrame(aPresContext, aNewFrame,
+                                           aStyleContext, nsnull, PR_FALSE);
+
+  if (aIsPositioned) {                            
     // Relatively positioned frames becomes a container for child
     // frames that are positioned
     aState.PushAbsoluteContainingBlock(aNewFrame, absoluteSaveState);
@@ -13652,11 +13634,11 @@ nsCSSFrameConstructor::ConstructInline(nsIPresShell*            aPresShell,
   InitAndRestoreFrame(aPresContext, aState, aContent, 
                       aParentFrame, blockSC, nsnull, blockFrame);  
 
-  if (aIsPositioned) {
-    // Relatively positioned frames need a view
-    nsHTMLContainerFrame::CreateViewForFrame(aPresContext, blockFrame,
-                                             aStyleContext, nsnull, PR_FALSE);
+  // Any inline frame could have a view (e.g., opacity)
+  nsHTMLContainerFrame::CreateViewForFrame(aPresContext, blockFrame,
+                                           aStyleContext, nsnull, PR_FALSE);
 
+  if (aIsPositioned) {
     // Move list2's frames into the new view
     nsIFrame* oldParent;
     list2->GetParent(&oldParent);
@@ -13685,11 +13667,11 @@ nsCSSFrameConstructor::ConstructInline(nsIPresShell*            aPresShell,
     InitAndRestoreFrame(aPresContext, aState, aContent, 
                         aParentFrame, aStyleContext, nsnull, inlineFrame);
 
-    if (aIsPositioned) {
-      // Relatively positioned frames need a view
-      nsHTMLContainerFrame::CreateViewForFrame(aPresContext, inlineFrame,
-                                               aStyleContext, nsnull, PR_FALSE);
+    // Any frame might need a view
+    nsHTMLContainerFrame::CreateViewForFrame(aPresContext, inlineFrame,
+                                             aStyleContext, nsnull, PR_FALSE);
 
+    if (aIsPositioned) {
       // Move list3's frames into the new view
       nsIFrame* oldParent;
       list3->GetParent(&oldParent);
