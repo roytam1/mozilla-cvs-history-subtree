@@ -79,6 +79,8 @@ namespace JS2Runtime {
 #define JSDOUBLE_IS_FINITE(x)                                                 \
     ((JSDOUBLE_HI32(x) & JSDOUBLE_HI32_EXPMASK) != JSDOUBLE_HI32_EXPMASK)
 
+#define JSDOUBLE_IS_POSZERO(d)  (JSDOUBLE_HI32(d) == 0 && JSDOUBLE_LO32(d) == 0)
+
 #define JSDOUBLE_IS_NEGZERO(d)  (JSDOUBLE_HI32(d) == JSDOUBLE_HI32_SIGNBIT && \
                                  JSDOUBLE_LO32(d) == 0)
 
@@ -167,7 +169,7 @@ static const double two31 = 2147483648.0;
         bool isNegativeInfinity() const                 { ASSERT(isNumber()); return (f64 < 0) && JSDOUBLE_IS_INFINITE(f64); }
         bool isPositiveInfinity() const                 { ASSERT(isNumber()); return (f64 > 0) && JSDOUBLE_IS_INFINITE(f64); }
         bool isNegativeZero() const                     { ASSERT(isNumber()); return JSDOUBLE_IS_NEGZERO(f64); }
-        bool isPositiveZero() const                     { ASSERT(isNumber()); return (f64 == 0.0) && !JSDOUBLE_IS_NEGZERO(f64); }
+        bool isPositiveZero() const                     { ASSERT(isNumber()); return JSDOUBLE_IS_POSZERO(f64); }
 
         bool isTrue() const                             { ASSERT(isBool()); return boolean; }
         bool isFalse() const                            { ASSERT(isBool()); return !boolean; }
