@@ -137,7 +137,8 @@ nsXFormsInputElement::GetScriptingInterfaces(PRUint32 *aCount, nsIID ***aArray)
 NS_IMETHODIMP
 nsXFormsInputElement::GetNotificationMask(PRUint32 *aMask)
 {
-  *aMask = nsIXTFElement::NOTIFY_ATTRIBUTE_SET;
+  *aMask = (nsIXTFElement::NOTIFY_WILL_SET_ATTRIBUTE |
+            nsIXTFElement::NOTIFY_ATTRIBUTE_SET);
   return NS_OK;
 }
 
@@ -204,6 +205,13 @@ nsXFormsInputElement::ChildRemoved(PRUint32 aIndex)
 NS_IMETHODIMP
 nsXFormsInputElement::WillSetAttribute(nsIAtom *aName, const nsAString &aValue)
 {
+  if (aName == nsXFormsAtoms::bind || aName == nsXFormsAtoms::ref) {
+    nsCOMPtr<nsIDOMElement> bindElement;
+    nsXFormsModelElement *model = GetModelAndBind(getter_AddRefs(bindElement));
+    if (model)
+      model->RemoveFormControl(this);
+  }
+
   return NS_OK;
 }
 
@@ -242,37 +250,40 @@ nsXFormsInputElement::Refresh()
   if (!mInstanceNode)
     mInstanceNode = FindInstanceNode();
 
-  if (!mInstanceNode || !mInput)
+  if (!mInput)
     return;
 
-  // Fetch our value from the instance data
-  nsCOMPtr<nsIDOM3Node> node = do_QueryInterface(mInstanceNode);
-  NS_ASSERTION(node, "unexpected QI failure");
-
-  nsAutoString textContent;
-  node->GetTextContent(textContent);
-
-  // Revalidate our type
   nsCOMPtr<nsIDOMElement> bindElement;
   nsXFormsModelElement *model = GetModelAndBind(getter_AddRefs(bindElement));
 
   if (model) {
-    nsCOMPtr<nsISchemaType> type = model->GetTypeForControl(this);
-    nsCOMPtr<nsISchemaBuiltinType> biType = do_QueryInterface(type);
-    PRUint16 typeValue = nsISchemaBuiltinType::BUILTIN_TYPE_STRING;
+    model->AddFormControl(this);
 
-    if (biType)
-      biType->GetBuiltinType(&typeValue);
+    if (mInstanceNode) {
+      // Fetch our value from the instance data
+      nsCOMPtr<nsIDOM3Node> node = do_QueryInterface(mInstanceNode);
+      NS_ASSERTION(node, "unexpected QI failure");
 
-    if (typeValue == nsISchemaBuiltinType::BUILTIN_TYPE_BOOLEAN) {
-      mInput->SetAttribute(NS_LITERAL_STRING("type"),
-                           NS_LITERAL_STRING("checkbox"));
+      nsAutoString textContent;
+      node->GetTextContent(textContent);
 
-      mInput->SetChecked(textContent.EqualsASCII("true") ||
-                         textContent.EqualsASCII("1"));
-    } else {
-      mInput->RemoveAttribute(NS_LITERAL_STRING("type"));
-      mInput->SetValue(textContent);
+      nsCOMPtr<nsISchemaType> type = model->GetTypeForControl(this);
+      nsCOMPtr<nsISchemaBuiltinType> biType = do_QueryInterface(type);
+      PRUint16 typeValue = nsISchemaBuiltinType::BUILTIN_TYPE_STRING;
+
+      if (biType)
+        biType->GetBuiltinType(&typeValue);
+
+      if (typeValue == nsISchemaBuiltinType::BUILTIN_TYPE_BOOLEAN) {
+        mInput->SetAttribute(NS_LITERAL_STRING("type"),
+                             NS_LITERAL_STRING("checkbox"));
+
+        mInput->SetChecked(textContent.EqualsASCII("true") ||
+                           textContent.EqualsASCII("1"));
+      } else {
+        mInput->RemoveAttribute(NS_LITERAL_STRING("type"));
+        mInput->SetValue(textContent);
+      }
     }
   }
 }

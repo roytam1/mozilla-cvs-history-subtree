@@ -44,6 +44,7 @@
 #include "nsIXFormsModelElement.h"
 #include "nsISchema.h"
 #include "nsCOMArray.h"
+#include "nsVoidArray.h"
 #include "nsCOMPtr.h"
 #include "nsIDOMLoadListener.h"
 #include "nsIDOMDocument.h"
@@ -86,6 +87,9 @@ public:
   NS_HIDDEN_(already_AddRefed<nsISchemaType>)
     GetTypeForControl(nsXFormsControl *aControl);
 
+  NS_HIDDEN_(void) AddFormControl(nsXFormsControl *aControl);
+  NS_HIDDEN_(void) RemoveFormControl(nsXFormsControl *aControl);
+
   // Called after nsXFormsAtoms is registered
   static NS_HIDDEN_(void) Startup();
 
@@ -104,6 +108,7 @@ private:
   nsIContent              *mContent;
   nsCOMArray<nsISchema>    mSchemas;
   nsCOMPtr<nsIDOMDocument> mInstanceDocument;
+  nsVoidArray              mFormControls;
 
   PRInt32 mSchemaCount;
   PRBool  mInstanceDataLoaded;

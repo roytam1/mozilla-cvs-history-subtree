@@ -62,6 +62,7 @@
 #include "nsIDOMNSUIEvent.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIContent.h"
+#include "nsXFormsControl.h"
 
 #include "nsISchemaLoader.h"
 #include "nsAutoPtr.h"
@@ -589,7 +590,11 @@ nsXFormsModelElement::HandleEvent(nsIDOMEvent* aEvent)
   aEvent->GetType(type);
 
   if (type.EqualsASCII("xforms-refresh")) {
-    // refresh
+    // refresh all of our form controls
+    PRInt32 controlCount = mFormControls.Count();
+    for (PRInt32 i = 0; i < controlCount; ++i) {
+      NS_STATIC_CAST(nsXFormsControl*, mFormControls[i])->Refresh();
+    }
   } else if (type.EqualsASCII("xforms-revalidate")) {
     // revalidate
   } else if (type.EqualsASCII("xforms-recalculate")) {
@@ -817,6 +822,19 @@ already_AddRefed<nsISchemaType>
 nsXFormsModelElement::GetTypeForControl(nsXFormsControl *aControl)
 {
   return nsnull;
+}
+
+void
+nsXFormsModelElement::AddFormControl(nsXFormsControl *aControl)
+{
+  if (mFormControls.IndexOf(aControl) == -1)
+    mFormControls.AppendElement(aControl);
+}
+
+void
+nsXFormsModelElement::RemoveFormControl(nsXFormsControl *aControl)
+{
+  mFormControls.RemoveElement(aControl);
 }
 
 /* static */ void
