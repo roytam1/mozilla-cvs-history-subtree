@@ -1,2 +1,2 @@
-[gtkembed mfcembed winembed]
-embedding/lite/@SHARED_LIBRARY@ dist/bin/components
+[gtkembed winembed]
+embedding/lite/@SHARED_LIBRARY@ dist/bin/components/@SHARED_LIBRARY@
