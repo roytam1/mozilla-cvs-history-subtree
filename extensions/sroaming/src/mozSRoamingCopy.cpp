@@ -221,27 +221,43 @@ nsresult mozSRoamingCopy::DownUpLoad(PRBool download)
         NS_ConvertASCIItoUCS2 fileL(file);
 
         nsCOMPtr<nsIFile> profileFile;
-        printf("2.1\n");
         rv = mProfileDir->Clone(getter_AddRefs(profileFile));
         if (NS_FAILED(rv))
             return rv;
-        printf("2.2\n");
         rv = profileFile->Append(fileL);
         if (NS_FAILED(rv))
             return rv;
 
-        printf("2.3\n");
         nsCOMPtr<nsIFile> remoteFile;
         rv = mRemoteDir->Clone(getter_AddRefs(remoteFile));
         if (NS_FAILED(rv))
             return rv;
-        printf("2.4\n");
         rv = remoteFile->Append(fileL);
         if (NS_FAILED(rv))
             return rv;
 
-        printf("2.5\n");
-        PRInt64 profileTime, remoteTime;
+        // avoid conflicts for missing files
+        PRBool remoteExists = PR_TRUE;
+        PRBool profileExists = PR_TRUE;
+        remoteFile->Exists(&remoteExists);
+        profileFile->Exists(&profileExists);
+        if (download)
+        {
+          if (!remoteExists)
+            continue;
+          else if (!profileExists)
+            copyfiles.AppendCString(file);
+        }
+        else
+        {
+          if (!profileExists)
+            continue;
+          else if (!remoteExists)
+            copyfiles.AppendCString(file);
+        }
+
+        PRInt64 profileTime = 0;
+        PRInt64 remoteTime = 0;
         profileFile->GetLastModifiedTime(&profileTime);
         remoteFile->GetLastModifiedTime(&remoteTime);
         //printf("mod time profile: %qd, remote: %qd\n", profileTime, remoteTime);

@@ -93,16 +93,6 @@ public:
     nsCOMPtr<nsIRegistry> Registry();
     nsRegistryKey RegistryTree();
 
-    /* These functions allow to conviently en/decrypt an arbitary string,
-       usually a password or other credential. This makes it easier for the
-       methods to store passwords more safer. This does not use the master
-       password, though (the password manager is not really up yet,
-       and there is not much point in entering a password to retrieve a single
-       password), so it's not really secure.
-       The en/decrypted string is simply replaced with the de/encrypted one.*/ 
-    void Encrypt(/*inout*/ nsAString& );
-    void Decrypt(/*inout*/ nsAString& );
-
     /* At the time we attempt to upload, the network lib has already been
        shut down. So, temporarily restore it and then close it down again.
        Of course, this is a hack, until we (me, ccarlen, darin) have found a
@@ -114,7 +104,6 @@ public:
                      either "profile-change-net-restore"
                      or "profile-change-net-teardown"
     */
-    //nsresult RestoreCloseNet(const char* topic);
     nsresult RestoreCloseNet(PRBool restore);
 
 protected:

@@ -271,9 +271,10 @@ function download(transfer, remoteListing)
     else // Mismatch
     {
       localFiles = localFilesStats(transfer.files);
-      var emptyRemote = substractFiles(transfer.files, remoteListing);
-      var emptyLocal = substractFiles(transfer.files, localFiles);
-      keepLocalVersionFiles = emptyRemote;
+      // non-existant files
+      var missingRemote = substractFiles(transfer.files, remoteListing);
+      var missingLocal = substractFiles(transfer.files, localFiles);
+      keepLocalVersionFiles = missingRemote;
 
       /* Ignore list of matches, just consider all to mismatch. In normal
          operation (even expected error cases), either all should match or
@@ -298,7 +299,7 @@ function download(transfer, remoteListing)
 
         // avoid conflicts for files which don't exist on server or locally
         var conflicts = substractFiles(comparisonStep2aa.mismatches,
-                                       emptyRemote.concat(emptyLocal));
+                                       missingRemote.concat(missingLocal));
 
         if (conflicts.length > 0)
         {
@@ -386,8 +387,9 @@ function upload(transfer, remoteListing)
                                                    kListingUploadedFilename,
                                                    function()
       {
-        var emptyRemote = substractFiles(transfer.files, remoteListing);
-        var emptyLocal = substractFiles(transfer.files, localFiles);
+        // non-existant files
+        var missingRemote = substractFiles(transfer.files, remoteListing);
+        var missingLocal = substractFiles(transfer.files, localFiles);
 
         var listingUploaded = listingUploadedResult.value;
         var comparisonStep2a = compareFiles(transfer.files,
@@ -396,7 +398,7 @@ function upload(transfer, remoteListing)
 
         // avoid conflicts for files which don't exist on server or locally
         var conflicts = substractFiles(comparisonStep2a.mismatches,
-                                       emptyRemote.concat(emptyLocal));
+                                       missingRemote.concat(missingLocal));
 
         if (conflicts.length == 0)
         {
@@ -404,7 +406,7 @@ function upload(transfer, remoteListing)
           /* no conflict (we were the last ones who uploaded),
              but we need to upload. */
           // upload all files, so no need to change transfer.files.
-          uploadStep4(transfer, localFiles, remoteListing, emptyLocal);
+          uploadStep4(transfer, localFiles, remoteListing, missingLocal);
         }
         else
         {
@@ -421,7 +423,7 @@ function upload(transfer, remoteListing)
             return;
           }
           uploadStep4(transfer, localFiles, remoteListing,
-                      emptyLocal.concat(answer.server));
+                      missingLocal.concat(answer.server));
         }
       }, false);
     }

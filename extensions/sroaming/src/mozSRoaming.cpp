@@ -233,7 +233,14 @@ mozSRoaming::ConflictResolveUI(PRBool download, const nsCStringArray& files,
            Item 0: 1 = download, 2 = upload
            Item 1: Number of files (n below)
          String array
-           Item 1..(n): filenames
+           Item 1..(n): Either filename or comma-separated (no spaces) string:
+                        - filename
+                        - last modified (unix time) server
+                        - size (bytes) server
+                        - last modified (unix time) local
+                        - size (bytes) local
+                        e.g. "bookmarks.html,100024563,325,100024535,245" or
+                        "bookmarks.html"
        From dialog (upon close)
          Int array
            Item 0:      3 = OK, 4 = Cancel
@@ -450,25 +457,6 @@ mozSRoamingProtocol* mozSRoaming::CreateMethodHandler()
         return new mozSRoamingCopy;
     else // 0=unknown, e.g. prefs not yet read, or invalid
         return 0;
-}
-
-NS_IMETHODIMP
-mozSRoaming::Encrypt(PRUnichar **password)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-NS_IMETHODIMP
-mozSRoaming::Decrypt(PRUnichar **password)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-void mozSRoaming::Encrypt(/*inout*/ nsAString& )
-{
-}
-
-void mozSRoaming::Decrypt(/*inout*/ nsAString& )
-{
 }
 
 /* A workaround for the fact that the network library is shut down during

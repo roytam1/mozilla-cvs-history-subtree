@@ -163,7 +163,6 @@ nsresult mozSRoamingStream::Init(mozSRoaming* aController)
     /* failure is non-fatal, because username if there's none, the
        transfer will pull up a prompt. */
     mPassword = passwordPref;
-    mController->Decrypt(mPassword);
 
     PRInt32 savepw = 0;
     rv = registry->GetInt(regkey, kRegKeySavePassword.get(),
@@ -320,11 +319,10 @@ nsresult mozSRoamingStream::DownUpLoad(PRBool download)
       nsXPIDLString password, username;
       ioParamBlock->GetString(0, getter_Copies(username));
       ioParamBlock->GetString(1, getter_Copies(password));
-	    printf("got username: -%s-\n", NS_ConvertUCS2toUTF8(username).get());
+      printf("got username: -%s-\n", NS_ConvertUCS2toUTF8(username).get());
     	printf("got password: -%s-\n", NS_ConvertUCS2toUTF8(password).get());
 
       mPassword = password;
-    	mController->Encrypt(mPassword);
 	    printf("will save encrypted password: -%s-\n",
 	                                  NS_ConvertUCS2toUTF8(password).get());
 	    nsCOMPtr<nsIRegistry> registry = mController->Registry();
