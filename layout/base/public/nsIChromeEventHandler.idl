@@ -1,4 +1,4 @@
-/* -*- Mode: IDL; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -26,6 +26,7 @@
 %{ C++
 #include "nsIPresContext.h"
 #include "nsIDOMEvent.h"
+#include "nsGUIEvent.h"
 %}
 
 [ptr] native nsIPresContext(nsIPresContext);
@@ -38,13 +39,13 @@ native nsEventStatus(nsEventStatus);
  * The nsIChromeEventHandler
  */
 
-[scriptable, uuid(7BC08970-9E6C-11d3-AFB2-00A024FFC08C)]
+[uuid(7BC08970-9E6C-11d3-AFB2-00A024FFC08C)]
 interface nsIChromeEventHandler : nsISupports
 {
-	/**
-	* Handle a chrome DOM event.
-	*/
-	[noscript] void handleChromeEvent(in nsIPresContext aPresContext, 
-		in nsEventPtr aEvent, out nsIDOMEvent aDOMEvent, in unsigned long aFlags,
-		inout nsEventStatus aStatus);
+  /**
+   * Handle a chrome DOM event.
+   */
+  void handleChromeEvent(in nsIPresContext aPresContext, 
+                         in nsEventPtr aEvent, out nsIDOMEvent aDOMEvent, in unsigned long aFlags,
+                         inout nsEventStatus aStatus);
 };
