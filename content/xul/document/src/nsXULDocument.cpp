@@ -1881,7 +1881,9 @@ nsXULDocument::AddReference(void *aKey, nsISupports *aReference)
 {
   nsVoidKey key(aKey);
 
-  mContentWrapperHash.Put(&key, aReference);
+  if (mScriptGlobalObject) {
+      mContentWrapperHash.Put(&key, aReference);
+  }
 
   return NS_OK;
 }
