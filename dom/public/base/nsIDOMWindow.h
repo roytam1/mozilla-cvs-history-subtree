@@ -16,8 +16,6 @@
  * Communications Corporation.  Portions created by Netscape are
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
- *
- * Contributor(s): 
  */
 /* AUTO-GENERATED. DO NOT EDIT!!! */
 

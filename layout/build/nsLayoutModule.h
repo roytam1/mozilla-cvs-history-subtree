@@ -48,11 +48,9 @@ public:
 protected:
   void Shutdown();
 
-  nsresult RegisterDocumentFactories(nsIComponentManager* aCompMgr,
-                                     nsIFileSpec* aPath);
+  nsresult RegisterDocumentFactories(nsIComponentManager* aCompMgr, nsIFile* aPath);
 
-  void UnregisterDocumentFactories(nsIComponentManager* aCompMgr,
-                                   nsIFileSpec* aPath);
+  void UnregisterDocumentFactories(nsIComponentManager* aCompMgr, nsIFile* aPath);
 
   PRBool mInitialized;
 //  static nsIFactory* gFactory;

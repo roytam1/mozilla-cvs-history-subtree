@@ -61,9 +61,7 @@
 
 static nsLayoutModule *gModule = NULL;
 
-extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
-                                          nsIFileSpec* location,
-                                          nsIModule** return_cobj)
+extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr, nsIFile* aPath, nsIModule** return_cobj)
 {
   nsresult rv = NS_OK;
 
@@ -350,7 +348,7 @@ static Components gComponents[] = {
 
 NS_IMETHODIMP
 nsLayoutModule::RegisterSelf(nsIComponentManager *aCompMgr,
-                             nsIFileSpec* aPath,
+                             nsIFile* aPath,
                              const char* registryLocation,
                              const char* componentType)
 {
@@ -382,7 +380,7 @@ nsLayoutModule::RegisterSelf(nsIComponentManager *aCompMgr,
 
 NS_IMETHODIMP
 nsLayoutModule::UnregisterSelf(nsIComponentManager* aCompMgr,
-                               nsIFileSpec* aPath,
+                               nsIFile* aPath,
                                const char* registryLocation)
 {
 #ifdef DEBUG

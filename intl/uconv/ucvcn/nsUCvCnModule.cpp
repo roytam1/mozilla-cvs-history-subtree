@@ -40,7 +40,8 @@
 #include "nsGB2312ToUnicode.h"
 #include "nsUnicodeToGB2312.h"
 #include "nsUnicodeToGB2312GL.h"
-
+#include "nsFileSpec.h"
+#include "nsIFile.h"
 //----------------------------------------------------------------------------
 // Global functions and data [declaration]
 
@@ -202,7 +203,7 @@ public:
 static nsConverterModule * gModule = NULL;
 
 extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager * compMgr,
-                                          nsIFileSpec* location,
+                                          nsIFile* aPath,
                                           nsIModule** return_cobj)
 {
   nsresult rv = NS_OK;
@@ -346,7 +347,7 @@ NS_IMETHODIMP nsConverterModule::GetClassObject(nsIComponentManager *aCompMgr,
 }
 
 NS_IMETHODIMP nsConverterModule::RegisterSelf(nsIComponentManager *aCompMgr,
-                                              nsIFileSpec* aPath,
+                                              nsIFile* aPath,
                                               const char* registryLocation,
                                               const char* componentType)
 {
@@ -410,7 +411,7 @@ done:
 }
 
 NS_IMETHODIMP nsConverterModule::UnregisterSelf(nsIComponentManager *aCompMgr,
-                                                nsIFileSpec* aPath,
+                                                nsIFile* aPath,
                                                 const char* registryLocation)
 {
   // XXX also delete the stuff I added to the registry
