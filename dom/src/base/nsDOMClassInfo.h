@@ -116,12 +116,54 @@ protected:
 typedef nsDOMClassInfo nsDOMGenericSH;
 
 
-// Window scirptable helper
+// EventProp scriptable helper, this class should be the base class of
+// all objects that should support things like
+// obj.onclick=function{...}
 
-class nsWindowSH : public nsDOMGenericSH
+class nsEventRecieverSH : public nsDOMGenericSH
 {
 protected:
-  nsWindowSH(nsDOMClassInfoID aID) : nsDOMGenericSH(aID)
+  nsEventRecieverSH(nsDOMClassInfoID aID) : nsDOMGenericSH(aID)
+  {
+  }
+
+  virtual ~nsEventRecieverSH()
+  {
+  }
+
+  static PRBool ReallyIsEventName(JSString *str);
+
+  static inline PRBool IsEventName(JSString *jsstr)
+  {
+    jschar *str = ::JS_GetStringChars(jsstr);
+
+    if (str[0] == 'o' && str[1] == 'n' && str[2]) {
+      return ReallyIsEventName(jsstr);
+    }
+
+    return PR_FALSE;
+  }
+
+  nsresult RegisterCompileHandler(nsIXPConnectWrappedNative *wrapper,
+                                  JSContext *cx, JSObject *obj, jsval id,
+                                  jsval *vp, PRBool aCompile);
+
+public:
+  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp,
+                         PRBool *_retval);
+  NS_IMETHOD SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp,
+                         PRBool *_retval);
+};
+
+
+// Window scirptable helper
+
+class nsWindowSH : public nsEventRecieverSH
+{
+protected:
+  nsWindowSH(nsDOMClassInfoID aID) : nsEventRecieverSH(aID)
   {
   }
 
@@ -150,13 +192,13 @@ public:
 };
 
 
-// DOM Node scriptable helper, this class deals with setting the
-// parent for the wrappers
+// DOM Node helper, this class deals with setting the parent for the
+// wrappers
 
-class nsNodeSH : public nsDOMGenericSH
+class nsNodeSH : public nsEventRecieverSH
 {
 protected:
-  nsNodeSH(nsDOMClassInfoID aID) : nsDOMGenericSH(aID)
+  nsNodeSH(nsDOMClassInfoID aID) : nsEventRecieverSH(aID)
   {
   }
 
@@ -175,54 +217,12 @@ public:
 };
 
 
-// EventProp scriptable helper, this class should be the base class of
-// all objects that should support things like
-// obj.onclick=function{...}
-
-class nsEventPropSH : public nsNodeSH
-{
-protected:
-  nsEventPropSH(nsDOMClassInfoID aID) : nsNodeSH(aID)
-  {
-  }
-
-  virtual ~nsEventPropSH()
-  {
-  }
-
-  static PRBool ReallyIsEventName(JSString *str);
-
-  static inline PRBool IsEventName(JSString *jsstr)
-  {
-    jschar *str = ::JS_GetStringChars(jsstr);
-
-    if (str[0] == 'o' && str[1] == 'n' && str[2]) {
-      return ReallyIsEventName(jsstr);
-    }
-
-    return PR_FALSE;
-  }
-
-  nsresult RegisterCompileEventHandler(nsIXPConnectWrappedNative *wrapper,
-                                       JSContext *cx, JSObject *obj, jsval id,
-                                       jsval *vp, PRBool aCompile);
-
-public:
-  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                         JSObject *obj, jsval id, jsval *vp,
-                         PRBool *_retval);
-  NS_IMETHOD SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                         JSObject *obj, jsval id, jsval *vp,
-                         PRBool *_retval);
-};
-
-
 // Element helper
 
-class nsElementSH : public nsEventPropSH
+class nsElementSH : public nsNodeSH
 {
 protected:
-  nsElementSH(nsDOMClassInfoID aID) : nsEventPropSH(aID)
+  nsElementSH(nsDOMClassInfoID aID) : nsNodeSH(aID)
   {
   }
 
@@ -293,10 +293,10 @@ public:
 
 // Document helper, for document.location and document.on*
 
-class nsDocumentSH : public nsEventPropSH
+class nsDocumentSH : public nsNodeSH
 {
 public:
-  nsDocumentSH(nsDOMClassInfoID aID) : nsEventPropSH(aID)
+  nsDocumentSH(nsDOMClassInfoID aID) : nsNodeSH(aID)
   {
   }
 

@@ -322,6 +322,7 @@ nsDOMClassInfo::Init()
                            USE_JSSTUB_FOR_SETPROPERTY |
                            ALLOW_PROP_MODS_DURING_RESOLVE |
                            WANT_GETPROPERTY |
+                           WANT_SETPROPERTY |
                            WANT_NEWRESOLVE |
                            WANT_PRECREATE);
 
@@ -901,8 +902,8 @@ nsWindowSH::PreCreate(nsISupports *nativeObj, JSContext * cx,
 }
 
 NS_IMETHODIMP
-nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
-                        JSObject * obj, jsval id, jsval * vp, PRBool *_retval)
+nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                        JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
 {
   if (JSVAL_IS_STRING(id)) {
     // Look for a child frame with the name of the property we're
@@ -993,7 +994,7 @@ nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
     }
   }
 
-  return NS_OK;
+  return nsEventRecieverSH::GetProperty(wrapper, cx, obj, id, vp, _retval);
 }
 
 static JSBool PR_CALLBACK
@@ -1360,7 +1361,7 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
 
 // static
 PRBool
-nsEventPropSH::ReallyIsEventName(JSString *jsstr)
+nsEventRecieverSH::ReallyIsEventName(JSString *jsstr)
 {
   if (jsstr == sOnmousedown_id ||
       jsstr == sOnmouseup_id   ||
@@ -1391,10 +1392,10 @@ nsEventPropSH::ReallyIsEventName(JSString *jsstr)
 }
 
 nsresult
-nsEventPropSH::RegisterCompileEventHandler(nsIXPConnectWrappedNative *wrapper,
-                                           JSContext *cx, JSObject *obj,
-                                           jsval id, jsval *vp,
-                                           PRBool aCompile)
+nsEventRecieverSH::RegisterCompileHandler(nsIXPConnectWrappedNative *wrapper,
+                                          JSContext *cx, JSObject *obj,
+                                          jsval id, jsval *vp,
+                                          PRBool aCompile)
 {
   JSString *str = JSVAL_TO_STRING(id);
 
@@ -1443,24 +1444,24 @@ nsEventPropSH::RegisterCompileEventHandler(nsIXPConnectWrappedNative *wrapper,
 }
 
 NS_IMETHODIMP
-nsEventPropSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                           JSObject *obj, jsval id, jsval *vp,
-                           PRBool *_retval)
+nsEventRecieverSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
+                               JSContext *cx, JSObject *obj, jsval id,
+                               jsval *vp, PRBool *_retval)
 {
   if (JSVAL_IS_STRING(id)) {
-    return RegisterCompileEventHandler(wrapper, cx, obj, id, vp, PR_TRUE);
+    return RegisterCompileHandler(wrapper, cx, obj, id, vp, PR_TRUE);
   }
 
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsEventPropSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                           JSObject *obj, jsval id, jsval *vp,
-                           PRBool *_retval)
+nsEventRecieverSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
+                               JSContext *cx, JSObject *obj, jsval id,
+                               jsval *vp, PRBool *_retval)
 {
   if (::JS_TypeOfValue(cx, *vp) == JSTYPE_FUNCTION || JSVAL_IS_STRING(id)) {
-    return RegisterCompileEventHandler(wrapper, cx, obj, id, vp, PR_FALSE);
+    return RegisterCompileHandler(wrapper, cx, obj, id, vp, PR_FALSE);
   }
 
   return NS_OK;
@@ -1710,7 +1711,7 @@ nsDocumentSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     }
   }
 
-  return nsEventPropSH::SetProperty(wrapper, cx, obj, id, vp, _retval);
+  return nsNodeSH::SetProperty(wrapper, cx, obj, id, vp, _retval);
 }
 
 
@@ -1823,7 +1824,7 @@ nsHTMLFormElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
     }
   }
 
-  return NS_OK;
+  return nsElementSH::GetProperty(wrapper, cx, obj, id, vp, _retval);
 }
 
 // HTMLOptionCollection helper
