@@ -2577,7 +2577,7 @@ np_newinstance(np_handle *handle, MWContext *cx, NPEmbeddedApp *app,
                     char** values = ndata->lo_struct->attributes.values;
 #else
                     int16 argc = (int16) ndata->lo_struct->attribute_cnt;
-                    char** names = ndata->lo_struct->attributes_list;
+                    char** names = ndata->lo_struct->attribute_list;
                     char** values = ndata->lo_struct->value_list;
 #endif
                     err = CallNPP_NewProc(handle->f->newp, requestedType, npp, 
