@@ -66,6 +66,7 @@ nsMailboxProtocol::~nsMailboxProtocol()
 void nsMailboxProtocol::Initialize(nsIURI * aURL)
 {
 	NS_PRECONDITION(aURL, "invalid URL passed into MAILBOX Protocol");
+	nsresult rv = NS_OK;
 	if (aURL)
 	{
 		nsresult rv = aURL->QueryInterface(nsIMailboxUrl::GetIID(), (void **) getter_AddRefs(m_runningUrl));
@@ -73,7 +74,23 @@ void nsMailboxProtocol::Initialize(nsIURI * aURL)
 		{
 			nsFileSpec * fileSpec = nsnull;
 			m_runningUrl->GetFilePath(&fileSpec);
-			rv = OpenFileSocket(aURL, fileSpec);
+			if (m_mailboxAction == nsIMailboxUrl::ActionParseMailbox)
+				rv = OpenFileSocket(aURL, fileSpec, 0, -1 /* read in all the bytes in the file */);
+			else
+			{
+				// we need to specify a byte range to read in so we read in JUST the message we want.
+				nsMsgKey aMsgKey;
+				PRUint32 aMsgSize = 0;
+				rv = m_runningUrl->GetMessageKey(&aMsgKey);
+				NS_ASSERTION(NS_SUCCEEDED(rv), "oops....i messed something up");
+				rv = m_runningUrl->GetMessageSize(&aMsgSize);
+				NS_ASSERTION(NS_SUCCEEDED(rv), "oops....i messed something up");
+
+				// mscott -- oops...impedence mismatch between aMsgSize and the desired
+				// argument type!
+				rv = OpenFileSocket(aURL, fileSpec, (PRUint32) aMsgKey, aMsgSize);
+				NS_ASSERTION(NS_SUCCEEDED(rv), "oops....i messed something up");
+			}
 		}
 	}
 
