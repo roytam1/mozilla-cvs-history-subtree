@@ -623,7 +623,7 @@ private:
     nsresult evalDescendants(Expr* aStep, const txXPathNode& aNode,
                              txIMatchContext* aContext,
                              txNodeSet* resNodes);
-}; //-- PathExpr
+};
 
 /**
  * This class represents a RootExpr, which only matches the Document node
