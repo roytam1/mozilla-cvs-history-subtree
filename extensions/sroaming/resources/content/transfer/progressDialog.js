@@ -46,10 +46,6 @@
 */
 
 var gTransfer; // main |Transfer| object, for the main files to be tranferred
-/*var gTransfers = new Array(); /* all |Transfer| objects, incl. support stuff,
-                                 e.g. listing files. Needed for Cancel.
-                                 XXX bad solution. too bad. don't care for,
-                                 let the XPCOM excpetion fly! ;-P */
 var gDialog = new Object(); // references to widgets
 var gFinished = false;  // all files finished (done or failed)
 var gTransferFailed = false; // any file failed
@@ -177,7 +173,6 @@ function GetParams()
                            password, savepw,
                            files,
                            undefined, SetProgressStatus);
-  //gTransfers.push(gTransfer);
 }
 
 function PassBackParams()
@@ -204,7 +199,6 @@ function PassBackParams()
     params.SetString(0, "");
     params.SetString(1, "");
   }
-  // XXX call gTransfer.done()?
   //ddump(" done");
 }
 
@@ -399,7 +393,7 @@ function addFileStatus(file)
               + ": " + ErrorMessageForFile(file) + "\n";
 }
 
-//XXX hack
+// replace with nicer dialog
 function showErrors()
 {
   GetPromptService().alert(window, GetString("TransferErrorsTitle"),

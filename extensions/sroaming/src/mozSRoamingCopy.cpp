@@ -46,10 +46,11 @@
 
 // Internal helper functions unrelated to class
 
+/* @param fileSubPath  works for subpaths or just filenames?
+                       doesn't really matter for us. */
 nsresult CopyFile(nsCOMPtr<nsIFile> fromDir,
                   nsCOMPtr<nsIFile> toDir,
                   nsAString& fileSubPath)
-    // XXX: works for subpaths or just filenames?
 {
     nsresult rv;
 

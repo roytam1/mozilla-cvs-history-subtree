@@ -253,9 +253,7 @@ function checkAndTransfer(transfer, listingProgress)
     });
   }, function()
   {
-    // XXX progress callback
   });
-  //gTransfers.push(listingTransfer);
   listingTransfer.transfer();
 }
 
@@ -296,7 +294,8 @@ function download(transfer, remoteListing)
          operation (even expected error cases), either all should match or
          mismatch, so if a few match and a few mismatch, there is something
          goofy going on. XXX is this also true, if local files didn't exist
-         yet? */
+         yet?
+         (Same case again in upload() below.) */
       //ddump("Step 2a: Comparing local files with listing-uploaded");
       var comparisonStep2a = compareFiles(transfer.files,
                                           localFiles,
@@ -392,11 +391,7 @@ function upload(transfer, remoteListing)
     }
     else // Mismatch
     {
-      /* Ignore list of matches, just consider all to mismatch. In normal
-         operation (even expected error cases), either all should match or
-         mismatch, so if a few match and a few mismatch, there is something
-         goofy going on. XXX is this also true, if local files didn't exist
-         yet? */
+      // See "Ignore list of matches, ..." above
       //ddump("Step 2a: Comparing listing from server with listing-uploaded");
       //ddump("loading listing-uploaded file");
       var listingUploadedResult = loadAndReadListingFile(
@@ -492,9 +487,7 @@ function uploadStep4(transfer, localFiles, remoteFiles, keepServerVersionFiles)
       CheckDone(true);
     }, function()
     {
-      // XXX progress
     });
-    //gTransfers.push(listingTransfer);
     listingTransfer.transfer();
   });
   transfer.transfer();
@@ -516,10 +509,10 @@ function uploadStep4(transfer, localFiles, remoteFiles, keepServerVersionFiles)
 */
 function compareFiles(filesList, files1, files2)
 {
-  //ddump("comparing file lists");
-  //dumpObject(filesList, "  filesList", 1);
-  //dumpObject(files1, "  files1", 1);
-  //dumpObject(files2, "  files2", 1);
+  ddump("comparing file lists");
+  dumpObject(filesList, "  filesList", 1);
+  dumpObject(files1, "  files1", 1);
+  dumpObject(files2, "  files2", 1);
 
   var result = new Object();
   result.matches = new Array();
@@ -550,7 +543,7 @@ function compareFiles(filesList, files1, files2)
     //if (!f1 && !f2) needed? Would break current conflict logic (|missing*|)
     //  matches = true;
 
-    //ddump(filename + (matches ? " matches" : " doesn't match"));
+    ddump(filename + (matches ? " matches" : " doesn't match"));
     if (matches)
       result.matches.push(filesList[i]);
     else
@@ -827,9 +820,9 @@ function printtree(domnode, indent)
 function createListingFile(files, filename)
 {
   // create content as string
-  // XXX xml namespace/dtd
-  var content = "<?xml version=\"1.0\"?>\n<listing>\n";
-                                     // content of the file to be written
+  var content = "<?xml version=\"1.0\"?>\n" //content of the file to be written
+              + "<listing xmlns=\"http://www.mozilla.org/keymaster/"
+              + "transfer-listing.xml\">\n";
   for (var i = 0, l = files.length; i < l; i++)
   {
     var f = files[i];

@@ -800,12 +800,13 @@ TransferProgressListener.prototype =
       /* WORKAROUND
          HTTP gives us NS_OK, although the request failed with an HTTP error
          code, so check for that.
-         FTP gives us NS_OK, although the transfer is still ongoing */
+         FTP gives us NS_OK, although the transfer is still ongoing.
+         I tried to work around that in onStatus(), see comment there. */
       var scheme = this.file.channel.URI.scheme;
       if (scheme == "http")
         this.privateHTTPResponse();
       //else if (scheme == "ftp")
-      //XXX  return;
+      //  return;
       else
         // let's hope that the other protocol impl.s are saner
         this.file.setStatus("done", aStatusCode);

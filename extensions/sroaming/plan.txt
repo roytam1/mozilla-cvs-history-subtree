@@ -1,11 +1,9 @@
 todo:
-- downloading all the time
-- XXXs
 - firebird/thunderbird extension
 
 don't care (for now):
 - conflict
-  - some files failed (see XXX - update: eh, where was that?)
+  - some files failed, see XXX - update: eh, where was that?
 - world gone
   - problem: ddump, xpcom not defined after files done and dialog closed
     solution: close dialog only when done with processing.

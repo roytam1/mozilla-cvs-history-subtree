@@ -64,23 +64,3 @@
 
 <!ENTITY copyDir.label            "Copy to/from directory">
 <!ENTITY copyDir.accesskey        "d">
-
-
-<!ENTITY bookmarks.label          "Bookmarks">
-<!ENTITY addressbook.label        "Personal Addressbook">
-<!ENTITY ab-history.label         "Collected Addressbook">
-<!ENTITY cookies.label            "Cookies">
-<!ENTITY cookperm.label           "Cookie Permissions">
-<!ENTITY history.label            "Browsing history">
-<!ENTITY passwords.label          "Passwords (dangerous)">
-<!ENTITY wallet.label             "Fill Form data (dangerous?)">
-<!ENTITY helperapps.label         "Helper App Settings">
-<!ENTITY sidebar.label            "Sidebar panel list">
-<!ENTITY localstorerdf.label      "Window settings">
-<!ENTITY userstuff.label          "Files for user edition (user*)">
-<!ENTITY mailViews.label          "Message views XXX">
-<!ENTITY filters.label            "Mail filters">
-<!ENTITY newsrc.label             "Newsgroup subscriptions">
-<!ENTITY emailcerts.label         "Client Certificates, mostly for crypto emailXXX">
-<!ENTITY cryptokeys.label         "Private Keys (?)">
-<!ENTITY secmod.label             "Security module database (XXX)">
