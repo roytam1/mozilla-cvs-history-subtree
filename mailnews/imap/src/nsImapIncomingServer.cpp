@@ -1055,7 +1055,7 @@ nsresult nsImapIncomingServer::GetPFCForStringId(PRBool createIfMissing, PRInt32
   nsCAutoString pfcMailUri(pfcURI);
 //  pfcMailUri.Append(".sbd");
   pfcMailUri.Append("/");
-  pfcMailUri.AppendWithConversion(pfcName.get());
+  pfcMailUri.Append(NS_ConvertUCS2toUTF8(pfcName).get());
   pfcParent->GetChildWithURI(pfcMailUri.get(), PR_FALSE, PR_FALSE /* caseInsensitive*/, aFolder);
   if (!*aFolder && createIfMissing)
   {
