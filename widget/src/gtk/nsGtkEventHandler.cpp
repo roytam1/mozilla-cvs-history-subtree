@@ -717,7 +717,10 @@ gint handle_key_press_event_for_text(GtkObject *w, GdkEventKey* event,
   win->OnKey(kevent);
 
   win->Release();
-  gtk_signal_emit_stop_by_name (GTK_OBJECT(w), "key_press_event");
+  if (w)
+  {
+    gtk_signal_emit_stop_by_name (GTK_OBJECT(w), "key_press_event");
+  }
 
   return PR_TRUE;
 }
@@ -740,8 +743,11 @@ gint handle_key_release_event_for_text(GtkObject *w, GdkEventKey* event,
   win->AddRef();
   win->OnKey(kevent);
   win->Release();
-
-  gtk_signal_emit_stop_by_name (GTK_OBJECT(w), "key_release_event");
+  
+  if (w)
+  {
+    gtk_signal_emit_stop_by_name (GTK_OBJECT(w), "key_release_event");
+  }
 
   return PR_TRUE;
 }
@@ -800,8 +806,11 @@ gint handle_key_press_event(GtkObject *w, GdkEventKey* event, gpointer p)
   }
 
   win->Release();
-  gtk_signal_emit_stop_by_name (GTK_OBJECT(w), "key_press_event");
-  
+  if (w)
+  {
+    gtk_signal_emit_stop_by_name (GTK_OBJECT(w), "key_press_event");
+  }
+
   return PR_TRUE;
 }
 
@@ -823,7 +832,10 @@ gint handle_key_release_event(GtkObject *w, GdkEventKey* event, gpointer p)
   win->OnKey(kevent);
   win->Release();
 
-  gtk_signal_emit_stop_by_name (GTK_OBJECT(w), "key_release_event");
+  if (w)
+  {
+    gtk_signal_emit_stop_by_name (GTK_OBJECT(w), "key_release_event");
+  }
 
   return PR_TRUE;
 }
