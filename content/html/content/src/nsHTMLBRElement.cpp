@@ -105,8 +105,20 @@ nsHTMLBRElement::~nsHTMLBRElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLBRElement, nsGenericElement) 
 NS_IMPL_RELEASE_INHERITED(nsHTMLBRElement, nsGenericElement) 
 
-NS_IMPL_HTMLCONTENT_QI(nsHTMLBRElement, nsGenericHTMLLeafElement,
-                       nsIDOMHTMLBRElement)
+
+// XPConnect interface list for nsHTMLBRElement
+NS_CLASINFO_MAP_BEGIN(HTMLBRElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLBRElement)
+  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLBRElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLBRElement,
+                                    nsGenericHTMLLeafElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLBRElement)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLBRElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 nsresult

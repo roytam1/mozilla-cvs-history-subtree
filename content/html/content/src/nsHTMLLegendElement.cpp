@@ -110,9 +110,20 @@ nsHTMLLegendElement::~nsHTMLLegendElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLLegendElement, nsGenericElement) 
 NS_IMPL_RELEASE_INHERITED(nsHTMLLegendElement, nsGenericElement) 
 
-NS_IMPL_HTMLCONTENT_QI(nsHTMLLegendElement,
-                       nsGenericHTMLContainerFormElement,
-                       nsIDOMHTMLLegendElement);
+
+// XPConnect interface list for nsHTMLLegendElement
+NS_CLASINFO_MAP_BEGIN(HTMLLegendElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLLegendElement)
+  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLLegendElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLLegendElement,
+                                    nsGenericHTMLContainerFormElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLLegendElement)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLLegendElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 nsresult

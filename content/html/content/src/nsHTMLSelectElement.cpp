@@ -226,9 +226,23 @@ nsHTMLSelectElement::~nsHTMLSelectElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLSelectElement, nsGenericElement);
 NS_IMPL_RELEASE_INHERITED(nsHTMLSelectElement, nsGenericElement);
 
-NS_IMPL_HTMLCONTENT_QI3(nsHTMLSelectElement, nsGenericHTMLContainerFormElement,
-                        nsIDOMHTMLSelectElement, nsIDOMNSHTMLSelectElement,
-                        nsISelectElement);
+
+// XPConnect interface list for nsHTMLSelectElement
+NS_CLASINFO_MAP_BEGIN(HTMLSelectElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLSelectElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMNSHTMLSelectElement)
+  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLSelectElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLSelectElement,
+                                    nsGenericHTMLContainerFormElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLSelectElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLSelectElement)
+  NS_INTERFACE_MAP_ENTRY(nsISelectElement)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLSelectElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 // nsIDOMHTMLSelectElement

@@ -32,7 +32,7 @@ public:
   NS_DECL_ISUPPORTS
 
   // nsIXPCScriptable
-  XPC_DECLARE_IXPCSCRIPTABLE
+  NS_DECL_NSIXPCSCRIPTABLE
 
   nsDOMScriptableHelper();
   virtual ~nsDOMScriptableHelper();

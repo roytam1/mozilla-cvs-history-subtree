@@ -77,10 +77,6 @@
 
 #include "nsIServiceManager.h"
 
-
-NS_BEGIN_DOM_CLASSINFO_IMPL(nsGenericElement)
-NS_END_DOM_CLASSINFO_IMPL
-
 //----------------------------------------------------------------------
 
 nsChildContentList::nsChildContentList(nsIContent *aContent)

@@ -40,13 +40,14 @@
 #include "nsIScriptContext.h"
 #include "nsContentUtils.h"
 #include "nsVoidArray.h"
+#include "nsIXPConnect.h"
 
 
 nsVoidArray *nsContentUtils::sKungFuDeathGripArray = nsnull;
 
 
 // static 
-nsresult 
+nsresult
 nsContentUtils::GetStaticScriptGlobal(JSContext* aContext,
                                      JSObject* aObj,
                                      nsIScriptGlobalObject** aNativeGlobal)
@@ -75,12 +76,17 @@ nsContentUtils::GetStaticScriptGlobal(JSContext* aContext,
     return NS_ERROR_FAILURE;
   }
 
-  return supports->QueryInterface(NS_GET_IID(nsIScriptGlobalObject),
-                                  (void**) aNativeGlobal);
+  nsCOMPtr<nsIXPConnectWrappedNative> wrapper(do_QueryInterface(supports));
+  NS_ENSURE_TRUE(wrapper, NS_ERROR_UNEXPECTED);
+
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
+
+  return CallQueryInterface(native, aNativeGlobal);
 }
 
 //static
-nsresult 
+nsresult
 nsContentUtils::GetStaticScriptContext(JSContext* aContext,
                                       JSObject* aObj,
                                       nsIScriptContext** aScriptContext)

@@ -332,50 +332,33 @@ nsHTMLDocument::~nsHTMLDocument()
   }
 }
 
-NS_IMETHODIMP
-nsHTMLDocument::QueryInterface(REFNSIID aIID, void** aInstancePtr)
-{
-  NS_PRECONDITION(nsnull != aInstancePtr, "null ptr");
-  if (nsnull == aInstancePtr) {
-    return NS_ERROR_NULL_POINTER;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIHTMLDocument))) {
-    NS_ADDREF_THIS();
-    *aInstancePtr = (void**) (nsIHTMLDocument *)this;
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIDOMHTMLDocument))) {
-    NS_ADDREF_THIS();
-    *aInstancePtr = (void**) (nsIDOMHTMLDocument *)this;
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIDOMNSHTMLDocument))) {
-    NS_ADDREF_THIS();
-    *aInstancePtr = (void**) (nsIDOMNSHTMLDocument *)this;
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIHTMLContentContainer))) {
-    NS_ADDREF_THIS();
-    *aInstancePtr = (void**) (nsIHTMLContentContainer *)this;
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIXPCScriptable))) {
-    return nsDOMScriptableHelper::GetHTMLDocHelper(aInstancePtr);
-  }
-  return nsDocument::QueryInterface(aIID, aInstancePtr);
-}
+NS_IMPL_ADDREF_INHERITED(nsHTMLDocument, nsDocument)
+NS_IMPL_RELEASE_INHERITED(nsHTMLDocument, nsDocument)
 
-nsrefcnt
-nsHTMLDocument::AddRef()
-{
-  return nsDocument::AddRef();
-}
 
-nsrefcnt
-nsHTMLDocument::Release()
-{
-  return nsDocument::Release();
-}
+// XPConnect interface list for nsHTMLDocument
+NS_CLASINFO_MAP_BEGIN(HTMLDocument)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLDocument)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMNSHTMLDocument)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMNSDocument)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMDocumentEvent)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMDocumentStyle)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMDocumentView)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMDocumentRange)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMDocumentXBL)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMEventReceiver)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLAnchorElement
+NS_INTERFACE_MAP_BEGIN(nsHTMLDocument)
+  NS_INTERFACE_MAP_ENTRY(nsIHTMLDocument)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLDocument)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLDocument)
+  NS_INTERFACE_MAP_ENTRY(nsIHTMLContentContainer)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLDocument)
+NS_INTERFACE_MAP_END_INHERITING(nsDocument)
+
 
 nsresult 
 nsHTMLDocument::Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup)

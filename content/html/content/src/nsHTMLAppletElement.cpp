@@ -126,8 +126,20 @@ nsHTMLAppletElement::~nsHTMLAppletElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLAppletElement, nsGenericElement) 
 NS_IMPL_RELEASE_INHERITED(nsHTMLAppletElement, nsGenericElement) 
 
-NS_IMPL_HTMLCONTENT_QI(nsHTMLAppletElement, nsGenericHTMLContainerElement,
-                       nsIDOMHTMLAppletElement)
+
+// XPConnect interface list for nsHTMLAppletElement
+NS_CLASINFO_MAP_BEGIN(HTMLAppletElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLAppletElement)
+  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLAppletElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLAppletElement,
+                                    nsGenericHTMLContainerElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLAppletElement)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLAppletElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 nsresult

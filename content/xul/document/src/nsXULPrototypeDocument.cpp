@@ -46,6 +46,11 @@
 #include "nsXULElement.h"
 #include "nsIConsoleService.h"
 #include "nsIScriptError.h"
+#include "nsIDOMScriptObjectFactory.h"
+#include "nsDOMCID.h"
+
+static NS_DEFINE_CID(kDOMScriptObjectFactoryCID,
+                     NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
 
 class nsXULPDGlobalObject : public nsIScriptGlobalObject,
                             public nsIScriptObjectPrincipal
@@ -437,9 +442,14 @@ nsXULPDGlobalObject::GetContext(nsIScriptContext **aContext)
     // This whole fragile mess is predicated on the fact that
     // GetContext() will be called before GetScriptObject() is.
     if (! mScriptContext) {
-        nsresult rv;
-        rv = NS_CreateScriptContext(this, getter_AddRefs(mScriptContext));
-        if (NS_FAILED(rv)) return rv;
+        nsCOMPtr<nsIDOMScriptObjectFactory> factory =
+            do_GetService(kDOMScriptObjectFactoryCID);
+        NS_ENSURE_TRUE(factory, NS_ERROR_FAILURE);
+
+        nsresult rv =
+            factory->NewScriptContext(this, getter_AddRefs(mScriptContext));
+        if (NS_FAILED(rv))
+            return rv;
     }
 
     *aContext = mScriptContext;

@@ -54,9 +54,12 @@
 #include "nsIServiceManager.h"
 #include "nsXPIDLString.h"
 #include "nsIXPConnect.h"
-
+#include "nsIDOMScriptObjectFactory.h"
+#include "nsDOMCID.h"
 
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
+static NS_DEFINE_CID(kDOMScriptObjectFactoryCID,
+                     NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
 
 PRUint32 nsXBLPrototypeHandler::gRefCnt = 0;
 
@@ -358,9 +361,14 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver, nsIDOMEven
   boundContext->BindCompiledEventHandler(scriptObject, onEventAtom, handler);
 
   // Execute it.
+  nsCOMPtr<nsIDOMScriptObjectFactory> factory =
+    do_GetService(kDOMScriptObjectFactoryCID);
+  NS_ENSURE_TRUE(factory, NS_ERROR_FAILURE);
+
   nsCOMPtr<nsIDOMEventListener> eventListener;
-  NS_NewJSEventListener(getter_AddRefs(eventListener), boundContext,
-                        boundGlobal);
+
+  factory->NewJSEventListener(boundContext, boundGlobal,
+                              getter_AddRefs(eventListener));
 
   nsCOMPtr<nsIJSEventListener> jsListener(do_QueryInterface(eventListener));
   jsListener->SetEventName(onEventAtom);

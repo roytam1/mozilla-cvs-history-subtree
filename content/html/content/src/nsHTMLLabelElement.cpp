@@ -206,8 +206,20 @@ nsHTMLLabelElement::~nsHTMLLabelElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLLabelElement, nsGenericElement) 
 NS_IMPL_RELEASE_INHERITED(nsHTMLLabelElement, nsGenericElement) 
 
-NS_IMPL_HTMLCONTENT_QI(nsHTMLLabelElement, nsGenericHTMLContainerFormElement,
-                       nsIDOMHTMLLabelElement);
+
+// XPConnect interface list for nsHTMLLabelElement
+NS_CLASINFO_MAP_BEGIN(HTMLLabelElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLLabelElement)
+  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLLabelElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLLabelElement,
+                                    nsGenericHTMLContainerFormElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLLabelElement)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLLabelElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 // nsIDOMHTMLLabelElement

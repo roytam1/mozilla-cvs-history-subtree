@@ -99,8 +99,11 @@ public:
   NS_IMETHOD RemoveElement(nsIFormControl* aElement);
   NS_IMETHOD RemoveElementFromTable(nsIFormControl* aElement,
                                     const nsAReadableString& aName);
+  NS_IMETHOD ResolveName(const nsAReadableString& aName,
+                         nsISupports **aReturn);
   NS_IMETHOD SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const;
 
+  // nsIContent
   NS_IMETHOD StringToAttribute(nsIAtom* aAttribute,
                                const nsAReadableString& aValue,
                                nsHTMLValue& aResult);
@@ -134,7 +137,8 @@ public:
   // nsIDOMNSHTMLFormControlList interface
   NS_DECL_NSIDOMNSHTMLFORMCONTROLLIST
 
-  //  nsresult GetNamedObject(JSContext* aContext, jsval aID, JSObject** aObj);
+  nsresult GetNamedObject(const nsAReadableString& aName,
+                          nsISupports **aResult);
 
   nsresult AddElementToTable(nsIFormControl* aChild,
                              const nsAReadableString& aName);
@@ -211,9 +215,23 @@ nsHTMLFormElement::~nsHTMLFormElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLFormElement, nsGenericElement) 
 NS_IMPL_RELEASE_INHERITED(nsHTMLFormElement, nsGenericElement) 
 
-NS_IMPL_HTMLCONTENT_QI3(nsHTMLFormElement, nsGenericHTMLContainerElement,
-                        nsIDOMHTMLFormElement, nsIDOMNSHTMLFormElement,
-                        nsIForm)
+
+// XPConnect interface list for nsHTMLFormElement
+NS_CLASINFO_MAP_BEGIN(HTMLFormElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLFormElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMNSHTMLFormElement)
+  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLFormElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLFormElement,
+                                    nsGenericHTMLContainerElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLFormElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLFormElement)
+  NS_INTERFACE_MAP_ENTRY(nsIForm)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLFormElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 // nsIDOMHTMLFormElement
@@ -495,12 +513,20 @@ nsHTMLFormElement::RemoveElement(nsIFormControl* aChild)
   return NS_OK;
 }
 
-NS_IMETHODIMP 
+NS_IMETHODIMP
 nsHTMLFormElement::RemoveElementFromTable(nsIFormControl* aElement,
                                           const nsAReadableString& aName)
 {
   return mControls->RemoveElementFromTable(aElement, aName);
 }
+
+NS_IMETHODIMP
+nsHTMLFormElement::ResolveName(const nsAReadableString& aName,
+                               nsISupports **aResult)
+{
+  return mControls->GetNamedObject(aName, aResult);
+}
+
 
 NS_IMETHODIMP
 nsHTMLFormElement::GetEncoding(nsAWritableString& aEncoding)
@@ -749,13 +775,11 @@ nsFormControlList::Item(PRUint32 aIndex, nsIDOMNode** aReturn)
   return NS_OK;
 }
 
-#if 0
 nsresult
-nsFormControlList::GetNamedObject(JSContext* aContext, jsval aID,
-                                  JSObject** aObj) 
+nsFormControlList::GetNamedObject(const nsAReadableString& aName,
+                                  nsISupports** aResult)
 {
-  NS_ENSURE_ARG_POINTER(aObj);
-  *aObj = nsnull;
+  *aResult = nsnull;
 
   if (!mForm) {
     // No form, no named objects
@@ -763,56 +787,16 @@ nsFormControlList::GetNamedObject(JSContext* aContext, jsval aID,
   }
   
   nsresult rv = NS_OK;
-  nsCOMPtr<nsIScriptContext> scriptContext;
-  nsCOMPtr<nsIScriptObjectOwner> owner;
-  char* str = JS_GetStringBytes(JS_ValueToString(aContext, aID));
 
   if (mLookupTable) {
     // Get the hash entry
-    nsAutoString ustr; ustr.AssignWithConversion(str);
-    nsStringKey key(ustr);
+    nsStringKey key(aName);
 
-    nsCOMPtr<nsISupports> tmp = dont_AddRef((nsISupports *)mLookupTable->Get(&key));
-
-    if (tmp) {
-      // Found something, we don't care here if it's a element or a node
-      // list, we just return the script object
-      owner = do_QueryInterface(tmp);
-    }
+    *aResult = mLookupTable->Get(&key);
   }
 
-  if (!owner) {
-    // No owner means we didn't find anything, at least not something we can
-    // return as a JSObject.
-    return NS_OK;
-  }
-
-  nsCOMPtr<nsIDocument> document;
-  nsCOMPtr<nsIContent> form = do_QueryInterface(mForm);
-
-  if (form) {
-    rv = form->GetDocument(*getter_AddRefs(document));
-    if (NS_FAILED(rv)) {
-      return rv;
-    }
-  }
-
-  if (document) {
-    nsCOMPtr<nsIScriptGlobalObject> globalObject;
-    document->GetScriptGlobalObject(getter_AddRefs(globalObject));
-    if (globalObject) {
-      rv = globalObject->GetContext(getter_AddRefs(scriptContext));
-    }
-  }
-
-  // If we can't get a script context, there's nothing we can do
-  if (!scriptContext) {
-    return NS_ERROR_FAILURE;
-  }
-
-  return owner->GetScriptObject(scriptContext, (void**)aObj);
+  return NS_OK;
 }
-#endif
 
 NS_IMETHODIMP 
 nsFormControlList::NamedItem(const nsAReadableString& aName,

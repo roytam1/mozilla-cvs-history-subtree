@@ -95,7 +95,6 @@ public:
                             nsEventStatus* aEventStatus);
   NS_IMETHOD SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const;
 
-  //  NS_DECL_DOM_CLASSINFO(nsGenericHTMLElement)
 protected:
   nsresult RegUnRegAccessKey(PRBool aDoReg);
 
@@ -103,14 +102,6 @@ protected:
   nsLinkState mLinkState;
 
 };
-
-NS_DECL_DOM_CLASSINFO(nsHTMLAnchorElement, nsGenericHTMLElement);
-
-NS_BEGIN_DOM_CLASSINFO_IMPL(nsHTMLAnchorElement)
-  NS_DOM_CLASSINFO_IID_ENTRY(nsIDOMHTMLAnchorElement)
-  NS_DOM_CLASSINFO_IID_ENTRY(nsIDOMNSHTMLAnchorElement)
-  NS_DOM_CLASSINFO_BASECLASS_IIDS(nsGenericHTMLElement)
-NS_END_DOM_CLASSINFO_IMPL
 
 
 nsresult
@@ -154,12 +145,23 @@ nsHTMLAnchorElement::~nsHTMLAnchorElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLAnchorElement, nsGenericElement) 
 NS_IMPL_RELEASE_INHERITED(nsHTMLAnchorElement, nsGenericElement) 
 
-NS_HTML_INTERFACE_MAP_BEGIN(nsHTMLAnchorElement, nsGenericHTMLContainerElement)
-  NS_HTML_INTERFACE_MAP_ENTRY(nsIDOMHTMLAnchorElement)
-  NS_HTML_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLAnchorElement)
-  NS_HTML_INTERFACE_MAP_ENTRY(nsILink)
-  NS_HTML_INTERFACE_MAP_CLASSINFO(nsHTMLAnchorElement)
-NS_HTML_INTERFACE_MAP_END
+
+// XPConnect interface list for nsHTMLAnchorElement
+NS_CLASINFO_MAP_BEGIN(HTMLAnchorElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLAnchorElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMNSHTMLAnchorElement)
+  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLAnchorElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLAnchorElement,
+                                    nsGenericHTMLContainerElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLAnchorElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLAnchorElement)
+  NS_INTERFACE_MAP_ENTRY(nsILink)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLAnchorElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 nsresult

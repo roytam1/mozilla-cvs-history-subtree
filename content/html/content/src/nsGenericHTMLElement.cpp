@@ -115,13 +115,6 @@ static NS_DEFINE_CID(kPresStateCID,  NS_PRESSTATE_CID);
 
 #include "nsIPref.h" // Used by the temp pref, should be removed!
 
-NS_BEGIN_DOM_CLASSINFO_IMPL(nsGenericHTMLElement)
-  NS_DOM_CLASSINFO_IID_ENTRY(nsIDOMHTMLElement)
-  NS_DOM_CLASSINFO_IID_ENTRY(nsIDOMNSHTMLElement)
-  NS_DOM_CLASSINFO_IID_ENTRY(nsIDOMElementCSSInlineStyle)
-  NS_DOM_CLASSINFO_BASECLASS_IIDS(nsGenericElement)
-NS_END_DOM_CLASSINFO_IMPL
-
 
 //----------------------------------------------------------------------
 
@@ -455,6 +448,14 @@ nsGenericHTMLElementTearoff::QueryInterface(REFNSIID aIID, void** aInstancePtr)
   return NS_OK;
 }
 
+
+// XPConnect interface list for nsGenericHTMLElement
+NS_CLASINFO_MAP_BEGIN_EXPORTED(GenericHTMLElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMNSHTMLElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMElementCSSInlineStyle)
+NS_CLASINFO_MAP_END
+
+
 nsGenericHTMLElement::nsGenericHTMLElement()
 {
   mAttributes = nsnull;
@@ -481,8 +482,6 @@ nsGenericHTMLElement::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 
   if (aIID.Equals(NS_GET_IID(nsIHTMLContent))) {
     inst = NS_STATIC_CAST(nsIHTMLContent *, this);
-  } else if (aIID.Equals(NS_GET_IID(nsIXPCScriptable))) {
-    return nsDOMScriptableHelper::GetDefaultHelper(aInstancePtr);
   } else {
     return NS_NOINTERFACE;
   }

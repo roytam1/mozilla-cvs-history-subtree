@@ -102,8 +102,18 @@ nsHTMLUnknownElement::~nsHTMLUnknownElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLUnknownElement, nsGenericElement) 
 NS_IMPL_RELEASE_INHERITED(nsHTMLUnknownElement, nsGenericElement) 
 
-NS_IMPL_HTMLCONTENT_QI0(nsHTMLUnknownElement,
-                        nsGenericHTMLContainerElement);
+
+// XPConnect interface list for nsHTMLUnknownElement
+NS_CLASINFO_MAP_BEGIN(HTMLUnknownElement)
+  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLUnknownElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLUnknownElement,
+                                    nsGenericHTMLContainerElement)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLUnknownElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 nsresult

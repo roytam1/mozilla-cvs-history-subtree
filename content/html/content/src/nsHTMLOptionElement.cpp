@@ -158,8 +158,21 @@ nsHTMLOptionElement::~nsHTMLOptionElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLOptionElement, nsGenericElement);
 NS_IMPL_RELEASE_INHERITED(nsHTMLOptionElement, nsGenericElement);
 
-NS_IMPL_HTMLCONTENT_QI2(nsHTMLOptionElement, nsGenericHTMLContainerElement,
-                        nsIDOMHTMLOptionElement, nsIJSNativeInitializer);
+
+// XPConnect interface list for nsHTMLOptionElement
+NS_CLASINFO_MAP_BEGIN(HTMLOptionElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLOptionElement)
+  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLOptionElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLOptionElement,
+                                    nsGenericHTMLContainerElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLOptionElement)
+  NS_INTERFACE_MAP_ENTRY(nsIJSNativeInitializer)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLOptionElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 nsresult

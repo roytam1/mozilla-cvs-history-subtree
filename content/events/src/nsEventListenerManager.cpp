@@ -60,6 +60,11 @@
 #include "nsIPresShell.h"
 #include "nsMutationEvent.h"
 #include "nsIXPConnect.h"
+#include "nsIDOMScriptObjectFactory.h"
+#include "nsDOMCID.h"
+
+static NS_DEFINE_CID(kDOMScriptObjectFactoryCID,
+                     NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
 
 
 nsEventListenerManager::nsEventListenerManager() 
@@ -637,12 +642,21 @@ nsEventListenerManager::SetJSEventListener(nsIScriptContext *aContext,
   ls = FindJSEventListener(aIID);
 
   if (nsnull == ls) {
-    //If we didn't find a script listener or no listeners existed create and add a new one.
-    nsIDOMEventListener* scriptListener;
-    rv = NS_NewJSEventListener(&scriptListener, aContext, aObject);
+    //If we didn't find a script listener or no listeners existed
+    //create and add a new one.
+    nsCOMPtr<nsIDOMEventListener> scriptListener;
+
+    nsCOMPtr<nsIDOMScriptObjectFactory> factory =
+      do_GetService(kDOMScriptObjectFactoryCID);
+    NS_ENSURE_TRUE(factory, NS_ERROR_FAILURE);
+
+    rv = factory->NewJSEventListener(aContext, aObject,
+                                     getter_AddRefs(scriptListener));
+
     if (NS_SUCCEEDED(rv)) {
-      AddEventListenerByIID(scriptListener, aIID, NS_EVENT_FLAG_BUBBLE | NS_PRIV_EVENT_FLAG_SCRIPT);
-      NS_RELEASE(scriptListener);
+      AddEventListenerByIID(scriptListener, aIID,
+                            NS_EVENT_FLAG_BUBBLE | NS_PRIV_EVENT_FLAG_SCRIPT);
+
       ls = FindJSEventListener(aIID);
     }
   }

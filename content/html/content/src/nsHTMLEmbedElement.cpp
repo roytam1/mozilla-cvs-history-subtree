@@ -99,8 +99,20 @@ nsHTMLEmbedElement::~nsHTMLEmbedElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLEmbedElement, nsGenericElement);
 NS_IMPL_RELEASE_INHERITED(nsHTMLEmbedElement, nsGenericElement);
 
-NS_IMPL_HTMLCONTENT_QI(nsHTMLEmbedElement, nsGenericHTMLLeafElement,
-                       nsIDOMHTMLEmbedElement);
+
+// XPConnect interface list for nsHTMLEmbedElement
+NS_CLASINFO_MAP_BEGIN(HTMLEmbedElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLEmbedElement)
+  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLEmbedElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLEmbedElement,
+                                    nsGenericHTMLLeafElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLEmbedElement)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLEmbedElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 nsresult

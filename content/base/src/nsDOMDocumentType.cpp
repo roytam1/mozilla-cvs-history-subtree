@@ -25,6 +25,8 @@
 #include "nsIDOMNamedNodeMap.h"
 #include "nsLayoutAtoms.h"
 #include "nsCOMPtr.h"
+#include "nsDOMClassInfo.h"
+
 
 nsresult
 NS_NewDOMDocumentType(nsIDOMDocumentType** aDocType,
@@ -74,15 +76,25 @@ nsDOMDocumentType::~nsDOMDocumentType()
   NS_IF_RELEASE(mNotations);
 }
 
-NS_IMPL_ADDREF(nsDOMDocumentType)
-NS_IMPL_RELEASE(nsDOMDocumentType)
 
+// XPConnect interface list for nsDOMDocumentType
+NS_CLASINFO_MAP_BEGIN(DocumentType)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMDocumentType)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsDOMDocumentType
 NS_INTERFACE_MAP_BEGIN(nsDOMDocumentType)
    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMDocumentType)
    NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentType)
    NS_INTERFACE_MAP_ENTRY(nsIDOMNode)
    NS_INTERFACE_MAP_ENTRY(nsIContent)
 NS_INTERFACE_MAP_END_THREADSAFE
+
+
+NS_IMPL_ADDREF(nsDOMDocumentType)
+NS_IMPL_RELEASE(nsDOMDocumentType)
+
 
 NS_IMETHODIMP    
 nsDOMDocumentType::GetName(nsAWritableString& aName)

@@ -95,8 +95,20 @@ nsHTMLHeadElement::~nsHTMLHeadElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLHeadElement, nsGenericElement);
 NS_IMPL_RELEASE_INHERITED(nsHTMLHeadElement, nsGenericElement);
 
-NS_IMPL_HTMLCONTENT_QI(nsHTMLHeadElement, nsGenericHTMLContainerElement,
-                       nsIDOMHTMLHeadElement);
+
+// XPConnect interface list for nsHTMLHeadElement
+NS_CLASINFO_MAP_BEGIN(HTMLHeadElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLHeadElement)
+  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLHeadElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLHeadElement,
+                                    nsGenericHTMLContainerElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLHeadElement)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLHeadElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 nsresult

@@ -184,9 +184,23 @@ nsHTMLImageElement::~nsHTMLImageElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLImageElement, nsGenericElement) 
 NS_IMPL_RELEASE_INHERITED(nsHTMLImageElement, nsGenericElement) 
 
-NS_IMPL_HTMLCONTENT_QI3(nsHTMLImageElement, nsGenericHTMLLeafElement,
-                        nsIDOMHTMLImageElement, nsIDOMNSHTMLImageElement,
-                        nsIJSNativeInitializer);
+
+// XPConnect interface list for nsHTMLImageElement
+NS_CLASINFO_MAP_BEGIN(HTMLImageElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLImageElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMNSHTMLImageElement)
+  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLImageElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLImageElement,
+                                    nsGenericHTMLLeafElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLImageElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLImageElement)
+  NS_INTERFACE_MAP_ENTRY(nsIJSNativeInitializer)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLImageElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 nsresult

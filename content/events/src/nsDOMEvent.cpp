@@ -42,6 +42,7 @@
 #include "prmem.h"
 #include "nsLayoutAtoms.h"
 #include "nsMutationEvent.h"
+#include "nsDOMClassInfo.h"
 
 
 static char* mEventNames[] = {
@@ -124,7 +125,8 @@ nsDOMEvent::operator delete(void* aPtr)
 
 
 
-nsDOMEvent::nsDOMEvent(nsIPresContext* aPresContext, nsEvent* aEvent, const nsAReadableString& aEventType) 
+nsDOMEvent::nsDOMEvent(nsIPresContext* aPresContext, nsEvent* aEvent,
+                       const nsAReadableString& aEventType) 
 {
   mPresContext = aPresContext;
   if (mPresContext)
@@ -167,25 +169,39 @@ nsDOMEvent::nsDOMEvent(nsIPresContext* aPresContext, nsEvent* aEvent, const nsAR
 	  //
 	  // extract the IME composition string
 	  //
+
 	  mText = new nsString(((nsTextEvent*)aEvent)->theText);
+
 	  //
-	  // build the range list -- ranges need to be DOM-ified since the IME transaction
-	  //  will hold a ref, the widget representation isn't persistent
+	  // build the range list -- ranges need to be DOM-ified since the
+	  // IME transaction will hold a ref, the widget representation
+	  // isn't persistent
 	  //
-	  nsIPrivateTextRange** tempTextRangeList = new nsIPrivateTextRange*[((nsTextEvent*)aEvent)->rangeCount];
-	  if (tempTextRangeList!=nsnull) {
-		for(PRUint16 i=0;i<((nsTextEvent*)aEvent)->rangeCount;i++) {
-			nsPrivateTextRange* tempPrivateTextRange = new nsPrivateTextRange((((nsTextEvent*)aEvent)->rangeArray[i]).mStartOffset,
-														(((nsTextEvent*)aEvent)->rangeArray[i]).mEndOffset,
-														(((nsTextEvent*)aEvent)->rangeArray[i]).mRangeType);
-			if (tempPrivateTextRange!=nsnull) {
-				tempPrivateTextRange->AddRef();
-				tempTextRangeList[i] = (nsIPrivateTextRange*)tempPrivateTextRange;
-			}
-		}
-		
-		mTextRange = (nsIPrivateTextRangeList*) new nsPrivateTextRangeList(((nsTextEvent*)aEvent)->rangeCount,tempTextRangeList);
-		if (mTextRange!=nsnull)  mTextRange->AddRef();
+
+    nsTextEvent *te = (nsTextEvent*)aEvent;
+
+	  nsIPrivateTextRange** tempTextRangeList =
+      new nsIPrivateTextRange*[te->rangeCount];
+
+	  if (tempTextRangeList) {
+      for(PRUint16 i=0;i<((nsTextEvent*)aEvent)->rangeCount;i++) {
+
+        nsPrivateTextRange* tempPrivateTextRange =
+          new nsPrivateTextRange(te->rangeArray[i].mStartOffset,
+                                 te->rangeArray[i].mEndOffset,
+                                 te->rangeArray[i].mRangeType);
+
+        if (tempPrivateTextRange) {
+          tempPrivateTextRange->AddRef();
+          tempTextRangeList[i] = (nsIPrivateTextRange*)tempPrivateTextRange;
+        }
+      }
+
+      // Node, the nsPrivateTextRangeList takes ownership of
+      // tempTextRangeList
+      mTextRange = new nsPrivateTextRangeList(te->rangeCount,
+                                              tempTextRangeList);
+      NS_IF_ADDREF(mTextRange);
 	  }
   }
 
@@ -218,6 +234,13 @@ nsDOMEvent::~nsDOMEvent()
 NS_IMPL_ADDREF(nsDOMEvent)
 NS_IMPL_RELEASE(nsDOMEvent)
 
+// XPConnect interface list for nsHTMLFormElement
+NS_CLASINFO_MAP_BEGIN(Event)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMKeyEvent)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMMouseEvent)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMNSUIEvent)
+NS_CLASINFO_MAP_END
+
 NS_INTERFACE_MAP_BEGIN(nsDOMEvent)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsIDOMEvent, nsIDOMMouseEvent)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsIDOMUIEvent, nsIDOMMouseEvent)
@@ -228,6 +251,7 @@ NS_INTERFACE_MAP_BEGIN(nsDOMEvent)
   NS_INTERFACE_MAP_ENTRY(nsIPrivateTextEvent)
   NS_INTERFACE_MAP_ENTRY(nsIPrivateCompositionEvent)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMMouseEvent)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(Event)
 NS_INTERFACE_MAP_END
 
 // nsIDOMEventInterface

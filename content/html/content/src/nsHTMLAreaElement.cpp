@@ -125,9 +125,23 @@ nsHTMLAreaElement::~nsHTMLAreaElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLAreaElement, nsGenericElement) 
 NS_IMPL_RELEASE_INHERITED(nsHTMLAreaElement, nsGenericElement) 
 
-NS_IMPL_HTMLCONTENT_QI3(nsHTMLAreaElement, nsGenericHTMLLeafElement,
-                        nsIDOMHTMLAreaElement, nsIDOMNSHTMLAreaElement,
-                        nsILink)
+
+// XPConnect interface list for nsHTMLAreaElement
+NS_CLASINFO_MAP_BEGIN(HTMLAreaElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLAreaElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMNSHTMLAreaElement)
+  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLAreaElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLAreaElement,
+                                    nsGenericHTMLLeafElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLAreaElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLAreaElement)
+  NS_INTERFACE_MAP_ENTRY(nsILink)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLAreaElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 nsresult

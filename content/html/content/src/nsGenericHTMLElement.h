@@ -33,7 +33,6 @@
 
 #include "nsIStatefulFrame.h"
 
-
 class nsIDOMAttr;
 class nsIDOMEventListener;
 class nsIDOMNodeList;
@@ -53,6 +52,8 @@ class nsIFormControlFrame;
 class nsIForm;
 class nsIPresState;
 class nsIPluginInstance;
+
+extern void GetGenericHTMLElementIIDs(nsVoidArray& aArray);
 
 class nsGenericHTMLElement : public nsGenericElement {
 public:
@@ -344,9 +345,6 @@ protected:
                            jsval *aVp);
   */
 };
-
-
-NS_DECL_DOM_CLASSINFO(nsGenericHTMLElement, nsGenericElement);
 
 
 //----------------------------------------------------------------------
@@ -752,14 +750,12 @@ _class::QueryInterface(REFNSIID aIID, void** aInstancePtr)                    \
  * QueryInterface() implementation helper macros
  */
 
-#define NS_HTML_INTERFACE_MAP_BEGIN(_class, _base)                            \
+#define NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(_class, _base)                    \
   NS_IMETHODIMP _class::QueryInterface(REFNSIID aIID, void** aInstancePtr)    \
   {                                                                           \
     NS_ENSURE_ARG_POINTER(aInstancePtr);                                      \
                                                                               \
     *aInstancePtr = nsnull;                                                   \
-                                                                              \
-    nsISupports *inst = nsnull;                                               \
                                                                               \
     nsresult rv;                                                              \
                                                                               \
@@ -771,24 +767,19 @@ _class::QueryInterface(REFNSIID aIID, void** aInstancePtr)                    \
     rv = DOMQueryInterface(this, aIID, aInstancePtr);                         \
                                                                               \
     if (NS_SUCCEEDED(rv))                                                     \
-      return rv;
-
-#define NS_HTML_INTERFACE_MAP_ENTRY(_interface)                               \
-    if (aIID.Equals(NS_GET_IID(_interface))) {                                \
-      inst = NS_STATIC_CAST(_interface *, this);                              \
-    } else
-
-#define NS_HTML_INTERFACE_MAP_CLASSINFO NS_DOM_INTERFACE_MAP_CLASSINFO
+      return rv;                                                              \
+                                                                              \
+    nsISupports *foundInterface = nsnull;
 
 
-#define NS_HTML_INTERFACE_MAP_END                                             \
+#define NS_HTML_CONTENT_INTERFACE_MAP_END                                     \
     {                                                                         \
       return NS_NOINTERFACE;                                                  \
     }                                                                         \
                                                                               \
-    NS_ADDREF(inst);                                                          \
+    NS_ADDREF(foundInterface);                                                \
                                                                               \
-    *aInstancePtr = inst;                                                     \
+    *aInstancePtr = foundInterface;                                           \
                                                                               \
     return NS_OK;                                                             \
   }

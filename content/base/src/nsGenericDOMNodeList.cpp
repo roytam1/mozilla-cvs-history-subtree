@@ -32,24 +32,21 @@ nsGenericDOMNodeList::~nsGenericDOMNodeList()
 {
 }
 
-nsresult 
-nsGenericDOMNodeList::QueryInterface(REFNSIID aIID, void** aInstancePtr)
-{
-  if (NULL == aInstancePtr) {
-    return NS_ERROR_NULL_POINTER;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIDOMNodeList))) {
-    *aInstancePtr = (void*)(nsIDOMNodeList*)this;
-    AddRef();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsISupports))) {
-    *aInstancePtr = (void*)(nsISupports*)(nsIDOMNodeList*)this;
-    AddRef();
-    return NS_OK;
-  }
-  return NS_NOINTERFACE;
-}
-
 NS_IMPL_ADDREF(nsGenericDOMNodeList)
 NS_IMPL_RELEASE(nsGenericDOMNodeList)
+
+
+// XPConnect interface list for nsGenericDOMNodeList
+NS_CLASINFO_MAP_BEGIN(NodeList)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMNodeList)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsGenericDOMNodeList
+NS_INTERFACE_MAP_BEGIN(nsGenericDOMNodeList)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNodeList)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(NodeList)
+NS_INTERFACE_MAP_END
+
+

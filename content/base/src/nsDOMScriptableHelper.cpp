@@ -74,22 +74,143 @@ NS_INTERFACE_MAP_BEGIN(nsDOMScriptableHelper)
   NS_INTERFACE_MAP_ENTRY(nsISupports)
 NS_INTERFACE_MAP_END
 
-XPC_IMPLEMENT_FORWARD_CREATE(nsDOMScriptableHelper)
-XPC_IMPLEMENT_FORWARD_GETFLAGS(nsDOMScriptableHelper)
-XPC_IMPLEMENT_FORWARD_LOOKUPPROPERTY(nsDOMScriptableHelper)
-XPC_IMPLEMENT_FORWARD_DEFINEPROPERTY(nsDOMScriptableHelper)
-XPC_IMPLEMENT_FORWARD_GETPROPERTY(nsDOMScriptableHelper)
-XPC_IMPLEMENT_FORWARD_SETPROPERTY(nsDOMScriptableHelper)
-XPC_IMPLEMENT_FORWARD_GETATTRIBUTES(nsDOMScriptableHelper)
-XPC_IMPLEMENT_FORWARD_SETATTRIBUTES(nsDOMScriptableHelper)
-XPC_IMPLEMENT_FORWARD_DELETEPROPERTY(nsDOMScriptableHelper)
-XPC_IMPLEMENT_FORWARD_DEFAULTVALUE(nsDOMScriptableHelper)
-XPC_IMPLEMENT_FORWARD_ENUMERATE(nsDOMScriptableHelper)
-XPC_IMPLEMENT_FORWARD_CHECKACCESS(nsDOMScriptableHelper)
-XPC_IMPLEMENT_FORWARD_CALL(nsDOMScriptableHelper)
-XPC_IMPLEMENT_FORWARD_CONSTRUCT(nsDOMScriptableHelper)
-XPC_IMPLEMENT_FORWARD_HASINSTANCE(nsDOMScriptableHelper)
-XPC_IMPLEMENT_FORWARD_FINALIZE(nsDOMScriptableHelper)
+NS_IMETHODIMP
+nsDOMScriptableHelper::GetClassName(char * *aClassName)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::GetFlags(PRUint32 *aFlags)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::PreCreate(nsISupports *nativeObj, JSContext * cx,
+                                 JSObject * globalObj, JSObject * *parentObj)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::Create(nsIXPConnectWrappedNative *wrapper,
+                              JSContext * cx, JSObject * obj)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::AddProperty(nsIXPConnectWrappedNative *wrapper,
+                                   JSContext * cx, JSObject * obj, jsval id,
+                                   jsval * vp, PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::DelProperty(nsIXPConnectWrappedNative *wrapper,
+                                   JSContext * cx, JSObject * obj, jsval id,
+                                   jsval * vp, PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::GetProperty(nsIXPConnectWrappedNative *wrapper,
+                                   JSContext * cx, JSObject * obj, jsval id,
+                                   jsval * vp, PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::SetProperty(nsIXPConnectWrappedNative *wrapper,
+                                   JSContext * cx, JSObject * obj, jsval id,
+                                   jsval * vp, PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::Enumerate(nsIXPConnectWrappedNative *wrapper,
+                                 JSContext * cx, JSObject * obj,
+                                 PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
+                                    JSContext * cx, JSObject * obj,
+                                    PRUint32 enum_op, jsval * statep,
+                                    jsid *idp, PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::NewResolve(nsIXPConnectWrappedNative *wrapper,
+                                  JSContext * cx, JSObject * obj, jsval id,
+                                  PRUint32 flags, JSObject * *objp,
+                                  PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::Convert(nsIXPConnectWrappedNative *wrapper,
+                               JSContext * cx, JSObject * obj, PRUint32 type,
+                               jsval * vp, PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::Finalize(nsIXPConnectWrappedNative *wrapper,
+                                JSContext * cx, JSObject * obj)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::CheckAccess(nsIXPConnectWrappedNative *wrapper,
+                                   JSContext * cx, JSObject * obj, jsval id,
+                                   PRUint32 mode, jsval * vp, PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::Call(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
+                            JSObject * obj, PRUint32 argc, jsval * argv,
+                            jsval * vp, PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::Construct(nsIXPConnectWrappedNative *wrapper,
+                                 JSContext * cx, JSObject * obj, PRUint32 argc,
+                                 jsval * argv, jsval * vp, PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::HasInstance(nsIXPConnectWrappedNative *wrapper,
+                                   JSContext * cx, JSObject * obj, jsval val,
+                                   PRBool *bp, PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::Mark(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
+                            JSObject * obj, void * arg, PRUint32 *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
 
 // static
 nsresult
@@ -153,6 +274,7 @@ class nsHTMLDocHelper : nsDOMScriptableHelper
 public:
   virtual ~nsHTMLDocHelper() {};
 
+#if 0
   NS_IMETHOD GetProperty(JSContext *cx, JSObject *obj,
                          jsid id, jsval *vp,
                          nsIXPConnectWrappedNative* wrapper,
@@ -163,8 +285,10 @@ public:
                          nsIXPConnectWrappedNative* wrapper,
                          nsIXPCScriptable* arbitrary,
                          JSBool* retval);
+#endif
 };
 
+#if 0
 NS_IMETHODIMP
 nsHTMLDocHelper::GetProperty(JSContext *cx, JSObject *obj,
                              jsid id, jsval *vp,
@@ -261,6 +385,7 @@ nsHTMLDocHelper::SetProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp,
 
   return arbitrary->SetProperty(cx, obj, id, vp, wrapper, NULL, retval);
 }
+#endif
 
 // static
 nsresult
@@ -288,14 +413,17 @@ class nsHTMLFormHelper : nsDOMScriptableHelper
 public:
   virtual ~nsHTMLFormHelper() {};
 
+#if 0
   NS_IMETHOD GetProperty(JSContext *cx, JSObject *obj,
                          jsid id, jsval *vp,
                          nsIXPConnectWrappedNative* wrapper,
                          nsIXPCScriptable* arbitrary,
                          JSBool* retval);
+#endif
 };
 
 
+#if 0
 NS_IMETHODIMP
 nsHTMLFormHelper::GetProperty(JSContext *cx, JSObject *obj,
                               jsid id, jsval *vp,
@@ -357,6 +485,7 @@ nsHTMLFormHelper::GetProperty(JSContext *cx, JSObject *obj,
 
   return arbitrary->GetProperty(cx, obj, id, vp, wrapper, NULL, retval);
 }
+#endif
 
 // static
 nsresult

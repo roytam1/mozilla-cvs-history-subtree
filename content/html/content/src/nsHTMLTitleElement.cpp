@@ -98,9 +98,20 @@ nsHTMLTitleElement::~nsHTMLTitleElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLTitleElement, nsGenericElement) 
 NS_IMPL_RELEASE_INHERITED(nsHTMLTitleElement, nsGenericElement) 
 
-NS_IMPL_HTMLCONTENT_QI(nsHTMLTitleElement,
-                       nsGenericHTMLContainerElement,
-                       nsIDOMHTMLTitleElement);
+
+// XPConnect interface list for nsHTMLTitleElement
+NS_CLASINFO_MAP_BEGIN(HTMLTitleElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLTitleElement)
+  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLTitleElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLTitleElement,
+                                    nsGenericHTMLContainerElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLTitleElement)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLTitleElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 nsresult

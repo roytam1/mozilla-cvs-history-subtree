@@ -329,8 +329,6 @@ protected:
   PRUint32 mContentID;
 };
 
-NS_DECL_DOM_CLASSINFO_NO_BASE(nsGenericElement);
-
 class nsGenericContainerElement : public nsGenericElement {
 public:
   nsGenericContainerElement();

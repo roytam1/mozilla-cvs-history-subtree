@@ -719,8 +719,20 @@ nsHTMLBodyElement::~nsHTMLBodyElement()
 }
 
 
-NS_IMPL_HTMLCONTENT_QI(nsHTMLBodyElement, nsGenericHTMLContainerElement,
-                       nsIDOMHTMLBodyElement)
+
+// XPConnect interface list for nsHTMLBodyElement
+NS_CLASINFO_MAP_BEGIN(HTMLBodyElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLBodyElement)
+  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLBodyElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLBodyElement,
+                                    nsGenericHTMLContainerElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLBodyElement)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLBodyElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 nsresult

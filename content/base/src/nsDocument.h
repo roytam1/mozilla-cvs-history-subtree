@@ -31,6 +31,7 @@
 #include "nsIDOMDocumentXBL.h"
 #include "nsIDOMNSDocument.h"
 #include "nsIDOMDocumentStyle.h"
+#include "nsIDOMDocumentRange.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIDiskDocument.h"
 #include "nsIScriptGlobalObject.h"
@@ -121,6 +122,7 @@ class nsDocument : public nsIDocument,
                    public nsIDOMDocumentEvent,
                    public nsIDOMDocumentStyle,
                    public nsIDOMDocumentView,
+                   public nsIDOMDocumentRange,
                    public nsIDOMDocumentXBL,
                    public nsIDiskDocument,
                    public nsSupportsWeakReference,
@@ -334,44 +336,29 @@ public:
 
 public:
   
-  // nsIDOMDocument interface
-  NS_IMETHOD    GetDoctype(nsIDOMDocumentType** aDoctype);
-  NS_IMETHOD    GetImplementation(nsIDOMDOMImplementation** aImplementation);
-  NS_IMETHOD    GetDocumentElement(nsIDOMElement** aDocumentElement);
+  // nsIDOMDocument
+  NS_DECL_NSIDOMDOCUMENT
 
-  NS_IMETHOD    CreateElement(const nsAReadableString& aTagName, nsIDOMElement** aReturn);
-  NS_IMETHOD    CreateDocumentFragment(nsIDOMDocumentFragment** aReturn);
-  NS_IMETHOD    CreateTextNode(const nsAReadableString& aData, nsIDOMText** aReturn);
-  NS_IMETHOD    CreateComment(const nsAReadableString& aData, nsIDOMComment** aReturn);
-  NS_IMETHOD    CreateCDATASection(const nsAReadableString& aData, nsIDOMCDATASection** aReturn);
-  NS_IMETHOD    CreateProcessingInstruction(const nsAReadableString& aTarget, const nsAReadableString& aData, nsIDOMProcessingInstruction** aReturn);
-  NS_IMETHOD    CreateAttribute(const nsAReadableString& aName, nsIDOMAttr** aReturn);
-  NS_IMETHOD    CreateEntityReference(const nsAReadableString& aName, nsIDOMEntityReference** aReturn);
-  NS_IMETHOD    GetElementsByTagName(const nsAReadableString& aTagname, nsIDOMNodeList** aReturn);
-  NS_IMETHOD    GetElementsByTagNameNS(const nsAReadableString& aNamespaceURI, const nsAReadableString& aLocalName, nsIDOMNodeList** aReturn);
-  NS_IMETHOD    GetStyleSheets(nsIDOMStyleSheetList** aStyleSheets);
-  NS_IMETHOD    GetCharacterSet(nsAWritableString& aCharacterSet);
-  NS_IMETHOD    ImportNode(nsIDOMNode* aImportedNode,
-                           PRBool aDeep,
-                           nsIDOMNode** aReturn);
-  NS_IMETHOD    CreateRange(nsIDOMRange** aReturn);
-  NS_IMETHOD    Load (const nsAReadableString& aUrl);
-  NS_IMETHOD    GetPlugins(nsIDOMPluginArray** aPlugins);
-  NS_IMETHOD    GetLocation(nsIDOMLocation** aLocation);
-  NS_IMETHOD    GetBoxObjectFor(nsIDOMElement* aElement, nsIBoxObject** aResult);
-  NS_IMETHOD    SetBoxObjectFor(nsIDOMElement* aElement, nsIBoxObject* aBoxObject);
- 
-  // nsIDOMNode interface
+  // nsIDOMNSDocument
+  NS_DECL_NSIDOMNSDOCUMENT
+
+  // nsIDOMNode
   NS_DECL_NSIDOMNODE
+
+  // nsIDOMDocumentEvent
+  NS_DECL_NSIDOMDOCUMENTEVENT
+
+  // nsIDOMDocumentStyle
+  NS_DECL_NSIDOMDOCUMENTSTYLE
 
   // nsIDOMDocumentView
   NS_DECL_NSIDOMDOCUMENTVIEW
 
+  // nsIDOMDocumentRange
+  NS_DECL_NSIDOMDOCUMENTRANGE
+
   // nsIDOMDocumentXBL
   NS_DECL_NSIDOMDOCUMENTXBL
-
-  // nsIDOMDocumentEvent
-  NS_DECL_NSIDOMDOCUMENTEVENT
 
   // nsIDOMEventReceiver interface
   NS_IMETHOD AddEventListenerByIID(nsIDOMEventListener *aListener, const nsIID& aIID);

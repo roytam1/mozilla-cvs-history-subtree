@@ -131,9 +131,23 @@ nsHTMLLinkElement::~nsHTMLLinkElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLLinkElement, nsGenericElement) 
 NS_IMPL_RELEASE_INHERITED(nsHTMLLinkElement, nsGenericElement) 
 
-NS_IMPL_HTMLCONTENT_QI3(nsHTMLLinkElement, nsGenericHTMLLeafElement,
-                        nsIDOMHTMLLinkElement, nsIDOMLinkStyle,
-                        nsIStyleSheetLinkingElement);
+
+// XPConnect interface list for nsHTMLLinkElement
+NS_CLASINFO_MAP_BEGIN(HTMLLinkElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLLinkElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMLinkStyle)
+  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLLinkElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLLinkElement,
+                                    nsGenericHTMLLeafElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLLinkElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMLinkStyle)
+  NS_INTERFACE_MAP_ENTRY(nsIStyleSheetLinkingElement)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLLinkElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 nsresult

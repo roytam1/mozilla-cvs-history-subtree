@@ -273,8 +273,22 @@ nsHTMLInputElement::~nsHTMLInputElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLInputElement, nsGenericElement) 
 NS_IMPL_RELEASE_INHERITED(nsHTMLInputElement, nsGenericElement) 
 
-NS_IMPL_HTMLCONTENT_QI2(nsHTMLInputElement, nsGenericHTMLLeafFormElement,
-                        nsIDOMHTMLInputElement, nsIDOMNSHTMLInputElement)
+
+// XPConnect interface list for nsHTMLInputElement
+NS_CLASINFO_MAP_BEGIN(HTMLInputElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLInputElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMNSHTMLInputElement)
+  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLInputElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLInputElement,
+                                    nsGenericHTMLLeafFormElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLInputElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLInputElement)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLInputElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 // nsIDOMNode

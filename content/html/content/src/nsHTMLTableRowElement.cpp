@@ -255,9 +255,20 @@ nsHTMLTableRowElement::~nsHTMLTableRowElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLTableRowElement, nsGenericElement) 
 NS_IMPL_RELEASE_INHERITED(nsHTMLTableRowElement, nsGenericElement) 
 
-NS_IMPL_HTMLCONTENT_QI(nsHTMLTableRowElement,
-                       nsGenericHTMLContainerElement,
-                       nsIDOMHTMLTableRowElement);
+
+// XPConnect interface list for nsHTMLTableRowElement
+NS_CLASINFO_MAP_BEGIN(HTMLTableRowElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLTableRowElement)
+  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLTableRowElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLTableRowElement,
+                                    nsGenericHTMLContainerElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLTableRowElement)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLTableRowElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 nsresult

@@ -119,7 +119,18 @@ nsHTMLSpacerElement::~nsHTMLSpacerElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLSpacerElement, nsGenericElement);
 NS_IMPL_RELEASE_INHERITED(nsHTMLSpacerElement, nsGenericElement);
 
-NS_IMPL_HTMLCONTENT_QI0(nsHTMLSpacerElement, nsGenericHTMLLeafElement);
+
+// XPConnect interface list for nsHTMLSpacerElement
+NS_CLASINFO_MAP_BEGIN(HTMLSpacerElement)
+  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLSpacerElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLSpacerElement,
+                                    nsGenericHTMLLeafElement)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLSpacerElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 nsresult

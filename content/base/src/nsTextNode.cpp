@@ -29,6 +29,7 @@
 #include "nsCRT.h"
 #include "nsLayoutAtoms.h"
 #include "nsString.h"
+#include "nsDOMClassInfo.h"
 
 
 class nsTextNode : public nsIDOMText,
@@ -93,6 +94,16 @@ nsTextNode::~nsTextNode()
 NS_IMPL_ADDREF(nsTextNode)
 NS_IMPL_RELEASE(nsTextNode)
 
+
+// XPConnect interface list for nsGenericDOMNodeList
+NS_CLASINFO_MAP_BEGIN(Text)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMText)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsGenericDOMNodeList
+
+// This really needs to use the map!
 NS_IMETHODIMP
 nsTextNode::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 {
@@ -107,6 +118,16 @@ nsTextNode::QueryInterface(REFNSIID aIID, void** aInstancePtr)
     nsITextContent* tmp = this;
     *aInstancePtr = (void*) tmp;
     NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {
+    nsISupports *inst =
+      nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfo::eText_id,
+                                           GetTextIIDs,
+                                           "Text");
+    NS_ENSURE_TRUE(inst, NS_ERROR_OUT_OF_MEMORY);
+    NS_ADDREF(inst);
+    *aInstancePtr = inst;
     return NS_OK;
   }
   return NS_NOINTERFACE;

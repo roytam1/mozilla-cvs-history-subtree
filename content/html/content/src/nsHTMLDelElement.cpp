@@ -95,8 +95,20 @@ nsHTMLDelElement::~nsHTMLDelElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLDelElement, nsGenericElement);
 NS_IMPL_RELEASE_INHERITED(nsHTMLDelElement, nsGenericElement);
 
-NS_IMPL_HTMLCONTENT_QI(nsHTMLDelElement, nsGenericHTMLContainerElement,
-                       nsIDOMHTMLModElement);
+
+// XPConnect interface list for nsHTMLDelElement
+NS_CLASINFO_MAP_BEGIN(HTMLDelElement)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLModElement)
+  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLDelElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLDelElement,
+                                    nsGenericHTMLContainerElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLModElement)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLDelElement)
+NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
 nsresult

@@ -1775,6 +1775,15 @@ nsDocument::CreateElement(const nsAReadableString& aTagName,
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+NS_IMETHODIMP    
+nsDocument::CreateElementNS(const nsAReadableString & namespaceURI,
+                            const nsAReadableString & qualifiedName,
+                            nsIDOMElement **_retval)
+{
+  // Should be implemented by subclass
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 NS_IMETHODIMP
 nsDocument::CreateTextNode(const nsAReadableString& aData, nsIDOMText** aReturn)
 {
@@ -1846,6 +1855,15 @@ nsDocument::CreateAttribute(const nsAReadableString& aName,
   return attribute->QueryInterface(NS_GET_IID(nsIDOMAttr), (void**)aReturn);
 }
 
+NS_IMETHODIMP
+nsDocument::CreateAttributeNS(const nsAReadableString & namespaceURI,
+                              const nsAReadableString & qualifiedName,
+                              nsIDOMAttr **_retval)
+{
+  // Should be implemented by subclass
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 NS_IMETHODIMP    
 nsDocument::CreateEntityReference(const nsAReadableString& aName, 
                                   nsIDOMEntityReference** aReturn)
@@ -1893,6 +1911,14 @@ nsDocument::GetElementsByTagNameNS(const nsAReadableString& aNamespaceURI,
   }
 
   return list->QueryInterface(NS_GET_IID(nsIDOMNodeList), (void **)aReturn);
+}
+
+NS_IMETHODIMP    
+nsDocument::GetElementById(const nsAReadableString & elementId,
+                           nsIDOMElement **_retval)
+{
+  // Should be implemented by subclass
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP    
@@ -2243,6 +2269,21 @@ nsDocument::SetBoxObjectFor(nsIDOMElement* aElement, nsIBoxObject* aBoxObject)
 
   return NS_OK;
 }
+
+NS_IMETHODIMP
+nsDocument::GetDir(nsAWritableString& aDirection)
+{
+  aDirection.Assign(NS_LITERAL_STRING("ltr"));
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocument::SetDir(const nsAReadableString& aDirection)
+{
+  return NS_OK;
+}
+
 
 //
 // nsIDOMNode methods
