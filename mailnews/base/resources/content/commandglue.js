@@ -224,6 +224,8 @@ function ChangeFolderByURI(uri, viewType, viewFlags, sortType, sortOrder)
 	//notification before folder has actually changed.
 	msgfolder.updateFolder(msgWindow);
   }
+
+  document.commandDispatcher.updateCommands('mail-toolbar');
 }
 
 function isNewsURI(uri)
@@ -556,7 +558,9 @@ function CreateDBView(msgFolder, viewType, viewFlags, sortType, sortOrder)
 
     gCurViewFlags = viewFlags;
     var count = new Object;
-    gDBView.init(messenger, msgWindow);
+    if (!gThreadPaneCommandUpdater)
+      gThreadPaneCommandUpdater = new nsMsgDBViewCommandUpdater();
+    gDBView.init(messenger, msgWindow, gThreadPaneCommandUpdater);
     gDBView.open(msgFolder, sortType, sortOrder, viewFlags, count);
     
     var colID = ConvertSortTypeToColumnID(sortType);
