@@ -28,6 +28,7 @@
 #include <algorithm>
 
 #include "CHTMLClickrecord.h"
+#include "BookmarksFile.h"
 #include "CBrowserContext.h"
 #include "CBrowserWindow.h"
 #include "CURLDispatcher.h"
