@@ -27,24 +27,12 @@ MODULE=xmlextras
 DEFINES=-D_IMPL_NS_HTML -DWIN32_LEAN_AND_MEAN
 
 CPPSRCS=					\
-	nsSOAPCall.cpp				\
-	nsSOAPResponse.cpp			\
-	nsSOAPUtils.cpp				\
-	nsSOAPFault.cpp				\
-	nsSOAPParameter.cpp			\
-	nsDefaultSOAPEncoder.cpp		\
-	nsHTTPSOAPTransport.cpp			\
+	nsSOAPMessage.cpp				\
 	$(NULL)
 
 
 CPP_OBJS=					\
-	.\$(OBJDIR)\nsSOAPCall.obj		\
-	.\$(OBJDIR)\nsSOAPResponse.obj		\
-	.\$(OBJDIR)\nsSOAPUtils.obj		\
-	.\$(OBJDIR)\nsSOAPFault.obj		\
-	.\$(OBJDIR)\nsSOAPParameter.obj		\
-	.\$(OBJDIR)\nsDefaultSOAPEncoder.obj	\
-	.\$(OBJDIR)\nsHTTPSOAPTransport.obj	\
+	.\$(OBJDIR)\nsSOAPMessage.obj		\
 	$(NULL)
 
 EXPORTS =					\
