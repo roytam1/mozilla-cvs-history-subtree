@@ -4160,7 +4160,7 @@ FE_CreateJavaWindow(MWContext *pContext, LO_JavaAppStruct *java_struct,
 		    int32 xp, int32 yp, int32 xs, int32 ys)
 {
     CWinCX* ctxt = WINCX(pContext);
-    LJAppletData* ad = (LJAppletData*)java_struct->session_data;
+    LJAppletData* ad = (LJAppletData*)java_struct->objTag.session_data;
     HWND parent;
 
     PR_ASSERT(ad);
