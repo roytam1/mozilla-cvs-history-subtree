@@ -5467,8 +5467,10 @@ function updatePageLivemarks()
   var livemarkLinks = gBrowser.mCurrentBrowser.livemarkLinks;
   if (!livemarkLinks || livemarkLinks.length == 0) {
     gLivemarksButton.removeAttribute("livemarks");
+    gLivemarksButton.setAttribute("tooltiptext", gNavigatorBundle.getString("livemarkNoLivemarksTooltip"));
   } else {
     gLivemarksButton.setAttribute("livemarks", "true");
+    gLivemarksButton.setAttribute("tooltiptext", gNavigatorBundle.getString("livemarkHasLivemarksTooltip"));
   }
 }
 
@@ -5476,7 +5478,7 @@ function livemarkFillPopup(menuPopup)
 {
   var livemarkLinks = gBrowser.mCurrentBrowser.livemarkLinks;
   if (livemarkLinks == null) {
-    return;
+    return false;
   }
 
   while (menuPopup.firstChild) {
@@ -5492,6 +5494,8 @@ function livemarkFillPopup(menuPopup)
     menuItem.setAttribute("tooltiptext", markinfo.href);
     menuPopup.appendChild(menuItem);
   }
+
+  return true;
 }
 
 function livemarkAddMark(wincontent, data) {

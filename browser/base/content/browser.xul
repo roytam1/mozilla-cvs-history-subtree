@@ -456,8 +456,8 @@
         <menuseparator/>
       </menupopup>
     </statusbarpanel>
-    <statusbarpanel id="livemark-button" type="menu" class="statusbarpanel-menu-iconic" tooltiptext="&livemarkIcon.tooltip;">
-      <menupopup onpopupshowing="livemarkFillPopup(this);"
+    <statusbarpanel id="livemark-button" type="menu" class="statusbarpanel-menu-iconic">
+      <menupopup onpopupshowing="return livemarkFillPopup(this);"
                  oncommand="livemarkAddMark(window._content, event.target.getAttribute('data'));" />
     </statusbarpanel>
     <statusbarpanel id="statusbar-updates"/>
