@@ -288,11 +288,7 @@ static JSObject_RegisterNativeMethods(JNIEnv* jEnv)
         "removeMember", "(Ljava/lang/String;)V", (void*)&Java_netscape_javascript_JSObject_removeMember,
         "call", "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/Object;", (void*)&Java_netscape_javascript_JSObject_call,
         "eval", "(Ljava/lang/String;)Ljava/lang/Object;", (void*)&Java_netscape_javascript_JSObject_eval,
-#endif
-
         "toString", "()Ljava/lang/String;", (void*)&Java_netscape_javascript_JSObject_toString,
-
-#if 0        
         "getWindow", "(Ljava/applet/Applet;)Lnetscape/javascript/JSObject;", (void*)&Java_netscape_javascript_JSObject_getWindow,
         "finalize", "()V", (void*)&Java_netscape_javascript_JSObject_finalize,
         /* "equals", "(Ljava/lang/Object;)Z", (void*)&Java_netscape_javascript_JSObject_equals */
