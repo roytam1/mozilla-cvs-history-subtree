@@ -45,6 +45,7 @@
 #include "nsVoidArray.h"  // XXX introduces dependency on raptorbase
 #include "nsRDFCID.h"
 #include "nsString.h"
+#include "nsXPIDLString.h"
 #include "rdfutil.h"
 #include "plhash.h"
 #include "plstr.h"
@@ -890,6 +891,7 @@ InMemoryDataSource::~InMemoryDataSource(void)
         delete mObservers;
     }
 
+    if (mURL) PL_strfree(mURL);
     PR_DestroyLock(mLock);
 }
 
@@ -964,8 +966,10 @@ InMemoryDataSource::GetURI(char* *uri)
     if (! uri)
         return NS_ERROR_NULL_POINTER;
 
-    *uri = mURL;
-    return NS_OK;
+    if ((*uri = nsXPIDLCString::Copy(mURL)) == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+    else
+        return NS_OK;
 }
 
 NS_IMETHODIMP

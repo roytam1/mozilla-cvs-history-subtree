@@ -199,8 +199,10 @@ FindDataSource::Init(const char *uri)
 NS_IMETHODIMP
 FindDataSource::GetURI(char **uri)
 {
-	*uri = mURI;
-	return NS_OK;
+    if ((*uri = nsXPIDLCString::Copy(mURI)) == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+    else
+        return NS_OK;
 }
 
 

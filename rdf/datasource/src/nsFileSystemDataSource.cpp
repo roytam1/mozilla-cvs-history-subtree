@@ -215,8 +215,10 @@ FileSystemDataSource::Init(const char *uri)
 NS_IMETHODIMP
 FileSystemDataSource::GetURI(char **uri)
 {
-	*uri = nsXPIDLCString::Copy(mURI);
-	return NS_OK;
+    if ((*uri = nsXPIDLCString::Copy(mURI)) == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+    else
+        return NS_OK;
 }
 
 

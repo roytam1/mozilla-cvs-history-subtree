@@ -21,6 +21,7 @@
 #include "nsIServiceManager.h"
 #include "nsIRDFService.h"
 #include "nsRDFCID.h"
+#include "nsXPIDLString.h"
 #include "prlog.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
@@ -125,8 +126,11 @@ nsRDFResource::GetValue(char* *uri)
 {
     if (!uri)
         return NS_ERROR_NULL_POINTER;
-    *uri = mURI;
-    return NS_OK;
+    
+    if ((*uri = nsXPIDLCString::Copy(mURI)) == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+    else
+        return NS_OK;
 }
 
 NS_IMETHODIMP
