@@ -174,7 +174,7 @@
   locale/communicator/wallet/wallet.properties       (@AB_CD@/chrome/communicator/wallet/wallet.properties)
   locale/communicator/wallet/SignonViewer.properties (@AB_CD@/chrome/communicator/wallet/SignonViewer.properties)
   locale/communicator/wallet/SignonViewer.dtd        (@AB_CD@/chrome/communicator/wallet/SignonViewer.dtd)
-  locale/communicator-platform/contents.rdf                         (generic/chrome/communicator-platform/contents.rdf)
+* locale/communicator-platform/contents.rdf                         (generic/chrome/communicator-platform/contents.rdf)
   locale/communicator-platform/win/platformCommunicatorOverlay.dtd  (@AB_CD@/chrome/communicator-platform/win/platformCommunicatorOverlay.dtd)
   locale/communicator-platform/win/pref/platformPrefOverlay.dtd     (@AB_CD@/chrome/communicator-platform/win/pref/platformPrefOverlay.dtd)
   locale/communicator-platform/mac/platformCommunicatorOverlay.dtd  (@AB_CD@/chrome/communicator-platform/mac/platformCommunicatorOverlay.dtd)
