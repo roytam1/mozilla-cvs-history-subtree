@@ -305,6 +305,7 @@ var BookmarksCommand = {
     // delete
     // ---------------------
     // bm_refreshlivemark
+    // bm_sortbyname
     // ---------------------
     // bm_properties
     switch (type) {
@@ -312,6 +313,7 @@ var BookmarksCommand = {
       commands = ["bm_newbookmark", "bm_newfolder", "bm_newseparator", "bm_separator",
                   "cut", "copy", "paste", "bm_separator",
                   "delete", "bm_separator",
+                  "bm_sortbyname", "bm_separator",
                   "bm_properties"];
       break;
     case "Bookmark":
@@ -319,6 +321,7 @@ var BookmarksCommand = {
                   "bm_newbookmark", "bm_newfolder", "bm_newseparator", "bm_separator",
                   "cut", "copy", "paste", "bm_separator",
                   "delete", "bm_separator",
+                  "bm_sortbyname", "bm_separator",
                   "bm_properties"];
       break;
     case "Folder":
@@ -345,7 +348,7 @@ var BookmarksCommand = {
       commands = ["bm_expandfolder", "bm_openfolder", "bm_separator",
                   "cut", "copy", "bm_separator",
                   "delete", "bm_separator",
-                  "bm_refreshlivemark", "bm_separator",
+                  "bm_refreshlivemark", "bm_sortbyname", "bm_separator",
                   "bm_properties"];
       break;
     case "LivemarkBookmark":
@@ -805,12 +808,25 @@ var BookmarksCommand = {
 
   sortByName: function (aSelection)
   {
-    if (aSelection.length != 1 ||
-        BookmarksUtils.resolveType (aSelection.item[0]) != "Folder")
+    var theFolder;
+
+    if (aSelection.length != 1)
       return;
 
+    var selType = BookmarksUtils.resolveType (aSelection.item[0]);
+    if (selType == "Folder" || selType == "Bookmark" ||
+        selType == "PersonalToolbarFolder" || selType == "Livemark")
+    {
+      theFolder = aSelection.parent[0];
+    } else {
+      // we're not going to try to sort ImmutableBookmark siblings or
+      // any other such thing, since it'll probably just get us into
+      // trouble
+      return;
+    }
+
     var toSort = [];
-    RDFC.Init(BMDS, aSelection.item[0]);
+    RDFC.Init(BMDS, theFolder);
     var folderContents = RDFC.GetElements();
     while (folderContents.hasMoreElements()) {
         var rsrc = folderContents.getNext().QueryInterface(kRDFRSCIID);
@@ -832,10 +848,13 @@ var BookmarksCommand = {
                    var atype = BookmarksUtils.resolveType(a);
                    var btype = BookmarksUtils.resolveType(b);
 
+                   var aisfolder = (atype == "Folder") || (atype == "PersonalToolbarFolder");
+                   var bisfolder = (btype == "Folder") || (btype == "PersonalToolbarFolder");
+
                    // folders above bookmarks
-                   if (atype == "Folder" && btype != "Folder")
+                   if (aisfolder && !bisfolder)
                      return -1;
-                   if (btype == "Folder" && atype != "Folder")
+                   if (bisfolder && !aisfolder)
                      return 1;
 
                    // then sort by name
@@ -848,7 +867,7 @@ var BookmarksCommand = {
     // we now have the resources here sorted by name
     BMDS.beginUpdateBatch();
 
-    RDFC.Init(BMDS, aSelection.item[0]);
+    RDFC.Init(BMDS, theFolder);
 
     // remove existing elements
     var folderContents = RDFC.GetElements();
@@ -1010,10 +1029,12 @@ var BookmarksController = {
       }
       return length > 0;
     case "cmd_bm_sortbyname":
-      if (length != 1 ||
-          aSelection.type[0] != "Folder")
-        return false;
-      return true;
+      if (length == 1 && (aSelection.type[0] == "Folder" ||
+                          aSelection.type[0] == "Bookmark" ||
+                          aSelection.type[0] == "PersonalToolbarFolder" ||
+                          aSelection.type[0] == "Livemark"))
+        return true;
+      return false;
     default:
       return false;
     }
