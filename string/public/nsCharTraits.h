@@ -35,6 +35,10 @@
   // for |PRUnichar|
 #endif
 
+#ifndef nsStringIteratorUtils_h___
+#include "nsStringIteratorUtils.h"
+#endif
+
 
 #ifdef HAVE_CPP_BOOL
   typedef bool nsCharTraits_bool;

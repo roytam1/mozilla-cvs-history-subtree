@@ -18,6 +18,7 @@
 # 
 # Contributor(s):
 #   Johnny Stenback <jst@netscape.com> (original author)
+#   Scott Collins <scc@mozilla.org>
 #
 
 DEPTH		= ../..
@@ -33,6 +34,7 @@ LIBRARY_NAME	= string_s
 REQUIRES	= xpcom
 
 CPPSRCS		=				\
+		nsLocalString.cpp		\
 		nsFragmentedString.cpp		\
 		nsPrintfCString.cpp		\
 		nsReadableUtils.cpp		\

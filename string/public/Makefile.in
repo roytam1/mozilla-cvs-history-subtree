@@ -18,6 +18,7 @@
 # 
 # Contributor(s):
 #   Johnny Stenback <jst@netscape.com> (original author)
+#   Scott Collins <scc@mozilla.org>
 #
 
 DEPTH		= ../..
@@ -31,6 +32,7 @@ MODULE		= string
 
 EXPORTS		=				\
 		nsAlgorithm.h			\
+		nsAString.h			\
 		nsBufferHandle.h		\
 		nsBufferHandleUtils.h		\
 		nsPrivateSharableString.h	\
@@ -41,7 +43,12 @@ EXPORTS		=				\
 		nsSharedBufferList.h		\
 		nsSlidingString.h		\
 		nsFragmentedString.h		\
+    nsLiteralString.h		\
+    nsLocalString.h		\
 		nsPrintfCString.h		\
+		nsStringFragment.h		\
+		nsStringIterator.h		\
+		nsStringIteratorUtils.h		\
 		$(NULL)			
 
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))

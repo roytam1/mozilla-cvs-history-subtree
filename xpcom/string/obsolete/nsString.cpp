@@ -792,8 +792,8 @@ void nsCString::AssignWithConversion( const nsAReadableString& aString ) {
       temp.mLength=fraglen;
 
       StrAppend(*this,temp,0,fraglen);
-      
-      start += fraglen;
+
+      start.advance(fraglen);
     }
   }
 }
@@ -816,7 +816,7 @@ void nsCString::AppendWithConversion( const nsAReadableString& aString ) {
 
       StrAppend(*this,temp,0,fraglen);
       
-      start += fraglen;
+      start.advance(fraglen);
     }
   }
 }
@@ -1390,7 +1390,7 @@ NS_ConvertUCS2toUTF8::NS_ConvertUCS2toUTF8( const nsAReadableString& aString )
     while (start != end) {
       nsReadableFragment<PRUnichar> frag(start.fragment());
       Append(frag.mStart, frag.mEnd - frag.mStart);
-      start += start.size_forward();
+      start.advance(start.size_forward());
     }
   }
 

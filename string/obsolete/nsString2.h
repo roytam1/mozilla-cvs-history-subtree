@@ -53,6 +53,7 @@
 #include "nsCRT.h"
 
 #include "nsAWritableString.h"
+#include "nsLiteralString.h"
 
 #ifdef STANDALONE_MI_STRING_TESTS
   class nsAReadableString { public: virtual ~nsAReadableString() { } };

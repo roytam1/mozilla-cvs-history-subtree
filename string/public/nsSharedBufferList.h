@@ -40,6 +40,10 @@
   // for |nsReadingIterator|
 #endif
 
+#ifndef nsLiteralString_h___
+#include "nsLiteralString.h"
+#endif
+
 #ifndef nsBufferHandleUtils_h___
 #include "nsBufferHandleUtils.h"
   // for |NS_AllocateContiguousHandleWithData|
@@ -180,7 +184,7 @@ class NS_COM nsSharedBufferList
       NewSingleAllocationBuffer( const PRUnichar* aData, PRUint32 aDataLength, PRUint32 aAdditionalCapacity = 1 )
         {
           typedef Buffer* Buffer_ptr;
-          return NS_AllocateContiguousHandleWithData(Buffer_ptr(0), NS_READABLE_CAST(PRUnichar, nsLiteralString(aData, aDataLength)), aAdditionalCapacity);
+          return NS_AllocateContiguousHandleWithData(Buffer_ptr(0), NS_READABLE_CAST(PRUnichar, literal_string(aData, aDataLength)), aAdditionalCapacity);
         }
 
       static

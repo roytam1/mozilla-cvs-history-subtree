@@ -22,14 +22,20 @@
  
 
 nsAlgorithm.h
+nsAString.h
 nsAReadableString.h
 nsAWritableString.h
 nsBufferHandle.h
 nsBufferHandleUtils.h
 nsCharTraits.h
 nsFragmentedString.h
+nsLiteralString.h
+nsLocalString.h
 nsPrintfCString.h
 nsPrivateSharableString.h
 nsReadableUtils.h
 nsSharedBufferList.h
 nsSlidingString.h
+nsStringFragment.h
+nsStringIterator.h
+nsStringIteratorUtils.h

@@ -29,245 +29,12 @@
 #include "nsAReadableString.h"
 #endif
 
+#ifndef nsLiteralString_h___
+#include "nsLiteralString.h"
+#endif
 
-template <class CharT>
-struct nsWritableFragment
-  {
-    CharT*    mStart;
-    CharT*    mEnd;
-    void*     mFragmentIdentifier;
-
-    nsWritableFragment()
-        : mStart(0), mEnd(0), mFragmentIdentifier(0)
-      {
-        // nothing else to do here
-      }
-  };
 
 template <class CharT> class basic_nsAWritableString;
-
-template <class CharT>
-class nsWritingIterator
-//  : public bidirectional_iterator_tag
-  {
-    public:
-      typedef ptrdiff_t                   difference_type;
-      typedef CharT                       value_type;
-      typedef CharT*                      pointer;
-      typedef CharT&                      reference;
-//    typedef bidirectional_iterator_tag  iterator_category;
-
-    private:
-      friend class basic_nsAWritableString<CharT>;
-
-      nsWritableFragment<CharT>       mFragment;
-      CharT*                          mPosition;
-      basic_nsAWritableString<CharT>* mOwningString;
-
-      nsWritingIterator( nsWritableFragment<CharT>& aFragment,
-                         CharT* aStartingPosition,
-                         basic_nsAWritableString<CharT>& aOwningString )
-          : mFragment(aFragment),
-            mPosition(aStartingPosition),
-            mOwningString(&aOwningString)
-        {
-          // nothing else to do here
-        }
-
-    public:
-      nsWritingIterator() { }
-      // nsWritingIterator( const nsWritingIterator<CharT>& );                    // auto-generated copy-constructor OK
-      // nsWritingIterator<CharT>& operator=( const nsWritingIterator<CharT>& );  // auto-generated copy-assignment operator OK
-
-      inline void normalize_forward();
-      inline void normalize_backward();
-
-      pointer
-      get() const
-        {
-          return mPosition;
-        }
-      
-      reference
-      operator*() const
-        {
-          return *get();
-        }
-
-#if 0
-        // An iterator really deserves this, but some compilers (notably IBM VisualAge for OS/2)
-        //  don't like this when |CharT| is a type without members.
-      pointer
-      operator->() const
-        {
-          return get();
-        }
-#endif
-
-      nsWritingIterator<CharT>&
-      operator++()
-        {
-          ++mPosition;
-          normalize_forward();
-          return *this;
-        }
-
-      nsWritingIterator<CharT>
-      operator++( int )
-        {
-          nsWritingIterator<CharT> result(*this);
-          ++mPosition;
-          normalize_forward();
-          return result;
-        }
-
-      nsWritingIterator<CharT>&
-      operator--()
-        {
-          normalize_backward();
-          --mPosition;
-          return *this;
-        }
-
-      nsWritingIterator<CharT>
-      operator--( int )
-        {
-          nsWritingIterator<CharT> result(*this);
-          normalize_backward();
-          --mPosition;
-          return result;
-        }
-
-      const nsWritableFragment<CharT>&
-      fragment() const
-        {
-          return mFragment;
-        }
-
-      nsWritableFragment<CharT>&
-      fragment()
-        {
-          return mFragment;
-        }
-
-      const basic_nsAWritableString<CharT>&
-      string() const
-        {
-          NS_ASSERTION(mOwningString, "iterator not attached to a string (|mOwningString| == 0)");
-          return *mOwningString;
-        }
-
-      basic_nsAWritableString<CharT>&
-      string()
-        {
-          NS_ASSERTION(mOwningString, "iterator not attached to a string (|mOwningString| == 0)");
-          return *mOwningString;
-        }
-
-      difference_type
-      size_forward() const
-        {
-          return mFragment.mEnd - mPosition;
-        }
-
-      difference_type
-      size_backward() const
-        {
-          return mPosition - mFragment.mStart;
-        }
-
-      nsWritingIterator<CharT>&
-      advance( difference_type n )
-        {
-          while ( n > 0 )
-            {
-              difference_type one_hop = NS_MIN(n, size_forward());
-
-              NS_ASSERTION(one_hop>0, "Infinite loop: can't advance a writing iterator beyond the end of a string");
-                // perhaps I should |break| if |!one_hop|?
-
-              mPosition += one_hop;
-              normalize_forward();
-              n -= one_hop;
-            }
-
-          while ( n < 0 )
-            {
-              normalize_backward();
-              difference_type one_hop = NS_MAX(n, -size_backward());
-
-              NS_ASSERTION(one_hop<0, "Infinite loop: can't advance (backward) a writing iterator beyond the end of a string");
-                // perhaps I should |break| if |!one_hop|?
-
-              mPosition += one_hop;
-              n -= one_hop;
-            }
-
-          return *this;
-        }
-
-        /**
-         * Really don't want to call these two operations |+=| and |-=|.
-         * Would prefer a single function, e.g., |advance|, which doesn't imply a constant time operation.
-         *
-         * We'll get rid of these as soon as we can.
-         */
-      nsWritingIterator<CharT>&
-      operator+=( difference_type n ) // deprecated
-        {
-          return advance(n);
-        }
-
-      nsWritingIterator<CharT>&
-      operator-=( difference_type n ) // deprecated
-        {
-          return advance(-n);
-        }
-
-      PRUint32
-      write( const value_type* s, PRUint32 n )
-        {
-          NS_ASSERTION(size_forward() > 0, "You can't |write| into an |nsWritingIterator| with no space!");
-
-          n = NS_MIN(n, PRUint32(size_forward()));
-          nsCharTraits<value_type>::move(mPosition, s, n);
-          advance( difference_type(n) );
-          return n;
-        }
-  };
-
-#if 0
-template <class CharT>
-nsWritingIterator<CharT>&
-nsWritingIterator<CharT>::advance( difference_type n )
-  {
-    while ( n > 0 )
-      {
-        difference_type one_hop = NS_MIN(n, size_forward());
-
-        NS_ASSERTION(one_hop>0, "Infinite loop: can't advance a writing iterator beyond the end of a string");
-          // perhaps I should |break| if |!one_hop|?
-
-        mPosition += one_hop;
-        normalize_forward();
-        n -= one_hop;
-      }
-
-    while ( n < 0 )
-      {
-        normalize_backward();
-        difference_type one_hop = NS_MAX(n, -size_backward());
-
-        NS_ASSERTION(one_hop<0, "Infinite loop: can't advance (backward) a writing iterator beyond the end of a string");
-          // perhaps I should |break| if |!one_hop|?
-
-        mPosition += one_hop;
-        n -= one_hop;
-      }
-
-    return *this;
-  }
-#endif
 
 /*
   This file defines the abstract interfaces |nsAWritableString| and
@@ -477,46 +244,6 @@ class basic_nsAWritableString
 
 
 
-  //
-  // |nsWritingIterator|s
-  //
-
-template <class CharT>
-inline
-void
-nsWritingIterator<CharT>::normalize_forward()
-  {
-    while ( mPosition == mFragment.mEnd
-         && mOwningString->GetWritableFragment(mFragment, kNextFragment) )
-      mPosition = mFragment.mStart;
-  }
-
-template <class CharT>
-inline
-void
-nsWritingIterator<CharT>::normalize_backward()
-  {
-    while ( mPosition == mFragment.mStart
-         && mOwningString->GetWritableFragment(mFragment, kPrevFragment) )
-      mPosition = mFragment.mEnd;
-  }
-
-template <class CharT>
-inline
-PRBool
-operator==( const nsWritingIterator<CharT>& lhs, const nsWritingIterator<CharT>& rhs )
-  {
-    return lhs.get() == rhs.get();
-  }
-
-template <class CharT>
-inline
-PRBool
-operator!=( const nsWritingIterator<CharT>& lhs, const nsWritingIterator<CharT>& rhs )
-  {
-    return lhs.get() != rhs.get();
-  }
-
 
 
   //
@@ -594,21 +321,21 @@ template <class CharT>
 void
 basic_nsAWritableString<CharT>::do_AssignFromElementPtr( const CharT* aPtr )
   {
-    do_AssignFromReadable(basic_nsLiteralString<CharT>(aPtr));
+    do_AssignFromReadable(literal_string(aPtr));
   }
 
 template <class CharT>
 void
 basic_nsAWritableString<CharT>::do_AssignFromElementPtrLength( const CharT* aPtr, PRUint32 aLength )
   {
-    do_AssignFromReadable(basic_nsLiteralString<CharT>(aPtr, aLength));
+    do_AssignFromReadable(literal_string(aPtr, aLength));
   }
 
 template <class CharT>
 void
 basic_nsAWritableString<CharT>::do_AssignFromElement( CharT aChar )
   {
-    do_AssignFromReadable(basic_nsLiteralChar<CharT>(aChar));
+    do_AssignFromReadable(literal_string(&aChar, 1));
   }
 
 
@@ -665,21 +392,21 @@ template <class CharT>
 void
 basic_nsAWritableString<CharT>::do_AppendFromElementPtr( const CharT* aChar )
   {
-    do_AppendFromReadable(basic_nsLiteralString<CharT>(aChar));
+    do_AppendFromReadable(literal_string(aChar));
   }
 
 template <class CharT>
 void
 basic_nsAWritableString<CharT>::do_AppendFromElementPtrLength( const CharT* aChar, PRUint32 aLength )
   {
-    do_AppendFromReadable(basic_nsLiteralString<CharT>(aChar, aLength));
+    do_AppendFromReadable(literal_string(aChar, aLength));
   }
 
 template <class CharT>
 void
 basic_nsAWritableString<CharT>::do_AppendFromElement( CharT aChar )
   {
-    do_AppendFromReadable(basic_nsLiteralChar<CharT>(aChar));
+    do_AppendFromReadable(literal_string(&aChar, 1));
   }
 
 
@@ -740,21 +467,21 @@ template <class CharT>
 void
 basic_nsAWritableString<CharT>::do_InsertFromElementPtr( const CharT* aPtr, PRUint32 atPosition )
   {
-    do_InsertFromReadable(basic_nsLiteralString<CharT>(aPtr), atPosition);
+    do_InsertFromReadable(literal_string(aPtr), atPosition);
   }
 
 template <class CharT>
 void
 basic_nsAWritableString<CharT>::do_InsertFromElementPtrLength( const CharT* aPtr, PRUint32 atPosition, PRUint32 aLength )
   {
-    do_InsertFromReadable(basic_nsLiteralString<CharT>(aPtr, aLength), atPosition);
+    do_InsertFromReadable(literal_string(aPtr, aLength), atPosition);
   }
 
 template <class CharT>
 void
 basic_nsAWritableString<CharT>::do_InsertFromElement( CharT aChar, PRUint32 atPosition )
   {
-    do_InsertFromReadable(basic_nsLiteralChar<CharT>(aChar), atPosition);
+    do_InsertFromReadable(literal_string(&aChar, 1), atPosition);
   }
 
 
@@ -809,7 +536,7 @@ basic_nsAWritableString<CharT>::ReplaceFromPromise( PRUint32 cutStart, PRUint32 
             nsReadingIterator<CharT> fromBegin, fromEnd;
             CharT* toBegin = buffer;
             copy_string(aReadable.BeginReading(fromBegin), aReadable.EndReading(fromEnd), toBegin);
-            do_ReplaceFromReadable(cutStart, cutLength, basic_nsLiteralString<CharT>(buffer, length));
+            do_ReplaceFromReadable(cutStart, cutLength, literal_string(buffer, length));
             delete buffer;
           }
         // else assert?

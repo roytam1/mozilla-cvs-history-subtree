@@ -19,23 +19,30 @@
 # 
 # Contributor(s): 
 #   Johnny Stenback <jst@netscape.com> (original author)
+#   Scott Collins <scc@mozilla.org>
 #
 
 DEPTH=..\..
 
 EXPORTS =                               \
         nsAlgorithm.h                   \
+        nsAString.h                     \
         nsAReadableString.h             \
         nsAWritableString.h             \
         nsBufferHandle.h                \
         nsBufferHandleUtils.h           \
         nsCharTraits.h                  \
         nsFragmentedString.h            \
+        nsLiteralString.h               \
+        nsLocalString.h                 \
         nsPrintfCString.h               \
         nsPrivateSharableString.h       \
         nsReadableUtils.h               \
         nsSharedBufferList.h            \
         nsSlidingString.h               \
+        nsStringFragment.h              \
+        nsStringIterator.h              \
+        nsStringIteratorUtils.h         \
         $(NULL)                 
 
 include <$(DEPTH)\config\rules.mak>
