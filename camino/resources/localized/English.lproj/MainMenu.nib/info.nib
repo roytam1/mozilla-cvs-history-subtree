@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist SYSTEM "file://localhost/System/Library/DTDs/PropertyList.dtd">
-<plist version="0.9">
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
 <dict>
 	<key>IBDocumentLocation</key>
 	<string>108 107 477 485 0 0 1280 1002 </string>
@@ -9,10 +9,10 @@
 		<key>266</key>
 		<string>483 623 277 90 0 0 1280 1002 </string>
 		<key>29</key>
-		<string>8 957 446 44 0 0 1280 1002 </string>
+		<string>7 803 446 44 0 0 1152 848 </string>
 	</dict>
 	<key>IBFramework Version</key>
-	<string>248.0</string>
+	<string>286.0</string>
 	<key>IBGroupedObjects</key>
 	<dict>
 		<key>0</key>
@@ -34,6 +34,6 @@
 		<integer>29</integer>
 	</array>
 	<key>IBSystem Version</key>
-	<string>5S66</string>
+	<string>6C115</string>
 </dict>
 </plist>
