@@ -36,9 +36,6 @@
 #include "nsIAppShell.h"
 #include "nsIXULWindowCallbacks.h"
 
-// For posting events to the UI thread
-#include "nsProxyEvent.h"
-
 #include "nsIAppShellService.h"
 #include "nsAppShellCIDs.h"
 
