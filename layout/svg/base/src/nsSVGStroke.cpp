@@ -51,8 +51,8 @@ double nsSVGStroke::getFlatness()
   double flatness = 0.5;
   
   nsresult rv;
-  NS_WITH_SERVICE(nsIPref, prefs, NS_PREF_CONTRACTID, &rv);
-	if (NS_SUCCEEDED(rv) && prefs)
+  nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID, &rv);
+  if (NS_SUCCEEDED(rv) && prefs)
 	{
     // XXX: wouldn't it be great if nsIPref had a 'GetFloatPref()'-function?
 		char	*valuestr = nsnull;
