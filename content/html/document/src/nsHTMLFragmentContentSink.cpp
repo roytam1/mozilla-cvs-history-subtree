@@ -164,6 +164,35 @@ public:
   nsCOMPtr<nsINodeInfoManager> mNodeInfoManager;
 };
 
+class nsHTMLFragmentContentSink2 : public nsHTMLFragmentContentSink 
+{
+public:
+  nsHTMLFragmentContentSink2() { mHitSentinel = PR_TRUE; mSeenBody = PR_FALSE;}
+  virtual ~nsHTMLFragmentContentSink2() {}
+  NS_IMETHODIMP OpenHead(const nsIParserNode& aNode)  { return OpenContainer(aNode);  }
+  NS_IMETHODIMP CloseHead(const nsIParserNode& aNode) { return CloseContainer(aNode); }
+};
+
+nsresult
+NS_NewHTMLFragmentContentSink2(nsIHTMLFragmentContentSink** aResult)
+{
+  NS_PRECONDITION(nsnull != aResult, "null ptr");
+  if (nsnull == aResult) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsHTMLFragmentContentSink2* it;
+  NS_NEWXPCOM(it, nsHTMLFragmentContentSink2);
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  nsresult rv = it->Init();
+  if (NS_FAILED(rv)) {
+    delete it;
+    return rv;
+  }
+
+  return it->QueryInterface(NS_GET_IID(nsIHTMLFragmentContentSink), (void **)aResult);
+}
 
 nsresult
 NS_NewHTMLFragmentContentSink(nsIHTMLFragmentContentSink** aResult)
@@ -245,6 +274,12 @@ nsHTMLFragmentContentSink::QueryInterface(REFNSIID aIID, void** aInstancePtr)
   } 
   if (aIID.Equals(NS_GET_IID(nsIHTMLContentSink))) {
     nsIHTMLContentSink* tmp = this;
+    *aInstancePtr = (void*) tmp;
+    NS_ADDREF_THIS();
+    return NS_OK;
+  } 
+  if (aIID.Equals(NS_GET_IID(nsIContentSink))) {
+    nsIContentSink* tmp = this;
     *aInstancePtr = (void*) tmp;
     NS_ADDREF_THIS();
     return NS_OK;
@@ -380,7 +415,6 @@ nsHTMLFragmentContentSink::CloseHTML(const nsIParserNode& aNode)
 NS_IMETHODIMP 
 nsHTMLFragmentContentSink::OpenHead(const nsIParserNode& aNode)
 {
-  // XXX Not likely to get a head in the fragment
   return NS_OK;
 }
 

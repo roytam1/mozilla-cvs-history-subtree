@@ -323,7 +323,7 @@ SUB_SHLOBJS = $(foreach dir,$(SHARED_LIBRARY_DIRS),$(addprefix $(dir)/,$(shell $
 endif
 endif
 
-$(SHARED_LIBRARY): $(OBJS) $(RES) $(MAPFILE)
+$(SHARED_LIBRARY): $(OBJS) $(RES) $(MAPFILE) $(SUB_SHLOBJS)
 	@$(MAKE_OBJDIR)
 	rm -f $@
 ifeq ($(OS_TARGET)$(OS_RELEASE), AIX4.1)
@@ -363,6 +363,11 @@ endif
 	chmod +x $@
 ifeq ($(OS_TARGET),OpenVMS)
 	@echo "`translate $@`" > $(@:$(DLL_SUFFIX)=vms)
+endif
+ifeq ($(OS_TARGET),Darwin)
+ifdef MAPFILE
+	nmedit -s $(MAPFILE) $@
+endif
 endif
 endif
 endif
