@@ -129,7 +129,7 @@ OBJDEST = $(OBJDIR_NAME)
 
 ifeq ($(USE_DLL_EXPORTS_FILE), 1)
 # recursive gmake rule to create exported symbols file
-$(SSL_EXPORT_DEFS):: ../libldap_ssl.ex
+$(SSLDAP_EXPORT_DEFS):: ../libldap_ssl.ex
 ifeq ($(OS_ARCH), WINNT)
 	$(GENEXPORTS) Win32 Standard $< $(GENEXPARGS) > $@
 else

@@ -35,19 +35,7 @@ static char copyright[] = "@(#) Copyright (c) 1995 Regents of the University of 
 
 #include "ldap-int.h"
 
-/* OK, this stuff broke the Macintosh Dogbert build. Please fix it.
-** The files you included do not exist for client builds on macintosh.
-** XXXmcs: noted.
-*/
-#if defined(XP_MAC) && defined(MOZILLA_CLIENT)
 #define VI_PRODUCTVERSION 3
-#else
-#ifndef _WINDOWS
-#include "sdkver.h"
-#else
-#define VI_PRODUCTVERSION 3
-#endif
-#endif
 
 #ifndef INADDR_LOOPBACK
 #define INADDR_LOOPBACK	((unsigned long) 0x7f000001)
