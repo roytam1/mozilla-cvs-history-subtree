@@ -915,12 +915,11 @@ function GetFolderNameFromUri(uri, tree)
 
 function SwitchPaneFocus(direction)
 {
-        var gray_vertical_splitter = document.getElementById("gray_vertical_splitter"); 
-        var focusedElement = document.commandDispatcher.focusedElement;
-        var focusedElementId;
-        if (direction == "counter-clockwise")
+  var gray_vertical_splitter = document.getElementById("gray_vertical_splitter"); 
+  var focusedElement = document.commandDispatcher.focusedElement;
+  var focusedElementId;
+  if (direction == "counter-clockwise")
 	{
-
 		if ( MessagePaneHasFocus() )
 			SetFocusThreadPane();
 		else 
@@ -928,21 +927,21 @@ function SwitchPaneFocus(direction)
 			try 
 			{ 
 				focusedElementId = focusedElement.getAttribute('id');
-				if(focusedElementId == "threadTree")
+				if(focusedElementId == "threadOutliner")
 				{
 					if (gray_vertical_splitter)
 					{
 						if (!(is_collapsed(gray_vertical_splitter)))
-						SetFocusFolderPane();
+						  SetFocusFolderPane();
 						else if(!(IsThreadAndMessagePaneSplitterCollapsed()))
-						SetFocusMessagePane();
+						  SetFocusMessagePane();
 					}
 					else 
 					{
 						if (!(sidebar_is_collapsed()))
-						SetFocusFolderPane();
+						  SetFocusFolderPane();
 						else if(!(IsThreadAndMessagePaneSplitterCollapsed()))
-						SetFocusMessagePane();
+						  SetFocusMessagePane();
 					}
 				}
 				else if(focusedElementId == "folderTree")
@@ -974,9 +973,9 @@ function SwitchPaneFocus(direction)
 			else 
 			{
 				if (!(sidebar_is_collapsed()))
-				SetFocusFolderPane();
+				  SetFocusFolderPane();
 				else
-				SetFocusThreadPane();
+				  SetFocusThreadPane();
 			}
 		}
 		else 
@@ -984,7 +983,7 @@ function SwitchPaneFocus(direction)
 			try 
 			{ 
 				focusedElementId = focusedElement.getAttribute('id');
-				if(focusedElementId == "threadTree")
+				if(focusedElementId == "threadOutliner")
 				{
 					if (!(IsThreadAndMessagePaneSplitterCollapsed()))
 						SetFocusMessagePane();
@@ -1011,8 +1010,8 @@ function SwitchPaneFocus(direction)
 
 function SetFocusFolderPane()
 {
-    var folderTree = GetFolderTree();
-    folderTree.focus();
+  var folderTree = GetFolderTree();
+  folderTree.focus();
 	return;
 }
 
