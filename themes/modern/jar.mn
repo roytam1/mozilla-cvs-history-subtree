@@ -273,6 +273,7 @@ modern.jar:
   skin/modern/messenger/mailWindow2.css                            (messenger/mailWindow2.css)
   skin/modern/messenger/messageBody.css                            (messenger/messageBody.css)
   skin/modern/messenger/messageHeader.css                          (messenger/messageHeader.css)
+  skin/modern/messenger/messageKeywords.css                        (messenger/messageKeywords.css)
   skin/modern/messenger/messageWindow.css                          (messenger/messageWindow.css)
   skin/modern/messenger/messenger.css                              (messenger/messenger.css)
   skin/modern/messenger/prefPanels.css                             (messenger/prefPanels.css)
