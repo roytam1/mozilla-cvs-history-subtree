@@ -52,7 +52,7 @@
 /* ------------------------------------------------------------------------- */
 
 /**
- * There are dummy class definitions for the abstract string types used in
+ * These are dummy class definitions for the abstract string types used in
  * XPIDL generated header files.  Do not count on the structure of these
  * classes, and do not try to mix these definitions with the internal 
  * definition of these classes used within the mozilla codebase.

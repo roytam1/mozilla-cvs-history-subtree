@@ -148,7 +148,7 @@ TPromiseFlatString_CharT( const nsTAString_CharT& str )
   // e.g., PromiseFlatCString(Substring(s))
 inline
 const nsTPromiseFlatString_CharT
-TPromiseFlatString_CharT( const nsCStringBase& frag )
+TPromiseFlatString_CharT( const nsTStringBase_CharT& frag )
   {
     return nsTPromiseFlatString_CharT(frag);
   }
@@ -156,7 +156,7 @@ TPromiseFlatString_CharT( const nsCStringBase& frag )
   // e.g., PromiseFlatCString(a + b)
 inline
 const nsTPromiseFlatString_CharT
-TPromiseFlatString_CharT( const nsCStringTuple& tuple )
+TPromiseFlatString_CharT( const nsTStringTuple_CharT& tuple )
   {
     return nsTPromiseFlatString_CharT(tuple);
   }

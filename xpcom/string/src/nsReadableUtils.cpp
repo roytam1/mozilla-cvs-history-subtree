@@ -26,10 +26,6 @@
 #include "nsString.h"
 #include "nsUTF8Utils.h"
 
-#ifndef nsStringTraits_h___
-#include "nsStringTraits.h"
-#endif
-
 
 template <class Iterator>
 inline
