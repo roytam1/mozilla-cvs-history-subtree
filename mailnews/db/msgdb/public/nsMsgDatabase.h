@@ -29,6 +29,8 @@
 #include "nsMsgMessageFlags.h"
 #include "nsISupportsArray.h"
 #include "nsDBFolderInfo.h"
+#include "nsICollation.h"
+#include "nsCOMPtr.h"
 
 class ListContext;
 class nsMsgKeyArray;
@@ -196,6 +198,7 @@ public:
 	nsIMdbStore				*GetStore() {return m_mdbStore;}
 	virtual PRUint32		GetCurVersion();
 	nsIMsgHeaderParser		*GetHeaderParser();
+	nsresult				GetCollationKeyGenerator();
 
 	static nsMsgDatabase* FindInCache(nsFileSpec &dbName);
 
@@ -280,6 +283,7 @@ protected:
 	static nsVoidArray/*<nsMsgDatabase>*/* GetDBCache();
 	static nsVoidArray/*<nsMsgDatabase>*/* m_dbCache;
 
+	nsCOMPtr <nsICollation> m_collationKeyGenerator;
 	// mdb bookkeeping stuff
 	nsresult			InitExistingDB();
 	nsresult			InitNewDB();
