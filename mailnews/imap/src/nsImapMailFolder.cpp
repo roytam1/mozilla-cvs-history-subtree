@@ -2910,7 +2910,7 @@ NS_IMETHODIMP nsImapMailFolder::CopyData(nsIInputStream *aIStream,
   }
 
   char *start, *end;
-  PRUint32 linebreak_len = 0;
+  PRUint32 linebreak_len = 1;
 
   rv = aIStream->Read(m_copyState->m_dataBuffer+m_copyState->m_leftOver, aLength, &readCount);
   if (NS_FAILED(rv)) 
@@ -2920,14 +2920,17 @@ NS_IMETHODIMP nsImapMailFolder::CopyData(nsIInputStream *aIStream,
   m_copyState->m_dataBuffer[m_copyState->m_leftOver] = '\0';
 
   start = m_copyState->m_dataBuffer;
+  if (m_copyState->m_eatLF)
+  {
+    if (*start == nsCRT::LF)
+      start++;
+    m_copyState->m_eatLF = PR_FALSE;
+  }
   end = PL_strchr(start, '\r');
   if (!end)
     end = PL_strchr(start, '\n');
-  else if (*(end+1) == nsCRT::LF && linebreak_len == 0)
+  else if (*(end+1) == nsCRT::LF)
     linebreak_len = 2;
-
-  if (linebreak_len == 0) // not initialize yet
-    linebreak_len = 1;
 
   while (start && end)
   {
@@ -2947,9 +2950,16 @@ NS_IMETHODIMP nsImapMailFolder::CopyData(nsIInputStream *aIStream,
        m_copyState->m_leftOver = 0;
        break;
     }
+    linebreak_len = 1;
+
     end = PL_strchr(start, '\r');
     if (!end)
       end = PL_strchr(start, '\n');
+    else if (*(end+1) == nsCRT::LF)
+      linebreak_len = 2;
+    else if (! *(end+1)) // block might have split CRLF so remember if
+      m_copyState->m_eatLF = PR_TRUE; // we should eat LF
+
     if (start && !end)
     {
       m_copyState->m_leftOver -= (start - m_copyState->m_dataBuffer);
