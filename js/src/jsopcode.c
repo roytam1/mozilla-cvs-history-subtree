@@ -946,10 +946,12 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 		    if (!lval)
 			return JS_FALSE;
 
-		    /* The offset tells distance to next comma, or to end. */
+		    /* 
+                     * The offset tells distance to the end of the right-hand
+                     * operand of the comma operator.
+                     */
 		    done = pc + len;
 		    pc += js_GetSrcNoteOffset(sn, 0);
-		    LOCAL_ASSERT(pc == endpc || *pc == JSOP_POP);
 		    len = 0;
 
 		    if (!Decompile(ss, done, pc - done)) {
