@@ -23,6 +23,7 @@
 #include "nsLocalFolderSummarySpec.h"
 #include "plstr.h"
 #include "nsString.h"
+#include "nsEscape.h"
 
 MOZ_DECL_CTOR_COUNTER(nsLocalFolderSummarySpec);
 
@@ -73,6 +74,9 @@ void nsLocalFolderSummarySpec::	CreateSummaryFileName()
 
 	fullLeafName += ".msf";				// message summary file
 	char *cLeafName = fullLeafName.ToNewCString();
+
+    cLeafName = nsUnescape(cLeafName);
+
 	SetLeafName(cLeafName);
     nsAllocator::Free(cLeafName);
 	PL_strfree(leafName);
