@@ -99,6 +99,43 @@ NET_StreamAbort(NET_VoidStreamClass *stream, int32 status)
 	(*stream->cstream->abort)(stream->cstream, status);	
 }
 
+PUBLIC char *
+NET_StreamName(NET_VoidStreamClass *stream)
+{
+	if(!stream || !stream->cstream || !stream->cstream->name)
+	{
+		PR_ASSERT(0);
+		return NULL;
+	}
+	return stream->cstream->name;
+}
+
+/* returns -1 on error 0 on success */
+PUBLIC int 
+NET_SetStreamData(NET_VoidStreamClass *stream, void *data)
+{
+	if(!stream || !stream->cstream)
+	{
+		PR_ASSERT(0);
+		return -1;
+	}
+
+	stream->cstream->data_object = data;
+	return 0;
+}
+
+PUBLIC void *
+NET_GetStreamData(NET_VoidStreamClass *stream)
+{
+        if(!stream || !stream->cstream)
+        {
+                PR_ASSERT(0);
+                return NULL;
+        }
+
+        return stream->cstream->data_object;
+}
+
 PUBLIC void
 NET_StreamFree(NET_VoidStreamClass *stream)
 {
