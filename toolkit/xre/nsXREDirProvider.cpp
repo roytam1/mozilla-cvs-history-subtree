@@ -124,7 +124,6 @@ nsXREDirProvider::Initialize()
     }
     CFRelease(bundleURL);
   }
-  CFRelease(appBundle);
 
   return rv;
 
