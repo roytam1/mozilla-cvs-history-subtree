@@ -45,15 +45,44 @@
 #define NS_ISVGGDIPLUSGLYPHMETRICS_IID \
 { 0xa0b0e2a4, 0x4237, 0x44c8, { 0x9f, 0xd8, 0x8b, 0x1b, 0x48, 0xf4, 0x3c, 0x93 } }
 
+/**
+ * \addtogroup gdiplus_renderer GDI+ Rendering Engine
+ * @{
+ */
+
+/**
+ * 'Private' rendering engine interface
+ */
 class nsISVGGDIPlusGlyphMetrics : public nsISVGRendererGlyphMetrics
 {
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISVGGDIPLUSGLYPHMETRICS_IID)
 
+  /**
+   * Obtain the bounding rectangle of the (composite) glyph as a Gdiplus::RectF.
+   */
   NS_IMETHOD_(const RectF*) GetBoundingRect()=0;
+
+  /**
+   * Obtain the bounding rectangle of the glyphs of part of the
+   * character string as a Gdiplus::RectF.
+   *
+   * @param charoffset Offset into nsISVGGlyphMetricsSource::characterData.
+   * @param count      Number of characters for which to get bounds.
+   */   
   NS_IMETHOD_(void) GetSubBoundingRect(PRUint32 charoffset, PRUint32 count, RectF* retval)=0;
+
+  /**
+   * Obtain the Gdiplus::Font object selected for this glyph metrics object.
+   */
   NS_IMETHOD_(const Font*) GetFont()=0;
+
+  /**
+   * Obtain the Gdiplus::TextRenderingHint for this glyph metrics object.
+   */
   NS_IMETHOD_(TextRenderingHint) GetTextRenderingHint()=0;
 };
+
+/** @} */
 
 #endif // __NS_ISVGGDIPLUS_GLYPHMETRICS_H__

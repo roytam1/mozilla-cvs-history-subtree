@@ -54,9 +54,14 @@ using namespace Gdiplus;
 #include "nsRect.h"
 #include "nsIRenderingContextWin.h"
 
-////////////////////////////////////////////////////////////////////////
-// nsSVGGDIPlusCanvas class
-
+/**
+ * \addtogroup gdiplus_renderer GDI+ Rendering Engine
+ * @{
+ */
+//////////////////////////////////////////////////////////////////////
+/**
+ * GDI+ canvas implementation
+ */
 class nsSVGGDIPlusCanvas : public nsISVGGDIPlusCanvas
 {
 public:
@@ -86,6 +91,8 @@ private:
   nsDrawingSurface mTempBuffer; // temp storage for during DC locking
 #endif
 };
+
+/** @} */
 
 //----------------------------------------------------------------------
 // implementation:
@@ -212,7 +219,7 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // nsISVGRendererCanvas methods:
 
-/* [noscript] nsIRenderingContext lockRenderingContext ([const] in nsRectRef rect); */
+/** Implements [noscript] nsIRenderingContext lockRenderingContext(const in nsRectRef rect); */
 NS_IMETHODIMP
 nsSVGGDIPlusCanvas::LockRenderingContext(const nsRect & rect,
                                          nsIRenderingContext **_retval)
@@ -239,7 +246,7 @@ nsSVGGDIPlusCanvas::LockRenderingContext(const nsRect & rect,
   return NS_OK;
 }
 
-/* void unlockRenderingContext (); */
+/** Implements void unlockRenderingContext(); */
 NS_IMETHODIMP 
 nsSVGGDIPlusCanvas::UnlockRenderingContext()
 {
@@ -258,7 +265,7 @@ nsSVGGDIPlusCanvas::UnlockRenderingContext()
   return NS_OK;
 }
 
-/* nsIPresContext getPresContext (); */
+/** Implements nsIPresContext getPresContext(); */
 NS_IMETHODIMP
 nsSVGGDIPlusCanvas::GetPresContext(nsIPresContext **_retval)
 {
@@ -267,7 +274,7 @@ nsSVGGDIPlusCanvas::GetPresContext(nsIPresContext **_retval)
   return NS_OK;
 }
 
-/* void clear (in nscolor color); */
+/** Implements void clear(in nscolor color); */
 NS_IMETHODIMP
 nsSVGGDIPlusCanvas::Clear(nscolor color)
 {
@@ -284,7 +291,7 @@ nsSVGGDIPlusCanvas::Clear(nscolor color)
   return NS_OK;
 }
 
-/* void flush (); */
+/** Implements void flush(); */
 NS_IMETHODIMP
 nsSVGGDIPlusCanvas::Flush()
 {
@@ -311,3 +318,5 @@ nsSVGGDIPlusCanvas::GetGraphics()
   return mGraphics;
 #endif
 }
+
+

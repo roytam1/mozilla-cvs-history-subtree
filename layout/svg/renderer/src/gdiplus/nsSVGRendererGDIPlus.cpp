@@ -55,7 +55,14 @@ using namespace Gdiplus;
 void NS_InitSVGGDIPlusGlyphMetricsGlobals();
 void NS_FreeSVGGDIPlusGlyphMetricsGlobals();
 
+/**
+ * \addtogroup gdiplus_renderer GDI+ Rendering Engine
+ * @{
+ */
 ////////////////////////////////////////////////////////////////////////
+/**
+ * GDI+ renderer factory
+ */
 class nsSVGRendererGDIPlus : public nsISVGRenderer
 {
 protected:
@@ -77,6 +84,8 @@ private:
   static GdiplusStartupOutput sGdiplusStartupOutput;
 
 };
+
+/** @} */
 
 //----------------------------------------------------------------------
 // implementation:
@@ -135,7 +144,7 @@ NS_IMPL_ISUPPORTS1(nsSVGRendererGDIPlus, nsISVGRenderer);
 //----------------------------------------------------------------------
 // nsISVGRenderer methods
 
-/* nsISVGRendererPathGeometry createPathGeometry (in nsISVGPathGeometrySource src); */
+/** Implements nsISVGRendererPathGeometry createPathGeometry(in nsISVGPathGeometrySource src); */
 NS_IMETHODIMP
 nsSVGRendererGDIPlus::CreatePathGeometry(nsISVGPathGeometrySource *src,
                                          nsISVGRendererPathGeometry **_retval)
@@ -143,7 +152,7 @@ nsSVGRendererGDIPlus::CreatePathGeometry(nsISVGPathGeometrySource *src,
   return NS_NewSVGGDIPlusPathGeometry(_retval, src);
 }
 
-/* nsISVGRendererGlyphMetrics createGlyphMetrics (in nsISVGGlyphMetricsSource src); */
+/** Implements nsISVGRendererGlyphMetrics createGlyphMetrics(in nsISVGGlyphMetricsSource src); */
 NS_IMETHODIMP
 nsSVGRendererGDIPlus::CreateGlyphMetrics(nsISVGGlyphMetricsSource *src,
                                          nsISVGRendererGlyphMetrics **_retval)
@@ -151,7 +160,7 @@ nsSVGRendererGDIPlus::CreateGlyphMetrics(nsISVGGlyphMetricsSource *src,
   return NS_NewSVGGDIPlusGlyphMetrics(_retval, src);
 }
 
-/* nsISVGRendererGlyphGeometry createGlyphGeometry (in nsISVGGlyphGeometrySource src); */
+/** Implements nsISVGRendererGlyphGeometry createGlyphGeometry(in nsISVGGlyphGeometrySource src); */
 NS_IMETHODIMP
 nsSVGRendererGDIPlus::CreateGlyphGeometry(nsISVGGlyphGeometrySource *src,
                                           nsISVGRendererGlyphGeometry **_retval)
@@ -159,8 +168,8 @@ nsSVGRendererGDIPlus::CreateGlyphGeometry(nsISVGGlyphGeometrySource *src,
   return NS_NewSVGGDIPlusGlyphGeometry(_retval, src);
 }
 
-/* [noscript] nsISVGRendererCanvas createCanvas (in nsIRenderingContext ctx,
-   in nsIPresContext presContext, [const] in nsRectRef dirtyRect); */
+/** Implements [noscript] nsISVGRendererCanvas createCanvas(in nsIRenderingContext ctx,
+   in nsIPresContext presContext, const in nsRectRef dirtyRect); */
 NS_IMETHODIMP
 nsSVGRendererGDIPlus::CreateCanvas(nsIRenderingContext *ctx,
                                    nsIPresContext *presContext,
@@ -170,7 +179,7 @@ nsSVGRendererGDIPlus::CreateCanvas(nsIRenderingContext *ctx,
   return NS_NewSVGGDIPlusCanvas(_retval, ctx, presContext, dirtyRect);
 }
 
-/* nsISVGRendererRegion createRectRegion (in float x, in float y, in float width, in float height); */
+/** Implements nsISVGRendererRegion createRectRegion(in float x, in float y, in float width, in float height); */
 NS_IMETHODIMP
 nsSVGRendererGDIPlus::CreateRectRegion(float x, float y, float width, float height,
                                        nsISVGRendererRegion **_retval)

@@ -59,6 +59,14 @@ using namespace Gdiplus;
 #define NS_ISVGGDIPLUSREGION_IID \
 { 0x366160b9, 0x98dd, 0x4ec0, { 0x83, 0xca, 0x0e, 0x47, 0x4f, 0x7a, 0x82, 0xc2 } }
 
+/**
+ * \addtogroup gdiplus_renderer GDI+ Rendering Engine
+ * @{
+ */
+
+/**
+ * 'Private' rendering engine interface
+ */
 class nsISVGGDIPlusRegion : public nsISVGRendererRegion
 {
 public:
@@ -71,5 +79,6 @@ public:
 #endif
 };
 
+/** @} */
 
 #endif //__NS_ISVGGDIPLUS_REGION_H__

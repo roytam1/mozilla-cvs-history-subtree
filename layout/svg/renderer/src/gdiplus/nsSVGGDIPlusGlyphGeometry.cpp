@@ -58,10 +58,17 @@ using namespace Gdiplus;
 #include "nsIPresContext.h"
 #include "nsMemory.h"
 
-////////////////////////////////////////////////////////////////////////
-// SectionIterator helper class:
-// we section the text into highlighted & non-highlighted regions and use
-// this helper class to iterate over them
+/**
+ * \addtogroup gdiplus_renderer GDI+ Rendering Engine
+ * @{
+ */
+//////////////////////////////////////////////////////////////////////
+/**
+ * Helper class used by nsSVGGDIPlusGlyphGeometry
+ *
+ * We section the text into highlighted & non-highlighted regions and use
+ * this helper class to iterate over them.
+ */
 class SectionIterator
 {
 public:
@@ -116,6 +123,8 @@ private:
   int mPointer;
   nsString mText;
 };
+
+/** @} */
 
 SectionIterator::SectionIterator(nsISVGGlyphGeometrySource *src)
     : mCount(0), mPointer(0)
@@ -190,10 +199,15 @@ SectionIterator::SectionIterator(nsISVGGlyphGeometrySource *src)
   }
     
 }
-  
-////////////////////////////////////////////////////////////////////////
-// nsSVGGDIPlusGlyphGeometry class
 
+/**
+ * \addtogroup gdiplus_renderer GDI+ Rendering Engine
+ * @{
+ */
+////////////////////////////////////////////////////////////////////////
+/**
+ *  GDI+ glyph geometry implementation
+ */
 class nsSVGGDIPlusGlyphGeometry : public nsISVGRendererGlyphGeometry
 {
 protected:
@@ -222,6 +236,8 @@ protected:
   Region *mHitTestRegion;
   GraphicsPath *mStroke;
 };
+
+/** @} */
 
 //----------------------------------------------------------------------
 // implementation:
@@ -282,7 +298,7 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // nsISVGRendererGlyphGeometry methods:
 
-/* void render (in nsISVGRendererCanvas canvas); */
+/** Implements void render(in nsISVGRendererCanvas canvas); */
 NS_IMETHODIMP
 nsSVGGDIPlusGlyphGeometry::Render(nsISVGRendererCanvas *canvas)
 {
@@ -395,7 +411,7 @@ nsSVGGDIPlusGlyphGeometry::Render(nsISVGRendererCanvas *canvas)
   return NS_OK;
 }
 
-/* nsISVGRendererRegion update (in unsigned long updatemask); */
+/** Implements nsISVGRendererRegion update(in unsigned long updatemask); */
 NS_IMETHODIMP
 nsSVGGDIPlusGlyphGeometry::Update(PRUint32 updatemask, nsISVGRendererRegion **_retval)
 {
@@ -449,7 +465,7 @@ nsSVGGDIPlusGlyphGeometry::Update(PRUint32 updatemask, nsISVGRendererRegion **_r
   return NS_OK;
 }
 
-/* nsISVGRendererRegion getCoveredRegion (); */
+/** Implements nsISVGRendererRegion getCoveredRegion(); */
 NS_IMETHODIMP
 nsSVGGDIPlusGlyphGeometry::GetCoveredRegion(nsISVGRendererRegion **_retval)
 {
@@ -458,7 +474,7 @@ nsSVGGDIPlusGlyphGeometry::GetCoveredRegion(nsISVGRendererRegion **_retval)
   return NS_OK;
 }
 
-/* boolean containsPoint (in float x, in float y); */
+/** Implements boolean containsPoint(in float x, in float y); */
 NS_IMETHODIMP
 nsSVGGDIPlusGlyphGeometry::ContainsPoint(float x, float y, PRBool *_retval)
 {

@@ -53,13 +53,25 @@ using namespace Gdiplus;
 #define NS_ISVGGDIPLUSCANVAS_IID \
 { 0xd6afebfe, 0x819b, 0x46ce, { 0x83, 0x4c, 0x16, 0xae, 0x21, 0x05, 0x92, 0x5c } }
 
+/**
+ * \addtogroup gdiplus_renderer GDI+ Rendering Engine
+ * @{
+ */
+
+/**
+ * 'Private' rendering engine interface
+ */
 class nsISVGGDIPlusCanvas : public nsISVGRendererCanvas
 {
 public:
-  static const nsIID& GetIID() { static nsIID iid = NS_ISVGGDIPLUSCANVAS_IID; return iid; }
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISVGGDIPLUSCANVAS_IID)
 
+  /**
+   * Obtain the Gdiplus::Graphics object for this canvas.
+   */
   NS_IMETHOD_(Graphics*) GetGraphics()=0;
 };
 
+/** @} */
 
 #endif //__NS_ISVGGDIPLUS_CANVAS_H__

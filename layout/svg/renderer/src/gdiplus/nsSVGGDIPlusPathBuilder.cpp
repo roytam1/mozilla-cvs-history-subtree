@@ -49,9 +49,16 @@ using namespace Gdiplus;
 #include "nsISVGRendererPathBuilder.h"
 #include <math.h>
 
+/**
+ * \addtogroup gdiplus_renderer GDI+ Rendering Engine
+ * @{
+ */
 ////////////////////////////////////////////////////////////////////////
-// PointStack helper class
-
+/**
+ * Helper class used by nsSVGGDIPlusPathBuilder
+ *
+ * Maintains a stack of points during the path building process.
+ */
 class PointStack
 {
 public:
@@ -73,6 +80,8 @@ private:
   int mCapacity;
   int mSize;
 };
+
+/** @} */
 
 PointStack::PointStack()
     : mPoints(0), mCapacity(0), mSize(0)
@@ -114,9 +123,14 @@ void PointStack::Grow()
   }
 }
 
+/**
+ * \addtogroup gdiplus_renderer GDI+ Rendering Engine
+ * @{
+ */
 ////////////////////////////////////////////////////////////////////////
-// nsSVGGDIPlusPathBuilder class
-
+/**
+ * GDI+ path builder implementation
+ */
 class nsSVGGDIPlusPathBuilder : public nsISVGRendererPathBuilder
 {
 protected:
@@ -140,6 +154,8 @@ private:
   PointStack mSubPathStack;
   PointF mCurrentPoint;
 };
+
+/** @} */
 
 //----------------------------------------------------------------------
 // implementation:
@@ -181,7 +197,7 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // nsISVGRendererPathBuilder methods:
 
-/* void moveto (in float x, in float y); */
+/** Implements void moveto(in float x, in float y); */
 NS_IMETHODIMP
 nsSVGGDIPlusPathBuilder::Moveto(float x, float y)
 {
@@ -193,7 +209,7 @@ nsSVGGDIPlusPathBuilder::Moveto(float x, float y)
   return NS_OK;
 }
 
-/* void lineto (in float x, in float y); */
+/** Implements void lineto(in float x, in float y); */
 NS_IMETHODIMP
 nsSVGGDIPlusPathBuilder::Lineto(float x, float y)
 {
@@ -203,7 +219,7 @@ nsSVGGDIPlusPathBuilder::Lineto(float x, float y)
   return NS_OK;
 }
 
-/* void curveto (in float x, in float y, in float x1, in float y1, in float x2, in float y2); */
+/** Implements void curveto(in float x, in float y, in float x1, in float y1, in float x2, in float y2); */
 NS_IMETHODIMP
 nsSVGGDIPlusPathBuilder::Curveto(float x, float y, float x1, float y1, float x2, float y2)
 {
@@ -226,7 +242,7 @@ static inline double CalcVectorAngle(double ux, double uy, double vx, double vy)
 }
 
 
-/* void arcto (in float x, in float y, in float r1, in float r2, in float angle, in boolean largeArcFlag, in boolean sweepFlag); */
+/** Implements void arcto(in float x, in float y, in float r1, in float r2, in float angle, in boolean largeArcFlag, in boolean sweepFlag); */
 NS_IMETHODIMP
 nsSVGGDIPlusPathBuilder::Arcto(float x2, float y2, float rx, float ry, float angle, PRBool largeArcFlag, PRBool sweepFlag)
 {
@@ -332,7 +348,7 @@ nsSVGGDIPlusPathBuilder::Arcto(float x2, float y2, float rx, float ry, float ang
   return NS_OK;
 }
 
-/* void closePath (out float newX, out float newY); */
+/** Implements void closePath(out float newX, out float newY); */
 NS_IMETHODIMP
 nsSVGGDIPlusPathBuilder::ClosePath(float *newX, float *newY)
 {
@@ -347,7 +363,7 @@ nsSVGGDIPlusPathBuilder::ClosePath(float *newX, float *newY)
   return NS_OK;
 }
 
-/* void endPath (); */
+/** Implements void endPath(); */
 NS_IMETHODIMP
 nsSVGGDIPlusPathBuilder::EndPath()
 {

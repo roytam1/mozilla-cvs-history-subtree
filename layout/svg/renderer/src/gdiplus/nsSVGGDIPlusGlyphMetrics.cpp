@@ -59,9 +59,16 @@ using namespace Gdiplus;
 #include "nsIComponentManager.h"
 #include "nsDataHashtable.h"
 
+/**
+ * \addtogroup gdiplus_renderer GDI+ Rendering Engine
+ * @{
+ */
 ////////////////////////////////////////////////////////////////////////
-// nsWindowsDC helper class
-
+/**
+ * Helper class used by nsSVGGDIPlusGlyphMetrics
+ *
+ * Wraps a Windows device context handle.
+ */
 class nsWindowsDC {
 public:
   nsWindowsDC(nsIPresContext* presContext);
@@ -72,6 +79,9 @@ private:
   HWND mWND;
   HDC mHDC;
 };
+
+/** @} */
+
 
 nsWindowsDC::nsWindowsDC(nsIPresContext* presContext)
 {
@@ -95,9 +105,14 @@ nsWindowsDC::~nsWindowsDC()
     ::ReleaseDC(mWND, mHDC);
 }
 
+/**
+ * \addtogroup gdiplus_renderer GDI+ Rendering Engine
+ * @{
+ */
 ////////////////////////////////////////////////////////////////////////
-// nsSVGGDIPlusGlyphMetrics class
-
+/**
+ *  GDI+ glyph metrics implementation
+ */
 class nsSVGGDIPlusGlyphMetrics : public nsISVGGDIPlusGlyphMetrics
 {
 protected:
@@ -137,6 +152,8 @@ private:
 public:
   static nsDataHashtable<nsStringHashKey,nsDependentString*> sFontAliases;
 };
+
+/** @} */
 
 //----------------------------------------------------------------------
 // implementation:
@@ -204,7 +221,7 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // nsISVGRendererGlyphMetrics methods:
 
-/* float getBaselineOffset (in unsigned short baselineIdentifier); */
+/** Implements float getBaselineOffset(in unsigned short baselineIdentifier); */
 NS_IMETHODIMP
 nsSVGGDIPlusGlyphMetrics::GetBaselineOffset(PRUint16 baselineIdentifier, float *_retval)
 {
@@ -276,7 +293,7 @@ nsSVGGDIPlusGlyphMetrics::GetBaselineOffset(PRUint16 baselineIdentifier, float *
 }
 
 
-/* readonly attribute float advance; */
+/** Implements readonly attribute float #advance; */
 NS_IMETHODIMP
 nsSVGGDIPlusGlyphMetrics::GetAdvance(float *aAdvance)
 {
@@ -285,7 +302,7 @@ nsSVGGDIPlusGlyphMetrics::GetAdvance(float *aAdvance)
   return NS_OK;
 }
 
-/* readonly attribute nsIDOMSVGRect boundingBox; */
+/** Implements readonly attribute nsIDOMSVGRect #boundingBox; */
 NS_IMETHODIMP
 nsSVGGDIPlusGlyphMetrics::GetBoundingBox(nsIDOMSVGRect * *aBoundingBox)
 {
@@ -307,7 +324,7 @@ nsSVGGDIPlusGlyphMetrics::GetBoundingBox(nsIDOMSVGRect * *aBoundingBox)
   return NS_OK;
 }
 
-/* [noscript] nsIDOMSVGRect getExtentOfChar (in unsigned long charnum); */
+/** Implements nsIDOMSVGRect getExtentOfChar(in unsigned long charnum); */
 NS_IMETHODIMP
 nsSVGGDIPlusGlyphMetrics::GetExtentOfChar(PRUint32 charnum, nsIDOMSVGRect **_retval)
 {
@@ -332,7 +349,7 @@ nsSVGGDIPlusGlyphMetrics::GetExtentOfChar(PRUint32 charnum, nsIDOMSVGRect **_ret
   return NS_OK;
 }
 
-/* boolean update (in unsigned long updatemask); */
+/** Implements boolean update(in unsigned long updatemask); */
 NS_IMETHODIMP
 nsSVGGDIPlusGlyphMetrics::Update(PRUint32 updatemask, PRBool *_retval)
 {

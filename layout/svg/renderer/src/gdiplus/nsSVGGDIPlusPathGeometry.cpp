@@ -56,9 +56,14 @@ using namespace Gdiplus;
 #include "nsISVGRendererPathBuilder.h"
 #include "nsMemory.h"
 
+/**
+ * \addtogroup gdiplus_renderer GDI+ Rendering Engine
+ * @{
+ */
 ////////////////////////////////////////////////////////////////////////
-// nsSVGGDIPlusPathGeometry class
-
+/**
+ * GDI+ path geometry implementation
+ */
 class nsSVGGDIPlusPathGeometry : public nsISVGRendererPathGeometry
 {
 protected:
@@ -98,6 +103,9 @@ private:
   Region *mHitTestRegion;
   nsCOMPtr<nsISVGRendererRegion> mCoveredRegion;
 };
+
+/** @} */
+
 
 //----------------------------------------------------------------------
 // implementation:
@@ -357,7 +365,7 @@ nsSVGGDIPlusPathGeometry::RenderPath(GraphicsPath *path, nscolor color, float op
 //----------------------------------------------------------------------
 // nsISVGRendererPathGeometry methods:
 
-/* void render (in nsISVGRendererCanvas canvas); */
+/** Implements void render(in nsISVGRendererCanvas canvas); */
 NS_IMETHODIMP
 nsSVGGDIPlusPathGeometry::Render(nsISVGRendererCanvas *canvas)
 {
@@ -391,7 +399,7 @@ nsSVGGDIPlusPathGeometry::Render(nsISVGRendererCanvas *canvas)
   return NS_OK;
 }
 
-/* nsISVGRendererRegion update (in unsigned long updatemask); */
+/** Implements nsISVGRendererRegion update(in unsigned long updatemask); */
 NS_IMETHODIMP
 nsSVGGDIPlusPathGeometry::Update(PRUint32 updatemask, nsISVGRendererRegion **_retval)
 {
@@ -451,7 +459,7 @@ nsSVGGDIPlusPathGeometry::Update(PRUint32 updatemask, nsISVGRendererRegion **_re
   return NS_OK;
 }
 
-/* nsISVGRendererRegion getCoveredRegion (); */
+/** Implements nsISVGRendererRegion getCoveredRegion(); */
 NS_IMETHODIMP
 nsSVGGDIPlusPathGeometry::GetCoveredRegion(nsISVGRendererRegion **_retval)
 {
@@ -492,7 +500,7 @@ nsSVGGDIPlusPathGeometry::GetCoveredRegion(nsISVGRendererRegion **_retval)
   return NS_OK;
 }
 
-/* boolean containsPoint (in float x, in float y); */
+/** Implements boolean containsPoint(in float x, in float y); */
 NS_IMETHODIMP
 nsSVGGDIPlusPathGeometry::ContainsPoint(float x, float y, PRBool *_retval)
 {

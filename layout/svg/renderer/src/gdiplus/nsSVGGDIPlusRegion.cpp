@@ -51,9 +51,14 @@ using namespace Gdiplus;
 #include "nsIPresContext.h"
 #include "nsDeviceContextWin.h"
 
+/**
+ * \addtogroup gdiplus_renderer GDI+ Rendering Engine
+ * @{
+ */
 ////////////////////////////////////////////////////////////////////////
-// nsSVGGDIPlusRegion class
-
+/**
+ *  GDI+ region implementation
+ */
 class nsSVGGDIPlusRegion : public nsISVGGDIPlusRegion
 {
 protected:
@@ -97,6 +102,8 @@ private:
   Region mRegion;
 #endif
 };
+
+/** @} */
 
 //----------------------------------------------------------------------
 // implementation:
@@ -244,7 +251,7 @@ nsSVGGDIPlusRegion::GetRegion()const
 //----------------------------------------------------------------------
 // nsISVGRendererRegion methods:
 
-/* nsISVGRendererRegion combine (in nsISVGRendererRegion other); */
+/** Implements nsISVGRendererRegion combine(in nsISVGRendererRegion other); */
 NS_IMETHODIMP
 nsSVGGDIPlusRegion::Combine(nsISVGRendererRegion *other, nsISVGRendererRegion **_retval)
 {
@@ -271,7 +278,7 @@ nsSVGGDIPlusRegion::Combine(nsISVGRendererRegion *other, nsISVGRendererRegion **
   return NS_OK;
 }
 
-/* void getRectangleScans (in nsISVGRectangleSink sink); */
+/** Implements void getRectangleScans(in nsISVGRectangleSink sink); */
 NS_IMETHODIMP
 nsSVGGDIPlusRegion::GetRectangleScans(nsISVGRectangleSink *sink)
 {
