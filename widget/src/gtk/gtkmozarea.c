@@ -92,6 +92,9 @@ gtk_mozarea_size_allocate (GtkWidget    *widget,
   g_return_if_fail (GTK_IS_MOZAREA (widget));
 
   mozarea = GTK_MOZAREA (widget);
+
+  g_print("gtk_mozarea_size_allocate to %d %d\n",
+          allocation->width, allocation->height);
   
   if (GTK_WIDGET_REALIZED (widget))
     {

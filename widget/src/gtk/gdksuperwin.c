@@ -146,7 +146,7 @@ void gdk_superwin_destroy(GdkSuperWin *superwin)
                            superwin);
   gdk_window_destroy(superwin->bin_window);
   gdk_window_destroy(superwin->shell_window);
-  free(superwin);
+  /* XXX this needs to free itself */
 }
 
 void         
@@ -209,19 +209,20 @@ gdk_superwin_scroll (GdkSuperWin *superwin,
 
 void         
 gdk_superwin_set_event_func (GdkSuperWin    *superwin,
-			     GdkSuperWinFunc event_func,
-			     gpointer        func_data,
-			     GDestroyNotify  notify)
+                             GdkSuperWinFunc event_func,
+                             gpointer        func_data,
+                             GDestroyNotify  notify)
 {
   if (superwin->notify && superwin->func_data)
     superwin->notify (superwin->func_data);
-
-  g_print("setting func to %p, arg to %p\n",
-          superwin->event_func, superwin->func_data);
   
   superwin->event_func = event_func;
   superwin->func_data = func_data;
   superwin->notify = notify;
+
+  /* g_print("setting func to %p, arg to %p in win %p\n",
+     superwin->event_func, superwin->func_data, superwin); */
+
 }
 
 void gdk_superwin_resize (GdkSuperWin *superwin,
@@ -251,39 +252,35 @@ gdk_superwin_bin_filter (GdkXEvent *gdk_xevent,
   GdkSuperWinTranslate *translate;
   GList *tmp_list;
 
-  switch (xevent->xany.type)
-    {
-    case Expose:
-      tmp_list = superwin->translate_queue;
-      while (tmp_list)
-	{
-	  translate = tmp_list->data;
-	  
-	  xevent->xexpose.x += translate->dx;
-	  xevent->xexpose.y += translate->dy;
-	  
-	  tmp_list = tmp_list->next;
-	}
-      break;
+  switch (xevent->xany.type) {
+  case Expose:
+    tmp_list = superwin->translate_queue;
+    while (tmp_list) {
+      translate = tmp_list->data;
       
-    case ConfigureNotify:
-      if (superwin->translate_queue)
-	{
-	  translate = superwin->translate_queue->data;
-	  if (xevent->xany.serial == translate->serial)
-	    {
+      xevent->xexpose.x += translate->dx;
+      xevent->xexpose.y += translate->dy;
+      
+      tmp_list = tmp_list->next;
+    }
+    break;
+    
+  case ConfigureNotify:
+    if (superwin->translate_queue) {
+      translate = superwin->translate_queue->data;
+      if (xevent->xany.serial == translate->serial) {
 	      tmp_list = superwin->translate_queue;
 	      superwin->translate_queue = g_list_remove_link (tmp_list, tmp_list);
 	      g_free (tmp_list->data);
 	      g_list_free_1 (tmp_list);
 	    }
-	  break;
-	}
+      break;
     }
+  }
 
   if (superwin->event_func) {
-    g_print("calling func %p with arg %p\n",
-            superwin->event_func, superwin->func_data);
+    /* g_print("calling func %p with arg %p in win %p\n",
+       superwin->event_func, superwin->func_data, superwin); */
     superwin->event_func (superwin, xevent, superwin->func_data);
   }
 
