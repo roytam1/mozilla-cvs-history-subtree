@@ -136,12 +136,10 @@ protected:
       Enumerator();
       virtual ~Enumerator();
 
-      NS_IMETHOD First();
-      NS_IMETHOD Last();
-      NS_IMETHOD Next();
-      NS_IMETHOD Prev();
-      NS_IMETHOD CurrentItem(nsISupports **aItem);
-      NS_IMETHOD IsDone();
+      NS_IMETHOD HasMoreElements(PRBool* aResult);
+      NS_IMETHOD GetNext(nsISupports** aResult);
+      NS_IMETHOD HasPreviousElements(PRBool* aResult);
+      NS_IMETHOD GetPrev(nsISupports** aResult);
 
       void Append(nsIWidget* aWidget);
       void Remove(nsIWidget* aWidget);
