@@ -119,13 +119,13 @@ ifeq ($(PACKAGE_BUILD),)
 	@echo +++ Creating runem.  Use this to run the test browser.
 	rm -f runem
 	@echo #!/bin/sh > runem
-	@echo $(PERL) ../src_share/runem.pl $(DIST)/bin org.mozilla.webclient.test.EmbeddedMozilla $(DEPTH) "$$"1 "$$"2 "$$"3 "$$"4 "$$"4 "$$"6 >> runem
+	@echo $(PERL) ../src_share/runem.pl org.mozilla.webclient.test.EmbeddedMozilla $(DEPTH) "$$"1 "$$"2 "$$"3 "$$"4 "$$"4 "$$"6 >> runem
 	chmod 755 runem
 else
 	@echo +++ Commercial Packaging - Creating runem. Used to run test
 	rm -f runem
 	@echo #!/bin/sh > runem
-	@echo $(PERL) runem.pl ../../ org.mozilla.test.EmbeddedMozilla "$$"1 "$$"2 "$$"3 "$$"4 "$$"4 "$$"6 >> runem
+	@echo $(PERL) runem.pl org.mozilla.test.EmbeddedMozilla "$$"1 "$$"2 "$$"3 "$$"4 "$$"4 "$$"6 >> runem
 	chmod 755 runem
 	if test ! -d $(PACKAGE_EXAMPLE) ; then mkdir $(PACKAGE_EXAMPLE) ; else true ; fi ;
 	cp $(topsrcdir)/dist/bin/libwebclientstub.so $(PACKAGE_LIB)/libwebclientstub.so.$(VERSION_NUMBER)
@@ -165,6 +165,7 @@ else
 	if test ! -d $(PACKAGE_EXAMPLE)/runem ; then cp $(topsrcdir)/java/webclient/src_moz/runem $(PACKAGE_EXAMPLE)/runem ; else true ; fi ;
 	if test ! -d $(PACKAGE_EXAMPLE)/runem.pl ; then cp $(topsrcdir)/java/webclient/src_share/runem_commercial.pl $(PACKAGE_EXAMPLE)/runem.pl ; else true ; fi ;
 	chmod 755 $(PACKAGE_EXAMPLE)/runem.pl
+	cp $(topsrcdir)/java/README.commercial $(PACKAGE_DIR)/README
 endif # PACKAGE_BUILD
 endif # BAL_INTERFACE
 

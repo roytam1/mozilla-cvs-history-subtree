@@ -410,7 +410,7 @@ int processEventLoop(WebShellInitContext * initContext)
 
     // PENDING(edburns): revisit this.  Not sure why this is necessary, but
     // this fixes bug 44327
-    printf("%c", 8); // 8 is ASCII for backspace
+    //    printf("%c", 8); // 8 is ASCII for backspace
 
     return 1;
 }
@@ -645,10 +645,6 @@ nsresult InitMozillaStuff (WebShellInitContext * initContext)
     nsCOMPtr<nsIWebShell> webShell(do_QueryInterface(initContext->docShell));
     webShell->SetContainer(wsContainer);
     
-    // set the URIContentListener
-    nsCOMPtr<nsIURIContentListener> contentListener(do_QueryInterface(initContext->browserContainer));
-    webBrowser->SetParentURIContentListener(contentListener);
-    
     // set the TreeOwner
     nsCOMPtr<nsIDocShellTreeItem> docShellAsItem(do_QueryInterface(initContext->docShell));
     nsCOMPtr<nsIDocShellTreeOwner> treeOwner(do_QueryInterface(initContext->browserContainer));
@@ -688,7 +684,7 @@ nsresult InitMozillaStuff (WebShellInitContext * initContext)
     }
     
     initContext->initComplete = TRUE;
-    
+   
 #if DEBUG_RAPTOR_CANVAS
     if (prLogModuleInfo) {
         PR_LOG(prLogModuleInfo, 3, 
