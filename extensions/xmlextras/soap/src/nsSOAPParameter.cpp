@@ -24,26 +24,15 @@
 #include "nsSOAPUtils.h"
 #include "nsIXPConnect.h"
 #include "nsIServiceManager.h"
+#include "nsISupportsPrimitives.h"
 
 nsSOAPParameter::nsSOAPParameter()
 {
   NS_INIT_ISUPPORTS();
-  mType = PARAMETER_TYPE_NULL;
-  mJSValue = nsnull;
-  JSContext* cx;
-  cx = nsSOAPUtils::GetSafeContext();
-  if (cx) {
-    JS_AddNamedRoot(cx, &mJSValue, "nsSOAPParameter");
-  }
 }
 
 nsSOAPParameter::~nsSOAPParameter()
 {
-  JSContext* cx;
-  cx = nsSOAPUtils::GetSafeContext();
-  if (cx) {
-    JS_RemoveRoot(cx, &mJSValue);
-  }
 }
 
 NS_IMPL_ISUPPORTS4(nsSOAPParameter, 
@@ -52,62 +41,158 @@ NS_IMPL_ISUPPORTS4(nsSOAPParameter,
                    nsIXPCScriptable,
                    nsIJSNativeInitializer)
 
-/* attribute string encodingStyleURI; */
-NS_IMETHODIMP nsSOAPParameter::GetEncodingStyleURI(char * *aEncodingStyleURI)
+/* attribute DOMString name; */
+NS_IMETHODIMP nsSOAPParameter::GetName(nsAWritableString & aName)
 {
-  NS_ENSURE_ARG_POINTER(aEncodingStyleURI);
-  if (mEncodingStyleURI.Length() > 0) {
-    *aEncodingStyleURI = mEncodingStyleURI.ToNewCString();
-  }
-  else {
-    *aEncodingStyleURI = nsnull;
-  }
-
+  NS_ENSURE_ARG_POINTER(&aName);
+  aName.Assign(mName);
   return NS_OK;
 }
-NS_IMETHODIMP nsSOAPParameter::SetEncodingStyleURI(const char * aEncodingStyleURI)
+NS_IMETHODIMP nsSOAPParameter::SetName(const nsAReadableString & aName)
 {
-  if (aEncodingStyleURI) {
-    mEncodingStyleURI.Assign(aEncodingStyleURI);
-  }
-  else {
-    mEncodingStyleURI.Truncate();
-  }
+  mName.Assign(aName);
   return NS_OK;
 }
 
-/* attribute wstring name; */
-NS_IMETHODIMP nsSOAPParameter::GetName(PRUnichar * *aName)
+/* attribute DOMString encodingStyleURI; */
+NS_IMETHODIMP nsSOAPParameter::GetEncodingStyleURI(nsAWritableString & aEncodingStyleURI)
 {
-  NS_ENSURE_ARG_POINTER(aName);
-  if (mName.Length() > 0) {
-    *aName = mName.ToNewUnicode();
-  }
-  else {
-    *aName = nsnull;
-  }
-
+  NS_ENSURE_ARG_POINTER(&aEncodingStyleURI);
+  aEncodingStyleURI.Assign(mEncodingStyleURI);
   return NS_OK;
 }
-NS_IMETHODIMP nsSOAPParameter::SetName(const PRUnichar * aName)
+NS_IMETHODIMP nsSOAPParameter::SetEncodingStyleURI(const nsAReadableString & aEncodingStyleURI)
 {
-  if (aName) {
-    mName.Assign(aName);
-  }
-  else {
-    mName.Truncate();
-  }
+  mEncodingStyleURI.Assign(aEncodingStyleURI);
   return NS_OK;
 }
 
-/* readonly attribute long type; */
-NS_IMETHODIMP nsSOAPParameter::GetType(PRInt32 *aType)
+/* attribute DOMString type; */
+NS_IMETHODIMP nsSOAPParameter::GetType(nsAWritableString & aType)
 {
-  NS_ENSURE_ARG(aType);
-  *aType = mType;
+  NS_ENSURE_ARG_POINTER(&aType);
+  aType.Assign(mType);
+  return NS_OK;
+}
+NS_IMETHODIMP nsSOAPParameter::SetType(const nsAReadableString & aType)
+{
+  mType.Assign(aType);
   return NS_OK;
 }
 
+/* [noscript] readonly attribute nsISupports value; */
+NS_IMETHODIMP nsSOAPParameter::GetValue(nsISupports * *aValue)
+{
+  NS_ENSURE_ARG_POINTER(aValue);
+  *aValue = mValue;
+  NS_IF_ADDREF(*aValue);
+  return NS_OK;
+}
+
+/* void setAsWString (in DOMString aValue); */
+NS_IMETHODIMP nsSOAPParameter::SetAsWString(const nsAReadableString & aValue)
+{
+    mType.Assign(nsSOAPUtils::kWStringType);
+    nsCOMPtr<nsISupportsWString> value = do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID);
+    PRInt32 len = aValue.Length();
+    PRUnichar* sval = new PRUnichar[len + 1];
+    for (int i = 0; i < len; i++) {  // There has got to be a better way...
+      sval[i] = aValue.CharAt(i);
+    }
+    sval[len] = 0;
+    value->SetData(sval);
+    mValue = value;
+    return NS_OK;
+}
+
+/* void setAsBoolean (in PRBool aValue); */
+NS_IMETHODIMP nsSOAPParameter::SetAsBoolean(PRBool aValue)
+{
+    mType.Assign(nsSOAPUtils::kPRBoolType);
+    nsCOMPtr<nsISupportsPRBool> value = do_CreateInstance(NS_SUPPORTS_PRBOOL_CONTRACTID);
+    value->SetData(aValue);
+    mValue = value;
+    return NS_OK;
+}
+
+/* void setAsDouble (in double aValue); */
+NS_IMETHODIMP nsSOAPParameter::SetAsDouble(double aValue)
+{
+    mType.Assign(nsSOAPUtils::kDoubleType);
+    nsCOMPtr<nsISupportsDouble> value = do_CreateInstance(NS_SUPPORTS_DOUBLE_CONTRACTID);
+    value->SetData(aValue);
+    mValue = value;
+    return NS_OK;
+}
+
+/* void setAsFloat (in float aValue); */
+NS_IMETHODIMP nsSOAPParameter::SetAsFloat(float aValue)
+{
+    mType.Assign(nsSOAPUtils::kFloatType);
+    nsCOMPtr<nsISupportsFloat> value = do_CreateInstance(NS_SUPPORTS_FLOAT_CONTRACTID);
+    value->SetData(aValue);
+    mValue = value;
+    return NS_OK;
+}
+
+/* void setAsLong (in PRInt64 aValue); */
+NS_IMETHODIMP nsSOAPParameter::SetAsLong(PRInt64 aValue)
+{
+    mType.Assign(nsSOAPUtils::kPRInt64Type);
+    nsCOMPtr<nsISupportsPRInt64> value = do_CreateInstance(NS_SUPPORTS_PRINT64_CONTRACTID);
+    value->SetData(aValue);
+    mValue = value;
+    return NS_OK;
+}
+
+/* void setAsInt (in PRInt32 aValue); */
+NS_IMETHODIMP nsSOAPParameter::SetAsInt(PRInt32 aValue)
+{
+    mType.Assign(nsSOAPUtils::kPRInt32Type);
+    nsCOMPtr<nsISupportsPRInt32> value = do_CreateInstance(NS_SUPPORTS_PRINT32_CONTRACTID);
+    value->SetData(aValue);
+    mValue = value;
+    return NS_OK;
+}
+
+/* void setAsShort (in PRInt16 aValue); */
+NS_IMETHODIMP nsSOAPParameter::SetAsShort(PRInt16 aValue)
+{
+    mType.Assign(nsSOAPUtils::kPRInt16Type);
+    nsCOMPtr<nsISupportsPRInt16> value = do_CreateInstance(NS_SUPPORTS_PRINT16_CONTRACTID);
+    value->SetData(aValue);
+    mValue = value;
+    return NS_OK;
+}
+
+/* void setAsByte (in PRUint8 aValue); */
+NS_IMETHODIMP nsSOAPParameter::SetAsByte(PRUint8 aValue)
+{
+    mType.Assign(nsSOAPUtils::kCharType);
+    nsCOMPtr<nsISupportsChar> value = do_CreateInstance(NS_SUPPORTS_CHAR_CONTRACTID);
+    value->SetData(aValue);
+    mValue = value;
+    return NS_OK;
+}
+
+/* void setAsArray (in nsISupportsArray aValue); */
+NS_IMETHODIMP nsSOAPParameter::SetAsArray(nsISupportsArray *aValue)
+{
+    mType.Assign(nsSOAPUtils::kArrayType);
+    mValue = NS_REINTERPRET_CAST(nsISupports*, aValue);
+    return NS_OK;
+}
+
+/* void setAsInterface (in nsIIDRef aIID, in nsISupports aValue); */
+NS_IMETHODIMP nsSOAPParameter::SetAsInterface(const nsIID & aIID, nsISupports *aValue)
+{
+    mType.Assign(nsSOAPUtils::kIIDObjectType);
+    mType.Append(nsSOAPUtils::kTypeSeparator);
+    mValue = aValue;
+    return NS_OK;
+}
+
+#if 0
 /* [noscript] void setValueAndType (in nsISupports value, in long type); */
 NS_IMETHODIMP nsSOAPParameter::SetValueAndType(nsISupports *value, PRInt32 type)
 {
@@ -178,6 +263,8 @@ NS_IMETHODIMP nsSOAPParameter::GetJSValue(JSObject * *aJSValue)
   return NS_OK;
 }
 
+#endif
+
 NS_IMETHODIMP 
 nsSOAPParameter::Initialize(JSContext *cx, JSObject *obj, 
                             PRUint32 argc, jsval *argv)
@@ -185,7 +272,7 @@ nsSOAPParameter::Initialize(JSContext *cx, JSObject *obj,
   if (argc > 0) {
     JSString* namestr = JS_ValueToString(cx, argv[0]);
     if (namestr) {
-      SetName(NS_REINTERPRET_CAST(PRUnichar*, JS_GetStringChars(namestr)));
+      SetName(nsString(NS_REINTERPRET_CAST(PRUnichar*, JS_GetStringChars(namestr))));
       if (argc > 1) {
         SetValue(cx, argv[1]);
       }

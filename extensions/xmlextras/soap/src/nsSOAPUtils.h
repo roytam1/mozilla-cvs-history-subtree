@@ -80,6 +80,18 @@ public:
   static const nsString kFaultDetailTagName;
   static const nsString kSOAPCallType;
   static const nsString kEmpty;
+  static const nsString kWStringType;
+  static const nsString kPRBoolType;
+  static const nsString kDoubleType;
+  static const nsString kFloatType;
+  static const nsString kPRInt64Type;
+  static const nsString kPRInt32Type;
+  static const nsString kPRInt16Type;
+  static const nsString kCharType;
+  static const nsString kArrayType;
+  static const nsString kJSObjectType;
+  static const nsString kIIDObjectType;
+  static const nsString kTypeSeparator;
 };
 
 #endif

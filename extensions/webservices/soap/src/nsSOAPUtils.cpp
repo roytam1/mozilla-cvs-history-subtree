@@ -48,8 +48,22 @@ const nsString nsSOAPUtils::kFaultCodeTagName(NS_LITERAL_STRING("faultcode"));
 const nsString nsSOAPUtils::kFaultStringTagName(NS_LITERAL_STRING("faultstring"));
 const nsString nsSOAPUtils::kFaultActorTagName(NS_LITERAL_STRING("faultactor"));
 const nsString nsSOAPUtils::kFaultDetailTagName(NS_LITERAL_STRING("detail"));
+
 const nsString nsSOAPUtils::kSOAPCallType(NS_LITERAL_STRING("#nsSOAPUtils::kSOAPCallType"));
 const nsString nsSOAPUtils::kEmpty(NS_LITERAL_STRING(""));
+
+const nsString nsSOAPUtils::kWStringType(NS_LITERAL_STRING("#DOMString"));
+const nsString nsSOAPUtils::kPRBoolType(NS_LITERAL_STRING("#boolean"));
+const nsString nsSOAPUtils::kDoubleType(NS_LITERAL_STRING("#double"));
+const nsString nsSOAPUtils::kFloatType(NS_LITERAL_STRING("#float"));
+const nsString nsSOAPUtils::kPRInt64Type(NS_LITERAL_STRING("#long"));
+const nsString nsSOAPUtils::kPRInt32Type(NS_LITERAL_STRING("#int"));
+const nsString nsSOAPUtils::kPRInt16Type(NS_LITERAL_STRING("#short"));
+const nsString nsSOAPUtils::kCharType(NS_LITERAL_STRING("#byte"));
+const nsString nsSOAPUtils::kArrayType(NS_LITERAL_STRING("#array"));
+const nsString nsSOAPUtils::kJSObjectType(NS_LITERAL_STRING("#js"));
+const nsString nsSOAPUtils::kIIDObjectType(NS_LITERAL_STRING("#iid"));
+const nsString nsSOAPUtils::kTypeSeparator(NS_LITERAL_STRING("#"));
 
 void 
 nsSOAPUtils::GetSpecificChildElement(

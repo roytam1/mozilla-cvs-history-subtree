@@ -23,12 +23,12 @@
 #ifndef nsSOAPParameter_h__
 #define nsSOAPParameter_h__
 
+#include "nsString.h"
 #include "jsapi.h"
 #include "nsISOAPParameter.h"
 #include "nsISecurityCheckedComponent.h"
 #include "nsIXPCScriptable.h"
 #include "nsIJSNativeInitializer.h"
-#include "nsString.h"
 #include "nsCOMPtr.h"
 
 class nsSOAPParameter : public nsISOAPParameter,
@@ -61,11 +61,10 @@ public:
                         PRUint32 argc, jsval *argv);
 
 protected:
-  nsCString mEncodingStyleURI;
+  nsString mEncodingStyleURI;
   nsString mName;
-  PRInt32 mType;
+  nsString mType;
   nsCOMPtr<nsISupports> mValue;
-  JSObject* mJSValue;
 };
 
 #endif
