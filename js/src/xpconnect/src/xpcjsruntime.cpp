@@ -637,6 +637,15 @@ XPCJSRuntime::SyncXPCContextList(JSContext* cx /* = nsnull */)
             found = xpcc;
     }
 
+    XPCPerThreadData* tls = XPCPerThreadData::GetData();
+    if(tls)
+    {
+        if(found)
+            tls->SetRecentContext(cx, found);
+        else    
+            tls->ClearRecentContext();
+    }
+
     return found;
 }
 

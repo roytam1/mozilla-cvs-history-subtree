@@ -344,7 +344,9 @@ XPCPerThreadData::XPCPerThreadData()
         mNextThread(nsnull),
         mCallContext(nsnull),
         mResolveName(0),
-        mResolvingWrapper(nsnull)
+        mResolvingWrapper(nsnull),
+        mMostRecentJSContext(nsnull),
+        mMostRecentXPCContext(nsnull)
 {
     if(gLock)
     {
@@ -459,13 +461,43 @@ XPCPerThreadData::GetData()
 void
 XPCPerThreadData::CleanupAllThreads()
 {
+    // I've questioned the sense of cleaning up other threads' data from the 
+    // start. But I got talked into it. Now I see that we *can't* do all the
+    // cleaup while holding this lock. So, we are going to go to the trouble 
+    // to copy out the data that needs to be cleaned up *outside* of
+    // the lock. Yuk!
+
+    XPCJSContextStack** stacks = nsnull;
+    int count = 0;
+    int i;
+
     if(gLock)
     {
         nsAutoLock lock(gLock);
-
+    
         for(XPCPerThreadData* cur = gThreads; cur; cur = cur->mNextThread)
-            cur->Cleanup();
+            count++;
+
+        stacks = (XPCJSContextStack**) new XPCJSContextStack*[count] ;
+        if(stacks)
+        {
+            i = 0;
+            for(XPCPerThreadData* cur = gThreads; cur; cur = cur->mNextThread)
+            {
+                stacks[i++] = cur->mJSContextStack;
+                cur->mJSContextStack = nsnull;
+                cur->Cleanup();
+            }    
+        }
     }
+
+    if(stacks)
+    {
+        for(i = 0; i < count; i++)
+            delete stacks[i];    
+        delete [] stacks;
+    }
+
     if(gTLSIndex != BAD_TLS_INDEX)
         PR_SetThreadPrivate(gTLSIndex, nsnull);
 }

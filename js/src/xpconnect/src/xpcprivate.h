@@ -1519,7 +1519,8 @@ public:
                                    GetSet() != mMaybeProto->GetSet());}
 
     XPCJSRuntime* 
-    GetRuntime() const {return GetScope() ? GetScope()->GetRuntime() : nsnull;}
+    GetRuntime() const {XPCWrappedNativeScope* scope = GetScope(); 
+                        return scope ? scope->GetRuntime() : nsnull;}
 
     static nsresult
     GetNewOrUsed(XPCCallContext& ccx,
@@ -2313,6 +2314,15 @@ public:
     // Must be called with the threads locked.
     static XPCPerThreadData* IterateThreads(XPCPerThreadData** iteratorp);
 
+    XPCContext* GetRecentXPCContext(JSContext* cx) const
+        {return cx == mMostRecentJSContext ? mMostRecentXPCContext : nsnull;}
+
+    void SetRecentContext(JSContext* cx, XPCContext* xpcc)
+        {mMostRecentJSContext = cx; mMostRecentXPCContext = xpcc;}
+
+    void ClearRecentContext()
+        {mMostRecentJSContext = nsnull; mMostRecentXPCContext = nsnull;}
+
 private:
     XPCPerThreadData();
 
@@ -2323,6 +2333,9 @@ private:
     XPCCallContext*     mCallContext;
     jsval               mResolveName;
     XPCWrappedNative*   mResolvingWrapper;
+
+    JSContext*          mMostRecentJSContext;
+    XPCContext*         mMostRecentXPCContext;
 
     static PRLock*           gLock;
     static XPCPerThreadData* gThreads;

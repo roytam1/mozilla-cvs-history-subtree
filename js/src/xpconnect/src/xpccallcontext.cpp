@@ -37,7 +37,6 @@
 
 #include "xpcprivate.h"
 
-
 XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
                                JSContext* cx    /* = nsnull  */,
                                JSObject* obj    /* = nsnull  */,
@@ -105,9 +104,20 @@ XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
         mContextPopRequired = JS_TRUE;
     }
 
-    if(!(mXPCContext = nsXPConnect::GetContext(mJSContext, mXPC)))
-        return;
-    
+    // Try to get the JSContext -> XPCContext mapping from the cache.
+    // FWIW... quicky tests show this hitting ~ 95% of the time.
+    // That is a *lot* of locking we can skip in nsXPConnect::GetContext.
+    mXPCContext = mThreadData->GetRecentXPCContext(mJSContext);
+
+    if(!mXPCContext)
+    {
+        if(!(mXPCContext = nsXPConnect::GetContext(mJSContext, mXPC)))
+            return;
+        
+        // Fill the cache.
+        mThreadData->SetRecentContext(mJSContext, mXPCContext);
+    } 
+
     mPrevCallerLanguage = mXPCContext->SetCallingLangType(mCallerLanguage);
 
     // hook into call context chain for our thread
