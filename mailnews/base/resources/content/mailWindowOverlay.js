@@ -965,7 +965,11 @@ function IsGetNextNMessagesEnabled()
 
 function IsEmptyTrashEnabled()
 {
-    return IsMailFolderSelected();
+    var selectedFolders = GetSelectedMsgFolders();
+    if (selectedFolders.length)
+        return true;
+    else
+        return false;
 }
 
 function IsCompactFolderEnabled()
