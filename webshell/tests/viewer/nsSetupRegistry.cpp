@@ -115,7 +115,6 @@ static NS_DEFINE_IID(kCDOMScriptObjectFactory, NS_DOM_SCRIPT_OBJECT_FACTORY_CID)
 static NS_DEFINE_IID(kCDOMNativeObjectRegistry, NS_DOM_NATIVE_OBJECT_REGISTRY_CID);
 static NS_DEFINE_IID(kCHTMLDocument, NS_HTMLDOCUMENT_CID);
 static NS_DEFINE_IID(kCXMLDocument, NS_XMLDOCUMENT_CID);
-static NS_DEFINE_IID(kCRDFDocument, NS_RDFDOCUMENT_CID);
 static NS_DEFINE_IID(kCImageDocument, NS_IMAGEDOCUMENT_CID);
 static NS_DEFINE_IID(kCHTMLImageElementFactory, NS_HTMLIMAGEELEMENTFACTORY_CID);
 static NS_DEFINE_IID(kNetServiceCID, NS_NETSERVICE_CID);
@@ -125,6 +124,9 @@ static NS_DEFINE_CID(kRDFResourceManagerCID,    NS_RDFRESOURCEMANAGER_CID);
 static NS_DEFINE_CID(kRDFSimpleDataBaseCID,     NS_RDFSIMPLEDATABASE_CID);
 static NS_DEFINE_CID(kRDFBookMarkDataSourceCID, NS_RDFBOOKMARKDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFRegistryCID,           NS_RDFREGISTRY_CID);
+static NS_DEFINE_CID(kRDFDocumentCID,           NS_RDFDOCUMENT_CID);
+
+static NS_DEFINE_CID(kCSSParserCID,             NS_CSSPARSER_CID);
 
 extern "C" void
 NS_SetupRegistry()
@@ -167,13 +169,16 @@ NS_SetupRegistry()
   nsRepository::RegisterFactory(kCDOMNativeObjectRegistry, DOM_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kCHTMLDocument, LAYOUT_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kCXMLDocument, LAYOUT_DLL, PR_FALSE, PR_FALSE);
-  nsRepository::RegisterFactory(kCRDFDocument, LAYOUT_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kCImageDocument, LAYOUT_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kCHTMLImageElementFactory, LAYOUT_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kNetServiceCID, NETLIB_DLL, PR_FALSE, PR_FALSE);
+
+  nsRepository::RegisterFactory(kRDFDocumentCID,           RDF_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kRDFMemoryDataSourceCID,   RDF_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kRDFResourceManagerCID,    RDF_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kRDFBookMarkDataSourceCID, RDF_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kRDFSimpleDataBaseCID,     RDF_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kRDFRegistryCID,           RDF_DLL, PR_FALSE, PR_FALSE);
+
+  nsRepository::RegisterFactory(kCSSParserCID, LAYOUT_DLL, PR_FALSE, PR_FALSE);
 }
