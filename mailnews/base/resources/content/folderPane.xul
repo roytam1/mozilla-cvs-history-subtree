@@ -112,7 +112,8 @@
                   flex="1"
                   tooltip="folderTooltip"
                   datasources="rdf:null"
-                  onselect="top.FolderPaneSelectionChange();">
+                  onselect="FolderPaneSelectionChange();"
+                  onclick="FolderPaneOnClick(event);"> 
       <template>
         <outlinerrow class="folderTreeItem"
                      uri="...">

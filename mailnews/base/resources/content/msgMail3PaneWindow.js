@@ -705,8 +705,16 @@ function GetSelectedFolderIndex()
 
 function FolderPaneOnClick(event)
 {
-	debug("in FolderPaneClick()\n");
+    dump("In FolderPaneClick()\n");
 
+    var folderOutliner = GetFolderOutliner();
+    var row = { };
+    var col = { };
+    var elt = { };
+    folderOutliner.outlinerBoxObject.getCellAt(event.clientX, event.clientY, row, col, elt);
+    var folderResource = GetFolderResource(row.value);
+
+/*
   var t = event.originalTarget;
   var item;
   var uri;
@@ -754,14 +762,21 @@ function FolderPaneOnClick(event)
 		if (item.localName == "treeitem")
 			FolderPaneDoubleClick(item);
 	}
+*/
+    if (event.detail == 2)
+        FolderPaneDoubleClick(folderResource);
 }
 
-function FolderPaneDoubleClick(treeitem)
+function FolderPaneDoubleClick(resource)
 {
-	var isServer = false;
+    dump("In FolderPaneDoubleClick()\n");
 
-	if (treeitem) {
-		isServer = (treeitem.getAttribute('IsServer') == "true");
+    var isServer = false;
+ 
+    if (resource)
+    {
+        isServer = (GetFolderAttribute(resource, 'IsServer') == 'true');
+/*
 		if (isServer) {
 			var open = treeitem.getAttribute('open');
 			if (open == "true") {
@@ -776,13 +791,13 @@ function FolderPaneDoubleClick(treeitem)
 				// double clicking close, don't PerformExpand()
 			}
 		}
-	}
+*/
+    }
 
-	// don't open a new msg window if we are double clicking on a server.
-	// only do it for folders or newsgroups
-	if (!isServer) {
-		MsgOpenNewWindowForFolder(treeitem.getAttribute('id'));
-	}
+    // don't open a new msg window if we are double clicking on a server.
+    // only do it for folders or newsgroups
+    if (!isServer)
+        MsgOpenNewWindowForFolder(resource.Value);
 }
 
 function ChangeSelection(outliner, newIndex)
