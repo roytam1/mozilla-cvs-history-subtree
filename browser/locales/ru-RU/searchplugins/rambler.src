@@ -1,0 +1,24 @@
+# Mozilla/Rambler plugin
+
+<search 
+	name="Rambler"
+	description="Rambler Search"
+	method="GET"
+	action="http://search.rambler.ru/cgi-bin/rambler_search"
+	queryCharset="windows-1251"
+>
+
+<input name="words" user>
+<input name="where" value="1">
+<input name="limit" value="15">
+<input name="sort" value="0">
+
+<interpret 
+	browserResultType="result" 
+	charset="windows-1251"
+	resultListStart="<ol class="listres" start="1">" 
+	resultListEnd="</ol>"
+	resultItemStart="<li><span class="hdrs">" 
+	resultItemEnd="</span>"
+>
+</search>

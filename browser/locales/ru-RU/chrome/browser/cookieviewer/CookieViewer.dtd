@@ -1,0 +1,14 @@
+<!ENTITY treehead.infoselected.label "информация о выбранном cookie">
+<!ENTITY treehead.cookiedomain.label "Сайт">
+<!ENTITY props.path.label "Путь:">
+<!ENTITY props.value.label "Содержимое:">
+<!ENTITY treehead.cookiename.label "Имя cookie">
+<!ENTITY props.domain.label "Узел:">
+<!ENTITY button.removeallcookies.label "Удалить все cookies">
+<!ENTITY props.name.label "Имя:">
+<!ENTITY div.cookiesonsystem.label "Просмотр и удаление cookies, хранящихся на вашем компьютере.">
+<!ENTITY props.secure.label "Посылать при:">
+<!ENTITY window.title "Просмотр Cookies">
+<!ENTITY checkbox.label "Не разрешать сайтам, чьи cookies были удалены, сохранять их снова">
+<!ENTITY button.removecookie.label "Удалить cookie">
+<!ENTITY props.expires.label "Срок действия:">

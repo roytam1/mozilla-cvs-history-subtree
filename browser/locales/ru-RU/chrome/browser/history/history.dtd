@@ -1,0 +1,27 @@
+<!ENTITY byLastVisited.accesskey "о">
+<!ENTITY view.label "Просмотр">
+<!ENTITY collapse.label "Свернуть">
+<!ENTITY openLinkInWindow.accesskey "О">
+<!ENTITY find.label "Найти:">
+<!ENTITY openInNewWindow.accesskey "н">
+<!ENTITY openInNewWindow.label "Открыть в новом окне">
+<!ENTITY expand.accesskey "Р">
+<!ENTITY openInNewTab.accesskey "в">
+<!ENTITY byMostVisited.label "По посещаемости">
+<!ENTITY expand.label "Развернуть">
+<!ENTITY byDayAndSite.label "По дате и сайтам">
+<!ENTITY copyLink.accesskey "К">
+<!ENTITY byLastVisited.label "По последнему посещению">
+<!ENTITY bookmarkLink.accesskey "с">
+<!ENTITY byDayAndSite.accesskey "и">
+<!ENTITY bySite.label "По сайтам">
+<!ENTITY bySite.accesskey "с">
+<!ENTITY byDate.accesskey "д">
+<!ENTITY openLinkInWindow.label "Открыть">
+<!ENTITY bookmarkLink.label "Добавить ссылку в закладки">
+<!ENTITY byMostVisited.accesskey "п">
+<!ENTITY copyLink.label "Копировать ссылку">
+<!ENTITY byDate.label "По дате">
+<!ENTITY openInNewTab.label "Открыть в новой вкладке">
+<!ENTITY find.accesskey "й">
+<!ENTITY collapse.accesskey "С">

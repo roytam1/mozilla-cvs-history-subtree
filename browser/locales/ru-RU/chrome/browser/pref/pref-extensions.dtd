@@ -1,0 +1,9 @@
+<!ENTITY getnew.url "http://texturizer.net/firefox/extensions/">
+<!ENTITY disableExtension.label "Отключить расширение">
+<!ENTITY getNewExtensions.label "Загрузить новые расширения">
+<!ENTITY uninstallExtension.label "Удалить расширение">
+<!ENTITY lHeader "Расширения">
+<!ENTITY extensionTitle.label "Установлены следующие расширения:">
+<!ENTITY author.tooltip "Закрыть окно настроек и перейти на веб-страницу автора">
+<!ENTITY getnew.tooltip "Закрыть окно настроек и перейти на справочную страницу расширений Mozilla Firebird">
+<!ENTITY extensionSettings.label "Параметры...">

@@ -1,0 +1,84 @@
+<!ENTITY enableAutoImageResizing.label "Уменьшать размеры больших изображений до размеров окна">
+<!ENTITY multimedia.label "Мультимедиа">
+<!ENTITY SSLClientAuthMethod "Выбор сертификата клиента">
+<!ENTITY validation.crllastupdate.label "Последнее обновление">
+<!ENTITY accessibility.label "Расширенные возможности">
+<!ENTITY managedevices.accesskey "п">
+<!ENTITY validation.managecrls.button "Упорядочить CRL....">
+<!ENTITY validation.title "Подтверждение действительности">
+<!ENTITY crl.autoupdate.fail.cnt.label "Предыдущие последовательные ошибки обновлений:">
+<!ENTITY crl.issuer.org.label "Организация:">
+<!ENTITY checkNow.accesskey "с">
+<!ENTITY validation.crl.autoupdate.enable.label "Использовать автоматическое обновление этого CRL">
+<!ENTITY softwareupdateinfo.label "Периодически проверять наличие обновлений для:">
+<!ENTITY managedevices.button "Упорядочить устройства...">
+<!ENTITY serviceURL.label "URL службы:">
+<!ENTITY xpinstall.allowedSites.accesskey "Р">
+<!ENTITY help.button "Справка">
+<!ENTITY validation.crlautoupdatestatus.label "Статус автообновления">
+<!ENTITY disableOCSP.label "Не использовать OCSP для проверки действительности сертификатов">
+<!ENTITY useTLS1.label "Использовать TLS 1.0">
+<!ENTITY browsing.label "Просмотр сайтов">
+<!ENTITY validation.updatecrl.label "Обновить">
+<!ENTITY crl.import.status.title "Статус импорта CRL">
+<!ENTITY certselect.description "Определите, как &brandShortName; будет выбирать сертификат, если сайт запросит его:">
+<!ENTITY validation.crl.autoupdate.time.label2 "Дней до следующего обновления">
+<!ENTITY validation.crl.autoupdate.time.label1 "Обновление">
+<!ENTITY loadInBackground.label "Переходить на новые вкладки открываемые из ссылок">
+<!ENTITY signingCA.accesskey "д">
+<!ENTITY validation.deletecrl.label "Удалить">
+<!ENTITY cancel.button "Отмена">
+<!ENTITY enableExtensionUpdate.accesskey "М">
+<!ENTITY validation.ocsp.description "&brandShortName; может использовать протокол просмотра статуса сертификатов (OCSP) для верификации. Использовать OSCP так:">
+<!ENTITY xpinstall.allowedSites.label "Разрешенные сайты...">
+<!ENTITY useTypeAheadFind.label "Использовать поиск по мере набора">
+<!ENTITY useAutoScrolling.label "Использовать автоматическую прокрутку">
+<!ENTITY enableAutoInstall.label "Автоматически загружать и устанавливать обновления для расширений.">
+<!ENTITY crl.autoupdate.fail.reason.label "Подробности последней ошибки обновления:">
+<!ENTITY validation.crl.label "CRL">
+<!ENTITY managecerts.button "Упорядочить сертификаты...">
+<!ENTITY validation.crlautoupdateenabled.label "Автообновление">
+<!ENTITY certs.label "Сертификаты">
+<!ENTITY edit.button "Параметры">
+<!ENTITY crl.issuer.label "CRL выдан:">
+<!ENTITY certOCSP.label "Использовать OCSP для проверки только тех сертификатов, в которых указан URL службы OCSP">
+<!ENTITY crl.issuer.orgunit.label "Отдел: ">
+<!ENTITY validation.crl.autoupdate.title "Настройки автоматического обновления CRL">
+<!ENTITY validation.managecrls.accesskey "У">
+<!ENTITY ok.button "OK">
+<!ENTITY checkNow.label "Проверить сейчас">
+<!ENTITY validation.crlname.label "Имя">
+<!ENTITY validation.label "Подтверждение">
+<!ENTITY managedevices.label "Упорядочение устройств защиты">
+<!ENTITY softwareupdate.label "Обновление">
+<!ENTITY validation.crlmanager.label "Упорядочение CRL">
+<!ENTITY enableExtensionUpdate.label "моих расширений">
+<!ENTITY useSSL2.label "Использовать SSL 2.0">
+<!ENTITY validation.advanced.label "Параметры">
+<!ENTITY enableSmartUpdate.label "&brandShortName;">
+<!ENTITY validation.crl.autoupdate.url.label "CRL будет импортирован с:">
+<!ENTITY serviceURL.accesskey "с">
+<!ENTITY managecerts.label "Упорядочение сертификатов">
+<!ENTITY linksOnlyTypeAheadFind.label "только для поиска ссылок">
+<!ENTITY enableSmartUpdate.accesskey "F">
+<!ENTITY validation.crlnextupdate.label "Следующее обновление">
+<!ENTITY enableAutoInstall.accesskey "в">
+<!ENTITY proxyOCSP.label "Использовать OCSP для проверки всех сертификатов с помощью этого URL:">
+<!ENTITY certselect.auto "Выбирать автоматически">
+<!ENTITY security.label "Безопасность">
+<!ENTITY lHeader "Дополнительно">
+<!ENTITY certselect.ask "Спрашивать каждый раз">
+<!ENTITY useSSL3.label "Использовать SSL 3.0">
+<!ENTITY validation.crl.autoupdate.freq.label2 "Дней">
+<!ENTITY validation.crl.autoupdate.freq.label1 "Обновлять каждые">
+<!ENTITY validation.ocsp.label "OCSP">
+<!ENTITY validation.crl.description "Используйте Менеджер сертификатов для упорядочения списков отозванных сертификатов (CRL), хранящихся в вашей базе сертификатов.">
+<!ENTITY managecerts.accesskey "о">
+<!ENTITY moveSystemCaret.label "Перемещать курсор вслед за фокусом/выделением">
+<!ENTITY useSmoothScrolling.label "Использовать плавную прокрутку">
+<!ENTITY signingCA.label "Подписавшаяся сторона:">
+<!ENTITY crl.import.success.message "Список отозванных сертификатов (CRL) был успешно импортирован.">
+<!ENTITY crl.import.nextupdate.label "Следующее обновление:">
+<!ENTITY hideTabBar.label "Скрывать панель вкладок, когда открыт только один сайт">
+<!ENTITY managecerts.text "Используйте Менеджер сертификатов для упорядочения ваших сертификатов и сертификатов, принадлежащих другим людям и центрам сертификации.">
+<!ENTITY managedevices.text "Нажав на эту кнопку, вы сможете упорядочить ваши устройства защиты (например, смарт-карты).">

@@ -1,0 +1,30 @@
+<!ENTITY useCurrent.accesskey "Т">
+<!ENTITY location.label "Адрес:">
+<!ENTITY showFontsAndColors.label "Шрифты и цвета...">
+<!ENTITY showFontsAndColors.accesskey "р">
+<!ENTITY useBookmark.label "Закладка...">
+<!ENTITY connectionsInfo.caption "Соединение">
+<!ENTITY header2.label "Начальная страница">
+<!ENTITY useBookmark.accesskey "З">
+<!ENTITY languagesInfo.label "Выберите языки и кодировки, используемые по умолчанию при отображении страниц.">
+<!ENTITY checkNow.label "Проверить сейчас">
+<!ENTITY useCurrentMultiple.label "Текущая группа страниц">
+<!ENTITY proxiesInfo.label "Укажите прокси-серверы для работы в Интернете.">
+<!ENTITY showConnections.label "Параметры соединения...">
+<!ENTITY checkForDefault.accesskey "у">
+<!ENTITY fonts.caption "Шрифты и цвета">
+<!ENTITY useCurrent.label "Текущая страница">
+<!ENTITY makeDefaultText "Установить &brandShortName; как ваш браузер по умолчанию.">
+<!ENTITY languages.caption "Языки">
+<!ENTITY location.accesskey "А">
+<!ENTITY defaultBrowserButton.label "Установить как браузер по умолчанию">
+<!ENTITY useBlank.accesskey "П">
+<!ENTITY useBlank.label "Пустая страница">
+<!ENTITY lHeader "Основное">
+<!ENTITY checkNow.accesskey "с">
+<!ENTITY showLanguages.accesskey "Я">
+<!ENTITY defaultBrowserGroup.label "Браузер по умолчанию">
+<!ENTITY showConnections.accesskey "о">
+<!ENTITY fontsInfo.label "Выберите шрифты и цвета, используемые по умолчанию при отображении страниц.">
+<!ENTITY checkForDefault.label "&brandShortName; должен проверять, является ли он браузером по умолчанию, при загрузке.">
+<!ENTITY showLanguages.label "Языки...">

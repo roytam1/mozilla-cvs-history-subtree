@@ -1,0 +1,10 @@
+altlinux
+aport
+bugzilla
+google
+lxrmozilla
+mailru
+mozilla
+multitran
+rambler
+yandex

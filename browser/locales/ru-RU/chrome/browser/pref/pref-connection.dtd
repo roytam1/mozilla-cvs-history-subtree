@@ -1,0 +1,39 @@
+<!ENTITY manualTypeRadio.accesskey "Н">
+<!ENTITY socks.accesskey "У">
+<!ENTITY SSLport.accesskey "">
+<!ENTITY directTypeRadio.accesskey "П">
+<!ENTITY noproxyExplain.label "Пример: .mozilla.ru, .net.nz, 192.168.1.0/24">
+<!ENTITY socks.label "Узел SOCKS:">
+<!ENTITY gopher.accesskey "с">
+<!ENTITY reload.label "Обновить">
+<!ENTITY configAutoconfigText.accesskey "к">
+<!ENTITY gopher.label "Gopher-прокси">
+<!ENTITY gopherPort.accesskey "">
+<!ENTITY manualTypeRadio.label "Настройка прокси вручную">
+<!ENTITY socks4.label "SOCKS 4">
+<!ENTITY configAutoconfigText.label "Адрес конфигурации (URL):">
+<!ENTITY port.label "Порт:">
+<!ENTITY autoTypeRadio.label "URL автоматической настройки прокси:">
+<!ENTITY ftp.label "FTP-прокси:">
+<!ENTITY socks4.accesskey "4">
+<!ENTITY ssl.accesskey "р">
+<!ENTITY autoTypeRadio.accesskey "а">
+<!ENTITY noproxy.accesskey "д">
+<!ENTITY noproxy.label "Не использовать прокси для:">
+<!ENTITY FTPport.accesskey "">
+<!ENTITY reload.accesskey "О">
+<!ENTITY SOCKSport.accesskey "">
+<!ENTITY http.accesskey "и">
+<!ENTITY ftp.accesskey "к">
+<!ENTITY lHeader "Параметры соединения">
+<!ENTITY http.label "HTTP-прокси:">
+<!ENTITY directTypeRadio.label "Прямое подключение к Интернету">
+<!ENTITY socks5.accesskey "5">
+<!ENTITY proxyTitle.label "Настройка прокси для доступа в Интернет">
+<!ENTITY socks5.label "SOCKS 5">
+<!ENTITY ssl.label "SSL-прокси:">
+<!ENTITY HTTPport.accesskey "">
+<!ENTITY shareproxy.label "Использовать один прокси-сервер для всех протоколов">
+<!ENTITY WPADTypeRadio.accesskey "w">
+<!ENTITY WPADTypeRadio.label "Автоматическое определение настроек прокси-сервера для данной сети">
+<!ENTITY shareproxy.accesskey "о">

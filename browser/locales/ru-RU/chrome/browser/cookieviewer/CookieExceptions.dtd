@@ -1,0 +1,9 @@
+<!ENTITY allow.label "Разрешить">
+<!ENTITY removeallpermissions.label "Удалить все">
+<!ENTITY addpermission.label "Новый сайт">
+<!ENTITY window.title "Исключения">
+<!ENTITY address.label "Адрес сайта:">
+<!ENTITY treehead.sitename.label "Сайт">
+<!ENTITY block.label "Блокировать">
+<!ENTITY removepermission.label "Удалить">
+<!ENTITY treehead.status.label "Статус">

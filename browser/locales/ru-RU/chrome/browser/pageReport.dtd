@@ -1,0 +1,7 @@
+<!ENTITY unblock.accesskey "Р">
+<!ENTITY done.accesskey "Г">
+<!ENTITY unblock.label "Разблокировать сайт">
+<!ENTITY done.label "Готово">
+<!ENTITY intro.label "Были заблокированы всплывающие окна со
+следующих страниц:">
+<!ENTITY caption.label "Заблокированные всплывающие окна">

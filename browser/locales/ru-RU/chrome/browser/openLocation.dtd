@@ -1,0 +1,9 @@
+<!ENTITY newTab.label "В новой вкладке">
+<!ENTITY enter.label "Введите адрес в Интернете (URL) или укажите файл на диске, который хотите открыть:">
+<!ENTITY topWindow.label "В этом окне">
+<!ENTITY openWhere.label "Открыть в:">
+<!ENTITY openBtn.label "Открыть">
+<!ENTITY example.label "Пример: &vendorURL;">
+<!ENTITY newWindow.label "В новом окне">
+<!ENTITY chooseFile.label "Выбрать файл...">
+<!ENTITY caption.label "Открытие веб-адреса">

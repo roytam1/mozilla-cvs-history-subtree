@@ -1,0 +1,10 @@
+<!ENTITY general.label "Основное">
+<!ENTITY privacy.label "Приватность">
+<!ENTITY prefWindow.title "Настройки">
+<!ENTITY themes.label "Темы">
+<!ENTITY features.label "Дополнительные функции">
+<!ENTITY ext.label "Расширения">
+<!ENTITY downloads.label "Загрузки">
+<!ENTITY advanced.label "Дополнительно">
+<!ENTITY prefWindowUnix.title "Настройки">
+<!ENTITY prefWindow.size "width: 67em; height: 43em;">

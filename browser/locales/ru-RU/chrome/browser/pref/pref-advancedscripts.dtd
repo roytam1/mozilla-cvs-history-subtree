@@ -1,0 +1,9 @@
+<!ENTITY allowScripts.label "Разрешить сценариям:">
+<!ENTITY allowControlContextMenu.label "отключать или заменять контекстные меню">
+<!ENTITY allowWindowOpen.label "открывать окна самостоятельно">
+<!ENTITY allowWindowStatusChange.label "менять текст в строке состояния">
+<!ENTITY allowWindowFlip.label "перемещать окна над или под другие">
+<!ENTITY allowWindowMoveResize.label "перемещать существующие окна или менять их размеры">
+<!ENTITY allowScripts.title "Дополнительные параметры JavaScript">
+<!ENTITY allowHideStatusBar.label "скрывать строку состояния">
+<!ENTITY allowWindowImageSrcChange.label "менять изображения">

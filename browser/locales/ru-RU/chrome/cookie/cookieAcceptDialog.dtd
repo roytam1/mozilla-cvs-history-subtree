@@ -1,0 +1,17 @@
+<!ENTITY dialog.remember.accesskey "И">
+<!ENTITY props.domain.label "Узел:">
+<!ENTITY button.deny.accesskey "D">
+<!ENTITY props.name.label "Имя:">
+<!ENTITY props.value.label "Содержимое:">
+<!ENTITY button.session.accesskey "с">
+<!ENTITY props.box.label "Об этом cookie">
+<!ENTITY dialog.title "Подтверждение">
+<!ENTITY props.expires.label "Срок действия:">
+<!ENTITY button.session.label "Разрешить на сессию">
+<!ENTITY props.secure.label "Посылать при:">
+<!ENTITY button.allow.label "Разрешить">
+<!ENTITY button.allow.accesskey "Р">
+<!ENTITY props.path.label "Путь:">
+<!ENTITY dialog.remember.label "Использовать для всех cookies с этого сайта">
+<!ENTITY props.policy.label "Политика:">
+<!ENTITY button.deny.label "Отклонить">

@@ -1,0 +1,50 @@
+<!ENTITY clearHistory.label "Очистить">
+<!ENTITY enableCookies.label "Разрешать сайтам устанавливать cookies">
+<!ENTITY viewPasswords.label "Просмотр сохраненных паролей">
+<!ENTITY pageHis.accesskey "У">
+<!ENTITY acceptNormally.label "пока не истечет срок их действия">
+<!ENTITY cookies.label "Cookies">
+<!ENTITY formfill.label "Сохраненные данные формы">
+<!ENTITY passwordsEnable.accesskey "З">
+<!ENTITY formfillEnable.accesskey "С">
+<!ENTITY clearAllDescription.label "Очистить всю информацию, накопившуюся за время работы:">
+<!ENTITY clearCache.label "Очистить">
+<!ENTITY pageHis.label "Удалять страницы из журнала после">
+<!ENTITY askAboutCookies.label "спрашивать для каждой cookie">
+<!ENTITY downloads.label "Журнал Менеджера загрузок">
+<!ENTITY forCurrentSessionOnly.accesskey "в">
+<!ENTITY downloadsRemoveManually.label "Вручную">
+<!ENTITY downloadsRetentionPolicy.label "Удалять файлы из списка Менеджера загрузок">
+<!ENTITY clearAll.label "Очистить все">
+<!ENTITY history.label "Журнал посещений">
+<!ENTITY passwords.label "Сохраненные пароли">
+<!ENTITY cache.label "Кэш">
+<!ENTITY kbytes "Кб дискового пространства.">
+<!ENTITY passwordsDescription.label "Менеджер паролей может хранить регистрационную информацию так, что вам не придется вводить ее снова при последующих посещениях тех же сайтов.">
+<!ENTITY downloadsRemoveExit.label "При закрытии Mozilla Firebird">
+<!ENTITY viewCookies.label "Просмотр Cookies">
+<!ENTITY diskCache.label "Использовать для кэша до:">
+<!ENTITY passwordsEnable.label "Запоминать пароли">
+<!ENTITY cacheExplanation.label "Просмотренные вами страницы хранятся в кэше, чтобы ускорить время их повторных загрузок.">
+<!ENTITY forCurrentSessionOnly.label "только на время текущего сеанса">
+<!ENTITY forOriginatingSiteOnly.accesskey "т">
+<!ENTITY clearDownloads.label "Очистить">
+<!ENTITY diskCache.accesskey "И">
+<!ENTITY enableCookies.accesskey "Р">
+<!ENTITY privacyDescription.label "Во время работы в сети информация о том, где вы были, что делали и т. д., хранится в следующих местах.">
+<!ENTITY exceptions.label "Исключения">
+<!ENTITY cookieExplanation.label "Cookies - небольшие текстовые файлы, содержащие информацию о посещаемых вами сайтах и хранящиеся у вас на компьютере.">
+<!ENTITY downloadsDescription.label "Менеджер загрузок хранит информацию о недавно загруженных файлах. ЭТИ ПАРАМЕТРЫ ЕЩЕ НЕ РЕАЛИЗОВАНЫ.">
+<!ENTITY clearPasswords.label "Очистить">
+<!ENTITY clearFormfill.label "Очистить">
+<!ENTITY clearCookies.label "Очистить">
+<!ENTITY lHeader "Приватность">
+<!ENTITY acceptForSession.label "только на время текущего сеанса &brandShortName;">
+<!ENTITY days.label "дней">
+<!ENTITY forOriginatingSiteOnly.label "только личные cookies сайта">
+<!ENTITY formfillDescription.label "Информация, вводимая вами в формы на веб-страницах и в строке поиска, сохраняется, чтобы ускорить последующий поиск и заполнение форм.">
+<!ENTITY butAskFirst.label "но перед заменой спрашивать">
+<!ENTITY downloadsRemoveImmediately.label "При завершении загрузки">
+<!ENTITY formfillEnable.label "Сохранять данные, вводимые мной в строку поиска и веб-формы">
+<!ENTITY butAskFirst.accesskey "н">
+<!ENTITY cookieRetention.label "Сохранять Cookies:">

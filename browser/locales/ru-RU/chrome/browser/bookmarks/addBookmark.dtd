@@ -1,0 +1,28 @@
+<!ENTITY alwayscreateinfolder.label "Больше не показывать этот диалог">
+<!ENTITY name.accesskey "Н">
+<!ENTITY button.defaultfolder.accesskey "у">
+<!ENTITY acceptButton.label "Добавить">
+<!ENTITY newFolder.label "Создать папку...">
+<!ENTITY expanderDown.tooltip "Показать все папки закладок">
+<!ENTITY selectFolder.label "Выбор папки">
+<!ENTITY expanderUp.tooltip "Скрыть">
+<!ENTITY createin.label "Создать в:">
+<!ENTITY button.createin.label "Создать в &gt;&gt;">
+<!ENTITY createin.accesskey "в">
+<!ENTITY url.label "Адрес:">
+<!ENTITY newbookmark.label "&brandShortName; добавит закладку на эту страницу.">
+<!ENTITY keyword.label "Ключевое слово:">
+<!ENTITY newBookmark.title "Добавление закладки">
+<!ENTITY button.createin2.label "Создать в &lt;&lt;">
+<!ENTITY newFolder.accesskey "С">
+<!ENTITY button.defaultfolder.label "По умолчанию">
+<!ENTITY button.createin.accesskey "С">
+<!ENTITY button.newfolder.label "Новая папка...">
+<!ENTITY addGroup.accesskey "Д">
+<!ENTITY name.label "Название:">
+<!ENTITY button.newfolder.accesskey "п">
+<!ENTITY dontshowmessage.tooltip "Если выбрана эта опция, новые закладки будут создаваться с названием, указанным на странице.">
+<!ENTITY url.accesskey "А">
+<!ENTITY keyword.accesskey "К">
+<!ENTITY addGroup.label "Добавить все вкладки в папку закладок">
+<!ENTITY alwayscreateinfolder.accesskey "Б">

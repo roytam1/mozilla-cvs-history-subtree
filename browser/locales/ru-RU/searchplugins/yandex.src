@@ -1,0 +1,30 @@
+# Mozilla/Yandex plugin
+
+<search 
+	name="Yandex"
+	description="Yandex Search"
+	method="GET"
+	action="http://ya.ru/yandsearch"
+	queryCharset="windows-1251"
+>
+
+<input name="text" user>
+
+<interpret 
+	browserResultType="topresult" 
+	charset="windows-1251"
+	resultListStart="<!-- RESURSY -->" 
+	resultListEnd="<!-- /RESURSY -->"
+	resultItemStart="<li>" 
+	resultItemEnd="<br>"
+>
+
+<interpret 
+	browserResultType="result" 
+	charset="windows-1251"
+	resultListStart="<!-- web search results -->" 
+	resultListEnd="<!-- /web search results -->"
+	resultItemStart="<li value" 
+	resultItemEnd="<br>"
+>
+</search>

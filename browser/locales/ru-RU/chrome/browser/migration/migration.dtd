@@ -1,0 +1,38 @@
+<!ENTITY selectProfile.label "Импорт может быть произведен из следующих профилей:">
+<!ENTITY importFromCamino.label "Camino">
+<!ENTITY importFromEpiphany.accesskey "E">
+<!ENTITY importFromSafari.accesskey "Safari">
+<!ENTITY importFrom.label "Импортировать настройки, закладки, журнал, пароли и другие данные из:">
+<!ENTITY importFromIE.label "Microsoft Internet Explorer">
+<!ENTITY importFromKonqueror.label "Konqueror">
+<!ENTITY importFromSeamonkey.accesskey "N">
+<!ENTITY importItems.label "Выберите обьекты для импорта:">
+<!ENTITY importFromEpiphany.label "Epiphany">
+<!ENTITY importFromOmniWeb.accesskey "W">
+<!ENTITY done.title "Импорт завершен">
+<!ENTITY migrating.title "Импортирую...">
+<!ENTITY importFromNetscape4.accesskey "4">
+<!ENTITY importFromNothing.label "Не импортировать ничего">
+<!ENTITY importFromICab.label "iCab">
+<!ENTITY importFromNetscape4.label "Netscape 4.x">
+<!ENTITY importFromNothing.accesskey "н">
+<!ENTITY importFromOpera.accesskey "O">
+<!ENTITY importFromKonqueror.accesskey "K">
+<!ENTITY importFromSafari.label "Safari">
+<!ENTITY selectProfile.title "Выбор профиля">
+<!ENTITY done.label "Следующие обьекты были успешно импортированы:">
+<!ENTITY importFromIE.accesskey "M">
+<!ENTITY migrating.label "Следующие обьекты импортируются в данное время...">
+<!ENTITY importItems.title "Обьекты для импорта">
+<!ENTITY importFromICab.accesskey "i">
+<!ENTITY importFromGaleon.label "Galeon">
+<!ENTITY migrationWizard.title "Мастер импорта">
+<!ENTITY importFromSeamonkey.label "Netscape 6, 7 или Mozilla 1.x">
+<!ENTITY importFromCamino.accesskey "Camino">
+<!ENTITY importSource.title "Импортировать настройки и данные из">
+<!ENTITY importFromOpera.label "Opera">
+<!ENTITY importFromUnix.label "Импортировать настройки, закладки, журнал, пароли и другие данные из:">
+<!ENTITY importFromPhoenix.label "Firefox 0.8, Firebird или Phoenix">
+<!ENTITY importFromGaleon.accesskey "G">
+<!ENTITY importFromPhoenix.accesskey "P">
+<!ENTITY importFromOmniWeb.label "OmniWeb">

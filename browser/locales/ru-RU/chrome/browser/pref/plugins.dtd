@@ -1,0 +1,6 @@
+<!ENTITY pluginInfo2.label "Отключение модуля для типа файлов привелет к тому, что файлы этого типа будут загружаться вместо того, чтобы быть открытыми.">
+<!ENTITY typeHeader.label "Тип файлов">
+<!ENTITY enabledHeader.label "Используется">
+<!ENTITY extensionsHeader.label "Расширение">
+<!ENTITY plugins.title "Модули">
+<!ENTITY pluginInfo.label "Модули, доступные для следующих типов файлов:">

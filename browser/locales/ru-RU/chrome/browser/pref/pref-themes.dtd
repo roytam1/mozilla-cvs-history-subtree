@@ -1,0 +1,13 @@
+<!ENTITY getnew.url "http://texturizer.net/firefox/themes/">
+<!ENTITY preview.label "Предварительный просмотр">
+<!ENTITY general.label "Основное">
+<!ENTITY selectSkin.accesskey "П">
+<!ENTITY lHeader "Темы">
+<!ENTITY installedThemes.label "Установленные темы:">
+<!ENTITY author.tooltip "Закрыть окно настроек и перейти на веб-страницу автора">
+<!ENTITY getnew.tooltip "Закрыть окно настроек и перейти на справочную страницу тем Mozilla Firebird">
+<!ENTITY getNewThemes.label "Новые темы">
+<!ENTITY uninstallSkin.label "Удалить тему">
+<!ENTITY skinIntro.label "Выбор новой темы приведет к смене внешнего вида кнопок, диалоговых окон, меню, панелей инструментов и других элементов.">
+<!ENTITY selectSkin.label "Применить тему">
+<!ENTITY uninstallSkin.accesskey "У">

@@ -1,0 +1,7 @@
+<!ENTITY position.label "Расположение:">
+<!ENTITY preview.label "Предварительный просмотр">
+<!ENTITY tile.label "Рядом">
+<!ENTITY color.label "Цвет:">
+<!ENTITY stretch.label "Растянуть">
+<!ENTITY center.label "По центру">
+<!ENTITY setWallpaper.title "Поместить на Рабочий стол">

@@ -1,0 +1,62 @@
+<!ENTITY PMnine.label "В 9 часов вечера">
+<!ENTITY PMfour.label "В 4 часа дня">
+<!ENTITY AMeleven.label "В 11 часов утра">
+<!ENTITY generalInfo.accesskey "И">
+<!ENTITY bookmarks.location.label "Адрес:">
+<!ENTITY checkfridays.label "По пятницам">
+<!ENTITY generalInfo.label "Информация">
+<!ENTITY checknever.label "Никогда">
+<!ENTITY bookmarks.information.label "Информация:">
+<!ENTITY checkthursdays.label "По четвергам">
+<!ENTITY checkweekdays.label "По будням">
+<!ENTITY bookmarks.feedurl.label "Расположение источника:">
+<!ENTITY AMfive.label "В 5 часов утра">
+<!ENTITY AMone.label "В час ночи">
+<!ENTITY AMnine.label "В 9 часов утра">
+<!ENTITY AMfour.label "В 4 часа утра">
+<!ENTITY every.label "каждые">
+<!ENTITY PMone.label "В час дня">
+<!ENTITY when.label "Когда:">
+<!ENTITY bookmarks.windowtitle.label "Свойства &quot;**bm_title**&quot;">
+<!ENTITY notification.alert.label "Отобразить уведомление">
+<!ENTITY checkmondays.label "По понедельникам">
+<!ENTITY bookmarks.webpanels.label "Загрузить закладку в Боковую панель">
+<!ENTITY bookmarks.shortcut.label "Ключевое слово:">
+<!ENTITY AMten.label "В 10 часов утра">
+<!ENTITY schedule.description "&brandShortName; может проверять сайты на наличие обновлений и сообщать вам при их появлении. Используйте эти параметры для создания расписания проверок этой страницы.">
+<!ENTITY notification.sound.label "Звуковое уведомление">
+<!ENTITY AMsix.label "В 6 часов утра">
+<!ENTITY checksundays.label "По воскресеньям">
+<!ENTITY PMten.label "В 10 часов вечера">
+<!ENTITY minutes.label "минут(ы)">
+<!ENTITY bookmarks.name.label "Название:">
+<!ENTITY PMsix.label "В 6 часов вечера">
+<!ENTITY checkweekends.label "По выходным">
+<!ENTITY checkforupdates.legend.label "Проверять этот адрес на обновления:">
+<!ENTITY notifications.legend.label "Уведомлять:">
+<!ENTITY noon.label "В полдень">
+<!ENTITY PMthree.label "В 3 часа дня">
+<!ENTITY PMeight.label "В 8 часов вечера">
+<!ENTITY AMtwo.label "В 2 часа ночи">
+<!ENTITY notification.icon.label "Сменить значок закладки">
+<!ENTITY PMeleven.label "В 11 часов вечера">
+<!ENTITY to.label "до:">
+<!ENTITY notification.window.label "Открыть веб-страницу в новом окне">
+<!ENTITY PMseven.label "В 7 часов вечера">
+<!ENTITY checksaturdays.label "По субботам">
+<!ENTITY PMtwo.label "В 2 часа дня">
+<!ENTITY AMthree.label "В 3 часа ночи">
+<!ENTITY AMeight.label "В 8 часов утра">
+<!ENTITY notification.label "Уведомления">
+<!ENTITY schedule.label "Расписание">
+<!ENTITY from.label "с:">
+<!ENTITY schedule.accesskey "Р">
+<!ENTITY notification.accesskey "У">
+<!ENTITY AMseven.label "В 7 часов утра">
+<!ENTITY notification.description "&brandShortName; сообщит, когда сайт изменится. Используйте эти параметры для создания расписания уведомлений.">
+<!ENTITY checkwednesdays.label "По средам">
+<!ENTITY bookmarks.description.label "Описание:">
+<!ENTITY midnight.label "В полночь">
+<!ENTITY checkeveryday.label "Каждый день">
+<!ENTITY PMfive.label "В 5 часов вечера">
+<!ENTITY checktuesdays.label "По вторникам">

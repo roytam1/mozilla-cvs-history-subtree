@@ -1,0 +1,296 @@
+<!ENTITY allowPopups.accesskey "Р">
+<!ENTITY manBookmarksCmd.accesskey "У">
+<!ENTITY viewToolbarsMenu.accesskey "П">
+<!ENTITY mainWindow.title "&brandFullName;">
+<!ENTITY taskbarCmd.accesskey "т">
+<!ENTITY quitApplicationCmdWin.accesskey "х">
+<!ENTITY javaScriptConsoleCmd.label "Консоль JavaScript">
+<!ENTITY mailButton.readMail.label "Чтение почты">
+<!ENTITY editPopupSettings.accesskey "И">
+<!ENTITY copyCmd.key "C">
+<!ENTITY search.label "Поиск в Интернете">
+<!ENTITY cutButton.tooltip "Вырезать">
+<!ENTITY mailButton.tooltip "Чтение и отправка почты">
+<!ENTITY find.label "Найти:">
+<!ENTITY reloadCmd.commandkey "r">
+<!ENTITY bookmarkFrameCmd.label "Добавить фрейм в закладки...">
+<!ENTITY cutCmd.accesskey "В">
+<!ENTITY findOnCmd.label "Найти на этой странице...">
+<!ENTITY copyCmd.label "Копировать">
+<!ENTITY findOnSearchBarCmd.label "Найти на этой странице">
+<!ENTITY viewsourcetitle.preface "Код для: ">
+<!ENTITY historyButton.label "Журнал посещений">
+<!ENTITY highlight.tooltip "Подсветить все вхождения фразы в тексте">
+<!ENTITY windowMenu.label "Окно">
+<!ENTITY forwardButton.tooltip "На следующую страницу">
+<!ENTITY editPopupSettings.label "Изменить настройки блокировки всплывающих окон...">
+<!ENTITY viewFrameSourceCmd.label "Просмотр в виде HTML">
+<!ENTITY saveLinkCmd.accesskey "С">
+<!ENTITY openFrameCmdInTab.accesskey "н">
+<!ENTITY bookmarksButton.label "Закладки">
+<!ENTITY helpMenuWin.accesskey "П">
+<!ENTITY openLinkCmdInTab.accesskey "в">
+<!ENTITY printSetupCmd.label "Параметры страницы...">
+<!ENTITY viewFrameInfoCmd.accesskey "И">
+<!ENTITY pageReportIcon.tooltip "Изменить параметры блокирования всплывающих окон">
+<!ENTITY extensions.accesskey "Р">
+<!ENTITY findAgainCmd.commandkey "g">
+<!ENTITY addCurPageAsCmd.label "Добавить страницу в закладки...">
+<!ENTITY pageInfoCmd.commandkey "i">
+<!ENTITY savePageCmd.accesskey "к">
+<!ENTITY javaScriptConsoleCmd.accesskey "о">
+<!ENTITY pageSourceCmd.commandkey "u">
+<!ENTITY viewCustomizeToolbar.accesskey "Н">
+<!ENTITY printSetupCmd.accesskey "П">
+<!ENTITY newWindowButton.tooltip "Открывает новое окно">
+<!ENTITY pageInfoCmd.label "Информация о странице">
+<!ENTITY printCmd.commandkey "p">
+<!ENTITY reloadCmd.label "Обновить">
+<!ENTITY extensions.label "Расширения">
+<!ENTITY tabCmd.commandkey "t">
+<!ENTITY showOnlyThisFrameCmd.accesskey "П">
+<!ENTITY viewPageSourceCmd.accesskey "х">
+<!ENTITY cutCmd.key "X">
+<!ENTITY thisFrameMenu.label "В этом фрейме">
+<!ENTITY openLocationCmd.label "Открыть адрес...">
+<!ENTITY selectAllCmd.label "Выделить все">
+<!ENTITY fullScreenCmd.label "Полноэкранный режим">
+<!ENTITY stopCmd.label "Стоп">
+<!ENTITY import.label "Импорт...">
+<!ENTITY pageThemeNoTheme.accesskey "Н">
+<!ENTITY saveImageCmd.label "Сохранить изображение как...">
+<!ENTITY downloads.label "Загрузки">
+<!ENTITY goOfflineCmd.accesskey "а">
+<!ENTITY quitApplicationCmd.accesskey "В">
+<!ENTITY selectAllCmd.accesskey "д">
+<!ENTITY saveFrameCmd.accesskey "С">
+<!ENTITY thisFrameMenu.accesskey "ф">
+<!ENTITY bookmarksItem.title "Закладки">
+<!ENTITY copyImageContentsCmd.label "Копировать изображение">
+<!ENTITY stopCmd.accesskey "С">
+<!ENTITY javaConsoleCmd.label "Консоль Java">
+<!ENTITY textZoomResetCmd.commandkey "0">
+<!ENTITY openFrameCmdInTab.label "Открыть фрейм в новой вкладке">
+<!ENTITY reloadCmd.accesskey "О">
+<!ENTITY preferencesCmd.accesskey "Н">
+<!ENTITY earlierHistory.label "Более ранние записи">
+<!ENTITY viewPartialSourceForMathMLCmd.label "Просмотр в виде MathML">
+<!ENTITY backCmd.label "Назад">
+<!ENTITY openLinkInWindowCmd.label "Открыть">
+<!ENTITY setWallpaperCmd.accesskey "д">
+<!ENTITY redoCmd.accesskey "П">
+<!ENTITY textZoomEnlargeCmd.commandkey "+">
+<!ENTITY keywordfield.accesskey "с">
+<!ENTITY pageThemeNoTheme.label "Нет">
+<!ENTITY sendMessage.commandkey "m">
+<!ENTITY viewMenu.label "Вид">
+<!ENTITY newNavigatorCmd.accesskey "Н">
+<!ENTITY aboutCmd.label "О &brandShortName;">
+<!ENTITY findPrevious.tooltip "Найти предыдущее вхождение фразы в текст">
+<!ENTITY mailButton.newMessage.label "Создать сообщение...">
+<!ENTITY openLinkCmd.accesskey "н">
+<!ENTITY textZoomReduceCmd.commandkey "-">
+<!ENTITY minimizeWindow.key "m">
+<!ENTITY viewBGImageCmd.label "Показать фоновое изображение">
+<!ENTITY textZoomEnlargeCmd.accesskey "в">
+<!ENTITY viewPageSourceCmd.label "Исходный код страницы">
+<!ENTITY findAgainCmd.accesskey "й">
+<!ENTITY viewSidebarMenu.accesskey "Б">
+<!ENTITY printCmd.label "Печать...">
+<!ENTITY pasteCmd.key "V">
+<!ENTITY copyImageCmd.accesskey "и">
+<!ENTITY editMenu.accesskey "П">
+<!ENTITY toolsMenu.label "Инструменты">
+<!ENTITY deleteCmd.key "D">
+<!ENTITY openFileCmd.commandkey "o">
+<!ENTITY findNext.tooltip "Найти следующее вхождение фразы в текст">
+<!ENTITY copyEmailCmd.accesskey "э">
+<!ENTITY helpMenu.label "Справка">
+<!ENTITY searchFocusUnix.commandkey "j">
+<!ENTITY pageInfoCmd.accesskey "И">
+<!ENTITY showOnlyThisFrameCmd.label "Показать только этот фрейм">
+<!ENTITY goButton.label "Перейти">
+<!ENTITY metadataCmd.accesskey "й">
+<!ENTITY newTabButton.tooltip "Открывает новую вкладку">
+<!ENTITY bookmarkPageCmd.accesskey "Д">
+<!ENTITY reloadButton.tooltip "Обновить текущую страницу">
+<!ENTITY sidebarCloseButton.tooltip "Закрыть боковую панель">
+<!ENTITY savePageCmd.commandkey "s">
+<!ENTITY metadataCmd.label "Свойства">
+<!ENTITY printPreviewCmd.accesskey "р">
+<!ENTITY goMenu.label "Переход">
+<!ENTITY helpMenu.accesskey "С">
+<!ENTITY goButton.tooltip "Введите адрес в панель адреса и нажмите &quot;Перейти&quot;">
+<!ENTITY copyCmd.accesskey "К">
+<!ENTITY toolsMenu.accesskey "И">
+<!ENTITY bookmarksButton.tooltip "Отображает ваши закладки">
+<!ENTITY openLinkInWindowCmd.accesskey "О">
+<!ENTITY addCurPageAsCmd.accesskey "Д">
+<!ENTITY viewBGImageCmd.accesskey "П">
+<!ENTITY backCmd.accesskey "Н">
+<!ENTITY historyButton.tooltip "Отображает список недавно просмотренных страниц">
+<!ENTITY editMenu.label "Правка">
+<!ENTITY printButton.tooltip "Напечатать эту страницу">
+<!ENTITY homeButton.label "К началу">
+<!ENTITY copyImageCmd.label "Копировать ссылку на изображение">
+<!ENTITY pasteCmd.accesskey "с">
+<!ENTITY mailMenu.label "Почта и новости">
+<!ENTITY mailMenu.accesskey "П">
+<!ENTITY openFrameCmd.label "Открыть фрейм в новом окне">
+<!ENTITY navbarCmd.label "Панель навигации">
+<!ENTITY newNavigatorCmd.key "N">
+<!ENTITY sendPageCmd.label "Отправить ссылку...">
+<!ENTITY sendImageCmd.label "Отправить изображение...">
+<!ENTITY javaConsoleCmd.accesskey "К">
+<!ENTITY throbberItem.title "Индикатор активности">
+<!ENTITY printPreviewCmd.label "Предварительный просмотр">
+<!ENTITY bringAllToFront.label "Переместить все на передний план">
+<!ENTITY viewFrameSourceCmd.accesskey "р">
+<!ENTITY mailButton.newMessage.accesskey "С">
+<!ENTITY deleteCmd.accesskey "У">
+<!ENTITY preferencesCmdUnix.label "Настройки">
+<!ENTITY personalbarCmd.accesskey "з">
+<!ENTITY textZoomEnlargeCmd.commandkey2 "=">
+<!ENTITY pasteButton.tooltip "Вставить">
+<!ENTITY savePageCmd.label "Сохранить как...">
+<!ENTITY mailButton.readNews.accesskey "н">
+<!ENTITY cutCmd.label "Вырезать">
+<!ENTITY stopButton.tooltip "Прервать загрузку страницы">
+<!ENTITY viewPartialSourceCmd.accesskey "и">
+<!ENTITY goOfflineCmd.label "Работать автономно">
+<!ENTITY openFrameCmd.accesskey "О">
+<!ENTITY textZoomReduceCmd.label "Уменьшить размер шрифта">
+<!ENTITY bookmarksToolbarItem.label "Элементы панели закладок">
+<!ENTITY findCloseButton.tooltip "Закрыть панель поиска">
+<!ENTITY themes.tooltip "Сменить тему">
+<!ENTITY sendLinkCmd.label "Отправить ссылку...">
+<!ENTITY viewSidebarMenu.label "Боковая панель">
+<!ENTITY sendPageCmd.accesskey "с">
+<!ENTITY downloads.tooltip "Показывать бегущую дорожку происходящих загрузок">
+<!ENTITY manBookmarksCmd.label "Упорядочить закладки...">
+<!ENTITY goBackCmd.commandKey "[">
+<!ENTITY preferencesCmdUnix.accesskey "Н">
+<!ENTITY goMenu.accesskey "е">
+<!ENTITY bookmarkPageCmd.label "Добавить страницу в закладки...">
+<!ENTITY viewCustomizeToolbar.label "Настроить...">
+<!ENTITY viewFrameInfoCmd.label "Информация о фрейме">
+<!ENTITY keywordfield.label "Добавить ключевое слово для данного поиска...">
+<!ENTITY forwardCmd.accesskey "В">
+<!ENTITY saveLinkCmd.label "Сохранить ссылку как...">
+<!ENTITY throbber.tooltip "Перейти на домашнюю страницу &vendorShortName;">
+<!ENTITY bookmarkLinkCmd.accesskey "з">
+<!ENTITY undoCmd.accesskey "О">
+<!ENTITY goHomeCmd.label "К началу">
+<!ENTITY viewMenu.accesskey "В">
+<!ENTITY printCmd.accesskey "е">
+<!ENTITY copyEmailCmd.label "Копировать адрес эл. почты">
+<!ENTITY locationItem.title "Адрес">
+<!ENTITY mailButton.sendLink.accesskey "с">
+<!ENTITY newMenu.label "Создать">
+<!ENTITY sendImageCmd.accesskey "з">
+<!ENTITY reloadFrameCmd.accesskey "ф">
+<!ENTITY import.accesskey "И">
+<!ENTITY pageSourceCmd.label "Исходный код">
+<!ENTITY bookmarkFrameCmd.accesskey "Д">
+<!ENTITY personalbarCmd.label "Панель закладок">
+<!ENTITY copyButton.tooltip "Копировать">
+<!ENTITY copyImageContentsCmd.accesskey "и">
+<!ENTITY tabCmd.accesskey "в">
+<!ENTITY findAgainCmd.commandkey2 "VK_F3">
+<!ENTITY openFileCmd.label "Открыть файл...">
+<!ENTITY pasteCmd.label "Вставить">
+<!ENTITY proxyIcon.tooltip "Перетащите этот значок, чтобы создать ссылку на эту страницу">
+<!ENTITY preferencesCmd.label "Настройки...">
+<!ENTITY quitApplicationCmdWin.label "Выход">
+<!ENTITY redoCmd.key "Y">
+<!ENTITY mailButton.readNews.label "Чтение новостей">
+<!ENTITY mainWindow.titlemodifier "&brandFullName;">
+<!ENTITY findNext.label "Найти далее">
+<!ENTITY openCmd.commandkey "l">
+<!ENTITY openLocationCmd.accesskey "а">
+<!ENTITY closeWindow.label "Закрыть окно">
+<!ENTITY closeCmd.label "Закрыть">
+<!ENTITY pageSourceCmd.accesskey "х">
+<!ENTITY findOnCmd.accesskey "Н">
+<!ENTITY setWallpaperCmd.label "Сделать обоями">
+<!ENTITY zoomWindow.label "Увеличение">
+<!ENTITY newMenu.accesskey "С">
+<!ENTITY backButton.tooltip "На предыдущую страницу">
+<!ENTITY searchFocus.commandkey2 "e">
+<!ENTITY addCurPageAsCmd.commandkey "d">
+<!ENTITY viewPageInfoCmd.accesskey "И">
+<!ENTITY textZoomEnlargeCmd.label "Увеличить размер шрифта">
+<!ENTITY redoCmd.label "Повторить">
+<!ENTITY pageInfoWinCmd.commandkey "j">
+<!ENTITY findOnCmd.commandkey "f">
+<!ENTITY aboutCmd.accesskey "О">
+<!ENTITY pageThemeIcon.tooltip "Использовать другой стиль">
+<!ENTITY viewImageCmd.accesskey "П">
+<!ENTITY bookmarksMenu.label "Закладки">
+<!ENTITY pageThemePersistentOnly.label "Основной стиль">
+<!ENTITY viewPartialSourceForSelectionCmd.label "Просмотр выделенного фрагмента в виде HTML">
+<!ENTITY viewToolbarsMenu.label "Панели инструментов">
+<!ENTITY viewPageInfoCmd.label "Информация о странице">
+<!ENTITY reloadFrameCmd.label "Обновить фрейм">
+<!ENTITY deleteCmd.label "Удалить">
+<!ENTITY newNavigatorCmd.label "Новое окно">
+<!ENTITY search.accesskey "П">
+<!ENTITY goHomeCmd.accesskey "К">
+<!ENTITY closeCmd.accesskey "З">
+<!ENTITY dontShowMessage.accesskey "н">
+<!ENTITY textZoomReduceCmd.accesskey "м">
+<!ENTITY sendLinkCmd.accesskey "ы">
+<!ENTITY saveFrameCmd.label "Сохранить фрейм как...">
+<!ENTITY navbarCmd.accesskey "П">
+<!ENTITY mailButton.readMail.accesskey "п">
+<!ENTITY helpMenuWin.label "Помощь">
+<!ENTITY findPrevious.label "Найти предыдущее совпадение">
+<!ENTITY minimizeWindow.label "Свернуть">
+<!ENTITY tabCmd.label "Новая вкладка">
+<!ENTITY undoCmd.label "Отменить">
+<!ENTITY copyLinkCmd.label "Копировать ссылку">
+<!ENTITY openLinkCmdInTab.label "Открыть в новой вкладке">
+<!ENTITY goForwardCmd.commandKey "]">
+<!ENTITY nothingAvailable.label "(Недоступно)">
+<!ENTITY undoCmd.key "Z">
+<!ENTITY themes.accesskey "Т">
+<!ENTITY bookmarksMenu.accesskey "З">
+<!ENTITY downloads.accesskey "З">
+<!ENTITY quitApplicationCmd.label "Выход">
+<!ENTITY openFileCmd.accesskey "О">
+<!ENTITY blockImageCmd.accesskey "Б">
+<!ENTITY taskbarCmd.label "Строка состояния">
+<!ENTITY closeCmd.key "W">
+<!ENTITY openLinkCmd.label "Открыть в новом окне">
+<!ENTITY highlight.label "Подсветить">
+<!ENTITY downloads.commandkey "y">
+<!ENTITY pageThemePersistentOnly.accesskey "О">
+<!ENTITY copyLinkCmd.accesskey "К">
+<!ENTITY fileMenu.accesskey "Ф">
+<!ENTITY searchItem.title "Поиск">
+<!ENTITY bookmarkLinkCmd.label "Добавить ссылку в закладки...">
+<!ENTITY urlbar.accesskey "d">
+<!ENTITY fullScreenCmd.accesskey "э">
+<!ENTITY fileMenu.label "Файл">
+<!ENTITY themes.label "Темы">
+<!ENTITY searchFocus.commandkey "k">
+<!ENTITY printButton.label "Печать">
+<!ENTITY selectAllCmd.key "A">
+<!ENTITY mailButton.sendLink.label "Отправить ссылку...">
+<!ENTITY viewImageCmd.label "Показать изображение">
+<!ENTITY forwardCmd.label "Вперед">
+<!ENTITY saveImageCmd.accesskey "х">
+<!ENTITY mainWindow.titlemodifiermenuseparator " - ">
+<!ENTITY mailButton.label "Почта">
+<!ENTITY findAgainCmd.label "Найти снова">
+<!ENTITY pageThemeButton.label "Темы страницы">
+<!ENTITY extensions.tooltip "Отображение и управление установленными расширениями">
+<!ENTITY bookmarksSidebarWinCmd.commandkey "i">
+<!ENTITY historySidebarCmd.accesskey "Ж">
+<!ENTITY bookmarksSidebarCmd.accesskey "З">
+<!ENTITY bookmarksSidebarCmd.commandkey "b">
+<!ENTITY historySidebarCmd.commandKey "h">
+<!ENTITY promote.label "Promote &brandShortName;">
+<!ENTITY tellAFriend.accesskey "T">
+<!ENTITY tellAFriend.label "Tell a Friend">
+<!ENTITY promote.accesskey "P">

@@ -1,0 +1,68 @@
+<!ENTITY viewMenu.label "Вид">
+<!ENTITY menuitem.newBookmark.label "Новая закладка...">
+<!ENTITY closeCmd.accesskey "З">
+<!ENTITY menuitem.newFolder.label "Создать папку...">
+<!ENTITY menuitem.view.ascending.accesskey "С">
+<!ENTITY menuitem.view.show_columns.label "Показать колонки">
+<!ENTITY command.rename.accesskey "П">
+<!ENTITY menuitem.personaltoolbarfolder.accesskey "а">
+<!ENTITY menuitem.view.descending.accesskey "О">
+<!ENTITY treecol.lastmod.label "Дате последнего изменения">
+<!ENTITY viewMenu.accesskey "В">
+<!ENTITY menuitem.view.command.toolbar.label "Панель инструментов">
+<!ENTITY bookmarksWindowTitle.label "Менеджер закладок">
+<!ENTITY command.refreshLivemark.label "Обновить Live Bookmark">
+<!ENTITY search.label "Поиск:">
+<!ENTITY menuitem.import.label "Импорт...">
+<!ENTITY menuitem.export.label "Экспорт...">
+<!ENTITY menuitem.newSeparator.accesskey "Р">
+<!ENTITY menuitem.find.accesskey "П">
+<!ENTITY command.properties.label "Свойства...">
+<!ENTITY menuitem.view.ascending.label "Сортировка по алфавиту">
+<!ENTITY closeCmd.commandkey "W">
+<!ENTITY command.manageBookmarks.label "Управление">
+<!ENTITY menuitem.newFolder.accesskey "а">
+<!ENTITY command.delete.label "Удалить">
+<!ENTITY menuitem.export.accesskey "Э">
+<!ENTITY edit.properties.keybinding "i">
+<!ENTITY treecol.lastmod.accesskey "П">
+<!ENTITY command.addBookmark.label "Добавить...">
+<!ENTITY command.rename.label "Переименовать...">
+<!ENTITY menuitem.find.label "Поиск в закладках...">
+<!ENTITY treecol.lastvisit.label "Дате последнего посещения">
+<!ENTITY selectBookmark.title "Выбор начальной страницы">
+<!ENTITY treecol.name.label "Названию">
+<!ENTITY treecol.lastvisit.accesskey "с">
+<!ENTITY fileMenu.label "Файл">
+<!ENTITY closeCmd.label "Закрыть">
+<!ENTITY treecol.shortcut.accesskey "К">
+<!ENTITY menuitem.view.unsorted.label "Не сортировать">
+<!ENTITY menuitem.newSeparator.label "Создать разделитель">
+<!ENTITY treecol.addedon.label "Дате добавления">
+<!ENTITY menuitem.view.command.toolbar.accesskey "П">
+<!ENTITY command.moveBookmark.label "Переместить закладки...">
+<!ENTITY search.accesskey "о">
+<!ENTITY command.properties.accesskey "С">
+<!ENTITY command.delete.accesskey "У">
+<!ENTITY treecol.url.label "Адресу">
+<!ENTITY treecol.description.label "Описанию">
+<!ENTITY treecol.name.accesskey "Н">
+<!ENTITY fileMenu.accesskey "Ф">
+<!ENTITY menuitem.newLivemark.label "Новая Live Bookmark...">
+<!ENTITY treecol.addedon.accesskey "Д">
+<!ENTITY command.moveBookmark.accesskey "е">
+<!ENTITY menuitem.view.show_columns.accesskey "к">
+<!ENTITY menuitem.personaltoolbarfolder.label "Сделать папкой личной панели">
+<!ENTITY menuitem.newLivemark.accesskey "Н">
+<!ENTITY menuitem.view.descending.label "В обратном порядке">
+<!ENTITY menuitem.newBookmark.accesskey "З">
+<!ENTITY menuitem.view.unsorted.accesskey "Н">
+<!ENTITY edit.find.keybinding "П">
+<!ENTITY treecol.shortcut.label "Ключевому слову">
+<!ENTITY treecol.url.accesskey "А">
+<!ENTITY command.moveBookmarkShort.label "Переместить...">
+<!ENTITY menuitem.import.accesskey "И">
+<!ENTITY selectBookmark.label "Выберите закладку для начальной страницы. Если вы выберете папку, закладки, в ней содержащиеся, будут открыты во вкладках.">
+<!ENTITY command.findBookmarks.label "Поиск...">
+<!ENTITY treecol.description.accesskey "О">
+<!ENTITY bookmarksRoot.label "Закладки">

@@ -1,0 +1,32 @@
+# Mozilla/Altlinux plugin
+
+<search 
+	name="ALTLinux"
+	description="ALTLinux Search"
+	method="GET"
+	action="http://search.altlinux.ru/index.php"
+	queryCharset="KOI8-R"
+>
+
+<input name="ps=50&ps=20&o=0&m=all&ul=&dt=back&dp=0&dx=1&dm=0&dd=01&dy=2000&db=01%2F01%2F1970&de=31%2F12%2F2020&cat=&q" user>
+
+
+<interpret 
+	browserResultType="topresult" 
+	charset="KOI8-R"
+	resultListStart="<!-- RESURSY -->" 
+	resultListEnd="<!-- /RESURSY -->"
+	resultItemStart="<li>" 
+	resultItemEnd="<br>"
+>
+
+<interpret 
+	browserResultType="result" 
+	charset="KOI8-R"
+	resultListStart="<!-- web search results -->" 
+	resultListEnd="<!-- /web search results -->"
+	resultItemStart="<li value" 
+	resultItemEnd="<br>"
+>
+</search>
+

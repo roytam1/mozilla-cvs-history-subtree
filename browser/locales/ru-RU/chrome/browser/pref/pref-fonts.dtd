@@ -1,0 +1,73 @@
+<!ENTITY alwaysUseMy.label "Всегда использовать мои:">
+<!ENTITY backgroundColor.accesskey "Ф">
+<!ENTITY backgroundColor.label "Фон:">
+<!ENTITY sans-serif.label "Без засечек:">
+<!ENTITY font.langGroup.japanese "Японский">
+<!ENTITY resolution.accesskey "Р">
+<!ENTITY underlineLinks.label "Подчеркивать ссылки">
+<!ENTITY newLanguages.label "Новые группы языков могут быть определены с помощью панели языков.">
+<!ENTITY useSystemColors.accesskey "И">
+<!ENTITY typefaces.label "Гарнитура">
+<!ENTITY prefFontsDialog.title "Шрифты и цвета">
+<!ENTITY font.langGroup.devanagari "Деванагари">
+<!ENTITY useSystemColors.label "Использовать системные цвета">
+<!ENTITY font.langGroup.thai "Тайский">
+<!ENTITY proportional.label "Пропорциональный:">
+<!ENTITY visitedLinkColor.accesskey "т">
+<!ENTITY font.langGroup.hebrew "Иврит">
+<!ENTITY units.centimetres "сантиметров">
+<!ENTITY useDefaultFontSerif.label "С засечками">
+<!ENTITY sizes.label "Размер (пикселы)">
+<!ENTITY resolution.system.label "Системные настройки">
+<!ENTITY resolution.other "Другое...">
+<!ENTITY minSize.accesskey "Н">
+<!ENTITY useMyColors.label "Цвета">
+<!ENTITY links "Цвет ссылок">
+<!ENTITY textColor.accesskey "Т">
+<!ENTITY serif.accesskey "С">
+<!ENTITY calibrateDialog.title "Определение разрешения">
+<!ENTITY resolution.dpival "$val &resolution.dpi;">
+<!ENTITY font.langGroup.trad-chinese "Традиционный китайский">
+<!ENTITY monospace.accesskey "М">
+<!ENTITY color "Текст и фон">
+<!ENTITY calibrate.instructions "Длина линии вверху:">
+<!ENTITY visitedLinkColor.label "Просмотренные ссылки:">
+<!ENTITY serif.label "С засечками:">
+<!ENTITY font.langGroup.cyrillic "Кириллица">
+<!ENTITY font.langGroup.tamil "Тамильский">
+<!ENTITY someProvColors "Если веб-страница предоставляет свои цвета и фон">
+<!ENTITY language.label "Шрифты для набора символов:">
+<!ENTITY fantasy.label "Декоративный:">
+<!ENTITY header2 "Когда для страницы определен другой шрифт">
+<!ENTITY font.langGroup.trad-chinese-hk "Традиционный китайский (Гонконг)">
+<!ENTITY minSize.none "Нет">
+<!ENTITY underlineLinks.accesskey "о">
+<!ENTITY resolution.label "Разрешение экрана:">
+<!ENTITY font.langGroup.arabic "Арабские">
+<!ENTITY useMyColors.accesskey "а">
+<!ENTITY cursive.label "Курсив:">
+<!ENTITY useMyFonts.label "Шрифты">
+<!ENTITY font.langGroup.unicode "Unicode">
+<!ENTITY font.langGroup.turkish "Турецкий">
+<!ENTITY units.inches "дюймов">
+<!ENTITY font.langGroup.user-def "Определено пользователем">
+<!ENTITY fantasy.accesskey "Д">
+<!ENTITY cursive.accesskey "К">
+<!ENTITY monospace.label "Моноширинный:">
+<!ENTITY language.accesskey "Ш">
+<!ENTITY textColor.label "Текст:">
+<!ENTITY useDefaultFontSansSerif.label "Без засечек">
+<!ENTITY font.langGroup.baltic "Прибалтийский">
+<!ENTITY font.langGroup.el "Греческий">
+<!ENTITY resolution.dpi "dpi">
+<!ENTITY proportional.accesskey "П">
+<!ENTITY fontsize.units "пикселов">
+<!ENTITY sans-serif.accesskey "Б">
+<!ENTITY font.langGroup.simpl-chinese "Упрощенный китайский">
+<!ENTITY linkColor.label "Непросмотренные ссылки:">
+<!ENTITY font.langGroup.korean "Корейский">
+<!ENTITY font.langGroup.latin2 "Центральноевропейский">
+<!ENTITY font.langGroup.latin1 "Западноевропейский">
+<!ENTITY minSize.label "Наименьший размер шрифта:">
+<!ENTITY useMyFonts.accesskey "ы">
+<!ENTITY linkColor.accesskey "е">

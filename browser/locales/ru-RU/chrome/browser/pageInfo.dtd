@@ -1,0 +1,64 @@
+<!ENTITY mediaAltHeader "Альтернативный текст">
+<!ENTITY frameAddress "Адрес">
+<!ENTITY linkName "Имя">
+<!ENTITY linkType "Тип">
+<!ENTITY formEncoding "Тип кодирования:">
+<!ENTITY mediaURL "URL:">
+<!ENTITY formName "Имя">
+<!ENTITY mediaAlt "Альтернативный текст:">
+<!ENTITY formType "Тип">
+<!ENTITY mediaCharset "Кодировка:">
+<!ENTITY generalExpires "Срок действия:">
+<!ENTITY mediaAddress "Адрес">
+<!ENTITY generalType "Тип:">
+<!ENTITY formNo "Номер">
+<!ENTITY generalTitle "Заголовок:">
+<!ENTITY mediaEncryption "Шифрование:">
+<!ENTITY generalReferrer "Ссылающийся URL:">
+<!ENTITY generalMeta "Информация тегов META:">
+<!ENTITY formCValue "Текущее значение">
+<!ENTITY pageInfoWindow.width "450">
+<!ENTITY mediaNo "Номер">
+<!ENTITY title "Информация о странице">
+<!ENTITY mediaBase "Базовый URL:">
+<!ENTITY mediaHeader "Изображения на странице">
+<!ENTITY formFields "Поля:">
+<!ENTITY linkNo "Номер">
+<!ENTITY generalEncoding "Кодировка:">
+<!ENTITY formAction "Действие формы">
+<!ENTITY generalMetaName "Имя">
+<!ENTITY linkAccessKey "Клавиша быстрого доступа">
+<!ENTITY framesTab "Фреймы">
+<!ENTITY mediaTitle "Описание:">
+<!ENTITY unknown "Неизвестно">
+<!ENTITY description "Информация о текущей странице">
+<!ENTITY generalSource "Источник:">
+<!ENTITY formMethod "Метод">
+<!ENTITY linkAddress "Адрес">
+<!ENTITY generalTab "Основная">
+<!ENTITY mediaSaveAsAccesskey "С">
+<!ENTITY generalMode "Тип визуализации:">
+<!ENTITY preface "Информация для:">
+<!ENTITY linksTab "Ссылки">
+<!ENTITY mediaLongdesc "Длинное описание:">
+<!ENTITY closeWindow "Н">
+<!ENTITY generalMetaContent "Содержимое">
+<!ENTITY helpButton "Справка">
+<!ENTITY formsTab "Формы">
+<!ENTITY generalSize "Размер:">
+<!ENTITY generalURL "URL:">
+<!ENTITY mediaName "Имя">
+<!ENTITY generalModified "Последнее изменение:">
+<!ENTITY mediaType "Тип">
+<!ENTITY mediaPlugin "Модуль:">
+<!ENTITY linkTarget "Целевой объект">
+<!ENTITY formTarget "Целевой объект:">
+<!ENTITY frameType "Тип">
+<!ENTITY frameName "Имя">
+<!ENTITY formLabel "Метка">
+<!ENTITY mediaTab "Мультимедиа">
+<!ENTITY mediaSaveAs "Сохранить как...">
+<!ENTITY generalSent "Отправлена:">
+<!ENTITY mediaDimensions "Размеры:">
+<!ENTITY pageInfoWindow.height "500">
+<!ENTITY formFName "Имя поля">

@@ -1,0 +1,23 @@
+# Mozilla/aport plugin
+
+<search 
+	name="Aport"
+	description="Aport Search"
+	method="GET"
+	action="http://sm.aport.ru/scripts/template.dll"
+	queryCharset="windows-1251"
+  
+>
+
+<input name="r" user>
+
+<interpret 
+	browserResultType="result" 
+	charset = "windows-1251"
+
+	resultListStart="<div style=margin-top:0pt>" 
+	resultListEnd="<input type=text size=40 name=r" 
+	resultItemStart="<div style=margin-top:2pt>" 
+	resultItemEnd="<br>"
+>
+</search>

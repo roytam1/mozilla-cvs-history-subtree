@@ -1,0 +1,16 @@
+<!ENTITY advancedJavaScript.accesskey "Д">
+<!ENTITY forOriginatingSiteOnly.accesskey "т">
+<!ENTITY enableJavaScript.accesskey "И">
+<!ENTITY advancedJavaScript.label "Дополнительно...">
+<!ENTITY enableSoftwareUpdate.label "Разрешать сайтам устанавливать программное обеспечение">
+<!ENTITY enableJavaScript.label "Использовать JavaScript">
+<!ENTITY exceptions.label "Исключения">
+<!ENTITY enableSoftwareUpdate.accesskey "Р">
+<!ENTITY forOriginatingSiteOnly.label "только с этого же сайта">
+<!ENTITY enbJavaCheck.label "Использовать Java">
+<!ENTITY popupReject.accesskey "Б">
+<!ENTITY popupReject.label "Блокирование всплывающих окон">
+<!ENTITY enableImages.accesskey "З">
+<!ENTITY lHeader "Дополнительные функции">
+<!ENTITY enableImages.label "Загружать изображения">
+<!ENTITY enbJavaCheck.accesskey "с">

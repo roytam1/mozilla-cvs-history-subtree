@@ -1,0 +1,22 @@
+<!ENTITY credit.marketleads "Marketing Leads">
+<!ENTITY credit.market "Marketing">
+<!ENTITY credit.leads "Engineering Leads">
+<!ENTITY credit.support "Support Resources">
+<!ENTITY credit.build "Build and Release">
+<!ENTITY credit.creators "Created By">
+<!ENTITY brandMotto "The Browser, Reloaded">
+<!ENTITY credit.web "Web Design">
+<!ENTITY credit.thanks "Special Thanks To">
+<!ENTITY credit.qa "Quality Assurance">
+<!ENTITY credit.gecko "Gecko Layout Engine">
+<!ENTITY credit.core "Core Development Posse">
+<!ENTITY credit.update "Mozilla Update">
+<!ENTITY credit.manage "Project Management">
+<!ENTITY credit.memory "In Fond Memory Of">
+<!ENTITY credit.theme "Theme Design">
+<!ENTITY credit.qalead "Quality Assurance Lead">
+<!ENTITY credit.translation "<h3>Translators</h3><ul><li>Александр Словесник</li><li>Валентина Ванеева</li><li>Вадим Виниченко</li><li>Сергей Дегтярев</li><li>Даниил Смирнов</li></ul>">
+<!ENTITY credit.infra "Infrastructure Support">
+<!ENTITY credit.brand "Brand Identity">
+<!ENTITY credit.visuals "Visual Design Coordinator">
+<!ENTITY credit.powered "Powered by">
