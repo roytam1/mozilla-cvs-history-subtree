@@ -1510,6 +1510,18 @@ NS_IMETHODIMP nsDocLoaderImpl::OnRedirect(nsIHttpChannel *aOldChannel, nsIChanne
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsDocLoaderImpl::OnAuthenticate(nsIHttpChannel *httpChannel, const char *host, PRInt32 port, PRBool isProxy, const char *realm, char **username, char **password)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDocLoaderImpl::OnAuthenticationFailed(nsIHttpChannel *httpChannel, const char *host, PRInt32 port, PRBool isProxy, const char *realm, const char *username, const char *password)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 
 NS_IMETHODIMP nsDocLoaderImpl::OnSecurityChange(nsISupports * aContext,
                                                 PRInt32 state)
