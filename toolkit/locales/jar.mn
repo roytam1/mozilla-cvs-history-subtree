@@ -92,6 +92,8 @@
   locale/mozapps/extensions/extensions.properties         (@AB_CD@/chrome/mozapps/extensions/extensions.properties)
   locale/mozapps/extensions/about.dtd                     (@AB_CD@/chrome/mozapps/extensions/about.dtd)
   locale/mozapps/extensions/finalize.dtd                  (@AB_CD@/chrome/mozapps/extensions/finalize.dtd)
+  locale/mozapps/plugins/plugins.dtd                      (@AB_CD@/chrome/mozapps/plugins/plugins.dtd)
+  locale/mozapps/plugins/plugins.properties               (@AB_CD@/chrome/mozapps/plugins/plugins.properties)
   locale/mozapps/profile/createProfileWizard.dtd          (@AB_CD@/chrome/mozapps/profile/createProfileWizard.dtd)
   locale/mozapps/profile/profileSelection.properties      (@AB_CD@/chrome/mozapps/profile/profileSelection.properties)
   locale/mozapps/profile/profileSelection.dtd             (@AB_CD@/chrome/mozapps/profile/profileSelection.dtd)

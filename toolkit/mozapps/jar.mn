@@ -27,3 +27,8 @@ toolkit.jar:
 * content/mozapps/update/errors.xul                             (update/content/errors.xul)
 * content/mozapps/shared/richview.xml                           (shared/content/richview.xml)
   content/mozapps/contents.rdf                                  (contents-content.rdf)
+  content/mozapps/plugins/pluginInstallerWizard.xul             (plugins/content/pluginInstallerWizard.xul)
+  content/mozapps/plugins/pluginInstallerWizard.js              (plugins/content/pluginInstallerWizard.js)
+  content/mozapps/plugins/pluginInstallerWizard.css             (plugins/content/pluginInstallerWizard.css)
+  content/mozapps/plugins/pluginWSConnection.js                 (plugins/content/pluginWSConnection.js)
+  content/mozapps/plugins/pluginInstallerService.js             (plugins/content/pluginInstallerService.js)

@@ -1071,6 +1071,7 @@ function prepareForStartup()
   gProgressMeterPanel = document.getElementById("statusbar-progresspanel");
   gBrowser.addEventListener("DOMUpdatePageReport", gPopupBlockerObserver.onUpdatePageReport, false);
   gBrowser.addEventListener("DOMLinkAdded", livemarkOnLinkAdded, false);
+  gBrowser.addEventListener("PluginNotFound", gMissingPluginInstaller.newMissingPlugin, false);
 
   var webNavigation;
   try {
@@ -1134,6 +1135,7 @@ function delayedStartup()
   os.addObserver(gXPInstallObserver, "xpinstall-install-blocked", false);
   os.addObserver(gXPInstallObserver, "xpinstall-install-edit-prefs", false);
   os.addObserver(gXPInstallObserver, "xpinstall-install-edit-permissions", false);
+  os.addObserver(gMissingPluginInstaller, "missing-plugin", false);
 
   gPrefService = Components.classes["@mozilla.org/preferences-service;1"]
                               .getService(Components.interfaces.nsIPrefService);
@@ -1314,6 +1316,7 @@ function Shutdown()
   os.removeObserver(gXPInstallObserver, "xpinstall-install-blocked");
   os.removeObserver(gXPInstallObserver, "xpinstall-install-edit-permissions");
   os.removeObserver(gXPInstallObserver, "xpinstall-install-edit-prefs");
+  os.removeObserver(gMissingPluginInstaller, "missing-plugin");
 
 #ifdef MOZ_ENABLE_XREMOTE
   // remove remote support
@@ -3399,6 +3402,9 @@ nsBrowserStatusHandler.prototype =
       closeFindBar();
       gBackProtectBuffer = 0;
     }
+    
+    // clear missing plugins
+    gMissingPluginInstaller.clearMissingPlugins(getBrowser().selectedTab);
        
     setTimeout(function () { updatePageTheme(); updatePageLivemarks(); }, 0);
   },
@@ -5795,3 +5801,70 @@ function SwitchFocusedTextEntryDirection() {
         focusedElement.style.direction = "ltr";
   }
 }
+
+function missingPluginInstaller(){
+  this.missingPlugins = new Object();
+}
+
+missingPluginInstaller.prototype.newMissingPlugin = function(aEvent){
+  var tabbrowser = getBrowser();
+  const browsers = tabbrowser.mPanelContainer.childNodes;
+
+  var window = aEvent.target.ownerDocument.__parent__;
+  // walk up till the toplevel window
+  while (window.parent != window)
+    window = window.parent;
+
+  var i = 0;
+  for (; i < browsers.length; i++) {
+    if (tabbrowser.getBrowserAtIndex(i).contentWindow == window)
+      break;
+  }
+
+  var tab = tabbrowser.mTabContainer.childNodes[i];
+
+  if (!gMissingPluginInstaller.missingPlugins)
+    gMissingPluginInstaller.missingPlugins = new Object();
+
+  if (!gMissingPluginInstaller.missingPlugins[tab])
+    gMissingPluginInstaller.missingPlugins[tab] = new Object();
+
+  gMissingPluginInstaller.missingPlugins[tab][aEvent.target.type] = {mimetype: aEvent.target.type, pluginsPage: aEvent.target.getAttribute("pluginspage")};
+
+  var browser = tabbrowser.getBrowserAtIndex(i);
+
+  var iconURL = "chrome://mozapps/skin/xpinstall/xpinstallItemGeneric.png";
+  
+  var bundle_browser = document.getElementById("bundle_browser");
+  var messageString = bundle_browser.getString("missingpluginsMessage.title");
+  var buttonString = bundle_browser.getString("missingpluginsMessage.button.label");
+
+  tabbrowser.showMessage(browser, iconURL, messageString, buttonString, 
+                                    "", "missing-plugin",
+                                    null, "top");
+
+  aEvent.preventDefault();
+}
+
+missingPluginInstaller.prototype.clearMissingPlugins = function(aTab){
+  this.missingPlugins[aTab] = null;
+}
+
+
+missingPluginInstaller.prototype.observe = function(aSubject, aTopic, aData){
+  switch (aTopic) {
+    case "missing-plugin":
+      // get the urls of missing plugins
+      var tabbrowser = getBrowser();
+      var missingPluginsArray = gMissingPluginInstaller.missingPlugins[tabbrowser.mCurrentTab];
+
+      if (missingPluginsArray) {
+        window.openDialog("chrome://mozapps/content/plugins/pluginInstallerWizard.xul",
+           "_blank", "chrome,resizable=yes", {plugins: missingPluginsArray, tab: tabbrowser.mCurrentTab});
+      }            
+
+      tabbrowser.hideMessage(tabbrowser.selectedBrowser, "top");
+      break;      
+  }
+}
+var gMissingPluginInstaller = new missingPluginInstaller();
