@@ -489,7 +489,7 @@ sub update
 	}
     }
 
-  $ret = ldap_modify($self->{"ld"}, $entry->{"dn"}, \%mod)
+  $ret = ldap_modify_s($self->{"ld"}, $entry->{"dn"}, \%mod)
     if ($#arr >= $[);
 
   return ($ret == LDAP_SUCCESS);
