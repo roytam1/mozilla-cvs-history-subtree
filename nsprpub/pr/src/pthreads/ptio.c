@@ -340,7 +340,6 @@ static void pt_poll_now(pt_Continuation *op)
 
 				if (rv > 0)
 				{
-					PRIntn fd = tmp_pfd.fd;
 					PRInt16 events = tmp_pfd.events;
 					PRInt16 revents = tmp_pfd.revents;
 
@@ -392,7 +391,6 @@ static void pt_poll_now(pt_Continuation *op)
 
 				if (rv > 0)
 				{
-					PRIntn fd = tmp_pfd.fd;
 					PRInt16 events = tmp_pfd.events;
 					PRInt16 revents = tmp_pfd.revents;
 
@@ -436,10 +434,6 @@ static void pt_poll_now(pt_Continuation *op)
 
 static PRIntn pt_Continue(pt_Continuation *op)
 {
-    PRStatus rv;
-    PRThread *self = PR_GetCurrentThread();
-    struct pt_TimedQueue *tqp;
-
     op->status = pt_continuation_pending;  /* set default value */
 	/*
 	 * let each thread call poll directly
@@ -3223,7 +3217,6 @@ PR_IMPLEMENT(PRStatus) PR_CreatePipe(
 )
 {
     int pipefd[2];
-    int flags;
 
     if (pt_TestAbort()) return PR_FAILURE;
 
