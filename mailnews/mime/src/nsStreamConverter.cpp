@@ -52,7 +52,7 @@ bridge_create_stream(nsIMimeEmitter      *newEmitter,
                      nsIURI              *uri,
                      nsMimeOutputType    format_out)
 {
-  if (format_out == nsMimeOutput::nsMimeMessageDraft)
+  if (format_out == nsMimeOutput::nsMimeMessageDraftOrTemplate)
     return mime_bridge_create_draft_stream(newEmitter, newPluginObj2, uri, format_out);
   else
     return mime_bridge_create_display_stream(newEmitter, newPluginObj2, uri, format_out);
@@ -332,7 +332,7 @@ nsStreamConverter::SetOutputStream(nsIOutputStream *aOutStream, nsIURI *aURI, ns
       mOutputFormat = PL_strdup("raw");
       break;
 
-  case nsMimeOutput::nsMimeMessageDraft:       // Loading drafts & templates
+  case nsMimeOutput::nsMimeMessageDraftOrTemplate:       // Loading drafts & templates
       PR_FREEIF(mOutputFormat);
       mOutputFormat = PL_strdup("message/draft");
       break;
@@ -349,10 +349,10 @@ nsStreamConverter::SetOutputStream(nsIOutputStream *aOutStream, nsIURI *aURI, ns
 
   // 
   // We will first find an appropriate emitter in the repository that supports 
-  // the requested output format...note, the one special exception is for nsMimeMessageDraft
+  // the requested output format...note, the one special exception is for nsMimeMessageDraftOrTemplate
   // where we don't need any emitters
   //
-  if (newType != nsMimeOutput::nsMimeMessageDraft)
+  if (newType != nsMimeOutput::nsMimeMessageDraftOrTemplate)
   {
     nsAutoString progID (eOneByte);
     progID = "component://netscape/messenger/mimeemitter;type=";
@@ -483,9 +483,6 @@ char *output = "\
     return NS_ERROR_FAILURE;
   }
 
-  if (!mOutStream)
-    return NS_ERROR_FAILURE;
-
   char *buf = (char *)PR_Malloc(aLength);
   if (!buf)
     return NS_ERROR_OUT_OF_MEMORY; /* we couldn't allocate the object */
@@ -551,7 +548,8 @@ nsStreamConverter::OnStopRequest(nsIChannel * /* aChannel */, nsISupports *ctxt,
   }
 
   // First close the output stream...
-  mOutStream->Close();
+  if (mOutStream)
+    mOutStream->Close();
 
   // Make sure to do necessary cleanup!
   InternalCleanup();
