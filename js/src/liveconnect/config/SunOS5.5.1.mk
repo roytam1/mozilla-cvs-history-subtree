@@ -14,6 +14,10 @@
 # Copyright (C) 1998 Netscape Communications Corporation.  All Rights
 # Reserved.
 
-INCLUDES   += -I$(JDK)/include/solaris
+# Change these to the current platform settings!!!
+
+JDK = /u/rchinta/util/java/jdk1.1.5
+
+INCLUDES   += -I$(JDK)/include -I$(JDK)/include/solaris
 
 OTHER_LIBS = -L../$(OBJDIR) -ljs $(JDK)/lib/sparc/native_threads/libjava.so 
