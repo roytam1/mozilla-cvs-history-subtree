@@ -1503,10 +1503,24 @@ void CPaneCX::DisplayBuiltin(MWContext *pContext, int iLocation, LO_BuiltinStruc
     int yPos = builtin_struct->y;
 	int width = builtin_struct->width;
 	int height = builtin_struct->height;
-	
-	CRDFOutliner* pWnd = CRDFContentView::DisplayRDFTree(CWnd::FromHandle(cView), xPos, yPos, width, height);
-	builtin_struct->FE_Data = pWnd;
+	char* url = NULL;
+	int n = 0;
 
+	while (n < builtin_struct->attribute_cnt) {
+		char* attName = *(builtin_struct->attribute_list + n);
+		char* attValue = *(builtin_struct->value_list + n);
+		if (attName && (strcmp(attName, "src") == 0)) {
+			url = attValue;
+			break;
+		}
+		n++;
+	}
+	
+	if (builtin_struct->FE_Data == NULL)
+	{
+		CRDFOutliner* pWnd = CRDFContentView::DisplayRDFTree(CWnd::FromHandle(cView), xPos, yPos, width, height, url);
+		builtin_struct->FE_Data = pWnd;
+	}
 }
 
 void CPaneCX::FreeBuiltinElement(MWContext *pContext, LO_BuiltinStruct *pBuiltin)

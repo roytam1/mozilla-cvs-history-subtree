@@ -786,7 +786,7 @@ IconType DetermineIconType(HT_Resource pNode, BOOL largeIcon)
    if (pNode != NULL)
    {
 	    char* pURL = largeIcon? HT_GetNodeLargeIconURL(pNode) : HT_GetNodeSmallIconURL(pNode);
-		TRACE("%s\n", pURL);
+		//TRACE("%s\n", pURL);
 		if (strncmp("icon", pURL, 4) != 0)
 		{
 			// Time to load a custom image.
@@ -3656,6 +3656,7 @@ void CRDFOutlinerParent::CreateColumns ( void )
 	void* token;
 	uint32 tokenType;
 	UINT index = 0;
+
 	while (HT_GetNextColumn(columnCursor, &columnName, &columnWidth, &token, &tokenType))
 	{
 		// We have retrieved a new column.  Contruct a front end column object
@@ -3896,7 +3897,7 @@ void embeddedTreeNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event wh
 		theOutliner->HandleEvent(ns, n, whatHappened);
 }
 
-CRDFOutliner* CRDFContentView::DisplayRDFTree(CWnd* pParent, int xPos, int yPos, int width, int height)
+CRDFOutliner* CRDFContentView::DisplayRDFTree(CWnd* pParent, int xPos, int yPos, int width, int height, char* url)
 {
 	HT_Notification ns = new HT_NotificationStruct;
 	XP_BZERO(ns, sizeof(HT_NotificationStruct));
@@ -3904,7 +3905,7 @@ CRDFOutliner* CRDFContentView::DisplayRDFTree(CWnd* pParent, int xPos, int yPos,
 	ns->data = NULL;
 	
 	// Construct the pane and give it our notification struct
-	HT_Pane thePane = HT_NewPersonalToolbarPane(ns);
+	HT_Pane thePane = HT_PaneFromURL(url, ns, 0);  
 	
 	// Create the windows
 	CRect rClient(xPos, yPos, width, height);

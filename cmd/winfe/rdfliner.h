@@ -427,7 +427,7 @@ public:
 
 	void SwitchHTViews(HT_View htView);
 
-	static CRDFOutliner* DisplayRDFTree(CWnd* pParent, int xPos, int yPos, int width, int height);
+	static CRDFOutliner* DisplayRDFTree(CWnd* pParent, int xPos, int yPos, int width, int height, char* url);
 		// This function can be called to create an embedded RDF tree view inside another window.
 		// Used to embed the tree in HTML.
 
