@@ -23,6 +23,8 @@
 #include "primpl.h"
 #include <string.h>
 
+#if !defined(_PR_INET6) || defined(_PR_INET6_PROBE)
+
 static PRIOMethods ipv6_to_v4_tcpMethods;
 static PRIOMethods ipv6_to_v4_udpMethods;
 static PRDescIdentity _pr_ipv6_to_ipv4_id;
@@ -262,9 +264,40 @@ static PRInt32 PR_CALLBACK Ipv6ToIpv4SocketRecvFrom(PRFileDesc *fd, void *buf,
 	return result;
 }
 
+#if defined(_PR_INET6_PROBE)
+PRBool _pr_ipv6_is_present;
+PR_EXTERN(PRBool) _pr_test_ipv6_socket();
+#if defined(_PR_HAVE_GETIPNODEBYNAME)
+void *_pr_getipnodebyname_fp;
+void *_pr_freehostent_fp;
+#endif
+#endif
+
 PRStatus _pr_init_ipv6()
 {
-const PRIOMethods *stubMethods;
+    const PRIOMethods *stubMethods;
+
+#if defined(_PR_INET6_PROBE)
+
+#if !defined(_PR_INET6) && defined(_PR_HAVE_GETIPNODEBYNAME)
+	PRLibrary *lib;	
+	_pr_getipnodebyname_fp = PR_FindSymbolAndLibrary("getipnodebyname", &lib);
+	if (NULL != _pr_getipnodebyname_fp) {
+		_pr_freehostent_fp = PR_FindSymbolAndLibrary("freehostent", &lib);
+		if (NULL != _pr_freehostent_fp)
+			_pr_ipv6_is_present = PR_TRUE;
+		else
+			_pr_ipv6_is_present = PR_FALSE;
+		(void)PR_UnloadLibrary(lib);
+	} else
+		_pr_ipv6_is_present = PR_FALSE;
+	if (PR_TRUE == _pr_ipv6_is_present)
+#endif
+	
+	_pr_ipv6_is_present = _pr_test_ipv6_socket();
+	if (PR_TRUE == _pr_ipv6_is_present)
+			return PR_SUCCESS;
+#endif
 
     _pr_ipv6_to_ipv4_id = PR_GetUniqueIdentity("Ipv6_to_Ipv4 layer");
     PR_ASSERT(PR_INVALID_IO_LAYER != _pr_ipv6_to_ipv4_id);
@@ -328,3 +361,5 @@ errorExit:
 		ipv6_fd->dtor(ipv6_fd);
 	return PR_FAILURE;
 }
+
+#endif /* !defined(_PR_INET6) || defined(_PR_INET6_PROBE) */

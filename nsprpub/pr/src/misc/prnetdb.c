@@ -95,7 +95,12 @@ static sigset_t timer_set;
 PRLock* _getproto_lock = NULL;
 #endif
 
+#if defined(_PR_INET6_PROBE)
+PR_EXTERN(PRBool) _pr_ipv6_is_present;
+#endif
+
 #if defined(_PR_INET6)
+
 const struct in6_addr _pr_in6addr_any = IN6ADDR_ANY_INIT;
 const struct in6_addr _pr_in6addr_loopback = IN6ADDR_LOOPBACK_INIT;
 
@@ -106,6 +111,8 @@ const struct in6_addr _pr_in6addr_loopback = IN6ADDR_LOOPBACK_INIT;
 
 #if defined(SOLARIS)
 #define _PR_IN6_V4MAPPED_TO_IPADDR(a) ((a)->_S6_un._S6_u32[3])
+#elif defined(OSF1)
+#define _PR_IN6_V4MAPPED_TO_IPADDR(a) ((a)->s6_laddr[3])
 #else
 #define _PR_IN6_V4MAPPED_TO_IPADDR(a) ((a)->s6_addr32[3])
 #endif
@@ -159,10 +166,6 @@ const PRIPv6Addr _pr_in6addr_loopback = {   0, 0, 0, 0,
 
 #endif /* _PR_INET6 */
 
-#if !defined(_PR_INET6)
-extern PRStatus _pr_init_ipv6();
-#endif
-
 void _PR_InitNet(void)
 {
 #if defined(XP_UNIX)
@@ -181,9 +184,6 @@ void _PR_InitNet(void)
 #endif
 #if !defined(_PR_HAVE_GETPROTO_R)
 	_getproto_lock = PR_NewLock();
-#endif
-#if !defined(_PR_INET6)
-	_pr_init_ipv6();
 #endif
 }
 
@@ -381,9 +381,6 @@ PR_IMPLEMENT(PRStatus) PR_GetHostByName(
 #ifdef XP_UNIX
 	sigset_t oldset;
 #endif
-#if defined(_PR_INET6) && defined(_PR_HAVE_GETIPNODEBYNAME)
-	int error_num;
-#endif
 
     if (!_pr_initialized) _PR_ImplicitInitialization();
 
@@ -400,11 +397,7 @@ PR_IMPLEMENT(PRStatus) PR_GetHostByName(
     
 	if (NULL == h)
 	{
-#if defined(_PR_INET6) && defined(_PR_HAVE_GETIPNODEBYNAME)
-	    PR_SetError(PR_DIRECTORY_LOOKUP_ERROR, error_num);
-#else
 	    PR_SetError(PR_DIRECTORY_LOOKUP_ERROR, _MD_GETHOST_ERRNO());
-#endif
 	}
 	else
 	{
@@ -412,9 +405,6 @@ PR_IMPLEMENT(PRStatus) PR_GetHostByName(
 		rv = CopyHostent(h, &buf, &bufsize, conversion, hp);
 		if (PR_SUCCESS != rv)
 		    PR_SetError(PR_INSUFFICIENT_RESOURCES_ERROR, 0);
-#if defined(_PR_INET6) && defined(_PR_HAVE_GETIPNODEBYNAME)
-		freehostent(h);
-#endif
 	}
 	UNLOCK_DNS();
 #ifdef XP_UNIX
@@ -423,20 +413,29 @@ PR_IMPLEMENT(PRStatus) PR_GetHostByName(
 	return rv;
 }
 
+#if defined(_PR_INET6_PROBE) && defined(_PR_HAVE_GETIPNODEBYNAME)
+typedef struct hostent  * (*_pr_getipnodebyname_t)(const char *, int,
+										int, int *);
+typedef void (*_pr_freehostent_t)(struct hostent *);
+extern void * _pr_getipnodebyname_fp;
+extern void * _pr_freehostent_fp;
+#endif
+
 PR_IMPLEMENT(PRStatus) PR_GetIPNodeByName(
     const char *name, PRUint16 af, PRIntn flags,
     char *buf, PRIntn bufsize, PRHostEnt *hp)
 {
-	struct hostent *h;
+	struct hostent *h = 0;
 	PRStatus rv = PR_FAILURE;
 #ifdef XP_UNIX
 	sigset_t oldset;
 #endif
-#if defined(_PR_INET6) && defined(_PR_HAVE_GETIPNODEBYNAME)
+#if defined(_PR_HAVE_GETIPNODEBYNAME)
+	PRUint16 md_af = af;
 	int error_num;
 	int tmp_flags = 0;
 #endif
-#if defined(_PR_INET6) && defined(_PR_HAVE_GETHOSTBYNAME2)
+#if defined(_PR_HAVE_GETHOSTBYNAME2)
     PRBool did_af_inet = PR_FALSE;
     char **new_addr_list;
 #endif
@@ -454,10 +453,26 @@ PR_IMPLEMENT(PRStatus) PR_GetIPNodeByName(
 #endif
 	LOCK_DNS();
 
+#if defined(_PR_HAVE_GETIPNODEBYNAME)
+	if (flags & PR_AI_V4MAPPED)
+		tmp_flags |= AI_V4MAPPED;
+	if (flags & PR_AI_ADDRCONFIG)
+		tmp_flags |= AI_ADDRCONFIG;
+	if (flags & PR_AI_ALL)
+		tmp_flags |= AI_ALL;
+    if (af == PR_AF_INET6)
+    	md_af = AF_INET6;
+	else
+    	md_af = af;
+#endif
+
 #ifdef _PR_INET6
 #ifdef _PR_HAVE_GETHOSTBYNAME2
     if (af == PR_AF_INET6)
     {
+#ifdef _PR_INET6_PROBE
+      if (_pr_ipv6_is_present == PR_TRUE)
+#endif
         h = gethostbyname2(name, AF_INET6); 
         if ((NULL == h) && (flags & PR_AI_V4MAPPED))
         {
@@ -471,16 +486,15 @@ PR_IMPLEMENT(PRStatus) PR_GetIPNodeByName(
         h = gethostbyname2(name, af);
     }
 #elif defined(_PR_HAVE_GETIPNODEBYNAME)
-	if (flags & PR_AI_V4MAPPED)
-		tmp_flags |= AI_V4MAPPED;
-	if (flags & PR_AI_ADDRCONFIG)
-		tmp_flags |= AI_ADDRCONFIG;
-	if (flags & PR_AI_ALL)
-		tmp_flags |= AI_ALL;
-    h = getipnodebyname(name, af, tmp_flags, &error_num);
+    h = getipnodebyname(name, md_af, tmp_flags, &error_num);
 #else
 #error "Unknown name-to-address translation function"
-#endif
+#endif	/* _PR_HAVE_GETHOSTBYNAME2 */
+#elif defined(_PR_INET6_PROBE) && defined(_PR_HAVE_GETIPNODEBYNAME)
+    if (_pr_ipv6_is_present == PR_TRUE)
+    	h = (*((_pr_getipnodebyname_t)_pr_getipnodebyname_fp))(name, md_af, tmp_flags, &error_num);
+	else
+    	h = gethostbyname(name);
 #else /* _PR_INET6 */
 #ifdef XP_OS2_VACPP
 	h = gethostbyname((char *)name);
@@ -493,6 +507,11 @@ PR_IMPLEMENT(PRStatus) PR_GetIPNodeByName(
 	{
 #if defined(_PR_INET6) && defined(_PR_HAVE_GETIPNODEBYNAME)
 	    PR_SetError(PR_DIRECTORY_LOOKUP_ERROR, error_num);
+#elif defined(_PR_INET6_PROBE) && defined(_PR_HAVE_GETIPNODEBYNAME)
+    	if (_pr_ipv6_is_present == PR_TRUE)
+	    	PR_SetError(PR_DIRECTORY_LOOKUP_ERROR, error_num);
+		else
+	    	PR_SetError(PR_DIRECTORY_LOOKUP_ERROR, _MD_GETHOST_ERRNO());
 #else
 	    PR_SetError(PR_DIRECTORY_LOOKUP_ERROR, _MD_GETHOST_ERRNO());
 #endif
@@ -507,6 +526,9 @@ PR_IMPLEMENT(PRStatus) PR_GetIPNodeByName(
 		    PR_SetError(PR_INSUFFICIENT_RESOURCES_ERROR, 0);
 #if defined(_PR_INET6) && defined(_PR_HAVE_GETIPNODEBYNAME)
 		freehostent(h);
+#elif defined(_PR_INET6_PROBE) && defined(_PR_HAVE_GETIPNODEBYNAME)
+    	if (_pr_ipv6_is_present == PR_TRUE)
+			(*((_pr_freehostent_t)_pr_freehostent_fp))(h);
 #endif
 #if defined(_PR_INET6) && defined(_PR_HAVE_GETHOSTBYNAME2)
 		if ((flags & PR_AI_V4MAPPED) && (flags & (PR_AI_ALL|PR_AI_ADDRCONFIG))
@@ -862,6 +884,8 @@ PR_IMPLEMENT(PRIntn) PR_EnumerateHostEnt(
         if (PR_AF_INET6 == hostEnt->h_addrtype)
         {
             address->ipv6.port = htons(port);
+        	address->ipv6.flowinfo = 0;
+        	address->ipv6.scope_id = 0;
             memcpy(&address->ipv6.ip, addr, hostEnt->h_length);
         }
         else
@@ -909,6 +933,8 @@ PR_IMPLEMENT(PRStatus) PR_SetNetAddr(
     if (af == PR_AF_INET6)
     {
         addr->ipv6.port = htons(port);
+        addr->ipv6.flowinfo = 0;
+        addr->ipv6.scope_id = 0;
         switch (val)
         {
         case PR_IpAddrNull:

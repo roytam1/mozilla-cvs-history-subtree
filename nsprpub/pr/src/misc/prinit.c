@@ -144,6 +144,10 @@ static void _pr_SetNativeThreadsOnlyMode(void)
 }
 #endif
 
+#if !defined(_PR_INET6) || defined(_PR_INET6_PROBE)
+extern PRStatus _pr_init_ipv6();
+#endif
+
 static void _PR_InitStuff(void)
 {
 
@@ -220,6 +224,10 @@ static void _PR_InitStuff(void)
 
     nspr_InitializePRErrorTable();
 
+#if !defined(_PR_INET6) || defined(_PR_INET6_PROBE)
+	_pr_init_ipv6();
+#endif
+	
     _PR_MD_FINAL_INIT();
 }
 
