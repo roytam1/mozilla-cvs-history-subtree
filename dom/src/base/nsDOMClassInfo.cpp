@@ -1994,14 +1994,15 @@ nsNamedArraySH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     nsresult rv = GetNamedItem(native, name, getter_AddRefs(item));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    // Do we wanto fall through to nsArraySH::GetProperty() here if
-    // item is null?
+    if (item) {
+      rv = WrapNative(cx, ::JS_GetGlobalObject(cx), item,
+                      NS_GET_IID(nsISupports), vp);
+      NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = WrapNative(cx, ::JS_GetGlobalObject(cx), item,
-                    NS_GET_IID(nsISupports), vp);
-    NS_ENSURE_SUCCESS(rv, rv);
+      return NS_OK;
+    }
 
-    return NS_OK;
+    // Fall through to nsArraySH::GetProperty() here
   }
 
   return nsArraySH::GetProperty(wrapper, cx, obj, id, vp, _retval);
