@@ -658,10 +658,11 @@ function FindSiteIndexAndDocDir(publishSiteData, docUrl, dirObj)
     //  So we must examine all records to find the site URL that best
     //    matches the document URL: the longest-matching substring (XXX is this right?)
     var lenObj = {value:0};
-    var tempData = publishSiteData[i];
-    
+    var tempData = Clone(publishSiteData[i]);
+
     // Check if this site matches docUrl (returns length of match if found)
     var len = FillInMatchingPublishData(tempData, docUrl);
+
     if (len > siteUrlLen)
     {
       siteIndex = i;
@@ -700,8 +701,10 @@ function FillInMatchingPublishData(publishData, docUrl)
   username = username.value;
 
   var matchedLength = 0;
-  var pubUrlFound = baseUrl.indexOf(publishData.publishUrl) == 0;
-  var browseUrlFound = baseUrl.indexOf(publishData.browseUrl) == 0;
+  var pubUrlFound = publishData.publishUrl ?
+                      baseUrl.indexOf(publishData.publishUrl) == 0 : false;
+  var browseUrlFound = publishData.browseUrl ?
+                          baseUrl.indexOf(publishData.browseUrl) == 0 : false;
 
   if ((pubUrlFound || browseUrlFound) 
       && (!username || !publishData.username || username == publishData.username))
@@ -710,10 +713,13 @@ function FillInMatchingPublishData(publishData, docUrl)
     matchedLength = pubUrlFound ? publishData.publishUrl.length 
                             : publishData.browseUrl.length;
 
-    publishData.filename = filename;
+    if (matchedLength > 0)
+    {
+      publishData.filename = filename;
 
-    // Subdirectory within the site is whats left in baseUrl after the matched portion
-    publishData.docDir = FormatDirForPublishing(baseUrl.slice(matchedLength));
+      // Subdirectory within the site is what's left in baseUrl after the matched portion
+      publishData.docDir = FormatDirForPublishing(baseUrl.slice(matchedLength));
+    }
   }
   return matchedLength;
 }
