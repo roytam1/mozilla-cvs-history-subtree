@@ -477,22 +477,20 @@ nsFilePicker::Show(PRInt16 *aReturn)
                                          directory.get());
   }
 
-  PRInt32 count = mFilters.Count();
-  for (PRInt32 i = 0; i < count; ++i) {
+  int count = mFilters.Count();
+  for (int i = 0; i < count; ++i) {
     // This is fun... the GTK file picker does not accept a list of filters
     // so we need to split out each string, and add it manually.
 
     char **patterns = g_strsplit(mFilters[i]->get(), ";", -1);
     if (!patterns) {
-      return NS_ERROR_OUT_OF_MEMORY;
+      return NS_ERROR_UNEXPECTED;
     }
 
     GtkFileFilter *filter = _gtk_file_filter_new ();
     for (int j = 0; patterns[j] != NULL; ++j) {
       _gtk_file_filter_add_pattern (filter, g_strstrip (patterns[j]));
     }
-
-    g_strfreev(patterns);
 
     if (!mFilterNames[i]->IsEmpty()) {
       // If we have a name for our filter, let's use that.

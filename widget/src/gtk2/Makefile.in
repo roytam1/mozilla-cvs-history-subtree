@@ -62,6 +62,7 @@ CPPSRCS		= \
 		nsGtkMozRemoteHelper.cpp \
 		nsClipboard.cpp \
 		nsDragService.cpp \
+		nsFilePicker.cpp \
 		nsSound.cpp \
 		nsNativeKeyBindings.cpp \
 		$(NULL)
