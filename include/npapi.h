@@ -87,7 +87,7 @@
 /*----------------------------------------------------------------------*/
 
 #define NP_VERSION_MAJOR 0
-#define NP_VERSION_MINOR 12
+#define NP_VERSION_MINOR 13
 
 
 /* The OS/2 version of Netscape uses RC_DATA to define the
