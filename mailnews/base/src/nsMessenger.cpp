@@ -384,7 +384,7 @@ nsMessenger::SetWindow(nsIDOMWindowInternal *aWin, nsIMsgWindow *aMsgWindow)
 
     mDocShell = do_QueryInterface(childAsItem);
 
-    if (NS_SUCCEEDED(rv) && mDocShell) {
+//    if (NS_SUCCEEDED(rv) && mDocShell) {
 
         if (aMsgWindow) {
             nsCOMPtr<nsIMsgStatusFeedback> aStatusFeedback;
@@ -400,7 +400,8 @@ nsMessenger::SetWindow(nsIDOMWindowInternal *aWin, nsIMsgWindow *aMsgWindow)
               pbi->AddObserver(MAILNEWS_ALLOW_PLUGINS_PREF_NAME, this, PR_TRUE);
             SetDisplayProperties();
         }
-    }
+//    }
+
   }
 
   // in just two pane mode, we won't have message pane, but we still want undo / redo.
