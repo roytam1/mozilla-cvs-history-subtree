@@ -1828,24 +1828,19 @@ GetClassPrototype(JSContext *cx, JSObject *scope, const char *name,
 JSObject *
 js_NewObject(JSContext *cx, JSClass *clasp, JSObject *proto, JSObject *parent)
 {
-    JSObject *obj, *ctor;
+    JSObject *obj;
     JSObjectOps *ops;
     JSObjectMap *map;
-    jsval cval;
+    JSClass *protoclasp;
     uint32 nslots, i;
     jsval *newslots;
-
-    /* Allocate an object from the GC heap and zero it. */
-    obj = (JSObject *) js_AllocGCThing(cx, GCX_OBJECT);
-    if (!obj)
-        return NULL;
 
     /* Bootstrap the ur-object, and make it the default prototype object. */
     if (!proto) {
         if (!GetClassPrototype(cx, parent, clasp->name, &proto))
-            goto bad;
+            return NULL;
         if (!proto && !GetClassPrototype(cx, parent, js_Object_str, &proto))
-            goto bad;
+            return NULL;
     }
 
     /* Always call the class's getObjectOps hook if it has one. */
@@ -1854,26 +1849,32 @@ js_NewObject(JSContext *cx, JSClass *clasp, JSObject *proto, JSObject *parent)
           : &js_ObjectOps;
 
     /*
+     * Allocate a zeroed object from the GC heap.  Do this *after* any other
+     * GC-thing allocations under GetClassPrototype or clasp->getObjectOps,
+     * to avoid displacing the newborn root for obj.
+     */
+    obj = (JSObject *) js_AllocGCThing(cx, GCX_OBJECT);
+    if (!obj)
+        return NULL;
+
+    /*
      * Share proto's map only if it has the same JSObjectOps, and only if
      * proto's class has the same private and reserved slots, as obj's map
      * and class have.
      */
     if (proto &&
         (map = proto->map)->ops == ops &&
-        ((clasp->flags ^ OBJ_GET_CLASS(cx, proto)->flags) &
-         (JSCLASS_HAS_PRIVATE |
-          (JSCLASS_RESERVED_SLOTS_MASK << JSCLASS_RESERVED_SLOTS_SHIFT)))
-        == 0) {
-        /* Default parent to the parent of the prototype's constructor. */
-        if (!parent) {
-            if (!OBJ_GET_PROPERTY(cx, proto,
-                                  (jsid)cx->runtime->atomState.constructorAtom,
-                                  &cval)) {
-                goto bad;
-            }
-            if (JSVAL_IS_OBJECT(cval) && (ctor = JSVAL_TO_OBJECT(cval)) != NULL)
-                parent = OBJ_GET_PARENT(cx, ctor);
-        }
+        ((protoclasp = OBJ_GET_CLASS(cx, proto)) == clasp ||
+         (!((protoclasp->flags ^ clasp->flags) &
+            (JSCLASS_HAS_PRIVATE |
+             (JSCLASS_RESERVED_SLOTS_MASK << JSCLASS_RESERVED_SLOTS_SHIFT))))))
+    {
+        /*
+         * Default parent to the parent of the prototype, which was set from
+         * the parent of the prototype's constructor.
+         */
+        if (!parent)
+            parent = OBJ_GET_PARENT(cx, proto);
 
         /* Share the given prototype's map. */
         obj->map = js_HoldObjectMap(cx, map);
