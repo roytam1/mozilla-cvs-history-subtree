@@ -326,3 +326,14 @@ img[align=right] {
 }
 
 
+/* Quirk: establish a new stacking context below the root element. 
+ * Everything in that context will be displayed above the root 
+ * element's background. b=78087
+ */
+ 
+body {
+  position: relative;
+  top: 0;
+  left: 0;
+  z-index: 0;
+}
