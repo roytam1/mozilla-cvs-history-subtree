@@ -68,7 +68,7 @@ CreateNewJavaStack(ExecEnv *ee, JavaStack *previous_stack)
 JRI_PUBLIC_API(bool_t)
 ExecuteJava(unsigned char *initial_pc, ExecEnv *ee)
 {
-  return FALSE;
+  return PR_FALSE;
 }
 
 /* FindClassFromClass                                                               libjsj.so */
@@ -239,7 +239,7 @@ JRI_PUBLIC_API(bool_t)
 VerifyClassAccess(ClassClass *current_class, ClassClass *new_class, 
 		  bool_t classloader_only) 
 {
-  return FALSE;
+  return PR_FALSE;
 }    
 
 /* VerifyFieldAccess                                                                libjsj.so */
@@ -249,7 +249,7 @@ JRI_PUBLIC_API(bool_t)
 VerifyFieldAccess(ClassClass *current_class, ClassClass *field_class, 
 		  int access, bool_t classloader_only)
 {
-  return FALSE;
+  return PR_FALSE;
 }
 
 /* awt_MToolkit_dispatchToWidget                                                    mozilla.o */
@@ -333,7 +333,7 @@ execute_java_constructor_vararg(struct execenv *ee,
 JRI_PUBLIC_API(bool_t)
 is_subclass_of(ClassClass *cb, ClassClass *dcb, ExecEnv *ee)
 {
-  return FALSE;
+  return PR_FALSE;
 }
 
 /* java_netscape_security_getPrincipals                                             libsecnav.so */
@@ -536,7 +536,7 @@ zip_close(zip_t *zip)
 JRI_PUBLIC_API(bool_t)
 zip_get(zip_t *zip, const char *fn, void HUGEP *buf, int32_t len)
 {
-  return FALSE;
+  return PR_FALSE;
 }
 
 /* zip_open                                                                         liblay.so */
@@ -554,5 +554,5 @@ zip_open(const char *fn)
 JRI_PUBLIC_API(bool_t)
 zip_stat(zip_t *zip, const char *fn, struct stat *sbuf)
 {
-  return FALSE;
+  return PR_FALSE;
 }
