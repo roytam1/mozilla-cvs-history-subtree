@@ -317,7 +317,7 @@ static void InitializeNGLayout() {
 }
 #endif /* MOZ_NGLAYOUT */
 
-extern "C" nsresult np_RegisterPluginMgr(void)
+extern "C" nsresult np_RegisterPluginMgr(void);
 extern "C" nsresult jvm_RegisterJVMMgr(void);
 
 static void

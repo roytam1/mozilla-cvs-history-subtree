@@ -699,6 +699,7 @@ NPPluginFuncs* FE_LoadPlugin(void* pluginType, NPNetscapeFuncs* pNavigatorFuncs,
             && (res = nsGetFactory(kIPluginIID, (nsIFactory**)&plugin, serviceMgr)) == NS_OK) {
 
             handle->userPlugin = plugin;
+            plugin->AddRef();   // the browser's reference
             pNPMgtBlock->pPluginFuncs = (NPPluginFuncs*)-1;   // something to say it's loaded, but != 0
 #ifdef LATER // XXX coming soon...
             // add the plugin directory if successful
@@ -814,8 +815,6 @@ void FE_UnloadPlugin(void* pluginType, struct _np_handle* handle)
     if (pNPMgtBlk->uRefCount == 0) {
         if (handle->userPlugin) {
             nsrefcnt cnt = handle->userPlugin->Release();
-            PR_ASSERT(cnt == 0);
-
 #if 0   // XXX later...
             // remove the plugin directory if successful
             JVM_RemoveFromClassPathRecursively(csPluginDir);
