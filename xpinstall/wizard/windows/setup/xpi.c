@@ -42,7 +42,7 @@ typedef BOOL    (WINAPI *SetDllPathProc)(const char*);
 static XpiInit          pfnXpiInit;
 static XpiInstall       pfnXpiInstall;
 static XpiExit          pfnXpiExit;
-static SetDllPathProc   pfnDllPathProc = NULL;
+static SetDllPathProc   pfnSetDllPath = NULL;
 
 static long             lFileCounter;
 static long             lBarberCounter;
