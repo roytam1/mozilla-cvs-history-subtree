@@ -790,6 +790,7 @@ NS_IMETHODIMP nsMsgDBView::CycleHeader(const PRUnichar * aColID, nsIDOMElement *
       printf("fix me\n");
       performSort = PR_FALSE;
     }
+    break;
   case 'd': // date
     sortType = nsMsgViewSortType::byDate;
     break;
