@@ -395,7 +395,7 @@ PREF_Init(char *filename)
 
 		}
 
-#if !defined(XP_PC) && !defined(XP_OS2)
+#if !defined(XP_PC) && !defined(XP_OS2) && !defined(XP_MAC)
 		ok = pref_InitInitialObjects();
 #endif
 	}
