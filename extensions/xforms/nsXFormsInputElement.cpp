@@ -268,11 +268,12 @@ nsXFormsInputElement::Refresh()
 
     if (mInstanceNode) {
       // Fetch our value from the instance data
-      nsCOMPtr<nsIDOM3Node> node = do_QueryInterface(mInstanceNode);
-      NS_ASSERTION(node, "unexpected QI failure");
+      nsCOMPtr<nsIDOMNode> childNode;
+      mInstanceNode->GetFirstChild(getter_AddRefs(childNode));
 
-      nsAutoString textContent;
-      node->GetTextContent(textContent);
+      nsAutoString nodeValue;
+      if (childNode)
+        childNode->GetNodeValue(nodeValue);
 
       nsCOMPtr<nsISchemaType> type = model->GetTypeForControl(this);
       nsCOMPtr<nsISchemaBuiltinType> biType = do_QueryInterface(type);
@@ -285,11 +286,11 @@ nsXFormsInputElement::Refresh()
         mInput->SetAttribute(NS_LITERAL_STRING("type"),
                              NS_LITERAL_STRING("checkbox"));
 
-        mInput->SetChecked(textContent.EqualsASCII("true") ||
-                           textContent.EqualsASCII("1"));
+        mInput->SetChecked(nodeValue.EqualsASCII("true") ||
+                           nodeValue.EqualsASCII("1"));
       } else {
         mInput->RemoveAttribute(NS_LITERAL_STRING("type"));
-        mInput->SetValue(textContent);
+        mInput->SetValue(nodeValue);
       }
     }
   }
