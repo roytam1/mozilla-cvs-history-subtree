@@ -73,6 +73,7 @@
 
 var gSelectedFolder;
 var gName;
+var gExpander;
 var gMenulist;
 var gBookmarksTree;
 var gGroup;
@@ -84,6 +85,7 @@ function Startup()
   initBMService();
   gName  = document.getElementById("name");
   gGroup = document.getElementById("addgroup");
+  gExpander = document.getElementById("expander");
   gMenulist = document.getElementById("select-menu");
   gBookmarksTree = document.getElementById("folder-tree");
   gName.value = window.arguments[0];
@@ -91,6 +93,7 @@ function Startup()
   gName.focus();
   onFieldInput();
   gSelectedFolder = RDF.GetResource(gMenulist.selectedItem.id);
+  gExpander.setAttribute("tooltiptext", gExpander.getAttribute("tooltiptextdown"));
 
   // fix no more persisted class attribute in old profiles
   var localStore = RDF.GetDataSource("rdf:local-store");
@@ -103,7 +106,7 @@ function Startup()
   if (rOldValue) {
     localStore.Unassert(rElement, rAttribute, rOldValue, true);
     localStore.Unassert(rDialog, rPersist, rElement, true);
-    document.getElementById("expander").setAttribute("class", "down");
+    gExpander.setAttribute("class", "down");
   }
 } 
 
@@ -205,7 +208,8 @@ function expandTree()
 {
   setFolderTreeHeight();
   var willCollapse = !gBookmarksTree.collapsed;
-  document.getElementById("expander").setAttribute("class",willCollapse?"down":"up");
+  gExpander.setAttribute("class",willCollapse?"down":"up");
+  gExpander.setAttribute("tooltiptext", gExpander.getAttribute("tooltiptext"+(willCollapse?"down":"up")));
   if (willCollapse)
     document.documentElement.buttons = "accept,cancel";
   else {
