@@ -54,7 +54,7 @@ class nsIXMLContentSink;
 { 0x6f4c2d0e, 0x2cdf, 0x11d3, {0xae, 0xf3, 0x00, 0x10, 0x83, 0x00, 0xff, 0x91} }
 
 /**
- * This interface represents a mediator between Gecko and an external
+ * This interface represents a mediator between raptor and an external
  * transformation engine.  The following process of document transformation 
  * is assumed : a source document, a stylesheet specifying the transform, 
  * and an output document are passed to a transformation engine.  All three
