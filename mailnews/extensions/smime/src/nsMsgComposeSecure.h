@@ -32,6 +32,7 @@
 #include "nsIHash.h"
 #include "nsICMSMessage.h"
 #include "nsIArray.h"
+#include "nsString.h"
 
 class nsIMsgCompFields;
 
