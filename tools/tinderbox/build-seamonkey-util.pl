@@ -1704,14 +1704,12 @@ sub BloatTest {
       print_log $bloat_string;
       
       # Report numbers to server.
-
-
       send_results_to_server($leaks, "--", $leaks_testname, ::hostname() );
       send_results_to_server($bloat, "--", $bloat_testname, ::hostname() );
 
     } else {
-      print_log "TinderboxPrint:Lk:<a title=\"refcnt Leaks\">" . PrintSize($leaks) . "B</a>\n\n";
-      print_log "TinderboxPrint:Bl:<a title=\"refcnt Bloat\">" . PrintSize($bloat) . "B</a>\n\n";
+      print_log "TinderboxPrint:Lk:<a title=\"" . $leaks_testname . "\">" . PrintSize($leaks) . "B</a>\n\n";
+      print_log "TinderboxPrint:Bl:<a title=\"" . $bloat_testname . "\">" . PrintSize($bloat) . "B</a>\n\n";
     }
 
     return 'success';
