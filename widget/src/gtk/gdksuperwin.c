@@ -121,6 +121,9 @@ gdk_superwin_new (GdkWindow *parent_window,
   superwin->shell_window = gdk_window_new (parent_window,
 					   &attributes, attributes_mask);
 
+  /* if we failed to create a window, die a horrible death */
+  g_assert(superwin->shell_window);
+
   /* Create the bin window for drawing */
 
   attributes.x = 0;
