@@ -20,6 +20,7 @@
  * Contributor(s): 
  *
  *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
+ *    Daniele Nicolodi <daniele@grinta.net> 
  *
  */
 
@@ -207,7 +208,41 @@ void nsSVGPathFrame::ConstructPath(nsASVGPathBuilder* pathBuilder)
       case nsIDOMSVGPathSeg::PATHSEG_CURVETO_QUADRATIC_ABS:
         absCoords = PR_TRUE;
       case nsIDOMSVGPathSeg::PATHSEG_CURVETO_QUADRATIC_REL:
-        NS_NOTYETIMPLEMENTED("write me!");
+        {
+          float x, y, x1, y1, x31, y31, x32, y32;
+          if (!absCoords) {
+            nsCOMPtr<nsIDOMSVGPathSegCurvetoQuadraticRel> curveseg = do_QueryInterface(segment);
+            NS_ASSERTION(curveseg, "interface not implemented");
+            curveseg->GetX(&x);
+            curveseg->GetY(&y);
+            curveseg->GetX1(&x1);
+            curveseg->GetY1(&y1);
+            x  += cx;
+            y  += cy;
+            x1 += cx;
+            y1 += cy;
+          } else {
+            nsCOMPtr<nsIDOMSVGPathSegCurvetoQuadraticAbs> curveseg = do_QueryInterface(segment);
+            NS_ASSERTION(curveseg, "interface not implemented");
+            curveseg->GetX(&x);
+            curveseg->GetY(&y);
+            curveseg->GetX1(&x1);
+            curveseg->GetY1(&y1);
+          }    
+
+          // conversion of quadratic bezier curve to cubic bezier curve:
+          x31 = cx + (x1 - cx) * 2 / 3;
+          y31 = cy + (y1 - cy) * 2 / 3;
+          x32 = x1 + (x - x1) / 3;
+          y32 = y1 + (y - y1) / 3;
+
+          cx  = x;
+          cy  = y;
+          cx1 = x1;
+          cy1 = y1;
+
+          pathBuilder->Curveto(x, y, x31, y31, x32, y32);
+        }
         break;
 
       case nsIDOMSVGPathSeg::PATHSEG_ARC_ABS:
@@ -299,8 +334,8 @@ void nsSVGPathFrame::ConstructPath(nsASVGPathBuilder* pathBuilder)
         {
           float x, y, x1, y1, x2, y2;
 
-          if (lastSegmentType == nsIDOMSVGPathSeg::PATHSEG_CURVETO_CUBIC_REL         ||
-              lastSegmentType == nsIDOMSVGPathSeg::PATHSEG_CURVETO_CUBIC_ABS         ||
+          if (lastSegmentType == nsIDOMSVGPathSeg::PATHSEG_CURVETO_CUBIC_REL        ||
+              lastSegmentType == nsIDOMSVGPathSeg::PATHSEG_CURVETO_CUBIC_ABS        ||
               lastSegmentType == nsIDOMSVGPathSeg::PATHSEG_CURVETO_CUBIC_SMOOTH_REL ||
               lastSegmentType == nsIDOMSVGPathSeg::PATHSEG_CURVETO_CUBIC_SMOOTH_ABS ) {
             // the first controlpoint is the reflection of the last one about the current point:
@@ -343,7 +378,50 @@ void nsSVGPathFrame::ConstructPath(nsASVGPathBuilder* pathBuilder)
       case nsIDOMSVGPathSeg::PATHSEG_CURVETO_QUADRATIC_SMOOTH_ABS:
         absCoords = PR_TRUE;
       case nsIDOMSVGPathSeg::PATHSEG_CURVETO_QUADRATIC_SMOOTH_REL:
-        NS_NOTYETIMPLEMENTED("write me!");
+        {
+          float x, y, x1, y1, x31, y31, x32, y32;
+
+          if (lastSegmentType == nsIDOMSVGPathSeg::PATHSEG_CURVETO_QUADRATIC_REL        ||
+              lastSegmentType == nsIDOMSVGPathSeg::PATHSEG_CURVETO_QUADRATIC_ABS        ||
+              lastSegmentType == nsIDOMSVGPathSeg::PATHSEG_CURVETO_QUADRATIC_SMOOTH_REL ||
+              lastSegmentType == nsIDOMSVGPathSeg::PATHSEG_CURVETO_QUADRATIC_SMOOTH_ABS ) {
+            // the first controlpoint is the reflection of the last one about the current point:
+            x1 = 2*cx - cx1;
+            y1 = 2*cy - cy1;
+          }
+          else {
+            // the first controlpoint is equal to the current point:
+            x1 = cx;
+            y1 = cy;
+          }
+          
+          if (!absCoords) {
+            nsCOMPtr<nsIDOMSVGPathSegCurvetoQuadraticSmoothRel> curveseg = do_QueryInterface(segment);
+            NS_ASSERTION(curveseg, "interface not implemented");
+            curveseg->GetX(&x);
+            curveseg->GetY(&y);
+            x  += cx;
+            y  += cy;
+          } else {
+            nsCOMPtr<nsIDOMSVGPathSegCurvetoQuadraticSmoothAbs> curveseg = do_QueryInterface(segment);
+            NS_ASSERTION(curveseg, "interface not implemented");
+            curveseg->GetX(&x);
+            curveseg->GetY(&y);
+          }            
+
+          // conversion of quadratic bezier curve to cubic bezier curve:
+          x31 = cx + (x1 - cx) * 2 / 3;
+          y31 = cy + (y1 - cy) * 2 / 3;
+          x32 = x1 + (x - x1) / 3;
+          y32 = y1 + (y - y1) / 3;
+
+          cx  = x;
+          cy  = y;
+          cx1 = x1;
+          cy1 = y1;
+
+          pathBuilder->Curveto(x, y, x31, y31, x32, y32);
+        }
         break;
 
       default:
