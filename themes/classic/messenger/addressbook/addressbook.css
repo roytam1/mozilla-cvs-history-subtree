@@ -37,51 +37,51 @@
 }
 
 #button-newcard {
-  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-normal.gif");
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/newcard-normal.gif");
 }
 
 #button-newcard:hover {
-  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-hover.gif");
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/newcard-hover.gif");
 } 
 
 #button-newcard:hover:active {
-  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-select.gif");
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/newcard-select.gif");
 }
 
 #button-newcard[disabled] {
-  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-disabled.gif");
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/newcard-disabled.gif");
 } 
 
 #button-newlist {
-  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-normal.gif");
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/newgrp-normal.gif");
 }
 
 #button-newlist:hover {
-  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-hover.gif");
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/newgrp-hover.gif");
 } 
 
 #button-newlist:hover:active {
-  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-select.gif");
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/newgrp-select.gif");
 }
 
 #button-newlist[disabled] {
-  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-disabled.gif");
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/newgrp-disabled.gif");
 } 
 
 #button-editcard {
-  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-normal.gif");
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/editcard-normal.gif");
 }
 
 #button-editcard:hover {
-  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-hover.gif");
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/editcard-hover.gif");
 } 
 
 #button-editcard:hover:active {
-  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-select.gif");
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/editcard-select.gif");
 }
 
 #button-editcard[disabled] {
-  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-disabled.gif");
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/editcard-disabled.gif");
 } 
 
 #button-delete {
@@ -242,4 +242,12 @@ html|p {
   -moz-border-bottom-colors: #C9F4FF #75BAD9;
   -moz-border-left-colors: #434240 #CBCDFF;
   border-right: none;
+}
+
+#clear {
+  -moz-border-top-colors: #86B3C8 #3A6E84;
+  -moz-border-right-colors: #B7ECFC #31718D;
+  -moz-border-bottom-colors: #C9F3FF #23759A;
+  -moz-border-left-colors: #89CAE8 #31718D;
+  background: url("chrome://global/skin/icons/clear-button-bg.gif");
 }

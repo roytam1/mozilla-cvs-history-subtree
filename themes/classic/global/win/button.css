@@ -35,10 +35,10 @@ button {
   min-width: 6.3em;
   border: 2px solid;
   -moz-border-radius: 4px;
-  -moz-border-top-colors: #86B3C8 #3A6E84;
-  -moz-border-right-colors: #B7ECFC #31718D;
-  -moz-border-bottom-colors: #C9F3FF #23759A;
-  -moz-border-left-colors: #89CAE8 #31718D;
+  -moz-border-top-colors: #176391 #0D364E;
+  -moz-border-right-colors: #1B81B9 #0D364E;
+  -moz-border-bottom-colors: #1E86C7 #0D364E;
+  -moz-border-left-colors: #1A6EA2 #0D364E;
   background: url("chrome://global/skin/icons/button-bg.gif");
   color: #000000;
 }
@@ -70,10 +70,23 @@ button[default="true"] {
 
 /* .......... active/open/checked state .......... */
 
+button:hover {
+  -moz-border-top-colors: #84B1CE #396D83;
+  -moz-border-right-colors: #B6EFFF #31718C;
+  -moz-border-bottom-colors: #CEF2FE #21749C;
+  -moz-border-left-colors: #8CCAEF #30728C;
+  background: url("chrome://global/skin/icons/button-bg-hov.gif");
+}
+
 button:hover:active,
 button[open="true"],
 button[checked="true"] {
-
+  -moz-border-top-colors: #166391 #0C2130;
+  -moz-border-right-colors: #186EA1 #0C2030;
+  -moz-border-bottom-colors: #166391 #0C2130;
+  -moz-border-left-colors: #166391 #0C2130;
+  background: url("chrome://global/skin/icons/button-bg-act.gif");
+  color: #FFFFFF;
 }
 
 button:hover:active > .button-box,

@@ -93,6 +93,14 @@
   padding: 3px;
 }
 
+#clearButton {
+  -moz-border-top-colors: #86B3C8 #3A6E84;
+  -moz-border-right-colors: #B7ECFC #31718D;
+  -moz-border-bottom-colors: #C9F3FF #23759A;
+  -moz-border-left-colors: #89CAE8 #31718D;
+  background: url("chrome://global/skin/icons/clear-button-bg.gif");
+}
+
 #folderTree > .tree-rows > .tree-bodybox,
 #threadTree > .tree-rows > .tree-bodybox {
   
