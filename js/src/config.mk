@@ -63,12 +63,30 @@ SO_SUFFIX = so
 
 NS_USE_NATIVE = 1
 
+# Java stuff
+CLASSDIR     = $(DEPTH)/liveconnect/classes
+JAVA_CLASSES = $(patsubst %.java,%.class,$(JAVA_SRCS))
+TARGETS     += $(addprefix $(CLASSDIR)/$(OBJDIR)/$(JARPATH)/, $(JAVA_CLASSES))
+JAVAC        = $(JDK)/bin/javac
+JAVAC_FLAGS  = -classpath "$(CLASSPATH)" -d $(CLASSDIR)/$(OBJDIR)
+ifeq ($(OS_ARCH), WINNT)
+  SEP        = ;
+else
+  SEP        = :
+endif
+CLASSPATH    = $(JDK)/lib/classes.zip$(SEP)$(CLASSDIR)/$(OBJDIR)
+
 include $(DEPTH)/config/$(OS_CONFIG).mk
 
 # Name of the binary code directories
+ifdef BUILD_IDG
+OBJDIR          = $(OS_CONFIG)$(OBJDIR_TAG).OBJD
+else
 OBJDIR          = $(OS_CONFIG)$(OBJDIR_TAG).OBJ
+endif
 VPATH           = $(OBJDIR)
 
 # Automatic make dependencies file
 DEPENDENCIES    = $(OBJDIR)/.md
 
+LCJAR = js15lc30.jar

@@ -76,6 +76,7 @@ ifeq ($(OS_ARCH), WINNT)
     SHIP_LIBS += jsj.dll jsj.lib
   endif
 endif
+SHIP_LIBS     += $(LCJAR)
 SHIP_LIBS     := $(addprefix $(SHIP_DIST)/lib/, $(SHIP_LIBS))
 
 SHIP_INCS      = js*.h prmjtime.h resource.h *.msg *.tbl
@@ -96,7 +97,11 @@ SHIP_BINS     := $(addprefix $(SHIP_DIST)/bin/, $(SHIP_BINS))
 ifdef BUILD_OPT
   JSREFJAR = jsref_opt.jar
 else
+ifdef BUILD_IDG
+  JSREFJAR = jsref_idg.jar
+else
   JSREFJAR = jsref_dbg.jar
+endif
 endif
 
 ship:
