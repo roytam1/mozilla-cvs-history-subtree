@@ -153,7 +153,12 @@ var BookmarksMenu = {
     if (!aTarget.hasChildNodes())
       return;
 
-    if (aTarget.lastChild.id == "empty-menuitem")
+    // if the user drags to the menu while it's open (i.e. on the toolbar),
+    // the bookmark gets added either before or after the Empty menu item
+    // before the menu is hidden.  So we need to test both first and last.
+    if (aTarget.firstChild.id == "empty-menuitem")
+      aTarget.removeChild(aTarget.firstChild);
+    else if (aTarget.lastChild.id == "empty-menuitem")
       aTarget.removeChild(aTarget.lastChild);
   },
 
