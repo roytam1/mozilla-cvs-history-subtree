@@ -550,12 +550,14 @@ txStylesheetCompilerState::addInstruction(nsAutoPtr<txInstruction> aInstruction)
 {
     NS_PRECONDITION(mNextInstrPtr, "adding instruction outside container");
 
+    txInstruction* newInstr = aInstruction;
+
     *mNextInstrPtr = aInstruction.forget();
-    mNextInstrPtr = &aInstruction->mNext;
+    mNextInstrPtr = &newInstr->mNext;
     
     PRInt32 i, count = mGotoTargetPointers.Count();
     for (i = 0; i < count; ++i) {
-        *(txInstruction**)mGotoTargetPointers[i] = aInstruction;
+        *(txInstruction**)mGotoTargetPointers[i] = newInstr;
     }
     mGotoTargetPointers.Clear();
 
@@ -565,7 +567,7 @@ txStylesheetCompilerState::addInstruction(nsAutoPtr<txInstruction> aInstruction)
 nsresult
 txStylesheetCompilerState::loadIncludedStylesheet(const nsAString& aURI)
 {
-    nsAutoPtr<txToplevelItem> item = new txDummyItem;
+    nsAutoPtr<txToplevelItem> item(new txDummyItem);
     NS_ENSURE_TRUE(item, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = mToplevelIterator.addBefore(item);

@@ -707,7 +707,7 @@ txPushNewContext::SortKey::SortKey(nsAutoPtr<Expr> aSelectExpr,
 nsresult
 txPushParams::execute(txExecutionState& aEs)
 {
-    return aEs.pushParamMap();;
+    return aEs.pushParamMap();
 }
 
 nsresult

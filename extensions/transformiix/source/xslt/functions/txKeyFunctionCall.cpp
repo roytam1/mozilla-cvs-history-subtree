@@ -287,7 +287,7 @@ PRBool txXSLKey::addKey(nsAutoPtr<txPattern> aMatch, nsAutoPtr<Expr> aUse)
     if (!aMatch || !aUse)
         return PR_FALSE;
 
-    nsAutoPtr<Key> key = new Key;
+    nsAutoPtr<Key> key(new Key);
     if (!key)
         return PR_FALSE;
 

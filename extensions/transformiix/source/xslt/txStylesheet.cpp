@@ -66,10 +66,10 @@ txStylesheet::init()
     *instrp = new txPushParams;
     NS_ENSURE_TRUE(*instrp, NS_ERROR_OUT_OF_MEMORY);
 
-    nsAutoPtr<txNodeTest> nt = new txNodeTypeTest(txNodeTypeTest::NODE_TYPE);
+    nsAutoPtr<txNodeTest> nt(new txNodeTypeTest(txNodeTypeTest::NODE_TYPE));
     NS_ENSURE_TRUE(nt, NS_ERROR_OUT_OF_MEMORY);
 
-    nsAutoPtr<Expr> nodeExpr = new LocationStep(nt, LocationStep::CHILD_AXIS);
+    nsAutoPtr<Expr> nodeExpr(new LocationStep(nt, LocationStep::CHILD_AXIS));
     NS_ENSURE_TRUE(nodeExpr, NS_ERROR_OUT_OF_MEMORY);
 
     instrp = &(*instrp)->mNext;
@@ -371,7 +371,7 @@ txStylesheet::doneCompiling()
     }
 
     if (!mDecimalFormats.get(txExpandedName())) {
-        nsAutoPtr<txDecimalFormat> format = new txDecimalFormat;
+        nsAutoPtr<txDecimalFormat> format(new txDecimalFormat);
         NS_ENSURE_TRUE(format, NS_ERROR_OUT_OF_MEMORY);
         
         rv = mDecimalFormats.add(txExpandedName(), format);

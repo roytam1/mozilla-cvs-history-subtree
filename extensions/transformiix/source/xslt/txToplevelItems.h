@@ -136,7 +136,7 @@ public:
         return txToplevelItem::stripSpace;
     }
 
-    addStripSpaceTest(txStripSpaceTest* aStripSpaceTest);
+    nsresult addStripSpaceTest(txStripSpaceTest* aStripSpaceTest);
 
     nsVoidArray mStripSpaceTests;
 };

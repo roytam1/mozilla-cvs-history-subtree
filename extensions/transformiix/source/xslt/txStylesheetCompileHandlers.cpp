@@ -939,13 +939,12 @@ txFnStartTemplate(PRInt32 aNamespaceID,
     nsAutoPtr<txTemplateItem> templ(new txTemplateItem(match, name, mode, prio));
     NS_ENSURE_TRUE(templ, NS_ERROR_OUT_OF_MEMORY);
 
+    aState.openInstructionContainer(templ);
     rv = aState.addToplevelItem(templ);
     NS_ENSURE_SUCCESS(rv, rv);
     
     templ.forget();
     
-    aState.openInstructionContainer(templ);
-
     return NS_OK;
 }
 

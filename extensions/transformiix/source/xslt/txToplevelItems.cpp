@@ -49,6 +49,7 @@ txStripSpaceItem::~txStripSpaceItem()
     }
 }
 
+nsresult
 txStripSpaceItem::addStripSpaceTest(txStripSpaceTest* aStripSpaceTest)
 {
     if (!mStripSpaceTests.AppendElement(aStripSpaceTest)) {
