@@ -26,6 +26,7 @@
 #include "jsapi.h"
 #include "nsISOAPParameter.h"
 #include "nsISOAPType.h"
+#include "nsSOAPTypeRegistry.h"
 #include "nsISOAPMarshaller.h"
 #include "nsISOAPUnmarshaller.h"
 #include "nsIServiceManager.h"
@@ -41,7 +42,7 @@
 //
 /////////////////////////////////////////////
   
-nsSOAPMessage::nsSOAPMessage()
+nsSOAPMessage::nsSOAPMessage(): mTypes(new nsSOAPTypeRegistry())
 {
   NS_INIT_ISUPPORTS();
   mStatus = 0;
@@ -185,14 +186,14 @@ NS_IMETHODIMP nsSOAPMessage::SetTargetObjectURI(const nsAReadableString & aTarge
 NS_IMETHODIMP nsSOAPMessage::MarshallParameters(nsISupportsArray *SOAPParameters)
 {
   nsCOMPtr<nsISupports> ignore;
-  return mTypes->Marshall(this, SOAPParameters, nsSOAPUtils::kEmpty, nsSOAPUtils::kSOAPCallType, getter_AddRefs(ignore));
+  return mTypes->Marshall(this, SOAPParameters, mEncodingStyleURI, nsSOAPUtils::kSOAPCallType, getter_AddRefs(ignore));
 }
 
 /* nsISupportsArray unmarshallParameters (); */
 NS_IMETHODIMP nsSOAPMessage::UnmarshallParameters(nsISupportsArray **_retval)
 {
   nsCOMPtr<nsISupports> result;
-  nsresult rc = mTypes->Unmarshall(this, mMessage, nsSOAPUtils::kEmpty, nsSOAPUtils::kSOAPCallType, getter_AddRefs(result));
+  nsresult rc = mTypes->Unmarshall(this, mMessage, mEncodingStyleURI, nsSOAPUtils::kSOAPCallType, getter_AddRefs(result));
   if (result)
     return result->QueryInterface(NS_GET_IID(nsISupportsArray), (void**)_retval);
   return rc;

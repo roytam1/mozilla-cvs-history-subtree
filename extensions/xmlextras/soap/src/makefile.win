@@ -35,6 +35,8 @@ CPPSRCS=					\
 	nsSOAPParameter.cpp				\
 	nsSOAPResponse.cpp				\
 	nsSOAPUtils.cpp					\
+	nsSOAPType.cpp					\
+	nsSOAPTypeRegistry.cpp				\
 	$(NULL)
 
 

@@ -39,6 +39,8 @@ CPPSRCS	= 				\
 		nsSOAPParameter.cpp	\
 		nsSOAPResponse.cpp	\
 		nsSOAPUtils.cpp		\
+		nsSOAPType.cpp		\
+		nsSOAPTypeRegistry.cpp		\
 		$(NULL)
 
 # we don't want the shared lib, but we want to force the creation of a

@@ -190,79 +190,6 @@ NS_IMETHODIMP nsSOAPParameter::SetAsInterface(const nsIID & aIID, nsISupports *a
     return NS_OK;
 }
 
-#if 0
-/* [noscript] void setValueAndType (in nsISupports value, in long type); */
-NS_IMETHODIMP nsSOAPParameter::SetValueAndType(nsISupports *value, PRInt32 type)
-{
-  mValue = value;
-  mType = type;
-  mJSValue = nsnull;
-  return NS_OK;
-}
-
-/* [noscript] void getValueAndType (out nsISupports value, out long type); */
-NS_IMETHODIMP nsSOAPParameter::GetValueAndType(nsISupports **value, PRInt32 *type)
-{
-  NS_ENSURE_ARG_POINTER(value);
-  NS_ENSURE_ARG_POINTER(type);
-
-  *value = mValue;
-  NS_IF_ADDREF(*value);
-  *type = mType;
-
-  return NS_OK;
-}
-
-/* attribute nsISupports value; */
-// We can't use this attribute for script calls without a variant type
-// in xpidl. For now, use nsIXPCScriptable to implement.
-NS_IMETHODIMP nsSOAPParameter::GetValue(nsISupports * *aValue)
-{
-  NS_ENSURE_ARG_POINTER(aValue);
-
-  *aValue = mValue;
-  NS_IF_ADDREF(*aValue);
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSOAPParameter::SetValue(nsISupports* value)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsSOAPParameter::GetValue(JSContext* aContext,
-                                        jsval* aValue)
-{
-  return nsSOAPUtils::ConvertValueToJSVal(aContext,
-                                          mValue,
-                                          mJSValue,
-                                          mType,
-                                          aValue);
-}
-
-NS_IMETHODIMP nsSOAPParameter::SetValue(JSContext* aContext,
-                                        jsval aValue)
-{
-  return nsSOAPUtils::ConvertJSValToValue(aContext,
-                                          aValue,
-                                          getter_AddRefs(mValue),
-                                          &mJSValue,
-                                          &mType);
-}
-
-/* [noscript] readonly attribute JSObjectPtr JSValue; */
-NS_IMETHODIMP nsSOAPParameter::GetJSValue(JSObject * *aJSValue)
-{
-  NS_ENSURE_ARG_POINTER(aJSValue);
-  *aJSValue = mJSValue;
-  
-  return NS_OK;
-}
-
-#endif
-
 NS_IMETHODIMP 
 nsSOAPParameter::Initialize(JSContext *cx, JSObject *obj, 
                             PRUint32 argc, jsval *argv)
@@ -274,14 +201,10 @@ nsSOAPParameter::Initialize(JSContext *cx, JSObject *obj,
       if (argc > 1) {
         nsCOMPtr<nsISupports> value;
         nsAutoString type;
-#if 0
         nsresult rc = nsSOAPUtils::ConvertJSValToValue(cx,
                                           argv[1],
                                           getter_AddRefs(value),
                                           type);
-#else
-        nsresult rc = 0;
-#endif
         mType = type;
         mValue = value;
         return rc;
@@ -317,13 +240,14 @@ nsSOAPParameter::GetProperty(JSContext *cx, JSObject *obj,
   jsval val;
   if (JS_IdToValue(cx, id, &val)) {
     if (JSVAL_IS_STRING(val)) {
-#if 0
       JSString* str = JSVAL_TO_STRING(val);
       char* name = JS_GetStringBytes(str);
       if (nsCRT::strcmp(name, "value") == 0) {
-        return GetValue(cx, vp);
+        return nsSOAPUtils::ConvertValueToJSVal(cx,
+                                          mValue,
+                                          mType,
+                                          vp);
       }
-#endif
     }
   }
   return NS_OK;
@@ -339,13 +263,14 @@ nsSOAPParameter::SetProperty(JSContext *cx, JSObject *obj, jsid id,
   jsval val;
   if (JS_IdToValue(cx, id, &val)) {
     if (JSVAL_IS_STRING(val)) {
-#if 0
       JSString* str = JSVAL_TO_STRING(val);
       char* name = JS_GetStringBytes(str);
       if (nsCRT::strcmp(name, "value") == 0) {
-        return SetValue(cx, *vp);
+        return nsSOAPUtils::ConvertJSValToValue(cx,
+                                          *vp,
+                                          getter_AddRefs(mValue),
+                                          mType);
       }
-#endif
     }
   }
   return NS_OK;
