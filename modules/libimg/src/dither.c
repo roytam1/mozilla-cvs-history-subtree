@@ -16,9 +16,6 @@
  * Reserved.
  */
 
-/*
-#include "xp.h"
-*/
 #include "if.h"
 #include "il.h"
 
@@ -56,10 +53,10 @@ il_setup_quantize(void)
 		return TRUE;
 
 	/* lost for ever */
-	table = (JSAMPLE *)XP_ALLOC((5 * (MAXJSAMPLE+1) + CENTERJSAMPLE) * SIZEOF(JSAMPLE));
+	table = (JSAMPLE *)PR_MALLOC((5 * (MAXJSAMPLE+1) + CENTERJSAMPLE) * SIZEOF(JSAMPLE));
 	if (!table) 
 	{
-		XP_TRACE(("il: range limit table lossage"));
+		ILTRACE(1,("il: range limit table lossage"));
 		return FALSE;
 	}
 
@@ -101,7 +98,7 @@ il_init_quantize(il_container *ic)
     if (ic->quantize)
         il_free_quantize(ic);
 
-    ic->quantize = XP_NEW_ZAP(my_cquantize);
+    ic->quantize = PR_NEWZAP(my_cquantize);
     if (!ic->quantize) 
 	{
 	loser:
@@ -113,7 +110,7 @@ il_init_quantize(il_container *ic)
     arraysize = (size_t) ((ic->image->header.width + 2) * SIZEOF(FSERROR));
     for (i = 0; i < 3; i++) 
 	{
-		cquantize->fserrors[i] = (FSERRPTR) XP_CALLOC(1, arraysize);
+		cquantize->fserrors[i] = (FSERRPTR) PR_Calloc(1, arraysize);
 		if (!cquantize->fserrors[i]) 
 		{
 			/* ran out of memory part way thru */
@@ -121,13 +118,13 @@ il_init_quantize(il_container *ic)
 			{
 				if (cquantize->fserrors[j])
 				{
-					XP_FREE(cquantize->fserrors[j]);
+					PR_FREEIF(cquantize->fserrors[j]);
 					cquantize->fserrors[j]=0;
 				}
 			}
 			if (cquantize)
 			{
-				XP_FREE(cquantize);
+				PR_FREEIF(cquantize);
 				ic->quantize = 0;
 			}
 			goto loser;
@@ -151,18 +148,18 @@ il_free_quantize(il_container *ic)
     {
 #ifdef DEBUG
 		if (il_debug > 5) 
-			XP_TRACE(("il: 0x%x: free quantize", ic));
+			ILTRACE(1,("il: 0x%x: free quantize", ic));
 #endif
 		for (i = 0; i < 3; i++) 
 		{
 			if (cquantize->fserrors[i]) 
 			{
-				XP_FREE(cquantize->fserrors[i]);
+				PR_FREEIF(cquantize->fserrors[i]);
 				cquantize->fserrors[i] = 0;
 			}
 		}
 
-		XP_FREE(cquantize);
+		PR_FREEIF(cquantize);
 		ic->quantize = 0;
     }
 }
@@ -198,7 +195,7 @@ il_quantize_fs_dither(il_container *ic, const uint8 *mask,
     IL_ColorMap *cmap = &ic->image->header.color_space->cmap;
     IL_RGB *map = cmap->map;              /* The colormap array. */
     IL_RGB *map_entry;                    /* Current entry in the colormap. */
-    uint8 *lookup_table = cmap->table;    /* Lookup table for the colormap. */
+    uint8 *lookup_table = (uint8 *)cmap->table;  /* Lookup table for the colormap. */
     const uint8 *maskp;
     uint8 map_index;
     int dir;                   /* 1 for left-to-right, -1 for right-to-left */

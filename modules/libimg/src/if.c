@@ -20,20 +20,23 @@
  *   if.c --- Top-level image library routines
  */
 
-/*
-#include "xp.h"
-*/
+
 #include "if.h"
 
 #include "merrors.h"
-#include "shist.h"
+#ifdef STANDALONE_IMAGE_LIB
+#include "xpcompat.h"
+#else
 #include "xpgetstr.h"
+#endif /* STANDALONE_IMAGE_LIB */
 
-#include "il_strm.h"            /* Stream converters. */
+#include "il_strm.h"
 
+PR_BEGIN_EXTERN_C
 extern int XP_MSG_IMAGE_PIXELS;
 extern int MK_UNABLE_TO_LOCATE_FILE;
 extern int MK_OUT_OF_MEMORY;
+PR_END_EXTERN_C
 
 #define HOWMANY(x, r)     (((x) + ((r) - 1)) / (r))
 #define ROUNDUP(x, r)     (HOWMANY(x, r) * (r))
@@ -69,17 +72,17 @@ il_description_notify(il_container *ic)
 
     switch (ic->type) {
         /* XXX - This needs to be fixed for Image Plugins. */
-    case IL_GIF : XP_STRCPY(buf2, "GIF"); break;
-    case IL_XBM : XP_STRCPY(buf2, "XBM"); break;
-    case IL_JPEG : XP_STRCPY(buf2, "JPEG"); break;
-    case IL_PNG : XP_STRCPY(buf2, "PNG"); break;
+    case IL_GIF : PL_strcpy(buf2, "GIF"); break;
+    case IL_XBM : PL_strcpy(buf2, "XBM"); break;
+    case IL_JPEG : PL_strcpy(buf2, "JPEG"); break;
+    case IL_PNG : PL_strcpy(buf2, "PNG"); break;
 
-    default : XP_STRCPY(buf2, "");
+    default : PL_strcpy(buf2, "");
     }
     XP_SPRINTF(buf, XP_GetString(XP_MSG_IMAGE_PIXELS), buf2,
                img_header->width, img_header->height);
 
-	XP_ASSERT(ic->clients);
+	PR_ASSERT(ic->clients);
 	for (image_req = ic->clients; image_req; image_req = image_req->next) {
         if (image_req->is_view_image) {
             message_data.image_instance = image_req;
@@ -99,7 +102,7 @@ il_dimensions_notify(il_container *ic, int dest_width, int dest_height)
     
     XP_BZERO(&message_data, sizeof(IL_MessageData));
 
-	XP_ASSERT(ic->clients);
+	PR_ASSERT(ic->clients);
     for (image_req = ic->clients; image_req; image_req = image_req->next) {
         message_data.image_instance = image_req;
         message_data.width = dest_width;   /* Note: these are stored as */
@@ -117,7 +120,7 @@ il_transparent_notify(il_container *ic)
     
     XP_BZERO(&message_data, sizeof(IL_MessageData));
 
-	XP_ASSERT(ic->clients);
+	PR_ASSERT(ic->clients);
     for (image_req = ic->clients; image_req; image_req = image_req->next) {
         message_data.image_instance = image_req;
         XP_NotifyObservers(image_req->obs_list, IL_IS_TRANSPARENT,
@@ -140,7 +143,7 @@ il_pixmap_update_notify(il_container *ic)
     update_rect->width = (uint16)ic->image->header.width;
     update_rect->height = (uint16)(ic->update_end_row-ic->update_start_row+1);
 
-	XP_ASSERT(ic->clients);
+	PR_ASSERT(ic->clients);
     for(image_req = ic->clients; image_req; image_req = image_req->next) {
         /* The user aborted the image loading.  Don't display any more image
            data */
@@ -162,7 +165,7 @@ il_image_complete_notify(il_container *ic)
     
     XP_BZERO(&message_data, sizeof(IL_MessageData));
 
-	XP_ASSERT(ic->clients);
+	PR_ASSERT(ic->clients);
     for (image_req = ic->clients; image_req; image_req = image_req->next) {
         message_data.image_instance = image_req;
         XP_NotifyObservers(image_req->obs_list, IL_IMAGE_COMPLETE,
@@ -180,7 +183,7 @@ il_frame_complete_notify(il_container *ic)
     
     XP_BZERO(&message_data, sizeof(IL_MessageData));
 
-	XP_ASSERT(ic->clients);
+	PR_ASSERT(ic->clients);
     for (image_req = ic->clients; image_req; image_req = image_req->next) {
         message_data.image_instance = image_req;
         XP_NotifyObservers(image_req->obs_list, IL_FRAME_COMPLETE,
@@ -236,7 +239,7 @@ il_progress_notify(il_container *ic)
     }
 
     if (percent_done != last_percent_done) {
-        XP_ASSERT(ic->clients);
+        PR_ASSERT(ic->clients);
         for (image_req = ic->clients; image_req; image_req = image_req->next) {
             if (image_req->is_view_image) { /* XXXM12N Eliminate this test? */
                 message_data.image_instance = image_req;
@@ -263,7 +266,7 @@ il_cache_return_notify(IL_ImageReq *image_req)
     message_data.image_instance = image_req;
 
     /* This function should only be called if the dimensions are known. */
-    XP_ASSERT(ic->state >= IC_SIZED);
+    PR_ASSERT(ic->state >= IC_SIZED);
 
     /* First notify observers of the image dimensions. */
     message_data.width = ic->dest_width;   /* Note: these are stored as */
@@ -331,8 +334,13 @@ il_icon_notify(IL_ImageReq *image_req, int icon_number,
     XP_BZERO(&message_data, sizeof(IL_MessageData));
   
     /* Obtain the dimensions of the icon. */
+#ifdef STANDALONE_IMAGE_LIB
+    img_cx->img_cb->GetIconDimensions(img_cx->dpy_cx, &icon_width,
+                                      &icon_height, icon_number);
+#else
     IMGCBIF_GetIconDimensions(img_cx->img_cb, img_cx->dpy_cx, &icon_width,
                               &icon_height, icon_number);
+#endif /* STANDALONE_IMAGE_LIB */
 
     /* Fill in the message data and notify observers. */
     message_data.image_instance = image_req;
@@ -371,12 +379,11 @@ il_init_scaling(il_container *ic)
     int scaled_width = ic->image->header.width;
         
     /* Allocate temporary scale space */
-    if (scaled_width != ic->src_header->width)
+    if (scaled_width != (int)ic->src_header->width)
 	{
-        if (ic->scalerow)
-            XP_FREE(ic->scalerow);
+        PR_FREEIF(ic->scalerow);
         
-        if (!(ic->scalerow = (unsigned char *)XP_ALLOC(scaled_width * 3)))
+        if (!(ic->scalerow = (unsigned char *)PR_MALLOC(scaled_width * 3)))
 		{
             ILTRACE(0,("il: MEM scale row"));
             return MK_OUT_OF_MEMORY;
@@ -395,7 +402,7 @@ il_init_image_transparent_pixel(il_container *ic)
     IL_IRGB *img_trans_pixel = ic->image->header.transparent_pixel;
     
     if (!img_trans_pixel) {
-        img_trans_pixel = XP_NEW_ZAP(IL_IRGB);
+        img_trans_pixel = PR_NEWZAP(IL_IRGB);
         if (!img_trans_pixel)
             return FALSE;
 
@@ -419,8 +426,7 @@ il_destroy_image_transparent_pixel(il_container *ic)
 {
     NI_PixmapHeader *img_header = &ic->image->header;
 
-    if (img_header->transparent_pixel)
-        XP_FREE(img_header->transparent_pixel);
+    PR_FREEIF(img_header->transparent_pixel);
     img_header->transparent_pixel = NULL;
 }
 
@@ -442,8 +448,7 @@ il_size(il_container *ic)
     NI_PixmapHeader *src_header = ic->src_header; /* Source image header. */
     NI_PixmapHeader *img_header = &ic->image->header; /* Destination image
                                                          header. */
-    uint32 req_w=0, req_h=0;  /* store requested values for printing.*/
-
+    
     /* Get the dimensions of the source image. */
     src_width = src_header->width;
     src_height = src_header->height;
@@ -459,13 +464,6 @@ il_size(il_container *ic)
 	ic->state = IC_SIZED;
 	if (ic->state == IC_MULTI)
 		return 0;
-
-        if(ic->display_type == IL_Printer){
-		req_w = ic->dest_width;
-		req_h = ic->dest_height;
-		ic->dest_width = 0;   /*to decode natural size*/
-		ic->dest_height = 0;
-	}
 
     /* For now, we don't allow an image to change output size on the
      * fly, but we do allow the source image size to change, and thus
@@ -515,7 +513,7 @@ il_size(il_container *ic)
     if (ic->dest_height == 0) ic->dest_height = 1;
 
     /* Determine if the image will be displayed at its natural size. */
-    if (ic->dest_width == src_width && ic->dest_height == src_height)
+    if (ic->dest_width == (int)src_width && ic->dest_height == (int)src_height)
         ic->natural_size = PR_TRUE;
 
     /* Check that the target image dimensions are reasonable. */
@@ -540,7 +538,7 @@ il_size(il_container *ic)
         if (!ic->mask) {
             NI_PixmapHeader *mask_header;
     
-            if (!(ic->mask = XP_NEW_ZAP(IL_Pixmap))) {
+            if (!(ic->mask = PR_NEWZAP(IL_Pixmap))) {
                 return MK_OUT_OF_MEMORY;
             }
 
@@ -591,8 +589,13 @@ il_size(il_container *ic)
 
     /* If the display front-end doesn't support scaling, IMGCBIF_NewPixmap will
        set the image and mask dimensions to scaled_width and scaled_height. */
+#ifdef STANDALONE_IMAGE_LIB
+    img_cx->img_cb->NewPixmap(img_cx->dpy_cx, ic->dest_width,
+                              ic->dest_height, ic->image, ic->mask);
+#else
     IMGCBIF_NewPixmap(img_cx->img_cb, img_cx->dpy_cx, ic->dest_width,
                       ic->dest_height, ic->image, ic->mask);
+#endif /* STANDALONE_IMAGE_LIB */
     
 	if (!ic->image->bits)
 		return MK_OUT_OF_MEMORY;
@@ -611,13 +614,23 @@ il_size(il_container *ic)
         NI_PixmapHeader *mask_header = &ic->mask->header;
         uint32 mask_size = mask_header->widthBytes * mask_header->height;
 
+#ifdef STANDALONE_IMAGE_LIB
+        img_cx->img_cb->ControlPixmapBits(img_cx->dpy_cx, ic->mask,
+                                          IL_LOCK_BITS);
+#else
         IMGCBIF_ControlPixmapBits(img_cx->img_cb, img_cx->dpy_cx, ic->mask,
                                   IL_LOCK_BITS);
+#endif /* STANDALONE_IMAGE_LIB */
                                 
         memset (ic->mask->bits, ~0, mask_size);
         
+#ifdef STANDALONE_IMAGE_LIB
+        img_cx->img_cb->ControlPixmapBits(img_cx->dpy_cx, ic->mask,
+                                          IL_UNLOCK_BITS);
+#else
         IMGCBIF_ControlPixmapBits(img_cx->img_cb, img_cx->dpy_cx, ic->mask,
                                   IL_UNLOCK_BITS);
+#endif /* STANDALONE_IMAGE_LIB */
     }
     
     if ((status = il_init_scaling(ic)) < 0)
@@ -631,11 +644,6 @@ il_size(il_container *ic)
 			ILTRACE(0,("il: MEM il_init_quantize"));
 			return MK_OUT_OF_MEMORY;
 		}
-	}
-
-        if((ic->display_type == IL_Printer)&& (req_w || req_h)){
-		ic->dest_width = req_w;
-		ic->dest_height = req_h;
 	}
 
 	return 0;
@@ -666,9 +674,8 @@ il_size(il_container *ic)
 #endif
 
 unsigned int
-il_write_ready(NET_StreamClass *stream)
+IL_StreamWriteReady(il_container *ic)
 {
-	il_container *ic = (il_container *)stream->data_object;
     uint request_size = 1;
 
     if (ic->write_ready)
@@ -753,16 +760,15 @@ il_type(int suspected_type, const char *buf, int32 len)
 /*
  *	determine what kind of image data we are dealing with
  */
-int
+IL_IMPLEMENT(int)
 IL_Type(const char *buf, int32 len)
 {
     return il_type(IL_UNKNOWN, buf, len);
 }
 
-static int 
-il_write(NET_StreamClass *stream, const unsigned char *str, int32 len)
+int 
+IL_StreamWrite(il_container *ic, const unsigned char *str, int32 len)
 {
-    il_container *ic = (il_container *)stream->data_object;
 	int err = 0;
 
     ILTRACE(4, ("il: write with %5d bytes for %s\n", len, ic->url_address));
@@ -795,15 +801,12 @@ il_write(NET_StreamClass *stream, const unsigned char *str, int32 len)
 
 
 int
-il_first_write(NET_StreamClass *stream, const unsigned char *str, int32 len)
+IL_StreamFirstWrite(il_container *ic, const unsigned char *str, int32 len)
 {
-	void *dobj=stream->data_object;
-	il_container *ic = (il_container *)dobj;
 	int (*init)(il_container *);
 
-	XP_ASSERT(ic);
-	XP_ASSERT(dobj == ic->stream->data_object);
-	XP_ASSERT(ic->image);
+	PR_ASSERT(ic);
+	PR_ASSERT(ic->image);
 
     /* If URL redirection occurs, the url stored in the
     image container is the redirect url not the image file url.
@@ -811,12 +814,12 @@ il_first_write(NET_StreamClass *stream, const unsigned char *str, int32 len)
     file name in the cache unless you update ic->url_address.
     ic->fetch_url keeps the actual url for you.
      */	
-    if((ic->url)&&(ic->url->address)){
-	    ic->fetch_url = XP_STRDUP(ic->url->address);
+    if((ic->url)&& ic->url->GetAddress()){
+	    ic->fetch_url = PL_strdup(ic->url->GetAddress());
     }
     else{
 	if(ic->url_address) /* check needed because of mkicons.c */
-        	ic->fetch_url = XP_STRDUP(ic->url_address);
+        	ic->fetch_url = PL_strdup(ic->url_address);
 	else
 		ic->fetch_url = NULL;
     }
@@ -827,7 +830,7 @@ il_first_write(NET_StreamClass *stream, const unsigned char *str, int32 len)
 
 	/* Grab the URL's expiration date */
 	if (ic->url)
-	  ic->expires = ic->url->expires;
+	  ic->expires = ic->url->GetExpires();
 
 	switch (ic->type) 
 	{
@@ -875,11 +878,8 @@ il_first_write(NET_StreamClass *stream, const unsigned char *str, int32 len)
 		ILTRACE(0,("il: image init failed"));
 		return MK_OUT_OF_MEMORY;
 	}
-
-	ic->stream->put_block = (MKStreamWriteFunc)il_write;
-
-	/* do first write */
-	return ic->stream->put_block(stream, (const char*) str, len);
+	
+	return 0;
 }
 
 /* Called when a container is aborted by Netlib. */
@@ -912,7 +912,7 @@ il_container_aborted(il_container *ic)
         img_cx->num_aborted++;
 
 #ifdef DEBUG_GROUP_OBSERVER
-        XP_TRACE(("1 img_cx=%x total=%d loading=%d looping=%d aborted=%d",
+        ILTRACE(1,("1 img_cx=%x total=%d loading=%d looping=%d aborted=%d",
                   img_cx, img_cx->num_containers, img_cx->num_loading,
                   img_cx->num_looping, img_cx->num_aborted));
 #endif /* DEBUG_GROUP_OBSERVER */
@@ -946,13 +946,12 @@ il_bad_container(il_container *ic)
       /* Image container gets deleted later. */
 }
 
-/* NET_GetURL completion callback. */
-static void
-il_netgeturldone (URL_Struct *urls, int status, OPAQUE_CONTEXT *cx)
+/* IL_GetURL completion callback. */
+void
+IL_NetRequestDone(il_container *ic, ilIURL *url, int status)
 {
 	IL_ImageReq *image_req;
-	il_container *ic = (il_container*)urls->fe_data;
-	XP_ASSERT(ic);
+	PR_ASSERT(ic);
 
 	/* Record the fact that NetLib is done loading. */
 	ic->is_url_loading = PR_FALSE;
@@ -964,7 +963,7 @@ il_netgeturldone (URL_Struct *urls, int status, OPAQUE_CONTEXT *cx)
      */
 	if (ic->state == IC_ABORT_PENDING) {
 		il_delete_container(ic);
-        NET_FreeURLStruct(urls);
+        NS_RELEASE(url);
         return;
     }
     
@@ -1007,10 +1006,6 @@ il_netgeturldone (URL_Struct *urls, int status, OPAQUE_CONTEXT *cx)
                 }
 			}
         }
-
-		/* for mac */
-		if (status == MK_OUT_OF_MEMORY)
-			NET_InterruptWindow(cx);
 	}
 	else {
         /* It is possible for NetLib to call the exit routine with a success status,
@@ -1024,7 +1019,7 @@ il_netgeturldone (URL_Struct *urls, int status, OPAQUE_CONTEXT *cx)
 	    }
     }
 
-	NET_FreeURLStruct(urls);
+	NS_RELEASE(url);
 }
 
 
@@ -1042,26 +1037,24 @@ il_image_abort(il_container *ic)
 }
 
 void
-il_stream_complete(NET_StreamClass *stream)
+IL_StreamComplete(il_container *ic, PRBool is_multipart)
 {
-	void *data_object=stream->data_object;
-	il_container *ic = (il_container *)data_object;
+#ifdef DEBUG
+	PRTime cur_time;
+	PRInt32 difference;
+#endif /* DEBUG */
 
-	XP_ASSERT(ic);
-#ifdef XP_OS2_HACK 
-	if (ic->stream) { /*DSR011696 - occasionally this goes NULL and causes 
-						the assert to trap*/ 
-		XP_ASSERT(data_object == ic->stream->data_object); 
-	} 
-#else 
-    XP_ASSERT(data_object == ic->stream->data_object);
-#endif /* !XP_OS2 */ 
+	PR_ASSERT(ic);
 
+#ifdef DEBUG
+	cur_time = PR_Now();
+	LL_SUB(cur_time, cur_time, ic->start_time);
+	difference = LL_L2I(difference, cur_time);
     ILTRACE(1, ("il: complete: %d seconds for %s\n",
-                XP_TIME() - ic->start_time, ic->url_address));
+                difference, ic->url_address));
+#endif /* DEBUG */
 
-    ic->is_multipart = ic->stream->is_multipart;
-    ic->stream = NULL;
+    ic->is_multipart = is_multipart;
 
 	if (ic->complete)
         (*ic->complete)(ic);
@@ -1094,7 +1087,7 @@ il_container_loaded(il_container *ic)
         }
 
 #ifdef DEBUG_GROUP_OBSERVER
-        XP_TRACE(("2 img_cx=%x total=%d loading=%d looping=%d aborted=%d",
+        ILTRACE(1,("2 img_cx=%x total=%d loading=%d looping=%d aborted=%d",
                   img_cx, img_cx->num_containers, img_cx->num_loading,
                   img_cx->num_looping, img_cx->num_aborted));
 #endif /* DEBUG_GROUP_OBSERVER */
@@ -1109,7 +1102,7 @@ il_container_loaded(il_container *ic)
 static void
 il_container_looping(il_container *ic) 
 {
-    PRBool is_looping = ic->is_looping;
+    PRBool is_looping = (PRBool)ic->is_looping;
     il_context_list *current;
     IL_GroupContext *img_cx;
 
@@ -1124,7 +1117,7 @@ il_container_looping(il_container *ic)
             img_cx->num_looping++;
 
 #ifdef DEBUG_GROUP_OBSERVER
-            XP_TRACE(("3 img_cx=%x total=%d loading=%d looping=%d aborted=%d",
+            ILTRACE(1,("3 img_cx=%x total=%d loading=%d looping=%d aborted=%d",
                       img_cx, img_cx->num_containers, img_cx->num_loading,
                       img_cx->num_looping, img_cx->num_aborted));
 #endif /* DEBUG_GROUP_OBSERVER */
@@ -1138,7 +1131,7 @@ il_container_looping(il_container *ic)
                 il_group_notify(img_cx, IL_FINISHED_LOOPING);
 
 #ifdef DEBUG_GROUP_OBSERVER
-            XP_TRACE(("4 img_cx=%x total=%d loading=%d looping=%d aborted=%d",
+            ILTRACE(1,("4 img_cx=%x total=%d loading=%d looping=%d aborted=%d",
                       img_cx, img_cx->num_containers, img_cx->num_loading,
                       img_cx->num_looping, img_cx->num_aborted));
 #endif /* DEBUG_GROUP_OBSERVER */
@@ -1153,17 +1146,27 @@ il_container_complete(il_container *ic)
 {
     IL_GroupContext *img_cx = ic->img_cx;
 
-    ic->stream = NULL;
-
     /* Update the image (and mask) pixmaps for the final time. */
     il_flush_image_data(ic);
 
     /* Tell the Front Ends that we will not modify the bits any further. */
+#ifdef STANDALONE_IMAGE_LIB
+    img_cx->img_cb->ControlPixmapBits(img_cx->dpy_cx, ic->image,
+                                      IL_RELEASE_BITS);
+#else
     IMGCBIF_ControlPixmapBits(img_cx->img_cb, img_cx->dpy_cx, ic->image,
                               IL_RELEASE_BITS);
-    if (ic->mask)
+#endif /* STANDALONE_IMAGE_LIB */
+
+    if (ic->mask) {
+#ifdef STANDALONE_IMAGE_LIB
+        img_cx->img_cb->ControlPixmapBits(img_cx->dpy_cx, ic->mask,
+                                          IL_RELEASE_BITS);
+#else
         IMGCBIF_ControlPixmapBits(img_cx->img_cb, img_cx->dpy_cx, ic->mask,
                                   IL_RELEASE_BITS);
+#endif /* STANDALONE_IMAGE_LIB */
+	}
 
     if (!ic->is_looping) {
         /* Tell the client contexts that the container has finished
@@ -1197,12 +1200,12 @@ il_image_complete(il_container *ic)
     NI_PixmapHeader *src_header = ic->src_header;
     IL_GroupContext *img_cx = ic->img_cx;
     IL_DisplayType display_type = ic->display_type;
+	ilINetReader *reader;
 
 	if (ic->state == IC_ABORT_PENDING) {
         /* It could be that layout aborted image loading by calling
            IL_DestroyImage() before the netlib finished transferring data.
            Don't do anything. */
-        ic->stream = NULL;
         il_scour_container(ic);
     }
     else if (ic->state < IC_SIZED) {
@@ -1212,8 +1215,8 @@ il_image_complete(il_container *ic)
         il_bad_container(ic);
 	}
 	else {
-		XP_ASSERT(ic->state == IC_SIZED || ic->state == IC_MULTI);
-		XP_ASSERT(ic->image && ic->image->bits);
+		PR_ASSERT(ic->state == IC_SIZED || ic->state == IC_MULTI);
+		PR_ASSERT(ic->image && ic->image->bits);
 
 		ILTRACE(1,("il: complete %d image width %d (%d) height %d,"
                    " depth %d, %d colors",
@@ -1248,14 +1251,13 @@ il_image_complete(il_container *ic)
             /* Handle looping, which can be used to replay an animation. */
             if (ic->loop_count) {
                 int is_infinite_loop = (ic->loop_count == -1);
-                IL_URL *netRequest = NULL;                
+                ilIURL *netRequest = NULL;                
                 if (!is_infinite_loop)
                     ic->loop_count--;
                 
                 ILTRACE(1,("il: loop %s", ic->url_address));
 
-                netRequest =                   
-                   NET_CreateURLStruct (ic->fetch_url, NET_DONT_RELOAD);
+                netRequest = ic->net_cx->CreateURL(ic->fetch_url, NET_DONT_RELOAD);
                 if (!netRequest) {   /* OOM */
                     il_container_complete(ic);
                     goto done;
@@ -1264,9 +1266,9 @@ il_image_complete(il_container *ic)
                 /* Only loop if the image stream is available locally.
                    Also, if the user hit the "stop" button, don't
                    allow the animation to loop. */
-                if ((NET_IsLocalFileURL(ic->fetch_url)   ||
-                     NET_IsURLInMemCache(netRequest)       ||
-                     NET_IsURLInDiskCache(netRequest))          &&
+                if ((ic->net_cx->IsLocalFileURL(ic->fetch_url)   ||
+                     ic->net_cx->IsURLInMemCache(netRequest)       ||
+                     ic->net_cx->IsURLInDiskCache(netRequest))          &&
 
                     (!il_image_stopped(ic))                &&
                     ic->net_cx &&
@@ -1296,14 +1298,13 @@ il_image_complete(il_container *ic)
                     ic->is_url_loading = PR_TRUE;
 
                     /* Suppress thermo & progress bar */
-                    netRequest->load_background = TRUE;
-                    netRequest->fe_data = (void *)ic;
-                    (void) NET_GetURL(ic->url, FO_CACHE_AND_INTERNAL_IMAGE,
-                                      ic->net_cx->cx,
-                                      (Net_GetUrlExitFunc*)&il_netgeturldone);
+					netRequest->SetBackgroundLoad(PR_TRUE);
+					reader = IL_NewNetReader(ic);
+                    (void) ic->net_cx->GetURL(ic->url, NET_DONT_RELOAD, 
+											  reader);
                 } else {
                     ic->loop_count = 0;
-                    NET_FreeURLStruct(netRequest);
+                    NS_RELEASE(netRequest);
                     il_container_complete(ic);
                 }
             }
@@ -1329,24 +1330,17 @@ il_image_complete(il_container *ic)
 
 
 void 
-il_abort(NET_StreamClass *stream, int status)
+IL_StreamAbort(il_container *ic, int status)
 {
-    il_container *ic = (il_container *)stream->data_object;
     int old_state;
     IL_ImageReq *image_req;	
 
-	XP_ASSERT(ic);
+	PR_ASSERT(ic);
 
 	ILTRACE(4,("il: abort, status=%d ic->state=%d", status, ic->state));
 
     /* Abort the image. */
     il_image_abort(ic);
-
-	/* It's possible that the stream is zero
-	   because this container is scoured already */
-	if (ic->stream)
-		ic->stream->data_object = 0;
-    ic->stream = NULL;
 
 	if(ic->state >= IC_SIZED || (ic->state == IC_ABORT_PENDING)){
 		if (status == MK_INTERRUPTED){
@@ -1376,43 +1370,24 @@ il_abort(NET_StreamClass *stream, int status)
         il_bad_container(ic);
 }
 
-NET_StreamClass *
-IL_NewStream (FO_Present_Types format_out,
-              void *type,
-              URL_Struct *urls,
-              OPAQUE_CONTEXT *cx)
+PRBool
+IL_StreamCreated(il_container *ic,
+				 ilIURL *url,
+				 int type)
 {
-	IL_Stream *stream = nil;
-	il_container *ic = nil;
-
-	/* recover the container */
-	ic = (il_container*)urls->fe_data;
-
-	XP_ASSERT(ic);
+	PR_ASSERT(ic);
 
 	/*
      * It could be that layout aborted image loading by calling IL_FreeImage()
      * before the netlib finished transferring data.  Don't do anything.
      */
 	if (ic->state == IC_ABORT_PENDING)
-		return NULL;
+		return PR_FALSE;
 	
-	/* Create stream object */
-	if (!(stream = XP_NEW_ZAP(NET_StreamClass))) 
-	{
-		ILTRACE(0,("il: MEM il_newstream"));
-		return 0;
-	}
-
-	ic->stream = stream;        /* XXXM12N We don't really need to hold on to
-                                   the stream object anymore. The self pointer
-                                   gets passed into the stream object's
-                                   methods. */
-    XP_ASSERT(ic->net_cx->cx == cx);
-
 	ic->type = (int)type;
-	ic->content_length = urls->content_length;
-	ILTRACE(4,("il: new stream, type %d, %s", ic->type, urls->address));
+	ic->content_length = url->GetContentLength();
+	ILTRACE(4,("il: new stream, type %d, %s", ic->type, 
+			   url->GetAddress()));
 	ic->state = IC_STREAM;
 
 #ifndef M12N                    /* XXXM12N Fix me. */
@@ -1420,16 +1395,8 @@ IL_NewStream (FO_Present_Types format_out,
     ic->image->hasUniqueColormap = FALSE;
 #endif
 #endif /* M12N */
-	
-	stream->name		   = "image decode";
-	stream->complete	   = il_stream_complete;
-	stream->abort		   = il_abort;
-	stream->is_write_ready = il_write_ready;
-	stream->data_object	   = (void *)ic;
-	stream->window_id	   = ic->net_cx->cx;
-	stream->put_block	   = (MKStreamWriteFunc) il_first_write;
 
-	return stream;
+	return PR_TRUE;
 }
 
 
@@ -1613,7 +1580,7 @@ il_setup_icon_table(void)
 	il_icon_table[inum++] = il_hash("internal-attachment-icon");
     il_icon_table[inum++] = IL_MSG_ATTACH;
 
-    XP_ASSERT(inum <= (sizeof(il_icon_table) / sizeof(il_icon_table[0])));
+    PR_ASSERT(inum <= (sizeof(il_icon_table) / sizeof(il_icon_table[0])));
 }
 
 
@@ -1636,65 +1603,33 @@ il_internal_image(const char *image_url)
 }
 
 
-PRBool
-IL_PreferredStream(IL_URL *urls)
-{
-	il_container *ic = 0;
-	IL_ImageReq *image_req;
 
-	XP_ASSERT(urls);
-	if (urls) {
-		/* xxx this MUST be an image stream */
-		ic = (il_container*)urls->fe_data;		
-
-		XP_ASSERT(ic);
-		if (ic) {
-            /*
-             * It could be that layout aborted image loading by
-             * calling IL_FreeImage before the netlib finished
-             * transferring data.  Don't do anything.
-             */
-            if (ic->state == IC_ABORT_PENDING)
-                return FALSE;
-
-			/* discover if layout is blocked on this image */
-			for (image_req = ic->clients; image_req;
-                 image_req = image_req->next) {
-#ifndef M12N                    /* XXXM12N Fixme.  Observer for layout?
-                                   Query mechanism for FE? */
-				if ((LO_BlockedOnImage(c->cx,
-                                       (LO_ImageStruct*)c->client) == TRUE) ||
-                    FE_ImageOnScreen(c->cx, (LO_ImageStruct*)c->client) )
-#endif /* M12N */
-				return TRUE;
-			}
-		}
-	}
-	return FALSE;
-}
-
-IL_ImageReq *
+IL_IMPLEMENT(IL_ImageReq *)
 IL_GetImage(const char* image_url,
             IL_GroupContext *img_cx,
             XP_ObserverList obs_list,
             NI_IRGB *background_color,
             uint32 req_width, uint32 req_height,
             uint32 flags,
-            IL_NetContext *net_cx)
+            void *opaque_cx)
 {
-    NET_ReloadMethod cache_reload_policy = net_cx->cache_reload_policy;
+    ilINetContext *net_cx = (ilINetContext *)opaque_cx;
+    NET_ReloadMethod cache_reload_policy = net_cx->GetReloadPolicy();
 
-   IL_URL *urls = NULL;
+    ilIURL *url = NULL;
 
     IL_ImageReq *image_req;
+	ilINetReader *reader;
 	il_container *ic = NULL;
     int req_depth = img_cx->color_space->pixmap_depth;
 	int err;
+#ifndef STANDALONE_IMAGE_LIB
     int is_internal_external_reconnect = FALSE;
+#endif /* STANDALONE_IMAGE_LIB */
     int is_view_image;
 
     /* Create a new instance for this image request. */
-    image_req = XP_NEW_ZAP(IL_ImageReq);
+    image_req = PR_NEWZAP(IL_ImageReq);
     if (!image_req)
         return NULL;
     image_req->img_cx = img_cx;
@@ -1706,9 +1641,9 @@ IL_GetImage(const char* image_url,
      * be destroyed,) in which case we may need to give the container a
      * handle on this backup net context.
      */
-    image_req->net_cx = IL_CloneDummyNetContext(net_cx);
+    image_req->net_cx = net_cx->Clone();
 	if (!image_req->net_cx) {
-		XP_FREE(image_req);
+		PR_FREEIF(image_req);
 		return NULL;
 	}
     image_req->obs_list = obs_list;
@@ -1725,8 +1660,8 @@ IL_GetImage(const char* image_url,
 
     /* Check for any special internal-use URLs */
 	if (*image_url == 'i'                  ||
-        !XP_STRNCMP(image_url, "/mc-", 4)  ||
-        !XP_STRNCMP(image_url, "/ns-", 4))
+        !PL_strncmp(image_url, "/mc-", 4)  ||
+        !PL_strncmp(image_url, "/ns-", 4))
 	{
 		uint32 icon;
 
@@ -1743,13 +1678,15 @@ IL_GetImage(const char* image_url,
             return image_req;
 		}
 
+#ifndef STANDALONE_IMAGE_LIB
         /* Image viewer URLs look like "internal-external-reconnect:REALURL.gif"
          * Strip off the prefix to get the real URL name.
          */
-		if (!XP_STRNCMP(image_url, "internal-external-reconnect:", 28)) {
+		if (!PL_strncmp(image_url, "internal-external-reconnect:", 28)) {
             image_url += 28;
 			is_internal_external_reconnect = TRUE;
         }
+#endif /* STANDALONE_IMAGE_LIB */
 	}
 
     ic = il_get_container(img_cx, cache_reload_policy, image_url,
@@ -1759,8 +1696,10 @@ IL_GetImage(const char* image_url,
     {
         ILTRACE(0,("il: MEM il_container"));
         il_icon_notify(image_req, IL_IMAGE_DELAYED, IL_ERROR_INTERNAL);
+#ifndef STANDALONE_IMAGE_LIB
         if (is_internal_external_reconnect)
             il_abort_reconnect();
+#endif /* STANDALONE_IMAGE_LIB */
         return image_req;
     }
      
@@ -1768,18 +1707,24 @@ IL_GetImage(const char* image_url,
     image_req->ic = ic;
 
     /* Is this a call to the image viewer ? */
+#ifndef STANDALONE_IMAGE_LIB
 #ifndef M12N /* XXXM12N fix me. */
     is_view_image = is_internal_external_reconnect &&
         (cx->type != MWContextNews) && (cx->type != MWContextMail);
 #else
     is_view_image = is_internal_external_reconnect;
 #endif /* M12N */
+#else
+    is_view_image = FALSE;
+#endif /* STANDALONE_IMAGE_LIB */
 
     if (!il_add_client(img_cx, ic, image_req, is_view_image))
     {
         il_icon_notify(image_req, IL_IMAGE_DELAYED, IL_ERROR_INTERNAL);
+#ifndef STANDALONE_IMAGE_LIB
         if (is_internal_external_reconnect)
             il_abort_reconnect();
+#endif /* STANDALONE_IMAGE_LIB */
         return image_req;
     }
 
@@ -1793,7 +1738,9 @@ IL_GetImage(const char* image_url,
 
         case IC_MISSING:
             il_icon_notify(image_req, IL_IMAGE_NOT_FOUND, IL_ERROR_NO_DATA);
-            XP_ASSERT(! is_internal_external_reconnect);
+#ifndef STANDALONE_IMAGE_LIB
+            PR_ASSERT(! is_internal_external_reconnect);
+#endif /* STANDALONE_IMAGE_LIB */
             break;
 
         case IC_INCOMPLETE:
@@ -1825,18 +1772,20 @@ IL_GetImage(const char* image_url,
             break;
             
         default:
-            XP_ASSERT(0);
-            IL_DestroyDummyNetContext(image_req->net_cx);
-            XP_FREE(image_req);
+            PR_ASSERT(0);
+            NS_RELEASE(image_req->net_cx);
+            PR_FREEIF(image_req);
             return NULL;
         }
 
+#ifndef STANDALONE_IMAGE_LIB
         if (is_internal_external_reconnect) {
             /* Since we found the image in the cache, we don't
              * need any of the data now streaming into the image viewer.
              */
             il_abort_reconnect();
         }
+#endif /* STANDALONE_IMAGE_LIB */
 
 		/* NOCACHE falls through to be tried again */
         if (ic->state != IC_NOCACHE)
@@ -1852,12 +1801,13 @@ IL_GetImage(const char* image_url,
 	ic->state = IC_START;
     
 #ifdef DEBUG
-    ic->start_time = XP_TIME();
+    ic->start_time = PR_Now();
 #endif
 
     /* Record the context that actually initiates and controls the transfer. */
-    ic->net_cx = IL_CloneDummyNetContext(net_cx);
+    ic->net_cx = net_cx->Clone();
  
+#ifndef STANDALONE_IMAGE_LIB
 	if (is_internal_external_reconnect)
 	{
         /* "Reconnect" to the stream feeding IL_ViewStream(), already
@@ -1865,53 +1815,55 @@ IL_GetImage(const char* image_url,
         il_reconnect(ic);
         return image_req;
     }
+#endif /* STANDALONE_IMAGE_LIB */
         
     /* need to make a net request */
     ILTRACE(1,("il: net request for %s, %s", image_url,
                ic->forced ? "force" : ""));
 
-    urls = NET_CreateURLStruct(image_url, cache_reload_policy);
+    url = ic->net_cx->CreateURL(image_url, cache_reload_policy);
 
-    if (!urls)
+    if (!url)
     {
 #ifndef M12N /* XXXM12N fix me. */
         /* xxx clean up previously allocated objects */
         return MK_OUT_OF_MEMORY;
 #else
-        IL_DestroyDummyNetContext(image_req->net_cx);
-        XP_FREE(image_req);
+        NS_RELEASE(image_req->net_cx);
+        PR_FREEIF(image_req);
         return NULL;
 #endif /* M12N */
     }        
     
     /* Add the referer to the URL. */
-    IL_AddReferer(ic->net_cx, urls);
+    ic->net_cx->AddReferer(url);
     
     ic->is_looping = FALSE;
-    ic->url = urls;
+    ic->url = url;
 	/* Record the fact that we are calling NetLib to load a URL. */
     ic->is_url_loading = PR_TRUE;
 
     /* save away the container */
-    urls->fe_data = (void *)ic;
-    err = NET_GetURL(urls, (cache_reload_policy == NET_CACHE_ONLY_RELOAD) ?
-                     FO_ONLY_FROM_CACHE_AND_INTERNAL_IMAGE :
-                     FO_CACHE_AND_INTERNAL_IMAGE, 
-                     ic->net_cx->cx,
-                     (Net_GetUrlExitFunc*)&il_netgeturldone);
+	reader = IL_NewNetReader(ic);
+	if (!reader) {
+        NS_RELEASE(image_req->net_cx);
+        PR_FREEIF(image_req);
+        return NULL;
+	}
+    err = ic->net_cx->GetURL(url, cache_reload_policy, reader);
 	return image_req;
 }
 
 
-void
-IL_ReloadImages(IL_GroupContext *img_cx, IL_NetContext *net_cx)
+IL_IMPLEMENT(void)
+IL_ReloadImages(IL_GroupContext *img_cx, void *net_cx)
 {
     /* XXXM12N - Implement me. */
 
 }
 
 
-void
+IL_IMPLEMENT(void)
 IL_SetDisplayMode(IL_GroupContext *img_cx, uint32 display_flags,
                   IL_DisplayData *display_data)
 {
@@ -1945,7 +1897,7 @@ IL_SetDisplayMode(IL_GroupContext *img_cx, uint32 display_flags,
 
 /* Interrupts all images loading in a context.  Specifically, stops all
    looping image animations. */
-void
+IL_IMPLEMENT(void)
 IL_InterruptContext(IL_GroupContext *img_cx)
 {
     il_container *ic;
@@ -1966,6 +1918,15 @@ IL_InterruptContext(IL_GroupContext *img_cx)
     }
 }
 
+/* Interrupts just a specific image request */
+IL_IMPLEMENT(void)
+IL_InterruptRequest(IL_ImageReq *image_req)
+{
+  if (image_req != NULL) {
+	image_req->stopped = TRUE;
+  }
+}
+
 /* Has the user aborted the image load ? */
 PRBool
 il_image_stopped(il_container *ic)
@@ -1973,11 +1934,11 @@ il_image_stopped(il_container *ic)
     IL_ImageReq *image_req;
     for (image_req = ic->clients; image_req; image_req = image_req->next) {
         if (!image_req->stopped)
-            return FALSE;
+            return PR_FALSE;
     }
 
     /* All clients must be stopped for image container to become dormant. */
-    return TRUE;
+    return PR_TRUE;
 }
 
 
@@ -1989,15 +1950,20 @@ il_image_stopped(il_container *ic)
 
    The dpy_cx argument is opaque to the image library and is passed back to
    all of the callbacks in the IMGCBIF interface. */
-IL_GroupContext*
-IL_NewGroupContext(void *dpy_cx, IMGCBIF *img_cb)
+IL_IMPLEMENT(IL_GroupContext*)
+IL_NewGroupContext(void *dpy_cx, 
+#ifdef STANDALONE_IMAGE_LIB
+                   ilIImageRenderer *img_cb)
+#else
+                   IMGCBIF *img_cb)
+#endif /* STANDALONE_IMAGE_LIB */
 {
     IL_GroupContext *img_cx;
     
     if (!img_cb)
         return NULL;
 
-    img_cx = (IL_GroupContext*)XP_NEW_ZAP(IL_GroupContext);
+    img_cx = (IL_GroupContext*)PR_NEWZAP(IL_GroupContext);
     if (!img_cx)
         return NULL;
 
@@ -2009,7 +1975,7 @@ IL_NewGroupContext(void *dpy_cx, IMGCBIF *img_cb)
     /* Create an observer list for the image context. */
     if (XP_NewObserverList((void *)img_cx, &img_cx->obs_list)
         == MK_OUT_OF_MEMORY) {
-        XP_FREE(img_cx);
+        PR_FREEIF(img_cx);
         return NULL;
     }
 
@@ -2027,7 +1993,7 @@ IL_NewGroupContext(void *dpy_cx, IMGCBIF *img_cb)
    is expected to decrement the reference count for the IMGCBIF interface,
    and to free the callback vtable and the interface structure if the
    reference count is zero. */
-void
+IL_IMPLEMENT(void)
 IL_DestroyGroupContext(IL_GroupContext *img_cx)
 {
     if (img_cx) {
@@ -2049,7 +2015,7 @@ IL_DestroyGroupContext(IL_GroupContext *img_cx)
         
         /* Destroy any images remaining in the context. */
         if (img_cx->num_containers) {
-            XP_ASSERT(img_cx->container_list != NULL);
+            PR_ASSERT(img_cx->container_list != NULL);
             IL_DestroyImageGroup(img_cx);
         }
 
@@ -2063,26 +2029,31 @@ IL_DestroyGroupContext(IL_GroupContext *img_cx)
         }
 
         /* Release the JMC callback interface. */
+#ifdef STANDALONE_IMAGE_LIB
+        NS_RELEASE(img_cx->img_cb);
+#else
         IMGCBIF_release(img_cx->img_cb, NULL); /* XXXM12N Need to use
                                                   exceptions. */
-        XP_FREE(img_cx);
+#endif /* STANDALONE_IMAGE_LIB */
+
+        PR_FREEIF(img_cx);
     }
 }
 
 
 /* Add an observer/closure pair to an image group context's observer list.
    Returns PR_TRUE if the observer is successfully registered. */
-PRBool
+IL_IMPLEMENT(PRBool)
 IL_AddGroupObserver(IL_GroupContext *img_cx, XP_ObserverProc observer,
                     void *closure)
 {
-    return !XP_AddObserver(img_cx->obs_list, observer, closure);    
+    return (PRBool)(!XP_AddObserver(img_cx->obs_list, observer, closure));    
 }
 
 
 /* Remove an observer/closure pair from an image group context's observer
    list.  Returns PR_TRUE if successful. */
-PRBool
+IL_IMPLEMENT(PRBool)
 IL_RemoveGroupObserver(IL_GroupContext *img_cx, XP_ObserverProc observer,
                     void *closure)
 {
@@ -2105,7 +2076,7 @@ IL_RemoveGroupObserver(IL_GroupContext *img_cx, XP_ObserverProc observer,
    be fulfilled or that the image has been delayed, it will notify the client
    synchronously through the observer mechanism.  The client may then choose to
    request that an icon be drawn instead by making a call to IL_DisplayIcon. */
-void
+IL_IMPLEMENT(void)
 IL_DisplaySubImage(IL_ImageReq *image_req, int x, int y, int x_offset,
                    int y_offset, int width, int height)
 {
@@ -2162,10 +2133,17 @@ IL_DisplaySubImage(IL_ImageReq *image_req, int x, int y, int x_offset,
         
         /* Draw the intersection of the requested area and the displayable
            area. */
-        if ((display_width > 0) && (display_height > 0))
+        if ((display_width > 0) && (display_height > 0)) {
+#ifdef STANDALONE_IMAGE_LIB
+            img_cx->img_cb->DisplayPixmap(dpy_cx, ic->image, ic->mask,
+                                          x, y, display_left, display_top,
+                                          display_width, display_height);
+#else
             IMGCBIF_DisplayPixmap(img_cx->img_cb, dpy_cx, ic->image, ic->mask,
                                   x, y, display_left, display_top,
                                   display_width, display_height, ic->dest_width, ic->dest_height);
+#endif /* STANDALONE_IMAGE_LIB */
+        }
     }
     else {
         /* The entire image pixmap is displayable, (although this does not
@@ -2173,10 +2151,16 @@ IL_DisplaySubImage(IL_ImageReq *image_req, int x, int y, int x_offset,
            the entire area requested.  In the event that the requested
            area extends beyond the bounds of the image pixmap, tiling will
            be performed. */
-        if (width && height)
+        if (width && height) {
+#ifdef STANDALONE_IMAGE_LIB
+            img_cx->img_cb->DisplayPixmap(dpy_cx, ic->image, ic->mask,
+                                          x, y, x_offset, y_offset, 
+                                          width, height);
+#else
             IMGCBIF_DisplayPixmap(img_cx->img_cb, dpy_cx, ic->image, ic->mask,
-                                  x, y, x_offset, y_offset, width, height,
-                                  ic->dest_width, ic->dest_height);
+                                  x, y, x_offset, y_offset, width, height, ic->dest_width, ic->dest_height);
+#endif /* STANDALONE_IMAGE_LIB */
+        }
     }
 }
 
@@ -2184,7 +2168,7 @@ IL_DisplaySubImage(IL_ImageReq *image_req, int x, int y, int x_offset,
 /* Display an icon.  x and y refer to the top left corner of the icon, measured
    in pixels, with respect to the document origin.  x_offset, y_offset, width
    and height specify a clipping rectangle for this drawing request. */
-void
+IL_IMPLEMENT(void)
 IL_DisplayIcon(IL_GroupContext *img_cx, int icon_number, int x, int y)
 {
     /* Check for a NULL image context. */
@@ -2192,12 +2176,16 @@ IL_DisplayIcon(IL_GroupContext *img_cx, int icon_number, int x, int y)
         return;
 
     /* Ask the Front End to display the icon. */
+#ifdef STANDALONE_IMAGE_LIB
+    img_cx->img_cb->DisplayIcon(img_cx->dpy_cx, x, y, icon_number);
+#else
     IMGCBIF_DisplayIcon(img_cx->img_cb, img_cx->dpy_cx, x, y, icon_number);
+#endif /* STANDALONE_IMAGE_LIB */
 }
 
 
 /* Return the dimensions of an icon. */
-void
+IL_IMPLEMENT(void)
 IL_GetIconDimensions(IL_GroupContext *img_cx, int icon_number, int *width,
                      int *height)
 {
@@ -2206,13 +2194,18 @@ IL_GetIconDimensions(IL_GroupContext *img_cx, int icon_number, int *width,
         return;
 
     /* Obtain the dimensions of the icon. */
+#ifdef STANDALONE_IMAGE_LIB
+    img_cx->img_cb->GetIconDimensions(img_cx->dpy_cx, width, height,
+                                      icon_number);
+#else
     IMGCBIF_GetIconDimensions(img_cx->img_cb, img_cx->dpy_cx, width, height,
                               icon_number);
+#endif /* STANDALONE_IMAGE_LIB */
 }
 
 
 /* Return the image IL_Pixmap associated with an image request. */
-IL_Pixmap *
+IL_IMPLEMENT(IL_Pixmap *)
 IL_GetImagePixmap(IL_ImageReq *image_req)
 {
     if (image_req && image_req->ic)
@@ -2223,7 +2216,7 @@ IL_GetImagePixmap(IL_ImageReq *image_req)
 
 
 /* Return the mask IL_Pixmap associated with an image request. */
-IL_Pixmap *
+IL_IMPLEMENT(IL_Pixmap *)
 IL_GetMaskPixmap(IL_ImageReq *image_req)
 {
     if (image_req && image_req->ic)
@@ -2235,7 +2228,7 @@ IL_GetMaskPixmap(IL_ImageReq *image_req)
 
 /* Return the natural dimensions of the image.  Returns 0,0 if the dimensions
    are unknown. */
-void
+IL_IMPLEMENT(void)
 IL_GetNaturalDimensions(IL_ImageReq *image_req, int *width, int *height)
 {
 	NI_PixmapHeader *src_header;
@@ -2258,7 +2251,7 @@ IL_GetNaturalDimensions(IL_ImageReq *image_req, int *width, int *height)
 	}
 }
 
-
+#ifndef STANDALONE_IMAGE_LIB
 #ifndef M12N                    /* XXXM12N Get rid of these functions */
 void
 IL_DisableScaling(MWContext *cx)
@@ -2289,7 +2282,7 @@ IL_DisableLowSrc(MWContext *cx)
 	ip->nolowsrc = 1;
 }
 #endif /* M12N */
-
+#endif /* STANDALONE_IMAGE_LIB */
 #ifdef PROFILE
 #pragma profile off
 #endif

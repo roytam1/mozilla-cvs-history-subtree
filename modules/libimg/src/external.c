@@ -18,20 +18,34 @@
 
 
 #include "if.h"
+#include "dummy_nc.h"
+
 extern PRBool
-il_load_image(void *cx, char *image_url, NET_ReloadMethod cache_reload_policy);
+il_load_image(MWContext *cx, char *image_url, NET_ReloadMethod cache_reload_policy);
 
 #include "merrors.h"
+#ifdef STANDALONE_IMAGE_LIB
+#include "xpcompat.h"
+#else
 /* for XP_GetString() */
 #include "xpgetstr.h"
-
+#endif
 
 #include "il_strm.h"            /* Stream converters. */
+
+/* 
+ * XXX Temporary inclusion of this prototype. It was originally in
+ * libimg.h but needed to be removed since it required C++ compilation.
+ * It should eventually return to libimg.h and may be remove when
+ * a modularized netlib comes around.
+ */
+extern ilIURL *
+IL_CreateIURL(URL_Struct *urls);
 
 static unsigned int
 il_view_write_ready(NET_StreamClass *stream)
 {
-	il_container *ic = (il_container *)stream->data_object;	
+    ilINetReader *reader = (ilINetReader *)stream->data_object;
 
     /* For some reason, the imagelib can't deliver the image.
        Trigger il_view_write(), which will abort the stream. */
@@ -42,7 +56,7 @@ il_view_write_ready(NET_StreamClass *stream)
 	call il_view_write() until it has filled up the buffer one byte
 	at a time. This should be addressed correctly in later versions. */
 
-    return (ic != 0) * MAX_WRITE_READY;
+    return (reader != 0) * MAX_WRITE_READY;
 }
 
 /* Abort the stream if we get this far */
@@ -51,7 +65,7 @@ il_view_write(NET_StreamClass *stream, const unsigned char *str, int32 len)
 {
 	void *dobj=stream->data_object;	
     /* If this assert fires, chances are that the provided URL was malformed.*/
-    XP_ASSERT(dobj == (void*)1);
+    PR_ASSERT(dobj == (void*)1);
 
      /* Should be MK_DATA_LOADED, but netlib ignores that. */
 	return MK_INTERRUPTED;
@@ -67,28 +81,81 @@ il_view_abort(NET_StreamClass *stream, int status)
 {	
 }
 
+void
+il_stream_complete(NET_StreamClass *stream)
+{
+    ilINetReader *reader = (ilINetReader *)stream->data_object;
+	
+	reader->StreamComplete((PRBool)stream->is_multipart);
+}
+
+void 
+il_abort(NET_StreamClass *stream, int status)
+{
+    ilINetReader *reader = (ilINetReader *)stream->data_object;
+
+	reader->StreamAbort(status);
+	stream->data_object = 0;
+}
+
+unsigned int
+il_write_ready(NET_StreamClass *stream)
+{
+    ilINetReader *reader = (ilINetReader *)stream->data_object;
+
+	return reader->WriteReady();
+}
+
+int 
+il_write(NET_StreamClass *stream, const unsigned char *str, int32 len)
+{
+    ilINetReader *reader = (ilINetReader *)stream->data_object;
+
+	return reader->Write(str, len);
+}
+
+int
+il_first_write(NET_StreamClass *stream, const unsigned char *str, int32 len)
+{
+    ilINetReader *reader = (ilINetReader *)stream->data_object;
+	int ret_val;
+
+	ret_val = reader->FirstWrite(str, len);
+	if (ret_val != 0) {
+	    return ret_val;
+	}
+	
+	stream->put_block = (MKStreamWriteFunc)il_write;
+	/* do first write */
+	return stream->put_block(stream, (const char*) str, len);
+}
+
 /* there can be only one, highlander */
-static IL_Stream *unconnected_stream = 0;
-static IL_URL *unconnected_urls = 0;
+static NET_StreamClass *unconnected_stream = 0;
+static URL_Struct *unconnected_urls = 0;
 
 void
 il_reconnect(il_container *ic)
 {
 	if (unconnected_stream)
 	{
+	    ilINetReader *reader = IL_NewNetReader(ic);
+	    ilIURL *iurl;
 
-		unconnected_stream->complete       = il_stream_complete;
-		unconnected_stream->abort          = il_abort;
-		unconnected_stream->is_write_ready = il_write_ready;
-		unconnected_stream->data_object    = (void *)ic;
-		unconnected_stream->put_block      = (MKStreamWriteFunc)il_first_write;
+		if (reader != NULL) {
+    		unconnected_stream->complete       = il_stream_complete;
+		    unconnected_stream->abort          = il_abort;
+		    unconnected_stream->is_write_ready = il_write_ready;
+		    unconnected_stream->data_object    = (void *)reader;
+			unconnected_stream->put_block      = (MKStreamWriteFunc)il_first_write;
 
-		ic->type = IL_UNKNOWN;
-		ic->stream = unconnected_stream;
-		ic->state = IC_STREAM;
+			ic->type = IL_UNKNOWN;
+			ic->state = IC_STREAM;
 
-		unconnected_urls->fe_data = ic;	/* ugh */
-		ic->content_length = unconnected_urls->content_length;
+			iurl = (ilIURL *)unconnected_urls->fe_data;
+			iurl->SetReader(reader);
+			ic->content_length = unconnected_urls->content_length;
+		}
 
 		unconnected_stream = 0;
 		unconnected_urls = 0;
@@ -107,28 +174,37 @@ il_abort_reconnect()
     }
 }
 
+
 static char fakehtml[] = "<IMG SRC=\"%s\">";
 
 NET_StreamClass *
 IL_ViewStream(FO_Present_Types format_out, void *newshack, URL_Struct *urls,
               OPAQUE_CONTEXT *cx)
 {
-    IL_Stream *stream = nil, *viewstream;
+    NET_StreamClass *stream = nil, *viewstream;
 	il_container *ic = nil;
+	ilINetReader *reader = nil;
+	ilIURL *iurl;
 	char *org_content_type;
     char *image_url;
 
 	/* multi-part reconnect hack */
-
-	ic = (il_container*)urls->fe_data;
-	if(ic && ic->multi)
-	{
-		return IL_NewStream(format_out, IL_UNKNOWN, urls, cx);
+	iurl = (ilIURL *)urls->fe_data;
+	if (iurl) {
+	    reader = iurl->GetReader();
+		if(reader)
+		{
+		    if(reader->IsMulti()) {
+			    NS_RELEASE(reader);
+				return IL_NewStream(format_out, IL_UNKNOWN, urls, cx);
+			}
+			NS_RELEASE(reader);
+		}
 	}
 
 	/* Create stream object */
-    if (!(stream = XP_NEW_ZAP(NET_StreamClass))) {
-		XP_TRACE(("il: IL_ViewStream memory lossage"));
+    if (!(stream = PR_NEWZAP(NET_StreamClass))) {
+		ILTRACE(1,("il: IL_ViewStream memory lossage"));
 		return 0;
 	}
 	
@@ -137,12 +213,13 @@ IL_ViewStream(FO_Present_Types format_out, void *newshack, URL_Struct *urls,
     stream->abort          = il_view_abort;
     stream->is_write_ready = il_view_write_ready;
     stream->data_object    = NULL;
-    stream->window_id      = cx;
+    stream->window_id      = (MWContext *)cx;
     stream->put_block      = (MKStreamWriteFunc)il_view_write;
 
 	ILTRACE(0,("il: new view stream, %s", urls->address));
 
-	XP_ASSERT(!unconnected_stream);
+	PR_ASSERT(!unconnected_stream);
+ 	IL_CreateIURL(urls);
 	unconnected_stream = stream;
 	unconnected_urls = urls;
 
@@ -159,20 +236,20 @@ IL_ViewStream(FO_Present_Types format_out, void *newshack, URL_Struct *urls,
 		   We do this so that the pre-fetched image request won't be
 		   destroyed by a layout call to IL_DestroyImageGroup. */
 
-		viewstream = NET_StreamBuilder(format_out, urls, cx);
+		viewstream = NET_StreamBuilder(format_out, urls, (MWContext *)cx);
 		if (!viewstream) {
-			XP_FREE(stream);
+			PR_FREEIF(stream);
 			return NULL;
 		}
-        buffer = XP_STRDUP("<HTML>");
+        buffer = PL_strdup("<HTML>");
         if (!buffer) {
-            XP_FREE(stream);
-            XP_FREE(viewstream);
+            PR_FREEIF(stream);
+            PR_FREEIF(viewstream);
             return NULL;
         }
 		(*viewstream->put_block)(viewstream, buffer,
-                                 XP_STRLEN(buffer)+1);
-        XP_FREE(buffer);
+                                 PL_strlen(buffer)+1);
+        PR_FREEIF(buffer);
 
 	} /* !newshack */
 
@@ -180,40 +257,131 @@ IL_ViewStream(FO_Present_Types format_out, void *newshack, URL_Struct *urls,
 	   process image data even if the parser is blocked on the fake IMG
 	   tag that we send.  Note that this image request will persist until
 	   the document is destroyed (when IL_DestroyImageGroup will be called.) */
-    image_url = (char*) XP_ALLOC(XP_STRLEN(urls->address) + 29);
+    image_url = (char*) PR_MALLOC(PL_strlen(urls->address) + 29);
     if (!image_url) {
-        XP_FREE(stream);
-        XP_FREE(viewstream);
+        PR_FREEIF(stream);
+        PR_FREEIF(viewstream);
         return NULL;
     }
     XP_SPRINTF(image_url, "internal-external-reconnect:%s", urls->address);
-    if (!il_load_image(cx, image_url, urls->force_reload)) {
-        XP_FREE(stream);
-        XP_FREE(viewstream);
+    if (!il_load_image((MWContext *)cx, image_url, urls->force_reload)) {
+        PR_FREEIF(stream);
+        PR_FREEIF(viewstream);
         return NULL;
     }
-    XP_FREE(image_url);
+    PR_FREEIF(image_url);
 
 	if (!newshack) {
 	    if (viewstream) {
             	char *buffer = (char*)
-                XP_ALLOC(XP_STRLEN(fakehtml) + XP_STRLEN(urls->address) + 1);
+                PR_MALLOC(PL_strlen(fakehtml) + PL_strlen(urls->address) + 1);
 
             if (buffer)
             {
                 XP_SPRINTF(buffer, fakehtml, urls->address);
                 (*viewstream->put_block)(viewstream,
-                                         buffer, XP_STRLEN(buffer));
-                XP_FREE(buffer);
+                                         buffer, PL_strlen(buffer));
+                PR_FREEIF(buffer);
             }
 			(*viewstream->complete)(viewstream);
 		}
 
 		/* this has to be set back for abort to work correctly */
-		XP_FREE(urls->content_type);
+		PR_FREEIF(urls->content_type);
 		urls->content_type = org_content_type;
 	} /* !newshack */
 
     return stream;
 }
 
+NET_StreamClass *
+IL_NewStream (FO_Present_Types format_out,
+              void *type,
+              URL_Struct *urls,
+              OPAQUE_CONTEXT *cx)
+{
+	NET_StreamClass *stream = nil;
+	il_container *ic = nil;
+	ilINetReader *reader = nil;
+	ilIURL *iurl = nil;
+	
+    /* recover the container */
+	iurl = (ilIURL *)urls->fe_data;
+    reader = iurl->GetReader();
+
+	PR_ASSERT(reader);
+
+	if (reader->StreamCreated(iurl, (int)type) == PR_FALSE) {
+	    NS_RELEASE(reader); 
+	    return NULL;
+	}
+
+
+	/* Create stream object */
+	if (!(stream = PR_NEWZAP(NET_StreamClass))) 
+	{
+		ILTRACE(0,("il: MEM il_newstream"));
+   	NS_RELEASE(reader);
+		return 0;
+	}
+
+	stream->name		   = "image decode";
+	stream->complete	   = il_stream_complete;
+	stream->abort		   = il_abort;
+	stream->is_write_ready = il_write_ready;
+	stream->data_object	   = (void *)reader;
+	stream->window_id	   = (MWContext *)cx;
+	stream->put_block	   = (MKStreamWriteFunc) il_first_write;
+
+  // Careful not to call NS_RELEASE until the end, because it sets reader=NULL.
+ 	NS_RELEASE(reader);
+
+	return stream;
+}
+
+
+IL_IMPLEMENT(PRBool)
+IL_PreferredStream(URL_Struct *urls)
+{
+	il_container *ic = 0;
+	IL_ImageReq *image_req;
+	ilIURL *iurl;
+	ilINetReader *reader;
+
+	PR_ASSERT(urls);
+	if (urls) {
+		/* xxx this MUST be an image stream */
+	    iurl = (ilIURL *)urls->fe_data;
+		reader = iurl->GetReader();
+		ic = IL_GetNetReaderContainer(reader);
+		NS_RELEASE(reader);
+
+		PR_ASSERT(ic);
+		if (ic) {
+            /*
+             * It could be that layout aborted image loading by
+             * calling IL_FreeImage before the netlib finished
+             * transferring data.  Don't do anything.
+             */
+            if (ic->state == IC_ABORT_PENDING)
+                return PR_FALSE;
+
+			/* discover if layout is blocked on this image */
+			for (image_req = ic->clients; image_req;
+                 image_req = image_req->next) {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
+#ifndef M12N                    /* XXXM12N Fixme.  Observer for layout?
+                                   Query mechanism for FE? */
+				if ((LO_BlockedOnImage(c->cx,
+                                       (LO_ImageStruct*)c->client) == TRUE) ||
+                    FE_ImageOnScreen(c->cx, (LO_ImageStruct*)c->client) )
+#endif /* M12N */
+#endif /* MOZ_NGLAYOUT */
+				return PR_TRUE;
+			}
+		}
+	}
+	return PR_FALSE;
+}
