@@ -389,6 +389,103 @@ loser:
     return rv;
 }
 
+#ifdef XP_MAC
+
+nsresult MacLaunchPSM(const char* nativePath, PCMT_CONTROL &outControlRef)
+{
+  nsresult rv;
+  
+  // first look for the app in the Essential Files folder
+  nsCOMPtr<nsILocalFileMac> psmAppMacFile;
+
+  if (nativePath)
+  {
+    // if we are supplied a path, try to get the app at this path. In this case,
+    // we won't search the desktop database
+    nsCOMPtr<nsILocalFile> psmAppFile = do_CreateInstance(NS_LOCAL_FILE_PROGID, &rv);
+    if (NS_FAILED(rv)) return rv;
+  
+    rv = psmAppFile->InitWithPath(nativePath);
+    if (NS_FAILED(rv)) return rv;
+    
+    PRBool appExists, isExecutable;
+    rv = psmAppFile->Exists(&appExists);
+    if (NS_FAILED(rv)) return rv;
+    
+    rv = psmAppFile->IsExecutable(&isExecutable);
+    if (NS_FAILED(rv)) return rv;
+
+    psmAppMacFile = do_QueryInterface(psmAppFile, &rv);
+    if (NS_FAILED(rv)) return rv;
+  }
+  else
+  {
+    // the path was null, so we'll look in the Essential Files folder, then
+    // search the desktop databse
+
+#if 1
+    // "xpcom.currentProcess.componentDirectory" seems to be the only one registered. That sucks
+    nsCOMPtr<nsIFile> componentsDir;
+    rv = NS_GetSpecialDirectory("xpcom.currentProcess.componentDirectory", getter_AddRefs(componentsDir));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsIFile> aPSMApp;
+    rv = componentsDir->GetParent(getter_AddRefs(aPSMApp));
+    if (NS_FAILED(rv)) return rv;  
+#else
+    // one day we'll be able to do this.
+    rv = NS_GetSpecialDirectory("xpcom.currentProcessDirectory", getter_AddRefs(aPSMApp));
+    if (NS_FAILED(rv)) return rv;
+#endif
+
+    rv = aPSMApp->Append("Essential Files");
+    if (NS_FAILED(rv)) return rv;
+    
+    // it would be better to search the folder by creator code
+    rv = aPSMApp->Append("Personal Security Manager");
+    if (NS_FAILED(rv)) return rv;
+  
+    PRBool appExists, isExecutable;
+    rv = aPSMApp->Exists(&appExists);
+    if (NS_FAILED(rv)) return rv;
+    
+    rv = aPSMApp->IsExecutable(&isExecutable);
+    if (NS_FAILED(rv)) return rv;
+    
+    psmAppMacFile = do_QueryInterface(aPSMApp, &rv);
+    if (NS_FAILED(rv)) return rv;
+    
+    if (!appExists || !isExecutable)
+    {
+      rv = psmAppMacFile->InitFindingAppByCreatorCode('nPSM');
+      if (NS_FAILED(rv)) return rv;
+    }
+  }
+  
+  rv = psmAppMacFile->LaunchAppWithDoc(nsnull, PR_TRUE);
+  if (NS_FAILED(rv)) return rv;
+
+  const PRUint32 kMaxWaitTicks = 600;          // max 10 seconds
+  PRUint32 endTicks = ::TickCount() + kMaxWaitTicks;
+  
+  do
+  {
+    EventRecord theEvent;
+    WaitNextEvent(0, &theEvent, 10, NULL);
+    outControlRef = CMT_ControlConnect(&nsPSMMutexTbl, &nsPSMShimTbl);
+  } while (!outControlRef && (::TickCount() < endTicks));
+  
+  if (!outControlRef)
+  {
+    NS_WARNING("Did not connect to PSM in time");
+    rv = NS_ERROR_FAILURE;
+  }
+ 
+  return rv;
+}
+
+#endif
+
 NS_IMETHODIMP
 nsPSMComponent::GetControlConnection( CMT_CONTROL * *_retval )
 {
@@ -441,38 +538,11 @@ nsPSMComponent::GetControlConnection( CMT_CONTROL * *_retval )
             }
         }
 #else
-    if (mControl == nsnull)
-    {
-      // Attempt to locate "Personal Security Manager" in "Essential Files".
-      nsCOMPtr<nsILocalFile> aPSMApp = do_CreateInstance(NS_LOCAL_FILE_PROGID, &rv);
-      if (NS_SUCCEEDED(rv))
-      {
-        nsCOMPtr<nsILocalFileMac> psmAppMacFile = do_QueryInterface(aPSMApp, &rv);
-        if (NS_SUCCEEDED(rv))
+        if (mControl == nsnull)
         {
-          rv = psmAppMacFile->InitFindingAppByCreatorCode('nPSM');
-          if (NS_SUCCEEDED(rv))
-          {
-            rv = psmAppMacFile->LaunchAppWithDoc(nsnull, PR_TRUE);
-            if (NS_SUCCEEDED(rv))
-            {
-                 const PRUint32 kMaxWaitTicks = 180;          // max 3 seconds
-              PRUint32 endTicks = ::TickCount() + kMaxWaitTicks;
-              
-              do
-              {
-                EventRecord theEvent;
-                    WaitNextEvent(0, &theEvent, 5, NULL);
-                mControl = CMT_ControlConnect(&nsPSMMutexTbl, &nsPSMShimTbl);
-              } while (!mControl && (::TickCount() < endTicks));
-
-            }
-          }
+          rv = MacLaunchPSM(nsnull, mControl);
+          NS_ASSERTION(NS_SUCCEEDED(rv), "Launching PSM failed");
         }
-      }
-      NS_ASSERTION(NS_SUCCEEDED(rv), "Launching Personal Security Manager failed");
-    }
-
 #endif
 
 #ifdef XP_UNIX
@@ -514,7 +584,13 @@ nsPSMComponent::GetControlConnection( CMT_CONTROL * *_retval )
             if (! filePath)
                 return NS_ERROR_FAILURE;
 
+#ifdef XP_MAC
+            rv = MacLaunchPSM(filePath, mControl);
+            NS_ASSERTION(NS_SUCCEEDED(rv), "Launching PSM failed");
+#else
             mControl = CMT_EstablishControlConnection(filePath, &nsPSMShimTbl, &nsPSMMutexTbl);
+#endif
+            nsAllocator::Free(filePath);
         }
 
 
@@ -530,11 +606,16 @@ nsPSMComponent::GetControlConnection( CMT_CONTROL * *_retval )
         rv = profile->GetCurrentProfileDir(&profileSpec);
         if (NS_FAILED(rv)) goto failure;;
         
+#ifdef XP_MAC
+        profileSpec += "Security";
+        // make sure the dir exists
+        profileSpec.CreateDirectory();
+#endif
+        
         rv = profile->GetCurrentProfile(&profileName);
         if (NS_FAILED(rv)) goto failure;
           
         CMTStatus psmStatus;
-          
         psmStatus = CMT_Hello( mControl, 
                                    PROTOCOL_VERSION, 
                                    nsCAutoString(profileName), 
