@@ -50,6 +50,9 @@
 #include "nsReadableUtils.h"
 #include "nsGfxCIID.h"
 
+// For NS_CopyNativeToUnicode
+#include "nsNativeCharsetUtils.h"
+
 // File Picker
 #include "nsILocalFile.h"
 #include "nsIFile.h"
@@ -197,12 +200,8 @@ static PRUnichar * GetDefaultPrinterNameFromGlobalPrinters()
   PRUnichar * printerName;
   LPTSTR lpPrtName;
   GlobalPrinters::GetInstance()->GetDefaultPrinterName(lpPrtName);
-  nsString str;
-#ifdef UNICODE
-  str.AppendWithConversion((PRUnichar *)lpPrtName);
-#else 
-  str.AssignWithConversion((char*)lpPrtName);
-#endif
+  nsAutoString str;
+  NS_CopyNativeToUnicode(nsDependentCString((char *)lpPrtName), str);
   printerName = ToNewUnicode(str);
   free(lpPrtName);
   return printerName;
