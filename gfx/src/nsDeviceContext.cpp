@@ -687,7 +687,7 @@ DeviceContextImpl::GetLangGroup(const nsString& aCharSet, nsIAtom** aLangGroup)
 
   LangGroupEntry* p = langGroups;
   while (p->mCharSet) {
-    if (aCharSet == p->mCharSet) {
+    if (aCharSet.EqualsIgnoreCase(p->mCharSet)) {
       if (!p->mAtom) {
         p->mAtom = NS_NewAtom(p->mLangGroup);
         if (p->mAtom) {
