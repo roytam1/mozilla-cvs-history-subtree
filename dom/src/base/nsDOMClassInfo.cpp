@@ -4179,8 +4179,8 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                                        0,
                                        nsnull,
                                        NS_LITERAL_STRING("return this.content;"),
-                                       "",
-                                       0,
+                                       __FILE__,
+                                       __LINE__ - 2,
                                        PR_FALSE,
                                        (void **) &getterObj);
       NS_ENSURE_TRUE(NS_SUCCEEDED(rv) && getterObj, NS_ERROR_FAILURE);
@@ -4377,7 +4377,7 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
   nsCOMPtr<nsIDocument> doc;
 
   if (content) {
-    content->GetDocument(getter_AddRefs(doc));
+    doc = content->GetDocument();
   }
 
   if (!doc) {
@@ -4430,10 +4430,7 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
     }
 
     if (!native_parent) {
-      nsCOMPtr<nsIContent> parentContent;
-
-      content->GetParent(getter_AddRefs(parentContent));
-      native_parent = parentContent;
+      native_parent = content->GetParent();
 
       if (!native_parent) {
         native_parent = doc;
@@ -4669,9 +4666,7 @@ nsElementSH::PostCreate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   nsCOMPtr<nsIContent> content(do_QueryInterface(native));
   NS_ENSURE_TRUE(content, NS_ERROR_UNEXPECTED);
 
-  nsCOMPtr<nsIDocument> doc;
-
-  content->GetDocument(getter_AddRefs(doc));
+  nsCOMPtr<nsIDocument> doc = content->GetDocument();
 
   if (!doc) {
     // There's no baseclass that cares about this call so we just
@@ -5415,10 +5410,7 @@ nsHTMLFormElementSH::FindNamedItem(nsIForm *aForm, JSString *str,
     nsCOMPtr<nsIContent> content(do_QueryInterface(aForm));
     nsCOMPtr<nsIDOMHTMLFormElement> form_element(do_QueryInterface(aForm));
 
-    nsCOMPtr<nsIDocument> doc;
-    content->GetDocument(getter_AddRefs(doc));
-
-    nsCOMPtr<nsIHTMLDocument> html_doc(do_QueryInterface(doc));
+    nsCOMPtr<nsIHTMLDocument> html_doc(do_QueryInterface(content->GetDocument()));
 
     if (html_doc && form_element) {
       html_doc->ResolveName(name, form_element, aResult);
@@ -5706,9 +5698,7 @@ nsHTMLExternalObjSH::GetPluginInstance(nsIXPConnectWrappedNative *wrapper,
   nsCOMPtr<nsIContent> content(do_QueryInterface(native));
   NS_ENSURE_TRUE(content, NS_ERROR_UNEXPECTED);
 
-  nsCOMPtr<nsIDocument> doc;
-
-  content->GetDocument(getter_AddRefs(doc));
+  nsCOMPtr<nsIDocument> doc = content->GetDocument();
 
   if (!doc) {
     // No document, no plugin.

@@ -652,7 +652,7 @@ nsSVGAttributes::SetAttr(nsINodeInfo* aNodeInfo,
 
   nsCOMPtr<nsIDocument> document;
   if (mContent)
-    mContent->GetDocument(getter_AddRefs(document));
+    document = mContent->GetDocument();
   
   nsSVGAttribute* attr = nsnull;
   PRInt32 index;
@@ -781,7 +781,7 @@ nsSVGAttributes::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
 
   nsCOMPtr<nsIDocument> document;
   if (mContent)
-    mContent->GetDocument(getter_AddRefs(document));
+    document = mContent->GetDocument();
   
   PRInt32 count = Count();
   PRInt32 index;
