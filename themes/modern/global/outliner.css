@@ -16,6 +16,7 @@ outliner {
 outlinerbody {
   background-color: white;
   color: black;
+  -moz-user-select: none;
 }
 
 :-moz-outliner-row
@@ -25,7 +26,17 @@ outlinerbody {
   border-left: 1px solid transparent;
 }
 
+:-moz-outliner-row(selected)
+{
+  background-color:  #486380;
+}
+
 :-moz-outliner-cell
+{
+  
+}
+
+:-moz-outliner-cell(selected)
 {
   
 }
@@ -35,6 +46,10 @@ outlinerbody {
   color: inherit;
 }
 
+:-moz-outliner-cell-text(selected)
+{
+  color: white;  
+}
 
 outlinercol { 
   border-top: 1px solid transparent;
