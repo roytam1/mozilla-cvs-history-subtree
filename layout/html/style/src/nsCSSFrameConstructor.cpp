@@ -194,6 +194,7 @@ NS_NewSVGTSpanFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame* pa
 #include "nsIScrollable.h"
 #include "nsINodeInfo.h"
 #include "prenv.h"
+#include "nsWidgetsCID.h"
 
 // Global object maintenance
 nsIXBLService * nsCSSFrameConstructor::gXBLService = nsnull;
@@ -2580,7 +2581,7 @@ nsCSSFrameConstructor::ConstructTableFrame(nsIPresShell*            aPresShell,
 
     // if there are any anonymous children for the table, create frames for them
     CreateAnonymousFrames(aPresShell, aPresContext, nsnull, aState, aContent, aNewInnerFrame,
-                          childItems);
+                          PR_FALSE, childItems);
 
     // Set the inner table frame's initial primary list 
     aNewInnerFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
@@ -2702,7 +2703,7 @@ nsCSSFrameConstructor::ConstructTableRowGroupFrame(nsIPresShell*            aPre
     if (NS_FAILED(rv)) return rv;
     // if there are any anonymous children for the table, create frames for them
     CreateAnonymousFrames(aPresShell, aPresContext, nsnull, aState, aContent, aNewFrame,
-                          childItems);
+                          PR_FALSE, childItems);
 
     aNewFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
     if (aIsPseudoParent) {
@@ -2813,7 +2814,7 @@ nsCSSFrameConstructor::ConstructTableRowFrame(nsIPresShell*            aPresShel
     if (NS_FAILED(rv)) return rv;
     // if there are any anonymous children for the table, create frames for them
     CreateAnonymousFrames(aPresShell, aPresContext, nsnull, aState, aContent, aNewFrame,
-                          childItems);
+                          PR_FALSE, childItems);
 
     aNewFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
     if (aIsPseudoParent) {
@@ -3553,7 +3554,7 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
     // This must happen before ProcessChildren to ensure that popups are
     // never constructed before the popupset.
     CreateAnonymousFrames(aPresShell, aPresContext, nsnull, aState, aDocElement, contentFrame,
-                          childItems, PR_TRUE);
+                          PR_FALSE, childItems, PR_TRUE);
     ProcessChildren(aPresShell, aPresContext, aState, aDocElement, contentFrame,
                     PR_TRUE, childItems, isBlockFrame);
 
@@ -3881,6 +3882,7 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
 
       nsIFrame* newScrollableFrame = nsnull;
 
+      newFrame = nsnull;
       rootPseudoStyle = BeginBuildingScrollFrame( aPresShell,
                                                   aPresContext,
                                                   state,
@@ -4042,37 +4044,8 @@ nsCSSFrameConstructor::ConstructPageFrame(nsIPresShell*   aPresShell,
 
   aPageFrame->SetInitialChildList(aPresContext, nsnull, aPageContentFrame);
 
-  if (aPrevPageFrame) {
-    // Get aPrevPageFrame's page content frame
-    nsIFrame* prevPCFrame;
-    aPrevPageFrame->FirstChild(aPresContext, nsnull, &prevPCFrame);
-
-    nsFrameItems fixedPlaceholders;
-    nsIFrame* firstFixed;
-    prevPCFrame->FirstChild(aPresContext, nsLayoutAtoms::fixedList, &firstFixed);
-
-    nsFrameConstructorState state(aPresContext, aPageContentFrame,
-                                  mInitialContainingBlock, mInitialContainingBlock);
-    // Iterate the fixed frames and replicate each
-    for (nsIFrame* fixed = firstFixed; fixed; fixed->GetNextSibling(&fixed)) {
-      nsIContent* content;
-      fixed->GetContent(&content);
-      rv = ConstructFrame(aPresShell, aPresContext, state, content, 
-                          aPageContentFrame, fixedPlaceholders);
-      if (NS_FAILED(rv))
-        return NS_ERROR_NULL_POINTER;
-    }
-    // Add the fixed frames and their placeholders to aPageContentFrame
-    if (firstFixed) {
-      // Add the placeholders to the primary child list. They will not be reflowed 
-      // (only the area frame child is reflowed) but must not be destroyed until the 
-      // page content frame is destroyed.
-      aPageContentFrame->SetInitialChildList(aPresContext, nsnull, fixedPlaceholders.childList);
-      // Add the fixed frames to the fixed child list.
-      aPageContentFrame->SetInitialChildList(aPresContext, nsLayoutAtoms::fixedList, 
-                                             state.mFixedItems.childList);
-    }
-  }
+  // Fixed pos kids are taken care of directly in CreateContinuingFrame()
+  
   return rv;
 }
 
@@ -4393,6 +4366,11 @@ nsCSSFrameConstructor::ConstructSelectFrame(nsIPresShell*        aPresShell,
       nsIFrame* scrolledFrame = nsnull;
       NS_NewSelectsAreaFrame(aPresShell, &scrolledFrame, flags);
 
+      // make sure any existing anonymous content is cleared out. Gfx scroll frame construction
+      // should reset it to just be the anonymous scrollbars, but we don't want to depend
+      // on that.
+      aPresShell->SetAnonymousContentFor(aContent, nsnull);
+
       InitializeSelectFrame(aPresShell, aPresContext, aState, listFrame, scrolledFrame, aContent, comboboxFrame,
                            listStyle, PR_FALSE, PR_FALSE, PR_TRUE);
       newFrame = listFrame;
@@ -4417,10 +4395,12 @@ nsCSSFrameConstructor::ConstructSelectFrame(nsIPresShell*        aPresShell,
       NS_RELEASE(viewWidget);
       //listView->SetViewFlags(NS_VIEW_PUBLIC_FLAG_DONT_CHECK_CHILDREN);
 
-      // Create display and button frames from the combobox's anonymous content
+      // Create display and button frames from the combobox's anonymous content.
+      // The anonymous content is appended to existing anonymous content for this
+      // element (the scrollbars).
       nsFrameItems childItems;
       CreateAnonymousFrames(aPresShell, aPresContext, nsHTMLAtoms::combobox,
-                            aState, aContent, comboboxFrame, childItems);
+                            aState, aContent, comboboxFrame, PR_TRUE, childItems);
   
       comboboxFrame->SetInitialChildList(aPresContext, nsnull,
                                          childItems.childList);
@@ -4465,14 +4445,6 @@ nsCSSFrameConstructor::ConstructSelectFrame(nsIPresShell*        aPresShell,
 
       aNewFrame = listFrame;
 
-        // Set flag so the events go to the listFrame not child frames.
-        // XXX: We should replace this with a real widget manager similar
-        // to how the nsFormControlFrame works.
-        // Re-directing events is a temporary Kludge.
-      nsIView *listView; 
-      listFrame->GetView(aPresContext, &listView);
-      NS_ASSERTION(nsnull != listView,"ListFrame's view is nsnull");
-      //listView->SetViewFlags(NS_VIEW_PUBLIC_FLAG_DONT_CHECK_CHILDREN);
       aFrameHasBeenInitialized = PR_TRUE;
     }
   }
@@ -4496,7 +4468,7 @@ nsCSSFrameConstructor::InitializeSelectFrame(nsIPresShell*        aPresShell,
                                              nsStyleContext*          aStyleContext,
                                              PRBool                   aIsAbsolutelyPositioned,
                                              PRBool                   aIsFixedPositioned,
-                                             PRBool                   aCreateBlock)
+                                             PRBool                   aBuildCombobox)
 {
   // Initialize it
   nsIFrame* geometricParent = aParentFrame;
@@ -4507,24 +4479,48 @@ nsCSSFrameConstructor::InitializeSelectFrame(nsIPresShell*        aPresShell,
     geometricParent = aState.mFixedItems.containingBlock;
   }
   
-  nsRefPtr<nsStyleContext> scrolledPseudoStyle;
+  // We don't call InitAndRestoreFrame for scrollFrame because we can only
+  // restore the frame state after its parts have been created (in particular,
+  // the scrollable view). So we have to split Init and Restore.
 
-  
-  scrolledPseudoStyle = aPresContext->ResolvePseudoStyleContextFor(aContent,
-                                                                   nsCSSAnonBoxes::scrolledContent,
-                                                                   aStyleContext);
+  // Initialize the frame
+  scrollFrame->Init(aPresContext, aContent, geometricParent, aStyleContext, nsnull);
 
-  InitAndRestoreFrame(aPresContext, aState, aContent, 
-                      geometricParent, aStyleContext, nsnull, scrollFrame);
+  nsHTMLContainerFrame::CreateViewForFrame(aPresContext, scrollFrame,
+                                           aStyleContext, aParentFrame, aBuildCombobox);
+  if (aBuildCombobox) {
+    // Give the drop-down list a popup widget
+    nsIView * view;
+    scrollFrame->GetView(aPresContext, &view);
+    NS_ASSERTION(view, "We asked for a view but didn't get one");
+    if (view) {
+      nsCOMPtr<nsIViewManager> vm;
+      view->GetViewManager(*getter_AddRefs(vm));
+      vm->SetViewFloating(view, PR_TRUE);
 
-  // Initialize the frame and force it to have a view
-  // the scrolled frame is anonymous and does not have a content node
-  InitAndRestoreFrame(aPresContext, aState, aContent, 
-                      scrollFrame, scrolledPseudoStyle, nsnull, scrolledFrame);
+      nsWidgetInitData widgetData;
+      widgetData.mWindowType  = eWindowType_popup;
+      widgetData.mBorderStyle = eBorderStyle_default;
 
-  nsHTMLContainerFrame::CreateViewForFrame(aPresContext, scrolledFrame,
-                                           scrolledPseudoStyle, nsnull, PR_TRUE);
+#if defined(XP_MAC) || defined(XP_MACOSX)
+      static NS_DEFINE_IID(kCPopUpCID,  NS_POPUP_CID);
+      view->CreateWidget(kCPopUpCID, &widgetData, nsnull);
+#else
+      static NS_DEFINE_IID(kCChildCID, NS_CHILD_CID);
+      view->CreateWidget(kCChildCID, &widgetData, nsnull);
+#endif
+    }
+  }
 
+  nsStyleContext* scrolledPseudoStyle;
+  BuildScrollFrame(aPresShell, aPresContext, aState, aContent, aStyleContext,
+                   scrolledFrame, geometricParent, aParentFrame, scrollFrame,
+                   scrolledPseudoStyle);
+
+  if (aState.mFrameState && aState.mFrameManager) {
+    // Restore frame state for the scroll frame
+    aState.mFrameManager->RestoreFrameStateFor(aPresContext, scrollFrame, aState.mFrameState);
+  }
 
   // The area frame is a floater container
   PRBool haveFirstLetterStyle, haveFirstLineStyle;
@@ -4577,17 +4573,9 @@ nsCSSFrameConstructor::InitializeSelectFrame(nsIPresShell*        aPresShell,
                                        aState.mFloatedItems.childList);
   }
 
-  // Set the scroll frame's initial child list
-  scrollFrame->SetInitialChildList(aPresContext, nsnull, scrolledFrame);
-
   return NS_OK;
 }
 
-/**
- * Used to be InitializeScrollFrame but now its only used for the select tag
- * But the select tag should really be fixed to use GFX scrollbars that can
- * be create with BuildScrollFrame.
- */
 nsresult
 nsCSSFrameConstructor::ConstructFieldSetFrame(nsIPresShell*            aPresShell, 
                                               nsIPresContext*          aPresContext,
@@ -5117,7 +5105,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsIPresShell*            aPresShell,
 
     // if there are any anonymous children create frames for them
     CreateAnonymousFrames(aPresShell, aPresContext, aTag, aState, aContent, newFrame,
-                          childItems);
+                          PR_FALSE, childItems);
 
 
     // Set the frame's initial child list
@@ -5275,6 +5263,7 @@ nsCSSFrameConstructor::CreateAnonymousFrames(nsIPresShell*            aPresShell
                                              nsFrameConstructorState& aState,
                                              nsIContent*              aParent,
                                              nsIFrame*                aNewFrame,
+                                             PRBool                   aAppendToExisting,
                                              nsFrameItems&            aChildItems,
                                              PRBool                   aIsRoot)
 {
@@ -5298,7 +5287,8 @@ nsCSSFrameConstructor::CreateAnonymousFrames(nsIPresShell*            aPresShell
       )
     return NS_OK;
 
-  return CreateAnonymousFrames(aPresShell, aPresContext, aState, aParent, mDocument, aNewFrame, aChildItems);
+  return CreateAnonymousFrames(aPresShell, aPresContext, aState, aParent,
+                               mDocument, aNewFrame, aAppendToExisting, aChildItems);
 }
 
 // after the node has been constructed and initialized create any
@@ -5310,6 +5300,7 @@ nsCSSFrameConstructor::CreateAnonymousFrames(nsIPresShell*            aPresShell
                                              nsIContent*              aParent,
                                              nsIDocument*             aDocument,
                                              nsIFrame*                aParentFrame,
+                                             PRBool                   aAppendToExisting,
                                              nsFrameItems&            aChildItems)
 {
   nsCOMPtr<nsIAnonymousContentCreator> creator(do_QueryInterface(aParentFrame));
@@ -5325,6 +5316,29 @@ nsCSSFrameConstructor::CreateAnonymousFrames(nsIPresShell*            aPresShell
   anonymousItems->Count(&count);
 
   if (count) {
+    // A content element can have multiple sources of anonymous content. For example,
+    // SELECTs have a combobox dropdown button and also scrollbars in the list view.
+    // nsPresShell doesn't handle this very well. It's a problem because a reframe could
+    // cause anonymous content from one source to be destroyed and recreated while
+    // (in theory) leaving the rest intact, but the presshell doesn't have a way of tracking
+    // the anonymous content at that granularity.
+
+    // So what we're doing right now is wiping out existing content whenever we get new
+    // anonymous content, except for the one case we care about where there are multiple
+    // sources (SELECTs). This case is handled by having SELECT initialization tell us
+    // explicitly not to wipe out the scrollbars when the combobox anonymous content is
+    // added.
+    // Note that we only wipe out existing content when there is actual new content.
+    // Otherwise we wipe out scrollbars and other anonymous content when we check sources
+    // that never provide anonymous content (e.g. the call to CreateAnonymousFrames
+    // from ConstructBlock).
+
+    // What we SHOULD do is get rid of the presshell's need to track anonymous
+    // content. It's only used for cleanup as far as I can tell.
+    if (!aAppendToExisting) {
+      aPresShell->SetAnonymousContentFor(aParent, nsnull);
+    }
+
     // Inform the pres shell about the anonymous content
     aPresShell->SetAnonymousContentFor(aParent, anonymousItems);
 
@@ -5958,7 +5972,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
       }
       
       CreateAnonymousFrames(aPresShell, aPresContext, aTag, aState, aContent,
-                            newFrame, childItems);
+                            newFrame, PR_FALSE, childItems);
 
       // Set the frame's initial child list
       newFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
@@ -6074,7 +6088,7 @@ nsCSSFrameConstructor::BeginBuildingScrollFrame(nsIPresShell*            aPresSh
 
   nsIFrame* scrollFrame = nsnull;
   nsIFrame* parentFrame = nsnull;
-  nsIFrame* gfxScrollFrame = nsnull;
+  nsIFrame* gfxScrollFrame = aNewFrame;
 
   nsFrameItems anonymousItems;
 
@@ -6083,9 +6097,20 @@ nsCSSFrameConstructor::BeginBuildingScrollFrame(nsIPresShell*            aPresSh
   PRBool isGfx = HasGfxScrollbars();
 
   if (isGfx) {
-    BuildGfxScrollFrame(aPresShell, aPresContext, aState, aContent, aDocument,
-                        aParentFrame, aContentParentFrame, contentStyle,
-                        aIsRoot, gfxScrollFrame, anonymousItems, aScrollPortFrame);
+    if (!gfxScrollFrame) {
+      NS_NewGfxScrollFrame(aPresShell, &gfxScrollFrame, aDocument, aIsRoot);
+      
+      InitAndRestoreFrame(aPresContext, aState, aContent, 
+                          aParentFrame, contentStyle, nsnull, gfxScrollFrame);
+      
+      // Create a view
+      nsHTMLContainerFrame::CreateViewForFrame(aPresContext, gfxScrollFrame,
+                                               contentStyle, aContentParentFrame, PR_FALSE);
+    }
+    
+    InitGfxScrollFrame(aPresShell, aPresContext, aState, aContent, aDocument,
+                       aParentFrame, aContentParentFrame, contentStyle,
+                       aIsRoot, gfxScrollFrame, anonymousItems, aScrollPortFrame);
 
     scrollFrame = anonymousItems.childList; // get the scrollport from the anonymous list
     parentFrame = gfxScrollFrame;
@@ -6228,6 +6253,7 @@ nsCSSFrameConstructor::FinishBuildingScrollFrame(nsIPresContext*      aPresConte
  *
  * @param aNewFrame The new scrollframe or gfx scrollframe that we create. It will contain the
  *                  scrolled frame you passed in. (returned)
+ *                  If this is not null, we'll just use it
  * @param aScrolledContentStyle the style that was resolved for the scrolled frame. (returned)
  */
 nsresult
@@ -6302,32 +6328,24 @@ nsCSSFrameConstructor::BuildScrollFrame(nsIPresShell*            aPresShell,
 
 /** 
  * If we are building GFX scrollframes this will create one
+ * if aNewFrame gets a frame passed in, we'll use it instead
+ * of creating a new frame
  */
 nsresult
-nsCSSFrameConstructor::BuildGfxScrollFrame (nsIPresShell*            aPresShell, 
-                                            nsIPresContext*          aPresContext,
-                                            nsFrameConstructorState& aState,
-                                            nsIContent*              aContent,
-                                            nsIDocument*             aDocument,
-                                            nsIFrame*                aParentFrame,
-                                            nsIFrame*                aContentParentFrame,
-                                            nsStyleContext*          aStyleContext,
-                                            PRBool                   aIsRoot,
-                                            nsIFrame*&               aNewFrame,
-                                            nsFrameItems&            aAnonymousFrames,
-                                            nsIFrame*                aScrollPortFrame)
+nsCSSFrameConstructor::InitGfxScrollFrame(nsIPresShell*            aPresShell, 
+                                          nsIPresContext*          aPresContext,
+                                          nsFrameConstructorState& aState,
+                                          nsIContent*              aContent,
+                                          nsIDocument*             aDocument,
+                                          nsIFrame*                aParentFrame,
+                                          nsIFrame*                aContentParentFrame,
+                                          nsStyleContext*          aStyleContext,
+                                          PRBool                   aIsRoot,
+                                          nsIFrame*&               aNewFrame,
+                                          nsFrameItems&            aAnonymousFrames,
+                                          nsIFrame*                aScrollPortFrame)
 {
 #ifdef INCLUDE_XUL
-  NS_NewGfxScrollFrame(aPresShell, &aNewFrame, aDocument, aIsRoot);
-
-  InitAndRestoreFrame(aPresContext, aState, aContent, 
-                      aParentFrame, aStyleContext, nsnull, aNewFrame);
-
-  // Create a view
-  nsHTMLContainerFrame::CreateViewForFrame(aPresContext, aNewFrame,
-                                           aStyleContext, aContentParentFrame, PR_FALSE);
-
-  
   if (!aScrollPortFrame)
     NS_NewScrollPortFrame(aPresShell, &aScrollPortFrame);
 
@@ -6335,7 +6353,7 @@ nsCSSFrameConstructor::BuildGfxScrollFrame (nsIPresShell*            aPresShell,
 
   // if there are any anonymous children for the nsScrollFrame create frames for them.
   CreateAnonymousFrames(aPresShell, aPresContext, aState, aContent, aDocument, aNewFrame,
-                        aAnonymousFrames);
+                        PR_FALSE, aAnonymousFrames);
 
   return NS_OK;
 #endif
@@ -6466,7 +6484,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
     nsCOMPtr<nsIAtom> tag;
     aContent->GetTag(*getter_AddRefs(tag));
     CreateAnonymousFrames(aPresShell, aPresContext, tag, aState, aContent, newFrame,
-                            childItems);
+                          PR_FALSE, childItems);
 
     // Set the scrolled frame's initial child lists
     scrolledFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
@@ -6531,7 +6549,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
     nsCOMPtr<nsIAtom> tag;
     aContent->GetTag(*getter_AddRefs(tag));
     CreateAnonymousFrames(aPresShell, aPresContext, tag, aState, aContent, newFrame,
-                          childItems);
+                          PR_FALSE, childItems);
 
     // Set the frame's initial child list(s)
     newFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
@@ -6583,7 +6601,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
     nsCOMPtr<nsIAtom> tag;
     aContent->GetTag(*getter_AddRefs(tag));
     CreateAnonymousFrames(aPresShell, aPresContext, tag, aState, aContent, newFrame,
-                          childItems);
+                          PR_FALSE, childItems);
 
     // Set the frame's initial child list(s)
     newFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
@@ -7109,7 +7127,7 @@ nsCSSFrameConstructor::ConstructMathMLFrame(nsIPresShell*            aPresShell,
                            childItems, PR_FALSE);
 
       CreateAnonymousFrames(aPresShell, aPresContext, aTag, aState, aContent, newFrame,
-                            childItems);
+                            PR_FALSE, childItems);
     }
 
     // Set the frame's initial child list
@@ -7260,7 +7278,7 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
                            newFrame, PR_TRUE, childItems, isBlock);
 
       CreateAnonymousFrames(aPresShell, aPresContext, aTag, aState, aContent, newFrame,
-                            childItems);
+                            PR_FALSE, childItems);
     }
 
     // Set the frame's initial child list
@@ -8482,7 +8500,7 @@ nsCSSFrameConstructor::ContentAppended(nsIPresContext* aPresContext,
           nsIContent* item = nsCOMPtr<nsIContent>(*iter);
           if (item == child)
             // Call ContentInserted with this index.
-            ContentInserted(aPresContext, aContainer, child, iter.index(), mTempFrameTreeState, PR_FALSE);
+            ContentInserted(aPresContext, aContainer, nsnull, child, iter.index(), mTempFrameTreeState, PR_FALSE);
         }
       }
 
@@ -8985,6 +9003,7 @@ nsCSSFrameConstructor::NeedSpecialFrameReframe(nsIPresShell*   aPresShell,
 NS_IMETHODIMP
 nsCSSFrameConstructor::ContentInserted(nsIPresContext*        aPresContext,
                                        nsIContent*            aContainer,
+                                       nsIFrame*              aContainerFrame,
                                        nsIContent*            aChild,
                                        PRInt32                aIndexInContainer,
                                        nsILayoutHistoryState* aFrameState,
@@ -8992,7 +9011,6 @@ nsCSSFrameConstructor::ContentInserted(nsIPresContext*        aPresContext,
 {
   // XXXldb Do we need to re-resolve style to handle the CSS2 + combinator and
   // the :empty pseudo-class?
-
 #ifdef DEBUG
   if (gNoisyContentUpdates) {
     printf("nsCSSFrameConstructor::ContentInserted container=%p child=%p index=%d\n",
@@ -9113,10 +9131,13 @@ nsCSSFrameConstructor::ContentInserted(nsIPresContext*        aPresContext,
   }
 
   // Otherwise, we've got parent content. Find its frame.
-  nsIFrame* parentFrame = GetFrameFor(shell, aPresContext, aContainer);
-  if (! parentFrame)
-    return NS_OK; // XXXwaterson will this break selects? (See ``Here
-                  // we have been notified...'' below.)
+  nsIFrame* parentFrame = aContainerFrame;
+  if (!parentFrame) {
+    parentFrame = GetFrameFor(shell, aPresContext, aContainer);
+    if (! parentFrame)
+      return NS_OK; // XXXwaterson will this break selects? (See ``Here
+    // we have been notified...'' below.)
+  }
 
   // See if we have an XBL insertion point. If so, then that's our
   // real parent frame; if not, then the frame hasn't been built yet
@@ -9438,7 +9459,7 @@ nsCSSFrameConstructor::ContentReplaced(nsIPresContext* aPresContext,
                                 aOldChild, aIndexInContainer, PR_TRUE);
 
   if (NS_SUCCEEDED(res)) {
-    res = ContentInserted(aPresContext, aContainer, 
+    res = ContentInserted(aPresContext, aContainer,  nsnull,
                           aNewChild, aIndexInContainer, nsnull, PR_TRUE);
   }
 
@@ -9731,10 +9752,7 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
       // For "select" add the pseudo frame after the last item is deleted
       nsIFrame* parentFrame = nsnull;
       childFrame->GetParent(&parentFrame);
-      if (parentFrame == selectFrame) {
-        return NS_ERROR_FAILURE;
-      }
-      if (shell && parentFrame) {
+      if (shell && parentFrame && parentFrame != selectFrame) {
         nsFrameConstructorState state(aPresContext,
                                       nsnull, nsnull, nsnull);
         AddDummyFrameToSelect(aPresContext, shell, state,
@@ -11612,9 +11630,81 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsIPresShell*   aPresShell,
     rv = NS_ERROR_UNEXPECTED;
   }
 
-  *aContinuingFrame = newFrame; 
+  *aContinuingFrame = newFrame;
 
-  return rv;
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
+
+  // Now deal with fixed-pos things....  They should appear on all pages, and
+  // the placeholders must be kids of a block, so we want to move over the
+  // placeholders when processing the child of the pageContentFrame.
+  if (!aParentFrame) {
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIAtom> parentType;
+  aParentFrame->GetFrameType(getter_AddRefs(parentType));
+  if (parentType != nsLayoutAtoms::pageContentFrame) {
+    return NS_OK;
+  }
+
+  // Our parent is a page content frame.  Look up its page frame and
+  // see whether it has a prev-in-flow.
+  nsIFrame* pageFrame;
+  aParentFrame->GetParent(&pageFrame);
+  if (!pageFrame) {
+    NS_ERROR("pageContentFrame does not have parent!");
+    return NS_ERROR_UNEXPECTED;
+  }
+
+  nsIFrame* prevPage;
+  pageFrame->GetPrevInFlow(&prevPage);
+  if (!prevPage) {
+    return NS_OK;
+  }
+
+  // OK.  now we need to do this fixed-pos game.
+  // Get prevPage's page content frame
+  nsIFrame* prevPageContentFrame;
+  prevPage->FirstChild(aPresContext, nsnull, &prevPageContentFrame);
+
+  if (!prevPageContentFrame) {
+    return NS_ERROR_UNEXPECTED;
+  }
+  
+  nsFrameItems fixedPlaceholders;
+  nsIFrame* firstFixed;
+  prevPageContentFrame->FirstChild(aPresContext, nsLayoutAtoms::fixedList,
+                                   &firstFixed);
+
+  if (!firstFixed) {
+    return NS_OK;
+  }
+
+  nsFrameConstructorState state(aPresContext, aParentFrame,
+                                mInitialContainingBlock,
+                                mInitialContainingBlock);
+  
+  // Iterate the fixed frames and replicate each
+  for (nsIFrame* fixed = firstFixed; fixed; fixed->GetNextSibling(&fixed)) {
+    nsIContent* content;
+    fixed->GetContent(&content);
+    rv = ConstructFrame(aPresShell, aPresContext, state, content, 
+                        newFrame, fixedPlaceholders);
+    if (NS_FAILED(rv))
+      return rv;
+  }
+
+  // Add the placeholders to our primary child list.
+  // XXXbz this is a little screwed up, since the fixed frames will have the
+  // wrong parent block and hence auto-positioning will be broken.  Oh, well.
+  newFrame->SetInitialChildList(aPresContext, nsnull, fixedPlaceholders.childList);
+  // Add the fixed frames to the fixed child list of the page content frame
+  aParentFrame->SetInitialChildList(aPresContext,
+                                    nsLayoutAtoms::fixedList, 
+                                    state.mFixedItems.childList);
+  return NS_OK;
 }
 
 // Helper function that searches the immediate child frames 
@@ -12089,12 +12179,17 @@ nsCSSFrameConstructor::RecreateFramesForContent(nsIPresContext* aPresContext,
   nsCOMPtr<nsIContent> container;
   aContent->GetParent(*getter_AddRefs(container));
   if (container) {
-    PRInt32 indexInContainer;    
+    PRInt32 indexInContainer;
     rv = container->IndexOf(aContent, indexInContainer);
     if (NS_SUCCEEDED(rv)) {
       // Before removing the frames associated with the content object, ask them to save their
       // state onto a temporary state object.
       CaptureStateForFramesOf(aPresContext, aContent, mTempFrameTreeState);
+
+      // Save parent frame because this frame is going away
+      nsIFrame* parent = nsnull;
+      if (frame)
+        frame->GetParent(&parent);
 
       // Remove the frames associated with the content object on which the
       // attribute change occurred.
@@ -12102,7 +12197,7 @@ nsCSSFrameConstructor::RecreateFramesForContent(nsIPresContext* aPresContext,
 
       if (NS_SUCCEEDED(rv)) {
         // Now, recreate the frames associated with this content object.
-        rv = ContentInserted(aPresContext, container, aContent, indexInContainer, mTempFrameTreeState, PR_FALSE);
+        rv = ContentInserted(aPresContext, container, parent, aContent, indexInContainer, mTempFrameTreeState, PR_FALSE);
       }      
     }
   } else {
@@ -13355,7 +13450,7 @@ nsCSSFrameConstructor::ConstructBlock(nsIPresShell*            aPresShell,
   nsCOMPtr<nsIAtom> tag;
   aContent->GetTag(*getter_AddRefs(tag));
   CreateAnonymousFrames(aPresShell, aPresContext, tag, aState, aContent, aNewFrame,
-                          childItems);
+                        PR_FALSE, childItems);
 
   // Set the frame's initial child list
   aNewFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
@@ -13496,7 +13591,7 @@ nsCSSFrameConstructor::ConstructInline(nsIPresShell*            aPresShell,
     nsCOMPtr<nsIAtom> tag;
     aContent->GetTag(*getter_AddRefs(tag));
     CreateAnonymousFrames(aPresShell, aPresContext, tag, aState, aContent, aNewFrame,
-                            childItems);
+                          PR_FALSE, childItems);
 
     aNewFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
 
