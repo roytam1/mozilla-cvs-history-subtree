@@ -148,7 +148,9 @@ public:
                                   PRBool               aCheckVis,
                                   PRBool*              aIsVisible);
 
-  NS_IMETHOD IsEmpty(PRBool aIsQuirkMode, PRBool aIsPre, PRBool* aResult);
+  NS_IMETHOD IsEmpty(nsCompatibility aCompatMode,
+                     PRBool aIsPre,
+                     PRBool* aResult);
 
   // nsIHTMLReflow
   NS_IMETHOD Reflow(nsIPresContext*          aPresContext,

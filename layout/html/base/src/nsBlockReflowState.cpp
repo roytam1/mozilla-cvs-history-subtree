@@ -451,7 +451,6 @@ nsBlockReflowState::ReconstructMarginAbove(nsLineList::iterator aLine)
 
   nsCompatibility mode;
   mPresContext->GetCompatibilityMode(&mode);
-  PRBool isQuirkMode = mode == eCompatibility_NavQuirks;
 
   nsLineList::iterator firstLine = block->begin_lines();
   for (;;) {
@@ -461,7 +460,7 @@ nsBlockReflowState::ReconstructMarginAbove(nsLineList::iterator aLine)
       break;
     }
     PRBool isEmpty;
-    aLine->IsEmpty(isQuirkMode, isPre, &isEmpty);
+    aLine->IsEmpty(mode, isPre, &isEmpty);
     if (! isEmpty) {
       break;
     }

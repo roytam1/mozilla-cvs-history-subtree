@@ -3257,13 +3257,11 @@ RuleProcessorData::RuleProcessorData(nsIPresContext* aPresContext,
   mPreviousSiblingData = nsnull;
   mParentData = nsnull;
 
+  // get the compat. mode (unless it is provided)
   if(!aCompat) {
-    // get the compat. mode (unless it is provided)
-    nsCompatibility quirkMode = eCompatibility_Standard;
-    mPresContext->GetCompatibilityMode(&quirkMode);
-    mIsQuirkMode = eCompatibility_Standard == quirkMode ? PR_FALSE : PR_TRUE;
+    mPresContext->GetCompatibilityMode(&mCompatMode);
   } else {
-    mIsQuirkMode = eCompatibility_Standard == *aCompat ? PR_FALSE : PR_TRUE;
+    mCompatMode = *aCompat;
   }
 
 
@@ -3739,7 +3737,8 @@ static PRBool SelectorMatches(RuleProcessorData &data,
       ((nsnull != aSelector->mIDList) || (nsnull != aSelector->mClassList))) {  // test for ID & class match
     result = localFalse;
     if (data.mStyledContent) {
-      PRBool isCaseSensitive = !data.mIsQuirkMode; // bug 93371
+      // case sensitivity: bug 93371
+      PRBool isCaseSensitive = data.mCompatMode != eCompatibility_NavQuirks;
       nsAtomList* IDList = aSelector->mIDList;
       if (nsnull == IDList) {
         result = PR_TRUE;
@@ -3810,7 +3809,7 @@ static PRBool SelectorMatchesTree(RuleProcessorData &data,
 
       // for adjacent sibling combinators, the content to test against the
       // selector is the previous sibling
-      nsCompatibility compat = curdata->mIsQuirkMode ? eCompatibility_NavQuirks : eCompatibility_Standard;
+      nsCompatibility compat = curdata->mCompatMode;
       RuleProcessorData* newdata;
       if (PRUnichar('+') == selector->mOperator) {
         newdata = curdata->mPreviousSiblingData;
@@ -4451,9 +4450,9 @@ CSSRuleProcessor::GetRuleCascade(nsIPresContext* aPresContext, nsIAtom* aMedium)
       mSheets->EnumerateForwards(CascadeSheetRulesInto, &data);
       PutRulesInList(&data.mRuleArrays, cascade->mWeightedRules);
 
-      nsCompatibility quirkMode = eCompatibility_Standard;
+      nsCompatibility quirkMode = eCompatibility_FullStandards;
       aPresContext->GetCompatibilityMode(&quirkMode);
-      PRBool isQuirksMode = (eCompatibility_Standard == quirkMode ? PR_FALSE : PR_TRUE);
+      PRBool isQuirksMode = eCompatibility_NavQuirks == quirkMode;
 
       cascade->mRuleHash.SetCaseSensitive(!isQuirksMode);
       cascade->mWeightedRules->EnumerateBackwards(BuildHashEnum, &(cascade->mRuleHash));

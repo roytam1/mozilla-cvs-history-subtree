@@ -1255,24 +1255,14 @@ static nsIHTMLStyleSheet* GetAttrStyleSheet(nsIDocument* aDocument)
 PRBool
 nsGenericHTMLElement::InNavQuirksMode(nsIDocument* aDoc)
 {
-  PRBool status = PR_FALSE;
-  if (aDoc) {
-    nsCompatibility mode;
-    // multiple shells on the same doc are out of luck
-    nsCOMPtr<nsIPresShell> shell;
-    aDoc->GetShellAt(0, getter_AddRefs(shell));
-    if (shell) {
-      nsCOMPtr<nsIPresContext> presContext;
-      shell->GetPresContext(getter_AddRefs(presContext));
-      if (presContext) {
-        presContext->GetCompatibilityMode(&mode);
-        if (eCompatibility_NavQuirks == mode) {
-          status = PR_TRUE;
-        }
-      }
-    }
+  nsCOMPtr<nsIHTMLDocument> doc(do_QueryInterface(aDoc));
+  if (!doc) {
+    return PR_FALSE;
   }
-  return status;
+
+  nsCompatibility mode;
+  doc->GetCompatibilityMode(mode);
+  return mode == eCompatibility_NavQuirks;
 }
 
 nsresult

@@ -864,9 +864,21 @@ NS_IMETHODIMP StyleSetImpl::EnableQuirkStyleSheet(PRBool aEnable)
       }
     }
   }
+  NS_ASSERTION(mQuirkStyleSheet, "no quirk stylesheet");
   if (mQuirkStyleSheet) {
 #if defined(DEBUG_warren) || defined(DEBUG_attinasi)
     printf( "%s Quirk StyleSheet\n", aEnable ? "Enabling" : "Disabling" );
+#endif
+#ifdef DEBUG_dbaron // XXX Make this |DEBUG| once it stops firing.
+    PRUint32 count = 0;
+    if (mAgentRuleProcessors)
+      mAgentRuleProcessors->Count(&count);
+    PRBool enabledNow;
+    mQuirkStyleSheet->GetEnabled(enabledNow);
+    NS_ASSERTION(count == 0 || aEnable == enabledNow,
+                 "enabling/disabling quirk stylesheet too late");
+    if (count != 0 && aEnable == enabledNow)
+      printf("WARNING: We set the quirks mode too many times.\n"); // we do!
 #endif
     mQuirkStyleSheet->SetEnabled(aEnable);
   }
