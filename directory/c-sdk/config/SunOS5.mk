@@ -121,6 +121,7 @@ OS_DEFINES		= -DSVR4 -DSYSV -D__svr4 -D__svr4__ -DSOLARIS
 
 ifeq ($(OS_TEST),i86pc)
 CPU_ARCH		= x86
+COMPILER_TAG		= _i86pc
 OS_DEFINES		+= -Di386
 # The default debug format, DWARF (-g), is not supported by gcc
 # on i386-ANY-sysv4/solaris, but the stabs format is.  It is
