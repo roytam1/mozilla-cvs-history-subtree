@@ -652,6 +652,8 @@ nsJVMMgr::StartupJVM(void)
 
     nsresult err = fJVM->StartupJVM(&initargs);
     if (err == NS_OK) {
+        /* assume the JVM is running. */
+        fStatus = nsJVMStatus_Running;
 #ifdef MOZ_SMARTUPDATE
         nsIJRIPlugin* jriJVM;
         if (fJVM->QueryInterface(kIJRIPluginIID, (void**)&jriJVM) == NS_OK) {
