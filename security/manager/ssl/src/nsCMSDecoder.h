@@ -28,6 +28,7 @@
 #include "nsCOMPtr.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsICMSDecoder.h"
+#include "sechash.h"
 #include "cms.h"
 
 #define NS_HASH_CLASSNAME "Hash Object"
@@ -40,13 +41,12 @@ class nsHash : public nsIHash
     NS_DECL_ISUPPORTS
     NS_DECL_NSIHASH
 
-    nsHash(long type);
+    nsHash();
     virtual ~nsHash();
 
   private:
     HASHContext * m_ctxt;
-}
-
+};
 
 #define NS_CMSMESSAGE_CLASSNAME "CMS Message Object"
 #define NS_CMSMESSAGE_CID \

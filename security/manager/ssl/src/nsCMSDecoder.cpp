@@ -27,24 +27,42 @@
 
 NS_IMPL_ISUPPORTS1(nsHash, nsIHash)
 
-nsHash::nsHash(short type)
+nsHash::nsHash() : m_ctxt(nsnull)
 {
 }
 
-nsHash::Create()
+nsHash::~nsHash()
 {
+  if (m_ctxt) {
+    HASH_Destroy(m_ctxt);
+  }
 }
 
-nsHash::Begin()
+NS_IMETHODIMP nsHash::Create(PRInt16 aAlg)
 {
+  m_ctxt = HASH_Create((HASH_HashType)aAlg);
+  if (m_ctxt == nsnull) {
+    return NS_ERROR_FAILURE;
+  }
+  return NS_OK;
 }
 
-nsHash::Update()
+NS_IMETHODIMP nsHash::Begin()
 {
+  HASH_Begin(m_ctxt);
+  return NS_OK;
 }
 
-nsHash::Finish()
+NS_IMETHODIMP nsHash::Update(unsigned char* aBuf, PRInt32 aLen)
 {
+  HASH_Update(m_ctxt, (const unsigned char*)aBuf, aLen);
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsHash::End(unsigned char** aBuf, PRInt32* aResultLen, PRInt32 aMaxResultLen)
+{
+  HASH_End(m_ctxt, aBuf, aResultLen, aMaxResultLen;
+  return NS_OK;
 }
 
 NS_IMPL_ISUPPORTS1(nsCMSMessage, nsICMSMessage)

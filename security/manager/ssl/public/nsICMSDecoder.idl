@@ -27,7 +27,7 @@ typedef void (*NSSCMSContentCallback)(void *arg, const char *buf, unsigned long 
 %}
 
 native NSSCMSContentCallback(NSSCMSContentCallback);
-// [ptr] native VoidPtr(void);
+[ptr] native UnsignedCharPtr(unsigned char);
 
 [uuid(a31a3028-ae28-11d5-ba4b-00108303b117)]
 interface nsIHash : nsISupports
@@ -40,9 +40,10 @@ interface nsIHash : nsISupports
   const unsigned long SHA1_LENGTH = 20;
   const unsigned long MAX_HASH_LENGTH = SHA1_LENGTH;  
 
+  void create(in short aAlg);
   void begin();
-  void update(in string buf, in long len);
-  void end(out string hash, out long len, in long max_len);
+  void update(in UnsignedCharPtr aBuf, in long aLen);
+  void end(out UnsignedCharPtr aHash, out long aLen, in long aMaxLen);
 };
 
 /**
