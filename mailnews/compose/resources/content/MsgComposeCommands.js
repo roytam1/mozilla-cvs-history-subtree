@@ -2037,9 +2037,15 @@ function FillIdentityListPopup(popup)
 
 function getCurrentIdentity()
 {
-    var identities = GetIdentities();
+    // fill in Identity combobox
+    var identityList = document.getElementById("msgIdentity");
 
-    var identity = identities[0];
+    var item = identityList.selectedItem;
+    var identityKey = item.getAttribute('id');
+
+    //dump("Looking for identity " + identityKey + "\n");
+    var identity = gAccountManager.getIdentity(identityKey);
+
     return identity;
 }
 
@@ -2472,7 +2478,6 @@ function LoadIdentity(startup)
     var prevIdentity = gCurrentIdentity;
     
     if (identityElement) {
-        var idKey = "id1";
         var item = identityElement.selectedItem;
         var idKey = item.getAttribute('id');
         gCurrentIdentity = gAccountManager.getIdentity(idKey);
@@ -2881,55 +2886,5 @@ function toggleCcRowVisibility()
 {
   var ccRow = document.getElementById("ccRow");
   ccRow.hidden = !ccRow.hidden;
-}
-
-function toggleABUI(aCmd)
-{
-  var abPane = document.getElementById("abPane");
-  abPane.hidden = !abPane.hidden;
-  var abSplitter = document.getElementById("abSplitter");
-  abSplitter.hidden = !abSplitter.hidden;
-  var isChecked = aCmd.getAttribute("checked") == "true";
-  if (isChecked)
-    aCmd.removeAttribute("checked");
-  else
-    aCmd.setAttribute("checked", "true");
-}
-
-function addMailHeader(aType)
-{
-  var addresses = GetSelectedAddresses();
-  var sep = ", ";
-  switch(aType) {
-    case 'to':
-      var toField = document.getElementById("toField");
-      if (!toField.value) sep = ""; // should trim field's value of spaces first
-      toField.value += sep + addresses;
-      break;
-    case 'cc':
-      var ccRow = document.getElementById("ccRow");
-      ccRow.hidden = false;
-      var ccField = document.getElementById("ccField");
-      if (!ccField.value) sep = "";
-      ccField.value += sep + addresses;
-      break;
-    case 'bcc':
-      var bccRow = document.getElementById("bccRow");
-      bccRow.hidden = false;
-      var bccField = document.getElementById("bccField");
-      if (!bccField.value) sep = "";
-      bccField.value += sep + addresses;
-      break;
-  }
-}
-
-function updateRowMenuitems() {
-  var menuitem = document.getElementById("toggleBccRowVisibility");
-  var row = document.getElementById("bccRow");
-  menuitem.setAttribute("checked", row.hidden ? "false" : "true");
-
-  menuitem = document.getElementById("toggleCcRowVisibility");
-  row = document.getElementById("ccRow");
-  menuitem.setAttribute("checked", row.hidden ? "false" : "true");
 }
 
