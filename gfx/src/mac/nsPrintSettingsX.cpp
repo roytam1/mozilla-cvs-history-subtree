@@ -68,34 +68,6 @@ nsPrintSettingsX::nsPrintSettingsX() :
 /** ---------------------------------------------------
  */
 nsPrintSettingsX::nsPrintSettingsX(const nsPrintSettingsX& src) :
-  nsPrintSettings(src),
-  mPageFormat(kPMNoPageFormat),
-  mPrintSettings(kPMNoPrintSettings)
-{
-  NS_INIT_REFCNT();
-  
-  nsPrintSettingsX* aPSX = (nsPrintSettingsX*)aPS;
-
-  OSStatus status = noErr;
-  
-  if (aPSX->mPageFormat) {
-    status = ::PMNewPageFormat(&mPageFormat);
-    if (status != noErr)
-      status = ::PMCopyPageFormat(aPSX->mPageFormat, mPageFormat);
-    NS_ASSERTION(status == noErr, "Failed to copy page format");
-  }
-  
-  if (aPSX->mPrintSettings) {
-    status = ::PMNewPrintSettings(&mPrintSettings);
-    if (status != noErr)
-      status = ::PMCopyPrintSettings(aPSX->mPrintSettings, mPrintSettings);
-    NS_ASSERTION(status == noErr, "Failed to copy page format");
-  } 
-}
-
-/** ---------------------------------------------------
- */
-nsPrintSettingsX::nsPrintSettingsX(const nsPrintSettingsX& src) :
   mPageFormat(kPMNoPageFormat),
   mPrintSettings(kPMNoPrintSettings)
 {
@@ -370,7 +342,7 @@ nsresult nsPrintSettingsX::_Clone(nsIPrintSettings **_retval)
 //-------------------------------------------
 NS_IMETHODIMP nsPrintSettingsX::_Assign(nsIPrintSettings *aPS)
 {
-  nsPrintSettingsX *printSettingsX = dynamic_cast<nsPrintSettingsX*>(aPS);
+  nsPrintSettingsX *printSettingsX = NS_STATIC_CAST(nsPrintSettingsX*, aPS);
   if (!printSettingsX)
     return NS_ERROR_UNEXPECTED;
   *this = *printSettingsX;
