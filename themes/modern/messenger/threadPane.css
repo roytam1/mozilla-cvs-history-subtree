@@ -18,9 +18,6 @@
  * Rights Reserved.
  */
 
-
-/* temporary outliner styles */
-
 outliner:focus > outliner-bodybox
 {
   border: 1px solid black;
@@ -82,109 +79,5 @@ outlinerbody:-moz-outliner-cell-text(priority-low)
   color: rgb(85, 85, 85);
 }
 
-/* end temporary outliner styles */
 
 
-.tree-thread-row.unread-true {
-	font-weight: bold;
-}
-
-.tree-thread-row { min-height: 17px; }
-.prioritycol-highest
-{
-	color:red;
-}
-
-.prioritycol-high
-{
-	color: rgb(128, 0, 0);
-}
-
-.prioritycol-lowest
-{
-	color: rgb(170, 170, 170);
-}
-
-.prioritycol-low
-{
-	color: rgb(85, 85, 85);
-}
-
-.tree-cell-threadpane-icon {
-  list-style-image: url("chrome://messenger/skin/message-mail.gif");
-  min-height: 14px;
-}
-
-.tree-cell-threadpane-icon.status-new {
-  list-style-image: url("chrome://messenger/skin/message-mail-new.gif");
-}
-
-.tree-cell-threadpane-icon.message-type-news {
-  list-style-image: url("chrome://messenger/skin/message-news.gif");
-}
-
-.tree-cell-threadpane-icon.message-type-news.status-new {
-  list-style-image: url("chrome://messenger/skin/message-news-new.gif");
-}
-
-.tree-cell-threadpane-icon.message-type-mail.has-attachment-true {
-  list-style-image: url("chrome://messenger/skin/message-mail-attach.gif");
-}
-
-.tree-cell-threadpane-icon.is-imap-deleted-true {
-  list-style-image: url("chrome://messenger/skin/message-mail-imapdelete.gif");
-}
-
-.unreadcol-false {
-  list-style-image: url("chrome://messenger/skin/readmail.gif");
-  min-height: 14px;
-}
-
-.unreadcol-true {
-  list-style-image: url("chrome://messenger/skin/unreadmail.gif");
-}
-
-.flagcol-unflagged {
-  list-style-image: url("chrome://messenger/skin/readmail.gif");
-  min-height: 14px;
-}
-
-.flagcol-flagged {
-  list-style-image: url("chrome://messenger/skin/flaggedmail.gif");
-}
-
-treeitem > treerow > .threadcol-thread{
-  list-style-image: url("chrome://messenger/skin/thread-closed.gif");
-}
-
-treeitem[open="true"] > treerow > .threadcol-thread{
-  list-style-image: url("chrome://messenger/skin/thread-open.gif");
-}
-
-treeitem > treerow > .threadcol-threadWithUnread{
-  list-style-image: url("chrome://messenger/skin/thread-new-closed.gif");
-}
-
-treeitem[open="true"] > treerow > .threadcol-threadWithUnread{
-  list-style-image: url("chrome://messenger/skin/thread-new-open.gif");
-}
-
-treecell.threadColumnHeader[currentView="threaded"] {
-  list-style-image: url("chrome://messenger/skin/threadcol.gif");
-}
-
-treecell.threadColumnHeader[currentView="unthreaded"] {
-  list-style-image: url("chrome://messenger/skin/unthreadcol.gif");
-}
-
-treecell.readColumnHeader {
-  list-style-image: url("chrome://messenger/skin/unreadmail.gif");
-}
-
-treecell.flagColumnHeader {
-  list-style-image: url("chrome://messenger/skin/flaggedmail.gif");
-}
-
-treeitem[empty="true"] > treerow > treecell > .tree-cell-twisty {               
-  visibility:hidden;
- }    
