@@ -243,6 +243,17 @@
   return mLabelCell;
 }
 
+// allow clicks in background windows to switch tabs
+- (BOOL)acceptsFirstMouse:(NSEvent *)theEvent
+{
+  return YES;
+}
+
+- (BOOL)mouseDownCanMoveWindow
+{
+  return NO;
+}
+
 - (void)drawRect:(NSRect)aRect
 {
   [mLabelCell drawWithFrame:[self bounds] inView:self];
