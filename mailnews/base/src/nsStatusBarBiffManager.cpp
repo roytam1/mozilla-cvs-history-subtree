@@ -125,10 +125,8 @@ nsresult nsStatusBarBiffManager::PerformStatusBarBiff(PRUint32 newBiffFlag)
           nsCOMPtr<nsISound> sound = do_CreateInstance("@mozilla.org/sound;1");
           if (sound) {
 #ifdef PLAY_INTERNAL_SOUND
-            nsCOMPtr<nsIFileURL> soundURL = do_CreateInstance("@mozilla.org/network/standard-url;1");
-            nsCAutoString soundSpec;
-            soundSpec = "chrome://messenger/content/newmail.wav";
-            soundURL->SetSpec(soundSpec);
+            nsCOMPtr<nsIURL> soundURL = do_CreateInstance("@mozilla.org/network/standard-url;1");
+            soundURL->SetSpec(NS_LITERAL_CSTRING("chrome://messenger/content/newmail.wav"));
             rv = sound->Play(soundURL);
 #else
             rv = sound->PlaySystemSound("_moz_mailbeep");
