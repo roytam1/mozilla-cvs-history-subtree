@@ -524,7 +524,7 @@ HandleFixedBackground(nsIPresContext* aPresContext,
   }
 }
 
-static void PostResolveCallback(nsRuleData* aRuleData)
+static void PostResolveCallback(nsStyleStruct* aStyleStruct, nsRuleData* aRuleData)
 {
   // get the context data for the BODY, HTML element, and CANVAS
   nsCOMPtr<nsIStyleContext> parentContext;

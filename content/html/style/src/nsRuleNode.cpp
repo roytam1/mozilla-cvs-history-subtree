@@ -714,7 +714,7 @@ nsRuleNode::WalkRuleTree(const nsStyleStructID& aSID, nsIStyleContext* aContext,
 
   // If we have a post-resolve callback, handle that now.
   if (aRuleData->mPostResolveCallback)
-    (*aRuleData->mPostResolveCallback)(aRuleData);
+    (*aRuleData->mPostResolveCallback)((nsStyleStruct*)res, aRuleData);
 
   // Now return the result.
   return res;

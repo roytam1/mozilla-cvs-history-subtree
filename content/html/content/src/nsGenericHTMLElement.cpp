@@ -3025,8 +3025,30 @@ nsGenericHTMLElement::ParseStyleAttribute(const nsAReadableString& aValue, nsHTM
   return result;
 }
 
+static void PostResolveCallback(nsStyleStruct* aStyleStruct, nsRuleData* aRuleData)
+{
+  if (!aRuleData->mAttributes)
+    return;
 
-
+  nsHTMLValue value;
+  aRuleData->mAttributes->GetAttribute(nsHTMLAtoms::lang, value);
+  if (value.GetUnit() == eHTMLUnit_String) {
+    if (!gLangService) {
+      nsServiceManager::GetService(NS_LANGUAGEATOMSERVICE_CONTRACTID,
+        NS_GET_IID(nsILanguageAtomService), (nsISupports**) &gLangService);
+      if (!gLangService) {
+        return;
+      }
+    }
+    nsStyleVisibility* vis = (nsStyleVisibility*)aStyleStruct;
+    
+    nsAutoString lang;
+    value.GetStringValue(lang);
+    gLangService->LookupLanguage(lang.GetUnicode(),
+      getter_AddRefs(vis->mLanguage));
+  }
+}
+  
 /**
  * Handle attributes common to all html elements
  */
@@ -3044,25 +3066,14 @@ nsGenericHTMLElement::MapCommonAttributesInto(const nsIHTMLMappedAttributes* aAt
       aData->mDisplayData->mDirection = nsCSSValue(value.GetIntValue(), eCSSUnit_Enumerated);
   }
   
-  // XXXdwh. I have broken lang!
-  /*aAttributes->GetAttribute(nsHTMLAtoms::lang, value);
+  nsHTMLValue value;
+  aAttributes->GetAttribute(nsHTMLAtoms::lang, value);
   if (value.GetUnit() == eHTMLUnit_String) {
-    if (!gLangService) {
-      nsServiceManager::GetService(NS_LANGUAGEATOMSERVICE_CONTRACTID,
-        NS_GET_IID(nsILanguageAtomService), (nsISupports**) &gLangService);
-      if (!gLangService) {
-        return;
-      }
-    }
-    nsStyleVisibility* vis = (nsStyleVisibility*)
-      aStyleContext->GetMutableStyleData(eStyleStruct_Visibility);
-   
-    nsAutoString lang;
-    value.GetStringValue(lang);
-    gLangService->LookupLanguage(lang.GetUnicode(),
-      getter_AddRefs(vis->mLanguage));
+    // Register a post-resolve callback for filling in the language atom
+    // over in the computed style data.
+    aData->mAttributes = (nsIHTMLMappedAttributes*)aAttributes;
+    aData->mPostResolveCallback = &PostResolveCallback;
   }
-  */
 }
 
 PRBool

@@ -31,7 +31,9 @@
 #include "nsIMutableStyleContext.h"
 #include "nsICSSDeclaration.h"
 
-typedef void (*nsPostResolveFunc)(nsRuleData* aData);
+class nsIHTMLMappedAttributes;
+
+typedef void (*nsPostResolveFunc)(nsStyleStruct* aStyleStruct, nsRuleData* aData);
 
 struct nsInheritedStyleData
 {
@@ -244,6 +246,8 @@ struct nsRuleData
   nsIStyleContext* mStyleContext;
   nsPostResolveFunc mPostResolveCallback;
 
+  nsIHTMLMappedAttributes* mAttributes; // Can be cached in the rule data by a content node for a post-resolve callback.
+
   nsCSSFont* mFontData; // Should always be stack-allocated! We don't own these structures!
   nsCSSDisplay* mDisplayData;
   nsCSSMargin* mMarginData;
@@ -258,7 +262,7 @@ struct nsRuleData
 
   nsRuleData(const nsStyleStructID& aSID, nsIPresContext* aContext, nsIStyleContext* aStyleContext) 
     :mSID(aSID), mPresContext(aContext), mStyleContext(aStyleContext), mPostResolveCallback(nsnull),
-     mDisplayData(nsnull), mFontData(nsnull), mMarginData(nsnull), mListData(nsnull), 
+     mAttributes(nsnull), mDisplayData(nsnull), mFontData(nsnull), mMarginData(nsnull), mListData(nsnull), 
      mPositionData(nsnull), mTableData(nsnull), mColorData(nsnull)
   {
 #ifdef INCLUDE_XUL
