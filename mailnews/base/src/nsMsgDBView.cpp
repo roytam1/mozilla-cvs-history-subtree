@@ -2724,7 +2724,7 @@ nsresult nsMsgDBView::NavigateFromPos(nsMsgNavigationTypeValue motion, nsMsgView
                 NS_ASSERTION(0, "unexpected");
                 break;
             }
-            m_db->MarkLater(m_keys.GetAt(startIndex), 0);
+            m_db->MarkLater(m_keys.GetAt(startIndex), LL_ZERO);
             return NavigateFromPos(nsMsgNavigationType::nextUnreadMessage, startIndex, pResultKey, pResultIndex, pThreadIndex, PR_TRUE, resultFolderInfo);
         default:
             NS_ASSERTION(0, "unsupported motion");
