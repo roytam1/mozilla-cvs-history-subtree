@@ -130,8 +130,11 @@ OTHER_HFILES =		\
 	jsopcode.tbl	\
 	js.msg		\
 	jsshell.msg	\
-	$(OBJDIR)/jsautocfg.h	\
 	$(NULL)
+
+ifndef PREBUILT_CPUCFG
+OTHER_HFILES += $(OBJDIR)/jsautocfg.h
+endif
 
 HFILES = $(JS_HFILES) $(API_HFILES) $(OTHER_HFILES)
 
