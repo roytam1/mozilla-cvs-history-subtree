@@ -433,6 +433,7 @@ nsImageBoxFrame::PaintImage(nsIPresContext* aPresContext,
 
 #ifdef USE_IMG2
   nsCOMPtr<imgIContainer> imgCon;
+  if (!mImageRequest) return NS_ERROR_UNEXPECTED;
   mImageRequest->GetImage(getter_AddRefs(imgCon));
 
   if (imgCon) {
@@ -634,6 +635,8 @@ NS_IMETHODIMP nsImageBoxFrame::OnStartContainer(imgIRequest *request, nsIPresCon
 { 
   nsCOMPtr<nsIPresShell> presShell;
   aPresContext->GetShell(getter_AddRefs(presShell));
+
+  NS_ENSURE_ARG(image);
 
   mHasImage = PR_TRUE;
   mSizeFrozen = PR_FALSE;
