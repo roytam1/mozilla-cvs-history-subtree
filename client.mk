@@ -110,7 +110,8 @@ XTF_BRANCH_NEW_FILES = \
 	content/xtf/src/Makefile.in \
 	content/xtf/src/nsIXTFService.h \
 	content/xtf/src/nsXMLContentBuilder.cpp \
-	content/xtf/src/nsXTFGenericElementWrapper.cpp \
+	content/xtf/src/nsXTFElementWrapper.cpp \
+	content/xtf/src/nsXTFElementWrapper.h \
 	content/xtf/src/nsXTFGenericElementWrapper.h \
 	content/xtf/src/nsXTFInterfaceAggregator.cpp \
 	content/xtf/src/nsXTFInterfaceAggregator.h \
