@@ -855,17 +855,17 @@ CERT_DecodeDERCertificate(SECItem *derSignedCert, PRBool copyDER,
 ** valid. The slop is designed to allow for some variance in the clocks
 ** of the machine checking the certificate.
 */
-#define PENDING_SLOP (24L*60L*60L)		/* seconds per day */
-static PRInt32 pendingSlop = PENDING_SLOP;	/* seconds */
+#define PENDING_SLOP (24L*60L*60L)
+static PRInt32 pendingSlop = PENDING_SLOP;
 
 PRInt32
 CERT_GetSlopTime(void)
 {
-    return pendingSlop;			/* seconds */
+    return pendingSlop;
 }
 
 SECStatus
-CERT_SetSlopTime(PRInt32 slop)		/* seconds */
+CERT_SetSlopTime(PRInt32 slop)
 {
     if (slop < 0)
 	return SECFailure;
@@ -874,7 +874,7 @@ CERT_SetSlopTime(PRInt32 slop)		/* seconds */
 }
 
 SECStatus
-CERT_GetCertTimes(CERTCertificate *c, PRTime *notBefore, PRTime *notAfter)
+CERT_GetCertTimes(CERTCertificate *c, int64 *notBefore, int64 *notAfter)
 {
     int rv;
     
@@ -897,9 +897,9 @@ CERT_GetCertTimes(CERTCertificate *c, PRTime *notBefore, PRTime *notAfter)
  * Check the validity times of a certificate
  */
 SECCertTimeValidity
-CERT_CheckCertValidTimes(CERTCertificate *c, PRTime t, PRBool allowOverride)
+CERT_CheckCertValidTimes(CERTCertificate *c, int64 t, PRBool allowOverride)
 {
-    PRTime notBefore, notAfter, llPendingSlop, tmp1;
+    int64 notBefore, notAfter, llPendingSlop;
     SECStatus rv;
 
     /* if cert is already marked OK, then don't bother to check */
@@ -914,9 +914,6 @@ CERT_CheckCertValidTimes(CERTCertificate *c, PRTime t, PRBool allowOverride)
     }
     
     LL_I2L(llPendingSlop, pendingSlop);
-    /* convert to micro seconds */
-    LL_I2L(tmp1, PR_USEC_PER_SEC);
-    LL_MUL(llPendingSlop, llPendingSlop, tmp1);
     LL_SUB(notBefore, notBefore, llPendingSlop);
     if ( LL_CMP( t, <, notBefore ) ) {
 	PORT_SetError(SEC_ERROR_EXPIRED_CERTIFICATE);
@@ -931,7 +928,7 @@ CERT_CheckCertValidTimes(CERTCertificate *c, PRTime t, PRBool allowOverride)
 }
 
 SECStatus
-SEC_GetCrlTimes(CERTCrl *date, PRTime *notBefore, PRTime *notAfter)
+SEC_GetCrlTimes(CERTCrl *date, int64 *notBefore, int64 *notAfter)
 {
     int rv;
     
@@ -958,8 +955,8 @@ SEC_GetCrlTimes(CERTCrl *date, PRTime *notBefore, PRTime *notAfter)
  * routines using an common extraction routine.
  */
 SECCertTimeValidity
-SEC_CheckCrlTimes(CERTCrl *crl, PRTime t) {
-    PRTime notBefore, notAfter, llPendingSlop, tmp1;
+SEC_CheckCrlTimes(CERTCrl *crl, int64 t) {
+    int64 notBefore, notAfter, llPendingSlop;
     SECStatus rv;
 
     rv = SEC_GetCrlTimes(crl, &notBefore, &notAfter);
@@ -969,9 +966,6 @@ SEC_CheckCrlTimes(CERTCrl *crl, PRTime t) {
     }
 
     LL_I2L(llPendingSlop, pendingSlop);
-    /* convert to micro seconds */
-    LL_I2L(tmp1, PR_USEC_PER_SEC);
-    LL_MUL(llPendingSlop, llPendingSlop, tmp1);
     LL_SUB(notBefore, notBefore, llPendingSlop);
     if ( LL_CMP( t, <, notBefore ) ) {
 	return(secCertTimeNotValidYet);
@@ -993,8 +987,8 @@ SEC_CheckCrlTimes(CERTCrl *crl, PRTime t) {
 
 PRBool
 SEC_CrlIsNewer(CERTCrl *inNew, CERTCrl *old) {
-    PRTime newNotBefore, newNotAfter;
-    PRTime oldNotBefore, oldNotAfter;
+    int64 newNotBefore, newNotAfter;
+    int64 oldNotBefore, oldNotAfter;
     SECStatus rv;
 
     /* problems with the new CRL? reject it */
@@ -1551,24 +1545,9 @@ CERT_MakeCANickname(CERTCertificate *cert)
 	}
 
 	org = CERT_GetOrgName(&cert->issuer);
-	if (org == NULL) {
-	    org = CERT_GetDomainComponentName(&cert->issuer);
-	    if (org == NULL) {
-		if (firstname) {
-		    org = firstname;
-		    firstname = NULL;
-		} else {
-		    org = PORT_Strdup("Unknown CA");
-		}
-	    }
-	}
-
-	/* can only fail if PORT_Strdup fails, in which case
-	 * we're having memory problems. */
-	if (org == NULL) {
+	if ( org == NULL ) {
 	    goto loser;
 	}
-
     
 	count = 1;
 	while ( 1 ) {
@@ -1698,29 +1677,13 @@ CERT_IsCACert(CERTCertificate *cert, unsigned int *rettype)
     return(ret);
 }
 
-
-PRBool
-CERT_IsCADERCert(SECItem *derCert, unsigned int *type) {
-    CERTCertificate *cert;
-    PRBool isCA;
-
-    cert = CERT_NewTempCertificate(CERT_GetDefaultCertDB(), derCert, NULL,
-	                                   PR_FALSE, PR_TRUE);
-    if (cert == NULL) return NULL;
-
-    isCA = CERT_IsCACert(cert,type);
-    CERT_DestroyCertificate (cert);
-    return isCA;
-}
-
-
 /*
  * is certa newer than certb?  If one is expired, pick the other one.
  */
 PRBool
 CERT_IsNewer(CERTCertificate *certa, CERTCertificate *certb)
 {
-    PRTime notBeforeA, notAfterA, notBeforeB, notAfterB, now;
+    int64 notBeforeA, notAfterA, notBeforeB, notAfterB, now;
     SECStatus rv;
     PRBool newerbefore, newerafter;
     
@@ -2127,13 +2090,13 @@ CERT_SortCBValidity(CERTCertificate *certa,
 		    CERTCertificate *certb,
 		    void *arg)
 {
-    PRTime sorttime;
-    PRTime notBeforeA, notAfterA, notBeforeB, notAfterB;
+    int64 sorttime;
+    int64 notBeforeA, notAfterA, notBeforeB, notAfterB;
     SECStatus rv;
     PRBool newerbefore, newerafter;
     PRBool aNotValid = PR_FALSE, bNotValid = PR_FALSE;
 
-    sorttime = *(PRTime *)arg;
+    sorttime = *(int64 *)arg;
     
     rv = CERT_GetCertTimes(certa, &notBeforeA, &notAfterA);
     if ( rv != SECSuccess ) {

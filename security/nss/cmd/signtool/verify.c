@@ -49,7 +49,6 @@ VerifyJar(char *filename)
 
   int ret;
   int status;
-  int failed = 0;
   char *err;
 
   JAR *jar;
@@ -74,7 +73,6 @@ VerifyJar(char *filename)
 
   if (status < 0 || jar->valid < 0)
     {
-    failed = 1;
     PR_fprintf(outputFD, "\nNOTE -- \"%s\" archive DID NOT PASS crypto verification.\n", filename);
     if (status < 0)
       {
@@ -94,7 +92,7 @@ VerifyJar(char *filename)
       /* corrupt files should not have their contents listed */ 
 
       if (status == JAR_ERR_CORRUPT)
-        return -1;
+        return status;
       }
     PR_fprintf(outputFD,
 		"entries shown below will have their digests checked only.\n"); 
@@ -104,8 +102,7 @@ VerifyJar(char *filename)
     PR_fprintf(outputFD,
 		"archive \"%s\" has passed crypto verification.\n", filename);
 
-  if (verify_global (jar))
-    failed = 1;
+  verify_global (jar);
 
   PR_fprintf(outputFD, "\n");
   PR_fprintf(outputFD, "%16s   %s\n", "status", "path");
@@ -120,7 +117,6 @@ VerifyJar(char *filename)
 	rm_dash_r(TMP_OUTPUT);
       ret = JAR_verified_extract (jar, it->pathname, TMP_OUTPUT);
       /* if (ret < 0) printf ("error %d on %s\n", ret, it->pathname); */
-      if (ret < 0) failed = 1;
 
       if (ret == JAR_ERR_PNF)
         err = "NOT PRESENT";
@@ -141,7 +137,6 @@ VerifyJar(char *filename)
 
   if (status < 0 || jar->valid < 0)
     {
-    failed = 1;
     PR_fprintf(outputFD,
 		"\nNOTE -- \"%s\" archive DID NOT PASS crypto verification.\n", filename);
     give_help (status);
@@ -149,8 +144,6 @@ VerifyJar(char *filename)
 
   JAR_destroy (jar);
 
-  if (failed)
-    return -1;
   return 0;
 }
 
@@ -174,8 +167,6 @@ verify_global (JAR *jar)
   char buf [BUFSIZ];
 
   unsigned char *md5_digest, *sha1_digest;
-
-  int retval = 0;
 
   ctx = JAR_find (jar, "*", jarTypePhy);
 
@@ -212,7 +203,6 @@ verify_global (JAR *jar)
 				PR_fprintf(errorFD, "%s: error extracting %s\n", PROGRAM_NAME,
 				  it->pathname);
 				errorCount++;
-				retval = -1;
 				continue;
 			}
 
@@ -276,14 +266,14 @@ verify_global (JAR *jar)
 
   JAR_find_end (ctx);
 
-  return retval;
+  return 0;
 }
 
 /************************************************************************
  *
  * J a r W h o
  */
-int
+void
 JarWho(char *filename)
   {
   FILE *fp;
@@ -292,7 +282,6 @@ JarWho(char *filename)
   JAR_Context *ctx;
 
   int status;
-  int retval = 0;
 
   JAR_Item *it;
   JAR_Cert *fing;
@@ -315,7 +304,6 @@ JarWho(char *filename)
     {
     PR_fprintf(outputFD,
 		"NOTE -- \"%s\" archive DID NOT PASS crypto verification.\n", filename);
-    retval = -1;
     if (jar->valid < 0 || status != -1)
       {
       char *errtext;
@@ -355,10 +343,7 @@ JarWho(char *filename)
         PR_fprintf(outputFD, "issuer name: %s\n", cert->issuerName);
       }
     else
-      {
       PR_fprintf(outputFD, "no certificate could be found\n");
-      retval = -1;
-      }
 
     prev = cert;
     }
@@ -366,7 +351,6 @@ JarWho(char *filename)
   JAR_find_end (ctx);
 
   JAR_destroy (jar);
-  return retval;
 }
 
 /************************************************************************

@@ -752,8 +752,8 @@ CERTSignedCrl * CERT_ImportCRL
 }
 
 /* From certdb.c */
-static SECStatus
-cert_ImportCAChain(SECItem *certs, int numcerts, SECCertUsage certUsage, PRBool trusted)
+SECStatus
+CERT_ImportCAChain(SECItem *certs, int numcerts, SECCertUsage certUsage)
 {
     SECStatus rv;
     SECItem *derCert;
@@ -802,12 +802,10 @@ cert_ImportCAChain(SECItem *certs, int numcerts, SECCertUsage certUsage, PRBool 
 	    goto loser;
 	}
 
-	if (!trusted) {
-	    /* make sure that cert is valid */
-	    rv = CERT_CertTimesValid(newcert);
-	    if ( rv == SECFailure ) {
-		goto endloop;
-	    }
+	/* make sure that cert is valid */
+	rv = CERT_CertTimesValid(newcert);
+	if ( rv == SECFailure ) {
+	    goto endloop;
 	}
 
 	/* does it have the CA extension */
@@ -819,43 +817,38 @@ cert_ImportCAChain(SECItem *certs, int numcerts, SECCertUsage certUsage, PRBool 
 	isca = CERT_IsCACert(newcert, &certtype);
 
 	if ( !isca ) {
-	    if (!trusted) {
-		goto endloop;
-	    }
-	    trust.sslFlags = CERTDB_VALID_CA;
-	    trust.emailFlags = CERTDB_VALID_CA;
-	    trust.objectSigningFlags = CERTDB_VALID_CA;
-	} else {
-	    /* SSL ca's must have the ssl bit set */
-	    if ( ( certUsage == certUsageSSLCA ) &&
-		(( certtype & NS_CERT_TYPE_SSL_CA ) != NS_CERT_TYPE_SSL_CA )) {
-		goto endloop;
-	    }
+	    goto endloop;
+	}
 
-	    /* it passed all of the tests, so lets add it to the database */
-	    /* mark it as a CA */
-	    PORT_Memset((void *)&trust, 0, sizeof(trust));
-	    switch ( certUsage ) {
-	      case certUsageSSLCA:
+	/* SSL ca's must have the ssl bit set */
+	if ( ( certUsage == certUsageSSLCA ) &&
+	    ( ( certtype & NS_CERT_TYPE_SSL_CA ) != NS_CERT_TYPE_SSL_CA ) ) {
+	    goto endloop;
+	}
+
+	/* it passed all of the tests, so lets add it to the database */
+	/* mark it as a CA */
+	PORT_Memset((void *)&trust, 0, sizeof(trust));
+	switch ( certUsage ) {
+	  case certUsageSSLCA:
+	    trust.sslFlags = CERTDB_VALID_CA;
+	    break;
+	  case certUsageUserCertImport:
+	    if ( ( certtype & NS_CERT_TYPE_SSL_CA ) == NS_CERT_TYPE_SSL_CA ) {
 		trust.sslFlags = CERTDB_VALID_CA;
-		break;
-	      case certUsageUserCertImport:
-		if ((certtype & NS_CERT_TYPE_SSL_CA) == NS_CERT_TYPE_SSL_CA) {
-		    trust.sslFlags = CERTDB_VALID_CA;
-		}
-		if ((certtype & NS_CERT_TYPE_EMAIL_CA) 
-						== NS_CERT_TYPE_EMAIL_CA ) {
-		    trust.emailFlags = CERTDB_VALID_CA;
-		}
-		if ( ( certtype & NS_CERT_TYPE_OBJECT_SIGNING_CA ) ==
-					NS_CERT_TYPE_OBJECT_SIGNING_CA ) {
-		     trust.objectSigningFlags = CERTDB_VALID_CA;
-		}
-		break;
-	      default:
-		PORT_Assert(0);
-		break;
 	    }
+	    if ( ( certtype & NS_CERT_TYPE_EMAIL_CA ) ==
+		NS_CERT_TYPE_EMAIL_CA ) {
+		trust.emailFlags = CERTDB_VALID_CA;
+	    }
+	    if ( ( certtype & NS_CERT_TYPE_OBJECT_SIGNING_CA ) ==
+		NS_CERT_TYPE_OBJECT_SIGNING_CA ) {
+		trust.objectSigningFlags = CERTDB_VALID_CA;
+	    }
+	    break;
+	  default:
+	    PORT_Assert(0);
+	    break;
 	}
 	
 	cert = CERT_NewTempCertificate(handle, derCert, NULL, PR_FALSE, PR_TRUE);
@@ -908,17 +901,6 @@ done:
     }
 
     return(rv);
-}
-
-SECStatus
-CERT_ImportCAChain(SECItem *certs, int numcerts, SECCertUsage certUsage)
-{
-    return cert_ImportCAChain(certs, numcerts, certUsage, PR_FALSE);
-}
-
-SECStatus
-CERT_ImportCAChainTrusted(SECItem *certs, int numcerts, SECCertUsage certUsage) {
-    return cert_ImportCAChain(certs, numcerts, certUsage, PR_TRUE);
 }
 
 /* Moved from certdb.c */
