@@ -154,3 +154,8 @@ interface nsINetDataCacheManager : nsISupports
      */
     attribute PRUint32 memCacheCapacity;
 };
+
+%{ C++
+// ProgID prefix for Components that implement this interface
+#define NS_NETWORK_CACHE_MANAGER_PROGID NS_NETWORK_CACHE_PROGID "?name=manager"
+%}
