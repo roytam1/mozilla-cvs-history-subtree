@@ -269,7 +269,7 @@ NS_IMETHODIMP SimpleDOMNode::GetComputedStyleDeclaration(nsIDOMCSSStyleDeclarati
 STDMETHODIMP SimpleDOMNode::get_computedStyle( 
     /* [in] */ unsigned short aMaxStyleProperties,
     /* [out] */ unsigned short __RPC_FAR *aNumStyleProperties,
-    /* [in] */ boolean aUseAlternateViewMediaProperties,
+    /* [in] */ boolean aUseAlternateView,
     /* [length_is][size_is][out] */ BSTR __RPC_FAR *aStyleProperties,
     /* [length_is][size_is][out] */ BSTR __RPC_FAR *aStyleValues)
 {
@@ -302,7 +302,7 @@ STDMETHODIMP SimpleDOMNode::get_computedStyle(
 
 STDMETHODIMP SimpleDOMNode::get_computedStyleForProperties( 
     /* [in] */ unsigned short aNumStyleProperties,
-    /* [in] */ boolean aUseAlternateViewMediaProperties,
+    /* [in] */ boolean aUseAlternateView,
     /* [length_is][size_is][in] */ BSTR __RPC_FAR *aStyleProperties,
     /* [length_is][size_is][out] */ BSTR __RPC_FAR *aStyleValues)
 {

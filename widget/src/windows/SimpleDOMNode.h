@@ -79,13 +79,13 @@ class SimpleDOMNode : public ISimpleDOMNode
     virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_computedStyle( 
         /* [in] */ unsigned short maxStyleProperties,
         /* [out] */ unsigned short __RPC_FAR *numStyleProperties,
-        /* [in] */ boolean useAlternateViewMediaProperties,
+        /* [in] */ boolean useAlternateView,
         /* [length_is][size_is][out] */ BSTR __RPC_FAR *styleProperties,
         /* [length_is][size_is][out] */ BSTR __RPC_FAR *styleValues);
   
     virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_computedStyleForProperties( 
         /* [in] */ unsigned short numStyleProperties,
-        /* [in] */ boolean useAlternateViewMediaProperties,
+        /* [in] */ boolean useAlternateView,
         /* [length_is][size_is][in] */ BSTR __RPC_FAR *styleProperties,
         /* [length_is][size_is][out] */ BSTR __RPC_FAR *styleValues);
         
