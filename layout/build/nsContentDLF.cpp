@@ -57,7 +57,9 @@
 #include "nsNetUtil.h"
 #include "nsICSSLoader.h"
 #include "nsCRT.h"
+#ifndef MOZ_MINOTAUR
 #include "nsIViewSourceChannel.h"
+#endif
 
 #include "nsRDFCID.h"
 #include "nsIRDFResource.h"
@@ -174,6 +176,7 @@ nsContentDLF::CreateInstance(const char* aCommand,
 {
   EnsureUAStyleSheet();
 
+#ifndef MOZ_MINOTAUR
   // Are we viewing source?
 
   nsCOMPtr<nsIViewSourceChannel> viewSourceChannel = do_QueryInterface(aChannel);
@@ -221,7 +224,9 @@ nsContentDLF::CreateInstance(const char* aCommand,
     } else {
       viewSourceChannel->SetContentType(NS_LITERAL_CSTRING("text/plain"));
     }
-  } else if (0 == PL_strcmp("application/x-view-source", aContentType)) {
+  } else 
+#endif
+      if (0 == PL_strcmp("application/x-view-source", aContentType)) {
     aChannel->SetContentType(NS_LITERAL_CSTRING("text/plain"));
     aContentType = "text/plain";
   }
