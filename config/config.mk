@@ -310,6 +310,7 @@ endif
 
 ifdef MOZ_PDB
 MOZ_OPTIMIZE_FLAGS=-Zi -O1 -UDEBUG -DNDEBUG
+OS_LDFLAGS = /DEBUG
 endif
 
 #
