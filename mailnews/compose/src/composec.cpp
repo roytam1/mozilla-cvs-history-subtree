@@ -4,6 +4,7 @@
    composec.c --- the crypto interface to MIME generation (see compose.c.)
  */
 
+
 #include "composec.h"
 #include "nspr.h"
 #include "nsCOMPtr.h"
@@ -11,7 +12,13 @@
 #include "nsIX509Cert.h"
 #include "nsIMimeConverter.h"
 #include "nsMsgEncoders.h"
+#include "nsMimeStringResources.h"
+#include "nsMimeTypes.h"
 
+#define MIME_MULTIPART_SIGNED_BLURB "test"
+#define MIME_SMIME_ENCRYPTED_CONTENT_DESCRIPTION "test"
+#define MIME_SMIME_SIGNATURE_CONTENT_DESCRIPTION "test"
+#define MK_MIME_ERROR_WRITING_FILE -1
 
 typedef enum {
   mime_crypto_none,				/* normal unencapsulated MIME message */
@@ -77,16 +84,15 @@ free_crypto_closure (mime_crypto_closure *state)
 #if 0
 extern void msg_SetCompositionSecurityError(MWContext *, int status);
 
+#endif
+
 static void
 msg_remember_security_error(mime_crypto_closure *state, int status)
 {
   if (status >= 0) return;
-  PR_ASSERT(state && state->context->type == MWContextMessageComposition);
   if (!state) return;
-  msg_SetCompositionSecurityError(state->context, status);
+//   msg_SetCompositionSecurityError(state->context, status); XXX Fix this XXX //
 }
-
-#endif
 
 extern char *mime_make_separator(const char *prefix);
 
@@ -101,16 +107,16 @@ make_multipart_signed_header_string(PRBool outer_p,
 									char **header_return,
 									char **boundary_return)
 {
-  const char *crypto_multipart_blurb = 0;
-  
   *header_return = 0;
   *boundary_return = mime_make_separator("ms");
+  const char * crypto_multipart_blurb = nsnull;
 
   if (!*boundary_return)
 	return MIME_OUT_OF_MEMORY;
 
-  if (outer_p)
-	crypto_multipart_blurb = XP_GetString (MK_MIME_MULTIPART_SIGNED_BLURB);
+  if (outer_p) {
+	  crypto_multipart_blurb = MIME_MULTIPART_SIGNED_BLURB;
+  }
 
   *header_return =
 	PR_smprintf("Content-Type: " MULTIPART_SIGNED "; "
@@ -152,7 +158,7 @@ static int mime_crypto_hack_certs(mime_crypto_closure *,
    directly to the file.
  */
 int
-mime_begin_crypto_encapsulation (XP_File file, void **closure_return,
+mime_begin_crypto_encapsulation (nsOutputFileStream *file, void **closure_return,
 								 PRBool encrypt_p, PRBool sign_p,
 								 const char *recipients,
 								 PRBool saveAsDraft)
@@ -169,7 +175,6 @@ mime_begin_crypto_encapsulation (XP_File file, void **closure_return,
   if (!state) return MIME_OUT_OF_MEMORY;
 
   nsCRT::memset(state, 0, sizeof(*state));
-  state->context = context;
   state->file = file;
 
   state->isDraft = saveAsDraft;
@@ -236,7 +241,7 @@ mime_init_multipart_signed(mime_crypto_closure *state, PRBool outer_p)
 
   /* First, construct and write out the multipart/signed MIME header data.
    */
-
+  nsresult rv;
   char *header = 0;
   PRInt32 L;
   int status =
@@ -248,7 +253,7 @@ mime_init_multipart_signed(mime_crypto_closure *state, PRBool outer_p)
 
   if (outer_p){
 	  /* If this is the outer block, write it to the file. */
-    if (PRInt32(file->write(header, L)) < L) {
+    if (PRInt32(state->file->write(header, L)) < L) {
 		  status = MK_MIME_ERROR_WRITING_FILE;
     }
   } else {
@@ -269,7 +274,7 @@ mime_init_multipart_signed(mime_crypto_closure *state, PRBool outer_p)
   state->data_hash_context = do_CreateInstance(NS_HASH_CONTRACTID, &rv);
   if (NS_FAILED(rv)) return 0;
 
-  rv = state->data_hash_context->Create(state->hash_type));
+  rv = state->data_hash_context->Create(state->hash_type);
   if (NS_FAILED(rv))
 	{
 	  status = PR_GetError();
@@ -290,8 +295,8 @@ mime_init_multipart_signed(mime_crypto_closure *state, PRBool outer_p)
 
 static void mime_crypto_write_base64 (void *closure, const char *buf,
 									  unsigned long size);
-static int mime_encoder_output_fn (const char *buf, int32 size, void *closure);
-static int mime_nested_encoder_output_fn (const char *, int32, void *closure);
+static nsresult mime_encoder_output_fn(const char *buf, PRInt32 size, void *closure);
+static nsresult mime_nested_encoder_output_fn (const char *, PRInt32, void *closure);
 
 
 /* Helper function for mime_begin_crypto_encapsulation() to start an
@@ -301,6 +306,7 @@ static int
 mime_init_encryption(mime_crypto_closure *state, PRBool sign_p)
 {
   int status = 0;
+  nsresult rv;
 
   /* First, construct and write out the opaque-crypto-blob MIME header data.
    */
@@ -313,7 +319,7 @@ mime_init_encryption(mime_crypto_closure *state, PRBool sign_p)
 				  "; filename=\"smime.p7m\"" CRLF
 				"Content-Description: %s" CRLF
 				CRLF,
-				XP_GetString(MK_MIME_SMIME_ENCRYPTED_CONTENT_DESCRIPTION));
+				MIME_SMIME_ENCRYPTED_CONTENT_DESCRIPTION);
   PRInt32 L;
   if (!s) return MIME_OUT_OF_MEMORY;
   L = nsCRT::strlen(s);
@@ -328,13 +334,15 @@ mime_init_encryption(mime_crypto_closure *state, PRBool sign_p)
    */
 
   if (! state->isDraft) {
-	  PR_ASSERT(state->certs[0]);
-	  if (!state->certs[0]) return -1;
+    PRUint32 numCerts;
+    state->certs->Count(&numCerts);
+    PR_ASSERT(numCerts > 0);
+	  if (numCerts == 0) return -1;
   }
 
   /* Initialize the base64 encoder. */
   PR_ASSERT(!state->crypto_encoder_data);
-  state->crypto_encoder_data = MimeB64EncoderInit(mime_encoder_output_fn,
+  state->crypto_encoder_data = MIME_B64EncoderInit(mime_encoder_output_fn,
 												  state);
   if (!state->crypto_encoder_data)
 	return MIME_OUT_OF_MEMORY;
@@ -399,7 +407,7 @@ mime_finish_crypto_encapsulation (void *closure, PRBool abort_p)
 		  break;
 		case mime_crypto_opaque_signed:
 		  PR_ASSERT(0);    /* #### no api for this yet */
-		  status -1;
+		  status = -1;
 		  break;
 		case mime_crypto_signed_encrypted:
 		  status = mime_finish_encryption (state, PR_TRUE);
@@ -427,25 +435,24 @@ static int
 mime_finish_multipart_signed (mime_crypto_closure *state, PRBool outer_p)
 {
   int status;
+  nsresult rv;
   PRUint32 sec_item_len;
   unsigned char * sec_item_data;
-  nsCOMPtr<nsIHash> hash = do_CreateInstance(NS_HASH_CONTRACTID,&rv);
   nsCOMPtr<nsICMSMessage> cinfo = do_CreateInstance(NS_CMSMESSAGE_CONTRACTID, &rv);
   nsCOMPtr<nsICMSEncoder> encoder = do_CreateInstance(NS_CMSENCODER_CONTRACTID, &rv);
   PRStatus ds_status = PR_FAILURE;
-  nsresult rv;
 
   /* Compute the hash...
    */
-  sec_item_len = state->data_hash_context->ResultLen(state->hash_type);
-  sec_item_data = (unsigned char *) PR_MALLOC(sec_item.len);
+  state->data_hash_context->ResultLen(state->hash_type, &sec_item_len);
+  sec_item_data = (unsigned char *) PR_MALLOC(sec_item_len);
   if (!sec_item_data)	{
 	  status = MIME_OUT_OF_MEMORY;
 	  goto FAIL;
 	}
 
   PR_SetError(0,0);
-  state->data_hash_context->End(sec_item.data, &sec_item_len, sec_item_len);
+  state->data_hash_context->End(sec_item_data, &sec_item_len, sec_item_len);
   status = PR_GetError();
   if (status < 0) {
     goto FAIL;
@@ -472,7 +479,7 @@ mime_finish_multipart_signed (mime_crypto_closure *state, PRBool outer_p)
 				  "Content-Description: %s" CRLF
 				  CRLF,
 				  state->multipart_signed_boundary,
-				  XP_GetString(MK_MIME_SMIME_SIGNATURE_CONTENT_DESCRIPTION));
+				  MIME_SMIME_SIGNATURE_CONTENT_DESCRIPTION);
 	if (!header) {
 		status = MIME_OUT_OF_MEMORY;
 		goto FAIL;
@@ -481,7 +488,7 @@ mime_finish_multipart_signed (mime_crypto_closure *state, PRBool outer_p)
 	L = nsCRT::strlen(header);
 	if (outer_p) {
 		/* If this is the outer block, write it to the file. */
-		if (PRInt32(state->file->write(header, L)) < L)
+    if (PRInt32(state->file->write(header, L)) < L) {
 		  status = MK_MIME_ERROR_WRITING_FILE;
     } else {
 		  /* If this is an inner block, feed it through the crypto stream. */
@@ -512,7 +519,7 @@ mime_finish_multipart_signed (mime_crypto_closure *state, PRBool outer_p)
    */
   PR_ASSERT(!state->sig_encoder_data);
   state->sig_encoder_data =
-	MimeB64EncoderInit((outer_p
+	MIME_B64EncoderInit((outer_p
 						? mime_encoder_output_fn
 						: mime_nested_encoder_output_fn),
 					   state);
@@ -525,7 +532,7 @@ mime_finish_multipart_signed (mime_crypto_closure *state, PRBool outer_p)
    */
   PR_SetError(0,0);
   rv = encoder->Encode (cinfo);
-  if (ds_status != SECSuccess) {
+  if (NS_FAILED(rv)) {
 	  status = PR_GetError();
 	  PR_ASSERT(status < 0);
 	  if (status >= 0) status = -1;
@@ -534,7 +541,7 @@ mime_finish_multipart_signed (mime_crypto_closure *state, PRBool outer_p)
 
   /* Shut down the sig's base64 encoder.
    */
-  status = MimeEncoderDestroy(state->sig_encoder_data, PR_FALSE);
+  status = MIME_EncoderDestroy(state->sig_encoder_data, PR_FALSE);
   state->sig_encoder_data = 0;
   if (status < 0) goto FAIL;
 
@@ -577,6 +584,7 @@ static int
 mime_finish_encryption (mime_crypto_closure *state, PRBool sign_p)
 {
   int status = 0;
+  nsresult rv;
 
   /* If this object is both encrypted and signed, close off the
 	 signature first (since it's inside.) */
@@ -611,7 +619,7 @@ mime_finish_encryption (mime_crypto_closure *state, PRBool sign_p)
   if (status < 0) goto FAIL;
 
   /* Shut down the base64 encoder. */
-  status = MimeEncoderDestroy(state->crypto_encoder_data, PR_FALSE);
+  status = MIME_EncoderDestroy(state->crypto_encoder_data, PR_FALSE);
   state->crypto_encoder_data = 0;
 
   if (status < 0) goto FAIL;
@@ -621,42 +629,12 @@ mime_finish_encryption (mime_crypto_closure *state, PRBool sign_p)
   return status;
 }
 
-
-
-
 extern char *MSG_ExtractRFC822AddressMailboxes (const char *line);
 extern char *MSG_RemoveDuplicateAddresses (const char *addrs,
 										   const char *other_addrs,
 										   PRBool removeAliasesToMe);
 extern int MSG_ParseRFC822Addresses (const char *line,
 									 char **names, char **addresses);
-
-
-static CERTCertificate *
-msg_get_cert(const char *email_addr)
-{
-  CERTCertificate * cert = NULL;
-  CERTCertList *certList = NULL;
-  SECStatus rv;
-  
-  certList = CERT_CreateEmailAddrCertList(NULL, CERT_GetDefaultCertDB(),
-										  (char *)email_addr, PR_Now(),
-										  PR_PR_TRUE);
-
-  if ( certList == NULL ) {
-	return NULL;
-  }
-
-  rv = CERT_FilterCertListByUsage(certList, certUsageEmailRecipient, PR_PR_FALSE);
-  
-  if ( ! CERT_LIST_END(CERT_LIST_HEAD(certList), certList) ) {
-	  cert = CERT_DupCertificate(CERT_LIST_HEAD(certList)->cert);
-  }
-
-  CERT_DestroyCertList(certList);
-  
-  return cert;   /* cert may point to a cert or may be NULL */
-}
 
 
 /* Used to figure out what certs should be used when encrypting this message.
@@ -669,10 +647,11 @@ mime_crypto_hack_certs(mime_crypto_closure *state, const char *recipients,
   char *all_mailboxes = 0, *mailboxes = 0, *mailbox_list = 0;
   const char *mailbox = 0;
   int count = 0;
+  nsCOMPtr<nsIX509CertDB> certdb = do_GetService(NS_X509CERTDB_CONTRACTID);
+
 /*  char **nocerts = 0; */
   int32 nocert_count = 0;
   PRBool no_clearsigning_p = PR_FALSE;
-  CERTCertificate **certs_tail;
 
   PR_ASSERT(encrypt_p || sign_p);
 
@@ -753,8 +732,8 @@ mime_crypto_hack_certs(mime_crypto_closure *state, const char *recipients,
 	  /* null terminate the list of cert */
 	  *certs_tail = NULL;	
  
-	  if (nocert_count)
-		{
+	  if (nocert_count) {
+#if 0 // XXX Fix this XXX //
 		/* If we wanted to encrypt but couldn't, ask the user whether they'd
 		 rather just turn off encryption and send anyway. */
 		if (FE_Confirm(state->context,
@@ -774,12 +753,13 @@ mime_crypto_hack_certs(mime_crypto_closure *state, const char *recipients,
 			{
 			status = MK_INTERRUPTED;	/* "fail" without an error dialog */
 			}
-
+#endif
+    status = 1; // XXX Fix this XXX //
 		goto FAIL;
 		}
 	}
 FAIL:
-  FREEIF(mailbox_list);
+  PR_FREEIF(mailbox_list);
 /*  FREEIF(nocerts); */
 
   if (status >= 0 &&
@@ -817,8 +797,8 @@ mime_crypto_write_base64 (void *closure, const char *buf,
    the signature for a multipart/signed object, this is used to write the
    base64-encoded representation of the signature to the file.
  */
-static int
-mime_encoder_output_fn (const char *buf, int32 size, void *closure)
+nsresult
+mime_encoder_output_fn(const char *buf, PRInt32 size, void *closure)
 {
   mime_crypto_closure *state = (mime_crypto_closure *) closure;
   if ((int32) XP_FileWrite((char *) buf, size, state->file) < size)

@@ -2,7 +2,6 @@
 /*
    composec.h --- the crypto interface to MIME generation (see compose.c.)
  */
-
 #include "nspr.h"
 #include "msgCore.h"
 #include "nsFileStream.h"
