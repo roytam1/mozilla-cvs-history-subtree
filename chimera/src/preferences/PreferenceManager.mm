@@ -202,6 +202,11 @@ app_getModuleInfo(nsStaticModuleInfo **info, PRUint32 *count);
         return;
     }
 
+    // set the universal charset detector pref. we can't set it in chimera.js
+    // because it's a funky locale-specific pref.
+    static const char* const kUniversalCharsetDetectorPref = "intl.charset.detector";
+    mPrefs->SetCharPref(kUniversalCharsetDetectorPref, "universal_charset_detector");
+    
     // fix up the cookie prefs. If 'p3p' or 'accept foreign cookies' are on, remap them to
     // something that chimera can deal with.
     PRInt32 acceptCookies = 0;
