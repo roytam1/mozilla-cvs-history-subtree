@@ -49,9 +49,10 @@
     </resources>
 
     <content>
-      <xul:button label="&print.label;" oncommand="BrowserPrint();"/>
+      <xul:button label="&print.label;" accesskey="&print.accesskey;" 
+        oncommand="BrowserPrint();"/>
 
-      <xul:button label="&pageSetup.label;" 
+      <xul:button label="&pageSetup.label;" accesskey="&pageSetup.accesskey;"
         oncommand="doPageSetup();"/>
 
       <xul:vbox align="center" pack="center">
@@ -116,7 +117,7 @@
 
       <xul:toolbarseparator/>
       <xul:toolbarseparator class="toolbarseparator-primary"/>
-      <xul:button label="&close.label;" 
+      <xul:button label="&close.label;" accesskey="&close.accesskey;"
         oncommand="BrowserExitPrintPreview();"/>
       <xul:data value="&customPrompt.title;"/>
     </content>
@@ -177,6 +178,9 @@
         {
           // hide print button
           this.mPrintButton.setAttribute("hidden", "true");
+
+          // hide page setup button
+          document.getAnonymousNodes(this)[1].setAttribute("hidden", "true");
 
           // hide scale widgets (indices: 8, 9, 10, 11)
           // hide orient widgets (indices: 12, 13)
@@ -326,7 +330,7 @@
           if (aValue == "ShrinkToFit") {
             if (!settings.shrinkToFit) {
               settings.shrinkToFit = true;
-              print.printPreview(settings);
+              print.printPreview(settings, null, null);
               this.mScaleCombobox.setAttribute('lastValidInx', this.mScaleCombobox.selectedIndex);
               // update total number of pages since this could have changed
               this.mTotalPages.value = print.printPreviewNumPages;
@@ -352,7 +356,7 @@
 
           settings.shrinkToFit = false;
           settings.scaling = aValue;
-          print.printPreview(settings);
+          print.printPreview(settings, null, null);
           // update total number of pages since this could have changed
           this.mTotalPages.value = print.printPreviewNumPages;
         ]]>
@@ -383,7 +387,7 @@
           var print = this._getWebBrowserPrint();
           var settings = print.currentPrintSettings;
           settings.orientation = orientValue;
-          print.printPreview(settings);
+          print.printPreview(settings, null, null);
 
           // update total number of pages since this could have changed
           this.mTotalPages.value = print.printPreviewNumPages;
