@@ -70,22 +70,24 @@ static int ldap_default_rebind_auth = LDAP_AUTH_SIMPLE;
 /* Return a Perl List from a char ** in PPCODE */
 #define RET_CPP(cppvar) \
 	   int cppindex; \
+	   if (cppvar) { \
 	   for (cppindex = 0; cppvar[cppindex] != NULL; cppindex++) \
 	   { \
 	      EXTEND(sp,1); \
 	      PUSHs(sv_2mortal(newSVpv(cppvar[cppindex],strlen(cppvar[cppindex])))); \
 	   } \
-	   ldap_value_free(cppvar)
+	   ldap_value_free(cppvar); }
 
 /* Return a Perl List from a berval ** in PPCODE */
 #define RET_BVPP(bvppvar) \
 	   int bvppindex; \
+	   if (bvppvar) { \
 	   for (bvppindex = 0; bvppvar[bvppindex] != NULL; bvppindex++) \
 	   { \
 	      EXTEND(sp,1); \
 	      PUSHs(sv_2mortal(newSVpv(bvppvar[bvppindex]->bv_val,bvppvar[bvppindex]->bv_len))); \
 	   } \
-	   ldap_value_free_len(bvppvar)
+	   ldap_value_free_len(bvppvar); }
 
 /* Return a char ** when passed a reference to an AV */
 char ** avref2charptrptr(SV *avref)
