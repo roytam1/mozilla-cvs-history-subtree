@@ -412,6 +412,12 @@ nsRuleNode::GetRule(nsIStyleRule** aResult)
 }
 
 NS_IMETHODIMP
+nsRuleNode::ClearCachedData(nsIStyleRule* aRule)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsRuleNode::GetPresContext(nsIPresContext** aResult)
 {
   *aResult = mPresContext;

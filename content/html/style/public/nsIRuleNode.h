@@ -174,7 +174,7 @@ struct nsCachedStyleData
     return PR_TRUE;
   };
 
-  static PRUint32 nsCachedStyleData::GetBitForSID(const nsStyleStructID& aSID)
+  static PRUint32 GetBitForSID(const nsStyleStructID& aSID)
   {
     switch (aSID) {
       case eStyleStruct_Visibility:
@@ -335,6 +335,8 @@ public:
   NS_IMETHOD GetRule(nsIStyleRule** aResult)=0;
 
   NS_IMETHOD GetPresContext(nsIPresContext** aResult)=0;
+
+  NS_IMETHOD ClearCachedData(nsIStyleRule* aRule)=0;
 
   virtual const nsStyleStruct* GetStyleData(nsStyleStructID aSID, 
                                             nsIStyleContext* aContext)=0;
