@@ -6,6 +6,7 @@ const NS_JUNKMAIL_CID =
     Components.ID('{c9a94b7c-a67d-11d6-8039-00008646b737}');
 
 var headerTestsByName = {};
+var rawbodyRegexpTestsByName = {};
 var gPrefs;
 var gTargetFolder;
 var gLogStream;
@@ -23,6 +24,11 @@ const TEST_HEADER_EVAL = 4;
 // non-whitespace character after the keyword token.
 //
 const parseConfigLine = {
+
+
+    body: function(line) {
+
+    },
 
     describe: function(line) {
         // if this is a describe line and a corresponding test object exists, 
@@ -164,6 +170,52 @@ const parseConfigLine = {
         }
     }, 
 
+    rawbody: function(line) {
+
+        // get the test name
+	//
+	// XXX test name parsing cut-n-pasted; should be modularized
+        //
+        var testNameRE = /^(\S+)\s+/g;
+        testNameRE.lastIndex = 0;
+        var matches = testNameRE.exec(line);
+        if (matches) {
+            var testName = matches[1];
+            line = line.substring(testNameRE.lastIndex); // move down the line
+        } else {
+            debug("error parsing header config line: '" + line + "'\n");
+            return;
+        }
+
+        if ( testName[0] == '_' && testName[1] == '_') {
+            // debug("subrule skipped\n");
+            return;
+        }
+        var test = new Object();
+        test.name = testName;
+
+	matches = /^eval\:(.*)$/.exec(line);
+	if (matches) {
+	    // this must be an eval
+	    // debug("rawbody eval ignored\n");
+	} else if (matches = /\/(.*)\/(\S*)/.exec(line)) {
+
+            // JS RegExps don't support all Perl RegExp flags.  Ignore
+            // tests containing these.
+            const knownREFlags = /^[igm]*$/;
+            if (!knownREFlags.test(matches[2])) {
+                // debug("ignored (unsupported regexp flag):" + matches[2] 
+		// + "\n");
+                return;
+            }
+            test.regexp = new RegExp(matches[1], matches[2]);
+	    rawbodyRegexpTestsByName[testName] = test;
+	} else {
+            // debug("error parsing rawbody test: '" + line + "'\n");
+	}
+	return;
+    }, 
+
     score: function(line) {
         // if this is a score line and a corresponding test object exists, 
         // attach a score property to the test 
@@ -174,7 +226,11 @@ const parseConfigLine = {
             if ( matches[1] in headerTestsByName) { 
                 headerTestsByName[matches[1]].score = Number(matches[2]);
                 return;
-            }
+            } else if ( matches[1] in rawbodyRegexpTestsByName ) {
+                rawbodyRegexpTestsByName[matches[1]].score =	
+		    Number(matches[2]);
+                return;
+	    }
             // debug("ignored score line for unknown test: " + matches[1] 
             // + "\n");
         } else {
@@ -592,7 +648,8 @@ nsJunkmail.prototype = {
 
             var subject = getHeaderVals("Subject");
 
-            if (subject.search( /[-_\.\s]{7,}([-a-z0-9]{4,})$/ ) >= 0
+            if (subject
+		&& subject.search( /[-_\.\s]{7,}([-a-z0-9]{4,})$/ ) >= 0
                 || subject.search( /\s{10,}(?:\S\s)?(\S+)$/ ) >= 0 
                 || subject.search( 
                     /\s{3,}[-:\#\(\[]+([-a-z0-9]{4,})[\]\)]+$/ ) >=0
