@@ -49,11 +49,6 @@
 #define USE_LONG
 #endif
 
-#if defined(_WIN32_WCE)
-#undef WORD
-#define WORD ARC4WORD
-#endif
-
 #if defined(NSS_USE_HYBRID) && !defined(SOLARIS) && !defined(NSS_USE_64) 
 typedef unsigned long long WORD;
 #else

@@ -71,6 +71,13 @@ static const char PKIT_CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$ $Name$";
 
 PR_BEGIN_EXTERN_C
 
+typedef struct nssDecodedCertStr nssDecodedCert;
+
+typedef struct nssCertificateStoreStr nssCertificateStore;
+
+/* How wide is the scope of this? */
+typedef struct nssSMIMEProfileStr nssSMIMEProfile;
+
 /*
  * A note on ephemeral certs
  *
@@ -86,25 +93,17 @@ PR_BEGIN_EXTERN_C
  * for each object.
  */
 
-/* nssPKIObject
- *
- * This is the base object class, common to all PKI objects defined in
- * nsspkit.h
- */
-struct nssPKIObjectStr 
+/* The common data from which all objects inherit */
+struct nssPKIObjectBaseStr 
 {
     /* The arena for all object memory */
     NSSArena *arena;
-    /* Atomically incremented/decremented reference counting */
-    PRInt32 refCount;
-    /* lock protects the array of nssCryptokiInstance's of the object */
+    /* Thread-safe reference counting */
     PZLock *lock;
-    /* XXX with LRU cache, this cannot be guaranteed up-to-date.  It cannot
-     * be compared against the update level of the trust domain, since it is
-     * also affected by import/export.  Where is this array needed?
-     */
-    nssCryptokiObject **instances;
-    PRUint32 numInstances;
+    PRInt32 refCount;
+    /* List of nssCryptokiInstance's of the object */
+    nssList *instanceList;
+    nssListIterator *instances;
     /* The object must live in a trust domain */
     NSSTrustDomain *trustDomain;
     /* The object may live in a crypto context */
@@ -113,18 +112,9 @@ struct nssPKIObjectStr
     NSSUTF8 *tempName;
 };
 
-typedef struct nssDecodedCertStr nssDecodedCert;
-
-typedef struct nssCertificateStoreStr nssCertificateStore;
-
-/* How wide is the scope of this? */
-typedef struct nssSMIMEProfileStr nssSMIMEProfile;
-
-typedef struct nssPKIObjectStr nssPKIObject;
-
 struct NSSTrustStr 
 {
-    nssPKIObject object;
+    struct nssPKIObjectBaseStr object;
     NSSCertificate *certificate;
     nssTrustLevel serverAuth;
     nssTrustLevel clientAuth;
@@ -134,7 +124,7 @@ struct NSSTrustStr
 
 struct nssSMIMEProfileStr
 {
-    nssPKIObject object;
+    struct nssPKIObjectBaseStr object;
     NSSCertificate *certificate;
     NSSASCII7 *email;
     NSSDER *subject;
@@ -144,7 +134,7 @@ struct nssSMIMEProfileStr
 
 struct NSSCertificateStr
 {
-    nssPKIObject object;
+    struct nssPKIObjectBaseStr object;
     NSSCertificateType type;
     NSSItem id;
     NSSBER encoding;
@@ -166,7 +156,7 @@ typedef struct nssTDCertificateCacheStr nssTDCertificateCache;
 struct NSSTrustDomainStr {
     PRInt32 refCount;
     NSSArena *arena;
-    NSSCallback *defaultCallback;
+    NSSCallback defaultCallback;
     nssList *tokenList;
     nssListIterator *tokens;
     nssTDCertificateCache *cache;
@@ -189,15 +179,6 @@ struct NSSCryptoContextStr
 struct NSSTimeStr {
     PRTime prTime;
 };
-
-struct NSSCRLStr {
-  nssPKIObject object;
-  NSSDER encoding;
-  NSSUTF8 *url;
-  PRBool isKRL;
-};
-
-typedef struct NSSCRLStr NSSCRL;
 
 struct NSSPoliciesStr;
 

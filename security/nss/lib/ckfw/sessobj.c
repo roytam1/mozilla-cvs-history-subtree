@@ -202,7 +202,7 @@ nss_ckmdSessionObject_GetAttributeSize
   CK_RV *pError
 );
 
-static NSSCKFWItem
+static const NSSItem *
 nss_ckmdSessionObject_GetAttribute
 (
   NSSCKMDObject *mdObject,
@@ -582,7 +582,7 @@ nss_ckmdSessionObject_GetAttributeSize
  * nss_ckmdSessionObject_GetAttribute
  *
  */
-static NSSCKFWItem
+static const NSSItem *
 nss_ckmdSessionObject_GetAttribute
 (
   NSSCKMDObject *mdObject,
@@ -597,20 +597,17 @@ nss_ckmdSessionObject_GetAttribute
   CK_RV *pError
 )
 {
-  NSSCKFWItem item;
   nssCKMDSessionObject *obj;
   CK_ULONG i;
 
-  item.needsFreeing = PR_FALSE;
-  item.item = NULL;
 #ifdef NSSDEBUG
   if( (CK_RV *)NULL == pError ) {
-    return item;
+    return 0;
   }
 
   *pError = nss_ckmdSessionObject_verifyPointer(mdObject);
   if( CKR_OK != *pError ) {
-    return item;
+    return 0;
   }
 
   /* We could even check all the other arguments, for sanity. */
@@ -620,13 +617,12 @@ nss_ckmdSessionObject_GetAttribute
 
   for( i = 0; i < obj->n; i++ ) {
     if( attribute == obj->types[i] ) {
-      item.item = &obj->attributes[i];
-      return item;
+      return &obj->attributes[i];
     }
   }
 
   *pError = CKR_ATTRIBUTE_TYPE_INVALID;
-  return item;
+  return 0;
 }
 
 /*

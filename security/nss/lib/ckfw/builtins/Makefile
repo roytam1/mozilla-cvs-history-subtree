@@ -47,6 +47,8 @@ ifeq (,$(filter-out WIN%,$(OS_TARGET)))
 EXTRA_LIBS += \
 	$(DIST)/lib/$(NSPR31_LIB_PREFIX)plc4_s.lib \
 	$(DIST)/lib/$(NSPR31_LIB_PREFIX)plds4_s.lib \
+	wsock32.lib \
+	winmm.lib \
 	$(NULL)
 
 else

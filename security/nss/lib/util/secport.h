@@ -85,10 +85,7 @@
 #include "watcomfx.h"
 #endif
 
-#if defined(_WIN32_WCE)
-#include <windef.h>
-#include <types.h>
-#elif defined( XP_MAC ) 
+#ifdef XP_MAC
 #include <types.h>
 #include <time.h> /* for time_t below */
 #else
@@ -103,11 +100,7 @@
 
 #include <ctype.h>
 #include <string.h>
-#if defined(_WIN32_WCE)
-#include <stdlib.h>	/* WinCE puts some stddef symbols here. */
-#else
 #include <stddef.h>
-#endif
 #include <stdlib.h>
 #include "prtypes.h"
 #include "prlog.h"	/* for PR_ASSERT */
@@ -144,7 +137,7 @@ extern void *PORT_ArenaGrow(PLArenaPool *arena, void *ptr,
 extern void *PORT_ArenaMark(PLArenaPool *arena);
 extern void PORT_ArenaRelease(PLArenaPool *arena, void *mark);
 extern void PORT_ArenaUnmark(PLArenaPool *arena, void *mark);
-extern char *PORT_ArenaStrdup(PLArenaPool *arena, const char *str);
+extern char *PORT_ArenaStrdup(PLArenaPool *arena, char *str);
 
 #ifdef __cplusplus
 }
@@ -210,10 +203,10 @@ extern char *PORT_ArenaStrdup(PLArenaPool *arena, const char *str);
 #define PORT_Strcasecmp PL_strcasecmp
 #define PORT_Strcat 	strcat
 #define PORT_Strchr 	strchr
-#define PORT_Strrchr    strrchr
+#define PORT_Strrchr    PL_strrchr
 #define PORT_Strcmp 	strcmp
 #define PORT_Strcpy 	strcpy
-extern char *PORT_Strdup(const char *s);
+#define PORT_Strdup 	PL_strdup
 #define PORT_Strlen(s) 	strlen(s)
 #define PORT_Strncasecmp PL_strncasecmp
 #define PORT_Strncat 	strncat

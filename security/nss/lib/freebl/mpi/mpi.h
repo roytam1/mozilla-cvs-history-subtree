@@ -60,10 +60,8 @@
 #undef ULLONG_MAX
 #endif
 
-#if defined( macintosh )
+#ifdef macintosh
 #include <Types.h>
-#elif defined( _WIN32_WCE)
-/* #include <sys/types.h> What do we need here ?? */
 #else
 #include <sys/types.h>
 #endif

@@ -313,23 +313,19 @@ nssList_Count(nssList *list)
 NSS_IMPLEMENT PRStatus
 nssList_GetArray(nssList *list, void **rvArray, PRUint32 maxElements)
 {
-    nssListElement *node;
+    nssListIterator *iter;
+    void *el;
     PRUint32 i = 0;
     PR_ASSERT(maxElements > 0);
-    node = list->head;
-    if (!node) {
-	return PR_SUCCESS;
-    }
-    NSSLIST_LOCK_IF(list);
-    while (node) {
-	rvArray[i++] = node->data;
+    iter = nssList_CreateIterator(list);
+    for (el = nssListIterator_Start(iter); el != NULL;
+         el = nssListIterator_Next(iter)) 
+    {
+	rvArray[i++] = el;
 	if (i == maxElements) break;
-	node = (nssListElement *)PR_NEXT_LINK(&node->link);
-	if (node == list->head) {
-	    break;
-	}
     }
-    NSSLIST_UNLOCK_IF(list);
+    nssListIterator_Finish(iter);
+    nssListIterator_Destroy(iter);
     return PR_SUCCESS;
 }
 

@@ -59,6 +59,8 @@ EXPORTS = \
 	watcomfx.h \
 	$(NULL)
 
+MODULE = security
+
 CSRCS = \
 	secdig.c \
 	derdec.c \
@@ -84,9 +86,6 @@ CSRCS = \
 	utf8.c \
 	$(NULL)
 
-MODULE = security
-
-# don't duplicate module name in REQUIRES
-REQUIRES = dbm
+REQUIRES = security dbm
 
 LIBRARY_NAME = secutil

@@ -935,9 +935,7 @@ sub run_all_tests {
         # Also assuming only one profile here.
         #
         my $cp_result = 0;
-        unless ((-d "$build_dir/.mozilla/$Settings::MozProfileName")||
-                ((-d "$build_dir/.mozilla/Profiles/$Settings::MozProfileName") and 
-                 ($Settings::OS eq 'Darwin'))) {
+        unless (-d "$build_dir/.mozilla/$Settings::MozProfileName") {
             print_log "No profile found, creating profile.\n";
             $cp_result = create_profile($build_dir, $binary_dir, $binary);
         } else {
@@ -946,7 +944,6 @@ sub run_all_tests {
             # Recreate profile if we have $Settings::CleanProfile set.
             if ($Settings::CleanProfile) {
                 print_log "Creating clean profile ...\n";
-                print_log "Deleting $build_dir/.mozilla ...\n";
                 File::Path::rmtree("$build_dir/.mozilla", 0, 0);
                 if (-e "$build_dir/.mozilla") {
                     print_log "Error: rmtree('$build_dir/.mozilla', 0, 0) failed.\n";

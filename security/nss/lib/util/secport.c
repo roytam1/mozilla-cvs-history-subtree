@@ -159,19 +159,6 @@ PORT_ZFree(void *ptr, size_t len)
     }
 }
 
-char *
-PORT_Strdup(const char *str)
-{
-    size_t len = PORT_Strlen(str)+1;
-    char *newstr;
-
-    newstr = (char *)PORT_Alloc(len);
-    if (newstr) {
-        PORT_Memcpy(newstr, str, len);
-    }
-    return newstr;
-}
-
 void
 PORT_SetError(int value)
 {	
@@ -271,12 +258,6 @@ PORT_FreeArena(PLArenaPool *arena, PRBool zero)
 	PZ_Lock(lock);
     }
     if (!pvd) {
-	/* Each of NSPR's DLLs has a function libVersionPoint().
-	** We could do a lot of extra work to be sure we're calling the
-	** one in the DLL that holds PR_FreeArenaPool, but instead we
-	** rely on the fact that ALL NSPR DLLs in the same directory
-	** must be from the same release, and we call which ever one we get. 
-	*/
 	/* no need for thread protection here */
 	pvd = libVersionPoint();
 	if ((pvd->vMajor > 4) || 
@@ -459,7 +440,7 @@ PORT_ArenaUnmark(PLArenaPool *arena, void *mark)
 }
 
 char *
-PORT_ArenaStrdup(PLArenaPool *arena, const char *str) {
+PORT_ArenaStrdup(PLArenaPool *arena, char *str) {
     int len = PORT_Strlen(str)+1;
     char *newstr;
 
@@ -548,7 +529,7 @@ PORT_UCS2_ASCIIConversion(PRBool toUnicode, unsigned char *inBuf,
 int
 NSS_PutEnv(const char * envVarName, const char * envValue)
 {
-#if  defined(XP_MAC) || defined(_WIN32_WCE)
+#if  defined(XP_MAC)
     return SECFailure;
 #else
     SECStatus result = SECSuccess;

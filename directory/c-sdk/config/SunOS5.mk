@@ -82,7 +82,7 @@ else
 OS_CFLAGS		= $(NOMD_OS_CFLAGS) -MDupdate $(DEPENDENCIES)
 endif
 else
-CC			= cc -v -xstrconst
+CC			= cc -xstrconst
 CCC			= CC -Qoption cg -xstrconst
 ASFLAGS			+= -Wa,-P
 OS_CFLAGS		= $(NOMD_OS_CFLAGS)
