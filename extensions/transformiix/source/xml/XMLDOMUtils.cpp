@@ -98,7 +98,7 @@ Node* XMLDOMUtils::copyNode(Node* node, Document* owner, NamespaceResolver* reso
                 for ( i = 0; i < attList->getLength(); i++ ) {
                     Attr* attr = (Attr*) attList->item(i);
 #ifdef MOZ_XSL
-		    resolver->getNameSpaceURI(attr->getName(), nameSpaceURI);
+                    resolver->getNameSpaceURI(attr->getName(), nameSpaceURI);
                     newElement->setAttributeNS(nameSpaceURI, attr->getName(), attr->getValue());
 #else
                     newElement->setAttribute(attr->getName(), attr->getValue());
@@ -155,7 +155,12 @@ void XMLDOMUtils::getNodeValue(Node* node, String* target) {
         {
             nl = node->getChildNodes();
             for ( int i = 0; i < nl->getLength(); i++) {
-                getNodeValue(nl->item(i),target);
+                nodeType = nl->item(i)->getNodeType();
+                if ((nodeType == Node::TEXT_NODE) ||
+                    (nodeType == Node::ELEMENT_NODE))
+                    {
+                        getNodeValue(nl->item(i),target);
+                    }
             }
             break;
         }
