@@ -187,7 +187,7 @@ NS_NewXULTreeBuilder(nsISupports* aOuter, REFNSIID aIID, void** aResult);
 #endif
 
 PR_STATIC_CALLBACK(nsresult) Initialize(nsIModule* aSelf);
-PR_STATIC_CALLBACK(void) Shutdown(nsIModule* aSelf);
+static void Shutdown();
 
 #ifdef MOZ_MATHML
 #include "nsMathMLAtoms.h"
@@ -213,33 +213,34 @@ void NS_FreeSVGRendererCairoGlobals();
 #endif
 #endif
 
-// jst says, ``we need this to avoid holding on to XPConnect past its
-// destruction. By being an XPCOM shutdown observer we can make sure
-// we release the content global reference to XPConnect before
-// XPConnect is shutdown, which cuts down on leaks n' whatnot...''
-class ContentShutdownObserver : public nsIObserver
+//-----------------------------------------------------------------------------
+
+// Per bug 209804, it is necessary to observe the "xpcom-shutdown" event and
+// perform shutdown of the layout modules at that time instead of waiting for
+// our module destructor to run.  If we do not do this, then we risk holding
+// references to objects in other component libraries that have already been
+// shutdown (and possibly unloaded if 60709 is ever fixed).
+
+class LayoutShutdownObserver : public nsIObserver
 {
 public:
-  ContentShutdownObserver()
-  {
-  }
-
   NS_DECL_ISUPPORTS
   NS_DECL_NSIOBSERVER
 };
 
-NS_IMPL_ISUPPORTS1(ContentShutdownObserver, nsIObserver)
+NS_IMPL_ISUPPORTS1(LayoutShutdownObserver, nsIObserver)
 
 NS_IMETHODIMP
-ContentShutdownObserver::Observe(nsISupports *aSubject,
-                                 const char *aTopic,
-                                 const PRUnichar *someData)
+LayoutShutdownObserver::Observe(nsISupports *aSubject,
+                                const char *aTopic,
+                                const PRUnichar *someData)
 {
-  if (!nsCRT::strcmp(aTopic, NS_XPCOM_SHUTDOWN_OBSERVER_ID))
-    nsContentUtils::Shutdown();
-
+  if (!strcmp(aTopic, NS_XPCOM_SHUTDOWN_OBSERVER_ID))
+    Shutdown();
   return NS_OK;
 }
+
+//-----------------------------------------------------------------------------
 
 static PRBool gInitialized = PR_FALSE;
 
@@ -260,7 +261,7 @@ Initialize(nsIModule* aSelf)
   if (NS_FAILED(rv)) {
     NS_ERROR("Could not initialize nsContentUtils");
 
-    Shutdown(aSelf);
+    Shutdown();
 
     return rv;
   }
@@ -282,7 +283,7 @@ Initialize(nsIModule* aSelf)
   if (NS_FAILED(rv)) {
     NS_ERROR("Could not initialize nsXULContentUtils");
 
-    Shutdown(aSelf);
+    Shutdown();
 
     return rv;
   }
@@ -313,7 +314,7 @@ Initialize(nsIModule* aSelf)
   if (NS_FAILED(rv)) {
     NS_ERROR("Could not initialize nsTextTransformer");
 
-    Shutdown(aSelf);
+    Shutdown();
 
     return rv;
   }
@@ -325,11 +326,11 @@ Initialize(nsIModule* aSelf)
     do_GetService("@mozilla.org/observer-service;1");
 
   if (observerService) {
-    ContentShutdownObserver* observer =
-      new ContentShutdownObserver();
+    LayoutShutdownObserver* observer =
+      new LayoutShutdownObserver();
 
     if (!observer) {
-      Shutdown(aSelf);
+      Shutdown();
 
       return NS_ERROR_OUT_OF_MEMORY;
     }
@@ -345,8 +346,8 @@ Initialize(nsIModule* aSelf)
 // Shutdown this module, releasing all of the module resources
 
 // static
-void PR_CALLBACK
-Shutdown(nsIModule* aSelf)
+void
+Shutdown()
 {
   NS_PRECONDITION(gInitialized, "module not initialized");
   if (!gInitialized)
@@ -1355,4 +1356,4 @@ static const nsModuleComponentInfo gComponents[] = {
     CreatePluginDocument }
 };
 
-NS_IMPL_NSGETMODULE_WITH_CTOR_DTOR(nsLayoutModule, gComponents, Initialize, Shutdown)
+NS_IMPL_NSGETMODULE_WITH_CTOR(nsLayoutModule, gComponents, Initialize)
