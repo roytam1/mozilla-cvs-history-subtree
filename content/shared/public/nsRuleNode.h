@@ -476,6 +476,10 @@ protected:
                                       nsIStyleContext* aContext,  
                                       nsRuleNode* aHighestNode,
                                       const RuleDetail& aRuleDetail, PRBool aInherited);
+  const nsStyleStruct* ComputeSVGResetData(nsStyleStruct* aStartSVG, const nsCSSStruct& aSVGData, 
+                                           nsIStyleContext* aContext,  
+                                           nsRuleNode* aHighestNode,
+                                           const RuleDetail& aRuleDetail, PRBool aInherited);
 #endif
   
   typedef const nsStyleStruct*
@@ -515,6 +519,7 @@ protected:
 #endif
 #ifdef MOZ_SVG
   const nsStyleStruct* GetSVGData(nsIStyleContext* aContext, PRBool aComputeData);
+  const nsStyleStruct* GetSVGResetData(nsIStyleContext* aContext, PRBool aComputeData);
 #endif
 
   typedef const nsStyleStruct* (nsRuleNode::*GetStyleDataFn)(nsIStyleContext*, PRBool);

@@ -131,13 +131,7 @@ nsSVGPathSegList::SetValueString(const nsAString& aValue)
 
   nsresult rv = NS_OK;
 
-  // XXX how am I supposed to do this ??? 
-  // char* str  = aValue.ToNewCString();
-  char* str;
-  {
-    nsAutoString temp(aValue);
-    str = ToNewCString(temp);
-  }
+  char *str = ToNewCString(aValue);
 
   nsSVGPathDataParser parser(this);
   rv = parser.Parse(str);

@@ -146,6 +146,7 @@ static NS_DEFINE_CID(kAttributeContentCID, NS_ATTRIBUTECONTENT_CID);
 #include "nsISVGAttribute.h"
 #include "nsISVGValue.h"
 #include "nsISVGStyleValue.h"
+#include "nsISVGTextContainerFrame.h"
 
 extern nsresult
 NS_NewSVGOuterSVGFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
@@ -169,6 +170,12 @@ extern nsresult
 NS_NewSVGForeignObjectFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
 extern nsresult
 NS_NewSVGPathFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
+extern nsresult
+NS_NewSVGGlyphFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame* parent, nsIFrame** aNewFrame);
+extern nsresult
+NS_NewSVGTextFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
+extern nsresult
+NS_NewSVGTSpanFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame* parent, nsIFrame** aNewFrame);
 #endif
 
 #include "nsIDocument.h"
@@ -4625,7 +4632,17 @@ nsCSSFrameConstructor::ConstructTextFrame(nsIPresShell*            aPresShell,
     ProcessPseudoFrames(aPresContext, aState.mPseudoFrames, aFrameItems);
 
   nsIFrame* newFrame = nsnull;
+
+#ifdef MOZ_SVG
+  nsresult rv;
+  nsCOMPtr<nsISVGTextContainerFrame> svg_parent = do_QueryInterface(aParentFrame);
+  if (svg_parent)
+    rv = NS_NewSVGGlyphFrame(aPresShell, aContent, aParentFrame, &newFrame);
+  else
+    rv = NS_NewTextFrame(aPresShell, &newFrame);
+#else
   nsresult rv = NS_NewTextFrame(aPresShell, &newFrame);
+#endif
   if (NS_FAILED(rv) || !newFrame)
     return rv;
 
@@ -7034,8 +7051,7 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
                                           nsIStyleContext*         aStyleContext,
                                           nsFrameItems&            aFrameItems)
 {
-  NS_ASSERTION(NS_SUCCEEDED(aContent->GetNameSpaceID(aNameSpaceID)) && 
-            (aNameSpaceID == nsSVGAtoms::nameSpaceID), "SVG frame constructed in wrong namespace");
+  NS_ASSERTION(aNameSpaceID == nsSVGAtoms::nameSpaceID, "SVG frame constructed in wrong namespace");
 
   nsresult  rv = NS_OK;
   PRBool isAbsolutelyPositioned = PR_FALSE;
@@ -7090,6 +7106,14 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
   }
   else if (aTag == nsSVGAtoms::path)
     rv = NS_NewSVGPathFrame(aPresShell, aContent, &newFrame);
+  else if (aTag == nsSVGAtoms::text) {
+    processChildren = PR_TRUE;
+    rv = NS_NewSVGTextFrame(aPresShell, aContent, &newFrame);
+  }
+  else if (aTag == nsSVGAtoms::tspan) {
+    processChildren = PR_TRUE;
+    rv = NS_NewSVGTSpanFrame(aPresShell, aContent, aParentFrame, &newFrame);
+  }
   
   if (newFrame == nsnull) {
     // Either we have an unknown tag, or construction of a frame
@@ -7341,8 +7365,8 @@ nsCSSFrameConstructor::ConstructFrameInternal( nsIPresShell*            aPresShe
     aState.mFrameManager->SetUndisplayedContent(aContent, styleContext);
     return NS_OK;
   }
-
-  if (aTag == nsLayoutAtoms::textTagName)
+  
+  if (aTag == nsLayoutAtoms::textTagName) 
     return ConstructTextFrame(aPresShell, aPresContext, aState,
                               aContent, aParentFrame, styleContext,
                               aFrameItems);

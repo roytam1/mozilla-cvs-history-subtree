@@ -26,7 +26,14 @@
 
 @namespace url(http://www.w3.org/2000/svg);
 
-/* maybe we don't need this after all! */
+svg {
+  
+  /* We give svg elements block display style, so that they reflow
+     correctly when given a relative width/height: */  
+  display: block;
+
+  font-family: Helvetica;
+}
 
 
 

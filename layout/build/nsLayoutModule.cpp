@@ -79,6 +79,7 @@
 // SVG
 #ifdef MOZ_SVG
 #include "nsSVGAtoms.h"
+#include "nsISVGRenderer.h"
 #endif
 
 
@@ -189,6 +190,12 @@ extern nsresult NS_CreateCSSFrameConstructor(nsICSSFrameConstructor** aResult);
 extern nsresult NS_NewLayoutHistoryState(nsILayoutHistoryState** aResult);
 extern nsresult NS_NewAutoCopyService(nsIAutoCopyService** aResult);
 
+#ifdef MOZ_SVG
+//ifdef XXX
+extern nsresult NS_NewSVGRendererGDIPlus(nsISVGRenderer** aResult);
+// endif XXX
+#endif // MOZ_SVG
+
 #define MAKE_CTOR(ctor_, iface_, func_)                   \
 static NS_IMETHODIMP                                      \
 ctor_(nsISupports* aOuter, REFNSIID aIID, void** aResult) \
@@ -229,8 +236,23 @@ MAKE_CTOR(CreateNewScrollBoxObject,     nsIBoxObject,           NS_NewScrollBoxO
 MAKE_CTOR(CreateNewTreeBoxObject,       nsIBoxObject,           NS_NewTreeBoxObject)
 MAKE_CTOR(CreateNewAutoCopyService,     nsIAutoCopyService,     NS_NewAutoCopyService)
 
+#ifdef MOZ_SVG
+//ifdef XXX
+MAKE_CTOR(CreateNewSVGRendererGDIPlus,  nsISVGRenderer,         NS_NewSVGRendererGDIPlus)
+// endif XXX
+#endif // MOZ_SVG
+  
 // The list of components we register
 static const nsModuleComponentInfo gComponents[] = {
+#ifdef MOZ_SVG
+//ifdef XXX
+  { "SVG GdiPlus Renderer",
+    NS_SVG_RENDERER_GDIPLUS_CID,
+    NS_SVG_RENDERER_GDIPLUS_CONTRACTID,
+    CreateNewSVGRendererGDIPlus },
+// endif XXX
+#endif // MOZ_SVG
+
 #ifdef DEBUG
   { "Frame utility",
     NS_FRAME_UTIL_CID,

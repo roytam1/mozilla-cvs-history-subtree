@@ -52,7 +52,11 @@ SVG_ATOM(polygon, "polygon")
 SVG_ATOM(polyline, "polyline")
 SVG_ATOM(rect, "rect")
 SVG_ATOM(svg, "svg")
+SVG_ATOM(text, "text")
+SVG_ATOM(tref, "tref")
+SVG_ATOM(tspan, "tspan")
 
+  
 // properties
 SVG_ATOM(cx, "cx")
 SVG_ATOM(cy, "cy")
@@ -77,6 +81,7 @@ SVG_ATOM(x2, "x2")
 SVG_ATOM(y2, "y2")
   
 // transformation keywords
+SVG_ATOM(matrix, "matrix")
 SVG_ATOM(rotate, "rotate")
 SVG_ATOM(scale, "scale")
 SVG_ATOM(skewX, "skewX")

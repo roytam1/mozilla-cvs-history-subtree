@@ -1132,18 +1132,40 @@ struct nsStyleSVG : public nsStyleStruct {
 
   PRInt32 CalcDifference(const nsStyleSVG& aOther) const;
 
-  // all [inherit]ed
-  nsStyleSVGPaint  mFill;
-  float            mFillOpacity;
-  PRUint8          mFillRule; // see nsStyleConsts.h
-  nsStyleSVGPaint  mStroke;
-  nsString         mStrokeDasharray; // XXX we want a parsed value here
-  float            mStrokeDashoffset;
-  PRUint8          mStrokeLinecap;  // see nsStyleConsts.h
-  PRUint8          mStrokeLinejoin; // see nsStyleConsts.h
-  float            mStrokeMiterlimit;
-  float            mStrokeOpacity;
-  float            mStrokeWidth; // in pixels
+  nsStyleSVGPaint  mFill;             // [inherit]
+  float            mFillOpacity;      // [inherit]
+  PRUint8          mFillRule;         // [inherit], see nsStyleConsts.h
+  nsStyleSVGPaint  mStroke;           // [inherit]
+  nsString         mStrokeDasharray;  // [inherit] XXX we want a parsed value here
+  float            mStrokeDashoffset; // [inherit]
+  PRUint8          mStrokeLinecap;    // [inherit] see nsStyleConsts.h
+  PRUint8          mStrokeLinejoin;   // [inherit] see nsStyleConsts.h
+  float            mStrokeMiterlimit; // [inherit]
+  float            mStrokeOpacity;    // [inherit]
+  float            mStrokeWidth;      // [inherit], in pixels
+  PRUint8          mTextAnchor;       // [inherit], see nsStyleConsts.h
+};
+
+struct nsStyleSVGReset : public nsStyleStruct {
+  nsStyleSVGReset();
+  nsStyleSVGReset(const nsStyleSVGReset& aSource);
+  ~nsStyleSVGReset();
+
+  NS_DEFINE_STATIC_STYLESTRUCTID_ACCESSOR(eStyleStruct_SVGReset)
+  
+  void* operator new(size_t sz, nsIPresContext* aContext) CPP_THROW_NEW {
+    void* result = nsnull;
+    aContext->AllocateFromShell(sz, &result);
+    return result;
+  }
+  void Destroy(nsIPresContext* aContext) {
+    this->~nsStyleSVGReset();
+    aContext->FreeToShell(sizeof(nsStyleSVGReset), this);
+  };
+
+  PRInt32 CalcDifference(const nsStyleSVGReset& aOther) const;
+
+  PRUint8          mDominantBaseline; // [reset], see nsStyleConsts.h
 };
 #endif
 

@@ -174,13 +174,7 @@ nsSVGTransformList::SetValueString(const nsAString& aValue)
 
   nsresult rv = NS_OK;
 
-  // XXX how am I supposed to do this ??? 
-  // char* str  = aValue.ToNewCString();
-  char* str;
-  {
-    nsAutoString temp(aValue);
-    str = ToNewCString(temp);
-  }
+  char *str = ToNewCString(aValue);
   
   char* rest = str;
   char* keyword;
@@ -252,7 +246,40 @@ nsSVGTransformList::SetValueString(const nsAString& aValue)
       char* end;
       float angle = (float) PR_strtod(arg1, &end);
       transform->SetSkewY(angle);
-    }  
+    }
+    else if (keyatom == nsSVGAtoms::matrix) {
+      char *arg, *end;
+
+      arg = nsCRT::strtok(args, delimiters3, &args);
+      if (!arg) break; // parse error
+      float a = (float) PR_strtod(arg, &end);
+
+      arg = nsCRT::strtok(args, delimiters3, &args);
+      if (!arg) break; // parse error
+      float b = (float) PR_strtod(arg, &end);
+
+      arg = nsCRT::strtok(args, delimiters3, &args);
+      if (!arg) break; // parse error
+      float c = (float) PR_strtod(arg, &end);
+
+      arg = nsCRT::strtok(args, delimiters3, &args);
+      if (!arg) break; // parse error
+      float d = (float) PR_strtod(arg, &end);
+
+      arg = nsCRT::strtok(args, delimiters3, &args);
+      if (!arg) break; // parse error
+      float e = (float) PR_strtod(arg, &end);
+
+      arg = nsCRT::strtok(args, delimiters3, &args);
+      if (!arg) break; // parse error
+      float f = (float) PR_strtod(arg, &end);
+
+      nsCOMPtr<nsIDOMSVGMatrix> matrix;
+      nsSVGMatrix::Create(getter_AddRefs(matrix),
+                          a, b, c, d, e, f);
+      NS_ASSERTION(matrix, "couldn't create matrix");
+      transform->SetMatrix(matrix);
+    }
     else { // parse error
       break;
     }    

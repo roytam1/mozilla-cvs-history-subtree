@@ -1124,7 +1124,8 @@ nsCSSSVG::nsCSSSVG(void)
 }
 
 nsCSSSVG::nsCSSSVG(const nsCSSSVG& aCopy)
-    : mFill(aCopy.mFill),
+    : mDominantBaseline(aCopy.mDominantBaseline),
+      mFill(aCopy.mFill),
       mFillOpacity(aCopy.mFillOpacity),
       mFillRule(aCopy.mFillRule),
       mStroke(aCopy.mStroke),
@@ -1134,7 +1135,8 @@ nsCSSSVG::nsCSSSVG(const nsCSSSVG& aCopy)
       mStrokeLinejoin(aCopy.mStrokeLinejoin),
       mStrokeMiterlimit(aCopy.mStrokeMiterlimit),
       mStrokeOpacity(aCopy.mStrokeOpacity),
-      mStrokeWidth(aCopy.mStrokeWidth)
+      mStrokeWidth(aCopy.mStrokeWidth),
+      mTextAnchor(aCopy.mTextAnchor)
 {
   MOZ_COUNT_CTOR(nsCSSSVG);
 }
@@ -1156,6 +1158,7 @@ void nsCSSSVG::List(FILE* out, PRInt32 aIndent) const
 
   nsAutoString buffer;
 
+  mDominantBaseline.AppendToString(buffer, eCSSProperty_dominant_baseline);
   mFill.AppendToString(buffer, eCSSProperty_fill);
   mFillOpacity.AppendToString(buffer, eCSSProperty_fill_opacity);
   mFillRule.AppendToString(buffer, eCSSProperty_fill_rule);
@@ -1167,6 +1170,7 @@ void nsCSSSVG::List(FILE* out, PRInt32 aIndent) const
   mStrokeMiterlimit.AppendToString(buffer, eCSSProperty_stroke_miterlimit);
   mStrokeOpacity.AppendToString(buffer, eCSSProperty_stroke_opacity);
   mStrokeWidth.AppendToString(buffer, eCSSProperty_stroke_width);
+  mTextAnchor.AppendToString(buffer, eCSSProperty_text_anchor);
   fputs(NS_LossyConvertUCS2toASCII(buffer).get(), out);
 }
 #endif
@@ -1976,6 +1980,7 @@ nsCSSDeclaration::AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValue)
 
 #ifdef MOZ_SVG
     // nsCSSSVG
+    case eCSSProperty_dominant_baseline:
     case eCSSProperty_fill:
     case eCSSProperty_fill_opacity:
     case eCSSProperty_fill_rule:
@@ -1986,20 +1991,23 @@ nsCSSDeclaration::AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValue)
     case eCSSProperty_stroke_linejoin:
     case eCSSProperty_stroke_miterlimit:
     case eCSSProperty_stroke_opacity:
-    case eCSSProperty_stroke_width: {
+    case eCSSProperty_stroke_width:
+    case eCSSProperty_text_anchor: {
       CSS_ENSURE(SVG) {
         switch (aProperty) {
-          case eCSSProperty_fill:              theSVG->mFill = aValue;            break;
-          case eCSSProperty_fill_opacity:      theSVG->mFillOpacity = aValue;     break;
-          case eCSSProperty_fill_rule:         theSVG->mFillRule = aValue;        break;
-          case eCSSProperty_stroke:            theSVG->mStroke = aValue;          break;
-          case eCSSProperty_stroke_dasharray:  theSVG->mStrokeDasharray = aValue; break;
+          case eCSSProperty_dominant_baseline: theSVG->mDominantBaseline = aValue; break;
+          case eCSSProperty_fill:              theSVG->mFill = aValue;             break;
+          case eCSSProperty_fill_opacity:      theSVG->mFillOpacity = aValue;      break;
+          case eCSSProperty_fill_rule:         theSVG->mFillRule = aValue;         break;
+          case eCSSProperty_stroke:            theSVG->mStroke = aValue;           break;
+          case eCSSProperty_stroke_dasharray:  theSVG->mStrokeDasharray = aValue;  break;
           case eCSSProperty_stroke_dashoffset: theSVG->mStrokeDashoffset = aValue; break;
-          case eCSSProperty_stroke_linecap:    theSVG->mStrokeLinecap = aValue;   break;
-          case eCSSProperty_stroke_linejoin:   theSVG->mStrokeLinejoin = aValue; break;
+          case eCSSProperty_stroke_linecap:    theSVG->mStrokeLinecap = aValue;    break;
+          case eCSSProperty_stroke_linejoin:   theSVG->mStrokeLinejoin = aValue;   break;
           case eCSSProperty_stroke_miterlimit: theSVG->mStrokeMiterlimit = aValue; break;
-          case eCSSProperty_stroke_opacity:    theSVG->mStrokeOpacity = aValue;   break;
-          case eCSSProperty_stroke_width:      theSVG->mStrokeWidth = aValue;     break;
+          case eCSSProperty_stroke_opacity:    theSVG->mStrokeOpacity = aValue;    break;
+          case eCSSProperty_stroke_width:      theSVG->mStrokeWidth = aValue;      break;
+          case eCSSProperty_text_anchor:       theSVG->mTextAnchor = aValue;       break;
           CSS_BOGUS_DEFAULT; // make compiler happy
         }
       }
@@ -2978,6 +2986,7 @@ nsCSSDeclaration::SetValueImportant(nsCSSProperty aProperty)
 
 #ifdef MOZ_SVG
       // nsCSSSVG
+      case eCSSProperty_dominant_baseline:
       case eCSSProperty_fill:
       case eCSSProperty_fill_opacity:
       case eCSSProperty_fill_rule:
@@ -2988,11 +2997,13 @@ nsCSSDeclaration::SetValueImportant(nsCSSProperty aProperty)
       case eCSSProperty_stroke_linejoin:
       case eCSSProperty_stroke_miterlimit:
       case eCSSProperty_stroke_opacity:
-      case eCSSProperty_stroke_width: {
+      case eCSSProperty_stroke_width:
+      case eCSSProperty_text_anchor: {
         CSS_VARONSTACK_GET(SVG);
         if (nsnull != theSVG) {
           CSS_ENSURE_IMPORTANT(SVG) {
             switch (aProperty) {
+              CSS_CASE_IMPORTANT(eCSSProperty_dominant_baseline, SVG, mDominantBaseline);
               CSS_CASE_IMPORTANT(eCSSProperty_fill,              SVG, mFill);
               CSS_CASE_IMPORTANT(eCSSProperty_fill_opacity,      SVG, mFillOpacity);
               CSS_CASE_IMPORTANT(eCSSProperty_fill_rule,         SVG, mFillRule);
@@ -3004,6 +3015,7 @@ nsCSSDeclaration::SetValueImportant(nsCSSProperty aProperty)
               CSS_CASE_IMPORTANT(eCSSProperty_stroke_miterlimit, SVG, mStrokeMiterlimit);
               CSS_CASE_IMPORTANT(eCSSProperty_stroke_opacity,    SVG, mStrokeOpacity);
               CSS_CASE_IMPORTANT(eCSSProperty_stroke_width,      SVG, mStrokeWidth);
+              CSS_CASE_IMPORTANT(eCSSProperty_text_anchor,       SVG, mTextAnchor);
               CSS_BOGUS_DEFAULT; // make compiler happy
             }
           }
@@ -3789,6 +3801,7 @@ nsCSSDeclaration::RemoveProperty(nsCSSProperty aProperty)
 
 #ifdef MOZ_SVG
     // nsCSSSVG
+    case eCSSProperty_dominant_baseline:
     case eCSSProperty_fill:
     case eCSSProperty_fill_opacity:
     case eCSSProperty_fill_rule:
@@ -3799,9 +3812,11 @@ nsCSSDeclaration::RemoveProperty(nsCSSProperty aProperty)
     case eCSSProperty_stroke_linejoin:
     case eCSSProperty_stroke_miterlimit:
     case eCSSProperty_stroke_opacity:
-    case eCSSProperty_stroke_width: {
+    case eCSSProperty_stroke_width:
+    case eCSSProperty_text_anchor: {
       CSS_CHECK(SVG) {
         switch(aProperty) {
+          case eCSSProperty_dominant_baseline: theSVG->mDominantBaseline.Reset(); break;
           case eCSSProperty_fill:              theSVG->mFill.Reset();             break;
           case eCSSProperty_fill_opacity:      theSVG->mFillOpacity.Reset();      break;
           case eCSSProperty_fill_rule:         theSVG->mFillRule.Reset();         break;
@@ -3813,6 +3828,7 @@ nsCSSDeclaration::RemoveProperty(nsCSSProperty aProperty)
           case eCSSProperty_stroke_miterlimit: theSVG->mStrokeMiterlimit.Reset(); break;
           case eCSSProperty_stroke_opacity:    theSVG->mStrokeOpacity.Reset(); break;
           case eCSSProperty_stroke_width:      theSVG->mStrokeWidth.Reset();   break;
+          case eCSSProperty_text_anchor:       theSVG->mTextAnchor.Reset();   break;
        CSS_BOGUS_DEFAULT; // Make compiler happy
         }
       }
@@ -4668,6 +4684,7 @@ nsCSSDeclaration::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
 
 #ifdef MOZ_SVG
     // nsCSSSVG
+    case eCSSProperty_dominant_baseline:
     case eCSSProperty_fill:
     case eCSSProperty_fill_opacity:
     case eCSSProperty_fill_rule:
@@ -4678,10 +4695,12 @@ nsCSSDeclaration::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
     case eCSSProperty_stroke_linejoin:
     case eCSSProperty_stroke_miterlimit:
     case eCSSProperty_stroke_opacity:
-    case eCSSProperty_stroke_width: {
+    case eCSSProperty_stroke_width:
+    case eCSSProperty_text_anchor: {
       CSS_VARONSTACK_GET(SVG);
       if (nsnull != theSVG) {
         switch (aProperty) {
+          case eCSSProperty_dominant_baseline: aValue = theSVG->mDominantBaseline; break;
           case eCSSProperty_fill:              aValue = theSVG->mFill;             break;
           case eCSSProperty_fill_opacity:      aValue = theSVG->mFillOpacity;      break;
           case eCSSProperty_fill_rule:         aValue = theSVG->mFillRule;         break;
@@ -4693,6 +4712,7 @@ nsCSSDeclaration::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
           case eCSSProperty_stroke_miterlimit: aValue = theSVG->mStrokeMiterlimit; break;
           case eCSSProperty_stroke_opacity:    aValue = theSVG->mStrokeOpacity;    break;
           case eCSSProperty_stroke_width:      aValue = theSVG->mStrokeWidth;      break;
+          case eCSSProperty_text_anchor:       aValue = theSVG->mTextAnchor;       break;
           CSS_BOGUS_DEFAULT; // make compiler happy
         }
       }

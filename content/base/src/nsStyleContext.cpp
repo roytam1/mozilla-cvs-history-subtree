@@ -625,6 +625,18 @@ nsStyleContext::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint)
         }
       }
     }
+
+    if (aHint < maxHint) {
+      const nsStyleSVGReset* svg = (const nsStyleSVGReset*)PeekStyleData(eStyleStruct_SVGReset);
+      if (svg) {
+        const nsStyleSVGReset* otherSVG = (const nsStyleSVGReset*)aOther->GetStyleData(eStyleStruct_SVGReset);
+        if (svg != otherSVG) {
+          hint = svg->CalcDifference(*otherSVG);
+          if (aHint < hint)
+            aHint = hint;
+        }
+      }
+    }
 #endif
 
     // At this point, we know that the worst kind of damage we could do is a reflow.
@@ -1170,8 +1182,8 @@ void nsStyleContext::DumpRegressionData(nsIPresContext* aPresContext, FILE* out,
   fprintf(out, "\" />\n");
 #endif
 
-  // SVG
 #ifdef MOZ_SVG
+  // SVG
   IndentBy(out,aIndent);
   const nsStyleSVG* svg = (const nsStyleSVG*)GetStyleData(eStyleStruct_SVG);
   fprintf(out, "<svg data=\"%d %f %f %d %f",
@@ -1181,6 +1193,12 @@ void nsStyleContext::DumpRegressionData(nsIPresContext* aPresContext, FILE* out,
           (int)svg->mFill.mType,
           svg->mFillOpacity);
   fprintf(out, "\" />\n");
+
+  // SVGReset
+  IndentBy(out,aIndent);
+  const nsStyleSVGReset* svgReset = (const nsStyleSVGReset*)GetStyleData(eStyleStruct_SVGReset);
+  fprintf(out, "<svgreset data=\"%d\" />\n",
+          (int)svgReset->mDominantBaseline);
 #endif
   //#insert new style structs here#
 }

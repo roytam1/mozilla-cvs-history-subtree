@@ -234,7 +234,12 @@ enum nsDOMClassInfoID {
   eDOMClassInfo_SVGPathSegCurvetoQuadraticSmoothRel_id,
   eDOMClassInfo_SVGRect_id,
   eDOMClassInfo_SVGAnimatedRect_id,
-#endif
+  eDOMClassInfo_SVGAnimatedLengthList_id,
+  eDOMClassInfo_SVGLengthList_id,
+  eDOMClassInfo_SVGNumber_id,
+  eDOMClassInfo_SVGTextElement_id,
+  eDOMClassInfo_SVGTSpanElement_id,
+#endif //MOZ_SVG
   
   // DOM Traversal classes
   eDOMClassInfo_TreeWalker_id,

@@ -617,20 +617,46 @@
 #define NS_STYLE_PAGE_BREAK_RIGHT               4
 
 #ifdef MOZ_SVG
+// Some of our constants must map to the same values as those defined in
+// nsISVGGeometrySource.idl/
+// I don't want to add a dependency on the SVG module
+// everywhere by #include'ing nsISVGGeometrySource.h, so these consts
+// have to be kept in sync manually.
+
+// dominant-baseline
+#define NS_STYLE_DOMINANT_BASELINE_AUTO              0
+#define NS_STYLE_DOMINANT_BASELINE_USE_SCRIPT        1
+#define NS_STYLE_DOMINANT_BASELINE_NO_CHANGE         2
+#define NS_STYLE_DOMINANT_BASELINE_RESET_SIZE        3
+#define NS_STYLE_DOMINANT_BASELINE_ALPHABETIC        4
+#define NS_STYLE_DOMINANT_BASELINE_HANGING           5
+#define NS_STYLE_DOMINANT_BASELINE_IDEOGRAPHIC       6
+#define NS_STYLE_DOMINANT_BASELINE_MATHEMATICAL      7
+#define NS_STYLE_DOMINANT_BASELINE_CENTRAL           8
+#define NS_STYLE_DOMINANT_BASELINE_MIDDLE            9
+#define NS_STYLE_DOMINANT_BASELINE_TEXT_AFTER_EDGE  10
+#define NS_STYLE_DOMINANT_BASELINE_TEXT_BEFORE_EDGE 11
+#define NS_STYLE_DOMINANT_BASELINE_TEXT_TOP         12
+#define NS_STYLE_DOMINANT_BASELINE_TEXT_BOTTOM      13
 
 // fill-rule
-#define NS_STYLE_FILL_RULE_NONZERO              0
-#define NS_STYLE_FILL_RULE_EVENODD              1
+#define NS_STYLE_FILL_RULE_NONZERO              0 /* == nsISVGGeometrySource::FILL_RULE_NONZERO */
+#define NS_STYLE_FILL_RULE_EVENODD              1 /* == nsISVGGeometrySource::FILL_RULE_EVENODD */
 
 // stroke-linecap
-#define NS_STYLE_STROKE_LINECAP_BUTT            0
-#define NS_STYLE_STROKE_LINECAP_ROUND           1
-#define NS_STYLE_STROKE_LINECAP_SQUARE          2
+#define NS_STYLE_STROKE_LINECAP_BUTT            0 /* == nsISVGGeometrySource::STROKE_LINECAP_BUTT */
+#define NS_STYLE_STROKE_LINECAP_ROUND           1 /* == nsISVGGeometrySource::STROKE_LINECAP_ROUND */
+#define NS_STYLE_STROKE_LINECAP_SQUARE          2 /* == nsISVGGeometrySource::STROKE_LINECAP_SQUARE */
 
 // stroke-linejoin
-#define NS_STYLE_STROKE_LINEJOIN_MITER          0
-#define NS_STYLE_STROKE_LINEJOIN_ROUND          1
-#define NS_STYLE_STROKE_LINEJOIN_BEVEL          2
+#define NS_STYLE_STROKE_LINEJOIN_MITER          0 /* == nsISVGGeometrySource::STROKE_LINEJOIN_MITER */
+#define NS_STYLE_STROKE_LINEJOIN_ROUND          1 /* == nsISVGGeometrySource::STROKE_LINEJOIN_ROUND */
+#define NS_STYLE_STROKE_LINEJOIN_BEVEL          2 /* == nsISVGGeometrySource::STROKE_LINEJOIN_BEVEL */
+
+// text-anchor
+#define NS_STYLE_TEXT_ANCHOR_START              0 
+#define NS_STYLE_TEXT_ANCHOR_MIDDLE             1 
+#define NS_STYLE_TEXT_ANCHOR_END                2 
 
 #endif // MOZ_SVG
 

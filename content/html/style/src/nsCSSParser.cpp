@@ -3725,6 +3725,9 @@ PRBool CSSParserImpl::ParseSingleValueProperty(PRInt32& aErrorCode,
     return ParseVariant(aErrorCode, aValue, VARIANT_INTEGER, nsnull);
 #endif
 #ifdef MOZ_SVG
+  case eCSSProperty_dominant_baseline:
+    return ParseVariant(aErrorCode, aValue, VARIANT_AHK,
+                        nsCSSProps::kDominantBaselineKTable);
   case eCSSProperty_fill:
     return ParseVariant(aErrorCode, aValue, VARIANT_HC | VARIANT_NONE,
                         nsnull);
@@ -3758,6 +3761,9 @@ PRBool CSSParserImpl::ParseSingleValueProperty(PRInt32& aErrorCode,
   case eCSSProperty_stroke_width:
     return ParsePositiveVariant(aErrorCode, aValue, VARIANT_HLPN,
                         nsnull);
+  case eCSSProperty_text_anchor:
+    return ParseVariant(aErrorCode, aValue, VARIANT_HK,
+                        nsCSSProps::kTextAnchorKTable);
 #endif
   case eCSSProperty_box_sizing:
     return ParseVariant(aErrorCode, aValue, VARIANT_HK,

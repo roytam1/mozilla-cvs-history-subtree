@@ -69,14 +69,17 @@ public:
   // Partial Implementation of nsISVGValue interface:
   NS_IMETHOD AddObserver(nsISVGValueObserver* observer);
   NS_IMETHOD RemoveObserver(nsISVGValueObserver* observer);
+  NS_IMETHOD BeginBatchUpdate();
+  NS_IMETHOD EndBatchUpdate();
   
 protected:
   // implementation helpers
   void ReleaseObservers();
-  
   void NotifyObservers(SVGObserverNotifyFunction f);
-  
+  PRInt32 GetModifyNestCount() { return mModifyNestCount; }
 private:
+  virtual void OnDidModify(){}; // hook that will be called before observers are notified
+  
   nsSmallVoidArray mObservers;
   PRInt32 mModifyNestCount;
 };

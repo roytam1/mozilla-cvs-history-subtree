@@ -99,7 +99,7 @@ public:
 // Implementation
 
 nsresult
-NS_NewSVGPathSegClosePath(nsIDOMSVGPathSeg** result)
+NS_NewSVGPathSegClosePath(nsIDOMSVGPathSegClosePath** result)
 {
   nsSVGPathSegClosePath *ps = new nsSVGPathSegClosePath();
   NS_ENSURE_TRUE(ps, NS_ERROR_OUT_OF_MEMORY);
@@ -171,7 +171,7 @@ protected:
 // Implementation
 
 nsresult
-NS_NewSVGPathSegMovetoAbs(nsIDOMSVGPathSeg** result,
+NS_NewSVGPathSegMovetoAbs(nsIDOMSVGPathSegMovetoAbs** result,
                           float x, float y)
 { 
   nsSVGPathSegMovetoAbs *ps = new nsSVGPathSegMovetoAbs(x, y);
@@ -280,7 +280,7 @@ protected:
 // Implementation
 
 nsresult
-NS_NewSVGPathSegMovetoRel(nsIDOMSVGPathSeg** result,
+NS_NewSVGPathSegMovetoRel(nsIDOMSVGPathSegMovetoRel** result,
                           float x, float y)
 {
   nsSVGPathSegMovetoRel *ps = new nsSVGPathSegMovetoRel(x, y);
@@ -388,7 +388,7 @@ protected:
 // Implementation
 
 nsresult
-NS_NewSVGPathSegLinetoAbs(nsIDOMSVGPathSeg** result,
+NS_NewSVGPathSegLinetoAbs(nsIDOMSVGPathSegLinetoAbs** result,
                           float x, float y)
 {
   nsSVGPathSegLinetoAbs *ps = new nsSVGPathSegLinetoAbs(x, y);
@@ -497,7 +497,7 @@ protected:
 // Implementation
 
 nsresult
-NS_NewSVGPathSegLinetoRel(nsIDOMSVGPathSeg** result,
+NS_NewSVGPathSegLinetoRel(nsIDOMSVGPathSegLinetoRel** result,
                           float x, float y)
 {
   nsSVGPathSegLinetoRel *ps = new nsSVGPathSegLinetoRel(x, y);
@@ -608,7 +608,7 @@ protected:
 // Implementation
 
 nsresult
-NS_NewSVGPathSegCurvetoCubicAbs(nsIDOMSVGPathSeg** result,
+NS_NewSVGPathSegCurvetoCubicAbs(nsIDOMSVGPathSegCurvetoCubicAbs** result,
                                 float x, float y,
                                 float x1, float y1,
                                 float x2, float y2)
@@ -780,7 +780,7 @@ protected:
 // Implementation
 
 nsresult
-NS_NewSVGPathSegCurvetoCubicRel(nsIDOMSVGPathSeg** result,
+NS_NewSVGPathSegCurvetoCubicRel(nsIDOMSVGPathSegCurvetoCubicRel** result,
                                 float x, float y,
                                 float x1, float y1,
                                 float x2, float y2)
@@ -950,7 +950,7 @@ protected:
 // Implementation
 
 nsresult
-NS_NewSVGPathSegCurvetoQuadraticAbs(nsIDOMSVGPathSeg** result,
+NS_NewSVGPathSegCurvetoQuadraticAbs(nsIDOMSVGPathSegCurvetoQuadraticAbs** result,
                                     float x, float y,
                                     float x1, float y1)
 {
@@ -1091,7 +1091,7 @@ protected:
 // Implementation
 
 nsresult
-NS_NewSVGPathSegCurvetoQuadraticRel(nsIDOMSVGPathSeg** result,
+NS_NewSVGPathSegCurvetoQuadraticRel(nsIDOMSVGPathSegCurvetoQuadraticRel** result,
                                     float x, float y,
                                     float x1, float y1)
 {
@@ -1234,7 +1234,7 @@ protected:
 // Implementation
 
 nsresult
-NS_NewSVGPathSegArcAbs(nsIDOMSVGPathSeg** result,
+NS_NewSVGPathSegArcAbs(nsIDOMSVGPathSegArcAbs** result,
                        float x, float y,
                        float r1, float r2, float angle,
                        PRBool largeArcFlag, PRBool sweepFlag)
@@ -1424,7 +1424,7 @@ protected:
 // Implementation
 
 nsresult
-NS_NewSVGPathSegArcRel(nsIDOMSVGPathSeg** result,
+NS_NewSVGPathSegArcRel(nsIDOMSVGPathSegArcRel** result,
                        float x, float y,
                        float r1, float r2, float angle,
                        PRBool largeArcFlag, PRBool sweepFlag)
@@ -1610,7 +1610,7 @@ protected:
 // Implementation
 
 nsresult
-NS_NewSVGPathSegLinetoHorizontalAbs(nsIDOMSVGPathSeg** result, float x)
+NS_NewSVGPathSegLinetoHorizontalAbs(nsIDOMSVGPathSegLinetoHorizontalAbs** result, float x)
 {
   nsSVGPathSegLinetoHorizontalAbs *ps = new nsSVGPathSegLinetoHorizontalAbs(x);
   NS_ENSURE_TRUE(ps, NS_ERROR_OUT_OF_MEMORY);
@@ -1703,7 +1703,7 @@ protected:
 // Implementation
 
 nsresult
-NS_NewSVGPathSegLinetoHorizontalRel(nsIDOMSVGPathSeg** result, float x)
+NS_NewSVGPathSegLinetoHorizontalRel(nsIDOMSVGPathSegLinetoHorizontalRel** result, float x)
 {
   nsSVGPathSegLinetoHorizontalRel *ps = new nsSVGPathSegLinetoHorizontalRel(x);
   NS_ENSURE_TRUE(ps, NS_ERROR_OUT_OF_MEMORY);
@@ -1796,7 +1796,7 @@ protected:
 // Implementation
 
 nsresult
-NS_NewSVGPathSegLinetoVerticalAbs(nsIDOMSVGPathSeg** result, float y)
+NS_NewSVGPathSegLinetoVerticalAbs(nsIDOMSVGPathSegLinetoVerticalAbs** result, float y)
 {
   nsSVGPathSegLinetoVerticalAbs *ps = new nsSVGPathSegLinetoVerticalAbs(y);
   NS_ENSURE_TRUE(ps, NS_ERROR_OUT_OF_MEMORY);
@@ -1889,7 +1889,7 @@ protected:
 // Implementation
 
 nsresult
-NS_NewSVGPathSegLinetoVerticalRel(nsIDOMSVGPathSeg** result, float y)
+NS_NewSVGPathSegLinetoVerticalRel(nsIDOMSVGPathSegLinetoVerticalRel** result, float y)
 {
   nsSVGPathSegLinetoVerticalRel *ps = new nsSVGPathSegLinetoVerticalRel(y);
   NS_ENSURE_TRUE(ps, NS_ERROR_OUT_OF_MEMORY);
@@ -1983,7 +1983,7 @@ protected:
 // Implementation
 
 nsresult
-NS_NewSVGPathSegCurvetoCubicSmoothAbs(nsIDOMSVGPathSeg** result,
+NS_NewSVGPathSegCurvetoCubicSmoothAbs(nsIDOMSVGPathSegCurvetoCubicSmoothAbs** result,
                                       float x, float y,
                                       float x2, float y2)
 {
@@ -2123,7 +2123,7 @@ protected:
 // Implementation
 
 nsresult
-NS_NewSVGPathSegCurvetoCubicSmoothRel(nsIDOMSVGPathSeg** result,
+NS_NewSVGPathSegCurvetoCubicSmoothRel(nsIDOMSVGPathSegCurvetoCubicSmoothRel** result,
                                       float x, float y,
                                       float x2, float y2)
 {
@@ -2262,7 +2262,7 @@ protected:
 // Implementation
 
 nsresult
-NS_NewSVGPathSegCurvetoQuadraticSmoothAbs(nsIDOMSVGPathSeg** result,
+NS_NewSVGPathSegCurvetoQuadraticSmoothAbs(nsIDOMSVGPathSegCurvetoQuadraticSmoothAbs** result,
                           float x, float y)
 {
   nsSVGPathSegCurvetoQuadraticSmoothAbs *ps = new nsSVGPathSegCurvetoQuadraticSmoothAbs(x, y);
@@ -2370,8 +2370,8 @@ protected:
 // Implementation
 
 nsresult
-NS_NewSVGPathSegCurvetoQuadraticSmoothRel(nsIDOMSVGPathSeg** result,
-                          float x, float y)
+NS_NewSVGPathSegCurvetoQuadraticSmoothRel(nsIDOMSVGPathSegCurvetoQuadraticSmoothRel** result,
+                                          float x, float y)
 {
   nsSVGPathSegCurvetoQuadraticSmoothRel *ps = new nsSVGPathSegCurvetoQuadraticSmoothRel(x, y);
   NS_ENSURE_TRUE(ps, NS_ERROR_OUT_OF_MEMORY);

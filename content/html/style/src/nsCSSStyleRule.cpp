@@ -1854,6 +1854,9 @@ MapSVGForDeclaration(nsCSSDeclaration* aDecl, nsCSSSVG& aSVG)
   if (!ourSVG)
     return NS_OK; // We don't have any rules for SVG.
 
+  // dominant-baseline:
+  if (aSVG.mDominantBaseline.GetUnit() == eCSSUnit_Null && ourSVG->mDominantBaseline.GetUnit() != eCSSUnit_Null)
+    aSVG.mDominantBaseline = ourSVG->mDominantBaseline;
   // fill:
   if (aSVG.mFill.GetUnit() == eCSSUnit_Null && ourSVG->mFill.GetUnit() != eCSSUnit_Null)
     aSVG.mFill = ourSVG->mFill;
@@ -1887,7 +1890,9 @@ MapSVGForDeclaration(nsCSSDeclaration* aDecl, nsCSSSVG& aSVG)
   // stroke-width:
   if (aSVG.mStrokeWidth.GetUnit() == eCSSUnit_Null && ourSVG->mStrokeWidth.GetUnit() != eCSSUnit_Null)
     aSVG.mStrokeWidth = ourSVG->mStrokeWidth;
-  
+  // text-anchor:
+  if (aSVG.mTextAnchor.GetUnit() == eCSSUnit_Null && ourSVG->mTextAnchor.GetUnit() != eCSSUnit_Null)
+    aSVG.mTextAnchor = ourSVG->mTextAnchor;
   return NS_OK;
 }
 #endif

@@ -487,6 +487,7 @@ struct nsCSSSVG : public nsCSSStruct {
   void List(FILE* out = stdout, PRInt32 aIndent = 0) const;
 #endif
 
+  nsCSSValue mDominantBaseline;
   nsCSSValue mFill;
   nsCSSValue mFillOpacity;
   nsCSSValue mFillRule;
@@ -498,6 +499,7 @@ struct nsCSSSVG : public nsCSSStruct {
   nsCSSValue mStrokeMiterlimit;
   nsCSSValue mStrokeOpacity;
   nsCSSValue mStrokeWidth;
+  nsCSSValue mTextAnchor;
 };
 #endif
 

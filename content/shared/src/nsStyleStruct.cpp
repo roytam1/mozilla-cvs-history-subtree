@@ -763,8 +763,8 @@ nsStyleXUL::CalcDifference(const nsStyleXUL& aOther) const
 // nsStyleSVG
 //
 nsStyleSVG::nsStyleSVG() 
-{ 
-    mFill.mType       = eStyleSVGPaintType_None;
+{
+    mFill.mType       = eStyleSVGPaintType_Color;
     mFill.mColor      = NS_RGB(0,0,0);
     mFillOpacity      = 1.0f;
     mFillRule         = NS_STYLE_FILL_RULE_NONZERO;
@@ -777,6 +777,7 @@ nsStyleSVG::nsStyleSVG()
     mStrokeMiterlimit = 4.0f;
     mStrokeOpacity    = 1.0f;
     mStrokeWidth      = 1.0f;
+    mTextAnchor       = NS_STYLE_TEXT_ANCHOR_START;
 }
 
 nsStyleSVG::~nsStyleSVG() 
@@ -802,6 +803,7 @@ nsStyleSVG::nsStyleSVG(const nsStyleSVG& aSource)
   mStrokeMiterlimit = aSource.mStrokeMiterlimit;
   mStrokeOpacity = aSource.mStrokeOpacity;
   mStrokeWidth = aSource.mStrokeWidth;
+  mTextAnchor = aSource.mTextAnchor;
 }
 
 PRInt32 
@@ -817,13 +819,40 @@ nsStyleSVG::CalcDifference(const nsStyleSVG& aOther) const
        mStrokeLinejoin   != aOther.mStrokeLinejoin   ||
        mStrokeMiterlimit != aOther.mStrokeMiterlimit ||
        mStrokeOpacity    != aOther.mStrokeOpacity    ||
-       mStrokeWidth      != aOther.mStrokeWidth      )
+       mStrokeWidth      != aOther.mStrokeWidth      ||
+       mTextAnchor       != aOther.mTextAnchor)
     return NS_STYLE_HINT_VISUAL;
 
   if ( (mStroke.mType == eStyleSVGPaintType_Color && mStroke.mColor != aOther.mStroke.mColor) ||
        (mFill.mType   == eStyleSVGPaintType_Color && mFill.mColor   != aOther.mFill.mColor) )
     return NS_STYLE_HINT_VISUAL;
 
+  return NS_STYLE_HINT_NONE;
+}
+
+// --------------------
+// nsStyleSVGReset
+//
+nsStyleSVGReset::nsStyleSVGReset() 
+{
+    mDominantBaseline = NS_STYLE_DOMINANT_BASELINE_AUTO;
+}
+
+nsStyleSVGReset::~nsStyleSVGReset() 
+{
+}
+
+nsStyleSVGReset::nsStyleSVGReset(const nsStyleSVGReset& aSource)
+{
+  memcpy((nsStyleSVGReset*)this, &aSource, sizeof(nsStyleSVGReset));
+}
+
+PRInt32 
+nsStyleSVGReset::CalcDifference(const nsStyleSVGReset& aOther) const
+{
+  if (mDominantBaseline != aOther.mDominantBaseline)
+    return NS_STYLE_HINT_VISUAL;
+  
   return NS_STYLE_HINT_NONE;
 }
 

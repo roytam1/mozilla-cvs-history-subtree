@@ -278,6 +278,7 @@
 
 #ifdef MOZ_SVG
 #include "nsIDOMSVGAnimatedLength.h"
+#include "nsIDOMSVGAnimatedLengthList.h"
 #include "nsIDOMSVGAnimatedPoints.h"
 #include "nsIDOMSVGAnimatedPathData.h"
 #include "nsIDOMSVGAnimTransformList.h"
@@ -292,6 +293,7 @@
 #include "nsIDOMSVGForeignObjectElem.h"
 #include "nsIDOMSVGMatrix.h"
 #include "nsIDOMSVGLength.h"
+#include "nsIDOMSVGLengthList.h"
 #include "nsIDOMSVGLocatable.h"
 #include "nsIDOMSVGPathElement.h"
 #include "nsIDOMSVGPathSeg.h"
@@ -306,6 +308,9 @@
 #include "nsIDOMSVGTransformList.h"
 #include "nsIDOMSVGRect.h"
 #include "nsIDOMSVGAnimatedRect.h"
+#include "nsIDOMSVGNumber.h"
+#include "nsIDOMSVGTextElement.h"
+#include "nsIDOMSVGTSpanElement.h"
 #endif
 
 static NS_DEFINE_CID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
@@ -761,6 +766,16 @@ static nsDOMClassInfoData sClassInfoData[] = {
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)    
   NS_DEFINE_CLASSINFO_DATA(SVGAnimatedRect, nsDOMGenericSH,
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)    
+  NS_DEFINE_CLASSINFO_DATA(SVGAnimatedLengthList, nsDOMGenericSH,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
+  NS_DEFINE_CLASSINFO_DATA(SVGLengthList, nsDOMGenericSH,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
+  NS_DEFINE_CLASSINFO_DATA(SVGNumber, nsDOMGenericSH,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)    
+  NS_DEFINE_CLASSINFO_DATA(SVGTextElement, nsElementSH,
+                           ELEMENT_SCRIPTABLE_FLAGS)
+  NS_DEFINE_CLASSINFO_DATA(SVGTSpanElement, nsElementSH,
+                           ELEMENT_SCRIPTABLE_FLAGS)
 #endif
 
   // DOM Traversal classes
@@ -2082,7 +2097,31 @@ nsDOMClassInfo::Init()
   DOM_CLASSINFO_MAP_BEGIN(SVGAnimatedRect, nsIDOMSVGAnimatedRect)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGAnimatedRect)
   DOM_CLASSINFO_MAP_END
-#endif
+
+  DOM_CLASSINFO_MAP_BEGIN(SVGAnimatedLengthList, nsIDOMSVGAnimatedLengthList)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGAnimatedLengthList)
+  DOM_CLASSINFO_MAP_END
+
+  DOM_CLASSINFO_MAP_BEGIN(SVGLengthList, nsIDOMSVGLengthList)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGLengthList)
+  DOM_CLASSINFO_MAP_END
+
+  DOM_CLASSINFO_MAP_BEGIN(SVGNumber, nsIDOMSVGNumber)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGNumber)
+  DOM_CLASSINFO_MAP_END
+
+  DOM_CLASSINFO_MAP_BEGIN(SVGTextElement, nsIDOMSVGTextElement)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGTextPositioningElement)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGTextContentElement)
+    DOM_CLASSINFO_SVG_GRAPHIC_ELEMENT_MAP_ENTRIES
+  DOM_CLASSINFO_MAP_END
+
+  DOM_CLASSINFO_MAP_BEGIN(SVGTSpanElement, nsIDOMSVGTSpanElement)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGTextPositioningElement)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGTextContentElement)
+  DOM_CLASSINFO_MAP_END
+    
+#endif //MOZ_SVG
 
   DOM_CLASSINFO_MAP_BEGIN_NO_CLASS_IF(ChromeWindow, nsIDOMWindow)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMWindow)

@@ -46,7 +46,9 @@ class nsSVGMatrix : public nsIDOMSVGMatrix,
                     public nsSVGValue
 {
 public:
-  static nsresult Create(nsIDOMSVGMatrix** aResult);
+  static nsresult Create(nsIDOMSVGMatrix** aResult,
+                         float _a=1.0f, float b=0.0f, float c=0.0f,
+                         float d=1.0f, float e=0.0f, float f=0.0f);
   
 protected:
   nsSVGMatrix(float a=1.0f,

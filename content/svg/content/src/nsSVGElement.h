@@ -76,7 +76,7 @@ public:
   // NS_IMETHOD SetDocument(nsIDocument* aDocument, PRBool aDeep,
   //                       PRBool aCompileEventHandlers);
   // NS_IMETHOD GetParent(nsIContent*& aResult) const;
-  // NS_IMETHOD SetParent(nsIContent* aParent);
+  NS_IMETHOD SetParent(nsIContent* aParent);
   // NS_IMETHOD GetNameSpaceID(PRInt32& aNameSpaceID) const;
   // NS_IMETHOD GetTag(nsIAtom*& aResult) const;
   // NS_IMETHOD GetNodeInfo(nsINodeInfo*& aResult) const;
@@ -131,7 +131,7 @@ public:
 //   NS_IMETHOD SetFocus(nsIPresContext* aContext);
 //   NS_IMETHOD RemoveFocus(nsIPresContext* aContext);
 //   NS_IMETHOD GetBindingParent(nsIContent** aContent);
-//   NS_IMETHOD SetBindingParent(nsIContent* aParent);
+   NS_IMETHOD SetBindingParent(nsIContent* aParent);
 
   NS_IMETHOD SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const;  
 
@@ -171,6 +171,7 @@ public:
 protected:
 
   nsresult CopyNode(nsSVGElement* dest, PRBool deep);
+  virtual void ParentChainChanged(){}; 
   
   nsVoidArray                  mChildren;   
   nsSVGAttributes*             mAttributes;

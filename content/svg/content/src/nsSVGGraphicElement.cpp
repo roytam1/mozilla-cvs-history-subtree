@@ -41,7 +41,7 @@
 #include "nsSVGAnimatedTransformList.h"
 #include "nsSVGAtoms.h"
 #include "nsSVGMatrix.h"
-#include "nsIDOMSVGSVGElement.h"
+#include "nsISVGSVGElement.h"
 #include "nsIDOMEventTarget.h"
 #include "nsIBindingManager.h"
 #include "nsIDocument.h"

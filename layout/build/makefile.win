@@ -77,8 +77,20 @@ SUB_LIBRARIES=                          \
 !ifdef MOZ_SVG
  $(DIST)\lib\layoutsvgbase_s.lib        \
  $(DIST)\lib\moz_art_lgpl.lib           \
+# ifdef XXX
+ $(DIST)\lib\layoutsvgrenderergdiplus_s.lib \
+# endif XXX
 !endif
  $(NULL)
+
+
+!ifdef MOZ_SVG
+# ifdef XXX
+OS_LIBS = \
+	$(OS_LIBS) \
+	Gdiplus.lib
+#!endif
+!endif
 
 # These are the libraries we need to link with to create the dll
 LLIBS=					\

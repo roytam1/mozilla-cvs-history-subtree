@@ -54,7 +54,7 @@
 #include "nsIXBLService.h"
 #include "nsSVGAtoms.h"
 #include "nsIStyleRule.h"
-#include "nsIDOMSVGSVGElement.h"
+#include "nsISVGSVGElement.h"
 #include "nsRuleWalker.h"
 #include "nsSVGStyleValue.h"
 
@@ -127,6 +127,16 @@ nsSVGElement::Init()
 
 //----------------------------------------------------------------------
 // nsIContent methods
+
+NS_IMETHODIMP
+nsSVGElement::SetParent(nsIContent* aParent)
+{
+  nsresult rv = nsGenericElement::SetParent(aParent);
+
+  ParentChainChanged();
+  return rv;
+}
+
 
 NS_IMETHODIMP
 nsSVGElement::CanContainChildren(PRBool& aResult) const
@@ -413,6 +423,17 @@ nsSVGElement::DumpContent(FILE* out, PRInt32 aIndent,PRBool aDumpAll) const
   // XXX
   fprintf(out, "some SVG element\n");
   return NS_OK; 
+}
+
+NS_IMETHODIMP
+nsSVGElement::SetBindingParent(nsIContent* aParent)
+{
+  nsresult rv = nsGenericElement::SetBindingParent(aParent);
+
+  // XXX Are parent and bindingparent always in sync? (in which case
+  // we don't have to call ParentChainChanged() here)
+  ParentChainChanged();
+  return rv;
 }
 
 NS_IMETHODIMP

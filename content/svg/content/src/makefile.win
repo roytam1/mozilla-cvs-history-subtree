@@ -49,6 +49,7 @@ DEFINES=-D_IMPL_NS_HTML -DWIN32_LEAN_AND_MEAN
 
 CPP_OBJS=					                 \
   .\$(OBJDIR)\nsSVGAnimatedLength.obj        \
+  .\$(OBJDIR)\nsSVGAnimatedLengthList.obj    \
   .\$(OBJDIR)\nsSVGAnimatedRect.obj          \
   .\$(OBJDIR)\nsSVGAnimatedTransformList.obj \
   .\$(OBJDIR)\nsSVGAttributes.obj            \
@@ -61,8 +62,10 @@ CPP_OBJS=					                 \
   .\$(OBJDIR)\nsSVGGenericStringValue.obj    \
   .\$(OBJDIR)\nsSVGGraphicElement.obj        \
   .\$(OBJDIR)\nsSVGLength.obj                \
+  .\$(OBJDIR)\nsSVGLengthList.obj            \
   .\$(OBJDIR)\nsSVGLineElement.obj           \
   .\$(OBJDIR)\nsSVGMatrix.obj                \
+  .\$(OBJDIR)\nsSVGNumber.obj                \
   .\$(OBJDIR)\nsSVGPathDataParser.obj        \
   .\$(OBJDIR)\nsSVGPathElement.obj           \
   .\$(OBJDIR)\nsSVGPathSeg.obj               \
@@ -75,15 +78,20 @@ CPP_OBJS=					                 \
   .\$(OBJDIR)\nsSVGRectElement.obj           \
   .\$(OBJDIR)\nsSVGSVGElement.obj            \
   .\$(OBJDIR)\nsSVGStyleValue.obj            \
+  .\$(OBJDIR)\nsSVGTextElement.obj           \
+  .\$(OBJDIR)\nsSVGTSpanElement.obj          \
   .\$(OBJDIR)\nsSVGTransform.obj             \
   .\$(OBJDIR)\nsSVGTransformList.obj         \
   .\$(OBJDIR)\nsSVGValue.obj                 \
+  .\$(OBJDIR)\nsSVGViewportRect.obj          \
 	$(NULL)
 
 EXPORTS =  					\
     nsISVGAttribute.h       \
     nsISVGValue.h           \
     nsISVGStyleValue.h      \
+    nsISVGValueUtils.h      \
+    nsISVGValueObserver.h   \
 	$(NULL)
 
 LINCS=-I$(PUBLIC)\xpcom -I$(PUBLIC)\raptor -I$(PUBLIC)\js \

@@ -72,6 +72,9 @@ public:
 
   NS_IMETHOD AddObserver(nsISVGValueObserver* observer)=0;
   NS_IMETHOD RemoveObserver(nsISVGValueObserver* observer)=0;
+
+  NS_IMETHOD BeginBatchUpdate()=0;
+  NS_IMETHOD EndBatchUpdate()=0;
 };
 
 extern nsresult

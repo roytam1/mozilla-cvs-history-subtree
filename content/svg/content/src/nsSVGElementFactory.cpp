@@ -53,6 +53,8 @@ extern nsresult NS_NewSVGGElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
 extern nsresult NS_NewSVGSVGElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
 extern nsresult NS_NewSVGForeignObjectElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
 extern nsresult NS_NewSVGPathElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
+extern nsresult NS_NewSVGTextElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
+extern nsresult NS_NewSVGTSpanElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
 
 
 class nsSVGElementFactory : public nsIElementFactory
@@ -132,6 +134,10 @@ nsSVGElementFactory::CreateInstanceByTag(nsINodeInfo *aNodeInfo,
     return NS_NewSVGForeignObjectElement(aResult, aNodeInfo);
   else if (name == nsSVGAtoms::path)
     return NS_NewSVGPathElement(aResult, aNodeInfo);
+  else if (name == nsSVGAtoms::text)
+    return NS_NewSVGTextElement(aResult, aNodeInfo);
+  else if (name == nsSVGAtoms::tspan)
+    return NS_NewSVGTSpanElement(aResult, aNodeInfo);
 
   // if we don't know what to create, just create a standard xml element:
   nsCOMPtr<nsIContent> xmlContent;

@@ -39,8 +39,9 @@
 #include "nsContainerFrame.h"
 #include "nsIDOMSVGGElement.h"
 #include "nsIPresContext.h"
-#include "nsISVGFrame.h"
-#include "nsSVGRenderingContext.h"
+#include "nsISVGChildFrame.h"
+#include "nsISVGContainerFrame.h"
+#include "nsISVGRendererRenderContext.h"
 #include "nsWeakReference.h"
 #include "nsISVGValue.h"
 #include "nsISVGValueObserver.h"
@@ -48,7 +49,8 @@
 typedef nsContainerFrame nsSVGGenericContainerFrameBase;
 
 class nsSVGGenericContainerFrame : public nsSVGGenericContainerFrameBase,
-                                   public nsISVGFrame,
+                                   public nsISVGChildFrame,
+                                   public nsISVGContainerFrame,
                                    public nsISVGValueObserver,
                                    public nsSupportsWeakReference
 
@@ -106,15 +108,17 @@ public:
   // nsISupportsWeakReference
   // implementation inherited from nsSupportsWeakReference
 
-  // nsISVGFrame interface:
-  NS_IMETHOD Paint(nsSVGRenderingContext* renderingContext);
-  NS_IMETHOD InvalidateRegion(ArtUta* uta, PRBool bRedraw);
+  // nsISVGChildFrame interface:
+  NS_IMETHOD Paint(nsISVGRendererRenderContext* renderingContext);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);  
+  NS_IMETHOD InitialUpdate();
   NS_IMETHOD NotifyCTMChanged();
   NS_IMETHOD NotifyRedrawSuspended();
   NS_IMETHOD NotifyRedrawUnsuspended();
-  NS_IMETHOD IsRedrawSuspended(PRBool* isSuspended);
-  
+
+  // nsISVGContainerFrame interface:
+  NS_IMETHOD_(nsISVGOuterSVGFrame*) GetOuterSVGFrame();
+
 protected:
 };
 
@@ -156,7 +160,8 @@ nsresult nsSVGGenericContainerFrame::Init()
 // nsISupports methods
 
 NS_INTERFACE_MAP_BEGIN(nsSVGGenericContainerFrame)
-  NS_INTERFACE_MAP_ENTRY(nsISVGFrame)
+  NS_INTERFACE_MAP_ENTRY(nsISVGChildFrame)
+  NS_INTERFACE_MAP_ENTRY(nsISVGContainerFrame)
   NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
   NS_INTERFACE_MAP_ENTRY(nsISVGValueObserver)
 NS_INTERFACE_MAP_END_INHERITING(nsSVGGenericContainerFrameBase)
@@ -187,22 +192,9 @@ nsSVGGenericContainerFrame::AppendFrames(nsIPresContext* aPresContext,
                                          nsIAtom*        aListName,
                                          nsIFrame*       aFrameList)
 {
-  nsresult  rv = NS_OK;
-
-  // Insert the new frames
-  mFrames.AppendFrames(this, aFrameList);
-
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    nsISVGFrame* SVGFrame=0;
-    kid->QueryInterface(NS_GET_IID(nsISVGFrame),(void**)&SVGFrame);
-    if (SVGFrame) {
-      SVGFrame->NotifyCTMChanged(); //XXX use different function
-    }
-    kid->GetNextSibling(&kid);
-  }
-
-  return rv;
+  // append == insert at end:
+  return InsertFrames(aPresContext, aPresShell, aListName,
+                      mFrames.LastChild(), aFrameList);  
 }
 
 NS_IMETHODIMP
@@ -212,25 +204,31 @@ nsSVGGenericContainerFrame::InsertFrames(nsIPresContext* aPresContext,
                       nsIFrame*       aPrevFrame,
                       nsIFrame*       aFrameList)
 {
-  nsresult  rv = NS_OK;
-
+  nsIFrame* lastNewFrame = nsnull;
+  {
+    nsFrameList tmpList(aFrameList);
+    lastNewFrame = tmpList.LastChild();
+  }
+  
   // Insert the new frames
-#ifdef NS_DEBUG
-  nsFrame::VerifyDirtyBitSet(aFrameList);
-#endif
   mFrames.InsertFrames(nsnull, aPrevFrame, aFrameList);
 
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    nsISVGFrame* SVGFrame=0;
-    kid->QueryInterface(NS_GET_IID(nsISVGFrame),(void**)&SVGFrame);
+  // call InitialUpdate() on all new frames:
+  nsIFrame* kid = aFrameList;
+  nsIFrame* end = nsnull;
+  if (lastNewFrame)
+    lastNewFrame->GetNextSibling(&end);
+
+  while (kid != end) {
+    nsISVGChildFrame* SVGFrame=nsnull;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
-      SVGFrame->NotifyCTMChanged(); //XXX use different function
+      SVGFrame->InitialUpdate(); 
     }
     kid->GetNextSibling(&kid);
   }
   
-  return rv;
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -239,13 +237,11 @@ nsSVGGenericContainerFrame::RemoveFrame(nsIPresContext* aPresContext,
                      nsIAtom*        aListName,
                      nsIFrame*       aOldFrame)
 {
+  // XXX maybe we should invalidate the area covered by the removed frame?
+  
   PRBool result = mFrames.DestroyFrame(aPresContext, aOldFrame);
   NS_ASSERTION(result, "didn't find frame to delete");
-  // Because positioned frames aren't part of a flow, there's no
-  // additional work to do, e.g. reflowing sibling frames. And because
-  // positioned frames have a view, we don't need to repaint
   return result ? NS_OK : NS_ERROR_FAILURE;
-
 }
 
 NS_IMETHODIMP
@@ -297,8 +293,8 @@ nsSVGGenericContainerFrame::DidModifySVGObservable(nsISVGValue* observable)
   
   nsIFrame* kid = mFrames.FirstChild();
   while (kid) {
-    nsISVGFrame* SVGFrame=0;
-    kid->QueryInterface(NS_GET_IID(nsISVGFrame),(void**)&SVGFrame);
+    nsISVGChildFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame)
       SVGFrame->NotifyCTMChanged();
     kid->GetNextSibling(&kid);
@@ -308,15 +304,18 @@ nsSVGGenericContainerFrame::DidModifySVGObservable(nsISVGValue* observable)
 
 
 //----------------------------------------------------------------------
-// nsISVGFrame methods
+// nsISVGChildFrame methods
 
 NS_IMETHODIMP
-nsSVGGenericContainerFrame::Paint(nsSVGRenderingContext* renderingContext)
+nsSVGGenericContainerFrame::Paint(nsISVGRendererRenderContext* renderingContext)
 {
+#ifdef DEBUG
+//  printf("nsSVGGenericContainer(%p)::Paint\n", this);
+#endif
   nsIFrame* kid = mFrames.FirstChild();
   while (kid) {
-    nsISVGFrame* SVGFrame=0;
-    kid->QueryInterface(NS_GET_IID(nsISVGFrame),(void**)&SVGFrame);
+    nsISVGChildFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame)
       SVGFrame->Paint(renderingContext);
     kid->GetNextSibling(&kid);
@@ -326,34 +325,16 @@ nsSVGGenericContainerFrame::Paint(nsSVGRenderingContext* renderingContext)
 }
 
 NS_IMETHODIMP
-nsSVGGenericContainerFrame::InvalidateRegion(ArtUta* uta, PRBool bRedraw)
-{
-  if (!uta && !bRedraw) return NS_OK;
-  
-  if (!mParent) {
-    if (uta)
-      art_uta_free(uta);
-    return NS_OK;
-  }
-
-  nsCOMPtr<nsISVGFrame> SVGFrame = do_QueryInterface(mParent);
-  if (!SVGFrame) {
-    if (uta)
-      art_uta_free(uta);
-    return NS_OK;
-  }
-
-  return SVGFrame->InvalidateRegion(uta, bRedraw);
-}
-
-NS_IMETHODIMP
 nsSVGGenericContainerFrame::GetFrameForPoint(float x, float y, nsIFrame** hit)
 {
+#ifdef DEBUG
+//  printf("nsSVGGenericContainerFrame(%p)::GetFrameForPoint\n", this);
+#endif
   *hit = nsnull;
   nsIFrame* kid = mFrames.FirstChild();
   while (kid) {
-    nsISVGFrame* SVGFrame=0;
-    kid->QueryInterface(NS_GET_IID(nsISVGFrame),(void**)&SVGFrame);
+    nsISVGChildFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
       nsIFrame* temp=nsnull;
       nsresult rv = SVGFrame->GetFrameForPoint(x, y, &temp);
@@ -370,12 +351,27 @@ nsSVGGenericContainerFrame::GetFrameForPoint(float x, float y, nsIFrame** hit)
 }
 
 NS_IMETHODIMP
+nsSVGGenericContainerFrame::InitialUpdate()
+{
+  nsIFrame* kid = mFrames.FirstChild();
+  while (kid) {
+    nsISVGChildFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      SVGFrame->InitialUpdate();
+    }
+    kid->GetNextSibling(&kid);
+  }
+  return NS_OK;
+}  
+
+NS_IMETHODIMP
 nsSVGGenericContainerFrame::NotifyCTMChanged()
 {
   nsIFrame* kid = mFrames.FirstChild();
   while (kid) {
-    nsISVGFrame* SVGFrame=0;
-    kid->QueryInterface(NS_GET_IID(nsISVGFrame),(void**)&SVGFrame);
+    nsISVGChildFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
       SVGFrame->NotifyCTMChanged();
     }
@@ -389,8 +385,8 @@ nsSVGGenericContainerFrame::NotifyRedrawSuspended()
 {
   nsIFrame* kid = mFrames.FirstChild();
   while (kid) {
-    nsISVGFrame* SVGFrame=0;
-    kid->QueryInterface(NS_GET_IID(nsISVGFrame),(void**)&SVGFrame);
+    nsISVGChildFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
       SVGFrame->NotifyRedrawSuspended();
     }
@@ -404,8 +400,8 @@ nsSVGGenericContainerFrame::NotifyRedrawUnsuspended()
 {
   nsIFrame* kid = mFrames.FirstChild();
   while (kid) {
-    nsISVGFrame* SVGFrame=0;
-    kid->QueryInterface(NS_GET_IID(nsISVGFrame),(void**)&SVGFrame);
+    nsISVGChildFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
       SVGFrame->NotifyRedrawUnsuspended();
     }
@@ -414,15 +410,20 @@ nsSVGGenericContainerFrame::NotifyRedrawUnsuspended()
  return NS_OK;
 }
 
-NS_IMETHODIMP
-nsSVGGenericContainerFrame::IsRedrawSuspended(PRBool* isSuspended)
+//----------------------------------------------------------------------
+// nsISVGContainerFrame methods:
+
+NS_IMETHODIMP_(nsISVGOuterSVGFrame *)
+nsSVGGenericContainerFrame::GetOuterSVGFrame()
 {
-  nsCOMPtr<nsISVGFrame> SVGFrame = do_QueryInterface(mParent);
-  if (!SVGFrame) {
-    *isSuspended = PR_FALSE;
-    return NS_OK;
+  NS_ASSERTION(mParent, "null parent");
+  
+  nsISVGContainerFrame *containerFrame;
+  mParent->QueryInterface(NS_GET_IID(nsISVGContainerFrame), (void**)&containerFrame);
+  if (!containerFrame) {
+    NS_ERROR("invalid container");
+    return nsnull;
   }
 
-  return SVGFrame->IsRedrawSuspended(isSuspended);  
+  return containerFrame->GetOuterSVGFrame();  
 }
-

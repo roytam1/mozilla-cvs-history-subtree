@@ -822,6 +822,24 @@ const PRInt32 nsCSSProps::kBoxPackKTable[] = {
 
 #ifdef MOZ_SVG
 // keyword tables for SVG properties
+
+const PRInt32 nsCSSProps::kDominantBaselineKTable[] = {
+  eCSSKeyword_use_script, NS_STYLE_DOMINANT_BASELINE_USE_SCRIPT,
+  eCSSKeyword_no_change, NS_STYLE_DOMINANT_BASELINE_NO_CHANGE,
+  eCSSKeyword_reset_size, NS_STYLE_DOMINANT_BASELINE_RESET_SIZE,
+  eCSSKeyword_alphabetic, NS_STYLE_DOMINANT_BASELINE_ALPHABETIC,
+  eCSSKeyword_hanging, NS_STYLE_DOMINANT_BASELINE_HANGING,
+  eCSSKeyword_ideographic, NS_STYLE_DOMINANT_BASELINE_IDEOGRAPHIC,
+  eCSSKeyword_mathematical, NS_STYLE_DOMINANT_BASELINE_MATHEMATICAL,
+  eCSSKeyword_central, NS_STYLE_DOMINANT_BASELINE_CENTRAL,
+  eCSSKeyword_middle, NS_STYLE_DOMINANT_BASELINE_MIDDLE,
+  eCSSKeyword_text_after_edge, NS_STYLE_DOMINANT_BASELINE_TEXT_AFTER_EDGE,
+  eCSSKeyword_text_before_edge, NS_STYLE_DOMINANT_BASELINE_TEXT_BEFORE_EDGE,
+  eCSSKeyword_text_top, NS_STYLE_DOMINANT_BASELINE_TEXT_TOP,
+  eCSSKeyword_text_bottom, NS_STYLE_DOMINANT_BASELINE_TEXT_BOTTOM,
+  -1, -1
+};
+
 const PRInt32 nsCSSProps::kFillRuleKTable[] = {
   eCSSKeyword_nonzero, NS_STYLE_FILL_RULE_NONZERO,
   eCSSKeyword_evenodd, NS_STYLE_FILL_RULE_EVENODD,
@@ -839,6 +857,13 @@ const PRInt32 nsCSSProps::kStrokeLinejoinKTable[] = {
   eCSSKeyword_butt, NS_STYLE_STROKE_LINEJOIN_MITER,
   eCSSKeyword_round, NS_STYLE_STROKE_LINEJOIN_ROUND,
   eCSSKeyword_bevel, NS_STYLE_STROKE_LINEJOIN_BEVEL,
+  -1, -1
+};
+
+const PRInt32 nsCSSProps::kTextAnchorKTable[] = {
+  eCSSKeyword_start, NS_STYLE_TEXT_ANCHOR_START,
+  eCSSKeyword_middle, NS_STYLE_TEXT_ANCHOR_MIDDLE,
+  eCSSKeyword_end, NS_STYLE_TEXT_ANCHOR_END,
   -1, -1
 };
 #endif
@@ -951,12 +976,16 @@ static const PRInt32 kBackgroundYPositionKTable[] = {
   case eCSSProperty_stroke_width:
     break;
 
+  case eCSSProperty_dominant_baseline:
+    return SearchKeywordTable(aValue, kDominantBaselineKTable);
   case eCSSProperty_fill_rule:
     return SearchKeywordTable(aValue, kFillRuleKTable);
   case eCSSProperty_stroke_linecap:
     return SearchKeywordTable(aValue, kStrokeLinecapKTable);
   case eCSSProperty_stroke_linejoin:
     return SearchKeywordTable(aValue, kStrokeLinejoinKTable);
+  case eCSSProperty_text_anchor:
+    return SearchKeywordTable(aValue, kTextAnchorKTable);
 #endif
     
   case eCSSProperty_box_sizing:
