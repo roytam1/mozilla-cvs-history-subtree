@@ -17,13 +17,19 @@
  */
 
 #include "jsapi.h"
+#if defined(XP_MAC)
+#include <stat.h>
+#else
 #include <sys/stat.h>
+#endif
 #include <errno.h>
 #ifdef _WIN32
 #include "windows.h"
 #endif 
 
+#ifdef MOZ_ADMIN_LIB
 #include "prefldap.h"
+#endif
 #include "prefapi.h"
 
 #if defined(XP_MAC) || defined(XP_UNIX)
