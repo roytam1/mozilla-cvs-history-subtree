@@ -13,7 +13,7 @@ Prerequisites
 In order to build the module, you'll need
 
 	- Perl, version 5.005 or later, although it's only been
-	tested and developed u sing 5.008.
+	tested and developed using 5.008.
 
 	- An ANSI-C compiler, e.g. gcc-2.x, or Visual C++ 5.0.
 

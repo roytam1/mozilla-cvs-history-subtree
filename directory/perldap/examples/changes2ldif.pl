@@ -40,13 +40,13 @@ no strict "vars";
 # Constants, shouldn't have to edit these...
 #
 $APPNAM	= "changes2ldif";
-$USAGE	= "$APPNAM [-nv] -b base -h host -D bind -w pswd -P cert [min [max]]";
+$USAGE	= "$APPNAM [-nv] -b base -h host -D bind -w pswd -P cert -V ver [min [max]]";
 
 
 #################################################################################
 # Check arguments, and configure some parameters accordingly..
 #
-if (!getopts('nvb:h:D:p:s:w:P:'))
+if (!getopts('nvb:h:D:p:s:w:P:V:'))
 {
    print "usage: $APPNAM $USAGE\n";
    exit;

@@ -1,3 +1,31 @@
+2004-10-13  Leif Hedstrom  <leif@ogre.com>
+
+	* modattr.pl: Added a -i option, for case insentive "adds" to an
+	attribute. This means that trying to add "foo" or "Foo" will only
+	generate one value for the server.
+
+	* monitor.pl: Added -V option (for version).
+
+	* psoftsync.pl: Added -V option (for version).
+
+	* changes2ldif.pl: Added -V option (for version).
+
+	* tabdump.pl: Added -V option (for version).
+
+	* rmentry.pl: Added -V option (for version).
+
+	* rename.pl: Added -V option (for version).
+
+	* rand_mods.pl: Added -V option (for version).
+
+	* modattr.pl: Added -V option (for version).
+
+	* lfinger.pl: Added -V option (for version).
+
+	* ldappasswd.pl: Added -V option (for version).
+
+	* qsearch.pl: Added -V option (for version).
+
 1999-06-30  Leif Hedstrom  <leif@netscape.com>
 
 	* rmentry.pl: Added support for "-p".

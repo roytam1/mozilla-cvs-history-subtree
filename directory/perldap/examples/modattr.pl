@@ -41,19 +41,20 @@ no strict "vars";
 # Constants, shouldn't have to edit these...
 #
 $APPNAM	= "modattr";
-$USAGE	= "$APPNAM [-dnvW] -b base -h host -D bind -w pswd -P cert attr=value filter";
+$USAGE	= "$APPNAM [-dnvW] -b base -h host -D bind -w pswd -P cert -V ver attr=value filter";
 
 
 #############################################################################
 # Check arguments, and configure some parameters accordingly..
 #
-if (!getopts('adnvWb:h:D:p:s:w:P:'))
+if (!getopts('adnvWb:h:D:p:s:w:P:V:i:'))
 {
   print "usage: $APPNAM $USAGE\n";
   exit;
 }
 %ld = Mozilla::LDAP::Utils::ldapArgs();
 Mozilla::LDAP::Utils::userCredentials(\%ld) unless $opt_n;
+$nocase = (defined($opt_i) && $opt_i) ? 1 : 0;
 
 
 #############################################################################
@@ -110,7 +111,7 @@ while ($entry)
 	}
       elsif ($opt_a)
 	{
-	  $changed = $entry->addValue($attr, $value);
+	  $changed = $entry->addValue($attr, $value, 0, 0, $nocase);
 	  if ($changed && $opt_v)
 	    {
 	      print "Added attribute to ", $entry->getDN(), "\n" if $opt_v;
@@ -125,8 +126,9 @@ while ($entry)
     }
   if ($changed && ! $opt_n)
     {
-      $conn->update($entry);
-      $conn->printError() if $conn->getErrorCode();
+      if (!$conn->update($entry)) {
+        $conn->printError();
+      }
     }
 
   $entry = $conn->nextEntry();

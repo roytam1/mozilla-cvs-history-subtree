@@ -37,13 +37,13 @@ use Mozilla::LDAP::Utils;		# LULU, utilities.
 # Constants, shouldn't have to edit these...
 #
 $APPNAM	= "tabdump";
-$USAGE	= "$APPNAM [-nv] -b base -h host -D bind -w pswd -P [-t <sep>] cert attr1,attr2,.. srch";
+$USAGE	= "$APPNAM [-nv] -b base -h host -D bind -w pswd -P cert -V ver -t <sep> attr1,attr2,.. srch";
 
 
 #################################################################################
 # Check arguments, and configure some parameters accordingly..
 #
-if (!getopts('nvb:h:D:p:s:w:P:t:'))
+if (!getopts('nvb:h:D:p:s:w:P:t:V:'))
 {
    print "usage: $APPNAM $USAGE\n";
    exit;

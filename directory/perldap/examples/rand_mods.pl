@@ -49,14 +49,14 @@ no strict "vars";
 # Constants, shouldn't have to edit these...
 #
 $APPNAM	= "rand_mods";
-$USAGE	= "$APPNAM [-dnvW] -b base -h host -D bind -w pswd filter loops attr ...";
+$USAGE	= "$APPNAM [-dnvW] -b base -h host -D bind -w pswd -V ver filter loops attr ...";
 $AUTHOR	= "Leif Hedstrom <leif\@netscape.com>";
 
 
 #################################################################################
 # Check arguments, and configure some parameters accordingly..
 #
-if (!getopts('adnvWb:h:D:p:s:w:P:'))
+if (!getopts('adnvWb:h:D:p:s:w:P:V:'))
 {
   print "usage: $APPNAM $USAGE\n";
   exit;

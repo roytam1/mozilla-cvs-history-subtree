@@ -61,16 +61,19 @@ sub new
       $self->{"binddn"} = $hash->{"bind"} if defined($hash->{"bind"});
       $self->{"bindpasswd"} = $hash->{"pswd"} if defined($hash->{"pswd"});
       $self->{"certdb"} = $hash->{"cert"} if defined($hash->{"cert"});
+      $self->{"version"} = $hash->{"vers"} if defined($hash->{"vers"});
     }
   else
     {
-      my ($host, $port, $binddn, $bindpasswd, $certdb, $authmeth) = @_;
+      my ($host, $port, $binddn, $bindpasswd, $certdb, $authmeth,
+          $version) = @_;
 
       $self->{"host"} = $host if defined($host);
       $self->{"port"} = $port if defined($port);
       $self->{"binddn"} = $binddn if defined($binddn);
       $self->{"bindpasswd"} = $bindpasswd if defined($bindpasswd);
       $self->{"certdb"} = $certdb if defined($certdb);
+      $self->{"version"} = $certdb if defined($version);
     }
 
   # Anonymous bind is the default...
@@ -133,8 +136,9 @@ sub init
       $ld = ldap_init($self->{"host"}, $self->{"port"});
     }
   return 0 unless $ld;
-
   $self->{"ld"} = $ld;
+
+  $self->setVersion(3) if ($self->{"version"} == LDAP_VERSION3);
   $ret = ldap_simple_bind_s($ld, $self->{"binddn"}, $self->{"bindpasswd"});
 
   return (($ret == LDAP_SUCCESS) ? 1 : 0);
@@ -204,6 +208,7 @@ sub getErrorCode
   my ($ret);
 
   return LDAP_SUCCESS unless defined($self->{"ld"});
+  return $self->{"searchres"} if defined($self->{"searchres"});
   return ldap_get_lderrno($self->{"ld"}, $match, $msg);
 }
 *getError = \*getErrorCode;
@@ -218,7 +223,14 @@ sub getErrorString
   my ($err);
   
   return LDAP_SUCCESS unless defined($self->{"ld"});
-  $err = ldap_get_lderrno($self->{"ld"}, undef, undef);
+  if (defined($self->{"searchres"}))
+    {
+      $err = $self->{"searchres"};
+    }
+  else
+    {
+      $err = ldap_get_lderrno($self->{"ld"}, undef, undef);
+    }
 
   return ldap_err2string($err);
 }
@@ -245,6 +257,7 @@ sub printError
 sub search
 {
   my ($self, $basedn, $scope, $filter, $attrsonly, @attrs) = @_;
+  my ($res);
 
   $scope = Mozilla::LDAP::Utils::str2Scope($scope);
   $filter = "(objectclass=*)" if ($filter =~ /^ALL$/i);
@@ -254,23 +267,33 @@ sub search
       ldap_msgfree($self->{"ldres"});
       undef $self->{"ldres"};
     }
+  if (defined($self->{"searchres"}))
+    {
+      undef $self->{"searchres"};
+    }
 
   if (ldap_is_ldap_url($filter))
     {
-      if (! ldap_url_search_s($self->{"ld"}, $filter, $attrsonly,
-			      $self->{"ldres"}))
+      $res = ldap_url_search_s($self->{"ld"}, $filter, $attrsonly,
+                               $self->{"ldres"});
+      if ($res == LDAP_SUCCESS || $res == LDAP_TIMELIMIT_EXCEEDED ||
+          $res == LDAP_SIZELIMIT_EXCEEDED ||$res == LDAP_ADMINLIMIT_EXCEEDED)
 	{
+          $self->{"searchres"} = $res unless $res == LDAP_SUCCESS;
 	  $self->{"ldfe"} = 1;
 	  return $self->nextEntry();
 	}
     }
   else
     {
-      if (! ldap_search_s($self->{"ld"}, $basedn, $scope, $filter,
-			  defined(\@attrs) ? \@attrs : 0,
-			  defined($attrsonly) ? $attrsonly : 0,
-			  $self->{"ldres"}))
-	{
+      $res = ldap_search_s($self->{"ld"}, $basedn, $scope, $filter,
+                           defined(\@attrs) ? \@attrs : 0,
+                           defined($attrsonly) ? $attrsonly : 0,
+                           $self->{"ldres"});
+      if ($res == LDAP_SUCCESS || $res == LDAP_TIMELIMIT_EXCEEDED ||
+          $res == LDAP_SIZELIMIT_EXCEEDED ||$res == LDAP_ADMINLIMIT_EXCEEDED)
+        {
+          $self->{"searchres"} = $res unless $res == LDAP_SUCCESS;
 	  $self->{"ldfe"} = 1;
 	  return $self->nextEntry();
 	}
@@ -287,17 +310,26 @@ sub search
 sub searchURL
 {
   my ($self, $url, $attrsonly) = @_;
+  my ($res);
 
   if (defined($self->{"ldres"}))
     {
       ldap_msgfree($self->{"ldres"});
       undef $self->{"ldres"};
     }
-      
-  if (! ldap_url_search_s($self->{"ld"}, $url,
-			  defined($attrsonly) ? $attrsonly : 0,
-			  $self->{"ldres"}))
+  if (defined($self->{"searchres"}))
     {
+      undef $self->{"searchres"};
+    }
+
+      
+  $res = ldap_url_search_s($self->{"ld"}, $url,
+                           defined($attrsonly) ? $attrsonly : 0,
+                           $self->{"ldres"});
+  if ($res == LDAP_SUCCESS || $res == LDAP_TIMELIMIT_EXCEEDED ||
+      $res == LDAP_SIZELIMIT_EXCEEDED ||$res == LDAP_ADMINLIMIT_EXCEEDED)
+    {
+      $self->{"searchres"} = $res unless $res == LDAP_SUCCESS;
       $self->{"ldfe"} = 1;
       return $self->nextEntry();
     }
@@ -548,7 +580,7 @@ sub update
   my ($self, $entry) = @_;
   my ($vals, @add, @remove, %mod, %new);
   my ($key, $val);
-  my ($ret) = 1;
+  my ($ret) = LDAP_SUCCESS;
   local $_;
 
   foreach $key (@{$entry->{"_oc_order_"}})
@@ -619,8 +651,8 @@ sub update
 	}
     }
 
-  $ret = ldap_modify_s($self->{"ld"}, $entry->{"dn"}, \%mod)
-    if (scalar(keys(%mod)));
+  $ret = ldap_modify_ext_s($self->{"ld"}, $entry->{"dn"}, \%mod, undef, undef)
+    if %mod;
 
   return (($ret == LDAP_SUCCESS) ? 1 : 0);
 }
@@ -663,6 +695,26 @@ sub simpleAuth
   my ($ret);
 
   $ret = ldap_simple_bind_s($self->{"ld"}, $dn, $pswd);
+
+  return (($ret == LDAP_SUCCESS) ? 1 : 0);
+}
+
+
+#############################################################################
+# Set LDAP protocol version
+#
+sub setVersion
+{
+  my ($self, $ver) = @_;
+  my $ret = LDAP_SUCCESS;
+
+  if ($ver eq "2") {
+    $self->{"version"} = LDAP_VERSION2;
+  } else {
+    $self->{"version"} = LDAP_VERSION3;
+  }
+  $ret = ldap_set_option($self->{"ld"}, LDAP_OPT_PROTOCOL_VERSION,
+                         $self->{"version"});
 
   return (($ret == LDAP_SUCCESS) ? 1 : 0);
 }
@@ -766,11 +818,12 @@ Before you can do anything with PerLDAP, you'll need to instantiate at
 least one Mozilla::LDAP::Conn object, and connect it to an LDAP server. As
 you probably guessed already, this is done with the B<new> method:
 
-    $conn = new Mozilla::LDAP::Conn("ldap", "389", $bind, $pswd, $cert);
+    $conn = new Mozilla::LDAP::Conn("ldap", "389", $bind, $pswd, $cert, $ver);
     die "Couldn't connect to LDAP server ldap" unless  $conn;
 
 The arguments are: Host name, port number, and optionally a bind-DN, it's
-password, and a certificate. If there is no bind-DN, the connection will
+password, and a certificate. A recent addition is the LDAP protocol version,
+which is by default LDAP v3. If there is no bind-DN, the connection will
 be bound as the anonymous user. If the certificate file is specified, the
 connection will be over SSL, and you should then probably connect to port
 636. You have to check that the object was created properly, and take
@@ -791,6 +844,7 @@ The components of the hash are:
     $ld->{"bind"}
     $ld->{"pswd"}
     $ld->{"cert"}
+    $ld->{"vers"}
 
 and (not used in the B<new> method)
 
@@ -888,7 +942,7 @@ filter string. This can be used to easily parse and process URLs, which is
 a compact way of storing a "link" to some specific LDAP information. To
 process such a search, you use the B<searchURL> method:
 
-    $entry->searchURL("ldap:///o=netscape.com??sub?(uid=leif");
+    $entry->searchURL("ldap:///o=netscape.com??sub?(uid=leif)");
 
 As it turns out, the B<search> method also supports LDAP URL searches. If
 the search filter looks like a proper URL, we will actually do an URL
@@ -1218,6 +1272,15 @@ the function to use, you give it the DN, password and Auth method. Then
 we'll use a default rebind procedure (internal in C) to handle the rebind
 credentials. This was a solution for the Windows/NT problem/bugs we have
 with rebind procedures written in Perl.
+
+=item B<setVersion>
+
+Change the LDAP protocol version on the already initialized connection.
+The default is LDAP v3 (new for PerLDAP v1.5!), but you can downgrade
+the connection to LDAP v2 if necessary using this function. Example:
+
+    $conn->setVersion(2);
+   
 
 =back
 

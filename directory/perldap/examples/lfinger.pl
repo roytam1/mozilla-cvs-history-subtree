@@ -40,7 +40,7 @@ use Mozilla::LDAP::Utils;		# LULU, utilities.
 # effectively with appropriate ACI/ACLs.
 #
 $APPNAM	= "lfinger";
-$USAGE	= "$APPNAM -m -b base -h host -D bind -w pswd -P cert user_info";
+$USAGE	= "$APPNAM -m -b base -h host -D bind -w pswd -P cert -V ver user_info";
 
 @ATTRIBUTES = ("uid", "cn", "homedirectory", "loginshell", "pager",
 	       "telephonenumber", "facsimiletelephonenumber", "mobile");
@@ -86,7 +86,7 @@ sub printIt
 #############################################################################
 # Check arguments, and configure some parameters accordingly..
 #
-if (!getopts('mb:h:D:p:w:P:') || !defined($ARGV[$[]))
+if (!getopts('mb:h:D:p:w:P:V:') || !defined($ARGV[$[]))
 {
    print "usage: $APPNAM $USAGE\n";
    exit;

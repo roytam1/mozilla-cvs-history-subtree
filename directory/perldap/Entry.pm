@@ -481,9 +481,8 @@ sub removeDNValue
 sub addValue
 {
   my ($self) = shift;
-  my ($attr, $val, $force, $norm) = (lc $_[$[], $_[$[ + 1], $_[$[ + 2],
-				     $_[$[ + 3]);
-  my ($attrval);
+  my ($attr, $val, $force, $norm, $nocase) = (lc $_[$[], $_[$[+1], $_[$[+2],
+                                              $_[$[+3], $_[$[+4]);
   local $_;
 
   return 0 unless (defined($val) && ($val ne ""));
@@ -492,12 +491,14 @@ sub addValue
 
   if (defined($self->{$attr}) && (!defined($force) || !$force))
     {
+      my ($attrval);
       my ($nval) = $val;
 
       $nval = normalizeDN($val) if (defined($norm) && $norm);
       foreach $attrval (@{$self->{$attr}})
         {
 	  $_ = ((defined($norm) && $norm) ? normalizeDN($attrval) : $attrval);
+          $_ = lc $_ if (defined($nocase) && $nocase);
           return 0 if ($_ eq $nval);
         }
     }
@@ -543,11 +544,11 @@ sub addValue
 sub addDNValue
 {
   my ($self) = shift;
-  my ($attr, $val, $force, $norm) = (lc $_[$[], $_[$[ + 1], $_[$[ + 2],
-				     $_[$[ + 3]);
+  my ($attr, $val, $force, $norm, $nocase) = (lc $_[$[], $_[$[+1], $_[$[+2],
+                                              $_[$[+3], $_[$[+4]);
 
   $val = normalizeDN($val) if (defined($norm) && $norm);
-  return $self->addValue($attr, $val, $force, 1);
+  return $self->addValue($attr, $val, $force, 1, $nocase);
 }
 
 
@@ -914,18 +915,6 @@ modifications and updates to your LDAP entries.
 
 =over 13
 
-=item B<addDNValue>
-
-Just like B<addValue>, except this method assume the value is a DN
-attribute. For instance
-
-   $dn = "uid=Leif, dc=Netscape, dc=COM";
-   $entry->addDNValue("uniqueMember", $dn);
-
-
-will only add the DN for "uid=leif" if it does not exist as a DN in the
-uniqueMember attribute.
-
 =item B<addValue>
 
 Add a value to an attribute. If the attribute value already exists, or we
@@ -936,9 +925,26 @@ name, and the value to add.
 The optional third argument is a flag, indicating that we want to add the
 attribute without checking for duplicates. This is useful if you know the
 values are unique already, or if you perhaps want to allow duplicates for
-a particular attribute. To add a CN to an existing entry/attribute, do:
+a particular attribute. The fourth argument (again optional) is a flag
+indicating that we want to perform DN normalization on the attribute. The
+final, fifth, optional argument indicates that the attribute values are
+case insensitive (CIS).
+
+To add a CN to an existing entry/attribute, do:
 
     $entry->addValue("cn", "Leif Hedstrom");
+
+=item B<addDNValue>
+
+Just like B<addValue>, except this method assume the value is a DN
+attribute, and will enforce DN normalization. For instance
+
+   $dn = "uid=Leif, dc=Netscape, dc=COM";
+   $entry->addDNValue("uniqueMember", $dn);
+
+
+will only add the DN for "uid=leif" if it does not exist as a DN in the
+uniqueMember attribute.
 
 =item B<attrModified>
 

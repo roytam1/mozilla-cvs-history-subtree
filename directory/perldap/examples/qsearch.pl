@@ -39,13 +39,13 @@ no strict "vars";
 # Constants, shouldn't have to edit these...
 #
 $APPNAM	= "qsearch";
-$USAGE	= "$APPNAM -b base -h host -D bind -w pswd -P cert filter [attr...]";
+$USAGE	= "$APPNAM -b base -h host -D bind -w pswd -P cert -V ver filter [attr...]";
 
 
 #################################################################################
 # Check arguments, and configure some parameters accordingly..
 #
-if (!getopts('b:h:D:p:s:w:P:'))
+if (!getopts('b:h:D:p:s:w:P:V:'))
 {
    print "usage: $APPNAM $USAGE\n";
    exit;
@@ -90,6 +90,7 @@ foreach $search (@srch)
       $entry->printLDIF();
       $entry = $conn->nextEntry;
     }
+  $conn->printError() if $conn->getErrorCode();
   print "\n";
 }
 

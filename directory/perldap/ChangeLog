@@ -1,3 +1,26 @@
+2004-10-13  Leif Hedstrom  <leif@ogre.com>
+
+	* Conn.pm (search): Fix for bug 4633, we can now return some
+	number of entries even if we hit SIZE/TIME-LIMIT.
+	(searchURL): Dito.
+	(getErrorCode): Dito.
+	(getErrorString): Dito.
+
+	* Entry.pm (addDNValue): Added a "nocase" (optional) argument.
+	(addValue): Dito.
+
+	* Conn.pm (setVersion): New function, change the LDAP protocol version
+	on the connection.
+	(update): Performance optimization, faster check if the %mod structure
+	is empty or not.
+	(update): Fix for bug #77368, $conn->update() returns false if there
+	are no changes being made. Seems more reasonable to not consider that a
+	failure I think.
+	(update): Changed to use ldap_modify_ext_s().
+
+	* Utils.pm (ldapArgs): Added support for -V, and defaulting to LDAP v3
+	now.
+
 2003-06-24  Leif Hedstrom  <leif@perldap.org>
 
 	* Makefile.PL: Lots of changes to support modern C-SDK.

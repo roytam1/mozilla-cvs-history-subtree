@@ -4,15 +4,20 @@
 #                                                                           #
 #############################################################################
 
-VERSION 1.5 - ??? 2003
+VERSION 1.5 - Dec 2004
 =============================
 
 This is an update release, with a few goals:
 
    - Support for latest Mozilla and Sun C-SDK (v5.x)
+   - Now defaults to LDAP v3
    - Fully support Perl 5.005 and later
    - Easier installation
-   - Bug fixes
+
+
+New functionality
+-----------------
+
 
 
 VERSION 1.4 - AUGUST 18, 1999
