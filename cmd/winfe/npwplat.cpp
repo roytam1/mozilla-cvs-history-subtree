@@ -805,6 +805,11 @@ void FE_UnloadPlugin(void* pluginType, struct _np_handle* handle)
         if (handle->userPlugin) {
             nsrefcnt cnt = handle->userPlugin->Release();
             PR_ASSERT(cnt == 0);
+
+#if 0   // XXX later...
+            // remove the plugin directory if successful
+            JVM_RemoveFromClassPathRecursively(csPluginDir);
+#endif
         }
         else {
             // the NP_Shutdown entry point was misnamed as NP_PluginShutdown, early
