@@ -340,7 +340,7 @@ sub BuildIt {
 	} else {
 	    $CVSCO = $SaveCVSCO . ' -A';
 	}
-	$StartTime = time - 60 * 10;
+	$StartTime = time;
 	$StartTimeStr = &CVSTime($StartTime);
 
 	&StartBuild if ( $ReportStatus );
