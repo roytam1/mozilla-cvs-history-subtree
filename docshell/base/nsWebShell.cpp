@@ -572,7 +572,28 @@ nsWebShell::OnLinkClickSync(nsIContent *aContent,
     *aRequest = nsnull;
   }
 
-#ifdef IS_DEFAULT_BROWSER
+#ifndef IS_DEFAULT_BROWSER
+  nsAutoString spec(aURLSpec);
+  nsAutoString scheme;
+  PRInt32 pos = spec.FindChar(':');
+  static const char kMailToURI[] = "mailto";
+  if ((pos == (PRInt32)(sizeof kMailToURI - 1)) && (spec.Left(scheme, pos) != -1) && scheme.EqualsIgnoreCase(kMailToURI)) {
+    printf("If the scheme is mailtourl then let us handle it, we can.\n");
+  }
+  else {
+    nsCOMPtr <nsIURI> uri;
+    rv = NS_NewURI(getter_AddRefs(uri), NS_ConvertUCS2toUTF8(aURLSpec).get());
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    nsCOMPtr<nsIExternalProtocolService> extProtService = do_GetService(NS_EXTERNALPROTOCOLSERVICE_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    rv = extProtService->LoadUrl(uri);
+    NS_ENSURE_SUCCESS(rv,rv);
+    return rv;
+  }
+#endif
+
   switch(aVerb) {
     case eLinkVerb_New:
       target.Assign(NS_LITERAL_STRING("_blank"));
@@ -632,18 +653,6 @@ nsWebShell::OnLinkClickSync(nsIContent *aContent,
       NS_ABORT_IF_FALSE(0,"unexpected link verb");
       return NS_ERROR_UNEXPECTED;
   }
-#else
-  nsCOMPtr <nsIURI> uri;
-  rv = NS_NewURI(getter_AddRefs(uri), NS_ConvertUCS2toUTF8(aURLSpec).get());
-  NS_ENSURE_SUCCESS(rv,rv);
-
-  nsCOMPtr<nsIExternalProtocolService> extProtService = do_GetService(NS_EXTERNALPROTOCOLSERVICE_CONTRACTID, &rv);
-  NS_ENSURE_SUCCESS(rv,rv);
-
-  rv = extProtService->LoadUrl(uri);
-  NS_ENSURE_SUCCESS(rv,rv);
-  return rv;
-#endif
 }
 
 NS_IMETHODIMP
