@@ -46,14 +46,18 @@
 #include "nsILocalFile.h"
 #include "nsIDirectoryService.h"
 #include "nsDirectoryServiceDefs.h"
+#include "nsAppDirectoryServiceDefs.h"
 
 #include "nsCRT.h"
 #include "nsMemory.h"
 
 #include "nsISupportsArray.h"
+#include "nsSupportsArray.h"
 #include "nsInt64.h"
 
 #include "nsQuickSort.h"
+
+#include "nsXPIDLString.h"
 
 #ifdef XPTI_HAS_ZIP_SUPPORT
 #include "nsIZipReader.h"
@@ -148,15 +152,17 @@ private:
 class xptiFile
 {
 public:
-    const nsInt64&          GetSize() const {return mSize;}
-    const nsInt64&          GetDate() const {return mDate;}
-    const char*             GetName() const {return mName;}
+    const nsInt64&          GetSize()      const {return mSize;}
+    const nsInt64&          GetDate()      const {return mDate;}
+    const char*             GetName()      const {return mName;}
+    const PRUint32          GetDirectory() const {return mDirectory;}
           xptiTypelibGuts*  GetGuts()       {return mGuts;}
 
     xptiFile();
 
     xptiFile(const nsInt64&  aSize,
              const nsInt64&  aDate,
+             PRUint32        aDirectory,
              const char*     aName,
              xptiWorkingSet* aWorkingSet,
              XPTHeader*      aHeader = nsnull);
@@ -170,7 +176,8 @@ public:
 
     PRBool Equals(const xptiFile& r) const
     {
-        return  mSize == r.mSize &&
+        return  mDirectory == r.mDirectory &&
+                mSize == r.mSize &&
                 mDate == r.mDate &&
                 0 == PL_strcmp(mName, r.mName);
     }
@@ -186,9 +193,10 @@ public:
 private:
     void CopyFields(const xptiFile& r)
     {
-        mSize = r.mSize;
-        mDate = r.mDate;
-        mName = r.mName;
+        mSize      = r.mSize;
+        mDate      = r.mDate;
+        mName      = r.mName;
+        mDirectory = r.mDirectory;
         if(mGuts)
             delete mGuts;
         if(r.mGuts)
@@ -202,6 +210,7 @@ private:
     nsInt64          mDate;
     const char*      mName; // hold pointer into arena from initializer
     xptiTypelibGuts* mGuts; // new/delete
+    PRUint32         mDirectory;
 };
 
 /***************************************************************************/
@@ -260,7 +269,8 @@ private:
 class xptiWorkingSet
 {
 public:
-    xptiWorkingSet();
+    xptiWorkingSet(); // not implmented
+    xptiWorkingSet(nsISupportsArray* aDirectories);
     ~xptiWorkingSet();
     
     PRBool IsValid() const;
@@ -287,7 +297,12 @@ public:
     PRUint32  GetFileFreeSpace()
         {return mFileArray ? mMaxFileCount - mFileCount : 0;} 
     
-    PRUint32 FindFileWithName(const char* name);
+    PRUint32 FindFile(PRUint32 dir, const char* name);
+
+    PRUint32 GetTypelibDirectoryIndex(const xptiTypelib& typelib)
+    {
+        return GetFileAt(typelib.GetFileIndex()).GetDirectory();
+    }
 
     const char* GetTypelibFileName(const xptiTypelib& typelib)
     {
@@ -350,6 +365,15 @@ public:
     PRBool NewZipItemArray(PRUint32 count);
     PRBool ExtendZipItemArray(PRUint32 count);
 
+    // Directory stuff...
+
+    PRUint32 GetDirectoryCount();
+    nsresult GetCloneOfDirectoryAt(PRUint32 i, nsILocalFile** dir);
+    nsresult GetDirectoryAt(PRUint32 i, nsILocalFile** dir);
+    PRBool   FindDirectory(nsILocalFile* dir, PRUint32* index);
+    PRBool   FindDirectoryOfFile(nsILocalFile* file, PRUint32* index);
+    PRBool   DirectoryAtHasPersistentDescriptor(PRUint32 i, const char* desc);
+
     // Arena stuff...
 
     XPTArena*  GetStringArena() {return mStringArena;}
@@ -367,6 +391,8 @@ private:
 
     XPTArena*       mStringArena;
     XPTArena*       mStructArena;
+
+    nsCOMPtr<nsISupportsArray> mDirectories;
 
 public:
     // XXX make these private with accessors
@@ -687,9 +713,9 @@ public:
     PRBool LoadFile(const xptiTypelib& aTypelibRecord,
                     xptiWorkingSet* aWorkingSet = nsnull);
 
-    PRBool GetComponentsDir(nsILocalFile** aDir);
-    PRBool GetManifestDir(nsILocalFile** aDir);
-    
+    PRBool GetApplicationDir(nsILocalFile** aDir);
+    PRBool GetCloneOfManifestDir(nsILocalFile** aDir);
+
     static PRLock* GetResolveLock(xptiInterfaceInfoManager* self = nsnull) 
         {if(!self && !(self = GetInterfaceInfoManagerNoAddRef())) 
             return nsnull;
@@ -703,7 +729,8 @@ public:
     static void WriteToLog(const char *fmt, ...);
 
 private:
-    xptiInterfaceInfoManager();
+    xptiInterfaceInfoManager(); // not implmented
+    xptiInterfaceInfoManager(nsISupportsArray* aSearchPath);
 
     enum AutoRegMode {
         NO_FILES_CHANGED = 0,
@@ -713,20 +740,25 @@ private:
 
     PRBool IsValid();
 
-    PRBool BuildFileList(nsISupportsArray** aFileList);
+    PRBool BuildFileList(nsISupportsArray* aSearchPath,
+                         nsISupportsArray** aFileList);
 
-    nsILocalFile** BuildOrderedFileArray(nsISupportsArray* aFileList,
+    nsILocalFile** BuildOrderedFileArray(nsISupportsArray* aSearchPath,
+                                         nsISupportsArray* aFileList,
                                          xptiWorkingSet* aWorkingSet);
 
     XPTHeader* ReadXPTFile(nsILocalFile* aFile, xptiWorkingSet* aWorkingSet);
     
-    AutoRegMode DetermineAutoRegStrategy(nsISupportsArray* aFileList,
+    AutoRegMode DetermineAutoRegStrategy(nsISupportsArray* aSearchPath,
+                                         nsISupportsArray* aFileList,
                                          xptiWorkingSet* aWorkingSet);
 
-    PRBool AddOnlyNewFileFromFileList(nsISupportsArray* aFileList,
-                                      xptiWorkingSet* aWorkingSet);
+    PRBool AddOnlyNewFilesFromFileList(nsISupportsArray* aSearchPath,
+                                       nsISupportsArray* aFileList,
+                                       xptiWorkingSet* aWorkingSet);
 
-    PRBool DoFullValidationMergeFromFileList(nsISupportsArray* aFileList,
+    PRBool DoFullValidationMergeFromFileList(nsISupportsArray* aSearchPath,
+                                             nsISupportsArray* aFileList,
                                              xptiWorkingSet* aWorkingSet);
 
     PRBool VerifyAndAddInterfaceIfNew(xptiWorkingSet* aWorkingSet,
@@ -743,14 +775,28 @@ private:
     PRBool DEBUG_DumpFileArray(nsILocalFile** aFileArray, PRUint32 count);
     PRBool DEBUG_DumpFileListInWorkingSet(xptiWorkingSet* aWorkingSet);
 
+    static PRBool BuildFileSearchPath(nsISupportsArray** aPath);
+
 private:
-    xptiWorkingSet          mWorkingSet;
-    nsCOMPtr<nsILocalFile>  mStatsLogFile;
-    nsCOMPtr<nsILocalFile>  mAutoRegLogFile;
-    PRFileDesc*             mOpenLogFile;
-    PRLock*                 mResolveLock;
-    PRLock*                 mAutoRegLock;
+    xptiWorkingSet              mWorkingSet;
+    nsCOMPtr<nsILocalFile>      mStatsLogFile;
+    nsCOMPtr<nsILocalFile>      mAutoRegLogFile;
+    PRFileDesc*                 mOpenLogFile;
+    PRLock*                     mResolveLock;
+    PRLock*                     mAutoRegLock;
+    nsCOMPtr<nsILocalFile>      mManifestDir;
+    nsCOMPtr<nsISupportsArray>  mSearchPath;
+
 };
+
+/***************************************************************************/
+// utilities...
+
+nsresult xptiCloneLocalFile(nsILocalFile*  aLocalFile,
+                            nsILocalFile** aCloneLocalFile);
+
+nsresult xptiCloneElementAsLocalFile(nsISupportsArray* aArray, PRUint32 aIndex,
+                                     nsILocalFile** aLocalFile);
 
 /***************************************************************************/
 //inlines...
