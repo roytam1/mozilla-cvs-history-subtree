@@ -28,11 +28,13 @@ function execute()
   p.open("POST", "http://green/cgi-bin/echo_xml.cgi", false);
   p.send(x);
 
-  var d = p.responseXML;
-  var s = new XMLSerializer()
-  str = s.serializeToString(d);
   document.getElementById("id1").firstChild.nodeValue = p.responseText;
-  document.getElementById("id2").firstChild.nodeValue = str;
+  if (p.responseXML) {
+    var s = new XMLSerializer();
+    var d = p.responseXML;
+    var str = s.serializeToString(d);
+    document.getElementById("id2").firstChild.nodeValue = str;
+  }
   document.getElementById("id3").firstChild.nodeValue = p.getAllResponseHeaders();
   document.getElementById("id4").firstChild.nodeValue = p.status;
   document.getElementById("id5").firstChild.nodeValue = p.statusText;

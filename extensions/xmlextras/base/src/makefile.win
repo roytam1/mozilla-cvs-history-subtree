@@ -30,6 +30,7 @@ CPPSRCS=					\
 	nsDOMSerializer.cpp			\
 	nsXMLHttpRequest.cpp			\
 	nsDOMParser.cpp				\
+	nsLoadListenerProxy.cpp \
 	$(NULL)
 
 
@@ -37,6 +38,7 @@ CPP_OBJS=					\
 	.\$(OBJDIR)\nsDOMSerializer.obj		\
 	.\$(OBJDIR)\nsXMLHttpRequest.obj	\
 	.\$(OBJDIR)\nsDOMParser.obj		\
+	.\$(OBJDIR)\nsLoadListenerProxy.obj \
 	$(NULL)
 
 EXPORTS =					\
