@@ -1,0 +1,67 @@
+<!-- 
+   - The contents of this file are subject to the Mozilla Public
+   - License Version 1.1 (the "License"); you may not use this file
+   - except in compliance with the License. You may obtain a copy of
+   - the License at http://www.mozilla.org/MPL/
+   - 
+   - Software distributed under the License is distributed on an "AS
+   - IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+   - implied. See the License for the specific language governing
+   - rights and limitations under the License.
+   - 
+   - The Original Code is mozilla.org code.
+   - 
+   - The Initial Developer of the Original Code is Netscape
+   - Communications Corp.  Portions created by Netscape are
+   - Copyright (C) 2001 Netscape Communications Corp.  All
+   - Rights Reserved.
+   - 
+   - Contributor(s):
+   - David P. Drinan (ddrinan@netscape.com)
+  -->
+
+<!ENTITY  validation.title          "Ověřování platnosti">
+
+<!ENTITY  validation.crl.label      "Seznam uložených certifikátů">
+<!ENTITY  validation.crl.description "Správce CRL používejte pro správu seznamu uložených certifikátů (Certificate Revocation Lists - CRL), které jsou ve vaší databázi certifikátů.">
+<!ENTITY  validation.managecrls.button      "Spravovat seznam CRL...">
+<!ENTITY  validation.managecrls.accesskey   "M">
+<!ENTITY  validation.crlmanager.label       "Spravovat seznam CRL">
+<!ENTITY  validation.crlname.label          "Název">
+<!ENTITY  validation.crllastupdate.label    "Datum poslední aktualizace">
+<!ENTITY  validation.crlnextupdate.label    "Následující aktualizace">
+<!ENTITY  validation.crlautoupdateenabled.label   "Automatická aktualizace">
+<!ENTITY  validation.crlautoupdatestatus.label    "Stav automatické aktualizace">
+<!ENTITY  validation.deletecrl.label        "Smazat">
+<!ENTITY  validation.updatecrl.label        "Aktualizovat">
+<!ENTITY  validation.advanced.label         "Nastavení">
+
+<!ENTITY  validation.crl.autoupdate.title            "Předvolby automatické aktualizace CRL">
+<!ENTITY  validation.crl.autoupdate.enable.label     "Povolit automatickou aktualizaci pro tento CRL">
+<!ENTITY  validation.crl.autoupdate.time.label1      "Aktualizovat">
+<!ENTITY  validation.crl.autoupdate.time.label2      "dní před další aktualizací">
+<!ENTITY  validation.crl.autoupdate.freq.label1      "Aktualizovat každých">
+<!ENTITY  validation.crl.autoupdate.freq.label2      "dnů">
+<!ENTITY  validation.crl.autoupdate.url.label        "CRL bude importováno z:">
+<!ENTITY  crl.import.status.title         "Stav importu CRL">
+<!ENTITY  crl.import.success.message      "Seznam certifikatů (CRL) byl úspěšně importován.">
+<!ENTITY  crl.issuer.label                "CRL vydal:">
+<!ENTITY  crl.issuer.org.label            "Organizace:">
+<!ENTITY  crl.issuer.orgunit.label        "Jednotka: ">
+<!ENTITY  crl.import.nextupdate.label     "Další aktualizace: ">
+<!ENTITY  crl.autoupdate.fail.cnt.label      "Předchozí navazující selhaní aktualizace: ">
+<!ENTITY  crl.autoupdate.fail.reason.label   "Podrobnosti o posledním selhání aktualizace: ">
+<!ENTITY  ok.button        "OK">
+<!ENTITY  cancel.button    "Zrušit">
+<!ENTITY  help.button      "Nápověda">
+<!ENTITY  edit.button      "Nastavení">
+
+<!ENTITY validation.ocsp.label      "Online ověření stavu certifikátů">
+<!ENTITY validation.ocsp.description "&brandShortName; může používat protokol pro online ověření stavu certifikátů (Online Certificate Status Protocol - OCSP). Nastavit aplikaci &brandShortName; pro použití OCSP následovně:">
+<!ENTITY disableOCSP.label "Nepoužívat OCSP pro ověřování platnosti certifikátů">
+<!ENTITY certOCSP.label "Používat OCSP pro ověření platnosti pouze těch certifikátů, které obsahují adresu služby OCSP">
+<!ENTITY proxyOCSP.label "Používat OCSP pro ověření platnosti všech certifikátů a používat tuto adresu a podepisovatele:">
+<!ENTITY serviceURL.label "Adresa služby:">
+<!ENTITY serviceURL.accesskey "s">
+<!ENTITY signingCA.label "Podepisovatel odpovědi:">
+<!ENTITY signingCA.accesskey "P">

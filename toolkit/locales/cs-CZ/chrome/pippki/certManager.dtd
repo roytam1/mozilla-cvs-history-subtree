@@ -1,0 +1,102 @@
+<!-- 
+   - The contents of this file are subject to the Mozilla Public
+   - License Version 1.1 (the "License"); you may not use this file
+   - except in compliance with the License. You may obtain a copy of
+   - the License at http://www.mozilla.org/MPL/
+   - 
+   - Software distributed under the License is distributed on an "AS
+   - IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+   - implied. See the License for the specific language governing
+   - rights and limitations under the License.
+   - 
+   - The Original Code is mozilla.org code.
+   - 
+   - The Initial Developer of the Original Code is Netscape
+   - Communications Corp.  Portions created by Netscape are
+   - Copyright (C) 2001 Netscape Communications Corp.  All
+   - Rights Reserved.
+   - 
+   - Contributor(s):
+   -   Ian McGreer <mcgreer@netscape.com>
+  -->
+
+<!ENTITY certmgr.title "Správce certifikátů">
+
+<!ENTITY certmgr.tab.mine "Osobní certifikáty">
+<!ENTITY certmgr.tab.others "Ostatní certifikáty">
+<!ENTITY certmgr.tab.websites "Webové servery">
+<!ENTITY certmgr.tab.ca "Certifikační Autority">
+
+<!ENTITY certmgr.ca.builtins "Vestavěné CA">
+<!ENTITY certmgr.ca.mycas "CA správované vámi">
+
+<!ENTITY certmgr.mine "Od těchto organizací máte certifikáty, které vás identifikují:">
+<!ENTITY certmgr.others "Máte uložené certifikáty pro tyto lidi:">
+<!ENTITY certmgr.websites "Máte uložené certifikáty pro tyto webové servery:">
+<!ENTITY certmgr.cas "Máte uložené certifikáty, které identifikují tyto CA:">
+
+<!ENTITY certmgr.detail.general_tab.title "Obecné informace">
+<!ENTITY certmgr.detail.prettyprint_tab.title "Podrobné informace">
+
+<!ENTITY certmgr.subjectinfo.label "Vydáno pro">
+<!ENTITY certmgr.issuerinfo.label "Vydal">
+<!ENTITY certmgr.validity.label "Platnost" >
+<!ENTITY certmgr.fingerprints.label "Otisky">
+<!ENTITY certmgr.certdetail.title "Podrobnosti certifikátu">
+<!ENTITY certmgr.certdetail.cn "Obecné jméno (CN)">
+<!ENTITY certmgr.certdetail.o "Organizace (O)">
+<!ENTITY certmgr.certdetail.ou "Jednotka organizace (OU)">
+<!ENTITY certmgr.certdetail.serialnumber "Sériové číslo">
+<!ENTITY certmgr.certdetail.sha1fingerprint "Otisk SHA1">
+<!ENTITY certmgr.certdetail.md5fingerprint "Otisk MD5">
+
+<!ENTITY certmgr.editcert.title "Upravit nastavení bezpečnostních certifikátů">
+<!ENTITY certmgr.editcacert.title "Upravit nastavení důvěryhodnosti CA">
+<!ENTITY certmgr.editsslcert.title "Upravit nastavení důvěryhodnosti webového serveru">
+<!ENTITY certmgr.editcert.edittrust "Upravit nastavení důvěryhodnosti:">
+<!ENTITY certmgr.editcert.trustssl "Tento certifikát může identifikovat webový server.">
+<!ENTITY certmgr.editcert.trustemail "Tento certifikát může identifikovat uživatele e-mailu.">
+<!ENTITY certmgr.editcert.trustobjsign "Tento certifikát může identifikovat výrobce softwaru.">
+<!ENTITY certmgr.editsslcert.edittrust "Upravit nastavení důvěryhodnosti certifikátu:">
+<!ENTITY certmgr.editsslcert.dotrust "Důvěřovat pravosti tohoto certifikátu.">
+<!ENTITY certmgr.editsslcert.donttrust "Nedůvěřovat pravosti tohoto certifikátu.">
+<!ENTITY certmgr.editemailcert.title "Úprava nastavení pro certifkátu pro poštu">
+<!ENTITY certmgr.editemailcert.edittrust "Upravit nastavení důvěryhodnosti certifikátu:">
+<!ENTITY certmgr.editemailcert.dotrust "Důvěřovat pravosti tohoto certifikátu.">
+<!ENTITY certmgr.editemailcert.donttrust "Nedůvěřovat pravosti tohoto certifikátu.">
+
+<!ENTITY certmgr.deletecert.title "Smazat certifikát">
+<!ENTITY certmgr.deletecert.beforename "Požádali jste o smazání tohoto certifikátu:">
+<!ENTITY certmgr.deletecert.aftername "Určitě chcete smazat tento certifikát?">
+<!ENTITY certmgr.deleteusercert.title "Smazat certifikát">
+<!ENTITY certmgr.deleteusercert.beforename "Požádali jste o smazání tohoto certifikátu:">
+<!ENTITY certmgr.deleteusercert.aftername "Jakmile smažete tento certifikát, nebudete moci číst poštu, která jím byla zašifrována.">
+
+<!ENTITY certmgr.certname "Jméno certifikátu">
+<!ENTITY certmgr.tokenname "Bezpečnostní zařízení">
+<!ENTITY certmgr.purpose "Účel">
+<!ENTITY certmgr.issued "Vydáno dne">
+<!ENTITY certmgr.expires "Platný do">
+<!ENTITY certmgr.email "Emailová adresa">
+<!ENTITY certmgr.serial "Sériové číslo">
+<!ENTITY certmgr.ocsp_info "Certifikát nebyl ověřen přes OCSP. Klepněte na Zobrazit pro vykonání.">
+
+<!ENTITY certmgr.help.label "Nápověda">
+<!ENTITY certmgr.ok.label "OK">
+<!ENTITY certmgr.close.label "Zavřít">
+<!ENTITY certmgr.cancel.label "Zrušit">
+<!ENTITY certmgr.view.label "Zobrazit">
+<!ENTITY certmgr.edit.label "Upravit">
+<!ENTITY certmgr.editca.label "Upravit důvěryhodnost CA">
+<!ENTITY certmgr.add.label "Přidat">
+<!ENTITY certmgr.delete.label "Smazat">
+<!ENTITY certmgr.backup.label "Zálohovat">
+<!ENTITY certmgr.backupall.label "Zálohovat vše">
+<!ENTITY certmgr.restore.label "Importovat">
+<!ENTITY certmgr.details.label "Položky certifikátu">
+<!ENTITY certmgr.fields.label "Hodnota">
+<!ENTITY certmgr.hierarchy.label "Hierarchie certifikátu">
+
+<!-- access key definitions -->
+<!ENTITY certmgr.helpButtonAccessKey "N">
+<!ENTITY certmgr.closeWindowAccessKey "z">

@@ -1,0 +1,44 @@
+<!-- 
+   - The contents of this file are subject to the Mozilla Public
+   - License Version 1.1 (the "License"); you may not use this file
+   - except in compliance with the License. You may obtain a copy of
+   - the License at http://www.mozilla.org/MPL/
+   - 
+   - Software distributed under the License is distributed on an "AS
+   - IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+   - implied. See the License for the specific language governing
+   - rights and limitations under the License.
+   - 
+   - The Original Code is mozilla.org code.
+   - 
+   - The Initial Developer of the Original Code is Netscape
+   - Communications Corp.  Portions created by Netscape are
+   - Copyright (C) 2001 Netscape Communications Corp.  All
+   - Rights Reserved.
+   - 
+   - Contributor(s):
+   -   Ian McGreer <mcgreer@netscape.com>
+  -->
+
+<!ENTITY devmgr.title "Správce zařízení">
+
+<!ENTITY devmgr.devlist.label "Bezpečnostní moduly a zařízení">
+<!ENTITY devmgr.details.title "Podrobnosti">
+<!ENTITY devmgr.details.title2 "Hodnota">
+<!ENTITY devmgr.status.label "Stav">
+<!ENTITY devmgr.version.label "Verze">
+
+<!ENTITY devmgr.button.changeslotname.label "Změnit jméno pozice">
+<!ENTITY devmgr.button.login.label "Přihlásit">
+<!ENTITY devmgr.button.logout.label "Odhlásit">
+<!ENTITY devmgr.button.changepw.label "Změnit heslo">
+<!ENTITY devmgr.button.load.label "Přidat">
+<!ENTITY devmgr.button.unload.label "Odstranit">
+
+<!ENTITY loaddevice.info "Zadejte informace o modulu, který chcete přidat.">
+<!ENTITY loaddevice.modname "Jméno modulu:">
+<!ENTITY loaddevice.modname.default "Nový PKCS#11 modul">
+<!ENTITY loaddevice.filename "Název souboru modulu:">
+<!ENTITY loaddevice.browse "Vyhledat...">
+
+<!ENTITY loaddevice.title "Přidat PKCS#11 zařízení">

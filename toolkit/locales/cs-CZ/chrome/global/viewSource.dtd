@@ -1,0 +1,44 @@
+<!-- extracted from content/viewSource.xul -->
+
+<!-- LOCALIZATION NOTE (mainWindow.title) : DONT_TRANSLATE --> 
+<!ENTITY mainWindow.title "&brandShortName;">
+<!-- LOCALIZATION NOTE (mainWindow.titlemodifier) : DONT_TRANSLATE --> 
+<!ENTITY mainWindow.titlemodifier "&brandShortName;">
+<!-- LOCALIZATION NOTE (mainWindow.titlemodifierseparator) : DONT_TRANSLATE -->
+<!ENTITY mainWindow.titlemodifierseparator " - ">
+<!ENTITY mainWindow.preface "Zdrojový kód:">
+
+<!ENTITY fileMenu.label "Soubor">
+<!ENTITY fileMenu.accesskey "S">
+<!ENTITY savePageCmd.label "Uložit stránku jako...">
+<!ENTITY savePageCmd.accesskey "j">
+<!ENTITY savePageCmd.commandkey "S">
+<!ENTITY pageSetupCmd.label "Vzhled stránky...">
+<!ENTITY pageSetupCmd.accesskey "r">
+<!ENTITY printPreviewCmd.label "Náhled tisku">
+<!ENTITY printPreviewCmd.accesskey "h">
+<!ENTITY printCmd.label "Tisk...">
+<!ENTITY printCmd.accesskey "T">
+<!ENTITY printCmd.commandkey "P">
+<!ENTITY closeCmd.label "Zavřít">
+<!ENTITY closeCmd.accesskey "Z">
+<!ENTITY closeCmd.commandkey "W">
+
+<!ENTITY textEnlarge.commandkey "+">
+<!ENTITY textReduce.commandkey "-">
+<!ENTITY textReset.commandkey "0">
+
+<!ENTITY goToLineCmd.label "Přejít na řádek...">
+<!ENTITY goToLineCmd.accesskey "P">
+<!ENTITY goToLineCmd.commandkey "l">
+
+<!ENTITY viewMenu.label           "Zobrazit">
+<!ENTITY viewMenu.accesskey       "Z">
+<!ENTITY menu_wrapLongLines.title "Zalamovat dlouhé řádky"> 
+<!ENTITY menu_wrapLongLines.accesskey "l">
+<!ENTITY menu_highlightSyntax.label "Zvýraznění syntaxe">
+<!ENTITY menu_highlightSyntax.accesskey "v">
+<!ENTITY menu_textEnlarge.label "Zvětšit velikost textu">
+<!ENTITY menu_textEnlarge.accesskey "v">
+<!ENTITY menu_textReduce.label "Zmenšit velikost textu">
+<!ENTITY menu_textReduce.accesskey "m">

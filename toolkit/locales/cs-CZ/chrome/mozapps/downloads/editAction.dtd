@@ -1,0 +1,13 @@
+<!ENTITY  changeAction.title                        "Změna akce">
+
+<!ENTITY  whenDownloading.label                     "Při stahování souborů typu:">
+<!ENTITY  always.label                              "automaticky:">
+
+<!ENTITY  openDefault.label                         "Otevřít ve výchozí aplikaci:">
+<!ENTITY  openApplication.label                     "Otevřít v této aplikaci:">
+<!ENTITY  changeApp.label                           "Změnit...">
+<!ENTITY  changeApp.accesskey                       "m">
+<!ENTITY  customAppPath.label                       "Klepněte na 'Změnit...' pro výběr aplikace">
+<!ENTITY  saveToDisk.label                          "Uložit na disk">
+
+<!ENTITY  changeAppWindowTitle.label                "Choose Application...">

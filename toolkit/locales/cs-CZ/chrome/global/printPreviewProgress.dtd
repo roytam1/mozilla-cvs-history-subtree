@@ -1,0 +1,6 @@
+<!--LOCALIZATION NOTE printPreviewProgress.dtd Main UI for Print Preview Progress Dialog -->
+<!ENTITY printWindow.title "Náhled tisku"> 
+<!ENTITY title   "Nadpis:"> 
+<!ENTITY spaces    "            ">
+<!ENTITY preparing "Připravuji...">
+<!ENTITY progress "Průběh:">

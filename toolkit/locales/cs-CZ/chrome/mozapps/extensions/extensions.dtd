@@ -1,0 +1,63 @@
+<!ENTITY extensions.title                 "Rozšíření">
+
+<!ENTITY cmd.info.commandKey              "i">
+<!ENTITY cmd.options.commandKey           ",">
+<!ENTITY cmd.close.commandKey             "w">
+
+<!-- Command Bar items -->
+<!ENTITY cmd.uninstall.label              "Odinstalovat">
+<!ENTITY cmd.uninstall.tooltip            "Odinstaluje zvolenou položku">
+<!ENTITY cmd.uninstall.accesskey          "i">
+<!ENTITY cmd.update.label                 "Aktualizovat">
+<!ENTITY cmd.update.accesskey             "A">
+<!ENTITY cmd.update.tooltip               "Zkontroluje dostupnost aktualizací pro zvolenou položku">
+<!ENTITY cmd.useTheme.label               "Použít motiv vzhledu">
+<!ENTITY cmd.useTheme.accesskey           "P">
+<!ENTITY cmd.useTheme.tooltip             "Změní motiv vzhledu aplikace &brandShortName;.">
+<!-- the following command bar items are used by thunderbird only -->
+<!ENTITY cmd.install.label              "Install">
+<!ENTITY cmd.install.tooltip            "Instalovat rozšíření">
+<!ENTITY cmd.install.accesskey          "n">
+
+<!-- Context Menu Options: Extension -->
+<!ENTITY cmd.options.label                "Možnosti">
+<!ENTITY cmd.options.accesskey            "M">
+<!ENTITY cmd.optionsUnix.label            "Preferences">
+<!ENTITY cmd.optionsUnix.accesskey        "r">
+<!ENTITY cmd.homepage.label               "Přejít na domovskou stránku">
+<!ENTITY cmd.homepage.accesskey           "d">
+<!ENTITY cmd.about.label                  "O tomto rozšíření">
+<!ENTITY cmd.about.accesskey              "O">
+<!ENTITY cmd.enable.label                 "Povolit">
+<!ENTITY cmd.enable.accesskey             "P">
+<!ENTITY cmd.disable.label                "Zakázat">
+<!ENTITY cmd.disable.accesskey            "Z">
+<!ENTITY cmd.moveToTop.label              "Posunout nahoru">
+<!ENTITY cmd.moveToTop.accesskey          "T">
+<!ENTITY cmd.moveUp.label                 "Posunout vzhůru">
+<!ENTITY cmd.moveUp.accesskey             "p">
+<!ENTITY cmd.moveDn.label                 "Posunout dolů">
+<!ENTITY cmd.moveDn.accesskey             "s">
+
+<!-- Extension Items -->
+<!ENTITY options.tooltip                  "Možnosti">
+<!ENTITY optionsUnix.tooltip              "Preferences">
+<!ENTITY about.tooltip                    "O rozšíření">
+<!ENTITY homepage.tooltip                 "Domovská stránka">
+
+<!ENTITY extensionItem.toBeDisabled.label     "Tato položka bude zakázána po restartu aplikace &brandShortName;.">
+<!ENTITY extensionItem.toBeEnabled.label      "This item will be enabled after you restart &brandShortName;.">
+<!ENTITY extensionItem.toBeInstalled.label    "Tato položka bude nainstalována po restartu aplikace &brandShortName;.">
+<!ENTITY extensionItem.toBeUninstalled.label  "Tato položka bude odinstalována po restartu aplikace &brandShortName;.">
+<!ENTITY extensionItem.done.label             "Instalace byla úspěšná">
+<!ENTITY extensionItem.waiting.label          "Waiting...">
+<!ENTITY extensionItem.installing.label       "Instaluji...">
+
+<!ENTITY getMoreExtensions.label          "Získat nová rozšíření">
+<!ENTITY getMoreExtensions.tooltip        "Získá nová rozšíření z update.mozilla.org">
+<!ENTITY getMoreThemes.label              "Získat nový motiv vzhledu">
+<!ENTITY getMoreThemes.tooltip            "Získá nový motiv vzhledu z update.mozilla.org">
+
+<!ENTITY previewNoThemeSelected.label     "Nebyl vybrán žádný motiv">
+<!ENTITY previewNoPreviewImage.label      "Tento motiv vzhledu neobsahuje žádný náhled">
+

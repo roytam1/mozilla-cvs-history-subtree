@@ -1,0 +1,106 @@
+<!-- 
+   - The contents of this file are subject to the Mozilla Public
+   - License Version 1.1 (the "License"); you may not use this file
+   - except in compliance with the License. You may obtain a copy of
+   - the License at http://www.mozilla.org/MPL/
+   - 
+   - Software distributed under the License is distributed on an "AS
+   - IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+   - implied. See the License for the specific language governing
+   - rights and limitations under the License.
+   - 
+   - The Original Code is mozilla.org code.
+   - 
+   - The Initial Developer of the Original Code is Netscape
+   - Communications Corp.  Portions created by Netscape are
+   - Copyright (C) 2001 Netscape Communications Corp.  All
+   - Rights Reserved.
+   - 
+   - Contributor(s):
+   -   Bob Lord <lord@netscape.com>
+   -   Terry Hayes <thayes@netscape.com>
+  -->
+
+<!ENTITY  SSLProtocolVersions          "Verze SSL protokolu">
+<!ENTITY  SSLWarnings                  "SSL upozornění">
+<!ENTITY  SSLClientAuthMethod          "Výběr certifikátů klienta">
+
+<!ENTITY prefheader.title "SSL">
+<!ENTITY enable.ssl2 "Povolit SSL verze 2">
+<!ENTITY enable.ssl3 "Povolit SSL verze 3">
+<!ENTITY enable.tls "Povolit TLS">
+
+<!ENTITY edit.sslciphers "Upravit...">
+<!ENTITY edit.sslciphers.accesskey "U">
+
+<!ENTITY warn.description "&brandShortName; vás může upozornit na stav zabezpečení stránky, kterou si prohlížíte. Nastavit tak, aby &brandShortName; ukazovala upozornění a zjišťovala pravomoce před:">
+<!ENTITY warn.enteringsecure "Vstupem na stránku, která podporuje šifrování">
+<!ENTITY warn.enteringweak "Vstupem na stránku, která používá slabou šifru">
+<!ENTITY warn.insecurepost "Zasláním dat z formuláře na nezabezpečené stránce na nezabezpečenou stránku">
+<!ENTITY warn.leavingsecure "Opuštění stránky, která podporuje šifrování">
+<!ENTITY warn.secureredirect "Přesměrováním z jedné zabezpečené stránky na druhou">
+<!ENTITY warn.secureredirecttoinsecure "Přesměrováním ze zabezpečené stránky na nezabezpečenou stránku">
+<!ENTITY warn.viewmixed "Zobrazením stránky se směsicí zašifrovaných i nezašifrovaných dat">
+
+<!ENTITY certselect.description "Rozhodněte, jaký bezpečnostní certifikát má aplikace &brandShortName; předkládat stránkám, které jej vyžadují">
+<!ENTITY certselect.auto "Vybírat automaticky">
+<!ENTITY certselect.ask "Vždy se dotázat">
+
+<!-- Cipher pref window -->
+<!ENTITY cipher.title "SSL: Úprava šifer">
+<!ENTITY cipher.ssl2.label "Skupiny šifer SSL2">
+<!ENTITY cipher.ssl3.label "Skupiny šifer SSL3/TLS">
+<!ENTITY cipher.ssl3_extra.label "Extra SSL3/TLS šifry">
+<!ENTITY cipher.tab.ssl2 "SSL2">
+<!ENTITY cipher.tab.ssl3tls "SSL3/TLS">
+<!ENTITY cipher.tab.ssl3tls_extra "Extra SSL3/TLS">
+
+<!-- SSL2 Ciphers -->
+
+<!ENTITY cipher.ssl2.rc4_128 "RC4 šifra se 128 bitovým klíčem s RSA a MD5 MAC">
+<!ENTITY cipher.ssl2.rc2_128 "RC2 šifra se 128 bitovým klíčem">
+<!ENTITY cipher.ssl2.des_ede3_192 "Trojitá šifra DES se 168 bitovým klíčem">
+<!ENTITY cipher.ssl2.des_64 "DES šifra s 56 bitovým klíčem">
+<!ENTITY cipher.ssl2.rc4_40 "RC4 šifra s 40 bitovým klíčem">
+<!ENTITY cipher.ssl2.rc2_40 "RC2 šifra s 40 bitovým klíčem">
+
+<!-- SSL3/TLS ciphers -->
+<!ENTITY cipher.ssl3.rsa_rc4_128_md5 "RC4 šifra se 128 bitovým klíčem a MD5 MAC">
+<!ENTITY cipher.ssl3.rsa_rc4_128_sha "RC4 šifra se 128 bitovým klíčem s RSA a SHA1 MAC">
+<!ENTITY cipher.ssl3.rsa_fips_des_ede3_sha "FIPS 140-1 kompatibilní trojitá šifra DES s SHA-1 MAC">
+<!ENTITY cipher.ssl3.rsa_des_ede3_sha "Trojitá šifra DES se 168 bitovým klíčem a SHA-1 MAC">
+<!ENTITY cipher.ssl3.rsa_fips_des_sha "FIPS 140-1 kompatibilní šifra DES s SHA-1 MAC">
+<!ENTITY cipher.ssl3.rsa_des_sha "Šifra DES s 56 bitovým klíčem a SHA-1 MAC">
+<!ENTITY cipher.ssl3.rsa_1024_rc4_56_sha "Šifra RC4 s 56 bitovým klíčem a SHA-1 MAC">
+<!ENTITY cipher.ssl3.rsa_1024_des_cbc_sha "Šifra DES v CBC módu s 56 bitovým klíčem a SHA-1 MAC">
+<!ENTITY cipher.ssl3.rsa_rc4_40_md5 "Šifra RC4 s 40 bitovým klíčem a MD5 MAC">
+<!ENTITY cipher.ssl3.rsa_rc2_40_md5 "Šifra RC2 s 40 bitovým klíčem a MD5 MAC">
+
+<!-- Extra SSL3/TLS ciphers -->
+<!ENTITY cipher.ssl3.dhe_rsa_aes_256_sha "256-bit AES šifrování s RSA, DHE a SHA1 MAC">
+<!ENTITY cipher.ssl3.dhe_dss_aes_256_sha "256-bit AES šifrování s DSA, DHE a SHA1 MAC">
+<!ENTITY cipher.ssl3.rsa_aes_256_sha "256-bit AES šifrování s RSA a SHA1 MAC">
+<!ENTITY cipher.ssl3.dhe_rsa_aes_128_sha "128 bitová AES šifra s RSA, DHE a SHA1 MAC">
+<!ENTITY cipher.ssl3.dhe_dss_aes_128_sha "128-bit AES šifrování s DSA, DHE a SHA1 MAC">
+<!ENTITY cipher.ssl3.rsa_aes_128_sha "128-bit AES šifrování s RSA a SHA1 MAC">
+<!ENTITY cipher.ssl3.dhe_rsa_des_ede3_sha "Trojitá 168 bitová DES šifra s RSA. DHE a SHA1 MAC">
+<!ENTITY cipher.ssl3.dhe_dss_des_ede3_sha "Trojitá 168 bitová DES šifra s DSA, DHE a SHA1 MAC">
+<!ENTITY cipher.ssl3.dhe_rsa_des_sha "56-ti bitová DES šifra s RSA, DHE a SHA1 MAC">
+<!ENTITY cipher.ssl3.dhe_dss_des_sha "56-ti bitová DES šifra s DSA, DHE a SHA1 MAC">
+<!ENTITY cipher.ssl3.rsa_null_sha "Bez šifrování s RSA autentizací a SHA1 MAC">
+<!ENTITY cipher.ssl3.rsa_null_md5 "MD5 MAC bez šifer">
+
+<!-- Labels for cipher attributes -->
+<!ENTITY cipher.name "Šifra">
+<!ENTITY cipher.encryption "Šifrovací algoritmus:">
+<!ENTITY cipher.authAlg "Autentizační algoritmus:">
+<!ENTITY cipher.keyAlg "Algoritmus pro klíč:">
+<!ENTITY cipher.keySize "Efektivní délka klíče:">
+<!ENTITY cipher.macAlg "MAC algoritmus:">
+<!ENTITY cipher.other "Další atributy:">
+<!ENTITY cipher.fips "FIPS">
+<!ENTITY cipher.exportable "IsExportable">
+
+<!ENTITY cipher.details "Detaily...">
+
+<!ENTITY cipherinfo.title "Detaily pro šifru">
