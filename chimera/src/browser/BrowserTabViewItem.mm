@@ -48,7 +48,7 @@
 
 
 @interface BrowserTabViewItem(Private)
-- (int)setTag:(int)tag;
+- (void)setTag:(int)tag;
 - (void)relocateTabContents:(NSRect)inRect;
 - (BOOL)draggable;
 @end
@@ -458,7 +458,7 @@
   return mTabContentsView;
 }
 
-- (int)setTag:(int)tag
+- (void)setTag:(int)tag
 {
   mTag = tag;
 }
