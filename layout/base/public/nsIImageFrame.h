@@ -25,6 +25,8 @@
 #include "nsIPresContext.h"
 
 class nsIFrame;
+class imgIRequest;
+
 struct nsHTMLReflowState;
 struct nsHTMLReflowMetrics;
 struct nsSize;
@@ -70,6 +72,8 @@ public:
 
   NS_IMETHOD GetNaturalImageSize(PRUint32* naturalWidth, 
                                  PRUint32 *naturalHeight) = 0;
+
+  NS_IMETHOD GetImageRequest(imgIRequest **aRequest) = 0;
 
   NS_IMETHOD IsImageComplete(PRBool* aComplete) = 0;
 
