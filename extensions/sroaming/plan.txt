@@ -4,7 +4,6 @@ To do:
     - column headings
     - width
   - listing progressmeter doesn't work
-  - filenames -> descr
 - error handling
   - (local profile) files missing, also adjust listing.xml
   - copy protocol
@@ -15,7 +14,7 @@ Later:
 - license headers
 - nsresult for internal functions, clean up interfaces
 - warn before saving pw
-- alert() -> nsiprompt
+- alert() -> nsiprompt or dialog
 - remove printfs
 - XXXs
 - clean up progressdialog
@@ -36,9 +35,7 @@ Enhance
   - LDAP (already done by Sun?)
   - IMAP
 - password encrypt
-- rewrite progress dialog
 - no upload at switch profile
-- don't transfer files that didn't change (server = local)
 
 roaming urls
  <ftp://user@ftp-server//path/to/dir/>
@@ -64,7 +61,7 @@ WARNING: NS_ENSURE_TRUE(!aQualifiedName.IsEmpty()) failed, file ../../../../mozi
 
 [4]
 onStatus:
-  Request: ftp://ben:ie02c@ftp.server.bucksch.org//mnt/save/roaming/ben/listing.xml
+  Request: ftp://...
   StatusCode: NET_STATUS_SENDING_TO
   StatusArg: ftp.server.bucksch.org
 request to change listing.xml from done (NS_OK) to busy (NET_STATUS_SENDING_TO)

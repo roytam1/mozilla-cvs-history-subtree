@@ -132,13 +132,16 @@
           - the entries from the server's listing file for
             those files which we chose not to upload /plus/
           - the entries for those local files which successfully uploaded
-
-       6. Upload listing file (created in step 6)
+       6. Upload listing file (created in last step)
        7. Create listing-uploaded, not containing those files for which
           the user selected the server version (otherwise, we would think
           in the next download run that we have them already in the local
           profile, not download them and then overwrite the server file
           during the next upload)
+
+     I know, it's complicated. If somebody knows a better solution
+     (less steps and more cases covered, ideally provably all cases covered),
+     ...
   */
 
 
@@ -249,7 +252,9 @@ function download(transfer, remoteListing)
                                                      function()
   {
     var localFiles;
+    var keepLocalVersionFiles = null;
     var listingUploaded = listingUploadedResult.value;
+
     ddump("Step 2: Comparing these listing files");
     var comparisonStep2 = compareFiles(transfer.files,
                                        remoteListing,
@@ -265,21 +270,24 @@ function download(transfer, remoteListing)
     }
     else // Mismatch
     {
+      localFiles = localFilesStats(transfer.files);
+      var emptyRemote = substractFiles(transfer.files, remoteListing);
+      var emptyLocal = substractFiles(transfer.files, localFiles);
+      keepLocalVersionFiles = emptyRemote;
+
       /* Ignore list of matches, just consider all to mismatch. In normal
          operation (even expected error cases), either all should match or
          mismatch, so if a few match and a few mismatch, there is something
          goofy going on. XXX is this also true, if local files didn't exist
          yet? */
       ddump("Step 2a: Comparing local files with listing-uploaded");
-      localFiles = localFilesStats(transfer.files);
       var comparisonStep2a = compareFiles(transfer.files,
                                           localFiles,
                                           listingUploaded);
       if (comparisonStep2a.mismatches.length == 0)
       {
         ddump("Step 3: Skipped, because no conflict found");
-        // no conflict, but we need to download.
-        // download all files, so no need to change transfer.files
+        // no conflict, but we need to download
       }
       else
       {
@@ -287,11 +295,16 @@ function download(transfer, remoteListing)
         var comparisonStep2aa = compareFiles(transfer.files,
                                              remoteListing,
                                              localFiles);
-        if (comparisonStep2aa.mismatches.length > 0)
+
+        // avoid conflicts for files which don't exist on server or locally
+        var conflicts = substractFiles(comparisonStep2aa.mismatches,
+                                       emptyRemote.concat(emptyLocal));
+
+        if (conflicts.length > 0)
         {
           ddump("Step 3: Asking user which version to use");
           var answer = conflictAsk(true,
-                                   comparisonStep2aa.mismatches,
+                                   conflicts,
                                    remoteListing,
                                    localFiles);
                /* for the mismatching files, pass the stats of the server
@@ -301,10 +314,14 @@ function download(transfer, remoteListing)
             onCancel();
             return;
           }
-          transfer.files = substractFiles(transfer.files, answer.local);
-          transfer.filesChanged();
+          keepLocalVersionFiles = keepLocalVersionFiles.concat(answer.local);
         }
       }
+    }
+    if (keepLocalVersionFiles)
+    {
+      transfer.files = substractFiles(transfer.files, keepLocalVersionFiles);
+      transfer.filesChanged();
     }
 
     ddump("Step 4: Downloading profile files");
@@ -369,22 +386,31 @@ function upload(transfer, remoteListing)
                                                    kListingUploadedFilename,
                                                    function()
       {
+        var emptyRemote = substractFiles(transfer.files, remoteListing);
+        var emptyLocal = substractFiles(transfer.files, localFiles);
+
         var listingUploaded = listingUploadedResult.value;
         var comparisonStep2a = compareFiles(transfer.files,
                                             remoteListing,
                                             listingUploaded);
-        if (comparisonStep2a.mismatches.length == 0)
+
+        // avoid conflicts for files which don't exist on server or locally
+        var conflicts = substractFiles(comparisonStep2a.mismatches,
+                                       emptyRemote.concat(emptyLocal));
+
+        if (conflicts.length == 0)
         {
           ddump("Step 3: Skipped, because no conflict found");
           /* no conflict (we were the last ones who uploaded),
              but we need to upload. */
           // upload all files, so no need to change transfer.files.
+          uploadStep4(transfer, localFiles, remoteListing, emptyLocal);
         }
         else
         {
           ddump("Step 3: Asking user which version to use");
           var answer = conflictAsk(false,
-                                   comparisonStep2a.mismatches,
+                                   conflicts,
                                    remoteListing,
                                    localFiles);
                  /* for the mismatching files, pass the stats of the server
@@ -394,10 +420,9 @@ function upload(transfer, remoteListing)
             onCancel();
             return;
           }
-          transfer.files = substractFiles(transfer.files, answer.server);
-          transfer.filesChanged();
+          uploadStep4(transfer, localFiles, remoteListing,
+                      emptyLocal.concat(answer.server));
         }
-        uploadStep4(transfer, localFiles, remoteListing, answer.server);
       }, false);
     }
   }, false);
@@ -405,6 +430,12 @@ function upload(transfer, remoteListing)
 
 function uploadStep4(transfer, localFiles, remoteFiles, keepServerVersionFiles)
 {
+  if (keepServerVersionFiles)
+  {
+    transfer.files = substractFiles(transfer.files, keepServerVersionFiles);
+    transfer.filesChanged();
+  }
+
   ddump("Step 4: Uploading profile files");
   transfer.finishedCallbacks.push(function(success)
   {
@@ -497,8 +528,8 @@ function compareFiles(filesList, files1, files2)
     var matches = (f1 && f2
                    && f1.size == f2.size
                    && f1.lastModified == f2.lastModified);
-    if (!f1 && !f2)
-      matches = true;
+    //if (!f1 && !f2) needed? Would break current conflict logic
+    //  matches = true;
 
     ddump(filename + (matches ? " matches" : " doesn't match"));
     if (matches)
@@ -799,6 +830,7 @@ function createListingFile(files, filename)
 /*
   Creates a FilesStats (with stats from the filesystem) from the
   local profile files.
+  If a file doesn't exist, no entry will be returned for that file.
 
   @param  checkFiles  FilesList  List of files to be checked
   @result  FilesStats  filesystem stats of the files
