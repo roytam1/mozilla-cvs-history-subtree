@@ -48,8 +48,11 @@
 #   define PR_FALSE false
 
     struct nsCRT {
-	static int strcmp(const char *a, const char *b) {return ::strcmp(a,b);}
 	static int strlen(const char *a) {return ::strlen(a);}
+	static int strcmp(const char *a, const char *b) {return ::strcmp(a,b);}
+	static int memcmp(const char *a, const char *b, int c) {
+	    return ::memcmp(a,b,c);
+	}
     };
 #else
 #   include "nsCRT.h"
@@ -107,7 +110,8 @@ nsStringMap::newNode()
 nsStringMap::Patricia *
 nsStringMap::searchDown(BitTester &key)
 {
-    Patricia *x = &head;
+    // The head node only branches to the left, so we can optimize here.
+    Patricia *x = head.l;
 
     PRUint32 lastBits;
 
@@ -131,7 +135,7 @@ nsStringMap::Get(const char *str)
 
     Patricia *t = searchDown(key);
 
-    if(!nsCRT::strcmp(t->key, str)) {
+    if(!key.strcmp(t->key)) {
 	return t->obj;
     }
 
@@ -145,7 +149,7 @@ nsStringMap::Put(const char *str, void *obj)
 
     Patricia *t = searchDown(key);
 
-    if(!nsCRT::strcmp(str, t->key)) {
+    if(!key.strcmp(t->key)) {
 	t->obj = obj;
 	return PR_TRUE;
     }
@@ -153,7 +157,7 @@ nsStringMap::Put(const char *str, void *obj)
     // This is somewhat ugly.  We need to find the maximum bit position that
     // differs, but this is complicated by the fact that we have random length
     // data.  Assume that data past the end of the string is 0.
-    const PRUint32 klen = nsCRT::strlen(str);
+    const PRUint32 klen = key.strlen();
     const PRUint32 tlen = nsCRT::strlen(t->key);
     PRUint32   bpos;
     if(klen>tlen) {
@@ -233,13 +237,15 @@ PRBool etest(const char *key, void *data, void *closure)
 int main()
 {
     nsStringMap map;
-    char *strings[] = {
-	"I am number 1 string",
-	"I am number 2 string",
-	"I am number 3 string",
-	"a different string",
-	"a similar string",
-	0
+    const char *strings[] = {
+      "I am number 1 string",
+      "I am number 2 string",
+      "I am number 3 string",
+      "a different string",
+      "a similar string",
+      "I am a very long string and I want to make sure we can handle this",
+      "I am a very long string and I want to make sure we can handle this too",
+      0
     };
 
     int idx;

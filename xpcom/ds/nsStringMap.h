@@ -60,22 +60,23 @@ public:
 	void       *obj;
     };
 
-    // The BitTester class is a bit overengineered.  It tries to avoid
-    // calculating the stringlength ahead of time and does it on the fly
-    // in the hope that it will not have to go all the way to the end of
-    // the string.  It turns out that on the first insert into the Patricia
-    // tree, we go all the way to the end, so we are really just complicating
-    // things.  I am going to simplify this in the future.  Here is the
-    // original comment:
-    //
     // The BitTester class is used to test a particular bit position in a 
     // 0 terminated string of unknown length.  Bits after the end of the
     // string are treated as zero
     class BitTester {
-	PRUint32    so_far;
+	PRUint32    slen;
 	const char *cstr;
     public:
-	BitTester(const char *s) : so_far(0), cstr(s) {}
+	BitTester(const char *s) : slen(nsCRT::strlen(s)), cstr(s) {}
+
+	// We dont know how long ostr is, but by including the terminating
+	// 0 character in the comparison we cover the case where str is a
+	// substring of ostr.
+	PRUint32 strcmp(const char *ostr) const {
+	    return nsCRT::memcmp(cstr, ostr, slen+1);
+	}
+
+	PRUint32 strlen() const {return slen;}
 
 	static PRBool isset_checked(const char *str, PRUint32 idx) {
 	    return (str[idx/8] & (1<<(idx & 7))) != 0;
@@ -88,9 +89,7 @@ public:
 
 	PRBool isset(PRUint32 idx) {
 	    const PRUint32 base = idx/8;
-	    for(;so_far<base; ++so_far) {
-		if(cstr[so_far]==0) return 0;
-	    }
+	    if(base>=slen) return 0;
 	    return (cstr[base] & (1<<(idx & 7))) != 0;
 	}
     };
