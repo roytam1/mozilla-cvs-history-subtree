@@ -73,6 +73,7 @@ XP_LIBS		+= \
 		$(ZLIB_LIBS) \
 		$(MOZ_GDK_PIXBUF_LIBS) \
 		$(MOZ_XIE_LIBS) \
+		$(MOZ_XPRINT_LDFLAGS) \
 		$(NULL)
 
 ifdef MOZ_PSM
