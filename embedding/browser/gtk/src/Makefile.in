@@ -37,7 +37,6 @@ CPPSRCS		= \
 		EmbedContentListener.cpp \
 		EmbedEventListener.cpp \
 		EmbedWindowCreator.cpp \
-		EmbedPrompter.cpp \
 		EmbedStream.cpp
 
 SHARED_LIBRARY_LIBS= \
