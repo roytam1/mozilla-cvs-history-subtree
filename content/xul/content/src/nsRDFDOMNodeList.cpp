@@ -139,12 +139,8 @@ nsRDFDOMNodeList::GetLength(PRUint32* aLength)
 NS_IMETHODIMP
 nsRDFDOMNodeList::Item(PRUint32 aIndex, nsIDOMNode** aReturn)
 {
-    PRUint32 cnt;
-    nsresult rv = mElements->Count(&cnt);
-    if (NS_FAILED(rv)) return rv;
-
-    if (aIndex >= (PRUint32) cnt)
-        return NS_ERROR_INVALID_ARG;
+    // It's ok to access past the end of the array here, if we do that
+    // we simply return nsnull, as per the DOM spec.
 
     // Cast is okay because we're in a closed system.
     *aReturn = (nsIDOMNode*) mElements->ElementAt(aIndex);
