@@ -39,8 +39,8 @@
 #include "nsCOMPtr.h"
 #include "nsISVGRenderer.h"
 #include "nsSVGLibartPathGeometry.h"
-//#include "nsSVGGDIPlusGlyphGeometry.h"
-//#include "nsSVGGDIPlusGlyphMetrics.h"
+#include "nsSVGLibartGlyphGeometry.h"
+#include "nsSVGLibartGlyphMetrics.h"
 #include "nsSVGLibartCanvas.h"
 #include "nsSVGLibartRegion.h"
 
@@ -111,8 +111,7 @@ NS_IMETHODIMP
 nsSVGRendererLibart::CreateGlyphMetrics(nsISVGGlyphMetricsSource *src,
                                         nsISVGRendererGlyphMetrics **_retval)
 {
-//  return NS_NewSVGGDIPlusGlyphMetrics(_retval, src);
-  return NS_ERROR_FAILURE;
+  return NS_NewSVGLibartGlyphMetrics(_retval, src);
 }
 
 /* nsISVGRendererGlyphGeometry createGlyphGeometry (in nsISVGGlyphGeometrySource src); */
@@ -120,8 +119,7 @@ NS_IMETHODIMP
 nsSVGRendererLibart::CreateGlyphGeometry(nsISVGGlyphGeometrySource *src,
                                          nsISVGRendererGlyphGeometry **_retval)
 {
-//  return NS_NewSVGGDIPlusGlyphGeometry(_retval, src);
-  return NS_ERROR_FAILURE;
+  return NS_NewSVGLibartGlyphGeometry(_retval, src);
 }
 
 /* [noscript] nsISVGRendererCanvas createCanvas (in nsIRenderingContext ctx,
