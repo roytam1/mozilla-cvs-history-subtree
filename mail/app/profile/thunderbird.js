@@ -40,6 +40,14 @@ pref("general.useragent.vendorSub",
 #expand __APP_VERSION__
 );
 
+// This is this application's unique identifier used by the Extension System to identify
+// this application as an extension target, and by the SmartUpdate system to identify
+// this application to the Update server.
+pref("app.id", "{3550f703-e582-4d05-9a08-453d09bdfdc6}");
+pref("app.version", 
+#expand __APP_VERSION__
+);
+
 #ifdef XP_MACOSX
 pref("mail.biff.animate_dock_icon", false);
 #endif
