@@ -818,8 +818,6 @@ function MsgDeleteFolder()
 }
 
 // 3pane related commands.  Need to go in own file.  Putting here for the moment.
-var nsMsgNavigationType = Components.interfaces.nsMsgNavigationType;
-
 function MsgNextMessage()
 {
 	GoNextMessage(nsMsgNavigationType.nextMessage, false );
