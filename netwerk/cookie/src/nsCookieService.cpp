@@ -1229,6 +1229,7 @@ nsCookieService::AddInternal(nsCookie   *aCookie,
     if (oldCookie) {
       aCookie->SetCreationTime(oldCookie->CreationTime());
     }
+
   } else {
     // check if cookie has already expired
     if (!aCookie->IsSession() && aCookie->Expiry() <= aCurrentTime) {
