@@ -471,43 +471,226 @@ size_t Winstrftime(char *strDest, size_t maxsize, const char *format, const stru
                         }
                         break;
                     case 'm':
-                        PR_ASSERT(0);
+                        {
+                            int getRes = 0;
+
+                            /*
+                             * Month in decimal.
+                             */
+                            traverse++;
+                            getRes = GetDateFormatW(LOCALE_USER_DEFAULT, 0, &sysTime, (PR_TRUE == poundOutput) ? _T("M") : _T("MM"), buf, sizeof(buf) / sizeof(WCHAR));
+                            if(0 != getRes)
+                            {
+                                helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                            }
+                            else
+                            {
+                                errorOut = PR_TRUE;
+                            }
+                        }
                         break;
                     case 'M':
-                        PR_ASSERT(0);
+                        {
+                            int getRes = 0;
+
+                            /*
+                             * Minute in decimal.
+                             */
+                            traverse++;
+                            getRes = GetTimeFormatW(LOCALE_USER_DEFAULT, 0, &sysTime, (PR_TRUE == poundOutput) ? _T("m") : _T("mm"), buf, sizeof(buf) / sizeof(WCHAR));
+                            if(0 != getRes)
+                            {
+                                helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                            }
+                            else
+                            {
+                                errorOut = PR_TRUE;
+                            }
+                        }
                         break;
                     case 'p':
-                        PR_ASSERT(0);
+                        {
+                            int getRes = 0;
+
+                            /*
+                             * 12 hour indicator.
+                             */
+                            traverse++;
+                            getRes = GetTimeFormatW(LOCALE_USER_DEFAULT, 0, &sysTime, _T("tt"), buf, sizeof(buf) / sizeof(WCHAR));
+                            if(0 != getRes)
+                            {
+                                helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                            }
+                            else
+                            {
+                                errorOut = PR_TRUE;
+                            }
+                        }
                         break;
                     case 'S':
-                        PR_ASSERT(0);
+                        {
+                            int getRes = 0;
+
+                            /*
+                             * Second in decimal.
+                             */
+                            traverse++;
+                            getRes = GetTimeFormatW(LOCALE_USER_DEFAULT, 0, &sysTime, (PR_TRUE == poundOutput) ? _T("s") : _T("ss"), buf, sizeof(buf) / sizeof(WCHAR));
+                            if(0 != getRes)
+                            {
+                                helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                            }
+                            else
+                            {
+                                errorOut = PR_TRUE;
+                            }
+                        }
                         break;
                     case 'U':
-                        PR_ASSERT(0);
+                        {
+                            int weekOfYear = 0;
+                            int dayAdjust = convertTM.tm_yday;
+
+                            /*
+                             * Week of year in decimal.
+                             * Sunday as first day.
+                             */
+                            traverse++;
+                            if(dayAdjust >= convertTM.tm_wday)
+                            {
+                                dayAdjust -= convertTM.tm_wday;
+                            }
+                            else
+                            {
+                                dayAdjust = 0;
+                            }
+
+                            weekOfYear = dayAdjust / 7;
+
+                            wsprintfW(buf, (PR_TRUE == poundOutput) ? _T("d") : _T(".2d"), weekOfYear);
+                            helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                        }
                         break;
                     case 'w':
-                        PR_ASSERT(0);
+                        {
+                            /*
+                             * Weekday as decimal.
+                             */
+                            traverse++;
+                            wsprintfW(buf, _T("d"), convertTM.tm_wday);
+                            helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                        }
                         break;
                     case 'W':
-                        PR_ASSERT(0);
+                        {
+                            int weekOfYear = 0;
+                            int dayOfWeek = convertTM.tm_wday;
+                            int dayAdjust = convertTM.tm_yday;
+
+                            /*
+                             * Week of year in decimal.
+                             * Monday as first day.
+                             */
+                            traverse++;
+                            if(0 == dayOfWeek)
+                            {
+                                dayOfWeek = 6;
+                            }
+                            else
+                            {
+                                dayOfWeek--;
+                            }
+                            if(dayAdjust >= dayOfWeek)
+                            {
+                                dayAdjust -= dayOfWeek;
+                            }
+                            else
+                            {
+                                dayAdjust = 0;
+                            }
+
+                            weekOfYear = dayAdjust / 7;
+
+                            wsprintfW(buf, (PR_TRUE == poundOutput) ? _T("d") : _T(".2d"), weekOfYear);
+                            helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                        }
                         break;
                     case 'x':
-                        PR_ASSERT(0);
+                        {
+                            int getRes = 0;
+
+                            /*
+                             * Date representation for locale.
+                             */
+                            traverse++;
+                            getRes = GetDateFormatW(LOCALE_USER_DEFAULT, (PR_TRUE == poundOutput) ? DATE_LONGDATE : DATE_SHORTDATE, &sysTime, NULL, buf, sizeof(buf) / sizeof(WCHAR));
+                            if(0 != getRes)
+                            {
+                                helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                            }
+                            else
+                            {
+                                errorOut = PR_TRUE;
+                            }
+                        }
                         break;
                     case 'X':
-                        PR_ASSERT(0);
+                        {
+                            int getRes = 0;
+
+                            /*
+                             * Time representation for locale.
+                             */
+                            traverse++;
+                            getRes = GetTimeFormatW(LOCALE_USER_DEFAULT, 0, &sysTime, NULL, buf, sizeof(buf) / sizeof(WCHAR));
+                            if(0 != getRes)
+                            {
+                                helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                            }
+                            else
+                            {
+                                errorOut = PR_TRUE;
+                            }
+                        }
                         break;
                     case 'y':
-                        PR_ASSERT(0);
+                        {
+                            /*
+                             * Year without century in decimal. (00-99)
+                             */
+                            traverse++;
+                            wsprintfW(buf, (PR_TRUE == poundOutput) ? _T("d") : _T(".2d"), convertTM.tm_year % 100);
+                            helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                        }
                         break;
                     case 'Y':
-                        PR_ASSERT(0);
+                        {
+                            int getRes = 0;
+
+                            /*
+                             * Year with century, in decimal.
+                             */
+                            getRes = GetDateFormatW(LOCALE_USER_DEFAULT, 0, &sysTime, _T("YYYY"), buf, sizeof(buf) / sizeof(WCHAR));
+                            if(0 != getRes)
+                            {
+                                helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                            }
+                            else
+                            {
+                                errorOut = PR_TRUE;
+                            }
+                        }
                         break;
                     case 'z':
-                        PR_ASSERT(0);
-                        break;
                     case 'Z':
-                        PR_ASSERT(0);
+                        {
+                            /*
+                             * Time zone name or abbreviation, or nothing if not known.
+                             * We could possibly do something here with GetTimeZoneInformation,
+                             *  but is that relevant to the tm passed in?
+                             */
+                            traverse++;
+                        }
                         break;
                     case '%':
                         {
