@@ -92,17 +92,14 @@
     <command id="cmd_textZoomEnlarge" oncommand="ZoomManager.prototype.getInstance().enlarge();"/>
     <command id="Browser:OpenLocation" oncommand="openLocation();"/>
     
+    <command id="Tools:Downloads" oncommand="toOpenWindowByType('Download:Manager', 'chrome://mozapps/content/downloads/downloads.xul');"/>
+    
 #ifdef XP_MACOSX
     <command id="minimizeWindow" label="&minimizeWindow.label;" disabled="true"/>
 #endif
   </commandset>
 
   <broadcasterset id="mainBroadcasterSet">
-    <broadcaster id="viewDownloadsSidebar" autoCheck="false" label="&downloadsButton.label;"
-                 type="checkbox" group="sidebar" sidebarurl="chrome://browser/content/downloads/downloadPanel.xul"
-                 sidebartitle="&currentDownloads.label;"
-                 oncommand="toggleSidebar('viewDownloadsSidebar');"/>
-
     <broadcaster id="viewBookmarksSidebar" autoCheck="false" label="&bookmarksButton.label;"
                  type="checkbox" group="sidebar" sidebarurl="chrome://browser/content/bookmarks/bookmarksPanel.xul"
                  oncommand="toggleSidebar('viewBookmarksSidebar');"/>
@@ -205,7 +202,7 @@
     <key id="key_textZoomEnlarge" key="&textZoomEnlargeCmd.commandkey;"  command="cmd_textZoomEnlarge" modifiers="accel"/>
     <key                          key="&textZoomEnlargeCmd.commandkey2;" command="cmd_textZoomEnlarge" modifiers="accel"/>
     <key                          key="&textZoomResetCmd.commandkey;"    oncommand="ZoomManager.prototype.getInstance().reset();"   modifiers="accel"/>
-    <key id="key_openDownloadsSidebar" key="&openDownloadsSidebar.commandkey;" command="viewDownloadsSidebar" modifiers="accel"/>
+    <key id="key_openDownloads"   key="&downloads.commandkey;"           command="Tools:Downloads" modifiers="accel"/>
     
 #ifdef XP_MACOSX
     <key id="key_minimizeWindow" command="minimizeWindow" key="&minimizeWindow.key;" modifiers="accel"/>
