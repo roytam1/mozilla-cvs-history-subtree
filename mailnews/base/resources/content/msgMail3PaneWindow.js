@@ -699,7 +699,7 @@ function OnLoadFolderPane()
 
     var folderUnreadCol = document.getElementById("folderUnreadCol");
     var hidden = folderUnreadCol.getAttribute("hidden");
-    if (!hidden)
+    if (hidden != "true")
     {
         var folderNameCell = document.getElementById("folderNameCell");
         folderNameCell.setAttribute("label", "?folderTreeSimpleName");
