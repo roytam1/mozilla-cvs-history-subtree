@@ -56,24 +56,22 @@ XP_LIBS		= \
 		-Wl,--end-group \
 		$(OJI_LIBS) \
 		$(NSPR_LIBS) \
-		-L/usr/X11R6/lib \
-		-lgdk_pixbuf \
-		-lXIE \
-		-lICE \
-		-lSM \
-		-lX11 \
-		-lXext \
-		-lXi \
-		-lXt \
-		-ldl \
-		-lgtk \
-		-lgdk \
-		-lglib \
-		-lgmodule \
-		-liberty \
-		-ljpeg \
-		-lpng \
-		-lm \
+		$(NULL)
+
+ifndef NO_STATIC_LIB
+XP_LIBS		+= \
+		$(TK_LIBS) \
+		$(MOZ_GDK_PIXBUF_LIBS) \
+		-L/usr/X11R6/bin -lXt \
+		$(JPEG_LIBS) \
+		$(MNG_LIBS) \
+		$(PNG_LIBS) \
+		$(ZLIB_LIBS) \
+		$(NULL)
+endif
+
+XP_LIBS 	+= \
+		$(OS_LIBS) \
 		$(NULL)
 
 ifdef MOZ_FULLCIRCLE
