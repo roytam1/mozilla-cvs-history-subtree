@@ -334,9 +334,9 @@ function OnLoadMessageWindowDelayed(loadCustomMessage)
   if (loadCustomMessage)
     gDBView.loadMessageByUrl(gCurrentMessageUri);
   else
-{
-  var msgKey = extractMsgKeyFromURI(gCurrentMessageUri); 
-  gDBView.loadMessageByMsgKey(msgKey); 
+  {
+    var msgKey = extractMsgKeyFromURI(gCurrentMessageUri); 
+    LoadMessageByViewIndex(gDBView.findIndexFromKey(msgKey, true));
   }
   gNextMessageViewIndexAfterDelete = gDBView.msgToSelectAfterDelete; 
   UpdateStandAloneMessageCounts();
@@ -1130,10 +1130,7 @@ function GetDBView()
 
 function LoadMessageByMsgKey(messageKey)
 {
-  gDBView.loadMessageByMsgKey(messageKey);
-  // we only want to update the toolbar if there was no previous selected message.
-  if (nsMsgKey_None == gDBView.keyForFirstSelectedMessage)
-    UpdateMailToolbar("update toolbar for message Window");
+  LoadMessageByViewIndex(gDBView.findIndexFromKey(messageKey, true));
 }
 
 function LoadMessageByViewIndex(viewIndex)
