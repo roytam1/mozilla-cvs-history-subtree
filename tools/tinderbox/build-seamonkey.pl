@@ -16,8 +16,8 @@ sub PrintUsage {
      ."          --configfile CONFIGFILENAME --version\n";
 }
 
-&ParseArgs;
 &InitVars;
+&ParseArgs;
 &ConditionalArgs;
 &GetSystemInfo;
 &SetupEnv;
