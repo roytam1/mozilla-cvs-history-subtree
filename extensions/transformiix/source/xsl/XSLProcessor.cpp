@@ -59,7 +59,7 @@ XSLProcessor::XSLProcessor() {
 
     xslVersion.append("1.0");
     appName.append("TransforMiiX");
-    appVersion.append("1.0 [beta v20000222]");
+    appVersion.append("1.0 [beta v20000322]");
 
 
     //-- create XSL element types
