@@ -24,6 +24,7 @@
  */
 
 #include "Expr.h"
+#include "txIXPathContext.h"
 
 /**
  * This class represents a FunctionCall as defined by the XSL Working Draft
@@ -40,34 +41,31 @@ const String FunctionCall::INVALID_PARAM_VALUE =
 /**
  * Creates a new FunctionCall
 **/
-FunctionCall::FunctionCall() {
-    this->name = "void";
-} //-- FunctionCall
+FunctionCall::FunctionCall() : name("void")
+{    
+}
 
 /**
  * Creates a new FunctionCall with the given function
  * Note: The object references in parameters will be deleted when this
  * FunctionCall gets destroyed.
 **/
-FunctionCall::FunctionCall(const String& name)
+FunctionCall::FunctionCall(const String& aName):name(aName)
 {
-    //-- copy name
-    this->name = name;
-} //-- FunctionCall
+}
 
 /**
  * Destructor
 **/
 FunctionCall::~FunctionCall()
 {
-    ListIterator* iter = params.iterator();
-    while (iter->hasNext()) {
-        iter->next();
-        Expr* expr = (Expr*) iter->remove();
+    txListIterator iter(&params);
+    while (iter.hasNext()) {
+        iter.next();
+        Expr* expr = (Expr*) iter.remove();
         delete expr;
     }
-    delete iter;
-} //-- ~FunctionCall
+} // ~FunctionCall
 
   //------------------/
  //- Public Methods -/
@@ -77,49 +75,23 @@ FunctionCall::~FunctionCall()
  * Adds the given parameter to this FunctionCall's parameter list
  * @param expr the Expr to add to this FunctionCall's parameter list
 **/
-void FunctionCall::addParam(Expr* expr)
+nsresult FunctionCall::addParam(Expr* expr)
 {
     if (expr)
       params.add(expr);
+    return NS_OK;
 } //-- addParam
-
-/**
- * Returns the default priority of this Expr based on the given Node,
- * context Node, and ContextState.
-**/
-double FunctionCall::getDefaultPriority(Node* node,
-                                        Node* context,
-                                        ContextState* cs)
-{
-    return 0.5;
-} //-- getDefaultPriority
-
-/**
- * Determines whether this Expr matches the given node within
- * the given context
-**/
-MBool FunctionCall::matches(Node* node, Node* context, ContextState* cs)
-{
-    MBool result = MB_FALSE;
-    ExprResult* exprResult = evaluate(node, cs);
-    if (exprResult->getResultType() == ExprResult::NODESET) {
-        NodeSet* nodes = (NodeSet*)exprResult;
-        result = (nodes->contains(node));
-    }
-    delete exprResult;
-    return result;
-} //-- matches
 
 /**
  * Evaluates the given Expression and converts it's result to a String.
  * The value is appended to the given destination String
 **/
-void FunctionCall::evaluateToString(Expr* expr, Node* context, 
-                                    ContextState* cs, String& dest)
+void FunctionCall::evaluateToString(Expr* expr, txIEvalContext* aContext,
+                                    String& dest)
 {
     if (!expr)
         return;
-    ExprResult* exprResult = expr->evaluate(context, cs);
+    ExprResult* exprResult = expr->evaluate(aContext);
     exprResult->stringValue(dest);
     delete exprResult;
 } //-- evaluateToString
@@ -127,13 +99,12 @@ void FunctionCall::evaluateToString(Expr* expr, Node* context,
 /**
  * Evaluates the given Expression and converts it's result to a number.
 **/
-double FunctionCall::evaluateToNumber(Expr* expr, Node* context,
-                                      ContextState* cs)
+double FunctionCall::evaluateToNumber(Expr* expr, txIEvalContext* aContext)
 {
     double result = Double::NaN;
     if (!expr)
       return result;
-    ExprResult* exprResult = expr->evaluate(context, cs);
+    ExprResult* exprResult = expr->evaluate(aContext);
     result =  exprResult->numberValue();
     delete exprResult;
     return result;
@@ -144,24 +115,23 @@ double FunctionCall::evaluateToNumber(Expr* expr, Node* context,
  * If the result is not a NodeSet NULL is returned.
  */
 NodeSet* FunctionCall::evaluateToNodeSet(Expr* aExpr,
-                                         Node* aContext,
-                                         ContextState* aCs)
+                                         txIEvalContext* aContext)
 {
     NS_ASSERTION(aExpr, "Missing expression to evaluate");
 
-    ExprResult* exprResult = aExpr->evaluate(aContext, aCs);
+    ExprResult* exprResult = aExpr->evaluate(aContext);
     if (!exprResult)
         return 0;
 
     if (exprResult->getResultType() != ExprResult::NODESET) {
         String err("NodeSet expected as argument");
-        aCs->recieveError(err);
+        aContext->receiveError(err, txLevelError);
         delete exprResult;
         return 0;
     }
 
     NodeSet* nodes = (NodeSet*)exprResult;
-    aCs->sortByDocumentOrder(nodes);
+    nodes->sortByDocumentOrder();
 
     return nodes;
 }
@@ -171,13 +141,13 @@ NodeSet* FunctionCall::evaluateToNodeSet(Expr* aExpr,
 **/
 MBool FunctionCall::requireParams (int paramCountMin,
                                    int paramCountMax,
-                                   ContextState* cs)
+                                   txIEvalContext* aContext)
 {
     int argc = params.getLength();
     if ((argc < paramCountMin) || (argc > paramCountMax)) {
         String err(INVALID_PARAM_COUNT);
         toString(err);
-        cs->recieveError(err);
+        aContext->receiveError(err, txLevelError);
         return MB_FALSE;
     }
     return MB_TRUE;
@@ -186,13 +156,13 @@ MBool FunctionCall::requireParams (int paramCountMin,
 /**
  * Called to check number of parameters
 **/
-MBool FunctionCall::requireParams(int paramCountMin, ContextState* cs)
+MBool FunctionCall::requireParams(int paramCountMin, txIEvalContext* aContext)
 {
     int argc = params.getLength();
     if (argc < paramCountMin) {
         String err(INVALID_PARAM_COUNT);
         toString(err);
-        cs->recieveError(err);
+        aContext->receiveError(err, txLevelError);
         return MB_FALSE;
     }
     return MB_TRUE;
@@ -211,16 +181,15 @@ void FunctionCall::toString(String& dest)
     dest.append(this->name);
     dest.append('(');
     //-- add parameters
-    ListIterator* iterator = params.iterator();
+    txListIterator iterator(&params);
     int argc = 0;
-    while (iterator->hasNext()) {
+    while (iterator.hasNext()) {
         if (argc > 0)
             dest.append(',');
-        Expr* expr = (Expr*)iterator->next();
+        Expr* expr = (Expr*)iterator.next();
         expr->toString(dest);
         ++argc;
     }
-    delete iterator;
     dest.append(')');
-} //-- toString
+} // toString
 

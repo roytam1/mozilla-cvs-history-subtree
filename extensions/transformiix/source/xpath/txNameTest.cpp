@@ -25,20 +25,13 @@
 
 #include "Expr.h"
 #include "txAtoms.h"
+#include "txIXPathContext.h"
 
-txNameTest::txNameTest(String& aName, Node::NodeType aNodeType)
-    :mNodeType(aNodeType)
+txNameTest::txNameTest(String& aPrefix, String& aLocalName, PRUint32 aNSID,
+                       Node::NodeType aNodeType)
+    :mPrefix(aPrefix), mNamespace(aNSID), mNodeType(aNodeType)
 {
-    int idx = aName.indexOf(':');
-    if (idx >= 0) {
-        aName.subString(0, idx, mPrefix);
-        String localName;
-        aName.subString(idx+1, localName);
-        mLocalName = TX_GET_ATOM(localName);
-    }
-    else {
-        mLocalName = TX_GET_ATOM(aName);
-    }
+    mLocalName = TX_GET_ATOM(aLocalName);
 }
 
 txNameTest::~txNameTest()
@@ -49,26 +42,19 @@ txNameTest::~txNameTest()
 /*
  * Determines whether this txNodeTest matches the given node
  */
-MBool txNameTest::matches(Node* aNode, ContextState* aCs)
+MBool txNameTest::matches(Node* aNode, txIMatchContext* aContext)
 {
     if (!aNode || aNode->getNodeType() != mNodeType)
         return MB_FALSE;
 
     // Totally wild?
-    if (mLocalName == txXPathAtoms::_asterix && mPrefix.isEmpty())
+    if (mLocalName == txXPathAtoms::_asterix &&
+        !(kNameSpaceID_None == mNamespace))
         return MB_TRUE;
 
     // Compare namespaces
-    if (mPrefix.isEmpty()) {
-        if (aNode->getNamespaceID() != kNameSpaceID_None)
-            return MB_FALSE;
-    }
-    else {
-        String nsURI;
-        aCs->getNameSpaceURIFromPrefix(mPrefix, nsURI);
-        if(!aNode->getNamespaceURI().isEqual(nsURI))
-            return MB_FALSE;
-    }
+    if (aNode->getNamespaceID() != mNamespace)
+        return MB_FALSE;
 
     // Name wild?
     if (mLocalName == txXPathAtoms::_asterix)
@@ -89,7 +75,7 @@ MBool txNameTest::matches(Node* aNode, ContextState* aCs)
 double txNameTest::getDefaultPriority()
 {
     if (mLocalName == txXPathAtoms::_asterix) {
-        if (mPrefix.isEmpty())
+        if (kNameSpaceID_None == mNamespace)
             return -0.5;
         return -0.25;
     }
@@ -97,13 +83,60 @@ double txNameTest::getDefaultPriority()
 }
 
 /*
+ * Returns the NodeSet of nodes matching this name test with
+ * the XPathParent being the given Node.
+ */
+nsresult txNameTest::evalStep(Node* aNode, txIMatchContext* aContext,
+                              NodeSet* aResult)
+{
+    Node::NodeType type = (Node::NodeType)aNode->getNodeType();
+    switch (mNodeType) {
+        case Node::ELEMENT_NODE:
+            if (Node::ELEMENT_NODE == type) {
+                Node* child = aNode->getFirstChild();
+                while (child) {
+                    if (matches(child, aContext)) {
+                        aResult->add(child);
+                    }
+                    child = child->getNextSibling();
+                }
+            }
+            else if (Node::DOCUMENT_NODE == type) {
+                Element* docElem = ((Document*)aNode)->getDocumentElement();
+                if (matches(docElem, aContext)) {
+                    aResult->add(docElem);
+                }
+            }
+            break;
+        default:
+            break;
+    }
+    return NS_OK;
+}
+
+/*
+ * Returns a NodeSet of nodes matching this step and having
+ * the context node of aContext as XPathParent
+ */
+ExprResult* txNameTest::evaluate(txIEvalContext* aContext)
+{
+    NodeSet* result = new NodeSet();
+    if (!result) {
+        // XXX error out of mem
+        return 0;
+    }
+    evalStep(aContext->getContextNode(), aContext, result);
+    return result;
+}
+          
+/*
  * Returns the String representation of this txNodeTest.
  * @param aDest the String to use when creating the string representation.
  *              The string representation will be appended to the string.
  */
 void txNameTest::toString(String& aDest)
 {
-    if (!mPrefix.isEmpty()) {
+    if (kNameSpaceID_None != mNamespace) {
         aDest.append(mPrefix);
         aDest.append(':');
     }

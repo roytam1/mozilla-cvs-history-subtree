@@ -1,4 +1,4 @@
-/*
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -41,16 +41,16 @@
 /**
  * Creates a new MultiplicativeExpr using the given operator
 **/
-MultiplicativeExpr::MultiplicativeExpr(Expr* leftExpr, Expr* rightExpr, short op) {
-    this->op = op;
-    this->leftExpr = leftExpr;
-    this->rightExpr = rightExpr;
-} //-- MultiplicativeExpr
+MultiplicativeExpr::MultiplicativeExpr(Expr* aLeftExpr, Expr* aRightExpr,
+                                       short aOp)
+    :mLeftExpr(aLeftExpr), mRightExpr(aRightExpr), mOp(aOp)
+{
+}
 
 MultiplicativeExpr::~MultiplicativeExpr() {
-    delete leftExpr;
-    delete rightExpr;
-} //-- ~MultiplicativeExpr
+    delete mLeftExpr;
+    delete mRightExpr;
+} // ~MultiplicativeExpr
 
 /**
  * Evaluates this Expr based on the given context node and processor state
@@ -59,28 +59,29 @@ MultiplicativeExpr::~MultiplicativeExpr() {
  * for evaluation
  * @return the result of the evaluation
 **/
-ExprResult* MultiplicativeExpr::evaluate(Node* context, ContextState* cs) {
-
-
+ExprResult* MultiplicativeExpr::evaluate(txIEvalContext* aContext)
+{
     double rightDbl = Double::NaN;
     ExprResult* exprRes = 0;
 
-    if ( rightExpr ) {
-        exprRes = rightExpr->evaluate(context, cs);
-        if ( exprRes ) rightDbl = exprRes->numberValue();
+    if (mRightExpr) {
+        exprRes = mRightExpr->evaluate(aContext);
+        if (exprRes)
+            rightDbl = exprRes->numberValue();
         delete exprRes;
     }
 
     double leftDbl = Double::NaN;
-    if ( leftExpr ) {
-        exprRes = leftExpr->evaluate(context, cs);
-        if ( exprRes ) leftDbl = exprRes->numberValue();
+    if (mLeftExpr) {
+        exprRes = mLeftExpr->evaluate(aContext);
+        if (exprRes)
+            leftDbl = exprRes->numberValue();
         delete exprRes;
     }
 
     double result = 0;
 
-    switch ( op ) {
+    switch (mOp) {
         case DIVIDE:
             if (rightDbl == 0) {
 #ifdef XP_PC
@@ -128,24 +129,27 @@ ExprResult* MultiplicativeExpr::evaluate(Node* context, ContextState* cs) {
  * other #toString() methods for Expressions.
  * @return the String representation of this Expr.
 **/
-void MultiplicativeExpr::toString(String& str) {
+void MultiplicativeExpr::toString(String& aDest)
+{
+    if (mLeftExpr)
+        mLeftExpr->toString(aDest);
+    else
+        aDest.append("null");
 
-    if ( leftExpr ) leftExpr->toString(str);
-    else str.append("null");
-
-    switch ( op ) {
+    switch (mOp) {
         case DIVIDE:
-            str.append(" div ");
+            aDest.append(" div ");
             break;
         case MODULUS:
-            str.append(" mod ");
+            aDest.append(" mod ");
             break;
         default:
-            str.append(" * ");
+            aDest.append(" * ");
             break;
     }
-    if ( rightExpr ) rightExpr->toString(str);
-    else str.append("null");
-
-} //-- toString
+    if (mRightExpr)
+        mRightExpr->toString(aDest);
+    else
+        aDest.append("null");
+} // toString
 

@@ -1,4 +1,4 @@
-/*
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- 
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -32,27 +32,29 @@
 /**
  * Create a new AttributeValueTemplate
 **/
-AttributeValueTemplate::AttributeValueTemplate() {};
+AttributeValueTemplate::AttributeValueTemplate()
+{};
 
 /**
  * Default destructor
 **/
-AttributeValueTemplate::~AttributeValueTemplate() {
-    ListIterator* iter = expressions.iterator();
-    while ( iter->hasNext() ) {
-        iter->next(); //advance iterator to allow remove
-        Expr* expr = (Expr*)iter->remove();
+AttributeValueTemplate::~AttributeValueTemplate()
+{
+    ListIterator iter(&mExpressions);
+    while (iter.hasNext()) {
+        iter.next(); //advance iterator to allow remove
+        Expr* expr = (Expr*)iter.remove();
         delete expr;
     }
-    delete iter;
-
-} //-- ~AttributeValueTemplate
+} // ~AttributeValueTemplate
 
 /**
  * Adds the given Expr to this AttributeValueTemplate
 **/
-void AttributeValueTemplate::addExpr(Expr* expr) {
-    if (expr) expressions.add(expr);
+void AttributeValueTemplate::addExpr(Expr* aExpr)
+{
+    if (aExpr)
+        mExpressions.add(aExpr);
 } //-- addExpr
 
 /**
@@ -62,18 +64,18 @@ void AttributeValueTemplate::addExpr(Expr* expr) {
  * for evaluation
  * @return the result of the evaluation
 **/
-ExprResult* AttributeValueTemplate::evaluate(Node* context, ContextState* cs) {
-    ListIterator* iter = expressions.iterator();
+ExprResult* AttributeValueTemplate::evaluate(txIEvalContext* aContext)
+{
+    txListIterator iter(&mExpressions);
     String result;
-    while ( iter->hasNext() ) {
-        Expr* expr = (Expr*)iter->next();
-        ExprResult* exprResult = expr->evaluate(context, cs);
+    while (iter.hasNext()) {
+        Expr* expr = (Expr*)iter.next();
+        ExprResult* exprResult = expr->evaluate(aContext);
         exprResult->stringValue(result);
         delete exprResult;
     }
-    delete iter;
     return new StringResult(result);
-} //-- evaluate
+} // evaluate
 
 /**
 * Returns the String representation of this Expr.
@@ -83,14 +85,13 @@ ExprResult* AttributeValueTemplate::evaluate(Node* context, ContextState* cs) {
 * other #toString() methods for Expressions.
 * @return the String representation of this Expr.
 **/
-void AttributeValueTemplate::toString(String& str) {
-    ListIterator* iter = expressions.iterator();
-    while ( iter->hasNext() ) {
-        str.append('{');
-        Expr* expr = (Expr*)iter->next();
-        expr->toString(str);
-        str.append('}');
+void AttributeValueTemplate::toString(String& aDest) {
+    txListIterator iter(&mExpressions);
+    while (iter.hasNext()) {
+        aDest.append('{');
+        Expr* expr = (Expr*)iter.next();
+        expr->toString(aDest);
+        aDest.append('}');
     }
-    delete iter;
-} //-- toString
+} // toString
 

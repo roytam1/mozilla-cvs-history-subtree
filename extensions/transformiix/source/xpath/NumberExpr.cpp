@@ -30,9 +30,9 @@
  //- NumberExpr -/
 //--------------/
 
-NumberExpr::NumberExpr(double dbl) {
-    _value = dbl;
-} //-- NumberExpr
+NumberExpr::NumberExpr(double dbl) : _value(dbl)
+{
+}
 
 /**
  * Evaluates this Expr based on the given context node and processor state
@@ -41,7 +41,8 @@ NumberExpr::NumberExpr(double dbl) {
  * for evaluation
  * @return the result of the evaluation
 **/
-ExprResult* NumberExpr::evaluate(Node* context, ContextState* cs) {
+ExprResult* NumberExpr::evaluate(txIEvalContext* aContext)
+{
    return new NumberResult(_value);
 } //-- evaluate
 
@@ -53,7 +54,8 @@ ExprResult* NumberExpr::evaluate(Node* context, ContextState* cs) {
  * other #toString() methods for Expressions.
  * @return the String representation of this Expr.
 **/
-void NumberExpr::toString(String& str) {
-    Double::toString(_value, str);
-} //-- toString
+void NumberExpr::toString(String& aDest)
+{
+    Double::toString(_value, aDest);
+}
 

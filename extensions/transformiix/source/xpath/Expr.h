@@ -1,4 +1,4 @@
-/*
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- 
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -34,7 +34,7 @@
 #ifndef TRANSFRMX_EXPR_H
 #define TRANSFRMX_EXPR_H
 
-
+#include "txError.h"
 #include "TxString.h"
 #include "ErrorObserver.h"
 #include "NodeSet.h"
@@ -50,61 +50,23 @@
   Much of this code was ported from XSL:P.
 */
 
-//necessary prototypes
-class FunctionCall;
+/*
+ * necessary prototypes
+ */
+class txIParseContext;
+class txIMatchContext;
+class txIEvalContext;
 
 typedef class Expr Pattern;
 typedef class Expr PatternExpr;
 
 
 /**
- * The expression context and state class used when evaluating XPath Expressions.
-**/
-class ContextState : public NamespaceResolver, public ErrorObserver {
-
-public:
-
-     /**
-      * Returns the value of a given variable binding within the current scope
-      * @param the name to which the desired variable value has been bound
-      * @return the ExprResult which has been bound to the variable with
-      *  the given name
-     **/
-    virtual ExprResult* getVariable(String& name) = 0;
-
-    /**
-     * Returns the Stack of context NodeSets
-     * @return the Stack of context NodeSets
-    **/
-    virtual Stack* getNodeSetStack() = 0;
-
-    virtual MBool isStripSpaceAllowed(Node* node) = 0;
-
-    /**
-     * Returns a call to the function that has the given name.
-     * This method is used for XPath Extension Functions.
-     * @return the FunctionCall for the function with the given name.
-    **/
-    virtual FunctionCall* resolveFunctionCall(const String& name) = 0;
-
-    /**
-     * Sorts the given NodeSet by DocumentOrder. 
-     * @param nodes the NodeSet to sort
-     *
-     * Note: I will be moving this functionality elsewhere soon
-    **/
-    virtual void sortByDocumentOrder(NodeSet* nodes) = 0;
-
-}; //-- ContextState
-
-
-/**
  * A Base Class for all XSL Expressions
 **/
-class Expr : public TxObject {
-
+class Expr : public TxObject
+{
 public:
-
     /**
      * Virtual destructor, important for subclasses
     **/
@@ -117,19 +79,7 @@ public:
      * for evaluation
      * @return the result of the evaluation
     **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs) = 0;
-
-    /**
-     * Determines whether this Expr matches the given node within
-     * the given context
-    **/
-    virtual MBool matches(Node* node, Node* context, ContextState* cs);
-
-    /**
-     * Returns the default priority of this Expr based on the given Node,
-     * context Node, and ContextState.
-    **/
-    virtual double getDefaultPriority(Node* node, Node* context, ContextState* cs);
+    virtual ExprResult* evaluate(txIEvalContext* aContext) = 0;
 
     /**
      * Returns the String representation of this Expr.
@@ -139,18 +89,82 @@ public:
      * other #toString() methods for Expressions.
      * @return the String representation of this Expr.
     **/
-    virtual void toString(String& str) = 0;
+    virtual void toString(String& aDest) = 0;
 
-}; //-- Expr
+};
+
+#define TX_DECL_EXPR \
+    ExprResult* evaluate(txIEvalContext* aContext); \
+    void toString(String& aDest)
+
+class txPattern : public TxObject
+{
+public:
+    virtual ~txPattern();
+
+    /*
+     * Determines whether this Pattern matches the given node.
+     */
+    virtual MBool matches(Node* aNode, txIMatchContext* aContext) = 0;
+
+    /*
+     * Returns the default priority of this Pattern.
+     *
+     * Simple Patterns return the values as specified in XPath 5.5.
+     * Returns -Inf for union patterns, as it shouldn't be called on them.
+     */
+    virtual double getDefaultPriority() = 0;
+
+    /*
+     * Returns the String representation of this Pattern.
+     * @param dest the String to use when creating the String
+     * representation. The String representation will be appended to
+     * any data in the destination String, to allow cascading calls to
+     * other #toString() methods for Patterns.
+     * @return the String representation of this Pattern.
+     */
+    virtual void toString(String& aDest) = 0;
+
+    /*
+     * Adds the simple Patterns to the List.
+     * For union patterns, add all sub patterns,
+     * all other (simple) patterns just add themselves
+     */
+    virtual nsresult getSimplePatterns(txList aList);
+};
+
+#define TX_DECL_PATTERN \
+    MBool matches(Node* aNode, txIMatchContext* aContext); \
+    double getDefaultPriority(); \
+    void toString(String& aDest)
+#define TX_DECL_PATTERN2 \
+    TX_DECL_PATTERN; \
+    nsresult getSimplePatterns(txList aList)
+
+#define TX_DECL_EXPR_PATTERN \
+    ExprResult* evaluate(txIEvalContext* aContext); \
+    TX_DECL_PATTERN
+
+class txStep : virtual public Expr, public txPattern
+{
+public:
+    virtual ~txStep();
+    virtual nsresult evalStep(Node* aNode, txIMatchContext* aContext,
+                              NodeSet* aResult) = 0;
+    virtual void toString(String& aDest) = 0;
+};
+
+#define TX_DECL_STEP \
+    TX_DECL_EXPR_PATTERN; \
+    nsresult evalStep(Node* aNode, txIMatchContext* aContext, NodeSet* aResult)
 
 /**
  * This class represents a FunctionCall as defined by the XPath 1.0
  * Recommendation.
 **/
-class FunctionCall : public Expr {
-
+class FunctionCall : public Expr
+{
 public:
-
     static const String INVALID_PARAM_COUNT;
     static const String INVALID_PARAM_VALUE;
 
@@ -159,50 +173,48 @@ public:
     /**
      * Virtual methods from Expr 
     **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs) = 0;
-    virtual MBool matches(Node* node, Node* context, ContextState* cs);
-    virtual double getDefaultPriority(Node* node, Node* context, ContextState* cs);
-    virtual void toString(String& dest);
+    virtual ExprResult* evaluate(txIEvalContext* aContext) = 0;
+    virtual void toString(String& aDest);
 
     /**
      * Adds the given parameter to this FunctionCall's parameter list
      * @param expr the Expr to add to this FunctionCall's parameter list
     **/
-    void addParam(Expr* expr);
+    nsresult addParam(Expr* expr);
 
-    virtual MBool requireParams(int paramCountMin, ContextState* cs);
-
-    virtual MBool requireParams(int paramCountMin,
-                                int paramCountMax,
-                                ContextState* cs);
+    /*
+     * XXX txIEvalContext should be txIParseContest, to do
+     */
+    virtual MBool requireParams(int aParamCountMin, txIEvalContext* aContext);
+    virtual MBool requireParams(int aParamCountMin,
+                                int aParamCountMax,
+                                txIEvalContext* aContext);
 
 protected:
-
-    List params;
+    txList params;
+    String name;
 
     FunctionCall();
-    FunctionCall(const String& name);
+    FunctionCall(const String& aName);
 
-    /**
+    /*
      * Evaluates the given Expression and converts it's result to a String.
      * The value is appended to the given destination String
-    **/
-    void evaluateToString
-        (Expr* expr, Node* context, ContextState* cs, String& dest);
+     */
+    void evaluateToString(Expr* aExpr, txIEvalContext* aContext,
+                          String& aDest);
 
-    /**
+    /*
      * Evaluates the given Expression and converts it's result to a number.
-    **/
-    double evaluateToNumber(Expr* expr, Node* context, ContextState* cs);
+     */
+    double evaluateToNumber(Expr* aExpr, txIEvalContext* aContext);
 
     /*
      * Evaluates the given Expression and converts it's result to a NodeSet.
      * If the result is not a NodeSet NULL is returned.
      */
-    NodeSet* evaluateToNodeSet(Expr* aExpr, Node* aContext, ContextState* aCs);
-
-    String name;
-}; //-- FunctionCall
+    NodeSet* evaluateToNodeSet(Expr* aExpr, txIEvalContext* aContext);
+}; // FunctionCall
 
 
 /**
@@ -219,83 +231,65 @@ public:
     /**
      * Adds the given Expr to this AttributeValueTemplate
     **/
-    void addExpr(Expr* expr);
+    void addExpr(Expr* aExpr);
 
-    /**
-     * Virtual methods from Expr 
-    **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
-    virtual void toString(String& str);
+    TX_DECL_EXPR;
 
 private:
-    List expressions;
+    txList mExpressions;
 };
 
 
 /*
  * This class represents a NodeTest as defined by the XPath spec
  */
-class txNodeTest {
-
+class txNodeTest : public txStep
+{
 public:
-
     virtual ~txNodeTest() {}
-
     /*
-     * Determines whether this txNodeTest matches the given node
+     * Virtual methods from txStep
+     * txNodeTests use the txPattern::getSimplePatterns implementation,
+     * so don't overload it here
      */
-    virtual MBool matches(Node* aNode, ContextState* aCs) = 0;
-
-    /*
-     * Returns the default priority of this txNodeTest
-     */
+    virtual MBool matches(Node* aNode, txIMatchContext* aContext) = 0;
     virtual double getDefaultPriority() = 0;
-
-    /*
-     * Returns the String representation of this txNodeTest.
-     * @param aDest the String to use when creating the string representation.
-     *              The string representation will be appended to the string.
-     */
+    virtual ExprResult* evaluate(txIEvalContext* aContext) = 0;
+    virtual nsresult evalStep(Node* aNode, txIMatchContext* aContext,
+                              NodeSet* aResult) = 0;
     virtual void toString(String& aDest) = 0;
-
 };
 
 /*
  * This class represents a NameTest as defined by the XPath spec
  */
-class txNameTest : public txNodeTest {
-
+class txNameTest : public txNodeTest
+{
 public:
-
     /*
      * Creates a new txNameTest with the given type and the given
      * principal node type
      */
-    txNameTest(String& aName, Node::NodeType aNodeType);
+    txNameTest(String& aPrefix, String& aLocalName, PRUint32 aNSID,
+               Node::NodeType aNodeType);
 
     ~txNameTest();
 
-    /*
-     * Virtual methods from txNodeTest 
-     */
-    MBool matches(Node* aNode, ContextState* aCs);
-    double getDefaultPriority();
-    void toString(String& aDest);
+    TX_DECL_STEP;
 
 private:
-
     String mPrefix;
     txAtom* mLocalName;
+    PRUint32 mNamespace;
     Node::NodeType mNodeType;
 };
 
 /*
  * This class represents a NodeType as defined by the XPath spec
  */
-class txNodeTypeTest : public txNodeTest {
-
+class txNodeTypeTest : public txNodeTest
+{
 public:
-
     enum NodeType {
         COMMENT_TYPE,
         TEXT_TYPE,
@@ -311,20 +305,26 @@ public:
     ~txNodeTypeTest();
 
     /*
+     * Makes this step a standalone expression or pattern.
+     * If this is set, the step will assume an implicit
+     * child:: axis, therefor node() will not match a document node
+     */
+    void setStandalone()
+    {
+        mStandalone = MB_TRUE;
+    }
+
+    /*
      * Sets the name of the node to match. Only availible for pi nodes
      */
     void setNodeName(const String& aName);
 
-    /*
-     * Virtual methods from txNodeTest 
-     */
-    MBool matches(Node* aNode, ContextState* aCs);
-    double getDefaultPriority();
-    void toString(String& aDest);
+    TX_DECL_STEP;
 
 private:
     NodeType mNodeType;
     txAtom* mNodeName;
+    MBool mStandalone;
 };
 
 /**
@@ -351,8 +351,8 @@ public:
     **/
     void add(Expr* expr);
 
-
-    void evaluatePredicates(NodeSet* nodes, ContextState* cs);
+    void evaluatePredicates(NodeSet* nodes, txIMatchContext* aContext);
+    MBool matchPredicates(txIEvalContext* aContext);
 
     /**
      * returns true if this predicate list is empty
@@ -367,15 +367,15 @@ public:
      * other #toString() methods for Expressions.
      * @return the String representation of this PredicateList.
     **/
-    virtual void toString(String& dest);
+    virtual void toString(String& aDest);
 
 private:
     //-- list of predicates
     List predicates;
 }; //-- PredicateList
 
-class LocationStep : public PredicateList, public Expr {
-
+class LocationStep : public PredicateList, public txStep
+{
 public:
 
     // Axis Identifier Types
@@ -408,21 +408,17 @@ public:
     **/
     virtual ~LocationStep();
 
-    /**
-     * Virtual methods from Expr 
-    **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
-    virtual MBool matches(Node* node, Node* context, ContextState* cs);
-    virtual double getDefaultPriority(Node* node, Node* context, ContextState* cs);
-    virtual void toString(String& dest);
+    TX_DECL_STEP;
 
 private:
 
     txNodeTest* mNodeTest;
     LocationStepType mAxisIdentifier;
 
-    void fromDescendants(Node* context, ContextState* cs, NodeSet* nodes);
-    void fromDescendantsRev(Node* context, ContextState* cs, NodeSet* nodes);
+    void fromDescendants(Node* node, txIMatchContext* aContext,
+                         NodeSet* nodes);
+    void fromDescendantsRev(Node* node, txIMatchContext* aContext,
+                            NodeSet* nodes);
 
 }; //-- LocationStep
 
@@ -435,20 +431,14 @@ public:
      * Creates a new FilterExpr using the given Expr
      * @param expr the Expr to use for evaluation
     **/
-    FilterExpr(Expr* expr);
+    FilterExpr(Expr* aExpr);
 
     /**
      * Destructor, will delete all predicates and the given Expr
     **/
     virtual ~FilterExpr();
 
-    /**
-     * Virtual methods from Expr 
-    **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
-    virtual MBool matches(Node* node, Node* context, ContextState* cs);
-    virtual double getDefaultPriority(Node* node, Node* context, ContextState* cs);
-    virtual void toString(String& dest);
+    TX_DECL_EXPR;
 
 private:
     Expr* expr;
@@ -462,11 +452,7 @@ public:
 
     NumberExpr(double dbl);
 
-    /**
-     * Virtual methods from Expr 
-    **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
-    virtual void toString(String& str);
+    TX_DECL_EXPR;
 
 private:
 
@@ -480,13 +466,9 @@ class StringExpr : public Expr {
 
 public:
 
-    StringExpr(const String& value);
+    StringExpr(const String& aValue);
 
-    /**
-     * Virtual methods from Expr 
-    **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
-    virtual void toString(String& str);
+    TX_DECL_EXPR;
 
 private:
 
@@ -508,19 +490,15 @@ public:
     //-- LF, changed from static const short to enum
     enum _AdditiveExprType { ADDITION = 1, SUBTRACTION };
 
-     AdditiveExpr(Expr* leftExpr, Expr* rightExpr, short op);
+     AdditiveExpr(Expr* aLeftExpr, Expr* aRightExpr, short op);
      ~AdditiveExpr();
 
-    /**
-     * Virtual methods from Expr 
-    **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
-    virtual void toString(String& str);
+    TX_DECL_EXPR;
 
 private:
-    short op;
-    Expr* leftExpr;
-    Expr* rightExpr;
+    short mOp;
+    Expr* mLeftExpr;
+    Expr* mRightExpr;
 }; //-- AdditiveExpr
 
 /**
@@ -530,17 +508,13 @@ class UnaryExpr : public Expr {
 
 public:
 
-     UnaryExpr(Expr* expr);
+     UnaryExpr(Expr* aExpr);
      ~UnaryExpr();
 
-    /**
-     * Virtual methods from Expr 
-    **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
-    virtual void toString(String& str);
+    TX_DECL_EXPR;
 
 private:
-    Expr* expr;
+    Expr* mExpr;
 }; //-- UnaryExpr
 
 /**
@@ -557,16 +531,12 @@ public:
      BooleanExpr(Expr* leftExpr, Expr* rightExpr, short op);
      ~BooleanExpr();
 
-    /**
-     * Virtual methods from Expr 
-    **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
-    virtual void toString(String& str);
+    TX_DECL_EXPR;
 
 private:
-    short op;
-    Expr* leftExpr;
-    Expr* rightExpr;
+    short mOp;
+    Expr* mLeftExpr;
+    Expr* mRightExpr;
 }; //-- BooleanExpr
 
 /**
@@ -585,19 +555,15 @@ public:
     //-- LF, changed from static const short to enum
     enum _MultiplicativeExprType { DIVIDE = 1, MULTIPLY, MODULUS };
 
-     MultiplicativeExpr(Expr* leftExpr, Expr* rightExpr, short op);
+     MultiplicativeExpr(Expr* aLeftExpr, Expr* aRightExpr, short aOp);
      ~MultiplicativeExpr();
 
-    /**
-     * Virtual methods from Expr 
-    **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
-    virtual void toString(String& str);
+    TX_DECL_EXPR;
 
 private:
-    short op;
-    Expr* leftExpr;
-    Expr* rightExpr;
+    Expr* mLeftExpr;
+    Expr* mRightExpr;
+    short mOp;
 }; //-- MultiplicativeExpr
 
 /**
@@ -628,11 +594,7 @@ public:
      RelationalExpr(Expr* leftExpr, Expr* rightExpr, short op);
      ~RelationalExpr();
 
-    /**
-     * Virtual methods from Expr 
-    **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
-    virtual void toString(String& str);
+    TX_DECL_EXPR;
 
 private:
     short op;
@@ -650,18 +612,16 @@ class VariableRefExpr : public Expr {
 
 public:
 
-    VariableRefExpr(const String& name);
+    VariableRefExpr(const String& aPrefix,
+                    const String& aLocalName, PRInt32 aID);
 
-    /**
-     * Virtual methods from Expr 
-    **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
-    virtual void toString(String& str);
+    TX_DECL_EXPR;
 
 private:
-    String name;
-
-}; //-- VariableRefExpr
+    String mPrefix;
+    txAtom* mLocalName;
+    PRUint32 mNamespace;
+};
 
 /**
  *  Represents a PathExpr
@@ -689,42 +649,39 @@ public:
      * Adds the Expr to this PathExpr
      * @param expr the Expr to add to this PathExpr
     **/
-    void addExpr(Expr* expr, PathOperator pathOp);
+    void addExpr(txStep* expr, PathOperator pathOp);
 
-    /**
-     * Virtual methods from Expr 
-    **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
-    virtual MBool matches(Node* node, Node* context, ContextState* cs);
-    virtual double getDefaultPriority(Node* node, Node* context, ContextState* cs);
-    virtual void toString(String& dest);
+    void setFilterExpr(Expr* aExpr);
+
+    TX_DECL_EXPR;
 
 private:
-
+    static const String RTF_INVALID_OP;
+    static const String NODESET_EXPECTED;
     struct PathExprItem {
-        Expr* expr;
+        txStep* expr;
         PathOperator pathOp;
     };
 
-   List expressions;
+    txList expressions;
+    Expr* mFilter;
 
-   /**
-    * Selects from the descendants of the context node
-    * all nodes that match the Expr
-    * -- this will be moving to a Utility class
-   **/
-   void evalDescendants(Expr* expr,
-                        Node* context,
-                        ContextState* cs,
-                        NodeSet* resNodes);
+    /**
+     * Selects from the descendants of the context node
+     * all nodes that match the Expr
+     * -- this will be moving to a Utility class
+     **/
+    void evalDescendants(txStep* aStep, Node* aNode,
+                         txIMatchContext* aContext,
+                         NodeSet* resNodes);
 
 }; //-- PathExpr
 
 /**
  * This class represents a RootExpr, which only matches the Document node
 **/
-class RootExpr : public Expr {
-
+class RootExpr : public txStep
+{
 public:
 
     /**
@@ -733,13 +690,7 @@ public:
      */
     RootExpr(MBool aSerialize);
 
-    /**
-     * Virtual methods from Expr 
-    **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
-    virtual MBool matches(Node* node, Node* context, ContextState* cs);
-    virtual double getDefaultPriority(Node* node, Node* context, ContextState* cs);
-    virtual void toString(String& dest);
+    TX_DECL_STEP;
 
 private:
     // When a RootExpr is used in a PathExpr it shouldn't be serialized
@@ -770,13 +721,7 @@ public:
     **/
     void addExpr(Expr* expr);
 
-    /**
-     * Virtual methods from Expr 
-    **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
-    virtual MBool matches(Node* node, Node* context, ContextState* cs);
-    virtual double getDefaultPriority(Node* node, Node* context, ContextState* cs);
-    virtual void toString(String& dest);
+    TX_DECL_EXPR;
 
 private:
 
@@ -784,7 +729,6 @@ private:
 
 }; //-- UnionExpr
 
-/* */
 #endif
 
 

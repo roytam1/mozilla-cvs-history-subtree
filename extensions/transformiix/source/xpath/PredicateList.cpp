@@ -24,6 +24,7 @@
  */
 
 #include "Expr.h"
+#include "txNodeSetContext.h"
 
 /*
  * Represents an ordered list of Predicates,
@@ -56,13 +57,13 @@ void PredicateList::add(Expr* expr)
     predicates.add(expr);
 } // add
 
-void PredicateList::evaluatePredicates(NodeSet* nodes, ContextState* cs)
+void PredicateList::evaluatePredicates(NodeSet* nodes,
+                                       txIMatchContext* aContext)
 {
     NS_ASSERTION(nodes, "called evaluatePredicates with NULL NodeSet");
     if (!nodes)
         return;
 
-    cs->getNodeSetStack()->push(nodes);
     NodeSet newNodes;
     // optimize; set DuplicateChecking to MB_FALSE,
     // restore original state later
@@ -72,41 +73,77 @@ void PredicateList::evaluatePredicates(NodeSet* nodes, ContextState* cs)
     nodes->setDuplicateChecking(MB_FALSE);
     newNodes.setDuplicateChecking(MB_FALSE);
     txListIterator iter(&predicates);
-    while (iter.hasNext()) {
+    while (iter.hasNext() && !nodes->isEmpty()) {
         Expr* expr = (Expr*)iter.next();
+        txNodeSetContext predContext(nodes, aContext);
         /*
          * add nodes to newNodes that match the expression
          * or, if the result is a number, add the node with the right
          * position
          */
         newNodes.clear();
-        int nIdx;
-        for (nIdx = 0; nIdx < nodes->size(); nIdx++) {
-            Node* node = nodes->get(nIdx);
-            ExprResult* exprResult = expr->evaluate(node, cs);
+        do {
+            ExprResult* exprResult = expr->evaluate(&predContext);
             if (!exprResult)
                 break;
             switch(exprResult->getResultType()) {
                 case ExprResult::NUMBER :
                     // handle default, [position() == numberValue()]
-                    if ((double)(nIdx+1) == exprResult->numberValue())
-                        newNodes.add(node);
+                    if ((double)predContext.position() ==
+                        exprResult->numberValue())
+                        newNodes.add(predContext.getContextNode());
                     break;
                 default:
                     if (exprResult->booleanValue())
-                        newNodes.add(node);
+                        newNodes.add(predContext.getContextNode());
                     break;
             }
             delete exprResult;
-        }
+            if (predContext.hasNext())
+                predContext.next();
+            else
+                break;
+        } while (1);
         // Move new NodeSet to the current one
         nodes->clear();
         newNodes.copyInto(*nodes);
     }
-    cs->getNodeSetStack()->pop();
     // restore DuplicateChecking of NodeSet
     nodes->setDuplicateChecking(ndsCheckDupl);
 } // evaluatePredicates
+
+MBool PredicateList::matchPredicates(txIEvalContext* aContext)
+{
+    NS_ASSERTION(aContext, "called with no context");
+    txListIterator iter(&predicates);
+    NS_ASSERTION(iter.hasNext(), "PredicateList without predicates");
+    if (!iter.hasNext())
+        return MB_TRUE;
+    Expr* first = (Expr*)iter.next();
+    // single predicate, that's easy and cheap
+    if (!iter.hasNext()) {
+        ExprResult* exprResult = first->evaluate(aContext);
+        if (!exprResult)
+            return MB_FALSE;
+        switch(exprResult->getResultType()) {
+            case ExprResult::NUMBER :
+                // handle default, [position() == numberValue()]
+                return ((double)aContext->position() ==
+                        exprResult->numberValue());
+                default:
+                    return exprResult->booleanValue();
+        }
+    }
+    // multiple predicates, create a nodeset and call evaluatePredicates
+    NodeSet nodes(aContext->size());
+    nodes.setDuplicateChecking(MB_FALSE);
+    aContext->getContextNodeSet()->copyInto(nodes);
+
+    evaluatePredicates(&nodes, aContext);
+
+    return nodes.contains(aContext->getContextNode());
+}
+
 
 /*
  * returns true if this predicate list is empty

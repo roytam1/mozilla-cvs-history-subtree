@@ -1,4 +1,4 @@
-/*
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -35,15 +35,14 @@
 /**
  * Creates a new AdditiveExpr using the given operator
 **/
-AdditiveExpr::AdditiveExpr(Expr* leftExpr, Expr* rightExpr, short op) {
-    this->op = op;
-    this->leftExpr = leftExpr;
-    this->rightExpr = rightExpr;
-} //-- AdditiveExpr
+AdditiveExpr::AdditiveExpr(Expr* aLeftExpr, Expr* aRightExpr, short op) 
+    :mOp(op), mLeftExpr(aLeftExpr), mRightExpr(aRightExpr)
+{
+} // AdditiveExpr
 
 AdditiveExpr::~AdditiveExpr() {
-    delete leftExpr;
-    delete rightExpr;
+    delete mLeftExpr;
+    delete mRightExpr;
 } //-- ~AdditiveExpr
 
 /**
@@ -53,28 +52,29 @@ AdditiveExpr::~AdditiveExpr() {
  * for evaluation
  * @return the result of the evaluation
 **/
-ExprResult* AdditiveExpr::evaluate(Node* context, ContextState* cs) {
-
-
+ExprResult* AdditiveExpr::evaluate(txIEvalContext* aContext)
+{
     double rightDbl = Double::NaN;
     ExprResult* exprRes = 0;
 
-    if ( rightExpr ) {
-        exprRes = rightExpr->evaluate(context, cs);
-        if ( exprRes ) rightDbl = exprRes->numberValue();
+    if (mRightExpr) {
+        exprRes = mRightExpr->evaluate(aContext);
+        if (exprRes)
+            rightDbl = exprRes->numberValue();
         delete exprRes;
     }
 
     double leftDbl = Double::NaN;
-    if ( leftExpr ) {
-        exprRes = leftExpr->evaluate(context, cs);
-        if ( exprRes ) leftDbl = exprRes->numberValue();
+    if (mLeftExpr) {
+        exprRes = mLeftExpr->evaluate(aContext);
+        if (exprRes)
+            leftDbl = exprRes->numberValue();
         delete exprRes;
     }
 
     double result = 0;
 
-    switch ( op ) {
+    switch (mOp) {
         case SUBTRACTION:
             result = leftDbl - rightDbl;
             break;
@@ -93,21 +93,25 @@ ExprResult* AdditiveExpr::evaluate(Node* context, ContextState* cs) {
  * other #toString() methods for Expressions.
  * @return the String representation of this Expr.
 **/
-void AdditiveExpr::toString(String& str) {
+void AdditiveExpr::toString(String& aDest)
+{
+    if (mLeftExpr)
+        mLeftExpr->toString(aDest);
+    else
+        aDest.append("null");
 
-    if ( leftExpr ) leftExpr->toString(str);
-    else str.append("null");
-
-    switch ( op ) {
+    switch (mOp) {
         case SUBTRACTION:
-            str.append(" - ");
+            aDest.append(" - ");
             break;
         default:
-            str.append(" + ");
+            aDest.append(" + ");
             break;
     }
-    if ( rightExpr ) rightExpr->toString(str);
-    else str.append("null");
+    if (mRightExpr)
+        mRightExpr->toString(aDest);
+    else
+        aDest.append("null");
 
-} //-- toString
+} // toString
 

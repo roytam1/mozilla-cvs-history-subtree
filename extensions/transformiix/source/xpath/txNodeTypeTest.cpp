@@ -25,14 +25,14 @@
 
 #include "Expr.h"
 #include "txAtom.h"
+#include "txIXPathContext.h"
 
 /*
  * Creates a new txNodeTypeTest of the given type
  */
 txNodeTypeTest::txNodeTypeTest(NodeType aNodeType)
+    :mNodeType(aNodeType), mNodeName(0), mStandalone(MB_FALSE)
 {
-    mNodeType = aNodeType;
-    mNodeName = 0;
 }
 
 txNodeTypeTest::~txNodeTypeTest()
@@ -48,20 +48,22 @@ void txNodeTypeTest::setNodeName(const String& aName)
 /*
  * Determines whether this txNodeTest matches the given node
  */
-MBool txNodeTypeTest::matches(Node* aNode, ContextState* aCs)
+MBool txNodeTypeTest::matches(Node* aNode, txIMatchContext* aContext)
 {
     if (!aNode)
         return MB_FALSE;
 
+    Node::NodeType type = (Node::NodeType)aNode->getNodeType();
+
     switch (mNodeType) {
         case COMMENT_TYPE:
-            return aNode->getNodeType() == Node::COMMENT_NODE;
+            return Node::COMMENT_NODE == type;
         case TEXT_TYPE:
-            return (aNode->getNodeType() == Node::TEXT_NODE ||
-                    aNode->getNodeType() == Node::CDATA_SECTION_NODE) &&
-                   !aCs->isStripSpaceAllowed(aNode);
+            return (Node::TEXT_NODE == type ||
+                    Node::CDATA_SECTION_NODE == type) &&
+                   !aContext->isStripSpaceAllowed(aNode);
         case PI_TYPE:
-            if (aNode->getNodeType() == Node::PROCESSING_INSTRUCTION_NODE) {
+            if (Node::PROCESSING_INSTRUCTION_NODE == type) {
                 txAtom* localName;
                 MBool result;
                 result = !mNodeName ||
@@ -72,12 +74,45 @@ MBool txNodeTypeTest::matches(Node* aNode, ContextState* aCs)
             }
             return MB_FALSE;
         case NODE_TYPE:
-            return (aNode->getNodeType() != Node::TEXT_NODE &&
-                    aNode->getNodeType() != Node::CDATA_SECTION_NODE) ||
-                   !aCs->isStripSpaceAllowed(aNode);
+            return (mStandalone && Node::DOCUMENT_NODE != type) &&
+                ((Node::TEXT_NODE !=type && Node::CDATA_SECTION_NODE !=type) ||
+                   !aContext->isStripSpaceAllowed(aNode));
     }
     return MB_TRUE;
 }
+
+/*
+ * Returns the NodeSet of nodes matching this name test with
+ * the XPathParent being the given Node.
+ */
+nsresult txNameTest::evalStep(Node* aNode, txIMatchContext* aContext,
+                              NodeSet* aResult)
+{
+    Node* child = aNode->getFirstChild();
+    while (child) {
+        if (matches(child, aContext)) {
+            aResult->add(child);
+        }
+        child = child->getNextSibling();
+    }
+    return NS_OK;
+}
+
+/*
+ * Returns a NodeSet of nodes matching this step and having
+ * the context node of aContext as XPathParent
+ */
+ExprResult* txNodeTypeTest::evaluate(txIEvalContext* aContext)
+{
+    NodeSet* result = new NodeSet();
+    if (!result) {
+        // XXX error out of mem
+        return 0;
+    }
+    evalStep(aContext->getContextNode(), aContext, result);
+    return result;
+}
+          
 
 /*
  * Returns the default priority of this txNodeTest

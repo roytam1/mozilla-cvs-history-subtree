@@ -41,6 +41,8 @@
 #include "ExprParser.h"
 #include "FunctionLib.h"
 #include "Names.h"
+#include "txAtom.h"
+#include "txIXPathContext.h"
 
 /**
  * Creates a new ExprParser
@@ -57,13 +59,16 @@ ExprParser::~ExprParser() {};
  * This should move to XSLProcessor class
 **/
 AttributeValueTemplate* ExprParser::createAttributeValueTemplate
-    (const String& attValue)
+    (const String& attValue, txIParseContext* aContext)
 {
+    mContext = aContext;
 
     AttributeValueTemplate* avt = new AttributeValueTemplate();
 
-    if (attValue.isEmpty())
+    if (attValue.isEmpty()) {
+        mContext = 0;
         return avt; //XXX should return 0, but that causes crash in lre12
+    }
 
     PRInt32 size = attValue.length();
     int cc = 0;
@@ -116,9 +121,11 @@ AttributeValueTemplate* ExprParser::createAttributeValueTemplate
             case '}':
                 if (inExpr) {
                     inExpr = MB_FALSE;
-                    Expr* expr = createExpr(buffer);
+                    ExprLexer lexer(buffer);
+                    Expr* expr = createExpr(lexer);
                     if (!expr) {
                         delete avt;
+                        mContext = 0;
                         return 0;
                     }
                     avt->addExpr(expr);
@@ -132,6 +139,7 @@ AttributeValueTemplate* ExprParser::createAttributeValueTemplate
                 else {
                     //XXX ErrorReport: unmatched '}' found
                     delete avt;
+                    mContext = 0;
                     return 0;
                 }
                 break;
@@ -144,26 +152,36 @@ AttributeValueTemplate* ExprParser::createAttributeValueTemplate
     if (inExpr) {
         //XXX ErrorReport: ending '}' missing
         delete avt;
+        mContext = 0;
         return 0;
     }
 
     if (!buffer.isEmpty())
         avt->addExpr(new StringExpr(buffer));
 
+    mContext = 0;
     return avt;
 
 } //-- createAttributeValueTemplate
 
-Expr* ExprParser::createExpr(const String& aExpression)
+Expr* ExprParser::createExpr(const String& aExpression,
+                             txIParseContext* aContext)
 {
+    mContext = aContext;
     ExprLexer lexer(aExpression);
-    return createExpr(lexer);
+    Expr* expr = createExpr(lexer);
+    mContext = 0;
+    return expr;
 } //-- createExpr
 
-Pattern* ExprParser::createPattern(const String& aPattern)
+Pattern* ExprParser::createPattern(const String& aPattern,
+                                   txIParseContext* aContext)
 {
+    mContext = aContext;
     ExprLexer lexer(aPattern);
-    return createUnionExpr(lexer);
+    Pattern* pattern = createUnionExpr(lexer);
+    mContext = 0;
+    return pattern;
 } //-- createPatternExpr
 
   //--------------------/
@@ -310,7 +328,17 @@ Expr* ExprParser::createFilterExpr(ExprLexer& lexer) {
             expr = createFunctionCall(lexer);
             break;
         case Token::VAR_REFERENCE :
-            expr = new VariableRefExpr(tok->value);
+            {
+                String prefix, lName;
+                nsresult res = NS_OK;
+                PRInt32 nspace;
+                res = resolveQName(tok->value, prefix, lName, nspace);
+                if (NS_FAILED(res)) {
+                    // XXX error report namespace resolve failed
+                    return 0;
+                }
+                expr = new VariableRefExpr(prefix, lName, nspace);
+            }
             break;
         case Token::L_PAREN:
             expr = createExpr(lexer);
@@ -361,6 +389,7 @@ Expr* ExprParser::createFilterExpr(ExprLexer& lexer) {
 FunctionCall* ExprParser::createFunctionCall(ExprLexer& lexer) {
 
     FunctionCall* fnCall = 0;
+    nsresult res = NS_OK;
 
     Token* tok = lexer.nextToken();
     if (tok->type != Token::FUNCTION_NAME) {
@@ -455,11 +484,33 @@ FunctionCall* ExprParser::createFunctionCall(ExprLexer& lexer) {
         fnCall = new NumberFunctionCall(NumberFunctionCall::FLOOR);
     }
     else {
-        //-- Most likely an Extension Function, or error, but it's
-        //-- not our job to report an invalid function call here
-        fnCall = new ExtensionFunctionCall(fnName);
+        txAtom* name;
+        PRInt32 namespaceID;
+        int idx = tok->value.indexOf(':');
+        if (idx >= 0) {
+            String nameStr, prefixStr;
+            tok->value.subString(idx+1, nameStr);
+            name = TX_GET_ATOM(nameStr);
+
+            tok->value.subString(0, idx, prefixStr);
+            txAtom* prefix = TX_GET_ATOM(prefixStr);
+            res = mContext->resolveNamespacePrefix(prefix, namespaceID);
+            // XXX report error
+            TX_IF_RELEASE_ATOM(prefix);
+        }
+        else {
+            name = TX_GET_ATOM(tok->value);
+            namespaceID = kNameSpaceID_None;
+        }
+
+        res = mContext->resolveFunctionCall(name, namespaceID, fnCall);
+        // XXX report error
+        TX_IF_RELEASE_ATOM(name);
     }
     
+    if (!fnCall)
+        return 0;
+
     //-- handle parametes
     if (!parseParameters(fnCall, lexer)) {
         delete fnCall;
@@ -562,14 +613,26 @@ LocationStep* ExprParser::createLocationStep(ExprLexer& lexer) {
 
         switch (tok->type) {
             case Token::CNAME :
-                switch (axisIdentifier) {
-                    case LocationStep::ATTRIBUTE_AXIS:
-                        nodeTest = new txNameTest(tok->value, Node::ATTRIBUTE_NODE);
-                        break;
-                    // XXX Namespace: handle namespaces here
-                    default:
-                        nodeTest = new txNameTest(tok->value, Node::ELEMENT_NODE);
-                        break;
+                {
+                    // resolve QName
+                    String prefix, lName;
+                    nsresult res = NS_OK;
+                    PRInt32 nspace;
+                    res = resolveQName(tok->value, prefix, lName, nspace);
+                    if (NS_FAILED(res)) {
+                        // XXX error report namespace resolve failed
+                        return 0;
+                    }
+                    switch (axisIdentifier) {
+                        case LocationStep::ATTRIBUTE_AXIS:
+                            nodeTest = new txNameTest(prefix, lName, nspace,
+                                                      Node::ATTRIBUTE_NODE);
+                            break;
+                        default:
+                            nodeTest = new txNameTest(prefix, lName, nspace,
+                                                      Node::ELEMENT_NODE);
+                            break;
+                    }
                 }
                 if (!nodeTest) {
                     //XXX ErrorReport: out of memory
@@ -661,7 +724,9 @@ txNodeTest* ExprParser::createNodeTest(ExprLexer& lexer) {
 **/
 Expr* ExprParser::createPathExpr(ExprLexer& lexer) {
 
-    Expr* expr = 0;
+    txStep* expr = 0;
+    Expr* filter = 0;
+    MBool isFilter = MB_FALSE;
 
     Token* tok = lexer.peek();
 
@@ -678,7 +743,8 @@ Expr* ExprParser::createPathExpr(ExprLexer& lexer) {
     if (tok->type != Token::PARENT_OP &&
         tok->type != Token::ANCESTOR_OP) {
         if (isFilterExprToken(tok)) {
-            expr = createFilterExpr(lexer);
+            filter = createFilterExpr(lexer);
+            isFilter = MB_TRUE;
         }
         else
             expr = createLocationStep(lexer);
@@ -707,7 +773,10 @@ Expr* ExprParser::createPathExpr(ExprLexer& lexer) {
         delete expr;
         return 0;
     }
-    pathExpr->addExpr(expr, PathExpr::RELATIVE_OP);
+    if (!isFilter)
+        pathExpr->addExpr(expr, PathExpr::RELATIVE_OP);
+    else
+        pathExpr->setFilterExpr(filter);
 
     // this is ugly
     while (1) {
@@ -910,5 +979,31 @@ short ExprParser::precedenceLevel(short tokenType) {
             break;
     }
     return 0;
-} //-- precedenceLevel
+}
 
+nsresult ExprParser::resolveQName(const String& aQName,
+                                  String& aPrefix, String& aLocalName,
+                                  PRInt32 aNamespace)
+{
+    nsresult res = NS_OK;
+    aNamespace = kNameSpaceID_None;
+    int idx = aQName.indexOf(':');
+    if (idx > 0) {
+        aQName.subString(0, idx, aPrefix);
+        txAtom* prefix = TX_GET_ATOM(aPrefix);
+        if (!prefix) {
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
+        res = mContext->resolveNamespacePrefix(prefix, aNamespace);
+        TX_RELEASE_ATOM(prefix);
+        if (NS_FAILED(res)) {
+            return res;
+        }
+        aQName.subString(idx+1, aLocalName);
+    }
+    else {
+        // the lexer dealt with idx == 0 
+        aLocalName.append(aQName);
+    }
+    return res;
+}

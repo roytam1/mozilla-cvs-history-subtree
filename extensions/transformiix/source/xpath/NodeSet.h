@@ -35,6 +35,7 @@
 
 #include "dom.h"
 #include "ExprResult.h"
+#include "txError.h"
 
 class NodeSet : public ExprResult
 {
@@ -157,6 +158,11 @@ public:
      * @return the number of elements in the NodeSet
     **/
     int size() const;
+
+    /**
+     * Sorts the nodeset by document order
+    **/
+    nsresult sortByDocumentOrder();
 
     /**
      * Creates a String representation of this NodeSet

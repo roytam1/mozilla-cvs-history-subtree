@@ -1,4 +1,4 @@
-/*
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- 
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -28,13 +28,14 @@
 
 #include "FunctionLib.h"
 #include "Names.h"
+#include "txIXPathContext.h"
 
 /**
  * Creates a default BooleanFunctionCall, which always evaluates to False
 **/
-BooleanFunctionCall::BooleanFunctionCall(short type) : FunctionCall()
+BooleanFunctionCall::BooleanFunctionCall(short aType) : FunctionCall()
 {
-    switch ( type ) {
+    switch (aType) {
         case TX_BOOLEAN :
             name = XPathNames::BOOLEAN_FN;
             break;
@@ -51,7 +52,7 @@ BooleanFunctionCall::BooleanFunctionCall(short type) : FunctionCall()
             name = XPathNames::FALSE_FN;
             break;
     }
-    this->type = type;
+    type = aType;
 } //-- BooleanFunctionCall
 
 /**
@@ -61,27 +62,27 @@ BooleanFunctionCall::BooleanFunctionCall(short type) : FunctionCall()
  * for evaluation
  * @return the result of the evaluation
 **/
-ExprResult* BooleanFunctionCall::evaluate(Node* context, ContextState* cs) {
-
+ExprResult* BooleanFunctionCall::evaluate(txIEvalContext* aContext)
+{
     MBool result = MB_FALSE;
-    ListIterator* iter = params.iterator();
+    txListIterator iter(&params);
     Expr* param = 0;
     String err;
 
-
-    switch ( type ) {
+    switch (type) {
         case TX_BOOLEAN :
-            if ( requireParams(1,1,cs) ) {
-                param = (Expr*)iter->next();
-                ExprResult* exprResult = param->evaluate(context, cs);
+            if (requireParams(1, 1, aContext)) {
+                param = (Expr*)iter.next();
+                ExprResult* exprResult = param->evaluate(aContext);
                 result = exprResult->booleanValue();
                 delete exprResult;
             }
             break;
         case TX_LANG:
-            if ( requireParams(1,1,cs) ) {
+            if (requireParams(1, 1, aContext)) {
                 String arg1, lang;
-                evaluateToString((Expr*)iter->next(),context, cs, arg1);
+                evaluateToString((Expr*)iter.next(), aContext, arg1);
+                Element* context = (Element*)aContext->getContextNode();
                 lang = ((Element*)context)->getAttribute(XML_LANG_ATTR);
                 arg1.toUpperCase(); // case-insensitive comparison
                 lang.toUpperCase();
@@ -89,9 +90,9 @@ ExprResult* BooleanFunctionCall::evaluate(Node* context, ContextState* cs) {
             }
             break;
         case TX_NOT :
-            if ( requireParams(1,1,cs) ) {
-                param = (Expr*)iter->next();
-                ExprResult* exprResult = param->evaluate(context, cs);
+            if (requireParams(1, 1, aContext)) {
+                param = (Expr*)iter.next();
+                ExprResult* exprResult = param->evaluate(aContext);
                 result = (MBool)(!exprResult->booleanValue());
                 delete exprResult;
             }
@@ -102,7 +103,6 @@ ExprResult* BooleanFunctionCall::evaluate(Node* context, ContextState* cs) {
         default:
             break;
     }
-    delete iter;
     return new BooleanResult(result);
-} //-- evaluate
+} // evaluate
 

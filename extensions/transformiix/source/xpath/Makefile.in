@@ -43,11 +43,9 @@ CPPSRCS = AdditiveExpr.cpp \
         BooleanFunctionCall.cpp \
         BooleanResult.cpp \
         ErrorFunctionCall.cpp \
-        Expr.cpp \
         ExprLexer.cpp \
         ExprLexerChars.cpp \
         ExprParser.cpp \
-        ExtensionFunctionCall.cpp \
         FilterExpr.cpp \
         FunctionCall.cpp \
         LocationStep.cpp \
@@ -66,6 +64,8 @@ CPPSRCS = AdditiveExpr.cpp \
         StringResult.cpp \
         txNameTest.cpp \
         txNodeTypeTest.cpp \
+        txForwardContext.cpp \
+        txNodeSetContext.cpp \
         UnionExpr.cpp \
         UnaryExpr.cpp \
         VariableRefExpr.cpp \
