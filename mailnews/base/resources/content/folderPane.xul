@@ -33,7 +33,7 @@
 
 <popup id="folderTooltip" class="tooltip" oncreate="return FillInFolderTooltip(event);" >
   <text id="foldertooltipText"/>
-</popup>A
+</popup>
 
   <outliner id="folderOutliner"
             class="mail-folders"
