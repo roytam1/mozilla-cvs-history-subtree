@@ -68,6 +68,16 @@ var folderListener = {
  }
 }
 
+function UpdateStandAloneMessageCounts()
+{
+  dump("XXX UpdateStandAloneMessageCounts()\n");
+  // for now, do nothing on this
+  // but still provide this hook
+  if ("UpdateExtraStandAloneMessageCounts()" in top) {
+    UpdateExtraStandAloneMessageCounts();
+  }
+}
+
 function nsMsgDBViewCommandUpdater()
 {}
 
@@ -84,6 +94,9 @@ nsMsgDBViewCommandUpdater.prototype =
   {
     setTitleFromFolder(aFolder, aSubject);
     gCurrentMessageUri = gDBView.URIForFirstSelectedMessage;
+    UpdateStandAloneMessageCounts();
+    if ("SetUpExtraMsgToolbarButtons" in top)
+      SetUpExtraMsgToolbarButtons();
     SetKeywords(aKeywords);
   },
 
@@ -215,7 +228,7 @@ function OnLoadMessageWindow()
     SetUpToolbarButtons(gCurrentFolderUri);
   }
  
-  setTimeout("var msgKey = extractMsgKeyFromURI(gCurrentMessageUri); gDBView.loadMessageByMsgKey(msgKey); gNextMessageViewIndexAfterDelete = gDBView.msgToSelectAfterDelete;", 0);
+  setTimeout("var msgKey = extractMsgKeyFromURI(gCurrentMessageUri); gDBView.loadMessageByMsgKey(msgKey); gNextMessageViewIndexAfterDelete = gDBView.msgToSelectAfterDelete; UpdateStandAloneMessageCounts();", 0);
 
   SetupCommandUpdateHandlers();
   var messagePaneFrame = top.frames['messagepane'];
@@ -402,7 +415,6 @@ function SelectMessage(messageUri)
   var msgHdr = messenger.messageServiceFromURI(messageUri).messageURIToMsgHdr(messageUri)
   gDBView.loadMessageByMsgKey(msgHdr.messageKey);
 }
- 
 
 function ReloadMessage()
 {
@@ -769,6 +781,8 @@ function performNavigation(type)
   {
     // load the message key
     gDBView.loadMessageByMsgKey(resultId.value);
+    // if we changed folders, the message counts changed.
+    UpdateStandAloneMessageCounts();
     return;
   }
    
