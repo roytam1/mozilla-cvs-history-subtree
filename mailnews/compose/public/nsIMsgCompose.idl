@@ -258,6 +258,8 @@ interface nsIMsgCompose : nsISupports {
   
  	/* ... */
  	attribute boolean recycledWindow;
+  
+  readonly attribute string originalMsgURI;
 };
 
 /* send listener interface */
