@@ -79,7 +79,7 @@ class nsString;
 // Document interface
 class nsIDocument : public nsISupports {
 public:
-  static const nsIID& GetIID() { static nsIID iid = NS_IDOCUMENT_IID; return iid; }
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDOCUMENT_IID)
 
   // All documents have a memory arena associated with them which is
   // used for memory allocation during document creation. This call
@@ -304,6 +304,9 @@ public:
   NS_IMETHOD GetNodeInfoManager(nsINodeInfoManager*& aNodeInfoManager) = 0;
 
   NS_IMETHOD Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup) = 0;
+
+  NS_IMETHOD AddReference(void *aKey, nsISupports *aReference) = 0;
+  NS_IMETHOD RemoveReference(void *aKey, nsISupports **aOldReference) = 0;
 };
 
 

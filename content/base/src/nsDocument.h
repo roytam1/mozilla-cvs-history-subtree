@@ -351,6 +351,8 @@ public:
   NS_IMETHOD GetAndIncrementContentID(PRInt32* aID);
   NS_IMETHOD GetBindingManager(nsIBindingManager** aResult);
   NS_IMETHOD GetNodeInfoManager(nsINodeInfoManager*& aNodeInfoManager);
+  NS_IMETHOD AddReference(void *aKey, nsISupports *aReference);
+  NS_IMETHOD RemoveReference(void *aKey, nsISupports **aOldReference);
 
 public:
   
@@ -466,6 +468,8 @@ protected:
   nsCOMPtr<nsINodeInfoManager> mNodeInfoManager; // OWNER
   nsSupportsHashtable* mBoxObjectTable;
   PRInt32 mNumCapturers; //Number of capturing event handlers in doc.  Used to optimize event delivery.
+
+  nsSupportsHashtable mContentWrapperHash;
 
 private:
   // These are not implemented and not supported.

@@ -1336,6 +1336,13 @@ nsXULDocument::SetScriptGlobalObject(nsIScriptGlobalObject* aScriptGlobalObject)
 
             shell->ReleaseAnonymousContent();
         }
+
+#ifdef DEBUG_jst
+    printf ("Content wrapper hash had %d entries.\n",
+            mContentWrapperHash.Count());
+#endif
+
+        mContentWrapperHash.Reset();
     }
 
     mScriptGlobalObject = aScriptGlobalObject;
@@ -1835,6 +1842,26 @@ nsXULDocument::GetNodeInfoManager(class nsINodeInfoManager *&aNodeInfoManager)
     NS_ADDREF(aNodeInfoManager);
 
     return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXULDocument::AddReference(void *aKey, nsISupports *aReference)
+{
+  nsVoidKey key(aKey);
+
+  mContentWrapperHash.Put(&key, aReference);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXULDocument::RemoveReference(void *aKey, nsISupports **aOldReference)
+{
+  nsVoidKey key(aKey);
+
+  mContentWrapperHash.Remove(&key, aOldReference);
+
+  return NS_OK;
 }
 
 void

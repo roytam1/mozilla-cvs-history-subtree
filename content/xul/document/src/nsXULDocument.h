@@ -274,6 +274,9 @@ public:
 
     NS_IMETHOD GetNodeInfoManager(class nsINodeInfoManager *&aNodeInfoManager);
 
+    NS_IMETHOD AddReference(void *aKey, nsISupports *aReference);
+    NS_IMETHOD RemoveReference(void *aKey, nsISupports **aOldReference);
+
     virtual void SetDisplaySelection(PRInt8 aToggle);
 
     virtual PRInt8 GetDisplaySelection() const;
@@ -754,6 +757,9 @@ protected:
     };
 
     friend class ParserObserver;
+
+
+    nsSupportsHashtable mContentWrapperHash;
 };
 
 

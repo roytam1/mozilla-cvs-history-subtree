@@ -1389,6 +1389,13 @@ nsDocument::SetScriptGlobalObject(nsIScriptGlobalObject *aScriptGlobalObject)
 
       shell->ReleaseAnonymousContent();
     }
+
+#ifdef DEBUG_jst
+    printf ("Content wrapper hash had %d entries.\n",
+            mContentWrapperHash.Count());
+#endif
+
+    mContentWrapperHash.Reset();
   }
 
   mScriptGlobalObject = aScriptGlobalObject;
@@ -3148,6 +3155,25 @@ nsDocument::GetNodeInfoManager(nsINodeInfoManager*& aNodeInfoManager)
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsDocument::AddReference(void *aKey, nsISupports *aReference)
+{
+  nsVoidKey key(aKey);
+
+  mContentWrapperHash.Put(&key, aReference);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocument::RemoveReference(void *aKey, nsISupports **aOldReference)
+{
+  nsVoidKey key(aKey);
+
+  mContentWrapperHash.Remove(&key, aOldReference);
+
+  return NS_OK;
+}
 
 //
 // FindContent does a depth-first search from aStartNode
