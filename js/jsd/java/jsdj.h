@@ -23,6 +23,13 @@
 #ifndef jsdj_h___
 #define jsdj_h___
 
+/*
+* NOTE: This is a *private* header file and should only be included by
+* the sources in js/jsd/java.Defining EXPORT_JSDJ_API in an outside module
+* using jsdjava would be bad.
+*/
+#define EXPORT_JSDJ_API 1 /* if used, must be set before include of jsdjava.h */
+
 /* Get jstypes.h included first. After that we can use PR macros for doing
 *  this extern "C" stuff!
 */ 
