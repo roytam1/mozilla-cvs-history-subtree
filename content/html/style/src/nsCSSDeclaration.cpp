@@ -6156,8 +6156,8 @@ nsCSSDeclaration::Clone() const
 }
 
 
-NS_EXPORT nsresult
-  NS_NewCSSDeclaration(nsCSSDeclaration** aInstancePtrResult)
+nsresult
+NS_NewCSSDeclaration(nsCSSDeclaration** aInstancePtrResult)
 {
   if (aInstancePtrResult == nsnull) {
     return NS_ERROR_NULL_POINTER;

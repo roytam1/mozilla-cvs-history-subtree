@@ -102,6 +102,7 @@
 #include "nsITextContent.h"
 #include "nsIXBLService.h"
 #include "nsIFrameLoader.h"
+#include "nsICaret.h"
 #include "nsLayoutAtoms.h"
 #include "nsPlainTextSerializer.h"
 #include "mozSanitizingSerializer.h"
@@ -151,10 +152,10 @@ class nsIDocumentLoaderFactory;
 #include "nsXULContentUtils.h"
 #include "nsXULElement.h"
 
-extern NS_IMETHODIMP
+NS_IMETHODIMP
 NS_NewXULContentBuilder(nsISupports* aOuter, REFNSIID aIID, void** aResult);
 
-extern NS_IMETHODIMP
+NS_IMETHODIMP
 NS_NewXULTreeBuilder(nsISupports* aOuter, REFNSIID aIID, void** aResult);
 #endif
 
@@ -320,65 +321,66 @@ Shutdown(nsIModule* aSelf)
 }
 
 #ifdef NS_DEBUG
-extern nsresult NS_NewFrameUtil(nsIFrameUtil** aResult);
-extern nsresult NS_NewLayoutDebugger(nsILayoutDebugger** aResult);
+nsresult NS_NewFrameUtil(nsIFrameUtil** aResult);
+nsresult NS_NewLayoutDebugger(nsILayoutDebugger** aResult);
 #endif
 
-extern nsresult NS_NewBoxObject(nsIBoxObject** aResult);
-extern nsresult NS_NewListBoxObject(nsIBoxObject** aResult);
-extern nsresult NS_NewScrollBoxObject(nsIBoxObject** aResult);
-extern nsresult NS_NewMenuBoxObject(nsIBoxObject** aResult);
-extern nsresult NS_NewEditorBoxObject(nsIBoxObject** aResult);
-extern nsresult NS_NewPopupBoxObject(nsIBoxObject** aResult);
-extern nsresult NS_NewBrowserBoxObject(nsIBoxObject** aResult);
-extern nsresult NS_NewIFrameBoxObject(nsIBoxObject** aResult);
-extern nsresult NS_NewTreeBoxObject(nsIBoxObject** aResult);
-extern nsresult NS_CreateFrameTraversal(nsIFrameTraversal** aResult);
-extern nsresult NS_CreateCSSFrameConstructor(nsICSSFrameConstructor** aResult);
-extern nsresult NS_NewLayoutHistoryState(nsILayoutHistoryState** aResult);
-extern nsresult NS_NewAutoCopyService(nsIAutoCopyService** aResult);
-extern nsresult NS_NewSelectionImageService(nsISelectionImageService** aResult);
-extern nsresult NS_NewSelection(nsIFrameSelection** aResult);
-extern nsresult NS_NewDomSelection(nsISelection** aResult);
-extern nsresult NS_NewDocumentViewer(nsIDocumentViewer** aResult);
-extern nsresult NS_NewRange(nsIDOMRange** aResult);
-extern nsresult NS_NewRangeUtils(nsIRangeUtils** aResult);
-extern nsresult NS_NewContentIterator(nsIContentIterator** aResult);
-extern nsresult NS_NewPreContentIterator(nsIContentIterator** aResult);
-extern nsresult NS_NewGenRegularIterator(nsIContentIterator** aResult);
-extern nsresult NS_NewContentSubtreeIterator(nsIContentIterator** aResult);
-extern nsresult NS_NewGenSubtreeIterator(nsIContentIterator** aInstancePtrResult);
-extern nsresult NS_NewContentDocumentLoaderFactory(nsIDocumentLoaderFactory** aResult);
-extern nsresult NS_NewHTMLElementFactory(nsIElementFactory** aResult);
-extern nsresult NS_NewXMLElementFactory(nsIElementFactory** aResult);
-extern nsresult NS_NewHTMLCopyTextEncoder(nsIDocumentEncoder** aResult);
-extern nsresult NS_NewTextEncoder(nsIDocumentEncoder** aResult);
-extern nsresult NS_NewXBLService(nsIXBLService** aResult);
-extern nsresult NS_NewBindingManager(nsIBindingManager** aResult);
-extern nsresult NS_NewNodeInfoManager(nsINodeInfoManager** aResult);
-extern nsresult NS_NewContentPolicy(nsIContentPolicy** aResult);
-extern nsresult NS_NewFrameLoader(nsIFrameLoader** aResult);
-extern nsresult NS_NewSyncLoadDOMService(nsISyncLoadDOMService** aResult);
-extern nsresult NS_NewDOMEventGroup(nsIDOMEventGroup** aResult);
+nsresult NS_NewBoxObject(nsIBoxObject** aResult);
+nsresult NS_NewListBoxObject(nsIBoxObject** aResult);
+nsresult NS_NewScrollBoxObject(nsIBoxObject** aResult);
+nsresult NS_NewMenuBoxObject(nsIBoxObject** aResult);
+nsresult NS_NewEditorBoxObject(nsIBoxObject** aResult);
+nsresult NS_NewPopupBoxObject(nsIBoxObject** aResult);
+nsresult NS_NewBrowserBoxObject(nsIBoxObject** aResult);
+nsresult NS_NewIFrameBoxObject(nsIBoxObject** aResult);
+nsresult NS_NewTreeBoxObject(nsIBoxObject** aResult);
+nsresult NS_CreateFrameTraversal(nsIFrameTraversal** aResult);
+nsresult NS_CreateCSSFrameConstructor(nsICSSFrameConstructor** aResult);
+nsresult NS_NewLayoutHistoryState(nsILayoutHistoryState** aResult);
+nsresult NS_NewAutoCopyService(nsIAutoCopyService** aResult);
+nsresult NS_NewSelectionImageService(nsISelectionImageService** aResult);
+
+nsresult NS_NewSelection(nsIFrameSelection** aResult);
+nsresult NS_NewDomSelection(nsISelection** aResult);
+nsresult NS_NewDocumentViewer(nsIDocumentViewer** aResult);
+nsresult NS_NewRange(nsIDOMRange** aResult);
+nsresult NS_NewRangeUtils(nsIRangeUtils** aResult);
+nsresult NS_NewContentIterator(nsIContentIterator** aResult);
+nsresult NS_NewPreContentIterator(nsIContentIterator** aResult);
+nsresult NS_NewGenRegularIterator(nsIContentIterator** aResult);
+nsresult NS_NewContentSubtreeIterator(nsIContentIterator** aResult);
+nsresult NS_NewGenSubtreeIterator(nsIContentIterator** aInstancePtrResult);
+nsresult NS_NewContentDocumentLoaderFactory(nsIDocumentLoaderFactory** aResult);
+nsresult NS_NewHTMLElementFactory(nsIElementFactory** aResult);
+nsresult NS_NewXMLElementFactory(nsIElementFactory** aResult);
+nsresult NS_NewHTMLCopyTextEncoder(nsIDocumentEncoder** aResult);
+nsresult NS_NewTextEncoder(nsIDocumentEncoder** aResult);
+nsresult NS_NewXBLService(nsIXBLService** aResult);
+nsresult NS_NewBindingManager(nsIBindingManager** aResult);
+nsresult NS_NewNodeInfoManager(nsINodeInfoManager** aResult);
+nsresult NS_NewContentPolicy(nsIContentPolicy** aResult);
+nsresult NS_NewFrameLoader(nsIFrameLoader** aResult);
+nsresult NS_NewSyncLoadDOMService(nsISyncLoadDOMService** aResult);
+nsresult NS_NewDOMEventGroup(nsIDOMEventGroup** aResult);
 
 #ifdef MOZ_XUL
-extern nsresult NS_NewXULElementFactory(nsIElementFactory** aResult);
-extern NS_IMETHODIMP NS_NewXULControllers(nsISupports* aOuter, REFNSIID aIID, void** aResult);
+nsresult NS_NewXULElementFactory(nsIElementFactory** aResult);
+NS_IMETHODIMP NS_NewXULControllers(nsISupports* aOuter, REFNSIID aIID, void** aResult);
 #endif
 
 #ifdef MOZ_MATHML
-extern nsresult NS_NewMathMLElementFactory(nsIElementFactory** aResult);
+nsresult NS_NewMathMLElementFactory(nsIElementFactory** aResult);
 #endif
 
 #ifdef MOZ_SVG
 #ifdef MOZ_SVG_RENDERER_GDIPLUS
-extern nsresult NS_NewSVGRendererGDIPlus(nsISVGRenderer** aResult);
+nsresult NS_NewSVGRendererGDIPlus(nsISVGRenderer** aResult);
 #endif // MOZ_SVG_RENDERER_GDIPLUS
 #ifdef MOZ_SVG_RENDERER_LIBART
-extern nsresult NS_NewSVGRendererLibart(nsISVGRenderer** aResult);
+nsresult NS_NewSVGRendererLibart(nsISVGRenderer** aResult);
 #endif // MOZ_SVG_RENDERER_LIBART
 
-extern nsresult NS_NewSVGElementFactory(nsIElementFactory** aResult);
+nsresult NS_NewSVGElementFactory(nsIElementFactory** aResult);
 #endif
 
 #define MAKE_CTOR(ctor_, iface_, func_)                   \
@@ -429,6 +431,7 @@ MAKE_CTOR(CreateNewSVGRendererGDIPlus,  nsISVGRenderer,         NS_NewSVGRendere
 MAKE_CTOR(CreateNewSVGRendererLibart,   nsISVGRenderer,         NS_NewSVGRendererLibart)
 #endif // MOZ_SVG_RENDERER_LIBART
 #endif
+MAKE_CTOR(CreateCaret,                  nsICaret,               NS_NewCaret)
 MAKE_CTOR(CreateNameSpaceManager,         nsINameSpaceManager,         NS_GetNameSpaceManager)
 MAKE_CTOR(CreateEventListenerManager,     nsIEventListenerManager,     NS_NewEventListenerManager)
 MAKE_CTOR(CreateEventStateManager,        nsIEventStateManager,        NS_NewEventStateManager)
@@ -650,7 +653,12 @@ static const nsModuleComponentInfo gComponents[] = {
   { "selection image storage",
     NS_SELECTIONIMAGESERVICE_CID,
     nsnull,
-    CreateSelectionImageService},
+    CreateSelectionImageService },
+
+  { "caret",
+    NS_CARET_CID,
+    "@mozilla.org/layout/caret;1",
+    CreateCaret },
 
   // XXX ick
   { "Presentation shell",
@@ -1120,7 +1128,7 @@ static const nsModuleComponentInfo gComponents[] = {
 
   { "Document Loader Factory",
     NS_CONTENT_DOCUMENT_LOADER_FACTORY_CID,
-    "@mozilla.org:/content/document-loader-factory;1",
+    "@mozilla.org/content/document-loader-factory;1",
     CreateContentDLF,
     nsContentDLF::RegisterDocumentFactories,
     nsContentDLF::UnregisterDocumentFactories },

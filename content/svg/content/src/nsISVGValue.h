@@ -77,7 +77,7 @@ public:
   NS_IMETHOD EndBatchUpdate()=0;
 };
 
-extern nsresult
+nsresult
 NS_CreateSVGGenericStringValue(const nsAString& aValue, nsISVGValue** aResult);
 
 #endif // __NS_ISVGVALUE_H__
