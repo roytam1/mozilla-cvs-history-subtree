@@ -176,13 +176,18 @@ public:
    * buffer. Like operator= except a length is specified instead of
    * assuming 0 termination.
    */
+#ifdef IBMBIDI
+  PRBool SetTo(const PRUnichar* aBuffer, PRInt32 aLength);
+#else
   void SetTo(const PRUnichar* aBuffer, PRInt32 aLength);
+#endif // IBMBIDI
 
   /**
    * Change the contents of this fragment to be a copy of the given
    * buffer. Like operator= except a length is specified instead of
    * assuming 0 termination.
    */
+
   void SetTo(const char* aBuffer, PRInt32 aLength);
 
   /**

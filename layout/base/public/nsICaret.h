@@ -86,6 +86,27 @@ public:
    */
   NS_IMETHOD SetCaretWidth(nscoord aPixels) = 0;
 
+#ifdef IBMBIDI  
+  /** Carry Flage to change the caret position
+   *
+   *	Mamdouh
+   *
+   */
+  void AccessVirtualKey(PRBool VKAcessFlage)
+  {
+    VKaccess=VKAcessFlage;
+  };
+
+  void VKHomePress(PRBool HomeVKAcessFlage)
+  {
+    HomeVKaccess=HomeVKAcessFlage;
+  };
+
+protected:
+  PRBool VKaccess;
+  PRBool HomeVKaccess;
+
+#endif // IBMBIDI
 };
 
 extern nsresult NS_NewCaret(nsICaret** aInstancePtrResult);

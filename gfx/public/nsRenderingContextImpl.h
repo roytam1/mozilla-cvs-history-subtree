@@ -25,6 +25,9 @@
 
 #include "nsIRenderingContext.h"
 #include "nsPoint.h"
+#ifdef IBMBIDI
+#include "nsIUBidiUtils.h" // Bidi options
+#endif // IBMBIDI
 
 
 typedef struct {	
@@ -92,6 +95,11 @@ public:
    */
   NS_IMETHOD FillStdPolygon(const nsPoint aPoints[], PRInt32 aNumPoints) { return NS_OK; }
 
+#ifdef IBMBIDI
+  NS_IMETHOD IsBidiSystem(PRBool& aIsBidi)  { aIsBidi = PR_FALSE; return NS_OK; }
+  NS_IMETHOD SetRTLReading(PRBool aIsRTL)   { mIsRTL = aIsRTL;    return NS_OK; }
+#endif // IBMBIDI
+
 protected:
   virtual ~nsRenderingContextImpl();
 
@@ -117,6 +125,11 @@ protected:
 
   void cdelete(int i);
   void cinsert(int i,int y,const nsPoint aPointArray[],PRInt32 aNumPts);
+
+#ifdef IBMBIDI
+  nsBidiOptions     mBidi; // IBMBIDI Options
+  PRPackedBool      mIsRTL;
+#endif // IBMBIDI
 
 public:
 

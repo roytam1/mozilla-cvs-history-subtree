@@ -45,9 +45,23 @@
   #define VERIFY(exp)                 (exp)
 #endif  // !_DEBUG
 
-//comment this out so we won't do arabic and hebrew buggy reordering untill
-// it get fixed 
+#ifdef IBMBIDI
+#include "nsCOMPtr.h"
+#include "nsIServiceManager.h"
+#include "nsIUBidiUtils.h"
+#include "nsIBidi.h"
+#include "nsIPref.h"
+#include "nsIServiceManager.h"
+
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
+static NS_DEFINE_CID(kUBidiUtilCID, NS_UNICHARBIDIUTIL_CID);
+static NS_DEFINE_CID(kBidiCID, NS_BIDI_CID);
+
+#define  ARABIC_HEBREW_RENDERING
+#define IS_BIDI_SYSTEM  (::GetSystemMetrics(SM_MIDEASTENABLED) == PR_TRUE)
+#else // #ifndef IBMBIDI
 //#define  ARABIC_HEBREW_RENDERING
+#endif // IBMBIDI
 
 static NS_DEFINE_IID(kIRenderingContextIID, NS_IRENDERING_CONTEXT_IID);
 static NS_DEFINE_IID(kIRenderingContextWinIID, NS_IRENDERING_CONTEXT_WIN_IID);
@@ -1443,12 +1457,14 @@ NS_IMETHODIMP nsRenderingContextWin :: FillArc(nscoord aX, nscoord aY, nscoord a
 
 
 #ifdef ARABIC_HEBREW_RENDERING
-
+#ifndef IBMBIDI
+//IBMBIDI: this will be deleted as we R going to implement nsBidi::<Shaping Func.> as static..
+// moved to nsBidiOptions.h
 #define CHAR_IS_HEBREW(c) ((0x0590 <= (c)) && ((c)<= 0x05FF))
 #define CHAR_IS_ARABIC(c) ((0x0600 <= (c)) && ((c)<= 0x06FF))
 #define HAS_ARABIC_PRESENTATION_FORM_B(font) (FONT_HAS_GLYPH((font)->mMap, 0xFE81))
 #define HAS_HEBREW_GLYPH(font)               (FONT_HAS_GLYPH((font)->mMap, 0x05D0))
-
+#endif // IBMBIDI
 // the following code assume all the aString is from right to left without
 // mixing with left to right characters
 static void HebrewReordering(const PRUnichar *aString, PRUint32 aLen,
@@ -1461,7 +1477,9 @@ static void HebrewReordering(const PRUnichar *aString, PRUint32 aLen,
    aBufLen = aLen;
 }
 //============ Begin Arabic Basic to Presentation Form B Code ============
-
+#ifndef IBMBIDI
+//IBMBIDI: this will be deleted as we R going to implement nsBidi::<Shaping Func.> as static..
+// moved to nsBidiOptions.h
 PRUint8 gArabicMap1[] = {
             0x81, 0x83, 0x85, 0x87, 0x89, 0x8D, // 0622-0627
 0x8F, 0x93, 0x95, 0x99, 0x9D, 0xA1, 0xA5, 0xA9, // 0628-062F
@@ -1539,6 +1557,8 @@ PRUint16 gArabicLigatureMap[] =
 0x8EDF, // 0xFE8E 0xFEDF -> 0xFEFB
 0x8EE0  // 0xFE8E 0xFEE0 -> 0xFEFC
 };
+#endif // IBMBIDI
+//IBMBIDI: this will be deleted as we R going to implement nsBidi::<Shaping Func.> as static..
 static void ArabicShaping(const PRUnichar* aString, PRUint32 aLen,
              PRUnichar* aBuf, PRUint32 &aBufLen, PRUint32* map)
 {
@@ -1553,12 +1573,28 @@ static void ArabicShaping(const PRUnichar* aString, PRUint32 aLen,
    rightJ = GetJoiningClass(*(src)) ;
    while(src>aString) {
       leftJ = thisJ;
+#ifdef IBMBIDI
+      //if((eTr != leftJ) || ((leftJ == eTr) && (*(src+1)) == 0x0020))
+      if ((eTr != leftJ) || ((leftJ == eTr) && !CHAR_IS_ARABIC(*(src+1))))
+         leftNoTrJ = thisJ;
+      //for(p=src+2; (eTr == leftNoTrJ) && ((*(p-1)) != 0x0020) && (p <= (aString+aLen-1)); p++)
+      for(p=src+2; (eTr == leftNoTrJ) && (CHAR_IS_ARABIC(*(p-1))) && (p <= (aString+aLen-1)); p++)
+         leftNoTrJ = GetJoiningClass(*(p)) ;
+
+#else
       if(eTr != thisJ)
         leftNoTrJ = thisJ;
+#endif // IBMBIDI
       thisJ = rightJ;
       rightJ = rightNoTrJ = GetJoiningClass(*(src-1)) ;
+#ifdef IBMBIDI
+      //for(p=src-2; (eTr == rightNoTrJ) && ((*(src-1)) != 0x0020) && (p >= aString); p--)
+      for(p=src-2; (eTr == rightNoTrJ) && (CHAR_IS_ARABIC(*(src-1))) && (p >= aString); p--)
+         rightNoTrJ = GetJoiningClass(*(p)) ;
+#else
       for(p=src-2; (eTr == rightNoTrJ) && (p >= src); p--) 
           rightNoTrJ = GetJoiningClass(*(p)) ;
+#endif // IBMBIDI
       formB = PresentationFormB(*src, DecideForm(leftNoTrJ, thisJ, rightNoTrJ));
       if(FONT_HAS_GLYPH(map,formB))
           *dest++ = formB;
@@ -1568,8 +1604,17 @@ static void ArabicShaping(const PRUnichar* aString, PRUint32 aLen,
 //PresentationFormB(*src, DecideForm(leftJ, thisJ, rightJ)));
       src--;
    }
+#ifdef IBMBIDI
+      //if((eTr != thisJ) || ((thisJ == eTr) && (*(src+1)) == 0x0020))
+      if((eTr != thisJ) || ((thisJ == eTr) && (!CHAR_IS_ARABIC(*(src+1)))))
+         leftNoTrJ = thisJ;
+      //for(p=src+2; (eTr == leftNoTrJ) && ((*(p-1)) != 0x0020) && (p <= (aString+aLen-1)); p++)
+      for(p=src+2; (eTr == leftNoTrJ) && (CHAR_IS_ARABIC(*(p-1))) && (p <= (aString+aLen-1)); p++)
+         leftNoTrJ = GetJoiningClass(*(p)) ;
+#else
    if(eTr != thisJ)
      leftNoTrJ = thisJ;
+#endif // IBMBIDI
    formB = PresentationFormB(*src, DecideForm(leftNoTrJ, rightJ, eNJ));
    if(FONT_HAS_GLYPH(map,formB))
        *dest++ = formB;
@@ -1616,7 +1661,7 @@ printf("]\n");
 #endif
 }
 //============ End of Arabic Basic to Presentation Form B Code ============
-
+//IBMBIDI: this will be deleted as we R going to implement nsBidi::<Shaping Func.> as static..
 static PRBool NeedComplexScriptHandling(const PRUnichar *aString, PRUint32 aLen,
        PRBool bFontSupportHebrew, PRBool* oHebrew,
        PRBool bFontSupportArabic, PRBool* oArabic)
@@ -1916,6 +1961,10 @@ NS_IMETHODIMP nsRenderingContextWin :: GetWidth(const PRUnichar *aString,
                                                 nscoord &aWidth,
                                                 PRInt32 *aFontID)
 {
+#ifdef IBMBIDI
+  nsresult rv = NS_OK;
+  NS_WITH_SERVICE(nsIUBidiUtils, BidiEngine, kUBidiUtilCID, &rv);
+#endif // IBMBIDI
   if (nsnull != mFontMetrics)
   {
     PRUnichar* pstr = (PRUnichar *)(const PRUnichar *)aString;
@@ -1934,11 +1983,12 @@ NS_IMETHODIMP nsRenderingContextWin :: GetWidth(const PRUnichar *aString,
 
     SetupFontAndColor();
     HFONT selectedFont = mCurrFont;
-#ifdef ARABIC_HEBREW_RENDERING
+#ifdef IBMBIDI
+    PRBool bArabic=PR_FALSE;
+    PRBool bHebrew=PR_FALSE;
     PRUnichar buf[8192];
     PRUint32 len;
-#endif  // ARABIC_HEBREW_RENDERING
-
+#endif // IBMBIDI
     LONG width = 0;
     PRUint32 start = 0;
     for (PRUint32 i = 0; i < aLength; i++) {
@@ -1962,23 +2012,60 @@ FoundFont:
             ::SelectObject(mDC, prevFont->mFont);
             selectedFont = prevFont->mFont;
           }
-#ifdef ARABIC_HEBREW_RENDERING
-          PRBool bArabic=PR_FALSE;
-          PRBool bHebrew=PR_FALSE;
-          if(NeedComplexScriptHandling(&pstr[start],i-start,
-                HAS_HEBREW_GLYPH(prevFont), &bHebrew,
-                HAS_ARABIC_PRESENTATION_FORM_B(prevFont), &bArabic ) )
-          {
-             len = 8192;
-             if(bHebrew) {
-                HebrewReordering(&pstr[start], i-start, buf, len);
-             } else if (bArabic) {
-                ArabicShaping(&pstr[start], i-start, buf, len, prevFont->mMap);
+#ifdef IBMBIDI
+          len = 0;
+#if 0
+          if (mIsRTL && mNeedReverse) {
+            len = 8192;
+            HebrewReordering(&pstr[start], i-start, buf, len);
+          }
+#endif
+          if (BidiEngine->NeedComplexScriptHandling(&pstr[start], i-start,
+                                        HAS_HEBREW_GLYPH(prevFont), &bHebrew,
+                                        HAS_ARABIC_PRESENTATION_FORM_B(prevFont), &bArabic) ) {
+            //XXX TODO: Handle BDO for both Arabic and Hebrew here
+
+            //ahmed: changes here to follow the user pref. disabling system shaping or mozilla shaping
+            // in this part enable or disable mozilla shape & revrse
+            nsresult rv = NS_OK;
+            nsCOMPtr<nsIPref> prefs;
+            PRInt8 prefInt = 0;
+            rv = nsServiceManager::GetService(kPrefCID,
+                                              NS_GET_IID(nsIPref),
+                                              (nsISupports**)&prefs); 
+            if (NS_SUCCEEDED(rv) && prefs)
+            {
+              NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_SUPPORTMODE_STR , ((PRInt32*)&prefInt)));
+              // Support Mode
+              // ------------------
+              // bidi.support
+              // 1 = mozillaBidisupport *
+              // 2 = OsBidisupport
+              // 3 = disableBidisupport
+              if((IBMBIDI_SUPPORTMODE_MOZILLA==prefInt)&& (bArabic))
+              {
+                //reverse the arabic buffer
+                PRUnichar aRevBuf [8192];
+                PRInt32 aRevBufLen = 8192,j;
+                nsresult rv1 = NS_OK;
+                NS_WITH_SERVICE(nsIBidi, BidiEngine2, kBidiCID, &rv1);
+                BidiEngine2->writeReverse(pstr,i-start, aRevBuf, UBIDI_KEEP_BASE_COMBINING|UBIDI_DO_MIRRORING, &aRevBufLen);
+                for(j=0;j<aRevBufLen;j++)
+                {
+                  pstr[j] = aRevBuf[j];
+                }
+                //shape the arabic string
+                len = 8192;
+                BidiEngine->ArabicShaping(&pstr[start], i-start, buf, len, prevFont->mMap);
+              }
             }
-             width += prevFont->GetWidth(mDC, buf, len);
-          } 
-          else 
-#endif // ARABIC_HEBREW_RENDERING
+          }
+          //end ahmed
+          if (len > 0) {
+            width += prevFont->GetWidth(mDC, buf, len);
+          }
+          else
+#endif // IBMBIDI
           {
             width += prevFont->GetWidth(mDC, &pstr[start], i - start);
           }
@@ -1997,23 +2084,57 @@ FoundFont:
         ::SelectObject(mDC, prevFont->mFont);
         selectedFont = prevFont->mFont;
       }
-#ifdef ARABIC_HEBREW_RENDERING
-      PRBool bArabic=PR_FALSE;
-      PRBool bHebrew=PR_FALSE;
-      if(NeedComplexScriptHandling(&pstr[start],i-start,
-                HAS_HEBREW_GLYPH(prevFont), &bHebrew,
-            HAS_ARABIC_PRESENTATION_FORM_B(prevFont), &bArabic ) )
-      {
-         len = 8192;
-         if(bHebrew) {
-            HebrewReordering(&pstr[start], i-start, buf, len);
-         } else if (bArabic) {
-            ArabicShaping(&pstr[start], i-start, buf, len, prevFont->mMap);
-        }
+#ifdef IBMBIDI
+      bArabic=PR_FALSE;
+      bHebrew=PR_FALSE;
+      len = 0;
+#if 0
+      if (mIsRTL && mNeedReverse) {
+        len = 8192;
+        HebrewReordering(&pstr[start], i-start, buf, len);
+      }
+#endif
+      if (BidiEngine->NeedComplexScriptHandling(&pstr[start], i-start,
+                                    HAS_HEBREW_GLYPH(prevFont), &bHebrew,
+                                    HAS_ARABIC_PRESENTATION_FORM_B(prevFont), &bArabic) ) {
+         //XXX TODO: Handle BDO for both Arabic and Hebrew here
+         //ahmed:changes here to follow the user pref. disabling system shaping or mozilla shaping
+         //in this part enable or disable mozilla shape & revrse
+
+         nsresult rv = NS_OK;
+         nsCOMPtr<nsIPref>     prefs;
+         PRInt8 prefInt = 0;
+         rv = nsServiceManager::GetService(kPrefCID,
+                                           NS_GET_IID(nsIPref),
+                                           (nsISupports**)&prefs);
+         if (NS_SUCCEEDED(rv) && prefs)
+         {
+            NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_SUPPORTMODE_STR , ((PRInt32*)&prefInt)));
+
+            if((IBMBIDI_SUPPORTMODE_MOZILLA==prefInt)&& (bArabic))
+            {
+               // reverse the arabic buffer
+               PRUnichar aRevBuf [8192];
+               PRInt32 aRevBufLen = 8192,j;
+               nsresult rv1 = NS_OK;
+               NS_WITH_SERVICE(nsIBidi, BidiEngine2, kBidiCID, &rv1);
+               BidiEngine2->writeReverse(pstr,i-start, aRevBuf, UBIDI_KEEP_BASE_COMBINING|UBIDI_DO_MIRRORING, &aRevBufLen);
+               for(j=0;j<aRevBufLen;j++)
+               {
+                  pstr[j] = aRevBuf[j];
+               }
+               //shape the arabic string
+            
+               len = 8192;
+               BidiEngine->ArabicShaping(&pstr[start], i-start, buf, len, prevFont->mMap);
+            }
+         }
+      }
+      if (len > 0) {
          width += prevFont->GetWidth(mDC, buf, len);
-      } 
-      else 
-#endif // ARABIC_HEBREW_RENDERING
+      }
+      else
+#endif // IBMBIDI
       {
         width += prevFont->GetWidth(mDC, &pstr[start], i - start);
       }
@@ -2357,6 +2478,12 @@ NS_IMETHODIMP nsRenderingContextWin :: DrawString(const PRUnichar *aString, PRUi
                                                   PRInt32 aFontID,
                                                   const nscoord* aSpacing)
 {
+#ifdef IBMBIDI
+  //PRUint8 value;
+  //this->GetDocumentBidi(IBMBIDI_NUMERAL,&value);
+ nsresult rv = NS_OK;
+ NS_WITH_SERVICE(nsIUBidiUtils/*nsIUBidiUtils*/, BidiEngine, kUBidiUtilCID, &rv);
+#endif // IBMBIDI
   if (nsnull != mFontMetrics)
   {
     PRUnichar* pstr = (PRUnichar *)(const PRUnichar *)aString;
@@ -2383,10 +2510,12 @@ NS_IMETHODIMP nsRenderingContextWin :: DrawString(const PRUnichar *aString, PRUi
 
     SetupFontAndColor();
     HFONT selectedFont = mCurrFont;
-#ifdef ARABIC_HEBREW_RENDERING
+#ifdef IBMBIDI
     PRUnichar buf[8192];
     PRUint32 len;
-#endif  // ARABIC_HEBREW_RENDERING
+    PRBool bArabic=PR_FALSE;
+    PRBool bHebrew=PR_FALSE;
+#endif  // IBMBIDI
 
     PRUint32 start = 0;
     for (PRUint32 i = 0; i < aLength; i++) {
@@ -2429,24 +2558,53 @@ FoundFont:
             }
           }
           else {
-#ifdef ARABIC_HEBREW_RENDERING
-            PRBool bArabic=PR_FALSE;
-            PRBool bHebrew=PR_FALSE;
-            if(NeedComplexScriptHandling(&pstr[start],i-start,
-                HAS_HEBREW_GLYPH(prevFont), &bHebrew,
-                HAS_ARABIC_PRESENTATION_FORM_B(prevFont), &bArabic ) )
-            {
+#ifdef IBMBIDI
+             len = 0;
+#if 0
+             if (mIsRTL && mNeedReverse) {
                len = 8192;
-               if(bHebrew) {
-                  HebrewReordering(&pstr[start], i-start, buf, len);
-               } else if (bArabic) {
-                  ArabicShaping(&pstr[start], i-start, buf, len, prevFont->mMap);
-              }
-              prevFont->DrawString(mDC, x, y, buf, len);
-              x += prevFont->GetWidth(mDC, buf, len);
-            } 
-            else 
-#endif // ARABIC_HEBREW_RENDERING
+               HebrewReordering(&pstr[start], i-start, buf, len);
+             }
+#endif
+             if (BidiEngine->NeedComplexScriptHandling(&pstr[start], i-start,
+                                           HAS_HEBREW_GLYPH(prevFont), &bHebrew,
+                                           HAS_ARABIC_PRESENTATION_FORM_B(prevFont), &bArabic) ) {
+                //XXX TODO: Handle BDO for both Arabic and Hebrew here
+                //ahmed: changes here to follow the user pref. disabling system shaping or mozilla shaping
+                // in this part enable or disable mozilla shape & revrse
+                nsresult rv = NS_OK;  
+                nsCOMPtr<nsIPref> prefs;
+                PRInt8 prefInt = 0;
+                rv = nsServiceManager::GetService(kPrefCID,
+                                                  NS_GET_IID(nsIPref),
+                                                  (nsISupports**)&prefs);
+                if (NS_SUCCEEDED(rv) && prefs)
+                {
+                   NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_SUPPORTMODE_STR , ((PRInt32*)&prefInt)));
+                   if((IBMBIDI_SUPPORTMODE_MOZILLA==prefInt)&& (bArabic))
+                   {
+                      //reverse the arabic buffer
+                      PRUnichar aRevBuf [8192];
+                      PRInt32 aRevBufLen = 8192,j;
+                      nsresult rv1 = NS_OK;
+                      NS_WITH_SERVICE(nsIBidi, BidiEngine2, kBidiCID, &rv1);
+                      BidiEngine2->writeReverse(pstr,i-start, aRevBuf, UBIDI_KEEP_BASE_COMBINING|UBIDI_DO_MIRRORING, &aRevBufLen);
+                      for(j=0;j<aRevBufLen;j++)
+                      {
+                         pstr[j] = aRevBuf[j];
+                      }
+                      //shape the arabic string
+                      len = 8192;
+                      BidiEngine->ArabicShaping(&pstr[start], i-start, buf, len, prevFont->mMap);
+                   }
+                }
+             }
+             if (len > 0) {
+               prevFont->DrawString(mDC, x, y, buf, len);
+               x += prevFont->GetWidth(mDC, buf, len);
+             }
+             else
+#endif // IBMBIDI
             {
               prevFont->DrawString(mDC, x, y, &pstr[start], i - start);
               x += prevFont->GetWidth(mDC, &pstr[start], i - start);
@@ -2487,23 +2645,54 @@ FoundFont:
         }
       }
       else {
-#ifdef ARABIC_HEBREW_RENDERING
-        PRBool bArabic=PR_FALSE;
-        PRBool bHebrew=PR_FALSE;
-        if(NeedComplexScriptHandling(&pstr[start],i-start,
-            HAS_HEBREW_GLYPH(prevFont), &bHebrew,
-            HAS_ARABIC_PRESENTATION_FORM_B(prevFont), &bArabic ) )
-        {
-            len = 8192;
-            if(bHebrew) {
-               HebrewReordering(&pstr[start], i-start, buf, len);
-            } else if (bArabic) {
-               ArabicShaping(&pstr[start], i-start, buf, len, prevFont->mMap);
+#ifdef IBMBIDI
+         bArabic=PR_FALSE;
+         bHebrew=PR_FALSE;
+         len = 0;
+#if 0
+         if (mIsRTL && mNeedReverse) {
+           len = 8192;
+           HebrewReordering(&pstr[start], i-start, buf, len);
+         }
+#endif
+         if (BidiEngine->NeedComplexScriptHandling(&pstr[start], i-start,
+                                       HAS_HEBREW_GLYPH(prevFont), &bHebrew,
+                                       HAS_ARABIC_PRESENTATION_FORM_B(prevFont), &bArabic) ) {
+            //XXX TODO: Handle BDO for both Arabic and Hebrew here
+            //ahmed: changes here to follow the user pref. disabling system shaping or mozilla shaping
+            //in this part enable or disable mozilla shape & revrse
+            nsresult rv = NS_OK;  
+            nsCOMPtr<nsIPref> prefs;
+            PRInt8 prefInt = 0;
+            rv = nsServiceManager::GetService(kPrefCID,
+                                              NS_GET_IID(nsIPref),
+                                       (nsISupports**)&prefs);
+            if (NS_SUCCEEDED(rv) && prefs)
+            {
+               NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_SUPPORTMODE_STR , ((PRInt32*)&prefInt)));
+               if((IBMBIDI_SUPPORTMODE_MOZILLA==prefInt)&& (bArabic))
+               {
+                  //reverse the arabic buffer before shaping
+                  PRUnichar aRevBuf [8192];
+                  PRInt32 aRevBufLen = 8192,j;
+                  nsresult rv1 = NS_OK;
+                  NS_WITH_SERVICE(nsIBidi, BidiEngine2, kBidiCID, &rv1);
+                  BidiEngine2->writeReverse(pstr,i-start, aRevBuf, UBIDI_KEEP_BASE_COMBINING|UBIDI_DO_MIRRORING, &aRevBufLen);
+                  for(j=0;j<aRevBufLen;j++)
+                  {
+                     pstr[j] = aRevBuf[j];
+                  }
+                  //shape the arabic string
+                  len = 8192;
+                  BidiEngine->ArabicShaping(&pstr[start], i-start, buf, len, prevFont->mMap);
+               }
             }
-            prevFont->DrawString(mDC, x, y, buf, len);
-        } 
-        else 
-#endif // ARABIC_HEBREW_RENDERING
+         }
+         if (len > 0) {
+           prevFont->DrawString(mDC, x, y, buf, len);
+         }
+         else
+#endif // IBMBIDI
         {
           prevFont->DrawString(mDC, x, y, &pstr[start], i - start);
         }
@@ -3743,5 +3932,31 @@ nsRenderingContextWin::ConditionRect(nsRect& aSrcRect, RECT& aDestRect)
                       : (aSrcRect.x+aSrcRect.width);
 }
 
+#ifdef IBMBIDI
+/**
+ *  Examine whether the platfrom provides Bidi support
+ *  
+ */
+nsresult nsRenderingContextWin::IsBidiSystem(PRBool& aIsBidi)
+{
+  aIsBidi = IS_BIDI_SYSTEM;
+  return NS_OK;
+}
 
-
+/**
+ * Let the device context know whether we want RTL reading
+ *  
+ */
+nsresult nsRenderingContextWin::SetRTLReading(PRBool aIsRTL)
+{
+  if (mIsRTL != aIsRTL) {
+    if (IS_BIDI_SYSTEM) {
+      UINT flags = (aIsRTL) ? ::GetTextAlign(mDC) | TA_RTLREADING
+                            : ::GetTextAlign(mDC) & (~TA_RTLREADING);
+      ::SetTextAlign(mDC, flags);
+    }
+    mIsRTL = aIsRTL;
+  }
+  return NS_OK;
+}
+#endif // IBMBIDI

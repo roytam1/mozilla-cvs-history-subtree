@@ -183,6 +183,11 @@ public:
   //~~~
   NS_IMETHOD RetrieveCurrentNativeGraphicData(PRUint32 * ngd);
 
+#ifdef IBMBIDI
+  NS_IMETHOD IsBidiSystem(PRBool& aIsBidi);
+  NS_IMETHOD SetRTLReading(PRBool aIsRTL);
+#endif // IBMBIDI
+
   // nsIRenderingContextWin
   NS_IMETHOD CreateDrawingSurface(HDC aDC, nsDrawingSurface &aSurface);
 

@@ -430,6 +430,10 @@ public:
    * @return error status
    */
   NS_IMETHOD EndPage(void) = 0;
+
+#ifdef IBMBIDI
+  PRPackedBool          mIsVisual;
+#endif // IBMBIDI
 };
 
 #endif /* nsIDeviceContext_h___ */

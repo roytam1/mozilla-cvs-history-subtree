@@ -83,6 +83,9 @@ LAYOUT_ATOM(selectScrolledContentPseudo, ":-moz-select-scrolled-content")
 
   // Alphabetical list of frame types
 LAYOUT_ATOM(areaFrame, "AreaFrame")
+#ifdef IBMBIDI
+LAYOUT_ATOM(directionalFrame, "BidiControlFrame")
+#endif // IBMBIDI
 LAYOUT_ATOM(blockFrame, "BlockFrame")
 LAYOUT_ATOM(brFrame, "BRFrame")
 LAYOUT_ATOM(bulletFrame, "BulletFrame")
@@ -93,6 +96,9 @@ LAYOUT_ATOM(imageFrame, "ImageFrame")
 LAYOUT_ATOM(inlineFrame, "InlineFrame")
 LAYOUT_ATOM(letterFrame, "LetterFrame")
 LAYOUT_ATOM(lineFrame, "LineFrame")
+#ifdef IBMBIDI
+LAYOUT_ATOM(listControlFrame,"ListControlFrame")
+#endif
 LAYOUT_ATOM(objectFrame, "ObjectFrame")
 LAYOUT_ATOM(pageFrame, "PageFrame")
 LAYOUT_ATOM(placeholderFrame, "PlaceholderFrame")
@@ -113,13 +119,25 @@ LAYOUT_ATOM(textFrame, "TextFrame")
 LAYOUT_ATOM(viewportFrame, "ViewportFrame")
 
   // Alphabetical list of frame property names
+#ifdef IBMBIDI
+LAYOUT_ATOM(baseLevel, "BaseLevel")                            // PRUint8
+#endif // IBMBIDI
 LAYOUT_ATOM(collapseOffsetProperty, "CollapseOffsetProperty")  // nsPoint*
+#ifdef IBMBIDI
+LAYOUT_ATOM(embeddingLevel, "EmbeddingLevel")                  // PRUint8
+#endif // IBMBIDI
 LAYOUT_ATOM(inlineFrameAnnotation, "InlineFrameAnnotation")    // BOOL
 LAYOUT_ATOM(maxElementSizeProperty, "MaxElementSizeProperty")  // nsSize*
+#ifdef IBMBIDI
+LAYOUT_ATOM(nextBidi, "NextBidi")                              // nsIFrame*
+#endif // IBMBIDI
 LAYOUT_ATOM(overflowAreaProperty, "OverflowArea")              // nsRect*
 LAYOUT_ATOM(overflowProperty, "OverflowProperty")              // list of nsIFrame*
 LAYOUT_ATOM(overflowLinesProperty, "OverflowLinesProperty")    // list of nsLineBox*
 LAYOUT_ATOM(spaceManagerProperty, "SpaceManagerProperty")      // the space manager for a block
+#ifdef IBMBIDI
+LAYOUT_ATOM(textClass, "TextClass")                            // PRUint8
+#endif // IBMBIDI
 LAYOUT_ATOM(viewProperty, "ViewProperty")                      // nsView*
 
   // Alphabetical list of event handler names

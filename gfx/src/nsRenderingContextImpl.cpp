@@ -41,8 +41,9 @@ PRInt32 PR_CALLBACK compare_active(const void *u,const void *v){return ((Edge*)u
  */
 nsRenderingContextImpl :: nsRenderingContextImpl()
 {
-
-
+#ifdef IBMBIDI
+  mIsRTL = PR_FALSE;
+#endif // IBMBIDI
 }
 
 /** ---------------------------------------------------

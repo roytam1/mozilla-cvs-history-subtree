@@ -1057,6 +1057,18 @@ public:
    */
   NS_IMETHOD ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild) = 0;
 
+#ifdef IBMBIDI
+  /**
+   *  retrieve and set Bidi property of this frame
+   *  @lina 5/1/2000
+   */
+  NS_IMETHOD GetBidiProperty(nsIPresContext* aPresContext,
+                             nsIAtom*        aPropertyName,
+                             void**          aPropertyValue) const = 0;
+  NS_IMETHOD SetBidiProperty(nsIPresContext* aPresContext,
+                             nsIAtom*        aPropertyName,
+                             void*           aPropertyValue) const = 0;
+#endif // IBMBIDI
 private:
   NS_IMETHOD_(nsrefcnt) AddRef(void) = 0;
   NS_IMETHOD_(nsrefcnt) Release(void) = 0;

@@ -29,7 +29,7 @@
  * identified per MPL Section 3.3
  *
  * Date         Modified by     Description of modification
- * 03/20/2000   IBM Corp.       BiDi - ability to change the default direction of the browser
+ * 03/20/2000   IBM Corp.       Bidi - ability to change the default direction of the browser
  *
  */
 #ifndef nsIPresContext_h___
@@ -41,6 +41,10 @@
 #include "nsColor.h"
 #include "nsIFrameImageLoader.h"
 #include "nsILanguageAtom.h"
+#ifdef IBMBIDI
+#include "nsIUBidiUtils.h"
+#include "nsBidiPresUtils.h"
+#endif // IBMBIDI
 
 struct nsFont;
 
@@ -320,6 +324,14 @@ public:
   NS_IMETHOD GetDefaultDirection(PRUint8* aDirection) = 0;
   NS_IMETHOD SetDefaultDirection(PRUint8 aDirection) = 0;
   NS_IMETHOD GetLanguage(nsILanguageAtom** aLanguage) = 0;
+#ifdef IBMBIDI
+  NS_IMETHOD BidiEnabled(PRBool& aBidiEnabled) const = 0;
+  NS_IMETHOD IsVisualMode(PRBool& aIsVisual) const = 0;
+  NS_IMETHOD SetVisualMode(PRBool aIsVisual) = 0;
+  NS_IMETHOD GetBidiUtils(nsBidiPresUtils** aBidiUtils) = 0;
+  NS_IMETHOD SetBidi(nsBidiOptions Source) = 0;
+  NS_IMETHOD GetBidi(nsBidiOptions * Dist) = 0;
+#endif // IBMBIDI
 
 #ifdef MOZ_REFLOW_PERF
   NS_IMETHOD CountReflows(const char * aName, PRUint32 aType) = 0;

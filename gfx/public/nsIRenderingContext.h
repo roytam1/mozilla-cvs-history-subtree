@@ -756,6 +756,10 @@ public:
                      nsBoundingMetrics& aBoundingMetrics,
                      PRInt32*           aFontID = nsnull) = 0;
 #endif
+#ifdef IBMBIDI
+  NS_IMETHOD IsBidiSystem(PRBool& aIsBidi) = 0;
+  NS_IMETHOD SetRTLReading(PRBool aIsRTL) = 0;
+#endif // IBMBIDI
 };
 
 //modifiers for text rendering

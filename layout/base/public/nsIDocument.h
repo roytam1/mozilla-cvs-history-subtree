@@ -26,6 +26,9 @@
 #include "nsISupports.h"
 #include "nsIUnicharInputStream.h"
 #include "nsGUIEvent.h"
+#ifdef IBMBIDI
+#include "nsIUBidiUtils.h"
+#endif // IBMBIDI
 
 class nsIAtom;
 class nsIArena;
@@ -148,6 +151,14 @@ public:
    * Remove a charset observer.
    */
   NS_IMETHOD RemoveCharSetObserver(nsIObserver* aObserver) = 0;
+
+#ifdef IBMBIDI
+  NS_IMETHOD   SetBidi(nsBidiOptions Source) = 0;
+  NS_IMETHOD   GetBidi(nsBidiOptions * Dist) = 0;
+
+  NS_IMETHOD   BidiEnabled(PRBool& aBidiEnabled) const = 0;
+  NS_IMETHOD   EnableBidi(void) = 0;
+#endif // IBMBIDI
 
   /**
    * Return the Line Breaker for the document
