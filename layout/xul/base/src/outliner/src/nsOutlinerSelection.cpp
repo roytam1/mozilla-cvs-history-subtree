@@ -136,6 +136,12 @@ struct nsOutlinerRange
         mMin++;
       else if (aIndex == mMax)
         mMax--;
+      else {
+        // We have to break this range.
+        nsOutlinerRange* newRange = new nsOutlinerRange(mSelection, aIndex + 1, mMax);
+        newRange->Connect(this, mNext);
+        mMax = aIndex - 1;
+      }
     }
     else if (mNext)
       mNext->Remove(aIndex);
@@ -353,9 +359,9 @@ NS_IMETHODIMP nsOutlinerSelection::ToggleSelect(PRInt32 aIndex)
   else {
     if (!mFirstRange->Contains(aIndex))
       mFirstRange->Add(aIndex);
-    else 
+    else
       mFirstRange->Remove(aIndex);
-
+    
     mOutliner->InvalidateRow(aIndex);
 
     FireOnSelectHandler();
