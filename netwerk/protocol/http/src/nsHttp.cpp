@@ -54,12 +54,14 @@ HashString(const PRUint8 *key)
 static nsresult
 CreateAtomTable()
 {
+    LOG(("CreateAtomTable\n"));
+
     if (gHttpAtomTable)
         return NS_OK;
 
     gHttpAtomTable = PL_NewHashTable(128, (PLHashFunction) HashString,
                                           (PLHashComparator) PL_strcasecmp, 
-                                          (PLHashComparator) 0, 0, 0);
+                                          (PLHashComparator) PL_strcasecmp, 0, 0);
     if (!gHttpAtomTable)
         return NS_ERROR_OUT_OF_MEMORY;
 
@@ -68,6 +70,7 @@ CreateAtomTable()
 #include "nsHttpAtomList.h"
 #undef HTTP_ATOM
 
+    nsHttp::DumpAtomTable();
     return NS_OK;
 }
 
@@ -80,7 +83,6 @@ nsHttp::DestroyAtomTable()
     }
 }
 
-#if 0
 #define NBUCKETS(ht)    (1 << (PL_HASH_BITS - (ht)->shift))
 void
 nsHttp::DumpAtomTable()
@@ -92,14 +94,13 @@ nsHttp::DumpAtomTable()
             printf("bucket %d: ", i);
             hep = &gHttpAtomTable->buckets[i];
             while ((he = *hep) != 0) {
-                printf("%x ", he);
+                printf("(%x,%s,%x,%x) ", he->key, (const char *) he->key, he->keyHash, he->value);
                 hep = &he->next;
             }
             printf("\n");
         }
     }
 }
-#endif
 
 nsHttpAtom
 nsHttp::ResolveAtom(const char *str)
@@ -108,9 +109,12 @@ nsHttp::ResolveAtom(const char *str)
         CreateAtomTable();
 
     nsHttpAtom atom = { nsnull };
-    
-    if (gHttpAtomTable)
+
+    if (gHttpAtomTable) {
+        printf("ResolveAtom: str=[%s,%x] --> ", str, HashString((const PRUint8 *) str));
         atom._val = (const char *) PL_HashTableLookup(gHttpAtomTable, str);
+        printf("[%s]\n", atom.get());
+    }
 
     return atom;
 }

@@ -2,7 +2,15 @@
 #include "nsHttpTransaction.h"
 #include "nsHttpConnection.h"
 #include "nsIStringStream.h"
+#include "nsIStreamConverterService.h"
+#include "nsISupportsPrimitives.h"
+#include "nsIServiceManager.h"
+#include "nsHTTPChunkConv.h"
+#include "nsNetCID.h"
 #include "prmem.h"
+
+static NS_DEFINE_CID(kStreamConverterServiceCID, NS_STREAMCONVERTERSERVICE_CID);
+static NS_DEFINE_CID(kSupportsVoidCID, NS_SUPPORTS_VOID_CID);
 
 //-----------------------------------------------------------------------------
 // nsHttpTransaction
@@ -14,8 +22,10 @@ nsHttpTransaction::nsHttpTransaction(nsIStreamListener *listener)
     , mResponseVersion(HTTP_VERSION_UNKNOWN)
     , mResponseStatus(0)
     , mReadBuf(0)
+    , mChunkConvCtx(0)
     , mHaveStatusLine(0)
     , mHaveAllHeaders(0)
+    , mFiredOnStart(0)
 {
     NS_INIT_ISUPPORTS();
 
@@ -93,7 +103,7 @@ nsHttpTransaction::OnDataAvailable(nsIInputStream *is, PRUint32 count)
 
     if (mHaveAllHeaders)
         // simply pipe the data over to the channel's thread
-        return mListener->OnDataAvailable(this, nsnull, is, 0, count);
+        return HandleContent(is, count);
 
     //
     // need to parse status line and headers
@@ -150,7 +160,7 @@ done:
             nsCOMPtr<nsIInputStream> stream = do_QueryInterface(sup, &rv);
             if (NS_FAILED(rv)) return rv;
 
-            rv = OnDataAvailable(stream, bufCount);
+            rv = HandleContent(stream, bufCount);
             // the stream listener proxy should have room for all of the data
             // in this stream.
             NS_POSTCONDITION(rv != NS_BASE_STREAM_WOULD_BLOCK, "bad listener");
@@ -158,7 +168,7 @@ done:
             if (NS_FAILED(rv)) return rv;
         }
         if (count) // try to read some more from the socket
-            return OnDataAvailable(is, count);
+            return HandleContent(is, count);
     }
     return NS_OK;
 }
@@ -172,6 +182,11 @@ nsHttpTransaction::OnStopRequest(nsresult status)
     if (mReadBuf) {
         PR_Free(mReadBuf);
         mReadBuf = 0;
+    }
+
+    if (!mFiredOnStart) {
+        mFiredOnStart = PR_TRUE;
+        mListener->OnStartRequest(this, nsnull); 
     }
 
     return mListener->OnStopRequest(this, nsnull, status);
@@ -279,8 +294,10 @@ nsHttpTransaction::ParseHeaderLine(const char *line)
     if (*line == '\0')
         mHaveAllHeaders = PR_TRUE;
     else if ((p = PL_strchr(line, ':')) != nsnull) {
+        LOG(("found :\n"));
         *p = 0;
         nsHttpAtom atom = nsHttp::ResolveAtom(line);
+        LOG(("resolved header atom: %s\n", atom.get()));
         if (atom) {
             // skip over whitespace
             do {
@@ -288,6 +305,8 @@ nsHttpTransaction::ParseHeaderLine(const char *line)
             } while (*p == ' ');
             // assign response header
             mResponseHeaders.SetHeader(atom, p);
+
+            LOG(("setting header [%s:%s]\n", atom.get(), p));
         }
     }
     else
@@ -347,6 +366,67 @@ nsHttpTransaction::HandleSegment(const char *segment,
     }
 
     // read something
+    return NS_OK;
+}
+
+nsresult
+nsHttpTransaction::HandleContent(nsIInputStream *stream, PRUint32 count)
+{
+    nsresult rv;
+
+    LOG(("nsHttpTransaction::HandleContent [this=%x count=%u]\n",
+        this, count));
+
+    if (!mFiredOnStart) {
+        mFiredOnStart = PR_TRUE;
+
+        LOG(("firing OnStartRequest\n"));
+
+        rv = mListener->OnStartRequest(this, nsnull);
+        if (NS_FAILED(rv)) return rv;
+
+        // handle chunked encoding here
+        const char *val =
+            mResponseHeaders.PeekHeader(nsHttp::Transfer_Encoding);
+        if (val) {
+            rv = InstallChunkedDecoder();
+            if (NS_FAILED(rv)) return rv;
+        }
+    }
+
+    return mListener->OnDataAvailable(this, nsnull, stream, 0, count);
+}
+
+nsresult
+nsHttpTransaction::InstallChunkedDecoder()
+{
+    nsresult rv;
+
+    LOG(("nsHttpTransaction::InstallChunkedDecoder [this=%x]\n", this));
+
+    nsCOMPtr<nsIStreamConverterService> serv =
+            do_GetService(kStreamConverterServiceCID, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    mChunkConvCtx = new nsHTTPChunkConvContext();
+    if (!mChunkConvCtx)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    nsCOMPtr<nsISupportsVoid> ctx =
+            do_CreateInstance(kSupportsVoidCID, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    ctx->SetData(mChunkConvCtx);
+
+    nsCOMPtr<nsIStreamListener> listener;
+    rv = serv->AsyncConvertData(NS_LITERAL_STRING("chunked").get(),
+                                NS_LITERAL_STRING("unchunked").get(),
+                                mListener, ctx,
+                                getter_AddRefs(listener));
+    if (NS_FAILED(rv)) return rv;
+
+    // data will now be pumped through the chunked decoder
+    mListener = listener;
     return NS_OK;
 }
 

@@ -10,6 +10,7 @@
 
 class nsHttpConnection;
 class nsHttpConnectionInfo;
+class nsHTTPChunkConvContext;
 
 //-----------------------------------------------------------------------------
 // nsHttpTransaction represents a single HTTP transaction.  It is thread-safe,
@@ -45,10 +46,10 @@ public:
     PRUint32              ResponseStatus()     { return mResponseStatus; }
     const char           *ResponseStatusText() { return mResponseStatusText; }
 
-    // Called to write data until return NS_BASE_STREAM_CLOSED
+    // Called to write data to the socket until return NS_BASE_STREAM_CLOSED
     nsresult OnDataWritable(nsIOutputStream *, PRUint32 count);
 
-    // Called to read data until return NS_BASE_STREAM_CLOSED
+    // Called to read data from the socket
     nsresult OnDataAvailable(nsIInputStream *, PRUint32 count);
 
     // Called when the transaction completes, possibly prematurely with an error.
@@ -60,6 +61,8 @@ private:
     nsresult ParseHeaderLine(const char *line);
     nsresult ParseLine(const char *line);
     nsresult HandleSegment(const char *segment, PRUint32 count, PRUint32 *countRead);
+    nsresult HandleContent(nsIInputStream *, PRUint32 count);
+    nsresult InstallChunkedDecoder();
 
     // ReadSegments callback
     static NS_METHOD WriteSegmentFun(nsIInputStream *, void *, const char *,
@@ -79,10 +82,14 @@ private:
     nsXPIDLCString              mResponseStatusText;
 
     char                       *mReadBuf; // read ahead buffer
-
     nsCString                   mLineBuf; // may contain a partial line
+
+    // we hold onto this context to know when eof has been reached
+    nsHTTPChunkConvContext     *mChunkConvCtx;
+
     PRPackedBool                mHaveStatusLine;
     PRPackedBool                mHaveAllHeaders;
+    PRPackedBool                mFiredOnStart;
 };
 
 #endif
