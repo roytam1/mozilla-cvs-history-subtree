@@ -47,8 +47,8 @@ nsSVGRenderingContext::nsSVGRenderingContext(nsIPresContext* presContext,
 #ifdef SVG_USE_SURFACE
       mTempBuffer(nsnull),
 #endif
-      mDirtyRectTwips(dirtyRectTwips),
-      mDirtyRect(dirtyRectTwips)
+      mDirtyRect(dirtyRectTwips),
+      mDirtyRectTwips(dirtyRectTwips)
 {
   float twipsPerPx;
   mPresContext->GetPixelsToTwips(&twipsPerPx);
@@ -121,10 +121,6 @@ void nsSVGRenderingContext::ClearBuffer(nscolor color)
 
   mBuffer->UnlockImagePixels(PR_FALSE);  
 
-  nsCOMPtr<nsIDeviceContext> ctx;
-  mRenderingContext->GetDeviceContext(*getter_AddRefs(ctx));
-  nsRect r(0,0,mBuffer->GetWidth(),mBuffer->GetHeight());
-  mBuffer->ImageUpdated(ctx, nsImageUpdateFlags_kBitsChanged,&r);
 #endif
 }
 
@@ -199,6 +195,12 @@ void nsSVGRenderingContext::Render()
   mBuffer->SetNaturalWidth(mDirtyRect.width);
   mBuffer->SetNaturalHeight(mDirtyRect.height);
 
+  // and tell the image that we've changed it...
+  nsCOMPtr<nsIDeviceContext> ctx;
+  mRenderingContext->GetDeviceContext(*getter_AddRefs(ctx));
+  nsRect r(0,0,mBuffer->GetWidth(),mBuffer->GetHeight());
+  mBuffer->ImageUpdated(ctx, nsImageUpdateFlags_kBitsChanged,&r);
+
   mRenderingContext->DrawImage(mBuffer, mDirtyRectTwips);
 #endif
 }
@@ -266,13 +268,6 @@ void nsSVGRenderingContext::InvokeRender(ArtRender* render)
   mBuffer->Unlock();
 #else
   mBuffer->UnlockImagePixels(PR_FALSE);
-
-  // and tell the image that we've changed it...
-  // XXXXX - we could do better than this, and use UTAs
-  nsCOMPtr<nsIDeviceContext> ctx;
-  mRenderingContext->GetDeviceContext(*getter_AddRefs(ctx));
-  nsRect r(0,0,mBuffer->GetWidth(),mBuffer->GetHeight());
-  mBuffer->ImageUpdated(ctx, nsImageUpdateFlags_kBitsChanged,&r);
 #endif
 }
 
