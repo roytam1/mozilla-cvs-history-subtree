@@ -23,7 +23,7 @@
 #include "rdf-int.h"
 #include "prprf.h"
 #include "prtime.h"
-
+#include <string.h>
 
 
 /* mcf.c data structures and defines */
