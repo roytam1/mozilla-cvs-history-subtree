@@ -105,32 +105,6 @@ function LoadMessageByUri(uri)
 
 }
 
-function ChangeFolderByIndex(index)
-{
-  var folderResource = GetFolderResource(index);
-  if (! folderResource)
-    return;
-
-  var sortType = 0;
-  var sortOrder = 0;
-  var viewFlags = 0;
-  var viewType = 0;
-  var msgfolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
-  if (msgfolder)
-  {
-    var msgdb = msgfolder.getMsgDatabase(msgWindow);
-    if (msgdb)
-    {
-      var dbFolderInfo = msgdb.dBFolderInfo;
-      sortType = dbFolderInfo.sortType;
-      sortOrder = dbFolderInfo.sortOrder;
-      viewFlags = dbFolderInfo.viewFlags;
-      viewType = dbFolderInfo.viewType;
-    }
-  }
-  ChangeFolderByURI(folderResource.Value, viewType, viewFlags, sortType, sortOrder);
-}
-
 function setTitleFromFolder(msgfolder, subject)
 {
     if (!msgfolder) return;
@@ -692,11 +666,36 @@ function FolderPaneSelectionChange()
     var endIndex = {};
     folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startIndex, endIndex);
     if (startIndex.value >= 0 && startIndex.value == endIndex.value)
-        ChangeFolderByIndex(startIndex.value);
+    {
+        var folderResource = GetFolderResource(startIndex.value);
+        var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+        if (msgFolder == msgWindow.openFolder)
+            return;
+        else
+        {
+            var sortType = 0;
+            var sortOrder = 0;
+            var viewFlags = 0;
+            var viewType = 0;
+            var msgDatabase = msgFolder.getMsgDatabase(msgWindow);
+            if (msgDatabase)
+            {
+                var dbFolderInfo = msgDatabase.dBFolderInfo;
+                sortType = dbFolderInfo.sortType;
+                sortOrder = dbFolderInfo.sortOrder;
+                viewFlags = dbFolderInfo.viewFlags;
+                viewType = dbFolderInfo.viewType;
+            }
+            ChangeFolderByURI(folderResource.Value, viewType, viewFlags, sortType, sortOrder);
+        }
+    }
     else
+    {
+        msgWindow.openFolder = null;
         ClearThreadPane();
+    }
 
-    if (!gAccountCentralLoaded)
+    if (! gAccountCentralLoaded)
         ClearMessagePane();
 
     if (gDisplayStartupPage)
