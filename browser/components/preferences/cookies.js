@@ -73,99 +73,111 @@ var gCookiesWindow = {
     os.removeObserver(this, "perm-changed");
   },
   
+  _cookieEquals: function (aCookieA, aCookieB, aStrippedHost)
+  {
+    return aCookieA.rawHost == aStrippedHost &&
+           aCookieA.name == aCookieB.name &&
+           aCookieA.path == aCookieB.path;
+  },
+  
   observe: function (aSubject, aTopic, aData) 
   {
-    dump("*** observe = " + aSubject + " / " + aTopic + " / " + aData + "\n");
-    if (aTopic != "cookie-changed")
+    if (aTopic != "cookie-changed" || !aSubject)
       return;
     
     var changedCookie = aSubject.QueryInterface(Components.interfaces.nsICookie);
     var strippedHost = this._makeStrippedHost(changedCookie.host);
-    if (aData == "changed") {
-      var rowIndex = 0;
-      var cookieItem = null;
-      if (!this._view._filtered) {
-        for (var host in this._hosts) {
-          ++rowIndex;
-          var hostItem = this._hosts[host];
-          if (host == strippedHost) {
-            // Host matches, look for the cookie within this Host collection
-            // and update its data
-            for (var i = 0; i < hostItem.cookies.length; ++i) {
-              ++rowIndex;
-              var currCookie = hostItem.cookies[i];
-              if (currCookie.name == changedCookie.name &&
-                  currCookie.path == changedCookie.path) {
-                currCookie.value    = changedCookie.value;
-                currCookie.isSecure = changedCookie.isSecure;
-                currCookie.isDomain = changedCookie.isDomain;
-                currCookie.expires  = changedCookie.expires;
-                cookieItem = currCookie;
-                break;
-              }
+    if (aData == "changed")
+      this._handleCookieChanged(changedCookie, strippedHost);
+    else if (aData == "added")
+      this._handleCookieAdded(changedCookie, strippedHost);
+    
+    // We don't yet handle aData == "deleted" - it's a less common case
+    // and is rather complicated as selection tracking is difficult
+  },
+  
+  _handleCookieChanged: function (changedCookie, strippedHost) 
+  {
+    var rowIndex = 0;
+    var cookieItem = null;
+    if (!this._view._filtered) {
+      for (var host in this._hosts) {
+        ++rowIndex;
+        var hostItem = this._hosts[host];
+        if (host == strippedHost) {
+          // Host matches, look for the cookie within this Host collection
+          // and update its data
+          for (var i = 0; i < hostItem.cookies.length; ++i) {
+            ++rowIndex;
+            var currCookie = hostItem.cookies[i];
+            if (this._cookieEquals(currCookie, changedCookie, strippedHost)) {
+              currCookie.value    = changedCookie.value;
+              currCookie.isSecure = changedCookie.isSecure;
+              currCookie.isDomain = changedCookie.isDomain;
+              currCookie.expires  = changedCookie.expires;
+              cookieItem = currCookie;
+              break;
             }
           }
-          else if (hostItem.open)
-            rowIndex += hostItem.cookies.length;
+        }
+        else if (hostItem.open)
+          rowIndex += hostItem.cookies.length;
+      }
+    }
+    else {
+      // Just walk the filter list to find the item. It doesn't matter that
+      // we don't update the main Host collection when we do this, because
+      // when the filter is reset the Host collection is rebuilt anyway.
+      for (rowIndex = 0; rowIndex < this._view._filterSet.length; ++rowIndex) {
+        currCookie = this._view._filterSet[rowIndex];
+        if (this._cookieEquals(currCookie, changedCookie, strippedHost)) {
+          currCookie.value    = changedCookie.value;
+          currCookie.isSecure = changedCookie.isSecure;
+          currCookie.isDomain = changedCookie.isDomain;
+          currCookie.expires  = changedCookie.expires;
+          cookieItem = currCookie;
+          break;
         }
       }
-      else {
-        // Just walk the filter list to find the item. It doesn't matter that
-        // we don't update the main Host collection when we do this, because
-        // when the filter is reset the Host collection is rebuilt anyway.
-        for (rowIndex = 0; rowIndex < this._view._filterSet.length; ++rowIndex) {
-          currCookie = this._view._filterSet[rowIndex];
-          if (currCookie.rawHost == strippedHost && 
-              currCookie.name == changedCookie.name &&
-              currCookie.path == changedCookie.path) {
-            currCookie.value    = changedCookie.value;
-            currCookie.isSecure = changedCookie.isSecure;
-            currCookie.isDomain = changedCookie.isDomain;
-            currCookie.expires  = changedCookie.expires;
-            cookieItem = currCookie;
-            break;
-          }
-        }
-      }
-      
-      // Make sure the tree display is up to date...
-      this._tree.treeBoxObject.invalidateRow(rowIndex);
-      // ... and if the cookie is selected, update the displayed metadata too
-      if (cookieItem != null && this._view.selection.currentIndex == rowIndex)
-        this._updateCookieData(cookieItem);
     }
-    else if (aData == "added") {
-      var rowCountImpact = 0;
-      var addedHost = { value: 0 };
-      this._addCookie(strippedHost, changedCookie, addedHost);
-      if (!this._view._filtered) {
-        // The Host collection for this cookie already exists, and it's not open, 
-        // so don't increment the rowCountImpact becaues the user is not going to
-        // see the additional rows as they're hidden. 
-        if (addedHost.value || this._hosts[strippedHost].open)
-          ++rowCountImpact;
-      }
-      else {
-        // We're in search mode, and the cookie being added matches
-        // the search condition, so add it to the list. 
-        if (strippedHost.indexOf(this._view._filterValue) != -1 ||
-            changedCookie.name.indexOf(this._view._filterValue) != -1 ||
-            changedCookie.value.indexOf(this._view._filterValue) != -1) {
-          this._view._filterSet.push(this._makeCookieObject(strippedHost, changedCookie));
-          ++rowCountImpact;
-        }
-      }
-      // Now update the tree display at the end (we could/should re run the sort
-      // if any to get the position correct.)
-      var oldRowCount = this._rowCount;
-      this._view._rowCount += rowCountImpact;
-      this._tree.treeBoxObject.rowCountChanged(oldRowCount - 1, rowCountImpact);
-    }
-    else if (aData == "deleted") {
-      dump("*** deleted!\n");
-    }
+    
+    // Make sure the tree display is up to date...
+    this._tree.treeBoxObject.invalidateRow(rowIndex);
+    // ... and if the cookie is selected, update the displayed metadata too
+    if (cookieItem != null && this._view.selection.currentIndex == rowIndex)
+      this._updateCookieData(cookieItem);  
   },
+  
+  _handleCookieAdded: function (changedCookie, strippedHost)
+  {
+    var rowCountImpact = 0;
+    var addedHost = { value: 0 };
+    this._addCookie(strippedHost, changedCookie, addedHost);
+    if (!this._view._filtered) {
+      // The Host collection for this cookie already exists, and it's not open, 
+      // so don't increment the rowCountImpact becaues the user is not going to
+      // see the additional rows as they're hidden. 
+      if (addedHost.value || this._hosts[strippedHost].open)
+        ++rowCountImpact;
+    }
+    else {
+      // We're in search mode, and the cookie being added matches
+      // the search condition, so add it to the list. 
+      var c = this._makeCookieObject(strippedHost, changedCookie);
+      if (this._cookieMatchesFilter(c)) {
+        this._view._filterSet.push(this._makeCookieObject(strippedHost, changedCookie));
+        ++rowCountImpact;
+      }
+    }
+    // Now update the tree display at the end (we could/should re run the sort
+    // if any to get the position correct.)
+    var oldRowCount = this._rowCount;
+    this._view._rowCount += rowCountImpact;
+    this._tree.treeBoxObject.rowCountChanged(oldRowCount - 1, rowCountImpact);
 
+    document.getElementById("removeAllCookies").disabled = this._view._filtered || (this._view.rowCount == 0);
+  },
+  
   _view: {
     _filtered   : false,
     _filterSet  : [],
@@ -512,9 +524,8 @@ var gCookiesWindow = {
     var stringKey = selectedCookieCount == 1 ? "removeCookie" : "removeCookies";
     document.getElementById("removeCookie").label = this._bundle.getString(stringKey);
     
-    document.getElementById("removeAllCookies").disabled = this._view._filtered || (seln.count == 0);
+    document.getElementById("removeAllCookies").disabled = this._view._filtered || (this._view.rowCount == 0);
     document.getElementById("removeCookie").disabled = !(seln.count > 0);
-    
   },
   
   deleteCookie: function () 
@@ -628,7 +639,6 @@ var gCookiesWindow = {
         rowCountImpact = -1 * delta;
         this._view._rowCount += rowCountImpact;
         tbo.rowCountChanged(min.value, rowCountImpact);
-
       }
     }
     
@@ -639,7 +649,6 @@ var gCookiesWindow = {
       blockFutureCookies = psvc.getBoolPref("network.cookie.blockFutureCookies");
     for (i = 0; i < deleteItems.length; ++i) {
       var item = deleteItems[i];
-      dump("*** remove = " + item.host + " / " + item.name + " / " + item.path + " / " + blockFutureCookies + "\n");
       this._cm.remove(item.host, item.name, item.path, blockFutureCookies);
     }
     
@@ -658,8 +667,10 @@ var gCookiesWindow = {
     
     var oldRowCount = this._view._rowCount;
     this._view._rowCount = 0;
-    this._tree.treeBoxObject.rowCountChanged(0, -this._view._rowCount);
+    this._tree.treeBoxObject.rowCountChanged(0, -oldRowCount);
     this._view.selection.clearSelection();
+    
+    this._tree.focus();
   },
   
   onCookieKeyPress: function (aEvent)
@@ -673,6 +684,19 @@ var gCookiesWindow = {
   
   sort: function (aColumn) 
   {
+/*
+    var ascending = (aColumn == aLastSortColumn) ? !aLastSortAscending : true;
+    aTable.sort(function (a, b) { return a[aColumn].toLowerCase().localeCompare(b[aColumn].toLowerCase()); });
+    if (!ascending)
+      aTable.reverse();
+    
+    aTree.view.selection.select(-1);
+    aTree.view.selection.select(0);
+    aTree.treeBoxObject.invalidate();
+    aTree.treeBoxObject.ensureRowIsVisible(0);
+    
+    return ascending;
+*/  
     this._lastCookieSortAscending = gTreeUtils.sort(this._tree,
                                                     this._view,
                                                     this._cookies,
@@ -715,6 +739,13 @@ var gCookiesWindow = {
     document.getElementById("clearFilter").disabled = true;
   },
   
+  _cookieMatchesFilter: function (aCookie)
+  {
+    return aCookie.rawHost.indexOf(this._view._filterValue) != -1 ||
+           aCookie.name.indexOf(this._view._filterValue) != -1 || 
+           aCookie.value.indexOf(this._view._filterValue) != -1;
+  },
+  
   _filterCookies: function (aFilterValue)
   {
     this._view._filterValue = aFilterValue;
@@ -724,9 +755,7 @@ var gCookiesWindow = {
       if (!currHost) continue;
       for (var i = 0; i < currHost.cookies.length; ++i) {
         var cookie = currHost.cookies[i];
-        if (cookie.rawHost.indexOf(aFilterValue) != -1 ||
-            cookie.name.indexOf(aFilterValue) != -1 || 
-            cookie.value.indexOf(aFilterValue) != -1)
+        if (this._cookieMatchesFilter(cookie))
           cookies.push(cookie);
       }
     }
