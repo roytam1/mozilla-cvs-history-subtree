@@ -599,7 +599,7 @@ static gint composition_end(GdkEventKey *aEvent, nsWindow *aWin,
 
 static nsIUnicodeDecoder*
 open_unicode_decoder(void) {
-  nsresult result;
+  nsresult result = NS_ERROR_FAILURE;
   nsIUnicodeDecoder *decoder = nsnull;
   NS_WITH_SERVICE(nsIPlatformCharset, platform, NS_PLATFORMCHARSET_PROGID,
                   &result);
@@ -614,7 +614,7 @@ open_unicode_decoder(void) {
       GetService(kCharsetConverterManagerCID,
                  nsCOMTypeInfo<nsICharsetConverterManager>::GetIID(),
                  (nsISupports**)&manager);
-    if (NS_SUCCEEDED(res)) {
+    if (manager && NS_SUCCEEDED(res)) {
       manager->GetUnicodeDecoder(&charset, &decoder);
       nsServiceManager::ReleaseService(kCharsetConverterManagerCID, manager);
     }
@@ -721,13 +721,13 @@ gint handle_key_press_event(GtkWidget *w, GdkEventKey* event, gpointer p)
   //  character code.  Note we have to check for modifier keys, since
   // gtk returns a character value for them
   //
-#ifdef USE_XIM_NOT
+#ifdef USE_XIM
   if (event->length) {
     static nsIUnicodeDecoder *decoder = nsnull;
     if (!decoder) {
       decoder = open_unicode_decoder();
     }
-    if (decoder) {
+    if (decoder && (!kevent.keyCode)) {
       nsEventStatus status;
       composition_start(event, win, &status);
       composition_draw(event, win, decoder, &status);
