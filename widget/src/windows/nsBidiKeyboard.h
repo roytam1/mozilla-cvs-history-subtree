@@ -23,6 +23,7 @@
 #ifndef __nsBidiKeyboard
 #define __nsBidiKeyboard
 #include "nsIBidiKeyboard.h"
+#include <windows.h>
 
 class nsBidiKeyboard : public nsIBidiKeyboard
 {
@@ -32,7 +33,17 @@ public:
 
   nsBidiKeyboard();
   virtual ~nsBidiKeyboard();
-  /* additional members */
+
+#ifdef IBMBIDI
+protected:
+
+  nsresult EnumerateKeyboards();
+  PRBool IsRTLLanguage(HKL aLocale);
+
+  PRBool mDefaultsSet;
+  char mLTRKeyboard[KL_NAMELENGTH];
+  char mRTLKeyboard[KL_NAMELENGTH];
+#endif // IBMBIDI
 };
 
 

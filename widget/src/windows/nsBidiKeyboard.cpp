@@ -21,70 +21,109 @@
  */
 
 #include "nsBidiKeyboard.h"
-#include <windows.h>
+#include "prmem.h"
 
 static NS_DEFINE_IID(kIBidiKeyboardIID, NS_IBIDIKEYBOARD_IID);
 
 NS_IMPL_ISUPPORTS(nsBidiKeyboard, NS_IBIDIKEYBOARD_IID)
 
-#define RTL_LANGS 17
-
-char langID[RTL_LANGS][KL_NAMELENGTH]=
-{
-  "00000401", //Arabic (Saudi Arabia)
-  "00000801", //Arabic (Iraq)
-  "00000c01", //Arabic (Egypt)
-  "00001001", //Arabic (Libya)
-  "00001401", //Arabic (Algeria)
-  "00001801", //Arabic (Morocco)
-  "00001c01", //Arabic (Tunisia)
-  "00002001", //Arabic (Oman)
-  "00002401", //Arabic (Yemen)
-  "00002801", //Arabic (Syria)
-  "00002c01", //Arabic (Jordan)
-  "00003001", //Arabic (Lebanon)
-  "00003401", //Arabic (Kuwait)
-  "00003801", //Arabic (U.A.E.)
-  "00003c01", //Arabic (Bahrain)
-  "00004001", //Arabic (Qatar)
-  "0000040d"  //Hebrew
-};
-
-// XXX - need a cross-language solution for this
-#define kRTLLanguage 	"0000040d"  //Hebrew
-//#define kRTLLanguage 	"00000c01", //Arabic (Egypt)
-#define kLTRLanguage 	"00000409"  //US English
-
 nsBidiKeyboard::nsBidiKeyboard() : nsIBidiKeyboard()
 {
   NS_INIT_REFCNT();
+  mDefaultsSet = PR_FALSE;
 }
 
 nsBidiKeyboard::~nsBidiKeyboard()
 {
 }
 
-NS_IMETHODIMP nsBidiKeyboard::IsLangRTL(PRBool *aIsRTL)
-{
-#ifdef IBMBIDI
-  char currentLang[KL_NAMELENGTH]="00000000";    // to get keyboar layout name in this array
-
-  *aIsRTL = PR_FALSE;
-  GetKeyboardLayoutName(currentLang);
-  for(int count=0;count<RTL_LANGS;count++) {
-    if(strcmp(currentLang,langID[count])==0) {
-      *aIsRTL = PR_TRUE;
-      break;
-    }
-  }
-#endif
-  return NS_OK;
-}
-
 NS_IMETHODIMP nsBidiKeyboard::SetLangFromBidiLevel(PRUint8 aLevel)
 {
-#ifdef IBMBIDI
-  LoadKeyboardLayout((aLevel & 1) ? kRTLLanguage : kLTRLanguage, KLF_ACTIVATE);
+#ifdef IBMBIDI      
+  if (!mDefaultsSet) {
+    nsresult result = EnumerateKeyboards();
+    if (NS_SUCCEEDED(result))
+      mDefaultsSet = PR_TRUE;
+    else
+      return result;
+  }
+
+  if (!::LoadKeyboardLayout((aLevel & 1) ? mRTLKeyboard : mLTRKeyboard, KLF_ACTIVATE))
+    return NS_ERROR_FAILURE;
 #endif
   return NS_OK;
 }
+
+NS_IMETHODIMP nsBidiKeyboard::IsLangRTL(PRBool *aIsRTL)
+{
+  *aIsRTL = PR_FALSE;
+#ifdef IBMBIDI
+  HKL  currentLocale;
+  char currentLocaleName[KL_NAMELENGTH];
+  
+  currentLocale = ::GetKeyboardLayout(0);
+  *aIsRTL = IsRTLLanguage(currentLocale);
+  
+  ::GetKeyboardLayoutName(currentLocaleName);
+  // The language set by the user overrides the default language for that direction
+  if (*aIsRTL)
+    strcpy(mRTLKeyboard, currentLocaleName);
+  else
+    strcpy(mLTRKeyboard, currentLocaleName);
+#endif
+  return NS_OK;
+}
+
+#ifdef IBMBIDI
+
+// Get the list of keyboard layouts available in the system
+// Set mLTRKeyboard to the first LTR keyboard in the list and mRTLKeyboard to the first RTL keyboard in the list
+// These defaults will be used unless the user explicitly sets something else.
+nsresult nsBidiKeyboard::EnumerateKeyboards()
+{
+  int keyboards;
+  HKL far* buf;
+  HKL locale;
+  
+  // GetKeyboardLayoutList with 0 as first parameter returns the number of keyboard layouts available
+  keyboards = ::GetKeyboardLayoutList(0, nsnull);
+  if (!keyboards)
+    return NS_ERROR_FAILURE;
+
+  // allocate a buffer to hold the list
+  buf = (HKL far*) PR_Malloc(keyboards * sizeof(HKL));
+  if (!buf)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  // Call again to fill the buffer
+  if (::GetKeyboardLayoutList(keyboards, buf) != keyboards)
+    return NS_ERROR_UNEXPECTED;
+
+  // Go through the list and pick a default LTR and RTL keyboard layout
+  while (keyboards--) {
+    locale = buf[keyboards];
+    if (IsRTLLanguage(locale))
+      sprintf(mRTLKeyboard, "%.*x", KL_NAMELENGTH - 1, LANGIDFROMLCID(locale));
+    else
+      sprintf(mLTRKeyboard, "%.*x", KL_NAMELENGTH - 1, LANGIDFROMLCID(locale));
+  }
+  PR_Free(buf);
+  return NS_OK;
+}
+
+// Test whether the language represented by this locale identifier is a right-to-left language
+PRBool nsBidiKeyboard::IsRTLLanguage(HKL aLocale)
+{
+  // This macro extracts the primary language id (low 10 bits) from the locale id
+  switch (PRIMARYLANGID(aLocale)){
+    case LANG_ARABIC:
+    case LANG_FARSI:
+    case LANG_HEBREW:
+      return PR_TRUE;
+      break;
+
+    default:
+      return PR_FALSE;
+  }
+}
+#endif // IBMBIDI
