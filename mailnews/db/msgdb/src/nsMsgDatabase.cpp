@@ -2180,7 +2180,6 @@ NS_IMETHODIMP nsMsgDatabase::MarkAllRead(nsMsgKeyArray *thoseMarked)
 {
   nsresult		rv;
   nsMsgHdr		*pHeader;
-  PRInt32			numChanged = 0;
   
   nsCOMPtr <nsISimpleEnumerator> hdrs;
   rv = EnumerateMessages(getter_AddRefs(hdrs));
@@ -2195,6 +2194,11 @@ NS_IMETHODIMP nsMsgDatabase::MarkAllRead(nsMsgKeyArray *thoseMarked)
     if (NS_FAILED(rv)) 
       break;
     
+    PRBool isRead;
+    IsHeaderRead(pHeader, &isRead);
+
+    if (!isRead)
+    {
     if (thoseMarked) 
     {
       nsMsgKey key;
@@ -2202,7 +2206,7 @@ NS_IMETHODIMP nsMsgDatabase::MarkAllRead(nsMsgKeyArray *thoseMarked)
       thoseMarked->Add(key);
     }
     rv = MarkHdrRead(pHeader, PR_TRUE, nsnull); 	// ### dmb - blow off error?
-    numChanged++;
+    }
     NS_RELEASE(pHeader);
   }
   

@@ -49,6 +49,8 @@
 #include "nsIWindowMediator.h"
 #include "nsPIWindowWatcher.h"
 #include "nsISplashScreen.h"
+#include "nsIURIContentListener.h"
+#include "nsIInterfaceRequestor.h"
 
 class nsAppShellService : public nsIAppShellService,
                           public nsIObserver,
@@ -108,7 +110,22 @@ private:
                       PRInt32 aWidth, PRInt32 aHeight);
                       
   nsresult OpenBrowserWindow(PRInt32 height, PRInt32 width);
+};
 
+
+class nsAppShellServiceContentListener : public nsIURIContentListener,
+                                         public nsIInterfaceRequestor
+{
+public:
+  nsAppShellServiceContentListener();
+  virtual ~nsAppShellServiceContentListener();
+ 
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIURICONTENTLISTENER
+  NS_DECL_NSIINTERFACEREQUESTOR
+ 
+private:
+  nsCOMPtr<nsISupports> mLoadCookie;
 };
 
 #endif

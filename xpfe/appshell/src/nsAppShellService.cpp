@@ -95,6 +95,12 @@ static PRBool OnMacOSX();
 #include "nsICharsetConverterManager.h"
 #include "nsIUnicodeDecoder.h"
 
+#include "nsIURILoader.h"
+#include "nsCURILoader.h"
+#include "nsIURI.h"
+#include "nsIChannel.h"
+#include "nsNetUtil.h"
+
 /* Define Class IDs */
 static NS_DEFINE_CID(kAppShellCID,          NS_APPSHELL_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
@@ -1179,14 +1185,9 @@ nsAppShellService::LaunchTask(const char *aParam, PRInt32 height, PRInt32 width,
   PRBool handlesArgs = PR_FALSE;
   rv = handler->GetHandlesArgs(&handlesArgs);
   if (handlesArgs) {
-#ifndef MOZ_THUNDERBIRD
-    nsXPIDLString defaultArgs;
-    rv = handler->GetDefaultArgs(getter_Copies(defaultArgs));
-    if (NS_FAILED(rv)) return rv;
-    rv = OpenWindow(chromeUrlForTask, defaultArgs, SIZE_TO_CONTENT, SIZE_TO_CONTENT);
-#else
-    // XXX horibble thunderbird hack. Don't pass in the default args if the cmd line service
-    // says we have real arguments! Use those instead.
+    // Check first to see if we were passed in an argument (i.e. a url) to pass to the command
+    // line handler. If no such argument exists, then just use the default args
+
     nsXPIDLCString args;
     nsXPIDLCString cmdLineArgument; // -mail, -compose, etc. 
     rv = handler->GetCommandLineArgument(getter_Copies(cmdLineArgument));
@@ -1200,15 +1201,14 @@ nsAppShellService::LaunchTask(const char *aParam, PRInt32 height, PRInt32 width,
         rv = NS_ERROR_FAILURE;
     }
     
-    // any failure case, do what we used to do:
+    // If the command line handler was not given an argument then do what we used to do
+    // and use the default args. 
     if (NS_FAILED(rv)) {
       nsXPIDLString defaultArgs;
       rv = handler->GetDefaultArgs(getter_Copies(defaultArgs));
       if (NS_FAILED(rv)) return rv;
       rv = OpenWindow(chromeUrlForTask, defaultArgs, SIZE_TO_CONTENT, SIZE_TO_CONTENT);
     }
-#endif
-
   }
   else {
     rv = OpenWindow(chromeUrlForTask, nsString(), width, height);
@@ -1323,12 +1323,22 @@ nsAppShellService::Ensure1Window(nsICmdLineService *aCmdLineService)
         PR_sscanf(tempString.get(), "%d", &height);
 
 #ifdef MOZ_THUNDERBIRD
+    nsCOMPtr <nsICmdLineService> cmdLine = do_GetService("@mozilla.org/appshell/commandLineService;1", &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    nsXPIDLCString urlToLoad;
+    rv = cmdLine->GetURLToLoad(getter_Copies(urlToLoad));
+    if (!urlToLoad.IsEmpty()) 
+      return OpenURL(urlToLoad);
+    else
+    {
       PRBool windowOpened = PR_FALSE;
       
       rv = LaunchTask(NULL, height, width, &windowOpened); 
       
       if (NS_FAILED(rv) || !windowOpened)
         rv = LaunchTask("mail", height, width, &windowOpened);
+    }
 #else
       rv = OpenBrowserWindow(height, width);
 #endif
@@ -1337,6 +1347,41 @@ nsAppShellService::Ensure1Window(nsICmdLineService *aCmdLineService)
   return rv;
 }
 
+NS_IMETHODIMP
+nsAppShellService::OpenURL(const nsACString &aArgument)
+{
+  nsCOMPtr<nsIURILoader> loader;
+  loader = do_GetService(NS_URI_LOADER_CONTRACTID);
+  if (!loader)
+    return NS_ERROR_FAILURE;
+
+  nsAppShellServiceContentListener *listener;
+  listener = new nsAppShellServiceContentListener();
+  if (!listener)
+    return NS_ERROR_FAILURE;
+
+  // we own it
+  NS_ADDREF(listener);
+  nsCOMPtr<nsISupports> listenerRef;
+  listenerRef = do_QueryInterface(NS_STATIC_CAST(nsIURIContentListener *, listener));
+  // now the listenerref is the only reference
+  NS_RELEASE(listener);
+
+  // create our uri object
+  nsCOMPtr<nsIURI> uri;
+  nsresult rv = NS_NewURI(getter_AddRefs(uri), aArgument);
+  if (NS_FAILED(rv))
+    return NS_ERROR_FAILURE;
+
+  // open a channel
+  nsCOMPtr<nsIChannel> channel;
+  rv = NS_NewChannel(getter_AddRefs(channel), uri);
+  if (NS_FAILED(rv))
+    return NS_ERROR_FAILURE;
+
+  // load it
+  return loader->OpenURI(channel, PR_TRUE, listenerRef);
+}
 nsresult
 nsAppShellService::OpenBrowserWindow(PRInt32 height, PRInt32 width)
 {
@@ -1576,4 +1621,87 @@ static nsresult ConvertToUnicode(nsCString& aCharset, const char* inString, nsAS
   }
 
   return rv;
+}
+
+nsAppShellServiceContentListener::nsAppShellServiceContentListener()
+{
+}
+
+nsAppShellServiceContentListener::~nsAppShellServiceContentListener()
+{
+}
+
+NS_IMPL_ISUPPORTS2(nsAppShellServiceContentListener, nsIURIContentListener, nsIInterfaceRequestor)
+
+// nsIURIContentListener
+
+NS_IMETHODIMP
+nsAppShellServiceContentListener::OnStartURIOpen(nsIURI *aURI, PRBool *_retval)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsAppShellServiceContentListener::DoContent(const char *aContentType,
+				  PRBool aIsContentPreferred,
+				  nsIRequest *request,
+				  nsIStreamListener **aContentHandler,
+				  PRBool *_retval)
+{
+  NS_NOTREACHED("nsAppShellServiceContentListener::DoContent");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsAppShellServiceContentListener::IsPreferred(const char *aContentType,
+				    char **aDesiredContentType,
+				    PRBool *_retval)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsAppShellServiceContentListener::CanHandleContent(const char *aContentType,
+					 PRBool aIsContentPreferred,
+					 char **aDesiredContentType,
+					 PRBool *_retval)
+{
+  NS_NOTREACHED("nsAppShellServiceContentListener::CanHandleContent");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsAppShellServiceContentListener::GetLoadCookie(nsISupports * *aLoadCookie)
+{
+  *aLoadCookie = mLoadCookie;
+  NS_IF_ADDREF(*aLoadCookie);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsAppShellServiceContentListener::SetLoadCookie(nsISupports * aLoadCookie)
+{
+  mLoadCookie = aLoadCookie;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsAppShellServiceContentListener::GetParentContentListener(nsIURIContentListener * *aParentContentListener)
+{
+  *aParentContentListener = nsnull;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsAppShellServiceContentListener::SetParentContentListener(nsIURIContentListener * aParentContentListener)
+{
+  return NS_OK;
+}
+
+// nsIInterfaceRequestor
+NS_IMETHODIMP
+nsAppShellServiceContentListener::GetInterface(const nsIID & uuid, void * *result)
+{
+  NS_ENSURE_ARG_POINTER(result);
+  return QueryInterface(uuid, result);
 }

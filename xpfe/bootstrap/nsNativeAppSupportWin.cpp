@@ -1754,10 +1754,9 @@ nsNativeAppSupportWin::HandleRequest( LPBYTE request, PRBool newWindow ) {
       printf( "Launching browser on url [%s]...\n", (const char*)arg );
 #endif
       if (NS_SUCCEEDED(nativeApp->EnsureProfile(args)))
-        (void)OpenBrowserWindow( arg, newWindow );
+        appShell->OpenURL(arg);
       return;
     }
-
 
     // ok, let's try the -chrome argument
     rv = args->GetCmdLineValue("-chrome", getter_Copies(arg));

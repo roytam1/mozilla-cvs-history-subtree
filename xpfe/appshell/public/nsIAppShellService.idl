@@ -217,5 +217,14 @@ interface nsIAppShellService : nsISupports
    * @param aCmdLineService  the command line from which startup args can be read.
    */
   void ensure1Window(in nsICmdLineService aCmdLineService);
+
+  /**
+   *  if the app was started with just a url given to the command line,
+   *  we'll generically open it, letting the registered content provider
+   *  for the resulting content type actually create the chrome window.
+   *  This allows mozilla to start up given any kind of url (mailto, news, addressbook, etc.)
+   *  instead of just assuming it's a browser url.
+   */
+  void OpenURL(in ACString aArgument);
 };
 
