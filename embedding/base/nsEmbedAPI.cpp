@@ -70,7 +70,8 @@ extern "C" void NS_SetupRegistry();
 
 
 nsresult NS_InitEmbedding(nsILocalFile *mozBinDirectory,
-                          nsIDirectoryServiceProvider *appFileLocProvider)
+                          nsIDirectoryServiceProvider *appFileLocProvider,
+                          const char* productName)
 {
     nsresult rv;
 
@@ -86,7 +87,7 @@ nsresult NS_InitEmbedding(nsILocalFile *mozBinDirectory,
 #endif
     {
         // Initialise XPCOM
-        NS_InitXPCOM(&sServiceManager, mozBinDirectory);
+        NS_InitXPCOM2(productName, &sServiceManager, mozBinDirectory);
         if (!sServiceManager)
             return NS_ERROR_NULL_POINTER;
         

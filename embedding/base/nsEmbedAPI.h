@@ -30,12 +30,14 @@
 
 
 /*
-    aPath       -> the mozilla bin directory. If nsnull, the default is used
-    aProvider   -> the application directory service provider. If nsnull, the
-                   default (nsAppFileLocationProvider) is constructed and used.
+    mozBinDirectory      -> the mozilla bin directory. If nsnull, the default is used
+    appFileLocProvider   -> the application directory service provider. If nsnull, the
+                            default (nsAppFileLocationProvider) is constructed and used.
+    productName          -> determines the name of the application registry file
 */
 extern nsresult NS_InitEmbedding(nsILocalFile *mozBinDirectory,
-                                 nsIDirectoryServiceProvider *appFileLocProvider);
+                                 nsIDirectoryServiceProvider *appFileLocProvider,
+                                 const char* productName);
 extern nsresult NS_TermEmbedding();
 
 
