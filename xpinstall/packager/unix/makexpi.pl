@@ -62,6 +62,17 @@ sub RecursiveStrip
     find({ wanted => \&find_libraries, no_chdir => 1 }, $targetDir);
     @dirEntries = <$targetDir/*>;
 
+    # Remove from @libraryList files that shouldn't be stripped.  This is a
+    # temporary workaround to resolve bug 262822.
+    @libraryList = grep { ! /softokn3/ } @libraryList;
+    @libraryList = grep { ! /freebl_hybrid_3/ } @libraryList;
+    @libraryList = grep { ! /freebl_pure32_3/ } @libraryList;
+
+    # As stated by Wan-Teh, the true fix is to recreate the *.chk files for
+    # files of the form *softokn3*, *freebl_hybrid_3*, and *freebl_pure32_3*
+    # after they have been stripped.  To be safe, we should probably regenerate
+    # all of the *.chk files for stripped libraries.
+
     # strip all strippable files
     system("strip @libraryList") if (defined(@libraryList));
 }
