@@ -24,6 +24,13 @@
    (via nsIRegistry), not in the prefs system (nsIPref;
    it is not yet running when needed). This file implements
    the saving of the settings (from the dialog) to the registry.
+
+   Oh Shit. When the user switches panes, the dialog loses all state. Nothing
+   restores it. But we can't save it to the registry either, the user might
+   cancel later. So, we have to store all values in our own, internal data
+   structure and later save it to the registry, if the user clicked OK.
+
+   To unify matters, I share a data structure between top.xul and files.js.
 */
 
 //from mozSRoaming*.cpp
@@ -62,21 +69,21 @@ const kXULNS ="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 var _elementIDs = []; // no prefs (nsIPref) needed, see above
 var registry;
 var regkeyProf; // The registry branch with for the current profile.
-                // The Roaming branch hangs directly below that.
-parent.roaming = Object();
 
 function Startup()
 {
-   if (regkeyProf) // if we switched panes and back, don't overwrite changes
-      return;
-   parent.hPrefWindow.registerOKCallbackFunc(Shutdown);
-   ReadFromRegistry()
-   InitUI();
+  dump("startup top\n");
+  if (regkeyProf) // if we switched panes and back, don't overwrite changes
+    return;
+  parent.hPrefWindow.registerOKCallbackFunc(Shutdown);
+  ReadFromRegistry();
+  InitUI();
 }
 
 function Shutdown()
 {
-   SaveToRegistry();
+  dump("shutdown top\n");
+  SaveToRegistry();
 }
 
 
@@ -84,7 +91,10 @@ function Shutdown()
 
 function ReadFromRegistry()
 {
-	if (parent.roaming.loaded == true)
+  if (!parent.roaming)
+    parent.roaming = Object();
+	if (parent.roaming.loadedTop == true)
+    // prevent overwriting of user changes after pane switch back/forth
 		return;
 
 	// set default values, matching the hardcoded ones, in case we fail below
@@ -94,7 +104,8 @@ function ReadFromRegistry()
 	E("streamSavePW").checked = false;
 
 	try {
-		// to understand the structure, see comment at the const defs above
+		/* to understand the structure of the registry,
+       see comment at the const defs above */
 		// get the Roaming reg branch
 		registry = Components.classes["@mozilla.org/registry;1"]
                          .createInstance(Components.interfaces.nsIRegistry);
@@ -107,7 +118,7 @@ function ReadFromRegistry()
 
 		// enabled
 		var value = registry.getInt(regkey, kRegKeyEnabled);
-		E("enabled").checked = value == 0 ? false : true;
+		E("enabled").checked = value == 1 ? true : false;
 
 		// protocol (in the sense of the roaming implementation) selection
 		value = registry.getString(regkey, kRegKeyProtocol);
@@ -140,8 +151,12 @@ function ReadFromRegistry()
 			dump("error during registry read for Roaming prefs: " + e + "\n");
 		// later errors are expected, if we never wrote roaming prefs before,
 		// fatal otherwise, but we don't know the difference.
-		else dump(e);
+		else
+      dump(e);
 	}
+  parent.roaming.loadedTop = true;
+       /* we might have failed above, but in this case, there is probably no
+          sense trying it again, so treat that the same as loaded. */
 }
 
 function SaveToRegistry()
@@ -178,6 +193,8 @@ function SaveToRegistry()
 		// copy
 		regkey = SaveRegBranch(regkeyRoaming, kRegTreeCopy);
 		registry.setString(regkey, kRegKeyCopyDir, E("copyDir").value);
+
+    dump("saved top\n");
 	} catch (e) {
 		dump("can't write registry entries for Roaming: " + e + "\n");
 		return;

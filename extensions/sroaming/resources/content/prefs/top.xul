@@ -17,7 +17,8 @@
     <caption label="&generic.label;" />
 -->
   <checkbox id="enabled"
-    oncommand="EnableTree(this.checked, E('roamingSettings'));"
+    oncommand="EnableTree(this.checked, E('roamingSettings'));
+               parent.roaming.enabled = this.checked;"
     class="indent"
     label="&enabled.label;"
     accesskey="&enabled.accesskey;" />

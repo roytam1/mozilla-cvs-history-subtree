@@ -38,13 +38,18 @@ var regkeyProf; // The registry branch with for the current profile.
 
 function Startup()
 {
+  dump("startup files\n");
   parent.hPrefWindow.registerOKCallbackFunc(Shutdown);
   SetFiles();
   ReadFromRegistry()
+  dump("parent.roaming.enabled" + parent.roaming.enabled + "\n");
+  if (parent.roaming.enabled == false)
+    EnableTree(false, E("filesList"));
 }
 
 function Shutdown()
 {
+  dump("shutdown files\n");
   SaveToRegistry();
 }
 
@@ -58,10 +63,9 @@ function SetFiles()
                             .getService(Components.interfaces.nsIPrefService);
   var prefs = prefService.getBranch(null);
   try {
-	SetFile("filePassword", prefs.getCharPref("signon.SignonFileName"));
-	SetFile("fileWallet", prefs.getCharPref("wallet.SchemaValueFileName"));
-  } catch (e) {
-  }
+    SetFile("filePassword", prefs.getCharPref("signon.SignonFileName"));
+    SetFile("fileWallet", prefs.getCharPref("wallet.SchemaValueFileName"));
+  } catch (e) {}
 
   // disable the nodes which are still invalid
   var children = E("filesList").childNodes;
@@ -89,6 +93,12 @@ function SetFile(elementID, filename)
 
 function ReadFromRegistry()
 {
+  if (!parent.roaming)
+    parent.roaming = Object();
+	if (parent.roaming.loadedFiles == true)
+    // prevent overwriting of user changes after pane switch back/forth
+		return;
+
 	try {
 		// to understand the structure, see comment at the const defs above
 		// get the Roaming reg branch
@@ -133,7 +143,6 @@ function ReadFromRegistry()
             && checkbox.getAttribute("filename") == file)
         {
           checkbox.checked = true;
-					dump("checking\n");
           found = true;
         }
       }
@@ -158,6 +167,7 @@ function ReadFromRegistry()
 		// fatal otherwise, but we don't know the difference.
 		//else dump(e);
 	}
+	parent.roaming.loadedFiles = true;
 }
 
 function SaveToRegistry()
@@ -172,16 +182,21 @@ function SaveToRegistry()
 		var value = "";
 		var children = E("filesList").childNodes;
 		for (var i = 0; i < children.length; i++)
-        {
-        	var checkbox = children.item(i);
-        	if (checkbox.checked)
-        		value += checkbox.getAttribute("filename") + ","
-        }
-        // remove last ","
-        if (value.length > 0)
-        	value = value.substring(0, value.length - 1);
-        dump("files: " + value + "\n");
+    {
+      var checkbox = children.item(i);
+      if (checkbox.checked)
+      {
+        var filename = checkbox.getAttribute("filename");
+        if (filename)
+          value += filename + ",";
+      }
+    }
+    // remove last ","
+    if (value.length > 0)
+      value = value.substring(0, value.length - 1);
+    dump("files: " + value + "\n");
 		registry.setString(regkey, kRegKeyFiles, value);
+    dump("saved files\n");
 	} catch (e) {
 		dump("can't write registry entries for Roaming: " + e + "\n");
 		return;
@@ -207,4 +222,17 @@ function SaveRegBranch(baseregkey, branchname)
 function E(elementID)
 {
   return document.getElementById(elementID);
+}
+
+function EnableTree(enabled, element)
+{
+  if(!enabled)
+    element.setAttribute("disabled", "true");
+  else
+    element.removeAttribute("disabled");
+
+  // EnableTree direct children (recursive)
+  var children = element.childNodes;
+  for (var i = 0; i < children.length; i++)
+    EnableTree(enabled, children.item(i));
 }

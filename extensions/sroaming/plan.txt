@@ -8,6 +8,7 @@ now
   - pref dialog loses state
   - pref dialog saves (only) "," as files pref
   - small stuff
+  - no upload at switch profile
 - error handling
   - empty pref
   - ftp
