@@ -90,6 +90,13 @@
           </hbox>
         </column>
 
+        <column id="collapsedsenderBox" collapsed="true">
+          <hbox align="start">
+            <label class="collapsedHeaderDisplayName" value="&senderField.label;"/>          
+            <mail-emailaddress id="collapsedsenderValue" flex="1"/>
+          </hbox>
+        </column>
+
         <column id = "collapseddateBox" collapsed="true">
           <hbox align="start">
             <textbox id="collapseddateValue" keywordrelated="true" class="collapsedHeaderValue plain" originalclass="collapsedHeaderValue plain" appendoriginalclass="true" readonly="true"/>
@@ -112,6 +119,7 @@
         <mail-toggle-headerfield keywordrelated="true" id="expandedsubjectBox" class="subjectvalue" label="&subjectField.label;" ontwistyclick="ToggleHeaderView();" collapsed="true"/>
  
         <mail-emailheaderfield id="expandedfromBox" label="&fromField.label;" collapsed="true"/>
+        <mail-emailheaderfield id="expandedsenderBox" label="&senderField.label;" collapsed="true"/>
         <mail-headerfield id="expandedorganizationBox" label="&organizationField.label;" collapsed="true"/>
         <mail-emailheaderfield id="expandedreply-toBox" label="&replyToField.label;" collapsed="true"/>
 

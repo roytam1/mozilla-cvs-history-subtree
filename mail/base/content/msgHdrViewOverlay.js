@@ -44,6 +44,7 @@ var gNumAddressesToShow = 3;
 var gShowOrganization = false;
 var gShowLargeAttachmentView = false;
 var gShowUserAgent = false;
+var gShowSender = false;
 var gMinNumberOfHeaders = 0;
 var gDummyHeaderIdIndex = 0;
 var gCollectIncoming = false;
@@ -203,6 +204,12 @@ function initializeHeaderViewTables()
       var userAgentEntry = {name:"user-agent", outputFunction:updateHeaderValue};
       gExpandedHeaderView[userAgentEntry.name] = new createHeaderEntry('expanded', userAgentEntry);
     }
+    if (gShowSender)
+    {
+      var senderEntry = {name:"sender", outputFunction:OutputEmailAddresses};
+      gCollapsedHeaderView[senderEntry.name] = new createHeaderEntry('collapsed', senderEntry);
+      gExpandedHeaderView[senderEntry.name] = new createHeaderEntry('expanded', senderEntry);
+    }
 }
 
 function OnLoadMsgHeaderPane()
@@ -218,6 +225,7 @@ function OnLoadMsgHeaderPane()
   gCollectNewsgroup = pref.getBoolPref("mail.collect_email_address_newsgroup");
   gCollectOutgoing = pref.getBoolPref("mail.collect_email_address_outgoing");
   gShowUserAgent = pref.getBoolPref("mailnews.headers.showUserAgent");
+  gShowSender = pref.getBoolPref("mailnews.headers.showSender");
   gMinNumberOfHeaders = pref.getIntPref("mailnews.headers.minNumHeaders");
   gShowOrganization = pref.getBoolPref("mailnews.headers.showOrganization");
   gShowLargeAttachmentView = pref.getBoolPref("mailnews.attachments.display.largeView");
@@ -332,6 +340,7 @@ var messageHeaderSink = {
     processHeaders: function(headerNameEnumerator, headerValueEnumerator, dontCollectAddress)
     {
       this.onStartHeaders(); 
+      var fromMailbox;
 
       while (headerNameEnumerator.hasMore()) 
       {
@@ -348,6 +357,11 @@ var messageHeaderSink = {
         if (lowerCaseHeaderName == "x-mailer")
           lowerCaseHeaderName = "user-agent";   
         
+        if (gShowSender && lowerCaseHeaderName == "sender")
+        {
+          if (fromMailbox == header.headerValue)
+            continue;
+        }
         // according to RFC 2822, certain headers
         // can occur "unlimited" times
         if (lowerCaseHeaderName in currentHeaderData)
@@ -367,6 +381,9 @@ var messageHeaderSink = {
 
         if (lowerCaseHeaderName == "from")
         {
+          if (gShowSender && msgHeaderParser)
+            fromMailbox = msgHeaderParser.extractHeaderAddressMailboxes(null, header.headerValue);
+
           if (header.value && abAddressCollector) {
             if ((gCollectIncoming && !dontCollectAddress) || 
                 (gCollectNewsgroup && dontCollectAddress))
@@ -840,6 +857,7 @@ function OutputEmailAddresses(headerEntry, emailAddresses)
       headerEntry.enclosingBox.buildViews(gNumAddressesToShow);
   } // if msgheader parser
 }
+
 
 function setFromBuddyIcon(email)
 {
