@@ -522,20 +522,26 @@ function addNewToolbar()
   var title = stringBundle.getString("enterToolbarTitle");
   
   var name = {};
-  while (1) {
-    if (!promptService.prompt(window, title, message, name, null, {})) {
+  while (true) {
+    if (!promptService.prompt(window, title, message, name, null, {}))
       return;
-    } else {
-      // Check for an existing toolbar with the same name and prompt again
-      // if a conflict is found
-      var nameToId = "__customToolbar_" + name.value.replace(" ", "");
-      var existingToolbar = gToolboxDocument.getElementById(nameToId);
-      if (existingToolbar) {
-        message = stringBundle.getFormattedString("enterToolbarDup", [name.value]);
-      } else {
+      
+    var dupeFound = false;
+     
+     // Check for an existing toolbar with the same display name
+    for (i = 0; i < gToolbox.childNodes.length; ++i) {
+      var toolbar = gToolbox.childNodes[i];
+      var toolbarName = toolbar.getAttribute("toolbarname");
+      if (toolbarName == name.value && toolbar.getAttribute("type") != "menubar") {
+        dupeFound = true;
         break;
       }
-    }
+    }          
+
+    if (!dupeFound)
+      break;
+     
+    message = stringBundle.getFormattedString("enterToolbarDup", [name.value]);      
   }
     
   gToolbox.appendCustomToolbar(name.value, "");

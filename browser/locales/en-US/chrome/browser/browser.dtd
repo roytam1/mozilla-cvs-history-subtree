@@ -232,7 +232,7 @@
 <!ENTITY bookmarkLinkCmd.accesskey    "L">
 <!ENTITY bookmarkFrameCmd.label       "Bookmark This Frame...">
 <!ENTITY bookmarkFrameCmd.accesskey   "F">
-<!ENTITY sendPageCmd.label            "Send Page...">
+<!ENTITY sendPageCmd.label            "Send Link...">
 <!ENTITY sendPageCmd.accesskey        "S">
 <!ENTITY savePageCmd.label            "Save Page As...">
 <!ENTITY savePageCmd.accesskey        "A">

@@ -175,9 +175,6 @@
       <toolbarbutton id="newbookmark" label="&menuitem.newBookmark.label;"
                      accesskey="&menuitem.newBookmark.accesskey;"
                      command="cmd_bm_newbookmark"/>
-      <toolbarbutton id="newlivemark" label="&menuitem.newLivemark.label;"
-                     accesskey="&menuitem.newLivemark.accesskey;"
-                     command="cmd_bm_newlivemark"/>
       <toolbarbutton id="newfolder" label="&menuitem.newFolder.label;"
                      accesskey="&menuitem.newFolder.accesskey;"
                      command="cmd_bm_newfolder"/>

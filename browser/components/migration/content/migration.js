@@ -61,15 +61,15 @@ var MigrationWizard = {
       }
     }
     
-    var firstNonDisabled = null;
+    var firstSelectable = null;
     for (var i = 0; i < group.childNodes.length; ++i) {
-      if (!group.childNodes[i].disabled) {
-        firstNonDisabled = group.childNodes[i];
+      if (!group.childNodes[i].disabled && !group.childNodes[i].hidden) {
+        firstSelectable = group.childNodes[i];
         break;
       }
     }
 
-    group.selectedItem = this._source == "" ? firstNonDisabled : document.getElementById(this._source);
+    group.selectedItem = !this._source ? firstSelectable : document.getElementById(this._source);
   },
   
   onImportSourcePageAdvanced: function ()

@@ -342,8 +342,8 @@ function onBrowserKeyPress(evt)
   if (!shouldFastFind(evt))
     return;
   
+  var findField = document.getElementById("find-field");
   if (gFindMode != FIND_NORMAL) {    
-    var findField = document.getElementById("find-field");
     if (evt.keyCode == 8) {
       if (findField.value) {
         findField.value = findField.value.substr(0, findField.value.length - 1);
@@ -361,17 +361,19 @@ function onBrowserKeyPress(evt)
         findNext();
     }
     else if (isPrintable(evt.charCode)) {
+      if (evt.charCode == 32) // Space
+        evt.preventDefault();
+        
       findField.value += String.fromCharCode(evt.charCode);
       find(findField.value);
     }
     return;
   }
   
-  if (evt.charCode == 39 /* '*/ || evt.charCode == 47 /* / */ || (gUseTypeAheadFind & isPrintable(evt.charCode))) {
-    if (openFindBar()) {
-      setFindCloseTimeout();
-      gFindMode = (evt.charCode == 39) ? FIND_LINKS : FIND_TYPEAHEAD;                   
-      var findField = document.getElementById("find-field");
+  if (evt.charCode == 39 /* '*/ || evt.charCode == 47 /* / */ || (gUseTypeAheadFind & isPrintable(evt.charCode) && evt.charCode != 32)) {   
+    gFindMode = (evt.charCode == 39) ? FIND_LINKS : FIND_TYPEAHEAD;
+    if (openFindBar()) {      
+      setFindCloseTimeout();      
       if (gUseTypeAheadFind && evt.charCode != 39 && evt.charCode != 47) {
         gTypeAheadFindBuffer += String.fromCharCode(evt.charCode);        
         findField.value = gTypeAheadFindBuffer;
@@ -382,9 +384,15 @@ function onBrowserKeyPress(evt)
       }
     }
     else {
-      selectFindBar();      
-      focusFindBar();
-    }    
+      if (gFindMode == FIND_NORMAL) {
+        selectFindBar();      
+        focusFindBar();
+      }
+      else {
+        findField.value = String.fromCharCode(evt.charCode);
+        find(findField.value);
+      }
+    }        
   }
 }
 
@@ -480,7 +488,7 @@ function setFindCloseTimeout()
 {
   if (gQuickFindTimeout)
     clearTimeout(gQuickFindTimeout);
-  gQuickFindTimeout = setTimeout(closeFindBar, gQuickFindTimeoutLength);
+  gQuickFindTimeout = setTimeout(function() { if (gFindMode != FIND_NORMAL) closeFindBar(); }, gQuickFindTimeoutLength);
 }
 
 function UpdateBackForwardButtons()
@@ -3242,7 +3250,7 @@ nsBrowserStatusHandler.prototype =
       observerService.notifyObservers(_content, notification, urlStr);
     } catch (e) {
     }
-    setTimeout(function() { if (document.getElementById("highlight").checked) BrowserHighlight(true); }, 0);
+    setTimeout(function() { if (document.getElementById("highlight").checked) toggleHighlight(true); }, 0);
   }
 }
 
@@ -5160,33 +5168,7 @@ function WindowIsClosing()
   var browser = getBrowser();
   var cn = browser.tabContainer.childNodes;
   var numtabs = cn.length;
-  var reallyClose = true;
-
-  if (numtabs > 1) {
-    var shouldPrompt = gPrefService.getBoolPref("browser.tabs.warnOnClose");
-    if (shouldPrompt) {
-      var promptService =
-        Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
-                  .getService(Components.interfaces.nsIPromptService);
-      //default to true: if it were false, we wouldn't get this far
-      var warnOnClose = {value:true};
-
-       var buttonPressed = promptService.confirmEx(window, 
-         gNavigatorBundle.getString('tabs.closeWarningTitle'), 
-         gNavigatorBundle.getFormattedString("tabs.closeWarning", [numtabs]),
-         (promptService.BUTTON_TITLE_IS_STRING * promptService.BUTTON_POS_0)
-          + (promptService.BUTTON_TITLE_CANCEL * promptService.BUTTON_POS_1),
-            gNavigatorBundle.getString('tabs.closeButton'),
-            null, null,
-            gNavigatorBundle.getString('tabs.closeWarningPromptMe'),
-            warnOnClose);
-      reallyClose = (buttonPressed == 0);
-      //don't set the pref unless they press OK and it's false
-      if (reallyClose && !warnOnClose.value) {
-        gPrefService.setBoolPref("browser.tabs.warnOnClose", false);
-      }
-    } //if the warn-me pref was true
-  } //if multiple tabs are open
+  var reallyClose = browser.warnAboutClosingTabs(true);
 
   for (var i = 0; reallyClose && i < numtabs; ++i) {
     var ds = browser.getBrowserForTab(cn[i]).docShell;
@@ -5254,7 +5236,7 @@ var MailIntegration = {
     element.setAttribute("tooltiptext", message);
                                                               
     message = gNavigatorBundle.getFormattedString("mailUnreadMenuitem", [unreadCount]);
-    element = document.getElementById("readMailItem");
+    element = document.getElementById("Browser:ReadMail");
     element.setAttribute("label", message);
   }
 #else

@@ -82,7 +82,7 @@
     <command id="Browser:SendLink" oncommand="MailIntegration.sendLinkForContent();"/>
     <command id="Browser:NewMessage" oncommand="MailIntegration.sendMessage('', '');"/>
 #ifdef XP_WIN
-    <command id="Browser:ReadMail" oncommand="MailIntegration.readMail();"/>
+    <command id="Browser:ReadMail" oncommand="MailIntegration.readMail();" label="&mailButton.readMail.label;"/>
     <command id="Browser:ReadNews" oncommand="MailIntegration.readNews();"/>
 #endif
 
@@ -270,7 +270,7 @@
     <key id="viewBookmarksSidebarKb" key="&manBookmarksWinCmd.commandkey;" command="viewBookmarksSidebar" modifiers="accel"/>
 #endif
 
-    <key id="key_stop" keycode="VK_ESCAPE" command="Browser:Stop"/>
+    <key id="key_stop" keycode="VK_ESCAPE" oncommand="BrowserStop();"/>
 #ifdef XP_MACOSX
     <key id="key_gotoHistory"  key="&history.commandKey;"  command="viewHistorySidebar" modifiers="accel,shift"/>
 #else
