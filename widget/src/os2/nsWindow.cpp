@@ -3747,7 +3747,7 @@ PRUint32 WMChar2KeyCode( MPARAM mp1, MPARAM mp2)
          {
            rc = rc - '0' + NS_VK_0;
          }
-         else {
+         else if (CHAR4FROMMP(mp1) != 0) {
            /* For some characters, map the scan code to the NS_VK value */
            /* This only happens in the char case NOT the VK case! */
            switch (CHAR4FROMMP(mp1)) {
@@ -3831,13 +3831,18 @@ PRUint32 WMChar2KeyCode( MPARAM mp1, MPARAM mp2)
                rc = NS_VK_DIVIDE;
                break;
 
-             case 0x0C:
+            case 0x0C:
                rc = NS_VK_SUBTRACT; /* THIS IS WRONG! */
                break;
 
              default:
                break;
            }
+         } else {
+           /* If we got here, it is an IME input */
+           /* Just set rc to 0 so that it is ignored */
+           /* Other values cause bad things to happen */
+           rc = 0;
          }
       }
    }
