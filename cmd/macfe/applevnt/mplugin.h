@@ -136,6 +136,7 @@ private:
 			Boolean			fIsPrinting;
 			LArray*			fWindowList;
 			TArray<SInt16>*	fMenuList;
+			RgnHandle		fPluginClipping;
 			
 	static	LArray*			sPluginList;
 };
