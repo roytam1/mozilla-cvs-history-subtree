@@ -478,9 +478,6 @@ nsDNSLookup::nsDNSLookup()
     , mState(LOOKUP_NEW)
     , mCacheable(PR_TRUE)
     , mExpires(0)
-#if defined(XP_UNIX)
-    , mNextLookup(nsnull)
-#endif
 {
 	NS_INIT_REFCNT();
 	MOZ_COUNT_CTOR(nsDNSLookup);
@@ -1164,13 +1161,15 @@ nsDNSService::Run()
         nsDNSLookup * lookup = DequeuePendingQ();
         if (lookup) {
             // Got a request!!
+            printf("### nsDNSService::Run() - lookup %s\n", lookup->HostName());
             lookup->DoSyncLookup();
             lookup->ProcessRequests();
             AddToEvictionQ(lookup);
-        } else
+        } else {
             // Woken up without a request --> shutdown
             NS_ASSERTION(mState == DNS_SHUTTING_DOWN, "bad DNS shutdown state");
             break;
+        }   
     }
 
     return NS_OK;
@@ -1209,7 +1208,7 @@ nsDNSService::Lookup(const char*     hostName,
     nsresult rv;
     nsDNSRequest * request = nsnull;
     *result = nsnull;
-    
+    printf("### Lookup(%s)\n", hostName);
     if (!mDNSServiceLock || (mState != DNS_RUNNING))  return NS_ERROR_OFFLINE;
     else {
         nsAutoLock  dnsLock(mDNSServiceLock);
@@ -1237,13 +1236,9 @@ nsDNSService::Lookup(const char*     hostName,
         rv = lookup->EnqueueRequest(request);    // releases dns lock
 
         if (NS_FAILED(rv)) {
-
             NS_RELEASE(lookup);
-
             return rv;
-
         }
-
 
         if (lookup->IsComplete()) {
             lookup->ProcessRequests();      // releases dns lock
