@@ -55,9 +55,14 @@ if ( ! -e "$file") {
 # This needs to be atomic
 open(OUT, ">>$file") || die ("$file: $!\n");
 flock(OUT, LOCK_EX) unless $nofilelocks;
-system("grep -c '^$entry\$' $file >/dev/null");
-$exit_value = $? >> 8;
-if ($exit_value) {
+open(RES, "grep -c '^$entry\$' $file |") or $err = $!;
+if ($err) {
+	flock(OUT,LOCK_UN) unless $nofilelocks;
+	die ("grep: $err\n");
+}
+chomp($val = <RES>);
+close(RES);
+if (!$val) {
     print OUT "$entry\n";
 }
 flock(OUT, LOCK_UN) unless $nofilelocks;
