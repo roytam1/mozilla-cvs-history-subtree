@@ -90,7 +90,7 @@ void nsMailboxProtocol::Initialize(nsIURI * aURL)
 // we suppport the nsIStreamListener interface 
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-NS_IMETHODIMP nsMailboxProtocol::OnStartRequest(nsISupports *ctxt)
+NS_IMETHODIMP nsMailboxProtocol::OnStartRequest(nsIChannel * aChannel, nsISupports *ctxt)
 {
 	// extract the appropriate event sinks from the url and initialize them in our protocol data
 	// the URL should be queried for a nsINewsURL. If it doesn't support a news URL interface then
@@ -99,25 +99,25 @@ NS_IMETHODIMP nsMailboxProtocol::OnStartRequest(nsISupports *ctxt)
 	if (m_nextState == MAILBOX_READ_FOLDER && m_mailboxParser)
 	{
 		// we need to inform our mailbox parser that it's time to start...
-		m_mailboxParser->OnStartRequest(ctxt);
+		m_mailboxParser->OnStartRequest(aChannel, ctxt);
 	}
 	else if(m_mailboxCopyHandler) 
-		m_mailboxCopyHandler->OnStartRequest(ctxt); 
+		m_mailboxCopyHandler->OnStartRequest(aChannel, ctxt); 
 
 	return NS_OK;
 
 }
 
 // stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-NS_IMETHODIMP nsMailboxProtocol::OnStopRequest(nsISupports *ctxt, nsresult aStatus, const PRUnichar *aMsg)
+NS_IMETHODIMP nsMailboxProtocol::OnStopRequest(nsIChannel * aChannel, nsISupports *ctxt, nsresult aStatus, const PRUnichar *aMsg)
 {
 	if (m_nextState == MAILBOX_READ_FOLDER && m_mailboxParser)
 	{
 		// we need to inform our mailbox parser that there is no more incoming data...
-		m_mailboxParser->OnStopRequest(ctxt, 0, nsnull);
+		m_mailboxParser->OnStopRequest(aChannel, ctxt, 0, nsnull);
 	}
 	else if (m_mailboxCopyHandler) 
-		m_mailboxCopyHandler->OnStopRequest(ctxt, 0, nsnull); 
+		m_mailboxCopyHandler->OnStopRequest(aChannel, ctxt, 0, nsnull); 
 	else if (m_nextState == MAILBOX_READ_MESSAGE) 
 	{
 		DoneReadingMessage();
@@ -145,7 +145,7 @@ NS_IMETHODIMP nsMailboxProtocol::OnStopRequest(nsISupports *ctxt, nsresult aStat
 	// is coming from netlib so they are never going to ping us again with on data available. This means
 	// we'll never be going through the Process loop...
 
-	nsMsgProtocol::OnStopRequest(ctxt, aStatus, aMsg);
+	nsMsgProtocol::OnStopRequest(aChannel, ctxt, aStatus, aMsg);
 	return CloseSocket(); 
 }
 
@@ -277,7 +277,7 @@ PRInt32 nsMailboxProtocol::ReadFolderResponse(nsIInputStream * inputStream, PRUi
 	if (m_mailboxParser)
 	{
 		nsCOMPtr <nsIURI> url = do_QueryInterface(m_runningUrl);
-		rv = m_mailboxParser->OnDataAvailable(url, inputStream, sourceOffset, length); // let the parser deal with it...
+		rv = m_mailboxParser->OnDataAvailable(nsnull, url, inputStream, sourceOffset, length); // let the parser deal with it...
 	}
 
 	if (NS_FAILED(rv))
@@ -311,7 +311,7 @@ PRInt32 nsMailboxProtocol::ReadMessageResponse(nsIInputStream * inputStream, PRU
 		if (m_mailboxCopyHandler)
 		{
 			nsCOMPtr <nsIURI> url = do_QueryInterface(m_runningUrl);
-			rv = m_mailboxCopyHandler->OnDataAvailable(url, inputStream, sourceOffset, length);
+			rv = m_mailboxCopyHandler->OnDataAvailable(nsnull, url, inputStream, sourceOffset, length);
 		}
 	}
 	else
