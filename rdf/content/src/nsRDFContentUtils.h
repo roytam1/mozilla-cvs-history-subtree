@@ -50,11 +50,9 @@ public:
                    nsIContent **aResult);
 
     static nsresult
-    FindChildByTagAndResource(nsIContent* aElement,
-                              PRInt32 aNameSpaceID,
-                              nsIAtom* aTag,
-                              nsIRDFResource* aResource,
-                              nsIContent** aResult);
+    FindChildByResource(nsIContent* aElement,
+                        nsIRDFResource* aResource,
+                        nsIContent** aResult);
 
     static nsresult
     GetElementResource(nsIContent* aElement, nsIRDFResource** aResult);
@@ -72,7 +70,7 @@ public:
     GetAttributeLogString(nsIContent* aElement, PRInt32 aNameSpaceID, nsIAtom* aTag, nsString& aResult);
 
     static nsresult
-    MakeElementURI(nsIDocument* aDocument, const nsString& aElementID, nsString& aURI);
+    MakeElementURI(nsIDocument* aDocument, const nsString& aElementID, nsCString& aURI);
 
     static nsresult
     MakeElementID(nsIDocument* aDocument, const nsString& aURI, nsString& aElementID);
