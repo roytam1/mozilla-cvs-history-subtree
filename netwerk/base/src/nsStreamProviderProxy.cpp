@@ -7,6 +7,21 @@
 #define DEFAULT_BUFFER_SEGMENT_SIZE 2048
 #define DEFAULT_BUFFER_MAX_SIZE  (4*2048)
 
+//
+//----------------------------------------------------------------------------
+// Design Overview
+//
+// A stream provider proxy maintains a pipe.  When requested to provide data
+// to the channel, whatever data is in the pipe (up to the amount requested)
+// is provided to the channel.  If there is no data in the pipe, then the 
+// proxy posts an asynchronous event for more data, and returns WOULD_BLOCK
+// indicating that the channel should suspend itself.
+//
+// The channel is only resumed once the event has been successfully handled;
+// meaning that data has been written to the pipe.
+//----------------------------------------------------------------------------
+//
+
 nsStreamProviderProxy::nsStreamProviderProxy()
     : mProviderStatus(NS_OK)
 { }
@@ -81,8 +96,8 @@ nsOnProvideDataEvent::HandleEvent()
         //
         // Mask NS_BASE_STREAM_WOULD_BLOCK return values.
         //
-        providerProxy->mProviderStatus = 
-            rv != NS_BASE_STREAM_WOULD_BLOCK ? rv : NS_OK;
+        providerProxy->SetProviderStatus(
+            rv != NS_BASE_STREAM_WOULD_BLOCK ? rv : NS_OK);
 
         //
         // The channel is already suspended, so unless the provider returned
@@ -174,9 +189,10 @@ nsStreamProviderProxy::OnProvideData(nsIChannel *aChannel,
     //
     // Any non-successful provider status gets passed back to the caller
     //
-    PRINTF("mProviderStatus=%x\n", mProviderStatus);
-    if (NS_FAILED(mProviderStatus))
+    if (NS_FAILED(mProviderStatus)) {
+        PRINTF("provider failed [status=%x]\n", mProviderStatus);
         return mProviderStatus;
+    }
 
     //
     // Provide the channel with whatever data is already in the pipe (not

@@ -23,16 +23,16 @@ public:
         return NS_STATIC_CAST(nsIStreamProvider *, GetReceiver());
     }
 
-    //
-    // The provider status is controlled by the event on the
-    // provider's thread. The monitor protects access to the
-    // provider's status.
-    //
-    nsresult mProviderStatus;
+    void SetProviderStatus(nsresult status)
+    {
+        mProviderStatus = status;
+    }
 
 protected:
     nsCOMPtr<nsIInputStream>  mPipeIn;
     nsCOMPtr<nsIOutputStream> mPipeOut;
+
+    nsresult                  mProviderStatus;
 };
 
 #endif /* !nsStreamProviderProxy_h__ */
