@@ -2153,7 +2153,7 @@ NS_IMETHODIMP nsExternalAppHandler::Cancel()
   // clean up after ourselves and delete the temp file...
   if (mTempFile)
   {
-    mTempFile->Remove(PR_TRUE);
+    mTempFile->Remove(PR_FALSE);
     mTempFile = nsnull;
   }
 
