@@ -3204,7 +3204,7 @@ var nsPreferencesCommand =
   },
   doCommand: function(aCommand)
   {
-    goPreferences('navigator.xul', 'chrome://editor/content/pref-composer.xul','editor');
+    goPreferences('editor', 'chrome://editor/content/pref-composer.xul','editor');
     window._content.focus();
   }
 };
