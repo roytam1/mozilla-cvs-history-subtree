@@ -482,7 +482,7 @@ nsLDAPConnection::InvokeMessageCallback(LDAPMessage *aMsgHandle,
         return NS_ERROR_OUT_OF_MEMORY;
 
     // find the operation in question
-    operation = getter_AddRefs(NS_STATIC_CAST(nsILDAPOperation *, mPendingOperations->Get(key)));
+    operation = NS_STATIC_CAST(nsILDAPOperation *, mPendingOperations->Get(key));
     if (!operation) {
 
         PR_LOG(gLDAPLogModule, PR_LOG_WARNING, 
