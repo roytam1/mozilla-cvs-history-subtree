@@ -330,7 +330,7 @@ nsInstall::AddDirectory(const nsString& aRegName,
     
     nsString* qualifiedRegName = nsnull;
     
-    if ( aRegName == "" ) 
+    if ( aRegName == "" || aRegName == "null") 
     {
         // Default subName = location in jar file
         qualifiedRegName = GetQualifiedRegName( aJarSource );
@@ -2490,7 +2490,7 @@ nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aPacka
         
     mUserCancelled = PR_FALSE; 
     
-    if ( aPackageName.Equals("") ) 
+    if ( aPackageName.Equals("") || aPackageName.EqualsIgnoreCase("null"))  
     {
         *aReturn = nsInstall::INVALID_ARGUMENTS;
         return NS_OK;
@@ -2575,7 +2575,7 @@ nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aPacka
         
     mUserCancelled = PR_FALSE; 
     
-    if ( aPackageName.Equals("") ) 
+    if ( aPackageName.Equals("") || aPackageName.EqualsIgnoreCase("null"))  
     {
         *aReturn = nsInstall::INVALID_ARGUMENTS;
         return NS_OK;
@@ -2660,7 +2660,7 @@ nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aPacka
         
     mUserCancelled = PR_FALSE; 
     
-    if ( aPackageName.Equals("") ) 
+    if ( aPackageName.Equals("") || aPackageName.EqualsIgnoreCase("null"))  
     {
         *aReturn = nsInstall::INVALID_ARGUMENTS;
         return NS_OK;
@@ -2745,7 +2745,7 @@ nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aPacka
         
     mUserCancelled = PR_FALSE; 
     
-    if ( aPackageName.Equals("") ) 
+    if ( aPackageName.Equals("") || aPackageName.EqualsIgnoreCase("null"))  
     {
         *aReturn = nsInstall::INVALID_ARGUMENTS;
         return NS_OK;
