@@ -2079,6 +2079,7 @@ nsMenuPopupFrame::HandleEvent(nsIPresContext* aPresContext,
 NS_IMETHODIMP
 nsMenuPopupFrame::Destroy(nsIPresContext* aPresContext)
 {
+  RemoveKeyboardNavigator();
   return nsBoxFrame::Destroy(aPresContext);
 }
 
