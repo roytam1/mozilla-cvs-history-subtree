@@ -893,7 +893,7 @@ void nsEudoraWin32::SetSmtpServer( nsIMsgAccountManager *pMgr, nsIMsgAccount *pA
  	}
 }
 
-nsresult nsEudoraWin32::GetAttachmentInfo( const char *pFileName, nsIFileSpec *pSpec, nsCString& mimeType)
+nsresult nsEudoraWin32::GetAttachmentInfo( const char *pFileName, nsIFileSpec *pSpec, nsCString& mimeType, nsCString& aAttachmentName)
 {
 	mimeType.Truncate();
 	pSpec->SetNativePath( pFileName);
@@ -921,6 +921,8 @@ nsresult nsEudoraWin32::GetAttachmentInfo( const char *pFileName, nsIFileSpec *p
 		}
 		if (mimeType.IsEmpty())
 			mimeType = "application/octet-stream";
+
+    aAttachmentName = name; // use the leaf name of the attachment file url as the attachment name
 
 		return( NS_OK);
 	}

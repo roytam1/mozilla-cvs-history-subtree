@@ -109,20 +109,20 @@ public:
 	nsEudoraCompose();
 	~nsEudoraCompose();
 
-	nsresult	SendTheMessage( nsIFileSpec *pMsg);
+  nsresult	SendTheMessage( nsIFileSpec *pMsg);
 
-	void		SetBody( const char *pBody, PRInt32 len) { m_pBody = pBody; m_bodyLen = len;}
-	void		SetHeaders( const char *pHeaders, PRInt32 len) { m_pHeaders = pHeaders; m_headerLen = len;}
-	void		SetAttachments( nsVoidArray *pAttachments) { m_pAttachments = pAttachments;}
+  void		SetBody( const char *pBody, PRInt32 len, nsCString &bodyType) { m_pBody = pBody; m_bodyLen = len; m_bodyType = bodyType;}
+  void		SetHeaders( const char *pHeaders, PRInt32 len) { m_pHeaders = pHeaders; m_headerLen = len;}
+  void		SetAttachments( nsVoidArray *pAttachments) { m_pAttachments = pAttachments;}
   void		SetDefaultDate( nsCString date) { m_defaultDate = date;}
 
-	nsresult	CopyComposedMessage( nsCString& fromLine, nsIFileSpec *pSrc, nsIFileSpec *pDst, SimpleBufferTonyRCopiedOnce& copy);
+  nsresult	CopyComposedMessage( nsCString& fromLine, nsIFileSpec *pSrc, nsIFileSpec *pDst, SimpleBufferTonyRCopiedOnce& copy);
 
-	static nsresult	FillMailBuffer( ReadFileState *pState, SimpleBufferTonyRCopiedOnce& read);
+  static nsresult	FillMailBuffer( ReadFileState *pState, SimpleBufferTonyRCopiedOnce& read);
 
 private:
-	nsresult	CreateComponents( void);
-	nsresult	CreateIdentity( void);
+  nsresult	CreateComponents( void);
+  nsresult	CreateIdentity( void);
 	
 	void		GetNthHeader( const char *pData, PRInt32 dataLen, PRInt32 n, nsCString& header, nsCString& val, PRBool unwrap);
 	void		GetHeaderValue( const char *pData, PRInt32 dataLen, const char *pHeader, nsCString& val, PRBool unwrap = PR_TRUE);
@@ -157,8 +157,9 @@ private:
 	PRInt32					m_headerLen;
 	const char *			m_pHeaders;
 	PRInt32					m_bodyLen;
-	const char *			m_pBody;
-	nsString				m_defCharset;
+  const char *			m_pBody;
+  nsCString				m_bodyType;
+  nsString				m_defCharset;
 	SimpleBufferTonyRCopiedOnce			m_readHeaders;
 	nsCOMPtr<nsIImportService>	m_pImportService;
   nsCString       m_defaultDate;  // Use this if no Date: header in msgs
