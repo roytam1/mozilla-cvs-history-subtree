@@ -117,7 +117,7 @@ struct nsInputEvent : public nsGUIEvent {
                 /// PR_TRUE indicates the command key in down
                 /// For now, it's only used in Widget: not for export
                 /// in nsIDOMEvent.h or nsJSEvent.cpp (later maybe)
-    PRBool          isCommand;          
+    PRBool          isMeta;          
 #endif
 };
 
