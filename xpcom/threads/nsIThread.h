@@ -58,10 +58,10 @@ public:
     NS_DEFINE_STATIC_IID_ACCESSOR(NS_ITHREAD_IID);
 
     // returns the nsIThread for the current thread:
-    static NS_BASE nsresult GetCurrent(nsIThread* *result);
+    static NS_COM nsresult GetCurrent(nsIThread* *result);
 
     // returns the nsIThread for an arbitrary PRThread:
-    static NS_BASE nsresult GetIThread(PRThread* prthread, nsIThread* *result);
+    static NS_COM nsresult GetIThread(PRThread* prthread, nsIThread* *result);
 
     NS_IMETHOD Join() = 0;
 
@@ -76,7 +76,7 @@ public:
     NS_IMETHOD GetPRThread(PRThread* *result) = 0;
 };
 
-extern NS_BASE nsresult
+extern NS_COM nsresult
 NS_NewThread(nsIThread* *result, 
              nsIRunnable* runnable,
              PRUint32 stackSize = 0,
@@ -111,7 +111,7 @@ public:
     NS_IMETHOD Shutdown() = 0;
 };
 
-extern NS_BASE nsresult
+extern NS_COM nsresult
 NS_NewThreadPool(nsIThreadPool* *result,
                  PRUint32 minThreads, PRUint32 maxThreads,
                  PRUint32 stackSize = 0,

@@ -368,7 +368,7 @@ nsByteBufferOutputStream::Flush(void)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-NS_BASE nsresult
+NS_COM nsresult
 NS_NewByteBufferInputStream(nsIByteBufferInputStream* *result,
                             PRBool blocking, PRUint32 size)
 {
@@ -390,7 +390,7 @@ NS_NewByteBufferInputStream(nsIByteBufferInputStream* *result,
 
 ////////////////////////////////////////////////////////////////////////////////
 
-NS_BASE nsresult
+NS_COM nsresult
 NS_NewPipe(nsIInputStream* *inStrResult,
            nsIOutputStream* *outStrResult,
            PRBool blocking, PRUint32 size)

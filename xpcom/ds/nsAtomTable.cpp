@@ -92,18 +92,18 @@ static PRIntn CompareKeys(const PRUnichar* k1, const PRUnichar* k2)
   return nsCRT::strcmp(k1, k2) == 0;
 }
 
-NS_BASE nsIAtom* NS_NewAtom(const char* isolatin1)
+NS_COM nsIAtom* NS_NewAtom(const char* isolatin1)
 {
   nsAutoString tmp(isolatin1);
   return NS_NewAtom(tmp.GetUnicode());
 }
 
-NS_BASE nsIAtom* NS_NewAtom(const nsString& aString)
+NS_COM nsIAtom* NS_NewAtom(const nsString& aString)
 {
   return NS_NewAtom(aString.GetUnicode());
 }
 
-NS_BASE nsIAtom* NS_NewAtom(const PRUnichar* us)
+NS_COM nsIAtom* NS_NewAtom(const PRUnichar* us)
 {
   if (nsnull == gAtomHashTable) {
     gAtomHashTable = PL_NewHashTable(8, (PLHashFunction) HashKey,
@@ -126,7 +126,7 @@ NS_BASE nsIAtom* NS_NewAtom(const PRUnichar* us)
   return id;
 }
 
-NS_BASE nsrefcnt NS_GetNumberOfAtoms(void)
+NS_COM nsrefcnt NS_GetNumberOfAtoms(void)
 {
   if (nsnull != gAtomHashTable) {
     NS_PRECONDITION(nsrefcnt(gAtomHashTable->nentries) == gAtoms, "bad atom table");

@@ -50,12 +50,12 @@ public:
 
 ////////////////////////////////////////////////////////////////////////////////
 
-extern NS_BASE nsresult
+extern NS_COM nsresult
 NS_NewByteBufferInputStream(nsIByteBufferInputStream* *result,
                             PRBool blocking = PR_FALSE,
                             PRUint32 size = 4096);
 
-extern NS_BASE nsresult
+extern NS_COM nsresult
 NS_NewPipe(nsIInputStream* *inStrResult,
            nsIOutputStream* *outStrResult,
            PRBool blocking = PR_TRUE,

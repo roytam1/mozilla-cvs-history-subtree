@@ -49,7 +49,7 @@ public:
  * underlying memory blocks. The underlying memory blocks are allocated
  * using the PR heap.
  */
-extern NS_BASE nsresult NS_NewHeapArena(nsIArena** aInstancePtrResult,
+extern NS_COM nsresult NS_NewHeapArena(nsIArena** aInstancePtrResult,
                                         PRUint32 aArenaBlockSize = 0);
 
 #define NS_ARENA_CID                                 \

@@ -60,7 +60,7 @@ public:
 }
 
 /** Create a new byte buffer using the given buffer size. */
-extern NS_BASE nsresult 
+extern NS_COM nsresult 
 NS_NewByteBuffer(nsIByteBuffer** aInstancePtrResult,
                  nsISupports* aOuter,
                  PRUint32 aBufferSize = 0);

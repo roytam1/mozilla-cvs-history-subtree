@@ -38,7 +38,7 @@ public:
     NS_IMETHOD   Notify(nsISupports** result) = 0;
 };
 
-extern NS_BASE nsresult NS_NewObserver(nsIObserver** anObserver, nsISupports* outer = NULL);
+extern NS_COM nsresult NS_NewObserver(nsIObserver** anObserver, nsISupports* outer = NULL);
 
 #define NS_OBSERVER_PROGID             "component://netscape/xpcom/observer"
 

@@ -67,7 +67,7 @@ ArenaImpl::Create(nsISupports *aOuter, REFNSIID aIID, void **aResult)
   return rv;
 }
 
-NS_BASE nsresult NS_NewHeapArena(nsIArena** aInstancePtrResult,
+NS_COM nsresult NS_NewHeapArena(nsIArena** aInstancePtrResult,
                                  PRUint32 aArenaBlockSize)
 {
   nsresult rv;

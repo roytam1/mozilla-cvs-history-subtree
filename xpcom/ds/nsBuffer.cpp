@@ -332,7 +332,7 @@ nsBuffer::SetEOF()
 
 static NS_DEFINE_CID(kAllocatorCID, NS_ALLOCATOR_CID);
 
-NS_BASE nsresult
+NS_COM nsresult
 NS_NewBuffer(nsIBuffer* *result,
              PRUint32 growBySize, PRUint32 maxSize)
 {
@@ -356,7 +356,7 @@ NS_NewBuffer(nsIBuffer* *result,
 
 static NS_DEFINE_CID(kPageManagerCID, NS_PAGEMANAGER_CID);
 
-NS_BASE nsresult
+NS_COM nsresult
 NS_NewPageBuffer(nsIBuffer* *result,
                  PRUint32 growBySize, PRUint32 maxSize)
 {
