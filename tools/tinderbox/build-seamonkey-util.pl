@@ -1940,7 +1940,7 @@ sub CodesizeTest {
     $bash_cmd = $type . "summary.win.bash";
   } else {
     # Assume Linux for non-windows for now.
-    $bash_cmd = $type . "summary.linux.bash";
+    $bash_cmd = $type . "summary.unix.bash";
   }
   
   my $test_result =
