@@ -151,22 +151,6 @@ UNZIP_PROG	= $(LOCAL_BIN)/unzip
 ZIP_PROG	= $(LOCAL_BIN)/zip
 ZIP_FLAGS	= -0rq
 
-ifeq ($(OS_ARCH),OS2)
-EMPTY		:=
-SLASH		:= /$(EMPTY)
-BSLASH		:= \$(EMPTY)
-SEMICOLON	:= ;$(EMPTY)
-SPACE		:= $(EMPTY) $(EMPTY)
-PATH_SEPARATOR	:= \;
-XP_DEFINE	= -DXP_PC
-LIB_SUFFIX	= lib
-DLL_SUFFIX	= dll
-MAP_SUFFIX	= map
-BIN_SUFFIX	= .exe
-NSINSTALL	= nsinstall
-INSTALL		= $(NSINSTALL)
-JAVAC_ZIP	= $(subst $(BSLASH),$(SLASH),$(JAVA_HOME))/lib/classes.zip
-else
 ifeq ($(OS_ARCH),WINNT)
 PATH_SEPARATOR	:= :
 RC		= rc$(BIN_SUFFIX)
@@ -197,7 +181,6 @@ PERL		= $(NS_BIN)perl
 TAR		= tar
 EMACS		= xemacs
 WHOAMI		= /usr/bin/whoami
-endif
 endif
 
 #
@@ -266,11 +249,13 @@ LIBNSPR		+= $(DIST)/lib/libdbmalloc.$(LIB_SUFFIX)
 endif
 
 ifeq ($(OS_ARCH),OS2)
-LIBNSJAVA	= $(DIST)/lib/jrt$(MOZ_BITS)$(VERSION_NUMBER).$(LIB_SUFFIX)
+LIBNSJAVA	= $(DIST)/lib/libjrt.$(LIB_SUFFIX)
 LIBMD		= $(DIST)/lib/libjmd.$(LIB_SUFFIX)
+LIBZIP		= $(DIST)/lib/libzlib.$(LIB_SUFFIX)
 LIBJAVA		= $(DIST)/lib/libjrt.$(LIB_SUFFIX)
-LIBNSPR		= $(DIST)/lib/pr$(MOZ_BITS)$(VERSION_NUMBER).$(LIB_SUFFIX)
-LIBXP		= $(DIST)/lib/libxp.$(LIB_SUFFIX)
+LIBNSPR		= $(DIST)/lib/nspr21.$(LIB_SUFFIX) \
+                  $(DIST)/lib/plds21.$(LIB_SUFFIX) \
+		  $(DIST)/lib/msgc21.$(LIB_SUFFIX)
 else
 ifeq ($(OS_ARCH),WINNT)
 LIBNSJAVA	= $(DIST)/lib/jrt3221.$(LIB_SUFFIX)

@@ -16,7 +16,7 @@
 #
 
 ######################################################################
-# Config stuff for OS/2
+# Common Config stuff for OS/2
 ######################################################################
 SHELL	= GBASH.EXE
 
@@ -30,16 +30,66 @@ endif
 
 OBJDIR_TAG := $(addprefix _$(MOZ_OS2_TOOLS), $(OBJDIR_TAG))
 
+
+######################################################################
+# Overrides of stuff in config.mk
+######################################################################
+EMPTY		:=
+SLASH		:= /$(EMPTY)
+BSLASH		:= \$(EMPTY)
+SEMICOLON	:= ;$(EMPTY)
+SPACE		:= $(EMPTY) $(EMPTY)
+PATH_SEPARATOR	:= \;
+XP_DEFINE	= -DXP_PC
+LIB_SUFFIX	= lib
+DLL_SUFFIX	= dll
+MAP_SUFFIX	= map
+BIN_SUFFIX	= .exe
+NSINSTALL	= nsinstall
+INSTALL		= $(NSINSTALL)
+JAVA_PROG	= $(FLIPPER) java -norestart
+JAVAC_ZIP	= $(subst $(BSLASH),$(SLASH),$(JAVA_HOME))/lib/classes.zip
+RANLIB		= echo
+
 ifdef XP_OS2_EMX
 ######################################################################
 # These are for emx/gcc
 ######################################################################
 
-PLATFORM_FLAGS	= -ansi -Wall -Zmtd -DXP_OS2 -DXP_OS2_FIX -DXP_OS2_EMX -DOS2
+LINK		= $(CC)
+
+# Determine which object format to use.  Two choices:
+# a.out and omf.  We default to a.out.
+ifeq ($(MOZ_OS2_EMX_OBJECTFORMAT), OMF)
+OMF_FLAG 	= -Zomf
+AR		= emxomfar r $@
+LIB_SUFFIX	= lib
+else
+AR      	= ar -q $@
+LIB_SUFFIX	= a
+endif
+
+PLATFORM_FLAGS	= $(OMF_FLAG) -ansi -Wall -Zmtd -DXP_OS2 -DXP_OS2_FIX -DXP_OS2_EMX -DOS2
 MOVEMAIL_FLAGS	=
 PORT_FLAGS		= -DNEED_GETOPT_H -DHAVE_SIGNED_CHAR
 
 OS_CFLAGS		= $(PLATFORM_FLAGS) $(PORT_FLAGS) $(MOVEMAIL_FLAGS)
+OS_LIBS     		= -lsocket -lemxio
+OS_DLLFLAGS 		= $(OMF_FLAG) -Zmap -Zmt -Zdll -Zcrtdll -o $@
+
+MKSHLIB			= $(LD) $(DSO_LDOPTS)
+RC 			= rc.exe
+FILTER  		= emxexp
+IMPLIB  		= emximp -o
+
+ifdef BUILD_OPT
+OPTIMIZER		= -O3
+DLLFLAGS		= 
+else
+OPTIMIZER		= -g
+DLLFLAGS		= -g -L$(DIST)/lib -o $@
+endif
+
 
 ######################################################################
 # end XP_OS2_EMX
@@ -50,8 +100,13 @@ ifdef XP_OS2_VACPP
 ######################################################################
 # These are for VisualAge C++
 ######################################################################
-CC				= icc
-LINK			= ilink
+FLIPPER         = flipper
+CC		= icc
+LINK		= ilink
+
+ifdef MAKE_DLL
+DLL_FLAGS = -ge-
+endif
 
 ifdef BUILD_OPT
 OPTIMIZER	= -O+ -Oi
@@ -59,14 +114,25 @@ else
 OPTIMIZER   = -Ti+
 endif
 
-PLATFORM_FLAGS	= -q -W3 -DOS2::4 -DXP_OS2 -DXP_OS2_FIX -DXP_OS2_VACPP -N10 -D_X86_
+PLATFORM_FLAGS	= $(DLL_FLAGS) -q -W3 -DOS2::4 -DXP_OS2 -DXP_OS2_FIX -DXP_OS2_VACPP -N10 -D_X86_
 PLATFORM_FLAGS += -Gm -Gd+ -Su4 -Ss -I. -I$(DEPTH)/config/os2
 MOVEMAIL_FLAGS	=
-PORT_FLAGS		= -DHAVE_SIGNED_CHAR
+PORT_FLAGS	= -DHAVE_SIGNED_CHAR
 
-OS_CFLAGS		= $(PLATFORM_FLAGS) $(PORT_FLAGS) $(MOVEMAIL_FLAGS)
+OS_CFLAGS	= $(PLATFORM_FLAGS) $(PORT_FLAGS) $(MOVEMAIL_FLAGS)
+OS_LFLAGS	= /PM:VIO /NOLOGO
+OS_DLLFLAGS	= -FREE -NOE -nologo -DLL
+OS_LIBS		= $(SOCKLIB) tcp32dll.lib cppom30o.lib os2386.lib
 
-OS_LFLAGS       = /PM:VIO /NOLOGO
+RC		= $(FLIPPER) rc$(BIN_SUFFIX)
+AR		= $(FLIPPER) ILib //noignorecase //nologo $@
+IMPLIB		= $(FLIPPER) implib -nologo -noignorecase
+DLLFLAGS	= -OUT:$@ -MAP:$(@:.dll=.map)
+LFLAGS		= $(OBJS) -OUT:$@ $(XLFLAGS) $(DEPLIBS) $(EXTRA_LIBS) -MAP:$(@:.dll=.map) $(DEF_FILE)
+AR_EXTRA_ARGS   = ,,
+MKSHLIB		= $(FLIPPER) ilink
+FILTER		= $(FLIPPER) cppfilt -q -B -P
+LIB_SUFFIX      = lib
 
 ######################################################################
 # End XP_OS2_VACPP

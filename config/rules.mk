@@ -82,16 +82,25 @@ endif
 endif
 
 ifdef LIBRARY
-ifdef XP_OS2_VACPP
+ifeq ($(OS_ARCH),OS2)
 ifndef DEF_FILE
-DEF_FILE		:= $(LIBRARY:.lib=.def)
+DEF_FILE		:= $(addprefix $(OBJDIR)/, $(LIBRARY:.$(LIB_SUFFIX)=.def))
 endif
 endif
 LIBRARY			:= $(addprefix $(OBJDIR)/, $(LIBRARY))
 ifdef MKSHLIB
-ifdef XP_OS2_VACPP
-SHARED_LIBRARY		:= $(LIBRARY:.lib=.dll)
-MAPS			:= $(LIBRARY:.lib=.map)
+ifeq ($(OS_ARCH),OS2)
+ifdef MAKE_DLL
+# Funky trick to rename the static library and create a new import library that will be
+# used by anything that wants to link with this library. Don't try this at home.
+IMPORT_LIBRARY          := $(LIBRARY)
+SHARED_LIBRARY		:= $(LIBRARY:.$(LIB_SUFFIX)=.dll)
+MAPS			:= $(LIBRARY:.$(LIB_SUFFIX)=.map)
+LIBRARY			:= $(LIBRARY:.$(LIB_SUFFIX)=_s.$(LIB_SUFFIX))
+ifdef TARGETS
+TARGETS			+= $(IMPORT_LIBRARY)
+endif
+endif
 else
 ifeq ($(OS_ARCH),WINNT)
 SHARED_LIBRARY		:= $(LIBRARY:.lib=.dll)
@@ -119,7 +128,7 @@ endif
 endif
 
 ifndef TARGETS
-TARGETS			= $(LIBRARY) $(SHARED_LIBRARY) $(PROGRAM)
+TARGETS			= $(LIBRARY) $(SHARED_LIBRARY) $(IMPORT_LIBRARY) $(PROGRAM)
 endif
 
 ifndef OBJS
@@ -146,9 +155,13 @@ if test ! -d $(@D); then rm -rf $(@D); $(NSINSTALL) -D $(@D); fi
 endef
 endif
 
-ifndef OS2_IMPLIB
-LIBOBJS			:= $(addprefix \", $(OBJS))
-LIBOBJS			:= $(addsuffix \", $(LIBOBJS))
+# The OS/2 VACPP library utility can't handle spaces or hyphens in object names unless
+# each filename is in this format: \"OBJ\".  Don't ask me why.  
+ifdef XP_OS2_VACPP
+AR_OBJS			:= $(addprefix \", $(OBJS))
+AR_OBJS			:= $(addsuffix \", $(AR_OBJS))
+else
+AR_OBJS			:= $(OBJS)
 endif
 
 ifndef PACKAGE
@@ -260,9 +273,12 @@ endif
 export::
 	+$(LOOP_OVER_DIRS)
 
-libs install:: $(LIBRARY) $(SHARED_LIBRARY) $(PROGRAM) $(MAPS)
+libs install:: $(LIBRARY) $(SHARED_LIBRARY) $(IMPORT_LIBRARY) $(PROGRAM) $(MAPS)
 ifdef LIBRARY
 	$(INSTALL) -m 444 $(LIBRARY) $(DIST)/lib
+endif
+ifdef IMPORT_LIBRARY
+	$(INSTALL) -m 444 $(IMPORT_LIBRARY) $(DIST)/lib
 endif
 ifdef MAPS
 	$(INSTALL) -m 444 $(MAPS) $(DIST)/bin
@@ -299,57 +315,42 @@ else
 endif
 endif
 
-ifneq ($(OS_ARCH),OS2)
 $(LIBRARY): $(OBJS) $(LOBJS)
 	@$(MAKE_OBJDIR)
 	rm -f $@
-	$(AR) $(OBJS) $(LOBJS)
+	$(AR) $(AR_OBJS) $(LOBJS) $(AR_EXTRA_ARGS)
 	$(RANLIB) $@
-else
-ifdef XP_OS2_VACPP
-ifdef OS2_IMPLIB
-$(LIBRARY): $(OBJS) $(DEF_FILE) 
+
+ifeq ($(OS_ARCH), OS2)
+$(IMPORT_LIBRARY): $(LIBRARY) $(SHARED_LIBRARY)
 	@$(MAKE_OBJDIR)
 	rm -f $@
 	$(IMPLIB) $@ $(DEF_FILE)
-	$(RANLIB) $@
-else
-$(LIBRARY): $(OBJS)
-	@$(MAKE_OBJDIR)
-	rm -f $@
-	$(AR) $(LIBOBJS),,
-	$(RANLIB) $@
-endif
-endif
 endif
 
-ifneq ($(OS_ARCH),OS2)
 $(SHARED_LIBRARY): $(OBJS) $(LOBJS)
 	@$(MAKE_OBJDIR)
 	rm -f $@
+ifeq ($(OS_ARCH),OS2)
+# append ( >> ) doesn't seem to be working under OS/2 gmake. Run through OS/2 shell instead.	
+	@echo Generating DEF file: $(DEF_FILE)
+	@cmd /C "echo LIBRARY $(notdir $(basename $(SHARED_LIBRARY))) INITINSTANCE TERMINSTANCE > $(DEF_FILE)"
+	@cmd /C "echo PROTMODE >> $(DEF_FILE)"
+	@cmd /C "echo CODE    LOADONCALL MOVEABLE DISCARDABLE >> $(DEF_FILE)"
+	@cmd /C "echo DATA    PRELOAD MOVEABLE MULTIPLE NONSHARED >> $(DEF_FILE)"
+	@cmd /C "echo EXPORTS >> $(DEF_FILE)"
+	@cmd /C "$(FILTER) $(LIBRARY) >> $(DEF_FILE)"
+	$(LINK_DLL) $(DLLBASE) $(OBJS) $(OS_LIBS) $(EXTRA_LIBS) $(DEF_FILE)
+else
 	$(MKSHLIB) -o $@ $(OBJS) $(LOBJS) $(EXTRA_DSO_LDOPTS)
 	chmod +x $@
-else
-ifdef XP_OS2_VACPP
-$(SHARED_LIBRARY): $(OBJS) $(DEF_FILE)
-	@$(MAKE_OBJDIR)
-	rm -f $@
-	$(LINK_DLL) $(OBJS) $(OS_LIBS) $(EXTRA_LIBS) $(DEF_FILE)
-	chmod +x $@
-endif
 endif
 
-ifeq ($(OS_ARCH),WINNT)
+ifneq (,$(filter OS2 WINNT,$(OS_ARCH)))
 $(DLL): $(OBJS) $(EXTRA_LIBS)
 	@$(MAKE_OBJDIR)
 	rm -f $@
 	$(LINK_DLL) $(OBJS) $(OS_LIBS) $(EXTRA_LIBS)
-endif
-
-ifdef XP_OS2_VACPP
-	@$(MAKE_OBJDIR)
-	rm -f $@
-	$(LINK_DLL) $(OBJS) $(EXTRA_LIBS) $(OS_LIBS)
 endif
 
 $(OBJDIR)/%: %.c
