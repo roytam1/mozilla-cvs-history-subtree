@@ -33,10 +33,10 @@
 nsCacheEntryChannel::nsCacheEntryChannel(
         nsCachedNetData* aCacheEntry, 
         nsIChannel* aChannel,
-     nsILoadGroup* aLoadGroup):
-    mChannel(aChannel),
+        nsILoadGroup* aLoadGroup):
     mCacheEntry(aCacheEntry), 
-    mLoadGroup(aLoadGroup)
+    mLoadGroup(aLoadGroup),
+    mChannel(aChannel)
 {
     NS_ASSERTION(aCacheEntry->mChannelCount < 0xFF, "Overflowed channel counter");
     mCacheEntry->mChannelCount++;
@@ -177,8 +177,7 @@ nsCacheEntryChannel::AsyncRead(nsIStreamListener *aListener, nsISupports *aConte
 
 // No async writes allowed to the cache yet
 NS_IMETHODIMP
-nsCacheEntryChannel::AsyncWrite(nsIInputStream *aFromStream, 
-                                nsIStreamObserver *aObserver,
+nsCacheEntryChannel::AsyncWrite(nsIStreamProvider *aProvider,
                                 nsISupports *ctxt, 
                                 PRUint32 transferOffset, 
                                 PRUint32 transferCount, 

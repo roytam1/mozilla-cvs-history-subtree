@@ -49,6 +49,7 @@
 #include "nsIInterfaceRequestor.h"
 #include "nsIProgressEventSink.h"
 #include "nsCRT.h"
+#include "nsNetUtil.h"
 
 #if defined(XP_MAC)
 #include "macstdlibextras.h"
@@ -431,7 +432,10 @@ nsresult TestConnection::WriteBuffer(void)
 
       // Write the buffer to the server...
       if (NS_SUCCEEDED(rv)) {
-          rv = mTransport->AsyncWrite(mStream, nsnull, mTransport, 0, bytesWritten, getter_AddRefs(mWriteRequest));
+          rv = NS_AsyncWriteFromStream(
+                  getter_AddRefs(mWriteRequest),
+                  mTransport, mStream, 0, bytesWritten,
+                  nsnull, mTransport);
       } 
       // Wait for the write to complete...
       if (NS_FAILED(rv)) {

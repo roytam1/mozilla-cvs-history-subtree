@@ -371,8 +371,7 @@ nsDataChannel::AsyncRead(nsIStreamListener *aListener, nsISupports *ctxt,
 }
 
 NS_IMETHODIMP
-nsDataChannel::AsyncWrite(nsIInputStream *fromStream,
-                          nsIStreamObserver *observer,
+nsDataChannel::AsyncWrite(nsIStreamProvider *provider,
                           nsISupports *ctxt,
                           PRUint32 transferOffset, 
                           PRUint32 transferCount, 

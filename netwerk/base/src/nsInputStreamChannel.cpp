@@ -170,16 +170,27 @@ nsStreamIOChannel::Init(nsIURI* uri, nsIStreamIO* io)
     return NS_OK;
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS6(nsStreamIOChannel, 
-                              nsIStreamIOChannel,
-                              nsIChannel,
-                              nsIRequest,
-                              nsIStreamContentInfo,
-                              nsIStreamObserver,
-                              nsIStreamListener);
+////////////////////////////////////////////////////////////////////////////////
+// nsISupports implementation:
+////////////////////////////////////////////////////////////////////////////////
+
+NS_IMPL_THREADSAFE_ADDREF(nsStreamIOChannel)
+NS_IMPL_THREADSAFE_RELEASE(nsStreamIOChannel)
+
+NS_INTERFACE_MAP_BEGIN(nsStreamIOChannel)
+    NS_INTERFACE_MAP_ENTRY(nsIStreamIOChannel)
+    NS_INTERFACE_MAP_ENTRY(nsIChannel)
+    NS_INTERFACE_MAP_ENTRY(nsIRequest)
+    NS_INTERFACE_MAP_ENTRY(nsIStreamContentInfo)
+    NS_INTERFACE_MAP_ENTRY(nsIStreamListener)
+    NS_INTERFACE_MAP_ENTRY(nsIStreamProvider)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsIStreamObserver, nsIStreamListener)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIStreamListener)
+NS_INTERFACE_MAP_END_THREADSAFE
 
 ////////////////////////////////////////////////////////////////////////////////
-// nsIRequest methods:
+// nsIRequest implementation:
+////////////////////////////////////////////////////////////////////////////////
 
 NS_IMETHODIMP
 nsStreamIOChannel::GetName(PRUnichar* *result)
@@ -242,8 +253,23 @@ nsStreamIOChannel::Resume(void)
     return NS_OK;
 }
 
+NS_IMETHODIMP
+nsStreamIOChannel::GetParent(nsISupports **aParent)
+{
+    NS_ADDREF(*aParent=(nsISupports*)(nsIChannel*)this);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsStreamIOChannel::SetParent(nsISupports *aParent)
+{
+    NS_NOTREACHED("SetParent");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
-// nsIChannel methods:
+// nsIChannel implementation:
+////////////////////////////////////////////////////////////////////////////////
 
 NS_IMETHODIMP
 nsStreamIOChannel::GetOriginalURI(nsIURI* *aURI)
@@ -345,14 +371,14 @@ nsStreamIOChannel::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt,
 }
 
 NS_IMETHODIMP
-nsStreamIOChannel::AsyncWrite(nsIInputStream *fromStream, 
-                              nsIStreamObserver *observer, nsISupports *ctxt,
-                              PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
+nsStreamIOChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt,
+                              PRUint32 transferOffset, PRUint32 transferCount,
+                              nsIRequest **_retval)
 {
     nsresult rv;
 
-    NS_ASSERTION(observer, "no observer");
-    mUserObserver = observer;
+    NS_ASSERTION(provider, "no provider");
+    SetProvider(provider);
 
     if (mLoadGroup) {
         nsCOMPtr<nsILoadGroupListenerFactory> factory;
@@ -361,12 +387,15 @@ nsStreamIOChannel::AsyncWrite(nsIInputStream *fromStream,
         //
         rv = mLoadGroup->GetGroupListenerFactory(getter_AddRefs(factory));
         if (factory) {
+            NS_WARNING("load group proxy listener not implemented for AsyncWrite");
+#if 0
             nsIStreamListener *newListener;
             rv = factory->CreateLoadGroupListener(GetListener(), &newListener);
             if (NS_SUCCEEDED(rv)) {
                 mUserObserver = newListener;
                 NS_RELEASE(newListener);
             }
+#endif
         }
 
         rv = mLoadGroup->AddRequest(this, nsnull);
@@ -387,7 +416,7 @@ nsStreamIOChannel::AsyncWrite(nsIInputStream *fromStream,
         if (NS_FAILED(rv)) goto done;
     }
 #endif
-    rv = mFileTransport->AsyncWrite(fromStream, this, ctxt, 0, -1, getter_AddRefs(mRequest));
+    rv = mFileTransport->AsyncWrite(this, ctxt, 0, -1, getter_AddRefs(mRequest));
 
   done:
     if (NS_FAILED(rv)) {
@@ -413,50 +442,6 @@ NS_IMETHODIMP
 nsStreamIOChannel::SetLoadAttributes(nsLoadFlags aLoadAttributes)
 {
     mLoadAttributes = aLoadAttributes;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsStreamIOChannel::GetContentType(char * *aContentType)
-{
-    nsresult rv;
-    if (mContentType == nsnull) {
-        rv = mStreamIO->Open(&mContentType, &mContentLength);
-        if (NS_FAILED(rv)) return rv;
-    }
-    *aContentType = nsCRT::strdup(mContentType);
-    if (*aContentType == nsnull) {
-        return NS_ERROR_OUT_OF_MEMORY;
-    }
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsStreamIOChannel::SetContentType(const char *aContentType)
-{
-    mContentType = nsCRT::strdup(aContentType);
-    if (*aContentType == nsnull) {
-        return NS_ERROR_OUT_OF_MEMORY;
-    }
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsStreamIOChannel::GetContentLength(PRInt32 *aContentLength)
-{
-    nsresult rv;
-    if (mContentType == nsnull) {
-        rv = mStreamIO->Open(&mContentType, &mContentLength);
-        if (NS_FAILED(rv)) return rv;
-    }
-    *aContentLength = mContentLength;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsStreamIOChannel::SetContentLength(PRInt32 aContentLength)
-{
-    mContentLength = aContentLength;
     return NS_OK;
 }
 
@@ -514,7 +499,55 @@ nsStreamIOChannel::GetSecurityInfo(nsISupports * *aSecurityInfo)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// nsIStreamListener methods:
+// nsIContentStreamInfo implementation:
+////////////////////////////////////////////////////////////////////////////////
+
+NS_IMETHODIMP
+nsStreamIOChannel::GetContentType(char * *aContentType)
+{
+    nsresult rv;
+    if (mContentType == nsnull) {
+        rv = mStreamIO->Open(&mContentType, &mContentLength);
+        if (NS_FAILED(rv)) return rv;
+    }
+    *aContentType = nsCRT::strdup(mContentType);
+    if (*aContentType == nsnull) {
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsStreamIOChannel::SetContentType(const char *aContentType)
+{
+    mContentType = nsCRT::strdup(aContentType);
+    if (*aContentType == nsnull) {
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsStreamIOChannel::GetContentLength(PRInt32 *aContentLength)
+{
+    nsresult rv;
+    if (mContentType == nsnull) {
+        rv = mStreamIO->Open(&mContentType, &mContentLength);
+        if (NS_FAILED(rv)) return rv;
+    }
+    *aContentLength = mContentLength;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsStreamIOChannel::SetContentLength(PRInt32 aContentLength)
+{
+    mContentLength = aContentLength;
+    return NS_OK;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// nsIStreamObserver implementation:
 ////////////////////////////////////////////////////////////////////////////////
 
 NS_IMETHODIMP
@@ -549,6 +582,10 @@ nsStreamIOChannel::OnStopRequest(nsIRequest *request, nsISupports* context,
     return mStreamIO->Close(aStatus);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// nsIStreamListener implementation:
+////////////////////////////////////////////////////////////////////////////////
+
 NS_IMETHODIMP
 nsStreamIOChannel::OnDataAvailable(nsIRequest *request, nsISupports* context,
                                    nsIInputStream *aIStream, PRUint32 aSourceOffset,
@@ -558,15 +595,17 @@ nsStreamIOChannel::OnDataAvailable(nsIRequest *request, nsISupports* context,
                                           aSourceOffset, aLength);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// nsIStreamProvider implementation:
+////////////////////////////////////////////////////////////////////////////////
 
-/* attribute nsISupports parent; */
-NS_IMETHODIMP nsStreamIOChannel::GetParent(nsISupports * *aParent)
+NS_IMETHODIMP
+nsStreamIOChannel::OnDataWritable(nsIRequest *request, nsISupports *context,
+                                  nsIOutputStream *aOStream,
+                                  PRUint32 aOffset, PRUint32 aLength)
 {
-    NS_ADDREF(*aParent=(nsISupports*)(nsIChannel*)this);
-    return NS_OK;
+    return GetProvider()->OnDataWritable(this, context, aOStream,
+                                         aOffset, aLength);
 }
-NS_IMETHODIMP nsStreamIOChannel::SetParent(nsISupports * aParent)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
+
 ////////////////////////////////////////////////////////////////////////////////

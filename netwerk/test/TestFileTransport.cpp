@@ -22,7 +22,6 @@
 
 #include "nsIFileTransportService.h"
 #include "nsIChannel.h"
-#include "nsIStreamContentInfo.h"
 #include "nsIServiceManager.h"
 #include "nsIComponentManager.h"
 #include "nsCOMPtr.h"
@@ -30,8 +29,22 @@
 #include "nsString.h"
 #include "nsIFileStreams.h"
 #include "nsIStreamListener.h"
+#include "nsIStreamContentInfo.h"
 #include "nsIEventQueueService.h"
 #include "nsIEventQueue.h"
+#include "nsNetUtil.h"
+#include "prlog.h"
+
+////////////////////////////////////////////////////////////////////////////////
+
+#if defined(PR_LOGGING)
+static PRLogModuleInfo *gTestFileTransportLog = nsnull;
+#define PRINTF(args) PR_LOG(gTestFileTransportLog, PR_LOG_ALWAYS, args)
+#else
+#define PRINTF(args)
+#endif
+
+////////////////////////////////////////////////////////////////////////////////
 
 static NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
@@ -47,13 +60,13 @@ public:
     NS_DECL_ISUPPORTS
 
     NS_IMETHOD OnStartRequest(nsIRequest *request, nsISupports *ctxt) {
-        printf("starting\n");
+        PRINTF(("starting\n"));
         return NS_OK;
     }
 
     NS_IMETHOD OnStopRequest(nsIRequest *request, nsISupports *ctxt, 
                              nsresult aStatus, const PRUnichar* aStatusArg) {
-        printf("ending status=%0x total=%d\n", aStatus, mTotal);
+        PRINTF(("ending status=%0x total=%d\n", aStatus, mTotal));
         if (--mStopCount == 0)
             gDone = PR_TRUE;
         return NS_OK;
@@ -62,9 +75,9 @@ public:
     NS_IMETHOD OnDataAvailable(nsIRequest *request, nsISupports *ctxt, 
                                nsIInputStream *inStr, PRUint32 sourceOffset, 
                                PRUint32 count) {
-        printf("receiving %d bytes\n", count);
+        PRINTF(("receiving %d bytes\n", count));
         char buf[256];
-        PRUint32 writeCount;
+        PRUint32 writeCount, givenCount=count;
         nsresult rv;
         while (count > 0) {
             PRUint32 amt = PR_MIN(count, 256);
@@ -72,12 +85,15 @@ public:
             rv = inStr->Read(buf, amt, &readCount);
             if (NS_FAILED(rv)) return rv;
             NS_ASSERTION(readCount != 0, "premature EOF");
-            nsresult rv = mOut->Write(buf, readCount, &writeCount);
+            rv = mOut->Write(buf, readCount, &writeCount);
             if (NS_FAILED(rv)) return rv;
             NS_ASSERTION(writeCount == readCount, "failed to write all the data");
             count -= readCount;
             mTotal += readCount;
         }
+        PRINTF(("done reading data [read %u bytes]\n", givenCount - count));
+        //PRINTF("sleeping for 100 ticks\n");FLUSH();
+        //PR_Sleep(100);
         return NS_OK;
     }
     
@@ -125,6 +141,8 @@ TestAsyncRead(const char* fileName, PRUint32 offset, PRInt32 length)
 {
     nsresult rv;
 
+    PRINTF(("TestAsyncRead\n"));
+
     NS_WITH_SERVICE(nsIFileTransportService, fts, kFileTransportServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
@@ -149,7 +167,7 @@ TestAsyncRead(const char* fileName, PRUint32 offset, PRInt32 length)
 
     while (!gDone) {
         PLEvent* event;
-        rv = gEventQ->GetEvent(&event);
+        rv = gEventQ->WaitForEvent(&event);
         if (NS_FAILED(rv)) return rv;
         rv = gEventQ->HandleEvent(event);
         if (NS_FAILED(rv)) return rv;
@@ -166,6 +184,8 @@ nsresult
 TestAsyncWrite(const char* fileName, PRUint32 offset, PRInt32 length)
 {
     nsresult rv;
+
+    PRINTF(("TestAsyncWrite\n"));
 
     NS_WITH_SERVICE(nsIFileTransportService, fts, kFileTransportServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
@@ -197,12 +217,12 @@ TestAsyncWrite(const char* fileName, PRUint32 offset, PRInt32 length)
 
     gDone = PR_FALSE;
     nsCOMPtr<nsIRequest> request;
-    rv = fileTrans->AsyncWrite(inStr, listener, nsnull, offset, length, getter_AddRefs(request));
+    rv = NS_AsyncWriteFromStream(getter_AddRefs(request), fileTrans, inStr, offset, length, listener);
     if (NS_FAILED(rv)) return rv;
 
     while (!gDone) {
         PLEvent* event;
-        rv = gEventQ->GetEvent(&event);
+        rv = gEventQ->WaitForEvent(&event);
         if (NS_FAILED(rv)) return rv;
         rv = gEventQ->HandleEvent(event);
         if (NS_FAILED(rv)) return rv;
@@ -223,21 +243,21 @@ public:
     NS_IMETHOD OnStartRequest(nsIRequest *request, nsISupports *ctxt) {
         nsresult rv;
         char* contentType;
-        nsCOMPtr<nsIStreamContentInfo> cr = do_QueryInterface(request);
+        nsCOMPtr<nsIStreamContentInfo> cr;
         rv = cr->GetContentType(&contentType);
         if (NS_FAILED(rv)) return rv;
         PRInt32 length;
         rv = cr->GetContentLength(&length);
         if (NS_FAILED(rv)) return rv;
-        printf("stream opened: content type = %s, length = %d\n",
-               contentType, length);
+        PRINTF(("stream opened: content type = %s, length = %d\n",
+                contentType, length));
         nsCRT::free(contentType);
         return NS_OK;
     }
 
     NS_IMETHOD OnStopRequest(nsIRequest *request, nsISupports *ctxt,
                              nsresult aStatus, const PRUnichar* aStatusArg) {
-        printf("stream closed: status %x\n", aStatus);
+        PRINTF(("stream closed: status %x\n", aStatus));
         return NS_OK;
     }
 
@@ -260,6 +280,10 @@ int
 main(int argc, char* argv[])
 {
     nsresult rv;
+
+#if defined(PR_LOGGING)
+    gTestFileTransportLog = PR_NewLogModule("TestFileTransport");
+#endif
 
     if (argc < 2) {
         printf("usage: %s <file-to-read>\n", argv[0]);

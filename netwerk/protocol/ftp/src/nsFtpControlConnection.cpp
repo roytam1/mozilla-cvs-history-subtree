@@ -25,15 +25,63 @@
 #include "prlog.h"
 #include "nsIPipe.h"
 #include "nsIInputStream.h"
+#include "nsIStreamProvider.h"
 
 #if defined(PR_LOGGING)
 extern PRLogModuleInfo* gFTPLog;
 #endif /* PR_LOGGING */
 
-//NS_IMPL_THREADSAFE_ISUPPORTS2(nsFtpControlConnection, 
-//                                    nsIStreamListener, 
-//                                    nsIStreamObserver);
+class nsFtpStreamProvider : public nsIStreamProvider {
+public:
+    NS_DECL_ISUPPORTS
 
+    nsFtpStreamProvider() {}
+    virtual ~nsFtpStreamProvider() {}
+
+    //
+    // nsIStreamObserver implementation ...
+    //
+    NS_IMETHODIMP OnStartRequest(nsIRequest *req, nsISupports *ctxt) { return NS_OK; }
+    NS_IMETHODIMP OnStopRequest(nsIRequest *req, nsISupports *ctxt, nsresult status, const PRUnichar *statusText) { return NS_OK; }
+
+    //
+    // nsIStreamProvider implementation ...
+    //
+    NS_IMETHODIMP OnDataWritable(nsIRequest *aRequest, nsISupports *aContext,
+                                 nsIOutputStream *aOutStream,
+                                 PRUint32 aOffset, PRUint32 aCount)
+    { 
+        NS_ASSERTION(mInStream, "not initialized");
+
+        nsresult rv;
+        PRUint32 avail;
+
+        // Write whatever is available in the pipe. If the pipe is empty, then
+        // return NS_BASE_STREAM_WOULD_BLOCK; we will resume the write when there
+        // is more data.
+
+        rv = mInStream->Available(&avail);
+        if (NS_FAILED(rv)) return rv;
+
+        if (avail == 0) {
+            NS_STATIC_CAST(nsFtpControlConnection*, aContext)->mSuspendedWrite = PR_TRUE;
+            return NS_BASE_STREAM_WOULD_BLOCK;
+        }
+        PRUint32 bytesWritten;
+        return aOutStream->WriteFrom(mInStream, PR_MIN(avail, aCount), &bytesWritten);
+    }
+
+    nsCOMPtr<nsIInputStream> mInStream;
+};
+
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsFtpStreamProvider,
+                              nsIStreamProvider,
+                              nsIStreamObserver)
+
+
+//
+// nsFtpControlConnection implementation ...
+//
 
 NS_IMPL_THREADSAFE_QUERY_INTERFACE2(nsFtpControlConnection, 
                                     nsIStreamListener, 
@@ -98,12 +146,15 @@ nsFtpControlConnection::Connect()
 
     if (NS_FAILED(rv)) return rv;
 
-    // so that we can share the nsIStreamObserver implemention, we will be checking the context
-    // to indicate between the read and the write transport.  We will be passing the a non-null
-    // context for the write, and a null context for the read.  
+    nsCOMPtr<nsIStreamProvider> provider;
+    NS_NEWXPCOM(provider, nsFtpStreamProvider);
+    if (!provider) return NS_ERROR_OUT_OF_MEMORY;
 
-    rv = mCPipe->AsyncWrite(inStream, 
-                            NS_STATIC_CAST(nsIStreamObserver*, this), 
+    // setup the stream provider to get data from the pipe.
+    NS_STATIC_CAST(nsFtpStreamProvider*, 
+        NS_STATIC_CAST(nsIStreamProvider*, provider))->mInStream = inStream;
+
+    rv = mCPipe->AsyncWrite(provider, 
                             NS_STATIC_CAST(nsISupports*, this),
                             0, -1, 
                             getter_AddRefs(mWriteRequest));
@@ -141,8 +192,13 @@ nsFtpControlConnection::Write(nsCString& command)
     PRUint32 len = command.Length();
     PRUint32 cnt;
     nsresult rv = mOutStream->Write(command.GetBuffer(), len, &cnt);
-    if (NS_SUCCEEDED(rv) && len==cnt)
+    if (NS_SUCCEEDED(rv) && len==cnt) {
+        if (mSuspendedWrite) {
+            mSuspendedWrite = PR_FALSE;
+            mWriteRequest->Resume();
+        }
         return NS_OK;
+    }
 
     return NS_ERROR_FAILURE;
 

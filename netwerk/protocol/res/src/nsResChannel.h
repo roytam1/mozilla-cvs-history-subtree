@@ -25,6 +25,7 @@
 
 #include "nsIResChannel.h"
 #include "nsIStreamListener.h"
+#include "nsIStreamProvider.h"
 #include "nsIResProtocolHandler.h"
 #include "nsIURI.h"
 #include "nsIInterfaceRequestor.h"
@@ -41,6 +42,7 @@
 class nsResChannel : public nsIResChannel,
                      public nsIFileChannel,
                      public nsIStreamListener,
+                     public nsIStreamProvider,
                      public nsIRequest,
                      public nsIStreamContentInfo
 {
@@ -53,6 +55,7 @@ public:
     NS_DECL_NSIRESCHANNEL
     NS_DECL_NSISTREAMOBSERVER
     NS_DECL_NSISTREAMLISTENER
+    NS_DECL_NSISTREAMPROVIDER
 
     nsResChannel();
     virtual ~nsResChannel();
@@ -96,6 +99,15 @@ protected:
         return listener;
     }
 
+    nsIStreamProvider* GetUserProvider() {
+        // this method doesn't addref the provider
+        NS_ASSERTION(mState == ASYNC_WRITE, "wrong state");
+        // this cast is safe because we set mUserObserver in AsyncWrite
+        nsIStreamObserver* obs = mUserObserver;
+        nsIStreamProvider* provider = NS_STATIC_CAST(nsIStreamProvider*, obs);
+        return provider;
+    }
+
     nsresult EnsureNextResolvedChannel();
     nsresult EndRequest(nsresult aStatus, const PRUnichar* aStatusArg);
 
@@ -114,7 +126,6 @@ protected:
     Substitutions                       mSubstitutions;
     nsCOMPtr<nsIStreamObserver>         mUserObserver;
     nsCOMPtr<nsISupports>               mUserContext;
-    nsCOMPtr<nsIInputStream>            mFromStream;
     nsresult                            mStatus;
 #ifdef DEBUG
     PRThread*                           mInitiator;

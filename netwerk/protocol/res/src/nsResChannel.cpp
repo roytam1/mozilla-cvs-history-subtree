@@ -99,7 +99,8 @@ NS_INTERFACE_MAP_BEGIN(nsResChannel)
     NS_INTERFACE_MAP_ENTRY(nsIRequest)
     NS_INTERFACE_MAP_ENTRY(nsIStreamContentInfo)
     NS_INTERFACE_MAP_ENTRY(nsIStreamListener)
-    NS_INTERFACE_MAP_ENTRY(nsIStreamObserver)
+    NS_INTERFACE_MAP_ENTRY(nsIStreamProvider)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsIStreamObserver, nsIStreamListener)
     NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIResChannel)
     NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsIChannel, nsIResChannel)
 NS_INTERFACE_MAP_END_THREADSAFE
@@ -436,11 +437,11 @@ nsResChannel::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt,
 }
 
 NS_IMETHODIMP
-nsResChannel::AsyncWrite(nsIInputStream *fromStream,
-                         nsIStreamObserver *observer,
-                         nsISupports *ctxt,
-                        PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
+nsResChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt,
+                         PRUint32 transferOffset, PRUint32 transferCount,
+                         nsIRequest **result)
 {
+    NS_ENSURE_ARG_POINTER(result);
     nsresult rv;
 
 #ifdef DEBUG
@@ -468,16 +469,15 @@ nsResChannel::AsyncWrite(nsIInputStream *fromStream,
     }
     NS_ASSERTION(mState == ASYNC_READ, "wrong state");
 
-    mFromStream = fromStream;
     mUserContext = ctxt;
-    mUserObserver = observer;
+    mUserObserver = provider;
 
     do {
         rv = EnsureNextResolvedChannel();
         if (NS_FAILED(rv)) break;
 
         if (mResolvedChannel)
-            rv = mResolvedChannel->AsyncWrite(fromStream, this, nsnull, 
+            rv = mResolvedChannel->AsyncWrite(this, nsnull, 
                                               transferOffset, transferCount, 
                                               getter_AddRefs(mResolvedRequest));
         // Later, this AsyncWrite will call back our OnStopRequest
@@ -487,7 +487,7 @@ nsResChannel::AsyncWrite(nsIInputStream *fromStream,
     if (NS_FAILED(rv)) {
         (void)EndRequest(rv, nsnull);
     } else {
-        NS_ADDREF(*_retval = this);
+        NS_ADDREF(*result = this);
     }
 
     return rv;
@@ -633,7 +633,7 @@ nsResChannel::OnStopRequest(nsIRequest* request, nsISupports* context,
           case ASYNC_READ: 
             return AsyncRead(GetUserListener(), mUserContext, 0, -1, getter_AddRefs(dummyRequest));
           case ASYNC_WRITE:
-            return AsyncWrite(mFromStream, mUserObserver, mUserContext, 0, -1, getter_AddRefs(dummyRequest));
+            return AsyncWrite(GetUserProvider(), mUserContext, 0, -1, getter_AddRefs(dummyRequest));
           default:
             break;
         }
@@ -654,10 +654,9 @@ nsResChannel::EndRequest(nsresult aStatus, const PRUnichar* aStatusArg)
     }
 #endif
     // Release the reference to the consumer stream listener...
-    mUserObserver = null_nsCOMPtr();
-    mUserContext = null_nsCOMPtr();
-    mResolvedChannel = null_nsCOMPtr();
-    mFromStream = null_nsCOMPtr();
+    mUserObserver = 0;
+    mUserContext = 0;
+    mResolvedChannel = 0;
     return rv;
 }
 
@@ -672,6 +671,17 @@ nsResChannel::OnDataAvailable(nsIRequest* request, nsISupports* context,
 #endif
     return GetUserListener()->OnDataAvailable(this, mUserContext, aIStream,
                                               aSourceOffset, aLength);
+}
+
+NS_IMETHODIMP
+nsResChannel::OnDataWritable(nsIRequest* request, nsISupports* context,
+                             nsIOutputStream* aOStream, PRUint32 aOffset, PRUint32 aLength)
+{
+#ifdef DEBUG
+    NS_ASSERTION(mInitiator == PR_CurrentThread(),
+                 "wrong thread calling this routing");
+#endif
+    return GetUserProvider()->OnDataWritable(this, mUserContext, aOStream, aOffset, aLength);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -43,6 +43,7 @@
 #include "nsISocketTransport.h"
 #include "nsISSLSocketControl.h"
 #include "plstr.h"
+#include "nsNetUtil.h"
 
 #if defined(PR_LOGGING)
 extern PRLogModuleInfo* gHTTPLog;
@@ -183,15 +184,7 @@ nsHTTPRequest::Resume()
 /* attribute nsISupports parent; */
 NS_IMETHODIMP nsHTTPRequest::GetParent(nsISupports * *aParent)
 {
-    if (mPipelinedRequest) {
-        nsCOMPtr<nsIChannel> channel;
-        mPipelinedRequest->GetTransport(getter_AddRefs(channel));
-        nsISupports *x = channel.get();
-        NS_ADDREF(*aParent=this);
-        return NS_OK;
-    }
-
-    NS_ADDREF(*aParent=(nsISupports*)(nsIChannel*)this);
+    NS_ADDREF(*aParent=this);
     return NS_OK;
 }
 NS_IMETHODIMP nsHTTPRequest::SetParent(nsISupports * aParent)
@@ -743,10 +736,10 @@ nsHTTPPipelinedRequest::WriteRequest(nsIInputStream* iRequestStream)
     }
 
     mOnStopDone = PR_FALSE;
-    rv = mTransport->AsyncWrite(stream, this,(nsISupports*)(nsIRequest*)req->mConnection, 
-                                0, 
-                                mRequestBuffer.Length(), 
-                                getter_AddRefs(mCurrentWriteRequest));
+    rv = NS_AsyncWriteFromStream(
+            getter_AddRefs(mCurrentWriteRequest),
+            mTransport, stream, 0, mRequestBuffer.Length(), 
+            this, (nsISupports*)(nsIRequest*)req->mConnection);
     NS_RELEASE(req);
 
     return rv;
@@ -796,11 +789,10 @@ nsHTTPPipelinedRequest::OnStopRequest(nsIRequest *request, nsISupports* i_Contex
                        ("nsHTTPRequest [this=%x]. "
                         "Writing PUT/POST data to the server.\n", this));
 
-                rv = mTransport->AsyncWrite(mInputStream, this, 
-                                            (nsISupports*)(nsIRequest*)req->mConnection,
-                                            0, 
-                                            -1,
-                                            getter_AddRefs(mCurrentWriteRequest));
+                rv = NS_AsyncWriteFromStream(
+                        getter_AddRefs(mCurrentWriteRequest),
+                        mTransport, mInputStream, 0, -1,
+                        this, (nsISupports*)(nsIRequest*)req->mConnection);
 
                 /* the mInputStream is released below... */
             }

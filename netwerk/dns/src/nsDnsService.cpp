@@ -356,7 +356,7 @@ nsDNSRequest::Resume(void)
 /* attribute nsISupports parent; */
 NS_IMETHODIMP nsDNSRequest::GetParent(nsISupports * *aParent)
 {
-    NS_ADDREF(*aParent=(nsISupports*)(nsIChannel*)this);
+    NS_ADDREF(*aParent = this);
     return NS_OK;
 }
 NS_IMETHODIMP nsDNSRequest::SetParent(nsISupports * aParent)

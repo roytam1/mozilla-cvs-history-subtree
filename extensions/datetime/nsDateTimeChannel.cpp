@@ -227,8 +227,7 @@ nsDateTimeChannel::AsyncRead(nsIStreamListener *aListener,
 }
 
 NS_IMETHODIMP
-nsDateTimeChannel::AsyncWrite(nsIInputStream *fromStream,
-                              nsIStreamObserver *observer,
+nsDateTimeChannel::AsyncWrite(nsIStreamProvider *provider,
                               nsISupports *ctxt,
                               PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
 {

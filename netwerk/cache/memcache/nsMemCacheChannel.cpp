@@ -52,7 +52,7 @@ class AsyncReadStreamAdaptor : public nsIInputStream,
 public:
     AsyncReadStreamAdaptor(nsMemCacheChannel* aChannel, nsIInputStream *aSyncStream):
         mSyncStream(aSyncStream), mDataAvailCursor(0),
-        mRemaining(-1), mAvailable(0), mChannel(aChannel), mAbortStatus(NS_OK), mSuspended(PR_FALSE)
+        mRemaining((PRUint32)-1), mAvailable(0), mChannel(aChannel), mAbortStatus(NS_OK), mSuspended(PR_FALSE)
         {
             NS_INIT_REFCNT();
             NS_ADDREF(mChannel);
@@ -548,16 +548,17 @@ nsMemCacheChannel::AsyncRead(nsIStreamListener *aListener, nsISupports *aContext
 
     rv = asyncReadStreamAdaptor->AsyncRead(aListener, aContext,
                                            transferOffset, transferCount, getter_AddRefs(mCurrentReadRequest));
-    if (NS_FAILED(rv))
-        delete asyncReadStreamAdaptor;
+    if (NS_FAILED(rv)) {
+        mAsyncReadStream = nsnull;
+        NS_RELEASE(asyncReadStreamAdaptor);
+    }
 
     NS_ADDREF(*_retval=this);
     return rv;
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::AsyncWrite(nsIInputStream *fromStream, 
-                              nsIStreamObserver *observer, nsISupports *ctxt,
+nsMemCacheChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt,
                               PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
 {
     // Not required to be implemented

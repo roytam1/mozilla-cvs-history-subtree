@@ -459,12 +459,11 @@ nsDiskCacheRecordChannel::AsyncRead(nsIStreamListener *aListener,
 }
 
 NS_IMETHODIMP
-nsDiskCacheRecordChannel::AsyncWrite(nsIInputStream *fromStream, 
-                                     nsIStreamObserver *observer, 
+nsDiskCacheRecordChannel::AsyncWrite(nsIStreamProvider *provider, 
                                      nsISupports *ctxt,
-                                    PRUint32 transferOffset, 
-                                    PRUint32 transferCount, 
-                                    nsIRequest **_retval)
+                                     PRUint32 transferOffset, 
+                                     PRUint32 transferCount, 
+                                     nsIRequest **_retval)
 
 {
   /*

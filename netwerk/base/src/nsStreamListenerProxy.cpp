@@ -40,12 +40,12 @@
 // If data was written to the pipe, then the proxy posts an asynchronous event
 // corresponding to the amount of data written.  If no data could be written,
 // because the pipe was full, then WOULD_BLOCK is returned to the channel,
-// indicating that the channel should suspend itself.
+// indicating that the request should be suspended.
 //
-// Once suspended in this manner, the channel is only resumed when the pipe is
+// Once suspended in this manner, the request is only resumed when the pipe is
 // emptied.
 //
-// XXX The current design does NOT allow the channel to be "externally"
+// XXX The current design does NOT allow the request to be "externally"
 // suspended!!  For the moment this is not a problem, but it should be fixed.
 //----------------------------------------------------------------------------
 //
@@ -59,7 +59,6 @@
 nsStreamListenerProxy::nsStreamListenerProxy()
     : mLock(nsnull)
     , mPendingCount(0)
-    , mPipeEmptied(PR_FALSE)
     , mListenerStatus(NS_OK)
 { }
 
@@ -86,11 +85,11 @@ class nsOnDataAvailableEvent : public nsStreamObserverEvent
 {
 public:
     nsOnDataAvailableEvent(nsStreamProxyBase *aProxy,
-                           nsIChannel *aChannel,
+                           nsIRequest *aRequest,
                            nsISupports *aContext,
                            nsIInputStream *aSource,
                            PRUint32 aOffset)
-        : nsStreamObserverEvent(aProxy, aChannel, aContext)
+        : nsStreamObserverEvent(aProxy, aRequest, aContext)
         , mSource(aSource)
         , mOffset(aOffset)
     {
@@ -112,33 +111,33 @@ protected:
 NS_IMETHODIMP
 nsOnDataAvailableEvent::HandleEvent()
 {
-    LOG(("nsOnDataAvailableEvent: HandleEvent [event=%x, chan=%x]", this, mChannel.get()));
+    LOG(("nsOnDataAvailableEvent: HandleEvent [event=%x, req=%x]", this, mRequest.get()));
 
     nsStreamListenerProxy *listenerProxy =
         NS_STATIC_CAST(nsStreamListenerProxy *, mProxy);
 
     if (NS_FAILED(listenerProxy->GetListenerStatus())) {
-        LOG(("nsOnDataAvailableEvent: Discarding event [listener_status=%x, chan=%x]\n",
-            listenerProxy->GetListenerStatus(), mChannel.get()));
+        LOG(("nsOnDataAvailableEvent: Discarding event [listener_status=%x, req=%x]\n",
+            listenerProxy->GetListenerStatus(), mRequest.get()));
         return NS_ERROR_FAILURE;
     }
 
     nsCOMPtr<nsIStreamListener> listener = listenerProxy->GetListener();
     if (!listener) {
-        LOG(("nsOnDataAvailableEvent: Already called OnStopRequest (listener is NULL), [chan=%x]\n",
-            mChannel.get()));
+        LOG(("nsOnDataAvailableEvent: Already called OnStopRequest (listener is NULL), [req=%x]\n",
+            mRequest.get()));
         return NS_ERROR_FAILURE;
     }
 
     nsresult status = NS_OK;
-    nsresult rv = mChannel->GetStatus(&status);
+    nsresult rv = mRequest->GetStatus(&status);
     NS_ASSERTION(NS_SUCCEEDED(rv), "GetStatus failed");
 
     //
-    // We should only forward this event to the listener if the channel is
+    // We should only forward this event to the listener if the request is
     // still in a "good" state.  Because these events are being processed
     // asynchronously, there is a very real chance that the listener might
-    // have cancelled the channel after _this_ event was triggered.
+    // have cancelled the request after _this_ event was triggered.
     //
     if (NS_SUCCEEDED(status)) {
         //
@@ -151,22 +150,22 @@ nsOnDataAvailableEvent::HandleEvent()
             PRUint32 avail;
             mSource->Available(&avail);
             LOG(("nsOnDataAvailableEvent: Calling the consumer's OnDataAvailable "
-                "[offset=%u count=%u avail=%u chan=%x]\n",
-                mOffset, count, avail, mChannel.get()));
+                "[offset=%u count=%u avail=%u req=%x]\n",
+                mOffset, count, avail, mRequest.get()));
         }
 #endif
 
         // Forward call to listener
-        rv = listener->OnDataAvailable(mChannel, mContext, mSource, mOffset, count);
+        rv = listener->OnDataAvailable(mRequest, mContext, mSource, mOffset, count);
 
         LOG(("nsOnDataAvailableEvent: Done with the consumer's OnDataAvailable "
-            "[rv=%x, chan=%x]\n",
-            rv, mChannel.get()));
+            "[rv=%x, req=%x]\n",
+            rv, mRequest.get()));
 
         //
-        // XXX Need to suspend the underlying channel... must consider
+        // XXX Need to suspend the underlying request... must consider
         //     other pending events (such as OnStopRequest). These
-        //     should not be forwarded to the listener if the channel
+        //     should not be forwarded to the listener if the request
         //     is suspended. Also, handling the Resume could be tricky.
         //
         if (rv == NS_BASE_STREAM_WOULD_BLOCK) {
@@ -181,8 +180,8 @@ nsOnDataAvailableEvent::HandleEvent()
         listenerProxy->SetListenerStatus(rv);
     }
     else
-        LOG(("nsOnDataAvailableEvent: Not calling OnDataAvailable [chan=%x]",
-            mChannel.get()));
+        LOG(("nsOnDataAvailableEvent: Not calling OnDataAvailable [req=%x]",
+            mRequest.get()));
     return NS_OK;
 }
 
@@ -203,15 +202,15 @@ NS_IMPL_ISUPPORTS_INHERITED3(nsStreamListenerProxy,
 //----------------------------------------------------------------------------
 //
 NS_IMETHODIMP
-nsStreamListenerProxy::OnStartRequest(nsIChannel *aChannel,
+nsStreamListenerProxy::OnStartRequest(nsIRequest *aRequest,
                                       nsISupports *aContext)
 {
 
-    return nsStreamProxyBase::OnStartRequest(aChannel, aContext);
+    return nsStreamProxyBase::OnStartRequest(aRequest, aContext);
 }
 
 NS_IMETHODIMP
-nsStreamListenerProxy::OnStopRequest(nsIChannel *aChannel,
+nsStreamListenerProxy::OnStopRequest(nsIRequest *aRequest,
                                      nsISupports *aContext,
                                      nsresult aStatus,
                                      const PRUnichar *aStatusText)
@@ -222,7 +221,7 @@ nsStreamListenerProxy::OnStopRequest(nsIChannel *aChannel,
     mPipeIn = 0;
     mPipeOut = 0;
 
-    return nsStreamProxyBase::OnStopRequest(aChannel, aContext,
+    return nsStreamProxyBase::OnStopRequest(aRequest, aContext,
                                             aStatus, aStatusText);
 }
 
@@ -232,7 +231,7 @@ nsStreamListenerProxy::OnStopRequest(nsIChannel *aChannel,
 //----------------------------------------------------------------------------
 //
 NS_IMETHODIMP
-nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
+nsStreamListenerProxy::OnDataAvailable(nsIRequest *aRequest,
                                        nsISupports *aContext,
                                        nsIInputStream *aSource,
                                        PRUint32 aOffset,
@@ -241,10 +240,10 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
     nsresult rv;
     PRUint32 bytesWritten=0;
 
-    LOG(("nsStreamListenerProxy: OnDataAvailable [offset=%u count=%u chan=%x]\n",
-         aOffset, aCount, aChannel));
+    LOG(("nsStreamListenerProxy: OnDataAvailable [offset=%u count=%u req=%x]\n",
+         aOffset, aCount, aRequest));
 
-    NS_PRECONDITION(mChannelToResume == 0, "Unexpected call to OnDataAvailable");
+    NS_PRECONDITION(mRequestToResume == 0, "Unexpected call to OnDataAvailable");
     NS_PRECONDITION(mPipeIn, "Pipe not initialized");
     NS_PRECONDITION(mPipeOut, "Pipe not initialized");
 
@@ -254,45 +253,40 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
     {
         nsresult status = mListenerStatus;
         if (NS_FAILED(status)) {
-            LOG(("nsStreamListenerProxy: Listener failed [status=%x chan=%x]\n", status, aChannel));
+            LOG(("nsStreamListenerProxy: Listener failed [status=%x req=%x]\n", status, aRequest));
             return status;
         }
     }
     
-    while (1) {
-        mPipeEmptied = PR_FALSE;
+    //
+    // Enter the RequestToResume lock
+    //
+    {
+        nsAutoLock lock(mLock);
+
         // 
         // Try to copy data into the pipe.
         //
-        // If the pipe is full, then we return NS_BASE_STREAM_WOULD_BLOCK
-        // so the calling channel can suspend itself.  If, however, we detect
-        // that the pipe was emptied during this time, we retry copying data
-        // into the pipe.
+        // If the pipe is full, then suspend the request.  It will be resumed
+        // when the pipe is emptied.  Being inside the RequestToResume lock
+        // ensures that the resume will follow the suspend.
         //
         rv = mPipeOut->WriteFrom(aSource, aCount, &bytesWritten);
 
-        LOG(("nsStreamListenerProxy: Wrote data to pipe [rv=%x count=%u bytesWritten=%u chan=%x]\n",
-            rv, aCount, bytesWritten, aChannel));
+        LOG(("nsStreamListenerProxy: Wrote data to pipe [rv=%x count=%u bytesWritten=%u req=%x]\n",
+            rv, aCount, bytesWritten, aRequest));
 
         if (NS_FAILED(rv)) {
             if (rv == NS_BASE_STREAM_WOULD_BLOCK) {
-                nsAutoLock lock(mLock);
-                if (mPipeEmptied) {
-                    LOG(("nsStreamListenerProxy: Pipe emptied; looping back [chan=%x]\n", aChannel));
-                    continue;
-                }
-                LOG(("nsStreamListenerProxy: Pipe full; setting channel to resume [chan=%x]\n", aChannel));
-                mChannelToResume = aChannel;
+                LOG(("nsStreamListenerProxy: Setting request to resume [req=%x]\n", aRequest));
+                mRequestToResume = aRequest;
             }
             return rv;
         }
-        if (bytesWritten == 0) {
-            LOG(("nsStreamListenerProxy: Copied zero bytes; not posting an event [chan=%x]\n", aChannel));
+        else if (bytesWritten == 0) {
+            LOG(("nsStreamListenerProxy: Copied zero bytes; not posting an event [req=%x]\n", aRequest));
             return NS_OK;
         }
-
-        // Copied something into the pipe...
-        break;
     }
 
     //
@@ -300,8 +294,8 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
     //
     PRUint32 total = PR_AtomicAdd((PRInt32 *) &mPendingCount, bytesWritten);
     if (total > bytesWritten) {
-        LOG(("nsStreamListenerProxy: Piggy-backing pending event [total=%u, chan=%x]\n",
-            total, aChannel));
+        LOG(("nsStreamListenerProxy: Piggy-backing pending event [total=%u, req=%x]\n",
+            total, aRequest));
         return NS_OK;
     }
  
@@ -309,7 +303,7 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
     // Post an event for the number of bytes actually written.
     //
     nsOnDataAvailableEvent *ev =
-        new nsOnDataAvailableEvent(this, aChannel, aContext, mPipeIn, aOffset);
+        new nsOnDataAvailableEvent(this, aRequest, aContext, mPipeIn, aOffset);
     if (!ev) return NS_ERROR_OUT_OF_MEMORY;
 
     rv = ev->FireEvent(GetEventQueue());
@@ -335,7 +329,7 @@ nsStreamListenerProxy::Init(nsIStreamListener *aListener,
     NS_PRECONDITION(GetEventQueue() == nsnull, "Event queue already set");
 
     //
-    // Create the ChannelToResume lock
+    // Create the RequestToResume lock
     //
     mLock = PR_NewLock();
     if (!mLock) return NS_ERROR_OUT_OF_MEMORY;
@@ -374,23 +368,20 @@ nsStreamListenerProxy::OnEmpty(nsIInputStream *aInputStream)
 {
     LOG(("nsStreamListenerProxy: OnEmpty\n"));
     //
-    // The pipe has been emptied by the listener.  If the channel
+    // The pipe has been emptied by the listener.  If the request
     // has been suspended (waiting for the pipe to be emptied), then
     // go ahead and resume it.  But take care not to resume while 
-    // holding the "ChannelToResume" lock.
+    // holding the "RequestToResume" lock.
     //
-    nsCOMPtr<nsIChannel> chan;
+    nsCOMPtr<nsIRequest> req;
     {
         nsAutoLock lock(mLock);
-        if (mChannelToResume) {
-            chan = mChannelToResume;
-            mChannelToResume = 0;
-        }
-        mPipeEmptied = PR_TRUE; // Flag this call
+        req = mRequestToResume;
+        mRequestToResume = 0;
     }
-    if (chan) {
-        LOG(("nsStreamListenerProxy: Resuming channel\n"));
-        chan->Resume();
+    if (req) {
+        LOG(("nsStreamListenerProxy: Resuming request\n"));
+        req->Resume();
     }
     return NS_OK;
 }

@@ -3,7 +3,7 @@
 
 #include "nsStreamObserverProxy.h"
 #include "nsIStreamListener.h"
-#include "nsIChannel.h"
+#include "nsIRequest.h"
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
 #include "nsCOMPtr.h"
@@ -42,10 +42,9 @@ public:
 protected:
     nsCOMPtr<nsIInputStream>  mPipeIn;
     nsCOMPtr<nsIOutputStream> mPipeOut;
-    nsCOMPtr<nsIChannel>      mChannelToResume;
+    nsCOMPtr<nsIRequest>      mRequestToResume;
     PRLock                   *mLock;
     PRUint32                  mPendingCount;
-    PRBool                    mPipeEmptied;
     nsresult                  mListenerStatus;
 };
 

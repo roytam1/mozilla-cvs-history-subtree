@@ -355,8 +355,7 @@ nsFileChannel::AsyncRead(nsIStreamListener *listener,
 }
 
 NS_IMETHODIMP
-nsFileChannel::AsyncWrite(nsIInputStream *fromStream, 
-                          nsIStreamObserver *observer, 
+nsFileChannel::AsyncWrite(nsIStreamProvider *provider, 
                           nsISupports *ctxt, 
                           PRUint32 transferOffset, 
                           PRUint32 transferCount, 
@@ -398,7 +397,7 @@ nsFileChannel::AsyncWrite(nsIInputStream *fromStream,
     rv = EnsureTransport();
     if (NS_FAILED(rv)) goto done;
 
-    rv = mFileTransport->AsyncWrite(fromStream, observer, ctxt, 
+    rv = mFileTransport->AsyncWrite(provider, ctxt, 
                                     transferOffset, transferCount, 
                                     getter_AddRefs(mCurrentRequest));
 

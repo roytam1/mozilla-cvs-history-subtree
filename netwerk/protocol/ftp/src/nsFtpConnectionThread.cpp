@@ -1323,7 +1323,8 @@ nsFtpState::S_stor() {
     mFireCallbacks = PR_FALSE; // observer callbacks will be handled by the transport.
     
     PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) writing on Data Transport\n", this));
-    return mDPipe->AsyncWrite(mWriteStream, mObserver, mObserverContext, 0, mWriteCount, getter_AddRefs(mDPipeRequest));
+    return NS_AsyncWriteFromStream(getter_AddRefs(mDPipeRequest), mDPipe, mWriteStream,
+                                   0, mWriteCount, mObserver, mObserverContext);
 }
 
 FTP_STATE
