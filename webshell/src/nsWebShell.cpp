@@ -2782,7 +2782,6 @@ nsWebShell::ReloadDocument(const char* aCharset,
   mHintCharsetSource= aSource;
 
   return Reload( nsIChannel::LOAD_NORMAL);
-
 }
 
 NS_IMETHODIMP
@@ -3232,7 +3231,8 @@ nsWebShell::OnEndDocumentLoad(nsIDocumentLoader* loader,
   if (NS_FAILED(rv)) return rv;
 #endif
 
-  if (!mProcessedEndDocumentLoad) {
+//if (!mProcessedEndDocumentLoad) {
+  if (loader == mDocLoader) {
     mProcessedEndDocumentLoad = PR_TRUE;    
 
     if (nsnull != mScriptGlobal) {
