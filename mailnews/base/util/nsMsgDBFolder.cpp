@@ -1010,14 +1010,13 @@ NS_IMETHODIMP nsMsgDBFolder::HasMsgOffline(nsMsgKey msgKey, PRBool *result)
 {
   NS_ENSURE_ARG(result);
   *result = PR_FALSE;
-	if(!mDatabase)
-		return NS_ERROR_FAILURE;
+  nsresult rv = GetDatabase(nsnull);
+  NS_ENSURE_SUCCESS(rv, rv);
 
-	nsresult rv;
-	nsCOMPtr<nsIMsgDBHdr> hdr;
-	rv = mDatabase->GetMsgHdrForKey(msgKey, getter_AddRefs(hdr));
-	if(NS_FAILED(rv))
-		return rv;
+  nsCOMPtr<nsIMsgDBHdr> hdr;
+  rv = mDatabase->GetMsgHdrForKey(msgKey, getter_AddRefs(hdr));
+  if(NS_FAILED(rv))
+	  return rv;
 
   if (hdr)
   {
