@@ -41,6 +41,8 @@
 
 #include "nsISVGRendererCanvas.h"
 #include "libart-incs.h"
+typedef PRUint32 nscolor;
+typedef ArtPixMaxDepth ArtColor[3];
 
 // {6F963B6F-8D8E-4C8D-B4A1-FA87FB825973}
 #define NS_ISVGLIBARTCANVAS_IID \
@@ -53,6 +55,7 @@ public:
 
   NS_IMETHOD_(ArtRender*) NewRender()=0;
   NS_IMETHOD_(void) InvokeRender(ArtRender* render)=0;
+  NS_IMETHOD_(void) GetArtColor(nscolor rgb, ArtColor& artColor)=0;
 };
 
 

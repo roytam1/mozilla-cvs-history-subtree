@@ -57,6 +57,7 @@
 #include "nsISVGRendererRegion.h"
 #include "nsISVGRenderer.h"
 #include "nsISVGOuterSVGFrame.h"
+#include "nsTransform2D.h"
 
 typedef nsBlockFrame nsSVGForeignObjectFrameBase;
 
@@ -121,7 +122,7 @@ public:
   // implementation inherited from nsSupportsWeakReference
   
   // nsISVGChildFrame interface:
-  NS_IMETHOD Paint(nsISVGRendererCanvas* canvas);
+  NS_IMETHOD Paint(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);  
   NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion();
   NS_IMETHOD InitialUpdate();
@@ -445,7 +446,7 @@ nsSVGForeignObjectFrame::DidModifySVGObservable (nsISVGValue* observable)
 // nsISVGChildFrame methods
 
 NS_IMETHODIMP
-nsSVGForeignObjectFrame::Paint(nsISVGRendererCanvas* canvas)
+nsSVGForeignObjectFrame::Paint(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips)
 {
   if (mIsDirty) {
     nsCOMPtr<nsISVGRendererRegion> region = DoReflow();
@@ -453,17 +454,30 @@ nsSVGForeignObjectFrame::Paint(nsISVGRendererCanvas* canvas)
 
   nsCOMPtr<nsIPresContext> presContext;
   canvas->GetPresContext(getter_AddRefs(presContext));
-  
-  nsCOMPtr<nsIRenderingContext> ctx;
-  canvas->LockRenderingContext(getter_AddRefs(ctx));
-  nsRect dirtyRect;
-  PRBool clipStatus;
-  ctx->GetClipRect(dirtyRect, clipStatus);
 
-  ctx->PushState();
-  ctx->Translate(mRect.x, mRect.y);
+  float pxPerTwips = GetPxPerTwips();
+  nsRect r(mRect.x*pxPerTwips, mRect.y*pxPerTwips,
+           mRect.width*pxPerTwips, mRect.height*pxPerTwips);
+  nsCOMPtr<nsIRenderingContext> ctx;
+  canvas->LockRenderingContext(r, getter_AddRefs(ctx));
+
+  if (!ctx) {
+    NS_WARNING("Can't render foreignObject element!");
+    return NS_ERROR_FAILURE;
+  }
+  
+  nsRect dirtyRect = dirtyRectTwips;
   dirtyRect.x -= mRect.x;
   dirtyRect.y -= mRect.y;
+
+  // As described in nsContainerFrame, don't use PushState/PopState;
+  // instead save/restore the modified transform components:
+  float xMatrix;
+  float yMatrix;
+  nsTransform2D *theTransform;
+  ctx->GetCurrentTransform(theTransform);
+  theTransform->GetTranslation(&xMatrix, &yMatrix);
+  ctx->Translate(mRect.x, mRect.y);
   
   nsSVGForeignObjectFrameBase::Paint(presContext,
                                      *ctx,
@@ -482,7 +496,8 @@ nsSVGForeignObjectFrame::Paint(nsISVGRendererCanvas* canvas)
                                      dirtyRect,
                                      NS_FRAME_PAINT_LAYER_FOREGROUND,
                                      0);
-  ctx->PopState(clipStatus);
+
+  theTransform->SetTranslation(xMatrix, yMatrix);
   ctx = nsnull;
   canvas->UnlockRenderingContext();
   
@@ -541,7 +556,7 @@ nsSVGForeignObjectFrame::GetCoveredRegion()
                              (mRect.width+2) * pxPerTwips,
                              (mRect.height+2) * pxPerTwips,
                              &region);
-  
+  NS_ASSERTION(region, "could not create region");
   return region;
   
 }

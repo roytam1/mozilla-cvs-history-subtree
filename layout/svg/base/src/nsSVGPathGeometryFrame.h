@@ -92,7 +92,7 @@ public:
   NS_IMETHOD DidModifySVGObservable (nsISVGValue* observable);
 
   // nsISVGChildFrame interface:
-  NS_IMETHOD Paint(nsISVGRendererCanvas* canvas);
+  NS_IMETHOD Paint(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);
   NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion();
   NS_IMETHOD InitialUpdate();

@@ -213,9 +213,10 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // nsISVGRendererCanvas methods:
 
-/* nsIRenderingContext lockRenderingContext (); */
+/* [noscript] nsIRenderingContext lockRenderingContext ([const] in nsRectRef rect); */
 NS_IMETHODIMP
-nsSVGGDIPlusCanvas::LockRenderingContext(nsIRenderingContext **_retval)
+nsSVGGDIPlusCanvas::LockRenderingContext(const nsRect & rect,
+                                         nsIRenderingContext **_retval)
 {
 #ifdef SVG_GDIPLUS_ENABLE_OFFSCREEN_BUFFER
   NS_ASSERTION(!mOffscreenHDC, "offscreen hdc already created! Nested rendering context locking?");

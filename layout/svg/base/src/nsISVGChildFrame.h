@@ -47,6 +47,7 @@
 class nsISVGRendererCanvas;
 class nsIPresContext;
 class nsIDOMSVGRect;
+struct nsRect;
 
 // {1F23A200-B583-40EC-8564-9E6740C4DD3A}
 #define NS_ISVGCHILDFRAME_IID \
@@ -57,7 +58,9 @@ public:
 
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISVGCHILDFRAME_IID)
 
-  NS_IMETHOD Paint(nsISVGRendererCanvas* canvas)=0;
+  // XXX Ideally we don't want to pass the dirtyRect along but extract
+  // it from nsIRenderingContext where needed (only in foreign objects)
+  NS_IMETHOD Paint(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips)=0;
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit)=0;
   NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion()=0;
   NS_IMETHOD InitialUpdate()=0;

@@ -64,6 +64,7 @@ CPPSRCS = \
 	nsSVGRenderItem.cpp \
 	nsSVGFill.cpp \
 	nsSVGStroke.cpp \
+	nsSVGLibartBitmapDefault.cpp \
 	$(NULL)
 
 #LOCAL_INCLUDES	= \

@@ -96,7 +96,7 @@ public:
   NS_IMETHOD  IsSelectable(PRBool* aIsSelectable, PRUint8* aSelectStyle);
 
   // nsISVGChildFrame interface:
-  NS_IMETHOD Paint(nsISVGRendererCanvas* canvas);
+  NS_IMETHOD Paint(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);
   NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion();
   NS_IMETHOD InitialUpdate();
@@ -323,7 +323,7 @@ nsSVGGlyphFrame::IsSelectable(PRBool* aIsSelectable,
 // nsISVGChildFrame methods
 
 NS_IMETHODIMP
-nsSVGGlyphFrame::Paint(nsISVGRendererCanvas* canvas)
+nsSVGGlyphFrame::Paint(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips)
 {
 #ifdef DEBUG
   //printf("nsSVGGlyphFrame(%p)::Paint\n", this);

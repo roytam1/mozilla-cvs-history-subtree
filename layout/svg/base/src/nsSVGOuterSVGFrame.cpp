@@ -852,7 +852,7 @@ nsSVGOuterSVGFrame::Paint(nsIPresContext* aPresContext,
     nsISVGChildFrame* SVGFrame=0;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame)
-      SVGFrame->Paint(canvas);
+      SVGFrame->Paint(canvas, aDirtyRect);
     kid->GetNextSibling(&kid);
   }
   

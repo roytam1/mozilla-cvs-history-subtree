@@ -38,6 +38,13 @@
 
 #include "nsISupports.idl"
 
+
+%{C++
+struct nsRect;
+%}
+
+[ref] native nsRectRef(nsRect);
+
 typedef PRUint32 nscolor;
 
 interface nsIRenderingContext;
@@ -46,7 +53,7 @@ interface nsIPresContext;
 [scriptable, uuid(a1d9f15e-ee63-4ce1-9fe7-b6cdb09a48a0)]
 interface nsISVGRendererCanvas : nsISupports
 { 
-  nsIRenderingContext lockRenderingContext();
+  [noscript] nsIRenderingContext lockRenderingContext([const] in nsRectRef rect);
   void unlockRenderingContext();
   nsIPresContext getPresContext();
   

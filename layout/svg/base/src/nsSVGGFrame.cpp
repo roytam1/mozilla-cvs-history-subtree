@@ -105,7 +105,7 @@ public:
   // implementation inherited from nsSupportsWeakReference
   
   // nsISVGChildFrame interface:
-  NS_IMETHOD Paint(nsISVGRendererCanvas* canvas);
+  NS_IMETHOD Paint(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);  
   NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion();
   NS_IMETHOD InitialUpdate();
@@ -315,14 +315,14 @@ nsSVGGFrame::DidModifySVGObservable (nsISVGValue* observable)
 // nsISVGChildFrame methods
 
 NS_IMETHODIMP
-nsSVGGFrame::Paint(nsISVGRendererCanvas* canvas)
+nsSVGGFrame::Paint(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips)
 {
   nsIFrame* kid = mFrames.FirstChild();
   while (kid) {
     nsISVGChildFrame* SVGFrame=0;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame)
-      SVGFrame->Paint(canvas);
+      SVGFrame->Paint(canvas, dirtyRectTwips);
     kid->GetNextSibling(&kid);
   }
 

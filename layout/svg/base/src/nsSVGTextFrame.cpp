@@ -132,7 +132,7 @@ public:
   // implementation inherited from nsSupportsWeakReference
   
   // nsISVGChildFrame interface:
-  NS_IMETHOD Paint(nsISVGRendererCanvas* canvas);
+  NS_IMETHOD Paint(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);
   NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion();
   NS_IMETHOD InitialUpdate();
@@ -476,7 +476,7 @@ nsSVGTextFrame::GetExtentOfChar(PRUint32 charnum, nsIDOMSVGRect **_retval)
 // nsISVGChildFrame methods
 
 NS_IMETHODIMP
-nsSVGTextFrame::Paint(nsISVGRendererCanvas* canvas)
+nsSVGTextFrame::Paint(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips)
 {
 #ifdef DEBUG
 //  printf("nsSVGTextFrame(%p)::Paint\n", this);
@@ -487,7 +487,7 @@ nsSVGTextFrame::Paint(nsISVGRendererCanvas* canvas)
     nsISVGChildFrame* SVGFrame=0;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame)
-      SVGFrame->Paint(canvas);
+      SVGFrame->Paint(canvas, dirtyRectTwips);
     kid->GetNextSibling(&kid);
   }
 
