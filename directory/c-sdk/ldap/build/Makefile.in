@@ -1,0 +1,24 @@
+DEPTH	= ../../../..
+srcdir	= @srcdir@
+ldaptopsrcdir = @top_srcdir@
+
+INTERNAL_TOOLS = 1
+
+CSRCS	= dirver.c
+
+include autoconf.mk
+
+PROGRAM = dirver$(BIN_SUFFIX)
+
+GARBAGE	+= $(TARGETS)
+
+include $(NSPR_TREE)/config/rules.mk
+
+export:: $(PROGRAM)
+	$(INSTALL) -m 555 $(PROGRAM) $(DIST)/bin
+
+install:: export
+
+clean::
+	-rm -rf $(filter-out . ..,$(OBJDIR_NAME))
+

@@ -39,7 +39,7 @@
                         /*              DES-CBC, DES3-ECB, DES3-CBC, RSA */
                         /*              and DSA.                         */
 #include "seccomon.h"   /* Required for RSA and DSA. */
-#include "lowkeyi.h"     /* Required for RSA and DSA. */
+#include "keylow.h"     /* Required for RSA and DSA. */
 #include "pkcs11.h"     /* Required for PKCS #11. */
 #include "secerr.h"
 
@@ -792,13 +792,13 @@ pk11_fips_RSA_PowerUpSelfTest( void )
     PLArenaPool *         rsa_public_arena;
     PLArenaPool *         rsa_private_arena;
 #endif
-    NSSLOWKEYPublicKey *  rsa_public_key;
-    NSSLOWKEYPrivateKey * rsa_private_key;
+    SECKEYLowPublicKey *  rsa_public_key;
+    SECKEYLowPrivateKey * rsa_private_key;
     unsigned int          rsa_bytes_signed;
     SECStatus             rsa_status;
 
-    NSSLOWKEYPublicKey    low_public_key   = { NULL, NSSLOWKEYRSAKey, };
-    NSSLOWKEYPrivateKey   low_private_key  = { NULL, NSSLOWKEYRSAKey, };
+    SECKEYLowPublicKey    low_public_key   = { NULL, rsaKey, };
+    SECKEYLowPrivateKey   low_private_key  = { NULL, rsaKey, };
     PRUint8               rsa_computed_ciphertext[FIPS_RSA_ENCRYPT_LENGTH];
     PRUint8               rsa_computed_plaintext[FIPS_RSA_DECRYPT_LENGTH];
     PRUint8               rsa_computed_signature[FIPS_RSA_SIGNATURE_LENGTH];
@@ -894,16 +894,16 @@ pk11_fips_RSA_PowerUpSelfTest( void )
         goto rsa_loser;
 
     /* Dispose of all RSA key material. */
-    nsslowkey_DestroyPublicKey( rsa_public_key );
-    nsslowkey_DestroyPrivateKey( rsa_private_key );
+    SECKEY_LowDestroyPublicKey( rsa_public_key );
+    SECKEY_LowDestroyPrivateKey( rsa_private_key );
 
     return( CKR_OK );
 
 
 rsa_loser:
 
-    nsslowkey_DestroyPublicKey( rsa_public_key );
-    nsslowkey_DestroyPrivateKey( rsa_private_key );
+    SECKEY_LowDestroyPublicKey( rsa_public_key );
+    SECKEY_LowDestroyPrivateKey( rsa_private_key );
 
     return( CKR_DEVICE_ERROR );
 }

@@ -1029,26 +1029,17 @@ SEC_PKCS12AddCert(SEC_PKCS12ExportContext *p12ctxt, SEC_PKCS12SafeInfo *safe,
 	    	CERTCertificate *tempCert;
 
 		/* decode the certificate */
-		/* XXX
-		 * This was rather silly.  The chain is constructed above
-		 * by finding all of the CERTCertificate's in the database.
-		 * Then the chain is put into a CERTCertificateList, which only
-		 * contains the DER.  Finally, the DER was decoded, and the
-		 * decoded cert was sent recursively back to this function.
-		 * Beyond being inefficent, this causes data loss (specifically,
-		 * the nickname).  Instead, for 3.4, we'll do a lookup by the
-		 * DER, which should return the cached entry.
-		 */
-		tempCert = CERT_FindCertByDERCert(CERT_GetDefaultCertDB(),
-		                                  &certList->certs[count]);
+	    	tempCert = CERT_NewTempCertificate(certDb, 
+	    					&certList->certs[count], NULL,
+	    					PR_FALSE, PR_TRUE);
 	    	if(!tempCert) {
 		    CERT_DestroyCertificateList(certList);
 		    goto loser;
 		}
 
 		/* add the certificate */
-	    	if(SEC_PKCS12AddCert(p12ctxt, safe, nestedDest, tempCert,
-				 certDb, NULL, PR_FALSE) != SECSuccess) {
+	    	if(SEC_PKCS12AddCert(p12ctxt, safe, nestedDest, tempCert, certDb,
+				     NULL, PR_FALSE) != SECSuccess) {
 		    CERT_DestroyCertificate(tempCert);
 		    CERT_DestroyCertificateList(certList);
 		    goto loser;
@@ -1409,7 +1400,8 @@ SEC_PKCS12AddDERCertAndEncryptedKey(SEC_PKCS12ExportContext *p12ctxt,
 
     mark = PORT_ArenaMark(p12ctxt->arena);
 
-    cert = CERT_DecodeDERCertificate(derCert, PR_FALSE, NULL);
+    cert = CERT_NewTempCertificate(CERT_GetDefaultCertDB(), derCert,
+				   NULL, PR_FALSE, PR_TRUE);
     if(!cert) {
 	PORT_ArenaRelease(p12ctxt->arena, mark);
 	PORT_SetError(SEC_ERROR_NO_MEMORY);

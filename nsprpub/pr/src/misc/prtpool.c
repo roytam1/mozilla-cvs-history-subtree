@@ -166,7 +166,7 @@ struct PRJob {
 				PR_END_MACRO
 
 static void delete_job(PRJob *jobp);
-static PRThreadPool * alloc_threadpool(void);
+static PRThreadPool * alloc_threadpool();
 static PRJob * alloc_job(PRBool joinable, PRThreadPool *tp);
 static void notify_ioq(PRThreadPool *tp);
 static void notify_timerq(PRThreadPool *tp);
@@ -599,7 +599,7 @@ delete_threadpool(PRThreadPool *tp)
 }
 
 static PRThreadPool *
-alloc_threadpool(void)
+alloc_threadpool()
 {
 PRThreadPool *tp;
 

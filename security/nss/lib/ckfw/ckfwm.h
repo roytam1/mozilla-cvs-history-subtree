@@ -158,10 +158,4 @@ nssCKFWHash_Iterate
   void *closure
 );
 
-NSS_EXTERN void
-nssSetLockArgs(
-   CK_C_INITIALIZE_ARGS_PTR pInitArgs
-);
-
-
 #endif /* CKFWM_H */

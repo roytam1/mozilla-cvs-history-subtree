@@ -46,7 +46,6 @@
 #include "pk11func.h"
 #include "prtime.h"
 #include "secerr.h"
-#include "secpkcs5.h"
 
 /*
  * NSS_CMSEncryptedData_Create - create an empty encryptedData object.

@@ -66,6 +66,7 @@ DSAU_ConvertUnsignedToSigned(SECItem *dest, SECItem *src)
     unsigned char *pSrc = src->data;
     unsigned char *pDst = dest->data;
     unsigned int   cntSrc = src->len;
+    unsigned int   cntDst = dest->len;
     unsigned char  c;
 
     /* skip any leading zeros. */

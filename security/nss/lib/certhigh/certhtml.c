@@ -116,6 +116,24 @@ gatherStrings(char **strings)
     return( ret );
 }
 
+static PRBool
+CERT_IsAVAInUnicode(CERTAVA *ava, SECOidTag type)
+{
+    switch(type) {
+	case SEC_OID_AVA_COUNTRY_NAME:
+	case SEC_OID_PKCS9_EMAIL_ADDRESS:
+	case SEC_OID_RFC1274_MAIL:
+	    return PR_FALSE;
+	default:
+	    if(ava->value.data[0] == SEC_ASN1_UNIVERSAL_STRING) {
+		return PR_TRUE;
+	    }
+	    break;
+    }
+
+    return PR_FALSE;
+}
+
 #define BREAK "<br>"
 #define BREAKLEN 4
 #define COMMA ", "
@@ -307,7 +325,7 @@ static char *sec_FortezzaClearance(SECItem *clearance) {
     return "None";
 }
 
-static char *sec_FortezzaMessagePrivilege(SECItem *priv) {
+static char *sec_FortezzaMessagePriviledge(SECItem *priv) {
     unsigned char clr = 0;
 
     if (priv->len > 0) { clr = (priv->data[0]) & 0x78; }
@@ -332,7 +350,7 @@ static char *sec_FortezzaMessagePrivilege(SECItem *priv) {
 
 }
 					
-static char *sec_FortezzaCertPrivilege(SECItem *priv) {
+static char *sec_FortezzaCertPriviledge(SECItem *priv) {
     unsigned char clr = 0;
 
     if (priv->len > 0) { clr = priv->data[0]; }
@@ -379,9 +397,9 @@ static char *htmlcertstrings[] = {
     0, /* notAfter does here */
     "</b><br><b>Clearance:</b>",
     0,
-    "<br><b>DSS Privileges:</b>",
+    "<br><b>DSS Priviledges:</b>",
     0,
-    "<br><b>KEA Privileges:</b>",
+    "<br><b>KEA Priviledges:</b>",
     0,
     "<br><b>KMID:</b>",
     0,
@@ -500,12 +518,12 @@ CERT_HTMLCertInfo(CERTCertificate *cert, PRBool showImages, PRBool showIssuer)
 	htmlcertstrings[18] = "</b><br><b>Clearance:</b>";
 	htmlcertstrings[19] = sec_FortezzaClearance(
 					&pubk->u.fortezza.clearance);
-	htmlcertstrings[20] = "<br><b>DSS Privileges:</b>";
-	DSSPriv = sec_FortezzaCertPrivilege(
+	htmlcertstrings[20] = "<br><b>DSS Priviledges:</b>";
+	DSSPriv = sec_FortezzaCertPriviledge(
 					&pubk->u.fortezza.DSSpriviledge);
 	htmlcertstrings[21] = DSSPriv;
-	htmlcertstrings[22] = "<br><b>KEA Privileges:</b>";
-	htmlcertstrings[23] = sec_FortezzaMessagePrivilege(
+	htmlcertstrings[22] = "<br><b>KEA Priviledges:</b>";
+	htmlcertstrings[23] = sec_FortezzaMessagePriviledge(
 					&pubk->u.fortezza.KEApriviledge);
 	htmlcertstrings[24] = "<br><b>KMID:</b>";
 	dummyitem.data = &pubk->u.fortezza.KMID[0];

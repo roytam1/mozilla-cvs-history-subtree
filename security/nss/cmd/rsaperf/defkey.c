@@ -36,7 +36,7 @@
 */
 #include "seccomon.h"
 #include "secoidt.h"
-#include "lowkeyti.h"
+#include "keyt.h"
 
 #define CONST
 
@@ -100,16 +100,16 @@ static CONST unsigned char default_qInvModP[64] = {
 };
 
 
-static struct NSSLOWKEYPrivateKeyStr rsaPriv;
+static struct SECKEYLowPrivateKeyStr rsaPriv;
 
-NSSLOWKEYPrivateKey *
+SECKEYLowPrivateKey *
 getDefaultRSAPrivateKey(void)
 {
-    if (rsaPriv.keyType != NSSLOWKEYRSAKey) {
+    if (rsaPriv.keyType != rsaKey) {
 
 	/* leaving arena uninitialized. It isn't used in this test. */
 
-	rsaPriv.keyType                     = NSSLOWKEYRSAKey;
+	rsaPriv.keyType                     = rsaKey;
 
 	/* leaving arena   uninitialized. It isn't used. */
 	/* leaving version uninitialized. It isn't used. */
@@ -134,14 +134,14 @@ getDefaultRSAPrivateKey(void)
     return &rsaPriv;
 }
 
-static struct NSSLOWKEYPublicKeyStr rsaPub;
+static struct SECKEYLowPublicKeyStr rsaPub;
 
-NSSLOWKEYPublicKey *
+SECKEYLowPublicKey *
 getDefaultRSAPublicKey(void)
 {
-    if (rsaPub.keyType != NSSLOWKEYRSAKey) {
+    if (rsaPub.keyType != rsaKey) {
 
-	rsaPub.keyType			   = NSSLOWKEYRSAKey;
+	rsaPub.keyType			   = rsaKey;
 
 	rsaPub.u.rsa.modulus.data          =        default_n;
 	rsaPub.u.rsa.modulus.len           = sizeof default_n;

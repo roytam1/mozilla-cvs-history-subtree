@@ -235,7 +235,7 @@ extern const NSSError NSS_ERROR_INVALID_NSSOID;
  */
 
 #ifdef DEBUG
-NSS_EXTERN const NSSUTF8 *
+NSS_EXTERN const char *
 nssOID_getExplanation
 (
   NSSOID *oid

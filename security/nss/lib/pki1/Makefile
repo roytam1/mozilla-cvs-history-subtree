@@ -33,14 +33,6 @@
 MAKEFILE_CVS_ID = "@(#) $RCSfile$ $Revision$ $Date$ $Name$"
 
 include manifest.mn
-include $(CORE_DEPTH)/coreconf/config.mk
 include config.mk
+include $(CORE_DEPTH)/coreconf/config.mk
 include $(CORE_DEPTH)/coreconf/rules.mk
-
-# Generate oiddata.h and oiddata.c.
-oidgen: oidgen.perl oids.txt
-	rm -f oiddata.c oiddata.h
-	perl oidgen.perl oiddata.c oiddata.h oids.txt
-
-export::  private_export 
-

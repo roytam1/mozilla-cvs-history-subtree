@@ -93,11 +93,8 @@ ssl_init()
   fileout=0 #FIXME, looks like all.sh tried to turn this on but actually didn't
   #fileout=1
   #verbose="-v" #FIXME - see where this is usefull
-
-  USER_NICKNAME=TestUser
-  NORM_EXT=""
-
   cd ${CLIENTDIR}
+
 }
 
 ########################### is_selfserv_alive ##########################
@@ -130,7 +127,7 @@ wait_for_selfserv()
       html_failed "<TR><TD> Wait for Server "
       echo "RETRY: tstclnt -p ${PORT} -h ${HOST} -q -d . < ${REQUEST_FILE}"
       tstclnt -p ${PORT} -h ${HOST} -q -d . < ${REQUEST_FILE}
-  elif [ sparam = "-c ABCDEFabcdefghijklmnvy" ] ; then # "$1" = "cov" ] ; then
+  elif [ sparam = "-c ABCDEFabcdefghijklm" ] ; then # "$1" = "cov" ] ; then
       html_passed "<TR><TD> Wait for Server"
   fi
   is_selfserv_alive
@@ -141,29 +138,13 @@ wait_for_selfserv()
 ########################################################################
 kill_selfserv()
 {
-  # Bug 119340: This is an inelegant but more reliable way to ensure
-  # that a multithreaded process on Linux has been completely killed.
-  # Recall that each thread is a process on Linux.  Instead of killing
-  # the primary thread, we kill the first thread created by selfserv and
-  # let the thread manager take care of terminating the other threads in
-  # selfserv.  The assumption we rely on is that the primary thread is
-  # the last one to go because it's the parent of the thread manager.
-  #
-  # On Linux, the first thread created by selfserv writes its pid to the
-  # {SERVERPID}.2 file.
-  if  [ "${OS_ARCH}" = "Linux" ]; then
-      ${KILL} `cat ${SERVERPID}.2`
-  else
-      ${KILL} `cat ${SERVERPID}`
-  fi
+  ${KILL} `cat ${SERVERPID}`
   wait `cat ${SERVERPID}`
   if [ ${fileout} -eq 1 ]; then
       cat ${SERVEROUTFILE}
   fi
+  ${SLEEP}  #FIXME linux waits 30 seconds - find a shorter way (sockets free)
   rm ${SERVERPID}
-  if  [ "${OS_ARCH}" = "Linux" ]; then
-      rm ${SERVERPID}.2
-  fi
 }
 
 ########################### start_selfserv #############################
@@ -196,21 +177,15 @@ start_selfserv()
 ########################################################################
 ssl_cov()
 {
-  html_head "SSL Cipher Coverage $NORM_EXT"
+  html_head "SSL Cipher Coverage"
 
   testname=""
-  sparam="-c ABCDEFabcdefghijklmnvy"
+  sparam="-c ABCDEFabcdefghijklm"
   start_selfserv # Launch the server
                
-  p=""
-
   cat ${SSLCOV} | while read tls param testname
   do
-      p=`echo "$testname" | sed -e "s/ .*//"`   #sonmi, only run extended test on SSL3 and TLS
-      
-      if [ "$p" = "SSL2" -a "$NORM_EXT" = "Extended test" ] ; then
-          echo "$SCRIPTNAME: skipping  $testname for $NORM_EXT"
-      elif [ "$tls" != "#" ] ; then
+      if [ $tls != "#" ]; then
           echo "$SCRIPTNAME: running $testname ----------------------------"
           TLS_FLAG=-T
           if [ $tls = "TLS" ]; then
@@ -224,13 +199,20 @@ ssl_cov()
           is_selfserv_alive
           echo "tstclnt -p ${PORT} -h ${HOST} -c ${param} ${TLS_FLAG} \\"
           echo "        -f -d . < ${REQUEST_FILE}"
-
-          rm ${TMP}/$HOST.tmp.$$ 2>/dev/null
-          tstclnt -p ${PORT} -h ${HOST} -c ${param} ${TLS_FLAG} -f \
-                  -d . < ${REQUEST_FILE} >${TMP}/$HOST.tmp.$$  2>&1
-          ret=$?
-          cat ${TMP}/$HOST.tmp.$$ 
-          rm ${TMP}/$HOST.tmp.$$ 2>/dev/null
+          if [ `uname -n` = "dump" ] ; then
+              echo "workaround for dump to avoid client and server writes at "
+              echo "       the same time"
+              rm ${TMP}/dump.tmp.$$ 2>/dev/null
+              tstclnt -p ${PORT} -h ${HOST} -c ${param} ${TLS_FLAG} -f \
+                  -d . < ${REQUEST_FILE} >${TMP}/dump.tmp.$$  2>&1
+              ret=$?
+              cat ${TMP}/dump.tmp.$$ 
+              rm ${TMP}/dump.tmp.$$ 2>/dev/null
+          else
+              tstclnt -p ${PORT} -h ${HOST} -c ${param} ${TLS_FLAG} -f \
+                  -d . < ${REQUEST_FILE}
+              ret=$?
+          fi
           html_msg $ret 0 "${testname}"
       fi
   done
@@ -244,22 +226,29 @@ ssl_cov()
 ########################################################################
 ssl_auth()
 {
-  html_head "SSL Client Authentication $NORM_EXT"
+  html_head "SSL Client Authentication"
 
   cat ${SSLAUTH} | while read value sparam cparam testname
   do
       if [ $value != "#" ]; then
-          cparam=`echo $cparam | sed -e 's;_; ;g' -e "s/TestUser/$USER_NICKNAME/g" `
+          cparam=`echo $cparam | sed -e 's;_; ;g'`
           start_selfserv
 
           echo "tstclnt -p ${PORT} -h ${HOST} -f -d . ${cparam} \\"
           echo "        < ${REQUEST_FILE}"
-          rm ${TMP}/$HOST.tmp.$$ 2>/dev/null
-          tstclnt -p ${PORT} -h ${HOST} -f ${cparam} \
-                  -d . < ${REQUEST_FILE} >${TMP}/$HOST.tmp.$$  2>&1
-          ret=$?
-          cat ${TMP}/$HOST.tmp.$$ 
-          rm ${TMP}/$HOST.tmp.$$ 2>/dev/null
+          if [ `uname -n` = "dump" ] ; then
+              echo "workaround for dump to avoid client and server writes at "
+              echo "       the same time"
+              rm ${TMP}/dump.tmp.$$ 2>/dev/null
+              tstclnt -p ${PORT} -h ${HOST} -f ${cparam} \
+                  -d . < ${REQUEST_FILE} >${TMP}/dump.tmp.$$  2>&1
+              ret=$?
+              cat ${TMP}/dump.tmp.$$ 
+              rm ${TMP}/dump.tmp.$$ 2>/dev/null
+          else
+            tstclnt -p ${PORT} -h ${HOST} -f -d . ${cparam} < ${REQUEST_FILE}
+            ret=$?
+          fi
 
           html_msg $ret $value "${testname}" \
                    "produced a returncode of $ret, expected is $value"
@@ -276,32 +265,32 @@ ssl_auth()
 ########################################################################
 ssl_stress()
 {
-  html_head "SSL Stress Test $NORM_EXT"
+  html_head "SSL Stress Test"
 
   cat ${SSLSTRESS} | while read value sparam cparam testname
   do
-      p=`echo "$testname" | sed -e "s/Stress //" -e "s/ .*//"`   #sonmi, only run extended test on SSL3 and TLS
-      if [ "$p" = "SSL2" -a "$NORM_EXT" = "Extended test" ] ; then
-          echo "$SCRIPTNAME: skipping  $testname for $NORM_EXT"
-      elif [ $value != "#" ]; then
+      if [ $value != "#" ]; then
           cparam=`echo $cparam | sed -e 's;_; ;g'`
           start_selfserv
-          if [ `uname -n` = "sjsu" ] ; then
-              echo "debugging disapering selfserv... ps -ef | grep selfserv"
-              ps -ef | grep selfserv
-          fi
 
-          echo "strsclnt -q -p ${PORT} -d . -w nss $cparam $verbose \\"
-          echo "         ${HOSTADDR}"
-          echo "strsclnt started at `date`"
-          strsclnt -q -p ${PORT} -d . -w nss $cparam $verbose ${HOSTADDR}
-          ret=$?
+          #FIXME - this is done because NSS 3.2 stressclient did not have the 
+          # -q option - needs to be removed when testing later releases
+          if [ -n "$BC_RELEASE" -a "$BC_RELEASE" = "3.2" -a \
+               -n "$TEST_LEVEL" -a "$TEST_LEVEL" = "2" ] ; then
+              echo "strsclnt -p ${PORT} -d . -w nss $cparam $verbose \\"
+              echo "         ${HOSTADDR}"
+              echo "strsclnt started at `date`"
+              strsclnt -p ${PORT} -d . -w nss $cparam $verbose ${HOSTADDR}
+              ret=$?
+          else
+              echo "strsclnt -q -p ${PORT} -d . -w nss $cparam $verbose \\"
+              echo "         ${HOSTADDR}"
+              echo "strsclnt started at `date`"
+              strsclnt -q -p ${PORT} -d . -w nss $cparam $verbose ${HOSTADDR}
+              ret=$?
+          fi
           echo "strsclnt completed at `date`"
           html_msg $ret $value "${testname}"
-          if [ `uname -n` = "sjsu" ] ; then
-              echo "debugging disapering selfserv... ps -ef | grep selfserv"
-              ps -ef | grep selfserv
-          fi
           kill_selfserv
       fi
   done
@@ -327,17 +316,6 @@ ssl_cleanup()
 
 if [ -z  "$DO_REM_ST" -a -z  "$DO_DIST_ST" ] ; then
     ssl_init
-    ssl_cov
-    ssl_auth
-    ssl_stress
-
-    SERVERDIR=$EXT_SERVERDIR
-    CLIENTDIR=$EXT_CLIENTDIR
-    R_SERVERDIR=$R_EXT_SERVERDIR
-    R_CLIENTDIR=$R_EXT_CLIENTDIR
-    USER_NICKNAME=ExtendedSSLUser
-    NORM_EXT="Extended test"
-    cd ${CLIENTDIR}
     ssl_cov
     ssl_auth
     ssl_stress

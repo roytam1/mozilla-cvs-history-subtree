@@ -420,6 +420,10 @@ nssCKFWObject_IsTokenObject
   }
 #endif /* NSSDEBUG */
 
+  if( CKR_OK != nssCKFWMutex_Lock(fwObject->mutex) ) {
+    return CK_FALSE;
+  }
+
   if( (void *)NULL == (void *)fwObject->mdObject->IsTokenObject ) {
     NSSItem item;
     NSSItem *pItem;
@@ -444,6 +448,7 @@ nssCKFWObject_IsTokenObject
     fwObject->fwToken, fwObject->mdInstance, fwObject->fwInstance);
 
  done:
+  (void)nssCKFWMutex_Unlock(fwObject->mutex);
   return b;
 }
 
@@ -611,7 +616,7 @@ nssCKFWObject_GetAttribute
   }
 #endif /* NSSDEBUG */
 
-  if( (void *)NULL == (void *)fwObject->mdObject->GetAttribute ) {
+  if( (void *)NULL == (void *)fwObject->mdObject->GetAttributeSize ) {
     *pError = CKR_GENERAL_ERROR;
     return (NSSItem *)NULL;
   }
@@ -943,9 +948,9 @@ NSSCKFWObject_GetAttributeTypes
   CK_ULONG ulCount
 )
 {
-#ifdef DEBUG
   CK_RV error = CKR_OK;
 
+#ifdef DEBUG
   error = nssCKFWObject_verifyPointer(fwObject);
   if( CKR_OK != error ) {
     return error;

@@ -36,18 +36,6 @@
 #ifndef _SECMODT_H_
 #define _SECMODT_H_ 1
 
-#include "secoid.h"
-#include "secasn1.h"
-
-/* find a better home for these... */
-extern const SEC_ASN1Template SECKEY_PointerToEncryptedPrivateKeyInfoTemplate[];
-extern SEC_ASN1TemplateChooser NSS_Get_SECKEY_PointerToEncryptedPrivateKeyInfoTemplate;
-extern const SEC_ASN1Template SECKEY_EncryptedPrivateKeyInfoTemplate[];
-extern const SEC_ASN1Template SECKEY_PrivateKeyInfoTemplate[];
-extern SEC_ASN1TemplateChooser NSS_Get_SECKEY_PrivateKeyInfoTemplate;
-extern const SEC_ASN1Template SECKEY_PointerToPrivateKeyInfoTemplate[];
-extern SEC_ASN1TemplateChooser NSS_Get_SECKEY_PointerToPrivateKeyInfoTemplate;
-
 /* PKCS11 needs to be included */
 typedef struct SECMODModuleStr SECMODModule;
 typedef struct SECMODModuleListStr SECMODModuleList;
@@ -83,14 +71,6 @@ struct SECMODModuleStr {
     SECMODModuleID moduleID;	/* ID so we can find this module again */
     PRBool	isThreadSafe;
     unsigned long ssl[2];	/* SSL cipher enable flags */
-    char	*libraryParams;  /* Module specific parameters */
-    void *moduleDBFunc; /* function to return module configuration data*/
-    SECMODModule *parent;	/* module that loaded us */
-    PRBool	isCritical;	/* This module must load successfully */
-    PRBool	isModuleDB;	/* this module has lists of PKCS #11 modules */
-    PRBool	moduleDBOnly;	/* this module only has lists of PKCS #11 modules */
-    int		trustOrder;	/* order for this module's certificate trust rollup */
-    int		cipherOrder;	/* order for cipher operations */
 };
 
 struct SECMODModuleListStr {
@@ -163,23 +143,13 @@ struct PK11DefaultArrayEntryStr {
 #define CKM_FAKE_RANDOM       0x80000efeL
 #define CKM_INVALID_MECHANISM 0xffffffffL
 #define CKA_DIGEST            0x81000000L
+#define CK_INVALID_KEY 0
+#define CK_INVALID_SESSION 0
 
 /* Cryptographic module types */
 #define SECMOD_EXTERNAL	0	/* external module */
 #define SECMOD_INTERNAL 1	/* internal default module */
 #define SECMOD_FIPS	2	/* internal fips module */
-
-/* default module configuration strings */
-#define SECMOD_SLOT_FLAGS "slotFlags=[RSA,DSA,DH,RC2,RC4,DES,RANDOM,SHA1,MD5,MD2,SSL,TLS,AES]"
-
-#define SECMOD_MAKE_NSS_FLAGS(fips,slot) \
-"Flags=internal,critical"fips" slotparams=("#slot"={"SECMOD_SLOT_FLAGS"})"
-
-#define SECMOD_INT_NAME "NSS Internal PKCS #11 Module"
-#define SECMOD_INT_FLAGS SECMOD_MAKE_NSS_FLAGS("",1)
-#define SECMOD_FIPS_NAME "NSS Internal FIPS PKCS #11 Module"
-#define SECMOD_FIPS_FLAGS SECMOD_MAKE_NSS_FLAGS(",fips",3)
-
 
 /*
  * What is the origin of a given Key. Normally this doesn't matter, but
@@ -206,43 +176,8 @@ typedef enum {
 /* function pointer type for password callback function.
  * This type is passed in to PK11_SetPasswordFunc() 
  */
-typedef char *(PR_CALLBACK *PK11PasswordFunc)(PK11SlotInfo *slot, PRBool retry, void *arg);
-typedef PRBool (PR_CALLBACK *PK11VerifyPasswordFunc)(PK11SlotInfo *slot, void *arg);
-typedef PRBool (PR_CALLBACK *PK11IsLoggedInFunc)(PK11SlotInfo *slot, void *arg);
-
-/*
- * PKCS #11 key structures
- */
-
-/*
-** Attributes
-*/
-struct SECKEYAttributeStr {
-    SECItem attrType;
-    SECItem **attrValue;
-};
-typedef struct SECKEYAttributeStr SECKEYAttribute;
-
-/*
-** A PKCS#8 private key info object
-*/
-struct SECKEYPrivateKeyInfoStr {
-    PLArenaPool *arena;
-    SECItem version;
-    SECAlgorithmID algorithm;
-    SECItem privateKey;
-    SECKEYAttribute **attributes;
-};
-typedef struct SECKEYPrivateKeyInfoStr SECKEYPrivateKeyInfo;
-
-/*
-** A PKCS#8 private key info object
-*/
-struct SECKEYEncryptedPrivateKeyInfoStr {
-    PLArenaPool *arena;
-    SECAlgorithmID algorithm;
-    SECItem encryptedData;
-};
-typedef struct SECKEYEncryptedPrivateKeyInfoStr SECKEYEncryptedPrivateKeyInfo;
+typedef char *(*PK11PasswordFunc)(PK11SlotInfo *slot, PRBool retry, void *arg);
+typedef PRBool (*PK11VerifyPasswordFunc)(PK11SlotInfo *slot, void *arg);
+typedef PRBool (*PK11IsLoggedInFunc)(PK11SlotInfo *slot, void *arg);
 
 #endif /*_SECMODT_H_ */

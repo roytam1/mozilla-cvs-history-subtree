@@ -217,7 +217,7 @@ GetCertRequest(PRFileDesc *inFile, PRBool ascii)
     do {
 	arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
 	if (arena == NULL) {
-	    GEN_BREAK (SECFailure);
+	    GEN_BREAK (SEC_ERROR_NO_MEMORY);
 	}
 	
  	rv = SECU_ReadDERFromFile(&reqDER, inFile, ascii);
@@ -272,7 +272,7 @@ GetYesNo(char *prompt)
 
 static SECStatus
 AddCert(PK11SlotInfo *slot, CERTCertDBHandle *handle, char *name, char *trusts, 
-        PRFileDesc *inFile, PRBool ascii, PRBool emailcert, void *pwdata)
+        PRFileDesc *inFile, PRBool ascii, PRBool emailcert)
 {
     CERTCertTrust *trust = NULL;
     CERTCertificate *cert = NULL, *tempCert = NULL;
@@ -308,7 +308,6 @@ AddCert(PK11SlotInfo *slot, CERTCertDBHandle *handle, char *name, char *trusts,
 	    GEN_BREAK(SECFailure);
 	}
 
-#ifdef notdef
 	/* CERT_ImportCert only collects certificates and returns the
 	* first certficate.  It does not insert these certificates into
 	* the dbase.  For now, just call CERT_NewTempCertificate.
@@ -321,7 +320,6 @@ AddCert(PK11SlotInfo *slot, CERTCertDBHandle *handle, char *name, char *trusts,
 
 	if (!PK11_IsInternal(slot)) {
 	    tempCert->trust = trust;
-
 	    rv = PK11_ImportCertForKeyToSlot(slot, tempCert, name,
 	                                     PR_FALSE, NULL);
 	}
@@ -339,35 +337,9 @@ AddCert(PK11SlotInfo *slot, CERTCertDBHandle *handle, char *name, char *trusts,
 
 	if ( emailcert )
 	    CERT_SaveSMimeProfile(tempCert, NULL, NULL);
-#else
-	rv = PK11_Authenticate(slot, PR_TRUE, pwdata);
-	if (rv != SECSuccess) {
-	    SECU_PrintError(progName, "could authenticate to token or database");
-	    GEN_BREAK(SECFailure);
-	}
-
-	rv =  PK11_ImportCert(slot, cert, CK_INVALID_HANDLE, name, PR_FALSE);
-	if (rv != SECSuccess) {
-	    SECU_PrintError(progName, "could not add certificate to token or database");
-	    GEN_BREAK(SECFailure);
-	}
-
-	rv = CERT_ChangeCertTrust(handle, cert, trust);
-	if (rv != SECSuccess) {
-	    SECU_PrintError(progName, "could not change trust on certificate");
-	    GEN_BREAK(SECFailure);
-	}
-
-	if ( emailcert ) {
-	    CERT_SaveSMimeProfile(cert, NULL, pwdata);
-	}
-
-#endif
     } while (0);
 
-#ifdef notdef
     CERT_DestroyCertificate (tempCert);
-#endif
     CERT_DestroyCertificate (cert);
     PORT_Free(trust);
     PORT_Free(certDER.data);
@@ -553,41 +525,14 @@ printCertCB(CERTCertificate *cert, void *arg)
     if (trust) {
 	SECU_PrintTrustFlags(stdout, trust,
 	                     "Certificate Trust Flags", 1);
-    } else if (cert->trust) {
-	SECU_PrintTrustFlags(stdout, cert->trust,
+    } else {
+	SECU_PrintTrustFlags(stdout, &cert->dbEntry->trust,
 	                     "Certificate Trust Flags", 1);
     }
 
     printf("\n");
 
     return(SECSuccess);
-}
-
-static SECStatus
-dumpChain(CERTCertDBHandle *handle, char *name, PK11SlotInfo *slot,
-          PRBool raw, PRBool ascii, PRFileDesc *outfile, void *pwarg)
-{
-    SECStatus rv;
-    CERTCertificate *the_cert;
-    CERTCertificateList *chain;
-    int i, j;
-    the_cert = PK11_FindCertFromNickname(name, NULL);
-    if (!the_cert) {
-	SECU_PrintError(progName, "Could not find: %s\n", name);
-	return SECFailure;
-    }
-    chain = CERT_CertChainFromCert(the_cert, 0, PR_TRUE);
-    if (!chain) {
-	SECU_PrintError(progName, "Could not obtain chain for: %s\n", name);
-	return SECFailure;
-    }
-    for (i=chain->len-1; i>=0; i--) {
-	CERTCertificate *c;
-	c = CERT_FindCertByDERCert(handle, &chain->certs[i]);
-	for (j=i; j<chain->len-1; j++) printf("  ");
-	printf("\"%s\" [%s]\n\n", c->nickname, c->subjectName);
-    }
-    return SECSuccess;
 }
 
 static SECStatus
@@ -599,7 +544,6 @@ listCerts(CERTCertDBHandle *handle, char *name, PK11SlotInfo *slot,
     PRInt32 numBytes;
     SECStatus rv;
 
-#ifdef nodef
     /* For now, split handling of slot to internal vs. other.  slot should
      * probably be allowed to be NULL so that all slots can be listed.
      * In that case, need to add a call to PK11_TraverseSlotCerts().
@@ -640,10 +584,8 @@ listCerts(CERTCertDBHandle *handle, char *name, PK11SlotInfo *slot,
 	                                           NULL);
 	}
     } else {
-#endif
 	/* List certs on a non-internal slot. */
-	if ( PK11_IsFIPS() || 
-	     (!PK11_IsFriendly(slot) && PK11_NeedLogin(slot)) )
+	if (PK11_NeedLogin(slot))
 	    PK11_Authenticate(slot, PR_TRUE, pwarg);
 	if (name) {
 	    CERTCertificate *the_cert;
@@ -652,22 +594,7 @@ listCerts(CERTCertDBHandle *handle, char *name, PK11SlotInfo *slot,
 		SECU_PrintError(progName, "Could not find: %s\n", name);
 		return SECFailure;
 	    }
-	    data.data = the_cert->derCert.data;
-	    data.len = the_cert->derCert.len;
-	    if (ascii) {
-		PR_fprintf(outfile, "%s\n%s\n%s\n", NS_CERT_HEADER, 
-		        BTOA_DataToAscii(data.data, data.len), NS_CERT_TRAILER);
-		rv = SECSuccess;
-	    } else if (raw) {
-		numBytes = PR_Write(outfile, data.data, data.len);
-	        if (numBytes != data.len) {
-		    SECU_PrintSystemError(progName, "error writing raw cert");
-		    rv = SECFailure;
-		}
-		rv = SECSuccess;
-	    } else {
-	        rv = printCertCB(the_cert, the_cert->trust);
-	    }
+	    rv = printCertCB(the_cert, the_cert->trust);
 	} else {
 	    rv = PK11_TraverseCertsInSlot(slot, SECU_PrintCertNickname, stdout);
 	}
@@ -675,9 +602,7 @@ listCerts(CERTCertDBHandle *handle, char *name, PK11SlotInfo *slot,
 	    SECU_PrintError(progName, "problem printing certificate nicknames");
 	    return SECFailure;
 	}
-#ifdef notdef
     }
-#endif
 
     return SECSuccess;	/* not rv ?? */
 }
@@ -699,28 +624,6 @@ ListCerts(CERTCertDBHandle *handle, char *name, PK11SlotInfo *slot,
 	}
     } else {
 	rv = listCerts(handle,name,slot,raw,ascii,outfile,pwdata);
-    }
-    return rv;
-}
-
-static SECStatus
-DumpChain(CERTCertDBHandle *handle, char *name, PK11SlotInfo *slot,
-          PRBool raw, PRBool ascii, PRFileDesc *outfile, secuPWData *pwdata)
-{
-    SECStatus rv;
-
-    if (slot == NULL) {
-	PK11SlotList *list;
-	PK11SlotListElement *le;
-
-	list= PK11_GetAllTokens(CKM_INVALID_MECHANISM,
-						PR_FALSE,PR_FALSE,pwdata);
-	if (list) for (le = list->head; le; le = le->next) {
-	    printf("\n\nListing certificates for %s:\n\n", PK11_GetSlotName(le->slot));
-	    rv = dumpChain(handle,name,le->slot,raw,ascii,outfile,pwdata);
-	}
-    } else {
-	rv = dumpChain(handle,name,slot,raw,ascii,outfile,pwdata);
     }
     return rv;
 }
@@ -2050,7 +1953,7 @@ CreateCert(
     do {
 	arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
 	if (!arena) {
-	    GEN_BREAK (SECFailure);
+	    GEN_BREAK (SEC_ERROR_NO_MEMORY);
 	}
 	
 	/* Create a certrequest object from the input cert request der */
@@ -2149,7 +2052,6 @@ enum {
     cmd_ListCerts,
     cmd_ModifyCertTrust,
     cmd_NewDBs,
-    cmd_DumpChain,
     cmd_CertReq,
     cmd_CreateAndAddCert,
     cmd_TokenReset,
@@ -2210,7 +2112,6 @@ static secuCommandFlag certutil_commands[] =
 	{ /* cmd_ListCerts           */  'L', PR_FALSE, 0, PR_FALSE },
 	{ /* cmd_ModifyCertTrust     */  'M', PR_FALSE, 0, PR_FALSE },
 	{ /* cmd_NewDBs              */  'N', PR_FALSE, 0, PR_FALSE },
-	{ /* cmd_DumpChain           */  'P', PR_FALSE, 0, PR_FALSE },
 	{ /* cmd_CertReq             */  'R', PR_FALSE, 0, PR_FALSE },
 	{ /* cmd_CreateAndAddCert    */  'S', PR_FALSE, 0, PR_FALSE },
 	{ /* cmd_TokenReset          */  'T', PR_FALSE, 0, PR_FALSE },
@@ -2504,8 +2405,7 @@ main(int argc, char **argv)
          !certutil.options[opt_SerialNumber].activated) {
 	/*  Make a default serial number from the current time.  */
 	PRTime now = PR_Now();
-	serialNumber = LL_L2I(serialNumber, now);
-	if (serialNumber < 0) serialNumber *= -1;
+	serialNumber = LL_L2UI(serialNumber, now);
     }
 
     /*  Validation needs the usage to validate for.  */
@@ -2530,7 +2430,6 @@ main(int argc, char **argv)
     /*  Using slotname == NULL for listing keys and certs on all slots, 
      *  but only that. */
     if (!(certutil.commands[cmd_ListKeys].activated ||
-	  certutil.commands[cmd_DumpChain].activated ||
     	  certutil.commands[cmd_ListCerts].activated) && slotname == NULL) {
 	PR_fprintf(PR_STDERR,
 	           "%s -%c: cannot use \"-h all\" for this command.\n",
@@ -2622,13 +2521,6 @@ main(int argc, char **argv)
                        (outFile) ? outFile : PR_STDOUT, &pwdata);
 	return rv ? 255 : 0;
     }
-    if (certutil.commands[cmd_DumpChain].activated) {
-	rv = DumpChain(certHandle, name, slot,
-	               certutil.options[opt_BinaryDER].activated,
-	               certutil.options[opt_ASCIIForIO].activated, 
-                       (outFile) ? outFile : PR_STDOUT, &pwdata);
-	return rv ? 255 : 0;
-    }
     /*  XXX needs work  */
     /*  List keys (-K)  */
     if (certutil.commands[cmd_ListKeys].activated) {
@@ -2673,6 +2565,7 @@ main(int argc, char **argv)
 
  	return !rv - 1;
     }
+
     /*  Check cert validity against current time (-V)  */
     if (certutil.commands[cmd_CheckCertValidity].activated) {
 	/* XXX temporary hack for fips - must log in to get priv key */
@@ -2798,7 +2691,7 @@ main(int argc, char **argv)
 	             certutil.options[opt_Trust].arg,
 	             inFile, 
 	             certutil.options[opt_ASCIIForIO].activated,
-	             certutil.commands[cmd_AddEmailCert].activated,&pwdata);
+	             certutil.commands[cmd_AddEmailCert].activated);
 	if (rv) 
 	    return 255;
     }
@@ -2809,13 +2702,9 @@ main(int argc, char **argv)
 	PR_Delete(certreqfile);
     }
 
-#ifdef notdef
     if ( certHandle ) {
 	CERT_ClosePermCertDB(certHandle);
     }
-#else
-    NSS_Shutdown();
-#endif
 
     return rv;  
 }

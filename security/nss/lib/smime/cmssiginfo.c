@@ -806,14 +806,10 @@ NSS_SMIMESignerInfo_SaveSMIMEProfile(NSSCMSSignerInfo *signerinfo)
 	    return SECFailure;
     }
 
-    /* verify this cert for encryption (has been verified for signing so far) */    /* don't verify this cert for encryption. It may just be a signing cert.
-     * that's OK, we can still save the S/MIME profile. The encryption cert
-     * should have already been saved */
-#ifdef notdef
+    /* verify this cert for encryption (has been verified for signing so far) */
     if (CERT_VerifyCert(certdb, cert, PR_TRUE, certUsageEmailRecipient, PR_Now(), signerinfo->cmsg->pwfn_arg, NULL) != SECSuccess) {
 	return SECFailure;
     }
-#endif
 
     /* XXX store encryption cert permanently? */
 
