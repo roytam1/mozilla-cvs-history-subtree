@@ -41,11 +41,6 @@
 #include "txInstructions.h"
 #include "txXSLTPatterns.h"
 
-txInstructionContainer::~txInstructionContainer()
-{
-    delete mFirstInstruction;
-}
-
 txStripSpaceItem::~txStripSpaceItem()
 {
     txListIterator iter(&mNameTestItems);
@@ -55,25 +50,16 @@ txStripSpaceItem::~txStripSpaceItem()
     }
 }
 
-txTemplateItem::txTemplateItem(txPattern* aMatch, const txExpandedName& aName,
+txTemplateItem::txTemplateItem(nsAutoPtr<txPattern> aMatch,
+                               const txExpandedName& aName,
                                const txExpandedName& aMode, double aPrio)
     : mMatch(aMatch), mName(aName), mMode(aMode), mPrio(aPrio)
 {
 }
 
-txTemplateItem::~txTemplateItem()
-{
-    delete mMatch;
-}
-
-txVariableItem::txVariableItem(const txExpandedName& aName, Expr* aValue,
+txVariableItem::txVariableItem(const txExpandedName& aName,
+                               nsAutoPtr<Expr> aValue,
                                PRBool aIsParam)
     : mName(aName), mValue(aValue), mIsParam(aIsParam)
 {
 }
-
-txVariableItem::~txVariableItem()
-{
-    delete mValue;
-}
-

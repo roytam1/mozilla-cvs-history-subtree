@@ -318,8 +318,8 @@ txStylesheetCompiler::ensureNewElementContext()
     if (!mState.mElementContext->mDepth)
         return NS_OK;
     
-    nsAutoPtr<txElementContext> context =
-        new txElementContext(*mState.mElementContext);
+    nsAutoPtr<txElementContext>
+        context(new txElementContext(*mState.mElementContext));
     NS_ENSURE_TRUE(context, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = mState.pushObject(mState.mElementContext);
@@ -496,7 +496,7 @@ txStylesheetCompilerState::openInstructionContainer(txInstructionContainer* aCon
 {
     NS_PRECONDITION(!mNextInstrPtr, "can't nest instruction-containers");
 
-    mNextInstrPtr = &aContainer->mFirstInstruction;
+    mNextInstrPtr = aContainer->mFirstInstruction.StartAssignment();
     return NS_OK;
 }
 

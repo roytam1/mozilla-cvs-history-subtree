@@ -329,7 +329,6 @@ txStylesheet::doneCompiling()
     return NS_OK;
 }
 
-// XXX This one isn't OOM safe.
 nsresult
 txStylesheet::addTemplate(txTemplateItem* aTemplate,
                           ImportFrame* aImportFrame)
@@ -341,9 +340,8 @@ txStylesheet::addTemplate(txTemplateItem* aTemplate,
     NS_ENSURE_SUCCESS(rv, rv);
 
     // mTemplateInstructions now owns the instructions
-    aTemplate->mFirstInstruction = 0;
+    aTemplate->mFirstInstruction.forget();
 
-    rv = NS_OK;
     if (!aTemplate->mName.isNull()) {
         rv = mNamedTemplates.add(aTemplate->mName, instr);
         NS_ENSURE_TRUE(NS_SUCCEEDED(rv) || rv == NS_ERROR_XSLT_ALREADY_SET,
@@ -361,55 +359,54 @@ txStylesheet::addTemplate(txTemplateItem* aTemplate,
         (txList*)aImportFrame->mMatchableTemplates.get(aTemplate->mMode);
 
     if (!templates) {
-        templates = new txList;
-        if (!templates) {
-            return NS_ERROR_OUT_OF_MEMORY;
-        }
+        nsAutoPtr<txList> newList(new txList);
+        NS_ENSURE_TRUE(newList, NS_ERROR_OUT_OF_MEMORY);
 
-        rv = aImportFrame->mMatchableTemplates.add(aTemplate->mMode,
-                                                   templates);
-        if (NS_FAILED(rv)) {
-            delete templates;
-            return rv;
-        }
+        rv = aImportFrame->mMatchableTemplates.add(aTemplate->mMode, newList);
+        NS_ENSURE_SUCCESS(rv, rv);
+        
+        templates = newList.forget();
     }
 
     // Add the simple patterns to the list of matchable templates, according
     // to default priority
     txList simpleMatches;
-    aTemplate->mMatch->getSimplePatterns(simpleMatches);
+    rv = aTemplate->mMatch->getSimplePatterns(simpleMatches);
+    if (simpleMatches.get(0) == aTemplate->mMatch) {
+        aTemplate->mMatch.forget();
+    }
+    
     txListIterator simples(&simpleMatches);
     while (simples.hasNext()) {
-        txPattern* simple = (txPattern*)simples.next();
-        if (simple != aTemplate->mMatch && aTemplate->mMatch) {
-            // txUnionPattern, it doesn't own the txLocPathPatterns no more,
-            // so delete it. (only once, of course)
-            delete aTemplate->mMatch;
-            aTemplate->mMatch = 0;
-        }
+        nsAutoPtr<txPattern> simple((txPattern*)simples.next());
         double priority = aTemplate->mPrio;
         if (Double::isNaN(priority)) {
             priority = simple->getDefaultPriority();
             NS_ASSERTION(!Double::isNaN(priority),
                          "simple pattern without default priority");
         }
-        MatchableTemplate* nt = new MatchableTemplate(instr, simple, priority);
+        nsAutoPtr<MatchableTemplate>
+            nt(new MatchableTemplate(instr, simple, priority));
+        NS_ENSURE_TRUE(nt, NS_ERROR_OUT_OF_MEMORY);
 
         txListIterator templ(templates);
-        MBool added = MB_FALSE;
         while (templ.hasNext()) {
             MatchableTemplate* mt = (MatchableTemplate*)templ.next();
             if (priority > mt->mPriority) {
-                templ.addBefore(nt);
-                added = MB_TRUE;
+                rv = templ.addBefore(nt);
+                NS_ENSURE_SUCCESS(rv, rv);
+
+                nt.forget();
                 break;
             }
         }
-        if (!added) {
-            templates->add(nt);
+        if (nt) {
+            rv = templates->add(nt);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            nt.forget();
         }
     }
-    aTemplate->mMatch = 0;
 
     return NS_OK;
 }
@@ -423,9 +420,6 @@ txStylesheet::addGlobalVariable(txVariableItem* aVariable)
     GlobalVariable* var = new GlobalVariable(aVariable->mValue,
                                              aVariable->mFirstInstruction);
     NS_ENSURE_TRUE(var, NS_ERROR_OUT_OF_MEMORY);
-    
-    aVariable->mValue = nsnull;
-    aVariable->mFirstInstruction = nsnull;
     
     nsresult rv = mGlobalVariables.add(aVariable->mName, var);
     if (NS_FAILED(rv)) {
@@ -474,7 +468,6 @@ txStylesheet::ImportFrame::~ImportFrame()
         txListIterator templIter((txList*)mapIter.value());
         MatchableTemplate* templ;
         while ((templ = (MatchableTemplate*)templIter.next())) {
-            delete templ->mMatch;
             delete templ;
         }
     }
@@ -485,13 +478,8 @@ txStylesheet::ImportFrame::~ImportFrame()
     }
 }
 
-txStylesheet::GlobalVariable::GlobalVariable(Expr* aExpr, txInstruction* aFirstInstruction)
+txStylesheet::GlobalVariable::GlobalVariable(nsAutoPtr<Expr> aExpr,
+                                             nsAutoPtr<txInstruction> aFirstInstruction)
     : mExpr(aExpr), mFirstInstruction(aFirstInstruction)
 {
-}
-
-txStylesheet::GlobalVariable::~GlobalVariable()
-{
-    delete mExpr;
-    delete mFirstInstruction;
 }

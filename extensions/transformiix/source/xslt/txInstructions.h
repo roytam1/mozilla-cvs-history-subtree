@@ -48,8 +48,7 @@
 #include "XMLUtils.h"
 #include "txNamespaceMap.h"
 #include "nsAutoPtr.h"
-
-class Expr;
+#include "Expr.h"
 
 class txInstruction : public TxObject
 {
@@ -85,14 +84,13 @@ public:
 class txAttribute : public txInstruction
 {
 public:
-    txAttribute(Expr* aName, Expr* aNamespace,
+    txAttribute(nsAutoPtr<Expr> aName, nsAutoPtr<Expr> aNamespace,
                 txNamespaceMap* aMappings);
-    ~txAttribute();
 
     TX_DECL_TXINSTRUCTION
 
-    Expr* mName;
-    Expr* mNamespace;
+    nsAutoPtr<Expr> mName;
+    nsAutoPtr<Expr> mNamespace;
     nsRefPtr<txNamespaceMap> mMappings;
 };
 
@@ -120,12 +118,11 @@ public:
 class txConditionalGoto : public txInstruction
 {
 public:
-    txConditionalGoto(Expr* aCondition, txInstruction* aTarget);
-    ~txConditionalGoto();
+    txConditionalGoto(nsAutoPtr<Expr> aCondition, txInstruction* aTarget);
 
     TX_DECL_TXINSTRUCTION
     
-    Expr* mCondition;
+    nsAutoPtr<Expr> mCondition;
     txInstruction* mTarget;
 };
 
@@ -154,12 +151,11 @@ public:
 class txCopyOf : public txCopyBase
 {
 public:
-    txCopyOf(Expr* aSelect);
-    ~txCopyOf();
+    txCopyOf(nsAutoPtr<Expr> aSelect);
 
     TX_DECL_TXINSTRUCTION
     
-    Expr* mSelect;
+    nsAutoPtr<Expr> mSelect;
 };
 
 class txEndElement : public txInstruction
@@ -202,15 +198,14 @@ class txLREAttribute : public txInstruction
 {
 public:
     txLREAttribute(PRInt32 aNamespaceID, nsIAtom* aLocalName,
-                   nsIAtom* aPrefix, Expr* aValue);
-    virtual ~txLREAttribute();
+                   nsIAtom* aPrefix, nsAutoPtr<Expr> aValue);
 
     TX_DECL_TXINSTRUCTION
 
     PRInt32 mNamespaceID;
     nsCOMPtr<nsIAtom> mLocalName;
     nsCOMPtr<nsIAtom> mPrefix;
-    Expr* mValue;
+    nsAutoPtr<Expr> mValue;
 };
 
 class txMessage : public txInstruction
@@ -232,37 +227,38 @@ public:
 class txProcessingInstruction : public txInstruction
 {
 public:
-    txProcessingInstruction(Expr* aName);
+    txProcessingInstruction(nsAutoPtr<Expr> aName);
 
     TX_DECL_TXINSTRUCTION
 
-    Expr* mName;
+    nsAutoPtr<Expr> mName;
 };
 
 class txPushNewContext : public txInstruction
 {
 public:
-    txPushNewContext(Expr* aSelect);
+    txPushNewContext(nsAutoPtr<Expr> aSelect);
     ~txPushNewContext();
 
     TX_DECL_TXINSTRUCTION
     
     
-    nsresult addSort(Expr* aSelectExpr, Expr* aLangExpr, Expr* aDataTypeExpr,
-                     Expr* aOrderExpr, Expr* aCaseOrderExpr);
+    nsresult addSort(nsAutoPtr<Expr> aSelectExpr, nsAutoPtr<Expr> aLangExpr,
+                     nsAutoPtr<Expr> aDataTypeExpr, nsAutoPtr<Expr> aOrderExpr,
+                     nsAutoPtr<Expr> aCaseOrderExpr);
 
-    Expr* mSelect;
+    nsAutoPtr<Expr> mSelect;
 
     struct SortKey {
-        SortKey(Expr* aSelectExpr, Expr* aLangExpr, Expr* aDataTypeExpr,
-                Expr* aOrderExpr, Expr* aCaseOrderExpr);
-        ~SortKey();
+        SortKey(nsAutoPtr<Expr> aSelectExpr, nsAutoPtr<Expr> aLangExpr,
+                nsAutoPtr<Expr> aDataTypeExpr, nsAutoPtr<Expr> aOrderExpr,
+                nsAutoPtr<Expr> aCaseOrderExpr);
 
-        Expr* mSelectExpr;
-        Expr* mLangExpr;
-        Expr* mDataTypeExpr;
-        Expr* mOrderExpr;
-        Expr* mCaseOrderExpr;
+        nsAutoPtr<Expr> mSelectExpr;
+        nsAutoPtr<Expr> mLangExpr;
+        nsAutoPtr<Expr> mDataTypeExpr;
+        nsAutoPtr<Expr> mOrderExpr;
+        nsAutoPtr<Expr> mCaseOrderExpr;
     };
     
     nsVoidArray mSortKeys;
@@ -325,38 +321,35 @@ public:
 class txSetParam : public txInstruction
 {
 public:
-    txSetParam(const txExpandedName& aName, Expr* aValue);
-    ~txSetParam();
+    txSetParam(const txExpandedName& aName, nsAutoPtr<Expr> aValue);
 
     TX_DECL_TXINSTRUCTION
 
     txExpandedName mName;
-    Expr* mValue;
+    nsAutoPtr<Expr> mValue;
 };
 
 class txSetVariable : public txInstruction
 {
 public:
-    txSetVariable(const txExpandedName& aName, Expr* aValue);
-    ~txSetVariable();
+    txSetVariable(const txExpandedName& aName, nsAutoPtr<Expr> aValue);
 
     TX_DECL_TXINSTRUCTION
 
     txExpandedName mName;
-    Expr* mValue;
+    nsAutoPtr<Expr> mValue;
 };
 
 class txStartElement : public txInstruction
 {
 public:
-    txStartElement(Expr* aName, Expr* aNamespace,
+    txStartElement(nsAutoPtr<Expr> aName, nsAutoPtr<Expr> aNamespace,
                    txNamespaceMap* aMappings);
-    ~txStartElement();
 
     TX_DECL_TXINSTRUCTION
 
-    Expr* mName;
-    Expr* mNamespace;
+    nsAutoPtr<Expr> mName;
+    nsAutoPtr<Expr> mNamespace;
     nsRefPtr<txNamespaceMap> mMappings;
 };
 
@@ -387,12 +380,11 @@ public:
 class txValueOf : public txInstruction
 {
 public:
-    txValueOf(Expr* aExpr, PRBool aDOE);
-    ~txValueOf();
+    txValueOf(nsAutoPtr<Expr> aExpr, PRBool aDOE);
 
     TX_DECL_TXINSTRUCTION
 
-    Expr* mExpr;
+    nsAutoPtr<Expr> mExpr;
     PRBool mDOE;
 };
 

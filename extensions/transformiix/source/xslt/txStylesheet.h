@@ -43,10 +43,11 @@
 #include "txExpandedNameMap.h"
 #include "List.h"
 #include "Expr.h"
+#include "txXSLTPatterns.h"
+#include "txInstructions.h"
 
 class txInstruction;
 class txToplevelItem;
-class txPattern;
 class txTemplateItem;
 class txDecimalFormat;
 class txVariableItem;
@@ -124,7 +125,7 @@ private:
     class MatchableTemplate {
     public:
         MatchableTemplate(txInstruction* aFirstInstruction,
-                          txPattern* aPattern,
+                          nsAutoPtr<txPattern> aPattern,
                           double aPriority)
             : mFirstInstruction(aFirstInstruction),
               mMatch(aPattern),
@@ -132,17 +133,17 @@ private:
         {
         }
         txInstruction* mFirstInstruction;
-        txPattern* mMatch;
+        nsAutoPtr<txPattern> mMatch;
         double mPriority;
     };
     
     class GlobalVariable : public TxObject {
     public:
-        GlobalVariable(Expr* aExpr, txInstruction* aFirstInstruction);
-        ~GlobalVariable();
+        GlobalVariable(nsAutoPtr<Expr> aExpr,
+                       nsAutoPtr<txInstruction> aFirstInstruction);
 
-        Expr* mExpr;
-        txInstruction* mFirstInstruction;
+        nsAutoPtr<Expr> mExpr;
+        nsAutoPtr<txInstruction> mFirstInstruction;
     };
 
     nsresult addTemplate(txTemplateItem* aTemplate, ImportFrame* aImportFrame);

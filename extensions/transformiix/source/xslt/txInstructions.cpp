@@ -75,18 +75,12 @@ txApplyTemplates::execute(txExecutionState& aEs)
     return aEs.runTemplate(templ, this);
 }
 
-txAttribute::txAttribute(Expr* aName, Expr* aNamespace,
+txAttribute::txAttribute(nsAutoPtr<Expr> aName, nsAutoPtr<Expr> aNamespace,
                          txNamespaceMap* aMappings)
     : mName(aName),
       mNamespace(aNamespace),
       mMappings(aMappings)
 {
-}
-
-txAttribute::~txAttribute()
-{
-    delete mName;
-    delete mNamespace;
 }
 
 nsresult
@@ -193,15 +187,11 @@ txCheckParam::execute(txExecutionState& aEs)
     return NS_OK;
 }
 
-txConditionalGoto::txConditionalGoto(Expr* aCondition, txInstruction* aTarget)
+txConditionalGoto::txConditionalGoto(nsAutoPtr<Expr> aCondition,
+                                     txInstruction* aTarget)
     : mCondition(aCondition),
       mTarget(aTarget)
 {
-}
-
-txConditionalGoto::~txConditionalGoto()
-{
-    delete mCondition;
 }
 
 nsresult
@@ -379,14 +369,9 @@ txCopy::execute(txExecutionState& aEs)
     return NS_OK;
 }
 
-txCopyOf::txCopyOf(Expr* aSelect)
+txCopyOf::txCopyOf(nsAutoPtr<Expr> aSelect)
     : mSelect(aSelect)
 {
-}
-
-txCopyOf::~txCopyOf()
-{
-    delete mSelect;
 }
 
 nsresult
@@ -506,17 +491,12 @@ txInsertAttrSet::execute(txExecutionState& aEs)
 }
 
 txLREAttribute::txLREAttribute(PRInt32 aNamespaceID, nsIAtom* aLocalName,
-                               nsIAtom* aPrefix, Expr* aValue)
+                               nsIAtom* aPrefix, nsAutoPtr<Expr> aValue)
     : mNamespaceID(aNamespaceID),
       mLocalName(aLocalName),
       mPrefix(aPrefix),
       mValue(aValue)
 {
-}
-
-txLREAttribute::~txLREAttribute()
-{
-    delete mValue;
 }
 
 nsresult
@@ -577,7 +557,7 @@ txPopParams::execute(txExecutionState& aEs)
     return NS_OK;
 }
 
-txProcessingInstruction::txProcessingInstruction(Expr* aName)
+txProcessingInstruction::txProcessingInstruction(nsAutoPtr<Expr> aName)
     : mName(aName)
 {
 }
@@ -609,15 +589,13 @@ txProcessingInstruction::execute(txExecutionState& aEs)
     return NS_OK;
 }
 
-txPushNewContext::txPushNewContext(Expr* aSelect)
+txPushNewContext::txPushNewContext(nsAutoPtr<Expr> aSelect)
     : mSelect(aSelect)
 {
 }
 
 txPushNewContext::~txPushNewContext()
 {
-    delete mSelect;
-
     PRInt32 i;
     for (i = 0; i < mSortKeys.Count(); ++i)
     {
@@ -671,8 +649,11 @@ txPushNewContext::execute(txExecutionState& aEs)
 }
 
 nsresult
-txPushNewContext::addSort(Expr* aSelectExpr, Expr* aLangExpr, Expr* aDataTypeExpr,
-                          Expr* aOrderExpr, Expr* aCaseOrderExpr)
+txPushNewContext::addSort(nsAutoPtr<Expr> aSelectExpr,
+                          nsAutoPtr<Expr> aLangExpr,
+                          nsAutoPtr<Expr> aDataTypeExpr,
+                          nsAutoPtr<Expr> aOrderExpr,
+                          nsAutoPtr<Expr> aCaseOrderExpr)
 {
     SortKey* sort = new SortKey(aSelectExpr, aLangExpr, aDataTypeExpr,
                                 aOrderExpr, aCaseOrderExpr);
@@ -686,22 +667,15 @@ txPushNewContext::addSort(Expr* aSelectExpr, Expr* aLangExpr, Expr* aDataTypeExp
     return NS_OK;
 }
 
-txPushNewContext::SortKey::SortKey(Expr* aSelectExpr, Expr* aLangExpr,
-                                   Expr* aDataTypeExpr, Expr* aOrderExpr,
-                                   Expr* aCaseOrderExpr)
+txPushNewContext::SortKey::SortKey(nsAutoPtr<Expr> aSelectExpr,
+                                   nsAutoPtr<Expr> aLangExpr,
+                                   nsAutoPtr<Expr> aDataTypeExpr,
+                                   nsAutoPtr<Expr> aOrderExpr,
+                                   nsAutoPtr<Expr> aCaseOrderExpr)
     : mSelectExpr(aSelectExpr), mLangExpr(aLangExpr),
       mDataTypeExpr(aDataTypeExpr), mOrderExpr(aOrderExpr),
       mCaseOrderExpr(aCaseOrderExpr)
 {
-}
-
-txPushNewContext::SortKey::~SortKey()
-{
-    delete mSelectExpr;
-    delete mLangExpr;
-    delete mDataTypeExpr;
-    delete mOrderExpr;
-    delete mCaseOrderExpr;
 }
 
 nsresult
@@ -785,14 +759,9 @@ txReturn::execute(txExecutionState& aEs)
     return NS_OK;
 }
 
-txSetParam::txSetParam(const txExpandedName& aName, Expr* aValue)
+txSetParam::txSetParam(const txExpandedName& aName, nsAutoPtr<Expr> aValue)
     : mName(aName), mValue(aValue)
 {
-}
-
-txSetParam::~txSetParam()
-{
-    delete mValue;
 }
 
 nsresult
@@ -824,14 +793,10 @@ txSetParam::execute(txExecutionState& aEs)
     return NS_OK;
 }
 
-txSetVariable::txSetVariable(const txExpandedName& aName, Expr* aValue)
+txSetVariable::txSetVariable(const txExpandedName& aName,
+                             nsAutoPtr<Expr> aValue)
     : mName(aName), mValue(aValue)
 {
-}
-
-txSetVariable::~txSetVariable()
-{
-    delete mValue;
 }
 
 nsresult
@@ -858,18 +823,13 @@ txSetVariable::execute(txExecutionState& aEs)
     return NS_OK;
 }
 
-txStartElement::txStartElement(Expr* aName, Expr* aNamespace,
+txStartElement::txStartElement(nsAutoPtr<Expr> aName,
+                               nsAutoPtr<Expr> aNamespace,
                                txNamespaceMap* aMappings)
     : mName(aName),
       mNamespace(aNamespace),
       mMappings(aMappings)
 {
-}
-
-txStartElement::~txStartElement()
-{
-    delete mName;
-    delete mNamespace;
 }
 
 nsresult
@@ -989,15 +949,10 @@ txText::execute(txExecutionState& aEs)
     return NS_OK;
 }
 
-txValueOf::txValueOf(Expr* aExpr, PRBool aDOE)
+txValueOf::txValueOf(nsAutoPtr<Expr> aExpr, PRBool aDOE)
     : mExpr(aExpr),
       mDOE(aDOE)
 {
-}
-
-txValueOf::~txValueOf()
-{
-    delete mExpr;
 }
 
 nsresult

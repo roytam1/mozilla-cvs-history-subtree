@@ -72,13 +72,7 @@ public:
 class txInstructionContainer : public txToplevelItem
 {
 public:
-    txInstructionContainer() : mFirstInstruction(0)
-    {
-    }
-
-    virtual ~txInstructionContainer();
-
-    txInstruction* mFirstInstruction;
+    nsAutoPtr<txInstruction> mFirstInstruction;
 };
 
 // xsl:attribute-set
@@ -158,16 +152,15 @@ private:
 class txTemplateItem : public txInstructionContainer
 {
 public:
-    txTemplateItem(txPattern* aMatch, const txExpandedName& aName,
+    txTemplateItem(nsAutoPtr<txPattern> aMatch, const txExpandedName& aName,
                    const txExpandedName& aMode, double aPrio);
-    virtual ~txTemplateItem();
 
     virtual txToplevelItem::type getType()
     {
         return txToplevelItem::templ;
     }
-    
-    txPattern* mMatch;
+
+    nsAutoPtr<txPattern> mMatch;
     txExpandedName mName;
     txExpandedName mMode;
     double mPrio;
@@ -177,8 +170,8 @@ public:
 class txVariableItem : public txInstructionContainer
 {
 public:
-    txVariableItem(const txExpandedName& aName, Expr* aValue, PRBool aIsParam);
-    ~txVariableItem();
+    txVariableItem(const txExpandedName& aName, nsAutoPtr<Expr> aValue,
+                   PRBool aIsParam);
     
     virtual txToplevelItem::type getType()
     {
@@ -186,7 +179,7 @@ public:
     }
 
     txExpandedName mName;
-    Expr* mValue;
+    nsAutoPtr<Expr> mValue;
     PRBool mIsParam;
 };
 
