@@ -130,7 +130,8 @@ static void InitIPCMethods()
 #endif
 
 NS_IMETHODIMP
-ipcSocketProviderUnix::NewSocket(const char *host,
+ipcSocketProviderUnix::NewSocket(PRInt32 family,
+                                 const char *host,
                                  PRInt32 port,
                                  const char *proxyHost,
                                  PRInt32 proxyPort,
@@ -170,7 +171,8 @@ loser:
 }
 
 NS_IMETHODIMP
-ipcSocketProviderUnix::AddToSocket(const char *host,
+ipcSocketProviderUnix::AddToSocket(PRInt32 family,
+                                   const char *host,
                                    PRInt32 port,
                                    const char *proxyHost,
                                    PRInt32 proxyPort,
