@@ -93,33 +93,6 @@ nsDownloadManager::nsDownloadManager() : mCurrDownloads(nsnull),
 
 nsDownloadManager::~nsDownloadManager()
 {
-
-  // get the downloads container
-  nsCOMPtr<nsIRDFContainer> downloads;
-  nsresult rv = GetDownloadsContainer(getter_AddRefs(downloads));
-
-  // get the container's elements (nsIRDFResource's)
-  nsCOMPtr<nsISimpleEnumerator> items;
-  rv = downloads->GetElements(getter_AddRefs(items));
-
-  // enumerate the resources, use their ids to retrieve the corresponding
-  // nsIDownloads from the hashtable (if they don't exist, the download isn't
-  // a current transfer), get the items' progress information,
-  // and assert it into the graph
-
-  PRBool moreElements;
-  items->HasMoreElements(&moreElements);
-  for( ; moreElements; items->HasMoreElements(&moreElements)) {
-    nsCOMPtr<nsISupports> supports;
-    items->GetNext(getter_AddRefs(supports));
-    nsCOMPtr<nsIRDFResource> res = do_QueryInterface(supports);
-    char* id;
-    res->GetValue(&id);
-    nsCStringKey key(id);
-    if (mCurrDownloads->Exists(&key))
-      CancelDownload(id);
-  }
-
   gRDFService->UnregisterDataSource(mDataSource);
 
   NS_IF_RELEASE(gNC_DownloadsRoot);                                             
@@ -874,13 +847,14 @@ nsDownloadManager::HandleEvent(nsIDOMEvent* aEvent)
 NS_IMETHODIMP
 nsDownloadManager::Observe(nsISupports* aSubject, const char* aTopic, const PRUnichar* aData)
 {
-  nsCOMPtr<nsIProgressDialog> dialog = do_QueryInterface(aSubject);
+  nsresult rv;
   if (nsCRT::strcmp(aTopic, "oncancel") == 0) {
+    nsCOMPtr<nsIProgressDialog> dialog = do_QueryInterface(aSubject);
     nsCOMPtr<nsILocalFile> target;
     dialog->GetTarget(getter_AddRefs(target));
     
     nsCAutoString path;
-    nsresult rv = target->GetNativePath(path);
+    rv = target->GetNativePath(path);
     if (NS_FAILED(rv)) return rv;
     
     nsCStringKey key(path);
