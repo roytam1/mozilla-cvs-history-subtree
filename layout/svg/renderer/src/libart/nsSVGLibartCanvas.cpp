@@ -88,7 +88,6 @@ nsSVGLibartCanvas::nsSVGLibartCanvas()
 
 nsSVGLibartCanvas::~nsSVGLibartCanvas()
 {
-  Flush();
 }
 
 nsresult
