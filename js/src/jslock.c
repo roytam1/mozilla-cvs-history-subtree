@@ -101,7 +101,7 @@ js_CompareAndSwap(jsword *w, jsword ov, jsword nv)
 #if defined(__GNUC__)
     unsigned int res;
 #ifndef ULTRA_SPARC
-    JS_ASSERT(nv >= 0);
+    JS_ASSERT(nv != -1);
     asm volatile ("
 stbar
 swap [%1],%4
@@ -135,7 +135,7 @@ mov 0,%0
 #else /* !__GNUC__ */
     extern int compare_and_swap(jsword*,jsword,jsword);
 #ifndef ULTRA_SPARC
-    JS_ASSERT(nv >= 0);
+    JS_ASSERT(nv != -1);
 #else
     JS_ASSERT(ov != nv);
 #endif
