@@ -84,21 +84,15 @@ LLIBS	= \
 
 DEFFILE	= $(DLL1NAME).def
 !else
-LLIBS	= $(LIBNSPR) $(DIST)\lib\js$(MOZ_BITS)$(VERSION_NUMBER).lib \
 !if defined(MOZ_DEBUG) && defined(GLOWCODE)
 	$(GLOWDIR)\glowcode.lib \
 !endif
-<<<<<<< makefile.win
-	$(HASHLIBS)
-=======
-!else
 LLIBS	= \
 	$(DIST)\lib\libplc21.lib \
 	$(LIBNSPR) \
 	$(DIST)\lib\js$(MOZ_BITS)$(VERSION_NUMBER).lib \
 	$(DIST)\lib\xpcom32.lib \
 	$(HASHLIBS)
->>>>>>> 3.1.8.1
 !endif
 
 

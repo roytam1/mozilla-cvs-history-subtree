@@ -28,13 +28,6 @@
 #include "jspubtd.h"
 
 #ifdef XP_WIN
-<<<<<<< prefapi.h
-/* NSPR 1.0 compatibility */
-#ifdef NSPR
-#include "prhash.h"
-#else
-=======
->>>>>>> 3.1.8.2
 #include "plhash.h"
 #endif
 
@@ -385,14 +378,9 @@ PR_EXTERN(PRBool) PREF_IsAutoAdminEnabled(void);
 #ifdef XP_UNIX
 typedef void* XmStringPtr;
 typedef void* KeySymPtr;
-<<<<<<< prefapi.h
-PR_EXTERN(XP_Bool) PREF_GetLabelAndMnemonic(char*, char**, XmStringPtr xmstring, KeySymPtr keysym);
-PR_EXTERN(XP_Bool) PREF_GetUrl(char*, char**);
-=======
 PR_EXTERN(void) PREF_AlterSplashIcon(struct fe_icon_data*);
 PR_EXTERN(PRBool) PREF_GetLabelAndMnemonic(char*, char**, XmStringPtr xmstring, KeySymPtr keysym);
 PR_EXTERN(PRBool) PREF_GetUrl(char*, char**);
->>>>>>> 3.1.8.2
 #endif
 
 NSPR_END_EXTERN_C
