@@ -260,6 +260,7 @@ Contributor(s): ______________________________________. -->
                      datasources="rdf:bookmarks rdf:files rdf:localsearch rdf:internetsearch"
                      ref="NC:BookmarksRoot" container="true" flags="dont-test-empty"
                      oncommand="OpenBookmarkURL(event.target,document.getElementById('BookmarksMenu').database)" 
+                     ondraggesture="if (navigator.appVersion.indexOf('X11') != -1) event.preventBubble();"
                      ondragover="nsDragAndDrop.dragOver(event, folderObserver);"
                      template="bookmarksMenuTemplate">
         <menupopup onpopuphiding="gDidOpen = false;"
