@@ -52,11 +52,15 @@ namespace JS2Runtime {
 
 using namespace ByteCode;
 
-JSType *Object_Type = new JSType(NULL);
-JSType *Number_Type = new JSType(Object_Type);
-JSType *String_Type = new JSType(Object_Type);
-JSType *Boolean_Type = new JSType(Object_Type);
-JSType *Type_Type = new JSType(Object_Type);
+//
+// XXX don't these belong in the context? But don't
+// they need to compare equal across contexts?
+//
+JSType *Object_Type = NULL;
+JSType *Number_Type;
+JSType *String_Type;
+JSType *Boolean_Type;
+JSType *Type_Type;
 
 bool hasAttribute(const IdentifierList* identifiers, Token::Kind tokenKind)
 {
@@ -316,7 +320,7 @@ void Context::buildRuntime(StmtNode *p)
 {
     mScopeChain.addScope(mGlobal);
     while (p) {
-        mScopeChain.processDeclarations(p);   // adds declarations for each top-level entity in p
+        mScopeChain.collectNames(p);          // adds declarations for each top-level entity in p
         buildRuntimeForStmt(p);               // adds definitions as they exist for ditto
         p = p->next;
     }
@@ -352,7 +356,7 @@ bool Context::executeOperator(Operator op, JSType *t1, JSType *t2)
     // XXX more code needed here, obviously
 
     if (candidate->isNative()) {
-        // JSValue result = candidate->mCode(this, &mStack.at(mStack.size() - 2), 2);
+        // if the candidate can't 
         JSValue result = candidate->mCode(this, mStack.end() - 2, 2);
         mStack.pop_back();      // XXX
         mStack.pop_back();
@@ -391,17 +395,18 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     uint32 argCount = *((uint32 *)pc); 
                     pc += sizeof(uint32);
                     
-                    // JSValue *targetValue = &mStack.at(mStack.size() - (argCount + 1));
                     JSValue *targetValue = mStack.end() - (argCount + 1);
-                    ASSERT(targetValue->isFunction());
+                    if (!targetValue->isFunction())
+                        throw Exception(Exception::referenceError, "Not a function");
                     JSFunction *target = targetValue->function;
-                    JSValue *argBase = NULL;
+                    uint32 argBase = 0;
 
                     if (mStack.size() > argCount)
-                        argBase = targetValue + 1;
+                        argBase = mStack.size() - argCount;
 
                     if (target->mByteCode) {
-                        mActivationStack.push(new Activation(mLocals, mArgumentBase, pc, mCurModule));
+                        mActivationStack.push(new Activation(mLocals, mArgumentBase, 
+                                                                    pc, mCurModule, argCount));
                         mCurModule = target->mByteCode;
                         pc = mCurModule->mCodeBase;
                         endPC = mCurModule->mCodeBase + mCurModule->mLength;
@@ -410,14 +415,14 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                         mLocals = new JSValue[mCurModule->mLocalsCount];
                     }
                     else {
-                        JSValue result = (target->mCode)(this, argBase, argCount);
-                        mStack.erase(argBase, mStack.end());
+                        JSValue result = (target->mCode)(this, &mStack[argBase], argCount);
+                        mStack.erase(&mStack[argBase], mStack.end());
                         mStack.push_back(result);
                     }
 
                 }
                 break;
-            case ReturnOp:
+            case ReturnVoidOp:
                 {
                     Activation *prev = mActivationStack.top();
                     mActivationStack.pop();
@@ -428,6 +433,34 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     mLocals = new JSValue[mCurModule->mLocalsCount];
                     memcpy(mLocals, prev->mLocals, sizeof(JSValue) * mCurModule->mLocalsCount);
                     mArgumentBase = prev->mArgumentBase;
+
+                    mStack.resize(mStack.size() - (prev->mArgCount + 1));
+                }
+                break;
+            case ReturnOp:
+                {
+                    JSValue result = mStack.back();
+                    mStack.pop_back();
+
+                    Activation *prev = mActivationStack.top();
+                    mActivationStack.pop();
+
+                    mCurModule = prev->mModule;
+                    pc = prev->mPC;
+                    endPC = mCurModule->mCodeBase + mCurModule->mLength;
+                    mLocals = new JSValue[mCurModule->mLocalsCount];
+                    memcpy(mLocals, prev->mLocals, sizeof(JSValue) * mCurModule->mLocalsCount);
+                    mArgumentBase = prev->mArgumentBase;
+
+                    mStack.resize(mStack.size() - (prev->mArgCount + 1));
+                    mStack.push_back(result);
+                }
+                break;
+            case LoadTypeOp:
+                {
+                    JSType *t = *((JSType **)pc);
+                    pc += sizeof(JSType *);
+                    mStack.push_back(JSValue(t));
                 }
                 break;
             case LoadFunctionOp:
@@ -475,11 +508,15 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 {
                     JSValue base = mStack.back();
                     mStack.pop_back();
-                    ASSERT(base.isObject() || base.isType());
+                    JSObject *obj = NULL;
+                    if (!base.isObject() && !base.isType())
+                        obj = base.toObject(this).object;
+                    else
+                        obj = base.object;
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     const String &name = *mCurModule->getString(index);
-                    if (base.object->getProperty(this, name) ) {
+                    if (obj->getProperty(this, name) ) {
                         // need to invoke
                     }
                 }
@@ -490,11 +527,15 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     mStack.pop_back();
                     JSValue base = mStack.back();
                     mStack.pop_back();
-                    ASSERT(base.isObject() || base.isType());
+                    JSObject *obj = NULL;
+                    if (!base.isObject() && !base.isType())
+                        obj = base.toObject(this).object;
+                    else
+                        obj = base.object;
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     const String &name = *mCurModule->getString(index);
-                    if (base.object->setProperty(this, name, v) ) {
+                    if (obj->setProperty(this, name, v) ) {
                         // need to invoke
                     }
                 }
@@ -502,8 +543,6 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
             case DoOperatorOp:
                 {
                     Operator op = (Operator)(*pc++);
-                    // JSValue v1 = mStack.at(mStack.size() - 2);
-                    // JSValue v2 = mStack.back();
                     JSValue v1 = *(mStack.end() - 2);
                     JSValue v2 = *(mStack.end() - 1);
                     if (executeOperator(op, v1.getType(), v2.getType())) {
@@ -546,21 +585,21 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 break;
             case LoadThisOp:
                 {
-                    mStack.push_back(mArgumentBase[0]);
+                    mStack.push_back(mStack[mArgumentBase + 0]);
                 }
                 break;
             case GetArgOp:
                 {
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
-                    mStack.push_back(mArgumentBase[index]);
+                    mStack.push_back(mStack[mArgumentBase + index]);
                 }
                 break;
             case SetArgOp:
                 {
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
-                    mArgumentBase[index] = mStack.back();
+                    mStack[mArgumentBase + index] = mStack.back();
                     mStack.pop_back();
                 }
                 break;
@@ -568,18 +607,29 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 {
                     JSValue base = mStack.back();
                     mStack.pop_back();
-                    ASSERT(base.isObject() || base.isType());
+                    ASSERT(dynamic_cast<JSInstance *>(base.object));
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     mStack.push_back(JSValue(base.object->mType->mMethods[index]));
                     mStack.push_back(base);
                 }
                 break;
+            case GetStaticMethodOp:
+                {
+                    JSValue base = mStack.back();
+                    mStack.pop_back();
+                    ASSERT(dynamic_cast<JSType *>(base.object));
+                    uint32 index = *((uint32 *)pc);
+                    pc += sizeof(uint32);
+                    JSType *classP = (JSType *)(base.object);
+                    ASSERT(classP->mStatics);
+                    mStack.push_back(JSValue(classP->mStatics->mMethods[index]));
+                }
+                break;
             case GetFieldOp:
                 {
                     JSValue base = mStack.back();
                     mStack.pop_back();
-                    ASSERT(base.isObject() || base.isType());
                     ASSERT(dynamic_cast<JSInstance *>(base.object));
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
@@ -592,11 +642,36 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     mStack.pop_back();
                     JSValue base = mStack.back();
                     mStack.pop_back();
-                    ASSERT(base.isObject() || base.isType());
                     ASSERT(dynamic_cast<JSInstance *>(base.object));
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     ((JSInstance *)(base.object))->mInstanceValues[index] = v;
+                }
+                break;
+            case GetStaticFieldOp:
+                {
+                    JSValue base = mStack.back();
+                    mStack.pop_back();
+                    ASSERT(dynamic_cast<JSType *>(base.object));
+                    JSType *classP = (JSType *)(base.object);
+                    ASSERT(classP->mStatics);
+                    uint32 index = *((uint32 *)pc);
+                    pc += sizeof(uint32);
+                    mStack.push_back(classP->mStatics->mInstanceValues[index]);
+                }
+                break;
+            case SetStaticFieldOp:
+                {
+                    JSValue v = mStack.back();
+                    mStack.pop_back();
+                    JSValue base = mStack.back();
+                    mStack.pop_back();
+                    ASSERT(dynamic_cast<JSType *>(base.object));
+                    JSType *classP = (JSType *)(base.object);
+                    ASSERT(classP->mStatics);
+                    uint32 index = *((uint32 *)pc);
+                    pc += sizeof(uint32);
+                    classP->mStatics->mInstanceValues[index] = v;
                 }
                 break;
             case PushScopeOp:
@@ -610,7 +685,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 }
                 break;
             default:
-                throw Exception(Exception::runtimeError, "Bad Opcode");
+                throw Exception(Exception::internalError, "Bad Opcode");
             }
         }
         catch (Exception x) {
@@ -622,7 +697,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
 }
 
 //  The first pass over the tree - it just installs the names of each declaration
-void ScopeChain::processDeclarations(StmtNode *p)
+void ScopeChain::collectNames(StmtNode *p)
 {
     switch (p->getKind()) {
         // XXX - other statements, execute them (assuming they have constant control values) ?
@@ -639,11 +714,11 @@ void ScopeChain::processDeclarations(StmtNode *p)
         break;
     case StmtNode::block:
         {
-            // should push a new Activation scope here
+            // should push a new Activation scope here?
             BlockStmtNode *b = static_cast<BlockStmtNode *>(p);
             StmtNode *s = b->statements;
             while (s) {
-                processDeclarations(s);
+                collectNames(s);
                 s = s->next;
             }            
         }
@@ -684,17 +759,96 @@ void ScopeChain::processDeclarations(StmtNode *p)
                         p->prop = defineStaticMethod(name, NULL);
                         PROPERTY_KIND(p->prop) = Constructor;
                     }
-                    else
-                        if (isStatic)
-                            p->prop = defineStaticMethod(name, NULL);
-                        else
-                            p->prop = defineMethod(name, NULL);
+                    else {
+                        switch (f->function.prefix) {
+                        case FunctionName::Get:
+                            p->prop = defineGetterMethod(name, NULL);
+                            break;
+                        case FunctionName::Set:
+                            p->prop = defineSetterMethod(name, NULL);
+                            break;
+                        case FunctionName::normal:
+                            if (isStatic)
+                                p->prop = defineStaticMethod(name, NULL);
+                            else
+                                p->prop = defineMethod(name, NULL);
+                            break;
+                        default:
+                            NOT_REACHED("unexpected prefix");
+                            break;
+                        }
+                    }
                 }
             }
         }
         break;
     }
 }
+
+void JSType::completeClass(ScopeChain *scopeChain, JSType *super)
+{    
+    // Note test of mStatics:
+    // we want to complete the statics classes but not to the
+    // extent of providing a default constructor.
+
+    // if none exists, build a default constructor that calls 'super()'
+    if (mStatics && getDefaultConstructor() == NULL) {
+        JSFunction *fnc = new JSFunction(NULL);
+        ByteCodeGen bcg(scopeChain);
+
+        if (mSuperType && mSuperType->getDefaultConstructor()) {
+            bcg.addByte(LoadFunctionOp);
+            bcg.addPointer(mSuperType->getDefaultConstructor());
+            bcg.addByte(LoadThisOp);
+            bcg.addByte(InvokeOp);
+            bcg.addLong(1);
+        }
+        bcg.addByte(LoadThisOp);
+        bcg.addByte(ReturnOp);
+        fnc->mByteCode = new ByteCodeModule(&bcg);        
+
+        PropertyIterator propIt = scopeChain->defineStaticMethod(mClassName, NULL);
+        PROPERTY_KIND(propIt) = Constructor;
+
+        scopeChain->setStaticValue(PROPERTY(propIt), JSValue(fnc));                
+    }
+
+    // add the super type instance variable count into the slot indices
+    uint32 superInstanceVarCount = 0;
+    uint32 super_vTableCount = 0;
+    if (super) {
+        superInstanceVarCount = super->mVariableCount;
+        super_vTableCount = super->mMethods.size();
+    }
+
+    mVariableCount += superInstanceVarCount;
+    if (superInstanceVarCount) {
+        for (PropertyIterator i = mProperties.begin(), 
+                    end = mProperties.end();
+                    (i != end); i++) {            
+            if (PROPERTY_KIND(i) == Slot)
+                PROPERTY_INDEX(i) += superInstanceVarCount;
+        }
+    }
+    
+    // likewise for the vTable
+    if (super_vTableCount) {
+        for (PropertyIterator i = mProperties.begin(), 
+                    end = mProperties.end();
+                    (i != end); i++) {            
+            if ((PROPERTY_KIND(i) == Method) 
+                    || (PROPERTY_KIND(i) == Constructor))
+                PROPERTY_INDEX(i) += super_vTableCount;
+        }
+        mMethods.insert(mMethods.begin(), 
+                            super->mMethods.begin(), 
+                            super->mMethods.end());
+    }
+    // complete the static class (inherit static instances etc)
+    if (mStatics && mSuperType)
+        mStatics->completeClass(scopeChain, mSuperType->mStatics);
+}
+
 
 // Second pass, collect type information
 void Context::buildRuntimeForStmt(StmtNode *p)
@@ -746,8 +900,19 @@ void Context::buildRuntimeForStmt(StmtNode *p)
                         isConstructor = true;
                     if (isStatic || isConstructor)
                         mScopeChain.setStaticValue(prop, JSValue(fnc));
-                    else
-                        mScopeChain.setValue(prop, JSValue(fnc));
+                    else {
+                        switch (f->function.prefix) {
+                        case FunctionName::Get:
+                            mScopeChain.setGetterValue(prop, fnc);
+                            break;
+                        case FunctionName::Set:
+                            mScopeChain.setSetterValue(prop, fnc);
+                            break;
+                        case FunctionName::normal:
+                            mScopeChain.setValue(prop, JSValue(fnc));
+                            break;
+                        }
+                    }
                 }
                 else
                     ASSERT(false);
@@ -764,8 +929,8 @@ void Context::buildRuntimeForStmt(StmtNode *p)
                 }
                 v = v->next;
             }
-            mScopeChain.addScope(fnc);        // local variables are added to the function object
-            mScopeChain.processDeclarations(f->function.body);
+            mScopeChain.addScope(&fnc->mActivation);
+            mScopeChain.collectNames(f->function.body);
             buildRuntimeForStmt(f->function.body);
             mScopeChain.popScope();
             mScopeChain.popScope();
@@ -791,7 +956,7 @@ void Context::buildRuntimeForStmt(StmtNode *p)
             if (classStmt->body) {
                 StmtNode* s = classStmt->body->statements;
                 while (s) {
-                    mScopeChain.processDeclarations(s);
+                    mScopeChain.collectNames(s);
                     s = s->next;
                 }
                 s = classStmt->body->statements;
@@ -800,27 +965,39 @@ void Context::buildRuntimeForStmt(StmtNode *p)
                     s = s->next;
                 }
             }
-            mScopeChain.popScope();
-            mScopeChain.popScope();
-            thisClass->completeClass(superClass);
+            thisClass->completeClass(&mScopeChain, superClass);
             thisClass->createStaticInstance();      // XXX should be a part of the class initialization code
+
+            mScopeChain.popScope();
+            mScopeChain.popScope();
         }        
         break;
     }
 
 }
 
-JSValue numberAdd(Context *cx, JSValue *argv, uint32 argc)
+JSValue numberPlus(Context *cx, JSValue *argv, uint32 argc)
 {
     return JSValue(argv[0].f64 + argv[1].f64);
 }
 
-JSValue objectAdd(Context *cx, JSValue *argv, uint32 argc)
+JSValue numberMinus(Context *cx, JSValue *argv, uint32 argc)
+{
+    return JSValue(argv[0].f64 - argv[1].f64);
+}
+
+JSValue objectPlus(Context *cx, JSValue *argv, uint32 argc)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
-    if (r1.isNumber() && r2.isNumber())
-        return JSValue(r1.toNumber().f64 + r2.toNumber().f64);
+    if (r1.isNumber() && r2.isNumber()) {
+//        try {
+            return JSValue(r1.toNumber(cx).f64 + r2.toNumber(cx).f64);
+//        }
+//        catch (HotPotato) {
+            // push invocation of toNumber, toNumber, Plus onto stack
+//        }
+    }
 
     if (r1.isString()) {
         if (r2.isString())
@@ -844,20 +1021,53 @@ JSValue objectAdd(Context *cx, JSValue *argv, uint32 argc)
                     return JSValue(new String(*r1p.toString(cx).string + *r2p.string));
             }
             else {
-                JSValue num1(r1.toNumber());
-                JSValue num2(r2.toNumber());
+                JSValue num1(r1.toNumber(cx));
+                JSValue num2(r2.toNumber(cx));
                 return JSValue(num1.f64 + num2.f64);
             }
         }
     }
 }
 
+struct OpTableEntry {
+    Operator which;
+    JSType *op1;
+    JSType *op2;
+    JSFunction::NativeCode *imp;
+    JSType *resType;
+} OpTable[] = {
+    { Plus,  Object_Type, Object_Type, objectPlus,  Object_Type },
+    { Plus,  Number_Type, Number_Type, numberPlus,  Number_Type },
+
+    { Minus, Number_Type, Number_Type, numberMinus, Number_Type },
+};
+
 void Context::initOperators()
 {
-    mOperatorTable[Plus].push_back(new OperatorDefinition(Object_Type, Object_Type, new JSFunction(objectAdd, Object_Type)));
-    mOperatorTable[Plus].push_back(new OperatorDefinition(Number_Type, Number_Type, new JSFunction(numberAdd, Number_Type)));
+    for (int i = 0; i < sizeof(OpTable) / sizeof(OpTableEntry); i++) {
+        JSFunction *f = new JSFunction(OpTable[i].imp, OpTable[i].resType);
+        OperatorDefinition *op = new OperatorDefinition(OpTable[i].op1, OpTable[i].op2, f);
+        mOperatorTable[OpTable[i].which].push_back(op);
+    }
 }
 
+JSValue Number_Constructor(Context *cx, JSValue *argv, uint32 argc)
+{
+    ASSERT(argc >= 1);
+    ASSERT(argv[0].isObject());
+    JSValue that = argv[0];
+    JSObject *thatObj = that.object;
+    if (argc > 1)
+        thatObj->mPrivate = argv[1];
+    else
+        thatObj->mPrivate = kPositiveZero;
+    return that;
+}
+
+JSValue Number_ToString(Context *cx, JSValue *argv, uint32 argc)
+{
+    return argv[0].toString(cx);
+}
 
 bool JSValue::isNaN() const
 {
@@ -919,7 +1129,47 @@ bool JSValue::isPositiveZero() const
     }
 }
 
-JSValue JSValue::valueToNumber(const JSValue& value) // can assume value is not a number
+JSValue JSValue::valueToObject(Context *cx, JSValue& value)
+{
+    switch (value.tag) {
+    case f64_tag:
+        {
+            JSObject *obj = Number_Type->newInstance();
+            JSFunction *defCon = Number_Type->getDefaultConstructor();
+            JSValue argv[2];
+            argv[0] = JSValue(obj);
+            argv[1] = value;
+            if (defCon->mCode) {
+                (defCon->mCode)(cx, &argv[0], 2); 
+            }
+            else {
+                ASSERT(false);  // need to throw a hot potato back to
+                                // ye interpreter loop
+            }
+            return argv[0];
+        }
+/*
+    case boolean_tag:
+        return JSValue((value.boolean) ? 1.0 : 0.0);
+    case string_tag: 
+        {
+            const char16 *numEnd;
+	    double d = stringToDouble(value.string->begin(), value.string->end(), numEnd);
+            return JSValue(d);
+        }
+*/
+    case object_tag:
+    case function_tag:
+        return value;
+    case undefined_tag:
+        return value;
+    default:
+        NOT_REACHED("Bad tag");
+        return kUndefinedValue;
+    }
+}
+
+JSValue JSValue::valueToNumber(Context *cx, JSValue& value)
 {
     switch (value.tag) {
     case f64_tag:
@@ -932,9 +1182,7 @@ JSValue JSValue::valueToNumber(const JSValue& value) // can assume value is not 
         }
     case object_tag:
     case function_tag:
-        // XXX more needed :
-        // toNumber(toPrimitive(hint Number))
-        return kUndefinedValue;
+        return value.toPrimitive(cx, NumberHint).toNumber(cx);
     case boolean_tag:
         return JSValue((value.boolean) ? 1.0 : 0.0);
     case undefined_tag:
@@ -945,7 +1193,7 @@ JSValue JSValue::valueToNumber(const JSValue& value) // can assume value is not 
     }
 }
               
-JSValue JSValue::valueToString(Context *cx, const JSValue& value)
+JSValue JSValue::valueToString(Context *cx, JSValue& value)
 {
     const char* chrp = NULL;
     JSObject *obj = NULL;
@@ -972,47 +1220,35 @@ JSValue JSValue::valueToString(Context *cx, const JSValue& value)
         NOT_REACHED("Bad tag");
     }
     if (obj) {
-        return JSValue(new JavaScript::String(widenCString("object")));
-/*
-
-    Here we need to try invoking various methods on the 
-    discovered object, 'obj' - this requires handling the
-    case where 'toString' is a getter method that returns
-    a value etc. etc. blah blah ?
-
-  So we actually need to execute 'getProperty <toString>'
-
-
         JSFunction *target = NULL;
-        const JSValue &toString = obj->getProperty(widenCString("toString"));
-        if (toString.isFunction()) {
-            target = toString.function;
+        if (obj->hasProperty(widenCString("toString"), Read)) {
+            JSValue v = obj->getProperty(widenCString("toString"));
+            if (v.isFunction())
+                target = v.function;
         }
-        else {    
-            const JSValue &valueOf = obj->getProperty(widenCString("valueOf"));
-            if (valueOf.isFunction())
-                target = valueOf.function;
+        if (target == NULL) {
+            if (obj->hasProperty(widenCString("valueOf"), Read)) {
+                JSValue v = obj->getProperty(widenCString("valueOf"));
+                if (v.isFunction())
+                    target = v.function;
+            }
         }
         if (target) {
-            if (target->isNative()) {
-                JSValues argv(1);
-                argv[0] = value;
-                return static_cast<JSNativeFunction*>(target)->mCode(cx, argv);
+            if (target->mByteCode) {
+                // XXX
+
             }
-            else {
-                return cx->interpret(target->getICode(), JSValues());
-            }
+            else
+                return (target->mCode)(cx, &value, 1);
         }
         throw new Exception(Exception::runtimeError, "toString");    // XXX
-*/
     }
-
     else
         return JSValue(new JavaScript::String(widenCString(chrp)));
 
 }
 
-JSValue JSValue::toPrimitive(Context *cx, ECMA_type hint) const
+JSValue JSValue::toPrimitive(Context *cx, Hint hint)
 {
     JSObject *obj;
     switch (tag) {
@@ -1041,7 +1277,7 @@ JSValue JSValue::toPrimitive(Context *cx, ECMA_type hint) const
 
     // The following is [[DefaultValue]]
     //
-    if ((hint == Number) || (hint == NoHint)) {
+    if ((hint == NumberHint) || (hint == NoHint)) {
         const JSValue &valueOf = obj->getProperty(widenCString("valueOf"));
         if (valueOf.isFunction()) {
             target = valueOf.function;

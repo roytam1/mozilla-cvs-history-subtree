@@ -49,8 +49,8 @@ namespace JS2Runtime {
 
 using namespace ByteCode;
 
-Activation::Activation(JSValue *locals, JSValue *argBase, uint8 *pc, ByteCodeModule *module)
-    : JSType(NULL), mArgumentBase(argBase), mPC(pc), mModule(module) 
+Activation::Activation(JSValue *locals, uint32 argBase, uint8 *pc, ByteCodeModule *module, uint32 argCount)
+    : JSType(NULL), mArgumentBase(argBase), mPC(pc), mModule(module), mArgCount(argCount)
 {
     // need a private copy in case this activation gets persisted
     // within a closure ???
@@ -58,7 +58,7 @@ Activation::Activation(JSValue *locals, JSValue *argBase, uint8 *pc, ByteCodeMod
     memcpy(mLocals, locals, sizeof(JSValue) * mModule->mLocalsCount);
 }
 
-
+// XXX don't seem to need 'hasBase' anywhere?
 void AccessorReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
 { 
     bcg->addByte(InvokeOp); 
@@ -93,14 +93,15 @@ void ClosureVarReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase)
     bcg->addLong(mIndex); 
 }
 
+void StaticFieldReference::emitImplicitLoad(ByteCodeGen *bcg) 
+{
+    bcg->addByte(LoadTypeOp);
+    bcg->addPointer(mClass);
+}
+
 void FieldReference::emitImplicitLoad(ByteCodeGen *bcg) 
 {
-    if (mIsStatic) {
-        bcg->addByte(LoadTypeOp);
-        bcg->addPointer(mClass);
-    }
-    else
-        bcg->addByte(LoadThisOp);
+    bcg->addByte(LoadThisOp);
 }
 
 void FieldReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
@@ -112,14 +113,77 @@ void FieldReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase)
     bcg->addLong(mIndex); 
 }
 
+void StaticFieldReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+{
+    if (mAccess == Read)
+        bcg->addByte(GetStaticFieldOp);
+    else
+        bcg->addByte(SetStaticFieldOp);
+    bcg->addLong(mIndex); 
+}
+
 void MethodReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
 {
     bcg->addByte(GetMethodOp);
     bcg->addLong(mIndex); 
 }
 
+void StaticFunctionReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+{
+    bcg->addByte(GetStaticMethodOp);
+    bcg->addLong(mIndex); 
+}
+
+void GetterMethodReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+{
+    bcg->addByte(GetMethodOp);
+    bcg->addLong(mIndex); 
+    bcg->addByte(InvokeOp);
+    bcg->addLong(1);
+}
+
+void SetterMethodReference::emitImplicitLoad(ByteCodeGen *bcg) 
+{
+    bcg->addByte(GetMethodOp);
+    bcg->addLong(mIndex); 
+}
+
+void SetterMethodReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+{
+    bcg->addByte(InvokeOp);
+    bcg->addLong(1);
+}
+
 void FunctionReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
 {
+    bcg->addByte(LoadFunctionOp);
+    bcg->addPointer(mFunction);
+}
+
+void ConstructorReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+{
+    bcg->addByte(LoadFunctionOp);
+    bcg->addPointer(mFunction);
+}
+
+void GetterFunctionReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+{
+    bcg->addByte(LoadFunctionOp);
+    bcg->addPointer(mFunction);
+    bcg->addByte(InvokeOp);
+    bcg->addLong(0);
+}
+
+void SetterFunctionReference::emitImplicitLoad(ByteCodeGen *bcg) 
+{
+    bcg->addByte(LoadFunctionOp);
+    bcg->addPointer(mFunction);
+}
+
+void SetterFunctionReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+{
+    bcg->addByte(InvokeOp);
+    bcg->addLong(1);
 }
 
 void NameReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
@@ -178,10 +242,10 @@ ByteCodeModule::ByteCodeModule(ByteCodeGen *bcg)
     mLocalsCount = bcg->mScopeChain->countVars();
 }
 
-void ByteCodeGen::genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc, bool isConstructor)
+void ByteCodeGen::genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc, bool isConstructor, JSType *topClass)
 {
     mScopeChain->addScope(fnc->mParameterBarrel);
-    mScopeChain->addScope(fnc);
+    mScopeChain->addScope(&fnc->mActivation);
     // OPT - no need to push the parameter and function
     // scopes if the function doesn't contain any 'eval'
     // calls, all other references to the variables mapped
@@ -190,7 +254,69 @@ void ByteCodeGen::genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc, bool 
     addByte(PushScopeOp);
     addPointer(fnc->mParameterBarrel);
     addByte(PushScopeOp);   
-    addPointer(fnc);
+    addPointer(&fnc->mActivation);
+
+    if (isConstructor) {
+        //
+        //  Invoke the super class constructor if there isn't an explicit
+        // statement to do so.
+        //  
+        bool foundSuperCall = false;
+        BlockStmtNode *b = f->function.body;
+        if (b && b->statements) {
+            if (b->statements->getKind() == StmtNode::expression) {
+                ExprStmtNode *e = static_cast<ExprStmtNode *>(b->statements);
+                if (e->expr->getKind() == ExprNode::call) {
+                    InvokeExprNode *i = static_cast<InvokeExprNode *>(e->expr);
+                    if (i->op->getKind() == ExprNode::dot) {
+                        // here, under '.' we check for 'super.m()' or 'this.m()'
+                        // 
+                        BinaryExprNode *b = static_cast<BinaryExprNode *>(i->op);
+                        if ((b->op1->getKind() == ExprNode::This) && (b->op2->getKind() == ExprNode::identifier)) {
+                            IdentifierExprNode *i = static_cast<IdentifierExprNode *>(b->op2);
+                            // XXX verify that i->name is a constructor in the superclass
+                            foundSuperCall = true;
+                        }
+                        else {
+                            if ((b->op1->getKind() == ExprNode::Super) && (b->op2->getKind() == ExprNode::identifier)) {
+                                IdentifierExprNode *i = static_cast<IdentifierExprNode *>(b->op2);
+                                // XXX verify that i->name is a constructor in this class
+                                foundSuperCall = true;
+                            }
+                        }
+                    }
+                    else {
+                        // look for calls to 'this()' or 'super'
+                        if (i->op->getKind() == ExprNode::This) {
+                            foundSuperCall = true;
+                        }
+                        else {
+                            if (i->op->getKind() == ExprNode::Super) {
+                                foundSuperCall = true;
+                            }
+                        }
+                    }
+                }
+            }
+            else {
+                // is there (going to be) such a thing as a SuperStatement ?
+            }
+        }
+
+        if (!foundSuperCall) { // invoke the default superclass constructor
+            JSType *superClass = topClass->mSuperType;
+            if (superClass) {
+                JSFunction *superConstructor = superClass->getDefaultConstructor();
+                if (superConstructor) {
+                    addByte(LoadFunctionOp);
+                    addPointer(superConstructor);
+                    addByte(LoadThisOp);
+                    addByte(InvokeOp);
+                    addLong(1);
+                }
+            }
+        }
+    }
 
     genCodeForStatement(f->function.body, NULL);
 
@@ -254,7 +380,7 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                     if (v->initializer) {
                         IdentifierExprNode *i = static_cast<IdentifierExprNode *>(v->name);
                         Reference *ref = mScopeChain->getName(i->name, Write);
-                        ASSERT(ref);    // must have been added previously by processDeclarations
+                        ASSERT(ref);    // must have been added previously by collectNames
                         if (isStatic && (static_cg != NULL)) {
                             static_cg->genExpr(v->initializer);
                             ref->emitCodeSequence(static_cg);
@@ -282,16 +408,32 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                         && (mScopeChain->topClass()->mClassName.compare(name) == 0))
                 isConstructor = true;
 
-            JSValue v;    
-            if (isStatic || isConstructor)
-                v = mScopeChain->getStaticValue(PROPERTY(p->prop));
-            else
-                v = mScopeChain->getValue(PROPERTY(p->prop));
-            ASSERT(v.isFunction());
-            JSFunction *fnc = v.function;
+            JSFunction *fnc = NULL;    
+            if (isStatic || isConstructor) {
+                JSValue v = mScopeChain->getStaticValue(PROPERTY(p->prop));
+                ASSERT(v.isFunction());
+                fnc = v.function;
+            }
+            else {
+                switch (f->function.prefix) {
+                case FunctionName::Get:
+                    fnc = mScopeChain->getGetterValue(PROPERTY(p->prop));
+                    break;
+                case FunctionName::Set:
+                    fnc = mScopeChain->getSetterValue(PROPERTY(p->prop));
+                    break;
+                case FunctionName::normal:
+                    {
+                        JSValue v = mScopeChain->getValue(PROPERTY(p->prop));
+                        ASSERT(v.isFunction());
+                        fnc = v.function;
+                    }
+                    break;
+                }
+            }
 
             ByteCodeGen bcg(mScopeChain);
-            bcg.genCodeForFunction(f, fnc, isConstructor);
+            bcg.genCodeForFunction(f, fnc, isConstructor, mScopeChain->topClass());
         }
         break;
     case StmtNode::block:
@@ -318,6 +460,8 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             genExpr(e->expr);
         }
         break;
+    default:
+        NOT_REACHED("Not Implemented Yet");
     }
 }
 
@@ -338,7 +482,18 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
             BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
             
             JSType *lType = NULL;
-            // optimize for ClassName.identifier
+
+            // Optimize for ClassName.identifier. If we don't
+            // do this we simply generate a getProperty op
+            // against the Type_Type object the leftside has found.
+            //
+            // If we find it, emit the code to 'load' the class
+            // (which loads the static instance) and the name 
+            // lookup can then proceed against the static type.
+            //
+            // Note that we're depending on this to discover when
+            // a class constructor is being invoked (and hence needs
+            // a newObjectOp). 
             if (b->op1->getKind() == ExprNode::identifier) {
                 const StringAtom &name = static_cast<IdentifierExprNode *>(b->op1)->name;
                 Reference *ref = mScopeChain->getName(name, Read);
@@ -453,6 +608,17 @@ JSType *ByteCodeGen::genExpr(ExprNode *p)
             Reference *ref = genReference(i->op, Read);
             ref->emitCodeSequence(this);
 
+            // we want to be able to detect calls to a class constructor
+            // (other than as super.m() or this.m()) and precede them
+            // with a call to newObject
+
+            if (ref->isConstructor()) {
+                addByte(LoadTypeOp);
+                addPointer(ref->mType);
+                addByte(NewObjectOp);
+            }
+
+
             ExprPairList *p = i->pairs;
             uint32 argCount = 0;
             while (p) {
@@ -471,6 +637,8 @@ JSType *ByteCodeGen::genExpr(ExprNode *p)
             delete ref;
             return type;
         }
+    default:
+        NOT_REACHED("Not Implemented Yet");
     }
     return NULL;
 }
@@ -482,6 +650,10 @@ Formatter& operator<<(Formatter& f, const ByteCodeModule& bcm)
         switch (bcm.mCodeBase[i]) {
         case ReturnOp:
             f << "Return\n";
+            i++;
+            break;
+        case ReturnVoidOp:
+            f << "ReturnVoid\n";
             i++;
             break;
         case InvokeOp:
@@ -508,16 +680,28 @@ Formatter& operator<<(Formatter& f, const ByteCodeModule& bcm)
             f << "SetArg " << bcm.getLong(i + 1) << "\n";
             i += 5;
             break;
-        case GetFieldOp:
-            f << "GetField " << bcm.getLong(i + 1) << "\n";
-            i += 5;
-            break;
         case GetMethodOp:
             f << "GetMethod " << bcm.getLong(i + 1) << "\n";
             i += 5;
             break;            
+        case GetStaticMethodOp:
+            f << "GetStaticMethod " << bcm.getLong(i + 1) << "\n";
+            i += 5;
+            break;            
+        case GetFieldOp:
+            f << "GetField " << bcm.getLong(i + 1) << "\n";
+            i += 5;
+            break;
         case SetFieldOp:
             f << "SetField " << bcm.getLong(i + 1) << "\n";
+            i += 5;
+            break;
+        case GetStaticFieldOp:
+            f << "GetStaticField " << bcm.getLong(i + 1) << "\n";
+            i += 5;
+            break;
+        case SetStaticFieldOp:
+            f << "SetStaticField " << bcm.getLong(i + 1) << "\n";
             i += 5;
             break;
         case GetNameOp:
@@ -542,6 +726,10 @@ Formatter& operator<<(Formatter& f, const ByteCodeModule& bcm)
             break;
         case LoadConstantStringOp:
             f << "LoadConstantString " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
+            i += 5;
+            break;
+        case LoadTypeOp:
+            printFormat(f, "LoadType 0x%X\n", bcm.getLong(i + 1));
             i += 5;
             break;
         case LoadFunctionOp:

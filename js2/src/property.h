@@ -50,24 +50,42 @@ namespace JS2Runtime {
         Property() { }
 
         Property(uint32 g, uint32 s, JSType *type)
-            : mType(type), mFlag(IndexPair) { mData.iPair.getIndex = g;  mData.iPair.setIndex = s; }
+            : mType(type), mFlag(IndexPair) 
+        { 
+            mData.iPair.getterI = g;
+            mData.iPair.setterI = s;
+        }
+
+        Property(JSType *type, JSFunction *g, JSFunction *s)    // XXX the type is the return
+                                                                // type of the getter function.
+            : mType(type), mFlag(FunctionPair) 
+        { 
+            mData.fPair.getterF = g;  
+            mData.fPair.setterF = s;
+        }
 
         Property(uint32 i, JSType *type, PropertyFlag flag) 
-            : mType(type), mFlag(flag) { mData.index = i; }
+            : mType(type), mFlag(flag)
+        { 
+            mData.index = i;
+        }
 
         Property(JSValue *p, JSType *type) 
-            : mType(type), mFlag(ValuePointer) { mData.vp = p; }
+            : mType(type), mFlag(ValuePointer) 
+        { 
+            mData.vp = p;
+        }
         
         
         union {
             JSValue *vp;        // straightforward value
             struct {            // getter & setter functions
-                JSFunction *getF;
-                JSFunction *setF;
+                JSFunction *getterF;
+                JSFunction *setterF;
             } fPair;
             struct {            // getter & setter methods (in base->mMethods)
-                uint32 getIndex;
-                uint32 setIndex;
+                uint32 getterI;
+                uint32 setterI;
             } iPair;
             uint32 index;       // method (in base->mMethods) or 
                                 // slot (in base->mInstanceValues)
@@ -87,6 +105,10 @@ namespace JS2Runtime {
 #define PROPERTY_VALUEPOINTER(it)   (it->second.mData.vp)
 #define PROPERTY_INDEX(it)          (it->second.mData.index)
 #define PROPERTY_NAME(it)           (it->first)
+#define PROPERTY_GETTERF(it)        (it->second.mData.fPair.getterF)
+#define PROPERTY_SETTERF(it)        (it->second.mData.fPair.setterF)
+#define PROPERTY_GETTERI(it)        (it->second.mData.iPair.getterI)
+#define PROPERTY_SETTERI(it)        (it->second.mData.iPair.setterI)
 
 
 }

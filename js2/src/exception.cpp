@@ -46,6 +46,7 @@ namespace JavaScript
     static const char *const kindStrings[] = {
         "Syntax error",                         // syntaxError
         "Stack overflow",                       // stackOverflow
+        "Internal error",                       // diabetes
         "Runtime error",                        // runtimeError
         "Reference error"                       // referenceError
     };

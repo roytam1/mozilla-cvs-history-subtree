@@ -78,7 +78,8 @@ namespace ByteCode {
         PushStringOp,           // <poolindex>         --> <Object(index)>
         PushTypeOp,             // <poolindex>
 
-        ReturnOp,               //                     
+        ReturnOp,               //                     <function> <args> <result> --> <result>
+        ReturnVoidOp,           //                     <function> <args> -->
 
         GetConstructorOp,       //                     <type> --> <function> <type>
         NewObjectOp,            //                     <type> --> <object>
@@ -92,9 +93,14 @@ namespace ByteCode {
         // for instance members
         GetFieldOp,             // <slot>              <base> --> <object>
         SetFieldOp,             // <slot>              <object> <base>  --> 
+        // for static members
+        GetStaticFieldOp,       // <slot>              <base> --> <object>
+        SetStaticFieldOp,       // <slot>              <object> <base>  --> 
 
         // for instance methods
         GetMethodOp,            // <slot>              <base> --> <function> <base> 
+        // for static methods
+        GetStaticMethodOp,      // <slot>              <base> --> <function>
 
         // for argumentz
         GetArgOp,               // <index>             --> <object>
@@ -155,7 +161,10 @@ namespace ByteCode {
 
         ByteCodeModule *genCodeForScript(StmtNode *p);
         void genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg);
-        void genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc, bool isConstructor);
+        void genCodeForFunction(FunctionStmtNode *f, 
+                                    JSFunction *fnc, 
+                                    bool isConstructor, 
+                                    JSType *topClass);
         JSType *genExpr(ExprNode *p);
         Reference *genReference(ExprNode *p, Access acc);
 

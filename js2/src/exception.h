@@ -49,6 +49,7 @@ namespace JavaScript
         enum Kind {
             syntaxError,
             stackOverflow,
+            internalError,
             runtimeError,
             referenceError
         };
