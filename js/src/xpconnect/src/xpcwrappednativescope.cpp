@@ -188,14 +188,25 @@ WrappedNativeSetMarker(JSHashEntry *he, intN i, void *arg)
     return HT_ENUMERATE_NEXT;
 }
 
+// We need to explicitly mark all the protos too because some protos may be 
+// alive in the hashtable but not currently in use by any wrapper
+JS_STATIC_DLL_CALLBACK(intN)
+WrappedNativeProtoSetMarker(JSHashEntry *he, intN i, void *arg)
+{
+    ((XPCWrappedNativeProto*) he->value)->MarkSet();
+    return HT_ENUMERATE_NEXT;
+}
+
 // static 
 void
 XPCWrappedNativeScope::MarkAllInterfaceSets()
 {
     for(XPCWrappedNativeScope* cur = gScopes; cur; cur = cur->mNext)
+    {
         cur->mWrappedNativeMap->Enumerate(WrappedNativeSetMarker, nsnull);
+        cur->mWrappedNativeProtoMap->Enumerate(WrappedNativeProtoSetMarker, nsnull);
+    }
 }
-
 
 #ifdef DEBUG
 JS_STATIC_DLL_CALLBACK(intN)
@@ -205,12 +216,24 @@ ASSERT_WrappedNativeSetNotMarked(JSHashEntry *he, intN i, void *arg)
     return HT_ENUMERATE_NEXT;
 }
 
+JS_STATIC_DLL_CALLBACK(intN)
+ASSERT_WrappedNativeProtoSetNotMarked(JSHashEntry *he, intN i, void *arg)
+{
+    ((XPCWrappedNativeProto*) he->value)->ASSERT_SetNotMarked();
+    return HT_ENUMERATE_NEXT;
+}
+
 // static 
 void
 XPCWrappedNativeScope::ASSERT_NoInterfaceSetsAreMarked()
 {
     for(XPCWrappedNativeScope* cur = gScopes; cur; cur = cur->mNext)
-        cur->mWrappedNativeMap->Enumerate(ASSERT_WrappedNativeSetNotMarked, nsnull);
+    {
+        cur->mWrappedNativeMap->Enumerate(
+            ASSERT_WrappedNativeSetNotMarked, nsnull);
+        cur->mWrappedNativeProtoMap->Enumerate(
+            ASSERT_WrappedNativeProtoSetNotMarked, nsnull);
+    }
 }
 #endif
 

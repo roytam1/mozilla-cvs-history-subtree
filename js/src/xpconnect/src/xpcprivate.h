@@ -1916,6 +1916,12 @@ public:
 
     void DebugDump(PRInt16 depth);
 
+    void MarkSet() const {mSet->Mark();} 
+
+#ifdef DEBUG
+    void ASSERT_SetNotMarked() const {mSet->ASSERT_NotMarked();} 
+#endif
+
 private:
     // disable copy ctor and assignment
     XPCWrappedNativeProto(const XPCWrappedNativeProto& r); // not implemented
@@ -2084,14 +2090,11 @@ public:
                                                 XPCNativeInterface* aInterface,
                                                 JSBool needJSObject = JS_FALSE);
 
-    void MarkSets() const 
-        {mSet->Mark(); 
-         if(HasMutatedSet()) GetProto()->GetSet()->Mark();}
+    void MarkSets() const {mSet->Mark(); GetProto()->MarkSet();}
 
 #ifdef DEBUG
     void ASSERT_SetsNotMarked() const
-        {mSet->ASSERT_NotMarked(); 
-         if(HasMutatedSet()) GetProto()->GetSet()->ASSERT_NotMarked();}
+        {mSet->ASSERT_NotMarked(); GetProto()->ASSERT_SetNotMarked();}
 #endif
 
     inline void SweepTearOffs();
