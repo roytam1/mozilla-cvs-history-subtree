@@ -68,13 +68,6 @@ function numMatchingChars(str1, str2) {
 }
 
 function sortFilename(a, b) {
-  if (! ("cachedName" in a)) {
-    a.cachedName = a.file.unicodeLeafName;
-  }
-  if (! ("cachedName" in b)) {
-    b.cachedName = b.file.unicodeLeafName;
-  }
-
   if (a.cachedName < b.cachedName) {
     return -1;
   } else if (a.cachedName > b.cachedName) {
@@ -85,13 +78,6 @@ function sortFilename(a, b) {
 }
   
 function sortSize(a, b) {
-  if (! ("cachedSize" in a)) {
-    a.cachedSize = a.file.fileSize;
-  }
-  if (! ("cachedSize" in b)) {
-    b.cachedSize = b.file.fileSize;
-  }
-
   if (a.cachedSize < b.cachedSize) {
     return -1;
   } else if (a.cachedSize > b.cachedSize) {
@@ -102,13 +88,6 @@ function sortSize(a, b) {
 }
 
 function sortDate(a, b) {
-  if (! ("cachedDate" in a)) {
-    a.cachedDate = a.file.lastModificationDate;
-  }
-  if (! ("cachedDate" in b)) {
-    b.cachedDate = b.file.lastModificationDate;
-  }
-
   if (a.cachedDate < b.cachedDate) {
     return -1;
   } else if (a.cachedDate > b.cachedDate) {
@@ -304,17 +283,39 @@ nsFileView.prototype = {
     } else {
       var compareFunc;
       
+      /* We pre-fetch all the data we are going to sort on, to avoid
+         calling into C++ on every comparison */
+      var i;
+
       switch (sortType) {
       case 0:
         /* no sort has been set yet */
         return;
       case sortType_name:
+        for (i = 0; i < this.mDirList.length; i++) {
+          this.mDirList[i].cachedName = this.mDirList[i].file.unicodeLeafName;
+        }
+        for (i = 0; i < this.mFilteredFiles.length; i++) {
+          this.mFilteredFiles[i].cachedName = this.mFilteredFiles[i].file.unicodeLeafName;
+        }
         compareFunc = sortFilename;
         break;
       case sortType_size:
+        for (i = 0; i < this.mDirList.length; i++) {
+          this.mDirList[i].cachedSize = this.mDirList[i].file.fileSize;
+        }
+        for (i = 0; i < this.mFilteredFiles.length; i++) {
+          this.mFilteredFiles[i].cachedSize = this.mFilteredFiles[i].file.fileSize;
+        }
         compareFunc = sortSize;
         break;
       case sortType_date:
+        for (i = 0; i < this.mDirList.length; i++) {
+          this.mDirList[i].cachedDate = this.mDirList[i].file.lastModificationDate;
+        }
+        for (i = 0; i < this.mFilteredFiles.length; i++) {
+          this.mFilteredFiles[i].cachedDate = this.mFilteredFiles[i].file.lastModificationDate;
+        }
         compareFunc = sortDate;
         break;
       default:
@@ -362,8 +363,9 @@ nsFileView.prototype = {
     dump("load time: " + time/1000 + " seconds\n");
 
     if (this.mOutliner) {
-      dump("setDirectory: mTotalRows = "+this.mTotalRows+", dir length = "+this.mDirList.length+"\n");
+      dump("rowCountChanged(0, -" + this.mTotalRows + ")\n");
       this.mOutliner.rowCountChanged(0, -this.mTotalRows);
+      dump("rowCountChanged(0, " + this.mDirList.length + ")\n");
       this.mOutliner.rowCountChanged(0, this.mDirList.length);
     }
 
@@ -407,6 +409,11 @@ nsFileView.prototype = {
     }
 
     this.mCurrentFilter = new RegExp(filterStr.substr(0, (filterStr.length) - 1) + ")");
+
+    if (this.mOutliner) {
+      dump("rowCountChanged("+this.mDirList.length+", "+ -(this.mTotalRows - this.mDirList.length) + ")\n");
+      this.mOutliner.rowCountChanged(this.mDirList.length, -(this.mTotalRows - this.mDirList.length));
+    }
     this.filterFiles();
     this.sort(this.mSortType, this.mReverseSort, true);
   },
@@ -433,6 +440,7 @@ nsFileView.prototype = {
 
     // Tell the outliner how many rows we just added
     if (this.mOutliner) {
+      dump("routCountChanged("+this.mDirList.length+", "+this.mFilteredFiles.length+")\n");
       this.mOutliner.rowCountChanged(this.mDirList.length, this.mFilteredFiles.length);
     }
 
