@@ -4082,9 +4082,12 @@ static XP_Bool nntp_are_connections_available (NNTPConnection *conn)
 	return connCount < kMaxConnectionsPerHost;
 }
 
+<<<<<<< mknews.c
 static XP_Bool isOnline = TRUE;
 static XP_Bool prefInitialized = FALSE;
 
+=======
+>>>>>>> 3.1.2.1
 /* fix Mac warning of missing prototype */
 MODULE_PRIVATE int PR_CALLBACK 
 NET_OnlinePrefChangedFunc(const char *pref, void *data);
@@ -4137,23 +4140,6 @@ MODULE_PRIVATE int PR_CALLBACK NET_NewsMaxArticlesChangedFunc(const char *pref, 
 		NET_SetNumberOfNewsArticlesInListing(maxArticles);
 	}
 	return status;
-}
-
-MODULE_PRIVATE XP_Bool
-NET_IsOffline()
-{
-	/*  Cache this value, and register a pref callback to
-		find out when it changes. 
-	*/
-	if (!prefInitialized)
-	{
-		/*int status =*/ PREF_GetBoolPref("network.online", &isOnline);
-		PREF_RegisterCallback("network.online",NET_OnlinePrefChangedFunc, NULL);
-		/* because this routine gets called so often, we can register this callback here too. */
-		PREF_RegisterCallback("news.max_articles", NET_NewsMaxArticlesChangedFunc, NULL);
-		prefInitialized = TRUE;
-	}
-	return !isOnline;
 }
 
 PRIVATE int32
