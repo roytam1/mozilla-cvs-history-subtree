@@ -169,8 +169,8 @@ NS_IMETHODIMP
 HTMLColorRule::MapRuleInfoInto(nsRuleData* aRuleData)
 {
   if (aRuleData->mSID == eStyleStruct_Color && aRuleData->mColorData) {
-    nsCSSValue val; val.SetColorValue(mColor);
-    aRuleData->mColorData->mColor = val;
+    if (aRuleData->mColorData->mColor.GetUnit() == eCSSUnit_Null)
+      aRuleData->mColorData->mColor = nsCSSValue(mColor);
   }
   return NS_OK;
 }
