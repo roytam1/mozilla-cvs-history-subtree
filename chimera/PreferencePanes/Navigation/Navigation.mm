@@ -24,24 +24,40 @@
 #import <Carbon/Carbon.h>
 
 #import "Navigation.h"
+#import "NSString+Utils.h"
 
+#include "nsCOMPtr.h"
 #include "nsIServiceManager.h"
 #include "nsIPrefBranch.h"
 #include "nsIPref.h"
 #include "nsIBrowserHistory.h"
 #include "nsICacheService.h"
+#include "nsILocalFileMac.h"
+#include "nsDirectoryServiceDefs.h"
+#include "nsString.h"
 
 const int kDefaultExpireDays = 9;
 
 @interface OrgMozillaChimeraPreferenceNavigation(Private)
 
 - (NSString*)getInternetConfigString:(Str255)icPref;
+- (NSString*)getDownloadFolderDescription;
 
 @end
 
 
 @implementation OrgMozillaChimeraPreferenceNavigation
 
+- (id)initWithBundle:(NSBundle *)bundle
+{
+  self = [super initWithBundle:bundle];
+  return self;
+}
+
+- (void)dealloc
+{
+  [super dealloc];
+}
 
 - (void)mainViewDidLoad
 {
@@ -84,8 +100,12 @@ const int kDefaultExpireDays = 9;
   [textFieldSearchPage setStringValue: [self getCurrentSearchPage]];
   
   [mEnableHelperApps setState:[self getBooleanPref:"browser.download.autoDispatch" withSuccess:&gotPref]];
-  nsSpecialSystemDirectory downloadFolder(kDefaultDownloadFolderType);
-  [mDownloadFolder setStringValue:[NSString stringWithCString:downloadFolder]];
+
+  NSString* downloadFolderDesc = [self getDownloadFolderDescription];
+  if ([downloadFolderDesc length] == 0)
+    downloadFolderDesc = [self getLocalizedString:@"MissingDlFolder"];
+    
+  [mDownloadFolder setStringValue:[self getDownloadFolderDescription]];
 }
 
 - (void) didUnselect
@@ -203,6 +223,41 @@ const int kDefaultExpireDays = 9;
   if ( hist )
     hist->RemoveAllPages();
 }
+
+- (NSString*)getDownloadFolderDescription
+{
+  NSString* downloadStr = @"";
+  nsCOMPtr<nsIFile> downloadsDir;
+  NS_GetSpecialDirectory(NS_MAC_DEFAULT_DOWNLOAD_DIR, getter_AddRefs(downloadsDir));
+	if (!downloadsDir)
+    return downloadStr;
+
+  nsCOMPtr<nsILocalFileMac> macDir = do_QueryInterface(downloadsDir);
+  if (!macDir)
+    return downloadStr;
+
+  FSRef folderRef;
+  nsresult rv = macDir->GetFSRef(&folderRef);
+  if (NS_FAILED(rv))
+    return downloadStr;
+
+  FSCatalogInfo catInfo;
+  HFSUniStr255 fileName;
+  OSErr err = FSGetCatalogInfo(&folderRef, kFSCatInfoVolume, &catInfo, &fileName, NULL, NULL);
+  if (err != noErr)
+    return downloadStr;
+    
+  HFSUniStr255 volName;
+  err = FSGetVolumeInfo(catInfo.volume, 0, NULL, kFSVolInfoNone, NULL, &volName, NULL);
+  if (err != noErr)
+    return downloadStr;
+
+  NSString* fileNameStr   = [NSString stringWithCharacters:fileName.unicode length:fileName.length];
+  NSString* volumeNameStr = [NSString stringWithCharacters:volName.unicode  length:volName.length];
+  
+	return [NSString stringWithFormat:[self getLocalizedString:@"DownloadFolderDesc"], fileNameStr, volumeNameStr];
+}
+
 
 - (NSString*)getInternetConfigString:(Str255)icPref
 {
