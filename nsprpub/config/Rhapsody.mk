@@ -52,6 +52,5 @@ ARCH			= rhapsody
 #DSO_LDOPTS		= -Bshareable
 #DSO_LDFLAGS		=
 
-#MKSHLIB			= $(LD) $(DSO_LDOPTS)
-
-#G++INCLUDES		= -I/usr/include/g++
+MKSHLIB			= $(CC) -arch ppc -dynamiclib -compatibility_version 1 -current_version 1
+DLL_SUFFIX		= dylib
