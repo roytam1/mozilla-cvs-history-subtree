@@ -1,6 +1,6 @@
 /* Insert copyright and license here 1996 */
 
-#include "nsICMSDecoder.h"
+#include "nsICMS.h"
 #include "mimecms.h"
 #include "nsCRT.h"
 #include "nspr.h"
@@ -563,7 +563,7 @@ MimeCMS_generate (void *crypto_closure)
 			}
 		}
 
-#if 0 // XXX Fix this XXX .//
+#if 0 
 	  if (SEC_PKCS7ContainsCertsOrCrls(data->content_info))
 		{
 		  /* #### call libsec telling it to import the certs */

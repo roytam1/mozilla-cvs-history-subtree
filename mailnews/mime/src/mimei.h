@@ -201,7 +201,7 @@
  */
 
 #include "mimehdrs.h"
-#include "nsICMSDecoder.h"
+#include "nsICMS.h"
 
 typedef struct MimeObject      MimeObject;
 typedef struct MimeObjectClass MimeObjectClass;

@@ -3,7 +3,7 @@
 #ifndef _MIMEMPKC_H_
 #define _MIMEMPKC_H_
 
-#include "nsICMSDecoder.h"
+#include "nsICMS.h"
 #include "mimemsig.h"
 
 /* The MimeMultipartSignedCMS class implements a multipart/signed MIME 

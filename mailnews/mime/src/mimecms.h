@@ -4,7 +4,7 @@
 #define _MIMECMS_H_
 
 #include "mimecryp.h"
-#include "nsICMSDecoder.h"
+#include "nsICMS.h"
 
 
 /* The MimeEncryptedCMS class implements a type of MIME object where the
