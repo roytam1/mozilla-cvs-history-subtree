@@ -2325,3 +2325,26 @@ function DisplaySaveFolderDlg(folderURI)
   return;
 }
 
+function EncryptMessage()
+{
+    var msgCompFields = msgCompose.compFields;
+    if (msgCompFields) {
+        if (msgCompFields.encrypted) {
+            msgCompFields.encrypted = false;
+        } else {
+            msgCompFields.encrypted = true;
+        }
+    }
+}
+
+function SignMessage()
+{
+    var msgCompFields = msgCompose.compFields;
+    if (msgCompFields) {
+        if (msgCompFields.signed) {
+            msgCompFields.signed = false;
+        } else {
+            msgCompFields.signed = true;
+        }
+    }
+}

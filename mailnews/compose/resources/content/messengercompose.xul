@@ -342,6 +342,16 @@
               </rule>
             </template>
           </menu>     
+
+          <menuseparator/>
+          <menu label="&securityMenu.label;">
+            <menupopup>
+            <menuitem id="menu_securityEncryptAlways" type="checkbox" label="&menu_securityEncryptAlways.label;" oncommand="EncryptMessage()"/>
+            <menuitem id="menu_securityEncryptIfPossible" type="checkbox" label="&menu_securityEncryptIfPossible.label;" disabled="true"/>
+            <menuitem id="menu_securitySign" type="checkbox" label="&menu_securitySign.label;" oncommand="SignMessage()"/>
+            </menupopup>
+          </menu>
+
           <!--menuseparator/>
           <menuitem label="&addSignatureCmd.label;" disabled="true" oncommand=""/>      
           <menuitem label="&attachVCardCmd.label;" disabled="true" accesskey="&attachVCardCmd.accesskey;" oncommand="AttachVCard()"/-->     

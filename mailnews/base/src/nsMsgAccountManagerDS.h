@@ -130,6 +130,7 @@ protected:
   static nsIRDFResource* kNC_PageTitleAddressing;
   static nsIRDFResource* kNC_PageTitleAdvanced;
   static nsIRDFResource* kNC_PageTitleSMTP;
+  static nsIRDFResource* kNC_PageTitleSecurity;
 
   static nsIRDFLiteral* kTrueLiteral;
 

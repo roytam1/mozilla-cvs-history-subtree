@@ -267,6 +267,15 @@ interface nsIMsgIncomingServer : nsISupports {
 
   /* used for setting up the search UI */
   readonly attribute nsMsgSearchScopeValue searchScope;
+
+  /* S/MIME attributes... */
+  /* ...encryption        */
+  attribute boolean ifPossibleEncryptMail;
+  attribute boolean alwaysEncryptMail;
+  attribute string encryptionCertName;
+  /* ...signing           */
+  attribute boolean signMail;
+  attribute string signingCertName;
 };
 
 %{C++

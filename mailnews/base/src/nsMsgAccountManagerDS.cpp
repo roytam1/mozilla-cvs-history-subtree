@@ -57,6 +57,7 @@ static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 #define NC_RDF_PAGETITLE_ADDRESSING  NC_NAMESPACE_URI "PageTitleAddressing"
 #define NC_RDF_PAGETITLE_SMTP     NC_NAMESPACE_URI "PageTitleSMTP"
 #define NC_RDF_PAGETAG NC_NAMESPACE_URI "PageTag"
+#define NC_RDF_PAGETITLE_SECURITY     NC_NAMESPACE_URI "PageTitleSecurity"
 
 #define NC_RDF_ACCOUNTROOT "msgaccounts:/"
 
@@ -103,6 +104,7 @@ nsIRDFResource* nsMsgAccountManagerDataSource::kNC_PageTitleDiskSpace=nsnull;
 nsIRDFResource* nsMsgAccountManagerDataSource::kNC_PageTitleAddressing=nsnull;
 nsIRDFResource* nsMsgAccountManagerDataSource::kNC_PageTitleAdvanced=nsnull;
 nsIRDFResource* nsMsgAccountManagerDataSource::kNC_PageTitleSMTP=nsnull;
+nsIRDFResource* nsMsgAccountManagerDataSource::kNC_PageTitleSecurity=nsnull;
 
 // common literals
 nsIRDFLiteral* nsMsgAccountManagerDataSource::kTrueLiteral = nsnull;
@@ -154,6 +156,7 @@ nsMsgAccountManagerDataSource::nsMsgAccountManagerDataSource()
       getRDFService()->GetResource(NC_RDF_PAGETITLE_ADDRESSING, &kNC_PageTitleAddressing);
       getRDFService()->GetResource(NC_RDF_PAGETITLE_ADVANCED, &kNC_PageTitleAdvanced);
       getRDFService()->GetResource(NC_RDF_PAGETITLE_SMTP, &kNC_PageTitleSMTP);
+      getRDFService()->GetResource(NC_RDF_PAGETITLE_SECURITY, &kNC_PageTitleSecurity);
       
       getRDFService()->GetResource(NC_RDF_ACCOUNTROOT, &kNC_AccountRoot);
 
@@ -302,7 +305,9 @@ nsMsgAccountManagerDataSource::GetTarget(nsIRDFResource *source,
       else if (source == kNC_PageTitleSMTP)
           mStringBundle->GetStringFromName(NS_ConvertASCIItoUCS2("prefPanel-smtp").get(),
                                            getter_Copies(pageTitle));
-
+      else if (source == kNC_PageTitleSecurity)
+          mStringBundle->GetStringFromName(NS_ConvertASCIItoUCS2("prefPanel-security").get(),
+                                           getter_Copies(pageTitle));
       else {
           nsCOMPtr<nsIMsgFolder> folder = do_QueryInterface(source, &rv);
           if (NS_SUCCEEDED(rv)) {
@@ -328,6 +333,8 @@ nsMsgAccountManagerDataSource::GetTarget(nsIRDFResource *source,
       str = NS_LITERAL_STRING("am-advanced.xul");
     else if (source == kNC_PageTitleSMTP) 
       str = NS_LITERAL_STRING("am-smtp.xul");
+    else if (source == kNC_PageTitleSecurity) 
+      str = NS_LITERAL_STRING("am-security.xul");
     else {
       str = NS_LITERAL_STRING("am-main.xul");
 
@@ -568,6 +575,8 @@ nsMsgAccountManagerDataSource::createSettingsResources(nsIRDFResource *aSource,
                 else if (supportsDiskSpace) {
                    aNodeArray->AppendElement(kNC_PageTitleDiskSpace);
                 }
+
+                aNodeArray->AppendElement(kNC_PageTitleSecurity);
             }
         }
     }
