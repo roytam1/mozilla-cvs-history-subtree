@@ -20,7 +20,8 @@
  * Contributor(s): 
  */
 
-#include "nsIIOService.h"
+#include "nsIOService.h"
+#include "nsIProtocolHandler.h"
 #include "nsURLHelper.h"
 #include "nsStdURL.h"
 #include "nsStdURLParser.h"
@@ -39,6 +40,7 @@ static NS_DEFINE_CID(kStdURLCID, NS_STANDARDURL_CID);
 static NS_DEFINE_CID(kThisStdURLImplementationCID,
                      NS_THIS_STANDARDURL_IMPLEMENTATION_CID);
 static NS_DEFINE_CID(kStdURLParserCID, NS_STANDARDURLPARSER_CID);
+static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 nsStdURL::nsStdURL()
     : mScheme(nsnull),
@@ -516,6 +518,7 @@ NS_IMETHODIMP
 nsStdURL::SetRelativePath(const char* i_Relative)
 {
     nsresult rv = NS_OK;
+    nsresult urirv = NS_OK;
     nsCAutoString options;
     char* ref;
     char* query;
@@ -533,10 +536,30 @@ nsStdURL::SetRelativePath(const char* i_Relative)
     // If not then its an absolute case
     static const char delimiters[] = "/;?#:";
     char* brk = PL_strpbrk(i_Relative, delimiters);
+    char* abrk = brk;
     if (brk && (*brk == ':')) // This is an absolute case
     {
-        rv = SetSpec((char*) i_Relative);
-        return rv;
+        // if there is a / then this is really an absolute URL
+        // find it out
+        static const char adelimiters[] = "/";
+        abrk = PL_strpbrk(brk, adelimiters);
+        if (abrk) {        
+            rv = SetSpec((char*) i_Relative);
+            return rv;
+        } else {
+            // This maybe a simple absolute or a standard relative case
+            NS_WITH_SERVICE(nsIIOService, ioServ, kIOServiceCID, &rv);
+            if (NS_FAILED(rv)) return rv;
+
+            PRInt16 uritype;
+            urirv = ioServ->GetUritype(i_Relative, &uritype);
+            if (NS_SUCCEEDED(urirv) && 
+              ((uritype & nsIProtocolHandler::url_norelative) ||
+               (uritype & nsIProtocolHandler::url_nonhierachical))) {
+                rv = SetSpec((char*) i_Relative);
+                return rv;
+            }
+        }
     }
 
     if (*i_Relative == '/' && *(i_Relative+1) != '\0' && 
@@ -553,6 +576,12 @@ nsStdURL::SetRelativePath(const char* i_Relative)
     } else {
         i_Path = (char*)i_Relative;
     } 
+
+    if (brk && !abrk && NS_SUCCEEDED(urirv)) {
+        // A : but no / and a valid scheme
+        ExtractString((char*)i_Relative,&mScheme,(brk-i_Relative));
+        i_Path = brk+1; 
+    }
 
     char* eFileName = nsnull;
 
@@ -611,25 +640,44 @@ NS_IMETHODIMP
 nsStdURL::Resolve(const char *relativePath, char **result) 
 {
     nsresult rv = NS_OK;
-
+    nsresult urirv = NS_OK;
     if (!relativePath) return NS_ERROR_NULL_POINTER;
 
     // Make sure that if there is a : its before other delimiters
-    // If not then its an absolute case
+    // If it is then it maybe an absolute case
     static const char delimiters[] = "/;?#:";
     char* brk = PL_strpbrk(relativePath, delimiters);
-    if (brk && (*brk == ':')) // This is an absolute case
+    char* abrk = brk;
+    if (brk && (*brk == ':')) // This maybe an absolute case
     {
-        rv = DupString(result, relativePath);
-        char* path = PL_strstr(*result,"://");
-        if (path) {
-            path = PL_strstr((char*)(path+3),"/");
-            if (path) 
-                CoaleseDirs(path);
-        }
-        return rv;
-    }
+        // if there is a / then this is really an absolute URL
+        // find it out
+        static const char adelimiters[] = "/";
+        abrk = PL_strpbrk(brk, adelimiters);
+        if (abrk) {        
+            rv = DupString(result, relativePath);
+            char* path = PL_strstr(*result,"://");
+            if (path) {
+                path = PL_strstr((char*)(path+3),"/");
+                if (path) 
+                    CoaleseDirs(path);
+            }
+            return rv;
+        } else {
+            // This maybe a simple absolute or a standard relative case
+            NS_WITH_SERVICE(nsIIOService, ioServ, kIOServiceCID, &rv);
+            if (NS_FAILED(rv)) return rv;
 
+            PRInt16 uritype;
+            urirv = ioServ->GetUritype(relativePath, &uritype);
+            if (NS_SUCCEEDED(urirv) && 
+              ((uritype & nsIProtocolHandler::url_norelative) ||
+               (uritype & nsIProtocolHandler::url_nonhierachical))) {
+                rv = DupString(result, relativePath);
+                return rv;
+            }
+        }
+    }
     nsCAutoString finalSpec; // guaranteed to be singlebyte.
 
     // This is another case of an almost absolute URL 
@@ -659,10 +707,22 @@ nsStdURL::Resolve(const char *relativePath, char **result)
 
     const char *start = relativePath;
 
-    if (mScheme)
+    if (brk && !abrk && NS_SUCCEEDED(urirv))
+    // A : but no / and a valid scheme
     {
-        rv = AppendString(finalSpec,mScheme,ESCAPED,nsIIOService::url_Scheme);
+        char* eScheme = nsnull;
+        ExtractString((char*)relativePath,&eScheme,(brk-relativePath));
+        rv = AppendString(finalSpec,eScheme,ESCAPED,nsIIOService::url_Scheme);
+        CRTFREEIF(eScheme);
         finalSpec += "://";
+        start = brk+1;
+    } else {
+        if (mScheme)
+        {
+            rv = AppendString(finalSpec,mScheme,ESCAPED,
+            nsIIOService::url_Scheme);
+            finalSpec += "://";
+        }
     }
 
     rv = AppendPreHost(finalSpec,mUsername,mPassword,ESCAPED);

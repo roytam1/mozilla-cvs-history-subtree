@@ -1242,6 +1242,7 @@ nsresult nsHTTPChannel::Redirect(const char *aNewLocation,
   //
 
   nsXPIDLCString   newref;
+  nsXPIDLCString   newquery;
   nsCOMPtr<nsIURL> newurl;
   
   newurl = do_QueryInterface(newURI, &rv);
@@ -1260,6 +1261,23 @@ nsresult nsHTTPChannel::Redirect(const char *aNewLocation,
           // If the old URL had a reference and the new URL does not,
           // then move it to the new URL...
           newurl->SetRef(baseref);                
+        }
+      }
+    }
+    rv = newurl->GetQuery(getter_Copies(newquery));
+    if (NS_SUCCEEDED(rv) && !newquery) {
+      nsXPIDLCString   basequery;
+      nsCOMPtr<nsIURL> baseurl;
+
+
+      baseurl = do_QueryInterface(mURI, &rv);
+      if (NS_SUCCEEDED(rv)) {
+
+        rv = baseurl->GetQuery(getter_Copies(basequery));
+        if (NS_SUCCEEDED(rv) && basequery) {
+          // If the old URL had a query and the new URL does not,
+          // then move it to the new URL...
+          newurl->SetQuery(basequery);                
         }
       }
     }

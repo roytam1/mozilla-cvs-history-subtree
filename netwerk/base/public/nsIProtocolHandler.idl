@@ -35,6 +35,43 @@ interface nsIProtocolHandler : nsISupports
     readonly attribute long defaultPort;
 
     /**
+     * constants for the uritype mask
+     *
+     *
+     * the default uritype is an url with authority, has a / in its path and
+     * can have relative urls. We mark the deviation from this standard with
+     * setting some of these constants for the url 
+     *
+     * this are some simple questions for the url-scheme:
+     *
+     * does it have the concept of a relative url?
+     * if not assign url_norelative
+     *
+     * does it have a / as minimum path?
+     * if not assign url_nonhierachical
+     *
+     * does it have an authority (username/host) component? 
+     * if not assign url_noauth
+     *
+     * if in doubt assign url_std as default
+     */
+
+    /* standard url, can have relative, is hierachical, 
+       has authority component (http, ftp, ...) */ 
+    const short url_std            = 0;     
+
+    /* no relative urls (mail, news, imap, mailbox ...) */ 
+    const short url_norelative     = (1<<0);
+
+    /* non hierachical urls (about, rdf, javascript, finger ...) */ 
+    const short url_nonhierachical = (1<<1);
+
+    /* no authority component (file) */ 
+    const short url_noauth         = (1<<2);
+
+    readonly attribute short uritype;
+
+    /**
      * Makes a URI object that is suitable for loading by this protocol.
      * In the usual case (when only the accessors provided by nsIURI are 
      * needed), this method just constructs a standard URI using the

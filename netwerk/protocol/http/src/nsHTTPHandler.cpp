@@ -109,6 +109,13 @@ nsHTTPHandler::GetScheme(char * *o_Scheme)
     return NS_OK;
 }
 
+NS_IMETHODIMP
+nsHTTPHandler::GetUritype(PRInt16 *result)
+{
+    *result = url_std;
+    return NS_OK;
+}
+
 /*
  * CategoryCreateService()
  * Given a category, this convenience functions enumerates the category and creates

@@ -175,6 +175,26 @@ nsIOService::ExtractScheme(const char* inURI, PRUint32 *startPos, PRUint32 *endP
     return NS_ERROR_MALFORMED_URI;
 }
 
+NS_IMETHODIMP
+nsIOService::GetUritype(const char* inURI, PRInt16 *uritype)
+{
+    char* scheme = nsnull;
+    PRUint32 startPos, endPos;
+    nsresult rv = ExtractScheme(inURI, &startPos, &endPos, &scheme);
+    if (NS_FAILED(rv)) {
+        CRTFREEIF(scheme);
+        return rv;
+    }
+    nsCOMPtr<nsIProtocolHandler> handler;
+    rv = GetProtocolHandler(scheme, getter_AddRefs(handler));
+    CRTFREEIF(scheme);
+    if (NS_FAILED(rv)) {
+        return rv;
+    }
+    rv = handler->GetUritype(uritype);
+    return rv;
+}
+
 nsresult
 nsIOService::NewURI(const char* aSpec, nsIURI* aBaseURI,
                     nsIURI* *result, nsIProtocolHandler* *hdlrResult)
@@ -308,7 +328,7 @@ nsIOService::Escape(const char *str, PRInt16 mask, char** result)
 }
 
 NS_IMETHODIMP
-nsIOService::Unescape(const char *str, char **result)
+nsIOService::Unescape(const char *str, char** result)
 {
     return nsURLUnescape((char*)str,result);
 }

@@ -29,7 +29,7 @@ const int EscapeChars[256] =
 {
         0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,       /* 0x */
         0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,  	    /* 1x */
-        0,1023,   0, 512, 761,   0,1023,   0,1023,1023,1023,1023,1023,1023, 959,1016,       /* 2x   !"#$%&'()*+,-./	 */
+        0,1023,   0, 512, 761,   0,1023,   0,1023,1023,1023,1023,1023,1023, 959, 912,       /* 2x   !"#$%&'()*+,-./	 */
      1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,1008, 896,   0,1008,   0, 768,       /* 3x  0123456789:;<=>?	 */
       992,1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,       /* 4x  @ABCDEFGHIJKLMNO  */
      1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,1023, 896, 896, 896, 896,1023,       /* 5x  PQRSTUVWXYZ[\]^_	 */
@@ -60,6 +60,11 @@ nsURLEscape(const char* str, PRInt16 mask, nsCString &result)
         return NS_OK;
     }
 
+    PRBool forced = PR_FALSE;
+
+    if ((nsIIOService::url_Force) & (mask))
+        forced = PR_TRUE;
+    
     int i = 0;
     char* hexChars = "0123456789ABCDEF";
     static const char CheckHexChars[] = "0123456789ABCDEFabcdef";
@@ -86,7 +91,7 @@ nsURLEscape(const char* str, PRInt16 mask, nsCString &result)
 
         /* if the char has not to be escaped or whatever follows % is 
            a valid escaped string, just copy the char */
-        if (IS_OK(c) || (c == HEX_ESCAPE && (pc1) && (pc2) &&
+        if (IS_OK(c) || (!(forced) && c == HEX_ESCAPE && (pc1) && (pc2) &&
            PL_strpbrk(pc1, CheckHexChars) != 0 &&  
            PL_strpbrk(pc2, CheckHexChars) != 0)) {
 		    tempBuffer[tempBufferPos++]=c;

@@ -73,6 +73,13 @@ nsDataHandler::GetDefaultPort(PRInt32 *result) {
 }
 
 NS_IMETHODIMP
+nsDataHandler::GetUritype(PRInt16 *result)
+{
+    *result = url_nonhierachical + url_norelative + url_noauth;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 nsDataHandler::NewURI(const char *aSpec, nsIURI *aBaseURI,
                              nsIURI **result) {
     nsresult rv;

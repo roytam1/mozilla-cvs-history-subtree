@@ -90,6 +90,13 @@ nsAboutProtocolHandler::GetDefaultPort(PRInt32 *result)
 }
 
 NS_IMETHODIMP
+nsAboutProtocolHandler::GetUritype(PRInt16 *result)
+{
+    *result = url_nonhierachical + url_norelative + url_noauth;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 nsAboutProtocolHandler::NewURI(const char *aSpec, nsIURI *aBaseURI,
                                nsIURI **result)
 {

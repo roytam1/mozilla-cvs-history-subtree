@@ -304,6 +304,12 @@ NS_IMETHODIMP nsMailboxService::GetDefaultPort(PRInt32 *aDefaultPort)
 	return rv; 	
 }
 
+NS_IMETHODIMP nsMailboxService::GetUritype(PRInt16 *result)
+{
+    *result = url_norelative;
+    return NS_OK;
+}
+
 NS_IMETHODIMP nsMailboxService::NewURI(const char *aSpec, nsIURI *aBaseURI, nsIURI **_retval)
 {
 	nsCOMPtr<nsIMailboxUrl> aMsgUrl;

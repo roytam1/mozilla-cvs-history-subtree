@@ -23,6 +23,7 @@
 #include "prtypes.h"
 #include "nscore.h"
 #include "nsCRT.h"
+#include "nsIIOService.h"
 #include "nsString.h"
 
 #ifdef __cplusplus
@@ -36,7 +37,7 @@ NS_NET nsresult nsURLEscape (const char* str, PRInt16 mask, nsCString &result);
 NS_NET nsresult nsAppendURLEscapedString(nsCString& originalStr, const char* str, PRInt16 mask);
 
 /* decode % escaped hex codes into character values */
-NS_NET nsresult nsURLUnescape(char* str, char ** result);
+NS_NET nsresult nsURLUnescape(char* str, char* *result);
 
 /* Get port from string */ 
 NS_NET PRInt32 ExtractPortFrom(const char* src);

@@ -88,7 +88,7 @@ nsResourceProtocolHandler::Create(nsISupports *aOuter, REFNSIID aIID, void **aRe
 NS_IMETHODIMP
 nsResourceProtocolHandler::GetScheme(char* *result)
 {
-    *result = nsCRT::strdup("resource");
+    *result = nsCRT::strdup("res");
     if (*result == nsnull)
         return NS_ERROR_OUT_OF_MEMORY;
     return NS_OK;
@@ -98,6 +98,13 @@ NS_IMETHODIMP
 nsResourceProtocolHandler::GetDefaultPort(PRInt32 *result)
 {
     *result = -1;        // no port for resource: URLs
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsResourceProtocolHandler::GetUritype(PRInt16 *result)
+{
+    *result = url_std;
     return NS_OK;
 }
 

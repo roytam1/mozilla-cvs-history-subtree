@@ -236,6 +236,12 @@ NS_IMETHODIMP nsSmtpService::GetDefaultPort(PRInt32 *aDefaultPort)
 	return rv; 	
 }
 
+NS_IMETHODIMP nsSmtpService::GetUritype(PRInt16 *result)
+{
+    *result = url_nonhierachical + url_norelative + url_noauth;
+    return NS_OK;
+}
+
 //////////////////////////////////////////////////////////////////////////
 // This is just a little stub channel class for mailto urls. Mailto urls
 // don't really have any data for the stream calls in nsIChannel to make much sense.

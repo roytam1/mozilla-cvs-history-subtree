@@ -118,6 +118,13 @@ nsFtpProtocolHandler::GetDefaultPort(PRInt32 *result)
 }
 
 NS_IMETHODIMP
+nsFtpProtocolHandler::GetUritype(PRInt16 *result)
+{
+    *result = url_std;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 nsFtpProtocolHandler::NewURI(const char *aSpec, nsIURI *aBaseURI,
                              nsIURI **result)
 {

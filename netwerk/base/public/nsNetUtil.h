@@ -125,23 +125,11 @@ NS_OpenURI(nsIStreamListener* aConsumer, nsISupports* context, nsIURI* uri,
 inline nsresult
 NS_MakeAbsoluteURI(const char* spec, nsIURI* baseURI, char* *result)
 {
-    nsresult rv;
     NS_ASSERTION(baseURI, "It doesn't make sense to not supply a base URI");
  
     if (spec == nsnull)
         return baseURI->GetSpec(result);
-     
-    static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
-    NS_WITH_SERVICE(nsIIOService, serv, kIOServiceCID, &rv);
 
-    PRUint32 startPos, endPos;
-    rv = serv->ExtractScheme(spec, &startPos, &endPos, nsnull);
-    if (NS_SUCCEEDED(rv)) {
-        // if spec has a scheme, then it's already absolute
-        *result = nsCRT::strdup(spec);
-        return (*result == nsnull) ? NS_ERROR_OUT_OF_MEMORY : NS_OK;
-    }
-     
     return baseURI->Resolve(spec, result);
 }
 

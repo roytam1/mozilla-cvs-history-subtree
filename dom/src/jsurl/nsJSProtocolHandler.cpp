@@ -156,6 +156,13 @@ nsJSProtocolHandler::GetDefaultPort(PRInt32 *result)
 }
 
 NS_IMETHODIMP
+nsJSProtocolHandler::GetUritype(PRInt16 *result)
+{
+    *result = url_nonhierachical + url_norelative + url_noauth;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 nsJSProtocolHandler::NewURI(const char *aSpec, nsIURI *aBaseURI,
                             nsIURI **result)
 {

@@ -55,11 +55,17 @@ interface nsIIOService : nsISupports
     const short url_Param         = (1<<7);
     const short url_Query         = (1<<8);
     const short url_Ref           = (1<<9);
+    const short url_Force         = (1<<10);
 
     /**
      * Returns a protocol handler for a given URI scheme.
      */
     nsIProtocolHandler getProtocolHandler(in string scheme);
+
+    /**
+     * Returns a uritype for a given URI.
+     */
+    short getUritype(in string inURI);
 
     /**
      * This method constructs a new URI by first determining the scheme

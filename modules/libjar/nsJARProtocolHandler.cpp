@@ -91,6 +91,13 @@ nsJARProtocolHandler::GetDefaultPort(PRInt32 *result)
 }
 
 NS_IMETHODIMP
+nsJARProtocolHandler::GetUritype(PRInt16 *result)
+{
+    *result = url_std;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 nsJARProtocolHandler::NewURI(const char *aSpec, nsIURI *aBaseURI,
                              nsIURI **result)
 {

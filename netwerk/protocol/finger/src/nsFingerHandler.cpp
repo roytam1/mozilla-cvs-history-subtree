@@ -72,6 +72,13 @@ nsFingerHandler::GetDefaultPort(PRInt32 *result) {
 }
 
 NS_IMETHODIMP
+nsFingerHandler::GetUritype(PRInt16 *result)
+{
+    *result = url_nonhierachical + url_norelative + url_noauth;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 nsFingerHandler::NewURI(const char *aSpec, nsIURI *aBaseURI,
                              nsIURI **result) {
     nsresult rv;

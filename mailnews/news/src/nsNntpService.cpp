@@ -1025,6 +1025,12 @@ NS_IMETHODIMP nsNntpService::GetDefaultPort(PRInt32 *aDefaultPort)
 	return rv; 	
 }
 
+NS_IMETHODIMP nsNntpService::GetUritype(PRInt16 *result)
+{
+    *result = url_norelative;
+    return NS_OK;
+}
+
 NS_IMETHODIMP nsNntpService::NewURI(const char *aSpec, nsIURI *aBaseURI, nsIURI **_retval)
 {
 	nsresult rv = NS_OK;
