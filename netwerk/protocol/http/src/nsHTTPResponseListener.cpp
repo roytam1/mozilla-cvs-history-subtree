@@ -352,7 +352,6 @@ nsHTTPServerListener::OnDataAvailable(nsIChannel* channel,
 
                         if (NS_SUCCEEDED (rv))
                         {
-    						// nsSocketTransport* trans = NS_STATIC_CAST (nsSocketTransport*, channel);
 							trans -> SetBytesAllowed (cl - i_Length);
 							mContentLengthDone = PR_TRUE;
 
