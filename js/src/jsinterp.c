@@ -2736,6 +2736,7 @@ js_Interpret(JSContext *cx, jsval *result)
             rval = ATOM_KEY(atom);
             JS_ASSERT(JSVAL_IS_OBJECT(rval));
             PUSH_OPND(rval);
+            obj = NULL;
             break;
 
           case JSOP_ZERO:
