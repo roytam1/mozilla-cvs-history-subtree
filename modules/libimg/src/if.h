@@ -86,11 +86,7 @@ PR_END_EXTERN_C
 /* #define DEBUG_GROUP_OBSERVER */
 
 #ifdef DEBUG
-#ifndef XP_MAC
 #define Debug 1
-#else
-extern int Debug;
-#endif
 #endif
 
 #ifdef XP_WIN
