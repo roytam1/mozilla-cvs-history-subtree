@@ -776,7 +776,7 @@ function getDefaultFileName(aDefaultFileName, aNameFromHeaders, aDocumentURI, aD
         charset = document.commandDispatcher.focusedWindow.document.characterSet;
       else
         charset = window._content.document.characterSet;
-      return textToSubURI.unEscapeURIForUI(charset, url.fileName);
+      return validateFileName(textToSubURI.unEscapeURIForUI(charset, url.fileName));
     } catch (e) {
       // This is something like a wyciwyg:, data:, and so forth
       // URI... no usable filename here.
