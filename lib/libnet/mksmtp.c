@@ -535,17 +535,19 @@ net_smtp_auth_login_response(ActiveEntry *cur_entry)
 
   switch (CD_RESPONSE_CODE/100) {
   case 2:
-#ifdef MOZ_MAIL_NEWS
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
 	  {
 		  char *pop_password = (char *)NET_GetPopPassword();
 		  CD_NEXT_STATE = SMTP_SEND_HELO_RESPONSE;
 		  if (pop_password == NULL)
 			NET_SetPopPassword2(net_smtp_password);
+#if defined(MOZ_MAIL_NEWS)
 		  if ( IMAP_GetPassword() == NULL )
 			  IMAP_SetPassword(net_smtp_password);
+#endif /* MOZ_MAIL_NEWS */
 		  XP_FREEIF(pop_password);
 	  }
-#endif /* MOZ_MAIL_NEWS */
+#endif /* MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE */
 	break;
   case 3:
 	CD_NEXT_STATE = SMTP_SEND_AUTH_LOGIN_PASSWORD;

@@ -1355,7 +1355,7 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
 	
 	FE_EnableClicking(CE_WINDOW_ID);
 
-#ifdef MOZ_MAIL_NEWS    
+#ifdef MOZ_MAIL_NEWS
     if (cur_entry->format_out == FO_PRESENT)
     {
       if (NET_URL_Type(cur_entry->URL_s->address) == NEWS_TYPE_URL)
@@ -1379,7 +1379,7 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
           }
       }
     }
-#endif /* MOZ_MAIL_NEWS */      
+#endif /* MOZ_MAIL_NEWS */
 
 	/* open the outgoing stream
 	 */

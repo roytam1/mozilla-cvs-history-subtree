@@ -197,7 +197,11 @@ MimeInlineTextVCard_parse_line (char *line, int32 length, MimeObject *obj)
     return 0;
 }
 
-
+/* This routine generates a lot of unresolved symbols in the free src:
+   Parse_MIME, nextVObjectInList, cleanVObject, isAPropertyOf,
+   vObjectUStringZValue, fakeCString, writeMemVObjects, vObjectName,
+   initPropIterator, moreIteration, nextVObject
+ */
 static int
 MimeInlineTextVCard_parse_eof (MimeObject *obj, XP_Bool abort_p)
 {

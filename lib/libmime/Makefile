@@ -48,7 +48,6 @@ CSRCS		= mimecont.c \
 		  mimetpla.c \
 		  mimetric.c \
 		  mimeunty.c \
-		  mimevcrd.c \
 		  $(NULL)
 
 ifndef NO_SECURITY

@@ -2106,7 +2106,6 @@ MIME_DisplayAttachmentPane(MWContext* context)
     return 0;
 }
 
-
 /* This struct is the state we used in MIME_VCardConverter() */
 struct mime_vcard_data {
     URL_Struct *url;                         /* original url */
@@ -2259,9 +2258,13 @@ MIME_VCardConverter ( int format_out,
     vcd->options->stream_closure = vcd;
     vcd->options->html_closure = vcd;
 
+#ifdef PARSE_VCARDS
     obj = mime_new ( (MimeObjectClass *) &mimeInlineTextVCardClass,
         (MimeHeaders *) NULL,
         TEXT_VCARD );
+#else /* PARSE_VCARDS */
+    obj = 0;
+#endif /* PARSE_VCARDS */
 
     if ( !obj ) {
         FREEIF( vcd->options->part_to_load );

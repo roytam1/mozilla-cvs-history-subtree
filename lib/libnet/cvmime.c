@@ -68,14 +68,6 @@ extern int XP_EDITOR_NON_HTML;
 #include "robotxt.h"
 #endif
 
-#ifdef MOZ_MAIL_NEWS
-/* #### defined in libmsg/msgutils.c */
-extern NET_StreamClass * 
-msg_MakeRebufferingStream (NET_StreamClass *next_stream,
-						   URL_Struct *url,
-						   MWContext *context);
-#endif /* MOZ_MAIL_NEWS */
-
 /* defined at the bottom of this file */
 NET_StreamClass *
 NET_PrintRawToDisk(int format_out, 
@@ -84,14 +76,18 @@ NET_PrintRawToDisk(int format_out,
 				   MWContext *context);
 
 #if defined(MOZ_MAIL_NEWS)|| defined(MOZ_MAIL_COMPOSE)
+
+/* #### defined in libmsg/msgutils.c */
+extern NET_StreamClass * 
+msg_MakeRebufferingStream (NET_StreamClass *next_stream,
+						   URL_Struct *url,
+						   MWContext *context);
+
 typedef struct MIME_DataObject {
   MimeDecoderData *decoder;		/* State used by the decoder */  
   NET_StreamClass *next_stream;	/* Where the output goes */
   XP_Bool partial_p;			/* Whether we should close that stream */
 } MIME_DataObject;
-
-
-
 
 
 static int
@@ -165,7 +161,7 @@ PRIVATE void net_MimeEncodingConverterAbort (NET_StreamClass *stream, int status
     }
   XP_FREE (data);
 }
-#endif /* MOZ_MAIL_NEWS */
+#endif /* MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE */
 
 PRIVATE NET_StreamClass * 
 NET_MimeEncodingConverter_1 (int          format_out,
@@ -428,8 +424,8 @@ net_RegisterDefaultDecoders (void)
 									FO_PRESENT,
 									NULL, 
 									NET_PlainTextConverter);
-
-#ifdef MOZ_MAIL_NEWS
+  
+#if defined(MOZ_MAIL_NEWS)
 #if defined(XP_MAC)
   NET_RegisterContentTypeConverter (MULTIPART_APPLEDOUBLE, FO_SAVE_AS,
 								    NULL, fe_MakeAppleDoubleDecodeStream_1);
@@ -786,7 +782,7 @@ NET_RegisterMIMEDecoders (void)
   NET_RegisterContentTypeConverter ("*", FO_MULTIPART_IMAGE,
 									(void *) 1, IL_ViewStream);
 
-#ifdef MOZ_MAIL_NEWS
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
   /* Decoders for libmsg/compose.c */
   MSG_RegisterConverters ();
 #endif  
