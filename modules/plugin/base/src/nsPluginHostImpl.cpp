@@ -43,6 +43,8 @@
 #include "nsNetUtil.h"
 #include "nsIProgressEventSink.h"
 #include "nsIDocument.h"
+#include "nsIRegistry.h"
+#include "nsEnumeratorUtils.h"
 
 // for the dialog
 #include "nsIStringBundle.h"
@@ -386,7 +388,7 @@ nsPluginTag::nsPluginTag()
   mFileName = nsnull;
 }
 
-inline char* new_str(char* str)
+inline char* new_str(const char* str)
 {
   if(str == nsnull)
     return nsnull;
@@ -478,6 +480,93 @@ nsPluginTag::nsPluginTag(nsPluginInfo* aPluginInfo)
 	mLibrary = nsnull;
 	mEntryPoint = nsnull;
 	mFlags = NS_PLUGIN_FLAG_ENABLED;
+}
+
+
+static PRBool
+NextVariant(const char*& aCursor, char** aSlot)
+{
+  if (! aCursor)
+    return PR_FALSE;
+
+  for (const char* p = aCursor; *p && *p != '|'; ++p)
+    ;
+
+  PRInt32 len = (p - aCursor);
+
+  if (len) {
+    PRInt32 size = len + 1;
+    *aSlot = new char[size];
+    PL_strncpyz(*aSlot, aCursor, size);
+  }
+  else {
+    *aSlot = nsnull;
+  }
+
+  if (! *p)
+    return PR_FALSE;
+
+  aCursor = p + 1;
+  return PR_TRUE;
+}
+
+
+
+nsPluginTag::nsPluginTag(const char* aName,
+                         const char* aDescription,
+                         const char* aMimeTypes,
+                         const char* aMimeDescriptions,
+                         const char* aExtensions,
+                         const char* aFileName)
+  : mVariants(0),
+    mMimeTypeArray(nsnull),
+    mMimeDescriptionArray(nsnull),
+    mExtensionsArray(nsnull),
+    mLibrary(nsnull),
+    mEntryPoint(nsnull),
+    mNext(nsnull)
+{
+  mName            = new_str(aName);
+  mDescription     = new_str(aDescription);
+  mMimeType        = new_str(aMimeTypes);
+  mMimeDescription = new_str(aMimeDescriptions);
+  mExtensions      = new_str(aExtensions);
+  mFileName        = new_str(aFileName);
+
+  if (aMimeTypes) {
+    // Count how many variants we have. We'll use the MIME type array
+    // as the baseline. It should be separated with '|' characters.
+    const char* p;
+    for (p = aMimeTypes; p != nsnull; p = PL_strchr(p, '|'), ++mVariants)
+      ;
+  }
+
+  if (mVariants) {
+    mMimeTypeArray        = new char*[mVariants];
+    mMimeDescriptionArray = new char*[mVariants];
+    mExtensionsArray      = new char*[mVariants];
+
+    {
+      for (PRInt32 i = 0; i < mVariants; ++i)
+        mMimeTypeArray[i]
+          = mMimeDescriptionArray[i]
+          = mExtensionsArray[i]
+          = nsnull;
+    }
+
+    const char* mimetype = aMimeTypes;
+    const char* mimedescription = aMimeDescriptions;
+    const char* extension = aExtensions;
+
+    PRBool more;
+    PRInt32 i = 0;
+    do {
+      more = NextVariant(mimetype, &mMimeTypeArray[i]);
+      more = NextVariant(mimedescription, &mMimeDescriptionArray[i]) && more;
+      more = NextVariant(extension, &mExtensionsArray[i]) && more;
+      ++i;
+    } while (more);
+  }
 }
 
 nsPluginTag::~nsPluginTag()
@@ -1306,6 +1395,9 @@ NS_IMETHODIMP nsPluginHostImpl::GetValue(nsPluginManagerVariable variable, void 
 
 nsresult nsPluginHostImpl::ReloadPlugins(PRBool reloadPages)
 {
+  // XXX don't we want to nuke the old mPlugins right now?
+  // XXX for new-style plugins, we should also call
+  //     nsIComponentManager::AutoRegister()
   mPluginsLoaded = PR_FALSE;
   return LoadPlugins();
 }
@@ -1939,11 +2031,9 @@ nsresult nsPluginHostImpl::RegisterPluginMimeTypesWithLayout(nsPluginTag * plugi
   for(int i = 0; i < pluginTag->mVariants; i++)
   {
     static NS_DEFINE_CID(kPluginDocLoaderFactoryCID, NS_PLUGINDOCLOADERFACTORY_CID);
-    char progid[512];
 
-    PR_snprintf(progid, sizeof(progid),
-                NS_DOCUMENT_LOADER_FACTORY_PROGID_PREFIX "view/%s",
-                pluginTag->mMimeTypeArray[i]);
+    nsCAutoString progid = NS_DOCUMENT_LOADER_FACTORY_PROGID_PREFIX "view/";
+    progid += pluginTag->mMimeTypeArray[i];
 
     rv = compManager->RegisterComponentSpec(kPluginDocLoaderFactoryCID,
                                             "Plugin Loader Stub",
@@ -2478,16 +2568,17 @@ NS_IMETHODIMP nsPluginHostImpl::GetPluginFactory(const char *aMimeType, nsIPlugi
 
 NS_IMETHODIMP nsPluginHostImpl::LoadPlugins()
 {
-  do {
-		// 1. scan the plugins directory (where is it?) for eligible plugin libraries.
-		nsPluginsDir pluginsDir;
-		if (! pluginsDir.Valid())
-			break;
-
     // retrieve a path for layout module. Needed for plugin mime types registration
     nsCOMPtr<nsIComponentManager> compManager = do_GetService(kComponentManagerCID);
     nsCOMPtr<nsIFile> path;
     nsresult rvIsLayoutPath = compManager->SpecForRegistryLocation(REL_PLUGIN_DLL, getter_AddRefs(path));
+
+    LoadXPCOMPlugins(compManager, path);
+
+		// 1. scan the plugins directory (where is it?) for eligible plugin libraries.
+		nsPluginsDir pluginsDir;
+		if (! pluginsDir.Valid())
+			return NS_ERROR_FAILURE;
 
     for (nsDirectoryIterator iter(pluginsDir, PR_TRUE); iter.Exists(); iter++) {
 			const nsFileSpec& file = iter;
@@ -2527,9 +2618,6 @@ NS_IMETHODIMP nsPluginHostImpl::LoadPlugins()
 
 		mPluginsLoaded = PR_TRUE;
 		return NS_OK;
-	} while (0);
-	
-	return NS_ERROR_FAILURE;
 }
 
 #else // go for new plugin finding logic on Windows
@@ -2595,6 +2683,13 @@ static PRBool isUnwantedPlugin(nsPluginTag * tag)
 
 NS_IMETHODIMP nsPluginHostImpl::LoadPlugins()
 {
+  // retrieve a path for layout module. Needed for plugin mime types registration
+  nsCOMPtr<nsIComponentManager> compManager = do_GetService(kComponentManagerCID);
+  nsCOMPtr<nsIFile> path;
+  nsresult rvIsLayoutPath = compManager->SpecForRegistryLocation(REL_PLUGIN_DLL, getter_AddRefs(path));
+
+  LoadXPCOMPlugins(compManager, path);
+
 // currently we decided to look in both local plugins dir and 
 // that of the previous 4.x installation combining plugins from both places.
 // See bug #21938
@@ -2606,11 +2701,6 @@ NS_IMETHODIMP nsPluginHostImpl::LoadPlugins()
 
   if(!pluginsDir4x.Valid() && !pluginsDirMoz.Valid())
   	return NS_ERROR_FAILURE;
-
-  // retrieve a path for layout module. Needed for plugin mime types registration
-  nsCOMPtr<nsIComponentManager> compManager = do_GetService(kComponentManagerCID);
-  nsCOMPtr<nsIFile> path;
-  nsresult rvIsLayoutPath = compManager->SpecForRegistryLocation(REL_PLUGIN_DLL, getter_AddRefs(path));
 
   // first, make a list from MOZ_LOCAL installation
   for (nsDirectoryIterator iter(pluginsDirMoz, PR_TRUE); iter.Exists(); iter++) 
@@ -2718,6 +2808,147 @@ NS_IMETHODIMP nsPluginHostImpl::LoadPlugins()
 	return NS_OK;
 }
 #endif // XP_WIN -- end new plugin finding logic
+
+
+static nsresult
+LoadXPCOMPlugin(nsIComponentManager* aComponentManager,
+                nsIRegistry* aRegistry,
+                nsRegistryKey aPluginKey,
+                nsPluginTag** aResult)
+{
+  nsresult rv;
+
+  // The name, description, MIME types, MIME descriptions, and
+  // supported file extensions will all hang off of the plugin's key
+  // in the registry. Pull these out now.
+  nsXPIDLCString name;
+  aRegistry->GetStringUTF8(aPluginKey, "name", getter_Copies(name));
+
+  nsXPIDLCString description;
+  aRegistry->GetStringUTF8(aPluginKey, "description", getter_Copies(description));
+
+  nsXPIDLCString mimetypes;
+  aRegistry->GetStringUTF8(aPluginKey, "mimetypes", getter_Copies(mimetypes));
+
+  nsXPIDLCString mimedescriptions;
+  aRegistry->GetStringUTF8(aPluginKey, "mimedescriptions", getter_Copies(mimedescriptions));
+
+  nsXPIDLCString extensions;
+  aRegistry->GetStringUTF8(aPluginKey, "extensions", getter_Copies(extensions));
+
+  nsXPIDLCString filename;
+
+  // To figure out the filename of the plugin, we'll need to get the
+  // plugin's CID, and then navigate through the XPCOM registry to
+  // pull out the DLL name to which the CID is registered.
+  nsXPIDLCString cid;
+  aRegistry->GetStringUTF8(aPluginKey, "cid", getter_Copies(cid));
+
+  nsAutoString path = NS_LITERAL_STRING("software/mozilla/XPCOM/classID/");
+  path += NS_ConvertASCIItoUCS2(cid);
+
+  nsRegistryKey cidKey;
+  rv = aRegistry->GetKey(nsIRegistry::Common, path.GetUnicode(), &cidKey);
+
+  if (NS_SUCCEEDED(rv)) {
+    PRUint8* library;
+    PRUint32 count;
+    // XXX Good grief, what does "GetBytesUTF8()" mean? They're bytes!
+    rv = aRegistry->GetBytesUTF8(cidKey, "InprocServer", &count, &library);
+    if (NS_SUCCEEDED(rv)) {
+      nsCOMPtr<nsIFile> file;
+      rv = aComponentManager->SpecForRegistryLocation(NS_REINTERPRET_CAST(const char*, library),
+                                                      getter_AddRefs(file));
+
+      if (NS_SUCCEEDED(rv)) {
+        file->GetLeafName(getter_Copies(filename));
+      }
+
+      nsCRT::free(NS_REINTERPRET_CAST(char*, library));
+    }
+  }
+
+  // All done! Create the new nsPluginTag info and send it back.
+  nsPluginTag* tag
+    = new nsPluginTag(name,
+                      description,
+                      mimetypes,
+                      mimedescriptions,
+                      extensions,
+                      filename);
+
+  if (! tag)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  *aResult = tag;
+  return NS_OK;
+}
+
+nsresult
+nsPluginHostImpl::LoadXPCOMPlugins(nsIComponentManager* aComponentManager, nsIFile* aPath)
+{
+  // The "new style" XPCOM plugins have their information stored in
+  // the component registry, under the key
+  //
+  //   nsIRegistry::Common/software/plugins
+  //
+  // Enumerate through that list now, creating an nsPluginTag for
+  // each.
+  static NS_DEFINE_CID(kRegistryCID, NS_REGISTRY_CID);
+  nsCOMPtr<nsIRegistry> registry = do_CreateInstance(kRegistryCID);
+  if (! registry)
+    return NS_ERROR_FAILURE;
+
+  nsresult rv;
+  rv = registry->OpenWellKnownRegistry(nsIRegistry::ApplicationComponentRegistry);
+  if (NS_FAILED(rv)) return rv;
+  
+  nsRegistryKey pluginsKey;
+  rv = registry->GetSubtree(nsIRegistry::Common, "software/plugins", &pluginsKey);
+  if (NS_FAILED(rv)) return rv;
+
+  // XXX get rid nsIEnumerator someday!
+  nsCOMPtr<nsIEnumerator> enumerator;
+  rv = registry->EnumerateSubtrees(pluginsKey, getter_AddRefs(enumerator));
+  if (NS_FAILED(rv)) return rv;
+
+  nsCOMPtr<nsISimpleEnumerator> plugins;
+  rv = NS_NewAdapterEnumerator(getter_AddRefs(plugins), enumerator);
+  if (NS_FAILED(rv)) return rv;
+
+  for (;;) {
+    PRBool hasMore;
+    plugins->HasMoreElements(&hasMore);
+    if (! hasMore)
+      break;
+
+    nsCOMPtr<nsISupports> isupports;
+    plugins->GetNext(getter_AddRefs(isupports));
+
+    nsCOMPtr<nsIRegistryNode> node = do_QueryInterface(isupports);
+    NS_ASSERTION(node != nsnull, "not an nsIRegistryNode");
+    if (! node)
+      continue;
+
+    // Pull out the information for an individual plugin, and link it
+    // in to the mPlugins list.
+    nsRegistryKey key;
+    node->GetKey(&key);
+
+    nsPluginTag* tag;
+    rv = LoadXPCOMPlugin(aComponentManager, registry, key, &tag);
+    if (NS_FAILED(rv)) return rv;
+
+    tag->mNext = mPlugins;
+    mPlugins = tag;
+
+    // Create an nsIDocumentLoaderFactory wrapper in case we ever see
+    // any naked streams.
+    RegisterPluginMimeTypesWithLayout(tag, aComponentManager, aPath);
+  }
+
+  return NS_OK;
+}
 
 /* Called by GetURL and PostURL */
 

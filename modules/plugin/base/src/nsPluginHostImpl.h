@@ -35,13 +35,28 @@
 
 class ns4xPlugin;
 class nsFileSpec;
+class nsIComponentManager;
+class nsIFile;
 
+/**
+ * A linked-list of plugin information that is used for
+ * instantiating plugins and reflecting plugin information
+ * into JavaScript.
+ */
 class nsPluginTag
 {
 public:
   nsPluginTag();
   nsPluginTag(nsPluginTag* aPluginTag);
   nsPluginTag(nsPluginInfo* aPluginInfo);
+
+  nsPluginTag(const char* aName,
+              const char* aDescription,
+              const char* aMimeTypes,
+              const char* aMimeDescriptions,
+              const char* aExtensions,
+              const char* aFileName);
+
   ~nsPluginTag();
 
   nsPluginTag   *mNext;
@@ -159,7 +174,7 @@ public:
 
   NS_IMETHOD
   LoadPlugins(void);
-  
+
   NS_IMETHOD
   GetPluginFactory(const char *aMimeType, nsIPlugin** aPlugin);
 
@@ -265,6 +280,9 @@ public:
   StopPluginInstance(nsIPluginInstance* aInstance);
 
 private:
+
+  nsresult
+  LoadXPCOMPlugins(nsIComponentManager* aComponentManager, nsIFile* aPath);
 
   /* Called by InstantiatePlugin */
 
