@@ -110,7 +110,8 @@ public:
     kOpSetTextProperty     = 3010,
     kOpRemoveTextProperty  = 3011,
     kOpHTMLPaste           = 3012,
-    kOpLoadHTML            = 3013
+    kOpLoadHTML            = 3013,
+    kOpResetTextProperties = 3014
   };
 
   enum ResizingRequestID
@@ -148,6 +149,28 @@ public:
   NS_IMETHOD ParseStyleAttrIntoCSSRule(const nsAString& aString,
                                        nsIDOMCSSStyleRule **_retval); 
 
+  NS_IMETHOD AddDefaultProperty(nsIAtom *aProperty, 
+                                const nsAString & aAttribute, 
+                                const nsAString & aValue);
+
+  NS_IMETHOD RemoveDefaultProperty(nsIAtom *aProperty, 
+                                   const nsAString & aAttribute, 
+                                   const nsAString & aValue);
+
+  NS_IMETHOD RemoveAllDefaultProperties();
+
+  NS_IMETHOD AddAlternateProperty(nsIAtom *aProperty, 
+                                const nsAString & aAttribute, 
+                                const nsAString & aValue);
+
+  NS_IMETHOD RemoveAlternateProperty(nsIAtom *aProperty, 
+                                   const nsAString & aAttribute, 
+                                   const nsAString & aValue);
+
+  NS_IMETHOD RemoveAllAlternateProperties();
+
+  NS_IMETHOD SetPastePolicy(PRInt32 aPolicy);
+  
   NS_IMETHOD SetCSSInlineProperty(nsIAtom *aProperty, 
                              const nsAString & aAttribute, 
                              const nsAString & aValue);
@@ -542,6 +565,28 @@ protected:
   // inline style caching
   void ClearInlineStylesCache();
   
+  // property list management
+  nsresult AddPropertyImpl(nsVoidArray &aPropArray,
+                                        nsIAtom *aProperty, 
+                                        const nsAString & aAttribute, 
+                                        const nsAString & aValue);
+  nsresult RemovePropertyImpl(nsVoidArray &aPropArray,
+                                           nsIAtom *aProperty, 
+                                           const nsAString & aAttribute, 
+                                           const nsAString & aValue);
+  nsresult RemoveAllPropertiesImpl(nsVoidArray &aPropArray);
+
+  // property list usage
+  nsresult ApplyPropertiesToNode(nsVoidArray *aPropArray, nsIDOMNode *aNode);
+
+  nsresult ApplyPropertiesToTextNode(nsVoidArray *aPropArray, 
+                                       nsIDOMCharacterData *aTextNode, 
+                                       PRInt32 aStartOffset,
+                                       PRInt32 aEndOffset);
+
+  nsresult ApplyPropertiesToRange(nsVoidArray *aPropArray, nsIDOMRange *aRange);
+
+
   // key event helpers
   NS_IMETHOD TabInTable(PRBool inIsShift, PRBool *outHandled);
   NS_IMETHOD CreateBR(nsIDOMNode *aNode, PRInt32 aOffset, 
@@ -646,7 +691,7 @@ protected:
                                           const nsAString   *aValue,
                                           PRBool            &aIsSet,
                                           nsIDOMNode       **aStyleNode,
-                                          nsAString *outValue = nsnull) const;
+                                          nsAString *outValue = nsnull);
 
   /** style-based query returns PR_TRUE if (aProperty, aAttribute) is set in aSC.
     * WARNING: not well tested yet since we don't do style-based queries anywhere.
@@ -767,7 +812,8 @@ protected:
   nsresult SetInlinePropertyOnNode( nsIDOMNode *aNode,
                                     nsIAtom *aProperty, 
                                     const nsAString *aAttribute,
-                                    const nsAString *aValue);
+                                    const nsAString *aValue,
+                                    PRBool aDontOverride = PR_FALSE);
 
   nsresult PromoteInlineRange(nsIDOMRange *inRange);
   nsresult PromoteRangeIfStartsOrEndsInNamedAnchor(nsIDOMRange *inRange);
@@ -780,6 +826,7 @@ protected:
                                 const nsAString *aAttribute,
                                 nsCOMPtr<nsIDOMNode> *outLeftNode = nsnull,
                                 nsCOMPtr<nsIDOMNode> *outRightNode = nsnull);
+  nsresult ApplyDefaultProperties();
   nsresult RemoveStyleInside(nsIDOMNode *aNode, 
                              nsIAtom *aProperty, 
                              const nsAString *aAttribute, 
@@ -823,7 +870,8 @@ protected:
                              PRBool *aFirst, 
                              PRBool *aAny, 
                              PRBool *aAll,
-                             nsAString *outValue);
+                             nsAString *outValue,
+                             PRBool aCheckDefaults = PR_TRUE);
   nsresult HasStyleOrIdOrClass(nsIDOMElement * aElement, PRBool *aHasStyleOrIdOrClass);
   nsresult RemoveElementIfNoStyleOrIdOrClass(nsIDOMElement * aElement, nsIAtom * aTag);
 
@@ -849,6 +897,9 @@ protected:
   PRBool   mCachedUnderlineStyle;
   nsString mCachedFontName;
 
+  // Used to remember the type of paste in progress (unicode, html, ...)
+  nsString mPasteFlavor;
+  
   // Used to disable HTML formatting commands during HTML source editing
   PRBool   mCanEditHTML;
 
@@ -867,6 +918,10 @@ protected:
   nsStringArray mStyleSheetURLs;
   nsCOMPtr<nsISupportsArray> mStyleSheets;
   PRInt32 mNumStyleSheets;
+  
+  // arrays for holding default  and alternate style settings
+  nsVoidArray mDefaultStyles;
+  nsVoidArray mAlternateStyles;
 
   // Maintain a static parser service ...
   static nsCOMPtr<nsIParserService> sParserService;
@@ -910,6 +965,8 @@ protected:
   PRInt32 mYIncrementFactor;
   PRInt32 mWidthIncrementFactor;
   PRInt32 mHeightIncrementFactor;
+
+  PRInt32 mPastePolicy;
 
   nsresult CreateResizer(nsIDOMElement ** aReturn, PRInt16 aLocation, nsISupportsArray * aArray);
   void     SetResizerPosition(PRInt32 aX, PRInt32 aY, nsIDOMElement *aResizer);

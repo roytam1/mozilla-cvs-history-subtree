@@ -414,7 +414,9 @@ nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsAString & aInputString,
     NS_ENSURE_SUCCESS(res, res);
 
     // pasting does not inherit local inline styles
-    res = RemoveAllInlineProperties();
+    // NOTE: cant use RemoveAllInlineProperties() here becasue
+    // it applies default styles, which we dont want for html paste.
+    res = RemoveInlinePropertyImpl(nsnull, nsnull);
     NS_ENSURE_SUCCESS(res, res);
   }
   else
@@ -523,6 +525,10 @@ nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsAString & aInputString,
     else
       parentBlock = GetBlockNodeParent(parentNode);
       
+    // remember where we start pasting
+    nsCOMPtr<nsIDOMNode> pasteStartNode = parentNode;
+    PRInt32 pasteStartOffset = offsetOfNewNode;
+    
     for (j=0; j<listCount; j++)
     {
       nsCOMPtr<nsISupports> isupports = dont_AddRef(nodeList->ElementAt(j));
@@ -669,6 +675,30 @@ nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsAString & aInputString,
     // Now collapse the selection to the end of what we just inserted:
     if (lastInsertNode) 
     {
+      // find where we ended pasting
+      nsCOMPtr<nsIDOMNode> pasteEndNode;
+      PRInt32 pasteEndOffset;
+      GetNodeLocation(lastInsertNode, address_of(pasteEndNode), &pasteEndOffset);
+      pasteEndOffset++;  // end is *after* last inserted node.
+      
+      if ((mPastePolicy == eAddDefaultStyle) || (mPastePolicy == eAddAlternateStyle))
+      {
+        nsVoidArray *array = &mDefaultStyles;
+        if (mPastePolicy == eAddAlternateStyle)
+          array = &mAlternateStyles;
+          
+        // apply styles to paste
+        nsCOMPtr<nsIDOMRange> pasteRange = do_CreateInstance(kCRangeCID);
+        if (!pasteRange) 
+          return NS_ERROR_NULL_POINTER;
+        res = pasteRange->SetStart(pasteStartNode, pasteStartOffset);
+        NS_ENSURE_SUCCESS(res, res);
+        res = pasteRange->SetEnd(pasteEndNode, pasteEndOffset);
+        NS_ENSURE_SUCCESS(res, res);
+        res = ApplyPropertiesToRange(array, pasteRange);
+        NS_ENSURE_SUCCESS(res, res);
+      }
+      
       // set selection to the end of what we just pasted.
       nsCOMPtr<nsIDOMNode> selNode, tmp, visNode, highTable;
       PRInt32 selOffset;
@@ -1040,12 +1070,12 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
   if ( NS_SUCCEEDED(transferable->GetAnyTransferData(&bestFlavor, getter_AddRefs(genericDataObj), &len)) )
   {
     nsAutoTxnsConserveSelection dontSpazMySelection(this);
-    nsAutoString flavor, stuffToPaste;
-    flavor.AssignWithConversion( bestFlavor );   // just so we can use flavor.Equals()
+    nsAutoString stuffToPaste;
+    mPasteFlavor.AssignWithConversion( bestFlavor );   // remember flavor for rules code
 #ifdef DEBUG_clipboard
     printf("Got flavor [%s]\n", bestFlavor);
 #endif
-    if (flavor.Equals(NS_LITERAL_STRING(kNativeHTMLMime)))
+    if (mPasteFlavor.Equals(NS_LITERAL_STRING(kNativeHTMLMime)))
     {
       // note cf_html uses utf8, hence use length = len, not len/2 as in flavors below
       nsCOMPtr<nsISupportsCString> textDataObj(do_QueryInterface(genericDataObj));
@@ -1061,13 +1091,13 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
         {
           nsAutoEditBatch beginBatching(this);
           rv = InsertHTMLWithCharsetAndContext(cffragment, nsString(),
-                                              cfcontext, cfselection, flavor,
+                                              cfcontext, cfselection, mPasteFlavor,
                                               aDestinationNode, aDestOffset,
                                               aDoDeleteSelection);
         }
       }
     }
-    else if (flavor.Equals(NS_LITERAL_STRING(kHTMLMime)))
+    else if (mPasteFlavor.Equals(NS_LITERAL_STRING(kHTMLMime)))
     {
       nsCOMPtr<nsISupportsString> textDataObj(do_QueryInterface(genericDataObj));
       if (textDataObj && len > 0)
@@ -1078,12 +1108,12 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
         stuffToPaste.Assign(text.get(), len / 2);
         nsAutoEditBatch beginBatching(this);
         rv = InsertHTMLWithCharsetAndContext(stuffToPaste, nsString(),
-                                             aContextStr, aInfoStr, flavor,
+                                             aContextStr, aInfoStr, mPasteFlavor,
                                              aDestinationNode, aDestOffset,
                                              aDoDeleteSelection);
       }
     }
-    else if (flavor.Equals(NS_LITERAL_STRING(kUnicodeMime)))
+    else if (mPasteFlavor.Equals(NS_LITERAL_STRING(kUnicodeMime)))
     {
       nsCOMPtr<nsISupportsString> textDataObj ( do_QueryInterface(genericDataObj) );
       if (textDataObj && len > 0)
@@ -1097,7 +1127,7 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
         rv = InsertText(stuffToPaste);
       }
     }
-    else if (flavor.Equals(NS_LITERAL_STRING(kFileMime)))
+    else if (mPasteFlavor.Equals(NS_LITERAL_STRING(kFileMime)))
     {
       nsCOMPtr<nsIFile> fileObj ( do_QueryInterface(genericDataObj) );
       if (fileObj && len > 0)
@@ -1145,14 +1175,14 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
             }
             nsAutoEditBatch beginBatching(this);
             rv = InsertHTMLWithCharsetAndContext(stuffToPaste, nsString(),
-                                                nsString(), nsString(), flavor, 
+                                                nsString(), nsString(), mPasteFlavor, 
                                                 aDestinationNode, aDestOffset,
                                                 aDoDeleteSelection);
           }
         }
       }
     }
-    else if (flavor.Equals(NS_LITERAL_STRING(kJPEGImageMime)))
+    else if (mPasteFlavor.Equals(NS_LITERAL_STRING(kJPEGImageMime)))
     {
       // need to provide a hook from here
       // Insert Image code here
