@@ -163,17 +163,17 @@ public:
                          nsIRDFResource* aCommandTarget);
 
     // caching frequently used resources
-    nsIRDFResource* mResourceChild;
-    nsIRDFResource* mResourceFolder;
-    nsIRDFResource* mResourceFrom;
-    nsIRDFResource* mResourceSubject;
-    nsIRDFResource* mResourceDate;
-    nsIRDFResource* mResourceUser;
-    nsIRDFResource* mResourceHost;
-    nsIRDFResource* mResourceAccount;
-    nsIRDFResource* mResourceName;
-    nsIRDFResource* mMailRoot;
-    nsIRDFResource* mResourceColumns;
+    static nsIRDFResource* kNC_Child;
+    static nsIRDFResource* kNC_Folder;
+    static nsIRDFResource* kNC_From;
+    static nsIRDFResource* kNC_subject;
+    static nsIRDFResource* kNC_date;
+    static nsIRDFResource* kNC_user;
+    static nsIRDFResource* kNC_host;
+    static nsIRDFResource* kNC_account;
+    static nsIRDFResource* kNC_Name;
+    static nsIRDFResource* kNC_Columns;
+    static nsIRDFResource* kNC_MailRoot;
 
     nsIRDFDataSource* mMiscMailData;
 };
