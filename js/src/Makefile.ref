@@ -74,12 +74,12 @@ endif
 #
 ifdef JS_READLINE
 DEFINES += -DEDITLINE
-OTHER_LIBS += -lreadline
+PROG_LIBS += -lreadline
 else
 ifdef JS_EDITLINE
 PREDIRS += editline
 DEFINES += -DEDITLINE
-OTHER_LIBS += -Leditline/$(OBJDIR) -ledit
+PROG_LIBS += -Leditline/$(OBJDIR) -ledit
 endif
 endif
 
@@ -173,10 +173,6 @@ ifdef JS_LIVECONNECT
 DIRS      += liveconnect
 endif
 
-ifdef JS_PERLCONNECT
-JS_CFILES += jsperl.c
-endif
-
 ifdef JS_HAS_FILE_OBJECT
 JS_CFILES += jsfile.c
 JS_HFILES += jsfile.h
@@ -214,12 +210,12 @@ $(PROGRAM): $(PROG_OBJS) $(LIBRARY)
 	link.exe -out:"$@" $(EXE_LINK_FLAGS) $^
 else
 $(PROGRAM): $(PROG_OBJS) $(LIBRARY)
-	$(CC) -o $@ $(CFLAGS) $(PROG_OBJS) $(LIBRARY) $(LDFLAGS) $(OTHER_LIBS)
+	$(CC) -o $@ $(CFLAGS) $(PROG_OBJS) $(LIBRARY) $(LDFLAGS) $(OTHER_LIBS) $(PROG_LIBS)
 endif
 
 $(PROGRAM).pure: $(PROG_OBJS) $(LIBRARY)
 	purify $(PUREFLAGS) \
-	    $(CC) -o $@ $(PURE_OS_CFLAGS) $(PROG_OBJS) $(LIBRARY) $(LDFLAGS) $(OTHER_LIBS)
+	    $(CC) -o $@ $(PURE_OS_CFLAGS) $(PROG_OBJS) $(LIBRARY) $(LDFLAGS) $(OTHER_LIBS) $(PROG_LIBS)
 
 ifndef PREBUILT_CPUCFG
 $(HFILES) $(CFILES): $(OBJDIR)/jsautocfg.h
