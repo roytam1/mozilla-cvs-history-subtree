@@ -232,7 +232,7 @@ option[disabled],
 optgroup[disabled],
 select[disabled],
 select[disabled]:-moz-display-comboboxcontrol-frame {
-  color: GrayText;
+  color: GrayText !important;
   cursor: default;
 }
 
@@ -416,7 +416,7 @@ input[type="submit"][disabled]:active,
 input[type="submit"][disabled] {
   padding: 3px 1px 3px 1px;
   border: 1px outset ButtonShadow;
-  color: GrayText;
+  color: GrayText !important;
 }
 
 @media print {

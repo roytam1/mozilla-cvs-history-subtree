@@ -124,6 +124,11 @@ CHClickListener::MouseDown(nsIDOMEvent* aEvent)
   nsCOMPtr<nsIDOMHTMLSelectElement> sel(do_QueryInterface(target));
   if (sel) {
     NSMenu* menu = [[NSMenu alloc] init]; // Retain the menu.
+
+    // We'll set the disabled state as the options are created, so disable
+    // auto-enabling via NSMenuValidation.
+    [menu setAutoenablesItems: NO];
+
     nsCOMPtr<nsIDOMHTMLCollection> options;
     sel->GetOptions(getter_AddRefs(options));
     PRUint32 count;
@@ -147,6 +152,10 @@ CHClickListener::MouseDown(nsIDOMEvent* aEvent)
         [menuItem setState: NSOnState];
         selIndex = i;
       }
+      PRBool disabled;
+      option->GetDisabled(&disabled);
+      if (disabled)
+        [menuItem setEnabled: NO];
       CHOptionSelector* optSelector = [[CHOptionSelector alloc] initWithSelect: sel];
       [menuItem setTarget: optSelector];
       [menuItem setAction: @selector(selectOption:)];
