@@ -64,16 +64,13 @@
 #if defined(WIN32)
 
 #if defined(__GNUC__)
-#define PR_EXTERN(__type) extern __declspec(dllexport) __type
-#define PR_IMPLEMENT(__type) __declspec(dllexport) __type
-#define PR_EXTERN_DATA(__type) extern __declspec(dllexport) __type
-#define PR_IMPLEMENT_DATA(__type) __declspec(dllexport) __type
-#else
+#define _declspec(x) __declspec(x)
+#endif
+
 #define PR_EXTERN(__type) extern _declspec(dllexport) __type
 #define PR_IMPLEMENT(__type) _declspec(dllexport) __type
 #define PR_EXTERN_DATA(__type) extern _declspec(dllexport) __type
 #define PR_IMPLEMENT_DATA(__type) _declspec(dllexport) __type
-#endif
 
 #define PR_CALLBACK
 #define PR_CALLBACK_DECL
