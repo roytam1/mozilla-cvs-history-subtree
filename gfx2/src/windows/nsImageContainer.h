@@ -21,7 +21,7 @@
  *   Stuart Parmenter <pavlov@netscape.com>
  */
 
-#include "nsIImageContainer.h"
+#include "gfxIImageContainer.h"
 #include "nsPIImageContainerWin.h"
 #include "nsITimerCallback.h"
 
@@ -29,7 +29,7 @@
 
 #include "nsSupportsArray.h"
 
-#include "nsIImageContainerObserver.h"
+#include "gfxIImageContainerObserver.h"
 #include "nsITimer.h"
 
 
@@ -44,7 +44,7 @@
     {0x84, 0xa9, 0xa2, 0x80, 0xc2, 0x68, 0xe4, 0xfb} \
 }
 
-class nsImageContainer : public nsIImageContainer,
+class nsImageContainer : public gfxIImageContainer,
                          public nsPIImageContainerWin,
                          public nsITimerCallback
 {
@@ -68,7 +68,7 @@ private:
   PRPackedBool mDoneDecoding;
 
   nsCOMPtr<nsITimer> mTimer;
-  nsCOMPtr<nsIImageContainerObserver> mObserver;
+  nsCOMPtr<gfxIImageContainerObserver> mObserver;
 
 
 };

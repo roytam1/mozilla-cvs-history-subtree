@@ -69,7 +69,7 @@ typedef unsigned short      gfx_depth; // is short ok?
 /**
  * typedef that should be used for image formats
  * @var typedef long gfx_format
- * @see nsIGFXFormat
+ * @see gfxIGFXFormat
  */
 typedef long                gfx_format;
 

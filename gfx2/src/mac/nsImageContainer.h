@@ -22,9 +22,9 @@
  *   Chris Saari <saari@netscape.com>
  */
 
-#include "nsIImageContainer.h"
+#include "gfxIImageContainer.h"
 
-#include "nsIImageContainerObserver.h"
+#include "gfxIImageContainerObserver.h"
 
 #include "nsSize.h"
 
@@ -40,7 +40,7 @@
     {0x84, 0xa9, 0xa2, 0x80, 0xc2, 0x68, 0xe4, 0xfb} \
 }
 
-class nsImageContainer : public nsIImageContainer
+class nsImageContainer : public gfxIImageContainer
 {
 public:
   NS_DECL_ISUPPORTS
@@ -59,7 +59,7 @@ private:
   PRBool   mDoneDecoding;
   
   nsCOMPtr<nsITimer> mTimer;
-  nsCOMPtr<nsIImageContainerObserver> mObserver;
+  nsCOMPtr<gfxIImageContainerObserver> mObserver;
   
   static void sAnimationTimerCallback ( nsITimer* aTimer, void* aListener );
 };

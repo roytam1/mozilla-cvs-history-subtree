@@ -27,7 +27,7 @@
 
 #include "nsImageFrame.h"
 
-NS_IMPL_ISUPPORTS2(nsImageContainer, nsIImageContainer, nsPIImageContainerGtk)
+NS_IMPL_ISUPPORTS2(nsImageContainer, gfxIImageContainer, nsPIImageContainerGtk)
 
 nsImageContainer::nsImageContainer()
 {
@@ -45,8 +45,8 @@ nsImageContainer::~nsImageContainer()
 
 
 
-/* void init (in nscoord aWidth, in nscoord aHeight, in nsIImageContainerObserver aObserver); */
-NS_IMETHODIMP nsImageContainer::Init(nscoord aWidth, nscoord aHeight, nsIImageContainerObserver *aObserver)
+/* void init (in nscoord aWidth, in nscoord aHeight, in gfxIImageContainerObserver aObserver); */
+NS_IMETHODIMP nsImageContainer::Init(nscoord aWidth, nscoord aHeight, gfxIImageContainerObserver *aObserver)
 {
   if (aWidth <= 0 || aHeight <= 0) {
     printf("error - negative image size\n");
@@ -63,7 +63,7 @@ NS_IMETHODIMP nsImageContainer::Init(nscoord aWidth, nscoord aHeight, nsIImageCo
 /* readonly attribute gfx_format preferredAlphaChannelFormat; */
 NS_IMETHODIMP nsImageContainer::GetPreferredAlphaChannelFormat(gfx_format *aFormat)
 {
-  *aFormat = nsIGFXFormat::RGBA;
+  *aFormat = gfxIFormats::RGBA;
   return NS_OK;
 }
 
@@ -82,8 +82,8 @@ NS_IMETHODIMP nsImageContainer::GetHeight(nscoord *aHeight)
 }
 
 
-/* readonly attribute nsIImageFrame currentFrame; */
-NS_IMETHODIMP nsImageContainer::GetCurrentFrame(nsIImageFrame * *aCurrentFrame)
+/* readonly attribute gfxIImageFrame currentFrame; */
+NS_IMETHODIMP nsImageContainer::GetCurrentFrame(gfxIImageFrame * *aCurrentFrame)
 {
   return this->GetFrameAt(mCurrentFrame, aCurrentFrame);
 }
@@ -94,25 +94,25 @@ NS_IMETHODIMP nsImageContainer::GetNumFrames(PRUint32 *aNumFrames)
   return mFrames.Count(aNumFrames);
 }
 
-/* nsIImageFrame getFrameAt (in unsigned long index); */
-NS_IMETHODIMP nsImageContainer::GetFrameAt(PRUint32 index, nsIImageFrame **_retval)
+/* gfxIImageFrame getFrameAt (in unsigned long index); */
+NS_IMETHODIMP nsImageContainer::GetFrameAt(PRUint32 index, gfxIImageFrame **_retval)
 {
   nsISupports *sup = mFrames.ElementAt(index);
   if (!sup)
     return NS_ERROR_FAILURE;
 
-  *_retval = NS_REINTERPRET_CAST(nsIImageFrame *, sup);
+  *_retval = NS_REINTERPRET_CAST(gfxIImageFrame *, sup);
   return NS_OK;
 }
 
-/* void appendFrame (in nsIImageFrame item); */
-NS_IMETHODIMP nsImageContainer::AppendFrame(nsIImageFrame *item)
+/* void appendFrame (in gfxIImageFrame item); */
+NS_IMETHODIMP nsImageContainer::AppendFrame(gfxIImageFrame *item)
 {
     return mFrames.AppendElement(NS_REINTERPRET_CAST(nsISupports*, item));
 }
 
-/* void removeFrame (in nsIImageFrame item); */
-NS_IMETHODIMP nsImageContainer::RemoveFrame(nsIImageFrame *item)
+/* void removeFrame (in gfxIImageFrame item); */
+NS_IMETHODIMP nsImageContainer::RemoveFrame(gfxIImageFrame *item)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -146,7 +146,7 @@ NS_IMETHODIMP nsImageContainer::DrawImage(GdkDrawable *dest, const GdkGC *gc, co
 {
   nsresult rv;
 
-  nsCOMPtr<nsIImageFrame> img;
+  nsCOMPtr<gfxIImageFrame> img;
   rv = this->GetCurrentFrame(getter_AddRefs(img));
 
   if (NS_FAILED(rv))
@@ -159,7 +159,7 @@ NS_IMETHODIMP nsImageContainer::DrawScaledImage(GdkDrawable *dest, const GdkGC *
 {
   nsresult rv;
 
-  nsCOMPtr<nsIImageFrame> img;
+  nsCOMPtr<gfxIImageFrame> img;
   rv = this->GetCurrentFrame(getter_AddRefs(img));
 
   if (NS_FAILED(rv))

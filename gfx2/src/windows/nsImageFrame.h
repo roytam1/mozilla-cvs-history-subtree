@@ -21,7 +21,7 @@
  *   Stuart Parmenter <pavlov@netscape.com>
  */
 
-#include "nsIImageFrame.h"
+#include "gfxIImageFrame.h"
 
 #include "nsRect.h"
 
@@ -50,7 +50,7 @@ struct ImageData
   gfx_depth depth;
 };
 
-class nsImageFrame : public nsIImageFrame
+class nsImageFrame : public gfxIImageFrame
 {
 public:
   NS_DECL_ISUPPORTS

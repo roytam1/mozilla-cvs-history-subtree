@@ -23,14 +23,14 @@
 
 #include "nsISupports.idl"
 #include "gfxtypes.idl"
-#include "nsIGFXFormat.idl"
+#include "gfxIFormats.idl"
 
 %{C++
 #include "nsRect.h"
 %}
 
 /**
- * nsIImage interface
+ * gfxIImageFrame interface
  *
  * @author Tim Rowley <tor@cs.brown.edu>
  * @author Stuart Parmenter <pavlov@netscape.com>
@@ -38,13 +38,13 @@
  * @see "gfx2"
  */
 [scriptable, uuid(51cc27a8-1dd2-11b2-a1aa-dad33ab193b4)]
-interface nsIImageFrame : nsISupports
+interface gfxIImageFrame : nsISupports
 {
   /**
    * Create a new \a aWidth x \a aHeight sized image.
    *
-   * @param aX The x-offset from the origin of the nsIImageContainer parent.
-   * @param aY The y-offset from the origin of the nsIImageContainer parent.
+   * @param aX The x-offset from the origin of the gfxIImageContainer parent.
+   * @param aY The y-offset from the origin of the gfxIImageContainer parent.
    * @param aWidth The width of the image to create.
    * @param aHeight The height of the image to create.
    * @param aFormat the width of the image to create.
@@ -86,7 +86,7 @@ interface nsIImageFrame : nsISupports
 
   /**
    * The image data format the image was created with.
-   * @see nsIGFXFormat
+   * @see gfxIFormats
    */
   readonly attribute gfx_format format;
 

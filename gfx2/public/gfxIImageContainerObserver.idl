@@ -23,24 +23,23 @@
 
 #include "nsISupports.idl"
 #include "gfxtypes.idl"
-#include "nsIGFXFormat.idl"
 
 %{C++
 #include "nsRect.h"
 %}
 
-interface nsIImageContainer;
-interface nsIImageFrame;
+interface gfxIImageContainer;
+interface gfxIImageFrame;
 
 /**
- * nsIImageContainerObserver interface
+ * gfxIImageContainerObserver interface
  *
  * @author Stuart Parmenter <pavlov@netscape.com>
  * @version 0.1
  * @see "gfx2"
  */
 [uuid(153f1518-1dd2-11b2-b9cd-b16eb63e0471)]
-interface nsIImageContainerObserver : nsISupports
+interface gfxIImageContainerObserver : nsISupports
 {
-  [noscript] void frameChanged(in nsIImageContainer container, in nsISupports cx, in nsIImageFrame newframe, in nsRect dirtyRect);
+  [noscript] void frameChanged(in gfxIImageContainer container, in nsISupports cx, in gfxIImageFrame newframe, in nsRect dirtyRect);
 };

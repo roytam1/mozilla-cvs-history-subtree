@@ -21,10 +21,10 @@
  *   Stuart Parmenter <pavlov@netscape.com>
  */
 
-#include "nsIImageContainer.h"
+#include "gfxIImageContainer.h"
 #include "nsPIImageContainerGtk.h"
 
-#include "nsIImageContainerObserver.h"
+#include "gfxIImageContainerObserver.h"
 
 #include "nsSize.h"
 
@@ -40,7 +40,7 @@
     {0x8f, 0xda, 0xc4, 0xdb, 0x5f, 0xb6, 0x66, 0xe0} \
 }
 
-class nsImageContainer : public nsIImageContainer,
+class nsImageContainer : public gfxIImageContainer,
                          public nsPIImageContainerGtk
 {
 public:
@@ -57,6 +57,6 @@ private:
   nsSize mSize;
   PRUint32 mCurrentFrame;
 
-  nsCOMPtr<nsIImageContainerObserver> mObserver;
+  nsCOMPtr<gfxIImageContainerObserver> mObserver;
 };
 

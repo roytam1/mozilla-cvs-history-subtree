@@ -25,7 +25,7 @@
 
 #include "nsTransform2D.h"
 
-NS_IMPL_ISUPPORTS1(nsImageFrame, nsIImageFrame)
+NS_IMPL_ISUPPORTS1(nsImageFrame, gfxIImageFrame)
 
 struct MONOBITMAPINFO {
   BITMAPINFOHEADER  bmiHeader;
@@ -147,28 +147,28 @@ NS_IMETHODIMP nsImageFrame::Init(nscoord aX, nscoord aY, nscoord aWidth, nscoord
   mFormat = aFormat;
 
   // XXX this makes an assumption about what values these have and what is between them.. i'm being bad.
-  if (mFormat >= nsIGFXFormat::RGB_A1 && mFormat <= nsIGFXFormat::BGR_A8)
+  if (mFormat >= gfxIFormats::RGB_A1 && mFormat <= gfxIFormats::BGR_A8)
     mAlphaData = new ImageData;
 
   switch (aFormat) {
-  case nsIGFXFormat::BGR:
-  case nsIGFXFormat::RGB:
+  case gfxIFormats::BGR:
+  case gfxIFormats::RGB:
     mImageData.depth = 24;
     break;
-  case nsIGFXFormat::BGRA:
-  case nsIGFXFormat::RGBA:
+  case gfxIFormats::BGRA:
+  case gfxIFormats::RGBA:
     mImageData.depth = 32;
     break;
 
-  case nsIGFXFormat::BGR_A1:
-  case nsIGFXFormat::RGB_A1:
+  case gfxIFormats::BGR_A1:
+  case gfxIFormats::RGB_A1:
     mImageData.depth = 24;
     mAlphaData->depth = 1;
     mAlphaData->bytesPerRow = (((mRect.width + 7) / 8) + 3) & ~0x3;
 //    mAlphaData->header = new MONOBITMAPINFO(mRect.width, mRect.height);
     break;
-  case nsIGFXFormat::BGR_A8:
-  case nsIGFXFormat::RGB_A8:
+  case gfxIFormats::BGR_A8:
+  case gfxIFormats::RGB_A8:
     mImageData.depth = 24;
     mAlphaData->depth = 8;
     mAlphaData->bytesPerRow = (mRect.width + 3) & ~0x3;

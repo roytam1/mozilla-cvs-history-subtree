@@ -23,13 +23,13 @@
 
 /**
  * gfx image formats.
- * @file nsIGFXFormat.idl
+ * @file gfxIFormats.idl
  */
 
 #include "gfxtypes.idl"
 
 /**
- * nsIGFXFormat interface
+ * gfxIFormats interface
  *
  * @author Tim Rowley <tor@cs.brown.edu>
  * @author Stuart Parmenter <pavlov@netscape.com>
@@ -37,7 +37,7 @@
  * @see gfx_format
  */
 [scriptable]
-interface nsIGFXFormat
+interface gfxIFormats
 {
   /**
    * RGB    - duh...

@@ -1,6 +1,6 @@
 gfxtypes.idl
 gfx2types.idl
-nsIGFXFormat.idl
-nsIImageContainer.idl
-nsIImageContainerObserver.idl
-nsIImageFrame.idl
+gfxIFormats.idl
+gfxIImageContainer.idl
+gfxIImageContainerObserver.idl
+gfxIImageFrame.idl
