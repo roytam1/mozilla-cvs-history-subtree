@@ -166,7 +166,9 @@ NS_IMETHODIMP nsAccessibilityService::CreateHTMLRadioButtonAccessible(nsISupport
   nsIFrame* frame;
   nsCOMPtr<nsIDOMNode> node;
   nsCOMPtr<nsIPresShell> shell;
-  GetInfo(aFrame, &frame, getter_AddRefs(shell), getter_AddRefs(node));
+  nsresult rv = GetInfo(aFrame, &frame, getter_AddRefs(shell), getter_AddRefs(node));
+  if (NS_FAILED(rv))
+    return rv;
 
   *_retval = new nsHTMLRadioButtonAccessible(shell,node);
   if (*_retval) {
