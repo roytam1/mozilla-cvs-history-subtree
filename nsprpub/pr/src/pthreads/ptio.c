@@ -2688,7 +2688,23 @@ failed:
     return fd;
 }  /* PR_AllocFileDesc */
 
-extern PRStatus _pr_push_ipv6toipv4_layer(PRFileDesc *fd);
+#if !defined(_PR_INET6) || defined(_PR_INET6_PROBE)
+PR_EXTERN(PRStatus) _pr_push_ipv6toipv4_layer(PRFileDesc *fd);
+#if defined(_PR_INET6_PROBE)
+PR_EXTERN(PRBool) _pr_ipv6_is_present;
+PR_IMPLEMENT(PRBool) _pr_test_ipv6_socket()
+{
+PRInt32 osfd;
+
+	osfd = socket(AF_INET6, SOCK_STREAM, 0);
+	if (osfd != -1) {
+		close(osfd);
+		return PR_TRUE;
+	}
+	return PR_FALSE;
+}
+#endif	/* _PR_INET6_PROBE */
+#endif
 
 PR_IMPLEMENT(PRFileDesc*) PR_Socket(PRInt32 domain, PRInt32 type, PRInt32 proto)
 {
@@ -2716,8 +2732,21 @@ PR_IMPLEMENT(PRFileDesc*) PR_Socket(PRInt32 domain, PRInt32 type, PRInt32 proto)
 		return fd;
 	}
 #if defined(_PR_INET6)
-	if (PR_AF_INET6 == domain)
+	if (PR_AF_INET6 == domain) {
+#if defined(_PR_INET6_PROBE)
+        if (_pr_ipv6_is_present == PR_FALSE) 
+            domain = AF_INET;
+        else
+#endif
 		domain = AF_INET6;
+    }
+#elif defined(_PR_INET6_PROBE)
+	if (PR_AF_INET6 == domain) {
+		if (_pr_ipv6_is_present == PR_FALSE) 
+			domain = AF_INET;
+		else
+			domain = AF_INET6;
+	}
 #else
 	if (PR_AF_INET6 == domain)
 		domain = AF_INET;
@@ -2730,13 +2759,13 @@ PR_IMPLEMENT(PRFileDesc*) PR_Socket(PRInt32 domain, PRInt32 type, PRInt32 proto)
         fd = pt_SetMethods(osfd, ftype, PR_FALSE);
         if (fd == NULL) close(osfd);
     }
-#if !defined(_PR_INET6)
+#if !defined(_PR_INET6) || defined(_PR_INET6_PROBE)
 	if (fd != NULL) {
 		/*
 		 * For platforms with no support for IPv6 
 		 * create layered socket for IPv4-mapped IPv6 addresses
 		 */
-		if (PR_AF_INET6 == tmp_domain) {
+		if (PR_AF_INET6 == tmp_domain && PR_AF_INET == domain) {
 			if (PR_FAILURE == _pr_push_ipv6toipv4_layer(fd)) {
 				PR_Close(fd);
 				fd = NULL;
