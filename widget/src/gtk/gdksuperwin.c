@@ -91,8 +91,13 @@ gdk_superwin_new (GdkWindow *parent_window,
                   guint      width,
                   guint      height)
 {
-  GdkWindowAttr attributes;
-  gint attributes_mask;
+  GdkWindowAttr         attributes;
+  gint                  attributes_mask;
+  Window                bin_xwindow;
+  Display              *xdisplay;
+  XSetWindowAttributes  xattr;
+  unsigned long         xattr_mask;
+
   GdkSuperWin *superwin = gtk_type_new(GDK_TYPE_SUPERWIN);
 
   superwin->translate_queue = NULL;
@@ -123,7 +128,16 @@ gdk_superwin_new (GdkWindow *parent_window,
   attributes.event_mask = GDK_EXPOSURE_MASK;
 
   superwin->bin_window = gdk_window_new (superwin->shell_window,
-					 &attributes, attributes_mask);
+                                         &attributes, attributes_mask);
+
+  /* set the backing store for the bin window */
+  bin_xwindow = GDK_WINDOW_XWINDOW(superwin->bin_window);
+  xdisplay = GDK_WINDOW_XDISPLAY(superwin->bin_window);
+  /* XXX should we make this Always? */
+  xattr.backing_store = WhenMapped;
+  xattr_mask = CWBackingStore;
+  XChangeWindowAttributes(xdisplay, bin_xwindow, xattr_mask, &xattr);
+
   gdk_window_show (superwin->bin_window);
 
   gdk_window_add_filter (superwin->shell_window, gdk_superwin_shell_filter, superwin);
