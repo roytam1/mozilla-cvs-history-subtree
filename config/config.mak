@@ -71,12 +71,15 @@ PUBLIC=$(XPDIST)\public
 #// has the same name no matter what
 #//-----------------------------------------------------------------------
 
-!ifdef MOZ_NAV_BUILD_PREFIX
-DIST_PREFIX=NAV
-!elseif defined(RAPTOR)
+
+!ifdef RAPTOR_BUILD_PREFIX
 DIST_PREFIX=RAP
 !else
+!ifdef MOZ_NAV_BUILD_PREFIX
+DIST_PREFIX=NAV
+!else
 DIST_PREFIX=WIN
+!endif
 !endif
 
 !ifndef MOZ_DEBUG
