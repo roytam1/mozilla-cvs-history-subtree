@@ -669,7 +669,6 @@ RDFXMLDataSourceImpl::BeginLoad(void)
 NS_IMETHODIMP
 RDFXMLDataSourceImpl::Interrupt(void)
 {
-    mIsLoading = PR_FALSE;
     for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
         nsIRDFXMLDataSourceObserver* obs = (nsIRDFXMLDataSourceObserver*) mObservers[i];
         obs->OnInterrupt(this);
@@ -690,6 +689,7 @@ RDFXMLDataSourceImpl::Resume(void)
 NS_IMETHODIMP
 RDFXMLDataSourceImpl::EndLoad(void)
 {
+    mIsLoading = PR_FALSE;
     for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
         nsIRDFXMLDataSourceObserver* obs = (nsIRDFXMLDataSourceObserver*) mObservers[i];
         obs->OnEndLoad(this);
