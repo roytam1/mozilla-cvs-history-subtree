@@ -304,6 +304,11 @@ nsBlockFrame::Destroy(nsIPresContext* aPresContext)
   if (overflowLines) {
     nsLineBox::DeleteLineList(aPresContext, *overflowLines);
   }
+  nsFrameList* overflowOutOfFlows = GetOverflowOutOfFlows(PR_TRUE);
+  if (overflowOutOfFlows) {
+    overflowOutOfFlows->DestroyFrames(aPresContext);
+    delete overflowOutOfFlows;
+  }
 
   return nsBlockFrameSuper::Destroy(aPresContext);
 }
@@ -477,6 +482,10 @@ nsBlockFrame::GetFirstChild(nsIAtom* aListName) const
     nsLineList* overflowLines = GetOverflowLines(GetPresContext(), PR_FALSE);
     return overflowLines ? overflowLines->front()->mFirstChild : nsnull;
   }
+  else if (aListName == nsLayoutAtoms::overflowOutOfFlowList) {
+    nsFrameList* oof = GetOverflowOutOfFlows(PR_FALSE);
+    return oof ? oof->FirstChild() : nsnull;
+  }
   else if (aListName == nsLayoutAtoms::floatList) {
     return mFloats.FirstChild();
   }
@@ -498,6 +507,8 @@ nsBlockFrame::GetAdditionalChildListName(PRInt32 aIndex) const
     return nsLayoutAtoms::bulletList;
   case NS_BLOCK_FRAME_OVERFLOW_LIST_INDEX:
     return nsLayoutAtoms::overflowList;
+  case NS_BLOCK_FRAME_OVERFLOW_OOF_LIST_INDEX:
+    return nsLayoutAtoms::overflowOutOfFlowList;
   case NS_BLOCK_FRAME_ABSOLUTE_LIST_INDEX:
     return mAbsoluteContainer.GetChildListName();
   default:
@@ -4217,7 +4228,6 @@ nsBlockFrame::PushLines(nsBlockReflowState&  aState,
 #endif
 }
 
-
 // The overflowLines property is stored as a pointer to a line list,
 // which must be deleted.  However, the following functions all maintain
 // the invariant that the property is never set if the list is empty.
@@ -4250,25 +4260,6 @@ nsBlockFrame::DrainOverflowLines(nsIPresContext* aPresContext)
         // views need to be reparented
         nsHTMLContainerFrame::ReparentFrameView(aPresContext, frame, prevBlock, this);
 
-        // If the frame we are looking at is a placeholder for a float, we
-        // need to reparent both it's out-of-flow frame and any views it has.
-        //
-        // Note: A floating table (example: style="position: relative; float: right")
-        //       is an example of an out-of-flow frame with a view
-
-        if (nsLayoutAtoms::placeholderFrame == frame->GetType()) {
-          nsIFrame *outOfFlowFrame = NS_STATIC_CAST(nsPlaceholderFrame*, frame)->GetOutOfFlowFrame();
-          if (outOfFlowFrame) {
-            const nsStyleDisplay* display = outOfFlowFrame->GetStyleDisplay();
-            if (!display->IsAbsolutelyPositioned()) {
-              // It's not an absolute or fixed positioned frame, so it
-              // must be a float!
-              outOfFlowFrame->SetParent(this);
-              nsHTMLContainerFrame::ReparentFrameView(aPresContext, outOfFlowFrame, prevBlock, this);
-            }
-          }
-        }
-
         // Get the next frame
         lastFrame = frame;
         frame = frame->GetNextSibling();
@@ -4284,6 +4275,20 @@ nsBlockFrame::DrainOverflowLines(nsIPresContext* aPresContext)
       mLines.splice(mLines.begin(), *overflowLines);
       NS_ASSERTION(overflowLines->empty(), "splice should empty list");
       delete overflowLines;
+
+      // Out-of-flow floats need to be reparented too.
+      nsFrameList* overflowOutOfFlows = prevBlock->GetOverflowOutOfFlows(PR_TRUE);
+      if (overflowOutOfFlows) {
+        for (nsIFrame* f = overflowOutOfFlows->FirstChild(); f;
+             f = f->GetNextSibling()) {
+          f->SetParent(this);
+
+          // When pushing and pulling frames we need to check for whether any
+          // views need to be reparented
+          nsHTMLContainerFrame::ReparentFrameView(aPresContext, f, prevBlock, this);
+        }
+        delete overflowOutOfFlows;
+      }
     }
   }
 
@@ -4304,6 +4309,14 @@ nsBlockFrame::DrainOverflowLines(nsIPresContext* aPresContext)
     mLines.splice(mLines.end(), *overflowLines);
     drained = PR_TRUE;
     delete overflowLines;
+
+    // Likewise, drain our own overflow out-of-flows. We don't need to
+    // reparent them since they're already our children. We don't need
+    // to put them on any child list since BuildFloatList will put
+    // them on some child list. All we need to do is remove the
+    // property.
+    nsFrameList* overflowOutOfFlows = GetOverflowOutOfFlows(PR_TRUE);
+    delete overflowOutOfFlows;
   }
   return drained;
 }
@@ -4347,6 +4360,35 @@ nsBlockFrame::SetOverflowLines(nsIPresContext* aPresContext,
                             aOverflowLines, DestroyOverflowLines);
   // Verify that we didn't overwrite an existing overflow list
   NS_ASSERTION(rv != NS_IFRAME_MGR_PROP_OVERWRITTEN, "existing overflow list");
+  return rv;
+}
+
+nsFrameList*
+nsBlockFrame::GetOverflowOutOfFlows(PRBool aRemoveProperty) const
+{
+  return NS_STATIC_CAST(nsFrameList*,
+    GetProperty(GetPresContext(), nsLayoutAtoms::overflowOutOfFlowsProperty, 
+                aRemoveProperty));
+}
+
+// Destructor function for the overflowPlaceholders frame property
+static void
+DestroyOverflowOOFs(nsIPresContext* aPresContext,
+                    nsIFrame*       aFrame,
+                    nsIAtom*        aPropertyName,
+                    void*           aPropertyValue)
+{
+  delete NS_STATIC_CAST(nsFrameList*, aPropertyValue);
+}
+
+// This takes ownership of aFloaters.
+nsresult
+nsBlockFrame::SetOverflowOutOfFlows(nsFrameList* aOOFs)
+{
+  nsresult rv = SetProperty(GetPresContext(), nsLayoutAtoms::overflowOutOfFlowsProperty,
+                            aOOFs, DestroyOverflowOOFs);
+  // Verify that we didn't overwrite an existing overflow list
+  NS_ASSERTION(rv != NS_IFRAME_MGR_PROP_OVERWRITTEN, "existing overflow float list");
   return rv;
 }
 
@@ -6364,19 +6406,20 @@ nsBlockFrame::ReflowBullet(nsBlockReflowState& aState,
 void
 nsBlockFrame::BuildFloatList()
 {
+  // Accumulate float list into mFloats.
+  // Use the float cache to speed up searching the lines for floats.
   nsIFrame* head = nsnull;
   nsIFrame* current = nsnull;
-  for (line_iterator line = begin_lines(), line_end = end_lines();
+  for (nsBlockFrame::line_iterator line = mLines.begin(), line_end = mLines.end();
        line != line_end;
        ++line) {
     if (line->HasFloats()) {
       nsFloatCache* fc = line->GetFirstFloat();
       while (fc) {
         nsIFrame* floatFrame = fc->mPlaceholder->GetOutOfFlowFrame();
-        if (nsnull == head) {
+        if (!head) {
           current = head = floatFrame;
-        }
-        else {
+        } else {
           current->SetNextSibling(floatFrame);
           current = floatFrame;
         }
@@ -6386,10 +6429,49 @@ nsBlockFrame::BuildFloatList()
   }
 
   // Terminate end of float list just in case a float was removed
-  if (nsnull != current) {
+  if (current) {
     current->SetNextSibling(nsnull);
   }
   mFloats.SetFrames(head);
+
+  // ensure that the floats in the overflow lines are put on a child list
+  // and not dropped from the frame tree!
+  // Note that overflow lines do not have any float cache set up for them,
+  // because the float cache contains only laid-out floats
+  nsLineList* overflowLines = GetOverflowLines(GetPresContext(), PR_FALSE);
+  if (overflowLines) {
+    head = nsnull;
+    current = nsnull;
+
+    nsIFrame* frame = overflowLines->front()->mFirstChild;
+    while (frame) {
+      if (nsLayoutAtoms::placeholderFrame == frame->GetType()) {
+        nsIFrame *outOfFlowFrame = NS_STATIC_CAST(nsPlaceholderFrame*, frame)->GetOutOfFlowFrame();
+        if (outOfFlowFrame &&
+            !outOfFlowFrame->GetStyleDisplay()->IsAbsolutelyPositioned()) {
+          // It's not an absolute or fixed positioned frame, so it
+          // must be a float!
+          // XXX This is a lame-o way of detecting a float, but it's the only way
+          // apparently
+          if (!head) {
+            head = current = outOfFlowFrame;
+          } else {
+            current->SetNextSibling(outOfFlowFrame);
+            current = outOfFlowFrame;
+          }
+        }
+      }
+      frame = frame->GetNextSibling();
+    }
+    
+    if (current) {
+      current->SetNextSibling(nsnull);
+      nsFrameList* frameList = new nsFrameList(head);
+      if (frameList) {
+        SetOverflowOutOfFlows(frameList);
+      }
+    }
+  }
 }
 
 // XXX keep the text-run data in the first-in-flow of the block
