@@ -648,7 +648,7 @@ GrowTokenBuf(JSContext *cx, JSTokenBuf *tb)
     base = tb->base;
     offset = PTRDIFF(tb->ptr, base, jschar);
     length = PTRDIFF(tb->limit, base, jschar);
-    tbincr = TBINCR * sizeof(jschar);
+    tbincr = (length + TBINCR) * sizeof(jschar);
     pool = &cx->tempPool;
     if (!base) {
 	JS_ARENA_ALLOCATE(base, pool, tbincr);
@@ -661,7 +661,7 @@ GrowTokenBuf(JSContext *cx, JSTokenBuf *tb)
 	return JS_FALSE;
     }
     tb->base = base;
-    tb->limit = base + length + TBINCR;
+    tb->limit = base + length + length + TBINCR;
     tb->ptr = base + offset;
     return JS_TRUE;
 }
