@@ -29,8 +29,6 @@ CPPSRCS=					\
 	$(NULL)
 
 CPP_OBJS=					\
-        .\$(OBJDIR)\nsRDFContentSink.obj        \
-        .\$(OBJDIR)\nsRDFDocument.obj           \
 	.\$(OBJDIR)\nsXMLContentSink.obj	\
 	.\$(OBJDIR)\nsXMLDocument.obj		\
 	$(NULL)

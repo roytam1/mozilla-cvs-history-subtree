@@ -47,6 +47,7 @@
 #include "nsIDocumentViewer.h"
 #include "nsICSSParser.h"
 #include "nsLayoutCID.h"
+#include "nsRDFCID.h"
 
 /* Forward declarations.... */
 class nsDocLoaderImpl;

@@ -29,11 +29,12 @@
 #include "nsDOMCID.h"
 #include "nsIDOMNativeObjectRegistry.h"
 #include "nsIServiceManager.h"
+#include "nsICSSParser.h"
 
 static NS_DEFINE_IID(kCHTMLDocumentCID, NS_HTMLDOCUMENT_CID);
 static NS_DEFINE_IID(kCXMLDocumentCID, NS_XMLDOCUMENT_CID);
-static NS_DEFINE_IID(kCRDFDocumentCID, NS_RDFDOCUMENT_CID);
 static NS_DEFINE_IID(kCImageDocumentCID, NS_IMAGEDOCUMENT_CID);
+static NS_DEFINE_IID(kCCSSParserCID,     NS_CSSPARSER_CID);
 static NS_DEFINE_IID(kCHTMLImageElementFactoryCID, NS_HTMLIMAGEELEMENTFACTORY_CID);
 static NS_DEFINE_IID(kIDOMHTMLImageElementFactoryIID, NS_IDOMHTMLIMAGEELEMENTFACTORY_IID);
 static NS_DEFINE_IID(kIDOMHTMLImageElementIID, NS_IDOMHTMLIMAGEELEMENT_IID);
@@ -181,32 +182,29 @@ nsresult nsLayoutFactory::CreateInstance(nsISupports *aOuter,
     }
     refCounted = PR_TRUE;
   }
-  if (mClassID.Equals(kCXMLDocumentCID)) {
+  else if (mClassID.Equals(kCXMLDocumentCID)) {
     res = NS_NewXMLDocument((nsIDocument **)&inst);
     if (res != NS_OK) {
       return res;
     }
     refCounted = PR_TRUE;
   }
-  if (mClassID.Equals(kCRDFDocumentCID)) {
-    res = NS_NewRDFDocument((nsIDocument **)&inst);
-    if (res != NS_OK) {
-      return res;
-    }
-    refCounted = PR_TRUE;
-  }
-  if (mClassID.Equals(kCImageDocumentCID)) {
+  else if (mClassID.Equals(kCImageDocumentCID)) {
     res = NS_NewImageDocument((nsIDocument **)&inst);
     if (res != NS_OK) {
       return res;
     }
     refCounted = PR_TRUE;
   }
-  if (mClassID.Equals(kCHTMLImageElementFactoryCID)) {
+  else if (mClassID.Equals(kCHTMLImageElementFactoryCID)) {
     inst = new HTMLImageElementFactory();
     refCounted = PR_FALSE;
   }
-
+  else if (mClassID.Equals(kCCSSParserCID)) {
+    if (NS_FAILED(res = NS_NewCSSParser((nsICSSParser**)&inst)))
+      return res;
+    refCounted = PR_TRUE;
+  }
   if (inst == NULL) {  
     return NS_ERROR_OUT_OF_MEMORY;  
   }  
