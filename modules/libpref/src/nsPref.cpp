@@ -618,12 +618,12 @@ extern "C" NS_EXPORT PRBool NSCanUnload()
 
 extern "C" NS_EXPORT nsresult NSRegisterSelf(const char *path)
 {
-  return NSRepository::RegisterFactory(kPrefCID, path, 
+  return nsRepository::RegisterFactory(kPrefCID, path, 
                                        PR_TRUE, PR_TRUE);
 }
 
 extern "C" NS_EXPORT nsresult NSUnregisterSelf(const char *path)
 {
-  return NSRepository::UnregisterFactory(kPrefCID, path);
+  return nsRepository::UnregisterFactory(kPrefCID, path);
 }
 
