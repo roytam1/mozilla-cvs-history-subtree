@@ -79,7 +79,6 @@ static PRInt32 gCnt=0;
 nsUNIXCharset::nsUNIXCharset()
 {
   NS_INIT_REFCNT();
-  PR_AtomicIncrement(&g_InstanceCount);
   PR_AtomicIncrement(&gCnt);
 }
 
@@ -125,7 +124,6 @@ nsUNIXCharset::ConvertLocaleToCharsetUsingDeprecatedConfig(nsAutoString& locale,
 
 nsUNIXCharset::~nsUNIXCharset()
 {
-  PR_AtomicDecrement(&g_InstanceCount);
   PR_AtomicDecrement(&gCnt);
   if(0 == gCnt) {
      if (gNLInfo) {

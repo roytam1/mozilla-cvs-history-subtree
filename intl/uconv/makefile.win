@@ -44,9 +44,9 @@ DIRS=idl public src  \
      ucvtw \
      ucvtw2 \
      ucvko \
-!if !defined(DISABLE_TESTS)
-     tests \
-!endif
+#!if !defined(DISABLE_TESTS)
+#     tests \
+#!endif
      $(NULL)
 
 include <$(DEPTH)\config\rules.mak>
