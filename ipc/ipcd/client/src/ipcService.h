@@ -75,8 +75,6 @@ public:
     void OnConnectionLost();
     void OnMessageAvailable(const ipcMessage *);
 
-    //PRBool InWaitMessage() { return mInWaitMessage; }
-
 private:
     nsresult ErrorAccordingToIPCM(PRUint32 err);
     void     OnIPCMClientID(const ipcmMessageClientID *);
@@ -97,14 +95,6 @@ private:
     PRUint32        mClientID;
 
     ipcClientQueryQ mQueryQ;
-
-#if 0
-    // WaitMessage support
-    ipcMessageQ    *mDelayedMsgQ;
-    nsID            mWaitingTarget;
-    PRPackedBool    mWaiting;
-    PRPackedBool    mInWaitMessage;
-#endif
 };
 
 #endif // !ipcService_h__

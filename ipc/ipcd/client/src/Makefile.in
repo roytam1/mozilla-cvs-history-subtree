@@ -61,12 +61,10 @@ CPPSRCS		= \
             ipcModuleFactory.cpp \
             $(NULL)
 
-# XXX use $(OS_ARCH) instead?
-ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
-CPPSRCS +=  ipcTransportWin.cpp
+ifeq ($(OS_ARCH),WINNT)
+CPPSRCS +=  ipcConnectionWin.cpp
 else
-CPPSRCS +=  ipcTransportUnix.cpp
-CPPSRCS +=  ipcSocketProviderUnix.cpp
+CPPSRCS +=  ipcConnectionUnix.cpp
 endif
 
 LOCAL_INCLUDES = \

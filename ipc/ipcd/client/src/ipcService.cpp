@@ -151,11 +151,6 @@ ipcClientQuery::OnQueryComplete(nsresult status, const ipcmMessageClientInfo *ms
 ipcService::ipcService()
     : mTransport(nsnull)
     , mClientID(0)
-#if 0
-    , mDelayedMsgQ(nsnull)
-    , mWaiting(PR_FALSE)
-    , mInWaitMessage(PR_FALSE)
-#endif
 {
     NS_INIT_ISUPPORTS();
 
@@ -495,6 +490,8 @@ ipcService::Observe(nsISupports *subject, const char *topic, const PRUnichar *da
 void
 ipcService::OnConnectionEstablished(PRUint32 clientID)
 {
+    LOG(("ipcService::OnConnectionEstablished [cid=%u]\n", clientID));
+
     mClientID = clientID;
 
     //

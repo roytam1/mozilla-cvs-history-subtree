@@ -40,6 +40,10 @@
 
 #include "prtypes.h"
 
+#ifdef DEBUG
+#define IPC_LOGGING
+#endif
+
 #ifdef IPC_LOGGING
 
 extern PRBool ipcLogEnabled;

@@ -36,6 +36,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "prlog.h"
+#include "prio.h"
 
 #include "ipcConfig.h"
 #include "ipcLog.h"
@@ -46,6 +47,21 @@
 #include "ipcCommandModule.h"
 #include "ipcdPrivate.h"
 #include "ipcd.h"
+
+//-----------------------------------------------------------------------------
+
+void
+IPC_NotifyParent()
+{
+    PRFileDesc *fd = PR_GetInheritedFD(IPC_STARTUP_PIPE_NAME);
+    if (fd) {
+        char c = IPC_STARTUP_PIPE_MAGIC;
+        PR_Write(fd, &c, 1);
+        PR_Close(fd);
+    }
+}
+
+//-----------------------------------------------------------------------------
 
 PRStatus
 IPC_DispatchMsg(ipcClient *client, const ipcMessage *msg)

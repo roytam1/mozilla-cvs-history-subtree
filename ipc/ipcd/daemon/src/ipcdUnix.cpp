@@ -177,6 +177,7 @@ static void ShutdownDaemonDir()
         ipcLockFD = 0;
     }
 }
+
 #endif
 
 //-----------------------------------------------------------------------------
@@ -281,6 +282,7 @@ static void PollLoop(PRFileDesc *listenFD)
         //
         // XXX add #define for timeout value
         //
+        LOG(("calling PR_Poll [pollCount=%d]\n", pollCount));
         rv = PR_Poll(ipcPollList, pollCount, PR_SecondsToInterval(60 * 5));
         if (rv == -1) {
             LOG(("PR_Poll failed [%d]\n", PR_GetError()));
@@ -433,10 +435,14 @@ int main(int argc, char **argv)
         goto end;
     }
 
+    IPC_NotifyParent();
+
     PollLoop(listenFD);
 
 end:
     IPC_ShutdownModuleReg();
+
+    IPC_NotifyParent();
 
     //IPC_Sleep(5);
 
