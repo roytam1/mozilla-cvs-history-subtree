@@ -1239,7 +1239,7 @@ static PRFileDesc* pt_Accept(
     }
 #endif /* _PR_HAVE_SOCKADDR_LEN */
 #ifdef _PR_INET6
-	if (AF_INET6 == addr->raw.family)
+	if (addr && (AF_INET6 == addr->raw.family))
         addr->raw.family = PR_AF_INET6;
 #endif
     newfd = pt_SetMethods(osfd, PR_DESC_SOCKET_TCP, PR_TRUE);
