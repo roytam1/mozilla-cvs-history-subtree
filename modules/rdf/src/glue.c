@@ -56,20 +56,23 @@ rdf_write_ready(NET_StreamClass *stream)
 	return MAX_WRITE_READY;
 }
 
-
+void
+rdf_freefile(RDFFile f)
+{
+   if (f) {
+     freeMem(f->line);
+     freeMem(f->currentSlot);
+     freeMem(f->holdOver);
+     freeNamespaces(f) ;
+   }
+}
 
 void
 rdf_complete(NET_StreamClass *stream)
 {
   RDFFile f = (RDFFile)stream->data_object;
-  if (f) {
-    freeMem(f->line);
-    freeMem(f->currentSlot);
-    freeMem(f->holdOver);
-    freeNamespaces(f) ;
-  }
+  rdf_freefile(f);
 }
-
 
 
 void
@@ -79,10 +82,7 @@ rdf_abort(NET_StreamClass *stream, int status)
   if (f) {
      f->locked = false;
      gcRDFFile (f);
-    freeMem(f->line);
-    freeMem(f->currentSlot);
-    freeMem(f->holdOver);
-    freeNamespaces(f) ;
+     rdf_freefile(f);
   }
 }
 
@@ -332,8 +332,6 @@ beginReadingRDFFile (RDFFile file)
       }
       PR_Close(fd);
    }
-   if(bSuccess == TRUE)
-      rdf_complete(&stream);
 #else
 
 	url = file->url;

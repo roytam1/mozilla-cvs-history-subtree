@@ -69,6 +69,7 @@ void ht_fprintf(PRFileHandle file, const char *fmt, ...);
 
 
 unsigned int		rdf_write_ready(NET_StreamClass *stream);
+void			rdf_freefile(RDFFile f);
 void			rdf_complete(NET_StreamClass *stream);
 void			rdf_abort(NET_StreamClass *stream, int status);
 NET_StreamClass *	rdf_Converter(FO_Present_Types format_out,
