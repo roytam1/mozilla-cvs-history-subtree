@@ -1180,7 +1180,8 @@ nsRDFContentSink::OpenObject(const nsIParserNode& aNode)
         mRootElement = static_cast<nsIContent*>(rdfElement);
         mDocument->SetRootContent(mRootElement);
 
-        NS_RELEASE(rdfElement);
+        // don't release the rdfElement since we're keeping
+        // a reference to it in mRootElement
     }
 
     // If we're in a member or property element, then this is the cue
