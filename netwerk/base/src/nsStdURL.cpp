@@ -248,6 +248,10 @@ nsStdURL::Parse(const char* i_Spec)
     if (!mURLParser)
         return NS_ERROR_NULL_POINTER;
 
+    printf("SPEC: ");
+    printf(i_Spec);
+    printf("\n");
+
     // Parse the spec
     char* ePath = nsnull;
     nsresult rv = mURLParser->ParseAtScheme(i_Spec, &mScheme, &mUsername, 
@@ -260,6 +264,7 @@ nsStdURL::Parse(const char* i_Spec)
                                           &mQuery, &mRef);
     }
     CRTFREEIF(ePath);
+
     return rv;
 }
 
@@ -386,6 +391,10 @@ nsStdURL::GetSpec(char **o_Spec)
     }
     *o_Spec = finalSpec.ToNewCString();
     CRTFREEIF(ePath);
+
+    printf("GETSPEC: ");
+    printf(*o_Spec);
+    printf("\n");
 
     return (*o_Spec ? NS_OK : NS_ERROR_OUT_OF_MEMORY);
 }
