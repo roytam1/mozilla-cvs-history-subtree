@@ -68,7 +68,7 @@ Rights Reserved.
     <column id="collapsedsubjectBox" collapsed="true" flex="1">
       <hbox align="start">
         <label class="collapsedHeaderDisplayName" value="&subjectField.label;"/>
-        <label id="collapsedsubjectValue" class="collapsedHeaderValue" crop="right" flex="1"/>
+        <textbox id="collapsedsubjectValue" class="collapsedHeaderValue plain" readonly="true" crop="right" flex="1"/>
       </hbox>
 	</column>
 
@@ -81,7 +81,7 @@ Rights Reserved.
 
     <column id="collapseddateBox" collapsed="true">
       <hbox align="start">
-        <label id="collapseddateValue" class="collapsedHeaderValue"/>
+        <textbox id="collapseddateValue" class="collapsedHeaderValue plain" readonly="true"/>
       </hbox>
     </column>
 
