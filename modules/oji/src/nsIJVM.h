@@ -126,7 +126,7 @@ public:
     GetClassPath(void) = 0;
     
     NS_IMETHOD_(nsIPluginInstance*)
-    GetPluginInstance(void *applet) = 0;
+    GetPluginInstance(jobject applet) = 0;
 
     NS_IMETHOD_(jobject)
     AttachThreadToJavaObject(JNIEnv *jenv) = 0;
