@@ -167,7 +167,10 @@ nsHttpChannel::Init(nsIURI *uri,
     if (NS_FAILED(rv)) return rv;
 
     // Notify nsIHttpNotify implementations
-    return nsHttpHandler::get()->OnModifyRequest(this);
+    rv = nsHttpHandler::get()->OnModifyRequest(this);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "OnModifyRequest failed");
+
+    return NS_OK;
 }
 
 //-----------------------------------------------------------------------------
@@ -408,7 +411,8 @@ nsHttpChannel::ProcessNormal()
     }
 
     // notify nsIHttpNotify implementations
-    nsHttpHandler::get()->OnExamineResponse(this);
+    rv = nsHttpHandler::get()->OnExamineResponse(this);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "OnExamineResponse failed");
 
     return mListener->OnStartRequest(this, mListenerContext);
 }
