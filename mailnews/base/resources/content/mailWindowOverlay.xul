@@ -21,6 +21,7 @@ Rights Reserved.
 -->
 
 <?xml-stylesheet href="chrome://messenger/skin/folderMenus.css" type="text/css"?>
+<?xml-stylesheet href="chrome://messenger/skin/smime/msgReadSMIMEOverlay.css" type="text/css"?> 
 
 <?xul-overlay href="chrome://global/content/charsetOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/viewZoomOverlay.xul"?>
@@ -33,6 +34,8 @@ Rights Reserved.
 %contentAreaCommandsDTD;
 <!ENTITY % brandDTD SYSTEM "chrome://global/locale/brand.dtd" >
 %brandDTD;
+<!ENTITY % smimeDTD SYSTEM "chrome://messenger-smime/locale/msgReadSMIMEOverlay.dtd" >
+%smimeDTD;
 ]>  
 
 <overlay
@@ -49,11 +52,14 @@ Rights Reserved.
 <script type="application/x-javascript" src="chrome://communicator/content/bookmarks/bookmarksOverlay.js"/>
 -->
 
+<script type="application/x-javascript" src="chrome://messenger-smime/content/msgReadSMIMEOverlay.js"/>
+
 <stringbundleset id="stringbundleset">
   <stringbundle id="bundle_messenger" src="chrome://messenger/locale/messenger.properties"/>
   <stringbundle id="bundle_offlinePrompts" src="chrome://messenger/locale/offline.properties"/>
   <stringbundle id="bundle_viewZoom"/>
   <stringbundle id="findBundle" src="chrome://global/locale/finddialog.properties"/>
+  <stringbundle id="bundle_read_smime" src="chrome://messenger-smime/locale/msgReadSMIMEOverlay.properties"/>
 </stringbundleset>
  
 <!-- Performance optimization...we include utilityOverlay.xul which defines some command sets
@@ -116,7 +122,8 @@ Rights Reserved.
             commandupdater="true"
             events="create-menu-view"
             oncommandupdate="goUpdateMailMenuItems(this)">
-
+   
+   <command id="cmd_viewSecurityStatus" oncommand="showMessageReadSecurityInfo();" disabled="true"/>
    <command id="cmd_viewPageSource" oncommand="goDoCommand('cmd_viewPageSource')" disabled="true"/>
    <command id="cmd_setFolderCharset" oncommand="goDoCommand('cmd_setFolderCharset')" />
    <command id="cmd_reload" oncommand="goDoCommand('cmd_reload')" disabled="true"/>
@@ -1123,6 +1130,8 @@ Rights Reserved.
       <menu id="mailviewCharsetMenu" />
       <menuseparator/>
       <menuitem id="pageSourceMenuItem" label="&pageSourceCmd.label;" key="key_viewPageSource" accesskey="&pageSourceCmd.accesskey;" observes="cmd_viewPageSource"/>
+      <menuitem label="&menu_securityStatus.label;" 
+        accesskey="&menu_securityStatus.accesskey;" observes="cmd_viewSecurityStatus"/>
     </menupopup>
   </menu>
   <menu label="&goMenu.label;" accesskey="&goMenu.accesskey;">
@@ -1547,7 +1556,13 @@ Rights Reserved.
       <progressmeter class="progressmeter-statusbar" id="statusbar-icon" mode="normal" value="0" oncommand="dumpProgress()"/>
     </statusbarpanel>
   </hbox>
-  <hbox insertafter="totalMessageCount" id="status-bar-end-box">
+
+
+  <hbox insertafter="totalMessageCount" id="status-bar-end-box">  
+    <statusbarpanel class="statusbarpanel-iconic"
+      id="signed-status" collapsed="true" oncommand="showMessageReadSecurityInfo();"/>
+    <statusbarpanel class="statusbarpanel-iconic"
+      id="encrypted-status" collapsed="true" oncommand="showMessageReadSecurityInfo();"/>
     <statusbarpanel checkfunc="MailCheckBeforeOfflineChange()" id="offline-status" class="statusbarpanel-iconic"/> 
   </hbox>
 </statusbar> 
