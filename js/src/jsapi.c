@@ -38,7 +38,6 @@
 #include "jsdate.h"
 #include "jsemit.h"
 #include "jsexn.h"
-#include "jsfile.h"
 #include "jsfun.h"
 #include "jsgc.h"
 #include "jsinterp.h"
@@ -53,6 +52,10 @@
 #include "jsscope.h"
 #include "jsscript.h"
 #include "jsstr.h"
+
+#if JS_HAS_FILE_OBJECT
+#include "jsfile.h"
+#endif
 
 #if defined(JS_PARANOID_REQUEST) && defined(JS_THREADSAFE)
 #define CHECK_REQUEST(cx)	JS_ASSERT(cx->requestDepth)
