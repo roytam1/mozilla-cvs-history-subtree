@@ -295,9 +295,6 @@ function foundHeaderInfo(aSniffer, aData)
     contentType = contentEncodingType;
   }
 
-  appendFiltersForContentType(fp, contentType, urlExt,
-                              isDocument ? saveMode : SAVEMODE_FILEONLY);
-
   const prefSvcContractID = "@mozilla.org/preferences-service;1";
   const prefSvcIID = Components.interfaces.nsIPrefService;                              
   var prefs = Components.classes[prefSvcContractID].getService(prefSvcIID).getBranch("browser.download.");
@@ -327,6 +324,9 @@ function foundHeaderInfo(aSniffer, aData)
   fp.defaultExtension = defaultExtension;
   fp.defaultString = getNormalizedLeafName(defaultFileName, defaultExtension);
   
+  appendFiltersForContentType(fp, contentType, defaultExtension,
+                              isDocument ? saveMode : SAVEMODE_FILEONLY);
+
   if (fp.show() == Components.interfaces.nsIFilePicker.returnCancel || !fp.file)
     return;
 
