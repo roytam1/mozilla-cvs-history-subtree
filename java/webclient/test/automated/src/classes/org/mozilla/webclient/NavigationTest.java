@@ -248,8 +248,6 @@ public class NavigationTest extends WebclientTestCase {
 	BrowserControlFactory.deleteBrowserControl(firstBrowserControl);
     }
 
-    /**********
-
     public void testHttpLoad() throws Exception {
 	BrowserControl firstBrowserControl = null;
 	DocumentListener listener = null;
@@ -285,7 +283,8 @@ public class NavigationTest extends WebclientTestCase {
 	
 	final THTTPD.ServerThread serverThread = 
 	    new THTTPD.ServerThread("LocalHTTPD",
-				    new File (getBrowserBinDir()), 1);
+				    new File (getBrowserBinDir() +
+					      "/../../java/webclient/build.test"), 1);
 	serverThread.setSoTimeout(15000);
 	serverThread.start();
 	serverThread.P();
@@ -303,6 +302,8 @@ public class NavigationTest extends WebclientTestCase {
 	    });
 
 	String url = "http://localhost:5243/HttpNavigationTest.txt";
+
+	Thread.currentThread().sleep(3000);
 	
 	nav.loadURL(url);
 	
@@ -315,9 +316,6 @@ public class NavigationTest extends WebclientTestCase {
 	frame.setVisible(false);
 	BrowserControlFactory.deleteBrowserControl(firstBrowserControl);
     }
-
-    ****************/
-
 
     public static abstract class DocumentListener implements DocumentLoadListener {
 

@@ -92,8 +92,10 @@ public class THTTPD extends Object {
 	    V();
 	    
 	    while (keepRunning) {
-		if ((-1 != maxRequests) && numRequests < maxRequests) {
-		    break;
+		if (numRequests >= maxRequests) {
+		    if (-1 != maxRequests) {
+			break;
+		    }
 		}
 		numRequests++;
 		try {
