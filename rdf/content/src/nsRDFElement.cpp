@@ -266,6 +266,8 @@ public:
 
     nsresult ExecuteOnChangeHandler(nsIDOMElement* anElement, const nsString& attrName);
 
+    PRBool ElementIsInDocument();
+
     static nsresult
     ExecuteJSCode(nsIDOMElement* anElement);
 
@@ -742,7 +744,7 @@ RDFElementImpl::InsertBefore(nsIDOMNode* aNewChild, nsIDOMNode* aRefChild, nsIDO
     // It's possible that mDocument will be null for an element that's
     // not in the content model (e.g., somebody is working on a
     // "scratch" element that has been removed from the content tree).
-    if (mDocument) {
+    if (ElementIsInDocument()) {
         nsIDOMNodeObserver* obs;
         if (NS_SUCCEEDED(mDocument->QueryInterface(nsIDOMNodeObserver::GetIID(), (void**) &obs))) {
             obs->OnInsertBefore(this, aNewChild, aRefChild);
@@ -766,7 +768,7 @@ RDFElementImpl::ReplaceChild(nsIDOMNode* aNewChild, nsIDOMNode* aOldChild, nsIDO
     // It's possible that mDocument will be null for an element that's
     // not in the content model (e.g., somebody is working on a
     // "scratch" element that has been removed from the content tree).
-    if (mDocument) {
+    if (ElementIsInDocument()) {
         nsIDOMNodeObserver* obs;
         if (NS_SUCCEEDED(mDocument->QueryInterface(nsIDOMNodeObserver::GetIID(), (void**) &obs))) {
             obs->OnReplaceChild(this, aNewChild, aOldChild);
@@ -790,7 +792,7 @@ RDFElementImpl::RemoveChild(nsIDOMNode* aOldChild, nsIDOMNode** aReturn)
     // It's possible that mDocument will be null for an element that's
     // not in the content model (e.g., somebody is working on a
     // "scratch" element that has been removed from the content tree).
-    if (mDocument) {
+    if (ElementIsInDocument()) {
         nsIDOMNodeObserver* obs;
         if (NS_SUCCEEDED(mDocument->QueryInterface(nsIDOMNodeObserver::GetIID(), (void**) &obs))) {
             obs->OnRemoveChild(this, aOldChild);
@@ -814,7 +816,7 @@ RDFElementImpl::AppendChild(nsIDOMNode* aNewChild, nsIDOMNode** aReturn)
     // It's possible that mDocument will be null for an element that's
     // not in the content model (e.g., somebody is working on a
     // "scratch" element that has been removed from the content tree).
-    if (mDocument) {
+    if (ElementIsInDocument()) {
         nsIDOMNodeObserver* obs;
         if (NS_SUCCEEDED(mDocument->QueryInterface(nsIDOMNodeObserver::GetIID(), (void**) &obs))) {
             obs->OnAppendChild(this, aNewChild);
@@ -1525,12 +1527,9 @@ RDFElementImpl::InsertChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify)
         NS_ADDREF(aKid);
         aKid->SetParent(NS_STATIC_CAST(nsIStyledContent*, this));
         //nsRange::OwnerChildInserted(this, aIndex);
-        nsIDocument* doc = mDocument;
-        if (nsnull != doc) {
-            aKid->SetDocument(doc, PR_TRUE);
-            if (aNotify) {
-                doc->ContentInserted(NS_STATIC_CAST(nsIStyledContent*, this), aKid, aIndex);
-            }
+        aKid->SetDocument(mDocument, PR_TRUE);
+        if (aNotify && ElementIsInDocument()) {
+                mDocument->ContentInserted(NS_STATIC_CAST(nsIStyledContent*, this), aKid, aIndex);
         }
     }
     return NS_OK;
@@ -1568,12 +1567,9 @@ RDFElementImpl::ReplaceChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify)
         NS_ADDREF(aKid);
         aKid->SetParent(NS_STATIC_CAST(nsIStyledContent*, this));
         //nsRange::OwnerChildReplaced(this, aIndex, oldKid);
-        nsIDocument* doc = mDocument;
-        if (nsnull != doc) {
-            aKid->SetDocument(doc, PR_TRUE);
-            if (aNotify) {
-                doc->ContentReplaced(NS_STATIC_CAST(nsIStyledContent*, this), oldKid, aKid, aIndex);
-            }
+        aKid->SetDocument(mDocument, PR_TRUE);
+        if (aNotify && ElementIsInDocument()) {
+            mDocument->ContentReplaced(NS_STATIC_CAST(nsIStyledContent*, this), oldKid, aKid, aIndex);
         }
         oldKid->SetDocument(nsnull, PR_TRUE);
         oldKid->SetParent(nsnull);
@@ -1609,15 +1605,17 @@ RDFElementImpl::AppendChildTo(nsIContent* aKid, PRBool aNotify)
         NS_ADDREF(aKid);
         aKid->SetParent(NS_STATIC_CAST(nsIStyledContent*, this));
         // ranges don't need adjustment since new child is at end of list
-        nsIDocument* doc = mDocument;
-        if (nsnull != doc) {
-            aKid->SetDocument(doc, PR_TRUE);
-            if (aNotify) {
-                PRUint32 cnt;
-                nsresult rv = mChildren->Count(&cnt);
-                if (NS_FAILED(rv)) return rv;
-                doc->ContentInserted(NS_STATIC_CAST(nsIStyledContent*, this), aKid, cnt - 1);
-            }
+        aKid->SetDocument(mDocument, PR_TRUE);
+        if (aNotify && ElementIsInDocument()) {
+            PRUint32 cnt;
+            nsresult rv = mChildren->Count(&cnt);
+            if (NS_FAILED(rv)) return rv;
+#if 0
+            // XXX Can't do this because of the tree frame trickery, I think.
+            mDocument->ContentAppended(NS_STATIC_CAST(nsIStyledContent*, this), cnt - 1);
+#else
+            mDocument->ContentInserted(NS_STATIC_CAST(nsIStyledContent*, this), aKid, cnt - 1);
+#endif
         }
     }
     return NS_OK;
@@ -1639,10 +1637,8 @@ RDFElementImpl::RemoveChildAt(PRInt32 aIndex, PRBool aNotify)
         nsIDocument* doc = mDocument;
         PRBool removeOk = mChildren->RemoveElementAt(aIndex);
         //nsRange::OwnerChildRemoved(this, aIndex, oldKid);
-        if (aNotify && removeOk) {
-            if (nsnull != doc) {
-                doc->ContentRemoved(NS_STATIC_CAST(nsIStyledContent*, this), oldKid, aIndex);
-            }
+        if (aNotify && removeOk && ElementIsInDocument()) {
+            doc->ContentRemoved(NS_STATIC_CAST(nsIStyledContent*, this), oldKid, aIndex);
         }
         oldKid->SetDocument(nsnull, PR_TRUE);
         oldKid->SetParent(nsnull);
@@ -1890,7 +1886,7 @@ RDFElementImpl::SetAttribute(PRInt32 aNameSpaceID,
         }
     }
 
-    if (NS_SUCCEEDED(rv) && aNotify && (nsnull != mDocument)) {
+    if (NS_SUCCEEDED(rv) && aNotify && ElementIsInDocument()) {
         mDocument->AttributeChanged(NS_STATIC_CAST(nsIStyledContent*, this), aName, NS_STYLE_HINT_UNKNOWN);
     }
 
@@ -2480,7 +2476,7 @@ RDFElementImpl::EnsureContentsGenerated(void) const
     return rv;
 }
 
-
+    
 nsresult
 RDFElementImpl::ExecuteOnChangeHandler(nsIDOMElement* anElement, const nsString& attrName)
 {
@@ -2521,6 +2517,37 @@ RDFElementImpl::ExecuteOnChangeHandler(nsIDOMElement* anElement, const nsString&
     }
 
     return NS_OK;
+}
+
+
+PRBool
+RDFElementImpl::ElementIsInDocument()
+{
+    // Check to see if the element is really _in_ the document; that
+    // is, that it actually is in the tree rooted at the document's
+    // root content.
+    if (! mDocument)
+        return PR_FALSE;
+
+    nsresult rv;
+
+    nsCOMPtr<nsIContent> root = dont_QueryInterface( mDocument->GetRootContent() );
+    if (! root)
+        return PR_FALSE;
+
+    nsCOMPtr<nsIContent> node =
+        do_QueryInterface(NS_STATIC_CAST(nsIStyledContent*, this));
+
+    while (node) {
+        if (node == root)
+            return PR_TRUE;
+
+        nsCOMPtr<nsIContent> oldNode = node;
+        rv = oldNode->GetParent(*getter_AddRefs(node));
+        if (NS_FAILED(rv)) return PR_FALSE;
+    }
+
+    return PR_FALSE;
 }
 
 nsresult
