@@ -26,16 +26,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-/* Stubbed-out functions */
-PR_IMPLEMENT(PRLock*) PR_NewLock(void) { return NULL; }
-PR_IMPLEMENT(void) PR_DestroyLock(PRLock *lock) { }
-PR_IMPLEMENT(void) PR_Lock(PRLock *lock) { }
-PR_IMPLEMENT(PRStatus) PR_Unlock(PRLock *lock) { return PR_SUCCESS;}
-PR_IMPLEMENT(PRThread*) PR_GetCurrentThread() {return NULL;}
-
-
 PRBool _pr_initialized;
 
+/* Stubbed-out functions */
 void _PR_ImplicitInitialization(void)
 {
     _pr_initialized = PR_TRUE;
