@@ -43,6 +43,8 @@
 		
 		#include "DefinesMac.h"
 		#include "DefinesMozilla.h"
+		
+		#define USE_PROFILES 1
 	
 	
 		//	Support for automatically naming the precompiled header file ...
