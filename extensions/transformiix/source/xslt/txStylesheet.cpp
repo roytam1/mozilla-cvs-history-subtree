@@ -275,16 +275,18 @@ txStylesheet::doneCompiling()
 {
     nsresult rv = NS_OK;
     // Collect all importframes into a single ordered list
-    rv = mImportFrames.add(mRootFrame);
+    txListIterator frameIter(&mImportFrames);
+    rv = frameIter.addAfter(mRootFrame);
     NS_ENSURE_SUCCESS(rv, rv);
     
     mRootFrame = nsnull;
-    
-    // XXX ToDo: traverse tree of importframes and fill mImportFrames
+    frameIter.next();
+    rv = addFrames(frameIter);
+    NS_ENSURE_SUCCESS(rv, rv);
 
     // Loop through importframes in decreasing-precedence-order and process
     // all items
-    txListIterator frameIter(&mImportFrames);
+    frameIter.reset();
     ImportFrame* frame;
     while ((frame = (ImportFrame*)frameIter.next())) {
         txListIterator itemIter(&frame->mToplevelItems);
@@ -408,6 +410,32 @@ txStylesheet::addTemplate(txTemplateItem* aTemplate,
         }
     }
 
+    return NS_OK;
+}
+
+nsresult
+txStylesheet::addFrames(txListIterator& aInsertIter)
+{
+    ImportFrame* frame = (ImportFrame*)aInsertIter.current();
+    nsresult rv = NS_OK;
+    txListIterator iter(&frame->mToplevelItems);
+    txToplevelItem* item;
+    while ((item = (txToplevelItem*)iter.next())) {
+        if (item->getType() == txToplevelItem::import) {
+            txImportItem* import = (txImportItem*)item;
+            import->mFrame->mFirstNotImported =
+                (ImportFrame*)aInsertIter.next();
+            rv = aInsertIter.addBefore(import->mFrame);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            import->mFrame.forget();
+            aInsertIter.previous();
+            rv = addFrames(aInsertIter);
+            NS_ENSURE_SUCCESS(rv, rv);
+            aInsertIter.previous();
+        }
+    }
+    
     return NS_OK;
 }
 

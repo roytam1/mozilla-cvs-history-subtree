@@ -148,6 +148,7 @@ private:
 
     nsresult addTemplate(txTemplateItem* aTemplate, ImportFrame* aImportFrame);
     nsresult addGlobalVariable(txVariableItem* aVariable);
+    nsresult addFrames(txListIterator& aInsertIter);
 
     // Refcount
     nsAutoRefCnt mRefCnt;
