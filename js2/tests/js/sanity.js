@@ -80,8 +80,8 @@ var a = 3, b = 2;
 a &&= b;
 if (a != 2) result = false;
 
-//if (bc.Q != 13) result = false;
-//bc.Q = 1;
-//if (BaseClass.gBC != 100) result = false;
+if (bc.Q != 13) result = false;
+bc.Q = 1;
+if (BaseClass.gBC != 100) result = false;
 
 if (result) print("still sane") else print("gone off the deep end");

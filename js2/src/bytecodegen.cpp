@@ -178,7 +178,6 @@ void SetterMethodReference::emitPreAssignment(ByteCodeGen *bcg)
 {
     bcg->addByte(GetMethodOp);
     bcg->addLong(mIndex);
-    bcg->addByte(SwapOp);
 }
 
 void SetterMethodReference::emitImplicitLoad(ByteCodeGen *bcg) 
@@ -1192,6 +1191,7 @@ BinaryOpEquals:
                     addByte(DupOp);
             }
             writeRef->emitPreAssignment(this);
+            addByte(SwapOp);
             readRef->emitCodeSequence(this);
             genExpr(b->op2);
             addByte(DoOperatorOp);
@@ -1219,6 +1219,8 @@ BinaryOpEquals:
             }
 
             uint32 labelAfterSecondExpr = getLabel();
+            writeRef->emitPreAssignment(this);
+            addByte(SwapOp);
             readRef->emitCodeSequence(this);
             addByte(DupOp);
             addByte(ToBooleanOp);
@@ -1249,6 +1251,8 @@ BinaryOpEquals:
             }
 
             uint32 labelAfterSecondExpr = getLabel();
+            writeRef->emitPreAssignment(this);
+            addByte(SwapOp);
             readRef->emitCodeSequence(this);
             addByte(DupOp);
             addByte(ToBooleanOp);
@@ -1278,6 +1282,7 @@ BinaryOpEquals:
                     addByte(DupOp);
             }
 
+            writeRef->emitPreAssignment(this);
             readRef->emitCodeSequence(this);
             genExpr(b->op2);
             addByte(LogicalXorOp);
@@ -1339,6 +1344,7 @@ BinaryOpEquals:
         {
             BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
             Reference *ref = genReference(b->op1, Write);
+            ref->emitPreAssignment(this);
             genExpr(b->op2);
             ref->emitCodeSequence(this);
             delete ref;

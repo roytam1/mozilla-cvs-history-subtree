@@ -97,12 +97,11 @@ const bool showTokens = false;
 
 JSValue load(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    JSValue result = kUndefinedValue;
     if ((argc >= 1) && (argv[0].isString())) {    
         const String& fileName = *argv[0].string;
-        result = cx->readEvalFile(fileName);
+        cx->readEvalFile(fileName);
     }    
-    return result;
+    return kUndefinedValue;
 }
 JSValue print(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
