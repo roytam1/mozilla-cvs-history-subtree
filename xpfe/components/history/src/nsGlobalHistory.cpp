@@ -1099,8 +1099,17 @@ nsGlobalHistory::IsVisited(const char *aURL, PRBool *_retval)
   nsMdbPtr<nsIMdbRow> row(mEnv);
   rv = FindRow(kToken_URLColumn, aURL, getter_Acquires(row));
 
-  if (NS_FAILED(rv))
-    *_retval = PR_FALSE;
+  if (NS_FAILED(rv)) {
+    // now try it with a "/" appended?
+    rv = FindRow(kToken_URLColumn,
+                 PromiseFlatCString(nsDependentCString(aURL) +
+                                    nsDependentCString("/")).get(),
+                 getter_Acquires(row));
+    if (NS_FAILED(rv))
+      *_retval = PR_FALSE;
+    else
+      *_retval = PR_TRUE;
+  }
   else
     *_retval = PR_TRUE;
 
