@@ -95,7 +95,7 @@ NO_PKG_FILES = \
 ifeq ($(OS_ARCH), WINNT)
 NO_PKG_FILES += \
 	chrome/en-unix.jar \
-	chrome/en-unix.jar \
+	chrome/en-mac.jar \
 	$(NULL)
 endif
 
