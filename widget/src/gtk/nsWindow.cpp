@@ -453,6 +453,76 @@ NS_IMETHODIMP nsWindow::SetBackgroundColor(const nscolor &aColor)
   return NS_OK;
 }
 
+//-------------------------------------------------------------------------
+//
+// Set this component cursor
+//
+//-------------------------------------------------------------------------
+NS_IMETHODIMP nsWindow::SetCursor(nsCursor aCursor)
+{
+  if (!mSuperWin) 
+    return NS_ERROR_FAILURE;
+
+  // Only change cursor if it's changing
+  if (aCursor != mCursor) {
+    GdkCursor *newCursor = 0;
+
+    switch(aCursor) {
+      case eCursor_select:
+        newCursor = gdk_cursor_new(GDK_XTERM);
+        break;
+
+      case eCursor_wait:
+        newCursor = gdk_cursor_new(GDK_WATCH);
+        break;
+
+      case eCursor_hyperlink:
+        newCursor = gdk_cursor_new(GDK_HAND2);
+        break;
+
+      case eCursor_standard:
+        newCursor = gdk_cursor_new(GDK_LEFT_PTR);
+        break;
+
+      case eCursor_sizeWE:
+      case eCursor_sizeNS:
+        newCursor = gdk_cursor_new(GDK_TCROSS);
+        break;
+
+      case eCursor_arrow_south:
+      case eCursor_arrow_south_plus:
+        newCursor = gdk_cursor_new(GDK_BOTTOM_SIDE);
+        break;
+
+      case eCursor_arrow_north:
+      case eCursor_arrow_north_plus:
+        newCursor = gdk_cursor_new(GDK_TOP_SIDE);
+        break;
+
+      case eCursor_arrow_east:
+      case eCursor_arrow_east_plus:
+        newCursor = gdk_cursor_new(GDK_RIGHT_SIDE);
+        break;
+
+      case eCursor_arrow_west:
+      case eCursor_arrow_west_plus:
+        newCursor = gdk_cursor_new(GDK_LEFT_SIDE);
+        break;
+
+      default:
+        NS_ASSERTION(PR_FALSE, "Invalid cursor type");
+        break;
+    }
+
+    if (nsnull != newCursor) {
+      mCursor = aCursor;
+      ::gdk_window_set_cursor(mSuperWin->shell_window, newCursor);
+      ::gdk_cursor_destroy(newCursor);
+    }
+  }
+  return NS_OK;
+}
+
 #endif /* USE_SUPERWIN */
 
 void
