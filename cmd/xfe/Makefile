@@ -290,6 +290,7 @@ endif
 ifdef MOZ_NEO
 BASIC_LIBS	+= \
 		  $(DIST)/lib/libneo.a \
+		  $(DIST)/lib/libaddr.a \
 		  $(NULL)
 endif
 
