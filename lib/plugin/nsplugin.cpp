@@ -241,6 +241,8 @@ nsPluginInstancePeer::GetMode(void)
     return (NPPluginType)instance->type;
 }
 
+static char* empty_list[] = { "", NULL };
+
 NS_METHOD_(NPPluginError)
 nsPluginInstancePeer::GetAttributes(PRUint16& n, 
                                     const char*const*& names, 
@@ -293,7 +295,7 @@ nsPluginInstancePeer::GetAttributes(PRUint16& n,
     PR_ASSERT( 0 );
 
     n = 0;
-    const char* const* empty_list = { { '\0' } };
+    // const char* const* empty_list = { { '\0' } };
     names = values = empty_list;
 
     return NPPluginError_GenericError;
@@ -361,7 +363,7 @@ nsPluginInstancePeer::GetParameters(PRUint16& n,
     PR_ASSERT( 0 );
 
     n = 0;
-    const char* const* empty_list = { { '\0' } };
+    // static const char* const* empty_list = { { '\0' } };
     names = values = empty_list;
 
     return NPPluginError_GenericError;
