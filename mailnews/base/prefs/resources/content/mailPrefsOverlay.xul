@@ -54,7 +54,7 @@
   <treechildren id="panelChildren">
     <treeitem id="mailnews">
       <treerow>
-        <treecell url="chrome://messenger/content/pref-mailnews.xul" label="Messages"/>
+        <treecell url="chrome://messenger/content/pref-mailnews.xul" label="&messages.label;"/>
       </treerow>
     </treeitem>
     <treeitem>

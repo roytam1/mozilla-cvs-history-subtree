@@ -40,7 +40,7 @@ button {
   -moz-border-bottom-colors: #1E86C7 #0D364E;
   -moz-border-left-colors: #1A6EA2 #0D364E;
   background: url("chrome://global/skin/icons/button-bg.gif");
-  color: #000000;
+  color: #FFFFFF;
 }
 
 .button-box {
@@ -76,6 +76,7 @@ button:hover {
   -moz-border-bottom-colors: #CEF2FE #21749C;
   -moz-border-left-colors: #8CCAEF #30728C;
   background: url("chrome://global/skin/icons/button-bg-hov.gif");
+  color: #000000;
 }
 
 button:hover:active,

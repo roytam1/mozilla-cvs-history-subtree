@@ -31,7 +31,7 @@ Contributor(s):
 
 <page xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
       onload="parent.initPanel('chrome://messenger/content/pref-mailnews.xul');"
-      headertitle="Messages">
+      headertitle="&header.label;">
 
   <popupset id="aTooltipSet"/>
 

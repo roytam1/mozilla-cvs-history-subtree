@@ -93,14 +93,6 @@
   padding: 3px;
 }
 
-#clearButton {
-  -moz-border-top-colors: #86B3C8 #3A6E84;
-  -moz-border-right-colors: #B7ECFC #31718D;
-  -moz-border-bottom-colors: #C9F3FF #23759A;
-  -moz-border-left-colors: #89CAE8 #31718D;
-  background: url("chrome://global/skin/icons/clear-button-bg.gif");
-}
-
 #folderTree > .tree-rows > .tree-bodybox,
 #threadTree > .tree-rows > .tree-bodybox {
   
@@ -137,3 +129,33 @@
 #messagepanebox[focusring="true"] > #messagepane {
 
 }
+
+/* .... clear button .... */
+
+#clearButton {
+  border: 3px solid;
+  -moz-border-top-colors: #A4CDE3 #86B3C8 #3A6E84;
+  -moz-border-right-colors: transparent #B7ECFC #31718D;
+  -moz-border-bottom-colors: #98C3D6 #C9F3FF #23759A;
+  -moz-border-left-colors: transparent #89CAE8 #31718D;
+  background: url("chrome://global/skin/icons/clear-button-bg.gif");
+  color: #000000;
+}
+
+#clearButton:hover {
+  background: url("chrome://global/skin/icons/clear-button-bg-hov.gif");
+}
+
+#clearButton:hover:active {
+  background: url("chrome://global/skin/icons/clear-button-bg-act.gif");
+}
+
+#clearButton[disabled="true"] {
+  -moz-border-top-colors: #A6CCE0 #A3CBDE #90B4C3;
+  -moz-border-right-colors: transparent #C3EDFE #8EB9CF;
+  -moz-border-bottom-colors: #8EC6DE #A5DDF3 #68AECD;
+  -moz-border-left-colors: transparent #A4D6EE #89B7CE;
+  background: url("chrome://global/skin/icons/clear-button-bg-dis.gif");
+  color: #024A69;
+}
+

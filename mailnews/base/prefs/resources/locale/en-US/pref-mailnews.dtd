@@ -53,3 +53,4 @@ Rights Reserved.
 <!ENTITY warnOnSendAccelKey.accesskey      "o">
 <!ENTITY warnOnSendAccelKey.label         "Confirm when using keyboard shortcut to send message">
 <!ENTITY windowSettings.label             "General Settings">
+<!ENTITY header.label                     "Messages">

@@ -31,8 +31,7 @@
 
 .tabs-left,
 .tabs-right {
-  border-bottom: 2px solid;
-  -moz-border-bottom-colors: ThreeDHighlight ThreeDLightShadow;
+  border-bottom: 1px solid #89CAE8;
 }
 
 /* ::::: tabpanels ::::: */
@@ -42,7 +41,6 @@ tabpanels {
   border-right: 2px solid;
   border-bottom: 2px solid;
   border-left: 2px solid;
-  -moz-border-top-colors: #3A6E84 #86B3C8;
   -moz-border-right-colors: #B7ECFC #31718D;
   -moz-border-bottom-colors: #C9F3FF #23759A;
   -moz-border-left-colors: #31718D #89CAE8;
@@ -59,6 +57,7 @@ tab {
   border-top: 2px solid;
   border-right: 2px solid;
   border-left: 2px solid;
+  border-bottom: 1px solid #89CAE8;
   -moz-border-top-colors: #3A6E84 #86B3C8;
   -moz-border-right-colors: #B7ECFC #31718D;
   -moz-border-left-colors: #31718D #89CAE8;

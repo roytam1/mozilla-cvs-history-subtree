@@ -14,3 +14,5 @@
 <!ENTITY return.label "Return Receipts">
 <!ENTITY disk.label "Disk Space">
 <!ENTITY labels.label "Labels">
+
+<!ENTITY messages.label "Messages">
