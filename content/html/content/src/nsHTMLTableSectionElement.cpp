@@ -32,6 +32,7 @@
 #include "nsStyleConsts.h"
 #include "nsIPresContext.h"
 #include "GenericElementCollection.h"
+#include "nsIRuleNode.h"
 
 // you will see the phrases "rowgroup" and "section" used interchangably
 
@@ -324,6 +325,26 @@ nsHTMLTableSectionElement::AttributeToString(nsIAtom* aAttribute,
                                                           aResult);
 }
 
+static 
+void MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleData* aData)
+{
+  if (!aAttributes || !aData)
+    return;
+
+  nsHTMLValue value;
+  
+  if (aData->mPositionData) {
+    // height: value
+    if (aData->mPositionData->mHeight.GetUnit() == eCSSUnit_Null) {
+      aAttributes->GetAttribute(nsHTMLAtoms::height, value);
+      if (value.GetUnit() == eHTMLUnit_Pixel) {
+        nsCSSValue val((float)value.GetPixelValue(), eCSSUnit_Pixel);
+        aData->mPositionData->mHeight = val;   
+      }
+    }
+  }
+}
+
 static void
 MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIMutableStyleContext* aContext,
@@ -351,17 +372,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
         textStyle = (nsStyleText*)aContext->GetMutableStyleData(eStyleStruct_Text);
       textStyle->mVerticalAlign.SetIntValue(value.GetIntValue(),
                                             eStyleUnit_Enumerated);
-    }
-
-    // height: pixel
-    aAttributes->GetAttribute(nsHTMLAtoms::height, value);
-    if (value.GetUnit() == eHTMLUnit_Pixel) {
-      float p2t;
-      aPresContext->GetScaledPixelsToTwips(&p2t);
-      nsStylePosition* pos = (nsStylePosition*)
-        aContext->GetMutableStyleData(eStyleStruct_Position);
-      nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-      pos->mHeight.SetCoordValue(twips);
     }
 
     nsGenericHTMLElement::MapBackgroundAttributesInto(aAttributes, aContext,
@@ -395,7 +405,7 @@ NS_IMETHODIMP
 nsHTMLTableSectionElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                         nsMapAttributesFunc& aMapFunc) const
 {
-  aMapRuleFunc = nsnull;
+  aMapRuleFunc = &MapAttributesIntoRule;
   aMapFunc = &MapAttributesInto;
   return NS_OK;
 }

@@ -194,18 +194,31 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
   if (!aData)
     return;
 
-  if (!aData->mFontData)
-    return;
+  if (aData->mFontData) {
+    nsCSSFont& font = *(aData->mFontData);
 
-  nsCSSFont& font = *(aData->mFontData);
+    if (nsnull != aAttributes) {
+      nsHTMLValue value;
 
-  if (nsnull != aAttributes) {
+      // variable: empty
+      aAttributes->GetAttribute(nsHTMLAtoms::variable, value);
+      if (value.GetUnit() == eHTMLUnit_Empty)
+        font.mFamily = nsCSSValue(NS_LITERAL_STRING("serif"), eCSSUnit_String);
+    }
+  }
+  else if (aData->mPositionData) {
+    // cols: int (nav4 attribute)
     nsHTMLValue value;
+    if (aData->mPositionData->mWidth.GetUnit() == eCSSUnit_Null) {
+      aAttributes->GetAttribute(nsHTMLAtoms::cols, value);
+      if (value.GetUnit() == eHTMLUnit_Integer)
+        aData->mPositionData->mWidth = nsCSSValue((float)value.GetIntValue(), eCSSUnit_Char);
 
-    // variable: empty
-    aAttributes->GetAttribute(nsHTMLAtoms::variable, value);
-    if (value.GetUnit() == eHTMLUnit_Empty)
-      font.mFamily = nsCSSValue(NS_LITERAL_STRING("serif"), eCSSUnit_String);
+      // width: int (html4 attribute == nav4 cols)
+      aAttributes->GetAttribute(nsHTMLAtoms::width, value);
+      if (value.GetUnit() == eHTMLUnit_Integer)
+        aData->mPositionData->mWidth = nsCSSValue((float)value.GetIntValue(), eCSSUnit_Char);
+    }
   }
 }
 
@@ -228,9 +241,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
     // cols: int (nav4 attribute)
     aAttributes->GetAttribute(nsHTMLAtoms::cols, value);
     if (value.GetUnit() == eHTMLUnit_Integer) {
-      nsStylePosition* position = (nsStylePosition*)
-        aContext->GetMutableStyleData(eStyleStruct_Position);
-      position->mWidth.SetIntValue(value.GetIntValue(), eStyleUnit_Chars);
       // Force wrap property on since we want to wrap at a width
       // boundary not just a newline.
       nsStyleText* text = (nsStyleText*)
@@ -241,9 +251,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
     // width: int (html4 attribute == nav4 cols)
     aAttributes->GetAttribute(nsHTMLAtoms::width, value);
     if (value.GetUnit() == eHTMLUnit_Integer) {
-      nsStylePosition* position = (nsStylePosition*)
-        aContext->GetMutableStyleData(eStyleStruct_Position);
-      position->mWidth.SetIntValue(value.GetIntValue(), eStyleUnit_Chars);
       // Force wrap property on since we want to wrap at a width
       // boundary not just a newline.
       nsStyleText* text = (nsStyleText*)

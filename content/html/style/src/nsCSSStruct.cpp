@@ -4208,6 +4208,8 @@ PRBool CSSDeclarationImpl::AppendValueToString(nsCSSProperty aProperty, const ns
 
     case eCSSUnit_Pixel:        aResult.Append(NS_LITERAL_STRING("px"));   break;
 
+    case eCSSUnit_Proportional: aResult.Append(NS_LITERAL_STRING("*"));   break;
+
     case eCSSUnit_Degree:       aResult.Append(NS_LITERAL_STRING("deg"));  break;
     case eCSSUnit_Grad:         aResult.Append(NS_LITERAL_STRING("grad")); break;
     case eCSSUnit_Radian:       aResult.Append(NS_LITERAL_STRING("rad"));  break;

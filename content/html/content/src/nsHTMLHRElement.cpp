@@ -211,37 +211,62 @@ static void
 MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
                       nsRuleData* aData)
 {
-  if (!aAttributes || !aData || aData->mSID != eStyleStruct_Margin || !aData->mMarginData)
+  if (!aAttributes || !aData || !aData->mMarginData)
     return;
 
-  nsCSSRect* margin = aData->mMarginData->mMargin;
+  if (aData->mSID == eStyleStruct_Margin) {
+    nsCSSRect* margin = aData->mMarginData->mMargin;
+    nsHTMLValue value;
+    // align: enum
+    aAttributes->GetAttribute(nsHTMLAtoms::align, value);
+    if (eHTMLUnit_Enumerated == value.GetUnit()) {
+      // Map align attribute into auto side margins
+      nsCSSValue autoVal(eStyleUnit_Auto);
+      nsCSSValue zero(0.0f, eCSSUnit_Pixel);
+      switch (value.GetIntValue()) {
+      case NS_STYLE_TEXT_ALIGN_LEFT:
+        if (margin->mLeft.GetUnit() != eCSSUnit_Null)
+          margin->mLeft = zero;
+        if (margin->mRight.GetUnit() != eCSSUnit_Null)
+          margin->mRight = autoVal;
+        break;
+      case NS_STYLE_TEXT_ALIGN_RIGHT:
+        if (margin->mLeft.GetUnit() != eCSSUnit_Null)
+          margin->mLeft = autoVal;
+        if (margin->mRight.GetUnit() != eCSSUnit_Null)
+          margin->mRight = zero;
+        break;
+      case NS_STYLE_TEXT_ALIGN_CENTER:
+        if (margin->mLeft.GetUnit() != eCSSUnit_Null)
+          margin->mLeft = autoVal;
+        if (margin->mRight.GetUnit() != eCSSUnit_Null)
+          margin->mRight = autoVal;
+        break;
+      }
+    }
+  }
+  else if (aData->mSID == eStyleStruct_Position) {
+    nsHTMLValue value;
+    // width: pixel, percent
+    if (aData->mPositionData->mWidth.GetUnit() == eCSSUnit_Null) {
+      aAttributes->GetAttribute(nsHTMLAtoms::width, value);
+      if (value.GetUnit() == eHTMLUnit_Pixel) {
+        nsCSSValue val((float)value.GetPixelValue(), eCSSUnit_Pixel);
+        aData->mPositionData->mWidth = val;    
+      }
+      else if (value.GetUnit() == eHTMLUnit_Percent) {
+        nsCSSValue val; val.SetPercentValue(value.GetPercentValue());
+        aData->mPositionData->mWidth = val;    
+      }
+    }
 
-  nsHTMLValue value;
-  // align: enum
-  aAttributes->GetAttribute(nsHTMLAtoms::align, value);
-  if (eHTMLUnit_Enumerated == value.GetUnit()) {
-    // Map align attribute into auto side margins
-    nsCSSValue autoVal(eStyleUnit_Auto);
-    nsCSSValue zero(0.0f, eCSSUnit_Pixel);
-    switch (value.GetIntValue()) {
-    case NS_STYLE_TEXT_ALIGN_LEFT:
-      if (margin->mLeft.GetUnit() != eCSSUnit_Null)
-        margin->mLeft = zero;
-      if (margin->mRight.GetUnit() != eCSSUnit_Null)
-        margin->mRight = autoVal;
-      break;
-    case NS_STYLE_TEXT_ALIGN_RIGHT:
-      if (margin->mLeft.GetUnit() != eCSSUnit_Null)
-        margin->mLeft = autoVal;
-      if (margin->mRight.GetUnit() != eCSSUnit_Null)
-        margin->mRight = zero;
-      break;
-    case NS_STYLE_TEXT_ALIGN_CENTER:
-      if (margin->mLeft.GetUnit() != eCSSUnit_Null)
-        margin->mLeft = autoVal;
-      if (margin->mRight.GetUnit() != eCSSUnit_Null)
-        margin->mRight = autoVal;
-      break;
+    // size: pixel
+    if (aData->mPositionData->mHeight.GetUnit() == eCSSUnit_Null) {
+      aAttributes->GetAttribute(nsHTMLAtoms::size, value);
+      if (value.GetUnit() == eHTMLUnit_Pixel) {
+        nsCSSValue val((float)value.GetPixelValue(), eCSSUnit_Pixel);
+        aData->mPositionData->mHeight = val;    
+      }
     }
   }
 }
@@ -251,29 +276,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIMutableStyleContext* aContext,
                   nsIPresContext* aPresContext)
 {
-  if (nsnull != aAttributes) {
-    nsHTMLValue value;
-    // width: pixel, percent
-    float p2t;
-    aPresContext->GetScaledPixelsToTwips(&p2t);
-    nsStylePosition* pos = (nsStylePosition*)
-      aContext->GetMutableStyleData(eStyleStruct_Position);
-    aAttributes->GetAttribute(nsHTMLAtoms::width, value);
-    if (eHTMLUnit_Pixel == value.GetUnit()) {
-      nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-      pos->mWidth.SetCoordValue(twips);
-    }
-    else if (eHTMLUnit_Percent == value.GetUnit()) {
-      pos->mWidth.SetPercentValue(value.GetPercentValue());
-    }
-
-    // size: pixel
-    aAttributes->GetAttribute(nsHTMLAtoms::size, value);
-    if (eHTMLUnit_Pixel == value.GetUnit()) {
-      nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-      pos->mHeight.SetCoordValue(twips);
-    }
-  }
   nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
                                                 aPresContext);
 }

@@ -31,7 +31,7 @@
 #include "nsIMutableStyleContext.h"
 #include "nsStyleConsts.h"
 #include "nsIPresContext.h"
-
+#include "nsIRuleNode.h"
 
 class nsHTMLTableColElement : public nsGenericHTMLContainerElement,
                               public nsIDOMHTMLTableColElement,
@@ -236,6 +236,41 @@ nsHTMLTableColElement::AttributeToString(nsIAtom* aAttribute,
                                                           aResult);
 }
 
+static 
+void MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleData* aData)
+{
+  if (!aAttributes || !aData)
+    return;
+
+  nsHTMLValue value;
+  
+  if (aData->mPositionData && aData->mPositionData->mWidth.GetUnit() == eCSSUnit_Null) {
+    // width
+    aAttributes->GetAttribute(nsHTMLAtoms::width, value);
+    if (value.GetUnit() != eHTMLUnit_Null) {
+      switch (value.GetUnit()) {
+      case eHTMLUnit_Percent: {
+        nsCSSValue val; val.SetPercentValue(value.GetPercentValue());
+        aData->mPositionData->mWidth = val;
+        break;
+      }
+      case eHTMLUnit_Pixel: {
+        nsCSSValue val((float)value.GetPixelValue(), eCSSUnit_Pixel);
+        aData->mPositionData->mWidth = val;
+        break;
+      }
+      case eHTMLUnit_Proportional: {
+        nsCSSValue val((float)value.GetIntValue(), eCSSUnit_Proportional);
+        aData->mPositionData->mWidth = val;
+        break;
+      }
+      default:
+        break;
+      }
+    }
+  }
+}
+
 static void
 MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIMutableStyleContext* aContext,
@@ -247,32 +282,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
   if (aAttributes) {
     nsHTMLValue value;
     nsStyleText* textStyle = nsnull;
-
-    // width
-    aAttributes->GetAttribute(nsHTMLAtoms::width, value);
-
-    if (value.GetUnit() != eHTMLUnit_Null) {
-      nsStylePosition* position = (nsStylePosition*)
-        aContext->GetMutableStyleData(eStyleStruct_Position);
-
-      switch (value.GetUnit()) {
-      case eHTMLUnit_Percent:
-        position->mWidth.SetPercentValue(value.GetPercentValue());
-        break;
-
-      case eHTMLUnit_Pixel:
-        float p2t;
-        aPresContext->GetScaledPixelsToTwips(&p2t);
-        position->mWidth.SetCoordValue(NSIntPixelsToTwips(value.GetPixelValue(), p2t));
-        break;
-
-      case eHTMLUnit_Proportional:
-        position->mWidth.SetIntValue(value.GetIntValue(), eStyleUnit_Proportional);
-        break;
-      default:
-        break;
-      }
-    }
 
     // align: enum
     aAttributes->GetAttribute(nsHTMLAtoms::align, value);
@@ -324,7 +333,7 @@ NS_IMETHODIMP
 nsHTMLTableColElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                     nsMapAttributesFunc& aMapFunc) const
 {
-  aMapRuleFunc = nsnull;
+  aMapRuleFunc = &MapAttributesIntoRule;
   aMapFunc = &MapAttributesInto;
   return NS_OK;
 }

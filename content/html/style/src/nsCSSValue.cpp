@@ -310,6 +310,7 @@ void nsCSSValue::AppendToString(nsAWritableString& aBuffer,
     case eCSSUnit_CapHeight:    aBuffer.Append(NS_LITERAL_STRING("cap"));  break;
     case eCSSUnit_Char:         aBuffer.Append(NS_LITERAL_STRING("ch"));   break;
     case eCSSUnit_Pixel:        aBuffer.Append(NS_LITERAL_STRING("px"));   break;
+    case eCSSUnit_Proportional: aBuffer.Append(NS_LITERAL_STRING("*"));    break;
     case eCSSUnit_Degree:       aBuffer.Append(NS_LITERAL_STRING("deg"));  break;
     case eCSSUnit_Grad:         aBuffer.Append(NS_LITERAL_STRING("grad")); break;
     case eCSSUnit_Radian:       aBuffer.Append(NS_LITERAL_STRING("rad"));  break;

@@ -43,7 +43,7 @@
 #include "nsIWebShell.h"
 #include "nsIFrame.h"
 #include "nsLayoutAtoms.h"
-
+#include "nsIRuleNode.h"
 
 // XXX nav attrs: suppress
 
@@ -206,10 +206,57 @@ static void
 MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
                       nsRuleData* aData)
 {
-  if (!aData)
+  if (!aAttributes || !aData)
     return;
 
   nsGenericHTMLElement::MapImageMarginAttributeInto(aAttributes, aData);
+  nsGenericHTMLElement::MapImagePositionAttributeInto(aAttributes, aData);
+
+  if (aData->mPositionData) {
+    nsHTMLValue value;
+    const nsStyleDisplay* display = (const nsStyleDisplay*)
+      aData->mStyleContext->GetStyleData(eStyleStruct_Display);
+    
+    PRBool typeIsBlock = (display->mDisplay == NS_STYLE_DISPLAY_BLOCK);
+    if (typeIsBlock) {
+      // width: value
+      if (aData->mPositionData->mWidth.GetUnit() == eCSSUnit_Null) {
+        aAttributes->GetAttribute(nsHTMLAtoms::width, value);
+        if (value.GetUnit() == eHTMLUnit_Pixel) {
+          nsCSSValue val((float)value.GetPixelValue(), eCSSUnit_Pixel);
+          aData->mPositionData->mWidth = val;    
+        }
+        else if (value.GetUnit() == eHTMLUnit_Percent) {
+          nsCSSValue val; val.SetPercentValue(value.GetPercentValue());
+          aData->mPositionData->mWidth = val;    
+        }
+      }
+
+      // height: value
+      if (aData->mPositionData->mHeight.GetUnit() == eCSSUnit_Null) {
+        aAttributes->GetAttribute(nsHTMLAtoms::height, value);
+        if (value.GetUnit() == eHTMLUnit_Pixel) {
+          nsCSSValue val((float)value.GetPixelValue(), eCSSUnit_Pixel);
+          aData->mPositionData->mHeight = val;    
+        }
+        else if (value.GetUnit() == eHTMLUnit_Percent) {
+          nsCSSValue val; val.SetPercentValue(value.GetPercentValue());
+          aData->mPositionData->mHeight = val;    
+        }
+      }
+    }
+    else
+    {
+      // size: value
+      if (aData->mPositionData->mWidth.GetUnit() == eCSSUnit_Null) {
+        aAttributes->GetAttribute(nsHTMLAtoms::size, value);
+        if (value.GetUnit() == eHTMLUnit_Pixel) {
+          nsCSSValue val((float)value.GetPixelValue(), eCSSUnit_Pixel);
+          aData->mPositionData->mWidth = val;    
+        }
+      }
+    }
+  }
 }
 
 static void
@@ -224,8 +271,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
     nsHTMLValue value;
     nsStyleDisplay* display = (nsStyleDisplay*)
       aContext->GetMutableStyleData(eStyleStruct_Display);
-    nsStylePosition* position = (nsStylePosition*)
-      aContext->GetMutableStyleData(eStyleStruct_Position);
     aAttributes->GetAttribute(nsHTMLAtoms::align, value);
     if (eHTMLUnit_Enumerated == value.GetUnit()) {
       switch (value.GetIntValue()) {
@@ -240,12 +285,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
       }
     }
 
-    nsGenericHTMLElement::MapImageAttributesInto(aAttributes, aContext,
-                                                 aPresContext);
-
-    float p2t;
-    aPresContext->GetScaledPixelsToTwips(&p2t);
-    PRBool typeIsBlock = PR_FALSE;
     aAttributes->GetAttribute(nsHTMLAtoms::type, value);
     if (eHTMLUnit_String == value.GetUnit()) {
       nsAutoString tmp;
@@ -257,40 +296,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
         // This is not strictly 100% compatible: if the spacer is given
         // a width of zero then it is basically ignored.
         display->mDisplay = NS_STYLE_DISPLAY_BLOCK;
-        if (tmp.EqualsIgnoreCase("block")) {
-          typeIsBlock = PR_TRUE;
-        }
-      }
-    }
-
-    if (typeIsBlock) {
-      // width: value
-      aAttributes->GetAttribute(nsHTMLAtoms::width, value);
-      if (value.GetUnit() == eHTMLUnit_Pixel) {
-        nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-        position->mWidth.SetCoordValue(twips);
-      }
-      else if (value.GetUnit() == eHTMLUnit_Percent) {
-        position->mWidth.SetPercentValue(value.GetPercentValue());
-      }
-
-      // height: value
-      aAttributes->GetAttribute(nsHTMLAtoms::height, value);
-      if (value.GetUnit() == eHTMLUnit_Pixel) {
-        nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-        position->mHeight.SetCoordValue(twips);
-      }
-      else if (value.GetUnit() == eHTMLUnit_Percent) {
-        position->mHeight.SetPercentValue(value.GetPercentValue());
-      }
-    }
-    else
-    {
-      // size: value
-      aAttributes->GetAttribute(nsHTMLAtoms::size, value);
-      if (value.GetUnit() == eHTMLUnit_Pixel) {
-        nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-        position->mWidth.SetCoordValue(twips);
       }
     }
   }

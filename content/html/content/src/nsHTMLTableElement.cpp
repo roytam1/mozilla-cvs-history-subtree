@@ -1208,52 +1208,56 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
     return;
 
   if (aData->mSID == eStyleStruct_Margin && aData->mMarginData) {
-    // align; Check for enumerated type (it may be another type if
-    // illegal)
-    nsHTMLValue value;
-    aAttributes->GetAttribute(nsHTMLAtoms::align, value);
+    const nsStyleDisplay* readDisplay = (nsStyleDisplay*)
+                  aData->mStyleContext->GetStyleData(eStyleStruct_Display);
+  
+    if (readDisplay && readDisplay->mDisplay != NS_STYLE_DISPLAY_TABLE_CELL) {
+      // align; Check for enumerated type (it may be another type if
+      // illegal)
+      nsHTMLValue value;
+      aAttributes->GetAttribute(nsHTMLAtoms::align, value);
 
-    if (value.GetUnit() == eHTMLUnit_Enumerated) {
-      if ((NS_STYLE_TEXT_ALIGN_CENTER == value.GetIntValue()) ||
-          (NS_STYLE_TEXT_ALIGN_MOZ_CENTER == value.GetIntValue())) {
-        nsCSSValue autoVal(eCSSUnit_Auto);
-        nsCSSRect* margin = aData->mMarginData->mMargin;
-        if (margin->mLeft.GetUnit() == eCSSUnit_Null)
-          margin->mLeft = autoVal;
-        if (margin->mRight.GetUnit() == eCSSUnit_Null)
-          margin->mRight = autoVal;
+      if (value.GetUnit() == eHTMLUnit_Enumerated) {
+        if ((NS_STYLE_TEXT_ALIGN_CENTER == value.GetIntValue()) ||
+            (NS_STYLE_TEXT_ALIGN_MOZ_CENTER == value.GetIntValue())) {
+          nsCSSValue autoVal(eCSSUnit_Auto);
+          nsCSSRect* margin = aData->mMarginData->mMargin;
+          if (margin->mLeft.GetUnit() == eCSSUnit_Null)
+            margin->mLeft = autoVal;
+          if (margin->mRight.GetUnit() == eCSSUnit_Null)
+            margin->mRight = autoVal;
+        }
+      }
+
+      // hspace is mapped into left and right margin, 
+      // vspace is mapped into top and bottom margins
+      // - *** Quirks Mode only ***
+      nsCompatibility mode;
+      aData->mPresContext->GetCompatibilityMode(&mode);
+      if (eCompatibility_NavQuirks == mode) {
+        aAttributes->GetAttribute(nsHTMLAtoms::hspace, value);
+
+        if (value.GetUnit() == eHTMLUnit_Pixel) {
+          nsCSSValue hval((float)value.GetPixelValue(), eCSSUnit_Pixel); 
+          nsCSSRect* margin = aData->mMarginData->mMargin;
+          if (margin->mLeft.GetUnit() == eCSSUnit_Null)
+            margin->mLeft = hval;
+          if (margin->mRight.GetUnit() == eCSSUnit_Null)
+            margin->mRight = hval;
+        }
+
+        aAttributes->GetAttribute(nsHTMLAtoms::vspace, value);
+
+        if (value.GetUnit() == eHTMLUnit_Pixel) {
+          nsCSSValue vval((float)value.GetPixelValue(), eCSSUnit_Pixel); 
+          nsCSSRect* margin = aData->mMarginData->mMargin;
+          if (margin->mTop.GetUnit() == eCSSUnit_Null)
+            margin->mTop = vval;
+          if (margin->mBottom.GetUnit() == eCSSUnit_Null)
+            margin->mBottom = vval;
+        }
       }
     }
-
-    // hspace is mapped into left and right margin, 
-    // vspace is mapped into top and bottom margins
-    // - *** Quirks Mode only ***
-    nsCompatibility mode;
-    aData->mPresContext->GetCompatibilityMode(&mode);
-    if (eCompatibility_NavQuirks == mode) {
-      aAttributes->GetAttribute(nsHTMLAtoms::hspace, value);
-
-      if (value.GetUnit() == eHTMLUnit_Pixel) {
-        nsCSSValue hval((float)value.GetPixelValue(), eCSSUnit_Pixel); 
-        nsCSSRect* margin = aData->mMarginData->mMargin;
-        if (margin->mLeft.GetUnit() == eCSSUnit_Null)
-          margin->mLeft = hval;
-        if (margin->mRight.GetUnit() == eCSSUnit_Null)
-          margin->mRight = hval;
-      }
-
-      aAttributes->GetAttribute(nsHTMLAtoms::vspace, value);
-
-      if (value.GetUnit() == eHTMLUnit_Pixel) {
-        nsCSSValue vval((float)value.GetPixelValue(), eCSSUnit_Pixel); 
-        nsCSSRect* margin = aData->mMarginData->mMargin;
-        if (margin->mTop.GetUnit() == eCSSUnit_Null)
-          margin->mTop = vval;
-        if (margin->mBottom.GetUnit() == eCSSUnit_Null)
-          margin->mBottom = vval;
-      }
-    }
-
   }
   else if (aData->mSID == eStyleStruct_Padding && aData->mMarginData) {
     const nsStyleDisplay* readDisplay = (nsStyleDisplay*)
@@ -1283,6 +1287,52 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
           aData->mMarginData->mPadding->mTop = padVal;
         if (aData->mMarginData->mPadding->mBottom.GetUnit() == eCSSUnit_Null)
           aData->mMarginData->mPadding->mBottom = padVal;
+      }
+    }
+  }
+  else if (aData->mPositionData) {
+    const nsStyleDisplay* readDisplay = (nsStyleDisplay*)
+                  aData->mStyleContext->GetStyleData(eStyleStruct_Display);
+  
+    if (readDisplay &&
+        (readDisplay->mDisplay != NS_STYLE_DISPLAY_TABLE_CELL)) {
+      nsHTMLValue value;
+      // width: value
+      if (aData->mPositionData->mWidth.GetUnit() == eCSSUnit_Null) {
+        aAttributes->GetAttribute(nsHTMLAtoms::width, value);
+        if (value.GetUnit() == eHTMLUnit_Pixel) {
+          //if (value.GetPixelValue() > 0) {
+            nsCSSValue val((float)value.GetPixelValue(), eCSSUnit_Pixel);
+            aData->mPositionData->mWidth = val;   
+          //}
+          // else 0 implies auto for compatibility.
+        }
+        else if (value.GetUnit() == eHTMLUnit_Percent) {
+          //if (value.GetPercentValue() > 0.0f) {
+            nsCSSValue val; val.SetPercentValue(value.GetPercentValue());
+            aData->mPositionData->mWidth = val;   
+          //}
+          // else 0 implies auto for compatibility
+        }
+      }
+
+      // height: value
+      if (aData->mPositionData->mHeight.GetUnit() == eCSSUnit_Null) {
+        aAttributes->GetAttribute(nsHTMLAtoms::height, value);
+        if (value.GetUnit() == eHTMLUnit_Pixel) {
+          //if (value.GetPixelValue() > 0) {
+            nsCSSValue val((float)value.GetPixelValue(), eCSSUnit_Pixel);
+            aData->mPositionData->mHeight = val;   
+          //}
+          // else 0 implies auto for compatibility.
+        }
+        else if (value.GetUnit() == eHTMLUnit_Percent) {
+          //if (value.GetPercentValue() > 0.0f) {
+            nsCSSValue val; val.SetPercentValue(value.GetPercentValue());
+            aData->mPositionData->mHeight = val;   
+          //}
+          // else 0 implies auto for compatibility
+        }
       }
     }
   }
@@ -1388,52 +1438,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
         (readDisplay->mDisplay == NS_STYLE_DISPLAY_TABLE_CELL)) {
     }
     else {  // handle attributes for table
-      // width
-      aAttributes->GetAttribute(nsHTMLAtoms::width, value);
-
-      if (value.GetUnit() != eHTMLUnit_Null) {
-        nsStylePosition* position = (nsStylePosition*)
-          aContext->GetMutableStyleData(eStyleStruct_Position);
-
-        switch (value.GetUnit()) {
-        case eHTMLUnit_Percent:
-          // 0 width remains default auto
-          //if (value.GetPercentValue() > 0.0f) {
-            position->mWidth.SetPercentValue(value.GetPercentValue());
-          //}
-
-          break;
-        case eHTMLUnit_Pixel:
-          // 0 width remains default auto
-          //if (value.GetPixelValue() > 0) {
-            position->mWidth.SetCoordValue(NSIntPixelsToTwips(value.GetPixelValue(), sp2t));
-          //}
-
-          break;
-        default:
-          break;
-        }
-      }
-
-      // height
-      aAttributes->GetAttribute(nsHTMLAtoms::height, value);
-
-      if (value.GetUnit() != eHTMLUnit_Null) {
-        nsStylePosition* position = (nsStylePosition*)
-          aContext->GetMutableStyleData(eStyleStruct_Position);
-        switch (value.GetUnit()) {
-        case eHTMLUnit_Percent:
-          position->mHeight.SetPercentValue(value.GetPercentValue());
-
-          break;
-        case eHTMLUnit_Pixel:
-          position->mHeight.SetCoordValue(NSIntPixelsToTwips(value.GetPixelValue(), sp2t));
-
-          break;
-        default:
-          break;
-        }
-      }
 
       // align; Check for enumerated type (it may be another type if
       // illegal)
@@ -1448,12 +1452,10 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
           switch (value.GetIntValue()) {
           case NS_STYLE_TEXT_ALIGN_LEFT:
             display->mFloats = NS_STYLE_FLOAT_LEFT;
-
             break;
           case NS_STYLE_TEXT_ALIGN_RIGHT:
           case NS_STYLE_TEXT_ALIGN_MOZ_RIGHT:
             display->mFloats = NS_STYLE_FLOAT_RIGHT;
-
             break;
           }
         }

@@ -33,7 +33,7 @@
 #include "nsIMutableStyleContext.h"
 #include "nsStyleConsts.h"
 #include "nsIPresContext.h"
-
+#include "nsIRuleNode.h"
 
 class nsHTMLTableCellElement : public nsGenericHTMLContainerElement,
                                public nsIHTMLTableCellElement,
@@ -396,6 +396,55 @@ nsHTMLTableCellElement::AttributeToString(nsIAtom* aAttribute,
                                                           aResult);
 }
 
+static 
+void MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleData* aData)
+{
+  if (!aAttributes || !aData)
+    return;
+
+  nsHTMLValue value;
+  
+  if (aData->mPositionData) {
+    // width: value
+    if (aData->mPositionData->mWidth.GetUnit() == eCSSUnit_Null) {
+      aAttributes->GetAttribute(nsHTMLAtoms::width, value);
+      if (value.GetUnit() == eHTMLUnit_Pixel) {
+        if (value.GetPixelValue() > 0) {
+          nsCSSValue val((float)value.GetPixelValue(), eCSSUnit_Pixel);
+          aData->mPositionData->mWidth = val;   
+        }
+        // else 0 implies auto for compatibility.
+      }
+      else if (value.GetUnit() == eHTMLUnit_Percent) {
+        if (value.GetPercentValue() > 0.0f) {
+          nsCSSValue val; val.SetPercentValue(value.GetPercentValue());
+          aData->mPositionData->mWidth = val;   
+        }
+        // else 0 implies auto for compatibility
+      }
+    }
+
+    // height: value
+    if (aData->mPositionData->mHeight.GetUnit() == eCSSUnit_Null) {
+      aAttributes->GetAttribute(nsHTMLAtoms::height, value);
+      if (value.GetUnit() == eHTMLUnit_Pixel) {
+        if (value.GetPixelValue() > 0) {
+          nsCSSValue val((float)value.GetPixelValue(), eCSSUnit_Pixel);
+          aData->mPositionData->mHeight = val;   
+        }
+        // else 0 implies auto for compatibility.
+      }
+      else if (value.GetUnit() == eHTMLUnit_Percent) {
+        if (value.GetPercentValue() > 0.0f) {
+          nsCSSValue val; val.SetPercentValue(value.GetPercentValue());
+          aData->mPositionData->mHeight = val;   
+        }
+        // else 0 implies auto for compatibility
+      }
+    }
+  }
+}
+
 static void
 MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIMutableStyleContext* aContext,
@@ -422,41 +471,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
       if (nsnull==textStyle)
         textStyle = (nsStyleText*)aContext->GetMutableStyleData(eStyleStruct_Text);
       textStyle->mVerticalAlign.SetIntValue(value.GetIntValue(), eStyleUnit_Enumerated);
-    }
-
-    float p2t;
-    aPresContext->GetScaledPixelsToTwips(&p2t);
-    nsStylePosition* pos = (nsStylePosition*)
-      aContext->GetMutableStyleData(eStyleStruct_Position);
-    aAttributes->GetAttribute(nsHTMLAtoms::width, widthValue);
-
-    if (widthValue.GetUnit() == eHTMLUnit_Pixel) {     // width: pixel
-      nscoord width = widthValue.GetPixelValue();
-
-      if (width > 0) {
-        nscoord twips = NSIntPixelsToTwips(width, p2t);
-        pos->mWidth.SetCoordValue(twips);
-      }
-      // else, 0 implies AUTO for compatibility 
-    }
-    else if (widthValue.GetUnit() == eHTMLUnit_Percent) { // width: percent
-      float widthPercent = widthValue.GetPercentValue();
-      if (widthPercent > 0.0f) {
-        pos->mWidth.SetPercentValue(widthPercent);
-      }
-      // else, 0 implies AUTO for compatibility 
-    }
-
-    // height: pixel
-    aAttributes->GetAttribute(nsHTMLAtoms::height, value);
-    if (value.GetUnit() == eHTMLUnit_Pixel) { // height: pixel
-      nscoord height = value.GetPixelValue();
-      nscoord twips = NSIntPixelsToTwips(height, p2t);
-      pos->mHeight.SetCoordValue(twips);
-    }
-    else if (value.GetUnit() == eHTMLUnit_Percent) { // height: percent
-      float heightPercent = value.GetPercentValue();
-      pos->mHeight.SetPercentValue(heightPercent);
     }
 
     // nowrap
@@ -510,7 +524,7 @@ NS_IMETHODIMP
 nsHTMLTableCellElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                      nsMapAttributesFunc& aMapFunc) const
 {
-  aMapRuleFunc = nsnull;
+  aMapRuleFunc = &MapAttributesIntoRule;
   aMapFunc = &MapAttributesInto;
   return NS_OK;
 }

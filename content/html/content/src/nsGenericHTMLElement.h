@@ -291,22 +291,21 @@ public:
   static PRBool GetCommonMappedAttributesImpact(const nsIAtom* aAttribute,
                                                 PRInt32& aHint);
 
-  static void MapImageAttributesInto(const nsIHTMLMappedAttributes* aAttributes, 
-                                     nsIMutableStyleContext* aContext,
-                                     nsIPresContext* aPresContext);
   static PRBool GetImageMappedAttributesImpact(const nsIAtom* aAttribute,
                                                PRInt32& aHint);
-
-  static void MapImageAlignAttributeInto(const nsIHTMLMappedAttributes* aAttributes, 
-                                         nsIMutableStyleContext* aContext,
-                                         nsIPresContext* aPresContext);
   static PRBool GetImageAlignAttributeImpact(const nsIAtom* aAttribute,
                                              PRInt32& aHint);
+
+  static void MapImageAlignAttributeInto(const nsIHTMLMappedAttributes* aAttributes,
+                                                 nsIMutableStyleContext* aContext,
+                                                 nsIPresContext* aPresContext);
 
   static void MapImageBorderAttributeInto(const nsIHTMLMappedAttributes* aAttributes,
                                           nsRuleData* aData);
   static void MapImageMarginAttributeInto(const nsIHTMLMappedAttributes* aAttributes,
                                           nsRuleData* aData);
+  static void MapImagePositionAttributeInto(const nsIHTMLMappedAttributes* aAttributes,
+                                            nsRuleData* aData);
   static PRBool GetImageBorderAttributeImpact(const nsIAtom* aAttribute,
                                               PRInt32& aHint);
 

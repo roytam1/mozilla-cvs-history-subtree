@@ -29,6 +29,7 @@
 #include "nsIFontMetrics.h"
 #include "nsIDocShellTreeItem.h"
 #include "nsStyleUtil.h"
+#include "nsCSSAtoms.h"
 
 nscoord CalcLength(const nsCSSValue& aValue,
                    nsFont* aFont, 
@@ -1595,6 +1596,14 @@ nsRuleNode::ComputePositionData(nsStylePosition* aStartPos, const nsCSSPosition&
   // position: enum, inherit
   if (eCSSUnit_Enumerated == aPosData.mPosition.GetUnit()) {
     pos->mPosition = aPosData.mPosition.GetIntValue();
+    if (pos->mPosition != NS_STYLE_POSITION_NORMAL) {
+      // :before and :after elts cannot be positioned.  We need to check for this
+      // case.
+      nsCOMPtr<nsIAtom> tag;
+      aContext->GetPseudoType(*getter_AddRefs(tag));
+      if (tag && tag.get() == nsCSSAtoms::beforePseudo || tag.get() == nsCSSAtoms::afterPseudo)
+        pos->mPosition = NS_STYLE_POSITION_NORMAL;
+    }
   }
   else if (eCSSUnit_Inherit == aPosData.mPosition.GetUnit()) {
     pos->mPosition = parentPos->mPosition;
@@ -1622,8 +1631,11 @@ nsRuleNode::ComputePositionData(nsStylePosition* aStartPos, const nsCSSPosition&
     }
   }
 
-  SetCoord(aPosData.mWidth, pos->mWidth, parentPos->mWidth,
-           SETCOORD_LPAH, aContext, mPresContext, inherited);
+  if (aPosData.mWidth.GetUnit() == eCSSUnit_Proportional)
+    pos->mWidth.SetIntValue(aPosData.mWidth.GetIntValue(), eStyleUnit_Proportional);
+  else 
+    SetCoord(aPosData.mWidth, pos->mWidth, parentPos->mWidth,
+             SETCOORD_LPAH, aContext, mPresContext, inherited);
   SetCoord(aPosData.mMinWidth, pos->mMinWidth, parentPos->mMinWidth,
            SETCOORD_LPH, aContext, mPresContext, inherited);
   if (! SetCoord(aPosData.mMaxWidth, pos->mMaxWidth, parentPos->mMaxWidth,

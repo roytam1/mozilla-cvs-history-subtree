@@ -1379,6 +1379,7 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
       case NS_FORM_INPUT_IMAGE: {
         nsGenericHTMLElement::MapImageBorderAttributeInto(aAttributes, aData);
         nsGenericHTMLElement::MapImageMarginAttributeInto(aAttributes, aData);
+        nsGenericHTMLElement::MapImagePositionAttributeInto(aAttributes, aData);
         break;
       }
     }
@@ -1409,18 +1410,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
       text->mVerticalAlign.SetIntValue(value.GetIntValue(),
                                        eStyleUnit_Enumerated);
       break;
-    }
-  }
-
-  aAttributes->GetAttribute(nsHTMLAtoms::type, value);
-  if (eHTMLUnit_Enumerated == value.GetUnit()) {  
-    switch (value.GetIntValue()) {
-      case NS_FORM_INPUT_IMAGE:
-      {
-        nsGenericHTMLElement::MapImageAttributesInto(aAttributes, aContext,
-                                                     aPresContext);
-        break;
-      }
     }
   }
 
