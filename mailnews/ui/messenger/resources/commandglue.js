@@ -39,3 +39,32 @@ function LoadMessage(messageNode)
 	OpenURL(uri);
 
 }
+
+function ChangeFolder(folderNode)
+{
+	var uri = folderNode.getAttribute('id');
+	dump(uri);
+	var tree = frames[0].frame[1].document.getElementById('threadTree');
+	tree.childNodes[4].setAttribute('id', uri);
+}
+
+
+function ReplyMessage(messageHdr)
+{
+	var appCore = new ComposeAppCore();
+	if (appCore != null) {
+		dump("Initializing ComposeAppCore and creating a new Message\n");
+		appCore.Init("ComposeAppCore");
+		appCore.ReplyMessage("resource:/res/samples/compose.xul", messageHdr, 0);
+	}
+}
+
+function ForwardMessage(messageHdr)
+{
+	var appCore = new ComposeAppCore();
+	if (appCore != null) {
+		dump("Initializing ComposeAppCore and creating a new Message\n");
+		appCore.Init("ComposeAppCore");
+		appCore.ForwardMessage("resource:/res/samples/compose.xul", messageHdr, 0);
+	}
+}
