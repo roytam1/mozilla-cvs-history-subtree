@@ -82,10 +82,10 @@ public void loadURL(String absoluteURL)
 {
     ParameterCheck.nonNull(absoluteURL);
     getWrapperFactory().verifyInitialized();
-    Assert.assert_it(-1 != getNativeWebShell());
+    Assert.assert_it(-1 != getNativeBrowserControl());
     
     synchronized(getBrowserControl()) {
-        nativeLoadURL(getNativeWebShell(), absoluteURL);
+        nativeLoadURL(getNativeBrowserControl(), absoluteURL);
     }
 }
 
@@ -102,10 +102,10 @@ public void loadFromStream(InputStream stream, String uri,
     }
 
     getWrapperFactory().verifyInitialized();
-    Assert.assert_it(-1 != getNativeWebShell());
+    Assert.assert_it(-1 != getNativeBrowserControl());
     
     synchronized(getBrowserControl()) {
-        nativeLoadFromStream(getNativeWebShell(), stream,
+        nativeLoadFromStream(getNativeBrowserControl(), stream,
                              uri, contentType, contentLength,
                              loadInfo);
     }
@@ -115,20 +115,20 @@ public void refresh(long loadFlags)
 {
     ParameterCheck.noLessThan(loadFlags, 0);
     getWrapperFactory().verifyInitialized();
-    Assert.assert_it(-1 != getNativeWebShell());
+    Assert.assert_it(-1 != getNativeBrowserControl());
     
     synchronized(getBrowserControl()) {
-        nativeRefresh(getNativeWebShell(), loadFlags);
+        nativeRefresh(getNativeBrowserControl(), loadFlags);
     }
 }
 
 public void stop()
 {
     getWrapperFactory().verifyInitialized();
-    Assert.assert_it(-1 != getNativeWebShell());
+    Assert.assert_it(-1 != getNativeBrowserControl());
     
     synchronized(getBrowserControl()) {
-        nativeStop(getNativeWebShell());
+        nativeStop(getNativeBrowserControl());
     }
 }
 
@@ -136,10 +136,10 @@ public void setPrompt(Prompt yourPrompt)
 {
     ParameterCheck.nonNull(yourPrompt);
     getWrapperFactory().verifyInitialized();
-    Assert.assert_it(-1 != getNativeWebShell());
+    Assert.assert_it(-1 != getNativeBrowserControl());
     
     synchronized(getBrowserControl()) {
-        nativeSetPrompt(getNativeWebShell(), yourPrompt);
+        nativeSetPrompt(getNativeBrowserControl(), yourPrompt);
     }
 
 }
@@ -155,7 +155,7 @@ public void post(String  absoluteUrl,
 {
     ParameterCheck.nonNull(absoluteUrl);
     getWrapperFactory().verifyInitialized();
-    Assert.assert_it(-1 != getNativeWebShell());
+    Assert.assert_it(-1 != getNativeBrowserControl());
 
     int postDataLength = 0;
     int postHeadersLength = 0;
@@ -174,7 +174,7 @@ public void post(String  absoluteUrl,
     }
 
     synchronized(getBrowserControl()) {
-        nativePost(getNativeWebShell(), 
+        nativePost(getNativeBrowserControl(), 
                    absoluteUrl, 
                    target,
                    postDataLength, 
