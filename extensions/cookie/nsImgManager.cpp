@@ -263,7 +263,7 @@ nsImgManager::TestPermission(nsIURI *aCurrentURI,
 
   // Third party checking
   if (mBehaviorPref == IMAGE_NOFOREIGN) {
-    // We need a requesting uri for third party checks to work.
+    // We need a requesting uri for third party checks to work
     if (!aFirstURI)
       return NS_OK;
 
