@@ -1369,7 +1369,7 @@ NS_IMETHODIMP nsImapMailFolder::SetOnlineName(const char * aOnlineFolderName)
   nsCOMPtr<nsIDBFolderInfo> folderInfo;
   m_onlineFolderName = aOnlineFolderName;
   rv = GetDBFolderInfoAndDB(getter_AddRefs(folderInfo), getter_AddRefs(db));
-  if(NS_SUCCEEDED(rv))
+  if(NS_SUCCEEDED(rv) && folderInfo)
   {
     nsAutoString onlineName; onlineName.AssignWithConversion(aOnlineFolderName);
     rv = folderInfo->SetProperty("onlineName", &onlineName);
@@ -1858,8 +1858,10 @@ NS_IMETHODIMP nsImapMailFolder::UpdateImapMailboxInfo(
       if (mDatabase)
       {
         dbFolderInfo = null_nsCOMPtr();
+        NotifyStoreClosedAllHeaders();
         mDatabase->ForceClosed();
       }
+
       mDatabase = null_nsCOMPtr();
       
       nsLocalFolderSummarySpec  summarySpec(dbName);
