@@ -452,6 +452,8 @@ void CNavTitleBar::OnMouseMove(UINT nFlags, CPoint point)
 			ReleaseCapture();
 
 			// Start a drag
+			CRDFOutliner* pOutliner = (CRDFOutliner*)HT_GetViewFEData(m_View);
+			pOutliner->SetIsPopup(FALSE);
 			MapWindowPoints(navFrameParent, &point, 1); 
 			navFrameParent->StartDrag(point);
 		}

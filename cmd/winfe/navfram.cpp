@@ -572,11 +572,12 @@ void CNSNavFrame::DockFrame(CNSGenFrame* pParent, short dockStyle)
 		{ 
 			CNSNavFrame* pFrame = pParent->GetDockedNavCenter();
 			if (pFrame)	
-			{ // if the parent frame has a docked frame, tell this frame to float.
+			{ // if the parent frame has a docked frame, then destroy it.
 				pFrame->DeleteNavCenter();
 			}
 			nsModifyStyle( GetSafeHwnd(), GWL_STYLE, WS_OVERLAPPEDWINDOW, WS_CHILD);
 			nsModifyStyle( GetSafeHwnd(), GWL_EXSTYLE, WS_EX_CLIENTEDGE, 0);
+			nsModifyStyle( GetSafeHwnd(), GWL_STYLE, WS_POPUP, 0);
 
 			SetParent(pParent);
 
