@@ -219,7 +219,7 @@ BookmarksUIElement.prototype = {
                   "newfolder", "separator", "properties"];
       break;
     case "http://home.netscape.com/NC-rdf#IEFavoriteFolder":
-      commands = ["open", "find", "separator", "bm_copy", "separator", "rename", "separator",
+      commands = ["open", "find", "separator", "bm_copy", "bm_delete", "separator", "rename", "separator",
                   "bm_fileBookmark", "separator", "separator", "properties"];
       break;
     case "http://home.netscape.com/NC-rdf#IEFavorite":
@@ -324,6 +324,11 @@ BookmarksUIElement.prototype = {
       openDialog("chrome://communicator/content/bookmarks/addBookmark.xul", "", 
                  "centerscreen,chrome,modal=yes,dialog=yes,resizable=yes", null, null, folder, null, "selectFolder", rv);
       if (rv.selectedFolder) {
+        for (var k = 0; k < selection.length; ++k) {                            
+          if (NODE_ID(selection[k]) == rv.selectedFolder)                       
+            return; // Selection contains the target folder. Just fail silently.
+        }                                                                       
+        
         var additiveFlag = false;
         var selectedItems = [].concat(this.getSelection())
         for (var i = 0; i < selectedItems.length; ++i) {
@@ -551,6 +556,8 @@ BookmarksUIElement.prototype = {
     return hasFlavors;
   },
   
+  ///////////////////////////////////////////////////////////////////////////// 
+  // aSelection is a mutable array, not a NodeList.                             
   deleteSelection: function (aSelection)
   {
     const kRDFCContractID = "@mozilla.org/rdf/container;1";
@@ -588,8 +595,6 @@ BookmarksUIElement.prototype = {
       ksRDFC.Init(kBMDS, krParent);
       nextElement = this.getNextElement(aSelection[count]);
       ksRDFC.RemoveElement(krBookmark, true);
-      // Manipulate the selection array ourselves. 
-      aSelection.splice(count,1);
 
       try {
         // XXX - UGH. Template builder is NOT removing the element from the
@@ -601,7 +606,8 @@ BookmarksUIElement.prototype = {
       catch (e) {
       }
       
-      ++count;
+      // Manipulate the selection array ourselves. 
+      aSelection.splice(count,1);
     }
     this.selectElement(nextElement);
   },

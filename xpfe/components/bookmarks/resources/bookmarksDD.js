@@ -73,8 +73,6 @@ var bookmarksDNDObserver = {
     if (bookmarksTree.getAttribute("sortActive") == "true")
       throw Components.results.NS_OK; 
       
-    dump("*** pass\n");  
-      
     var selItems = null;
     if (bookmarksTree.selectedItems.length <= 0)
       selItems = [aEvent.target.parentNode.parentNode];
@@ -96,11 +94,16 @@ var bookmarksDNDObserver = {
                     type != (NC_NS + "Folder"))) 
         throw Components.results.NS_OK;
       var name = this.getTarget(bookmarksTree.database, currURI, NC_NS + "Name");  
-      name = name.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
 
       var data = new TransferData();
+      if (name) {
+        name = name.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
+        data.addDataForFlavour("text/x-moz-url", currURI + "\n" + name);
+      }
+      else
+        data.addDataForFlavour("text/x-moz-url", currURI);                      
+
       data.addDataForFlavour("moz/rdfitem", currURI + "\n" + parentURI);
-      data.addDataForFlavour("text/x-moz-url", currURI + "\n" + name);
       data.addDataForFlavour("text/unicode", currURI);
       aXferData.data.push(data);
     }
@@ -235,18 +238,12 @@ var bookmarksDNDObserver = {
     var dirty = false;
     var additiveFlag = false;
     var numObjects = aXferData.dataList.length;
-    /*
-    if (numObjects > 1) {
-      var bo = bookmarksTree.boxObject.QueryInterface(Components.interfaces.nsITreeBoxObject);
-      bo.beginBatch();
-    }
-    */
-
     var sourceID = [], parentID = [], nameRequired = [], name = [];
     
     for (i = 0; i < numObjects; ++i) {
       var flavourData = aXferData.dataList[i].first;
       nameRequired[i] = false;
+      name[i] = null;
       var data = flavourData.data;
       switch (flavourData.flavour.contentType) {
       case "moz/rdfitem":
@@ -352,13 +349,6 @@ var bookmarksDNDObserver = {
       }
     }
 
-    /*
-    if (numObjects > 1) {
-      var bo = bookmarksTree.boxObject.QueryInterface(Components.interfaces.nsITreeBoxObject);
-      bo.endBatch();
-    }
-    */
-    
     if (dirty) {
       var remoteDS = kBMDS.QueryInterface(Components.interfaces.nsIRDFRemoteDataSource);
       remoteDS.Flush();

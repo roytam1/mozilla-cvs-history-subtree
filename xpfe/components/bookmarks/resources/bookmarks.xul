@@ -127,8 +127,12 @@
           <menuseparator/>
           <menuitem id="menu_close"/>
           <menuseparator/>
-          <menuitem label="&menuitem.import.label;" command="cmd_bm_import"/>
-          <menuitem label="&menuitem.export.label;" command="cmd_bm_export"/>
+          <menuitem label="&menuitem.import.label;"
+                    accesskey="&menuitem.import.accesskey;"
+                    command="cmd_bm_import"/>
+          <menuitem label="&menuitem.export.label;" 
+                    accesskey="&menuitem.export.accesskey;"
+                    command="cmd_bm_export"/>
           <menuseparator/>
           <menuitem command="cmd_bm_properties" key="bm_key_properties" 
                     label="&command.properties.label;" 
@@ -168,8 +172,9 @@
       </menu>
   
       <menu id="menu_View">
-        <menupopup oncreate="fillViewMenu(this)">
+        <menupopup onpopupshowing="fillViewMenu(this)">
           <menuitem id="viewCommandToolbar" type="checkbox" class="menuitem-iconic"
+                    persist="checked"
                     label="&menuitem.view.command.toolbar.label;"
                     accesskey="&menuitem.view.command.toolbar.accesskey;"
                     oncommand="goToggleToolbar('command-toolbar', 'viewCommandToolbar');"/>
@@ -191,7 +196,7 @@
           <menuseparator/>
           <menu label="&menuitem.view.show_columns.label;" 
                 accesskey="&menuitem.view.show_columns.accesskey;">
-            <menupopup oncreate="BuildTreePopup(document.getElementById('theColumns'), 
+            <menupopup onpopupshowing="BuildTreePopup(document.getElementById('theColumns'), 
                                                 document.getElementById('headRow'), this,
                                                 document.getElementById('popupCell'))"/>
           </menu>
@@ -211,7 +216,7 @@
       <menu id="menu_Help"/>
     </menubar>
 
-    <toolbar id="command-toolbar" tbautostretch="always" grippy="false">
+    <toolbar id="command-toolbar" tbalign="always" grippy="false">
       <button class="button-toolbar" id="newfolder" label="&command.newFolder.label;" 
               command="cmd_bm_newfolder"/>
       <button class="button-toolbar" id="newseparator" label="&command.newSeparator.label;" 
@@ -261,7 +266,7 @@
           <outlinerrow uri="rdf:*" properties="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type separator"/>
         </rule>
         <rule>
-          <outlinerrow uri="rdf:*" properties="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type rdf:http://home.netscape.com/NC-rdf#loading">
+          <outlinerrow uri="rdf:*" properties="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type rdf:http://home.netscape.com/NC-rdf#loading rdf:http://home.netscape.com/WEB-rdf#status">
             <outlinercell ref="Name"
                           label="rdf:http://home.netscape.com/NC-rdf#Name" />
             <outlinercell ref="URL"
