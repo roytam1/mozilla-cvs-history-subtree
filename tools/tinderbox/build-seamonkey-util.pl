@@ -339,7 +339,7 @@ sub SetupPath {
     }
 
     if ($Settings::OS eq 'BSD_OS') {
-        $ENV{PATH}        = "/usr/contrib/bin:/bin:/usr/bin:$ENV{PATH}";
+        $ENV{PATH}        = "/usr/contrib/bin:/usr/contrib/gnome/bin:/usr/bin:$ENV{PATH}";
         #$Settings::ConfigureArgs .= '--disable-shared';
         #$Settings::ConfigureEnvArgs ||= 'CC=shlicc2 CXX=shlicc2';
         #$Settings::Compiler ||= 'shlicc2';
