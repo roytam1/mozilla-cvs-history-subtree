@@ -478,8 +478,10 @@ static nsresult Ensure1Window( nsICmdLineService* cmdLineArgs)
 }
 
 #ifdef DEBUG_warren
+#ifdef XP_PC
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
+#endif
 #endif
 
 static nsresult main1(int argc, char* argv[])
