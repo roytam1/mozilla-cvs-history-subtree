@@ -1,0 +1,174 @@
+#pragma warning ( disable : 4786 )
+
+#include <string>
+#include "Context.h"
+
+namespace esc {
+namespace v1 {
+
+std::map<std::string,std::string> Context::e3cp_profile;
+std::map<std::string,std::string> Context::e4_profile;
+
+void Context::init() {
+	if( e3cp_profile.size() == 0 ) {
+		//e3cp_profile["IdentifierNode"]="not supported";
+		//e3cp_profile["ThisExpressionNode"]="not supported"; 
+		e3cp_profile["SuperExpressionNode"]="not supported";
+		e3cp_profile["QualifiedIdentifierNode"]="not supported"; 
+		//e3cp_profile["LiteralNullNode"]="not supported"; 
+		//e3cp_profile["LiteralBooleanNode"]="not supported"; 
+		//e3cp_profile["LiteralNumberNode"]="not supported"; 
+		//e3cp_profile["LiteralStringNode"]="not supported"; 
+		//e3cp_profile["LiteralUndefinedNode"]="not supported";
+		e3cp_profile["LiteralRegExpNode"]="not supported";
+		e3cp_profile["UnitExpressionNode"]="not supported";
+		//e3cp_profile["FunctionExpressionNode"]="not supported";
+		//e3cp_profile["ParenthesizedExpressionNode"]="not supported";
+		//e3cp_profile["ParenthesizedListExpressionNode"]="not supported";
+		//e3cp_profile["LiteralObjectNode"]="not supported";
+		//e3cp_profile["LiteralFieldNode"]="not supported";
+		//e3cp_profile["LiteralArrayNode"]="not supported";
+		//e3cp_profile["PostfixExpressionNode"]="not supported"; 
+		//e3cp_profile["NewExpressionNode"]="not supported"; 
+		e3cp_profile["IndexedMemberExpressionNode"]="not supported"; 
+		e3cp_profile["ClassofExpressionNode"]="not supported";
+		//e3cp_profile["MemberExpressionNode"]="not supported"; 
+		//e3cp_profile["CoersionExpressionNode"]="not supported"; 
+		//e3cp_profile["CallExpressionNode"]="not supported"; 
+		//e3cp_profile["GetExpressionNode"]="not supported"; 
+		//e3cp_profile["SetExpressionNode"]="not supported"; 
+		//e3cp_profile["UnaryExpressionNode"]="not supported"; 
+		//e3cp_profile["BinaryExpressionNode"]="not supported"; 
+		//e3cp_profile["ConditionalExpressionNode"]="not supported"; 
+		//e3cp_profile["AssignmentExpressionNode"]="not supported"; 
+		//e3cp_profile["ListNode"]="not supported"; 
+		//e3cp_profile["StatementListNode"]="not supported"; 
+		//e3cp_profile["EmptyStatementNode"]="not supported"; 
+		//e3cp_profile["ExpressionStatementNode"]="not supported"; 
+		e3cp_profile["AnnotatedBlockNode"]="not supported"; 
+		e3cp_profile["LabeledStatementNode"]="not supported"; 
+		e3cp_profile["IfStatementNode"]="not supported"; 
+		e3cp_profile["SwitchStatementNode"]="not supported"; 
+		e3cp_profile["CaseLabelNode"]="not supported"; 
+		e3cp_profile["DoStatementNode"]="not supported"; 
+		e3cp_profile["WhileStatementNode"]="not supported"; 
+		e3cp_profile["ForInStatementNode"]="not supported"; 
+		e3cp_profile["ForStatementNode"]="not supported"; 
+		e3cp_profile["WithStatementNode"]="not supported"; 
+		e3cp_profile["ContinueStatementNode"]="not supported"; 
+		e3cp_profile["BreakStatementNode"]="not supported"; 
+		e3cp_profile["ReturnStatementNode"]="not supported"; 
+		e3cp_profile["ThrowStatementNode"]="not supported"; 
+		e3cp_profile["TryStatementNode"]="not supported"; 
+		e3cp_profile["CatchClauseNode"]="not supported"; 
+		e3cp_profile["FinallyClauseNode"]="not supported"; 
+		e3cp_profile["UseStatementNode"]="not supported"; 
+		e3cp_profile["IncludeStatementNode"]="not supported"; 
+		e3cp_profile["ImportDefinitionNode"]="not supported"; 
+		e3cp_profile["ImportBindingNode"]="not supported"; 
+		e3cp_profile["AnnotatedDefinitionNode"]="not supported"; 
+		e3cp_profile["AttributeListNode"]="not supported"; 
+		e3cp_profile["ExportDefinitionNode"]="not supported"; 
+		e3cp_profile["ExportBindingNode"]="not supported"; 
+		e3cp_profile["VariableDefinitionNode"]="not supported"; 
+		e3cp_profile["VariableBindingNode"]="not supported"; 
+		e3cp_profile["TypedVariableNode"]="not supported"; 
+		e3cp_profile["FunctionDefinitionNode"]="not supported"; 
+		e3cp_profile["FunctionDeclarationNode"]="not supported"; 
+		e3cp_profile["FunctionNameNode"]="not supported"; 
+		e3cp_profile["FunctionSignatureNode"]="not supported"; 
+		e3cp_profile["ParameterNode"]="not supported"; 
+		e3cp_profile["OptionalParameterNode"]="not supported"; 
+		e3cp_profile["RestParameterNode"]="not supported";
+		e3cp_profile["NamedParameterNode"]="not supported";
+		e3cp_profile["ClassDefinitionNode"]="not supported"; 
+		e3cp_profile["ClassDeclarationNode"]="not supported"; 
+		e3cp_profile["InheritanceNode"]="not supported"; 
+		e3cp_profile["NamespaceDefinitionNode"]="not supported"; 
+		e3cp_profile["PackageDefinitionNode"]="not supported"; 
+		e3cp_profile["LanguageDeclarationNode"]="not supported";
+		//e3cp_profile["ProgramNode"]="not supported";
+	}
+	if( e4_profile.size() == 0 ) {
+		//e4_profile["IdentifierNode"]="not implemented";
+		//e4_profile["ThisExpressionNode"]="not implemented"; 
+		//e4_profile["SuperExpressionNode"]="not implemented";
+		//e4_profile["QualifiedIdentifierNode"]="not implemented"; 
+		//e4_profile["LiteralNullNode"]="not implemented"; 
+		//e4_profile["LiteralBooleanNode"]="not implemented"; 
+		//e4_profile["LiteralNumberNode"]="not implemented"; 
+		//e4_profile["LiteralStringNode"]="not implemented"; 
+		//e4_profile["LiteralUndefinedNode"]="not implemented";
+		//e4_profile["LiteralRegExpNode"]="not implemented";
+		//e4_profile["UnitExpressionNode"]="not implemented";
+		//e4_profile["FunctionExpressionNode"]="not implemented";
+		//e4_profile["ParenthesizedExpressionNode"]="not implemented";
+		//e4_profile["ParenthesizedListExpressionNode"]="not implemented";
+		//e4_profile["LiteralObjectNode"]="not implemented";
+		//e4_profile["LiteralFieldNode"]="not implemented";
+		//e4_profile["LiteralArrayNode"]="not implemented";
+		//e4_profile["PostfixExpressionNode"]="not implemented"; 
+		//e4_profile["NewExpressionNode"]="not implemented"; 
+		//e4_profile["IndexedMemberExpressionNode"]="not implemented"; 
+		//e4_profile["ClassofExpressionNode"]="not implemented";
+		//e4_profile["MemberExpressionNode"]="not implemented"; 
+		//e4_profile["CoersionExpressionNode"]="not implemented"; 
+		//e4_profile["CallExpressionNode"]="not implemented"; 
+		//e4_profile["GetExpressionNode"]="not implemented"; 
+		//e4_profile["SetExpressionNode"]="not implemented"; 
+		//e4_profile["UnaryExpressionNode"]="not implemented"; 
+		//e4_profile["BinaryExpressionNode"]="not implemented"; 
+		//e4_profile["ConditionalExpressionNode"]="not implemented"; 
+		//e4_profile["AssignmentExpressionNode"]="not implemented"; 
+		//e4_profile["ListNode"]="not implemented"; 
+		//e4_profile["StatementListNode"]="not implemented"; 
+		//e4_profile["EmptyStatementNode"]="not implemented"; 
+		//e4_profile["ExpressionStatementNode"]="not implemented"; 
+		e4_profile["AnnotatedBlockNode"]="not implemented"; 
+		e4_profile["LabeledStatementNode"]="not implemented"; 
+		e4_profile["IfStatementNode"]="not implemented"; 
+		e4_profile["SwitchStatementNode"]="not implemented"; 
+		e4_profile["CaseLabelNode"]="not implemented"; 
+		e4_profile["DoStatementNode"]="not implemented"; 
+		e4_profile["WhileStatementNode"]="not implemented"; 
+		e4_profile["ForInStatementNode"]="not implemented"; 
+		e4_profile["ForStatementNode"]="not implemented"; 
+		e4_profile["WithStatementNode"]="not implemented"; 
+		e4_profile["ContinueStatementNode"]="not implemented"; 
+		e4_profile["BreakStatementNode"]="not implemented"; 
+		e4_profile["ReturnStatementNode"]="not implemented"; 
+		e4_profile["ThrowStatementNode"]="not implemented"; 
+		e4_profile["TryStatementNode"]="not implemented"; 
+		e4_profile["CatchClauseNode"]="not implemented"; 
+		e4_profile["FinallyClauseNode"]="not implemented"; 
+		e4_profile["UseStatementNode"]="not implemented"; 
+		e4_profile["IncludeStatementNode"]="not implemented"; 
+		e4_profile["ImportDefinitionNode"]="not implemented"; 
+		e4_profile["ImportBindingNode"]="not implemented"; 
+		e4_profile["AnnotatedDefinitionNode"]="not implemented"; 
+		e4_profile["AttributeListNode"]="not implemented"; 
+		e4_profile["ExportDefinitionNode"]="not implemented"; 
+		e4_profile["ExportBindingNode"]="not implemented"; 
+		e4_profile["VariableDefinitionNode"]="not implemented"; 
+		e4_profile["VariableBindingNode"]="not implemented"; 
+		e4_profile["TypedVariableNode"]="not implemented"; 
+		e4_profile["FunctionDefinitionNode"]="not implemented"; 
+		e4_profile["FunctionDeclarationNode"]="not implemented"; 
+		//e4_profile["FunctionNameNode"]="not implemented"; 
+		//e4_profile["FunctionSignatureNode"]="not implemented"; 
+		//e4_profile["ParameterNode"]="not implemented"; 
+		e4_profile["OptionalParameterNode"]="not implemented"; 
+		e4_profile["RestParameterNode"]="not implemented";
+		e4_profile["NamedParameterNode"]="not implemented";
+		e4_profile["ClassDefinitionNode"]="not implemented"; 
+		e4_profile["ClassDeclarationNode"]="not implemented"; 
+		e4_profile["InheritanceNode"]="not implemented"; 
+		e4_profile["NamespaceDefinitionNode"]="not implemented"; 
+		e4_profile["PackageDefinitionNode"]="not implemented"; 
+		e4_profile["LanguageDeclarationNode"]="not implemented";
+		//e4_profile["ProgramNode"]="not implemented";
+	}
+}
+
+}
+}

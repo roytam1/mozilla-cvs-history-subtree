@@ -9,8 +9,11 @@
 #ifndef Evaluator_h
 #define Evaluator_h
 
+#include <map>
+
 #include "Value.h"
 #include "Context.h"
+#include "Node.h"
 
 namespace esc {
 namespace v1 {
@@ -98,10 +101,21 @@ class Evaluator {
 
 public:
 
-    // Base node
+	bool checkFeature(Context& cx, Node* node) {
+		std::map<std::string,std::string>::iterator feature = cx.features.find(node->toString());
+		if( feature!=cx.features.end() ) {
+			std::string& msg = (*feature).second;
+			cx.err << node->toString() << ": " << msg << '\n';
+			return false;
+		} else {
+			return true;
+		}
+	}
+
+	// Base node
     
-	virtual Value* evaluate( Context& cx, Node* node ) { 
-        throw;
+	virtual Value* evaluate( Context& cx, Node* node ) {
+		throw;
     }
 
 	// Expression evaluators
@@ -125,10 +139,14 @@ public:
     virtual Value* evaluate( Context& cx, LiteralNumberNode* node ) { 
         throw;
     }
-    virtual Value* evaluate( Context& cx, LiteralStringNode* node ) { 
-        throw;
+    virtual Value* evaluate( Context& cx, LiteralStringNode* node ) {
+		throw;
+		return 0;
     }
     virtual Value* evaluate( Context& cx, LiteralUndefinedNode* node ) {
+        throw;
+    }
+    virtual Value* evaluate( Context& cx, LiteralNullNode* node ) {
         throw;
     }
     virtual Value* evaluate( Context& cx, LiteralRegExpNode* node ) {

@@ -18,297 +18,297 @@
 #ifndef Tokens_h
 #define Tokens_h
 
+#include <string>
+
 namespace esc {
 namespace v1 {
+namespace lexer {
 
-class Tokens {
+/*
+ * Token class values are negative, and token instances are positive so
+ * that their values can point to their instance data in an array.
+ */
 
-#if 0
+enum {
+	first_token                 = -1,
+	eos_token                   = first_token-0,
 
-public interface Tokens {
-
-	/**
-	 * Token class values are negative, and token instances are positive so
-	 * that their values can point to their instance data in an array.
-	 */
-
-	public static final int first_token                 = -1;
-	public static final int eos_token                   = first_token-0;
-
-	public static final int minus_token					= first_token - 1;
-	public static final int minusminus_token            = minus_token - 1;					
-	public static final int not_token					= minusminus_token - 1;
-	public static final int notequals_token				= not_token - 1;
-	public static final int strictnotequals_token		= notequals_token - 1;
-	public static final int pound_token		            = strictnotequals_token - 1;
-	public static final int modulus_token				= pound_token - 1;
-	public static final int modulusassign_token			= modulus_token - 1;
-	public static final int bitwiseand_token			= modulusassign_token - 1;
-	public static final int logicaland_token			= bitwiseand_token - 1;
-	public static final int logicalandassign_token		= logicaland_token - 1;
-	public static final int bitwiseandassign_token		= logicalandassign_token - 1;
-	public static final int leftparen_token				= bitwiseandassign_token - 1;
-	public static final int rightparen_token			= leftparen_token - 1;
-	public static final int mult_token					= rightparen_token - 1;
-	public static final int multassign_token			= mult_token - 1;
-	public static final int comma_token					= multassign_token - 1;	
-	public static final int dot_token					= comma_token - 1;	
-	public static final int doubledot_token				= dot_token - 1;	
-	public static final int tripledot_token				= doubledot_token - 1;	
-	public static final int div_token					= tripledot_token - 1;	
-	public static final int divassign_token				= div_token - 1;	
-	public static final int colon_token					= divassign_token - 1;	
-	public static final int doublecolon_token			= colon_token - 1;	
-	public static final int semicolon_token				= doublecolon_token - 1;	
-	public static final int questionmark_token			= semicolon_token - 1;	
-	public static final int ampersand_token			    = questionmark_token - 1;	
-	public static final int leftbracket_token			= ampersand_token - 1;	
-	public static final int rightbracket_token			= leftbracket_token - 1	;
-	public static final int bitwisexor_token			= rightbracket_token - 	1;
-	public static final int logicalxor_token			= bitwisexor_token - 1;	
-	public static final int logicalxorassign_token		= logicalxor_token - 1;	
-	public static final int bitwisexorassign_token		= logicalxorassign_token - 1;	
-	public static final int leftbrace_token				= bitwisexorassign_token - 1;
-	public static final int bitwiseor_token				= leftbrace_token - 1;	
-	public static final int logicalor_token				= bitwiseor_token - 1;	
-	public static final int logicalorassign_token		= logicalor_token - 1;	
-	public static final int bitwiseorassign_token		= logicalorassign_token - 1;	
-	public static final int rightbrace_token			= bitwiseorassign_token - 1;
-  	public static final int bitwisenot_token			= rightbrace_token - 1;
-  	public static final int plus_token					= bitwisenot_token - 1;
-  	public static final int plusplus_token				= plus_token - 1;
-  	public static final int plusassign_token			= plusplus_token - 1;
-  	public static final int lessthan_token				= plusassign_token - 1;
-  	public static final int leftshift_token				= lessthan_token - 1;
-  	public static final int leftshiftassign_token		= leftshift_token - 1;
-  	public static final int lessthanorequals_token		= leftshiftassign_token - 1;
-  	public static final int assign_token				= lessthanorequals_token - 1;
-  	public static final int minusassign_token			= assign_token - 1;
-  	public static final int equals_token				= minusassign_token - 1;
-  	public static final int strictequals_token			= equals_token - 1;
-  	public static final int greaterthan_token			= strictequals_token - 1;
-  	public static final int arrow_token			        = greaterthan_token - 1;
-  	public static final int greaterthanorequals_token	= arrow_token - 1;
-  	public static final int rightshift_token			= greaterthanorequals_token - 1;
-  	public static final int rightshiftassign_token		= rightshift_token - 1;
-  	public static final int unsignedrightshift_token	= rightshiftassign_token - 1;
-  	public static final int unsignedrightshiftassign_token	= unsignedrightshift_token - 1;
-  	public static final int abstract_token				= unsignedrightshiftassign_token - 1;
-  	public static final int attribute_token				= abstract_token - 1;
-  	public static final int boolean_token				= attribute_token - 1;
-  	public static final int break_token					= boolean_token - 1;
-  	public static final int byte_token					= break_token - 1;
-  	public static final int case_token					= byte_token - 1;
-  	public static final int catch_token					= case_token - 1;
-  	public static final int char_token					= catch_token - 1;
-  	public static final int class_token					= char_token - 1;
-  	public static final int const_token					= class_token - 1;
-  	public static final int constructor_token			= const_token - 1;
-  	public static final int continue_token				= constructor_token - 1;
-  	public static final int debugger_token				= continue_token - 1;
-  	public static final int default_token				= debugger_token - 1;
-  	public static final int delete_token				= default_token - 1;
-  	public static final int do_token					= delete_token - 1;
-  	public static final int double_token				= do_token - 1;
-  	public static final int else_token					= double_token - 1;
-  	public static final int enum_token					= else_token - 1;
-  	public static final int eval_token					= enum_token - 1;
-  	public static final int export_token				= eval_token - 1;
-  	public static final int extends_token				= export_token - 1;
-  	public static final int false_token					= extends_token - 1;
-  	public static final int final_token					= false_token - 1;
-  	public static final int finally_token				= final_token - 1;
-  	public static final int float_token					= finally_token - 1;
-  	public static final int for_token					= float_token - 1;
-  	public static final int function_token				= for_token - 1;
-  	public static final int get_token				    = function_token - 1;
-  	public static final int goto_token					= get_token - 1;
-  	public static final int if_token					= goto_token - 1;
-  	public static final int implements_token			= if_token - 1;
-  	public static final int import_token				= implements_token - 1;
-  	public static final int in_token					= import_token - 1;
-  	public static final int include_token				= in_token - 1;
-  	public static final int instanceof_token			= include_token - 1;
-  	public static final int int_token					= instanceof_token - 1;
-  	public static final int interface_token				= int_token - 1;
-  	public static final int long_token					= interface_token - 1;
-  	public static final int namespace_token				= long_token - 1;
-  	public static final int native_token				= namespace_token - 1;
-  	public static final int new_token					= native_token - 1;
-  	public static final int null_token					= new_token - 1;
-  	public static final int package_token				= null_token - 1;
-  	public static final int private_token				= package_token - 1;
-  	public static final int protected_token				= private_token - 1;
-  	public static final int public_token				= protected_token - 1;
-  	public static final int return_token				= public_token - 1;
-  	public static final int set_token				    = return_token - 1;
-  	public static final int short_token					= set_token - 1;
-  	public static final int static_token				= short_token - 1;
-  	public static final int super_token					= static_token - 1;
-  	public static final int switch_token				= super_token - 1;
-  	public static final int synchronized_token			= switch_token - 1;
-  	public static final int this_token					= synchronized_token - 1;
-  	public static final int throw_token					= this_token - 1;
-  	public static final int throws_token				= throw_token - 1;
-  	public static final int transient_token				= throws_token - 1;
-  	public static final int true_token					= transient_token - 1;
-  	public static final int try_token					= true_token - 1;
-  	public static final int typeof_token				= try_token - 1;
-  	public static final int use_token				    = typeof_token - 1;
-  	public static final int var_token					= use_token - 1;
-  	public static final int void_token					= var_token - 1;
-  	public static final int volatile_token				= void_token - 1;
-  	public static final int while_token					= volatile_token - 1;
-  	public static final int with_token					= while_token - 1;
-  	public static final int identifier_token			= with_token - 1;
-  	public static final int numberliteral_token			= identifier_token - 1;
-  	public static final int regexpliteral_token			= numberliteral_token - 1;
-  	public static final int stringliteral_token			= regexpliteral_token - 1;
+	minus_token					= first_token - 1,
+	minusminus_token            = minus_token - 1,					
+	not_token					= minusminus_token - 1,
+	notequals_token				= not_token - 1,
+	strictnotequals_token		= notequals_token - 1,
+	pound_token		            = strictnotequals_token - 1,
+	modulus_token				= pound_token - 1,
+	modulusassign_token			= modulus_token - 1,
+	bitwiseand_token			= modulusassign_token - 1,
+	logicaland_token			= bitwiseand_token - 1,
+	logicalandassign_token		= logicaland_token - 1,
+	bitwiseandassign_token		= logicalandassign_token - 1,
+	leftparen_token				= bitwiseandassign_token - 1,
+	rightparen_token			= leftparen_token - 1,
+	mult_token					= rightparen_token - 1,
+	multassign_token			= mult_token - 1,
+	comma_token					= multassign_token - 1,	
+	dot_token					= comma_token - 1,	
+	doubledot_token				= dot_token - 1,	
+	tripledot_token				= doubledot_token - 1,	
+	div_token					= tripledot_token - 1,	
+	divassign_token				= div_token - 1,	
+	colon_token					= divassign_token - 1,	
+	doublecolon_token			= colon_token - 1,	
+	semicolon_token				= doublecolon_token - 1,	
+	questionmark_token			= semicolon_token - 1,	
+	ampersand_token			    = questionmark_token - 1,	
+	leftbracket_token			= ampersand_token - 1,	
+	rightbracket_token			= leftbracket_token - 1,
+	bitwisexor_token			= rightbracket_token - 1,
+	logicalxor_token			= bitwisexor_token - 1,	
+	logicalxorassign_token		= logicalxor_token - 1,	
+	bitwisexorassign_token		= logicalxorassign_token - 1,	
+	leftbrace_token				= bitwisexorassign_token - 1,
+	bitwiseor_token				= leftbrace_token - 1,	
+	logicalor_token				= bitwiseor_token - 1,	
+	logicalorassign_token		= logicalor_token - 1,	
+	bitwiseorassign_token		= logicalorassign_token - 1,	
+	rightbrace_token			= bitwiseorassign_token - 1,
+  	bitwisenot_token			= rightbrace_token - 1,
+  	plus_token					= bitwisenot_token - 1,
+  	plusplus_token				= plus_token - 1,
+  	plusassign_token			= plusplus_token - 1,
+  	lessthan_token				= plusassign_token - 1,
+  	leftshift_token				= lessthan_token - 1,
+  	leftshiftassign_token		= leftshift_token - 1,
+  	lessthanorequals_token		= leftshiftassign_token - 1,
+  	assign_token				= lessthanorequals_token - 1,
+  	minusassign_token			= assign_token - 1,
+  	equals_token				= minusassign_token - 1,
+  	strictequals_token			= equals_token - 1,
+  	greaterthan_token			= strictequals_token - 1,
+  	arrow_token			        = greaterthan_token - 1,
+  	greaterthanorequals_token	= arrow_token - 1,
+  	rightshift_token			= greaterthanorequals_token - 1,
+  	rightshiftassign_token		= rightshift_token - 1,
+  	unsignedrightshift_token	= rightshiftassign_token - 1,
+  	unsignedrightshiftassign_token	= unsignedrightshift_token - 1,
+  	abstract_token				= unsignedrightshiftassign_token - 1,
+  	attribute_token				= abstract_token - 1,
+  	boolean_token				= attribute_token - 1,
+  	break_token					= boolean_token - 1,
+  	byte_token					= break_token - 1,
+  	case_token					= byte_token - 1,
+  	catch_token					= case_token - 1,
+  	char_token					= catch_token - 1,
+  	class_token					= char_token - 1,
+  	const_token					= class_token - 1,
+  	constructor_token			= const_token - 1,
+  	continue_token				= constructor_token - 1,
+  	debugger_token				= continue_token - 1,
+  	default_token				= debugger_token - 1,
+  	delete_token				= default_token - 1,
+  	do_token					= delete_token - 1,
+  	double_token				= do_token - 1,
+  	else_token					= double_token - 1,
+  	enum_token					= else_token - 1,
+  	eval_token					= enum_token - 1,
+  	exclude_token				= eval_token - 1,
+  	export_token				= exclude_token - 1,
+  	extends_token				= export_token - 1,
+  	false_token					= extends_token - 1,
+  	final_token					= false_token - 1,
+  	finally_token				= final_token - 1,
+  	float_token					= finally_token - 1,
+  	for_token					= float_token - 1,
+  	function_token				= for_token - 1,
+  	get_token				    = function_token - 1,
+  	goto_token					= get_token - 1,
+  	if_token					= goto_token - 1,
+  	implements_token			= if_token - 1,
+  	import_token				= implements_token - 1,
+  	in_token					= import_token - 1,
+  	include_token				= in_token - 1,
+  	instanceof_token			= include_token - 1,
+  	int_token					= instanceof_token - 1,
+  	interface_token				= int_token - 1,
+  	long_token					= interface_token - 1,
+  	namespace_token				= long_token - 1,
+  	native_token				= namespace_token - 1,
+  	new_token					= native_token - 1,
+  	null_token					= new_token - 1,
+  	package_token				= null_token - 1,
+  	private_token				= package_token - 1,
+  	protected_token				= private_token - 1,
+  	public_token				= protected_token - 1,
+  	return_token				= public_token - 1,
+  	set_token				    = return_token - 1,
+  	short_token					= set_token - 1,
+  	static_token				= short_token - 1,
+  	super_token					= static_token - 1,
+  	switch_token				= super_token - 1,
+  	synchronized_token			= switch_token - 1,
+  	this_token					= synchronized_token - 1,
+  	throw_token					= this_token - 1,
+  	throws_token				= throw_token - 1,
+  	transient_token				= throws_token - 1,
+  	true_token					= transient_token - 1,
+  	try_token					= true_token - 1,
+  	typeof_token				= try_token - 1,
+  	use_token				    = typeof_token - 1,
+  	var_token					= use_token - 1,
+  	void_token					= var_token - 1,
+  	volatile_token				= void_token - 1,
+  	while_token					= volatile_token - 1,
+  	with_token					= while_token - 1,
+  	identifier_token			= with_token - 1,
+  	numberliteral_token			= identifier_token - 1,
+  	regexpliteral_token			= numberliteral_token - 1,
+  	stringliteral_token			= regexpliteral_token - 1,
 	
-    public static final int eol_token                   = stringliteral_token - 1;
+	eol_token                   = stringliteral_token - 1,
 
-    public static final int empty_token                 = eol_token - 1;
-    public static final int error_token                 = empty_token - 1;
-    public static final int last_token                  = empty_token - 1;
+	empty_token                 = eol_token - 1,
+	error_token                 = empty_token - 1,
+	last_token                  = empty_token - 1,
+};
+}
 
-	public static final String[] tokenClassNames = {
-		"<unused index>", 
-		"<eos>",
-		"minus_token",
-		"minusminus_token",
-		"not_token",
-		"notequals_token",
-		"strictnotequals_token",
-		"pound_token",
-		"modulus_token",
-		"modulusassign_token",
-		"bitwiseand_token",
-		"logicaland_token",
-		"logicalandassign_token",
-		"bitwiseandassign_token",
-		"leftparen_token",
-		"rightparen_token",
-		"mult_token",
-		"multassign_token",
-		"comma_token",
-		"dot_token",
-		"doubledot_token",
-		"tripledot_token",
-		"div_token",
-		"divassign_token",
-		"colon_token",
-		"doublecolon_token",
-		"semicolon_token",
-		"questionmark_token",
-		"ampersand_token",
-		"leftbracket_token",
-		"rightbracket_token",
-		"bitwisexor_token",
-		"logicalxor_token",
-		"logicalxorassign_token",
-		"bitwisexorassign_token",
-		"leftbrace_token",
-		"bitwiseor_token",
-		"logicalor_token",
-		"logicalorassign_token",
-		"bitwiseorassign_token",
-		"rightbrace_token",
-		"bitwisenot_token",
-		"plus_token",
-		"plusplus_token",
-		"plusassign_token",
-		"lessthan_token",
-		"leftshift_token",
-		"leftshiftassign_token",
-		"lessthanorequals_token",
-		"assign_token",
-		"minusassign_token",
-		"equals_token",
-		"strictequals_token",
-		"greaterthan_token",
-		"arrow_token",
-		"greaterthanorequals_token",
-		"rightshift_token",
-		"rightshiftassign_token",
-		"unsignedrightshift_token",
-		"unsignedrightshiftassign_token",
-		"abstract_token",
-		"attribute_token",
-		"boolean_token",
-		"break_token",
-		"byte_token",
-		"case_token",
-		"catch_token",
-		"char_token",
-		"class_token",
-		"const_token",
-		"constructor_token",
-		"continue_token",
-		"debugger_token",
-		"default_token",
-		"delete_token",
-		"do_token",
-		"double_token",
-		"else_token",
-		"enum_token",
-		"eval_token",
-		"export_token",
-		"extends_token",
-		"false_token",
-		"final_token",
-		"finally_token",
-		"float_token",
-		"for_token",
-		"function_token",
-		"get_token",
-		"goto_token",
-		"if_token",
-		"implements_token",
-		"import_token",
-		"in_token",
-		"include_token",
-		"instanceof_token",
-		"int_token",
-		"interface_token",
-		"long_token",
-		"namespace_token",
-		"native_token",
-		"new_token",
-		"null_token",
-		"package_token",
-		"private_token",
-		"protected_token",
-		"public_token",
-		"return_token",
-		"set_token",
-		"short_token",
-		"static_token",
-		"super_token",
-		"switch_token",
-		"synchronized_token",
-		"this_token",
-		"throw_token",
-		"throws_token",
-		"transient_token",
-		"true_token",
-		"try_token",
-		"typeof_token",
-		"use_token",
-		"var_token",
-		"void_token",
-		"volatile_token",
-		"while_token",
-		"with_token",
-		"identifier_token",
-		"numberliteral_token",
-		"regexpliteral_token",
-		"stringliteral_token",
+const std::string tokenClassNames [] = {
+	"<unused index>", 
+	"<eos>",
+	"minus_token",
+	"minusminus_token",
+	"not_token",
+	"notequals_token",
+	"strictnotequals_token",
+	"pound_token",
+	"modulus_token",
+	"modulusassign_token",
+	"bitwiseand_token",
+	"logicaland_token",
+	"logicalandassign_token",
+	"bitwiseandassign_token",
+	"leftparen_token",
+	"rightparen_token",
+	"mult_token",
+	"multassign_token",
+	"comma_token",
+	"dot_token",
+	"doubledot_token",
+	"tripledot_token",
+	"div_token",
+	"divassign_token",
+	"colon_token",
+	"doublecolon_token",
+	"semicolon_token",
+	"questionmark_token",
+	"ampersand_token",
+	"leftbracket_token",
+	"rightbracket_token",
+	"bitwisexor_token",
+	"logicalxor_token",
+	"logicalxorassign_token",
+	"bitwisexorassign_token",
+	"leftbrace_token",
+	"bitwiseor_token",
+	"logicalor_token",
+	"logicalorassign_token",
+	"bitwiseorassign_token",
+	"rightbrace_token",
+	"bitwisenot_token",
+	"plus_token",
+	"plusplus_token",
+	"plusassign_token",
+	"lessthan_token",
+	"leftshift_token",
+	"leftshiftassign_token",
+	"lessthanorequals_token",
+	"assign_token",
+	"minusassign_token",
+	"equals_token",
+	"strictequals_token",
+	"greaterthan_token",
+	"arrow_token",
+	"greaterthanorequals_token",
+	"rightshift_token",
+	"rightshiftassign_token",
+	"unsignedrightshift_token",
+	"unsignedrightshiftassign_token",
+	"abstract_token",
+	"attribute_token",
+	"boolean_token",
+	"break_token",
+	"byte_token",
+	"case_token",
+	"catch_token",
+	"char_token",
+	"class_token",
+	"const_token",
+	"constructor_token",
+	"continue_token",
+	"debugger_token",
+	"default_token",
+	"delete_token",
+	"do_token",
+	"double_token",
+	"else_token",
+	"enum_token",
+	"eval_token",
+	"exclude_token",
+	"export_token",
+	"extends_token",
+	"false_token",
+	"final_token",
+	"finally_token",
+	"float_token",
+	"for_token",
+	"function_token",
+	"get_token",
+	"goto_token",
+	"if_token",
+	"implements_token",
+	"import_token",
+	"in_token",
+	"include_token",
+	"instanceof_token",
+	"int_token",
+	"interface_token",
+	"long_token",
+	"namespace_token",
+	"native_token",
+	"new_token",
+	"null_token",
+	"package_token",
+	"private_token",
+	"protected_token",
+	"public_token",
+	"return_token",
+	"set_token",
+	"short_token",
+	"static_token",
+	"super_token",
+	"switch_token",
+	"synchronized_token",
+	"this_token",
+	"throw_token",
+	"throws_token",
+	"transient_token",
+	"true_token",
+	"try_token",
+	"typeof_token",
+	"use_token",
+	"var_token",
+	"void_token",
+	"volatile_token",
+	"while_token",
+	"with_token",
+	"identifier_token",
+	"numberliteral_token",
+	"regexpliteral_token",
+	"stringliteral_token",
 
-		"<eol>",
-		"<empty>",
-		"<error>"
-	};
-#endif
+	"<eol>",
+	"<empty>",
+	"<error>"
 };
 
 }

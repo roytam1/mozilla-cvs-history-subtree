@@ -6,6 +6,7 @@
 #define Nodes_h
 
 #include <string>
+#include <typeinfo>
 
 #include "Node.h"
 #include "Evaluator.h"
@@ -14,6 +15,8 @@
 
 namespace esc {
 namespace v1 {
+
+using namespace lexer;
 
 class ReferenceValue;
 
@@ -31,11 +34,15 @@ struct IdentifierNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-	std::string toString() {
-        return "identifier( " + name + " )";
+    const char* toString() {
+        return "IdentifierNode";
     }
 };
 
@@ -54,15 +61,19 @@ struct AnnotatedBlockNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
     Node* last() {
         return statements->last();
     }
 
-    std::string toString() {
-        return "annotatedblock";
+    const char* toString() {
+        return "AnnotatedBlockNode";
     }
 };
 
@@ -81,15 +92,19 @@ struct AnnotatedDefinitionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
     bool isBranch() {
         return true;
     }
 
-    std::string toString() {
-        return "annotateddefinition";
+    const char* toString() {
+        return "AnnotatedDefinitionNode";
     }
 };
 
@@ -97,7 +112,7 @@ struct AnnotatedDefinitionNode : public Node {
  * AssignmentExpressionNode
  */
 
-struct AssignmentExpressionNode : public Node, private Tokens {
+struct AssignmentExpressionNode : public Node {
 
     Node* lhs;
 	Node* rhs;
@@ -111,11 +126,22 @@ struct AssignmentExpressionNode : public Node, private Tokens {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "assignmentexpression";
+    static bool isFieldName(Node* node) {
+        return typeid(node) == typeid(LiteralStringNode) ||
+               typeid(node) == typeid(LiteralNumberNode) ||
+               typeid(node) == typeid(IdentifierNode) ||
+               typeid(node) == typeid(ParenthesizedExpressionNode);
+    }
+
+    const char* toString() {
+        return "AssignmentExpressionNode";
     }
 };
 
@@ -134,11 +160,15 @@ struct AttributeListNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "attributelist";
+    const char* toString() {
+        return "AttributeListNode";
     }
 };
 
@@ -160,11 +190,15 @@ struct BinaryExpressionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "binaryexpression";
+    const char* toString() {
+        return "BinaryExpressionNode";
     }
 };
 
@@ -181,15 +215,19 @@ struct BreakStatementNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
     bool isBranch() {
         return true;
     }
 
-    std::string toString() {
-        return "breakstatement";
+    const char* toString() {
+        return "BreakStatementNode";
     }
 };
 
@@ -199,22 +237,30 @@ struct BreakStatementNode : public Node {
 
 struct CallExpressionNode : public Node {
 
-    MemberExpressionNode* member;
+    Node* member;
 	ListNode* args;
 
 	ReferenceValue* ref;
 
-    CallExpressionNode( MemberExpressionNode* member, ListNode* args ) {
+    CallExpressionNode( Node* member, ListNode* args ) {
         this->member = member;
         this->args   = args;
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "callexpression";
+	bool isCallExpression() {
+		return true;
+	}
+
+    const char* toString() {
+        return "CallExpressionNode";
     }
 };
 
@@ -233,12 +279,17 @@ struct GetExpressionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "callexpression";
+    const char* toString() {
+        return "GetExpressionNode";
     }
+
 };
 
 /*
@@ -258,11 +309,15 @@ struct SetExpressionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "setexpression";
+    const char* toString() {
+        return "SetExpressionNode";
     }
 };
 
@@ -279,11 +334,15 @@ struct CaseLabelNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "caselabel";
+    const char* toString() {
+        return "CaseLabelNode";
     }
 };
 
@@ -302,11 +361,15 @@ struct CatchClauseNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "catchclause";
+    const char* toString() {
+        return "CatchClauseNode";
     }
 };
 
@@ -323,11 +386,15 @@ struct ClassDeclarationNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "classdeclaration";
+    const char* toString() {
+        return "ClassDeclarationNode";
     }
 };
 
@@ -353,7 +420,11 @@ struct ClassDefinitionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
     Node* first() {
@@ -364,8 +435,8 @@ struct ClassDefinitionNode : public Node {
         return statements->last();
     }
 
-    std::string toString() {
-        return "classdefinition";
+    const char* toString() {
+        return "ClassDefinitionNode";
     }
 };
 
@@ -382,11 +453,15 @@ struct ClassofExpressionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "classofexpression";
+    const char* toString() {
+        return "ClassofExpressionNode";
     }
 };
 
@@ -406,11 +481,15 @@ struct CoersionExpressionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "coersionexpression";
+    const char* toString() {
+        return "CoersionExpressionNode";
     }
 };
 
@@ -431,11 +510,15 @@ struct ConditionalExpressionNode : public Node {
 	}
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-	std::string toString() {
-		return "conditionalexpression";
+	const char* toString() {
+		return "ConditionalExpressionNode";
 	}
 };
 
@@ -452,15 +535,19 @@ struct ContinueStatementNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
     bool isBranch() {
         return true;
     }
 
-    std::string toString() {
-        return "continuestatement";
+    const char* toString() {
+        return "ContinueStatementNode";
     }
 };
 
@@ -479,15 +566,19 @@ struct DoStatementNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
     bool isBranch() {
         return true;
     }
 
-    std::string toString() {
-        return "dostatement";
+    const char* toString() {
+        return "DoStatementNode";
     }
 };
 
@@ -506,11 +597,15 @@ struct ElementListNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "elementlist";
+    const char* toString() {
+        return "ElementListNode";
     }
 };
 
@@ -521,11 +616,15 @@ struct ElementListNode : public Node {
 struct EmptyStatementNode : public Node {
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "emptystatement";
+    const char* toString() {
+        return "EmptyStatementNode";
     }
 };
 
@@ -542,11 +641,15 @@ struct ExpressionStatementNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "expressionstatement";
+    const char* toString() {
+        return "ExpressionStatementNode";
     }
 };
 
@@ -565,11 +668,15 @@ struct ExportBindingNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "exportbinding";
+    const char* toString() {
+        return "ExportBindingNode";
     }
 };
 
@@ -586,11 +693,15 @@ struct ExportDefinitionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "exportdefinition";
+    const char* toString() {
+        return "ExportDefinitionNode";
     }
 };
 
@@ -609,11 +720,15 @@ struct FieldListNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "fieldlist";
+    const char* toString() {
+        return "FieldListNode";
     }
 };
 
@@ -630,11 +745,15 @@ struct FinallyClauseNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "finallyclause";
+    const char* toString() {
+        return "FinallyClauseNode";
     }
 };
 
@@ -673,15 +792,19 @@ struct ForStatementNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
     bool isBranch() {
         return true;
     }
 
-    std::string toString() {
-        return "forstatement";
+    const char* toString() {
+        return "ForStatementNode";
     }
 };
 
@@ -702,14 +825,18 @@ struct ForInStatementNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
     bool isBranch() {
         return true;
     }
 
-    std::string toString() {
+    const char* toString() {
         return "forinstatement";
     }
 };
@@ -731,11 +858,15 @@ struct FunctionExpressionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "functionexpression";
+    const char* toString() {
+        return "FunctionExpressionNode";
     }
 };
 
@@ -752,15 +883,19 @@ struct ReturnStatementNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
     bool isBranch() {
         return true;
     }
 
-    std::string toString() {
-        return "returnstatement";
+    const char* toString() {
+        return "ReturnStatementNode";
     }
 };
 
@@ -781,11 +916,15 @@ struct FunctionDeclarationNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "functiondeclaration";
+    const char* toString() {
+        return "FunctionDeclarationNode";
     }
 };
 
@@ -805,7 +944,11 @@ struct FunctionDefinitionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
     Node* first() {
@@ -816,8 +959,8 @@ struct FunctionDefinitionNode : public Node {
         return body->last();
     }
 
-    std::string toString() {
-        return "functiondefinition";
+    const char* toString() {
+        return "FunctionDefinitionNode";
     }
 };
 
@@ -836,10 +979,14 @@ struct FunctionNameNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
+    const char* toString() {
         return "functionname";
     }
 };
@@ -860,11 +1007,15 @@ struct FunctionSignatureNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "functionsignature";
+    const char* toString() {
+        return "FunctionNameNode";
     }
 };
 
@@ -885,11 +1036,15 @@ struct IfStatementNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "ifstatement";
+    const char* toString() {
+        return "IfStatementNode";
     }
 
     bool isBranch() {
@@ -912,11 +1067,15 @@ struct ImportBindingNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "importbinding";
+    const char* toString() {
+        return "ImportBindingNode";
     }
 };
 
@@ -935,10 +1094,14 @@ struct ImportDefinitionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
+    const char* toString() {
         return "importdefinition";
     }
 };
@@ -956,34 +1119,15 @@ struct IncludeStatementNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "includestatement";
-    }
-};
-
-/**
- * IndexedMemberExpressionNode
- */
-
-struct IndexedMemberExpressionNode : public Node {
-
-    Node* base;
-	Node* expr;
-
-    IndexedMemberExpressionNode( Node* base, Node* expr, int pos )  : Node(pos) {
-        this->base = base;
-	    this->expr = expr;
-    }
-
-    Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
-    }
-
-    std::string toString() {
-        return "indexedmemberexpression";
+    const char* toString() {
+        return "ImportDefinitionNode";
     }
 };
 
@@ -1002,10 +1146,14 @@ struct InheritanceNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
+    const char* toString() {
         return "inheritance";
     }
 };
@@ -1023,11 +1171,15 @@ struct InterfaceDeclarationNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "interfacedeclaration";
+    const char* toString() {
+        return "InheritanceNode";
     }
 };
 
@@ -1049,11 +1201,15 @@ struct InterfaceDefinitionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "interfacedefinition";
+    const char* toString() {
+        return "InterfaceDefinitionNode";
     }
 };
 
@@ -1072,15 +1228,19 @@ struct LabeledStatementNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
     bool isBranch() {
         return true;
     }
 
-    std::string toString() {
-        return "labeledstatement";
+    const char* toString() {
+        return "LabeledStatementNode";
     }
 };
 
@@ -1097,11 +1257,15 @@ struct LanguageDeclarationNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "languagedeclaration";
+    const char* toString() {
+        return "LanguageDeclarationNode";
     }
 };
 
@@ -1120,7 +1284,11 @@ struct ListNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
     short size() {
@@ -1137,8 +1305,8 @@ struct ListNode : public Node {
         return item->pos();
     }
 
-    std::string toString() {
-        return "list";
+    const char* toString() {
+        return "ListNode";
     }
 };
 
@@ -1156,11 +1324,15 @@ struct LiteralArrayNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "literalarray";
+    const char* toString() {
+        return "LiteralArrayNode";
     }
 };
 
@@ -1177,11 +1349,15 @@ struct LiteralBooleanNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "literalboolean";
+    const char* toString() {
+        return "LiteralBooleanNode";
     }
 };
 
@@ -1201,11 +1377,15 @@ struct LiteralFieldNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "literalfield";
+    const char* toString() {
+        return "LiteralFieldNode";
     }
 };
 
@@ -1219,11 +1399,15 @@ struct LiteralNullNode : public Node {
   }
 
   Value* evaluate( Context& cx, Evaluator* evaluator ) {
-    return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
   }
 
-  std::string toString() {
-    return "literalNULL";
+  const char* toString() {
+    return "LiteralNullNode";
   }
 };
 
@@ -1240,11 +1424,15 @@ struct LiteralNumberNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "literalnumber(";
+    const char* toString() {
+        return "LiteralNumberNode";
     }
 };
 
@@ -1262,11 +1450,15 @@ struct LiteralObjectNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "literalobject";
+    const char* toString() {
+        return "LiteralObjectNode";
     }
 };
 
@@ -1283,11 +1475,15 @@ struct LiteralRegExpNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "literalregexp";
+    const char* toString() {
+        return "LiteralRegExpNode";
     }
 };
 
@@ -1304,11 +1500,15 @@ struct LiteralStringNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "literalstring";
+    const char* toString() {
+        return "LiteralStringNode";
     }
 };
 
@@ -1325,11 +1525,15 @@ struct LiteralTypeNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "literaltype";
+    const char* toString() {
+        return "LiteralTypeNode";
     }
 };
 
@@ -1343,11 +1547,15 @@ struct LiteralUndefinedNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-      return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-      return "literalundefined";
+    const char* toString() {
+      return "LiteralUndefinedNode";
     }
 };
 
@@ -1367,13 +1575,49 @@ struct MemberExpressionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "memberexpression";
+	bool isMemberExpression() {
+		return true;
+	}
+
+    const char* toString() {
+        return "MemberExpressionNode";
     }
 };
+
+/*
+ * IndexedMemberExpressionNode
+ */
+struct IndexedMemberExpressionNode : public MemberExpressionNode {
+
+    Node* base;
+	Node* expr;
+
+    IndexedMemberExpressionNode( Node* base, Node* expr, int pos )  
+		: MemberExpressionNode(base,expr,pos) {
+        this->base = base;
+	    this->expr = expr;
+    }
+
+    Value* evaluate( Context& cx, Evaluator* evaluator ) {
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
+    }
+
+    const char* toString() {
+        return "IndexedMemberExpressionNode";
+    }
+};
+
 
 /**
  * NamedParameterNode
@@ -1390,11 +1634,15 @@ struct NamedParameterNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "namedparameter";
+    const char* toString() {
+        return "NamedParameterNode";
     }
 };
 
@@ -1413,11 +1661,15 @@ struct NamespaceDefinitionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "namespacedefinition";
+    const char* toString() {
+        return "NamespaceDefinitionNode";
     }
 };
 
@@ -1434,11 +1686,19 @@ struct NewExpressionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "newexpression";
+	bool isFullNewExpression() {
+		return this->expr->isCallExpression();
+	}
+
+    const char* toString() {
+        return "NewExpressionNode";
     }
 };
 
@@ -1457,11 +1717,15 @@ struct PackageDefinitionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "packagedefinition";
+    const char* toString() {
+        return "PackageDefinitionNode";
     }
 };
 
@@ -1480,11 +1744,15 @@ struct OptionalParameterNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "optionalparameter";
+    const char* toString() {
+        return "OptionalParameterNode";
     }
 };
 
@@ -1504,11 +1772,15 @@ struct ParameterNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "parameter";
+    const char* toString() {
+        return "ParameterNode";
     }
 };
 
@@ -1525,11 +1797,15 @@ struct ParenthesizedExpressionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "parenthesizedexpression";
+    const char* toString() {
+        return "ParenthesizedExpressionNode";
     }
 };
 
@@ -1546,11 +1822,19 @@ struct ParenthesizedListExpressionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "parenthesizedlistexpression";
+	bool isListExpression() {
+        return dynamic_cast<ListNode*>(expr) != 0;
+	}
+
+    const char* toString() {
+        return "ParenthesizedListExpressionNode";
     }
 };
 
@@ -1569,11 +1853,15 @@ struct PostfixExpressionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "postfixexpression";
+    const char* toString() {
+        return "PostfixExpressionNode";
     }
 };
 
@@ -1590,11 +1878,15 @@ struct ProgramNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "program";
+    const char* toString() {
+        return "ProgramNode";
     }
 };
 
@@ -1614,11 +1906,15 @@ struct QualifiedIdentifierNode : IdentifierNode {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "qualifiedidentifier";
+    const char* toString() {
+        return "QualifiedIdentifierNode";
     }
 };
 
@@ -1635,11 +1931,15 @@ struct RestParameterNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "restparameter";
+    const char* toString() {
+        return "RestParameterNode";
     }
 };
 
@@ -1658,7 +1958,11 @@ struct StatementListNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
     Node* first() {
@@ -1673,8 +1977,8 @@ struct StatementListNode : public Node {
         return this->item;
     }
 
-    std::string toString() {
-        return "statementlist";
+    const char* toString() {
+        return "StatementListNode";
     }
 };
 
@@ -1693,15 +1997,19 @@ struct SwitchStatementNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
     bool isBranch() {
         return true;
     }
 
-    std::string toString() {
-        return "switchstatement";
+    const char* toString() {
+        return "SwitchStatementNode";
     }
 };
 
@@ -1712,13 +2020,27 @@ struct SwitchStatementNode : public Node {
 
 struct SuperExpressionNode : public Node {
 
+	Node* expr;
+
+	SuperExpressionNode(Node* expr) : expr(expr) {
+	}
+
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "superexpression";
+    const char* toString() {
+        return "SuperExpressionNode";
     }
+
+	bool isFullSuperExpression() {
+		return expr != 0;
+	}
+
 };
 
 /**
@@ -1729,11 +2051,15 @@ struct SuperExpressionNode : public Node {
 struct ThisExpressionNode : public Node {
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "thisexpression";
+    const char* toString() {
+        return "ThisExpressionNode";
     }
 };
 
@@ -1750,15 +2076,19 @@ struct ThrowStatementNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
     bool isBranch() {
         return true;
     }
 
-    std::string toString() {
-        return "throwstatement";
+    const char* toString() {
+        return "ThrowStatementNode";
     }
 };
 
@@ -1779,15 +2109,19 @@ struct TryStatementNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
     bool isBranch() {
         return true;
     }
 
-    std::string toString() {
-        return "trystatement";
+    const char* toString() {
+        return "TryStatementNode";
     }
 };
 
@@ -1807,11 +2141,15 @@ struct TypedVariableNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "typedvariable";
+    const char* toString() {
+        return "TypedVariableNode";
     }
 };
 
@@ -1830,11 +2168,15 @@ struct UnaryExpressionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "unaryexpression";
+    const char* toString() {
+        return "UnaryExpressionNode";
     }
 };
 
@@ -1853,11 +2195,15 @@ struct UnitExpressionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "unitexpression";
+    const char* toString() {
+        return "UnitExpressionNode";
     }
 };
 
@@ -1874,11 +2220,15 @@ struct UseStatementNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "usestatement";
+    const char* toString() {
+        return "UseStatementNode";
     }
 };
 
@@ -1897,15 +2247,19 @@ struct VariableBindingNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
     int pos() {
         return variable->pos();
     }
 
-    std::string toString() {
-        return "variablebinding";
+    const char* toString() {
+        return "VariableBindingNode";
     }
 };
 
@@ -1924,11 +2278,15 @@ struct VariableDefinitionNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "variabledefinition";
+    const char* toString() {
+        return "VariableDefinitionNode";
     }
 };
 
@@ -1947,15 +2305,19 @@ struct WhileStatementNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
     bool isBranch() {
         return true;
     }
 
-    std::string toString() {
-        return "whilestatement";
+    const char* toString() {
+        return "WhileStatementNode";
     }
 };
 
@@ -1974,24 +2336,25 @@ struct WithStatementNode : public Node {
     }
 
     Value* evaluate( Context& cx, Evaluator* evaluator ) {
-        return evaluator->evaluate( cx, this );
+		if( evaluator->checkFeature(cx,this) ) {
+			return evaluator->evaluate( cx, this );
+		} else {
+			return 0;
+		}
     }
 
-    std::string toString() {
-        return "withstatement";
+    const char* toString() {
+        return "WithStatementNode";
     }
 };
 
 }
 }
 
-#if 0
-
-#endif // 0
-
 #endif // Nodes_h
 
 /*
+ * Written by Jeff Dyer
  * Copyright (c) 1998-2001 by Mountain View Compiler Company
  * All rights reserved.
  */

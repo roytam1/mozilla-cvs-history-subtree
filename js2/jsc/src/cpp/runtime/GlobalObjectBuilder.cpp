@@ -97,11 +97,13 @@ namespace v1 {
 
 		slot_index = ob->addSlot(cx);
 		slot_index = ob->define(cx,"get version",ObjectValue::publicNamespace,slot_index);
+//		slot_index = ob->defineGet(cx,"version",ObjectValue::publicNamespace,slot_index);
 		slot = ob->getSlot(cx,slot_index);
 		slot->intValue = 7; //value_count;		// function: get version
 
 		slot_index = ob->addSlot(cx);
 		slot_index = ob->define(cx,"set version",ObjectValue::publicNamespace,slot_index);
+//		slot_index = ob->defineSet(cx,"version",ObjectValue::publicNamespace,slot_index);
 		slot = ob->getSlot(cx,slot_index);
 		slot->intValue = 7; //value_count++;  // function: set version
 

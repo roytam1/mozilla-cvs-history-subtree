@@ -90,9 +90,21 @@ public:
 	static void init();
 	static void fini();
 
-	/* Define a property and associate it with slot_index
+	/* Define a property and associate it with slot_index. Four forms:
+	 * - maps a getter and setter name to a slot. This only works if
+	 *   the contents of the slot is an actual var index.
+	 * - maps a getter name to a slot. The contents of the slot needs
+	 *   to be a code block that implements a getter.
+	 * - maps a setter name to a slot. The contents of the slot needs
+	 *   to be a code blcok that implements a setter.
+	 * - maps a method name to a slot. The contents of the slot needs
+	 *   to be a code block that implements a method.
 	 */
+
     int define(Context& cx, std::string name, Value* qualifier, int slot_index);
+//    int defineGetter(Context& cx, std::string name, Value* qualifier, int slot_index);
+//    int defineSetter(Context& cx, std::string name, Value* qualifier, int slot_index);
+//    int defineMethod(Context& cx, std::string name, Value* qualifier, int slot_index);
 
 	/* Get the slot index of a property name
 	 */

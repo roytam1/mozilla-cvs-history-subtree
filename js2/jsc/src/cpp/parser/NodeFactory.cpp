@@ -2,6 +2,7 @@
  * The value class from which all other values derive.
  */
 
+#pragma warning ( disable : 4786 )
 #include "NodeFactory.h"
 
 namespace esc {

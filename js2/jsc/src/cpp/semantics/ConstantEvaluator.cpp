@@ -1,6 +1,6 @@
 
 #pragma warning ( disable : 4786 )
-
+#include <typeinfo>
 #include "Nodes.h"
 #include "ConstantEvaluator.h"
 #include "NodeFactory.h"
@@ -162,7 +162,7 @@ namespace v1 {
     }
 
     Value* ConstantEvaluator::evaluate( Context& cx, LiteralNumberNode* node ) { 
-        throw;
+        return ObjectValue::undefinedValue;
     }
     
 	Value* ConstantEvaluator::evaluate( Context& cx, LiteralStringNode* node ) { 
@@ -178,7 +178,13 @@ namespace v1 {
     }
     
 	Value* ConstantEvaluator::evaluate( Context& cx, UnitExpressionNode* node ) {
-        throw;
+		if( node->value ) {
+			node->value->evaluate(cx,this);
+		}
+		if( node->type ) {
+			node->type->evaluate(cx,this);
+		}
+        return 0;
     }
     
 	Value* ConstantEvaluator::evaluate( Context& cx, FunctionExpressionNode* node ) {
@@ -270,6 +276,7 @@ namespace v1 {
 			node->list->evaluate(cx,this); 
 		} 
 		if( node->item ) {
+			// If it is a member expression convert it to a get expression.
 			node->item->evaluate(cx,this);
 		}
 		return ObjectValue::undefinedValue;
@@ -291,8 +298,12 @@ namespace v1 {
         throw;
     }
     
-	Value* ConstantEvaluator::evaluate( Context& cx, ExpressionStatementNode* node ) { 
-        throw;
+	Value* ConstantEvaluator::evaluate( Context& cx, ExpressionStatementNode* node ) {
+		Value* result = 0;
+		if( node->expr ) {
+			result = node->expr->evaluate(cx,this);
+		}
+		return result;
     }
     
 	Value* ConstantEvaluator::evaluate( Context& cx, AnnotatedBlockNode* node ) { 
@@ -381,8 +392,17 @@ namespace v1 {
         throw;
     }
     
-	Value* ConstantEvaluator::evaluate( Context& cx, AnnotatedDefinitionNode* node ) { 
-        throw;
+	Value* ConstantEvaluator::evaluate( Context& cx, AnnotatedDefinitionNode* node ) {
+		Value* result;
+        if( node->attributes ) {
+//            modifier_attributes = node->attributes->evaluate(cx,this);
+//            if( modifier_attributes.getValue(context)==BooleanValue.falseValue ) {
+//                return UndefinedValue.undefinedValue;
+//            }
+        }
+
+        result = node->definition->evaluate(cx,this);
+		return result;
     }
     
 	Value* ConstantEvaluator::evaluate( Context& cx, AttributeListNode* node ) { 
@@ -454,7 +474,7 @@ namespace v1 {
     }
 
     Value* ConstantEvaluator::evaluate( Context& cx, ProgramNode* node ) {
-        if( node->statements != (ProgramNode*)0 ) {
+        if( node->statements ) {
 			node->statements->evaluate(cx,this); 
 		}
         return (Value*)0;
@@ -466,7 +486,8 @@ namespace v1 {
 
     int ConstantEvaluator::main(int argc, char* argv[]) {
 
-		Context cx;
+		std::ofstream err("ConstantEvaluator.err");
+		Context cx(err);
 		Evaluator* evaluator = new ConstantEvaluator();
 
 		Builder*     globalObjectBuilder = new GlobalObjectBuilder();

@@ -45,6 +45,26 @@ struct Node {
         return position;
     }
 
+	virtual const char* toString() {
+		return "Node";
+	}
+
+	virtual bool isCallExpression() {
+		return false;
+	}
+
+	virtual bool isFullNewExpression() {
+		return false;
+	}
+
+	virtual bool isFullSuperExpression() {
+		return false;
+	}
+
+	virtual bool isMemberExpression() {
+		return false;
+	}
+
 #if 0
 
     private static final boolean debug = false;

@@ -7,6 +7,8 @@
 
 #include <stack>
 #include <vector>
+#include <fstream>
+#include <map>
 
 
 namespace esc {
@@ -19,9 +21,26 @@ class Context {
 
 	ObjectValue* global;
 	std::stack<ObjectValue*> scopes;
+	std::ofstream* err_root;
 
 public:
-	Context() {
+	static std::map<std::string,std::string> e3cp_profile;
+	static std::map<std::string,std::string> e4_profile;
+	std::map<std::string,std::string> features;
+	std::ofstream& err;
+
+	static void init();
+
+	Context(std::ofstream& err, const std::map<std::string,std::string>& features = e4_profile) : err(err), err_root(0), features(features) {
+	}
+
+	Context() : err(*(err_root=new std::ofstream("default.err"))) {
+	}
+
+	~Context() {
+		if( err_root ) {
+			delete err_root;
+		}
 	}
 
 	void pushScope(ObjectValue* scope) {

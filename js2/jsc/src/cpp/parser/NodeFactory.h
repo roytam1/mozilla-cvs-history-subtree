@@ -142,13 +142,13 @@ struct NodeFactory {
 		roots->push_back(node);
 		return node;
     }
-    static SuperExpressionNode* SuperExpression() {
-        SuperExpressionNode* node = new SuperExpressionNode();
+    static SuperExpressionNode* SuperExpression(Node* expr) {
+        SuperExpressionNode* node = new SuperExpressionNode(expr);
 		roots->push_back(node);
 		return node;
     }
     static ListNode* List( ListNode* list, Node* item ) {
-        ListNode* node = new ListNode(list,item,item->pos());
+        ListNode* node = new ListNode(list,item,0);
 		roots->push_back(node);
 		return node;
     }
@@ -157,8 +157,8 @@ struct NodeFactory {
 		roots->push_back(node);
 		return node;
     }
-    static NewExpressionNode* NewExpression( Node* member ) {
-        NewExpressionNode* node = new NewExpressionNode(member);
+    static NewExpressionNode* NewExpression( Node* expr ) {
+        NewExpressionNode* node = new NewExpressionNode(expr);
 		roots->push_back(node);
 		return node;
     }
@@ -167,7 +167,7 @@ struct NodeFactory {
 		roots->push_back(node);
 		return node;
     }
-    static CallExpressionNode* CallExpression( MemberExpressionNode* member, ListNode* args ) {
+    static CallExpressionNode* CallExpression( Node* member, ListNode* args ) {
         CallExpressionNode* node = new CallExpressionNode(member,args);
 		roots->push_back(node);
 		return node;
@@ -369,6 +369,11 @@ struct NodeFactory {
     }
     static FunctionDeclarationNode* FunctionDeclaration( Node* name, Node* signature ) {
         FunctionDeclarationNode* node = new FunctionDeclarationNode(name,signature);
+		roots->push_back(node);
+		return node;
+    }
+    static FunctionSignatureNode* FunctionSignature( Node* parameter, Node* result ) {
+        FunctionSignatureNode* node = new FunctionSignatureNode(parameter,result);
 		roots->push_back(node);
 		return node;
     }
