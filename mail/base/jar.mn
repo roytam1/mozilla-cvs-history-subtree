@@ -35,6 +35,8 @@ messenger.jar:
     content/messenger/about-credits.png             (content/about-credits.png)
     content/messenger/about-footer.png              (content/about-footer.png)
     content/messenger/aboutDialog.css               (content/aboutDialog.css)
++   content/messenger/messenger.css                 (content/messenger.css)
+*   content/messenger/search.xml                    (content/search.xml)
 
 comm.jar:
 *   content/help/contents.rdf                       (content/help.rdf)
