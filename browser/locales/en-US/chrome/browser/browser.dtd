@@ -328,6 +328,7 @@
 
 <!ENTITY pageThemeIcon.tooltip            "Switch to an alternate stylesheet">
 <!ENTITY pageReportIcon.tooltip            "Change popup blocking settings for this website">
+<!ENTITY livemarkIcon.tooltip             "Create Livemark for this page">
 
 <!ENTITY find.label "Find:">
 <!ENTITY findNext.label "Find Next">

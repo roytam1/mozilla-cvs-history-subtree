@@ -18,6 +18,20 @@ toolbarbutton#newbookmark[disabled="true"] {
   -moz-image-region: rect(48px 24px 72px 0px) !important;
 }
 
+/* new livemark */
+
+toolbarbutton#newlivemark {
+  -moz-image-region: rect(0px 24px 24px 0px);
+}
+
+toolbarbutton#newlivemark:hover {
+  -moz-image-region: rect(24px 24px 48px 0px);
+}
+
+toolbarbutton#newlivemark[disabled="true"] {
+  -moz-image-region: rect(48px 24px 72px 0px) !important;
+}
+
 /* new folder */
 
 toolbarbutton#newfolder {

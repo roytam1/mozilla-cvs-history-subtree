@@ -712,8 +712,10 @@
         onToggleOpenState: function (aRow)
         {
           // update the open attribute of the selection
-          var resource = this.mOuter.getRowResource(aRow);
           var selection = this.mOuter._selection;
+          if (!selection)
+            return;
+          var resource = this.mOuter.getRowResource(aRow);
           for (var i=0; i<selection.length; ++i) {
             if (selection.item[i] == resource) {
               selection.isExpanded[i] = !selection.isExpanded[i];
@@ -955,6 +957,16 @@
             datasources="rdf:bookmarks rdf:files rdf:localsearch" ref="NC:BookmarksTopRoot" flags="dont-build-content"
             onselect="this.parentNode.treeBoxObject.view.selectionChanged();">
         <template>
+          <!-- I don't want these things to appear at all, but that's not an option -->
+          <rule rdf:type="http://home.netscape.com/NC-rdf#Livemark">
+            <treechildren>
+              <treeitem uri="rdf:*">
+                <treerow properties="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type rdf:http://home.netscape.com/NC-rdf#loading rdf:http://home.netscape.com/WEB-rdf#status">
+                  <treecell label="rdf:http://home.netscape.com/NC-rdf#Name" />
+                </treerow>
+              </treeitem>
+            </treechildren>
+          </rule>
           <rule iscontainer="true">
             <treechildren>
               <treeitem uri="rdf:*">

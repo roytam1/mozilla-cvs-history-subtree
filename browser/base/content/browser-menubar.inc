@@ -419,15 +419,21 @@
         </menubar>
 
 
-<template id='bookmarks-template' xmlns:nc="http://home.netscape.com/NC-rdf#">
+  <template id='bookmarks-template' xmlns:nc="http://home.netscape.com/NC-rdf#">
+    <!-- this Livemark rule can die once the template builder is fixed;
+         it's here only to block the Empty item from appearing (bug 248015, 192624) -->
+    <rule parent="hbox" rdf:type="http://home.netscape.com/NC-rdf#Livemark">
+      <toolbarbutton type="menu" class="bookmark-item" uri="rdf:*" editable="true"
+                     rdf:type="http://home.netscape.com/NC-rdf#Folder"
+                     label="rdf:http://home.netscape.com/NC-rdf#Name">
+        <menupopup contextmenu="bookmarks-context-menu"/>
+      </toolbarbutton>
+    </rule>
     <rule parent="hbox" rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator">
       <toolbarseparator uri="rdf:*"
                         rdf:type="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type"/>
     </rule>
-    <!-- yes, the type attribute is necessary otherwise all leaves are 
-         treated as containers for some reason -->
-    <rule parent="hbox" iscontainer="true" isempty="true"
-          rdf:type="http://home.netscape.com/NC-rdf#Folder">
+    <rule parent="hbox" iscontainer="true" isempty="true">
       <toolbarbutton type="menu" editable="true" class="bookmark-item"
                      rdf:type="http://home.netscape.com/NC-rdf#Folder"
                      uri="rdf:*" label="rdf:http://home.netscape.com/NC-rdf#Name">
@@ -452,8 +458,21 @@
                      tooltip="btTooltip"
                      label="rdf:http://home.netscape.com/NC-rdf#Name"/>
     </rule>
-    <rule iscontainer="true" isempty="true"
-          rdf:type="http://home.netscape.com/NC-rdf#Folder">
+    <rule rdf:type="http://home.netscape.com/NC-rdf#Livemark">
+      <menupopup>
+        <menu class="menu-iconic bookmark-item" uri="rdf:*"
+              label="rdf:http://home.netscape.com/NC-rdf#Name"
+              type="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type">
+          <menupopup contextmenu="bookmarks-context-menu"/>
+        </menu>
+      </menupopup>
+    </rule>
+    <rule rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator">
+      <menupopup> 
+        <menuseparator uri="rdf:*" />
+      </menupopup>
+    </rule>
+    <rule iscontainer="true" isempty="true">
       <menupopup>
         <menu class="menu-iconic bookmark-item" uri="rdf:*" 
               type="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
@@ -471,11 +490,6 @@
               type="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type">
           <menupopup contextmenu="bookmarks-context-menu"/>
         </menu>
-      </menupopup>
-    </rule>
-    <rule rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator">
-      <menupopup> 
-        <menuseparator uri="rdf:*" />
       </menupopup>
     </rule>
     <rule>

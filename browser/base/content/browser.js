@@ -59,6 +59,7 @@ var gGlobalHistory = null;
 var gURIFixup = null;
 var gReportButton = null;
 var gPageThemeButton = null;
+var gLivemarksButton = null;
 var gCharsetMenu = null;
 var gLastBrowserCharset = null;
 var gPrevCharset = null;
@@ -112,6 +113,7 @@ function loadEventHandlers(event)
     checkForDirectoryListing();
     charsetLoadListener(event);
     updatePageTheme();
+    checkForLivemark();
   }
 }
 
@@ -2760,7 +2762,7 @@ nsBrowserStatusHandler.prototype =
     }
     UpdateBackForwardButtons();
     
-    setTimeout(updatePageTheme, 0);
+    setTimeout(function () { updatePageTheme(); checkForLivemark(); }, 0);
   },
 
   onStatusChange : function(aWebProgress, aRequest, aStatus, aMessage)
@@ -4915,5 +4917,73 @@ function AddKeywordForSearchField()
              "centerscreen,chrome,dialog,resizable,dependent",
              "", spec, null, node.ownerDocument.characterSet, null, null, 
              false, "", true, postData);
+}
+
+// check _content.document for RSS link tags
+function checkForLivemark()
+{
+  if (!gLivemarksButton)
+    gLivemarksButton = document.getElementById("livemark-button");
+
+  // XXX - we should probably hook into DOMLinkAdded instead of this
+  var head = _content.document.getElementsByTagName("head");
+  if (head == null || head.length == 0)
+    return;
+
+  var livemarkLinks = [];
+
+  var links = head[0].getElementsByTagName("link");
+  for (var i = 0; i < links.length; i++) {
+    // hooray for no standards
+    if (links[i].type == "application/rss+xml" ||
+        links[i].type == "application/atom+xml" ||
+        links[i].type == "application/x.atom+xml" || // this is, apparently, the "official" Atom type.
+        links[i].title == "rss" ||
+        links[i].title == "RSS" ||
+        links[i].title == "Atom")
+    {
+      //dump ("Page has RSS link: " + links[i].href + "\n");
+      livemarkLinks.push({ href: links[i].href,
+                           type: links[i].type,
+                          title: links[i].title});
+    }
+  }
+
+  // show the livemarks icon in the status bar area if there were any
+  // found
+  if (livemarkLinks.length > 0) {
+    gBrowser.mCurrentBrowser.livemarkLinks = livemarkLinks;
+    gLivemarksButton.setAttribute("livemarks", "true");
+  } else {
+    gBrowser.mCurrentBrowser.livemarkLinks = null;
+    gLivemarksButton.removeAttribute("livemarks");
+  }
+}
+
+function livemarkFillPopup(menuPopup)
+{
+  var livemarkLinks = gBrowser.mCurrentBrowser.livemarkLinks;
+  if (livemarkLinks == null) {
+    return;
+  }
+
+  while (menuPopup.firstChild) {
+    menuPopup.removeChild(menuPopup.firstChild);
+  }
+
+  for (var i = 0; i < livemarkLinks.length; i++) {
+    var markinfo = livemarkLinks[i];
+
+    var menuItem = document.createElement("menuitem");
+    menuItem.setAttribute("label", markinfo.title || markinfo.href);
+    menuItem.setAttribute("data", markinfo.href);
+    menuItem.setAttribute("tooltiptext", markinfo.href);
+    menuPopup.appendChild(menuItem);
+  }
+}
+
+function livemarkAddMark(wincontent, data) {
+  var title = wincontent.document.title;
+  BookmarksUtils.addLivemark(wincontent.document.baseURI, data, title);
 }
 

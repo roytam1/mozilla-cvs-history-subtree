@@ -254,6 +254,7 @@ var BookmarksMenu = {
             type == "Bookmark"              ||
             type == "Folder"                ||
             type == "PersonalToolbarFolder" ||
+            type == "Livemark"              ||
             aURI == "bookmarks-ptf")
   },
 

@@ -444,6 +444,11 @@
       </menupopup>
     </statusbarpanel>
 
+    <statusbarpanel id="livemark-button" type="menu" class="statusbarpanel-menu-iconic" tooltiptext="&livemarkIcon.tooltip;">
+      <menupopup onpopupshowing="livemarkFillPopup(this);"
+                 oncommand="livemarkAddMark(window._content, event.target.getAttribute('data'));" />
+    </statusbarpanel>
+
     <statusbarpanel id="statusbar-display" flex="1"/>
     <statusbarpanel class="statusbarpanel-progress" collapsed="true" id="statusbar-progresspanel">
       <progressmeter class="progressmeter-statusbar" id="statusbar-icon" mode="normal" value="0"/>

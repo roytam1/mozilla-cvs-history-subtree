@@ -105,9 +105,13 @@ nsIRDFResource      *kNC_Name;
 nsIRDFResource      *kNC_Icon;
 nsIRDFResource      *kNC_BookmarksToolbarFolder;
 nsIRDFResource      *kNC_ShortcutURL;
+nsIRDFResource      *kNC_FeedURL;
 nsIRDFResource      *kNC_URL;
 nsIRDFResource      *kNC_WebPanel;
 nsIRDFResource      *kNC_PostData;
+nsIRDFResource      *kNC_Livemark;
+nsIRDFResource      *kNC_LivemarkLock;
+nsIRDFResource      *kNC_LivemarkExpiration;
 nsIRDFResource      *kRDF_type;
 nsIRDFResource      *kRDF_nextVal;
 nsIRDFResource      *kWEB_LastModifiedDate;
@@ -131,6 +135,25 @@ nsIRDFResource      *kNC_BookmarkCommand_DeleteBookmarkSeparator;
 nsIRDFResource      *kNC_BookmarkCommand_SetPersonalToolbarFolder;
 nsIRDFResource      *kNC_BookmarkCommand_Import;
 nsIRDFResource      *kNC_BookmarkCommand_Export;
+
+/* RDF Resources for RSS parsing */
+#ifndef RSS09_NAMESPACE_URI
+#define RSS09_NAMESPACE_URI "http://my.netscape.com/rdf/simple/0.9/"
+#endif
+
+nsIRDFResource      *kRSS09_channel;
+nsIRDFResource      *kRSS09_item;
+nsIRDFResource      *kRSS09_title;
+nsIRDFResource      *kRSS09_link;
+
+#ifndef RSS10_NAMESPACE_URI
+#define RSS10_NAMESPACE_URI "http://purl.org/rss/1.0/"
+#endif
+
+nsIRDFResource      *kRSS10_channel;
+nsIRDFResource      *kRSS10_items;
+nsIRDFResource      *kRSS10_title;
+nsIRDFResource      *kRSS10_link;
 
 #define BOOKMARK_TIMEOUT        15000       // fire every 15 seconds
 // #define  DEBUG_BOOKMARK_PING_OUTPUT  1
@@ -158,6 +181,10 @@ static const char kURINC_SystemBookmarksStaticRoot[]  = "NC:SystemBookmarksStati
 static const char kBookmarkCommand[]                  = "http://home.netscape.com/NC-rdf#command?";
 
 #define bookmark_properties NS_LITERAL_CSTRING("chrome://browser/locale/bookmarks/bookmarks.properties")
+
+/* in nsBookmarksRSSHandler.cpp */
+nsresult nsBMSVCClearSeqContainer (nsIRDFDataSource* aDataSource, nsIRDFResource* aResource);
+nsresult nsBMSVCUnmakeSeq (nsIRDFDataSource* aDataSource, nsIRDFResource* aResource);
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -229,12 +256,20 @@ bm_AddRefGlobals()
                           &kNC_Icon);
         gRDF->GetResource(NS_LITERAL_CSTRING(NC_NAMESPACE_URI "ShortcutURL"),
                           &kNC_ShortcutURL);
+        gRDF->GetResource(NS_LITERAL_CSTRING(NC_NAMESPACE_URI "FeedURL"),
+                          &kNC_FeedURL);
         gRDF->GetResource(NS_LITERAL_CSTRING(NC_NAMESPACE_URI "URL"),
                           &kNC_URL);
         gRDF->GetResource(NS_LITERAL_CSTRING(NC_NAMESPACE_URI "WebPanel"),
                           &kNC_WebPanel);
         gRDF->GetResource(NS_LITERAL_CSTRING(NC_NAMESPACE_URI "PostData"),
                           &kNC_PostData);
+        gRDF->GetResource(NS_LITERAL_CSTRING(NC_NAMESPACE_URI "Livemark"),
+                          &kNC_Livemark);
+        gRDF->GetResource(NS_LITERAL_CSTRING(NC_NAMESPACE_URI "LivemarkLock"),
+                          &kNC_LivemarkLock);
+        gRDF->GetResource(NS_LITERAL_CSTRING(NC_NAMESPACE_URI "LivemarkExpiration"),
+                          &kNC_LivemarkExpiration);
         gRDF->GetResource(NS_LITERAL_CSTRING(RDF_NAMESPACE_URI "type"),
                           &kRDF_type);
         gRDF->GetResource(NS_LITERAL_CSTRING(RDF_NAMESPACE_URI "nextVal"),
@@ -284,6 +319,25 @@ bm_AddRefGlobals()
                           &kNC_BookmarkCommand_Import);
         gRDF->GetResource(NS_LITERAL_CSTRING(NC_NAMESPACE_URI "command?cmd=export"),
                           &kNC_BookmarkCommand_Export);
+
+        /* RSS Resources */
+        gRDF->GetResource(NS_LITERAL_CSTRING(RSS09_NAMESPACE_URI "channel"),
+                          &kRSS09_channel);
+        gRDF->GetResource(NS_LITERAL_CSTRING(RSS09_NAMESPACE_URI "item"),
+                          &kRSS09_item);
+        gRDF->GetResource(NS_LITERAL_CSTRING(RSS09_NAMESPACE_URI "title"),
+                          &kRSS09_title);
+        gRDF->GetResource(NS_LITERAL_CSTRING(RSS09_NAMESPACE_URI "link"),
+                          &kRSS09_link);
+
+        gRDF->GetResource(NS_LITERAL_CSTRING(RSS10_NAMESPACE_URI "channel"),
+                          &kRSS10_channel);
+        gRDF->GetResource(NS_LITERAL_CSTRING(RSS10_NAMESPACE_URI "items"),
+                          &kRSS10_items);
+        gRDF->GetResource(NS_LITERAL_CSTRING(RSS10_NAMESPACE_URI "title"),
+                          &kRSS10_title);
+        gRDF->GetResource(NS_LITERAL_CSTRING(RSS10_NAMESPACE_URI "link"),
+                          &kRSS10_link);
     }
     return NS_OK;
 }
@@ -330,9 +384,13 @@ bm_ReleaseGlobals()
         NS_IF_RELEASE(kNC_Icon);
         NS_IF_RELEASE(kNC_BookmarksToolbarFolder);
         NS_IF_RELEASE(kNC_ShortcutURL);
+        NS_IF_RELEASE(kNC_FeedURL);
         NS_IF_RELEASE(kNC_URL);
         NS_IF_RELEASE(kNC_WebPanel);
         NS_IF_RELEASE(kNC_PostData);
+        NS_IF_RELEASE(kNC_Livemark);
+        NS_IF_RELEASE(kNC_LivemarkLock);
+        NS_IF_RELEASE(kNC_LivemarkExpiration);
         NS_IF_RELEASE(kRDF_type);
         NS_IF_RELEASE(kRDF_nextVal);
         NS_IF_RELEASE(kWEB_LastModifiedDate);
@@ -356,9 +414,18 @@ bm_ReleaseGlobals()
         NS_IF_RELEASE(kNC_BookmarkCommand_SetPersonalToolbarFolder);
         NS_IF_RELEASE(kNC_BookmarkCommand_Import);
         NS_IF_RELEASE(kNC_BookmarkCommand_Export);
+
+        NS_IF_RELEASE(kRSS09_channel);
+        NS_IF_RELEASE(kRSS09_item);
+        NS_IF_RELEASE(kRSS09_title);
+        NS_IF_RELEASE(kRSS09_link);
+
+        NS_IF_RELEASE(kRSS10_channel);
+        NS_IF_RELEASE(kRSS10_items);
+        NS_IF_RELEASE(kRSS10_title);
+        NS_IF_RELEASE(kRSS10_link);
     }
 }
-
 
 class nsSpillableStackBuffer
 {
@@ -551,6 +618,7 @@ static const char kLastVisitEquals[]       = "LAST_VISIT=\"";
 static const char kLastModifiedEquals[]    = "LAST_MODIFIED=\"";
 static const char kLastCharsetEquals[]     = "LAST_CHARSET=\"";
 static const char kShortcutURLEquals[]     = "SHORTCUTURL=\"";
+static const char kFeedURLEquals[]         = "FEEDURL=\"";
 static const char kIconEquals[]            = "ICON=\"";
 static const char kWebPanelEquals[]        = "WEB_PANEL=\"";
 static const char kPostDataEquals[]        = "POST_DATA=\"";
@@ -807,7 +875,11 @@ BookmarkParser::ProcessLine(nsIRDFContainer *container, nsIRDFResource *nodeType
         description.Truncate();
     }
 
-    if ((offset = line.Find(kHREFEquals, PR_TRUE)) >= 0)
+    if ((offset = line.Find(kFeedURLEquals, PR_TRUE)) >= 0)
+    {
+        rv = ParseBookmarkInfo(gBookmarkFieldTable, PR_TRUE, line, container, kNC_Livemark, bookmarkNode);
+    }
+    else if ((offset = line.Find(kHREFEquals, PR_TRUE)) >= 0)
     {
         rv = ParseBookmarkInfo(gBookmarkFieldTable, PR_TRUE, line, container, nodeType, bookmarkNode);
     }
@@ -1041,6 +1113,7 @@ BookmarkParser::gBookmarkFieldTable[] =
   { kLastVisitEquals,       WEB_NAMESPACE_URI "LastVisitDate",     nsnull,  BookmarkParser::ParseDate,      nsnull },
   { kLastModifiedEquals,    WEB_NAMESPACE_URI "LastModifiedDate",  nsnull,  BookmarkParser::ParseDate,      nsnull },
   { kShortcutURLEquals,     NC_NAMESPACE_URI  "ShortcutURL",       nsnull,  BookmarkParser::ParseLiteral,   nsnull },
+  { kFeedURLEquals,         NC_NAMESPACE_URI  "FeedURL",            nsnull,  BookmarkParser::ParseLiteral,   nsnull },
   { kIconEquals,            NC_NAMESPACE_URI  "Icon",              nsnull,  BookmarkParser::ParseLiteral,   nsnull },
   { kWebPanelEquals,        NC_NAMESPACE_URI  "WebPanel",          nsnull,  BookmarkParser::ParseLiteral,   nsnull },
   { kPostDataEquals,        NC_NAMESPACE_URI  "PostData",          nsnull,  BookmarkParser::ParseLiteral,   nsnull },
@@ -1200,9 +1273,15 @@ BookmarkParser::ParseBookmarkInfo(BookmarkField *fields, PRBool isBookmarkFlag,
         }
         else if (aNodeType == kNC_IEFavorite ||
                  aNodeType == kNC_IEFavoriteFolder ||
-                 aNodeType == kNC_BookmarkSeparator)
+                 aNodeType == kNC_BookmarkSeparator ||
+                 aNodeType == kNC_Livemark)
         {
             rv = mDataSource->Assert(bookmark, kRDF_type, aNodeType, PR_TRUE);
+            if (aNodeType == kNC_Livemark) {
+                /* And make it a sequence, if livemark -- we don't add anything
+                 * into the sequence here */
+                rv = gRDFC->MakeSeq(mDataSource, bookmark, nsnull);
+            }
         }
 
         // process data
@@ -2488,6 +2567,11 @@ nsBookmarksService::CreateFolderInContainer(const PRUnichar* aName,
                                             nsIRDFResource* aParentFolder, PRInt32 aIndex,
                                             nsIRDFResource** aResult)
 {
+    nsCOMPtr<nsIRDFNode> nodeType;
+    GetSynthesizedType(aParentFolder, getter_AddRefs(nodeType));
+    if (nodeType == kNC_Livemark)
+        return NS_RDF_ASSERTION_REJECTED;
+
     nsresult rv = CreateFolder(aName, aResult);
     if (NS_SUCCEEDED(rv))
         rv = InsertResource(*aResult, aParentFolder, aIndex);
@@ -2643,7 +2727,126 @@ nsBookmarksService::CreateBookmarkInContainer(const PRUnichar* aName,
                                               PRInt32 aIndex,
                                               nsIRDFResource** aResult)
 {
+    nsCOMPtr<nsIRDFNode> nodeType;
+    GetSynthesizedType(aParentFolder, getter_AddRefs(nodeType));
+    if (nodeType == kNC_Livemark)
+        return NS_RDF_ASSERTION_REJECTED;
+    
     nsresult rv = CreateBookmark(aName, aURL, aShortcutURL, aDescription, aDocCharSet, aPostData, aResult);
+    if (NS_SUCCEEDED(rv))
+        rv = InsertResource(*aResult, aParentFolder, aIndex);
+    return rv;
+}
+
+NS_IMETHODIMP
+nsBookmarksService::CreateLivemark(const PRUnichar* aName,
+                                   const PRUnichar* aURL, 
+                                   const PRUnichar* aFeedURL,
+                                   const PRUnichar* aDescription,
+                                   nsIRDFResource** aResult)
+{
+    // Resource: Bookmark ID
+    nsCOMPtr<nsIRDFResource> livemarkResource;
+    nsresult rv = gRDF->GetAnonymousResource(getter_AddRefs(livemarkResource));
+
+    if (NS_FAILED(rv)) 
+        return rv;
+
+    rv = gRDFC->MakeSeq(mInner, livemarkResource, nsnull);
+    if (NS_FAILED(rv)) 
+        return rv;
+
+    // Literal: Name
+    nsCOMPtr<nsIRDFLiteral> nameLiteral;
+    nsAutoString bookmarkName; 
+    bookmarkName.Assign(aName);
+    if (bookmarkName.IsEmpty()) {
+        getLocaleString("NewBookmark", bookmarkName);
+
+        rv = gRDF->GetLiteral(bookmarkName.get(), getter_AddRefs(nameLiteral));
+        if (NS_FAILED(rv)) 
+            return rv;
+    }
+    else
+    {
+        rv = gRDF->GetLiteral(aName, getter_AddRefs(nameLiteral));
+        if (NS_FAILED(rv)) 
+            return rv;
+    }
+
+    rv = mInner->Assert(livemarkResource, kNC_Name, nameLiteral, PR_TRUE);
+    if (NS_FAILED(rv)) 
+        return rv;
+
+    // Resource: URL
+    nsAutoString url;
+    url.Assign(aURL);
+    nsCOMPtr<nsIRDFLiteral> urlLiteral;
+    rv = gRDF->GetLiteral(url.get(), getter_AddRefs(urlLiteral));
+    if (NS_FAILED(rv)) 
+        return rv;
+    rv = mInner->Assert(livemarkResource, kNC_URL, urlLiteral, PR_TRUE);
+    if (NS_FAILED(rv)) 
+        return rv;
+
+    // Literal: FEED URL
+    nsAutoString feedurl;
+    feedurl.Assign(aFeedURL);
+    nsCOMPtr<nsIRDFLiteral> feedurlLiteral;
+    rv = gRDF->GetLiteral(feedurl.get(), getter_AddRefs(feedurlLiteral));
+    if (NS_FAILED(rv))
+        return rv;
+    rv = mInner->Assert(livemarkResource, kNC_FeedURL, feedurlLiteral, PR_TRUE);
+    if (NS_FAILED(rv))
+        return rv;
+
+    // Literal: Description
+    if (aDescription && *aDescription) {
+        nsCOMPtr<nsIRDFLiteral> descriptionLiteral;
+        rv = gRDF->GetLiteral(aDescription, getter_AddRefs(descriptionLiteral));
+        if (NS_FAILED(rv)) 
+            return rv;
+        rv = mInner->Assert(livemarkResource, kNC_Description, descriptionLiteral, PR_TRUE);
+        if (NS_FAILED(rv)) 
+            return rv;
+    }
+
+    // Date: Date of Creation
+    // Convert the current date/time from microseconds (PRTime) to seconds.
+    nsCOMPtr<nsIRDFDate> dateLiteral;
+    rv = gRDF->GetDateLiteral(PR_Now(), getter_AddRefs(dateLiteral));
+    if (NS_FAILED(rv)) 
+        return rv;
+    rv = mInner->Assert(livemarkResource, kNC_BookmarkAddDate, dateLiteral, PR_TRUE);
+    if (NS_FAILED(rv)) 
+        return rv;
+
+    // Type: LiveMark
+    rv = mInner->Assert(livemarkResource, kRDF_type, kNC_Livemark, PR_TRUE);
+    if (NS_FAILED(rv))
+        return rv;
+
+    *aResult = livemarkResource;
+    NS_ADDREF(*aResult);
+
+    return rv;
+}
+
+NS_IMETHODIMP
+nsBookmarksService::CreateLivemarkInContainer(const PRUnichar* aName,
+                                              const PRUnichar* aURL, 
+                                              const PRUnichar* aFeedURL, 
+                                              const PRUnichar* aDescription, 
+                                              nsIRDFResource* aParentFolder,
+                                              PRInt32 aIndex,
+                                              nsIRDFResource** aResult)
+{
+    nsCOMPtr<nsIRDFNode> nodeType;
+    GetSynthesizedType(aParentFolder, getter_AddRefs(nodeType));
+    if (nodeType == kNC_Livemark)
+        return NS_RDF_ASSERTION_REJECTED;
+
+    nsresult rv = CreateLivemark(aName, aURL, aFeedURL, aDescription, aResult);
     if (NS_SUCCEEDED(rv))
         rv = InsertResource(*aResult, aParentFolder, aIndex);
     return rv;
@@ -3357,6 +3560,7 @@ nsBookmarksService::GetTarget(nsIRDFResource* aSource,
     *aTarget = nsnull;
 
     nsresult rv;
+    PRBool isLivemark = PR_FALSE;
 
     if (aTruthValue && (aProperty == kRDF_type))
     {
@@ -3396,10 +3600,12 @@ nsBookmarksService::GetTarget(nsIRDFResource* aSource,
             return rv;
         }
     }
-    else if (aProperty == kNC_Icon)
+    else if ((aProperty == kNC_child || aProperty == kRDF_nextVal) &&
+             NS_SUCCEEDED(mInner->HasAssertion(aSource, kRDF_type, kNC_Livemark,
+                                               PR_TRUE, &isLivemark)) &&
+             isLivemark)
     {
-        rv = ProcessCachedBookmarkIcon(aSource, nsnull, aTarget);
-        return rv;
+        UpdateLivemarkChildren (aSource);
     }
 
     rv = mInner->GetTarget(aSource, aProperty, aTruthValue, aTarget);
@@ -3426,6 +3632,15 @@ nsBookmarksService::GetTargets(nsIRDFResource* aSource,
 
   if (aSource == kNC_LastModifiedFoldersRoot && aProperty == kNC_child) {
     return GetLastModifiedFolders(aTargets);
+  }
+
+  PRBool isLivemark = PR_FALSE;
+  if (aProperty == kNC_child &&
+      NS_SUCCEEDED(mInner->HasAssertion(aSource, kRDF_type, kNC_Livemark,
+                                        PR_TRUE, &isLivemark)) &&
+      isLivemark)
+  {
+    UpdateLivemarkChildren(aSource);
   }
 
   return mInner->GetTargets(aSource, aProperty, aTruthValue, aTargets);
@@ -3598,6 +3813,16 @@ nsBookmarksService::Assert(nsIRDFResource* aSource,
             
         if (aProperty == kWEB_Schedule) {
               AnnotateBookmarkSchedule(aSource, PR_TRUE);
+        } else if (aProperty == kNC_FeedURL) {
+            /* Reload feed URL - also allow only one LivemarkExpiration */
+            nsCOMPtr<nsIRDFNode> oldExpiration;
+            rv = mInner->GetTarget(aSource, kNC_LivemarkExpiration, PR_TRUE, getter_AddRefs(oldExpiration));
+            if (rv == NS_OK)
+                mInner->Unassert(aSource, kNC_LivemarkExpiration, oldExpiration);
+            rv = UpdateLivemarkChildren(aSource);
+            return rv;
+        } else if (aProperty == kRDF_type && aTarget == kNC_Livemark) {
+            rv = gRDFC->MakeSeq(mInner, aSource, nsnull);
         }
     }
 
@@ -3620,6 +3845,13 @@ nsBookmarksService::Unassert(nsIRDFResource* aSource,
 
         if (aProperty == kWEB_Schedule) {
             AnnotateBookmarkSchedule(aSource, PR_FALSE);
+        } else if (aProperty == kRDF_type && aTarget == kNC_Livemark) {
+            rv = nsBMSVCUnmakeSeq(mInner, aSource);
+        } else if (aProperty == kNC_LivemarkExpiration) {
+            // reload livemark if someone unasserted the expiration
+            // clear the Seq to make the command feel more responsive
+            nsBMSVCClearSeqContainer(mInner, aSource);
+            rv = UpdateLivemarkChildren(aSource);
         }
     }
 
@@ -3643,6 +3875,20 @@ nsBookmarksService::Change(nsIRDFResource* aSource,
 
         if (aProperty == kWEB_Schedule) {
             AnnotateBookmarkSchedule(aSource, PR_TRUE);
+        } else if (aProperty == kNC_FeedURL) {
+            /* Reload feed data */
+            nsCOMPtr<nsIRDFNode> oldExpiration;
+            rv = mInner->GetTarget(aSource, kNC_LivemarkExpiration, PR_TRUE, getter_AddRefs(oldExpiration));
+            if (rv == NS_OK)
+                mInner->Unassert(aSource, kNC_LivemarkExpiration, oldExpiration);
+            rv = UpdateLivemarkChildren(aSource);
+            return rv;
+        } else if (aProperty == kRDF_type) {
+            if (aNewTarget == kNC_Livemark) {
+                rv = gRDFC->MakeSeq(mInner, aSource, nsnull);
+            } else if (aNewTarget == kNC_Bookmark) {
+                rv = nsBMSVCUnmakeSeq(mInner, aSource);
+            }
         }
     }
 
@@ -3679,6 +3925,17 @@ nsBookmarksService::HasAssertion(nsIRDFResource* source,
 #if defined(XP_MAC) || defined(XP_MACOSX)
     HandleSystemBookmarks(source);
 #endif
+
+    PRBool isLivemark = PR_FALSE;
+    if (property != kNC_LivemarkLock &&
+        (property == kRDF_nextVal || property == kNC_child) &&
+        NS_SUCCEEDED(mInner->HasAssertion(source, kRDF_type, kNC_Livemark, PR_TRUE, &isLivemark)) &&
+        isLivemark)
+    {
+        const char *cval;
+        property->GetValueConst (&cval);
+        UpdateLivemarkChildren(source);
+    }
 
     return mInner->HasAssertion(source, property, target, tv, hasAssertion);
 }
@@ -3723,7 +3980,14 @@ nsBookmarksService::HasArcOut(nsIRDFResource *aSource, nsIRDFResource *aArc, PRB
 #if defined(XP_MAC) || defined(XP_MACOSX)
     HandleSystemBookmarks(aSource);
 #endif
-  
+
+    PRBool isLivemark = PR_FALSE;
+    if (NS_SUCCEEDED(mInner->HasAssertion(aSource, kRDF_type, kNC_Livemark, PR_TRUE, &isLivemark)) &&
+        isLivemark)
+    {
+        UpdateLivemarkChildren(aSource);
+    }
+
     return mInner->HasArcOut(aSource, aArc, _retval);
 }
 
@@ -3761,19 +4025,20 @@ nsBookmarksService::GetAllCmds(nsIRDFResource* source,
     nsCOMPtr<nsIRDFNode> nodeType;
     GetSynthesizedType(source, getter_AddRefs(nodeType));
 
-    PRBool  isBookmark, isBookmarkFolder, isBookmarkSeparator;
+    PRBool  isBookmark, isBookmarkFolder, isBookmarkSeparator, isLivemark;
     isBookmark = (nodeType == kNC_Bookmark) ? PR_TRUE : PR_FALSE;
     isBookmarkFolder = (nodeType == kNC_Folder) ? PR_TRUE : PR_FALSE;
     isBookmarkSeparator = (nodeType == kNC_BookmarkSeparator) ? PR_TRUE : PR_FALSE;
+    isLivemark = (nodeType == kNC_Livemark) ? PR_TRUE : PR_FALSE;
 
-    if (isBookmark || isBookmarkFolder || isBookmarkSeparator)
+    if (isBookmark || isBookmarkFolder || isBookmarkSeparator || isLivemark)
     {
         cmdArray->AppendElement(kNC_BookmarkCommand_NewBookmark);
         cmdArray->AppendElement(kNC_BookmarkCommand_NewFolder);
         cmdArray->AppendElement(kNC_BookmarkCommand_NewSeparator);
         cmdArray->AppendElement(kNC_BookmarkSeparator);
     }
-    if (isBookmark)
+    if (isBookmark || isLivemark) // FIXME - isLivemark needs a "Delete Live Feed" menu item
     {
         cmdArray->AppendElement(kNC_BookmarkCommand_DeleteBookmark);
     }
@@ -4227,6 +4492,39 @@ nsBookmarksService::InitDataSource()
     if (NS_FAILED(rv)) return rv;
     rv = container->AppendElement(kNC_BookmarksRoot);
 
+    // create livemark bookmarks
+    {
+        nsXPIDLString lmloadingName;
+        rv = mBundle->GetStringFromName(NS_LITERAL_STRING("BookmarksLivemarkLoading").get(), getter_Copies(lmloadingName));
+        if (NS_FAILED(rv)) {
+            lmloadingName.Assign(NS_LITERAL_STRING("Livemark loading..."));
+        }
+
+        nsXPIDLString lmfailedName;
+        rv = mBundle->GetStringFromName(NS_LITERAL_STRING("BookmarksLivemarkFailed").get(), getter_Copies(lmfailedName));
+        if (NS_FAILED(rv)) {
+            lmfailedName.Assign(NS_LITERAL_STRING("Livemark feed failed to load."));
+        }
+
+        CreateBookmark(lmloadingName.get(),
+                       NS_LITERAL_STRING("about:livemark-loading").get(),
+                       nsnull,
+                       nsnull,
+                       nsnull,
+                       nsnull,
+                       getter_AddRefs(mLivemarkLoadingBookmark));
+
+        CreateBookmark(lmfailedName.get(),
+                       NS_LITERAL_STRING("about:livemark-failed").get(),
+                       nsnull,
+                       nsnull,
+                       nsnull,
+                       nsnull,
+                       getter_AddRefs(mLivemarkLoadFailedBookmark));
+
+        rv = NS_OK;
+    }
+
     return rv;
 }
 
@@ -4649,10 +4947,19 @@ nsBookmarksService::WriteBookmarksContainer(nsIRDFDataSource *ds,
                 if (!child) break;
 
                 PRBool isSomething = PR_FALSE;
+                PRBool isLivemark = PR_FALSE;
                 if (child.get() != kNC_IEFavoritesRoot)
                 {
                     rv = gRDFC->IsContainer(ds, child, &isSomething);
                     if (NS_FAILED(rv)) break;
+                }
+
+                if (NS_SUCCEEDED(mInner->HasAssertion(child, kRDF_type,
+                                                      kNC_Livemark, PR_TRUE, &isLivemark))
+                    && isLivemark)
+                {
+                    // it's not a folder (the current something), for serialization purposes
+                    isSomething = PR_FALSE;
                 }
 
                 rv = strm->Write(indentation.get(), indentation.Length(), &dummy);
@@ -4745,6 +5052,12 @@ nsBookmarksService::WriteBookmarksContainer(nsIRDFDataSource *ds,
 
                     // output PING_STATUS
                     rv |= WriteBookmarkProperties(ds, strm, child, kWEB_Status, kPingStatusEquals, PR_FALSE);
+
+                    // output livemark
+                    if (isLivemark) {
+                        // output FEEDURL
+                        rv |= WriteBookmarkProperties(ds, strm, child, kNC_FeedURL, kFeedURLEquals, PR_FALSE);
+                    }
 
                     // output ID and NAME
                     rv |= WriteBookmarkIdAndName(ds, strm, child);
@@ -5016,8 +5329,12 @@ nsBookmarksService::CanAccept(nsIRDFResource* aSource,
              (aProperty == kNC_Name) ||
              (aProperty == kNC_ShortcutURL) ||
              (aProperty == kNC_URL) ||
+             (aProperty == kNC_FeedURL) ||
              (aProperty == kNC_WebPanel) ||
              (aProperty == kNC_PostData) ||
+             (aProperty == kNC_Livemark) ||
+             (aProperty == kNC_LivemarkLock) ||
+             (aProperty == kNC_LivemarkExpiration) ||
              (aProperty == kWEB_LastModifiedDate) ||
              (aProperty == kWEB_LastVisitDate) ||
              (aProperty == kNC_BookmarkAddDate) ||
