@@ -34,7 +34,7 @@
 #ifdef XP_UNIX
 #include <sys/mman.h>
 #endif
-#if defined(_PR_PTHREADS) && !defined(_PR_DCETHREADS)
+#if defined(_PR_PTHREADS)
 #include <pthread.h>
 #endif
 
@@ -262,7 +262,7 @@ PRThread* create_new_thread(PRThreadType type,
 PRInt32 native_thread = 0;
 
 	PR_ASSERT(state == PR_UNJOINABLE_THREAD);
-#if (defined(_PR_PTHREADS) && !defined(_PR_DCETHREADS)) || defined(WINNT)
+#if defined(_PR_PTHREADS) || defined(WINNT)
 	switch(index %  4) {
 		case 0:
 			scope = (PR_LOCAL_THREAD);
@@ -281,9 +281,9 @@ PRInt32 native_thread = 0;
 			break;
 	}
 	if (native_thread) {
-#if defined(_PR_PTHREADS) && !defined(_PR_DCETHREADS)
+#ifdef _PR_PTHREADS
 		pthread_t tid;
-		if (!pthread_create(&tid, NULL, (void * (*)(void *)) start, arg))
+		if (!pthread_create(&tid, NULL, start, arg))
 			return((PRThread *) tid);
 		else
 			return (NULL);

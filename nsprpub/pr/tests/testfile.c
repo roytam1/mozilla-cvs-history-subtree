@@ -26,7 +26,7 @@
 #include <windows.h>
 #include <process.h>
 #endif
-#if defined(_PR_PTHREADS) && !defined(_PR_DCETHREADS)
+#if defined(_PR_PTHREADS)
 #include <pthread.h>
 #endif
 
@@ -111,7 +111,7 @@ PRThread* create_new_thread(PRThreadType type,
 PRInt32 native_thread = 0;
 
 	PR_ASSERT(state == PR_UNJOINABLE_THREAD);
-#if (defined(_PR_PTHREADS) && !defined(_PR_DCETHREADS)) || defined(WINNT)
+#if defined(_PR_PTHREADS) || defined(WINNT)
 	switch(index %  4) {
 		case 0:
 			scope = (PR_LOCAL_THREAD);
@@ -130,8 +130,9 @@ PRInt32 native_thread = 0;
 			break;
 	}
 	if (native_thread) {
-#if defined(_PR_PTHREADS) && !defined(_PR_DCETHREADS)
+#ifdef _PR_PTHREADS
 		pthread_t tid;
+		printf("creating pthread\n");
 		if (!pthread_create(&tid, NULL, start, arg))
 			return((PRThread *) tid);
 		else
@@ -303,19 +304,6 @@ char tmpname[1024];
 		rv = -1;
 		goto cleanup;
 	}
-	if (PR_GetOpenFileInfo(fd_file, &file_info) < 0) {
-		printf("testfile PR_GetFileInfo failed on file %s\n",pathname);
-		goto cleanup;
-	}
-	if (LL_NE(file_info.creationTime , file_info1.creationTime)) {
-		printf(
-		"testfile PR_GetFileInfo returned incorrect status-change time: %s\n",
-		pathname);
-		printf("ft = %lld, ft1 = %lld\n",file_info.creationTime,
-									file_info1.creationTime);
-		rv = -1;
-		goto cleanup;
-	}
 	len = PR_Write(fd_file, out_buf->data, CHUNK_SIZE);
 	if (len < 0) {
 		printf("testfile failed to write to file %s\n",pathname);
@@ -333,12 +321,19 @@ char tmpname[1024];
 		rv = -1;
 		goto cleanup;
 	}
-	if (LL_CMP(file_info.modifyTime, < , file_info1.modifyTime)) {
+	if (LL_NE(file_info.creationTime , file_info1.creationTime)) {
+		printf(
+		"testfile PR_GetFileInfo returned incorrect creation time: %s\n",
+		pathname);
+		printf("ft = %lld, ft1 = %lld\n",file_info.creationTime,
+									file_info1.creationTime);
+		rv = -1;
+		goto cleanup;
+	}
+	if (LL_CMP(file_info.modifyTime, > , file_info1.modifyTime)) {
 		printf(
 		"testfile PR_GetFileInfo returned incorrect modify time: %s\n",
 		pathname);
-		printf("ft = %lld, ft1 = %lld\n",file_info.modifyTime,
-									file_info1.modifyTime);
 		rv = -1;
 		goto cleanup;
 	}

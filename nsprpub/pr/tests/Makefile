@@ -144,7 +144,6 @@ CSRCS =             \
 	udpsrv.c	    \
 	writev.c        \
 	xnotify.c       \
-	y2k.c           \
 	$(NULL)
 
 ifeq ($(OS_TARGET),OS2)
@@ -472,13 +471,13 @@ clean::
 
 ifeq ($(USE_PTHREADS), 1)
 $(OBJDIR)/foreign: $(OBJDIR)/foreign.o
-	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
+	$(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
 $(OBJDIR)/provider: $(OBJDIR)/provider.o
-	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
+	$(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
 $(OBJDIR)/socket: $(OBJDIR)/socket.o
-	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
+	$(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
 $(OBJDIR)/testfile: $(OBJDIR)/testfile.o
-	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
+	$(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
 endif
 
 #

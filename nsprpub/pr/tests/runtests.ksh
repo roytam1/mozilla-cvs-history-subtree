@@ -1,5 +1,3 @@
-#!/bin/ksh
-
 #
 # The contents of this file are subject to the Netscape Public License
 # Version 1.0 (the "NPL"); you may not use this file except in
@@ -163,11 +161,10 @@ echo "Test\t\t\tResult\n"
 for prog in $TESTS
 do
 echo "$prog\c"
-./$prog >> ${LOGFILE} 2>&1
+./$prog >> LOGFILE 2>&1
 if [ 0 = $? ] ; then
 	echo "\t\t\tPassed";
 else
 	echo "\t\t\tFAILED";
 fi;
 done
-echo "END\t\t\t`date`"
