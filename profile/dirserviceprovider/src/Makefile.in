@@ -48,7 +48,7 @@ REQUIRES	= xpcom \
 		  $(NULL)
       
 ifdef MOZ_PROFILESHARING
-REQUIRES	+= transaction_manager \
+REQUIRES	+= transmngr
 		  profilesharingsetup \
 		  $(NULL)
 endif
