@@ -525,6 +525,7 @@ gint nsWindow::ConvertBorderStyles(nsBorderStyle bs)
 NS_METHOD nsWindow::CreateNative(GtkObject *parentWidget)
 {
   GdkSuperWin *superwin = 0;
+  GdkEventMask mask;
 
   if (parentWidget) {
     if (GDK_IS_SUPERWIN(parentWidget))
@@ -537,7 +538,6 @@ NS_METHOD nsWindow::CreateNative(GtkObject *parentWidget)
   {
   case eWindowType_dialog:
     mIsToplevel = PR_TRUE;
-
     mShell = gtk_window_new(GTK_WINDOW_DIALOG);
     gtk_window_set_policy(GTK_WINDOW(mShell), PR_TRUE, PR_TRUE, PR_FALSE);
     //    gtk_widget_set_app_paintable(mShell, PR_TRUE);
@@ -604,17 +604,19 @@ NS_METHOD nsWindow::CreateNative(GtkObject *parentWidget)
     break;
   }
 
+  mask = (GdkEventMask)(GDK_BUTTON_PRESS_MASK |
+                        GDK_BUTTON_RELEASE_MASK |
+                        GDK_ENTER_NOTIFY_MASK |
+                        GDK_LEAVE_NOTIFY_MASK |
+                        GDK_EXPOSURE_MASK |
+                        GDK_FOCUS_CHANGE_MASK |
+                        GDK_KEY_PRESS_MASK |
+                        GDK_KEY_RELEASE_MASK |
+                        GDK_POINTER_MOTION_MASK |
+                        GDK_POINTER_MOTION_HINT_MASK);
+
   gdk_window_set_events(mSuperWin->bin_window, 
-                        (GdkEventMask)(GDK_BUTTON_PRESS_MASK |
-                                       GDK_BUTTON_RELEASE_MASK |
-                                       GDK_ENTER_NOTIFY_MASK |
-                                       GDK_LEAVE_NOTIFY_MASK |
-                                       GDK_EXPOSURE_MASK |
-                                       GDK_FOCUS_CHANGE_MASK |
-                                       GDK_KEY_PRESS_MASK |
-                                       GDK_KEY_RELEASE_MASK |
-                                       GDK_POINTER_MOTION_MASK |
-                                       GDK_POINTER_MOTION_HINT_MASK));
+                        mask);
 
   gtk_object_set_data (GTK_OBJECT (mSuperWin), "nsWindow", this);
   gdk_window_set_user_data (mSuperWin->bin_window, (gpointer)mSuperWin);
@@ -1927,22 +1929,24 @@ nsWindow::HandleXlibConfigureNotifyEvent(XEvent *event)
 
   gdk_superwin_clear_translate_queue(mSuperWin, event->xany.serial);
 
-  nsSizeEvent sevent;
-  sevent.message = NS_SIZE;
-  sevent.widget = this;
-  sevent.eventStructType = NS_SIZE_EVENT;
-  sevent.windowSize = new nsRect (event->xconfigure.x, event->xconfigure.y,
-                                  event->xconfigure.width, event->xconfigure.height);
-  sevent.point.x = event->xconfigure.x;
-  sevent.point.y = event->xconfigure.y;
-  sevent.mWinWidth = event->xconfigure.width;
-  sevent.mWinHeight = event->xconfigure.height;
-  // XXX fix this
-  sevent.time = 0;
-  AddRef();
-  OnResize(sevent);
-  Release();
-  delete sevent.windowSize;
+  if (mIsToplevel || mListenForResizes) {
+    nsSizeEvent sevent;
+    sevent.message = NS_SIZE;
+    sevent.widget = this;
+    sevent.eventStructType = NS_SIZE_EVENT;
+    sevent.windowSize = new nsRect (event->xconfigure.x, event->xconfigure.y,
+                                    event->xconfigure.width, event->xconfigure.height);
+    sevent.point.x = event->xconfigure.x;
+    sevent.point.y = event->xconfigure.y;
+    sevent.mWinWidth = event->xconfigure.width;
+    sevent.mWinHeight = event->xconfigure.height;
+    // XXX fix this
+    sevent.time = 0;
+    AddRef();
+    OnResize(sevent);
+    Release();
+    delete sevent.windowSize;
+  }
 }
 
 // Return the GtkMozArea that is the nearest parent of this widget

@@ -373,6 +373,7 @@ protected:
   PRBool mShown;
 
   PRUint32 mPreferredWidth, mPreferredHeight;
+  PRBool       mListenForResizes;
 
   GdkICPrivate *mIC;
   GdkICPrivate *GetXIC();

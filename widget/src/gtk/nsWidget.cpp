@@ -124,6 +124,7 @@ nsWidget::nsWidget()
   mIC = nsnull;
   mIMECompositionUniString = nsnull;
   mIMECompositionUniStringSize = 0;
+  mListenForResizes = PR_FALSE;
 
 }
 
@@ -1026,6 +1027,8 @@ nsresult nsWidget::CreateWidget(nsIWidget *aParent,
 
   if (aNativeParent) {
     parentWidget = GTK_OBJECT(aNativeParent);
+    // we've got a native parent so listen for resizes
+    mListenForResizes = PR_TRUE;
   } else if (aParent) {
     // this ups the refcount of the gtk widget, we must unref later.
     parentWidget = GTK_OBJECT(aParent->GetNativeData(NS_NATIVE_WIDGET));
