@@ -374,6 +374,15 @@ GlobalWindowImpl::SetNewDocument(nsIDOMDocument* aDocument,
     ::JS_ClearWatchPointsForObject((JSContext *)mContext->GetNativeContext(),
                                    mJSObject);
 
+  // Release the navigator object so that it will be recreated for the new 
+  // document. The plugins or mime types array may have changed. 
+  // See bug 150087
+  if (mNavigator) {
+    mNavigator->SetDocShell(nsnull);
+
+    NS_RELEASE(mNavigator);
+  }
+
   if (mFirstDocumentLoad) {
     if (aDocument) {
       mFirstDocumentLoad = PR_FALSE;
