@@ -56,7 +56,19 @@ extern "C" {
 #define _NSPRIMP __declspec(dllimport)
 #endif
 
-/* The following definitions are generally expected in time.h */
+/* The following definitions are generally expected in <stddef.h> */
+
+typedef int ptrdiff_t; /* pointer difference */
+
+
+/* The following definitions are generally expected in <errno.h> */
+
+#define ERANGE 34
+
+#define errno (*PR_GetOSErrorAddress())
+
+
+/* The following definitions are generally expected in <time.h> */
 
 /*
  * struct tm
