@@ -187,8 +187,6 @@ public:
     nsCOMPtr<nsITextToSubURI> textToSubURI = do_GetService(NS_ITEXTTOSUBURI_CONTRACTID, &rv);
     if (NS_SUCCEEDED(rv))
       textToSubURI->UnEscapeAndConvert("UTF-8",  PromiseFlatCString(Substring(aText, aText + aTextLen)).get(), getter_Copies(text));
-    else
-      text.AssignWithConversion(aText, aTextLen);
   }
   ~searchTerm() {
     MOZ_COUNT_DTOR(searchTerm);
