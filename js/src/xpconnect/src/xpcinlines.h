@@ -305,32 +305,44 @@ XPCCallContext::SetMethodIndex(PRUint16 index)
 
 /***************************************************************************/
 
-inline const nsIID* XPCNativeInterface::GetIID() const
+inline const nsIID* 
+XPCNativeInterface::GetIID() const
 {
     const nsIID* iid;
     return NS_SUCCEEDED(mInfo->GetIIDShared(&iid)) ? iid : nsnull;
 }
 
-inline const char* XPCNativeInterface::GetNameString() const
+inline const char* 
+XPCNativeInterface::GetNameString() const
 {
     const char* name;
     return NS_SUCCEEDED(mInfo->GetNameShared(&name)) ? name : nsnull;
 }
 
-inline XPCNativeMember* XPCNativeInterface::FindMember(jsval name) const
+inline XPCNativeMember* 
+XPCNativeInterface::FindMember(jsval name) const
 {
-    int count = (int) mMemberCount;
-    for(int i = 0; i < count; i++)
-        if(mMembers[i].GetName() == name)
-            return (XPCNativeMember*) &mMembers[i];
+    const XPCNativeMember* member = mMembers;
+    for(int i = (int) mMemberCount; i > 0; i--, member++)
+        if(member->GetName() == name)
+            return NS_CONST_CAST(XPCNativeMember*, member);
     return nsnull;
 }
 
-inline JSBool XPCNativeInterface::HasAncestor(const nsIID* iid) const
+inline JSBool 
+XPCNativeInterface::HasAncestor(const nsIID* iid) const
 {
     PRBool found = PR_FALSE;
     mInfo->HasAncestor(iid, &found);
     return found;
+}
+
+inline void 
+XPCNativeInterface::DealWithDyingGCThings(JSContext* cx, XPCJSRuntime* rt)
+{
+    XPCNativeMember* member = mMembers;
+    for(int i = (int) mMemberCount; i > 0; i--, member++)
+        member->DealWithDyingGCThings(cx, rt);
 }
 
 /***************************************************************************/
@@ -339,14 +351,15 @@ inline JSBool
 XPCNativeSet::FindMember(jsval name, XPCNativeMember** pMember,
                          PRUint16* pInterfaceIndex) const
 {
+    XPCNativeInterface* const * iface;
     int count = (int) mInterfaceCount;
     int i;
 
     // look for interface names first
 
-    for(i = 0; i < count; i++)
+    for(i = 0, iface = mInterfaces; i < count; i++, iface++)
     {
-        if(name == mInterfaces[i]->GetName())
+        if(name == (*iface)->GetName())
         {
             if(pMember) 
                 *pMember = nsnull;
@@ -357,9 +370,9 @@ XPCNativeSet::FindMember(jsval name, XPCNativeMember** pMember,
     }
 
     // look for method names
-    for(i = 0; i < count; i++)
+    for(i = 0, iface = mInterfaces; i < count; i++, iface++)
     {
-        XPCNativeMember* member = mInterfaces[i]->FindMember(name);
+        XPCNativeMember* member = (*iface)->FindMember(name);
         if(member)
         {
             if(pMember) 
@@ -413,13 +426,14 @@ XPCNativeSet::FindMember(jsval name,
 inline XPCNativeInterface* 
 XPCNativeSet::FindNamedInterface(jsval name) const
 {
-    int count = (int) mInterfaceCount;
-    int i;
+    XPCNativeInterface* const * pp = mInterfaces;
 
-    for(i = 0; i < count; i++)
+    for(int i = (int) mInterfaceCount; i > 0; i--, pp++)
     {
-        if(name == mInterfaces[i]->GetName())
-            return mInterfaces[i];
+        XPCNativeInterface* iface = *pp;
+
+        if(name == iface->GetName())
+            return iface;
     }
     return nsnull;
 }
@@ -427,13 +441,14 @@ XPCNativeSet::FindNamedInterface(jsval name) const
 inline XPCNativeInterface* 
 XPCNativeSet::FindInterfaceWithIID(const nsIID& iid) const
 {
-    int count = (int) mInterfaceCount;
-    int i;
+    XPCNativeInterface* const * pp = mInterfaces;
 
-    for(i = 0; i < count; i++)
+    for(int i = (int) mInterfaceCount; i > 0; i--, pp++)
     {
-        if(mInterfaces[i]->GetIID()->Equals(iid))
-            return mInterfaces[i];
+        XPCNativeInterface* iface = *pp;
+
+        if(iface->GetIID()->Equals(iid))
+            return iface;
     }
     return nsnull;
 }
@@ -441,10 +456,13 @@ XPCNativeSet::FindInterfaceWithIID(const nsIID& iid) const
 inline JSBool 
 XPCNativeSet::HasInterface(XPCNativeInterface* aInterface) const
 {
-    int count = (int) mInterfaceCount;
-    for(int i = 0; i < count; i++)
-        if(aInterface == mInterfaces[i])
+    XPCNativeInterface* const * pp = mInterfaces;
+
+    for(int i = (int) mInterfaceCount; i > 0; i--, pp++)
+    {
+        if(aInterface == *pp)
             return JS_TRUE;
+    }
     return JS_FALSE;
 }
 
@@ -452,10 +470,11 @@ inline JSBool
 XPCNativeSet::HasInterfaceWithAncestor(XPCNativeInterface* aInterface) const
 {
     const nsIID* iid = aInterface->GetIID();
-    int count = (int) mInterfaceCount;
+
     // We can safely skip the first interface which is *always* nsISupports.
-    for(int i = 1; i < count; i++)
-        if(mInterfaces[i]->HasAncestor(iid))
+    XPCNativeInterface* const * pp = mInterfaces+1;
+    for(int i = (int) mInterfaceCount; i > 1; i--, pp++)
+        if((*pp)->HasAncestor(iid))
             return JS_TRUE;
 
     // This is rare, so check last.
@@ -470,10 +489,14 @@ XPCNativeSet::MatchesSetUpToInterface(const XPCNativeSet* other,
                                       XPCNativeInterface* iface) const
 {
     int count = JS_MIN((int)mInterfaceCount, (int)other->mInterfaceCount);
-    for(int i = 0; i < count; i++)
+    
+    XPCNativeInterface* const * pp1 = mInterfaces;
+    XPCNativeInterface* const * pp2 = other->mInterfaces;
+    
+    for(int i = (int) count; i > 0; i--, pp1++, pp2++)
     {
-        XPCNativeInterface* cur = other->mInterfaces[i];
-        if(cur != mInterfaces[i])
+        XPCNativeInterface* cur = (*pp1);
+        if(cur != (*pp2))
             return JS_FALSE;
         if(cur == iface)
             return JS_TRUE;
@@ -485,9 +508,12 @@ inline void XPCNativeSet::Mark()
 {
     if(IsMarked())
         return;
-    int count = (int) mInterfaceCount;
-    for(int i = 0; i < count; i++)
-        mInterfaces[i]->Mark();
+
+    XPCNativeInterface* const * pp = mInterfaces;
+
+    for(int i = (int) mInterfaceCount; i > 0; i--, pp++)
+        (*pp)->Mark();
+    
     MarkSelfOnly();
 }
 
@@ -495,9 +521,11 @@ inline void XPCNativeSet::Mark()
 inline void XPCNativeSet::ASSERT_NotMarked()
 {
     NS_ASSERTION(!IsMarked(), "bad");
-    int count = (int) mInterfaceCount;
-    for(int i = 0; i < count; i++)
-        NS_ASSERTION(!mInterfaces[i]->IsMarked(), "bad");
+    
+    XPCNativeInterface* const * pp = mInterfaces;
+
+    for(int i = (int) mInterfaceCount; i > 0; i--, pp++)
+        NS_ASSERTION(!(*pp)->IsMarked(), "bad");
 }
 #endif
 
@@ -531,7 +559,7 @@ XPCWrappedNative::FindTearOff(XPCCallContext& ccx,
         lastChunk = chunk, chunk = chunk->mNextChunk)
     {
         XPCWrappedNativeTearOff* to = chunk->mTearOffs;
-        for(int i = XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK-1; i >= 0; i--, to++)
+        for(int i = XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK; i > 0; i--, to++)
         {
             if(to->GetInterface() == aInterface)
             {
@@ -568,7 +596,7 @@ XPCWrappedNative::SweepTearOffs()
     for(chunk = &mFirstChunk; chunk; chunk = chunk->mNextChunk)
     {
         XPCWrappedNativeTearOff* to = chunk->mTearOffs;
-        for(int i = XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK-1; i >= 0; i--, to++)
+        for(int i = XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK; i > 0; i--, to++)
         {
             JSBool marked = to->IsMarked();
             to->Unmark();

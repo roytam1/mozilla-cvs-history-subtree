@@ -1813,9 +1813,7 @@ public:
     XPCNativeMember* GetMemberAt(PRUint16 i)
         {NS_ASSERTION(i < mMemberCount, "bad index"); return &mMembers[i];}
 
-    void DealWithDyingGCThings(JSContext* cx, XPCJSRuntime* rt)
-        {for(PRUint16 i = 0; i < mMemberCount; i++) 
-            mMembers[i].DealWithDyingGCThings(cx, rt);}
+    inline void DealWithDyingGCThings(JSContext* cx, XPCJSRuntime* rt);
 
     void DebugDump(PRInt16 depth);
 
