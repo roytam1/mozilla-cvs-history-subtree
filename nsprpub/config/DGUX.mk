@@ -16,7 +16,32 @@
 #
 
 #
-# Config stuff for WIN95
+# Config stuff for Data General DG/UX
+#
+# Initial DG/UX port by Marc Fraioli <fraioli@dg-rtp.dg.com>
 #
 
-include $(MOD_DEPTH)/config/WIN32.mk
+include $(MOD_DEPTH)/config/UNIX.mk
+
+CC		= gcc
+CCC		= g++
+
+RANLIB		= true
+
+DEFINES		+= -D_PR_LOCAL_THREADS_ONLY 
+OS_CFLAGS	= -DSVR4 -DSYSV -DDGUX -D_DGUX_SOURCE -D_POSIX4A_DRAFT6_SOURCE 
+
+MKSHLIB		= $(LD) $(DSO_LDOPTS)
+DSO_LDOPTS	= -G 
+
+CPU_ARCH	= x86
+ARCH		= dgux
+
+NOSUCHFILE	= /no-such-file
+
+ifdef BUILD_OPT
+OPTIMIZER	= -O2
+else
+# -g would produce a huge executable.
+OPTIMIZER	=
+endif
