@@ -953,10 +953,8 @@ Boolean	CStandardFlexTable::ClickSelect(
 	else
 	{
 		// since the click is not in the icon and not in the text, the selection should be
-		// cleared before we try to show any context menus. This is possibly faster than
-		// calling UnselectAllCells() because it only iterates over the selection, not the whole table.
-		static const Rect empty = { 0, 0, 0, 0 };
-		UnselectCellsNotInSelectionOutline(empty);
+		// cleared before we try to show any context menus.
+		UnselectAllCells();
 		
 		if (mClickTimer)
 			mClickTimer->NoteSingleClick();
@@ -1009,11 +1007,8 @@ void CStandardFlexTable::ClickSelf(const SMouseDownEvent &inMouseDown)
 	else
 	{
 		// since the click is not in any cell, the selection should be cleared before
-		// we try to show the context menus. This is possibly faster than  calling
-		// UnselectAllCells() because  it only iterates over the selection, not the
-		// whole table.
-		static const Rect empty = { 0, 0, 0, 0 };
-		UnselectCellsNotInSelectionOutline(empty);
+		// we try to show the context menus.
+		UnselectAllCells();
 
 		CContextMenuAttachment::SExecuteParams params;
 		params.inMouseDown = &inMouseDown;
