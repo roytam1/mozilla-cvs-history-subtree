@@ -123,9 +123,9 @@ void _PR_InitThreads(PRThreadType type, PRThreadPriority priority,
 
     /*
      * Needs _PR_PRIMORDIAL flag set before calling
-     * _PR_MD_INIT_ATTACHED_THREAD()
+     * _PR_MD_INIT_THREAD()
      */
-    if (_PR_MD_INIT_ATTACHED_THREAD(thread) == PR_FAILURE) {
+    if (_PR_MD_INIT_THREAD(thread) == PR_FAILURE) {
 		/*
 		 * XXX do what?
 		 */
