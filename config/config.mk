@@ -212,7 +212,7 @@ ifeq ($(OS_ARCH),OS2)
 OPTIMIZER	= -Ti+
 XLFLAGS		+= -DEBUG
 ifdef BUILD_PROFILE
-OPTIMIZER	+= -Gh+ 
+OPTIMIZER	+= -Gh+
 OBJDIR_TAG	= _PRF
 else
 OPTIMIZER	+= -DDEBUG
@@ -395,7 +395,7 @@ NO_SECURITY	= 1
 endif
 ifdef MOZ_DARK
 DEFINES += -DEDITOR -DMOZ_COMMUNICATOR_IIDS -DMOZ_MAIL_NEWS -DMOZ_OFFLINE \
-                   -DMOZ_TASKBAR -DMOZ_LDAP -DMOZ_NEO
+                   -DMOZ_TASKBAR -DMOZ_LDAP -DMOZ_NEO -DMOZ_CALENDAR
 EDITOR		= 1
 MOZ_JSD		= 1
 MOZ_COMMUNICATOR_IIDS	= 1
@@ -406,6 +406,7 @@ MOZ_OFFLINE=1
 MOZ_TASKBAR=1
 MOZ_LDAP=1
 MOZ_MAIL_NEWS=1
+MOZ_CALENDAR=1
 MOZ_NEO=1
 endif
 ifdef MOZ_GOLD
@@ -482,8 +483,8 @@ PROF_FLAGS	= $(OS_GPROF_FLAGS) -DMOZILLA_GPROF
 endif
 endif
 
-# This compiles in heap dumping utilities and other good stuff 
-# for developers -- maybe we only want it in for a special SDK 
+# This compiles in heap dumping utilities and other good stuff
+# for developers -- maybe we only want it in for a special SDK
 # nspr/java runtime(?):
 DEFINES		+= -DDEVELOPER_DEBUG
 
