@@ -51,6 +51,7 @@ REQUIRES	=\
 			style \
 			xfeicons \
 			rdf \
+			progress \
 			xpcom \
 			netcnvts \
 			msg \
