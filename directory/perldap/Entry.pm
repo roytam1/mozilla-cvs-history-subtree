@@ -81,7 +81,8 @@ sub DESTROY
 
 
 #############################################################################
-# Store method, to keep track of changes.
+# Store method, to keep track of changes on an entire array of values (per
+# attribute, of course).
 #
 sub STORE
 {
@@ -568,8 +569,20 @@ sub setValues
   return 0 unless (defined($attr) && ($attr ne ""));
   return 0 if ($attr eq "dn");
 
+  if (defined($self->{$attr}))
+    {
+      $self->{"_self_obj_"}->{"_${attr}_save_"} = [ @{$self->{$attr}} ]
+	unless defined($self->{"_${attr}_save_"});
+    }
+  else
+    {
+      $self->{"_self_obj_"}->{"_${attr}_save_"} = [ ]
+	unless defined($self->{"_${attr}_save_"});
+    }
+
   $self->{$attr} = [ @vals ];
   $self->{"_${attr}_modified_"} = 1;
+  $self->{"_${attr}_replaced_"} = 1;
 
   delete $self->{"_${attr}_deleted_"}
     if defined($self->{"_${attr}_deleted_"});

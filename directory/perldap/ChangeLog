@@ -1,3 +1,9 @@
+1999-08-13  Michelle Wyner  <mwyner@netscape.com>
+
+	* Entry.pm: Updated documentation, and cleaned it up.
+
+	* Conn.pm: Ditto.
+
 1999-08-12  Leif Hedstrom  <leif@netscape.com>
 
 	* Entry.pm (move): Changed name, was rename(), is now move().

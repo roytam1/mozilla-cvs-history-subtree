@@ -1,0 +1,61 @@
+#############################################################################
+#                                                                           #
+#                        PerLDAP Release Notes		                    #
+#                                                                           #
+#############################################################################
+
+VERSION 1.4 - AUGUST 18, 1999
+=============================
+
+This is primarily a bug fix release, however there are 5  new
+methods introduced as well.  Brief descriptions follow in this
+document.  To get full examples and a larger summary, see the PerLDAP
+Programmer's Guide. 
+
+
+New Methods Added
+-----------------
+
+Entry.pm:
+	getValues() - returns the array of values.
+	move() - move one attribute to another, and delete the original.
+	copy() - copy one attribute to another.
+	
+Conn.pm:
+	browse() - makes it easy to browse an entry.
+	compare() - compare an attribute value against a DN/entry
+		    without having to do the search.	
+
+Bug Fixes
+---------
+
+Entry.pm:
+	addDNValue() - fixed wrong index for norm.
+	matchValue() - fixed missing normalization in half of case statement. 
+	STORE - fixed not ignoring the internal instance variables properly.
+	fixed numerous bugs for large attribute sets.
+	fixed bug 4368 ("exists vs. EXISTS").
+	fixed numerous loop bugs.
+
+Conn.pm:
+	close() - fixed memory leak.
+	modifyRDN() - fixed problem where we weren't updating the
+		      appropriate DN in the self object.
+	fixed bug 3342 (problems adding entries with binary data).
+
+API.xs:
+	fixed memory allocation problems.
+	
+Miscellaneous
+-------------
+
+Entry.pm:
+	setValue() - remove _delete_ flag if set.
+
+Conn.pm:
+	getErrorCode()/getErrorString() - return LDAP_SUCCESS if no
+					  LDAP connection handle.
+	add() - fixed code to handle hash array as docs indicate.
+
+Various other optimizations on tests and such.
+Set .pm files to "use strict".
