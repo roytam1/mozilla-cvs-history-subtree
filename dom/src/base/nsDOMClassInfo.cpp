@@ -51,6 +51,7 @@
 #include "nsScriptNameSpaceManager.h"
 #include "nsIScriptObjectOwner.h"
 #include "nsIJSNativeInitializer.h"
+#include "nsIDOMWindowCollection.h"
 
 // DOM base includes
 #include "nsIDOMPluginArray.h"
@@ -128,7 +129,10 @@
   USE_JSSTUB_FOR_DELPROPERTY |                                                \
   USE_JSSTUB_FOR_SETPROPERTY |                                                \
   ALLOW_PROP_MODS_DURING_RESOLVE |                                            \
-  DONT_ASK_INSTANCE_FOR_SCRIPTABLE
+  ALLOW_PROP_MODS_TO_PROTOTYPE |                                              \
+  DONT_ASK_INSTANCE_FOR_SCRIPTABLE |                                          \
+  DONT_ENUM_QUERY_INTERFACE |                                                 \
+  CLASSINFO_INTERFACES_ONLY
 
 #define ELEMENT_SCRIPTABLE_FLAGS                                              \
   DEFAULT_SCRIPTABLE_FLAGS |                                                  \
@@ -363,8 +367,7 @@ nsDOMClassInfo::Init()
                            WANT_GETPROPERTY |
                            WANT_SETPROPERTY |
                            WANT_NEWRESOLVE |
-                           WANT_PRECREATE |
-                           ALLOW_PROP_MODS_TO_PROTOTYPE);
+                           WANT_PRECREATE);
   NS_DEFINE_CLASSINFO_DATA(Location, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Plugin, nsDOMGenericSH::Create,
@@ -396,17 +399,17 @@ nsDOMClassInfo::Init()
   NS_DEFINE_CLASSINFO_DATA(Attr, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Text, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
   NS_DEFINE_CLASSINFO_DATA(Comment, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
   NS_DEFINE_CLASSINFO_DATA(CDATASection, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
   NS_DEFINE_CLASSINFO_DATA(ProcessingInstruction, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
   NS_DEFINE_CLASSINFO_DATA(Entity, nsNodeSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(EntityReference, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
   NS_DEFINE_CLASSINFO_DATA(Notation, nsNodeSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(NodeList, nsArraySH::Create,
@@ -428,8 +431,7 @@ nsDOMClassInfo::Init()
   // Misc HTML classes
   NS_DEFINE_CLASSINFO_DATA(HTMLDocument, nsHTMLDocumentSH::Create,
                            DOCUMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLCollection,
-                           nsArraySH::Create, // XXX????
+  NS_DEFINE_CLASSINFO_DATA(HTMLCollection, nsHTMLCollectionSH::Create,
                            ARRAY_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLOptionCollection,
                            nsHTMLOptionCollectionSH::Create,
@@ -1035,7 +1037,32 @@ NS_IMETHODIMP
 nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
 {
-  return nsEventRecieverSH::GetProperty(wrapper, cx, obj, id, vp, _retval);
+  jsval v = *vp;
+
+  nsresult rv = nsEventRecieverSH::GetProperty(wrapper, cx, obj, id, vp,
+                                               _retval);
+
+  if (*vp == v && JSVAL_IS_NUMBER(id)) {
+    nsCOMPtr<nsISupports> native;
+    wrapper->GetNative(getter_AddRefs(native));
+
+    nsCOMPtr<nsIDOMWindowInternal> win(do_QueryInterface(native));
+
+    nsCOMPtr<nsIDOMWindowCollection> frames;
+
+    win->GetFrames(getter_AddRefs(frames));
+
+    if (frames) {
+      nsCOMPtr<nsIDOMWindow> f;
+
+      frames->Item(JSVAL_TO_INT(id), getter_AddRefs(f));
+
+      rv = WrapNative(cx, ::JS_GetGlobalObject(cx), f,
+                      NS_GET_IID(nsIDOMWindow), vp);
+    }
+  }
+
+  return rv;
 }
 
 NS_IMETHODIMP
@@ -1292,11 +1319,12 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     global->GetDocShell(getter_AddRefs(docShell));
 
     nsCOMPtr<nsIDocShellTreeNode> dsn(do_QueryInterface(docShell));
-    NS_ENSURE_TRUE(dsn, NS_ERROR_UNEXPECTED);
 
     PRInt32 count = 0;
 
-    dsn->GetChildCount(&count);
+    if (dsn) {
+      dsn->GetChildCount(&count);
+    }
 
     if (count > 0) {
       nsCOMPtr<nsIDocShellTreeItem> child;
@@ -1492,62 +1520,49 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
   return rv;
 }
 
-// EventProp helper
+// EventReciever helper
 
 // static
 PRBool
 nsEventRecieverSH::ReallyIsEventName(JSString *jsstr, jschar aFirstChar)
 {
+  // I wonder if this is faster than using a hash...
+
   switch (aFirstChar) {
   case 'a' :
+    return jsstr == sOnabort_id;
   case 'b' :
+    return jsstr == sOnblur_id;
   case 'e' :
+    return jsstr == sOnerror_id;
   case 'f' :
-    if (jsstr == sOnabort_id     ||
-        jsstr == sOnblur_id      ||
-        jsstr == sOnerror_id     ||
-        jsstr == sOnfocus_id)
-      return PR_TRUE;
-
-    break;
+    return jsstr == sOnfocus_id;
   case 'c' :
+    return ((jsstr == sOnchange_id)    ||
+            (jsstr == sOnclick_id));
   case 'l' :
+    return jsstr == sOnload_id;
   case 'p' :
-    if (jsstr == sOnchange_id    ||
-        jsstr == sOnclick_id     ||
-        jsstr == sOnload_id      ||
-        jsstr == sOnpaint_id)
-      return PR_TRUE;
-
-    break;
+    return jsstr == sOnpaint_id;
   case 'k' :
+    return ((jsstr == sOnkeydown_id)   ||
+            (jsstr == sOnkeypress_id)  ||
+            (jsstr == sOnkeyup_id));
   case 'u' :
-    if (jsstr == sOnkeydown_id   ||
-        jsstr == sOnkeypress_id  ||
-        jsstr == sOnkeyup_id     ||
-        jsstr == sOnunload_id)
-      return PR_TRUE;
-
-    break;
+    return jsstr == sOnunload_id;
   case 'm' :
-    if (jsstr == sOnmousemove_id ||
-        jsstr == sOnmouseout_id  ||
-        jsstr == sOnmouseover_id ||
-        jsstr == sOnmouseup_id   ||
-        jsstr == sOnmousedown_id)
-      return PR_TRUE;
-
-    break;
+    return ((jsstr == sOnmousemove_id) ||
+            (jsstr == sOnmouseout_id)  ||
+            (jsstr == sOnmouseover_id) ||
+            (jsstr == sOnmouseup_id)   ||
+            (jsstr == sOnmousedown_id));
   case 'r' :
+    return ((jsstr == sOnreset_id)     ||
+            (jsstr == sOnresize_id));
   case 's' :
-    if (jsstr == sOnreset_id     ||
-        jsstr == sOnresize_id    ||
-        jsstr == sOnscroll_id    ||
-        jsstr == sOnselect_id    ||
-        jsstr == sOnsubmit_id)
-      return PR_TRUE;
-
-    break;
+    return ((jsstr == sOnscroll_id)    ||
+            (jsstr == sOnselect_id)    ||
+            (jsstr == sOnsubmit_id));
   }
 
   return PR_FALSE;
@@ -1797,6 +1812,51 @@ nsNamedArraySH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   }
 
   return nsArraySH::GetProperty(wrapper, cx, obj, id, vp, _retval);
+}
+
+
+// HTMLCollection helper
+
+nsresult
+nsHTMLCollectionSH::GetItemAt(nsIXPConnectWrappedNative *wrapper,
+                              PRUint32 aIndex, nsISupports **aResult)
+{
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
+
+  nsCOMPtr<nsIDOMHTMLCollection> collection(do_QueryInterface(native));
+  NS_ENSURE_TRUE(collection, NS_ERROR_UNEXPECTED);
+
+  nsIDOMNode *node = nsnull; // Weak, transfer the ownership over to aResult
+  nsresult rv = collection->Item(aIndex, &node);
+
+  *aResult = node;
+
+  return rv;
+}
+
+nsresult
+nsHTMLCollectionSH::GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
+                                 nsISupports **aResult)
+{
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
+
+  nsCOMPtr<nsIDOMHTMLCollection> collection(do_QueryInterface(native));
+  NS_ENSURE_TRUE(collection, NS_ERROR_UNEXPECTED);
+
+  JSString *jsstr = JSVAL_TO_STRING(id);
+
+  nsLiteralString name(NS_REINTERPRET_CAST(const PRUnichar *,
+                                           ::JS_GetStringChars(jsstr)),
+                       ::JS_GetStringLength(jsstr));
+
+  nsIDOMNode *node = nsnull; // Weak, transfer the ownership over to aResult
+  nsresult rv =  collection->NamedItem(name, &node);
+
+  *aResult = node;
+
+  return rv;
 }
 
 

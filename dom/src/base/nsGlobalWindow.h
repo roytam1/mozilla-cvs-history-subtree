@@ -42,7 +42,6 @@
 #include "nsIDOMNSLocation.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsIDOMJSWindow.h"
-#include "nsIJSScriptObject.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsITimer.h"
 #include "nsIWebBrowserChrome.h"
@@ -118,6 +117,7 @@ public:
   // nsIDOMJSWindow
   NS_DECL_NSIDOMJSWINDOW
 
+#if 0
   // nsIJSScriptObject
   virtual PRBool AddProperty(JSContext *aContext, JSObject *aObj,
                              jsval aID, jsval *aVp);
@@ -132,6 +132,7 @@ public:
                          PRBool *aDidDefineProperty);
   virtual PRBool Convert(JSContext *aContext, JSObject *aObj, jsval aID);
   virtual void   Finalize(JSContext *aContext, JSObject *aObj);
+#endif
 
   // nsIDOMEventTarget
   NS_IMETHOD AddEventListener(const nsAReadableString& aType,
@@ -325,13 +326,6 @@ public:
 
   // nsIDOMNSLocation
   NS_DECL_NSIDOMNSLOCATION
-
-  // nsIJSScriptObject
-  // XXX all these should go away!!!
-  virtual PRBool    GetProperty(JSContext *aContext, JSObject *aObj,
-                                jsval aID, jsval *aVp);
-  virtual PRBool    SetProperty(JSContext *aContext, JSObject *aObj,
-                                jsval aID, jsval *aVp);
 
   nsresult SetHrefWithContext(JSContext* cx, const nsAReadableString& aHref);
 

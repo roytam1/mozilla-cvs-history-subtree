@@ -304,6 +304,36 @@ public:
 };
 
 
+// HTMLCollection helper
+
+class nsHTMLCollectionSH : public nsNamedArraySH
+{
+protected:
+  nsHTMLCollectionSH(nsDOMClassInfoID aID) : nsNamedArraySH(aID)
+  {
+  }
+
+  virtual ~nsHTMLCollectionSH()
+  {
+  }
+
+  // Override nsArraySH::GetItemAt() since our list isn't a
+  // nsIDOMNodeList
+  virtual nsresult GetItemAt(nsIXPConnectWrappedNative *wrapper,
+                             PRUint32 aIndex, nsISupports **aResult);
+
+  // Override nsNamedArraySH::GetNamedItem()
+  virtual nsresult GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
+                                nsISupports **aResult);
+
+public:
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsHTMLCollectionSH(aID);
+  }
+};
+
+
 // FomrControlList helper
 
 class nsFormControlListSH : public nsNamedArraySH
@@ -414,10 +444,10 @@ public:
 
 // HTMLOptionCollection helper
 
-class nsHTMLOptionCollectionSH : public nsArraySH
+class nsHTMLOptionCollectionSH : public nsHTMLCollectionSH
 {
 private:
-  nsHTMLOptionCollectionSH(nsDOMClassInfoID aID) : nsArraySH(aID)
+  nsHTMLOptionCollectionSH(nsDOMClassInfoID aID) : nsHTMLCollectionSH(aID)
   {
   }
 

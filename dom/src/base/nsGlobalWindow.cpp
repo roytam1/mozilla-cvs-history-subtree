@@ -1190,7 +1190,7 @@ NS_IMETHODIMP GlobalWindowImpl::SetInnerWidth(PRInt32 aInnerWidth)
   // It's only valid to access this from a top window.  Doesn't work from 
   // sub-frames.
   if (docShellParent)
-    return NS_ERROR_FAILURE;
+    return NS_OK; // Silent failure
 
   nsCOMPtr<nsIDocShellTreeOwner> treeOwner;
   docShellAsItem->GetTreeOwner(getter_AddRefs(treeOwner));
@@ -1230,7 +1230,7 @@ NS_IMETHODIMP GlobalWindowImpl::SetInnerHeight(PRInt32 aInnerHeight)
   // It's only valid to access this from a top window.  Doesn't work from 
   // sub-frames.
   if (docShellParent)
-    return NS_ERROR_FAILURE;
+    return NS_OK; // Silent failure
 
   nsCOMPtr<nsIDocShellTreeOwner> treeOwner;
   docShellAsItem->GetTreeOwner(getter_AddRefs(treeOwner));
@@ -2511,7 +2511,7 @@ NS_IMETHODIMP GlobalWindowImpl::GetSelection(nsISelection** aSelection)
                                  aSelection);
 }
 
-
+#if 0
 //*****************************************************************************
 // GlobalWindowImpl::nsIJSScriptObject
 //*****************************************************************************
@@ -2629,6 +2629,7 @@ PRBool GlobalWindowImpl::Convert(JSContext* aContext, JSObject* aObj, jsval aID)
 void GlobalWindowImpl::Finalize(JSContext* aContext, JSObject* aObj)
 {
 }
+#endif
 
 //*****************************************************************************
 // GlobalWindowImpl::nsIDOMEventTarget

@@ -842,6 +842,7 @@ CheckHrefAccess(JSContext *aContext, JSObject *aObj, PRBool isWrite)
   return rv;
 }
 
+#if 0
 PRBool
 LocationImpl::GetProperty(JSContext *aContext, JSObject *aObj, jsval aID,
                           jsval *aVp)
@@ -908,4 +909,4 @@ LocationImpl::SetProperty(JSContext *aContext, JSObject *aObj, jsval aID,
 
   return NS_SUCCEEDED(result);
 }
-
+#endif
