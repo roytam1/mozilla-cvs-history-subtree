@@ -241,15 +241,15 @@ pull_ldapcsdk:
 
 pull_accessible:
 	cd $(MOZ_SRC)\.
-	$(CVSCO_ACCESSIBLE) mozilla/accessible
+	$(CVSCO_ACCESSIBLE) $(CVS_BRANCH) mozilla/accessible
 
 pull_gfx2:
   cd $(MOZ_SRC)\.
-  $(CVSCO_GFX2) mozilla/gfx2
+  $(CVSCO_GFX2) $(CVS_BRANCH) mozilla/gfx2
 
 pull_imglib2:
   cd $(MOZ_SRC)\.
-  $(CVSCO_IMGLIB2) mozilla/modules/libpr0n
+  $(CVSCO_IMGLIB2) $(CVS_BRANCH) mozilla/modules/libpr0n
 
 pull_xpconnect: pull_nspr
 	cd $(MOZ_SRC)\.
