@@ -138,6 +138,8 @@ mozSpellChecker::CheckWord(const nsAString &aWord, PRBool *aIsMisspelled, nsStri
       for(i=0;i<count;i++){
         aSuggestions->AppendString(nsDependentString(words[i]));
       }
+      
+      if (count)
       NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(count, words);
     }
     if(aIsMisspelled){
