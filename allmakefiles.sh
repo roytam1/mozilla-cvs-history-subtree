@@ -531,7 +531,6 @@ widget/src/Makefile
 widget/src/beos/Makefile
 widget/src/build/Makefile
 widget/src/gtk/Makefile
-widget/src/gtk2/mai/Makefile
 widget/src/gtksuperwin/Makefile
 widget/src/gtkxtbin/Makefile
 widget/src/photon/Makefile
@@ -1182,6 +1181,8 @@ for extension in $MOZ_EXTENSIONS; do
             extensions/xmlextras/base/Makefile
             extensions/xmlextras/base/src/Makefile
             extensions/xmlextras/base/public/Makefile
+            extensions/xmlextras/pointers/Makefile
+            extensions/xmlextras/pointers/src/Makefile
             extensions/xmlextras/build/Makefile
             extensions/xmlextras/build/src/Makefile
             extensions/xmlextras/interfaceinfo/Makefile

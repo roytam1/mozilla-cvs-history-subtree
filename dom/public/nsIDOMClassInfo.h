@@ -243,6 +243,8 @@ enum nsDOMClassInfoID {
   eDOMClassInfo_SVGNumber_id,
   eDOMClassInfo_SVGTextElement_id,
   eDOMClassInfo_SVGTSpanElement_id,
+  eDOMClassInfo_SVGAnimatedString_id,
+  eDOMClassInfo_SVGImageElement_id,
 #endif //MOZ_SVG
   
   // DOM Traversal classes
@@ -274,9 +276,6 @@ enum nsDOMClassInfoID {
   eDOMClassInfo_XMLStylesheetProcessingInstruction_id,
   
   eDOMClassInfo_ImageDocument_id,
-
-  // XPointer evaluation result
-  eDOMClassInfo_XPointerResult_id,
 
   // This one better be the last one in this list
   eDOMClassInfoIDCount
