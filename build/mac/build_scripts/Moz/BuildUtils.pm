@@ -226,23 +226,39 @@ sub BuildOneProjectWithOutput($$$$$$)
     my ($project_path, $target_name, $output_name, $alias_shlb, $alias_xSYM, $component) = @_;
 
     unless ($project_path =~ m/^$main::BUILD_ROOT.+/) { return; }
+
+    my (@suffix_list) = (".mcp", ".xml");
+    my ($project_name, $project_dir, $suffix) = fileparse($project_path, @suffix_list);
+    if ($suffix eq "") { die "Project: $project_path must end in .xml or .mcp\n"; }
+
+    if ($suffix eq ".xml")
+    {
+        my($xml_path) = $project_path;
+        # Prepend an "_" onto the name of the generated project file so it doesn't conflict
+        $project_path = $project_dir . "_" . $project_name . ".mcp";
+        my($project_modtime) = (-e $project_path ? GetFileModDate($project_path) : 0);
+        my($xml_modtime) = (-e $xml_path ? GetFileModDate($xml_path) : 0);
+
+        if ($xml_modtime > $project_modtime)
+        {
+            print("Importing $project_path from $project_name.xml.\n");
+            unlink($project_path);
+            # Might want to delete the "xxx.mcp Data" dir ???
+            ImportXMLProject(full_path_to($xml_path), full_path_to($project_path));
+        }
+    }
     
-    # $D becomes a suffix to target names for selecting either the debug or non-debug target of a project
-    my($D) = $main::DEBUG ? "Debug" : "";
     my($dist_dir) = GetBinDirectory();
     
     # Put libraries in "Essential Files" folder, Components in "Components" folder
     my($component_dir) = $component ? "Components:" : "Essential Files:";
-
-    my($project_dir) = $project_path;
-    $project_dir =~ s/:[^:]+$/:/;           # chop off leaf name
 
     if ($main::CLOBBER_LIBS)
     {
         unlink "$project_dir$output_name";              # it's OK if these fail
         unlink "$project_dir$output_name.xSYM";
     }
-    
+        
     BuildProject($project_path, $target_name);
     
     $alias_shlb ? MakeAlias("$project_dir$output_name", "$dist_dir$component_dir") : 0;
