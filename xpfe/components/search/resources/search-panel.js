@@ -668,10 +668,16 @@ function doStop()
 
 function doSearch()
 {
-  var searchMode = nsPreferences.getIntPref("browser.search.mode", 0);
+  var navWindow = getNavigatorWindow(true);
+  if (navWindow._content)
+    return onNavWindowLoad();
+  navWindow.addEventListener("load", onNavWindowLoad, false);
+}
+
+function onNavWindowLoad() {
+  var navWindow = getNavigatorWindow(true);
 
   // hide various columns
-  var navWindow = getNavigatorWindow(false);
   if (navWindow && "_content" in navWindow && "isMozillaSearchWindow" in navWindow._content) {
     colNode = navWindow._content.document.getElementById("RelevanceColumn");
     if (colNode)
@@ -694,6 +700,7 @@ function doSearch()
     return;
   }
 
+  var searchMode = nsPreferences.getIntPref("browser.search.mode", 0);
   var engineURIs = [];
   if (searchMode > 0) {
     var foundEngine = false;
