@@ -3716,6 +3716,11 @@ nsBookmarksService::ParseFavoritesFolder(nsIFile* aDirectory, nsIRDFResource* aP
         currFile->IsDirectory(&isDir);
         if (isDir)
         {
+            PRBool isSymlink = PR_FALSE;
+            currFile->IsSymlink(&isSymlink);
+            if (isSymlink)
+                continue;
+
             nsCOMPtr<nsIRDFResource> folder;
             rv = CreateFolderInContainer(bookmarkName.get(), aParentResource, -1, getter_AddRefs(folder));
             if (NS_FAILED(rv)) 
