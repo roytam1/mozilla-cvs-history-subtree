@@ -791,16 +791,21 @@ nsDiskCacheDevice::BindEntry(nsCacheEntry * newEntry)
     // some sort of chaining mechanism is implemented.
     nsDiskCacheEntry* oldDiskEntry = mBoundEntries.GetEntry(newEntry->Key()->get());
     if (oldDiskEntry) {
-        // set the generation count on the newly bound entry,
-        // so that files created will be unique and won't conflict
-        // with the doomed entries that are still active.
-        if (oldDiskEntry) {
+        if (oldDiskEntry->getRefCount() > 1) {
+            // set the generation count on the newly bound entry,
+            // so that files created will be unique and won't conflict
+            // with the doomed entries that are still active.
             newDiskEntry->setGeneration(oldDiskEntry->getGeneration() + 1);
             PR_APPEND_LINK(newDiskEntry, oldDiskEntry);
+            
+            // XXX Whom do we tell about this impending doom?
+            nsCacheEntry* oldEntry = oldDiskEntry->getCacheEntry();
+            NS_ASSERTION(!oldEntry->IsDoomed(), "a bound entry is doomed!");
+            nsCacheService::GlobalInstance()->DoomEntry_Locked(oldEntry);
+        } else {
+            // XXX somehow we didn't hear about the entry going away. Ask gordon.
+            mBoundEntries.RemoveEntry(oldDiskEntry);
         }
-        
-        // XXX Whom do we tell about this impending doom?
-        nsCacheService::GlobalInstance()->DoomEntry_Locked(oldDiskEntry->getCacheEntry());
     }
 
     rv = mBoundEntries.AddEntry(newDiskEntry);
@@ -1225,48 +1230,44 @@ nsresult nsDiskCacheDevice::readDiskCacheEntry(const char * key, nsDiskCacheEntr
     nsCOMPtr<nsIFile> file;
     nsresult rv = getFileForKey(key, PR_TRUE, 0, getter_AddRefs(file));
     if (NS_FAILED(rv)) return rv;
-    PRBool exists;
-    rv = file->Exists(&exists);
-    if (NS_FAILED(rv) || !exists) return NS_ERROR_NOT_AVAILABLE;
 
-    nsCacheEntry* entry = nsnull;
-    do {
-        nsCOMPtr<nsIInputStream> input;
-        rv = openInputStream(file, getter_AddRefs(input));
-        if (NS_FAILED(rv)) break;
-        
-        // read the metadata file.
-        MetaDataFile metaDataFile;
-        rv = metaDataFile.Read(input);
-        input->Close();
-        if (NS_FAILED(rv)) break;
-        
-        // Ensure that the keys match.
-        if (nsCRT::strcmp(key, metaDataFile.mKey) != 0) break;
-        
-        rv = NS_NewCacheEntry(&entry, key, PR_TRUE, nsICache::STORE_ON_DISK, this);
-        if (NS_FAILED(rv)) return rv;
+    nsCOMPtr<nsIInputStream> input;
+    rv = openInputStream(file, getter_AddRefs(input));
+    if (NS_FAILED(rv)) return rv;
     
-        // initialize the entry.
-        entry->SetFetchCount(metaDataFile.mFetchCount);
-        entry->SetLastFetched(metaDataFile.mLastFetched);
-        entry->SetLastModified(metaDataFile.mLastModified);
-        entry->SetExpirationTime(metaDataFile.mExpirationTime);
-        entry->SetDataSize(metaDataFile.mDataSize);
+    // read the metadata file.
+    MetaDataFile metaDataFile;
+    rv = metaDataFile.Read(input);
+    input->Close();
+    if (NS_FAILED(rv)) return rv;
         
-        // restore the metadata.
-        if (metaDataFile.mMetaDataSize) {
-            rv = entry->UnflattenMetaData(metaDataFile.mMetaData, metaDataFile.mMetaDataSize);
-            if (NS_FAILED(rv)) break;
-        }
-        
-        // celebrate!        
-        *result = ensureDiskCacheEntry(entry);
-        if (!*result) break;
-        return NS_OK;
-    } while (0);
+    // Ensure that the keys match.
+    if (nsCRT::strcmp(key, metaDataFile.mKey) != 0) return NS_ERROR_NOT_AVAILABLE;
+    
+    nsCacheEntry* entry = nsnull;
+    rv = NS_NewCacheEntry(&entry, key, PR_TRUE, nsICache::STORE_ON_DISK, this);
+    if (NS_FAILED(rv)) return rv;
 
-    // oh, auto_ptr<> would be nice right about now.    
+    // initialize the entry.
+    entry->SetFetchCount(metaDataFile.mFetchCount);
+    entry->SetLastFetched(metaDataFile.mLastFetched);
+    entry->SetLastModified(metaDataFile.mLastModified);
+    entry->SetExpirationTime(metaDataFile.mExpirationTime);
+    entry->SetDataSize(metaDataFile.mDataSize);
+    
+    // restore the metadata.
+    if (metaDataFile.mMetaDataSize) {
+        rv = entry->UnflattenMetaData(metaDataFile.mMetaData, metaDataFile.mMetaDataSize);
+        if (NS_FAILED(rv)) goto error;
+    }
+    
+    // celebrate!
+    *result = ensureDiskCacheEntry(entry);
+    if (!*result) goto error;
+    return NS_OK;
+
+error:
+    // oh, auto_ptr<> would be nice right about now.
     delete entry;
     return NS_ERROR_NOT_AVAILABLE;
 }
@@ -1294,7 +1295,11 @@ nsresult nsDiskCacheDevice::deleteDiskCacheEntry(nsDiskCacheEntry * diskEntry)
     }
     
     // remove from cache map.
-    mCacheMap->DeleteRecord(diskEntry->getHashNumber());
+    // XXX should change DeleteRecord() to take an nsDiskCacheRecord instead, to save
+    // two searches.
+    nsDiskCacheRecord* record = mCacheMap->GetRecord(diskEntry->getHashNumber());
+    if (record->HashNumber() == diskEntry->getHashNumber() && record->FileGeneration() == diskEntry->getGeneration())
+        mCacheMap->DeleteRecord(diskEntry->getHashNumber());
 
     return NS_OK;
 }
