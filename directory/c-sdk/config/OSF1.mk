@@ -77,7 +77,12 @@ else
 endif
 endif
 
+ifeq ($(HAVE_CCONF), 1)
+CC			= cc $(NON_LD_FLAGS)
+else
 CC			= cc $(NON_LD_FLAGS) -std1
+endif
+
 ifneq ($(OS_RELEASE),V2.0)
 CC			+= -readonly_strings
 endif
