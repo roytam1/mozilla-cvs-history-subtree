@@ -1198,7 +1198,7 @@ RDFElementImpl::SetDocument(nsIDocument* aDocument, PRBool aDeep)
     if (mDocument) {
         // Need to do a GetResource() here, because changing the document
         // may actually change the element's URI.
-        nsCOMPtr<nsIRDFResource> resource;
+        nsCOMPtr<nsISupports> resource;
         GetResource(getter_AddRefs(resource));
 
         // Remove this element from the RDF resource-to-element map in
@@ -1232,7 +1232,7 @@ RDFElementImpl::SetDocument(nsIDocument* aDocument, PRBool aDeep)
     if (mDocument) {
         // Need to do a GetResource() here, because changing the document
         // may actually change the element's URI.
-        nsCOMPtr<nsIRDFResource> resource;
+        nsCOMPtr<nsISupports> resource;
         GetResource(getter_AddRefs(resource));
 
         // Add this element to the RDF resource-to-element map in the
@@ -1601,7 +1601,7 @@ RDFElementImpl::SetAttribute(PRInt32 aNameSpaceID,
       nsCOMPtr<nsIRDFDocument> rdfDoc( do_QueryInterface(mDocument) );
       NS_ASSERTION(rdfDoc != nsnull, "not an RDF document");
       if (rdfDoc) {
-        nsCOMPtr<nsIRDFResource> resource;
+        nsCOMPtr<nsISupports> resource;
         if (NS_SUCCEEDED(rv = GetResource(getter_AddRefs(resource)))) {
           if (NS_FAILED(rv = rdfDoc->RemoveElementForResource(resource, this))) {
             NS_ERROR("unable to remove element from map");
@@ -1662,7 +1662,7 @@ RDFElementImpl::SetAttribute(PRInt32 aNameSpaceID,
       nsCOMPtr<nsIRDFDocument> rdfDoc( do_QueryInterface(mDocument) );
       NS_ASSERTION(rdfDoc != nsnull, "not an RDF document");
       if (rdfDoc) {
-        nsCOMPtr<nsIRDFResource> resource;
+        nsCOMPtr<nsISupports> resource;
         if (NS_SUCCEEDED(rv = GetResource(getter_AddRefs(resource)))) {
           if (NS_FAILED(rv = rdfDoc->AddElementForResource(resource, this))) {
             NS_ERROR("unable to remove element from map");
@@ -1787,8 +1787,8 @@ RDFElementImpl::GetAttribute(PRInt32 aNameSpaceID,
     // XXX I'm not sure if we should support properties as attributes
     // or not...
     nsIRDFCompositeDataSource* db = nsnull;
-    nsIRDFNode* property = nsnull;
-    nsIRDFNode* value    = nsnull;
+    nsISupports* property = nsnull;
+    nsISupports* value    = nsnull;
 
     if (NS_FAILED(rv = mDocument->GetDataBase(db)))
         goto done;
@@ -1948,7 +1948,7 @@ RDFElementImpl::GetAttributeNameAt(PRInt32 aIndex,
         goto done;
 
     while (NS_SUCCEEDED(rv = properties->HasMoreElements(moreProperties)) && moreProperties) {
-        nsIRDFNode* property = nsnull;
+        nsISupports* property = nsnull;
         PRBool tv;
 
         if (NS_FAILED(rv = properties->GetNext(property, tv /* ignored */)))
@@ -2266,7 +2266,7 @@ RDFElementImpl::RemoveBroadcastListener(const nsString& attr, nsIDOMElement* anE
 
 
 NS_IMETHODIMP
-RDFElementImpl::GetResource(nsIRDFResource** aResource)
+RDFElementImpl::GetResource(nsISupports** aResource)
 {
     nsAutoString uri;
     if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(kNameSpaceID_None, kIdAtom, uri)) {

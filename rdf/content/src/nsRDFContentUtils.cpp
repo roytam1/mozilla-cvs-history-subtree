@@ -30,33 +30,30 @@
 #include "nsITextContent.h"
 #include "nsLayoutCID.h"
 #include "nsRDFContentUtils.h"
+#include "nsIRDFService.h"
 #include "nsString.h"
 #include "prlog.h"
 
 static NS_DEFINE_IID(kIContentIID,     NS_ICONTENT_IID);
-static NS_DEFINE_IID(kIRDFResourceIID, NS_IRDFRESOURCE_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,  NS_IRDFLITERAL_IID);
 static NS_DEFINE_IID(kITextContentIID, NS_ITEXT_CONTENT_IID); // XXX grr...
 static NS_DEFINE_CID(kTextNodeCID,     NS_TEXTNODE_CID);
 
 
 
-
 nsresult
-nsRDFContentUtils::AttachTextNode(nsIContent* parent, nsIRDFNode* value)
+nsRDFContentUtils::AttachTextNode(nsIContent* parent, nsISupports* value)
 {
     nsresult rv;
     nsAutoString s;
     nsIContent* node         = nsnull;
     nsITextContent* text     = nsnull;
-    nsIRDFResource* resource = nsnull;
+    nsISupports* resource = nsnull;
     nsIRDFLiteral* literal   = nsnull;
     
-    if (NS_SUCCEEDED(rv = value->QueryInterface(kIRDFResourceIID, (void**) &resource))) {
-        const char* p;
-        if (NS_FAILED(rv = resource->GetValue(&p)))
-            goto error;
-
+    const char* p;
+    rv = NS_GetURI(value, &p);
+    if (NS_SUCCEEDED(rv)) {
         s = p;
     }
     else if (NS_SUCCEEDED(rv = value->QueryInterface(kIRDFLiteralIID, (void**) &literal))) {
@@ -72,9 +69,9 @@ nsRDFContentUtils::AttachTextNode(nsIContent* parent, nsIRDFNode* value)
     }
 
     if (NS_FAILED(rv = nsComponentManager::CreateInstance(kTextNodeCID,
-                                                    nsnull,
-                                                    kIContentIID,
-                                                    (void**) &node)))
+                                                          nsnull,
+                                                          kIContentIID,
+                                                          (void**) &node)))
         goto error;
 
     if (NS_FAILED(rv = node->QueryInterface(kITextContentIID, (void**) &text)))

@@ -27,7 +27,7 @@
 #include "nsRDFResource.h"
 
 nsresult
-NS_NewDefaultResource(nsIRDFResource** aResult)
+NS_NewDefaultResource(nsISupports** aResult)
 {
     NS_PRECONDITION(aResult != nsnull, "null ptr");
     if (! aResult)

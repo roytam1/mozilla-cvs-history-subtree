@@ -163,8 +163,8 @@ main(int argc, char** argv)
     PLEventQueue* mainQueue      = nsnull;
     nsIRDFService* theRDFService = nsnull;
     nsIRDFXMLDataSource* ds      = nsnull;
-    nsIRDFResource* theHomePage  = nsnull;
-    nsIRDFResource* NC_title     = nsnull;
+    nsISupports* theHomePage     = nsnull;
+    nsISupports* NC_title        = nsnull;
     nsIRDFLiteral* theTitle      = nsnull;
 
     // Get netlib off the floor...

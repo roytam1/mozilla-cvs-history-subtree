@@ -47,13 +47,13 @@
 class nsIRDFTree : public nsISupports {
 public:
 
-  NS_IMETHOD ListChildren (nsIRDFResource* folder, nsVoidArray** result);
+  NS_IMETHOD ListChildren (nsISupports* folder, nsVoidArray** result);
  // XXX should define something called nsResourceArray and use that
 
-  NS_IMETHOD IsFolder (nsIRDFResource* node, PRBool* result);
+  NS_IMETHOD IsFolder (nsISupports* node, PRBool* result);
 
-  NS_IMETHOD GetProperty (nsIRDFResource* node, nsIRDFResource* property, 
-			  nsIRDFNode** result);
+  NS_IMETHOD GetProperty (nsISupports* node, nsISupports* property, 
+			  nsISupports** result);
 
 }
 

@@ -31,9 +31,7 @@
 
 class nsIRDFDocument;
 class nsIRDFCompositeDataSource;
-class nsIRDFResource;
 class nsIContent;
-class nsIRDFNode;
 class nsIAtom;
 class nsIRDFService;
 
@@ -53,13 +51,13 @@ public:
     NS_IMETHOD SetDocument(nsIRDFDocument* aDocument);
     NS_IMETHOD SetDataBase(nsIRDFCompositeDataSource* aDataBase);
     NS_IMETHOD GetDataBase(nsIRDFCompositeDataSource** aDataBase);
-    NS_IMETHOD CreateRootContent(nsIRDFResource* aResource);
+    NS_IMETHOD CreateRootContent(nsISupports* aResource);
     NS_IMETHOD SetRootContent(nsIContent* aElement);
     NS_IMETHOD CreateContents(nsIContent* aElement);
 
     // nsIRDFObserver interface
-    NS_IMETHOD OnAssert(nsIRDFResource* aSubject, nsIRDFResource* aPredicate, nsIRDFNode* aObject);
-    NS_IMETHOD OnUnassert(nsIRDFResource* aSubject, nsIRDFResource* aPredicate, nsIRDFNode* aObjetct);
+    NS_IMETHOD OnAssert(nsISupports* aSubject, nsISupports* aPredicate, nsISupports* aObject);
+    NS_IMETHOD OnUnassert(nsISupports* aSubject, nsISupports* aPredicate, nsISupports* aObjetct);
 
     // nsIDOMNodeObserver interface
     NS_DECL_IDOMNODEOBSERVER
@@ -78,7 +76,7 @@ public:
     FindChildByTagAndResource(nsIContent* aElement,
                               PRInt32 aNameSpaceID,
                               nsIAtom* aTag,
-                              nsIRDFResource* aResource,
+                              nsISupports* aResource,
                               nsIContent** aChild);
 
     nsresult
@@ -93,17 +91,17 @@ public:
 
     virtual nsresult
     AddWidgetItem(nsIContent* aWidgetElement,
-                  nsIRDFResource* aProperty,
-                  nsIRDFResource* aValue, 
+                  nsISupports* aProperty,
+                  nsISupports* aValue, 
                   PRInt32 naturalOrderPos) = 0;
 
     virtual nsresult
     RemoveWidgetItem(nsIContent* aWidgetElement,
-                     nsIRDFResource* aProperty,
-                     nsIRDFResource* aValue) = 0;
+                     nsISupports* aProperty,
+                     nsISupports* aValue) = 0;
 
     virtual PRBool
-    IsContainmentProperty(nsIContent* aElement, nsIRDFResource* aProperty);
+    IsContainmentProperty(nsIContent* aElement, nsISupports* aProperty);
 
     PRBool
     IsOpen(nsIContent* aElement);
@@ -118,18 +116,18 @@ public:
     IsWidgetInsertionRootElement(nsIContent* aElement);
 
     nsresult
-    GetDOMNodeResource(nsIDOMNode* aNode, nsIRDFResource** aResource);
+    GetDOMNodeResource(nsIDOMNode* aNode, nsISupports** aResource);
 
     nsresult
     CreateResourceElement(PRInt32 aNameSpaceID,
                           nsIAtom* aTag,
-                          nsIRDFResource* aResource,
+                          nsISupports* aResource,
                           nsIContent** aResult);
 
     nsresult
     GetResource(PRInt32 aNameSpaceID,
                 nsIAtom* aNameAtom,
-                nsIRDFResource** aResource);
+                nsISupports** aResource);
 
     virtual nsresult
     OpenWidgetItem(nsIContent* aElement);
@@ -138,7 +136,7 @@ public:
     CloseWidgetItem(nsIContent* aElement);
 
     nsresult
-    GetElementResource(nsIContent* aElement, nsIRDFResource** aResult);
+    GetElementResource(nsIContent* aElement, nsISupports** aResult);
 
     virtual nsresult
     GetRootWidgetAtom(nsIAtom** aResult) = 0;
@@ -177,9 +175,9 @@ protected:
     static PRInt32  kNameSpaceID_RDF;
     static PRInt32  kNameSpaceID_XUL;
 
-    static nsIRDFResource* kNC_Title;
-    static nsIRDFResource* kNC_child;
-    static nsIRDFResource* kNC_Column;
-    static nsIRDFResource* kNC_Folder;
-    static nsIRDFResource* kRDF_child;
+    static nsISupports* kNC_Title;
+    static nsISupports* kNC_child;
+    static nsISupports* kNC_Column;
+    static nsISupports* kNC_Folder;
+    static nsISupports* kRDF_child;
 };

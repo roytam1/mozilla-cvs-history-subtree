@@ -30,7 +30,6 @@
 
 class nsIURL;
 class nsVoidArray;
-class nsIRDFResource;
 class nsIRDFDataSource;
 class nsIRDFService;
 class nsINameSpaceManager;
@@ -109,7 +108,7 @@ protected:
     // RDF-specific parsing
     nsresult GetIdAboutAttribute(const nsIParserNode& aNode, nsString& rResource);
     nsresult GetResourceAttribute(const nsIParserNode& aNode, nsString& rResource);
-    nsresult AddProperties(const nsIParserNode& aNode, nsIRDFResource* aSubject);
+    nsresult AddProperties(const nsIParserNode& aNode, nsISupports* aSubject);
 
     virtual nsresult OpenRDF(const nsIParserNode& aNode);
     virtual nsresult OpenObject(const nsIParserNode& aNode);
@@ -123,9 +122,9 @@ protected:
     RDFContentSinkState    mState;
 
     // content stack management
-    PRInt32         PushContext(nsIRDFResource *aContext, RDFContentSinkState aState);
-    nsresult        PopContext(nsIRDFResource*& rContext, RDFContentSinkState& rState);
-    nsIRDFResource* GetContextElement(PRInt32 ancestor = 0);
+    PRInt32         PushContext(nsISupports *aContext, RDFContentSinkState aState);
+    nsresult        PopContext(nsISupports*& rContext, RDFContentSinkState& rState);
+    nsISupports* GetContextElement(PRInt32 ancestor = 0);
 
     nsVoidArray* mContextStack;
 

@@ -34,7 +34,6 @@
 #include "nsIRDFDocument.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFService.h"
-#include "nsIServiceManager.h"
 #include "nsINameSpaceManager.h"
 #include "nsISupportsArray.h"
 #include "nsRDFContentUtils.h"
@@ -45,7 +44,6 @@
 
 static NS_DEFINE_IID(kIContentIID,                NS_ICONTENT_IID);
 static NS_DEFINE_IID(kIDocumentIID,               NS_IDOCUMENT_IID);
-static NS_DEFINE_IID(kIRDFResourceIID,            NS_IRDFRESOURCE_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,             NS_IRDFLITERAL_IID);
 static NS_DEFINE_IID(kIRDFContentModelBuilderIID, NS_IRDFCONTENTMODELBUILDER_IID);
 
@@ -74,26 +72,26 @@ public:
     NS_IMETHOD SetDocument(nsIRDFDocument* aDocument);
     NS_IMETHOD SetDataBase(nsIRDFCompositeDataSource* aDataBase);
     NS_IMETHOD GetDataBase(nsIRDFCompositeDataSource** aDataBase);
-    NS_IMETHOD CreateRootContent(nsIRDFResource* aResource);
+    NS_IMETHOD CreateRootContent(nsISupports* aResource);
     NS_IMETHOD SetRootContent(nsIContent* aElement);
     NS_IMETHOD CreateContents(nsIContent* aElement);
-    NS_IMETHOD OnAssert(nsIContent* aElement, nsIRDFResource* aProperty, nsIRDFNode* aValue);
-    NS_IMETHOD OnUnassert(nsIContent* aElement, nsIRDFResource* aProperty, nsIRDFNode* aValue);
+    NS_IMETHOD OnAssert(nsIContent* aElement, nsISupports* aProperty, nsISupports* aValue);
+    NS_IMETHOD OnUnassert(nsIContent* aElement, nsISupports* aProperty, nsISupports* aValue);
 
     // Implementation methods
     nsresult AddTreeChild(nsIContent* aParent,
-                          nsIRDFResource* property,
-                          nsIRDFResource* value);
+                          nsISupports* property,
+                          nsISupports* value);
 
     nsresult AddLeafChild(nsIContent* parent,
-                          nsIRDFResource* property,
+                          nsISupports* property,
                           nsIRDFLiteral* value);
 
-    PRBool IsTreeProperty(nsIRDFResource* aProperty);
+    PRBool IsTreeProperty(nsISupports* aProperty);
 
     nsresult CreateResourceElement(PRInt32 aNameSpaceID,
                                    nsIAtom* aTag,
-                                   nsIRDFResource* aResource,
+                                   nsISupports* aResource,
                                    nsIContent** aResult);
 };
 
@@ -131,8 +129,8 @@ NS_IMPL_ISUPPORTS(RDFHTMLBuilderImpl, kIRDFContentModelBuilderIID);
 
 nsresult
 RDFHTMLBuilderImpl::AddTreeChild(nsIContent* parent,
-                                 nsIRDFResource* property,
-                                 nsIRDFResource* value)
+                                 nsISupports* property,
+                                 nsISupports* value)
 {
     // If it's a tree property, then create a child element whose
     // value is the value of the property. We'll also attach an "ID="
@@ -157,8 +155,11 @@ RDFHTMLBuilderImpl::AddTreeChild(nsIContent* parent,
     if (NS_FAILED(rv = CreateResourceElement(nameSpaceID, tag, value, &child)))
         goto done;
 
-    if (NS_FAILED(rv = value->GetValue(&p)))
+    rv = NS_GetURI(value, &p);
+    if (NS_FAILED(rv)) {
+        NS_WARNING("RDFHTMLBuilderImpl::AddTreeChild: can't get URI");
         goto done;
+    }
 
     if (NS_FAILED(rv = child->SetAttribute(kNameSpaceID_HTML, kIdAtom, p, PR_FALSE)))
         goto done;
@@ -174,7 +175,7 @@ done:
 
 nsresult
 RDFHTMLBuilderImpl::AddLeafChild(nsIContent* parent,
-                                 nsIRDFResource* property,
+                                 nsISupports* property,
                                  nsIRDFLiteral* value)
 {
     // Otherwise, it's not a tree property. So we'll just create a
@@ -267,7 +268,7 @@ RDFHTMLBuilderImpl::GetDataBase(nsIRDFCompositeDataSource** aDataBase)
 
 
 NS_IMETHODIMP
-RDFHTMLBuilderImpl::CreateRootContent(nsIRDFResource* aResource)
+RDFHTMLBuilderImpl::CreateRootContent(nsISupports* aResource)
 {
     NS_PRECONDITION(mDocument != nsnull, "not initialized");
     if (! mDocument)
@@ -330,8 +331,8 @@ RDFHTMLBuilderImpl::CreateContents(nsIContent* aElement)
 
 NS_IMETHODIMP
 RDFHTMLBuilderImpl::OnAssert(nsIContent* parent,
-                             nsIRDFResource* property,
-                             nsIRDFNode* value)
+                             nsISupports* property,
+                             nsISupports* value)
 {
     NS_PRECONDITION(mDocument != nsnull, "not initialized");
     if (! mDocument)
@@ -339,18 +340,21 @@ RDFHTMLBuilderImpl::OnAssert(nsIContent* parent,
 
     nsresult rv;
 
-    nsIRDFResource* valueResource;
-    if (NS_SUCCEEDED(rv = value->QueryInterface(kIRDFResourceIID, (void**) &valueResource))) {
+    const char* uri;
+    rv = NS_GetURI(value, &uri);
+    if (NS_SUCCEEDED(rv)) {
         // If it's a tree property or an RDF container, then add it as
         // a tree child and return.
-        if (IsTreeProperty(property) || rdf_IsContainer(mDB, valueResource)) {
-            rv = AddTreeChild(parent, property, valueResource);
-            NS_RELEASE(valueResource);
+        if (IsTreeProperty(property) || rdf_IsContainer(mDB, value)) {
+            rv = AddTreeChild(parent, property, value);
+            NS_RELEASE(value);
             return rv;
         }
 
         // Otherwise, fall through and add try to add it as a property
-        NS_RELEASE(valueResource);
+    }
+    else {
+        NS_WARNING("RDFHTMLBuilderImpl::OnAssert: unable to get property URI");
     }
 
     nsIRDFLiteral* valueLiteral;
@@ -367,8 +371,8 @@ RDFHTMLBuilderImpl::OnAssert(nsIContent* parent,
 
 NS_IMETHODIMP
 RDFHTMLBuilderImpl::OnUnassert(nsIContent* parent,
-                               nsIRDFResource* property,
-                               nsIRDFNode* value)
+                               nsISupports* property,
+                               nsISupports* value)
 {
     PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED;
@@ -376,7 +380,7 @@ RDFHTMLBuilderImpl::OnUnassert(nsIContent* parent,
 
 
 PRBool
-RDFHTMLBuilderImpl::IsTreeProperty(nsIRDFResource* aProperty)
+RDFHTMLBuilderImpl::IsTreeProperty(nsISupports* aProperty)
 {
     // XXX This whole method is a mega-kludge. This should be read off
     // of the element somehow...
@@ -384,7 +388,12 @@ RDFHTMLBuilderImpl::IsTreeProperty(nsIRDFResource* aProperty)
 #define TREE_PROPERTY_HACK
 #if defined(TREE_PROPERTY_HACK)
     const char* p;
-    aProperty->GetValue(&p);
+    nsresult rv;
+    rv = NS_GetURI(aProperty, &p);
+    if (NS_FAILED(rv)) {
+        NS_WARNING("RDFHTMLBuilderImpl::IsTreeProperty: unable to get property URI");
+        return PR_FALSE; // XXX return rv
+    }
     nsAutoString s(p);
     if (s.Equals(NC_NAMESPACE_URI "child") ||
         s.Equals(NC_NAMESPACE_URI "Folder") ||
@@ -404,7 +413,7 @@ RDFHTMLBuilderImpl::IsTreeProperty(nsIRDFResource* aProperty)
 nsresult
 RDFHTMLBuilderImpl::CreateResourceElement(PRInt32 aNameSpaceID,
                                           nsIAtom* aTag,
-                                          nsIRDFResource* aResource,
+                                          nsISupports* aResource,
                                           nsIContent** aResult)
 {
     nsresult rv;
@@ -414,8 +423,11 @@ RDFHTMLBuilderImpl::CreateResourceElement(PRInt32 aNameSpaceID,
         return rv;
 
     const char* uri;
-    if (NS_FAILED(rv = aResource->GetValue(&uri)))
+    rv = NS_GetURI(aResource, &uri);
+    if (NS_FAILED(rv)) {
+        NS_WARNING("RDFHTMLBuilderImpl::CreateResourceElement: unable to get URI");
         return rv;
+    }
 
     if (NS_FAILED(rv = result->SetAttribute(kNameSpaceID_None, kIdAtom, uri, PR_FALSE)))
         return rv;

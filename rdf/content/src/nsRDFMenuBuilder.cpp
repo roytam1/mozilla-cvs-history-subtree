@@ -35,9 +35,7 @@
 #include "nsIRDFNode.h"
 #include "nsIRDFObserver.h"
 #include "nsIRDFService.h"
-#include "nsIServiceManager.h"
 #include "nsINameSpaceManager.h"
-#include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
 #include "nsIURL.h"
 #include "nsLayoutCID.h"
@@ -67,7 +65,6 @@ DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, child);
 static NS_DEFINE_IID(kIContentIID,                NS_ICONTENT_IID);
 static NS_DEFINE_IID(kIDocumentIID,               NS_IDOCUMENT_IID);
 static NS_DEFINE_IID(kINameSpaceManagerIID,       NS_INAMESPACEMANAGER_IID);
-static NS_DEFINE_IID(kIRDFResourceIID,            NS_IRDFRESOURCE_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,             NS_IRDFLITERAL_IID);
 static NS_DEFINE_IID(kIRDFContentModelBuilderIID, NS_IRDFCONTENTMODELBUILDER_IID);
 static NS_DEFINE_IID(kIRDFObserverIID,            NS_IRDFOBSERVER_IID);
@@ -75,7 +72,6 @@ static NS_DEFINE_IID(kIRDFServiceIID,             NS_IRDFSERVICE_IID);
 static NS_DEFINE_IID(kISupportsIID,               NS_ISUPPORTS_IID);
 
 static NS_DEFINE_CID(kNameSpaceManagerCID,        NS_NAMESPACEMANAGER_CID);
-static NS_DEFINE_CID(kRDFServiceCID,              NS_RDFSERVICE_CID);
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -88,13 +84,13 @@ public:
     // Implementation methods
     nsresult
     AddWidgetItem(nsIContent* aMenuItemElement,
-                  nsIRDFResource* aProperty,
-                  nsIRDFResource* aValue, PRInt32 aNaturalOrderPos);
+                  nsISupports* aProperty,
+                  nsISupports* aValue, PRInt32 aNaturalOrderPos);
 
     nsresult
     RemoveWidgetItem(nsIContent* aMenuItemElement,
-                     nsIRDFResource* aProperty,
-                     nsIRDFResource* aValue);
+                     nsISupports* aProperty,
+                     nsISupports* aValue);
 
     nsresult 
     GetRootWidgetAtom(nsIAtom** aResult) {
@@ -195,8 +191,8 @@ RDFMenuBuilderImpl::~RDFMenuBuilderImpl(void)
 
 nsresult
 RDFMenuBuilderImpl::AddWidgetItem(nsIContent* aElement,
-                                  nsIRDFResource* aProperty,
-                                  nsIRDFResource* aValue,
+                                  nsISupports* aProperty,
+                                  nsISupports* aValue,
                                   PRInt32 naturalOrderPos)
 {
     nsresult rv;
@@ -229,7 +225,7 @@ RDFMenuBuilderImpl::AddWidgetItem(nsIContent* aElement,
     }
 
     while (NS_SUCCEEDED(rv = arcs->Advance())) {
-        nsCOMPtr<nsIRDFResource> property;
+        nsCOMPtr<nsISupports> property;
         if (NS_FAILED(rv = arcs->GetPredicate(getter_AddRefs(property)))) {
             NS_ERROR("unable to get cursor value");
             return rv;
@@ -246,19 +242,19 @@ RDFMenuBuilderImpl::AddWidgetItem(nsIContent* aElement,
             return rv;
         }
 
-        nsCOMPtr<nsIRDFNode> value;
+        nsCOMPtr<nsISupports> value;
         if (NS_FAILED(rv = mDB->GetTarget(aValue, property, PR_TRUE, getter_AddRefs(value)))) {
             NS_ERROR("unable to get target");
             return rv;
         }
 
-        nsCOMPtr<nsIRDFResource> resource;
+        nsCOMPtr<nsISupports> resource;
         nsCOMPtr<nsIRDFLiteral> literal;
 
         nsAutoString s;
-        if (NS_SUCCEEDED(rv = value->QueryInterface(kIRDFResourceIID, getter_AddRefs(resource)))) {
-            const char* uri;
-            resource->GetValue(&uri);
+        const char* uri;
+        rv = NS_GetURI(value, &uri);
+        if (NS_SUCCEEDED(rv)) {
             s = uri;
         }
         else if (NS_SUCCEEDED(rv = value->QueryInterface(kIRDFLiteralIID, getter_AddRefs(literal)))) {
@@ -300,8 +296,8 @@ RDFMenuBuilderImpl::AddWidgetItem(nsIContent* aElement,
 
 nsresult
 RDFMenuBuilderImpl::RemoveWidgetItem(nsIContent* aMenuItemElement,
-                                     nsIRDFResource* aProperty,
-                                     nsIRDFResource* aValue)
+                                     nsISupports* aProperty,
+                                     nsISupports* aValue)
 {
     NS_NOTYETIMPLEMENTED("write me");
     return NS_ERROR_NOT_IMPLEMENTED;

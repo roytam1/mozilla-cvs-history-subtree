@@ -27,18 +27,18 @@ class nsIRDFService;
  * This simple base class implements nsIRDFResource, and can be used as a
  * superclass for more sophisticated resource implementations.
  */
-class NS_RDF nsRDFResource : public nsIRDFResource {
+class NS_RDF nsRDFResource : public nsISupports {
 public:
 
     NS_DECL_ISUPPORTS
 
     // nsIRDFNode methods:
-    NS_IMETHOD EqualsNode(nsIRDFNode* node, PRBool* result) const;
+    NS_IMETHOD EqualsNode(nsISupports* node, PRBool* result) const;
 
-    // nsIRDFResource methods:
+    // nsISupports methods:
     NS_IMETHOD Init(const char* uri);
     NS_IMETHOD GetValue(const char* *uri) const;
-    NS_IMETHOD EqualsResource(const nsIRDFResource* resource, PRBool* result) const;
+    NS_IMETHOD EqualsResource(const nsISupports* resource, PRBool* result) const;
     NS_IMETHOD EqualsString(const char* uri, PRBool* result) const;
 
     // nsRDFResource methods:

@@ -37,7 +37,6 @@
 
 class nsIRDFCompositeDataSource;
 class nsIContent;
-class nsIRDFResource;
 class nsIDOMNode;
 
 class nsIXULSortService : public nsISupports {
@@ -46,7 +45,7 @@ public:
 
     NS_IMETHOD DoSort(nsIDOMNode* node, const nsString& sortResource, const nsString& sortDirection) = 0;
     NS_IMETHOD OpenContainer(nsIRDFCompositeDataSource *db, nsIContent *container,
-			nsIRDFResource **flatArray, PRInt32 numElements, PRInt32 elementSize) = 0;
+			nsISupports **flatArray, PRInt32 numElements, PRInt32 elementSize) = 0;
 };
 
 

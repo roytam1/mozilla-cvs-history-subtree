@@ -30,7 +30,6 @@
 #if 0   // obsolete
 
 #include "nsISupports.h"
-class nsIRDFResource;
 
 // {8CE57A20-A02C-11d2-8EBF-00805F29F370}
 #define NS_IRDFRESOURCEFACTORY_IID \
@@ -68,7 +67,7 @@ public:
      * storage for the resource's URI. See
      * nsIRDFService::UnCacheResource() for more information.
      */
-    NS_IMETHOD CreateResource(const char* aURI, nsIRDFResource** aResult) = 0;
+    NS_IMETHOD CreateResource(const char* aURI, nsISupports** aResult) = 0;
 };
 
 #endif

@@ -61,8 +61,6 @@ static NS_DEFINE_IID(kIRDFAssertionCursorIID,      NS_IRDFASSERTIONCURSOR_IID);
 static NS_DEFINE_IID(kIRDFCursorIID,               NS_IRDFCURSOR_IID);
 static NS_DEFINE_IID(kIRDFArcsOutCursorIID,        NS_IRDFARCSOUTCURSOR_IID);
 static NS_DEFINE_IID(kISupportsIID,                NS_ISUPPORTS_IID);
-static NS_DEFINE_IID(kIRDFResourceIID,             NS_IRDFRESOURCE_IID);
-static NS_DEFINE_IID(kIRDFNodeIID,                 NS_IRDFNODE_IID);
 
 
 
@@ -82,39 +80,34 @@ static	FileSystemDataSource	*gFileSystemDataSource = nsnull;
 
 PRInt32 FileSystemDataSource::gRefCnt;
 
-nsIRDFResource		*FileSystemDataSource::kNC_FileSystemRoot;
-nsIRDFResource		*FileSystemDataSource::kNC_Child;
-nsIRDFResource		*FileSystemDataSource::kNC_Name;
-nsIRDFResource		*FileSystemDataSource::kNC_URL;
-nsIRDFResource		*FileSystemDataSource::kNC_FileSystemObject;
-nsIRDFResource		*FileSystemDataSource::kRDF_InstanceOf;
-nsIRDFResource		*FileSystemDataSource::kRDF_type;
+nsISupports		*FileSystemDataSource::kNC_FileSystemRoot;
+nsISupports		*FileSystemDataSource::kNC_Child;
+nsISupports		*FileSystemDataSource::kNC_Name;
+nsISupports		*FileSystemDataSource::kNC_URL;
+nsISupports		*FileSystemDataSource::kNC_FileSystemObject;
+nsISupports		*FileSystemDataSource::kRDF_InstanceOf;
+nsISupports		*FileSystemDataSource::kRDF_type;
 
 
 
-static PRBool
-peq(nsIRDFResource* r1, nsIRDFResource* r2)
+inline PRBool
+peq(nsISupports* r1, nsISupports* r2)
 {
-	PRBool		retVal=PR_FALSE, result;
-
-	if (NS_SUCCEEDED(r1->EqualsResource(r2, &result)))
-	{
-		if (result)
-		{
-			retVal = PR_TRUE;
-		}
-	}
-	return(retVal);
+    return NS_EqualsResource(r1, r2) == NS_OK;
 }
 
 
 static PRBool
-isFileURI(nsIRDFResource *r)
+isFileURI(nsISupports *r)
 {
 	PRBool		isFileURI = PR_FALSE;
 	const char	*uri;
 	
-	r->GetValue(&uri);
+	nsresult rv = NS_GetURI(r, &uri);
+        if (NS_FAILED(rv)) {
+            NS_WARNING("isFileURI: unable to get URI");
+            return PR_FALSE;     // XXX return rv 
+        }
 	if (!strncmp(uri, "file://", 7))
 	{
 		// XXX HACK HACK HACK
@@ -220,10 +213,10 @@ FileSystemDataSource::GetURI(const char **uri) const
 
 
 NS_IMETHODIMP
-FileSystemDataSource::GetSource(nsIRDFResource* property,
-                          nsIRDFNode* target,
+FileSystemDataSource::GetSource(nsISupports* property,
+                          nsISupports* target,
                           PRBool tv,
-                          nsIRDFResource** source /* out */)
+                          nsISupports** source /* out */)
 {
 	nsresult rv = NS_ERROR_RDF_NO_VALUE;
 	return rv;
@@ -232,8 +225,8 @@ FileSystemDataSource::GetSource(nsIRDFResource* property,
 
 
 NS_IMETHODIMP
-FileSystemDataSource::GetSources(nsIRDFResource *property,
-                           nsIRDFNode *target,
+FileSystemDataSource::GetSources(nsISupports *property,
+                           nsISupports *target,
 			   PRBool tv,
                            nsIRDFAssertionCursor **sources /* out */)
 {
@@ -244,18 +237,18 @@ FileSystemDataSource::GetSources(nsIRDFResource *property,
 
 
 nsresult	GetVolumeList(nsVoidArray **array);
-nsresult	GetFolderList(nsIRDFResource *source, nsVoidArray **array /* out */);
-nsresult	GetName(nsIRDFResource *source, nsVoidArray **array);
-nsresult	GetURL(nsIRDFResource *source, nsVoidArray **array);
+nsresult	GetFolderList(nsISupports *source, nsVoidArray **array /* out */);
+nsresult	GetName(nsISupports *source, nsVoidArray **array);
+nsresult	GetURL(nsISupports *source, nsVoidArray **array);
 PRBool		isVisible(nsNativeFileSpec file);
 
 
 
 NS_IMETHODIMP
-FileSystemDataSource::GetTarget(nsIRDFResource *source,
-                          nsIRDFResource *property,
+FileSystemDataSource::GetTarget(nsISupports *source,
+                          nsISupports *property,
                           PRBool tv,
-                          nsIRDFNode **target /* out */)
+                          nsISupports **target /* out */)
 {
 	nsresult		rv = NS_ERROR_RDF_NO_VALUE;
 
@@ -278,8 +271,8 @@ FileSystemDataSource::GetTarget(nsIRDFResource *source,
 		else if (peq(property, kRDF_type))
 		{
 			const char	*uri;
-			kNC_FileSystemObject->GetValue(&uri);
-			if (uri)
+			rv = NS_GetURI(kNC_FileSystemObject, &uri);
+			if (NS_SUCCEEDED(rv))
 			{
 				nsAutoString	url(uri);
 				nsIRDFLiteral	*literal;
@@ -287,12 +280,15 @@ FileSystemDataSource::GetTarget(nsIRDFResource *source,
 				*target = literal;
 				rv = NS_OK;
 			}
+                        else {
+                            NS_ERROR("FileSystemDataSource::GetTarget: unable to get URI");
+                        }
 			return(rv);
 		}
 		if (array != nsnull)
 		{
 			nsIRDFLiteral *literal = (nsIRDFLiteral *)(array->ElementAt(0));
-			*target = (nsIRDFNode *)literal;
+			*target = (nsISupports *)literal;
 			delete array;
 			rv = NS_OK;
 		}
@@ -307,8 +303,8 @@ FileSystemDataSource::GetTarget(nsIRDFResource *source,
 
 
 NS_IMETHODIMP
-FileSystemDataSource::GetTargets(nsIRDFResource *source,
-                           nsIRDFResource *property,
+FileSystemDataSource::GetTargets(nsISupports *source,
+                           nsISupports *property,
                            PRBool tv,
                            nsIRDFAssertionCursor **targets /* out */)
 {
@@ -339,8 +335,8 @@ FileSystemDataSource::GetTargets(nsIRDFResource *source,
 		else if (peq(property, kRDF_type))
 		{
 			const char	*uri;
-			kNC_FileSystemObject->GetValue(&uri);
-			if (uri)
+			rv = NS_GetURI(kNC_FileSystemObject, &uri);
+			if (NS_SUCCEEDED(rv))
 			{
 				nsAutoString	url(uri);
 				nsIRDFLiteral	*literal;
@@ -352,6 +348,9 @@ FileSystemDataSource::GetTargets(nsIRDFResource *source,
 					rv = NS_OK;
 				}
 			}
+                        else {
+                            NS_ERROR("FileSystemDataSource::GetTargets: unable to get URI");
+                        }
 		}
 	}
 	if ((rv == NS_OK) && (nsnull != array))
@@ -365,9 +364,9 @@ FileSystemDataSource::GetTargets(nsIRDFResource *source,
 
 
 NS_IMETHODIMP
-FileSystemDataSource::Assert(nsIRDFResource *source,
-                       nsIRDFResource *property,
-                       nsIRDFNode *target,
+FileSystemDataSource::Assert(nsISupports *source,
+                       nsISupports *property,
+                       nsISupports *target,
                        PRBool tv)
 {
 //	PR_ASSERT(0);
@@ -377,9 +376,9 @@ FileSystemDataSource::Assert(nsIRDFResource *source,
 
 
 NS_IMETHODIMP
-FileSystemDataSource::Unassert(nsIRDFResource *source,
-                         nsIRDFResource *property,
-                         nsIRDFNode *target)
+FileSystemDataSource::Unassert(nsISupports *source,
+                         nsISupports *property,
+                         nsISupports *target)
 {
 //	PR_ASSERT(0);
 	return NS_ERROR_NOT_IMPLEMENTED;
@@ -388,9 +387,9 @@ FileSystemDataSource::Unassert(nsIRDFResource *source,
 
 
 NS_IMETHODIMP
-FileSystemDataSource::HasAssertion(nsIRDFResource *source,
-                             nsIRDFResource *property,
-                             nsIRDFNode *target,
+FileSystemDataSource::HasAssertion(nsISupports *source,
+                             nsISupports *property,
+                             nsISupports *target,
                              PRBool tv,
                              PRBool *hasAssertion /* out */)
 {
@@ -402,7 +401,7 @@ FileSystemDataSource::HasAssertion(nsIRDFResource *source,
 	{
 		if (peq(property, kRDF_type))
 		{
-			if (peq((nsIRDFResource *)target, kRDF_type))
+			if (peq((nsISupports *)target, kRDF_type))
 			{
 				*hasAssertion = PR_TRUE;
 				rv = NS_OK;
@@ -415,7 +414,7 @@ FileSystemDataSource::HasAssertion(nsIRDFResource *source,
 
 
 NS_IMETHODIMP
-FileSystemDataSource::ArcLabelsIn(nsIRDFNode *node,
+FileSystemDataSource::ArcLabelsIn(nsISupports *node,
                             nsIRDFArcsInCursor ** labels /* out */)
 {
 	PR_ASSERT(0);
@@ -425,7 +424,7 @@ FileSystemDataSource::ArcLabelsIn(nsIRDFNode *node,
 
 
 NS_IMETHODIMP
-FileSystemDataSource::ArcLabelsOut(nsIRDFResource *source,
+FileSystemDataSource::ArcLabelsOut(nsISupports *source,
                              nsIRDFArcsOutCursor **labels /* out */)
 {
 	nsresult		rv = NS_ERROR_RDF_NO_VALUE;
@@ -453,8 +452,8 @@ FileSystemDataSource::ArcLabelsOut(nsIRDFResource *source,
 			return NS_ERROR_OUT_OF_MEMORY;
 
 		const char *uri;
-		source->GetValue(&uri);
-		if (uri)
+		rv = NS_GetURI(source, &uri);
+		if (NS_SUCCEEDED(rv))
 		{
 			nsFileURL	fileURL(uri);
 			nsFileSpec	fileSpec(fileURL);
@@ -463,6 +462,9 @@ FileSystemDataSource::ArcLabelsOut(nsIRDFResource *source,
 				temp->AppendElement(kNC_Child);
 			}
 		}
+                else {
+                    NS_ERROR("FileSystemDataSource::GetTargets: unable to get URI");
+                }
 
 		temp->AppendElement(kRDF_type);
 		*labels = new FileSystemCursor(source, kRDF_type, PR_TRUE, temp);
@@ -520,26 +522,26 @@ FileSystemDataSource::Flush()
 }
 
 NS_IMETHODIMP
-FileSystemDataSource::GetAllCommands(nsIRDFResource* source,
-                                     nsIEnumerator/*<nsIRDFResource>*/** commands)
+FileSystemDataSource::GetAllCommands(nsISupports* source,
+                                     nsIEnumerator** commands)
 {
     NS_NOTYETIMPLEMENTED("write me!");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-FileSystemDataSource::IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-                                       nsIRDFResource*   aCommand,
-                                       nsISupportsArray/*<nsIRDFResource>*/* aArguments)
+FileSystemDataSource::IsCommandEnabled(nsISupportsArray* aSources,
+                                       nsISupports*   aCommand,
+                                       nsISupportsArray* aArguments)
 {
     NS_NOTYETIMPLEMENTED("write me!");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-FileSystemDataSource::DoCommand(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-                                nsIRDFResource*   aCommand,
-                                nsISupportsArray/*<nsIRDFResource>*/* aArguments)
+FileSystemDataSource::DoCommand(nsISupportsArray* aSources,
+                                nsISupports*   aCommand,
+                                nsISupportsArray* aArguments)
 {
     NS_NOTYETIMPLEMENTED("write me!");
     return NS_ERROR_NOT_IMPLEMENTED;
@@ -579,7 +581,7 @@ GetVolumeList(nsVoidArray **array)
 		return(NS_ERROR_OUT_OF_MEMORY);
 	}
 
-	nsIRDFResource		*vol;
+	nsISupports		*vol;
 
 #ifdef	XP_MAC
 	FSSpec			fss;
@@ -614,7 +616,7 @@ GetVolumeList(nsVoidArray **array)
 					pathname += "/";
 				}
 				char		*filename = pathname.ToNewCString();
-				gRDFService->GetResource(filename, (nsIRDFResource **)&vol);
+				gRDFService->GetResource(filename, (nsISupports **)&vol);
 				NS_ADDREF(vol);
 				volumes->AppendElement(vol);
 				delete filename;
@@ -637,7 +639,7 @@ GetVolumeList(nsVoidArray **array)
 		{
 			if (nsnull != (url = PR_smprintf("file:///%c|/", volNum + 'A')))
 			{
-				gRDFService->GetResource(url, (nsIRDFResource **)&vol);
+				gRDFService->GetResource(url, (nsISupports **)&vol);
 				NS_ADDREF(vol);
 				volumes->AppendElement(vol);
 				PR_Free(url);
@@ -647,7 +649,7 @@ GetVolumeList(nsVoidArray **array)
 #endif
 
 #ifdef	XP_UNIX
-	gRDFService->GetResource("file:///", (nsIRDFResource **)&vol);
+	gRDFService->GetResource("file:///", (nsISupports **)&vol);
 	NS_ADDREF(vol);
 	volumes->AppendElement(vol);
 #endif
@@ -657,8 +659,8 @@ GetVolumeList(nsVoidArray **array)
 
 
 
-FileSystemCursor::FileSystemCursor(nsIRDFResource *source,
-				nsIRDFResource *property,
+FileSystemCursor::FileSystemCursor(nsISupports *source,
+				nsISupports *property,
 				PRBool isArcsOut,
 				nsVoidArray *array)
 	: mSource(source),
@@ -698,7 +700,7 @@ FileSystemCursor::Advance(void)
 	if (mArray->Count() <= mCount)
 		return NS_ERROR_RDF_CURSOR_EMPTY;
 	NS_IF_RELEASE(mValue);
-	mTarget = mValue = (nsIRDFNode *)mArray->ElementAt(mCount++);
+	mTarget = mValue = (nsISupports *)mArray->ElementAt(mCount++);
 	NS_ADDREF(mValue);
 	NS_ADDREF(mTarget);
 	return NS_OK;
@@ -707,7 +709,7 @@ FileSystemCursor::Advance(void)
 
 
 NS_IMETHODIMP
-FileSystemCursor::GetValue(nsIRDFNode **aValue)
+FileSystemCursor::GetValue(nsISupports **aValue)
 {
 	if (nsnull == mValue)
 		return NS_ERROR_NULL_POINTER;
@@ -729,7 +731,7 @@ FileSystemCursor::GetDataSource(nsIRDFDataSource **aDataSource)
 
 
 NS_IMETHODIMP
-FileSystemCursor::GetSubject(nsIRDFResource **aResource)
+FileSystemCursor::GetSubject(nsISupports **aResource)
 {
 	NS_ADDREF(mSource);
 	*aResource = mSource;
@@ -739,7 +741,7 @@ FileSystemCursor::GetSubject(nsIRDFResource **aResource)
 
 
 NS_IMETHODIMP
-FileSystemCursor::GetPredicate(nsIRDFResource **aPredicate)
+FileSystemCursor::GetPredicate(nsISupports **aPredicate)
 {
 	if (mArcsOut == PR_FALSE)
 	{
@@ -751,7 +753,7 @@ FileSystemCursor::GetPredicate(nsIRDFResource **aPredicate)
 		if (nsnull == mValue)
 			return NS_ERROR_NULL_POINTER;
 		NS_ADDREF(mValue);
-		*(nsIRDFNode **)aPredicate = mValue;
+		*(nsISupports **)aPredicate = mValue;
 	}
 	return NS_OK;
 }
@@ -759,7 +761,7 @@ FileSystemCursor::GetPredicate(nsIRDFResource **aPredicate)
 
 
 NS_IMETHODIMP
-FileSystemCursor::GetObject(nsIRDFNode **aObject)
+FileSystemCursor::GetObject(nsISupports **aObject)
 {
 	if (nsnull != mTarget)
 		NS_ADDREF(mTarget);
@@ -847,7 +849,7 @@ isVisible(nsNativeFileSpec file)
 
 
 nsresult
-GetFolderList(nsIRDFResource *source, nsVoidArray **array /* out */)
+GetFolderList(nsISupports *source, nsVoidArray **array /* out */)
 {
 	nsVoidArray	*nameArray = new nsVoidArray();
 	*array = nameArray;
@@ -857,11 +859,11 @@ GetFolderList(nsIRDFResource *source, nsVoidArray **array /* out */)
 	}
 
 	const char		*uri;
-	source->GetValue(&uri);
-	if (nsnull == uri)
-	{
-		return(NS_ERROR_FAILURE);
-	}
+	nsresult rv = NS_GetURI(source, &uri);
+        if (NS_FAILED(rv)) {
+            NS_WARNING("GetFolderList: unable to get URI");
+            return rv;
+        }
 
 	nsFileURL 		parentDir(uri);
 	nsNativeFileSpec 	nativeDir(parentDir);
@@ -880,8 +882,8 @@ GetFolderList(nsIRDFResource *source, nsVoidArray **array /* out */)
 				pathname += "/";
 			}
 			char		*filename = pathname.ToNewCString();
-			nsIRDFResource	*file;
-			gRDFService->GetResource(filename, (nsIRDFResource **)&file);
+			nsISupports	*file;
+			gRDFService->GetResource(filename, (nsISupports **)&file);
 			nameArray->AppendElement(file);
 			delete filename;
 		}
@@ -892,7 +894,7 @@ GetFolderList(nsIRDFResource *source, nsVoidArray **array /* out */)
 
 
 nsresult
-GetName(nsIRDFResource *source, nsVoidArray **array)
+GetName(nsISupports *source, nsVoidArray **array)
 {
 	nsVoidArray *nameArray = new nsVoidArray();
 	*array = nameArray;
@@ -902,7 +904,11 @@ GetName(nsIRDFResource *source, nsVoidArray **array)
 	}
 
 	const char		*uri;
-	source->GetValue(&uri);
+	nsresult rv = NS_GetURI(source, &uri);
+        if (NS_FAILED(rv)) {
+            NS_WARNING("GetName: unable to get URI");
+            return rv;
+        }
 	nsFileURL		url(uri);
 	nsNativeFileSpec	native(url);
 	char			*basename = native.GetLeafName();
@@ -923,7 +929,7 @@ GetName(nsIRDFResource *source, nsVoidArray **array)
 
 
 nsresult
-GetURL(nsIRDFResource *source, nsVoidArray **array)
+GetURL(nsISupports *source, nsVoidArray **array)
 {
 	nsVoidArray *urlArray = new nsVoidArray();
 	*array = urlArray;
@@ -933,7 +939,11 @@ GetURL(nsIRDFResource *source, nsVoidArray **array)
 	}
 
 	const char	*uri;
-	source->GetValue(&uri);
+	nsresult rv = NS_GetURI(source, &uri);
+        if (NS_FAILED(rv)) {
+            NS_WARNING("GetURL: unable to get URI");
+            return rv;
+        }
 	nsAutoString	url(uri);
 
 	nsIRDFLiteral	*literal;

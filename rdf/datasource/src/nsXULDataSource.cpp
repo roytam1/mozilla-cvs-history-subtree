@@ -64,7 +64,6 @@ static NS_DEFINE_IID(kIParserIID,            NS_IPARSER_IID);
 static NS_DEFINE_IID(kIRDFContentSinkIID,    NS_IRDFCONTENTSINK_IID);
 static NS_DEFINE_IID(kIRDFDataSourceIID,     NS_IRDFDATASOURCE_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,        NS_IRDFLITERAL_IID);
-static NS_DEFINE_IID(kIRDFResourceIID,       NS_IRDFRESOURCE_IID);
 static NS_DEFINE_IID(kIRDFServiceIID,        NS_IRDFSERVICE_IID);
 static NS_DEFINE_IID(kIStreamListenerIID,    NS_ISTREAMLISTENER_IID);
 static NS_DEFINE_IID(kISupportsIID,          NS_ISUPPORTS_IID);
@@ -107,7 +106,7 @@ protected:
     PRInt32           mNumNamedDataSourceURIs;
     nsIURL**          mCSSStyleSheetURLs;
     PRInt32           mNumCSSStyleSheetURLs;
-    nsIRDFResource*   mRootResource;
+    nsISupports*   mRootResource;
     PRBool            mIsLoading; // true while the document is loading
     NameSpaceMap*     mNameSpaces;
 
@@ -125,50 +124,50 @@ public:
         return mInner->GetURI(uri);
     }
 
-    NS_IMETHOD GetSource(nsIRDFResource* property,
-                         nsIRDFNode* target,
+    NS_IMETHOD GetSource(nsISupports* property,
+                         nsISupports* target,
                          PRBool tv,
-                         nsIRDFResource** source) {
+                         nsISupports** source) {
         return mInner->GetSource(property, target, tv, source);
     }
 
-    NS_IMETHOD GetSources(nsIRDFResource* property,
-                          nsIRDFNode* target,
+    NS_IMETHOD GetSources(nsISupports* property,
+                          nsISupports* target,
                           PRBool tv,
                           nsIRDFAssertionCursor** sources) {
         return mInner->GetSources(property, target, tv, sources);
     }
 
-    NS_IMETHOD GetTarget(nsIRDFResource* source,
-                         nsIRDFResource* property,
+    NS_IMETHOD GetTarget(nsISupports* source,
+                         nsISupports* property,
                          PRBool tv,
-                         nsIRDFNode** target) {
+                         nsISupports** target) {
         return mInner->GetTarget(source, property, tv, target);
     }
 
-    NS_IMETHOD GetTargets(nsIRDFResource* source,
-                          nsIRDFResource* property,
+    NS_IMETHOD GetTargets(nsISupports* source,
+                          nsISupports* property,
                           PRBool tv,
                           nsIRDFAssertionCursor** targets) {
         return mInner->GetTargets(source, property, tv, targets);
     }
 
-    NS_IMETHOD Assert(nsIRDFResource* source, 
-                      nsIRDFResource* property, 
-                      nsIRDFNode* target,
+    NS_IMETHOD Assert(nsISupports* source, 
+                      nsISupports* property, 
+                      nsISupports* target,
                       PRBool tv) {
         return mInner->Assert(source, property, target, tv);;
     }
 
-    NS_IMETHOD Unassert(nsIRDFResource* source,
-                        nsIRDFResource* property,
-                        nsIRDFNode* target) {
+    NS_IMETHOD Unassert(nsISupports* source,
+                        nsISupports* property,
+                        nsISupports* target) {
         return mInner->Unassert(source, property, target);
     }
 
-    NS_IMETHOD HasAssertion(nsIRDFResource* source,
-                            nsIRDFResource* property,
-                            nsIRDFNode* target,
+    NS_IMETHOD HasAssertion(nsISupports* source,
+                            nsISupports* property,
+                            nsISupports* target,
                             PRBool tv,
                             PRBool* hasAssertion) {
         return mInner->HasAssertion(source, property, target, tv, hasAssertion);
@@ -182,12 +181,12 @@ public:
         return mInner->RemoveObserver(n);
     }
 
-    NS_IMETHOD ArcLabelsIn(nsIRDFNode* node,
+    NS_IMETHOD ArcLabelsIn(nsISupports* node,
                            nsIRDFArcsInCursor** labels) {
         return mInner->ArcLabelsIn(node, labels);
     }
 
-    NS_IMETHOD ArcLabelsOut(nsIRDFResource* source,
+    NS_IMETHOD ArcLabelsOut(nsISupports* source,
                             nsIRDFArcsOutCursor** labels) {
         return mInner->ArcLabelsOut(source, labels);
     }
@@ -198,20 +197,20 @@ public:
 
     NS_IMETHOD Flush(void);
 
-    NS_IMETHOD GetAllCommands(nsIRDFResource* source,
-                              nsIEnumerator/*<nsIRDFResource>*/** commands) {
+    NS_IMETHOD GetAllCommands(nsISupports* source,
+                              nsIEnumerator** commands) {
         return mInner->GetAllCommands(source, commands);
     }
 
-    NS_IMETHOD IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-                                nsIRDFResource*   aCommand,
-                                nsISupportsArray/*<nsIRDFResource>*/* aArguments) {
+    NS_IMETHOD IsCommandEnabled(nsISupportsArray* aSources,
+                                nsISupports*   aCommand,
+                                nsISupportsArray* aArguments) {
         return mInner->IsCommandEnabled(aSources, aCommand, aArguments);
     }
 
-    NS_IMETHOD DoCommand(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-                         nsIRDFResource*   aCommand,
-                         nsISupportsArray/*<nsIRDFResource>*/* aArguments) {
+    NS_IMETHOD DoCommand(nsISupportsArray* aSources,
+                         nsISupports*   aCommand,
+                         nsISupportsArray* aArguments) {
         // XXX Uh oh, this could cause problems wrt. the "dirty" flag
         // if it changes the in-memory store's internal state.
         return mInner->DoCommand(aSources, aCommand, aArguments);
@@ -224,8 +223,8 @@ public:
     NS_IMETHOD Interrupt(void);
     NS_IMETHOD Resume(void);
     NS_IMETHOD EndLoad(void);
-    NS_IMETHOD SetRootResource(nsIRDFResource* aResource);
-    NS_IMETHOD GetRootResource(nsIRDFResource** aResource);
+    NS_IMETHOD SetRootResource(nsISupports* aResource);
+    NS_IMETHOD GetRootResource(nsISupports** aResource);
     NS_IMETHOD AddCSSStyleSheetURL(nsIURL* aStyleSheetURL);
     NS_IMETHOD GetCSSStyleSheetURLs(nsIURL*** aStyleSheetURLs, PRInt32* aCount);
     NS_IMETHOD AddNamedDataSourceURI(const char* aNamedDataSourceURI);
@@ -499,7 +498,7 @@ XULDataSourceImpl::EndLoad(void)
 }
 
 NS_IMETHODIMP
-XULDataSourceImpl::SetRootResource(nsIRDFResource* aResource)
+XULDataSourceImpl::SetRootResource(nsISupports* aResource)
 {
     NS_PRECONDITION(aResource != nsnull, "null ptr");
     if (! aResource)
@@ -516,7 +515,7 @@ XULDataSourceImpl::SetRootResource(nsIRDFResource* aResource)
 }
 
 NS_IMETHODIMP
-XULDataSourceImpl::GetRootResource(nsIRDFResource** aResource)
+XULDataSourceImpl::GetRootResource(nsISupports** aResource)
 {
     NS_ADDREF(mRootResource);
     *aResource = mRootResource;

@@ -49,12 +49,19 @@ nsRDFResource::nsRDFResource(void)
 
 nsRDFResource::~nsRDFResource(void)
 {
-    gRDFService->UnregisterResource(this);
-
-    // N.B. that we need to free the URI *after* we un-cache the resource,
-    // due to the way that the resource manager is implemented.
-    delete[] mURI;
-
+    if (mURI) {
+        gRDFService->UnregisterResource(mURI, this);
+        // N.B. that we need to free the URI *after* we un-cache the resource,
+        // due to the way that the resource manager is implemented.
+        delete[] mURI;
+    }
+    else {
+        const char* uri;
+        nsresult rv = gRDFService->GetURI(this, &uri);
+        if (NS_SUCCEEDED(rv))
+            gRDFService->UnregisterResource(uri, this);
+    }
+        
     if (--gRefCnt == 0) {
         nsServiceManager::ReleaseService(kRDFServiceCID, gRDFService);
         gRDFService = nsnull;
@@ -71,10 +78,8 @@ nsRDFResource::QueryInterface(REFNSIID iid, void** result)
         return NS_ERROR_NULL_POINTER;
 
     *result = nsnull;
-    if (iid.Equals(nsIRDFResource::GetIID()) ||
-        iid.Equals(nsIRDFNode::GetIID()) ||
-        iid.Equals(kISupportsIID)) {
-        *result = NS_STATIC_CAST(nsIRDFResource*, this);
+    if (iid.Equals(kISupportsIID)) {
+        *result = NS_STATIC_CAST(nsISupports*, this);
         NS_ADDREF_THIS();
         return NS_OK;
     }
@@ -93,15 +98,15 @@ nsRDFResource::Init(const char* uri)
         return NS_ERROR_OUT_OF_MEMORY;
 
     // don't replace an existing resource with the same URI automatically
-    return gRDFService->RegisterResource(this, PR_TRUE);
+    return gRDFService->RegisterResource(uri, this, PR_TRUE);
 }
 
 NS_IMETHODIMP
-nsRDFResource::EqualsNode(nsIRDFNode* node, PRBool* result) const
+nsRDFResource::EqualsNode(nsISupports* node, PRBool* result) const
 {
     nsresult rv;
-    nsIRDFResource* resource;
-    if (NS_SUCCEEDED(node->QueryInterface(nsIRDFResource::GetIID(), (void**)&resource))) {
+    nsISupports* resource;
+    if (NS_SUCCEEDED(node->QueryInterface(kISupportsIID, (void**)&resource))) {
         rv = EqualsResource(resource, result);
         NS_RELEASE(resource);
     }
@@ -118,6 +123,7 @@ nsRDFResource::EqualsNode(nsIRDFNode* node, PRBool* result) const
 NS_IMETHODIMP
 nsRDFResource::GetValue(const char* *uri) const
 {
+    NS_NOTREACHED("nsRDFResource::GetValue");
     if (!uri)
         return NS_ERROR_NULL_POINTER;
     *uri = mURI;
@@ -125,17 +131,18 @@ nsRDFResource::GetValue(const char* *uri) const
 }
 
 NS_IMETHODIMP
-nsRDFResource::EqualsResource(const nsIRDFResource* resource, PRBool* result) const
+nsRDFResource::EqualsResource(const nsISupports* resource, PRBool* result) const
 {
     if (!resource || !result)
         return NS_ERROR_NULL_POINTER;
 
+    nsresult rv;
     const char *uri;
-    if (NS_SUCCEEDED(resource->GetValue(&uri))) {
-        return NS_SUCCEEDED(EqualsString(uri, result)) ? NS_OK : NS_ERROR_FAILURE;
-    }
-
-    return NS_ERROR_FAILURE;
+    rv = gRDFService->GetURI((nsISupports*)resource, &uri);
+    if (NS_FAILED(rv)) return rv;
+    rv = EqualsString(uri, result);
+    NS_ASSERTION(NS_SUCCEEDED(rv) && *result ? resource == this : PR_TRUE, "strcmp URI strings should only work for == resources");
+    return NS_SUCCEEDED(rv) ? NS_OK : NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
@@ -143,6 +150,14 @@ nsRDFResource::EqualsString(const char* uri, PRBool* result) const
 {
     if (!uri || !result)
         return NS_ERROR_NULL_POINTER;
+    if (mURI == nsnull) {
+        const char* thisURI;
+        nsresult rv = gRDFService->GetURI((nsISupports*)this, &thisURI);
+        if (NS_FAILED(rv)) return rv;
+        ((nsRDFResource*)this)->mURI = nsCRT::strdup(thisURI);
+        if (mURI == nsnull)
+            return NS_ERROR_OUT_OF_MEMORY;
+    }
     *result = nsCRT::strcmp(uri, mURI) == 0;
     return NS_OK;
 }

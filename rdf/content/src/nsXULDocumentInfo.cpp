@@ -23,7 +23,6 @@
 
 #include "nsIXULDocumentInfo.h"
 #include "nsIDocument.h"
-#include "nsIRDFResource.h"
 #include "nsRDFCID.h"
 
 ////////////////////////////////////////////////////////////////////////
@@ -48,13 +47,13 @@ public:
     NS_DECL_ISUPPORTS
 
     // nsIDocumentInfo
-    NS_IMETHOD Init(nsIDocument* aDocument, nsIRDFResource* aResource);
+    NS_IMETHOD Init(nsIDocument* aDocument, nsISupports* aResource);
     NS_IMETHOD GetDocument(nsIDocument** aDocument);
-    NS_IMETHOD GetResource(nsIRDFResource** aResource);
+    NS_IMETHOD GetResource(nsISupports** aResource);
 
 private:
     nsIDocument* mParentDocument;
-    nsIRDFResource* mFragmentRoot;
+    nsISupports* mFragmentRoot;
 };
 
 
@@ -74,7 +73,7 @@ XULDocumentInfoImpl::~XULDocumentInfoImpl(void)
 }
 
 nsresult
-XULDocumentInfoImpl::Init(nsIDocument* aDocument, nsIRDFResource* aResource) {
+XULDocumentInfoImpl::Init(nsIDocument* aDocument, nsISupports* aResource) {
   NS_IF_RELEASE(mParentDocument);
   NS_IF_RELEASE(mFragmentRoot);
 
@@ -95,7 +94,7 @@ XULDocumentInfoImpl::GetDocument(nsIDocument** aDocument) {
 }
 
 nsresult
-XULDocumentInfoImpl::GetResource(nsIRDFResource** aResource) {
+XULDocumentInfoImpl::GetResource(nsISupports** aResource) {
   NS_IF_ADDREF(mFragmentRoot);
   *aResource = mFragmentRoot;
   return NS_OK;

@@ -40,6 +40,7 @@
 #include "plstr.h"
 #include "prprf.h"
 #include "prlog.h"
+#include "nsCRT.h"
 
 #if 0
 #ifdef XP_MAC
@@ -73,8 +74,6 @@ static NS_DEFINE_IID(kIRDFServiceIID,         NS_IRDFSERVICE_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,         NS_IRDFLITERAL_IID);
 static NS_DEFINE_IID(kIRDFDateIID,         NS_IRDFDATE_IID);
 static NS_DEFINE_IID(kIRDFIntIID,         NS_IRDFINT_IID);
-static NS_DEFINE_IID(kIRDFResourceIID,        NS_IRDFRESOURCE_IID);
-static NS_DEFINE_IID(kIRDFNodeIID,            NS_IRDFNODE_IID);
 static NS_DEFINE_IID(kISupportsIID,           NS_ISUPPORTS_IID);
 
 ////////////////////////////////////////////////////////////////////////
@@ -85,9 +84,10 @@ static NS_DEFINE_IID(kISupportsIID,           NS_ISUPPORTS_IID);
 class ServiceImpl : public nsIRDFService
 {
 protected:
-    PLHashTable* mNamedDataSources;
-    PLHashTable* mResources;
-    PLHashTable* mLiterals;
+    nsHashtable* mNamedDataSources;
+    nsHashtable* mResources;
+    nsHashtable* mURIs;
+    nsHashtable* mLiterals;
 
     ServiceImpl(void);
     virtual ~ServiceImpl(void);
@@ -100,14 +100,16 @@ public:
     NS_DECL_ISUPPORTS
 
     // nsIRDFService
-    NS_IMETHOD GetResource(const char* uri, nsIRDFResource** resource);
-    NS_IMETHOD FindResource(const char* uri, nsIRDFResource** resource, PRBool *found);
-    NS_IMETHOD GetUnicodeResource(const PRUnichar* uri, nsIRDFResource** resource);
+    NS_IMETHOD GetResource(const char* uri, nsISupports** resource);
+    NS_IMETHOD FindResource(const char* uri, nsISupports** resource, PRBool *found);
+    NS_IMETHOD GetURI(nsISupports* resource, const char* *uri);
+    NS_IMETHOD EqualsResource(nsISupports* r1, nsISupports* r2);
+    NS_IMETHOD GetUnicodeResource(const PRUnichar* uri, nsISupports** resource);
     NS_IMETHOD GetLiteral(const PRUnichar* value, nsIRDFLiteral** literal);
     NS_IMETHOD GetDateLiteral(const PRTime value, nsIRDFDate** date) ;
     NS_IMETHOD GetIntLiteral(const int32 value, nsIRDFInt** intLiteral);
-    NS_IMETHOD RegisterResource(nsIRDFResource* aResource, PRBool replace = PR_FALSE);
-    NS_IMETHOD UnregisterResource(nsIRDFResource* aResource);
+    NS_IMETHOD RegisterResource(const char* uri, nsISupports* aResource, PRBool replace = PR_FALSE);
+    NS_IMETHOD UnregisterResource(const char* uri, nsISupports* aResource);
     NS_IMETHOD RegisterDataSource(nsIRDFDataSource* dataSource, PRBool replace = PR_FALSE);
     NS_IMETHOD UnregisterDataSource(nsIRDFDataSource* dataSource);
     NS_IMETHOD GetDataSource(const char* uri, nsIRDFDataSource** dataSource);
@@ -115,6 +117,7 @@ public:
     NS_IMETHOD CreateBrowserDatabase(nsIRDFDataBase** dataBase);
 
     // Implementation methods
+    nsresult Init();
     nsresult RegisterLiteral(nsIRDFLiteral* aLiteral, PRBool aReplace = PR_FALSE);
     nsresult UnregisterLiteral(nsIRDFLiteral* aLiteral);
 };
@@ -138,7 +141,7 @@ public:
     NS_DECL_ISUPPORTS
 
     // nsIRDFNode
-    NS_IMETHOD EqualsNode(nsIRDFNode* node, PRBool* result) const;
+    NS_IMETHOD EqualsNode(nsISupports* node, PRBool* result) const;
 
     // nsIRDFLiteral
     NS_IMETHOD GetValue(const PRUnichar* *value) const;
@@ -172,7 +175,6 @@ LiteralImpl::QueryInterface(REFNSIID iid, void** result)
 
     *result = nsnull;
     if (iid.Equals(kIRDFLiteralIID) ||
-        iid.Equals(kIRDFNodeIID) ||
         iid.Equals(kISupportsIID)) {
         *result = NS_STATIC_CAST(nsIRDFLiteral*, this);
         AddRef();
@@ -182,7 +184,7 @@ LiteralImpl::QueryInterface(REFNSIID iid, void** result)
 }
 
 NS_IMETHODIMP
-LiteralImpl::EqualsNode(nsIRDFNode* node, PRBool* result) const
+LiteralImpl::EqualsNode(nsISupports* node, PRBool* result) const
 {
     nsresult rv;
     nsIRDFLiteral* literal;
@@ -241,7 +243,7 @@ public:
     NS_DECL_ISUPPORTS
 
     // nsIRDFNode
-    NS_IMETHOD EqualsNode(nsIRDFNode* node, PRBool* result) const;
+    NS_IMETHOD EqualsNode(nsISupports* node, PRBool* result) const;
 
     // nsIRDFDate
     NS_IMETHOD GetValue(PRTime *value) const;
@@ -273,7 +275,6 @@ DateImpl::QueryInterface(REFNSIID iid, void** result)
 
     *result = nsnull;
     if (iid.Equals(kIRDFDateIID) ||
-        iid.Equals(kIRDFNodeIID) ||
         iid.Equals(kISupportsIID)) {
         *result = NS_STATIC_CAST(nsIRDFDate*, this);
         AddRef();
@@ -283,7 +284,7 @@ DateImpl::QueryInterface(REFNSIID iid, void** result)
 }
 
 NS_IMETHODIMP
-DateImpl::EqualsNode(nsIRDFNode* node, PRBool* result) const
+DateImpl::EqualsNode(nsISupports* node, PRBool* result) const
 {
     nsresult rv;
     nsIRDFDate* date;
@@ -339,7 +340,7 @@ public:
     NS_DECL_ISUPPORTS
 
     // nsIRDFNode
-    NS_IMETHOD EqualsNode(nsIRDFNode* node, PRBool* result) const;
+    NS_IMETHOD EqualsNode(nsISupports* node, PRBool* result) const;
 
     // nsIRDFInt
     NS_IMETHOD GetValue(int32 *value) const;
@@ -371,7 +372,6 @@ IntImpl::QueryInterface(REFNSIID iid, void** result)
 
     *result = nsnull;
     if (iid.Equals(kIRDFIntIID) ||
-        iid.Equals(kIRDFNodeIID) ||
         iid.Equals(kISupportsIID)) {
         *result = NS_STATIC_CAST(nsIRDFInt*, this);
         AddRef();
@@ -381,7 +381,7 @@ IntImpl::QueryInterface(REFNSIID iid, void** result)
 }
 
 NS_IMETHODIMP
-IntImpl::EqualsNode(nsIRDFNode* node, PRBool* result) const
+IntImpl::EqualsNode(nsISupports* node, PRBool* result) const
 {
     nsresult rv;
     nsIRDFInt* intValue;
@@ -427,6 +427,7 @@ IntImpl::EqualsInt(const nsIRDFInt* intValue, PRBool* result) const
 ////////////////////////////////////////////////////////////////////////
 // ServiceImpl
 
+#if 0
 static PLHashNumber
 rdf_HashWideString(const void* key)
 {
@@ -435,43 +436,49 @@ rdf_HashWideString(const void* key)
         result = (result >> 28) ^ (result << 4) ^ *s;
     return result;
 }
+#endif
 
 ServiceImpl::ServiceImpl(void)
-    :  mNamedDataSources(nsnull), mResources(nsnull), mLiterals(nsnull)
+    :  mNamedDataSources(nsnull), mResources(nsnull), mURIs(nsnull),
+       mLiterals(nsnull)
 {
     NS_INIT_REFCNT();
-    mResources = PL_NewHashTable(1023,              // nbuckets
-                                 PL_HashString,     // hash fn
-                                 PL_CompareStrings, // key compare fn
-                                 PL_CompareValues,  // value compare fn
-                                 nsnull, nsnull);   // alloc ops & priv
-
-    mLiterals = PL_NewHashTable(1023,
-                                rdf_HashWideString,
-                                PL_CompareStrings,
-                                PL_CompareValues,
-                                nsnull, nsnull);
-
-    mNamedDataSources = PL_NewHashTable(23,
-                                        PL_HashString,
-                                        PL_CompareStrings,
-                                        PL_CompareValues,
-                                        nsnull, nsnull);
 }
 
+nsresult
+ServiceImpl::Init()
+{
+    mResources = new nsHashtable();
+    if (mResources == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+    mURIs = new nsHashtable();
+    if (mURIs == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+    mLiterals = new nsHashtable();
+    if (mLiterals == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+    mNamedDataSources = new nsHashtable();
+    if (mNamedDataSources == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+    return NS_OK;
+}
 
 ServiceImpl::~ServiceImpl(void)
 {
     if (mNamedDataSources) {
-        PL_HashTableDestroy(mNamedDataSources);
+        delete mNamedDataSources;
         mNamedDataSources = nsnull;
     }
     if (mResources) {
-        PL_HashTableDestroy(mResources);
+        delete mResources;
         mResources = nsnull;
     }
+    if (mURIs) {
+        delete mURIs;
+        mURIs = nsnull;
+    }
     if (mLiterals) {
-        PL_HashTableDestroy(mLiterals);
+        delete mLiterals;
         mLiterals = nsnull;
     }
     gRDFService = nsnull;
@@ -485,6 +492,8 @@ ServiceImpl::GetRDFService(nsIRDFService** mgr)
         ServiceImpl* serv = new ServiceImpl();
         if (! serv)
             return NS_ERROR_OUT_OF_MEMORY;
+        nsresult rv = serv->Init();
+        if (NS_FAILED(rv)) return rv;
         gRDFService = serv;
     }
 
@@ -512,7 +521,7 @@ NS_IMPL_QUERY_INTERFACE(ServiceImpl, kIRDFServiceIID);
 
 
 NS_IMETHODIMP
-ServiceImpl::GetResource(const char* aURI, nsIRDFResource** aResource)
+ServiceImpl::GetResource(const char* aURI, nsISupports** aResource)
 {
     // Sanity checks
     NS_PRECONDITION(aURI != nsnull, "null ptr");
@@ -525,8 +534,9 @@ ServiceImpl::GetResource(const char* aURI, nsIRDFResource** aResource)
 
     // First, check the cache to see if we've already created and
     // registered this thing.
-    nsIRDFResource* result =
-        NS_STATIC_CAST(nsIRDFResource*, PL_HashTableLookup(mResources, aURI));
+    nsCStringKey uriKey(aURI);
+    nsISupports* result =
+        NS_STATIC_CAST(nsISupports*, mResources->Get(&uriKey));
 
     if (result) {
         // Addref for the callee.
@@ -548,14 +558,14 @@ ServiceImpl::GetResource(const char* aURI, nsIRDFResource** aResource)
         rv = NSGetFactory(servMgr, kRDFDefaultResourceCID,
                           "", NS_RDF_RESOURCE_FACTORY_PROGID, &fact);
         if (rv == NS_OK) {
-            rv = fact->CreateInstance(nsnull, nsIRDFResource::GetIID(),
+            rv = fact->CreateInstance(nsnull, nsISupports::GetIID(),
                                       (void**)&result);
             NS_RELEASE(fact);
         }
 #else
         rv = nsComponentManager::CreateInstance(NS_RDF_RESOURCE_FACTORY_PROGID,
-                                          nsnull, nsIRDFResource::GetIID(),
-                                          (void**)&result);
+                                                nsnull, nsISupports::GetIID(),
+                                                (void**)&result);
 #endif
         if (NS_FAILED(rv)) {
             NS_ERROR("unable to create resource");
@@ -587,14 +597,14 @@ ServiceImpl::GetResource(const char* aURI, nsIRDFResource** aResource)
         rv = NSGetFactory(servMgr, kRDFDefaultResourceCID,
                           "", progID, &fact);
         if (rv == NS_OK) {
-            rv = fact->CreateInstance(nsnull, nsIRDFResource::GetIID(),
+            rv = fact->CreateInstance(nsnull, nsISupports::GetIID(),
                                       (void**)&result);
             NS_RELEASE(fact);
         }
 #else
         rv = nsComponentManager::CreateInstance(progID, nsnull,
-                                          nsIRDFResource::GetIID(),
-                                          (void**)&result);
+                                                nsISupports::GetIID(),
+                                                (void**)&result);
 #endif
         if (progID != buf)
             delete[] progID;
@@ -608,14 +618,14 @@ ServiceImpl::GetResource(const char* aURI, nsIRDFResource** aResource)
             rv = NSGetFactory(servMgr, kRDFDefaultResourceCID,
                               "", NS_RDF_RESOURCE_FACTORY_PROGID, &fact);
             if (rv == NS_OK) {
-                rv = fact->CreateInstance(nsnull, nsIRDFResource::GetIID(),
+                rv = fact->CreateInstance(nsnull, nsISupports::GetIID(),
                                           (void**)&result);
                 NS_RELEASE(fact);
             }
 #else
             rv = nsComponentManager::CreateInstance(NS_RDF_RESOURCE_FACTORY_PROGID,
-                                              nsnull, nsIRDFResource::GetIID(),
-                                              (void**)&result);
+                                                    nsnull, nsISupports::GetIID(),
+                                                    (void**)&result);
 #endif
             if (NS_FAILED(rv)) {
                 NS_ERROR("unable to create resource");
@@ -624,24 +634,37 @@ ServiceImpl::GetResource(const char* aURI, nsIRDFResource** aResource)
         }
     }
 
-    // Now initialize it with it's URI. At this point, the resource
-    // implementation should register itself with the RDF service.
-    rv = result->Init(aURI);
-    if (NS_FAILED(rv)) {
-        NS_ERROR("unable to initialize resource");
+    // All this CreateInstance stuff could have recursively entered GetResource and
+    // already registered a resource with the same URI (I've seen it happen). So
+    // check here and swap for the one that's already registered:
+    nsISupports* alreadyRegistered =
+        NS_STATIC_CAST(nsISupports*, mResources->Get(&uriKey));
+    if (alreadyRegistered) {
         NS_RELEASE(result);
-        return rv;
+        result = alreadyRegistered;
+        NS_ADDREF(result);
     }
-
+    else {
+        // Now initialize it with it's URI. At this point, the resource
+        // implementation should register itself with the RDF service.
+//        rv = result->Init(aURI);
+        rv = RegisterResource(aURI, result);
+        if (NS_FAILED(rv)) {
+            NS_ERROR("unable to initialize resource");
+            NS_RELEASE(result);
+            return rv;
+        }
+    }
     *aResource = result; // already refcounted from repository
     return rv;
 }
 
 NS_IMETHODIMP
-ServiceImpl::FindResource(const char* uri, nsIRDFResource** resource, PRBool *found)
+ServiceImpl::FindResource(const char* uri, nsISupports** resource, PRBool *found)
 {
-    nsIRDFResource* result =
-        NS_STATIC_CAST(nsIRDFResource*, PL_HashTableLookup(mResources, uri));
+    nsCStringKey key(uri);
+    nsISupports* result =
+        NS_STATIC_CAST(nsISupports*, mResources->Get(&key));
 
     if (result) {
         *resource = result;
@@ -653,7 +676,50 @@ ServiceImpl::FindResource(const char* uri, nsIRDFResource** resource, PRBool *fo
 }
 
 NS_IMETHODIMP
-ServiceImpl::GetUnicodeResource(const PRUnichar* aURI, nsIRDFResource** aResource)
+ServiceImpl::GetURI(nsISupports* resource, const char* *result)
+{
+    nsresult rv;
+    nsISupports* canonicalObject;
+    rv = ((nsISupports*)resource)->QueryInterface(kISupportsIID, (void**)&canonicalObject);
+    if (NS_FAILED(rv)) return rv;
+
+    nsVoidKey key(canonicalObject);
+    const char* uri =
+        NS_STATIC_CAST(const char*, mURIs->Get(&key));
+    if (uri == nsnull)
+        return NS_ERROR_FAILURE;
+    *result = uri;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+ServiceImpl::EqualsResource(nsISupports* r1, nsISupports* r2)
+{
+    nsresult rv;
+    PRBool eq;
+    nsIRDFLiteral* lit1;
+    rv = r1->QueryInterface(nsIRDFLiteral::GetIID(), (void**)&lit1);
+    if (NS_SUCCEEDED(rv)) {
+        rv = lit1->EqualsNode(r2, &eq);
+        NS_RELEASE(lit1);
+        if (NS_FAILED(rv)) return rv;
+    }
+    else {
+        nsISupports* s1 = nsnull;
+        nsISupports* s2 = nsnull;
+        rv = r1->QueryInterface(kISupportsIID, (void**)&s1);
+        if (NS_FAILED(rv)) return rv;
+        rv = r2->QueryInterface(kISupportsIID, (void**)&s2);
+        eq = s1 == s2;
+        NS_RELEASE(s1);
+        if (NS_FAILED(rv)) return rv;
+        NS_RELEASE(s2);
+    }
+    return eq ? NS_OK : NS_COMFALSE;
+}
+
+NS_IMETHODIMP
+ServiceImpl::GetUnicodeResource(const PRUnichar* aURI, nsISupports** aResource)
 {
     nsString uriStr(aURI);
     char buf[128];
@@ -685,8 +751,9 @@ ServiceImpl::GetLiteral(const PRUnichar* aValue, nsIRDFLiteral** aLiteral)
         return NS_ERROR_NULL_POINTER;
 
     // See if we have on already cached
+    nsUnicharKey key(aValue);
     nsIRDFLiteral* literal =
-        NS_STATIC_CAST(nsIRDFLiteral*, PL_HashTableLookup(mLiterals, aValue));
+        NS_STATIC_CAST(nsIRDFLiteral*, mLiterals->Get(&key));
 
     if (literal) {
         NS_ADDREF(literal);
@@ -731,27 +798,23 @@ ServiceImpl::GetIntLiteral(const int32 value, nsIRDFInt** literal)
 }
 
 NS_IMETHODIMP
-ServiceImpl::RegisterResource(nsIRDFResource* aResource, PRBool replace)
+ServiceImpl::RegisterResource(const char* uri, nsISupports* aResource, PRBool replace)
 {
     NS_PRECONDITION(aResource != nsnull, "null ptr");
     if (! aResource)
         return NS_ERROR_NULL_POINTER;
 
-    nsresult rv;
-
-    const char* uri;
-    rv = aResource->GetValue(&uri);
-    if (NS_FAILED(rv)) {
-        NS_ERROR("unable to get URI from resource");
-        return rv;
-    }
-
     NS_ASSERTION(uri != nsnull, "resource has no URI");
     if (! uri)
         return NS_ERROR_NULL_POINTER;
 
-    nsIRDFResource* prevRes =
-        NS_STATIC_CAST(nsIRDFResource*, PL_HashTableLookup(mResources, uri));
+    const char* uriValue = nsCRT::strdup(uri);
+    if (uriValue == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    nsCStringKey uriKey(uri);
+    nsISupports* prevRes =
+        NS_STATIC_CAST(nsISupports*, mResources->Get(&uriKey));
     if (prevRes != nsnull) {
         if (replace) {
             NS_RELEASE(prevRes);
@@ -762,10 +825,16 @@ ServiceImpl::RegisterResource(nsIRDFResource* aResource, PRBool replace)
         }
     }
 
-    // This is a little trick to make storage more efficient. For
-    // the "key" in the table, we'll use the string value that's
-    // stored as a member variable of the nsIRDFResource object.
-    PL_HashTableAdd(mResources, uri, aResource);
+    mResources->Put(&uriKey, aResource);
+
+    // store the inverse mapping too since we're no longer using 
+    // nsISupportss that contain their URI string
+    nsISupports* canonicalObject;
+    nsresult rv = aResource->QueryInterface(kISupportsIID, (void**)&canonicalObject);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "can't get nsISupports"); 
+    NS_RELEASE(aResource);
+    nsVoidKey resKey(canonicalObject);
+    mURIs->Put(&resKey, (void*)uriValue);
 
     // *We* don't AddRef() the resource: that way, the resource
     // can be garbage collected when the last refcount goes
@@ -775,20 +844,21 @@ ServiceImpl::RegisterResource(nsIRDFResource* aResource, PRBool replace)
 }
 
 NS_IMETHODIMP
-ServiceImpl::UnregisterResource(nsIRDFResource* resource)
+ServiceImpl::UnregisterResource(const char* uri, nsISupports* resource)
 {
     NS_PRECONDITION(resource != nsnull, "null ptr");
     if (! resource)
         return NS_ERROR_NULL_POINTER;
 
-    nsresult rv;
+    nsCStringKey uriKey(uri);
+    void* foundRes = mResources->Remove(&uriKey);
 
-    const char* uri;
-    if (NS_FAILED(rv = resource->GetValue(&uri)))
-        return rv;
-
-    PL_HashTableRemove(mResources, uri);
-    return NS_OK;
+    nsISupports* canonicalObject;
+    nsresult rv = resource->QueryInterface(kISupportsIID, (void**)&canonicalObject);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "can't get nsISupports");
+    nsVoidKey resKey(canonicalObject);
+    void* foundURI = mURIs->Remove(&resKey);
+    return foundRes && foundURI ? NS_OK : NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
@@ -804,8 +874,9 @@ ServiceImpl::RegisterDataSource(nsIRDFDataSource* aDataSource, PRBool replace)
     if (NS_FAILED(rv = aDataSource->GetURI(&uri)))
         return rv;
 
-    nsIRDFDataSource* ds =
-        NS_STATIC_CAST(nsIRDFDataSource*, PL_HashTableLookup(mNamedDataSources, uri));
+    nsCStringKey key(uri);
+    nsIRDFDataSource* ds = 
+        NS_STATIC_CAST(nsIRDFDataSource*, mNamedDataSources->Get(&key));
 
     if (ds) {
         if (replace)
@@ -814,7 +885,7 @@ ServiceImpl::RegisterDataSource(nsIRDFDataSource* aDataSource, PRBool replace)
             return NS_ERROR_FAILURE;    // already registered
     }
 
-    PL_HashTableAdd(mNamedDataSources, uri, aDataSource);
+    mNamedDataSources->Put(&key, aDataSource);
     return NS_OK;
 }
 
@@ -831,14 +902,9 @@ ServiceImpl::UnregisterDataSource(nsIRDFDataSource* aDataSource)
     if (NS_FAILED(rv = aDataSource->GetURI(&uri)))
         return rv;
 
-    nsIRDFDataSource* ds =
-        NS_STATIC_CAST(nsIRDFDataSource*, PL_HashTableLookup(mNamedDataSources, uri));
-
-    if (! ds)
-        return NS_ERROR_ILLEGAL_VALUE;
-
-    PL_HashTableRemove(mNamedDataSources, uri);
-    return NS_OK;
+    nsCStringKey key(uri);
+    void* found = mNamedDataSources->Remove(&key);
+    return found ? NS_OK : NS_ERROR_ILLEGAL_VALUE;
 }
 
 NS_IMETHODIMP
@@ -846,8 +912,9 @@ ServiceImpl::GetDataSource(const char* uri, nsIRDFDataSource** aDataSource)
 {
     // First, check the cache to see if we already have this
     // datasource loaded and initialized.
+    nsCStringKey key(uri);
     nsIRDFDataSource* ds =
-        NS_STATIC_CAST(nsIRDFDataSource*, PL_HashTableLookup(mNamedDataSources, uri));
+        NS_STATIC_CAST(nsIRDFDataSource*, mNamedDataSources->Get(&key));
 
     if (ds) {
         NS_ADDREF(ds);
@@ -960,8 +1027,9 @@ ServiceImpl::RegisterLiteral(nsIRDFLiteral* aLiteral, PRBool aReplace)
         return rv;
     }
 
+    nsUnicharKey key(value);
     nsIRDFLiteral* prevLiteral =
-        NS_STATIC_CAST(nsIRDFLiteral*, PL_HashTableLookup(mLiterals, value));
+        NS_STATIC_CAST(nsIRDFLiteral*, mLiterals->Get(&key));
 
     if (prevLiteral) {
         if (aReplace) {
@@ -973,8 +1041,8 @@ ServiceImpl::RegisterLiteral(nsIRDFLiteral* aLiteral, PRBool aReplace)
         }
     }
 
-    PL_HashTableAdd(mLiterals, value, aLiteral);
-    return NS_OK;
+    void* lit = mLiterals->Put(&key, aLiteral);
+    return lit ? NS_OK : NS_ERROR_FAILURE;
 }
 
 
@@ -990,9 +1058,10 @@ ServiceImpl::UnregisterLiteral(nsIRDFLiteral* aLiteral)
         NS_ERROR("unable to get literal's value");
         return rv;
     }
-
-    PL_HashTableRemove(mLiterals, value);
-    return NS_OK;
+    
+    nsUnicharKey key(value);
+    void* found = mLiterals->Remove(&key);
+    return found ? NS_OK : NS_ERROR_FAILURE;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -1002,3 +1071,42 @@ NS_NewRDFService(nsIRDFService** mgr)
 {
     return ServiceImpl::GetRDFService(mgr);
 }
+
+nsresult
+NS_GetURI(nsISupports* resource, const char* *result)
+{
+    nsIRDFService* rdf;
+    nsresult rv;
+    rv = ServiceImpl::GetRDFService(&rdf);
+    if (NS_FAILED(rv)) return rv;
+    rv = rdf->GetURI(resource, result);
+    NS_RELEASE(rdf);
+    return rv;
+}
+
+nsresult
+NS_EqualsResource(nsISupports* r1, nsISupports* r2)
+{
+    nsIRDFService* rdf;
+    nsresult rv;
+    rv = ServiceImpl::GetRDFService(&rdf);
+    if (NS_FAILED(rv)) return rv;
+    rv = rdf->EqualsResource(r1, r2);
+    NS_RELEASE(rdf);
+    return rv;
+}
+
+nsresult
+NS_EqualsString(nsISupports* resource, const char* str, PRBool *result)
+{
+    const char* uri;
+    nsresult rv = NS_GetURI(resource, &uri);
+    if (NS_FAILED(rv)) {
+        *result = PR_FALSE;
+        return NS_OK;
+    }
+    *result = nsCRT::strcmp(str, uri) == 0;
+    return NS_OK;
+}
+
+////////////////////////////////////////////////////////////////////////////////

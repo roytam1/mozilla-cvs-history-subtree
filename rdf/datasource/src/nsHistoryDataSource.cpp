@@ -55,8 +55,6 @@ static NS_DEFINE_IID(kIRDFCursorIID,               NS_IRDFCURSOR_IID);
 static NS_DEFINE_IID(kIRDFDataSourceIID,           NS_IRDFDATASOURCE_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,              NS_IRDFLITERAL_IID);
 static NS_DEFINE_IID(kIRDFHistoryDataSourceIID,    NS_IRDFHISTORYDATASOURCE_IID);
-static NS_DEFINE_IID(kIRDFNodeIID,                 NS_IRDFNODE_IID);
-static NS_DEFINE_IID(kIRDFResourceIID,             NS_IRDFRESOURCE_IID);
 static NS_DEFINE_IID(kIRDFServiceIID,              NS_IRDFSERVICE_IID);
 static NS_DEFINE_IID(kISupportsIID,                NS_ISUPPORTS_IID);
 static NS_DEFINE_CID(kRDFServiceCID,               NS_RDFSERVICE_CID);
@@ -109,18 +107,18 @@ protected:
     PLHashTable*       mLastVisitDateHash; 
     PRExplodedTime     mSessionTime;
 
-    nsIRDFResource*    mResourcePage;
-    nsIRDFResource*    mResourceDate;    
-    nsIRDFResource*    mResourceTitle;
-    nsIRDFResource*    mResourceReferer;
-    nsIRDFResource*    mResourceChild;
-    nsIRDFResource*    mResourceHistoryBySite;
+    nsISupports*    mResourcePage;
+    nsISupports*    mResourceDate;    
+    nsISupports*    mResourceTitle;
+    nsISupports*    mResourceReferer;
+    nsISupports*    mResourceChild;
+    nsISupports*    mResourceHistoryBySite;
 
     nsresult ReadHistory(void);
     nsresult ReadOneHistoryFile(nsInputFileStream& aStream, char *fileURL);
     nsresult AddPageToGraph(char* url, char* title, char* referer,  PRTime date);
-    nsresult AddToDateHierarchy (PRTime date, nsIRDFResource* resource) ;
-    nsresult getSiteOfURL(char* url, nsIRDFResource** resource) ;
+    nsresult AddToDateHierarchy (PRTime date, nsISupports* resource) ;
+    nsresult getSiteOfURL(char* url, nsISupports** resource) ;
 
 public:
     // nsISupports
@@ -142,44 +140,44 @@ public:
         return mInner->GetURI(uri);
     }
 
-    NS_IMETHOD GetSource(nsIRDFResource* property,
-                         nsIRDFNode* target,
-                         PRBool tv, nsIRDFResource** source) {
+    NS_IMETHOD GetSource(nsISupports* property,
+                         nsISupports* target,
+                         PRBool tv, nsISupports** source) {
         return mInner->GetSource(property, target, tv, source);
     }
 
-    NS_IMETHOD GetSources(nsIRDFResource* property,
-                          nsIRDFNode* target,  PRBool tv,
+    NS_IMETHOD GetSources(nsISupports* property,
+                          nsISupports* target,  PRBool tv,
                           nsIRDFAssertionCursor** sources) {
         return mInner->GetSources(property, target, tv, sources);
     }
 
-    NS_IMETHOD GetTarget(nsIRDFResource* source,
-                         nsIRDFResource* property,  PRBool tv,
-                         nsIRDFNode** target) {
+    NS_IMETHOD GetTarget(nsISupports* source,
+                         nsISupports* property,  PRBool tv,
+                         nsISupports** target) {
         return mInner->GetTarget(source, property, tv, target);
     }
 
-    NS_IMETHOD GetTargets(nsIRDFResource* source,
-                          nsIRDFResource* property,  PRBool tv,
+    NS_IMETHOD GetTargets(nsISupports* source,
+                          nsISupports* property,  PRBool tv,
                           nsIRDFAssertionCursor** targets) {
         return mInner->GetTargets(source, property, tv, targets);
     }
 
-    NS_IMETHOD Assert(nsIRDFResource* source, 
-                      nsIRDFResource* property, 
-                      nsIRDFNode* target, PRBool tv) {
+    NS_IMETHOD Assert(nsISupports* source, 
+                      nsISupports* property, 
+                      nsISupports* target, PRBool tv) {
         return mInner->Assert(source, property, target, tv);
     }
 
-    NS_IMETHOD Unassert(nsIRDFResource* source,
-                        nsIRDFResource* property, nsIRDFNode* target) {
+    NS_IMETHOD Unassert(nsISupports* source,
+                        nsISupports* property, nsISupports* target) {
         return mInner->Unassert(source, property, target);
     }
 
-    NS_IMETHOD HasAssertion(nsIRDFResource* source,
-                            nsIRDFResource* property,
-                            nsIRDFNode* target, PRBool tv,
+    NS_IMETHOD HasAssertion(nsISupports* source,
+                            nsISupports* property,
+                            nsISupports* target, PRBool tv,
                             PRBool* hasAssertion) {
         return mInner->HasAssertion(source, property, target, tv, hasAssertion);
     }
@@ -192,12 +190,12 @@ public:
         return mInner->RemoveObserver(n);
     }
 
-    NS_IMETHOD ArcLabelsIn(nsIRDFNode* node,
+    NS_IMETHOD ArcLabelsIn(nsISupports* node,
                            nsIRDFArcsInCursor** labels) {
         return mInner->ArcLabelsIn(node, labels);
     }
 
-    NS_IMETHOD ArcLabelsOut(nsIRDFResource* source,
+    NS_IMETHOD ArcLabelsOut(nsISupports* source,
                             nsIRDFArcsOutCursor** labels) {
         return mInner->ArcLabelsOut(source, labels);
     }
@@ -206,20 +204,20 @@ public:
         return mInner->Flush();
     }
 
-    NS_IMETHOD GetAllCommands(nsIRDFResource* source,
-                              nsIEnumerator/*<nsIRDFResource>*/** commands) {
+    NS_IMETHOD GetAllCommands(nsISupports* source,
+                              nsIEnumerator** commands) {
         return mInner->GetAllCommands(source, commands);
     }
 
-    NS_IMETHOD IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-                                nsIRDFResource*   aCommand,
-                                nsISupportsArray/*<nsIRDFResource>*/* aArguments) {
+    NS_IMETHOD IsCommandEnabled(nsISupportsArray* aSources,
+                                nsISupports*   aCommand,
+                                nsISupportsArray* aArguments) {
         return mInner->IsCommandEnabled(aSources, aCommand, aArguments);
     }
 
-    NS_IMETHOD DoCommand(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-                         nsIRDFResource*   aCommand,
-                         nsISupportsArray/*<nsIRDFResource>*/* aArguments) {
+    NS_IMETHOD DoCommand(nsISupportsArray* aSources,
+                         nsISupports*   aCommand,
+                         nsISupportsArray* aArguments) {
         // XXX Uh oh, this could cause problems wrt. the "dirty" flag
         // if it changes the in-memory store's internal state.
         return mInner->DoCommand(aSources, aCommand, aArguments);
@@ -237,12 +235,12 @@ public:
 
     NS_IMETHOD SetPageTitle (const char* uri, PRUnichar* title) ;
 
-    NS_IMETHOD RemovePage (nsIRDFResource* page) {
+    NS_IMETHOD RemovePage (nsISupports* page) {
         return NS_OK;
     }
 
     NS_IMETHOD LastVisitDate (const char* uri, uint32 *date) {
-        nsIRDFResource* res;
+        nsISupports* res;
         PRBool found = 0;
         *date = 0;
         gRDFService->FindResource(uri, &res, &found);
@@ -250,7 +248,7 @@ public:
         return NS_OK;
     }
 
-    nsresult UpdateLastVisitDate (nsIRDFResource* res, uint32 date) {
+    nsresult UpdateLastVisitDate (nsISupports* res, uint32 date) {
         uint32 edate = (uint32) PL_HashTableLookup(mLastVisitDateHash, res);    
         if (edate && (edate > date)) return NS_OK;
         PL_HashTableAdd(mLastVisitDateHash, res, (void*)date);
@@ -509,7 +507,7 @@ nsHistoryDataSource::ReadOneHistoryFile(nsInputFileStream& aStream, char *fileUR
 
 
 nsresult 
-nsHistoryDataSource::getSiteOfURL(char* url, nsIRDFResource** resource)
+nsHistoryDataSource::getSiteOfURL(char* url, nsISupports** resource)
 {
 	char* str = strstr(url, "://");
 	char buff[256];
@@ -547,11 +545,11 @@ nsHistoryDataSource::AddPageToGraph(char* url, char* title,
 	char *histURL = PR_smprintf("hst://%s", url);
 	if (histURL)
 	{
-		nsIRDFResource	*siteResource;    
+		nsISupports	*siteResource;    
 		rv = getSiteOfURL(url, &siteResource);
 		if (rv == NS_OK)
 		{
-			nsIRDFResource *pageResource, *refererResource, *histResource;    
+			nsISupports *pageResource, *refererResource, *histResource;    
 			nsIRDFLiteral  *titleLiteral;
 			nsIRDFDate     *dateLiteral;
 
@@ -583,7 +581,7 @@ nsHistoryDataSource::AddPageToGraph(char* url, char* title,
 
 
 nsresult
-nsHistoryDataSource::AddToDateHierarchy (PRTime date, nsIRDFResource* resource)
+nsHistoryDataSource::AddToDateHierarchy (PRTime date, nsISupports* resource)
 {
 	return(NS_OK);
 }

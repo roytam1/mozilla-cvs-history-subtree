@@ -68,9 +68,7 @@
 #include "nsIRDFNode.h"
 #include "nsIRDFObserver.h"
 #include "nsIRDFService.h"
-#include "nsIServiceManager.h"
 #include "nsINameSpaceManager.h"
-#include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
 #include "nsIURL.h"
 #include "nsLayoutCID.h"
@@ -100,7 +98,6 @@ DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, child);
 static NS_DEFINE_IID(kIContentIID,                NS_ICONTENT_IID);
 static NS_DEFINE_IID(kIDocumentIID,               NS_IDOCUMENT_IID);
 static NS_DEFINE_IID(kINameSpaceManagerIID,       NS_INAMESPACEMANAGER_IID);
-static NS_DEFINE_IID(kIRDFResourceIID,            NS_IRDFRESOURCE_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,             NS_IRDFLITERAL_IID);
 static NS_DEFINE_IID(kIRDFContentModelBuilderIID, NS_IRDFCONTENTMODELBUILDER_IID);
 static NS_DEFINE_IID(kIRDFObserverIID,            NS_IRDFOBSERVER_IID);
@@ -108,7 +105,6 @@ static NS_DEFINE_IID(kIRDFServiceIID,             NS_IRDFSERVICE_IID);
 static NS_DEFINE_IID(kISupportsIID,               NS_ISUPPORTS_IID);
 
 static NS_DEFINE_CID(kNameSpaceManagerCID,        NS_NAMESPACEMANAGER_CID);
-static NS_DEFINE_CID(kRDFServiceCID,              NS_RDFSERVICE_CID);
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -127,13 +123,13 @@ public:
     // Implementation methods
     nsresult
     AddWidgetItem(nsIContent* aTreeItemElement,
-                  nsIRDFResource* aProperty,
-                  nsIRDFResource* aValue, PRInt32 aNaturalOrderPos);
+                  nsISupports* aProperty,
+                  nsISupports* aValue, PRInt32 aNaturalOrderPos);
 
     nsresult
     RemoveWidgetItem(nsIContent* aElement,
-                     nsIRDFResource* aProperty,
-                     nsIRDFResource* aValue);
+                     nsISupports* aProperty,
+                     nsISupports* aValue);
 
     nsresult
     EnsureCell(nsIContent* aTreeItemElement, PRInt32 aIndex, nsIContent** aCellElement);
@@ -143,18 +139,18 @@ public:
 
     nsresult
     FindTreeCellForProperty(nsIContent* aTreeRowElement,
-                            nsIRDFResource* aProperty,
+                            nsISupports* aProperty,
                             nsIContent** aTreeCell);
 
     nsresult
     GetColumnForProperty(nsIContent* aTreeElement,
-                         nsIRDFResource* aProperty,
+                         nsISupports* aProperty,
                          PRInt32* aIndex);
 
     nsresult
     SetCellValue(nsIContent* aTreeRowElement,
-                 nsIRDFResource* aProperty,
-                 nsIRDFNode* aValue);
+                 nsISupports* aProperty,
+                 nsISupports* aValue);
  
     nsresult 
     GetRootWidgetAtom(nsIAtom** aResult) {
@@ -329,7 +325,7 @@ RDFTreeBuilderImpl::OnRemoveChild(nsIDOMNode* aParent, nsIDOMNode* aOldChild)
 
     nsresult rv;
 
-    nsCOMPtr<nsIRDFResource> resource;
+    nsCOMPtr<nsISupports> resource;
     if (NS_FAILED(rv = GetDOMNodeResource(aParent, getter_AddRefs(resource)))) {
         // XXX it's not a resource element, so there's no assertions
         // we need to make on the back-end. Should we just do the
@@ -404,7 +400,7 @@ RDFTreeBuilderImpl::OnRemoveChild(nsIDOMNode* aParent, nsIDOMNode* aOldChild)
                 // It's a relationship set up by RDF. So let's
                 // unassert it from the graph. First we need the
                 // property resource.
-                nsCOMPtr<nsIRDFResource> property;
+                nsCOMPtr<nsISupports> property;
                 if (NS_FAILED(gRDFService->GetUnicodeResource(propertyStr, getter_AddRefs(property)))) {
                     NS_ERROR("unable to construct resource for property");
                     return rv;
@@ -412,7 +408,7 @@ RDFTreeBuilderImpl::OnRemoveChild(nsIDOMNode* aParent, nsIDOMNode* aOldChild)
 
 
                 // And now we need the child's resource.
-                nsCOMPtr<nsIRDFResource> target;
+                nsCOMPtr<nsISupports> target;
                 if (NS_FAILED(rv = GetElementResource(child, getter_AddRefs(target)))) {
                     NS_ERROR("expected child to have resource");
                     return rv;
@@ -480,8 +476,8 @@ RDFTreeBuilderImpl::OnRemoveChild(nsIDOMNode* aParent, nsIDOMNode* aOldChild)
 
 nsresult
 RDFTreeBuilderImpl::AddWidgetItem(nsIContent* aElement,
-                                  nsIRDFResource* aProperty,
-                                  nsIRDFResource* aValue,
+                                  nsISupports* aProperty,
+                                  nsISupports* aValue,
                                   PRInt32 aNaturalOrderPos)
 {
     // If it's a tree property, then we need to add the new child
@@ -554,7 +550,11 @@ RDFTreeBuilderImpl::AddWidgetItem(nsIContent* aElement,
     // immutable.
     {
         const char* uri;
-        aProperty->GetValue(&uri);
+        rv = NS_GetURI(aProperty, &uri);
+        if (NS_FAILED(rv)) {
+            NS_WARNING("RDFTreeBuilderImpl::AddWidgetItem: unable to get property URI");
+            return rv;
+        }
         treeItem->SetAttribute(kNameSpaceID_RDF, kPropertyAtom, uri, PR_FALSE);
     }
 
@@ -575,7 +575,7 @@ RDFTreeBuilderImpl::AddWidgetItem(nsIContent* aElement,
 
     PRBool markAsContainer = PR_FALSE;
     while (NS_SUCCEEDED(rv = arcs->Advance())) {
-        nsCOMPtr<nsIRDFResource> property;
+        nsCOMPtr<nsISupports> property;
         if (NS_FAILED(rv = arcs->GetPredicate(getter_AddRefs(property)))) {
             NS_ERROR("unable to get cursor value");
             return rv;
@@ -595,19 +595,19 @@ RDFTreeBuilderImpl::AddWidgetItem(nsIContent* aElement,
             return rv;
         }
 
-        nsCOMPtr<nsIRDFNode> value;
+        nsCOMPtr<nsISupports> value;
         if (NS_FAILED(rv = mDB->GetTarget(aValue, property, PR_TRUE, getter_AddRefs(value)))) {
             NS_ERROR("unable to get target");
             return rv;
         }
 
-        nsCOMPtr<nsIRDFResource> resource;
+        nsCOMPtr<nsISupports> resource;
         nsCOMPtr<nsIRDFLiteral> literal;
 
         nsAutoString s;
-        if (NS_SUCCEEDED(rv = value->QueryInterface(kIRDFResourceIID, getter_AddRefs(resource)))) {
-            const char* uri;
-            resource->GetValue(&uri);
+        const char* uri;
+        rv = NS_GetURI(value, &uri);
+        if (NS_SUCCEEDED(rv)) {
             s = uri;
         }
         else if (NS_SUCCEEDED(rv = value->QueryInterface(kIRDFLiteralIID, getter_AddRefs(literal)))) {
@@ -656,8 +656,8 @@ RDFTreeBuilderImpl::AddWidgetItem(nsIContent* aElement,
 
 nsresult
 RDFTreeBuilderImpl::RemoveWidgetItem(nsIContent* aElement,
-                                     nsIRDFResource* aProperty,
-                                     nsIRDFResource* aValue)
+                                     nsISupports* aProperty,
+                                     nsISupports* aValue)
 {
     nsresult rv;
 
@@ -737,7 +737,7 @@ RDFTreeBuilderImpl::RemoveWidgetItem(nsIContent* aElement,
         // Now get the resource ID from the RDF:ID attribute. We do it
         // via the content model, because you're never sure who
         // might've added this stuff in...
-        nsCOMPtr<nsIRDFResource> resource;
+        nsCOMPtr<nsISupports> resource;
         if (NS_FAILED(rv = GetElementResource(kid, getter_AddRefs(resource)))) {
             NS_ERROR("severe error retrieving resource");
             return rv;
@@ -860,10 +860,10 @@ RDFTreeBuilderImpl::CreateTreeItemCells(nsIContent* aTreeItemElement)
     // actually a <xul:treeitem>...
 
     // Get the treeitem's resource so that we can generate cell
-    // values. We could QI for the nsIRDFResource here, but doing this
+    // values. We could QI for the nsISupports here, but doing this
     // via the nsIContent interface allows us to support generic nodes
     // that might get added in by DOM calls.
-    nsCOMPtr<nsIRDFResource> treeItemResource;
+    nsCOMPtr<nsISupports> treeItemResource;
     if (NS_FAILED(rv = GetElementResource(aTreeItemElement, getter_AddRefs(treeItemResource)))) {
         NS_ERROR("unable to get tree item resource");
         return rv;
@@ -962,14 +962,14 @@ RDFTreeBuilderImpl::CreateTreeItemCells(nsIContent* aTreeItemElement)
         if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
 
             // First construct a property resource from the URI...
-            nsCOMPtr<nsIRDFResource> property;
+            nsCOMPtr<nsISupports> property;
             if (NS_FAILED(gRDFService->GetUnicodeResource(uri, getter_AddRefs(property)))) {
                 NS_ERROR("unable to construct resource for xul:treecell");
                 return rv; // XXX fatal
             }
 
             // ...then query the RDF back-end
-            nsCOMPtr<nsIRDFNode> value;
+            nsCOMPtr<nsISupports> value;
             if (NS_SUCCEEDED(rv = mDB->GetTarget(treeItemResource,
                                                  property,
                                                  PR_TRUE,
@@ -1003,14 +1003,14 @@ RDFTreeBuilderImpl::CreateTreeItemCells(nsIContent* aTreeItemElement)
 
 nsresult
 RDFTreeBuilderImpl::GetColumnForProperty(nsIContent* aTreeElement,
-                                         nsIRDFResource* aProperty,
+                                         nsISupports* aProperty,
                                          PRInt32* aIndex)
 {
     nsresult rv;
 
     const char* propertyURI;
-    if (NS_FAILED(rv = aProperty->GetValue(&propertyURI))) {
-        NS_ERROR("unable to get property's URI");
+    if (NS_FAILED(rv = NS_GetURI(aProperty, &propertyURI))) {
+        NS_ERROR("RDFTreeBuilderImpl::GetColumnForProperty: unable to get property's URI");
         return rv;
     }
 
@@ -1075,8 +1075,8 @@ RDFTreeBuilderImpl::GetColumnForProperty(nsIContent* aTreeElement,
 
 nsresult
 RDFTreeBuilderImpl::SetCellValue(nsIContent* aTreeItemElement,
-                                 nsIRDFResource* aProperty,
-                                 nsIRDFNode* aValue)
+                                 nsISupports* aProperty,
+                                 nsISupports* aValue)
 {
     nsresult rv;
 

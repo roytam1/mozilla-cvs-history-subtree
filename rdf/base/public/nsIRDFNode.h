@@ -30,9 +30,6 @@
 #include "rdf.h"
 #include "nsISupports.h"
 #include "prtime.h"
-// {0F78DA50-8321-11d2-8EAC-00805F29F370}
-#define NS_IRDFNODE_IID \
-{ 0xf78da50, 0x8321, 0x11d2, { 0x8e, 0xac, 0x0, 0x80, 0x5f, 0x29, 0xf3, 0x70 } }
 
 /**
  *
@@ -53,24 +50,18 @@
  *
  */
 
-class NS_RDF nsIRDFNode : public nsISupports {
-public:
-    static const nsIID& GetIID() { static nsIID iid = NS_IRDFNODE_IID; return iid; }
-
-    /**
-     * Determine if two nodes are identical
-     */
-    NS_IMETHOD EqualsNode(nsIRDFNode* that, PRBool* result) const = 0;
-};
-
-
 // {E0C493D2-9542-11d2-8EB8-00805F29F370}
 #define NS_IRDFLITERAL_IID \
 { 0xe0c493d2, 0x9542, 0x11d2, { 0x8e, 0xb8, 0x0, 0x80, 0x5f, 0x29, 0xf3, 0x70 } }
 
-class NS_RDF nsIRDFLiteral : public nsIRDFNode {
+class NS_RDF nsIRDFLiteral : public nsISupports {
 public:
     static const nsIID& GetIID() { static nsIID iid = NS_IRDFLITERAL_IID; return iid; }
+
+    /**
+     * Determine if two literals are identical
+     */
+    NS_IMETHOD EqualsNode(nsISupports* that, PRBool* result) const = 0;
 
     /**
      * Get the Unicode string value of the node.
@@ -88,7 +79,7 @@ public:
 { 0xe13a24e1, 0xc77a, 0x11d2, { 0x80, 0xbe, 0x0, 0x60, 0x97, 0xb7, 0x6b, 0x8e } };
 
 
-class nsIRDFDate : public nsIRDFNode {
+class nsIRDFDate : public nsISupports {
 public:
     static const nsIID& IID() { static nsIID iid = NS_IRDFDATE_IID; return iid; }
 
@@ -107,7 +98,7 @@ public:
 #define NS_IRDFINT_IID \
 { 0xe13a24e3, 0xc77a, 0x11d2, { 0x80, 0xbe, 0x0, 0x60, 0x97, 0xb7, 0x6b, 0x8e } };
 
-class nsIRDFInt : public nsIRDFNode {
+class nsIRDFInt : public nsISupports {
 public:
     static const nsIID& IID() { static nsIID iid = NS_IRDFINT_IID; return iid; }
 

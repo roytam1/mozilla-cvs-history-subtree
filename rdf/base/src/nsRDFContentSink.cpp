@@ -198,9 +198,9 @@ protected:
                             nsString& rProperty);
 
     // RDF-specific parsing
-    nsresult GetIdAboutAttribute(const nsIParserNode& aNode, nsIRDFResource** aResource);
-    nsresult GetResourceAttribute(const nsIParserNode& aNode, nsIRDFResource** aResource);
-    nsresult AddProperties(const nsIParserNode& aNode, nsIRDFResource* aSubject);
+    nsresult GetIdAboutAttribute(const nsIParserNode& aNode, nsISupports** aResource);
+    nsresult GetResourceAttribute(const nsIParserNode& aNode, nsISupports** aResource);
+    nsresult AddProperties(const nsIParserNode& aNode, nsISupports* aSubject);
 
     virtual nsresult OpenRDF(const nsIParserNode& aNode);
     virtual nsresult OpenObject(const nsIParserNode& aNode);
@@ -214,9 +214,9 @@ protected:
     RDFContentSinkState    mState;
 
     // content stack management
-    PRInt32         PushContext(nsIRDFResource *aContext, RDFContentSinkState aState);
-    nsresult        PopContext(nsIRDFResource*& rContext, RDFContentSinkState& rState);
-    nsIRDFResource* GetContextElement(PRInt32 ancestor = 0);
+    PRInt32         PushContext(nsISupports *aContext, RDFContentSinkState aState);
+    nsresult        PopContext(nsISupports*& rContext, RDFContentSinkState& rState);
+    nsISupports* GetContextElement(PRInt32 ancestor = 0);
 
     nsVoidArray* mContextStack;
 
@@ -277,7 +277,7 @@ RDFContentSinkImpl::~RDFContentSinkImpl()
         // pop all the elements off the stack and release them.
         PRInt32 index = mContextStack->Count();
         while (0 < index--) {
-            nsIRDFResource* resource;
+            nsISupports* resource;
             RDFContentSinkState state;
             PopContext(resource, state);
             NS_IF_RELEASE(resource);
@@ -412,7 +412,7 @@ RDFContentSinkImpl::CloseContainer(const nsIParserNode& aNode)
 
     FlushText();
 
-    nsIRDFResource* resource;
+    nsISupports* resource;
     if (NS_FAILED(PopContext(resource, mState))) {
         // XXX parser didn't catch unmatched tags?
         PR_ASSERT(0);
@@ -756,7 +756,7 @@ RDFContentSinkImpl::SplitQualifiedName(const nsString& aQualifiedName,
 
 nsresult
 RDFContentSinkImpl::GetIdAboutAttribute(const nsIParserNode& aNode,
-                                        nsIRDFResource** aResource)
+                                        nsISupports** aResource)
 {
     // This corresponds to the dirty work of production [6.5]
     nsAutoString k;
@@ -817,7 +817,7 @@ RDFContentSinkImpl::GetIdAboutAttribute(const nsIParserNode& aNode,
 
 nsresult
 RDFContentSinkImpl::GetResourceAttribute(const nsIParserNode& aNode,
-                                         nsIRDFResource** aResource)
+                                         nsISupports** aResource)
 {
     nsAutoString k;
     nsAutoString attr;
@@ -854,7 +854,7 @@ RDFContentSinkImpl::GetResourceAttribute(const nsIParserNode& aNode,
 
 nsresult
 RDFContentSinkImpl::AddProperties(const nsIParserNode& aNode,
-                                  nsIRDFResource* aSubject)
+                                  nsISupports* aSubject)
 {
     // Add tag attributes to the content attributes
     nsAutoString k, v;
@@ -932,7 +932,7 @@ RDFContentSinkImpl::OpenObject(const nsIParserNode& aNode)
 
     // Figure out the URI of this object, and create an RDF node for it.
     nsresult rv;
-    nsIRDFResource* rdfResource;
+    nsISupports* rdfResource;
     if (NS_FAILED(rv = GetIdAboutAttribute(aNode, &rdfResource)))
         return rv;
 
@@ -1034,11 +1034,11 @@ RDFContentSinkImpl::OpenProperty(const nsIParserNode& aNode)
     // destructively alter "ns" to contain the fully qualified tag
     // name. We can do this 'cause we don't need it anymore...
     ns.Append(tag);
-    nsIRDFResource* rdfProperty;
+    nsISupports* rdfProperty;
     if (NS_FAILED(rv = mRDFService->GetUnicodeResource(ns, &rdfProperty)))
         return rv;
 
-    nsIRDFResource* rdfResource;
+    nsISupports* rdfResource;
     if (NS_SUCCEEDED(GetResourceAttribute(aNode, &rdfResource))) {
         // They specified an inline resource for the value of this
         // property. Create an RDF resource for the inline resource
@@ -1088,12 +1088,12 @@ RDFContentSinkImpl::OpenMember(const nsIParserNode& aNode)
         return NS_ERROR_UNEXPECTED;
 
     // The parent element is the container.
-    nsIRDFResource* container = GetContextElement(0);
+    nsISupports* container = GetContextElement(0);
     if (! container)
         return NS_ERROR_NULL_POINTER;
 
     nsresult rv;
-    nsIRDFResource* resource;
+    nsISupports* resource;
     if (NS_SUCCEEDED(rv = GetResourceAttribute(aNode, &resource))) {
         // Okay, this node has an RDF:resource="..." attribute. That
         // means that it's a "referenced item," as covered in [6.29].
@@ -1130,11 +1130,11 @@ RDFContentSinkImpl::OpenValue(const nsIParserNode& aNode)
 // Content stack management
 
 struct RDFContextStackElement {
-    nsIRDFResource*     mResource;
+    nsISupports*     mResource;
     RDFContentSinkState mState;
 };
 
-nsIRDFResource* 
+nsISupports* 
 RDFContentSinkImpl::GetContextElement(PRInt32 ancestor /* = 0 */)
 {
     if ((nsnull == mContextStack) ||
@@ -1149,7 +1149,7 @@ RDFContentSinkImpl::GetContextElement(PRInt32 ancestor /* = 0 */)
 }
 
 PRInt32 
-RDFContentSinkImpl::PushContext(nsIRDFResource *aResource, RDFContentSinkState aState)
+RDFContentSinkImpl::PushContext(nsISupports *aResource, RDFContentSinkState aState)
 {
     if (! mContextStack) {
         mContextStack = new nsVoidArray();
@@ -1170,7 +1170,7 @@ RDFContentSinkImpl::PushContext(nsIRDFResource *aResource, RDFContentSinkState a
 }
  
 nsresult
-RDFContentSinkImpl::PopContext(nsIRDFResource*& rResource, RDFContentSinkState& rState)
+RDFContentSinkImpl::PopContext(nsISupports*& rResource, RDFContentSinkState& rState)
 {
     RDFContextStackElement* e;
     if ((nsnull == mContextStack) ||

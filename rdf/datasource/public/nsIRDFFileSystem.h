@@ -22,7 +22,7 @@
 #include "nscore.h"
 #include "nsISupports.h"
 #include "nsVoidArray.h"
-#include "nsIRDFNode.h"
+#include "nsISupports.h"
 
 
 
@@ -39,10 +39,10 @@ public:
 #define NS_IRDFFILESYSTEM_IID \
 { 0x204a1a00, 0xa5e4, 0x11d2, { 0x8b, 0x7c, 0x00, 0x80, 0x5f, 0x8a, 0x7d, 0xb5 } }
 
-class nsIRDFFileSystem : public nsIRDFResource
+class nsIRDFFileSystem : public nsISupports
 {
 public:
-	NS_IMETHOD	GetFolderList(nsIRDFResource *source, nsVoidArray **array) const = 0;
+	NS_IMETHOD	GetFolderList(nsISupports *source, nsVoidArray **array) const = 0;
 	NS_IMETHOD	GetName(nsVoidArray **array) const = 0;
 	NS_IMETHOD	GetURL(nsVoidArray **array) const = 0;
 };

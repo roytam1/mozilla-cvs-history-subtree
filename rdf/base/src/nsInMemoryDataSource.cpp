@@ -41,6 +41,7 @@
 #include "nsIRDFDataSource.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFObserver.h"
+#include "nsIRDFService.h"
 #include "nsIServiceManager.h"
 #include "nsVoidArray.h"  // XXX introduces dependency on raptorbase
 #include "nsRDFCID.h"
@@ -64,8 +65,6 @@ static NS_DEFINE_IID(kIRDFArcsOutCursorIID,    NS_IRDFARCSOUTCURSOR_IID);
 static NS_DEFINE_IID(kIRDFCursorIID,           NS_IRDFCURSOR_IID);
 static NS_DEFINE_IID(kIRDFDataSourceIID,       NS_IRDFDATASOURCE_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,          NS_IRDFLITERAL_IID);
-static NS_DEFINE_IID(kIRDFNodeIID,             NS_IRDFNODE_IID);
-static NS_DEFINE_IID(kIRDFResourceIID,         NS_IRDFRESOURCE_IID);
 static NS_DEFINE_IID(kIRDFResourceCursorIID,   NS_IRDFRESOURCECURSOR_IID);
 static NS_DEFINE_IID(kISupportsIID,            NS_ISUPPORTS_IID);
 
@@ -78,9 +77,9 @@ enum Direction {
 // arcs hash tables.
 struct Assertion 
 {
-    nsIRDFResource* mSource;
-    nsIRDFResource* mProperty;
-    nsIRDFNode*     mTarget;
+    nsISupports* mSource;
+    nsISupports* mProperty;
+    nsISupports*     mTarget;
     PRBool          mTruthValue;
     Assertion*      mNext;
     Assertion*      mInvNext;
@@ -98,14 +97,7 @@ rdf_HashPointer(const void* key)
 static PRIntn
 rdf_CompareNodes(const void* v1, const void* v2)
 {
-    nsIRDFNode* a = (nsIRDFNode*)v1;
-    nsIRDFNode* b = (nsIRDFNode*)v2;
-
-    PRBool result;
-    if (NS_FAILED(a->EqualsNode(b, &result)))
-        return 0;
-
-    return (PRIntn) result;
+    return NS_EqualsResource((nsISupports*)v1, (nsISupports*)v2) == NS_OK;
 }
 
 
@@ -118,9 +110,9 @@ class InMemoryDataSource : public nsIRDFDataSource
 protected:
     char*        mURL;
 
-    // These hash tables are keyed on pointers to nsIRDFResource
+    // These hash tables are keyed on pointers to nsISupports
     // objects (the nsIRDFService ensures that there is only ever one
-    // nsIRDFResource object per unique URI). The value of an entry is
+    // nsISupports object per unique URI). The value of an entry is
     // an Assertion struct, which is a linked list of (subject
     // predicate object) triples.
     PLHashTable* mForwardArcs; 
@@ -136,15 +128,15 @@ protected:
 
     // Thread-safe writer implementation methods.
     nsresult
-    SafeAssert(nsIRDFResource* source, 
-               nsIRDFResource* property, 
-               nsIRDFNode* target,
+    SafeAssert(nsISupports* source, 
+               nsISupports* property, 
+               nsISupports* target,
                PRBool tv);
 
     nsresult
-    SafeUnassert(nsIRDFResource* source,
-                 nsIRDFResource* property,
-                 nsIRDFNode* target);
+    SafeUnassert(nsISupports* source,
+                 nsISupports* property,
+                 nsISupports* target);
 
 
 public:
@@ -159,38 +151,38 @@ public:
 
     NS_IMETHOD GetURI(const char* *uri) const;
 
-    NS_IMETHOD GetSource(nsIRDFResource* property,
-                         nsIRDFNode* target,
+    NS_IMETHOD GetSource(nsISupports* property,
+                         nsISupports* target,
                          PRBool tv,
-                         nsIRDFResource** source);
+                         nsISupports** source);
 
-    NS_IMETHOD GetSources(nsIRDFResource* property,
-                          nsIRDFNode* target,
+    NS_IMETHOD GetSources(nsISupports* property,
+                          nsISupports* target,
                           PRBool tv,
                           nsIRDFAssertionCursor** sources);
 
-    NS_IMETHOD GetTarget(nsIRDFResource* source,
-                         nsIRDFResource* property,
+    NS_IMETHOD GetTarget(nsISupports* source,
+                         nsISupports* property,
                          PRBool tv,
-                         nsIRDFNode** target);
+                         nsISupports** target);
 
-    NS_IMETHOD GetTargets(nsIRDFResource* source,
-                          nsIRDFResource* property,
+    NS_IMETHOD GetTargets(nsISupports* source,
+                          nsISupports* property,
                           PRBool tv,
                           nsIRDFAssertionCursor** targets);
 
-    NS_IMETHOD Assert(nsIRDFResource* source, 
-                      nsIRDFResource* property, 
-                      nsIRDFNode* target,
+    NS_IMETHOD Assert(nsISupports* source, 
+                      nsISupports* property, 
+                      nsISupports* target,
                       PRBool tv);
 
-    NS_IMETHOD Unassert(nsIRDFResource* source,
-                        nsIRDFResource* property,
-                        nsIRDFNode* target);
+    NS_IMETHOD Unassert(nsISupports* source,
+                        nsISupports* property,
+                        nsISupports* target);
 
-    NS_IMETHOD HasAssertion(nsIRDFResource* source,
-                            nsIRDFResource* property,
-                            nsIRDFNode* target,
+    NS_IMETHOD HasAssertion(nsISupports* source,
+                            nsISupports* property,
+                            nsISupports* target,
                             PRBool tv,
                             PRBool* hasAssertion);
 
@@ -198,32 +190,32 @@ public:
 
     NS_IMETHOD RemoveObserver(nsIRDFObserver* n);
 
-    NS_IMETHOD ArcLabelsIn(nsIRDFNode* node,
+    NS_IMETHOD ArcLabelsIn(nsISupports* node,
                            nsIRDFArcsInCursor** labels);
 
-    NS_IMETHOD ArcLabelsOut(nsIRDFResource* source,
+    NS_IMETHOD ArcLabelsOut(nsISupports* source,
                             nsIRDFArcsOutCursor** labels);
 
     NS_IMETHOD GetAllResources(nsIRDFResourceCursor** aCursor);
 
     NS_IMETHOD Flush();
 
-    NS_IMETHOD GetAllCommands(nsIRDFResource* source,
-                              nsIEnumerator/*<nsIRDFResource>*/** commands);
+    NS_IMETHOD GetAllCommands(nsISupports* source,
+                              nsIEnumerator** commands);
 
-    NS_IMETHOD IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-                                nsIRDFResource*   aCommand,
-                                nsISupportsArray/*<nsIRDFResource>*/* aArguments);
+    NS_IMETHOD IsCommandEnabled(nsISupportsArray* aSources,
+                                nsISupports*   aCommand,
+                                nsISupportsArray* aArguments);
 
-    NS_IMETHOD DoCommand(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-                         nsIRDFResource*   aCommand,
-                         nsISupportsArray/*<nsIRDFResource>*/* aArguments);
+    NS_IMETHOD DoCommand(nsISupportsArray* aSources,
+                         nsISupports*   aCommand,
+                         nsISupportsArray* aArguments);
 
     // Implemenatation methods
-    Assertion* GetForwardArcs(nsIRDFResource* u);
-    Assertion* GetReverseArcs(nsIRDFNode* v);
-    void       SetForwardArcs(nsIRDFResource* u, Assertion* as);
-    void       SetReverseArcs(nsIRDFNode* v, Assertion* as);
+    Assertion* GetForwardArcs(nsISupports* u);
+    Assertion* GetReverseArcs(nsISupports* v);
+    void       SetForwardArcs(nsISupports* u, Assertion* as);
+    void       SetReverseArcs(nsISupports* v, Assertion* as);
 
 
     // This datasource's monitor object.
@@ -242,10 +234,10 @@ class InMemoryAssertionCursor : public nsIRDFAssertionCursor
 {
 private:
     InMemoryDataSource* mDataSource;
-    nsIRDFResource* mSource;
-    nsIRDFResource* mLabel;
-    nsIRDFNode*     mTarget;
-    nsIRDFNode*     mValue;
+    nsISupports* mSource;
+    nsISupports* mLabel;
+    nsISupports*     mTarget;
+    nsISupports*     mValue;
     PRInt32         mCount;
     PRBool          mTruthValue;
     Direction       mDirection;
@@ -257,8 +249,8 @@ private:
 
 public:
     InMemoryAssertionCursor(InMemoryDataSource* ds,
-                              nsIRDFNode* u,
-                              nsIRDFResource* s,
+                              nsISupports* u,
+                              nsISupports* s,
                               PRBool tv,
                               Direction mDirection);
 
@@ -270,20 +262,20 @@ public:
     // nsIRDFCursor interface
     NS_IMETHOD Advance(void);
     NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource);
-    NS_IMETHOD GetValue(nsIRDFNode** aValue);
+    NS_IMETHOD GetValue(nsISupports** aValue);
 
     // nsIRDFAssertionCursor interface
-    NS_IMETHOD GetSubject(nsIRDFResource** aResource);
-    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate);
-    NS_IMETHOD GetObject(nsIRDFNode** aObject);
+    NS_IMETHOD GetSubject(nsISupports** aResource);
+    NS_IMETHOD GetPredicate(nsISupports** aPredicate);
+    NS_IMETHOD GetObject(nsISupports** aObject);
     NS_IMETHOD GetTruthValue(PRBool* aTruthValue);
 };
 
 ////////////////////////////////////////////////////////////////////////
 
 InMemoryAssertionCursor::InMemoryAssertionCursor(InMemoryDataSource* ds,
-                                                 nsIRDFNode* u,
-                                                 nsIRDFResource* label, 
+                                                 nsISupports* u,
+                                                 nsISupports* label, 
                                                  PRBool tv,
                                                  Direction direction)
     : mDataSource(ds),
@@ -302,8 +294,7 @@ InMemoryAssertionCursor::InMemoryAssertionCursor(InMemoryDataSource* ds,
     NS_ADDREF(mLabel);
 
     if (mDirection == eDirectionForwards) {
-        // Cast is okay because we're in a closed system.
-        mSource = (nsIRDFResource*) u;
+        mSource = u;
         NS_ADDREF(mSource);
 
         mNextAssertion = mDataSource->GetForwardArcs(mSource);
@@ -336,12 +327,12 @@ InMemoryAssertionCursor::Advance(void)
     NS_IF_RELEASE(mValue);
 
     while (mNextAssertion) {
-        PRBool eq;
-        if (NS_FAILED(rv = mLabel->EqualsResource(mNextAssertion->mProperty, &eq)))
+        if (NS_FAILED(rv = NS_EqualsResource(mLabel, mNextAssertion->mProperty)))
             return rv;
 
         PRBool foundIt = PR_FALSE;
-        if ((mTruthValue == mNextAssertion->mTruthValue) && eq) {
+        if ((mTruthValue == mNextAssertion->mTruthValue)
+            && rv == NS_OK) {   // as opposed to NS_COMFALSE
             if (mDirection == eDirectionForwards) {
                 mValue = mNextAssertion->mTarget;
                 NS_ADDREF(mValue);
@@ -364,7 +355,7 @@ InMemoryAssertionCursor::Advance(void)
 }
 
 NS_IMETHODIMP 
-InMemoryAssertionCursor::GetValue(nsIRDFNode** aValue)
+InMemoryAssertionCursor::GetValue(nsISupports** aValue)
 {
     if (! aValue)
         return NS_ERROR_NULL_POINTER;
@@ -390,7 +381,7 @@ InMemoryAssertionCursor::GetDataSource(nsIRDFDataSource** aDataSource)
 
 
 NS_IMETHODIMP
-InMemoryAssertionCursor::GetSubject(nsIRDFResource** aSubject)
+InMemoryAssertionCursor::GetSubject(nsISupports** aSubject)
 {
     NS_PRECONDITION(aSubject != nsnull, "null ptr");
     if (! aSubject)
@@ -408,13 +399,13 @@ InMemoryAssertionCursor::GetSubject(nsIRDFResource** aSubject)
             return NS_ERROR_UNEXPECTED;
 
         // this'll AddRef()
-        return mValue->QueryInterface(kIRDFResourceIID, (void**) aSubject);
+        return mValue->QueryInterface(kISupportsIID, (void**) aSubject);
     }
 }
 
 
 NS_IMETHODIMP
-InMemoryAssertionCursor::GetPredicate(nsIRDFResource** aPredicate)
+InMemoryAssertionCursor::GetPredicate(nsISupports** aPredicate)
 {
     NS_PRECONDITION(aPredicate != nsnull, "null ptr");
     if (! aPredicate)
@@ -427,7 +418,7 @@ InMemoryAssertionCursor::GetPredicate(nsIRDFResource** aPredicate)
 
 
 NS_IMETHODIMP
-InMemoryAssertionCursor::GetObject(nsIRDFNode** aObject)
+InMemoryAssertionCursor::GetObject(nsISupports** aObject)
 {
     NS_PRECONDITION(aObject != nsnull, "null ptr");
     if (! aObject)
@@ -480,16 +471,16 @@ class InMemoryArcsCursor : public nsIRDFArcsOutCursor,
 {
 private:
     InMemoryDataSource* mDataSource;
-    nsIRDFResource*     mSubject;
-    nsIRDFNode*         mObject;
+    nsISupports*     mSubject;
+    nsISupports*         mObject;
     nsVoidArray         mElements;
     PRInt32             mNextIndex;
-    nsIRDFResource*     mCurrent;
+    nsISupports*     mCurrent;
     Direction           mDirection;
 
 public:
     InMemoryArcsCursor(InMemoryDataSource* ds,
-                       nsIRDFNode* node,
+                       nsISupports* node,
                        Direction direction);
 
     virtual ~InMemoryArcsCursor(void);
@@ -500,19 +491,19 @@ public:
     // nsIRDFCursor interface
     NS_IMETHOD Advance(void);
     NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource);
-    NS_IMETHOD GetValue(nsIRDFNode** aValue);
+    NS_IMETHOD GetValue(nsISupports** aValue);
 
     // nsIRDFArcsOutCursor interface
-    NS_IMETHOD GetSubject(nsIRDFResource** aSubject);
-    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate);
+    NS_IMETHOD GetSubject(nsISupports** aSubject);
+    NS_IMETHOD GetPredicate(nsISupports** aPredicate);
     NS_IMETHOD GetTruthValue(PRBool* aTruthValue);
 
     // nsIRDFArcsInCursor interface
-    NS_IMETHOD GetObject(nsIRDFNode** aObject);
+    NS_IMETHOD GetObject(nsISupports** aObject);
 };
 
 InMemoryArcsCursor::InMemoryArcsCursor(InMemoryDataSource* ds,
-                                       nsIRDFNode* node,
+                                       nsISupports* node,
                                        Direction direction)
     : mDataSource(ds),
       mSubject(nsnull),
@@ -533,7 +524,7 @@ InMemoryArcsCursor::InMemoryArcsCursor(InMemoryDataSource* ds,
     Assertion* as;
     if (mDirection == eDirectionForwards) {
         // cast okay because it's a closed system
-        mSubject = (nsIRDFResource*) node;
+        mSubject = (nsISupports*) node;
         NS_ADDREF(mSubject);
         as = ds->GetForwardArcs(mSubject);
     }
@@ -570,7 +561,7 @@ InMemoryArcsCursor::~InMemoryArcsCursor(void)
     NS_IF_RELEASE(mCurrent);
 
     for (PRInt32 i = mElements.Count() - 1; i >= mNextIndex; --i) {
-        nsIRDFResource* resource = (nsIRDFResource*) mElements[i];
+        nsISupports* resource = (nsISupports*) mElements[i];
         NS_RELEASE(resource);
     }
 }
@@ -615,14 +606,14 @@ InMemoryArcsCursor::Advance(void)
     // mCurrent, keeping the refcount properly in sync. We just need
     // to remember that any of the indicies before mNextIndex are
     // dangling pointers.
-    mCurrent = (nsIRDFResource*) mElements[mNextIndex];
+    mCurrent = (nsISupports*) mElements[mNextIndex];
     ++mNextIndex;
 
     return NS_OK;
 }
 
 NS_IMETHODIMP
-InMemoryArcsCursor::GetValue(nsIRDFNode** aValue)
+InMemoryArcsCursor::GetValue(nsISupports** aValue)
 {
     if (! aValue)
         return NS_ERROR_NULL_POINTER;
@@ -645,7 +636,7 @@ InMemoryArcsCursor::GetDataSource(nsIRDFDataSource** aDataSource)
 }
 
 NS_IMETHODIMP
-InMemoryArcsCursor::GetSubject(nsIRDFResource** aSubject)
+InMemoryArcsCursor::GetSubject(nsISupports** aSubject)
 {
     NS_PRECONDITION(aSubject != nsnull, "null ptr");
     if (! aSubject)
@@ -657,7 +648,7 @@ InMemoryArcsCursor::GetSubject(nsIRDFResource** aSubject)
 }
 
 NS_IMETHODIMP
-InMemoryArcsCursor::GetObject(nsIRDFNode** aObject)
+InMemoryArcsCursor::GetObject(nsISupports** aObject)
 {
     NS_PRECONDITION(aObject != nsnull, "null ptr");
     if (! aObject)
@@ -669,7 +660,7 @@ InMemoryArcsCursor::GetObject(nsIRDFNode** aObject)
 }
 
 NS_IMETHODIMP
-InMemoryArcsCursor::GetPredicate(nsIRDFResource** aPredicate)
+InMemoryArcsCursor::GetPredicate(nsISupports** aPredicate)
 {
     NS_PRECONDITION(aPredicate != nsnull, "null ptr");
     if (! aPredicate)
@@ -713,10 +704,10 @@ public:
     // nsIRDFCursor interface
     NS_IMETHOD Advance(void);
     NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource);
-    NS_IMETHOD GetValue(nsIRDFNode** aValue);
+    NS_IMETHOD GetValue(nsISupports** aValue);
 
-    // nsIRDFResourceCursor interface
-    NS_IMETHOD GetResource(nsIRDFResource** aResource);
+    // nsISupportsCursor interface
+    NS_IMETHOD GetResource(nsISupports** aResource);
 };
 
 static PRIntn
@@ -724,8 +715,8 @@ rdf_ResourceEnumerator(PLHashEntry* he, PRIntn index, void* closure)
 {
     nsVoidArray* resources = NS_STATIC_CAST(nsVoidArray*, closure);
 
-    nsIRDFResource* resource = 
-        NS_CONST_CAST(nsIRDFResource*, NS_STATIC_CAST(const nsIRDFResource*, he->key));
+    nsISupports* resource = 
+        NS_CONST_CAST(nsISupports*, NS_STATIC_CAST(const nsISupports*, he->key));
 
     NS_ADDREF(resource);
     resources->AppendElement(resource);
@@ -747,7 +738,7 @@ InMemoryResourceCursor::InMemoryResourceCursor(InMemoryDataSource* ds)
 InMemoryResourceCursor::~InMemoryResourceCursor(void)
 {
     for (PRInt32 i = mResources.Count() - 1; i >= mNext; --i) {
-        nsIRDFResource* resource = NS_STATIC_CAST(nsIRDFResource*, mResources[i]);
+        nsISupports* resource = NS_STATIC_CAST(nsISupports*, mResources[i]);
         NS_RELEASE(resource);
     }
     NS_RELEASE(mDataSource);
@@ -763,7 +754,7 @@ InMemoryResourceCursor::Advance(void)
         return NS_ERROR_RDF_CURSOR_EMPTY;
 
     if (mNext >= 0) {
-        nsIRDFResource* resource = NS_STATIC_CAST(nsIRDFResource*, mResources[mNext]);
+        nsISupports* resource = NS_STATIC_CAST(nsISupports*, mResources[mNext]);
         NS_RELEASE(resource);
     }
 
@@ -784,10 +775,10 @@ InMemoryResourceCursor::GetDataSource(nsIRDFDataSource** aDataSource)
 }
 
 NS_IMETHODIMP
-InMemoryResourceCursor::GetValue(nsIRDFNode** aValue)
+InMemoryResourceCursor::GetValue(nsISupports** aValue)
 {
     nsresult rv;
-    nsIRDFResource* result;
+    nsISupports* result;
     if (NS_FAILED(rv = GetResource(&result)))
         return rv;
 
@@ -796,7 +787,7 @@ InMemoryResourceCursor::GetValue(nsIRDFNode** aValue)
 }
 
 NS_IMETHODIMP
-InMemoryResourceCursor::GetResource(nsIRDFResource** aResource)
+InMemoryResourceCursor::GetResource(nsISupports** aResource)
 {
     NS_ASSERTION(mNext >= 0, "didn't advance");
     if (mNext < 0)
@@ -806,7 +797,7 @@ InMemoryResourceCursor::GetResource(nsIRDFResource** aResource)
     if (mNext > mResources.Count())
         return NS_ERROR_UNEXPECTED;
 
-    nsIRDFResource* result = NS_STATIC_CAST(nsIRDFResource*, mResources[mNext]);
+    nsISupports* result = NS_STATIC_CAST(nsISupports*, mResources[mNext]);
     *aResource = result;
     NS_ADDREF(result);
     return NS_OK;
@@ -908,21 +899,21 @@ InMemoryDataSource::DeleteForwardArcsEntry(PLHashEntry* he, PRIntn index, void* 
 
 
 Assertion*
-InMemoryDataSource::GetForwardArcs(nsIRDFResource* u)
+InMemoryDataSource::GetForwardArcs(nsISupports* u)
 {
     // Cast is okay, we're in a closed system
     return (Assertion*) PL_HashTableLookup(mForwardArcs, u);
 }
 
 Assertion*
-InMemoryDataSource::GetReverseArcs(nsIRDFNode* v)
+InMemoryDataSource::GetReverseArcs(nsISupports* v)
 {
     // Cast is okay, we're in a closed system
     return (Assertion*) PL_HashTableLookup(mReverseArcs, v);
 }   
 
 void
-InMemoryDataSource::SetForwardArcs(nsIRDFResource* u, Assertion* as)
+InMemoryDataSource::SetForwardArcs(nsISupports* u, Assertion* as)
 {
     NS_PRECONDITION(u != nsnull, "null ptr");
     if (as) {
@@ -934,7 +925,7 @@ InMemoryDataSource::SetForwardArcs(nsIRDFResource* u, Assertion* as)
 }
 
 void
-InMemoryDataSource::SetReverseArcs(nsIRDFNode* v, Assertion* as)
+InMemoryDataSource::SetReverseArcs(nsISupports* v, Assertion* as)
 {
     NS_PRECONDITION(v != nsnull, "null ptr");
     if (as) {
@@ -966,10 +957,10 @@ InMemoryDataSource::GetURI(const char* *uri) const
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::GetSource(nsIRDFResource* property,
-                              nsIRDFNode* target,
+InMemoryDataSource::GetSource(nsISupports* property,
+                              nsISupports* target,
                               PRBool tv,
-                              nsIRDFResource** source)
+                              nsISupports** source)
 {
     NS_PRECONDITION(source != nsnull, "null ptr");
     if (! source)
@@ -987,11 +978,10 @@ InMemoryDataSource::GetSource(nsIRDFResource* property,
 
     nsresult rv;
     for (Assertion* as = GetReverseArcs(target); as != nsnull; as = as->mNext) {
-        PRBool eq;
-        if (NS_FAILED(rv = property->EqualsResource(as->mProperty, &eq)))
+        if (NS_FAILED(rv = NS_EqualsResource(property, as->mProperty)))
             return rv;
-
-        if (! eq)
+        
+        if (rv != NS_OK)
             continue;
 
         if (as->mTruthValue != tv)
@@ -1006,10 +996,10 @@ InMemoryDataSource::GetSource(nsIRDFResource* property,
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::GetTarget(nsIRDFResource* source,
-                              nsIRDFResource* property,
+InMemoryDataSource::GetTarget(nsISupports* source,
+                              nsISupports* property,
                               PRBool tv,
-                              nsIRDFNode** target)
+                              nsISupports** target)
 {
     NS_PRECONDITION(source != nsnull, "null ptr");
     if (! source)
@@ -1027,11 +1017,10 @@ InMemoryDataSource::GetTarget(nsIRDFResource* source,
 
     nsresult rv;
     for (Assertion* as = GetForwardArcs(source); as != nsnull; as = as->mNext) {
-        PRBool eq;
-        if (NS_FAILED(rv = property->EqualsResource(as->mProperty, &eq)))
+        if (NS_FAILED(rv = NS_EqualsResource(property, as->mProperty)))
             return rv;
-
-        if (! eq)
+        
+        if (rv != NS_OK)
             continue;
 
         if (as->mTruthValue != tv)
@@ -1049,9 +1038,9 @@ InMemoryDataSource::GetTarget(nsIRDFResource* source,
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::HasAssertion(nsIRDFResource* source,
-                                 nsIRDFResource* property,
-                                 nsIRDFNode* target,
+InMemoryDataSource::HasAssertion(nsISupports* source,
+                                 nsISupports* property,
+                                 nsISupports* target,
                                  PRBool tv,
                                  PRBool* hasAssertion)
 {
@@ -1071,17 +1060,16 @@ InMemoryDataSource::HasAssertion(nsIRDFResource* source,
 
     nsresult rv;
     for (Assertion* as = GetForwardArcs(source); as != nsnull; as = as->mNext) {
-        PRBool eq;
-        if (NS_FAILED(rv = property->EqualsResource(as->mProperty, &eq)))
+        if (NS_FAILED(rv = NS_EqualsResource(property, as->mProperty)))
             return rv;
 
-        if (! eq)
+        if (rv != NS_OK)
             continue;
 
-        if (NS_FAILED(rv = target->EqualsNode(as->mTarget, &eq)))
+        if (NS_FAILED(rv = NS_EqualsResource(target, as->mTarget)))
             return rv;
 
-        if (! eq)
+        if (rv != NS_OK)
             continue;
 
         if (as->mTruthValue != tv)
@@ -1098,8 +1086,8 @@ InMemoryDataSource::HasAssertion(nsIRDFResource* source,
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::GetSources(nsIRDFResource* property,
-                               nsIRDFNode* target,
+InMemoryDataSource::GetSources(nsISupports* property,
+                               nsISupports* target,
                                PRBool tv,
                                nsIRDFAssertionCursor** sources)
 {
@@ -1121,8 +1109,8 @@ InMemoryDataSource::GetSources(nsIRDFResource* property,
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::GetTargets(nsIRDFResource* source,
-                               nsIRDFResource* property,
+InMemoryDataSource::GetTargets(nsISupports* source,
+                               nsISupports* property,
                                PRBool tv,
                                nsIRDFAssertionCursor** targets)
 {
@@ -1145,9 +1133,9 @@ InMemoryDataSource::GetTargets(nsIRDFResource* source,
 
 
 nsresult
-InMemoryDataSource::SafeAssert(nsIRDFResource* source,
-                               nsIRDFResource* property,
-                               nsIRDFNode* target,
+InMemoryDataSource::SafeAssert(nsISupports* source,
+                               nsISupports* property,
+                               nsISupports* target,
                                PRBool tv)
 {
     NS_AUTOLOCK(mLock);
@@ -1160,16 +1148,14 @@ InMemoryDataSource::SafeAssert(nsIRDFResource* source,
     // Walk to the end of the linked list.
     // XXX shouldn't we just keep a pointer to the end, or insert at the front???
     while (next) {
-        PRBool eq;
-
-        if (NS_FAILED(rv = property->EqualsResource(next->mProperty, &eq)))
+        if (NS_FAILED(rv = NS_EqualsResource(property, next->mProperty)))
             return rv;
 
-        if (eq) {
-            if (NS_FAILED(rv = target->EqualsNode(next->mTarget, &eq)))
+        if (rv == NS_OK) {
+            if (NS_FAILED(rv = NS_EqualsResource(target, next->mTarget)))
                 return rv;
 
-            if (eq) {
+            if (rv == NS_OK) {
                 // Wow, we already had the assertion. Make sure that the
                 // truth values are correct and bail.
                 next->mTruthValue = tv;
@@ -1226,9 +1212,9 @@ InMemoryDataSource::SafeAssert(nsIRDFResource* source,
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::Assert(nsIRDFResource* source,
-                           nsIRDFResource* property, 
-                           nsIRDFNode* target,
+InMemoryDataSource::Assert(nsISupports* source,
+                           nsISupports* property, 
+                           nsISupports* target,
                            PRBool tv) 
 {
     nsresult rv;
@@ -1250,9 +1236,9 @@ InMemoryDataSource::Assert(nsIRDFResource* source,
 
 
 nsresult
-InMemoryDataSource::SafeUnassert(nsIRDFResource* source,
-                                 nsIRDFResource* property,
-                                 nsIRDFNode* target)
+InMemoryDataSource::SafeUnassert(nsISupports* source,
+                                 nsISupports* property,
+                                 nsISupports* target)
 {
     NS_AUTOLOCK(mLock);
 
@@ -1262,16 +1248,14 @@ InMemoryDataSource::SafeUnassert(nsIRDFResource* source,
     Assertion* as = nsnull;
 
     while (next) {
-        PRBool eq;
-
-        if (NS_FAILED(rv = property->EqualsResource(next->mProperty, &eq)))
+        if (NS_FAILED(rv = NS_EqualsResource(property, next->mProperty)))
             return rv;
 
-        if (eq) {
-            if (NS_FAILED(rv = target->EqualsNode(next->mTarget, &eq)))
+        if (rv == NS_OK) {
+            if (NS_FAILED(rv = NS_EqualsResource(target, next->mTarget)))
                 return rv;
 
-            if (eq) {
+            if (rv == NS_OK) {
                 if (prev == next) {
                     SetForwardArcs(source, next->mNext);
                 } else {
@@ -1325,9 +1309,9 @@ InMemoryDataSource::SafeUnassert(nsIRDFResource* source,
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::Unassert(nsIRDFResource* source,
-                             nsIRDFResource* property,
-                             nsIRDFNode* target)
+InMemoryDataSource::Unassert(nsISupports* source,
+                             nsISupports* property,
+                             nsISupports* target)
 {
     nsresult rv;
 
@@ -1382,7 +1366,7 @@ InMemoryDataSource::RemoveObserver(nsIRDFObserver* observer)
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::ArcLabelsIn(nsIRDFNode* node, nsIRDFArcsInCursor** labels)
+InMemoryDataSource::ArcLabelsIn(nsISupports* node, nsIRDFArcsInCursor** labels)
 {
     NS_PRECONDITION(labels != nsnull, "null ptr");
     if (! labels)
@@ -1400,7 +1384,7 @@ InMemoryDataSource::ArcLabelsIn(nsIRDFNode* node, nsIRDFArcsInCursor** labels)
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::ArcLabelsOut(nsIRDFResource* source, nsIRDFArcsOutCursor** labels)
+InMemoryDataSource::ArcLabelsOut(nsISupports* source, nsIRDFArcsOutCursor** labels)
 {
     NS_PRECONDITION(labels != nsnull, "null ptr");
     if (! labels)
@@ -1447,26 +1431,26 @@ InMemoryDataSource::Flush()
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::GetAllCommands(nsIRDFResource* source,
-                                   nsIEnumerator/*<nsIRDFResource>*/** commands)
+InMemoryDataSource::GetAllCommands(nsISupports* source,
+                                   nsIEnumerator** commands)
 {
     NS_NOTYETIMPLEMENTED("write me!");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-                                     nsIRDFResource*   aCommand,
-                                     nsISupportsArray/*<nsIRDFResource>*/* aArguments)
+InMemoryDataSource::IsCommandEnabled(nsISupportsArray* aSources,
+                                     nsISupports*   aCommand,
+                                     nsISupportsArray* aArguments)
 {
     NS_NOTYETIMPLEMENTED("write me!");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::DoCommand(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-                              nsIRDFResource*   aCommand,
-                              nsISupportsArray/*<nsIRDFResource>*/* aArguments)
+InMemoryDataSource::DoCommand(nsISupportsArray* aSources,
+                              nsISupports*   aCommand,
+                              nsISupportsArray* aArguments)
 {
     NS_NOTYETIMPLEMENTED("write me!");
     return NS_ERROR_NOT_IMPLEMENTED;

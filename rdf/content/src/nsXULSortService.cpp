@@ -34,7 +34,7 @@
 #include "nsIRDFCursor.h"
 #include "nsIRDFCompositeDataSource.h"
 #include "nsIRDFDocument.h"
-#include "nsIRDFNode.h"
+#include "nsISupports.h"
 #include "nsIRDFObserver.h"
 #include "nsIRDFService.h"
 #include "nsIServiceManager.h"
@@ -101,7 +101,6 @@ static NS_DEFINE_IID(kIDomElementIID,         NS_IDOMELEMENT_IID);
 
 static NS_DEFINE_CID(kRDFServiceCID,          NS_RDFSERVICE_CID);
 static NS_DEFINE_IID(kIRDFServiceIID,         NS_IRDFSERVICE_IID);
-static NS_DEFINE_IID(kIRDFResourceIID,        NS_IRDFRESOURCE_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,         NS_IRDFLITERAL_IID);
 
 static NS_DEFINE_IID(kIDomXulTreeElementIID,  NS_IDOMXULTREEELEMENT_IID);
@@ -116,7 +115,7 @@ DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, child);
 
 typedef	struct	_sortStruct	{
     nsIRDFCompositeDataSource	*db;
-    nsIRDFResource		*sortProperty;
+    nsISupports		*sortProperty;
     PRInt32			colIndex;
     nsIAtom			*kNaturalOrderPosAtom;
     nsIAtom			*kTreeCellAtom;
@@ -187,7 +186,7 @@ public:
 
     // nsISortService
     NS_IMETHOD DoSort(nsIDOMNode* node, const nsString& sortResource, const nsString& sortDirection);
-    NS_IMETHOD OpenContainer(nsIRDFCompositeDataSource *db, nsIContent *container, nsIRDFResource **flatArray,
+    NS_IMETHOD OpenContainer(nsIRDFCompositeDataSource *db, nsIContent *container, nsISupports **flatArray,
 				PRInt32 numElements, PRInt32 elementSize);
 };
 
@@ -600,40 +599,39 @@ openSortCallback(const void *data1, const void *data2, void *sortData)
 	int		sortOrder = 0;
 	nsresult	rv;
 
-	nsIRDFNode	*node1, *node2;
-	node1 = *(nsIRDFNode **)data1;
-	node2 = *(nsIRDFNode **)data2;
+	nsISupports	*node1, *node2;
+	node1 = *(nsISupports **)data1;
+	node2 = *(nsISupports **)data2;
 	_sortStruct	*sortPtr = (_sortStruct *)sortData;
 
-	nsIRDFResource	*res1;
-	nsIRDFResource	*res2;
+    const char* uri;
 	const PRUnichar	*uniStr1 = nsnull;
 	const PRUnichar	*uniStr2 = nsnull;
 
-	if (NS_SUCCEEDED(node1->QueryInterface(kIRDFResourceIID, (void **) &res1)))
-	{
-		nsIRDFNode	*nodeVal1;
-		if (NS_SUCCEEDED(rv = sortPtr->db->GetTarget(res1, sortPtr->sortProperty, PR_TRUE, &nodeVal1)))
-		{
-			nsIRDFLiteral *literal1;
-			if (NS_SUCCEEDED(nodeVal1->QueryInterface(kIRDFLiteralIID, (void **) &literal1)))
-			{
-				literal1->GetValue(&uniStr1);
-			}
-		}
-	}
-	if (NS_SUCCEEDED(node2->QueryInterface(kIRDFResourceIID, (void **) &res2)))
-	{
-		nsIRDFNode	*nodeVal2;
-		if (NS_SUCCEEDED(rv = sortPtr->db->GetTarget(res2, sortPtr->sortProperty, PR_TRUE, &nodeVal2)))
-		{
-			nsIRDFLiteral	*literal2;
-			if (NS_SUCCEEDED(nodeVal2->QueryInterface(kIRDFLiteralIID, (void **) &literal2)))
-			{
-				literal2->GetValue(&uniStr2);
-			}
-		}
-	}
+    if (NS_SUCCEEDED(NS_GetURI(node1, &uri)))
+    {
+        nsISupports	*nodeVal1;
+        if (NS_SUCCEEDED(rv = sortPtr->db->GetTarget(node1, sortPtr->sortProperty, PR_TRUE, &nodeVal1)))
+        {
+            nsIRDFLiteral *literal1;
+            if (NS_SUCCEEDED(nodeVal1->QueryInterface(kIRDFLiteralIID, (void **) &literal1)))
+            {
+                literal1->GetValue(&uniStr1);
+            }
+        }
+    }
+    if (NS_SUCCEEDED(NS_GetURI(node2, &uri)))
+    {
+        nsISupports	*nodeVal2;
+        if (NS_SUCCEEDED(rv = sortPtr->db->GetTarget(node2, sortPtr->sortProperty, PR_TRUE, &nodeVal2)))
+        {
+            nsIRDFLiteral	*literal2;
+            if (NS_SUCCEEDED(nodeVal2->QueryInterface(kIRDFLiteralIID, (void **) &literal2)))
+            {
+                literal2->GetValue(&uniStr2);
+            }
+        }
+    }
 	if ((uniStr1 != nsnull) && (uniStr2 != nsnull))
 	{
 		nsAutoString	str1(uniStr1), str2(uniStr2);
@@ -664,7 +662,7 @@ inplaceSortCallback(const void *data1, const void *data2, void *sortData)
 	nsIContent		*node1 = *(nsIContent **)data1;
 	nsIContent		*node2 = *(nsIContent **)data2;
 	nsIDOMXULElement	*dom1 = nsnull, *dom2 = nsnull;
-	nsIRDFResource		*res1 = nsnull, *res2 = nsnull;
+	nsISupports		*res1 = nsnull, *res2 = nsnull;
 	nsAutoString		cellVal1(""), cellVal2("");
 	nsresult		rv;
 
@@ -674,7 +672,7 @@ inplaceSortCallback(const void *data1, const void *data2, void *sortData)
 		{
 			if ((sortPtr->naturalOrderSort == PR_FALSE) && (sortPtr->sortProperty))
 			{
-				nsIRDFNode	*target1 = nsnull;
+				nsISupports	*target1 = nsnull;
 				if (NS_SUCCEEDED(rv = (sortPtr->db)->GetTarget(res1, sortPtr->sortProperty, PR_TRUE, &target1)))
 				{
 					nsIRDFLiteral *literal1;
@@ -717,7 +715,7 @@ inplaceSortCallback(const void *data1, const void *data2, void *sortData)
 		{
 			if ((sortPtr->naturalOrderSort == PR_FALSE) && (sortPtr->sortProperty))
 			{
-				nsIRDFNode	*target2 = nsnull;
+				nsISupports	*target2 = nsnull;
 				if (NS_SUCCEEDED(rv = (sortPtr->db)->GetTarget(res2, sortPtr->sortProperty, PR_TRUE, &target2)))
 				{
 					nsIRDFLiteral *literal2;
@@ -869,7 +867,7 @@ XULSortServiceImpl::SortTreeChildren(nsIContent *container, PRInt32 colIndex, so
 
 NS_IMETHODIMP
 XULSortServiceImpl::OpenContainer(nsIRDFCompositeDataSource *db, nsIContent *container,
-			nsIRDFResource **flatArray, PRInt32 numElements, PRInt32 elementSize)
+			nsISupports **flatArray, PRInt32 numElements, PRInt32 elementSize)
 {
 	nsresult	rv;
 	nsIContent	*treeNode;
@@ -982,6 +980,7 @@ XULSortServiceImpl::PrintTreeChildren(nsIContent *container, PRInt32 colIndex, P
 					PRInt32 len = textFrags->GetLength();
 					if (val)	printf("value='%.*s'", len, val);
 				}
+                NS_RELEASE(text);
 			}
 			printf("\n");
 		}
