@@ -133,21 +133,17 @@ nsresult OnIdentityCheck()
 	return result;
 }
 
-// Utility to create a nsIURL object...
+// Utility to create a nsIURI object...
 nsresult 
-nsMsgNewURL(nsIURI** aInstancePtrResult, const nsString& aSpec)
+nsMsgNewURL(nsIURI** aInstancePtrResult, const char * aSpec)
 {  
+  nsresult rv = NS_OK;
   if (nsnull == aInstancePtrResult) 
     return NS_ERROR_NULL_POINTER;
   
-  nsINetService *inet = nsnull;
-  nsresult rv = nsServiceManager::GetService(kNetServiceCID, nsINetService::GetIID(),
-                                             (nsISupports **)&inet);
-  if (rv != NS_OK) 
-    return rv;
-
-  rv = inet->CreateURL(aInstancePtrResult, aSpec, nsnull, nsnull, nsnull);
-  nsServiceManager::ReleaseService(kNetServiceCID, inet);
+  NS_WITH_SERVICE(nsIIOService, pNetService, kIOServiceCID, &rv); 
+  if (NS_SUCCEEDED(rv) && pNetService)
+	rv = pNetService->NewURI(aSpec, nsnull, aInstancePtrResult)
   return rv;
 }
 
@@ -162,7 +158,7 @@ GetAttachments(void)
   if (!attachments)
     return NULL;
   
-  nsMsgNewURL(&url, nsString("file://C:/boxster.jpg"));
+  nsMsgNewURL(&url, "file://C:/boxster.jpg");
 
   nsCRT::memset(attachments, 0, sizeof(nsMsgAttachedFile) * attachCount);
   attachments[0].orig_url = url;
@@ -185,7 +181,7 @@ GetRemoteAttachments()
 
   nsCRT::memset(attachments, 0, sizeof(nsMsgAttachmentData) * attachCount);
 
-  nsMsgNewURL(&url, nsString("http://www.netscape.com"));
+  nsMsgNewURL(&url,"http://www.netscape.com");
   NS_ADDREF(url);
   attachments[0].url = url; // The URL to attach. This should be 0 to signify "end of list".
 
@@ -208,11 +204,11 @@ GetRemoteAttachments()
   (void)attachments[0].description;	    // If you put a string here, it will show up as the Content-Description header.  
                                   // This can be any explanatory text; it's not a file name.						 
 
-  nsMsgNewURL(&url, nsString("http://www.pennatech.com"));
+  nsMsgNewURL(&url,"http://www.pennatech.com");
   NS_ADDREF(url);
   attachments[1].url = url; // The URL to attach. This should be 0 to signify "end of list".
 
-  nsMsgNewURL(&url, nsString("file:///C|/boxster.jpg"));
+  nsMsgNewURL(&url,"file:///C|/boxster.jpg");
   NS_ADDREF(url);
   attachments[2].url = url; // The URL to attach. This should be 0 to signify "end of list".
 
