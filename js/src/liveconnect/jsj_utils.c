@@ -30,10 +30,10 @@
 #include "prtypes.h"
 #include "prprf.h"
 #include "prlog.h"
-/*
-=-= sudu: Check with scott if we need it. It compiles without it.
+
+#ifdef XP_MAC
 #include "prosdep.h"
-*/
+#endif
 
 #include "jsj_private.h"        /* LiveConnect internals */
 #include "jsjava.h"             /* External LiveConnect API */

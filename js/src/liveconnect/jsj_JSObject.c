@@ -32,6 +32,10 @@
 #include "prprf.h"
 #include "prlog.h"
 
+#ifdef XP_MAC
+#include "prosdep.h"
+#endif
+
 #include "jsj_private.h"
 #include "jsjava.h"
 

@@ -38,10 +38,10 @@
 
 #include "prtypes.h"
 #include "prprf.h"
-/*
-=-= sudu: Check with scott if we need it. It compiles without it.
+
+#ifdef XP_MAC
 #include "prosdep.h"
-*/
+#endif
 
 #include "jsj_private.h"        /* LiveConnect internals */
 #include "jsjava.h"
