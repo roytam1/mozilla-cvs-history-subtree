@@ -28,13 +28,13 @@
 #include "prthread.h"
 
 struct np_instance;
-struct NPIPlugin;
-struct NPIPluginInstance;
-struct NPIPluginInstancePeer;
+struct nsIPlugin;
+struct nsIPluginInstance;
+struct nsIPluginInstancePeer;
 struct nsISupports;
-PR_EXTERN(struct NPIPluginInstance*) NPL_GetOJIPluginInstance(NPEmbeddedApp *embed);
-PR_EXTERN(char *) NPL_GetText(struct NPIPluginInstance *);
-PR_EXTERN(jobject) NPL_GetJavaObject(struct NPIPluginInstance *);
+PR_EXTERN(struct nsIPluginInstance*) NPL_GetOJIPluginInstance(NPEmbeddedApp *embed);
+PR_EXTERN(char *) NPL_GetText(struct nsIPluginInstance *);
+PR_EXTERN(jobject) NPL_GetJavaObject(struct nsIPluginInstance *);
 PR_EXTERN(void ) NPL_Release(struct nsISupports *);
 PR_EXTERN(XP_Bool) NPL_IsJVMAndMochaPrefsEnabled(void);
 PR_EXTERN(void)NPL_JSJInit(void);
