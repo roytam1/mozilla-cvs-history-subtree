@@ -1196,3 +1196,15 @@ nsImageWin::GetBits()
 
 } // GetBits
 
+
+
+
+
+/** ---------------------------------------------------
+ *	See documentation in nsImageWin.h
+ *	@update 
+ */
+NS_IMETHODIMP nsImageWin::DrawToImage(nsIImage* aDstImage, nscoord aDX, nscoord aDY, nscoord aDWidth, nscoord aDHeight)
+{
+  return NS_OK;
+}
