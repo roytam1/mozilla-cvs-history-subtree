@@ -846,7 +846,7 @@ NS_COM nsresult NS_NewLocalFile(nsILocalFile** result)
     *result = new nsLocalFile();
     if (*result)
         return NS_OK;
-    return NS_FAILURE;
+    return NS_ERROR_FAILURE;
 }
 
 
