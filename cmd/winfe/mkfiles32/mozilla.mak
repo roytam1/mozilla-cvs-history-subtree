@@ -1019,22 +1019,19 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\spellcli.cpp
 !endif
 !ifdef MOZ_MAIL_NEWS
-	$(DEPTH)\cmd\winfe\dlgdwnld.cpp
 	$(DEPTH)\cmd\winfe\dlghtmmq.cpp
 	$(DEPTH)\cmd\winfe\dlghtmrp.cpp
 	$(DEPTH)\cmd\winfe\dlgseldg.cpp
    $(DEPTH)\cmd\winfe\nsadrlst.cpp
    $(DEPTH)\cmd\winfe\nsadrnam.cpp
    $(DEPTH)\cmd\winfe\nsadrtyp.cpp
+   	$(DEPTH)\cmd\winfe\offlndlg.cpp
+	$(DEPTH)\cmd\winfe\offpkdlg.cpp
 	$(DEPTH)\cmd\winfe\fldrfrm.cpp        
    $(DEPTH)\cmd\winfe\dspppage.cpp
 	$(DEPTH)\cmd\winfe\srchdlg.cpp
 	$(DEPTH)\cmd\winfe\srchobj.cpp
 	$(DEPTH)\cmd\winfe\mnrccln.cpp
-!endif
-!ifdef MOZ_OFFLINE
-	$(DEPTH)\cmd\winfe\offlndlg.cpp
-	$(DEPTH)\cmd\winfe\offpkdlg.cpp
 !endif
 	$(DEPTH)\cmd\winfe\setupwiz.cpp  
 	$(DEPTH)\cmd\winfe\ngdwtrst.cpp
@@ -1042,7 +1039,9 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\animbar2.cpp   
 	$(DEPTH)\cmd\winfe\apiapi.cpp 
 	$(DEPTH)\cmd\winfe\animecho.cpp
+#ifdef MOZ_OFFLINE
 	$(DEPTH)\cmd\winfe\askmedlg.cpp 
+#endif
 	$(DEPTH)\cmd\winfe\authdll.cpp
 	$(DEPTH)\cmd\winfe\button.cpp 
 	$(DEPTH)\cmd\winfe\cfe.cpp
