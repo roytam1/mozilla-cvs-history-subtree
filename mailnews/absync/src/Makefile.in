@@ -54,6 +54,7 @@ REQUIRES	= xpcom \
 CPPSRCS		= \
 		nsAbSyncPostEngine.cpp \
 		nsAbSync.cpp \
+    nsAbSyncList.cpp \
 		nsAbSyncCRCModel.cpp \
 		nsABSyncDriver.cpp \
 		nsSyncDecoderRing.cpp	\
