@@ -61,6 +61,8 @@ Node* XMLDOMUtils::copyNode(Node* node, Document* owner, NamespaceResolver* reso
         {
             Document* doc = (Document*)node;
             Document* newDoc = new Document();
+            if (!newDoc)
+                break;
 #ifdef MOZ_XSL
             owner->addWrapper(newDoc);
 #endif

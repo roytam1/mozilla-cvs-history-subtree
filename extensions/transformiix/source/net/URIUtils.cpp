@@ -249,6 +249,8 @@ istream* URIUtils::openStream(ParsedURI* uri) {
 URIUtils::ParsedURI* URIUtils::parseURI(const String& uri) {
 
     ParsedURI* uriTokens = new ParsedURI;
+    if (!uriTokens)
+        return NULL;
     uriTokens->isMalformed = MB_FALSE;
 
     short mode = PROTOCOL_MODE;
