@@ -5451,6 +5451,10 @@ nsCSSFrameConstructor::CantRenderReplacedElement(nsIPresContext* aPresContext,
         // Make sure that's correct
         ((nsPlaceholderFrame*)placeholderFrame)->SetOutOfFlowFrame(newFrame);
       }
+      // Reset the primary frame mapping 
+      presShell->SetPrimaryFrameFor(content, newFrame); 
+
+      // Insert the new frame 
       parentFrame->InsertFrames(*aPresContext, *presShell, listName, prevSibling, newFrame);
     }
 
