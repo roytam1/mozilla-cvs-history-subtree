@@ -279,7 +279,7 @@ nsresult nsInternetConfigService::FillMIMEInfoForICEntry(ICMapEntry& entry, nsIM
     
     // convert entry.extension which is a Str255 
     // don't forget to remove the '.' in front of the file extension....
-    nsCAutoString temp((char *)&entry.extension[2], (int)entry.extension[0]-1);
+    nsCAutoString temp((char *)&entry.extension[2], entry.extension[0] > 0 ? (int)entry.extension[0]-1 : 0);
     info->AppendExtension(temp);
     info->SetMacType(entry.fileType);
     info->SetMacCreator(entry.fileCreator);
