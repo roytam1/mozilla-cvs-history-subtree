@@ -474,6 +474,9 @@ struct URL_Struct_ {
 										   */
 	void	*owner_data;				  /* private data owned by whomever created the URL_Struct */			
 	char    *page_services_url;
+#ifdef PRIVACY_POLICIES
+	char	*privacy_policy_url;
+#endif
 	char	*etag;						  /* HTTP/1.1 Etag */
 	char    *origin_url;                  /* original referrer of javascript: URL */
 };
