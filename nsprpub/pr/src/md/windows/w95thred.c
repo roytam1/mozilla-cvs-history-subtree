@@ -218,6 +218,10 @@ _PR_MD_CLEAN_THREAD(PRThread *thread)
     }
 
     if (thread->md.handle) {
+#if !defined(WINCE)
+        rv = CloseHandle(thread->md.handle);
+        PR_ASSERT(rv);
+#else
         if(PR_FALSE == thread->md.noCloseHandle) {
             rv = CloseHandle(thread->md.handle);
             PR_ASSERT(rv);
@@ -225,6 +229,7 @@ _PR_MD_CLEAN_THREAD(PRThread *thread)
         else {
             thread->md.noCloseHandle = PR_FALSE; /* reused? insurance.... */
         }
+#endif
         thread->md.handle = 0;
     }
 }
