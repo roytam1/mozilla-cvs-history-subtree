@@ -485,8 +485,8 @@ nsPKCS12Blob::digest_open(void *arg, PRBool reading)
   nsresult rv;
   // use DirectoryService to find the system temp directory
   nsCOMPtr<nsILocalFile> tmpFile;
-  NS_WITH_SERVICE(nsIProperties, directoryService, 
-                                 NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+  nsCOMPtr<nsIProperties> directoryService = 
+           do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
   if (NS_FAILED(rv)) return SECFailure;
   directoryService->Get(NS_OS_TEMP_DIR, 
                         NS_GET_IID(nsIFile),
