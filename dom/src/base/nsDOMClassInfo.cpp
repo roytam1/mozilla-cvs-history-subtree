@@ -122,6 +122,7 @@
 #include "nsIPluginHost.h"
 #include "nsPIPluginHost.h"
 
+#ifdef OJI
 // HTMLAppletElement helper includes
 #include "nsIJVMManager.h"
 
@@ -130,6 +131,7 @@
 
 #include "nsILiveConnectManager.h"
 #include "nsIJVMPluginInstance.h"
+#endif
 
 // HTMLOptionCollection includes
 #include "nsIDOMHTMLOptionElement.h"
@@ -5761,13 +5763,16 @@ nsHTMLAppletElementSH::GetPluginJSObject(JSContext *cx, JSObject *obj,
                                          JSObject **plugin_obj,
                                          JSObject **plugin_proto)
 {
+#ifdef OJI
   *plugin_obj = nsnull;
   *plugin_proto = nsnull;
 
   nsCOMPtr<nsIJVMManager> jvm(do_GetService(nsIJVMManager::GetCID()));
 
   if (!jvm) {
+#endif
     return NS_OK;
+#ifdef OJI
   }
 
   nsCOMPtr<nsIJVMPluginInstance> javaPluginInstance;
@@ -5793,6 +5798,7 @@ nsHTMLAppletElementSH::GetPluginJSObject(JSContext *cx, JSObject *obj,
   }
 
   return manager->WrapJavaObject(cx, appletObject, plugin_obj);
+#endif /* OJI */
 }
 
 
