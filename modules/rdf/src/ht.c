@@ -995,18 +995,18 @@ HT_NewToolbarPane(HT_Notification notify)
 			err = true;
 			break;
 		}
-		pane->special = true;
+		
 		pane->ns = notify;
 		pane->mask = HT_EVENT_DEFAULT_NOTIFICATION_MASK ;
-                if ((ev = (RDF_Event)getMem(sizeof(struct RDF_EventStruct))) == NULL) 
+        if ((ev = (RDF_Event)getMem(sizeof(struct RDF_EventStruct))) == NULL) 
 		{
 			err = true; 
 			break;
 		}
 
 		ev->eventType = HT_EVENT_DEFAULT_NOTIFICATION_MASK;
-
-		pane->rns = RDF_AddNotifiable(gNCDB, bmkNotifFunc, ev, pane);
+		pane->db = HTRDF_GetDB(pane);
+		pane->rns = RDF_AddNotifiable(gNCDB, htrdfNotifFunc, ev, pane);
 		freeMem(ev);
 
 		if ((pane->hash = PL_NewHashTable(500, idenHash, PL_CompareValues,
@@ -1015,7 +1015,7 @@ HT_NewToolbarPane(HT_Notification notify)
 			err = true;
 			break;
 		}
-		pane->db =  newNavCenterDB();
+		
 		pane->autoFlushFlag = true;
 		
 		pane->next = gHTTop;

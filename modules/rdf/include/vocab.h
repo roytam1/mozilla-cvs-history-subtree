@@ -133,6 +133,9 @@ typedef struct _RDF_NCVocabStruct {
   RDF_Resource selectedColumnHeaderBGColor;
   RDF_Resource showColumnHilite;
   RDF_Resource triggerPlacement;
+
+  /* Toolbar Appearance Styles */
+  RDF_Resource toolbarBitmapPosition; /* Bitmap's position ("side"/"top") */
 } RDF_NCVocabStruct;
 
 typedef RDF_NCVocabStruct* RDF_NCVocab;

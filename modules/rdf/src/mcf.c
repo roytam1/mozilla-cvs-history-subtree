@@ -455,6 +455,10 @@ RDF_GetResource (RDF db, char* id, PRBool createp)
   char* nid;
   RDF_Resource existing;
   if (id != NULL) {
+	
+	if (strcmp(id, "NC:PersonalToolbar") == 0)
+		return RDFUtil_GetPTFolder();
+
     existing = (RDF_Resource)PL_HashTableLookup(resourceHash, id);
     if (existing != null) return addDep(db, existing);
     if (!createp) {

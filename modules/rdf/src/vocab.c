@@ -199,6 +199,10 @@ createNavCenterVocab () {
   gNavCenter->selectedColumnHeaderBGColor = newResource("selectedColumnHeaderBGColor", RDF_SELECTED_HEADER_BG_COLOR_STR);
   gNavCenter->showColumnHilite = newResource("showColumnHilite", RDF_SHOW_COLUMN_HILITING_STR);
   gNavCenter->triggerPlacement = newResource("triggerPlacement", RDF_TRIGGER_PLACEMENT_STR);
+
+  /* Toolbar Appearance Styles */
+  gNavCenter->toolbarBitmapPosition = newResource("toolbarBitmapPosition", "Toolbar Bitmap Position");
+
 #endif /* MOZILLA_CLIENT */
 }
 
