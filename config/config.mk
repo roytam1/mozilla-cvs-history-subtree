@@ -270,6 +270,9 @@ MOZ_META_COMPONENTS_mail = nsMsgBaseModule IMAP_factory nsVCardModule mime_servi
 MOZ_META_COMPONENTS_mail_comps = mailnews msgimap mime mimeemitter msgnews msgcompose localmail absyncsvc import addrbook impText vcard msgdb #smime
 MOZ_META_COMPONENTS_mail_libs = msgbaseutil
 
+MOZ_META_COMPONENTS_crypto = PKI NSS
+MOZ_META_COMPONENTS_crypto_comps = pippki pipnss
+
 #
 # Build using PIC by default
 # Do not use PIC if not building a shared lib (see exceptions below)

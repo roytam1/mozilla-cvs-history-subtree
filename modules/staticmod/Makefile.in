@@ -80,6 +80,12 @@ endif
 
 #EXTRA_DSO_LDOPTS += $(MOZ_COMPONENT_LIBS)
 
+ifdef MOZ_META_COMPONENTS
+ifeq ($(LIBRARY_NAME),meta_crypto)
+EXTRA_LIBS += $(NSS_LIBS)
+endif
+endif
+
 GARBAGE += $(CPPSRCS)
 
 list:
