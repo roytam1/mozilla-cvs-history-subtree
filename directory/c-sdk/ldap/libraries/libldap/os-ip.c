@@ -37,7 +37,7 @@ static char copyright[] = "@(#) Copyright (c) 1995 Regents of the University of 
 /* the non-blocking connect code due to the select() implementation  */
 /* We will temporarily get around this problem by upping the max number  */
 /* of socket descriptors for select as described on the select() man page */
-/* (mhein)
+/* (mhein) */
 
 #ifdef SOLARIS
 #define FD_SETSIZE	65536
