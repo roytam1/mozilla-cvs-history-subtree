@@ -339,7 +339,9 @@ nsresult nsScanner::Append(const nsAString& aBuffer) {
  *  @param   
  *  @return  
  */
-nsresult nsScanner::Append(const char* aBuffer, PRUint32 aLen){
+nsresult nsScanner::Append(const char* aBuffer, PRUint32 aLen,
+                           nsIRequest *aRequest)
+{
   nsresult res=NS_OK;
   PRUnichar *unichars, *start;
   if(mUnicodeDecoder) {
@@ -379,7 +381,7 @@ nsresult nsScanner::Append(const char* aBuffer, PRUint32 aLen){
 	  } while (NS_FAILED(res) && (aLen > 0));
 
     buffer->SetDataLength(totalChars);
-    AppendToBuffer(buffer);
+    AppendToBuffer(buffer, aRequest);
     mTotalRead += totalChars;
 
     // Don't propagate return code of unicode decoder
@@ -388,7 +390,7 @@ nsresult nsScanner::Append(const char* aBuffer, PRUint32 aLen){
     res = NS_OK; 
   }
   else {
-    AppendASCIItoBuffer(aBuffer, aLen);
+    AppendASCIItoBuffer(aBuffer, aLen, aRequest);
     mTotalRead+=aLen;
   }
 
@@ -433,7 +435,7 @@ nsresult nsScanner::FillBuffer(void) {
     }
 
     if((0<numread) && (0==result)) {
-      AppendASCIItoBuffer(buf, numread);
+      AppendASCIItoBuffer(buf, numread, nsnull);
     }
     mTotalRead+=numread;
   }
@@ -1368,11 +1370,12 @@ void nsScanner::ReplaceCharacter(nsScannerIterator& aPosition,
   }
 }
 
-void nsScanner::AppendToBuffer(nsScannerString::Buffer* aBuf)
+void nsScanner::AppendToBuffer(nsScannerString::Buffer* aBuf,
+                               nsIRequest *aRequest)
 {
   if (nsParser::sParserDataListeners && mParser &&
       NS_FAILED(mParser->DataAdded(Substring(aBuf->DataStart(),
-                                             aBuf->DataEnd())))) {
+                                             aBuf->DataEnd()), aRequest))) {
     // Don't actually append on failure.
 
     return;
@@ -1410,7 +1413,8 @@ void nsScanner::AppendToBuffer(nsScannerString::Buffer* aBuf)
   }
 }
 
-void nsScanner::AppendASCIItoBuffer(const char* aData, PRUint32 aLen)
+void nsScanner::AppendASCIItoBuffer(const char* aData, PRUint32 aLen,
+                                    nsIRequest *aRequest)
 {
   nsScannerString::Buffer* buf = nsScannerString::AllocBuffer(aLen);
   if (buf)
@@ -1418,7 +1422,7 @@ void nsScanner::AppendASCIItoBuffer(const char* aData, PRUint32 aLen)
     LossyConvertEncoding<char, PRUnichar> converter(buf->DataStart());
     converter.write(aData, aLen);
     converter.write_terminator();
-    AppendToBuffer(buf);
+    AppendToBuffer(buf, aRequest);
   }
 }
 
