@@ -1016,8 +1016,8 @@
             argsArray.AppendElement(rValue);
           }
       
-          // Exec the command in the Bookmarks datasource. 
-          this.bookmarksDS.DoCommand(sourcesArray, rCommand, argsArray);
+          // rjc: Exec the command against the composite datasource
+          this.db.DoCommand(sourcesArray, rCommand, argsArray);
         ]]></body>
       </method>
       
