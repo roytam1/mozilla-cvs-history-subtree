@@ -173,22 +173,19 @@ FeedItem.prototype.isStored = function() {
   else
     server = getIncomingServer();
 
-  var folder;
+  var folder = this.feed.folder;
+
   try {
-    //var folder = server.rootMsgFolder.FindSubFolder(feed);
-    folder = server.rootMsgFolder.getChildNamed(this.feed.name);
-  } catch(e) {
-    folder = null;
-  }
+    if (!folder)
+      folder = server.rootMsgFolder.getChildNamed(this.feed.name);
+  } catch(e) {}
+
   if (!folder) 
   {
     debug(this.feed.name + " folder doesn't exist; creating");
 		debug("creating " + this.feed.name + "as child of " + server.rootMsgFolder + "\n");
     server.rootMsgFolder.createSubfolder(this.feed.name, getMessageWindow());
     folder = server.rootMsgFolder.FindSubFolder(this.feed.name);
-    var msgdb = folder.getMsgDatabase(null);
-    var folderInfo = msgdb.dBFolderInfo;
-    folderInfo.SetCharPtrProperty("feedUrl", this.url);
     debug(this.identity + " not stored (folder didn't exist)");
     return false;
   }
@@ -203,9 +200,9 @@ FeedItem.prototype.isStored = function() {
   }
   else 
   {
-      debug(this.identity + " stored");
-      return true;
-    }
+    debug(this.identity + " stored");
+    return true;
+  }
 }
 
 // XXX This should happen in the constructor automatically.
@@ -225,7 +222,7 @@ FeedItem.prototype.markValid = function() {
     else {
       ds.Assert(resource, FZ_VALID, RDF_LITERAL_TRUE, true);
     }
-  }
+}
 
 
 FeedItem.prototype.markStored = function() {
@@ -242,7 +239,7 @@ FeedItem.prototype.markStored = function() {
     }
     else {
       ds.Assert(resource, FZ_STORED, RDF_LITERAL_TRUE, true);
-  }
+    }
 }
 
 FeedItem.prototype.download = function() {
@@ -296,7 +293,7 @@ FeedItem.prototype.toUtf8 = function(str) {
 
 FeedItem.prototype.writeToFolder = function() {
   debug(this.identity + " writing to message folder" + this.feed.name + "\n");
-
+  
   var server;
   if (this.feed.folder)
     server = this.feed.folder.server;
@@ -349,7 +346,7 @@ FeedItem.prototype.writeToFolder = function() {
   debug(this.identity + " is " + source.length + " characters long");
 
   // Get the folder and database storing the feed's messages and headers.
-  var folder = server.rootMsgFolder.getChildNamed(this.feed.name);
+  var folder = this.feed.folder ? this.feed.folder : server.rootMsgFolder.getChildNamed(this.feed.name);
   folder = folder.QueryInterface(Components.interfaces.nsIMsgLocalMailFolder);
   folder.addMessage(source);
   this.markStored();
