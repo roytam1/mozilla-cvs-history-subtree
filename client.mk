@@ -192,7 +192,7 @@ endif
 ####################################
 # CVS defines for PSM
 #
-PSM_CO_MODULE= mozilla/security/manager
+PSM_CO_MODULE= mozilla/security/manager mozilla/security/makefile.win
 PSM_CO_FLAGS := -P -A
 ifdef MOZ_CO_FLAGS
   PSM_CO_FLAGS := $(MOZ_CO_FLAGS)
@@ -495,8 +495,8 @@ real_checkout:
 	  ("$$@" || touch $$failed) 2>&1 | tee -a $(CVSCO_LOGFILE) && \
 	  if test -f $$failed; then false; else true; fi; }; \
 	cvs_co $(CVSCO_NSPR) && \
-	cvs_co $(CVSCO_PSM) && \
 	cvs_co $(CVSCO_NSS) && \
+	cvs_co $(CVSCO_PSM) && \
         cvs_co $(CVSCO_LDAPCSDK) && \
         cvs_co $(CVSCO_ACCESSIBLE) && \
         cvs_co $(CVSCO_GFX2) && \
@@ -567,10 +567,10 @@ real_fast-update:
 	  ("$$@" || touch $$failed) 2>&1 | tee -a $(CVSCO_LOGFILE) && \
 	  if test -f $$failed; then false; else true; fi; }; \
 	fast_update $(CVSCO_NSPR) && \
-	fast_update $(CVSCO_PSM) && \
 	cd $(ROOTDIR) && \
 	cvs_co $(CVSCO_NSS) && \
 	cd mozilla && \
+	fast_update $(CVSCO_PSM) && \
 	fast_update $(CVSCO_LDAPCSDK) && \
 	fast_update $(CVSCO_ACCESSIBLE) && \
 	fast_update $(CVSCO_GFX2) && \

@@ -349,7 +349,7 @@ sub ProcessJarManifests()
       CreateJarFromManifest(":mozilla:extensions:venkman:resources:jar.mn", $chrome_dir, \%jars);
     }
     
-    CreateJarFromManifest(":mozilla:accessible:src:jar.mn", $chrome_dir, \%jars);
+    CreateJarFromManifest(":mozilla:accessible:src:base:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:caps:src:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:docshell:base:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:editor:jar.mn", $chrome_dir, \%jars);
@@ -405,7 +405,6 @@ sub ProcessJarManifests()
     if ($main::options{psm}) {
     	CreateJarFromManifest(":mozilla:security:manager:ssl:resources:jar.mn", $chrome_dir, \%jars);
     	CreateJarFromManifest(":mozilla:security:manager:pki:resources:jar.mn", $chrome_dir, \%jars);
-    	InstallFromManifest(":mozilla:security:manager:ssl:src:MANIFEST_NSSIFAIL", "$resource_dir");
     }
     # bad jar.mn files
 #    CreateJarFromManifest(":mozilla:extensions:xmlterm:jar.mn", $chrome_dir, \%jars);
@@ -1085,7 +1084,8 @@ sub BuildIDLProjects()
 	
     if ($main::options{psm}) {
     	BuildIDLProject(":mozilla:security:manager:ssl:macbuild:pipnssIDL.mcp",         "pipnss");
-    	BuildIDLProject(":mozilla:security:manager:pki:macbuild:pippkiIDL.mcp",         "pippki");    	
+    	BuildIDLProject(":mozilla:security:manager:pki:macbuild:pippkiIDL.mcp",         "pippki");
+    	BuildIDLProject(":mozilla:security:manager:boot:macbuild:pipbootIDL.mcp",		"pipboot");
     }
     
     BuildIDLProject(":mozilla:modules:libpref:macbuild:libprefIDL.mcp",             "libpref");
@@ -1516,8 +1516,9 @@ sub BuildSecurityProjects()
     StartBuildModule("security");
 
     BuildProject(":mozilla:security:nss:macbuild:NSS.mcp","NSS$D.o");
-    BuildOneProject(":mozilla:security:manager:ssl:macbuild:PIPNSS.mcp", "PIPNSS$D.$S",  1, $main::ALIAS_SYM_FILES, 1);
-    BuildOneProject(":mozilla:security:manager:pki:macbuild:PIPPKI.mcp", "PIPPKI$D.$S",  1, $main::ALIAS_SYM_FILES, 1); 
+    BuildOneProject(":mozilla:security:manager:boot:macbuild:pipboot.mcp", "pipboot$D.$S",  1, $main::ALIAS_SYM_FILES, 1);
+    BuildOneProject(":mozilla:security:manager:ssl:macbuild:PIPNSS.mcp",   "PIPNSS$D.$S",  1, $main::ALIAS_SYM_FILES, 1);
+    BuildOneProject(":mozilla:security:manager:pki:macbuild:PIPPKI.mcp",   "PIPPKI$D.$S",  1, $main::ALIAS_SYM_FILES, 1); 
     
 	if ($main::options{static_build}) {
 		BuildOneProject(":mozilla:modules:staticmod:macbuild:cryptoComponent.mcp",    "MetaCrypto$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);

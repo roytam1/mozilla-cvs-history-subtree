@@ -1530,49 +1530,33 @@ nsCSSFrameConstructor::CreateInputFrame(nsIPresShell    *aPresShell,
                                         nsIFrame        *&aFrame,
                                         nsIStyleContext *aStyleContext)
 {
-  nsresult  rv;
-
   // Figure out which type of input frame to create
   nsAutoString  val;
   if (NS_OK == aContent->GetAttr(kNameSpaceID_HTML, nsHTMLAtoms::type, val)) {
-    if (val.EqualsIgnoreCase("submit")) {
-      rv = ConstructButtonControlFrame(aPresShell, aPresContext, aFrame);
-    }
-    else if (val.EqualsIgnoreCase("reset")) {
-      rv = ConstructButtonControlFrame(aPresShell, aPresContext, aFrame);
-    }
-    else if (val.EqualsIgnoreCase("button")) {
-      rv = ConstructButtonControlFrame(aPresShell, aPresContext, aFrame);
+    if (val.EqualsIgnoreCase("submit") ||
+        val.EqualsIgnoreCase("reset") ||
+        val.EqualsIgnoreCase("button")) {
+      return ConstructButtonControlFrame(aPresShell, aPresContext, aFrame);
     }
     else if (val.EqualsIgnoreCase("checkbox")) {
-      rv = ConstructCheckboxControlFrame(aPresShell, aPresContext, aFrame, aContent, aStyleContext);
+      return ConstructCheckboxControlFrame(aPresShell, aPresContext, aFrame, aContent, aStyleContext);
     }
     else if (val.EqualsIgnoreCase("file")) {
-      rv = NS_NewFileControlFrame(aPresShell, &aFrame);
+      return NS_NewFileControlFrame(aPresShell, &aFrame);
     }
     else if (val.EqualsIgnoreCase("hidden")) {
-      rv = NS_OK;
+      return NS_OK;
     }
     else if (val.EqualsIgnoreCase("image")) {
-      rv = NS_NewImageControlFrame(aPresShell, &aFrame);
-    }
-    else if (val.EqualsIgnoreCase("password")) {
-      rv = ConstructTextControlFrame(aPresShell, aPresContext, aFrame, aContent);
+      return NS_NewImageControlFrame(aPresShell, &aFrame);
     }
     else if (val.EqualsIgnoreCase("radio")) {
-      rv = ConstructRadioControlFrame(aPresShell, aPresContext, aFrame, aContent, aStyleContext);
+      return ConstructRadioControlFrame(aPresShell, aPresContext, aFrame, aContent, aStyleContext);
     }
-    else if (val.EqualsIgnoreCase("text")) {
-      rv = ConstructTextControlFrame(aPresShell, aPresContext, aFrame, aContent);
-    }
-    else {
-      rv = ConstructTextControlFrame(aPresShell, aPresContext, aFrame, aContent);
-    }
-  } else {
-    rv = ConstructTextControlFrame(aPresShell, aPresContext, aFrame, aContent);
   }
 
-  return rv;
+  // "password", "text", and all others
+  return ConstructTextControlFrame(aPresShell, aPresContext, aFrame, aContent);
 }
 
 static PRBool
@@ -3416,9 +3400,11 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
 
       // Not all shells have scroll frames, even in scrollable presContext (bug 30317)
       if (view) {
-        PRUint32  viewFlags;
-        view->GetViewFlags(&viewFlags);
-        view->SetViewFlags(viewFlags | NS_VIEW_PUBLIC_FLAG_DONT_BITBLT);
+        nsCOMPtr<nsIViewManager> vm;
+        view->GetViewManager(*getter_AddRefs(vm));
+        if (vm) {
+          vm->SetViewBitBltEnabled(view, PR_FALSE);
+        }
       }
     }
 
@@ -7850,6 +7836,14 @@ nsCSSFrameConstructor::ContentAppended(nsIPresContext* aPresContext,
     PRInt32 namespaceID;
     bindingManager->ResolveTag(aContainer, &namespaceID, getter_AddRefs(tag));
 
+    // Just ignore outliner tags, anyway we don't create any frames for them.
+    if (tag == nsXULAtoms::outlineritem ||
+        tag == nsXULAtoms::outlinerseparator ||
+        tag == nsXULAtoms::outlinerchildren ||
+        tag == nsXULAtoms::outlinerrow ||
+        tag == nsXULAtoms::outlinercell)
+      return NS_OK;
+
     PRBool treeChildren = tag.get() == nsXULAtoms::treechildren;
     PRBool treeItem = tag.get() == nsXULAtoms::treeitem;
 
@@ -8429,6 +8423,14 @@ nsCSSFrameConstructor::ContentInserted(nsIPresContext* aPresContext,
     nsCOMPtr<nsIAtom> tag;
     PRInt32 namespaceID;
     bindingManager->ResolveTag(aContainer, &namespaceID, getter_AddRefs(tag));
+
+    // Just ignore outliner tags, anyway we don't create any frames for them.
+    if (tag == nsXULAtoms::outlineritem ||
+        tag == nsXULAtoms::outlinerseparator ||
+        tag == nsXULAtoms::outlinerchildren ||
+        tag == nsXULAtoms::outlinerrow ||
+        tag == nsXULAtoms::outlinercell)
+      return NS_OK;
 
     PRBool treeChildren = tag && tag.get() == nsXULAtoms::treechildren;
     PRBool treeItem = tag && tag.get() == nsXULAtoms::treeitem;
@@ -9148,6 +9150,8 @@ RemoveGeneratedContentFrameSiblings(nsIPresContext *aPresContext, nsIPresShell *
     nsIFrame *frame = nsnull;
     aFrame->GetParent(&frame);
 
+    NS_ASSERTION(frame, "No parent frame!");
+
     // Find aFrame's previous sibling.
     // XXX: Is there a better way to do this?
 
@@ -9182,6 +9186,29 @@ RemoveGeneratedContentFrameSiblings(nsIPresContext *aPresContext, nsIPresShell *
                      nsCSSAtoms::afterPseudo)) {
     nsIFrame *afterFrame = nsnull;
     aFrame->GetNextSibling(&afterFrame);
+
+    if (!afterFrame)
+    {
+      // At this point we know that aFrame has a :after frame,
+      // but it has no next sibling, so it's possible that it's
+      // :after frame was pushed into a continuing frame for it's parent.
+
+      nsIFrame *frame = nsnull;
+
+      aFrame->GetParent(&frame);
+
+      NS_ASSERTION(frame, "No parent frame!");
+
+      if (frame)
+      {
+        // Now get the first child of the parent's next-in-flow.
+
+        frame->GetNextInFlow(&frame);
+
+        if (frame)
+          frame->FirstChild(aPresContext, nsnull, &afterFrame);
+      }
+    }
 
     if (afterFrame &&
         IsGeneratedContentFor(content, afterFrame, nsCSSAtoms::afterPseudo)) {
@@ -9262,6 +9289,14 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
     nsCOMPtr<nsIAtom> tag;
     PRInt32 namespaceID;
     bindingManager->ResolveTag(aContainer, &namespaceID, getter_AddRefs(tag));
+
+    // Just ignore outliner tags, anyway we don't create any frames for them.
+    if (tag == nsXULAtoms::outlineritem ||
+        tag == nsXULAtoms::outlinerseparator ||
+        tag == nsXULAtoms::outlinerchildren ||
+        tag == nsXULAtoms::outlinerrow ||
+        tag == nsXULAtoms::outlinercell)
+      return NS_OK;
 
     PRBool treeChildren = tag && tag.get() == nsXULAtoms::treechildren;
     PRBool treeItem = tag && tag.get() == nsXULAtoms::treeitem;
