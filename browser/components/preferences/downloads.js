@@ -117,15 +117,19 @@ var gDownloadsPane = {
   
   readDownloadDirPref: function ()
   {
-    // Show the 'Custom Dir' menu item only when:
-    // a) there is a custom download dir at all (i.e. browser.download.dir is 
-    //    set to something), and:
-    // b) the custom download dir that is set is not set to one of the default
-    //    options (Desktop or My Downloads).
+    var folderListPref = document.getElementById("browser.download.folderList");
+    var bundlePreferences = document.getElementById("bundlePreferences");
+    var downloadFolder = document.getElementById("downloadFolder");
+
     var customDirPref = document.getElementById("browser.download.dir");
-    var customDownloadFolder = document.getElementById("customDownloadFolder");
-    customDownloadFolder.hidden = this._fileToIndex(customDirPref.value) != 2 || !customDirPref.value;
-    customDownloadFolder.label = this._getDisplayNameOfFile(customDirPref.value);
+    var customIndex = this._fileToIndex(customDirPref.value);
+    
+    if (folderListPref.value == 0 || customIndex == 0)
+      downloadFolder.value = bundlePreferences.getString("desktopFolderName");
+    else if (folderListPref.value == 1 || customIndex == 1) 
+      downloadFolder.value = bundlePreferences.getString("myDownloadsFolderName");
+    else
+      downloadFolder.value = this._getDisplayNameOfFile(customDirPref.value);
     
     var ios = Components.classes["@mozilla.org/network/io-service;1"]
                         .getService(Components.interfaces.nsIIOService);
@@ -133,17 +137,9 @@ var gDownloadsPane = {
                  .QueryInterface(Components.interfaces.nsIFileProtocolHandler);
     var currentDirPref = document.getElementById("browser.download.downloadDir");
     var urlspec = fph.getURLSpecFromFile(currentDirPref.value);
-    var downloadFolder = document.getElementById("downloadFolder");
-    downloadFolder.setAttribute("src", "moz-icon://" + urlspec + "?size=16");
+    var downloadFolderIcon = document.getElementById("downloadFolderIcon");
+    downloadFolderIcon.setAttribute("src", "moz-icon://" + urlspec + "?size=16");
     
-    return undefined;
-  },
-  
-  writeDownloadDirPref: function ()
-  {
-    var currentDirPref = document.getElementById("browser.download.downloadDir");
-    var downloadFolder = document.getElementById("downloadFolder");
-    currentDirPref.value = this._indexToFile(downloadFolder.selectedIndex);
     return undefined;
   },
   

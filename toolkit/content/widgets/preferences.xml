@@ -292,10 +292,11 @@
               dump(e);
             }
           }
-          if (rv !== undefined)
-            aElement.value = rv;
+          var val = rv !== undefined ? rv : (this.instantApply ? this.valueFromPreferences : this.value);
+          if ("value" in aElement) 
+            aElement.value = val;
           else
-            aElement.value = this.instantApply ? this.valueFromPreferences : this.value;
+            aElement.setAttribute("value", val);
           
           if (this.locked)
             aElement.disabled = true;
@@ -346,7 +347,7 @@
           case "menulist":
             return true;
           }
-          return false;
+          return aElement.getAttribute("preference-editable") == "true";
         ]]> 
         </body>
       </method>
@@ -526,6 +527,10 @@
         <parameter name="aPaneElement"/>
         <body>
         <![CDATA[
+#ifdef XP_MACOSX
+          document.title = aPaneElement.label;
+#endif
+
           // Find this pane's index in the deck and set the deck's 
           // selectedIndex to that value to switch to it.
           var prefpanes = this.preferencePanes;

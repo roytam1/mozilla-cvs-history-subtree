@@ -62,6 +62,8 @@
     </preferences>
     
     <script type="application/x-javascript" src="chrome://browser/content/preferences/downloads.js"/>
+    
+    <stringbundle id="bundlePreferences" src="chrome://browser/locale/preferences/preferences.properties"/>
 
     <groupbox>
       <caption label="&askOnSave.label;"/>
@@ -72,16 +74,15 @@
         <vbox flex="1">
           <radio id="neverAsk" label="&neverAsk.label;" value="true"/>
           <hbox>
-            <menulist id="downloadFolder" flex="1" crop="center" class="indent"
-                      preference="browser.download.folderList"
-                      onpreferenceread="return gDownloadsPane.readDownloadDirPref();"
-                      onpreferencewrite="return gDownloadsPane.writeDownloadDirPref();">
-              <menupopup>
-                <menuitem value="0" label="&desktop.label;"/>
-                <menuitem value="1" label="&downloads.label;"/>
-                <menuitem value="2" hidden="true" id="customDownloadFolder" crop="center" flex="1"/>
-              </menupopup>
-            </menulist>
+            <hbox id="downloadFolderContainer" flex="1"
+                  preference="browser.download.folderList"
+                  preference-editable="true"
+                  onpreferenceread="return gDownloadsPane.readDownloadDirPref();">
+              <hbox align="center" flex="1" id="downloadFolderContainer2">
+                <image id="downloadFolderIcon"/>
+                <textbox id="downloadFolder" flex="1" readonly="true"/>
+              </hbox>
+            </hbox>
             <button id="chooseFolder" oncommand="gDownloadsPane.chooseFolder();"
 #ifdef XP_MACSOX
                     label="&chooseFolderMac.label;"/>

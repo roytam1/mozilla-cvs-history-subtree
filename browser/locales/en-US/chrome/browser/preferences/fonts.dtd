@@ -54,7 +54,7 @@
 <!ENTITY  resolution.system.label                 "System setting">
 <!ENTITY  resolution.other                        "Other...">
 
-<!ENTITY  allowPagesToUse.label                   "Allow pages to choose fonts, in preference to my selections above">
+<!ENTITY  allowPagesToUse.label                   "Allow pages to choose their own fonts, instead of my selections above">
 <!ENTITY  allowPagesToUse.accesskey               "h">
 
 <!ENTITY languages.customize.Charset.grouplabel         "Character Encoding">

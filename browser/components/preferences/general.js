@@ -62,8 +62,8 @@ var gGeneralPane = {
   setHomePageToBookmark: function ()
   {
     var rv = { url: null };
-    openDialog("chrome://browser/content/bookmarks/selectBookmark.xul", "", 
-              "centerscreen,chrome,modal=yes,dialog=yes,resizable=yes", rv);
+    document.documentElement.openSubDialog("chrome://browser/content/bookmarks/selectBookmark.xul",
+                                           "resizable", rv);  
     if (rv.url) {
       var homePageField = document.getElementById("browserStartupHomepage");
       homePageField.value = rv.url;

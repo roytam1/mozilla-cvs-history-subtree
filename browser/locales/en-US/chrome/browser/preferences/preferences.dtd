@@ -1,6 +1,6 @@
 
-<!ENTITY  prefWindow.titleWin     "Foopy">
-<!ENTITY  prefWindow.titleMac     "Preferences">
+<!ENTITY  prefWindow.titleWin     "Options">
+<!ENTITY  prefWindow.titleGNOME   "&brandShortName; Preferences">
 <!ENTITY  prefWindow.width        "width: 42em;">
 
 <!ENTITY  paneGeneral.title       "General">

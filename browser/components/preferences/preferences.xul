@@ -39,7 +39,12 @@
 <?xml-stylesheet href="chrome://global/skin/global.css"?>
 <?xml-stylesheet href="chrome://browser/skin/preferences/preferences.css"?>
 
-<!DOCTYPE prefwindow SYSTEM "chrome://browser/locale/preferences/preferences.dtd">
+<!DOCTYPE prefwindow [
+<!ENTITY % brandDTD SYSTEM "chrome://global/locale/brand.dtd">
+<!ENTITY % preferencesDTD SYSTEM "chrome://browser/locale/preferences/preferences.dtd">
+%brandDTD;
+%preferencesDTD;
+]>
 
 <prefwindow type="prefwindow"
             id="BrowserPreferences"
@@ -47,7 +52,11 @@
 #ifdef XP_WIN
             title="&prefWindow.titleWin;"
 #else
-            title="&prefWindow.titleMac;"
+#ifdef XP_UNIX
+#ifndef XP_MACOSX
+            title="&prefWindow.titleGNOME;"
+#endif
+#endif
 #endif
             xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
             style="&prefWindow.width;">
