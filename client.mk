@@ -126,6 +126,7 @@ XTF_BRANCH_NEW_FILES = \
 	js/src/xpconnect/shared/JSBackstagePass.cpp \
 	js/src/xpconnect/shared/JSBackstagePass.h \
 	js/src/xpconnect/loader/JSComponentUtils.js \
+	js/src/xpconnect/loader/mozIJSComponentLib.idl \
 	layout/xtf/Makefile.in \
 	layout/xtf/src/Makefile.in \
 	layout/xtf/src/nsXTFSVGDisplayFrame.cpp

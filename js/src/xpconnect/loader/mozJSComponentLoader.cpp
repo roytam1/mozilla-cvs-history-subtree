@@ -334,7 +334,9 @@ mozJSComponentLoader::~mozJSComponentLoader()
 {
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(mozJSComponentLoader, nsIComponentLoader)
+NS_IMPL_THREADSAFE_ISUPPORTS2(mozJSComponentLoader,
+                              nsIComponentLoader,
+                              mozIJSComponentLib)
 
 NS_IMETHODIMP
 mozJSComponentLoader::GetFactory(const nsIID &aCID,
@@ -1085,6 +1087,35 @@ mozJSComponentLoader::UnloadAll(PRInt32 aWhen)
 #ifdef DEBUG_shaver_off
     fprintf(stderr, "mJCL: UnloadAll(%d)\n", aWhen);
 #endif
+
+    return NS_OK;
+}
+
+//----------------------------------------------------------------------
+// mozIJSComponentLib methods
+
+/* void probeComponent (in AUTF8String registryLocation); */
+NS_IMETHODIMP
+mozJSComponentLoader::ProbeComponent(const nsACString & registryLocation)
+{
+    // This function should only be called from JS.
+    
+    nsCOMPtr<nsIXPConnect> xpc = do_GetService(kXPConnectServiceContractID);
+    NS_ASSERTION(xpc, "could not get xpconnect service");
+    
+    nsCOMPtr<nsIXPCNativeCallContext> cc;
+    xpc->GetCurrentNativeCallContext(getter_AddRefs(cc));
+    if (!cc) {
+        NS_ERROR("could not get native call context");
+        return NS_ERROR_FAILURE;
+    }
+
+    JSObject *global = GlobalForLocation(PromiseFlatCString(registryLocation).get(), 0);
+    
+    jsval *retval = nsnull;
+    cc->GetRetValPtr(&retval);
+    if (*retval)
+        *retval = global ? OBJECT_TO_JSVAL(global) : JSVAL_NULL;
 
     return NS_OK;
 }

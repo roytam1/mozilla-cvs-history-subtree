@@ -66,6 +66,17 @@ interface mozIJSCodeLib : nsISupports
   /**
    * Imports the JS code module at 'moduleURL' to the JS object 'obj'.
    */
-  [noscript] void importModuleToJSObject(in AUTF8String moduleURL, in JSObjectPtr obj); 
+  [noscript] void importModuleToJSObject(in AUTF8String moduleURL, in JSObjectPtr obj);
+  
+  /**
+   * To be called from JS only.
+   *
+   * Load JS code module at 'moduleURL' if it isn't loaded
+   * already. Returns the module's global object, or null if the
+   * module wasn't found. If force==true, an empty global object will
+   * be returned if the module given by moduleURL is not found. The
+   * same global object will be returned for subsequent invocations.
+   */
+  void /* JSObject */ probeModule(in AUTF8String moduleURL /* , [optional] in boolean force */);
 };
 

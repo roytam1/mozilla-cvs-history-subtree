@@ -149,7 +149,7 @@ mozJSCodeLib::ImportModule(const nsACString & moduleName)
   cc->GetArgc(&argc);
 
   if (argc>1) {
-    // The caller passed in the second optional argument. Get it.    
+    // The caller passed in the optional second argument. Get it.    
     jsval *argv = nsnull;
     cc->GetArgvPtr (&argv);
 
@@ -271,6 +271,51 @@ mozJSCodeLib::ImportModuleToJSObject(const nsACString & moduleName, JSObject * t
   return NS_OK;
 }
 
+/* JSObject probeModule (in AUTF8String moduleURL, [optional] in boolean force); */
+NS_IMETHODIMP
+mozJSCodeLib::ProbeModule(const nsACString & moduleName)
+{
+  // This function should only be called from JS.
+
+  nsCOMPtr<nsIXPCNativeCallContext> cc;
+  mXPConnect->GetCurrentNativeCallContext(getter_AddRefs(cc));
+  if (!cc) {
+    NS_ERROR("could not get native call context");
+    return NS_ERROR_FAILURE;
+  }
+
+  JSBool force = PR_FALSE;
+  
+  PRUint32 argc = 0;
+  cc->GetArgc(&argc);
+
+  if (argc>1) {
+    // The caller passed in the optional second argument. Get it.
+    JSContext *cx = nsnull;
+    cc->GetJSContext (&cx);
+    
+    jsval *argv = nsnull;
+    cc->GetArgvPtr (&argv);
+
+    if (!JS_ValueToBoolean(cx, argv[1], &force)) {
+      cc->SetExceptionWasThrown(JS_TRUE);
+      return NS_OK;
+    }
+  }
+    
+  JSObject *moduleObj = nsnull;
+  if (!mModules.Get(moduleName, &moduleObj)) {
+    moduleObj = LoadModule(moduleName, force);
+  }
+
+  jsval *retval = nsnull;
+  cc->GetRetValPtr(&retval);
+  if (*retval)
+    *retval = moduleObj ? OBJECT_TO_JSVAL(moduleObj) : JSVAL_NULL;
+  
+  return NS_OK;
+}
+
 //----------------------------------------------------------------------
 // implementation helpers:
 
@@ -288,54 +333,54 @@ mozJSCodeLib::LoadURL(char **buf, const nsACString &url)
   
   ioserv = do_GetService(kIOServiceCID);
   if (!ioserv) {
-    NS_ERROR("could not get io service");
-    goto error;
+    NS_WARNING("could not get io service");
+    goto failure;
   }
 
   ioserv->NewChannel(url, nsnull, nsnull, getter_AddRefs(channel));
   if (!channel) {
-    NS_ERROR("could not create channel");
-    goto error;
+    NS_WARNING("could not create channel");
+    goto failure;
   }
   
   channel->Open(getter_AddRefs(instream));
   if (!instream) {
-    NS_ERROR("could not open stream");
-    goto error;
+    NS_WARNING("could not open stream");
+    goto failure;
   }
 
   if (NS_FAILED(channel->GetContentLength(&content_length))) {
-    NS_ERROR("could not get content length");
-    goto error;
+    NS_WARNING("could not get content length");
+    goto failure;
   }
   
   *buf = new char[content_length+1];
   if (!*buf) {
-    NS_ERROR("could not alloc buffer");
-    goto error;
+    NS_WARNING("could not alloc buffer");
+    goto failure;
   }
 
   instream->Read(*buf, content_length, &bytesRead);
   if (bytesRead != content_length) {
-    NS_ERROR("stream read error");
-    goto error;
+    NS_WARNING("stream read error");
+    goto failure;
   }
 
   return content_length;
   
-  error:
+  failure:
   if (*buf)
     delete[] *buf;
   return -1;
 }
 
 JSObject *
-mozJSCodeLib::LoadModule(const nsACString &module)
+mozJSCodeLib::LoadModule(const nsACString &module, PRBool force)
 {
   JSObject *moduleObj = nsnull;
   char *buf = nsnull;
   PRInt32 content_length = LoadURL(&buf, module);
-  if (!buf) {
+  if (!buf && !force) {
     NS_ERROR("error loading url");
     return nsnull;
   }
@@ -382,10 +427,13 @@ mozJSCodeLib::LoadModule(const nsACString &module)
   }
 #endif
   
-  if (JS_EvaluateScriptForPrincipals(cx, moduleObj,
-                                     jsprincipals, buf,
-                                     content_length,
-                                     PromiseFlatCString(module).get(), 1, &result)) {
+  if (buf && !JS_EvaluateScriptForPrincipals(cx, moduleObj,
+                                             jsprincipals, buf,
+                                             content_length,
+                                             PromiseFlatCString(module).get(), 1, &result)) {
+    moduleObj = nsnull;
+  }
+  else {
     // Add obj to hash and protect from gc until unloaded in
     // UnloadModules()
     ModulesHash::EntryType *entry = mModules.PutEntry(module);
@@ -396,12 +444,10 @@ mozJSCodeLib::LoadModule(const nsACString &module)
     entry->mData = moduleObj;
     JS_AddNamedRoot(cx, &(entry->mData), "mozJSCodeLib");
   }
-  else
-    moduleObj = nsnull;
-  
-  JSPRINCIPALS_DROP(cx, jsprincipals);
   
   done:
+  if (jsprincipals)
+    JSPRINCIPALS_DROP(cx, jsprincipals);  
   if (buf)
     delete[] buf;
   return moduleObj;

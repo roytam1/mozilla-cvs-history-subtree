@@ -61,6 +61,7 @@ PACKAGE_FILE = xpconnect.pkg
 REQUIRES	= xpcom \
 		  string \
 		  js \
+		  jsloader \
 		  caps \
 		  $(NULL)
 
