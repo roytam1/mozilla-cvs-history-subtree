@@ -2546,7 +2546,7 @@ out:
 /* Routines to print out values during debugging. */
 
 void printChar(jschar *cp) {
-    fprintf(stderr, "jschar* (0x%x) \"", cp);
+    fprintf(stderr, "jschar* (0x%p) \"", cp);
     while (*cp)
 	fputc(*cp++, stderr);
     fputc('"', stderr);
@@ -2555,7 +2555,7 @@ void printChar(jschar *cp) {
 
 void printString(JSString *str) {
     jsuint i;
-    fprintf(stderr, "string (0x%x) \"", str);
+    fprintf(stderr, "string (0x%p) \"", str);
     for (i=0; i < str->length; i++)
 	fputc(str->chars[i], stderr);
     fputc('"', stderr);
@@ -2569,21 +2569,21 @@ void printObj(JSObject *jsobj) {
     jsval val;
     JSClass *clasp;
 
-    fprintf(stderr, "object 0x%x\n", jsobj);
+    fprintf(stderr, "object 0x%p\n", jsobj);
     clasp = OBJ_GET_CLASS(NULL, jsobj);
-    fprintf(stderr, "class 0x%x %s\n", clasp, clasp->name);
+    fprintf(stderr, "class 0x%p %s\n", clasp, clasp->name);
     for (i=0; i < jsobj->map->nslots; i++) {
         fprintf(stderr, "slot %3d ", i);
         val = jsobj->slots[i];
         if (JSVAL_IS_OBJECT(val))
-	    fprintf(stderr, "object 0x%x\n", JSVAL_TO_OBJECT(val));
+	    fprintf(stderr, "object 0x%p\n", JSVAL_TO_OBJECT(val));
         else
             printVal(val);
     }
 }
 
 void printVal(jsval val) {
-    fprintf(stderr, "val %d (0x%x) = ", val, val);
+    fprintf(stderr, "val %d (0x%p) = ", val, val);
     if (JSVAL_IS_NULL(val)) {
 	fprintf(stderr, "null\n");
     } else if (JSVAL_IS_VOID(val)) {
@@ -2605,7 +2605,7 @@ void printVal(jsval val) {
 }
 
 void printId(jsid id) {
-    fprintf(stderr, "id %d (0x%x) is ", id, id);
+    fprintf(stderr, "id %d (0x%p) is ", id, id);
     printVal(js_IdToValue(id));
 }
 
