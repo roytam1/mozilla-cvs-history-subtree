@@ -504,9 +504,7 @@ DoRFC822toHTMLConversion(char *filename, int numArgs)
   // if (numArgs >= 3)
   nsCOMPtr<nsIMimeStreamConverter> mimeStream = do_QueryInterface(mimeParser);
   mimeStream->SetMimeOutputType(nsMimeOutput::nsMimeMessageHeaderDisplay);
-	rv = mimeParser->Init(theURI, out);
-//    rv = mimeParser->SetOutputStream(nsnull, theURI, nsMimeOutput::nsMimeMessageDraftOrTemplate, &outFormat, &contentType);
-
+	rv = mimeParser->Init(theURI, out, nsnull);
   if (NS_FAILED(rv) || !mimeParser)
   {
     printf("Unable to set the output stream for the mime parser...\ncould be failure to create internal libmime data\n");
