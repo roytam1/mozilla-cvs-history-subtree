@@ -625,32 +625,47 @@ ifeq ($(OS_ARCH),Linux)
 # If the motif.mk file exists, it might define extra flags needed for
 # specific versions of motif.
 #
-# Currently there is only 2 flags:
+# The following flags are currently handleded in the xfe:
 #
-# MOZILLA_XM_2_1_PRINT_SHELL_FLAGS: X Print Shell Extension available
-# starting with X11R6.3 and needed by motif 2.1.
 #
-# MOZILLA_XM_2_1_BROKEN_LOCALE_FLAGS: Needed because of currently
-# broken locale support in motif 2.1 when linked with gnu libc2.
+# MOZ_XFE_LINUX_BROKEN_LOCALE_FLAGS
+#	Needed because of currently broken locale support when mixing gnu
+#	libc2 with motif (any version).
+#
+#
+# MOZ_XFE_MOTIF_PRINT_SHELL_FLAGS
+#	X Print Shell Extension available starting with X11R6.3 and needed
+#	by motif 2.1.
+#
+#
+# MOZ_XFE_USE_WINNING_FILE_SELECTION
+#   Hacks to the motif file selection code to "fix" it.  Where "fix" 
+#   means "make the motif fsb not suck as hell".  Motif source code
+#   is needed for this hack (it breaks with lesstif)
+#
 #
 # Please direct questions about motif and linux to ramiro@netscape.com.
 #
 -include $(DEPTH)/config/motif.mk
 
+ifdef MOZ_XFE_USE_WINNING_FILE_SELECTION
+CFLAGS		+= -DMOZ_XFE_USE_WINNING_FILE_SELECTION
+endif
+
 XTOOLLIB	= -L/usr/X11R6/lib -lXt -lSM -lICE
 XLIB		= -lXext -lX11
 XMULIB		= -lXmu -lXpm
 
-ifeq ($(OS_RELEASE),2.0)
+ifneq (,$(filter 2.0 2.1,$(OS_RELEASE)))
 ifeq ($(CPU_ARCH),ppc)
 MOTIFLIB	= /usr/local/lib/libXm.a
 else
 
 MOTIFLIB	=\
 			$(MOTIFPATCH_LIB) \
-			$(MOZILLA_XM_2_1_BROKEN_LOCALE_FLAGS) \
+			$(MOZ_XFE_LINUX_BROKEN_LOCALE_FLAGS) \
 			-L/usr/X11R6/lib -lXm \
-			$(MOZILLA_XM_2_1_PRINT_SHELL_FLAGS)
+			$(MOZ_XFE_MOTIF_PRINT_SHELL_FLAGS)
 
 
 endif
@@ -664,13 +679,14 @@ OTHER_LIBS	= $(MOTIFLIB) $(XTOOLLIB) $(XMULIB) $(EXTENSIONLIB) $(XLIB) -lm -ldl
 # This assumes there is a libXm.so on the system.  If there isn't, you'll
 # get two identical binaries.
 #
-ifeq ($(OS_RELEASE)$(CPU_ARCH),2.0x86)
+ifeq ($(CPU_ARCH),x86)
+ifneq (,$(filter 2.0 2.1,$(OS_RELEASE)))
 
 DYN_MOTIFLIB		=\
 					$(MOTIFPATCH_LIB) \
-					$(MOZILLA_XM_2_1_BROKEN_LOCALE_FLAGS) \
+					$(MOZ_XFE_LINUX_BROKEN_LOCALE_FLAGS) \
 					-lXm \
-					$(MOZILLA_XM_2_1_PRINT_SHELL_FLAGS)
+					$(MOZ_XFE_MOTIF_PRINT_SHELL_FLAGS)
 
 
 EXTRA_EXPORT_OBJS	= $(OBJDIR)/$(XFE_PROGNAME)-motif-export
@@ -680,6 +696,8 @@ PLUGIN_DSO	+= $(DIST)/bin/libnullplugin-dynMotif.so
 
 ifndef NO_WEBFONTS
 EXTRA_REL_FILES += $(WEBFONT_DSO)
+endif
+
 endif
 
 endif
@@ -967,13 +985,18 @@ $(OBJDIR)/$(XFE_PROGNAME)-nis-export: $(OBJS) $(NIS_EXPORT_OBJS) $(NIS_OBJS) $(E
 #
 # Build a dynamic Motif version.
 #
-ifeq ($(OS_ARCH)$(OS_RELEASE)$(CPU_ARCH),Linux2.0x86)
+ifeq ($(OS_ARCH)$(CPU_ARCH),Linuxx86)
+
+ifneq (,$(filter 2.0 2.1,$(OS_RELEASE)))
 
 $(OBJDIR)/$(XFE_PROGNAME)-motif-export: $(OBJS) $(EXPORT_OBJS) $(EXPORT_DEPLIBS)
 	@$(MAKE_OBJDIR)
 	rm -f $@
 	$(CCLD) -o $@ $(LDFLAGS) $(OBJS) $(EXPORT_OBJS) $(BASIC_LIBS) $(EXPORT_LIB) $(BASIC_LIBS_2) -L/usr/X11R6/lib $(DYN_MOTIFLIB) -lXt -lSM -lICE $(XMULIB) $(EXTENSIONLIB) $(XLIB) -lm -ldl $(NSPR_LIB) $(DNS_LIB) -lc
 	@$(EXTRA_POST_LINK_CMD) $@
+
+endif
+
 endif
 
 #---------------- Misc link targets follow ----------------------#
