@@ -100,20 +100,30 @@ else
 CC			= gcc
 CCC			= gcc
 LINK			= gcc
-AR      		= ar -q $@
 RC 			= rc.exe
 FILTER  		= emxexp
 IMPLIB  		= emximp -o
 
+# Determine which object format to use.  Two choices:
+# a.out and omf.  We default to a.out.
+ifeq($(MOZ_OS2_EMX_OBJECTFORMAT), OMF)
+OMF_FLAG 	= -Zomf
+AR		= emxomfar r $@
+LIB_SUFFIX	= lib
+else
+AR      	= ar -q $@
+LIB_SUFFIX	= a
+endif
+
 OS_LIBS     		= -lsocket -lemxio
 
-LIB_SUFFIX 		= a
+LIB_SUFFIX 		= lib
 
 DEFINES += -DXP_OS2_EMX
 
-OS_CFLAGS     		= -I. -Wall -Zmt $(DEFINES)
-OS_EXE_CFLAGS 		= -I. -Wall -Zmt $(DEFINES)
-OS_DLLFLAGS 		= -Zmt -Zdll -Zcrtdll -o $@
+OS_CFLAGS     		= $(OMF_FLAG) -I. -Wall -Zmt $(DEFINES)
+OS_EXE_CFLAGS 		= $(OS_CFLAGS)
+OS_DLLFLAGS 		= $(OMF_FLAG) -Zmt -Zdll -Zcrtdll -o $@
 
 ifdef BUILD_OPT
 OPTIMIZER		= -O3
@@ -122,7 +132,7 @@ EXEFLAGS    		= -Zmt -o $@
 else
 OPTIMIZER		= -g
 DLLFLAGS		= -g
-EXEFLAGS		= -g -Zmt -L$(DIST)/lib -o $@
+EXEFLAGS		= $(OMF_FLAG) -g -Zmt -L$(DIST)/lib -o $@
 endif
 
 AR_EXTRA_ARGS 		=
