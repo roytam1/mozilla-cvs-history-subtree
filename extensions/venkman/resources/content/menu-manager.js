@@ -119,7 +119,6 @@ function mmgr_showpop (event)
         
         expr = expr.replace (/\Wand\W/gi, " && ");
 
-        dd ("evaling " + expr);
         try
         {
             return eval("(" + expr + ")");

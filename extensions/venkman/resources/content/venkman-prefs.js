@@ -60,6 +60,8 @@ function initPrefs()
     console.addPref ("guessPattern", "(\\w+)\\s*[:=]\\s*$");
     console.addPref ("permitStartupHit", true);
     console.addPref ("statusDuration", 5 * 1000);
+    console.addPref ("menubarInFloaters",
+                     navigator.platform.indexOf ("Mac") != -1);
     var list = console.prefs.prefBranch.getChildList("", {});
     for (var p in list)
     {

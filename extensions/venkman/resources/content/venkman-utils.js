@@ -84,7 +84,7 @@ if (DEBUG) {
                      _dd_currentIndent.substr (0, _dd_currentIndent.length -
                                                _dd_indentLength);
                  if (_dd_lastDumpWasOpen)
-                     dumpln ("} " + sufx);
+                     dumpln (str + " " + sufx);
                  else
                      dumpln (_dd_pfx + _dd_currentIndent + str + " " + sufx);
                  _dd_lastDumpWasOpen = false;
@@ -146,39 +146,46 @@ function dumpObjectTree (o, recurse, compress, level)
 
     for (i in o)
     {
-        
-        var t = typeof o[i];
-        switch (t)
+        var t;
+        try
         {
-            case "function":
-                var sfunc = String(o[i]).split("\n");
-                if (sfunc[2] == "    [native code]")
-                    sfunc = "[native code]";
-                else
-                    sfunc = sfunc.length + " lines";
-                s += pfx + tee + i + " (function) " + sfunc + "\n";
-                break;
-
-            case "object":
-                s += pfx + tee + i + " (object) " + o[i] + "\n";
-                if (!compress)
-                    s += pfx + "|\n";
-                if ((i != "parent") && (recurse))
-                    s += dumpObjectTree (o[i], recurse - 1,
-                                         compress, level + 1);
-                break;
-
-            case "string":
-                if (o[i].length > 200)
-                    s += pfx + tee + i + " (" + t + ") " + 
-                        o[i].length + " chars\n";
-                else
-                    s += pfx + tee + i + " (" + t + ") '" + o[i] + "'\n";
-                break;
-
-            default:
-                s += pfx + tee + i + " (" + t + ") " + o[i] + "\n";
-                
+            t = typeof o[i];
+        
+            switch (t)
+            {
+                case "function":
+                    var sfunc = String(o[i]).split("\n");
+                    if (sfunc[2] == "    [native code]")
+                        sfunc = "[native code]";
+                    else
+                        sfunc = sfunc.length + " lines";
+                    s += pfx + tee + i + " (function) " + sfunc + "\n";
+                    break;
+                    
+                case "object":
+                    s += pfx + tee + i + " (object) " + o[i] + "\n";
+                    if (!compress)
+                        s += pfx + "|\n";
+                    if ((i != "parent") && (recurse))
+                        s += dumpObjectTree (o[i], recurse - 1,
+                                             compress, level + 1);
+                    break;
+                    
+                case "string":
+                    if (o[i].length > 200)
+                        s += pfx + tee + i + " (" + t + ") " + 
+                            o[i].length + " chars\n";
+                    else
+                        s += pfx + tee + i + " (" + t + ") '" + o[i] + "'\n";
+                    break;
+                    
+                default:
+                    s += pfx + tee + i + " (" + t + ") " + o[i] + "\n";
+            }
+        }
+        catch (ex)
+        {
+            s += pfx + tee + i + " (exception) " + ex + "\n";
         }
 
         if (!compress)

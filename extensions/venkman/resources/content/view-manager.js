@@ -82,7 +82,7 @@ function vmgr_realizeview (view)
     var toggleName = "toggle-" + key;
     if (!(key in this.commandManager.commands))
     {
-        entry = [toggleName, "toggle-view " + key, 0];
+        entry = [toggleName, "toggle-view " + key, CMD_CONSOLE];
         
         if ("cmdary" in view)
             view.cmdary.unshift(entry);

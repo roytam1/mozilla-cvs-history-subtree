@@ -342,7 +342,7 @@ function XULTreeViewRecord(share)
 {
     this._share = share;
     this.visualFootprint = 1;
-    this.childIndex = -1;
+    //this.childIndex = -1;
     this.isHidden = true; /* records are considered hidden until they are
                            * inserted into a live tree */
 }
@@ -371,6 +371,53 @@ function xtvr_gettree ()
     }
 
     return null;
+}
+
+XULTreeViewRecord.prototype.__defineGetter__("childIndex", xtvr_getChildIndex);
+function xtvr_getChildIndex ()
+{
+    //dd ("getChildIndex {");
+    
+    if (!("parentRecord" in this))
+    {
+        delete this._childIndex;
+        //dd ("} -1");
+        return -1;
+    }
+    
+    if ("_childIndex" in this)
+    {
+        if ("childData" in this && this._childIndex in this.childData &&
+            this.childData[this._childIndex] == this)
+        {
+            //dd ("} " + this._childIndex);
+            return this._childIndex;
+        }
+    }
+
+    var childData = this.parentRecord.childData;
+    var len = childData.length;
+    for (var i = 0; i < len; ++i)
+    {
+        if (childData[i] == this)
+        {
+            this._childIndex = i;
+            //dd ("} " + this._childIndex);
+            return i;
+        }
+    }
+    
+    delete this._childIndex;
+    //dd ("} -1");
+    return -1;
+}
+
+XULTreeViewRecord.prototype.__defineSetter__("childIndex", xtvr_setChildIndex);
+function xtvr_setChildIndex ()
+{
+    dump ("xtvr: childIndex is read only, ignore attempt to write to it\n");
+    if (typeof getStackTrace == "function")
+        dump (getStackTrace());
 }
 
 /* count the number of parents, not including the root node */
@@ -524,7 +571,7 @@ function xtvr_resort (leafSort)
     
     for (var i = 0; i < this.childData.length; ++i)
     {
-        this.childData[i].childIndex = i;
+        //this.childData[i].childIndex = i;
         if ("isContainerOpen" in this.childData[i] &&
             this.childData[i].isContainerOpen)
             this.childData[i].resort(true);
@@ -580,10 +627,10 @@ function xtvr_appchild (child)
 {
     if (!(child instanceof XULTreeViewRecord))
         throw Components.results.NS_ERROR_INVALID_ARG;
-
+    
     child.isHidden = false;
     child.parentRecord = this;
-    child.childIndex = this.childData.length;
+    //child.childIndex = this.childData.length;
     this.childData.push(child);
     
     if ("isContainerOpen" in this && this.isContainerOpen)
@@ -619,8 +666,9 @@ function xtvr_appchild (children)
         var child = children[i];
         child.isHidden = false;
         child.parentRecord = this;
-        this.childData[idx] = child;
-        child.childIndex = idx++;
+        this.childData.push(child);
+        // this.childData[idx] = child;
+        //child.childIndex = idx++;
         delta += child.visualFootprint;
     }
     
@@ -646,21 +694,22 @@ function xtvr_remchild (index)
     if (!ASSERT(this.childData.length, "removing from empty childData"))
         return;
     
-    for (var i = index + 1; i < this.childData.length; ++i)
-        --this.childData[i].childIndex;
+    //for (var i = index + 1; i < this.childData.length; ++i)
+    //    --this.childData[i].childIndex;
     
     var fpDelta = -this.childData[index].visualFootprint;
     var changeStart = this.childData[index].calculateVisualRow();
-    this.childData[index].childIndex = -1;
+    //this.childData[index].childIndex = -1;
     delete this.childData[index].parentRecord;
     arrayRemoveAt (this.childData, index);
     if ("isContainerOpen" in this && this.isContainerOpen)
     {
-        if (this.calculateVisualRow() >= 0)
-        {
-            this.resort(true);  /* resort, don't invalidate.  we're going to do
-                                 * that in the onVisualFootprintChanged call. */
-        }
+        //XXX why would we need to resort on a remove?
+        //if (this.calculateVisualRow() >= 0)
+        //{
+        //    this.resort(true); /* resort, don't invalidate.  we're going to do
+        //                        * that in the onVisualFootprintChanged call. */
+        // }
         this.onVisualFootprintChanged (changeStart, fpDelta);
     }
 }
@@ -720,6 +769,7 @@ function xtvr_open ()
             delta += this.childData[i].visualFootprint;
     }
 
+    /* this resort should only happen if the sort column changed */
     this.resort(true);
     this.visualFootprint += delta;
     if ("parentRecord" in this)
@@ -818,7 +868,8 @@ function xtvr_calcrow ()
         ++vrow;
 
     /* add in the footprint for all of the earlier siblings */
-    for (var i = 0; i < this.childIndex; ++i)
+    var ci = this.childIndex;
+    for (var i = 0; i < ci; ++i)
     {
         if (!this.parentRecord.childData[i].isHidden)
             vrow += this.parentRecord.childData[i].visualFootprint;
@@ -983,7 +1034,7 @@ function torr_resort ()
     
     for (var i = 0; i < this.childData.length; ++i)
     {
-        this.childData[i].childIndex = i;
+        //this.childData[i].childIndex = i;
         if ("isContainerOpen" in this.childData[i] &&
             this.childData[i].isContainerOpen)
             this.childData[i].resort(true);
@@ -1109,8 +1160,6 @@ function xtv_freeze ()
 XULTreeView.prototype.thaw =
 function xtv_thaw ()
 {
-    //dd ("thaw " + (this.frozen - 1));
-
     if (this.frozen == 0)
     {
         ASSERT (0, "not frozen");
@@ -1128,9 +1177,54 @@ function xtv_thaw ()
         delete this.needsResort;
     }
     
+    
     delete this.changeStart;
     delete this.changeAmount;
 
+}
+
+XULTreeView.prototype.saveBranchState =
+function xtv_savebranch (target, source, recurse)
+{
+    var len = source.length;
+    for (var i = 0; i < len; ++i)
+    {
+        if (source[i].isContainerOpen)
+        {
+            target[i] = new Object();
+            target[i].name = source[i]._colValues["col-0"];
+            if (recurse)
+                this.saveBranchState (target[i], source[i].childData, true);
+        }
+    }
+}
+
+XULTreeView.prototype.restoreBranchState =
+function xtv_restorebranch (target, source, recurse)
+{
+    for (var i in source)
+    {
+        if (typeof source[i] == "object")
+        {
+            var name = source[i].name;
+            var len = target.length;
+            for (var j = 0; j < len; ++j)
+            {
+                if (target[j]._colValues["col-0"] == name &&
+                    "childData" in target[j])
+                {
+                    //dd ("opening " + name);
+                    target[j].open();
+                    if (recurse)
+                    {
+                        this.restoreBranchState (target[j].childData,
+                                                 source[i], true);
+                    }
+                    break;
+                }
+            }
+        }
+    }
 }
 
 /* scroll the line specified by |line| to the center of the tree */
@@ -1166,7 +1260,7 @@ function xtv_isctr (index)
     return rv;
     */
 
-    return Boolean(row && "childData" in row);
+    return Boolean(row && ("alwaysHasChildren" in row || "childData" in row));
 }
 
 XULTreeView.prototype.__defineGetter__("selectedIndex", xtv_getsel);
@@ -1228,11 +1322,11 @@ function xtv_isctrempt (index)
     dd ("isContainerEmpty: row " + index + " returning " + rv);
     return rv;
     */
-    if (!row || !("childData" in row))
-        return true;
-
     if ("alwaysHasChildren" in row)
         return false;
+
+    if (!row || !("childData" in row))
+        return true;
 
     return !row.childData.length;
 }
@@ -1247,7 +1341,7 @@ XULTreeView.prototype.getParentIndex =
 function xtv_getpi (index)
 {
     var row = this.childData.locateChildByVisualRow (index);
-    //ASSERT(row, "bogus row " + index);
+    ASSERT(row, "bogus row " + index);
     var rv = row.parentRecord.calculateVisualRow();
     //dd ("getParentIndex: row " + index + " returning " + rv);
     return (rv != null) ? rv : -1;

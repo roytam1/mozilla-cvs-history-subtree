@@ -37,19 +37,12 @@ const DEFAULT_VURLS =
 (
  ("x-vloc:/mainwindow?target=container&type=horizontal&id=outer; " +
   ("x-vloc:/mainwindow/outer?target=container&type=vertical&id=vleft; " +
-   ("x-vloc:/mainwindow/vleft?target=view&id=windows; " +
-    "x-vloc:/mainwindow/vleft?target=view&id=breaks; " +
+   ("x-vloc:/mainwindow/vleft?target=view&id=scripts; " +
     "x-vloc:/mainwindow/vleft?target=view&id=locals; " +
-    "x-vloc:/mainwindow/vleft?target=view&id=watches; ")
-   ) +
+    "x-vloc:/mainwindow/vleft?target=view&id=stack; ")) +
   ("x-vloc:/mainwindow/outer?target=container&type=vertical&id=vright; " +
-   ("x-vloc:/mainwindow/vright?target=container&type=horizontal&id=topright; " +
-    ("x-vloc:/mainwindow/topright?target=view&id=source; " +
-     "x-vloc:/mainwindow/topright?target=view&id=scripts; ")) +
-   ("x-vloc:/mainwindow/vright?target=container&type=horizontal&id=bottomright; " +
-    ("x-vloc:/mainwindow/bottomright?target=view&id=session; " +
-     "x-vloc:/mainwindow/bottomright?target=view&id=stack"))
-   )
+   ("x-vloc:/mainwindow/vright?target=view&id=source; " +     
+    "x-vloc:/mainwindow/vright?target=view&id=session"))
   )
  );
 
@@ -498,6 +491,8 @@ function lv_renit (jsdFrame)
     if (jsdFrame.scope)
     {
         this.scopeRecord = new ValueRecord (jsdFrame.scope, MSG_VAL_SCOPE, "");
+        this.scopeRecord.onPreRefresh = null;
+        this.childData.appendChild(this.scopeRecord);
         if (!state && jsdFrame.scope.propertyCount <
             console.prefs["localsView.autoOpenMax"])
         {
@@ -511,11 +506,14 @@ function lv_renit (jsdFrame)
                                               ["locals:col-1", "locals:col-2",
                                                "locals:col-3"]);
         this.scopeRecord.property = ValueRecord.prototype.atomObject;
+        this.childData.appendChild(this.scopeRecord);
     }
     
     if (jsdFrame.thisValue)
     {
         this.thisRecord = new ValueRecord (jsdFrame.thisValue, MSG_VAL_THIS, "");
+        this.thisRecord.onPreRefresh = null;
+        this.childData.appendChild(this.thisRecord);
         if (!state && jsdFrame.thisValue.propertyCount < 
             console.prefs["localsView.autoOpenMax"])
         {
@@ -528,10 +526,8 @@ function lv_renit (jsdFrame)
                                              ["locals:col-1", "locals:col-2",
                                               "locals:col-3"]);
         this.thisRecord.property = ValueRecord.prototype.atomObject;
+        this.childData.appendChild(this.thisRecord);
     }
-
-    this.childData.appendChild(this.scopeRecord);
-    this.childData.appendChild(this.thisRecord);
 
     if (state)
         this.restoreState(state);
@@ -540,39 +536,18 @@ function lv_renit (jsdFrame)
 console.views.locals.restoreState =
 function lv_restore (state)
 {
-    function restoreBranch (target, source)
-    {
-        for (var i in source)
-        {
-            if (typeof source[i] == "object")
-            {
-                var name = source[i].name;
-                var len = target.length;
-                for (var j = 0; j < len; ++j)
-                {
-                    if (target[j]._colValues["col-0"] == name &&
-                        "childData" in target[j])
-                    {
-                        //dd ("opening " + name);
-                        target[j].open();
-                        restoreBranch (target[j].childData, source[i]);
-                        break;
-                    }
-                }
-            }
-        }
-    };
-    
     this.freeze();
     if ("scopeState" in state)
     {
         this.scopeRecord.open();
-        restoreBranch (this.scopeRecord.childData, state.scopeState);
+        this.restoreBranchState (this.scopeRecord.childData, state.scopeState,
+                                 true);
     }
     if ("thisState" in state)
     {
         this.thisRecord.open();
-        restoreBranch (this.thisRecord.childData, state.thisState);
+        this.restoreBranchState (this.thisRecord.childData, state.thisState,
+                                 true);
     }
     this.thaw();
     this.scrollTo (state.firstVisible, -1);
@@ -584,20 +559,6 @@ function sv_save ()
     if (!ASSERT(this.jsdFrame, "no frame"))
         return;
         
-    function saveBranch (target, source)
-    {
-        var len = source.length;
-        for (var i = 0; i < len; ++i)
-        {
-            if (source[i].isContainerOpen)
-            {
-                target[i] = new Object();
-                target[i].name = source[i]._colValues["col-0"];
-                saveBranch (target[i], source[i].childData);
-            }
-        }
-    };
-
     var tag = this.jsdFrame.script.tag;    
 
     if (!tag in this.savedStates &&
@@ -616,13 +577,15 @@ function sv_save ()
     if (this.scopeRecord.isContainerOpen)
     {
         state.scopeState = { name: "scope" };
-        saveBranch (state.scopeState, this.scopeRecord.childData);
+        this.saveBranchState (state.scopeState, this.scopeRecord.childData,
+                              true);
     }
     
     if (this.thisRecord.isContainerOpen)
     {
         state.thisState = { name: "this" };
-        saveBranch (state.thisState, this.thisRecord.childData);
+        this.saveBranchState (state.thisState, this.thisRecord.childData,
+                              true);
     }
     
     //dd ("saved as\n" + dumpObjectTree(this.savedState, 10));
@@ -721,27 +684,18 @@ function lv_refresh()
     if (!this.tree)
         return;
 
-    var rootRecord = this.childData;
-    
+    var rootRecord = this.childData;    
     if (!"childData" in rootRecord)
         return;
     
-    var delta = 0;
-    var thisDelta;
+    this.freeze();
     
     for (var i = 0; i < rootRecord.childData.length; ++i)
-    {
-        var item = rootRecord.childData[i];
-        thisDelta = item.refresh();
-        /* if the container isn't open, we still have to update the children,
-         * but we don't care about any visual footprint changes */
-        if (item.isContainerOpen)
-            delta += thisDelta;
-    }
+        rootRecord.childData[i].refresh();
 
-    rootRecord.visualFootprint += delta;
-    rootRecord.invalidateCache();
-    this.tree.rowCountChanged (0, rootRecord.visualFootprint);
+    this.thaw();
+    /* the refresh may have changed a property without altering the
+     * size of the tree, so thaw might not invalidate. */
     this.tree.invalidate();
 }
 
@@ -777,7 +731,7 @@ function scv_init ()
          ["clear-script", {enabledif: "cx.scriptWrapper.breakpointCount"}],
          ["-"],
          [">scripts:instance-flags"],
-         [">scripts:wrapper-flags", {enabledif: "false && has('scriptWrapper')"}],
+         [">scripts:wrapper-flags", {enabledif: "has('scriptWrapper')"}],
          ["-"],
          ["save-profile"],
          ["clear-profile"]
@@ -833,7 +787,7 @@ function scv_hookChromeFilter(e)
     scriptsView.freeze();
 
     dd ("e.toggle is " + e.toggle);
-                
+
     for (var m in console.scriptManagers)
     {
         if (console.scriptManagers[m].url.search(/^chrome:/) == -1)
@@ -872,6 +826,8 @@ function scv_hookChromeFilter(e)
     }
 
     scriptsView.thaw();
+    if (scriptsView.tree)
+        scriptsView.tree.invalidate();
 }
 
 console.views.scripts.hooks["hook-break-set"] =
@@ -1365,12 +1321,10 @@ function ss_syncframe ()
         if ("contentDocument" in this.iframe)
         {
             /* iframe looks ready */
-            dd ("iframe is ready");
             this.outputDocument = this.iframe.contentDocument;
 
             if (this.iframe.getAttribute ("src") == "about:blank")
             {
-                dd ("iframe is about:blank");
                 /* but it doesn't point to the right place yet */
                 var docURL = console.prefs["sessionView.outputWindow"];
                 var css = console.prefs["sessionView.currentCSS"];
@@ -1380,7 +1334,6 @@ function ss_syncframe ()
             else
             {
                 /* now it is, get the DOM nodes */
-                dd ("iframe has a url");
                 var win = this.currentContent.ownerWindow;
                 for (var f = 0; f < win.frames.length; ++f)
                 {
@@ -1399,8 +1352,8 @@ function ss_syncframe ()
     }
     catch (ex)
     {
-        dd ("caught exception showing session view, will try again later.");
-        dd (dumpObjectTree(ex));
+        //dd ("caught exception showing session view, will try again later.");
+        //dd (dumpObjectTree(ex));
     }
     
     if (!this.outputDocument || !this.outputTable || !this.inputElement)
@@ -1624,6 +1577,15 @@ console.views.stack.viewId = VIEW_STACK;
 console.views.stack.init =
 function skv_init()
 {
+    console.menuSpecs["context:stack"] = {
+        getContext: this.getContext,
+        items:
+        [
+         ["find-frame"],
+         ["debug-script"],
+         ["profile-script"]
+        ]
+    };
 }
 
 console.views.stack.hooks = new Object();
@@ -1638,6 +1600,8 @@ function skv_hookDebugStop (e)
         frameRec = new FrameRecord(console.frames[i]);
         console.views.stack.childData.appendChild (frameRec);
     }
+
+    console.views.stack.hooks["find-frame"]({ frameIndex: 0 });
 }
 
 console.views.stack.hooks["hook-debug-continue"] =
@@ -1645,6 +1609,8 @@ function skv_hookDebugCont (e)
 {
     while (console.views.stack.childData.childData.length)
         console.views.stack.childData.removeChildAtIndex(0);
+
+    delete console.views.stack.lastFrameIndex;
 }
 
 console.views.stack.hooks["hook-guess-complete"] =
@@ -1665,10 +1631,20 @@ function skv_hookGuessComplete(e)
 console.views.stack.hooks["find-frame"] =
 function skv_hookFrame (e)
 {
-    if (e.frameIndex && console.views.stack.tree)
+    var stackView = console.views.stack;    
+    var childData = stackView.childData.childData;
+
+    childData[e.frameIndex].property = FrameRecord.prototype.atomCurrent;
+    if ("lastFrameIndex" in stackView)
+        delete childData[stackView.lastFrameIndex].property;
+
+    stackView.lastFrameIndex = e.frameIndex;
+
+    if (console.views.stack.tree)
     {
-        console.views.stack.scrollTo (e.frameIndex, 0);
-        console.views.stack.tree.selection.currentIndex = e.frameIndex;
+        stackView.scrollTo (e.frameIndex, 0);
+        stackView.tree.selection.currentIndex = e.frameIndex;
+        stackView.tree.invalidate();
     }
 }
 
@@ -1676,6 +1652,7 @@ console.views.stack.onShow =
 function skv_show()
 {
     syncTreeView (getChildById(this.currentContent, "stack-tree"), this);
+    initContextMenu(this.currentContent.ownerDocument, "context:stack");
 }
 
 console.views.stack.onHide =
@@ -1699,39 +1676,39 @@ function skv_select (row)
 console.views.stack.getContext =
 function sv_getcx(cx)
 {
-    if (!cx)
-        cx = new Object();
-
-    var selection = this.tree.selection;
-
-    var rec = this.childData.locateChildByVisualRow(selection.currentIndex);
+    cx.urlList = new Array();
+    cx.scriptInstanceList = new Array();
+    cx.scriptWrapperList = new Array();
+    cx.lineNumberList = new Array();
+    cx.toggle = "toggle";
     
-    if (!rec)
+    function recordContextGetter (cx, rec, i)
     {
-        dd ("no current index.");
-        return cx;
-    }
-
-    cx.target = rec;    
-    cx.frameIndex = rec.childIndex;
-
-    var rangeCount = selection.getRangeCount();
-    if (rangeCount > 0)
-        cx.frameIndexList = new Array();
-    
-    for (var range = 0; range < rangeCount; ++range)
-    {
-        var min = new Object();
-        var max = new Object();
-        selection.getRangeAt(range, min, max);
-        for (var i = min.value; i < max.value; ++i)
+        if (i == 0)
         {
-            rec = this.childData.locateChildByVisualRow(i);
-            cx.frameIndexList.push(rec.childIndex);
+            if (rec.scriptWrapper)
+            {
+                cx.scriptWrapper = rec.scriptWrapper;
+                cx.scriptInstance = rec.scriptWrapper.scriptInstance;
+                cx.url = cx.scriptInstance.url;
+                cx.lineNumber = rec.scriptWrapper.baseLineNumber;
+            }
         }
-    }
-
-    return cx;
+        else
+        {
+            if (rec.scriptWrapper)
+            {
+                cx.scriptWrapperList.push (rec.scriptWrapper);
+                cx.scriptInstanceList.push(rec.scriptWrapper.scriptInstance);
+                cx.urlList.push (rec.scriptWrapper.scriptInstance.url);
+                cx.lineNumberList.push (rec.scriptWrapper.baseLineNumber);
+            }
+            
+        }
+        return cx;
+    };
+    
+    return getTreeContext (console.views.stack, cx, recordContextGetter);
 }    
 
 console.views.stack.getCellProperties =
@@ -2107,7 +2084,7 @@ function sv_show ()
         var sourceText = sourceView.childData;
         if (sourceText && sourceText.url in sourceView.savedState)
         {
-            dd ("clearing lastRowCount");
+            //dd ("clearing lastRowCount");
             delete sourceView.savedState[sourceText.url].lastRowCount;
         }
         sourceView.syncTreeView();
@@ -2507,11 +2484,13 @@ function wv_init()
         [
          ["find-creator",
                  {enabledif: "cx.target instanceof ValueRecord && " +
-                  "cx.target.jsType == jsdIValue.TYPE_OBJECT && " +
+                  "(cx.target.jsType == jsdIValue.TYPE_OBJECT || " +
+                  "cx.target.jsType == jsdIValue.TYPE_FUNCTION) && " +
                   "cx.target.value.objectValue.creatorURL"}],
          ["find-ctor",
                  {enabledif: "cx.target instanceof ValueRecord && " +
-                  "cx.target.jsType == jsdIValue.TYPE_OBJECT && " +
+                  "(cx.target.jsType == jsdIValue.TYPE_OBJECT || " +
+                  "cx.target.jsType == jsdIValue.TYPE_FUNCTION) && " +
                   "cx.target.value.objectValue.constructorURL"}]
         ]
     };
@@ -2585,26 +2564,16 @@ function wv_refresh()
         return;
     
     var rootRecord = this.childData;
-    
     if (!"childData" in rootRecord)
         return;
     
-    var delta = 0;
-    var thisDelta;
-    
+    this.freeze();
     for (var i = 0; i < rootRecord.childData.length; ++i)
-    {
-        var item = rootRecord.childData[i];
-        thisDelta = item.refresh();
-        /* if the container isn't open, we still have to update the children,
-         * but we don't care about any visual footprint changes */
-        if (item.isContainerOpen)
-            delta += thisDelta;
-    }
+        rootRecord.childData[i].refresh()
 
-    rootRecord.visualFootprint += delta;
-    rootRecord.invalidateCache();
-    this.tree.rowCountChanged (0, rootRecord.visualFootprint);
+    this.thaw();
+    /* the refresh may have changed a property without altering the
+     * size of the tree, so thaw might not invalidate. */
     this.tree.invalidate();
 }
 
@@ -2640,7 +2609,6 @@ function cmdWatchExpr (e)
     {
         refresher = function () {
                         var rv = evalInDebuggerScope(e.expression, true);
-                        dd ("refreshing: '" + e.expression + "' = " + rv);
                         this.value = console.jsds.wrapValue(rv);
                     };
     }
@@ -2649,6 +2617,7 @@ function cmdWatchExpr (e)
     rec.onPreRefresh = refresher;
     rec.refresh();
     console.views.watches.childData.appendChild(rec);
+    console.views.watches.refresh();
     return rec;
 }
 
@@ -2657,13 +2626,15 @@ function cmdWatchProperty (e)
     var rec = new ValueRecord(console.jsds.wrapValue(null),
                               e.propertyName, 0);
     rec.onPreRefresh = function () {
-                           this.value = e.jsdValue.getProperty(e.propertyName);
+                           var prop = e.jsdValue.getProperty(e.propertyName);
+                           this.value = prop.value;
+                           this.flags = prop.flags;
+                           this.displayFlags = this.flags;
                        };
     rec.onPreRefresh();
     console.views.watches.childData.appendChild(rec);
     return rec;
 }
-
 
 /*******************************************************************************
  * Windows View
@@ -2694,6 +2665,30 @@ function winv_hookWindowClosed (e)
     if (!ASSERT(winRecord, "Can't find window record for closed window."))
         return;
     console.views.windows.childData.removeChildAtIndex(winRecord.childIndex);
+}
+
+console.views.windows.hooks["chrome-filter"] =
+function scv_hookChromeFilter(e)
+{
+    if (e.toggle != null)
+    {
+        var windowsView = console.views.windows;
+        var rootRecord = console.views.windows.childData;
+
+        windowsView.freeze();
+        rootRecord.childData = new Array();
+        var enumerator = console.windowWatcher.getWindowEnumerator();
+        while (enumerator.hasMoreElements())
+        {
+            var window = enumerator.getNext();
+            if (!isWindowFiltered(window))
+                rootRecord.appendChild (new WindowRecord(window, ""));
+        }
+        windowsView.thaw();
+        if (windowsView.tree)
+            windowsView.tree.invalidate();
+    }
+
 }
 
 console.views.windows.onShow =

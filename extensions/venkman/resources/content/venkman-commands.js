@@ -79,7 +79,6 @@ function initCommands()
          ["finish",         cmdFinish,             CMD_CONSOLE | CMD_NEED_STACK],
          ["focus-input",    cmdHook,                                          0],
          ["frame",          cmdFrame,              CMD_CONSOLE | CMD_NEED_STACK],
-         ["grout-container",cmdGroutContainer,                                0],
          ["help",           cmdHelp,                                CMD_CONSOLE],
          ["loadd",          cmdLoadd,                               CMD_CONSOLE],
          ["move-view",      cmdMoveView,                            CMD_CONSOLE],
@@ -114,7 +113,7 @@ function initCommands()
          
          /* aliases */         
          ["save-default-layout",      "save-layout default",                  0],
-         ["profile-tb",               "profile toggle",             CMD_CONSOLE],
+         ["profile-tb",               "profile toggle",                       0],
          ["this",                     "props this",                 CMD_CONSOLE],
          ["toggle-chrome",            "chrome-filter toggle",                 0],
          ["toggle-ias",               "startup-init toggle",                  0],
@@ -215,10 +214,6 @@ function defineVenkmanCommands (cmdary)
                                "cmd." + name + ".help", null, helpDefault);
         var command = new CommandRecord (name, func, usage, help, label, flags);
         cm.addCommand(command);
-
-        var key = getMsgFrom (bundle, "cmd." + name + ".key", null, "");
-        if (key)
-            cm.setKey("dynamic-keys", command, key);
     }
 }
 
@@ -318,22 +313,81 @@ function cmdBPProps (e)
 
 function cmdChromeFilter (e)
 {
-    var currentState = console.prefs["enableChromeFilter"];
+    const FLAGS = SCRIPT_NODEBUG | SCRIPT_NOPROFILE;
     
+    function setFlag (scriptWrapper)
+    {
+        if (!scriptWrapper.jsdScript.isValid)
+            return;
+        
+        if (e.toggle)
+        {
+            scriptWrapper.lastFlags = scriptWrapper.jsdScript.flags;
+            scriptWrapper.jsdScript.flags |= FLAGS;
+        }
+        else
+        {
+            if ("lastFlags" in scriptWrapper)
+            {
+                scriptWrapper.jsdScript.flags = scriptWrapper.lastFlags;
+                delete scriptWrapper.lastFlags;
+            }
+            else
+            {
+                scriptWrapper.jsdScript.flags &= ~(FLAGS);
+            }
+        }
+    };
+    
+    var currentState = console.prefs["enableChromeFilter"];
+
     if (e.toggle != null)
     {
+        currentState = console.prefs["enableChromeFilter"];
         e.toggle = getToggle (e.toggle, currentState);
+        console.prefs["enableChromeFilter"] = e.toggle;
+        
+
         if (e.toggle != currentState)
         {
-            if (e.toggle)
-                console.jsds.insertFilter (console.chromeFilter, null);
-            else
-                console.jsds.removeFilter (console.chromeFilter);
-        }        
+            for (var url in console.scriptManagers)
+            {
+                if (!isURLFiltered(url))
+                    continue;
+                //                    break next_url;
 
-        currentState = 
-            console.enableChromeFilter = 
-            console.prefs["enableChromeFilter"] = e.toggle;
+                dd ("setting chrome filter " + e.toggle + " for " + url);
+                
+                var mgr = console.scriptManagers[url];
+                if (e.toggle)
+                {
+                    mgr.lastDisableTransients = mgr.disableTransients;
+                    mgr.disableTransients = true;
+                }
+                else
+                {
+                    if ("lastDisableTransients" in mgr)
+                    {
+                        mgr.disableTransients = mgr.lastDisableTransients;
+                        delete mgr.lastDisableTransients;
+                    }
+                    else
+                    {
+                        mgr.disableTransients = false;
+                    }
+                }
+                    
+                for (var i in mgr.instances)
+                {
+                    var instance = mgr.instances[i];
+                    if (instance.topLevel)
+                        setFlag (instance.topLevel);
+                    
+                    for (var f in instance.functions)
+                        setFlag(instance.functions[f]);
+                }
+            }
+        }
     }
 
     feedback (e, getMsg(MSN_CHROME_FILTER,
@@ -361,7 +415,7 @@ function cmdClear (e)
 
     if (!found)
     {
-        feedback (e, getMsg(MSN_ERR_NODICE, [e.urlPattern, e.lineNumber]),
+        feedback (e, getMsg(MSN_ERR_BP_NODICE, [e.urlPattern, e.lineNumber]),
                   MT_ERROR);
     }
 }
@@ -858,7 +912,7 @@ function cmdFClear (e)
 
     if (!found)
     {
-        feedback (e, getMsg(MSN_ERR_NO_DICE, [e.urlPattern, e.lineNumber]),
+        feedback (e, getMsg(MSN_ERR_BP_NODICE, [e.urlPattern, e.lineNumber]),
                   MT_ERROR);
     }
 }
@@ -888,10 +942,6 @@ function cmdFrame (e)
 
     dispatch ("find-frame", { frameIndex: e.frameIndex });
     return true;
-}
-
-function cmdGroutContainer (e)
-{
 }
 
 function cmdHelp (e)

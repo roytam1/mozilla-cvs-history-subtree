@@ -128,10 +128,12 @@ function initMenus()
          ["-"],
          ["toggle-chrome",
                  {type: "checkbox",
-                  checkedif: "console.enableChromeFilter"}],
+                  checkedif: "console.prefs['enableChromeFilter']"}]
+         /*
          ["toggle-ias",
                  {type: "checkbox",
-                  checkedif: "console.jsds.initAtStartup"}],
+                  checkedif: "console.jsds.initAtStartup"}]
+         */
         ]
     };
     

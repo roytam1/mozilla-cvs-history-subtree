@@ -225,7 +225,42 @@ tree {
 */
 }
 
-.view-title-margin-left,
+.view-title-margin-left {
+    display: none;
+}
+
+.view-outer {
+    margin-bottom: 4px;
+}
+
+.view-title-grippy {
+    background: url(chrome://venkman/skin/images/shaded.png);
+    border: 1px black solid;
+    -moz-box-align: center;
+    font-weight: bold;
+    font-size: 10px;
+    color: #333333;
+    margin-right: 2px;
+    margin-left: 2px;
+}
+
+.view-title-pop {
+    list-style-image: url("chrome://venkman/skin/images/view-pop-button.png");
+    margin: 1px;
+}
+
+.view-title-close {
+    list-style-image: url("chrome://venkman/skin/images/view-close-button.png");
+    margin: 1px;
+}
+
+.view-title-pop:hover,
+.view-title-close:hover {
+    border: 1px silver outset;
+    margin: 0px;
+}
+
+/*
 .view-title-margin-right {
     margin: 3px;
     border-top: 2px grey groove;
@@ -238,6 +273,7 @@ tree {
     font-size: 8pt;
     font-variant: small-caps;
 }
+*/
 
 floatingview {
     padding: 4px 4px 4px 4px;
@@ -279,35 +315,28 @@ floatingview[dragover="down"] {
     list-style-image: url("chrome://venkman/skin/images/arrow-down.png") !important;
 }
 
-.view-title-pop[parentid="breaks"] {
-    list-style-image: url("chrome://venkman/skin/images/breakpoints.png");
-}
-
 /*
 .view-title-pop[parentid="locals"],
 .view-title-pop[parentid="scripts"],
-.view-title-pop[parentid="source"] {
-    list-style-image: url("chrome://venkman/skin/images/XXX.png");
-}
-*/
-
-.view-title-pop[parentid="stack"] {
-    list-style-image: url("chrome://venkman/skin/images/stack.png");
-}
-
-/*
+.view-title-pop[parentid="source"],
 .view-title-pop[parentid="watch"] {
     list-style-image: url("chrome://venkman/skin/images/XXX.png");
 }
 */
 
+/*
+.view-title-pop[parentid="stack"] {
+    list-style-image: url("chrome://venkman/skin/images/stack.png");
+}
+
 .view-title-pop[parentid="windows"] {
     list-style-image: url("chrome://venkman/skin/images/windows.png");
 }
 
-.view-title-pop {
-    list-style-image: url("chrome://venkman/skin/images/view-pop-button.png");
+.view-title-pop[parentid="breaks"] {
+    list-style-image: url("chrome://venkman/skin/images/breakpoints.png");
 }
+*/
 
 treechildren:-moz-tree-cell(source\:col-0) {
     background: #CCCCCC;
@@ -413,6 +442,15 @@ treechildren:-moz-tree-cell-text(item-exception) {
     color: darkred;
 }
 
+treechildren:-moz-tree-cell-text(item-hinted) {
+    font-weight: bold;
+    color: #555555;
+}
+
+treechildren:-moz-tree-cell-text(item-hinted,selected) {
+    color: white;
+}
+
 treechildren:-moz-tree-image(item-unk) {
     list-style-image: url("chrome://venkman/skin/images/file-unknown.png");
 }
@@ -454,7 +492,8 @@ treechildren:-moz-tree-image(item-xml, item-has-bp) {
 }
 
 treechildren:-moz-tree-image(item-frame) {
-    list-style-image: url("chrome://venkman/skin/images/value-frame.png");
+/*    list-style-image: url("chrome://venkman/skin/images/value-frame.png");*/
+    list-style-image: url("chrome://venkman/skin/images/clear.png");
 }
 
 treechildren:-moz-tree-image(item-void) {

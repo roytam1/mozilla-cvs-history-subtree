@@ -178,15 +178,15 @@
     <floatingview id="stack" title="&Stack.label;" flex="1"
       grippytooltiptext="&Stack.label;">
       <vbox id="stack-view-content" flex="1">
-        <tree flex="2" id="stack-tree" persist="width"
+        <tree flex="2" id="stack-tree" persist="width" context="context:stack"
           ondblclick="console.views.stack.onDblClick(event);">
 
           <treecols>
             <treecol id="stack:col-0" flex="1" persist="hidden width"
-              primary="true" label="&StackCol0.header;"/>
+              label="&StackCol0.header;"/>
             <splitter class="tree-splitter"/>
             <treecol flex="2" id="stack:col-1" persist="hidden width"
-              hidden="true" label="&StackCol1.header;"/>
+              label="&StackCol1.header;"/>
             <splitter class="tree-splitter"/>
           </treecols>
 

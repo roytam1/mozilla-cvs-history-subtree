@@ -107,7 +107,6 @@ function nativeFrameTest()
 {
     function compare(a, b)
     {
-        debugger;
         if (a > b)
             return 1;
 
@@ -125,6 +124,7 @@ function dbg()
 {
     var a = 0;
     dbg2();
+    nativeFrameTest();
     var c = 0;
 }
 

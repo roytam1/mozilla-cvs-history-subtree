@@ -47,17 +47,20 @@
         ondragover="console.dnd.dragOver(event, console.viewProxy);"
         ondragexit="console.dnd.dragExit(event, console.viewProxy);"
         ondragdrop="console.dnd.drop(event, console.viewProxy);">
-        <xul:vbox id="view-outer"
+        <xul:vbox class="view-outer"
           ondraggesture="console.dnd.startDrag(event, console.viewProxyTitle);">
           <xul:hbox id="view-title">
-            <xul:toolbarbutton class="view-title-pop"
-              xbl:inherits="parentid=id containertype"
-              oncommand="console.dispatch('toggle-float', { viewId: this.getAttribute('parentid')});"/>
+            <xul:image class="view-title-pop"
+              xbl:inherits="parentid=id"
+              onclick="console.dispatch('toggle-float', { viewId: this.getAttribute('parentid')});"/>
             <xul:hbox class="view-title-grippy" flex="1">
               <xul:hbox flex="1" class="view-title-margin-left"/>
               <xul:label id="view-title-text" xbl:inherits="value=title"/>
               <xul:hbox flex="1" class="view-title-margin-right"/>
             </xul:hbox>
+            <xul:image class="view-title-close"
+              xbl:inherits="parentid=id"
+              onclick="console.dispatch('toggle-view', { viewId: this.getAttribute('parentid')});"/>
           </xul:hbox>
         </xul:vbox>
         <children/>

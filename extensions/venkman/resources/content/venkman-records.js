@@ -56,6 +56,7 @@ function initRecords()
     ValueRecord.prototype.atomObject    = atomsvc.getAtom("item-object");
     ValueRecord.prototype.atomError     = atomsvc.getAtom("item-error");
     ValueRecord.prototype.atomException = atomsvc.getAtom("item-exception");
+    ValueRecord.prototype.atomHinted    = atomsvc.getAtom("item-hinted");
 }
 
 /*******************************************************************************
@@ -133,7 +134,7 @@ FrameRecord.prototype = new XULTreeViewRecord (console.views.stack.share);
 function WindowRecord (win, baseURL)
 {
     function none() { return ""; };
-    this.setColumnPropertyName ("col-0", "shortName");
+    this.setColumnPropertyName ("col-0", "displayName");
 
     this.window = win;
     this.url = win.location.href;
@@ -150,10 +151,19 @@ function WindowRecord (win, baseURL)
         this.baseURL = getPathFromURL(this.url);
     }
     
-    this.shortName = getFileFromPath (this.url);
     
     this.reserveChildren(true);
-    this.filesRecord = new FileContainerRecord(this);
+    this.shortName = getFileFromPath (this.url);
+    if (console.prefs["enableChromeFilter"] && this.shortName == "navigator.xul")
+    {
+        this.displayName = MSG_NAVIGATOR_XUL;
+    }
+    else
+    {
+        this.filesRecord = new FileContainerRecord(this);
+        this.displayName = this.shortName;
+    }
+    
 }
 
 WindowRecord.prototype = new XULTreeViewRecord(console.views.windows.share);
@@ -163,7 +173,8 @@ function wr_preopen()
 {   
     this.childData = new Array();
 
-    this.appendChild(this.filesRecord);    
+    if ("filesRecord" in this)
+        this.appendChild(this.filesRecord);    
 
     var framesLength = this.window.frames.length;
     for (var i = 0; i < framesLength; ++i)
@@ -422,10 +433,13 @@ function ValueRecord (value, name, flags)
     this.setColumnPropertyName ("col-3", "displayFlags");    
     this.displayName = name;
     this.displayFlags = formatFlags(flags);
+    this.name = name;
     this.flags = flags;
     this.value = value;
     this.jsType = null;
+    this.onPreRefresh = false;
     this.refresh();
+    delete this.onPreRefresh;
 }
 
 ValueRecord.prototype = new XULTreeViewRecord (null);
@@ -443,17 +457,8 @@ function vr_getshare()
     return null;
 }
 
-ValueRecord.prototype.hiddenFunctionCount = 0;
-ValueRecord.prototype.showFunctions = false;
-
-ValueRecord.prototype.resort =
-function cr_resort()
-{
-    /*
-     * we want to override the prototype's resort() method with this empty one
-     * because we take care of the sorting business ourselves in onPreOpen()
-     */
-}
+ValueRecord.prototype.showFunctions = true;
+ValueRecord.prototype.showECMAProps = true;
 
 ValueRecord.prototype.getProperties =
 function vr_getprops (properties)
@@ -464,13 +469,54 @@ function vr_getprops (properties)
     if (this.flags & PROP_ERROR)
         properties.AppendElement (this.atomError);
 
+    if (this.flags & PROP_HINTED)
+        properties.AppendElement (this.atomHinted);
+
     properties.AppendElement (this.property);
 }
 
+ValueRecord.prototype.onPreRefresh =
+function vr_prerefresh ()
+{
+    if (!ASSERT("parentRecord" in this, "onPreRefresh with no parent"))
+        return;
+    
+    if ("isECMAProto" in this)
+    {
+        if (this.parentRecord.value.jsPrototype)
+            this.value = this.parentRecord.value.jsPrototype;
+        else
+            this.value = console.jsds.wrapValue(null);
+    }
+    else if ("isECMAParent" in this)
+    {
+        if (this.parentRecord.value.jsParent)
+            this.value = this.parentRecord.value.jsParent;
+        else
+            this.value = console.jsds.wrapValue(null);
+    }
+    else
+    {
+        var value = this.parentRecord.value;
+        var prop = value.getProperty (this.name);
+        if (prop)
+        {
+            this.flags = prop.flags;
+            this.value = prop.value;
+        }
+        else
+        {
+            var jsval = value.getWrappedValue();
+            this.value = console.jsds.wrapValue(jsval[this.name]);
+            this.flags = PROP_ENUMERATE | PROP_HINTED;
+        }
+    }
+}
+    
 ValueRecord.prototype.refresh =
 function vr_refresh ()
 {
-    if ("onPreRefresh" in this)
+    if (this.onPreRefresh)
     {
         try
         {
@@ -479,6 +525,9 @@ function vr_refresh ()
         }
         catch (ex)
         {
+            dd ("caught exception refreshing " + this.displayName);
+            dd (dumpObjectTree(ex));
+
             if (!(ex instanceof jsdIValue))
                 ex = console.jsds.wrapValue(ex);
             
@@ -487,80 +536,63 @@ function vr_refresh ()
         }
     }
 
-    var sizeDelta = 0;
-    var lastType = this.jsType;
     this.jsType = this.value.jsType;
-    
-    if (0 && lastType != this.jsType && lastType == jsdIValue.TYPE_FUNCTION)
-    {
-        /* we changed from a non-function to a function */
-        --this.hiddenFunctionCount;
-        ++sizeDelta;
-    }
-    
-    if (this.jsType != jsdIValue.TYPE_OBJECT)
-    {
-        if ("childData" in this)
-        {
-            /* if we're not an object but we have child data, then we must have
-             * just turned into something other than an object. */
-            delete this.childData;
-            this.isContainerOpen = false;
-            sizeDelta = 1 - this.visualFootprint;
-        }
-        
-        if ("alwaysHasChildren" in this)
-            delete this.alwaysHasChildren;
-    }
-    else
-    {
-        this.alwaysHasChildren = true;
-    }
+    delete this.alwaysHasChildren;
 
+    var strval;
+    
     switch (this.jsType)
     {
-        case jsdIValue.TYPE_VOID:
+        case TYPE_VOID:
             this.displayValue = MSG_TYPE_VOID
             this.displayType  = MSG_TYPE_VOID;
             this.property     = this.atomVoid;
             break;
-        case jsdIValue.TYPE_NULL:
+        case TYPE_NULL:
             this.displayValue = MSG_TYPE_NULL;
             this.displayType  = MSG_TYPE_NULL;
             this.property     = this.atomNull;
             break;
-        case jsdIValue.TYPE_BOOLEAN:
+        case TYPE_BOOLEAN:
             this.displayValue = this.value.stringValue;
             this.displayType  = MSG_TYPE_BOOLEAN;
             this.property     = this.atomBool;
             break;
-        case jsdIValue.TYPE_INT:
+        case TYPE_INT:
             this.displayValue = this.value.intValue;
             this.displayType  = MSG_TYPE_INT;
             this.property     = this.atomInt;
             break;
-        case jsdIValue.TYPE_DOUBLE:
+        case TYPE_DOUBLE:
             this.displayValue = this.value.doubleValue;
             this.displayType  = MSG_TYPE_DOUBLE;
             this.property     = this.atomDouble;
             break;
-        case jsdIValue.TYPE_STRING:
-            var strval = this.value.stringValue.quote();
+        case TYPE_STRING:
+            strval = this.value.stringValue.quote();
             if (strval.length > MAX_STR_LEN)
                 strval = getMsg(MSN_FMT_LONGSTR, strval.length);
             this.displayValue = strval;
             this.displayType  = MSG_TYPE_STRING;
             this.property     = this.atomString;
             break;
-        case jsdIValue.TYPE_FUNCTION:
-            this.displayType  = MSG_TYPE_FUNCTION;
-            this.displayValue = (this.value.isNative) ? MSG_VAL_NATIVE :
-                MSG_WORD_SCRIPT;
-            this.property = this.atomFunction;
-            break;
-        case jsdIValue.TYPE_OBJECT:
+        case TYPE_FUNCTION:
+        case TYPE_OBJECT:
+            this.displayType = MSG_TYPE_OBJECT;
+            this.property = this.atomObject;
+
+            this.alwaysHasChildren = true;
             this.value.refresh();
+
             var ctor = this.value.jsClassName;
+
+            if (ctor == "Function")
+            {
+                this.displayType  = MSG_TYPE_FUNCTION;
+                ctor = (this.value.isNative ? MSG_CLASS_NATIVE_FUN :
+                        MSG_CLASS_SCRIPT_FUN);
+                this.property = this.atomFunction;
+            }
             if (ctor == "Object")
             {
                 if (this.value.jsConstructor)
@@ -568,210 +600,222 @@ function vr_refresh ()
             }
             else if (ctor == "XPCWrappedNative_NoHelper")
             {
+                ctor = MSG_CLASS_CONST_XPCOBJ;
+            }
+            else if (ctor == "XPC_WN_ModsAllowed_Proto_JSClass")
+            {
                 ctor = MSG_CLASS_XPCOBJ;
             }
 
-            this.displayValue = "{" + ctor + ":" + this.value.propertyCount +
-                "}";
-
-            this.displayType = MSG_TYPE_OBJECT;
-            this.property = this.atomObject;
-            /* if we had children, and were open before, then we need to descend
-             * and refresh our children. */
-            if ("childData" in this && this.childData.length > 0)
+            if (ctor != "String")
             {
-                var rc = 0;
-                rc = this.refreshChildren();
-                sizeDelta += rc;
-                //dd ("refreshChildren returned " + rc);
-                this.visualFootprint += rc;
+                this.displayValue = getMsg (MSN_FMT_OBJECT_VALUE,
+                                            [ctor, this.countProperties()]);
             }
             else
             {
-                this.childData = new Array();
-                this.isContainerOpen = false;
+                strval = this.value.stringValue.quote();
+                if (strval.length > MAX_STR_LEN)
+                    strval = getMsg(MSN_FMT_LONGSTR, strval.length);
+                this.displayValue = strval;
             }
-            break;
             
+            /* if we have children, refresh them. */
+            if ("childData" in this && this.childData.length > 0)
+            {
+                if (!this.refreshChildren())
+                {
+                    dd ("refreshChilren failed for " + this.displayName);
+                    delete this.childData;
+                    this.close();
+                }
+            }
+            break;            
 
         default:
             ASSERT (0, "invalid value");
     }
+}
 
-    //dd ("refresh returning " + sizeDelta);
-    return sizeDelta;
+ValueRecord.prototype.countProperties =
+function vr_countprops ()
+{
+    var c = 0;
+    var jsval = this.value.getWrappedValue();
+    for (var p in jsval)
+    {
+        if (this.showFunctions || typeof jsval[p] != "function")
+        {
+            //dd ("counting " + p);
+            ++c;
+        }
+    }
+    return c;
+}
 
+ValueRecord.prototype.listProperties =
+function vr_listprops ()
+{
+    //dd ("listProperties {");
+    var i;
+    var jsval = this.value.getWrappedValue();
+    var propMap = new Object();
+    
+    /* get the enumerable properties */
+    for (var p in jsval)
+    {
+        var value;
+        try
+        {
+            value = console.jsds.wrapValue(jsval[p]);
+            if (this.showFunctions || value.jsType != TYPE_FUNCTION)
+            {
+                propMap[p] = { name: p, value: value,
+                               flags: PROP_ENUMERATE | PROP_HINTED };
+            }
+            else
+            {
+                //dd ("not including function " + name);
+                propMap[p] = null;
+            }
+        }
+        catch (ex)
+        {
+            propMap[p] = { name: p, value: console.jsds.wrapValue(ex),
+                           flags: PROP_EXCEPTION };
+        }
+    }
+    
+    /* get the local properties, may or may not be enumerable */
+    var localProps = new Object()
+    this.value.getProperties(localProps, {});
+    localProps = localProps.value;
+    var len = localProps.length;
+    for (i = 0; i < len; ++i)
+    {
+        var prop = localProps[i];
+        if (!ASSERT(prop, "prop[" + i + "] is null"))
+            continue;
+        
+        var name = prop.name.stringValue;
+        
+        if (!(name in propMap))
+        {
+            if (this.showFunctions || prop.value.jsType != TYPE_FUNCTION)
+            {
+                //dd ("localProps: adding " + name + ", " + prop);
+                propMap[name] = { name: name, value: prop.value,
+                                  flags: prop.flags };
+            }
+            else
+            {
+                //dd ("not including function " + name);
+                propMap[name] = null;
+            }
+        }
+        else
+        {
+            if (propMap[name])
+                propMap[name].flags = prop.flags;
+        }
+    }
+    
+    /* sort the property list */
+    var nameList = keys(propMap);
+    nameList.sort();
+    var propertyList = new Array();
+    for (i = 0; i < nameList.length; ++i)
+    {
+        name = nameList[i];
+        if (propMap[name])
+            propertyList.push (propMap[name]);
+    }
+
+    //dd ("} " + propertyList.length + " properties");
+
+    return propertyList;
 }
 
 ValueRecord.prototype.refreshChildren =
 function vr_refreshkids ()
 {
-    /* XXX add identity check to see if we are a totally different object */
-    /* if we now have more properties than we used to, we're going to have
-     * to close any children we may have open, because we can't tell where the
-     * new property is in any efficient way. */
-    if (this.value.propertyCount > this.lastPropertyCount)
-    {
-        this.onPreOpen();
-        return (this.childData.length + 1) - this.visualFootprint;
-    }
-
-    /* otherwise, we had children before.  we've got to update each of them
-     * in turn. */
-    var sizeDelta    = 0; /* total change in size */
-    var idx          = 0; /* the new position of the child in childData */
-    var deleteCount  = 0; /* number of children we've lost */
-    var specialProps = 0; /* number of special properties in this object */
+    var leadingProps = 0;
+    
+    this.propertyList = this.listProperties();
 
     for (var i = 0; i < this.childData.length; ++i)
     {
-        //dd ("refreshing child #" + i);
-        var name = this.childData[i]._colValues["col-0"];
-        var value;
-        switch (name)
+        if ("isECMAParent" in this.childData[i] ||
+            "isECMAProto" in this.childData[i])
         {
-            case MSG_VAL_PARENT:
-                /* "special" property, doesn't actually exist
-                 * on the object */
-                value = this.value.jsParent;
-                specialProps++;
-                break;
-            case MSG_VAL_PROTO:
-                /* "special" property, doesn't actually exist
-                 * on the object */
-                value = this.value.jsPrototype;
-                specialProps++;
-                break;
-            default:
-                var prop = this.value.getProperty(name);
-                if (prop)
-                    value = prop.value;
-                break;
+            ++leadingProps;
         }
-        
-        if (value)
+        else if (this.childData.length - leadingProps != 
+                 this.propertyList.length)
         {
-            if (this.showFunctions || value.jsType != jsdIValue.TYPE_FUNCTION)
-            {
-                /* if this property still has a value, sync it in its (possibly)
-                 * new position in the childData array, and refresh it */
-                this.childData[idx] = this.childData[i];
-                this.childData[idx].childIndex = idx;
-                this.childData[idx].value = value;
-                sizeDelta += this.childData[idx].refresh();
-                ++idx;
-                value = null;
-            }
-            else
-            {
-                /* if we changed from a non-function to a function, and we're in
-                 * "hide function" mode, we need to consider this child deleted
-                 */
-                ++this.hiddenFunctionCount;
-                ++deleteCount;
-                sizeDelta -= this.childData[i].visualFootprint;
-            }
+            dd ("refreshChildren: property length mismatch");
+            return false;
         }
-        else
+        else if (this.childData[i]._colValues["col-0"] !=
+                 this.propertyList[i - leadingProps].name)
         {
-            /* if the property isn't here anymore, make a note of
-             * it */
-            ++deleteCount;
-            sizeDelta -= this.childData[i].visualFootprint;
+            dd ("refreshChildren: " +
+                this.childData[i]._colValues["col-0"] + " != " +
+                this.propertyList[i - leadingProps].name);
+            return false;
         }
-    }
-    
-    /* if we've deleted some kids, adjust the length of childData to
-     * match */
-    if (deleteCount != 0)
-        this.childData.length -= deleteCount;
-    
-    if ((this.childData.length + this.hiddenFunctionCount - specialProps) !=
-        this.value.propertyCount)
-    {
-        /* if the two lengths *don't* match, then we *must* be in
-         * a state where the user added and deleted the same
-         * number of properties.  if this is the case, then
-         * everything we just did was a totally
-         * useless waste of time.  throw it out and re-init
-         * whatever children we have.  see the "THESE COMMENTS"
-         * comments above for the description of what we're doing
-         * here. */
-        this.onPreOpen();
-        sizeDelta = (this.childData.length + 1) - this.visualFootprint;
+
+        this.childData[i].refresh();
     }
 
-    return sizeDelta;
+    if (this.childData.length - leadingProps != 
+        this.propertyList.length)
+    {
+        dd ("refreshChildren: property length mismatch");
+        return false;
+    }
+    return true;
 }
 
 ValueRecord.prototype.onPreOpen =
 function vr_create()
 {
-    if (this.value.jsType != jsdIValue.TYPE_OBJECT)
-        return;
-    
-    function vr_compare (a, b)
+    if (!ASSERT(this.value.jsType == TYPE_OBJECT || 
+                this.value.jsType == TYPE_FUNCTION,
+                "onPreOpen called for non object?"))
     {
-        aType = a.value.jsType;
-        bType = b.value.jsType;
-        
-        if (aType < bType)
-            return -1;
-        
-        if (aType > bType)
-            return 1;
-        
-        aVal = a.displayName;
-        bVal = b.displayName;
-        
-        if (aVal < bVal)
-            return -1;
-        
-        if (aVal > bVal)
-            return 1;
-        
-        return 0;
+        return;
     }
     
     this.childData = new Array();
+    this.propertyList = this.listProperties();
     
-    var p = new Object();
-    this.value.getProperties (p, {});
-    this.lastPropertyCount = p.value.length;
-    /* we'll end up with the 0 from the prototype */
-    delete this.hiddenFunctionCount;
-    for (var i = 0; i < p.value.length; ++i)
+    if (this.showECMAProps)
     {
-        var prop = p.value[i];
-        if (this.showFunctions ||
-            prop.value.jsType != jsdIValue.TYPE_FUNCTION)
+        var rec;
+        if (this.value.jsPrototype)
         {
-            this.childData.push(new ValueRecord(prop.value,
-                                                prop.name.stringValue,
-                                                prop.flags));
+            rec = new ValueRecord(this.value.jsPrototype,
+                                                MSG_VAL_PROTO);
+            rec.isECMAProto = true;
+            this.appendChild (rec);
         }
-        else
+
+        if (this.value.jsParent)
         {
-            ++this.hiddenFunctionCount;
+            rec = new ValueRecord(this.value.jsParent,
+                                                MSG_VAL_PARENT);
+            rec.isECMAParent = true;
+            this.appendChild (rec);
         }
     }
-
-    this.childData.sort (vr_compare);
-
-    if (this.value.jsPrototype)
-        this.childData.unshift (new ValueRecord(this.value.jsPrototype,
-                                                MSG_VAL_PROTO));
-
-    if (this.value.jsParent)
-        this.childData.unshift (new ValueRecord(this.value.jsParent,
-                                                MSG_VAL_PARENT));
-    
-    for (i = 0; i < this.childData.length; ++i)
+        
+    for (var i = 0; i < this.propertyList.length; ++i)
     {
-        var cd = this.childData[i];
-        cd.parentRecord = this;
-        cd.childIndex = i;
-        cd.isHidden = false;
+        var prop = this.propertyList[i];
+        this.appendChild(new ValueRecord(prop.value,
+                                         prop.name,
+                                         prop.flags));
     }
 }
 
@@ -779,4 +823,5 @@ ValueRecord.prototype.onPostClose =
 function vr_destroy()
 {
     this.childData = new Array();
+    delete this.propertyList;
 }

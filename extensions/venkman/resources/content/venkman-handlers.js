@@ -52,7 +52,7 @@ function initHandlers()
     while (enumerator.hasMoreElements())
     {
         var win = enumerator.getNext();
-        if (win.location.href != "chrome://venkman/content/venkman.xul")
+        if (!isWindowFiltered(win))
         {
             console.onWindowOpen(win);
             console.onWindowLoad();
@@ -71,6 +71,17 @@ function destroyHandlers()
     }
 }
 
+function isWindowFiltered (window)
+{
+    var href = window.location.href;
+    var rv = ((href.search (/^chrome:\/\/venkman\//) != -1 &&
+              href.search (/test/) == -1) ||
+              (console.prefs["enableChromeFilter"] &&
+               href.search (/navigator.xul($|\?)/) == -1));
+    dd ("isWindowFiltered " + window.location.href + ", returning " + rv);
+    return rv;
+}
+
 console.onWindowOpen = 
 function con_winopen (win)
 {
@@ -81,6 +92,9 @@ function con_winopen (win)
         return;
     }   
 
+    if (isWindowFiltered(win))
+        return;
+    
     dd ("window opened: " + win + " ``" + win.location + "''");
     console.hookedWindows.push(win);
     dispatch ("hook-window-opened", {window: win});
@@ -105,15 +119,15 @@ function con_winunload (e)
 console.onWindowClose =
 function con_winclose (win)
 {
+    if (isWindowFiltered(win))
+        return;
+
     dd ("window closed: " + win + " ``" + win.location + "''");
-    if (win.location.href != "chrome://venkman/content/venkman.xul")
-    {
-        var i = arrayIndexOf(console.hookedWindows, win);
-        ASSERT (i != console.hookedWindows.length,
-                "WARNING: Can't find hook window for closed window " + i + ".");
-        arrayRemoveAt(console.hookedWindows, i);
-        dispatch ("hook-window-closed", {window: win});
-    }
+    var i = arrayIndexOf(console.hookedWindows, win);
+    ASSERT (i != console.hookedWindows.length,
+            "WARNING: Can't find hook window for closed window " + i + ".");
+    arrayRemoveAt(console.hookedWindows, i);
+    dispatch ("hook-window-closed", {window: win});
     //console.scriptsView.freeze();
 }
 
@@ -159,9 +173,6 @@ function con_unload (e)
     if (typeof console != "object")
         return;
 
-    while (console.floatingWindows.length)
-        console.floatingWindows[0].close();
-    
     dispatch ("hook-venkman-exit");
     destroy();
 }

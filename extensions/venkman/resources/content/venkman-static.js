@@ -33,7 +33,7 @@
  *
  */
 
-const __vnk_version        = "0.9.11+";
+const __vnk_version        = "0.9.13+";
 const __vnk_requiredLocale = "0.9.x";
 var   __vnk_versionSuffix  = "";
 
@@ -138,6 +138,13 @@ function disableDebugCommands()
         cmds[i].enabled = true;
 }
 
+function isURLFiltered (url)
+{
+    return ((console.prefs["enableChromeFilter"] &&
+            url.search(/^chrome:/) == 0) ||
+            (url.search (/^chrome:\/\/venkman/) == 0 &&
+             url.search (/test/) == -1));
+}
 
 function displayUsageError (e, details)
 {
@@ -242,7 +249,18 @@ function dispatchCommand (command, e, flags)
                 dd ("calling " + (isBefore ? "before" : "after") + 
                     " hook " + name);
             }
-            hooks[name](e);
+            try
+            {
+                hooks[name](e);
+            }
+            catch (ex)
+            {
+                display (getMsg(MSN_ERR_INTERNAL_HOOK, name), MT_ERROR);
+                display (formatException(ex), MT_ERROR);
+                dd (formatException(ex), MT_ERROR);
+                if ("stack" in ex)
+                    dd (ex.stack);
+            }
         }
     };
     
@@ -344,6 +362,9 @@ function display(message, msgtype)
         !(message instanceof Components.interfaces.nsIDOMHTMLElement))
         throw new InvalidParam ("message", message);
 
+    if ("capturedMsgs" in console)
+        console.capturedMsgs.push ([message, msgtype]);
+        
     dispatchCommand(console.coDisplayHook, 
                     { message: message, msgtype: msgtype });
 }
@@ -412,7 +433,8 @@ function formatEvalException (ex)
 }
 
 function init()
-{    
+{
+    var i;
     const WW_CTRID = "@mozilla.org/embedcomp/window-watcher;1";
     const nsIWindowWatcher = Components.interfaces.nsIWindowWatcher;
 
@@ -426,7 +448,6 @@ function init()
     console.files = new Object();
     console.pluginState = new Object();
 
-    console.floatingWindows = new Array();    
     console._statusStack = new Array();
     console._lastStackDepth = -1;
 
@@ -448,15 +469,16 @@ function init()
 
     initMenus();
 
+    console.capturedMsgs = new Array();
     var ary = console.prefs["initialScripts"].split(/\s*;\s*/);
-    for (var i = 0; i < ary.length; ++i)
+    for (i = 0; i < ary.length; ++i)
     {
         var url = stringTrim(ary[i]);
         if (url)
             dispatch ("loadd", { url: ary[i] });
     }
 
-    dispatch ("hook-venkman-init");
+    dispatch ("hook-venkman-started");
 
     initViews();
     initRecords();
@@ -483,22 +505,17 @@ function init()
     console.pushStatus(MSG_STATUS_DEFAULT);
 
     dispatch ("restore-layout default");
+
+    var startupMsgs = console.capturedMsgs;
+    delete console.capturedMsgs;
+    
     dispatch ("version");
+
+    for (i = 0; i < startupMsgs.length; ++i)
+        display (startupMsgs[i][0], startupMsgs[i][1]);
+    
     dispatch ("commands");
     dispatch ("help");
-
-    /*
-    dispatch ("toggle-view windows");
-    dispatch ("toggle-view breaks");
-    dispatch ("toggle-view locals");
-    dispatch ("toggle-view watches");
-
-    dispatch ("toggle-view source");
-    dispatch ("toggle-view scripts");
-
-    dispatch ("toggle-view session");
-    dispatch ("toggle-view stack");
-    */
 
     dispatch ("pprint", { toggle: console.prefs["prettyprint"] });
 
@@ -509,6 +526,7 @@ function init()
                  MT_WARN);
     }
 
+    console.initialized = true;
     dispatch ("hook-venkman-started");
 
 }
@@ -973,39 +991,59 @@ PPSourceText.prototype.isLoaded = true;
 PPSourceText.prototype.reloadSource =
 function pp_reload (cb)
 {
-    var jsdScript = this.scriptWrapper.jsdScript;
+    try
+    {    
+        var jsdScript = this.scriptWrapper.jsdScript;
+        this.tabWidth = console.prefs["tabWidth"];
+        this.url = jsdScript.fileName;
+        var lines = String(jsdScript.functionSource).split("\n");
+        var lineMap = new Array();
+        var len = lines.length;
+        for (var i = 0; i < len; ++i)
+        {
+            if (jsdScript.isLineExecutable(i + 1, PCMAP_PRETTYPRINT))
+                lineMap[i] = LINE_BREAKABLE;
+        }
         
-    this.tabWidth = console.prefs["tabWidth"];
-    this.url = jsdScript.fileName;
-    this.lines = String(jsdScript.functionSource).split("\n");
-    this.lineMap = new Array();
-    var len = this.lines.length;
-    for (var i = 0; i < len; ++i)
-    {
-        if (jsdScript.isLineExecutable(i + 1, PCMAP_PRETTYPRINT))
-            this.lineMap[i] = LINE_BREAKABLE;
+        for (var b in this.scriptWrapper.breaks)
+        {
+            var line = jsdScript.pcToLine(this.scriptWrapper.breaks[b].pc,
+                                          PCMAP_PRETTYPRINT);
+            arrayOrFlag (lineMap, line - 1, LINE_BREAK);
+        }
+        
+        this.lines = lines;
+        this.lineMap = lineMap;
+        
+        if (typeof cb == "function")
+            cb (Components.results.NS_OK);
     }
-
-    for (var b in this.scriptWrapper.breaks)
+    catch (ex)
     {
-        var line = jsdScript.pcToLine(this.scriptWrapper.breaks[b].pc,
-                                      PCMAP_PRETTYPRINT);
-        arrayOrFlag (this.lineMap, line - 1, LINE_BREAK);
-    }
-
-    if (typeof cb == "function")
-        cb (Components.results.NS_OK);
+        ASSERT(0, "caught exception reloading pretty printed source " + ex);
+        if (typeof cb == "function")
+            cb (Components.results.NS_ERROR_FAILURE);
+        this.lines = [String(MSG_CANT_PPRINT)];
+        this.lineMap = [0];
+    }           
 }
 
 PPSourceText.prototype.onMarginClick =
 function st_marginclick (e, line)
 {
-    var jsdScript = this.scriptWrapper.jsdScript;
-    var pc = jsdScript.lineToPc(line, PCMAP_PRETTYPRINT);
-    if (this.scriptWrapper.hasBreakpoint(pc))
-        this.scriptWrapper.clearBreakpoint(pc);
-    else
-        this.scriptWrapper.setBreakpoint(pc);
+    try
+    {
+        var jsdScript = this.scriptWrapper.jsdScript;
+        var pc = jsdScript.lineToPc(line, PCMAP_PRETTYPRINT);
+        if (this.scriptWrapper.hasBreakpoint(pc))
+            this.scriptWrapper.clearBreakpoint(pc);
+        else
+            this.scriptWrapper.setBreakpoint(pc);
+    }
+    catch (ex)
+    {
+        ASSERT(0, "onMarginClick caught exception " + ex);
+    }
 }
 
 function HelpText ()

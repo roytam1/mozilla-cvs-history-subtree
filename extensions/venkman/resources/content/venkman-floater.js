@@ -54,8 +54,9 @@ function onLoad()
     {
         window.arguments[0](window);
     }
-    
-    console.createMainMenu (window.document);
+
+    if (console.prefs["menubarInFloaters"])
+        console.createMainMenu (window.document);
 }
 
 function onClose()

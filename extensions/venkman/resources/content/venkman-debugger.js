@@ -42,7 +42,16 @@ const jsdIValue           = Components.interfaces.jsdIValue;
 const jsdIProperty        = Components.interfaces.jsdIProperty;
 const jsdIScript          = Components.interfaces.jsdIScript;
 const jsdIStackFrame      = Components.interfaces.jsdIStackFrame;
-const jsdIFilter          = Components.interfaces.jsdIFilter;
+
+const TYPE_VOID     = jsdIValue.TYPE_VOID;
+const TYPE_NULL     = jsdIValue.TYPE_NULL;
+const TYPE_BOOLEAN  = jsdIValue.TYPE_BOOLEAN;
+const TYPE_INT      = jsdIValue.TYPE_INT;
+const TYPE_DOUBLE   = jsdIValue.TYPE_DOUBLE;
+const TYPE_STRING   = jsdIValue.TYPE_STRING;
+const TYPE_FUNCTION = jsdIValue.TYPE_FUNCTION;
+const TYPE_OBJECT   = jsdIValue.TYPE_OBJECT;
+
 
 const PROP_ENUMERATE = jsdIProperty.FLAG_ENUMERATE;
 const PROP_READONLY  = jsdIProperty.FLAG_READONLY;
@@ -65,11 +74,6 @@ const PCMAP_PRETTYPRINT   = jsdIScript.PCMAP_PRETTYPRINT;
 const FTYPE_STD     = 0;
 const FTYPE_SUMMARY = 1;
 const FTYPE_ARRAY   = 2;
-
-const FILTER_ENABLED  = jsdIFilter.FLAG_ENABLED;
-const FILTER_DISABLED = ~jsdIFilter.FLAG_ENABLED;
-const FILTER_PASS     = jsdIFilter.FLAG_PASS;
-const FILTER_SYSTEM   = 0x100; /* system filter, do not show in UI */
 
 var $ = new Array(); /* array to store results from evals in debug frames */
 
@@ -103,40 +107,6 @@ function initDebugger()
     console.jsds.errorHook      = console.errorHook;
     console.jsds.flags          = jsdIDebuggerService.ENABLE_NATIVE_FRAMES;
 
-    console.chromeFilter = {
-        globalObject: null,
-        flags: FILTER_SYSTEM | FILTER_ENABLED,
-        urlPattern: "chrome:*",
-        startLine: 0,
-        endLine: 0
-    };
-    
-    if (console.prefs["enableChromeFilter"])
-    {
-        console.enableChromeFilter = true;
-        console.jsds.appendFilter(console.chromeFilter);
-    }
-    else
-        console.enableChromeFilter = false;
-
-    console.venkmanFilter1 = {  /* glob based filter goes first, because it's */
-        globalObject: this,     /* the easiest to match.                      */
-        flags: FILTER_SYSTEM | FILTER_ENABLED,
-        urlPattern: null,
-        startLine: 0,
-        endLine: 0
-    };
-    //    console.jsds.appendFilter (venkmanFilter1);
-
-    console.venkmanFilter2 = {  /* url based filter for XPCOM callbacks that  */
-        globalObject: null,     /* may not happen under our glob.             */
-        flags: FILTER_SYSTEM | FILTER_ENABLED,
-        urlPattern: "chrome://venkman/*",
-        startLine: 0,
-        endLine: 0
-    };
-    //    console.jsds.appendFilter (console.venkmanFilter2);
-
     console.throwMode = TMODE_IGNORE;
     console.errorMode = EMODE_IGNORE;
     
@@ -160,7 +130,6 @@ function detachDebugger()
     console.jsds.scriptHook = null;
     console.jsds.interruptHook = null;
     console.jsds.clearAllBreakpoints();
-    console.jsds.clearFilters();
     if (!console.jsds.initAtStartup)
         console.jsds.off();
 }
@@ -275,7 +244,9 @@ function jsdExecutionHook (frame, type, rv)
 
     try
     {
+        dd ("debug trap " + formatFrame(frame));
         hookReturn = debugTrap(frame, type, rv);
+        dd ("debug trap returned " + hookReturn);
     }
     catch (ex)
     {
@@ -356,7 +327,7 @@ function ScriptManager (url)
     this.instances = new Array();
     this.transients = new Object();
     this.transientCount = 0;
-    this.disableTransients = false;
+    this.disableTransients = isURLFiltered(url);
 }
 
 ScriptManager.prototype.onScriptCreated =
@@ -406,7 +377,8 @@ function smgr_created (jsdScript)
         //dd ("transient created " + formatScript(jsdScript));
         ++this.transientCount;
         if (this.disableTransients)
-            jsdScript.flags |= SCRIPT_NODEBUG;
+            jsdScript.flags |= SCRIPT_NODEBUG | SCRIPT_NOPROFILE;
+
         this.transients[jsdScript.tag] = scriptWrapper;
         scriptWrapper.functionName = MSG_VAL_EVSCRIPT;
         //dispatch ("hook-transient-script", { scriptWrapper: scriptWrapper });
@@ -553,7 +525,7 @@ function si_seal ()
     this.sealDate = new Date();
     this.isSealed = true;
 
-    if (this.url.search (/^chrome:\/\/venkman/) == 0)
+    if (isURLFiltered(this.url))
     {
         var nada = SCRIPT_NODEBUG | SCRIPT_NOPROFILE;
         for (var f in this.functions)
@@ -697,7 +669,10 @@ function si_setbp (line, parentBP)
         return false;
     };
 
-    var found = setBP (this.topLevel);
+    var found;
+    
+    if (this.topLevel)
+        found = setBP (this.topLevel);
     for (var f in this.functions)
         found |= setBP (this.functions[f]);
 
@@ -1005,13 +980,6 @@ function fb_clear ()
     }
 }
 
-function isURLFiltered (url)
-{
-    return (!url || url == MSG_VAL_CONSOLE ||
-            (console.enableChromeFilter && url.indexOf ("chrome:") == 0) ||
-            url.indexOf ("x-jsd:internal") == 0);
-}    
-
 const EMODE_IGNORE = 0;
 const EMODE_TRACE  = 1;
 const EMODE_BREAK  = 2;
@@ -1021,9 +989,7 @@ const TMODE_TRACE  = 1;
 const TMODE_BREAK  = 2;
 
 function debugTrap (frame, type, rv)
-{
-    dd ("debug trap");
-    
+{    
     var tn = "";
     var retcode = jsdIExecutionHook.RETURN_CONTINUE;
 
@@ -1055,13 +1021,19 @@ function debugTrap (frame, type, rv)
             tn = MSG_VAL_THROW;
             break;
         case jsdIExecutionHook.TYPE_INTERRUPTED:
+            if (isURLFiltered(frame.script.fileName))
+            {
+                dd ("filtered url: " + frame.script.fileName);
+                return retcode;
+            }
+            
             var line;
             if (console.prefs["prettyprint"])
                 line = frame.script.pcToLine (frame.pc, PCMAP_PRETTYPRINT);
             else
                 line = frame.line;
             if (console._stepPast == frame.script.fileName + line)
-                return jsdIExecutionHook.RETURN_CONTINUE;
+                return retcode;
             delete console._stepPast;
             setStopState(false);
             break;

@@ -242,17 +242,6 @@ function cmdTestFilters ()
 function cmdTreeTest()
 {
     var w = openDialog("chrome://venkman/content/tests/tree.xul", "", "");
-    var testsFilter = {
-        globalObject: w,
-        flags: jsdIFilter.FLAG_ENABLED | jsdIFilter.FLAG_PASS,
-        urlPattern: null,
-        startLine: 0,
-        endLine: 0
-    };
-    /* make sure this filter goes at the top, so the system
-     * "chrome://venkman/ *" filter doesn't get to it first.
-     */
-    console.jsds.insertFilter (testsFilter, null);
 }
 
 initDev();
