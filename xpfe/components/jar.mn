@@ -1,5 +1,6 @@
 comm.jar:
     content/communicator/directory/directory.xul                (directory/directory.xul)
+    content/communicator/directory/directory.html               (directory/directory.html)
     content/communicator/directory/directory.js                 (directory/directory.js)
     content/communicator/history/history.xul                    (history/resources/history.xul)	
     content/communicator/history/historyTreeOverlay.xul         (history/resources/historyTreeOverlay.xul)	
@@ -50,7 +51,6 @@ comm.jar:
     content/communicator/pref/pref-mousewheel.xul               (prefwindow/resources/content/pref-mousewheel.xul)
     content/communicator/pref/pref-winhooks.xul                 (prefwindow/resources/content/pref-winhooks.xul)
     content/communicator/pref/pref-winhooks.js                  (prefwindow/resources/content/pref-winhooks.js)
-    content/communicator/pref/prefutilities.js                  (prefwindow/resources/content/prefutilities.js)
     content/communicator/regviewer/regviewer.js                 (regviewer/regviewer.js)
     content/communicator/regviewer/regviewer.xul                (regviewer/regviewer.xul)
     content/communicator/related/related-panel.xul              (related/resources/related-panel.xul)

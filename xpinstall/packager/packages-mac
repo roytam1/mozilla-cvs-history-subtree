@@ -69,9 +69,7 @@ viewer:Essential Files:libutil.shlb
 viewer:Essential Files:RaptorShell.shlb 
 viewer:Essential Files:widget.shlb 
 
-viewer:Essential Files:PSM.shlb
 viewer:Essential Files:NSSckbi.shlb
-viewer:psmdata:*
 
 viewer:Components:docshell.shlb 
 viewer:Components:AppShell.shlb 
@@ -86,6 +84,7 @@ viewer:Components:content.shlb
 viewer:Components:content.xpt
 viewer:Components:xuldoc.xpt
 viewer:Components:xultmpl.xpt
+viewer:Components:cookie.xpt 
 viewer:Components:Cookie.shlb 
 viewer:Components:appcomps.shlb 
 viewer:Components:Directory.xpt 
@@ -129,14 +128,16 @@ viewer:Components:nslocale.shlb
 viewer:Components:nsLocale.xpt 
 viewer:Components:nsSidebar.js
 viewer:Components:oji.xpt 
+viewer:Components:PIPNSS.shlb
+viewer:Components:pipnss.xpt
+viewer:Components:PIPPKI.shlb
+viewer:Components:pippki.xpt
 viewer:Components:plugin.shlb 
 viewer:Components:pngdecoder.shlb 
 viewer:Components:prefm.shlb 
 viewer:Components:prefm.xpt 
 viewer:Components:profile.shlb 
 viewer:Components:profileservices.xpt 
-viewer:Components:PSMGlue.shlb
-viewer:Components:psmglue.xpt
 viewer:Components:rdf.xpt 
 viewer:Components:RDFLibrary.shlb 
 viewer:Components:RegViewer.shlb 
@@ -179,6 +180,7 @@ viewer:Components:xpinstall.xpt
 viewer:Components:autocomplete.xpt 
 viewer:Components:xml-rpc.xpt
 viewer:Components:nsDictionary.js
+viewer:Components:nsProxyAutoConfig.js
 viewer:Components:nsXmlRpcClient.js
 viewer:Components:xmlextras.xpt
 viewer:Components:xmlextras.shlb
@@ -195,10 +197,13 @@ viewer:Components:necko.xpt
 viewer:Components:Cache.shlb 
 viewer:Components:cache.xpt
 
+viewer:chrome:help.jar
 viewer:chrome:comm.jar
 viewer:chrome:toolkit.jar
 viewer:chrome:modern.jar
 viewer:chrome:classic.jar
+viewer:chrome:pippki.jar
+viewer:chrome:pipnss.jar
 -viewer:chrome:comm:content:editor:EditorInitPage.html
 -viewer:chrome:comm:content:editor:EditorInitPagePlain.html
 ;Include this for "debug" testing - remove for actual beta release:
@@ -231,6 +236,7 @@ viewer:defaults:wallet:StateSchema.tbl
 viewer:res:html:*
 viewer:res:html.css
 viewer:res:quirk.css
+viewer:res:viewsource.css
 viewer:res:maccharset.properties 
 viewer:res:rdf:article.gif
 viewer:res:rdf:collapser.gif

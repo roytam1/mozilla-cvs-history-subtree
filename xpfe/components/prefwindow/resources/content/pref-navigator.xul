@@ -22,21 +22,19 @@
   -->
 
 <?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
-<?xul-overlay href="chrome://global/content/dialogOverlay.xul"?>
+<?xml-stylesheet href="chrome://communicator/skin/dialogOverlay.css" type="text/css"?>
 <?xul-overlay href="chrome://communicator/content/communicatorOverlay.xul"?>
 
 <!DOCTYPE window SYSTEM "chrome://communicator/locale/pref/pref-navigator.dtd" >
 
-<window debug="false" xmlns:html="http://www.w3.org/1999/xhtml"
+<window xmlns:html="http://www.w3.org/1999/xhtml"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         class="color-dialog"
-        orient="vertical" title="&title.label;"
+        orient="vertical"
         onload="parent.initPanel('chrome://communicator/content/pref/pref-navigator.xul');">
 
-  <!-- XXX: Replace strres.js when prefutilities is converted -->
-  <script type="application/x-javascript" src="chrome://global/content/strres.js"/>
-  <script type="application/x-javascript" src="chrome://communicator/content/pref/prefutilities.js"/>
-  <script type="application/x-javascript" src="chrome://global/content/nsJSComponentManager.js"/>
+  <stringbundle id="bundle_prefutilities" src="chrome://communicator/locale/pref/prefutilities.properties"/>
+  <script type="application/x-javascript" src="chrome://communicator/content/pref/pref-navigator.js"/>
   <script type="application/x-javascript">
   <![CDATA[
     var _elementIDs = ["startupPage", "browserStartupHomepage",
@@ -75,9 +73,13 @@
     </box>
     <box autostretch="never" halign="right">
       <button class="dialog" label="&useCurrent.label;" accesskey="&useCurrent.accesskey;"
-              oncommand="setHomePageToCurrentPage('browserStartupHomepage');"/>
+              oncommand="setHomePageToCurrentPage();"
+              id="browserUseCurrent" pref="true" preftype="bool"
+              prefstring="pref.browser.homepage.disable_button.current_page" prefattribute="disabled"/>
       <button class="dialog" label="&browseFile.label;" accesskey="&browseFile.accesskey;"
-              oncommand="prefNavSelectFile('browserStartupHomepage', 'choosehomepage', false );"/>
+              oncommand="selectFile();"
+              id="browserChooseFile" pref="true" preftype="bool"
+              prefstring="pref.browser.homepage.disable_button.select_file" prefattribute="disabled"/>
     </box>
   </titledbox>
   

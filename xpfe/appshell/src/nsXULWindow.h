@@ -42,6 +42,8 @@
 #include "nsIInterfaceRequestor.h"
 #include "nsIWidget.h"
 #include "nsIXULWindow.h"
+#include "nsIPrompt.h"
+#include "nsIAuthPrompt.h"
 
 // nsXULWindow
 
@@ -66,12 +68,15 @@ protected:
    NS_IMETHOD EnsureChromeTreeOwner();
    NS_IMETHOD EnsureContentTreeOwner();
    NS_IMETHOD EnsurePrimaryContentTreeOwner();
+   NS_IMETHOD EnsurePrompter();
+   NS_IMETHOD EnsureAuthPrompter();
    
    void OnChromeLoaded();
    void StaggerPosition(PRInt32 &aRequestedX, PRInt32 &aRequestedY,
                         PRInt32 aSpecWidth, PRInt32 aSpecHeight);
    NS_IMETHOD LoadPositionAndSizeFromXUL(PRBool aPosition, PRBool aSize);
    NS_IMETHOD LoadTitleFromXUL();
+   NS_IMETHOD LoadIconFromXUL();
    NS_IMETHOD PersistPositionAndSize(PRBool aPosition, PRBool aSize, PRBool aSizeMode);
 
    NS_IMETHOD GetWindowDOMWindow(nsIDOMWindowInternal** aDOMWindow);
@@ -103,6 +108,8 @@ protected:
    nsCOMPtr<nsIDocShell>   mDocShell;
    nsCOMPtr<nsIDOMWindowInternal>  mDOMWindow;
    nsCOMPtr<nsIWeakReference> mParentWindow;
+   nsCOMPtr<nsIPrompt>     mPrompter;
+   nsCOMPtr<nsIAuthPrompt> mAuthPrompter;
    nsVoidArray             mContentShells;
    PRBool                  mContinueModalLoop;
    nsresult                mModalStatus;
@@ -112,6 +119,7 @@ protected:
    PRInt32                 mSizeMode;
    PRBool                  mIntrinsicallySized; 
    PRBool                  mCenterAfterLoad;
+   PRBool                  mIsHiddenWindow;
    PRBool                  mHadChildWindow;
    unsigned long           mZlevel;
 };

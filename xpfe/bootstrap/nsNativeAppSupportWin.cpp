@@ -28,13 +28,10 @@
 #include "nsXPIDLString.h"
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
-#include "nsIAppShellService.h"
-#include "nsAppShellCIDs.h"
-#include "nsIDOMWindowInternal.h"
 #include "nsICmdLineHandler.h"
+#include "nsIDOMWindow.h"
 #include "nsISupportsPrimitives.h"
-#include "nsISupportsArray.h"
-
+#include "nsIWindowWatcher.h"
 #include <windows.h>
 #include <ddeml.h>
 #include <stdlib.h>
@@ -1029,32 +1026,23 @@ nsNativeAppSupportWin::GetCmdLineArgs( LPBYTE request, nsICmdLineService **aResu
 }
 
 nsresult
-nsNativeAppSupportWin::OpenWindow( const char*urlstr, const char *args )
-{
-  nsresult rv;
-  static NS_DEFINE_CID( kAppShellServiceCID,    NS_APPSHELL_SERVICE_CID );
-  NS_WITH_SERVICE(nsIAppShellService, appShellService, kAppShellServiceCID,
-                  &rv);
+nsNativeAppSupportWin::OpenWindow( const char*urlstr, const char *args ) {
 
-  NS_ENSURE_SUCCESS(rv, rv);
+  nsresult rv = NS_ERROR_FAILURE;
 
-  nsCOMPtr<nsIDOMWindowInternal> hiddenWindow;
+  nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+  nsCOMPtr<nsISupportsString> sarg(do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID));
+  if (sarg)
+    sarg->SetData(args);
 
-  rv = appShellService->GetHiddenDOMWindow( getter_AddRefs( hiddenWindow ) );
-
-  if ( NS_SUCCEEDED( rv ) && hiddenWindow ) {
-    nsCOMPtr<nsISupportsString> str =
-      do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID, &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    str->SetData(args);
-
+  if (wwatch && sarg) {
     nsCOMPtr<nsIDOMWindow> newWindow;
-    rv = hiddenWindow->OpenDialog(NS_ConvertASCIItoUCS2(urlstr),
-                                  NS_LITERAL_STRING("_blank"),
-                                  NS_LITERAL_STRING("chrome,dialog=no,all"),
-                                  str, getter_AddRefs( newWindow ) );
+    rv = wwatch->OpenWindow(0, urlstr, "_blank", "chrome,dialog=no,all",
+                   sarg, getter_AddRefs(newWindow));
+#ifdef MOZ_DEBUG_DDE
+  } else {
+      printf("Get WindowWatcher (or create string) failed\n");
+#endif
   }
-
   return rv;
 }

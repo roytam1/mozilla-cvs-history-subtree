@@ -87,7 +87,7 @@ bin\components\chardetc.dll
 bin\components\chrome.dll
 bin\components\chrome.xpt
 bin\components\cookie.dll
-bin\components\cookieviewer.xpt
+bin\components\cookie.xpt
 bin\components\docshell.dll
 bin\components\docshell_base.xpt
 bin\components\dom.xpt
@@ -162,8 +162,6 @@ bin\components\prefmigr.xpt
 bin\components\profile.dll
 bin\components\profile.xpt
 bin\components\proxyObjInst.xpt
-bin\components\psmglue.dll
-bin\components\psmglue.xpt
 bin\components\rdf.dll
 bin\components\rdf.xpt
 bin\components\regviewer.xpt
@@ -214,12 +212,14 @@ bin\components\xpinstall.xpt
 bin\components\xppref32.dll
 bin\components\xml-rpc.xpt
 bin\components\nsDictionary.js
+bin\components\nsProxyAutoConfig.js
 bin\components\nsXmlRpcClient.js
 bin\plugins\npnul32.dll
 bin\components\xmlextras.xpt
 bin\components\xmlextras.dll
 
 ; chrome stuff
+bin\chrome\help.jar
 bin\chrome\comm.jar
 bin\chrome\toolkit.jar
 bin\chrome\modern.jar
@@ -228,7 +228,6 @@ bin\chrome\comm\*
 bin\chrome\toolkit\*
 bin\chrome\modern\*
 bin\chrome\classic\*
-;bin\chrome\blue\*
 ;-bin\chrome\comm\content\editor\EditorInitPage.html
 ;-bin\chrome\comm\editor\content\EditorInitPagePlain.html
 ;Include this for "debug" testing - remove for actual beta release:
@@ -250,6 +249,7 @@ bin\res\html.css
 bin\res\ua.css
 bin\res\forms.css
 bin\res\quirk.css
+bin\res\viewsource.css
 bin\res\arrow.gif
 bin\res\html\*
 bin\defaults\wallet\VcardSchema.tbl
@@ -318,7 +318,11 @@ bin\chrome\chatzilla.jar
 bin\chrome\chatzilla\*
 
 [psm]
-bin\psm.exe
 bin\nssckbi.dll
-bin\psmdata\*
+bin\components\pipnss.dll
+bin\components\pipnss.xpt
+bin\components\pippki.dll
+bin\components\pippki.xpt
+bin\chrome\pipnss.jar
+bin\chrome\pippki.jar
 

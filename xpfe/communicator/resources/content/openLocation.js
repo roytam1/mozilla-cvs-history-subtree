@@ -23,8 +23,7 @@
  */
 
 var browser;
-var dialog;
-var bundle;
+var dialog = {};
 var pref = null;
 try {
   pref = Components.classes["@mozilla.org/preferences;1"]
@@ -35,15 +34,12 @@ try {
 
 function onLoad()
 {
-  bundle = srGetStrBundle("chrome://communicator/locale/openLocation.properties");
-
-  dialog                = new Object;
   dialog.input          = document.getElementById("dialog.input");
-  dialog.help           = document.getElementById("dialog.help");
   dialog.open           = document.getElementById("ok");
   dialog.openAppList    = document.getElementById("openAppList");
   dialog.openTopWindow  = document.getElementById("currentWindow");
   dialog.openEditWindow = document.getElementById("editWindow");
+  dialog.bundle         = document.getElementById("openLocationBundle");
 
   browser = window.arguments[0];
   if (!browser) {
@@ -56,7 +52,7 @@ function onLoad()
   }
 
   // change OK button text to 'open'
-  dialog.open.label = bundle.GetStringFromName("openButtonLabel");
+  dialog.open.label = dialog.bundle.getString("openButtonLabel");
 
   doSetOKCancel(open, 0, 0, 0);
 
@@ -85,7 +81,12 @@ function doEnabling()
 
 function open()
 {
-  var url = browser.getShortcutOrURI(dialog.input.value);
+  var url;
+  if (browser)
+    url = browser.getShortcutOrURI(dialog.input.value);
+  else
+    url = dialog.input.value;
+
   try {
     switch (dialog.openAppList.value) {
       case "0":
@@ -125,8 +126,7 @@ function onChooseFile()
 {
   try {
     var fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(nsIFilePicker);
-    fp.init(window, bundle.GetStringFromName("chooseFileDialogTitle"), nsIFilePicker.modeOpen);
-
+    fp.init(window, dialog.bundle.getString("chooseFileDialogTitle"), nsIFilePicker.modeOpen);
     if (dialog.openAppList.value == "2") {
       // When loading into Composer, direct user to prefer HTML files and text files,
       // so we call separately to control the order of the filter list

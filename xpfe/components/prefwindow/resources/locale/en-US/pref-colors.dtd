@@ -1,7 +1,6 @@
 <!-- extracted from content/pref-colors.xul -->
 
 <!-- LOCALIZATION NOTE : FILE Color management prefs -->
-<!ENTITY  window.title                    "Colors">
 <!ENTITY  lHeader                         "Colors">
 <!ENTITY  color                           "Text and Background">
 <!ENTITY  textColor.label                 "Text:">
@@ -26,3 +25,6 @@
 <!-- LOCALIZATION NOTE (ignoreDocColors.label): This is option two, and it appends to 'someProvColors' above.  -->
 <!ENTITY  useMyColors.label               "Use my chosen colors, ignoring the colors specified">
 <!ENTITY  useMyColors.accesskey           "i">
+<!ENTITY  viewsource                      "View Source Window">
+<!ENTITY  syntaxHighlight.label           "Enable syntax highlighting">
+<!ENTITY  syntaxHighlight.accesskey       "e">

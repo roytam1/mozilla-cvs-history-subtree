@@ -85,8 +85,7 @@ function prefNavSelectFile(folderFieldId, stringId, useNative)
 
 function setHomePageToCurrentPage(folderFieldId)
 {
-  var windowManager = Components.classes["@mozilla.org/rdf/datasource;1?name=window-mediator"]
-                                .getService(Components.interfaces.nsIWindowMediator);
+  var windowManager = Components.classes["@mozilla.org/rdf/datasource;1?name=window-mediator"].getService(Components.interfaces.nsIWindowMediator);
   var browserWindow = windowManager.getMostRecentWindow("navigator:browser");
   if (browserWindow) {
     var browser = browserWindow.document.getElementById("content");
@@ -100,7 +99,7 @@ function setHomePageToCurrentPage(folderFieldId)
 
 function prefClearGlobalHistory()
 {
-  var globalHistory = nsJSComponentManager.getService("@mozilla.org/browser/global-history;1", "nsIBrowserHistory");
+  var globalHistory = Components.classes["@mozilla.org/browser/global-history;1"].getService(Components.interfaces.nsIBrowserHistory);
   if (globalHistory)
     globalHistory.removeAllPages();
 }
@@ -108,8 +107,7 @@ function prefClearGlobalHistory()
 function prefClearUrlbarHistory()
 {
   var button = document.getElementById("ClearUrlBarHistoryButton");
-  var urlBarHist = nsJSComponentManager.getService("@mozilla.org/browser/urlbarhistory;1",
-  "nsIUrlbarHistory");
+  var urlBarHist = Components.classes["@mozilla.org/browser/urlbarhistory;1"].getService(Components.interfaces.nsIUrlbarHistory);
   if ( urlBarHist )
   {
     urlBarHist.clearHistory();

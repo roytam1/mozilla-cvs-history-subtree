@@ -24,7 +24,6 @@
 #include "nsIAppShellService.h"
 #include "nsICmdLineService.h"
 #include "nsAppShellCIDs.h"
-#include "nsINetSupportDialogService.h"
 #include "nsIEditor.h"
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
@@ -34,11 +33,9 @@
 
 #include "rdf.h"
 #include "nsIWindowMediator.h"
-#include "nsICommonDialogs.h"
-#include "nsIDialogParamBlock.h"
 // #include "nsAbout.h"
 #include "nsIAboutModule.h"
-static NS_DEFINE_CID(	kCommonDialogsCID, NS_CommonDialog_CID );
+
 #ifdef XP_OS2
 
 #define WIDGET_DLL      "WDGTOS2"
@@ -83,10 +80,8 @@ static NS_DEFINE_CID(	kCommonDialogsCID, NS_CommonDialog_CID );
 // Class IDs
 static NS_DEFINE_CID(kCAppShellServiceCID, NS_APPSHELL_SERVICE_CID);
 static NS_DEFINE_CID(kCCmdLineServiceCID, NS_COMMANDLINE_SERVICE_CID);
-static NS_DEFINE_CID(kNetSupportDialogCID,    NS_NETSUPPORTDIALOG_CID);
 static NS_DEFINE_CID(kProtocolHelperCID,  NS_PROTOCOL_HELPER_CID);
 static NS_DEFINE_CID(kWindowMediatorCID,  NS_WINDOWMEDIATOR_CID);
-static NS_DEFINE_CID( kDialogParamBlockCID, NS_DialogParamBlock_CID );
 #define NS_ABOUT_CID                    \
 { /* {1f1ce501-663a-11d3-b7a0-be426e4e69bc} */         \
 0x1f1ce501, 0x663a, 0x11d3, { 0xb7, 0xa0, 0xbe, 0x42, 0x6e, 0x4e, 0x69, 0xbc } \

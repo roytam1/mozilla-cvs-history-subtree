@@ -24,7 +24,7 @@
        -Added a syntax example for the "no proxy" field.
   -->
 <?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
-<?xul-overlay href="chrome://global/content/dialogOverlay.xul"?>
+<?xml-stylesheet href="chrome://communicator/skin/dialogOverlay.css" type="text/css"?>
 
 <!DOCTYPE window SYSTEM "chrome://communicator/locale/pref/pref-proxies.dtd" >
 <window xmlns:html="http://www.w3.org/1999/xhtml"
@@ -47,9 +47,6 @@
         
   <stringbundle id="bundle_prefutilities"
                 src="chrome://pref/locale/prefutilities.properties"/>
-  <!-- XXX: Replace strres.js when prefutilities is converted -->
-  <script type="application/x-javascript" src="chrome://global/content/strres.js"/>
-  <script type="application/x-javascript" src="chrome://communicator/content/pref/prefutilities.js"/>
   <script type="application/x-javascript" src="chrome://communicator/content/pref/pref-proxies.js"/>
   
   <box class="box-smallheader" title="&lHeader;"/>
@@ -141,7 +138,9 @@
         <textbox id="networkProxyAutoconfigURL" flex="1" 
                    pref="true" preftype="string" prefstring="network.proxy.autoconfig_url"
                    prefattribute="value"/>
-        <button id="autoReload" class="dialog" label="&reload.label;" accesskey="&reload.accesskey;"/>
+        <button id="autoReload" class="dialog" label="&reload.label;" accesskey="&reload.accesskey;"
+                pref="true" preftype="bool"
+                prefstring="pref.advanced.proxies.disable_button.reload" prefattribute="disabled"/>
       </box>
     </radiogroup>
 

@@ -59,16 +59,13 @@
 
 #include "nsProxiedService.h"
 #include "nsIAppShellComponentImpl.h"
-#include "nsICommonDialogs.h"
+#include "nsIPromptService.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsISupportsPrimitives.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
-static NS_DEFINE_IID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID );
 static NS_DEFINE_IID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
 static NS_DEFINE_IID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
-static NS_DEFINE_CID(kDialogParamBlockCID, NS_DialogParamBlock_CID);
-static NS_DEFINE_CID(kCommonDialogCID, NS_CommonDialog_CID);
 
 #include "nsIEventQueueService.h"
 
@@ -187,7 +184,7 @@ nsXPInstallManager::InitManager(nsIScriptGlobalObject* aGlobalObject, nsXPITrigg
     // Create the nsIDialogParamBlock to pass the trigger
     // list to the dialog
     //-----------------------------------------------------
-    rv = nsComponentManager::CreateInstance(kDialogParamBlockCID,
+    rv = nsComponentManager::CreateInstance("@mozilla.org/embedcomp/dialogparam;1",
                                             nsnull,
                                             NS_GET_IID(nsIDialogParamBlock),
                                             getter_AddRefs(ioParamBlock));
@@ -346,8 +343,8 @@ PRBool nsXPInstallManager::ConfirmChromeInstall(nsIScriptGlobalObject* aGlobalOb
         nsCOMPtr<nsIDOMWindowInternal> parentWindow(do_QueryInterface(aGlobalObject));
         if (parentWindow)
         {
-            NS_WITH_SERVICE(nsICommonDialogs, dlgService, kCommonDialogCID, &rv);
-            if (NS_SUCCEEDED(rv))
+            nsCOMPtr<nsIPromptService> dlgService(do_GetService("@mozilla.org/embedcomp/prompt-service;1"));
+            if (dlgService)
             {
                 rv = dlgService->ConfirmCheck( parentWindow,
                                                nsnull,
@@ -721,7 +718,7 @@ nsXPInstallManager::OnStartRequest(nsIRequest* request, nsISupports *ctxt)
 
 NS_IMETHODIMP
 nsXPInstallManager::OnStopRequest(nsIRequest *request, nsISupports *ctxt,
-                                  nsresult status, const PRUnichar *errorMsg)
+                                  nsresult status)
 {
     nsresult rv;
 

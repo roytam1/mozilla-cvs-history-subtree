@@ -36,12 +36,10 @@
 #include "nsString.h"
 #include "nsISupports.h"
 
-#include "nsIStreamObserver.h"
+#include "nsIRequestObserver.h"
 #include "nsIInputStream.h"
 #include "nsIObserver.h"
 #include "nsICmdLineHandler.h"
-#include "nsIXULBrowserWindow.h"
-#include "nsIWebProgressListener.h"
 #include "nsIWebShell.h"
 #include "nsIUrlbarHistory.h"
 
@@ -61,7 +59,6 @@ class nsIFindComponent;
 
 class nsBrowserInstance : public nsIBrowserInstance,
                           public nsIURIContentListener,
-                          public nsIWebProgressListener,
                           public nsSupportsWeakReference 
 {
   public:
@@ -78,9 +75,6 @@ class nsBrowserInstance : public nsIBrowserInstance,
     // URI Content listener
     NS_DECL_NSIURICONTENTLISTENER
 
-    // WebProgress listener
-    NS_DECL_NSIWEBPROGRESSLISTENER
-
   protected:
 
     nsresult GetContentAreaDocShell(nsIDocShell** outDocShell);
@@ -92,20 +86,8 @@ class nsBrowserInstance : public nsIBrowserInstance,
 
     nsresult InitializeSearch(nsIDOMWindowInternal* windowToSearch, nsIFindComponent *finder );
     
-    NS_IMETHOD EnsureXULBrowserWindow();
-
-    // helper methods for dealing with document loading...
-    nsresult StartDocumentLoad(nsIDOMWindow *aDOMWindow,
-                               nsIRequest *request);
-
-    nsresult EndDocumentLoad(nsIDOMWindow *aDOMWindow,
-                             nsIRequest *request,
-                             nsresult aResult);
-
     PRBool              mIsClosed;
     static PRBool       sCmdLineURLUsed;
-
-    nsCOMPtr<nsIXULBrowserWindow> mXULBrowserWindow;
 
     nsWeakPtr          mContentAreaDocShellWeak;
 
@@ -116,7 +98,6 @@ class nsBrowserInstance : public nsIBrowserInstance,
     nsCOMPtr<nsIUrlbarHistory> mUrlbarHistory;                  //We own this
     nsCOMPtr<nsISupports>  mSearchContext;				// at last, something we really own
     nsInstanceCounter   mInstanceCounter;
-    nsCOMPtr<nsIInputStream> mPostData; // Post data for current page.
 #ifdef DEBUG_warren
     PRIntervalTime      mLoadStartTime;
 #endif

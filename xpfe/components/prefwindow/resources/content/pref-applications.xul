@@ -23,7 +23,7 @@
   -->
 
 <?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
-<?xul-overlay href="chrome://global/content/dialogOverlay.xul"?>
+<?xml-stylesheet href="chrome://communicator/skin/dialogOverlay.css" type="text/css"?>
 
 <!DOCTYPE window SYSTEM "chrome://communicator/locale/pref/pref-applications.dtd" >
 
@@ -31,15 +31,13 @@
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
         class="color-dialog"
-        style="-moz-user-focus: ignore;"
-        title="&window.title;" align="vertical"
+        orient="vertical"
         onload="parent.initPanel('chrome://communicator/content/pref/pref-applications.xul');">
 
   <stringbundle id="bundle_prefApplications"
                 src="chrome://communicator/locale/pref/pref-applications.properties"/>
   <script type="application/x-javascript" src="chrome://communicator/content/pref/pref-applications.js"/>
   <script type="application/x-javascript" src="chrome://communicator/content/pref/overrideHandler.js"/>
-  <script type="application/x-javascript" src="chrome://global/content/nsJSComponentManager.js"/>
         
   <box class="box-smallheader" title="&lHeader;"/>
 
@@ -86,13 +84,19 @@
     <box orient="vertical">
       <button id="newTypeButton" 
               label="&newTypeButton.label;" accesskey="&newTypeButton.accesskey;" 
-              oncommand="newType();"/>
+              oncommand="newType();"
+              pref="true" preftype="bool"
+              prefstring="pref.application.disable_button.new_type" prefattribute="disabled"/>
       <button id="editButton" 
               label="&editButton.label;" accesskey="&editButton.accesskey;" 
-              oncommand="editType();"/>
+              oncommand="editType();"
+              pref="true" preftype="bool"
+              prefstring="pref.application.disable_button.edit" prefattribute="disabled"/>
       <button id="removeButton" 
               label="&removeButton.label;" accesskey="&removeButton.accesskey;" 
-              oncommand="removeType();"/>
+              oncommand="removeType();"
+              pref="true" preftype="bool"
+              prefstring="pref.application.disable_button.remove" prefattribute="disabled"/>
     </box>
   </titledbox>
     

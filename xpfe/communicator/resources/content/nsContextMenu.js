@@ -72,6 +72,7 @@ nsContextMenu.prototype = {
         this.initMiscItems();
         this.initSaveItems();
         this.initClipboardItems();
+        this.initMetadataItems();
     },
     initOpenItems : function () {
         // Remove open/edit link if not applicable.
@@ -169,11 +170,21 @@ nsContextMenu.prototype = {
         this.showItem( "context-cut", this.onTextInput );
         this.showItem( "context-paste", this.onTextInput );
 
+        // XXX dr
+        // ------
+        // nsDocumentViewer.cpp has code to determine whether we're
+        // on a link or an image. we really ought to be using that...
+
         // Copy link location depends on whether we're on a link.
         this.showItem( "context-copylink", this.onLink );
 
         // Copy image location depends on whether we're on an image.
         this.showItem( "context-copyimage", this.onImage );
+    },
+    initMetadataItems : function () {
+        // Show unless in directory listing.
+        // Metadata for directory listings could ofcource be added if wanted
+        this.setItemAttr( "context-metadata", "disabled", this.inDirList ? "true" : null );
     },
     // Set various context menu attributes based on the state of the world.
     setTarget : function ( node ) {
@@ -244,7 +255,7 @@ nsContextMenu.prototype = {
                if(this.target.getAttribute( "type" ).toUpperCase() == "IMAGE") {
                  this.onImage = true;
                  // Convert src attribute to absolute URL.
-                 this.imageURL = this.makeURLAbsolute( this.target.ownerDocument,
+                 this.imageURL = this.makeURLAbsolute( this.target.baseURI,
                                                        this.target.src );
                } else /* if (this.target.getAttribute( "type" ).toUpperCase() == "TEXT") */ {
                  this.onTextInput = this.isTargetATextBox(this.target);
@@ -254,7 +265,7 @@ nsContextMenu.prototype = {
             } else if ( this.target.getAttribute( "background" ) ) {
                this.onImage = true;
                // Convert background attribute to absolute URL.
-               this.imageURL = this.makeURLAbsolute( this.target.ownerDocument,
+               this.imageURL = this.makeURLAbsolute( this.target.baseURI,
                                                      this.target.getAttribute( "background" ) );
             } else if ( "HTTPIndex" in _content &&
                         _content.HTTPIndex instanceof Components.interfaces.nsIHTTPIndex ) {
@@ -298,7 +309,7 @@ nsContextMenu.prototype = {
                         this.onImage = true;
                         var url = cssAttr.toLowerCase().replace(/url\("*(.+)"*\)/, "$1");
                         // Convert attribute to absolute URL.
-                        this.imageURL = this.makeURLAbsolute( this.target.ownerDocument, url );
+                        this.imageURL = this.makeURLAbsolute( this.target.baseURI, url );
                     }
                 } catch ( exception ) {
                 }
@@ -415,13 +426,13 @@ nsContextMenu.prototype = {
     saveBGImage : function () {
         this.savePage( this.bgImageURL(), true );
     },
-    // Generate link URL and put it on clibboard.
-    copyLink : function () {
-        this.copyToClipboard( this.linkURL() );
-    },
-    // Generate image URL and put it on the clipboard.
-    copyImage : function () {
-        this.copyToClipboard( this.imageURL );
+
+    // Open Metadata window for node
+    showMetadata : function () {
+        window.openDialog(  "chrome://navigator/content/metadata.xul",
+                            "_blank",
+                            "scrollbars,resizable,chrome,dialog=no",
+                            this.target);
     },
 
     ///////////////
@@ -513,11 +524,11 @@ nsContextMenu.prototype = {
         if (this.link.href) {
           return this.link.href;
         }
-        // XXX TODO Relative URLs, XML Base
         var href = this.link.getAttributeNS("http://www.w3.org/1999/xlink","href");
         if (href == "") {
           throw "Empty href"; // Without this we try to save as the current doc, for example, HTML case also throws if empty
         }
+        href = this.makeURLAbsolute(this.link.baseURI,href);
         return href;
     },
     // Get text of link (if possible).
@@ -573,48 +584,6 @@ nsContextMenu.prototype = {
         // Not implemented so all text-selected-based options are disabled.
         return "true";
     },
-    // Copy link/image url to clipboard.
-    copyToClipboard : function ( text ) {
-        // Get clipboard.
-        var clipboard = this.getService( "@mozilla.org/widget/clipboard;1",
-                                         "nsIClipboard" );
-
-        // Create tranferable that will transfer the text.
-        var transferable = this.createInstance( "@mozilla.org/widget/transferable;1",
-                                                "nsITransferable" );
-
-        if ( clipboard && transferable ) {
-          transferable.addDataFlavor( "text/unicode" );
-          // Create wrapper for text.
-          var data = this.createInstance( "@mozilla.org/supports-wstring;1",
-                                          "nsISupportsWString" );
-          if ( data ) {
-            data.data = text;
-            transferable.setTransferData( "text/unicode", data, text.length * 2 );
-            // Put on clipboard.
-            clipboard.setData( transferable, null, Components.interfaces.nsIClipboard.kGlobalClipboard );
-          }
-        }
-
-        // Create a second transferable to copy selection.  Unix needs this,
-        // other OS's will probably map to a no-op.
-        var transferableForSelection = this.createInstance( "@mozilla.org/widget/transferable;1",
-                                                         "nsITransferable" );
-
-        if ( clipboard && transferableForSelection ) {
-          transferableForSelection.addDataFlavor( "text/unicode" );
-          // Create wrapper for text.
-          var selectionData = this.createInstance( "@mozilla.org/supports-wstring;1",
-                                          "nsISupportsWString" );
-          if ( selectionData ) {
-            selectionData.data = text;
-            transferableForSelection.setTransferData( "text/unicode", selectionData, text.length * 2 );
-            // Put on clipboard.
-            clipboard.setData( transferableForSelection, null,
-                               Components.interfaces.nsIClipboard.kSelectionClipboard );
-          }
-        }
-    },
     // Determine if target <object> is an image.
     objectIsImage : function ( objElem ) {
         var result = false;
@@ -633,22 +602,15 @@ nsContextMenu.prototype = {
         // Extract url from data= attribute.
         var data = objElem.getAttribute( "data" );
         // Make it absolute.
-        return this.makeURLAbsolute( objElem.ownerDocument, data );
+        return this.makeURLAbsolute( objElem.baseURI, data );
     },
     // Convert relative URL to absolute, using document's <base>.
-    makeURLAbsolute : function ( doc, url ) {
+    makeURLAbsolute : function ( base, url ) {
         // Construct nsIURL.
         var baseURL = this.createInstance( "@mozilla.org/network/standard-url;1", "nsIURL" );
-        // Initialize from document url.
-        baseURL.spec = doc.location.href;
-        // Look for <base> tag.
-        var baseTags = doc.getElementsByTagName( "BASE" );
-        if ( baseTags && baseTags.length ) {
-            // Reset base URL using href attribute of <base> tag.
-            var href = baseTags[ baseTags.length - 1 ].getAttribute( "href" );
-            baseURL.spec = baseURL.resolve( href );
-        }
-        // Finally, convert argument url using base.
+        // Initialize from base url.
+        baseURL.spec = base;
+        // Resolve
         var result = baseURL.resolve( url );
         return result;
     },
@@ -658,11 +620,15 @@ nsContextMenu.prototype = {
         // Default is to save current page.
         if ( !url ) {
             url = window._content.location.href;
-            // Post data comes from appcore.
-            if ( window.appCore ) {
-                postData = window.appCore.postData;
+
+            try {
+                var sessionHistory = getWebNavigation().sessionHistory;
+                var entry = sessionHistory.getEntryAtIndex(sessionHistory.index, false);
+                postData = entry.postData;
+            } catch(e) {
             }
         }
+
         // Use stream xfer component to prompt for destination and save.
         var xfer = this.getService( "@mozilla.org/appshell/component/xfer;1",
                                     "nsIStreamTransfer" );

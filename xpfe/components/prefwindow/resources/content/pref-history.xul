@@ -19,23 +19,19 @@
    Rights Reserved.
    
    Contributor(s): 
+     Jason Eager <jce2@po.cwru.edu>
   -->
 
 <?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
-<?xul-overlay href="chrome://global/content/dialogOverlay.xul"?>
+<?xml-stylesheet href="chrome://communicator/skin/dialogOverlay.css" type="text/css"?>
 
 <!DOCTYPE window SYSTEM "chrome://communicator/locale/pref/pref-history.dtd" >
 
-<window debug="false" xmlns:html="http://www.w3.org/1999/xhtml"
+<window xmlns:html="http://www.w3.org/1999/xhtml"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         class="color-dialog"
-        orient="vertical" title="&title.label;"
+        orient="vertical"
         onload="parent.initPanel('chrome://communicator/content/pref/pref-history.xul');">
-
-  <!-- XXX: Replace strres.js when prefutilities is converted -->
-  <script type="application/x-javascript" src="chrome://global/content/strres.js"/>
-  <script type="application/x-javascript" src="chrome://communicator/content/pref/prefutilities.js"/>
-  <script type="application/x-javascript" src="chrome://global/content/nsJSComponentManager.js"/>
 
   <script type="application/x-javascript">
 
@@ -48,16 +44,21 @@
 
     var button = document.getElementById("ClearUrlBarHistoryButton");
     try {
-      var urlBarHist = nsJSComponentManager.getService("@mozilla.org/browser/urlbarhistory;1","nsIUrlbarHistory");
-      button.disabled = urlBarHist.count == 0;
+      var urlBarHist = Components.classes["@mozilla.org/browser/urlbarhistory;1"]
+                                 .getService(Components.interfaces.nsIUrlbarHistory);
+      var isBtnLocked = parent.hPrefWindow.getPrefIsLocked(button.getAttribute("prefstring"));
+      button.disabled = ( urlBarHist.count == 0 ) || isBtnLocked ;
     }
     catch(ex) {
     } 
   }
 
   function onHistoryOK()
-  {    
-    var maxSize = document.getElementById('shistMax').value;
+  {
+    var data = parent.hPrefWindow.wsm.dataManager.pageData["chrome://communicator/content/pref/pref-history.xul"];
+    if ( "GetFields" in window )
+      data = GetFields();
+    var maxSize = data.shistMax;
     if (maxSize < 0) {
       // Don't bother calling in to the component if the value is illegal.
       // I need a way to enforce proper value and/or stop the pref
@@ -65,11 +66,35 @@
       return;
     }
     try {
-      var SHistory = nsJSComponentManager.getService("@mozilla.org/browser/shistory;1", "nsISHistory");
+      var SHistory = Components.classes["@mozilla.org/browser/shistory;1"]
+                               .getService(Components.interfaces.nsISHistory);
       SHistory.maxLength = maxSize;
     }
     catch (ex) {
     }
+  }
+  
+  function GetFields() {
+    var data = {};
+    data.shistMax = document.getElementById('shistMax').value;
+    return data;
+  }
+
+
+  function prefClearGlobalHistory()
+  {
+    var globalHistory = Components.classes["@mozilla.org/browser/global-history;1"]
+                                  .getService(Components.interfaces.nsIBrowserHistory);
+    globalHistory.removeAllPages();
+  }
+
+  function prefClearUrlbarHistory()
+  {
+    var button = document.getElementById("ClearUrlBarHistoryButton");
+    var urlBarHistory = Components.classes["@mozilla.org/browser/urlbarhistory;1"]
+                                  .getService(Components.interfaces.nsIUrlbarHistory);
+    urlBarHistory.clearHistory();
+    button.setAttribute("disabled","true");
   }
   ]]>
   </script>
@@ -88,7 +113,9 @@
       <text class="label" value="&days.label;"/>
       <spring flex="1"/>
       <button class="dialog" label="&clearHistory.label;" accesskey="&clearHistory.accesskey;"
-        oncommand="prefClearGlobalHistory();"/>
+        oncommand="prefClearGlobalHistory();"
+        id="browserClearHistory" pref="true" preftype="bool"
+        prefstring="pref.browser.history.disable_button.clear_hist" prefattribute="disabled"/>
     </box>
   </titledbox>  
   
@@ -99,7 +126,9 @@
       <html flex="1">&clearLocationBar.label;</html>
       <box autostretch="never" halign="right">
         <button class="dialog" id="ClearUrlBarHistoryButton" label="&clearLocationBarButton.label;" accesskey="&clearLocationBarButton.accesskey;"
-         oncommand="prefClearUrlbarHistory();"/>
+         oncommand="prefClearUrlbarHistory();"
+         pref="true" preftype="bool"
+         prefstring="pref.browser.history.disable_button.clear_urlbar" prefattribute="disabled"/>
       </box>
     </box>
   </titledbox>  

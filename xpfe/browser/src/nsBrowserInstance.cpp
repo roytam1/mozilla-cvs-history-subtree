@@ -34,8 +34,6 @@
 #include "nsIDocShellTreeItem.h"
 #include "nsISHistory.h"
 #include "nsIWebNavigation.h"
-#include "nsIWebProgress.h"
-#include "nsIXULBrowserWindow.h"
 #include "nsPIDOMWindow.h"
 #include "nsIHTTPChannel.h"
 
@@ -60,6 +58,7 @@
 #include "nsIDocShell.h"
 #include "nsIWebShellWindow.h"
 #include "nsIWebBrowserChrome.h"
+#include "nsIWindowWatcher.h"
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
 
@@ -576,11 +575,7 @@ nsresult nsBrowserInstance::GetFocussedContentWindow(nsIDOMWindowInternal** outF
   if (!focussedWindow)
     return GetContentWindow(outFocussedWindow);   // default to content window
 
-  if (focussedWindow) {
-    return CallQueryInterface(focussedWindow, outFocussedWindow);
-  }
-
-  return NS_OK;
+  return CallQueryInterface(focussedWindow, outFocussedWindow);
 }
 
 
@@ -594,7 +589,6 @@ NS_IMPL_RELEASE(nsBrowserInstance)
 NS_INTERFACE_MAP_BEGIN(nsBrowserInstance)
    NS_INTERFACE_MAP_ENTRY(nsIBrowserInstance)
    NS_INTERFACE_MAP_ENTRY(nsIURIContentListener)
-   NS_INTERFACE_MAP_ENTRY(nsIWebProgressListener)
    NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIURIContentListener)
 NS_INTERFACE_MAP_END
@@ -873,184 +867,6 @@ nsBrowserInstance::FindNext()
 }
 
 //*****************************************************************************
-//  Helper functions for notifying observers when documents start and finish
-//  loading.
-//*****************************************************************************
-
-nsresult nsBrowserInstance::StartDocumentLoad(nsIDOMWindow *aDOMWindow,
-                                              nsIRequest *request)
-{
-  nsresult rv;
-
-  nsCOMPtr<nsIURI> uri;
-  nsXPIDLCString uriCString;
-  nsAutoString urlStr;
-
-  nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
-  if (!aChannel) return NS_ERROR_FAILURE;
-
-  // Get the URI strign and convert it to unicode...
-  rv = aChannel->GetURI(getter_AddRefs(uri));
-  if (NS_FAILED(rv)) return rv;
-
-  rv = uri->GetSpec(getter_Copies(uriCString));
-  if (NS_FAILED(rv)) return rv;
-
-  urlStr.AssignWithConversion(uriCString);
-
-#ifdef DEBUG_warren
-  if (gTimerLog == nsnull)
-    gTimerLog = PR_NewLogModule("Timer");
-  mLoadStartTime = PR_IntervalNow();
-  PR_LOG(gTimerLog, PR_LOG_DEBUG, 
-         (">>>>> Starting timer for %s\n", (const char *)uriCString));
-  printf(">>>>> Starting timer for %s\n", (const char *)uriCString);
-#endif
-
-  //
-  // If this document notification is for a frame then ignore it...
-  //
-  nsCOMPtr<nsIDOMWindowInternal> contentWindow;
-  nsCOMPtr<nsIDOMWindow> thisDOMWindow;
-
-  rv = GetContentWindow(getter_AddRefs(contentWindow));
-  if (NS_FAILED(rv)) return rv;
-
-  thisDOMWindow = do_QueryInterface(contentWindow);
-  if (aDOMWindow != thisDOMWindow.get()) {
-    // Since the notification is from a different DOM window, just ignore it.
-    return NS_OK;
-  }
-
-  // Notify observers that a document load has started in the
-  // content window.
-  NS_WITH_SERVICE(nsIObserverService, observer, NS_OBSERVERSERVICE_CONTRACTID, &rv);
-  if (NS_FAILED(rv)) return rv;
-
-  rv = observer->Notify(contentWindow, NS_LITERAL_STRING("StartDocumentLoad").get(), urlStr.GetUnicode());
-
-  // XXX Ignore rv for now. They are using nsIEnumerator instead of
-  // nsISimpleEnumerator.
-
-  return NS_OK;
-}
-
-nsresult nsBrowserInstance::EndDocumentLoad(nsIDOMWindow *aDOMWindow,
-                                            nsIRequest *request,
-                                            nsresult aStatus)
-{
-  nsresult rv;
-
-  nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
-  if (!aChannel) return NS_ERROR_FAILURE;
-
-  nsCOMPtr<nsIURI> uri;
-  rv = aChannel->GetOriginalURI(getter_AddRefs(uri));
-  if (NS_FAILED(rv)) return rv;
-
-  nsXPIDLCString urlCString;
-  rv = uri->GetSpec(getter_Copies(urlCString));
-  if (NS_FAILED(rv)) return rv;
-
-#ifdef DEBUG_warren
-  if (gTimerLog == nsnull)
-    gTimerLog = PR_NewLogModule("Timer");
-  PRIntervalTime end = PR_IntervalNow();
-  PRIntervalTime diff = end - mLoadStartTime;
-  PR_LOG(gTimerLog, PR_LOG_DEBUG, 
-         (">>>>> Stopping timer for %s. Elapsed: %.3f\n", 
-          (const char *)urlCString, PR_IntervalToMilliseconds(diff) / 1000.0));
-  printf(">>>>> Stopping timer for %s. Elapsed: %.3f\n", 
-         (const char *)urlCString, PR_IntervalToMilliseconds(diff) / 1000.0);
-#endif
-
-  //
-  // If this document notification is for a frame then ignore it...
-  //
-  if (aDOMWindow) {
-    nsCOMPtr<nsIDOMWindow> topDOMWindow;
-
-    aDOMWindow->GetTop(getter_AddRefs(topDOMWindow));
-
-    if (aDOMWindow != topDOMWindow.get()) {
-      // Since the notification is from a child DOM window, just ignore it.
-      return NS_OK;
-    }
-  }
-
-  nsCOMPtr<nsIDOMWindowInternal> contentWindow;
-  rv = GetContentWindow(getter_AddRefs(contentWindow));
-  if (NS_FAILED(rv)) return rv;
-
-  //
-  // XXX: The DocLoader should never be busy at this point!!  
-  //
-#ifdef DEBUG
-  nsCOMPtr<nsIScriptGlobalObject> globalObj(do_QueryInterface(contentWindow));
-
-  if (globalObj) {
-    nsCOMPtr<nsIDocShell> docShell;
-    globalObj->GetDocShell(getter_AddRefs(docShell));
-    nsCOMPtr<nsIWebShell> webShell(do_QueryInterface(docShell));
-
-    if (webShell) {
-      nsCOMPtr<nsIDocumentLoader> docLoader;
-      webShell->GetDocumentLoader(*getter_AddRefs(docLoader));
-
-      if (docLoader) {
-        PRBool isBusy = PR_FALSE;
-        docLoader->IsBusy(&isBusy);
-
-        if (isBusy) {
-          NS_ASSERTION(0, "The DocLoader is still busy... There is a bug in End Document notifications\n");
-          return NS_OK;
-        }
-      }
-    }
-  }
-#endif 
-
-  /* If this is a frame, don't do any of the Global History
-   * & observer thingy 
-   */
-  NS_WITH_SERVICE(nsIObserverService, observer, NS_OBSERVERSERVICE_CONTRACTID, &rv);
-  if (NS_FAILED(rv)) return rv;
-
-  // Notify observers that a document load has started in the
-  // content window.
-  rv = observer->Notify(contentWindow,
-                        NS_SUCCEEDED(aStatus) ? NS_LITERAL_STRING("EndDocumentLoad").get()
-                                              : NS_LITERAL_STRING("FailDocumentLoad").get(),
-                        NS_ConvertASCIItoUCS2(urlCString).get());
-
-  // XXX Ignore rv for now. They are using nsIEnumerator instead of
-  // nsISimpleEnumerator.
-
-  /* To satisfy a request from the QA group */
-  nsCOMPtr<nsIInputStream> postData;
-  if (NS_SUCCEEDED(aStatus)) {
-    // Remember post data for http channels.
-    nsCOMPtr<nsIHTTPChannel> httpChannel(do_QueryInterface(aChannel));
-    if (httpChannel)
-      httpChannel->GetUploadStream(getter_AddRefs(postData));
-  }
-
-//#ifdef DEBUG
-  if (NS_SUCCEEDED(aStatus)) {
-    fprintf(stdout, "Document %s loaded successfully\n", urlCString.get());
-    fflush(stdout);
-  } else {
-    fprintf(stdout, "Error loading URL %s: %0x \n", urlCString.get(), aStatus);
-    fflush(stdout);
-  }
-//#endif
-
-  SetPostData(postData);
-
-  return NS_OK;
-}
-
-//*****************************************************************************
 //    nsBrowserInstance: nsIURIContentListener
 //*****************************************************************************
 
@@ -1179,99 +995,6 @@ nsBrowserInstance::SetLoadCookie(nsISupports * aLoadCookie)
 }
 
 //*****************************************************************************
-// nsBrowserInstance::nsIWebProgressListener
-//*****************************************************************************
-
-NS_IMETHODIMP
-nsBrowserInstance::OnProgressChange(nsIWebProgress* aWebProgress,
-                                    nsIRequest* aRequest,
-                                    PRInt32 aCurSelfProgress,
-                                    PRInt32 aMaxSelfProgress, 
-                                    PRInt32 aCurTotalProgress,
-                                    PRInt32 aMaxTotalProgress)
-{
-  EnsureXULBrowserWindow();
-  if(mXULBrowserWindow) {
-      mXULBrowserWindow->OnProgress(aRequest, aCurTotalProgress, aMaxTotalProgress);
-  }
-  return NS_OK;
-}
-      
-NS_IMETHODIMP
-nsBrowserInstance::OnStateChange(nsIWebProgress* aWebProgress,
-                                 nsIRequest* aRequest,
-                                 PRInt32 aStateFlags,
-                                 nsresult aStatus)
-{
-  nsresult rv;
-
-  EnsureXULBrowserWindow();
-
-  // Ignore this notification if it did not originate from a channel...
-  if (!aRequest) {
-    return NS_OK;
-  }
-
-  if (aStateFlags & nsIWebProgressListener::STATE_IS_NETWORK) {
-    nsCOMPtr<nsIDOMWindow> domWindow;
-
-    rv = aWebProgress->GetDOMWindow(getter_AddRefs(domWindow));
-    if (NS_SUCCEEDED(rv)) {
-      if (aStateFlags & nsIWebProgressListener::STATE_START) {
-        rv = StartDocumentLoad(domWindow, aRequest);
-      }
-      else if (aStateFlags & nsIWebProgressListener::STATE_STOP) {
-        rv = EndDocumentLoad(domWindow, aRequest, aStatus);
-      }
-    }
-  }
-
-  if(mXULBrowserWindow) {
-    mXULBrowserWindow->OnStateChange(aRequest, aStateFlags);
-  }
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsBrowserInstance::OnLocationChange(nsIWebProgress* aWebProgress,
-                                                  nsIRequest* aRequest,
-                                                  nsIURI* aLocation)
-{
-   EnsureXULBrowserWindow();
-   if(!mXULBrowserWindow)
-      return NS_OK;
-
-   nsXPIDLCString spec;
-   aLocation->GetSpec(getter_Copies(spec));
-   nsAutoString specW; specW.AssignWithConversion(spec);
-   mXULBrowserWindow->OnLocationChange(specW.GetUnicode());
-
-   return NS_OK;
-}
-
-NS_IMETHODIMP 
-nsBrowserInstance::OnStatusChange(nsIWebProgress* aWebProgress,
-                                  nsIRequest* aRequest,
-                                  nsresult aStatus,
-                                  const PRUnichar* aMessage)
-{
-  EnsureXULBrowserWindow();
-  if(mXULBrowserWindow) {
-      mXULBrowserWindow->OnStatus(aRequest, aStatus, aMessage);
-  }
-  return NS_OK;
-}
-
-
-NS_IMETHODIMP 
-nsBrowserInstance::OnSecurityChange(nsIWebProgress *aWebProgress, 
-                                    nsIRequest *aRequest, 
-                                    PRInt32 state)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-
-//*****************************************************************************
 // nsBrowserInstance: Helpers
 //*****************************************************************************
 
@@ -1289,25 +1012,6 @@ nsBrowserInstance::InitializeSearch(nsIDOMWindowInternal* windowToSearch, nsIFin
         rv = finder->ResetContext(mSearchContext, windowToSearch, nsnull);
     
     return rv;
-}
-
-NS_IMETHODIMP
-nsBrowserInstance::EnsureXULBrowserWindow()
-{
-   if(mXULBrowserWindow)
-      return NS_OK;
-   
-   nsCOMPtr<nsPIDOMWindow> piDOMWindow(do_QueryInterface(mDOMWindow));
-   NS_ENSURE_TRUE(piDOMWindow, NS_ERROR_FAILURE);
-
-   nsCOMPtr<nsISupports> xpConnectObj;
-   piDOMWindow->GetObjectProperty(NS_LITERAL_STRING("XULBrowserWindow").get(), getter_AddRefs(xpConnectObj));
-   mXULBrowserWindow = do_QueryInterface(xpConnectObj);
-
-   if(mXULBrowserWindow)
-      return NS_OK;
-
-   return NS_ERROR_FAILURE;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -1469,39 +1173,13 @@ NS_IMETHODIMP nsBrowserContentHandler::HandleContent(const char * aContentType,
                                                      nsISupports * aWindowContext,
                                                      nsIRequest * aRequest)
 {
-  // we need a dom window to create the new browser window...in order
-  // to do this, we need to get the window mediator service and ask it for a dom window
+  // create a new browser window to handle the content
   NS_ENSURE_ARG(aRequest);
-  nsCOMPtr<nsIDOMWindowInternal> parentWindow;
-  JSContext* jsContext = nsnull;
+  nsCOMPtr<nsIDOMWindow> parentWindow;
 
   if (aWindowContext)
-  {
     parentWindow = do_GetInterface(aWindowContext);
-    if (parentWindow)
-    {
-      nsCOMPtr<nsIScriptGlobalObject> sgo;     
-      sgo = do_QueryInterface( parentWindow );
-      if (sgo)
-      {
-        nsCOMPtr<nsIScriptContext> scriptContext;
-        sgo->GetContext( getter_AddRefs( scriptContext ) );
-        if (scriptContext)
-          jsContext = (JSContext*)scriptContext->GetNativeContext();
-      }
 
-    }
-  }
-
-  // if we still don't have a parent window, try to use the hidden window...
-  if (!parentWindow || !jsContext)
-  {
-    nsCOMPtr<nsIAppShellService> windowService (do_GetService(kAppShellServiceCID));
-    NS_ENSURE_SUCCESS(windowService->GetHiddenWindowAndJSContext(getter_AddRefs(parentWindow), &jsContext),
-                      NS_ERROR_FAILURE);
-  }
-
-  
   nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(aRequest);
   if (!aChannel) return NS_ERROR_FAILURE;
 
@@ -1511,25 +1189,22 @@ NS_IMETHODIMP nsBrowserContentHandler::HandleContent(const char * aContentType,
   nsXPIDLCString spec;
   uri->GetSpec(getter_Copies(spec));
 
-  nsAutoString value;
-  value.AssignWithConversion(spec);
-
   // we only want to pass in the window target name if it isn't something like _new or _blank....
   // i.e. only real names like "my window", etc...
-  nsAutoString windowTarget;
-  windowTarget.AssignWithConversion(aWindowTarget);
-
+  const char * windowTarget = aWindowTarget;
   if (!aWindowTarget || !nsCRT::strcasecmp(aWindowTarget, "_new") ||
                         !nsCRT::strcasecmp(aWindowTarget, "_blank") ||
                         !nsCRT::strcasecmp(aWindowTarget, "_top") ||
                         !nsCRT::strcasecmp(aWindowTarget, "_parent") ||
                         !nsCRT::strcasecmp(aWindowTarget, "_content"))
-    windowTarget.Truncate();
+    windowTarget = "";
 
-  nsCOMPtr<nsIDOMWindow> newWindow;
-
-  parentWindow->Open(value, windowTarget, NS_LITERAL_STRING(""),
-                     getter_AddRefs(newWindow));
+  nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+  if (wwatch) {
+    nsCOMPtr<nsIDOMWindow> newWindow;
+    wwatch->OpenWindow(parentWindow, spec, windowTarget, 0, 0,
+              getter_AddRefs(newWindow));
+  }
 
   // now abort the current channel load...
   aRequest->Cancel(NS_BINDING_ABORTED);
@@ -1620,17 +1295,3 @@ static nsModuleComponentInfo components[] = {
 
 NS_IMPL_NSGETMODULE("nsBrowserModule", components)
 
-
-NS_IMETHODIMP
-nsBrowserInstance::GetPostData( nsIInputStream **aResult ) {
-    NS_ENSURE_ARG_POINTER( aResult );
-    *aResult = mPostData;
-    NS_IF_ADDREF( *aResult );
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsBrowserInstance::SetPostData( nsIInputStream *aInputStream ) {
-    mPostData = aInputStream;
-    return NS_OK;
-}

@@ -24,18 +24,6 @@
     </content>
   </binding>
 
-  <binding id="scrollbar">
-    <content>
-      <xul:scrollbarbutton type="decrement">
-        <xul:image inherits="src"/>
-      </xul:scrollbarbutton>
-      <xul:slider flex="1" inherits="curpos,maxpos,pageincrement,increment"/>
-      <xul:scrollbarbutton type="increment">
-      <xul:image inherits="src"/>
-    </xul:scrollbarbutton>
-    </content>
-  </binding>
-
   <binding id="tab">
     <content>
       <xul:image inherits="src" class="tab-left"/>
@@ -263,24 +251,24 @@
       </xul:box>
       <xul:popupset>
         <xul:popup oncreate="this.parentNode.parentNode.doPopupItemEnabling(this); this.focus();">
-          <xul:menuitem label="&undoCmd.label;" accesskey="&undoCmd.accesskey;" command="cmd_undo" oncommand="
+          <xul:menuitem label="&undoCmd.label;" accesskey="&undoCmd.accesskey;" cmd="cmd_undo" oncommand="
             var controller = document.commandDispatcher.getControllerForCommand('cmd_undo');              
             controller.doCommand('cmd_undo');"/>
           <xul:menuseparator/>
-          <xul:menuitem label="&cutCmd.label;" accesskey="&cutCmd.accesskey;" command="cmd_cut" oncommand="
+          <xul:menuitem label="&cutCmd.label;" accesskey="&cutCmd.accesskey;" cmd="cmd_cut" oncommand="
             var controller = document.commandDispatcher.getControllerForCommand('cmd_cut');
             controller.doCommand('cmd_cut');"/>
-          <xul:menuitem label="&copyCmd.label;" accesskey="&copyCmd.accesskey;" command="cmd_copy" oncommand="
+          <xul:menuitem label="&copyCmd.label;" accesskey="&copyCmd.accesskey;" cmd="cmd_copy" oncommand="
             var controller = document.commandDispatcher.getControllerForCommand('cmd_copy');
             controller.doCommand('cmd_copy');"/>
-          <xul:menuitem label="&pasteCmd.label;" accesskey="&pasteCmd.accesskey;" command="cmd_paste" oncommand="
+          <xul:menuitem label="&pasteCmd.label;" accesskey="&pasteCmd.accesskey;" cmd="cmd_paste" oncommand="
             var controller = document.commandDispatcher.getControllerForCommand('cmd_paste');
             controller.doCommand('cmd_paste');"/>
-          <xul:menuitem label="&deleteCmd.label;" accesskey="&deleteCmd.accesskey;" command="cmd_delete" oncommand="
+          <xul:menuitem label="&deleteCmd.label;" accesskey="&deleteCmd.accesskey;" cmd="cmd_delete" oncommand="
             var controller = document.commandDispatcher.getControllerForCommand('cmd_delete');
             controller.doCommand('cmd_delete');"/>
            <xul:menuseparator/>
-          <xul:menuitem label="&selectAllCmd.label;" accesskey="&selectAllCmd.accesskey;" command="cmd_selectAll" oncommand="
+          <xul:menuitem label="&selectAllCmd.label;" accesskey="&selectAllCmd.accesskey;" cmd="cmd_selectAll" oncommand="
             var controller = document.commandDispatcher.getControllerForCommand('cmd_selectAll');
             controller.doCommand('cmd_selectAll');"/>
         </xul:popup>
@@ -328,7 +316,7 @@
           <![CDATA[
             var children = popupNode.childNodes;
             for (var i = 0; i < children.length; i++) {              
-              var command = children[i].getAttribute("command");
+              var command = children[i].getAttribute("cmd");
               if (command) {
                 var controller = document.commandDispatcher.getControllerForCommand(command);
                 var enabled = controller.isCommandEnabled(command);
@@ -399,24 +387,24 @@
       </xul:box>
       <xul:popupset>
         <xul:popup oncreate="this.parentNode.parentNode.doPopupItemEnabling(this); this.focus();">
-          <xul:menuitem label="&undoCmd.label;" accesskey="&undoCmd.accesskey;" command="cmd_undo" oncommand="
+          <xul:menuitem label="&undoCmd.label;" accesskey="&undoCmd.accesskey;" cmd="cmd_undo" oncommand="
             var controller = document.commandDispatcher.getControllerForCommand('cmd_undo');              
             controller.doCommand('cmd_undo');"/>
           <xul:menuseparator/>
-          <xul:menuitem label="&cutCmd.label;" accesskey="&cutCmd.accesskey;" command="cmd_cut" oncommand="
+          <xul:menuitem label="&cutCmd.label;" accesskey="&cutCmd.accesskey;" cmd="cmd_cut" oncommand="
             var controller = document.commandDispatcher.getControllerForCommand('cmd_cut');
             controller.doCommand('cmd_cut');"/>
-          <xul:menuitem label="&copyCmd.label;" accesskey="&copyCmd.accesskey;" command="cmd_copy" oncommand="
+          <xul:menuitem label="&copyCmd.label;" accesskey="&copyCmd.accesskey;" cmd="cmd_copy" oncommand="
             var controller = document.commandDispatcher.getControllerForCommand('cmd_copy');
             controller.doCommand('cmd_copy');"/>
-          <xul:menuitem label="&pasteCmd.label;" accesskey="&pasteCmd.accesskey;" command="cmd_paste" oncommand="
+          <xul:menuitem label="&pasteCmd.label;" accesskey="&pasteCmd.accesskey;" cmd="cmd_paste" oncommand="
             var controller = document.commandDispatcher.getControllerForCommand('cmd_paste');
             controller.doCommand('cmd_paste');"/>
-          <xul:menuitem label="&deleteCmd.label;" accesskey="&deleteCmd.accesskey;" command="cmd_delete" oncommand="
+          <xul:menuitem label="&deleteCmd.label;" accesskey="&deleteCmd.accesskey;" cmd="cmd_delete" oncommand="
             var controller = document.commandDispatcher.getControllerForCommand('cmd_delete');
             controller.doCommand('cmd_delete');"/>
            <xul:menuseparator/>
-          <xul:menuitem label="&selectAllCmd.label;" accesskey="&selectAllCmd.accesskey;" command="cmd_selectAll" oncommand="
+          <xul:menuitem label="&selectAllCmd.label;" accesskey="&selectAllCmd.accesskey;" cmd="cmd_selectAll" oncommand="
             var controller = document.commandDispatcher.getControllerForCommand('cmd_selectAll');
             controller.doCommand('cmd_selectAll');"/>
         </xul:popup>
@@ -554,6 +542,9 @@
         </setter>
       </property>
     </implementation>     
+    <handlers>
+      <handler event="contextmenu" action="event.preventDefault();"/>
+    </handlers>
   </binding>
   
   
@@ -676,6 +667,154 @@
     </xul:vbox>
     </content>
   </binding>
+
+  <!--
+    Inline Editable UI Element
+    - This binding forms the basis of the inline edit treecell and the inline edit
+    - buttons. 
+    - TODO: investigate creating extensions to the wrapper widgets (tree, toolbar)
+    -       to make them provide some object implementing an interface similar to
+    -       outliner's so we can build in some of the ile behavior (such as going
+    -       in and out of the mode, asking isEditable etc) so as to remove some of
+    -       the burden from the implementor. 
+    -
+    - Note that this widget will be no longer used in the bookmarks window once 
+    - outliner is extended to have this functionality built in. 
+    -->
+  <binding id="inline-edit-base" extends="chrome://global/content/xulBindings.xml#basetext">
+    <implementation>
+      <property name="_mode">0</property>
+      <method name="setMode">
+        <parameter name="val"/>
+        <body>
+        <![CDATA[
+          var ctr = document.getAnonymousElementByAttribute(this, "ileattr", "text-container");
+          var txt = document.getAnonymousElementByAttribute(this, "ileattr", "text");
+          this.setAttribute("mode", val);
+          if (val == "edit") {
+            var nodes = document.getAnonymousNodes(this);
+
+            if (txt.getAttribute("hidden") != "true") {
+              ctr.setAttribute("mode", "edit");
+              var width = ctr.boxObject.width;
+              txt.setAttribute("hidden", "true");
+              const kXULNS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
+              var field = document.createElementNS(kXULNS, "textbox");
+              field.className = "textbox-inline-edit";
+              field.setAttribute("flex", "1");
+              field.setAttribute("value", txt.getAttribute("value"));
+              field.setAttribute("ileattr", "field");
+              field.setAttribute("rootcontent", txt.getAttribute("rootcontent"));
+              field.setAttribute("style", "width: " + width + "px");
+              ctr.appendChild(field);
+              field.addEventListener("keydown", this.fieldKeyDown, false);
+              field.addEventListener("change", this.fieldChange, false);
+              field.select();
+            }
+          }
+          else {
+            nodes = document.getAnonymousNodes(this);
+            var fld = document.getAnonymousElementByAttribute(this, "ileattr", "field");
+            if (fld && txt.getAttribute("hidden") == "true") {
+              ctr.removeAttribute("mode");
+              fld.blur();
+              ctr.removeChild(fld);
+              txt.removeAttribute("hidden");
+            }
+          }
+        ]]>
+        </body>
+      </method>
+      <property name="_observers">
+      <![CDATA[
+        ({
+          reject: [], 
+          accept: []
+        })
+      ]]>
+      </property>
+      <property name="valueIsRejected">false</property>
+      <method name="addObserver">
+        <parameter name="aObserver"/>
+        <parameter name="aTopic"/>
+        <parameter name="aParams"/>
+        <body>
+          this._observers[aTopic].push({ callback: aObserver, params: aParams });
+        </body>
+      </method>
+      <method name="fieldKeyDown">
+        <parameter name="aEvent"/>
+        <body>
+        <![CDATA[
+          var rootLocalName = aEvent.target.getAttribute("rootcontent");
+          if (rootLocalName) {
+            // Root content is the bound element. 
+            var rootContent = aEvent.target;
+            while (rootContent && rootContent.localName != rootLocalName) 
+              rootContent = rootContent.parentNode;
+            
+            if (rootContent) {
+              var ctr = document.getAnonymousElementByAttribute(rootContent, "ileattr", "text-container");
+              if (aEvent.keyCode == 13) {
+                rootContent.valueIsRejected = false;
+                rootContent.fieldChange(aEvent);
+              }
+              if (aEvent.keyCode == 27) {
+                rootContent.valueIsRejected = true;
+                var fld = document.getAnonymousElementByAttribute(rootContent, "ileattr", "field");
+                for (i = 0; i < rootContent._observers["reject"].length; ++i) 
+                  rootContent._observers["reject"][i].callback(rootContent._observers["reject"][i].params.concat(fld.value), "reject");
+                if ("setMode" in rootContent) 
+                  rootContent.setMode("normal");
+              }
+            }
+          }
+          aEvent.preventBubble();
+        ]]>
+        </body>
+      </method>
+      <property name="valueIsAccepted">false</property>
+      <method name="fieldChange">
+        <parameter name="aEvent"/>
+        <body>
+        <![CDATA[
+          var rootLocalName = this.getAttribute("rootcontent");
+          if (rootLocalName) {
+            // Root content is the bound element. 
+            var rootContent = this;
+            while (rootContent && rootContent.localName != rootLocalName) 
+              rootContent = rootContent.parentNode;
+            
+            if (rootContent) {
+              var ctr = document.getAnonymousElementByAttribute(rootContent, "ileattr", "text-container");
+              if (!rootContent.valueIsRejected) {
+                var fld = document.getAnonymousElementByAttribute(rootContent, "ileattr", "field");
+                for (var i = 0; i < rootContent._observers["accept"].length; ++i)
+                  rootContent._observers["accept"][i].callback(rootContent._observers["accept"][i].params.concat(fld.value), "accept");
+                if ("setMode" in rootContent)
+                  rootContent.setMode("normal");
+              }
+            }
+          }
+        ]]>
+        </body>
+      </method>
+    </implementation>
+  </binding>
+
+  <!-- inline editable buttons -->
+  <binding id="buttonleft-ile" extends="chrome://global/content/xulBindings.xml#inline-edit-base">
+    <content>
+      <xul:hbox class="button-internal-box" autostretch="never" flex="1">
+        <xul:image class="button-icon" inherits="src"/>
+        <xul:vbox class="button-text-container" autostretch="never" flex="1" ileattr="text-container">
+          <xul:text class="button-text" inherits="value=label,accesskey,crop,dragover-top" ileattr="text" rootcontent="button"/>
+        </xul:vbox>
+      </xul:hbox>
+      <children includes="menupopup"/>
+    </content>
+  </binding>
+  
 
 </bindings>
 

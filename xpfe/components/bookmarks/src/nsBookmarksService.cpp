@@ -60,8 +60,8 @@
 #include "nsAppDirectoryServiceDefs.h"
 
 #include "nsISound.h"
-#include "nsINetSupportDialogService.h"
 #include "nsIPrompt.h"
+#include "nsIWindowWatcher.h"
 #include "nsAppShellCIDs.h"
 #include "nsIAppShellService.h"
 #include "nsIWebShell.h"
@@ -142,7 +142,6 @@ static NS_DEFINE_CID(kRDFContainerCID,            NS_RDFCONTAINER_CID);
 static NS_DEFINE_CID(kRDFContainerUtilsCID,       NS_RDFCONTAINERUTILS_CID);
 static NS_DEFINE_CID(kIOServiceCID,		  NS_IOSERVICE_CID);
 static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
-static NS_DEFINE_CID(kNetSupportDialogCID,        NS_NETSUPPORTDIALOG_CID);
 static NS_DEFINE_CID(kAppShellServiceCID,         NS_APPSHELL_SERVICE_CID);
 static NS_DEFINE_CID(kPrefCID,                    NS_PREF_CID);
 static NS_DEFINE_IID(kSoundCID,                   NS_SOUND_CID);
@@ -1658,7 +1657,7 @@ nsBookmarksService::Init()
 		{
 			if (*prefVal)
 			{
-				mPersonalToolbarName.AssignWithConversion(prefVal);
+				mPersonalToolbarName = NS_ConvertUTF8toUCS2(prefVal);
 			}
 			nsCRT::free(prefVal);
 			prefVal = nsnull;
@@ -1988,7 +1987,7 @@ nsBookmarksService::FireTimer(nsITimer* aTimer, void* aClosure)
 				nsCOMPtr<nsIChannel>	channel;
 				if (NS_SUCCEEDED(rv = NS_OpenURI(getter_AddRefs(channel), uri, nsnull)))
 				{
-					channel->SetLoadAttributes(nsIChannel::FORCE_VALIDATION | nsIChannel::VALIDATE_ALWAYS);
+					channel->SetLoadFlags(nsIRequest::VALIDATE_ALWAYS);
 					nsCOMPtr<nsIHTTPChannel>	httpChannel = do_QueryInterface(channel);
 					if (httpChannel)
 					{
@@ -2055,22 +2054,19 @@ nsBookmarksService::OnDataAvailable(nsIRequest* request, nsISupports *ctxt, nsII
 
 NS_IMETHODIMP
 nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
-				  nsresult status, const PRUnichar *errorMsg) 
+					nsresult status)
 {
 	nsresult		rv;
 
-	const char		*charPtrUri = nsnull;
-	nsAutoString            uri;
-	if (NS_SUCCEEDED(rv = busyResource->GetValueConst(&charPtrUri)) &&
-	    (charPtrUri))
+	const char		*uri = nsnull;
+	if (NS_SUCCEEDED(rv = busyResource->GetValueConst(&uri)) && (uri))
 	{
 #ifdef	DEBUG_BOOKMARK_PING_OUTPUT
 		printf("Finished polling '%s'\n", uri);
 #endif
 	}
-	uri.AssignWithConversion(charPtrUri);
-
-	nsCOMPtr<nsIHTTPChannel> httpChannel = do_QueryInterface(request);
+    nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
+	nsCOMPtr<nsIHTTPChannel>	httpChannel = do_QueryInterface(channel);
 	if (httpChannel)
 	{
 		nsCAutoString			eTagValue, lastModValue, contentLengthValue;
@@ -2354,11 +2350,15 @@ nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
 				nsCOMPtr<nsIInterfaceRequestor> interfaces;
 				nsCOMPtr<nsIPrompt> prompter;
 
-				httpChannel->GetNotificationCallbacks(getter_AddRefs(interfaces));
+				channel->GetNotificationCallbacks(getter_AddRefs(interfaces));
 				if (interfaces)
 					interfaces->GetInterface(NS_GET_IID(nsIPrompt), getter_AddRefs(prompter));
 				if (!prompter)
-					prompter = do_GetService(kNetSupportDialogCID);
+				{
+					nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+					if (wwatch)
+						wwatch->GetNewPrompter(0, getter_AddRefs(prompter));
+				}
 
 				if (prompter)
 				{
@@ -2389,7 +2389,7 @@ nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
 							}
 						}
 					}
-					promptStr.Append(uri);
+					promptStr.AppendWithConversion(uri);
 					
 					nsAutoString	temp;
 					getLocaleString("WebPageAskDisplay", temp);
@@ -2427,21 +2427,12 @@ nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
 				NS_WITH_SERVICE(nsIAppShellService, appShell, kAppShellServiceCID, &rv);
 				if (NS_SUCCEEDED(rv))
 				{
-					// get a parent window for the new browser window
-					nsCOMPtr<nsIXULWindow>	parent;
-					appShell->GetHiddenWindow(getter_AddRefs(parent));
-
-					// convert it to a DOMWindow
-					nsCOMPtr<nsIDocShell>	docShell;
-					if (parent)
+					nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+					if (wwatch)
 					{
-						parent->GetDocShell(getter_AddRefs(docShell));
+						nsCOMPtr<nsIDOMWindow> newWindow;
+						wwatch->OpenWindow(0, uri, "_blank", 0, 0, getter_AddRefs(newWindow));
 					}
-					nsCOMPtr<nsIDOMWindowInternal>	domParent(do_GetInterface(docShell));
-					// open the window
-					nsCOMPtr<nsIDOMWindow> newWindow;
-
-					domParent->Open(uri, NS_LITERAL_STRING(""), NS_LITERAL_STRING(""), getter_AddRefs(newWindow));
 				}
 			}
 		}
@@ -2523,7 +2514,7 @@ NS_IMPL_QUERY_INTERFACE8(nsBookmarksService,
 			 nsIRDFRemoteDataSource,
 			 nsIRDFObserver,
 			 nsIStreamListener,
-			 nsIStreamObserver,
+			 nsIRequestObserver,
 			 nsIObserver,
 			 nsISupportsWeakReference)
 
@@ -4441,7 +4432,7 @@ nsBookmarksService::WriteBookmarksContainer(nsIRDFDataSource *ds, nsOutputFileSt
 					const char	*url = nsnull;
 					if (NS_SUCCEEDED(rv = child->GetValueConst(&url)) && (url))
 					{
-						nsAutoString	uri; uri.AssignWithConversion(url);
+						nsCAutoString	uri(url);
 
 						PRBool		isBookmarkSeparator = PR_FALSE;
 						if (NS_SUCCEEDED(mInner->HasAssertion(child, kRDF_type,
@@ -4459,19 +4450,13 @@ nsBookmarksService::WriteBookmarksContainer(nsIRDFDataSource *ds, nsOutputFileSt
 							// Now do properly replace %22's; this is particularly important for javascript: URLs
 							static const char kEscape22[] = "%22";
 							PRInt32 offset;
-							while ((offset = uri.FindChar(PRUnichar('\"'))) >= 0)
+							while ((offset = uri.FindChar('\"')) >= 0)
 							{
 								uri.Cut(offset, 1);
-								uri.InsertWithConversion(kEscape22, offset);
-							}
-							char	*escapedID = uri.ToNewUTF8String();
-							if (escapedID)
-							{
-								strm << (const char *) escapedID;
-								nsCRT::free(escapedID);
-								escapedID = nsnull;
+								uri.Insert(kEscape22, offset);
 							}
 
+							strm << uri.get();
 							strm << "\"";
 								
 							// output ADD_DATE

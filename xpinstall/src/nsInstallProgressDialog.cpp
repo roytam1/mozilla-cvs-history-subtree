@@ -29,23 +29,21 @@
 #include "nsIAppShellComponentImpl.h"
 #include "nsIScriptGlobalObject.h"
 
-#include "nsIDOMWindowInternal.h"
+#include "nsIDOMWindow.h"
 #include "nsIServiceManager.h"
 #include "nsIDocumentViewer.h"
 #include "nsIContent.h"
 #include "nsINameSpaceManager.h"
 #include "nsIContentViewer.h"
 #include "nsIDOMElement.h"
+#include "nsISupportsArray.h"
+#include "nsISupportsPrimitives.h"
+#include "nsIWindowWatcher.h"
 #include "nsNetUtil.h"
 #include "nsIURL.h"
 #include "nsPIXPIManagerCallbacks.h"
-#include "nsISupportsArray.h"
-#include "nsISupportsPrimitives.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
-static NS_DEFINE_IID( kAppShellServiceCID, NS_APPSHELL_SERVICE_CID );
-
-static NS_DEFINE_CID(kDialogParamBlockCID, NS_DialogParamBlock_CID);
 
 nsInstallProgressDialog::nsInstallProgressDialog(nsPIXPIManagerCallbacks *aManager)
   : mManager(aManager)
@@ -144,47 +142,35 @@ nsInstallProgressDialog::LogComment(const PRUnichar* comment)
 NS_IMETHODIMP
 nsInstallProgressDialog::Open(nsIDialogParamBlock* ioParamBlock)
 {
-  nsresult rv = NS_OK;
-    
-  nsCOMPtr<nsIAppShellService> appShell(do_GetService( kAppShellServiceCID,
-                                                       &rv ));
+  nsresult rv = NS_ERROR_FAILURE;
 
-  NS_ENSURE_SUCCESS(rv, rv);
+  // build parameter list
+  nsCOMPtr<nsISupportsArray> params(do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID));
+  nsCOMPtr<nsISupportsInterfacePointer> pbwrap(do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID));
+  if (pbwrap) {
+    pbwrap->SetData(ioParamBlock);
+    pbwrap->SetDataIID(&NS_GET_IID(nsIDialogParamBlock));
+  }
+  nsCOMPtr<nsPIXPIManagerCallbacks> mgr = do_QueryInterface(mManager);
+  nsCOMPtr<nsISupportsInterfacePointer> callbackwrap(do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID));
+  if (callbackwrap) {
+    callbackwrap->SetData(mgr);
+    callbackwrap->SetDataIID(&NS_GET_IID(nsPIXPIManagerCallbacks));
+  }
+  if (params && pbwrap && callbackwrap) {
+    params->AppendElement(pbwrap);
+    params->AppendElement(callbackwrap);
 
-  nsCOMPtr<nsIDOMWindowInternal> hiddenWindow;
-  rv = appShell->GetHiddenDOMWindow( getter_AddRefs(hiddenWindow) );
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  nsCOMPtr<nsISupportsArray> array;
-
-  rv = NS_NewISupportsArray(getter_AddRefs(array));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  nsCOMPtr<nsISupportsInterfacePointer> ifptr =
-    do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID, &rv);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  ifptr->SetData(ioParamBlock);
-  ifptr->SetDataIID(&NS_GET_IID(nsIDialogParamBlock));
-
-  array->AppendElement(ifptr);
-
-  ifptr = do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID, &rv);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  ifptr->SetData(mManager);
-  ifptr->SetDataIID(&NS_GET_IID(nsPIXPIManagerCallbacks));
-
-  array->AppendElement(ifptr);
-
-  nsCOMPtr<nsIDOMWindow> newWin;
-
-  rv = hiddenWindow->OpenDialog(NS_LITERAL_STRING("chrome://communicator/content/xpinstall/xpistatus.xul"),
-                                NS_LITERAL_STRING("_blank"),
-                                NS_LITERAL_STRING("chrome,centered,titlebar,resizable"),
-                                array, getter_AddRefs( newWin ));
-
-  mWindow = do_QueryInterface(newWin);
+    // then open the window
+    nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+    if (wwatch) {
+      nsCOMPtr<nsIDOMWindow> newWindow;
+      rv = wwatch->OpenWindow(0, "chrome://communicator/content/xpinstall/xpistatus.xul",
+                     "_blank", "chrome,centerscreen,titlebar,resizable",
+                     params, getter_AddRefs(newWindow));
+      mWindow = do_QueryInterface(newWindow);
+    }
+  }
 
   return rv;
 }

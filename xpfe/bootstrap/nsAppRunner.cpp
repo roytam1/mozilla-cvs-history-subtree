@@ -227,28 +227,19 @@ static nsresult OpenWindow(const char *urlstr, const PRUnichar *args)
 #ifdef DEBUG_CMD_LINE
   printf("OpenWindow(%s,?)\n",urlstr);
 #endif /* DEBUG_CMD_LINE */
+
+  nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+  nsCOMPtr<nsISupportsWString> sarg(do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID));
+  if (!wwatch || !sarg)
+    return NS_ERROR_FAILURE;
+
+  sarg->SetData(args);
+
+  nsCOMPtr<nsIDOMWindow> newWindow;
   nsresult rv;
-  nsCOMPtr<nsIAppShellService> appShellService(do_GetService(kAppShellServiceCID, &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  nsCOMPtr<nsIDOMWindowInternal> hiddenWindow;
-  rv = appShellService->GetHiddenDOMWindow(getter_AddRefs(hiddenWindow));
-
-  nsCOMPtr<nsIDOMWindowInternal> win(do_QueryInterface(hiddenWindow));
-
-  if (NS_SUCCEEDED(rv) && win) {
-    nsCOMPtr<nsISupportsWString> str =
-      do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID, &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    str->SetData(args);
-
-    nsCOMPtr<nsIDOMWindow> newWindow;
-    rv = win->OpenDialog(NS_ConvertASCIItoUCS2(urlstr),
-                         NS_LITERAL_STRING("_blank"),
-                         NS_LITERAL_STRING("chrome,dialog=no,all"),
-                         str, getter_AddRefs( newWindow ) );
-  }
+  rv = wwatch->OpenWindow(0, urlstr, "_blank",
+                 "chrome,dialog=no,all", sarg,
+                 getter_AddRefs(newWindow));
 
   return rv;
 }

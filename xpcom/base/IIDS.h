@@ -1154,12 +1154,6 @@ nsLoggingSink_CID = { /* a6cf910d-15b3-11d2-932e-00805f8add32 */
     0x11d2,
     {0x93, 0x2e, 0x00, 0x80, 0x5f, 0x8a, 0xdd, 0x32}
   };
-nsHTMLContentSinkStream_CID = { /* a6cf910f-15b3-11d2-932e-00805f8add32 */
-    0xa6cf910f,
-    0x15b3,
-    0x11d2,
-    {0x93, 0x2e, 0x00, 0x80, 0x5f, 0x8a, 0xdd, 0x32}
-  };
 nsIParserService = { /* a6cf9111-15b3-11d2-932e-00805f8add32 */
     0xa6cf9111,
     0x15b3,
@@ -1286,13 +1280,13 @@ nsIEditorObserver = { /* a6cf9125-15b3-11d2-932e-00805f8add32 */
     0x11d2,
     {0x93, 0x2e, 0x00, 0x80, 0x5f, 0x8a, 0xdd, 0x32}
   };
-INTERFACENAME = { /* a6cf9126-15b3-11d2-932e-00805f8add32 */
+nsIRangeUtil_CID = { /* a6cf9126-15b3-11d2-932e-00805f8add32 */
     0xa6cf9126,
     0x15b3,
     0x11d2,
     {0x93, 0x2e, 0x00, 0x80, 0x5f, 0x8a, 0xdd, 0x32}
   };
-INTERFACENAME = { /* a6cf9127-15b3-11d2-932e-00805f8add32 */
+nsIRangeUtil_IID = { /* a6cf9127-15b3-11d2-932e-00805f8add32 */
     0xa6cf9127,
     0x15b3,
     0x11d2,

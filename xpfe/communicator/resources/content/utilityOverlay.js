@@ -31,8 +31,8 @@
  **/
 function setOfflineStatus(aToggleFlag)
 {
-  var ioService = nsJSComponentManager.getServiceByID("{9ac9e770-18bc-11d3-9337-00104ba0fd40}",
-                                                      "nsIIOService");
+  var ioService = Components.classesByID["{9ac9e770-18bc-11d3-9337-00104ba0fd40}"]
+                            .getService(Components.interfaces.nsIIOService);
   var broadcaster = document.getElementById("Communicator:WorkMode");
   if (aToggleFlag)
     ioService.offline = !ioService.offline;
@@ -80,12 +80,12 @@ function goPageSetup()
 {
 }
 
-function goEditCardDialog(abURI, card, okCallback)
+function goEditCardDialog(abURI, card, okCallback, abCardURI)
 {
   window.openDialog("chrome://messenger/content/addressbook/abEditCardDialog.xul",
-            "",
-            "chrome,resizeable=no,modal,titlebar",
-            {abURI:abURI, card:card, okCallback:okCallback});
+					  "",
+					  "chrome,resizeable=no,modal,titlebar",
+					  {abURI:abURI, card:card, okCallback:okCallback, abCardURI:abCardURI});
 }
 
 function goPreferences(containerID, paneURL, itemID)
@@ -209,7 +209,7 @@ function goAboutDialog()
     window.openDialog( getBrowserURL(), "_blank", "chrome,all,dialog=no", 'chrome://global/locale/about.html' );
 }
 
-
+// update menu items that rely on focus
 function goUpdateGlobalEditMenuItems()
 {
   goUpdateCommand('cmd_undo');
@@ -280,6 +280,20 @@ function editPage(url, launchWindow, delay)
       return;
     }
   }
+
+  // URL Loading Security Check
+  var focusedWindow = launchWindow.document.commandDispatcher.focusedWindow;
+  var sourceWin = isDocumentFrame(focusedWindow) ? focusedWindow.location.href : focusedWindow._content.location.href;
+
+  const nsIScriptSecurityManager = Components.interfaces.nsIScriptSecurityManager;
+  var secMan = Components.classes["@mozilla.org/scriptsecuritymanager;1"].getService().
+               QueryInterface(nsIScriptSecurityManager);
+  try {
+    secMan.checkLoadURIStr(sourceWin, url, nsIScriptSecurityManager.STANDARD);
+  } catch (e) {
+  	  throw "Edit of " + url + " denied.";
+  }
+
 
   var windowManager = Components.classes['@mozilla.org/rdf/datasource;1?name=window-mediator'].getService();
   if (!windowManager) return;

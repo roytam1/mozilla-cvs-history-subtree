@@ -26,23 +26,18 @@
 #include "nsAppShellCIDs.h"
 #include "nsICmdLineService.h"
 #include "nsIFileLocator.h"
-#include "nsINetSupportDialogService.h"
 #include "nsIWindowMediator.h"
 #include "rdf.h"
-#include "nsICommonDialogs.h"
-#include "nsIDialogParamBlock.h"
 #include "nsAbout.h"
 #include "nsIGenericFactory.h"
 
 
 #include "nsIAppShellService.h"
 #include "nsCommandLineService.h"  
-#include "nsNetSupportDialog.h"
 #include "nsAppShellService.h"
 #include "nsWindowMediator.h"
-#include "nsCommonDialogs.h"
-#include "nsDialogParamBlock.h"
 #include "nsFileLocations.h"
+#include "nsTimingService.h"
 
 #ifdef XP_MAC
 #include "nsMacMIMEDataSource.h"
@@ -58,12 +53,10 @@ nsresult NS_NewAppShellServiceFactory(nsIFactory** aFactory);
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCmdLineService);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAppShellService);
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsNetSupportDialog);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsWindowMediator);
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsCommonDialogs);
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsDialogParamBlock);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFileLocator);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsUserInfo);
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsTimingService);
 
 static nsModuleComponentInfo gAppShellModuleInfo[] =
 {
@@ -77,25 +70,10 @@ static nsModuleComponentInfo gAppShellModuleInfo[] =
     "@mozilla.org/appshell/commandLineService;1",
     nsCmdLineServiceConstructor,
   },
-  { "Net Support Dialogs",
-    NS_NETSUPPORTDIALOG_CID,
-    NULL,
-    nsNetSupportDialogConstructor,
-  },
   { "Window Mediator",
     NS_WINDOWMEDIATOR_CID,
     NS_RDF_DATASOURCE_CONTRACTID_PREFIX "window-mediator",
     nsWindowMediatorConstructor,
-  },
-  { "Common Dialogs",
-    NS_CommonDialog_CID,
-    "@mozilla.org/appshell/commonDialogs;1",
-    nsCommonDialogsConstructor,
-  },
-  { "kDialogParamBlockCID",
-    NS_DialogParamBlock_CID,
-    NULL,
-    nsDialogParamBlockConstructor,
   },
   { "kAboutModuleCID",
     NS_ABOUT_CID,
@@ -112,7 +90,12 @@ static nsModuleComponentInfo gAppShellModuleInfo[] =
     NS_USERINFO_CONTRACTID,
     nsUserInfoConstructor,
   },
- #if XP_MAC
+  { "Timing Service",
+    NS_TIMINGSERVICE_CID,
+    NS_TIMINGSERVICE_CONTRACTID,
+    nsTimingServiceConstructor,
+  },
+#if XP_MAC
    { "MacMIME data source",
     NS_NATIVEMIMEDATASOURCE_CID,
     NS_NATIVEMIMEDATASOURCE_CONTRACTID,
@@ -123,7 +106,7 @@ static nsModuleComponentInfo gAppShellModuleInfo[] =
    NS_INTERNETCONFIGSERVICE_CONTRACTID,
    nsInternetConfigServiceConstructor,
    },
- #endif
+#endif
 };
 
 NS_IMPL_NSGETMODULE("appshell", gAppShellModuleInfo)

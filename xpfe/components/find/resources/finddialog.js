@@ -40,6 +40,14 @@ function initDialogObject()
   dialog.searchBackwards = document.getElementById("dialog.searchBackwards");
   dialog.find            = document.getElementById("ok");
   dialog.bundle          = null;
+
+  // Move dialog to center, if it not been shown before
+  var windowElement = document.getElementById("findDialog");
+  if (!windowElement.hasAttribute("screenX") || !windowElement.hasAttribute("screenY"))
+  {
+    sizeToContent();
+    moveToAlertPosition();
+  }
 }
 
 function fillDialog()

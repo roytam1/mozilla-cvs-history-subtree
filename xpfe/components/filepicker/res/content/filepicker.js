@@ -209,6 +209,7 @@ function applyFilter()
 
 function onOK()
 {
+  var errorTitle, errorMessage, promptService;
   var ret = nsIFilePicker.returnCancel;
 
   var isDir = false;
@@ -235,6 +236,13 @@ function onOK()
   }
 
   if (!file.exists() && (filePickerMode != nsIFilePicker.modeSave)) {
+    errorTitle = gFilePickerBundle.getFormattedString("errorOpenFileDoesntExistTitle",
+                                                      [file.unicodePath]);
+    errorMessage = gFilePickerBundle.getFormattedString("errorOpenFileDoesntExistMessage",
+                                                        [file.unicodePath]);
+    promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
+                              .getService(Components.interfaces.nsIPromptService);
+    promptService.alert(window, errorTitle, errorMessage);
     return false;
   }
 
@@ -287,9 +295,8 @@ function onOK()
           oldParent = parent;
           parent = parent.parent;
         }
-        var errorTitle = gFilePickerBundle.getFormattedString("errorSavingFileTitle",
-                                                              [file.unicodePath]);
-        var errorMessage;
+        errorTitle = gFilePickerBundle.getFormattedString("errorSavingFileTitle",
+                                                          [file.unicodePath]);
         if (parent.isFile()) {
           errorMessage = gFilePickerBundle.getFormattedString("saveParentIsFileMessage",
                                                               [parent.unicodePath, file.unicodePath]);
@@ -297,9 +304,9 @@ function onOK()
           errorMessage = gFilePickerBundle.getFormattedString("saveParentDoesntExistMessage",
                                                               [oldParent.unicodePath, file.unicodePath]);
         }
-        var commonDialogs = Components.classes["@mozilla.org/appshell/commonDialogs;1"]
-                                      .getService(Components.interfaces.nsICommonDialogs);
-        commonDialogs.Alert(window, errorTitle, errorMessage);
+        promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
+                                  .getService(Components.interfaces.nsIPromptService);
+        promptService.alert(window, errorTitle, errorMessage);
         ret = nsIFilePicker.returnCancel;
       }
     }

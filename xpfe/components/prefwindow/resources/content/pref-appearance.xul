@@ -23,7 +23,7 @@
   -->
 
 <?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
-<?xul-overlay href="chrome://global/content/dialogOverlay.xul"?>
+<?xml-stylesheet href="chrome://communicator/skin/dialogOverlay.css" type="text/css"?>
 
 <!DOCTYPE window [
 <!ENTITY % brandDTD SYSTEM "chrome://global/locale/brand.dtd" >
@@ -42,7 +42,7 @@
     var panel = "chrome://communicator/content/pref/pref-appearance.xul";
     // the first elements in this array will be poked from chromeregistry loaded
     // overlays once overlays.rdf works properly 
-    var _elementIDs = ["generalStartupBrowser", /*"toolbarStyle,"*/ "showHideTooltips"];
+    var _elementIDs = ["generalStartupBrowser", "showHideTooltips"];
   ]]>
   </script>
           

@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Netscape Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -24,6 +24,7 @@
 #include "nsCRT.h"
 #include "nsMemory.h"
 #include "prprf.h"
+#include "nsIInterfaceInfoManager.h"
 
 /***************************************************************************/
 
@@ -38,7 +39,7 @@ nsSupportsIDImpl::nsSupportsIDImpl()
 nsSupportsIDImpl::~nsSupportsIDImpl()
 {
     if(mData)
-        nsMemory::Free(mData);
+      nsMemory::Free(mData);
 }
 
 NS_IMETHODIMP nsSupportsIDImpl::GetType(PRUint16 *aType)
@@ -67,7 +68,7 @@ NS_IMETHODIMP nsSupportsIDImpl::GetData(nsID **aData)
 NS_IMETHODIMP nsSupportsIDImpl::SetData(const nsID *aData)
 {
     if(mData)
-        nsMemory::Free(mData);
+      nsMemory::Free(mData);
     if(aData)
         mData = (nsID*) nsMemory::Clone(aData, sizeof(nsID));
     else
@@ -114,7 +115,7 @@ nsSupportsStringImpl::nsSupportsStringImpl()
 nsSupportsStringImpl::~nsSupportsStringImpl()
 {
     if(mData)
-        nsMemory::Free(mData);
+      nsMemory::Free(mData);
 }
 
 NS_IMETHODIMP nsSupportsStringImpl::GetType(PRUint16 *aType)
@@ -154,7 +155,7 @@ NS_IMETHODIMP nsSupportsStringImpl::ToString(char **_retval)
 NS_IMETHODIMP nsSupportsStringImpl::SetDataWithLength(PRUint32 aLength, const char *aData)
 {
     if(mData)
-        nsMemory::Free(mData);
+      nsMemory::Free(mData);
     if(aData) {
         mData = NS_STATIC_CAST(char*, nsMemory::Alloc((aLength+1)*sizeof(char)));
         if ( mData ) {
@@ -183,7 +184,7 @@ nsSupportsWStringImpl::nsSupportsWStringImpl()
 nsSupportsWStringImpl::~nsSupportsWStringImpl()
 {
     if(mData)
-        nsMemory::Free(mData);
+      nsMemory::Free(mData);
 }
 
 NS_IMETHODIMP nsSupportsWStringImpl::GetType(PRUint16 *aType)
@@ -225,15 +226,15 @@ NS_IMETHODIMP nsSupportsWStringImpl::ToString(PRUnichar **_retval)
 NS_IMETHODIMP nsSupportsWStringImpl::SetDataWithLength(PRUint32 aLength, const PRUnichar *aData)
 {
     if(mData)
-        nsMemory::Free(mData);
+      nsMemory::Free(mData);
     if(aData) {
         mData = NS_STATIC_CAST(PRUnichar*, nsMemory::Alloc((aLength+1)*sizeof(PRUnichar)));
         if ( mData ) {
-            nsCRT::memcpy ( mData, aData, aLength*sizeof(PRUnichar) );
-            mData[aLength] = NS_STATIC_CAST(PRUnichar, 0);
+          nsCRT::memcpy ( mData, aData, aLength*sizeof(PRUnichar) );
+          mData[aLength] = NS_STATIC_CAST(PRUnichar, 0);
         }
         else
-            return NS_ERROR_OUT_OF_MEMORY;
+          return NS_ERROR_OUT_OF_MEMORY;
     }
     else
         mData = nsnull;
@@ -948,19 +949,15 @@ NS_IMETHODIMP nsSupportsInterfacePointerImpl::SetDataIID(const nsID *aIID)
 
 NS_IMETHODIMP nsSupportsInterfacePointerImpl::ToString(char **_retval)
 {
-    if(!_retval)
-    {
-        NS_ASSERTION(0,"Bad pointer");
-        return NS_ERROR_NULL_POINTER;
-    }
+    NS_ASSERTION(_retval, "Bad pointer");
 
     static const char str[] = "[interface pointer]";
 
-    // XXX: should we include nsID::ToString here?
-
+    // jband sez: think about asking nsIInterfaceInfoManager whether
+    // the interface has a known human-readable name
     char* result = (char*) nsMemory::Clone(str, sizeof(str));
     *_retval = result;
     return  result ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
-}  
+}
 
 /***************************************************************************/

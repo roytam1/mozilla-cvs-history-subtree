@@ -60,14 +60,24 @@
 #include "rdf.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsITextToSubURI.h"
-
+#include "nsIInterfaceRequestor.h"
+#include "nsIFTPChannel.h"
+#include "nsIWindowWatcher.h"
+#include "nsIPrompt.h"
+#include "nsIAuthPrompt.h"
+#include "nsIContent.h"
+#include "nsIDOMWindow.h"
+#include "nsIDOMWindowInternal.h"
+#include "nsIDOMWindowCollection.h"
+#include "nsIDOMDocument.h"
+#include "nsIDOMElement.h"
+#include "nsIDOMText.h"
 //----------------------------------------------------------------------
 //
 // Common CIDs
 //
 
 static NS_DEFINE_CID(kRDFServiceCID,             NS_RDFSERVICE_CID);
-static NS_DEFINE_CID(kRDFInMemoryDataSourceCID,  NS_RDFINMEMORYDATASOURCE_CID);
 
 // Note: due to aggregation, the HTTPINDEX namespace should match
 // what's used in the rest of the application
@@ -87,7 +97,8 @@ static const char               kGopherProtocol[] = "gopher://";
 // nsHTTPIndexParser
 //
 
-class nsHTTPIndexParser : public nsIStreamListener
+class nsHTTPIndexParser : public nsIStreamListener, public nsIInterfaceRequestor, 
+                          public nsIFTPEventSink
 {
 protected:
   static nsrefcnt gRefCntParser;
@@ -99,6 +110,7 @@ protected:
   static nsIRDFResource* kHTTPIndex_Filetype;
   static nsIRDFResource* kHTTPIndex_Loading;
   static nsIRDFResource* kHTTPIndex_URL;
+  static nsIRDFResource* kHTTPIndex_IsContainer;
   static nsIRDFResource* kNC_Child;
   static nsIRDFLiteral*  kTrueLiteral;
   static nsIRDFLiteral*  kFalseLiteral;
@@ -147,7 +159,8 @@ protected:
   // the global object when we get an OnStartRequest() notification
   // (at this point, we'll know that the XUL document has been
   // embedded and the global object won't get clobbered.
-  nsISupports* mContainer;
+  PRBool mBindToGlobalObject;
+  nsCOMPtr<nsISupports> mContainer;
 
 public:
   static nsresult Create(nsHTTPIndex* aHTTPIndex,
@@ -155,8 +168,11 @@ public:
                          nsIStreamListener** aResult);
 
   NS_DECL_ISUPPORTS
-  NS_DECL_NSISTREAMOBSERVER
+  NS_DECL_NSIREQUESTOBSERVER
   NS_DECL_NSISTREAMLISTENER
+  NS_DECL_NSIINTERFACEREQUESTOR
+  NS_DECL_NSIFTPEVENTSINK
+
 };
 
 
@@ -170,6 +186,7 @@ nsIRDFResource* nsHTTPIndexParser::kHTTPIndex_Description;
 nsIRDFResource* nsHTTPIndexParser::kHTTPIndex_Filetype;
 nsIRDFResource* nsHTTPIndexParser::kHTTPIndex_Loading;
 nsIRDFResource* nsHTTPIndexParser::kHTTPIndex_URL;
+nsIRDFResource* nsHTTPIndexParser::kHTTPIndex_IsContainer;
 nsIRDFResource* nsHTTPIndexParser::kNC_Child;
 nsIRDFLiteral*  nsHTTPIndexParser::kTrueLiteral;
 nsIRDFLiteral*  nsHTTPIndexParser::kFalseLiteral;
@@ -202,8 +219,10 @@ nsHTTPIndexParser::nsHTTPIndexParser(nsHTTPIndex* aHTTPIndex,
   : mHTTPIndex(aHTTPIndex),
     mLineStart(0),
     mHasDescription(PR_FALSE),
+    mBindToGlobalObject(PR_TRUE),
     mContainer(aContainer)
 {
+  NS_ASSERTION(aContainer, "Need a containter");
   NS_INIT_REFCNT();
 }
 
@@ -217,7 +236,7 @@ nsHTTPIndexParser::Init()
     return NS_ERROR_NOT_INITIALIZED;
 
   nsresult rv;
-  rv = mHTTPIndex->GetDataSource(getter_AddRefs(mDataSource));
+  mDataSource = do_QueryInterface(mHTTPIndex, &rv);
   if (NS_FAILED(rv)) return rv;
 
   // No datasource. Uh oh. We won't be much use then.
@@ -259,6 +278,10 @@ nsHTTPIndexParser::Init()
                            &kHTTPIndex_URL);
     if (NS_FAILED(rv)) return rv;
 
+    rv = gRDF->GetResource(HTTPINDEX_NAMESPACE_URI "IsContainer",
+                           &kHTTPIndex_IsContainer);
+    if (NS_FAILED(rv)) return rv;
+
     rv = gRDF->GetResource(NC_NAMESPACE_URI "child",
                            &kNC_Child);
     if (NS_FAILED(rv)) return rv;
@@ -290,6 +313,7 @@ nsHTTPIndexParser::~nsHTTPIndexParser()
     NS_IF_RELEASE(kHTTPIndex_Filetype);
     NS_IF_RELEASE(kHTTPIndex_Loading);
     NS_IF_RELEASE(kHTTPIndex_URL);
+    NS_IF_RELEASE(kHTTPIndex_IsContainer);
     NS_IF_RELEASE(kNC_Child);
     NS_IF_RELEASE(kTrueLiteral);
     NS_IF_RELEASE(kFalseLiteral);
@@ -337,11 +361,95 @@ nsHTTPIndexParser::Create(nsHTTPIndex* aHTTPIndex,
   return NS_OK;
 }
 
-
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsHTTPIndexParser,
+NS_IMPL_THREADSAFE_ISUPPORTS4(nsHTTPIndexParser,
                               nsIStreamListener,
-                              nsIStreamObserver);
+                              nsIRequestObserver,
+                              nsIInterfaceRequestor,
+                              nsIFTPEventSink);
 
+NS_IMETHODIMP
+nsHTTPIndexParser::GetInterface(const nsIID &anIID, void **aResult ) 
+{
+    if (anIID.Equals(NS_GET_IID(nsIFTPEventSink))) {
+        // If we don't have a container to store the logged data
+        // then don't report ourselves back to the caller
+        if (!mContainer)
+          return NS_ERROR_NO_INTERFACE;
+        *aResult = NS_STATIC_CAST(nsIFTPEventSink*, this);
+        NS_ADDREF(this);
+        return NS_OK;
+    }
+
+    if (anIID.Equals(NS_GET_IID(nsIPrompt))) {
+        
+        nsCOMPtr<nsIInterfaceRequestor> requestor = do_QueryInterface(mContainer);
+        if (!requestor) 
+            return NS_ERROR_NO_INTERFACE;
+
+        nsCOMPtr<nsIDOMWindow> aDOMWindow = do_GetInterface(requestor);
+        if (!aDOMWindow) 
+            return NS_ERROR_NO_INTERFACE;
+
+        nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+        
+        return wwatch->GetNewPrompter(aDOMWindow, (nsIPrompt**)aResult);
+    }  
+
+    if (anIID.Equals(NS_GET_IID(nsIAuthPrompt))) {
+        
+        nsCOMPtr<nsIInterfaceRequestor> requestor = do_QueryInterface(mContainer);
+        if (!requestor) 
+            return NS_ERROR_NO_INTERFACE;
+
+        nsCOMPtr<nsIDOMWindow> aDOMWindow = do_GetInterface(requestor);
+        if (!aDOMWindow) 
+            return NS_ERROR_NO_INTERFACE;
+
+        nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+        
+        return wwatch->GetNewAuthPrompter(aDOMWindow, (nsIAuthPrompt**)aResult);
+    }  
+
+    return NS_ERROR_NO_INTERFACE;
+}
+
+NS_IMETHODIMP 
+nsHTTPIndexParser::OnFTPControlLog(PRBool server, const char *msg)
+{
+    NS_ENSURE_TRUE(mContainer, NS_OK);
+
+    nsCOMPtr<nsIScriptGlobalObject> scriptGlobal(do_GetInterface(mContainer));
+    NS_ENSURE_TRUE(scriptGlobal, NS_OK);
+
+    nsCOMPtr<nsIScriptContext> context;
+    nsresult rv = scriptGlobal->GetContext(getter_AddRefs(context));
+    NS_ENSURE_TRUE(context, NS_OK);
+
+    JSContext* jscontext = NS_REINTERPRET_CAST(JSContext*,
+                                               context->GetNativeContext());
+
+    JSObject* global = JS_GetGlobalObject(jscontext);
+
+    if (!jscontext || !global) return NS_OK;
+    
+    jsval params[2];
+
+    nsString unicodeMsg;
+    unicodeMsg.AssignWithConversion(msg);
+    JSString* jsMsgStr = JS_NewUCStringCopyZ(jscontext, (jschar*) unicodeMsg.GetUnicode());
+
+    params[0] = BOOLEAN_TO_JSVAL(server);
+    params[1] = STRING_TO_JSVAL(jsMsgStr);
+    
+    jsval val;
+    JS_CallFunctionName(jscontext, 
+                        global, 
+                        "OnFTPControlLog",
+                        2, 
+                        params, 
+                        &val);
+    return NS_OK;
+}
 
 NS_IMETHODIMP
 nsHTTPIndexParser::OnStartRequest(nsIRequest *request, nsISupports* aContext)
@@ -349,15 +457,12 @@ nsHTTPIndexParser::OnStartRequest(nsIRequest *request, nsISupports* aContext)
   nsresult rv;
 
   // This should only run once...
-  if (mContainer) {
-    // We need to undo the AddRef() on the nsHTTPIndex object that
-    // happened in nsDirectoryViewerFactory::CreateInstance(). We'll
-    // stuff it into an nsCOMPtr (because we _know_ it'll get release
-    // if any errors occur)...
-    nsCOMPtr<nsIHTTPIndex> httpindex = do_QueryInterface(mHTTPIndex);
+  // Unless we don't have a container to start with
+  // (ie called from bookmarks as an rdf datasource)
+  if (mBindToGlobalObject && mContainer.get()) {
+    mBindToGlobalObject = PR_FALSE;
 
-    // ...and then _force_ a release here
-    mHTTPIndex->Release();
+    nsCOMPtr<nsIHTTPIndex> httpindex = do_QueryInterface(mHTTPIndex);
 
     // Now get the content viewer container's script object.
     nsCOMPtr<nsIScriptGlobalObject> scriptGlobal(do_GetInterface(mContainer));
@@ -402,11 +507,41 @@ nsHTTPIndexParser::OnStartRequest(nsIRequest *request, nsISupports* aContext)
     if (! ok)
       return NS_ERROR_FAILURE;
   }
+  if (!aContext) {
+    nsCOMPtr<nsIChannel> channel(do_QueryInterface(request));
+    NS_ASSERTION(channel, "request should be a channel");
 
-  // Get the directory from the context
-  mDirectory = do_QueryInterface(aContext);
+    // lets hijack the notifications:
+    channel->SetNotificationCallbacks(this);
+
+    // now create the top most resource
+    nsCOMPtr<nsIURI> uri;
+    channel->GetURI(getter_AddRefs(uri));
+      
+    nsXPIDLCString entryuriC;
+    uri->GetSpec(getter_Copies(entryuriC));
+
+    nsCOMPtr<nsIRDFResource> entry;
+    rv = gRDF->GetResource(entryuriC, getter_AddRefs(entry));
+    
+    nsString uriUnicode;
+    uriUnicode.AssignWithConversion(entryuriC);
+
+    nsCOMPtr<nsIRDFLiteral> URLVal;
+    rv = gRDF->GetLiteral(uriUnicode.GetUnicode(), getter_AddRefs(URLVal));
+
+    mDataSource->Assert(entry, kHTTPIndex_URL, URLVal, PR_TRUE);
+    mDirectory = do_QueryInterface(entry);
+  }
+  else
+  {
+    // Get the directory from the context
+    mDirectory = do_QueryInterface(aContext);
+  }
+
   if (!mDirectory) {
-    return(NS_ERROR_UNEXPECTED);
+      request->Cancel(NS_BINDING_ABORTED);
+      return NS_BINDING_ABORTED;
   }
 
   // Mark the directory as "loading"
@@ -422,21 +557,20 @@ nsHTTPIndexParser::OnStartRequest(nsIRequest *request, nsISupports* aContext)
 NS_IMETHODIMP
 nsHTTPIndexParser::OnStopRequest(nsIRequest *request,
                                  nsISupports* aContext,
-                                 nsresult aStatus,
-                                 const PRUnichar* aErrorMsg)
+                                 nsresult aStatus)
 {
   // If mDirectory isn't set, then we should just bail. Either an
   // error occurred and OnStartRequest() never got called, or
   // something exploded in OnStartRequest().
   if (! mDirectory)
-    return NS_OK;
+    return NS_BINDING_ABORTED;
 
   // XXX Should we do anything different if aStatus != NS_OK?
 
   // Clean up any remaining data
   if (mBuf.Length() > (PRUint32) mLineStart)
   {
-    ProcessData(aContext);
+    ProcessData(mDirectory);
   }
 
   // free up buffer after processing all the data
@@ -465,6 +599,12 @@ nsHTTPIndexParser::OnDataAvailable(nsIRequest *request,
                                    PRUint32 aSourceOffset,
                                    PRUint32 aCount)
 {
+  // If mDirectory isn't set, then we should just bail. Either an
+  // error occurred and OnStartRequest() never got called, or
+  // something exploded in OnStartRequest().
+  if (! mDirectory)
+    return NS_BINDING_ABORTED;
+
   // Make sure there's some data to process...
   if (aCount < 1)
     return NS_OK;
@@ -491,7 +631,7 @@ nsHTTPIndexParser::OnDataAvailable(nsIRequest *request,
   mBuf.mLength = len + count;
   AddNullTerminator(mBuf);
 
-  return ProcessData(aContext);
+  return ProcessData(mDirectory);
 }
 
 
@@ -506,9 +646,9 @@ nsHTTPIndexParser::ProcessData(nsISupports *context)
 	}
 
     nsCOMPtr<nsIRDFResource>	parentRes = do_QueryInterface(context);
-    if (!parentRes)
-    {
-        return(NS_ERROR_UNEXPECTED);
+    if (!parentRes) {
+      NS_ERROR("Could not obtain parent resource");
+      return(NS_ERROR_UNEXPECTED);
     }
 
   // First, we'll iterate through the values and remember each (using
@@ -837,6 +977,14 @@ nsHTTPIndexParser::ParseData(nsString* values, const char *encodingStr,
       }
     }
 
+    // Since the definition of a directory depends on the protocol, we would have
+    // to do string comparisons all the time.
+    // But we're told if we're a container right here - so save that fact
+    if (isDirType)
+      mDataSource->Assert(entry, kHTTPIndex_IsContainer, kTrueLiteral, PR_TRUE);
+    else
+      mDataSource->Assert(entry, kHTTPIndex_IsContainer, kFalseLiteral, PR_TRUE);
+    
 //   instead of
 //       rv = mDataSource->Assert(parentRes, kNC_Child, entry, PR_TRUE);
 //       if (NS_FAILED(rv)) return rv;
@@ -940,7 +1088,6 @@ nsHTTPIndex::nsHTTPIndex()
 }
 
 
-
 nsHTTPIndex::nsHTTPIndex(nsISupports* aContainer)
   : mContainer(aContainer)
 {
@@ -948,18 +1095,18 @@ nsHTTPIndex::nsHTTPIndex(nsISupports* aContainer)
 }
 
 
-
 nsHTTPIndex::~nsHTTPIndex()
 {
-	// note: these are NOT statics due to the native of nsHTTPIndex
-	// where it may or may not be treated as a singleton
-
-	NS_IF_RELEASE(kNC_Child);
-	NS_IF_RELEASE(kNC_loading);
-        NS_IF_RELEASE(kNC_URL);
-	NS_IF_RELEASE(kTrueLiteral);
-	NS_IF_RELEASE(kFalseLiteral);
-
+  // note: these are NOT statics due to the native of nsHTTPIndex
+  // where it may or may not be treated as a singleton
+  
+  NS_IF_RELEASE(kNC_Child);
+  NS_IF_RELEASE(kNC_loading);
+  NS_IF_RELEASE(kNC_URL);
+  NS_IF_RELEASE(kNC_IsContainer);
+  NS_IF_RELEASE(kTrueLiteral);
+  NS_IF_RELEASE(kFalseLiteral);
+  
     if (mTimer)
     {
         // be sure to cancel the timer, as it holds a
@@ -970,12 +1117,12 @@ nsHTTPIndex::~nsHTTPIndex()
 
     mConnectionList = nsnull;
     mNodeList = nsnull;
-
-	if (mDirRDF)
-	{
-		// UnregisterDataSource() may fail; just ignore errors
-		mDirRDF->UnregisterDataSource(this);
-    }
+    
+    if (mDirRDF)
+      {
+        // UnregisterDataSource() may fail; just ignore errors
+        mDirRDF->UnregisterDataSource(this);
+      }
 }
 
 
@@ -983,27 +1130,26 @@ nsHTTPIndex::~nsHTTPIndex()
 nsresult
 nsHTTPIndex::CommonInit()
 {
-	nsresult	rv = NS_OK;
+    nsresult	rv = NS_OK;
 
-	// set initial/default encoding to ISO-8859-1 (not UTF-8)
-	mEncoding = "ISO-8859-1";
+    // set initial/default encoding to ISO-8859-1 (not UTF-8)
+    mEncoding = "ISO-8859-1";
 
     mDirRDF = do_GetService(kRDFServiceCID, &rv);
-	NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF service");
-	if (NS_FAILED(rv))
-	{
-	    return(rv);
-	}
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF service");
+    if (NS_FAILED(rv)) {
+      return(rv);
+    }
 
-	if (NS_FAILED(rv = nsComponentManager::CreateInstance(kRDFInMemoryDataSourceCID,
-			nsnull, NS_GET_IID(nsIRDFDataSource), (void**) getter_AddRefs(mInner))))
-	{
-		return(rv);
-	}
+    mInner = do_CreateInstance("@mozilla.org/rdf/datasource;1?name=in-memory-datasource", &rv);
 
-	mDirRDF->GetResource(NC_NAMESPACE_URI "child",   &kNC_Child);
-	mDirRDF->GetResource(NC_NAMESPACE_URI "loading", &kNC_loading);
-        mDirRDF->GetResource(NC_NAMESPACE_URI "URL", &kNC_URL);
+    if (NS_FAILED(rv))
+      return rv;
+
+    mDirRDF->GetResource(NC_NAMESPACE_URI "child",   &kNC_Child);
+    mDirRDF->GetResource(NC_NAMESPACE_URI "loading", &kNC_loading);
+    mDirRDF->GetResource(NC_NAMESPACE_URI "URL", &kNC_URL);
+    mDirRDF->GetResource(NC_NAMESPACE_URI "IsContainer", &kNC_IsContainer);
 
     rv = mDirRDF->GetLiteral(NS_LITERAL_STRING("true").get(), &kTrueLiteral);
     if (NS_FAILED(rv)) return(rv);
@@ -1013,11 +1159,9 @@ nsHTTPIndex::CommonInit()
     rv = NS_NewISupportsArray(getter_AddRefs(mConnectionList));
     if (NS_FAILED(rv)) return(rv);
 
-	// note: don't register DS here
-
-	return(rv);
+    // note: don't register DS here
+    return rv;
 }
-
 
 
 nsresult
@@ -1059,6 +1203,12 @@ nsHTTPIndex::Init(nsIURI* aBaseURL)
   if (NS_FAILED(rv)) return rv;
 
   mBaseURL.Assign(url);
+  
+  // Mark the base url as a container
+  nsCOMPtr<nsIRDFResource> baseRes;
+  mDirRDF->GetResource(mBaseURL.get(), getter_AddRefs(baseRes));
+  Assert(baseRes, kNC_IsContainer, kTrueLiteral, PR_TRUE);
+
   return NS_OK;
 }
 
@@ -1086,11 +1236,7 @@ nsHTTPIndex::Create(nsIURI* aBaseURL, nsISupports* aContainer, nsIHTTPIndex** aR
   return rv;
 }
 
-
-
 NS_IMPL_THREADSAFE_ISUPPORTS2(nsHTTPIndex, nsIHTTPIndex, nsIRDFDataSource);
-
-
 
 NS_IMETHODIMP
 nsHTTPIndex::GetBaseURL(char** _result)
@@ -1102,43 +1248,25 @@ nsHTTPIndex::GetBaseURL(char** _result)
   return NS_OK;
 }
 
-
-
 NS_IMETHODIMP
 nsHTTPIndex::GetDataSource(nsIRDFDataSource** _result)
 {
-  *_result = this;
-  NS_IF_ADDREF(*_result);
+  NS_ADDREF(*_result = this);
   return NS_OK;
 }
-
-
 
 NS_IMETHODIMP
 nsHTTPIndex::CreateListener(nsIStreamListener** _result)
 {
-  nsresult rv;
-  rv = nsHTTPIndexParser::Create(this, mContainer, _result);
-  if (NS_FAILED(rv)) return rv;
-
-  // Clear this: we only need to pass it through once.
-  mContainer = nsnull;
-
-  return NS_OK;
+  return nsHTTPIndexParser::Create(this, mContainer, _result);
 }
 
 // This function finds the destination when following a given nsIRDFResource
 // If the resource has a URL attribute, we use that. If not, just use
 // the uri.
-// We'd really like to not have to copy all the time. But because sometimes
-// we get a char*, and sometimes a PRUnichar*, we have to copy at some point,
-// and this would leak unless we deleted one of them. scc is working on string
-// changes which would hide the explicit ASCII vs unicode stuff, and I could just
-// return one of them. (see bug 53065). In the meantime, the performance loss in
-// copying should be small, especially compared with bug 69185.
 //
 // Do NOT try to get the destination of a uri in any other way
-char* nsHTTPIndex::GetDestination(nsIRDFResource* r) {
+void nsHTTPIndex::GetDestination(nsIRDFResource* r, nsXPIDLCString& dest) {
   // First try the URL attribute
   nsCOMPtr<nsIRDFNode> node;
   
@@ -1148,19 +1276,13 @@ char* nsHTTPIndex::GetDestination(nsIRDFResource* r) {
   if (node)
     url = do_QueryInterface(node);
 
-  char* cUri;
   if (!url) {
-    // copy always - see comments above
-    r->GetValue(&cUri);
+     r->GetValueConst(getter_Shares(dest));
   } else {
     const PRUnichar* uri;
     url->GetValueConst(&uri);
-    nsCAutoString tmp;
-    tmp.AssignWithConversion(uri);
-    cUri = ToNewCString(tmp);
+    *getter_Copies(dest) = ToNewUTF8String(nsLocalString(uri));
   }
-
-  return cUri;
 }
 
 // rjc: isWellknownContainerURI() decides whether a URI is a container for which,
@@ -1177,42 +1299,52 @@ char* nsHTTPIndex::GetDestination(nsIRDFResource* r) {
 
 // We also handle gopher now
 
-// This could be replaced by an RDF attribute (so we don't have to do string
-// parsing), set by the parser (using the isDirType flag - we have this
-// information already) 
-// But doing that gave me lots of xpcwrappednative assersions sometimes (not
-// always repeatable), plus it doesn't work properly with the personal toolbar
-// uris that end up here at startup (from the bookmarks code).
-// Maybe just use this as a fallback, and use the attribute for everything
-// else? - bbaetz
+
+// We use an rdf attribute to mark if this is a container or not.
+// Note that we still have to do string comparisons as a fallback
+// because stuff like the personal toolbar and bookmarks check whether
+// a URL is a container, and we have no attribute in that case.
 PRBool
 nsHTTPIndex::isWellknownContainerURI(nsIRDFResource *r)
 {
-    PRBool isContainerFlag = PR_FALSE;
-    char *uri = nsnull;
+  nsCOMPtr<nsIRDFNode> node;
+  GetTarget(r, kNC_IsContainer, PR_TRUE, getter_AddRefs(node));
+
+  PRBool isContainerFlag = PR_FALSE;
+
+  if (node && NS_SUCCEEDED(node->EqualsNode(kTrueLiteral, &isContainerFlag))) {
+    return isContainerFlag;
+  } else {
+    nsXPIDLCString uri;
     
     // For gopher, we need to follow the URL attribute to get the
     // real destination
-    uri = GetDestination(r);
+    GetDestination(r,uri);
 
-    if ((uri) && (!strncmp(uri, kFTPProtocol, sizeof(kFTPProtocol) - 1)))
-      {
-        if (uri[strlen(uri)-1] == '/')
-          {
-            isContainerFlag = PR_TRUE;
-          }
+    if ((uri.get()) && (!strncmp(uri, kFTPProtocol, sizeof(kFTPProtocol) - 1))) {
+      if (uri[strlen(uri)-1] == '/') {
+        isContainerFlag = PR_TRUE;
       }
-    if ((uri) && (!strncmp(uri,kGopherProtocol, sizeof(kGopherProtocol)-1))) {
+    }
+
+    // A gopher url is of the form:
+    // gopher://example.com/xFileNameToGet
+    // where x is a single character representing the type of file
+    // 1 is a directory, and 7 is a search.
+    // Searches will cause a dialog to be popped up (asking the user what
+    // to search for), and so even though searches return a directory as a
+    // result, don't treat it as a directory here.
+
+    // The isContainerFlag test above will correctly handle this when a
+    // search url is passed in as the baseuri
+    if ((uri.get()) &&
+        (!strncmp(uri,kGopherProtocol, sizeof(kGopherProtocol)-1))) {
       char* pos = PL_strchr(uri+sizeof(kGopherProtocol)-1, '/');
-      if (pos) {
-        if (pos == nsnull || *(pos+1) == '\0' || *(pos+1) == '1')
-          isContainerFlag = PR_TRUE;
-      }
-    } 
-
-    nsMemory::Free(uri);
-
-    return(isContainerFlag);
+      if (!pos || pos[1] == '\0' || pos[1] == '1')
+        isContainerFlag = PR_TRUE;
+    }  
+  }
+  return isContainerFlag;
 }
 
 
@@ -1383,59 +1515,57 @@ nsHTTPIndex::AddElement(nsIRDFResource *parent, nsIRDFResource *prop, nsIRDFNode
     return(NS_OK);
 }
 
-
-
 void
 nsHTTPIndex::FireTimer(nsITimer* aTimer, void* aClosure)
 {
-	nsHTTPIndex *httpIndex = NS_STATIC_CAST(nsHTTPIndex *, aClosure);
-	if (!httpIndex)	return;
-
-    // don't return out of this loop as mTimer may need to be cancelled afterwards
-    PRBool      refireTimer = PR_FALSE;
-
-    PRUint32    numItems = 0;
-    PRInt32     loop;
-    if (httpIndex->mConnectionList)
-    {
+  nsHTTPIndex *httpIndex = NS_STATIC_CAST(nsHTTPIndex *, aClosure);
+  if (!httpIndex)	return;
+  
+  // don't return out of this loop as mTimer may need to be cancelled afterwards
+  PRBool      refireTimer = PR_FALSE;
+  
+  PRUint32    numItems = 0;
+  if (httpIndex->mConnectionList)
+  {
         httpIndex->mConnectionList->Count(&numItems);
         if (numItems > 0)
         {
-            // Note: process ALL outstanding connection requests;
-            for (loop=((PRInt32)numItems)-1; loop>=0; loop--)
-            {
-                nsCOMPtr<nsISupports>   isupports;
-                httpIndex->mConnectionList->GetElementAt((PRUint32)loop, getter_AddRefs(isupports));
-                httpIndex->mConnectionList->RemoveElementAt((PRUint32)loop);
-
-                nsCOMPtr<nsIRDFResource>    aSource;
-                if (isupports)  aSource = do_QueryInterface(isupports);
-                char* uri = nsnull;
-                if (aSource) uri = httpIndex->GetDestination(aSource);
-
-                nsresult            rv = NS_OK;
-                nsCOMPtr<nsIURI>	url;
-                
-                if (uri) {
-                  rv = NS_NewURI(getter_AddRefs(url), uri);
-                  nsMemory::Free(uri);
-                }
-                nsCOMPtr<nsIChannel>	channel;
-                if (NS_SUCCEEDED(rv) && (url)) {
-                  rv = NS_OpenURI(getter_AddRefs(channel), url, nsnull, nsnull);
-                }
-                nsCOMPtr<nsIStreamListener>	listener;
-                if (NS_SUCCEEDED(rv) && (channel)) {
-                  rv = httpIndex->CreateListener(getter_AddRefs(listener));
-                }
-                if (NS_SUCCEEDED(rv) && (listener)) {
-                  rv = channel->AsyncOpen(listener, aSource);
-                }
-            }
+          nsCOMPtr<nsISupports>   isupports;
+          httpIndex->mConnectionList->GetElementAt((PRUint32)0, getter_AddRefs(isupports));
+          httpIndex->mConnectionList->RemoveElementAt((PRUint32)0);
+          
+          nsCOMPtr<nsIRDFResource>    aSource;
+          if (isupports)  aSource = do_QueryInterface(isupports);
+          
+          nsXPIDLCString uri;
+          if (aSource)
+            httpIndex->GetDestination(aSource, uri);
+          
+          if (!uri) {
+            NS_ERROR("Could not reconstruct uri");
+            return;
+          }
+          
+          nsresult            rv = NS_OK;
+          nsCOMPtr<nsIURI>	url;
+          
+          rv = NS_NewURI(getter_AddRefs(url), uri.get());
+          nsCOMPtr<nsIChannel>	channel;
+          if (NS_SUCCEEDED(rv) && (url)) {
+            rv = NS_OpenURI(getter_AddRefs(channel), url, nsnull, nsnull);
+          }
+          nsCOMPtr<nsIStreamListener>	listener;
+          if (NS_SUCCEEDED(rv) && (channel)) {
+            rv = httpIndex->CreateListener(getter_AddRefs(listener));
+          }
+          if (NS_SUCCEEDED(rv) && (listener)) {
+            nsCOMPtr<nsIInterfaceRequestor> callbacks = do_QueryInterface(listener);
+            if (callbacks)
+              channel->SetNotificationCallbacks(callbacks);
+            rv = channel->AsyncOpen(listener, aSource);
+          }
         }
-        httpIndex->mConnectionList->Clear();
     }
-
     if (httpIndex->mNodeList)
     {
         httpIndex->mNodeList->Count(&numItems);
@@ -1444,7 +1574,8 @@ nsHTTPIndex::FireTimer(nsITimer* aTimer, void* aClosure)
             // account for order required: src, prop, then target
             numItems /=3;
             if (numItems > 10)  numItems = 10;
-            
+          
+            PRInt32 loop;
             for (loop=0; loop<(PRInt32)numItems; loop++)
             {
                 nsCOMPtr<nsISupports>   isupports;
@@ -1452,17 +1583,16 @@ nsHTTPIndex::FireTimer(nsITimer* aTimer, void* aClosure)
                 httpIndex->mNodeList->RemoveElementAt((PRUint32)0);
                 nsCOMPtr<nsIRDFResource>    src;
                 if (isupports)  src = do_QueryInterface(isupports);
-
                 httpIndex->mNodeList->GetElementAt((PRUint32)0, getter_AddRefs(isupports));
                 httpIndex->mNodeList->RemoveElementAt((PRUint32)0);
                 nsCOMPtr<nsIRDFResource>    prop;
                 if (isupports)  prop = do_QueryInterface(isupports);
-
+                
                 httpIndex->mNodeList->GetElementAt((PRUint32)0, getter_AddRefs(isupports));
                 httpIndex->mNodeList->RemoveElementAt((PRUint32)0);
                 nsCOMPtr<nsIRDFNode>    target;
                 if (isupports)  target = do_QueryInterface(isupports);
-
+                
                 if (src && prop && target)
                 {
                     if (prop.get() == httpIndex->kNC_loading)
@@ -1477,7 +1607,7 @@ nsHTTPIndex::FireTimer(nsITimer* aTimer, void* aClosure)
             }                
         }
     }
-
+    
     // check both lists to see if the timer needs to continue firing
     if (httpIndex->mConnectionList)
     {
@@ -1504,24 +1634,24 @@ nsHTTPIndex::FireTimer(nsITimer* aTimer, void* aClosure)
         }
     }
 
-	// be sure to cancel the timer, as it holds a
-	// weak reference back to nsHTTPIndex
-	httpIndex->mTimer->Cancel();
-	httpIndex->mTimer = nsnull;
-
+    // be sure to cancel the timer, as it holds a
+    // weak reference back to nsHTTPIndex
+    httpIndex->mTimer->Cancel();
+    httpIndex->mTimer = nsnull;
+    
     // after firing off any/all of the connections be sure
     // to cancel the timer if we don't need to refire it
-	if (refireTimer == PR_TRUE)
-	{
-		httpIndex->mTimer = do_CreateInstance("@mozilla.org/timer;1");
-        if (httpIndex->mTimer)
-		{
-    		httpIndex->mTimer->Init(nsHTTPIndex::FireTimer, aClosure, 10,
-    		    NS_PRIORITY_LOWEST, NS_TYPE_ONE_SHOT);
-    		// Note: don't addref "this" as we'll cancel the
-    		// timer in the httpIndex destructor
-        }
-	}
+    if (refireTimer)
+    {
+      httpIndex->mTimer = do_CreateInstance("@mozilla.org/timer;1");
+      if (httpIndex->mTimer)
+      {
+        httpIndex->mTimer->Init(nsHTTPIndex::FireTimer, aClosure, 10,
+                                NS_PRIORITY_LOWEST, NS_TYPE_ONE_SHOT);
+        // Note: don't addref "this" as we'll cancel the
+        // timer in the httpIndex destructor
+      }
+    }
 }
 
 NS_IMETHODIMP
@@ -1813,16 +1943,8 @@ nsDirectoryViewerFactory::CreateInstance(const char *aCommand,
   // Now shanghai the stream into our http-index parsing datasource
   // wrapper beastie.
   rv = httpindex->CreateListener(aDocListenerResult);
-  if (NS_FAILED(rv)) return rv;
 
-  // addref the nsIHTTPIndex so that it'll live long enough to get
-  // added to the embedder's script global object; this happens when
-  // the stream's OnStartRequest() is called. (We can feel safe that
-  // this'll happen because of the flow-of-control in nsWebShell.cpp)
-  nsIHTTPIndex* dummy = httpindex;
-  NS_ADDREF(dummy);
-
-  return NS_OK;
+  return rv;
 }
 
 
