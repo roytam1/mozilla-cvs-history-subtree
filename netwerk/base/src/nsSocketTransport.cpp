@@ -566,6 +566,9 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
          "CurrentState=%d.\n",
           mHostName, mPort, this, aSelectFlags, mCurrentState);
 
+  if (mOperation == eSocketOperation_None)
+      done = PR_TRUE; // nothing to process
+
   //
   // Check for an error during PR_Poll(...)
   //
