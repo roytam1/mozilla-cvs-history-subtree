@@ -660,11 +660,11 @@ function OnClickThreadAndMessagePaneSplitterGrippy()
 function FolderPaneSelectionChange()
 {
     var folderOutliner = GetFolderOutliner();
-    var startIndex = {};
-    var endIndex = {};
-    folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startIndex, endIndex);
-    if (startIndex.value >= 0 && startIndex.value == endIndex.value)
+    if (folderOutliner.outlinerBoxObject.selection.count == 1)
     {
+        var startIndex = {};
+        var endIndex = {};
+        folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startIndex, endIndex);
         var folderResource = GetFolderResource(startIndex.value);
         var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
         if (msgFolder == msgWindow.openFolder)

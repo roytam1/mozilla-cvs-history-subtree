@@ -128,63 +128,62 @@ function MsgEmptyTrash()
 
 function MsgCompactFolder(isAll) 
 {
-	//get the selected elements
-	var tree = GetFolderTree();
-    if (tree)
+    // Get the selected folders.
+    var selectedFolders = GetSelectedMsgFolders();
+    var selectedFolder;
+    var folderResource;
+    var selectedFolderUri = "";
+    var isImap = false;
+
+    if (selectedFolders.length == 1)
     {
-        var folderList = tree.selectedItems;
-        if (folderList)
+        selectedFolder = selectedFolders[0];
+        folderResource = selectedFolder.QueryInterface(Components.interfaces.nsIRDFResource);
+        selectedFolderUri = folderResource.Value;
+        if (selectedFolderUri.indexOf("imap:") != -1)
+            isImap = true;
+        else
         {
-            var selectedFolderUri = "";
-            var isImap = false;
-            if (folderList.length == 1)
+            // set this so we'll reload it when compact is done
+            gCurrentFolderToReroot = selectedFolderUri;
+ 
+            // save off the current sort and view info so we'll
+            // use it on the folder loaded notification
+            var msgDatabase = selectedFolder.getMsgDatabase(msgWindow);
+            if (msgDatabase)
             {
-                selectedFolderUri = folderList[0].getAttribute('id');
-                if (selectedFolderUri.indexOf("imap:") != -1)
-                {
-                    isImap = true;
-                }
-                else
-                {
-                    ClearThreadPaneSelection();
-                    ClearThreadPane();
-                    ClearMessagePane();
-                    // set this so we'll reload it when compact is done
-                    gCurrentFolderToReroot = selectedFolderUri;
-                }
+                var dbFolderInfo = msgDatabase.dBFolderInfo;
+                gCurrentLoadingFolderSortType = dbFolderInfo.sortType;
+                gCurrentLoadingFolderSortOrder = dbFolderInfo.sortOrder;
+                gCurrentLoadingFolderViewFlags = dbFolderInfo.viewFlags;
+                gCurrentLoadingFolderViewType = dbFolderInfo.viewType;
             }
-            var i;
-            var folder;
-            for(i = 0; i < folderList.length; i++)
-            {
-                folder = folderList[i];
-                if (folder)
-                {
-                    folderuri = folder.getAttribute('id');
-                    dump(folderuri + "\n");
-                    dump("folder = " + folder.localName + "\n"); 
-                    try
-                    {
-                      messenger.CompactFolder(tree.database, folder.resource, isAll);
-                    }
-                    catch(e)
-                    {
-                      dump ("Exception : messenger.CompactFolder \n");
-                    }
-                }
-            }
-            if (!isImap && selectedFolderUri && selectedFolderUri != "")
-            {
-                /* this doesn't work; local compact is now an async operation
-                dump("selected folder = " + selectedFolderUri + "\n");
-                var selectedFolder =
-                    document.getElementById(selectedFolderUri);
-                ChangeSelection(tree, selectedFolder);
-                */
-                tree.clearItemSelection();
-            }
+
+            ClearThreadPaneSelection();
+            ClearThreadPane();
+            ClearMessagePane();
         }
-	}
+    }
+
+    for(var i = 0; i < selectedFolders.length; i++)
+    {
+        selectedFolder = selectedFolders[i];
+        folderResource = selectedFolder.QueryInterface(Components.interfaces.nsIRDFResource);
+        try
+        {
+            messenger.CompactFolder(GetFolderDatasource(), folderResource, isAll);
+        }
+        catch(e)
+        {
+            dump ("Exception : messenger.CompactFolder \n");
+        }
+    }
+
+    if (!isImap && selectedFolderUri)
+    {
+        var folderOutliner = GetFolderOutliner();
+        folderOutliner.outlinerBoxObject.selection.clearSelection();
+    }
 }
 
 function MsgFolderProperties() 
