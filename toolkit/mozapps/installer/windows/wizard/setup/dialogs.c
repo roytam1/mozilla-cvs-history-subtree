@@ -2082,6 +2082,12 @@ LRESULT CALLBACK DlgProcInstallSuccessful(HWND hDlg, UINT msg, WPARAM wParam, LO
     launchAppChecked = diInstallSuccessful.bLaunchAppChecked;
     resetHomepageChecked = diInstallSuccessful.bResetHomepageChecked;
 
+    if (gbIgnoreRunAppX) {
+      ctrl = GetDlgItem(hDlg, IDC_START_APP);
+      ShowWindow(ctrl, SW_HIDE);
+      launchAppChecked = FALSE;
+    }
+
     // Subclass dialog to paint all static controls white.
     OldDialogWndProc = SubclassWindow(hDlg, (WNDPROC)NewDialogWndProc);
     break;

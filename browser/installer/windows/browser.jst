@@ -612,9 +612,9 @@ if(verifyDiskSpace(fProgram, srDest))
     {
       err = performInstall();
       logComment("performInstall() returned: " + err);
-      if (! ('buildID' in Install))
+      if (File.exists(getFolder(fProgram, "xpicleanup.dat")))
       {
-        logComment("Running Pre-Mozilla 0.9.1");
+        logComment("incomplete install, manually launch cleanup utility");
         initInstall("Post-install Cleanup Utility", "Browser/xpicleanup", "$Version$");
         cleanupUtility = getFolder(fProgram, "xpicleanup.exe");
         err = File.execute(cleanupUtility);

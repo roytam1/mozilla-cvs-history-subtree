@@ -425,12 +425,6 @@ Message wait=@CLOSE_WAIT@
 ; the process id of this app instance window found.
 Close All Process Windows=TRUE
 
-; These keys are not normally necessary for checking instances.  They are
-; set here because Mozilla requires a way to shut down its turbo mode.
-Extra Cmd0 Reg Key Root=HKEY_LOCAL_MACHINE
-Extra Cmd0 Reg Key=Software\Microsoft\Windows\CurrentVersion\App Paths\$MainExeFile$
-Extra Cmd0 Reg Name=
-Extra Cmd0 Parameter=-kill
 
 ;DependeeX=Component A means
 ;  - if Component A gets checked this component gets checked

@@ -1764,7 +1764,7 @@ DWORD GetWinReg(HKEY hkRootKey, LPSTR szKey, LPSTR szName, LPSTR szReturnValue, 
   HKEY  hkResult;
   DWORD dwErr;
   DWORD dwSize;
-  DWORD dwType;
+  DWORD dwType = REG_NONE;
   char  szBuf[MAX_BUF];
 
   ZeroMemory(szBuf, sizeof(szBuf));

@@ -6741,7 +6741,7 @@ int PreCheckInstance(char *szSection, char *szIniFile)
       /* Even though WinSpawn is suppose to wait for the app to finish, this
        * does not really work that way for trying to quit the browser when
        * it's in turbo mode, so we wait 2 secs for it to complete. */
-      Delay(2);
+      Delay(5);
     }
 
     ++dwCounter;
@@ -6808,7 +6808,7 @@ HRESULT ShowMessageAndQuitProcess(HWND aHwndFW, char *aMsgQuitProcess, char *aMs
     if(aCloseAllWindows)
       CloseAllWindowsOfWindowHandle(aHwndFW, aMsgWait);
   }
-  Delay(2);
+  Delay(5);
   return(WIZ_OK);
 }
 
