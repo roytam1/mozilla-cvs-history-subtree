@@ -183,8 +183,8 @@ function HandleDeleteOrMoveMsgFailed(folder)
     //threadTree.treeBoxObject.endBatch();
     //dump("XXX end tree batch (delete or move failed)\n");
   }
-
-  ThreadPaneSelectionChange(true);
+  // fix me???
+//  ThreadPaneSelectionChange(true);
 }
 
 
@@ -244,8 +244,6 @@ function HandleDeleteOrMoveMsgCompleted(folder)
       //threadTree.treeBoxObject.endBatch();
       //dump("XXX end tree batch (delete or move succeeded)\n");
     }
-
-    ThreadPaneSelectionChange(true);
 */
 }
 
