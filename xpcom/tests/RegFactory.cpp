@@ -46,9 +46,9 @@ PRLibrary *GetLib(const char *path) {
   return PR_LoadLibrary(path);
 }
 
-int Register(const char *path) 
+nsresult Register(const char *path) 
 {
-  int res = NS_OK;
+  nsresult res = NS_OK;
   PRLibrary *instance = GetLib(path);
   if (instance != NULL) {
     nsRegisterProc proc = (nsRegisterProc) PR_FindSymbol(instance,
@@ -64,9 +64,9 @@ int Register(const char *path)
   return res;
 }
 
-int Unregister(const char *path) 
+nsresult Unregister(const char *path) 
 {
-  int res = NS_OK;
+  nsresult res = NS_OK;
   PRLibrary *instance = GetLib(path);
   if (instance != NULL) {
     nsUnregisterProc proc = (nsUnregisterProc) PR_FindSymbol(instance,
