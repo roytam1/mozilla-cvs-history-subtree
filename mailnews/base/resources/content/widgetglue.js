@@ -29,6 +29,7 @@
 
 //NOTE: gMessengerBundle must be defined and set or this Overlay won't work
 
+// test
 function ConvertDOMListToResourceArray(nodeList)
 {
     var result = Components.classes["@mozilla.org/supports-array;1"].createInstance(Components.interfaces.nsISupportsArray);
