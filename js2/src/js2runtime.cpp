@@ -1222,8 +1222,8 @@ void Context::buildRuntimeForStmt(StmtNode *p)
     case StmtNode::Function:
         {
             FunctionStmtNode *f = static_cast<FunctionStmtNode *>(p);
-            bool isStatic = hasAttribute(f->attributes, Token::Static);
-            bool isConstructor = hasAttribute(f->attributes, mScopeChain->ConstructorKeyWord);
+//            bool isStatic = hasAttribute(f->attributes, Token::Static);
+//            bool isConstructor = hasAttribute(f->attributes, mScopeChain->ConstructorKeyWord);
             bool isOperator = hasAttribute(f->attributes, mScopeChain->OperatorKeyWord);
             JSType *resultType = mScopeChain->extractType(f->function.resultType);
             JSFunction *fnc = f->mFunction;
@@ -1624,7 +1624,8 @@ JSValue String_split(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc
     JSObject *thisObj = thisValue->object;
 
     JSInstance *arrInst = Array_Type->newInstance(cx);
-    arrInst->setProperty(cx, widenCString("0"), NULL, JSValue((String *)(thisObj->mPrivate)));
+    JSValue v = JSValue((String *)(thisObj->mPrivate));
+    arrInst->setProperty(cx, widenCString("0"), NULL, v);
     return JSValue(arrInst);
 }
 
@@ -1645,7 +1646,7 @@ JSValue Array_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint32
     JSArrayInstance *arrInst = (JSArrayInstance *)thisObj;
     if (argc > 0) {
         if (argc == 1) {
-            arrInst->mLength = argv[0].toNumber(cx).f64;
+            arrInst->mLength = (uint32)(argv[0].toNumber(cx).f64);
            // arrInst->mInstanceValues = new JSValue[arrInst->mLength];
         }
         else {

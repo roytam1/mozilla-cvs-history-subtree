@@ -1711,7 +1711,7 @@ static const double two31 = 2147483648.0;
             JSValue v_int = v.toUInt32(cx);
             if ((v_int.f64 != two32minus1) && (v_int.toString(cx).string->compare(name) == 0)) {
                 if (v_int.f64 >= mLength)
-                    mLength = v_int.f64 + 1;
+                    mLength = (uint32)v_int.f64 + 1;
             }
         }
         return false;
@@ -1767,7 +1767,6 @@ static const double two31 = 2147483648.0;
             // hook up the prototype object
             PropertyIterator i;
             type->hasProperty(widenCString("prototype"), NULL, Read, &i);
-            Property &prop = PROPERTY(i);
             ASSERT(PROPERTY_KIND(i) == Slot);
             mInstanceValues[PROPERTY_INDEX(i)] = JSValue(type->mSuperType->mPrototype);
         }
