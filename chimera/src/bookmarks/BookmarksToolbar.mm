@@ -310,6 +310,7 @@
 
   if (!aShow)
   {
+    [[self superview] setNeedsDisplayInRect:[self frame]];
     NSRect newFrame = [self frame];
     newFrame.origin.y += newFrame.size.height;
     newFrame.size.height = 0;
