@@ -273,7 +273,7 @@ sub nextEntry
   my $self = shift;
   my %entry;
   my @ocorder;
-  my ($attr, @vals, $obj, $ldentry, $berv, $dn);
+  my ($attr, @vals, $obj, $ldentry, $berv, $dn, $count);
   my $ber = \$berv;
 
   # I use the object directly, to avoid setting the "change" flags
@@ -303,6 +303,7 @@ sub nextEntry
   @vals = ldap_get_values_len($self->{"ld"}, $self->{"ldentry"}, $attr);
   $obj->{$attr} = [@vals];
   push(@ocorder, $attr);
+  $count = 1;
 
   while ($attr = lc ldap_next_attribute($self->{"ld"},
 					$self->{"ldentry"}, $ber))
@@ -310,8 +311,12 @@ sub nextEntry
       @vals = ldap_get_values_len($self->{"ld"}, $self->{"ldentry"}, $attr);
       $obj->{$attr} = [@vals];
       push(@ocorder, $attr);
+      $count++;
     }
+
   $obj->{"_oc_order_"} = \@ocorder;
+  $obj->{"_oc_numattr_"} = $count;
+  $obj->{"_oc_keyidx_"} = 0;
   $obj->{"_self_obj_"} = $obj;
 
   ldap_ber_free($ber, 0) if $ber;
