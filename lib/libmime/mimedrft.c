@@ -258,113 +258,7 @@ static void mime_intl_insert_message_header(char **body, char**hdr_value,
 	StrAllocCat(*body, *hdr_value);
 }
 
-static void mime_insert_forwarded_message_headers(char **body, 
-												  MimeHeaders *headers,
-												  MSG_EditorType editorType,
-												  int16 mailcsid)
-{
-	if (body && *body && headers)
-	{
-		const char *newName = NULL;
-		char *newBody = NULL;
-		char *subject = MimeHeaders_get(headers, HEADER_SUBJECT, FALSE, FALSE);
-		char *from = MimeHeaders_get(headers, HEADER_FROM, FALSE, TRUE);
-		char *date = MimeHeaders_get(headers, HEADER_DATE, FALSE, TRUE);
-		char *organization = MimeHeaders_get(headers, HEADER_ORGANIZATION,
-											 FALSE, FALSE);
-		char *to = MimeHeaders_get(headers, HEADER_TO, FALSE, TRUE);
-		char *cc = MimeHeaders_get(headers, HEADER_CC, FALSE, TRUE);
-		char *bcc = MimeHeaders_get(headers, HEADER_BCC, FALSE, TRUE);
-		char *newsgroups = MimeHeaders_get(headers, HEADER_NEWSGROUPS, FALSE,
-										   TRUE);
-		const char *html_tag = XP_STRCASESTR(*body, "<HTML>");
-		XP_Bool htmlEdit = editorType == MSG_HTML_EDITOR;
 
-		if (!from)
-			from = MimeHeaders_get(headers, HEADER_SENDER, FALSE, TRUE);
-		if (!date)
-			date = MimeHeaders_get(headers, HEADER_RESENT_DATE, FALSE, TRUE);
-
-		if (htmlEdit)
-			StrAllocCopy(newBody, 
-						 "<HTML> <BR><BR>-------- Original Message --------");
-		else
-			StrAllocCopy(newBody, 
-						 LINEBREAK LINEBREAK "-------- Original Message --------");
-
-		if (subject)
-			mime_intl_insert_message_header(&newBody, &subject, HEADER_SUBJECT,
-											MK_MIMEHTML_DISP_SUBJECT,
-											mailcsid, htmlEdit);
-		if (from)
-		{
-			mime_fix_up_html_address(&from);
-			mime_intl_insert_message_header(&newBody, &from, HEADER_FROM,
-											MK_MIMEHTML_DISP_FROM,
-											mailcsid, htmlEdit);
-		}
-		if (date)
-			mime_intl_insert_message_header(&newBody, &date, HEADER_DATE,
-											MK_MIMEHTML_DISP_DATE,
-											mailcsid, htmlEdit);
-		if (organization)
-			mime_intl_insert_message_header(&newBody, &organization,
-											HEADER_ORGANIZATION,
-											MK_MIMEHTML_DISP_ORGANIZATION,
-											mailcsid, htmlEdit);
-		if (to)
-		{
-			mime_fix_up_html_address(&to);
-			mime_intl_insert_message_header(&newBody, &to, HEADER_TO,
-											MK_MIMEHTML_DISP_TO,
-											mailcsid, htmlEdit);
-		}
-		if (cc)
-		{
-			mime_fix_up_html_address(&cc);
-			mime_intl_insert_message_header(&newBody, &cc, HEADER_CC,
-											MK_MIMEHTML_DISP_CC,
-											mailcsid, htmlEdit);
-		}
-		if (bcc)
-		{
-			mime_fix_up_html_address(&bcc);
-			mime_intl_insert_message_header(&newBody, &bcc, HEADER_BCC,
-											MK_MIMEHTML_DISP_BCC,
-											mailcsid, htmlEdit);
-		}
-		if (newsgroups)
-			mime_intl_insert_message_header(&newBody, &newsgroups, HEADER_NEWSGROUPS,
-											MK_MIMEHTML_DISP_NEWSGROUPS,
-											mailcsid, htmlEdit);
-		if (htmlEdit)
-		{
-			StrAllocCat(newBody, LINEBREAK "<BR><BR>");
-			if (html_tag)
-				StrAllocCat(newBody, *body+6);
-			else
-				StrAllocCat(newBody, *body);
-		}
-		else
-		{
-			StrAllocCat(newBody, LINEBREAK LINEBREAK);
-			StrAllocCat(newBody, *body);
-		}
-		if (newBody)
-		{
-			XP_FREE(*body);
-			*body = newBody;
-		}
-		XP_FREEIF(subject);
-		XP_FREEIF(from);
-		XP_FREEIF(date);
-		XP_FREEIF(to);
-		XP_FREEIF(cc);
-		XP_FREEIF(bcc);
-		XP_FREEIF(newsgroups);
-		XP_FREEIF(organization);
-	}
-}
 
 static void
 mime_parse_stream_complete (NET_StreamClass *stream)
@@ -397,7 +291,6 @@ mime_parse_stream_complete (NET_StreamClass *stream)
 
   XP_Bool encrypt_p = FALSE;	/* #### how do we determine this? */
   XP_Bool sign_p = FALSE;		/* #### how do we determine this? */
-  XP_Bool forward_inline = FALSE;
   
   XP_ASSERT (mdd);
 
@@ -411,12 +304,6 @@ mime_parse_stream_complete (NET_StreamClass *stream)
     
 	encrypt_p = mdd->options->decrypt_p;
 	sign_p = mdd->options->signed_p;
-
-	forward_inline = ( mdd->url->fe_data && 
-					   mdd->format_out != FO_CMDLINE_ATTACHMENTS &&
-					   MSG_GetActionInfoFlags(mdd->url->fe_data) &
-					   MSG_FLAG_FORWARDED );
-
 
     XP_ASSERT ( mdd->options == mdd->obj->options );
     mime_free (mdd->obj);
@@ -438,56 +325,41 @@ mime_parse_stream_complete (NET_StreamClass *stream)
   if ( mdd->headers )
   {
 	subj = MimeHeaders_get(mdd->headers, HEADER_SUBJECT,  FALSE, FALSE);
-	if (forward_inline)
-	{
-		if (subj)
-		{
-			char *newSubj = PR_smprintf("[Fwd: %s]", subj);
-			if (newSubj)
-			{
-				XP_FREE(subj);
-				subj = newSubj;
-			}
+	repl = MimeHeaders_get(mdd->headers, HEADER_REPLY_TO, FALSE, FALSE);
+	to   = MimeHeaders_get(mdd->headers, HEADER_TO,       FALSE, TRUE);
+	cc   = MimeHeaders_get(mdd->headers, HEADER_CC,       FALSE, TRUE);
+	bcc   = MimeHeaders_get(mdd->headers, HEADER_BCC,       FALSE, TRUE);
+	
+	/* These headers should not be RFC-1522-decoded. */
+	grps = MimeHeaders_get(mdd->headers, HEADER_NEWSGROUPS,  FALSE, TRUE);
+	foll = MimeHeaders_get(mdd->headers, HEADER_FOLLOWUP_TO, FALSE, TRUE);
+		
+	host = MimeHeaders_get(mdd->headers, HEADER_X_MOZILLA_NEWSHOST, FALSE, FALSE);
+	if (!host)
+		host = MimeHeaders_get(mdd->headers, HEADER_NNTP_POSTING_HOST, FALSE, FALSE);
+		
+	id   = MimeHeaders_get(mdd->headers, HEADER_MESSAGE_ID,  FALSE, FALSE);
+	refs = MimeHeaders_get(mdd->headers, HEADER_REFERENCES,  FALSE, TRUE);
+	priority = MimeHeaders_get(mdd->headers, HEADER_X_PRIORITY, FALSE, FALSE);
+
+	mime_intl_mimepart_2_str(&repl, mdd->mailcsid);
+	mime_intl_mimepart_2_str(&to, mdd->mailcsid);
+	mime_intl_mimepart_2_str(&cc, mdd->mailcsid);
+	mime_intl_mimepart_2_str(&bcc, mdd->mailcsid);
+	mime_intl_mimepart_2_str(&grps, mdd->mailcsid);
+	mime_intl_mimepart_2_str(&foll, mdd->mailcsid);
+	mime_intl_mimepart_2_str(&host, mdd->mailcsid);
+
+	if (host) {
+		char *secure = NULL;
+		
+		secure = strcasestr(host, "secure");
+		if (secure) {
+			*secure = 0;
+			news_host = PR_smprintf ("snews://%s", host);
 		}
-	}	
-	else
-	{
-		repl = MimeHeaders_get(mdd->headers, HEADER_REPLY_TO, FALSE, FALSE);
-		to   = MimeHeaders_get(mdd->headers, HEADER_TO,       FALSE, TRUE);
-		cc   = MimeHeaders_get(mdd->headers, HEADER_CC,       FALSE, TRUE);
-		bcc   = MimeHeaders_get(mdd->headers, HEADER_BCC,       FALSE, TRUE);
-		
-		/* These headers should not be RFC-1522-decoded. */
-		grps = MimeHeaders_get(mdd->headers, HEADER_NEWSGROUPS,  FALSE, TRUE);
-		foll = MimeHeaders_get(mdd->headers, HEADER_FOLLOWUP_TO, FALSE, TRUE);
-		
-		host = MimeHeaders_get(mdd->headers, HEADER_X_MOZILLA_NEWSHOST, FALSE, FALSE);
-		if (!host)
-			host = MimeHeaders_get(mdd->headers, HEADER_NNTP_POSTING_HOST, FALSE, FALSE);
-		
-		id   = MimeHeaders_get(mdd->headers, HEADER_MESSAGE_ID,  FALSE, FALSE);
-		refs = MimeHeaders_get(mdd->headers, HEADER_REFERENCES,  FALSE, TRUE);
-		priority = MimeHeaders_get(mdd->headers, HEADER_X_PRIORITY, FALSE, FALSE);
-
-		mime_intl_mimepart_2_str(&repl, mdd->mailcsid);
-		mime_intl_mimepart_2_str(&to, mdd->mailcsid);
-		mime_intl_mimepart_2_str(&cc, mdd->mailcsid);
-		mime_intl_mimepart_2_str(&bcc, mdd->mailcsid);
-		mime_intl_mimepart_2_str(&grps, mdd->mailcsid);
-		mime_intl_mimepart_2_str(&foll, mdd->mailcsid);
-		mime_intl_mimepart_2_str(&host, mdd->mailcsid);
-
-		if (host) {
-			char *secure = NULL;
-			
-			secure = strcasestr(host, "secure");
-			if (secure) {
-				*secure = 0;
-				news_host = PR_smprintf ("snews://%s", host);
-			}
-			else {
-			news_host = PR_smprintf ("news://%s", host);
-			}
+		else {
+		news_host = PR_smprintf ("news://%s", host);
 		}
 	}
 
@@ -498,7 +370,7 @@ mime_parse_stream_complete (NET_StreamClass *stream)
 										  encrypt_p, sign_p);
 
 	draftInfo = MimeHeaders_get(mdd->headers, HEADER_X_MOZILLA_DRAFT_INFO, FALSE, FALSE);
-	if (draftInfo && fields && !forward_inline) {
+	if (draftInfo && fields) {
 		char *parm = 0;
 		parm = MimeHeaders_get_parameter(draftInfo, "vcard", NULL, NULL);
 		if (parm && !XP_STRCMP(parm, "1"))
@@ -578,14 +450,6 @@ mime_parse_stream_complete (NET_StreamClass *stream)
 				editorType = MSG_PLAINTEXT_EDITOR;
 			}
 		  
-			if (forward_inline)
-			{
-				mime_insert_forwarded_message_headers(&body, mdd->headers,
-													  editorType,
-													  mdd->mailcsid);
-				bodyLen = XP_STRLEN(body);
-			}
-
 			{
 				CCCDataObject conv = INTL_CreateCharCodeConverter();
 				if(conv) {
