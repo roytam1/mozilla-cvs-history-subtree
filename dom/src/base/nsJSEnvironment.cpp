@@ -1320,6 +1320,10 @@ nsJSContext::InitClasses()
   }
   */
 
+/*
+  // This is unnecessary because we already called 
+  // InitClassesWithNewWrappedGlobal.
+
   // Initialize XPConnect classes
   if (NS_SUCCEEDED(rv)) {
     NS_WITH_SERVICE(nsIXPConnect, xpc, nsIXPConnect::GetCID(), &rv);
@@ -1328,6 +1332,7 @@ nsJSContext::InitClasses()
     }
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to init xpconnect classes");
   }
+*/
 
   // Initialize the options object and set default options in mContext
   if (NS_SUCCEEDED(rv)) {
