@@ -295,7 +295,7 @@ private:
      * their value. If this value is true, the allowOnlyTextNodes flag is ignored.
     **/
     MBool getText
-        (DocumentFragment* dfrag, DOMString& dest, MBool deep, MBool allowOnlyTextNodes);
+        (DocumentFragment* dfrag, String& dest, MBool deep, MBool allowOnlyTextNodes);
 
     /**
      * Notifies all registered ErrorObservers of the given error
@@ -337,7 +337,7 @@ private:
      * @param ps the current ProcessorState
     **/
     void processAttrValueTemplate
-        (const String& attValue, DOMString& result, Node* context, ProcessorState* ps);
+        (const String& attValue, String& result, Node* context, ProcessorState* ps);
 
     void processTemplate(Node* node, Node* xslTemplate, ProcessorState* ps);
     void processTemplateParams(Node* xslTemplate, Node* context, ProcessorState* ps);
