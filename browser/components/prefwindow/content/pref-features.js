@@ -55,23 +55,32 @@ function Startup()
   switch (prefValue) {
   case "1": 
     gImagesRestricted.checked = true;
-    break;
   case "0": 
     gImagesEnabled.checked = true;
     break;
   }
   if (!gImagesEnabled.checked)
     gImagesRestricted.disabled = true;
+
+  if (parent.hPrefWindow.getPrefIsLocked("network.image.imageBehavior")) {  
+    gImagesRestricted.disabled = true;
+    gImagesEnabled.disabled = true;
+  }
 }
 
 function updateImagePref()
 {
-  if (!gImagesEnabled.checked) {
-    gImagesPref.setAttribute("value", 2)
-    gImagesRestricted.disabled = true;
+  if (!parent.hPrefWindow.getPrefIsLocked("network.image.imageBehavior")) {
+    if (!gImagesEnabled.checked) {
+      gImagesPref.setAttribute("value", 2)
+      gImagesRestricted.disabled = true;
+    } else {
+      gImagesPref.setAttribute("value", gImagesRestricted.checked ? 1 : 0)
+      gImagesRestricted.disabled = false;
+    }
   } else {
-    gImagesPref.setAttribute("value", gImagesRestricted.checked ? 1 : 0)
-    gImagesRestricted.disabled = false;
+    gImagesRestricted.disabled = true;
+    gImagesEnabled.disabled = true;
   }
 }
 
@@ -107,9 +116,9 @@ function updateButtons()
 }
 
 var gExceptionsParams = {
-  install: { blockVisible: false, allowVisible: true, prefilledHost: "", permissionType: "install" },
-  popup:   { blockVisible: false, allowVisible: true, prefilledHost: "", permissionType: "popup"   },
-  image:   { blockVisible: true,  allowVisible: true, prefilledHost: "", permissionType: "image"   }
+  install: { blockVisible: false, sessionVisible: false, allowVisible: true, prefilledHost: "", permissionType: "install" },
+  popup:   { blockVisible: false, sessionVisible: false, allowVisible: true, prefilledHost: "", permissionType: "popup"   },
+  image:   { blockVisible: true,  sessionVisible: false, allowVisible: true, prefilledHost: "", permissionType: "image"   },
 };
 
 function showExceptions(aEvent)

@@ -312,6 +312,7 @@ function viewCookieExceptions()
   }
   else {
     var params = { blockVisible   : true,
+                   sessionVisible : true,
                    allowVisible   : true,
                    prefilledHost  : "",
                    permissionType : "cookie" };
@@ -335,6 +336,9 @@ function updateCookieBehavior()
 
 function updateCookieBroadcaster()
 {
+  cookieBehaviorIsLocked = parent.hPrefWindow.getPrefIsLocked("network.cookie.cookieBehavior");
+  cookieLifetimeIsLocked = parent.hPrefWindow.getPrefIsLocked("network.cookie.lifetimePolicy");
+
   var broadcaster = document.getElementById("cookieBroadcaster");
   var checkbox    = document.getElementById("enableCookies");
   var radiogroup  = document.getElementById("networkCookieLifetime");
@@ -345,7 +349,12 @@ function updateCookieBroadcaster()
   }
   else {
     broadcaster.removeAttribute("disabled");
-    radiogroup.removeAttribute("disabled");
+    if (!cookieLifetimeIsLocked)
+      radiogroup.removeAttribute("disabled");
+  }
+  if (cookieBehaviorIsLocked) {
+    checkbox.setAttribute("disabled", "true");
+    broadcaster.setAttribute("disabled", "true");
   }
 }
 

@@ -73,14 +73,20 @@ function DoEnabling()
       for (i = 0; i < auto.length; i++)
         auto[i].setAttribute( "disabled", "true" );
       if (!radiogroup.disabled && !shareAllProxies.checked) {
-        for (i = 0; i < manual.length; i++)
-          manual[i].removeAttribute("disabled");
+        for (i = 0; i < manual.length; i++) {
+           prefstring = manual[i].getAttribute( "prefstring" );
+           if (!window.opener.top.hPrefWindow.getPrefIsLocked(prefstring))
+             manual[i].removeAttribute( "disabled" );
+        }
       } else {
         for (i = 0; i < manual.length; i++)
           manual[i].setAttribute("disabled", "true");
-        for (i = 0; i < manual2.length; i++)
-          manual2[i].removeAttribute("disabled");
-      }        
+        for (i = 0; i < manual2.length; i++) {
+           prefstring = manual2[i].getAttribute( "prefstring" );
+           if (!window.opener.top.hPrefWindow.getPrefIsLocked(prefstring))
+             manual2[i].removeAttribute( "disabled" );
+        }
+      }
       break;
     case "2":
     default:
@@ -145,24 +151,37 @@ function toggleProxySettings()
   var ports = [ftpPort,gopherPort,sslPort];
   var allFields = [ftp,gopher,ssl,ftpPort,gopherPort,sslPort,socks,socksPort,socksVersion,socksVersion4,socksVersion5];
 
-  if ( document.getElementById("shareAllProxies").checked ) {
+  if (document.getElementById("shareAllProxies").checked) {
     for (i = 0; i < allFields.length; i++)
       allFields[i].setAttribute("disabled", "true");
     for (i = 0; i < urls.length; i++) {
       oldUrls[i] = urls[i].value;
-      urls[i].value = http.value;
+      prefstring = urls[i].getAttribute("prefstring");
+      if (!window.opener.top.hPrefWindow.getPrefIsLocked(prefstring))
+        urls[i].value = http.value;
     }
     for (i = 0; i < ports.length; i++) {
       oldPorts[i] = ports[i].value;
-      ports[i].value = httpPort.value;
+      prefstring = ports[i].getAttribute("prefstring");
+      if (!window.opener.top.hPrefWindow.getPrefIsLocked(prefstring))
+        ports[i].value = httpPort.value;
     }
   } else {
-    for (i = 0; i < allFields.length; i++)
-      allFields[i].removeAttribute("disabled");
-    for (i = 0; i < urls.length; i++)
-      urls[i].value = oldUrls[i];
-    for (i = 0; i < ports.length; i++)
-      ports[i].value = oldPorts[i];
+    for (i = 0; i < allFields.length; i++) {
+      prefstring = allFields[i].getAttribute("prefstring");
+      if (!window.opener.top.hPrefWindow.getPrefIsLocked(prefstring))
+        allFields[i].removeAttribute("disabled");
+    }
+    for (i = 0; i < urls.length; i++) {
+      prefstring = urls[i].getAttribute("prefstring");
+      if (!window.opener.top.hPrefWindow.getPrefIsLocked(prefstring))
+        urls[i].value = oldUrls[i];
+    }
+    for (i = 0; i < ports.length; i++) {
+      prefstring = ports[i].getAttribute("prefstring");
+      if (!window.opener.top.hPrefWindow.getPrefIsLocked(prefstring))
+        ports[i].value = oldPorts[i];
+    }
   }
 }
 
@@ -183,8 +202,14 @@ function copyProxySettings()
   var urls = [ftp,gopher,ssl];
   var ports = [ftpPort,gopherPort,sslPort];
   
-  for (i = 0; i < urls.length; i++)
-    urls[i].value = http.value;
-  for (i = 0; i < ports.length; i++)
-    ports[i].value = httpPort.value;
+  for (i = 0; i < urls.length; i++) {
+    prefstring = urls[i].getAttribute("prefstring");
+    if (!window.opener.top.hPrefWindow.getPrefIsLocked(prefstring))
+      urls[i].value = http.value;
+  }
+  for (i = 0; i < ports.length; i++) {
+    prefstring = ports[i].getAttribute("prefstring");
+    if (!window.opener.top.hPrefWindow.getPrefIsLocked(prefstring))
+      ports[i].value = httpPort.value;
+  }
 }

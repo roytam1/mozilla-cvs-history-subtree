@@ -46,12 +46,14 @@
   <label value="&address.label;"/>
   <hbox align="start">
     <textbox id="url" flex="1" oninput="gPermissionManager.onHostInput(event.target);"/>
-    <vbox>
-      <button id="btnBlock" disabled="true" label="&block.label;" 
-              oncommand="gPermissionManager.addPermission(nsIPermissionManager.DENY_ACTION);"/>
-      <button id="btnAllow" disabled="true" label="&allow.label;" 
-              oncommand="gPermissionManager.addPermission(nsIPermissionManager.ALLOW_ACTION);"/>
-    </vbox>
+  </hbox>
+  <hbox pack="end">
+     <button id="btnBlock" disabled="true"
+             label="&block.label;" oncommand="gPermissionManager.addPermission(nsIPermissionManager.DENY_ACTION);"/>
+     <button id="btnSession" disabled="true"
+             label="&session.label;" oncommand="gPermissionManager.addPermission(nsICookiePermission.ACCESS_SESSION);"/>
+     <button id="btnAllow" disabled="true"
+             label="&allow.label;" oncommand="gPermissionManager.addPermission(nsIPermissionManager.ALLOW_ACTION);"/>
   </hbox>
   <separator class="thin"/>
   <tree id="permissionsTree" flex="1" style="height: 18em;"

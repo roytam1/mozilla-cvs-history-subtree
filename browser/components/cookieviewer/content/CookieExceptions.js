@@ -1,4 +1,5 @@
 const nsIPermissionManager = Components.interfaces.nsIPermissionManager;
+const nsICookiePermission = Components.interfaces.nsICookiePermission;
 
 function Permission(id, host, rawHost, type, capability, perm) 
 {
@@ -68,16 +69,40 @@ var gPermissionManager = {
   addPermission: function (aPermission)
   {
     var textbox = document.getElementById("url");
-    var url = textbox.value.replace(/ /g, "");
-    var uri = Components.classes["@mozilla.org/network/standard-url;1"]
-                        .createInstance(Components.interfaces.nsIURI);
-    uri.spec = url;
+    var host = textbox.value.replace(/^\s*([-\w]*:\/+)?/, ""); // trim any leading space and scheme
+    try {
+      var ioService = Components.classes["@mozilla.org/network/io-service;1"]
+                                .getService(Components.interfaces.nsIIOService);
+      var uri = ioService.newURI("http://"+host, null, null);
+      host = uri.host;
+    } catch(ex) {
+      var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
+                                    .getService(Components.interfaces.nsIPromptService);
+      var message = stringBundle.getString("invalidURI");
+      var title = stringBundle.getString("invalidURITitle");
+      promptservice.alert(window,title,message);
+    }
 
+    // we need this whether the perm exists or not
+    var stringKey = null;
+    switch (aPermission) {
+      case nsIPermissionManager.ALLOW_ACTION:
+        stringKey = "can";
+        break;
+      case nsIPermissionManager.DENY_ACTION:
+        stringKey = "cannot";
+        break;
+      case nsICookiePermission.ACCESS_SESSION:
+        stringKey = "canSession";
+        break;
+      default:
+        break;
+    } 
+    // check whether the permission already exists, if not, add it
     var exists = false;
     for (var i = 0; i < this._addedPermissions.length; ++i) {
-      if (this._addedPermissions[i].rawHost == url) {
+      if (this._addedPermissions[i].rawHost == host) {
         exists = true;
-        var stringKey = aPermission == nsIPermissionManager.ALLOW_ACTION ? "can" : "cannot";
         this._addedPermissions[i].capability = this._bundle.getString(stringKey);
         this._addedPermissions[i].perm = aPermission;
         break;
@@ -85,10 +110,9 @@ var gPermissionManager = {
     }
     
     if (!exists) {
-      var stringKey = aPermission == nsIPermissionManager.ALLOW_ACTION ? "can" : "cannot";
       var p = new Permission(this._addedPermissions.length, 
-                             url, 
-                             (url.charAt(0) == ".") ? url.substring(1,url.length) : url, 
+                             host, 
+                             (host.charAt(0) == ".") ? host.substring(1,host.length) : host, 
                              this._type, 
                              this._bundle.getString(stringKey), 
                              aPermission);
@@ -100,10 +124,17 @@ var gPermissionManager = {
     }
     textbox.value = "";
     textbox.focus();
+
+    // covers a case where the site exists already, so the buttons don't disable
+    this.onHostInput(textbox);
+
+    // enable "remove all" button as needed
+    document.getElementById("removeAllPermissions").disabled = this._addedPermissions.length == 0;
   },
   
   onHostInput: function (aSiteField)
   {
+    document.getElementById("btnSession").disabled = !aSiteField.value;
     document.getElementById("btnBlock").disabled = !aSiteField.value;
     document.getElementById("btnAllow").disabled = !aSiteField.value;
   },
@@ -124,6 +155,7 @@ var gPermissionManager = {
     document.documentElement.setAttribute("title", titleString);
     
     document.getElementById("btnBlock").hidden = !window.arguments[0].blockVisible;
+    document.getElementById("btnSession").hidden = !window.arguments[0].sessionVisible;
     document.getElementById("btnAllow").hidden = !window.arguments[0].allowVisible;
     document.getElementById("url").value = window.arguments[0].prefilledHost;
     this.onHostInput(document.getElementById("url"));
@@ -183,8 +215,22 @@ var gPermissionManager = {
       var nextPermission = enumerator.getNext().QueryInterface(Components.interfaces.nsIPermission);
       if (nextPermission.type == this._type) {
         var host = nextPermission.host;
-        var capability = ( nextPermission.capability == nsIPermissionManager.ALLOW_ACTION ) ? true : false;
-        var capabilityString = this._bundle.getString( capability ? "can" : "cannot");
+        var capability = null;
+        switch (nextPermission.capability) {
+          case nsIPermissionManager.ALLOW_ACTION:
+            capability = "can";
+            break;
+          case nsIPermissionManager.DENY_ACTION:
+            capability = "cannot";
+            break;
+          // we should only ever hit this for cookies
+          case nsICookiePermission.ACCESS_SESSION:
+            capability = "canSession";
+            break;
+          default:
+            break;
+        } 
+        var capabilityString = this._bundle.getString(capability);
         var p = new Permission(count++, host,
                                (host.charAt(0) == ".") ? host.substring(1,host.length) : host,
                                nextPermission.type,

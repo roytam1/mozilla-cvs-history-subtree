@@ -118,6 +118,12 @@ function Startup()
     // prefwindow wasn't opened from a browser window, so no current page
     useButton.disabled = true;
   }
+  
+  if (parent.hPrefWindow.getPrefIsLocked("browser.startup.homepage")) {
+    document.getElementById("browserUseCurrent").disabled = true;
+    document.getElementById("browserUseBookmark").disabled = true;
+    document.getElementById("browserUseBlank").disabled = true;
+  }
  
 #ifdef MOZ_WIDGET_GTK2
   var shell = getShellService();

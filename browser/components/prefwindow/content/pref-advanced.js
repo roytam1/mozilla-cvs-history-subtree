@@ -99,8 +99,10 @@ function doSecurityEnabling()
     break;
   case "2":
   default:
-    signersMenu.removeAttribute("disabled");
-    signersURL.removeAttribute("disabled");
+    if (!parent.hPrefWindow.getPrefIsLocked("security.OCSP.signingCA"))
+      signersMenu.removeAttribute("disabled");
+    if (!parent.hPrefWindow.getPrefIsLocked("security.OCSP.URL"))
+      signersURL.removeAttribute("disabled");
   }
 }
 

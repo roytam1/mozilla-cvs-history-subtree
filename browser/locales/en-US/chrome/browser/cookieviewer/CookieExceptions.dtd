@@ -6,4 +6,5 @@
 <!ENTITY removeallpermissions.label   "Remove All Sites">
 <!ENTITY address.label                "Address of website:">
 <!ENTITY block.label                  "Block">
+<!ENTITY session.label                "Allow for Session">
 <!ENTITY allow.label                  "Allow">
