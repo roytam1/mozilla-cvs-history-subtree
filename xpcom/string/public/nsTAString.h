@@ -449,6 +449,9 @@ class nsTAString_CharT
     private:
 
         // NOT TO BE IMPLEMENTED
+      nsTAString_CharT( const self_type& );
+
+        // NOT TO BE IMPLEMENTED
       size_type CountChar( incompatible_char_type );
       void operator=     ( incompatible_char_type );
       void Assign        ( incompatible_char_type );
