@@ -50,10 +50,6 @@
 #include "nsIWebBrowserPrint.h"
 #include "nsIWindowWatcher.h"
 
-// for painting the background window
-#include "nsIDeviceContext.h"
-#include "nsIRenderingContext.h"
-
 #include "nsVoidArray.h"
 #include "nsWeakPtr.h"
 
@@ -127,8 +123,6 @@ protected:
     NS_IMETHOD UnBindListener(nsISupports *aListener, const nsIID& aIID);
     NS_IMETHOD EnsureFindImpl();
 
-    NS_IMETHOD FillBackground(const nsRect &aRect);
-
     static nsEventStatus PR_CALLBACK HandleEvent(nsGUIEvent *aEvent);
 
 protected:
@@ -149,9 +143,7 @@ protected:
    nsCOMPtr<nsIWebProgress>   mWebProgress;
    nsWebBrowserFindImpl*      mFindImpl;
 
-   // so that we can draw when we get expose events
-   nsCOMPtr<nsIRenderingContext> mRC;
-   nsCOMPtr<nsIDeviceContext>    mDC;
+   // cached background color
    nscolor                       mBackgroundColor;
 
    //Weak Reference interfaces...
