@@ -37,7 +37,7 @@ extern PRLogModuleInfo *_pr_shm_lm;
 /* 
 **  there is no named_shared_memory 
 */
-extern PRSharedMemory*  _MD_OpenSharedMemory( PRSharedMemory *shm )
+extern PRSharedMemory*  _MD_OpenSharedMemory( const char *name, PRSize size, PRIntn flags, PRIntn mode )
 {
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
     return PR_FAILURE;

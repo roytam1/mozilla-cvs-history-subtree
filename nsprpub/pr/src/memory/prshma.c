@@ -31,7 +31,21 @@ extern PRLogModuleInfo *_pr_shma_lm;
 #elif defined(WIN32)
 /* defined in pr/src/md/windows/w32shm.c */
 #else
-    error! ... not supported on this platform
+extern PRFileMap * _PR_MD_OPEN_ANON_FILE_MAP( const char *dirName, PRSize size, PRFileMapProtect prot )
+{
+    PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
+    return NULL;
+}
+extern PRStatus _PR_MD_EXPORT_FILE_MAP_AS_STRING(PRFileMap *fm, PRSize bufSize, char *buf)
+{
+    PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
+    return PR_FAILURE;
+}
+extern PRFileMap * _PR_MD_IMPORT_FILE_MAP_FROM_STRING(const char *fmstring)
+{
+    PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
+    return NULL;
+}
 #endif
 
 /*
