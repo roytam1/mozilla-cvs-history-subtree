@@ -1795,7 +1795,7 @@ nsresult nsMsgDBView::ExpandAll()
 
 nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded)
 {
-	char			flags = m_flags[index];
+	PRUint32			flags = m_flags[index];
 	nsMsgKey		firstIdInThread;
   nsMsgKey        startMsg = nsMsgKey_None;
 	nsresult		rv = NS_OK;
