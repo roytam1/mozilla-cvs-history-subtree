@@ -146,8 +146,6 @@ Transfer.prototype =
   {
     ddump("Done(" + (success ? "without" : "with") + " errors)");
 
-    SavePassword(); // XXX object
-
     if (this.finishedCallback)
       this.finishedCallback(success);
 
