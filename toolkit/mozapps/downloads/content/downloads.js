@@ -107,32 +107,39 @@ var gDownloadObserver = {
     case "dl-failed":
     case "dl-done":
     case "dl-cancel":
-      var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
-      var rdfc = Components.classes["@mozilla.org/rdf/container;1"].createInstance(Components.interfaces.nsIRDFContainer);
+      // Wrap this in try...catch since this can be called while shutting down... 
+      // it doesn't really matter if it fails then since well.. we're shutting down
+      // and there's no UI to update!
+      try {
+        var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
+        var rdfc = Components.classes["@mozilla.org/rdf/container;1"].createInstance(Components.interfaces.nsIRDFContainer);
 
-      var db = gDownloadManager.datasource;
-      
-      rdfc.Init(db, rdf.GetResource("NC:DownloadsRoot"));
+        var db = gDownloadManager.datasource;
+        
+        rdfc.Init(db, rdf.GetResource("NC:DownloadsRoot"));
 
-      var dlRes = rdf.GetUnicodeResource(dl.target.persistentDescriptor);
-      rdfc.RemoveElement(dlRes, true);
-      
-      var elts = rdfc.GetElements();
-      var insertIndex = 1;
-      while (elts.hasMoreElements()) {
-        var currDL = elts.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
-        // This is based on the ASSumption that the dlmgr only hashes active downloads. 
-        var dl = gDownloadManager.getDownload(currDL.Value);
-        if (!dl) 
-          break;
-        ++insertIndex;
+        var dlRes = rdf.GetUnicodeResource(dl.target.persistentDescriptor);
+        rdfc.RemoveElement(dlRes, true);
+        
+        var elts = rdfc.GetElements();
+        var insertIndex = 1;
+        while (elts.hasMoreElements()) {
+          var currDL = elts.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+          // This is based on the ASSumption that the dlmgr only hashes active downloads. 
+          var dl = gDownloadManager.getDownload(currDL.Value);
+          if (!dl) 
+            break;
+          ++insertIndex;
+        }
+        
+        if (insertIndex == rdfc.GetCount() || insertIndex < 1) 
+          rdfc.AppendElement(dlRes);
+        else
+          rdfc.InsertElementAt(dlRes, insertIndex, true);      
       }
-      
-      if (insertIndex == rdfc.GetCount() || insertIndex < 1) 
-        rdfc.AppendElement(dlRes);
-      else
-        rdfc.InsertElementAt(dlRes, insertIndex, true);      
-      
+      catch (e) {
+      }
+            
       break;
     case "dl-start":
       // Add this download to the percentage average tally
