@@ -48,7 +48,7 @@ NS_IMETHODIMP nsSOAPResponse::GetRespondingTo(nsISOAPMessage * *aRespondingTo)
 {
   NS_ENSURE_ARG_POINTER(aRespondingTo);
   *aRespondingTo = mRespondingTo;
-  NS_IF_ADD_REF(*aRespondingTo);
+  NS_IF_ADDREF(*aRespondingTo);
   return NS_OK;
 }
 NS_IMETHODIMP nsSOAPResponse::SetRespondingTo(nsISOAPMessage * aRespondingTo)
