@@ -82,18 +82,30 @@ sub _to_LDIF_records
     return 0; # zero or more references to records
 }
 
-sub continue_line
+sub _continue_lines
 {
     my ($max_line, $from) = @_;
-    return $from unless (defined ($max_line) and $max_line > 1);
+    $max_line = undef unless (defined ($max_line) and $max_line > 1);
+    # The caller may allow \n characters to be unencoded, by supplying the
+    # option [encode=>pattern].  In this case, the \n characters will be
+    # lost; that is, a standard LDIF parser will not reconstruct them.
+    # But the remaining characters are preserved, and the output is fairly
+    # legible, with an LDIF continuation line for each line in the value.
+
     my ($into) = "";
-    while ($max_line < length ($from)) {
-	my $chunk;
-	($chunk, $from) = unpack ("a". $max_line ."a*", $from);
-	$into .= $chunk . "\n";
-	$from = " " . $from;
+    foreach my $line (split /\n/, $from, -1) {
+	$line = " $line" if length $into; # continuation of previous line
+	if (defined $max_line) {
+	    while ($max_line < length $line) {
+		my $chunk;
+		($chunk, $line) = unpack ("a${max_line}a*", $line);
+		$into .= "$chunk\n";
+		$line = " $line";
+	    }
+	}
+	$into .= "$line\n";
     }
-    return $into . $from;
+    return $into;
 }
 
 #############################################################################
@@ -154,7 +166,7 @@ sub pack_LDIF
 	    my ($attr, $val) = splice @record, 0, 2;
 	    foreach $val (((ref $val) eq "ARRAY") ? @$val : $val) {
 		if (not defined $val) {
-		    $str .= continue_line ($max_line, $attr);
+		    $str .= _continue_lines ($max_line, $attr);
 		} else {
 		    my $value;
 		    if (ref $val) {
@@ -168,9 +180,8 @@ sub pack_LDIF
 		    } else {
 			$value = " $val";
 		    }
-		    $str .= continue_line ($max_line, "$attr:$value");
+		    $str .= _continue_lines ($max_line, "$attr:$value");
 		}
-		$str .= "\n";
 	    }
 	}
     }
