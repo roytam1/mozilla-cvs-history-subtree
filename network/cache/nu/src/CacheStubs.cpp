@@ -97,6 +97,18 @@ CacheObject_GetAddress(const void* pThis)
     return pThis ? ((nsCacheObject*)pThis)->Address() : 0;
 }
 
+const char*
+CacheObject_GetCharset(const void* pThis)
+{
+    return pThis ? ((nsCacheObject*)pThis)->Charset() : 0;
+}
+
+const char*
+CacheObject_GetContentEncoding(const void* pThis)
+{
+    return pThis ? ((nsCacheObject*)pThis)->ContentEncoding() : 0;
+}
+
 PRUint32
 CacheObject_GetContentLength(const void* pThis)
 {
@@ -145,6 +157,24 @@ CacheObject_GetModule(const void* pThis)
     return pThis ? ((nsCacheObject*)pThis)->Module() : -1;
 }
 
+const char*
+CacheObject_GetPageServicesURL(const void* pThis)
+{
+    return pThis ? ((nsCacheObject*)pThis)->PageServicesURL() : 0;
+}
+
+const char*
+CacheObject_GetPostData(const void* pThis)
+{
+    return pThis ? ((nsCacheObject*)pThis)->PostData() : 0;
+}
+
+PRUint32
+CacheObject_GetPostDataLen(const void* pThis)
+{
+    return pThis ? ((nsCacheObject*)pThis)->PostDataLen() : 0;
+}
+
 PRUint32
 CacheObject_GetSize(const void* pThis)
 {
@@ -174,6 +204,20 @@ CacheObject_SetAddress(void* pThis, const char* i_Address)
 {
     if (pThis)
         ((nsCacheObject*)pThis)->Address(i_Address);
+}
+
+void
+CacheObject_SetCharset(void* pThis, const char* i_Charset)
+{
+    if (pThis)
+        ((nsCacheObject*)pThis)->Charset(i_Charset);
+}
+
+void
+CacheObject_SetContentEncoding(void* pThis, const char* i_Encoding)
+{
+    if (pThis)
+        ((nsCacheObject*)pThis)->ContentEncoding(i_Encoding);
 }
 
 void
@@ -223,6 +267,20 @@ CacheObject_SetModule(void* pThis, const PRInt16 i_Module)
 {
     if (pThis)
         ((nsCacheObject*)pThis)->Module(i_Module);
+}
+
+void
+CacheObject_SetPageServicesURL(void* pThis, const char* i_Url)
+{
+    if (pThis)
+        ((nsCacheObject*)pThis)->PageServicesURL(i_Url);
+}
+
+void
+CacheObject_SetPostData(void* pThis, const char* i_PostData, const PRUint32 i_Len)
+{
+    if (pThis)
+        ((nsCacheObject*)pThis)->PostData(i_PostData, i_Len);
 }
 
 void

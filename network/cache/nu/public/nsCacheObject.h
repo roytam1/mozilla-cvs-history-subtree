@@ -56,6 +56,12 @@ public:
     void            Address(const char* i_url);
     const char*     Address(void) const;
 
+    void            Charset(const char* i_Charset);
+    const char*     Charset(void) const;
+
+    void            ContentEncoding(const char* i_Encoding);
+    const char*     ContentEncoding(void) const;
+
     void            ContentLength(PRUint32 i_len);
     PRUint32        ContentLength(void) const;
     
@@ -86,13 +92,18 @@ public:
     PRIntervalTime  LastAccessed(void) const;
 
     PRIntervalTime  LastModified(void) const;
-    void            LastModified(PRIntervalTime i_lastModified);
+    void            LastModified(const PRIntervalTime i_lastModified);
 
     PRInt16         Module(void) const;
     void            Module(PRUint16 i_m);
 
+    void            PageServicesURL(const char* i_Url);
+    const char*     PageServicesURL(void) const;
+
     const char*     PostData(void) const;
-    void            PostData(const char* i_data, PRUint32 i_Len);
+    void            PostData(const char* i_data, const PRUint32 i_Len);
+
+    PRUint32        PostDataLen(void) const;
 
     PRUint32        Read(char* o_Buffer, PRUint32 len);
 
@@ -102,28 +113,30 @@ public:
     const char*     Trace() const;
 
     PRUint32        Write(const char* i_Buffer, const PRUint32 len);
-//	virtual	void getReadStream();
-//	virtual void getWriteStream();
 
 protected:
 
-    void        Init();
+    void            Init();
 
-    PRUint32    m_ContentLength;
-    char*       m_ContentType;
-    char*       m_Etag;
-    PRIntervalTime
-                m_Expires;
-    int         m_Flags;
-    char*       m_Filename;
-    PRUint16    m_Hits;
-    PRIntervalTime
-                m_LastAccessed, m_LastModified;
-    PRUint32    m_Size;
-    char*       m_Url;
-    PRInt16     m_Module;
-    void*       m_pInfo;
-    PRUint32    m_info_size;
+    char*           m_Charset;
+    char*           m_ContentEncoding;
+    PRUint32        m_ContentLength;
+    char*           m_ContentType;
+    char*           m_Etag;
+    PRIntervalTime  m_Expires;
+    int             m_Flags;
+    char*           m_Filename;
+    PRUint16        m_Hits;
+    PRUint32        m_info_size;
+    PRIntervalTime  m_LastAccessed, m_LastModified;
+    void*           m_pInfo;
+    char*           m_PageServicesURL;
+    char*           m_PostData;
+    PRUint32        m_PostDataLen;
+    PRInt16         m_Module;
+    PRUint32        m_Size;
+    char*           m_URL;
+    
 
 private:
     nsCacheObject& operator=(const nsCacheObject& x);
@@ -132,8 +145,20 @@ private:
 inline 
 const char* nsCacheObject::Address(void) const
 {
-	return m_Url;
+	return m_URL;
 };
+
+inline
+const char* nsCacheObject::Charset(void) const
+{
+    return m_Charset;
+}
+
+inline
+const char* nsCacheObject::ContentEncoding(void) const
+{
+    return m_ContentEncoding;
+}
 
 inline 
 PRUint32 nsCacheObject::ContentLength(void) const
@@ -209,7 +234,7 @@ PRIntervalTime nsCacheObject::LastModified(void) const
 };
 
 inline 
-void nsCacheObject::LastModified(PRIntervalTime i_LastModified)
+void nsCacheObject::LastModified(const PRIntervalTime i_LastModified)
 {
 	m_LastModified = i_LastModified;
 };
@@ -225,6 +250,24 @@ void nsCacheObject::Module(PRUint16 i_Module)
 {
     m_Module = i_Module;
 };
+
+inline
+const char* nsCacheObject::PageServicesURL(void) const
+{
+    return m_PageServicesURL;
+}
+
+inline
+const char* nsCacheObject::PostData(void) const
+{
+    return m_PostData;
+}
+
+inline
+PRUint32 nsCacheObject::PostDataLen(void) const
+{
+    return m_PostDataLen;
+}
 
 inline 
 PRUint32 nsCacheObject::Size(void) const

@@ -56,6 +56,8 @@ PR_BEGIN_EXTERN_C
     extern void*            CacheObject_Create(const char* i_url);
     extern void             CacheObject_Destroy(void* pThis);
     extern const char*      CacheObject_GetAddress(const void* pThis);
+    extern const char*      CacheObject_GetCharset(void* pThis);
+    extern const char*      CacheObject_GetContentEncoding(void* pThis);
     extern PRUint32         CacheObject_GetContentLength(void* pThis);
     extern const char*      CacheObject_GetContentType(void* pThis);
     extern const char*      CacheObject_GetEtag(const void* pThis);
@@ -64,11 +66,16 @@ PR_BEGIN_EXTERN_C
     extern PRIntervalTime   CacheObject_GetLastAccessed(const void* pThis);
     extern PRIntervalTime   CacheObject_GetLastModified(const void* pThis);
     extern PRInt16          CacheObject_GetModule(const void* pThis);
+    extern const char*      CacheObject_GetPageServicesURL(void* pThis);
+    extern const char*      CacheObject_GetPostData(const void* pThis);
+    extern PRUint32         CacheObject_GetPostDataLen(const void* pThis);
     extern PRUint32         CacheObject_GetSize(const void* pThis);
     extern PRUint32         CacheObject_Hits(const void* pThis);
     extern PRBool           CacheObject_IsExpired(const void* pThis);
     extern PRBool           CacheObject_IsPartial(const void* pThis);
     extern void             CacheObject_SetAddress(void* pThis, const char* i_Address);
+    extern void             CacheObject_SetCharset(void* pThis, const char* i_CharSet);
+    extern void             CacheObject_SetContentEncoding(void* pThis, const char* i_Encoding);
     extern void             CacheObject_SetContentLength(void* pThis, PRUint32 i_Len);
     extern void             CacheObject_SetContentType(void* pThis, const char* i_Type);
     extern void             CacheObject_SetEtag(void* pThis, const char* i_Etag);
@@ -76,6 +83,8 @@ PR_BEGIN_EXTERN_C
     extern void             CacheObject_SetFilename(void *pThis, const char* i_Filename);
     extern void             CacheObject_SetLastModified(void* pThis, const PRIntervalTime i_Time);
     extern void             CacheObject_SetModule(void* pThis, const PRInt16 i_Module);
+    extern void             CacheObject_SetPageServicesURL(void* pThis, const char* i_Url);
+    extern void             CacheObject_SetPostData(void* pThis, const char* i_PostData, const PRUint32 i_Len);
     extern void             CacheObject_SetSize(void* pThis, const PRUint32 i_Size);
     extern PRBool           CacheObject_Synch(void* pThis);
     extern PRUint32         CacheObject_Write(void* pThis, const char* i_buffer, const PRUint32 i_length);
