@@ -104,6 +104,7 @@ public:
   NS_IMETHOD MoveTo(PRInt32 aX, PRInt32 aY);
   NS_IMETHOD Show();
   NS_IMETHOD Hide();
+  NS_IMETHOD Repaint(PRBool aForce);
   NS_IMETHOD GetContentViewer(nsIContentViewer*& aResult);
   NS_IMETHOD SetContainer(nsIWebShellContainer* aContainer);
   NS_IMETHOD GetContainer(nsIWebShellContainer*& aResult);
@@ -573,6 +574,18 @@ nsWebShell::Hide()
   }
   if (nsnull != mContentViewer) {
     mContentViewer->Hide();
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsWebShell::Repaint(PRBool aForce)
+{
+  NS_PRECONDITION(nsnull != mWindow, "null window");
+
+  if (nsnull != mWindow) {
+    mWindow->Invalidate(aForce);
   }
 
   return NS_OK;

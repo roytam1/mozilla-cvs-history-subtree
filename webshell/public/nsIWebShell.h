@@ -100,6 +100,8 @@ public:
 
   NS_IMETHOD Hide() = 0;
 
+  NS_IMETHOD Repaint(PRBool aForce) = 0;
+
   NS_IMETHOD GetContentViewer(nsIContentViewer*& aResult) = 0;
   // XXX SetContentViewer?
 
