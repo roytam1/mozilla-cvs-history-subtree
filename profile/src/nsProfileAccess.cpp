@@ -49,7 +49,6 @@
 
 #if defined (XP_UNIX)
 #define USER_ENVIRONMENT_VARIABLE "USER"
-#define LOGNAME_ENVIRONMENT_VARIABLE "LOGNAME"
 #define HOME_ENVIRONMENT_VARIABLE "HOME"
 #define PROFILE_NAME_ENVIRONMENT_VARIABLE "PROFILE_NAME"
 #define PROFILE_HOME_ENVIRONMENT_VARIABLE "PROFILE_HOME"
@@ -1207,6 +1206,8 @@ nsProfileAccess::ProfileExists(const PRUnichar *profileName)
 nsresult
 nsProfileAccess::Get4xProfileInfo(const char *registryName)
 {
+    NS_ASSERTION(registryName, "Invalid registryName");
+
     nsresult rv = NS_OK;
     mNumOldProfiles = 0;
 
@@ -1215,8 +1216,6 @@ nsProfileAccess::Get4xProfileInfo(const char *registryName)
     if (NS_FAILED(rv)) return rv;
 
 #if defined(XP_PC) || defined(XP_MAC)
-    NS_ASSERTION(registryName, "Invalid registryName");
-
     nsCOMPtr <nsIRegistry> oldReg;
     rv = nsComponentManager::CreateInstance(kRegistryCID,
                                             nsnull,
@@ -1345,11 +1344,8 @@ nsProfileAccess::Get4xProfileInfo(const char *registryName)
             (PL_strlen(unixProfileName) == 0) || 
             (PL_strlen(unixProfileDirectory) == 0)) 
         {
+            unixProfileName = PR_GetEnv(USER_ENVIRONMENT_VARIABLE);
             unixProfileDirectory = PR_GetEnv(HOME_ENVIRONMENT_VARIABLE);
-            unixProfileName = PR_GetEnv(LOGNAME_ENVIRONMENT_VARIABLE);
-            if (!unixProfileName ||  (PL_strlen(unixProfileName) == 0) ) {
-              unixProfileName = PR_GetEnv(USER_ENVIRONMENT_VARIABLE);
-            }
         }
 
         PRBool exists = PR_FALSE;;
