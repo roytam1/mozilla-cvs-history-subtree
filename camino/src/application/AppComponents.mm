@@ -81,7 +81,7 @@ static const nsModuleComponentInfo gAppComponents[] = {
 };
 
 
-nsModuleComponentInfo* GetAppComponents ( unsigned int * outNumComponents )
+const nsModuleComponentInfo* GetAppComponents ( unsigned int * outNumComponents )
 {
   *outNumComponents = sizeof(gAppComponents) / sizeof(nsModuleComponentInfo);
   return gAppComponents;

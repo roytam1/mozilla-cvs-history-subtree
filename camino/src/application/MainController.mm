@@ -72,7 +72,7 @@ nsresult PR_CALLBACK
 app_getModuleInfo(nsStaticModuleInfo **info, PRUint32 *count);
 #endif
 
-extern nsModuleComponentInfo* GetAppComponents(unsigned int * outNumComponents);
+extern const nsModuleComponentInfo* GetAppComponents(unsigned int * outNumComponents);
 
 static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
 
@@ -164,7 +164,7 @@ const int kReuseWindowOnAE = 2;
 
   // register our app components with the embed layer
   unsigned int numComps = 0;
-  nsModuleComponentInfo* comps = GetAppComponents(&numComps);
+  const nsModuleComponentInfo* comps = GetAppComponents(&numComps);
   CHBrowserService::RegisterAppComponents(comps, numComps);
 
   // make sure we have a bookmarks manager

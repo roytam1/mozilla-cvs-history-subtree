@@ -691,6 +691,8 @@ BookmarksService::SaveBookmarksToFile(const nsAString& inFileName)
     // rename the temp file to the final name
     bookmarksTempFile->MoveTo(NULL, inFileName);
   }
+  
+  return NS_OK;
 }
 
 NSImage*
