@@ -234,16 +234,18 @@ endif
 ifdef USE_MSVC
 TARGETS = $(LIBRARY)   # $(PROGRAM) not supported for MSVC yet
 else
-TARGETS = $(LIBRARY) $(PROGRAM)
+TARGETS = $(OBJDIR)/libfdm.a $(LIBRARY) $(PROGRAM)
 endif
 
 all: $(TARGETS)
 
 clean:
 	rm -rf $(OBJS)
+	cd fdlibm; gmake clean
 
 clobber:
 	rm -rf $(OBJS) $(TARGETS) $(DEPENDENCIES)
+	cd fdlibm; gmake clean
 
 depend:
 	gcc -MM $(CFLAGS) $(JS_CFILES)
