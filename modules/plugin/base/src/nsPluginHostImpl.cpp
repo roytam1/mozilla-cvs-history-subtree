@@ -5529,7 +5529,8 @@ AddPluginInfoToRegistry(nsIRegistry* registry, nsRegistryKey top,
                              strlen(tag->mMimeDescriptionArray[i]) + 1, 
                              (PRUint8 *)tag->mMimeDescriptionArray[i]);
 
-    registry->SetStringUTF8(mimetypeKey, kPluginsMimeExtKey, tag->mExtensionsArray[i]);
+    if(tag->mExtensionsArray && tag->mExtensionsArray[i])
+      registry->SetStringUTF8(mimetypeKey, kPluginsMimeExtKey, tag->mExtensionsArray[i]);
   }
   if (NS_FAILED(rv))
     rv = registry->RemoveSubtree(top, keyname);
