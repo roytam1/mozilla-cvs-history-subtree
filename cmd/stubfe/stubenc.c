@@ -20,6 +20,10 @@
    stubenc.c --- encoding stuff specific to the stub fe.
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "libi18n.h"
 
 char **fe_encoding_extensions = 0; /* gag.  used by mkcache.c. */

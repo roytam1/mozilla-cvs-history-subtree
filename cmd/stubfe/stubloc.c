@@ -20,6 +20,10 @@
    stubloc.c --- stub fe handling of locale specific stuff.
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "xplocale.h"
 
 #include "structs.h"

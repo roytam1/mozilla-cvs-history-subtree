@@ -21,6 +21,10 @@
                  specific images stuff.
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #define JMC_INIT_IMGCB_ID
 
 #include "xp_core.h"

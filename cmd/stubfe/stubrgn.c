@@ -18,6 +18,10 @@
 
 /*   stubrgn.c --- stub functions dealing with front-end */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "fe_rgn.h"
 
 FE_Region

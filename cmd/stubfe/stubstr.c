@@ -18,6 +18,10 @@
 
 /*   stubstr.c --- stub fe handling of string id's */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "ntypes.h"
 
 extern char *XP_GetBuiltinString(int16 i);

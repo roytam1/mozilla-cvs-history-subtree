@@ -21,6 +21,10 @@
                   handling of form elements.
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "stubform.h"
 
 /*

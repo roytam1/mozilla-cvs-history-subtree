@@ -21,6 +21,10 @@
                   password, alerts, messages, etc.)
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "xp_core.h"
 #include "structs.h"
 #include "ntypes.h"
