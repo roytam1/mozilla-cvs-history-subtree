@@ -71,9 +71,9 @@ static void MacintoshInitializeTime(void)
 
 	GetDateTime(&currentLocalTimeSeconds);
 
-	LL_I2L(microSecondsToSeconds, PR_USEC_PER_SEC);
-	LL_DIV(upTimeSecondsLong,  *((uint64 *)&upTime), microSecondsToSeconds);
-	LL_L2I(upTimeSeconds, upTimeSecondsLong);
+	JSLL_I2L(microSecondsToSeconds, PRMJ_USEC_PER_SEC);
+	JSLL_DIV(upTimeSecondsLong,  *((uint64 *)&upTime), microSecondsToSeconds);
+	JSLL_L2I(upTimeSeconds, upTimeSecondsLong);
 
 	startupTimeSeconds = currentLocalTimeSeconds - upTimeSeconds;
 
@@ -95,9 +95,9 @@ static void MacintoshInitializeTime(void)
 	//	Now convert the startup time into a wide so that we
 	//	can figure out GMT and DST.
 
-	LL_I2L(startupTimeMicroSeconds, startupTimeSeconds);
-	LL_I2L(oneMillion, PR_USEC_PER_SEC);
-	LL_MUL(dstLocalBaseMicroseconds, oneMillion, startupTimeMicroSeconds);
+	JSLL_I2L(startupTimeMicroSeconds, startupTimeSeconds);
+	JSLL_I2L(oneMillion, PRMJ_USEC_PER_SEC);
+	JSLL_MUL(dstLocalBaseMicroseconds, oneMillion, startupTimeMicroSeconds);
 }
 
 // Because serial port and SLIP conflict with ReadXPram calls,
@@ -106,12 +106,12 @@ static void MacintoshInitializeTime(void)
 static void MyReadLocation(MachineLocation * loc)
 {
 	static MachineLocation storedLoc;	// InsideMac, OSUtilities, page 4-20
-	static PRBool didReadLocation = PR_FALSE;
+	static JSBool didReadLocation = JS_FALSE;
 	if (!didReadLocation)
 	{
 		MacintoshInitializeTime();
 		ReadLocation(&storedLoc);
-		didReadLocation = PR_TRUE;
+		didReadLocation = JS_TRUE;
 	}
 	*loc = storedLoc;
 }
@@ -210,7 +210,7 @@ PRMJ_LocalGMTDifference()
 #define G2037GMTMICROLOW       0x7a238000 /* micro secs to 2037 low */
 
 /* Convert from base time to extended time */
-IMPLEMENT(JSInt64)
+static IMPLEMENT(JSInt64)
 PRMJ_ToExtendedTime(JSInt32 time)
 {
     JSInt64 exttime;
