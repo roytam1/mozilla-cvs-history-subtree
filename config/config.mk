@@ -26,11 +26,17 @@ ifndef topsrcdir
 topsrcdir	= $(DEPTH)
 endif
 
+NS_CONFIG_MK	= 1
+#
+# Force a final install pass so we can build tests properly.
+#
+LIBS_NEQ_INSTALL = 1
+
 ifdef USE_AUTOCONF_2
 
-CCC		= $(CXX)
+CCC		:= $(CXX)
 
-NFSPWD		= $(MOD_DEPTH)/config/nfspwd
+NFSPWD		= $(DEPTH)/config/nfspwd
 
 CFLAGS		= $(CC_ONLY_FLAGS) $(OPTIMIZER) $(OS_CFLAGS)\
 		  $(XP_DEFINE) $(DEFINES) $(INCLUDES) $(XCFLAGS)
@@ -44,30 +50,68 @@ NOMD_CCFLAGS	= $(CCC_ONLY_FLAGS) $(OPTIMIZER) $(NOMD_OS_CFLAGS)\
 
 INCLUDES	= $(LOCAL_INCLUDES) -I$(DIST)/include -I$(XPDIST)/include -I$(topsrcdir)/include $(OS_INCLUDES) $(G++INCLUDES)
 
-BUILD		= $(OBJDIR_NAME)
-OBJDIR		= $(OBJDIR_NAME)
-XPDIST		= $(DEPTH)/dist
-DIST		= $(DEPTH)/dist/$(OBJDIR_NAME)
+LDFLAGS		= $(OS_LDFLAGS)
 
-XPIDL_COMPILE 	= $(DIST)/bin/xpidl
-XPIDL_LINK	= $(DIST)/bin/xpt_link
+BUILD		:= $(OBJDIR_NAME)
+OBJDIR		:= $(OBJDIR_NAME)
+XPDIST		:= $(DEPTH)/dist
+DIST		:= $(DEPTH)/dist/$(OBJDIR_NAME)
 
-NSINSTALL	= $(DEPTH)/config/$(OBJDIR_NAME)/nsinstall
+XPIDL_COMPILE 	:= $(DIST)/bin/xpidl
+XPIDL_LINK	:= $(DIST)/bin/xpt_link
+
+NSINSTALL	:= $(DEPTH)/config/$(OBJDIR_NAME)/nsinstall
 
 ifeq ($(NSDISTMODE),copy)
 # copy files, but preserve source mtime
-INSTALL		= $(NSINSTALL) -t
+INSTALL		:= $(NSINSTALL) -t
 else
 ifeq ($(NSDISTMODE),absolute_symlink)
 # install using absolute symbolic links
-INSTALL		= $(NSINSTALL) -L `$(NFSPWD)`
+INSTALL		:= $(NSINSTALL) -L `$(NFSPWD)`
 else
 # install using relative symbolic links
-INSTALL		= $(NSINSTALL) -R
+INSTALL		:= $(NSINSTALL) -R
 endif
 endif
 
 GARBAGE		+= $(DEPENDENCIES) core $(wildcard core.[0-9]*)
+
+# We need to know where to find the libraries we
+# put on the link line for binaries, and should
+# we link statically or dynamic?  Assuming dynamic for now.
+LIBS_DIR	:= -L$(DIST)/bin -L$(DIST)/lib
+
+# all public include files go in subdirectories of PUBLIC:
+PUBLIC		:= $(XPDIST)/public
+
+DEPENDENCIES	= .md
+
+ifdef MOZ_NATIVE_MAKEDEPEND
+MKDEPEND_DIR	=
+# Adding the '-w' flag shortens the depend.mk files by allowing
+# more dependencies on one line. It may even speed up makedepend.
+# (Picking 3000 somewhat arbitrarily.)
+MKDEPEND	:= $(MOZ_NATIVE_MAKEDEPEND) -Y -w 3000
+else
+MKDEPEND_DIR	:= $(DEPTH)/config/mkdepend
+MKDEPEND	:= $(MKDEPEND_DIR)/$(OBJDIR_NAME)/mkdepend
+endif
+
+MKDEPENDENCIES	:= $(OBJDIR)/depend.mk
+
+ifneq (, $(filter $(MODULE), $(MOZ_DEBUG_MODULES)))
+  MOZ_DEBUG=1
+  OS_CFLAGS += -g
+  OS_CXXFLAGS += -g
+endif
+
+OS_TEST	:= $(TARGET_CPU)
+OS_ARCH := $(TARGET_OS)
+
+
+
+
 
 else # !USE_AUTOCONF_2
 
@@ -318,6 +362,7 @@ ifndef MOZ_DEBUG
 DEFINES		+= -UDEBUG -DNDEBUG -DTRIMMED
 endif
 XBCFLAGS	=
+
 else
 
 #
@@ -370,13 +415,8 @@ endif
 endif # !USE_AUTOCONF
 
 ifdef MOZ_DEBUG
-ifdef USE_AUTOCONF
 OPTIMIZER	=
 DEFINES		+= -DDEBUG -UNDEBUG -DDEBUG_$(shell $(WHOAMI)) -DTRACING
-else
-OPTIMIZER	= -g
-DEFINES		= -DDEBUG -UNDEBUG -DDEBUG_$(shell $(WHOAMI)) -DTRACING
-endif
 JAVA_OPTIMIZER	= -g
 XBCFLAGS	= -FR$*
 endif
@@ -434,14 +474,6 @@ endif
 #
 # Name of the binary code directories
 #
-ifndef USE_AUTOCONF
-ifeq ($(OS_ARCH)_$(PROCESSOR_ARCHITECTURE),WINNT_x86)
-OBJDIR_NAME	= $(OS_CONFIG)$(OS_VERSION)$(OBJDIR_TAG).OBJ
-else
-OBJDIR_NAME	= $(OS_CONFIG)$(OS_VERSION)$(PROCESSOR_ARCHITECTURE)$(COMPILER)$(IMPL_STRATEGY)$(OBJDIR_TAG).OBJ
-endif
-
-else
 # We're autoconf freaks here
 # Override defaults
 EMACS			= $(ACEMACS)
@@ -450,7 +482,6 @@ RANLIB			= $(ACRANLIB)
 UNZIP_PROG		= $(ACUNZIP)
 WHOAMI			= $(ACWHOAMI)
 ZIP_PROG		= $(ACZIP)
-endif
 
 # Figure out where the binary code lives. It either lives in the src
 # tree (NSBUILDROOT is undefined) or somewhere else.
@@ -474,12 +505,7 @@ LIBS_DIR	= -L$(DIST)/bin -L$(DIST)/lib
 # all public include files go in subdirectories of PUBLIC:
 PUBLIC		= $(XPDIST)/public
 
-ifdef USE_AUTOCONF
 DEPENDENCIES	= .md
-else
-VPATH		= $(OBJDIR)
-DEPENDENCIES	= $(OBJDIR)/.md
-endif
 
 ifneq ($(OS_ARCH),WINNT)
 
@@ -506,7 +532,7 @@ endif
 ######################################################################
 # Now test variables that might have been set or overridden by $(MY_CONFIG).
 
-#DEFINES         += -DOSTYPE=\"$(OS_CONFIG)\"
+DEFINES         += -DOSTYPE=\"$(OS_CONFIG)\"
 
 # Specify that we are building a client.
 # This will instruct the cross platform libraries to
@@ -521,25 +547,6 @@ else
 MOZILLA_CLIENT	= 1
 MOZ_JSD		= 1
 endif
-
-ifndef USE_AUTOCONF
-ifdef MOZ_LITE
-NO_UNIX_LDAP	= 1
-MOZ_NAV_BUILD_PREFIX	= 1
-else
-DEFINES		+= -DMOZ_COMMUNICATOR_IIDS
-MOZ_COMMUNICATOR_IIDS	= 1
-MOZ_COMMUNICATOR_CONFIG_JS	= 1
-MOZ_COPY_ALL_JARS	= 1
-MOZ_EDITOR	= 1
-endif
-
-ifdef MOZ_MEDIUM
-ifndef MODULAR_NETLIB
-MOZ_MAIL_COMPOSE	= 1
-endif
-endif
-endif # ! USE_AUTOCONF
 
 ifdef MOZ_MAIL_COMPOSE
 DEFINES		+= -DMOZ_MAIL_COMPOSE
@@ -658,13 +665,6 @@ PROF_FLAGS	= $(OS_GPROF_FLAGS) -DMOZILLA_GPROF
 endif
 endif
 
-# This compiles in heap dumping utilities and other good stuff 
-# for developers -- maybe we only want it in for a special SDK 
-# nspr/java runtime(?):
-ifndef USE_AUTOCONF
-DEFINES		+= -DDEVELOPER_DEBUG
-endif
-
 ifndef MOZ_FE
 MOZ_FE		= x
 endif
@@ -762,15 +762,5 @@ JAVA_DEFINES	+= -DAWT_11
 else
 JAVA_DEFINES	+= -DAWT_102
 endif
-
-# I don't believe this is still true -cls
-ifndef USE_AUTOCONF
-
-# From nsprpub/config/config.mk, mozilla/jpeg needs to know
-# about USE_PTHREADS.  This fixes platforms like SparcLinux. -mcafee
-ifeq ($(USE_PTHREADS), 1)
-DEFINES += -D_PR_PTHREADS -UHAVE_CVAR_BUILT_ON_SEM
-endif
-endif #!USE_AUTOCONF
 
 endif #USE_AUTOCONF_2
