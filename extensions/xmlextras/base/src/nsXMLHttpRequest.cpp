@@ -45,7 +45,6 @@
 #include "nsICodebasePrincipal.h"
 #include "nsWeakPtr.h"
 #include "nsICharsetAlias.h"
-#include "nsDOMPropEnums.h"
 #ifdef IMPLEMENT_SYNC_LOAD
 #include "nsIScriptContext.h"
 #include "nsIScriptGlobalObject.h"
@@ -73,13 +72,13 @@ GetSafeContext()
 {
   // Get the "safe" JSContext: our JSContext of last resort
   nsresult rv;
-  NS_WITH_SERVICE(nsIJSContextStack, stack, "@mozilla.org/js/xpc/ContextStack;1", 
-                  &rv);
+  nsCOMPtr<nsIThreadJSContextStack> stack =
+    do_GetService("@mozilla.org/js/xpc/ContextStack;1", &rv);
   if (NS_FAILED(rv))
     return nsnull;
-  nsCOMPtr<nsIThreadJSContextStack> tcs(do_QueryInterface(stack));
+
   JSContext* cx;
-  if (NS_FAILED(tcs->GetSafeJSContext(&cx))) {
+  if (NS_FAILED(stack->GetSafeJSContext(&cx))) {
     return nsnull;
   }
   return cx;
@@ -941,26 +940,26 @@ nsXMLHttpRequest::Open(const char *method, const char *url)
     jsval* argv;
     rv = cc->GetArgvPtr(&argv);
     if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-    
+
     JSContext* cx;
     rv = cc->GetJSContext(&cx);
     if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
 
     NS_WITH_SERVICE(nsIScriptSecurityManager, secMan,
                     NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
-     if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+    if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
  /*
      rv = secMan->CheckScriptAccessToURL(cx, url, NS_DOM_PROP_XMLHTTPREQUEST_OPEN, PR_FALSE);
      if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
  */
-     nsCOMPtr<nsIPrincipal> principal;
-     rv = secMan->GetSubjectPrincipal(getter_AddRefs(principal));
-      if (NS_SUCCEEDED(rv)) {
-       nsCOMPtr<nsICodebasePrincipal> codebase = do_QueryInterface(principal);
-       if (codebase) {
-         codebase->GetURI(getter_AddRefs(mBaseURI));
-        }
+    nsCOMPtr<nsIPrincipal> principal;
+    rv = secMan->GetSubjectPrincipal(getter_AddRefs(principal));
+    if (NS_SUCCEEDED(rv)) {
+      nsCOMPtr<nsICodebasePrincipal> codebase = do_QueryInterface(principal);
+      if (codebase) {
+        codebase->GetURI(getter_AddRefs(mBaseURI));
       }
+    }
 
     if (argc > 2) {
       JSBool asyncBool;
@@ -974,10 +973,10 @@ nsXMLHttpRequest::Open(const char *method, const char *url)
         if (userStr) {
           user = JS_GetStringBytes(userStr);
         }
-        
+
         if (argc > 4) {
           JSString* passwordStr;
-          
+
           passwordStr = JS_ValueToString(cx, argv[4]);
           if (passwordStr) {
             password = JS_GetStringBytes(passwordStr);
