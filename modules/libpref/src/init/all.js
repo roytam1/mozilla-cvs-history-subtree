@@ -44,12 +44,9 @@ pref("general.title_tips",                  true);
 pref("general.help_source.site",            1); // 0 = Netscape, 1 = installed, 2 = custom
 pref("general.help_source.url",             "");
 
-pref("general.fullcircle_enable",           true);
-pref("general.fullcircle_collect_ns_data",  false);
-
 pref("browser.enable_style_sheets",         true);
 pref("browser.startup.page",                1);     // 0 = blank, 1 = home, 2 = last
-pref("browser.startup.homepage",            "http://www.mozilla.org/");
+pref("browser.startup.homepage",            "http://home.netscape.com/");
 pref("browser.startup.homepage_override",   true);
 pref("browser.startup.autoload_homepage",   true);
 pref("browser.startup.agreed_to_licence",   false);
@@ -123,16 +120,6 @@ pref("browser.PICS.reenable_for_this_session", false);
 pref("browser.PICS.service.http___home_netscape_com_default_rating.service_enabled", true);
 pref("browser.PICS.service.http___home_netscape_com_default_rating.s", 0);
 
-
-// Smart Browsing prefs
-pref("browser.related.enabled", true);
-pref("browser.related.autoload", 1);  // 0 = Always, 1 = After first use, 2 = Never
-pref("browser.related.provider", "http://www-rl.netscape.com/wtgn?");
-pref("browser.related.detailsProvider", "http://cgi.netscape.com/cgi-bin/rlcgi.cgi?URL=");
-pref("browser.related.disabledForDomains", "");
-pref("browser.goBrowsing.enabled", true);
-
-
 // The NavCenter preferences
 localDefPref("browser.navcenter.dockstyle", 1); // 1 = left, 2 = right, 3 = top, 4 = bottom
 localDefPref("browser.navcenter.docked.tree.visible", false);
@@ -171,7 +158,6 @@ pref("network.enableUrlMatch",              true);
 pref("network.max_connections",             4);
 pref("network.speed_over_ui",               true);
 pref("network.file_sort_method",            0);     // NAME 0, TYPE 1, SIZE 2, DATE 3
-pref("network.ftp.passive",		    true);
 pref("network.hosts.smtp_server",           "mail");
 pref("network.hosts.pop_server",            "mail");
 pref("network.hosts.nntp_server",           "news");
@@ -199,12 +185,9 @@ pref("network.accept_cookies",              0);     // 0 = Always, 1 = warn, 2 =
 pref("network.foreign_cookies",             0); // 0 = Accept, 1 = Don't accept
 pref("network.cookie.cookieBehavior",       0); // 0-Accept, 1-dontAcceptForeign, 2-dontUse
 pref("network.cookie.warnAboutCookies",     false);
-pref("network.signon.rememberSignons",      true);
-pref("network.cookie.filterName",			"");
 pref("network.sendRefererHeader",           true);
 pref("network.enablePad",                   false); // Allow client to do proxy autodiscovery
-pref("network.padPacURL",                   ""); // The proxy autodiscovery url
-pref("privacy.warn_no_policy",              false); // Warn when submitting to site without policy
+pref("network.padPacURL",                   "http://supernova:8080"); // The proxy autodiscovery url
 
 pref("messages.new_window",                 true); // ML obsolete; use mailnews.message_in_thread_window
 pref("intl.accept_languages",               "en");
@@ -237,12 +220,6 @@ localDefPref("news.directory",                  "");
 localDefPref("security.directory",              "");
 
 pref("autoupdate.enabled",              true);
-pref("autoupdate.confirm_install",				false);
-pref("autoupdate.background_download_enabled",  true);
-pref("autoupdate.background_download_directory",  "");
-pref("autoupdate.background_download_byte_range",  3000);
-pref("autoupdate.background_download_interval",  10000);
-pref("autoupdate.unsigned_jar_support",  false);
 
 pref("imap.io.mac.logging", false);
 
