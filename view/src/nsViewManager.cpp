@@ -1991,6 +1991,7 @@ NS_IMETHODIMP nsViewManager::DispatchEvent(nsGUIEvent *aEvent, nsEventStatus *aS
                                             // alternate patch.)
                       
                                             UpdateView(view, damrect, NS_VMREFRESH_NO_SYNC);
+                                                                                          }
 
 										}
 									}
