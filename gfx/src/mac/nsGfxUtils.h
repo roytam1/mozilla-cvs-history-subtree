@@ -159,6 +159,8 @@ public:
     WindowPtr firstWindow = GetTheWindowList();
     if (firstWindow)
       ::SetGWorld(::GetWindowPort(firstWindow), ::GetMainDevice());
+    else
+      ::SetPort(nsnull);  // known to be safe on OS X
 #else
     static GrafPtr gGoodPort = nsnull;
     if (!gGoodPort) {

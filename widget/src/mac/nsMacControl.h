@@ -79,7 +79,13 @@ public:
 
 protected:
 	
-	NS_METHOD			CreateOrReplaceMacControl(short inControlType);
+	nsresult			CreateOrReplaceMacControl(short inControlType);
+
+	OSStatus 			InstallEventHandlerOnControl();
+	void				RemoveEventHandlerFromControl();
+	
+	void				ClearControl();
+  
 	virtual void		GetRectForMacControl(nsRect &outRect);
 	void				SetupMacControlFont();
 	void				ControlChanged(PRInt32 aNewValue);
@@ -95,6 +101,7 @@ protected:
 	PRInt32				mMin;
 	PRInt32				mMax;
 	ControlHandle		mControl;
+	EventHandlerRef		mControlEventHandler;
 	short				mControlType;
 
 	nsString			mLastLabel;

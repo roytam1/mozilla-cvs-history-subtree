@@ -39,6 +39,7 @@
 
 #include "nsICharsetAlias.h"
 #include "pratom.h"
+#include "nsAutoLock.h"
 
 // for NS_IMPL_IDS only
 #include "nsIPlatformCharset.h"
@@ -51,19 +52,21 @@
 #include "nsCharsetAlias.h"
 
 //--------------------------------------------------------------
-NS_IMPL_ISUPPORTS1(nsCharsetAlias2, nsICharsetAlias);
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsCharsetAlias2, nsICharsetAlias);
 
 //--------------------------------------------------------------
 nsCharsetAlias2::nsCharsetAlias2()
+: mDelegate(nsnull)
 {
   NS_INIT_ISUPPORTS();
-  mDelegate = nsnull; // delay the load of mDelegate untill we need it.
+  mDelegateLock = PR_NewLock();
 }
 //--------------------------------------------------------------
 nsCharsetAlias2::~nsCharsetAlias2()
 {
-  if(mDelegate)
-     delete mDelegate;
+  delete mDelegate;
+  if (mDelegateLock)
+    PR_DestroyLock(mDelegateLock);
 }
 //--------------------------------------------------------------
 NS_IMETHODIMP nsCharsetAlias2::GetPreferred(const nsAString& aAlias, nsAString& oResult)
@@ -75,33 +78,39 @@ NS_IMETHODIMP nsCharsetAlias2::GetPreferred(const nsAString& aAlias, nsAString& 
    ToLowerCase(aKey);
    oResult.Truncate();
 
-   //delay loading charsetalias.properties by resolving most freq. aliases
-   if(!mDelegate) {
-     if(aKey.Equals(NS_LITERAL_STRING("utf-8"))) {
-       oResult = NS_LITERAL_STRING("UTF-8");
-       NS_TIMELINE_STOP_TIMER("nsCharsetAlias2:GetPreferred");
-       return NS_OK;
-     } 
-     if(aKey.Equals(NS_LITERAL_STRING("iso-8859-1"))) {
-       oResult = NS_LITERAL_STRING("ISO-8859-1");
-       NS_TIMELINE_STOP_TIMER("nsCharsetAlias2:GetPreferred");
-       return NS_OK;
-     } 
-     if(aKey.Equals(NS_LITERAL_STRING("x-sjis")) ||
-        aKey.Equals(NS_LITERAL_STRING("shift_jis"))) {
-       oResult = NS_LITERAL_STRING("Shift_JIS");
-       NS_TIMELINE_STOP_TIMER("nsCharsetAlias2:GetPreferred");
-       return NS_OK;
-     } 
-     //load charsetalias.properties string bundle with all remaining aliases
-     // we may need to protect the following section with a lock so we won't call the 
-     // 'new nsURLProperties' from two different threads
-     mDelegate = new nsURLProperties( NS_LITERAL_CSTRING("resource:/res/charsetalias.properties") );
-     NS_ASSERTION(mDelegate, "cannot create nsURLProperties");
-     if(nsnull == mDelegate)
-       return NS_ERROR_OUT_OF_MEMORY;
-   }
+   {  // lock scope to protect delegate creation
+     nsAutoLock lock(mDelegateLock);
 
+     if(!mDelegate) {
+
+       // delay loading charsetalias.properties by resolving most freq. aliases
+       if(aKey.Equals(NS_LITERAL_STRING("utf-8"))) {
+         oResult = NS_LITERAL_STRING("UTF-8");
+         NS_TIMELINE_STOP_TIMER("nsCharsetAlias2:GetPreferred");
+         return NS_OK;
+       } 
+       if(aKey.Equals(NS_LITERAL_STRING("iso-8859-1"))) {
+         oResult = NS_LITERAL_STRING("ISO-8859-1");
+         NS_TIMELINE_STOP_TIMER("nsCharsetAlias2:GetPreferred");
+         return NS_OK;
+       } 
+       if(aKey.Equals(NS_LITERAL_STRING("x-sjis")) ||
+          aKey.Equals(NS_LITERAL_STRING("shift_jis"))) {
+         oResult = NS_LITERAL_STRING("Shift_JIS");
+         NS_TIMELINE_STOP_TIMER("nsCharsetAlias2:GetPreferred");
+         return NS_OK;
+       }
+       
+       //load charsetalias.properties string bundle with all remaining aliases
+       // we may need to protect the following section with a lock so we won't call the 
+       // 'new nsURLProperties' from two different threads
+       mDelegate = new nsURLProperties( NS_LITERAL_CSTRING("resource:/res/charsetalias.properties") );
+       NS_ASSERTION(mDelegate, "cannot create nsURLProperties");
+       if(!mDelegate)
+         return NS_ERROR_OUT_OF_MEMORY;
+     }
+   }
+   
    NS_TIMELINE_STOP_TIMER("nsCharsetAlias2:GetPreferred");
    NS_TIMELINE_MARK_TIMER("nsCharsetAlias2:GetPreferred");
 
