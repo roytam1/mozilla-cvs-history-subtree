@@ -1,4 +1,0 @@
-locales/en-US.jar:
-    global/locale/platformGlobalOverlay.dtd
-    global/locale/platformDialogOverlay.dtd
-    global/locale/printdialog.dtd
