@@ -26,6 +26,8 @@
 #include "nsIDOMWindow.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIDocShell.h"
+#include "nsIDocShellTreeItem.h"
+#include "nsIInterfaceRequestorUtils.h"
 #include "nsIBaseWindow.h"
 #include "nsIContentViewer.h"
 #include "nsIDocumentViewer.h"
