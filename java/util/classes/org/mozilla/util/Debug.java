@@ -77,6 +77,10 @@ public class Debug extends Object {
     static long startTime = 0L;
     static long lapTime = 0L;
 
+    public static boolean keepWaiting = true;
+
+
+
     static {
 	/** This code adds to the filters Vector from the
 	 * System.Properties variable named by PROPERTY_NAME
@@ -96,6 +100,32 @@ public class Debug extends Object {
 	    }
 	}
     }
+
+/** 
+
+* Usage: <P>
+
+* Place a call to this method in the earliest possible entry point of
+* your servlet app.  It will cause the app to enter into an infinite
+* loop, sleeping until the static var keepWaiting is set to false.  The
+* idea is that you attach your debugger to the servlet, then, set a
+* breakpont in this method.  When it is hit, you use the debugger to set
+* the keepWaiting class var to false.
+
+*/
+
+public static void waitForDebugger() {
+    while (keepWaiting) {
+	try {
+	    Thread.sleep(5000);
+	}
+	catch (InterruptedException e) {
+	    System.out.println("DebugUtil.waitForDebugger(): Exception: " + 
+			       e.getMessage());
+	}
+    }
+}
+
 
     /**
     * Sets a debug filter, for future consumption by this class, as well as other
