@@ -459,7 +459,7 @@ ldap_mods_free_perl(LDAPMod **mods, int freemods)
 {
   int	i;
 
-  if (! mods)
+  if (! mods || ! *mods)
     return;
 
   for (i = 0; mods[i] != NULL; i++)
