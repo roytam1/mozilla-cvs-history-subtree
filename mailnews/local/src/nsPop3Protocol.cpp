@@ -26,6 +26,7 @@
 #include "plstr.h"
 #include "MailNewsTypes.h"
 #include "nsString.h"
+#include "nsXPIDLString.h"
 
 #include "nsIMsgIncomingServer.h"
 
@@ -437,8 +438,8 @@ nsresult nsPop3Protocol::LoadUrl(nsIURI* aURL, nsISupports * /* aConsumer */)
 	nsCOMPtr<nsIURL> url = do_QueryInterface(aURL, &rv);
 	if (NS_FAILED(rv)) return rv;
 
-	char * queryPart = nsnull;
-	rv = url->GetQuery(&queryPart);
+	nsXPIDLCString queryPart;
+	rv = url->GetQuery(getter_Copies(queryPart));
 	NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get the url spect");
 
 	if (PL_strcasestr(queryPart, "check"))
@@ -471,8 +472,8 @@ nsresult nsPop3Protocol::LoadUrl(nsIURI* aURL, nsISupports * /* aConsumer */)
 	nsCOMPtr<nsIPop3IncomingServer> popServer;
     char* mailDirectory = 0;
 
-	char * host = nsnull;
-	aURL->GetHost(&host);
+	nsXPIDLCString host;
+	aURL->GetHost(getter_Copies(host));
     rv = m_nsIPop3Sink->GetPopServer(getter_AddRefs(popServer));
 
     nsCOMPtr<nsIMsgIncomingServer> server = do_QueryInterface(popServer);
@@ -481,12 +482,10 @@ nsresult nsPop3Protocol::LoadUrl(nsIURI* aURL, nsISupports * /* aConsumer */)
 
     m_pop3ConData->uidlinfo = net_pop3_load_state(host, GetUsername(), mailDirectory);
     PL_strfree(mailDirectory);
-	nsCRT::free(host);
 
 	m_pop3ConData->biffstate = nsMsgBiffState_NoMail;
 
 	const char* uidl = PL_strcasestr(queryPart, "uidl=");
-	nsCRT::free(queryPart);
     PR_FREEIF(m_pop3ConData->only_uidl);
 		
     if (uidl)
