@@ -27,11 +27,80 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS		= public src obsolete
+MODULE		= string
+LIBRARY_NAME	= string_s
+REQUIRES	= xpcom
 
-#ifdef ENABLE_TESTS
-#DIRS		+= \
-#	tests
-#endif
+PWD		= $(shell pwd)
+
+CPPSRCS		=				\
+		src/nsASingleFragmentString.cpp	\
+		src/nsAString.cpp			\
+		src/nsDependentConcatenation.cpp	\
+		src/nsDependentSubstring.cpp	\
+		src/nsFragmentedString.cpp		\
+		src/nsPrintfCString.cpp		\
+		src/nsPromiseFlatString.cpp		\
+		src/nsReadableUtils.cpp		\
+		src/nsSharableString.cpp		\
+		src/nsSharedBufferList.cpp		\
+		src/nsSlidingString.cpp		\
+		src/nsXPIDLString.cpp		\
+		obsolete/nsStr.cpp		\
+		obsolete/nsString.cpp		\
+		obsolete/nsString2.cpp		\
+		$(NULL)
+
+EXPORTS		=				\
+		nsAFlatString.h			\
+		nsAlgorithm.h			\
+		nsASingleFragmentString.h	\
+		nsAString.h			\
+		nsAStringGenerator.h		\
+		nsBufferHandle.h		\
+		nsBufferHandleUtils.h		\
+		nsCharTraits.h			\
+		nsDependentConcatenation.h	\
+		nsDependentString.h		\
+		nsDependentSubstring.h		\
+		nsFragmentedString.h		\
+		nsLiteralString.h		\
+		nsPrintfCString.h		\
+		nsPromiseFlatString.h		\
+		nsReadableUtils.h		\
+		nsSharableString.h		\
+		nsSharedBufferList.h		\
+		nsSlidingString.h		\
+		nsStringDefines.h		\
+		nsStringFragment.h		\
+		nsStringFwd.h			\
+		nsStringIterator.h		\
+		nsStringIteratorUtils.h		\
+		nsStringTraits.h		\
+		nsXPIDLString.h			\
+		$(NULL)			
+
+EXPORTS	:= $(addprefix public/, $(EXPORTS))
+
+EXPORTS += \
+		obsolete/nsStr.h			\
+		obsolete/nsStrShared.h           \
+		obsolete/nsString.h		\
+		obsolete/nsString2.h		\
+		$(NULL)			
+
+# we don't want the shared lib, but we want to force the creation of a
+# static lib.
+FORCE_STATIC_LIB = 1
+
+# Force use of PIC
+FORCE_USE_PIC	= 1
+
+MAKE_DIRS	= $(PWD)/src $(PWD)/obsolete
 
 include $(topsrcdir)/config/rules.mk
+
+$(PWD)/src $(PWD)/obsolete:
+	@$(MAKE_OBJDIR)
+
+DEFINES		+= -D_IMPL_NS_COM
