@@ -54,6 +54,7 @@ bin\components\ucharuti.dll
 
 [mail]
 ; files listed in xpcom (missing in this section) will be installed as part of the browser
+bin\splash.bmp
 bin\README.txt,bin\readme.txt
 bin\LICENSE,bin\license.txt
 bin\gkgfx.dll
