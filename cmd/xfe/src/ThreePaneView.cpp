@@ -24,7 +24,7 @@
 
 #include "ThreePaneView.h"
 #include "ThreadFrame.h"
-#include "hpane/HPaned.h"
+#include <Xfe/Pane.h>
 #include "prefs.h"
 #include "prefapi.h"
 
@@ -44,8 +44,19 @@ XFE_ThreePaneView::XFE_ThreePaneView(XFE_Component *toplevel_component,
 {
   Widget hpane;
   
+#if 1
+  hpane = XtVaCreateWidget("hpane",
+						   xfePaneWidgetClass,
+						   parent,
+						   XmNorientation,			XmHORIZONTAL,
+						   XmNsashPosition,			200,
+						   XmNsashThickness,		10,
+						   XmNsashShadowThickness,	1,
+						   XmNpaneSashType,			XmPANE_SASH_LIVE,
+						   NULL);
+#else
   hpane = XmCreateHPanedWindow(parent, "hpane", NULL, 0);
-
+#endif
   m_focusview = NULL;
   m_folderview = new XFE_FolderView(toplevel_component, hpane, this,
 				    context);
