@@ -1676,6 +1676,12 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int                  aRowIndex,
     // If we're the primary column, we need to indent and paint the twisty and any connecting lines
     // between siblings.
 
+    PRInt32 level;
+    mView->GetLevel(aRowIndex, &level);
+
+    currX += mIndentation * level;
+    remainingWidth -= mIndentation * level;
+
     // Always leave space for the twisty.
     nsRect twistyRect(currX, cellRect.y, remainingWidth, cellRect.height);
     nsRect dirtyRect;
@@ -1688,9 +1694,6 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int                  aRowIndex,
     GetPseudoStyleContext(nsXULAtoms::mozoutlinerline, getter_AddRefs(lineContext));
     const nsStyleDisplay* displayStyle = (const nsStyleDisplay*)lineContext->GetStyleData(eStyleStruct_Display);
     
-    PRInt32 level;
-    mView->GetLevel(aRowIndex, &level);
-
     if (displayStyle->IsVisibleOrCollapsed() && level && NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer) {
       // Paint the connecting lines.
       aRenderingContext.PushState();
@@ -1740,9 +1743,9 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int                  aRowIndex,
           PRBool hasNextSibling;
           mView->HasNextSibling(currentParent, aRowIndex, &hasNextSibling);
           if (hasNextSibling)
-            aRenderingContext.DrawLine(x + (i - 1) * mIndentation, y, x + (i - 1) * mIndentation, y + mRowHeight);
+            aRenderingContext.DrawLine(x - (level - i + 1) * mIndentation, y, x - (level - i + 1) * mIndentation, y + mRowHeight);
           else if (i == level)
-            aRenderingContext.DrawLine(x + (i - 1) * mIndentation, y, x + (i - 1) * mIndentation, y + mRowHeight / 2);
+            aRenderingContext.DrawLine(x - (level - i + 1) * mIndentation, y, x - (level - i + 1) * mIndentation, y + mRowHeight / 2);
         }
 
         PRInt32 parent;
@@ -1754,7 +1757,7 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int                  aRowIndex,
 
       // Don't paint off our cell.
       if (level == maxLevel)
-        aRenderingContext.DrawLine(x + (level - 1) * mIndentation, y + mRowHeight / 2, x + level * mIndentation, y + mRowHeight /2);
+        aRenderingContext.DrawLine(x - mIndentation, y + mRowHeight / 2, x, y + mRowHeight /2);
 
       PRBool clipState;
       aRenderingContext.PopState(clipState);
@@ -1762,9 +1765,6 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int                  aRowIndex,
       PrefillPropertyArray(aRowIndex, aColumn);
       mView->GetCellProperties(aRowIndex, aColumn->GetID(), mScratchArray);
     }
-
-    currX += mIndentation*level;
-    remainingWidth -= mIndentation*level;
   }
   
   // Now paint the icon for our cell.
