@@ -37,7 +37,7 @@ use Mac::Processes;
 use File::Copy;
 
 @ISA				= qw(Exporter);
-@EXPORT			= qw(BuildProject BuildProjectClean OpenErrorLog MakeAlias StopForErrors DontStopForErrors InstallFromManifest InstallResources SetBuildNumber SetAgentString SetTimeBomb Delay ActivateApplication);
+@EXPORT			= qw(BuildProject BuildProjectClean GetFileModDate OpenErrorLog MakeAlias StopForErrors DontStopForErrors InstallFromManifest InstallResources SetBuildNumber SetAgentString SetTimeBomb Delay ActivateApplication);
 @EXPORT_OK	= qw(CloseErrorLog UseCodeWarriorLib QUIET);
 
 	use Cwd;
@@ -487,6 +487,15 @@ sub Delay($)
      $now = time;
   }
 	
+}
+
+
+sub GetFileModDate($)
+{
+    my($filePath)=@_;
+    my($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
+        $atime,$mtime,$ctime,$blksize,$blocks) = stat($filePath);
+    return $mtime;
 }
 
 
