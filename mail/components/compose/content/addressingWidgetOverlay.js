@@ -42,7 +42,6 @@ var selectElementIndexTable = null;
 
 var gNumberOfCols = 0;
 
-var msgHeaderParserContractID		   = "@mozilla.org/messenger/headerparser;1";
 var gDragService = Components.classes["@mozilla.org/widget/dragservice;1"].getService();
 gDragService = gDragService.QueryInterface(Components.interfaces.nsIDragService);
 var gMimeHeaderParser = null;
@@ -91,11 +90,11 @@ function awInputElementName()
 }
 
 function awSelectElementName()
-  {
+{
     if (selectElementType == "")
         selectElementType = document.getElementById("addressCol1#1").localName;
     return selectElementType;
-    }
+}
 
 function awGetSelectItemIndex(itemData)
 {
@@ -155,11 +154,11 @@ function Recipients2CompFields(msgCompFields)
           case "addr_cc"    :
           case "addr_bcc"   :
           case "addr_reply" :
-    try {
+            try {
               recipient = gMimeHeaderParser.reformatUnquotedAddresses(fieldValue);
             } catch (ex) {recipient = fieldValue;}
             break;
-    }
+        }
 
         switch (recipientType)
         {
@@ -195,7 +194,7 @@ function CompFields2Recipients(msgCompFields, msgType)
 {
   if (msgCompFields) {
     gMimeHeaderParser = Components.classes["@mozilla.org/messenger/headerparser;1"].getService(Components.interfaces.nsIMsgHeaderParser);
-   
+
     var listbox = document.getElementById('addressingWidget');
     var newListBoxNode = listbox.cloneNode(false);
     var listBoxColsClone = listbox.firstChild.cloneNode(true);
@@ -1038,14 +1037,16 @@ var gAutomatedAutoCompleteListener = null;
 
 function parseAndAddAddresses(addressText)
 {
-  var msgHeaderParser = Components.classes[msgHeaderParserContractID].getService(Components.interfaces.nsIMsgHeaderParser);
+  var fullNames;
 
-  var addresses = {};
-  var fullNames = {};
-  var names = {};
-  var numAddresses =  0;
+  fullNames = addressText.split(',');
+  numAddresses = fullNames.length;
 
-  var numAddresses = msgHeaderParser.parseHeadersWithArray(addressText, addresses, names, fullNames);
+  for (index in fullNames)
+  {
+    // we want to eat leading and trailing white space... 
+    fullNames[index] = fullNames[index].replace(/^\s+|\s+$/g, "");
+  }
 
   if (numAddresses > 0)
   {
@@ -1087,9 +1088,6 @@ AutomatedAutoCompleteHandler.prototype =
 
     // set up the auto complete sessions to use
     setupAutocomplete();
-
-    SetBusyCursor(window, true);
-
     this.autoCompleteNextAddress();
   },
 
@@ -1099,9 +1097,9 @@ AutomatedAutoCompleteHandler.prototype =
     this.numSessionsSearched = 0;
     this.searchResults = new Array;
 
-    if (this.indexIntoNames < this.numNamesToComplete)
+    if (this.indexIntoNames < this.numNamesToComplete && this.namesToComplete[this.indexIntoNames])
     {
-      if (this.namesToComplete.value[this.indexIntoNames].search('@') == -1) // don't autocomplete if address has an @ sign in it
+      if (this.namesToComplete[this.indexIntoNames].search('@') == -1) // don't autocomplete if address has an @ sign in it
       {
         // make sure total session count is updated before we kick off ANY actual searches
         if (gAutocompleteSession) 
@@ -1112,7 +1110,7 @@ AutomatedAutoCompleteHandler.prototype =
 
         if (gAutocompleteSession)
         {
-           gAutocompleteSession.onAutoComplete(this.namesToComplete.value[this.indexIntoNames], null, this);
+           gAutocompleteSession.onAutoComplete(this.namesToComplete[this.indexIntoNames], null, this);
            // AB searches are actually synchronous. So by the time we get here we have already looked up results.
 
            // if we WERE going to also do an LDAP lookup, then check to see if we have a valid match in the AB, if we do
@@ -1125,7 +1123,7 @@ AutomatedAutoCompleteHandler.prototype =
         }
 
         if (gLDAPSession)
-          gLDAPSession.onStartLookup(this.namesToComplete.value[this.indexIntoNames], null, this);
+          gLDAPSession.onStartLookup(this.namesToComplete[this.indexIntoNames], null, this);
       }
 
       if (!this.numSessionsToSearch)
@@ -1184,12 +1182,10 @@ AutomatedAutoCompleteHandler.prototype =
 
     // no matches anywhere...just use what we were given
     if (!addressToAdd)
-      addressToAdd = this.namesToComplete.value[this.indexIntoNames];
+      addressToAdd = this.namesToComplete[this.indexIntoNames];
 
     // that will automatically set the focus on a new available row, and make sure it is visible
     awAddRecipient("addr_to", addressToAdd);  
-
-    SetBusyCursor(window, false);
     
     this.indexIntoNames++;
     this.autoCompleteNextAddress();
