@@ -43,7 +43,7 @@
  
 .toolbarbutton-1 {
   -moz-box-orient: vertical;
-  min-width: 0px;
+  min-width: 47px;
   list-style-image: url("chrome://messenger/skin/messengercompose/compose-toolbar.png");
 }
 
@@ -150,6 +150,7 @@ toolbar[mode="text"] .toolbarbutton-text {
 /* ::::: small primary toolbar buttons ::::: */
 
 toolbar[iconsize="small"] .toolbarbutton-1 {
+  min-width: 30px;
   list-style-image: url("chrome://messenger/skin/messengercompose/compose-toolbar-small.png");
 }
 
