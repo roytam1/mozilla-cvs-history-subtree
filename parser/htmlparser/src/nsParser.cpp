@@ -958,12 +958,13 @@ aContentType,PRBool aVerifyEnabled,PRBool aLastCall,eParseMode aMode){
       eAutoDetectResult theStatus=eUnknownDetect; 
 
       if(mParserContext && (mParserContext->mSourceType==aContentType)) { 
-        theDTD=mParserContext->mDTD; 
+        mParserContext->mDTD->CreateNewInstance(&theDTD); // To fix 32263
         theStatus=mParserContext->mAutoDetectStatus; 
+
+        //added this to fix bug 32022.
       } 
 
       pc=new CParserContext(theScanner,aKey, 0,theDTD,theStatus,aLastCall); 
-  
 
       if(pc && theScanner) { 
         PushContext(*pc); 
@@ -978,8 +979,8 @@ aContentType,PRBool aVerifyEnabled,PRBool aLastCall,eParseMode aMode){
         pc->mSourceType=aContentType; 
         mUnusedInput.Truncate(0); 
 
-        pc->mScanner->Append(aSourceBuffer); 
         //printf("Parse(string) iterate: %i",PR_FALSE); 
+        pc->mScanner->Append(aSourceBuffer); 
         result=ResumeParse(PR_FALSE); 
 
       } 
@@ -991,6 +992,9 @@ aContentType,PRBool aVerifyEnabled,PRBool aLastCall,eParseMode aMode){
     } 
     else { 
       mParserContext->mScanner->Append(aSourceBuffer); 
+      if(!mParserContext->mPrevContext) {
+        ResumeParse(PR_FALSE);
+      }
     } 
   }//if 
   NS_RELEASE(me); 
@@ -1150,9 +1154,9 @@ nsresult nsParser::ResumeParse(PRBool allowIteration, PRBool aIsFinalChunk) {
 
       mParserContext->mDTD->WillResumeParse();
       PRBool theFirstTime=PR_TRUE;
-      PRBool theIterationIsOk=(allowIteration || (!mParserContext->mPrevContext));
-      
-      while((result==NS_OK) && (theFirstTime || theIterationIsOk)) {
+      PRBool theIterationIsOk=(theFirstTime || allowIteration||(!mParserContext->mPrevContext));
+       
+      while((result==NS_OK) && (theIterationIsOk)) {
         theFirstTime=PR_FALSE;
         if(mUnusedInput.Length()>0) {
           if(mParserContext->mScanner) {
@@ -1194,26 +1198,27 @@ nsresult nsParser::ResumeParse(PRBool allowIteration, PRBool aIsFinalChunk) {
 
           PRBool theContextIsStringBased=PRBool(CParserContext::eCTString==mParserContext->mContextType);
           if( (eOnStop==mParserContext->mStreamListenerState) || 
-              (!mParserContext->mMultipart) ||
-              (theContextIsStringBased)) {
+              (!mParserContext->mMultipart) || theContextIsStringBased) {
 
             if(!mParserContext->mPrevContext) {
+              if(eOnStop==mParserContext->mStreamListenerState) {
 
-              DidBuildModel(mStreamStatus);          
+                DidBuildModel(mStreamStatus);          
 
-              MOZ_TIMER_DEBUGLOG(("Stop: Parse Time: nsParser::ResumeParse(), this=%p\n", this));
-              MOZ_TIMER_STOP(mParseTime);
+                MOZ_TIMER_DEBUGLOG(("Stop: Parse Time: nsParser::ResumeParse(), this=%p\n", this));
+                MOZ_TIMER_STOP(mParseTime);
 
-              MOZ_TIMER_LOG(("Parse Time (this=%p): ", this));
-              MOZ_TIMER_PRINT(mParseTime);
+                MOZ_TIMER_LOG(("Parse Time (this=%p): ", this));
+                MOZ_TIMER_PRINT(mParseTime);
 
-              MOZ_TIMER_LOG(("DTD Time: "));
-              MOZ_TIMER_PRINT(mDTDTime);
+                MOZ_TIMER_LOG(("DTD Time: "));
+                MOZ_TIMER_PRINT(mDTDTime);
 
-              MOZ_TIMER_LOG(("Tokenize Time: "));
-              MOZ_TIMER_PRINT(mTokenizeTime);
+                MOZ_TIMER_LOG(("Tokenize Time: "));
+                MOZ_TIMER_PRINT(mTokenizeTime);
 
-              return result;
+                return result;
+              }
 
             }
             else {
@@ -1365,6 +1370,7 @@ nsresult nsParser::OnStartRequest(nsIChannel* channel, nsISupports* aContext)
   }
   mParserContext->mStreamListenerState=eOnStart;
   mParserContext->mAutoDetectStatus=eUnknownDetect;
+  mParserContext->mChannel=channel;
   mParserContext->mDTD=0;
   nsresult rv;
   char* contentType = nsnull;
@@ -1372,7 +1378,7 @@ nsresult nsParser::OnStartRequest(nsIChannel* channel, nsISupports* aContext)
   if (NS_SUCCEEDED(rv))
   {
     mParserContext->mSourceType = contentType;
-	nsCRT::free(contentType);
+	  nsCRT::free(contentType);
   }
   else
     NS_ASSERTION(contentType, "parser needs a content type to find a dtd");
@@ -1495,91 +1501,107 @@ static PRBool detectByteOrderMark(const unsigned char* aBytes, PRInt32 aLen, nsS
  *  @param   length is the number of bytes waiting input
  *  @return  error code (usually 0)
  */
-nsresult nsParser::OnDataAvailable(nsIChannel* channel, nsISupports* aContext,
-                                   nsIInputStream *pIStream, PRUint32 sourceOffset, PRUint32 aLength)
-{
 
-  NS_PRECONDITION(((eOnStart==mParserContext->mStreamListenerState)||(eOnDataAvail==mParserContext->mStreamListenerState)),kOnStartNotCalled);
+nsresult nsParser::OnDataAvailable(nsIChannel* channel, nsISupports* aContext, 
+                                   nsIInputStream *pIStream, PRUint32 sourceOffset, PRUint32 aLength) 
+{ 
 
-  mParserContext->mStreamListenerState=eOnDataAvail;
+ 
+NS_PRECONDITION(((eOnStart==mParserContext->mStreamListenerState)||(eOnDataAvail==mParserContext->mStreamListenerState)),kOnStartNotCalled);
 
-  if(eInvalidDetect==mParserContext->mAutoDetectStatus) {
-    if(mParserContext->mScanner) {
-      mParserContext->mScanner->GetBuffer().Truncate();
-    }
-  }
+  nsresult result=NS_OK; 
 
-  PRInt32 newLength=(aLength>mParserContext->mTransferBufferSize) ? aLength : mParserContext->mTransferBufferSize;
-  if(!mParserContext->mTransferBuffer) {
-    mParserContext->mTransferBufferSize=newLength;
-    mParserContext->mTransferBuffer=new char[newLength+20];
-  }
-  else if(aLength>mParserContext->mTransferBufferSize){
-    delete [] mParserContext->mTransferBuffer;
-    mParserContext->mTransferBufferSize=newLength;
-    mParserContext->mTransferBuffer=new char[newLength+20];
-  }
+  CParserContext *theContext=mParserContext; 
+  
+  while(theContext) { 
+    if(theContext->mChannel!=channel && theContext->mPrevContext) 
+      theContext=theContext->mPrevContext; 
+    else break; 
+  } 
 
-  nsresult result=NS_OK;
+  if(theContext && theContext->mChannel==channel) { 
 
-  if(mParserContext->mTransferBuffer) {
+    theContext->mStreamListenerState=eOnDataAvail; 
 
-      //We need to add code to defensively deal with the case where the transfer buffer is null.
+    if(eInvalidDetect==theContext->mAutoDetectStatus) { 
+      if(theContext->mScanner) { 
+        theContext->mScanner->GetBuffer().Truncate(); 
+      } 
+    } 
 
-    PRUint32  theTotalRead=0; 
-    PRUint32  theNumRead=1;   //init to a non-zero value
-    int       theStartPos=0;   
+    PRInt32 newLength=(aLength>theContext->mTransferBufferSize) ? aLength :
+theContext->mTransferBufferSize; 
+    if(!theContext->mTransferBuffer) { 
+      theContext->mTransferBufferSize=newLength; 
+      theContext->mTransferBuffer=new char[newLength+20]; 
+    } 
+    else if(aLength>theContext->mTransferBufferSize){ 
+      delete [] theContext->mTransferBuffer; 
+      theContext->mTransferBufferSize=newLength; 
+      theContext->mTransferBuffer=new char[newLength+20]; 
+    } 
 
-    PRBool needCheckFirst4Bytes = 
-            ((0 == sourceOffset) && (mCharsetSource<kCharsetFromAutoDetection));
-    while ((theNumRead>0) && (aLength>theTotalRead) && (NS_OK==result)) {
-      result = pIStream->Read(mParserContext->mTransferBuffer, aLength, &theNumRead);
-      if(NS_SUCCEEDED(result) && (theNumRead>0)) {
-        if(needCheckFirst4Bytes && (theNumRead >= 4)) {
-           nsCharsetSource guessSource;
-           nsAutoString guess("");
-         
-           needCheckFirst4Bytes = PR_FALSE;
-           if(detectByteOrderMark((const unsigned char*)mParserContext->mTransferBuffer,
-                                  theNumRead, guess, guessSource)) 
-           {
-  #ifdef DEBUG_XMLENCODING
-              printf("xmlencoding detect- %s\n", guess.ToNewCString());
-  #endif
-              this->SetDocumentCharset(guess, guessSource);
-           }
-        }
-        theTotalRead+=theNumRead;
-        if(mParserFilter)
-           mParserFilter->RawBuffer(mParserContext->mTransferBuffer, &theNumRead);
+    if(theContext->mTransferBuffer) { 
 
-  #ifdef NS_DEBUG
-        unsigned int index=0;
-        for(index=0;index<theNumRead;index++) {
-          if(0==mParserContext->mTransferBuffer[index]){
-            printf("\nNull found at buffer[%i] provided by netlib...\n",index);
-            break;
-          }
-        }
-  #endif
+        //We need to add code to defensively deal with the case where the transfer buffer is null. 
 
-        mParserContext->mScanner->Append(mParserContext->mTransferBuffer,theNumRead);
+      PRUint32  theTotalRead=0; 
+      PRUint32  theNumRead=1;   //init to a non-zero value 
+      int       theStartPos=0; 
 
-  #ifdef rickgdebug
-        mParserContext->mTransferBuffer[theNumRead]=0;
-        mParserContext->mTransferBuffer[theNumRead+1]=0;
-        mParserContext->mTransferBuffer[theNumRead+2]=0;
-        (*gOutFile) << mParserContext->mTransferBuffer;
-  #endif
+      PRBool needCheckFirst4Bytes = 
+              ((0 == sourceOffset) && (mCharsetSource<kCharsetFromAutoDetection)); 
+      while ((theNumRead>0) && (aLength>theTotalRead) && (NS_OK==result)) { 
+        result = pIStream->Read(theContext->mTransferBuffer, aLength, &theNumRead); 
+        if(NS_SUCCEEDED(result) && (theNumRead>0)) { 
+          if(needCheckFirst4Bytes && (theNumRead >= 4)) { 
+             nsCharsetSource guessSource; 
+             nsAutoString guess(""); 
+  
+             needCheckFirst4Bytes = PR_FALSE; 
+             if(detectByteOrderMark((const unsigned char*)theContext->mTransferBuffer, 
+                                    theNumRead, guess, guessSource)) 
+             { 
+    #ifdef DEBUG_XMLENCODING 
+                printf("xmlencoding detect- %s\n", guess.ToNewCString()); 
+    #endif 
+                this->SetDocumentCharset(guess, guessSource); 
+             } 
+          } 
+          theTotalRead+=theNumRead; 
+          if(mParserFilter) 
+             mParserFilter->RawBuffer(theContext->mTransferBuffer, &theNumRead); 
 
-      } //if
-      theStartPos+=theNumRead;
-    }//while
+    #ifdef NS_DEBUG 
+          unsigned int index=0; 
+          for(index=0;index<theNumRead;index++) { 
+            if(0==theContext->mTransferBuffer[index]){ 
+              printf("\nNull found at buffer[%i] provided by netlib...\n",index); 
+              break; 
+            } 
+          } 
+    #endif 
 
-    result=ResumeParse();     
-  }
-  return result;
-}
+          theContext->mScanner->Append(theContext->mTransferBuffer,theNumRead); 
+
+    #ifdef rickgdebug 
+          theContext->mTransferBuffer[theNumRead]=0; 
+          theContext->mTransferBuffer[theNumRead+1]=0; 
+          theContext->mTransferBuffer[theNumRead+2]=0; 
+          cout << theContext->mTransferBuffer; 
+    #endif 
+
+        } //if 
+        theStartPos+=theNumRead; 
+      }//while 
+
+      result=ResumeParse(); 
+    } //if 
+
+  } //if 
+
+  return result; 
+} 
 
 /**
  *  This is called by the networking library once the last block of data
