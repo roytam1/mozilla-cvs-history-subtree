@@ -54,7 +54,7 @@
  * itself.
  */
 static char *compatible_version[] = {
-    "4.0", "4.0.1", "4.0.2", 4.1, PR_VERSION
+    "4.0", "4.0.1", "4.0.2", "4.1", PR_VERSION
 };
 
 /*
