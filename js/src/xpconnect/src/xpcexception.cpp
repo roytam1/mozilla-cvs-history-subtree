@@ -55,6 +55,8 @@ static struct ResultMap
     {0,0,0}   // sentinel to mark end of array
 };
 
+#define RESULT_COUNT ((sizeof(map) / sizeof(map[0]))-1)
+
 // static
 JSBool
 nsXPCException::NameAndFormatForNSResult(nsresult rv,
@@ -96,6 +98,13 @@ nsXPCException::IterateNSResults(nsresult* rv,
         p = nsnull;
     *iterp = p;
     return p;
+}
+
+// static 
+PRUint32 
+nsXPCException::GetNSResultCount()
+{
+    return RESULT_COUNT;
 }
 
 /***************************************************************************/

@@ -248,6 +248,29 @@ JSClass XPC_WN_NoHelper_JSClass = {
     nsnull                          // spare;
 };
 
+
+/***************************************************************************/
+
+extern "C" JS_IMPORT_DATA(JSObjectOps) js_ObjectOps;
+
+static JSObjectOps XPC_WN_JSOps;
+
+JSObjectOps * JS_DLL_CALLBACK
+XPC_WN_GetObjectOpsStub(JSContext *cx, JSClass *clazz)
+{
+    return &XPC_WN_JSOps;
+}
+
+JSBool xpc_InitWrappedNativeJSOps()
+{
+    if(!XPC_WN_JSOps.newObjectMap)
+    {
+        memcpy(&XPC_WN_JSOps, &js_ObjectOps, sizeof(JSObjectOps));
+        // XXX and then we need to set the Enum OP to ours!
+    }
+    return JS_TRUE;
+}
+
 /***************************************************************************/
 
 // XXX This may be routed differently in the future...
@@ -385,6 +408,8 @@ XPC_WN_Proto_Enumerate(JSContext *cx, JSObject *obj)
             XPCNativeMember* member = interface->GetMemberAt(k);
             JSProperty* prop;
             JSObject* obj2;
+
+            // XXX I should support a lazier lookup here!!!
 
             // The Lookup will force a Resolve and eager Define of the property
             
@@ -547,13 +572,6 @@ JSClass XPC_WN_Tearoff_JSClass = {
 };
 
 /***************************************************************************/
-
-JSBool xpc_InitWrappedNativeJSOps()
-{
-    // XXX fix this...
-    return JS_TRUE;
-}
-
 
 #if 0
 
@@ -1263,12 +1281,13 @@ JSBool xpc_InitWrappedNativeJSOps()
     return JS_TRUE;
 }
 
-#else
 JSBool xpc_InitWrappedNativeJSOps()
 {
     // XXX fix this...
     return JS_TRUE;
 }
+
+#else
 
 #endif
 

@@ -172,7 +172,6 @@ public:
     static XPCContext*  GetContext(JSContext* cx, nsXPConnect* xpc = nsnull);
 
     static JSBool IsISupportsDescendant(nsIInterfaceInfo* info);
-    nsIXPCScriptable* GetArbitraryScriptable() {return mArbitraryScriptable;}
 
     nsIXPCSecurityManager* GetDefaultSecurityManager() const
         {return mDefaultSecurityManager;}
@@ -196,7 +195,6 @@ private:
     static JSBool gOnceAliveNowDead;
 
     XPCJSRuntime* mRuntime;
-    nsIXPCScriptable* mArbitraryScriptable;
     nsIInterfaceInfoManager* mInterfaceInfoManager;
     nsIThreadJSContextStack* mContextStack;
     nsIXPCSecurityManager* mDefaultSecurityManager;
@@ -260,6 +258,7 @@ public:
         IDX_OBJECT                  ,
         IDX_PROTOTYPE               ,
         IDX_CALLABLE_INFO_PROP_NAME ,
+        IDX_CREATE_INSTANCE         ,
         IDX_TOTAL_COUNT // just a count of the above
     };
 
@@ -479,7 +478,6 @@ public:
     inline XPCWrappedNativeTearOff*     GetTearOffForScriptable() const ;
  
     inline XPCNativeScriptableInfo*     GetScriptableInfo() const ;
-    inline nsIXPCScriptable*            GetArbitraryScriptable() const ;
     inline XPCNativeSet*                GetSet() const ;
     inline XPCNativeInterface*          GetInterface() const ;
     inline XPCNativeMember*             GetMember() const ;
@@ -942,19 +940,6 @@ XPC_JSArgumentFormatter(JSContext *cx, const char *format,
 
 /***************************************************************************/
 
-class nsXPCArbitraryScriptable : public nsIXPCScriptable
-{
-public:
-    // all the interface method declarations...
-    NS_DECL_ISUPPORTS
-    XPC_DECLARE_IXPCSCRIPTABLE
-
-public:
-    nsXPCArbitraryScriptable();
-};
-
-/***************************************************************************/
-
 class XPCJSStack
 {
 public:
@@ -999,6 +984,9 @@ public:
                                   const char** name,
                                   const char** format,
                                   void** iterp);
+
+    static PRUint32 GetNSResultCount();
+
     nsXPCException();
     virtual ~nsXPCException();
 
@@ -1053,6 +1041,8 @@ public:
     PRBool NameIsSet() const {return nsnull != mName;}
     const nsID* GetID() const {return &mID;}
 
+    PRBool IsValid() const {return !mID.Equals(GetInvalidIID());}
+
     static nsJSID* NewID(const char* str);
 
     nsJSID();
@@ -1081,7 +1071,7 @@ public:
 
     // we implement the rest...
     NS_DECL_NSIJSIID
-    XPC_DECLARE_IXPCSCRIPTABLE
+    NS_DECL_NSIXPCSCRIPTABLE
 
     static nsJSIID* NewID(const char* str);
 
@@ -1091,15 +1081,8 @@ public:
 private:
     void ResolveName();
 
-    void FillCache(JSContext *cx, JSObject *obj,
-                   nsIXPCWrappedNativeTearOff *tearOff,
-                   nsIXPCScriptable *arbitrary);
-    
-    JSBool NeedToFillCache(JSObject* obj) const {return obj != mObj;}
-
 private:
     nsJSID mDetails;
-    JSObject* mObj;
 };
 
 // nsJSCID
@@ -1114,7 +1097,7 @@ public:
 
     // we implement the rest...
     NS_DECL_NSIJSCID
-    XPC_DECLARE_IXPCSCRIPTABLE
+    NS_DECL_NSIXPCSCRIPTABLE
 
     static nsJSCID* NewID(const char* str);
 
@@ -1254,7 +1237,7 @@ class nsXPCComponents : public nsIXPCComponents,
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIXPCCOMPONENTS
-    XPC_DECLARE_IXPCSCRIPTABLE
+    NS_DECL_NSIXPCSCRIPTABLE
 
 #ifdef XPC_USE_SECURITY_CHECKED_COMPONENT
     NS_DECL_NSISECURITYCHECKEDCOMPONENT
@@ -1279,7 +1262,6 @@ private:
     nsXPCComponents_ID*          mID;
     nsXPCComponents_Exception*   mException;
     nsXPCComponents_Constructor* mConstructor;
-    PRBool                       mCreating;
 };
 
 /***************************************************************************/
@@ -1668,15 +1650,27 @@ public:
     JSUint32          GetFlags() const       {return mFlags;}
     JSClass*          GetJSClass()           {return &mJSClass;}
 
-    // XXX these need to be sync'd with the new nsIXPCScriptable flags
 
-    JSBool DontEnumStaticProps() const           {return (JSBool)(mFlags & XPCSCRIPTABLE_DONT_ENUM_STATIC_PROPS           );}
-    JSBool DontAskInstanceForScriptable() const  {return (JSBool)(mFlags & XPCSCRIPTABLE_DONT_ASK_INSTANCE_FOR_SCRIPTABLE );}
-    JSBool CallScriptableFirst() const           {return (JSBool)(mFlags & XPCSCRIPTABLE_CALL_SCRIPTABLE_FIRST            );}
-    JSBool HideCallAndConstruct() const          {return (JSBool)(mFlags & XPCSCRIPTABLE_HIDE_CALL_AND_CONSTRUCT          );}
-    JSBool HideQueryInterface() const            {return (JSBool)(mFlags & XPCSCRIPTABLE_HIDE_QUERY_INTERFACE             );}
-    JSBool NoTearOffs() const                    {return (JSBool)(mFlags & XPCSCRIPTABLE_NO_TEAROFFS                      );}
-    JSBool DontCallScriptableForTearOffs() const {return (JSBool)(mFlags & XPCSCRIPTABLE_DONT_CALL_SCRIPTABLE_ON_TEAROFFS );}
+    JSBool WantCreate()                   const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CREATE);}
+    JSBool WantAddproperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_ADDPROPERTY);}
+    JSBool WantDelproperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_DELPROPERTY);}
+    JSBool WantGetproperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_GETPROPERTY);}
+    JSBool WantSetproperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_SETPROPERTY);}
+    JSBool WantEnumerate()                const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_ENUMERATE);}
+    JSBool WantNewenumerate()             const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_NEWENUMERATE);}
+    JSBool WantResolve()                  const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_RESOLVE);}
+    JSBool WantNewresolve()               const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_NEWRESOLVE);}
+    JSBool WantConvert()                  const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CONVERT);}
+    JSBool WantFinalize()                 const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_FINALIZE);}
+    JSBool WantCheckaccess()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CHECKACCESS);}
+    JSBool WantCall()                     const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CALL);}
+    JSBool WantConstruct()                const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CONSTRUCT);}
+    JSBool WantHasinstance()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_HASINSTANCE);}
+    JSBool WantMark()                     const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_MARK);}
+    JSBool DontEnumStaticProps()          const {return (JSBool)(mFlags & nsIXPCScriptable::DONT_ENUM_STATIC_PROPS);}
+    JSBool DontAskInstanceForScriptable() const {return (JSBool)(mFlags & nsIXPCScriptable::DONT_ASK_INSTANCE_FOR_SCRIPTABLE);}
+    JSBool HideQueryInterface()           const {return (JSBool)(mFlags & nsIXPCScriptable::HIDE_QUERY_INTERFACE);}
+    JSBool NoTearoffs()                   const {return (JSBool)(mFlags & nsIXPCScriptable::NO_TEAROFFS);}
 
 private:
     // disable copy ctor and assignment
@@ -1835,7 +1829,7 @@ private:
     XPCWrappedNativeProto* mProto;
     XPCNativeSet*   mSet;
     nsISupports*    mIdentity;          // only addref'd when necessary
-    JSObject*       mFlatJSObject;      // only build on demand
+    JSObject*       mFlatJSObject;
 
     XPCNativeScriptableInfo* mScriptableInfo;
 

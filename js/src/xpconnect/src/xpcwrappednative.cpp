@@ -168,8 +168,7 @@ XPCWrappedNative::Init(XPCCallContext& ccx)
         if(helper)
         {
             JSUint32 flags;
-            nsresult rv = helper->GetFlags(cx, nsnull, nsnull, &flags, 
-                                           ccx.GetArbitraryScriptable());
+            nsresult rv = helper->GetFlags(&flags);
             if(NS_FAILED(rv))
                 return JS_FALSE;
 
@@ -219,7 +218,7 @@ XPCWrappedNative::Init(XPCCallContext& ccx)
         to.SetNative(mIdentity);
         
         mScriptableInfo->GetScriptable()->
-            Create(cx, mFlatJSObject, &to, ccx.GetArbitraryScriptable());
+            Create(this, cx, mFlatJSObject);
     }
     
     // XXX and so on....

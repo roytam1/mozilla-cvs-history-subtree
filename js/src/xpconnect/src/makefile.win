@@ -52,7 +52,6 @@ PCHFLAGS=-YX -Fp.\$(OBJDIR)\$(DLLNAME).pch
 OBJS=					\
 	.\$(OBJDIR)\nsScriptError.obj	\
 	.\$(OBJDIR)\nsXPConnect.obj	\
-	.\$(OBJDIR)\xpcarbitrary.obj	\
 	.\$(OBJDIR)\xpccallcontext.obj	\
 	.\$(OBJDIR)\xpccomponents.obj	\
 	.\$(OBJDIR)\xpccontext.obj	\

@@ -46,19 +46,20 @@ interface nsIXPCScriptable : nsISupports
     const PRUint32 WANT_GETPROPERTY                 = 1 <<  3;
     const PRUint32 WANT_SETPROPERTY                 = 1 <<  4;
     const PRUint32 WANT_ENUMERATE                   = 1 <<  5;
-    const PRUint32 WANT_RESOLVE                     = 1 <<  6;
-    const PRUint32 WANT_CONVERT                     = 1 <<  7;
-    const PRUint32 WANT_FINALIZE                    = 1 <<  8;
-    const PRUint32 WANT_CHECKACCESS                 = 1 <<  9;
-    const PRUint32 WANT_CALL                        = 1 << 10;
-    const PRUint32 WANT_CONSTRUCT                   = 1 << 11;
-    const PRUint32 WANT_HASINSTANCE                 = 1 << 12;
-    const PRUint32 WANT_MARK                        = 1 << 13;
-
-    const PRUint32 DONT_ENUM_STATIC_PROPS           = 1 << 14;
-    const PRUint32 DONT_ASK_INSTANCE_FOR_SCRIPTABLE = 1 << 15;
-    const PRUint32 HIDE_QUERY_INTERFACE             = 1 << 16;
-    const PRUint32 NO_TEAROFFS                      = 1 << 17;
+    const PRUint32 WANT_NEWENUMERATE                = 1 <<  6;
+    const PRUint32 WANT_RESOLVE                     = 1 <<  7;
+    const PRUint32 WANT_NEWRESOLVE                  = 1 <<  8;
+    const PRUint32 WANT_CONVERT                     = 1 <<  9;
+    const PRUint32 WANT_FINALIZE                    = 1 << 10;
+    const PRUint32 WANT_CHECKACCESS                 = 1 << 11;
+    const PRUint32 WANT_CALL                        = 1 << 12;
+    const PRUint32 WANT_CONSTRUCT                   = 1 << 13;
+    const PRUint32 WANT_HASINSTANCE                 = 1 << 14;
+    const PRUint32 WANT_MARK                        = 1 << 15;
+    const PRUint32 DONT_ENUM_STATIC_PROPS           = 1 << 16;
+    const PRUint32 DONT_ASK_INSTANCE_FOR_SCRIPTABLE = 1 << 17;
+    const PRUint32 HIDE_QUERY_INTERFACE             = 1 << 18;
+    const PRUint32 NO_TEAROFFS                      = 1 << 19;
 
     /* XXX I want some flags to tell xpc to use JS stubs for some of these */
     // e.g.  USE_JSSTUB_FOR_ADDPROPERTY
@@ -69,42 +70,130 @@ interface nsIXPCScriptable : nsISupports
     readonly attribute string   className;
     readonly attribute PRUint32 flags;
 
-    void   create(in JSContextPtr cx, in JSObjectPtr obj);
+    void   create(in nsIXPConnectWrappedNative wrapper, 
+                  in JSContextPtr cx, in JSObjectPtr obj);
 
-    PRBool addProperty(in JSContextPtr cx, in JSObjectPtr obj, in JSID id, 
+    PRBool addProperty(in nsIXPConnectWrappedNative wrapper,
+                       in JSContextPtr cx, in JSObjectPtr obj, in JSID id, 
                        in JSValPtr vp);
             
-    PRBool delProperty(in JSContextPtr cx, in JSObjectPtr obj, in JSID id,
+    PRBool delProperty(in nsIXPConnectWrappedNative wrapper,
+                       in JSContextPtr cx, in JSObjectPtr obj, in JSID id,
                        in JSValPtr vp);
 
-    PRBool getProperty(in JSContextPtr cx, in JSObjectPtr obj, in JSID id,
+    PRBool getProperty(in nsIXPConnectWrappedNative wrapper,
+                       in JSContextPtr cx, in JSObjectPtr obj, in JSID id,
                        in JSValPtr vp);
 
-    PRBool setProperty(in JSContextPtr cx, in JSObjectPtr obj, in JSID id,
+    PRBool setProperty(in nsIXPConnectWrappedNative wrapper,
+                       in JSContextPtr cx, in JSObjectPtr obj, in JSID id,
                        in JSValPtr vp);
 
-    PRBool enumerate(in JSContextPtr cx, in JSObjectPtr obj,
-                     in PRUint32 enum_op, in JSValPtr statep, in JSID idp);
+    PRBool enumerate(in nsIXPConnectWrappedNative wrapper,
+                     in JSContextPtr cx, in JSObjectPtr obj);
 
-    PRBool resolve(in JSContextPtr cx, in JSObjectPtr obj, in JSID id,
-                   in PRUint32 flags, out JSObjectPtr objp);
+    PRBool newEnumerate(in nsIXPConnectWrappedNative wrapper,
+                        in JSContextPtr cx, in JSObjectPtr obj,
+                        in PRUint32 enum_op, in JSValPtr statep, out JSID idp);
 
-    PRBool convert(in JSContextPtr cx, in JSObjectPtr obj,
+    PRBool resolve(in nsIXPConnectWrappedNative wrapper,
+                   in JSContextPtr cx, in JSObjectPtr obj, in JSID id);
+
+    PRBool newResolve(in nsIXPConnectWrappedNative wrapper,
+                      in JSContextPtr cx, in JSObjectPtr obj, in JSID id,
+                      in PRUint32 flags, out JSObjectPtr objp);
+
+    PRBool convert(in nsIXPConnectWrappedNative wrapper,
+                   in JSContextPtr cx, in JSObjectPtr obj,
                    in PRUint32 type, in JSValPtr vp);
                    
-    void   finalize(in JSContextPtr cx, in JSObjectPtr obj);
+    void   finalize(in nsIXPConnectWrappedNative wrapper,
+                    in JSContextPtr cx, in JSObjectPtr obj);
 
-    PRBool checkAccess(in JSContextPtr cx, in JSObjectPtr obj, in JSID id,
+    PRBool checkAccess(in nsIXPConnectWrappedNative wrapper,
+                       in JSContextPtr cx, in JSObjectPtr obj, in JSID id,
                        in PRUint32 mode, in JSValPtr vp);
 
-    PRBool call(in JSContextPtr cx, in JSObjectPtr obj, 
+    PRBool call(in nsIXPConnectWrappedNative wrapper,
+                in JSContextPtr cx, in JSObjectPtr obj, 
                 in PRUint32 argc, in JSValPtr argv, in JSValPtr vp);
     
-    PRBool construct(in JSContextPtr cx, in JSObjectPtr obj, 
+    PRBool construct(in nsIXPConnectWrappedNative wrapper,
+                     in JSContextPtr cx, in JSObjectPtr obj, 
                      in PRUint32 argc, in JSValPtr argv, in JSValPtr vp);
 
-    PRBool hasInstance(in JSContextPtr cx, in JSObjectPtr obj,
+    PRBool hasInstance(in nsIXPConnectWrappedNative wrapper,
+                       in JSContextPtr cx, in JSObjectPtr obj,
                        in JSVal val, out PRBool bp);
 
-    PRUint32 mark(in JSContextPtr cx, in JSObjectPtr obj, in voidPtr arg);
+    PRUint32 mark(in nsIXPConnectWrappedNative wrapper,
+                  in JSContextPtr cx, in JSObjectPtr obj, in voidPtr arg);
 };    
+
+
+/***************************************************************************/
+
+%{ C++
+
+/*
+ * These two classes are *not* xpcom interfaces. They have no virtual methods
+ * and are not reference counted. They exist only as a way to expose a little
+ * of the XPConnect interals to implementors of nsIXPCScriptable and users of
+ * nsIXPCNativeCallContext interfaces. In the places where a pointer to a
+ * nsIXPCWrappedNativeTearOff object is available it should be used only for
+ * the lifetime of the call in question. Same story for nsIXPCNativeInterface.
+ */
+
+// no virtuals
+class nsIXPCWrappedNativeTearOff
+    {
+public:
+    inline nsIXPConnectWrappedNative* GetWrapper()   const {return mWrapper;}
+    inline JSObject*                  GetJSObject()  const {return mJSObject;}
+    inline nsISupports*               GetNative()    const {return mNative;}
+    inline nsIXPCNativeInterface*     GetInterface() const {return mInterface;}
+
+    inline JSBool IsFlattenedObject() const {return nsnull == mInterface;}
+
+protected:
+    nsIXPCWrappedNativeTearOff()
+        : mWrapper(nsnull), mJSObject(nsnull), 
+          mNative(nsnull), mInterface(nsnull) {}
+    ~nsIXPCWrappedNativeTearOff() {}
+
+    nsIXPCWrappedNativeTearOff(const nsIXPCWrappedNativeTearOff& r); // not implemented
+    nsIXPCWrappedNativeTearOff& operator= (const nsIXPCWrappedNativeTearOff& r); // not implemented
+
+protected:
+    nsIXPConnectWrappedNative*  mWrapper;
+    JSObject*                   mJSObject;
+    nsISupports*                mNative;
+    nsIXPCNativeInterface*      mInterface;
+};
+
+// no virtuals
+
+class nsIXPCNativeInterface
+{
+public:
+    inline nsIInterfaceInfo* GetInterfaceInfo() const {return mInfo;}
+    inline jsid              GetNameID()        const {return mNameID;}
+
+protected:
+    nsIXPCNativeInterface(nsIInterfaceInfo* aInfo, jsid aNameID)
+        : mInfo(aInfo), mNameID(aNameID) {}
+    ~nsIXPCNativeInterface() {}
+
+    nsIXPCNativeInterface(const nsIXPCNativeInterface& r); // not implemented
+    nsIXPCNativeInterface& operator= (const nsIXPCNativeInterface& r); // not implemented
+
+protected:
+    nsCOMPtr<nsIInterfaceInfo> mInfo;
+    jsid                       mNameID;
+};
+
+%}
+
+/***************************************************************************/
+
+

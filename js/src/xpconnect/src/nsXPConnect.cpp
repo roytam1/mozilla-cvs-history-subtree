@@ -44,20 +44,9 @@ nsXPConnect* nsXPConnect::gSelf = nsnull;
 JSBool nsXPConnect::gOnceAliveNowDead = JS_FALSE;
 
 /***************************************************************************/
-// has to go somewhere...
-
-nsXPCArbitraryScriptable::nsXPCArbitraryScriptable()
-{
-    NS_INIT_REFCNT();
-    NS_ADDREF_THIS();
-}
-
-/***************************************************************************/
-/***************************************************************************/
 
 nsXPConnect::nsXPConnect()
     :   mRuntime(nsnull),
-        mArbitraryScriptable(nsnull),
         mInterfaceInfoManager(nsnull),
         mContextStack(nsnull),
         mDefaultSecurityManager(nsnull),
@@ -68,8 +57,6 @@ nsXPConnect::nsXPConnect()
     // ignore result - if the runtime service is not ready to rumble
     // then we'll set this up later as needed.
     CreateRuntime();
-
-    mArbitraryScriptable = new nsXPCArbitraryScriptable();
 
     mInterfaceInfoManager = XPTI_GetInterfaceInfoManager();
 
@@ -107,7 +94,6 @@ nsXPConnect::nsXPConnect()
 
 nsXPConnect::~nsXPConnect()
 {
-    NS_IF_RELEASE(mArbitraryScriptable);
     NS_IF_RELEASE(mInterfaceInfoManager);
     NS_IF_RELEASE(mContextStack);
     NS_IF_RELEASE(mDefaultSecurityManager);
@@ -144,7 +130,6 @@ nsXPConnect::GetXPConnect()
             return nsnull;
         gSelf = new nsXPConnect();
         if (!gSelf ||
-            !gSelf->mArbitraryScriptable ||
             !gSelf->mInterfaceInfoManager ||
             !gSelf->mContextStack)
         {
@@ -697,7 +682,6 @@ nsXPConnect::DebugDump(PRInt16 depth)
     depth-- ;
     XPC_LOG_ALWAYS(("nsXPConnect @ %x with mRefCnt = %d", this, mRefCnt));
     XPC_LOG_INDENT();
-        XPC_LOG_ALWAYS(("mArbitraryScriptable @ %x", mArbitraryScriptable));
         XPC_LOG_ALWAYS(("mInterfaceInfoManager @ %x", mInterfaceInfoManager));
         XPC_LOG_ALWAYS(("mContextStack @ %x", mContextStack));
         if(mRuntime)

@@ -18,7 +18,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *   John Bandhauer <jband@netscape.com>
  *   Pierre Phaneuf <pp@ludusdesign.com>
  *
@@ -51,15 +51,15 @@ static nsresult ThrowAndFail(nsresult errNum, JSContext* cx, JSBool* retval)
     XPCThrower::Throw(errNum, cx);
     *retval = JS_FALSE;
     return NS_OK;
-}        
+}
 
-static nsresult ThrowBadResultAndFail(nsresult errNum, nsresult result, 
+static nsresult ThrowBadResultAndFail(nsresult errNum, nsresult result,
                                       XPCCallContext& ccx, JSBool* retval)
 {
     XPCThrower::ThrowBadResult(errNum, result, ccx);
     *retval = JS_FALSE;
     return NS_OK;
-}        
+}
 
 /***************************************************************************/
 // nsJSID
@@ -152,7 +152,7 @@ nsJSID::GetValid(PRBool *aValid)
     if(!aValid)
         return NS_ERROR_NULL_POINTER;
 
-    *aValid = !mID.Equals(GetInvalidIID());
+    *aValid = IsValid();
     return NS_OK;
 }
 
@@ -265,25 +265,16 @@ nsJSID::NewID(const char* str)
 
 NS_IMPL_THREADSAFE_ISUPPORTS3(nsJSIID, nsIJSID, nsIJSIID, nsIXPCScriptable)
 
-XPC_IMPLEMENT_FORWARD_CREATE(nsJSIID)
-// XPC_IMPLEMENT_IGNORE_GETFLAGS(nsJSIID)
-// XPC_IMPLEMENT_IGNORE_LOOKUPPROPERTY(nsJSIID)
-XPC_IMPLEMENT_IGNORE_DEFINEPROPERTY(nsJSIID)
-// XPC_IMPLEMENT_IGNORE_GETPROPERTY(nsJSIID)
-XPC_IMPLEMENT_IGNORE_SETPROPERTY(nsJSIID)
-XPC_IMPLEMENT_IGNORE_GETATTRIBUTES(nsJSIID)
-XPC_IMPLEMENT_IGNORE_SETATTRIBUTES(nsJSIID)
-XPC_IMPLEMENT_IGNORE_DELETEPROPERTY(nsJSIID)
-XPC_IMPLEMENT_FORWARD_DEFAULTVALUE(nsJSIID)
-// XPC_IMPLEMENT_IGNORE_ENUMERATE(nsJSIID)
-XPC_IMPLEMENT_IGNORE_CHECKACCESS(nsJSIID)
-XPC_IMPLEMENT_IGNORE_CALL(nsJSIID)
-XPC_IMPLEMENT_IGNORE_CONSTRUCT(nsJSIID)
-// XPC_IMPLEMENT_FORWARD_HASINSTANCE(nsJSIID)
-XPC_IMPLEMENT_FORWARD_FINALIZE(nsJSIID)
+// The nsIXPCScriptable map declaration that will generate stubs for us...
+#define XPC_MAP_CLASSNAME           nsJSIID
+#define XPC_MAP_QUOTED_CLASSNAME   "nsJSIID"
+#define                             XPC_MAP_WANT_RESOLVE
+#define                             XPC_MAP_WANT_ENUMERATE
+#define                             XPC_MAP_WANT_HASINSTANCE
+#define XPC_MAP_FLAGS               nsIXPCScriptable::DONT_ENUM_STATIC_PROPS
+#include "xpc_map_end.h" /* This will #undef the above */
 
 nsJSIID::nsJSIID()
-    :   mObj(nsnull)
 {
     NS_INIT_ISUPPORTS();
 }
@@ -378,514 +369,122 @@ nsJSIID::NewID(const char* str)
     return idObj;
 }
 
+
+/* PRBool resolve (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSID id); */
 NS_IMETHODIMP
-nsJSIID::HasInstance(JSContext *cx, JSObject *obj,
-                     jsval v, JSBool *bp,
-                     nsIXPCWrappedNativeTearOff* tearOff,
-                     nsIXPCScriptable* arbitrary,
-                     JSBool* retval)
+nsJSIID::Resolve(nsIXPConnectWrappedNative *wrapper,
+                 JSContext * cx, JSObject * obj,
+                 jsid id, PRBool *_retval)
+{
+    *_retval = JS_TRUE;
+
+    XPCCallContext ccx(JS_CALLER, cx);
+
+    XPCNativeInterface* iface =
+        XPCNativeInterface::GetNewOrUsed(ccx, mDetails.GetID());
+
+    if(!iface)
+        return NS_OK;
+
+    XPCNativeMember* member = iface->FindMember(id);
+    if(member && member->IsConstant())
+    {
+        jsval val;
+        if(!member->GetValue(ccx, iface, &val))
+            return NS_ERROR_OUT_OF_MEMORY;
+
+        *_retval = OBJ_DEFINE_PROPERTY(cx, obj, id, val,
+                                       nsnull, nsnull,
+                                       JSPROP_ENUMERATE |
+                                       JSPROP_READONLY |
+                                       JSPROP_PERMANENT,
+                                       nsnull);
+    }
+
+    return NS_OK;
+}
+
+/* PRBool enumerate (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj); */
+NS_IMETHODIMP
+nsJSIID::Enumerate(nsIXPConnectWrappedNative *wrapper,
+                   JSContext * cx, JSObject * obj, PRBool *_retval)
+{
+    // In this case, let's just eagerly resolve...
+
+    *_retval = JS_TRUE;
+
+    XPCCallContext ccx(JS_CALLER, cx);
+
+    XPCNativeInterface* iface =
+        XPCNativeInterface::GetNewOrUsed(ccx, mDetails.GetID());
+
+    if(!iface)
+        return NS_OK;
+
+    PRUint16 count = iface->GetMemberCount();
+    for(PRUint16 i = 0; i < count; i++)
+    {
+        XPCNativeMember* member = iface->GetMemberAt(i);
+        if(member && member->IsConstant())
+        {
+            JSObject* obj2;
+            JSProperty* prop;
+            if(!OBJ_LOOKUP_PROPERTY(cx, obj, member->GetID(), &obj2, &prop))
+                return NS_ERROR_UNEXPECTED;
+        }
+    }
+    return NS_OK;
+}
+
+/* PRBool hasInstance (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSVal val, out PRBool bp); */
+NS_IMETHODIMP
+nsJSIID::HasInstance(nsIXPConnectWrappedNative *wrapper,
+                     JSContext * cx, JSObject * obj,
+                     jsval val, PRBool *bp, PRBool *_retval)
 {
     *bp = JS_FALSE;
-    *retval = JS_TRUE;
+    *_retval = JS_TRUE;
     nsresult rv = NS_OK;
 
-// fix this
-
-#if 0
-
-    if(!JSVAL_IS_PRIMITIVE(v))
+    if(!JSVAL_IS_PRIMITIVE(val))
     {
         // we have a JSObject
-        JSObject* obj = JSVAL_TO_OBJECT(v);
+        JSObject* obj = JSVAL_TO_OBJECT(val);
 
         NS_ASSERTION(obj, "when is an object not an object?");
 
+        JSObject* ignored1;
+        XPCWrappedNativeTearOff* ignored2;
+
         // is this really a native xpcom object with a wrapper?
-        nsXPCWrappedNative* other_wrapper =
-           nsXPCWrappedNativeClass::GetWrappedNativeOfJSObject(cx,obj);
+        XPCWrappedNative* other_wrapper =
+           XPCWrappedNative::GetWrappedNativeOfJSObject(cx, obj,
+                                                        &ignored1, &ignored2);
 
         if(!other_wrapper)
             return NS_OK;
 
-        if(mDetails.GetID()->Equals(other_wrapper->GetIID()))
+        XPCCallContext ccx(JS_CALLER, cx);
+
+        XPCNativeInterface* iface =
+            XPCNativeInterface::GetNewOrUsed(ccx, mDetails.GetID());
+
+        if(iface && other_wrapper->FindTearOff(iface))
             *bp = JS_TRUE;
-        else
-        {
-            // This would be so easy except for the case...
-            // other_wrapper might inherit from our type
-            nsXPCWrappedNativeClass* clazz;
-            nsIInterfaceInfo* prev;
-            if(!(clazz = other_wrapper->GetClass()) ||
-               !(prev = clazz->GetInterfaceInfo()))
-                return NS_ERROR_UNEXPECTED;
-
-            nsIInterfaceInfo* cur;
-            NS_ADDREF(prev);
-            while(NS_SUCCEEDED(prev->GetParent(&cur)) && cur)
-            {
-                NS_RELEASE(prev);
-                prev = cur;
-
-                nsID* iid;
-                if(NS_SUCCEEDED(cur->GetIID(&iid)))
-                {
-                    JSBool found = mDetails.GetID()->Equals(*iid);
-                    nsMemory::Free(iid);
-                    if(found)
-                    {
-                        *bp = JS_TRUE;
-                        break;
-                    }
-                }
-                else
-                {
-                    rv = NS_ERROR_OUT_OF_MEMORY;
-                    break;
-                }
-            }
-            NS_RELEASE(prev);
-        }
     }
-#endif
     return rv;
 }
 
-void
-nsJSIID::FillCache(JSContext *cx, JSObject *obj,
-                   nsIXPCWrappedNativeTearOff *tearOff,
-                   nsIXPCScriptable *arbitrary)
-{
-    nsIInterfaceInfoManager* iim = nsnull;
-    nsCOMPtr<nsIInterfaceInfo> iinfo;
-    PRUint16 count;
-
-    if(!(iim = XPTI_GetInterfaceInfoManager()) ||
-       NS_FAILED(iim->GetInfoForIID(mDetails.GetID(), getter_AddRefs(iinfo))) ||
-       !iinfo ||
-       NS_FAILED(iinfo->GetConstantCount(&count)))
-
-    {
-        NS_ASSERTION(0,"access to interface info is truly horked");
-        NS_IF_RELEASE(iim);
-        ThrowException(NS_ERROR_XPC_UNEXPECTED, cx);
-        return;
-    }
-    NS_RELEASE(iim);
-
-
-// fix this
-#if 0
-
-    for(PRUint16 i = 0; i < count; i++)
-    {
-        const nsXPTConstant* constant;
-        jsid id;
-        JSString *jstrid;
-        jsval val;
-        JSBool retval;
-
-        if(NS_FAILED(iinfo->GetConstant(i, &constant)) ||
-           !(jstrid = JS_InternString(cx, constant->GetName())) ||
-           !JS_ValueToId(cx, STRING_TO_JSVAL(jstrid), &id) ||
-           !nsXPCWrappedNativeClass::GetConstantAsJSVal(cx, iinfo, i, &val) ||
-           NS_FAILED(arbitrary->SetProperty(cx, obj, id, &val, wrapper, nsnull, &retval)) ||
-           !retval)
-        {
-            ThrowException(NS_ERROR_XPC_UNEXPECTED, cx);
-            return;
-        }
-    }
-#endif
-
-    // Indicate that we've added the properties to the current object.
-    mObj = obj;
-    return;
-}
-
-NS_IMETHODIMP
-nsJSIID::GetFlags(JSContext *cx, JSObject *obj,
-                  nsIXPCWrappedNativeTearOff* tearOff,
-                  JSUint32* flagsp,
-                  nsIXPCScriptable* arbitrary)
-{
-    NS_PRECONDITION(flagsp, "bad param");
-    *flagsp = XPCSCRIPTABLE_DONT_ENUM_STATIC_PROPS;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsJSIID::LookupProperty(JSContext *cx, JSObject *obj,
-                        jsid id,
-                        JSObject **objp, JSProperty **propp,
-                        nsIXPCWrappedNativeTearOff* tearOff,
-                        nsIXPCScriptable* arbitrary,
-                        JSBool* retval)
-{
-    if(NeedToFillCache(obj))
-        FillCache(cx, obj, tearOff, arbitrary);
-    return arbitrary->LookupProperty(cx, obj, id, objp, propp, tearOff,
-                                     nsnull, retval);
-}
-
-NS_IMETHODIMP
-nsJSIID::GetProperty(JSContext *cx, JSObject *obj,
-                     jsid id, jsval *vp,
-                     nsIXPCWrappedNativeTearOff* tearOff,
-                     nsIXPCScriptable* arbitrary,
-                     JSBool* retval)
-{
-    if(NeedToFillCache(obj))
-        FillCache(cx, obj, tearOff, arbitrary);
-    return arbitrary->GetProperty(cx, obj, id, vp, tearOff, nsnull, retval);
-}
-
-
-NS_IMETHODIMP
-nsJSIID::Enumerate(JSContext *cx, JSObject *obj,
-                   JSIterateOp enum_op,
-                   jsval *statep, jsid *idp,
-                   nsIXPCWrappedNativeTearOff *tearOff,
-                   nsIXPCScriptable *arbitrary,
-                   JSBool *retval)
-{
-    if(enum_op == JSENUMERATE_INIT && NeedToFillCache(obj))
-        FillCache(cx, obj, tearOff, arbitrary);
-
-    return arbitrary->Enumerate(cx, obj, enum_op, statep, idp, tearOff,
-                                arbitrary, retval);
-}
-
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
-/*
-* nsJSCID supports 'createInstance' and 'getService'. These are implemented
-* using the (somewhat complex) nsIXPCScriptable scheme so that when called
-* they can do security checks (i.e so that the methods know in which JSContect 
-* the call is being made).
-*/
-
-// {16A43B00-F116-11d2-985A-006008962422}
-#define NS_CIDCREATEINSTANCE_IID \
-{ 0x16a43b00, 0xf116, 0x11d2, \
-    { 0x98, 0x5a, 0x0, 0x60, 0x8, 0x96, 0x24, 0x22 } }
-
-class CIDCreateInstance : public nsIXPCScriptable
-{
-public:
-    NS_DEFINE_STATIC_IID_ACCESSOR(NS_CIDCREATEINSTANCE_IID)
-    NS_DECL_ISUPPORTS
-    XPC_DECLARE_IXPCSCRIPTABLE
-
-    CIDCreateInstance(nsJSCID* aCID);
-    virtual ~CIDCreateInstance();
-    nsJSCID* GetCID() const {return mCID;}
-
-private:
-    CIDCreateInstance(); // not implemented
-
-private:
-    nsJSCID* mCID;
-};
-
-/*********************************************/
-
-NS_IMPL_THREADSAFE_ISUPPORTS2(CIDCreateInstance, CIDCreateInstance, nsIXPCScriptable)
-
-CIDCreateInstance::CIDCreateInstance(nsJSCID *aCID)
-    : mCID(aCID)
-{
-    NS_PRECONDITION(mCID, "bad cid");
-    NS_INIT_ISUPPORTS();
-    NS_IF_ADDREF(mCID);
-}
-
-CIDCreateInstance::~CIDCreateInstance()
-{
-    NS_IF_RELEASE(mCID);
-}
-
-XPC_IMPLEMENT_FORWARD_CREATE(CIDCreateInstance)
-XPC_IMPLEMENT_IGNORE_GETFLAGS(CIDCreateInstance)
-XPC_IMPLEMENT_IGNORE_LOOKUPPROPERTY(CIDCreateInstance)
-XPC_IMPLEMENT_IGNORE_DEFINEPROPERTY(CIDCreateInstance)
-XPC_IMPLEMENT_IGNORE_GETPROPERTY(CIDCreateInstance)
-XPC_IMPLEMENT_IGNORE_SETPROPERTY(CIDCreateInstance)
-XPC_IMPLEMENT_IGNORE_GETATTRIBUTES(CIDCreateInstance)
-XPC_IMPLEMENT_IGNORE_SETATTRIBUTES(CIDCreateInstance)
-XPC_IMPLEMENT_IGNORE_DELETEPROPERTY(CIDCreateInstance)
-XPC_IMPLEMENT_FORWARD_DEFAULTVALUE(CIDCreateInstance)
-XPC_IMPLEMENT_FORWARD_ENUMERATE(CIDCreateInstance)
-XPC_IMPLEMENT_FORWARD_CHECKACCESS(CIDCreateInstance)
-// XPC_IMPLEMENT_IGNORE_CALL(CIDCreateInstance)
-XPC_IMPLEMENT_IGNORE_CONSTRUCT(CIDCreateInstance)
-XPC_IMPLEMENT_FORWARD_HASINSTANCE(CIDCreateInstance)
-XPC_IMPLEMENT_FORWARD_FINALIZE(CIDCreateInstance)
-
-NS_IMETHODIMP
-CIDCreateInstance::Call(JSContext *cx, JSObject *obj,
-                        uintN argc, jsval *argv,
-                        jsval *rval,
-                        nsIXPCWrappedNativeTearOff* tearOff,
-                        nsIXPCScriptable* arbitrary,
-                        JSBool* retval)
-{
-    nsJSCID* cidObj;
-    nsCID*  cid;
-    PRBool valid;
-    nsID iid;
-
-    if(!(cidObj = GetCID()) ||
-       NS_FAILED(cidObj->GetValid(&valid)) ||
-       !valid ||
-       NS_FAILED(cidObj->GetId(&cid)) ||
-       !cid)
-    {
-        return ThrowAndFail(NS_ERROR_XPC_BAD_CID, cx, retval);
-    }
-
-    // Do the security check if necessary
-
-    XPCCallContext ccx(JS_CALLER, cx);
-    if(!ccx.IsValid())
-        return ThrowAndFail(NS_ERROR_XPC_UNEXPECTED, cx, retval);
-
-    XPCContext* xpcc = ccx.GetXPCContext();
-    nsIXPCSecurityManager* sm;
-    sm = xpcc->GetAppropriateSecurityManager(
-                        nsIXPCSecurityManager::HOOK_CREATE_INSTANCE);
-    if(sm && NS_OK != sm->CanCreateInstance(cx, *cid))
-    {
-        // the security manager vetoed. It should have set an exception.
-        nsMemory::Free(cid);
-        *rval = JSVAL_NULL;
-        *retval = JS_FALSE;
-        return NS_OK;
-    }
-
-    // If an IID was passed in then use it
-    if(argc)
-    {
-        JSObject* iidobj;
-        jsval val = *argv;
-        nsID* piid = nsnull;
-        if(JSVAL_IS_PRIMITIVE(val) || 
-           !(iidobj = JSVAL_TO_OBJECT(val)) ||
-           !(piid = xpc_JSObjectToID(cx, iidobj)))
-        {
-            return ThrowAndFail(NS_ERROR_XPC_BAD_IID, cx, retval);
-        }
-        iid = *piid;
-        nsMemory::Free(piid);
-    }
-    else
-        iid = NS_GET_IID(nsISupports);
-
-    nsCOMPtr<nsISupports> inst;
-    nsresult rv;
-
-    rv = nsComponentManager::CreateInstance(*cid, nsnull, iid, 
-                                            (void**) getter_AddRefs(inst));
-    NS_ASSERTION(NS_FAILED(rv) || inst, "component manager returned success, but instance is null!");
-    nsMemory::Free(cid);
-
-    if(NS_FAILED(rv) || !inst)
-        return ThrowBadResultAndFail(NS_ERROR_XPC_CI_RETURNED_FAILURE, rv, ccx, retval);
-
-    nsCOMPtr<nsXPConnect> xpc = dont_AddRef(nsXPConnect::GetXPConnect());
-    if(!xpc)
-    {
-        return ThrowBadResultAndFail(NS_ERROR_UNEXPECTED, rv, ccx, retval);
-    }
-
-    JSObject* instJSObj;
-    nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-    rv = xpc->WrapNative(cx, obj, inst, iid, getter_AddRefs(holder));
-    if(NS_FAILED(rv) || !holder || NS_FAILED(holder->GetJSObject(&instJSObj)))
-    {
-        return ThrowAndFail(NS_ERROR_XPC_CANT_CREATE_WN, cx, retval);
-    }
-
-    *rval = OBJECT_TO_JSVAL(instJSObj);
-    *retval = JS_TRUE;
-
-    return NS_OK;
-}
-
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
-
-// {C46BC320-F13E-11d2-985A-006008962422}
-#define NS_CIDGETSERVICE_IID \
-{ 0xc46bc320, 0xf13e, 0x11d2, \
-  { 0x98, 0x5a, 0x0, 0x60, 0x8, 0x96, 0x24, 0x22 } }
-
-class CIDGetService : public nsIXPCScriptable
-{
-public:
-    NS_DEFINE_STATIC_IID_ACCESSOR(NS_CIDGETSERVICE_IID)
-    NS_DECL_ISUPPORTS
-    XPC_DECLARE_IXPCSCRIPTABLE
-
-    CIDGetService(nsJSCID* aCID);
-    virtual ~CIDGetService();
-    nsJSCID* GetCID() const {return mCID;}
-
-private:
-    CIDGetService(); // not implemented
-
-private:
-    nsJSCID* mCID;
-};
-
-/*********************************************/
-
-NS_IMPL_THREADSAFE_ISUPPORTS2(CIDGetService, CIDGetService, nsIXPCScriptable)
-
-CIDGetService::CIDGetService(nsJSCID *aCID)
-    : mCID(aCID)
-{
-    NS_PRECONDITION(mCID, "bad cid");
-    NS_INIT_ISUPPORTS();
-    NS_IF_ADDREF(mCID);
-}
-
-CIDGetService::~CIDGetService()
-{
-    NS_IF_RELEASE(mCID);
-}
-
-XPC_IMPLEMENT_FORWARD_CREATE(CIDGetService)
-XPC_IMPLEMENT_IGNORE_GETFLAGS(CIDGetService)
-XPC_IMPLEMENT_IGNORE_LOOKUPPROPERTY(CIDGetService)
-XPC_IMPLEMENT_IGNORE_DEFINEPROPERTY(CIDGetService)
-XPC_IMPLEMENT_IGNORE_GETPROPERTY(CIDGetService)
-XPC_IMPLEMENT_IGNORE_SETPROPERTY(CIDGetService)
-XPC_IMPLEMENT_IGNORE_GETATTRIBUTES(CIDGetService)
-XPC_IMPLEMENT_IGNORE_SETATTRIBUTES(CIDGetService)
-XPC_IMPLEMENT_IGNORE_DELETEPROPERTY(CIDGetService)
-XPC_IMPLEMENT_FORWARD_DEFAULTVALUE(CIDGetService)
-XPC_IMPLEMENT_FORWARD_ENUMERATE(CIDGetService)
-XPC_IMPLEMENT_FORWARD_CHECKACCESS(CIDGetService)
-// XPC_IMPLEMENT_IGNORE_CALL(CIDGetService)
-XPC_IMPLEMENT_IGNORE_CONSTRUCT(CIDGetService)
-XPC_IMPLEMENT_FORWARD_HASINSTANCE(CIDGetService)
-XPC_IMPLEMENT_FORWARD_FINALIZE(CIDGetService)
-
-NS_IMETHODIMP
-CIDGetService::Call(JSContext *cx, JSObject *obj,
-                    uintN argc, jsval *argv,
-                    jsval *rval,
-                    nsIXPCWrappedNativeTearOff* tearOff,
-                    nsIXPCScriptable* arbitrary,
-                    JSBool* retval)
-{
-    nsJSCID* cidObj;
-    nsCID*  cid;
-    PRBool valid;
-    nsID iid;
-
-    if(!(cidObj = GetCID()) ||
-       NS_FAILED(cidObj->GetValid(&valid)) ||
-       !valid ||
-       NS_FAILED(cidObj->GetId(&cid)) ||
-       !cid)
-    {
-        return ThrowAndFail(NS_ERROR_XPC_BAD_CID, cx, retval);
-    }
-
-    // Do the security check if necessary
-
-    XPCCallContext ccx(JS_CALLER, cx);
-    if(!ccx.IsValid())
-        return ThrowAndFail(NS_ERROR_XPC_UNEXPECTED, cx, retval);
-
-    XPCContext* xpcc = ccx.GetXPCContext();
-    nsIXPCSecurityManager* sm;
-    sm = xpcc->GetAppropriateSecurityManager(
-                        nsIXPCSecurityManager::HOOK_GET_SERVICE);
-    if(sm && NS_OK != sm->CanGetService(cx, *cid))
-    {
-        // the security manager vetoed. It should have set an exception.
-        nsMemory::Free(cid);
-        *rval = JSVAL_NULL;
-        *retval = JS_FALSE;
-        return NS_OK;
-    }
-
-    // If an IID was passed in then use it
-    if(argc)
-    {
-        JSObject* iidobj;
-        jsval val = *argv;
-        nsID* piid = nsnull;
-        if(JSVAL_IS_PRIMITIVE(val) || 
-           !(iidobj = JSVAL_TO_OBJECT(val)) ||
-           !(piid = xpc_JSObjectToID(cx, iidobj)))
-        {
-            nsMemory::Free(cid);
-            return ThrowAndFail(NS_ERROR_XPC_BAD_IID, cx, retval);
-        }
-        iid = *piid;
-        nsMemory::Free(piid);
-    }
-    else
-        iid = NS_GET_IID(nsISupports);
-
-    nsresult rv;
-
-    nsCOMPtr<nsISupports> srvc;
-    rv = nsServiceManager::GetService(*cid, iid, getter_AddRefs(srvc), nsnull);
-    nsMemory::Free(cid);
-    NS_ASSERTION(NS_FAILED(rv) || srvc, "service manager returned success, but service is null!");
-    if(NS_FAILED(rv) || !srvc)
-    {
-        return ThrowBadResultAndFail(NS_ERROR_XPC_GS_RETURNED_FAILURE, rv, ccx, retval);
-    }
-
-    nsCOMPtr<nsXPConnect> xpc = dont_AddRef(nsXPConnect::GetXPConnect());
-    if(!xpc)
-    {
-        return ThrowBadResultAndFail(NS_ERROR_UNEXPECTED, rv, ccx, retval);
-    }
-
-    JSObject* srvcJSObj;
-    nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-    rv = xpc->WrapNative(cx, obj, srvc, iid, getter_AddRefs(holder));
-    if(NS_FAILED(rv) || !holder || NS_FAILED(holder->GetJSObject(&srvcJSObj)))
-    {
-        return ThrowAndFail(NS_ERROR_XPC_CANT_CREATE_WN, cx, retval);
-    }
-
-    *rval = OBJECT_TO_JSVAL(srvcJSObj);
-    *retval = JS_TRUE;
-
-    return NS_OK;
-}
-
-/***************************************************************************/
 /***************************************************************************/
 
 NS_IMPL_THREADSAFE_ISUPPORTS3(nsJSCID, nsIJSID, nsIJSCID, nsIXPCScriptable)
 
-XPC_IMPLEMENT_FORWARD_CREATE(nsJSCID)
-XPC_IMPLEMENT_IGNORE_GETFLAGS(nsJSCID)
-XPC_IMPLEMENT_IGNORE_LOOKUPPROPERTY(nsJSCID)
-XPC_IMPLEMENT_IGNORE_DEFINEPROPERTY(nsJSCID)
-XPC_IMPLEMENT_IGNORE_GETPROPERTY(nsJSCID)
-XPC_IMPLEMENT_IGNORE_SETPROPERTY(nsJSCID)
-XPC_IMPLEMENT_IGNORE_GETATTRIBUTES(nsJSCID)
-XPC_IMPLEMENT_IGNORE_SETATTRIBUTES(nsJSCID)
-XPC_IMPLEMENT_IGNORE_DELETEPROPERTY(nsJSCID)
-XPC_IMPLEMENT_FORWARD_DEFAULTVALUE(nsJSCID)
-XPC_IMPLEMENT_FORWARD_ENUMERATE(nsJSCID)
-XPC_IMPLEMENT_IGNORE_CHECKACCESS(nsJSCID)
-XPC_IMPLEMENT_IGNORE_CALL(nsJSCID)
-// XPC_IMPLEMENT_IGNORE_CONSTRUCT(nsJSCID)
-XPC_IMPLEMENT_FORWARD_HASINSTANCE(nsJSCID)
-XPC_IMPLEMENT_FORWARD_FINALIZE(nsJSCID)
+// The nsIXPCScriptable map declaration that will generate stubs for us...
+#define XPC_MAP_CLASSNAME           nsJSCID
+#define XPC_MAP_QUOTED_CLASSNAME   "nsJSCID"
+#define                             XPC_MAP_WANT_CONSTRUCT
+#define XPC_MAP_FLAGS               0
+#include "xpc_map_end.h" /* This will #undef the above */
 
 nsJSCID::nsJSCID()  {NS_INIT_ISUPPORTS();}
 nsJSCID::~nsJSCID() {}
@@ -953,54 +552,196 @@ nsJSCID::NewID(const char* str)
     return idObj;
 }
 
-/* readonly attribute nsISupports createInstance; */
+
+/* nsISupports createInstance (); */
 NS_IMETHODIMP
-nsJSCID::GetCreateInstance(nsISupports * *aCreateInstance)
+nsJSCID::CreateInstance(nsISupports **_retval)
 {
-    if(!aCreateInstance)
-        return NS_ERROR_NULL_POINTER;
+    if(!mDetails.IsValid())
+        return NS_ERROR_XPC_BAD_CID;
 
-    *aCreateInstance = new CIDCreateInstance(this);
-    if(*aCreateInstance)
-        NS_ADDREF(*aCreateInstance);
+    nsCOMPtr<nsXPConnect> xpc(dont_AddRef(nsXPConnect::GetXPConnect()));
+    if(!xpc)
+        return NS_ERROR_UNEXPECTED;
 
-    return NS_OK;
-}
+    // These suckers can't leak
+    nsIXPCNativeCallContext* ccxp;
+    if(NS_FAILED(xpc->GetCurrentNativeCallContext(&ccxp)) || !ccxp)
+        return NS_ERROR_UNEXPECTED;
 
-/* readonly attribute nsISupports getService; */
-NS_IMETHODIMP
-nsJSCID::GetGetService(nsISupports * *aGetService)
-{
-    if(!aGetService)
-        return NS_ERROR_NULL_POINTER;
+    PRUint32 argc;
+    jsval * argv;
+    jsval * vp;
+    JSContext* cx;
+    JSObject* obj;
 
-    *aGetService = new CIDGetService(this);
-    if(*aGetService)
-        NS_ADDREF(*aGetService);
-    return NS_OK;
-}
+    ccxp->GetJSContext(&cx);
+    ccxp->GetArgc(&argc);
+    ccxp->GetArgvPtr(&argv);
+    ccxp->GetRetValPtr(&vp);
 
-NS_IMETHODIMP
-nsJSCID::Construct(JSContext *cx, JSObject *obj,
-                   uintN argc, jsval *argv,
-                   jsval *rval,
-                   nsIXPCWrappedNativeTearOff* tearOff,
-                   nsIXPCScriptable* arbitrary,
-                   JSBool* retval)
-{
-    nsIXPCScriptable *ci;
-    CIDCreateInstance *p;
-    if(nsnull == (p = new CIDCreateInstance(this)) ||
-       NS_FAILED(p->QueryInterface(NS_GET_IID(nsIXPCScriptable),(void**)&ci)))
+    nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
+    ccxp->GetCalleeWrapper(getter_AddRefs(wrapper));
+    wrapper->GetJSObject(&obj);
+
+    // Do the security check if necessary
+
+    XPCContext* xpcc = nsXPConnect::GetContext(cx);
+
+    nsIXPCSecurityManager* sm;
+    sm = xpcc->GetAppropriateSecurityManager(
+                        nsIXPCSecurityManager::HOOK_CREATE_INSTANCE);
+    if(sm && NS_FAILED(sm->CanCreateInstance(cx, *mDetails.GetID())))
     {
-        ThrowException(NS_ERROR_OUT_OF_MEMORY, cx);
-        *retval = JS_FALSE;
+        // the security manager vetoed. It should have set an exception.
+        ccxp->SetExceptionWasThrown(JS_TRUE);
         return NS_OK;
     }
-    nsresult rv = ci->Call(cx, obj, argc, argv, rval, 
-                           tearOff, arbitrary, retval);
-    NS_RELEASE(ci);
-    return rv;
+
+    nsID iid;
+
+    // If an IID was passed in then use it
+    if(argc)
+    {
+        JSObject* iidobj;
+        jsval val = *argv;
+        nsID* piid = nsnull;
+        if(JSVAL_IS_PRIMITIVE(val) ||
+           !(iidobj = JSVAL_TO_OBJECT(val)) ||
+           !(piid = xpc_JSObjectToID(cx, iidobj)))
+        {
+            return NS_ERROR_XPC_BAD_IID;
+        }
+        iid = *piid;
+        nsMemory::Free(piid);
+    }
+    else
+        iid = NS_GET_IID(nsISupports);
+
+    nsCOMPtr<nsISupports> inst;
+    nsresult rv;
+
+    rv = nsComponentManager::CreateInstance(*mDetails.GetID(), nsnull, iid,
+                                            (void**) getter_AddRefs(inst));
+    NS_ASSERTION(NS_FAILED(rv) || inst, "component manager returned success, but instance is null!");
+
+    if(NS_FAILED(rv) || !inst)
+        return NS_ERROR_XPC_CI_RETURNED_FAILURE;
+
+    JSObject* instJSObj;
+    nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+    rv = xpc->WrapNative(cx, obj, inst, iid, getter_AddRefs(holder));
+    if(NS_FAILED(rv) || !holder || NS_FAILED(holder->GetJSObject(&instJSObj)))
+        return NS_ERROR_XPC_CANT_CREATE_WN;
+
+    *vp = OBJECT_TO_JSVAL(instJSObj);
+    ccxp->SetReturnValueWasSet(JS_TRUE);
+    return NS_OK;
+}
+
+/* nsISupports getService (); */
+NS_IMETHODIMP
+nsJSCID::GetService(nsISupports **_retval)
+{
+    if(!mDetails.IsValid())
+        return NS_ERROR_XPC_BAD_CID;
+
+    nsCOMPtr<nsXPConnect> xpc(dont_AddRef(nsXPConnect::GetXPConnect()));
+    if(!xpc)
+        return NS_ERROR_UNEXPECTED;
+
+    // These suckers can't leak
+    nsIXPCNativeCallContext* ccxp;
+    if(NS_FAILED(xpc->GetCurrentNativeCallContext(&ccxp)) || !ccxp)
+        return NS_ERROR_UNEXPECTED;
+
+    PRUint32 argc;
+    jsval * argv;
+    jsval * vp;
+    JSContext* cx;
+    JSObject* obj;
+
+    ccxp->GetJSContext(&cx);
+    ccxp->GetArgc(&argc);
+    ccxp->GetArgvPtr(&argv);
+    ccxp->GetRetValPtr(&vp);
+
+    nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
+    ccxp->GetCalleeWrapper(getter_AddRefs(wrapper));
+    wrapper->GetJSObject(&obj);
+
+    // Do the security check if necessary
+
+    XPCContext* xpcc = nsXPConnect::GetContext(cx);
+
+    nsIXPCSecurityManager* sm;
+    sm = xpcc->GetAppropriateSecurityManager(
+                        nsIXPCSecurityManager::HOOK_GET_SERVICE);
+    if(sm && NS_FAILED(sm->CanCreateInstance(cx, *mDetails.GetID())))
+    {
+        // the security manager vetoed. It should have set an exception.
+        ccxp->SetExceptionWasThrown(JS_TRUE);
+        return NS_OK;
+    }
+
+    nsID iid;
+
+    // If an IID was passed in then use it
+    if(argc)
+    {
+        JSObject* iidobj;
+        jsval val = *argv;
+        nsID* piid = nsnull;
+        if(JSVAL_IS_PRIMITIVE(val) ||
+           !(iidobj = JSVAL_TO_OBJECT(val)) ||
+           !(piid = xpc_JSObjectToID(cx, iidobj)))
+        {
+            return NS_ERROR_XPC_BAD_IID;
+        }
+        iid = *piid;
+        nsMemory::Free(piid);
+    }
+    else
+        iid = NS_GET_IID(nsISupports);
+
+    nsCOMPtr<nsISupports> srvc;
+    nsresult rv;
+
+    rv = nsServiceManager::GetService(*mDetails.GetID(), iid, 
+                                      getter_AddRefs(srvc), nsnull);
+    NS_ASSERTION(NS_FAILED(rv) || srvc, "service manager returned success, but service is null!");
+    if(NS_FAILED(rv) || !srvc)
+        return NS_ERROR_XPC_GS_RETURNED_FAILURE;
+
+    JSObject* instJSObj;
+    nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+    rv = xpc->WrapNative(cx, obj, srvc, iid, getter_AddRefs(holder));
+    if(NS_FAILED(rv) || !holder || NS_FAILED(holder->GetJSObject(&instJSObj)))
+        return NS_ERROR_XPC_CANT_CREATE_WN;
+
+    *vp = OBJECT_TO_JSVAL(instJSObj);
+    ccxp->SetReturnValueWasSet(JS_TRUE);
+    return NS_OK;
+}
+
+/* PRBool construct (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in PRUint32 argc, in JSValPtr argv, in JSValPtr vp); */
+NS_IMETHODIMP
+nsJSCID::Construct(nsIXPConnectWrappedNative *wrapper,
+                   JSContext * cx, JSObject * obj,
+                   PRUint32 argc, jsval * argv, jsval * vp,
+                   PRBool *_retval)
+{
+    XPCJSRuntime* rt = nsXPConnect::GetRuntime();
+    if(!rt)
+        return NS_ERROR_FAILURE;
+
+    // 'push' a call context and call on it
+    XPCCallContext ccx(JS_CALLER, cx, obj,
+                       rt->GetStringID(XPCJSRuntime::IDX_CREATE_INSTANCE),
+                       argc, argv, vp);
+
+    *_retval = XPCWrappedNative::CallMethod(ccx);
+    return NS_OK;
 }
 
 /***************************************************************************/
@@ -1014,12 +755,12 @@ xpc_NewIDObject(JSContext *cx, JSObject* jsobj, const nsID& aID)
     char* idString = aID.ToString();
     if(idString)
     {
-        nsCOMPtr<nsIJSID> iid = 
+        nsCOMPtr<nsIJSID> iid =
             dont_AddRef(NS_STATIC_CAST(nsIJSID*, nsJSID::NewID(idString)));
         nsCRT::free(idString);
         if(iid)
         {
-            nsCOMPtr<nsXPConnect> xpc = 
+            nsCOMPtr<nsXPConnect> xpc =
                 dont_AddRef(nsXPConnect::GetXPConnect());
             if(xpc)
             {
@@ -1048,8 +789,8 @@ xpc_JSObjectToID(JSContext *cx, JSObject* obj)
 // fix this
 #if 0
     // NOTE: this call does NOT addref
-    nsXPCWrappedNative* wrapper =
-        nsXPCWrappedNativeClass::GetWrappedNativeOfJSObject(cx, obj);
+    XPCWrappedNative* wrapper =
+        XPCWrappedNativeClass::GetWrappedNativeOfJSObject(cx, obj);
     if(wrapper)
     {
         if(wrapper->GetIID().Equals(NS_GET_IID(nsIJSID))  ||

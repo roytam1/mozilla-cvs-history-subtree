@@ -178,13 +178,6 @@ XPCCallContext::GetScriptableInfo() const
     return mScriptableInfo;
 }
 
-inline nsIXPCScriptable*
-XPCCallContext::GetArbitraryScriptable() const
-{
-    CHECK_STATE(HAVE_CONTEXT);
-    return mXPC->GetArbitraryScriptable();
-}
-
 inline XPCNativeSet*
 XPCCallContext::GetSet() const 
 {

@@ -51,7 +51,8 @@ const char* XPCJSRuntime::mStrings[] = {
     "wrappedJSObject",      // IDX_WRAPPED_JSOBJECT
     "Object",               // IDX_OBJECT
     "prototype",            // IDX_PROTOTYPE
-    "__callableinfo"        // IDX_CALLABLE_INFO_PROP_NAME
+    "__callableinfo",       // IDX_CALLABLE_INFO_PROP_NAME
+    "createInstance"        // IDX_CREATE_INSTANCE
 };
 
 /***************************************************************************/

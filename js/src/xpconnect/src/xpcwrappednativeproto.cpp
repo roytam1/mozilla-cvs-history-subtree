@@ -72,8 +72,7 @@ XPCWrappedNativeProto::Init(XPCCallContext& ccx)
             if(helper)
             {
                 JSUint32 flags;
-                rv = helper->GetFlags(ccx.GetJSContext(), nsnull, nsnull, 
-                                      &flags, ccx.GetArbitraryScriptable());
+                rv = helper->GetFlags(&flags);
                 if(NS_FAILED(rv))
                     return JS_FALSE;
 
