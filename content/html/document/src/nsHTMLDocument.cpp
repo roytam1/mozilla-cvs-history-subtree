@@ -324,6 +324,25 @@ nsHTMLDocument::Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup)
         return result;
   }
 
+  return BaseResetToURI(aURL);
+}
+
+
+NS_IMETHODIMP
+nsHTMLDocument::ResetToURI(nsIURI *aURI, nsILoadGroup *aLoadGroup)
+{
+  nsresult result = nsDocument::ResetToURI(aURI, aLoadGroup);
+  if (NS_SUCCEEDED(result))
+    result = BaseResetToURI(aURI);
+  return result;
+}
+
+
+nsresult
+nsHTMLDocument::BaseResetToURI(nsIURI *aURL)
+{
+  nsresult result = NS_OK;
+
   InvalidateHashTables();
   PrePopulateHashTables();
 
@@ -375,6 +394,7 @@ nsHTMLDocument::Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup)
 
   return result;
 }
+
 
 NS_IMETHODIMP
 nsHTMLDocument::CreateShell(nsIPresContext* aContext,
@@ -1986,7 +2006,7 @@ nsHTMLDocument::SetCookie(const nsAReadableString& aCookie)
     result = NS_ERROR_OUT_OF_MEMORY;
     char* cookie = ToNewCString(aCookie);
     if (cookie) {
-      result = service->SetCookieString(mDocumentURL, prompt, cookie);
+      result = service->SetCookieString(mDocumentURL, prompt, cookie, 0);
       nsCRT::free(cookie);
     }
   }
@@ -3728,12 +3748,13 @@ nsHTMLDocument::RemoveDocWriteDummyRequest(void)
   rv = GetDocumentLoadGroup(getter_AddRefs(loadGroup));
   if (NS_FAILED(rv)) return rv;
 
+  // note there can be a write request without a load group if
+  // this is a synchronously constructed about:blank document
   if (loadGroup && mDocWriteDummyRequest) {
     rv = loadGroup->RemoveRequest(mDocWriteDummyRequest, nsnull, NS_OK);
     if (NS_FAILED(rv)) return rv;
-
-    mDocWriteDummyRequest = nsnull;
   }
+  mDocWriteDummyRequest = nsnull;
 
   return rv;
 }
