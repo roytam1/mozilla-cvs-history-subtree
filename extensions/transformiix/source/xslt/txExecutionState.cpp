@@ -118,19 +118,36 @@ txExecutionState::txExecutionState(txStylesheet* aStylesheet)
 
 txExecutionState::~txExecutionState()
 {
+    delete mResultHandler;
+    delete mLocalVariables;
     delete mEvalContext;
     delete mRTFDocument;
     delete mTemplateParams;
-    
-    // XXX ToDo: delete stack of resulthandlers. This is messy since the 
-    // the top resulthandler is the outputhandler, which is refcounted
-    // in module and not in standalone.
 
-
-    // XXX ToDo: delete evalcontext-stack. mind the initial evalcontext, it
-    // can occur more then once in the evalcontext-stack. If we refcount them
-    // this won't be a problem.
+    PRInt32 i;
+    for (i = 0; i < mTemplateRuleCount; ++i) {
+        NS_IF_RELEASE(mTemplateRules[i].mModeLocalName);
+    }
+    delete [] mTemplateRules;
     
+    txStackIterator varsIter(&mLocalVarsStack);
+    while (varsIter.hasNext()) {
+        delete (txVariableMap*)varsIter.next();
+    }
+
+    txStackIterator contextIter(&mEvalContextStack);
+    while (contextIter.hasNext()) {
+        txIEvalContext* context = (txIEvalContext*)contextIter.next();
+        if (context != mInitialEvalContext) {
+            delete context;
+        }
+    }
+
+    txStackIterator handlerIter(&mResultHandlerStack);
+    while (handlerIter.hasNext()) {
+        delete (txAXMLEventHandler*)handlerIter.next();
+    }
+
     txStackIterator paramIter(&mParamStack);
     while (paramIter.hasNext()) {
         delete (txExpandedNameMap*)paramIter.next();
@@ -207,9 +224,11 @@ txExecutionState::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
     txExpandedName name(aNamespace, aLName);
 
     // look for a local variable
-    aResult = mLocalVariables->getVariable(name);
-    if (aResult) {
-        return NS_OK;
+    if (mLocalVariables) {
+        aResult = mLocalVariables->getVariable(name);
+        if (aResult) {
+            return NS_OK;
+        }
     }
 
     // look for an evaluated global variable
@@ -525,12 +544,10 @@ txExecutionState::runTemplate(txInstruction* aTemplate)
     nsresult rv = mLocalVarsStack.push(mLocalVariables);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    mLocalVariables = new txVariableMap;
-    NS_ENSURE_TRUE(mLocalVariables, NS_ERROR_OUT_OF_MEMORY);
-
     rv = mReturnStack.push(mNextInstruction);
     NS_ENSURE_SUCCESS(rv, rv);
     
+    mLocalVariables = nsnull;
     mNextInstruction = aTemplate;
     
     return NS_OK;
@@ -556,6 +573,10 @@ nsresult
 txExecutionState::bindVariable(const txExpandedName& aName,
                                ExprResult* aValue, MBool aOwned)
 {
+    if (!mLocalVariables) {
+        mLocalVariables = new txVariableMap;
+        NS_ENSURE_TRUE(mLocalVariables, NS_ERROR_OUT_OF_MEMORY);
+    }
     return mLocalVariables->bindVariable(aName, aValue, aOwned);
 }
 
