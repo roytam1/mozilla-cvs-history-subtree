@@ -427,8 +427,44 @@ sub import_project ($$) {
 	
 	my($prm) = "kocl:type(PRJD), rtyp:TEXT(@), data:TEXT(@), &subj:'null'()";
 	
-	my($evt) = do_event(qw/core crel/, $app, $prm, $project_path, $xml_file);    
+	my($evt) = do_event(qw/core crel/, $app, $prm, $project_path, $xml_file);
+	if ($evt->{ERROR} eq "") {
+		_close(_get_project($project_path));
+	}
 	return $evt->{ERROR};
+}
+
+sub export_project ($$) {
+	my($project_path, $xml_out_path) = @_;
+	my($p, $project_was_closed);
+	
+	$project_was_closed = 0;
+	while (1) {
+		$p = _get_project($project_path);
+		if (!$p) {
+			if ($project_was_closed) {
+				print "### Error - request for project document failed after opening\n";
+				die "### possibly CW bug: be sure to close your Find window\n";
+			}
+			$project_was_closed = 1;
+			_open_file($project_path);
+		} else {
+			last;
+		}
+	}
+
+	my($prm) =
+		q"'----':obj {form:indx, want:type(PRJD), " .
+		q"seld:1, from:'null'()}, kfil:TEXT(@)";
+
+	my($evt) = do_event(qw/CWIE EXPT/, $app, $prm, $xml_out_path);    
+	
+	if ($project_was_closed) {
+		$p = _get_project($project_path);
+		_close($p);
+	}
+	
+	return $evt->{ERROR};	
 }
 
 sub _doc_named ($) {
