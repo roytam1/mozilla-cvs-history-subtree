@@ -614,6 +614,72 @@ function configureNewAccount()
 	document.vars.path.value = "Existing Path";
 }
 
+/*
+function testNetcenterReg()
+{
+	debug( "testing netcenter registration" );
+	
+	netscape.security.PrivilegeManager.enablePrivilege( "AccountSetup" );
+
+	var configFolder = getConfigFolder( self );
+	var regFile = configFolder + "RegServ.IAS";
+	var netCenterCGI = GetNameValuePair( regFile, "IP", "NetcenterCGI" );
+	debug( "netCenterCGI: " + netCenterCGI );
+
+	if ( netCenterCGI == null || netCenterCGI == "" )
+		return;
+
+	reggieData = document.setupPlugin.newStringArray( 14 );		// increment this # as new dialer strings are added
+	reggieData[ 0 ] = "CST_FIRST_NAME=" + escape( "Tim" );
+	reggieData[ 1 ] = "CST_LAST_NAME=" + escape( "McClarren" );
+	reggieData[ 2 ] = "CST_ORGANIZATION_NAME=" + escape( "netscape-test" );
+	reggieData[ 3 ] = "CST_STREET_1=" + escape( "teststreet1" );
+	reggieData[ 4 ] = "CST_STREET_2=" + escape( "teststreet2" );
+	reggieData[ 5 ] = "CST_CITY=" + escape( "testcity1" );
+	reggieData[ 6 ] = "CST_STATE_PROVINCE=" + escape( "CA" );
+	reggieData[ 7 ] = "CST_POSTAL_CODE=" + escape( "94503" );
+	reggieData[ 8 ] = "CST_PHONE=" + escape( "+1 (415) 555-1212" );
+	reggieData[ 9 ] = "CST_COUNTRY=" + escape( "USA" );
+	reggieData[ 10 ] = "CST_EMAIL=" + escape( "noone@qwest.com" );
+	reggieData[ 11 ] = "CST_EMAIL_PASSWORD=" + escape( "nothing" );
+	reggieData[ 12 ] = "CST_DOMAIN=" + escape( "qwest.com" );
+	reggieData[ 13 ] = "CST_HASHCODE=" + escape( "xxxxxxxx" );
+
+	result = document.setupPlugin.NetcenterRegister( netCenterCGI, reggieData );
+	if ( result == true )
+		netCenterUserName = document.setupPlugin.GetNetcenterUsername();		
+}
+*/
+
+function createNetcenterAccount()
+{
+	var configFolder = getConfigFolder( self );
+	var regFile = configFolder + document.vars.compServer.value;
+	var netCenterCGI = GetNameValuePair( regFile, "IP", "NetcenterCGI" );
+
+	if ( netCenterCGI == null || netCenterCGI == "" )
+		return;
+
+	reggieData = document.setupPlugin.newStringArray( 14 );		// increment this # as new dialer strings are added
+	reggieData[ 0 ] = "CST_FIRST_NAME=" + escape( document.vars.first.value );
+	reggieData[ 1 ] = "CST_LAST_NAME=" + escape( document.vars.last.value );
+	reggieData[ 2 ] = "CST_ORGANIZATION_NAME=" + escape( document.vars.company.value );
+	reggieData[ 3 ] = "CST_STREET_1=" + escape( document.vars.address1.value );
+	reggieData[ 4 ] = "CST_STREET_2=" + escape( document.vars.address2.value );
+	reggieData[ 5 ] = "CST_CITY=" + escape( document.vars.city.value );
+	reggieData[ 6 ] = "CST_STATE_PROVINCE=" + escape( document.vars.state.value );
+	reggieData[ 7 ] = "CST_POSTAL_CODE=" + escape( document.vars.zip.value );
+	reggieData[ 8 ] = "CST_PHONE=" + escape( document.vars.phoneNumber.value );
+	reggieData[ 9 ] = "CST_COUNTRY=" + escape( document.vars.country.value );
+	reggieData[ 10 ] = "CST_EMAIL=" + escape( findVariable( "EMAIL_ADDR" ) );
+	reggieData[ 11 ] = "CST_EMAIL_PASSWORD=" + escape( findVariable ( "POP_PASSWORD" ) );
+	reggieData[ 12 ] = "CST_DOMAIN=" + escape( findVariable( "DOMAIN_NAME" ) );
+	reggieData[ 13 ] = "CST_HASHCODE=" + escape( findVariable( "HASH_CODE" ) );
+
+	result = document.setupPlugin.NetcenterRegister( netCenterCGI, reggieData );
+	if ( result == true )
+		netCenterUserName = document.setupPlugin.GetNetcenterUsername();		
+}
 
 
 function saveAccountInfo(promptFlag)

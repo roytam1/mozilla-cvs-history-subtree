@@ -28,6 +28,7 @@ parent.ondblclick = cancelEvent;
 var oneStepSemaphore = false;
 var selectedISP = null;
 var supportWindow = null;
+var netCenterUsername = null;
 
 function getSelectedISPName()
 {
@@ -643,7 +644,8 @@ function setRegisterMode( numSecondsElapsed )
 			if ( status == "OK" )
 			{
 				configureNewAccount();
-
+				createNetcenterAccount();
+				
 				var rebootFlag = document.setupPlugin.NeedReboot();
 				if ( rebootFlag == true )
 					setContentPage( "okreboot.htm" );

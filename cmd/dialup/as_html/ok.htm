@@ -67,6 +67,12 @@ login and password, your provider's server addresses and technical support phone
 		var theFile = parent.parent.globals.getAcctSetupFilename(self);
 		var saveAcctFlag = parent.parent.globals.GetNameValuePair(theFile,"New Acct Mode","AskSaveAcctInfo");
 
+		var netCenterName = parent.parent.globals.netCenterUserName;
+		if ( netCenterName != null && netCenterName != "" )
+		{
+			document.writeln("<P>Your Netcenter login name is " + netCenterName + "</P>");
+		}
+		
 		if (saveAcctFlag != null && saveAcctFlag != "")	{
 			saveAcctFlag = saveAcctFlag.toLowerCase();
 			}
