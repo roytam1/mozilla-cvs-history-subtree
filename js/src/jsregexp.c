@@ -1518,15 +1518,13 @@ static const jschar *matchRENodes(MatchState *state, RENode *ren, RENode *stop,
                             cp = kidMatch;
                         }
                     }
-                    if (num < ren->u.range.max) {
-                        if ((ren->flags & RENODE_MINIMAL) == 0)
-                            cp = matchGreedyKid(state, ren, num,
-                                                ren->u.range.max, cp, lastKid);
-                        else
-                            cp = matchNonGreedyKid(state, ren, num,
-                                                ren->u.range.max, cp);
-                        if (cp == NULL) return NULL;
-                    }
+                    if ((ren->flags & RENODE_MINIMAL) == 0)
+                        cp = matchGreedyKid(state, ren, num,
+                                            ren->u.range.max, cp, lastKid);
+                    else
+                        cp = matchNonGreedyKid(state, ren, num,
+                                            ren->u.range.max, cp);
+                    if (cp == NULL) return NULL;
                     break;
                 }
             case REOP_PLUS:
