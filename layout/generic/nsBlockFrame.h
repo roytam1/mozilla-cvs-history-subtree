@@ -528,8 +528,6 @@ protected:
 
   PRBool FrameStartsCounterScope(nsIFrame* aFrame);
 
-  nsresult UpdateBulletPosition(nsBlockReflowState& aState);
-
   void ReflowBullet(nsBlockReflowState& aState,
                     nsHTMLReflowMetrics& aMetrics);
 

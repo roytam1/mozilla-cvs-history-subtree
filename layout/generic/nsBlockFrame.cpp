@@ -1373,83 +1373,8 @@ nsBlockFrame::MarkLineDirty(line_iterator aLine)
 }
 
 nsresult
-nsBlockFrame::UpdateBulletPosition(nsBlockReflowState& aState)
-{
-  if (nsnull == mBullet) {
-    // Don't bother if there is no bullet
-    return NS_OK;
-  }
-  const nsStyleList* styleList = GetStyleList();
-  if (NS_STYLE_LIST_STYLE_POSITION_INSIDE == styleList->mListStylePosition) {
-    if (mBullet && HaveOutsideBullet()) {
-      // We now have an inside bullet, but used to have an outside
-      // bullet.  Adjust the frame line list
-      if (! mLines.empty()) {
-        // if we have a line already, then move the bullet to the front of the
-        // first line
-        nsIFrame* child = nsnull;
-        nsLineBox* firstLine = mLines.front();
-        
-        // bullet should not have any siblings if it was an outside bullet
-        NS_ASSERTION(!mBullet->GetNextSibling(), "outside bullet should not have siblings");
-
-        // move bullet to front and chain the previous frames, and update the line count
-        child = firstLine->mFirstChild;
-        firstLine->mFirstChild = mBullet;
-        mBullet->SetNextSibling(child);
-        PRInt32 count = firstLine->GetChildCount();
-        firstLine->SetChildCount(count+1);
-        // dirty it here in case the caller does not
-        firstLine->MarkDirty();
-      } else {
-        // no prior lines, just create a new line for the bullet
-        nsLineBox* line = aState.NewLineBox(mBullet, 1, PR_FALSE);
-        if (!line) {
-          return NS_ERROR_OUT_OF_MEMORY;
-        }
-        mLines.push_back(line);
-      }
-    }
-    mState &= ~NS_BLOCK_FRAME_HAS_OUTSIDE_BULLET;
-  }
-  else {
-    if (!HaveOutsideBullet()) {
-      // We now have an outside bullet, but used to have an inside
-      // bullet. Take the bullet frame out of the first lines frame
-      // list.
-      if ((! mLines.empty()) && (mBullet == mLines.front()->mFirstChild)) {
-        nsIFrame* next = mBullet->GetNextSibling();
-        mBullet->SetNextSibling(nsnull);
-        PRInt32 count = mLines.front()->GetChildCount() - 1;
-        NS_ASSERTION(count >= 0, "empty line w/o bullet");
-        mLines.front()->SetChildCount(count);
-        if (0 == count) {
-          nsLineBox* oldFront = mLines.front();
-          mLines.pop_front();
-          aState.FreeLineBox(oldFront);
-          if (! mLines.empty()) {
-            mLines.front()->MarkDirty();
-          }
-        }
-        else {
-          mLines.front()->mFirstChild = next;
-          mLines.front()->MarkDirty();
-        }
-      }
-    }
-    mState |= NS_BLOCK_FRAME_HAS_OUTSIDE_BULLET;
-  }
-#ifdef DEBUG
-  VerifyLines(PR_TRUE);
-#endif
-  return NS_OK;
-}
-
-nsresult
 nsBlockFrame::PrepareStyleChangedReflow(nsBlockReflowState& aState)
 {
-  nsresult rv = UpdateBulletPosition(aState);
-
   // Mark everything dirty
   for (line_iterator line = begin_lines(), line_end = end_lines();
        line != line_end;
