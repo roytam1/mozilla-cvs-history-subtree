@@ -3201,8 +3201,11 @@ nsExtensionsDataSource.prototype = {
     // XXXben hack for pre-configured classic.jar
     if ((!chromeDir.exists() || !chromeDir.directoryEntries.hasMoreElements()) &&
         aSource.EqualsNode(this._rdf.GetResource("urn:mozilla:theme:{972ce4c6-7e08-4474-a285-3208198ce6fd}")))
+#ifdef MOZ_THUNDERBIRD
+      jarFile = getFile(KEY_APPDIR, ["chrome", "qute.jar"]);  // Thunderbird packages the default theme into qute.jar not classic.jar.
+#else
       jarFile = getFile(KEY_APPDIR, ["chrome", "classic.jar"]);
-      
+#endif
     if (chromeDir.directoryEntries.hasMoreElements() || jarFile) {
       if (!jarFile)
         jarFile = chromeDir.directoryEntries.getNext().QueryInterface(Components.interfaces.nsIFile);
