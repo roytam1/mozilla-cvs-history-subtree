@@ -244,6 +244,13 @@ protected:
                          nsTableFrame*            aTableFrame,
                          nsReflowStatus&          aStatus);
 
+  NS_METHOD     ReflowBeforeRowLayout(nsIPresContext&      aPresContext,
+                                      nsHTMLReflowMetrics& aDesiredSize,
+                                      RowGroupReflowState& aReflowState,
+                                      nsReflowStatus&      aStatus) { return NS_OK; };
+
+  virtual PRBool ExcludeFrameFromReflow(nsIFrame* aFrame) { return PR_FALSE; }
+
 private:
   nsIAtom *mType;
 

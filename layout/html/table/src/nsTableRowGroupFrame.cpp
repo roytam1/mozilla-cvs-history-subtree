@@ -441,15 +441,26 @@ NS_METHOD nsTableRowGroupFrame::ReflowMappedChildren(nsIPresContext&      aPresC
   nsSize*   pKidMaxElementSize = (nsnull != aDesiredSize.maxElementSize) ? &kidMaxElementSize : nsnull;
   nsresult  rv = NS_OK;
   nsIFrame*  kidFrame;
-  if (nsnull==aStartFrame)
+  if (nsnull==aStartFrame) {
     kidFrame = mFrames.FirstChild();
+    ReflowBeforeRowLayout(aPresContext, aDesiredSize, aReflowState, aStatus);
+  }
   else
     kidFrame = aStartFrame;
-
+                   
   PRUint8 borderStyle = aReflowState.tableFrame->GetBorderCollapseStyle();
 
   for ( ; nsnull != kidFrame; ) 
   {
+    if (ExcludeFrameFromReflow(kidFrame)) {
+      if (PR_FALSE==aDoSiblings)
+        break;
+
+      // Get the next child
+      kidFrame->GetNextSibling(&kidFrame);
+      continue;
+    }
+
     nsSize kidAvailSize(aReflowState.availSize);
     if (0>=kidAvailSize.height)
       kidAvailSize.height = 1;      // XXX: HaCk - we don't handle negative heights yet
