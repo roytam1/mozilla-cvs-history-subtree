@@ -554,7 +554,7 @@ function InitializeDataSources()
 
 function OnLoadFolderPane()
 {
-    SortFolderPane("folderNameCol", "rdf:http://home.netscape.com/NC-rdf#FolderTreeName");
+    SortFolderPane("folderNameCol", "?folderTreeNameSort");
 
 	//Add folderDataSource and accountManagerDataSource to folderPane
 	accountManagerDataSource = accountManagerDataSource.QueryInterface(Components.interfaces.nsIRDFDataSource);

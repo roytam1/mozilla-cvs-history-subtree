@@ -50,18 +50,60 @@
                   ondragdrop="return DropOnFolderOutliner(event);"
                   onclick="FolderPaneOnClick(event);"> 
       <template>
-        <outlinerrow uri="...">
-          <outlinercell ref="folderNameCol"
-                        label="rdf:http://home.netscape.com/NC-rdf#FolderTreeName"
-                        properties="specialFolder-rdf:http://home.netscape.com/NC-rdf#SpecialFolder
-                                    biffState-rdf:http://home.netscape.com/NC-rdf#BiffState
-                                    isServer-rdf:http://home.netscape.com/NC-rdf#IsServer
-                                    newMessages-rdf:http://home.netscape.com/NC-rdf#NewMessages
-                                    hasUnreadMessages-rdf:http://home.netscape.com/NC-rdf#HasUnreadMessages
-                                    isSecure-rdf:http://home.netscape.com/NC-rdf#IsSecure
-                                    serverType-rdf:http://home.netscape.com/NC-rdf#ServerType
-                                    noSelect-rdf:http://home.netscape.com/NC-rdf#NoSelect"/>
-        </outlinerrow>
+        <rule>
+          <conditions>
+            <outlinerrow uri="?container"/>
+            <member container="?container" child="?member" />
+          </conditions>
+
+          <bindings>
+            <binding subject="?member"
+                     predicate="http://home.netscape.com/NC-rdf#FolderTreeName"
+                     object="?folderTreeName" />
+            <binding subject="?member"
+                     predicate="http://home.netscape.com/NC-rdf#FolderTreeName?sort=true"
+                     object="?folderTreeNameSort" />
+            <binding subject="?member"
+                     predicate="http://home.netscape.com/NC-rdf#SpecialFolder"
+                     object="?specialFolder" />
+            <binding subject="?member"
+                     predicate="http://home.netscape.com/NC-rdf#BiffState"
+                     object="?biffState" />
+            <binding subject="?member"
+                     predicate="http://home.netscape.com/NC-rdf#IsServer"
+                     object="?isServer" />
+            <binding subject="?member"
+                     predicate="http://home.netscape.com/NC-rdf#NewMessages"
+                     object="?newMessages" />
+            <binding subject="?member"
+                     predicate="http://home.netscape.com/NC-rdf#HasUnreadMessages"
+                     object="?hasUnreadMessages" />
+            <binding subject="?member"
+                     predicate="http://home.netscape.com/NC-rdf#IsSecure"
+                     object="?isSecure" />
+            <binding subject="?member"
+                     predicate="http://home.netscape.com/NC-rdf#ServerType"
+                     object="?serverType" />
+            <binding subject="?member"
+                     predicate="http://home.netscape.com/NC-rdf#NoSelect"
+                     object="?noSelect" />
+          </bindings>
+
+          <action>
+            <outlinerrow uri="?member">
+               <outlinercell ref="folderNameCol"
+                             label="?folderTreeName"
+                             properties="specialFolder-?specialFolder
+                                         biffState-?biffState
+                                         isServer-?isServer
+                                         newMessages-?newMessages
+                                         hasUnreadMessages-?hasUnreadMessages
+                                         isSecure-?isSecure
+                                         serverType-?serverType
+                                         noSelect-?noSelect"/>
+            </outlinerrow>
+          </action>
+        </rule>
       </template>
     </outlinerbody>
   </outliner>
