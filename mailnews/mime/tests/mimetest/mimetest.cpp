@@ -30,6 +30,7 @@
 #include "nsIServiceManager.h"
 #include "nsIStreamListener.h"
 #include "nsIStreamConverter.h"
+#include "nsIMimeStreamConverter.h"
 #include "nsFileStream.h"
 #include "nsFileSpec.h"
 #include "nsMimeTypes.h"
@@ -146,10 +147,10 @@ SetupRegistry(void)
 // THIS IS THE CLASS THAT WOULD BE IMPLEMENTED BY THE CONSUMER OF THE HTML OUPUT
 // FROM LIBMIME. THIS EXAMPLE SIMPLY WRITES THE OUTPUT TO STDOUT()
 ////////////////////////////////////////////////////////////////////////////////////
-class ConsoleOutputStreamImpl : public nsIOutputStream
+class ConsoleOutputStreamListener : public nsIStreamListener
 {
 public:
-    ConsoleOutputStreamImpl(void) 
+    ConsoleOutputStreamListener(void) 
     { 
       NS_INIT_REFCNT(); 
       mIndentCount = 0;
@@ -157,14 +158,20 @@ public:
       mOutFormat = nsMimeOutput::nsMimeMessageRaw;
     }
 
-    virtual ~ConsoleOutputStreamImpl(void) {}
+    virtual ~ConsoleOutputStreamListener(void) {}
 
     // nsISupports interface
     NS_DECL_ISUPPORTS
 
-    // nsIBaseStream interface
-    NS_IMETHOD Close(void) 
-    {
+	NS_IMETHOD OnDataAvailable(nsIChannel * aChannel, 
+							 nsISupports    *ctxt, 
+                             nsIInputStream *inStr, 
+                             PRUint32       sourceOffset, 
+                             PRUint32       count);
+
+	NS_IMETHOD OnStartRequest(nsIChannel * aChannel, nsISupports *ctxt) { return NS_OK;}
+	NS_IMETHOD OnStopRequest(nsIChannel * aChannel, nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg)
+	{
       if ((mOutFormat == nsMimeOutput::nsMimeMessageSplitDisplay) ||
           (mOutFormat == nsMimeOutput::nsMimeMessageBodyDisplay) ||
           (mOutFormat == nsMimeOutput::nsMimeMessageQuoting))
@@ -177,7 +184,6 @@ public:
     }
 
     // nsIOutputStream interface
-    NS_IMETHOD Write(const char* aBuf, PRUint32 aCount, PRUint32 *aWriteCount);
 
     NS_IMETHOD Flush(void) {
         PR_Sync(PR_GetSpecialFD(PR_StandardOutput));
@@ -192,12 +198,12 @@ private:
   PRBool              mInClosingTag;
   nsMimeOutputType    mOutFormat;
 };
-NS_IMPL_ISUPPORTS(ConsoleOutputStreamImpl, nsIOutputStream::GetIID());
+NS_IMPL_ISUPPORTS(ConsoleOutputStreamListener, nsIOutputStream::GetIID());
 
 #define TAB_SPACES    2
 
 nsresult
-ConsoleOutputStreamImpl::SetFormat(nsMimeOutputType  aFormat)
+ConsoleOutputStreamListener::SetFormat(nsMimeOutputType  aFormat)
 {
   mOutFormat = aFormat;
   return NS_OK;
@@ -205,7 +211,7 @@ ConsoleOutputStreamImpl::SetFormat(nsMimeOutputType  aFormat)
 
 // make the html pretty :-)
 nsresult
-ConsoleOutputStreamImpl::DoIndent()
+ConsoleOutputStreamListener::DoIndent()
 {
   PR_Write(PR_GetSpecialFD(PR_StandardOutput), MSG_LINEBREAK, MSG_LINEBREAK_LEN);
   if (mIndentCount <= 1)
@@ -216,16 +222,21 @@ ConsoleOutputStreamImpl::DoIndent()
   return NS_OK;
 }
 
-nsresult
-ConsoleOutputStreamImpl::Write(const char* aBuf, PRUint32 aCount, PRUint32 *aWriteCount)
+NS_IMETHODIMP ConsoleOutputStreamListener::OnDataAvailable(nsIChannel * aChannel, 
+							 nsISupports    *ctxt, 
+                             nsIInputStream *inStr, 
+                             PRUint32       sourceOffset, 
+                             PRUint32       count)
 {
   PRUint32 i=0;
+  PRUint32 aCount = 0;
+  char * aBuf = (char *) PR_Malloc(sizeof(char) * (count+1));
+  inStr->Read(aBuf, count, &aCount);
 
   // If raw, don't postprocess...
   if (mOutFormat == nsMimeOutput::nsMimeMessageRaw)
   {
     PR_Write(PR_GetSpecialFD(PR_StandardOutput), aBuf, aCount);
-    *aWriteCount = aCount;
     return NS_OK;
   }
 
@@ -261,7 +272,6 @@ ConsoleOutputStreamImpl::Write(const char* aBuf, PRUint32 aCount, PRUint32 *aWri
     }
   }
 
-  *aWriteCount = aCount;
   return NS_OK;
 }
 
@@ -457,8 +467,8 @@ DoRFC822toHTMLConversion(char *filename, int numArgs)
   }
   
   // Create the consumer output stream.. this will receive all the HTML from libmime
-  ConsoleOutputStreamImpl   *ptr = new ConsoleOutputStreamImpl();
-  nsCOMPtr<nsIOutputStream> out = do_QueryInterface(ptr);
+  ConsoleOutputStreamListener   *ptr = new ConsoleOutputStreamListener();
+  nsCOMPtr<nsIStreamListener> out = (nsIStreamListener *) ptr;
 
   if (!out)
   {
@@ -491,10 +501,11 @@ DoRFC822toHTMLConversion(char *filename, int numArgs)
   }
 
   // Set us as the output stream for HTML data from libmime...
-  if (numArgs >= 3)
-    rv = mimeParser->SetOutputStream(nsnull, theURI, nsMimeOutput::nsMimeMessageDraftOrTemplate, &outFormat, &contentType);
-  else
-    rv = mimeParser->SetOutputStream(out, theURI, nsMimeOutput::nsMimeUnknown, &outFormat, &contentType);
+  // if (numArgs >= 3)
+  nsCOMPtr<nsIMimeStreamConverter> mimeStream = do_QueryInterface(mimeParser);
+  mimeStream->SetMimeOutputType(nsMimeOutput::nsMimeMessageHeaderDisplay);
+	rv = mimeParser->Init(theURI, out);
+//    rv = mimeParser->SetOutputStream(nsnull, theURI, nsMimeOutput::nsMimeMessageDraftOrTemplate, &outFormat, &contentType);
 
   if (NS_FAILED(rv) || !mimeParser)
   {
@@ -509,7 +520,7 @@ DoRFC822toHTMLConversion(char *filename, int numArgs)
     PR_FREEIF(contentType);
   }
 
-  out->SetFormat(outFormat);
+  ptr->SetFormat(outFormat);
 
   // Assuming this is an RFC822 message...
   mimeParser->OnStartRequest(nsnull, theURI);
