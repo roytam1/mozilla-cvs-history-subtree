@@ -146,7 +146,7 @@ nsSoftwareUpdate::Startup()
     /* Perform Scheduled Tasks             */
     /***************************************/
     
-#if 0
+#if 1
     PR_CreateThread(PR_USER_THREAD,
                     PerformScheduledTasks,
                     nsnull, 
@@ -155,7 +155,7 @@ nsSoftwareUpdate::Startup()
                     PR_UNJOINABLE_THREAD,
                     0);  
 #endif 
-    PerformScheduledTasks(nsnull);
+//    PerformScheduledTasks(nsnull);
     
     return NS_OK;
 }
