@@ -442,10 +442,10 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 
     NS_ASSERTION(member->IsAttribute(), "way broken!");
 
-    propFlags |= JSPROP_GETTER;
+    propFlags |= JSPROP_GETTER | JSPROP_SHARED;
     if(member->IsWritableAttribute())
     {
-        propFlags |= JSPROP_SETTER | JSPROP_SHARED;
+        propFlags |= JSPROP_SETTER;
         propFlags &= ~JSPROP_READONLY;
     }
 
