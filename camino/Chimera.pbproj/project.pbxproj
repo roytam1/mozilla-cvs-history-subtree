@@ -178,6 +178,7 @@
 				F580736B023A1514010001CA,
 				29B97315FDCFA39411CA2CEA,
 				29B97317FDCFA39411CA2CEA,
+				F56610A40394767101A9666E,
 				29B97323FDCFA39411CA2CEA,
 				19C28FACFE9D520D11CA2CBB,
 				F6BD637A01B30E0F01A962F7,
@@ -273,8 +274,9 @@
 				F5247C480228BA0B013DD99A,
 				F54EF7EF022A2F9D01A80165,
 				F5F24BDB022B88EF010001CA,
-				29B9732DFDCFA39411CA2CEA,
 				F55A4D8E03806CF601A80166,
+				F56610CD0394779F01A9666E,
+				29B9732DFDCFA39411CA2CEA,
 			);
 			buildSettings = {
 				DEBUGGING_SYMBOLS = NO;
@@ -4470,6 +4472,54 @@
 			shellPath = /bin/sh;
 			shellScript = "/Developer/Tools/Rez resources/application/ChimeraVersion.r -o build/Navigator.app/Contents/Resources/English.lproj/Localized.rsrc -useDF";
 		};
+		F56610A40394767101A9666E = {
+			children = (
+				F56610BC0394775201A9666E,
+			);
+			isa = PBXGroup;
+			name = Plugins;
+			path = "";
+			refType = 4;
+		};
+		F56610BC0394775201A9666E = {
+			includeInIndex = 1;
+			isa = PBXFolderReference;
+			name = "Default Plugin.plugin";
+			path = "../modules/plugin/samples/default/mac/build/Default Plugin.plugin";
+			refType = 2;
+		};
+		F56610CD0394779F01A9666E = {
+			buildActionMask = 2147483647;
+			dstPath = plugins;
+			dstSubfolderSpec = 6;
+			files = (
+				F56610D0039477B701A9666E,
+			);
+			isa = PBXCopyFilesBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F56610D0039477B701A9666E = {
+			fileRef = F56610BC0394775201A9666E;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F56610DB0394790701A9666E = {
+			buildActionMask = 2147483647;
+			dstPath = plugins;
+			dstSubfolderSpec = 6;
+			files = (
+				F56610DC0394791201A9666E,
+			);
+			isa = PBXCopyFilesBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F56610DC0394791201A9666E = {
+			fileRef = F56610BC0394775201A9666E;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 		F566BD1202EFA9AD01A967F3 = {
 			isa = PBXFileReference;
 			name = CocoaPromptService.h;
@@ -6865,6 +6915,7 @@
 				F5BAAC3402AC6AA201A967F3,
 				F5BAAC3702AC6AA201A967F3,
 				F5BAAC3B02AC6AA201A967F3,
+				F56610DB0394790701A9666E,
 				F55A4DFD03808BB401A80166,
 				F5BAAB1D02AC45D301A967F3,
 			);
