@@ -48,7 +48,7 @@ endif
 
 ARCH			= netbsd
 
-ifeq($(OBJECT_FMT),ELF)
+ifeq ($(OBJECT_FMT),ELF)
 DLL_SUFFIX		= so
 else
 DLL_SUFFIX		= so.1.0
