@@ -97,7 +97,6 @@ CSRCS			+= \
 			  mknewsgr.c \
 			  mkpop3.c \
 			  mksmtp.c \
-			  prefetch.c \
 			  $(NULL)
 
 CPPSRCS			+= mkabook.cpp \
