@@ -12,11 +12,11 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is mozilla.org code.
+ * The Original Code is Mozilla Roaming code.
  *
  * The Initial Developer of the Original Code is 
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998
+ * Ben Bucksch
+ * Portions created by the Initial Developer are Copyright (C) 2002
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -39,49 +39,36 @@
 #include "nsIFile.idl"
 
 %{C++
-      
-#define NS_PROFILE_CID                                 \
-  { /* {02b0625b-e7f3-11d2-9f5a-006008a6efe9} */       \
-    0x02b0625b,                                        \
-    0xe7f3,                                            \
-    0x11d2,                                            \
-    { 0x9f, 0x5a, 0x00, 0x60, 0x08, 0xa6, 0xef, 0xe9 } \
+
+#define MOZ_SROAMING_CID                                \
+  { /* {ab62465c-494c-446e-b671-930bb98a7bc4} */       \
+    0xab62465c,                                        \
+    0x494c,                                            \
+    0x446e,                                            \
+    { 0xb6, 0x71, 0x93, 0x0b, 0xb9, 0x8a, 0x7b, 0xc4 } \
   }
 
-#define NS_PROFILE_CONTRACTID	\
-	"@mozilla.org/profile/manager;1"
+#define MOZ_SROAMING_CONTRACTID	\
+	"@mozilla.org/profile/sroaming;1"
 
-#define NS_PROFILE_STARTUP_CATEGORY \
-        "profile-startup-category"
 %}
 
 /**
- * nsIProfile
+ * mozISRoaming
+ *
+ * see extensions/sraoming/README.txt
  * 
- * @status FROZEN
+ * @status EXPERIMENTAL
  * @version 1.0
  */
 
-[scriptable, uuid(02b0625a-e7f3-11d2-9f5a-006008a6efe9)]
-interface nsIProfile : nsISupports {
-    
-    readonly attribute long profileCount;
-    void getProfileList(out unsigned long length, [retval, array, size_is(length)] out wstring profileNames); 
-    boolean profileExists(in wstring profileName);
+[scriptable, uuid(ab62465c-494c-446e-b671-930bb98a7bc4)]
+interface mozISRoaming : nsISupports {
+    void BeginSession(); 
+    void EndSession(); 
 
-    attribute wstring currentProfile;
+    boolean isRoaming();                  // should be here?
 
-    const unsigned long SHUTDOWN_PERSIST      = 0x00000001;
-    const unsigned long SHUTDOWN_CLEANSE      = 0x00000002;
-    
-    void shutDownCurrentProfile(in unsigned long shutDownType);
-
-    void createNewProfile(in wstring profileName, 
-                          in wstring nativeProfileDir, 
-                          in wstring langcode,
-                          in boolean useExistingDir);    
-
-    void renameProfile(in wstring oldName, in wstring newName);
-    void deleteProfile(in wstring name, in boolean canDeleteFiles);
-    void cloneProfile(in wstring profileName);
+    void Encrypt(inout wstring password); // dito
+    void Decrypt(inout wstring password); // dito
 };

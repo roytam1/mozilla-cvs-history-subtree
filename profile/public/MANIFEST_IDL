@@ -1,2 +1,3 @@
 nsIProfile.idl
 nsIProfileStartupListener.idl
+mozISRoaming.idl
