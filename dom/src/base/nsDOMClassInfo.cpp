@@ -146,8 +146,6 @@ static NS_DEFINE_IID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
     d->mName = nsnull;                                                        \
     d->mGetIIDsFptr = nsnull;                                                 \
     d->mConstructorFptr = _ctor;                                              \
-    d->mClassInfoFlags = nsIClassInfo::MAIN_THREAD_ONLY |                     \
-                         nsIClassInfo::DOM_OBJECT;                            \
     d->mScriptableFlags = _flags
 
 #define NS_DEFINE_CLASSINFO_DATA_TAIL                                         \
@@ -192,7 +190,6 @@ struct nsDOMClassInfoData
   GetDOMClassIIDsFnc mGetIIDsFptr;
   nsDOMClassInfoConstructorFnc mConstructorFptr;
   nsIClassInfo *mCachedClassInfo;
-  PRUint32 mClassInfoFlags;
   PRUint32 mScriptableFlags; // Do we need this here?
 };
 
@@ -754,7 +751,7 @@ nsDOMClassInfo::GetImplementationLanguage(PRUint32 *aImplLanguage)
 NS_IMETHODIMP
 nsDOMClassInfo::GetFlags(PRUint32 *aFlags)
 {
-  *aFlags = sClassInfoData[mID].mClassInfoFlags;
+  *aFlags = nsIClassInfo::MAIN_THREAD_ONLY | nsIClassInfo::DOM_OBJECT;
 
   return NS_OK;
 }
