@@ -181,8 +181,7 @@ protected:
                                     Handle *aMask);                                                
 	
 	static void       CopyBitsWithMask(BitMap* srcBits, BitMap* maskBits, PRInt16 maskDepth, BitMap* destBits,
-	                          const Rect& srcRect, const Rect& maskRect, const Rect& destRect);
-	
+                                      const Rect& srcRect, const Rect& maskRect, const Rect& destRect, PRBool inDrawingToPort);	
 	static PRBool     RenderingToPrinter(nsIRenderingContext &aContext);
 
 private:

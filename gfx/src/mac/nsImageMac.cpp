@@ -44,6 +44,8 @@
 #include <Quickdraw.h>
 
 #include "nsGfxUtils.h"
+#include "nsRegionPool.h"
+
 
 /** ---------------------------------------------------
  *	See documentation in nsImageMac.h
@@ -329,7 +331,7 @@ NS_IMETHODIMP nsImageMac::Draw(nsIRenderingContext &aContext, nsDrawingSurface a
     CopyBitsWithMask((BitMap*)(&mImagePixmap),
         mMaskBitsHandle ? (BitMap*)(&mMaskPixmap) : nsnull, mAlphaDepth,
         (BitMap*)(*destPixels),
-        srcRect, maskRect, dstRect);
+        srcRect, maskRect, dstRect, PR_TRUE);
 	}
 	
 	return NS_OK;
@@ -383,7 +385,7 @@ NS_IMETHODIMP nsImageMac :: DrawToImage(nsIImage* aDstImage, PRInt32 aDX, PRInt3
           
   CopyBitsWithMask((BitMap*)(&mImagePixmap),
       mMaskBitsHandle ? (BitMap*)(&mMaskPixmap) : nsnull, mAlphaDepth,
-      (BitMap*)(destPixels), srcRect, maskRect, dstRect);
+      (BitMap*)(destPixels), srcRect, maskRect, dstRect, PR_FALSE);
   
   aDstImage->UnlockImagePixels(PR_FALSE);
   aDstImage->UnlockImagePixels(PR_TRUE);
@@ -777,19 +779,23 @@ OSErr nsImageMac::AllocateGWorld(PRInt16 depth, CTabHandle colorTable, const Rec
 }
 
 void nsImageMac::CopyBitsWithMask(BitMap* srcBits, BitMap* maskBits, PRInt16 maskDepth, BitMap* destBits,
-        const Rect& srcRect, const Rect& maskRect, const Rect& destRect)
+                                    const Rect& srcRect, const Rect& maskRect, const Rect& destRect, PRBool inDrawingToPort)
 {
   if (maskBits)
   {
-    if (maskDepth > 1)
-      ::CopyDeepMask(srcBits, maskBits, destBits, &srcRect, &maskRect, &destRect, srcCopy, nsnull);
-    else
-      ::CopyMask(srcBits, maskBits, destBits, &srcRect, &maskRect, &destRect);
+    StRegionFromPool clipRegion;
+    
+    if (inDrawingToPort)
+    {
+      // we need to pass in the clip region, even if it doesn't intersect the image, to avoid a bug
+      // on Mac OS X that causes bad image drawing (see bug 137295).
+      ::GetClip(clipRegion);
+     }
+    
+    ::CopyDeepMask(srcBits, maskBits, destBits, &srcRect, &maskRect, &destRect, srcCopy, inDrawingToPort ? clipRegion : nsnull);
   }
   else
-  {
-    ::CopyBits(srcBits, destBits, &srcRect, &destRect, srcCopy, nsnull);
-  }
+   ::CopyBits(srcBits, destBits, &srcRect, &destRect, srcCopy, nsnull);
 }
 
 
@@ -843,7 +849,7 @@ nsImageMac :: ConvertToPICT ( PicHandle* outPicture )
   		// copy from the destination into our temp GWorld, to get the background
       CopyBitsWithMask((BitMap*)(&mImagePixmap),
           mMaskBitsHandle ? (BitMap*)(&mMaskPixmap) : nsnull, mAlphaDepth,
-          (BitMap*)(*tempPixMap), picFrame, maskFrame, picFrame);
+          (BitMap*)(*tempPixMap), picFrame, maskFrame, picFrame, PR_FALSE);
       
   		// now copy into the picture
   		GWorldPtr currPort;
@@ -947,7 +953,7 @@ nsImageMac::ConvertToIcon(  const nsRect& aSrcRegion,
     }
     
     //returns null if there size specified isn't a valid size for an icon
-    OSType iconType = MakeIconType(aIconSize, aIconDepth, false);
+    OSType iconType = MakeIconType(aIconSize, aIconDepth, PR_FALSE);
     if (iconType == nil) {
         return NS_ERROR_INVALID_ARG;
     } 
@@ -1034,7 +1040,7 @@ nsImageMac::ConvertAlphaToIconMask(  const nsRect& aSrcRegion,
     *aOutIconType = nsnull;
     
     //returns null if there size specified isn't a valid size for an icon
-    OSType iconType = MakeIconType(aMaskSize, aMaskDepth, true);
+    OSType iconType = MakeIconType(aMaskSize, aMaskDepth, PR_TRUE);
     if (iconType == nil) {
         return NS_ERROR_INVALID_ARG;
     } 
@@ -1562,7 +1568,7 @@ nsresult nsImageMac::DrawTileQuickly(nsIRenderingContext &aContext,
 	  		// CopyBits will do the truncation for us at the edges
         CopyBitsWithMask((BitMap*)(&mImagePixmap),
             mMaskBitsHandle ? (BitMap*)(&mMaskPixmap) : nsnull, mAlphaDepth,
-            (BitMap*)(*destPixels), imageRect, imageRect, imageDestRect);
+            (BitMap*)(*destPixels), imageRect, imageRect, imageDestRect, PR_TRUE);
 	  	}
   	}
   
@@ -1745,7 +1751,7 @@ nsresult nsImageMac::DrawTileQuickly(nsIRenderingContext &aContext,
     // finally, copy to the destination
     CopyBitsWithMask((BitMap*)(*tilingPixels),
         maskingPixels ? (BitMap*)(*maskingPixels) : nsnull, mAlphaDepth,
-        (BitMap*)(*destPixels), tileRect, tileRect, tileDestRect);
+        (BitMap*)(*destPixels), tileRect, tileRect, tileDestRect, PR_TRUE);
     
   } // scope for locks
 
