@@ -38,6 +38,24 @@ class nsIRDFResource;
 class nsIRDFResourceFactory : public nsISupports
 {
 public:
+    /**
+     * This method is called by the RDF service to create a new
+     * resource.
+     *
+     * NOTE. After constructing a new resource via a call to
+     * nsIRDFResourceFactory::CreateResource(), the implementation of
+     * the RDF service calls nsIRDFResource::GetValue() on the
+     * resulting resource. The resulting <tt>const char*</tt> is used
+     * as a key for the resource cache. (The assumption is that the
+     * custom resource implementation needs to store this information,
+     * anyway.)
+     *
+     * This has important implications for a custom resource's
+     * destructor; namely, that you must call
+     * nsIRDFService::UnCacheResource() <b>before</b> releasing the
+     * storage for the resource's URI. See
+     * nsIRDFService::UnCacheResource() for more information.
+     */
     NS_IMETHOD CreateResource(const char* aURI, nsIRDFResource** aResult) = 0;
 };
 

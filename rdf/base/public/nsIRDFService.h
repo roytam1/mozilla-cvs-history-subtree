@@ -69,7 +69,17 @@ public:
     NS_IMETHOD GetLiteral(const PRUnichar* value, nsIRDFLiteral** literal) = 0;
 
     /**
-     * Called to notify the resource manager that a resource is no longer in use.
+     * Called to notify the resource manager that a resource is no
+     * longer in use. This method should only be called from the
+     * destructor of a "custom" resource implementation to notify the
+     * RDF service that the last reference to the resource has been
+     * released, so the resource is no longer valid.
+     *
+     * NOTE. As mentioned in nsIRDFResourceFactory::CreateResource(),
+     * the RDF service will use the result of
+     * nsIRDFResource::GetValue() as a key into its cache. For this
+     * reason, you must always un-cache the resource <b>before</b>
+     * releasing the storage for the <tt>const char*</tt> URI.
      */
     NS_IMETHOD UnCacheResource(nsIRDFResource* resource) = 0;
 
