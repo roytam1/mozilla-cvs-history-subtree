@@ -1,3 +1,12 @@
+1998-12-17  Leif Hedstrom  <leif@netscape.com>
+
+	* Conn.pm (DESTROY): undef the Perl data after doing a
+	ldap_msgfree(), bug #1964.
+	(search): Dito.
+	(searchURL): Dito.
+	(nextEntry): Changed the order of setting numattr, to make sure
+	it's zero if we don't find anything.
+
 1998-12-16  Leif Hedstrom  <leif@netscape.com>
 
 	* Entry.pm (FIRSTKEY): Modified to honor the oc_order.
