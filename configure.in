@@ -3936,7 +3936,9 @@ MOZ_ARG_ENABLE_BOOL(static,
   NO_STATIC_LIB=
   MOZ_STATIC_COMPONENT_LIBS=1)
 
-AC_DEFINE(MOZ_STATIC_COMPONENT_LIBS)
+if test "$MOZ_STATIC_COMPONENT_LIBS"; then
+  AC_DEFINE(MOZ_STATIC_COMPONENT_LIBS)
+fi
 
 dnl ========================================================
 
