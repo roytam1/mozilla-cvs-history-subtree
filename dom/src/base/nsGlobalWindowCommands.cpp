@@ -256,15 +256,14 @@ nsSelectMoveScrollCommand::DoSelectCommand(const char *aCommandName, nsIDOMWindo
   GetSelectionControllerFromWindow(aWindow, getter_AddRefs(selCont));
   NS_ENSURE_TRUE(selCont, NS_ERROR_NOT_INITIALIZED);       
 
-  PRBool doBrowseWithCaret = PR_FALSE;
+  PRBool caretOn = PR_FALSE;
+  selCont->GetCaretEnabled(&caretOn);
 
   nsCOMPtr<nsIEventStateManager> esm;
   GetEventStateManagerForWindow(aWindow, getter_AddRefs(esm));
-  if (esm)
-    esm->GetBrowseWithCaret(&doBrowseWithCaret);
 
   nsresult rv;
-  if (doBrowseWithCaret)
+  if (caretOn || (esm && esm->GetBrowseWithCaret()))
     rv = DoCommandBrowseWithCaretOn(aCommandName, selCont, esm);
   else
     rv = DoCommandBrowseWithCaretOff(aCommandName, selCont);
