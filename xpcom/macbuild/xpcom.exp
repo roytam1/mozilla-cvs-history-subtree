@@ -83,6 +83,7 @@ PL_NewVector
 
 # GetFactory call
 NSGetFactory
+nsRegistry_GetFactory
 
 # nsServiceManager static method exports.
 ReleaseService__16nsServiceManagerFRC4nsIDP11nsISupportsP19nsIShutdownListener
@@ -94,4 +95,8 @@ Create__13nsTraceRefcntFPvPCcPCci
 Release__13nsTraceRefcntFPvUlPCci
 AddRef__13nsTraceRefcntFPvUlPCci
 
-nsRegistry_GetFactory
+# nsCOMPtr
+begin_assignment__13nsCOMPtr_baseFv
+assign_with_QueryInterface__13nsCOMPtr_baseFP11nsISupportsRC4nsIDPUi
+assign_with_AddRef__13nsCOMPtr_baseFP11nsISupports
+
