@@ -578,7 +578,7 @@ int CAbstractCX::GetUrl(URL_Struct *pUrl, FO_Present_Types iFormatOut, BOOL bRea
 #ifdef MOZ_MAIL_NEWS
             if ((((iFormatOut & 0x1f ) == FO_PRESENT) 
 				  && (GetContext()->type != MWContextMetaFile) 
-        		  && MSG_NewWindowRequired(GetContext(), pUrl->address)) 
+        		  && MSG_NewWindowRequiredForURL(GetContext(), pUrl)) 
 				  || bForceNew)
 
             {
@@ -597,7 +597,7 @@ int CAbstractCX::GetUrl(URL_Struct *pUrl, FO_Present_Types iFormatOut, BOOL bRea
         			{
         			case MSG_THREADPANE:
         				{
-        				MSG_FolderInfo *folder = MSG_GetFolderInfoFromURL(WFE_MSGGetMaster(), pUrl->address);
+	       				MSG_FolderInfo *folder = MSG_GetFolderInfoFromURL(WFE_MSGGetMaster(), pUrl->address, TRUE);
 						BOOL bContinue = FALSE;
         				if (folder){
         					C3PaneMailFrame::Open(folder, MSG_MESSAGEKEYNONE, &bContinue);
