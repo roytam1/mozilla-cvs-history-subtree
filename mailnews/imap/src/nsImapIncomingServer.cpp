@@ -2354,6 +2354,15 @@ nsresult nsImapIncomingServer::GetUnverifiedSubFolders(nsIFolder *parentFolder, 
 	return rv;
 }
 
+NS_IMETHODIMP nsImapIncomingServer::ForgetSessionPassword()
+{
+  nsresult rv = nsMsgIncomingServer::ForgetSessionPassword();
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  m_userAuthenticated = PR_FALSE;
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsImapIncomingServer::GetServerRequiresPasswordForBiff(PRBool *_retval)
 {
   NS_ENSURE_ARG_POINTER(_retval);
