@@ -45,8 +45,6 @@
 {
   NSTextField*              mUrlbar;
   NSTextField*              mStatus;
-  NSProgressIndicator*      mProgress;
-  NSView*                   mProgressSuper;
   BrowserWindowController*  mWindowController;
   NSTabViewItem*            mTabItem;
   NSWindow*                 mWindow;
@@ -90,7 +88,7 @@
 
 - (void)loadURI:(NSString *)urlSpec referrer:(NSString*)referrer flags:(unsigned int)flags activate:(BOOL)activate;
 - (void)makePrimaryBrowserView: (id)aUrlbar status: (id)aStatus
-    progress: (id)aProgress windowController: (BrowserWindowController*)aWindowController;
+          windowController: (BrowserWindowController*)aWindowController;
 - (void)disconnectView;
 - (void)setTab: (NSTabViewItem*)tab;
 

@@ -153,8 +153,6 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
 {
   mUrlbar = nil;
   mStatus = nil;
-  mProgress = nil;
-  mProgressSuper = nil;
   mIsPrimary = NO;
   [[NSNotificationCenter defaultCenter] removeObserver:self name:kOfflineNotificationName object:nil];
 
@@ -167,16 +165,14 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
 }
 
 -(void)makePrimaryBrowserView: (id)aUrlbar status: (id)aStatus
-        progress: (id)aProgress windowController: (BrowserWindowController*)aWindowController
+         windowController: (BrowserWindowController*)aWindowController
 {
   mUrlbar = aUrlbar;
   mStatus = aStatus;
-  mProgress = aProgress;
-  mProgressSuper = [aProgress superview];
   mWindowController = aWindowController;
 
   if (!mIsBusy)
-    [mProgress removeFromSuperview];
+    [mWindowController hideProgressIndicator];
   
   mDefaultStatusString = NULL;
   mLoadingStatusString = DOCUMENT_DONE_STRING;
@@ -268,9 +264,9 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
     mDefaultStatusString = NULL;
   }
 
-  [mProgressSuper addSubview:mProgress];
-  [mProgress setIndeterminate:YES];
-  [mProgress startAnimation:self];
+  [mWindowController showProgressIndicator];
+  [[mWindowController progressIndicator] setIndeterminate:YES];
+  [[mWindowController progressIndicator] startAnimation:self];
 
   mLoadingStatusString = NSLocalizedString(@"TabLoading", @"");
   [mStatus setStringValue:mLoadingStatusString];
@@ -291,9 +287,9 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
     mActivateOnLoad = NO;
   }
   
-  [mProgress setIndeterminate:YES];
-  [mProgress stopAnimation:self];
-  [mProgress removeFromSuperview];
+  [[mWindowController progressIndicator] setIndeterminate:YES];
+  [[mWindowController progressIndicator] stopAnimation:self];
+  [mWindowController hideProgressIndicator];
 
   mLoadingStatusString = DOCUMENT_DONE_STRING;
   if (mDefaultStatusString) {
@@ -329,12 +325,11 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
 - (void)onProgressChange:(int)currentBytes outOf:(int)maxBytes 
 {
   if (maxBytes > 0) {
-    BOOL isIndeterminate = [mProgress isIndeterminate];
-    if (isIndeterminate) {
-      [mProgress setIndeterminate:NO];
-    }
+    BOOL isIndeterminate = [[mWindowController progressIndicator] isIndeterminate];
+    if (isIndeterminate)
+      [[mWindowController progressIndicator] setIndeterminate:NO];
     double val = ((double)currentBytes / (double)maxBytes) * 100.0;
-    [mProgress setDoubleValue:val];
+    [[mWindowController progressIndicator] setDoubleValue:val];
   }
 }
 

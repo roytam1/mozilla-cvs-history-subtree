@@ -97,7 +97,7 @@ typedef enum
   IBOutlet NSView*            mLocationToolbarView;
   IBOutlet NSTextField*       mURLBar;
   IBOutlet NSTextField*       mStatus;
-  IBOutlet NSProgressIndicator* mProgress;
+  IBOutlet NSProgressIndicator* mProgress;              // STRONG reference
   IBOutlet NSImageView*       mLock;
   IBOutlet NSWindow*          mLocationSheetWindow;
   IBOutlet NSTextField*       mLocationSheetURLField;
@@ -162,6 +162,11 @@ typedef enum
 
   // Funky field editor for URL bar
   NSTextView *mURLFieldEditor;
+  
+  // cached superview for progress meter so we know where to add/remove it. This
+  // could be an outlet, but i figure it's easier to get it at runtime thereby saving
+  // someone from messing up in the nib when making changes.
+  NSView* mProgressSuperview;                // WEAK ptr
 }
 
 - (void)dealloc;
@@ -268,6 +273,10 @@ typedef enum
 - (IBAction)viewOnlyThisImage:(id)aSender;
 
 - (BookmarksToolbar*) bookmarksToolbar;
+
+- (NSProgressIndicator*) progressIndicator;
+- (void) showProgressIndicator;
+- (void) hideProgressIndicator;
 
 - (BOOL) isResponderGeckoView:(NSResponder*) responder;
 

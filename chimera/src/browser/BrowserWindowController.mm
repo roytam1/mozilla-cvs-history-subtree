@@ -201,6 +201,7 @@ static NSArray* sToolbarDefaults = nil;
         mThrobberImages = nil;
         mThrobberHandler = nil;
         mURLFieldEditor = nil;
+        mProgressSuperview = nil;
     }
     return self;
 }
@@ -280,10 +281,13 @@ static NSArray* sToolbarDefaults = nil;
       mLock = nil;
     }
     else {
-      // Retain with a single extra refcount.  This allows the CHBrowserWrappers
-      // to remove the progress meter from its superview without having to 
-      // worry about retaining and releasing it.
+      // Retain with a single extra refcount. This allows us to remove
+      // the progress meter from its superview without having to worry
+      // about retaining and releasing it. Cache the superview of the
+      // progress. Dynamically fetch the superview so as not to burden
+      // someone rearranging the nib with this detail.
       [mProgress retain];
+      mProgressSuperview = [mProgress superview];
     }
 
     // Get our saved dimensions.
@@ -1059,8 +1063,7 @@ static NSArray* sToolbarDefaults = nil;
     mBrowserView = [aTabViewItem view];
        
     // Make the new view the primary content area.
-    [mBrowserView makePrimaryBrowserView: mURLBar status: mStatus
-        progress: mProgress windowController: self];
+    [mBrowserView makePrimaryBrowserView: mURLBar status: mStatus windowController: self];
 }
 
 - (void)tabViewDidChangeNumberOfTabViewItems:(NSTabView *)aTabView
@@ -1439,9 +1442,26 @@ static NSArray* sToolbarDefaults = nil;
   }  
 }
 
+
 - (BookmarksToolbar*) bookmarksToolbar
 {
   return mPersonalToolbar;
+}
+
+- (NSProgressIndicator*)progressIndicator
+{
+  return mProgress;
+}
+
+- (void)showProgressIndicator
+{
+  // note we do nothing to check if the progress indicator is already there.
+  [mProgressSuperview addSubview:mProgress];
+}
+
+- (void)hideProgressIndicator
+{
+  [mProgress removeFromSuperview];
 }
 
 
