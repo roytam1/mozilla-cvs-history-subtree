@@ -76,6 +76,7 @@ var gClickSelectsAll = false;
 var gIgnoreFocus = false;
 var gIgnoreClick = false;
 var gToolbarMode = "icons";
+var gToolbarContextMenu = "";
 var gIconSize = "";
 var gMustLoadSidebar = false;
 var gProgressMeterPanel = null;
@@ -2457,6 +2458,10 @@ function BrowserToolboxCustomizeDone(aToolboxChanged)
     bt.controllers.appendController(BookmarksMenuController);
     bt.builder.rebuild();
     btchevron.builder.rebuild();
+
+    // fake a resize; this function takes care of flowing bookmarks
+    // from the bar to the overflow item
+    BookmarksToolbar.resizeFunc(null);
   }
 
   // XXX Shouldn't have to do this, but I do
@@ -2484,16 +2489,22 @@ var FullScreen =
         if (!aShow) {
           gToolbarMode = els[i].getAttribute("mode");
           gIconSize = els[i].getAttribute("iconsize");
+          gToolbarContextMenu = els[i].getAttribute("context");
           // It's okay to display full screen in text mode.
           // Otherwise we'll switch to small icons.
           if (gToolbarMode != "text") {
             els[i].setAttribute("mode", "icons");
             els[i].setAttribute("iconsize", "small");
           }
+          // XXX See bug 202978: we disable the context menu
+          // to prevent customization while in fullscreen, which
+          // causes menu breakage.
+          els[i].removeAttribute("context");
         }
         else {
           els[i].setAttribute("mode", gToolbarMode);
           els[i].setAttribute("iconsize", gIconSize);
+          els[i].setAttribute("context", gToolbarContextMenu);
         }
       } else {
         // use moz-collapsed so it doesn't persist hidden/collapsed,
