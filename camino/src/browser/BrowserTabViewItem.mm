@@ -490,7 +490,7 @@
 
 - (void)setLabel:(NSString *)label
 {
-  NSAttributedString* labelString = [[NSAttributedString alloc] initWithString:label attributes:mLabelAttributes];
+  NSAttributedString* labelString = [[[NSAttributedString alloc] initWithString:label attributes:mLabelAttributes] autorelease];
   [[mTabContentsView labelCell] setAttributedStringValue:labelString];
 
   [super setLabel:label];
