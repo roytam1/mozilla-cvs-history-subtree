@@ -528,7 +528,7 @@ private:
 };
 
 // NS_DEF_STRING_COMPARISON_OPERATORS(nsString, PRUnichar)
-NS_DEF_DERIVED_STRING_OPERATOR_PLUS(nsString, PRUnichar)
+// NS_DEF_DERIVED_STRING_OPERATOR_PLUS(nsString, PRUnichar)
 
 extern NS_COM int fputs(const nsString& aString, FILE* out);
 //ostream& operator<<(ostream& aStream,const nsString& aString);
@@ -578,7 +578,7 @@ public:
     char mBuffer[kDefaultStringSize<<eTwoByte];
 };
 
-NS_DEF_DERIVED_STRING_OPERATOR_PLUS(nsAutoString, PRUnichar)
+// NS_DEF_DERIVED_STRING_OPERATOR_PLUS(nsAutoString, PRUnichar)
 
 class NS_COM NS_ConvertASCIItoUCS2
       : public nsAutoString
