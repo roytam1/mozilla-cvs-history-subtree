@@ -67,6 +67,7 @@ public :
     PRInt16 RegisterSession(PRUint32 aHwnd, const PRUnichar *aUserName, \
                             const PRUnichar *aPassword, PRBool aForceDownLoad, \
                             PRBool aNewSession, PRUint32 *aSession, char *aIdKey);
+    PRBool IsSessionValid(PRUint32 aSessionID);
     PRBool UnRegisterSession(PRUint32 aSessionID);
     PRUnichar *GetPassWord(PRUint32 aSessionID);
     char *GetIdKey(PRUint32 aSessionID);

@@ -231,6 +231,24 @@ PRBool nsMAPIConfiguration::UnRegisterSession(PRUint32 aSessionID)
     return bResult;
 }
 
+PRBool nsMAPIConfiguration::IsSessionValid(PRUint32 aSessionID)
+{
+    if (aSessionID == 0)
+        return PR_FALSE;
+
+    PRBool retValue = PR_FALSE;
+    nsPRUintKey sessionKey(aSessionID);
+
+    PR_Lock(m_Lock);
+
+    retValue = m_SessionMap->Exists(&sessionKey);
+        
+    PR_Unlock(m_Lock);
+
+    return retValue;
+}
+
+
 PRUnichar *nsMAPIConfiguration::GetPassWord(PRUint32 aSessionID)
 {
     PRUnichar *pResult = nsnull;

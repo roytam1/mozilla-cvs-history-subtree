@@ -94,6 +94,8 @@ interface nsIMapi : IUnknown
                   [out] unsigned long *aSessionId);
 
     HRESULT Initialize();
+    HRESULT IsValid();
+    HRESULT IsValidSession([in] unsigned long aSession);
 
     HRESULT SendMail([in] unsigned long aSession, [in] lpnsMapiMessage aMessage,
                   [in] short aRecipCount, [in, size_is(aRecipCount)] lpnsMapiRecipDesc aRecips, 
