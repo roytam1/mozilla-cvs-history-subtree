@@ -96,6 +96,8 @@ install::
 	$(MAKE_INSTALL) toolbar-endcap.gif $(DISTBROWSER)
 	$(MAKE_INSTALL) n-box.gif $(DISTBROWSER)
 	$(MAKE_INSTALL) search.gif $(DISTBROWSER)
+	$(MAKE_INSTALL) animthrob.gif $(DISTBROWSER)
+	$(MAKE_INSTALL) animthrob_single.gif $(DISTBROWSER)
 	
 clobber::
   rm -f $(DIST)\bin\chrome\global\skin\default\*.*
