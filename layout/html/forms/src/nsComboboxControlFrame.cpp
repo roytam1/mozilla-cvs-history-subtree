@@ -983,18 +983,11 @@ nsComboboxControlFrame::ToggleList(nsIPresContext* aPresContext)
 NS_IMETHODIMP
 nsComboboxControlFrame::UpdateSelection(PRBool aDoDispatchEvent, PRBool aForceUpdate, PRInt32 aNewIndex)
 {
-  if (nsnull != mListControlFrame) {
+  if (mListControlFrame) {
      // Check to see if the selection changed
     if (mSelectedIndex != aNewIndex || aForceUpdate) {
-      nsAutoString newTextStr;
-      mListControlFrame->GetSelectedItem(newTextStr);
-      //XXX:TODO look at the ordinal position of the selected content in the listbox to tell
-      // if the selection has changed, rather than looking at the text string.
-      // There may be more than one item in the dropdown list with the same label. 
-      if (newTextStr != mTextStr) {
-        mTextStr = newTextStr;
-        SelectionChanged(aDoDispatchEvent);
-      }
+      mListControlFrame->GetSelectedItem(mTextStr); // Update text box
+      mListControlFrame->UpdateSelection(aDoDispatchEvent, mContent);
     } 
     mSelectedIndex = aNewIndex;
   }
@@ -1007,7 +1000,7 @@ nsComboboxControlFrame::AbsolutelyPositionDropDown()
 {
   nsRect absoluteTwips;
   nsRect absolutePixels;
-  nsIFrame* displayFrame = GetDisplayFrame(*mPresContext);
+// XXX Not used  nsIFrame* displayFrame = GetDisplayFrame(*mPresContext);
   nsRect rect;
   this->GetRect(rect);
   GetAbsoluteFramePosition(*mPresContext, this,  absoluteTwips, absolutePixels);
@@ -1029,67 +1022,29 @@ nsComboboxControlFrame::GetAbsoluteRect(nsRect* aRect)
 ///////////////////////////////////////////////////////////////
 
 NS_IMETHODIMP
-nsComboboxControlFrame::SelectionChanged(PRBool aDoDispatchEvent)
+nsComboboxControlFrame::SelectionChanged()
 {
-  if (nsnull != mDisplayContent) {
-    mDisplayContent->SetAttribute(kNameSpaceID_None, nsHTMLAtoms::value, mTextStr, PR_TRUE);
-    nsIFrame* displayFrame = GetDisplayFrame(*mPresContext);
-    nsFormControlHelper::ForceDrawFrame(displayFrame);
-
-    // Send reflow command because the new text maybe larger
-    nsIReflowCommand* cmd;
-    nsresult          rv;
-    rv = NS_NewHTMLReflowCommand(&cmd, displayFrame, nsIReflowCommand::StyleChanged);
+  // Send reflow command because the new text maybe larger
+  nsresult rv = NS_OK;
+  if (mDisplayContent) {
+    rv = mDisplayContent->SetAttribute(kNameSpaceID_None, nsHTMLAtoms::value, mTextStr, PR_TRUE);
     if (NS_SUCCEEDED(rv)) {
-      nsCOMPtr<nsIPresShell> shell;
-      rv = mPresContext->GetShell(getter_AddRefs(shell));
-      if (NS_SUCCEEDED(rv) && shell) {
-        shell->AppendReflowCommand(cmd);
+      nsIFrame* displayFrame = GetDisplayFrame(*mPresContext);
+      nsFormControlHelper::ForceDrawFrame(displayFrame);
+
+      nsIReflowCommand* cmd;
+      rv = NS_NewHTMLReflowCommand(&cmd, displayFrame, nsIReflowCommand::StyleChanged);
+      if (NS_SUCCEEDED(rv)) {
+        nsCOMPtr<nsIPresShell> shell;
+        rv = mPresContext->GetShell(getter_AddRefs(shell));
+        if (NS_SUCCEEDED(rv) && shell) {
+          shell->AppendReflowCommand(cmd);
+        }
         NS_RELEASE(cmd);
       }
     }
   }
-
-  if (aDoDispatchEvent) {
-     // Dispatch the NS_FORM_CHANGE event
-    nsEventStatus status = nsEventStatus_eIgnore;
-    nsGUIEvent event;
-    event.eventStructType = NS_GUI_EVENT;
-    event.widget = nsnull;
-    event.message = NS_FORM_CHANGE;
-    event.flags = NS_EVENT_FLAG_NONE;
-
-     // Here we create our own DOM event and set the target to the Select
-     // We'll pass this DOM event in, in hopes that the target is used.
-    nsIDOMEvent* DOMEvent = nsnull;
-    nsresult res = NS_NewDOMUIEvent(&DOMEvent, *mPresContext, &event);
-    if (NS_SUCCEEDED(res) && DOMEvent && mContent) {
-      nsIDOMNode* node = nsnull;
-      res = mContent->QueryInterface(kIDOMNodeIID, (void**)&node);
-      if (NS_SUCCEEDED(res) && node) {
-        nsIPrivateDOMEvent* pDOMEvent = nsnull;
-        res = DOMEvent->QueryInterface(kIPrivateDOMEventIID, (void**)&pDOMEvent);
-        if (NS_SUCCEEDED(res) && pDOMEvent) {
-          pDOMEvent->SetTarget(node);
-          NS_RELEASE(pDOMEvent);
-
-           // Have the content handle the event.
-          mContent->HandleDOMEvent(*mPresContext, &event, &DOMEvent, NS_EVENT_FLAG_BUBBLE, status); 
-        }
-        NS_RELEASE(node);
-      }
-      NS_RELEASE(DOMEvent);
-    }
-     
-     // Now have the frame handle the event
-    nsIFrame* frame = nsnull;
-    nsIFrame* dropdownFrame = GetDropdownFrame();
-    nsresult result = dropdownFrame->QueryInterface(kIFrameIID, (void**)&frame);
-    if ((NS_SUCCEEDED(result)) && (nsnull != frame)) {
-      frame->HandleEvent(*mPresContext, &event, status);
-    }
-  }
-  return NS_OK;
+  return rv;
 }
 
 

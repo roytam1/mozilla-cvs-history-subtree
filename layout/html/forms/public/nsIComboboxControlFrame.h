@@ -86,6 +86,11 @@ public:
   /**
    *
    */
+  NS_IMETHOD SelectionChanged() = 0;
+
+  /**
+   *
+   */
   NS_IMETHOD AbsolutelyPositionDropDown() = 0;
 
   /**

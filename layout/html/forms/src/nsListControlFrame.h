@@ -117,6 +117,7 @@ public:
   NS_IMETHOD GetNumberOfOptions(PRInt32* aNumOptions);  
   NS_IMETHOD SyncViewWithFrame();
   NS_IMETHOD AboutToDropDown();
+  NS_IMETHOD UpdateSelection(PRBool aDoDispatchEvent, nsIContent* aContent);
 
   // nsISelectControlFrame
   NS_IMETHOD AddOption(PRInt32 index);
@@ -201,6 +202,11 @@ protected:
   PRBool   HasSameContent(nsIFrame* aFrame1, nsIFrame* aFrame2);
   void     HandleListSelection(nsIDOMEvent * aDOMEvent);
   PRInt32  GetSelectedIndexFromFrame(nsIFrame *aHitFrame);
+
+  // onChange detection
+  nsresult InitSelectionCache(PRInt32 aLength);
+  nsresult SelectionChanged(nsIContent* aContent);
+
   // Data Members
   nscoord      mBorderOffsetY;
   nsFormFrame* mFormFrame;
@@ -219,7 +225,9 @@ protected:
   nscoord      mMaxWidth;
   nscoord      mMaxHeight;
   PRBool       mIsCapturingMouseEvents;
-  PRBool       mIgnoreMouseUp;             
+  PRBool       mIgnoreMouseUp;              
+  PRBool*      mSelectionCache;
+  PRInt32      mSelectionCacheLength;
 
   nsIPresContext* mPresContext;             // XXX: Remove the need to cache the pres context.
 

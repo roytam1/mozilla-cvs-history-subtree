@@ -86,6 +86,11 @@ public:
    */
   NS_IMETHOD AboutToDropDown() = 0;
 
+  /**
+   * 
+   */
+  NS_IMETHOD UpdateSelection(PRBool aDoDispatchEvent, nsIContent* aContent) = 0;
+
 };
 
 #endif
