@@ -41,7 +41,7 @@
 #if defined (__SVR4) && defined (__sun)
 # include <sys/int_types.h>
 #else
-# if defined (__OpenBSD__) || defined (_AIX)
+# if defined (__OpenBSD__)
 #  include <inttypes.h>
 # else 
 #  include <stdint.h>
