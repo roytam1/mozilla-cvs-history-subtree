@@ -59,6 +59,7 @@ protected:
   virtual void GetNextFrameForReflow(nsIPresContext& aPresContext, nsIFrame* aFrame, nsIFrame** aResult);
 
   virtual nsIFrame* GetFirstFrame();
+  virtual nsIFrame* GetLastFrame();
   virtual void GetNextFrame(nsIFrame* aFrame, nsIFrame** aResult);
 
   void LocateFrame(nsIFrame* aStartFrame, nsIFrame** aResult);

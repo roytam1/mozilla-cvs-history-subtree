@@ -143,15 +143,23 @@ nsTreeRowGroupFrame::GetFirstFrame()
   if (!mIsLazy)
     return mFrames.FirstChild();
 
+  LocateFrame(nsnull, &mTopFrame);
   return mTopFrame;
+}
+
+nsIFrame*
+nsTreeRowGroupFrame::GetLastFrame()
+{
+  // For now just return the one on the end.
+  return mFrames.LastChild();
 }
 
 void
 nsTreeRowGroupFrame::GetNextFrame(nsIFrame* aPrevFrame, nsIFrame** aResult)
 {
-  if (aPrevFrame == mBottomFrame)
-    *aResult = nsnull;
-  else aPrevFrame->GetNextSibling(aResult);
+  if (!mIsLazy)
+    aPrevFrame->GetNextSibling(aResult);
+  else LocateFrame(aPrevFrame, aResult);
 }
 
 nsIFrame* 
@@ -181,8 +189,7 @@ nsTreeRowGroupFrame::GetFirstFrameForReflow(nsIPresContext& aPresContext)
     mContent->ChildAt(i, *getter_AddRefs(childContent));
     mFrameConstructor->CreateTreeWidgetContent(&aPresContext, mContent, childContent, i,
                                                  &mTopFrame);
-    i++;
-    printf("Created frame number %d\n", i);
+    printf("Created a frame\n");
     mBottomFrame = mTopFrame;
     nsTableFrame* tableFrame = nsnull;
     nsTableFrame::GetTableFrame(this, tableFrame);
@@ -193,8 +200,6 @@ nsTreeRowGroupFrame::GetFirstFrameForReflow(nsIPresContext& aPresContext)
   return nsnull;
 }
   
-static int i = 0;
-
 void 
 nsTreeRowGroupFrame::GetNextFrameForReflow(nsIPresContext& aPresContext, nsIFrame* aFrame, nsIFrame** aResult) 
 { 
@@ -215,15 +220,14 @@ nsTreeRowGroupFrame::GetNextFrameForReflow(nsIPresContext& aPresContext, nsIFram
         mContent->ChildAt(i+1, *getter_AddRefs(nextContent));
         mFrameConstructor->CreateTreeWidgetContent(&aPresContext, mContent, nextContent, i+1,
                                                    aResult);
-        i++;
-        printf("Created frame number %d\n", i);
+        printf("Created a frame\n");
         mBottomFrame = mFrames.FrameAt(i+1);
         nsTableFrame* tableFrame = nsnull;
         nsTableFrame::GetTableFrame(this, tableFrame);
         tableFrame->DidAppendRowGroup(this);
-        return;
       }
     }
+    return;
   }
   
   // Ho-hum. Move along, nothing to see here.

@@ -153,7 +153,7 @@ public:
   PRInt32 GetStartRowIndex();
 
   /** get the maximum number of columns taken up by any row in this rowgroup */
-  NS_METHOD GetMaxColumns(PRInt32 &aMaxColumns) const;
+  NS_METHOD GetMaxColumns(PRInt32 &aMaxColumns);
 
   /**
    * Used for header and footer row group frames that are repeated when
@@ -299,7 +299,9 @@ protected:
   virtual nsIFrame* GetFirstFrameForReflow(nsIPresContext& aPresContext) { return mFrames.FirstChild(); };
   virtual void GetNextFrameForReflow(nsIPresContext& aPresContext, nsIFrame* aFrame, nsIFrame** aResult) { aFrame->GetNextSibling(aResult); };
   virtual nsIFrame* GetFirstFrame() { return mFrames.FirstChild(); };
+  virtual nsIFrame* GetLastFrame() { return mFrames.LastChild(); };
   virtual void GetNextFrame(nsIFrame* aFrame, nsIFrame** aResult) { aFrame->GetNextSibling(aResult); };
+  void GetNextRowSibling(nsIFrame** aRowFrame);
 
 private:
   nsIAtom *mType;
