@@ -39,7 +39,11 @@ ifdef MOZ_NEO
 DIRS	+= libneo
 endif
 
-DIRS	+= libnet libparse plugin xlate xp
+DIRS	+= libnet libparse plugin xlate
+
+ifneq ($(OS_ARCH),OS2)
+DIRS    += xp
+endif
 
 ifdef MOZ_MAIL_NEWS
 DIRS	+= libaddr libmime
