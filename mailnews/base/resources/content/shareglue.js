@@ -96,22 +96,9 @@ function EditBookmark() {}
 function Newsgroups() {}
 function AddressBook() 
 {
-	var toolkitCore = XPAppCoresManager.Find("ToolkitCore");
-	if (!toolkitCore)
-	{
-		toolkitCore = new ToolkitCore();
-		if (toolkitCore)
-		{
-			toolkitCore.Init("ToolkitCore");
-		}
-    }
-
-    if (toolkitCore)
-	{
-      toolkitCore.ShowWindow("chrome://addressbook/content/",
-                             window);
-    }
-
+	var wind = window.open("chrome://addressbook/content/addressbook.xul",
+							 "AddressBook");
+	return wind;
 }
 
 function History() {}
