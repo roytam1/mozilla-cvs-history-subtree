@@ -38,7 +38,11 @@
 #include "edt.h"	// for EDT_RegisterPlugin()
 #include "CApplicationEventAttachment.h"
 
+#if defined(OJI)
+#include "jvmmgr.h"
+#elif defined(JAVA)
 #include "java.h"	// for LJ_AddToClassPath
+#endif
 
 #include "np.h"
 #include "nppg.h"
@@ -406,30 +410,27 @@ OSErr CPluginHandler::InitCodeResource(NPNetscapeFuncs* funcs, _np_handle* handl
 			FSSpec fileSpec;
 			fFile->GetSpecifier(fileSpec);
 			
-			char* cFullPath;
-			cFullPath = CFileMgr::PathNameFromFSSpec(fileSpec, TRUE);
+			char* cFullPath = CFileMgr::PathNameFromFSSpec(fileSpec, TRUE);
 			ThrowIfNil_(cFullPath);
 			
 			fLibrary = PR_LoadLibrary(cFullPath);
 			ThrowIfNil_(fLibrary);
 
-			// Try the new C++ interface plugin interface.
-    		NP_CREATEPLUGIN npCreatePlugin = NULL;
-#ifndef NSPR20
-			npCreatePlugin = (NP_CREATEPLUGIN)PR_FindSymbol("NP_CreatePlugin", fLibrary);
-#else
-			npCreatePlugin = (NP_CREATEPLUGIN)PR_FindSymbol(fLibrary, "NP_CreatePlugin");
-#endif
-			if (npCreatePlugin != NULL) {
+			// PCB:  Let's factor this into an XP function, please!
+			nsFactoryProc nsGetFactory = (nsFactoryProc) PR_FindSymbol(fLibrary, "NSGetFactory");
+			if (nsGetFactory != NULL) {
+				nsresult res = nsPluginError_NoError;
 			    if (thePluginManager == NULL) {
-			        static NS_DEFINE_IID(kIPluginManagerIID, NP_IPLUGINMANAGER_IID);
-			        if (nsPluginManager::Create(NULL, kIPluginManagerIID, (void**)&thePluginManager) != NS_OK)
-			            return NULL;
+			    	// For now, create the plugin manager on demand.
+			        static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
+			        res = nsPluginManager::Create(NULL, kIPluginManagerIID, (void**)&thePluginManager);
+			    	ThrowIf_(res != nsPluginError_NoError || thePluginManager == NULL);
 			    }
-			    NPIPlugin* plugin = NULL;
-			    NPPluginError pluginErr = npCreatePlugin(thePluginManager, &plugin);
-			    handle->userPlugin = plugin;
-			    ThrowIf_(pluginErr != NPPluginError_NoError || plugin == NULL);
+				static NS_DEFINE_IID(kIPluginIID, NS_IPLUGIN_IID);
+				nsIPlugin* plugin = NULL;
+				res = nsGetFactory(kIPluginIID, (nsIFactory**)&plugin);
+			    ThrowIf_(res != nsPluginError_NoError || plugin == NULL);
+				handle->userPlugin = plugin;
 			} else {
 #ifndef NSPR20
 				fMainEntryFunc = (NPP_MainEntryUPP) PR_FindSymbol("mainRD", fLibrary);
@@ -661,9 +662,13 @@ void RegisterPluginsInFolder(FSSpec folder)
 		char* cUnixFullPath = CFileMgr::EncodeMacPath(cFullPath);	// Frees cFullPath
 		ThrowIfNil_(cUnixFullPath);
 		(void) NET_UnEscape(cUnixFullPath);
-		
+
+#ifdef JAVA		
 		// Tell Java about this path name
 		LJ_AddToClassPath(cUnixFullPath);
+#elif define(OJI)
+		// What, tell the current Java plugin about this class path?
+#endif
 		XP_FREE(cUnixFullPath);
 	}
 	Catch_(inErr) {}
