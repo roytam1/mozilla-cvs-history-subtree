@@ -21,7 +21,7 @@
  *   David Drinan <ddrinan@netscape.com>
  */
 #include "nsISupports.h"
-#include "nsCMSDecoder.h"
+#include "nsCMS.h"
 #include "nsNSSHelper.h"
 #include "nsNSSCertificate.h"
 #include "smime.h"

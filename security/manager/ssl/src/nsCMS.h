@@ -27,7 +27,7 @@
 #include "nsISupports.h"
 #include "nsCOMPtr.h"
 #include "nsIInterfaceRequestor.h"
-#include "nsICMSDecoder.h"
+#include "nsICMS.h"
 #include "sechash.h"
 #include "cms.h"
 

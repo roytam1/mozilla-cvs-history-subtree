@@ -73,7 +73,7 @@ CPPSRCS = 				\
         nsPKCS11Slot.cpp                \
         nsKeygenThread.cpp              \
         nsCMSSecureMessage.cpp          \
-        nsCMSDecoder.cpp                \
+        nsCMS.cpp 	                \
         nsCertPicker.cpp                \
 	$(NULL)
 

@@ -45,7 +45,7 @@
 #include "nsDOMCID.h"
 
 #include "nsCMSSecureMessage.h"
-#include "nsCMSDecoder.h"
+#include "nsCMS.h"
 #include "nsCertPicker.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsNSSComponent, Init)

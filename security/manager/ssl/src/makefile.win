@@ -101,7 +101,7 @@ OBJS = \
     .\$(OBJDIR)\nsPKCS11Slot.obj \
     .\$(OBJDIR)\nsKeygenThread.obj \
     .\$(OBJDIR)\nsCMSSecureMessage.obj \
-    .\$(OBJDIR)\nsCMSDecoder.obj \
+    .\$(OBJDIR)\nsCMS.obj \
     .\$(OBJDIR)\nsCertPicker.obj \
     $(NULL)
 
