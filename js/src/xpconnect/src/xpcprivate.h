@@ -779,7 +779,7 @@ public:
     void SetComponents(nsXPCComponents* aComponents);
     void SetGlobal(XPCCallContext& ccx, JSObject* aGlobal);
 
-private:
+protected:
     XPCWrappedNativeScope(XPCCallContext& ccx, JSObject* aGlobal);
     virtual ~XPCWrappedNativeScope();
 
@@ -1839,7 +1839,7 @@ public:
     static void DestroyInstance(JSContext* cx, XPCJSRuntime* rt,
                                 XPCNativeInterface* inst);
 
-private:
+protected:
     static XPCNativeInterface* NewInstance(XPCCallContext& ccx,
                                            nsIInterfaceInfo* aInfo);
 
@@ -1868,8 +1868,8 @@ public:
     XPCNativeSetKey(XPCNativeSet*       BaseSet  = nsnull,
                     XPCNativeInterface* Addition = nsnull,
                     PRUint16            Position = 0)
-        : mIsAKey(IS_A_KEY), mBaseSet(BaseSet), mAddition(Addition),
-          mPosition(Position) {}
+        : mIsAKey(IS_A_KEY), mPosition(Position), mBaseSet(BaseSet),
+          mAddition(Addition) {}
     ~XPCNativeSetKey() {}
 
     XPCNativeSet*           GetBaseSet()  const {return mBaseSet;}
@@ -1965,7 +1965,7 @@ public:
 
     static void DestroyInstance(XPCNativeSet* inst);
 
-private:
+protected:
     static XPCNativeSet* NewInstance(XPCCallContext& ccx,
                                      XPCNativeInterface** array,
                                      PRUint16 count);
@@ -2116,7 +2116,7 @@ public:
     void ASSERT_SetNotMarked() const {mSet->ASSERT_NotMarked();}
 #endif
 
-private:
+protected:
     // disable copy ctor and assignment
     XPCWrappedNativeProto(const XPCWrappedNativeProto& r); // not implemented
     XPCWrappedNativeProto& operator= (const XPCWrappedNativeProto& r); // not implemented
@@ -2159,12 +2159,12 @@ public:
 
     void SetInterface(XPCNativeInterface*  Interface) {mInterface = Interface;}
     void SetNative(nsISupports*  Native)              {mNative = Native;}
-    void SetJSObject(JSObject*  JSObject)             {mJSObject = JSObject;}
+    void SetJSObject(JSObject*  JSObj)                {mJSObject = JSObj;}
 
     void JSObjectFinalized() {mJSObject = nsnull;}
 
     XPCWrappedNativeTearOff()
-        : mJSObject(nsnull), mNative(nsnull), mInterface(nsnull) {}
+        : mInterface(nsnull), mNative(nsnull), mJSObject(nsnull) {}
     ~XPCWrappedNativeTearOff()
         {NS_ASSERTION(!(mInterface||mNative||mJSObject), "tearoff not empty in dtor");}
 

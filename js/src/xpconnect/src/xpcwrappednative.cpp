@@ -394,7 +394,6 @@ XPCWrappedNative::Init(XPCCallContext& ccx, JSObject* parent,
         }
     }
     XPCNativeScriptableInfo* si = mScriptableInfo;
-    XPCWrappedNativeScope* scope = mProto->GetScope();
 
     // create our flatJSObject
 
@@ -1067,13 +1066,11 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
     JSBool foundDependentParam;
 
     XPCJSRuntime* rt = ccx.GetRuntime();
-    nsXPConnect* xpc = ccx.GetXPConnect();
     XPCContext* xpcc = ccx.GetXPCContext();
     nsISupports* callee = ccx.GetTearOff()->GetNative();
     XPCPerThreadData* tls = ccx.GetThreadData();
     uint16 vtblIndex = ccx.GetMethodIndex();
     nsIInterfaceInfo* ifaceInfo = ccx.GetInterface()->GetInterfaceInfo();
-    const nsIID& iid = *ccx.GetInterface()->GetIID();
     jsval name = ccx.GetMember()->GetName();
     jsval* argv = ccx.GetArgv();
 
@@ -1856,11 +1853,11 @@ XPCWrappedNative::HandlePossibleNameCaseError(XPCCallContext& ccx,
             const char* badName = JS_GetStringBytes(oldJSStr);
             char* locationStr = nsnull;
 
-            nsIXPCException* exp = nsnull;
-            nsXPCException::NewException("", NS_OK, nsnull, nsnull, &exp);
+            nsIXPCException* xpc_exp = nsnull;
+            nsXPCException::NewException("", NS_OK, nsnull, nsnull, &xpc_exp);
 
             nsCOMPtr<nsIXPCException> e =
-                dont_AddRef(NS_STATIC_CAST(nsIXPCException*, exp));
+                dont_AddRef(NS_STATIC_CAST(nsIXPCException*, xpc_exp));
 
             nsCOMPtr<nsIJSStackFrameLocation> loc = nsnull;
             if(e)

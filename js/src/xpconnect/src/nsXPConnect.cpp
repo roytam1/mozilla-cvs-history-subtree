@@ -327,8 +327,6 @@ nsXPConnect::InitClasses(JSContext * aJSContext, JSObject * aGlobalJSObj)
     if(!ccx.IsValid())
         return UnexpectedFailure(NS_ERROR_FAILURE);
 
-    XPCContext* xpcc = ccx.GetXPCContext();
-
     if(!xpc_InitWrappedNativeJSOps())
         return UnexpectedFailure(NS_ERROR_FAILURE);
 

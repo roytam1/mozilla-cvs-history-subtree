@@ -319,7 +319,7 @@ nsXPCException::NewException(const char *aMessage,
                              nsresult aResult,
                              nsIJSStackFrameLocation *aLocation,
                              nsISupports *aData,
-                             nsIXPCException** exception)
+                             nsIXPCException** exceptn)
 {
     nsresult rv;
     nsXPCException* e = new nsXPCException();
@@ -378,7 +378,7 @@ nsXPCException::NewException(const char *aMessage,
     if(!e)
         return NS_ERROR_FAILURE;
 
-    *exception = NS_STATIC_CAST(nsIXPCException*, e);
+    *exceptn = NS_STATIC_CAST(nsIXPCException*, e);
     return NS_OK;
 }
 

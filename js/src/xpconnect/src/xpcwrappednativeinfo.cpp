@@ -159,8 +159,6 @@ XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
         v.type = constant->GetType();
         memcpy(&v.val, &mv.val, sizeof(mv.val));
 
-        jsval old_val = mVal;
-
         if(!XPCConvert::NativeData2JS(ccx, &mVal, &v.val, v.type,
                                       nsnull, nsnull, nsnull))
             return JS_FALSE;

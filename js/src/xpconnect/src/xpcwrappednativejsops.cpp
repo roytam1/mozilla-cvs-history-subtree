@@ -312,7 +312,6 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 
             if(wrapperToReflectInterfaceNames)
             {
-                const char* name;
                 XPCWrappedNativeTearOff* to;
                 JSObject* jso;
 
