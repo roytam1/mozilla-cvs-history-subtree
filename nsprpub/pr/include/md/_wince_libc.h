@@ -70,6 +70,8 @@ typedef int ptrdiff_t; /* pointer difference */
 
 /* The following definitions are generally expected in <time.h> */
 
+#ifndef _TM_DEFINED
+#define _TM_DEFINED
 /*
  * struct tm
  *
@@ -96,6 +98,7 @@ struct tm {
 _NSPRIMP struct tm* gmtime(const time_t* inTimeT);
 _NSPRIMP struct tm* localtime(const time_t* inTimeT);
 _NSPRIMP time_t mktime(struct tm* inTM);
+#endif
 _NSPRIMP size_t strftime(char *strDest, size_t maxsize, const char *format,
                          const struct tm *timeptr);
 
