@@ -23,12 +23,12 @@
 #include "nsIIOService.h"
 #include "nsMailHeaders.h"
 #include "nsMsgI18N.h"
-//#include "xp_time.h"
 #include "nsMsgCompPrefs.h"
 #include "nsIMsgHeaderParser.h"
 #include "nsIMimeURLUtils.h"
 #include "nsINntpService.h"
 #include "nsMsgNewsCID.h"
+#include "nsXPIDLString.h"
 
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID); 
 static NS_DEFINE_CID(kMsgHeaderParserCID, NS_MSGHEADERPARSER_CID); 
@@ -1831,7 +1831,7 @@ msg_pick_real_name (nsMsgAttachmentHandler *attachment, const char *charset)
   NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &rv); 
   const char *s, *s2;
   char *s3;
-  char *url;
+  nsXPIDLCString url;
 
   if (attachment->m_real_name)
   	return;
@@ -1840,7 +1840,7 @@ msg_pick_real_name (nsMsgAttachmentHandler *attachment, const char *charset)
   // this should all be scratched and we should ask for the specific parts from the
   // url itself..no need to parse the url spec, it's already been done! Use calls like
   // GetPath, GetQuery, etc.
-  attachment->mURL->GetSpec(&url);
+  attachment->mURL->GetSpec(getter_Copies(url));
 
   /* Perhaps the MIME parser knows a better name than the URL itself?
 	 This can happen when one attaches a MIME part from one message
@@ -1851,10 +1851,7 @@ msg_pick_real_name (nsMsgAttachmentHandler *attachment, const char *charset)
   MWContext *x = NULL;
   attachment->m_real_name =	MimeGuessURLContentName(x, url);
   if (attachment->m_real_name)
-  {
-	nsCRT::free(url);
   	return;
-  }
 
   /* Otherwise, extract a name from the URL. */
 
@@ -1867,10 +1864,7 @@ msg_pick_real_name (nsMsgAttachmentHandler *attachment, const char *charset)
 	  !PL_strncasecmp (url, "snews:", 6) ||
 	  !PL_strncasecmp (url, "IMAP:", 5) ||
 	  !PL_strncasecmp (url, "mailbox:", 8))
-  {
-	nsCRT::free(url);
   	return;
-  }
 
   /* Take the part of the file name after the last / or \ */
   s2 = PL_strrchr (s, '/');
@@ -1993,8 +1987,6 @@ msg_pick_real_name (nsMsgAttachmentHandler *attachment, const char *charset)
 		  exts++;
 		}
 	}
-
-  nsCRT::free(url);
 }
 
 // Utility to create a nsIURI object...
