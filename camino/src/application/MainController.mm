@@ -403,15 +403,26 @@ const int kReuseWindowOnAE = 2;
 
   [[[self getMainWindowBrowserController] getBrowserWrapper] getTitle:&titleString andHref:&urlString];
   
-  NSString* mailtoURLString = [NSString stringWithFormat:@"mailto:?subject=%@&body=%@", titleString, urlString];
+  if (!titleString) titleString = @"";
+  if (!urlString)   urlString = @"";
+  
+  // we need to encode entities in the title and url strings first. For some reason, CFURLCreateStringByAddingPercentEscapes is only happy
+  // with UTF-8 strings.
+  CFStringRef urlUTF8String   = CFStringCreateWithCString(kCFAllocatorDefault, [urlString   UTF8String], kCFStringEncodingUTF8);
+  CFStringRef titleUTF8String = CFStringCreateWithCString(kCFAllocatorDefault, [titleString UTF8String], kCFStringEncodingUTF8);
+  
+  CFStringRef escapedURL   = CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault, urlUTF8String,   NULL, CFSTR("&?="), kCFStringEncodingUTF8);
+  CFStringRef escapedTitle = CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault, titleUTF8String, NULL, CFSTR("&?="), kCFStringEncodingUTF8);
+    
+  NSString* mailtoURLString = [NSString stringWithFormat:@"mailto:?subject=%@&body=%@", (NSString*)escapedTitle, (NSString*)escapedURL];
 
-  CFStringRef myString = CFStringCreateWithCString(NULL, [mailtoURLString UTF8String], kCFStringEncodingUTF8);
-  CFStringRef escapedString = CFURLCreateStringByAddingPercentEscapes(NULL, myString, NULL, NULL, kCFStringEncodingUTF8);
-
-  [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:(NSString *)escapedString]];
-
-  CFRelease(myString);
-  CFRelease(escapedString);
+  [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:mailtoURLString]];
+  
+  CFRelease(urlUTF8String);
+  CFRelease(titleUTF8String);
+  
+  CFRelease(escapedURL);
+  CFRelease(escapedTitle);
 }
 
 
