@@ -206,6 +206,13 @@ public void run()
     }
 
     while (true) {
+        try {
+            Thread.sleep(1);
+        }
+        catch (Exception e) {
+            System.out.println("NativeEventThread.run(): Exception: " + e + 
+                               " while sleeping: " + e.getMessage());
+        }
         synchronized (this) {
 
             // this has to be inside the synchronized block!
