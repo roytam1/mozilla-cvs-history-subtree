@@ -155,14 +155,18 @@ nsHttpTransaction::OnDataReadable(nsIInputStream *is)
 
     LOG(("nsHttpTransaction::OnDataReadable [this=%x]\n", this));
 
-    if (!mListener)
+    if (!mListener) {
+        LOG(("nsHttpTransaction: no listener! closing stream\n"));
         return NS_BASE_STREAM_CLOSED;
+    }
 
     mSource = is;
 
     // let our listener try to read up to NS_HTTP_BUFFER_SIZE from us.
     rv = mListener->OnDataAvailable(this, nsnull, this,
                                     mContentRead, NS_HTTP_BUFFER_SIZE);
+
+    LOG(("nsHttpTransaction: listener returned [rv=%x]\n", rv));
 
     mSource = 0;
     return rv;
@@ -298,7 +302,8 @@ nsHttpTransaction::HandleContent(char *buf,
                 mHaveAllHeaders = PR_FALSE;
                 mHaveStatusLine = PR_FALSE;
                 mResponseHead->Reset();
-                return NS_OK;
+                // wait to be called again...
+                return NS_BASE_STREAM_WOULD_BLOCK;
             }
 
             // notify the connection first
@@ -384,9 +389,12 @@ nsHttpTransaction::HandleContent(char *buf,
             // result in OnStopTransaction being fired.
             return mConnection->OnTransactionComplete(NS_OK);
         }
+        return NS_OK;
     }
 
-    return NS_OK;
+    // if we didn't "read" anything and this is not a no-content response,
+    // then we must return NS_BASE_STREAM_WOULD_BLOCK so we'll be called again.
+    return (!mNoContent && !*countRead) ? NS_BASE_STREAM_WOULD_BLOCK : NS_OK;
 }
 
 //-----------------------------------------------------------------------------
@@ -521,7 +529,10 @@ nsHttpTransaction::Read(char *buf, PRUint32 count, PRUint32 *bytesWritten)
 
     // read some data from our source and put it in the given buf
     rv = mSource->Read(buf, count, bytesWritten);
-    if (NS_FAILED(rv) || (*bytesWritten == 0)) return rv;
+    if (NS_FAILED(rv) || (*bytesWritten == 0)) {
+        LOG(("nsHttpTransaction: mSource->Read() returned [rv=%x]\n", rv));
+        return rv;
+    }
 
     // pretend that no bytes were written (since we're just borrowing the
     // given buf anyways).
@@ -560,7 +571,7 @@ nsHttpTransaction::Read(char *buf, PRUint32 count, PRUint32 *bytesWritten)
         return HandleContent(buf, count, bytesWritten);
 
     // wait for more data
-    return NS_OK;
+    return NS_BASE_STREAM_WOULD_BLOCK;
 }
 
 NS_IMETHODIMP

@@ -510,8 +510,10 @@ nsHttpConnection::OnDataWritable(nsIRequest *request, nsISupports *context,
                                  nsIOutputStream *outputStream,
                                  PRUint32 offset, PRUint32 count)
 {
-    if (!mTransaction)
+    if (!mTransaction) {
+        LOG(("nsHttpConnection: no transaction! closing stream\n"));
         return NS_BASE_STREAM_CLOSED;
+    }
 
     mState = WRITING;
 
@@ -531,8 +533,10 @@ nsHttpConnection::OnDataAvailable(nsIRequest *request, nsISupports *context,
                                   nsIInputStream *inputStream,
                                   PRUint32 offset, PRUint32 count)
 {
-    if (!mTransaction)
+    if (!mTransaction) {
+        LOG(("nsHttpConnection: no transaction! closing stream\n"));
         return NS_BASE_STREAM_CLOSED;
+    }
 
     mState = READING;
     mLastActiveTime = NowInSeconds();
@@ -540,7 +544,10 @@ nsHttpConnection::OnDataAvailable(nsIRequest *request, nsISupports *context,
     LOG(("nsHttpConnection::OnDataAvailable [this=%x state=%d]\n",
         this, mState));
 
-    return mTransaction->OnDataReadable(inputStream);
+    nsresult rv = mTransaction->OnDataReadable(inputStream);
+
+    LOG(("mTransaction->OnDataReadable() returned [rv=%x]\n", rv));
+    return rv;
 }
 
 //-----------------------------------------------------------------------------
