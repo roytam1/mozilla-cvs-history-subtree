@@ -36,7 +36,7 @@
 /* We need this because Solaris' version of qsort is broken and
  * causes array bounds reads.
  */
-#if defined(SOLARIS) || defined(XP_MAC)
+#if !defined(HAVE_QSORT) || defined(BROKEN_QSORT)
 
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0
@@ -192,4 +192,4 @@ loop:	SWAPINIT(a, es);
 	}
 /*		qsort(pn - r, r / es, es, cmp);*/
 }
-#endif /* SOLARIS or XP_MAC */
+#endif /* !HAVE_QSORT || BROKEN_QSORT */
