@@ -819,7 +819,8 @@ function WizCallback(state)
 
 function ComposeLoad()
 {
-  msgComposeService.TimeStamp("Start Initializing the compose window (ComposeLoad)", false);
+	if (msgComposeService)
+    msgComposeService.TimeStamp("Start Initializing the compose window (ComposeLoad)", false);
   try {
     SetupCommandUpdateHandlers();
   	var wizardcallback = true;
@@ -854,7 +855,8 @@ function ComposeLoad()
     return;
   }
 	window.tryToClose=ComposeCanClose;
-  msgComposeService.TimeStamp("Done with the initialization (ComposeLoad). Waiting on editor to load about::blank", false);
+	if (msgComposeService)
+    msgComposeService.TimeStamp("Done with the initialization (ComposeLoad). Waiting on editor to load about::blank", false);
 }
 
 function ComposeUnload(calledFromExit)

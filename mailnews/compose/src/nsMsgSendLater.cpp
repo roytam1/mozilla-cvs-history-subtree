@@ -20,10 +20,10 @@
  * Contributor(s): 
  *   Pierre Phaneuf <pp@ludusdesign.com>
  */
+#include "nsMsgSendLater.h"
 #include "nsCOMPtr.h"
 #include "nsMsgCopy.h"
 #include "nsIPref.h"
-#include "nsMsgSendLater.h"
 #include "nsIEnumerator.h"
 #include "nsIFileSpec.h"
 #include "nsISmtpService.h"
@@ -39,8 +39,6 @@
 #include "nsMsgCompUtils.h"
 #include "nsMsgUtils.h"
 #include "nsMsgFolderFlags.h"
-#include "nsIMessage.h"
-#include "nsIRDFResource.h"
 #include "nsISupportsArray.h"
 #include "nsMailHeaders.h"
 #include "nsMsgPrompts.h"
@@ -540,7 +538,7 @@ nsCOMPtr<nsIMsgSend>        pMsgSend = nsnull;
                                  PR_TRUE, // PRBool deleteSendFileOnCompletion,
                                  PR_FALSE, // PRBool digest_p,
                                  nsIMsgSend::nsMsgDeliverNow, // nsMsgDeliverMode mode,
-                                 nsnull, // nsIMessage *msgToReplace, 
+                                 nsnull, // nsIMsgDBHdr *msgToReplace, 
                                  tArray, listeners); 
   NS_RELEASE(mSendListener);
   mSendListener = nsnull;
@@ -573,24 +571,18 @@ nsMsgSendLater::StartNextMailFileSend()
 
   rv = mEnumerator->GetNext(getter_AddRefs(currentItem));
   if (NS_FAILED(rv))
-  {
     return rv;
-  }
 
   mMessage = do_QueryInterface(currentItem); 
   if(!mMessage)
-  {
     return NS_ERROR_NOT_AVAILABLE;
-  }
 
-  nsCOMPtr<nsIRDFResource>  myRDFNode ;
+  nsCOMPtr<nsIMsgDBHdr>  myRDFNode ;
   myRDFNode = do_QueryInterface(mMessage, &rv);
   if(NS_FAILED(rv) || (!myRDFNode))
-  {
     return NS_ERROR_NOT_AVAILABLE;
-  }
 
-  myRDFNode->GetValue(getter_Copies(aMessageURI));
+  mMessageFolder->GetUriForMsg(mMessage, getter_Copies(aMessageURI));
 
 #ifdef NS_DEBUG
   nsXPIDLCString      subject;

@@ -27,7 +27,7 @@
 #include "nsIMsgSendLater.h"
 #include "nsIEnumerator.h"
 #include "nsIMsgFolder.h"
-#include "nsIMessage.h"
+//#include "nsIMessage.h"
 #include "nsIFileSpec.h"
 #include "nsFileStream.h"
 #include "nsIMsgSendListener.h"
@@ -107,7 +107,7 @@ public:
   // counters and things for enumeration 
   PRUint32                  mTotalSentSuccessfully;
   PRUint32                  mTotalSendCount;
-  nsISimpleEnumerator             *mEnumerator;
+  nsISimpleEnumerator       *mEnumerator;
   nsIMsgIdentity            *mIdentity;
   nsCOMPtr<nsIMsgFolder>    mMessageFolder;
   nsCOMPtr<nsIMsgWindow>    m_window;
@@ -123,7 +123,7 @@ private:
   nsMsgSendUnsentMessagesCallback  mCompleteCallback;
   SendOperationListener     *mSendListener;
 
-  nsCOMPtr<nsIMessage>      mMessage;
+  nsCOMPtr<nsIMsgDBHdr>      mMessage;
 
   //
   // File output stuff...

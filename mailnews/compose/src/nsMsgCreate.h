@@ -40,7 +40,7 @@ public:
 	NS_DECL_NSIMSGDRAFT
 
   nsresult    ProcessDraftOrTemplateOperation(const char *msgURI, nsMimeOutputType aOutType,
-                                              nsIMsgIdentity * identity, nsIMessage **aMsgToReplace);
+                                              nsIMsgIdentity * identity, nsIMsgDBHdr **aMsgToReplace);
 
   // 
   // Implementation data...
@@ -50,11 +50,6 @@ public:
   nsMimeOutputType      mOutType;
   PRBool                mAddInlineHeaders;
 };
-
-// Will be used by factory to generate a nsMsgQuote class...
-nsresult      NS_NewMsgDraft(const nsIID &aIID, void ** aInstancePtrResult);
-
-nsIMessage * GetIMessageFromURI(const char *msgURI);
 
 
 #endif /* _nsMsgCreate_H_ */

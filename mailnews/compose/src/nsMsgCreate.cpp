@@ -45,12 +45,8 @@
 #include "nsIMsgAccountManager.h"
 #include "nsIMsgIdentity.h"
 #include "nsIEnumerator.h"
-#include "nsIMessage.h"
-#include "nsIRDFResource.h"
 #include "nsMsgBaseCID.h"
 #include "nsMsgCopy.h"
-#include "nsIRDFService.h"
-#include "nsRDFCID.h"
 #include "nsNetUtil.h"
 #include "nsMsgMimeCID.h"
 #include "nsIMsgMailSession.h"
@@ -60,7 +56,6 @@
 
 // CID's needed
 static NS_DEFINE_CID(kPrefCID,            NS_PREF_CID);
-static NS_DEFINE_CID(kRDFServiceCID,      NS_RDFSERVICE_CID);
 
 //
 // Implementation...
@@ -89,50 +84,12 @@ nsMsgDraft::~nsMsgDraft()
 /* the following macro actually implement addref, release and query interface for our component. */
 NS_IMPL_ISUPPORTS1(nsMsgDraft, nsIMsgDraft)
 
-/* this function will be used by the factory to generate an Message Compose Fields Object....*/
-nsresult 
-NS_NewMsgDraft(const nsIID &aIID, void ** aInstancePtrResult)
-{
-	/* note this new macro for assertions...they can take a string describing the assertion */
-	NS_PRECONDITION(nsnull != aInstancePtrResult, "nsnull ptr");
-	if (nsnull != aInstancePtrResult)
-	{
-		nsMsgDraft *pQuote = new nsMsgDraft();
-		if (pQuote)
-			return pQuote->QueryInterface(aIID, aInstancePtrResult);
-		else
-			return NS_ERROR_OUT_OF_MEMORY; /* we couldn't allocate the object */
-	}
-	else
-		return NS_ERROR_NULL_POINTER; /* aInstancePtrResult was NULL....*/
-}
-
 // stream converter
 static NS_DEFINE_CID(kStreamConverterCID,    NS_MAILNEWS_MIME_STREAM_CONVERTER_CID);
 
-nsIMessage *
-GetIMessageFromURI(const char *msgURI)
-{
-  nsresult                  rv;
-  nsIRDFResource            *myRDFNode = nsnull;
-  nsIMessage                *returnMessage;
-
-  NS_WITH_SERVICE(nsIRDFService, rdfService, kRDFServiceCID, &rv); 
-	if (NS_FAILED(rv) || (!rdfService))
-		return nsnull;
-
-  rdfService->GetResource(msgURI, &myRDFNode);
-  if (!myRDFNode)
-    return nsnull;
-
-  myRDFNode->QueryInterface(NS_GET_IID(nsIMessage), (void **)&returnMessage);
-  NS_IF_RELEASE(myRDFNode);
-  return returnMessage;
-}
-
 nsresult    
 nsMsgDraft::ProcessDraftOrTemplateOperation(const char *msgURI, nsMimeOutputType aOutType, 
-                                            nsIMsgIdentity * identity, nsIMessage **aMsgToReplace)
+                                            nsIMsgIdentity * identity, nsIMsgDBHdr **aMsgToReplace)
 {
   nsresult  rv;
 
@@ -232,7 +189,7 @@ nsMsgDraft::ProcessDraftOrTemplateOperation(const char *msgURI, nsMimeOutputType
 
   // Make sure we return this if requested!
   if (aMsgToReplace)
-    *aMsgToReplace = GetIMessageFromURI(msgURI);
+     GetMsgDBHdrFromURI(msgURI, aMsgToReplace);
 
   // Now, just plug the two together and get the hell out of the way!
   rv = mMessageService->DisplayMessage(mURI, convertedListener, nsnull, nsnull, mailCharset, nsnull);
@@ -248,7 +205,7 @@ nsMsgDraft::ProcessDraftOrTemplateOperation(const char *msgURI, nsMimeOutputType
 }
 
 nsresult
-nsMsgDraft::OpenDraftMsg(const char *msgURI, nsIMessage **aMsgToReplace,
+nsMsgDraft::OpenDraftMsg(const char *msgURI, nsIMsgDBHdr **aMsgToReplace,
                          nsIMsgIdentity * identity, PRBool addInlineHeaders)
 {
   // We should really never get here, but if we do, just return 
@@ -262,7 +219,7 @@ nsMsgDraft::OpenDraftMsg(const char *msgURI, nsIMessage **aMsgToReplace,
 }
 
 nsresult
-nsMsgDraft::OpenEditorTemplate(const char *msgURI, nsIMessage **aMsgToReplace,
+nsMsgDraft::OpenEditorTemplate(const char *msgURI, nsIMsgDBHdr **aMsgToReplace,
 							   nsIMsgIdentity * identity)
 {
   return ProcessDraftOrTemplateOperation(msgURI, nsMimeOutput::nsMimeMessageEditorTemplate, 

@@ -36,8 +36,6 @@
 #include "nsICharsetConverterManager.h"
 #include "nsICharsetConverterManager2.h"
 #include "nsMsgCompCID.h"
-#include "nsIMessenger.h"	//temporary!
-#include "nsIMessage.h"		//temporary!
 #include "nsMsgQuote.h"
 #include "nsIPref.h"
 #include "nsIDocumentEncoder.h"    // for editor output flags
@@ -610,17 +608,17 @@ nsresult nsMsgCompose::_SendMsg(MSG_DeliverMode deliverMode, nsIMsgIdentity *ide
                     tEditor,
                     identity,
                     m_compFields, 
-                    PR_FALSE,         					// PRBool                            digest_p,
-                    PR_FALSE,         					// PRBool                            dont_deliver_p,
+                    PR_FALSE,         					        // PRBool                            digest_p,
+                    PR_FALSE,         					        // PRBool                            dont_deliver_p,
                     (nsMsgDeliverMode)deliverMode,   		// nsMsgDeliverMode                  mode,
-                    nsnull,                     			// nsIMessage *msgToReplace, 
-                    m_composeHTML?TEXT_HTML:TEXT_PLAIN,	// const char                        *attachment1_type,
-                    bodyString,               			// const char                        *attachment1_body,
-                    bodyLength,               			// PRUint32                          attachment1_body_length,
-                    nsnull,             					// const struct nsMsgAttachmentData  *attachments,
-                    nsnull,             					// const struct nsMsgAttachedFile    *preloaded_attachments,
-                    nsnull,             					// nsMsgSendPart                     *relatedPart,
-                    tArray, listeners);           // listener array
+                    nsnull,                     			  // nsIMsgDBHdr *msgToReplace, 
+                    m_composeHTML?TEXT_HTML:TEXT_PLAIN, // const char                        *attachment1_type,
+                    bodyString,               			    // const char                        *attachment1_body,
+                    bodyLength,               			    // PRUint32                          attachment1_body_length,
+                    nsnull,             					      // const struct nsMsgAttachmentData  *attachments,
+                    nsnull,             					      // const struct nsMsgAttachedFile    *preloaded_attachments,
+                    nsnull,             					      // nsMsgSendPart                     *relatedPart,
+                    tArray, listeners);                 // listener array
       
       // Cleanup converted body...
       if (newBody)
@@ -946,14 +944,8 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
     // mark any disposition flags like replied or forwarded on the message.
 
     mOriginalMsgURI = firstURI;
-    
-    nsCOMPtr <nsIMsgMessageService> msgMessageService;
-    rv = GetMessageServiceFromURI(firstURI, getter_AddRefs(msgMessageService));
-    NS_ENSURE_SUCCESS(rv,rv);
-    if (!msgMessageService) return NS_ERROR_FAILURE;
-
     nsCOMPtr <nsIMsgDBHdr> msgHdr;
-    rv = msgMessageService->MessageURIToMsgHdr(firstURI, getter_AddRefs(msgHdr));
+    rv = GetMsgDBHdrFromURI(firstURI, getter_AddRefs(msgHdr));
     NS_ENSURE_SUCCESS(rv,rv);
 
     if (msgHdr)
@@ -1082,11 +1074,7 @@ QuotingOutputStreamListener::QuotingOutputStreamListener(const char * originalMs
   {
    // For the built message body...
    nsCOMPtr <nsIMsgDBHdr> originalMsgHdr;
-   nsCOMPtr <nsIMsgMessageService> msgMessageService;
-   rv = GetMessageServiceFromURI(originalMsgURI, getter_AddRefs(msgMessageService));
-   if (NS_SUCCEEDED(rv)) {
-       rv = msgMessageService->MessageURIToMsgHdr(originalMsgURI, getter_AddRefs(originalMsgHdr));
-   }
+   rv = GetMsgDBHdrFromURI(originalMsgURI, getter_AddRefs(originalMsgHdr));
    if (NS_SUCCEEDED(rv) && originalMsgHdr && !quoteHeaders)
     {
       // Setup the cite information....
@@ -1562,13 +1550,8 @@ nsresult nsMsgCompose::ProcessReplyFlags()
   {
     if (!mOriginalMsgURI.IsEmpty())
     {
-      nsCOMPtr <nsIMsgMessageService> msgMessageService;
-      rv = GetMessageServiceFromURI(mOriginalMsgURI, getter_AddRefs(msgMessageService));
-      NS_ENSURE_SUCCESS(rv,rv);
-      if (!msgMessageService) return NS_ERROR_FAILURE;
-
       nsCOMPtr <nsIMsgDBHdr> msgHdr;
-      rv = msgMessageService->MessageURIToMsgHdr(mOriginalMsgURI, getter_AddRefs(msgHdr));
+      rv = GetMsgDBHdrFromURI(mOriginalMsgURI, getter_AddRefs(msgHdr));
       NS_ENSURE_SUCCESS(rv,rv);
       if (msgHdr)
       {

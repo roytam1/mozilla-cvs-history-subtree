@@ -62,14 +62,9 @@ static PRUint32 GetMessageSizeFromURI(const char * originalMsgURI)
   if (originalMsgURI && *originalMsgURI)
   {
     nsCOMPtr <nsIMsgDBHdr> originalMsgHdr;
-    nsCOMPtr <nsIMsgMessageService> msgMessageService;
-    nsresult rv = GetMessageServiceFromURI(originalMsgURI, getter_AddRefs(msgMessageService));
-    if (NS_SUCCEEDED(rv))
-    {
-       rv = msgMessageService->MessageURIToMsgHdr(originalMsgURI, getter_AddRefs(originalMsgHdr));
-       if (originalMsgHdr)
-        originalMsgHdr->GetMessageSize(&msgSize);
-    }
+    GetMsgDBHdrFromURI(originalMsgURI, getter_AddRefs(originalMsgHdr));
+    if (originalMsgHdr)
+    originalMsgHdr->GetMessageSize(&msgSize);
   }
   
   return msgSize;
