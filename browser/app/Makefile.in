@@ -261,6 +261,7 @@ ifeq ($(OS_ARCH),WINNT)
 endif
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 	cp $(srcdir)/macbuild/firefox.icns  $(DIST)/branding/firefox.icns
+	cp $(srcdir)/macbuild/document.icns  $(DIST)/branding/document.icns
 endif
 ifneq (,$(filter gtk gtk2,$(MOZ_WIDGET_TOOLKIT)))
 	cp $(srcdir)/mozicon16.xpm $(DIST)/branding/mozicon16.xpm
@@ -302,6 +303,7 @@ libs repackage:: $(PROGRAM)
 	rsync -aL $(PROGRAM) $(DIST)/$(APP_NAME).app/Contents/MacOS
 	-cp -L $(DIST)/bin/mangle $(DIST)/bin/shlibsign $(DIST)/$(APP_NAME).app/Contents/MacOS
 	cp -RL $(DIST)/branding/firefox.icns $(DIST)/$(APP_NAME).app/Contents/Resources/firefox.icns
+	cp -RL $(DIST)/branding/document.icns $(DIST)/$(APP_NAME).app/Contents/Resources/document.icns
 	cp -RL $(DIST)/package/mozillaSuite.rsrc $(DIST)/$(APP_NAME).app/Contents/Resources/$(PROGRAM).rsrc
 	echo -n APPLMOZB > $(DIST)/$(APP_NAME).app/Contents/PkgInfo
 #       remove CVS dirs from packaged app
