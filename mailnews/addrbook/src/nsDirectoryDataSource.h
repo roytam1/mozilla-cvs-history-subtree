@@ -109,16 +109,18 @@ public:
 
 protected:
 
-	nsresult createDirectoryNode(nsIAbDirectory* directory, nsIRDFResource* property,
-                                 nsIRDFNode** target);
-	nsresult createDirectoryNameNode(nsIAbDirectory *directory,
-                                     nsIRDFNode **target);
-	nsresult createDirectoryUriNode(nsIAbDirectory *directory,
-                                     nsIRDFNode **target);
-	nsresult createDirectoryChildNode(nsIAbDirectory *directory,
-                                      nsIRDFNode **target);
-	nsresult createDirectoryIsMailListNode(nsIAbDirectory *directory,
-                                      nsIRDFNode **target);
+  nsresult createDirectoryNode(nsIAbDirectory* directory, nsIRDFResource* property,
+    nsIRDFNode** target);
+  nsresult createDirectoryNameNode(nsIAbDirectory *directory,
+    nsIRDFNode **target);
+  nsresult createDirectoryUriNode(nsIAbDirectory *directory,
+    nsIRDFNode **target);
+  nsresult createDirectoryChildNode(nsIAbDirectory *directory,
+    nsIRDFNode **target);
+  nsresult createDirectoryIsMailListNode(nsIAbDirectory *directory,
+    nsIRDFNode **target);
+  nsresult createDirectoryIsRemoteNode(nsIAbDirectory *directory,
+    nsIRDFNode **target);
 	static nsresult getDirectoryArcLabelsOut(nsIAbDirectory *directory,
 										   nsISupportsArray **arcs);
 
@@ -143,6 +145,7 @@ protected:
 	static nsIRDFResource* kNC_CardChild;
 	static nsIRDFResource* kNC_DirUri;
 	static nsIRDFResource* kNC_IsMailList;
+  static nsIRDFResource* kNC_IsRemote;
 
 	// commands
 	static nsIRDFResource* kNC_Delete;

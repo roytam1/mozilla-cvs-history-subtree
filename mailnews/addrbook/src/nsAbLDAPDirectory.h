@@ -66,6 +66,7 @@ public:
     NS_IMETHOD GetChildCards(nsIEnumerator* *result);
     NS_IMETHOD HasCard(nsIAbCard *cards, PRBool *hasCard);
     NS_IMETHOD GetSupportsMailingLists(PRBool *aSupportsMailingsLists);
+    NS_IMETHOD GetIsRemote(PRBool *aIsRemote);
 
     // nsAbLDAPDirectoryQuery methods
     nsresult GetLDAPConnection (nsILDAPConnection** connection);

@@ -104,8 +104,12 @@ interface nsIAbDirectory : nsISupports {
 	void addCard(in nsIAbCard card);
 	void dropCard(in nsIAbCard card, in boolean needToCopyCard);
 
-	// Mail list specific
+    /**
+	 * directory is local (example, mork based) or remote (example, LDAP)
+     */
+	readonly attribute boolean isRemote;
 
+	// Mail list specific
     readonly attribute boolean supportsMailingLists;
 	
 	// This attribute servers two purposes 

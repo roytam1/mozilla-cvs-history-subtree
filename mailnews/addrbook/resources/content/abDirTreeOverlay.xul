@@ -53,7 +53,8 @@ Contributors:
         <treeitem uri="..." persist="sortColumn sortKey sortDirection" open="true">
           <treerow>
             <treecell indent="true" class="treecell-indent ab-directory-icon" label="rdf:http://home.netscape.com/NC-rdf#DirName"
-                     IsMailList="rdf:http://home.netscape.com/NC-rdf#IsMailList"/>
+                     IsMailList="rdf:http://home.netscape.com/NC-rdf#IsMailList"
+                     IsRemote="rdf:http://home.netscape.com/NC-rdf#IsRemote"/>
           </treerow>
         </treeitem>
        </treechildren>

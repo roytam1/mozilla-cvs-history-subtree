@@ -281,3 +281,9 @@ NS_IMETHODIMP nsAbDirProperty::GetSupportsMailingLists(PRBool *aSupportsMailings
   *aSupportsMailingsLists = PR_TRUE;
   return NS_OK;
 }
+
+NS_IMETHODIMP nsAbDirProperty::GetIsRemote(PRBool *aIsRemote)
+{
+  *aIsRemote = PR_FALSE;
+  return NS_OK;
+}

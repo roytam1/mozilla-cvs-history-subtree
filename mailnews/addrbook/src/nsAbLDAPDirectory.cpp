@@ -350,3 +350,9 @@ NS_IMETHODIMP nsAbLDAPDirectory::GetSupportsMailingLists(PRBool *aSupportsMailin
   *aSupportsMailingsLists = PR_FALSE;
   return NS_OK;
 }
+
+NS_IMETHODIMP nsAbLDAPDirectory::GetIsRemote(PRBool *aIsRemote)
+{
+  *aIsRemote = PR_TRUE;
+  return NS_OK;
+}
