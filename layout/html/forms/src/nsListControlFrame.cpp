@@ -1706,6 +1706,9 @@ nsListControlFrame::OnOptionSelected(nsIPresContext* aPresContext,
                                      PRInt32 aIndex,
                                      PRBool aSelected)
 {
+  if (aSelected) {
+    ScrollToIndex(aIndex);
+  }
   return NS_OK;
 }
 

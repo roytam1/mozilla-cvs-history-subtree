@@ -432,32 +432,32 @@ nsHTMLSelectElement::InsertOptionsIntoList(nsIContent* aOptions,
 
   // Deal with the selected list
   if (insertIndex - aListIndex) {
-    // Notify the frame
+    // Fix the currently selected index
+    if (aListIndex <= mSelectedIndex) {
+      mSelectedIndex += (insertIndex - aListIndex);
+    }
+
+    // Get the frame stuff for notification
     nsIFormControlFrame* fcFrame = nsnull;
     nsISelectControlFrame* selectFrame = nsnull;
     nsCOMPtr<nsIPresContext> presContext;
     GetPrimaryFrame(this, fcFrame, PR_FALSE, PR_FALSE);
-
     if (fcFrame) {
       CallQueryInterface(fcFrame, &selectFrame);
       if (selectFrame) {
         GetPresContext(this, getter_AddRefs(presContext));
-
-        for (int i=aListIndex;i<insertIndex;i++) {
-          selectFrame->AddOption(presContext, i);
-        }
       }
-    }
-
-    // Fix the currently selected index
-    if (aListIndex <= mSelectedIndex) {
-      mSelectedIndex += (insertIndex - aListIndex);
     }
 
     // Actually select the options if the added options warrant it
     nsCOMPtr<nsIDOMNode> optionNode;
     nsCOMPtr<nsIOptionElement> option;
     for (PRInt32 i=aListIndex;i<insertIndex;i++) {
+      // Notify the frame that the option is added
+      if (selectFrame) {
+        selectFrame->AddOption(presContext, i);
+      }
+
       Item(i, getter_AddRefs(optionNode));
       option = do_QueryInterface(optionNode);
       if (option) {
@@ -774,13 +774,10 @@ nsHTMLSelectElement::GetFirstOptionIndex(nsIContent* aOptions,
 {
   nsCOMPtr<nsIDOMHTMLOptionElement> optElement(do_QueryInterface(aOptions));
   if (optElement) {
-    nsCOMPtr<nsIDOMHTMLOptionElement> elem(do_QueryInterface(aOptions));
-    if (elem) {
-      GetOptionIndex(elem, aListIndex);
-      // If you nested stuff under the option, you're just plain
-      // screwed.  *I'm* not going to aid and abet your evil deed.
-      return NS_OK;
-    }
+    GetOptionIndex(optElement, aListIndex);
+    // If you nested stuff under the option, you're just plain
+    // screwed.  *I'm* not going to aid and abet your evil deed.
+    return NS_OK;
   }
 
   PRInt32 numChildren;
@@ -957,7 +954,7 @@ NS_IMETHODIMP
 nsHTMLSelectElement::SetSelectedIndex(PRInt32 aIndex)
 {
   return SetOptionsSelectedByIndex(aIndex, aIndex, PR_TRUE,
-                                   PR_TRUE, PR_TRUE, nsnull);
+                                   PR_FALSE, PR_TRUE, nsnull);
 }
 
 nsresult
@@ -965,7 +962,6 @@ nsHTMLSelectElement::GetOptionIndex(nsIDOMHTMLOptionElement* aOption,
                                     PRInt32 * anIndex)
 {
   NS_ENSURE_ARG_POINTER(anIndex);
-  *anIndex = 0;
 
   PRUint32 numOptions;
 
@@ -1177,6 +1173,11 @@ nsHTMLSelectElement::SetOptionsSelectedByIndex(PRInt32 aStartIndex,
     PRBool allDisabled = !aSetDisabled;
 
     //
+    // Save a little time when clearing other options
+    //
+    PRInt32 previousSelectedIndex = mSelectedIndex;
+
+    //
     // Select the requested indices
     //
     // If index is -1, everything will be deselected (bug 28143)
@@ -1219,10 +1220,13 @@ nsHTMLSelectElement::SetOptionsSelectedByIndex(PRInt32 aStartIndex,
 
     // Next remove all other options if single select or all is clear
     // If index is -1, everything will be deselected (bug 28143)
-    if ((!isMultiple && optionsSelected)
+    if (((!isMultiple && optionsSelected)
        || (aClearAll && !allDisabled)
-       || aStartIndex == -1) {
-      for (PRInt32 optIndex = 0; optIndex < (PRInt32)numItems; optIndex++) {
+       || aStartIndex == -1)
+       && previousSelectedIndex != -1) {
+      for (PRInt32 optIndex = previousSelectedIndex;
+           optIndex < (PRInt32)numItems;
+           optIndex++) {
         if (optIndex < aStartIndex || optIndex > aEndIndex) {
           nsCOMPtr<nsIDOMHTMLOptionElement> option;
           mOptions->ItemAsOption(optIndex, getter_AddRefs(option));
@@ -1233,6 +1237,11 @@ nsHTMLSelectElement::SetOptionsSelectedByIndex(PRInt32 aStartIndex,
             if (isSelected) {
               OnOptionSelected(selectFrame, presContext, optIndex, PR_FALSE);
               optionsDeselected = PR_TRUE;
+
+              // Only need to deselect one option if not multiple
+              if (!isMultiple) {
+                break;
+              }
             }
           }
         }

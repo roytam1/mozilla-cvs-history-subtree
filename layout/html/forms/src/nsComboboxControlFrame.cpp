@@ -1954,9 +1954,9 @@ nsComboboxControlFrame::SelectionChanged()
       rv = mPresContext->GetShell(getter_AddRefs(shell));
       ReflowDirtyChild(shell, (nsIFrame*) mDisplayFrame);
 
-      nsCOMPtr<nsIPresShell> presShell;
-      mPresContext->GetShell(getter_AddRefs(presShell));
-      presShell->FlushPendingNotifications(PR_FALSE);
+//      nsCOMPtr<nsIPresShell> presShell;
+//      mPresContext->GetShell(getter_AddRefs(presShell));
+//      presShell->FlushPendingNotifications(PR_FALSE);
     }
   }
   return rv;
