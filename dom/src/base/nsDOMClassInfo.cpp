@@ -1339,15 +1339,17 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                              PR_FALSE, PR_FALSE, nsnull,
                              getter_AddRefs(child));
 
-      if (child) {
+      nsCOMPtr<nsIDOMWindow> child_win(do_GetInterface(child));
+
+      if (child_win) {
         // We found a subframe of the right name, define the property
         // on the wrapper so that ::NewResolve() doesn't get called
         // for again for this property name.
 
         jsval v;
 
-        rv = WrapNative(cx, ::JS_GetGlobalObject(cx), child,
-                        NS_GET_IID(nsISupports), &v);
+        rv = WrapNative(cx, ::JS_GetGlobalObject(cx), child_win,
+                        NS_GET_IID(nsIDOMWindowInternal), &v);
         NS_ENSURE_SUCCESS(rv, rv);
 
         if (!::JS_DefineUCProperty(cx, obj, chars, ::JS_GetStringLength(str),
