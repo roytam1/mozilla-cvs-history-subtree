@@ -426,6 +426,16 @@ public final class CryptoManager implements TokenSupplier
 		 */
 		public String ocspResponderCertNickname = null;
 
+
+        /**
+         * Install the JSS crypto provider. Default is true.
+         */
+        public boolean installJSSProvider = true;
+
+        /**
+         * Remove the Sun crypto provider. Default is true.
+         */
+        public boolean removeSunProvider = true;
     }
 
     ////////////////////////////////////////////////////
@@ -814,14 +824,18 @@ public final class CryptoManager implements TokenSupplier
                 instance.reloadModules();
             }
         }
-		java.security.Security.removeProvider("SUN");
-		int position = java.security.Security.insertProviderAt(
+        if( values.removeSunProvider ) {
+		    java.security.Security.removeProvider("SUN");
+        }
+        if( values.installJSSProvider ) {
+		    int position = java.security.Security.insertProviderAt(
 							new org.mozilla.jss.provider.Provider(),
 							1);
-		if(position==-11) {
-			Debug.trace(Debug.ERROR,
-				"Unable to install default provider");
-		}
+		    if(position==-1) {
+			    Debug.trace(Debug.ERROR,
+				    "Unable to install default provider");
+		    }
+        }
     }
 
     private static native void
