@@ -1,1 +1,10 @@
-_NSGetModule ; 1
+?Release@nsBasicDecoderSupport@@UAGKXZ ; 24
+?AddRef@nsBasicDecoderSupport@@UAGKXZ ; 24
+?QueryInterface@nsBasicDecoderSupport@@UAGIABUnsID@@PAPAX@Z ; 8
+??1nsBasicDecoderSupport@@UAE@XZ ; 8
+?Convert@nsISO2022JPToUnicodeV2@@UAGIPBDPAHPAG1@Z ; 8
+??0nsBasicDecoderSupport@@QAE@XZ ; 8
+?GetMaxLength@nsShiftJISToUnicode@@UAGIPBDHPAH@Z ; 8
+??_EnsISO2022JPToUnicodeV2@@UAEPAXI@Z ; 8
+??0nsISO2022JPToUnicodeV2@@QAE@XZ ; 8
+NSGetModule ; 1

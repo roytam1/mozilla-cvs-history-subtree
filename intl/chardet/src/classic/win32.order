@@ -1,2 +1,1 @@
-_NSCanUnload ; 1
-_NSRegisterSelf ; 1
+NSGetModule ; 1
