@@ -22,6 +22,8 @@ const PREF_EXTENSIONS_DSS_SWITCHPENDING     = "extensions.dss.switchPending";
 const PREF_EM_LAST_SELECTED_SKIN            = "extensions.lastSelectedSkin";
 const PREF_GENERAL_SKINS_SELECTEDSKIN       = "general.skins.selectedSkin";
 
+const KEY_DEFAULT_THEME = "classic/1.0";
+
 ///////////////////////////////////////////////////////////////////////////////
 // Utility Functions 
 function stripPrefix(aResourceURI)
@@ -109,8 +111,11 @@ function Startup()
   if (!isExtensions) {
     gExtensionsView.addEventListener("richview-select", onThemeSelect, false);
 
-    gCurrentTheme = pref.getCharPref(PREF_GENERAL_SKINS_SELECTEDSKIN);
-    
+    if (pref.prefHasUserValue(PREF_GENERAL_SKINS_SELECTEDSKIN))
+      gCurrentTheme = pref.getCharPref(PREF_GENERAL_SKINS_SELECTEDSKIN);
+    else
+      gCurrentTheme = KEY_DEFAULT_THEME;
+      
     var useThemeButton = document.getElementById("useThemeButton");
     useThemeButton.hidden = false;
 

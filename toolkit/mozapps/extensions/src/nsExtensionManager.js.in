@@ -2015,7 +2015,8 @@ nsExtensionManager.prototype = {
           if (itemType != -1 && itemType & nsIUpdateItem.TYPE_EXTENSION)
             this.disableExtension(items[i].id);
           else if (itemType & nsIUpdateItem.TYPE_THEME) {
-            gPref.clearUserPref(PREF_GENERAL_SKINS_SELECTEDSKIN);
+            if (gPref.prefHasUserValue(PREF_GENERAL_SKINS_SELECTEDSKIN))
+              gPref.clearUserPref(PREF_GENERAL_SKINS_SELECTEDSKIN);
             this._ds.disableTheme(items[i].id);
           }
         }
