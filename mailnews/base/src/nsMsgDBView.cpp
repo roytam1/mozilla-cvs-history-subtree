@@ -86,6 +86,7 @@ nsIAtom * nsMsgDBView::kAttachMsgAtom = nsnull;
 nsIAtom * nsMsgDBView::kHasUnreadAtom = nsnull;
 nsIAtom * nsMsgDBView::kWatchThreadAtom = nsnull;
 nsIAtom * nsMsgDBView::kIgnoreThreadAtom = nsnull;
+nsIAtom * nsMsgDBView::kHasImageAtom = nsnull;
 
 nsIAtom * nsMsgDBView::mLabelPrefColorAtoms[PREF_LABELS_MAX] = {nsnull, nsnull, nsnull, nsnull, nsnull};
 
@@ -158,6 +159,7 @@ void nsMsgDBView::InitializeAtomsAndLiterals()
   kHasUnreadAtom = NS_NewAtom("hasUnread");
   kWatchThreadAtom = NS_NewAtom("watch");
   kIgnoreThreadAtom = NS_NewAtom("ignore");
+  kHasImageAtom = NS_NewAtom("hasimage");
 
 #ifdef SUPPORT_PRIORITY_COLORS
   kHighestPriorityAtom = NS_NewAtom("priority-highest");
@@ -201,6 +203,7 @@ nsMsgDBView::~nsMsgDBView()
     NS_IF_RELEASE(kHasUnreadAtom);
     NS_IF_RELEASE(kWatchThreadAtom);
     NS_IF_RELEASE(kIgnoreThreadAtom);
+    NS_IF_RELEASE(kHasImageAtom);
 
 #ifdef SUPPORT_PRIORITY_COLORS
     NS_IF_RELEASE(kHighestPriorityAtom);
@@ -497,7 +500,6 @@ nsresult nsMsgDBView::FetchAuthor(nsIMsgHdr * aHdr, PRUnichar ** aSenderString)
       return NS_OK;
     }
   }
-
   // if we got here then just return the original string
   *aSenderString = nsCRT::strdup(unparsedAuthor);
   return NS_OK;
@@ -880,7 +882,12 @@ nsresult nsMsgDBView::UpdateDisplayMessage(nsMsgKey aMsgKey)
       NS_ENSURE_SUCCESS(rv,rv);
       nsXPIDLString subject;
       FetchSubject(msgHdr, m_flags[viewPosition], getter_Copies(subject));
-      mCommandUpdater->DisplayMessageChanged(m_folder, subject);
+      
+      nsXPIDLCString keywords;
+      rv = msgHdr->GetStringProperty("keywords", getter_Copies(keywords));
+      NS_ENSURE_SUCCESS(rv,rv);
+
+      mCommandUpdater->DisplayMessageChanged(m_folder, subject, keywords);
     } // if view position is valid
   } // if we have an updater
   return NS_OK;
@@ -1105,7 +1112,33 @@ NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 aRow, const PRUnichar *colI
 
   if (mIsNews)
     properties->AppendElement(kNewsMsgAtom);
-    
+
+  nsXPIDLCString imageSize;
+  msgHdr->GetStringProperty("imageSize", getter_Copies(imageSize));
+  if (!imageSize.IsEmpty())
+  {
+    properties->AppendElement(kHasImageAtom);
+  }
+  nsXPIDLCString keywordProperty;
+  msgHdr->GetStringProperty("keywords", getter_Copies(keywordProperty));
+  if (!keywordProperty.IsEmpty())
+  {
+    nsCAutoString keywords(keywordProperty);
+    nsCAutoString nextKeyword;
+    PRInt32 spaceIndex = 0;
+    do
+    {
+      spaceIndex = keywords.FindChar(' ', spaceIndex);
+      PRInt32 endOfKeyword = (spaceIndex == -1) ? keywords.Length() : spaceIndex;
+      keywords.Left(nextKeyword, endOfKeyword);
+      nextKeyword.Insert("kw-", 0);
+      nsCOMPtr <nsIAtom> keywordAtom = NS_NewAtom(nextKeyword.get());
+      properties->AppendElement(keywordAtom);
+      keywords.Cut(0, endOfKeyword);
+    }
+    while (spaceIndex > 0);
+  }
+
 #ifdef SUPPORT_PRIORITY_COLORS
   // add special styles for priority
   nsMsgPriorityValue priority;

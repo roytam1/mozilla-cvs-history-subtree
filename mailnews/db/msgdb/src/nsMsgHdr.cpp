@@ -286,6 +286,16 @@ NS_IMETHODIMP nsMsgHdr::SetProperty(const char *propertyName, nsString &property
   return m_mdb->SetPropertyFromNSString(m_mdbRow, propertyName, &propertyStr);
 }
 
+NS_IMETHODIMP nsMsgHdr::SetStringProperty(const char *propertyName, const char *propertyValue)
+{
+  return m_mdb->SetProperty(m_mdbRow, propertyName, propertyValue);
+}
+
+NS_IMETHODIMP nsMsgHdr::GetStringProperty(const char *propertyName, char **aPropertyValue)
+{
+  return m_mdb->GetProperty(m_mdbRow, propertyName, aPropertyValue);
+}
+
 NS_IMETHODIMP nsMsgHdr::GetUint32Property(const char *propertyName, PRUint32 *pResult)
 {
   return m_mdb->GetUint32Property(GetMDBRow(), propertyName, pResult);
@@ -350,7 +360,14 @@ NS_IMETHODIMP nsMsgHdr::GetDate(PRTime *result)
 
 NS_IMETHODIMP nsMsgHdr::SetMessageId(const char *messageId)
 {
-	return SetStringColumn(messageId, m_mdb->m_messageIdColumnToken);
+  if (messageId && *messageId == '<')
+  {
+    nsCAutoString tempMessageID(messageId + 1);
+    if (tempMessageID.Last() == '>')
+      tempMessageID.SetLength(tempMessageID.Length() - 1);
+    return SetStringColumn(tempMessageID.get(), m_mdb->m_messageIdColumnToken);
+  }
+  return SetStringColumn(messageId, m_mdb->m_messageIdColumnToken);
 }
 
 NS_IMETHODIMP nsMsgHdr::SetSubject(const char *subject)
