@@ -3737,7 +3737,11 @@ nsXULDocument::RemoveSubtreeFromDocument(nsIContent* aElement)
     rv = RemoveElementFromMap(aElement);
     if (NS_FAILED(rv)) return rv;
 
-    // 3. If the element is a 'command updater', then remove the
+    // 3. Clear the box object for the element
+    nsCOMPtr<nsIDOMElement> element(do_QueryInterface(aElement));
+    SetBoxObjectFor(element, nsnull);
+
+    // 4. If the element is a 'command updater', then remove the
     // element from the document's command dispatcher.
     nsAutoString value;
     rv = aElement->GetAttr(kNameSpaceID_None, nsXULAtoms::commandupdater, value);
