@@ -3668,7 +3668,7 @@ void GlobalWindowImpl::ClearAllTimeouts()
       mTimeoutInsertionPoint = &mTimeouts;
 
     next = timeout->next;
-    if (timeout->timer && timeout != (nsTimeoutImpl*)mFireingTimeout) {
+    if (timeout->timer) {
       timeout->timer->Cancel();
       // Drop the count since the timer isn't going to hold on
       // anymore.
