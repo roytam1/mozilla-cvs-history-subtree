@@ -607,7 +607,7 @@ nsDiskCacheMap::WriteDiskCacheEntry(nsDiskCacheBinding *  binding)
         fileIndex = 0;
     }
     
-   PRUint32  metaFile   = binding->mRecord.MetaFile();
+    PRUint32  metaFile   = binding->mRecord.MetaFile();
 
     // Deallocate old storage if necessary    
     if (binding->mRecord.MetaLocationInitialized()) {
@@ -667,6 +667,7 @@ nsDiskCacheMap::WriteDiskCacheEntry(nsDiskCacheBinding *  binding)
         // XXX we should probably write out bucket ourselves
 
         // write data
+        diskEntry->Swap();
         rv = mBlockFile[fileIndex - 1].WriteBlocks(diskEntry, startBlock, blocks);
         if (NS_FAILED(rv))  goto exit;
         
