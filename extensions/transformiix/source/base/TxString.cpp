@@ -438,18 +438,18 @@ PRInt32 String::lastIndexOf(const char aData, const PRUint32 aOffset) const
 
 MBool String::isEqual(const char* aData) const
 {
-  if (!aSource) {
+  if (!aData) {
     return MB_FALSE;
   }
 
-  PRUint32 length = strlen(aSource);
+  PRUint32 length = strlen(aData);
   if (length != mLength) {
     return MB_FALSE;
   }
 
   PRUint32 counter;
   for (counter = 0; counter < length; ++counter) {
-    if (mBuffer[counter] != (UNICODE_CHAR)aSource[counter]) {
+    if (mBuffer[counter] != (UNICODE_CHAR)aData[counter]) {
       return MB_FALSE;
     }
   }
