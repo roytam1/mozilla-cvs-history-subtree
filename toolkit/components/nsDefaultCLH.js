@@ -83,7 +83,7 @@ var nsDefaultCLH = {
     var wwatch = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
                            .getService(nsIWindowWatcher);
     wwatch.openWindow(null, chromeURI, "_blank",
-                      "chrome,modal=no,all", cmdLine);
+                      "chrome,dialog=no,all", cmdLine);
   },
 
   helpInfo : "",
