@@ -79,7 +79,6 @@ const String VARIABLE           = "variable";
 const String WHEN               = "when";
 const String WITH_PARAM         = "with-param";
 
-
 //-- Attributes
 const String CDATA_ELEMENTS_ATTR     = "cdata-section-elements";
 const String COUNT_ATTR              = "count";
@@ -111,7 +110,6 @@ const String USE_ATTRIBUTE_SETS_ATTR = "use-attribute-sets";
 const String VALUE_ATTR              = "value";
 const String VERSION_ATTR            = "version";
 
-
 //-- Attribute Values
 const String ANY_VALUE            = "any";
 const String MULTIPLE_VALUE       = "multiple";
@@ -139,7 +137,6 @@ const String PRECEDING_AXIS           =  "preceding";
 const String PRECEDING_SIBLING_AXIS   =  "preceding-sibling";
 const String SELF_AXIS                =  "self";
 
-
 //-- NodeTest Operators
 const String ATTRIBUTE_FNAME         = "@";
 const String COMMENT_FNAME           = "comment";
@@ -150,11 +147,15 @@ const String IDENTITY_OP             = ".";
 const String PARENT_OP               = "..";
 
 //-- XSLT additional functions
-const String CURRENT_FN              = "current";
+const String DOCUMENT_FN             = "document";
+const String KEY_FN                  = "key";
 const String FORMAT_NUMBER_FN        = "format-number";
+const String CURRENT_FN              = "current";
+const String UNPARSED_ENTITY_URI_FN  = "unparsed-entity-uri";
 const String GENERATE_ID_FN          = "generate-id";
 const String SYSTEM_PROPERTY_FN      = "system-property";
-const String DOCUMENT_FN             = "document";
+const String ELEMENT_AVAILABLE_FN    = "element-available";
+const String FUNCTION_AVAILABLE_FN   = "function-available";
 
 //-- MISC
 const String WILD_CARD               = "*";

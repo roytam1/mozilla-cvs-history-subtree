@@ -68,7 +68,7 @@ ExprResult* AttributeExpr::evaluate(Node* context, ContextState* cs) {
     if ( !context ) return nodeSet;
     NamedNodeMap* atts = context->getAttributes();
     if ( atts ) {
-        for (int i = 0; i < atts->getLength(); i++ ) {
+        for (UInt32 i = 0; i < atts->getLength(); i++ ) {
             Attr* attr = (Attr*)atts->item(i);
             if ( isWild ) nodeSet->add(attr);
             else {

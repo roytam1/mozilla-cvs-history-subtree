@@ -36,10 +36,9 @@
 
 #include "TxString.h"
 #include "baseutils.h"
-#include <iostream.h>
+#ifndef MOZ_XSL
 #include <fstream.h>
-
-#ifdef MOZ_XSL
+#else
 #include "nsIServiceManager.h"
 #include "nsIIOService.h"
 #include "nsIURL.h"

@@ -28,7 +28,9 @@
  */
 
 #include "NodeStack.h"
+#ifndef MOZ_XSL
 #include <iostream.h>
+#endif
 
 /**
  * @author <a href="kvisco@ziplink.net">Keith Visco</a>

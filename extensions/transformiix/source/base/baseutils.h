@@ -34,7 +34,7 @@
 #define TRANSFRMX_BASEUTILS_H
 
 typedef int Int32;
-#ifndef nsNetUtil_h__
+#ifndef __MACTYPES__
 typedef unsigned int UInt32;
 #endif
 

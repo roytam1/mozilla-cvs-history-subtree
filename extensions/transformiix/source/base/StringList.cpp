@@ -32,7 +32,9 @@
  * @version $Revision$ $Date$
 **/
 
+#ifndef MOZ_XSL
 #include <iostream.h>
+#endif
 #include "StringList.h"
 
 /**

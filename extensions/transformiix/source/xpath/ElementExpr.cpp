@@ -83,7 +83,7 @@ ExprResult* ElementExpr::evaluate(Node* context, ContextState* cs) {
 
     NodeList* nl = context->getChildNodes();
 
-    for (int i = 0; i < nl->getLength(); i++ ) {
+    for (UInt32 i = 0; i < nl->getLength(); i++ ) {
         Node* node = nl->item(i);
         if (matches(node, context, cs)) nodeSet->add(node);
     }

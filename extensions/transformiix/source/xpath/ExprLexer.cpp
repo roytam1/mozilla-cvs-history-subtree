@@ -38,7 +38,6 @@
  * @version $Revision$ $Date$
 **/
 
-#include <iostream.h>
 #include "ExprLexer.h"
 
   //---------------------------/

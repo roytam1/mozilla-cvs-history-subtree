@@ -145,12 +145,15 @@ extern const String IDENTITY_OP;
 extern const String PARENT_OP;
 
 //-- XSLT additional functions
-extern const String CURRENT_FN;
+extern const String DOCUMENT_FN;
+extern const String KEY_FN;
 extern const String FORMAT_NUMBER_FN;
+extern const String CURRENT_FN;
+extern const String UNPARSED_ENTITY_URI_FN;
 extern const String GENERATE_ID_FN;
 extern const String SYSTEM_PROPERTY_FN;
-extern const String DOCUMENT_FN;
-
+extern const String ELEMENT_AVAILABLE_FN;
+extern const String FUNCTION_AVAILABLE_FN;
 
 //-- MISC
 extern const String WILD_CARD;

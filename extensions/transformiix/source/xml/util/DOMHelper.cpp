@@ -116,7 +116,7 @@ Node* DOMHelper::getParentNode(Node* node) {
         return node->getParentNode();
 
 #ifdef MOZ_XSL
-    void* key = node->getKey();
+    void* key = node->getNSObj();
 #else
     Int32 key = (Int32)node;
 #endif
@@ -144,7 +144,7 @@ Node* DOMHelper::getParentNode(Node* node) {
 void DOMHelper::addParentReference(Node* child, Node* parent) {
 
 #ifdef MOZ_XSL
-    void* key = child->getKey();
+    void* key = child->getNSObj();
 #else
     Int32 key = (Int32)child;
 #endif
@@ -207,7 +207,7 @@ void DOMHelper::continueIndexing(Node* node) {
                 Element* element = (Element*)idxState->next;
                 NamedNodeMap* atts = element->getAttributes();
                 if (atts) {
-                    for (int i = 0; i < atts->getLength(); i++) {
+                    for (UInt32 i = 0; i < atts->getLength(); i++) {
                         Node* tmpNode = atts->item(i);
                         addParentReference(tmpNode, element);
                         if (node == tmpNode) found = MB_TRUE;
@@ -274,7 +274,7 @@ OrderInfo* DOMHelper::getDocumentOrder(Node* node) {
     if (!node) return 0;
 
 #ifdef MOZ_XSL
-    void* key = node->getKey();
+    void* key = node->getNSObj();
 #else
     Int32 key = (Int32)node;
 #endif
