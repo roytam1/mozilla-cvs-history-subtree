@@ -735,17 +735,3 @@ PK11_TokenRefresh;
 ;+    local:
 ;+       *;
 ;+};
-;+NSS_3.8 { 	# NSS 3.8 release
-;+    global:
-HASH_GetHashObjectByOidTag;
-HASH_GetHashTypeByOidTag;
-PK11_GetDefaultArray;
-PK11_GetDefaultFlags;
-PK11_GetDisabledReason;
-PK11_UpdateSlotAttribute;
-PK11_UserEnableSlot;
-PK11_UserDisableSlot;
-SECITEM_ItemsAreEqual;
-;+    local:
-;+       *;
-;+};

@@ -309,7 +309,7 @@ typedef struct NSSCMSKeyTransRecipientInfoStr NSSCMSKeyTransRecipientInfo;
  */
 struct NSSCMSKeyTransRecipientInfoExStr {
     NSSCMSKeyTransRecipientInfo recipientInfo;
-    int version;  /* version of this structure (0) */
+    int version;
     SECKEYPublicKey *pubKey;
 };
 

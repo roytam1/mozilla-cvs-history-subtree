@@ -39,9 +39,7 @@
 #define _BLAPIT_H_
 
 #include "seccomon.h"
-#include "prlink.h"
 #include "plarena.h"
-
 
 /* RC2 operation modes */
 #define NSS_RC2			0
@@ -84,10 +82,6 @@
 #define SHA256_BLOCK_LENGTH 	 64 	/* bytes */
 #define SHA384_BLOCK_LENGTH 	128 	/* bytes */
 #define SHA512_BLOCK_LENGTH 	128 	/* bytes */
-
-#define AES_KEY_WRAP_IV_BYTES    8
-#define AES_KEY_WRAP_BLOCK_SIZE  8  /* bytes */
-#define AES_BLOCK_SIZE          16  /* bytes */
 
 #define NSS_FREEBL_DEFAULT_CHUNKSIZE 2048
 
@@ -145,7 +139,6 @@ struct MD5ContextStr        ;
 struct SHA1ContextStr       ;
 struct SHA256ContextStr     ;
 struct SHA512ContextStr     ;
-struct AESKeyWrapContextStr ;
 
 typedef struct DESContextStr        DESContext;
 typedef struct RC2ContextStr        RC2Context;
@@ -159,7 +152,6 @@ typedef struct SHA256ContextStr     SHA256Context;
 typedef struct SHA512ContextStr     SHA512Context;
 /* SHA384Context is really a SHA512ContextStr.  This is not a mistake. */
 typedef struct SHA512ContextStr     SHA384Context;
-typedef struct AESKeyWrapContextStr AESKeyWrapContext;
 
 /***************************************************************************
 ** RSA Public and Private Key structures

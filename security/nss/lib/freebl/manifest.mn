@@ -48,15 +48,12 @@ endif
 # same version as rest of freebl
 LIBRARY_VERSION = _3
 
-DEFINES += -DSHLIB_SUFFIX=\"$(DLL_SUFFIX)\" -DSHLIB_PREFIX=\"$(DLL_PREFIX)\"
-
 REQUIRES = 
 
 EXPORTS = \
 	blapi.h \
 	blapit.h \
 	secrng.h \
-	shsign.h \
 	$(NULL)
 
 PRIVATE_EXPORTS = \
@@ -84,20 +81,16 @@ CSRCS = \
 	sha_fast.c \
 	md2.c \
 	md5.c \
-	sha512.c \
 	alg2268.c \
 	arcfour.c \
 	arcfive.c \
 	desblapi.c \
 	des.c \
 	rijndael.c \
-	aeskeywrap.c \
 	dh.c \
 	pqg.c \
 	dsa.c \
 	rsa.c \
-	shvfy.c \
-	libpath.c \
 	$(MPI_SRCS) \
 	$(NULL)
 endif
@@ -113,7 +106,6 @@ ALL_HDRS =  \
 	secmpi.h \
 	sha.h \
 	sha_fast.h \
-	shsign.h \
 	vis_proto.h \
 	$(NULL)
 

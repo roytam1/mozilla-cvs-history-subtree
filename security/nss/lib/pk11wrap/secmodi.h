@@ -119,13 +119,13 @@ typedef struct SECMODCallOnceType {
 
 typedef SECStatus (PR_CALLBACK *SECMODCallOnceFN)(void *arg);
 
-extern void SECMOD_InitCallOnce(void);
+extern void SECMOD_InitCallOnce();
 
 extern SECStatus SECMOD_CallOnce(SECMODCallOnceType *once,
                                  SECMODCallOnceFN    func,
                                  void               *arg);
 
-extern void SECMOD_CleanupCallOnce(void);
+extern void SECMOD_CleanupCallOnce();
 
 SEC_END_PROTOS
 

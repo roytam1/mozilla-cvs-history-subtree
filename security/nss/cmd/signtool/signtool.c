@@ -287,7 +287,7 @@ parse_args(int argc, char *argv[])
 {
 	char *opt;
 	char *arg;
-	int needsInc = 0;
+	int needsInc;
 	int i;
 	OPT_TYPE type;
 
@@ -303,6 +303,7 @@ parse_args(int argc, char *argv[])
 					needsInc = 1;
 					arg = argv[i+1];
 				} else {
+					needsInc = 0;
 					arg = NULL;
 				}
  
@@ -326,11 +327,13 @@ parse_args(int argc, char *argv[])
 			} else {
 				/* char option */
 				if(opt[2]!='\0') {
+					needsInc = 0;
 					arg = opt+2;
 				} else if(i < argc-1) {
 					needsInc = 1;
 					arg = argv[i+1];
 				} else {
+					needsInc = 0;
 					arg = NULL;
 				}
 
@@ -419,8 +422,8 @@ parse_args(int argc, char *argv[])
 				}
 			}
 		} else {
-			type = UNKNOWN_OPT;
 			if(i == argc-1) {
+				type = UNKNOWN_OPT;
 				if(jartree) {
 				  PR_fprintf(errorFD,
 				    "warning: directory to be signed specified more than once."
@@ -430,6 +433,7 @@ parse_args(int argc, char *argv[])
 				}
 				jartree = PL_strdup(opt);
 			} else {
+				type = UNKNOWN_OPT;
 				PR_fprintf(errorFD, "warning: unrecognized option: %s\n", opt);
 				warningCount++;
 			}
@@ -1044,11 +1048,6 @@ cleanup:
 		PR_Close(outputFD);
 	}
 	rm_dash_r(TMP_OUTPUT);
-	if (retval == 0) {
-		if (NSS_Shutdown() != SECSuccess) {
-			exit(1);
-		}
-	}
   return retval;
 }
 

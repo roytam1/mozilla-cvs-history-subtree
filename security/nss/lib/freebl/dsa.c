@@ -179,8 +179,7 @@ dsa_SignDigest(DSAPrivateKey *key, SECItem *signature, const SECItem *digest,
     mp_int p, q, g;  /* PQG parameters */
     mp_int x, k;     /* private key & pseudo-random integer */
     mp_int r, s;     /* tuple (r, s) is signature) */
-    mp_err err   = MP_OKAY;
-    SECStatus rv = SECSuccess;
+    mp_err err;
 
     /* FIPS-compliance dictates that digest is a SHA1 hash. */
     /* Check args. */
@@ -236,7 +235,7 @@ dsa_SignDigest(DSAPrivateKey *key, SECItem *signature, const SECItem *digest,
     */
     if (mp_cmp_z(&r) == 0 || mp_cmp_z(&s) == 0) {
 	PORT_SetError(SEC_ERROR_NEED_RANDOM);
-	rv = SECFailure;
+	err = MP_UNDEF;
 	goto cleanup;
     }
     /*
@@ -245,11 +244,10 @@ dsa_SignDigest(DSAPrivateKey *key, SECItem *signature, const SECItem *digest,
     ** Signature is tuple (r, s)
     */
     err = mp_to_fixlen_octets(&r, signature->data, DSA_SUBPRIME_LEN);
-    if (err < 0) goto cleanup; 
+    if (err < 0) goto cleanup; else err = MP_OKAY;
     err = mp_to_fixlen_octets(&s, signature->data + DSA_SUBPRIME_LEN, 
                                   DSA_SUBPRIME_LEN);
-    if (err < 0) goto cleanup; 
-    err = MP_OKAY;
+    if (err < 0) goto cleanup; else err = MP_OKAY;
 cleanup:
     mp_clear(&p);
     mp_clear(&q);
@@ -260,9 +258,9 @@ cleanup:
     mp_clear(&s);
     if (err) {
 	translate_mpi_error(err);
-	rv = SECFailure;
+	return SECFailure;
     }
-    return rv;
+    return SECSuccess;
 }
 
 /* signature is caller-supplied buffer of at least 20 bytes.

@@ -3486,6 +3486,7 @@ UpdateV7DB(NSSLOWCERTCertDBHandle *handle, DB *updatedb)
 	case certDBEntryTypeSubject:
 	case certDBEntryTypeContentVersion:
 	case certDBEntryTypeNickname:
+	/*default: */
 	    break;
 
 	case certDBEntryTypeCert:
@@ -3545,8 +3546,6 @@ UpdateV7DB(NSSLOWCERTCertDBHandle *handle, DB *updatedb)
 						 &smimeEntry.optionsDate);
 	    PORT_FreeArena(smimeEntry.common.arena, PR_FALSE);
 	    smimeEntry.common.arena = NULL;
-	    break;
-	default:
 	    break;
 	}
     } while ( (* updatedb->seq)(updatedb, &key, &data, R_NEXT) == 0 );
@@ -3982,6 +3981,7 @@ openNewCertDB(const char *appName, const char *prefix, const char *certdbname,
     SECStatus rv;
     certDBEntryVersion *versionEntry = NULL;
     DB *updatedb = NULL;
+    char *tmpname;
     int status = RDB_FAIL;
 
     if (appName) {
@@ -4514,7 +4514,8 @@ nsslowcert_UpdatePermCert(NSSLOWCERTCertDBHandle *dbhandle,
     certDBEntryCert *entry;
     PRBool conflict;
     SECStatus ret;
-
+    SECStatus rv;
+    
     PORT_Assert(!cert->dbEntry);
 
     /* don't add a conflicting nickname */
@@ -4551,6 +4552,9 @@ SECStatus
 nsslowcert_AddPermCert(NSSLOWCERTCertDBHandle *dbhandle,
     NSSLOWCERTCertificate *cert, char *nickname, NSSLOWCERTCertTrust *trust)
 {
+    char *oldnn;
+    certDBEntryCert *entry;
+    PRBool conflict;
     SECStatus ret;
     SECStatus rv;
 
@@ -5258,4 +5262,3 @@ nsslowcert_DestroyGlobalLocks()
 	certTrustLock = NULL;
     }
 }
-

@@ -34,7 +34,6 @@
 
 #include "primpl.h"
 
-#include <string.h>
 
 PRSize _pr_CopyLowBits( 
     void *dst, 

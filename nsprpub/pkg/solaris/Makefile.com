@@ -16,13 +16,11 @@ endif
 
 PKGARCHIVE = $(dist_libdir)/pkgarchive
 DATAFILES = copyright
-FILES = $(DATAFILES) pkginfo prototype
+FILES = $(DATAFILES) pkginfo
 
 PACKAGE = $(shell basename `pwd`)
 
-PRODUCT_VERSION = $(shell grep PR_VERSION $(dist_includedir)/prinit.h \
-		   | sed -e 's/"$$//' -e 's/.*"//' -e 's/ .*//')
-
+PRODUCT_VERSION = $(MOD_VERSION).$(MOD_MINOR).$(MOD_PATCH)
 LN = /usr/bin/ln
 
 CLOBBERFILES = $(FILES)
@@ -30,6 +28,3 @@ CLOBBERFILES = $(FILES)
 include $(topsrcdir)/config/rules.mk
 
 # vim: ft=make
-
-
-

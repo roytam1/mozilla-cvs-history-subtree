@@ -814,9 +814,7 @@ main(int argc, char **argv)
 	server_main(port, requestCert, privKey, cert, disableSSL3);
 
 	/* Shutdown NSS and exit NSPR gracefully. */
-	if (NSS_Shutdown() != SECSuccess) {
-            exit(1);
-        }
+	NSS_Shutdown();
 	PR_Cleanup();
 	return 0;
 }

@@ -102,7 +102,6 @@ endif
 endif
 endif
 endif
-ifeq ($(BUILDCLU), 1)
 	@echo "Installing tools"
 	$(NSINSTALL) -D $(INSTDIR)/tools
 	$(NSINSTALL) $(BINDIR)/ldapsearch$(EXE_SUFFIX) $(INSTDIR)/tools
@@ -110,7 +109,6 @@ ifeq ($(BUILDCLU), 1)
 	$(NSINSTALL) $(BINDIR)/ldapmodify$(EXE_SUFFIX) $(INSTDIR)/tools
 	$(NSINSTALL) $(BINDIR)/ldapcmp$(EXE_SUFFIX) $(INSTDIR)/tools
 	$(NSINSTALL) $(BINDIR)/ldapcompare$(EXE_SUFFIX) $(INSTDIR)/tools
-endif
 
 	@echo "Installing includes"
 	$(NSINSTALL) -D $(INSTDIR)/include

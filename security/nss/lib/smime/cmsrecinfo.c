@@ -378,7 +378,7 @@ NSS_CMSRecipientInfo_GetEncryptedKey(NSSCMSRecipientInfo *ri, int subIndex)
 SECOidTag
 NSS_CMSRecipientInfo_GetKeyEncryptionAlgorithmTag(NSSCMSRecipientInfo *ri)
 {
-    SECOidTag encalgtag = SEC_OID_UNKNOWN; /* an invalid encryption alg */
+    SECOidTag encalgtag = SEC_OID_SHA1; /* set to not a valid encryption alg */
 
     switch (ri->recipientInfoType) {
     case NSSCMSRecipientInfoID_KeyTrans:
@@ -406,7 +406,7 @@ NSS_CMSRecipientInfo_WrapBulkKey(NSSCMSRecipientInfo *ri, PK11SymKey *bulkkey,
     NSSCMSOriginatorIdentifierOrKey *oiok;
     CERTSubjectPublicKeyInfo *spki, *freeSpki = NULL;
     PLArenaPool *poolp;
-    NSSCMSKeyTransRecipientInfoEx *extra = NULL;
+    NSSCMSKeyTransRecipientInfoEx *extra;
     PRBool usesSubjKeyID;
 
     poolp = ri->cmsg->poolp;
@@ -443,7 +443,6 @@ NSS_CMSRecipientInfo_WrapBulkKey(NSSCMSRecipientInfo *ri, PK11SymKey *bulkkey,
  	    if (rv != SECSuccess)
 		break;
 	} else if (usesSubjKeyID) {
-	    PORT_Assert(extra != NULL);
 	    rv = NSS_CMSUtil_EncryptSymKey_RSAPubKey(poolp, extra->pubKey,
 	                         bulkkey, &ri->ri.keyTransRecipientInfo.encKey);
  	    if (rv != SECSuccess)
