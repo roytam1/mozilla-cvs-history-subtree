@@ -69,13 +69,15 @@ CAdvancedPrefs::InitDialog()
 	CheckIfLockedPref("javascript.enabled", IDC_CHECK3);
 	CheckIfLockedPref("browser.enable_style_sheets", IDC_CHECK4);
 	CheckIfLockedPref("security.email_as_ftp_password", IDC_CHECK6);
+        CheckIfLockedPref("network.signon.rememberSignons", IDC_CHECK7);
+        CheckIfLockedPref("network.privacy_policy", IDC_CHECK8);
 
 	if (PREF_PrefIsLocked("network.cookie.cookieBehavior")) {
 		// Disable all the radio buttons in the group
 		DisableRadioButtonGroup(IDC_RADIO1);
 	}
 
-	CheckIfLockedPref("network.cookie.warnAboutCookies", IDC_CHECK7);
+        CheckIfLockedPref("network.cookie.warnAboutCookies", IDC_CHECK9);
 
 	return CBrowserPropertyPage::InitDialog();
 }
