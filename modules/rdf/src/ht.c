@@ -5761,11 +5761,19 @@ rdfFindDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned in
 
 
 
+#ifdef	XP_MAC
+static XPDialogInfo rdfFindDialogInfo = {
+	(XP_DIALOG_OK_BUTTON | XP_DIALOG_CANCEL_BUTTON),
+	rdfFindDialogHandler,
+	450, 120
+};
+#else
 static XPDialogInfo rdfFindDialogInfo = {
 	(XP_DIALOG_OK_BUTTON | XP_DIALOG_CANCEL_BUTTON),
 	rdfFindDialogHandler,
 	450, 150
 };
+#endif
 
 
 
