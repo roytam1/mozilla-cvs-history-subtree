@@ -152,6 +152,7 @@ veryclean:: clean
 
 clean::
 	$(RM) $(OBJS) $(LIBPRLDAP)
+	$(RM) -r $(PROBJDEST)
 
 $(OBJDEST):
 	$(MKDIR) $(OBJDEST)

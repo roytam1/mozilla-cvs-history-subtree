@@ -161,6 +161,7 @@ veryclean:: clean
 
 clean::
 	$(RM) $(OBJS) $(LIBSSLDAP)
+	$(RM) -r $(SSLOBJDEST)
 
 $(OBJDEST):
 	$(MKDIR) $(OBJDEST)

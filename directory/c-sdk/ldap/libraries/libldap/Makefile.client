@@ -227,6 +227,7 @@ veryclean:: clean
 
 clean::
 	$(RM) $(OBJS) $(LIBLDAP)
+	$(RM) -r $(LDAPOBJDEST)
 
 $(OBJDEST):
 	$(MKDIR) $(OBJDEST)

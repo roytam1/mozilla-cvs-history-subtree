@@ -87,6 +87,7 @@ veryclean:: clean
 
 clean::
 	$(RM) $(OBJS) $(LIBUTIL)
+	$(RM) -r $(UTILOBJDEST)
 
 $(OBJDEST):
 	$(MKDIR) $(OBJDEST)

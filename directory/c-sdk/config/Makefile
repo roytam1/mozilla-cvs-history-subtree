@@ -131,3 +131,7 @@ else
 	$(CC) $(XCFLAGS) $< $(XLDOPTS) $(OUTOPTION)$@
 endif
 
+cleanconfig:	FORCE
+	$(RM) -r $(OBJDIR)
+
+FORCE:

@@ -86,6 +86,7 @@ veryclean:: clean
 
 clean::
 	$(RM) $(OBJS) $(LIBLDIF)
+	$(RM) -r $(LDIFOBJDEST)
 
 $(OBJDEST):
 	$(MKDIR) $(OBJDEST)

@@ -182,5 +182,9 @@ clean clobber:	FORCE
 		echo "No LDAP directory -- skipping"; \
 		exit 0; \
 	fi
+	@if [ -d $(CONFIGDIR) ]; then \
+		cd $(CONFIGDIR); \
+		gmake cleanconfig; \
+	fi
 
 FORCE:
