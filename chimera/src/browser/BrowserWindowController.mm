@@ -816,6 +816,19 @@ static NSArray* sToolbarDefaults = nil;
   else
     return YES;
 }
+
+- (void)loadingStarted
+{
+  [self updateToolbarItems];
+  [self startThrobber];
+}
+
+- (void)loadingDone
+{
+  [self updateToolbarItems];
+  [self stopThrobber];
+  [mHistoryDataSource refresh];
+}
    
 - (void)updateToolbarItems
 {

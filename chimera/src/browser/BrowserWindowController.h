@@ -109,12 +109,12 @@ typedef enum
   IBOutlet NSTextField*       mLocationSheetURLField;
   IBOutlet NSView*            mStatusBar;     // contains the status text, progress bar, and lock
   IBOutlet PageProxyIcon*     mProxyIcon;
-  IBOutlet BrowserContentView* mContentView;
+  IBOutlet BrowserContentView*  mContentView;
   
   IBOutlet BookmarksDataSource* mSidebarBookmarksDataSource;
-  IBOutlet HistoryDataSource* mHistoryDataSource;
+  IBOutlet HistoryDataSource*   mHistoryDataSource;
 
-  IBOutlet BookmarksToolbar*  mPersonalToolbar;
+  IBOutlet BookmarksToolbar*    mPersonalToolbar;
 
   IBOutlet NSWindow*            mAddBookmarkSheetWindow;
   IBOutlet NSTextField*         mAddBookmarkTitleField;
@@ -191,6 +191,8 @@ typedef enum
 - (void)updateLocationFields:(NSString *)locationString;
 - (void)updateSiteIcons:(NSImage *)siteIconImage;
 - (void)updateToolbarItems;
+- (void)loadingStarted;
+- (void)loadingDone;
 - (void)focusURLBar;
 
     // call to update the image of the lock icon with a value from nsIWebProgressListener
