@@ -19,8 +19,10 @@
 # Config stuff for HPUX
 #
 
-CC = gcc -Wall -Wno-format -fPIC
-CCC = g++ -Wall -Wno-format -fPIC
+# CC = gcc -Wall -Wno-format -fPIC
+# CCC = g++ -Wall -Wno-format -fPIC
+CC  = cc -Ae +Z
+CCC = CC -Ae +a1 +eh +Z
 
 RANLIB = echo
 MKSHLIB = $(LD) -b
@@ -33,6 +35,8 @@ GFX_ARCH = x
 
 OS_CFLAGS = -DXP_UNIX -DHPUX -DSYSV -D_SVID_GETTOD
 OS_LIBS = -ldld
+
+XLDFLAGS = -lpthread
 
 ifeq ($(OS_RELEASE),B.10)
 PLATFORM_FLAGS		+= -DHPUX10 -Dhpux10
