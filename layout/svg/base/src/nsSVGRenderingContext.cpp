@@ -23,8 +23,6 @@
  *
  */
 
-#define SVG_LIBART_PIXEL_FORMAT 1
-
 #include "nsSVGRenderingContext.h"
 #include "nsSVGRenderItem.h"
 #include "nsIDeviceContext.h"
@@ -79,10 +77,15 @@ nsSVGRenderingContext::PaintSVGRenderItem(nsSVGRenderItem* item)
 
   nscolor rgb = item->GetColor();
   ArtPixMaxDepth col[3];
-
+#ifdef XP_PC
+  col[0] = ART_PIX_MAX_FROM_8(NS_GET_B(rgb));
+  col[1] = ART_PIX_MAX_FROM_8(NS_GET_G(rgb));
+  col[2] = ART_PIX_MAX_FROM_8(NS_GET_R(rgb));
+#else
   col[0] = ART_PIX_MAX_FROM_8(NS_GET_R(rgb));
   col[1] = ART_PIX_MAX_FROM_8(NS_GET_G(rgb));
   col[2] = ART_PIX_MAX_FROM_8(NS_GET_B(rgb));
+#endif
   
   art_render_image_solid(render, col);
   
@@ -224,36 +227,26 @@ ArtRender* nsSVGRenderingContext::NewRender()
   mBuffer->GetPixelFormat(&format);
   PRInt32 bbp = format.mRedCount + format.mGreenCount + format.mBlueCount + format.mAlphaCount;
 
-
-  #ifdef SVG_LIBART_PIXEL_FORMAT
- 
-  render = art_render_new(mDirtyRect.x, mDirtyRect.y,
-                          mDirtyRect.x+ mDirtyRect.width,
-                          mDirtyRect.y+ mDirtyRect.height,
-                          buf,
-                          stride,
-                          NS_STATIC_CAST(ArtDestinationPixelFormat, mArtPixelFormat),
-                          ART_ALPHA_NONE, // alpha
-                          NULL);
-  
-
-  #else
+#ifndef XP_MAC	// Mac doesn't implement this yet, <sigh>
   NS_ASSERTION(bbp == 24,
                "The SVG rendering backend currenly only supports 24bit color depths...\n"
                "Try compiling nsSVGRenderingContext.cpp with SVG_USE_SURFACE unset!");
 
   if (bbp != 24) return nsnull;
+#endif
     
   render = art_render_new(mDirtyRect.x, mDirtyRect.y,
                           mDirtyRect.x+ mDirtyRect.width,
                           mDirtyRect.y+ mDirtyRect.height,
                           buf,
                           stride,
+                    #ifdef XP_MAC
+                    	1,		// pixel padding parameter
+                    #endif	    
                           3, // channels 
                           8, // bits per channel
                           ART_ALPHA_NONE, // alpha
                           NULL);
-   #endif                       
 #else
   mBuffer->LockImagePixels(PR_FALSE);
 
@@ -285,46 +278,9 @@ void nsSVGRenderingContext::InitializeBuffer()
 
 #ifdef SVG_USE_SURFACE
    mRenderingContext->CreateDrawingSurface(&mDirtyRect,
-                                           NS_CREATEDRAWINGSURFACE_FOR_PIXEL_ACCESS
-                                        #ifndef SVG_LIBART_PIXEL_FORMAT
-                                          |  NS_CREATEDRAWINGSURFACE_24BIT
-                                       #endif 
-                                          ,
+                                           NS_CREATEDRAWINGSURFACE_FOR_PIXEL_ACCESS |
+                                           NS_CREATEDRAWINGSURFACE_24BIT,
                                            (void*&)*getter_AddRefs(mBuffer));
-  #ifdef SVG_LIBART_PIXEL_FORMAT
-    nsCOMPtr<nsIDeviceContext> dc;
-    mRenderingContext->GetDeviceContext(*getter_AddRefs(dc));
-    
-    unsigned int depth;
-    dc->GetDepth(depth);
-    
-    switch (depth) {
-    case 16: {
-      nsPixelFormat format;
-      mBuffer->GetPixelFormat(&format);
-      
-      if (format.mGreenCount == 5)
-        mArtPixelFormat = ART_PF_555;
-      else
-        mArtPixelFormat = ART_PF_565;
-        
-      } break;
-    
-    case 24:
-      mArtPixelFormat = ART_PF_RGB8;
-      break;
-        
-    case 32:  
-      // need to be sure it isn't RGBA8 ?
-      mArtPixelFormat = ART_PF_ARGB8;
-      break;
-      
-    default:
-       NS_ASSERTION(false, "unsupported pixel depth");
-    }
-    
-  #endif
-                                           
 #else
   mBuffer = do_CreateInstance(kCImage);
   mBuffer->Init(mDirtyRect.width, mDirtyRect.height, 24,
