@@ -2265,10 +2265,11 @@ nsHTMLFormElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
 
 // HTMLObject/EmbedElement helper
 
-// This resolve hook makes embed.nsIFoo work as if QueryInterface()
-// was called on the plugin instance, the result of calling QI,
-// assuming it's successful, will be defined on the embed element as a
-// nsIFoo property.
+// This resolve hook makes embed.nsIFoo work as if
+// QueryInterface(Components.interfaces.nsIFoo) was called on the
+// plugin instance, the result of calling QI, assuming it's
+// successful, will be defined on the embed element as a nsIFoo
+// property.
 
 nsresult
 nsHTMLExternalObjSH::GetPluginInstance(nsIXPConnectWrappedNative *wrapper,
