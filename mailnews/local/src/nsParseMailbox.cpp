@@ -33,6 +33,7 @@
 #include "nsFileStream.h"
 #include "nsMsgFolderFlags.h"
 #include "nsIMsgFolder.h"
+#include "nsXPIDLString.h"
 
 #ifdef DOING_FILTERS
 #include "nsIMsgFilterService.h"
@@ -77,8 +78,8 @@ NS_IMETHODIMP nsMsgMailboxParser::OnStartRequest(nsIChannel * /* aChannel */, ns
 	{
 		// okay, now fill in our event sinks...Note that each getter ref counts before
 		// it returns the interface to us...we'll release when we are done
-		char	*fileName;
-		url->GetPath(&fileName);
+		nsXPIDLCString fileName;
+		url->GetPath(getter_Copies(fileName));
 		if (fileName)
 		{
 			nsFilePath dbPath(fileName);
@@ -94,7 +95,6 @@ NS_IMETHODIMP nsMsgMailboxParser::OnStartRequest(nsIChannel * /* aChannel */, ns
 			}
 			NS_ASSERTION(m_mailDB, "failed to open mail db parsing folder");
 			printf("url file = %s\n", fileName);
-			nsCRT::free(fileName);
 		}
 	}
 
