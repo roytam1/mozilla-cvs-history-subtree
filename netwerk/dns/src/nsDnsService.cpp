@@ -1262,7 +1262,6 @@ nsDNSService::Run()
         nsDNSLookup * lookup = DequeuePendingQ();
         if (lookup) {
             // Got a request!!
-            printf("### nsDNSService::Run() - lookup %s\n", lookup->HostName());
             lookup->DoSyncLookup();
             lookup->ProcessRequests();
             AddToEvictionQ(lookup);
@@ -1309,7 +1308,6 @@ nsDNSService::Lookup(const char*     hostName,
     nsresult rv;
     nsDNSRequest * request = nsnull;
     *result = nsnull;
-    printf("### Lookup(%s)\n", hostName);
     if (!mDNSServiceLock || (mState != DNS_RUNNING))  return NS_ERROR_OFFLINE;
     else {
         nsAutoLock  dnsLock(mDNSServiceLock);
