@@ -320,11 +320,15 @@ private:
         nsISecureEnv* secureEnv = proxyEnv.mSecureEnv;
         nsresult result;
         result = secureEnv->FindClass(name, &outClass);
+#if 0
         if ((NS_FAILED(result) || !outClass) && !proxyEnv.mInProxyFindClass) {
             proxyEnv.mInProxyFindClass = JNI_TRUE;
             outClass = ProxyFindClass(env, name);
             proxyEnv.mInProxyFindClass = JNI_FALSE;
         }
+#endif
+        if (NS_FAILED(result))
+            outClass = NULL;
         return outClass;
     }
 
