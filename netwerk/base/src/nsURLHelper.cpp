@@ -371,7 +371,7 @@ NS_NET nsresult ExtractURLScheme(const char* inURI, PRUint32 *startPos,
         // Next chars can be alpha + digit + some special chars
         else if (length > 0 && (nsCRT::IsAsciiAlpha(c) || 
                  nsCRT::IsAsciiDigit(c) || c == '+' || 
-                 c == '.' || c == '_' || c == '-')) {
+                 c == '.' || c == '-')) {
             length++;
         }
         // stop if colon reached but not as first char
@@ -428,8 +428,6 @@ NS_NET PRUint32 SchemeTypeFor(const char* i_scheme)
     else if (0 == PL_strcasecmp("mailto", i_scheme))
         return nsIURI::MAILTO;
     else if (0 == PL_strcasecmp("news", i_scheme))
-        return nsIURI::NEWS;
-    else if (0 == PL_strcasecmp("news_message", i_scheme))
         return nsIURI::NEWS;
     else if (0 == PL_strcasecmp("ldap", i_scheme))
         return nsIURI::LDAP;

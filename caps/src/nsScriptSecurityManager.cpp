@@ -524,7 +524,6 @@ nsScriptSecurityManager::CheckLoadURI(nsIURI *aSourceURI, nsIURI *aTargetURI,
     if ((aFlags & nsIScriptSecurityManager::DISALLOW_FROM_MAIL) && 
         (nsCRT::strcasecmp(sourceScheme, "mailbox")  == 0 ||
          nsCRT::strcasecmp(sourceScheme, "imap")     == 0 ||
-         nsCRT::strcasecmp(sourceScheme, "news_message")     == 0 ||
          nsCRT::strcasecmp(sourceScheme, "news")     == 0))
     {
         return NS_ERROR_DOM_BAD_URI;
@@ -560,8 +559,7 @@ nsScriptSecurityManager::CheckLoadURI(nsIURI *aSourceURI, nsIURI *aTargetURI,
         { "pop",             AllowProtocol },
         { "imap",            DenyProtocol  },
         { "pop3",            DenyProtocol  },
-        { "news",            DenyProtocol  },
-        { "news_message",    DenyProtocol  },
+        { "news",            AllowProtocol },
         { "javascript",      AllowProtocol },
         { "ftp",             AllowProtocol },
         { "about",           AllowProtocol },
@@ -861,7 +859,6 @@ nsScriptSecurityManager::CanExecuteScripts(nsIPrincipal *principal,
             return NS_ERROR_FAILURE;
         if (nsCRT::strcasecmp(scheme, "imap") == 0 || 
             nsCRT::strcasecmp(scheme, "mailbox") == 0 ||
-            nsCRT::strcasecmp(scheme, "news_message") == 0 ||
             nsCRT::strcasecmp(scheme, "news") == 0) 
         {
             *result = mIsMailJavaScriptEnabled;

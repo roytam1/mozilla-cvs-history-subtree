@@ -186,7 +186,6 @@ nsCodebasePrincipal::Equals(nsIPrincipal *other, PRBool *result)
 
 		if (PL_strcmp(otherScheme, "imap")    == 0 ||
 	        PL_strcmp(otherScheme, "mailbox") == 0 ||
-	        PL_strcmp(otherScheme, "news_message") == 0 ||
             PL_strcmp(otherScheme, "news")    == 0) 
         {
             // Each message is a distinct trust domain; use the 
