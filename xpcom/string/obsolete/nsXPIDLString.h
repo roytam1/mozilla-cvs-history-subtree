@@ -42,7 +42,7 @@ typedef PRUint16 PRUnichar;
 //   XPIDL interfaces.
 //
 
-class nsXPIDLString {
+class NS_COM nsXPIDLString {
 private:
     PRUnichar* mBuf;
     PRBool     mBufOwner;
@@ -72,7 +72,7 @@ public:
     // A helper class for assignment-by-value. This class is an
     // implementation detail and should not be considered part of the
     // public interface.
-    class GetterCopies {
+    class NS_COM GetterCopies {
     private:
         nsXPIDLString& mXPIDLString;
 
@@ -92,7 +92,7 @@ public:
     // A helper class for assignment-by-reference. This class is an
     // implementation detail and should not be considered part of the
     // public interface.
-    class GetterShares {
+    class NS_COM GetterShares {
     private:
         nsXPIDLString& mXPIDLString;
 
@@ -147,7 +147,7 @@ getter_Shares(nsXPIDLString& aXPIDLString)
 //   interfaces.
 //
 
-class nsXPIDLCString {
+class NS_COM nsXPIDLCString {
 private:
     char*  mBuf;
     PRBool mBufOwner;
@@ -177,7 +177,7 @@ public:
     // A helper class for assignment-by-value. This class is an
     // implementation detail and should not be considered part of the
     // public interface.
-    class GetterCopies {
+    class NS_COM GetterCopies {
     private:
         nsXPIDLCString& mXPIDLString;
 
@@ -197,7 +197,7 @@ public:
     // A helper class for assignment-by-reference. This class is an
     // implementation detail and should not be considered part of the
     // public interface.
-    class GetterShares {
+    class NS_COM GetterShares {
     private:
         nsXPIDLCString& mXPIDLString;
 
