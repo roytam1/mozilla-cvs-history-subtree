@@ -42,6 +42,7 @@
 
 #include "FullPath.h"
 #include "MoreFilesExtras.h"
+#include "FSpCompat_fopen.h"
 
 /* compiler headers */
 #include "DropInCompilerLinker.h"
@@ -75,8 +76,6 @@ extern "C" {
 pascal short xpidl_compiler(CWPluginContext context);
 int xpidl_main(int argc, char* argv[]);
 int xptdump_main(int argc, char* argv[]);
-
-FILE * FSp_fopen(ConstFSSpecPtr spec, const char * open_mode);
 }
 
 pascal short xpidl_compiler(CWPluginContext context)
@@ -295,8 +294,9 @@ FILE* std::fopen(const char* filename, const char *mode)
 			err = LocateFile(gPluginContext, filename, filespec);
 		}
 	} while (0);
+
 	// if all went well, we have a file to open.
-	return (err == noErr ? FSp_fopen(&filespec, mode) : NULL);
+	return (err == noErr ? FSpCompat_fopen(&filespec, mode) : NULL);
 }
 
 /**
