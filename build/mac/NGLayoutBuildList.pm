@@ -432,11 +432,11 @@ sub Checkout()
     # activate MacCVS
     ActivateApplication('Mcvs');
 
-	my($nsprpub_tag) = "MOZILLA_0_6_RELEASE";
-    my($nss_tab) = "MOZILLA_0_6_MAC_RELEASE";
-    my($psm_tag) = "MOZILLA_0_6_MAC_RELEASE";
-    my($ldapsdk_tag) = "MOZILLA_0_6_RELEASE";
-    my($sma_tag) = "MOZILLA_0_6_RELEASE";
+	my($nsprpub_tag) = "MOZILLA_0_6_BRANCH";
+    my($nss_tab) = "MOZILLA_0_6_SECURITY_MAC_BRANCH";
+    my($psm_tag) = "MOZILLA_0_6_SECURITY_MAC_BRANCH";
+    my($ldapsdk_tag) = "MOZILLA_0_6_BRANCH";
+    my($sma_tag) = "MOZILLA_0_6_BRANCH";
     
     #//
     #// Checkout commands
