@@ -18,8 +18,8 @@
 
 /**
  * The nsIStorageStream interface maintains an internal data buffer that can be
- * filled using a single output stream.  One or more input streams can be
- * created to non-destructively read the data from the buffer.
+ * filled using a single output stream.  One or more independent input streams
+ * can be created to read the data from the buffer non-destructively.
  */
 
 #include "nsISupports.idl"
@@ -34,32 +34,34 @@ interface nsIStorageStream : nsISupports
 {
     /**
      * Get a reference to the one and only output stream for this instance.
-     * The zero-based <code>startPosition</code> argument is used is used to
-     * set the initial write cursor position.  The <code>startPosition</code>
-     * cannot be set larger than the current <code>Length</code>.  Calling this
-     * method has the side-effect of truncating the internal buffer to
-     * <code>startPosition</code>+1 bytes.
+     * The zero-based startPosition argument is used is used to set the initial
+     * write cursor position.  The startPosition cannot be set larger than the
+     * current buffer length.  Calling this method has the side-effect of
+     * truncating the internal buffer to startPosition bytes.
      */
-    nsIOutputStream GetOutputStream(in PRInt32 startPosition);
+    nsIOutputStream getOutputStream(in PRInt32 startPosition);
 
     /**
      * Create a new input stream to read data (written by the singleton output
-     * stream) from the internal buffer
+     * stream) from the internal buffer.  Multiple, independent input streams
+     * can be created.
      */
-    nsIInputStream NewInputStream(in PRInt32 startPosition);
+    nsIInputStream newInputStream(in PRInt32 startPosition);
 
     /** 
-     * Assigning to the Length field can be used to truncate the buffer data,
-     * but can not be used when either the instance's output stream or an input
+     * The length attribute indicates the total number of bytes stored in the
+     * nsIStorageStream internal buffer, regardless of any consumption by input
+     * streams.  Assigning to the length field can be used to truncate the
+     * buffer data, but can not be used when either the instance's output
      * stream is in use.
      *
-     * @See #WriteInProgress */
-    attribute PRUint32 Length;
+     * @See #writeInProgress */
+    attribute PRUint32 length;
 
     /**
      * True, when output stream has not yet been Close'ed
      */
-    readonly attribute boolean WriteInProgress;
+    readonly attribute boolean writeInProgress;
 };
 
 %{C++

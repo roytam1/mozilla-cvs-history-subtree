@@ -17,10 +17,13 @@
  */
 
 /**
- * The storage stream provides a single output stream that can be used
- * by a client to fill an internal buffer with data.  One or more
- * input streams can be created to read the data out non-destructively.
+ * The storage stream provides an internal buffer that can be filled by a
+ * client using a single output stream.  One or more independent input streams
+ * can be created to read the data out non-destructively.  The implementation
+ * uses a segmented buffer internally to avoid realloc'ing of large buffers,
+ * with the attendant performance loss and heap fragmentation.
  */
+
 #include "nsStorageStream.h"
 #include "nsSegmentedBuffer.h"
 #include "nsCOMPtr.h"
@@ -87,12 +90,15 @@ nsStorageStream::GetOutputStream(PRInt32 aStartingOffset,
     if (mWriteInProgress)
         return NS_ERROR_NOT_AVAILABLE;
 
-    if (mLastSegmentNum >= 0)
-        mSegmentedBuffer->ReallocLastSegment(mSegmentSize);
-    
     nsresult rv = Seek(aStartingOffset);
     if (NS_FAILED(rv)) return rv;
 
+    // Enlarge the last segment in the buffer so that it is the same size as
+    // all the other segments in the buffer.  (It may have been realloc'ed
+    // smaller in the Close() method.)
+    if (mLastSegmentNum >= 0)
+        mSegmentedBuffer->ReallocLastSegment(mSegmentSize);
+    
     NS_ADDREF(this);
     *aOutputStream = NS_STATIC_CAST(nsIOutputStream*, this);
     mWriteInProgress = true;
@@ -106,6 +112,8 @@ nsStorageStream::Close()
     
     PRInt32 segmentOffset = SegOffset(mLogicalLength);
 
+    // Shrink the final segment in the segmented buffer to the minimum size
+    // needed to contain the data, so as to conserve memory.
     if (segmentOffset)
         mSegmentedBuffer->ReallocLastSegment(segmentOffset);
     
@@ -128,7 +136,7 @@ nsStorageStream::Write(const char *aBuffer, PRUint32 aCount, PRUint32 *aNumWritt
     PRUint32 count, availableInSegment, remaining;
     nsresult rv = NS_OK;
 
-    NS_ENSURE_ARG(aNumWritten);
+    NS_ENSURE_ARG_POINTER(aNumWritten);
     NS_ENSURE_ARG(aBuffer);
 
     remaining = aCount;
@@ -168,6 +176,7 @@ nsStorageStream::GetLength(PRUint32 *aLength)
     return NS_OK;
 }
 
+// Truncate the buffer by deleting the end segments
 NS_IMETHODIMP
 nsStorageStream::SetLength(PRUint32 aLength)
 {
@@ -207,13 +216,14 @@ nsStorageStream::Seek(PRInt32 aPosition)
     if (aPosition == -1)
         aPosition = mLogicalLength;
 
-    // Seeking ahead of the stream end is illegal
+    // Seeking beyond the buffer end is illegal
     if ((PRUint32)aPosition > mLogicalLength)
         return NS_ERROR_INVALID_ARG;
 
     // Seeking backwards in the write stream results in truncation
     SetLength(aPosition);
 
+    // Special handling for seek to start-of-buffer
     if (aPosition == 0) {
         mWriteCursor = 0;
         mSegmentEnd = 0;
@@ -228,6 +238,7 @@ nsStorageStream::Seek(PRInt32 aPosition)
     return NS_OK;
 }
 
+// There can be many nsStorageInputStreams for a single nsStorageStream
 class nsStorageInputStream : public nsIInputStream
 {
 public:
@@ -256,11 +267,11 @@ protected:
     friend class nsStorageStream;
 
 private:
-    const char*      mReadCursor;    // Next memory location to read byte or NULL
+    const char*      mReadCursor;    // Next memory location to read byte, or NULL
     const char*      mSegmentEnd;    // One byte past end of current buffer segment
-    PRUint32         mSegmentNum;
+    PRUint32         mSegmentNum;    // Segment number containing read cursor
     PRUint32         mSegmentSize;   // All segments, except the last, are of this size
-    PRUint32         mLogicalCursor;
+    PRUint32         mLogicalCursor; // Logical offset into stream
     nsStorageStream* mStorageStream;
 
     PRUint32 SegNum(PRUint32 aPosition)    {return aPosition >> mStorageStream->mSegmentSizeLog2;}
