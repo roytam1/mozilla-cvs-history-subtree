@@ -2816,10 +2816,117 @@ nsresult nsChromeRegistry::UninstallFromDynamicDataSource(const nsACString& aPac
   return rv;
 }
 
+static nsresult CleanResource(nsIRDFDataSource* aDS, nsIRDFResource* aResource)
+{
+  nsresult rv;
+
+  nsCOMPtr<nsISimpleEnumerator> arcs;
+  for (PRInt32 i = 0; i < 2; ++i) {
+    rv = i == 0 ? aDS->ArcLabelsOut(aResource, getter_AddRefs(arcs)) 
+                : aDS->ArcLabelsIn(aResource, getter_AddRefs(arcs)) ;
+    if (NS_FAILED(rv)) return rv;
+    do {
+      PRBool hasMore;
+      arcs->HasMoreElements(&hasMore);
+
+      if (!hasMore)
+        break;
+
+      nsCOMPtr<nsISupports> supp;
+      arcs->GetNext(getter_AddRefs(supp));
+
+      nsCOMPtr<nsIRDFResource> prop(do_QueryInterface(supp));
+      nsCOMPtr<nsIRDFNode> target;
+      rv = aDS->GetTarget(aResource, prop, PR_TRUE, getter_AddRefs(target));
+      if (NS_FAILED(rv)) continue;
+
+      aDS->Unassert(aResource, prop, target);
+    }
+    while (1);
+  }
+
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsChromeRegistry::UninstallPackage(const nsACString& aPackageName, PRBool aUseProfile)
 {
+  nsresult rv;
+
+  // Uninstalling a package is a three step process:
+  //
+  // 1) Unhook all secondary resources
+  // 2) Remove the package from the package list
+  // 3) Remove references in the Dynamic Datasources (overlayinfo).
+  //
+  // Details:
+  // 1) The Chrome Registry holds information about a package like this:
+  //
+  //   urn:mozilla:package:root
+  //   --> urn:mozilla:package:newext1
+  //       --> c:baseURL = <BASEURL>
+  //       --> c:locType = "install"
+  //       --> c:name    = "newext1"
+  //
+  //   urn:mozilla:skin:classic/1.0:packages
+  //   --> urn:mozilla:skin:classic/1.0:newext1
+  //       --> c:baseURL = <BASEURL>
+  //       --> c:package = urn:mozilla:package:newext1
+  //
+  //   urn:mozilla:locale:en-US:packages
+  //   --> urn:mozilla:locale:en-US:newext1
+  //       --> c:baseURL = <BASEURL>
+  //       --> c:package = urn:mozilla:package:newext1
+  //
+  // We need to follow chrome:package arcs from the package resource to 
+  // secondary resources and then clean them. This is so that a subsequent
+  // installation of the same package into the opposite datasource (profile
+  // vs. install) does not result in the chrome registry telling the necko
+  // to load from the wrong location by "hitting" on redundant entries in
+  // the opposing datasource first.
+  //
+  // 2) Then we have to clean the resource and remove it from the package list.
+  // 3) Then update the dynamic datasources.
+  //
+
+  nsCAutoString packageResourceURI("urn:mozilla:package:");
+  packageResourceURI += aPackageName;
+
+  nsCOMPtr<nsIRDFResource> packageResource;
+  GetResource(packageResourceURI, getter_AddRefs(packageResource));
+
+  // Instantiate the data source we wish to modify.
+  nsCOMPtr<nsIRDFDataSource> installSource;
+  rv = LoadDataSource(kChromeFileName, getter_AddRefs(installSource), aUseProfile, nsnull);
+  if (NS_FAILED(rv)) return rv;
+  NS_ASSERTION(installSource, "failed to get installSource");
+
+  nsCOMPtr<nsISimpleEnumerator> sources;
+  rv = installSource->GetSources(mPackage, packageResource, PR_TRUE, 
+                                 getter_AddRefs(sources));
+  if (NS_FAILED(rv)) return rv;
+
+  do {
+    PRBool hasMore;
+    sources->HasMoreElements(&hasMore);
+
+    if (!hasMore)
+      break;
+
+    nsCOMPtr<nsISupports> supp;
+    sources->GetNext(getter_AddRefs(supp));
+
+    nsCOMPtr<nsIRDFResource> res(do_QueryInterface(supp));
+    rv = CleanResource(installSource, res);
+    if (NS_FAILED(rv)) continue;
+  }
+  while (1);
+
+  // Clean the package resource
+  rv = CleanResource(installSource, packageResource);
+  if (NS_FAILED(rv)) return rv;
+
   // Remove the package from the package list
-  nsresult rv = UninstallProvider(NS_LITERAL_CSTRING("package"), aPackageName, aUseProfile);
+  rv = UninstallProvider(NS_LITERAL_CSTRING("package"), aPackageName, aUseProfile);
   if (NS_FAILED(rv)) return rv;
 
   rv = UninstallFromDynamicDataSource(aPackageName, PR_TRUE, aUseProfile);

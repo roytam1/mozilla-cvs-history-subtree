@@ -1919,7 +1919,15 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
       nsCOMPtr<nsIExtensionManager> em(do_GetService("@mozilla.org/extensions/manager;1"));
       NS_ENSURE_TRUE(em, 1);
 
-      char* noEMRestart = PR_GetEnv("NO_EM_RESTART");
+      if (CheckArg("install-global-extension") || 
+          CheckArg("install-global-theme") || CheckArg("list-global-items") || 
+          CheckArg("lock-item") || CheckArg("unlock-item")) {
+        // Do the required processing and then shut down.
+        em->HandleCommandLineArgs();
+        return 0;
+      }
+
+          char* noEMRestart = PR_GetEnv("NO_EM_RESTART");
       noRestart = noEMRestart && !strcmp("1", noEMRestart);
       if (!noRestart && upgraded)
         em->CheckForMismatches(&needsRestart);

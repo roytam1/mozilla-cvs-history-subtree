@@ -793,7 +793,7 @@ nsExtensionInstaller.prototype = {
   },
   
   _registerChrome: function (aFile, aChromeType, aPath)
-  {
+  { 
     var fileURL = getURLSpecFromFile(aFile);
     if (!aFile.isDirectory()) // .jar files
       fileURL = "jar:" + fileURL + "!/" + aPath;
@@ -1211,41 +1211,6 @@ function nsExtensionManager()
   os.addObserver(this, "profile-after-change", false);
 
   ensureExtensionsFiles(false);
-
-  var cmdLineSvc = Components.classes["@mozilla.org/appshell/commandLineService;1"]
-                             .getService(Components.interfaces.nsICmdLineService);
-  var globalExtension = cmdLineSvc.getCmdLineValue("-install-global-extension");
-  if (globalExtension)
-    this._checkForGlobalInstalls(globalExtension, nsIUpdateItem.TYPE_EXTENSION);
-    
-  var globalTheme = cmdLineSvc.getCmdLineValue("-install-global-theme");
-  if (globalTheme)
-    this._checkForGlobalInstalls(globalTheme, nsIUpdateItem.TYPE_THEME);
-  
-  var showList = cmdLineSvc.getCmdLineValue("-list-global-items");
-  if (showList)
-    this._showGlobalItemList();
-    
-  var locked = cmdLineSvc.getCmdLineValue("-lock-item");
-  if (locked) {
-    this._ensureDS();
-    this._ds.lockUnlockItem(locked, true);
-  }
-
-  var unlocked = cmdLineSvc.getCmdLineValue("-unlock-item");
-  if (unlocked) {
-    this._ensureDS();
-    this._ds.lockUnlockItem(unlocked, false);
-  }
-
-  var needsToQuit = globalExtension || globalTheme || showList || locked || unlocked;
-  if (needsToQuit) {
-    // If we did a global install, shut down the app now. 
-    // XXXben - change to nsIAppStartup w/bsmedberg change
-    var appStartup = Components.classes["@mozilla.org/appshell/appShellService;1"]
-                               .getService(Components.interfaces.nsIAppShellService);
-    appStartup.quit(Components.interfaces.nsIAppShellService.eForceQuit);          
-  }
 }
 
 nsExtensionManager.prototype = {
@@ -1382,6 +1347,37 @@ nsExtensionManager.prototype = {
     return needsRestart;
   },
 
+  handleCommandLineArgs: function ()
+  {
+    var cmdLineSvc = Components.classes["@mozilla.org/appshell/commandLineService;1"]
+                              .getService(Components.interfaces.nsICmdLineService);
+    var globalExtension = cmdLineSvc.getCmdLineValue("-install-global-extension");
+    if (globalExtension)
+      this._checkForGlobalInstalls(globalExtension, nsIUpdateItem.TYPE_EXTENSION);
+      
+    var globalTheme = cmdLineSvc.getCmdLineValue("-install-global-theme");
+    if (globalTheme)
+      this._checkForGlobalInstalls(globalTheme, nsIUpdateItem.TYPE_THEME);
+    
+    var showList = cmdLineSvc.getCmdLineValue("-list-global-items");
+    if (showList)
+      this._showGlobalItemList();
+      
+    var locked = cmdLineSvc.getCmdLineValue("-lock-item");
+    if (locked) {
+      this._ensureDS();
+      this._ds.lockUnlockItem(locked, true);
+    }
+
+    var unlocked = cmdLineSvc.getCmdLineValue("-unlock-item");
+    if (unlocked) {
+      this._ensureDS();
+      this._ds.lockUnlockItem(unlocked, false);
+    }
+    
+    this._finishOperations();
+  },
+
   _cancelDownloads: function ()
   {
     var os = Components.classes["@mozilla.org/observer-service;1"]
@@ -1511,11 +1507,11 @@ nsExtensionManager.prototype = {
     dump(bundle.GetStringFromName("globalItemListExtensions"));
     var items = this.getItemList(null, nsIUpdateItem.TYPE_EXTENSION, {});
     for (var i = 0; i < items.length; ++i)
-      dump(" " + items[i].id + "   " + items[i].name + "\n");
+      dump(" " + items[i].id + "   " + items[i].name + " " + items[i].version + "\n");
     dump(bundle.GetStringFromName("globalItemListThemes"));
     items = this.getItemList(null, nsIUpdateItem.TYPE_THEME, {});
     for (var i = 0; i < items.length; ++i)
-      dump(" " + items[i].id + "   " + items[i].name + "\n");
+      dump(" " + items[i].id + "   " + items[i].name + " " + items[i].version + "\n");
       
     dump("\n\n");
   },
@@ -2923,8 +2919,8 @@ nsExtensionsDataSource.prototype = {
         var newVersionInfo = newVersionInfos.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
         var anon = this._rdf.GetAnonymousResource();
         targetDS.Assert(anon, idRes, aSourceDS.GetTarget(newVersionInfo, idRes, true), true);
-        targetDS.Assert(anon, idRes, aSourceDS.GetTarget(newVersionInfo, minVersionRes, true), true);
-        targetDS.Assert(anon, idRes, aSourceDS.GetTarget(newVersionInfo, maxVersionRes, true), true);
+        targetDS.Assert(anon, minVersionRes, aSourceDS.GetTarget(newVersionInfo, minVersionRes, true), true);
+        targetDS.Assert(anon, maxVersionRes, aSourceDS.GetTarget(newVersionInfo, maxVersionRes, true), true);
         targetDS.Assert(targetRes, property, anon, true);
       }
     }
@@ -3017,6 +3013,16 @@ nsExtensionsDataSource.prototype = {
     var item = this._rdf.GetResource(getItemPrefix(aItemType) + aItemID);
     var isProfile = this.isProfileItem(aItemID);
     var ds = isProfile ? this._profileExtensions : this._appExtensions;
+    
+    var resources = ["targetApplication", "requires"];
+    for (var i = 0; i < resources.length; ++i) {
+      var targetApps = ds.GetTargets(item, this._emR(resources[i]), true);
+      while (targetApps.hasMoreElements()) {
+        var targetApp = targetApps.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+        this._cleanResource(targetApp, ds);
+      }
+    }
+
     this._cleanResource(item, ds);
   },
   

@@ -259,6 +259,7 @@ XPInstallDownloadManager.prototype = {
       element.setAttribute("state", "installing");
       break;
     case nsIXPIProgressDialog.INSTALL_DONE:
+      dump("*** state change = " + aURL + ", state = " + aState + ", value = " + aValue + "\n");
       element.setAttribute("state", "done");
       var msg;
       if (aValue != 0) {
@@ -616,7 +617,7 @@ var gExtensionsViewController = {
       cr.refreshSkins();
 
       // disable the useThemeButton
-      gExtensionsViewController.onCommandUpdate();</pre>
+      gExtensionsViewController.onCommandUpdate();
     },
       
     cmd_options: function ()
