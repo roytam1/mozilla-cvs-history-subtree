@@ -170,6 +170,11 @@ public:
   NS_IMETHOD Init(nsIPresContext* aPresContext, nsIContent* aContent,
                   nsIFrame* aParent, nsIStyleContext* aContext, nsIFrame* aPrevInFlow);
   NS_IMETHOD Destroy(nsIPresContext* aPresContext);
+  NS_IMETHOD Reflow(nsIPresContext* aPresContext,
+                    nsHTMLReflowMetrics& aReflowMetrics,
+                    const nsHTMLReflowState& aReflowState,
+                    nsReflowStatus& aStatus);
+
 
   // Painting methods.
   // Paint is the generic nsIFrame paint method.  We override this method
@@ -249,7 +254,7 @@ protected:
   void PrefillPropertyArray(PRInt32 aRowIndex, const PRUnichar* aColID);
 
   // Our internal scroll method, used by all the public scroll methods.
-  nsresult ScrollInternal(PRInt32 aRow, PRBool aUpdateScrollbar);
+  nsresult ScrollInternal(PRInt32 aRow);
 
 protected: // Data Members
   // Our cached pres context.

@@ -276,6 +276,29 @@ nsOutlinerBodyFrame::Destroy(nsIPresContext* aPresContext)
   return nsLeafBoxFrame::Destroy(aPresContext);
 }
 
+NS_IMETHODIMP nsOutlinerBodyFrame::Reflow(nsIPresContext* aPresContext,
+                                          nsHTMLReflowMetrics& aReflowMetrics,
+                                          const nsHTMLReflowState& aReflowState,
+                                          nsReflowStatus& aStatus)
+{
+  if ( mView && aReflowState.reason == eReflowReason_Resize) {
+    mInnerBox = GetInnerBox();
+    mPageCount = mInnerBox.height / mRowHeight;
+
+    PRInt32 rowCount;
+    mView->GetRowCount(&rowCount);
+    PRInt32 lastPageTopRow = rowCount - mPageCount;
+    if (mTopRowIndex >= lastPageTopRow)
+      ScrollToRow(lastPageTopRow);
+
+    InvalidateScrollbar();
+  }
+
+//  nsLeafBoxFrame::Reflow(aPresContext, aReflowMetrics, aReflowState, aStatus);
+
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsOutlinerBodyFrame::GetView(nsIOutlinerView * *aView)
 {
   *aView = mView;
@@ -1124,7 +1147,10 @@ NS_IMETHODIMP nsOutlinerBodyFrame::EnsureRowIsVisible(PRInt32 aRow)
 
 NS_IMETHODIMP nsOutlinerBodyFrame::ScrollToRow(PRInt32 aRow)
 {
-  return ScrollInternal(aRow, PR_TRUE);
+  ScrollInternal(aRow);
+  UpdateScrollbar();
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsOutlinerBodyFrame::ScrollByLines(PRInt32 aNumLines)
@@ -1142,8 +1168,8 @@ NS_IMETHODIMP nsOutlinerBodyFrame::ScrollByLines(PRInt32 aNumLines)
     if (newIndex > lastPageTopRow)
       newIndex = lastPageTopRow;
   }
-  ScrollInternal(newIndex, PR_TRUE);
-  
+  ScrollToRow(newIndex);
+    
   return NS_OK;
 }
 
@@ -1162,13 +1188,13 @@ NS_IMETHODIMP nsOutlinerBodyFrame::ScrollByPages(PRInt32 aNumPages)
     if (newIndex > lastPageTopRow)
       newIndex = lastPageTopRow;
   }
-  ScrollInternal(newIndex, PR_TRUE);
-  
+  ScrollToRow(newIndex);
+    
   return NS_OK;
 }
 
 nsresult
-nsOutlinerBodyFrame::ScrollInternal(PRInt32 aRow, PRBool aUpdateScrollbar)
+nsOutlinerBodyFrame::ScrollInternal(PRInt32 aRow)
 {
   if (!mView)
     return NS_OK;
@@ -1204,9 +1230,6 @@ nsOutlinerBodyFrame::ScrollInternal(PRInt32 aRow, PRBool aUpdateScrollbar)
   else if (mOutlinerWidget)
     mOutlinerWidget->Scroll(0, -delta*rowHeightAsPixels, nsnull);
  
-  if (aUpdateScrollbar)
-    UpdateScrollbar();
-    
   return NS_OK;
 }
 
@@ -1231,7 +1254,7 @@ nsOutlinerBodyFrame::PositionChanged(PRInt32 aOldIndex, PRInt32& aNewIndex)
   nscoord newrow = aNewIndex/rh;
 
   if (oldrow != newrow)
-    ScrollInternal(newrow, PR_FALSE);
+    ScrollInternal(newrow);
 
   // Go exactly where we're supposed to
   // Update the scrollbar.
