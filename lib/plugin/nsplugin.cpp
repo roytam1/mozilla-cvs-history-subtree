@@ -29,8 +29,8 @@
 #ifdef OJI
 #include "nsplugin.h"
 #include "jvmmgr.h" 
-#include "plstr.h" /* PL_strcasecmp */
 #endif
+#include "plstr.h" /* PL_strcasecmp */
 
 #include "xp_mem.h"
 #include "xpassert.h" 
@@ -268,7 +268,7 @@ nsPluginInstancePeer::GetAttributes(PRUint16& n,
         // munged together under MOZ_JAVA...
         names = (const char*const*) ndata->lo_struct->attribute_list;
         values = (const char*const*) ndata->lo_struct->value_list;
-        n = (PRUint16) ndata->lO_struct->attribute_cnt;
+        n = (PRUint16) ndata->lo_struct->attribute_cnt;
 #endif
 
         return NPPluginError_NoError;
