@@ -197,10 +197,6 @@ public:
                     nsFramePaintLayer    aWhichLayer,
                     PRUint32             aFlags = 0);
 
-
-  // returns true if it is an Initial Reflow and doing Print Preview
-  static PRBool IsInitialReflowForPrintPreview(nsBoxLayoutState& aState, PRBool& aIsChrome);
-
   nsIBox* GetBoxAt(PRInt32 aIndex) { return mFrames.FrameAt(aIndex); }
   PRInt32 GetChildCount() { return mFrames.GetLength(); }
   

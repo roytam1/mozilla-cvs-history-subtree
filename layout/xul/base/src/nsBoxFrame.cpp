@@ -719,34 +719,6 @@ static void printSize(char * aDesc, nscoord aSize)
 }
 #endif
 
-/**
-  * Returns PR_TRUE when the reflow reason is "Initial" and doing Print Preview
-  *         when returning PR_FALSE aIsChrome's value is indeterminate
-  * aIsChrome - Returns PR_TRUE when document is chrome, otherwise PR_FALSE
-  */
-PRBool
-nsBoxFrame::IsInitialReflowForPrintPreview(nsBoxLayoutState& aState, 
-                                           PRBool& aIsChrome)
-{
-  aIsChrome = PR_FALSE;
-  const nsHTMLReflowState* reflowState = aState.GetReflowState();
-  if (reflowState->reason == eReflowReason_Initial) {
-    // See if we are doing Print Preview
-    if (aState.PresContext()->Type() == nsPresContext::eContext_PrintPreview) {
-      // Now, get the current URI to see if we doing chrome
-      nsIPresShell *presShell = aState.PresShell();
-      if (!presShell) return PR_FALSE;
-      nsIDocument *doc = presShell->GetDocument();
-      if (!doc) return PR_FALSE;
-      nsIURI *uri = doc->GetDocumentURI();
-      if (!uri) return PR_FALSE;
-      uri->SchemeIs("chrome", &aIsChrome);
-      return PR_TRUE;
-    }
-  }
-  return PR_FALSE;
-}
-
 NS_IMETHODIMP
 nsBoxFrame::Reflow(nsPresContext*          aPresContext,
                    nsHTMLReflowMetrics&     aDesiredSize,
@@ -856,15 +828,7 @@ nsBoxFrame::Reflow(nsPresContext*          aPresContext,
   // getting the ascent could be a lot of work. Don't get it if
   // we are the root. The viewport doesn't care about it.
   if (!(mState & NS_STATE_IS_ROOT)) {
-    // Only call GetAscent when not doing Initial reflow while in PP
-    // or when it is Initial reflow while in PP and a chrome doc
-    // If called again with initial reflow it crashes because the 
-    // frames are fully constructed (I think).
-    PRBool isChrome;
-    PRBool isInitialPP = IsInitialReflowForPrintPreview(state, isChrome);
-    if (!isInitialPP || (isInitialPP && isChrome)) {
-      GetAscent(state, ascent);
-    }
+    GetAscent(state, ascent);
   }
 
   aDesiredSize.width  = mRect.width;

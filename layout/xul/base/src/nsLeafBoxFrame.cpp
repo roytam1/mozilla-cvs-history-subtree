@@ -328,16 +328,7 @@ nsLeafBoxFrame::Reflow(nsPresContext*   aPresContext,
   
   // get the ascent
   nscoord ascent = mRect.height;
-
-  // Only call GetAscent when not doing Initial reflow while in PP
-  // or when it is Initial reflow while in PP and a chrome doc
-  // If called again with initial reflow it crashes because the 
-  // frames are fully constructed (I think).
-  PRBool isChrome;
-  PRBool isInitialPP = nsBoxFrame::IsInitialReflowForPrintPreview(state, isChrome);
-  if (!isInitialPP || (isInitialPP && isChrome)) {
-    GetAscent(state, ascent);
-  }
+  GetAscent(state, ascent);
 
   aDesiredSize.width  = mRect.width;
   aDesiredSize.height = mRect.height;
