@@ -717,11 +717,11 @@ nsXBLService::LoadBindings(nsIContent* aContent, const nsAReadableString& aURL, 
   // Tell the binding to build the anonymous content.
   newBinding->GenerateAnonymousContent();
 
-  // Set up our properties
-  newBinding->InstallProperties();
-
   // Tell the binding to install event handlers
   newBinding->InstallEventHandlers();
+
+  // Set up our properties
+  newBinding->InstallProperties();
 
   // Figure out if we need to execute a constructor.
   newBinding->GetFirstBindingWithConstructor(aBinding);
