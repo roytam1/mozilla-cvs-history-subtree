@@ -298,10 +298,10 @@ nsXULPrototypeDocument::Write(nsIObjectOutputStream* aStream)
     rv = mGlobalObject->GetContext(getter_AddRefs(scriptContext));
     if (NS_FAILED(rv)) return rv;
 
+#if 0
     rv = mRoot->Serialize(aStream, scriptContext);
     if (NS_FAILED(rv)) return rv;
 
-#if 0
     nsCOMPtr<nsISupportsArray> mStyleSheetReferences;
     nsCOMPtr<nsISupportsArray> mOverlayReferences;
     nsCOMPtr<nsIPrincipal> mDocumentPrincipal;

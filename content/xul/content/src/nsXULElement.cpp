@@ -4909,6 +4909,9 @@ nsXULPrototypeScript::Deserialize(nsIObjectInputStream* aStream,
                 if (! mJSObject) {
                     rv = NS_ERROR_OUT_OF_MEMORY;    // certain error
                     ::JS_DestroyScript(cx, script);
+                } else {
+                    rv = AddJSGCRoot(cx, &mJSObject,
+                                     "nsXULPrototypeScript::mJSObject");
                 }
             }
 
@@ -4932,7 +4935,7 @@ nsXULPrototypeScript::Deserialize(nsIObjectInputStream* aStream,
             // the JSXDRState.  So we steal it back, nulling xdr's buffer so it
             // doesn't get passed to ::JS_free by ::JS_XDRDestroy.
 
-            data = ::JS_XDRMemGetData(xdr, &size);
+            data = (void*) ::JS_XDRMemGetData(xdr, &size);
             if (data)
                 ::JS_XDRMemSetData(xdr, NULL, 0);
             ::JS_XDRDestroy(xdr);
@@ -4953,6 +4956,8 @@ nsXULPrototypeScript::Deserialize(nsIObjectInputStream* aStream,
     return NS_OK;
 }
 
+// XXXbe temporary, goes away when we serialize entire XUL prototype document
+#include "nsIFastLoadService.h"
 
 nsresult
 nsXULPrototypeScript::Compile(const PRUnichar* aText,
@@ -5034,6 +5039,19 @@ nsXULPrototypeScript::Compile(const PRUnichar* aText,
         rv = AddJSGCRoot(cx, &mJSObject, "nsXULPrototypeScript::mJSObject");
         if (NS_FAILED(rv))
             return rv;
+
+        // XXXbe temporary, until we serialize/deserialize everything from the
+        //       nsXULPrototypeDocument on down...
+        nsCOMPtr<nsIFastLoadService> fastLoadService(do_GetService(NS_FAST_LOAD_SERVICE_CONTRACTID));
+        nsCOMPtr<nsIObjectOutputStream> objectOutput;
+        fastLoadService->GetCurrentOutputStream(getter_AddRefs(objectOutput));
+        if (objectOutput) {
+            rv = Serialize(objectOutput, context);
+            if (NS_FAILED(rv)) {
+                // XXXbe remove FastLoad file
+                fastLoadService->SetCurrentOutputStream(nsnull);
+            }
+        }
     }
 
     return NS_OK;

@@ -737,6 +737,7 @@ nsXULDocument::StartDocumentLoad(const char* aCommand,
         // serialize to mObjectOutputStream.
         if (nsCRT::strcmp(aCommand, "view-source") != 0) {
             InitFastLoad(mDocumentURL);
+#if 0
             if (mObjectInputStream) {
                 // XXXbe skip the prototype document header so we can pull
                 //       scripts from the stream as we sink content
@@ -753,6 +754,7 @@ nsXULDocument::StartDocumentLoad(const char* aCommand,
                 NS_ASSERTION(equals, "bad URI in object stream!");
 #endif
             }
+#endif
         }
 
         // It's just a vanilla document load. Create a parser to deal
@@ -4277,6 +4279,16 @@ nsXULDocument::CreateElement(nsINodeInfo *aNodeInfo, nsIContent** aResult)
 }
 
 
+// XXXbe move to nsXULPrototypeDocument.cpp in the nsISerializable section.
+// We'll increment (or maybe decrement, for easier deciphering) this maigc
+// number as we flesh out the FastLoad file to include more and more data
+// induced by the master prototype document.
+
+#define XUL_PROTOTYPE_DOCUMENT_SERIALIZATION_VERSION  0xfeedbeef
+
+#define XUL_SERIALIZATION_BUFFER_SIZE   (64 * 1024)
+#define XUL_DESERIALIZATION_BUFFER_SIZE (8 * 1024)
+
 nsresult
 nsXULDocument::InitFastLoad(nsIURI* aURI)
 {
@@ -4303,34 +4315,57 @@ nsXULDocument::InitFastLoad(nsIURI* aURI)
 
     PRBool exists = PR_FALSE;
     if (NS_SUCCEEDED(file->Exists(&exists)) && exists) {
-        // XXXbe wrap with a buffering stream
         nsCOMPtr<nsIInputStream> fileInput;
         rv = NS_NewLocalFileInputStream(getter_AddRefs(fileInput), file);
         if (NS_FAILED(rv)) return rv;
 
+        nsCOMPtr<nsIInputStream> bufferedInput;
+        rv = NS_NewBufferedInputStream(getter_AddRefs(bufferedInput),
+                                       fileInput,
+                                       XUL_DESERIALIZATION_BUFFER_SIZE);
+        if (NS_FAILED(rv)) return rv;
+
         nsCOMPtr<nsIObjectInputStream> objectInput;
         PRUint32 checksum;
-        rv = fastLoadService->NewInputStream(fileInput, &checksum,
+        rv = fastLoadService->NewInputStream(bufferedInput, &checksum,
                                              getter_AddRefs(objectInput));
         if (NS_FAILED(rv)) return rv;
 
         // XXXbe verify checksum, clear exists if bad
         // XXXbe check dependencies, clear exists if any are newer
-        // else
+
+        // XXXbe version number, then scripts only for now -- bump
+        // version later when rest of prototype document header is
+        // serialized
+        PRUint32 version;
+        rv = objectInput->Read32(&version);
+        NS_ASSERTION(version == XUL_PROTOTYPE_DOCUMENT_SERIALIZATION_VERSION,
+                     "bad FastLoad file version");
+        if (version != XUL_PROTOTYPE_DOCUMENT_SERIALIZATION_VERSION)
+            return NS_ERROR_UNEXPECTED;
 
         fastLoadService->SetCurrentInputStream(objectInput);
         mObjectInputStream = objectInput;
     }
     
     if (! exists) {
-        // XXXbe wrap with a buffering stream
         nsCOMPtr<nsIOutputStream> fileOutput;
         rv = NS_NewLocalFileOutputStream(getter_AddRefs(fileOutput), file);
         if (NS_FAILED(rv)) return rv;
 
+        nsCOMPtr<nsIOutputStream> bufferedOutput;
+        rv = NS_NewBufferedOutputStream(getter_AddRefs(bufferedOutput),
+                                        fileOutput,
+                                        XUL_SERIALIZATION_BUFFER_SIZE);
+        if (NS_FAILED(rv)) return rv;
+
         nsCOMPtr<nsIObjectOutputStream> objectOutput;
-        rv = fastLoadService->NewOutputStream(fileOutput,
+        rv = fastLoadService->NewOutputStream(bufferedOutput,
                                               getter_AddRefs(objectOutput));
+        if (NS_FAILED(rv)) return rv;
+
+        PRUint32 version = XUL_PROTOTYPE_DOCUMENT_SERIALIZATION_VERSION;
+        rv = objectOutput->Write32(version);
         if (NS_FAILED(rv)) return rv;
 
         fastLoadService->SetCurrentOutputStream(objectOutput);
@@ -5091,7 +5126,10 @@ nsXULDocument::ResumeWalk()
             gFastLoadService->SetCurrentOutputStream(nsnull);
         mObjectOutputStream = nsnull;
 
+#if 0
+        // XXXbe for now, write scripts as we sink content...
         objectOutput->WriteObject(mMasterPrototype, PR_TRUE);
+#endif
         objectOutput->Close();
     }
 
