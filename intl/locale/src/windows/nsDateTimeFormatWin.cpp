@@ -77,6 +77,7 @@ nsresult nsDateTimeFormatWin::Initialize(nsILocale* locale)
     }
   }
 
+#if !defined(WINCE)
   // get os version
   OSVERSIONINFO os;
   os.dwOSVersionInfoSize = sizeof(os);
@@ -88,6 +89,9 @@ nsresult nsDateTimeFormatWin::Initialize(nsILocale* locale)
   else {
     mW_API = PR_FALSE;
   }
+#else /* WINCE */
+    mW_API = PR_TRUE;   // has W API
+#endif /* WINCE */
 
   // default LCID (en-US)
   mLCID = 1033;
@@ -293,6 +297,7 @@ int nsDateTimeFormatWin::nsGetTimeFormatW(DWORD dwFlags, const SYSTEMTIME *lpTim
     LPCWSTR wstr = format ? (LPCWSTR) formatString.get() : NULL;
     len = GetTimeFormatW(mLCID, dwFlags, lpTime, wstr, (LPWSTR) timeStr, cchTime);
   }
+#if !defined(WINCE)
   else {
     char cstr_time[NSDATETIMEFORMAT_BUFFER_LEN];
 
@@ -303,6 +308,10 @@ int nsDateTimeFormatWin::nsGetTimeFormatW(DWORD dwFlags, const SYSTEMTIME *lpTim
     if (len > 0)
       len = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (LPCSTR) cstr_time, len, (LPWSTR) timeStr, cchTime);
   }
+#else /* WINCE */
+    NS_ASSERTION(0, "mW_API should be set!");
+#endif /* WINCE */
+
   return len;
 }
 
@@ -316,6 +325,7 @@ int nsDateTimeFormatWin::nsGetDateFormatW(DWORD dwFlags, const SYSTEMTIME *lpDat
     LPCWSTR wstr = format ? (LPCWSTR) formatString.get() : NULL;
     len = GetDateFormatW(mLCID, dwFlags, lpDate, wstr, (LPWSTR) dateStr, cchDate);
   }
+#if !defined(WINCE)
   else {
     char cstr_date[NSDATETIMEFORMAT_BUFFER_LEN];
 
@@ -326,5 +336,9 @@ int nsDateTimeFormatWin::nsGetDateFormatW(DWORD dwFlags, const SYSTEMTIME *lpDat
     if (len > 0)
       len = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (LPCSTR) cstr_date, len, (LPWSTR) dateStr, cchDate);
   }
+#else /* WINCE */
+    NS_ASSERTION(0, "mW_API should be set!");
+#endif /* WINCE */
+
   return len;
 }

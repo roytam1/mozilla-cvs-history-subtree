@@ -77,6 +77,7 @@ nsresult nsCollationWin::Initialize(nsILocale* locale)
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
+#if !defined(WINCE)
   OSVERSIONINFO os;
   os.dwOSVersionInfoSize = sizeof(os);
   ::GetVersionEx(&os);
@@ -87,6 +88,10 @@ nsresult nsCollationWin::Initialize(nsILocale* locale)
   else {
     mW_API = PR_FALSE;
   }
+#else
+    // WinCE is unicode-only.
+    mW_API = PR_TRUE;
+#endif
 
   // default charset name
   mCharset.Assign(NS_LITERAL_STRING("ISO-8859-1"));
@@ -158,12 +163,16 @@ nsresult nsCollationWin::GetSortKeyLen(const nsCollationStrength strength,
                            (int) stringIn.Length(), NULL, 0);
   }
   else {
+#if !defined(WINCE)
     char *Cstr = nsnull;
     res = mCollation->UnicodeToChar(stringIn, &Cstr, mCharset);
     if (NS_SUCCEEDED(res) && Cstr != nsnull) {
       *outLen = LCMapStringA(mLCID, LCMAP_SORTKEY, Cstr, PL_strlen(Cstr), NULL, 0);
       PR_Free(Cstr);
     }
+#else /* WINCE */
+    NS_ASSERTION(0, "mW_API should be set!");
+#endif /* WINCE */
   }
 
   return res;
@@ -187,12 +196,16 @@ nsresult nsCollationWin::CreateRawSortKey(const nsCollationStrength strength,
                           (LPCWSTR) stringNormalized.get(), (int) stringNormalized.Length(), (LPWSTR) key, *outLen);
   }
   else {
+#if !defined(WINCE)
     char *Cstr = nsnull;
     res = mCollation->UnicodeToChar(stringNormalized, &Cstr, mCharset);
     if (NS_SUCCEEDED(res) && Cstr != nsnull) {
       byteLen = LCMapStringA(mLCID, LCMAP_SORTKEY, Cstr, PL_strlen(Cstr), (char *) key, (int) *outLen);
       PR_Free(Cstr);
     }
+#else /* WINCE */
+    NS_ASSERTION(0, "mW_API should be set!");
+#endif /* WINCE */
   }
   *outLen = (PRUint32) byteLen;
 
