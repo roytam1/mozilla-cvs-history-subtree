@@ -711,7 +711,7 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
     lm->next = pr_loadmap;
     pr_loadmap = lm;
     }
-#elif defined(XP_MAC) && !GENERATINGCFM
+#elif defined(XP_MAC) && !TARGET_RT_MAC_CFM
     {
 
     }
