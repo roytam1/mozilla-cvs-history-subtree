@@ -42,7 +42,6 @@
 #include "nsIDOMNSLocation.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsIDOMJSWindow.h"
-#include "nsIDOMEventProp.h"
 #include "nsIJSScriptObject.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsITimer.h"
@@ -87,8 +86,7 @@ class GlobalWindowImpl : public nsIScriptGlobalObject,
                          public nsIDOMEventReceiver,
                          public nsPIDOMWindow,
                          public nsIDOMViewCSS,
-                         public nsSupportsWeakReference,
-                         public nsIDOMEventProp
+                         public nsSupportsWeakReference
 {
 public:
   // nsISupports
@@ -185,9 +183,6 @@ public:
   // nsIDOMAbstractView
   NS_DECL_NSIDOMABSTRACTVIEW
 
-  // nsIDOMEventProp
-  NS_DECL_NSIDOMEVENTPROP
-
 public:
   // Object Management
   GlobalWindowImpl();
@@ -222,8 +217,6 @@ protected:
   nsresult GetWebBrowserChrome(nsIWebBrowserChrome** aBrowserChrome);
   nsresult GetScrollInfo(nsIScrollableView** aScrollableView, float* aP2T,
                          float* aT2P);
-  nsresult RegisterCompileEventListener(const char* aEventName,
-                                        PRBool aCompile);
 
   void FlushPendingNotifications();
   nsresult CheckSecurityWidthAndHeight(PRInt32* width, PRInt32* height);

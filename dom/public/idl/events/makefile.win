@@ -26,7 +26,6 @@ MODULE=dom_events
 XPIDLSRCS =					\
 	.\nsIDOMDocumentEvent.idl		\
 	.\nsIDOMEvent.idl			\
-	.\nsIDOMEventProp.idl			\
 	.\nsIDOMEventTarget.idl			\
 	.\nsIDOMKeyEvent.idl			\
 	.\nsIDOMMouseEvent.idl			\
