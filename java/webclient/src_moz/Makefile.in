@@ -22,6 +22,28 @@ topsrcdir	= $(DEPTH)
 srcdir		= $(topsrcdir)/java/webclient/src_moz
 VPATH		= $(topsrcdir)/java/webclient/src_moz
 
+# IMPORTANT: on Linux, if building webclient with a non-debug mozilla
+# tree, the libwidget_gtk.so binary produced will not work with
+# webclient.  Namely, the symbol handle_gdk_event__FP9_GdkEventPv will
+# be defined locally, not globaly, as is required.  For the webclient
+# 1.0 release, we're going to bundle a libwidget_gtk.so with the xpi.
+# If you want to do a non-debug build of your own, you must make sure
+# yor libwidget_gtk.so is linked without these options:
+
+# -DNDEBUG -DTRIMMED
+
+# and with these options
+
+# -DNDEBUG -DDEBUG_edburns
+
+# If your libwidget_gtk.so has this symbol:
+
+# 0003b2d0 T handle_gdk_event__FP9_GdkEventPv
+
+# with the capital T, you're ok.  The version of libwidget_gtk.so used
+# in the webclient 1.0 bundle is available at:
+# <http://www.mozilla.org/projects/blackwood/webclient/bin/1.0/libwidget_gtk.so>.
+
 # We don't need to build the stubs in the BAL case.
 ifeq ($(BAL_INTERFACE),)
 DIRS = motif

@@ -24,8 +24,6 @@
  *      Louis-Philippe Gagnon <louisphilippe@macadamian.com>
  */
 
-
-
 #include <limits.h>
 #include "CBrowserContainer.h"
 #include "nsCWebBrowser.h"
