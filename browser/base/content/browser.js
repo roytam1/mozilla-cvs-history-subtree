@@ -692,12 +692,22 @@ const gPopupBlockerObserver = {
       host = uri.host;
     }
     catch (e) { } 
-    var params = { blockVisible: false, 
-                   allowVisible: true, 
-                   prefilledHost: host, 
-                   permissionType: "popup" };
-    window.openDialog("chrome://browser/content/cookieviewer/CookieExceptions.xul?permission=popup",
-                      "_blank", "chrome,modal,resizable=yes", params);
+
+    var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                        .getService(Components.interfaces.nsIWindowMediator);
+    var existingWindow = wm.getMostRecentWindow("exceptions");
+    if (existingWindow) {
+      existingWindow.setHost(host);
+      existingWindow.focus();
+    }
+    else {
+      var params = { blockVisible: false, 
+                     allowVisible: true, 
+                     prefilledHost: host, 
+                     permissionType: "popup" };
+      window.openDialog("chrome://browser/content/cookieviewer/CookieExceptions.xul?permission=popup",
+                        "_blank", "chrome,modal,resizable=yes", params);
+    }
   },
   
   dontShowMessage: function ()
@@ -779,13 +789,22 @@ const gXPInstallObserver = {
       break;
     case "xpinstall-install-edit-permissions":
       var uri = aSubject.QueryInterface(Components.interfaces.nsIURI);
-      var params = { blockVisible:    false,
-                     allowVisible:    true,
-                     prefilledHost:   uri.host,
-                     permissionType:  "install" };
-      window.openDialog("chrome://browser/content/cookieviewer/CookieExceptions.xul?permission=install",
-                        "_blank", "chrome,modal,resizable=yes", params);
-      
+      var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                         .getService(Components.interfaces.nsIWindowMediator);
+      var existingWindow = wm.getMostRecentWindow("exceptions");
+      if (existingWindow) {
+        existingWindow.setHost(uri.host);
+        existingWindow.focus();
+      }
+      else {
+        var params = { blockVisible:    false,
+                       allowVisible:    true,
+                       prefilledHost:   uri.host,
+                       permissionType:  "install" };
+        window.openDialog("chrome://browser/content/cookieviewer/CookieExceptions.xul?permission=install",
+                          "_blank", "chrome,modal,resizable=yes", params);
+      }
+            
       var tabbrowser = getBrowser();
       tabbrowser.hideMessage(tabbrowser.selectedBrowser, "top");
       break;

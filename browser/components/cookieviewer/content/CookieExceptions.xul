@@ -27,6 +27,7 @@
 
 <dialog id="CookieExceptions"
         buttons="accept,cancel"
+        windowtype="exceptions"
         title="&window.title;"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         style="width: 30em;"

@@ -93,9 +93,18 @@ var gExceptionsParams = {
 
 function showExceptions(aEvent)
 {
-  const kURL = "chrome://browser/content/cookieviewer/CookieExceptions.xul?permission=";
-  var params = gExceptionsParams[aEvent.target.getAttribute("permissiontype")];
-  window.openDialog(kURL + params.type,
-                    "_blank", "chrome,modal,resizable=yes", params);
+  var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                     .getService(Components.interfaces.nsIWindowMediator);
+  var existingWindow = wm.getMostRecentWindow("exceptions");
+  if (existingWindow) {
+    existingWindow.setHost("");
+    existingWindow.focus();
+  }
+  else {
+    const kURL = "chrome://browser/content/cookieviewer/CookieExceptions.xul?permission=";
+    var params = gExceptionsParams[aEvent.target.getAttribute("permissiontype")];
+    window.openDialog(kURL + params.type,
+                      "_blank", "chrome,modal,resizable=yes", params);
+  }
 }
 

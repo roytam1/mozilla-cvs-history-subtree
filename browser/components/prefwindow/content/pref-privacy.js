@@ -303,12 +303,21 @@ function viewCookies()
 
 function viewCookieExceptions()
 {
-  var params = { blockVisible   : true,
-                 allowVisible   : true,
-                 prefilledHost  : "",
-                 permissionType : "cookie" };
-  window.openDialog("chrome://browser/content/cookieviewer/CookieExceptions.xul?permission=cookie",
-                    "_blank", "chrome,modal,resizable=yes", params);
+  var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                     .getService(Components.interfaces.nsIWindowMediator);
+  var existingWindow = wm.getMostRecentWindow("exceptions");
+  if (existingWindow) {
+    existingWindow.setHost("");
+    existingWindow.focus();
+  }
+  else {
+    var params = { blockVisible   : true,
+                   allowVisible   : true,
+                   prefilledHost  : "",
+                   permissionType : "cookie" };
+    window.openDialog("chrome://browser/content/cookieviewer/CookieExceptions.xul?permission=cookie",
+                      "_blank", "chrome,modal,resizable=yes", params);
+  }
 }
 
 function viewSignons() 

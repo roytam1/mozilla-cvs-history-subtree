@@ -203,6 +203,15 @@ var gPermissionManager = {
     // disable "remove all" button if there are none
     document.getElementById("removeAllPermissions").disabled = this._addedPermissions.length == 0;
   },
-
+  
+  setHost: function (aHost)
+  {
+    document.getElementById("url").value = aHost;
+  }
 };
+
+function setHost(aHost)
+{
+  gPermissionManager.setHost(aHost);
+}
 
