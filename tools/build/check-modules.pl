@@ -60,7 +60,6 @@ foreach $module (@module_names)
   &check_module($module);
 }
 
-
 # end main
 ######################################################################
 # begin subroutines
@@ -83,7 +82,7 @@ sub parse_input
     next if /^\#/ || /^\s*$/;
 
     # Check for a module definition
-    if (/^([a-zA-Z]+)\s+-a\s*(.*)$/) 
+    if (/^([_a-zA-Z0-9]+)\s+(?:-l\s+)?-a\s*(.*)$/) 
     {
       my ($module_name) = $1;
       my (@sub_items) = ();
