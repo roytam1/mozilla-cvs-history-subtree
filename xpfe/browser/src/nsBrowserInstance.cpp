@@ -624,7 +624,7 @@ nsBrowserInstance::Close()
 // nsBrowserInstance: Helpers
 //*****************************************************************************
 
-
+#ifndef MOZ_MINOTAUR
 ////////////////////////////////////////////////////////////////////////
 // browserCntHandler is a content handler component that registers
 // the browse as the preferred content handler for various content
@@ -861,3 +861,4 @@ NS_IMETHODIMP nsBrowserContentHandler::HandleContent(const char * aContentType,
 
   return NS_OK;
 }
+#endif

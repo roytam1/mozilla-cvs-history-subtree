@@ -222,6 +222,7 @@ static const nsModuleComponentInfo components[] = {
     NS_BROWSERINSTANCE_CONTRACTID, 
     nsBrowserInstanceConstructor
   },
+#ifndef MOZ_MINOTAUR
   { "Browser Content Handler",
     NS_BROWSERCONTENTHANDLER_CID,
     NS_CONTENT_HANDLER_CONTRACTID_PREFIX"text/html", 
@@ -232,13 +233,6 @@ static const nsModuleComponentInfo components[] = {
     NS_CONTENT_HANDLER_CONTRACTID_PREFIX"application/vnd.mozilla.xul+xml", 
     nsBrowserContentHandlerConstructor 
   },
-#ifdef MOZ_SVG
-  { "Browser Content Handler",
-    NS_BROWSERCONTENTHANDLER_CID,
-    NS_CONTENT_HANDLER_CONTRACTID_PREFIX"image/svg+xml",
-    nsBrowserContentHandlerConstructor
-  },
-#endif
   { "Browser Content Handler",
     NS_BROWSERCONTENTHANDLER_CID,
     NS_CONTENT_HANDLER_CONTRACTID_PREFIX"text/rdf", 
@@ -331,6 +325,14 @@ static const nsModuleComponentInfo components[] = {
     "@mozilla.org/commandlinehandler/general-startup;1?type=chrome",
     nsBrowserContentHandlerConstructor,
   },
+#endif
+#ifdef MOZ_SVG
+  { "Browser Content Handler",
+    NS_BROWSERCONTENTHANDLER_CID,
+    NS_CONTENT_HANDLER_CONTRACTID_PREFIX"image/svg+xml",
+    nsBrowserContentHandlerConstructor
+  },
+#endif
   { NS_BROWSERSTATUSFILTER_CLASSNAME,
     NS_BROWSERSTATUSFILTER_CID,
     NS_BROWSERSTATUSFILTER_CONTRACTID,
