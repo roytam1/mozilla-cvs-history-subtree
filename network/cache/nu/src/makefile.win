@@ -58,6 +58,7 @@ OBJS =						\
 	$(NULL)
 
 LINCS = 				\
+	-I$(PUBLIC)\raptor	\
 	-I$(PUBLIC)\xpcom	\
 	-I$(PUBLIC)\dbm		\
 	-I$(PUBLIC)\pref	\

@@ -24,11 +24,17 @@
 #include "nsCacheFileStream.h"
 #include "plstr.h"
 #include "prlog.h"
-#ifdef XP_UNIX
 #include "prio.h"
-#include "sys/param.h"
 #include "prsystem.h"
+
+#ifdef XP_UNIX
+#include "sys/param.h"
 #endif
+
+//This should really get picked up correctly from NSPR //TODO
+#ifndef MAXPATHLEN
+#define MAXPATHLEN 512
+#endif ///MAXPATHLEN
 
 nsCacheFileStream::nsCacheFileStream(const char* i_Filename):m_pFile(0),m_pFilename(0)
 {
