@@ -75,9 +75,10 @@ LOOP_OVER_DIRS		=					\
 endif
 
 export:	
-	$(INSTALL) -m 444 $(HFILES) $(DIST)/include
-	$(INSTALL) -m 555 $(LIBRARY) $(DIST)/lib
-	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(DIST)/lib
+	$(INSTALL) -m 644 $(HFILES) $(DIST)/include
+	$(INSTALL) -m 755 $(LIBRARY) $(DIST)/lib
+	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(DIST)/lib
+	$(INSTALL) -m 755 $(PROGRAM) $(DIST)/bin
 	+$(LOOP_OVER_DIRS)
 
 clean:
