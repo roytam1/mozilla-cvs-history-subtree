@@ -38,62 +38,106 @@
 #include "nsPluginsDir.h"
 #include "nsSpecialSystemDirectory.h"
 #include "prmem.h"
+#include "prenv.h"
+
+#define PLUGIN_PATH 	"NS600_PLUGIN_PATH"	
+#define PLUGIN_DIR 	"/plugins"	
+#define MTYPE_END	'|'
+#define MTYPE_END_OLD	';'
+#define MTYPE_PART      ':'
+
 
 /* Local helper functions */
  
 static PRUint32 CalculateVariantCount(const char* mimeTypes)
 {
-        PRUint32 variants = 0;
-        const char* ptr = mimeTypes;
-        while (*ptr)
-        {
-                if (*ptr == ';')
-                        variants++;
+    PRUint32 variants = 0;
+    const char* ptr = mimeTypes;
 
-                ++ptr; 
+    while (*ptr) {
+        if (*ptr == MTYPE_END) 
+	    variants++;
+        ++ptr; 
+    }
+
+    return variants;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Currently, in the MIME type info passed in by plugin, a ';' is used as the 
+// separator of two MIME types, and also the sparator of a version in one MIME 
+// type. For example: 
+// "application/x-java-applet;version1.3::java(TM) plugin;application/x-java-
+// applet...".
+// The ambiguity of ';'  causes the browser fail to parse the MIME types 
+// correctly.
+//
+// This method parses the MIME type input, and replaces the MIME type 
+// separators with '|' to eliminate the ambiguity of ';'. (The Windows version 
+// also uses '|' as the MIME type separator.)
+//
+// Input format: "...type[;version]:[extension]:[desecription];..."
+// Output format: "...type[;version]:[extension]:[desecription]|..."
+//
+static void SetMIMETypeSeparator(char *minfo)
+{
+    char *p;
+
+    p = minfo;
+    while (p) {
+	if ((p = PL_strchr(p, MTYPE_PART)) != 0) {
+	    *p++;
+	    if ((p = PL_strchr(p, MTYPE_END_OLD)) != 0) {
+	        *p = MTYPE_END;	
+		*p++;
+	    }
         }
-        return variants;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////
 
 /* nsPluginsDir implementation */
 
+// Get path to plugin directory. 
+// If already defined in environment, use it; otherwise, use native path.
 nsPluginsDir::nsPluginsDir(PRUint16 location)
 {
-    // this is somewhat lacking, in that it doesn't fall back to any 
-    // other directories. then again, I'm not sure we should be falling 
-    // back at all.  plugins have been (and probably should continue to be) 
-    // loaded from both <libdir>/plugins and ~/.mozilla/plugins.  There
-    // doesn't seem to be any way to do this in the current nsPluginsDir 
-    // code, which is disheartening.
+    nsSpecialSystemDirectory sysdir(nsSpecialSystemDirectory::
+                                    OS_CurrentProcessDirectory); 
+    const char *pluginsDir;
+    char       *tmp_dir;
 
-    // use MOZILLA_FIVE_HOME/plugins
+    if ((tmp_dir = PR_GetEnv(PLUGIN_PATH))) {
+        pluginsDir = (const char *)tmp_dir;
+    } else {
+        sysdir += "plugins";
+        pluginsDir = sysdir.GetCString(); // native path
+    }
 
-  nsSpecialSystemDirectory sysdir(nsSpecialSystemDirectory::OS_CurrentProcessDirectory); 
-  sysdir += "plugins"; 
-  const char *pluginsDir = sysdir.GetCString(); // native path
-  if (pluginsDir != NULL)
-  {
-      *(nsFileSpec*)this = pluginsDir;
-  }
+    if (pluginsDir != NULL) {
+        *(nsFileSpec*)this = pluginsDir;
+    }
+
+#ifdef NS_DEBUG
+    printf("********** Got plugins path: %s\n", pluginsDir);
+#endif
 }
 
 nsPluginsDir::~nsPluginsDir()
 {
-	// do nothing
+    // do nothing
 }
 
 PRBool nsPluginsDir::IsPluginFile(const nsFileSpec& fileSpec)
 {
     const char* pathname = fileSpec.GetCString();
 
-
 #ifdef NS_DEBUG
-	printf("IsPluginFile(%s)\n", pathname);
+    printf("IsPluginFile(%s)\n", pathname);
 #endif
 
-	return PR_TRUE;
+    return PR_TRUE;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -103,12 +147,12 @@ PRBool nsPluginsDir::IsPluginFile(const nsFileSpec& fileSpec)
 nsPluginFile::nsPluginFile(const nsFileSpec& spec)
 	:	nsFileSpec(spec)
 {
-	// nada
+    // nada
 }
 
 nsPluginFile::~nsPluginFile()
 {
-	// nada
+    // nada
 }
 
 /**
@@ -180,14 +224,15 @@ nsresult nsPluginFile::GetPluginInfo(nsPluginInfo& info)
         static NS_DEFINE_CID(kPluginCID, NS_PLUGIN_CID);
 
         nsCOMPtr<nsIFactory> factory;
-        rv = nsGetFactory(mgr, kPluginCID, nsnull, nsnull, getter_AddRefs(factory));
+        rv = nsGetFactory(mgr, kPluginCID, nsnull, nsnull, 
+			  getter_AddRefs(factory));
         if (NS_FAILED(rv)) return rv;
 
         plugin = do_QueryInterface(factory);
-    }
-    else {
+    } else {
         // It's old sk00l
-        rv = ns4xPlugin::CreatePlugin(mgr, this->GetCString(), pLibrary, getter_AddRefs(plugin));
+        rv = ns4xPlugin::CreatePlugin(mgr, this->GetCString(), pLibrary, 
+				      getter_AddRefs(plugin));
         if (NS_FAILED(rv)) return rv;
     }
 
@@ -199,8 +244,7 @@ nsresult nsPluginFile::GetPluginInfo(nsPluginInfo& info)
         info.fDescription = PL_strdup(description);
 
         plugin->GetMIMEDescription(&mimedescr);
-    }
-    else {
+    } else {
         info.fName = PL_strdup(this->GetCString());
         info.fDescription = PL_strdup("");
     }
@@ -209,81 +253,92 @@ nsresult nsPluginFile::GetPluginInfo(nsPluginInfo& info)
     printf("GetMIMEDescription() returned \"%s\"\n", mimedescr);
 #endif
 
-    // copy string
-    
+    // Copy MIME type input.
     mdesc = (char *)PR_Malloc(strlen(mimedescr)+1);
     strcpy(mdesc,mimedescr);
-    num=CalculateVariantCount(mimedescr)+1;
+
+    // Currently in MIME type input, a ';' is used as MIME type separator
+    // and a MIME type's version separator, which makes parsing difficult.
+    // To eliminate the ambiguity, set MIME type separator to '|'.
+    SetMIMETypeSeparator(mdesc);
+
+    // Get number of MIME types.
+    num = CalculateVariantCount(mdesc) + 1;
+
     info.fVariantCount = num;
+    info.fMimeTypeArray = (char **)PR_Malloc(num * sizeof(char *));
+    info.fMimeDescriptionArray = (char **)PR_Malloc(num * sizeof(char *));
+    info.fExtensionArray = (char **)PR_Malloc(num * sizeof(char *));
 
-    info.fMimeTypeArray =(char **)PR_Malloc(num * sizeof(char *));
-    info.fMimeDescriptionArray =(char **)PR_Malloc(num * sizeof(char *));
-    info.fExtensionArray =(char **)PR_Malloc(num * sizeof(char *));
-
-    start=mdesc;
-    for(i=0;i<num && *start;i++) {
-        // search start of next token (separator is ';')
-
+    // Retrive each MIME type info.
+    // Each MIME type info stored in format, "type:extension:description"
+    // Sample: "application/x-java-applet;version=1.1::Java(tm) Plug-in;".
+    start = mdesc;
+    for(i = 0;i < num && *start;i++) {
         if(i+1 < num) {
-            if((nexttoc=PL_strchr(start, ';')) != 0)
+            if((nexttoc = PL_strchr(start, MTYPE_END)) != 0)
                 *nexttoc++=0;
             else
                 nexttoc=start+strlen(start);
         } else
             nexttoc=start+strlen(start);
 
-        // split string into: mime type ':' extensions ':' description
-
-        mtype=start;
-        exten=PL_strchr(start, ':');
+        mtype = start;
+        exten = PL_strchr(start, MTYPE_PART);
         if(exten) {
-            *exten++=0;
-            descr=PL_strchr(exten, ':');
+            *exten++ = 0;
+            descr = PL_strchr(exten, MTYPE_PART);
         } else
-            descr=NULL;
+            descr = NULL;
 
         if(descr)
             *descr++=0;
 
-#ifdef NS_DEBUG
-        printf("Registering plugin for: \"%s\",\"%s\",\"%s\"\n", mtype,descr ? descr : "null",exten ? exten : "null");
-#endif
+//#ifdef NS_DEBUG
+        printf("Registering plugin %d for: \"%s\",\"%s\",\"%s\"\n",
+               i, mtype,descr ? descr : "null",exten ? exten : "null");
+//#endif
 
         if(!*mtype && !descr && !exten) {
             i--;
             info.fVariantCount--;
         } else {
             info.fMimeTypeArray[i] = mtype ? PL_strdup(mtype) : PL_strdup("");
-            info.fMimeDescriptionArray[i] = descr ? PL_strdup(descr) : PL_strdup("");
+            info.fMimeDescriptionArray[i] = descr ? PL_strdup(descr) :
+                                                    PL_strdup("");
             info.fExtensionArray[i] = exten ? PL_strdup(exten) : PL_strdup("");
         }
-        start=nexttoc;
+        start = nexttoc;
     }
 
     PR_Free(mdesc);
 
-	return NS_OK;
+    return NS_OK;
 }
 
 
 nsresult nsPluginFile::FreePluginInfo(nsPluginInfo& info)
 {
-  if(info.fName != nsnull)
-    PL_strfree(info.fName);
+    if(info.fName != nsnull)
+        PL_strfree(info.fName);
 
-  if(info.fDescription != nsnull)
-    PL_strfree(info.fDescription);
+    if(info.fDescription != nsnull)
+        PL_strfree(info.fDescription);
 
-  for(PRUint32 i = 0; i < info.fVariantCount; i++)
-  {
-    if(info.fMimeTypeArray[i] != nsnull)
-      PL_strfree(info.fMimeTypeArray[i]);
+    for(PRUint32 i = 0; i < info.fVariantCount; i++) {
+        if (info.fMimeTypeArray[i] != nsnull)
+            PL_strfree(info.fMimeTypeArray[i]);
 
-    if(info.fMimeDescriptionArray[i] != nsnull)
-      PL_strfree(info.fMimeDescriptionArray[i]);
+        if (info.fMimeDescriptionArray[i] != nsnull)
+            PL_strfree(info.fMimeDescriptionArray[i]);
 
-    if(info.fExtensionArray[i] != nsnull)
-      PL_strfree(info.fExtensionArray[i]);
-  }
-  return NS_OK;
+        if(info.fExtensionArray[i] != nsnull)
+            PL_strfree(info.fExtensionArray[i]);
+    }
+
+    PR_FREEIF(info.fMimeTypeArray);
+    PR_FREEIF(info.fMimeDescriptionArray);
+    PR_FREEIF(info.fExtensionArray);
+
+    return NS_OK;
 }
