@@ -86,7 +86,7 @@ interface nsIBookmarksService : nsISupports
     
     string resolveKeyword(in wstring aName);
     
-    wstring getLastCharset(in string aURI);
+    wstring getLastCharset(in string aURL);
 
     void importSystemBookmarks(in nsIRDFResource aParentFolder);
 };

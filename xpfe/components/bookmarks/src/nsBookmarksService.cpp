@@ -2862,40 +2862,45 @@ nsBookmarksService::IsBookmarked(const char *aURI, PRBool *isBookmarkedFlag)
 }
 
 NS_IMETHODIMP
-nsBookmarksService::GetLastCharset(const char *aURI,  PRUnichar **aLastCharset)
+nsBookmarksService::GetLastCharset(const char* aURL, PRUnichar** aLastCharset)
 {
-    if (!aURI)        return NS_ERROR_UNEXPECTED;
-    if (!mInner)        return NS_ERROR_UNEXPECTED;
-    NS_PRECONDITION(aLastCharset != nsnull, "null ptr");
-    if (!aLastCharset)  return NS_ERROR_NULL_POINTER;
+    NS_PRECONDITION(aURL != nsnull, "null ptr");
+    if (! aURL)
+        return NS_ERROR_NULL_POINTER;
+    NS_ENSURE_ARG_POINTER(aLastCharset);
 
-    nsCOMPtr<nsIRDFResource>  bookmark;
-    nsresult            rv = nsnull;
+    if (!mInner)
+        return NS_ERROR_UNEXPECTED;
 
-    if (NS_SUCCEEDED(rv = gRDF->GetResource(nsDependentCString(aURI), getter_AddRefs(bookmark) )))
-    {
-        // Note: always use mInner!! Otherwise, could get into an infinite loop
-        // due to Assert/Change calling UpdateBookmarkLastModifiedDate()
+    nsCOMPtr<nsIRDFLiteral> urlLiteral;
+    nsresult rv = gRDF->GetLiteral(NS_ConvertUTF8toUCS2(aURL).get(),
+                                   getter_AddRefs(urlLiteral));
+    if (NS_FAILED(rv))
+        return rv;
+
+    nsCOMPtr<nsIRDFResource> bookmark;
+    rv = GetSource(kNC_URL, urlLiteral, PR_TRUE, getter_AddRefs(bookmark));
+    if (NS_FAILED(rv))
+        return rv;
+
+    if (bookmark) {
+        // Always use mInner! Otherwise, could get into an infinite loop
+        // due to Assert/Change calling UpdateBookmarkLastModifiedDate().
 
         nsCOMPtr<nsIRDFNode> nodeType;
         GetSynthesizedType(bookmark, getter_AddRefs(nodeType));
-        if (nodeType == kNC_Bookmark)
-        {
-            nsCOMPtr<nsIRDFNode>  lastCharactersetNode;
+        if (nodeType == kNC_Bookmark) {
+            nsCOMPtr<nsIRDFNode>  charsetNode;
+            rv = mInner->GetTarget(bookmark, kWEB_LastCharset, PR_TRUE,
+                                   getter_AddRefs(charsetNode));
+            if (NS_FAILED(rv))
+                return rv;
 
-            if (NS_SUCCEEDED(rv = mInner->GetTarget(bookmark, kWEB_LastCharset, PR_TRUE,
-                                                    getter_AddRefs(lastCharactersetNode))) && (rv != NS_RDF_NO_VALUE))
-            {
-                nsCOMPtr<nsIRDFLiteral> charsetLiteral = do_QueryInterface(lastCharactersetNode);
-
-                if (!charsetLiteral)
-                    return NS_ERROR_NO_INTERFACE;          
-                if (NS_FAILED(rv = charsetLiteral->GetValue(aLastCharset)))
-                    return rv;
-                if (!*aLastCharset)
-                    return NS_ERROR_NULL_POINTER;
-
-                return NS_OK;
+            if (charsetNode) {
+                nsCOMPtr<nsIRDFLiteral> charsetLiteral = do_QueryInterface(charsetNode);
+                if (charsetLiteral) {
+                    return charsetLiteral->GetValue(aLastCharset);
+                }
             }
         }
     }
@@ -2987,6 +2992,9 @@ nsBookmarksService::UpdateLastVisitedDate(const char *aURL,
         if (!bookmark)
             continue;
 
+        // Always use mInner! Otherwise, we could get into an infinite loop
+        // due to Assert/Change calling UpdateBookmarkLastModifiedDate().
+
         nsCOMPtr<nsIRDFNode> nodeType;
         GetSynthesizedType(bookmark, getter_AddRefs(nodeType));
         if (nodeType == kNC_Bookmark) {
@@ -2994,9 +3002,6 @@ nsBookmarksService::UpdateLastVisitedDate(const char *aURL,
             rv = gRDF->GetDateLiteral(PR_Now(), getter_AddRefs(now));
             if (NS_FAILED(rv))
                 return rv;
-
-            // Always use mInner! Otherwise, we could get into an infinite loop
-            // due to Assert/Change calling UpdateBookmarkLastModifiedDate().
 
             nsCOMPtr<nsIRDFNode> lastMod;
             rv = mInner->GetTarget(bookmark, kWEB_LastVisitDate, PR_TRUE,
@@ -3141,16 +3146,16 @@ nsBookmarksService::ResolveKeyword(const PRUnichar *aUserInput, char **aShortcut
         return rv;
 
     if (source) {
-        nsCOMPtr<nsIRDFNode> node;
-        rv = GetTarget(source, kNC_URL, PR_TRUE, getter_AddRefs(node));
+        nsCOMPtr<nsIRDFNode> urlNode;
+        rv = GetTarget(source, kNC_URL, PR_TRUE, getter_AddRefs(urlNode));
         if (NS_FAILED(rv))
            return rv;
 
-        if (node) {
-            nsCOMPtr<nsIRDFLiteral> url = do_QueryInterface(node);
-            if (url) {
+        if (urlNode) {
+            nsCOMPtr<nsIRDFLiteral> urlLiteral = do_QueryInterface(urlNode);
+            if (urlLiteral) {
                 const PRUnichar* value;
-                rv = url->GetValueConst(&value);
+                rv = urlLiteral->GetValueConst(&value);
                 if (NS_FAILED(rv))
                     return rv;
 
