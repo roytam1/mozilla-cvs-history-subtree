@@ -88,10 +88,8 @@ function FindNextFolder(originalFolderURI)
   startFromBeginning is a boolean that states whether or not we should start looking at the beginning
   if we reach the end 
 */
-function GoNextMessage(type, startFromBeginning)
+function GoNextMessageOLD(type, startFromBeginning)
 {
-    GoNextMessageNWO(type, startFromBeginning);
-
 	var beforeGoNextMessage;
     if (showPerformance) {
 	    beforeGoNextMessage = new Date();
@@ -345,7 +343,7 @@ function GetTopLevelMessageForMessage(message, folder)
 
 var nsMsgNavigationType = Components.interfaces.nsMsgNavigationType;
 
-function GoNextMessageNWO(type, startFromBeginning)
+function GoNextMessage(type, startFromBeginning)
 {
   try {
     dump("XXX GoNextMessage(" + type + "," + startFromBeginning + ")\n");
@@ -366,6 +364,10 @@ function GoNextMessageNWO(type, startFromBeginning)
     dump("XXX resultIndex = " + resultIndex.value + "\n");
     dump("XXX threadIndex = " + threadIndex.value + "\n");
     dump("XXX resultFolder = " + resultFolder.value + "\n");
+
+    var outlinerView = gDBView.QueryInterface(Components.interfaces.nsIOutlinerView);
+    var selection = outlinerView.selection;
+    selection.select(resultIndex.value);
   }
   catch (ex) {
     dump("XXX ex = " + ex + "\n");
