@@ -91,30 +91,6 @@ nsAccessibilityService::CreateRootAccessible(nsISupports* aPresContext, nsISuppo
     return NS_ERROR_OUT_OF_MEMORY;
 }
 
-NS_IMETHODIMP 
-nsAccessibilityService::CreateHTMLBlockAccessible(nsIAccessible* aAccessible, nsIDOMNode* node, nsISupports* aPresContext, nsIAccessible **_retval)
-{
-  nsCOMPtr<nsIContent> n(do_QueryInterface(node));
-  NS_ASSERTION(n,"Error non nsIContent passed to accessible factory!!!");
-
-  nsCOMPtr<nsIPresContext> c(do_QueryInterface(aPresContext));
-  NS_ASSERTION(c,"Error non prescontext passed to accessible factory!!!");
-
-  nsCOMPtr<nsIPresShell> s;
-  c->GetShell(getter_AddRefs(s));
-
-  NS_ASSERTION(s,"Error not presshell!!");
-
-  nsCOMPtr<nsIWeakReference> wr = getter_AddRefs(NS_GetWeakReference(s));
-  //printf("################################## CreateHTMLBlockAccessible\n");
-
-  *_retval = new nsHTMLBlockAccessible(aAccessible, node,wr);
-  if (*_retval) {
-    NS_ADDREF(*_retval);
-    return NS_OK;
-  } else 
-    return NS_ERROR_OUT_OF_MEMORY;
-}
 
 NS_IMETHODIMP 
 nsAccessibilityService::CreateHTMLSelectAccessible(nsIAtom* aPopupAtom, nsIDOMNode* node, nsISupports* aPresContext, nsIAccessible **_retval)
@@ -263,24 +239,6 @@ NS_IMETHODIMP nsAccessibilityService::CreateHTMLTableCellAccessible(nsISupports 
     return rv;
 
   *_retval = new nsHTMLTableCellAccessible(shell, node);
-  if (*_retval) {
-    NS_ADDREF(*_retval);
-    return NS_OK;
-  } else 
-    return NS_ERROR_OUT_OF_MEMORY;
-}
-
-/* nsIAccessible createHTMLLinkAccessible (in nsISupports aPresShell, in nsISupports aFrame); */
-NS_IMETHODIMP nsAccessibilityService::CreateHTMLLinkAccessible(nsISupports *aFrame, nsIAccessible **_retval)
-{
-  nsIFrame* frame;
-  nsCOMPtr<nsIDOMNode> node;
-  nsCOMPtr<nsIPresShell> shell;
-  nsresult rv = GetInfo(aFrame, &frame, getter_AddRefs(shell), getter_AddRefs(node));
-  if (NS_FAILED(rv))
-    return rv;
-
-  *_retval = new nsHTMLLinkAccessible(shell, node);
   if (*_retval) {
     NS_ADDREF(*_retval);
     return NS_OK;

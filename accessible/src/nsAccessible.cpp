@@ -1534,51 +1534,45 @@ NS_IMETHODIMP nsAccessible::AccGetBounds(PRInt32 *x, PRInt32 *y, PRInt32 *width,
       return rv;
   }
 
+  // This routine will get the entire rectange for all the frames in this node
+  // -------------------------------------------------------------------------
+  //      Primary Frame for node
+  //  Another frame, same node                <- Example
+  //  Another frame, same node
+
+  float t2p;
   nsCOMPtr<nsIPresContext> presContext;
   GetPresContext(presContext);
+  presContext->GetTwipsToPixels(&t2p);   // Get pixels to twips conversion factor
 
-  nsIFrame* frame = GetBoundsFrame();
-  
-  float t2p;
-  presContext->GetTwipsToPixels(&t2p);
-
-  nsRect rect;
-  nsRect twips;
-
-  nsRect orgRectTwips;
   nsRect unionRectTwips;
-  nsRect orgRectPixels;
-  nsRect frameRectTwips;
+  GetBounds(unionRectTwips);   // Unions up all primary frames for this node and all siblings after it
 
-  GetBounds(orgRectTwips);   // This unions up all the  primary frames for this node and all of the sibling nodes after it
-  frame->GetRect(frameRectTwips);   // Usually just the primary frame, but can be the choice list frame for an nsSelectAccessible
+  *x      = NSTwipsToIntPixels(unionRectTwips.x, t2p); 
+  *y      = NSTwipsToIntPixels(unionRectTwips.y, t2p);
+  *width  = NSTwipsToIntPixels(unionRectTwips.width, t2p);
+  *height = NSTwipsToIntPixels(unionRectTwips.height, t2p);
 
-  nscoord xdiff = frameRectTwips.x - orgRectTwips.x;
-  nscoord ydiff = frameRectTwips.y - orgRectTwips.y;
-  
-  unionRectTwips = orgRectTwips;
+  // We have the union of the rectangle, now we need to put it in absolute screen coords
 
-  if (presContext && NS_SUCCEEDED(GetAbsoluteFramePosition(presContext, frame, twips, rect))) 
-  {
-    orgRectPixels = rect;
-    orgRectPixels.x -= NSTwipsToIntPixels(orgRectTwips.x + xdiff, t2p);
-    orgRectPixels.y -= NSTwipsToIntPixels(orgRectTwips.y + ydiff, t2p);
+  if (presContext) {
+    nsIFrame* frame = GetBoundsFrame();   // Get our primary frame
+    nsRect orgRectTwips, frameRectTwips, orgRectPixels;
+
+    // Get the offset of this frame in screen coordinates
+    if (frame && NS_SUCCEEDED(GetAbsoluteFramePosition(presContext, frame, orgRectTwips, orgRectPixels))) {
+      frame->GetRect(frameRectTwips);   // Usually just the primary frame, but can be the choice list frame for an nsSelectAccessible
+      // Add in the absolute coorinates.
+      // Since these absolute coordinates are for the primary frame, 
+      // also subtract the difference between our primary frame and our bounds frame
+      *x += orgRectPixels.x - NSTwipsToIntPixels(frameRectTwips.x, t2p);
+      *y += orgRectPixels.y - NSTwipsToIntPixels(frameRectTwips.y, t2p);
+    }
   }
-
-  nsRect rectPixels;
-
-  rectPixels.x      = NSTwipsToIntPixels(unionRectTwips.x, t2p) + orgRectPixels.x; 
-  rectPixels.y      = NSTwipsToIntPixels(unionRectTwips.y, t2p) + orgRectPixels.y;
-  rectPixels.width  = NSTwipsToIntPixels(unionRectTwips.width, t2p);
-  rectPixels.height = NSTwipsToIntPixels(unionRectTwips.height, t2p);
-
-  *x      = rectPixels.x;
-  *y      = rectPixels.y;
-  *width  = rectPixels.width;
-  *height = rectPixels.height;
 
   return NS_OK;
 }
+
 
 // helpers
 

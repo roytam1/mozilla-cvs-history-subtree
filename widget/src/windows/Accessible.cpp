@@ -386,23 +386,25 @@ STDMETHODIMP Accessible::accLocation(
       /* [out] */ long __RPC_FAR *pcyHeight,
       /* [optional][in] */ VARIANT varChild)
 {
-  PRInt32 x,y,w,h;
-  mAccessible->AccGetBounds(&x,&y,&w,&h);
+  nsCOMPtr<nsIAccessible> a;
+  GetNSAccessibleFor(varChild,a);
 
-  POINT cpos;
-  cpos.x = x;
-  cpos.y = y;
+  if (a) {
+    PRInt32 x,y,w,h;
+    a->AccGetBounds(&x,&y,&w,&h);
 
-//  ::ClientToScreen(mWnd, &cpos);
+    POINT cpos;
+    cpos.x = x;
+    cpos.y = y;
 
-//  *pxLeft = cpos.x;
-//  *pyTop = cpos.y;
-  *pxLeft = x;
-  *pyTop = y;
-  *pcxWidth = w;
-  *pcyHeight = h;
+    *pxLeft = x;
+    *pyTop = y;
+    *pcxWidth = w;
+    *pcyHeight = h;
+    return S_OK;
+  }
 
-  return S_OK;
+  return S_FALSE;  
 }
 
 STDMETHODIMP Accessible::accNavigate( 
@@ -666,7 +668,8 @@ PRInt32 RootAccessible::GetIdFor(nsIAccessible* aAccessible)
   mList[mNextPos].mAccessible = aAccessible;
 
   mNextId--;
-  mNextPos++;
+  if (++mNextPos >= MAX_LIST_SIZE)
+    mNextPos = 0;
   if (mListCount < MAX_LIST_SIZE)
     mListCount++;
 
