@@ -310,7 +310,10 @@ NS_IMETHODIMP gfxImageFrameWin::SetImageData(const PRUint8 *aData, PRUint32 aLen
 
   PRInt32 newOffset;
 #ifdef XP_PC
-  newOffset = ((mSize.height - 1) * row_stride) - aOffset;
+  // Adjust: We need offset to be top-down rows & LTR within each row
+  //         On XP_PC, it's passed in as bottom-up rows & LTR within each row
+  PRUint32 yOffset = ((PRUint32)(aOffset / row_stride)) * row_stride;
+  newOffset = ((mSize.height - 1) * row_stride) - yOffset + (aOffset % row_stride);
 #else
   newOffset = aOffset;
 #endif
@@ -402,7 +405,10 @@ NS_IMETHODIMP gfxImageFrameWin::SetAlphaData(const PRUint8 *aData, PRUint32 aLen
 
   PRInt32 newOffset;
 #ifdef XP_PC
-  newOffset = ((mSize.height - 1) * row_stride) - aOffset;
+  // Adjust: We need offset to be top-down rows & LTR within each row
+  //         On XP_PC, it's passed in as bottom-up rows & LTR within each row
+  PRUint32 yOffset = ((PRUint32)(aOffset / row_stride)) * row_stride;
+  newOffset = ((mSize.height - 1) * row_stride) - yOffset + (aOffset % row_stride);
 #else
   newOffset = aOffset;
 #endif

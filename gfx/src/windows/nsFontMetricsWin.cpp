@@ -157,7 +157,7 @@ static nsIAtom* gZHTW = nsnull;
 static nsIAtom* gZHCN = nsnull;
 
 static int gInitialized = 0;
-
+static PRBool gDoingLineheightFixup = PR_FALSE;
 static PRUint16* gUserDefinedCCMap = nsnull;
 
 static nsCharsetInfo gCharsetInfo[eCharset_COUNT] =
@@ -298,6 +298,15 @@ InitGlobals(void)
     FreeGlobals();
     return NS_ERROR_FAILURE;
   }
+
+  // if we do not include/compensate external leading in calculating normal 
+  // line height, we don't set gDoingLineheightFixup either to keep old behavior.
+  // These code should be eliminated in future when we choose to stay with 
+  // one normal lineheight calculation method.
+  PRInt32 intPref;
+  if (NS_SUCCEEDED(gPref->GetIntPref(
+      "browser.display.normal_lineheight_calc_control", &intPref)))
+    gDoingLineheightFixup = (intPref != 0);
 
   nsCOMPtr<nsILanguageAtomService> langService;
   langService = do_GetService(NS_LANGUAGEATOMSERVICE_CONTRACTID);
@@ -3263,6 +3272,7 @@ nsFontMetricsWin::RealizeFont()
   OUTLINETEXTMETRIC oMetrics;
   TEXTMETRIC& metrics = oMetrics.otmTextMetrics;
   nscoord onePixel = NSToCoordRound(1 * dev2app);
+  nscoord descentPos = 0;
 
   if (0 < ::GetOutlineTextMetrics(dc, sizeof(oMetrics), &oMetrics)) {
 //    mXHeight = NSToCoordRound(oMetrics.otmsXHeight * dev2app);  XXX not really supported on windows
@@ -3273,7 +3283,20 @@ nsFontMetricsWin::RealizeFont()
     mStrikeoutSize = PR_MAX(onePixel, NSToCoordRound(oMetrics.otmsStrikeoutSize * dev2app));
     mStrikeoutOffset = NSToCoordRound(oMetrics.otmsStrikeoutPosition * dev2app);
     mUnderlineSize = PR_MAX(onePixel, NSToCoordRound(oMetrics.otmsUnderscoreSize * dev2app));
-    mUnderlineOffset = NSToCoordRound(oMetrics.otmsUnderscorePosition * dev2app);
+    if (gDoingLineheightFixup) {
+      if(IsCJKLangGroupAtom(mLangGroup.get())) {
+        mUnderlineOffset = NSToCoordRound(PR_MIN(oMetrics.otmsUnderscorePosition, 
+                                                 oMetrics.otmDescent + oMetrics.otmsUnderscoreSize) 
+                                                 * dev2app);
+        // keep descent position, use it for mUnderlineOffset if leading allows
+        descentPos = NSToCoordRound(oMetrics.otmDescent * dev2app);
+      } else {
+        mUnderlineOffset = NSToCoordRound(PR_MIN(oMetrics.otmsUnderscorePosition*dev2app, 
+                                                 oMetrics.otmDescent*dev2app + mUnderlineSize));
+      }
+    }
+    else
+      mUnderlineOffset = NSToCoordRound(oMetrics.otmsUnderscorePosition * dev2app);
 
     // Begin -- section of code to get the real x-height with GetGlyphOutline()
     GLYPHMETRICS gm;
@@ -3298,7 +3321,8 @@ nsFontMetricsWin::RealizeFont()
     mUnderlineOffset = -NSToCoordRound((float)metrics.tmDescent * dev2app * 0.30f); // 30% of descent
   }
 
-  mLeading = NSToCoordRound(metrics.tmInternalLeading * dev2app);
+  mInternalLeading = NSToCoordRound(metrics.tmInternalLeading * dev2app);
+  mExternalLeading = NSToCoordRound(metrics.tmExternalLeading * dev2app);
   mEmHeight = NSToCoordRound((metrics.tmHeight - metrics.tmInternalLeading) *
                              dev2app);
   mEmAscent = NSToCoordRound((metrics.tmAscent - metrics.tmInternalLeading) *
@@ -3310,6 +3334,24 @@ nsFontMetricsWin::RealizeFont()
   mMaxAdvance = NSToCoordRound(metrics.tmMaxCharWidth * dev2app);
   mAveCharWidth = PR_MAX(1, NSToCoordRound(metrics.tmAveCharWidth * dev2app));
 
+  // descent position is preferred, but we need to make sure there is enough 
+  // space available. Baseline need to be raised so that underline will stay 
+  // within boundary.
+  // only do this for CJK to minimize possible risk
+  if (mLangGroup.get() == gJA || 
+      mLangGroup.get() == gKO || 
+      mLangGroup.get() == gZHTW || 
+      mLangGroup.get() == gZHCN ) {
+    if (gDoingLineheightFixup && 
+        mInternalLeading+mExternalLeading > mUnderlineSize &&
+        descentPos < mUnderlineOffset) {
+      mEmAscent -= mUnderlineSize;
+      mEmDescent += mUnderlineSize;
+      mMaxAscent -= mUnderlineSize;
+      mMaxDescent += mUnderlineSize;
+      mUnderlineOffset = descentPos;
+    }
+  }
   // Cache the width of a single space.
   SIZE  size;
   ::GetTextExtentPoint32(dc, " ", 1, &size);
@@ -3372,19 +3414,35 @@ nsFontMetricsWin::GetHeight(nscoord &aHeight)
   return NS_OK;
 }
 
+#ifdef FONT_LEADING_APIS_V2
 NS_IMETHODIMP
-nsFontMetricsWin::GetNormalLineHeight(nscoord &aHeight)
+nsFontMetricsWin::GetInternalLeading(nscoord &aLeading)
 {
-  aHeight = mEmHeight + mLeading;
+  aLeading = mInternalLeading;
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsFontMetricsWin::GetLeading(nscoord &aLeading)
+nsFontMetricsWin::GetExternalLeading(nscoord &aLeading)
 {
-  aLeading = mLeading;
+  aLeading = mExternalLeading;
   return NS_OK;
 }
+#else
+NS_IMETHODIMP
+nsFontMetricsWin::GetLeading(nscoord &aLeading)
+{
+  aLeading = mInternalLeading;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFontMetricsWin::GetNormalLineHeight(nscoord &aHeight)
+{
+  aHeight = mEmHeight + mInternalLeading;
+  return NS_OK;
+}
+#endif //FONT_LEADING_APIS_V2
 
 NS_IMETHODIMP
 nsFontMetricsWin::GetEmHeight(nscoord &aHeight)
@@ -4145,6 +4203,19 @@ GenerateSingleByte(nsCharsetInfo* aSelf)
   }
   mb[145] = 145;
   mb[146] = 146;
+
+  if (aSelf->mCodePage == 1250) {
+    mb[138] = 138;
+    mb[140] = 140;
+    mb[141] = 141;
+    mb[142] = 142;
+    mb[143] = 143;
+    mb[154] = 154;
+    mb[156] = 156;
+    mb[158] = 158;
+    mb[159] = 159;
+  }
+
   for (i = 160; i < 255; ++i) {
     mb[i] = i;
   }

@@ -27,6 +27,7 @@
 #include "nsIDOMClassInfo.h"
 #include "nsIExceptionService.h"
 #include "nsIGenericFactory.h"
+#include "nsIObserver.h"
 #include "nsIPrefService.h"
 #include "nsIPrefBranchInternal.h"
 #include "nsIScriptNameSpaceManager.h"
@@ -41,6 +42,9 @@
 #include "nsCRT.h"
 #include "txAtoms.h"
 #include "XSLTProcessor.h"
+#include "nsIScriptSecurityManager.h"
+#include "URIUtils.h"
+
 
 /* 1c1a3c01-14f6-11d6-a7f2-ea502af815dc */
 #define TRANSFORMIIX_DOMCI_EXTENSION_CID   \
@@ -169,6 +173,7 @@ PR_STATIC_CALLBACK(nsresult)
 Initialize(nsIModule* aSelf)
 {
     NS_PRECONDITION(!gInitialized, "module already initialized");
+    nsresult rv = NS_OK;
     if (gInitialized)
         return NS_OK;
 
@@ -192,6 +197,13 @@ Initialize(nsIModule* aSelf)
         return NS_ERROR_OUT_OF_MEMORY;
     if (!txHTMLAtoms::init())
         return NS_ERROR_OUT_OF_MEMORY;
+
+    rv = CallGetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &gTxSecurityManager);
+    if (NS_FAILED(rv)) {
+        gTxSecurityManager = nsnull;
+        return rv;
+    }
+
     return NS_OK;
 }
 
@@ -224,6 +236,8 @@ Shutdown(nsIModule* aSelf)
     txXPathAtoms::shutdown();
     txXSLTAtoms::shutdown();
     txHTMLAtoms::shutdown();
+
+    NS_IF_RELEASE(gTxSecurityManager);
 }
 
 // Check the master "xslt.enabled" pref.  Returns a success code if the

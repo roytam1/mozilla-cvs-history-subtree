@@ -771,10 +771,10 @@ NS_IMETHODIMP nsRenderingContextOS2::GetLineStyle( nsLineStyle &aLineStyle)
    return NS_OK;
 }
 
-NS_IMETHODIMP nsRenderingContextOS2::SetFont( const nsFont &aFont)
+NS_IMETHODIMP nsRenderingContextOS2::SetFont( const nsFont &aFont, nsIAtom* aLangGroup)
 {
    NS_IF_RELEASE( mFontMetrics);
-   mContext->GetMetricsFor( aFont, mFontMetrics);
+   mContext->GetMetricsFor( aFont, aLangGroup, mFontMetrics);
 
    return NS_OK;
 }
@@ -1117,6 +1117,10 @@ void nsRenderingContextOS2::PMDrawRect( nsRect &rect, BOOL fill)
 {
    mTranMatrix->TransformCoord( &rect.x, &rect.y, &rect.width, &rect.height);
 
+   // only draw line if it has a non-zero height and width
+   if ( !rect.width || !rect.height )
+      return;
+
    RECTL rcl;
    mSurface->NS2PM_ININ (rect, rcl);
 
@@ -1124,12 +1128,8 @@ void nsRenderingContextOS2::PMDrawRect( nsRect &rect, BOOL fill)
 
    if (rcl.xLeft == rcl.xRight || rcl.yTop == rcl.yBottom)
    {
-       // only draw line if it has a non-zero height and width
-      if( rect.width && rect.height )
-      {
-         SetupLineColorAndStyle ();
-         GFX (::GpiLine (mPS, ((PPOINTL)&rcl) + 1), GPI_ERROR);
-      }
+      SetupLineColorAndStyle ();
+      GFX (::GpiLine (mPS, ((PPOINTL)&rcl) + 1), GPI_ERROR);
    }
    else 
    {

@@ -698,7 +698,7 @@ NS_IMETHODIMP nsImageWin :: Draw(nsIRenderingContext &aContext, nsDrawingSurface
 NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
                                    nsDrawingSurface aSurface,
                                    PRInt32 aSXOffset, PRInt32 aSYOffset,
-                                   const nsRect &aTileRect)
+                                   const nsRect &aDestRect)
 {
   float            scale;
 
@@ -743,18 +743,18 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
 
   // put the width and hieght into the devices coordinates
 
-  PRInt32 aY0 = aTileRect.y - aSYOffset,
-          aX0 = aTileRect.x - aSXOffset,
-          aY1 = aTileRect.y + aTileRect.height,
-          aX1 = aTileRect.x + aTileRect.width;
+  PRInt32 aY0 = aDestRect.y - aSYOffset,
+          aX0 = aDestRect.x - aSXOffset,
+          aY1 = aDestRect.y + aDestRect.height,
+          aX1 = aDestRect.x + aDestRect.width;
 
   // this is the width and height of the image in pixels
   // we need to map this to the pixel height of the device
   nscoord imageScaledWidth = PR_MAX(int(mBHead->biWidth*scale), 1);
   nscoord imageScaledHeight = PR_MAX(int(mBHead->biHeight*scale), 1);
 
-  nscoord tileWidth = aTileRect.width;
-  nscoord tileHeight = aTileRect.height;
+  nscoord tileWidth = aDestRect.width;
+  nscoord tileHeight = aDestRect.height;
 
   PRBool              tryAgain = PR_FALSE;
   nsRect              destRect,srcRect,tvrect;
@@ -796,7 +796,7 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
       tryAgain = PR_TRUE;
     } else {
       // Copy from the HDC to the memory DC
-      ::StretchBlt(memDC, 0, 0, width, height,TheHDC, 0, 0, width, height, SRCCOPY);
+      ::StretchBlt(memDC, 0, 0, width, height,TheHDC, aDestRect.x, aDestRect.y, width, height, SRCCOPY);
   
       PRInt32 targetRowBytes = ((width * 3) + 3) & ~3;
       unsigned char *targetRow,*imageRow,*alphaRow;
@@ -831,7 +831,7 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
       }
 
       // Copy back to the HDC 
-      ::StretchBlt(TheHDC, 0, 0, width, height,memDC, 0, 0, width, height, SRCCOPY);
+      ::StretchBlt(TheHDC,aDestRect.x, aDestRect.y, width, height,memDC, 0, 0, width, height, SRCCOPY);
 
       ::SelectObject(memDC, oldBitmap);
       ::DeleteObject(tmpBitmap);
@@ -1447,109 +1447,177 @@ nsImageWin::GetBits()
 } // GetBits
 
 #ifdef USE_IMG2
-NS_IMETHODIMP nsImageWin::DrawToImage(nsIImage* aDstImage, nscoord aDX, nscoord aDY, nscoord aDWidth, nscoord aDHeight)
+NS_IMETHODIMP nsImageWin::DrawToImage(nsIImage* aDstImage,
+                                      nscoord aDX, nscoord aDY,
+                                      nscoord aDWidth, nscoord aDHeight)
 {
-  PRInt32 srcy;
-  HBITMAP oldDstBits;
-  DWORD   rop;
-  PRInt32 origDHeight = aDHeight;
-  PRInt32 origDWidth = aDWidth;
+  NS_ASSERTION(mAlphaDepth <= 1, "nsImageWin::DrawToImage can only handle 0 & 1 bit Alpha");
 
-  if (mBHead == nsnull || aDWidth < 0 || aDHeight < 0) 
+  if (mAlphaDepth > 1)
+    return NS_ERROR_UNEXPECTED;
+
+  nsImageWin *dest = NS_STATIC_CAST(nsImageWin *, aDstImage);
+
+  if (!dest)
     return NS_ERROR_FAILURE;
 
-  if (0 == aDWidth || 0 == aDHeight)
+  if (aDX >= dest->mBHead->biWidth || aDY >= dest->mBHead->biHeight)
     return NS_OK;
 
-  // Translate to bottom-up coordinates for the source bitmap
-  srcy = mBHead->biHeight - mNaturalHeight;
-
-  // Create a memory DC that is compatible with the screen
-  HDC dstMemDC = ::CreateCompatibleDC(nsnull);
-
-  nsImageWin* imgWin = NS_STATIC_CAST(nsImageWin*, aDstImage); 
-  if (!imgWin->mHBitmap)
+  if (!dest->mImageBits)
+    return NS_ERROR_FAILURE;
+    
+     
+  if (!dest->mIsOptimized)
   {
-    if (imgWin->mSizeImage > 0) {
-      void* bits;
-      imgWin->mHBitmap = CreateDIBSection(dstMemDC,(LPBITMAPINFO)imgWin->mBHead,DIB_RGB_COLORS,&bits,nsnull,nsnull);
-      imgWin->mDIBSection = imgWin->mHBitmap;
-      oldDstBits = (HBITMAP)::SelectObject(dstMemDC, imgWin->mHBitmap);
+    // set up some local variable to make things run faster in the loop
+    PRUint8 *rgbPtr=0, *alphaPtr=0;
+    PRUint32 rgbStride, alphaStride;
+    PRInt32 srcHeight;
+    PRUint8 *dstRgbPtr=0, *dstAlphaPtr=0;
+    PRUint32 dstRgbStride, dstAlphaStride;
+    PRInt32 dstHeight;
 
-      rop = SRCCOPY;
+    rgbPtr = mImageBits;
+    rgbStride = mRowBytes;
+    alphaPtr = mAlphaBits;
+    alphaStride = mARowBytes;
+    srcHeight = mBHead->biHeight;
 
-      if (nsnull != imgWin->mAlphaBits) {
-        if (1==imgWin->mAlphaDepth) {
-          MONOBITMAPINFO  bmi(imgWin->mAlphaWidth, imgWin->mAlphaHeight);
+    dstRgbPtr = dest->mImageBits;
+    dstRgbStride = dest->mRowBytes;
+    dstAlphaPtr = dest->mAlphaBits;
+    dstAlphaStride = dest->mARowBytes;
+    dstHeight = dest->mBHead->biHeight;
 
-          ::StretchDIBits(dstMemDC, 0, 0, aDWidth, aDHeight,0, 0,mNaturalWidth, mNaturalHeight, imgWin->mAlphaBits,
-                                        (LPBITMAPINFO)&bmi, DIB_RGB_COLORS, SRCAND);
-           rop = SRCPAINT;
+    PRInt32 y;
+    PRInt32 ValidWidth = ( aDWidth < ( dest->mBHead->biWidth - aDX ) ) ? aDWidth : ( dest->mBHead->biWidth - aDX );
+    PRInt32 ValidHeight = ( aDHeight < ( dstHeight - aDY ) ) ? aDHeight : ( dstHeight - aDY );
+    PRUint8 *dst;
+    PRUint8 *src;
+
+    // now composite the two images together
+    switch (mAlphaDepth) {
+    case 1:
+      {
+        PRUint8 *dstAlpha;
+        PRUint8 *alpha;
+        PRUint8 *dstGatherStart = nsnull;  // assign null to kill compiler warning
+        PRUint8 *srcGatherStart = nsnull;
+        PRUint8 offset = aDX & 0x7; // x starts at 0
+
+        for (y=0; y<ValidHeight; y++) {
+          dst = dstRgbPtr + (dstHeight - (aDY+y) - 1)*dstRgbStride + (3*aDX);
+          dstAlpha = dstAlphaPtr + (dstHeight - (aDY+y) - 1)*dstAlphaStride;
+          src = rgbPtr + (srcHeight - y - 1)*rgbStride;
+          alpha = alphaPtr + (srcHeight - y - 1)*alphaStride;
+          for (int x=0; x<ValidWidth; x += 8, dst += 3*8, src += 3*8) {
+            PRUint8 alphaPixels = *alpha++;
+            if (alphaPixels == 0) {
+              // all 8 transparent; jump forward
+              continue;
+            }
+
+            // 1 or more bits are set, handle dstAlpha now - may not be aligned.
+            // Are all 8 of these alpha pixels used?
+            if (x+7 >= ValidWidth) {
+              alphaPixels &= 0xff << (8 - (ValidWidth-x)); // no, mask off unused
+              if (alphaPixels == 0)
+                continue;  // no 1 alpha pixels left
+            }
+            if (offset == 0) {
+              dstAlpha[(aDX+x)>>3] |= alphaPixels; // the cheap aligned case
+            }
+            else {
+              dstAlpha[(aDX+x)>>3]       |= alphaPixels >> offset;
+              // avoid write if no 1's to write - also avoids going past end of array
+              // compiler should merge the common sub-expressions
+              if (alphaPixels << (8U - offset))
+                dstAlpha[((aDX+x)>>3) + 1] |= alphaPixels << (8U - offset);
+            }
+
+            if (alphaPixels == 0xff) {
+              // fix - could speed up by gathering a run of 0xff's and doing 1 memcpy
+              // all 8 pixels set; copy and jump forward
+              memcpy(dst,src,8*3);
+              continue;
+            }
+            else {
+              // else mix of 1's and 0's in alphaPixels, do 1 bit at a time
+              // Don't go past end of line!
+              PRUint8 *d = dst, *s = src;
+              for (PRUint8 aMask = 1<<7, j = 0; aMask && j < ValidWidth-x; aMask >>= 1, j++) {
+                // if this pixel is opaque then copy into the destination image
+                if (alphaPixels & aMask) {
+                  // might be faster with *d++ = *s++ 3 times?
+                  d[0] = s[0];
+                  d[1] = s[1];
+                  d[2] = s[2];
+                  // dstAlpha bit already set
+                }
+                d += 3;
+                s += 3;
+              }
+            }
+          }
         }
-      }
 
-      if (8==imgWin->mAlphaDepth) {              
-        DrawComposited(dstMemDC, aDX, aDY, aDWidth, aDHeight,0, 0, mNaturalHeight, mNaturalWidth);
-      } else {
-        ::StretchDIBits(dstMemDC, aDX, aDY, aDWidth, aDHeight,0, 0, mNaturalWidth, mNaturalHeight, imgWin->mImageBits,
-          (LPBITMAPINFO)imgWin->mBHead, DIB_RGB_COLORS, rop);
       }
-      imgWin->mIsOptimized = PR_TRUE;
-      imgWin->CleanUpDIB();
-      imgWin->mImageBits = (PRUint8*)bits;
+      break;
+    case 0:
+    default:
+      dst = dstRgbPtr + (dstHeight - aDY - 1)*dstRgbStride + 3*aDX;
+      src = rgbPtr + (srcHeight - 1)*rgbStride;
+
+      for (y=0; y<ValidHeight; y++) {
+        memcpy(dst, src, 3*ValidWidth);
+        dst -= dstRgbStride;
+        src -= rgbStride;
+      }
     }
-  } else
-    oldDstBits = (HBITMAP)::SelectObject(dstMemDC, imgWin->mHBitmap);
 
-#if 0
-  if (!IsOptimized() || nsnull==mHBitmap)
-#endif
-  {
+    nsRect rect(aDX, aDY, ValidWidth, ValidHeight);
+    dest->ImageUpdated(nsnull, 0, &rect);
+  } else {
+    // dst's Image is optimized (dest->mHBitmap is linked to dest->mImageBits), so just paint on it
+    if (!dest->mHBitmap)
+      return NS_ERROR_UNEXPECTED;
+      
+    HDC dstMemDC = ::CreateCompatibleDC(nsnull);
+    HBITMAP oldDstBits;
+    DWORD rop;
+
+    oldDstBits = (HBITMAP)::SelectObject(dstMemDC, dest->mHBitmap);
     rop = SRCCOPY;
 
-    if (nsnull != mAlphaBits) {
+    if (mAlphaBits) {
       if (1==mAlphaDepth) {
         MONOBITMAPINFO  bmi(mAlphaWidth, mAlphaHeight);
 
-        ::StretchDIBits(dstMemDC, aDX, aDY, aDWidth, aDHeight,0, 0,mNaturalWidth, mNaturalHeight, mAlphaBits,
+        ::StretchDIBits(dstMemDC, aDX, aDY, aDWidth, aDHeight, 0, 0, mNaturalWidth, mNaturalHeight, mAlphaBits,
                         (LPBITMAPINFO)&bmi, DIB_RGB_COLORS, SRCAND);
         rop = SRCPAINT;
       }
-    }
+    } 
+    
+    // Copy/Paint our rgb to dest
+    if (mIsOptimized && mHBitmap) {
+      // We are optimized, use Stretchblt
+      HDC srcMemDC = ::CreateCompatibleDC(nsnull);
+      HBITMAP oldSrcBits;
+      oldSrcBits = (HBITMAP)::SelectObject(srcMemDC, mHBitmap);
+       
+      ::StretchBlt(dstMemDC, aDX, aDY, aDWidth, aDHeight, srcMemDC, 0, 0, mNaturalWidth, mNaturalHeight, rop);
+      
+      ::SelectObject(srcMemDC, oldSrcBits);
+      ::DeleteDC(srcMemDC);
+    } else
+      ::StretchDIBits(dstMemDC, aDX, aDY, aDWidth, aDHeight, 0, 0, mNaturalWidth, mNaturalHeight, mImageBits,
+                     (LPBITMAPINFO)mBHead, DIB_RGB_COLORS, rop);
 
-    if (8==mAlphaDepth) {
-      DrawComposited(dstMemDC, aDX, aDY, aDWidth, aDHeight, 0, 0, mNaturalHeight, mNaturalWidth);
-    } else {
-      ::StretchDIBits(dstMemDC, aDX, aDY, aDWidth, aDHeight,0, 0, mNaturalWidth, mNaturalHeight, mImageBits,
-                      (LPBITMAPINFO)mBHead, DIB_RGB_COLORS, rop);
-    }
+    ::SelectObject(dstMemDC, oldDstBits);
+    ::DeleteDC(dstMemDC);
   }
-#if 0
-  else{
-    rop = SRCCOPY;
-    if (1==mAlphaDepth && mAlphaBits){
-      MONOBITMAPINFO  bmi(mAlphaWidth, mAlphaHeight);
-
-      ::StretchDIBits(dstMemDC, aDX, aDY, aDWidth, aDHeight,0, 0, mNaturalWidth, mNaturalHeight, mAlphaBits,
-                      (LPBITMAPINFO)&bmi, DIB_RGB_COLORS, SRCAND);
-      rop = SRCPAINT;
-      ::StretchDIBits(dstMemDC, aDX, aDY, aDWidth, aDHeight,0, 0, mNaturalWidth, mNaturalHeight, mHBitmap,
-                      (LPBITMAPINFO)mBHead, DIB_RGB_COLORS, rop);
-    } else if (8 == mAlphaDepth && mAlphaBits) {
-      BLENDFUNCTION blendFunction;
-      blendFunction.BlendOp = AC_SRC_OVER;
-      blendFunction.BlendFlags = 0;
-      blendFunction.SourceConstantAlpha = 255;
-      blendFunction.AlphaFormat = 1; //AC_SRC_ALPHA*
-      gAlphaBlend(dstMemDC, aDX, aDY, aDWidth, aDHeight, dstMemDC, 0, 0, mNaturalWidth, mNaturalHeight, blendFunction);
-    } else {
-      ::StretchBlt(dstMemDC, aDX, aDY, aDWidth, aDHeight, dstMemDC, 0, 0, mNaturalWidth, mNaturalHeight, rop);
-    }
-  }
-#endif
-
-  ::SelectObject(dstMemDC, oldDstBits);
-  ::DeleteDC(dstMemDC);
 
   return NS_OK;
 }

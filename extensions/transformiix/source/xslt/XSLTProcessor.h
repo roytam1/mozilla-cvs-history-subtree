@@ -41,10 +41,10 @@
 #include "nsICSSLoaderObserver.h"
 #include "nsIDocumentTransformer.h"
 #include "nsIDOMHTMLScriptElement.h"
-#include "nsIObserver.h"
 #include "nsIScriptLoader.h"
 #include "nsIScriptLoaderObserver.h"
-
+#include "nsITransformObserver.h"
+#include "nsWeakPtr.h"
 #include "txMozillaTextOutput.h"
 #include "txMozillaXMLOutput.h"
 #endif
@@ -408,7 +408,7 @@ private:
     void SignalTransformEnd();
 
     nsCOMPtr<nsIScriptLoader> mScriptLoader;
-    nsCOMPtr<nsIObserver> mObserver;
+    nsWeakPtr mObserver; //
 #endif
 }; //-- XSLTProcessor
 

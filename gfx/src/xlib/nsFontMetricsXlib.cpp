@@ -99,6 +99,12 @@ static PRLogModuleInfo *FontMetricsXlibLM = PR_NewLogModule("FontMetricsXlib");
 #undef USER_DEFINED
 #define USER_DEFINED "x-user-def"
 
+// This is the scaling factor that we keep fonts limited to against
+// the display size.  If a pixel size is requested that is more than
+// this factor larger than the height of the display, it's clamped to
+// that value instead of the requested size.
+#define FONT_MAX_FONT_SCALE 2
+
 #undef NOISY_FONTS
 #undef REALLY_NOISY_FONTS
 
@@ -167,12 +173,15 @@ static void SetCharsetLangGroup(nsFontCharSetInfoXlib* aCharSetInfo);
 
 static int gFontMetricsXlibCount = 0;
 static PRBool gInitialized = PR_FALSE;
+static PRBool gForceOutlineScaledFonts = PR_FALSE;
 static XlibRgbHandle *gXlibRgbHandle = nsnull;
 static PRBool gAllowDoubleByteSpecialChars = PR_TRUE;
 
 // XXX many of these statics need to be freed at shutdown time
 
 static nsIPref* gPref = nsnull;
+static float gDevScale = 0.0f; /* Scaler value from |GetCanonicalPixelScale()| */
+static PRBool gScaleBitmapFontsWithDevScale = PR_FALSE;
 static nsICharsetConverterManager2* gCharSetManager = nsnull;
 static nsIUnicodeEncoder* gUserDefinedConverter = nsnull;
 
@@ -849,8 +858,10 @@ nsFontMetricsXlib::InitGlobals(nsIDeviceContext *aDevice)
   }
 #endif /* NS_FONT_DEBUG */
 
-  NS_ASSERTION(aDevice!=nsnull, "calling InitGlobals() without a device"); 
+  NS_ENSURE_TRUE(nsnull != aDevice, NS_ERROR_NULL_POINTER);
   NS_STATIC_CAST(nsDeviceContextX *, aDevice)->GetXlibRgbHandle(gXlibRgbHandle);
+
+  aDevice->GetCanonicalPixelScale(gDevScale);
 
   nsServiceManager::GetService(kCharSetManagerCID,
     NS_GET_IID(nsICharsetConverterManager2), (nsISupports**) &gCharSetManager);
@@ -972,6 +983,27 @@ nsFontMetricsXlib::InitGlobals(nsIDeviceContext *aDevice)
     SIZE_FONT_PRINTF(("gBitmapUndersize = %g", gBitmapUndersize));
   }
 
+#ifdef USE_XPRINT
+  if (nsFontMetricsXlib::mPrinterMode) {
+    gForceOutlineScaledFonts = PR_TRUE;
+  }
+#endif /* USE_XPRINT */
+
+ PRBool force_outline_scaled_fonts = gForceOutlineScaledFonts;
+#ifdef USE_XPRINT
+  if (nsFontMetricsXlib::mPrinterMode) {
+    rv = gPref->GetBoolPref("print.xprint.font.force_outline_scaled_fonts", &force_outline_scaled_fonts);
+  }  
+  if (!nsFontMetricsXlib::mPrinterMode || NS_FAILED(rv)) {
+#endif /* USE_XPRINT */
+    rv = gPref->GetBoolPref("font.x11.force_outline_scaled_fonts", &force_outline_scaled_fonts);
+#ifdef USE_XPRINT
+  }
+#endif /* USE_XPRINT */
+  if (NS_SUCCEEDED(rv)) {
+    gForceOutlineScaledFonts = force_outline_scaled_fonts;
+  }
+
 #ifdef USE_FREETYPE
   PRBool enable_freetype2 = PR_TRUE;
   rv = gPref->GetBoolPref("font.FreeType2.enable", &enable_freetype2);
@@ -1025,6 +1057,27 @@ nsFontMetricsXlib::InitGlobals(nsIDeviceContext *aDevice)
     SIZE_FONT_PRINTF(("gAATTDarkTextGain = %g", gAATTDarkTextGain));
   }
 #endif /* USE_AASB */
+
+#ifdef USE_XPRINT
+  if (nsFontMetricsXlib::mPrinterMode) {
+    gScaleBitmapFontsWithDevScale = PR_TRUE;
+  }
+#endif /* USE_XPRINT */
+
+ PRBool scale_bitmap_fonts_with_devscale = gScaleBitmapFontsWithDevScale;
+#ifdef USE_XPRINT
+  if (nsFontMetricsXlib::mPrinterMode) {
+    rv = gPref->GetBoolPref("print.xprint.font.scale_bitmap_fonts_with_devscale", &scale_bitmap_fonts_with_devscale);
+  }  
+  if (!nsFontMetricsXlib::mPrinterMode || NS_FAILED(rv)) {
+#endif /* USE_XPRINT */
+    rv = gPref->GetBoolPref("font.x11.scale_bitmap_fonts_with_devscale", &scale_bitmap_fonts_with_devscale);
+#ifdef USE_XPRINT
+  }
+#endif /* USE_XPRINT */
+  if (NS_SUCCEEDED(rv)) {
+    gScaleBitmapFontsWithDevScale = scale_bitmap_fonts_with_devscale;
+  }
 
   gFFRENodes = new nsHashtable();
   if (!gFFRENodes) {
@@ -1143,7 +1196,16 @@ nsFontMetricsXlib::InitGlobals(nsIDeviceContext *aDevice)
 #ifdef ENABLE_X_FONT_BANNING
   /* get the font banning pattern */
   nsXPIDLCString fbpattern;
-  rv = gPref->GetCharPref("font.x11.rejectfontpattern", getter_Copies(fbpattern));
+#ifdef USE_XPRINT
+  if (nsFontMetricsXlib::mPrinterMode) {
+    rv = gPref->GetCharPref("print.xprint.font.rejectfontpattern", getter_Copies(fbpattern));
+  }  
+  if (!nsFontMetricsXlib::mPrinterMode || NS_FAILED(rv)) {
+#endif /* USE_XPRINT */
+    rv = gPref->GetCharPref("font.x11.rejectfontpattern", getter_Copies(fbpattern));
+#ifdef USE_XPRINT
+  }
+#endif /* USE_XPRINT */
   if (NS_SUCCEEDED(rv)) {
     gFontRejectRegEx = new regex_t;
     if (!gFontRejectRegEx) {
@@ -1163,7 +1225,16 @@ nsFontMetricsXlib::InitGlobals(nsIDeviceContext *aDevice)
     }    
   }
 
-  rv = gPref->GetCharPref("font.x11.acceptfontpattern", getter_Copies(fbpattern));
+#ifdef USE_XPRINT
+  if (nsFontMetricsXlib::mPrinterMode) {
+    rv = gPref->GetCharPref("print.xprint.font.acceptfontpattern", getter_Copies(fbpattern));
+  }  
+  if (!nsFontMetricsXlib::mPrinterMode || NS_FAILED(rv)) {
+#endif /* USE_XPRINT */
+    rv = gPref->GetCharPref("font.x11.acceptfontpattern", getter_Copies(fbpattern));
+#ifdef USE_XPRINT
+  }
+#endif /* USE_XPRINT */
   if (NS_SUCCEEDED(rv)) {
     gFontAcceptRegEx = new regex_t;
     if (!gFontAcceptRegEx) {
@@ -1440,7 +1511,12 @@ NS_IMETHODIMP nsFontMetricsXlib::Init(const nsFont& aFont, nsIAtom* aLangGroup,
 
   float app2dev;
   mDeviceContext->GetAppUnitsToDevUnits(app2dev);
+
   mPixelSize = NSToIntRound(app2dev * mFont->size);
+  // Make sure to clamp the pixel size to something reasonable so we
+  // don't make the X server blow up.
+  mPixelSize = PR_MIN(XHeightOfScreen(xxlib_rgb_get_screen(gXlibRgbHandle)) * FONT_MAX_FONT_SCALE, mPixelSize);
+
   mStretchIndex = 4; // Normal
   mStyleIndex = mFont->style;
 
@@ -3915,15 +3991,30 @@ NodeAddScalable(nsFontStretchXlib* aStretch,
 }
 
 static PRBool
-NodeAddSize(nsFontStretchXlib* aStretch, int aSize, const char *aName,
-        nsFontCharSetInfoXlib* aCharSetInfo)
+NodeAddSize(nsFontStretchXlib* aStretch, 
+            int aPixelSize, int aPointSize,
+            float scaler,
+            int aResX,      int aResY,
+            const char *aDashFoundry, const char *aFamily, 
+            const char *aWeight,      const char * aSlant, 
+            const char *aWidth,       const char *aStyle, 
+            const char *aSpacing,     const char *aCharSet,
+            nsFontCharSetInfoXlib* aCharSetInfo)
 {
+  if (scaler!=1.0f)
+  {
+    aPixelSize = int(float(aPixelSize) * scaler);
+    aPointSize = int(float(aPointSize) * scaler);
+    aResX = 0;
+    aResY = 0;
+  }
+
   PRBool haveSize = PR_FALSE;
   if (aStretch->mSizesCount) {
     nsFontXlib** end = &aStretch->mSizes[aStretch->mSizesCount];
     nsFontXlib** s;
     for (s = aStretch->mSizes; s < end; s++) {
-      if ((*s)->mSize == aSize) {
+      if ((*s)->mSize == aPixelSize) {
         haveSize = PR_TRUE;
         break;
       }
@@ -3942,8 +4033,11 @@ NodeAddSize(nsFontStretchXlib* aStretch, int aSize, const char *aName,
       delete [] aStretch->mSizes;
       aStretch->mSizes = newSizes;
     }
-    char* copy = PR_smprintf("%s", aName);
-    if (!copy) {
+    char *name = PR_smprintf("%s-%s-%s-%s-%s-%s-%d-%d-%d-%d-%s-*-%s", 
+                             aDashFoundry, aFamily, aWeight, aSlant, aWidth, aStyle, 
+                             aPixelSize, aPointSize, aResX, aResY, aSpacing, aCharSet);  
+
+    if (!name) {
       return PR_FALSE;
     }
     nsFontXlib* size = new nsFontXlibNormal();
@@ -3951,9 +4045,9 @@ NodeAddSize(nsFontStretchXlib* aStretch, int aSize, const char *aName,
       return PR_FALSE;
     }
     aStretch->mSizes[aStretch->mSizesCount++] = size;
-    size->mName           = copy;
+    size->mName           = name;
     // size->mFont is initialized in the constructor
-    size->mSize           = aSize;
+    size->mSize           = aPixelSize;
     size->mBaselineAdjust = 0;
     size->mCCMap          = nsnull;
     size->mCharSetInfo    = aCharSetInfo;
@@ -3962,7 +4056,7 @@ NodeAddSize(nsFontStretchXlib* aStretch, int aSize, const char *aName,
 }
 
 static void
-GetFontNames(const char* aPattern, PRBool aAnyFoundry, nsFontNodeArrayXlib* aNodes)
+GetFontNames(const char* aPattern, PRBool aAnyFoundry, PRBool aOnlyOutlineScaledFonts, nsFontNodeArrayXlib* aNodes)
 {
   Display *dpy = xxlib_rgb_get_display(gXlibRgbHandle);
   Screen  *scr = xxlib_rgb_get_screen (gXlibRgbHandle);
@@ -4057,9 +4151,9 @@ GetFontNames(const char* aPattern, PRBool aAnyFoundry, nsFontNodeArrayXlib* aNod
            outline_scaled = PR_FALSE;
 #ifdef USE_XPRINT
     PRBool builtin_printer_font = PR_FALSE;
+#endif /* USE_XPRINT */
     int    resX = -1,
            resY = -1;
-#endif /* USE_XPRINT */
 
 #ifdef FIND_FIELD
 #undef FIND_FIELD
@@ -4106,18 +4200,14 @@ GetFontNames(const char* aPattern, PRBool aAnyFoundry, nsFontNodeArrayXlib* aNod
       scalable = PR_TRUE;
     }
     FIND_FIELD(resolutionX);
-#ifdef USE_XPRINT
     resX = atoi(resolutionX);
     NS_ASSERTION(!(resolutionX[0] != '0' && resX == 0), "atoi(resolutionX) failure.");
-#endif /* USE_XPRINT */
     if (resolutionX[0] == '0') {
       scalable = PR_TRUE;
     }
     FIND_FIELD(resolutionY);
-#ifdef USE_XPRINT
     resY = atoi(resolutionY);
     NS_ASSERTION(!(resolutionY[0] != '0' && resY == 0), "atoi(resolutionY) failure.");
-#endif /* USE_XPRINT */
     if (resolutionY[0] == '0') {
       scalable = PR_TRUE;
     }
@@ -4157,14 +4247,18 @@ GetFontNames(const char* aPattern, PRBool aAnyFoundry, nsFontNodeArrayXlib* aNod
 
 #ifdef USE_XPRINT
     /* I am not sure what Xprint built-in printer fonts exactly look like
-     * (usually '-adobe-helvetica-medium-r-normal--50-120-300-300-p-0-iso8859-1'
-     * for a 300DPI printer) - but this test is good enough (except when
-     * someone installs 300DPI bitmap (!!) fonts on a system... =:-)
+     * (usually '-adobe-helvetica-medium-r-normal--0-0-1200-1200-p-0-iso8859-1'
+     * for a 300DPI printer ("fonts.dir" entry in 
+     * $XPCONFIGDIR/C/print/models/SPSPARC2/fonts/ for "Helvetica.pmf" 
+     * (PMF=printer font metrics) looks like this: 
+     * '-adobe-helvetica-medium-r-normal--199-120-1200-1200-p-1085-iso8859-1'))
+     * but this test is good enough (except when someone installs 1200DPI
+     * bitmap (!!) fonts on a system... =:-)
      */
     if (nsFontMetricsXlib::mPrinterMode &&
         averageWidth[0] == '0' && 
-        resX >= screen_xres    && 
-        resY >= screen_yres) {
+        resX > screen_xres && 
+        resY > screen_yres) {
       builtin_printer_font = PR_TRUE;
       /* Treat built-in printer fonts like outline-scaled ones... */
       outline_scaled = PR_TRUE;
@@ -4203,6 +4297,10 @@ GetFontNames(const char* aPattern, PRBool aAnyFoundry, nsFontNodeArrayXlib* aNod
     }
     char* charSetName = p; // CHARSET_REGISTRY & CHARSET_ENCODING
     if (!*charSetName) {
+      continue;
+    }
+    
+    if (aOnlyOutlineScaledFonts && (outline_scaled == PR_FALSE)) {
       continue;
     }
 
@@ -4353,19 +4451,39 @@ GetFontNames(const char* aPattern, PRBool aAnyFoundry, nsFontNodeArrayXlib* aNod
     }
   
     // get pixel size before the string is changed
-    int pixels = atoi(pixelSize);
+    int pixels,
+        points;
 
-    p = name;
-    while (p < charSetName) {
-      if (!*p) {
-        *p = '-';
-      }
-      p++;
-    }
- 
+    pixels = atoi(pixelSize);
+    points = atoi(pointSize);
+
     if (pixels) {
-      if (!NodeAddSize(stretch, pixels, name, charSetInfo))
+      if (!NodeAddSize(stretch, pixels, points, 1.0f, resX, resY, name, familyName, weightName, 
+                  slant, setWidth, addStyle, spacing, charSetName, charSetInfo))
         continue;
+
+      if (gScaleBitmapFontsWithDevScale && (gDevScale > 1.0f)) {
+        /* Add a font size which is exactly scaled as the scaling factor ... */
+        if (!NodeAddSize(stretch, pixels, points, gDevScale, resX, resY, name, familyName, weightName, 
+                         slant, setWidth, addStyle, spacing, charSetName, charSetInfo))
+          continue;
+
+        /* ... and offer a range of scaled fonts with integer scaling factors
+         * (we're taking half steps between integers, too - to avoid too big
+         * steps between font sizes) */
+        float minScaler = PR_MAX(gDevScale / 2.0f, 1.5f),
+              maxScaler = gDevScale * 2.f,
+              scaler;
+        for( scaler = minScaler ; scaler <= maxScaler ; scaler += 0.5f )
+        {
+          if (!NodeAddSize(stretch, pixels, points, scaler, resX, resY, name, familyName, weightName, 
+                           slant, setWidth, addStyle, spacing, charSetName, charSetInfo))
+            break;
+        }
+        if (scaler <= maxScaler) {
+          continue; /* |NodeAddSize| returned an error in the loop above... */
+        }
+      }
     }
   }
   XFreeFontNames(list);
@@ -4387,7 +4505,7 @@ GetAllFontNames(void)
     }
     /* Using "-*" instead of the full-qualified "-*-*-*-*-*-*-*-*-*-*-*-*-*-*"
      * because it's faster and "smarter" - see bug 34242 for details. */
-    GetFontNames("-*", PR_FALSE, gGlobalList);
+    GetFontNames("-*", PR_FALSE, PR_FALSE, gGlobalList);
   }
 
   return NS_OK;
@@ -4404,7 +4522,7 @@ FindFamily(nsCString* aName)
       char pattern[256];
       PR_snprintf(pattern, sizeof(pattern), "-*-%s-*-*-*-*-*-*-*-*-*-*-*-*",
         aName->get());
-      GetFontNames(pattern, PR_TRUE, &family->mNodes);
+      GetFontNames(pattern, PR_TRUE, gForceOutlineScaledFonts, &family->mNodes);
       gFamilies->Put(&key, family);
     }
   }
@@ -4492,7 +4610,7 @@ nsFontMetricsXlib::TryNodes(nsACString &aFFREName, PRUnichar aChar)
     nodes = new nsFontNodeArrayXlib;
     if (!nodes)
       return nsnull;
-    GetFontNames(pattern.get(), anyFoundry, nodes);
+    GetFontNames(pattern.get(), anyFoundry, gForceOutlineScaledFonts, nodes);
     gCachedFFRESearches->Put(&key, nodes);
   }
   int i, cnt = nodes->Count();
@@ -4513,6 +4631,9 @@ nsFontMetricsXlib::TryNode(nsCString* aName, PRUnichar aChar)
   //
   // check the specified font (foundry-family-registry-encoding)
   //
+  if (aName->IsEmpty()) {
+    return nsnull;
+  }
   nsFontXlib* font;
  
   nsCStringKey key(*aName);
@@ -4521,7 +4642,7 @@ nsFontMetricsXlib::TryNode(nsCString* aName, PRUnichar aChar)
     nsCAutoString pattern;
     FFREToXLFDPattern(*aName, pattern);
     nsFontNodeArrayXlib nodes;
-    GetFontNames(pattern.get(), PR_FALSE, &nodes);
+    GetFontNames(pattern.get(), PR_FALSE, gForceOutlineScaledFonts, &nodes);
     // no need to call gFFRENodes->Put() since GetFontNames already did
     if (nodes.Count() > 0) {
       // This assertion is not spurious; when searching for an FFRE
@@ -4574,6 +4695,9 @@ nsFontMetricsXlib::TryLangGroup(nsIAtom* aLangGroup, nsCString* aName, PRUnichar
   //
   FIND_FONT_PRINTF(("      TryLangGroup lang group = %s, aName = %s", 
                             atomToName(aLangGroup), (*aName).get()));
+  if (aName->IsEmpty()) {
+    return nsnull;
+  }
   nsFontXlib* font = FindLangGroupFont(aLangGroup, aChar, aName);
   return font;
 }
@@ -4719,7 +4843,7 @@ PrefEnumCallback(const char* aName, void* aClosure)
   nsXPIDLCString value;
   gPref->CopyCharPref(aName, getter_Copies(value));
   nsCAutoString name;
-  if (value) {
+  if (value.get()) {
     name = value;
     FIND_FONT_PRINTF(("       PrefEnumCallback"));
     s->mFont = s->mMetrics->TryNode(&name, s->mChar);
@@ -4727,14 +4851,14 @@ PrefEnumCallback(const char* aName, void* aClosure)
       NS_ASSERTION(s->mFont->SupportsChar(s->mChar), "font supposed to support this char");
       return;
     }
-  }
-  s->mFont = s->mMetrics->TryLangGroup(s->mMetrics->mLangGroup, &name, s->mChar);
-  if (s->mFont) {
-    NS_ASSERTION(s->mFont->SupportsChar(s->mChar), "font supposed to support this char");
-    return;
+    s->mFont = s->mMetrics->TryLangGroup(s->mMetrics->mLangGroup, &name, s->mChar);
+    if (s->mFont) {
+      NS_ASSERTION(s->mFont->SupportsChar(s->mChar), "font supposed to support this char");
+      return;
+    }
   }
   gPref->CopyDefaultCharPref(aName, getter_Copies(value));
-  if ((value) && (!name.Equals(value))) {
+  if (value.get() && (!name.Equals(value))) {
     name = value;
     FIND_FONT_PRINTF(("       PrefEnumCallback:default"));
     s->mFont = s->mMetrics->TryNode(&name, s->mChar);

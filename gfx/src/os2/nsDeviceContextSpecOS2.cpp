@@ -29,12 +29,7 @@
 #include "nsIPref.h"
 #include "prenv.h" /* for PR_GetEnv */
 
-#include "nsIDOMWindow.h"
 #include "nsIServiceManager.h"
-#include "nsIDialogParamBlock.h"
-#include "nsISupportsPrimitives.h"
-#include "nsIWindowWatcher.h"
-#include "nsIDOMWindowInternal.h"
 #include "nsUnicharUtils.h"
 
 PRINTDLG nsDeviceContextSpecOS2::PrnDlg;
@@ -158,7 +153,6 @@ nsresult nsDeviceContextSpecOS2::SetPrintSettingsFromDevMode(nsIPrintSettings* a
   PDJP_ITEM pDJP = (PDJP_ITEM) pDJP_Buffer;
 
   HDC hdc = nsDeviceContextSpecOS2::PrnDlg.GetDCHandle(printer);
-  char* driver = nsDeviceContextSpecOS2::PrnDlg.GetDriverType(printer);
 
   //Get Number of Copies from Job Properties
   pDJP->lType = DJP_CURRENT;
@@ -169,10 +163,7 @@ nsresult nsDeviceContextSpecOS2::SetPrintSettingsFromDevMode(nsIPrintSettings* a
   pDJP++;
 
   //Get Orientation from Job Properties
-  if (!strcmp(driver, "LASERJET"))
-    pDJP->lType = DJP_ALL;
-  else
-    pDJP->lType = DJP_CURRENT;
+  pDJP->lType = DJP_CURRENT;
   pDJP->cb = sizeof(DJP_ITEM);
   pDJP->ulNumReturned = 1;
   pDJP->ulProperty = DJP_SJ_ORIENTATION;
@@ -260,146 +251,79 @@ NS_IMPL_RELEASE(nsDeviceContextSpecOS2)
  * toolkits including:
  * - GTK+-toolkit:
  *   file:     mozilla/gfx/src/gtk/nsDeviceContextSpecG.cpp
- *   function: NS_IMETHODIMP nsDeviceContextSpecGTK::Init(PRBool aQuiet)
+ *   function: NS_IMETHODIMP nsDeviceContextSpecGTK::Init(PRBool aPrintPreview)
  * - Xlib-toolkit: 
  *   file:     mozilla/gfx/src/xlib/nsDeviceContextSpecXlib.cpp 
- *   function: NS_IMETHODIMP nsDeviceContextSpecXlib::Init(PRBool aQuiet)
+ *   function: NS_IMETHODIMP nsDeviceContextSpecXlib::Init(PRBool aPrintPreview)
  * - Qt-toolkit:
  *   file:     mozilla/gfx/src/qt/nsDeviceContextSpecQT.cpp
- *   function: NS_IMETHODIMP nsDeviceContextSpecQT::Init(PRBool aQuiet)
+ *   function: NS_IMETHODIMP nsDeviceContextSpecQT::Init(PRBool aPrintPreview)
  * 
  * ** Please update the other toolkits when changing this function.
  */
-NS_IMETHODIMP nsDeviceContextSpecOS2::Init(nsIPrintSettings* aPS, PRBool aQuiet)
+NS_IMETHODIMP nsDeviceContextSpecOS2::Init(nsIPrintSettings* aPS, PRBool aIsPrintPreview)
 {
   nsresult rv = NS_ERROR_FAILURE;
 
   mPrintSettings = aPS;
   NS_ASSERTION(aPS, "Must have a PrintSettings!");
 
-  // if there is a current selection then enable the "Selection" radio button
-  if (aPS != nsnull) {
-    PRBool isOn;
-    aPS->GetPrintOptions(nsIPrintSettings::kEnableSelectionRB, &isOn);
-    nsCOMPtr<nsIPref> pPrefs = do_GetService(NS_PREF_CONTRACTID, &rv);
-    if (NS_SUCCEEDED(rv)) {
-      (void) pPrefs->SetBoolPref("print.selection_radio_enabled", isOn);
-    }
-  }
-
-  PRBool canPrint = PR_FALSE;
-
   rv = GlobalPrinters::GetInstance()->InitializeGlobalPrinters();
   if (NS_FAILED(rv)) {
     return rv;
   }
  
-  if ( !aQuiet ) {
-    rv = NS_ERROR_FAILURE;
-    // create a nsISupportsArray of the parameters 
-    // being passed to the window
-    nsCOMPtr<nsISupportsArray> array;
-    NS_NewISupportsArray(getter_AddRefs(array));
-    if (!array) return NS_ERROR_FAILURE;
+  if (aPS) {
+    PRBool     tofile         = PR_FALSE;
+    PRInt32    copies         = 1;
+    PRUnichar *printer        = nsnull;
+    PRUnichar *printfile      = nsnull;
 
-    nsCOMPtr<nsIPrintSettings> ps = aPS;
-    nsCOMPtr<nsISupports> psSupports(do_QueryInterface(ps));
-    NS_ASSERTION(psSupports, "PrintSettings must be a supports");
-    array->AppendElement(psSupports);
+    mPrintSettings->GetPrinterName(&printer);
+    mPrintSettings->GetToFileName(&printfile);
+    mPrintSettings->GetPrintToFile(&tofile);
+    mPrintSettings->GetNumCopies(&copies);
 
-    nsCOMPtr<nsIDialogParamBlock> ioParamBlock(do_CreateInstance("@mozilla.org/embedcomp/dialogparam;1"));
-    if (ioParamBlock) {
-      ioParamBlock->SetInt(0, 0);
-      nsCOMPtr<nsISupports> blkSupps(do_QueryInterface(ioParamBlock));
-      NS_ASSERTION(blkSupps, "IOBlk must be a supports");
-
-      array->AppendElement(blkSupps);
-      nsCOMPtr<nsISupports> arguments(do_QueryInterface(array));
-      NS_ASSERTION(array, "array must be a supports");
-
-      nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
-      if (wwatch) {
-        nsCOMPtr<nsIDOMWindow> active;
-        wwatch->GetActiveWindow(getter_AddRefs(active));    
-        nsCOMPtr<nsIDOMWindowInternal> parent = do_QueryInterface(active);
-
-        nsCOMPtr<nsIDOMWindow> newWindow;
-        rv = wwatch->OpenWindow(parent, "chrome://global/content/printdialog.xul",
-              "_blank", "chrome,modal,centerscreen", array,
-              getter_AddRefs(newWindow));
-      }
+    if ((copies == 0)  ||  (copies > 999)) {
+      GlobalPrinters::GetInstance()->FreeGlobalPrinters();
+      return NS_ERROR_FAILURE;
     }
 
-    if (NS_SUCCEEDED(rv)) {
-      PRInt32 buttonPressed = 0;
-      ioParamBlock->GetInt(0, &buttonPressed);
-      if (buttonPressed == 1) 
-        canPrint = PR_TRUE;
-      else 
-      {
-         GlobalPrinters::GetInstance()->FreeGlobalPrinters();
-         return NS_ERROR_ABORT;
-      }
-    } else 
-       return NS_ERROR_ABORT;
-  } else {
-    canPrint = PR_TRUE;
-  }
-
-  if (canPrint) {
-    if (aPS) {
-      PRBool     tofile         = PR_FALSE;
-      PRInt16    printRange     = nsIPrintSettings::kRangeAllPages;
-      PRInt32    fromPage       = 1;
-      PRInt32    toPage         = 1;
-      PRInt32    copies         = 1;
-      PRUnichar *printer        = nsnull;
-      PRUnichar *printfile      = nsnull;
-
-      mPrintSettings->GetPrinterName(&printer);
-      mPrintSettings->GetPrintRange(&printRange);
-      mPrintSettings->GetToFileName(&printfile);
-      mPrintSettings->GetPrintToFile(&tofile);
-      mPrintSettings->GetStartPageRange(&fromPage);
-      mPrintSettings->GetEndPageRange(&toPage);
-      mPrintSettings->GetNumCopies(&copies);
-
-      if ((copies == 0)  ||  (copies > 999)) {
-         GlobalPrinters::GetInstance()->FreeGlobalPrinters();
-         return NS_ERROR_FAILURE;
-      }
-
-      if (printfile != nsnull) {
-        // ToDo: Use LocalEncoding instead of UTF-8 (see bug 73446)
-        strcpy(mPrData.path,    NS_ConvertUCS2toUTF8(printfile).get());
-      }
-      if (printer != nsnull) 
-        strcpy(mPrData.printer, NS_ConvertUCS2toUTF8(printer).get());  
-    
-      mPrData.toPrinter = !tofile;
-      mPrData.copies = copies;
-
-      rv = GlobalPrinters::GetInstance()->InitializeGlobalPrinters();
-      if (NS_FAILED(rv))
-        return rv;
-
-      const nsAFlatString& printerUCS2 = NS_ConvertUTF8toUCS2(mPrData.printer);
-      int numPrinters = GlobalPrinters::GetInstance()->GetNumPrinters();
-      if (numPrinters) {
-         for(int i = 0; (i < numPrinters) && !mQueue; i++) {
-            if ((GlobalPrinters::GetInstance()->GetStringAt(i)->Equals(printerUCS2, nsCaseInsensitiveStringComparator()))) {
-               SetupDevModeFromSettings(i, aPS);
-               mQueue = PrnDlg.SetPrinterQueue(i);
-            }
-         }
-      }
-
-      if (printfile != nsnull) 
-        nsMemory::Free(printfile);
-    
-      if (printer != nsnull) 
-        nsMemory::Free(printer);
+    if (printfile != nsnull) {
+      // ToDo: Use LocalEncoding instead of UTF-8 (see bug 73446)
+      strcpy(mPrData.path,    NS_ConvertUCS2toUTF8(printfile).get());
     }
+    if (printer != nsnull) 
+      strcpy(mPrData.printer, NS_ConvertUCS2toUTF8(printer).get());  
+    
+    if (aIsPrintPreview)
+      mPrData.destination = printPreview;
+    else if (tofile)
+      mPrData.destination = printToFile;
+    else
+      mPrData.destination = printToPrinter;
+    mPrData.copies = copies;
+
+    rv = GlobalPrinters::GetInstance()->InitializeGlobalPrinters();
+    if (NS_FAILED(rv))
+      return rv;
+
+    const nsAFlatString& printerUCS2 = NS_ConvertUTF8toUCS2(mPrData.printer);
+    int numPrinters = GlobalPrinters::GetInstance()->GetNumPrinters();
+    if (numPrinters) {
+       for(int i = 0; (i < numPrinters) && !mQueue; i++) {
+          if ((GlobalPrinters::GetInstance()->GetStringAt(i)->Equals(printerUCS2, nsCaseInsensitiveStringComparator()))) {
+             SetupDevModeFromSettings(i, aPS);
+             mQueue = PrnDlg.SetPrinterQueue(i);
+          }
+       }
+    }
+
+    if (printfile != nsnull) 
+      nsMemory::Free(printfile);
+    
+    if (printer != nsnull) 
+      nsMemory::Free(printer);
   }
 
   GlobalPrinters::GetInstance()->FreeGlobalPrinters();
@@ -407,9 +331,9 @@ NS_IMETHODIMP nsDeviceContextSpecOS2::Init(nsIPrintSettings* aPS, PRBool aQuiet)
 }
 
 
-NS_IMETHODIMP nsDeviceContextSpecOS2 :: GetToPrinter( PRBool &aToPrinter )     
+NS_IMETHODIMP nsDeviceContextSpecOS2 :: GetDestination( int &aDestination )     
 {
-  aToPrinter = mPrData.toPrinter;
+  aDestination = mPrData.destination;
   return NS_OK;
 }
 
@@ -581,7 +505,8 @@ nsresult GlobalPrinters::InitializeGlobalPrinters ()
 
   int defaultPrinter = nsDeviceContextSpecOS2::PrnDlg.GetDefaultPrinter();
   for (int i = 0; i < mGlobalNumPrinters; i++) {
-    char *printer = nsDeviceContextSpecOS2::PrnDlg.GetPrinter(i);
+    nsXPIDLCString printer;
+    nsDeviceContextSpecOS2::PrnDlg.GetPrinter(i, getter_Copies(printer));
     if ( defaultPrinter == i ) 
        mGlobalPrinterList->InsertStringAt(NS_ConvertASCIItoUCS2(printer), 0);
     else 
@@ -594,12 +519,14 @@ void GlobalPrinters::GetDefaultPrinterName(PRUnichar*& aDefaultPrinterName)
 {
   aDefaultPrinterName = nsnull;
 
-  int defaultPrinter = nsDeviceContextSpecOS2::PrnDlg.GetDefaultPrinter();
-  char *printer = nsDeviceContextSpecOS2::PrnDlg.GetPrinter(defaultPrinter);
+  if (GetNumPrinters() == 0)
+     return;
 
-  nsAutoString defaultName;
-  defaultName.AppendWithConversion(printer);
-  aDefaultPrinterName = ToNewUnicode(defaultName);
+  int defaultPrinter = nsDeviceContextSpecOS2::PrnDlg.GetDefaultPrinter();
+  nsXPIDLCString printer;
+  nsDeviceContextSpecOS2::PrnDlg.GetPrinter(defaultPrinter, getter_Copies(printer));
+ 
+  aDefaultPrinterName = ToNewUnicode(NS_ConvertASCIItoUCS2(printer));
 }
 
 void GlobalPrinters::FreeGlobalPrinters()
@@ -762,7 +689,7 @@ int PRINTDLG::GetDefaultPrinter ()
    return mDefaultQueue;
 }
 
-char* PRINTDLG::GetPrinter (int numPrinter)
+PRINTDLG::GetPrinter (int numPrinter, char** printerName)
 {
    if (numPrinter > mQueueCount)
       return NULL;
@@ -771,7 +698,7 @@ char* PRINTDLG::GetPrinter (int numPrinter)
 
    pName.ReplaceChar('\r', ' ');
    pName.StripChars("\n");
-   return ToNewCString(pName);
+   *printerName = ToNewCString(pName);
 }
 
 PRTQUEUE* PRINTDLG::SetPrinterQueue (int numPrinter)
@@ -880,7 +807,7 @@ BOOL PRINTDLG::ShowProperties (int index)
 /*  Job management                                                          */
 /****************************************************************************/
 
-HDC PrnOpenDC( PRTQUEUE *pInfo, PSZ pszApplicationName, int copies, int toPrinter, char *file )
+HDC PrnOpenDC( PRTQUEUE *pInfo, PSZ pszApplicationName, int copies, int destination, char *file )
 {
    HDC hdc = 0;
    PSZ pszLogAddress;
@@ -891,15 +818,13 @@ HDC PrnOpenDC( PRTQUEUE *pInfo, PSZ pszApplicationName, int copies, int toPrinte
    if (!pInfo || !pszApplicationName)
       return hdc;
 
-   char pszQueueProcParams[CCHMAXPATH] = "COP=";
-   char numCopies[12];
-   itoa (copies, numCopies, 10);
-   strcat (pszQueueProcParams, numCopies);
-
-   if ( toPrinter ) {
+   if ( destination ) {
       pszLogAddress = pInfo->PQI3 ().pszName;
       pszDataType = "PM_Q_STD";
-      dcType = OD_QUEUED;
+      if ( destination == 2 )
+         dcType = OD_METAFILE;
+      else
+         dcType = OD_QUEUED;
    } else {
       if (file && strlen(file) != 0) 
          pszLogAddress = (PSZ) file;
@@ -915,7 +840,7 @@ HDC PrnOpenDC( PRTQUEUE *pInfo, PSZ pszApplicationName, int copies, int toPrinte
     dop.pszDataType        = pszDataType; 
     dop.pszComment         = pszApplicationName;
     dop.pszQueueProcName   = pInfo->PQI3 ().pszPrProc;     
-    dop.pszQueueProcParams = pszQueueProcParams;   
+    dop.pszQueueProcParams = 0;   
     dop.pszSpoolerParams   = 0;     
     dop.pszNetworkParams   = 0;     
 
