@@ -19,8 +19,10 @@
 #ifndef PREFETCH_H
 #define PREFETCH_H
 
+XP_BEGIN_PROTOS
 extern void		PRE_AddToList(MWContext* context, char* url);
 extern void		PRE_Fetch(MWContext* context);
 extern void		PRE_Enable(PRUint8 nNumber);
+XP_END_PROTOS
 
 #endif /* PREFETCH_H */
