@@ -648,6 +648,7 @@ nodeCompareRtn(HT_Resource *node1, HT_Resource *node2)
 	uint32		sortTokenType;
 	PRBool		descendingFlag;
 	char		*node1Name = NULL, *node2Name = NULL;
+	time_t		date1, date2;
 
 	XP_ASSERT(node1 != NULL);
 	XP_ASSERT(node2 != NULL);
@@ -674,6 +675,26 @@ nodeCompareRtn(HT_Resource *node1, HT_Resource *node2)
 		HT_GetNodeData (*node1, sortToken, sortTokenType, &data1);
 		HT_GetNodeData (*node2, sortToken, sortTokenType, &data2);
 
+		if ((sortToken == gNavCenter->RDF_bookmarkAddDate) ||
+		    (sortToken == gWebData->RDF_firstVisitDate) ||
+		    (sortToken == gWebData->RDF_lastVisitDate) ||
+		    (sortToken == gWebData->RDF_creationDate) ||
+		    (sortToken == gWebData->RDF_lastModifiedDate))
+		{
+			if ((sortTokenType == HT_COLUMN_STRING) &&
+				(data1 != NULL) && (data2 != NULL))
+			{
+				date1 = (time_t)XP_ParseTimeString((char *)data1, FALSE);
+				date2 = (time_t)XP_ParseTimeString((char *)data2, FALSE);
+				if ((date1 != 0) && (date2 != 0))
+				{
+					data1 = (void *)date1;
+					data2 = (void *)date2;
+					sortTokenType = HT_COLUMN_DATE_INT;
+				}
+			}
+		}
+		
 		switch(sortTokenType)
 		{
 		case	HT_COLUMN_STRING:

@@ -22,6 +22,7 @@
 
 #include "xpassert.h"
 #include "xp_qsort.h"
+#include "xp_time.h"
 #include "client.h"
 #include "net.h"
 #include "xpgetstr.h"
