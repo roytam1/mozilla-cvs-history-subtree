@@ -31,7 +31,7 @@
 %}
 
 interface nsIXULWindow;
-interface nsIWidget;
+interface nsIWindow;
 
 
 [scriptable, uuid(0659cb81-faad-11d2-8e19-b206620a657c)]
@@ -116,9 +116,9 @@ interface nsIWindowMediator: nsIRDFDataSource
 
         [noscript] PRBool calculateZPosition(in nsIXULWindow inWindow,
                             in unsigned long  inPosition,
-                            in nsIWidget      inBelow,
+                            in nsIWindow      inBelow,
                             out unsigned long outPosition,
-                            out nsIWidget     outBelow);
+                            out nsIWindow     outBelow);
 
 	/* a window has been positioned behind another. Inform WindowMediator
 

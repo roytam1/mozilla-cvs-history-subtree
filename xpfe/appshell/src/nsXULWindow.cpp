@@ -351,7 +351,8 @@ NS_IMETHODIMP nsXULWindow::Destroy()
       NS_RELEASE(mChromeTreeOwner);
    }
    if(mWindow) {
-      mWindow->SetClientData(0); // nsWebShellWindow hackery
+     // XXX pav
+     //      mWindow->SetClientData(0); // nsWebShellWindow hackery
       mWindow = nsnull;
    }
 
@@ -766,7 +767,11 @@ NS_IMETHODIMP nsXULWindow::PersistPositionAndSize(PRBool aPosition, PRBool aSize
    PRInt32 sizeMode;
 
    NS_ENSURE_SUCCESS(GetPositionAndSize(&x, &y, &cx, &cy), NS_ERROR_FAILURE);
-   mWindow->GetSizeMode(&sizeMode);
+   nsCOMPtr<nsITopLevelWindow> tlw(do_QueryInterface(mWindow, &rv));
+   if (NS_FAILED(rv))
+     return rv;
+
+   tlw->GetSizeState(&sizeMode);
 
    // (But only for size elements which are persisted.)
    /* Note we use the same cheesy way to determine that as in
@@ -814,7 +819,7 @@ NS_IMETHODIMP nsXULWindow::PersistPositionAndSize(PRBool aPosition, PRBool aSize
 
    if (aSizeMode && persistString.Find("sizemode") >= 0) {
       PRInt32 sizemode;
-      if (NS_FAILED(mWindow->GetSizeMode(&sizemode)))
+      if (NS_FAILED(tlw->GetSizeState(&sizemode)))
         sizemode = nsSizeMode_Normal;
       sizeString.AssignWithConversion("n");
       if (sizemode == nsSizeMode_Minimized)
@@ -1270,12 +1275,15 @@ PRBool nsXULWindow::ConstrainToZLevel(
     nsCOMPtr<nsIXULWindow> windowAbove;
     if (newPosition == nsIWindowMediator::zLevelBelow && *aActualBelow) {
       void *data;
+      // XXX pav
+#if 0
       (*aActualBelow)->GetClientData(data);
       if (data) {
         nsWebShellWindow *win;
         win = NS_REINTERPRET_CAST(nsWebShellWindow *, data);
         windowAbove = do_QueryInterface(NS_STATIC_CAST(nsIWebShellWindow *,win));
       }
+#endif
     }
 
     mediator->SetZPosition(us, newPosition, windowAbove);
