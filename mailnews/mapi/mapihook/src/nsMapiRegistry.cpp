@@ -219,7 +219,7 @@ nsresult ShowMapiErrorDialog() {
                                           getter_Copies(dialogTitle));
         if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
         nsXPIDLString dialogText;
-        NS_NAMED_LITERAL_STRING(dialogTextPropertyTag, "errorMessageText");
+        NS_NAMED_LITERAL_STRING(dialogTextPropertyTag, "errorMessage");
         const PRUnichar *dpropertyTag = dialogTextPropertyTag.get();
         rv = bundle->FormatStringFromName(dpropertyTag,
                                           brandStrings, 1,
