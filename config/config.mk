@@ -494,6 +494,10 @@ ifndef NO_UNIX_ASYNC_DNS
 DEFINES		+= -DUNIX_ASYNC_DNS
 endif
 
+ifdef PRIVACY_FEATURES
+DEFINES		+= -DPRIVACY_POLICIES -DTRANSACTION_RECEIPTS
+endif
+
 # For profiling
 ifdef MOZILLA_GPROF
 # Don't want profiling on build tools..

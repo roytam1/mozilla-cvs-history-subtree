@@ -178,6 +178,12 @@ CFLAGS=$(CFLAGS) -DCookieManagement -DSingleSignon
 
 !endif
 
+# Defines for new privacy features...
+!ifdef PRIVACY_FEATURES
+CFLAGS=$(CFLAGS) -DPRIVACY_POLICIES -DTRANSACTION_RECEIPTS
+!endif
+
+
 # always need these:
 CFLAGS = $(CFLAGS) -DNETSCAPE
 
