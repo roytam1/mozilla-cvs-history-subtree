@@ -36,6 +36,7 @@
 #include "nsIServiceManager.h"
 #include "nsINameSpaceManager.h"
 #include "nsISupportsArray.h"
+#include "nsRDFContentUtils.h"
 #include "rdfutil.h"
 
 ////////////////////////////////////////////////////////////////////////
@@ -47,62 +48,6 @@ static NS_DEFINE_IID(kIRDFLiteralIID,             NS_IRDFLITERAL_IID);
 static NS_DEFINE_IID(kIRDFContentModelBuilderIID, NS_IRDFCONTENTMODELBUILDER_IID);
 
 ////////////////////////////////////////////////////////////////////////
-
-#include "nsITextContent.h"
-#include "nsLayoutCID.h"
-static NS_DEFINE_IID(kITextContentIID, NS_ITEXT_CONTENT_IID); // XXX grr...
-static NS_DEFINE_CID(kTextNodeCID,     NS_TEXTNODE_CID);
-
-nsresult
-rdf_AttachTextNode(nsIContent* parent, nsIRDFNode* value)
-{
-    nsresult rv;
-    nsAutoString s;
-    nsIContent* node         = nsnull;
-    nsITextContent* text     = nsnull;
-    nsIRDFResource* resource = nsnull;
-    nsIRDFLiteral* literal   = nsnull;
-    
-    if (NS_SUCCEEDED(rv = value->QueryInterface(kIRDFResourceIID, (void**) &resource))) {
-        const char* p;
-        if (NS_FAILED(rv = resource->GetValue(&p)))
-            goto error;
-
-        s = p;
-    }
-    else if (NS_SUCCEEDED(rv = value->QueryInterface(kIRDFLiteralIID, (void**) &literal))) {
-        const PRUnichar* p;
-        if (NS_FAILED(rv = literal->GetValue(&p)))
-            goto error;
-
-        s = p;
-    }
-    else {
-        PR_ASSERT(0);
-        goto error;
-    }
-
-    if (NS_FAILED(rv = nsRepository::CreateInstance(kTextNodeCID,
-                                                    nsnull,
-                                                    kIContentIID,
-                                                    (void**) &node)))
-        goto error;
-
-    if (NS_FAILED(rv = node->QueryInterface(kITextContentIID, (void**) &text)))
-        goto error;
-
-    if (NS_FAILED(rv = text->SetText(s.GetUnicode(), s.Length(), PR_FALSE)))
-        goto error;
-
-    // hook it up to the child
-    if (NS_FAILED(rv = parent->AppendChildTo(NS_STATIC_CAST(nsIContent*, node), PR_TRUE)))
-        goto error;
-
-error:
-    NS_IF_RELEASE(node);
-    NS_IF_RELEASE(text);
-    return rv;
-}
 
 ////////////////////////////////////////////////////////////////////////
 

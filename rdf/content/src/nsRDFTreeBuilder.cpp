@@ -38,14 +38,10 @@
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
 #include "nsRDFCID.h"
+#include "nsRDFContentUtils.h"
 #include "nsString.h"
 #include "rdf.h"
 #include "rdfutil.h"
-
-// XXX should go in a header file...
-extern nsresult
-rdf_AttachTextNode(nsIContent* parent, nsIRDFNode* value);
-
 
 ////////////////////////////////////////////////////////////////////////
 

@@ -28,14 +28,18 @@
 
 #include "nsError.h"
 
-class nsString;
 class nsIContent;
 class nsIDOMNodeList;
+class nsIRDFNode;
+class nsString;
 
 nsresult
-rdf_GetQuotedAttributeValue(nsString& aSource, 
+rdf_GetQuotedAttributeValue(const nsString& aSource, 
                             const nsString& aAttribute,
                             nsString& aValue);
+
+nsresult
+rdf_AttachTextNode(nsIContent* parent, nsIRDFNode* value);
 
 // In nsRDFDOMNodeList.cpp
 extern nsresult
