@@ -744,7 +744,6 @@ void CNSContextCallbacks::HandleClippingView(
 	theNSContext->HandleClippingView(appletD, x, y, width, height);
 }
 
-#ifdef SHACK
 void CNSContextCallbacks::FreeBuiltinElement(
                                 MWContext *context, 
                                 LO_BuiltinStruct *)
@@ -763,4 +762,3 @@ void CNSContextCallbacks::DisplayBuiltin(
       Assert_(theNSContext != NULL);
       Assert_(0);     // Not implemented      
 }
-#endif
