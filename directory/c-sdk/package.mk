@@ -113,6 +113,11 @@ endif
 	$(NSINSTALL) $(DOCDIR)/redist.txt $(INSTDIR)
 	$(NSINSTALL) $(DOCDIR)/README $(INSTDIR)/docs
 	$(NSINSTALL) $(DOCDIR)/redist.txt $(INSTDIR)/docs
+
+ifdef BUILD_SHIP
+	@echo "Copying files to $(BUILD_SHIP) directory"
+	$(CP) -r $(INSTDIR) $(BUILD_SHIP)
+endif
 	
 clean:: FORCE
 	@echo "Cleaning up old install"
