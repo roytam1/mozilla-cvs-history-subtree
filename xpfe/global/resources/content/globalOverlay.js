@@ -307,7 +307,8 @@ function helpMenuCreate()
 	var BrandName = BrandBundle.GetStringFromName("brandShortName");
 	var aboutItem = document.getElementById( "releaseName" );
 	var aboutName = aboutItem.getAttribute("name");
-	var aboutStrName = aboutName + " " + BrandName;
+//	var aboutStrName = aboutName + " " + BrandName;
+        var aboutStrName = BrandBundle.GetStringFromName("aboutStrName");
 	aboutItem.setAttribute("value", aboutStrName);
 	
 	//Adding the release url since it will change based on brand
