@@ -203,7 +203,7 @@ nsSocketTransport::~nsSocketTransport()
     }
     
     if (mService) {
-        PR_AtomicDecrement(&mService->mTotalTransports);
+        mService->OnTransportDestroyed();
         NS_RELEASE(mService);
     }
     
@@ -340,7 +340,7 @@ nsresult nsSocketTransport::Init(nsSocketTransportService* aService,
     
     // Update the active time for timeout purposes...
     mLastActiveTime = PR_IntervalNow();
-    PR_AtomicIncrement(&mService->mTotalTransports);
+    mService->OnTransportCreated();
     
     LOG(("nsSocketTransport: Initializing [%s:%d %x].  rv = %x",
         mHostName, mPort, this, rv));
@@ -422,8 +422,11 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
             //
             // A connection has been established with the server
             //
-            PR_AtomicIncrement(&mService->mConnectedTransports);
-            mWasConnected = PR_TRUE;
+            if (!mWasConnected) {
+                const char *host = (mProxyHost && !mProxyTransparent) ? mProxyHost : mHostName;
+                mService->OnTransportConnected(host, &mNetAddress);
+                mWasConnected = PR_TRUE;
+            }
 
             // Send status message
             OnStatus(NS_NET_STATUS_CONNECTED_TO);
@@ -626,46 +629,65 @@ nsresult nsSocketTransport::doResolveHost(void)
     //
     if (PR_IsNetAddrType(&mNetAddress, PR_IpAddrAny)) {
         //
-        // Initialize the port used for the connection...
+        // determine the desired host:port
         //
-        // XXX: The list of ports must be restricted - see net_bad_ports_table[] in 
-        //      mozilla/network/main/mkconect.c
-        //
-        mNetAddress.ipv6.port = PR_htons(((mProxyPort != -1 && !mProxyTransparent) ? mProxyPort : mPort));
+        const char *host = (mProxyHost && !mProxyTransparent) ? mProxyHost : mHostName;
+        PRInt32 port = (mProxyPort != -1 && !mProxyTransparent) ? mProxyPort : mPort;
 
-        nsCOMPtr<nsIDNSService> pDNSService(do_GetService(kDNSService, &rv));
-        if (NS_FAILED(rv)) return rv;
+        PRIPv6Addr addr;
+        if (mService->LookupHost(host, &addr)) {
+            // found address!
+            PR_SetNetAddr(PR_IpAddrAny, PR_AF_INET6, port, &mNetAddress);
+            memcpy(&mNetAddress.ipv6.ip, &addr, sizeof(addr));
+#ifdef PR_LOGGING
+            char buf[128];
+            PR_NetAddrToString(&mNetAddress, buf, sizeof(buf));
+            LOG((" -> using cached ip address [%s]\n", buf));
+#endif
+        }
+        else {
+            //
+            // Initialize the port used for the connection...
+            //
+            // XXX: The list of ports must be restricted - see net_bad_ports_table[] in 
+            //      mozilla/network/main/mkconect.c
+            //
+            mNetAddress.ipv6.port = PR_htons(port);
 
-        //
-        // Give up the SocketTransport lock.  This allows the DNS thread to call the
-        // nsIDNSListener notifications without blocking...
-        //
-        PR_ExitMonitor(mMonitor);
+            nsCOMPtr<nsIDNSService> pDNSService(do_GetService(kDNSService, &rv));
+            if (NS_FAILED(rv)) return rv;
 
-        rv = pDNSService->Lookup((mProxyHost && !mProxyTransparent) ? mProxyHost : mHostName, 
-                                 this, 
-                                 nsnull, 
-                                 getter_AddRefs(mDNSRequest));
-        //
-        // Aquire the SocketTransport lock again...
-        //
-        PR_EnterMonitor(mMonitor);
+            //
+            // Give up the SocketTransport lock.  This allows the DNS thread to call the
+            // nsIDNSListener notifications without blocking...
+            //
+            PR_ExitMonitor(mMonitor);
 
-        if (NS_SUCCEEDED(rv)) {
+            rv = pDNSService->Lookup(host,
+                                     this, 
+                                     nsnull, 
+                                     getter_AddRefs(mDNSRequest));
             //
-            // The DNS lookup has finished...  It has either failed or succeeded.
+            // Aquire the SocketTransport lock again...
             //
-            if (NS_FAILED(mStatus) || !PR_IsNetAddrType(&mNetAddress, PR_IpAddrAny)) {
-                mDNSRequest = 0;
-                rv = mStatus;
-            } 
-            //
-            // The DNS lookup is being processed...  Mark the transport as waiting
-            // until the result is available...
-            //
-            else {
-                SetFlag(eSocketDNS_Wait);
-                rv = NS_BASE_STREAM_WOULD_BLOCK;
+            PR_EnterMonitor(mMonitor);
+
+            if (NS_SUCCEEDED(rv)) {
+                //
+                // The DNS lookup has finished...  It has either failed or succeeded.
+                //
+                if (NS_FAILED(mStatus) || !PR_IsNetAddrType(&mNetAddress, PR_IpAddrAny)) {
+                    mDNSRequest = 0;
+                    rv = mStatus;
+                } 
+                //
+                // The DNS lookup is being processed...  Mark the transport as waiting
+                // until the result is available...
+                //
+                else {
+                    SetFlag(eSocketDNS_Wait);
+                    rv = NS_BASE_STREAM_WOULD_BLOCK;
+                }
             }
         }
     }
@@ -1129,7 +1151,7 @@ nsresult nsSocketTransport::CloseConnection()
 
     if (mWasConnected) {
         if (mService)
-            PR_AtomicDecrement(&mService->mConnectedTransports);
+            mService->OnTransportClosed();
         mWasConnected = PR_FALSE;
     }
     
