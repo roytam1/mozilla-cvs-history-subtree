@@ -43,6 +43,9 @@
 #include "nsTextServicesCID.h"
 #include "nsITextServicesDocument.h"
 #include "nsISpellChecker.h"
+#include "nsISelection.h"
+#include "nsIDOMRange.h"
+#include "nsIEditor.h"
 
 #include "nsIComponentManager.h"
 #include "nsXPIDLString.h"
@@ -93,6 +96,52 @@ nsEditorSpellCheck::InitSpellChecker(nsIEditor* editor)
   // Pass the editor to the text services document
   rv = tsDoc->InitWithEditor(editor);
   NS_ENSURE_SUCCESS(rv, rv);
+
+  // Find out if the section is collapsed or not.
+  // If it isn't, we want to spellcheck just the selection.
+
+  nsCOMPtr<nsISelection> selection;
+
+  rv = editor->GetSelection(getter_AddRefs(selection));
+  NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_TRUE(selection, NS_ERROR_FAILURE);
+
+  PRInt32 count = 0;
+
+  rv = selection->GetRangeCount(&count);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (count > 0) {
+    nsCOMPtr<nsIDOMRange> range;
+
+    rv = selection->GetRangeAt(0, getter_AddRefs(range));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    PRBool collapsed = PR_FALSE;
+    rv = range->GetCollapsed(&collapsed);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    if (!collapsed) {
+      // We don't want to touch the range in the selection,
+      // so create a new copy of it.
+
+      nsCOMPtr<nsIDOMRange> rangeBounds;
+      rv =  range->CloneRange(getter_AddRefs(rangeBounds));
+      NS_ENSURE_SUCCESS(rv, rv);
+      NS_ENSURE_TRUE(rangeBounds, NS_ERROR_FAILURE);
+
+      // Make sure the new range spans complete words.
+
+      rv = tsDoc->ExpandRangeToWordBoundaries(rangeBounds);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      // Now tell the text services that you only want
+      // to iterate over the text in this range.
+
+      rv = tsDoc->SetExtent(rangeBounds);
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
+  }
 
   rv = nsComponentManager::CreateInstance(NS_SPELLCHECKER_CONTRACTID,
                                           nsnull,
