@@ -1671,7 +1671,7 @@ nsSocketTransport::GetPort(PRInt32 *port)
 }
 
 NS_IMETHODIMP
-nsSocketTransport::GetAddress(PRNetAddr *addr)
+nsSocketTransport::GetPeerAddr(PRNetAddr *addr)
 {
     // once we are in the connected state, mNetAddr will not change.
     // so if we can verify that we are in the connected state, then
@@ -1682,6 +1682,15 @@ nsSocketTransport::GetAddress(PRNetAddr *addr)
 
     memcpy(addr, &mNetAddr, sizeof(mNetAddr));
     return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSocketTransport::GetSelfAddr(PRNetAddr *addr)
+{
+    if (mFDconnected && PR_GetSockName(mFD, addr) == PR_SUCCESS)
+	      return NS_OK;
+    else // trying to get the address before we have reached the connected state?
+	    return NS_ERROR_NOT_AVAILABLE;
 }
 
 NS_IMETHODIMP

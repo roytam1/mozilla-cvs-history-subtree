@@ -65,6 +65,7 @@
 #include "prprf.h"
 #include "prmem.h"
 #include "plbase64.h"
+#include "prnetdb.h"
 #include "nsEscape.h"
 #include "nsMsgUtils.h"
 #include "nsIPipe.h"
@@ -74,11 +75,13 @@
 #include "nsISignatureVerifier.h"
 #include "nsISSLSocketControl.h"
 #include "nsPrintfCString.h"
+#include "nsIDNSService.h"
 
 #ifndef XP_UNIX
 #include <stdarg.h>
 #endif /* !XP_UNIX */
 
+const char kDNSService_CONTRACTID[] = "@mozilla.org/network/dns-service;1";
 static PRLogModuleInfo *SMTPLogModule = nsnull;
 
 /* the output_buffer_size must be larger than the largest possible line
@@ -347,28 +350,35 @@ void nsSmtpProtocol::Initialize(nsIURI * aURL)
         return;
 }
 
-const char * nsSmtpProtocol::GetUserDomainName()
+void nsSmtpProtocol::GetUserDomainName(nsACString& aResult)
 {
-  nsresult rv;
-  NS_PRECONDITION(m_runningURL, "we must be running a url in order to get the user's domain...");
+  // should return the interface ip of the SMTP connection
+  // minimum case - see bug 68877 and RFC 2821, chapter 4.1.1.1
+  nsresult rv = NS_OK;
   
-  if (m_runningURL)
+  nsCOMPtr <nsIDNSService> dns = do_GetService(kDNSService_CONTRACTID, &rv);
+  if (NS_SUCCEEDED(rv))
   {
-    nsCOMPtr <nsIMsgIdentity> senderIdentity;
-    rv = m_runningURL->GetSenderIdentity(getter_AddRefs(senderIdentity));
-    if (NS_FAILED(rv) || !senderIdentity) 
-      return nsnull;
-				
-    rv =  senderIdentity->GetEmail(getter_Copies(m_mailAddr));
-    if (NS_FAILED(rv) || !((const char *)m_mailAddr)) 	
-      return nsnull;
-    
-    const char *atSignMarker = nsnull;
-    atSignMarker = PL_strchr(m_mailAddr, '@');
-    return atSignMarker ? atSignMarker+1 :  (const char *) m_mailAddr;  // return const ptr into buffer in running url...
+    PRNetAddr iaddr; // IP address for this connection
+    // our transport is always a nsISocketTransport
+    nsCOMPtr<nsISocketTransport> socketTransport = do_QueryInterface(m_transport); 
+    rv = socketTransport->GetSelfAddr(&iaddr);
+
+    if (NS_SUCCEEDED(rv))
+    {
+      // turn it into a string
+      char ipAddressString[64];
+      if (PR_NetAddrToString(&iaddr, ipAddressString, sizeof(ipAddressString)) == PR_SUCCESS) 
+      {
+        if (strchr(ipAddressString, ':'))   // IPv6 style address?
+          aResult.Assign(NS_LITERAL_CSTRING("[IPv6:"));
+        else
+          aResult.Assign(NS_LITERAL_CSTRING("["));
+
+        aResult.Append(nsDependentCString(ipAddressString) + NS_LITERAL_CSTRING("]"));
+      }
+    }
   }
-  
-  return nsnull;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -497,7 +507,10 @@ PRInt32 nsSmtpProtocol::ExtensionLoginResponse(nsIInputStream * inputStream, PRU
     return(NS_ERROR_COULD_NOT_LOGIN_TO_SMTP_SERVER);
   }
   
-  buffer += GetUserDomainName();
+  nsCAutoString domainName;
+  GetUserDomainName(domainName);
+
+  buffer += domainName;
   buffer += CRLF;
   
   nsCOMPtr<nsIURI> url = do_QueryInterface(m_runningURL);
@@ -632,7 +645,10 @@ PRInt32 nsSmtpProtocol::SendEhloResponse(nsIInputStream * inputStream, PRUint32 
             }
 
             buffer = "HELO ";
-            buffer += GetUserDomainName();
+            nsCAutoString domainName;
+            GetUserDomainName(domainName);
+
+            buffer += domainName;
             buffer += CRLF;
             status = SendData(url, buffer.get());
         }
@@ -1001,7 +1017,7 @@ PRInt32 nsSmtpProtocol::AuthLoginStep1()
   if (TestFlag(SMTP_AUTH_LOGIN_ENABLED))
   {
     base64Str = PL_Base64Encode((const char *)username, 
-    strlen((const char*)username), nsnull);
+        strlen((const char*)username), nsnull);
     PR_snprintf(buffer, sizeof(buffer), "%.256s" CRLF, base64Str);
   } 
   else

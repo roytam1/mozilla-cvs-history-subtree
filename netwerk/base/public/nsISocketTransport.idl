@@ -63,9 +63,15 @@ interface nsISocketTransport : nsITransport
 
     /** 
      * Returns the IP address for the underlying socket connection.  This
-     * attribute is only defined once a connection has been established.
+     * attribute is defined only once a connection has been established.
      */
-    [noscript] PRNetAddr getAddress();
+    [noscript] PRNetAddr getPeerAddr(); 
+
+    /** 
+     * Returns the IP address on the initiating end.  This
+     * attribute is defined only once a connection has been established.
+     */
+    [noscript] PRNetAddr getSelfAddr(); 
 
     /**
      * Security info object returned from the secure socket provider.  This
