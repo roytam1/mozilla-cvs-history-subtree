@@ -93,14 +93,14 @@ NS_IMETHODIMP nsHTMLIFrameRootAccessible::GetAccName(PRUnichar * *aAccName)
     shell->GetDocument(getter_AddRefs(document));
   if (document) {
     const nsString* docTitle = document->GetDocumentTitle();
-    if (!docTitle->IsEmpty()) {
+    if (docTitle && !docTitle->IsEmpty()) {
       *aAccName = docTitle->ToNewUnicode();
       return NS_OK;
     }
   }
   //*aAccName = ToNewUnicode(NS_LITERAL_STRING("Document"));
 
-  *aAccName = ToNewUnicode(NS_LITERAL_STRING("IFrame(Root)"));
+  *aAccName = ToNewUnicode(NS_LITERAL_STRING("Frame"));
   return NS_OK;  
 }
 

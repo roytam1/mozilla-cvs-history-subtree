@@ -73,7 +73,7 @@ nsRootAccessible::~nsRootAccessible()
 NS_IMETHODIMP nsRootAccessible::GetAccName(PRUnichar * *aAccName) 
 { 
   const nsString* docTitle = mDocument->GetDocumentTitle();
-  if (!docTitle->IsEmpty())
+  if (docTitle && !docTitle->IsEmpty())
     *aAccName = docTitle->ToNewUnicode();
   else *aAccName = ToNewUnicode(NS_LITERAL_STRING("Document"));
   
