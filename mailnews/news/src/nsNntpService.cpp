@@ -1631,3 +1631,9 @@ nsNntpService::HandleContent(const char * aContentType, const char * aCommand, c
 
   return rv;
 }
+
+NS_IMETHODIMP
+nsNntpService::MessageURIToMsgHdr(const char *uri, nsIMsgDBHdr **_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}

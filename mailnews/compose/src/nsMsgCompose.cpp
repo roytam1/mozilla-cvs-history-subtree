@@ -74,6 +74,7 @@
 #include "nsIMsgMailSession.h"
 #include "nsMsgBaseCID.h"
 #include "nsIPrompt.h"
+#include "nsMsgUtils.h"
 
 // Defines....
 static NS_DEFINE_CID(kHeaderParserCID, NS_MSGHEADERPARSER_CID);
@@ -945,8 +946,19 @@ nsresult nsMsgCompose::CreateMessage(const PRUnichar * originalMsgURI,
 
     mOriginalMsgURI = firstURI;
     
-    nsCOMPtr<nsIMessage> message = getter_AddRefs(GetIMessageFromURI(firstURI.GetUnicode()));
-    if ((NS_SUCCEEDED(rv)) && message)
+    printf("we need to fix this hackFoo.  we need to treat all message uris a char *, not prunichar *, but that will involve peeling too much of the onion.\n");
+    nsCAutoString hackFoo;
+    hackFoo.AssignWithConversion(firstURI);
+    nsCOMPtr <nsIMsgMessageService> msgMessageService;
+    rv = GetMessageServiceFromURI(hackFoo.get(), getter_AddRefs(msgMessageService));
+    NS_ENSURE_SUCCESS(rv,rv);
+    if (!msgMessageService) return NS_ERROR_FAILURE;
+
+    nsCOMPtr <nsIMsgDBHdr> msgHdr;
+    rv = msgMessageService->MessageURIToMsgHdr(hackFoo.get(), getter_AddRefs(msgHdr));
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    if (msgHdr)
     {
       nsXPIDLCString subject;
       nsAutoString subjectStr;
@@ -957,12 +969,12 @@ nsresult nsMsgCompose::CreateMessage(const PRUnichar * originalMsgURI,
 
       char *aCString = nsnull;
     
-      rv = message->GetCharset(getter_Copies(charset));
+      rv = msgHdr->GetCharset(getter_Copies(charset));
 
       aCharset.AssignWithConversion(charset);
 
       if (NS_FAILED(rv)) return rv;
-      rv = message->GetSubject(getter_Copies(subject));
+      rv = msgHdr->GetSubject(getter_Copies(subject));
       if (NS_FAILED(rv)) return rv;
       
       switch (type)
@@ -1008,7 +1020,7 @@ nsresult nsMsgCompose::CreateMessage(const PRUnichar * originalMsgURI,
             m_compFields->SetSubject(subjectStr.GetUnicode());
 
           nsXPIDLCString author;
-          rv = message->GetAuthor(getter_Copies(author));		
+          rv = msgHdr->GetAuthor(getter_Copies(author));		
           if (NS_FAILED(rv)) return rv;
           m_compFields->SetTo(author);
 
@@ -1063,22 +1075,28 @@ QuotingOutputStreamListener::QuotingOutputStreamListener(const PRUnichar * origi
                                                          PRBool headersOnly,
                                                          nsIMsgIdentity *identity) 
 { 
+  nsresult rv;
   mQuoteHeaders = quoteHeaders;
   mHeadersOnly = headersOnly;
   mIdentity = identity;
 
   if (! mHeadersOnly)
   {
-    // For the built message body...
-
-    nsCOMPtr<nsIMessage> originalMsg = getter_AddRefs(GetIMessageFromURI(originalMsgURI));
-    if (originalMsg && !quoteHeaders)
+   // For the built message body...
+   nsCOMPtr <nsIMsgDBHdr> originalMsgHdr;
+   nsCOMPtr <nsIMsgMessageService> msgMessageService;
+   printf("we need to fix this hackFoo.  we need to treat all message uris a char *, not prunichar *, but that will involve peeling too much of the onion.\n");
+   nsCAutoString hackFoo;
+   hackFoo.AssignWithConversion(originalMsgURI);
+   rv = GetMessageServiceFromURI(hackFoo.get(), getter_AddRefs(msgMessageService));
+   if (NS_SUCCEEDED(rv)) {
+       rv = msgMessageService->MessageURIToMsgHdr(hackFoo.get(), getter_AddRefs(originalMsgHdr));
+   }
+   if (NS_SUCCEEDED(rv) && originalMsgHdr && !quoteHeaders)
     {
-      nsresult rv;
-
       // Setup the cite information....
       nsXPIDLCString myGetter;
-      if (NS_SUCCEEDED(originalMsg->GetMessageId(getter_Copies(myGetter))))
+      if (NS_SUCCEEDED(originalMsgHdr->GetMessageId(getter_Copies(myGetter))))
       {
         nsCString unencodedURL(myGetter);
              // would be nice, if nsXPIDL*String were ns*String
@@ -1101,7 +1119,7 @@ QuotingOutputStreamListener::QuotingOutputStreamListener(const PRUnichar * origi
         mCitePrefix += NS_LITERAL_STRING("<br><br>");
 
       nsXPIDLString author;
-      rv = originalMsg->GetMime2DecodedAuthor(getter_Copies(author));
+      rv = originalMsgHdr->GetMime2DecodedAuthor(getter_Copies(author));
       if (NS_SUCCEEDED(rv))
       {
         char * authorName = nsnull;
@@ -1523,6 +1541,7 @@ void nsMsgCompose::CleanUpRecipients(nsString& recipients)
 
 nsresult nsMsgCompose::ProcessReplyFlags()
 {
+  nsresult rv;
   // check to see if we were doing a reply or a forward, if we were, set the answered field flag on the message folder
   // for this URI.
   if (mType == nsIMsgCompType::Reply || 
@@ -1533,17 +1552,25 @@ nsresult nsMsgCompose::ProcessReplyFlags()
       mType == nsIMsgCompType::ForwardAsAttachment ||              
   	  mType == nsIMsgCompType::ForwardInline)
   {
-    nsCOMPtr<nsIRDFService> rdfService (do_GetService(kRDFServiceCID));
-    if (rdfService && !mOriginalMsgURI.IsEmpty())
+    if (!mOriginalMsgURI.IsEmpty())
     {
-      nsCOMPtr<nsIRDFResource> resource;
-      rdfService->GetResource(NS_ConvertUCS2toUTF8(mOriginalMsgURI), getter_AddRefs(resource));
-      nsCOMPtr<nsIMessage> messageResource (do_QueryInterface(resource));
-      if (messageResource)
+      printf("we need to fix this hackFoo.  we need to treat all message uris a char *, not prunichar *, but that will involve peeling too much of the onion.\n");
+      nsCAutoString hackFoo;
+      hackFoo.AssignWithConversion(mOriginalMsgURI);
+      nsCOMPtr <nsIMsgMessageService> msgMessageService;
+      rv = GetMessageServiceFromURI(hackFoo.get(), getter_AddRefs(msgMessageService));
+      NS_ENSURE_SUCCESS(rv,rv);
+      if (!msgMessageService) return NS_ERROR_FAILURE;
+
+      nsCOMPtr <nsIMsgDBHdr> msgHdr;
+      rv = msgMessageService->MessageURIToMsgHdr(hackFoo.get(), getter_AddRefs(msgHdr));
+      NS_ENSURE_SUCCESS(rv,rv);
+      if (msgHdr)
       {
         // get the folder for the message resource
         nsCOMPtr<nsIMsgFolder> msgFolder;
-        messageResource->GetMsgFolder(getter_AddRefs(msgFolder));
+        NS_ASSERTION(0,"fix this");
+        //msgHdr->GetMsgFolder(getter_AddRefs(msgFolder));
         if (msgFolder)
         {
           nsMsgDispositionState dispositionSetting = nsIMsgFolder::nsMsgDispositionState_Replied;
@@ -1551,7 +1578,8 @@ nsresult nsMsgCompose::ProcessReplyFlags()
   	          mType == nsIMsgCompType::ForwardInline)
               dispositionSetting = nsIMsgFolder::nsMsgDispositionState_Forwarded;
 
-          msgFolder->AddMessageDispositionState(messageResource, dispositionSetting);
+          NS_ASSERTION(0,"fix this, too");
+          //msgFolder->AddMessageDispositionState(msgHdr, dispositionSetting);
         }
       }
       

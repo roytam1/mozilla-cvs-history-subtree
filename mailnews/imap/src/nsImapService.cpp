@@ -853,28 +853,36 @@ NS_IMETHODIMP nsImapService::Search(nsIMsgSearchSession *aSearchSession, nsIMsgW
 }
 
 // just a helper method to break down imap message URIs....
-nsresult nsImapService::DecomposeImapURI(const char * aMessageURI, nsIMsgFolder ** aFolder, char ** aMsgKey)
+nsresult nsImapService::DecomposeImapURI(const char * aMessageURI, nsIMsgFolder ** aFolder, nsMsgKey *aMsgKey)
 {
     nsresult rv = NS_OK;
-    NS_WITH_SERVICE(nsIRDFService, rdf, kRDFServiceCID, &rv); 
+    NS_WITH_SERVICE(nsIRDFService, rdf, kRDFServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
-	nsCAutoString	folderURI;
-    nsMsgKey msgKey;
-	rv = nsParseImapMessageURI(aMessageURI, folderURI, &msgKey, nsnull);
-	if (NS_SUCCEEDED(rv))
-	{
-		nsCOMPtr<nsIRDFResource> res;
-		rv = rdf->GetResource(folderURI, getter_AddRefs(res));
-		if (NS_FAILED(rv))	return rv;
+    nsCAutoString   folderURI;
+    rv = nsParseImapMessageURI(aMessageURI, folderURI, aMsgKey, nsnull);
+    if (NS_SUCCEEDED(rv))
+    {
+        nsCOMPtr<nsIRDFResource> res;
+        rv = rdf->GetResource(folderURI, getter_AddRefs(res));
+        if (NS_FAILED(rv))  return rv;
         rv = res->QueryInterface(NS_GET_IID(nsIMsgFolder), (void **) aFolder);
-        // convert the message key into a string
-        if (msgKey)
-        {
-            nsCAutoString messageIdString;
-            messageIdString.AppendInt(msgKey, 10 /* base 10 */);
-            *aMsgKey = messageIdString.ToNewCString();
-        }
+    }
+    return rv;
+}
+
+// just a helper method to break down imap message URIs....
+nsresult nsImapService::DecomposeImapURI(const char * aMessageURI, nsIMsgFolder ** aFolder, char ** aMsgKey)
+{
+    nsMsgKey msgKey;
+    nsresult rv;
+    rv = DecomposeImapURI(aMessageURI, aFolder, &msgKey);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    if (msgKey) {
+      nsCAutoString messageIdString;
+      messageIdString.AppendInt(msgKey, 10 /* base 10 */);
+      *aMsgKey = messageIdString.ToNewCString();
     }
 
     return rv;
@@ -3274,4 +3282,23 @@ nsImapService::DownloadMessagesForOffline(const char *messageIds, nsIMsgFolder *
       }
   }
   return rv;
+}
+
+NS_IMETHODIMP
+nsImapService::MessageURIToMsgHdr(const char *uri, nsIMsgDBHdr **_retval)
+{
+  NS_ENSURE_ARG_POINTER(uri);
+  NS_ENSURE_ARG_POINTER(_retval);
+
+  nsresult rv = NS_OK;
+
+  nsCOMPtr<nsIMsgFolder> folder;
+  nsMsgKey msgKey;
+
+  rv = DecomposeImapURI(uri, getter_AddRefs(folder), &msgKey);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  rv = folder->GetMessageHeader(msgKey, getter_AddRefs(_retval));
+  NS_ENSURE_SUCCESS(rv,rv);
+  return NS_OK;
 }

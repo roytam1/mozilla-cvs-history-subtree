@@ -433,3 +433,8 @@ NS_IMETHODIMP nsMailboxService::Search(nsIMsgSearchSession *aSearchSession, nsIM
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+NS_IMETHODIMP
+nsMailboxService::MessageURIToMsgHdr(const char *uri, nsIMsgDBHdr **_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
