@@ -145,6 +145,8 @@ PRInt8 nsEventStateManager::sTextfieldSelectModel = eTextfieldSelect_unset;
 PRUint32 nsEventStateManager::mInstanceCount = 0;
 PRInt32 nsEventStateManager::gGeneralAccesskeyModifier = -1; // magic value of -1 means uninitialized
 
+PRInt32 nsEventStateManager::sUserInputEventDepth = 0;
+
 enum {
  MOUSE_SCROLL_N_LINES,
  MOUSE_SCROLL_PAGE,
@@ -253,6 +255,8 @@ nsEventStateManager::Init()
     }
 
     mPrefBranch->AddObserver("accessibility.browsewithcaret", this, PR_TRUE);
+
+    mPrefBranch->AddObserver("dom.popup_allowed_events", this, PR_TRUE);
   }
 
   if (nsEventStateManager::sTextfieldSelectModel == eTextfieldSelect_unset) {
@@ -309,7 +313,8 @@ nsresult
 nsEventStateManager::Shutdown()
 {
   mPrefBranch->RemoveObserver("accessibility.browsewithcaret", this);
-  
+  mPrefBranch->RemoveObserver("dom.popup_allowed_events", this);
+
   mPrefBranch = nsnull;
 
   m_haveShutdown = PR_TRUE;
@@ -340,9 +345,15 @@ nsEventStateManager::Observe(nsISupports *aSubject,
   if (!nsCRT::strcmp(aTopic, NS_XPCOM_SHUTDOWN_OBSERVER_ID))
     Shutdown();
   else if (!nsCRT::strcmp(aTopic, NS_PREFBRANCH_PREFCHANGE_TOPIC_ID)) {
-    if (someData && nsDependentString(someData).Equals(NS_LITERAL_STRING("accessibility.browsewithcaret"))) {
-      PRBool browseWithCaret;
-      ResetBrowseWithCaret(&browseWithCaret);
+    if (someData) {
+      nsDependentString str(someData);
+
+      if (str.Equals(NS_LITERAL_STRING("accessibility.browsewithcaret"))) {
+        PRBool browseWithCaret;
+        ResetBrowseWithCaret(&browseWithCaret);
+      } else if (str.Equals(NS_LITERAL_STRING("dom.popup_allowed_events"))) {
+        nsDOMEvent::PopupAllowedEventsChanged();
+      }
     }
   }
   
@@ -975,6 +986,11 @@ nsEventStateManager::HandleAccessKey(nsIPresContext* aPresContext,
           // B) Click on it if the users prefs indicate to do so.
           nsEventStatus status = nsEventStatus_eIgnore;
           nsMouseEvent event(NS_MOUSE_LEFT_CLICK);
+
+          // Propagate trusted state to the new event.
+          event.internalAppFlags |=
+            aEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED;
+
           content->HandleDOMEvent(mPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
         }
 
