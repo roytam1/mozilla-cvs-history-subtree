@@ -144,12 +144,12 @@ sub compareDir
 
     opendir(DIR1, "$gSourceDir1/$path") ||
         die ("Couldn't list $gSourceDir1/$path");
-    @entries1 = grep(!/^\./, readdir(DIR1));
+    @entries1 = grep(!(/^(\.|CVS)/ || /~$/), readdir(DIR1));
     closedir(DIR1);
 
     opendir(DIR2, "$gSourceDir2/$path") ||
         die ("Couldn't list $gSourceDir2/$path");
-    %entries2 = map { $_ => 1 } grep(!/^\./, readdir(DIR2));
+    %entries2 = map { $_ => 1 } grep(!(/^(\.|CVS)/ || /~$/), readdir(DIR2));
     closedir(DIR2);
 
     foreach my $file (@entries1) {
