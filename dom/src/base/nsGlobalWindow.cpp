@@ -1995,6 +1995,33 @@ GlobalWindowImpl::GetLength(PRUint32* aLength)
   return NS_ERROR_FAILURE;
 }
 
+PRBool
+GlobalWindowImpl::DispatchCustomEvent(const char *aEventName)
+{
+  nsCOMPtr<nsIDOMDocumentEvent> doc(do_QueryInterface(mDocument));
+  nsCOMPtr<nsIDOMEvent> event;
+
+  // Doesn't this seem backwards? Seems like
+  // nsEventStateManager::DispatchNewEvent() screws up on the
+  // logic for its prevent default argument...
+  PRBool preventDefault = PR_TRUE;
+
+  if (doc) {
+    doc->CreateEvent(NS_LITERAL_STRING("Events"), getter_AddRefs(event));
+
+    nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(event));
+    if (privateEvent) {
+      event->InitEvent(NS_ConvertASCIItoUCS2(aEventName), PR_TRUE, PR_TRUE);
+
+      privateEvent->SetTrusted(PR_TRUE);
+
+      DispatchEvent(event, &preventDefault);
+    }
+  }
+
+  return preventDefault;
+}
+
 NS_IMETHODIMP GlobalWindowImpl::SetFullScreen(PRBool aFullScreen)
 {
   // Only chrome can change our fullScreen mode.
@@ -2023,21 +2050,12 @@ NS_IMETHODIMP GlobalWindowImpl::SetFullScreen(PRBool aFullScreen)
   if (itemType != nsIDocShellTreeItem::typeChrome)
     return NS_ERROR_FAILURE;
 
-  // dispatch an onfullscreen DOM event so that XUL apps can
+  // dispatch a "fullscreen" DOM event so that XUL apps can
   // respond visually if we are kicked into full screen mode
-  nsCOMPtr<nsIDOMDocumentEvent> doc(do_QueryInterface(mDocument));
-  nsCOMPtr<nsIDOMEvent> event;
-  doc->CreateEvent(NS_LITERAL_STRING("Events"), getter_AddRefs(event));
-  if (!event)
-    return NS_ERROR_FAILURE;
-
-  event->InitEvent(NS_LITERAL_STRING("fullscreen"), PR_FALSE, PR_TRUE);
-  PRBool allowDefault;
-  DispatchEvent(event, &allowDefault);
-
-  // event handlers can prevent us from going into full-screen mode
-  if (!allowDefault)
+  if (!DispatchCustomEvent("fullscreen")) {
+    // event handlers can prevent us from going into full-screen mode
     return NS_OK;
+  }
 
   nsCOMPtr<nsIBaseWindow> treeOwnerAsWin;
   GetTreeOwner(getter_AddRefs(treeOwnerAsWin));
@@ -2230,16 +2248,19 @@ GlobalWindowImpl::MakeScriptDialogTitle(const nsAString &aInTitle, nsAString &aO
 NS_IMETHODIMP
 GlobalWindowImpl::Alert(const nsAString& aString)
 {
-  NS_ENSURE_STATE(mDocShell);
+  nsCOMPtr<nsIPrompt> prompter(do_GetInterface(mDocShell));
+  NS_ENSURE_TRUE(prompter, NS_ERROR_FAILURE);
 
+  if (!DispatchCustomEvent("DOMWillOpenModalDialog")) {
+    // Someone chose to prevent the default action for this event,
+    // if so, don't show the dialog after all...
+
+    return NS_OK;
+  }
+ 
   nsAutoString str;
 
   str.Assign(aString);
-
-  // XXX: Concatenation of optional args?
-
-  nsCOMPtr<nsIPrompt> prompter(do_GetInterface(mDocShell));
-  NS_ENSURE_TRUE(prompter, NS_ERROR_FAILURE);
 
   // Test whether title needs to prefixed with [script]
   PRBool isChrome = PR_FALSE;
@@ -2256,13 +2277,25 @@ GlobalWindowImpl::Alert(const nsAString& aString)
   // pending reflows.
   EnsureReflowFlushAndPaint();
 
-  return prompter->Alert(title, str.get());
+  rv = prompter->Alert(title, PromiseFlatString(str).get());
+
+  DispatchCustomEvent("DOMModalDialogClosed");
+
+  return rv;
 }
 
 NS_IMETHODIMP
 GlobalWindowImpl::Confirm(const nsAString& aString, PRBool* aReturn)
 {
-  NS_ENSURE_STATE(mDocShell);
+  nsCOMPtr<nsIPrompt> prompter(do_GetInterface(mDocShell));
+  NS_ENSURE_TRUE(prompter, NS_ERROR_FAILURE);
+
+  if (!DispatchCustomEvent("DOMWillOpenModalDialog")) {
+    // Someone chose to prevent the default action for this event,
+    // if so, don't show the dialog after all...
+
+    return NS_OK;
+  }
 
   nsAutoString str;
 
@@ -2285,14 +2318,15 @@ GlobalWindowImpl::Confirm(const nsAString& aString, PRBool* aReturn)
                    "chrome shouldn't be calling confirm(), use the prompt "
                    "service");
 
-  nsCOMPtr<nsIPrompt> prompter(do_GetInterface(mDocShell));
-  NS_ENSURE_TRUE(prompter, NS_ERROR_FAILURE);
-
   // Before bringing up the window, unsuppress painting and flush
   // pending reflows.
   EnsureReflowFlushAndPaint();
 
-  return prompter->Confirm(title, str.get(), aReturn);
+  rv = prompter->Confirm(title, str.get(), aReturn);
+
+  DispatchCustomEvent("DOMModalDialogClosed");
+
+  return rv;
 }
 
 NS_IMETHODIMP
@@ -2302,15 +2336,16 @@ GlobalWindowImpl::Prompt(const nsAString& aMessage,
                          PRUint32 aSavePassword,
                          nsAString& aReturn)
 {
-  NS_ENSURE_STATE(mDocShell);
+  nsCOMPtr<nsIAuthPrompt> prompter(do_GetInterface(mDocShell));
+  NS_ENSURE_TRUE(prompter, NS_ERROR_FAILURE);
+
+  if (!DispatchCustomEvent("DOMWillOpenModalDialog")) {
+    // Someone chose to prevent the default action for this event,
+    // if so, don't show the dialog after all...
+    return NS_OK;
+  }
 
   aReturn.Truncate(); // XXX Null string!!!
-
-  nsresult rv = NS_OK;
-
-  nsCOMPtr<nsIAuthPrompt> prompter(do_GetInterface(mDocShell));
-
-  NS_ENSURE_TRUE(prompter, NS_ERROR_FAILURE);
 
   PRBool b;
   nsXPIDLString uniResult;
@@ -2322,7 +2357,7 @@ GlobalWindowImpl::Prompt(const nsAString& aMessage,
   // Test whether title needs to prefixed with [script]
   nsAutoString title;
   PRBool isChrome = PR_FALSE;
-  rv = CheckSecurityIsChromeCaller(&isChrome);
+  nsresult rv = CheckSecurityIsChromeCaller(&isChrome);
   if (NS_FAILED(rv) || !isChrome) {
       MakeScriptDialogTitle(aTitle, title);
   }
@@ -2337,6 +2372,9 @@ GlobalWindowImpl::Prompt(const nsAString& aMessage,
                         aSavePassword,
                         PromiseFlatString(aInitial).get(),
                         getter_Copies(uniResult), &b);
+
+  DispatchCustomEvent("DOMModalDialogClosed");
+
   NS_ENSURE_SUCCESS(rv, rv);
 
   if (uniResult && b) {
@@ -3299,25 +3337,10 @@ GlobalWindowImpl::Close()
   // could be abused by content code, but do we care? I don't think
   // so...
 
-  nsCOMPtr<nsIDOMDocumentEvent> doc(do_QueryInterface(mDocument));
-  nsCOMPtr<nsIDOMEvent> event;
-
-  if (doc) {
-    doc->CreateEvent(NS_LITERAL_STRING("Events"), getter_AddRefs(event));
-  }
-
-  if (event) {
-    event->InitEvent(NS_LITERAL_STRING("DOMWindowClose"), PR_TRUE, PR_TRUE);
-
-    PRBool executeDefault = PR_TRUE;
-    DispatchEvent(event, &executeDefault);
-
-    if (!executeDefault) {
-      // Someone chose to prevent the default action for this event,
-      // if so, let's not close this window after all...
-
-      return NS_OK;
-    }
+  if (!DispatchCustomEvent("DOMWindowClose")) {
+    // Someone chose to prevent the default action for this event, if
+    // so, let's not close this window after all...
+    return NS_OK;
   }
 
   // Flag that we were closed.
