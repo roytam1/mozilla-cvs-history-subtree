@@ -29,7 +29,6 @@
 #include "nsFont.h"
 #include "nsCRT.h"
 #include "nsCOMPtr.h"
-#include "nsIImageGroup.h"
 #include "nsIPref.h"
 #include "nsICharsetConverterManager.h"
 #include "nsILanguageAtomService.h"
@@ -41,6 +40,8 @@
 #include "nsIUBidiUtils.h"
 #endif
 
+#include "nsHashtable.h"
+
 // Base class for concrete presentation context classes
 class nsPresContext : public nsIPresContext, public nsIObserver {
 public:
@@ -51,7 +52,6 @@ public:
 
   // nsIPresContext methods
   NS_IMETHOD Init(nsIDeviceContext* aDeviceContext);
-  NS_IMETHOD Stop(PRBool aStopChrome = PR_TRUE);
   NS_IMETHOD SetShell(nsIPresShell* aShell);
   NS_IMETHOD GetShell(nsIPresShell** aResult);
   NS_IMETHOD GetCompatibilityMode(nsCompatibility* aModeResult);
@@ -122,15 +122,10 @@ public:
   NS_IMETHOD SetDefaultLinkColor(nscolor aColor);
   NS_IMETHOD SetDefaultVisitedLinkColor(nscolor aColor);
 
-  NS_IMETHOD GetImageGroup(nsIImageGroup** aGroupResult);
-  NS_IMETHOD StartLoadImage(const nsString& aURL,
-                            const nscolor* aBackgroundColor,
-                            const nsSize* aDesiredSize,
-                            nsIFrame* aTargetFrame,
-                            nsIFrameImageLoaderCB aCallBack,
-                            void* aClosure,
-                            void* aKey,
-                            nsIFrameImageLoader** aResult);
+  NS_IMETHOD LoadImage(const nsString& aURL,
+                       nsIFrame* aTargetFrame,
+                       imgIRequest **aRequest);
+
   NS_IMETHOD StopLoadImage(void* aKey, nsIFrameImageLoader* aLoader);
   NS_IMETHOD StopAllLoadImagesFor(nsIFrame* aTargetFrame, void* aKey);
   NS_IMETHOD SetContainer(nsISupports* aContainer);
@@ -199,7 +194,6 @@ protected:
   nsCOMPtr<nsILanguageAtomService> mLangService;
   nsCOMPtr<nsILanguageAtom> mLanguage;
   nsLanguageSpecificTransformType mLanguageSpecificTransformType;
-  nsCOMPtr<nsIImageGroup> mImageGroup;
   nsILinkHandler*       mLinkHandler;   // [WEAK]
   nsISupports*          mContainer;     // [WEAK]
   nsCOMPtr<nsILookAndFeel> mLookAndFeel;
@@ -223,7 +217,9 @@ protected:
   nscoord               mDefaultBackgroundImageOffsetX;
   nscoord               mDefaultBackgroundImageOffsetY;
   PRUint8               mDefaultBackgroundImageAttachment;
-  nsVoidArray           mImageLoaders;
+
+  nsSupportsHashtable   mImageLoaders;
+
   nsCOMPtr<nsIEventStateManager> mEventManager;
   nsCOMPtr<nsIURI>      mBaseURL;
   nsCompatibility       mCompatibilityMode;

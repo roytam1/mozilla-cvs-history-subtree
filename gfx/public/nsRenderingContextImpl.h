@@ -52,6 +52,7 @@ public:
 
 
 // CLASS METHODS
+#if 0
   /** ---------------------------------------------------
    *  See documentation in nsIRenderingContext.h
    *	@update 03/29/00 dwc
@@ -60,6 +61,7 @@ public:
                       nscoord aWidth,nscoord aHeight);
   NS_IMETHOD DrawTile(nsIImage *aImage, nscoord aSrcXOffset,
                       nscoord aSrcYOffset, const nsRect &aTileRect);
+#endif
   /** ---------------------------------------------------
    *  See documentation in nsIRenderingContext.h
    *	@update 03/29/00 dwc

@@ -629,16 +629,58 @@ NS_IMETHODIMP nsImageWin :: Draw(nsIRenderingContext &aContext, nsDrawingSurface
  *  See documentation in nsIRenderingContext.h
  *  @update 3/16/00 dwc
  */
-PRBool 
-nsImageWin::DrawTile(nsIRenderingContext &aContext, nsDrawingSurface aSurface,
-                                nscoord aX0,nscoord aY0,nscoord aX1,nscoord aY1,
-                                nscoord aWidth, nscoord aHeight)
+NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
+                                   nsDrawingSurface aSurface,
+                                   PRInt32 aSXOffset, PRInt32 aSYOffset,
+                                   const nsRect &aTileRect)
 {
-  nsRect              destRect,srcRect,tvrect;
-  HDC                 TheHDC,offDC,maskDC;
-  PRInt32             x,y,width,height,canRaster,TileBufferWidth,TileBufferHeight;
-  HBITMAP             maskBits,tileBits,oldBits,oldMaskBits; 
+  // XXX this code below is quite slow.  need to make it faster
+  PRInt32
+    validX = 0,
+    validY = 0,
+    validWidth  = mBHead->biWidth,
+    validHeight = mBHead->biHeight;
+  
+  // limit the image rectangle to the size of the image data which
+  // has been validated.
+  if (mDecodedY2 < mBHead->biHeight) {
+    validHeight = mDecodedY2 - mDecodedY1;
+  }
+  if (mDecodedX2 < mBHead->biWidth) {
+    validWidth = mDecodedX2 - mDecodedX1;
+  }
+  if (mDecodedY1 > 0) {   
+    validHeight -= mDecodedY1;
+    validY = mDecodedY1;
+  }
+  if (mDecodedX1 > 0) {
+    validWidth -= mDecodedX1;
+    validX = mDecodedX1; 
+  }
 
+  PRInt32 aY0 = aTileRect.y - aSYOffset,
+          aX0 = aTileRect.x - aSXOffset,
+          aY1 = aTileRect.y + aTileRect.height,
+          aX1 = aTileRect.x + aTileRect.width;
+
+  for (PRInt32 y = aY0; y < aY1; y += mBHead->biHeight)
+    for (PRInt32 x = aX0; x < aX1; x += mBHead->biWidth)
+      Draw(aContext, aSurface,
+           0, 0, PR_MIN(validWidth, aX1-x), PR_MIN(validHeight, aY1-y),
+           x, y, PR_MIN(validWidth, aX1-x), PR_MIN(validHeight, aY1-y));
+
+  return PR_TRUE;
+
+#if 0
+
+  nscoord aX0 = aTileRect.x + aSXOffset;
+  nscoord aY0 = aTileRect.y + aSYOffset;
+
+  nscoord aX1 = aX0 + aTileRect.width;
+  nscoord aY1 = aY0 + aTileRect.height;
+
+  nscoord aWidth = aTileRect.width;
+  nscoord aHeight = aTileRect.height;
 
   // The slower tiling will need to be used for the following cases:
   // 1.) Printers 2.) When in 256 color mode 3.) when the tile is larger than the buffer
@@ -768,8 +810,9 @@ nsImageWin::DrawTile(nsIRenderingContext &aContext, nsDrawingSurface aSurface,
   ::SelectObject(offDC,oldBits);
   ::DeleteObject(tileBits);
   ::DeleteObject(offDC);
+#endif
 
-  return (PR_TRUE);
+  return PR_TRUE;
 }
 
 /** ---------------------------------------------------
