@@ -1137,10 +1137,7 @@ pre_call_clean_up:
     ccx.GetThreadData()->SetException(nsnull); // XXX necessary?
 
 #define HANDLE_OUT_CONVERSION_FAILURE       \
-    PR_BEGIN_MACRO                          \
-        outConversionFailedIndex = i;       \
-        break;                              \
-    PR_END_MACRO
+        {outConversionFailedIndex = i; break;}
 
     // convert out args and result
     // NOTE: this is the total number of native params, not just the args
@@ -1176,10 +1173,11 @@ pre_call_clean_up:
 
         if(param.IsRetval())
             val = result;
-        else if(!OBJ_GET_PROPERTY(cx, JSVAL_TO_OBJECT(stackbase[i+2]),
+        else if(JSVAL_IS_PRIMITIVE(stackbase[i+2]) ||
+                !OBJ_GET_PROPERTY(cx, JSVAL_TO_OBJECT(stackbase[i+2]),
                     mRuntime->GetStringID(XPCJSRuntime::IDX_VALUE),
                     &val))
-            HANDLE_OUT_CONVERSION_FAILURE;
+            HANDLE_OUT_CONVERSION_FAILURE
 
         // setup allocator and/or iid
 
@@ -1187,7 +1185,7 @@ pre_call_clean_up:
         {
             if(NS_FAILED(GetInterfaceInfo()->GetIIDForParam(methodIndex, &param,
                                                             &conditional_iid)))
-                HANDLE_OUT_CONVERSION_FAILURE;
+                HANDLE_OUT_CONVERSION_FAILURE
             iidIsOwned = JS_TRUE;
         }
         else if(type.IsPointer() && !param.IsShared() && !param.IsDipper())
@@ -1195,7 +1193,7 @@ pre_call_clean_up:
 
         if(!XPCConvert::JSData2Native(ccx, &pv->val, val, type,
                                       useAllocator, conditional_iid, nsnull))
-            HANDLE_OUT_CONVERSION_FAILURE;
+            HANDLE_OUT_CONVERSION_FAILURE
 
         if(conditional_iid)
         {
@@ -1239,7 +1237,7 @@ pre_call_clean_up:
             else if(!OBJ_GET_PROPERTY(cx, JSVAL_TO_OBJECT(stackbase[i+2]),
                         mRuntime->GetStringID(XPCJSRuntime::IDX_VALUE),
                         &val))
-                HANDLE_OUT_CONVERSION_FAILURE;
+                HANDLE_OUT_CONVERSION_FAILURE
 
             // setup allocator and/or iid
 
@@ -1247,7 +1245,7 @@ pre_call_clean_up:
             {
                 if(NS_FAILED(mInfo->GetTypeForParam(methodIndex, &param, 1,
                                                     &datum_type)))
-                    HANDLE_OUT_CONVERSION_FAILURE;
+                    HANDLE_OUT_CONVERSION_FAILURE
             }
             else
                 datum_type = type;
@@ -1257,7 +1255,7 @@ pre_call_clean_up:
                if(!GetInterfaceTypeFromParam(cx, info, param, methodIndex,
                                              datum_type, nativeParams,
                                              &iidIsOwned, &conditional_iid))
-                    HANDLE_OUT_CONVERSION_FAILURE;
+                    HANDLE_OUT_CONVERSION_FAILURE
             }
             else if(type.IsPointer() && !param.IsShared())
                 useAllocator = JS_TRUE;
@@ -1267,7 +1265,7 @@ pre_call_clean_up:
                 if(!GetArraySizeFromParam(cx, info, param, methodIndex,
                                           i, GET_LENGTH, nativeParams,
                                           &array_count))
-                    HANDLE_OUT_CONVERSION_FAILURE;
+                    HANDLE_OUT_CONVERSION_FAILURE
             }
 
             if(isArray)
@@ -1277,7 +1275,7 @@ pre_call_clean_up:
                                                datum_type,
                                                useAllocator, conditional_iid,
                                                nsnull))
-                    HANDLE_OUT_CONVERSION_FAILURE;
+                    HANDLE_OUT_CONVERSION_FAILURE
             }
             else if(isSizedString)
             {
@@ -1286,14 +1284,14 @@ pre_call_clean_up:
                                                    array_count, array_count,
                                                    datum_type, useAllocator,
                                                    nsnull))
-                    HANDLE_OUT_CONVERSION_FAILURE;
+                    HANDLE_OUT_CONVERSION_FAILURE
             }
             else
             {
                 if(!XPCConvert::JSData2Native(ccx, &pv->val, val, type,
                                               useAllocator, conditional_iid,
                                               nsnull))
-                    HANDLE_OUT_CONVERSION_FAILURE;
+                    HANDLE_OUT_CONVERSION_FAILURE
             }
 
             if(conditional_iid)
