@@ -45,7 +45,7 @@ public:
 
   virtual PRBool OnMove(PRInt32 aX, PRInt32 aY) { return PR_FALSE; }
   virtual PRBool OnPaint(nsPaintEvent & aEvent) { return PR_FALSE; }
-  virtual PRBool OnResize(nsRect &aRect) { return PR_FALSE; }
+  //virtual PRBool OnResize(nsRect &aRect) { return PR_FALSE; }
 
 
 protected:
