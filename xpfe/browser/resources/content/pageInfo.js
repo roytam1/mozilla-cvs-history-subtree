@@ -200,7 +200,7 @@ function makeGeneralTab()
 
   try
   {
-    var cacheEntryDescriptor = httpCacheSession.openCacheEntry(url, Components.interfaces.nsICache.ACCESS_READ, true);
+    var cacheEntryDescriptor = httpCacheSession.openCacheEntry(url, Components.interfaces.nsICache.ACCESS_READ, false);
     if(cacheEntryDescriptor)
     { 
       switch(cacheEntryDescriptor.deviceID)
@@ -227,7 +227,7 @@ function makeGeneralTab()
   {
     try
     {
-      cacheEntryDescriptor = ftpCacheSession.openCacheEntry(url, Components.interfaces.nsICache.ACCESS_READ, true);
+      cacheEntryDescriptor = ftpCacheSession.openCacheEntry(url, Components.interfaces.nsICache.ACCESS_READ, false);
       if (cacheEntryDescriptor)
       {
         switch(cacheEntryDescriptor.deviceID)
@@ -690,7 +690,7 @@ function makePreview(item)
 
   try
   {
-    var cacheEntryDescriptor = httpCacheSession.openCacheEntry(url, Components.interfaces.nsICache.ACCESS_READ, true);   // open for READ, in blocking mode
+    var cacheEntryDescriptor = httpCacheSession.openCacheEntry(url, Components.interfaces.nsICache.ACCESS_READ, false);   // open for READ, in non-blocking mode
     if (cacheEntryDescriptor)
     {
       switch(cacheEntryDescriptor.deviceID)
@@ -717,7 +717,7 @@ function makePreview(item)
   {
     try
     {
-      cacheEntryDescriptor = ftpCacheSession.openCacheEntry(url, Components.interfaces.nsICache.ACCESS_READ, true);   // open for READ, in blocking mode
+      cacheEntryDescriptor = ftpCacheSession.openCacheEntry(url, Components.interfaces.nsICache.ACCESS_READ, false);   // open for READ, in non-blocking mode
       if (cacheEntryDescriptor)
       {
         switch(cacheEntryDescriptor.deviceID)
