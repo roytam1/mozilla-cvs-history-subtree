@@ -1219,7 +1219,7 @@ nsBrowserInstance::SetDocumentCharset(const PRUnichar *aCharset)
 }
 
 NS_IMETHODIMP    
-nsBrowserInstance::SetBidiDirection( const PRUint8 aBidiDirection)
+nsBrowserInstance::SetBidiDirection(PRUint8 aBidiDirection)
 {
 #ifdef IBMBIDI
   if (mWebShellWin != nsnull){
@@ -1236,7 +1236,7 @@ nsBrowserInstance::SetBidiDirection( const PRUint8 aBidiDirection)
 }
 
 NS_IMETHODIMP    
-nsBrowserInstance::SetBidiTextType(const PRUint8 aBidiTextType)
+nsBrowserInstance::SetBidiTextType(PRUint8 aBidiTextType)
 {
 #ifdef IBMBIDI
   if (mWebShellWin != nsnull){
@@ -1252,7 +1252,7 @@ nsBrowserInstance::SetBidiTextType(const PRUint8 aBidiTextType)
   return NS_OK;
 }
 NS_IMETHODIMP    
-nsBrowserInstance::SetBidiControlsMode(const PRUint8 aControlsMode)
+nsBrowserInstance::SetBidiControlsMode(PRUint8 aControlsMode)
 {
 #ifdef IBMBIDI
   if (mWebShellWin != nsnull){
@@ -1268,7 +1268,7 @@ nsBrowserInstance::SetBidiControlsMode(const PRUint8 aControlsMode)
   return NS_OK;
 }
 NS_IMETHODIMP    
-nsBrowserInstance::SetBidiClipboardMode( const PRUint8 aClipboardMode)
+nsBrowserInstance::SetBidiClipboardMode(PRUint8 aClipboardMode)
 {
 #ifdef IBMBIDI
   if (mWebShellWin != nsnull){
@@ -1283,7 +1283,7 @@ nsBrowserInstance::SetBidiClipboardMode( const PRUint8 aClipboardMode)
   return NS_OK;
 }
 NS_IMETHODIMP    
-nsBrowserInstance::SetBidiNumeralShape(const PRUint8 aBidiNumeralShape)
+nsBrowserInstance::SetBidiNumeralShape(PRUint8 aBidiNumeralShape)
 {
 #ifdef IBMBIDI
   if (mWebShellWin != nsnull){
@@ -1299,7 +1299,7 @@ nsBrowserInstance::SetBidiNumeralShape(const PRUint8 aBidiNumeralShape)
   return NS_OK;
 }
 NS_IMETHODIMP    
-nsBrowserInstance::SetBidiSupport(const PRUint8 aBidiSupport)
+nsBrowserInstance::SetBidiSupport(PRUint8 aBidiSupport)
 {
 #ifdef IBMBIDI
   if (mWebShellWin != nsnull){
@@ -1315,7 +1315,7 @@ nsBrowserInstance::SetBidiSupport(const PRUint8 aBidiSupport)
   return NS_OK;
 }
 NS_IMETHODIMP    
-nsBrowserInstance::SetBidiCharset(const PRUint8 aBidiCharset)
+nsBrowserInstance::SetBidiCharset(PRUint8 aBidiCharset)
 {
 #ifdef IBMBIDI
   if (mWebShellWin != nsnull){
