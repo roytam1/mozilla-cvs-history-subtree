@@ -25,8 +25,65 @@
 #define _LIBMATH_H
 
 #include <math.h>
+#include "jsconfig.h"
 
-#define USE_FDLIBM
+#if !JS_HAS_FDLIBM_MATH
+
+/*
+ * Use system provided math routines.
+ */
+
+#define fd_acos acos
+#define fd_acosh acosh
+#define fd_asin asin
+#define fd_asinh asinh
+#define fd_atan atan
+#define fd_atan2 atan2
+#define fd_atanh atanh
+#define fd_cbrt cbrt
+#define fd_ceil ceil
+#define fd_copysign copysign
+#define fd_cos cos
+#define fd_cosh cosh
+#define fd_erf erf
+#define fd_erfc erfc
+#define fd_exp exp
+#define fd_fabs fabs
+#define fd_finite finite
+#define fd_floor floor
+#define fd_fmod fmod
+#define fd_frexp frexp
+#define fd_gamma gamma
+#define fd_hypot hypot
+#define fd_isnan isnan
+#define fd_j0 j0
+#define fd_j1 j1
+#define fd_jn jn
+#define fd_ldexp ldexp
+#define fd_lgamma lgamma
+#define fd_log log
+#define fd_log10 log10
+#define fd_logb logb
+#define fd_matherr matherr
+#define fd_modf modf
+#define fd_nextafter nextafter
+#define fd_pow pow
+#define fd_remainder remainder
+#define fd_scalb scalb
+#define fd_sin sin
+#define fd_sinh sinh
+#define fd_sqrt sqrt
+#define fd_tan tan
+#define fd_tanh tanh
+#define fd_y0 y0
+#define fd_y1 y1
+#define fd_yn yn
+
+#else
+
+/*
+ * Use math routines in fdlibm.
+ */
 
 #ifdef __STDC__
 #define __P(p)  p
@@ -79,6 +136,8 @@
 #define fd_scalb scalb
 #define fd_matherr matherr
 extern double fd_atan2 __P((double, double));
+extern double fd_copysign __P((double, double));
+
 #ifdef DEBUG
 extern double fd_pow __P((double, double));
 #else
@@ -131,6 +190,7 @@ extern double fd_atan2 __P((double, double));
 extern double fd_pow __P((double, double));
 extern double fd_ceil __P((double));
 extern double fd_floor __P((double));
+extern double fd_copysign __P((double, double));
 
 #elif defined SOLARIS
 
@@ -178,6 +238,7 @@ extern double fd_asin __P((double));
 extern double fd_log __P((double));
 extern double fd_atan2 __P((double, double));
 extern double fd_pow __P((double, double));
+extern double fd_copysign __P((double, double));
 
 #elif defined HPUX
 
@@ -228,6 +289,7 @@ extern double fd_tan __P((double));
 extern double fd_pow __P((double, double));
 extern double fd_asin __P((double));
 extern double fd_atan __P((double));
+extern double fd_copysign __P((double, double));
 
 #elif defined LINUX
 
@@ -276,6 +338,7 @@ extern double fd_asin __P((double));
 extern double fd_acos __P((double));
 extern double fd_log __P((double));
 extern double fd_pow __P((double, double));
+extern double fd_copysign __P((double, double));
 
 #else /* other platform.. generic paranoid slow fdlibm */
 
@@ -334,10 +397,11 @@ extern int fd_matherr __P((struct exception *));
 
 extern double fd_atan2 __P((double, double));
 extern double fd_pow __P((double, double));
+extern double fd_copysign __P((double, double));
 
 #endif
 
-extern double fd_copysign(double, double);
+#endif /* JS_HAS_FDLIBM_MATH */
 
 #endif /* _LIBMATH_H */
 
