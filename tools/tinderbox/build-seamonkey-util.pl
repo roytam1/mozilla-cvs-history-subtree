@@ -1115,7 +1115,7 @@ sub get_profile_dir {
           ($profile_dir) = <$profile_dir . "*" . $Settings::MozProfileName . "*">;
         }
         else {
-          ($profile_dir) = <"$build_dir/.".lc($Settings::ProductName)."/" . "*" . $Settings::MozProfileName . "*">;
+          $profile_dir = "$build_dir/.".lc($Settings::ProductName)."/$Settings::MozProfileName";
         }
     }
 
