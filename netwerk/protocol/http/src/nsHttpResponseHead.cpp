@@ -320,6 +320,9 @@ nsHttpResponseHead::Reset()
     mVersion = NS_HTTP_VERSION_1_1;
     mStatus = 200;
     mStatusText = 0;
+    mContentLength = -1;
+    mContentType = 0;
+    mContentCharset = 0;
 }
 
 //-----------------------------------------------------------------------------
