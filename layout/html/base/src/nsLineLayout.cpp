@@ -2399,8 +2399,15 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
 #if 0
       if (!pfd->GetFlag(PFD_ISTEXTFRAME)) {
 #else
-      if (!pfd->GetFlag(PFD_ISTEXTFRAME) ||
-          (pfd->GetFlag(PFD_ISNONWHITESPACETEXTFRAME) && !logicalHeight)) {
+      // Only consider non empty text frames when there is no explicit line-height
+      PRBool canUpdate = !pfd->GetFlag(PFD_ISTEXTFRAME);
+      if (!canUpdate && pfd->GetFlag(PFD_ISNONWHITESPACETEXTFRAME)) {
+        const nsStyleText* textStyle;
+        frame->GetStyleData(eStyleStruct_Text, (const nsStyleStruct*&)textStyle);
+        canUpdate = textStyle->mLineHeight.GetUnit() == eStyleUnit_Null ||
+                    textStyle->mLineHeight.GetUnit() == eStyleUnit_Normal;
+      }
+      if (canUpdate) {
 #endif
         nscoord yTop, yBottom;
         if (frameSpan) {

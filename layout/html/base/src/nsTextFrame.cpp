@@ -69,6 +69,7 @@
 #include "nsIAccessible.h"
 #include "nsINameSpaceManager.h"
 #include "nsIAccessibilityService.h"
+#include "nsGUIEvent.h"
 
 #ifdef IBMBIDI
 #include "nsBidiFrames.h"
@@ -4387,14 +4388,6 @@ nsTextFrame::MeasureText(nsIPresContext*          aPresContext,
 #endif //IBMBIDI
 
   aTextData.mX = 0;
-  if (aTextData.mMeasureText) {
-    aTs.mNormalFont->GetMaxAscent(aTextData.mAscent);
-    aTs.mNormalFont->GetMaxDescent(aTextData.mDescent);
-  }
-  else {
-    aTextData.mAscent = mAscent;
-    aTextData.mDescent = mRect.height - aTextData.mAscent;
-  }
   for (;;firstThing = PR_FALSE) {
 #ifdef IBMBIDI
     if (nextBidi && (mContentLength <= 0) ) {
@@ -4742,6 +4735,8 @@ nsTextFrame::MeasureText(nsIPresContext*          aPresContext,
   // If we didn't actually measure any text, then make sure it looks
   // like we did
   if (!aTextData.mMeasureText) {
+    aTextData.mAscent = mAscent;
+    aTextData.mDescent = mRect.height - aTextData.mAscent;
     aTextData.mX = mRect.width;
     if (mState & TEXT_TRIMMED_WS) {
       // Add back in the width of a space since it was trimmed away last time
