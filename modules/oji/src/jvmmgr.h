@@ -51,7 +51,8 @@ struct JVMSecurityStack {
   void        **pNSIPrincipaArray;
   int           numPrincipals;
   void         *pNSISecurityContext;
-  JSStackFrame *pJavaToJSSFrame;
+  JSStackFrame *pJavaToJSFrame;
+  JSStackFrame *pJSToJavaFrame;
   JVMSecurityStack *next;
   JVMSecurityStack *prev;
 };
@@ -316,6 +317,9 @@ JVM_NSISecurityContextImplies(JSStackFrame  *pCurrentFrame, const char* target, 
 
 PR_EXTERN(JSPrincipals*)
 JVM_GetJavaPrincipalsFromStack(JSStackFrame  *pCurrentFrame);
+
+PR_EXTERN(void *)
+JVM_GetJavaPrincipalsFromStackAsNSVector(JSStackFrame  *pCurrentFrame);
 
 PR_EXTERN(JSStackFrame**)
 JVM_GetStartJSFrameFromParallelStack(void);

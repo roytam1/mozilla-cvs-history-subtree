@@ -513,8 +513,8 @@ get_java_vm_impl(char **errp)
 }
 #endif
 
-static JSPrincipals* PR_CALLBACK
-get_JSPrincipals_from_java_caller_impl(JNIEnv *pJNIEnv, JSContext *pJSContext, void  **ppNSIPrincipalArrayIN, int numPrincipals, void *pNSISecurityContext)
+static void* 
+ConvertNSIPrincipalToNSPrincipalArray(JNIEnv *pJNIEnv, JSContext *pJSContext, void  **ppNSIPrincipalArrayIN, int numPrincipals, void *pNSISecurityContext)
 {
     nsIPrincipal  **ppNSIPrincipalArray = (nsIPrincipal  **)ppNSIPrincipalArrayIN;
     PRInt32        length = numPrincipals;
@@ -561,6 +561,21 @@ get_JSPrincipals_from_java_caller_impl(JNIEnv *pJNIEnv, JSContext *pJSContext, v
     if (  (pNSPrincipalArray != NULL)
         &&(length != 0)
        )
+    {
+        return pNSPrincipalArray;
+    }
+
+    return NULL;
+}
+
+
+
+
+static JSPrincipals* PR_CALLBACK
+get_JSPrincipals_from_java_caller_impl(JNIEnv *pJNIEnv, JSContext *pJSContext, void  **ppNSIPrincipalArrayIN, int numPrincipals, void *pNSISecurityContext)
+{
+    void *pNSPrincipalArray  = ConvertNSIPrincipalToNSPrincipalArray(pJNIEnv, pJSContext, ppNSIPrincipalArrayIN, numPrincipals, pNSISecurityContext);
+    if (pNSPrincipalArray != NULL)
     {
         return LM_GetJSPrincipalsFromJavaCaller(pJSContext, pNSPrincipalArray, pNSISecurityContext);
     }
@@ -611,16 +626,17 @@ enter_js_from_java_impl(JNIEnv *jEnv, char **errp,
 		pSecInfoNew->prev                = pSecInfoNew;
 		pSecInfoNew->next                = pSecInfoNew;
 		JSStackFrame *fp                 = NULL;
-		pSecInfoNew->pJavaToJSSFrame     = JS_FrameIterator(pJSCX, &fp);
+		pSecInfoNew->pJavaToJSFrame      = JS_FrameIterator(pJSCX, &fp);
+		pSecInfoNew->pJSToJavaFrame      = NULL;
 
-		JVMSecurityStack *pSecInfoTop = context->securityStack;
-		if (pSecInfoTop == NULL) {
-			context->securityStack = pSecInfoTop;
+		JVMSecurityStack *pSecInfoBottom = context->securityStack;
+		if (pSecInfoBottom == NULL) {
+			context->securityStack = pSecInfoNew;
 		} else {
-			pSecInfoTop->prev->next = pSecInfoNew;
-			pSecInfoNew->prev       = pSecInfoTop->prev;
-			pSecInfoNew->next       = pSecInfoTop;
-			pSecInfoTop->prev       = pSecInfoNew;
+			pSecInfoBottom->prev->next = pSecInfoNew;
+			pSecInfoNew->prev          = pSecInfoBottom->prev;
+			pSecInfoNew->next          = pSecInfoBottom;
+			pSecInfoBottom->prev       = pSecInfoNew;
 		}
 	}
 	return PR_TRUE;
@@ -636,24 +652,24 @@ exit_js_impl(JNIEnv *jEnv)
 
     // Pop the security context stack
     JVMContext* context = GetJVMContext();
-    JVMSecurityStack *pSecInfoTop = context->securityStack;
-    if (pSecInfoTop != NULL)
+    JVMSecurityStack *pSecInfoBottom = context->securityStack;
+    if (pSecInfoBottom != NULL)
     {
-      if(pSecInfoTop->next == pSecInfoTop)
+      if(pSecInfoBottom->next == pSecInfoBottom)
       {
         context->securityStack = NULL;
-        pSecInfoTop->next        = NULL;            
-        pSecInfoTop->prev        = NULL;            
-        delete pSecInfoTop;
+        pSecInfoBottom->next   = NULL;            
+        pSecInfoBottom->prev   = NULL;            
+        delete pSecInfoBottom;
       }
       else
       {
-        JVMSecurityStack *tail = pSecInfoTop->prev;
-        tail->next        = NULL;            
-        pSecInfoTop->prev = tail->prev;        
-        tail->prev->next  = pSecInfoTop;
-        tail->prev        = NULL;
-        delete tail;
+        JVMSecurityStack *top = pSecInfoBottom->prev;
+        top->next        = NULL;            
+        pSecInfoBottom->prev = top->prev;        
+        top->prev->next  = pSecInfoBottom;
+        top->prev        = NULL;
+        delete top;
       }
     }
 
@@ -1585,37 +1601,37 @@ JVM_ShutdownJVM(void)
 JVMSecurityStack *
 findPrevNode(JSStackFrame  *pCurrentFrame)
 {
-	JVMContext* context = GetJVMContext();
-    JVMSecurityStack *pSecInfoTop = context->securityStack;
-    if (pSecInfoTop == NULL)
-    {
-       return NULL;
-    }
+	  JVMContext* context = GetJVMContext();
+   JVMSecurityStack *pSecInfoBottom = context->securityStack;
+   if (pSecInfoBottom == NULL)
+   {
+      return NULL;
+   }
 
-    JVMSecurityStack *pSecInfoTail = pSecInfoTop->prev;
-    if (pCurrentFrame == NULL)
-    {
-       return pSecInfoTail;
-    }
-    if ( pSecInfoTop->pJavaToJSSFrame == pCurrentFrame )
-    {
-       return NULL;
-    }
-    JVMSecurityStack *pTempSecNode = pSecInfoTail;
+   JVMSecurityStack *pSecInfoTop = pSecInfoBottom->prev;
+   if (pCurrentFrame == NULL)
+   {
+      return pSecInfoTop;
+   }
+   if ( pSecInfoBottom->pJavaToJSFrame == pCurrentFrame )
+   {
+      return NULL;
+   }
+   JVMSecurityStack *pTempSecNode = pSecInfoTop;
 
-    while( pTempSecNode->pJavaToJSSFrame != pCurrentFrame )
-    {
-       pTempSecNode = pTempSecNode->prev;
-       if ( pTempSecNode == pSecInfoTail )
-       {
-          break;
-       }
-    }
-    if( pTempSecNode->pJavaToJSSFrame == pCurrentFrame )
-    {
-      return pTempSecNode;
-    }
-    return NULL;
+   while( pTempSecNode->pJSToJavaFrame != pCurrentFrame )
+   {
+      pTempSecNode = pTempSecNode->prev;
+      if ( pTempSecNode == pSecInfoTop )
+      {
+         break;
+      }
+   }
+   if( pTempSecNode->pJSToJavaFrame == pCurrentFrame )
+   {
+     return pTempSecNode;
+   }
+   return NULL;
 }
 
 PR_IMPLEMENT(PRBool)
@@ -1637,6 +1653,34 @@ JVM_NSISecurityContextImplies(JSStackFrame  *pCurrentFrame, const char* target, 
     return bAllowedAccess;
 }
 
+PR_IMPLEMENT(void *)
+JVM_GetJavaPrincipalsFromStackAsNSVector(JSStackFrame  *pCurrentFrame)
+{
+    JVMSecurityStack *pSecInfo = findPrevNode(pCurrentFrame);
+
+    if (pSecInfo == NULL)
+    {
+       return NULL;
+    }
+
+    JSPrincipals  *principals = NULL;
+    JVMContext* context = GetJVMContext();
+    JSContext *pJSCX = context->js_context;
+    if (pJSCX == NULL)
+    {
+       pJSCX = LM_GetCrippledContext();
+    }
+
+    void *pNSPrincipalArray  = ConvertNSIPrincipalToNSPrincipalArray(NULL, pJSCX, pSecInfo->pNSIPrincipaArray, 
+                                                                     pSecInfo->numPrincipals, pSecInfo->pNSISecurityContext);
+    if (pNSPrincipalArray != NULL)
+    {
+       return pNSPrincipalArray;
+    }
+    return NULL;
+}
+
+
 PR_IMPLEMENT(JSPrincipals*)
 JVM_GetJavaPrincipalsFromStack(JSStackFrame  *pCurrentFrame)
 {
@@ -1655,9 +1699,13 @@ JVM_GetJavaPrincipalsFromStack(JSStackFrame  *pCurrentFrame)
        pJSCX = LM_GetCrippledContext();
     }
 
-    principals = get_JSPrincipals_from_java_caller_impl(NULL, pJSCX, pSecInfo->pNSIPrincipaArray, 
-                                   pSecInfo->numPrincipals, pSecInfo->pNSISecurityContext);
-    return principals;
+    void *pNSPrincipalArray  = ConvertNSIPrincipalToNSPrincipalArray(NULL, pJSCX, pSecInfo->pNSIPrincipaArray, 
+                                                                     pSecInfo->numPrincipals, pSecInfo->pNSISecurityContext);
+    if (pNSPrincipalArray != NULL)
+    {
+        return LM_GetJSPrincipalsFromJavaCaller(pJSCX, pNSPrincipalArray, pSecInfo->pNSISecurityContext);
+    }
+    return NULL;
 }
 
 PR_IMPLEMENT(JSStackFrame*)
@@ -1669,7 +1717,7 @@ JVM_GetEndJSFrameFromParallelStack(JSStackFrame  *pCurrentFrame)
     {
        return NULL;
     }
-    return pSecInfo->pJavaToJSSFrame;
+    return pSecInfo->pJavaToJSFrame;
 }
 
 PR_IMPLEMENT(JSStackFrame**)
@@ -1682,17 +1730,31 @@ JVM_GetStartJSFrameFromParallelStack()
 PR_IMPLEMENT(nsISecurityContext*) 
 JVM_GetJSSecurityContext()
 {
-	JVMContext* context = GetJVMContext();
-	nsCSecurityContext *pNSCSecurityContext = new nsCSecurityContext(context->js_context);
-	nsISecurityContext *pNSISecurityContext = NULL;
-	nsresult err = NS_OK;
-	err = pNSCSecurityContext->QueryInterface(kISecurityContextIID,
-	                                         (void**)&pNSISecurityContext);
-	if(err != NS_OK)
-	{
-	 return NULL; 
-	}
-	return pNSISecurityContext;
+	 JVMContext* context = GetJVMContext();
+  JVMSecurityStack  *pSecurityStack    = context->securityStack; 
+  JVMSecurityStack  *pSecurityStackTop = NULL;
+  JSContext         *pJSCX             = context->js_context;
+  if (pJSCX == NULL)
+  {
+     pJSCX = LM_GetCrippledContext();
+  }
+  if(pSecurityStack != NULL)
+  {
+    pSecurityStackTop = pSecurityStack->prev; 
+    JSStackFrame *fp = NULL;
+    pSecurityStackTop->pJSToJavaFrame = JS_FrameIterator(pJSCX, &fp);
+  }
+
+	 nsCSecurityContext *pNSCSecurityContext = new nsCSecurityContext(pJSCX);
+	 nsISecurityContext *pNSISecurityContext = NULL;
+	 nsresult err = NS_OK;
+	 err = pNSCSecurityContext->QueryInterface(kISecurityContextIID,
+	                                          (void**)&pNSISecurityContext);
+	 if(err != NS_OK)
+	 {
+	  return NULL; 
+	 }
+	 return pNSISecurityContext;
 }
 
 PR_END_EXTERN_C
