@@ -1,5 +1,7 @@
 1999-08-08  Leif Hedstrom  <leif@netscape.com> and Kevin McCarthy
 
+	* Entry.pm (setValue): Remove _delete_ flag, if set.
+
 	* Conn.pm (close): Fixed memory leak, moved code from the DESTROY
 	method over here.
 	(DESTROY): Call the close() method.
