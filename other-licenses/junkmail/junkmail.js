@@ -1,3 +1,5 @@
+/* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+
 // the junkmail plugin object itself
 //
 const NS_JUNKMAIL_CONTRACTID = 
@@ -9,7 +11,6 @@ var headerTestsByName = {};
 var rawbodyRegexpTestsByName = {};
 var gPrefs;
 var gTargetFolder;
-var gLogStream;
 var gMimeConverterService;
 
 // types of tests
@@ -172,8 +173,8 @@ const parseConfigLine = {
     rawbody: function(line) {
 
         // get the test name
-	//
-	// XXX test name parsing cut-n-pasted; should be modularized
+        //
+        // XXX test name parsing cut-n-pasted; should be modularized
         //
         var testNameRE = /^(\S+)\s+/g;
         testNameRE.lastIndex = 0;
@@ -193,26 +194,26 @@ const parseConfigLine = {
         var test = new Object();
         test.name = testName;
 
-	matches = /^eval\:(.*)$/.exec(line);
-	if (matches) {
-	    // this must be an eval
-	    // debug("rawbody eval ignored\n");
-	} else if ( (matches = /\/(.*)\/(\S*)/.exec(line)) ) {
+    matches = /^eval\:(.*)$/.exec(line);
+    if (matches) {
+        // this must be an eval
+        // debug("rawbody eval ignored\n");
+    } else if ( (matches = /\/(.*)\/(\S*)/.exec(line)) ) {
 
             // JS RegExps don't support all Perl RegExp flags.  Ignore
             // tests containing these.
             const knownREFlags = /^[igm]*$/;
             if (!knownREFlags.test(matches[2])) {
                 // debug("ignored (unsupported regexp flag):" + matches[2] 
-		// + "\n");
+                // + "\n");
                 return;
             }
             test.regexp = new RegExp(matches[1], matches[2]);
-	    rawbodyRegexpTestsByName[testName] = test;
-	} else {
+        rawbodyRegexpTestsByName[testName] = test;
+    } else {
             // debug("error parsing rawbody test: '" + line + "'\n");
-	}
-	return;
+    }
+    return;
     }, 
 
     score: function(line) {
@@ -226,10 +227,10 @@ const parseConfigLine = {
                 headerTestsByName[matches[1]].score = Number(matches[2]);
                 return;
             } else if ( matches[1] in rawbodyRegexpTestsByName ) {
-                rawbodyRegexpTestsByName[matches[1]].score =	
-		    Number(matches[2]);
+                rawbodyRegexpTestsByName[matches[1]].score =    
+            Number(matches[2]);
                 return;
-	    }
+        }
             // debug("ignored score line for unknown test: " + matches[1] 
             // + "\n");
         } else {
@@ -261,6 +262,8 @@ function nsJunkmail() {}
 
 nsJunkmail.prototype = {
 
+    logStream: {},
+
     init: function(aServerPrefsKey) {
 
         if (!gPrefs) {
@@ -269,40 +272,46 @@ nsJunkmail.prototype = {
                 .getBranch(null);
         }
 
-	if (!gMimeConverterService) {
-	    gMimeConverterService = 
-	        Components.classes["@mozilla.org/messenger/mimeconverter;1"]
-	        .getService(Components.interfaces.nsIMimeConverter);
-	}
+        if (!gMimeConverterService) {
+            gMimeConverterService = Components.classes
+                ["@mozilla.org/messenger/mimeconverter;1"]
+                .getService(Components.interfaces.nsIMimeConverter);
+        }
 
-        // XXX needs to be a wstring pref, actually.  Both of the following
-        // prefs probably should be associated if with an identity, if not
-        // an account or server
+        // XXX needs to be a complex pref, actually.
         //
         gTargetFolder = gPrefs.getCharPref("mail.junkmail.target_spam_folder");
 
-        if (!gLogStream) {
-            var logFileName = gPrefs.getCharPref("mail.junkmail.logfile");
+        // the logfile is called "junklog.txt" in the server directory
+        // XXX needs to a complex pref
+        // XXX / is probably not portable
+        //
+        var logFileName = gPrefs.getCharPref("mail.server." 
+                                             + aServerPrefsKey 
+                                             + ".directory")
+            + "/junklog.txt";
 
-            var logFile = Components.classes["@mozilla.org/file/local;1"].
-                createInstance(Components.interfaces.nsILocalFile);
+        var logFile = Components.classes["@mozilla.org/file/local;1"]
+        .createInstance(Components.interfaces.nsILocalFile);
            
-            logFile.initWithPath(logFileName);
+        logFile.initWithPath(logFileName);
 
-            // XXX need to use binary output stream here?
-            // XXX use nsIBufferedOutputStream?
-            gLogStream = Components.classes
-                ["@mozilla.org/network/file-output-stream;1"]
-                .createInstance(Components.interfaces.nsIFileOutputStream);
+        // XXX need to use binary output stream here?
+        // XXX use nsIBufferedOutputStream?
+        this.logStream = Components.classes
+            ["@mozilla.org/network/file-output-stream;1"]
+            .createInstance(Components.interfaces.nsIFileOutputStream);
 
-            // XXX commentary on the flags & constants
-            gLogStream.init(logFile, 0x02|0x10|0x80, 420, 0);
-        }
+        const PR_RDWR = 0x04;           // open for reading and writing
+        const PR_CREATE_FILE = 0x08;    // create if not there
+        const PR_APPEND = 0x10;         // append to any existing file
+        this.logStream.init(logFile, PR_RDWR | PR_CREATE_FILE | PR_APPEND,
+                            420, 0);
 
         var spamAssassinRulesPath = 
             gPrefs.getCharPref("mail.junkmail.spamassassin_rules_dir");
-        var rulesDir = Components.classes["@mozilla.org/file/local;1"].
-            createInstance(Components.interfaces.nsILocalFile);
+        var rulesDir = Components.classes["@mozilla.org/file/local;1"]
+            .createInstance(Components.interfaces.nsILocalFile);
         rulesDir.initWithPath(spamAssassinRulesPath);
 
         // verify that this is really a directory
@@ -407,9 +416,9 @@ nsJunkmail.prototype = {
                 // PerMsgStatus.pm:get_header(), note that it could end
                 // up with a trailing comma (bug?).
                 //
-		// XXX need to get the raw values for this, not the decoded
-		// values
-		//
+                // XXX need to get the raw values for this, not the decoded
+                // values
+                //
                 // XXX probably shouldn't generate this info dynamically,
                 // should add it to the table when the headers are read
                 // 
@@ -429,7 +438,7 @@ nsJunkmail.prototype = {
                         return toCc;
                     }
                 }
-		return undefined;
+        return undefined;
             } else {
                 return undefined;
             }
@@ -449,7 +458,9 @@ nsJunkmail.prototype = {
         // execute a single test to a single header value, updating msgScore as
         // we go (mmm, lexical-scoping & side-effects)
         //
-        function executeTest(aTest) {
+        // XXX hack alert; shouldn't have to pass thisobj
+        //
+        function executeTest(aTest, aThisObj) {
 
             // XXX header names currently case-sensitive, probably an issue
 
@@ -518,7 +529,7 @@ nsJunkmail.prototype = {
                 msgScore += aTest.score;
                 var logMsg =  " " + aTest.name + " (" + aTest.score + "): " 
                     + ("describe" in aTest ? aTest.describe : "") + "\n";
-                gLogStream.write(logMsg, logMsg.length);
+                aThisObj.logStream.write(logMsg, logMsg.length);
             } else {
                 // debug("  " + aTest.name + " (" + aTest.score + ")\n");
             }
@@ -551,30 +562,30 @@ nsJunkmail.prototype = {
                     headersByName[headerName] = new Array();
                 }
 
-		// save the value of the header, with all continuations 
-		// replaced
-		// XXX maybe let decodeMimeHeaderToCString do this
-		//
-		var headerValue = aHeaders[headerLine]
-		    .substring(headerRE.lastIndex)
-		    .replace(/\n\s+/g, " ");
+                // save the value of the header, with all continuations 
+                // replaced
+                // XXX maybe let decodeMimeHeaderToCString do this
+                //
+                var headerValue = aHeaders[headerLine]
+                    .substring(headerRE.lastIndex)
+                    .replace(/\n\s+/g, " ");
 
 
-		// try and decode the header
-		//
-		// XXX deal with different default charset depending on
-		// what user has set?
-		//
-		var decodedValue = 
-		    gMimeConverterService.decodeMimeHeaderToCString(
-			headerValue, null, false, true);
+                // try and decode the header
+                //
+                // XXX deal with different default charset depending on
+                // what user has set?
+                //
+                var decodedValue = 
+                    gMimeConverterService.decodeMimeHeaderToCString(
+                        headerValue, null, false, true);
 
                 // push the decoded header (if decoding was required) or the
-		// headerValue itself (if not) onto the array of like-named
-		// headers
-		//
+                // headerValue itself (if not) onto the array of like-named
+                // headers
+                //
                 headersByName[headerName].push(
-		    decodedValue ? decodedValue : headerValue);
+                    decodedValue ? decodedValue : headerValue);
             }
         }
 
@@ -585,12 +596,12 @@ nsJunkmail.prototype = {
         var fromVals = getHeaderVals("From");
         if (fromVals) {
             var logMsg = "From: " + fromVals + "\n";
-            gLogStream.write(logMsg, logMsg.length);
+            this.logStream.write(logMsg, logMsg.length);
         }
         var subjVals = getHeaderVals("Subject");
         if (subjVals) {
             logMsg = "Subject: " + subjVals + "\n";
-            gLogStream.write(logMsg, logMsg.length);
+            this.logStream.write(logMsg, logMsg.length);
         }
 
         // execute all the tests.  at some point, we'll do this in
@@ -599,11 +610,11 @@ nsJunkmail.prototype = {
         //
         for ( testName in headerTestsByName )
         {
-            executeTest(headerTestsByName[testName]);
+            executeTest(headerTestsByName[testName], this);
         }
 
         logMsg = "total message score: " + msgScore + "\n\n";
-        gLogStream.write(logMsg, logMsg.length);
+        this.logStream.write(logMsg, logMsg.length);
 
         // XXX don't hardcode this
         //
@@ -735,9 +746,6 @@ nsJunkmail.prototype = {
 }
 
 
-// XXX better way to do singleton?
-var Junkmail = null;
-
 var nsJunkmailModule = 
 {
     registerSelf: function (compMgr, fileSpec, location, type) {
@@ -772,11 +780,11 @@ var nsJunkmailModule =
             if (outer != null)
                 throw Components.results.NS_ERROR_NO_AGGREGATION;
       
-            if (Junkmail == null) {
-                Junkmail = new nsJunkmail();
+            if (!iid.equals(Components.interfaces.nsIMsgFilterPlugin)) {
+                throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
             }
 
-            return Junkmail;
+            return new nsJunkmail();
         }
     },
 
