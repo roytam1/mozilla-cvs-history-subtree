@@ -179,7 +179,7 @@ typedef struct _HTTPConData {
 	
 	HTTPConnection *connection;   /* struct to hold info about connection */
 
-    NET_VoidStreamClass * stream; /* The output stream */
+    NET_StreamClass * stream; /* The output stream */
     Bool     pause_for_read;   /* Pause now for next read? */
     Bool     send_http1;       /* should we send http/1.1? */
     Bool     acting_as_proxy;  /* are we acting as a proxy? */
@@ -268,13 +268,13 @@ int ReturnErrorStatus (int status)
 #define STATUS(Status)			ReturnErrorStatus (Status)
 
 
-#define PUTBLOCK(b, l)  NET_StreamPutBlock \
+#define PUTBLOCK(b, l)  (*cd->stream->put_block) \
                                     (cd->stream, b, l)
-#define PUTSTRING(s)    NET_StreamPutBlock \
+#define PUTSTRING(s)    (*cd->stream->put_block) \
                                     (cd->stream, s, PL_strlen(s))
-#define COMPLETE_STREAM NET_StreamComplete \
+#define COMPLETE_STREAM (*cd->stream->complete) \
                                     (cd->stream)
-#define ABORT_STREAM(s) NET_StreamAbort \
+#define ABORT_STREAM(s) (*cd->stream->abort) \
                                     (cd->stream, s)
 
 
@@ -2770,7 +2770,7 @@ net_setup_http_stream(ActiveEntry * ce)
           }
 
     	/* Set up the stream stack to handle the body of the message */
-    	CD_STREAM = NET_VoidStreamBuilder(CE_FORMAT_OUT, 
+    	CD_STREAM = NET_StreamBuilder(CE_FORMAT_OUT, 
 									  CE_URL_S, 
 									  stream_context);
 
@@ -2850,7 +2850,7 @@ net_setup_http_stream(ActiveEntry * ce)
 			/* @@@ bug, check return status and only send
 		 	* up to the return value
 		 	*/
-    		NET_StreamIsWriteReady(CD_STREAM);
+    		(*cd->stream->is_write_ready)(CD_STREAM);
         	CE_STATUS = PUTBLOCK(CD_LINE_BUFFER, CD_LINE_BUFFER_SIZE);
 			CE_BYTES_RECEIVED = CD_LINE_BUFFER_SIZE;
         	FE_GraphProgress(CE_WINDOW_ID, 
@@ -2890,7 +2890,7 @@ net_http_push_partial_cache_file(ActiveEntry *ce)
     HTTPConData * cd = (HTTPConData *)ce->con_data;
 	int32 write_ready, status;
 	
-	write_ready = NET_StreamIsWriteReady(cd->stream);
+	write_ready = (*cd->stream->is_write_ready)(cd->stream);
 
 	write_ready = MIN(write_ready, NET_Socket_Buffer_Size);
 
@@ -2959,7 +2959,7 @@ net_http_push_partial_cache_file(ActiveEntry *ce)
 
 	/* else, push the data read up the stream 
 	 */	
-	status = NET_StreamPutBlock(cd->stream, 
+	status = (*cd->stream->put_block)(cd->stream, 
 									  NET_Socket_Buffer, 
 									  status);
 
@@ -3013,7 +3013,7 @@ net_pull_http_data(ActiveEntry * ce)
 
     /* check to see if the stream is ready for writing
 	 */
-    write_ready = NET_StreamIsWriteReady(CD_STREAM);
+    write_ready = (*cd->stream->is_write_ready)(CD_STREAM);
 
 	if(!write_ready)
 	  {
@@ -3584,7 +3584,7 @@ HG51096
 										CE_BYTES_RECEIVED);
       
             PR_FREEIF(CD_LINE_BUFFER);
-            NET_StreamFree(CD_STREAM); /* don't forget the stream */
+            PR_Free(CD_STREAM); /* don't forget the stream */
 			PR_FREEIF(CD_SERVER_HEADERS);
 			PR_FREEIF(cd->orig_host);
 			if(CD_TCP_CON_DATA)
@@ -3643,7 +3643,7 @@ HG51096
                 cd->connection->sock = NULL;
 
                 if(CD_STREAM)
-                    NET_StreamAbort(CD_STREAM, CE_STATUS);
+                    (*cd->stream->abort)(CD_STREAM, CE_STATUS);
                 CD_SEND_HTTP1 = FALSE;
                 /* go back and send an HTTP0 request */
                 CD_NEXT_STATE = HTTP_START_CONNECT;
