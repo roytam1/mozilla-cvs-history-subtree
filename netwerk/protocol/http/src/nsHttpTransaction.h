@@ -205,6 +205,7 @@ private:
     PRPackedBool                    mNoContent;           // expecting an empty entity body?
     PRPackedBool                    mReceivedData;
     PRPackedBool                    mDestroying;
+    PRPackedBool                    mClosed;
 };
 
 #endif // nsHttpTransaction_h__

@@ -83,6 +83,7 @@ nsHttpPipeline::nsHttpPipeline()
     , mStatus(NS_OK)
     , mRequestIsPartial(PR_FALSE)
     , mResponseIsPartial(PR_FALSE)
+    , mClosed(PR_FALSE)
     , mPushBackBuf(nsnull)
     , mPushBackLen(0)
     , mPushBackMax(0)
@@ -361,8 +362,13 @@ nsHttpPipeline::ReadSegments(nsAHttpSegmentReader *reader,
     LOG(("nsHttpPipeline::ReadSegments [this=%x count=%u]\n", this, count));
 
     NS_ASSERTION(PR_GetCurrentThread() == gSocketThread, "wrong thread");
-    nsresult rv;
 
+    if (mClosed) {
+        *countRead = 0;
+        return mStatus;
+    }
+
+    nsresult rv;
     PRUint32 avail = 0;
     if (mSendBufIn) {
         rv = mSendBufIn->Available(&avail);
@@ -403,6 +409,9 @@ nsHttpPipeline::WriteSegments(nsAHttpSegmentWriter *writer,
     LOG(("nsHttpPipeline::WriteSegments [this=%x count=%u]\n", this, count));
 
     NS_ASSERTION(PR_GetCurrentThread() == gSocketThread, "wrong thread");
+
+    if (mClosed)
+        return NS_SUCCEEDED(mStatus) ? NS_BASE_STREAM_CLOSED : mStatus;
 
     nsAHttpTransaction *trans; 
     nsresult rv;
@@ -453,8 +462,14 @@ nsHttpPipeline::Close(nsresult reason)
 {
     LOG(("nsHttpPipeline::Close [this=%x reason=%x]\n", this, reason));
 
+    if (mClosed) {
+        LOG(("  already closed\n"));
+        return;
+    }
+
     // the connection is going away!
     mStatus = reason;
+    mClosed = PR_TRUE;
 
     // we must no longer reference the connection!
     NS_IF_RELEASE(mConnection);

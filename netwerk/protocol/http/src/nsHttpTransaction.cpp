@@ -123,6 +123,7 @@ nsHttpTransaction::nsHttpTransaction()
     , mNoContent(PR_FALSE)
     , mReceivedData(PR_FALSE)
     , mDestroying(PR_FALSE)
+    , mClosed(PR_FALSE)
 {
     LOG(("Creating nsHttpTransaction @%x\n", this));
 }
@@ -325,6 +326,11 @@ nsHttpTransaction::ReadSegments(nsAHttpSegmentReader *reader,
 {
     NS_ASSERTION(PR_CurrentThread() == gSocketThread, "wrong thread");
 
+    if (mTransactionDone) {
+        *countRead = 0;
+        return mStatus;
+    }
+
     if (!mConnected) {
         mConnected = PR_TRUE;
         mConnection->GetSecurityInfo(getter_AddRefs(mSecurityInfo));
@@ -349,7 +355,7 @@ nsHttpTransaction::WritePipeSegment(nsIOutputStream *stream,
     nsHttpTransaction *trans = (nsHttpTransaction *) closure;
 
     if (trans->mTransactionDone)
-        return NS_BASE_STREAM_CLOSED;
+        return NS_BASE_STREAM_CLOSED; // stop iterating
 
     nsresult rv;
     //
@@ -377,7 +383,7 @@ nsHttpTransaction::WriteSegments(nsAHttpSegmentWriter *writer,
     NS_ASSERTION(PR_CurrentThread() == gSocketThread, "wrong thread");
 
     if (mTransactionDone)
-        return NS_BASE_STREAM_CLOSED;
+        return NS_SUCCEEDED(mStatus) ? NS_BASE_STREAM_CLOSED : mStatus;
 
     mWriter = writer;
 
@@ -399,7 +405,7 @@ nsHttpTransaction::Close(nsresult reason)
 
     NS_ASSERTION(PR_CurrentThread() == gSocketThread, "wrong thread");
 
-    if (NS_FAILED(mStatus)) {
+    if (mClosed) {
         LOG(("  already closed\n"));
         return;
     }
@@ -437,6 +443,7 @@ nsHttpTransaction::Close(nsresult reason)
 
     mTransactionDone = PR_TRUE; // force this flag
     mStatus = reason;
+    mClosed = PR_TRUE;
 
     mPipeOut->CloseEx(reason);
 }
