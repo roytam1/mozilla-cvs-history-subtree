@@ -425,13 +425,17 @@ static JSValue Array_splice(Context *cx, const JSValue& thisValue, JSValue *argv
                 start = toUInt32(arg0);
         }
 
-        int32 deleteCount = (int32)(argv[1].toInt32(cx).f64);
-        if (deleteCount < 0)
+        uint32 deleteCount;
+        int32 arg1 = (int32)(argv[1].toInt32(cx).f64);
+        if (arg1 < 0)
             deleteCount = 0;
-        if (toUInt32(deleteCount) >= (length - start))
-            deleteCount = length - start;
+        else
+            if (toUInt32(arg1) >= (length - start))
+                deleteCount = length - start;
+            else
+                deleteCount = toUInt32(arg1);
         
-        for (k = 0; k < toUInt32(deleteCount); k++) {
+        for (k = 0; k < deleteCount; k++) {
             String *id1 = numberToString(start + k);
             PropertyIterator it;
             if (thisObj->hasOwnProperty(*id1, CURRENT_ATTR, Read, &it)) {
@@ -443,7 +447,7 @@ static JSValue Array_splice(Context *cx, const JSValue& thisValue, JSValue *argv
         A->setProperty(cx, widenCString("length"), CURRENT_ATTR, JSValue((float64)deleteCount) );
 
         uint32 newItemCount = argc - 2;
-        if (newItemCount < toUInt32(deleteCount)) {
+        if (newItemCount < deleteCount) {
             for (k = start; k < (length - deleteCount); k++) {
                 String *id1 = numberToString(k + deleteCount);
                 String *id2 = numberToString(k + newItemCount);
@@ -461,8 +465,8 @@ static JSValue Array_splice(Context *cx, const JSValue& thisValue, JSValue *argv
             }
         }
         else {
-            if (newItemCount > toUInt32(deleteCount)) {
-                for (k = length - deleteCount; k > toUInt32(start); k--) {
+            if (newItemCount > deleteCount) {
+                for (k = length - deleteCount; k > start; k--) {
                     String *id1 = numberToString(k + deleteCount - 1);
                     String *id2 = numberToString(k + newItemCount - 1);
                     PropertyIterator it;
