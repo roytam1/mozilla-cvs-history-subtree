@@ -782,7 +782,15 @@ sub RunBloatTest {
     }
     close READRUNLOG;
     print LOG "--------------- End of BloatTest Output -------------------- \n";
-	return 333;
+
+	# HACK.  Clobber isn't reporting bloat status properly,
+	# only turn tree orange for depend build.  This has
+	# been filed as bug 22052.  -mcafee
+	if ($BuildDepend == 1) {
+	  return 333;
+	} else {
+	  return 0;
+	}
   }
 
   print LOG "<a href=#bloat>\n######################## BLOAT STATISTICS\n";
