@@ -41,6 +41,7 @@
 #include "nsIDOMHTMLSelectElement.h"
 #include "nsIAccessibilityService.h"
 #include "nsIServiceManager.h"
+#include "nsIDOMHTMLOptionElement.h"
 
 /*
  * A class the represents the text field in the Select to the left
@@ -422,7 +423,7 @@ NS_IMETHODIMP nsHTMLSelectButtonAccessible::AccDoAction(PRUint8 index)
   if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::areaFrame) )
     return NS_ERROR_FAILURE;
   frame->GetNextSibling(&frame);
-  // not sure what kind of frame this is supposed to be, so far doesn't exist
+  // sibling of the SelectAreaFrame
   if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::areaFrame) )
     return NS_ERROR_FAILURE;
   nsCOMPtr<nsIContent> content;
@@ -457,11 +458,11 @@ void nsHTMLSelectButtonAccessible::GetBounds(nsRect& aBounds, nsIFrame** aRelati
   if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::areaFrame) )
     return;
   frame->GetNextSibling(&frame);
-  // not sure what kind of frame this is supposed to be, so far doesn't exist
+  // sibling of the SelectAreaFrame
   if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::areaFrame) )
     return;
   frame->GetParent(aRelativeFrame);
-  // should be the parent list control frame we started with (?)
+  // parent list control frame
   if ( ! nsHTMLSelectAccessible::IsCorrectFrame( *aRelativeFrame, nsLayoutAtoms::listControlFrame) )
     return;
   frame->GetRect(aBounds);
