@@ -52,6 +52,16 @@
 #include "ipcConnection.h"
 #include "ipcm.h"
 
+
+//-----------------------------------------------------------------------------
+// NOTE: this code does not need to link with anything but NSPR.  that is by
+//       design, so it can be easily reused in other projects that want to 
+//       talk with mozilla's IPC daemon, but don't want to depend on xpcom.
+//       we depend at most on some xpcom header files, but no xpcom runtime
+//       symbols are used.
+//-----------------------------------------------------------------------------
+
+
 //-----------------------------------------------------------------------------
 // windows message thread
 //-----------------------------------------------------------------------------

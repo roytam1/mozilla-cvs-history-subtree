@@ -57,8 +57,8 @@
 //-----------------------------------------------------------------------------
 
 
-// single user systems don't need these security checks.
-#if !defined(XP_OS2) && !defined(XP_BEOS)
+// single user systems, like OS/2, don't need these security checks.
+#ifndef XP_OS2
 #define IPC_SKIP_SECURITY_CHECKS
 #endif
 
@@ -371,7 +371,6 @@ TryConnect(PRFileDesc **result)
   PRSocketOptionData opt;
   nsresult rv = NS_ERROR_FAILURE;
 
-#ifndef XP_BEOS
   fd = PR_OpenTCPSocket(PR_AF_LOCAL);
   if (!fd)
     goto end;
@@ -398,7 +397,6 @@ TryConnect(PRFileDesc **result)
 end:
   if (fd)
     PR_Close(fd);
-#endif
 
   return rv;
 }

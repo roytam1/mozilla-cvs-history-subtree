@@ -63,7 +63,11 @@ CPPSRCS		= \
 ifeq ($(OS_ARCH),WINNT)
 CPPSRCS +=  ipcConnectionWin.cpp
 else
+ifeq ($(OS_ARCH),BeOS)
+CPPSRCS +=  ipcConnectionStub.cpp
+else
 CPPSRCS +=  ipcConnectionUnix.cpp
+endif
 endif
 
 LOCAL_INCLUDES = \
