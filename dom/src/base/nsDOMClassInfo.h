@@ -100,6 +100,7 @@ protected:
   static JSString *sOnmousedown_id;
   static JSString *sOnmouseup_id;
   static JSString *sOnclick_id;
+  static JSString *sOncontextmenu_id;
   static JSString *sOnmouseover_id;
   static JSString *sOnmouseout_id;
   static JSString *sOnkeydown_id;

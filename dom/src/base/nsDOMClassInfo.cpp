@@ -490,6 +490,7 @@ JSString *nsDOMClassInfo::sLength_id          = nsnull;
 JSString *nsDOMClassInfo::sOnmousedown_id     = nsnull;
 JSString *nsDOMClassInfo::sOnmouseup_id       = nsnull;
 JSString *nsDOMClassInfo::sOnclick_id         = nsnull;
+JSString *nsDOMClassInfo::sOncontextmenu_id   = nsnull;
 JSString *nsDOMClassInfo::sOnmouseover_id     = nsnull;
 JSString *nsDOMClassInfo::sOnmouseout_id      = nsnull;
 JSString *nsDOMClassInfo::sOnkeydown_id       = nsnull;
@@ -533,6 +534,7 @@ nsDOMClassInfo::DefineStaticJSStrings(JSContext *cx)
   sOnmousedown_id    = ::JS_InternString(cx, "onmousedown");
   sOnmouseup_id      = ::JS_InternString(cx, "onmouseup");
   sOnclick_id        = ::JS_InternString(cx, "onclick");
+  sOncontextmenu_id  = ::JS_InternString(cx, "oncontextmenu");
   sOnmouseover_id    = ::JS_InternString(cx, "onmouseover");
   sOnmouseout_id     = ::JS_InternString(cx, "onmouseout");
   sOnkeydown_id      = ::JS_InternString(cx, "onkeydown");
@@ -988,7 +990,7 @@ nsDOMClassInfo::ShutDown()
 
   JSString *jsnullstring = nsnull;
 
-#ifdef NS_DEBUG_jst
+#ifdef DEBUG_jst
   jsnullstring = (JSString *)1;
 #endif
 
@@ -1010,6 +1012,7 @@ nsDOMClassInfo::ShutDown()
   sOnmousedown_id     = jsnullstring;
   sOnmouseup_id       = jsnullstring;
   sOnclick_id         = jsnullstring;
+  sOncontextmenu_id   = jsnullstring;
   sOnmouseover_id     = jsnullstring;
   sOnmouseout_id      = jsnullstring;
   sOnkeydown_id       = jsnullstring;
@@ -1705,7 +1708,8 @@ nsEventRecieverSH::ReallyIsEventName(JSString *jsstr, jschar aFirstChar)
     return jsstr == sOnfocus_id;
   case 'c' :
     return ((jsstr == sOnchange_id)    ||
-            (jsstr == sOnclick_id));
+            (jsstr == sOnclick_id)     ||
+            (jsstr == sOncontextmenu_id));
   case 'l' :
     return jsstr == sOnload_id;
   case 'p' :
