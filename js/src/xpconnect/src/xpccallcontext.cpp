@@ -68,7 +68,8 @@ XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
 
     if(!stack || NS_FAILED(stack->Peek(&topJSContext)))
     {
-        NS_ASSERTION(0, "bad!");
+        NS_ERROR("bad!");
+        mJSContext = nsnull;
         return;
     }
 
@@ -98,7 +99,7 @@ XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
     {
         if(NS_FAILED(stack->Push(mJSContext)))
         {
-            NS_ASSERTION(0, "bad!");
+            NS_ERROR("bad!");
             return;
         }
         mContextPopRequired = JS_TRUE;
@@ -300,9 +301,6 @@ XPCCallContext::~XPCCallContext()
             }
         }
 
-        if(mCallerLanguage == NATIVE_CALLER && JS_GetContextThread(mJSContext))
-            JS_EndRequest(mJSContext);
-
 #ifdef DEBUG
         XPCCallContext* old = mThreadData->SetCallContext(mPrevCallContext);
         NS_ASSERTION(old == this, "bad pop from per thread data");
@@ -310,6 +308,10 @@ XPCCallContext::~XPCCallContext()
         (void) mThreadData->SetCallContext(mPrevCallContext);
 #endif
     }
+
+    if(mJSContext)
+        if(mCallerLanguage == NATIVE_CALLER && JS_GetContextThread(mJSContext))
+            JS_EndRequest(mJSContext);
 
     NS_IF_RELEASE(mXPC);
 }

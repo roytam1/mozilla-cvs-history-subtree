@@ -672,7 +672,7 @@ nsXPCWrappedJSClass::CallMethod(nsXPCWrappedJS* wrapper, uint16 methodIndex,
                         nsIXPCFunctionThisTranslator* translator;
 
                         IID2ThisTranslatorMap* map =
-                            mRuntime->GetThisTraslatorMap();
+                            mRuntime->GetThisTranslatorMap();
 
                         {
                             XPCAutoLock lock(mRuntime->GetMapLock()); // scoped lock

@@ -77,8 +77,6 @@ static char* CloneAllAccess()
 }
 #endif
 
-static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
-
 /***************************************************************************/
 
 class nsXPCComponents_Interfaces :
@@ -345,10 +343,9 @@ nsXPCComponents_Classes::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
     {
         case JSENUMERATE_INIT:
         {
-            nsCOMPtr<nsIComponentManager>
-                compMgr(do_GetService(kComponentManagerCID));
-
-            if(!compMgr || NS_FAILED(compMgr->EnumerateContractIDs(&e)) || !e ||
+            nsIComponentManager* compMgr;
+            if(NS_FAILED(NS_GetGlobalComponentManager(&compMgr)) ||
+               !compMgr || NS_FAILED(compMgr->EnumerateContractIDs(&e)) || !e ||
                NS_FAILED(e->First()))
 
             {
@@ -506,10 +503,9 @@ nsXPCComponents_ClassesByID::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
     {
         case JSENUMERATE_INIT:
         {
-            nsCOMPtr<nsIComponentManager>
-                compMgr(do_GetService(kComponentManagerCID));
-
-            if(!compMgr || NS_FAILED(compMgr->EnumerateCLSIDs(&e)) || !e ||
+            nsIComponentManager* compMgr;
+            if(NS_FAILED(NS_GetGlobalComponentManager(&compMgr)) ||
+               !compMgr || NS_FAILED(compMgr->EnumerateCLSIDs(&e)) || !e ||
                NS_FAILED(e->First()))
 
             {
@@ -568,8 +564,9 @@ IsRegisteredCLSID(const char* str)
     if(!id.Parse(str))
         return PR_FALSE;
 
-    nsCOMPtr<nsIComponentManager> compMgr(do_GetService(kComponentManagerCID));
-    if(!compMgr || NS_FAILED(compMgr->IsRegistered(id, &registered)))
+    nsIComponentManager* compMgr;
+    if(NS_FAILED(NS_GetGlobalComponentManager(&compMgr)) ||
+       !compMgr || NS_FAILED(compMgr->IsRegistered(id, &registered)))
         return PR_FALSE;
 
     return registered;
@@ -1588,7 +1585,7 @@ nsXPCComponents::GetStack(nsIStackFrame * *aStack)
 NS_IMETHODIMP
 nsXPCComponents::GetManager(nsIComponentManager * *aManager)
 {
-    NS_ENSURE_ARG_POINTER(aManager);
+    NS_ASSERTION(aManager, "bad param");
 
     nsIComponentManager* cm;
     if(NS_FAILED(NS_GetGlobalComponentManager(&cm)))

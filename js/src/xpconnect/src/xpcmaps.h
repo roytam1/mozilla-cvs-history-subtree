@@ -550,7 +550,7 @@ public:
         NS_IF_ADDREF(obj);
         NS_IF_RELEASE(entry->value);
         entry->value = obj;
-        memcpy(&entry->key, &iid, sizeof(nsIID));
+        entry->key = iid;
         return obj;
     }
 

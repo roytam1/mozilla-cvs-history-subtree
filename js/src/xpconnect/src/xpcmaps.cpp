@@ -90,12 +90,21 @@ HashNativeKey(JSDHashTable *table, const void *key)
     else
     {
         XPCNativeInterface** Current = Set->GetInterfaceArray();
-        PRUint16 count = Set->GetInterfaceCount() + (Addition ? 1 : 0);
-        for(PRUint16 i = 0; i < count; i++)
+        PRUint16 count = Set->GetInterfaceCount();
+        if(Addition)
         {
-            if(Addition && i == Position)
-                h ^= (JSHashNumber) Addition;
-            else
+            count++;
+            for(PRUint16 i = 0; i < count; i++)
+            {
+                if(i == Position)
+                    h ^= (JSHashNumber) Addition;
+                else
+                    h ^= (JSHashNumber) *(Current++);
+            }
+        }
+        else
+        {
+            for(PRUint16 i = 0; i < count; i++)
                 h ^= (JSHashNumber) *(Current++);
         }
     }
@@ -326,21 +335,21 @@ NativeSetMap::Entry::Match(JSDHashTable *table,
         XPCNativeSet* Set2 = ((Entry*)entry)->key_value;
 
         if(Set1 == Set2)
-            return 1;
+            return JS_TRUE;
 
         PRUint16 count = Set1->GetInterfaceCount();
         if(count != Set2->GetInterfaceCount())
-            return 0;
+            return JS_FALSE;
 
         XPCNativeInterface** Current1 = Set1->GetInterfaceArray();
         XPCNativeInterface** Current2 = Set2->GetInterfaceArray();
         for(PRUint16 i = 0; i < count; i++)
         {
             if(*(Current1++) != *(Current2++))
-                return 0;
+                return JS_FALSE;
         }
 
-        return 1;
+        return JS_TRUE;
     }
 
     XPCNativeSet*       SetInTable = ((Entry*)entry)->key_value;
@@ -358,19 +367,18 @@ NativeSetMap::Entry::Match(JSDHashTable *table,
         // it would end up really being a set with two interfaces (except for
         // the case where the one interface happened to be nsISupports).
 
-        return (intN)
-               ((SetInTable->GetInterfaceCount() == 1 &&
+        return ((SetInTable->GetInterfaceCount() == 1 &&
                  SetInTable->GetInterfaceAt(0) == Addition) ||
                 (SetInTable->GetInterfaceCount() == 2 &&
                  SetInTable->GetInterfaceAt(1) == Addition));
     }
 
     if(!Addition && Set == SetInTable)
-        return 1;
+        return JS_TRUE;
 
     PRUint16 count = Set->GetInterfaceCount() + (Addition ? 1 : 0);
     if(count != SetInTable->GetInterfaceCount())
-        return 0;
+        return JS_FALSE;
 
     PRUint16 Position = Key->GetPosition();
     XPCNativeInterface** CurrentInTable = SetInTable->GetInterfaceArray();
@@ -380,16 +388,16 @@ NativeSetMap::Entry::Match(JSDHashTable *table,
         if(Addition && i == Position)
         {
             if(Addition != *(CurrentInTable++))
-                return 0;
+                return JS_FALSE;
         }
         else
         {
             if(*(Current++) != *(CurrentInTable++))
-                return 0;
+                return JS_FALSE;
         }
     }
 
-    return 1;
+    return JS_TRUE;
 }
 
 struct JSDHashTableOps NativeSetMap::Entry::sOps =

@@ -412,7 +412,7 @@ public:
 
     virtual ~nsXPConnect();
 
-    JSBool IsShuttingDown() const {return mShutingDown;}
+    JSBool IsShuttingDown() const {return mShuttingDown;}
 
 protected:
     nsXPConnect();
@@ -431,7 +431,7 @@ private:
     nsIThreadJSContextStack* mContextStack;
     nsIXPCSecurityManager*   mDefaultSecurityManager;
     PRUint16                 mDefaultSecurityManagerFlags;
-    JSBool                   mShutingDown;
+    JSBool                   mShuttingDown;
 
 #ifdef XPC_TOOLS_SUPPORT
     nsCOMPtr<nsIXPCToolsProfiler> mProfiler;
@@ -469,7 +469,7 @@ public:
     NativeSetMap* GetNativeSetMap() const
         {return mNativeSetMap;}
 
-    IID2ThisTranslatorMap* GetThisTraslatorMap() const
+    IID2ThisTranslatorMap* GetThisTranslatorMap() const
         {return mThisTranslatorMap;}
 
     XPCNativeScriptableSharedMap* GetNativeScriptableSharedMap() const
@@ -1073,7 +1073,7 @@ public:
 
     void DebugDump(PRInt16 depth);
 
-#define XPC_NATIVE_IFACE_MARK_FLAG 0x8000 // only high bit of 16 is set
+#define XPC_NATIVE_IFACE_MARK_FLAG ((PRUint16)JS_BIT(15)) // only high bit of 16 is set
 
     void Mark()     {mMemberCount |= XPC_NATIVE_IFACE_MARK_FLAG;}
     void Unmark()   {mMemberCount &= ~XPC_NATIVE_IFACE_MARK_FLAG;}
@@ -1199,7 +1199,7 @@ public:
     inline JSBool MatchesSetUpToInterface(const XPCNativeSet* other,
                                           XPCNativeInterface* iface) const;
 
-#define XPC_NATIVE_SET_MARK_FLAG 0x8000 // only high bit of 16 is set
+#define XPC_NATIVE_SET_MARK_FLAG ((PRUint16)JS_BIT(15)) // only high bit of 16 is set
 
     inline void Mark();
 private:
@@ -1241,7 +1241,7 @@ private:
 // a member of the gc'd class XPCNativeScriptableShared, this class holds the
 // bit and exposes the inlined methods to support marking.
 
-#define XPC_WN_SJSFLAGS_MARK_FLAG 0x80000000 // only high bit of 32 is set
+#define XPC_WN_SJSFLAGS_MARK_FLAG JS_BIT(31) // only high bit of 32 is set
 
 class XPCNativeScriptableFlags
 {
@@ -1474,7 +1474,7 @@ public:
 
 #undef GET_IT
 
-#define XPC_PROTO_DONT_SHARE 0x80000000 // only high bit of 32 is set
+#define XPC_PROTO_DONT_SHARE JS_BIT(31) // only high bit of 32 is set
 
     JSBool
     IsShared() const {return !(mClassInfoFlags & XPC_PROTO_DONT_SHARE);}

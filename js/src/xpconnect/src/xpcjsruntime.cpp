@@ -633,7 +633,7 @@ XPCJSRuntime::newXPCJSRuntime(nsXPConnect* aXPConnect,
        self->GetIID2NativeInterfaceMap()     &&
        self->GetClassInfo2NativeSetMap()     &&
        self->GetNativeSetMap()               &&
-       self->GetThisTraslatorMap()           &&
+       self->GetThisTranslatorMap()          &&
        self->GetNativeScriptableSharedMap()  &&
        self->GetDyingWrappedNativeProtoMap() &&
        self->GetMapLock())

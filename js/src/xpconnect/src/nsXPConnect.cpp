@@ -59,7 +59,7 @@ nsXPConnect::nsXPConnect()
         mContextStack(nsnull),
         mDefaultSecurityManager(nsnull),
         mDefaultSecurityManagerFlags(0),
-        mShutingDown(JS_FALSE)
+        mShuttingDown(JS_FALSE)
 {
     NS_INIT_ISUPPORTS();
 
@@ -108,7 +108,7 @@ nsXPConnect::~nsXPConnect()
     // noted all over the place, this makes bad things happen since shutdown is
     // an unstable time for so many modules who have not planned well for it.
 
-    mShutingDown = JS_TRUE;
+    mShuttingDown = JS_TRUE;
     { // scoped callcontext
         XPCCallContext ccx(NATIVE_CALLER);
         if(ccx.IsValid())
@@ -328,8 +328,8 @@ inline nsresult UnexpectedFailure(nsresult rv)
 NS_IMETHODIMP
 nsXPConnect::InitClasses(JSContext * aJSContext, JSObject * aGlobalJSObj)
 {
-    NS_ENSURE_ARG_POINTER(aJSContext);
-    NS_ENSURE_ARG_POINTER(aGlobalJSObj);
+    NS_ASSERTION(aJSContext, "bad param");
+    NS_ASSERTION(aGlobalJSObj, "bad param");
 
     XPCCallContext ccx(NATIVE_CALLER, aJSContext);
     if(!ccx.IsValid())
@@ -378,9 +378,9 @@ nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext,
                                              PRBool aCallJS_InitStandardClasses,
                                              nsIXPConnectJSObjectHolder **_retval)
 {
-    NS_ENSURE_ARG_POINTER(aJSContext);
-    NS_ENSURE_ARG_POINTER(aCOMObj);
-    NS_ENSURE_ARG_POINTER(_retval);
+    NS_ASSERTION(aJSContext, "bad param");
+    NS_ASSERTION(aCOMObj, "bad param");
+    NS_ASSERTION(_retval, "bad param");
 
     // XXX This is not pretty. We make a temporary global object and
     // init it with all the Components object junk just so we have a
@@ -455,10 +455,10 @@ nsXPConnect::WrapNative(JSContext * aJSContext,
                         const nsIID & aIID,
                         nsIXPConnectJSObjectHolder **_retval)
 {
-    NS_ENSURE_ARG_POINTER(aJSContext);
-    NS_ENSURE_ARG_POINTER(aScope);
-    NS_ENSURE_ARG_POINTER(aCOMObj);
-    NS_ENSURE_ARG_POINTER(_retval);
+    NS_ASSERTION(aJSContext, "bad param");
+    NS_ASSERTION(aScope, "bad param");
+    NS_ASSERTION(aCOMObj, "bad param");
+    NS_ASSERTION(_retval, "bad param");
 
     *_retval = nsnull;
 
@@ -480,9 +480,9 @@ nsXPConnect::WrapJS(JSContext * aJSContext,
                     const nsIID & aIID,
                     void * *result)
 {
-    NS_ENSURE_ARG_POINTER(aJSContext);
-    NS_ENSURE_ARG_POINTER(aJSObj);
-    NS_ENSURE_ARG_POINTER(result);
+    NS_ASSERTION(aJSContext, "bad param");
+    NS_ASSERTION(aJSObj, "bad param");
+    NS_ASSERTION(result, "bad param");
 
     *result = nsnull;
 
@@ -505,10 +505,10 @@ nsXPConnect::WrapJSAggregatedToNative(nsISupports *aOuter,
                                       const nsIID & aIID,
                                       void * *result)
 {
-    NS_ENSURE_ARG_POINTER(aOuter);
-    NS_ENSURE_ARG_POINTER(aJSContext);
-    NS_ENSURE_ARG_POINTER(aJSObj);
-    NS_ENSURE_ARG_POINTER(result);
+    NS_ASSERTION(aOuter, "bad param");
+    NS_ASSERTION(aJSContext, "bad param");
+    NS_ASSERTION(aJSObj, "bad param");
+    NS_ASSERTION(result, "bad param");
 
     *result = nsnull;
 
@@ -529,9 +529,9 @@ nsXPConnect::GetWrappedNativeOfJSObject(JSContext * aJSContext,
                                         JSObject * aJSObj,
                                         nsIXPConnectWrappedNative **_retval)
 {
-    NS_ENSURE_ARG_POINTER(aJSContext);
-    NS_ENSURE_ARG_POINTER(aJSObj);
-    NS_ENSURE_ARG_POINTER(_retval);
+    NS_ASSERTION(aJSContext, "bad param");
+    NS_ASSERTION(aJSObj, "bad param");
+    NS_ASSERTION(_retval, "bad param");
 
     XPCCallContext ccx(NATIVE_CALLER, aJSContext);
     if(!ccx.IsValid())
@@ -558,10 +558,10 @@ nsXPConnect::GetWrappedNativeOfNativeObject(JSContext * aJSContext,
                                             const nsIID & aIID,
                                             nsIXPConnectWrappedNative **_retval)
 {
-    NS_ENSURE_ARG_POINTER(aJSContext);
-    NS_ENSURE_ARG_POINTER(aScope);
-    NS_ENSURE_ARG_POINTER(aCOMObj);
-    NS_ENSURE_ARG_POINTER(_retval);
+    NS_ASSERTION(aJSContext, "bad param");
+    NS_ASSERTION(aScope, "bad param");
+    NS_ASSERTION(aCOMObj, "bad param");
+    NS_ASSERTION(_retval, "bad param");
 
     *_retval = nsnull;
 
@@ -622,7 +622,7 @@ nsXPConnect::SetSecurityManagerForJSContext(JSContext * aJSContext,
                                             nsIXPCSecurityManager *aManager,
                                             PRUint16 flags)
 {
-    NS_ENSURE_ARG_POINTER(aJSContext);
+    NS_ASSERTION(aJSContext, "bad param");
 
     XPCCallContext ccx(NATIVE_CALLER, aJSContext);
     if(!ccx.IsValid())
@@ -645,9 +645,9 @@ nsXPConnect::GetSecurityManagerForJSContext(JSContext * aJSContext,
                                             nsIXPCSecurityManager **aManager,
                                             PRUint16 *flags)
 {
-    NS_ENSURE_ARG_POINTER(aJSContext);
-    NS_ENSURE_ARG_POINTER(aManager);
-    NS_ENSURE_ARG_POINTER(flags);
+    NS_ASSERTION(aJSContext, "bad param");
+    NS_ASSERTION(aManager, "bad param");
+    NS_ASSERTION(flags, "bad param");
 
     XPCCallContext ccx(NATIVE_CALLER, aJSContext);
     if(!ccx.IsValid())
@@ -681,8 +681,8 @@ NS_IMETHODIMP
 nsXPConnect::GetDefaultSecurityManager(nsIXPCSecurityManager **aManager,
                                        PRUint16 *flags)
 {
-    NS_ENSURE_ARG_POINTER(aManager);
-    NS_ENSURE_ARG_POINTER(flags);
+    NS_ASSERTION(aManager, "bad param");
+    NS_ASSERTION(flags, "bad param");
 
     NS_IF_ADDREF(mDefaultSecurityManager);
     *aManager = mDefaultSecurityManager;
@@ -699,7 +699,7 @@ nsXPConnect::CreateStackFrameLocation(PRUint32 aLanguage,
                                       nsIStackFrame *aCaller,
                                       nsIStackFrame **_retval)
 {
-    NS_ENSURE_ARG_POINTER(_retval);
+    NS_ASSERTION(_retval, "bad param");
 
     return XPCJSStack::CreateStackFrameLocation(aLanguage,
                                                 aFilename,
@@ -713,7 +713,7 @@ nsXPConnect::CreateStackFrameLocation(PRUint32 aLanguage,
 NS_IMETHODIMP
 nsXPConnect::GetCurrentJSStack(nsIStackFrame * *aCurrentJSStack)
 {
-    NS_ENSURE_ARG_POINTER(aCurrentJSStack);
+    NS_ASSERTION(aCurrentJSStack, "bad param");
     *aCurrentJSStack = nsnull;
 
     JSContext* cx;
@@ -745,7 +745,7 @@ nsXPConnect::GetCurrentJSStack(nsIStackFrame * *aCurrentJSStack)
 NS_IMETHODIMP
 nsXPConnect::GetCurrentNativeCallContext(nsIXPCNativeCallContext * *aCurrentNativeCallContext)
 {
-    NS_ENSURE_ARG_POINTER(aCurrentNativeCallContext);
+    NS_ASSERTION(aCurrentNativeCallContext, "bad param");
 
     XPCPerThreadData* data = XPCPerThreadData::GetData();
     if(data)
@@ -764,7 +764,7 @@ nsXPConnect::GetCurrentNativeCallContext(nsIXPCNativeCallContext * *aCurrentNati
 NS_IMETHODIMP
 nsXPConnect::GetPendingException(nsIException * *aPendingException)
 {
-    NS_ENSURE_ARG_POINTER(aPendingException);
+    NS_ASSERTION(aPendingException, "bad param");
 
     XPCPerThreadData* data = XPCPerThreadData::GetData();
     if(!data)
@@ -808,7 +808,7 @@ nsXPConnect::SetFunctionThisTranslator(const nsIID & aIID,
         return NS_ERROR_UNEXPECTED;
 
     nsIXPCFunctionThisTranslator* old;
-    IID2ThisTranslatorMap* map = rt->GetThisTraslatorMap();
+    IID2ThisTranslatorMap* map = rt->GetThisTranslatorMap();
 
     {
         XPCAutoLock lock(rt->GetMapLock()); // scoped lock
@@ -833,7 +833,7 @@ nsXPConnect::GetFunctionThisTranslator(const nsIID & aIID,
         return NS_ERROR_UNEXPECTED;
 
     nsIXPCFunctionThisTranslator* old;
-    IID2ThisTranslatorMap* map = rt->GetThisTraslatorMap();
+    IID2ThisTranslatorMap* map = rt->GetThisTranslatorMap();
 
     {
         XPCAutoLock lock(rt->GetMapLock()); // scoped lock
