@@ -1,0 +1,1 @@
+content,install,url,resource://app/chrome/content/sample/
