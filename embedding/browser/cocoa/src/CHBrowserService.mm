@@ -89,16 +89,16 @@ CHBrowserService::InitEmbedding()
     return NS_ERROR_OUT_OF_MEMORY;
   NS_ADDREF(sSingleton);
   
-  nsCOMPtr<nsIComponentRegistrar> cr;
-  NS_GetComponentRegistrar(getter_AddRefs(cr));
-  if ( !cr )
-    return NS_ERROR_FAILURE;
-
   // Register as the window creator
   nsCOMPtr<nsIWindowWatcher> watcher(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
   if (!watcher) 
     return NS_ERROR_FAILURE;
   watcher->SetWindowCreator(sSingleton);
+
+  nsCOMPtr<nsIComponentRegistrar> cr;
+  NS_GetComponentRegistrar(getter_AddRefs(cr));
+  if ( !cr )
+    return NS_ERROR_FAILURE;
 
   // replace the external helper app dialog with our own
   #define NS_HELPERAPPLAUNCHERDIALOG_CID \
