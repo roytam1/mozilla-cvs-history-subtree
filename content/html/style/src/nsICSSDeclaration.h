@@ -142,8 +142,6 @@ struct nsCSSColor : public nsCSSStruct  {
   nsCSSValue      mBackAttachment;
   nsCSSValue      mBackPositionX;
   nsCSSValue      mBackPositionY;
-  nsCSSValueList* mCursor;
-  nsCSSValue      mOpacity;
 };
 
 struct nsCSSShadow {
@@ -363,6 +361,9 @@ struct nsCSSUserInterface : public nsCSSStruct  { // NEW
   nsCSSValue      mUserFocus;
   nsCSSValue      mResizer;
   nsCSSValue      mBehavior;
+
+  nsCSSValueList* mCursor;
+  nsCSSValue      mOpacity;
 };
 
 struct nsCSSAural : public nsCSSStruct  { // NEW

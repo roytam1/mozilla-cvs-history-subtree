@@ -857,6 +857,7 @@ static void MapDeclarationInto(nsICSSDeclaration* aDeclaration,
 
 // New map helpers shared by both important and regular rules.
 static nsresult MapFontForDeclaration(nsICSSDeclaration* aDecl, nsCSSFont& aFont);
+static nsresult MapColorForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, nsCSSColor& aColor);
 static nsresult MapMarginForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, nsCSSMargin& aMargin); 
 static nsresult MapListForDeclaration(nsICSSDeclaration* aDecl, nsCSSList& aList);
 static nsresult MapPositionForDeclaration(nsICSSDeclaration* aDecl, nsCSSPosition& aPosition);
@@ -969,6 +970,8 @@ CSSImportantRule::MapRuleInfoInto(nsRuleData* aRuleData)
 
   if (aRuleData->mFontData)
     return MapFontForDeclaration(mDeclaration, *aRuleData->mFontData);
+  else if (aRuleData->mColorData)
+    return MapColorForDeclaration(mDeclaration, aRuleData->mSID, *aRuleData->mColorData);
   else if (aRuleData->mMarginData)
     return MapMarginForDeclaration(mDeclaration, aRuleData->mSID, *aRuleData->mMarginData);
   else if (aRuleData->mListData)
@@ -1802,6 +1805,8 @@ CSSStyleRuleImpl::MapRuleInfoInto(nsRuleData* aRuleData)
 
   if (aRuleData->mFontData)
     return MapFontForDeclaration(mDeclaration, *aRuleData->mFontData);
+  else if (aRuleData->mColorData)
+    return MapColorForDeclaration(mDeclaration, aRuleData->mSID, *aRuleData->mColorData);
   else if (aRuleData->mMarginData)
     return MapMarginForDeclaration(mDeclaration, aRuleData->mSID, *aRuleData->mMarginData);
   else if (aRuleData->mListData)
@@ -2104,6 +2109,49 @@ MapMarginForDeclaration(nsICSSDeclaration* aDeclaration, const nsStyleStructID& 
   return NS_OK;
 }
 
+static nsresult
+MapColorForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, nsCSSColor& aColor)
+{
+  if (!aDecl)
+    return NS_OK;
+
+  nsCSSColor* ourColor;
+  aDecl->GetData(kCSSColorSID, (nsCSSStruct**)&ourColor);
+  if (!ourColor)
+    return NS_OK; // No rules for color or background.
+
+  if (aID == eStyleStruct_Color) {
+    // color: color, string, inherit
+    if (aColor.mColor.GetUnit() == eCSSUnit_Null && ourColor->mColor.GetUnit() != eCSSUnit_Null)
+      aColor.mColor = ourColor->mColor;
+  }
+  else if (aID == eStyleStruct_Background) {
+    // background-color: color, string, enum (flags), inherit
+    if (aColor.mBackColor.GetUnit() == eCSSUnit_Null && ourColor->mBackColor.GetUnit() != eCSSUnit_Null)
+      aColor.mBackColor = ourColor->mBackColor;
+
+    // background-image: url, none, inherit
+    if (aColor.mBackImage.GetUnit() == eCSSUnit_Null && ourColor->mBackImage.GetUnit() != eCSSUnit_Null)
+      aColor.mBackImage = ourColor->mBackImage;
+
+    // background-repeat: enum, inherit
+    if (aColor.mBackRepeat.GetUnit() == eCSSUnit_Null && ourColor->mBackRepeat.GetUnit() != eCSSUnit_Null)
+      aColor.mBackRepeat = ourColor->mBackRepeat;
+
+    // background-attachment: enum, inherit
+    if (aColor.mBackAttachment.GetUnit() == eCSSUnit_Null && ourColor->mBackAttachment.GetUnit() != eCSSUnit_Null)
+      aColor.mBackAttachment = ourColor->mBackAttachment;
+      
+    // background-position: enum, length, percent (flags), inherit
+    if (aColor.mBackPositionX.GetUnit() == eCSSUnit_Null && ourColor->mBackPositionX.GetUnit() != eCSSUnit_Null)
+      aColor.mBackPositionX = ourColor->mBackPositionX;
+    if (aColor.mBackPositionY.GetUnit() == eCSSUnit_Null && ourColor->mBackPositionY.GetUnit() != eCSSUnit_Null)
+      aColor.mBackPositionY = ourColor->mBackPositionY;
+  }
+
+  return NS_OK;
+}
+
 static nsresult 
 MapTableForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, nsCSSTable& aTable)
 {
@@ -2394,177 +2442,6 @@ MapDeclarationDisplayInto(nsICSSDeclaration* aDeclaration,
 }
 
 static void 
-MapDeclarationColorInto(nsICSSDeclaration* aDeclaration, 
-                        nsIMutableStyleContext* aContext, nsIStyleContext* aParentContext,
-                        nsStyleFont* aFont, nsIPresContext* aPresContext)
-{
-  nsCSSColor*  ourColor;
-  if (NS_OK == aDeclaration->GetData(kCSSColorSID, (nsCSSStruct**)&ourColor)) {
-    if (nsnull != ourColor) {
-      nsStyleColor* color = (nsStyleColor*)aContext->GetMutableStyleData(eStyleStruct_Color);
-
-      const nsStyleColor* parentColor = color;
-      if (nsnull != aParentContext) {
-        parentColor = (const nsStyleColor*)aParentContext->GetStyleData(eStyleStruct_Color);
-      }
-
-      // color: color, string, inherit
-      if (! SetColor(ourColor->mColor, parentColor->mColor, aPresContext, color->mColor)) {
-      }
-
-      // cursor: enum, auto, url, inherit
-      nsCSSValueList*  list = ourColor->mCursor;
-      if (nsnull != list) {
-        // XXX need to deal with multiple URL values
-        if (eCSSUnit_Enumerated == list->mValue.GetUnit()) {
-          color->mCursor = list->mValue.GetIntValue();
-        }
-        else if (eCSSUnit_Auto == list->mValue.GetUnit()) {
-          color->mCursor = NS_STYLE_CURSOR_AUTO;
-        }
-        else if (eCSSUnit_URL == list->mValue.GetUnit()) {
-          list->mValue.GetStringValue(color->mCursorImage);
-        }
-        else if (eCSSUnit_Inherit == list->mValue.GetUnit()) {
-          color->mCursor = parentColor->mCursor;
-        }
-      }
-
-      // background-color: color, string, enum (flags), inherit
-      if (eCSSUnit_Inherit == ourColor->mBackColor.GetUnit()) { // do inherit first, so SetColor doesn't do it
-        const nsStyleColor* inheritColor = parentColor;
-        if (inheritColor->mBackgroundFlags & NS_STYLE_BG_PROPAGATED_TO_PARENT) {
-          // walk up the contexts until we get to a context that does not have its
-          // background propagated to its parent (or a context that has had its background
-          // propagated from its child)
-          if (nsnull != aParentContext) {
-            nsCOMPtr<nsIStyleContext> higherContext = getter_AddRefs(aParentContext->GetParent());
-            do {
-              if (higherContext) {
-                inheritColor = (const nsStyleColor*)higherContext->GetStyleData(eStyleStruct_Color);
-                if (inheritColor && 
-                    (!(inheritColor->mBackgroundFlags & NS_STYLE_BG_PROPAGATED_TO_PARENT)) ||
-                    (inheritColor->mBackgroundFlags & NS_STYLE_BG_PROPAGATED_FROM_CHILD)) {
-                  // done walking up the higher contexts
-                  break;
-                }
-                higherContext = getter_AddRefs(higherContext->GetParent());
-              }
-            } while (higherContext);
-          }
-        }
-        color->mBackgroundColor = inheritColor->mBackgroundColor;
-        color->mBackgroundFlags &= ~NS_STYLE_BG_COLOR_TRANSPARENT;
-        color->mBackgroundFlags |= (inheritColor->mBackgroundFlags & NS_STYLE_BG_COLOR_TRANSPARENT);
-      }
-      else if (SetColor(ourColor->mBackColor, parentColor->mBackgroundColor, 
-                        aPresContext, color->mBackgroundColor)) {
-        color->mBackgroundFlags &= ~NS_STYLE_BG_COLOR_TRANSPARENT;
-      }
-      else if (eCSSUnit_Enumerated == ourColor->mBackColor.GetUnit()) {
-        color->mBackgroundColor = parentColor->mBackgroundColor;
-        color->mBackgroundFlags |= NS_STYLE_BG_COLOR_TRANSPARENT;
-      }
-
-      // background-image: url, none, inherit
-      if (eCSSUnit_URL == ourColor->mBackImage.GetUnit()) {
-        ourColor->mBackImage.GetStringValue(color->mBackgroundImage);
-        color->mBackgroundFlags &= ~NS_STYLE_BG_IMAGE_NONE;
-      }
-      else if (eCSSUnit_None == ourColor->mBackImage.GetUnit()) {
-        color->mBackgroundImage.Truncate();
-        color->mBackgroundFlags |= NS_STYLE_BG_IMAGE_NONE;
-      }
-      else if (eCSSUnit_Inherit == ourColor->mBackImage.GetUnit()) {
-        color->mBackgroundImage = parentColor->mBackgroundImage;
-        color->mBackgroundFlags &= ~NS_STYLE_BG_IMAGE_NONE;
-        color->mBackgroundFlags |= (parentColor->mBackgroundFlags & NS_STYLE_BG_IMAGE_NONE);
-      }
-
-      // background-repeat: enum, inherit
-      if (eCSSUnit_Enumerated == ourColor->mBackRepeat.GetUnit()) {
-        color->mBackgroundRepeat = ourColor->mBackRepeat.GetIntValue();
-      }
-      else if (eCSSUnit_Inherit == ourColor->mBackRepeat.GetUnit()) {
-        color->mBackgroundRepeat = parentColor->mBackgroundRepeat;
-      }
-
-      // background-attachment: enum, inherit
-      if (eCSSUnit_Enumerated == ourColor->mBackAttachment.GetUnit()) {
-        color->mBackgroundAttachment = ourColor->mBackAttachment.GetIntValue();
-      }
-      else if (eCSSUnit_Inherit == ourColor->mBackAttachment.GetUnit()) {
-        color->mBackgroundAttachment = parentColor->mBackgroundAttachment;
-      }
-
-      // background-position: enum, length, percent (flags), inherit
-      if (eCSSUnit_Percent == ourColor->mBackPositionX.GetUnit()) {
-        color->mBackgroundXPosition = (nscoord)(100.0f * ourColor->mBackPositionX.GetPercentValue());
-        color->mBackgroundFlags |= NS_STYLE_BG_X_POSITION_PERCENT;
-        color->mBackgroundFlags &= ~NS_STYLE_BG_X_POSITION_LENGTH;
-      }
-      else if (ourColor->mBackPositionX.IsLengthUnit()) {
-        color->mBackgroundXPosition = CalcLength(ourColor->mBackPositionX,
-                                                 aFont->mFont, aPresContext);
-        color->mBackgroundFlags |= NS_STYLE_BG_X_POSITION_LENGTH;
-        color->mBackgroundFlags &= ~NS_STYLE_BG_X_POSITION_PERCENT;
-      }
-      else if (eCSSUnit_Enumerated == ourColor->mBackPositionX.GetUnit()) {
-        color->mBackgroundXPosition = (nscoord)ourColor->mBackPositionX.GetIntValue();
-        color->mBackgroundFlags |= NS_STYLE_BG_X_POSITION_PERCENT;
-        color->mBackgroundFlags &= ~NS_STYLE_BG_X_POSITION_LENGTH;
-      }
-      else if (eCSSUnit_Inherit == ourColor->mBackPositionX.GetUnit()) {
-        color->mBackgroundXPosition = parentColor->mBackgroundXPosition;
-        color->mBackgroundFlags &= ~(NS_STYLE_BG_X_POSITION_LENGTH | NS_STYLE_BG_X_POSITION_PERCENT);
-        color->mBackgroundFlags |= (parentColor->mBackgroundFlags & (NS_STYLE_BG_X_POSITION_LENGTH | NS_STYLE_BG_X_POSITION_PERCENT));
-      }
-
-      if (eCSSUnit_Percent == ourColor->mBackPositionY.GetUnit()) {
-        color->mBackgroundYPosition = (nscoord)(100.0f * ourColor->mBackPositionY.GetPercentValue());
-        color->mBackgroundFlags |= NS_STYLE_BG_Y_POSITION_PERCENT;
-        color->mBackgroundFlags &= ~NS_STYLE_BG_Y_POSITION_LENGTH;
-      }
-      else if (ourColor->mBackPositionY.IsLengthUnit()) {
-        color->mBackgroundYPosition = CalcLength(ourColor->mBackPositionY,
-                                                 aFont->mFont, aPresContext);
-        color->mBackgroundFlags |= NS_STYLE_BG_Y_POSITION_LENGTH;
-        color->mBackgroundFlags &= ~NS_STYLE_BG_Y_POSITION_PERCENT;
-      }
-      else if (eCSSUnit_Enumerated == ourColor->mBackPositionY.GetUnit()) {
-        color->mBackgroundYPosition = (nscoord)ourColor->mBackPositionY.GetIntValue();
-        color->mBackgroundFlags |= NS_STYLE_BG_Y_POSITION_PERCENT;
-        color->mBackgroundFlags &= ~NS_STYLE_BG_Y_POSITION_LENGTH;
-      }
-      else if (eCSSUnit_Inherit == ourColor->mBackPositionY.GetUnit()) {
-        color->mBackgroundYPosition = parentColor->mBackgroundYPosition;
-        color->mBackgroundFlags &= ~(NS_STYLE_BG_Y_POSITION_LENGTH | NS_STYLE_BG_Y_POSITION_PERCENT);
-        color->mBackgroundFlags |= (parentColor->mBackgroundFlags & (NS_STYLE_BG_Y_POSITION_LENGTH | NS_STYLE_BG_Y_POSITION_PERCENT));
-      }
-
-      // opacity: factor, percent, inherit
-      if (eCSSUnit_Percent == ourColor->mOpacity.GetUnit()) {
-        float opacity = parentColor->mOpacity * ourColor->mOpacity.GetPercentValue();
-        if (opacity < 0.0f) {
-          color->mOpacity = 0.0f;
-        } else if (1.0 < opacity) {
-          color->mOpacity = 1.0f;
-        }
-        else {
-          color->mOpacity = opacity;
-        }
-      }
-      else if (eCSSUnit_Number == ourColor->mOpacity.GetUnit()) {
-        color->mOpacity = ourColor->mOpacity.GetFloatValue();
-      }
-      else if (eCSSUnit_Inherit == ourColor->mOpacity.GetUnit()) {
-        color->mOpacity = parentColor->mOpacity;
-      }
-    }
-  }
-}
-
-static void 
 MapDeclarationContentInto(nsICSSDeclaration* aDeclaration, 
                           nsIMutableStyleContext* aContext, nsIStyleContext* aParentContext,
                           nsStyleFont* aFont, nsIPresContext* aPresContext)
@@ -2786,6 +2663,43 @@ MapDeclarationUIInto(nsICSSDeclaration* aDeclaration,
         parentUI = (const nsStyleUserInterface*)aParentContext->GetStyleData(eStyleStruct_UserInterface);
       }
 
+      // opacity: factor, percent, inherit
+      if (eCSSUnit_Percent == ourUI->mOpacity.GetUnit()) {
+        float opacity = parentUI->mOpacity * ourUI->mOpacity.GetPercentValue();
+        if (opacity < 0.0f) {
+          ui->mOpacity = 0.0f;
+        } else if (1.0 < opacity) {
+          ui->mOpacity = 1.0f;
+        }
+        else {
+          ui->mOpacity = opacity;
+        }
+      }
+      else if (eCSSUnit_Number == ourUI->mOpacity.GetUnit()) {
+        ui->mOpacity = ourUI->mOpacity.GetFloatValue();
+      }
+      else if (eCSSUnit_Inherit == ourUI->mOpacity.GetUnit()) {
+        ui->mOpacity = parentUI->mOpacity;
+      }
+
+      // cursor: enum, auto, url, inherit
+      nsCSSValueList*  list = ourUI->mCursor;
+      if (nsnull != list) {
+        // XXX need to deal with multiple URL values
+        if (eCSSUnit_Enumerated == list->mValue.GetUnit()) {
+          ui->mCursor = list->mValue.GetIntValue();
+        }
+        else if (eCSSUnit_Auto == list->mValue.GetUnit()) {
+          ui->mCursor = NS_STYLE_CURSOR_AUTO;
+        }
+        else if (eCSSUnit_URL == list->mValue.GetUnit()) {
+          list->mValue.GetStringValue(ui->mCursorImage);
+        }
+        else if (eCSSUnit_Inherit == list->mValue.GetUnit()) {
+          ui->mCursor = parentUI->mCursor;
+        }
+      }
+
       // user-input: auto, none, enum, inherit
       if (eCSSUnit_Enumerated == ourUI->mUserInput.GetUnit()) {
         ui->mUserInput = ourUI->mUserInput.GetIntValue();
@@ -2886,7 +2800,6 @@ void MapDeclarationInto(nsICSSDeclaration* aDeclaration,
 
     MapDeclarationTextInto(aDeclaration, aContext, parentContext, font, aPresContext);
     MapDeclarationDisplayInto(aDeclaration, aContext, parentContext, font, aPresContext);
-    MapDeclarationColorInto(aDeclaration, aContext, parentContext, font, aPresContext);
     MapDeclarationContentInto(aDeclaration, aContext, parentContext, font, aPresContext);
     MapDeclarationUIInto(aDeclaration, aContext, parentContext, font, aPresContext);
     

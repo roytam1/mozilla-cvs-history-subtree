@@ -188,9 +188,9 @@ nsButtonFrameRenderer::PaintBorderAndBackground(nsIPresContext* aPresContext,
   // get the styles
   const nsStyleBorder* border =
     (const nsStyleBorder*)context->GetStyleData(eStyleStruct_Border);
-  const nsStyleColor* color =
-    (const nsStyleColor*)context->GetStyleData(eStyleStruct_Color);
-
+  const nsStyleBackground* color =
+    (const nsStyleBackground*)context->GetStyleData(eStyleStruct_Background);
+      
 
   // paint the border and background
 

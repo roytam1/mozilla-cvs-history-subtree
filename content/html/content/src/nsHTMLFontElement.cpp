@@ -231,58 +231,71 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
   if (!aData)
     return;
 
-  if (!aData->mFontData)
-    return;
-
-  nsCSSFont& font = *(aData->mFontData);
-  nsHTMLValue value;
+  if (aData->mFontData) {
+    nsCSSFont& font = *(aData->mFontData);
+    nsHTMLValue value;
     
-  // face: string list
-  if (font.mFamily.GetUnit() == eCSSUnit_Null) {
-    aAttributes->GetAttribute(nsHTMLAtoms::face, value);
-    if (value.GetUnit() == eHTMLUnit_String) {
-      nsAutoString familyList;
-      value.GetStringValue(familyList);
-      if (!familyList.IsEmpty())
-        font.mFamily = nsCSSValue(familyList, eCSSUnit_String);
+    // face: string list
+    if (font.mFamily.GetUnit() == eCSSUnit_Null) {
+      aAttributes->GetAttribute(nsHTMLAtoms::face, value);
+      if (value.GetUnit() == eHTMLUnit_String) {
+        nsAutoString familyList;
+        value.GetStringValue(familyList);
+        if (!familyList.IsEmpty())
+          font.mFamily = nsCSSValue(familyList, eCSSUnit_String);
+      }
     }
-  }
 
-  // pointSize: int, enum
-  if (font.mSize.GetUnit() == eCSSUnit_Null) {
-    aAttributes->GetAttribute(nsHTMLAtoms::pointSize, value);
-    if (value.GetUnit() == eHTMLUnit_Integer) {
-      PRInt32 val = value.GetIntValue();
-      font.mSize = nsCSSValue(val, eCSSUnit_Integer);
-    }
-    else if (value.GetUnit() == eHTMLUnit_Enumerated) {
-      PRInt32 val = value.GetIntValue();
-      font.mSize = nsCSSValue(val, eCSSUnit_Enumerated);
-    }
-    else {
-      // size: int, enum , 
-      aAttributes->GetAttribute(nsHTMLAtoms::size, value);
-      if ((value.GetUnit() == eHTMLUnit_Integer) ||
-          (value.GetUnit() == eHTMLUnit_Enumerated)) { 
-        PRInt32 size = value.GetIntValue();
-        if (size) {
-          if (value.GetUnit() == eHTMLUnit_Integer) // int (+/-)
-	          size = 3 + size;  // XXX should be BASEFONT, not three
-	          
-          size = ((0 < size) ? ((size < 8) ? size : 7) : 1); 
-          font.mSize = nsCSSValue(size, eCSSUnit_Enumerated);
+    // pointSize: int, enum
+    if (font.mSize.GetUnit() == eCSSUnit_Null) {
+      aAttributes->GetAttribute(nsHTMLAtoms::pointSize, value);
+      if (value.GetUnit() == eHTMLUnit_Integer) {
+        PRInt32 val = value.GetIntValue();
+        font.mSize = nsCSSValue(val, eCSSUnit_Integer);
+      }
+      else if (value.GetUnit() == eHTMLUnit_Enumerated) {
+        PRInt32 val = value.GetIntValue();
+        font.mSize = nsCSSValue(val, eCSSUnit_Enumerated);
+      }
+      else {
+        // size: int, enum , 
+        aAttributes->GetAttribute(nsHTMLAtoms::size, value);
+        if ((value.GetUnit() == eHTMLUnit_Integer) ||
+            (value.GetUnit() == eHTMLUnit_Enumerated)) { 
+          PRInt32 size = value.GetIntValue();
+          if (size) {
+            if (value.GetUnit() == eHTMLUnit_Integer) // int (+/-)
+	            size = 3 + size;  // XXX should be BASEFONT, not three
+	            
+            size = ((0 < size) ? ((size < 8) ? size : 7) : 1); 
+            font.mSize = nsCSSValue(size, eCSSUnit_Enumerated);
+          }
         }
       }
     }
-  }
 
-  // fontWeight: int, enum
-  if (font.mWeight.GetUnit() == eCSSUnit_Null) {
-    aAttributes->GetAttribute(nsHTMLAtoms::fontWeight, value);
-    if (value.GetUnit() == eHTMLUnit_Integer) // +/-
-      font.mWeight = nsCSSValue(value.GetIntValue(), eCSSUnit_Integer);
-    else if (value.GetUnit() == eHTMLUnit_Enumerated)
-      font.mWeight = nsCSSValue(value.GetIntValue(), eCSSUnit_Enumerated);
+    // fontWeight: int, enum
+    if (font.mWeight.GetUnit() == eCSSUnit_Null) {
+      aAttributes->GetAttribute(nsHTMLAtoms::fontWeight, value);
+      if (value.GetUnit() == eHTMLUnit_Integer) // +/-
+        font.mWeight = nsCSSValue(value.GetIntValue(), eCSSUnit_Integer);
+      else if (value.GetUnit() == eHTMLUnit_Enumerated)
+        font.mWeight = nsCSSValue(value.GetIntValue(), eCSSUnit_Enumerated);
+    }
+  }
+  else if (aData->mColorData && aData->mSID == eStyleStruct_Color) {
+    if (aData->mColorData->mColor.GetUnit() == eCSSUnit_Null) {
+      // color: color
+      nsHTMLValue value;
+      if (NS_CONTENT_ATTR_NOT_THERE !=
+          aAttributes->GetAttribute(nsHTMLAtoms::color, value)) {
+        if (((eHTMLUnit_Color == value.GetUnit())) ||
+            (eHTMLUnit_ColorName == value.GetUnit())) {
+          nsCSSValue val; val.SetColorValue(value.GetColorValue());
+          aData->mColorData->mColor = val;
+        }
+      }
+    }
   }
 }
 
@@ -299,12 +312,9 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
         aAttributes->GetAttribute(nsHTMLAtoms::color, value)) {
       nsStyleText* text = (nsStyleText*)
         aContext->GetMutableStyleData(eStyleStruct_Text);
-      nsStyleColor* color = (nsStyleColor*)
-        aContext->GetMutableStyleData(eStyleStruct_Color);
       if (((eHTMLUnit_Color == value.GetUnit())) ||
           (eHTMLUnit_ColorName == value.GetUnit())) {
-        color->mColor = value.GetColorValue();
-
+        
         // XXXdwh don't forget this when you convert. re-apply inherited text decoration, so colors sync
         text->mTextDecoration = text->mTextDecorations;
       }

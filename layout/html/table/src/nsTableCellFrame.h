@@ -253,7 +253,7 @@ protected:
   PRBool    ConvertToPixelValue(nsHTMLValue& aValue, PRInt32 aDefault, PRInt32& aResult);
   nsresult  DecorateForSelection(nsIPresContext* aPresContext,
                                  nsIRenderingContext& aRenderingContext,
-                                 const nsStyleColor* aStyleColor);
+                                 const nsStyleBackground* aStyleColor);
   const nsStyleColor * GetColorStyleFromSelection(const nsStyleColor *aStyleColor);
 
 protected:

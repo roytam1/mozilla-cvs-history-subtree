@@ -31,6 +31,48 @@
 #include "nsStyleUtil.h"
 #include "nsCSSAtoms.h"
 
+class nsShellISupportsKey : public nsHashKey {
+public:
+  nsISupports* mKey;
+  
+public:
+  nsShellISupportsKey(nsISupports* key) {
+#ifdef DEBUG
+    mKeyType = SupportsKey;
+#endif
+    mKey = key;
+  }
+  
+  ~nsShellISupportsKey(void) {
+  }
+  
+  void* operator new(size_t sz, nsIPresContext* aContext) {
+    void* result = nsnull;
+    aContext->AllocateFromShell(sz, &result);
+    return result;
+  };
+  void operator delete(void* aPtr) {} // Does nothing. The arena will free us up when the rule tree
+                                      // dies.
+
+  void Destroy(nsIPresContext* aContext) {
+    this->~nsShellISupportsKey();
+    aContext->FreeToShell(sizeof(nsShellISupportsKey), this);
+  }
+
+  PRUint32 HashCode(void) const {
+    return (PRUint32)mKey;
+  }
+
+  PRBool Equals(const nsHashKey *aKey) const {
+    NS_ASSERTION(aKey->GetKeyType() == SupportsKey, "mismatched key types");
+    return (mKey == ((nsShellISupportsKey *) aKey)->mKey);
+  }
+
+  nsHashKey* Clone() const {
+    return (nsHashKey*)this; // Just return ourselves.
+  }
+};
+
 nscoord CalcLength(const nsCSSValue& aValue,
                    nsFont* aFont, 
                    nsIStyleContext* aStyleContext,
@@ -248,7 +290,7 @@ void nsRuleNode::CreateRootNode(nsIPresContext* aPresContext, nsIRuleNode** aRes
 }
 
 nsRuleNode::nsRuleNode(nsIPresContext* aContext, nsIStyleRule* aRule, nsRuleNode* aParent)
-    :mPresContext(aContext), mRule(aRule), mParent(aParent), mChildren(nsnull), mInheritBits(0)
+    :mPresContext(aContext), mRule(aRule), mParent(aParent), mChildren(nsnull), mInheritBits(0), mNoneBits(0)
 {
   NS_INIT_REFCNT();
   gRefCnt++;
@@ -264,7 +306,7 @@ NS_IMETHODIMP
 nsRuleNode::Transition(nsIStyleRule* aRule, nsIRuleNode** aResult)
 {
   nsCOMPtr<nsIRuleNode> next;
-  nsISupportsKey key(aRule);
+  nsShellISupportsKey key(aRule);
   if (mChildren)
     next = getter_AddRefs(NS_STATIC_CAST(nsIRuleNode*, mChildren->Get(&key)));
   
@@ -275,7 +317,10 @@ nsRuleNode::Transition(nsIStyleRule* aRule, nsIRuleNode** aResult)
 
     if (!mChildren)
       mChildren = new nsSupportsHashtable(4);
-    mChildren->Put(&key, next);
+
+    // Clone the key ourselves by allocating it from the shell's arena.
+    nsShellISupportsKey* clonedKey = new (mPresContext) nsShellISupportsKey(aRule);
+    mChildren->Put(clonedKey, next);
   }
 
   *aResult = next;
@@ -314,8 +359,21 @@ nsRuleNode::GetPresContext(nsIPresContext** aResult)
   return NS_OK;
 }
 
-void
-nsRuleNode::PropagateBit(PRUint32 aBit, nsRuleNode* aHighestNode)
+inline void
+nsRuleNode::PropagateNoneBit(PRUint32 aBit, nsRuleNode* aHighestNode)
+{
+  nsRuleNode* curr = this;
+  while (curr && curr != aHighestNode) {
+    if (curr->mNoneBits & aBit)
+      break;
+
+    curr->mNoneBits |= aBit;
+    curr = curr->mParent;
+  }
+}
+
+inline void
+nsRuleNode::PropagateInheritBit(PRUint32 aBit, nsRuleNode* aHighestNode)
 {
   if (mInheritBits & aBit)
     return; // Already set.
@@ -339,6 +397,10 @@ nsRuleNode::CheckSpecifiedProperties(const nsStyleStructID& aSID, const nsCSSStr
   switch (aSID) {
   case eStyleStruct_Font:
     return CheckFontProperties((const nsCSSFont&)aCSSStruct);
+  case eStyleStruct_Color:
+    return CheckColorProperties((const nsCSSColor&)aCSSStruct);
+  case eStyleStruct_Background:
+    return CheckBackgroundProperties((const nsCSSColor&)aCSSStruct);
   case eStyleStruct_Margin:
       return CheckMarginProperties((const nsCSSMargin&)aCSSStruct);
   case eStyleStruct_Border:
@@ -372,6 +434,26 @@ nsRuleNode::GetFontData(nsIStyleContext* aContext, nsIMutableStyleContext* aMuta
   ruleData.mFontData = &fontData;
 
   return WalkRuleTree(eStyleStruct_Font, aContext, aMutableContext, &ruleData, &fontData);
+}
+
+const nsStyleStruct*
+nsRuleNode::GetColorData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext)
+{
+  nsCSSColor colorData; // Declare a struct with null CSS values.
+  nsRuleData ruleData(eStyleStruct_Color, mPresContext, aContext);
+  ruleData.mColorData = &colorData;
+
+  return WalkRuleTree(eStyleStruct_Color, aContext, aMutableContext, &ruleData, &colorData);
+}
+
+const nsStyleStruct*
+nsRuleNode::GetBackgroundData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext)
+{
+  nsCSSColor colorData; // Declare a struct with null CSS values.
+  nsRuleData ruleData(eStyleStruct_Background, mPresContext, aContext);
+  ruleData.mColorData = &colorData;
+
+  return WalkRuleTree(eStyleStruct_Background, aContext, aMutableContext, &ruleData, &colorData);
 }
 
 const nsStyleStruct*
@@ -515,12 +597,19 @@ nsRuleNode::WalkRuleTree(const nsStyleStructID& aSID, nsIStyleContext* aContext,
   nsRuleNode* highestNode = nsnull;
   nsRuleNode* rootNode = this;
   RuleDetail detail = eRuleNone;
+  PRUint32 bit = nsCachedStyleData::GetBitForSID(aSID);
+
   while (ruleNode) {
     startStruct = ruleNode->mStyleData.GetStyleData(aSID);
     if (startStruct)
       break; // We found a rule with fully specified data.  We don't need to go up
              // the tree any further, since the remainder of this branch has already
              // been computed.
+
+    // See if this rule node has cached the fact that the remaining nodes along this
+    // path specify no data whatsoever.
+    if (ruleNode->mNoneBits & bit)
+      break;
 
     // Ask the rule to fill in the properties that it specifies.
     ruleNode->GetRule(getter_AddRefs(rule));
@@ -552,13 +641,19 @@ nsRuleNode::WalkRuleTree(const nsStyleStructID& aSID, nsIStyleContext* aContext,
     // node in the tree to the node that specified the data that tells nodes on that
     // branch that they never need to examine their rules for this particular struct type
     // ever again.
-    PropagateBit(nsCachedStyleData::GetBitForSID(aSID), ruleNode);
-
-    // Now we just return the parent rule node's computed data.
+    PropagateInheritBit(bit, ruleNode);
     return startStruct;
   }
   else if (!startStruct && ((!isReset && (detail == eRuleNone || detail == eRulePartialInherited)) 
                              || detail == eRuleFullInherited)) {
+    // We specified no non-inherited information and neither did any of our parent rules.  We set a bit
+    // along the branch from the highest node down to our node indicating that no non-inherited data
+    // was specified.
+    if (detail == eRuleNone)
+      PropagateNoneBit(bit, ruleNode); // XXXdwh This could be optimized to also propagate the
+                                       // eRuleFullInherited case, but we would need a third set
+                                       // of bits, and it's probably not worth the bloat.
+    
     // All information must necessarily be inherited from our parent style context.
     // In the absence of any computed data in the rule tree and with
     // no rules specified that didn't have values of 'inherit', we should check our parent.
@@ -569,7 +664,7 @@ nsRuleNode::WalkRuleTree(const nsStyleStructID& aSID, nsIStyleContext* aContext,
       // it never has to go back to the rule tree for data.  Instead the style context tree
       // should be walked to find the data.
       const nsStyleStruct* parentStruct = parentContext->GetStyleData(aSID);
-      aContext->AddInheritBit(nsCachedStyleData::GetBitForSID(aSID));
+      aContext->AddInheritBit(bit);
       return parentStruct;
     }
     else
@@ -581,7 +676,14 @@ nsRuleNode::WalkRuleTree(const nsStyleStructID& aSID, nsIStyleContext* aContext,
   }
 
   // We need to compute the data from the information that the rules specified.
-  return ComputeStyleData(aSID, startStruct, *aSpecificData, aContext, aMutableContext, highestNode, detail);
+  const nsStyleStruct* res = ComputeStyleData(aSID, startStruct, *aSpecificData, aContext, aMutableContext, highestNode, detail);
+
+  // If we have a post-resolve callback, handle that now.
+  if (aRuleData->mPostResolveCallback)
+    (*aRuleData->mPostResolveCallback)(aRuleData);
+
+  // Now return the result.
+  return res;
 }
 
 const nsStyleStruct*
@@ -595,6 +697,18 @@ nsRuleNode::SetDefaultOnRoot(const nsStyleStructID& aSID, nsIMutableStyleContext
       nsStyleFont* fontData = new (mPresContext) nsStyleFont(defaultFont, defaultFixedFont);
       aMutableContext->SetStyle(eStyleStruct_Font, *fontData);
       return fontData;
+    }
+    case eStyleStruct_Color:
+    {
+      nsStyleColor* color = new (mPresContext) nsStyleColor(mPresContext);
+      aMutableContext->SetStyle(eStyleStruct_Color, *color);
+      return color;
+    }
+    case eStyleStruct_Background:
+    {
+      nsStyleBackground* bg = new (mPresContext) nsStyleBackground(mPresContext);
+      aMutableContext->SetStyle(eStyleStruct_Background, *bg);
+      return bg;
     }
     case eStyleStruct_Margin:
     {
@@ -667,6 +781,12 @@ nsRuleNode::ComputeStyleData(const nsStyleStructID& aSID, nsStyleStruct* aStartS
   case eStyleStruct_Font:
     return ComputeFontData((nsStyleFont*)aStartStruct, (const nsCSSFont&)aStartData,
                            aContext, aMutableContext, aHighestNode, aRuleDetail);
+  case eStyleStruct_Color:
+    return ComputeColorData((nsStyleColor*)aStartStruct, (const nsCSSColor&)aStartData,
+                            aContext, aMutableContext, aHighestNode, aRuleDetail);
+  case eStyleStruct_Background:
+    return ComputeBackgroundData((nsStyleBackground*)aStartStruct, (const nsCSSColor&)aStartData,
+                                 aContext, aMutableContext, aHighestNode, aRuleDetail);
   case eStyleStruct_Margin:
     return ComputeMarginData((nsStyleMargin*)aStartStruct, (const nsCSSMargin&)aStartData, 
                              aContext, aMutableContext, aHighestNode, aRuleDetail);
@@ -1055,10 +1175,220 @@ nsRuleNode::ComputeFontData(nsStyleFont* aStartFont, const nsCSSFont& aFontData,
       aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
     aHighestNode->mStyleData.mInheritedData->mFontData = font;
     // Propagate the bit down.
-    PropagateBit(NS_STYLE_INHERIT_FONT, aHighestNode);
+    PropagateInheritBit(NS_STYLE_INHERIT_FONT, aHighestNode);
   }
 
   return font;
+}
+
+const nsStyleStruct*
+nsRuleNode::ComputeColorData(nsStyleColor* aStartColor, const nsCSSColor& aColorData, 
+                             nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                             nsRuleNode* aHighestNode,
+                             const RuleDetail& aRuleDetail)
+{
+#ifdef DEBUG_hyatt
+  printf("NEW COLOR CREATED!\n");
+#endif
+  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  
+  nsStyleColor* color = nsnull;
+  nsStyleColor* parentColor = color;
+  PRBool inherited = PR_FALSE;
+
+  if (aStartColor)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    color = new (mPresContext) nsStyleColor(*aStartColor);
+  else {
+    if (aRuleDetail != eRuleFullMixed) {
+      // No question. We will have to inherit. Go ahead and init
+      // with inherited vals from parent.
+      inherited = PR_TRUE;
+      if (parentContext)
+        parentColor = (nsStyleColor*)parentContext->GetStyleData(eStyleStruct_Color);
+      if (parentColor)
+        color = new (mPresContext) nsStyleColor(*parentColor);
+    }
+  }
+
+  if (!color)
+    color = parentColor = new (mPresContext) nsStyleColor(mPresContext);
+
+  // color: color, string, inherit
+  SetColor(aColorData.mColor, parentColor->mColor, mPresContext, color->mColor, inherited);
+
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aMutableContext->SetStyle(eStyleStruct_Color, *color);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mInheritedData)
+      aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
+    aHighestNode->mStyleData.mInheritedData->mColorData = color;
+    // Propagate the bit down.
+    PropagateInheritBit(NS_STYLE_INHERIT_COLOR, aHighestNode);
+  }
+
+  return color;
+}
+
+const nsStyleStruct*
+nsRuleNode::ComputeBackgroundData(nsStyleBackground* aStartBG, const nsCSSColor& aColorData, 
+                                  nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                  nsRuleNode* aHighestNode,
+                                  const RuleDetail& aRuleDetail)
+{
+#ifdef DEBUG_hyatt
+  printf("NEW BACKGROUND CREATED!\n");
+#endif
+  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  
+  nsStyleBackground* bg;
+  if (aStartBG)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    bg = new (mPresContext) nsStyleBackground(*aStartBG);
+  else
+    bg = new (mPresContext) nsStyleBackground(mPresContext);
+  nsStyleBackground* parentBG = bg;
+
+  if (parentContext)
+    parentBG = (nsStyleBackground*)parentContext->GetStyleData(eStyleStruct_Background);
+  PRBool inherited = PR_FALSE;
+
+  // background-color: color, string, enum (flags), inherit
+  if (eCSSUnit_Inherit == aColorData.mBackColor.GetUnit()) { // do inherit first, so SetColor doesn't do it
+    const nsStyleBackground* inheritBG = parentBG;
+    if (inheritBG->mBackgroundFlags & NS_STYLE_BG_PROPAGATED_TO_PARENT) {
+      // walk up the contexts until we get to a context that does not have its
+      // background propagated to its parent (or a context that has had its background
+      // propagated from its child)
+      if (nsnull != parentContext) {
+        nsCOMPtr<nsIStyleContext> higherContext = getter_AddRefs(parentContext->GetParent());
+        do {
+          if (higherContext) {
+            inheritBG = (const nsStyleBackground*)higherContext->GetStyleData(eStyleStruct_Background);
+            if (inheritBG && 
+                (!(inheritBG->mBackgroundFlags & NS_STYLE_BG_PROPAGATED_TO_PARENT)) ||
+                (inheritBG->mBackgroundFlags & NS_STYLE_BG_PROPAGATED_FROM_CHILD)) {
+              // done walking up the higher contexts
+              break;
+            }
+            higherContext = getter_AddRefs(higherContext->GetParent());
+          }
+        } while (higherContext);
+      }
+    }
+    bg->mBackgroundColor = inheritBG->mBackgroundColor;
+    bg->mBackgroundFlags &= ~NS_STYLE_BG_COLOR_TRANSPARENT;
+    bg->mBackgroundFlags |= (inheritBG->mBackgroundFlags & NS_STYLE_BG_COLOR_TRANSPARENT);
+    inherited = PR_TRUE;
+  }
+  else if (SetColor(aColorData.mBackColor, parentBG->mBackgroundColor, 
+                    mPresContext, bg->mBackgroundColor, inherited)) {
+    bg->mBackgroundFlags &= ~NS_STYLE_BG_COLOR_TRANSPARENT;
+  }
+  else if (eCSSUnit_Enumerated == aColorData.mBackColor.GetUnit()) {
+    //bg->mBackgroundColor = parentBG->mBackgroundColor; XXXwdh crap crap crap!
+    bg->mBackgroundFlags |= NS_STYLE_BG_COLOR_TRANSPARENT;
+  }
+
+  // background-image: url, none, inherit
+  if (eCSSUnit_URL == aColorData.mBackImage.GetUnit()) {
+    aColorData.mBackImage.GetStringValue(bg->mBackgroundImage);
+    bg->mBackgroundFlags &= ~NS_STYLE_BG_IMAGE_NONE;
+  }
+  else if (eCSSUnit_None == aColorData.mBackImage.GetUnit()) {
+    bg->mBackgroundImage.Truncate();
+    bg->mBackgroundFlags |= NS_STYLE_BG_IMAGE_NONE;
+  }
+  else if (eCSSUnit_Inherit == aColorData.mBackImage.GetUnit()) {
+    inherited = PR_TRUE;
+    bg->mBackgroundImage = parentBG->mBackgroundImage;
+    bg->mBackgroundFlags &= ~NS_STYLE_BG_IMAGE_NONE;
+    bg->mBackgroundFlags |= (parentBG->mBackgroundFlags & NS_STYLE_BG_IMAGE_NONE);
+  }
+
+  // background-repeat: enum, inherit
+  if (eCSSUnit_Enumerated == aColorData.mBackRepeat.GetUnit()) {
+    bg->mBackgroundRepeat = aColorData.mBackRepeat.GetIntValue();
+  }
+  else if (eCSSUnit_Inherit == aColorData.mBackRepeat.GetUnit()) {
+    bg->mBackgroundRepeat = parentBG->mBackgroundRepeat;
+  }
+
+  // background-attachment: enum, inherit
+  if (eCSSUnit_Enumerated == aColorData.mBackAttachment.GetUnit()) {
+    bg->mBackgroundAttachment = aColorData.mBackAttachment.GetIntValue();
+  }
+  else if (eCSSUnit_Inherit == aColorData.mBackAttachment.GetUnit()) {
+    inherited = PR_TRUE;
+    bg->mBackgroundAttachment = parentBG->mBackgroundAttachment;
+  }
+
+  // background-position: enum, length, percent (flags), inherit
+  if (eCSSUnit_Percent == aColorData.mBackPositionX.GetUnit()) {
+    bg->mBackgroundXPosition = (nscoord)(100.0f * aColorData.mBackPositionX.GetPercentValue());
+    bg->mBackgroundFlags |= NS_STYLE_BG_X_POSITION_PERCENT;
+    bg->mBackgroundFlags &= ~NS_STYLE_BG_X_POSITION_LENGTH;
+  }
+  else if (aColorData.mBackPositionX.IsLengthUnit()) {
+    bg->mBackgroundXPosition = CalcLength(aColorData.mBackPositionX, nsnull, 
+                                          aContext, mPresContext, inherited);
+    bg->mBackgroundFlags |= NS_STYLE_BG_X_POSITION_LENGTH;
+    bg->mBackgroundFlags &= ~NS_STYLE_BG_X_POSITION_PERCENT;
+  }
+  else if (eCSSUnit_Enumerated == aColorData.mBackPositionX.GetUnit()) {
+    bg->mBackgroundXPosition = (nscoord)aColorData.mBackPositionX.GetIntValue();
+    bg->mBackgroundFlags |= NS_STYLE_BG_X_POSITION_PERCENT;
+    bg->mBackgroundFlags &= ~NS_STYLE_BG_X_POSITION_LENGTH;
+  }
+  else if (eCSSUnit_Inherit == aColorData.mBackPositionX.GetUnit()) {
+    inherited = PR_TRUE;
+    bg->mBackgroundXPosition = parentBG->mBackgroundXPosition;
+    bg->mBackgroundFlags &= ~(NS_STYLE_BG_X_POSITION_LENGTH | NS_STYLE_BG_X_POSITION_PERCENT);
+    bg->mBackgroundFlags |= (parentBG->mBackgroundFlags & (NS_STYLE_BG_X_POSITION_LENGTH | NS_STYLE_BG_X_POSITION_PERCENT));
+  }
+
+  if (eCSSUnit_Percent == aColorData.mBackPositionY.GetUnit()) {
+    bg->mBackgroundYPosition = (nscoord)(100.0f * aColorData.mBackPositionY.GetPercentValue());
+    bg->mBackgroundFlags |= NS_STYLE_BG_Y_POSITION_PERCENT;
+    bg->mBackgroundFlags &= ~NS_STYLE_BG_Y_POSITION_LENGTH;
+  }
+  else if (aColorData.mBackPositionY.IsLengthUnit()) {
+    bg->mBackgroundYPosition = CalcLength(aColorData.mBackPositionY, nsnull,
+                                          aContext, mPresContext, inherited);
+    bg->mBackgroundFlags |= NS_STYLE_BG_Y_POSITION_LENGTH;
+    bg->mBackgroundFlags &= ~NS_STYLE_BG_Y_POSITION_PERCENT;
+  }
+  else if (eCSSUnit_Enumerated == aColorData.mBackPositionY.GetUnit()) {
+    bg->mBackgroundYPosition = (nscoord)aColorData.mBackPositionY.GetIntValue();
+    bg->mBackgroundFlags |= NS_STYLE_BG_Y_POSITION_PERCENT;
+    bg->mBackgroundFlags &= ~NS_STYLE_BG_Y_POSITION_LENGTH;
+  }
+  else if (eCSSUnit_Inherit == aColorData.mBackPositionY.GetUnit()) {
+    inherited = PR_TRUE;
+    bg->mBackgroundYPosition = parentBG->mBackgroundYPosition;
+    bg->mBackgroundFlags &= ~(NS_STYLE_BG_Y_POSITION_LENGTH | NS_STYLE_BG_Y_POSITION_PERCENT);
+    bg->mBackgroundFlags |= (parentBG->mBackgroundFlags & (NS_STYLE_BG_Y_POSITION_LENGTH | NS_STYLE_BG_Y_POSITION_PERCENT));
+  }
+
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aMutableContext->SetStyle(eStyleStruct_Background, *bg);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mResetData)
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+    aHighestNode->mStyleData.mResetData->mBackgroundData = bg;
+    // Propagate the bit down.
+    PropagateInheritBit(NS_STYLE_INHERIT_BACKGROUND, aHighestNode);
+  }
+
+  return bg;
 }
 
 const nsStyleStruct*
@@ -1117,7 +1447,7 @@ nsRuleNode::ComputeMarginData(nsStyleMargin* aStartMargin, const nsCSSMargin& aM
       aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
     aHighestNode->mStyleData.mResetData->mMarginData = margin;
     // Propagate the bit down.
-    PropagateBit(NS_STYLE_INHERIT_MARGIN, aHighestNode);
+    PropagateInheritBit(NS_STYLE_INHERIT_MARGIN, aHighestNode);
   }
 
   margin->RecalcData();
@@ -1363,7 +1693,7 @@ nsRuleNode::ComputeBorderData(nsStyleBorder* aStartBorder, const nsCSSMargin& aM
       aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
     aHighestNode->mStyleData.mResetData->mBorderData = border;
     // Propagate the bit down.
-    PropagateBit(NS_STYLE_INHERIT_BORDER, aHighestNode);
+    PropagateInheritBit(NS_STYLE_INHERIT_BORDER, aHighestNode);
   }
 
   border->RecalcData();
@@ -1426,7 +1756,7 @@ nsRuleNode::ComputePaddingData(nsStylePadding* aStartPadding, const nsCSSMargin&
       aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
     aHighestNode->mStyleData.mResetData->mPaddingData = padding;
     // Propagate the bit down.
-    PropagateBit(NS_STYLE_INHERIT_PADDING, aHighestNode);
+    PropagateInheritBit(NS_STYLE_INHERIT_PADDING, aHighestNode);
   }
 
   padding->RecalcData();
@@ -1496,7 +1826,7 @@ nsRuleNode::ComputeOutlineData(nsStyleOutline* aStartOutline, const nsCSSMargin&
       aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
     aHighestNode->mStyleData.mResetData->mOutlineData = outline;
     // Propagate the bit down.
-    PropagateBit(NS_STYLE_INHERIT_OUTLINE, aHighestNode);
+    PropagateInheritBit(NS_STYLE_INHERIT_OUTLINE, aHighestNode);
   }
 
   outline->RecalcData();
@@ -1580,7 +1910,7 @@ nsRuleNode::ComputeListData(nsStyleList* aStartList, const nsCSSList& aListData,
       aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
     aHighestNode->mStyleData.mInheritedData->mListData = list;
     // Propagate the bit down.
-    PropagateBit(NS_STYLE_INHERIT_LIST, aHighestNode);
+    PropagateInheritBit(NS_STYLE_INHERIT_LIST, aHighestNode);
   }
 
   return list;
@@ -1702,7 +2032,7 @@ nsRuleNode::ComputePositionData(nsStylePosition* aStartPos, const nsCSSPosition&
       aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
     aHighestNode->mStyleData.mResetData->mPositionData = pos;
     // Propagate the bit down.
-    PropagateBit(NS_STYLE_INHERIT_POSITION, aHighestNode);
+    PropagateInheritBit(NS_STYLE_INHERIT_POSITION, aHighestNode);
   }
 
   return pos;
@@ -1770,7 +2100,7 @@ nsRuleNode::ComputeTableData(nsStyleTable* aStartTable, const nsCSSTable& aTable
       aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
     aHighestNode->mStyleData.mResetData->mTableData = table;
     // Propagate the bit down.
-    PropagateBit(NS_STYLE_INHERIT_TABLE, aHighestNode);
+    PropagateInheritBit(NS_STYLE_INHERIT_TABLE, aHighestNode);
   }
 
   return table;
@@ -1866,7 +2196,7 @@ nsRuleNode::ComputeTableBorderData(nsStyleTableBorder* aStartTable, const nsCSST
       aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
     aHighestNode->mStyleData.mInheritedData->mTableData = table;
     // Propagate the bit down.
-    PropagateBit(NS_STYLE_INHERIT_TABLE_BORDER, aHighestNode);
+    PropagateInheritBit(NS_STYLE_INHERIT_TABLE_BORDER, aHighestNode);
   }
 
   return table;
@@ -1919,7 +2249,7 @@ nsRuleNode::ComputeXULData(nsStyleXUL* aStartXUL, const nsCSSXUL& aXULData,
       aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
     aHighestNode->mStyleData.mResetData->mXULData = xul;
     // Propagate the bit down.
-    PropagateBit(NS_STYLE_INHERIT_XUL, aHighestNode);
+    PropagateInheritBit(NS_STYLE_INHERIT_XUL, aHighestNode);
   }
 
   return xul;
@@ -2136,6 +2466,87 @@ nsRuleNode::CheckListProperties(const nsCSSList& aListData)
   if (inheritCount == numListProps)
     return eRuleFullInherited;
   else if (totalCount == numListProps)
+    return eRuleFullMixed;
+
+  if (totalCount == 0)
+    return eRuleNone;
+  else if (totalCount == inheritCount)
+    return eRulePartialInherited;
+
+  return eRulePartialMixed;
+}
+
+nsRuleNode::RuleDetail 
+nsRuleNode::CheckColorProperties(const nsCSSColor& aColorData)
+{
+  const PRUint32 numColorProps = 1;
+  PRUint32 totalCount=0;
+  PRUint32 inheritCount=0;
+  if (eCSSUnit_Null != aColorData.mColor.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aColorData.mColor.GetUnit())
+      inheritCount++;
+  }
+  
+  if (inheritCount == numColorProps)
+    return eRuleFullInherited;
+  else if (totalCount == numColorProps)
+    return eRuleFullMixed;
+
+  if (totalCount == 0)
+    return eRuleNone;
+  else if (totalCount == inheritCount)
+    return eRulePartialInherited;
+
+  return eRulePartialMixed;
+}
+
+nsRuleNode::RuleDetail 
+nsRuleNode::CheckBackgroundProperties(const nsCSSColor& aColorData)
+{
+  const PRUint32 numBGProps = 6;
+  PRUint32 totalCount=0;
+  PRUint32 inheritCount=0;
+  
+  if (eCSSUnit_Null != aColorData.mBackAttachment.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aColorData.mBackAttachment.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aColorData.mBackRepeat.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aColorData.mBackRepeat.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aColorData.mBackColor.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aColorData.mBackColor.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aColorData.mBackImage.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aColorData.mBackImage.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aColorData.mBackPositionX.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aColorData.mBackPositionX.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aColorData.mBackPositionY.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aColorData.mBackPositionY.GetUnit())
+      inheritCount++;
+  }
+
+  if (inheritCount == numBGProps)
+    return eRuleFullInherited;
+  else if (totalCount == numBGProps)
     return eRuleFullMixed;
 
   if (totalCount == 0)
@@ -2384,6 +2795,10 @@ nsRuleNode::GetStyleData(nsStyleStructID aSID,
     // Nothing is cached.  We'll have to delve further and examine our rules.
     case eStyleStruct_Font:
       return GetFontData(aContext, aMutableContext);
+    case eStyleStruct_Color:
+      return GetColorData(aContext, aMutableContext);
+    case eStyleStruct_Background:
+      return GetBackgroundData(aContext, aMutableContext);
     case eStyleStruct_Margin:
       return GetMarginData(aContext, aMutableContext);
     case eStyleStruct_Border:

@@ -1774,9 +1774,9 @@ nsFrame::GetCursor(nsIPresContext* aPresContext,
                    nsPoint& aPoint,
                    PRInt32& aCursor)
 {
-  const nsStyleColor* styleColor;
-  GetStyleData(eStyleStruct_Color, (const nsStyleStruct*&)styleColor);
-  aCursor = styleColor->mCursor;
+  const nsStyleUserInterface* styleUserInterface;
+  GetStyleData(eStyleStruct_UserInterface, (const nsStyleStruct*&)styleUserInterface);
+  aCursor = styleUserInterface->mCursor;
   if (NS_STYLE_CURSOR_AUTO == aCursor) {
     aCursor = NS_STYLE_CURSOR_DEFAULT;
   }
@@ -4009,8 +4009,8 @@ nsFrame::SetDefaultBackgroundColor(nsIPresContext* aPresContext)
 
     if (vm) {
       nsStyleStruct* colorStruct = nsnull;
-      mStyleContext->GetStyle(eStyleStruct_Color, &colorStruct);
-      nsStyleColor* color = NS_STATIC_CAST(nsStyleColor*, colorStruct);
+      mStyleContext->GetStyle(eStyleStruct_Background, &colorStruct);
+      nsStyleBackground* color = NS_STATIC_CAST(nsStyleBackground*, colorStruct);
 
       vm->SetDefaultBackgroundColor(
             (color->mBackgroundFlags & NS_STYLE_BG_COLOR_TRANSPARENT) == 0

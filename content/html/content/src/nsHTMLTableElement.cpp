@@ -1471,6 +1471,8 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
       MapTableBorderInto(aAttributes, aData, borderStyle);
     }
   }
+
+  nsGenericHTMLElement::MapBackgroundAttributesInto(aAttributes, aData);
 }
 
 static void
@@ -1515,9 +1517,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
         }
       }
 
-      //background: color
-      nsGenericHTMLElement::MapBackgroundAttributesInto(aAttributes, aContext,
-                                                        aPresContext);
       nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
                                                     aPresContext);
     }

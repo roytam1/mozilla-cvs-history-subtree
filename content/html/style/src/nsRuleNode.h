@@ -68,6 +68,12 @@ private:
   PRUint32 mInheritBits;          // Used to cache the fact that we can look up cached data under a parent
                                   // rule.  This is not the same thing as CSS inheritance.  
 
+  PRUint32 mNoneBits;             // Used to cache the fact that this entire branch specifies no data
+                                  // for a given struct type.  For example, if an entire rule branch
+                                  // specifies no color information, then a bit will be set along every
+                                  // rule node on that branch, so that you can break out of the rule tree
+                                  // early.
+
   static PRUint32 gRefCnt;
  
 protected:
@@ -79,7 +85,9 @@ protected:
   void* operator new(size_t sz, nsIPresContext* aContext);
   void Destroy();
 
-  void PropagateBit(PRUint32 aBit, nsRuleNode* aHighestNode);
+  void PropagateInheritBit(PRUint32 aBit, nsRuleNode* aHighestNode);
+  void PropagateNoneBit(PRUint32 aBit, nsRuleNode* aHighestNode);
+ 
   PRBool InheritsFromParentRule(const nsStyleStructID& aSID);
   
   const nsStyleStruct* SetDefaultOnRoot(const nsStyleStructID& aSID, nsIMutableStyleContext* aMutableContext);
@@ -97,6 +105,14 @@ protected:
                                        nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
                                        nsRuleNode* aHighestNode,
                                        const RuleDetail& aRuleDetail);
+  const nsStyleStruct* ComputeColorData(nsStyleColor* aStartColor, const nsCSSColor& aColorData, 
+                                        nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                        nsRuleNode* aHighestNode,
+                                        const RuleDetail& aRuleDetail);
+  const nsStyleStruct* ComputeBackgroundData(nsStyleBackground* aStartBackground, const nsCSSColor& aColorData, 
+                                             nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                             nsRuleNode* aHighestNode,
+                                             const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputeMarginData(nsStyleMargin* aStartMargin, const nsCSSMargin& aMarginData, 
                                          nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
                                          nsRuleNode* aHighestNode,
@@ -138,6 +154,8 @@ protected:
 
   RuleDetail CheckSpecifiedProperties(const nsStyleStructID& aSID, const nsCSSStruct& aCSSStruct);
   RuleDetail CheckFontProperties(const nsCSSFont& aFont);
+  RuleDetail CheckColorProperties(const nsCSSColor& aColor);
+  RuleDetail CheckBackgroundProperties(const nsCSSColor& aColor);
   RuleDetail CheckMarginProperties(const nsCSSMargin& aMargin);
   RuleDetail CheckBorderProperties(const nsCSSMargin& aMargin);
   RuleDetail CheckPaddingProperties(const nsCSSMargin& aMargin);
@@ -152,6 +170,8 @@ protected:
 
   const nsStyleStruct* GetParentData(const nsStyleStructID& aSID); 
   const nsStyleStruct* GetFontData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+  const nsStyleStruct* GetColorData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+  const nsStyleStruct* GetBackgroundData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
   const nsStyleStruct* GetMarginData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
   const nsStyleStruct* GetBorderData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
   const nsStyleStruct* GetPaddingData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);

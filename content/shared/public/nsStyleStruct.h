@@ -41,38 +41,40 @@ class nsIFrame;
 
 #define NS_STYLE_INHERIT_FONT             0x0001
 #define NS_STYLE_INHERIT_COLOR            0x0002
-#define NS_STYLE_INHERIT_LIST             0x0004
-#define NS_STYLE_INHERIT_POSITION         0x0008
-#define NS_STYLE_INHERIT_TEXT             0x0010
-#define NS_STYLE_INHERIT_DISPLAY          0x0020
-#define NS_STYLE_INHERIT_TABLE            0x0040
-#define NS_STYLE_INHERIT_TABLE_BORDER     0x0080
-#define NS_STYLE_INHERIT_CONTENT          0x0100
-#define NS_STYLE_INHERIT_UI               0x0200
-#define NS_STYLE_INHERIT_MARGIN           0x0400
-#define NS_STYLE_INHERIT_PADDING          0x0800
-#define NS_STYLE_INHERIT_BORDER           0x1000
-#define NS_STYLE_INHERIT_OUTLINE          0x2000
-#define NS_STYLE_INHERIT_XUL              0x4000
+#define NS_STYLE_INHERIT_BACKGROUND       0x0004
+#define NS_STYLE_INHERIT_LIST             0x0008
+#define NS_STYLE_INHERIT_POSITION         0x0010
+#define NS_STYLE_INHERIT_TEXT             0x0020
+#define NS_STYLE_INHERIT_DISPLAY          0x0040
+#define NS_STYLE_INHERIT_TABLE            0x0080
+#define NS_STYLE_INHERIT_TABLE_BORDER     0x0100
+#define NS_STYLE_INHERIT_CONTENT          0x0200
+#define NS_STYLE_INHERIT_UI               0x0400
+#define NS_STYLE_INHERIT_MARGIN           0x0800
+#define NS_STYLE_INHERIT_PADDING          0x1000
+#define NS_STYLE_INHERIT_BORDER           0x2000
+#define NS_STYLE_INHERIT_OUTLINE          0x4000
+#define NS_STYLE_INHERIT_XUL              0x8000
 
 enum nsStyleStructID {
   eStyleStruct_Font           = 1,
   eStyleStruct_Color          = 2,
-  eStyleStruct_List           = 3,
-  eStyleStruct_Position       = 4,
-  eStyleStruct_Text           = 5,
-  eStyleStruct_Display        = 6,
-  eStyleStruct_Content        = 7,
-  eStyleStruct_UserInterface  = 8,
-  eStyleStruct_Table          = 9,
-  eStyleStruct_TableBorder    = 10,
-  eStyleStruct_Margin         = 11,
-  eStyleStruct_Padding        = 12,
-  eStyleStruct_Border         = 13,
-  eStyleStruct_Outline        = 14,
-  eStyleStruct_XUL            = 15,
+  eStyleStruct_Background     = 3,
+  eStyleStruct_List           = 4,
+  eStyleStruct_Position       = 5,
+  eStyleStruct_Text           = 6,
+  eStyleStruct_Display        = 7,
+  eStyleStruct_Content        = 8,
+  eStyleStruct_UserInterface  = 9,
+  eStyleStruct_Table          = 10,
+  eStyleStruct_TableBorder    = 11,
+  eStyleStruct_Margin         = 12,
+  eStyleStruct_Padding        = 13,
+  eStyleStruct_Border         = 14,
+  eStyleStruct_Outline        = 15,
+  eStyleStruct_XUL            = 16,
   eStyleStruct_Max            = eStyleStruct_XUL,
-  eStyleStruct_BorderPaddingShortcut = 16       // only for use in GetStyle()
+  eStyleStruct_BorderPaddingShortcut = 17       // only for use in GetStyle()
 };
 
 
@@ -103,11 +105,42 @@ struct nsStyleFont : public nsStyleStruct {
 };
 
 struct nsStyleColor : public nsStyleStruct {
-  nsStyleColor(void) {}
-  ~nsStyleColor(void) {}
+  nsStyleColor(nsIPresContext* aPresContext);
+  nsStyleColor(const nsStyleColor& aOther);
+  ~nsStyleColor(void);
 
+  PRInt32 CalcDifference(const nsStyleColor& aOther) const;
+  
+  void* operator new(size_t sz, nsIPresContext* aContext) {
+    void* result = nsnull;
+    aContext->AllocateFromShell(sz, &result);
+    return result;
+  }
+  void Destroy(nsIPresContext* aContext) {
+    aContext->FreeToShell(sizeof(nsStyleColor), this);
+  };
+
+  // Don't add any members to this struct.  We can achieve caching in the rule
+  // tree (rather than the style tree) by letting color stay by itself. -dwh
   nscolor mColor;                 // [inherited]
- 
+};
+
+struct nsStyleBackground : public nsStyleStruct {
+  nsStyleBackground(nsIPresContext* aPresContext);
+  nsStyleBackground(const nsStyleBackground& aOther);
+  ~nsStyleBackground() {};
+
+  void* operator new(size_t sz, nsIPresContext* aContext) {
+    void* result = nsnull;
+    aContext->AllocateFromShell(sz, &result);
+    return result;
+  }
+  void Destroy(nsIPresContext* aContext) {
+    aContext->FreeToShell(sizeof(nsStyleBackground), this);
+  };
+
+  PRInt32 CalcDifference(const nsStyleBackground& aOther) const;
+  
   PRUint8 mBackgroundAttachment;  // [reset] See nsStyleConsts.h
   PRUint8 mBackgroundFlags;       // [reset] See nsStyleConsts.h
   PRUint8 mBackgroundRepeat;      // [reset] See nsStyleConsts.h
@@ -117,15 +150,10 @@ struct nsStyleColor : public nsStyleStruct {
   nscoord mBackgroundYPosition;   // [reset]
   nsString mBackgroundImage;      // [reset] absolute url string
 
-  PRUint8 mCursor;                // [reset] See nsStyleConsts.h NS_STYLE_CURSOR_*
-  nsString mCursorImage;          // [reset] url string
-  float mOpacity;                 // [inherited] percentage
-
   PRBool BackgroundIsTransparent() const {return (mBackgroundFlags &
     (NS_STYLE_BG_COLOR_TRANSPARENT | NS_STYLE_BG_IMAGE_NONE)) ==
     (NS_STYLE_BG_COLOR_TRANSPARENT | NS_STYLE_BG_IMAGE_NONE);}
 };
-
 
 #define BORDER_COLOR_DEFINED      0x80  
 #define BORDER_COLOR_TRANSPARENT  0x40
@@ -766,6 +794,14 @@ struct nsStyleUserInterface: public nsStyleStruct {
   PRUnichar mKeyEquivalent;   // [reset] XXX what type should this be?
   PRUint8   mResizer;         // [reset]
   nsString  mBehavior;        // [reset] absolute url string
+
+  float mOpacity;                       // [inherited] percentage
+  
+  // These properties are treated as inherited.  See bugzilla bug 51113.  This is
+  // not (strictly speaking) the correct behavior.
+  PRUint8 mCursor;                // [inherited] See nsStyleConsts.h NS_STYLE_CURSOR_*
+  nsString mCursorImage;          // [inherited] url string
+  
 
 };
 

@@ -206,8 +206,8 @@ NS_METHOD nsTableRowGroupFrame::Paint(nsIPresContext*      aPresContext,
       if (disp->IsVisibleOrCollapsed()) {
         const nsStyleBorder* border =
           (const nsStyleBorder*)mStyleContext->GetStyleData(eStyleStruct_Border);
-        const nsStyleColor* color =
-          (const nsStyleColor*)mStyleContext->GetStyleData(eStyleStruct_Color);
+        const nsStyleBackground* color =
+          (const nsStyleBackground*)mStyleContext->GetStyleData(eStyleStruct_Background);
         nsTableFrame* tableFrame = nsnull;
         rv = nsTableFrame::GetTableFrame(this, tableFrame);
         if (NS_FAILED(rv) || (nsnull == tableFrame)) {

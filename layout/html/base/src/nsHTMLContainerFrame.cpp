@@ -71,8 +71,8 @@ nsHTMLContainerFrame::Paint(nsIPresContext* aPresContext,
     if (disp->IsVisible() && mRect.width && mRect.height) {
       // Paint our background and border
       PRIntn skipSides = GetSkipSides();
-      const nsStyleColor* color = (const nsStyleColor*)
-        mStyleContext->GetStyleData(eStyleStruct_Color);
+      const nsStyleBackground* color = (const nsStyleBackground*)
+        mStyleContext->GetStyleData(eStyleStruct_Background);
       const nsStyleBorder* border = (const nsStyleBorder*)
         mStyleContext->GetStyleData(eStyleStruct_Border);
       const nsStyleOutline* outline = (const nsStyleOutline*)
@@ -448,17 +448,19 @@ nsHTMLContainerFrame::CreateViewForFrame(nsIPresContext* aPresContext,
     PRBool  fixedBackgroundAttachment = PR_FALSE;
 
     // Get nsStyleColor and nsStyleDisplay
-    const nsStyleColor* color = (const nsStyleColor*)
-      aStyleContext->GetStyleData(eStyleStruct_Color);
+    const nsStyleBackground* color = (const nsStyleBackground*)
+      aStyleContext->GetStyleData(eStyleStruct_Background);
+    const nsStyleUserInterface* ui = (const nsStyleUserInterface*)
+      aStyleContext->GetStyleData(eStyleStruct_UserInterface);
     const nsStyleDisplay* display = (const nsStyleDisplay*)
       aStyleContext->GetStyleData(eStyleStruct_Display);
     const nsStylePosition* position = (const nsStylePosition*)
       aStyleContext->GetStyleData(eStyleStruct_Position);
     
-    if (color->mOpacity != 1.0f) {
+    if (ui->mOpacity != 1.0f) {
       NS_FRAME_LOG(NS_FRAME_TRACE_CALLS,
         ("nsHTMLContainerFrame::CreateViewForFrame: frame=%p opacity=%g",
-         aFrame, color->mOpacity));
+         aFrame, ui->mOpacity));
       aForce = PR_TRUE;
     }
 
@@ -655,7 +657,7 @@ nsHTMLContainerFrame::CreateViewForFrame(nsIPresContext* aPresContext,
           view->CreateWidget(kCChildCID);
         }
 
-        viewManager->SetViewOpacity(view, color->mOpacity);
+        viewManager->SetViewOpacity(view, ui->mOpacity);
         NS_RELEASE(viewManager);
       }
 

@@ -172,11 +172,11 @@ CSSFirstLineRule::MapStyleInto(nsIMutableStyleContext* aContext,
   }
 
   // Undo any change made to "cursor"
-  nsStyleColor* color = (nsStyleColor*)
-    aContext->GetMutableStyleData(eStyleStruct_Color);
+  nsStyleUserInterface* color = (nsStyleUserInterface*)
+    aContext->GetMutableStyleData(eStyleStruct_UserInterface);
   if (parentContext) {
-    const nsStyleColor* parentColor = (const nsStyleColor*)
-      parentContext->GetStyleData(eStyleStruct_Color);
+    const nsStyleUserInterface* parentColor = (const nsStyleUserInterface*)
+      parentContext->GetStyleData(eStyleStruct_UserInterface);
     if (parentColor) {
       color->mCursor = parentColor->mCursor;
     }
@@ -291,11 +291,11 @@ CSSFirstLetterRule::MapStyleInto(nsIMutableStyleContext* aContext,
   }
 
   // Undo any change made to "cursor"
-  nsStyleColor* color = (nsStyleColor*)
-    aContext->GetMutableStyleData(eStyleStruct_Color);
+  nsStyleUserInterface* color = (nsStyleUserInterface*)
+    aContext->GetMutableStyleData(eStyleStruct_UserInterface);
   if (parentContext) {
-    const nsStyleColor* parentColor = (const nsStyleColor*)
-      parentContext->GetStyleData(eStyleStruct_Color);
+    const nsStyleUserInterface* parentColor = (const nsStyleUserInterface*)
+      parentContext->GetStyleData(eStyleStruct_UserInterface);
     if (parentColor) {
       color->mCursor = parentColor->mCursor;
     }

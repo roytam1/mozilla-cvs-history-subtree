@@ -767,3 +767,63 @@ PRInt32 nsStyleTableBorder::CalcDifference(const nsStyleTableBorder& aOther) con
   else
     return NS_STYLE_HINT_REFLOW;
 }
+
+// --------------------
+// nsStyleColor
+//
+
+nsStyleColor::nsStyleColor(nsIPresContext* aPresContext)
+{
+  aPresContext->GetDefaultColor(&mColor);
+}
+
+nsStyleColor::nsStyleColor(const nsStyleColor& aSource)
+{
+  mColor = aSource.mColor;
+}
+
+PRInt32 nsStyleColor::CalcDifference(const nsStyleColor& aOther) const
+{
+  if (mColor == aOther.mColor)
+    return NS_STYLE_HINT_NONE;
+  return NS_STYLE_HINT_VISUAL;
+}
+
+// --------------------
+// nsStyleBackground
+//
+
+nsStyleBackground::nsStyleBackground(nsIPresContext* aPresContext)
+{
+  mBackgroundFlags = NS_STYLE_BG_COLOR_TRANSPARENT | NS_STYLE_BG_IMAGE_NONE;
+  aPresContext->GetDefaultBackgroundColor(&mBackgroundColor);
+  aPresContext->GetDefaultBackgroundImageAttachment(&mBackgroundAttachment);
+  aPresContext->GetDefaultBackgroundImageRepeat(&mBackgroundRepeat);
+  aPresContext->GetDefaultBackgroundImageOffset(&mBackgroundXPosition, &mBackgroundYPosition);
+  aPresContext->GetDefaultBackgroundImage(mBackgroundImage);
+}
+
+nsStyleBackground::nsStyleBackground(const nsStyleBackground& aSource)
+{
+  mBackgroundAttachment = aSource.mBackgroundAttachment;
+  mBackgroundFlags = aSource.mBackgroundFlags;
+  mBackgroundRepeat = aSource.mBackgroundRepeat;
+
+  mBackgroundColor = aSource.mBackgroundColor;
+  mBackgroundXPosition = aSource.mBackgroundXPosition;
+  mBackgroundYPosition = aSource.mBackgroundYPosition;
+  mBackgroundImage = aSource.mBackgroundImage;
+}
+
+PRInt32 nsStyleBackground::CalcDifference(const nsStyleBackground& aOther) const
+{
+  if ((mBackgroundAttachment == aOther.mBackgroundAttachment) &&
+      (mBackgroundFlags == aOther.mBackgroundFlags) &&
+      (mBackgroundRepeat == aOther.mBackgroundRepeat) &&
+      (mBackgroundColor == aOther.mBackgroundColor) &&
+      (mBackgroundXPosition == aOther.mBackgroundXPosition) &&
+      (mBackgroundYPosition == aOther.mBackgroundYPosition) &&
+      (mBackgroundImage == aOther.mBackgroundImage))
+    return NS_STYLE_HINT_NONE;
+  return NS_STYLE_HINT_VISUAL;
+}

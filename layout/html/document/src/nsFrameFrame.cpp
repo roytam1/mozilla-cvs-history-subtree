@@ -691,8 +691,8 @@ nsHTMLFrameInnerFrame::Paint(nsIPresContext*      aPresContext,
   PRBool isPaginated;
   aPresContext->IsPaginated(&isPaginated);
    if (!mSubShell && !isPaginated) {
-    const nsStyleColor* color =
-      (const nsStyleColor*)mStyleContext->GetStyleData(eStyleStruct_Color);
+    const nsStyleBackground* color =
+      (const nsStyleBackground*)mStyleContext->GetStyleData(eStyleStruct_Background);
     aRenderingContext.SetColor(color->mBackgroundColor);
     aRenderingContext.FillRect(mRect);
   }

@@ -5001,8 +5001,8 @@ nsBlockFrame::Paint(nsIPresContext*      aPresContext,
   if (isVisible && (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer) &&
       (0 != mRect.width) && (0 != mRect.height)) {
     PRIntn skipSides = GetSkipSides();
-    const nsStyleColor* color = (const nsStyleColor*)
-      mStyleContext->GetStyleData(eStyleStruct_Color);
+    const nsStyleBackground* color = (const nsStyleBackground*)
+      mStyleContext->GetStyleData(eStyleStruct_Background);
     const nsStyleBorder* border = (const nsStyleBorder*)
       mStyleContext->GetStyleData(eStyleStruct_Border);
     const nsStyleOutline* outline = (const nsStyleOutline*)

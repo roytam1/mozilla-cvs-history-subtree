@@ -1299,9 +1299,9 @@ nsTextFrame::GetCursor(nsIPresContext* aPresContext,
                        nsPoint& aPoint,
                        PRInt32& aCursor)
 {
-  const nsStyleColor* styleColor;
-  GetStyleData(eStyleStruct_Color, (const nsStyleStruct*&)styleColor);
-  aCursor = styleColor->mCursor;
+  const nsStyleUserInterface*    ui = (const nsStyleUserInterface*)
+      mStyleContext->GetStyleData(eStyleStruct_UserInterface);
+  aCursor = ui->mCursor;
   if (NS_STYLE_CURSOR_AUTO == aCursor) {
     aCursor = NS_STYLE_CURSOR_TEXT;
   }

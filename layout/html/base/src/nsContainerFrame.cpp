@@ -497,17 +497,19 @@ nsContainerFrame::SyncFrameViewAfterReflow(nsIPresContext* aPresContext,
       }
     }
   
-    const nsStyleColor* color;
+    const nsStyleBackground* bg;
+    const nsStyleUserInterface* ui;
     const nsStyleDisplay* display;
-    aFrame->GetStyleData(eStyleStruct_Color, (const nsStyleStruct*&)color);
+    aFrame->GetStyleData(eStyleStruct_Background, (const nsStyleStruct*&)bg);
+    aFrame->GetStyleData(eStyleStruct_UserInterface, (const nsStyleStruct*&)ui);
     aFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&)display);
 
     // Set the view's opacity
-    vm->SetViewOpacity(aView, color->mOpacity);
+    vm->SetViewOpacity(aView, ui->mOpacity);
 
     // See if the view should be hidden or visible
     PRBool  viewIsVisible = PR_TRUE;
-    PRBool  viewHasTransparentContent = (color->mBackgroundFlags &
+    PRBool  viewHasTransparentContent = (bg->mBackgroundFlags &
               NS_STYLE_BG_COLOR_TRANSPARENT) == NS_STYLE_BG_COLOR_TRANSPARENT;
 
     if (NS_STYLE_VISIBILITY_COLLAPSE == display->mVisible) {

@@ -1430,8 +1430,8 @@ NS_METHOD nsTableFrame::Paint(nsIPresContext* aPresContext,
     if (disp->IsVisibleOrCollapsed()) {
       const nsStyleBorder* border =
         (const nsStyleBorder*)mStyleContext->GetStyleData(eStyleStruct_Border);
-      const nsStyleColor* color =
-        (const nsStyleColor*)mStyleContext->GetStyleData(eStyleStruct_Color);
+      const nsStyleBackground* color =
+        (const nsStyleBackground*)mStyleContext->GetStyleData(eStyleStruct_Background);
 
       nsRect  rect(0, 0, mRect.width, mRect.height);
         
@@ -3628,8 +3628,8 @@ void nsTableFrame::MapHTMLBorderStyle(nsStyleBorder& aBorderStyle, nscoord aBord
   aBorderStyle.SetBorderStyle(NS_SIDE_RIGHT, NS_STYLE_BORDER_STYLE_BG_OUTSET);
 
   nsIStyleContext* styleContext = mStyleContext; 
-  const nsStyleColor* colorData = (const nsStyleColor*)
-    styleContext->GetStyleData(eStyleStruct_Color);
+  const nsStyleBackground* colorData = (const nsStyleBackground*)
+    styleContext->GetStyleData(eStyleStruct_Background);
 
   // Look until we find a style context with a NON-transparent background color
   while (styleContext) {
@@ -3638,7 +3638,7 @@ void nsTableFrame::MapHTMLBorderStyle(nsStyleBorder& aBorderStyle, nscoord aBord
       styleContext = styleContext->GetParent();
       if (temp != mStyleContext)
         NS_RELEASE(temp);
-      colorData = (const nsStyleColor*)styleContext->GetStyleData(eStyleStruct_Color);
+      colorData = (const nsStyleBackground*)styleContext->GetStyleData(eStyleStruct_Background);
     }
     else {
       break;

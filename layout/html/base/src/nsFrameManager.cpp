@@ -1634,8 +1634,8 @@ FrameManager::ReResolveStyleContext(nsIPresContext* aPresContext,
         }
         // if old context had image and new context does not have the same image, 
         // stop the image load for the frame
-        const nsStyleColor* oldColor = (const nsStyleColor*)oldContext->GetStyleData(eStyleStruct_Color); 
-        const nsStyleColor* newColor = (const nsStyleColor*)newContext->GetStyleData(eStyleStruct_Color);
+        const nsStyleBackground* oldColor = (const nsStyleBackground*)oldContext->GetStyleData(eStyleStruct_Background); 
+        const nsStyleBackground* newColor = (const nsStyleBackground*)newContext->GetStyleData(eStyleStruct_Background);
 
         if(oldColor->mBackgroundImage.Length() > 0 &&
           oldColor->mBackgroundImage != newColor->mBackgroundImage ){

@@ -102,6 +102,7 @@ public:
   virtual ~HTMLDocumentColorRule();
 
   NS_IMETHOD MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext);
+  NS_IMETHOD MapRuleInfoInto(nsRuleData* aRuleData);
 
   virtual void SizeOf(nsISizeOfHandler *aSizeofHandler, PRUint32 &aSize);
 
@@ -161,18 +162,16 @@ HTMLColorRule::MapFontStyleInto(nsIMutableStyleContext* aContext, nsIPresContext
 NS_IMETHODIMP
 HTMLColorRule::MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
 {
-  nsStyleColor* styleColor = (nsStyleColor*)(aContext->GetMutableStyleData(eStyleStruct_Color));
-
-  if (nsnull != styleColor) {
-    styleColor->mColor = mColor;
-  }
   return NS_OK;
 }
 
 NS_IMETHODIMP
 HTMLColorRule::MapRuleInfoInto(nsRuleData* aRuleData)
 {
-  // Nothing to do.
+  if (aRuleData->mSID == eStyleStruct_Color && aRuleData->mColorData) {
+    nsCSSValue val; val.SetColorValue(mColor);
+    aRuleData->mColorData->mColor = val;
+  }
   return NS_OK;
 }
 
@@ -232,19 +231,22 @@ HTMLDocumentColorRule::~HTMLDocumentColorRule()
 }
 
 NS_IMETHODIMP
+HTMLDocumentColorRule::MapRuleInfoInto(nsRuleData* aRuleData)
+{
+  if (mForegroundSet && aRuleData->mSID == eStyleStruct_Color && aRuleData->mColorData) {
+    nsCSSValue val; val.SetColorValue(mColor);
+    aRuleData->mColorData->mColor = val;
+  }
+  else if (mBackgroundSet && aRuleData->mSID == eStyleStruct_Background && aRuleData->mColorData) {
+    nsCSSValue val; val.SetColorValue(mBackgroundColor);
+    aRuleData->mColorData->mBackColor = val;
+  }
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 HTMLDocumentColorRule::MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
 {
-  nsStyleColor* styleColor = (nsStyleColor*)(aContext->GetMutableStyleData(eStyleStruct_Color));
-
-  if (nsnull != styleColor) {
-    if (mForegroundSet) {
-      styleColor->mColor = mColor;
-    }
-    if (mBackgroundSet) {
-      styleColor->mBackgroundColor = mBackgroundColor;
-      styleColor->mBackgroundFlags &= ~NS_STYLE_BG_COLOR_TRANSPARENT;
-    }
-  }
   return NS_OK;
 }
 
@@ -418,55 +420,6 @@ void GenericTableRule::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
     PRUint32 localSize;
     mSheet->SizeOf(aSizeOfHandler, localSize);
   }
-}
-
-
-// -----------------------------------------------------------
-// this rule only applies in NavQuirks mode
-// -----------------------------------------------------------
-class TableBackgroundRule: public GenericTableRule {
-public:
-  TableBackgroundRule(nsIHTMLStyleSheet* aSheet);
-  virtual ~TableBackgroundRule();
-
-  NS_IMETHOD MapStyleInto(nsIMutableStyleContext* aContext,
-                          nsIPresContext* aPresContext);
-};
-
-TableBackgroundRule::TableBackgroundRule(nsIHTMLStyleSheet* aSheet)
-: GenericTableRule(aSheet)
-{
-}
-
-TableBackgroundRule::~TableBackgroundRule()
-{
-}
-
-NS_IMETHODIMP
-TableBackgroundRule::MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
-{
-  nsIStyleContext* parentContext = aContext->GetParent();
-
-  if (parentContext) {
-    nsStyleColor* styleColor;
-    styleColor = (nsStyleColor*)aContext->GetMutableStyleData(eStyleStruct_Color);
-
-    const nsStyleColor* parentStyleColor;
-    parentStyleColor = (const nsStyleColor*)parentContext->GetStyleData(eStyleStruct_Color);
-
-    if (!(parentStyleColor->mBackgroundFlags & NS_STYLE_BG_COLOR_TRANSPARENT)) {
-      styleColor->mBackgroundColor = parentStyleColor->mBackgroundColor;
-      styleColor->mBackgroundFlags &= ~NS_STYLE_BG_COLOR_TRANSPARENT;
-    }
-
-    if (!(parentStyleColor->mBackgroundFlags & NS_STYLE_BG_IMAGE_NONE)) {
-      styleColor->mBackgroundImage = parentStyleColor->mBackgroundImage;
-      styleColor->mBackgroundFlags &= ~NS_STYLE_BG_IMAGE_NONE;
-    }
-
-    NS_RELEASE(parentContext);
-  }
-  return NS_OK;
 }
 
 // -----------------------------------------------------------
@@ -699,7 +652,6 @@ protected:
   HTMLColorRule*       mVisitedRule;
   HTMLColorRule*       mActiveRule;
   HTMLDocumentColorRule* mDocumentColorRule;
-  TableBackgroundRule* mTableBackgroundRule;
   TableTHRule*         mTableTHRule;
     // NOTE: if adding more rules, be sure to update 
     // the SizeOf method to include them
@@ -752,8 +704,6 @@ HTMLStyleSheetImpl::HTMLStyleSheetImpl(void)
     mDocumentColorRule(nsnull)
 {
   NS_INIT_REFCNT();
-  mTableBackgroundRule = new TableBackgroundRule(this);
-  NS_ADDREF(mTableBackgroundRule);
   mTableTHRule = new TableTHRule(this);
   NS_ADDREF(mTableTHRule);
 }
@@ -783,10 +733,6 @@ HTMLStyleSheetImpl::~HTMLStyleSheetImpl()
   if (nsnull != mDocumentColorRule) {
     mDocumentColorRule->mSheet = nsnull;
     NS_RELEASE(mDocumentColorRule);
-  }
-  if (nsnull != mTableBackgroundRule) {
-    mTableBackgroundRule->mSheet = nsnull;
-    NS_RELEASE(mTableBackgroundRule);
   }
   if (nsnull != mTableTHRule) {
     mTableTHRule->mSheet = nsnull;
@@ -921,7 +867,6 @@ HTMLStyleSheetImpl::RulesMatching(nsIPresContext* aPresContext,
           if (mDocumentColorRule) {
             aRuleWalker->Forward(mDocumentColorRule);
           }
-          aRuleWalker->Forward(mTableBackgroundRule);
         }
       }
       else if (tag == nsHTMLAtoms::html) {
@@ -1104,10 +1049,6 @@ NS_IMETHODIMP HTMLStyleSheetImpl::Reset(nsIURI* aURL)
   if (mDocumentColorRule) {
     mDocumentColorRule->mSheet = nsnull;
     NS_RELEASE(mDocumentColorRule);
-  }
-  if (mTableBackgroundRule) {
-    mTableBackgroundRule->mSheet = nsnull;
-    NS_RELEASE(mTableBackgroundRule);
   }
   if (mTableTHRule) {
     mTableTHRule->mSheet = nsnull;
@@ -1412,7 +1353,6 @@ PRBool PR_CALLBACK MappedSizeAttributes(nsHashKey *aKey, void *aData, void* clos
 *       - mVisitedRule
 *       - mActiveRule
 *       - mDocumentColorRule
-*       - mTableBackgroundRule
 *       - mTableTHRule
 *       - mMappedAttrTable
 *    2) Delegates (really) to the MappedAttributes in the mMappedAttrTable
@@ -1446,7 +1386,6 @@ void HTMLStyleSheetImpl::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSiz
   // - mVisitedRule  : sizeof object
   // - mActiveRule  : sizeof object
   // - mDocumentColorRule  : sizeof object
-  // - mTableBackgroundRule  : sizeof object
   // - mTableTHRule : sizeof object
   // - mMappedAttrTable
 
@@ -1468,11 +1407,6 @@ void HTMLStyleSheetImpl::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSiz
   if(mDocumentColorRule && uniqueItems->AddItem((void*)mDocumentColorRule)){
     localSize = sizeof(*mDocumentColorRule);
     tag = getter_AddRefs(NS_NewAtom("DocumentColorRule"));
-    aSizeOfHandler->AddSize(tag,localSize);
-  }
-  if(mTableBackgroundRule && uniqueItems->AddItem((void*)mTableBackgroundRule)){
-    localSize = sizeof(*mTableBackgroundRule);
-    tag = getter_AddRefs(NS_NewAtom("TableBackgroundRule"));
     aSizeOfHandler->AddSize(tag,localSize);
   }
   if(mTableTHRule && uniqueItems->AddItem((void*)mTableTHRule)){

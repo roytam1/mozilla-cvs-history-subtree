@@ -72,6 +72,11 @@ li > ol:first-node {
 }
 
 
+/* Quirk: make sure backgrounds are inherited in tables */
+td, th, tr, thead, tbody, tfoot {
+  background: inherit;
+}
+
 /* Quirk: collapse top margin of BODY and TD and bottom margin of TD */
 
 body > :first-node, td > :first-node {

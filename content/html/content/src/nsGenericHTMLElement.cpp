@@ -3311,65 +3311,62 @@ nsGenericHTMLElement::GetImageBorderAttributeImpact(const nsIAtom* aAttribute,
 
 void
 nsGenericHTMLElement::MapBackgroundAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                                                  nsIMutableStyleContext* aContext,
-                                                  nsIPresContext* aPresContext)
+                                                  nsRuleData* aData)
 {
-  nsHTMLValue value;
+  if (!aData || !aData->mColorData || aData->mSID != eStyleStruct_Background)
+    return;
 
-  // background
-  if (NS_CONTENT_ATTR_HAS_VALUE ==
-      aAttributes->GetAttribute(nsHTMLAtoms::background, value)) {
-    if (eHTMLUnit_String == value.GetUnit()) {
-      nsAutoString absURLSpec;
-      nsAutoString spec;
-      value.GetStringValue(spec);
-      if (spec.Length() > 0) {
-        // Resolve url to an absolute url
-        nsCOMPtr<nsIPresShell> shell;
-        nsresult rv = aPresContext->GetShell(getter_AddRefs(shell));
-        if (NS_SUCCEEDED(rv) && shell) {
-          nsCOMPtr<nsIDocument> doc;
-          rv = shell->GetDocument(getter_AddRefs(doc));
-          if (NS_SUCCEEDED(rv) && doc) {
-            nsCOMPtr<nsIURI> docURL;
-            nsHTMLValue baseHref;
-            aAttributes->GetAttribute(nsHTMLAtoms::_baseHref, baseHref);
-            nsGenericHTMLElement::GetBaseURL(baseHref, doc,
-                                             getter_AddRefs(docURL));
-            rv = NS_MakeAbsoluteURI(absURLSpec, spec, docURL);
-            if (NS_SUCCEEDED(rv)) {
-              nsStyleColor* color = (nsStyleColor*)
-                aContext->GetMutableStyleData(eStyleStruct_Color);
-              color->mBackgroundImage = absURLSpec;
-              color->mBackgroundFlags &= ~NS_STYLE_BG_IMAGE_NONE;
-              color->mBackgroundRepeat = NS_STYLE_BG_REPEAT_XY;
+  if (aData->mColorData->mBackImage.GetUnit() == eCSSUnit_Null) {
+    // background
+    nsHTMLValue value;
+    if (NS_CONTENT_ATTR_HAS_VALUE ==
+        aAttributes->GetAttribute(nsHTMLAtoms::background, value)) {
+      if (eHTMLUnit_String == value.GetUnit()) {
+        nsAutoString absURLSpec;
+        nsAutoString spec;
+        value.GetStringValue(spec);
+        if (spec.Length() > 0) {
+          // Resolve url to an absolute url
+          nsCOMPtr<nsIPresShell> shell;
+          nsresult rv = aData->mPresContext->GetShell(getter_AddRefs(shell));
+          if (NS_SUCCEEDED(rv) && shell) {
+            nsCOMPtr<nsIDocument> doc;
+            rv = shell->GetDocument(getter_AddRefs(doc));
+            if (NS_SUCCEEDED(rv) && doc) {
+              nsCOMPtr<nsIURI> docURL;
+              nsHTMLValue baseHref;
+              aAttributes->GetAttribute(nsHTMLAtoms::_baseHref, baseHref);
+              nsGenericHTMLElement::GetBaseURL(baseHref, doc,
+                                               getter_AddRefs(docURL));
+              rv = NS_MakeAbsoluteURI(absURLSpec, spec, docURL);
+              if (NS_SUCCEEDED(rv)) {
+                nsCSSValue val; val.SetStringValue(absURLSpec, eCSSUnit_URL);
+                aData->mColorData->mBackImage = val;
+              }
             }
           }
         }
-      }
-    } else if (aPresContext) {
-      // in NavQuirks mode, allow the empty string to set the background to empty
-      nsCompatibility mode;
-      aPresContext->GetCompatibilityMode(&mode);
-      if (eCompatibility_NavQuirks == mode &&
-          eHTMLUnit_Empty == value.GetUnit()) {
-        nsStyleColor* color;
-        color = (nsStyleColor*)aContext->GetMutableStyleData(eStyleStruct_Color);
-        color->mBackgroundImage.Truncate();
-        color->mBackgroundFlags &= ~NS_STYLE_BG_IMAGE_NONE;
-        color->mBackgroundRepeat = NS_STYLE_BG_REPEAT_XY;
+      } else if (aData->mPresContext) {
+        // in NavQuirks mode, allow the empty string to set the background to empty
+        nsCompatibility mode;
+        aData->mPresContext->GetCompatibilityMode(&mode);
+        if (eCompatibility_NavQuirks == mode &&
+            eHTMLUnit_Empty == value.GetUnit()) {
+          nsCSSValue val; val.SetStringValue(NS_LITERAL_STRING(""), eCSSUnit_URL);
+          aData->mColorData->mBackImage = val;
+        }
       }
     }
   }
 
   // bgcolor
-  if (NS_CONTENT_ATTR_HAS_VALUE == aAttributes->GetAttribute(nsHTMLAtoms::bgcolor, value)) {
+  if (aData->mColorData->mBackColor.GetUnit() == eCSSUnit_Null) {
+    nsHTMLValue value;
+    aAttributes->GetAttribute(nsHTMLAtoms::bgcolor, value);
     if ((eHTMLUnit_Color == value.GetUnit()) ||
         (eHTMLUnit_ColorName == value.GetUnit())) {
-      nsStyleColor* color = (nsStyleColor*)
-        aContext->GetMutableStyleData(eStyleStruct_Color);
-      color->mBackgroundColor = value.GetColorValue();
-      color->mBackgroundFlags &= ~NS_STYLE_BG_COLOR_TRANSPARENT;
+      nsCSSValue val; val.SetColorValue(value.GetColorValue());
+      aData->mColorData->mBackColor = val;
     }
   }
 }

@@ -1388,7 +1388,7 @@ PRIntn  whichSide=0;
 // it's primary frame and from that the style context and from that the color to use.
 //
 PRBool GetBGColorForHTMLElement( nsIPresContext *aPresContext,
-                                   const nsStyleColor *&aBGColor )
+                                   const nsStyleBackground *&aBGColor )
 {
   NS_ASSERTION(aPresContext, "null params not allowed");
   PRBool result = PR_FALSE; // assume we did not find the HTML element
@@ -1413,7 +1413,7 @@ PRBool GetBGColorForHTMLElement( nsIPresContext *aPresContext,
               nsIStyleContext *pContext = nsnull;
               pFrame->GetStyleContext(&pContext);
               if (pContext) {
-                const nsStyleColor* color = (const nsStyleColor*)pContext->GetStyleData(eStyleStruct_Color);
+                const nsStyleBackground* color = (const nsStyleBackground*)pContext->GetStyleData(eStyleStruct_Background);
                 NS_ASSERTION(color,"ColorStyleData should not be null");
                 if (0 == (color->mBackgroundFlags & NS_STYLE_BG_COLOR_TRANSPARENT)) {
                   aBGColor = color;
@@ -1529,15 +1529,18 @@ void nsCSSRendering::PaintBorder(nsIPresContext* aPresContext,
   // Get our style context's color struct.
   const nsStyleColor* ourColor = (const nsStyleColor*)aStyleContext->GetStyleData(eStyleStruct_Color);
 
+  // Get our style context's background struct.
+  const nsStyleBackground* ourBG = (const nsStyleBackground*)aStyleContext->GetStyleData(eStyleStruct_Background);
+
   // in NavQuirks mode we want to use the parent's context as a starting point 
   // for determining the background color
-  const nsStyleColor* bgColor = 
+  const nsStyleBackground* bgColor = 
     nsStyleUtil::FindNonTransparentBackground(aStyleContext, 
                                             compatMode == eCompatibility_NavQuirks ? PR_TRUE : PR_FALSE); 
   // mozBGColor is used instead of bgColor when the display type is BG_INSET or BG_OUTSET
   // AND, in quirk mode, it is set to the BODY element's background color instead of the nearest
   // ancestor's background color.
-  const nsStyleColor* mozBGColor = bgColor;
+  const nsStyleBackground* mozBGColor = bgColor;
 
   // now check if we are in Quirks mode and have a border style of BG_INSET or OUTSET
   // - if so we use the bgColor from the HTML element instead of the nearest ancestor
@@ -1715,12 +1718,11 @@ void nsCSSRendering::PaintOutline(nsIPresContext* aPresContext,
 nsStyleCoord        bordStyleRadius[4];
 PRInt16             borderRadii[4],i;
 float               percent;
-const nsStyleColor* bgColor = nsStyleUtil::FindNonTransparentBackground(aStyleContext);
+const nsStyleBackground* bgColor = nsStyleUtil::FindNonTransparentBackground(aStyleContext);
 nscoord width;
 
   // Get our style context's color struct.
   const nsStyleColor* ourColor = (const nsStyleColor*)aStyleContext->GetStyleData(eStyleStruct_Color);
-
 
   aOutlineStyle.GetOutlineWidth(width);
 
@@ -1860,7 +1862,7 @@ void nsCSSRendering::PaintBorderEdges(nsIPresContext* aPresContext,
                                       PRIntn aSkipSides,
                                       nsRect* aGap)
 {
-  const nsStyleColor* bgColor = nsStyleUtil::FindNonTransparentBackground(aStyleContext);
+  const nsStyleBackground* bgColor = nsStyleUtil::FindNonTransparentBackground(aStyleContext);
   
   if (nsnull==aBorderEdges) {  // Empty border segments
     return;
@@ -2005,7 +2007,7 @@ void nsCSSRendering::PaintBorderEdges(nsIPresContext* aPresContext,
 // i.e., they are either 0 or a negative number whose absolute value is
 // less than the tile size in that dimension
 static void
-ComputeBackgroundAnchorPoint(const nsStyleColor& aColor,
+ComputeBackgroundAnchorPoint(const nsStyleBackground& aColor,
                              const nsRect& aBounds,
                              nscoord aTileWidth, nscoord aTileHeight,
                              nsPoint& aResult)
@@ -2109,7 +2111,7 @@ nsCSSRendering::PaintBackground(nsIPresContext* aPresContext,
                                 nsIFrame* aForFrame,
                                 const nsRect& aDirtyRect,
                                 const nsRect& aBorderArea,
-                                const nsStyleColor& aColor,
+                                const nsStyleBackground& aColor,
                                 const nsStyleBorder& aBorder,
                                 nscoord aDX,
                                 nscoord aDY)
@@ -2668,7 +2670,7 @@ nsCSSRendering::PaintRoundedBackground(nsIPresContext* aPresContext,
                                 nsIFrame* aForFrame,
                                 const nsRect& aDirtyRect,
                                 const nsRect& aBorderArea,
-                                const nsStyleColor& aColor,
+                                const nsStyleBackground& aColor,
                                 nscoord aDX,
                                 nscoord aDY,
                                 PRInt16 aTheRadius[4])
@@ -2956,7 +2958,7 @@ nsCSSRendering::RenderSide(nsFloatPoint aPoints[],nsIRenderingContext& aRenderin
       case NS_STYLE_BORDER_STYLE_OUTSET:
       case NS_STYLE_BORDER_STYLE_INSET:
         {
-        const nsStyleColor* bgColor = nsStyleUtil::FindNonTransparentBackground(aStyleContext);
+        const nsStyleBackground* bgColor = nsStyleUtil::FindNonTransparentBackground(aStyleContext);
         aRenderingContext.SetColor ( MakeBevelColor (aSide, border_Style, bgColor->mBackgroundColor,sideColor, PR_TRUE));
         }
       case NS_STYLE_BORDER_STYLE_DOTTED:
@@ -3000,7 +3002,7 @@ nsCSSRendering::RenderSide(nsFloatPoint aPoints[],nsIRenderingContext& aRenderin
       case NS_STYLE_BORDER_STYLE_RIDGE:
       case NS_STYLE_BORDER_STYLE_GROOVE:
         {
-        const nsStyleColor* bgColor = nsStyleUtil::FindNonTransparentBackground(aStyleContext);
+        const nsStyleBackground* bgColor = nsStyleUtil::FindNonTransparentBackground(aStyleContext);
         aRenderingContext.SetColor ( MakeBevelColor (aSide, border_Style, bgColor->mBackgroundColor,sideColor, PR_TRUE));
 
         polypath[0].x = NSToCoordRound(aPoints[0].x);

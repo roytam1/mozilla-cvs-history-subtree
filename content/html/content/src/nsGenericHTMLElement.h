@@ -309,9 +309,8 @@ public:
   static PRBool GetImageBorderAttributeImpact(const nsIAtom* aAttribute,
                                               PRInt32& aHint);
 
-  static void MapBackgroundAttributesInto(const nsIHTMLMappedAttributes* aAttributes, 
-                                          nsIMutableStyleContext* aContext,
-                                          nsIPresContext* aPresContext);
+  static void MapBackgroundAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
+                                          nsRuleData* aData);
   static PRBool GetBackgroundAttributesImpact(const nsIAtom* aAttribute,
                                               PRInt32& aHint);
 

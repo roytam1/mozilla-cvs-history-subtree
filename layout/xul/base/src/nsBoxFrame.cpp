@@ -1291,8 +1291,8 @@ nsBoxFrame::Paint(nsIPresContext* aPresContext,
     if (disp->IsVisible() && mRect.width && mRect.height) {
       // Paint our background and border
       PRIntn skipSides = GetSkipSides();
-      const nsStyleColor* color = (const nsStyleColor*)
-        mStyleContext->GetStyleData(eStyleStruct_Color);
+      const nsStyleBackground* color = (const nsStyleBackground*)
+        mStyleContext->GetStyleData(eStyleStruct_Background);
       const nsStyleBorder* border = (const nsStyleBorder*)
         mStyleContext->GetStyleData(eStyleStruct_Border);
       const nsStyleOutline* outline = (const nsStyleOutline*)
@@ -2353,20 +2353,22 @@ nsBoxFrame::CreateViewForFrame(nsIPresContext* aPresContext,
     PRBool  fixedBackgroundAttachment = PR_FALSE;
 
     // Get nsStyleColor and nsStyleDisplay
-    const nsStyleColor* color = (const nsStyleColor*)
-      aStyleContext->GetStyleData(eStyleStruct_Color);
+    const nsStyleUserInterface* ui = (const nsStyleUserInterface*)
+      aStyleContext->GetStyleData(eStyleStruct_UserInterface);
+    const nsStyleBackground* bg = (const nsStyleBackground*)
+      aStyleContext->GetStyleData(eStyleStruct_Background);
     const nsStyleDisplay* display = (const nsStyleDisplay*)
       aStyleContext->GetStyleData(eStyleStruct_Display);
 
-    if (color->mOpacity != 1.0f) {
+    if (ui->mOpacity != 1.0f) {
       NS_FRAME_LOG(NS_FRAME_TRACE_CALLS,
         ("nsHTMLContainerFrame::CreateViewForFrame: frame=%p opacity=%g",
-         aFrame, color->mOpacity));
+         aFrame, ui->mOpacity));
       aForce = PR_TRUE;
     }
 
     // See if the frame has a fixed background attachment
-    if (NS_STYLE_BG_ATTACHMENT_FIXED == color->mBackgroundAttachment) {
+    if (NS_STYLE_BG_ATTACHMENT_FIXED == bg->mBackgroundAttachment) {
       aForce = PR_TRUE;
       fixedBackgroundAttachment = PR_TRUE;
     }
@@ -2434,7 +2436,7 @@ nsBoxFrame::CreateViewForFrame(nsIPresContext* aPresContext,
 
         // See if the view should be hidden
         PRBool  viewIsVisible = PR_TRUE;
-        PRBool  viewHasTransparentContent = (color->mBackgroundFlags &
+        PRBool  viewHasTransparentContent = (bg->mBackgroundFlags &
                   NS_STYLE_BG_COLOR_TRANSPARENT) == NS_STYLE_BG_COLOR_TRANSPARENT;
 
         if (NS_STYLE_VISIBILITY_COLLAPSE == display->mVisible) {
@@ -2485,7 +2487,7 @@ nsBoxFrame::CreateViewForFrame(nsIPresContext* aPresContext,
           view->SetVisibility(nsViewVisibility_kHide);
         }
 
-        viewManager->SetViewOpacity(view, color->mOpacity);
+        viewManager->SetViewOpacity(view, ui->mOpacity);
         NS_RELEASE(viewManager);
       }
 

@@ -877,8 +877,8 @@ nsComputedDOMStyle::GetBackgroundColor(nsIFrame *aFrame,
   nsROCSSPrimitiveValue* val=GetROCSSPrimitiveValue();
   NS_ENSURE_TRUE(val, NS_ERROR_OUT_OF_MEMORY);
 
-  const nsStyleColor* color=nsnull;
-  GetStyleData(eStyleStruct_Color, (const nsStyleStruct*&)color, aFrame);
+  const nsStyleBackground* color=nsnull;
+  GetStyleData(eStyleStruct_Background, (const nsStyleStruct*&)color, aFrame);
 
   if(color) {
     nsAutoString hex;
@@ -900,8 +900,8 @@ nsComputedDOMStyle::GetBackgroundImage(nsIFrame *aFrame,
   nsROCSSPrimitiveValue* val=GetROCSSPrimitiveValue();
   NS_ENSURE_TRUE(val, NS_ERROR_OUT_OF_MEMORY);
 
-  const nsStyleColor* color=nsnull;
-  GetStyleData(eStyleStruct_Color, (const nsStyleStruct*&)color, aFrame);
+  const nsStyleBackground* color=nsnull;
+  GetStyleData(eStyleStruct_Background, (const nsStyleStruct*&)color, aFrame);
 
   if(color) {
       val->SetString(color->mBackgroundImage);

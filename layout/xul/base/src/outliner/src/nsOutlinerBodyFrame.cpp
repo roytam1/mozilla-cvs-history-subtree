@@ -1760,8 +1760,8 @@ nsOutlinerBodyFrame::PaintBackgroundLayer(nsIStyleContext* aStyleContext, nsIPre
                                           const nsRect& aRect, const nsRect& aDirtyRect)
 {
 
-  const nsStyleColor* myColor = (const nsStyleColor*)
-      aStyleContext->GetStyleData(eStyleStruct_Color);
+  const nsStyleBackground* myColor = (const nsStyleBackground*)
+      aStyleContext->GetStyleData(eStyleStruct_Background);
   const nsStyleBorder* myBorder = (const nsStyleBorder*)
       aStyleContext->GetStyleData(eStyleStruct_Border);
   const nsStyleOutline* myOutline = (const nsStyleOutline*)
@@ -1874,8 +1874,8 @@ nsOutlinerBodyFrame::ScrollInternal(PRInt32 aRow)
   nscoord rowHeightAsPixels = NSToCoordRound((float)mRowHeight*t2p);
 
   // See if we have a background image.  If we do, then we cannot blit.
-  const nsStyleColor* myColor = (const nsStyleColor*)
-      mStyleContext->GetStyleData(eStyleStruct_Color);
+  const nsStyleBackground* myColor = (const nsStyleBackground*)
+      mStyleContext->GetStyleData(eStyleStruct_Background);
   PRBool hasBackground = myColor->mBackgroundImage.Length() > 0;
 
   PRInt32 absDelta = delta > 0 ? delta : -delta;

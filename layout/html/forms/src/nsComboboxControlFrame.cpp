@@ -2585,7 +2585,8 @@ nsComboboxControlFrame::Paint(nsIPresContext* aPresContext,
             aRenderingContext.SetLineStyle(nsLineStyle_kDotted);
             aRenderingContext.SetColor(0);
           } else {
-            const nsStyleColor* myColor = (const nsStyleColor*)mStyleContext->GetStyleData(eStyleStruct_Color);
+            const nsStyleBackground* myColor =
+              (const nsStyleBackground*)mStyleContext->GetStyleData(eStyleStruct_Background);
             aRenderingContext.SetColor(myColor->mBackgroundColor);
             aRenderingContext.SetLineStyle(nsLineStyle_kSolid);
           }

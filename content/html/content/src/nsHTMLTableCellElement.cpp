@@ -401,11 +401,10 @@ void MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleDat
 {
   if (!aAttributes || !aData)
     return;
-
-  nsHTMLValue value;
-  
+ 
   if (aData->mPositionData) {
     // width: value
+    nsHTMLValue value;
     if (aData->mPositionData->mWidth.GetUnit() == eCSSUnit_Null) {
       aAttributes->GetAttribute(nsHTMLAtoms::width, value);
       if (value.GetUnit() == eHTMLUnit_Pixel) {
@@ -443,6 +442,8 @@ void MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleDat
       }
     }
   }
+  
+  nsGenericHTMLElement::MapBackgroundAttributesInto(aAttributes, aData);
 }
 
 static void
@@ -487,8 +488,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
       }
     }
 
-    nsGenericHTMLElement::MapBackgroundAttributesInto(aAttributes, aContext,
-                                                      aPresContext);
     nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
                                                   aPresContext);
   }

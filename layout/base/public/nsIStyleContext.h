@@ -59,6 +59,8 @@ public:
   virtual PRBool    Equals(const nsIStyleContext* aOther) const = 0;
   
   virtual nsIStyleContext*  GetParent(void) const = 0;
+  NS_IMETHOD GetFirstChild(nsIStyleContext** aContext)=0;
+
   NS_IMETHOD GetPseudoType(nsIAtom*& aPseudoTag) const = 0;
 
   NS_IMETHOD FindChildWithRules(const nsIAtom* aPseudoTag, 
@@ -90,6 +92,7 @@ public:
   // get a style data struct by ID, may return null 
   // Replace calls to this with calls to GetStyle();
   virtual const nsStyleStruct* GetStyleData(nsStyleStructID aSID) = 0;
+  virtual nsStyleStruct* GetUniqueStyleData(nsIPresContext* aPresContext, const nsStyleStructID& aSID) = 0;
 
   // get a style data struct by ID, may return null 
   virtual nsStyleStruct* GetMutableStyleData(nsStyleStructID aSID) = 0;

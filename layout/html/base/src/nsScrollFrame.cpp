@@ -411,8 +411,8 @@ nsScrollFrame::CreateScrollingView(nsIPresContext* aPresContext)
   if (NS_OK == rv) {
     const nsStylePosition* position = (const nsStylePosition*)
       mStyleContext->GetStyleData(eStyleStruct_Position);
-    const nsStyleColor*    color = (const nsStyleColor*)
-      mStyleContext->GetStyleData(eStyleStruct_Color);
+    const nsStyleUserInterface*    ui = (const nsStyleUserInterface*)
+      mStyleContext->GetStyleData(eStyleStruct_UserInterface);
     const nsStyleBorder*  borderStyle = (const nsStyleBorder*)
       mStyleContext->GetStyleData(eStyleStruct_Border);
     const nsStyleDisplay*  display = (const nsStyleDisplay*)
@@ -435,7 +435,7 @@ nsScrollFrame::CreateScrollingView(nsIPresContext* aPresContext)
     viewManager->InsertChild(parentView, view, zIndex);
 
     // Set the view's opacity
-    viewManager->SetViewOpacity(view, color->mOpacity);
+    viewManager->SetViewOpacity(view, ui->mOpacity);
 
     // Because we only paint the border and we don't paint a background,
     // inform the view manager that we have transparent content

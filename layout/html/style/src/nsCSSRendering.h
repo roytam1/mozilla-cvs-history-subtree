@@ -101,7 +101,7 @@ public:
                               nsIFrame* aForFrame,
                               const nsRect& aDirtyRect,
                               const nsRect& aBorderArea,
-                              const nsStyleColor& aColor,
+                              const nsStyleBackground& aColor,
                               const nsStyleBorder& aBorder,
                               nscoord aDX,
                               nscoord aDY);
@@ -168,7 +168,7 @@ protected:
                               nsIFrame* aForFrame,
                               const nsRect& aDirtyRect,
                               const nsRect& aBorderArea,
-                              const nsStyleColor& aColor,
+                              const nsStyleBackground& aColor,
                               nscoord aDX,
                               nscoord aDY,
                               PRInt16 aTheRadius[4]);

@@ -3263,12 +3263,13 @@ IsRootFrame(nsIFrame* aFrame)
 }
 
 static void
-PropagateBackgroundToParent(nsIStyleContext*    aStyleContext,
-                            const nsStyleColor* aColor,
+PropagateBackgroundToParent(nsIPresContext* aPresContext,
+                            nsIStyleContext*    aStyleContext,
+                            const nsStyleBackground* aColor,
                             nsIStyleContext*    aParentStyleContext)
 {
-  nsStyleColor* mutableColor;
-  mutableColor = (nsStyleColor*)aParentStyleContext->GetMutableStyleData(eStyleStruct_Color);
+  nsStyleBackground* mutableColor = 
+    (nsStyleBackground*)aParentStyleContext->GetUniqueStyleData(aPresContext, eStyleStruct_Background);
 
   mutableColor->mBackgroundAttachment = aColor->mBackgroundAttachment;
   mutableColor->mBackgroundFlags = aColor->mBackgroundFlags | NS_STYLE_BG_PROPAGATED_FROM_CHILD;
@@ -3279,7 +3280,7 @@ PropagateBackgroundToParent(nsIStyleContext*    aStyleContext,
   mutableColor->mBackgroundImage = aColor->mBackgroundImage;
 
   // Reset the BODY's background to transparent
-  mutableColor = (nsStyleColor*)aStyleContext->GetMutableStyleData(eStyleStruct_Color);
+  mutableColor = (nsStyleBackground*)aStyleContext->GetUniqueStyleData(aPresContext, eStyleStruct_Background);
   mutableColor->mBackgroundFlags = NS_STYLE_BG_COLOR_TRANSPARENT |
                                    NS_STYLE_BG_IMAGE_NONE |
                                    NS_STYLE_BG_PROPAGATED_TO_PARENT;
@@ -3401,8 +3402,8 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
 
   const nsStyleDisplay* display = 
     (const nsStyleDisplay*)styleContext->GetStyleData(eStyleStruct_Display);
-  const nsStyleColor* color = 
-    (const nsStyleColor*)styleContext->GetStyleData(eStyleStruct_Color);
+  const nsStyleBackground* bg = 
+    (const nsStyleBackground*)styleContext->GetStyleData(eStyleStruct_Background);
 
   PRBool docElemIsTable = IsTableRelated(display->mDisplay, PR_FALSE);
  
@@ -3524,7 +3525,7 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
     // Note: the reason we wait until after processing the document element's
     // children is because of special treatment of the background for the HTML
     // element. See BodyFixupRule::MapStyleInto() for details
-    if (NS_STYLE_BG_ATTACHMENT_FIXED == color->mBackgroundAttachment) {
+    if (NS_STYLE_BG_ATTACHMENT_FIXED == bg->mBackgroundAttachment) {
       // Fixed background attachments are handled by setting the
       // NS_VIEW_PUBLIC_FLAG_DONT_BITBLT flag bit on the view.
       //
@@ -3580,13 +3581,13 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
     // Section 14.2 of the CSS2 spec says that the background of the root element
     // covers the entire canvas. See if a background was specified for the root
     // element
-    if (!color->BackgroundIsTransparent() && (IsCanvasFrame(aParentFrame) || IsRootFrame(aParentFrame))) {
+    if (!bg->BackgroundIsTransparent() && (IsCanvasFrame(aParentFrame) || IsRootFrame(aParentFrame))) {
       nsIStyleContext*  parentContext;
       
       // Propagate the document element's background to the canvas so that it
       // renders the background over the entire canvas
       aParentFrame->GetStyleContext(&parentContext);
-      PropagateBackgroundToParent(styleContext, color, parentContext);
+      PropagateBackgroundToParent(aPresContext, styleContext, bg, parentContext);
       NS_RELEASE(parentContext);
     }
   }
@@ -9253,16 +9254,18 @@ SyncAndInvalidateView(nsIPresContext* aPresContext,
                       nsIFrame*       aFrame, 
                       nsIViewManager* aViewManager)
 {
-  const nsStyleColor* color;
+  const nsStyleBackground* bg;
+  const nsStyleUserInterface* ui;
   const nsStyleDisplay* disp; 
-  aFrame->GetStyleData(eStyleStruct_Color, (const nsStyleStruct*&) color);
+  aFrame->GetStyleData(eStyleStruct_Background, (const nsStyleStruct*&) bg);
+  aFrame->GetStyleData(eStyleStruct_UserInterface, (const nsStyleStruct*&) ui);
   aFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) disp);
 
-  aViewManager->SetViewOpacity(aView, color->mOpacity);
+  aViewManager->SetViewOpacity(aView, ui->mOpacity);
 
   // See if the view should be hidden or visible
   PRBool  viewIsVisible = PR_TRUE;
-  PRBool  viewHasTransparentContent = (color->mBackgroundFlags &
+  PRBool  viewHasTransparentContent = (bg->mBackgroundFlags &
             NS_STYLE_BG_COLOR_TRANSPARENT) == NS_STYLE_BG_COLOR_TRANSPARENT;
 
   if (NS_STYLE_VISIBILITY_COLLAPSE == disp->mVisible) {

@@ -31,17 +31,18 @@
 #include "nsIMutableStyleContext.h"
 #include "nsICSSDeclaration.h"
 
+typedef void (*nsPostResolveFunc)(nsRuleData* aData);
+
 struct nsInheritedStyleData
 {
   nsStyleFont* mFontData;
   nsStyleList* mListData;
   nsStyleTableBorder* mTableData;
+  nsStyleColor* mColorData;
 
   void* operator new(size_t sz, nsIPresContext* aContext) {
     void* result = nsnull;
     aContext->AllocateFromShell(sz, &result);
-    if (result)
-    nsCRT::zero(result, sz);
     return result;
   };
   void Destroy(nsIPresContext* aContext) {
@@ -51,18 +52,20 @@ struct nsInheritedStyleData
       mListData->Destroy(aContext);
     if (mTableData)
       mTableData->Destroy(aContext);
+    if (mColorData)
+      mColorData->Destroy(aContext);
     aContext->FreeToShell(sizeof(nsInheritedStyleData), this);
   };
 
   nsInheritedStyleData() 
-    :mFontData(nsnull), mListData(nsnull), mTableData(nsnull) {};
+    :mFontData(nsnull), mListData(nsnull), mTableData(nsnull), mColorData(nsnull) {};
 };
 
 struct nsResetStyleData
 {
   nsResetStyleData()
     :mMarginData(nsnull), mBorderData(nsnull), mPaddingData(nsnull), 
-     mOutlineData(nsnull), mPositionData(nsnull), mTableData(nsnull) {
+     mOutlineData(nsnull), mPositionData(nsnull), mTableData(nsnull), mBackgroundData(nsnull) {
 #ifdef INCLUDE_XUL
     mXULData = nsnull;
 #endif
@@ -71,8 +74,6 @@ struct nsResetStyleData
   void* operator new(size_t sz, nsIPresContext* aContext) {
     void* result = nsnull;
     aContext->AllocateFromShell(sz, &result);
-    if (result)
-    nsCRT::zero(result, sz);
     return result;
   }
   void Destroy(nsIPresContext* aContext) {
@@ -88,6 +89,8 @@ struct nsResetStyleData
       mPositionData->Destroy(aContext);
     if (mTableData)
       mTableData->Destroy(aContext);
+    if (mBackgroundData)
+      mBackgroundData->Destroy(aContext);
 #ifdef INCLUDE_XUL
     if (mXULData)
       mXULData->Destroy(aContext);
@@ -101,6 +104,7 @@ struct nsResetStyleData
   nsStyleOutline* mOutlineData;
   nsStylePosition* mPositionData;
   nsStyleTable* mTableData;
+  nsStyleBackground* mBackgroundData;
 
 #ifdef INCLUDE_XUL
   nsStyleXUL* mXULData;
@@ -118,6 +122,7 @@ struct nsCachedStyleData
       case eStyleStruct_Font: // [Inherited]
       case eStyleStruct_List:
       case eStyleStruct_TableBorder:
+      case eStyleStruct_Color:
         return PR_FALSE; 
       case eStyleStruct_Margin: // [Reset]
       case eStyleStruct_Padding:
@@ -125,6 +130,7 @@ struct nsCachedStyleData
       case eStyleStruct_Outline:
       case eStyleStruct_Position:
       case eStyleStruct_Table:
+      case eStyleStruct_Background:
       case eStyleStruct_XUL:
     	  return PR_TRUE;
     }
@@ -139,6 +145,8 @@ struct nsCachedStyleData
         return NS_STYLE_INHERIT_FONT;   
       case eStyleStruct_Color:
         return NS_STYLE_INHERIT_COLOR;
+      case eStyleStruct_Background:
+        return NS_STYLE_INHERIT_BACKGROUND;
       case eStyleStruct_List:
         return NS_STYLE_INHERIT_LIST;
       case eStyleStruct_Position:
@@ -175,6 +183,10 @@ struct nsCachedStyleData
     switch (aSID) {
       case eStyleStruct_Font:
         return mInheritedData ? mInheritedData->mFontData : nsnull;
+      case eStyleStruct_Color:
+        return mInheritedData ? mInheritedData->mColorData : nsnull;
+      case eStyleStruct_Background:
+        return mResetData ? mResetData->mBackgroundData : nsnull;
       case eStyleStruct_Margin:
         return mResetData ? mResetData->mMarginData : nsnull;
       case eStyleStruct_Padding:
@@ -208,20 +220,23 @@ struct nsRuleData
   nsStyleStructID mSID;
   nsIPresContext* mPresContext;
   nsIStyleContext* mStyleContext;
+  nsPostResolveFunc mPostResolveCallback;
 
   nsCSSFont* mFontData; // Should always be stack-allocated! We don't own these structures!
   nsCSSMargin* mMarginData;
   nsCSSList* mListData;
   nsCSSPosition* mPositionData;
   nsCSSTable* mTableData;
+  nsCSSColor* mColorData;
 
 #ifdef INCLUDE_XUL
   nsCSSXUL* mXULData;
 #endif
 
   nsRuleData(const nsStyleStructID& aSID, nsIPresContext* aContext, nsIStyleContext* aStyleContext) 
-    :mSID(aSID), mPresContext(aContext), mStyleContext(aStyleContext),
-     mFontData(nsnull), mMarginData(nsnull), mListData(nsnull), mPositionData(nsnull), mTableData(nsnull)
+    :mSID(aSID), mPresContext(aContext), mStyleContext(aStyleContext), mPostResolveCallback(nsnull),
+     mFontData(nsnull), mMarginData(nsnull), mListData(nsnull), mPositionData(nsnull), mTableData(nsnull),
+     mColorData(nsnull)
   {
 #ifdef INCLUDE_XUL
     mXULData = nsnull;

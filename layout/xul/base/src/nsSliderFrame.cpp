@@ -294,8 +294,8 @@ nsSliderFrame::Paint(nsIPresContext* aPresContext,
       const nsStyleDisplay* disp = (const nsStyleDisplay*)
       mStyleContext->GetStyleData(eStyleStruct_Display);
       if (disp->IsVisibleOrCollapsed()) {
-        const nsStyleColor* myColor = (const nsStyleColor*)
-        mStyleContext->GetStyleData(eStyleStruct_Color);
+        const nsStyleBackground* myColor = (const nsStyleBackground*)
+        mStyleContext->GetStyleData(eStyleStruct_Background);
         const nsStyleBorder* myBorder = (const nsStyleBorder*)
         mStyleContext->GetStyleData(eStyleStruct_Border);
         nsRect rect(0, 0, mRect.width, mRect.height);

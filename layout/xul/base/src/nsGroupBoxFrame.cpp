@@ -110,8 +110,8 @@ nsTitledBoxFrame::Paint(nsIPresContext* aPresContext,
 
     if (disp->IsVisible() && mRect.width && mRect.height) {
       PRIntn skipSides = GetSkipSides();
-      const nsStyleColor* color =
-        (const nsStyleColor*)mStyleContext->GetStyleData(eStyleStruct_Color);
+      const nsStyleBackground* color =
+        (const nsStyleBackground*)mStyleContext->GetStyleData(eStyleStruct_Background);
       const nsStyleBorder* borderStyleData =
         (const nsStyleBorder*)mStyleContext->GetStyleData(eStyleStruct_Border);
        

@@ -74,113 +74,6 @@
 //  - For enforcing the floated/positioned element CSS2 rules
 static void EnsureBlockDisplay(/*in out*/PRUint8 &display);
 
-
-// --------------------
-// nsStyleColor
-//
-
-struct StyleColorImpl: public nsStyleColor {
-  StyleColorImpl(void)  { }
-
-  void ResetFrom(const nsStyleColor* aParent, nsIPresContext* aPresContext);
-  void SetFrom(const nsStyleColor& aSource);
-  void CopyTo(nsStyleColor& aDest) const;
-  PRInt32 CalcDifference(const StyleColorImpl& aOther) const;
-  
-private:  // These are not allowed
-  StyleColorImpl(const StyleColorImpl& aOther);
-  StyleColorImpl& operator=(const StyleColorImpl& aOther);
-};
-
-void StyleColorImpl::ResetFrom(const nsStyleColor* aParent, nsIPresContext* aPresContext)
-{
-  if (nsnull != aParent) {
-    mColor = aParent->mColor;
-    mOpacity = aParent->mOpacity;
-    mCursor = aParent->mCursor; // fix for bugzilla bug 51113
-  }
-  else {
-    if (nsnull != aPresContext) {
-      aPresContext->GetDefaultColor(&mColor);
-    }
-    else {
-      mColor = NS_RGB(0x00, 0x00, 0x00);
-    }
-    mOpacity = 1.0f;
-    mCursor = NS_STYLE_CURSOR_AUTO; // fix for bugzilla bug 51113
-  }
-
-  mBackgroundFlags = NS_STYLE_BG_COLOR_TRANSPARENT | NS_STYLE_BG_IMAGE_NONE;
-  if (nsnull != aPresContext) {
-    aPresContext->GetDefaultBackgroundColor(&mBackgroundColor);
-    aPresContext->GetDefaultBackgroundImageAttachment(&mBackgroundAttachment);
-    aPresContext->GetDefaultBackgroundImageRepeat(&mBackgroundRepeat);
-    aPresContext->GetDefaultBackgroundImageOffset(&mBackgroundXPosition, &mBackgroundYPosition);
-    aPresContext->GetDefaultBackgroundImage(mBackgroundImage);
-  }
-  else {
-    mBackgroundColor = NS_RGB(192,192,192);
-    mBackgroundAttachment = NS_STYLE_BG_ATTACHMENT_SCROLL;
-    mBackgroundRepeat = NS_STYLE_BG_REPEAT_XY;
-    mBackgroundXPosition = 0;
-    mBackgroundYPosition = 0;
-  }
-}
-
-void StyleColorImpl::SetFrom(const nsStyleColor& aSource)
-{
-  mColor = aSource.mColor;
- 
-  mBackgroundAttachment = aSource.mBackgroundAttachment;
-  mBackgroundFlags = aSource.mBackgroundFlags;
-  mBackgroundRepeat = aSource.mBackgroundRepeat;
-
-  mBackgroundColor = aSource.mBackgroundColor;
-  mBackgroundXPosition = aSource.mBackgroundXPosition;
-  mBackgroundYPosition = aSource.mBackgroundYPosition;
-  mBackgroundImage = aSource.mBackgroundImage;
-
-  mCursor = aSource.mCursor;
-  mCursorImage = aSource.mCursorImage;
-  mOpacity = aSource.mOpacity;
-}
-
-void StyleColorImpl::CopyTo(nsStyleColor& aDest) const
-{
-  aDest.mColor = mColor;
- 
-  aDest.mBackgroundAttachment = mBackgroundAttachment;
-  aDest.mBackgroundFlags = mBackgroundFlags;
-  aDest.mBackgroundRepeat = mBackgroundRepeat;
-
-  aDest.mBackgroundColor = mBackgroundColor;
-  aDest.mBackgroundXPosition = mBackgroundXPosition;
-  aDest.mBackgroundYPosition = mBackgroundYPosition;
-  aDest.mBackgroundImage = mBackgroundImage;
-
-  aDest.mCursor = mCursor;
-  aDest.mCursorImage = mCursorImage;
-  aDest.mOpacity = mOpacity;
-}
-
-PRInt32 StyleColorImpl::CalcDifference(const StyleColorImpl& aOther) const
-{
-  if ((mColor == aOther.mColor) && 
-      (mBackgroundAttachment == aOther.mBackgroundAttachment) &&
-      (mBackgroundFlags == aOther.mBackgroundFlags) &&
-      (mBackgroundRepeat == aOther.mBackgroundRepeat) &&
-      (mBackgroundColor == aOther.mBackgroundColor) &&
-      (mBackgroundXPosition == aOther.mBackgroundXPosition) &&
-      (mBackgroundYPosition == aOther.mBackgroundYPosition) &&
-      (mBackgroundImage == aOther.mBackgroundImage) &&
-      (mCursor == aOther.mCursor) &&
-      (mCursorImage == aOther.mCursorImage) &&
-      (mOpacity == aOther.mOpacity)) {
-    return NS_STYLE_HINT_NONE;
-  }
-  return NS_STYLE_HINT_VISUAL;
-}
-
 // --------------------
 // nsStyleText
 //
@@ -592,11 +485,17 @@ void StyleUserInterfaceImpl::ResetFrom(const nsStyleUserInterface* aParent, nsIP
     mUserInput = aParent->mUserInput;
     mUserModify = aParent->mUserModify;
     mUserFocus = aParent->mUserFocus;
+    mOpacity = aParent->mOpacity;
+    mCursor = aParent->mCursor; // fix for bugzilla bug 51113
+    mCursorImage = aParent->mCursorImage; // fix for bugzilla bug 51113
   }
   else {
     mUserInput = NS_STYLE_USER_INPUT_AUTO;
     mUserModify = NS_STYLE_USER_MODIFY_READ_ONLY;
     mUserFocus = NS_STYLE_USER_FOCUS_NONE;
+
+    mOpacity = 1.0f;
+    mCursor = NS_STYLE_CURSOR_AUTO; // fix for bugzilla bug 51113
   }
 
   mUserSelect = NS_STYLE_USER_SELECT_AUTO;
@@ -615,6 +514,10 @@ void StyleUserInterfaceImpl::SetFrom(const nsStyleUserInterface& aSource)
   mKeyEquivalent = aSource.mKeyEquivalent;
   mResizer = aSource.mResizer;
   mBehavior = aSource.mBehavior;
+
+  mCursor = aSource.mCursor;
+  mCursorImage = aSource.mCursorImage;
+  mOpacity = aSource.mOpacity;
 }
 
 void StyleUserInterfaceImpl::CopyTo(nsStyleUserInterface& aDest) const
@@ -627,12 +530,21 @@ void StyleUserInterfaceImpl::CopyTo(nsStyleUserInterface& aDest) const
   aDest.mKeyEquivalent = mKeyEquivalent;
   aDest.mResizer = mResizer;
   aDest.mBehavior = mBehavior;
+
+  aDest.mCursor = mCursor;
+  aDest.mCursorImage = mCursorImage;
+  aDest.mOpacity = mOpacity;
 }
 
 PRInt32 StyleUserInterfaceImpl::CalcDifference(const StyleUserInterfaceImpl& aOther) const
 {
   if (mBehavior != aOther.mBehavior)
     return NS_STYLE_HINT_FRAMECHANGE;
+
+  if ((mCursor != aOther.mCursor) ||
+      (mCursorImage != aOther.mCursorImage) ||
+      (mOpacity != aOther.mOpacity))
+    return NS_STYLE_HINT_VISUAL;
 
   if ((mUserInput == aOther.mUserInput) && 
       (mResizer == aOther.mResizer)) {
@@ -671,6 +583,8 @@ public:
   NS_DECL_ISUPPORTS
 
   virtual nsIStyleContext*  GetParent(void) const;
+  NS_IMETHOD GetFirstChild(nsIStyleContext** aContext);
+
   NS_IMETHOD GetPseudoType(nsIAtom*& aPseudoTag) const;
 
   NS_IMETHOD FindChildWithRules(const nsIAtom* aPseudoTag, nsIRuleNode* aRules,
@@ -689,6 +603,8 @@ public:
   NS_IMETHOD AddInheritBit(const PRUint32& aInheritBit) { mInheritBits |= aInheritBit; return NS_OK; };
 
   virtual const nsStyleStruct* GetStyleData(nsStyleStructID aSID);
+  virtual nsStyleStruct* GetUniqueStyleData(nsIPresContext* aPresContext, const nsStyleStructID& aSID);
+
   virtual nsStyleStruct* GetMutableStyleData(nsStyleStructID aSID);
 
   virtual void ForceUnique(void);
@@ -721,7 +637,6 @@ protected:
   PRInt16           mDataCode;
 
   // the style data...
-  StyleColorImpl          mColor;
   StyleTextImpl           mText;
   StyleDisplayImpl        mDisplay;
   StyleContentImpl        mContent;
@@ -743,7 +658,6 @@ StyleContextImpl::StyleContextImpl(nsIStyleContext* aParent,
     mInheritBits(0),
     mRuleNode(aRuleNode),
     mDataCode(-1),
-    mColor(),
     mText(),
     mDisplay(),
     mContent(),
@@ -804,6 +718,14 @@ nsIStyleContext* StyleContextImpl::GetParent(void) const
 {
   NS_IF_ADDREF(mParent);
   return mParent;
+}
+
+NS_IMETHODIMP
+StyleContextImpl::GetFirstChild(nsIStyleContext** aContext)
+{
+  *aContext = mChild;
+  NS_IF_ADDREF(*aContext);
+  return NS_OK;
 }
 
 void StyleContextImpl::AppendChild(StyleContextImpl* aChild)
@@ -972,6 +894,8 @@ const nsStyleStruct* StyleContextImpl::GetStyleData(nsStyleStructID aSID)
       
   switch (aSID) {
     case eStyleStruct_Font:
+    case eStyleStruct_Color:
+    case eStyleStruct_Background:
     case eStyleStruct_Margin:
     case eStyleStruct_Border:
     case eStyleStruct_Padding:
@@ -987,9 +911,6 @@ const nsStyleStruct* StyleContextImpl::GetStyleData(nsStyleStructID aSID)
         return mParent->GetStyleData(aSID); // We inherit from our parent in the style context tree.
       else
         return mRuleNode->GetStyleData(aSID, this, this); // Our rule node will take care of it for us.
-    case eStyleStruct_Color:
-      result = & GETSCDATA(Color);
-      break;
     case eStyleStruct_Text:
       result = & GETSCDATA(Text);
       break;
@@ -1026,6 +947,31 @@ StyleContextImpl::GetBorderPaddingFor(nsStyleBorderPadding& aBorderPadding)
   return NS_OK;
 }
 
+// This is an evil evil function, since it forces you to alloc your own separate copy of
+// style data!  Do not use this function unless you absolutely have to!  You should avoid
+// this at all costs! -dwh
+nsStyleStruct* 
+StyleContextImpl::GetUniqueStyleData(nsIPresContext* aPresContext, const nsStyleStructID& aSID)
+{
+  nsStyleStruct* result = nsnull;
+  switch (aSID) {
+  case eStyleStruct_Background: {
+    if (mCachedStyleData.mResetData && mCachedStyleData.mResetData->mBackgroundData)
+      result = mCachedStyleData.mResetData->mBackgroundData;
+    else {
+      const nsStyleBackground* bg = (const nsStyleBackground*)GetStyleData(aSID);
+      nsStyleBackground* newBG = new (aPresContext) nsStyleBackground(*bg);
+      SetStyle(aSID, *newBG);
+      result = newBG;
+    }
+    break;
+  }
+  default:
+    NS_ERROR("Struct type not supported.  Please find another way to do this if you can!\n");
+  }
+
+  return result;
+}
 
 nsStyleStruct* StyleContextImpl::GetMutableStyleData(nsStyleStructID aSID)
 {
@@ -1033,6 +979,8 @@ nsStyleStruct* StyleContextImpl::GetMutableStyleData(nsStyleStructID aSID)
 
     switch (aSID) {
     case eStyleStruct_Font:
+    case eStyleStruct_Color:
+    case eStyleStruct_Background:
     case eStyleStruct_Border:
     case eStyleStruct_Margin:
     case eStyleStruct_Padding:
@@ -1044,9 +992,6 @@ nsStyleStruct* StyleContextImpl::GetMutableStyleData(nsStyleStructID aSID)
     case eStyleStruct_TableBorder:
       NS_ERROR("YOU CANNOT CALL THIS!  IT'S GOING TO BE REMOVED!\n");
       return nsnull;
-    case eStyleStruct_Color:
-      result = & GETSCDATA(Color);
-      break;
     case eStyleStruct_Text:
       result = & GETSCDATA(Text);
       break;
@@ -1104,7 +1049,10 @@ StyleContextImpl::SetStyle(nsStyleStructID aSID, const nsStyleStruct& aStruct)
       mCachedStyleData.mInheritedData->mFontData = (nsStyleFont*)(const nsStyleFont*)(&aStruct);
       break;
     case eStyleStruct_Color:
-      GETSCDATA(Color).SetFrom((const nsStyleColor&)aStruct);
+      mCachedStyleData.mInheritedData->mColorData = (nsStyleColor*)(const nsStyleColor*)(&aStruct);
+      break;
+    case eStyleStruct_Background:
+      mCachedStyleData.mResetData->mBackgroundData = (nsStyleBackground*)(const nsStyleBackground*)(&aStruct);
       break;
     case eStyleStruct_List:
       mCachedStyleData.mInheritedData->mListData = (nsStyleList*)(const nsStyleList*)(&aStruct);
@@ -1191,14 +1139,12 @@ StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
   mDataCode = -1;
 
   if (nsnull != mParent) {
-    GETSCDATA(Color).ResetFrom(&(mParent->GETSCDATA(Color)), aPresContext);
     GETSCDATA(Text).ResetFrom(&(mParent->GETSCDATA(Text)), aPresContext);
     GETSCDATA(Display).ResetFrom(&(mParent->GETSCDATA(Display)), aPresContext);
     GETSCDATA(Content).ResetFrom(&(mParent->GETSCDATA(Content)), aPresContext);
     GETSCDATA(UserInterface).ResetFrom(&(mParent->GETSCDATA(UserInterface)), aPresContext);
   }
   else {
-    GETSCDATA(Color).ResetFrom(nsnull, aPresContext);
     GETSCDATA(Text).ResetFrom(nsnull, aPresContext);
     GETSCDATA(Display).ResetFrom(nsnull, aPresContext);
     GETSCDATA(Content).ResetFrom(nsnull, aPresContext);
@@ -1269,7 +1215,7 @@ StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
       if (GETSCDATA(Display).mDisplay != NS_STYLE_DISPLAY_TABLE) {
        // GETSCDATA(Font).ResetFrom(nsnull, aPresContext);
       }
-      GETSCDATA(Color).ResetFrom(nsnull, aPresContext);
+      //GETSCDATA(Color).ResetFrom(nsnull, aPresContext);
       GETSCDATA(Text).ResetFrom(nsnull, aPresContext);
       //GETSCDATA(Position).ResetFrom(nsnull, aPresContext);
       GETSCDATA(Display).ResetFrom(nsnull, aPresContext);
@@ -1363,7 +1309,19 @@ StyleContextImpl::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PR
     aHint = font->CalcDifference(*otherFont);
     if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
     if (aHint < NS_STYLE_HINT_MAX) {
-      hint = GETSCDATA(Color).CalcDifference(other->GETSCDATA(Color));
+      const nsStyleColor* color = (const nsStyleColor*)GetStyleData(eStyleStruct_Color);
+      const nsStyleColor* otherColor = (const nsStyleColor*)aOther->GetStyleData(eStyleStruct_Color);
+      hint = color->CalcDifference(*otherColor);
+      if (aHint < hint) {
+        aHint = hint;
+      }
+    }
+
+    if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
+    if (aHint < NS_STYLE_HINT_MAX) {
+      const nsStyleBackground* background = (const nsStyleBackground*)GetStyleData(eStyleStruct_Background);
+      const nsStyleBackground* otherBackground = (const nsStyleBackground*)aOther->GetStyleData(eStyleStruct_Background);
+      hint = background->CalcDifference(*otherBackground);
       if (aHint < hint) {
         aHint = hint;
       }
@@ -1553,8 +1511,6 @@ void StyleContextImpl::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
 
     printf( "Detailed StyleContextImpl dump: basic class sizes of members\n" );
     printf( "*************************************\n");
-    printf( " - StyleColorImpl:         %ld\n", (long)sizeof(GETSCDATA(Color)) );
-    totalSize += (long)sizeof(GETSCDATA(Color));
     printf( " - StyleTextImpl:          %ld\n", (long)sizeof(GETSCDATA(Text)) );
     totalSize += (long)sizeof(GETSCDATA(Text));
     printf( " - StyleDisplayImpl:       %ld\n", (long)sizeof(GETSCDATA(Display)) );
@@ -1627,7 +1583,7 @@ void StyleContextImpl::DumpRegressionData(nsIPresContext* aPresContext, FILE* ou
   //        GETSCDATA(Font).mFlags);
 
   // COLOR
-  IndentBy(out,aIndent);
+  /*IndentBy(out,aIndent);
   fprintf(out, "<color data=\"%ld %d %d %d %ld %ld %ld %s %d %s %f\"/>\n", 
     (long)GETSCDATA(Color).mColor,
     (int)GETSCDATA(Color).mBackgroundAttachment,
@@ -1645,7 +1601,7 @@ void StyleContextImpl::DumpRegressionData(nsIPresContext* aPresContext, FILE* ou
   IndentBy(out,aIndent);
   fprintf(out, "<spacing data=\"");
 
- /* GETSCDATA(Margin).mMargin.ToString(str);
+  GETSCDATA(Margin).mMargin.ToString(str);
   fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   GETSCDATA(Padding).mPadding.ToString(str);
   fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
