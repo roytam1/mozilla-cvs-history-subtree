@@ -414,17 +414,29 @@ nsRuleNode::GetRule(nsIStyleRule** aResult)
 NS_IMETHODIMP
 nsRuleNode::ClearCachedData(nsIStyleRule* aRule)
 {
-  nsRuleNode* curr = this;
-  while (curr) {
-    if (curr->mRule == aRule) {
-      // We have a match.  Blow away all data stored at this node.
-      if (curr->mStyleData.mResetData || curr->mStyleData.mInheritedData)
-        curr->mStyleData.Destroy(0, mPresContext);
+  nsRuleNode* ruleDest = this;
+  while (ruleDest) {
+    if (ruleDest->mRule == aRule)
+      break;
+
+    ruleDest = ruleDest->mParent;
+  }
+
+  if (ruleDest) {
+    // The rule was contained along our branch.  We need to blow away
+    // all cached data along this path.
+    nsRuleNode* curr = this;
+    while (curr) {
       curr->mNoneBits &= ~NS_STYLE_INHERIT_MASK;
       curr->mInheritBits &= ~NS_STYLE_INHERIT_MASK;
-      break;
+      if (curr->mStyleData.mResetData || curr->mStyleData.mInheritedData)
+        curr->mStyleData.Destroy(0, mPresContext);
+
+      if (curr == ruleDest)
+        break;
+
+      curr = curr->mParent;
     }
-    curr = curr->mParent;
   }
 
   return NS_OK;
@@ -446,7 +458,7 @@ nsRuleNode::ClearCachedDataInSubtree(nsIStyleRule* aRule)
     if (mStyleData.mResetData || mStyleData.mInheritedData)
       mStyleData.Destroy(0, mPresContext);
     mNoneBits &= ~NS_STYLE_INHERIT_MASK;
-    mInheritBits &= ~NS_STYLE_INHERIT_MASK;  
+    mInheritBits &= ~NS_STYLE_INHERIT_MASK;  // XXXdwh need to clear all data in descendants!
   }
 
   if (mChildren)

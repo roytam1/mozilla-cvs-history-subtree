@@ -7135,13 +7135,13 @@ nsCSSFrameConstructor::ConstructFrameInternal( nsIPresShell*            aPresShe
   // The following code allows the user to specify the base tag
   // of an element using XBL.  XUL and HTML objects (like boxes, menus, etc.)
   // can then be extended arbitrarily.
+  const nsStyleDisplay*  display = (const nsStyleDisplay*)
+        aStyleContext->GetStyleData(eStyleStruct_Display);
   nsCOMPtr<nsIStyleContext> styleContext(do_QueryInterface(aStyleContext));
   nsCOMPtr<nsIXBLBinding> binding;
   if (!aXBLBaseTag)
   {
-    const nsStyleDisplay*  display = (const nsStyleDisplay*)
-        styleContext->GetStyleData(eStyleStruct_Display);
-
+    
     // Ensure that our XBL bindings are installed.
     if (!display->mBinding.IsEmpty()) {
       // Get the XBL loader.
@@ -7191,9 +7191,6 @@ nsCSSFrameConstructor::ConstructFrameInternal( nsIPresShell*            aPresShe
 
   // Pre-check for display "none" - if we find that, don't create
   // any frame at all
-  const nsStyleDisplay* display = (const nsStyleDisplay*)
-    styleContext->GetStyleData(eStyleStruct_Display);
-
   if (NS_STYLE_DISPLAY_NONE == display->mDisplay) {
     aState.mFrameManager->SetUndisplayedContent(aContent, styleContext);
     return NS_OK;
@@ -9802,24 +9799,28 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
 
   // check for inline style.  we need to clear the data at the style context's rule
   // node whenever the inline style property changes.
+  nsCOMPtr<nsIStyleContext> styleContext;
+  nsCOMPtr<nsIStyleRule> rule;
+  PRBool inlineStyle = PR_FALSE;
   if (aAttribute == nsHTMLAtoms::style) {
     nsCOMPtr<nsIHTMLContent> html(do_QueryInterface(aContent));
     if (html) {
       nsHTMLValue val;
       html->GetHTMLAttribute(nsHTMLAtoms::style, val);
       if (eHTMLUnit_ISupports == val.GetUnit()) {
+        inlineStyle = PR_TRUE;
+
         // This style rule exists and we need to blow away any computed data that this
         // rule cached in the rule tree.
-        nsCOMPtr<nsIStyleRule> rule = getter_AddRefs((nsIStyleRule*)val.GetISupportsValue());
-        nsCOMPtr<nsIStyleContext> context;
+        rule = getter_AddRefs((nsIStyleRule*)val.GetISupportsValue());
         if (primaryFrame)
-          primaryFrame->GetStyleContext(getter_AddRefs(context));
+          primaryFrame->GetStyleContext(getter_AddRefs(styleContext));
         else {
           // We might be in the undisplayed map.  Retrieve the style context from there.
           nsCOMPtr<nsIFrameManager> frameManager;
           shell->GetFrameManager(getter_AddRefs(frameManager));
-          frameManager->GetUndisplayedContent(aContent, getter_AddRefs(context));
-          if (!context) {
+          frameManager->GetUndisplayedContent(aContent, getter_AddRefs(styleContext));
+          if (!styleContext) {
             // Well, we don't have a context to use as a guide.  
             // Attempt #3 will be to resolve style if we at least have a parent frame.
             nsCOMPtr<nsIContent> parent;
@@ -9831,30 +9832,10 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
                 nsCOMPtr<nsIStyleContext> parentContext;
                 parentFrame->GetStyleContext(getter_AddRefs(parentContext));
                 aPresContext->ResolveStyleContextFor(aContent, parentContext, PR_FALSE,
-                                                     getter_AddRefs(context));  
+                                                     getter_AddRefs(styleContext));  
               }
             }
           }
-        }
-
-        if (context) {
-          nsCOMPtr<nsIRuleNode> ruleNode;
-          context->GetRuleNode(getter_AddRefs(ruleNode));
-          ruleNode->ClearCachedData(rule); // XXXdwh.  If we're willing to *really* special case
-                                           // inline style, we could only invalidate the struct data
-                                           // that actually changed.  For example, if someone changes
-                                           // style.left, we really only need to blow away cached
-                                           // data in the position struct.
-        }
-        else {
-          // Ok, our only option left is to just crawl the entire rule
-          // tree and blow away the data that way.
-          nsCOMPtr<nsIStyleSet> set;
-          shell->GetStyleSet(getter_AddRefs(set));
-          nsCOMPtr<nsIRuleNode> rootNode;
-          set->GetRuleTree(getter_AddRefs(rootNode));
-          if (rootNode)
-            rootNode->ClearCachedDataInSubtree(rule);
         }
       }
     }
@@ -9867,13 +9848,34 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
     result = ReconstructDocElementHierarchy(aPresContext);
   }
   else if (PR_TRUE == reframe) {
-    result = RecreateFramesForContent(aPresContext, aContent);
+    result = RecreateFramesForContent(aPresContext, aContent, inlineStyle, rule, styleContext);
   }
   else if (PR_TRUE == restyle) {
+    if (inlineStyle) {
+      if (styleContext) {
+        nsCOMPtr<nsIRuleNode> ruleNode;
+        styleContext->GetRuleNode(getter_AddRefs(ruleNode));
+        ruleNode->ClearCachedData(rule); // XXXdwh.  If we're willing to *really* special case
+                                         // inline style, we could only invalidate the struct data
+                                         // that actually changed.  For example, if someone changes
+                                         // style.left, we really only need to blow away cached
+                                         // data in the position struct.
+      }
+      else {
+        // Ok, our only option left is to just crawl the entire rule
+        // tree and blow away the data that way.
+        nsCOMPtr<nsIStyleSet> set;
+        shell->GetStyleSet(getter_AddRefs(set));
+        nsCOMPtr<nsIRuleNode> rootNode;
+        set->GetRuleTree(getter_AddRefs(rootNode));
+        if (rootNode)
+          rootNode->ClearCachedDataInSubtree(rule);
+      }
+    }
+
     // If there is no frame then there is no point in re-styling it,
     // is there?
     if (primaryFrame) {
-
       PRInt32 maxHint = aHint;
       nsStyleChangeList changeList;
       // put primary frame on list to deal with, re-resolve may update or add next in flows
@@ -9948,7 +9950,7 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
       ProcessRestyledFrames(changeList, aPresContext);
     }
     else {  // no frame now, possibly genetate one with new style data
-      result = RecreateFramesForContent(aPresContext, aContent);
+      result = RecreateFramesForContent(aPresContext, aContent, inlineStyle, rule, styleContext);
     }
   }
 
@@ -11115,7 +11117,9 @@ nsCSSFrameConstructor::CaptureStateFor(nsIPresContext* aPresContext,
 
 nsresult
 nsCSSFrameConstructor::RecreateFramesForContent(nsIPresContext* aPresContext,
-                                                nsIContent* aContent)                                   
+                                                nsIContent* aContent, PRBool aInlineStyle,
+                                                nsIStyleRule* aInlineStyleRule,
+                                                nsIStyleContext* aStyleContext)                                   
 {
   // Is the frame `special'? If so, we need to reframe the containing
   // block *here*, rather than trying to remove and re-insert the
@@ -11153,7 +11157,32 @@ nsCSSFrameConstructor::RecreateFramesForContent(nsIPresContext* aPresContext,
       // Remove the frames associated with the content object on which the
       // attribute change occurred.
       rv = ContentRemoved(aPresContext, container, aContent, indexInContainer);
-  
+
+      // Now that the old frame is gone (and has stopped depending on obsolete style
+      // data, we need to blow away our style information if this reframe happened as
+      // a result of an inline style attribute changing.
+      if (aInlineStyle) {
+        if (aStyleContext) {
+          nsCOMPtr<nsIRuleNode> ruleNode;
+          aStyleContext->GetRuleNode(getter_AddRefs(ruleNode));
+          ruleNode->ClearCachedData(aInlineStyleRule); // XXXdwh.  If we're willing to *really* special case
+                                           // inline style, we could only invalidate the struct data
+                                           // that actually changed.  For example, if someone changes
+                                           // style.left, we really only need to blow away cached
+                                           // data in the position struct.
+        }
+        else {
+          // Ok, our only option left is to just crawl the entire rule
+          // tree and blow away the data that way.
+          nsCOMPtr<nsIStyleSet> set;
+          shell->GetStyleSet(getter_AddRefs(set));
+          nsCOMPtr<nsIRuleNode> rootNode;
+          set->GetRuleTree(getter_AddRefs(rootNode));
+          if (rootNode)
+            rootNode->ClearCachedDataInSubtree(aInlineStyleRule);
+        }
+      }
+    
       if (NS_SUCCEEDED(rv)) {
         // Now, recreate the frames associated with this content object.
         rv = ContentInserted(aPresContext, container, aContent, indexInContainer, mTempFrameTreeState);
