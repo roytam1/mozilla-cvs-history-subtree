@@ -267,9 +267,9 @@ char* nsInstallExecute::toString()
 
         if (rsrcVal)
         {
-            char* temp;
-            mExecutableFile->GetPath(&temp);
-            sprintf( buffer, rsrcVal, temp);
+            nsCAutoString temp;
+            mExecutableFile->GetNativePath(temp);
+            sprintf( buffer, rsrcVal, temp.get());
             nsCRT::free(rsrcVal);
         }
     }

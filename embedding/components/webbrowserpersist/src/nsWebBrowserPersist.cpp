@@ -839,15 +839,13 @@ nsresult nsWebBrowserPersist::SendErrorStatusChange(
     nsAutoString path;
     if (file)
     {
-        nsXPIDLString filePath;
-        file->GetUnicodePath(getter_Copies(filePath));
-        path = filePath;
+        file->GetPath(path);
     }
     else
     {
         nsCAutoString fileurl;
         aURI->GetSpec(fileurl);
-        path.Assign(NS_ConvertUTF8toUCS2(fileurl));
+        path = NS_ConvertUTF8toUCS2(fileurl);
     }
     
     nsAutoString msgId;
@@ -1263,13 +1261,13 @@ nsresult nsWebBrowserPersist::SaveDocumentInternal(
                     break;
                 }
 
-                nsXPIDLCString dirName;
-                dataDirParent->GetLeafName(getter_Copies(dirName));
+                nsCAutoString dirName;
+                dataDirParent->GetNativeLeafName(dirName);
 
                 nsCAutoString newRelativePathToData;
-                newRelativePathToData = dirName.get();
-                newRelativePathToData.Append("/");
-                newRelativePathToData.Append(relativePathToData);
+                newRelativePathToData = dirName
+                                      + NS_LITERAL_CSTRING("/")
+                                      + relativePathToData;
                 relativePathToData = newRelativePathToData;
 
                 nsCOMPtr<nsIFile> newDataDirParent;
@@ -1283,7 +1281,7 @@ nsresult nsWebBrowserPersist::SaveDocumentInternal(
             nsCOMPtr<nsIURL> pathToBaseURL(do_QueryInterface(aFile));
             if (pathToBaseURL)
             {
-                nsXPIDLCString relativePath;  // nsACString
+                nsCAutoString relativePath;  // nsACString
                 if (NS_SUCCEEDED(pathToBaseURL->GetRelativeSpec(aDataPath, relativePath)))
                 {
                     mCurrentDataPathIsRelative = PR_TRUE;
@@ -1532,7 +1530,7 @@ nsWebBrowserPersist::CalculateAndAppendFileExt(nsIURI *aURI, nsIChannel *aChanne
 
                 if (localFile)
                 {
-                    localFile->SetLeafName(newFileName.get());
+                    localFile->SetNativeLeafName(newFileName);
 
                     // Resync the URI with the file after the extension has been appended
                     nsCOMPtr<nsIFileURL> fileURL = do_QueryInterface(aURI, &rv);

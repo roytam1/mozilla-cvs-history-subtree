@@ -280,7 +280,7 @@ NS_MakeAbsoluteURI(nsAString &result,
 inline nsresult
 NS_NewPostDataStream(nsIInputStream **result,
                      PRBool isFile,
-                     const char *data,
+                     const nsACString &data,
                      PRUint32 encodeFlags,
                      nsIIOService* ioService = nsnull)     // pass in nsIIOService to optimize callers
 {
@@ -290,7 +290,7 @@ NS_NewPostDataStream(nsIInputStream **result,
         nsCOMPtr<nsILocalFile> file;
         nsCOMPtr<nsIInputStream> fileStream;
 
-        rv = NS_NewLocalFile(data, PR_FALSE, getter_AddRefs(file));
+        rv = NS_NewNativeLocalFile(data, PR_FALSE, getter_AddRefs(file));
         if (NS_FAILED(rv)) return rv;
 
         rv = NS_NewLocalFileInputStream(getter_AddRefs(fileStream), file);
@@ -301,7 +301,7 @@ NS_NewPostDataStream(nsIInputStream **result,
     }
 
     // otherwise, create a string stream for the data
-    return NS_NewCStringInputStream(result, nsDependentCString(data));
+    return NS_NewCStringInputStream(result, data);
 }
 
 inline nsresult

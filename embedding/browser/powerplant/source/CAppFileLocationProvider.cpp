@@ -37,7 +37,7 @@
 
 #include "ApplIDs.h"
 
-static char* GetResCString(PRInt32 stringIndex, Str255& buf);
+static nsACString& GetResCString(PRInt32 stringIndex, nsACString& outStr);
   
 
 //*****************************************************************************
@@ -71,7 +71,7 @@ CAppFileLocationProvider::GetFile(const char *prop, PRBool *persistant, nsIFile 
 {    
 	nsCOMPtr<nsILocalFile>  localFile;
 	nsresult rv = NS_ERROR_FAILURE;
-	Str255 strBuf;
+	nsCAutoString strBuf;
 
 	*_retval = nsnull;
 	*persistant = PR_TRUE;
@@ -84,21 +84,21 @@ CAppFileLocationProvider::GetFile(const char *prop, PRBool *persistant, nsIFile 
     {
         rv = GetProductDirectory(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv))
-            rv = localFile->Append(GetResCString(str_AppRegistryName, strBuf));
+            rv = localFile->AppendNative(GetResCString(str_AppRegistryName, strBuf));
     }
     else if (nsCRT::strcmp(prop, NS_APP_DEFAULTS_50_DIR) == 0)
     {
         rv = CloneMozBinDirectory(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv))
-            rv = localFile->AppendRelativePath(GetResCString(str_DefaultsDirName, strBuf));
+            rv = localFile->AppendRelativeNativePath(GetResCString(str_DefaultsDirName, strBuf));
     }
     else if (nsCRT::strcmp(prop, NS_APP_PREF_DEFAULTS_50_DIR) == 0)
     {
         rv = CloneMozBinDirectory(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv)) {
-            rv = localFile->AppendRelativePath(GetResCString(str_DefaultsDirName, strBuf));
+            rv = localFile->AppendRelativeNativePath(GetResCString(str_DefaultsDirName, strBuf));
             if (NS_SUCCEEDED(rv))
-                rv = localFile->AppendRelativePath(GetResCString(str_PrefDefaultsDirName, strBuf));
+                rv = localFile->AppendRelativeNativePath(GetResCString(str_PrefDefaultsDirName, strBuf));
         }
     }
     else if (nsCRT::strcmp(prop, NS_APP_PROFILE_DEFAULTS_NLOC_50_DIR) == 0 ||
@@ -106,9 +106,9 @@ CAppFileLocationProvider::GetFile(const char *prop, PRBool *persistant, nsIFile 
     {
         rv = CloneMozBinDirectory(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv)) {
-            rv = localFile->AppendRelativePath(GetResCString(str_DefaultsDirName, strBuf));
+            rv = localFile->AppendRelativeNativePath(GetResCString(str_DefaultsDirName, strBuf));
             if (NS_SUCCEEDED(rv))
-                rv = localFile->AppendRelativePath(GetResCString(str_ProfileDefaultsDirName, strBuf));
+                rv = localFile->AppendRelativeNativePath(GetResCString(str_ProfileDefaultsDirName, strBuf));
         }
     }
     else if (nsCRT::strcmp(prop, NS_APP_USER_PROFILES_ROOT_DIR) == 0)
@@ -119,25 +119,25 @@ CAppFileLocationProvider::GetFile(const char *prop, PRBool *persistant, nsIFile 
     {
         rv = CloneMozBinDirectory(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv))
-            rv = localFile->AppendRelativePath(GetResCString(str_ResDirName, strBuf));
+            rv = localFile->AppendRelativeNativePath(GetResCString(str_ResDirName, strBuf));
     }
     else if (nsCRT::strcmp(prop, NS_APP_CHROME_DIR) == 0)
     {
         rv = CloneMozBinDirectory(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv))
-            rv = localFile->AppendRelativePath(GetResCString(str_ChromeDirName, strBuf));
+            rv = localFile->AppendRelativeNativePath(GetResCString(str_ChromeDirName, strBuf));
     }
     else if (nsCRT::strcmp(prop, NS_APP_PLUGINS_DIR) == 0)
     {
         rv = CloneMozBinDirectory(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv))
-            rv = localFile->AppendRelativePath(GetResCString(str_PlugInsDirName, strBuf));
+            rv = localFile->AppendRelativeNativePath(GetResCString(str_PlugInsDirName, strBuf));
     }
     else if (nsCRT::strcmp(prop, NS_APP_SEARCH_DIR) == 0)
     {
         rv = CloneMozBinDirectory(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv))
-            rv = localFile->AppendRelativePath(GetResCString(str_SearchPlugInsDirName, strBuf));
+            rv = localFile->AppendRelativeNativePath(GetResCString(str_SearchPlugInsDirName, strBuf));
     }
     
 	if (localFile && NS_SUCCEEDED(rv))
@@ -211,7 +211,7 @@ NS_METHOD CAppFileLocationProvider::GetProductDirectory(nsILocalFile **aLocalFil
     rv = directoryService->Get(prop, NS_GET_IID(nsILocalFile), getter_AddRefs(localDir));
     if (NS_FAILED(rv)) return rv;   
 
-    rv = localDir->AppendRelativePath(mProductDirName);
+    rv = localDir->AppendRelativeNativePath(nsDependentCString(mProductDirName));
     if (NS_FAILED(rv)) return rv;
     rv = localDir->Exists(&exists);
     if (NS_SUCCEEDED(rv) && !exists)
@@ -237,12 +237,12 @@ NS_METHOD CAppFileLocationProvider::GetDefaultUserProfileRoot(nsILocalFile **aLo
     nsresult rv;
     PRBool exists;
     nsCOMPtr<nsILocalFile> localDir;
-    Str255 strBuf;
+    nsCAutoString strBuf;
    
     rv = GetProductDirectory(getter_AddRefs(localDir));
     if (NS_FAILED(rv)) return rv;
 
-    rv = localDir->AppendRelativePath(GetResCString(str_ProfilesRootDirName, strBuf));
+    rv = localDir->AppendRelativeNativePath(GetResCString(str_ProfilesRootDirName, strBuf));
     if (NS_FAILED(rv)) return rv;
     rv = localDir->Exists(&exists);
     if (NS_SUCCEEDED(rv) && !exists)
@@ -259,19 +259,13 @@ NS_METHOD CAppFileLocationProvider::GetDefaultUserProfileRoot(nsILocalFile **aLo
 // Static Routines
 //****************************************************************************************
 
-static char* GetResCString(PRInt32 stringIndex, Str255& buf)
+static nsACString& GetResCString(PRInt32 stringIndex, nsACString& outStr)
 {
-    GetIndString(buf, STRx_FileLocProviderStrings, stringIndex);
-    if (!buf[0]) {
+    Str255 pString;
+    GetIndString(pString, STRx_FileLocProviderStrings, stringIndex);
+    if (!pString[0])
         NS_ASSERTION(PR_FALSE, "Directory name resource is missing.");
-        return nsnull;
-    }
-    
-    // Because of different availability of Pascal to C conversion routines
-    // in Carbon and not, just do it by hand.
-    PRInt32 len = buf[0];
-    memmove(buf, buf + 1, len);
-    buf[len] = '\0';
-    
-    return (char *)buf;
+
+    outStr.Assign((char*)&pString[1], pString[0]);
+    return outStr;   
 }

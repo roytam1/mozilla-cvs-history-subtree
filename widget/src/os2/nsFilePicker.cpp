@@ -109,17 +109,11 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
   char *title = ConvertToFileSystemCharset(mTitle.get());
   if (nsnull == title)
     title = ToNewCString(mTitle);
-  char *initialDir;
-  mDisplayDirectory->GetPath(&initialDir);
+  nsCAutoString initialDir;
+  mDisplayDirectory->GetNativePath(initialDir);
   // If no display directory, re-use the last one.
-  if(!initialDir || !*initialDir) {
-    // Free empty string returned from GetPath.
-    if (initialDir) {
-        nsMemory::Free(initialDir);
-    }
-    // Allocate copy of last used dir.
-    initialDir = NS_STATIC_CAST( char*, nsMemory::Clone(mLastUsedDirectory, PL_strlen(mLastUsedDirectory)+1) );
-  }
+  if(initialDir.IsEmpty())
+    initialDir = mLastUsedDirectory;
 
   mFile.SetLength(0);
 
@@ -129,8 +123,8 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
   filedlg.pszTitle = title;
 
   if (mMode == modeGetFolder) {
-    if (initialDir && *initialDir) {
-      PL_strncat(filedlg.szFullFile, initialDir, MAX_PATH);
+    if (!initialDir.IsEmpty()) {
+      strcpy(filedlg.szFullFile, initialDir.get());
     }
     PL_strncat(filedlg.szFullFile, "\\", 1);
     PL_strncat(filedlg.szFullFile, "^", 1);
@@ -143,7 +137,7 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
     *tempptr = '\0';
     if (filedlg.lReturn == DID_OK) {
       result = PR_TRUE;
-      mDisplayDirectory->InitWithPath(filedlg.szFullFile);
+      mDisplayDirectory->InitWithNativePath(nsDependentCString(filedlg.szFullFile));
       mFile.Append(filedlg.szFullFile);
     }
   }
@@ -273,20 +267,19 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
     nsCOMPtr<nsILocalFile> file(do_CreateInstance("@mozilla.org/file/local;1"));
     NS_ENSURE_TRUE(file, NS_ERROR_FAILURE);
 
-    file->InitWithPath(mFile.get());
+    file->InitWithNativePath(mFile);
     nsCOMPtr<nsIFile> dir;
     if (NS_SUCCEEDED(file->GetParent(getter_AddRefs(dir)))) {
       nsCOMPtr<nsILocalFile> localDir(do_QueryInterface(dir));
       if (localDir) {
-        char *newDir;
-        localDir->GetPath(&newDir);
-        if(newDir) {
-          PL_strncpyz(mLastUsedDirectory, newDir, MAX_PATH+1);
-          nsMemory::Free(newDir);
+        nsCAutoString newDir;
+        localDir->GetNativePath(newDir);
+        if(!newDir.IsEmpty()) {
+          PL_strncpyz(mLastUsedDirectory, newDir.get(), MAX_PATH+1);
         }
         // Update mDisplayDirectory with this directory, also.
         // Some callers rely on this.
-        mDisplayDirectory->InitWithPath( mLastUsedDirectory );
+        mDisplayDirectory->InitWithNativePath( nsDependentCString(mLastUsedDirectory) );
       }
     }
 
@@ -319,7 +312,7 @@ NS_IMETHODIMP nsFilePicker::GetFile(nsILocalFile **aFile)
     
   NS_ENSURE_TRUE(file, NS_ERROR_FAILURE);
 
-  file->InitWithPath(mFile.get());
+  file->InitWithNativePath(mFile);
 
   NS_ADDREF(*aFile = file);
 
@@ -331,7 +324,7 @@ NS_IMETHODIMP nsFilePicker::GetFileURL(nsIFileURL **aFileURL)
 {
   nsCOMPtr<nsILocalFile> file(do_CreateInstance("@mozilla.org/file/local;1"));
   NS_ENSURE_TRUE(file, NS_ERROR_FAILURE);
-  file->InitWithPath(mFile.get());
+  file->InitWithNativePath(mFile);
 
   nsCOMPtr<nsIURI> uri;
   NS_NewFileURI(getter_AddRefs(uri), file);

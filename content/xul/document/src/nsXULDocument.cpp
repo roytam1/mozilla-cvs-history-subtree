@@ -4904,8 +4904,8 @@ nsXULDocument::StartFastLoad()
     rv = NS_GetSpecialDirectory(NS_APP_CHROME_DIR, getter_AddRefs(chromeDir));
     if (NS_FAILED(rv))
         return rv;
-    nsXPIDLCString chromePath;
-    rv = chromeDir->GetPath(getter_Copies(chromePath));
+    nsCAutoString chromePath;
+    rv = chromeDir->GetNativePath(chromePath);
     if (NS_FAILED(rv))
         return rv;
 
@@ -4980,7 +4980,7 @@ nsXULDocument::StartFastLoad()
                         rv = objectInput->ReadStringZ(
                                                  getter_Copies(fileChromePath));
                         if (NS_SUCCEEDED(rv) &&
-                            nsCRT::strcmp(fileChromePath, chromePath) != 0) {
+                            !fileChromePath.Equals(chromePath)) {
                             rv = NS_ERROR_UNEXPECTED;
                         }
                     }
@@ -5000,7 +5000,7 @@ nsXULDocument::StartFastLoad()
             xio->mInputStream = nsnull;
 
 #ifdef DEBUG
-            file->MoveTo(nsnull, "Invalid.mfasl");
+            file->MoveToNative(nsnull, NS_LITERAL_CSTRING("Invalid.mfasl"));
 #else
             file->Remove(PR_FALSE);
 #endif
@@ -5020,7 +5020,7 @@ nsXULDocument::StartFastLoad()
         if (NS_SUCCEEDED(rv)) {
             rv = objectOutput->Write32(XUL_FASTLOAD_FILE_VERSION);
             if (NS_SUCCEEDED(rv))
-                rv = objectOutput->WriteStringZ(chromePath);
+                rv = objectOutput->WriteStringZ(chromePath.get());
         }
 
         // Remove here even though some errors above will lead to a FastLoad
@@ -5143,7 +5143,7 @@ nsXULDocument::AbortFastLoads()
     // Now rename or remove the file.
     if (file) {
 #ifdef DEBUG
-        file->MoveTo(nsnull, "Aborted.mfasl");
+        file->MoveToNative(nsnull, NS_LITERAL_CSTRING("Aborted.mfasl"));
 #else
         file->Remove(PR_FALSE);
 #endif

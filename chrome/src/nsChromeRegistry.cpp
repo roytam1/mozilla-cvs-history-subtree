@@ -99,6 +99,7 @@
 #include "prio.h"
 #include "nsInt64.h"
 #include "nsIDirectoryService.h"
+#include "nsILocalFile.h"
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsIPref.h"
 #include "nsIObserverService.h"
@@ -109,9 +110,10 @@
 #include "imgICache.h"
 
 static char kChromePrefix[] = "chrome://";
-static char kChromeFileName[] = "chrome.rdf";
-static char kInstalledChromeFileName[] = "installed-chrome.txt";
 static char kUseXBLFormsPref[] = "nglayout.debug.enable_xbl_forms";
+
+#define kChromeFileName           NS_LITERAL_CSTRING("chrome.rdf")
+#define kInstalledChromeFileName  NS_LITERAL_CSTRING("installed-chrome.txt")
 
 static NS_DEFINE_CID(kWindowMediatorCID, NS_WINDOWMEDIATOR_CID);
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
@@ -1800,9 +1802,8 @@ nsChromeRegistry::SetProviderForPackage(const nsCString& aProvider,
   
   // Figure out which file we're needing to modify, e.g., is it the install
   // dir or the profile dir, and get the right datasource.
-  nsDependentCString dataSourceStr(kChromeFileName);
   nsCOMPtr<nsIRDFDataSource> dataSource;
-  rv = LoadDataSource(dataSourceStr, getter_AddRefs(dataSource), aUseProfile, aProfilePath);
+  rv = LoadDataSource(kChromeFileName, getter_AddRefs(dataSource), aUseProfile, aProfilePath);
   if (NS_FAILED(rv)) return rv;
 
   rv = nsChromeRegistry::UpdateArc(dataSource, aPackageResource, aSelectionArc, aProviderPackageResource, !aIsAdding);
@@ -2082,10 +2083,9 @@ nsChromeRegistry::IsProviderSetForPackage(const nsCString& aProvider,
   nsresult rv;
   // Figure out which file we're needing to modify, e.g., is it the install
   // dir or the profile dir, and get the right datasource.
-  nsDependentCString dataSourceStr(kChromeFileName);
   
   nsCOMPtr<nsIRDFDataSource> dataSource;
-  rv = LoadDataSource(dataSourceStr, getter_AddRefs(dataSource), aUseProfile, nsnull);
+  rv = LoadDataSource(kChromeFileName, getter_AddRefs(dataSource), aUseProfile, nsnull);
   if (NS_FAILED(rv)) return rv;
 
   nsCOMPtr<nsIRDFNode> retVal;
@@ -2171,8 +2171,7 @@ NS_IMETHODIMP nsChromeRegistry::InstallProvider(const nsCString& aProviderType,
 
   // Load the install data source that we wish to manipulate.
   nsCOMPtr<nsIRDFDataSource> installSource;
-  nsDependentCString installStr(kChromeFileName);
-  rv = LoadDataSource(installStr, getter_AddRefs(installSource), aUseProfile, nsnull);
+  rv = LoadDataSource(kChromeFileName, getter_AddRefs(installSource), aUseProfile, nsnull);
   if (NS_FAILED(rv)) return rv;
   NS_ASSERTION(installSource, "failed to get installSource");
 
@@ -2536,8 +2535,7 @@ nsChromeRegistry::UninstallProvider(const nsCString& aProviderType,
 
   // Instantiate the data source we wish to modify.
   nsCOMPtr<nsIRDFDataSource> installSource;
-  nsDependentCString installStr(kChromeFileName);
-  rv = LoadDataSource(installStr, getter_AddRefs(installSource), aUseProfile, nsnull);
+  rv = LoadDataSource(kChromeFileName, getter_AddRefs(installSource), aUseProfile, nsnull);
   if (NS_FAILED(rv)) return rv;
   NS_ASSERTION(installSource, "failed to get installSource");
 
@@ -2608,15 +2606,15 @@ nsChromeRegistry::GetProfileRoot(nsCString& aFileURL)
                                      getter_AddRefs(defaultUserChromeFile));
        if (NS_FAILED(rv))
          return(rv);
-       defaultUserContentFile->Append("chrome");
-       defaultUserContentFile->Append("userContent.css");
-       defaultUserChromeFile->Append("chrome");
-       defaultUserChromeFile->Append("userChrome.css");
+       defaultUserContentFile->AppendNative(NS_LITERAL_CSTRING("chrome"));
+       defaultUserContentFile->AppendNative(NS_LITERAL_CSTRING("userContent.css"));
+       defaultUserChromeFile->AppendNative(NS_LITERAL_CSTRING("chrome"));
+       defaultUserChromeFile->AppendNative(NS_LITERAL_CSTRING("userChrome.css"));
 
        // copy along
        // It aint an error if these files dont exist
-       (void) defaultUserContentFile->CopyTo(userChromeDir, nsnull);
-       (void) defaultUserChromeFile->CopyTo(userChromeDir, nsnull);
+       (void) defaultUserContentFile->CopyToNative(userChromeDir, nsCString());
+       (void) defaultUserChromeFile->CopyToNative(userChromeDir, nsCString());
      }
    }
    if (NS_FAILED(rv))
@@ -2748,17 +2746,16 @@ nsChromeRegistry::AddToCompositeDataSource(PRBool aUseProfile)
     if (NS_FAILED(rv)) return rv;
   }
 
-  nsDependentCString name(kChromeFileName);
   if (aUseProfile) {
     // Profiles take precedence.  Load them first.
     nsCOMPtr<nsIRDFDataSource> dataSource;
-    LoadDataSource(name, getter_AddRefs(dataSource), PR_TRUE, nsnull);
+    LoadDataSource(kChromeFileName, getter_AddRefs(dataSource), PR_TRUE, nsnull);
     mChromeDataSource->AddDataSource(dataSource);
   }
 
   // Always load the install dir datasources
   nsCOMPtr<nsIRDFDataSource> dataSource;
-  LoadDataSource(name, getter_AddRefs(dataSource), PR_FALSE, nsnull);
+  LoadDataSource(kChromeFileName, getter_AddRefs(dataSource), PR_FALSE, nsnull);
   mChromeDataSource->AddDataSource(dataSource);
   
   return NS_OK;
@@ -3049,12 +3046,12 @@ nsChromeRegistry::CheckForNewChrome()
   nsCOMPtr<nsIFile> chromeFile;
   rv = listFile->Clone(getter_AddRefs(chromeFile));
   if (NS_FAILED(rv)) return rv;
-  rv = chromeFile->Append(kChromeFileName);
+  rv = chromeFile->AppendNative(kChromeFileName);
   if (NS_FAILED(rv)) return rv;
   nsInt64 chromeDate;
   (void)chromeFile->GetLastModifiedTime(&chromeDate.mValue);
 
-  rv = listFile->AppendRelativePath(kInstalledChromeFileName);
+  rv = listFile->AppendRelativeNativePath(kInstalledChromeFileName);
   if (NS_FAILED(rv)) return rv;
   nsInt64 listFileDate;
   (void)listFile->GetLastModifiedTime(&listFileDate.mValue);
@@ -3158,7 +3155,8 @@ nsChromeRegistry::ProcessNewChromeBuffer(char *aBuffer, PRInt32 aLength)
       nsCOMPtr<nsILocalFile> chromeFile(do_CreateInstance(NS_LOCAL_FILE_CONTRACTID, &rv));
       if (NS_FAILED(rv))
         return rv;
-      rv = chromeFile->InitWithPath(chromeLocation);
+      // assuming chromeLocation is given in the charset of the current locale
+      rv = chromeFile->InitWithNativePath(nsDependentCString(chromeLocation));
       if (NS_FAILED(rv))
         return rv;
 
@@ -3219,9 +3217,8 @@ nsChromeRegistry::ProcessNewChromeBuffer(char *aBuffer, PRInt32 aLength)
   }
 
   mBatchInstallFlushes = PR_FALSE;
-  nsDependentCString dataSourceStr(kChromeFileName);
   nsCOMPtr<nsIRDFDataSource> dataSource;
-  LoadDataSource(dataSourceStr, getter_AddRefs(dataSource), PR_FALSE, nsnull);
+  LoadDataSource(kChromeFileName, getter_AddRefs(dataSource), PR_FALSE, nsnull);
   nsCOMPtr<nsIRDFRemoteDataSource> remote(do_QueryInterface(dataSource));
   remote->Flush();
   return NS_OK;

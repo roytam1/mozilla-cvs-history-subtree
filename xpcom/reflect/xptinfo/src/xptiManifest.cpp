@@ -40,10 +40,11 @@
 /* Implementation of xptiManifest. */
 
 #include "xptiprivate.h"
+#include "nsString.h"
 
 
-static const char g_MainManifestFilename[] = "xpti.dat";
-static const char g_TempManifestFilename[] = "xptitemp.dat";
+#define g_MainManifestFilename NS_LITERAL_CSTRING("xpti.dat")
+#define g_TempManifestFilename NS_LITERAL_CSTRING("xptitemp.dat")
 
 static const char g_Disclaimer[] = "# Generated file. ** DO NOT EDIT! **";
 
@@ -61,7 +62,7 @@ static const int  g_VERSION_MINOR          = 0;
 /***************************************************************************/
 
 static PRBool 
-GetCurrentAppDirString(xptiInterfaceInfoManager* aMgr, char** aStr)
+GetCurrentAppDirString(xptiInterfaceInfoManager* aMgr, nsACString &aStr)
 {
     nsCOMPtr<nsILocalFile> appDir;
     aMgr->GetApplicationDir(getter_AddRefs(appDir));
@@ -72,17 +73,17 @@ GetCurrentAppDirString(xptiInterfaceInfoManager* aMgr, char** aStr)
 
 static PRBool 
 CurrentAppDirMatchesPersistentDescriptor(xptiInterfaceInfoManager* aMgr, 
-                                         const char* inStr)
+                                         const char *inStr)
 {
     nsCOMPtr<nsILocalFile> appDir;
     aMgr->GetApplicationDir(getter_AddRefs(appDir));
 
     nsCOMPtr<nsILocalFile> descDir;
-    nsresult rv = NS_NewLocalFile(nsnull, PR_FALSE, getter_AddRefs(descDir));
+    nsresult rv = NS_NewNativeLocalFile(nsCString(), PR_FALSE, getter_AddRefs(descDir));
     if(NS_FAILED(rv))
         return PR_FALSE;
 
-    rv = descDir->SetPersistentDescriptor(inStr);
+    rv = descDir->SetPersistentDescriptor(nsDependentCString(inStr));
     if(NS_FAILED(rv))
         return PR_FALSE;
     
@@ -129,13 +130,13 @@ PRBool xptiManifest::Write(xptiInterfaceInfoManager* aMgr,
     PRUint32 i;
     PRUint32 size32;
     PRIntn interfaceCount = 0;
-    nsXPIDLCString appDirString;
+    nsCAutoString appDirString;
     
     nsCOMPtr<nsILocalFile> tempFile;
     if(!aMgr->GetCloneOfManifestDir(getter_AddRefs(tempFile)) || !tempFile)
         return PR_FALSE;
 
-    if(NS_FAILED(tempFile->Append(g_TempManifestFilename)))
+    if(NS_FAILED(tempFile->AppendNative(g_TempManifestFilename)))
         return PR_FALSE;
 
     // All exits via "goto out;" from here on...
@@ -161,8 +162,8 @@ PRBool xptiManifest::Write(xptiInterfaceInfoManager* aMgr,
                        0, g_TOKEN_Version, g_VERSION_MAJOR, g_VERSION_MINOR))
         goto out;
 
-    GetCurrentAppDirString(aMgr, getter_Copies(appDirString));
-    if(!appDirString)
+    GetCurrentAppDirString(aMgr, appDirString);
+    if(appDirString.IsEmpty())
         goto out;
 
     if(!PR_fprintf(fd, "%d,%s,%s\n", 
@@ -179,14 +180,14 @@ PRBool xptiManifest::Write(xptiInterfaceInfoManager* aMgr,
     for(i = 0; i < aWorkingSet->GetDirectoryCount(); i++)
     {
         nsCOMPtr<nsILocalFile> dir;        
-        nsXPIDLCString str;
+        nsCAutoString str;
 
         aWorkingSet->GetDirectoryAt(i, getter_AddRefs(dir));
         if(!dir)
             goto out;
 
-        dir->GetPersistentDescriptor(getter_Copies(str));
-        if(!str)
+        dir->GetPersistentDescriptor(str);
+        if(str.IsEmpty())
             goto out;
         
         if(!PR_fprintf(fd, "%d,%s\n", (int) i, str.get()))
@@ -261,7 +262,7 @@ out:
         if(!aMgr->GetCloneOfManifestDir(getter_AddRefs(mainFile)) || !mainFile)
             return PR_FALSE;
     
-        if(NS_FAILED(mainFile->Append(g_MainManifestFilename)))
+        if(NS_FAILED(mainFile->AppendNative(g_MainManifestFilename)))
             return PR_FALSE;
     
         PRBool exists;
@@ -272,7 +273,7 @@ out:
             return PR_FALSE;
     
         // MoveTo means rename.
-        if(NS_FAILED(tempFile->MoveTo(nsnull, g_MainManifestFilename)))
+        if(NS_FAILED(tempFile->MoveToNative(nsnull, g_MainManifestFilename)))
             return PR_FALSE;
     }
 
@@ -296,15 +297,15 @@ ReadManifestIntoMemory(xptiInterfaceInfoManager* aMgr,
     if(!aMgr->GetCloneOfManifestDir(getter_AddRefs(aFile)) || !aFile)
         return nsnull;
     
-    if(NS_FAILED(aFile->Append(g_MainManifestFilename)))
+    if(NS_FAILED(aFile->AppendNative(g_MainManifestFilename)))
         return nsnull;
 
 #ifdef DEBUG
     {
         static PRBool shown = PR_FALSE;
         
-        nsXPIDLCString path;
-        if(!shown && NS_SUCCEEDED(aFile->GetPath(getter_Copies(path))) && path)
+        nsCAutoString path;
+        if(!shown && NS_SUCCEEDED(aFile->GetNativePath(path)) && !path.IsEmpty())
         {
             printf("Type Manifest File: %s\n", path.get());
             shown = PR_TRUE;        
@@ -775,7 +776,7 @@ PRBool xptiManifest::Delete(xptiInterfaceInfoManager* aMgr)
     if(!aMgr->GetCloneOfManifestDir(getter_AddRefs(aFile)) || !aFile)
         return PR_FALSE;
     
-    if(NS_FAILED(aFile->Append(g_MainManifestFilename)))
+    if(NS_FAILED(aFile->AppendNative(g_MainManifestFilename)))
         return PR_FALSE;
 
     PRBool exists;

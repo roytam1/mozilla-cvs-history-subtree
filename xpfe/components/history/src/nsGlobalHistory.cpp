@@ -71,6 +71,7 @@
 #include "rdf.h"
 #include "nsQuickSort.h"
 #include "nsIIOService.h"
+#include "nsILocalFile.h"
 
 #include "nsIURL.h"
 #include "nsNetCID.h"
@@ -2378,21 +2379,22 @@ nsGlobalHistory::OpenDB()
   NS_ASSERTION((err == 0), "unable to create mdb env");
   if (err != 0) return NS_ERROR_FAILURE;
 
-  nsXPIDLCString filePath;
-  rv = historyFile->GetPath(getter_Copies(filePath));
-  NS_ENSURE_SUCCESS(rv, rv);
+  // MDB requires native file paths
 
+  nsCAutoString filePath;
+  rv = historyFile->GetNativePath(filePath);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   PRBool exists = PR_TRUE;
 
   historyFile->Exists(&exists);
     
-  if (!exists || NS_FAILED(rv = OpenExistingFile(gMdbFactory, filePath))) {
+  if (!exists || NS_FAILED(rv = OpenExistingFile(gMdbFactory, filePath.get()))) {
 
     // we couldn't open the file, so it's either corrupt or doesn't exist.
     // attempt to delete the file, but ignore the error
     historyFile->Remove(PR_FALSE);
-    rv = OpenNewFile(gMdbFactory, filePath);
+    rv = OpenNewFile(gMdbFactory, filePath.get());
   }
 
   NS_ENSURE_SUCCESS(rv, rv);

@@ -1150,7 +1150,7 @@ static void ShowOSAlertFromFile(int argc, char **argv, const char *alert_filenam
                                NS_GET_IID(nsIFile),
                                getter_AddRefs(fileName));
     if (NS_SUCCEEDED(rv) && fileName) {
-      fileName->Append(alert_filename);
+      fileName->AppendNative(nsDependentCString(alert_filename));
       PRFileDesc* fd = 0;
       fileName->OpenNSPRFileDesc(PR_RDONLY, 0664, &fd);
       if (fd) {
@@ -1185,7 +1185,7 @@ static nsresult VerifyInstallation(int argc, char **argv)
   if (NS_FAILED(rv) || !registryFile)
     return NS_ERROR_FAILURE;
 
-  registryFile->Append(CLEANUP_REGISTRY);
+  registryFile->AppendNative(CLEANUP_REGISTRY);
 
   PRBool exists;
   registryFile->Exists(&exists);
@@ -1194,11 +1194,11 @@ static nsresult VerifyInstallation(int argc, char **argv)
     nsCOMPtr<nsIFile> binPath;
     const char lastResortMessage[] = "A previous install did not complete correctly.  Finishing install.";
 
-    ShowOSAlertFromFile(argc, argv, CLEANUP_MESSAGE_FILENAME, lastResortMessage);
+    ShowOSAlertFromFile(argc, argv, CLEANUP_MESSAGE_FILENAME.get(), lastResortMessage);
 
     nsCOMPtr<nsIFile> cleanupUtility;
     registryFile->Clone(getter_AddRefs(cleanupUtility));
-    cleanupUtility->SetLeafName(CLEANUP_UTIL);
+    cleanupUtility->SetNativeLeafName(CLEANUP_UTIL);
 
     //Create the process framework to run the cleanup utility
     nsCOMPtr<nsIProcess> cleanupProcess = do_CreateInstance(kIProcessCID);

@@ -39,6 +39,7 @@
 
 #include "nsISupportsArray.h"
 #include "nsIFileSpec.h"
+#include "nsILocalFile.h"
 #include "nsINSSDialogs.h"
 #include "nsIDirectoryService.h"
 #include "nsIWindowWatcher.h"
@@ -67,7 +68,7 @@ extern PRLogModuleInfo* gPIPNSSLog;
 
 static NS_DEFINE_CID(kNSSComponentCID, NS_NSSCOMPONENT_CID);
 
-#define PIP_PKCS12_TMPFILENAME   ".pip_p12tmp"
+#define PIP_PKCS12_TMPFILENAME   NS_LITERAL_CSTRING(".pip_p12tmp")
 #define PIP_PKCS12_BUFFER_SIZE   2048
 #define PIP_PKCS12_RESTORE_OK          1
 #define PIP_PKCS12_BACKUP_OK           2
@@ -257,7 +258,6 @@ nsPKCS12Blob::ExportToFile(nsILocalFile *file,
   SEC_PKCS12ExportContext *ecx = NULL;
   SEC_PKCS12SafeInfo *certSafe = NULL, *keySafe = NULL;
   SECItem unicodePw;
-  nsXPIDLCString xpidlFilePath;
   nsAutoString filePath;
   int i;
   nsCOMPtr<nsILocalFile> localFileRef;
@@ -352,8 +352,7 @@ nsPKCS12Blob::ExportToFile(nsILocalFile *file,
   
   // prepare the instance to write to an export file
   this->mTmpFile = NULL;
-  file->GetPath(getter_Copies(xpidlFilePath));
-  filePath.AssignWithConversion(xpidlFilePath);
+  file->GetPath(filePath);
   // Use the nsCOMPtr var localFileRef so that
   // the reference to the nsILocalFile we create gets released as soon as
   // we're out of scope, ie when this function exits.
@@ -364,7 +363,7 @@ nsPKCS12Blob::ExportToFile(nsILocalFile *file,
     filePath.Append(NS_LITERAL_STRING(".p12"));
     localFileRef = do_CreateInstance(NS_LOCAL_FILE_CONTRACTID, &rv);
     if (NS_FAILED(rv)) goto finish;
-    localFileRef->InitWithUnicodePath(filePath.get());
+    localFileRef->InitWithPath(filePath);
     file = localFileRef;
   }
   rv = file->OpenNSPRFileDesc(PR_RDWR|PR_CREATE_FILE|PR_TRUNCATE, 0664, 
@@ -467,14 +466,8 @@ nsPKCS12Blob::inputToDecoder(SEC_PKCS12DecoderContext *dcx, nsILocalFile *file)
   unsigned char buf[PIP_PKCS12_BUFFER_SIZE];
   // everybody else is doin' it
   nsCOMPtr<nsIFileSpec> tempSpec;
-  {
-    nsXPIDLCString pathBuf;
-    file->GetPath(getter_Copies(pathBuf));
-    rv = NS_NewFileSpec(getter_AddRefs(tempSpec));
-    if (NS_FAILED(rv)) return rv;
-    rv = tempSpec->SetNativePath(pathBuf);
-    if (NS_FAILED(rv)) return rv;
-  }
+  rv = NS_NewFileSpecFromIFile(file, getter_AddRefs(tempSpec));
+  if (NS_FAILED(rv)) return rv;
   nsInputFileStream fileStream(tempSpec);
   while (PR_TRUE) {
     amount = fileStream.read(buf, PIP_PKCS12_BUFFER_SIZE);
@@ -535,13 +528,13 @@ nsPKCS12Blob::digest_open(void *arg, PRBool reading)
            do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
   if (NS_FAILED(rv)) return SECFailure;
   directoryService->Get(NS_OS_TEMP_DIR, 
-                        NS_GET_IID(nsIFile),
+                        NS_GET_IID(nsILocalFile),
                         getter_AddRefs(tmpFile));
   if (tmpFile) {
-    tmpFile->Append(PIP_PKCS12_TMPFILENAME);
-    nsXPIDLCString pathBuf;
-    tmpFile->GetPath(getter_Copies(pathBuf));
-    cx->mTmpFilePath = PL_strdup(pathBuf.get());
+    tmpFile->AppendNative(PIP_PKCS12_TMPFILENAME);
+    nsCAutoString pathBuf;
+    tmpFile->GetNativePath(pathBuf);
+    cx->mTmpFilePath = ToNewCString(pathBuf);
 #ifdef XP_MAC
     char *unixPath = nsnull;
     ConvertMacPathToUnixPath(cx->mTmpFilePath, &unixPath);

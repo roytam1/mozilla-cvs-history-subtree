@@ -42,6 +42,7 @@
 #include "nsILocalFile.h"
 #include "nsIPref.h"
 #include "nsXPIDLString.h"
+#include "nsDependentString.h"
 #include "prmem.h"
 
 #if defined (XP_WIN)
@@ -248,7 +249,7 @@ nsPluginDirServiceProvider::GetFile(const char *prop, PRBool *persistant, nsIFil
 
         result = ::RegQueryValueEx(keyloc, "Plugins Directory", NULL, &type, (LPBYTE)&path, &pathlen); 
         if (result == ERROR_SUCCESS)
-          rv = NS_NewLocalFile(path, PR_TRUE, getter_AddRefs(localFile));
+          rv = NS_NewNativeLocalFile(nsDependentCString(path), PR_TRUE, getter_AddRefs(localFile));
         ::RegCloseKey(keyloc); 
       }
     }
@@ -306,7 +307,7 @@ nsPluginDirServiceProvider::GetFile(const char *prop, PRBool *persistant, nsIFil
     // if nothing is found, then don't add \bin dir
     if (newestPath[0] != 0) {
       PL_strcat(newestPath,"\\bin");
-      rv = NS_NewLocalFile(newestPath, PR_TRUE, getter_AddRefs(localFile));
+      rv = NS_NewNativeLocalFile(nsDependentCString(newestPath), PR_TRUE, getter_AddRefs(localFile));
     }
   } else if (nsCRT::strcmp(prop, NS_WIN_QUICKTIME_SCAN_KEY) == 0) {
     nsXPIDLCString strVer;
@@ -340,7 +341,7 @@ nsPluginDirServiceProvider::GetFile(const char *prop, PRBool *persistant, nsIFil
       result = ::RegQueryValueEx(keyloc, "InstallDir", NULL, &type, (LPBYTE)&path, &pathlen); 
       PL_strcat(path, "\\Plugins");
       if (result == ERROR_SUCCESS)
-        rv = NS_NewLocalFile(path, PR_TRUE, getter_AddRefs(localFile));
+        rv = NS_NewNativeLocalFile(nsDependentCString(path), PR_TRUE, getter_AddRefs(localFile));
       ::RegCloseKey(keyloc);
     }
   } else if (nsCRT::strcmp(prop, NS_WIN_WMP_SCAN_KEY) == 0) {
@@ -370,7 +371,7 @@ nsPluginDirServiceProvider::GetFile(const char *prop, PRBool *persistant, nsIFil
 
     if (ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, "software\\Microsoft\\MediaPlayer", 0, KEY_READ, &keyloc)) {
       if (ERROR_SUCCESS == ::RegQueryValueEx(keyloc, "Installation Directory", NULL, &type, (LPBYTE)&path, &pathlen))
-        rv = NS_NewLocalFile(path, PR_TRUE, getter_AddRefs(localFile));
+        rv = NS_NewNativeLocalFile(nsDependentCString(path), PR_TRUE, getter_AddRefs(localFile));
       ::RegCloseKey(keyloc);
     }
   } else if (nsCRT::strcmp(prop, NS_WIN_ACROBAT_SCAN_KEY) == 0) {
@@ -428,7 +429,7 @@ nsPluginDirServiceProvider::GetFile(const char *prop, PRBool *persistant, nsIFil
     ::RegCloseKey(baseloc);
     if (newestPath[0] != 0) {
       PL_strcat(newestPath,"\\browser");
-      rv = NS_NewLocalFile(newestPath, PR_TRUE, getter_AddRefs(localFile));
+      rv = NS_NewNativeLocalFile(nsDependentCString(newestPath), PR_TRUE, getter_AddRefs(localFile));
     }
 
   }

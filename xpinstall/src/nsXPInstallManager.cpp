@@ -692,7 +692,7 @@ nsXPInstallManager::GetDestinationFile(nsString& url, nsILocalFile* *file)
     NS_ENSURE_ARG_POINTER(file);
 
     nsresult rv;
-    nsString leaf;
+    nsAutoString leaf;
 
     PRInt32 pos = url.RFindChar('/');
     url.Mid( leaf, pos+1, url.Length() );
@@ -711,7 +711,7 @@ nsXPInstallManager::GetDestinationFile(nsString& url, nsILocalFile* *file)
                                        getter_AddRefs(temp));
             if (NS_SUCCEEDED(rv))
             { 
-                temp->Append("tmp.xpi");
+                temp->AppendNative(NS_LITERAL_CSTRING("tmp.xpi"));
                 MakeUnique(temp);
                 *file = temp;
                 NS_IF_ADDREF(*file);
@@ -744,7 +744,7 @@ nsXPInstallManager::GetDestinationFile(nsString& url, nsILocalFile* *file)
 
                 if (NS_SUCCEEDED(rv))
                 {
-                    userChrome->AppendUnicode(leaf.get());
+                    userChrome->Append(leaf);
                     MakeUnique(userChrome);
                     *file = userChrome;
                     NS_IF_ADDREF(*file);

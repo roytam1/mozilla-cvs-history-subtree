@@ -328,12 +328,10 @@ nsString nsStreamTransfer::SuggestNameFor( nsIChannel *aChannel, char const *sug
         // try to overwrite c:\config.sys or something.
         nsCOMPtr<nsILocalFile> localFile;
         nsCAutoString suggestedFileName(suggestedName);
-        if ( NS_SUCCEEDED( NS_NewLocalFile( nsUnescape(NS_CONST_CAST(char*, suggestedFileName.get())), PR_FALSE, getter_AddRefs( localFile ) ) ) ) {
+        NS_UnescapeURL(suggestedFileName);
+        if ( NS_SUCCEEDED( NS_NewNativeLocalFile( suggestedFileName, PR_FALSE, getter_AddRefs( localFile ) ) ) ) {
             // We want base part of name only.
-            nsXPIDLString baseName;
-            if ( NS_SUCCEEDED( localFile->GetUnicodeLeafName( getter_Copies( baseName ) ) ) ) {
-                result = baseName.get();
-            }
+            localFile->GetLeafName(result);
         }
     } else if ( aChannel ) {
         // Get URI from channel and spec from URI.
@@ -348,11 +346,8 @@ nsString nsStreamTransfer::SuggestNameFor( nsIChannel *aChannel, char const *sug
               rv = fileurl->GetFile(getter_AddRefs(localeFile));
               if ( NS_SUCCEEDED( rv ) && localeFile)
               {
-                nsXPIDLString baseName;
-                if ( NS_SUCCEEDED( localeFile->GetUnicodeLeafName( getter_Copies( baseName ) ) ) ) {
-                  result = baseName.get();
+                if ( NS_SUCCEEDED( localeFile->GetLeafName( result ) ) )
                   return result;
-                }
               }
             }
 
@@ -362,7 +357,7 @@ nsString nsStreamTransfer::SuggestNameFor( nsIChannel *aChannel, char const *sug
                 rv = url->GetFileName( nameFromURL );
                 if ( NS_SUCCEEDED( rv ) && !nameFromURL.IsEmpty() ) {
                     // Unescape the file name (GetFileName escapes it).
-                    nsUnescape( (char *) nameFromURL.get() );
+                    NS_UnescapeURL(nameFromURL);
 
                     //make sure nameFromURL only contains ascii,
                     //otherwise we have no idea about urlname's original charset, suggest nothing

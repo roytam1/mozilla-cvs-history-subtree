@@ -187,7 +187,7 @@
 
 // this is the name of the directory which will be created
 // to cache temporary files.
-static const char *kPluginTmpDirName = "plugtmp";
+#define kPluginTmpDirName NS_LITERAL_CSTRING("plugtmp")
 
 // Version of cached plugin info
 // 0.01 first implementation
@@ -1175,10 +1175,10 @@ public:
   MakeByteRangeString(nsByteRange* aRangeList, nsACString &string, PRInt32 *numRequests);
 
   void
-  SetLocalCachedFile(const char* path);
+  SetLocalCachedFile(nsIFile *file);
 
   void
-  GetLocalCachedFile(char** path);
+  GetLocalCachedFile(nsIFile** file);
 
   void
   SetLocalCachedFileStream(nsIOutputStream *stream);
@@ -1190,7 +1190,7 @@ private:
 
   char* mContentType;
   char* mURL;
-  char* mFilePath;
+  nsCOMPtr<nsIFile> mCachedFile;
   PRBool mSeekable;
   PRUint32 mLength;
   PRUint32 mModified;
@@ -1231,11 +1231,11 @@ public:
 
   nsresult InitializeFullPage(nsIPluginInstance *aInstance);
 
-  nsresult OnFileAvailable(const char* aFilename);
+  nsresult OnFileAvailable(nsIFile* aFile);
 
   nsILoadGroup* GetLoadGroup();
 
-  nsresult SetLocalFile(const char* aFilename);
+  nsresult SetLocalFile(nsIFile* aFile);
 
 private:
   nsresult SetUpCache(nsIURI* aURL); // todo: see about removing this...
@@ -1269,7 +1269,7 @@ private:
   nsIPluginHost           *mHost;
 
   // local file which was used to post data and which should be deleted after that
-  char                    *mLocalFile;
+  nsCOMPtr<nsIFile>        mLocalFile;
   nsHashtable             *mDataForwardToRequest;
 
 public:
@@ -1289,7 +1289,6 @@ nsPluginStreamInfo::nsPluginStreamInfo()
 
   mContentType = nsnull;
   mURL = nsnull;
-  mFilePath = nsnull;
   mSeekable = PR_FALSE;
   mLength = 0;
   mModified = 0;
@@ -1312,17 +1311,10 @@ nsPluginStreamInfo::~nsPluginStreamInfo()
     mFileCacheOutputStream->Close();
 
   // ONLY delete our cached file if we created it
-  if(mLocallyCached && mFilePath)
+  if(mLocallyCached && mCachedFile)
   {
-     nsCOMPtr<nsILocalFile> localFile;
-     nsresult res = NS_NewLocalFile(mFilePath, 
-                                    PR_FALSE, 
-                                    getter_AddRefs(localFile));
-     if(NS_SUCCEEDED(res))
-       localFile->Remove(PR_FALSE);
+     mCachedFile->Remove(PR_FALSE);
   }
-  if (mFilePath)
-    PL_strfree(mFilePath);
 
   NS_IF_RELEASE(mPluginInstance);
 }
@@ -1569,23 +1561,18 @@ nsPluginStreamInfo::SetURL(const char* url)
 
 ////////////////////////////////////////////////////////////////////////
 void
-nsPluginStreamInfo::SetLocalCachedFile(const char* path)
+nsPluginStreamInfo::SetLocalCachedFile(nsIFile* file)
 { 
-  if(mFilePath != nsnull)
-    PL_strfree(mFilePath);
-
-  mFilePath = PL_strdup(path);
+  file->Clone(getter_AddRefs(mCachedFile));
 }
 
 
 ////////////////////////////////////////////////////////////////////////
 void
-nsPluginStreamInfo::GetLocalCachedFile(char** path)
+nsPluginStreamInfo::GetLocalCachedFile(nsIFile** file)
 { 
-  if (mFilePath)
-    *path = PL_strdup(mFilePath);
-  else
-    *path = nsnull;
+  *file = mCachedFile;
+  NS_IF_ADDREF(*file);
 }
 
 
@@ -1718,7 +1705,6 @@ nsPluginStreamListenerPeer::nsPluginStreamListenerPeer()
   mHost = nsnull;
   mStreamType = nsPluginStreamType_Normal;
   mStartBinding = PR_FALSE;
-  mLocalFile = nsnull;
   mAbort = PR_FALSE;
   mRequestFailed = PR_FALSE;
 
@@ -1735,8 +1721,11 @@ nsPluginStreamListenerPeer::~nsPluginStreamListenerPeer()
   nsCAutoString urlSpec;
   if(mURL != nsnull) (void)mURL->GetSpec(urlSpec);
 
+  nsCAutoString filePath;
+  if(mLocalFile != nsnull) (void)mLocalFile->GetNativePath(filePath);
+
   PR_LOG(nsPluginLogging::gPluginLog, PLUGIN_LOG_NORMAL,
-        ("nsPluginStreamListenerPeer::dtor this=%p, url=%s, POST_file=%s\n",this, urlSpec.get(), mLocalFile));
+        ("nsPluginStreamListenerPeer::dtor this=%p, url=%s, POST_file=%s\n",this, urlSpec.get(), filePath.get()));
 
   PR_LogFlush();
 #endif
@@ -1751,13 +1740,8 @@ nsPluginStreamListenerPeer::~nsPluginStreamListenerPeer()
   // if we have mLocalFile (temp file used to post data) it should be
   // safe to delete it now, and hopefully the owner doesn't hold it.
   if(mLocalFile)
-  {
-    nsCOMPtr<nsILocalFile> localFile;
-    nsresult res = NS_NewLocalFile(mLocalFile, PR_FALSE, getter_AddRefs(localFile));
-    if(NS_SUCCEEDED(res))
-      localFile->Remove(PR_FALSE);
-    delete [] mLocalFile;
-  }
+    mLocalFile->Remove(PR_FALSE);
+
   delete mDataForwardToRequest;
 }
 
@@ -1912,7 +1896,7 @@ nsPluginStreamListenerPeer::SetupPluginCacheFile(nsIChannel* channel)
     rv = NS_GetSpecialDirectory(NS_OS_TEMP_DIR, getter_AddRefs(pluginTmp));
     if (NS_FAILED(rv)) return rv;
     
-    rv = pluginTmp->Append(kPluginTmpDirName);
+    rv = pluginTmp->AppendNative(kPluginTmpDirName);
     if (NS_FAILED(rv)) return rv;
     
     (void) pluginTmp->Create(nsIFile::DIRECTORY_TYPE,0777);
@@ -1931,18 +1915,15 @@ nsPluginStreamListenerPeer::SetupPluginCacheFile(nsIChannel* channel)
     if (NS_FAILED(rv)) return rv;
 
     // Create a file to save our stream into. Should we scramble the name?
-    rv = pluginTmp->Append(filename.get());
+    rv = pluginTmp->AppendNative(filename);
     if (NS_FAILED(rv)) return rv;
     
     // Yes, make it unique.
     rv = pluginTmp->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 0777); 
     if (NS_FAILED(rv)) return rv;
 
-    // save the file path off.
-    nsXPIDLCString saveToFilename;
-    (void) pluginTmp->GetPath(getter_Copies(saveToFilename));
-
-    mPluginStreamInfo->SetLocalCachedFile(saveToFilename);
+    // save the file.
+    mPluginStreamInfo->SetLocalCachedFile(pluginTmp);
     
     // create a file output stream to write to...
     nsCOMPtr<nsIOutputStream> outstream;
@@ -2102,7 +2083,7 @@ nsPluginStreamListenerPeer::OnStartRequest(nsIRequest *request, nsISupports* aCo
   // it's possible for the server to not send a Content-Length.  We should
   // still work in this case.
   if (NS_FAILED(rv)) {
-    mPluginStreamInfo->SetLength(-1);
+    mPluginStreamInfo->SetLength(PRUint32(-1));
   }
   else {
     mPluginStreamInfo->SetLength(length);
@@ -2355,11 +2336,10 @@ NS_IMETHODIMP nsPluginStreamListenerPeer::OnStopRequest(nsIRequest *request,
     return NS_OK;
   }
 
-  nsXPIDLCString pathAndFilename;
-  mPluginStreamInfo->GetLocalCachedFile(getter_Copies(pathAndFilename));
+  nsCOMPtr<nsIFile> localFile;
+  mPluginStreamInfo->GetLocalCachedFile(getter_AddRefs(localFile));
 
-  if (!pathAndFilename) {
-    nsCOMPtr<nsIFile> localFile;
+  if (!localFile) {
     nsCOMPtr<nsICachingChannel> cacheChannel = do_QueryInterface(request);
     if (cacheChannel) {
       cacheChannel->GetCacheFile(getter_AddRefs(localFile));
@@ -2370,13 +2350,10 @@ NS_IMETHODIMP nsPluginStreamListenerPeer::OnStopRequest(nsIRequest *request,
         fileChannel->GetFile(getter_AddRefs(localFile));
       }
     }
-    if (localFile) {
-      localFile->GetPath(getter_Copies(pathAndFilename));
-    }
   }
   
-  if (pathAndFilename && *pathAndFilename) {
-    OnFileAvailable(pathAndFilename);
+  if (localFile) {
+    OnFileAvailable(localFile);
   }
 
   if (mStartBinding)
@@ -2443,9 +2420,9 @@ nsresult nsPluginStreamListenerPeer::SetUpStreamListener(nsIRequest *request,
   // set seekability (seekable if the stream has a known length and if the
   // http server accepts byte ranges).
   PRBool bSeekable = PR_FALSE;
-  PRUint32 length = -1;
+  PRUint32 length = PRUint32(-1);
   mPluginStreamInfo->GetLength(&length);
-  if ((length != -1) && httpChannel)
+  if ((length != PRUint32(-1)) && httpChannel)
   {
     nsCAutoString range;
     if(NS_SUCCEEDED(httpChannel->GetResponseHeader(NS_LITERAL_CSTRING("accept-ranges"), range)))
@@ -2507,13 +2484,22 @@ nsresult nsPluginStreamListenerPeer::SetUpStreamListener(nsIRequest *request,
 
 ////////////////////////////////////////////////////////////////////////
 nsresult
-nsPluginStreamListenerPeer::OnFileAvailable(const char* aFilename)
+nsPluginStreamListenerPeer::OnFileAvailable(nsIFile* aFile)
 {
   nsresult rv;
   if (!mPStreamListener)
     return NS_ERROR_FAILURE;
 
-  rv = mPStreamListener->OnFileAvailable((nsIPluginStreamInfo*)mPluginStreamInfo, aFilename);
+  nsCAutoString path;
+  rv = aFile->GetNativePath(path);
+  if (NS_FAILED(rv)) return rv;
+
+  if (path.IsEmpty()) {
+    NS_WARNING("empty path");
+    return NS_OK;
+  }
+
+  rv = mPStreamListener->OnFileAvailable((nsIPluginStreamInfo*)mPluginStreamInfo, path.get());
   return rv;
 }
 
@@ -2547,25 +2533,18 @@ nsPluginStreamListenerPeer::VisitHeader(const nsACString &header, const nsACStri
 
 
 ////////////////////////////////////////////////////////////////////////
-nsresult nsPluginStreamListenerPeer::SetLocalFile(const char* aFilename)
+nsresult nsPluginStreamListenerPeer::SetLocalFile(nsIFile* aFile)
 {
-  NS_ENSURE_ARG_POINTER(aFilename);
-  nsresult rv = NS_OK;
+  NS_ENSURE_ARG_POINTER(aFile);
 
   if(mLocalFile)
   {
     NS_ASSERTION(!mLocalFile, "nsPluginStreamListenerPeer::SetLocalFile -- path already set, cleaning...");
-    delete [] mLocalFile;
     mLocalFile = nsnull;
   }
 
-  mLocalFile = new char[PL_strlen(aFilename) + 1];
-  if(!mLocalFile)
-    return NS_ERROR_OUT_OF_MEMORY;
-
-  PL_strcpy(mLocalFile, aFilename);
-
-  return rv;
+  // clone file to prevent it from being changed out from under us
+  return aFile->Clone(getter_AddRefs(mLocalFile));
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -3345,7 +3324,7 @@ NS_IMETHODIMP nsPluginHostImpl::Destroy(void)
   nsresult rv = NS_GetSpecialDirectory(NS_OS_TEMP_DIR, getter_AddRefs(pluginTmp));
   if (NS_FAILED(rv)) return rv;
     
-  rv = pluginTmp->Append(kPluginTmpDirName);
+  rv = pluginTmp->AppendNative(kPluginTmpDirName);
   if (NS_FAILED(rv)) return rv;
 
   pluginTmp->Remove(PR_TRUE);
@@ -3894,9 +3873,9 @@ NS_IMETHODIMP nsPluginHostImpl::SetUpPluginInstance(const char *aMimeType,
 
           if (NS_SUCCEEDED(result))
           {
-              nsXPIDLCString path;
-              binDirectory->GetPath(getter_Copies(path));
-              restoreOrigDir = ::SetCurrentDirectory(path);
+              nsCAutoString path;
+              binDirectory->GetNativePath(path);
+              restoreOrigDir = ::SetCurrentDirectory(path.get());
           }
         }
 #endif
@@ -4732,8 +4711,8 @@ nsresult nsPluginHostImpl::ScanPluginsDirectory(nsIFile * pluginsDir,
   *aPluginsChanged = PR_FALSE;
 
 #ifdef PLUGIN_LOGGING
-  nsXPIDLCString dirPath;
-  pluginsDir->GetPath(getter_Copies(dirPath));
+  nsCAutoString dirPath;
+  pluginsDir->GetNativePath(dirPath);
   PLUGIN_LOG(PLUGIN_LOG_BASIC,
   ("nsPluginHostImpl::ScanPluginsDirectory dir=%s\n", dirPath.get()));
 #endif
@@ -4751,15 +4730,15 @@ nsresult nsPluginHostImpl::ScanPluginsDirectory(nsIFile * pluginsDir,
     rv = iter->GetNext(getter_AddRefs(supports));
     if (NS_FAILED(rv))
       continue;
-    nsCOMPtr<nsIFile> dirEntry(do_QueryInterface(supports, &rv));
+    nsCOMPtr<nsILocalFile> dirEntry(do_QueryInterface(supports, &rv));
     if (NS_FAILED(rv))
       continue;
-    nsXPIDLCString filePath;
-    rv = dirEntry->GetPath(getter_Copies(filePath));
+    nsCAutoString filePath;
+    rv = dirEntry->GetNativePath(filePath);
     if (NS_FAILED(rv))
       continue;
     
-    nsFileSpec file(filePath);
+    nsFileSpec file(filePath.get());
     PRBool wasSymlink;  
     file.ResolveSymlink(wasSymlink);
 
@@ -5180,10 +5159,8 @@ void nsPluginHostImpl::ClearCachedPluginInfoList()
 
 static nsresult
 cidToDllname(nsIComponentManager* aComponentManager, nsIRegistry* aRegistry,
-             const char *aCID, char **dllName)
+             const nsACString &aCID, nsACString &dllName)
 {
-  NS_ENSURE_ARG_POINTER(dllName);
-
   // To figure out the filename of the plugin, we'll need to get the
   // plugin's CID, and then navigate through the XPCOM registry to
   // pull out the DLL name to which the CID is registered.
@@ -5207,7 +5184,7 @@ cidToDllname(nsIComponentManager* aComponentManager, nsIRegistry* aRegistry,
                                                       getter_AddRefs(file));
 
       if (NS_SUCCEEDED(rv)) {
-        file->GetPath(dllName);
+        file->GetNativePath(dllName);
       }
 
       nsCRT::free(NS_REINTERPRET_CAST(char*, library));
@@ -5458,13 +5435,13 @@ nsPluginHostImpl::LoadXPCOMPlugins(nsIComponentManager* aComponentManager, nsIFi
     nsRegistryKey key;
     node->GetKey(&key);
 
-    nsXPIDLCString filename;
-    rv = cidToDllname(aComponentManager, registry, cid, getter_Copies(filename));
+    nsCAutoString filename;
+    rv = cidToDllname(aComponentManager, registry, cid, filename);
     if (NS_FAILED(rv))
       continue;
 
     nsPluginTag* tag = nsnull;
-    rv = LoadXPCOMPlugin(registry, filename, key, &tag);
+    rv = LoadXPCOMPlugin(registry, filename.get(), key, &tag);
     if (NS_FAILED(rv))
       continue;
 
@@ -5976,14 +5953,14 @@ NS_IMETHODIMP nsPluginHostImpl::GetProgramPath(const char* *result)
   nsCOMPtr<nsIProperties> dirService(do_GetService(kDirectoryServiceContractID, &rv));
   if (NS_FAILED(rv))
     return rv;
-  nsCOMPtr<nsIFile> programDir;
-  rv = dirService->Get(NS_XPCOM_CURRENT_PROCESS_DIR, NS_GET_IID(nsIFile), getter_AddRefs(programDir));
+  nsCOMPtr<nsILocalFile> programDir;
+  rv = dirService->Get(NS_XPCOM_CURRENT_PROCESS_DIR, NS_GET_IID(nsILocalFile), getter_AddRefs(programDir));
   if (NS_FAILED(rv))
     return rv;
   
-  char *temp;
-  rv = programDir->GetPath(&temp);
-  *result = temp;
+  nsCAutoString temp;
+  rv = programDir->GetNativePath(temp);
+  *result = ToNewCString(temp);
   return rv;
 }
 
@@ -5998,14 +5975,14 @@ NS_IMETHODIMP nsPluginHostImpl::GetTempDirPath(const char* *result)
   nsCOMPtr<nsIProperties> dirService(do_GetService(kDirectoryServiceContractID, &rv));
   if (NS_FAILED(rv))
     return rv;
-  nsCOMPtr<nsIFile> tempDir;
-  rv = dirService->Get(NS_OS_TEMP_DIR, NS_GET_IID(nsIFile), getter_AddRefs(tempDir));
+  nsCOMPtr<nsILocalFile> tempDir;
+  rv = dirService->Get(NS_OS_TEMP_DIR, NS_GET_IID(nsILocalFile), getter_AddRefs(tempDir));
   if (NS_FAILED(rv))
     return rv;
   
-  char *temp;
-  rv = tempDir->GetPath(&temp);
-  *result = temp;
+  nsCAutoString temp;
+  rv = tempDir->GetNativePath(temp);
+  *result = ToNewCString(temp);
   return rv;
 }
 
@@ -6395,14 +6372,14 @@ nsPluginHostImpl::CreateTmpFileToPost(const char *postDataURL, char **pTmpFileNa
   *pTmpFileName = 0;
   nsresult rv;
   PRInt64 fileSize;
-  nsXPIDLCString filename;
+  nsCAutoString filename;
   // stat file == get size & convert file:///c:/ to c: if needed
   nsCOMPtr<nsILocalFile> file = do_CreateInstance(NS_LOCAL_FILE_CONTRACTID, &rv);
   if (NS_FAILED(rv) || 
     (NS_FAILED(rv = NS_InitFileFromURLSpec(file, nsDependentCString(postDataURL))) &&
-     NS_FAILED(rv = file->InitWithPath(postDataURL))) ||
+     NS_FAILED(rv = file->InitWithNativePath(nsDependentCString(postDataURL)))) ||
     NS_FAILED(rv = file->GetFileSize(&fileSize)) ||
-    NS_FAILED(rv = file->GetPath(getter_Copies(filename)))
+    NS_FAILED(rv = file->GetNativePath(filename))
     )
     return rv;
   if (!LL_IS_ZERO(fileSize)) {
@@ -6416,7 +6393,7 @@ nsPluginHostImpl::CreateTmpFileToPost(const char *postDataURL, char **pTmpFileNa
     nsresult rv;
     rv = NS_GetSpecialDirectory(NS_OS_TEMP_DIR, getter_AddRefs(tempFile));
     if (tempFile) {
-      tempFile->Append("pluginpost");
+      tempFile->AppendNative(NS_LITERAL_CSTRING("pluginpost"));
       // mode is 0600 so that it's not world-readable
       rv = tempFile->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 0600);
     }
@@ -6451,9 +6428,9 @@ nsPluginHostImpl::CreateTmpFileToPost(const char *postDataURL, char **pTmpFileNa
     inStream->Close();
     outStream->Close();
     if (NS_SUCCEEDED(rv)) {
-      nsXPIDLCString tempFileName;
-      tempFile->GetPath(getter_Copies(tempFileName));
-      *pTmpFileName = PL_strdup(tempFileName);
+      nsCAutoString tempFileName;
+      tempFile->GetNativePath(tempFileName);
+      *pTmpFileName = ToNewCString(tempFileName);
     }
   }
   return rv;
@@ -6484,15 +6461,15 @@ nsPluginHostImpl::ScanForRealInComponentsFolder(nsIComponentManager * aCompManag
     return rv;
     
   // make sure the file is actually there
-  RealPlugin->Append("nppl3260.dll");
+  RealPlugin->AppendNative(NS_LITERAL_CSTRING("nppl3260.dll"));
   PRBool exists;
-  nsXPIDLCString filePath;
+  nsCAutoString filePath;
   RealPlugin->Exists(&exists);
-  if (!exists || NS_FAILED(RealPlugin->GetPath(getter_Copies(filePath))))
+  if (!exists || NS_FAILED(RealPlugin->GetNativePath(filePath)))
     return rv;
 
   // now make sure it's a plugin
-  nsFileSpec file(filePath);
+  nsFileSpec file(filePath.get());
   if (!nsPluginsDir::IsPluginFile(file))
     return rv;
   

@@ -1163,15 +1163,15 @@ InstallFileOpFileWindowsShortcut(JSContext *cx, JSObject *obj, uintN argc, jsval
 
 
     ConvertJSValToStr(b0, cx, argv[0]);
-    NS_NewUnicodeLocalFile(b0.get(), PR_TRUE, getter_AddRefs(nsfsB0));
+    NS_NewLocalFile(b0, PR_TRUE, getter_AddRefs(nsfsB0));
     ConvertJSValToStr(b1, cx, argv[1]);
-    NS_NewUnicodeLocalFile(b1.get(), PR_TRUE, getter_AddRefs(nsfsB1));
+    NS_NewLocalFile(b1, PR_TRUE, getter_AddRefs(nsfsB1));
     ConvertJSValToStr(b2, cx, argv[2]);
     ConvertJSValToStr(b3, cx, argv[3]);
-    NS_NewUnicodeLocalFile(b3.get(), PR_TRUE, getter_AddRefs(nsfsB3));
+    NS_NewLocalFile(b3, PR_TRUE, getter_AddRefs(nsfsB3));
     ConvertJSValToStr(b4, cx, argv[4]);
     ConvertJSValToStr(b5, cx, argv[5]);
-    NS_NewUnicodeLocalFile(b5.get(), PR_TRUE, getter_AddRefs(nsfsB5));
+    NS_NewLocalFile(b5, PR_TRUE, getter_AddRefs(nsfsB5));
 
     if(JSVAL_IS_NULL(argv[6]))
     {
@@ -1273,8 +1273,8 @@ InstallFileOpFileMacAlias(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     }
 
     ConvertJSValToStr(sourceLeaf, cx, argv[1]);
-    rv1 = iFileSource->AppendUnicode(sourceLeaf.get());
-
+    rv1 = iFileSource->Append(sourceLeaf);
+        
     // public int FileMacAlias( InstallFolder aSourceFolder,
     //                          String        aSourceFileName,
     //                          InstallFolder aAliasFolder,
@@ -1297,13 +1297,13 @@ InstallFileOpFileMacAlias(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
         aliasLeaf = sourceLeaf;
         aliasLeaf.Append(NS_LITERAL_STRING(" alias"));   // XXX use GetResourcedString(id)
     }
-
-    rv2 = iFileAlias->AppendUnicode(aliasLeaf.get());
-    if (NS_FAILED(rv1) || NS_FAILED(rv2))
-    {
-        *rval = INT_TO_JSVAL(nsInstall::UNEXPECTED_ERROR);
-        return JS_TRUE;
-    }
+    
+    rv2 = iFileAlias->Append(aliasLeaf);
+	if (NS_FAILED(rv1) || NS_FAILED(rv2))
+	{
+		*rval = INT_TO_JSVAL(nsInstall::UNEXPECTED_ERROR);
+		return JS_TRUE;
+	}
 
     if(NS_OK != nativeThis->FileOpFileMacAlias(iFileSource, iFileAlias, &nativeRet))
     {

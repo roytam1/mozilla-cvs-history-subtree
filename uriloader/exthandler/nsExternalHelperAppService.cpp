@@ -949,7 +949,7 @@ nsresult nsExternalAppHandler::RetargetLoadNotifications(nsIRequest *request)
 
 #define SALT_SIZE 8
 #define TABLE_SIZE 36
-const char table[] = 
+const PRUnichar table[] = 
   { 'a','b','c','d','e','f','g','h','i','j',
     'k','l','m','n','o','p','q','r','s','t',
     'u','v','w','x','y','z','0','1','2','3',
@@ -972,16 +972,15 @@ void nsExternalAppHandler::EnsureSuggestedFileName()
   {
     // Get mSuggestedFileName's current extension.
     nsAutoString fileExt;
-    PRInt32 pos = mSuggestedFileName.RFindChar(PRUnichar('.'));
+    PRInt32 pos = mSuggestedFileName.RFindChar('.');
     if (pos != kNotFound)
       mSuggestedFileName.Right(fileExt, mSuggestedFileName.Length() - pos);
 
     // Now, compare fileExt to mTempFileExtension.
-    NS_ConvertASCIItoUCS2 tempFileExt(mTempFileExtension);
-    if (!fileExt.Equals(tempFileExt, nsCaseInsensitiveStringComparator()))
+    if (!fileExt.Equals(mTempFileExtension, nsCaseInsensitiveStringComparator()))
     {
       // Doesn't match, so force mSuggestedFileName to have the extension we want.
-      mSuggestedFileName.Append(tempFileExt);
+      mSuggestedFileName.Append(mTempFileExtension);
     }
   }
 }
@@ -1032,8 +1031,8 @@ nsresult nsExternalAppHandler::SetUpTempFile(nsIChannel * aChannel)
     url->GetFileName(leafName);
     if (!leafName.IsEmpty())
     {
-      NS_UnescapeURL((char *) leafName.get());
-      mSuggestedFileName = NS_ConvertUTF8toUCS2(leafName);
+      NS_UnescapeURL(leafName);
+      mSuggestedFileName = NS_ConvertUTF8toUCS2(leafName); // XXX leafName may not be UTF-8
 
 #ifndef XP_MAC
       // Make sure extension is still correct.
@@ -1046,7 +1045,7 @@ nsresult nsExternalAppHandler::SetUpTempFile(nsIChannel * aChannel)
   }
 
   // step (2), generate a salted file name for the temp file....
-  nsCAutoString saltedTempLeafName;
+  nsAutoString saltedTempLeafName;
   // this salting code was ripped directly from the profile manager.
   // turn PR_Now() into milliseconds since epoch 1058 // and salt rand with that. 
   double fpTime;
@@ -1061,7 +1060,7 @@ nsresult nsExternalAppHandler::SetUpTempFile(nsIChannel * aChannel)
   // now append our extension.
   saltedTempLeafName.Append(mTempFileExtension);
 
-  mTempFile->Append(saltedTempLeafName.get()); // make this file unique!!!
+  mTempFile->Append(saltedTempLeafName); // make this file unique!!!
   mTempFile->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 0600);
 
   NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
@@ -1195,7 +1194,7 @@ NS_IMETHODIMP nsExternalAppHandler::OnStartRequest(nsIRequest *request, nsISuppo
 // to the web progress listener.
 typedef enum { kReadError, kWriteError, kLaunchError } ErrorType;
 static void SendStatusChange( 
-    ErrorType type, nsresult rv, nsIRequest *aRequest, nsIWebProgressListener *aListener, const PRUnichar *path)
+    ErrorType type, nsresult rv, nsIRequest *aRequest, nsIWebProgressListener *aListener, const nsAFlatString &path)
 {
     nsAutoString msgId;
     switch(rv)
@@ -1240,7 +1239,7 @@ static void SendStatusChange(
         if (NS_SUCCEEDED(s->CreateBundle("chrome://global/locale/nsWebBrowserPersist.properties", getter_AddRefs(bundle))))
         {
             nsXPIDLString msgText;
-            const PRUnichar *strings[] = { path };
+            const PRUnichar *strings[] = { path.get() };
             if(NS_SUCCEEDED(bundle->FormatStringFromName(msgId.get(), strings, 1, getter_Copies(msgText))))
             {
                 aListener->OnStatusChange(nsnull, (type == kReadError) ? aRequest : nsnull, rv, msgText);
@@ -1321,10 +1320,10 @@ NS_IMETHODIMP nsExternalAppHandler::OnDataAvailable(nsIRequest *request, nsISupp
       // An error occurred, notify listener.
       if (mWebProgressListener)
       {
-        nsXPIDLString tempFilePath;
+        nsAutoString tempFilePath;
         if (mTempFile)
-          mTempFile->GetUnicodePath(getter_Copies(tempFilePath));
-        SendStatusChange(readError ? kReadError : kWriteError, rv, request, mWebProgressListener, tempFilePath.get());
+          mTempFile->GetPath(tempFilePath);
+        SendStatusChange(readError ? kReadError : kWriteError, rv, request, mWebProgressListener, tempFilePath);
       }
     }
   }
@@ -1405,8 +1404,8 @@ nsresult nsExternalAppHandler::Init(nsIMIMEInfo * aMIMEInfo, const char * aTempF
   
   // make sure the extention includes the '.'
   if (aTempFileExtension && *aTempFileExtension != '.')
-    mTempFileExtension = ".";
-  mTempFileExtension.Append(aTempFileExtension);
+    mTempFileExtension = PRUnichar('.');
+  mTempFileExtension.AppendWithConversion(aTempFileExtension);
 
   return NS_OK;
 }
@@ -1458,7 +1457,7 @@ nsresult nsExternalAppHandler::ShowProgressDialog()
         nsCOMPtr<nsILocalFile> file = do_QueryInterface(appl);
         if (file)
         {
-          file->GetUnicodeLeafName(getter_Copies(openWith));
+          file->GetLeafName(openWith);
         }
       }
     }
@@ -1475,7 +1474,7 @@ nsresult nsExternalAppHandler::ShowProgressDialog()
   return rv;
 }
 
-nsresult nsExternalAppHandler::PromptForSaveToFile(nsILocalFile ** aNewFile, const PRUnichar * aDefaultFile, const PRUnichar * aFileExtension)
+nsresult nsExternalAppHandler::PromptForSaveToFile(nsILocalFile ** aNewFile, const nsAFlatString &aDefaultFile, const nsAFlatString &aFileExtension)
 {
   // invoke the dialog!!!!! use mWindowContext as the window context parameter for the dialog request
   // XXX Convert to use file picker?
@@ -1490,8 +1489,10 @@ nsresult nsExternalAppHandler::PromptForSaveToFile(nsILocalFile ** aNewFile, con
   // we want to explicitly unescape aDefaultFile b4 passing into the dialog. we can't unescape
   // it because the dialog is implemented by a JS component which doesn't have a window so no unescape routine is defined...
   
-  rv = mDialog->PromptForSaveToFile(mWindowContext, aDefaultFile, aFileExtension, aNewFile);
-  
+  rv = mDialog->PromptForSaveToFile(mWindowContext,
+                                    aDefaultFile.get(),
+                                    aFileExtension.get(),
+                                    aNewFile);
   return rv;
 }
 
@@ -1517,20 +1518,20 @@ nsresult nsExternalAppHandler::MoveFile(nsIFile * aNewFileLocation)
       fileToUse->Remove(PR_FALSE);
 
      // extract the new leaf name from the file location
-     nsXPIDLCString fileName;
-     fileToUse->GetLeafName(getter_Copies(fileName));
+     nsCAutoString fileName;
+     fileToUse->GetNativeLeafName(fileName);
      nsCOMPtr<nsIFile> directoryLocation;
      fileToUse->GetParent(getter_AddRefs(directoryLocation));
      if (directoryLocation)
      {
-       rv = mTempFile->MoveTo(directoryLocation, fileName);
+       rv = mTempFile->MoveToNative(directoryLocation, fileName);
      }
      if (NS_FAILED(rv) && mWebProgressListener)
      {
        // Send error notification.        
-       nsXPIDLString path;
-       fileToUse->GetUnicodePath(getter_Copies(path));
-       SendStatusChange(kWriteError, rv, nsnull, mWebProgressListener, path.get());
+       nsAutoString path;
+       fileToUse->GetPath(path);
+       SendStatusChange(kWriteError, rv, nsnull, mWebProgressListener, path);
      }
   }
 
@@ -1555,21 +1556,21 @@ NS_IMETHODIMP nsExternalAppHandler::SaveToDisk(nsIFile * aNewFileLocation, PRBoo
 
   if (!aNewFileLocation)
   {
-    nsXPIDLString leafName;
+    nsAutoString leafName;
     nsCOMPtr<nsILocalFile> fileToUse;
-    mTempFile->GetUnicodeLeafName(getter_Copies(leafName));
+    mTempFile->GetLeafName(leafName);
     if (mSuggestedFileName.IsEmpty())
-      rv = PromptForSaveToFile(getter_AddRefs(fileToUse), leafName, NS_ConvertASCIItoUCS2(mTempFileExtension).get());
+      rv = PromptForSaveToFile(getter_AddRefs(fileToUse), leafName, mTempFileExtension);
     else
     {
       nsAutoString fileExt;
-      PRInt32 pos = mSuggestedFileName.RFindChar(PRUnichar('.'));
+      PRInt32 pos = mSuggestedFileName.RFindChar('.');
       if (pos >= 0)
         mSuggestedFileName.Right(fileExt, mSuggestedFileName.Length() - pos);
       if (fileExt.IsEmpty())
-        fileExt = NS_ConvertASCIItoUCS2(mTempFileExtension).get();
+        fileExt = mTempFileExtension;
 
-      rv = PromptForSaveToFile(getter_AddRefs(fileToUse), mSuggestedFileName.get(), fileExt.get());
+      rv = PromptForSaveToFile(getter_AddRefs(fileToUse), mSuggestedFileName, fileExt);
     }
 
     if (NS_FAILED(rv) || !fileToUse) 
@@ -1611,9 +1612,9 @@ nsresult nsExternalAppHandler::OpenWithApplication(nsIFile * aApplication)
       if (NS_FAILED(rv) && mWebProgressListener)
       {
         // Send error notification.
-        nsXPIDLString path;
-        mFinalFileDestination->GetUnicodePath(getter_Copies(path));
-        SendStatusChange(kLaunchError, rv, nsnull, mWebProgressListener,path.get());
+        nsAutoString path;
+        mFinalFileDestination->GetPath(path);
+        SendStatusChange(kLaunchError, rv, nsnull, mWebProgressListener, path);
       }
 
 #ifndef XP_MAC
@@ -1667,12 +1668,10 @@ NS_IMETHODIMP nsExternalAppHandler::LaunchWithApplication(nsIFile * aApplication
   if (mSuggestedFileName.IsEmpty())
   {
     // Keep using the leafname of the temp file, since we're just starting a helper
-    PRUnichar* filename;
-    mTempFile->GetUnicodeLeafName(&filename);
-    mSuggestedFileName.Adopt(filename);
+    mTempFile->GetLeafName(mSuggestedFileName);
   }
 
-  fileToUse->AppendUnicode(mSuggestedFileName.get());
+  fileToUse->Append(mSuggestedFileName);
   // We'll make sure this results in a unique name later
 
   mFinalFileDestination = do_QueryInterface(fileToUse);
@@ -1945,30 +1944,29 @@ NS_IMETHODIMP nsExternalHelperAppService::GetTypeFromURI(nsIURI *aURI, char **aC
 
 NS_IMETHODIMP nsExternalHelperAppService::GetTypeFromFile( nsIFile* aFile, char **aContentType )
 {
-	nsresult rv;
-	nsCOMPtr<nsIMIMEInfo> info;
+  nsresult rv;
+  nsCOMPtr<nsIMIMEInfo> info;
 	
-	// Get the Extension
-	char* fileName;
-	const char* ext = nsnull;
-  rv = aFile->GetLeafName(&fileName);
+  // Get the Extension
+  nsCAutoString fileName;
+  const char* ext = nsnull;
+  rv = aFile->GetNativeLeafName(fileName);
   if (NS_FAILED(rv)) return rv;
  
-  if (fileName != nsnull) 
+  if (!fileName.IsEmpty())
   {
-    PRInt32 len = strlen(fileName); 
+    PRInt32 len = fileName.Length(); 
     for (PRInt32 i = len; i >= 0; i--) 
     {
       if (fileName[i] == '.') 
       {
-        ext = &fileName[i + 1];
+        ext = fileName.get() + i + 1;
         break;
       }
     }
   }
   
   nsCString fileExt( ext );       
-  nsCRT::free(fileName);
   // Handle the mac case
 #ifdef XP_MAC
   nsCOMPtr<nsILocalFileMac> macFile;

@@ -110,7 +110,7 @@ nsInstallFile::nsInstallFile(nsInstall* inInstall,
     PRBool finished = PR_FALSE;
     PRUint32 offset = 0;
     PRInt32 location = 0, nodeLength = 0;
-    nsString subString;
+    nsAutoString subString;
 
     location = inPartialPath.FindChar('/', offset);
     if (location == ((PRInt32)inPartialPath.Length() - 1)) //trailing slash
@@ -139,12 +139,7 @@ nsInstallFile::nsInstallFile(nsInstall* inInstall,
         else
         {
             nsresult rv = inPartialPath.Mid(subString, offset, nodeLength);
-// remove dependency on libuconv on unix.
-#ifndef XP_UNIX
-            mFinalFile->AppendUnicode(subString.get());
-#else
-            mFinalFile->Append(NS_LossyConvertUCS2toASCII(subString).get());
-#endif
+            mFinalFile->Append(subString);
             offset += nodeLength + 1;
             if (!finished)
                 location = inPartialPath.FindChar('/', offset);
@@ -209,16 +204,9 @@ void nsInstallFile::CreateAllFolders(nsInstall *aInstall, nsIFile *aFolder, PRIn
 
         aFolder->Create(nsIFile::DIRECTORY_TYPE, 0755); //nsIFileXXX: What kind of permissions are required here?
         ++mFolderCreateCount;
-// remove dependency on libuconv on unix.
-#ifndef XP_UNIX
-        nsXPIDLString folderPath;
-        aFolder->GetUnicodePath(getter_Copies(folderPath));
+        nsAutoString folderPath;
+        aFolder->GetPath(folderPath);
         ilc = new nsInstallLogComment(aInstall, NS_LITERAL_STRING("CreateFolder"), folderPath, aError);
-#else
-        nsXPIDLCString folderPath;
-        aFolder->GetPath(getter_Copies(folderPath));
-        ilc = new nsInstallLogComment(aInstall, NS_LITERAL_STRING("CreateFolder"), NS_ConvertASCIItoUCS2(folderPath), aError);
-#endif
         if(ilc == nsnull)
             *aError = nsInstall::OUT_OF_MEMORY;
 
@@ -300,8 +288,8 @@ PRInt32 nsInstallFile::Complete()
 
     if ( mRegister && (0 == err || nsInstall::REBOOT_NEEDED == err) )
     {
-        nsXPIDLCString path;
-        mFinalFile->GetPath(getter_Copies(path));
+        nsCAutoString path;
+        mFinalFile->GetNativePath(path);
         VR_Install( NS_CONST_CAST(char*, NS_ConvertUCS2toUTF8(*mVersionRegistryName).get()),
                     NS_CONST_CAST(char*, path.get()),
                     NS_CONST_CAST(char*, NS_ConvertUCS2toUTF8(*mVersionInfo).get()),
@@ -365,9 +353,9 @@ char* nsInstallFile::toString()
 
         if(interimCStr)
         {
-            nsXPIDLCString fname;
+            nsCAutoString fname;
             if (mFinalFile)
-                mFinalFile->GetPath(getter_Copies(fname));
+                mFinalFile->GetNativePath(fname);
 
             PR_snprintf( buffer, RESBUFSIZE, interimCStr, fname.get() );
             Recycle(interimCStr);
@@ -403,9 +391,9 @@ PRInt32 nsInstallFile::CompleteFileMove()
 
     if(mMode & WIN_SHARED_FILE)
     {
-      nsXPIDLCString path;
-      mFinalFile->GetPath(getter_Copies(path));
-      RegisterSharedFile(path, mReplaceFile);
+      nsCAutoString path;
+      mFinalFile->GetNativePath(path);
+      RegisterSharedFile(path.get(), mReplaceFile);
     }
 
     return result;

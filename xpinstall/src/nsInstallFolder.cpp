@@ -32,6 +32,7 @@
 
 #include "nsString.h"
 #include "nsXPIDLString.h"
+#include "nsDependentString.h"
 #include "nsFileSpec.h"
 #include "nsIFileSpec.h"
 #include "nsIFile.h"
@@ -159,14 +160,14 @@ void
 nsInstallFolder::GetDirectoryPath(nsCString& aDirectoryPath)
 {
   PRBool flagIsDir;
-  nsXPIDLCString  thePath;
-
+  nsCAutoString thePath;
+  
   aDirectoryPath.SetLength(0);
 
     if (mFileSpec != nsnull)
     {
       // We want the NATIVE path.
-      mFileSpec->GetPath(getter_Copies(thePath));
+      mFileSpec->GetNativePath(thePath);
       aDirectoryPath.Assign(thePath);
 
       mFileSpec->IsDirectory(&flagIsDir);
@@ -203,7 +204,7 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
                 rv = nsSoftwareUpdate::GetProgramDirectory()->Clone(getter_AddRefs(mFileSpec));
 
                 if (NS_SUCCEEDED(rv))
-                    mFileSpec->Append(INSTALL_PLUGINS_DIR);
+                    mFileSpec->AppendNative(INSTALL_PLUGINS_DIR);
                 else
                     mFileSpec = nsnull;
             }
@@ -292,7 +293,7 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
                 rv = nsSoftwareUpdate::GetProgramDirectory()->Clone(getter_AddRefs(mFileSpec));
 
                 if (NS_SUCCEEDED(rv))
-                    mFileSpec->Append(INSTALL_COMPONENTS_DIR);
+                    mFileSpec->AppendNative(INSTALL_COMPONENTS_DIR);
                 else
                     mFileSpec = nsnull;
             }
@@ -310,7 +311,7 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
                 rv = nsSoftwareUpdate::GetProgramDirectory()->Clone(getter_AddRefs(mFileSpec));
 
                 if (NS_SUCCEEDED(rv))
-                    mFileSpec->Append(INSTALL_CHROME_DIR);
+                    mFileSpec->AppendNative(INSTALL_CHROME_DIR);
             }
             break;
 
@@ -402,7 +403,7 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
                 if ( result == ERROR_SUCCESS && type == REG_SZ )
                 {
                     nsCOMPtr<nsILocalFile> tmp;
-                    NS_NewLocalFile( (char*)path, PR_FALSE, getter_AddRefs(tmp) ); // native path
+                    NS_NewNativeLocalFile( nsDependentCString((const char*) path), PR_FALSE, getter_AddRefs(tmp) ); // native path
                     mFileSpec = do_QueryInterface(tmp);
                 }
             }
@@ -532,19 +533,14 @@ nsInstallFolder::AppendXPPath(const nsString& aRelativePath)
             aRelativePath.Mid(segment,start,curr-start);
             start = curr+1;
         }
-// remove dependency on libuconv on unix.
-#ifndef XP_UNIX
-        nsresult rv = mFileSpec->AppendUnicode(segment.get());
+        nsresult rv = mFileSpec->Append(segment);
         if (NS_FAILED(rv))
         {
             // Unicode converters not present (likely wizard case)
             // so do our best with the vanilla conversion.
             NS_WARNING("nsInstallFolder: unicode conversion failed");
-            mFileSpec->Append(NS_LossyConvertUCS2toASCII(segment).get());
+            mFileSpec->AppendNative(NS_LossyConvertUCS2toASCII(segment));
         }
-#else
-        mFileSpec->Append(NS_LossyConvertUCS2toASCII(segment).get());
-#endif
     } while ( start < aRelativePath.Length() );
 }
 
@@ -588,16 +584,8 @@ nsInstallFolder::ToString(nsAutoString* outString)
   if (!mFileSpec || !outString)
       return NS_ERROR_NULL_POINTER;
 
-  nsXPIDLString  tempUC;
-
-// remove dependency on libuconv on unix. 
-#ifndef XP_UNIX
-  nsresult rv = mFileSpec->GetUnicodePath(getter_Copies(tempUC));
-  if (NS_SUCCEEDED(rv))
-  {
-      outString->Assign(tempUC);
-  }
-  else
+  nsresult rv = mFileSpec->GetPath(*outString);
+  if (NS_FAILED(rv))
   {
       // converters not present, most likely in wizard case;
       // do best we can with stock ASCII conversion
@@ -607,15 +595,10 @@ nsInstallFolder::ToString(nsAutoString* outString)
       // XXX NOTE we can make sure our filenames are ASCII, but we have no
       // control over the directory name which might be localized!!!
       NS_WARNING("Couldn't get Unicode path, using broken conversion!");
-      nsXPIDLCString temp;
-      rv = mFileSpec->GetPath(getter_Copies(temp));
+      nsCAutoString temp;
+      rv = mFileSpec->GetNativePath(temp);
       outString->Assign(NS_ConvertASCIItoUCS2(temp));
   }
-#else
-  nsXPIDLCString temp;
-  nsresult rv = mFileSpec->GetPath(getter_Copies(temp));
-  outString->Assign(NS_ConvertASCIItoUCS2(temp));
-#endif
 
   PRBool flagIsFile = PR_FALSE;
   mFileSpec->IsFile(&flagIsFile);

@@ -3161,7 +3161,7 @@ nsBookmarksService::ResolveKeyword(const PRUnichar *aUserInput, char **aShortcut
 #ifdef XP_WIN
 // *** code copied from widget/src/windows/nsClipboard.cpp
 // Determines the URL for a shortcut file 
-static void ResolveShortcut(const char* aFileName, char** aOutURL)
+static void ResolveShortcut(const nsAFlatString &aFileName, char** aOutURL)
 {
 // IUniformResourceLocator isn't supported by VC5 (bless its little heart)
 #if _MSC_VER >= 1200
@@ -3174,10 +3174,7 @@ static void ResolveShortcut(const char* aFileName, char** aOutURL)
     IPersistFile* urlFile = nsnull;
     result = urlLink->QueryInterface(IID_IPersistFile, (void**)&urlFile);
     if (SUCCEEDED(result) && urlFile) {
-      WORD wideFileName[MAX_PATH];
-      ::MultiByteToWideChar(CP_ACP, 0, aFileName, -1, wideFileName, MAX_PATH);
-
-      result = urlFile->Load(wideFileName, STGM_READ);
+      result = urlFile->Load(aFileName.get(), STGM_READ);
       if (SUCCEEDED(result) ) {
         LPSTR lpTemp = nsnull;
 
@@ -3232,8 +3229,8 @@ nsBookmarksService::ParseFavoritesFolder(nsIFile* aDirectory, nsIRDFResource* aP
     nsCOMPtr<nsIFileURL> fileURL(do_QueryInterface(uri));
     fileURL->SetFile(currFile);
 
-      nsXPIDLString bookmarkName;
-      currFile->GetUnicodeLeafName(getter_Copies(bookmarkName));
+    nsAutoString bookmarkName;
+    currFile->GetLeafName(bookmarkName);
 
     PRBool isDir = PR_FALSE;
     currFile->IsDirectory(&isDir);
@@ -3254,11 +3251,11 @@ nsBookmarksService::ParseFavoritesFolder(nsIFile* aDirectory, nsIRDFResource* aP
       if (!extension.Equals(NS_LITERAL_CSTRING("url"))) 
         continue;
 
-      nsXPIDLCString path;
-      currFile->GetPath(getter_Copies(path));
+      nsAutoString path;
+      currFile->GetPath(path);
 
       nsXPIDLCString url;
-      ResolveShortcut(path.get(), getter_Copies(url));
+      ResolveShortcut(path, getter_Copies(url));
 
       nsCAutoString baseName;
       fileURL->GetFileBaseName(baseName);
@@ -4637,12 +4634,12 @@ nsBookmarksService::GetBookmarksFile(nsFileSpec* aResult)
                                     getter_AddRefs(bookmarksFile));
         if (NS_SUCCEEDED(rv)) {
 
-            // XXX: When the code which calls this can us nsIFile
+            // XXX: When the code which calls this can use nsIFile
             // or nsILocalFile, this conversion from nsIFile to
             // nsFileSpec can go away. Bug 36974.
 
-            nsXPIDLCString pathBuf;
-            rv = bookmarksFile->GetPath(getter_Copies(pathBuf));
+            nsCAutoString pathBuf;
+            rv = bookmarksFile->GetNativePath(pathBuf);
             if (NS_SUCCEEDED(rv))
                 *aResult = pathBuf.get();
         }

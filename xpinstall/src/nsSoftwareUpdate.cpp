@@ -131,15 +131,13 @@ nsSoftwareUpdate::nsSoftwareUpdate()
     if(!directoryService) return;
 
     nsCOMPtr<nsILocalFile> dir;
-    directoryService->Get(NS_XPCOM_CURRENT_PROCESS_DIR, NS_GET_IID(nsIFile), getter_AddRefs(dir));
+    directoryService->Get(NS_XPCOM_CURRENT_PROCESS_DIR, NS_GET_IID(nsILocalFile), getter_AddRefs(dir));
     if (dir)
     {
-        char* nativePath;
-        dir->GetPath(&nativePath);
+        nsCAutoString nativePath;
+        dir->GetNativePath(nativePath);
         // EVIL version registry does not take a nsIFile.;
-        VR_SetRegDirectory( nativePath );
-        if (nativePath)
-            nsMemory::Free(nativePath);
+        VR_SetRegDirectory( nativePath.get() );
 
     }
     /***************************************/
@@ -205,7 +203,7 @@ nsSoftwareUpdate::Shutdown()
             nsCOMPtr<nsIFile> tmp;
             rv = nsSoftwareUpdate::GetProgramDirectory()->Clone(getter_AddRefs(tmp));
 #if defined (XP_MAC)
-            tmp->Append(ESSENTIAL_FILES);
+            tmp->AppendNative(ESSENTIAL_FILES);
 #endif
             pathToCleanupUtility = do_QueryInterface(tmp);
 
@@ -220,7 +218,7 @@ nsSoftwareUpdate::Shutdown()
         NS_ASSERTION(pathToCleanupUtility,"No path to cleanup utility in nsSoftwareUpdate::Shutdown()");
 
         //Create the Process framework
-        pathToCleanupUtility->Append(CLEANUP_UTIL);
+        pathToCleanupUtility->AppendNative(CLEANUP_UTIL);
         nsCOMPtr<nsIProcess> cleanupProcess = do_CreateInstance(kIProcessCID);
         rv = cleanupProcess->Init(pathToCleanupUtility);
         if (NS_SUCCEEDED(rv))
@@ -536,10 +534,10 @@ nsSoftwareUpdate::StubInitialize(nsIFile *aDir, const char* logName)
     nsresult rv = aDir->Clone(getter_AddRefs(mProgramDir));
 
     // make sure registry updates go to the right place
-    nsXPIDLCString tempPath;
-    rv = aDir->GetPath(getter_Copies(tempPath));
+    nsCAutoString tempPath;
+    rv = aDir->GetNativePath(tempPath);
     if (NS_SUCCEEDED(rv))
-        VR_SetRegDirectory( tempPath );
+        VR_SetRegDirectory( tempPath.get() );
 
     // Optionally set logfile leafname
     if (logName)

@@ -540,10 +540,7 @@ nsFileView::GetCellText(PRInt32 aRow, const PRUnichar* aColID,
   }
 
   if (NS_LITERAL_STRING("FilenameColumn").Equals(aColID)) {
-    // XXX fix this by making GetUnicodeLeafName take an nsAString&
-    nsXPIDLString temp;
-    curFile->GetUnicodeLeafName(getter_Copies(temp));
-    aCellText = temp;
+    curFile->GetLeafName(aCellText);
   } else if (NS_LITERAL_STRING("LastModifiedColumn").Equals(aColID)) {
     PRInt64 lastModTime;
     curFile->GetLastModifiedTime(&lastModTime);
@@ -648,15 +645,15 @@ nsFileView::FilterFiles()
     if (!mShowHiddenFiles)
       file->IsHidden(&isHidden);
     
-    nsXPIDLString unicodeLeafName;
-    if(NS_FAILED(file->GetUnicodeLeafName(getter_Copies(unicodeLeafName)))) {
-      // need to check return value for GetUnicodeLeafName()
+    nsAutoString ucsLeafName;
+    if(NS_FAILED(file->GetLeafName(ucsLeafName))) {
+      // need to check return value for GetLeafName()
       continue;
     }
     
     if (!isHidden) {
       for (PRInt32 j = 0; j < filterCount; ++j) {
-        if (NS_WildCardMatch(unicodeLeafName.get(),
+        if (NS_WildCardMatch(ucsLeafName.get(),
                              (const PRUnichar*) mCurrentFilters.ElementAt(j),
                              PR_TRUE) == MATCH) {
           mFilteredFiles->AppendElement(file);
@@ -691,11 +688,11 @@ SortNameCallback(const void* aElement1, const void* aElement2, void* aContext)
   nsIFile* file1 = *NS_STATIC_CAST(nsIFile* const *, aElement1);
   nsIFile* file2 = *NS_STATIC_CAST(nsIFile* const *, aElement2);
   
-  nsXPIDLString leafName1, leafName2;
-  file1->GetUnicodeLeafName(getter_Copies(leafName1));
-  file2->GetUnicodeLeafName(getter_Copies(leafName2));
+  nsAutoString leafName1, leafName2;
+  file1->GetLeafName(leafName1);
+  file2->GetLeafName(leafName2);
 
-  return nsCRT::strcmp(leafName1.get(), leafName2.get());
+  return Compare(leafName1, leafName2);
 }
 
 PR_STATIC_CALLBACK(int)

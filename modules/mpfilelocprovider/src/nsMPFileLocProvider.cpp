@@ -157,19 +157,19 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(nsMPFileLocProvider, nsIDirectoryServiceProvider)
 
 // File Name Defines - Copied straight from nsProfile
 
-#define PREFS_FILE_50_NAME          "prefs.js"
-#define USER_CHROME_DIR_50_NAME     "chrome"
-#define LOCAL_STORE_FILE_50_NAME    "localstore.rdf"
-#define HISTORY_FILE_50_NAME        "history.dat"
-#define PANELS_FILE_50_NAME         "panels.rdf"
-#define MIME_TYPES_FILE_50_NAME     "mimeTypes.rdf"
-#define BOOKMARKS_FILE_50_NAME      "bookmarks.html"
-#define DOWNLOADS_FILE_50_NAME      "downloads.rdf"
-#define SEARCH_FILE_50_NAME         "search.rdf" 
-#define MAIL_DIR_50_NAME            "Mail"
-#define IMAP_MAIL_DIR_50_NAME       "ImapMail"
-#define NEWS_DIR_50_NAME            "News"
-#define MSG_FOLDER_CACHE_DIR_50_NAME "panacea.dat"
+#define PREFS_FILE_50_NAME           NS_LITERAL_CSTRING("prefs.js")
+#define USER_CHROME_DIR_50_NAME      NS_LITERAL_CSTRING("chrome")
+#define LOCAL_STORE_FILE_50_NAME     NS_LITERAL_CSTRING("localstore.rdf")
+#define HISTORY_FILE_50_NAME         NS_LITERAL_CSTRING("history.dat")
+#define PANELS_FILE_50_NAME          NS_LITERAL_CSTRING("panels.rdf")
+#define MIME_TYPES_FILE_50_NAME      NS_LITERAL_CSTRING("mimeTypes.rdf")
+#define BOOKMARKS_FILE_50_NAME       NS_LITERAL_CSTRING("bookmarks.html")
+#define DOWNLOADS_FILE_50_NAME       NS_LITERAL_CSTRING("downloads.rdf")
+#define SEARCH_FILE_50_NAME          NS_LITERAL_CSTRING("search.rdf" )
+#define MAIL_DIR_50_NAME             NS_LITERAL_CSTRING("Mail")
+#define IMAP_MAIL_DIR_50_NAME        NS_LITERAL_CSTRING("ImapMail")
+#define NEWS_DIR_50_NAME             NS_LITERAL_CSTRING("News")
+#define MSG_FOLDER_CACHE_DIR_50_NAME NS_LITERAL_CSTRING("panacea.dat")
 
 NS_IMETHODIMP
 nsMPFileLocProvider::GetFile(const char *prop, PRBool *persistant, nsIFile **_retval)
@@ -193,7 +193,7 @@ nsMPFileLocProvider::GetFile(const char *prop, PRBool *persistant, nsIFile **_re
     {
         rv = mProfileDir->Clone(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv))
-            rv = localFile->Append(PREFS_FILE_50_NAME);
+            rv = localFile->AppendNative(PREFS_FILE_50_NAME);
     }
     else if (inAtom == sApp_UserProfileDirectory50)
     {
@@ -203,19 +203,19 @@ nsMPFileLocProvider::GetFile(const char *prop, PRBool *persistant, nsIFile **_re
     {
         rv = mProfileDir->Clone(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv))
-            rv = localFile->Append(USER_CHROME_DIR_50_NAME);
+            rv = localFile->AppendNative(USER_CHROME_DIR_50_NAME);
     }
     else if (inAtom == sApp_LocalStore50)
     {
         rv = mProfileDir->Clone(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv))
-            rv = localFile->Append(LOCAL_STORE_FILE_50_NAME);
+            rv = localFile->AppendNative(LOCAL_STORE_FILE_50_NAME);
     }
     else if (inAtom == sApp_History50)
     {
         rv = mProfileDir->Clone(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv))
-            rv = localFile->Append(HISTORY_FILE_50_NAME);
+            rv = localFile->AppendNative(HISTORY_FILE_50_NAME);
     }
     else if (inAtom == sApp_UsersPanels50)
     {
@@ -226,7 +226,7 @@ nsMPFileLocProvider::GetFile(const char *prop, PRBool *persistant, nsIFile **_re
         
         rv = mProfileDir->Clone(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv))
-            rv = localFile->Append(PANELS_FILE_50_NAME);
+            rv = localFile->AppendNative(PANELS_FILE_50_NAME);
     }
     else if (inAtom == sApp_UsersMimeTypes50)
     {
@@ -237,19 +237,19 @@ nsMPFileLocProvider::GetFile(const char *prop, PRBool *persistant, nsIFile **_re
         
         rv = mProfileDir->Clone(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv))
-            rv = localFile->Append(MIME_TYPES_FILE_50_NAME);
+            rv = localFile->AppendNative(MIME_TYPES_FILE_50_NAME);
     }
     else if (inAtom == sApp_BookmarksFile50)
     {
         rv = mProfileDir->Clone(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv))
-            rv = localFile->Append(BOOKMARKS_FILE_50_NAME);
+            rv = localFile->AppendNative(BOOKMARKS_FILE_50_NAME);
     }
     else if (inAtom == sApp_DownloadsFile50)
     {
         rv = mProfileDir->Clone(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv))
-            rv = localFile->Append(DOWNLOADS_FILE_50_NAME);
+            rv = localFile->AppendNative(DOWNLOADS_FILE_50_NAME);
     }
     else if (inAtom == sApp_SearchFile50)
     {
@@ -260,31 +260,31 @@ nsMPFileLocProvider::GetFile(const char *prop, PRBool *persistant, nsIFile **_re
         
         rv = mProfileDir->Clone(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv))
-            rv = localFile->Append(SEARCH_FILE_50_NAME);
+            rv = localFile->AppendNative(SEARCH_FILE_50_NAME);
     }
     else if (inAtom == sApp_MailDirectory50)
     {
         rv = mProfileDir->Clone(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv))
-            rv = localFile->Append(MAIL_DIR_50_NAME);
+            rv = localFile->AppendNative(MAIL_DIR_50_NAME);
     }
     else if (inAtom == sApp_ImapMailDirectory50)
     {
         rv = mProfileDir->Clone(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv))
-            rv = localFile->Append(IMAP_MAIL_DIR_50_NAME);
+            rv = localFile->AppendNative(IMAP_MAIL_DIR_50_NAME);
     }
     else if (inAtom == sApp_NewsDirectory50)
     {
         rv = mProfileDir->Clone(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv))
-            rv = localFile->Append(NEWS_DIR_50_NAME);
+            rv = localFile->AppendNative(NEWS_DIR_50_NAME);
     }
     else if (inAtom == sApp_MessengerFolderCache50)
     {
         rv = mProfileDir->Clone(getter_AddRefs(localFile));
         if (NS_SUCCEEDED(rv))
-            rv = localFile->Append(MSG_FOLDER_CACHE_DIR_50_NAME);
+            rv = localFile->AppendNative(MSG_FOLDER_CACHE_DIR_50_NAME);
     }
 
     NS_RELEASE(inAtom);
@@ -341,14 +341,14 @@ nsresult RecursiveCopy(nsIFile* srcDir, nsIFile* destDir)
                           if (NS_SUCCEEDED(rv))
                           {
                               nsCOMPtr<nsILocalFile> newChild(do_QueryInterface(destClone));
-                              nsXPIDLCString leafName;
-                              dirEntry->GetLeafName(getter_Copies(leafName));
-                              newChild->AppendRelativePath(leafName);
+                              nsCAutoString leafName;
+                              dirEntry->GetNativeLeafName(leafName);
+                              newChild->AppendRelativeNativePath(leafName);
                               rv = RecursiveCopy(dirEntry, newChild);
                           }
                       }
                       else
-                          rv = dirEntry->CopyTo(destDir, nsnull);
+                          rv = dirEntry->CopyToNative(destDir, nsCString());
                   }
               
               }
@@ -372,7 +372,7 @@ nsresult nsMPFileLocProvider::InitProfileDir(nsIFile *profileParentDir,
         
     rv = profileParentDir->Clone(getter_AddRefs(profileDir));
     if (NS_FAILED(rv)) return rv;
-    rv = profileDir->Append(profileDirName);
+    rv = profileDir->AppendNative(nsDependentCString(profileDirName));
     if (NS_FAILED(rv)) return rv;
     
     PRBool exists;

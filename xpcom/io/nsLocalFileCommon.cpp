@@ -41,33 +41,18 @@
 
 #include "nsString.h"
 #include "nsCOMPtr.h"
-#include "nsXPIDLString.h"
 #include "nsReadableUtils.h"
+#include "nsPrintfCString.h"
 
 
 void NS_StartupLocalFile()
 {
-#ifdef XP_WIN
-  nsresult rv = NS_CreateShortcutResolver();
-  NS_ASSERTION(NS_SUCCEEDED(rv), "Shortcut resolver could not be created");
-#endif
-#ifdef XP_OS2
-  nsresult rv = NS_CreateUnicodeConverters();
-#endif
+    nsLocalFile::GlobalInit();
 }
 
 void NS_ShutdownLocalFile()
 {
-#ifndef XP_OS2
-  NS_ShutdownLocalFileUnicode();
-#endif
-  
-#ifdef XP_WIN
-  NS_DestroyShortcutResolver();
-#endif
-#ifdef XP_OS2
-  NS_DestroyUnicodeConverters();
-#endif
+    nsLocalFile::GlobalShutdown();
 }
 
 #if !defined(XP_MAC)
@@ -76,11 +61,11 @@ nsLocalFile::InitWithFile(nsILocalFile *aFile)
 {
     NS_ENSURE_ARG(aFile);
     
-    nsXPIDLCString path;
-    aFile->GetPath(getter_Copies(path));
-    if (!path)
+    nsCAutoString path;
+    aFile->GetNativePath(path);
+    if (path.IsEmpty())
         return NS_ERROR_FAILURE;
-    return InitWithPath(path.get()); 
+    return InitWithNativePath(path); 
 }
 #endif
 
@@ -95,60 +80,58 @@ nsLocalFile::CreateUnique(PRUint32 type, PRUint32 attributes)
     if (NS_SUCCEEDED(rv)) return NS_OK;
     if (rv != NS_ERROR_FILE_ALREADY_EXISTS) return rv;
 
-    char* leafName; 
-    rv = GetLeafName(&leafName);
+    nsCAutoString leafName; 
+    rv = GetNativeLeafName(leafName);
 
     if (NS_FAILED(rv)) return rv;
 
-    char* lastDot = strrchr(leafName, '.');
+    const char* lastDot = strrchr(leafName.get(), '.');
     char suffix[kMaxFilenameLength + 1] = "";
     if (lastDot)
     {
         strncpy(suffix, lastDot, kMaxFilenameLength); // include '.'
         suffix[kMaxFilenameLength] = 0; // make sure it's null terminated
-        *lastDot = '\0'; // strip suffix and dot.
+        leafName.SetLength(lastDot - leafName.get()); // strip suffix and dot.
     }
 
     // 27 should work on Macintosh, Unix, and Win32. 
     const int maxRootLength = 27 - strlen(suffix) - 1;
 
-    if ((int)strlen(leafName) > (int)maxRootLength)
-        leafName[maxRootLength] = '\0';
+    if ((int)leafName.Length() > (int)maxRootLength)
+        leafName.SetLength(maxRootLength);
 
     for (short indx = 1; indx < 10000; indx++)
     {
         // start with "Picture-1.jpg" after "Picture.jpg" exists
-        char newName[kMaxFilenameLength + 1];
-        sprintf(newName, "%s-%d%s", leafName, indx, suffix);
-        SetLeafName(newName);
+        SetNativeLeafName(leafName +
+                          nsPrintfCString("-%d", indx) +
+                          nsDependentCString(suffix));
 
         rv = Create(type, attributes);
     
         if (NS_SUCCEEDED(rv) || rv != NS_ERROR_FILE_ALREADY_EXISTS) 
         {
-            nsMemory::Free(leafName);
             return rv;
         }
     }
  
-    nsMemory::Free(leafName);
     // The disk is full, sort of
     return NS_ERROR_FILE_TOO_BIG;
 }
 
 #if defined(XP_MAC)
-const PRUnichar kPathSeparatorChar       = ':';
+static const PRUnichar kPathSeparatorChar       = ':';
 #elif defined(XP_WIN) || defined(XP_OS2)
-const PRUnichar kPathSeparatorChar       = '\\';
+static const PRUnichar kPathSeparatorChar       = '\\';
 #elif defined(XP_UNIX) || defined(XP_BEOS)
-const PRUnichar kPathSeparatorChar       = '/';
+static const PRUnichar kPathSeparatorChar       = '/';
 #else
 #error Need to define file path separator for your platform
 #endif
 
 #if defined(XP_MAC)
-const char* kSlashStr = "/";
-const char* kESCSlashStr = "%2F";
+static const char kSlashStr[] = "/";
+static const char kESCSlashStr[] = "%2F";
 #endif
 
 static PRInt32 SplitPath(PRUnichar *path, PRUnichar **nodeArray, PRInt32 arrayLen)
@@ -179,51 +162,47 @@ NS_IMETHODIMP
 nsLocalFile::GetRelativeDescriptor(nsILocalFile *fromFile, nsACString& _retval)
 {
     const PRInt32 kMaxNodesInPath = 32;
+
+    //
+    // _retval will be UTF-8 encoded
+    // 
         
     nsresult rv;
     _retval.Truncate(0);
 
-    PRUnichar *thisPath = nsnull, *fromPath = nsnull;
+    nsAutoString thisPath, fromPath;
     PRUnichar *thisNodes[kMaxNodesInPath], *fromNodes[kMaxNodesInPath];
     PRInt32  thisNodeCnt, fromNodeCnt, nodeIndex;
     
-    rv = GetUnicodePath(&thisPath);
+    rv = GetPath(thisPath);
     if (NS_FAILED(rv))
         return rv;
-    rv = fromFile->GetUnicodePath(&fromPath);
-    if (NS_FAILED(rv)) {
-        nsMemory::Free(thisPath);
+    rv = fromFile->GetPath(fromPath);
+    if (NS_FAILED(rv))
         return rv;
-    }
     
-    thisNodeCnt = SplitPath(thisPath, thisNodes, kMaxNodesInPath);
-    fromNodeCnt = SplitPath(fromPath, fromNodes, kMaxNodesInPath);
-    if (thisNodeCnt < 0 || fromNodeCnt < 0) {
-      nsMemory::Free(thisPath);
-      nsMemory::Free(fromPath);
+    thisNodeCnt = SplitPath((PRUnichar *)thisPath.get(), thisNodes, kMaxNodesInPath);
+    fromNodeCnt = SplitPath((PRUnichar *)fromPath.get(), fromNodes, kMaxNodesInPath);
+    if (thisNodeCnt < 0 || fromNodeCnt < 0)
       return NS_ERROR_FAILURE;
-    }      
     
     for (nodeIndex = 0; nodeIndex < thisNodeCnt && nodeIndex < fromNodeCnt; nodeIndex++) {
-      if (!(nsDependentString(thisNodes[nodeIndex])).Equals(nsDependentString(fromNodes[nodeIndex])))
+      if (!nsCRT::strcmp(thisNodes[nodeIndex], fromNodes[nodeIndex]))
         break;
     }
     
     PRInt32 branchIndex = nodeIndex;
     for (nodeIndex = branchIndex; nodeIndex < fromNodeCnt; nodeIndex++) 
-      _retval.Append("../");
+      _retval.Append(NS_LITERAL_CSTRING("../"));
     for (nodeIndex = branchIndex; nodeIndex < thisNodeCnt; nodeIndex++) {
       NS_ConvertUCS2toUTF8 nodeStr(thisNodes[nodeIndex]);
 #ifdef XP_MAC
       nodeStr.ReplaceSubstring(kSlashStr, kESCSlashStr);
 #endif
-      _retval.Append(nodeStr.get());
+      _retval.Append(nodeStr);
       if (nodeIndex + 1 < thisNodeCnt)
         _retval.Append('/');
     }
-        
-    nsMemory::Free(thisPath);
-    nsMemory::Free(fromPath);
         
     return NS_OK;
 }
@@ -237,6 +216,10 @@ nsLocalFile::SetRelativeDescriptor(nsILocalFile *fromFile, const nsACString& rel
     nsresult rv = fromFile->Clone(getter_AddRefs(targetFile));
     if (NS_FAILED(rv))
         return rv;
+
+    //
+    // relativeDesc is UTF-8 encoded
+    // 
 
     nsCString::const_iterator strBegin, strEnd;
     relativeDesc.BeginReading(strBegin);
@@ -260,11 +243,13 @@ nsLocalFile::SetRelativeDescriptor(nsILocalFile *fromFile, const nsACString& rel
     nodeBegin = nodeEnd = pos;
     while (nodeEnd != strEnd) {
       FindCharInReadable('/', nodeEnd, strEnd);
-      nsCAutoString nodeString(Substring(nodeBegin, nodeEnd));      
 #ifdef XP_MAC
+      nsCAutoString nodeString(Substring(nodeBegin, nodeEnd));      
       nodeString.ReplaceSubstring(kESCSlashStr, kSlashStr);
+      targetFile->Append(NS_ConvertUTF8toUCS2(nodeString));
+#else
+      targetFile->Append(NS_ConvertUTF8toUCS2(Substring(nodeBegin, nodeEnd)));
 #endif
-      targetFile->AppendUnicode((NS_ConvertUTF8toUCS2(nodeString)).get());
       if (nodeEnd != strEnd) // If there's more left in the string, inc over the '/' nodeEnd is on.
         ++nodeEnd;
       nodeBegin = nodeEnd;
