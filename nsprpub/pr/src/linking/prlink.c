@@ -241,8 +241,10 @@ void _PR_InitLinker(void)
         DLLErrorInternal(_MD_ERRNO());
         error = (char*)PR_MALLOC(PR_GetErrorTextLength());
         (void) PR_GetErrorText(error);
+#ifdef DEBUG
         fprintf(stderr, "failed to initialize shared libraries [%s]\n",
             error);
+#endif
         PR_DELETE(error);
         abort();/* XXX */
     }
@@ -594,10 +596,14 @@ static void* TV2FP(CFMutableDictionaryRef dict, const char* name, void *tvp)
                     newGlue[1] |= ((UInt32)tvp & 0xFFFF);
                     MakeDataExecutable(newGlue, sizeof(glue));
                     CFDictionaryAddValue(dict, nameRef, glueData);
+#ifdef DEBUG
                     printf("[TV2FP:  created wrapper for CFM function %s().]\n", name);
+#endif
                 }
             } else {
+#ifdef DEBUG
                 printf("[TV2FP:  found wrapper for CFM function %s().]\n", name);
+#endif
                 newGlue = (uint32*) CFDataGetMutableBytePtr(glueData);
             }
             CFRelease(nameRef);
@@ -777,7 +783,9 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
         err = ResolveAliasFile(&fileSpec, true, &tempUnusedBool, &tempUnusedBool);
         if (err != noErr)
         {
+#ifdef DEBUG
             printf("[NSPR:  oops couldn't resolve an alias.]\n");
+#endif
             oserr = err;
             PR_DELETE(lm);
             goto unlock;
@@ -805,7 +813,9 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
 #if TARGET_CARBON
             /* If not a CFM library, perhaps it's a CFBundle. */
             lm->bundle = getLibraryBundle(&fileSpec);
+#ifdef DEBUG
             if (lm->bundle) printf("[NSPR:  bundle loaded succesfully: %s]\n", name);
+#endif
             if (lm->bundle == NULL) {
 #if defined(USE_MACH_DYLD)
                 goto next;
@@ -826,6 +836,13 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
     lm->name = strdup(libName);
     lm->next = pr_loadmap;
     pr_loadmap = lm;
+    /*
+     * we need to initalize the refCount here because the goto success skips over
+     * the code which would ordinarily set it below (below the #ifdef XP_UNIX
+     * code.) This is ugly, but there is no truly good way to deal with this
+     * without re-writing this function.
+     */
+    lm->refCount = 1;
     goto success;
     }
   next:
@@ -1303,8 +1320,9 @@ pr_FindSymbolInLib(PRLibrary *lm, const char *name)
         CFragSymbolClass    symClass;
         Str255              pName;
         
+#ifdef DEBUG
         printf("[NSPR: looking up symbol:  %s]\n", name + SYM_OFFSET);
-        
+#endif        
         PStrFromCStr(name + SYM_OFFSET, pName);
         
         f = (FindSymbol(lm->connection, pName, &symAddr, &symClass) == noErr) ? symAddr : NULL;
