@@ -58,7 +58,6 @@ EXPORTS		= \
 EXTRA_DSO_LDOPTS = \
 		$(LIBS_DIR) \
 		$(MOZ_COMPONENT_LIBS) \
-		$(DIST)/lib/$(LIB_PREFIX)xpcom_obsolete.$(LIB_SUFFIX) \
 		$(MOZ_XPCOM_OBSOLETE_LIBS) \
 		$(MOZ_JS_LIBS) \
 		$(NULL)
