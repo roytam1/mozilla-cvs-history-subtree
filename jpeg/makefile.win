@@ -64,7 +64,7 @@ LCFLAGS = -Zi -GM
 !ifdef MOZ_JAVA
 LINCS = -I$(PUBLIC)/java -I$(DEPTH)/sun-java/include
 !else
-LINCS = -I$(DIST)/include
+LINCS = -I$(DIST)/include -I$(DEPTH)/include
 !endif
 
 #//------------------------------------------------------------------------
