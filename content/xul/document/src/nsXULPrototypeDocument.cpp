@@ -48,11 +48,11 @@
 #include "nsIScriptError.h"
 #include "nsIDOMScriptObjectFactory.h"
 #include "nsDOMCID.h"
-#include "nsContentUtils.h"
 
 
 static NS_DEFINE_CID(kDOMScriptObjectFactoryCID,
                      NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
+
 
 class nsXULPDGlobalObject : public nsIScriptGlobalObject,
                             public nsIScriptObjectPrincipal
@@ -78,7 +78,7 @@ public:
                               PRUint32 aFlags,
                               nsEventStatus* aEventStatus);
     NS_IMETHOD_(JSObject *) GetGlobalJSObject();
-    NS_IMETHOD OnFinalize(JSObject *aJSObject);
+    NS_IMETHOD OnFinalize(JSObject *aObject);
 
     // nsIScriptObjectPrincipal methods
     NS_IMETHOD GetPrincipal(nsIPrincipal** aPrincipal);
@@ -87,8 +87,11 @@ protected:
     virtual ~nsXULPDGlobalObject();
 
     nsCOMPtr<nsIScriptContext> mScriptContext;
+    JSObject *mJSObject;    // XXX JS language rabies bigotry badness
 
     nsIScriptGlobalObjectOwner* mGlobalObjectOwner; // weak reference
+
+    static JSClass gSharedGlobalClass;
 };
 
 class nsXULPrototypeDocument : public nsIXULPrototypeDocument,
@@ -138,9 +141,51 @@ protected:
     nsresult Init();
 
     friend NS_IMETHODIMP
-    NS_NewXULPrototypeDocument(nsISupports* aOuter, REFNSIID aIID,
-                               void** aResult);
+    NS_NewXULPrototypeDocument(nsISupports* aOuter, REFNSIID aIID, void** aResult);
 };
+
+
+
+void PR_CALLBACK
+nsXULPDGlobalObject_finalize(JSContext *cx, JSObject *obj)
+{
+    nsISupports *nativeThis = (nsISupports*)JS_GetPrivate(cx, obj);
+
+    nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(nativeThis));
+
+    if (sgo) {
+        sgo->OnFinalize(obj);
+    }
+
+    // The addref was part of JSObject construction
+    NS_RELEASE(nativeThis);
+}
+
+
+JSBool PR_CALLBACK
+nsXULPDGlobalObject_resolve(JSContext *cx, JSObject *obj, jsval id)
+{
+    if (JSVAL_IS_STRING(id)) {
+        JSString *str = JSVAL_TO_STRING(id);
+
+        jschar *s = ::JS_GetStringChars(str);
+    }
+
+    JSBool did_resolve = JS_FALSE;
+
+    return JS_ResolveStandardClass(cx, obj, id, &did_resolve);
+}
+
+
+JSClass nsXULPDGlobalObject::gSharedGlobalClass = {
+    "nsXULPrototypeScript compilation scope",
+    JSCLASS_HAS_PRIVATE,
+    JS_PropertyStub,  JS_PropertyStub, JS_PropertyStub, JS_PropertyStub,
+    JS_EnumerateStub, nsXULPDGlobalObject_resolve,  JS_ConvertStub,
+    nsXULPDGlobalObject_finalize
+};
+
+
 
 //----------------------------------------------------------------------
 //
@@ -172,17 +217,11 @@ nsXULPrototypeDocument::Init()
 
 nsXULPrototypeDocument::~nsXULPrototypeDocument()
 {
-    // Delete the root node and all it's children before tearing down
-    // the global object since deleting the root may cause unrooting
-    // of JSObjects and we want the GC that happens while tearing down
-    // the global object to collect those object
-
-    delete mRoot;
-
     if (mGlobalObject) {
       mGlobalObject->SetContext(nsnull); // remove circular reference
       mGlobalObject->SetGlobalObjectOwner(nsnull); // just in case
     }
+    delete mRoot;
 }
 
 NS_IMPL_ADDREF(nsXULPrototypeDocument)
@@ -191,7 +230,6 @@ NS_IMPL_RELEASE(nsXULPrototypeDocument)
 NS_INTERFACE_MAP_BEGIN(nsXULPrototypeDocument)
     NS_INTERFACE_MAP_ENTRY(nsIXULPrototypeDocument)
     NS_INTERFACE_MAP_ENTRY(nsIScriptGlobalObjectOwner)
-    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIXULPrototypeDocument)
 NS_INTERFACE_MAP_END
 
 NS_IMETHODIMP
@@ -403,7 +441,8 @@ nsXULPrototypeDocument::ReportScriptError(nsIScriptError *errorObject)
 //
 
 nsXULPDGlobalObject::nsXULPDGlobalObject()
-    : mGlobalObjectOwner(nsnull)
+    : mJSObject(nsnull),
+      mGlobalObjectOwner(nsnull)
 {
     NS_INIT_REFCNT();
 }
@@ -413,25 +452,14 @@ nsXULPDGlobalObject::~nsXULPDGlobalObject()
 {
 }
 
-
-// XPConnect interface list for nsXULPDGlobalObject
-NS_CLASSINFO_MAP_BEGIN(XULPDGlobalObject)
-    // no interfaces to expose here
-NS_CLASSINFO_MAP_END
-
-
-// QueryInterface implementation for nsXULPDGlobalObject
-NS_INTERFACE_MAP_BEGIN(nsXULPDGlobalObject)
-    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIScriptGlobalObject)
-    NS_INTERFACE_MAP_ENTRY(nsIScriptGlobalObject)
-    NS_INTERFACE_MAP_ENTRY(nsIScriptObjectPrincipal)
-    NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(XULPDGlobalObject)
-NS_INTERFACE_MAP_END
-
-
 NS_IMPL_ADDREF(nsXULPDGlobalObject)
 NS_IMPL_RELEASE(nsXULPDGlobalObject)
 
+NS_INTERFACE_MAP_BEGIN(nsXULPDGlobalObject)
+    NS_INTERFACE_MAP_ENTRY(nsIScriptGlobalObject)
+    NS_INTERFACE_MAP_ENTRY(nsIScriptObjectPrincipal)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIScriptGlobalObject)
+NS_INTERFACE_MAP_END
 
 //----------------------------------------------------------------------
 //
@@ -449,8 +477,6 @@ nsXULPDGlobalObject::SetContext(nsIScriptContext *aContext)
 NS_IMETHODIMP
 nsXULPDGlobalObject::GetContext(nsIScriptContext **aContext)
 {
-    *aContext = nsnull;
-
     // This whole fragile mess is predicated on the fact that
     // GetContext() will be called before GetScriptObject() is.
     if (! mScriptContext) {
@@ -459,9 +485,22 @@ nsXULPDGlobalObject::GetContext(nsIScriptContext **aContext)
         NS_ENSURE_TRUE(factory, NS_ERROR_FAILURE);
 
         nsresult rv =
-            factory->NewScriptContext(this, getter_AddRefs(mScriptContext));
+            factory->NewScriptContext(nsnull, getter_AddRefs(mScriptContext));
         if (NS_FAILED(rv))
             return rv;
+
+        JSContext *cx = (JSContext *)mScriptContext->GetNativeContext();
+
+        mJSObject = ::JS_NewObject(cx, &gSharedGlobalClass, nsnull, nsnull);
+        if (!mJSObject)
+            return NS_ERROR_OUT_OF_MEMORY;
+
+        ::JS_SetGlobalObject(cx, mJSObject);
+
+        // Add an owning reference from JS back to us. This'll be
+        // released when the JSObject is finalized.
+        ::JS_SetPrivate(cx, mJSObject, this);
+        NS_ADDREF(this);
     }
 
     *aContext = mScriptContext;
@@ -530,7 +569,6 @@ nsXULPDGlobalObject::HandleDOMEvent(nsIPresContext* aPresContext,
     return NS_ERROR_UNEXPECTED;
 }
 
-
 NS_IMETHODIMP_(JSObject *)
 nsXULPDGlobalObject::GetGlobalJSObject()
 {
@@ -548,13 +586,15 @@ nsXULPDGlobalObject::GetGlobalJSObject()
     return ::JS_GetGlobalObject(cx);
 }
 
-
 NS_IMETHODIMP
-nsXULPDGlobalObject::OnFinalize(JSObject *aJSObject)
+nsXULPDGlobalObject::OnFinalize(JSObject *aObject)
 {
+    NS_ASSERTION(aObject == mJSObject, "Wrong object finalized!");
+
+    mJSObject = nsnull;
+
     return NS_OK;
 }
-
 
 //----------------------------------------------------------------------
 //
