@@ -88,9 +88,15 @@ UnionExpr::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
             //XXX ErrorReport: report nonnodeset error
             return NS_ERROR_XSLT_NODESET_EXPECTED;
         }
-        rv = nodes->addAndTransfer(NS_STATIC_CAST(txNodeSet*,
-                                                  NS_STATIC_CAST(txAExprResult*,
-                                                                 exprResult)));
+	nsRefPtr<NodeSet> resultSet, ownedSet;
+	resultSet = NS_STATIC_CAST(txNodeSet*,
+				   NS_STATIC_CAST(txAExprResult*, exprResult));
+	exprResult = nsnull;
+	rv = aContext->recycler()->
+	  getNonSharedNodeSet(resultSet, getter_AddRefs(ownedSet));
+	NS_ENSURE_SUCCESS(rv, rv);
+
+        rv = nodes->addAndTransfer(ownedSet);
         NS_ENSURE_SUCCESS(rv, rv);
     }
 
