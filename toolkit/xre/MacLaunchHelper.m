@@ -60,16 +60,13 @@ UpdatePrebinding()
 {
 #ifdef _BUILD_STATIC_BIN
   struct utsname u;
-  float osVersion;
-
   uname(&u);
-  osVersion = atof(u.release);
 
   // We run the redo-prebinding script in these cases:
   // 10.1.x (5.x): No auto-update of prebinding exists
   // 10.3.x (7.x): Auto-update of prebinding fails to complete successfully
   //               (for no apparent reason)
-  if (osVersion >= 6.0 && osVersion < 7.0)
+  if (u.release[0] != '5' && u.release[0] != '7')
     return;
 
   if (!_dyld_launched_prebound()) {
