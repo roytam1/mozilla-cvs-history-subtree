@@ -533,7 +533,7 @@ nsresult nsMapiHook::HandleAttachments (nsIMsgCompFields * aCompFields, PRInt32 
 
             // set url 
             nsXPIDLCString pURL ;
-#if 
+#if 0
             pFile->GetURL (getter_Copies(pURL)) ;
 #else
             NS_GetURLFromFile(pFile, getter_Copies(pURL));
