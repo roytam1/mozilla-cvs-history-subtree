@@ -1870,7 +1870,7 @@ nsArraySH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     NS_ENSURE_SUCCESS(rv, rv);
 
     rv = WrapNative(cx, ::JS_GetGlobalObject(cx), array_item,
-                    NS_GET_IID(nsIDOMNode), vp);
+                    NS_GET_IID(nsISupports), vp);
     NS_ENSURE_SUCCESS(rv, rv);
   }
 
