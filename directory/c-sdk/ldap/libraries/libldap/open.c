@@ -187,7 +187,7 @@ set_ld_error( int err, char *matched, char *errmsg, void *dummy )
 	le->le_errmsg = errmsg;
 }
 
-static in
+static int
 get_ld_error ( char **matched, char **errmsg, void *dummy )
 {
 	struct nsldapi_ldap_error *le;
