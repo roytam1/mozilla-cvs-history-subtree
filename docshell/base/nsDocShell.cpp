@@ -2318,10 +2318,27 @@ NS_IMETHODIMP nsDocShell::SetupNewViewer(nsIContentViewer* aNewViewer)
       mContentViewer = nsnull;
       NS_ERROR("ContentViewer Initialization failed");
       return NS_ERROR_FAILURE;
-      }   
-    // Restore up any HistoryLayoutState this page might have.
+   }   
+
+   PRBool updateHistory = PR_TRUE;
+
+    // Determine if this type of load should update history   
+    switch(mLoadType)
+    {
+    case loadHistory:
+    case loadReloadNormal:
+    case loadReloadBypassCache:
+    case loadReloadBypassProxy:
+    case loadReloadBypassProxyAndCache:
+        updateHistory = PR_FALSE;
+
+    default:
+        break;
+    } 
+    // Restore up any HistoryLayoutState only if the loadtype is
+	// loadHistory or loadReload
     nsresult rv = NS_OK;
-    if (mSessionHistory) {
+    if (mSessionHistory && !updateHistory) {
       PRInt32 index = 0;
       mSessionHistory->GetIndex(&index);
       if (-1 < index) {
