@@ -25,8 +25,10 @@
 #include "nsHttpTransaction.h"
 #include "nsHttpConnection.h"
 #include "nsHttpHandler.h"
+#include "nsHttpAuthCache.h"
 #include "nsHttpResponseHead.h"
 #include "nsHttp.h"
+#include "nsIHttpAuthenticator.h"
 #include "nsNetUtil.h"
 #include "nsString2.h"
 #include "nsReadableUtils.h"
@@ -44,6 +46,7 @@ nsHttpChannel::nsHttpChannel()
     , mStatus(NS_OK)
     , mIsPending(PR_FALSE)
     , mApplyConversion(PR_TRUE)
+    , mAuthTriedWithPrehost(PR_FALSE)
 {
     LOG(("Creating nsHttpChannel @%x\n", this));
 
@@ -229,7 +232,6 @@ nsHttpChannel::ProcessResponse()
         break;
     case 401:
     case 407:
-        // XXX doom cache entry
         rv = ProcessAuthentication(httpStatus);
         if (NS_FAILED(rv))
             rv = ProcessNormal();
@@ -409,16 +411,153 @@ nsHttpChannel::ProcessAuthentication(PRUint32 httpStatus)
 }
 
 nsresult
-nsHttpChannel::GetCredentials(const char *challenge,
+nsHttpChannel::GetCredentials(const char *challenges,
                               PRBool proxyAuth,
                               nsACString &creds)
 {
+    nsAutoString user, pass;
+    nsresult rv;
+    
+    LOG(("nsHttpChannel::GetCredentials [this=%x proxyAuth=%d challenges=%s]\n",
+        this, proxyAuth, challenges));
+
+    // proxy auth's never in prehost
+    if (!mAuthTriedWithPrehost && !proxyAuth) {
+        rv = GetUserPassFromURI(user, pass);
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    // figure out which challenge we can handle and which authenticator to use.
+    nsCAutoString challenge;
+    nsCAutoString challengeType;
+    nsCOMPtr<nsIHttpAuthenticator> authenticator;
+    // loop over the various challenges (LF separated)...
+    for (const char *eol = challenges - 1; eol; ) {
+        const char *p = eol + 1;
+
+        // get the challenge string
+        if ((eol = PL_strchr(p, '\n')) != nsnull)
+            challenge.Assign(p, eol - p);
+        else
+            challenge.Assign(p);
+
+        // get the challenge type
+        if ((p = PL_strchr(challenge.get(), ' ')) != nsnull)
+            challengeType.Assign(challenge.get(), p - challenge.get());
+        else
+            challengeType.Assign(challenge);
+
+        // normalize to lowercase
+        ToLowerCase(challengeType);
+
+        rv = GetAuthenticator(challengeType.get(),
+                              getter_AddRefs(authenticator));
+
+        if (NS_SUCCEEDED(rv))
+            break;
+    }
+
+    if (!authenticator) {
+        LOG(("authentication type not supported\n"));
+        return NS_ERROR_FAILURE;
+    } 
+
+
+
+
+    // check
+    return NS_OK;
+}
+
+nsresult
+nsHttpChannel::GetAuthenticator(const char *challengeType,
+                                nsIHttpAuthenticator **authenticator)
+{
+    nsCAutoString contractid;
+    contractid.Assign(NS_HTTP_AUTHENTICATOR_CONTRACTID_PREFIX);
+    contractid.Append(challengeType);
+
+    nsCOMPtr<nsIHttpAuthenticator> auth = do_GetService(contractid, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    *authenticator = auth;
+    NS_ADDREF(*authenticator);
+    return NS_OK;
+}
+
+nsresult
+nsHttpChannel::GetUserPassFromURI(nsAString &user,
+                                  nsAString &pass)
+{
+    // XXX should be a necko utility function 
+    nsXPIDLCString prehost;
+    mURI->GetPreHost(getter_Copies(prehost));
+    if (prehost) {
+        nsresult rv;
+
+        nsCOMPtr<nsIIOService> serv = do_GetIOService(&rv);
+        if (NS_FAILED(rv)) return rv;
+
+        nsXPIDLCString buf;
+        rv = serv->Unescape(prehost, getter_Copies(buf));
+        if (NS_FAILED(rv)) return rv;
+
+        char *p = PL_strchr(buf, ':');
+        if (p) {
+            // user:pass
+            *p = 0;
+            user = NS_ConvertASCIItoUCS2(buf);
+            pass = NS_ConvertASCIItoUCS2(p+1);
+        }
+        else {
+            // user
+            user = NS_ConvertASCIItoUCS2(buf);
+        }
+    }
     return NS_OK;
 }
 
 nsresult
 nsHttpChannel::AddAuthorizationHeaders()
 {
+    LOG(("nsHttpChannel::AddAuthorizationHeaders [this=%x]\n", this));
+    nsHttpAuthCache *authCache = nsHttpHandler::get()->AuthCache();
+    if (authCache) {
+        nsCAutoString creds;
+        nsresult rv;
+
+        // check if proxy credentials should be sent
+        const char *proxyHost = mConnectionInfo->ProxyHost();
+        const char *proxyType = mConnectionInfo->ProxyType();
+        if (proxyHost && !PL_strcmp(proxyType, "http")) {
+            rv = authCache->GetCredentials(proxyHost,
+                                           mConnectionInfo->ProxyPort(),
+                                           nsnull, nsnull, creds);
+            if (NS_SUCCEEDED(rv)) {
+                LOG(("adding Proxy_Authorization [creds=%s]\n", creds.get()));
+                mRequestHead.SetHeader(nsHttp::Proxy_Authorization, creds.get());
+            }
+        }
+
+        // check if server credentials should be sent
+        nsXPIDLCString dir;
+        nsCOMPtr<nsIURL> url = do_QueryInterface(mURI);
+        if (url)
+            rv = url->GetDirectory(getter_Copies(dir));
+        else
+            rv = mURI->GetPath(getter_Copies(dir));
+        if (NS_FAILED(rv)) return rv;
+
+        rv = authCache->GetCredentials(mConnectionInfo->Host(),
+                                       mConnectionInfo->Port(),
+                                       dir.get(),
+                                       nsnull, // we don't know the realm yet
+                                       creds);
+        if (NS_SUCCEEDED(rv)) {
+            LOG(("adding Authorization [creds=%s]\n", creds.get()));
+            mRequestHead.SetHeader(nsHttp::Authorization, creds.get());
+        }
+    }
     return NS_OK;
 }
 

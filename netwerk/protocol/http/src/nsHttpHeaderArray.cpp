@@ -60,7 +60,7 @@ nsHttpHeaderArray::SetHeader(nsHttpAtom header, const char *value)
             header == nsHttp::WWW_Authenticate ||
             header == nsHttp::Proxy_Authenticate)
             // Special case these headers and use a newline delimiter to
-            // delimit the values from one another b/c commas may appear
+            // delimit the values from one another as commas may appear
             // in the values of these headers contrary to what the spec says.
             entry->value.Append('\n');
         else

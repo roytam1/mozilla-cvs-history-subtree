@@ -81,6 +81,7 @@ private:
     nsresult ProcessRedirection(PRUint32 httpStatus);
     nsresult ProcessAuthentication(PRUint32 httpStatus);
     nsresult GetCredentials(const char *challenge, PRBool proxyAuth, nsACString &creds);
+    nsresult GetUserPassFromURI(nsAString &user, nsAString &pass);
     nsresult AddAuthorizationHeaders();
 
 private:
@@ -110,6 +111,7 @@ private:
 
     PRPackedBool                    mIsPending;
     PRPackedBool                    mApplyConversion;
+    PRPackedBool                    mAuthTriedWithPrehost;
 };
 
 #endif
