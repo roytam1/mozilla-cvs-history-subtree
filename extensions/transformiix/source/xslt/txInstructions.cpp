@@ -177,7 +177,9 @@ nsresult txValueOfInstruction::execute(txExecutionState& aEs)
     exprRes->stringValue(value);
     delete exprRes;
 
-    aEs.mResultHandler->characters(value, mDOE);
+    if (!value.IsEmpty()) {
+        aEs.mResultHandler->characters(value, mDOE);
+    }
     return NS_OK;
 }
 
