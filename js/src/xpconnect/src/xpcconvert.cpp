@@ -1053,9 +1053,15 @@ XPCConvert::NativeInterface2JSObject(XPCCallContext& ccx,
         iface = XPCNativeInterface::GetNewOrUsed(ccx, iid);
         if(!iface)
             return JS_FALSE;
-
         XPCWrappedNative* wrapper;
-        nsresult rv = XPCWrappedNative::GetNewOrUsed(ccx, src, xpcscope,
+        nsresult rv;
+#ifdef XPC_IDISPATCH_SUPPORT
+        if (iid->Equals(NSID_IDISPATCH))
+            rv = XPCWrappedNative::IDispatchGetNewOrUsed(ccx, src, xpcscope,
+                                                        iface, &wrapper);
+        else
+#endif
+            rv = XPCWrappedNative::GetNewOrUsed(ccx, src, xpcscope,
                                                      iface, &wrapper);
         if(pErr)
             *pErr = rv;

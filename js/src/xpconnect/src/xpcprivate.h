@@ -1814,7 +1814,14 @@ public:
                  XPCWrappedNativeScope* Scope,
                  XPCNativeInterface* Interface,
                  XPCWrappedNative** wrapper);
-
+#ifdef XPC_IDISPATCH_SUPPORT
+    static nsresult
+    IDispatchGetNewOrUsed(XPCCallContext& ccx,
+                          nsISupports* Object,
+                          XPCWrappedNativeScope* Scope,
+                          XPCNativeInterface* Interface,
+                          XPCWrappedNative** resultWrapper);
+#endif
     static nsresult
     GetUsedOnly(XPCCallContext& ccx,
                 nsISupports* Object,

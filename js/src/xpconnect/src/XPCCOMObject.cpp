@@ -110,6 +110,8 @@ XPCCOMObject::COMCreateFromIDispatch(IDispatch *pDispatch, JSContext *cx, JSObje
 
 IDispatch * XPCCOMObject::COMCreateInstance(const char * className)
 {
+    // TODO: This needs to have some error handling. We could probably
+    // capture some information from the GetLastError
     // allows us to convert to BSTR for CLSID functions below
     _bstr_t bstrName(className);
     CLSID classID;

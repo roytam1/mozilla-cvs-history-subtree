@@ -203,15 +203,27 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
                                XPCNativeInterface* Interface,
                                XPCWrappedNative** resultWrapper)
 {
-    nsresult rv;
-
     nsCOMPtr<nsISupports> identity(do_QueryInterface(Object));
     if(!identity)
     {
         NS_ERROR("This XPCOM object fails in QueryInterface to nsISupports!");
         return NS_ERROR_FAILURE;
     }
+#ifdef XPC_IDISPATCH_SUPPORT
+    return IDispatchGetNewOrUsed(ccx, Object, Scope, Interface, resultWrapper);
+}
 
+// TODO: Better factor this out so we're not doing XPCOM only stuff on 
+// IDispatch
+nsresult
+XPCWrappedNative::IDispatchGetNewOrUsed(XPCCallContext& ccx,
+                               nsISupports* Object,
+                               XPCWrappedNativeScope* Scope,
+                               XPCNativeInterface* Interface,
+                               XPCWrappedNative** resultWrapper)
+{
+    nsresult rv;
+#endif
     XPCLock* mapLock = Scope->GetRuntime()->GetMapLock();
     
     // We use an AutoMarkingPtr here because it is possible for JS gc to happen
@@ -223,7 +235,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     Native2WrappedNativeMap* map = Scope->GetWrappedNativeMap();
     {   // scoped lock
         XPCAutoLock lock(mapLock);
-        wrapper = map->Find(identity);
+        wrapper = map->Find(Object);
         if(wrapper)
             wrapper->AddRef();
     }
@@ -250,7 +262,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     // It is possible that we will then end up forwarding this entire call
     // to this same function but with a different scope.
 
-    nsCOMPtr<nsIClassInfo> info(do_QueryInterface(identity));
+    nsCOMPtr<nsIClassInfo> info(do_QueryInterface(Object));
 
     // If we are making a wrapper for the nsIClassInfo interface then
     // We *don't* want to have it use the prototype meant for instances
@@ -260,7 +272,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     XPCNativeScriptableCreateInfo sciProto;
     XPCNativeScriptableCreateInfo sciWrapper;
 
-    if(NS_FAILED(GatherScriptableCreateInfo(identity,
+    if(NS_FAILED(GatherScriptableCreateInfo(Object,
                                             isClassInfo ? nsnull : info.get(),
                                             &sciProto, &sciWrapper)))
         return NS_ERROR_FAILURE;
@@ -270,7 +282,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     if(sciWrapper.GetFlags().WantPreCreate())
     {
         JSObject* plannedParent = parent;
-        nsresult rv = sciWrapper.GetCallback()->PreCreate(identity, ccx,
+        nsresult rv = sciWrapper.GetCallback()->PreCreate(Object, ccx,
                                                           parent, &parent);
         if(NS_FAILED(rv))
             return rv;
@@ -290,7 +302,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
 
         {   // scoped lock
             XPCAutoLock lock(mapLock);
-            wrapper = map->Find(identity);
+            wrapper = map->Find(Object);
             if(wrapper)
                 wrapper->AddRef();
         }
@@ -324,7 +336,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         if(!proto)
             return NS_ERROR_FAILURE;
 
-        wrapper = new XPCWrappedNative(identity, proto);
+        wrapper = new XPCWrappedNative(Object, proto);
         if(!wrapper)
             return NS_ERROR_FAILURE;
     }
@@ -336,7 +348,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         if(!set)
             return NS_ERROR_FAILURE;
 
-        wrapper = new XPCWrappedNative(identity, Scope, set);
+        wrapper = new XPCWrappedNative(Object, Scope, set);
         if(!wrapper)
             return NS_ERROR_FAILURE;
 
