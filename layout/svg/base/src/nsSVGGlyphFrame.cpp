@@ -799,13 +799,10 @@ nsSVGGlyphFrame::GetHighlight(PRUint32 *charnum, PRUint32 *nchars, nscolor *fore
     *charnum=CompressIndex(details->mStart, fragment);
     *nchars=CompressIndex(details->mEnd, fragment)-*charnum;  
     
-    nsCOMPtr<nsILookAndFeel> look;
-    presContext->GetLookAndFeel(getter_AddRefs(look));
-    NS_ASSERTION(look, "no LookAndFeel");
-    if (look) {
-      look->GetColor(nsILookAndFeel::eColor_TextSelectBackground, *background);
-      look->GetColor(nsILookAndFeel::eColor_TextSelectForeground, *foreground);
-    }
+    nsILookAndFeel *look = presContext->LookAndFeel();
+
+    look->GetColor(nsILookAndFeel::eColor_TextSelectBackground, *background);
+    look->GetColor(nsILookAndFeel::eColor_TextSelectForeground, *foreground);
 
     SelectionDetails *dp = details;
     while ((dp=details->mNext) != nsnull) {
