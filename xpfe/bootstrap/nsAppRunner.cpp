@@ -710,6 +710,8 @@ static PRBool IsStartupCommand(const char *arg)
   return PR_FALSE;
 }
 
+#define MAIL_ONLY
+
 static nsresult HandleArbitraryStartup( nsICmdLineService* cmdLineArgs, nsIPref *prefs,  PRBool heedGeneralStartupPrefs, PRBool *windowOpened)
 {
 	nsresult rv;
@@ -729,6 +731,11 @@ static nsresult HandleArbitraryStartup( nsICmdLineService* cmdLineArgs, nsIPref 
 
 	if ((const char*)tempString) PR_sscanf(tempString, "%d", &height);
 
+#ifdef MAIL_ONLY
+  // if this is mail only, we ignore generic command line args
+  // and the startup prefs.  we just launch mail.
+  return LaunchApplication("mail", height, width, windowOpened);
+#else /* MAIL_ONLY */ 
   if (heedGeneralStartupPrefs) {
 #ifdef DEBUG_CMD_LINE
     printf("XXX iterate over all the general.startup.* prefs\n");
@@ -778,8 +785,8 @@ static nsresult HandleArbitraryStartup( nsICmdLineService* cmdLineArgs, nsIPref 
       }
     }
   }
-
   return NS_OK;
+#endif /* MAIL_ONLY */
 }
 
 // This should be done by app shell enumeration someday
