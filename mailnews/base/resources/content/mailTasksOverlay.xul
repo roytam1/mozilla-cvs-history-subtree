@@ -64,12 +64,12 @@
     <button class="button-toolbar-4 taskbutton" id="mini-mail" oncommand="toMessengerWindow()" 
             position="2" tooltip="aTooltip" tooltiptext="&taskMessenger.tooltip;"/>
     <button class="button-toolbar-4 taskbutton" id="mini-addr" oncommand="toAddressBook();"
-            position="4" tooltip="aTooltip" tooltiptext="&taskAddressBook.tooltip;"/>
+            insertafter="mini-comp" tooltip="aTooltip" tooltiptext="&taskAddressBook.tooltip;"/>
   </hbox>
   
   <menupopup id="taskPopup">
     <menuitem position="2" accesskey="&messengerCmd.accesskey;" label="&messengerCmd.label;"  key="key_mail" command="Tasks:Mail"/>
-    <menuitem position="4" label="&addressBookCmd.label;" accesskey="&addressBookCmd.accesskey;" key="key_addressbook" command="Tasks:AddressBook"/>
+    <menuitem insertafter="editorTask" label="&addressBookCmd.label;" accesskey="&addressBookCmd.accesskey;" key="key_addressbook" command="Tasks:AddressBook"/>
   </menupopup>
   
 </overlay>         
