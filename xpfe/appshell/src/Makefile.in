@@ -40,17 +40,14 @@ CPPSRCS		= \
 		nsXULWindow.cpp \
 		nsAppShellService.cpp \
 		nsWebShellWindow.cpp \
+		nsAppShellFactory.cpp \
 		nsCommandLineService.cpp \
-		nsXPConnectFactory.cpp \
-		nsJSXPConnectFactory.cpp \
-		nsAppShellNameSet.cpp \
 		nsFileLocations.cpp \
 		nsNetSupportDialog.cpp \
 		nsWindowMediator.cpp \
 		nsDialogParamBlock.cpp \
 		nsCommonDialogs.cpp \
 		nsAbout.cpp \
-		nsAppShellFactory.cpp \
 		$(NULL)
 
 ifeq ($(MOZ_WIDGET_TOOLKIT),os2)
