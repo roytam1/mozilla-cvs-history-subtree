@@ -85,8 +85,6 @@ static PRLogModuleInfo *gOSXIntegrationLog = nsnull;
 
 #include <Carbon/Carbon.h>
 
-static NMRec gNMRec;
-
 nsMessengerOSXIntegration::nsMessengerOSXIntegration()
 {
 #if defined(PR_LOGGING)
@@ -152,8 +150,7 @@ nsMessengerOSXIntegration::OnItemUnicharPropertyChanged(nsISupports *, nsIAtom *
 }
 
 NS_IMETHODIMP
-//nsMessengerOSXIntegration::OnItemRemoved(nsISupports *, nsISupports *, const char *)
-nsMessengerOSXIntegration::OnItemRemoved(nsIRDFResource *, nsISupports *)
+nsMessengerWinIntegration::OnItemRemoved(nsISupports *, nsISupports *, const char *)
 {
   return NS_OK;
 }
