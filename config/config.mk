@@ -551,6 +551,7 @@ LDFLAGS		+= $(MOZ_OPTIMIZE_LDFLAGS)
 endif # MOZ_OPTIMIZE
 
 ifeq ($(OS_ARCH),WINNT)
+ifneq ($(OS_TARGET),WINCE)
 #// Currently, unless USE_STATIC_LIBS is defined, the multithreaded
 #// DLL version of the RTL is used...
 #//
@@ -579,6 +580,9 @@ endif
 endif # MOZ_DEBUG || NS_TRACE_MALLOC
 endif # USE_NON_MT_LIBS
 endif # USE_STATIC_LIBS
+else
+RTL_FLAGS=-Zl
+endif # WINCE
 endif # WINNT
 
 

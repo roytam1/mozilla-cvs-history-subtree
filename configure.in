@@ -979,7 +979,17 @@ case "$target" in
         DSO_PIC_CFLAGS=
         CFLAGS="$CFLAGS -W3 -nologo -Gy -Fd\$(PDBFILE)"
         CXXFLAGS="$CXXFLAGS -W3 -nologo -Gy -Fd\$(PDBFILE)"
-        LIBS="$LIBS kernel32.lib user32.lib gdi32.lib winmm.lib wsock32.lib advapi32.lib"
+        if test "$OS_TARGET" = "WINCE"; then
+            LIBS="$LIBS corelibc.lib coredll.lib winsock.lib wince_missing.lib"
+            LDFLAGS="$LDFLAGS -SUBSYSTEM:WINDOWSCE,3.00 -STACK:0x10000,0x1000 -NODEFAULTLIB:OLDNAMES.lib"
+            if test "$TARGETCPU" = "ARM"; then
+                LDFLAGS="$LDFLAGS -MACHINE:ARM"
+            else
+                LDFLAGS="$LDFLAGS -MACHINE:IX86"
+            fi
+        else
+            LIBS="$LIBS kernel32.lib user32.lib gdi32.lib winmm.lib wsock32.lib advapi32.lib"
+        fi
         MOZ_DEBUG_FLAGS='-Zi'
         MOZ_DEBUG_LDFLAGS='/DEBUG /DEBUGTYPE:CV'
     	MOZ_OPTIMIZE_FLAGS='-O1'
