@@ -1024,6 +1024,7 @@ function debugTrap (frame, type, rv)
             if (isURLFiltered(frame.script.fileName))
             {
                 dd ("filtered url: " + frame.script.fileName);
+                frame.script.flags |= SCRIPT_NOPROFILE | SCRIPT_NODEBUG;
                 return retcode;
             }
             

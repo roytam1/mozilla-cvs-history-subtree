@@ -352,7 +352,7 @@ function cmdChromeFilter (e)
         {
             for (var url in console.scriptManagers)
             {
-                if (!isURLFiltered(url))
+                if (url.search (/^chrome:/) == -1)
                     continue;
                 //                    break next_url;
 
