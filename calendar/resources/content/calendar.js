@@ -138,6 +138,9 @@ logMessage("application : " + applicationName);
 
 function calendarInit() 
 {
+  if(applicationName == "Thunderbird") {
+    document.getElementById( 'tasksMenuNavigator' ).setAttribute( "collapsed", "true" );
+   }
 	// get the calendar event data source
    gEventSource = new CalendarEventDataSource();
    
@@ -1030,7 +1033,7 @@ function goFindNewCalendars()
 
 function displayCalendarVersion()
 {
-   window.openDialog('chrome://calendar/content/about.xul', 'About','modal,centerscreen,chrome,width=500,resizable=yes');
+   window.openDialog( getBrowserURL(), "_blank", "chrome,all,dialog=no", 'chrome://calendar/content/about.html' );
 }
 
 function playSound( ThisURL )

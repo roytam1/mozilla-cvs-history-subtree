@@ -61,7 +61,7 @@
 #include "nsIPersistentProperties2.h"
 #include "nsCompressedCharMap.h"
 #include "nsNetUtil.h"
-#include "nsClassHashtable.h"
+#include "plhash.h"
 
 #include <gdk/gdkx.h>
 #include <freetype/tttables.h>
@@ -168,7 +168,7 @@ enum nsXftFontType {
 
 // a class to hold some essential information about font. 
 // it's shared and cached with 'family name' as hash key.
-class nsFontXftInfo {
+class nsFontXftInfo : public PLHashEntry {
     public:
     nsFontXftInfo() : mCCMap(nsnull), mConverter(0), 
                       mFontType(eFontTypeUnicode) 
@@ -189,6 +189,20 @@ class nsFontXftInfo {
     // for 'narrow' custom fonts.
     FT_Encoding                 mFT_Encoding;
 };
+
+PR_STATIC_CALLBACK(void*)        fontmapAllocTable(void *pool, size_t size);
+PR_STATIC_CALLBACK(void)         fontmapFreeTable (void *pool, void *item);
+PR_STATIC_CALLBACK(PLHashEntry*) fontmapAllocEntry(void *pool,
+                                                   const void *key);
+PR_STATIC_CALLBACK(void)         fontmapFreeEntry (void *pool,
+                                                   PLHashEntry *he,
+                                                   PRUint32 flag);
+
+PLHashAllocOps fontmapHashAllocOps = {
+    fontmapAllocTable, fontmapFreeTable,
+    fontmapAllocEntry, fontmapFreeEntry
+};
+
 
 struct MozXftLangGroup {
     const char    *mozLangGroup;
@@ -353,10 +367,7 @@ static NS_DEFINE_CID(kCharsetConverterManagerCID,
 static PRBool                      gInitialized = PR_FALSE;
 static nsIPersistentProperties*    gFontEncodingProperties = nsnull;
 static nsICharsetConverterManager* gCharsetManager = nsnull;
-
-typedef nsClassHashtable<nsCharPtrHashKey, nsFontXftInfo> nsFontXftInfoHash; 
-static nsFontXftInfoHash           gFontXftMaps;
-#define INITIAL_FONT_MAP_SIZE      32
+static PLHashTable*                gFontXftMaps = nsnull;
 
 static nsresult       GetEncoding(const char* aFontName,
                                   char **aEncoding,
@@ -366,6 +377,9 @@ static nsresult       GetConverter(const char* aEncoding,
                                    nsIUnicodeEncoder** aConverter);
 static nsresult       FreeGlobals(void);
 static nsFontXftInfo* GetFontXftInfo(FcPattern* aPattern);
+
+static PLHashNumber   HashKey(const void* aString);
+static PRIntn         CompareKeys(const void* aStr1, const void* aStr2);
 
 nsFontMetricsXft::nsFontMetricsXft(): mMiniFont(nsnull)
 {
@@ -499,9 +513,11 @@ nsFontMetricsXft::Init(const nsFont& aFont, nsIAtom* aLangGroup,
             FreeGlobals();
             return NS_ERROR_FAILURE;
         }
-
-        if (!gFontXftMaps.IsInitialized() && 
-            !gFontXftMaps.Init(INITIAL_FONT_MAP_SIZE)) {
+        if (!gFontXftMaps) { 
+            gFontXftMaps = PL_NewHashTable(0, HashKey, CompareKeys, nsnull, 
+                                           &fontmapHashAllocOps, nsnull);
+        }
+        if (!gFontXftMaps) { // error checking
             FreeGlobals();
             return NS_ERROR_OUT_OF_MEMORY;
         }
@@ -1251,9 +1267,8 @@ nsFontMetricsXft::DoMatch(PRBool aMatchAll)
     }
 
     // Create a list of new font objects based on the fonts returned
-    // as part of the query. We start at mLoadedFonts.Count() so as to
-    // not re-add the best match font we've already loaded.
-    for (int i=mLoadedFonts.Count(); i < set->nfont; ++i) {
+    // as part of the query
+    for (int i=0; i < set->nfont; ++i) {
         if (PR_LOG_TEST(gXftFontLoad, PR_LOG_DEBUG)) {
             char *name;
             FcPatternGetString(set->fonts[i], FC_FAMILY, 0, (FcChar8 **)&name);
@@ -2275,6 +2290,37 @@ nsFontXftCustom::SetFT_FaceCharmap(void)
     return NS_OK;
 }
 
+// Hash table allocation  for gFontXftMaps made up of 
+// (family, nsFontXftInfo) pairs.  Copied from nsFontMetricsWin.cpp. 
+// XXX : jshin I'd love to use brand-new nsClassHashtable, but I can't 
+// get it  compiled with g++ 3.2 under Linux.
+PR_STATIC_CALLBACK(void*) fontmapAllocTable(void *pool, size_t size)
+{
+    return nsMemory::Alloc(size);
+}
+
+PR_STATIC_CALLBACK(void) fontmapFreeTable(void *pool, void *item)
+{
+    nsMemory::Free(item);
+}
+
+PR_STATIC_CALLBACK(PLHashEntry*) fontmapAllocEntry(void *pool, const void *key)
+{
+    return new nsFontXftInfo();
+}
+
+PR_STATIC_CALLBACK(void) fontmapFreeEntry(void *pool, PLHashEntry *he, 
+                                          PRUint32 flag)
+{
+    // we don't have to free 'key' because key is from FcPatternGet()
+    // that owns it. 
+    if (flag == HT_FREE_ENTRY)  {
+        nsFontXftInfo *fontInfo = NS_STATIC_CAST(nsFontXftInfo *, he);
+        if (fontInfo)
+            delete fontInfo;
+    }
+}
+
 // class nsAutoBuffer
 
 nsAutoBuffer::nsAutoBuffer()
@@ -2922,7 +2968,10 @@ FreeGlobals(void)
     NS_IF_RELEASE(gFontEncodingProperties);
     NS_IF_RELEASE(gCharsetManager);
 
-    gFontXftMaps.Clear();
+    if (gFontXftMaps) {
+        PL_HashTableDestroy(gFontXftMaps);
+        gFontXftMaps = nsnull;
+    }
 
     return NS_OK;
 }
@@ -2938,19 +2987,25 @@ GetFontXftInfo(FcPattern* aPattern)
         return nsnull;
     }
 
-    NS_ASSERTION(gFontXftMaps.IsInitialized(), "gFontXMaps should be init'd by now.");
+    NS_ASSERTION(gFontXftMaps, "gFontXMaps should not be null by now.");
 
-    nsFontXftInfo* info;
+    // shouldn't be NULL, using it as a flag to catch bad changes
+    PLHashEntry *he, **hep = nsnull; 
+    PLHashNumber hash;
 
-    // cached entry found. 
-    if (gFontXftMaps.Get(family, &info))
-        return info;
+    hash = HashKey(family);
+    hep = PL_HashTableRawLookup(gFontXftMaps, hash, family);
+    he = *hep;
+    if (he) {
+      // cached entry found. 
+      return (NS_STATIC_CAST(nsFontXftInfo *, he));
+    }
 
+    PRUint16* ccmap = nsnull;
     nsCOMPtr<nsIUnicodeEncoder> converter;
     nsXftFontType fontType =  eFontTypeUnicode; 
     nsXPIDLCString encoding;
     FT_Encoding ftEncoding = ft_encoding_unicode;
-    PRUint16* ccmap = nsnull;
 
     // See if a font has a custom/private encoding by matching
     // its family name against the list in fontEncoding.properties 
@@ -2973,17 +3028,23 @@ GetFontXftInfo(FcPattern* aPattern)
 
     // XXX Need to check if an identical map has already been added - Bug 75260
     // For Xft, this doesn't look as critical as in GFX Win.
+    NS_ASSERTION(hep, "bad code");  
 
-    info = new nsFontXftInfo; 
-    if (!info) 
-        return nsnull; 
+    nsFontXftInfo* info;
 
+    // Put (family, info) pair to hash. family returned by FcPatternGet()
+    // is just a reference so that we shouldn't free it. 
+    he = PL_HashTableRawAdd(gFontXftMaps, hep, hash, family, nsnull);
+    if (!he)
+        return nsnull;
+
+    info = NS_STATIC_CAST(nsFontXftInfo*, he);
+    he->value = info;    
+    // will be freed by ~nsFontXftInfo() invoked  by fontmapFreeEntry
     info->mCCMap =  ccmap;  
     info->mConverter = converter;
     info->mFontType = fontType;
     info->mFT_Encoding = ftEncoding;
-
-    gFontXftMaps.Put(family, info); 
 
     return info;
 }
@@ -3059,4 +3120,18 @@ ConvertUCS4ToCustom(FcChar32 *aSrc,  PRUint32 aSrcLen,
     }
 
     return rv;
+}
+
+/* static */
+PLHashNumber
+HashKey(const void* aString)
+{
+  return PLHashNumber(nsCRT::HashCode((const char *) aString));
+}
+
+/* static */
+PRIntn
+CompareKeys(const void* aStr1, const void* aStr2)
+{
+  return nsCRT::strcmp((const char *) aStr1, (const char *) aStr2) == 0; 
 }

@@ -1412,12 +1412,9 @@ FSMoveRenameObjectUnicode(
 		result = FSRenameUnicode(ref, uniqueName.length, uniqueName.unicode, kTextEncodingUnknown, newRef);
 		require_noerr(result, FSRenameUnicodeBeforeMoveFailed);
 		
-		if ( FSCompareFSRefs(destDirectory, &originalDirectory) != noErr )
-		{
-		  /* Move object to its new home */
-		  result = FSMoveObject(newRef, destDirectory, newRef);
-		  require_noerr(result, FSMoveObjectAfterRenameFailed);
-		}
+		/* Move object to its new home */
+		result = FSMoveObject(newRef, destDirectory, newRef);
+		require_noerr(result, FSMoveObjectAfterRenameFailed);
 		
 		/* Rename the object to new name */
 		result = FSRenameUnicode(ref, nameLength, name, textEncodingHint, newRef);

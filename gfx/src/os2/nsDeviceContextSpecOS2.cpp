@@ -526,10 +526,6 @@ void GlobalPrinters::GetDefaultPrinterName(PRUnichar*& aDefaultPrinterName)
 {
   aDefaultPrinterName = nsnull;
 
-  nsresult rv = GlobalPrinters::GetInstance()->InitializeGlobalPrinters();
-  if (NS_FAILED(rv)) 
-     return;
-
   if (GetNumPrinters() == 0)
      return;
 
@@ -542,8 +538,6 @@ void GlobalPrinters::GetDefaultPrinterName(PRUnichar*& aDefaultPrinterName)
   delete [] printerName; 
 
   aDefaultPrinterName = ToNewUnicode(nativePrinterName);
-
-  GlobalPrinters::GetInstance()->FreeGlobalPrinters();
 }
 
 void GlobalPrinters::FreeGlobalPrinters()

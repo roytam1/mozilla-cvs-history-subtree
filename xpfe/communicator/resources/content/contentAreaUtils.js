@@ -271,7 +271,7 @@ function foundHeaderInfo(aSniffer, aData)
         getService(Components.interfaces.nsIExternalHelperAppService);
     var url = aSniffer.uri.QueryInterface(Components.interfaces.nsIURL);
     urlExt = url.fileExtension;
-    if (contentEncodingType &&
+    if (contentEncodingType && urlExt &&
         helperAppService.applyDecodingForExtension(urlExt,
                                                    contentEncodingType)) {
       shouldDecode = true;
@@ -775,7 +775,7 @@ function getDefaultFileName(aDefaultFileName, aNameFromHeaders, aDocumentURI, aD
       var textToSubURI = Components.classes["@mozilla.org/intl/texttosuburi;1"]
                                    .getService(Components.interfaces.nsITextToSubURI);
       var charset = getCharsetforSave(aDocument);
-      return validateFileName(textToSubURI.unEscapeURIForUI(charset, url.fileName));
+      return textToSubURI.unEscapeURIForUI(charset, url.fileName);
     } catch (e) {
       // This is something like a wyciwyg:, data:, and so forth
       // URI... no usable filename here.

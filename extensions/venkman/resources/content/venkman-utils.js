@@ -799,11 +799,6 @@ function formatDateOffset (seconds, format)
     return format;
 }
 
-function arrayHasElementAt(ary, i)
-{
-    return typeof ary[i] != "undefined";
-}
-
 function arraySpeak (ary, single, plural)
 {
     var rv = "";

@@ -2171,7 +2171,7 @@ function AddAttachment(attachment)
     var item = document.createElement("listitem");
 
     if (!attachment.name)
-      attachment.name = gMsgCompose.AttachmentPrettyName(attachment.url, attachment.urlCharset);
+      attachment.name = gMsgCompose.AttachmentPrettyName(attachment.url);
 
     // for security reasons, don't allow *-message:// uris to leak out
     // we don't want to reveal the .slt path (for mailbox://), or the username or hostname

@@ -578,12 +578,15 @@ get URL()
 ***************************/
 isDir : function()
 {
-  var rv = false;
-  try {
-    rv = this.mFileInst.isDirectory();
-  } catch (e) { rv = false; }
-    
-  return rv;
+
+  if (!this.exists()) {
+    jslibError(null, 
+      "(file doesn't exist)", 
+      "NS_ERROR_FAILURE", 
+      JS_FILESYSTEM_FILE+":isDir");
+    return false;
+  }
+  return this.mFileInst.isDirectory();
 },
 
 /***************************
@@ -591,12 +594,15 @@ isDir : function()
 ***************************/
 isFile : function()
 {
-  var rv = false;
-  try {
-    rv = this.mFileInst.isFile();
-  } catch (e) { rv = false; }
-    
-  return rv;
+
+  if (!this.exists()) {
+    jslibError(null, 
+      "(file doesn't exist)", 
+      "NS_ERROR_FAILURE",     
+      JS_FILESYSTEM_FILE+":isDir");
+    return false;
+  }
+  return this.mFileInst.isFile();
 },
 
 /***************************
@@ -604,12 +610,15 @@ isFile : function()
 ***************************/
 isExec : function()
 {
-  var rv = false;
-  try {
-    rv = this.mFileInst.isExecutable();
-  } catch (e) { rv = false; }
-    
-  return rv;
+
+  if (!this.exists()) {
+    jslibError(null, 
+      "(file doesn't exist)", 
+      "NS_ERROR_FAILURE", 
+      JS_FILESYSTEM_FILE+":isDir");
+    return false;
+  }
+  return this.mFileInst.isExecutable();
 },
 
 /***************************
@@ -618,12 +627,14 @@ isExec : function()
 isSymlink : function()
 {
 
-  var rv = false;
-  try {
-    rv = this.mFileInst.isSymlink();
-  } catch (e) { rv = false; }
-    
-  return rv;
+  if (!this.exists()) {
+    jslibError(null, 
+      "(file doesn't exist)", 
+      "NS_ERROR_FAILURE", 
+      JS_FILESYSTEM_FILE+":isDir");
+    return false;
+  }
+  return this.mFileInst.isSymlink();
 },
 
 /***************************

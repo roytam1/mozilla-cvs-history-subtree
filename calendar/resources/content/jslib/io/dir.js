@@ -64,7 +64,7 @@ const JS_DIR_PREFS_DIR               = 65539;
 const JS_DIR_DIRECTORY               = 0x01;     // 1
 const JS_DIR_OK                      = true;
 
-const JS_DIR_DEFAULT_PERMS           = 0766;
+const JS_DIR_DEFAULT_PERMS           = 0755;
 
 const JS_DIR_FilePath                = new C.Constructor(JS_DIR_LOCAL_CID, 
                                                    JS_DIR_I_LOCAL_FILE, 
@@ -101,7 +101,7 @@ Dir.prototype.create = function(aPermissions)
     return null;
   }
 
-  if (typeof(aPermissions) == "number") {
+  if(aPermissions) {
     var checkPerms = this.validatePermissions(aPermissions);
 
     if(!checkPerms) {
@@ -109,14 +109,18 @@ Dir.prototype.create = function(aPermissions)
                        "NS_ERROR_INVALID_ARG", JS_DIR_FILE+":create");
       return C.results.NS_ERROR_INVALID_ARG;
     }               
+
+    //var baseTen = permissions.toString(10);
+    //if(baseTen.substring(0,1) != 0)
+      //aPermissions = 0+baseTen;
   } else {
-    checkPerms = this.mFileInst.parent.permissions;
+    checkPerms = JS_DIR_DEFAULT_PERMS;
   }
 
   var rv = null;
 
   try {
-    rv=this.mFileInst.create(JS_DIR_DIRECTORY, checkPerms);
+    rv=this.mFileInst.create(JS_DIR_DIRECTORY, parseInt(aPermissions) );
   } catch (e) { 
     jslibError(e, "(unable to create)", "NS_ERROR_FAILURE", JS_DIR_FILE+":create");
     rv=null;

@@ -234,12 +234,9 @@ nsXMLPrettyPrinter::EndUpdate(nsIDocument* aDocument, nsUpdateType aUpdateType)
         nsCOMPtr<nsIDOMDocument> document = do_QueryInterface(mDocument);
         nsCOMPtr<nsIDOMElement> rootElem;
         document->GetDocumentElement(getter_AddRefs(rootElem));
-
-        if (rootElem) {
-            nsCOMPtr<nsIDOMDocumentXBL> xblDoc = do_QueryInterface(mDocument);
-            xblDoc->RemoveBinding(rootElem,
-                                  NS_LITERAL_STRING("chrome://communicator/content/xml/XMLPrettyPrint.xml#prettyprint"));
-        }
+        nsCOMPtr<nsIDOMDocumentXBL> xblDoc = do_QueryInterface(mDocument);
+        xblDoc->RemoveBinding(rootElem,
+                              NS_LITERAL_STRING("chrome://communicator/content/xml/XMLPrettyPrint.xml#prettyprint"));
 
         mDocument = nsnull;
 

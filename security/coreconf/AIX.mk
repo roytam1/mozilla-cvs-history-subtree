@@ -55,9 +55,9 @@ else
 	PTHREADS_USER = 1
 endif
 
-DEFAULT_COMPILER = xlc_r
+DEFAULT_COMPILER = xlC_r
 
-CC		= xlc_r
+CC		= xlC_r
 CCC		= xlC_r
 
 CPU_ARCH	= rs6000
@@ -65,6 +65,9 @@ CPU_ARCH	= rs6000
 RANLIB		= ranlib
 
 OS_CFLAGS	= -DAIX -DSYSV
+ifndef NS_USE_GCC
+	OS_CFLAGS += -qarch=com
+endif
 
 AIX_WRAP	= $(DIST)/lib/aixwrap.o
 AIX_TMP		= $(OBJDIR)/_aix_tmp.o

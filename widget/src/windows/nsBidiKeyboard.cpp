@@ -20,7 +20,6 @@
  * Contributor(s): Simon Montagu
  */
 
-#include <stdio.h>
 #include "nsBidiKeyboard.h"
 #include "prmem.h"
 

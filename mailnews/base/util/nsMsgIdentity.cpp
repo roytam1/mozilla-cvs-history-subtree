@@ -607,7 +607,6 @@ nsMsgIdentity::getFolderPref(const char *prefname, char **retval, PRBool mustHav
     {
       nsCOMPtr <nsIMsgFolder> msgFolder;
       rv = server->GetMsgFolderFromURI(folderResource, *retval, getter_AddRefs(msgFolder));
-      PR_Free(*retval);
       if (NS_SUCCEEDED(rv))
         return msgFolder->GetURI(retval);
     }

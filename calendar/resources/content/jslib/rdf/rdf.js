@@ -54,18 +54,17 @@ RDF.prototype._rdf_init = function(src, flags) {
   this.src = src;
 
   var load = true; // load source
-  jslibPrint("* RDFFile: Opening file \n");
+
   // Create an RDF/XML datasource using the XPCOM Component Manager
-  this.dsource = C
+  this.dsource = Components
     .classes[JS_RDFBASE_RDF_DS_PROGID]
-    .createInstance(C.interfaces.nsIRDFDataSource);
+    .createInstance(Components.interfaces.nsIRDFDataSource);
 
   // The nsIRDFRemoteDataSource interface has the interfaces
   // that we need to setup the datasource.
-  var remote = this.dsource.QueryInterface(C.interfaces.nsIRDFRemoteDataSource);
+  var remote = this.dsource.QueryInterface(Components.interfaces.nsIRDFRemoteDataSource);
 
   try {
-    jslibPrint("* RDFFile: doing remote init \n");
     remote.Init(src); // throws an exception if URL already in use
   }
   catch(err) {
@@ -77,7 +76,6 @@ RDF.prototype._rdf_init = function(src, flags) {
 
   if (load) {
     try {
-      jslibPrint("* RDFFile: refresh remote \n");
       remote.Refresh((flags & JS_RDF_FLAG_SYNC) ? true: false);
     }
     catch(err) {
@@ -90,9 +88,8 @@ RDF.prototype._rdf_init = function(src, flags) {
   }
   else {
     try {
-      jslibPrint("* RDFFile: getting ds \n");
       this.dsource = this.RDF.GetDataSource(src);
-      remote = this.dsource.QueryInterface(C.interfaces.nsIRDFRemoteDataSource);
+      remote = this.dsource.QueryInterface(Components.interfaces.nsIRDFRemoteDataSource);
     }
     catch(err) {
       this.dsource = null;
@@ -130,13 +127,13 @@ RDF.prototype._rdf_init = function(src, flags) {
 
         onError: function(aSink, aStatus, aErrorMsg)
         {
-          jslibError(null,"Error loading datasource: "+aErrorMsg,
+          jslibError(null,"Error loading datasource: "+aErrorMsg, 
                 "NS_ERROR_UNEXPECTED", JS_RDF_FILE+":_rdf_init (observer)");
         }
       };
 
       // RDF/XML Datasources are all nsIRDFXMLSinks
-      var sink = this.dsource.QueryInterface(C.interfaces.nsIRDFXMLSink);
+      var sink = this.dsource.QueryInterface(Components.interfaces.nsIRDFXMLSink);
 
       // Attach the observer to the datasource-as-sink
       sink.addXMLSinkObserver(obs);
@@ -156,7 +153,6 @@ RDF.prototype.getSource = function()
 
 RDF.prototype.getNode = function(aPath)
 {
-  jslibDebug("entering getNode");
   if(this.isValid()) {
     var res = this.RDF.GetResource(aPath);
     return new RDFResource("node", res.Value, null, this.dsource);
@@ -265,7 +261,7 @@ RDF.prototype.getRootContainers = function(aType)
     var elems = this.dsource.GetAllResources();
     while(elems.hasMoreElements()) {
       var elem = elems.getNext();
-      elem = elem.QueryInterface(C.interfaces.nsIRDFResource);
+      elem = elem.QueryInterface(Components.interfaces.nsIRDFResource);
       if(aType == "bag") {
         if(this.RDFCUtils.IsBag(this.dsource, elem)) {
           list.push(new RDFContainer(aType, elem.Value, null, this.dsource));
@@ -298,15 +294,11 @@ RDF.prototype.getRootContainers = function(aType)
 
 RDF.prototype.flush = function()
 {
-  if(this.isValid())
-    this.dsource.QueryInterface(C.interfaces.nsIRDFRemoteDataSource).Flush();
+  if(this.isValid()) {
+    this.dsource.QueryInterface(Components.interfaces.nsIRDFRemoteDataSource).Flush();
+  }
 };
 
-RDF.prototype.refresh = function(aBlocking)
-{
-  if(this.isValid())
-    this.dsource.QueryInterface(C.interfaces.nsIRDFRemoteDataSource).Refresh(aBlocking);
-};
 
 jslibDebug('*** load: '+JS_RDF_FILE+' OK');
 

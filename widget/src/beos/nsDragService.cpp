@@ -36,7 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include <stdio.h>
 #include "nsDragService.h"
 #include "nsITransferable.h"
 #include "nsIServiceManager.h"

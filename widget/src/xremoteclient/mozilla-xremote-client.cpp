@@ -33,7 +33,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include <stdio.h>
 #include "XRemoteClient.h"
 
 int main(int argc, char **argv)

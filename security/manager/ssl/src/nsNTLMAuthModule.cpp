@@ -442,10 +442,10 @@ GenerateType1Msg(void **outBuf, PRUint32 *outLen)
   //
 
   // 16 : supplied domain security buffer (empty)
-  cursor = WriteSecBuf(cursor, 0, 0);
+  cursor = WriteSecBuf(cursor, 0, NTLM_TYPE1_HEADER_LEN);
 
   // 24 : supplied workstation security buffer (empty)
-  cursor = WriteSecBuf(cursor, 0, 0);
+  cursor = WriteSecBuf(cursor, 0, NTLM_TYPE1_HEADER_LEN);
 
   return NS_OK;
 }
@@ -685,7 +685,8 @@ GenerateType3Msg(const nsString &domain,
   memcpy((PRUint8 *) *outBuf + offset, hostPtr, hostLen);
 
   // 52 : session key sec buf (not used)
-  cursor = WriteSecBuf(cursor, 0, 0);
+  offset += (hostLen + LM_RESP_LEN + NTLM_RESP_LEN);
+  cursor = WriteSecBuf(cursor, 0, offset);
 
   // 60 : negotiated flags
   cursor = WriteDWORD(cursor, msg.flags & NTLM_TYPE1_FLAGS);

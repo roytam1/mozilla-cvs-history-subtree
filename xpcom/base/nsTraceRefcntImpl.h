@@ -38,7 +38,6 @@
 #ifndef nsTraceRefcntImpl_h___
 #define nsTraceRefcntImpl_h___
 
-#include <stdio.h> // for FILE
 #include "nsITraceRefcnt.h"
 
 class nsTraceRefcntImpl : public nsITraceRefcnt

@@ -47,7 +47,6 @@
 
  */
 
-#include <stdio.h>
 #include "nsCOMPtr.h"
 #include "nsIComponentManager.h"
 #include "nsIEventQueueService.h"
@@ -67,6 +66,7 @@
 #include "plstr.h"
 #include "prio.h"
 #include "prthread.h"
+
 
 ////////////////////////////////////////////////////////////////////////
 // CIDs

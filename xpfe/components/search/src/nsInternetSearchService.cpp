@@ -5411,7 +5411,8 @@ InternetSearchDataSource::ParseHTML(nsIURI *aURL, nsIRDFResource *mParent,
 			}
 			resultItem.Mid(hrefStr, quoteStartOffset + 1, quoteEndOffset - quoteStartOffset - 1);
 
-			ConvertEntities(hrefStr, PR_FALSE, PR_TRUE, PR_FALSE);
+			// strip out any bogus CRs or LFs from the HREF URL
+			hrefStr.StripChars("\n\r");
 
 			if (hrefStr.IsEmpty())	continue;
 

@@ -559,15 +559,13 @@ NS_METHOD nsTableRowFrame::Paint(nsIPresContext*      aPresContext,
 #endif
   // Standards mode background painting removed.  See bug 4510
 
-  PRUint8 overflow = GetStyleDisplay()->mOverflow;
-  PRBool clip = overflow == NS_STYLE_OVERFLOW_HIDDEN ||
-                overflow == NS_STYLE_OVERFLOW_SCROLLBARS_NONE;
-  if (clip) {
+  const nsStyleDisplay* disp = GetStyleDisplay();
+  if (disp && (NS_STYLE_OVERFLOW_HIDDEN == disp->mOverflow)) {
     aRenderingContext.PushState();
     SetOverflowClipRect(aRenderingContext);
   }
   PaintChildren(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer, aFlags);
-  if (clip) {
+  if (disp && (NS_STYLE_OVERFLOW_HIDDEN == disp->mOverflow)) {
     PRBool clipState;
     aRenderingContext.PopState(clipState);
   }
@@ -603,8 +601,6 @@ nsTableRowFrame::GetFrameForPoint(nsIPresContext*        aPresContext,
   // frame work like a block frame) if rows with rowspan cells made the
   // the NS_FRAME_OUTSIDE_CHILDREN bit of mState set correctly (see
   // nsIFrame.h).
-
-  // XXXldb Do we need this anymore?
 
   // I imagine fixing this would help performance of GetFrameForPoint in
   // tables.  It may also fix problems with relative positioning.
@@ -988,15 +984,9 @@ nsTableRowFrame::ReflowChildren(nsIPresContext*          aPresContext,
           }
         }
         else { 
-          desiredSize.width = cellDesiredSize.width;
-          desiredSize.height = cellDesiredSize.height;
-          nsRect *overflowArea =
-            cellFrame->GetOverflowAreaProperty(aPresContext);
-          if (overflowArea)
-            desiredSize.mOverflowArea = *overflowArea;
-          else
-            desiredSize.mOverflowArea.SetRect(0, 0, cellDesiredSize.width,
-                                              cellDesiredSize.height);
+          nsSize priorSize = cellFrame->GetDesiredSize();
+          desiredSize.width = priorSize.width;
+          desiredSize.height = priorSize.height;
           
           // if we are in a floated table, our position is not yet established, so we cannot reposition our views
           // the containing glock will do this for us after positioning the table

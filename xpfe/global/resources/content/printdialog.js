@@ -458,9 +458,7 @@ function onAccept()
                 gPrintSetInterface.kInitSavePaperHeight   |
                 gPrintSetInterface.kInitSavePaperName     | 
                 gPrintSetInterface.kInitSaveInColor       |
-                gPrintSetInterface.kInitSavePrintCommand  |
-                gPrintSetInterface.kInitSaveShrinkToFit   |
-                gPrintSetInterface.kInitSaveScaling;
+                gPrintSetInterface.kInitSavePrintCommand;
     printService.savePrintSettingsToPrefs(gPrintSettings, true, flags);
   }
 

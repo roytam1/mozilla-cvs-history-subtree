@@ -1387,20 +1387,18 @@ nsTableFrame::PaintChildren(nsIPresContext*      aPresContext,
                             PRUint32             aFlags)
 
 {
-  PRUint8 overflow = GetStyleDisplay()->mOverflow;
-  PRBool clip = overflow == NS_STYLE_OVERFLOW_HIDDEN ||
-                overflow == NS_STYLE_OVERFLOW_SCROLLBARS_NONE;
+  const nsStyleDisplay* disp = GetStyleDisplay();
   // If overflow is hidden then set the clip rect so that children don't
   // leak out of us. Note that because overflow'-clip' only applies to
   // the content area we do this after painting the border and background
-  if (clip) {
+  if (NS_STYLE_OVERFLOW_HIDDEN == disp->mOverflow) {
     aRenderingContext.PushState();
     SetOverflowClipRect(aRenderingContext);
   }
 
   nsHTMLContainerFrame::PaintChildren(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer, aFlags);
 
-  if (clip) {
+  if (NS_STYLE_OVERFLOW_HIDDEN == disp->mOverflow) {
     PRBool clipState;
     aRenderingContext.PopState(clipState);
   }
@@ -1945,10 +1943,9 @@ NS_METHOD nsTableFrame::Reflow(nsIPresContext*          aPresContext,
                                            NS_UNCONSTRAINEDSIZE);
             // reflow the children
             nsIFrame *lastReflowed;
-            nsRect overflowArea;
             ReflowChildren(aPresContext, reflowState, !HaveReflowedColGroups(),
                            PR_FALSE, aStatus, lastReflowed,
-                           overflowArea);
+                           aDesiredSize.mOverflowArea);
           }
           mTableLayoutStrategy->Initialize(aPresContext, aReflowState);
         }

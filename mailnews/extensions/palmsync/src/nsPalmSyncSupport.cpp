@@ -46,6 +46,10 @@
 #include "nsICategoryManager.h"
 #include "nsCRT.h"
 
+#include "nsIPrefService.h"
+#include "nsIPrefBranch.h"
+#include "nsIPrefBranchInternal.h"
+
 #include "PalmSyncImp.h"
 #include "nsPalmSyncSupport.h"
 #include "Registry.h"

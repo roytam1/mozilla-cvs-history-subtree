@@ -3406,9 +3406,8 @@ PRBool nsViewManager::CreateDisplayList(nsView *aView, PRBool aReparentedViewsPr
   bounds.y += aY;
   pos.MoveBy(aX, aY);
 
-  // does this view clip all its children?
-  PRBool isClipView = IsClipView(aView)
-    && !(aView->GetViewFlags() & NS_VIEW_FLAG_CONTAINS_PLACEHOLDER);
+  // is this a clip view?
+  PRBool isClipView = IsClipView(aView);
   PRBool overlap;
   nsRect irect;
     
@@ -3446,7 +3445,8 @@ PRBool nsViewManager::CreateDisplayList(nsView *aView, PRBool aReparentedViewsPr
   // visible area can lie outside our bounds, so it can't intersect
   // the dirty area.  Also, if we don't contain any placeholder views,
   // then there is no way for anyone to reparent below us.
-  if (!overlap && !(aView->GetViewFlags() & NS_VIEW_FLAG_CONTAINS_PLACEHOLDER)) {
+  if (!overlap && (isClipView ||
+                   (aView->GetViewFlags() & NS_VIEW_FLAG_CONTAINS_PLACEHOLDER) == 0)) {
     return PR_FALSE;
   }
 

@@ -61,7 +61,7 @@ xpcom nsIFile file IO library from js
     parent;                             read only attribute gets parent dir part of a path
 
     // direct manipulation
-    nsIFile                             returns an nsIFile obj
+    nsIFIle                             returns an nsIFile obj
 
     // utils
     remove();                           removes the current file
@@ -361,11 +361,10 @@ File.prototype.open = function(aMode, aPerms)
       }
       this.mMode=JS_FILE_READ_MODE;
       try {
-        jslibPrint('****** '+this.mURI);
         this.mFileChannel = JS_FILE_IOSERVICE.newChannelFromURI(this.mURI);
-        this.mInputStream = new JS_FILE_InputStream();    
+        this.mInputStream        = new JS_FILE_InputStream();    
         this.mInputStream.init(this.mFileChannel.open());
-        this.mLineBuffer  = new Array();
+        this.mLineBuffer         = new Array();
         rv=true;
       } catch (e) {
         jslibError(e, "open(r) (error setting permissions)", 
@@ -755,6 +754,7 @@ File.prototype.create = function()
 /********************* REMOVE *******************************/
 File.prototype.remove = function ()
 {
+
   if (!this.checkInst())
     throw C.results.NS_ERROR_NOT_INITIALIZED;
 
@@ -767,8 +767,27 @@ File.prototype.remove = function ()
   this.close();
   var rv;
   try {
-    // this is a non recursive remove because we are only dealing w/ files.
-    rv = this.mFileInst.remove(false); 
+    if (!this.exists()) {
+      jslibError(null, "(file doesn't exist)", 
+                        "NS_ERROR_FAILURE", 
+                        JS_FILE_FILE+":remove");
+      return null;
+    }
+
+    // I think we should remove whatever is there, sym link, file, dir etc . .
+    if (this.mFileInst.isSpecial()) {
+      jslibError(null, "(file is not a regular file)", 
+                        "NS_ERROR_FAILURE", 
+                        JS_FILE_FILE+":remove");
+      return null;
+    }
+
+    if (!this.isFile()) {
+      jslibError(null, "(not a file)", "NS_ERROR_FAILURE", JS_FILE_FILE+":remove");
+      return null;
+    }
+    // this is a recursive remove.
+    this.isFile() ? rv = this.mFileInst.remove(true) : rv = null; 
   } catch (e) {
     jslibError(e, "(unexpected)", 
                   "NS_ERROR_UNEXPECTED", 
