@@ -485,7 +485,7 @@ nsSVGAttributes::IsMappedAttribute(nsSVGAttribute* attrib)
 
 
 nsSVGAttribute*
-nsSVGAttributes::ElementAt(PRInt32 i)
+nsSVGAttributes::ElementAt(PRInt32 i) const
 {
   return (nsSVGAttribute*)mAttributes.ElementAt(i);
 }
@@ -514,7 +514,7 @@ nsSVGAttributes::RemoveElementAt(PRInt32 aIndex)
 // interface used by the content element:
 
 PRInt32
-nsSVGAttributes::Count()
+nsSVGAttributes::Count() const
 {
   return mAttributes.Count();
 }
@@ -734,6 +734,22 @@ nsSVGAttributes::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
   return rv;
 }
 
+NS_IMETHODIMP_(PRBool)
+nsSVGAttributes::HasAttr(PRInt32 aNameSpaceID, nsIAtom* aName) const
+{
+  // XXX - this should be hashed, or something
+  PRInt32 count = Count();
+  PRInt32 index;
+  for (index = 0; index < count; index++) {
+    nsSVGAttribute *attr = ElementAt(index);
+    if ((aNameSpaceID == kNameSpaceID_Unknown ||
+         attr->GetNodeInfo()->NamespaceEquals(aNameSpaceID)) &&
+        (attr->GetNodeInfo()->Equals(aName))) {
+      return PR_TRUE;
+    }
+  }
+  return PR_FALSE;
+}
 
 NS_IMETHODIMP
 nsSVGAttributes::NormalizeAttrString(const nsAReadableString& aStr,

@@ -148,7 +148,7 @@ public:
   
   // interface for the content element:
 
-  PRInt32 Count();
+  PRInt32 Count() const;
   NS_IMETHOD GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
                      nsIAtom*& aPrefix,
                      nsAWritableString& aResult);
@@ -157,6 +157,8 @@ public:
                      PRBool aNotify);
   NS_IMETHOD UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
                        PRBool aNotify);
+  NS_IMETHOD_(PRBool) HasAttr(PRInt32 aNameSpaceID,
+                              nsIAtom* aName) const;
   NS_IMETHOD NormalizeAttrString(const nsAReadableString& aStr,
                                  nsINodeInfo*& aNodeInfo);
   NS_IMETHOD GetAttrNameAt(PRInt32 aIndex,
@@ -182,7 +184,7 @@ attrib);
   PRBool IsExplicitAttribute(nsSVGAttribute* attrib);
   PRBool IsMappedAttribute(nsSVGAttribute* attrib);  
 
-  nsSVGAttribute* ElementAt(PRInt32 index);
+  nsSVGAttribute* ElementAt(PRInt32 index) const;
   void AppendElement(nsSVGAttribute* aElement);
   void RemoveElementAt(PRInt32 aIndex);
 

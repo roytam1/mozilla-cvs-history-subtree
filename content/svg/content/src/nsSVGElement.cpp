@@ -364,6 +364,12 @@ nsSVGElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
   return mAttributes->UnsetAttr(aNameSpaceID, aName, aNotify);
 }
 
+NS_IMETHODIMP_(PRBool)
+nsSVGElement::HasAttr(PRInt32 aNameSpaceID, nsIAtom* aName) const
+{
+  return mAttributes->HasAttr(aNameSpaceID, aName);
+}
+
 NS_IMETHODIMP
 nsSVGElement::GetAttrNameAt(PRInt32 aIndex,
                             PRInt32& aNameSpaceID, 
