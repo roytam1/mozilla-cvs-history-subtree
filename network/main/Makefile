@@ -31,7 +31,6 @@ CSRCS		= \
 	mkautocf.c	\
 	mkconect.c	\
 	mkfsort.c	\
-	mkgeturl.c	\
 	singsign.c	\
 	mkhelp.c	\
 	mkmessag.c	\
@@ -53,6 +52,11 @@ CSRCS += \
 	$(NULL)
 endif
 
+CPPSRCS = \
+	mkgeturl.cpp	\
+	$(NULL)
+
+
 EXPORTS= mkstream.h mkparse.h mkfsort.h mksort.h mkgeturl.h \
 	netstream.h mkselect.h mktcp.h netutils.h mkpadpac.h mkautocf.h mkhelp.h \
         mkutils.h mktrace.h
@@ -68,6 +72,10 @@ REQUIRES	= ldapurl imap4url jtools progress nspr2 dbm util js parse lay style pr
 
 ifdef MOZ_MAIL_NEWS
 REQUIRES += mailbxurl nntpurl pop3url
+endif
+
+ifdef MOZ_SMOOTH_PROGRESS
+REQUIRES += progress xpcom
 endif
 
 include $(DEPTH)/config/rules.mk
