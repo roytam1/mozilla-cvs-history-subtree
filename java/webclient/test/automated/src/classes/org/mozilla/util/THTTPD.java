@@ -156,7 +156,8 @@ public class THTTPD extends Object {
 			    while (null != (curLine = responseReader.readLine())) {
 				responseString.append(curLine);
 			    }
-			    curLine = "Content-type: " + 
+			    curLine = "Server: THTTPD\r\n" + 
+				"Content-type: " + 
 				getContentTypeForFile(responseFile) + 
 				"\r\nContent-Length: " + 
 				responseString.length() + "\r\n\r\n";

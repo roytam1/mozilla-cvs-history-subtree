@@ -31,6 +31,9 @@ public abstract class DocumentLoadListenerImpl implements DocumentLoadListener {
 	public void eventDispatched(WebclientEvent event) {
 	    if (event instanceof DocumentLoadEvent) {
 		switch ((int) event.getType()) {
+		case ((int) DocumentLoadEvent.START_DOCUMENT_LOAD_EVENT_MASK):
+		    doStartCheck();
+		    break;
 		case ((int) DocumentLoadEvent.END_DOCUMENT_LOAD_EVENT_MASK):
 		    doEndCheck();
 		    break;
@@ -40,6 +43,8 @@ public abstract class DocumentLoadListenerImpl implements DocumentLoadListener {
 		}
 	    }
 	}	
+
+        public void doStartCheck() {}
 	
 	public void doEndCheck() {}
 
