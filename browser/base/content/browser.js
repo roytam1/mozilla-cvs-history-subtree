@@ -412,7 +412,7 @@ function onBrowserKeyPress(evt)
     return;
   }
   
-  if (evt.charCode == 39 /* '*/ || evt.charCode == 47 /* / */ || (gUseTypeAheadFind && evt.charCode && evt.charCode != 32)) {   
+  if (evt.charCode == 39 /* ' */ || evt.charCode == 47 /* / */ || (gUseTypeAheadFind && evt.charCode && evt.charCode != 32)) {   
     gFindMode = (evt.charCode == 39) ? FIND_LINKS : FIND_TYPEAHEAD;
     toggleLinkFocus(true);
     if (openFindBar()) {      
@@ -423,7 +423,10 @@ function onBrowserKeyPress(evt)
         find(findField.value);
       }
       else {
-        findField.value = "";
+        if (evt.charCode == 47)
+          selectFindBar();
+        else
+          findField.value = "";
       }
     }
     else {
