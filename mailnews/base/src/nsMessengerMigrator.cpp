@@ -831,6 +831,33 @@ nsMessengerMigrator::MigrateIdentity(nsIMsgIdentity *identity)
       }
   }    
 
+  nsCOMPtr<nsIMsgAccountManager> accountManager = 
+           do_GetService(NS_MSGACCOUNTMANAGER_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // we need to clone any pre-existing identies, in case MCD set some up.
+  nsCOMPtr<nsISupportsArray> identities;
+  accountManager->GetAllIdentities(getter_AddRefs(identities));
+  NS_ENSURE_SUCCESS(rv, rv);
+  PRUint32 idCount=0;
+  identities->Count(&idCount);
+
+  PRUint32 id;
+  nsXPIDLCString identityKey;
+  
+  for (id = 0; id < idCount; id++) 
+  {
+    nsCOMPtr<nsIMsgIdentity> thisIdentity = do_QueryElementAt(identities, id);
+
+    if (thisIdentity)
+    {
+      nsXPIDLCString thisKey, origKey;
+      thisIdentity->GetKey(getter_Copies(thisKey));
+      identity->GetKey(getter_Copies(origKey));
+      if (!thisKey.Equals(origKey))
+        thisIdentity->Copy(identity);
+    }
+  }
   /* NOTE:  if you add prefs here, make sure you update nsMsgIdentity::Copy() */
   return NS_OK;
 }
