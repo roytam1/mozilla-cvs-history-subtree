@@ -305,6 +305,8 @@ NS_IMETHODIMP nsOutlinerSelection::Select(PRInt32 aIndex)
 {
   mShiftSelectPivot = -1;
 
+  SetCurrentIndex(aIndex);
+
   if (mFirstRange) {
     PRBool alreadySelected = mFirstRange->Contains(aIndex);
 
@@ -324,8 +326,6 @@ NS_IMETHODIMP nsOutlinerSelection::Select(PRInt32 aIndex)
     }
   }
 
-  SetCurrentIndex(aIndex);
-  
   // Create our new selection.
   mFirstRange = new nsOutlinerRange(this, aIndex);
   mFirstRange->Invalidate();
