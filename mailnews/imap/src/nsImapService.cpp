@@ -3304,7 +3304,7 @@ nsImapService::MessageURIToMsgHdr(const char *uri, nsIMsgDBHdr **_retval)
   rv = DecomposeImapURI(uri, getter_AddRefs(folder), &msgKey);
   NS_ENSURE_SUCCESS(rv,rv);
 
-  rv = folder->GetMessageHeader(msgKey, getter_AddRefs(_retval));
+  rv = folder->GetMessageHeader(msgKey, _retval);
   NS_ENSURE_SUCCESS(rv,rv);
   return NS_OK;
 }
