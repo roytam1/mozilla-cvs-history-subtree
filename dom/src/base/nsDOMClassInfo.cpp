@@ -460,7 +460,6 @@ nsDOMClassInfoData sClassInfoData[] = {
 };
 
 nsIXPConnect *nsDOMClassInfo::sXPConnect = nsnull;
-PRUint32 nsDOMClassInfo::sInstanceCount = 0;
 PRBool nsDOMClassInfo::sIsInitialized = PR_FALSE;
 
 
@@ -580,17 +579,10 @@ nsDOMClassInfo::WrapNative(JSContext *cx, JSObject *scope, nsISupports *native,
 nsDOMClassInfo::nsDOMClassInfo(nsDOMClassInfoID aID) : mID(aID)
 {
   NS_INIT_REFCNT();
-
-  sInstanceCount++;
 }
 
 nsDOMClassInfo::~nsDOMClassInfo()
 {
-  sInstanceCount--;
-
-  if (!sInstanceCount) {
-    NS_IF_RELEASE(sXPConnect);
-  }
 }
 
 NS_IMPL_ADDREF(nsDOMClassInfo);
@@ -978,8 +970,6 @@ nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfoID aID,
 void
 nsDOMClassInfo::ShutDown()
 {
-  NS_IF_RELEASE(sXPConnect);
-
   if (sClassInfoData[0].mConstructorFptr) {
     PRUint32 i;
 
@@ -1031,6 +1021,8 @@ nsDOMClassInfo::ShutDown()
   sOnpaint_id         = jsnullstring;
   sOnresize_id        = jsnullstring;
   sOnscroll_id        = jsnullstring;
+
+  NS_IF_RELEASE(sXPConnect);
 }
 
 

@@ -76,7 +76,6 @@ protected:
   nsDOMClassInfoID mID;
 
   static nsIXPConnect *sXPConnect;
-  static PRUint32 sInstanceCount;
 
   // nsIXPCScriptable code
   static nsresult DefineStaticJSStrings(JSContext *cx);
