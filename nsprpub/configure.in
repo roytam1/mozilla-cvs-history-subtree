@@ -1216,7 +1216,7 @@ case "$target" in
         fi
 
         if test "$OS_TARGET" = "WINCE"; then
-            DLL_LIBS="coredll.lib winsock.lib"
+            DLL_LIBS="corelibc.lib coredll.lib winsock.lib"
         fi
 
         if test -n "$MOZ_OPTIMIZE"; then
@@ -1294,7 +1294,7 @@ case "$target" in
     fi
 
     if test "$OS_TARGET" = "WINCE"; then
-        OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWSCE,3.00 -PDB:NONE -MACHINE:IX86 -ENTRY:_DllMainCRTStartup -STACK:0x10000,0x1000'
+        OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWSCE,3.00 -MACHINE:IX86 -ENTRY:_DllMainCRTStartup -STACK:0x10000,0x1000 -NODEFAULTLIB:OLDNAMES.lib'
     else
         OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWS -PDB:NONE'
     fi
