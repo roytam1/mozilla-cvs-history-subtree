@@ -484,11 +484,11 @@ void CNetscapeApp::LaunchComponentWindow(int iStartupMode, char *pszCmdLine)
 			//starts the news and opens the default news server and group in split pain.
 			WFE_MSGOpenNews();
 			break; 
-#endif // MOZ_MAIL_NEWS
 
 		case STARTUP_CALENDAR:
 			WFE_StartCalendar();
 			break; 
+#endif // MOZ_MAIL_NEWS
 
 #ifdef EDITOR			
 		case STARTUP_EDITOR:
