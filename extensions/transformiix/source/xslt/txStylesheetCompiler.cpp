@@ -75,19 +75,28 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
     }
 
     // look for new namespace mappings
+    PRBool hasOwnNamespaceMap = PR_FALSE;
     for (i = 0; i < aAttrCount; ++i) {
         txStylesheetAttr* attr = aAttributes + i;
         if (attr->mNamespaceID == kNameSpaceID_XMLNS) {
             rv = ensureNewElementContext();
             NS_ENSURE_SUCCESS(rv, rv);
 
+            if (!hasOwnNamespaceMap) {
+                mState.mElementContext->mMappings =
+                    new txNamespaceMap(*mState.mElementContext->mMappings);
+                NS_ENSURE_TRUE(mState.mElementContext->mMappings,
+                               NS_ERROR_OUT_OF_MEMORY);
+                hasOwnNamespaceMap = PR_TRUE;
+            }
+
             if (attr->mLocalName == txXMLAtoms::xmlns) {
-                mState.mElementContext->
-                    mMappings.addNamespace(nsnull, attr->mValue);
+                mState.mElementContext->mMappings->
+                    addNamespace(nsnull, attr->mValue);
             }
             else {
-                mState.mElementContext->
-                    mMappings.addNamespace(attr->mLocalName, attr->mValue);
+                mState.mElementContext->mMappings->
+                    addNamespace(attr->mLocalName, attr->mValue);
             }
         }
     }
@@ -139,8 +148,8 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
 
             txTokenizer tok(attr->mValue);
             while (tok.hasMoreTokens()) {
-                PRInt32 namespaceID = mState.mElementContext->
-                    mMappings.lookupNamespaceWithDefault(tok.nextToken());
+                PRInt32 namespaceID = mState.mElementContext->mMappings->
+                    lookupNamespaceWithDefault(tok.nextToken());
                 
                 if (namespaceID == kNameSpaceID_Unknown)
                     return NS_ERROR_XSLT_PARSE_FAILURE;
@@ -346,8 +355,9 @@ txStylesheetCompilerState::txStylesheetCompilerState(const nsAString& aBaseURI,
     mHandlerTable = gTxRootHandler;
 
     mElementContext = new txElementContext(aBaseURI);
-    if (!mElementContext) {
+    if (!mElementContext || !mElementContext->mMappings) {
         // XXX invalidate
+        delete mElementContext;
         return;
     }
 
@@ -531,15 +541,9 @@ nsresult
 txStylesheetCompilerState::resolveNamespacePrefix(nsIAtom* aPrefix,
                                                   PRInt32& aID)
 {
-#ifdef DEBUG
-    if (!aPrefix || aPrefix == txXMLAtoms::_empty) {
-        // default namespace is not forwarded to xpath
-        NS_ASSERTION(0, "caller should handle default namespace ''");
-        aID = kNameSpaceID_None;
-        return NS_OK;
-    }
-#endif
-    aID = mElementContext->mMappings.lookupNamespace(aPrefix);
+    NS_ASSERTION(aPrefix && aPrefix != txXMLAtoms::_empty,
+                 "caller should handle default namespace ''");
+    aID = mElementContext->mMappings->lookupNamespace(aPrefix);
     return (aID != kNameSpaceID_Unknown) ? NS_OK : NS_ERROR_FAILURE;
 }
 
@@ -627,6 +631,7 @@ txElementContext::txElementContext(const nsAString& aBaseURI)
     : mPreserveWhitespace(PR_FALSE),
       mForwardsCompatibleParsing(PR_TRUE),
       mBaseURI(aBaseURI),
+      mMappings(new txNamespaceMap),
       mDepth(0)
 {
     mInstructionNamespaces.AppendElement(NS_INT32_TO_PTR(kNameSpaceID_XSLT));

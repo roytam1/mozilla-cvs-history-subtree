@@ -35,7 +35,7 @@
 /*
  * Creates a new key function call
  */
-txKeyFunctionCall::txKeyFunctionCall(txNamespaceMap& aMappings)
+txKeyFunctionCall::txKeyFunctionCall(txNamespaceMap* aMappings)
     : mMappings(aMappings)
 {
 }

@@ -47,6 +47,7 @@
 #include "nsString.h"
 #include "XMLUtils.h"
 #include "txNamespaceMap.h"
+#include "nsAutoPtr.h"
 
 class Expr;
 
@@ -85,14 +86,14 @@ class txAttribute : public txInstruction
 {
 public:
     txAttribute(Expr* aName, Expr* aNamespace,
-                   const txNamespaceMap& aMappings);
+                txNamespaceMap* aMappings);
     ~txAttribute();
 
     TX_DECL_TXINSTRUCTION
 
     Expr* mName;
     Expr* mNamespace;
-    txNamespaceMap mMappings;
+    nsRefPtr<txNamespaceMap> mMappings;
 };
 
 class txCallTemplate : public txInstruction
@@ -349,14 +350,14 @@ class txStartElement : public txInstruction
 {
 public:
     txStartElement(Expr* aName, Expr* aNamespace,
-                   const txNamespaceMap& aMappings);
+                   txNamespaceMap* aMappings);
     ~txStartElement();
 
     TX_DECL_TXINSTRUCTION
 
     Expr* mName;
     Expr* mNamespace;
-    txNamespaceMap mMappings;
+    nsRefPtr<txNamespaceMap> mMappings;
 };
 
 class txStartLREElement : public txInstruction

@@ -34,6 +34,7 @@
 #include "Expr.h"
 #include "txNamespaceMap.h"
 #include "XMLUtils.h"
+#include "nsAutoPtr.h"
 
 class txPattern;
 class txStylesheet;
@@ -68,12 +69,12 @@ public:
     /*
      * Creates a new key() function call
      */
-    txKeyFunctionCall(txNamespaceMap& aMappings);
+    txKeyFunctionCall(txNamespaceMap* aMappings);
 
     TX_DECL_FUNCTION;
 
 private:
-    txNamespaceMap mMappings;
+    nsRefPtr<txNamespaceMap> mMappings;
 };
 
 /**
@@ -86,7 +87,7 @@ public:
     /**
      * Creates a new format-number() function call
     **/
-    txFormatNumberFunctionCall(txStylesheet* aStylesheet, txNamespaceMap& aMappings);
+    txFormatNumberFunctionCall(txStylesheet* aStylesheet, txNamespaceMap* aMappings);
 
     TX_DECL_FUNCTION;
 
@@ -104,7 +105,7 @@ private:
     };
     
     txStylesheet* mStylesheet;
-    txNamespaceMap mMappings;
+    nsRefPtr<txNamespaceMap> mMappings;
 };
 
 /**
@@ -195,7 +196,7 @@ public:
      * aNode is the Element in the stylesheet containing the 
      * Expr and is used for namespaceID resolution
     **/
-    SystemPropertyFunctionCall(txNamespaceMap& aMappings);
+    SystemPropertyFunctionCall(txNamespaceMap* aMappings);
 
     TX_DECL_FUNCTION;
 
@@ -203,7 +204,7 @@ private:
     /*
      * resolve namespaceIDs with this node
      */
-    txNamespaceMap mMappings;
+    nsRefPtr<txNamespaceMap> mMappings;
 };
 
 /**
@@ -218,7 +219,7 @@ public:
      * aNode is the Element in the stylesheet containing the 
      * Expr and is used for namespaceID resolution
     **/
-    ElementAvailableFunctionCall(txNamespaceMap& aMappings);
+    ElementAvailableFunctionCall(txNamespaceMap* aMappings);
 
     TX_DECL_FUNCTION;
 
@@ -226,7 +227,7 @@ private:
     /*
      * resolve namespaceIDs with this node
      */
-    txNamespaceMap mMappings;
+    nsRefPtr<txNamespaceMap> mMappings;
 };
 
 /**
@@ -239,7 +240,7 @@ public:
     /**
      * Creates a new function-available() function call
     **/
-    FunctionAvailableFunctionCall(txNamespaceMap& aMappings);
+    FunctionAvailableFunctionCall(txNamespaceMap* aMappings);
 
     TX_DECL_FUNCTION;
 
@@ -247,7 +248,7 @@ private:
     /*
      * resolve namespaceIDs with this node
      */
-    txNamespaceMap mMappings;
+    nsRefPtr<txNamespaceMap> mMappings;
 };
 
 #endif

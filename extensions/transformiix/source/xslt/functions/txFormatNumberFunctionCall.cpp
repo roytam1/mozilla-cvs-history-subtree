@@ -57,7 +57,7 @@ const PRUnichar txFormatNumberFunctionCall::FORMAT_QUOTE = '\'';
  * Creates a new format-number function call
  */
 txFormatNumberFunctionCall::txFormatNumberFunctionCall(txStylesheet* aStylesheet,
-                                                       txNamespaceMap& aMappings)
+                                                       txNamespaceMap* aMappings)
     : mStylesheet(aStylesheet),
       mMappings(aMappings)
 {

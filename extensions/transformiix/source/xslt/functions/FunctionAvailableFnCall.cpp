@@ -50,7 +50,7 @@
 /**
  * Creates a new function-available function call
 **/
-FunctionAvailableFunctionCall::FunctionAvailableFunctionCall(txNamespaceMap& aMappings)
+FunctionAvailableFunctionCall::FunctionAvailableFunctionCall(txNamespaceMap* aMappings)
     : mMappings(aMappings)
 {
 }

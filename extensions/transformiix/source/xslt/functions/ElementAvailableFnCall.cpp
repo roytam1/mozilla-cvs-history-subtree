@@ -52,7 +52,7 @@
  * aNode is the Element in the stylesheet containing the 
  * Expr and is used for namespaceID resolution
 **/
-ElementAvailableFunctionCall::ElementAvailableFunctionCall(txNamespaceMap& aMappings)
+ElementAvailableFunctionCall::ElementAvailableFunctionCall(txNamespaceMap* aMappings)
     : mMappings(aMappings)
 {
 }

@@ -115,7 +115,7 @@ txQNameParser::parse(const nsAString::const_iterator& aStart,
 }
 
 nsresult txExpandedName::init(const nsAString& aQName,
-                              txNamespaceMap& aResolver,
+                              txNamespaceMap* aResolver,
                               MBool aUseDefault)
 {
     nsAString::const_iterator start, end;
@@ -131,7 +131,7 @@ nsresult txExpandedName::init(const nsAString& aQName,
     if (qr == txQNameParser::eTwoNames) {
         nsCOMPtr<nsIAtom> prefix =
             do_GetAtom(Substring(start, p.mColon));
-        PRInt32 namespaceID = aResolver.lookupNamespace(prefix);
+        PRInt32 namespaceID = aResolver->lookupNamespace(prefix);
         if (namespaceID == kNameSpaceID_Unknown)
             return NS_ERROR_FAILURE;
         mNamespaceID = namespaceID;
@@ -141,7 +141,7 @@ nsresult txExpandedName::init(const nsAString& aQName,
     else {
         mLocalName = do_GetAtom(aQName);
         if (aUseDefault)
-            mNamespaceID = aResolver.lookupNamespace(0);
+            mNamespaceID = aResolver->lookupNamespace(0);
         else
             mNamespaceID = kNameSpaceID_None;
     }

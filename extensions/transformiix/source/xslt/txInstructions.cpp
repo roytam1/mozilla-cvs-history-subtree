@@ -76,7 +76,7 @@ txApplyTemplates::execute(txExecutionState& aEs)
 }
 
 txAttribute::txAttribute(Expr* aName, Expr* aNamespace,
-                         const txNamespaceMap& aMappings)
+                         txNamespaceMap* aMappings)
     : mName(aName),
       mNamespace(aNamespace),
       mMappings(aMappings)
@@ -131,7 +131,7 @@ txAttribute::execute(txExecutionState& aEs)
             }
         }
         else if (prefix) {
-            nsId = mMappings.lookupNamespace(prefix);
+            nsId = mMappings->lookupNamespace(prefix);
             if (nsId == kNameSpaceID_Unknown) {
                 // tunkate name to indicate failure
                 name.Truncate();
@@ -859,7 +859,7 @@ txSetVariable::execute(txExecutionState& aEs)
 }
 
 txStartElement::txStartElement(Expr* aName, Expr* aNamespace,
-                               const txNamespaceMap& aMappings)
+                               txNamespaceMap* aMappings)
     : mName(aName),
       mNamespace(aNamespace),
       mMappings(aMappings)
@@ -912,7 +912,7 @@ txStartElement::execute(txExecutionState& aEs)
         else {
             nsCOMPtr<nsIAtom> prefix;
             XMLUtils::getPrefix(name, getter_AddRefs(prefix));
-            nsId = mMappings.lookupNamespace(prefix);
+            nsId = mMappings->lookupNamespace(prefix);
             if (nsId == kNameSpaceID_Unknown) {
                 // tunkate name to indicate failure
                 name.Truncate();

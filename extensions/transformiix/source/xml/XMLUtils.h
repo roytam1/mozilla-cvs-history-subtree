@@ -60,7 +60,7 @@ public:
     {
     }
     
-    nsresult init(const nsAString& aQName, txNamespaceMap& aResolver,
+    nsresult init(const nsAString& aQName, txNamespaceMap* aResolver,
                   MBool aUseDefault);
 
     void reset()

@@ -13,7 +13,7 @@
  * aNode is the Element in the stylesheet containing the 
  * Expr and is used for namespaceID resolution
 **/
-SystemPropertyFunctionCall::SystemPropertyFunctionCall(txNamespaceMap& aMappings)
+SystemPropertyFunctionCall::SystemPropertyFunctionCall(txNamespaceMap* aMappings)
     : mMappings(aMappings)      
 {
 }

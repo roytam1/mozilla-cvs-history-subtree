@@ -47,6 +47,7 @@
 #include "XMLUtils.h"
 #include "txIXPathContext.h"
 #include "txNamespaceMap.h"
+#include "nsAutoPtr.h"
 
 class txHandlerTable;
 class txElementContext;
@@ -162,7 +163,7 @@ public:
     PRBool mPreserveWhitespace;
     PRBool mForwardsCompatibleParsing;
     nsString mBaseURI;
-    txNamespaceMap mMappings;
+    nsRefPtr<txNamespaceMap> mMappings;
     nsVoidArray mInstructionNamespaces;
     PRInt32 mDepth;
 };
