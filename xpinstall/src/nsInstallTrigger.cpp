@@ -349,7 +349,7 @@ nsInstallTrigger::AllowInstall(nsIURI* aLaunchURI)
             updatePermissions( XPINSTALL_WHITELIST_ADD,
                                nsIPermissionManager::ALLOW_ACTION,
                                permissionMgr, prefBranch );
-            updatePermissions( XPINSTALL_WHITELIST_ADD_104,
+            updatePermissions( XPINSTALL_WHITELIST_ADD_103,
                                nsIPermissionManager::ALLOW_ACTION,
                                permissionMgr, prefBranch );
             updatePermissions( XPINSTALL_BLACKLIST_ADD,

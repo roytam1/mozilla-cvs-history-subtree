@@ -114,7 +114,7 @@ pref("update.showSlidingNotification", true);   // Windows-only slide-up taskbar
 pref("update.severity", 0); 
 
 pref("xpinstall.whitelist.add", "update.mozilla.org");
-pref("xpinstall.whitelist.add.104", "addons.mozilla.org");
+pref("xpinstall.whitelist.add.103", "addons.mozilla.org");
 
 /////////////////////////////////////////////////////////////////
 // Overrides of the seamonkey suite mailnews.js prefs
