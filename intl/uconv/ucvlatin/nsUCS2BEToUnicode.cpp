@@ -249,7 +249,7 @@ nsUTF16ToUnicode::Convert(const char * aSrc, PRInt32 * aSrcLength,
         mEndian = kLittleEndian;
       }
       else { // Neither BOM nor 'plausible' byte patterns at the beginning.
-             // Just assume it's BE (following Unicode standard)
+             // Just assume it's BE (per Unicode standard)
              // and let the garbage show up in the browser. (security concern?)
              // (bug 246194)
         mState = 0;   
