@@ -682,7 +682,10 @@ nsXFormsModelElement::FinishConstruction()
   nsCOMPtr<nsIDOMElement> firstInstanceRoot;
   firstInstanceDoc->GetDocumentElement(getter_AddRefs(firstInstanceRoot));
 
-  nsCOMPtr<nsIDOMXPathEvaluator> xpath = do_QueryInterface(firstInstanceDoc);
+  nsresult rv;
+  nsCOMPtr<nsIDOMXPathEvaluator> xpath = 
+           do_CreateInstance("@mozilla.org/dom/xforms-xpath-evaluator;1", &rv);
+  NS_ENSURE_TRUE(xpath, rv);
   
   nsCOMPtr<nsIDOMNodeList> children;
   mElement->GetChildNodes(getter_AddRefs(children));
