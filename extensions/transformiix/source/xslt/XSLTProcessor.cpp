@@ -74,7 +74,7 @@ XSLTProcessor::XSLTProcessor() {
 
     xslVersion.append("1.0");
     appName.append("TransforMiiX");
-    appVersion.append("1.0 [beta v20000725]");
+    appVersion.append("1.0 [beta v20010121]");
 
 
     //-- create XSL element types
@@ -865,6 +865,8 @@ void XSLTProcessor::processAction
         Expr* expr = 0;
 
         Element* actionElement = (Element*)xslAction;
+        ps->pushAction(actionElement);
+
         switch ( getElementType(nodeName, ps) ) {
 
             //-- xsl:apply-templates
@@ -1311,7 +1313,7 @@ void XSLTProcessor::processAction
                 String nsURI = actionElement->getAttribute(XMLUtils::XMLNS);
                 if ( nsURI.length() != 0 ) {
                     // Set the default namespace
-                    ps->setDefaultNameSpaceURI(nsURI);
+                    ps->setDefaultNameSpaceURIForResult(nsURI);
                     newDefaultNS = MB_TRUE;
                 }
 
@@ -1374,8 +1376,9 @@ void XSLTProcessor::processAction
                 }
 #endif
                 break;
-        }
-    }
+        } //-- switch
+        ps->popAction();
+    } //-- end if (element)
 
     //cout << "XSLTProcessor#processAction [exit]\n";
 } //-- processAction
@@ -1631,12 +1634,15 @@ void XSLTProcessor::xslCopy(Node* node, Element* action, ProcessorState* ps) {
             String nsURI = element->getAttribute(XMLUtils::XMLNS);
             if ( nsURI.length() != 0 ) {
                 // Set the default namespace
-                ps->setDefaultNameSpaceURI(nsURI);
+                ps->setDefaultNameSpaceURIForResult(nsURI);
                 newDefaultNS = MB_TRUE;
             }
 
             String nameSpaceURI;
-            ps->getNameSpaceURI(nodeName, nameSpaceURI);
+            String prefix;
+            int idx = nodeName.indexOf(':');
+            if (idx >= 0) nodeName.subString(0, idx, prefix);
+            XMLDOMUtils::getNameSpace(prefix, element, nameSpaceURI);
             // XXX HACK (pvdb) Workaround for BUG 51656 Html rendered as xhtml
             if (ps->getOutputFormat()->isHTMLOutput()) {
                 nodeName.toLowerCase();

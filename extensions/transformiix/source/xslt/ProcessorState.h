@@ -180,6 +180,13 @@ public:
     Document* getResultDocument();
 
     /**
+     * Returns the namespace URI for the given name, this method should
+     * only be called to get a namespace declared within the result
+     * document.
+    **/
+    void getResultNameSpaceURI(const String& name, String& nameSpaceURI);
+
+    /**
      * Returns a pointer to a list of available templates
     **/
     NodeSet* getTemplates();
@@ -209,9 +216,21 @@ public:
     void preserveSpace(String& names);
 
     /**
-     * Sets a new default Namespace URI.
+     * Removes the current XSLT action from the top of the stack.
+     * @returns the XSLT action after removing from the top of the stack
+    **/
+    Node* popAction();
+
+    /**
+     * Adds the given XSLT action to the top of the action stack
+    **/
+    void pushAction(Node* xsltAction);
+
+
+    /**
+     * Sets a new default Namespace URI. This is used for the Result Tree
     **/ 
-    void setDefaultNameSpaceURI(const String& nsURI);
+    void setDefaultNameSpaceURIForResult(const String& nsURI);
 
     /**
      * Sets the document base for including and importing stylesheets
@@ -292,12 +311,16 @@ public:
     //------------------------------------------/
 
     /**
-     * Returns the namespace URI for the given name
+     * Returns the namespace URI for the given name, this method should
+     * only be called to get a namespace declared within the context (ie.
+     * the stylesheet).
     **/ 
     void getNameSpaceURI(const String& name, String& nameSpaceURI);
 
     /**
-     * Returns the namespace URI for the given namespace prefix
+     * Returns the namespace URI for the given namespace prefix. This method
+     * should only be called to get a namespace declared within the
+     * context (ie. the stylesheet).
     **/
     void getNameSpaceURIFromPrefix(const String& prefix, String& nameSpaceURI);
 
@@ -305,6 +328,10 @@ private:
 
     enum XMLSpaceMode {STRIP = 0, DEFAULT, PRESERVE};
 
+    struct XSLTAction {
+        Node* node;
+        XSLTAction* prev;
+    };
 
     /**
      * Allows us to overcome some DOM deficiencies
@@ -364,6 +391,7 @@ private:
     NodeSet        templates;
 
 
+    XSLTAction*    currentAction;
     Stack          nodeSetStack;
     Document*      xslDocument;
     Document*      resultDocument;
@@ -375,6 +403,7 @@ private:
     NamedMap       nameSpaceMap;
     StringList     nameSpaceURIList;
     Stack          defaultNameSpaceURIStack;
+    Stack          xsltNameSpaces;
 
     //-- default templates
     Element*      dfWildCardTemplate;
