@@ -281,7 +281,7 @@ sub BuildIt {
 		  $BuildStatus = 
 			&RunFileBasedTest("MailNewsTest", 
 							  "mozilla-bin http://www.mozilla.org/quality/mailnews/APITest.html", 
-							  90, "removeAccount:	Passed", 1);  # Hack: testing some partial success string for now.
+							  90, "MAILNEWS TEST: Passed", 1);  # Hack: testing some partial success string for now.
 		}
 
         # Run Editor test.
