@@ -399,7 +399,7 @@ TestRead(nsINetDataCacheManager *aCache, PRUint32 aFlags)
         NS_ASSERTION(NS_SUCCEEDED(rv) && LL_EQ(expirationTime, expectedExpirationTime),
                      "nsICachedNetData::GetExpirationTime() failed");
 
-        PRUint32 expectedStreamLength = randomStream->Next() & 0xffff;
+        PRUint32 expectedStreamLength = randomStream->Next() % MAX_CONTENT_LENGTH;
 
         TestReadStream(cacheEntry, randomStream, expectedStreamLength);
     }
@@ -420,13 +420,14 @@ TestRead(nsINetDataCacheManager *aCache, PRUint32 aFlags)
 // Create entries in the network data cache, using random data for the
 // key, the meta-data and the stored content data.
 nsresult
-FillCache(nsINetDataCacheManager *aCache, PRUint32 aFlags)
+FillCache(nsINetDataCacheManager *aCache, PRUint32 aFlags, PRUint32 aCacheCapacity)
 {
     nsresult rv;
     PRBool inCache;
     nsCOMPtr<nsICachedNetData> cacheEntry;
     nsCOMPtr<nsIChannel> channel;
     nsCOMPtr<nsIOutputStream> outStream;
+    nsCOMPtr<nsINetDataCache> containingCache;
     char buf[1000];
     PRUint32 protocolDataLength;
     char cacheKey[CACHE_KEY_LENGTH];
@@ -473,26 +474,31 @@ FillCache(nsINetDataCacheManager *aCache, PRUint32 aFlags)
         randomStream->Read(protocolData, sizeof protocolData);
         cacheEntry->SetProtocolPrivate("test data", sizeof protocolData, protocolData);
 
+        // Store random data as allow-partial flag
         PRBool allowPartial = randomStream->Next() & 1;
         rv = cacheEntry->SetAllowPartial(allowPartial);
         NS_ASSERTION(NS_SUCCEEDED(rv),
                      "nsICachedNetData::SetAllowPartial() failed");
 
+        // Store random data as expiration time
         PRTime expirationTime = convertSecondsToPRTime(randomStream->Next() & 0xffffff);
         rv = cacheEntry->SetExpirationTime(expirationTime);
         NS_ASSERTION(NS_SUCCEEDED(rv),
                      "nsICachedNetData::SetExpirationTime() failed");
 
-        // Cache manager complains if expiration set without setting last-modified
+        // Cache manager complains if expiration set without setting last-modified time
         rv = cacheEntry->SetLastModifiedTime(expirationTime);
 
         rv = cacheEntry->NewChannel(0, getter_AddRefs(channel));
         NS_ASSERTION(NS_SUCCEEDED(rv), " ");
 
+        rv = cacheEntry->GetCache(getter_AddRefs(containingCache));
+        NS_ASSERTION(NS_SUCCEEDED(rv), " ");
+
         rv = channel->OpenOutputStream(0, getter_AddRefs(outStream));
         NS_ASSERTION(NS_SUCCEEDED(rv), " ");
         
-        int streamLength = randomStream->Next() & 0xffff;
+        int streamLength = randomStream->Next() % MAX_CONTENT_LENGTH;
         int remaining = streamLength;
         while (remaining) {
             PRUint32 numWritten;
@@ -504,6 +510,11 @@ FillCache(nsINetDataCacheManager *aCache, PRUint32 aFlags)
             NS_ASSERTION(numWritten == (PRUint32)amount, "Write() bug?");
             
             remaining -= amount;
+
+            PRUint32 storageInUse;
+            rv = containingCache->GetStorageInUse(&storageInUse);
+            NS_ASSERTION(NS_SUCCEEDED(rv) && (storageInUse <= aCacheCapacity),
+                         "Cache manager failed to limit cache growth");
         }
         outStream->Close();
         gTotalBytesWritten += streamLength;
@@ -538,7 +549,7 @@ nsresult NS_AutoregisterComponents()
 }
 
 nsresult
-Test(nsINetDataCacheManager *aCache, PRUint32 aFlags)
+Test(nsINetDataCacheManager *aCache, PRUint32 aFlags, PRUint32 aCacheCapacity)
 {
     nsresult rv;
 
@@ -550,7 +561,7 @@ Test(nsINetDataCacheManager *aCache, PRUint32 aFlags)
     NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't get number of cache entries");
     NS_ASSERTION(numEntries == 0, "Couldn't clear cache");
 
-    rv = FillCache(aCache, aFlags);
+    rv = FillCache(aCache, aFlags, aCacheCapacity);
     NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't fill cache with random test data");
 
     rv = TestRead(aCache, aFlags);
@@ -585,8 +596,8 @@ main(int argc, char* argv[])
 
     InitQueue();
     
-    Test(cache, nsINetDataCacheManager::BYPASS_PERSISTENT_CACHE);
-    Test(cache, nsINetDataCacheManager::BYPASS_MEMORY_CACHE);
+    Test(cache, nsINetDataCacheManager::BYPASS_PERSISTENT_CACHE, MEM_CACHE_CAPACITY);
+    Test(cache, nsINetDataCacheManager::BYPASS_MEMORY_CACHE, DISK_CACHE_CAPACITY);
     return 0;
 }
 
