@@ -369,6 +369,7 @@ NS_INTERFACE_MAP_BEGIN(GlobalWindowImpl)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIScriptGlobalObject)
   NS_INTERFACE_MAP_ENTRY(nsIDOMWindowInternal)
   NS_INTERFACE_MAP_ENTRY(nsIDOMWindow)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMWindow2)
   NS_INTERFACE_MAP_ENTRY(nsIDOMJSWindow)
   NS_INTERFACE_MAP_ENTRY(nsIScriptGlobalObject)
   NS_INTERFACE_MAP_ENTRY(nsIScriptObjectPrincipal)
@@ -2765,6 +2766,27 @@ GlobalWindowImpl::SizeToContent()
   NS_ENSURE_SUCCESS(markupViewer->SizeToContent(), NS_ERROR_FAILURE);
 
   return NS_OK;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::GetWindowRoot(nsIDOMEventTarget **aWindowRoot)
+{
+  *aWindowRoot = nsnull;
+
+  nsCOMPtr<nsIDOMWindowInternal> rootWindow;
+  GlobalWindowImpl::GetPrivateRoot(getter_AddRefs(rootWindow));
+  nsCOMPtr<nsPIDOMWindow> piWin(do_QueryInterface(rootWindow));
+  if (!piWin) {
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIChromeEventHandler> chromeHandler;
+  piWin->GetChromeEventHandler(getter_AddRefs(chromeHandler));
+  if (!chromeHandler) {
+    return NS_OK;
+  }
+
+  return CallQueryInterface(chromeHandler, aWindowRoot);
 }
 
 NS_IMETHODIMP
