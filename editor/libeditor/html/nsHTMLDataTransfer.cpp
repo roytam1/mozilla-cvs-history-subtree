@@ -130,6 +130,10 @@
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
 #include "nsIContentFilter.h"
+#include "imgIEncoder.h"
+
+#include "nsIExternalHelperAppService.h"
+#include "nsCExternalHandlerService.h"
 
 const PRUnichar nbsp = 160;
 
@@ -280,7 +284,22 @@ nsHTMLEditor::InsertHTMLWithContext(const nsAString & aInputString,
   // create a dom document fragment that represents the structure to paste
   nsCOMPtr<nsIDOMNode> fragmentAsNode;
   PRInt32 rangeStartHint, rangeEndHint;
-  res = CreateDOMFragmentFromPaste(aInputString, aContextStr, aInfoStr, 
+
+  nsAutoString contextStr;
+  contextStr.Assign(aContextStr);
+
+#ifdef MOZ_THUNDERBIRD
+  // See Bug #228920 --> editor / parser has trouble inserting single cell data from Excel.
+  // The details are in the bug. Until we figure out why the parser is not building the right 
+  // document structure for the single cell paste case, we can explicitly check for just such  
+  // a condition and work around it. By setting the contextStr to an empty string we end up 
+  // pasting just the cell text which is what we want anyway. 
+  // A paste from an excel cell always starts with a new line, two spaces and then the td tag
+  if (StringBeginsWith(aInputString, NS_LITERAL_STRING("\n  <td"))) 
+    contextStr = NS_LITERAL_STRING("");
+#endif
+
+  res = CreateDOMFragmentFromPaste(aInputString, contextStr, aInfoStr, 
                                             address_of(fragmentAsNode),
                                             &rangeStartHint, &rangeEndHint);
   NS_ENSURE_SUCCESS(res, res);
@@ -1129,7 +1148,9 @@ NS_IMETHODIMP nsHTMLEditor::PrepareHTMLTransferable(nsITransferable **aTransfera
       }
       (*aTransferable)->AddDataFlavor(kHTMLMime);
       (*aTransferable)->AddDataFlavor(kFileMime);
-      //(*aTransferable)->AddDataFlavor(kJPEGImageMime);
+      (*aTransferable)->AddDataFlavor(kJPEGImageMime);
+      (*aTransferable)->AddDataFlavor(kNativeImageMime);
+
     }
     (*aTransferable)->AddDataFlavor(kUnicodeMime);
   }
@@ -1393,14 +1414,62 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
         }
       }
     }
+    else if (flavor.Equals(NS_LITERAL_STRING(kNativeImageMime)))
+    {
+      nsXPIDLString htmlstr;
+      nsAutoEditBatch beginBatching(this);
+      rv = InsertHTMLWithContext(htmlstr, nsString(), nsString(), flavor, aSourceDoc, aDestinationNode, aDestOffset, aDoDeleteSelection);
+    }
     else if (0 == nsCRT::strcmp(bestFlavor, kJPEGImageMime))
     {
       // need to provide a hook from here
       // Insert Image code here
-      printf("Don't know how to insert an image yet!\n");
-      //nsIImage* image = (nsIImage *)data;
-      //NS_RELEASE(image);
-      rv = NS_ERROR_NOT_IMPLEMENTED; // for now give error code
+
+      nsCOMPtr<nsIClipboardImage> clipboardImage (do_QueryInterface(genericDataObj));
+      if (clipboardImage)
+      {
+        // invoke image encoder
+        nsCOMPtr<imgIEncoder> imgEncoder (do_CreateInstance("@mozilla.org/image/encoder;2?type=image/jpeg"));
+        if (imgEncoder)
+        {
+          nsCOMPtr<nsIFile> clipboardImageFile;
+          rv = imgEncoder->EncodeClipboardImage(clipboardImage, getter_AddRefs(clipboardImageFile));
+
+          if (NS_FAILED(rv) || !clipboardImageFile) 
+            return rv;
+          
+          nsCOMPtr<nsIURI> uri;
+          rv = NS_NewFileURI(getter_AddRefs(uri), clipboardImageFile);
+          if (NS_FAILED(rv))
+            return rv;
+        
+          nsCOMPtr<nsIURL> fileURL(do_QueryInterface(uri));
+          if (fileURL)
+          {
+            nsCAutoString urltext;
+            rv = fileURL->GetSpec(urltext);
+            if (NS_SUCCEEDED(rv) && !urltext.IsEmpty())
+            {
+              stuffToPaste.Assign(NS_LITERAL_STRING("<IMG src=\""));
+              stuffToPaste.Append(NS_ConvertUTF8toUCS2(urltext));
+              stuffToPaste.Append(NS_LITERAL_STRING("\" alt=\"\" >"));
+              nsAutoEditBatch beginBatching(this);
+              rv = InsertHTMLWithContext(stuffToPaste,
+                                       nsString(), nsString(), NS_LITERAL_STRING(kFileMime), 
+                                       aSourceDoc,
+                                       aDestinationNode, aDestOffset,
+                                       aDoDeleteSelection);
+            }
+          }
+          
+          // XXX: For mail, it should be safe to move this temporary file onto the list of files to delete at shutdown.
+          // But that is not true for editor documents. Maybe we should leave the document around if pasting into an editor document?
+
+          nsCOMPtr<nsPIExternalAppLauncher> tempFileManager (do_GetService(NS_EXTERNALHELPERAPPSERVICE_CONTRACTID));
+          if (tempFileManager)
+            tempFileManager->DeleteTemporaryFileOnExit(clipboardImageFile);
+        }
+      }
     }
   }
   nsCRT::free(bestFlavor);
@@ -1913,7 +1982,7 @@ NS_IMETHODIMP nsHTMLEditor::CanPaste(PRInt32 aSelectionType, PRBool *aCanPaste)
   
   // the flavors that we can deal with
   const char* const textEditorFlavors[] = { kUnicodeMime, nsnull };
-  const char* const htmlEditorFlavors[] = { kHTMLMime, kJPEGImageMime, nsnull };
+  const char* const htmlEditorFlavors[] = { kHTMLMime, kJPEGImageMime, kNativeImageMime, nsnull };
 
   nsCOMPtr<nsISupportsArray> flavorsList =
                            do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID, &rv);
