@@ -57,6 +57,7 @@ REQUIRES	= \
 		widget \
 		necko \
 		websrvcs \
+		docshell \
 		$(NULL)
 
 CPPSRCS		= \
@@ -65,6 +66,7 @@ CPPSRCS		= \
 		nsXFormsControl.cpp \
 		nsXFormsModelElement.cpp \
 		nsXFormsInputElement.cpp \
+		nsXFormsSubmissionElement.cpp \
 		nsXFormsStubElement.cpp \
 		nsXFormsAtoms.cpp \
 		nsXFormsModule.cpp \

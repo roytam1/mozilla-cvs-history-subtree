@@ -20,7 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *  Brian Ryner <bryner@brianryner.com>
+ *  Darin Fisher <darin@meer.net>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,29 +36,39 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsXFormsElementFactory.h"
-#include "nsXFormsModelElement.h"
-#include "nsXFormsSubmissionElement.h"
-#include "nsXFormsStubElement.h"
-#include "nsString.h"
+#include "nsIXTFGenericElement.h"
+#include "nsIDOMEventListener.h"
+#include "nsXFormsElement.h"
 
-NS_HIDDEN_(nsresult) NS_NewXFormsInputElement(nsIXTFElement **aElement);
+class nsIInputStream;
+class nsIContent;
+class nsString;
 
-NS_IMPL_ISUPPORTS1(nsXFormsElementFactory, nsIXTFElementFactory)
-
-NS_IMETHODIMP
-nsXFormsElementFactory::CreateElement(const nsAString& aTagName,
-                                      nsIXTFElement **aElement)
+class nsXFormsSubmissionElement : public nsXFormsElement,
+                                  public nsIXTFGenericElement,
+                                  public nsIDOMEventListener
 {
-  if (aTagName.EqualsLiteral("model"))
-    return NS_NewXFormsModelElement(aElement);
-  if (aTagName.EqualsLiteral("bind"))
-    return NS_NewXFormsStubElement(aElement);
-  if (aTagName.EqualsLiteral("input"))
-    return NS_NewXFormsInputElement(aElement);
-  if (aTagName.EqualsLiteral("submission"))
-    return NS_NewXFormsSubmissionElement(aElement);
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIXTFELEMENT
+  NS_DECL_NSIXTFGENERICELEMENT
+  NS_DECL_NSIDOMEVENTLISTENER
 
-  *aElement = nsnull;
-  return NS_ERROR_FAILURE;
-}
+  nsXFormsSubmissionElement()
+    : mContent(nsnull)
+  {}
+
+  NS_HIDDEN_(void)     Submit();
+  NS_HIDDEN_(nsresult) SubmitEnd(PRBool succeeded);
+  NS_HIDDEN_(void)     GetDefaultInstanceData(nsIDOMNode **result);
+  NS_HIDDEN_(void)     GetSelectedInstanceData(nsIDOMNode **result);
+  NS_HIDDEN_(nsresult) SerializeData(nsIDOMNode *data, nsString &uri, nsIInputStream **);
+  NS_HIDDEN_(void)     AppendDataToURI(nsIDOMNode *data, nsString &uri, const nsString &separator);
+  NS_HIDDEN_(nsresult) SendData(nsString &uri, nsIInputStream *stream);
+
+private:
+  nsIContent *mContent;
+};
+
+NS_HIDDEN_(nsresult)
+NS_NewXFormsSubmissionElement(nsIXTFElement **aResult);

@@ -56,6 +56,10 @@ class nsXFormsAtoms
   static NS_HIDDEN_(nsIAtom *) model;
   static NS_HIDDEN_(nsIAtom *) modelListProperty;
   static NS_HIDDEN_(nsIAtom *) ref;
+  static NS_HIDDEN_(nsIAtom *) action;
+  static NS_HIDDEN_(nsIAtom *) method;
+  static NS_HIDDEN_(nsIAtom *) replace;
+  static NS_HIDDEN_(nsIAtom *) separator;
 
   static NS_HIDDEN_(void) InitAtoms();
 

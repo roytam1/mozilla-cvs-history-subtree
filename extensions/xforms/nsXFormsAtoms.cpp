@@ -54,6 +54,10 @@ nsIAtom* nsXFormsAtoms::p3ptype;
 nsIAtom* nsXFormsAtoms::model;
 nsIAtom* nsXFormsAtoms::modelListProperty;
 nsIAtom *nsXFormsAtoms::ref;
+nsIAtom *nsXFormsAtoms::action;
+nsIAtom *nsXFormsAtoms::method;
+nsIAtom *nsXFormsAtoms::replace;
+nsIAtom *nsXFormsAtoms::separator;
 
 const nsStaticAtom nsXFormsAtoms::Atoms_info[] = {
   { "schema",            &nsXFormsAtoms::schema },
@@ -70,7 +74,11 @@ const nsStaticAtom nsXFormsAtoms::Atoms_info[] = {
   { "p3ptype",           &nsXFormsAtoms::p3ptype },
   { "model",             &nsXFormsAtoms::model },
   { "ModelListProperty", &nsXFormsAtoms::modelListProperty },
-  { "ref",               &nsXFormsAtoms::ref }
+  { "ref",               &nsXFormsAtoms::ref },
+  { "action",            &nsXFormsAtoms::action },
+  { "method",            &nsXFormsAtoms::method },
+  { "replace",           &nsXFormsAtoms::replace },
+  { "separator",         &nsXFormsAtoms::separator }
 };
 
 void
