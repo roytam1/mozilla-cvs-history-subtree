@@ -164,7 +164,10 @@ NS_IMETHODIMP nsAbSyncDriver::OnProgress(PRInt32 aTransactionID, PRUint32 aProgr
 /* void OnStatus (in PRInt32 aTransactionID, in wstring aMsg); */
 NS_IMETHODIMP nsAbSyncDriver::OnStatus(PRInt32 aTransactionID, const PRUnichar *aMsg)
 {
-  return mStatus->ShowStatusString(aMsg);
+  if (mStatus )              
+    return mStatus->ShowStatusString(aMsg);
+  else
+    return NS_OK;
 }
 
 /* void OnStopOperation (in PRInt32 aTransactionID, in nsresult aStatus, in wstring aMsg); */
@@ -228,8 +231,11 @@ NS_IMETHODIMP nsAbSyncDriver::KickIt(nsIMsgStatusFeedback *aStatus, nsIDOMWindow
   else
   {
     // We failed, turn the button back on...
-    mStatus->StopMeteors();
-    mStatus->CloseWindow();
+    if (mStatus)
+    {
+      mStatus->StopMeteors();
+      mStatus->CloseWindow();
+    }
   }
   return rv;
 }
