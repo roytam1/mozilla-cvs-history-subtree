@@ -588,7 +588,8 @@ nsWebShell::ReloadDocument(const char* aCharset,
       }
     }
   }
-  return NS_OK;
+  //return failer if this request is not accepted due to mCharsetReloadState
+  return NS_ERROR_FAILURE;
 }
 
 
@@ -597,9 +598,11 @@ nsWebShell::StopDocumentLoad(void)
 {
   if(eCharsetReloadRequested != mCharsetReloadState) 
   {
-     Stop(nsIWebNavigation::STOP_ALL);
+    Stop(nsIWebNavigation::STOP_ALL);
+    return NS_OK;
   }
-  return NS_OK;
+  //return failer if this request is not accepted due to mCharsetReloadState
+  return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
@@ -609,9 +612,11 @@ nsWebShell::SetRendering(PRBool aRender)
   {
     if (mContentViewer) {
        mContentViewer->SetEnableRendering(aRender);
+       return NS_OK;
     }
   }
-  return NS_OK;
+  //return failer if this request is not accepted due to mCharsetReloadState
+  return NS_ERROR_FAILURE;
 }
 
 //----------------------------------------------------------------------
