@@ -39,11 +39,10 @@
 #include "nsString2.h"
 #include "nsIAtom.h"
 #include "nsDeque.h"
-#include "nsIRegistry.h"
-#include "nsIEnumerator.h"
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
 #include "nsIStreamConverter.h"
+#include "nsICategoryManager.h"
 #include "nsCOMPtr.h"
 
 ////////////////////////////////////////////////////////////
@@ -96,8 +95,8 @@ nsStreamConverterService::Init() {
 // Builds the graph represented as an adjacency list (and built up in 
 // memory using an nsHashtable and nsVoidArray combination).
 //
-// :BuildGraph() consults the registry for all stream converter CONTRACTIDS then fills the
-// adjacency list with edges.
+// :BuildGraph() consults the category manager for all stream converter 
+// CONTRACTIDS then fills the adjacency list with edges.
 // An edge in this case is comprised of a FROM and TO MIME type combination.
 // 
 // CONTRACTID format:
@@ -111,58 +110,36 @@ nsresult
 nsStreamConverterService::BuildGraph() {
 
     nsresult rv;
-    // enumerate the registry subkeys
-    nsIRegistry *registry = nsnull;
-    nsRegistryKey key;
-    nsIEnumerator *components = nsnull;
-    rv = nsServiceManager::GetService(NS_REGISTRY_CONTRACTID,
-                                      NS_GET_IID(nsIRegistry),
-                                      (nsISupports**)&registry);
+
+    nsCOMPtr<nsICategoryManager> catmgr(do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv));
     if (NS_FAILED(rv)) return rv;
 
-    rv = registry->OpenWellKnownRegistry(nsIRegistry::ApplicationComponentRegistry);
+    nsCOMPtr<nsISimpleEnumerator> entries;
+    rv = catmgr->EnumerateCategory(NS_ISTREAMCONVERTER_KEY, getter_AddRefs(entries));
     if (NS_FAILED(rv)) return rv;
 
-    rv = registry->GetSubtree(nsIRegistry::Common,
-                              NS_ISTREAMCONVERTER_KEY,
-                              &key);
-    if (NS_FAILED(rv)) return rv;
+    // go through each entry to build the graph
+    nsCOMPtr<nsISupportsString> entry;
+    rv = entries->GetNext(getter_AddRefs(entry));
+    while (NS_SUCCEEDED(rv)) {
 
-    rv = registry->EnumerateSubtrees(key, &components);
-    if (NS_FAILED(rv)) return rv;
-
-    // go ahead and enumerate through.
-    rv = components->First();
-    while (NS_SUCCEEDED(rv) && (NS_OK != components->IsDone())) {
-        nsISupports *base = nsnull;
-
-        rv = components->CurrentItem(&base);
+        // get the entry string so we can lookup the entry value
+        nsXPIDLCString entryString;
+        rv = entry->GetData(getter_Copies(entryString));
         if (NS_FAILED(rv)) return rv;
-
-        nsIRegistryNode *node = nsnull;
-        nsIID nodeIID = NS_IREGISTRYNODE_IID;
-        rv = base->QueryInterface(nodeIID, (void**)&node);
+        
+        // entryValue must equal the entire, fully qualified contract ID of
+        // the converter component.
+        nsXPIDLCString contractIDString;
+        rv = catmgr->GetCategoryEntry(NS_ISTREAMCONVERTER_KEY, entryString, getter_Copies(contractIDString));
         if (NS_FAILED(rv)) return rv;
-
-        char *name = nsnull;
-        rv = node->GetNameUTF8(&name);
-        if (NS_FAILED(rv)) return rv;
-
-        nsCString actualContractID(NS_ISTREAMCONVERTER_KEY);
-        actualContractID.Append(name);
 
         // now we've got the CONTRACTID, let's parse it up.
-        rv = AddAdjacency(actualContractID.GetBuffer());
+        rv = AddAdjacency(contractIDString);
+        if (NS_FAILED(rv)) return rv;
 
-        // cleanup
-        nsCRT::free(name);
-        NS_RELEASE(node);
-        NS_RELEASE(base);
-        rv = components->Next();
+        rv = entries->GetNext(getter_AddRefs(entry));
     }
-
-    NS_IF_RELEASE( components );
-    nsServiceManager::ReleaseService( NS_REGISTRY_CONTRACTID, registry );
 
     return NS_OK;
 }
