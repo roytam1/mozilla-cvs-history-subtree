@@ -44,7 +44,7 @@
     || defined(SUNOS4)
 #define _PRSockLen_t int
 #elif (defined(AIX) && !defined(AIX4_1)) || defined(FREEBSD) \
-    || defined(UNIXWARE)
+    || defined(UNIXWARE) || defined(RHAPSODY)
 #define _PRSockLen_t size_t
 #else
 #error "Cannot determine architecture"
@@ -1198,7 +1198,7 @@ PRStatus _MD_getsockname(PRFileDesc *fd, PRNetAddr *addr,
 
     rv = getsockname(fd->secret->md.osfd,
             (struct sockaddr *) addr, (_PRSockLen_t *)addrlen);
-#ifdef AIX
+#if defined( AIX ) || defined( RHAPSODY )
     if (rv == 0) {
         /* mask off the first byte of struct sockaddr (the length field) */
         if (addr) {
@@ -2342,7 +2342,7 @@ PRInt32 _MD_open(const char *name, PRIntn flags, PRIntn mode)
 	if (flags & PR_TRUNCATE)
 		osflags |= O_TRUNC;
 	if (flags & PR_SYNC) {
-#if defined(FREEBSD)
+#if defined(FREEBSD) || defined(RHAPSODY)
 		osflags |= O_FSYNC;
 #else
 		osflags |= O_SYNC;

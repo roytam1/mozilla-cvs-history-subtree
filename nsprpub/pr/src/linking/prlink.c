@@ -32,6 +32,10 @@
 #include <dlfcn.h>
 #elif defined(USE_HPSHL)
 #include <dl.h>
+#elif defined(USE_RLD)
+#include <fcntl.h>
+#include <streams/streams.h>
+#include <mach-o/rld.h>
 #endif
 
 /* Define this on systems which don't have it (AIX) */
@@ -62,6 +66,9 @@ struct PRLibrary {
 #ifdef XP_UNIX
 #if defined(USE_HPSHL)
     shl_t			dlh;
+#elif defined(USE_RLD)
+    NXStream*			dlh;
+    int				rld_fd;
 #else
     void*			dlh;
 #endif 
@@ -98,17 +105,19 @@ static void DLLErrorInternal(PRIntn oserr)
 #ifdef HAVE_DLL
 #	ifdef USE_DLFCN
 	    error = dlerror();  /* $$$ That'll be wrong some of the time - AOF */
-#	elif defined(USE_HPSHL)
+#	else
 #		ifdef HAVE_STRERROR
-		    error = strerror(oserr);  /* This should be okay */
+		    error = strerror(oserr);  /* this should be okay */
 #		else
 		    error = errno_string(oserr);
-#		endif /* HAVE_STRERROR */
-#	else
-	    error = errno_string(oserr);
+#		endif
 #	endif
 #else
+#  ifdef HAVE_STRERROR
+    error = strerror(oserr);
+#  else
     error = errno_string(oserr);
+#  endif /* HAVE_STRERROR */
 #endif /* HAVE_DLL */
     if (NULL != error)
         PR_SetErrorText(strlen(error), error);
@@ -167,6 +176,8 @@ void _PR_InitLinker(void)
 #elif defined(USE_HPSHL)
 	h = NULL;
 	/* don't abort with this NULL */
+#elif defined(USE_RLD)
+	h = NULL; /* XXXX  toshok */
 #else
 #error no dll strategy
 #endif /* USE_DLFCN */
@@ -279,7 +290,7 @@ PR_GetLibraryPath()
 #endif
 
 #ifdef XP_UNIX
-#if defined USE_DLFCN
+#if defined USE_DLFCN || defined USE_RLD
     {
 	char *home;
 	char *local;
@@ -626,6 +637,11 @@ PR_LoadLibrary(const char *name)
      * with BIND_DEFERRED, so we have to use the BIND_IMMEDIATE flag.
      */
     shl_t h = shl_load(name, BIND_IMMEDIATE | DYNAMIC_PATH, 0L);
+#elif defined(USE_RLD)
+    int fd = open(name, O_RDONLY);
+    NXStream *h = NXOpenFile(fd, NX_READONLY);
+
+    lm->rld_fd = fd;
 #else
 #error Configuration error
 #endif
@@ -692,6 +708,10 @@ PR_UnloadLibrary(PRLibrary *lib)
     result = dlclose(lib->dlh);
 #elif defined(USE_HPSHL)
     result = shl_unload(lib->dlh);
+#elif defined(USE_RLD)
+    result = rld_unload(lib->dlh);
+    NXClose(lib->dlh);
+    close(lib->rld_fd);
 #else
 #error Configuration error
 #endif
@@ -801,6 +821,9 @@ pr_FindSymbolInLib(PRLibrary *lm, const char *name)
     f = dlsym(lm->dlh, name);
 #elif defined(USE_HPSHL)
     if (shl_findsym(&lm->dlh, name, TYPE_PROCEDURE, &f) == -1)
+	f = NULL;
+#elif defined(USE_RLD)
+    if (rld_lookup(lm->dlh, name, (unsigned long*)&f) == -1)
 	f = NULL;
 #endif
 #endif /* HAVE_DLL */

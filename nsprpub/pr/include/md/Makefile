@@ -59,6 +59,10 @@ ifeq ($(OS_ARCH),HP-UX)
 MDCPUCFG_H = _hpux.cfg
 endif
 
+ifeq ($(OS_ARCH),Rhapsody)
+MDCPUCFG_H = _rhapsody.cfg
+endif
+
 ifeq ($(OS_ARCH),Linux)
 MDCPUCFG_H = _linux.cfg
 endif

@@ -81,6 +81,10 @@ RELIANTUNIX_CSRCS = \
       reliantunix.c \
       $(NULL)
 
+RHAPSODY_CSRCS = \
+      rhapsody.c \
+      $(NULL)
+
 NEC_CSRCS = \
 	nec.c \
 	$(NULL)
@@ -145,6 +149,9 @@ CSRCS += $(SONY_CSRCS)
 endif
 ifeq ($(OS_ARCH),NCR)
 CSRCS += $(NCR_CSRCS)
+endif
+ifeq ($(OS_ARCH),Rhapsody)
+CSRCS += $(RHAPSODY_CSRCS)
 endif
 ifeq ($(OS_ARCH),SCO_SV)
 CSRCS += $(SCOOS_CSRCS)
