@@ -37,7 +37,7 @@
  */
 #include "seccomon.h"
 #include "secmod.h"
-#include "nssilock.h"
+#include "prlock.h"
 #include "pkcs11.h"
 #include "secmodi.h"
 #include "pk11func.h"
@@ -82,7 +82,7 @@ SECMODModule *SECMOD_NewModule(void) {
     newMod->ssl[0] = 0;
     newMod->ssl[1] = 0;
 #ifdef PKCS11_USE_THREADS
-    newMod->refLock = (void *)PZ_NewLock(nssILockRefLock);
+    newMod->refLock = (void *)PR_NewLock();
     if (newMod->refLock == NULL) {
 	PORT_FreeArena(arena,PR_FALSE);
 	return NULL;
@@ -109,7 +109,7 @@ SECMODModuleList *SECMOD_NewModuleListElement(void) {
 static unsigned long internalFlags = SECMOD_RSA_FLAG|SECMOD_DSA_FLAG|
 	SECMOD_RC2_FLAG| SECMOD_RC4_FLAG|SECMOD_DES_FLAG|SECMOD_RANDOM_FLAG|
 	SECMOD_SHA1_FLAG|SECMOD_MD5_FLAG|SECMOD_MD2_FLAG|SECMOD_SSL_FLAG|
-	SECMOD_TLS_FLAG|SECMOD_AES_FLAG;
+	SECMOD_TLS_FLAG;
 
 /* create a Internal  module */
 SECMODModule *SECMOD_NewInternal(void) {
@@ -118,7 +118,7 @@ SECMODModule *SECMOD_NewInternal(void) {
 	{ 1, SECMOD_RSA_FLAG|SECMOD_DSA_FLAG|SECMOD_RC2_FLAG|
 	SECMOD_RC4_FLAG|SECMOD_DES_FLAG|SECMOD_RANDOM_FLAG|
 	SECMOD_SHA1_FLAG|SECMOD_MD5_FLAG|SECMOD_MD2_FLAG|
-	SECMOD_SSL_FLAG|SECMOD_TLS_FLAG|SECMOD_AES_FLAG, -1, 30, 0 };
+	SECMOD_SSL_FLAG|SECMOD_TLS_FLAG, -1, 30, 0 };
 
     intern = SECMOD_NewModule();
     if (intern == NULL) {
@@ -128,7 +128,7 @@ SECMODModule *SECMOD_NewInternal(void) {
     /*
      * make this module an internal module
      */
-    intern->commonName = "NSS Internal PKCS #11 Module";
+    intern->commonName = "Netscape Internal PKCS #11 Module";
     intern->internal = PR_TRUE;
     intern->slotInfoCount = 1;
     intern->slotInfo = &internSlotInfo;
@@ -149,7 +149,7 @@ SECMODModule *SECMOD_GetFIPSInternal(void) {
      * make this module a FIPS internal module
      */
     intern->slotInfo[0].slotID = 3; /* FIPS slot */
-    intern->commonName = "NSS Internal FIPS PKCS #11 Module";
+    intern->commonName = "Netscape Internal FIPS PKCS #11 Module";
     intern->isFIPS = PR_TRUE;
 
     return (intern);
@@ -178,11 +178,11 @@ SECMODModule *SECMOD_DupModule(SECMODModule *old) {
  */
 SECMODModule *
 SECMOD_ReferenceModule(SECMODModule *module) {
-    PK11_USE_THREADS(PZ_Lock((PZLock *)module->refLock);)
+    PK11_USE_THREADS(PR_Lock((PRLock *)module->refLock);)
     PORT_Assert(module->refCount > 0);
 
     module->refCount++;
-    PK11_USE_THREADS(PZ_Unlock((PZLock*)module->refLock);)
+    PK11_USE_THREADS(PR_Unlock((PRLock*)module->refLock);)
     return module;
 }
 
@@ -194,12 +194,12 @@ SECMOD_DestroyModule(SECMODModule *module) {
     int slotCount;
     int i;
 
-    PK11_USE_THREADS(PZ_Lock((PZLock *)module->refLock);)
+    PK11_USE_THREADS(PR_Lock((PRLock *)module->refLock);)
     if (module->refCount-- == 1) {
 	willfree = PR_TRUE;
     }
     PORT_Assert(willfree || (module->refCount > 0));
-    PK11_USE_THREADS(PZ_Unlock((PZLock *)module->refLock);)
+    PK11_USE_THREADS(PR_Unlock((PRLock *)module->refLock);)
 
     if (!willfree) {
 	return;
@@ -233,18 +233,18 @@ SECMOD_SlotDestroyModule(SECMODModule *module, PRBool fromSlot) {
     PRBool willfree = PR_FALSE;
     if (fromSlot) {
         PORT_Assert(module->refCount == 0);
-	PK11_USE_THREADS(PZ_Lock((PZLock *)module->refLock);)
+	PK11_USE_THREADS(PR_Lock((PRLock *)module->refLock);)
 	if (module->slotCount-- == 1) {
 	    willfree = PR_TRUE;
 	}
 	PORT_Assert(willfree || (module->slotCount > 0));
-	PK11_USE_THREADS(PZ_Unlock((PZLock *)module->refLock);)
+	PK11_USE_THREADS(PR_Unlock((PRLock *)module->refLock);)
         if (!willfree) return;
     }
     if (module->loaded) {
 	SECMOD_UnloadModule(module);
     }
-    PK11_USE_THREADS(PZ_DestroyLock((PZLock *)module->refLock);)
+    PK11_USE_THREADS(PR_DestroyLock((PRLock *)module->refLock);)
     PORT_FreeArena(module->arena,PR_FALSE);
 }
 
