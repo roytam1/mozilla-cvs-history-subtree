@@ -281,6 +281,7 @@ extern nsresult NS_NewDocumentViewer(nsIDocumentViewer** aResult);
 extern nsresult NS_NewRange(nsIDOMRange** aResult);
 extern nsresult NS_NewRangeUtils(nsIRangeUtils** aResult);
 extern nsresult NS_NewContentIterator(nsIContentIterator** aResult);
+extern nsresult NS_NewPreContentIterator(nsIContentIterator** aResult);
 extern nsresult NS_NewGenRegularIterator(nsIContentIterator** aResult);
 extern nsresult NS_NewContentSubtreeIterator(nsIContentIterator** aResult);
 extern nsresult NS_NewGenSubtreeIterator(nsIContentIterator** aInstancePtrResult);
@@ -346,7 +347,7 @@ MAKE_CTOR(CreateImageDocument,            nsIDocument,                 NS_NewIma
 MAKE_CTOR(CreateCSSParser,                nsICSSParser,                NS_NewCSSParser)
 MAKE_CTOR(CreateCSSLoader,                nsICSSLoader,                NS_NewCSSLoader)
 MAKE_CTOR(CreateHTMLElementFactory,       nsIElementFactory,           NS_NewHTMLElementFactory)
-MAKE_CTOR(CreateTextNode,                 nsIContent,                  NS_NewTextNode)
+MAKE_CTOR(CreateTextNode,                 nsITextContent,              NS_NewTextNode)
 //MAKE_CTOR(CreateAnonymousElement,         nsIContent,                  NS_NewAnonymousElement)
 MAKE_CTOR(CreateAttributeContent,         nsIContent,                  NS_NewAttributeContent)
 MAKE_CTOR(CreateXMLElementFactory,        nsIElementFactory,           NS_NewXMLElementFactory)
@@ -356,6 +357,7 @@ MAKE_CTOR(CreateSelection,                nsIFrameSelection,           NS_NewSel
 MAKE_CTOR(CreateRange,                    nsIDOMRange,                 NS_NewRange)
 MAKE_CTOR(CreateRangeUtils,               nsIRangeUtils,               NS_NewRangeUtils)
 MAKE_CTOR(CreateContentIterator,          nsIContentIterator,          NS_NewContentIterator)
+MAKE_CTOR(CreatePreContentIterator,       nsIContentIterator,          NS_NewPreContentIterator)
 MAKE_CTOR(CreateGeneratedContentIterator, nsIContentIterator,          NS_NewGenRegularIterator)
 MAKE_CTOR(CreateGeneratedSubtreeIterator, nsIContentIterator,          NS_NewGenSubtreeIterator)
 MAKE_CTOR(CreateSubtreeIterator,          nsIContentIterator,          NS_NewContentSubtreeIterator)
@@ -367,6 +369,7 @@ MAKE_CTOR(CreateXMLContentSerializer,     nsIContentSerializer,        NS_NewXML
 MAKE_CTOR(CreateHTMLContentSerializer,    nsIContentSerializer,        NS_NewHTMLContentSerializer)
 MAKE_CTOR(CreatePlainTextSerializer,      nsIContentSerializer,        NS_NewPlainTextSerializer)
 MAKE_CTOR(CreateHTMLFragmentSink,         nsIHTMLFragmentContentSink,  NS_NewHTMLFragmentContentSink)
+MAKE_CTOR(CreateHTMLFragmentSink2,        nsIHTMLFragmentContentSink,  NS_NewHTMLFragmentContentSink2)
 MAKE_CTOR(CreateSanitizingHTMLSerializer, nsIContentSerializer,        NS_NewSanitizingHTMLSerializer)
 MAKE_CTOR(CreateXBLService,               nsIXBLService,               NS_NewXBLService)
 MAKE_CTOR(CreateBindingManager,           nsIBindingManager,           NS_NewBindingManager)
@@ -644,6 +647,11 @@ static const nsModuleComponentInfo gComponents[] = {
     nsnull,
     CreateContentIterator },
 
+  { "Pre Content iterator",
+    NS_PRECONTENTITERATOR_CID,
+    nsnull,
+    CreatePreContentIterator },
+
   { "Generated Content iterator",
     NS_GENERATEDCONTENTITERATOR_CID,
     nsnull,
@@ -767,6 +775,11 @@ static const nsModuleComponentInfo gComponents[] = {
     NS_HTMLFRAGMENTSINK_CID,
     NS_HTMLFRAGMENTSINK_CONTRACTID,
     CreateHTMLFragmentSink },
+
+  { "html fragment sink 2",
+    NS_HTMLFRAGMENTSINK2_CID,
+    NS_HTMLFRAGMENTSINK2_CONTRACTID,
+    CreateHTMLFragmentSink2 },
 
   { "HTML sanitizing content serializer",
     MOZ_SANITIZINGHTMLSERIALIZER_CID,
