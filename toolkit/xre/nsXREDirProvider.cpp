@@ -117,7 +117,7 @@ nsXREDirProvider::Initialize()
   if (bundleURL) {
     CFURLRef parentURL = CFURLCreateCopyDeletingLastPathComponent(kCFAllocatorDefault, bundleURL);
     if (parentURL) {
-      rv = NS_NewNativeLocalFile(nsCAutoString(), PR_TRUE,
+      rv = NS_NewNativeLocalFile(EmptyCString(), PR_TRUE,
                                  getter_AddRefs(mAppDir));
       if (NS_SUCCEEDED(rv)) {
         nsCOMPtr<nsILocalFileMac> appDirMac (do_QueryInterface(mAppDir, &rv));
@@ -506,7 +506,7 @@ nsXREDirProvider::GetUserAppDataDirectory(nsILocalFile** aFile)
   OSErr err = ::FSFindFolder(kUserDomain, kDomainLibraryFolderType, kCreateFolder, &fsRef);
   if (err) return NS_ERROR_FAILURE;
 
-  rv = NS_NewNativeLocalFile(nsCAutoString(), PR_TRUE, getter_AddRefs(localDir));
+  rv = NS_NewNativeLocalFile(EmptyCString(), PR_TRUE, getter_AddRefs(localDir));
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsILocalFileMac> dirFileMac = do_QueryInterface(localDir);
@@ -655,7 +655,7 @@ nsXREDirProvider::EnsureProfileFileExists(nsIFile *aFile)
   rv = defaultsFile->AppendNative(leafName);
   if (NS_FAILED(rv)) return;
   
-  defaultsFile->CopyToNative(mProfileDir, nsCAutoString());
+  defaultsFile->CopyToNative(mProfileDir, EmptyCString());
 }
 
 nsresult
