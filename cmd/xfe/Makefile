@@ -137,7 +137,6 @@ CSRCS		= \
 		  mozilla.c \
 		  prefs.c \
 		  prefdialogs.c \
-		  progress.c \
 		  remote-s.c \
 		  scroll.c \
 		  selection.c \
