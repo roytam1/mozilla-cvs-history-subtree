@@ -26,6 +26,7 @@
 #ifndef nsXPIDLString_h__
 #define nsXPIDLString_h__
 
+#include "nsCom.h"
 #include "prtypes.h"
 
 #ifndef __PRUNICHAR__
