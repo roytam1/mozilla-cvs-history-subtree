@@ -171,6 +171,47 @@ void CreationTest(char* creationPath, char* appendPath,
     }
     
 }    
+
+void
+CopyTest(char *testFile, char *targetDir)
+{
+  nsCOMPtr<nsILocalFile> file;
+  nsCOMPtr<nsILocalFile> dir;
+
+  printf("start copy test\n");
+
+  nsresult rv =
+    nsComponentManager::CreateInstance(NS_LOCAL_FILE_PROGID, NULL,
+				       nsCOMTypeInfo<nsILocalFile>::GetIID(), 
+				       (void**)getter_AddRefs(file));
+    
+  if (NS_FAILED(rv) || (!file)) 
+  {
+    printf("create nsILocalFile failed\n");
+    return;
+  }
+
+  rv = file->InitWithPath(testFile);
+  VerifyResult(rv);
+  
+  rv = nsComponentManager::CreateInstance(NS_LOCAL_FILE_PROGID, NULL,
+					  nsCOMTypeInfo<nsILocalFile>::GetIID(), 
+					  (void**)getter_AddRefs(dir));
+
+  if (NS_FAILED(rv) || (!dir)) 
+  {
+    printf("create nsILocalFile failed\n");
+    return;
+  }
+
+  rv = dir->InitWithPath(targetDir);
+  VerifyResult(rv);
+
+  rv = file->CopyTo(dir, NULL);
+  VerifyResult(rv);
+
+  printf("end copy test\n");
+}
     
 void
 DeletionTest(char* creationPath, char* appendPath, PRBool recursive)
@@ -247,6 +288,8 @@ int main(void)
     
     CreationTest("/tmp", "mumble/a/b/c/d/e/f/g/h/i/j/k/", nsIFile::DIRECTORY_TYPE, 0644);
     DeletionTest("/tmp", "mumble", PR_TRUE);
+    CopyTest("/tmp/test.txt", "/tmp/foo");
+
 #endif /* XP_UNIX */
 #endif /* XP_PC */
 }
