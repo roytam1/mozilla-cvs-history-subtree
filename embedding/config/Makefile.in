@@ -66,6 +66,11 @@ else
 	-$(RM) -rf $(DIST)/Embed/tmpchrome
 endif
 
+merge_xpt::
+	$(XPIDL_LINK) $(DIST)/Embed/components/xpt_tmp $(DIST)/Embed/components/*.xpt
+	$(RM) $(DIST)/Embed/components/*.xpt
+	mv $(DIST)/Embed/components/xpt_tmp $(DIST)/Embed/components/all.xpt
+
 libs:: embed_chrome
 	$(PERL) $(topsrcdir)/xpinstall/packager/pkgcp.pl -s $(DIST)/bin -d $(DIST) --f $(srcdir)/$(BASEBROWSER) -o $(_PLATFORM) -v
 ifeq ($(OS_ARCH),WINNT)

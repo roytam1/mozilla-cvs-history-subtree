@@ -59,10 +59,13 @@ HEADERS = \
 HEADERS := $(addprefix $(srcdir)/, $(HEADERS))
 
 ifeq ($(OS_ARCH), WINNT)
+ifdef NS_USE_GCC
+DLLBASE=-Wl,--image-base -Wl,0x30000000
+else
 DLLBASE=/BASE:0x30000000
+endif # GCC
 RES=$(OBJDIR)/plds.res
 RESNAME=plds.rc
-OS_LIBS = user32.lib
 endif # WINNT
 
 ifeq ($(OS_ARCH), AIX)
@@ -75,6 +78,21 @@ endif
 
 ifeq ($(OS_ARCH),IRIX)
 OS_LIBS = -lc
+endif
+
+ifeq ($(OS_ARCH),SunOS)
+OS_LIBS = -lc
+MAPFILE = $(OBJDIR)/pldsmap.sun
+GARBAGE += $(MAPFILE)
+ifdef NS_USE_GCC
+ifdef GCC_USE_GNU_LD
+MKSHLIB += -Wl,--version-script,$(MAPFILE)
+else
+MKSHLIB += -Wl,-M,$(MAPFILE)
+endif
+else
+MKSHLIB += -M $(MAPFILE)
+endif
 endif
 
 EXTRA_LIBS = $(LIBNSPR)
@@ -113,7 +131,7 @@ NOW = $(MOD_DEPTH)/config/$(OBJDIR)/now
 SH_DATE = $(shell date "+%Y-%m-%d %T")
 SH_NOW = $(shell $(NOW))
 
-ifeq ($(OS_ARCH), WINNT)
+ifeq ($(NS_USE_GCC)_$(OS_ARCH),_WINNT)
 	SUF = i64
 else
 	SUF = LL
@@ -133,7 +151,7 @@ $(TINC):
 
 
 $(OBJDIR)/plvrsion.$(OBJ_SUFFIX): plvrsion.c $(TINC)
-ifeq ($(OS_ARCH), WINNT)
+ifeq ($(NS_USE_GCC)_$(OS_ARCH),_WINNT)
 	$(CC) -Fo$@ -c $(CFLAGS) -I$(OBJDIR) $<
 else
 ifeq ($(MOZ_OS2_TOOLS), VACPP)

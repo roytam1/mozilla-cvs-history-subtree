@@ -204,4 +204,80 @@ int thread_resume(PRThread *thr_id) {
     return 0;
 }
 
+/*
+** Stubs for nspr_symvec.opt
+**
+** PR_ResumeSet, PR_ResumeTest, and PR_SuspendAllSuspended
+** (defined in ptthread.c) used to be exported by mistake
+** (because they look like public functions).  They have been
+** converted into static functions.
+**
+** There is an existing third-party binary that uses NSPR: the
+** Java plugin for Mozilla.  Because it is part of the Java
+** SDK, we have no control over its releases.  So we need these
+** stub functions to occupy the slots that used to be occupied
+** by PR_ResumeSet, PR_ResumeTest, and PR_SuspendAllSuspended
+** in the symbol vector so that LIBNSPR4 is backward compatible.
+**
+** The Java plugin was also using PR_CreateThread which we didn't
+** realise and hadn't "nailed down". So we now need to nail it down
+** to its Mozilla 1.1 position and have to insert 51 additional stubs
+** in order to achive this (stubs 4-54).
+**
+** Over time some of these stubs will get reused by new symbols.
+**   - Stub54 is replaced by LL_MaxUint
+*/
 
+void PR_VMS_Stub1(void) { }
+void PR_VMS_Stub2(void) { }
+void PR_VMS_Stub3(void) { }
+void PR_VMS_Stub4(void) { }
+void PR_VMS_Stub5(void) { }
+void PR_VMS_Stub6(void) { }
+void PR_VMS_Stub7(void) { }
+void PR_VMS_Stub8(void) { }
+void PR_VMS_Stub9(void) { }
+void PR_VMS_Stub10(void) { }
+void PR_VMS_Stub11(void) { }
+void PR_VMS_Stub12(void) { }
+void PR_VMS_Stub13(void) { }
+void PR_VMS_Stub14(void) { }
+void PR_VMS_Stub15(void) { }
+void PR_VMS_Stub16(void) { }
+void PR_VMS_Stub17(void) { }
+void PR_VMS_Stub18(void) { }
+void PR_VMS_Stub19(void) { }
+void PR_VMS_Stub20(void) { }
+void PR_VMS_Stub21(void) { }
+void PR_VMS_Stub22(void) { }
+void PR_VMS_Stub23(void) { }
+void PR_VMS_Stub24(void) { }
+void PR_VMS_Stub25(void) { }
+void PR_VMS_Stub26(void) { }
+void PR_VMS_Stub27(void) { }
+void PR_VMS_Stub28(void) { }
+void PR_VMS_Stub29(void) { }
+void PR_VMS_Stub30(void) { }
+void PR_VMS_Stub31(void) { }
+void PR_VMS_Stub32(void) { }
+void PR_VMS_Stub33(void) { }
+void PR_VMS_Stub34(void) { }
+void PR_VMS_Stub35(void) { }
+void PR_VMS_Stub36(void) { }
+void PR_VMS_Stub37(void) { }
+void PR_VMS_Stub38(void) { }
+void PR_VMS_Stub39(void) { }
+void PR_VMS_Stub40(void) { }
+void PR_VMS_Stub41(void) { }
+void PR_VMS_Stub42(void) { }
+void PR_VMS_Stub43(void) { }
+void PR_VMS_Stub44(void) { }
+void PR_VMS_Stub45(void) { }
+void PR_VMS_Stub46(void) { }
+void PR_VMS_Stub47(void) { }
+void PR_VMS_Stub48(void) { }
+void PR_VMS_Stub49(void) { }
+void PR_VMS_Stub50(void) { }
+void PR_VMS_Stub51(void) { }
+void PR_VMS_Stub52(void) { }
+void PR_VMS_Stub53(void) { }

@@ -60,10 +60,10 @@ PR_BEGIN_EXTERN_C
 ** The format of the version string is
 **     "<major version>.<minor version>[.<patch level>] [<Beta>]"
 */
-#define PR_VERSION  "4.2.1"
+#define PR_VERSION  "4.3"
 #define PR_VMAJOR   4
-#define PR_VMINOR   2
-#define PR_VPATCH   1
+#define PR_VMINOR   3
+#define PR_VPATCH   0
 #define PR_BETA     PR_FALSE
 
 /*
@@ -220,9 +220,17 @@ typedef struct PRCallOnceType {
 
 typedef PRStatus (PR_CALLBACK *PRCallOnceFN)(void);
 
+typedef PRStatus (PR_CALLBACK *PRCallOnceWithArgFN)(void *arg);
+
 NSPR_API(PRStatus) PR_CallOnce(
     PRCallOnceType *once,
     PRCallOnceFN    func
+);
+
+NSPR_API(PRStatus) PR_CallOnceWithArg(
+    PRCallOnceType      *once,
+    PRCallOnceWithArgFN  func,
+    void                *arg
 );
 
 

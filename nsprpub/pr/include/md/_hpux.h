@@ -46,7 +46,14 @@
 
 #define _PR_VMBASE        0x30000000 
 #define _PR_STACK_VMBASE    0x50000000
-#define _MD_DEFAULT_STACK_SIZE    65536L
+/*
+ * _USE_BIG_FDS increases the size of fd_set from 256 bytes to
+ * about 7500 bytes.  PR_Poll allocates three fd_sets on the
+ * stack, so it is safer to also increase the default thread
+ * stack size.
+ */
+#define _MD_DEFAULT_STACK_SIZE    (2*65536L)
+#define _MD_MINIMUM_STACK_SIZE    (2*65536L)
 #define _MD_MMAP_FLAGS          MAP_PRIVATE
 
 #define NEED_TIME_R
@@ -65,19 +72,19 @@
 #endif
 #define _PR_POLL_AVAILABLE
 #define _PR_USE_POLL
-/*
- * OSF1 and HPUX report the POLLHUP event for a socket when the
- * shutdown(SHUT_WR) operation is called for the remote end, even though
- * the socket is still writeable. Use select(), instead of poll(), to
- * workaround this problem.
- */
-#define _PR_POLL_WITH_SELECT
 #define _PR_STAT_HAS_ONLY_ST_ATIME
 #define _PR_HAVE_POSIX_SEMAPHORES
 #define PR_HAVE_POSIX_NAMED_SHARED_MEMORY
 #define _PR_ACCEPT_INHERIT_NONBLOCK
 
 #undef _PR_HAVE_ATOMIC_OPS
+
+#ifdef _PR_INET6
+#define _PR_HAVE_INET_NTOP
+#define _PR_HAVE_GETIPNODEBYNAME
+#define _PR_HAVE_GETIPNODEBYADDR
+#define _PR_INET6_PROBE
+#endif
 
 #if !defined(_PR_PTHREADS)
 

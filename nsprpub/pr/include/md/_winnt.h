@@ -47,6 +47,9 @@
 
 #include <windows.h>
 #include <winsock.h>
+#ifdef __MINGW32__
+#include <mswsock.h>
+#endif
 #include <errno.h>
 
 #include "prio.h"
@@ -450,6 +453,9 @@ extern PRStatus _PR_KillWindowsProcess(struct PRProcess *process);
 #define _MD_INTERVAL_PER_SEC              _PR_MD_INTERVAL_PER_SEC
 #define _MD_INTERVAL_PER_MILLISEC()       (_PR_MD_INTERVAL_PER_SEC() / 1000)
 #define _MD_INTERVAL_PER_MICROSEC()       (_PR_MD_INTERVAL_PER_SEC() / 1000000)
+
+/* --- Time --- */
+extern void _PR_FileTimeToPRTime(const FILETIME *filetime, PRTime *prtm);
 
 /* --- Native-Thread Specific Definitions ------------------------------- */
 

@@ -84,18 +84,12 @@ PRIntn _PR_MD_PUT_ENV(const char *name)
 PR_IMPLEMENT(PRTime)
 PR_Now(void)
 {
-    PRInt64 s, ms, ms2us, s2us;
-    struct timeb b;
+    PRTime prt;
+    FILETIME ft;
 
-    ftime(&b);
-    LL_I2L(ms2us, PR_USEC_PER_MSEC);
-    LL_I2L(s2us, PR_USEC_PER_SEC);
-    LL_I2L(s, b.time);
-    LL_I2L(ms, b.millitm);
-    LL_MUL(ms, ms, ms2us);
-    LL_MUL(s, s, s2us);
-    LL_ADD(s, s, ms);
-    return s;       
+    GetSystemTimeAsFileTime(&ft);
+    _PR_FileTimeToPRTime(&ft, &prt);
+    return prt;       
 }
 
 /*
@@ -792,7 +786,7 @@ PRInt32 _PR_MD_ATOMIC_DECREMENT(PRInt32 *val)
   PRInt32 result;
   asm volatile ("lock ; xadd %0, %1" 
                 : "=r"(result), "=m"(*val)
-                : "0"(1), "m"(*val));
+                : "0"(-1), "m"(*val));
   //asm volatile("lock ; xadd %0, %1" : "=m" (val), "=a" (result) : "-1" (1));
   return result - 1;
 #else
@@ -814,8 +808,8 @@ PRInt32 _PR_MD_ATOMIC_ADD(PRInt32 *intp, PRInt32 val)
   PRInt32 result;
   //asm volatile("lock ; xadd %1, %0" : "=m" (intp), "=a" (result) : "1" (val));
   asm volatile ("lock ; xadd %0, %1" 
-                : "=r"(result), "=m"(intp)
-                : "0"(val), "m"(intp));
+                : "=r"(result), "=m"(*intp)
+                : "0"(val), "m"(*intp));
   return result + val;
 #else
     __asm

@@ -166,6 +166,8 @@ public:
     NS_IMETHOD				Update();
     virtual void			UpdateWidget(nsRect& aRect, nsIRenderingContext* aContext);
     
+    PRBool						ContainerHierarchyIsVisible();
+    
     virtual void			ConvertToDeviceCoordinates(nscoord &aX, nscoord &aY);
     void					LocalToWindowCoordinate(nsPoint& aPoint)						{ ConvertToDeviceCoordinates(aPoint.x, aPoint.y); }
     void					LocalToWindowCoordinate(nscoord& aX, nscoord& aY)				{ ConvertToDeviceCoordinates(aX, aY); }
@@ -210,7 +212,6 @@ protected:
 	PRBool					ReportSizeEvent();
 
 	void    				CalcOffset(PRInt32 &aX,PRInt32 &aY);
-  PRBool          ContainerHierarchyIsVisible();
   
 	virtual PRBool			OnPaint(nsPaintEvent & aEvent);
 

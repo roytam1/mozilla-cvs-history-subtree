@@ -937,15 +937,26 @@ xptiInterfaceInfoManager::AddOnlyNewFilesFromFileList(nsISupportsArray* aSearchP
         PRInt64 size;
         PRInt64 date;
         PRUint32 dir;
-        if(NS_FAILED(file->GetFileSize(&size)) ||
-           NS_FAILED(file->GetLastModifiedTime(&date)) ||
-           NS_FAILED(file->GetNativeLeafName(name)) ||
-           !aWorkingSet->FindDirectoryOfFile(file, &dir))
+
+        PRBool saveFollowLinks;
+        file->GetFollowLinks(&saveFollowLinks);
+        file->SetFollowLinks(PR_TRUE);
+
+        PRBool gotDetails = PR_TRUE;
+        if ((NS_FAILED(file->GetFileSize(&size)) ||
+             NS_FAILED(file->GetLastModifiedTime(&date)) ||
+             NS_FAILED(file->GetNativeLeafName(name))))
+        {
+            gotDetails = PR_FALSE;
+        }
+
+        file->SetFollowLinks(saveFollowLinks);
+
+        if (!gotDetails || !aWorkingSet->FindDirectoryOfFile(file, &dir))
         {
             return PR_FALSE;
         }    
     
-
         if(xptiWorkingSet::NOT_FOUND != aWorkingSet->FindFile(dir, name.get()))
         {
             // This file was found in the working set, so skip it.       
@@ -1087,14 +1098,26 @@ xptiInterfaceInfoManager::DoFullValidationMergeFromFileList(nsISupportsArray* aS
         PRInt64 size;
         PRInt64 date;
         PRUint32 dir;
-        if(NS_FAILED(file->GetFileSize(&size)) ||
-           NS_FAILED(file->GetLastModifiedTime(&date)) ||
-           NS_FAILED(file->GetNativeLeafName(name)) ||
-           !aWorkingSet->FindDirectoryOfFile(file, &dir))
+
+        PRBool saveFollowLinks;
+        file->GetFollowLinks(&saveFollowLinks);
+        file->SetFollowLinks(PR_TRUE);
+
+        PRBool gotDetails = PR_TRUE;
+        if ((NS_FAILED(file->GetFileSize(&size)) ||
+             NS_FAILED(file->GetLastModifiedTime(&date)) ||
+             NS_FAILED(file->GetNativeLeafName(name))))
+        {
+            gotDetails = PR_FALSE;
+        }
+
+        file->SetFollowLinks(saveFollowLinks);
+
+        if(!gotDetails || !aWorkingSet->FindDirectoryOfFile(file, &dir))
         {
             return PR_FALSE;
         }    
-
+        
         LOG_AUTOREG(("  finding interfaces in file: %s\n", name.get()));
     
         xptiFile fileRecord;
