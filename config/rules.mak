@@ -107,7 +107,7 @@ _NO_FLOCK=-l
 #// linked with other components to form a ``meta-component'' or included
 #// in a final executable.
 #//
-#//   COMPONENT_NAME
+#//   MODULE_NAME
 #//     If set, indicates that we're building a ``component''. This value
 #//     should be set to the name of the generic module (as declared by
 #//     the NS_IMPL_NSGENERICMODULE macro; e.g., ``nsLayoutModule'').
@@ -140,10 +140,10 @@ _NO_FLOCK=-l
 #// executable if no META_COMPONENT is set.
 #//
 #//------------------------------------------------------------------------
-!if defined(COMPONENT_NAME)
+!if defined(MODULE_NAME)
 # We're building a component
 !if defined(EXPORT_LIBRARY)
-!error "Can't define both COMPONENT_NAME and EXPORT_LIBRARY."
+!error "Can't define both MODULE_NAME and EXPORT_LIBRARY."
 !endif
 
 !if defined(MOZ_STATIC_COMPONENT_LIBS)
@@ -219,7 +219,7 @@ LLIBS=$(SUB_LIBRARIES) $(LLIBS)
 #//     The name of the library to be created.
 #//
 #//------------------------------------------------------------------------
-!if defined(LIBRARY_NAME) && !defined(COMPONENT_NAME) && !defined(EXPORT_LIBRARY)
+!if defined(LIBRARY_NAME) && !defined(MODULE_NAME) && !defined(EXPORT_LIBRARY)
 !if !defined(LIBRARY)
 LIBRARY=$(OBJDIR)\$(LIBRARY_NAME).lib
 !endif
@@ -403,10 +403,10 @@ INSTALL_FILES: $(INSTALL_FILE_LIST)
 #// Rules for building components
 #//
 #//------------------------------------------------------------------------
-!if defined(COMPONENT_NAME)
+!if defined(MODULE_NAME)
 # We're building a component
 !if defined(EXPORT_LIBRARY)
-!error "Can't define both COMPONENT_NAME and EXPORT_LIBRARY."
+!error "Can't define both MODULE_NAME and EXPORT_LIBRARY."
 !endif
 
 !if defined(MOZ_STATIC_COMPONENT_LIBS)
@@ -418,7 +418,7 @@ INSTALL_FILES: $(INSTALL_FILE_LIST)
 # the meta component's list
 export::
         $(PERL) $(DEPTH)\config\build-list.pl $(_NO_FLOCK) $(META_LINK_COMPS:\=/) $(LIBRARY_NAME)
-        $(PERL) $(DEPTH)\config\build-list.pl $(_NO_FLOCK) $(META_LINK_COMP_NAMES:\=/) $(COMPONENT_NAME)
+        $(PERL) $(DEPTH)\config\build-list.pl $(_NO_FLOCK) $(META_LINK_COMP_NAMES:\=/) $(MODULE_NAME)
 
 !else # defined(META_COMPONENT)
 # Otherwise, it's to be linked into the main executable. Add the component
@@ -426,7 +426,7 @@ export::
 # static libs.
 export::
         $(PERL) $(DEPTH)\config\build-list.pl $(_NO_FLOCK) $(FINAL_LINK_COMPS:\=/) $(LIBRARY_NAME)
-        $(PERL) $(DEPTH)\config\build-list.pl $(_NO_FLOCK) $(FINAL_LINK_COMP_NAMES:\=/) $(COMPONENT_NAME)
+        $(PERL) $(DEPTH)\config\build-list.pl $(_NO_FLOCK) $(FINAL_LINK_COMP_NAMES:\=/) $(MODULE_NAME)
 
 !endif # defined(META_COMPONENT)
 
