@@ -1188,6 +1188,12 @@ PRInt32 nsPop3Protocol::CapaResponse(nsIInputStream* inputStream,
         m_pop3ConData->pause_for_read = PR_FALSE; /* don't pause */
     }
     else
+    if (!PL_strcasecmp(line, "XSENDER")) 
+    {
+        SetCapFlag(POP3_HAS_XSENDER);
+        m_pop3Server->SetPop3CapabilityFlags(m_pop3ConData->capability_flags);
+    }
+    else
     // see RFC 2449, chapter 6.4
     if (!PL_strcasecmp(line, "RESP-CODES")) 
     {
@@ -2412,7 +2418,7 @@ nsPop3Protocol::GetMsg()
     
     m_pop3Server->GetAuthLogin(&prefBool);
     
-    if (prefBool && (TestCapFlag(POP3_HAS_XSENDER | POP3_XSENDER_UNDEFINED)))
+    if (prefBool && (TestCapFlag(POP3_HAS_XSENDER)))
       m_pop3ConData->next_state = POP3_SEND_XSENDER;
     else
       m_pop3ConData->next_state = POP3_SEND_RETR;
@@ -2541,8 +2547,8 @@ PRInt32 nsPop3Protocol::SendXsender()
   {  
    m_pop3ConData->next_state_after_response = POP3_XSENDER_RESPONSE;
    status = SendData(m_url, cmd);
-  }
   PR_Free(cmd);
+  }
   return status;
 }
 
@@ -2551,19 +2557,14 @@ PRInt32 nsPop3Protocol::XsenderResponse()
     m_pop3ConData->seenFromHeader = PR_FALSE;
 	m_senderInfo = "";
     
-    ClearCapFlag(POP3_XSENDER_UNDEFINED);
-
     if (m_pop3ConData->command_succeeded) {
         if (m_commandResponse.Length() > 4)
-        {
 			m_senderInfo = m_commandResponse;
         }
-        SetCapFlag(POP3_HAS_XSENDER);
-    }
     else {
         ClearCapFlag(POP3_HAS_XSENDER);
-    }
     m_pop3Server->SetPop3CapabilityFlags(m_pop3ConData->capability_flags);
+    }
 
     if (m_pop3ConData->truncating_cur_msg)
         m_pop3ConData->next_state = POP3_SEND_TOP;
@@ -2887,7 +2888,7 @@ nsPop3Protocol::TopResponse(nsIInputStream* inputStream, PRUint32 length)
     m_pop3Server->GetAuthLogin(&prefBool);
     
     if (prefBool && 
-      (TestCapFlag(POP3_XSENDER_UNDEFINED | POP3_HAS_XSENDER)))
+      (TestCapFlag(POP3_HAS_XSENDER)))
       m_pop3ConData->next_state = POP3_SEND_XSENDER;
     else
       m_pop3ConData->next_state = POP3_SEND_RETR;
