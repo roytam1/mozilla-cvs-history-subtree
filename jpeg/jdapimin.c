@@ -416,11 +416,49 @@ jpeg_finish_decompress (j_decompress_ptr cinfo)
 
 #ifdef HAVE_MMX_INTEL_MNEMONICS
 
+static int mmx_supported = 0;
 
 int mmxsupport()
 {
-	int mmx_supported = 0;
 
+#ifdef XP_UNIX
+    __asm__ __volatile__(
+       "pushf\n\t"
+       "pop %eax\n\n"
+       "mov %eax, %ecx\n\n"
+       "xor %eax, 0x200000\n\t"		//Toggle ID bit in Eflag [i.e. bit(21)] 
+       "push %eax\n\t"				//Save modified Eflag back to stack
+
+       "popf\n\t"					//Restored modified value back to Eflag reg 
+       "pushf\n\t"				//Save Eflag to stack
+       "pop %eax\n\t"				//Get Eflag from stack
+       "xor %ecx, %eax\n\t"		//Compare the new Eflag with the original Eflag
+       "jz NOT_SUPPORTED\n\t"		//If the same, CPUID instruction is not supported,
+								//skip following instructions and jump to
+								//NOT_SUPPORTED label
+
+       "xor %eax, %eax\n\t"			//Set eax to zero
+       "cpuid\n\t"
+       "cmp %eax, 1\n\t"				//make sure eax return non-zero value
+       "jl NOT_SUPPORTED\n\t"		//If eax is zero, mmx not supported
+
+       "xor %eax, %eax\n\t"			//set eax to zero
+       "inc %eax\n\t"					//Now increment eax to 1.  This instruction is 
+								//faster than the instruction "mov eax, 1"
+		
+       "cpuid\n\t"
+       "and $0x00800000, %edx\n\t"		//mask out all bits but mmx bit(24)
+       "cmp %edx, 0\n\t"				// 0 = mmx not supported
+       "jz	NOT_SUPPORTED\n\t"		// non-zero = Yes, mmx IS supported
+
+       "mov	1,$_mmx_supported\n\t"	//set return value to 1
+
+"NOT_SUPPORTED:\n\t"
+       "mov	%eax, $_mmx_supported\n\t"	//move return value to eax	
+);
+#endif
+
+#ifdef XP_WIN
 	_asm {
 		pushfd					//Save Eflag to stack
 		pop eax					//Get Eflag from stack into eax
@@ -461,7 +499,8 @@ NOT_SUPPORTED:
 		mov	eax, mmx_supported	//move return value to eax	
 
 	}
-
+#endif
+    
 	return mmx_supported;		
 }
 
