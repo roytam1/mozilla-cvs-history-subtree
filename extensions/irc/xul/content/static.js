@@ -576,7 +576,6 @@ function mircToggleUnder (colorInfo, containerTag, data)
     if (!client.enableColors)
         return;
 
-    data.isUnderline = !data.isUnderline;
     if ("isUnderline" in data)
         delete data.isUnderline;
     else
@@ -587,7 +586,7 @@ function mircToggleUnder (colorInfo, containerTag, data)
 function mircResetColor (text, containerTag, data)
 {
     if (!client.enableColors || !("hasColorInfo" in data))
-         return;
+        return;
 
     delete data.currFgColor;
     delete data.currBgColor;
