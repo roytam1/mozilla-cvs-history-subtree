@@ -541,6 +541,38 @@ BOOL CRDFToolbarButton::OnEraseBkgnd( CDC* pDC )
 	return TRUE;
 }
 
+void CRDFToolbarButton::RemoveButtonFocus(void)
+{
+	// need to make the parent redraw
+	POINT point;
+	GetCursorPos(&point);
+
+	CRect rcClient;
+	GetWindowRect(&rcClient);
+
+	if (!rcClient.PtInRect(point))
+	{
+		CRect clientRect;
+		GetClientRect(&clientRect);
+		if (foundOnRDFToolbar() && m_eState != eDISABLED)
+		{
+			CRDFToolbar* pToolbar = (CRDFToolbar*)GetParent();
+			if (pToolbar->GetBackgroundImage() != NULL &&
+				pToolbar->GetBackgroundImage()->FrameSuccessfullyLoaded())
+			{
+				CWnd* pGrandParent = pToolbar->GetParent();
+				MapWindowPoints(pGrandParent, &clientRect);
+				ShowWindow(SW_HIDE);
+				pGrandParent->InvalidateRect(&clientRect);
+				pGrandParent->UpdateWindow();
+				ShowWindow(SW_SHOW);
+			}
+		}
+	}
+
+	CToolbarButton::RemoveButtonFocus();
+}
+
 void CRDFToolbarButton::OnPaint()
 {
 	CRect updateRect;

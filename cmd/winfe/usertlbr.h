@@ -115,7 +115,8 @@ public:
 	virtual HT_View GetHTView() { return HT_GetView(m_Node); }
 
 	virtual BOOL NeedsUpdate();
-	
+	virtual void RemoveButtonFocus(void);
+
 protected:
 	virtual void DrawPicturesMode(HDC hDC, CRect rect);
 	virtual void DrawPicturesAndTextMode(HDC hDC, CRect rect);
