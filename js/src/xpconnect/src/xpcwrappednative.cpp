@@ -135,6 +135,20 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     if(!proto)
         return nsnull;
 
+    nsIXPCSecurityManager* sm;
+       sm = ccx.GetXPCContext()->GetAppropriateSecurityManager(
+                            nsIXPCSecurityManager::HOOK_CREATE_WRAPPER);
+    if(sm && NS_FAILED(sm->
+                CanCreateWrapper(ccx, *Interface->GetIID(), 
+                                 identity, proto->GetSecurityInfoAddr())))
+    {
+        // the security manager vetoed. It should have set an exception.
+        
+        // XXX we need to get pErr back into the picture!
+        //SET_ERROR_CODE(NS_ERROR_XPC_SECURITY_MANAGER_VETO);
+        return nsnull;
+    }
+
     wrapper = new XPCWrappedNative(identity, proto);
     if(!wrapper)
     {
@@ -949,8 +963,9 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
         case CALL_METHOD:
             sm = xpcc->GetAppropriateSecurityManager(
                                 nsIXPCSecurityManager::HOOK_CALL_METHOD);
-            if(sm && NS_OK != sm->CanCallMethod(ccx, iid, callee,
-                                                ifaceInfo, vtblIndex, name))
+            if(sm && NS_FAILED(sm->
+                CanCallMethod(ccx, iid, callee, ifaceInfo, vtblIndex, name, 
+                              ccx.GetWrapper()->GetSecurityInfoAddr())))
             {
                 // the security manager vetoed. It should have set an exception.
                 goto done;
@@ -960,8 +975,9 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
         case CALL_GETTER:
             sm = xpcc->GetAppropriateSecurityManager(
                                 nsIXPCSecurityManager::HOOK_GET_PROPERTY);
-            if(sm && NS_OK != sm->CanGetProperty(ccx, iid, callee,
-                                                 ifaceInfo, vtblIndex, name))
+            if(sm && NS_FAILED(sm->
+                CanGetProperty(ccx, iid, callee, ifaceInfo, vtblIndex, name, 
+                               ccx.GetWrapper()->GetSecurityInfoAddr())))
             {
                 // the security manager vetoed. It should have set an exception.
                 goto done;
@@ -971,8 +987,9 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
         case CALL_SETTER:
             sm = xpcc->GetAppropriateSecurityManager(
                                 nsIXPCSecurityManager::HOOK_SET_PROPERTY);
-            if(sm && NS_OK != sm->CanSetProperty(ccx, iid, callee,
-                                                 ifaceInfo, vtblIndex, name))
+            if(sm && NS_FAILED(sm->
+                CanSetProperty(ccx, iid, callee, ifaceInfo, vtblIndex, name, 
+                               ccx.GetWrapper()->GetSecurityInfoAddr())))
             {
                 // the security manager vetoed. It should have set an exception.
                 goto done;

@@ -255,9 +255,10 @@ XPC_WN_DoubleWrappedGetter(JSContext *cx, JSObject *obj,
             nsCOMPtr<nsIInterfaceInfo> info;
             if(NS_SUCCEEDED(iimgr->GetInfoForIID(&iid, getter_AddRefs(info))))
             {
-                if(NS_FAILED(sm->CanGetProperty(cx, iid,
-                                                wrapper->GetIdentityObject(),
-                                                info, 3, idval)))
+                if(NS_FAILED(sm->
+                    CanGetProperty(cx, iid, wrapper->GetIdentityObject(),
+                                   info, 3, idval,
+                                   wrapper->GetSecurityInfoAddr())))
                 {
                     // The SecurityManager should have set an exception.
                     return JS_FALSE;

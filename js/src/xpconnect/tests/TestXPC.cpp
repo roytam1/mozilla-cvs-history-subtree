@@ -235,7 +235,7 @@ MySecMan::MySecMan()
 }
 
 NS_IMETHODIMP
-MySecMan::CanCreateWrapper(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj)
+MySecMan::CanCreateWrapper(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, void * *aPolicy)
 {
     switch(mMode)
     {
@@ -289,7 +289,7 @@ MySecMan::CanGetService(JSContext * aJSContext, const nsCID & aCID)
 }
 
 NS_IMETHODIMP
-MySecMan::CanCallMethod(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo, PRUint16 aMethodIndex, const jsid aName)
+MySecMan::CanCallMethod(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo, PRUint16 aMethodIndex, const jsval aName, void * *aPolicy)
 {
     switch(mMode)
     {
@@ -307,7 +307,7 @@ MySecMan::CanCallMethod(JSContext * aJSContext, const nsIID & aIID, nsISupports 
 }
 
 NS_IMETHODIMP
-MySecMan::CanGetProperty(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo, PRUint16 aMethodIndex, const jsid aName)
+MySecMan::CanGetProperty(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo, PRUint16 aMethodIndex, const jsval aName, void * *aPolicy)
 {
     switch(mMode)
     {
@@ -325,7 +325,7 @@ MySecMan::CanGetProperty(JSContext * aJSContext, const nsIID & aIID, nsISupports
 }
 
 NS_IMETHODIMP
-MySecMan::CanSetProperty(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo, PRUint16 aMethodIndex, const jsid aName)
+MySecMan::CanSetProperty(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo, PRUint16 aMethodIndex, const jsval aName, void * *aPolicy)
 {
     switch(mMode)
     {

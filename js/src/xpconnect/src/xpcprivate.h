@@ -1950,6 +1950,8 @@ public:
     nsISupports*           GetIdentityObject() const {return mIdentity;}
     JSObject*              GetFlatJSObject()   const {return mFlatJSObject;}
 
+    void** GetSecurityInfoAddr() const {return mProto->GetSecurityInfoAddr();}
+
     // XXX the rules may change here...
     JSBool IsValid() const {return nsnull != mFlatJSObject;}
     JSBool HasSharedProto() const {return GetProto()->IsShared();}
