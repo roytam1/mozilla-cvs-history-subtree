@@ -24,14 +24,14 @@
 
 /*
  * XXX xpcom/ should not depend on widget/public/nsIFileWidget.h
- * XXX We need to move into widget.
+ * XXX We need to move into widget. - at least, that's dp's opinion.
  */
 #ifdef FILE_WIDGET_DEPENDENCY
 #include "nsIFileWidget.h"
 #include "nsWidgetsCID.h"
 
 static NS_DEFINE_IID(kCFileWidgetCID, NS_FILEWIDGET_CID);
-#endif /* FILE_WIDGET_DEPENDENCY */
+#endif // FILE_WIDGET_DEPENDENCY
 
 #include "nsIComponentManager.h"
 
@@ -55,7 +55,6 @@ class nsFileSpecImpl
 	NS_DECL_ISUPPORTS
 
 	NS_IMETHOD fromFileSpec(const nsIFileSpec *original);
-#ifdef FILE_WIDGET_DEPENDENCY
 	NS_IMETHOD chooseOutputFile(const char *windowTitle, const char *suggestedLeafName);
 
 	NS_IMETHOD chooseInputFile(
@@ -64,7 +63,6 @@ class nsFileSpecImpl
 		const char *extraFilterTitle, const char *extraFilter);
 
 	NS_IMETHOD chooseDirectory(const char *title);
-#endif /* FILE_WIDGET_DEPENDENCY */
 
 	NS_IMETHOD GetURLString(char * *aURLString);
 	NS_IMETHOD SetURLString(char * aURLString);
@@ -254,13 +252,13 @@ NS_IMETHODIMP nsFileSpecImpl::fromFileSpec(const nsIFileSpec *original)
 	return mFileSpec.Error();
 }
 
-#ifdef FILE_WIDGET_DEPENDENCY
 //----------------------------------------------------------------------------------------
 NS_IMETHODIMP nsFileSpecImpl::chooseOutputFile(
 	const char *windowTitle,
 	const char *suggestedLeafName)
 //----------------------------------------------------------------------------------------
 {
+#ifdef FILE_WIDGET_DEPENDENCY
     nsCOMPtr<nsIFileWidget> fileWidget; 
     nsresult rv = nsComponentManager::CreateInstance(
     	kCFileWidgetCID,
@@ -276,6 +274,7 @@ NS_IMETHODIMP nsFileSpecImpl::chooseOutputFile(
     	return NS_FILE_FAILURE;
     if (mFileSpec.Exists() && result != nsFileDlgResults_Replace)
     	return NS_FILE_FAILURE;
+#endif /* FILE_WIDGET_DEPENDENCY */
     return NS_OK;
 } // nsFileSpecImpl::chooseOutputFile
 
@@ -286,8 +285,10 @@ NS_IMETHODIMP nsFileSpecImpl::chooseInputFile(
 		const char *inExtraFilterTitle, const char *inExtraFilter)
 //----------------------------------------------------------------------------------------
 {
+	nsresult rv = NS_OK;
+#ifdef FILE_WIDGET_DEPENDENCY
     nsCOMPtr<nsIFileWidget> fileWidget; 
-    nsresult rv = nsComponentManager::CreateInstance(
+    rv = nsComponentManager::CreateInstance(
     	kCFileWidgetCID,
         nsnull,
         nsIFileWidget::GetIID(),
@@ -348,6 +349,7 @@ NS_IMETHODIMP nsFileSpecImpl::chooseInputFile(
 Clean:
 	delete [] titles;
 	delete [] filters;
+#endif /* FILE_WIDGET_DEPENDENCY */
 	return rv;
 } // nsFileSpecImpl::chooseInputFile
 
@@ -355,6 +357,7 @@ Clean:
 NS_IMETHODIMP nsFileSpecImpl::chooseDirectory(const char *title)
 //----------------------------------------------------------------------------------------
 {
+#ifdef FILE_WIDGET_DEPENDENCY
     nsCOMPtr<nsIFileWidget> fileWidget;
     nsresult rv = nsComponentManager::CreateInstance(
     	kCFileWidgetCID,
@@ -365,9 +368,9 @@ NS_IMETHODIMP nsFileSpecImpl::chooseDirectory(const char *title)
 		return rv;
 	if (fileWidget->GetFolder(nsnull, title, mFileSpec) != nsFileDlgResults_OK)
 		rv = NS_FILE_FAILURE;
+#endif /* FILE_WIDGET_DEPENDENCY */
 	return NS_OK;
 } // nsFileSpecImpl::chooseDirectory
-#endif /* FILE_WIDGET_DEPENDENCY */
 
 //----------------------------------------------------------------------------------------
 NS_IMETHODIMP nsFileSpecImpl::GetURLString(char * *aURLString)
