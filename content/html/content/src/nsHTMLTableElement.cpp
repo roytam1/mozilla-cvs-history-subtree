@@ -1301,17 +1301,17 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
       if (aData->mPositionData->mWidth.GetUnit() == eCSSUnit_Null) {
         aAttributes->GetAttribute(nsHTMLAtoms::width, value);
         if (value.GetUnit() == eHTMLUnit_Pixel) {
-          //if (value.GetPixelValue() > 0) {
+          if (value.GetPixelValue() > 0) {
             nsCSSValue val((float)value.GetPixelValue(), eCSSUnit_Pixel);
             aData->mPositionData->mWidth = val;   
-          //}
+          }
           // else 0 implies auto for compatibility.
         }
         else if (value.GetUnit() == eHTMLUnit_Percent) {
-          //if (value.GetPercentValue() > 0.0f) {
+          if (value.GetPercentValue() > 0.0f) {
             nsCSSValue val; val.SetPercentValue(value.GetPercentValue());
             aData->mPositionData->mWidth = val;   
-          //}
+          }
           // else 0 implies auto for compatibility
         }
       }
@@ -1320,17 +1320,17 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
       if (aData->mPositionData->mHeight.GetUnit() == eCSSUnit_Null) {
         aAttributes->GetAttribute(nsHTMLAtoms::height, value);
         if (value.GetUnit() == eHTMLUnit_Pixel) {
-          //if (value.GetPixelValue() > 0) {
+          if (value.GetPixelValue() > 0) {
             nsCSSValue val((float)value.GetPixelValue(), eCSSUnit_Pixel);
             aData->mPositionData->mHeight = val;   
-          //}
+          }
           // else 0 implies auto for compatibility.
         }
         else if (value.GetUnit() == eHTMLUnit_Percent) {
-          //if (value.GetPercentValue() > 0.0f) {
+          if (value.GetPercentValue() > 0.0f) {
             nsCSSValue val; val.SetPercentValue(value.GetPercentValue());
             aData->mPositionData->mHeight = val;   
-          //}
+          }
           // else 0 implies auto for compatibility
         }
       }
