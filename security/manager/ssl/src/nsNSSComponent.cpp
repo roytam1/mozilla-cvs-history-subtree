@@ -1459,7 +1459,7 @@ nsNSSComponent::VerifySignature(const char* aRSABuf, PRUint32 aRSABufLen,
     nsAutoString orgName;
     rv2 = pCert->GetOrganization(orgName);
     if (NS_FAILED(rv2)) return rv2;
-    rv2 = certPrincipal->SetCommonName(NS_LossyConvertUTF16toASCII(orgName).get());
+    rv2 = certPrincipal->SetCommonName(NS_ConvertUTF16toUTF8(orgName).get());
     if (NS_FAILED(rv2)) return rv2;
 
     NS_ADDREF(*aPrincipal = certPrincipal);
