@@ -1909,7 +1909,7 @@ nsMsgLocalMailFolder::CopyFolderLocal( nsIMsgFolder *destFolder, nsIMsgFolder *s
 }
 
 NS_IMETHODIMP
-nsMsgLocalMailFolder::CopyFileMessage(nsIFileSpec* fileSpec, nsIMessage*
+nsMsgLocalMailFolder::CopyFileMessage(nsIFileSpec* fileSpec, nsIMsgDBHdr*
                                       msgToReplace, PRBool isDraftOrTemplate,
                                       nsIMsgWindow *msgWindow,
                                       nsIMsgCopyServiceListener* listener)
@@ -2151,7 +2151,7 @@ nsresult nsMsgLocalMailFolder::WriteStartOfNewMessage()
 }
 
 //nsICopyMessageListener
-NS_IMETHODIMP nsMsgLocalMailFolder::BeginCopy(nsIMessage *message)
+NS_IMETHODIMP nsMsgLocalMailFolder::BeginCopy(nsIMsgDBHdr *message)
 {
   if (!mCopyState) return NS_ERROR_NULL_POINTER;
   nsresult rv = NS_OK;

@@ -138,7 +138,7 @@ public:
                           nsIMsgCopyServiceListener* listener, PRBool isFolder );
   NS_IMETHOD CopyFolder(nsIMsgFolder *srcFolder, PRBool isMoveFolder, nsIMsgWindow *msgWindow,
                           nsIMsgCopyServiceListener* listener);
-  NS_IMETHOD CopyFileMessage(nsIFileSpec* fileSpec, nsIMessage* msgToReplace,
+  NS_IMETHOD CopyFileMessage(nsIFileSpec* fileSpec, nsIMsgDBHdr* msgToReplace,
                              PRBool isDraftOrTemplate, 
                              nsIMsgWindow *msgWindow,
                              nsIMsgCopyServiceListener* listener);

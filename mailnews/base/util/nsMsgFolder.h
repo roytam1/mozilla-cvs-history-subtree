@@ -138,7 +138,7 @@ public:
   // NS_IMETHOD DeleteMessages(nsISupportsArray *message, nsITransactionManager *txnMgr, PRBool deleteStorage);
   NS_IMETHOD CopyMessages(nsIMsgFolder *srcFolder, nsISupportsArray *messages, PRBool isMove, nsIMsgWindow *window, nsIMsgCopyServiceListener *listener, PRBool isFolder);
   NS_IMETHOD CopyFolder(nsIMsgFolder *srcFolder,PRBool isMoveFolder, nsIMsgWindow *window, nsIMsgCopyServiceListener *listener);
-  NS_IMETHOD CopyFileMessage(nsIFileSpec *fileSpec, nsIMessage *msgToReplace, PRBool isDraft, nsIMsgWindow *window, nsIMsgCopyServiceListener *listener);
+  NS_IMETHOD CopyFileMessage(nsIFileSpec *fileSpec, nsIMsgDBHdr *msgToReplace, PRBool isDraft, nsIMsgWindow *window, nsIMsgCopyServiceListener *listener);
   NS_IMETHOD AcquireSemaphore(nsISupports *semHolder);
   NS_IMETHOD ReleaseSemaphore(nsISupports *semHolder);
   NS_IMETHOD TestSemaphore(nsISupports *semHolder, PRBool *_retval);

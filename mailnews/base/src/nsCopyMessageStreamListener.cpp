@@ -44,7 +44,7 @@ NS_INTERFACE_MAP_BEGIN(nsCopyMessageStreamListener)
    NS_INTERFACE_MAP_ENTRY(nsICopyMessageStreamListener)
 NS_INTERFACE_MAP_END_THREADSAFE
 
-static nsresult GetMessage(nsIURI *aURL, nsIMessage **message)
+static nsresult GetMessage(nsIURI *aURL, nsIMsgDBHdr **message)
 {
 	nsCOMPtr<nsIMsgMessageUrl> uriURL;
 	char* uri;
@@ -68,7 +68,7 @@ static nsresult GetMessage(nsIURI *aURL, nsIMessage **message)
 		nsCOMPtr<nsIRDFResource> messageResource;
 		if(NS_SUCCEEDED(rdfService->GetResource(uri, getter_AddRefs(messageResource))))
 		{
-			messageResource->QueryInterface(NS_GET_IID(nsIMessage), (void**)message);
+			messageResource->QueryInterface(NS_GET_IID(nsIMsgDBHdr), (void**)message);
 		}
 	}
 	nsMemory::Free(uri);
@@ -79,7 +79,7 @@ static nsresult GetMessage(nsIURI *aURL, nsIMessage **message)
 
 static nsresult DeleteMessage(nsIURI *aURL, nsIMsgFolder *srcFolder)
 {
-	nsCOMPtr<nsIMessage> message;
+	nsCOMPtr<nsIMsgDBHdr> message;
 	nsresult rv;
 
 	rv = GetMessage(aURL, getter_AddRefs(message));
@@ -140,7 +140,7 @@ NS_IMETHODIMP nsCopyMessageStreamListener::OnDataAvailable(nsIChannel * /* aChan
 
 NS_IMETHODIMP nsCopyMessageStreamListener::OnStartRequest(nsIChannel * aChannel, nsISupports *ctxt)
 {
-	nsCOMPtr<nsIMessage> message;
+	nsCOMPtr<nsIMsgDBHdr> message;
 	nsresult rv = NS_OK;
 	nsCOMPtr<nsIURI> uri = do_QueryInterface(ctxt, &rv);
 

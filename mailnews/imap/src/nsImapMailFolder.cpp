@@ -2460,7 +2460,7 @@ NS_IMETHODIMP nsImapMailFolder::CreateMessageFromMsgDBHdr(nsIMsgDBHdr *msgDBHdr,
 }
 
   
-NS_IMETHODIMP nsImapMailFolder::BeginCopy(nsIMessage *message)
+NS_IMETHODIMP nsImapMailFolder::BeginCopy(nsIMsgDBHdr *message)
 {
   nsresult rv = NS_ERROR_NULL_POINTER;
     if (!m_copyState) return rv;

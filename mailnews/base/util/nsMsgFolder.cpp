@@ -2154,7 +2154,7 @@ nsMsgFolder::CopyFolder(nsIMsgFolder* srcFolder,
 
 NS_IMETHODIMP
 nsMsgFolder::CopyFileMessage(nsIFileSpec* fileSpec,
-                             nsIMessage* messageToReplace,
+                             nsIMsgDBHdr* messageToReplace,
                              PRBool isDraftOrTemplate,
                              nsIMsgWindow *window,
                              nsIMsgCopyServiceListener* listener)
