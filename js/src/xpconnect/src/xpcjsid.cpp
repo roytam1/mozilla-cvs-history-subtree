@@ -240,6 +240,54 @@ nsJSID::NewID(const char* str)
 /***************************************************************************/
 // Class object support so that we can share prototypes of wrapper
 
+// This class exists just so we can have a shared scriptable helper for
+// the nsJSIID class. The instances implement their own helpers. But we
+// needed to be able to indicate to the shared prototypes this single flag:
+// nsIXPCScriptable::DONT_ENUM_STATIC_PROPS. And having a class to do it is
+// the only means we have. Setting this flag on any given instance scriptable
+// helper is not sufficient to convey the information that we don't want
+// static properties enumerated on the shared proto.
+
+class SharedScriptableHelperForJSIID : public nsIXPCScriptable
+{
+public:
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSIXPCSCRIPTABLE
+    SharedScriptableHelperForJSIID() {NS_INIT_ISUPPORTS();}
+};   
+
+NS_INTERFACE_MAP_BEGIN(SharedScriptableHelperForJSIID)
+  NS_INTERFACE_MAP_ENTRY(nsIXPCScriptable)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIXPCScriptable)
+NS_INTERFACE_MAP_END_THREADSAFE
+
+NS_IMPL_THREADSAFE_ADDREF(SharedScriptableHelperForJSIID)
+NS_IMPL_THREADSAFE_RELEASE(SharedScriptableHelperForJSIID)
+
+// The nsIXPCScriptable map declaration that will generate stubs for us...
+#define XPC_MAP_CLASSNAME           SharedScriptableHelperForJSIID
+#define XPC_MAP_QUOTED_CLASSNAME   "JSIID"
+#define XPC_MAP_FLAGS               nsIXPCScriptable::DONT_ENUM_STATIC_PROPS |\
+                                    nsIXPCScriptable::ALLOW_PROP_MODS_DURING_RESOLVE
+#include "xpc_map_end.h" /* This will #undef the above */
+
+static nsIXPCScriptable* gSharedScriptableHelperForJSIID;
+
+NS_METHOD GetSharedScriptableHelperForJSIID(PRUint32 language,
+                                            nsISupports **helper)
+{
+    if(language == nsIClassInfo::LANGUAGE_JAVASCRIPT)
+    {
+        NS_IF_ADDREF(gSharedScriptableHelperForJSIID);
+        *helper = gSharedScriptableHelperForJSIID;
+    }
+    else
+        *helper = nsnull;
+    return NS_OK;
+}
+
+/******************************************************/
+
 static JSBool gClassObjectsWhereKilled = JS_FALSE;
 static JSBool gClassObjectsWhereInited = JS_FALSE;
 
@@ -249,8 +297,9 @@ static nsModuleComponentInfo CI_nsJSIID =
     {"JSIID", 
      {0x26ecb8d0, 0x35c9, 0x11d5, { 0x90, 0xb2, 0x0, 0x10, 0xa4, 0xe7, 0x3d, 0x9a }},
      nsnull, nsnull, nsnull,nsnull, nsnull,
-     NS_CI_INTERFACE_GETTER_NAME(nsJSIID), nsnull, 
-     &NS_CLASSINFO_NAME(nsJSIID)};
+     NS_CI_INTERFACE_GETTER_NAME(nsJSIID), 
+     GetSharedScriptableHelperForJSIID, 
+     &NS_CLASSINFO_NAME(nsJSIID), 0};
 
 NS_DECL_CI_INTERFACE_GETTER(nsJSCID)
 static nsIClassInfo* NS_CLASSINFO_NAME(nsJSCID);
@@ -259,7 +308,7 @@ static nsModuleComponentInfo CI_nsJSCID =
      {0x9255b5b0, 0x35cf, 0x11d5, { 0x90, 0xb2, 0x0, 0x10, 0xa4, 0xe7, 0x3d, 0x9a }},
      nsnull, nsnull, nsnull,nsnull, nsnull,
      NS_CI_INTERFACE_GETTER_NAME(nsJSCID), nsnull, 
-     &NS_CLASSINFO_NAME(nsJSCID)};
+     &NS_CLASSINFO_NAME(nsJSCID), 0};
 
 JSBool xpc_InitJSxIDClassObjects()
 {
@@ -294,6 +343,11 @@ JSBool xpc_InitJSxIDClassObjects()
             goto return_failure;
     }
 
+    gSharedScriptableHelperForJSIID = new SharedScriptableHelperForJSIID();
+    if(!gSharedScriptableHelperForJSIID)
+        goto return_failure;
+    NS_ADDREF(gSharedScriptableHelperForJSIID);
+
     gClassObjectsWhereInited = JS_TRUE;
     return JS_TRUE;
 return_failure:
@@ -304,6 +358,7 @@ void xpc_DestroyJSxIDClassObjects()
 {
     NS_IF_RELEASE(NS_CLASSINFO_NAME(nsJSIID));
     NS_IF_RELEASE(NS_CLASSINFO_NAME(nsJSCID));
+    NS_IF_RELEASE(gSharedScriptableHelperForJSIID);
 
     gClassObjectsWhereKilled = JS_TRUE;
 }

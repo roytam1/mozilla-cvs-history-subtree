@@ -421,6 +421,7 @@ XPCNativeSet::FindMember(jsval name,
 
     *pIsLocal =
         !Member ||
+        !protoSet ||
         (protoSet != this &&
          !protoSet->MatchesSetUpToInterface(this, Interface) &&
           (!protoSet->FindMember(name, &protoMember, (PRUint16*)nsnull) ||

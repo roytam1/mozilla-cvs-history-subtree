@@ -382,14 +382,8 @@ static
 XPCWrappedNativeScope*
 GetScopeOfObject(JSContext* cx, JSObject* obj)
 {
-    JSClass* clazz;
     nsISupports* supports;
-
-#ifdef JS_THREADSAFE
-    clazz = JS_GetClass(cx, obj);
-#else
-    clazz = JS_GetClass(obj);
-#endif
+    JSClass* clazz = JS_GET_CLASS(cx, obj);
 
     if(!clazz ||
        !(clazz->flags & JSCLASS_HAS_PRIVATE) ||

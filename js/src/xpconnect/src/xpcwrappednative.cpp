@@ -53,12 +53,12 @@ PRThread* XPCWrappedNative::gMainThread = nsnull;
 static int DEBUG_TotalWrappedNativeCount;
 static int DEBUG_TotalLiveWrappedNativeCount;
 static int DEBUG_TotalMaxWrappedNativeCount;
-static int DEBUG_WrappedNativeWithSharedProtoCount;
-static int DEBUG_LiveWrappedNativeWithSharedProtoCount;
-static int DEBUG_MaxWrappedNativeWithSharedProtoCount;
-static int DEBUG_WrappedNativeWithOneOffProtoCount;
-static int DEBUG_LiveWrappedNativeWithOneOffProtoCount;
-static int DEBUG_MaxWrappedNativeWithOneOffProtoCount;
+static int DEBUG_WrappedNativeWithProtoCount;
+static int DEBUG_LiveWrappedNativeWithProtoCount;
+static int DEBUG_MaxWrappedNativeWithProtoCount;
+static int DEBUG_WrappedNativeNoProtoCount;
+static int DEBUG_LiveWrappedNativeNoProtoCount;
+static int DEBUG_MaxWrappedNativeNoProtoCount;
 static int DEBUG_WrappedNativeTotalCalls;
 static int DEBUG_WrappedNativeMethodCalls;
 static int DEBUG_WrappedNativeGetterCalls;
@@ -72,8 +72,8 @@ static PRBool  DEBUG_DumpedWrapperStats;
 static void DEBUG_TrackNewWrapper(XPCWrappedNative* wrapper)
 {
 #ifdef XPC_CHECK_WRAPPERS_AT_SHUTDOWN
-    if(wrapper->GetProto())
-        wrapper->GetProto()->GetRuntime()->DEBUG_AddWrappedNative(wrapper);
+    if(wrapper->GetRuntime())
+        wrapper->GetRuntime()->DEBUG_AddWrappedNative(wrapper);
 #endif
 #ifdef XPC_TRACK_WRAPPER_STATS
     DEBUG_TotalWrappedNativeCount++;
@@ -81,19 +81,19 @@ static void DEBUG_TrackNewWrapper(XPCWrappedNative* wrapper)
     if(DEBUG_TotalMaxWrappedNativeCount < DEBUG_TotalLiveWrappedNativeCount)
         DEBUG_TotalMaxWrappedNativeCount = DEBUG_TotalLiveWrappedNativeCount;
 
-    if(wrapper->HasSharedProto())
+    if(wrapper->HasProto())
     {
-        DEBUG_WrappedNativeWithSharedProtoCount++;
-        DEBUG_LiveWrappedNativeWithSharedProtoCount++;
-        if(DEBUG_MaxWrappedNativeWithSharedProtoCount < DEBUG_LiveWrappedNativeWithSharedProtoCount)
-            DEBUG_MaxWrappedNativeWithSharedProtoCount = DEBUG_LiveWrappedNativeWithSharedProtoCount;
+        DEBUG_WrappedNativeWithProtoCount++;
+        DEBUG_LiveWrappedNativeWithProtoCount++;
+        if(DEBUG_MaxWrappedNativeWithProtoCount < DEBUG_LiveWrappedNativeWithProtoCount)
+            DEBUG_MaxWrappedNativeWithProtoCount = DEBUG_LiveWrappedNativeWithProtoCount;
     }
     else
     {
-        DEBUG_WrappedNativeWithOneOffProtoCount++;
-        DEBUG_LiveWrappedNativeWithOneOffProtoCount++;
-        if(DEBUG_MaxWrappedNativeWithOneOffProtoCount < DEBUG_LiveWrappedNativeWithOneOffProtoCount)
-            DEBUG_MaxWrappedNativeWithOneOffProtoCount = DEBUG_LiveWrappedNativeWithOneOffProtoCount;
+        DEBUG_WrappedNativeNoProtoCount++;
+        DEBUG_LiveWrappedNativeNoProtoCount++;
+        if(DEBUG_MaxWrappedNativeNoProtoCount < DEBUG_LiveWrappedNativeNoProtoCount)
+            DEBUG_MaxWrappedNativeNoProtoCount = DEBUG_LiveWrappedNativeNoProtoCount;
     }
 #endif
 }
@@ -101,15 +101,15 @@ static void DEBUG_TrackNewWrapper(XPCWrappedNative* wrapper)
 static void DEBUG_TrackDeleteWrapper(XPCWrappedNative* wrapper)
 {
 #ifdef XPC_CHECK_WRAPPERS_AT_SHUTDOWN
-    if(wrapper->GetProto())
-        wrapper->GetProto()->GetRuntime()->DEBUG_RemoveWrappedNative(wrapper);
+    if(wrapper->GetRuntime())
+        wrapper->GetRuntime()->DEBUG_RemoveWrappedNative(wrapper);
 #endif
 #ifdef XPC_TRACK_WRAPPER_STATS
     DEBUG_TotalLiveWrappedNativeCount--;
-    if(wrapper->HasSharedProto())
-        DEBUG_LiveWrappedNativeWithSharedProtoCount--;
+    if(wrapper->HasProto())
+        DEBUG_LiveWrappedNativeWithProtoCount--;
     else
-        DEBUG_LiveWrappedNativeWithOneOffProtoCount--;
+        DEBUG_LiveWrappedNativeNoProtoCount--;
 
     int extraChunkCount = wrapper->DEBUG_CountOfTearoffChunks() - 1;
     if(extraChunkCount > DEBUG_CHUCKS_TO_COUNT)
@@ -146,22 +146,22 @@ static void DEBUG_TrackShutdownWrapper(XPCWrappedNative* wrapper)
     {
         DEBUG_DumpedWrapperStats = PR_TRUE;
         printf("%d WrappedNatives were constructed. "
-               "(%d w/ shared protos, %d w/o)\n", 
+               "(%d w/ protos, %d w/o)\n", 
                DEBUG_TotalWrappedNativeCount,
-               DEBUG_WrappedNativeWithSharedProtoCount,
-               DEBUG_WrappedNativeWithOneOffProtoCount);
+               DEBUG_WrappedNativeWithProtoCount,
+               DEBUG_WrappedNativeNoProtoCount);
         
         printf("%d WrappedNatives max alive at one time. "
-               "(%d w/ shared protos, %d w/o)\n", 
+               "(%d w/ protos, %d w/o)\n", 
                DEBUG_TotalMaxWrappedNativeCount,
-               DEBUG_MaxWrappedNativeWithSharedProtoCount,
-               DEBUG_MaxWrappedNativeWithOneOffProtoCount);
+               DEBUG_MaxWrappedNativeWithProtoCount,
+               DEBUG_MaxWrappedNativeNoProtoCount);
 
         printf("%d WrappedNatives alive now. " 
-               "(%d w/ shared protos, %d w/o)\n", 
+               "(%d w/ protos, %d w/o)\n", 
                DEBUG_TotalLiveWrappedNativeCount,
-               DEBUG_LiveWrappedNativeWithSharedProtoCount,
-               DEBUG_LiveWrappedNativeWithOneOffProtoCount);
+               DEBUG_LiveWrappedNativeWithProtoCount,
+               DEBUG_LiveWrappedNativeNoProtoCount);
 
         printf("%d calls to WrappedNatives. "
                "(%d methods, %d getters, %d setters)\n", 
@@ -170,7 +170,6 @@ static void DEBUG_TrackShutdownWrapper(XPCWrappedNative* wrapper)
                DEBUG_WrappedNativeGetterCalls,
                DEBUG_WrappedNativeSetterCalls,
                DEBUG_WrappedNativeMethodCalls);
-
 
         printf("(wrappers / tearoffs): (");
         int i;
@@ -201,8 +200,6 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
                                XPCNativeInterface* Interface,
                                XPCWrappedNative** resultWrapper)
 {
-    // XXX should support null Interface IFF the object has an nsIClassInfo?
-
     nsCOMPtr<nsISupports> identity(do_QueryInterface(Object));
     if(!identity)
     {
@@ -277,7 +274,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     }
 
     // Here we take the performance hit of checking the hashtable again in case
-    // The precreate call caused the wrapper to get created through some
+    // the preCreate call caused the wrapper to get created through some
     // interesting path (the DOM code tends to make this happen sometimes).
 
     {   // scoped lock
@@ -298,54 +295,75 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         return NS_OK;
     }
 
-    XPCWrappedNativeProto* proto;
+    XPCWrappedNativeProto* proto = nsnull;
 
-    if(info && !isClassInfo)
-    {
-        proto = XPCWrappedNativeProto::GetNewOrUsed(ccx, Scope, info, &siProto);
-    }
-    else
-    {
-        XPCNativeSet* set =
-            XPCNativeSet::GetNewOrUsed(ccx, nsnull, Interface, 0);
+    // If there is nsIClassInfo then we use a wrapper that needs a prototype.
+    // We need to get the proto before the security check below.
 
-        if(!set)
+    if(info)
+    {
+        proto = XPCWrappedNativeProto::GetNewOrUsed(ccx, Scope, info, &siProto, 
+                                                    isClassInfo);
+        if(!proto)
             return NS_ERROR_FAILURE;
-
-        proto = XPCWrappedNativeProto::BuildOneOff(ccx, Scope, set);
     }
 
-    if(!proto)
-        return NS_ERROR_FAILURE;
+    // We have to ask the security manager if it is OK to create this wrapper.
+    // We give it a place to store the policy for future use. If we have a
+    // proto then we give it that space (where it might have previously cached
+    // a its own info about this class). If this wrapper is not going to have a
+    // proto, then we use some temporary space to capture the info and then
+    // pass that to the wrapper later after the wrapper is constucted.
+
+    void* securityInfoSpace = nsnull;
+    void** pSecurityInfoSpace = proto ? 
+                proto->GetSecurityInfoAddr() : &securityInfoSpace;
 
     nsIXPCSecurityManager* sm;
        sm = ccx.GetXPCContext()->GetAppropriateSecurityManager(
                             nsIXPCSecurityManager::HOOK_CREATE_WRAPPER);
     if(sm && NS_FAILED(sm->
                 CanCreateWrapper(ccx, *Interface->GetIID(),
-                                 identity, proto->GetSecurityInfoAddr())))
+                                 identity, pSecurityInfoSpace)))
     {
         // the security manager vetoed. It should have set an exception.
         return NS_ERROR_XPC_SECURITY_MANAGER_VETO;
     }
 
-    wrapper = new XPCWrappedNative(identity, proto);
-    if(!wrapper)
+    // Now we build the wrapper (with or without a proto).
+
+    if(info)
+    {    
+        wrapper = new XPCWrappedNative(identity, proto);
+        if(!wrapper)
+        {
+            proto->Release();
+            return NS_ERROR_FAILURE;
+        }
+    }
+    else
     {
-        proto->Release();
-        return NS_ERROR_FAILURE;
+        XPCNativeSet* set =
+            XPCNativeSet::GetNewOrUsed(ccx, nsnull, Interface, 0);
+        
+        if(!set)
+            return NS_ERROR_FAILURE;
+
+        wrapper = new XPCWrappedNative(identity, Scope, set, 
+                                       securityInfoSpace);
+        if(!wrapper)
+            return NS_ERROR_FAILURE;
     }
 
     if(!wrapper->Init(ccx, parent, siWrapper))
     {
-        // If the JSObject got created then it own one of the references
+        // If the JSObject got created then it owns one of the references
         if(!wrapper->GetFlatJSObject())
             wrapper->Release();
         wrapper->Release();
         return NS_ERROR_FAILURE;
     }
 
-    // XXX allow for null Interface?
     if(!wrapper->FindTearOff(ccx, Interface))
     {
         // Second reference will be released by the FlatJSObject's finializer.
@@ -379,14 +397,12 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     if(wrapperToKill)
     {
         // Second reference will be released by the FlatJSObject's finializer.
-#ifdef DEBUG_jband
-        NS_ERROR("hey!");
-#endif
         wrapperToKill->Release();
     }
     else if(wrapper)
     {
         // Our newly created wrapper is the one that we just added to the table.
+        // All is well. Call PostCreate as necessary.
         XPCNativeScriptableInfo* si = wrapper->GetScriptableInfo();
         if(si && si->WantPostCreate())
         {
@@ -400,7 +416,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
 
     DEBUG_CheckClassInfoClaims(wrapper);
     *resultWrapper = wrapper;
-    return wrapper ? NS_OK : NS_ERROR_FAILURE;
+    return NS_OK;
 }
 
 // static
@@ -411,8 +427,6 @@ XPCWrappedNative::GetUsedOnly(XPCCallContext& ccx,
                               XPCNativeInterface* Interface,
                               XPCWrappedNative** resultWrapper)
 {
-    // XXX should support null Interface IFF the object has an nsIClassInfo?
-
     nsCOMPtr<nsISupports> identity(do_QueryInterface(Object));
     if(!identity)
         return NS_ERROR_FAILURE;
@@ -438,40 +452,70 @@ XPCWrappedNative::GetUsedOnly(XPCCallContext& ccx,
     return NS_OK;
 }
 
+// This ctor is used if this object will have a proto.
 XPCWrappedNative::XPCWrappedNative(nsISupports* aIdentity,
                                    XPCWrappedNativeProto* aProto)
-    : mProto(aProto),
+    : mScopeOrHasProtoIfNull(nsnull),
+      mMaybeProto(aProto),
       mSet(aProto->GetSet()),
       mIdentity(aIdentity),
-      mFlatJSObject(nsnull),
+      mFlatJSObject((JSObject*)JSVAL_ONE), // non-null to pass IsValid() test
       mScriptableInfo(nsnull)
 {
     NS_INIT_ISUPPORTS();
     NS_ADDREF(mIdentity);
 
-    DEBUG_TrackNewWrapper(this);
+    NS_ASSERTION(mMaybeProto, "bad ctor param");
+    NS_ASSERTION(mSet, "bad ctor param");
 
+    DEBUG_TrackNewWrapper(this);
+}
+
+// This ctor is used if this object will NOT have a proto.
+XPCWrappedNative::XPCWrappedNative(nsISupports* aIdentity,
+                                   XPCWrappedNativeScope* aScope,
+                                   XPCNativeSet* aSet,
+                                   void* SecurityInfo)
+
+    : mScopeOrHasProtoIfNull(aScope),
+      mMaybeSecurityInfo(SecurityInfo),
+      mSet(aSet),
+      mIdentity(aIdentity),
+      mFlatJSObject((JSObject*)JSVAL_ONE), // non-null to pass IsValid() test
+      mScriptableInfo(nsnull)
+{
+    NS_INIT_ISUPPORTS();
+    NS_ADDREF(mIdentity);
+
+    NS_ASSERTION(mScopeOrHasProtoIfNull, "bad ctor param");
+    NS_ASSERTION(mSet, "bad ctor param");
+
+    DEBUG_TrackNewWrapper(this);
 }
 
 XPCWrappedNative::~XPCWrappedNative()
 {
     DEBUG_TrackDeleteWrapper(this);
 
-    if(mScriptableInfo && mScriptableInfo != mProto->GetScriptableInfo())
-        delete mScriptableInfo;
+    XPCWrappedNativeProto* proto = GetProto();
 
-    if(mProto)
+
+    if(mScriptableInfo && 
+       (!HasProto() || 
+        (proto && proto->GetScriptableInfo() != mScriptableInfo)))
     {
-        Native2WrappedNativeMap* map = mProto->GetScope()->GetWrappedNativeMap();
-        {   // scoped lock
-            XPCAutoLock lock(mProto->GetScope()->GetRuntime()->GetMapLock());
-            map->Remove(this);
-        }
-
-        mProto->Release();
-        mProto = nsnull;
+        delete mScriptableInfo;
+    }
+    
+    Native2WrappedNativeMap* map = GetScope()->GetWrappedNativeMap();
+    {   // scoped lock
+        XPCAutoLock lock(GetRuntime()->GetMapLock());
+        map->Remove(this);
     }
 
+    if(proto)
+        proto->Release();
+    
     NS_IF_RELEASE(mIdentity);
 }
 
@@ -527,6 +571,60 @@ XPCWrappedNative::GatherScriptableInfo(nsISupports* obj,
 
         siWrapper->SetScriptable(helper);
         siWrapper->SetFlags(flags);
+
+        // A whole series of assertions to catch bad uses of scriptable flags on
+        // the siWrapper...
+
+        NS_ASSERTION(!(siWrapper->WantPreCreate() && 
+                        !siProto->WantPreCreate()),
+                     "Can't set WANT_PRECREATE on an instance scriptable "
+                     "without also setting it on the class scriptable");
+
+        NS_ASSERTION(!(siWrapper->DontEnumStaticProps() &&
+                        !siProto->DontEnumStaticProps() &&
+                        siProto->GetScriptable() && 
+                        !siProto->DontSharePrototype()),
+                     "Can't set DONT_ENUM_STATIC_PROPS on an instance scriptable "
+                     "without also setting it on the class scriptable (if present and shared)");
+
+        NS_ASSERTION(!(siWrapper->DontEnumQueryInterface() && 
+                        !siProto->DontEnumQueryInterface() &&
+                        siProto->GetScriptable() && 
+                        !siProto->DontSharePrototype()),
+                     "Can't set DONT_ENUM_QUERY_INTERFACE on an instance scriptable "
+                     "without also setting it on the class scriptable (if present and shared)");
+
+        NS_ASSERTION(!(siWrapper->DontAskInstanceForScriptable() && 
+                        !siProto->DontAskInstanceForScriptable()),
+                     "Can't set DONT_ASK_INSTANCE_FOR_SCRIPTABLE on an instance scriptable "
+                     "without also setting it on the class scriptable");
+
+        NS_ASSERTION(!(siWrapper->ClassInfoInterfacesOnly() && 
+                        !siProto->ClassInfoInterfacesOnly() &&
+                        siProto->GetScriptable() && 
+                        !siProto->DontSharePrototype()),
+                     "Can't set CLASSINFO_INTERFACES_ONLY on an instance scriptable "
+                     "without also setting it on the class scriptable (if present and shared)");
+
+        NS_ASSERTION(!(siWrapper->AllowPropModsDuringResolve() && 
+                        !siProto->AllowPropModsDuringResolve() &&
+                        siProto->GetScriptable() && 
+                        !siProto->DontSharePrototype()),
+                     "Can't set ALLOW_PROP_MODS_DURING_RESOLVE on an instance scriptable "
+                     "without also setting it on the class scriptable (if present and shared)");
+
+        NS_ASSERTION(!(siWrapper->AllowPropModsToPrototype() && 
+                        !siProto->AllowPropModsToPrototype() &&
+                        siProto->GetScriptable() && 
+                        !siProto->DontSharePrototype()),
+                     "Can't set ALLOW_PROP_MODS_TO_PROTOTYPE on an instance scriptable "
+                     "without also setting it on the class scriptable (if present and shared)");
+
+        NS_ASSERTION(!(siWrapper->DontSharePrototype() && 
+                        !siProto->DontSharePrototype() &&
+                        siProto->GetScriptable()),
+                     "Can't set DONT_SHARE_PROTOTYPE on an instance scriptable "
+                     "without also setting it on the class scriptable (if present and shared)");
     }
 
     return NS_OK;
@@ -551,10 +649,13 @@ XPCWrappedNative::Init(XPCCallContext& ccx, JSObject* parent,
 
     if(scriptableInfo.GetScriptable())
     {
-        XPCNativeScriptableInfo* siProto = GetProto()->GetScriptableInfo();
-        if(siProto && siProto->GetScriptable() == scriptableInfo.GetScriptable())
-            mScriptableInfo = siProto;
-        else
+        if(HasProto())
+        {
+            XPCNativeScriptableInfo* siProto = GetProto()->GetScriptableInfo();
+            if(siProto && siProto->GetScriptable() == scriptableInfo.GetScriptable())
+                mScriptableInfo = siProto;
+        }
+        if(!mScriptableInfo)
         {
             mScriptableInfo = scriptableInfo.Clone();
             if(!mScriptableInfo || !mScriptableInfo->BuildJSClass())
@@ -564,8 +665,8 @@ XPCWrappedNative::Init(XPCCallContext& ccx, JSObject* parent,
             // This allows the proto's JSClass callbacks to do the right things
             // (like respecting the DONT_ENUM_STATIC_PROPS flag) w/o requiring
             // scriptable objects to have an nsIClassInfo.
-            if(!HasSharedProto())
-                mProto->SetScriptableInfo(mScriptableInfo);
+            if(HasProto() && !HasSharedProto())
+                GetProto()->SetScriptableInfo(mScriptableInfo);
         }
     }
     XPCNativeScriptableInfo* si = mScriptableInfo;
@@ -586,9 +687,11 @@ XPCWrappedNative::Init(XPCCallContext& ccx, JSObject* parent,
                  jsclazz->convert &&
                  jsclazz->finalize, "bad class");
 
-    mFlatJSObject = JS_NewObject(ccx, jsclazz,
-                                 mProto->GetJSProtoObject(),
-                                 parent);
+    JSObject* protoJSObject = HasProto() ?
+                                GetProto()->GetJSProtoObject() :
+                                GetScope()->GetPrototypeJSObject();
+
+    mFlatJSObject = JS_NewObject(ccx, jsclazz, protoJSObject, parent);
     if(!mFlatJSObject || !JS_SetPrivate(ccx, mFlatJSObject, this))
         return JS_FALSE;
 
@@ -610,10 +713,9 @@ XPCWrappedNative::Init(XPCCallContext& ccx, JSObject* parent,
     }
     mThread = PR_GetCurrentThread();
 
-    if(mProto->ClassIsMainThreadOnly() && gMainThread != mThread)
+    if(HasProto() && GetProto()->ClassIsMainThreadOnly() && gMainThread != mThread)
         DEBUG_ReportWrapperThreadSafetyError(ccx,
             "MainThread only wrapper created on the wrong thread", this);
-
 #endif
 
     return JS_TRUE;
@@ -752,6 +854,7 @@ XPCWrappedNative::FlatJSObjectFinalized(JSContext *cx, JSObject *obj)
         }
     }
 
+    //This makes IsValid return false from now on...
     mFlatJSObject = nsnull;
     Release();
 }
@@ -778,9 +881,12 @@ XPCWrappedNative::SystemIsBeingShutDown(XPCCallContext& ccx)
     // may hold a dynamically allocated JSClass that the JS engine can
     // reference when manipulating the (leaked) mFlatJSObject. That would crash!
 
-    mProto->SystemIsBeingShutDown(ccx);
-    mProto->Release();
-    mProto = nsnull;
+    if(HasProto())
+    {
+        mMaybeProto->SystemIsBeingShutDown(ccx);
+        mMaybeProto->Release();
+        mMaybeProto = nsnull;
+    }
 
     // cleanup the tearoffs...
 
@@ -844,15 +950,22 @@ XPCWrappedNative::ReparentWrapperIfFound(XPCCallContext& ccx,
     {
         // Oh, so now we need to move the wrapper to a different scope.
 
-        XPCWrappedNativeProto* oldProto = wrapper->GetProto();
-        XPCWrappedNativeProto* newProto =
-            XPCWrappedNativeProto::GetNewOrUsed(ccx, aNewScope,
-                                                oldProto->GetClassInfo(),
-                                                oldProto->GetScriptableInfo());
-        if(!newProto)
+        XPCWrappedNativeProto* oldProto = nsnull;
+        XPCWrappedNativeProto* newProto = nsnull;
+
+        if(wrapper->HasProto())
         {
-            NS_RELEASE(wrapper);
-            return NS_ERROR_FAILURE;
+            oldProto = wrapper->GetProto();
+            newProto =
+                XPCWrappedNativeProto::GetNewOrUsed(ccx, aNewScope,
+                                                    oldProto->GetClassInfo(),
+                                                    oldProto->GetScriptableInfo(),
+                                                    !oldProto->IsShared());
+            if(!newProto)
+            {
+                NS_RELEASE(wrapper);
+                return NS_ERROR_FAILURE;
+            }
         }
 
         Native2WrappedNativeMap* oldMap = aOldScope->GetWrappedNativeMap();
@@ -864,7 +977,8 @@ XPCWrappedNative::ReparentWrapperIfFound(XPCCallContext& ccx,
             // We only try to fixup the __proto__ JSObject if the wrapper
             // is directly using that of its XPCWrappedNativeProto.
 
-            if(JS_GetPrototype(ccx, wrapper->GetFlatJSObject()) ==
+            if(wrapper->HasProto() &&
+               JS_GetPrototype(ccx, wrapper->GetFlatJSObject()) ==
                oldProto->GetJSProtoObject())
             {
                 if(!JS_SetPrototype(ccx, wrapper->GetFlatJSObject(),
@@ -884,12 +998,14 @@ XPCWrappedNative::ReparentWrapperIfFound(XPCCallContext& ccx,
 
             oldMap->Remove(wrapper);
 
-            wrapper->mProto = newProto;
+            if(wrapper->HasProto())
+                wrapper->mMaybeProto = newProto;
 
             if(wrapper->mScriptableInfo == oldProto->GetScriptableInfo())
                 wrapper->mScriptableInfo = newProto->GetScriptableInfo();
 
-            oldProto->Release();
+            if(wrapper->HasProto())
+                oldProto->Release();
 
 #ifdef DEBUG
             XPCWrappedNative* prevWrapper = newMap->Add(wrapper);
@@ -1025,7 +1141,7 @@ XPCWrappedNative::ExtendSet(XPCCallContext& ccx, XPCNativeInterface* aInterface)
 
         mSet = newSet;
 
-        DEBUG_ReportShadowedMembers(newSet, GetProto());
+        DEBUG_ReportShadowedMembers(newSet, this, GetProto());
     }
     return JS_TRUE;
 }
@@ -1825,7 +1941,8 @@ NS_IMETHODIMP XPCWrappedNative::GetNative(nsISupports * *aNative)
 /* readonly attribute JSObjectPtr JSObjectPrototype; */
 NS_IMETHODIMP XPCWrappedNative::GetJSObjectPrototype(JSObject * *aJSObjectPrototype)
 {
-    *aJSObjectPrototype = mProto->GetJSProtoObject();
+    *aJSObjectPrototype = HasProto() ? 
+                GetProto()->GetJSProtoObject() : GetFlatJSObject();
     return NS_OK;
 }
 
@@ -1834,7 +1951,7 @@ NS_IMETHODIMP XPCWrappedNative::GetXPConnect(nsIXPConnect * *aXPConnect)
 {
     if(IsValid())
     {
-        nsIXPConnect* temp = GetProto()->GetScope()->GetRuntime()->GetXPConnect();
+        nsIXPConnect* temp = GetRuntime()->GetXPConnect();
         NS_IF_ADDREF(temp);
         *aXPConnect = temp;
     }
@@ -1883,10 +2000,15 @@ NS_IMETHODIMP XPCWrappedNative::DebugDump(PRInt16 depth)
     XPC_LOG_ALWAYS(("XPCWrappedNative @ %x with mRefCnt = %d", this, mRefCnt));
     XPC_LOG_INDENT();
 
-        if(depth && mProto)
-            mProto->DebugDump(depth);
+        if(HasProto())
+        {
+            if(depth && mMaybeProto)
+                mMaybeProto->DebugDump(depth);
+            else
+                XPC_LOG_ALWAYS(("mMaybeProto @ %x", mMaybeProto));
+        }
         else
-            XPC_LOG_ALWAYS(("mProto @ %x", mProto));
+            XPC_LOG_ALWAYS(("mScopeOrHasProtoIfNull @ %x", mScopeOrHasProtoIfNull));
 
         if(depth && mSet)
             mSet->DebugDump(depth);
@@ -2130,6 +2252,7 @@ static void DEBUG_CheckClassInfoClaims(XPCWrappedNative* wrapper)
 #ifdef XPC_REPORT_SHADOWED_WRAPPED_NATIVE_MEMBERS
 static void DEBUG_PrintShadowObjectInfo(const char* header,
                                         XPCNativeSet* set,
+                                        XPCWrappedNative* wrapper,
                                         XPCWrappedNativeProto* proto)
 
 {
@@ -2138,28 +2261,28 @@ static void DEBUG_PrintShadowObjectInfo(const char* header,
 
     printf("   XPCNativeSet @ 0x%p for the class:\n", set);
 
-    nsIClassInfo* clsInfo = proto->GetClassInfo();
+    char* className = nsnull;
+    char* contractID = nsnull;
+
+    nsIClassInfo* clsInfo = proto ? proto->GetClassInfo() : nsnull;
     if(clsInfo)
-    {
-        char* className = nsnull;
-        char* contractID = nsnull;
-
         clsInfo->GetContractID(&contractID);
-        if(proto->GetScriptableInfo())
-        {
-            proto->GetScriptableInfo()->GetScriptable()->
-                GetClassName(&className);
-        }
+    
+    XPCNativeScriptableInfo* si = wrapper ? 
+            wrapper->GetScriptableInfo() :
+            proto->GetScriptableInfo();    
+    if(si)
+        si->GetScriptable()->GetClassName(&className);
 
-        printf("   classname: %s \n"
-               "   contractid: %s \n",
-               className ? className : "<unknown>",
-               contractID ? contractID : "<unknown>");
-        if(className)
-            nsMemory::Free(className);
-        if(contractID)
-            nsMemory::Free(contractID);
-    }
+    printf("   classname: %s \n"
+           "   contractid: %s \n",
+           className ? className : "<unknown>",
+           contractID ? contractID : "<unknown>");
+
+    if(className)
+        nsMemory::Free(className);
+    if(contractID)
+        nsMemory::Free(contractID);
 
     printf("   claims to implement interfaces:\n");
 
@@ -2187,11 +2310,12 @@ static void ReportSingleMember(jsval ifaceName,
 static void ShowHeader(JSBool* printedHeader,
                        const char* header,
                        XPCNativeSet* set,
+                       XPCWrappedNative* wrapper,
                        XPCWrappedNativeProto* proto)
 {
     if(!*printedHeader)
     {
-        DEBUG_PrintShadowObjectInfo(header, set, proto);
+        DEBUG_PrintShadowObjectInfo(header, set, wrapper, proto);
         *printedHeader = JS_TRUE;
     }
 
@@ -2278,10 +2402,16 @@ static JSBool MembersAreTheSame(XPCNativeInterface* iface1,
 }
 
 void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
+                                 XPCWrappedNative* wrapper,
                                  XPCWrappedNativeProto* proto)
 {
-    if(!set || set->GetInterfaceCount() < 2)
+    // NOTE: Either wrapper or proto could be null...
+
+    if(!(proto || wrapper) || !set || set->GetInterfaceCount() < 2)
         return;
+
+    NS_ASSERTION(proto || wrapper, "bad param!");
+    XPCJSRuntime* rt = proto ? proto->GetRuntime() : wrapper->GetRuntime();
 
     // a quicky hack to avoid reporting info for the same set too often
     static int nextSeenSet = 0;
@@ -2291,16 +2421,21 @@ void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
         if(set == SeenSets[seen])
             return;
     SeenSets[nextSeenSet] = set;
+
 #ifdef off_DEBUG_jband
+    static int seenCount = 0;
     printf("--- adding SeenSets[%d] = 0x%p\n", nextSeenSet, set);
-    DEBUG_PrintShadowObjectInfo(nsnull, set, proto);
+    DEBUG_PrintShadowObjectInfo(nsnull, set, wrapper, proto);
 #endif
     int localNext = nextSeenSet+1;
     nextSeenSet = localNext < MAX_SEEN_SETS ? localNext : 0;
 
+    XPCNativeScriptableInfo* si = wrapper ? 
+            wrapper->GetScriptableInfo() :
+            proto->GetScriptableInfo();
 
     // We just want to skip some classes...
-    if(proto->GetScriptableInfo())
+    if(si)
     {
         // Add any classnames to skip to this (null terminated) array...
         static const char* skipClasses[] = {
@@ -2310,7 +2445,7 @@ void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
 
         PRBool quit = JS_FALSE;
         char* className = nsnull;
-        proto->GetScriptableInfo()->GetScriptable()->GetClassName(&className);
+        si->GetScriptable()->GetClassName(&className);
         if(className)
         {
             for(const char** name = skipClasses; *name; name++)
@@ -2332,8 +2467,7 @@ void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
 
     JSBool printedHeader = JS_FALSE;
 
-    jsval QIName = proto->GetRuntime()->
-        GetStringJSVal(XPCJSRuntime::IDX_QUERY_INTERFACE);
+    jsval QIName = rt->GetStringJSVal(XPCJSRuntime::IDX_QUERY_INTERFACE);
 
     PRUint16 ifaceCount = set->GetInterfaceCount();
     PRUint16 i, j, k, m;
@@ -2348,7 +2482,7 @@ void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
             XPCNativeInterface* ifaceInner = set->GetInterfaceAt(k);
             if(ifaceInner == ifaceOuter)
             {
-                ShowHeader(&printedHeader, header, set, proto);
+                ShowHeader(&printedHeader, header, set, wrapper, proto);
                 ShowDuplicateInterface(ifaceOuter->GetName());
             }
         }
@@ -2386,7 +2520,7 @@ void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
 
                 if(ifaceInnerName == memberOuterName)
                 {
-                    ShowHeader(&printedHeader, header, set, proto);
+                    ShowHeader(&printedHeader, header, set, wrapper, proto);
                     ShowOneShadow(ifaceInnerName, JSVAL_NULL,
                                   ifaceOuterName, memberOuterName);
                 }
@@ -2405,7 +2539,7 @@ void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
                        !MembersAreTheSame(ifaceOuter, j, ifaceInner, m))
 
                     {
-                        ShowHeader(&printedHeader, header, set, proto);
+                        ShowHeader(&printedHeader, header, set, wrapper, proto);
                         ShowOneShadow(ifaceOuterName, memberOuterName,
                                       ifaceInnerName, memberInnerName);
                     }
@@ -2442,12 +2576,12 @@ void DEBUG_ReportWrapperThreadSafetyError(XPCCallContext& ccx,
 void DEBUG_CheckWrapperThreadSafety(const XPCWrappedNative* wrapper)
 {
     XPCWrappedNativeProto* proto = wrapper->GetProto();
-    if(proto->ClassIsThreadSafe())
+    if(proto && proto->ClassIsThreadSafe())
         return;
 
     PRThread* currentThread = PR_GetCurrentThread();
 
-    if(proto->ClassIsMainThreadOnly())
+    if(proto && proto->ClassIsMainThreadOnly())
     {
         if(currentThread != wrapper->gMainThread)
         {

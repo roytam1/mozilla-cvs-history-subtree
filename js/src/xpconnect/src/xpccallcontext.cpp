@@ -169,7 +169,9 @@ XPCCallContext::SetName(jsval name)
         mSet = mWrapper->GetSet();
 
         if(mSet->FindMember(name, &mMember, &mInterface,
-                            mWrapper->GetProto()->GetSet(),
+                            mWrapper->HasProto() ? 
+                                mWrapper->GetProto()->GetSet() : 
+                                nsnull,
                             &mStaticMemberIsLocal))
         {
             if(mMember && !mMember->IsConstant())

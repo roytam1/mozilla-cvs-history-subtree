@@ -37,10 +37,6 @@
 
 #include "xpcprivate.h"
 
-#ifdef off_DEBUG_jband
-#define JS_HAS_RESERVED_SLOTS
-#endif
-
 /***************************************************************************/
 // XPCNativeMember
 
@@ -85,8 +81,6 @@ XPCNativeMember::GetCallInfo(XPCCallContext& ccx,
     fun = (JSFunction*) JS_GetPrivate(ccx, funobj);
     realFunObj = JS_GetFunctionObject(fun);
 
-#ifdef JS_HAS_RESERVED_SLOTS
-
     jsval ifaceVal;
     jsval memberVal;
 
@@ -101,43 +95,6 @@ XPCNativeMember::GetCallInfo(XPCCallContext& ccx,
     *pMember = (XPCNativeMember*) JSVAL_TO_PRIVATE(memberVal);
 
     return JS_TRUE;
-
-#else
-    jsid id;
-    jsval val;
-
-    id = ccx.GetRuntime()->GetStringID(XPCJSRuntime::IDX_CALLABLE_INFO_PROP_NAME);
-
-    if(OBJ_GET_PROPERTY(ccx, realFunObj, id, &val) && JSVAL_IS_INT(val))
-    {
-        XPCCallableInfo* ci = (XPCCallableInfo*) JSVAL_TO_PRIVATE(val);
-        if(ci)
-        {
-            *pInterface = ci->GetInterface();
-            *pMember = ci->GetMember();
-            return JS_TRUE;
-        }
-    }
-
-    return JS_FALSE;
-#endif
-}
-
-void
-XPCNativeMember::CleanupCallableInfo(JSContext* cx, XPCJSRuntime* rt,
-                                     JSObject* funobj)
-{
-#ifndef JS_HAS_RESERVED_SLOTS
-    jsid id;
-    jsval val;
-
-    // We know this must be the *real* function object - not a clone.
-
-    id = rt->GetStringID(XPCJSRuntime::IDX_CALLABLE_INFO_PROP_NAME);
-
-    if(OBJ_GET_PROPERTY(cx, funobj, id, &val) && JSVAL_IS_INT(val))
-        delete ((XPCCallableInfo*) JSVAL_TO_PRIVATE(val));
-#endif
 }
 
 JSBool
@@ -218,43 +175,13 @@ XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
 
     mVal = OBJECT_TO_JSVAL(funobj);
 
-#ifdef JS_HAS_RESERVED_SLOTS
-
     if(!JS_SetReservedSlot(ccx, funobj, 0, PRIVATE_TO_JSVAL(iface))||
        !JS_SetReservedSlot(ccx, funobj, 1, PRIVATE_TO_JSVAL(this)))
         return JS_FALSE;
-#else
-
-    jsid id = ccx.GetRuntime()->
-        GetStringID(XPCJSRuntime::IDX_CALLABLE_INFO_PROP_NAME);
-
-    XPCCallableInfo* ci = new XPCCallableInfo(iface, this);
-
-    if(!ci)
-        return JS_FALSE;
-
-    if(!OBJ_DEFINE_PROPERTY(cx, funobj, id, PRIVATE_TO_JSVAL(ci),
-                            nsnull, nsnull,
-                            JSPROP_READONLY|JSPROP_PERMANENT, nsnull))
-    {
-        delete ci;
-        return JS_FALSE;
-    }
-#endif
 
     mFlags |= RESOLVED;
 
     return JS_TRUE;
-}
-
-
-void
-XPCNativeMember::Cleanup(JSContext* cx, XPCJSRuntime* rt)
-{
-#ifndef JS_HAS_RESERVED_SLOTS
-    if(IsResolved() && !JSVAL_IS_PRIMITIVE(mVal))
-        CleanupCallableInfo(cx, rt, JSVAL_TO_OBJECT(mVal));
-#endif
 }
 
 /***************************************************************************/
@@ -415,12 +342,17 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
     if(NS_FAILED(aInfo->IsScriptable(&canScript)) || !canScript)
         return nsnull;
 
-    if(!nsXPConnect::IsISupportsDescendant(aInfo))
-        return nsnull;
-
     if(NS_FAILED(aInfo->GetMethodCount(&methodCount)) ||
        NS_FAILED(aInfo->GetConstantCount(&constCount)))
         return nsnull;
+
+    // If the interface does not have nsISupports in its inheritance chain
+    // then we know we can't reflect its methods. However, some interfaces that
+    // are used just to reflect constants are declared this way. We need to
+    // go ahead and build the thing. But, we'll ignore whatever methods it may 
+    // have.
+    if(!nsXPConnect::IsISupportsDescendant(aInfo))
+        methodCount = 0;
 
     totalCount = methodCount + constCount;
 
@@ -558,11 +490,6 @@ void
 XPCNativeInterface::DestroyInstance(JSContext* cx, XPCJSRuntime* rt,
                                     XPCNativeInterface* inst)
 {
-    int count = (int) inst->mMemberCount;
-    XPCNativeMember* cur = inst->mMembers;
-    for(int i = 0; i < count; i++, cur++)
-        cur->Cleanup(cx, rt);
-
     inst->~XPCNativeInterface();
     delete [] (char*) inst;
 }

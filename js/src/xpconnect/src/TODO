@@ -1,8 +1,10 @@
 /* jband - 03/06/01 - Stuff to do soon */
 
 - FIX these things:
+    - cleanup and land wrappers w/o protos fix
+    - add assertions for scriptable flags on instance that need class scriptable
+    - use reserved slots for functions.
     ! FIX resolve in setProperty brendan bug 72354
-    ! FIX to only share protos if scriptable flag says so.
     - FIX nested enumerate with scriptable helper
     - FIX xpccomponets.cpp use of scriptable to deal better with prototype use
 
@@ -19,6 +21,7 @@
     - VERIFY that scriptable flags are being honored
     - VERIFY that we honor nsIClassInfo flags
     - VERIFY cleanup of unused stuff
+    - VERIFY only share protos if scriptable flag says so.
 
 - FOORPRINT & PERFORMANCE
     ? look into optional hashtable in interface sets

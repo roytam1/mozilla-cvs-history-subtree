@@ -139,12 +139,7 @@ XPCConvert::IsMethodReflectable(const nsXPTMethodInfo& info)
 static JSBool
 GetISupportsFromJSObject(JSContext* cx, JSObject* obj, nsISupports** iface)
 {
-    JSClass* jsclass =
-#ifdef JS_THREADSAFE
-            JS_GetClass(cx, obj);
-#else
-            JS_GetClass(obj);
-#endif
+    JSClass* jsclass = JS_GET_CLASS(cx, obj);
     NS_ASSERTION(jsclass, "obj has no class");
     if(jsclass &&
        (jsclass->flags & JSCLASS_HAS_PRIVATE) &&

@@ -417,14 +417,13 @@ nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext, nsISupports
 
     scope->SetGlobal(ccx, globalJSObj);
 
-    XPCWrappedNativeProto* proto = wrapper->GetProto();
-    if(!proto)
-        return UnexpectedFailure(NS_ERROR_FAILURE);
-
-    JSObject* protoJSObject = proto->GetJSProtoObject();
+    JSObject* protoJSObject = wrapper->HasProto() ? 
+                                    wrapper->GetProto()->GetJSProtoObject() :
+                                    globalJSObj;
     if(protoJSObject)
     {
-        JS_SetParent(aJSContext, protoJSObject, globalJSObj);
+        if(protoJSObject != globalJSObj)
+            JS_SetParent(aJSContext, protoJSObject, globalJSObj);
         JS_SetPrototype(aJSContext, protoJSObject, scope->GetPrototypeJSObject());
     }
 

@@ -149,9 +149,10 @@
 
 #ifdef XPC_REPORT_SHADOWED_WRAPPED_NATIVE_MEMBERS
 void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
+                                 XPCWrappedNative* wrapper,
                                  XPCWrappedNativeProto* proto);
 #else
-#define DEBUG_ReportShadowedMembers(set, proto) ((void)0)
+#define DEBUG_ReportShadowedMembers(set, wrapper, proto) ((void)0)
 #endif
 
 #ifdef XPC_CHECK_WRAPPER_THREADSAFETY
@@ -472,7 +473,6 @@ private:
     IID2ThisTranslatorMap*   mThisTranslatorMap;
     XPCLock* mMapLock;
     nsVoidArray mWrappedJSToReleaseArray;
-
 };
 
 /***************************************************************************/
@@ -1777,20 +1777,15 @@ public:
     /* default ctor - leave random contents */
     XPCNativeMember() {}
     ~XPCNativeMember() {}
-
-    void Cleanup(JSContext* cx, XPCJSRuntime* rt);
-
+    
     void DealWithDyingGCThings(JSContext* cx, XPCJSRuntime* rt)
         {if(IsResolved() && JSVAL_IS_GCTHING(mVal) &&
            JS_IsAboutToBeFinalized(cx, JSVAL_TO_GCTHING(mVal)))
-           {Cleanup(cx, rt); mVal = JSVAL_NULL; mFlags &= ~RESOLVED;}}
+           {mVal = JSVAL_NULL; mFlags &= ~RESOLVED;}}
 
 private:
     JSBool IsResolved() const {return mFlags & RESOLVED;}
     JSBool Resolve(XPCCallContext& ccx, XPCNativeInterface* iface);
-
-    void   CleanupCallableInfo(JSContext* cx, XPCJSRuntime* rt,
-                               JSObject* funobj);
 
     enum {
         RESOLVED    = 0x01,
@@ -2043,6 +2038,7 @@ public:
     JSBool ClassInfoInterfacesOnly()      GET_IT(CLASSINFO_INTERFACES_ONLY)
     JSBool AllowPropModsDuringResolve()   GET_IT(ALLOW_PROP_MODS_DURING_RESOLVE)
     JSBool AllowPropModsToPrototype()     GET_IT(ALLOW_PROP_MODS_TO_PROTOTYPE)
+    JSBool DontSharePrototype()           GET_IT(DONT_SHARE_PROTOTYPE)
 
 #undef GET_IT
 
@@ -2075,28 +2071,38 @@ public:
     GetNewOrUsed(XPCCallContext& ccx,
                  XPCWrappedNativeScope* Scope,
                  nsIClassInfo* ClassInfo,
-                 const XPCNativeScriptableInfo* scriptableInfo);
+                 const XPCNativeScriptableInfo* ScriptableInfo,
+                 JSBool ForceNoSharing);
 
-    static XPCWrappedNativeProto*
-    BuildOneOff(XPCCallContext& ccx,
-                XPCWrappedNativeScope* Scope,
-                XPCNativeSet* Set);
+    XPCWrappedNativeScope*   
+    GetScope()   const {return mScope;}
+    
+    XPCJSRuntime*            
+    GetRuntime() const {return mScope->GetRuntime();}
 
-    XPCWrappedNativeScope*   GetScope()   const {return mScope;}
-    XPCJSRuntime*            GetRuntime() const {return mScope->GetRuntime();}
+    JSObject*                
+    GetJSProtoObject() const {return mJSProtoObject;}
+    
+    nsIClassInfo*            
+    GetClassInfo()     const {return mClassInfo;}
+    
+    XPCNativeSet*            
+    GetSet()           const {return mSet;}
 
-    JSObject*                GetJSProtoObject() const {return mJSProtoObject;}
-    nsIClassInfo*            GetClassInfo()     const {return mClassInfo;}
-    XPCNativeSet*            GetSet()           const {return mSet;}
+    XPCNativeScriptableInfo* 
+    GetScriptableInfo()   {return mScriptableInfo;}
+    
+    void**                   
+    GetSecurityInfoAddr() {return &mSecurityInfo;}
 
-    XPCNativeScriptableInfo* GetScriptableInfo()   {return mScriptableInfo;}
-    void**                   GetSecurityInfoAddr() {return &mSecurityInfo;}
+    JSUint32                 
+    GetClassInfoFlags() const {return mClassInfoFlags;}
 
-    JSUint32                 GetClassInfoFlags() const {return mClassInfoFlags;}
-
-    JSBool                   IsShared() const {return nsnull != mClassInfo.get();}
-    void                     AddRef();
-    void                     Release();
+    void 
+    AddRef();
+    
+    void 
+    Release();
 
 #ifdef GET_IT
 #undef GET_IT
@@ -2107,8 +2113,14 @@ public:
     JSBool ClassIsThreadSafe()          GET_IT(THREADSAFE)
     JSBool ClassIsMainThreadOnly()      GET_IT(MAIN_THREAD_ONLY)
     JSBool ClassIsDOMObject()           GET_IT(DOM_OBJECT)
+    JSBool ClassIsPluginObject()        GET_IT(PLUGIN_OBJECT)
 
 #undef GET_IT
+
+#define XPC_PROTO_DONT_SHARE 0x80000000 // only high bit of 32 is set
+
+    JSBool                   
+    IsShared() const {return !(mClassInfoFlags & XPC_PROTO_DONT_SHARE);}
 
     XPCLock* GetLock() const
         {return ClassIsThreadSafe() ? GetRuntime()->GetMapLock() : nsnull;}
@@ -2136,6 +2148,7 @@ protected:
     // hide ctor and dtor
     XPCWrappedNativeProto(XPCWrappedNativeScope* Scope,
                           nsIClassInfo* ClassInfo,
+                          PRUint32 ClassInfoFlags,
                           XPCNativeSet* Set);
 
     ~XPCWrappedNativeProto();
@@ -2152,7 +2165,7 @@ private:
     XPCWrappedNativeScope*   mScope;
     JSObject*                mJSProtoObject;
     nsCOMPtr<nsIClassInfo>   mClassInfo;
-    JSUint32                 mClassInfoFlags;
+    PRUint32                 mClassInfoFlags;
     XPCNativeSet*            mSet;
     void*                    mSecurityInfo;
     XPCNativeScriptableInfo* mScriptableInfo;
@@ -2210,13 +2223,71 @@ private:
     XPCWrappedNativeTearOffChunk* mNextChunk;
 };
 
+
 class XPCWrappedNative : public nsIXPConnectWrappedNative
 {
 public:
-
     NS_DECL_ISUPPORTS
     NS_DECL_NSIXPCONNECTJSOBJECTHOLDER
     NS_DECL_NSIXPCONNECTWRAPPEDNATIVE
+
+    JSBool 
+    IsValid() const {return nsnull != mFlatJSObject;}
+
+    JSBool                 
+    HasProto()          const {return !mScopeOrHasProtoIfNull;}
+    
+    XPCWrappedNativeProto* 
+    GetProto()          const {return HasProto() ? mMaybeProto : nsnull;}
+    
+    nsISupports*           
+    GetIdentityObject() const {return mIdentity;}
+    
+    JSObject*              
+    GetFlatJSObject()   const {return mFlatJSObject;}
+
+    XPCWrappedNativeScope* 
+    GetScope() const { return HasProto() ? 
+                              mMaybeProto->GetScope() : mScopeOrHasProtoIfNull;}
+
+    XPCLock* 
+    GetLock() const {return IsValid() && HasProto() ? 
+                                mMaybeProto->GetLock() : nsnull;}
+
+    XPCNativeSet* 
+    GetSet() const {XPCAutoLock al(GetLock()); return mSet;}
+
+private:
+    void 
+    SetSet(XPCNativeSet* set) {XPCAutoLock al(GetLock()); mSet = set;}
+public:
+
+    XPCNativeScriptableInfo* 
+    GetScriptableInfo() const {return mScriptableInfo;}
+    
+    nsIXPCScriptable*      // call this wrong and you deserve to crash
+    GetScriptable() const  {return mScriptableInfo->GetScriptable();}
+
+    void** 
+    GetSecurityInfoAddr() {return HasProto() ? 
+                                    mMaybeProto->GetSecurityInfoAddr() :
+                                    &mMaybeSecurityInfo;}
+
+    nsIClassInfo* 
+    GetClassInfo() const {return IsValid() && HasProto() ? 
+                            mMaybeProto->GetClassInfo() : nsnull;}
+
+    JSBool 
+    HasSharedProto() const {return IsValid() && HasProto() && 
+                            mMaybeProto->IsShared();}
+
+    JSBool 
+    HasMutatedSet() const {return IsValid() && 
+                                  (!HasProto() || 
+                                   GetSet() != mMaybeProto->GetSet());}
+
+    XPCJSRuntime* 
+    GetRuntime() const {return GetScope() ? GetScope()->GetRuntime() : nsnull;}
 
     static nsresult
     GetNewOrUsed(XPCCallContext& ccx,
@@ -2245,33 +2316,6 @@ public:
                            JSObject* aNewParent,
                            nsISupports* aCOMObj,
                            XPCWrappedNative** aWrapper);
-
-    XPCWrappedNativeProto* GetProto()          const {return mProto;}
-    nsISupports*           GetIdentityObject() const {return mIdentity;}
-    JSObject*              GetFlatJSObject()   const {return mFlatJSObject;}
-
-    XPCNativeSet* GetSet() const
-        {XPCAutoLock al(GetLock()); return mSet;}
-
-private:
-    void SetSet(XPCNativeSet* set)
-        {XPCAutoLock al(GetLock()); mSet = set;}
-public:
-
-    void** GetSecurityInfoAddr() const {return mProto->GetSecurityInfoAddr();}
-    nsIClassInfo* GetClassInfo() const {return mProto->GetClassInfo();}
-
-    XPCLock* GetLock() const {return mProto->GetLock();}
-
-    // XXX the rules may change here...
-    JSBool IsValid() const {return nsnull != mFlatJSObject;}
-    JSBool HasSharedProto() const {return GetProto()->IsShared();}
-    XPCWrappedNativeScope* GetScope() const {return GetProto()->GetScope();}
-
-    JSBool HasMutatedSet() const {return GetSet() != GetProto()->GetSet();}
-
-    XPCNativeScriptableInfo* GetScriptableInfo() const {return mScriptableInfo;}
-    nsIXPCScriptable* GetScriptable() const  {return mScriptableInfo->GetScriptable();}
 
     void FlatJSObjectFinalized(JSContext *cx, JSObject *obj);
 
@@ -2317,11 +2361,14 @@ public:
                                                 XPCNativeInterface* aInterface,
                                                 JSBool needJSObject = JS_FALSE);
 
-    void MarkSets() const {mSet->Mark(); GetProto()->MarkSet();}
+    void 
+    MarkSets() const 
+        {mSet->Mark(); if(HasProto()){mMaybeProto->MarkSet();}}
 
 #ifdef DEBUG
     void ASSERT_SetsNotMarked() const
-        {mSet->ASSERT_NotMarked(); GetProto()->ASSERT_SetNotMarked();}
+        {mSet->ASSERT_NotMarked(); 
+         if(HasProto()){mMaybeProto->ASSERT_SetNotMarked();}}
 
     int DEBUG_CountOfTearoffChunks() const
         {int i = 0; const XPCWrappedNativeTearOffChunk* to;
@@ -2337,8 +2384,17 @@ public:
     // Make ctor and dtor protected (rather than private) to placate nsCOMPtr.
 protected:
     XPCWrappedNative(); // not implemented
+
+    // This ctor is used if this object will have a proto.
     XPCWrappedNative(nsISupports* aIdentity,
                      XPCWrappedNativeProto* aProto);
+
+    // This ctor is used if this object will NOT have a proto.
+    XPCWrappedNative(nsISupports* aIdentity,
+                     XPCWrappedNativeScope* aScope,
+                     XPCNativeSet* aSet,
+                     void* SecurityInfo);
+
     virtual ~XPCWrappedNative();
 
 private:
@@ -2360,16 +2416,17 @@ private:
                                          XPCNativeScriptableInfo* siProto,
                                          XPCNativeScriptableInfo* siWrapper);
 
-    XPCJSRuntime* GetRuntime() const {return mProto->GetScope()->GetRuntime();}
-
 private:
-    XPCWrappedNativeProto* mProto;
-    XPCNativeSet*          mSet;
-    nsISupports*           mIdentity;
-    JSObject*              mFlatJSObject;
-
-    XPCNativeScriptableInfo* mScriptableInfo;
-
+    XPCWrappedNativeScope*       mScopeOrHasProtoIfNull;
+    union 
+    {
+        XPCWrappedNativeProto*   mMaybeProto;
+        void*                    mMaybeSecurityInfo;
+    };
+    XPCNativeSet*                mSet;
+    nsISupports*                 mIdentity;
+    JSObject*                    mFlatJSObject;
+    XPCNativeScriptableInfo*     mScriptableInfo;
     XPCWrappedNativeTearOffChunk mFirstChunk;
 
 #ifdef XPC_CHECK_WRAPPER_THREADSAFETY
