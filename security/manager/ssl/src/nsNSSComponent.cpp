@@ -61,7 +61,7 @@
 #include "ocsp.h"
 #include "cms.h"
 extern "C" {
-#include "pkcs11.h"
+/*#include "pkcs11.h" */
 #include "pkcs12.h"
 #include "p12plcy.h"
 }
@@ -543,7 +543,7 @@ nsNSSComponent::InitializeNSS()
   rv = profilePath->GetPath(getter_Copies(profileStr));
   if (NS_FAILED(rv)) 
     return rv;
-  
+ 
   if (NSS_InitReadWrite(profileStr) != SECSuccess) {
     return NS_ERROR_ABORT;
   }
@@ -692,8 +692,7 @@ static PRBool DecryptionAllowedCallback(SECAlgorithmID *algid,
   return SECMIME_DecryptionAllowed(algid, bulkkey);
 }
 
-static SECItem * GetPasswordKeyCallback(void *arg,
-                                               SECKEYKeyDBHandle *handle)
+static void * GetPasswordKeyCallback(void *arg, void *handle)
 {
   return NULL;
 }
