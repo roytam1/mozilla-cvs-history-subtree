@@ -62,51 +62,10 @@
 static nsresult       ipcThreadStatus = NS_OK;
 static PRThread      *ipcThread = NULL;
 static PRMonitor     *ipcMonitor = NULL;
-static nsIEventQueue *ipcEventQ = NULL;
 static HWND           ipcDaemonHwnd = NULL;
 static HWND           ipcLocalHwnd = NULL;
 static PRBool         ipcShutdown = PR_FALSE; // not accessed on message thread!!
 static ipcTransport  *ipcTrans = NULL;        // not accessed on message thread!!
-
-//-----------------------------------------------------------------------------
-// event proxy to main thread
-//-----------------------------------------------------------------------------
-
-struct ipcProxyEvent : PLEvent
-{
-    ipcMessage mMsg;
-};
-
-static void *PR_CALLBACK
-ipcProxyEventHandlerFunc(PLEvent *ev)
-{
-    ipcProxyEvent *proxyEvent = (ipcProxyEvent *) ev;
-    if (ipcTrans)
-        ipcTrans->OnMessageAvailable(&proxyEvent->mMsg);
-    return NULL;
-}
-
-static void PR_CALLBACK
-ipcProxyEventCleanupFunc(PLEvent *ev)
-{
-    delete (ipcProxyEvent *) ev;
-}
-
-static PRStatus
-ipcSetEventQ()
-{
-    nsCOMPtr<nsIEventQueueService> eqs(do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID));
-    if (!eqs)
-        return PR_FAILURE;
-
-    nsCOMPtr<nsIEventQueue> eq;
-    eqs->ResolveEventQueue(NS_CURRENT_EVENTQ, getter_AddRefs(eq));
-    if (!eq)
-        return PR_FAILURE;
-
-    NS_ADDREF(ipcEventQ = eq);
-    return PR_SUCCESS;
-} 
 
 //-----------------------------------------------------------------------------
 // window proc
@@ -120,30 +79,16 @@ ipcThreadWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     if (uMsg == WM_COPYDATA) {
         COPYDATASTRUCT *cd = (COPYDATASTRUCT *) lParam;
         if (cd && cd->lpData) {
-            ipcProxyEvent *ev = new ipcProxyEvent();
+            ipcMessage *msg = new ipcMessage();
             PRUint32 bytesRead;
             PRBool complete;
-            PRStatus rv = ev->mMsg.ReadFrom((const char *) cd->lpData, cd->cbData,
-                                            &bytesRead, &complete);
-            if (rv == PR_SUCCESS) {
-                if (!complete) {
-                    LOG(("  message is incomplete"));
-                    rv = PR_FAILURE;
-                }
-                else {
-                    LOG(("  got IPC message [len=%u]\n", ev->mMsg.MsgLen()));
-                    //
-                    // proxy message to main thread
-                    //
-                    PL_InitEvent(ev, NULL,
-                                 ipcProxyEventHandlerFunc,
-                                 ipcProxyEventCleanupFunc);
-                    rv = ipcEventQ->PostEvent(ev);
-                }
-            }
-            if (rv == PR_FAILURE) {
-                LOG(("  unable to deliver message\n"));
-                delete ev;
+            PRStatus rv = msg->ReadFrom((const char *) cd->lpData, cd->cbData,
+                                        &bytesRead, &complete);
+            if (rv == PR_SUCCESS && complete && ipcTrans)
+                ipcTrans->OnMessageAvailable(msg); // takes ownership of msg
+            else {
+                LOG(("  unable to deliver message [complete=%u]\n", complete));
+                delete msg;
             }
         }
         return TRUE;
@@ -223,9 +168,6 @@ ipcThreadInit(ipcTransport *transport)
     if (ipcThread)
         return PR_FAILURE;
 
-    if (ipcSetEventQ() != PR_SUCCESS)
-        return PR_FAILURE;
-
     NS_ADDREF(ipcTrans = transport);
     ipcShutdown = PR_FALSE;
 
@@ -277,7 +219,7 @@ ipcThreadShutdown()
     ipcMonitor = NULL;
 
     NS_RELEASE(ipcTrans);
-    NS_RELEASE(ipcEventQ);
+   // NS_RELEASE(ipcEventQ);
     return PR_SUCCESS;
 }
 
@@ -337,6 +279,8 @@ ipcTransport::Connect()
     SendMsg_Internal(new ipcmMessageClientHello());
     mSentHello = PR_TRUE;
 
+#if 0
+    // XXX need something else here
     //
     // begin a timer.  if the timer fires before we get a CLIENT_ID, then
     // assume the connection attempt failed.
@@ -345,8 +289,9 @@ ipcTransport::Connect()
     mTimer = do_CreateInstance(NS_TIMER_CONTRACTID, &rv);
     if (NS_SUCCEEDED(rv))
         rv = mTimer->Init(this, 1000, nsITimer::TYPE_ONE_SHOT);
-
     return rv;
+#endif
+    return NS_OK;
 }
 
 nsresult
