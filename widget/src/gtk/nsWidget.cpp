@@ -30,6 +30,8 @@
 
 #include <gdk/gdkx.h>
 
+#include "gtk_moz_window.h"
+
 
 #ifdef USE_XIM
 #include "nsIServiceManager.h"
@@ -366,10 +368,10 @@ NS_IMETHODIMP nsWidget::Move(PRInt32 aX, PRInt32 aY)
 {
   if (mWidget) 
   {
-    GtkWidget *    layout = mWidget->parent;
+    GtkWidget *    moz_window = mWidget->parent;
 
-    GtkAdjustment* ha = gtk_layout_get_hadjustment(GTK_LAYOUT(layout));
-    GtkAdjustment* va = gtk_layout_get_vadjustment(GTK_LAYOUT(layout));
+    GtkAdjustment* ha = gtk_moz_window_get_hadjustment(GTK_MOZ_WINDOW(moz_window));
+    GtkAdjustment* va = gtk_moz_window_get_vadjustment(GTK_MOZ_WINDOW(moz_window));
 
     // This correction is needed because the view manager code in
     // gecko assumes that the implementation of scrolling happens
@@ -399,10 +401,10 @@ NS_IMETHODIMP nsWidget::Move(PRInt32 aX, PRInt32 aY)
     PRInt32        x_correction = (PRInt32) ha->value;
     PRInt32        y_correction = (PRInt32) va->value;
     
-    gtk_layout_move(GTK_LAYOUT(layout), 
-                    mWidget, 
-                    aX + x_correction, 
-                    aY + y_correction);
+    gtk_moz_window_move(GTK_MOZ_WINDOW(moz_window), 
+                        mWidget, 
+                        aX + x_correction, 
+                        aY + y_correction);
   }
 
   return NS_OK;
@@ -899,7 +901,7 @@ nsresult nsWidget::CreateWidget(nsIWidget *aParent,
   {
     if (parentWidget)
     {
-      gtk_layout_put(GTK_LAYOUT(parentWidget), mWidget, aRect.x, aRect.y);
+      gtk_moz_window_put(GTK_MOZ_WINDOW(parentWidget), mWidget, aRect.x, aRect.y);
     }
   }
 
@@ -2016,9 +2018,9 @@ nsWidget::DropEvent(GtkWidget * aWidget,
 #if 0
   static int count = 0;
 
-  if (GTK_IS_LAYOUT(aWidget))
+  if (GTK_IS_MOZ_WINDOW(aWidget))
   {
-    GtkLayout * layout = GTK_LAYOUT(aWidget);
+    GtkMozWindow * moz_window = GTK_MOZ_WINDOW(aWidget);
 
     printf("%4d DropEvent(this=%p,widget=%p,event_win=%p,wid_win=%p,bin_win=%p)\n",
            count++,
@@ -2026,7 +2028,7 @@ nsWidget::DropEvent(GtkWidget * aWidget,
            aWidget,
            aEventWindow,
            aWidget->window,
-           layout->bin_window);
+           moz_window->bin_window);
   }
   else
   {
@@ -2044,11 +2046,11 @@ nsWidget::DropEvent(GtkWidget * aWidget,
   // that occur in the sub windows.  Check the window member
   // of the GdkEvent, if it is not the gtklayout's bin_window,
   // drop the event.
-  if (GTK_IS_LAYOUT(aWidget))
+  if (GTK_IS_MOZ_WINDOW(aWidget))
   {
-    GtkLayout * layout = GTK_LAYOUT(aWidget);
+    GtkMozWindow * moz_window = GTK_MOZ_WINDOW(aWidget);
 
-    if (aEventWindow != layout->bin_window)
+    if (aEventWindow != moz_window->bin_window)
     {
       return PR_TRUE;
     }
@@ -2339,9 +2341,9 @@ nsWidget::GetRenderWindow()
 
   if (mWidget)
   {
-    if (GTK_IS_LAYOUT(mWidget))
+    if (GTK_IS_MOZ_WINDOW(mWidget))
     {
-      renderWindow = GTK_LAYOUT(mWidget)->bin_window;
+      renderWindow = GTK_MOZ_WINDOW(mWidget)->bin_window;
     }
     else
     {
