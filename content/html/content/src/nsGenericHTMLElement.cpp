@@ -4841,10 +4841,14 @@ nsGenericHTMLElement::GetHostFromHrefString(const nsAString& aHref,
 
   nsCAutoString hostport;
   rv = uri->GetHostPort(hostport);
-  if (NS_FAILED(rv))
-    return rv;
 
-  aHost.Assign(NS_ConvertUTF8toUCS2(hostport));
+  // Failure to get the hostport from the URI isn't necessarily an
+  // error. Some URI's just don't have a hostport.
+
+  if (NS_SUCCEEDED(rv)) {
+    aHost.Assign(NS_ConvertUTF8toUCS2(hostport));
+  }
+
   return NS_OK;
 }
 
@@ -4861,12 +4865,14 @@ nsGenericHTMLElement::GetHostnameFromHrefString(const nsAString& aHref,
 
   nsCAutoString host;
   rv = url->GetHost(host);
-  if (NS_FAILED(rv))
-    return rv;
 
-  CopyASCIItoUCS2(host, aHostname);
+  if (NS_SUCCEEDED(rv)) {
+    // Failure to get the host from the URI isn't necessarily an
+    // error. Some URI's just don't have a host.
 
-  aHostname.Assign(NS_ConvertUTF8toUCS2(host));
+    aHostname.Assign(NS_ConvertUTF8toUCS2(host));
+  }
+
   return NS_OK;
 }
 
@@ -4882,9 +4888,13 @@ nsGenericHTMLElement::GetPathnameFromHrefString(const nsAString& aHref,
   if (NS_FAILED(rv))
     return rv;
 
-  nsCOMPtr<nsIURL> url(do_QueryInterface(uri, &rv));
-  if (NS_FAILED(rv))
-    return rv;
+  nsCOMPtr<nsIURL> url(do_QueryInterface(uri));
+
+  if (!url) {
+    // If this is not a URL, we can't get the pathname from the URI
+
+    return NS_OK;
+  }
 
   nsCAutoString file;
   rv = url->GetFilePath(file);
@@ -4892,6 +4902,7 @@ nsGenericHTMLElement::GetPathnameFromHrefString(const nsAString& aHref,
     return rv;
 
   aPathname.Assign(NS_ConvertUTF8toUCS2(file));
+
   return NS_OK;
 }
 
@@ -4907,19 +4918,24 @@ nsGenericHTMLElement::GetSearchFromHrefString(const nsAString& aHref,
   if (NS_FAILED(rv))
     return rv;
 
-  nsCOMPtr<nsIURL> url(do_QueryInterface(uri, &rv));
-  if (NS_FAILED(rv))
-    return rv;    
+  nsCOMPtr<nsIURL> url(do_QueryInterface(uri));
+
+  if (!url) {
+    // If this is not a URL, we can't get the query from the URI
+
+    return NS_OK;
+  }
 
   nsCAutoString search;
   rv = url->GetQuery(search);
   if (NS_FAILED(rv))
     return rv;
 
-  if (!search.IsEmpty())
+  if (!search.IsEmpty()) {
     aSearch.Assign(NS_LITERAL_STRING("?") + NS_ConvertUTF8toUCS2(search));
-  return NS_OK;
+  }
 
+  return NS_OK;
 }
 
 // static
@@ -4928,24 +4944,26 @@ nsGenericHTMLElement::GetPortFromHrefString(const nsAString& aHref,
                                             nsAString& aPort)
 {
   aPort.Truncate();
-  nsCOMPtr<nsIURI> url;
-  nsresult rv = NS_NewURI(getter_AddRefs(url), aHref);
+  nsCOMPtr<nsIURI> uri;
+  nsresult rv = NS_NewURI(getter_AddRefs(uri), aHref);
   if (NS_FAILED(rv))
     return rv;
 
-  aPort.SetLength(0);
   PRInt32 port;
-  rv = url->GetPort(&port);
-  if (NS_FAILED(rv))
-    return rv;
-  if (port == -1) {
-    aPort.Truncate();
-    return NS_OK;
-  }
+  rv = uri->GetPort(&port);
 
-  nsAutoString portStr;
-  portStr.AppendInt(port, 10);
-  aPort.Assign(portStr);
+  if (NS_SUCCEEDED(rv)) {
+    // Failure to get the port from the URI isn't necessarily an
+    // error. Some URI's just don't have a port.
+
+    if (port == -1) {
+      return NS_OK;
+    }
+
+    nsAutoString portStr;
+    portStr.AppendInt(port, 10);
+    aPort.Assign(portStr);
+  }
 
   return NS_OK;
 }
@@ -4962,9 +4980,13 @@ nsGenericHTMLElement::GetHashFromHrefString(const nsAString& aHref,
   if (NS_FAILED(rv))
     return rv;
 
-  nsCOMPtr<nsIURL> url(do_QueryInterface(uri, &rv));
-  if (NS_FAILED(rv))
-    return rv;
+  nsCOMPtr<nsIURL> url(do_QueryInterface(uri));
+
+  if (!url) {
+    // If this is not a URL, we can't get the hash part from the URI
+
+    return NS_OK;
+  }
 
   nsCAutoString ref;
   rv = url->GetRef(ref);
