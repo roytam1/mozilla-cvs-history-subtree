@@ -36,10 +36,11 @@ HT_Icon			urlList = NULL;
 HT_PaneStruct		*gHTTop = NULL;
 HT_Pane			gAutoOpenPane = NULL;
 RDF			gNCDB = NULL;
-PRBool			gInited = PR_FALSE;
+PRBool			gInited = PR_FALSE, gHTEventsEnabled = PR_TRUE;
 PRBool			gBatchUpdate = false, gAutoEditNewNode = false, gPaneDeletionMode = false;
 XP_Bool			gMissionControlEnabled = false;
 HT_MenuCommand		menuCommandsList = NULL;
+void			*htTimerID = NULL;
 _htmlElementPtr         htmlElementList = NULL;
 
 
@@ -59,6 +60,9 @@ HT_Startup()
 		gInited = PR_TRUE;
 		gMissionControlEnabled = false;
 		PREF_GetBoolPref(MISSION_CONTROL_RDF_PREF, &gMissionControlEnabled);
+		
+		/* HT timer every 12 seconds */
+		htTimerID = FE_SetTimeout(htTimerRoutine, NULL, 1000 * 12);
 	}
 }
 
@@ -70,6 +74,181 @@ HT_Shutdown()
 	freeMenuCommandList();
 	gInited = PR_FALSE;
 	gMissionControlEnabled = false;
+	if (htTimerID != NULL)
+	{
+		FE_ClearTimeout(htTimerID);
+		htTimerID = NULL;
+	}
+}
+
+
+
+void
+htTimerRoutine(void *timerData)
+{
+	PRBool		foundFlag = PR_FALSE;
+	HT_Pane		pane;
+	HT_View		view;
+
+	htTimerID = NULL;
+
+	pane = gHTTop;
+	while ((foundFlag == PR_FALSE) && (pane != NULL))
+	{
+		if (pane->special == PR_FALSE)
+		{
+			if ((view = HT_GetSelectedView(pane)) != NULL)
+			{
+				if (view->refreshingItemListp == PR_FALSE)
+				{
+					foundFlag = possiblyUpdateView(view);
+				}
+			}
+		}
+		pane = pane->next;
+	}
+
+	/* if found/updated something, try again a bit (half second later),
+	   otherwise try again in 12 seconds */
+	htTimerID = FE_SetTimeout(htTimerRoutine, NULL, ((foundFlag == PR_TRUE) ? (500) : (1000 * 12)));
+}
+
+
+
+PRBool
+possiblyUpdateView(HT_View view)
+{
+	HT_Resource	node;
+	PRBool		foundFlag = PR_FALSE;
+	uint32		theIndex;
+
+	XP_ASSERT(view != NULL);
+	if (view == NULL)	return;
+
+	/* walk the list backwards */
+
+	theIndex = HT_GetItemListCount(view);
+	while ((foundFlag == PR_FALSE) && (theIndex > 0))
+	{
+		--theIndex;
+		if ((node = HT_GetNthItem (view, theIndex)) != NULL)
+		{
+			if (HT_IsContainer(node) && HT_IsContainerOpen(node))
+			{
+				if (startsWith("file://", resourceID(node->node)))
+				{
+					updateViewItem(node);
+				}
+			}
+		}
+	}
+	return(foundFlag);
+}
+
+
+
+void
+updateViewItem(HT_Resource node)
+{
+	HT_Resource		child, newNode, nextChild;
+	RDF_Cursor		c;
+	RDF_Resource		r;
+	PRBool			foundFlag;
+
+	XP_ASSERT(node != NULL);
+	if (node == NULL)	return;
+
+	/* mark children as dirty and inited */
+	child = node->child;
+	while (child != NULL)
+	{
+		child->flags |= (HT_DIRTY_FLAG | HT_INITED_FLAG);
+		child = child->next;
+	}
+
+	gHTEventsEnabled = PR_FALSE;
+
+	/* poll contents, determine difference */
+	if ((c = RDF_GetSources(node->view->pane->db, node->node, 
+		gCoreVocab->RDF_parent, RDF_RESOURCE_TYPE,  true)) != NULL)
+	{
+		while (r = RDF_NextValue(c))
+		{
+			foundFlag = PR_FALSE;
+			child = node->child;
+			while (child != NULL)
+			{
+				if (child->node == r)
+				{
+					/* flush cached copy of RDF_lastModifiedDate
+					    as it may have changed */
+					resynchItem (node, gWebData->RDF_lastModifiedDate,
+						NULL, PR_TRUE);
+
+					/* XXX should we check lastModDate, and if it is
+					   different, flush all data off of node ??? */
+					child->flags |= HT_INITED_FLAG;
+					child->flags &= (~HT_DIRTY_FLAG);
+					foundFlag = PR_TRUE;
+					break;
+				}
+				child = child->next;
+			}
+			if (foundFlag == PR_FALSE)
+			{
+				/* add new item */
+				if ((child = addContainerItem (node, r)) != NULL)
+				{
+					child->flags &= (~HT_INITED_FLAG);
+					child->flags |= HT_DIRTY_FLAG;
+				}
+			}
+		}
+		RDF_DisposeCursor(c);
+	}
+
+	foundFlag = PR_FALSE;
+
+	/* first: delete any dirty nodes */
+	gBatchUpdate = true;
+	child = node->child;
+	while (child != NULL)
+	{
+		nextChild = child->next;
+		if ((child->flags & HT_INITED_FLAG) && (child->flags & HT_DIRTY_FLAG))
+		{
+			deleteContainerItem (node, child->node);
+			foundFlag = PR_TRUE;
+		}
+		child = nextChild;
+	}
+	gBatchUpdate = false;
+
+	/* second: update item list */
+	refreshItemList(node, 0);
+
+	/* third: send notification of any new nodes */
+	child = node->child;
+	while (child != NULL)
+	{
+		/* Note: don't check HT_INITED_FLAG as the previous call to
+		   refreshItemList() will have inited all nodes it saw */
+		if (child->flags & HT_DIRTY_FLAG)
+		{
+			/* new node, add */
+			child->flags &= (~HT_DIRTY_FLAG);
+			sendNotification(child,  HT_EVENT_NODE_ADDED);
+			foundFlag = PR_TRUE;
+		}
+		child = child->next;
+	}
+
+	gHTEventsEnabled = PR_TRUE;
+
+	if (foundFlag == PR_TRUE)
+	{
+		sendNotification(node->view->top,  HT_EVENT_VIEW_REFRESH);
+	}
 }
 
 
@@ -704,7 +883,10 @@ refreshItemList (HT_Resource node, HT_Event whatHappened)
 		refreshItemList1(node->view,node->view->top);
 		node->view->refreshingItemListp = 0;
 		node->view->inited = PR_TRUE;
-		if (whatHappened) sendNotification(node,  whatHappened);
+		if ((gHTEventsEnabled == PR_TRUE) && whatHappened)
+		{
+			sendNotification(node,  whatHappened);
+		}
 	}
 }
 
@@ -934,7 +1116,7 @@ gNavCenterDataSources1[15] =
 {
 	"rdf:localStore", "rdf:remoteStore", "rdf:remoteStore", "rdf:history",
 	 /* "rdf:ldap", */
-	"rdf:esftp", "rdf:mail",
+	"rdf:esftp", /* "rdf:mail", */
 
 #ifdef	XP_MAC
 	"rdf:appletalk",
@@ -1488,6 +1670,7 @@ deleteHTNode(HT_Resource node)
 	XP_ASSERT(node->view != NULL);
 
 	/* HT_SetSelectedState(node, false); */
+
 	sendNotification(node, (node->feData != NULL) ?
 		HT_EVENT_NODE_DELETED_DATA : HT_EVENT_NODE_DELETED_NODATA);
 
@@ -1835,13 +2018,14 @@ HT_TopNode (HT_View view)
 void
 resynchItem (HT_Resource node, void *token, void *data, PRBool assertAction)
 {
-	HT_Value		*value, tempValue;
+	HT_Value		*value, *nextValue, tempValue;
 
 	XP_ASSERT(node != NULL);
 
 	value = &(node->values);
 	while ((*value) != NULL)
 	{
+		nextValue = &((*value)->next);
 		if ((*value)->token == token)
 		{
 			if ((*value)->tokenType == HT_COLUMN_STRING ||
@@ -1860,6 +2044,7 @@ resynchItem (HT_Resource node, void *token, void *data, PRBool assertAction)
 				tempValue = (*value);
 				(*value) = (*value)->next;
 				freeMem(tempValue);
+				nextValue = value;
 			}
 			else if ((*value)->tokenType == HT_COLUMN_STRING ||
 			    (*value)->tokenType == HT_COLUMN_DATE_STRING)
@@ -1871,9 +2056,12 @@ resynchItem (HT_Resource node, void *token, void *data, PRBool assertAction)
 			{
 				(*value)->data = data;
 			}
-			break;
+			/* Note: don't "break", its possible to have multiple
+			   tokens that are the same (they could be of different
+			   types, for example:  one is a STRING, another is an INT) */
+			/* break; */
 		}
-		value = &((*value)->next);
+		value = nextValue;
 	}
 }
 
@@ -3003,6 +3191,10 @@ htIsMenuCmdEnabled(HT_Pane pane, HT_MenuCmd menuCmd,
 			if (node == NULL)			return(false);
 			if (!HT_IsContainer(node))		return(false);
 			if (resourceType(node->node) == LFS_RT)	return(false);
+			if (resourceType(node->node) == ATALK_RT)
+								return(false);
+			if (resourceType(node->node) == ATALKVIRTUAL_RT)
+								return(false);
 			if (htIsOpLocked(node, gNavCenter->RDF_CopyLock))
 								return(false);
 			break;
@@ -4017,9 +4209,15 @@ HT_ItemHasBackwardSibling(HT_Resource r)
 PR_PUBLIC_API(uint16)
 HT_GetItemIndentation (HT_Resource r)
 {
+	uint16		depth = 0;
+
 	XP_ASSERT(r != NULL);
 
-	return (r->depth);
+	if (r != NULL)
+	{
+		depth = r->depth;
+	}
+	return (depth);
 }
 
 
@@ -4027,9 +4225,15 @@ HT_GetItemIndentation (HT_Resource r)
 PR_PUBLIC_API(uint32)
 HT_GetItemListCount (HT_View v)
 {
+	uint32		count = 0;
+
 	XP_ASSERT(v != NULL);
 
-	return (v->itemListCount);
+	if (v != NULL)
+	{
+		count = v->itemListCount;
+	}
+	return (count);
 }
 
 

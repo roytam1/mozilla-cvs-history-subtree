@@ -25,6 +25,7 @@
 /* docs at 'http://developer.apple.com/technotes/tn/tn1111.html' */
 
 #include "atalk.h"
+#include "fs2rdf.h"
 
 	/* externs */
 void	startAsyncCursors();
@@ -686,11 +687,406 @@ AtalkHasAssertion (RDFT rdf, RDF_Resource u, RDF_Resource s, void *v, RDF_ValueT
 			retVal = true;
 		}
 	}
+	else if ((s == gCoreVocab->RDF_parent) && (type == RDF_RESOURCE_TYPE) &&
+		(resourceType(u) == ATALK_RT) && (containerp(v)) && 
+		(resourceType((RDF_Resource)v) == ATALK_RT) &&
+		(startsWith(resourceID((RDF_Resource)v),  resourceID(u))))
+	{
+		/* XXX ??? */
+	}
 	else
 	{
 		retVal = remoteStoreHasAssertion (rdf, u, s, v, type, tv);
 	}
 	return(retVal);
+}
+
+
+
+char *
+convertAFPtoUnescapedFile(char *id)
+{
+	char		*url = NULL, *slash, *temp;
+
+	XP_ASSERT(id != NULL);
+
+	if (id != NULL)
+	{
+		if (startsWith("afp:/", id))
+		{
+			/* mangle AFP URL to file URL */
+			if ((slash = strstr(id, "/")) != NULL)
+			{
+				if ((slash = strstr(slash+1, "/")) != NULL)
+				{
+					if ((slash = strstr(slash+1, "/")) != NULL)
+					{
+						if ((temp = append2Strings("file://", slash)) != NULL)
+						{
+							url = unescapeURL(&temp[FS_URL_OFFSET]);
+							freeMem(temp);
+						}
+					}
+				}
+			}
+		}
+	}
+	return(url);
+}
+
+
+
+void *
+AtalkGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, PRBool inversep,  PRBool tv)
+{
+	PRBool		passThru = PR_TRUE;
+	PRFileInfo	fn;
+	PRStatus	err;
+	PRTime		oneMillion, dateVal;
+	struct tm	*time;
+	char		buffer[128], *fileURL, *pathname, *slash, *colon;
+	void		*retVal = NULL;
+	int32		creationTime, modifyTime;
+	int		len, n;
+
+	if (startsWith("afp:/", resourceID(u)))
+	{
+		if ((s == gCoreVocab->RDF_name) && (type == RDF_STRING_TYPE) && (tv))
+		{
+			passThru = PR_FALSE;
+			if ((slash = strstr(resourceID(u), "/")) != NULL)
+			{
+				if ((slash = strstr(slash+1, "/")) != NULL)
+				{
+					slash = strstr(slash+1, "/");
+				}
+			}
+			if (slash != NULL)
+			{
+				if ((pathname = copyString(slash)) != NULL)
+				{
+					if ((len = strlen(pathname)) > 0)
+					{
+						if (pathname[len-1] == '/')  pathname[--len] = '\0';
+						n = revCharSearch('/', pathname);
+						retVal = (void *)unescapeURL(&pathname[n+1]);
+						passThru = PR_FALSE;
+						freeMem(pathname);
+					}
+				}
+			}
+			else
+			{
+				if ((slash = strstr(resourceID(u), "/")) != NULL)
+				{
+					if ((slash = strstr(slash+1, "/")) != NULL)
+					{
+						if ((pathname = copyString(slash+1)) != NULL)
+						{
+							if ((colon = strstr(pathname, ":")) != NULL)
+							{
+								*colon++ = '\0';
+								retVal = (void *)unescapeURL(pathname);
+								passThru = PR_FALSE;
+							}
+							freeMem(pathname);
+						}
+					}
+				}
+			}
+		}
+		else if ((s == gWebData->RDF_description) && (type == RDF_STRING_TYPE) && (tv))
+		{
+			passThru = PR_FALSE;
+			if (endsWith("/", resourceID(u)))
+			{
+				/* XXX localization */
+				retVal = (void *)copyString("Directory");
+			}
+			else
+			{
+				/* XXX localization */
+				retVal = (void *)copyString("File");
+			}
+		}
+		else if ((s == gWebData->RDF_size) && (type == RDF_INT_TYPE) && (tv))
+		{
+			if ((fileURL = convertAFPtoUnescapedFile(resourceID(u))) != NULL)
+			{
+				passThru = PR_FALSE;
+				err=PR_GetFileInfo(fileURL, &fn);
+				if (!err)	retVal = (void *)fn.size;
+				freeMem(fileURL);
+			}
+		}
+		else if ((s == gWebData->RDF_creationDate) && (tv))
+		{
+			if ((fileURL = convertAFPtoUnescapedFile(resourceID(u))) != NULL)
+			{
+				passThru = PR_FALSE;
+				err = PR_GetFileInfo(fileURL, &fn);
+				if (!err)
+				{
+					LL_I2L(oneMillion, PR_USEC_PER_SEC);
+					LL_DIV(dateVal, fn.creationTime, oneMillion);
+					LL_L2I(creationTime, dateVal);
+					if (type == RDF_STRING_TYPE)
+					{
+						if ((time = localtime((time_t *) &creationTime)) != NULL)
+						{
+#ifdef	XP_MAC
+							time->tm_year += 4;
+							strftime(buffer, sizeof(buffer), XP_GetString(RDF_HTML_MACDATE), time);
+#else
+							strftime(buffer, sizeof(buffer), XP_GetString(RDF_HTML_WINDATE), time);
+#endif
+							retVal = copyString(buffer);
+						}
+					}
+					else if (type == RDF_INT_TYPE)
+					{
+						retVal = (void *)creationTime;
+					}
+				}
+				freeMem(fileURL);
+			}
+		}
+		else if ((s == gWebData->RDF_lastModifiedDate) && (tv))
+		{
+			if ((fileURL = convertAFPtoUnescapedFile(resourceID(u))) != NULL)
+			{
+				passThru = PR_FALSE;
+				err = PR_GetFileInfo(fileURL, &fn);
+				if (!err)
+				{
+					LL_I2L(oneMillion, PR_USEC_PER_SEC);
+					LL_DIV(dateVal, fn.modifyTime, oneMillion);
+					LL_L2I(modifyTime, dateVal);
+					if (type == RDF_STRING_TYPE)
+					{
+						if ((time = localtime((time_t *) &modifyTime)) != NULL)
+						{
+#ifdef	XP_MAC
+							time->tm_year += 4;
+							strftime(buffer, sizeof(buffer), XP_GetString(RDF_HTML_MACDATE), time);
+#else
+							strftime(buffer, sizeof(buffer), XP_GetString(RDF_HTML_WINDATE), time);
+#endif
+							retVal = copyString(buffer);
+						}
+					}
+					else if (type == RDF_INT_TYPE)
+					{
+						retVal = (void *)modifyTime;
+					}
+				}
+				freeMem(fileURL);
+			}
+		}
+	}
+
+	if (passThru == PR_TRUE)
+	{
+		retVal = remoteStoreGetSlotValue(rdf, u, s, type, inversep, tv);
+	}
+	return(retVal);
+}
+
+
+RDF_Cursor
+AtalkGetSlotValues (RDFT rdf, RDF_Resource u, RDF_Resource s,
+		RDF_ValueType type,  PRBool inversep, PRBool tv)
+{
+	PRBool		passThru = PR_TRUE;
+	PRDir		*dir = NULL;
+	RDF_Cursor	c = NULL;
+	char		*slash, *temp;
+
+	if ((((s == gCoreVocab->RDF_child) && (!inversep)) ||
+		((s == gCoreVocab->RDF_parent) && (inversep))) &&
+		(type == RDF_RESOURCE_TYPE) && (tv))
+	{
+		if (u == gNavCenter->RDF_LocalFiles)
+		{
+			passThru = PR_FALSE;
+			if ((c = getMem(sizeof(struct RDF_CursorStruct))) != NULL)
+			{
+				c->u = u;
+				c->s = s;
+				c->type = type;
+				c->tv = tv;
+				c->inversep = inversep;
+				c->count = 0;
+				c->pdata = NULL;
+			}
+		}
+		else if (startsWith("afp:/", resourceID(u)))
+		{
+			passThru = PR_FALSE;
+
+			/* mangle AFP URLs (with associated volume info) to file URL */
+			if ((slash = strstr(resourceID(u), "/")) != NULL)
+			{
+				if ((slash = strstr(slash+1, "/")) != NULL)
+				{
+					if ((slash = strstr(slash+1, "/")) != NULL)
+					{
+						if ((temp = append2Strings("file://", slash)) != NULL)
+						{
+							if ((c = getMem(sizeof(struct RDF_CursorStruct))) != NULL)
+							{
+								if ((dir = OpenDir(temp)) != NULL)
+								{
+									c->u = u;
+									c->s = s;
+									c->type = type;
+									c->tv = tv;
+									c->inversep = inversep;
+									c->count = PR_SKIP_BOTH;
+									c->pdata = dir;
+								}
+								else
+								{
+									freeMem(c);
+									c = NULL;
+								}
+							}
+							freeMem(temp);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (passThru == PR_TRUE)
+	{
+		c = remoteStoreGetSlotValues(rdf, u, s, type, inversep, tv);
+	}
+	return(c);
+}
+
+
+
+void *
+AtalkNextValue (RDFT rdf, RDF_Cursor c)
+{
+	PRBool			passThru = PR_TRUE, isDirectoryFlag = false, sep;
+	PRDirEntry		*de;
+	PRFileInfo		fn;
+	RDF_Resource		r;
+	char			*base, *slash, *temp = NULL, *encoded = NULL, *url, *url2;
+	void			*retVal = NULL;
+
+	XP_ASSERT(c != NULL);
+	if (c == NULL)		return(NULL);
+
+	if ((((c->s == gCoreVocab->RDF_child) && (!c->inversep)) ||
+		((c->s == gCoreVocab->RDF_parent) && (c->inversep))) &&
+		(c->type == RDF_RESOURCE_TYPE) && (c->tv))
+	{
+		if (c->u == gNavCenter->RDF_LocalFiles)
+		{
+			passThru = PR_FALSE;
+			do
+			{
+				retVal = NULL;
+				if ((url = getVolume(c->count++, PR_TRUE)) != NULL)
+				{
+					if ((r = RDF_GetResource(NULL, url, 1)) != NULL)
+					{
+						setContainerp(r, 1);
+						setResourceType(r, ATALK_RT);
+						retVal = (void *)r;
+					}
+					XP_FREE(url);
+				}
+			} while((retVal == NULL) && (c->count <= 26));
+		}
+		else if (startsWith("afp:/", resourceID(c->u)) && (c->pdata != NULL))
+		{
+			passThru = PR_FALSE;
+
+			if ((de = PR_ReadDir((PRDir*)c->pdata, c->count++)) != NULL)
+			{
+				if ((base = NET_Escape(de->name, URL_XALPHAS)) != NULL)		/* URL_PATH */
+				{
+					sep = ((resourceID(c->u))[strlen(resourceID(c->u))-1] == XP_DIRECTORY_SEPARATOR);
+					if (sep)
+					{
+						url = PR_smprintf("%s%s",  resourceID(c->u), base);
+					}
+					else
+					{
+						url = PR_smprintf("%s/%s",  resourceID(c->u), base);
+					}
+					XP_FREE(base);
+
+					if (url != NULL)
+					{
+						/* mangle AFP URLs (with associated volume info) to file URL */
+						if ((slash = strstr(url, "/")) != NULL)
+						{
+							if ((slash = strstr(slash+1, "/")) != NULL)
+							{
+								if ((slash = strstr(slash+1, "/")) != NULL)
+								{
+									temp = append2Strings("file://", slash);
+								}
+							}
+						}
+						if (temp != NULL)
+						{
+							encoded = unescapeURL(&temp[FS_URL_OFFSET]);
+							if (encoded != NULL)
+							{
+								PR_GetFileInfo(encoded, &fn);
+								if (fn.type == PR_FILE_DIRECTORY)
+								{
+									isDirectoryFlag = TRUE;
+									url2 = PR_smprintf("%s/", url);
+									XP_FREE(url);
+									url = url2;
+								}
+								freeMem(encoded);
+							}
+							freeMem(temp);
+							retVal = (void *)CreateAFPFSUnit(url, isDirectoryFlag);
+						}
+						XP_FREE(url);
+					}
+				}
+			}
+		}
+	}
+	
+	if (passThru == PR_TRUE)
+	{
+		retVal = remoteStoreNextValue(rdf, c);
+	}
+	return(retVal);
+}
+
+
+
+RDF_Resource
+CreateAFPFSUnit (char *nname, PRBool isDirectoryFlag)
+{
+	RDF_Resource		r = NULL;
+
+	if (startsWith("afp:/", nname))
+	{
+		if ((r = RDF_GetResource(NULL, nname, 0)) == NULL)
+		{
+			if ((r = RDF_GetResource(NULL, nname, 1)) != NULL)
+			{
+				setResourceType(r, ATALK_RT);
+				setContainerp(r, isDirectoryFlag);
+				/* setAtalkResourceName(r); */
+			}
+		}	
+	}
+	return(r);
 }
 
 
@@ -709,9 +1105,9 @@ MakeAtalkStore (char* url)
 			ntr->assert = AtalkAssert;
 			ntr->unassert = NULL;
 			ntr->hasAssertion = AtalkHasAssertion;
-			ntr->getSlotValue = remoteStoreGetSlotValue;
-			ntr->getSlotValues = remoteStoreGetSlotValues;
-			ntr->nextValue = remoteStoreNextValue;
+			ntr->getSlotValue = AtalkGetSlotValue;
+			ntr->getSlotValues = AtalkGetSlotValues;
+			ntr->nextValue = AtalkNextValue;
 			ntr->disposeCursor = remoteStoreDisposeCursor;
 			ntr->possiblyAccessFile =  AtalkPossible;
 			ntr->destroy = AtalkDestroy;

@@ -59,6 +59,11 @@ void		AtalkPossible(RDFT rdf, RDF_Resource u, RDF_Resource s, PRBool inversep);
 RDF_Error	AtalkDestroy (RDFT r);
 PRBool		AtalkHasAssertion (RDFT mcf, RDF_Resource u, RDF_Resource s, void *v, RDF_ValueType type, PRBool tv);
 PRBool		AtalkAssert (RDFT rdf, RDF_Resource u, RDF_Resource s, void *v, RDF_ValueType type, PRBool tv);
+char *		convertAFPtoUnescapedFile(char *id);
+void *		AtalkGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, PRBool inversep,  PRBool tv);
+RDF_Cursor	AtalkGetSlotValues (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type,  PRBool inversep, PRBool tv);
+void *		AtalkNextValue (RDFT rdf, RDF_Cursor c);
+RDF_Resource	CreateAFPFSUnit (char *nname, PRBool isDirectoryFlag);
 RDFT		MakeAtalkStore (char* url);
 
 XP_END_PROTOS

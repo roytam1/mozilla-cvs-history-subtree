@@ -149,6 +149,7 @@ typedef	struct _HT_ValueStruct {
 #define	HT_FREEICON_URL_FLAG	0x0020
 #define	HT_PASSWORDOK_FLAG	0x0040
 #define	HT_INITED_FLAG		0x0080
+#define	HT_DIRTY_FLAG		0x0100
 
 typedef struct _HT_ResourceStruct {
 	struct _HT_ResourceStruct	*nextItem; 
@@ -226,6 +227,9 @@ XP_BEGIN_PROTOS
 
 void				HT_Startup();
 void				HT_Shutdown();
+void				htTimerRoutine(void *timerID);
+PRBool				possiblyUpdateView(HT_View view);
+void				updateViewItem(HT_Resource node);
 HT_Resource			newHTEntry (HT_View view, RDF_Resource node);
 void				addWorkspace(HT_Pane pane, RDF_Resource r, void *feData);
 void				deleteWorkspace(HT_Pane pane, RDF_Resource r);

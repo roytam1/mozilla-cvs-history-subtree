@@ -32,27 +32,70 @@ extern	int	RDF_UNABLETODELETEFILE, RDF_UNABLETODELETEFOLDER;
 
 
 char *
-getVolume(int volNum)
+getVolume(int16 volNum, PRBool afpVols)
 {
 	char			*url = NULL;
 
-#ifdef	XP_MAC	
+#ifdef	XP_MAC
+	AFPXVolMountInfo	afpInfo;
 	ParamBlockRec		pb;
-	Str255			str;
-	char			*encoded;
+	char			*encoded, str[64], *temp1, *temp2;
+	PRBool			isAfpVol;
 
+	XP_BZERO((void *)&pb, sizeof(pb));
 	pb.volumeParam.ioCompletion = NULL;
 	pb.volumeParam.ioVolIndex = volNum + 1;
 	pb.volumeParam.ioNamePtr = (void *)str;
 	if (!PBGetVInfo(&pb,FALSE))	{
-		/* network volumes (via AFP) shouldn't be represented by file URLs */
-		if (!isAFPVolume(pb.volumeParam.ioVRefNum) == PR_TRUE)
+		/* network volumes (via AFP) should be represented
+		   by afp URLS instead of file URLs */
+		
+		isAfpVol = isAFPVolume(pb.volumeParam.ioVRefNum);
+		if ((afpVols == PR_FALSE) && (isAfpVol == PR_FALSE))
 		{
 			str[1+(unsigned)str[0]] = '\0';
 			if ((encoded = NET_Escape((char *)&str[1], URL_XALPHAS)) != NULL)
 			{
 				url = PR_smprintf("file:///%s/", encoded);
 				XP_FREE(encoded);
+			}
+		}
+		else if ((afpVols == PR_TRUE) && (isAfpVol == PR_TRUE))
+		{
+			XP_BZERO((void *)&afpInfo, sizeof(afpInfo));
+			afpInfo.length = (short)sizeof(afpInfo);
+
+			pb.ioParam.ioCompletion = NULL;
+			/* use pb.ioParam.ioVRefNum */
+			pb.ioParam.ioBuffer = (Ptr)&afpInfo;
+			
+			if (!PBGetVolMountInfo(&pb))
+			{
+				str[1+(unsigned)str[0]] = '\0';
+				
+				temp1 = getMem(1024);
+				temp2 = getMem(1024);
+
+				strcpy(temp1, "afp:/at/");
+				/* server name */
+				strncpy((void *)temp2, &afpInfo.AFPData[afpInfo.serverNameOffset-30+1],
+					(unsigned int)afpInfo.AFPData[afpInfo.serverNameOffset-30]);
+				temp2[(unsigned int)afpInfo.AFPData[afpInfo.serverNameOffset-30]] = '\0';
+				strcat(temp1, (void *)NET_Escape((void *)temp2, URL_XALPHAS));
+				strcat(temp1, ":");
+				/* zone name */
+				strncpy((void *)temp2, &afpInfo.AFPData[afpInfo.zoneNameOffset-30+1],
+					(unsigned int)afpInfo.AFPData[afpInfo.zoneNameOffset-30]);
+				temp2[(unsigned int)afpInfo.AFPData[afpInfo.zoneNameOffset-30]] = '\0';
+				strcat(temp1, (void *)NET_Escape((void *)temp2, URL_XALPHAS));
+				strcat(temp1, "/");
+				/* volume name */
+				strcat(temp1, NET_Escape((char *)&str[1], URL_XALPHAS));
+				strcat(temp1,"/");
+				url = copyString(temp1);
+				
+				freeMem(temp1);
+				freeMem(temp2);
 			}
 		}
 	}
@@ -373,7 +416,33 @@ fsGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, PR
 			}
 		}
 	}
-	else if ((s == gWebData->RDF_lastModifiedDate) && (type == RDF_STRING_TYPE) && (tv))
+	else if ((s == gWebData->RDF_description) && (type == RDF_STRING_TYPE) && (tv))
+	{
+		if ((pathname = resourceID(u)) != NULL)
+		{
+			if ((url = unescapeURL(&pathname[FS_URL_OFFSET])) != NULL)
+			{
+				err=PR_GetFileInfo(url, &fn);
+				if (!err)
+				{
+					switch(fn.type)
+					{
+						case	PR_FILE_FILE:
+						/* XXX localization */
+						retVal = (void *)copyString("File");
+						break;
+
+						case	PR_FILE_DIRECTORY:
+						/* XXX localization */
+						retVal = (void *)copyString("Directory");
+						break;
+					}
+				}
+				XP_FREE(url);
+			}
+		}
+	}
+	else if ((s == gWebData->RDF_lastModifiedDate) && (tv))
 	{
 		if ((pathname = resourceID(u)) != NULL)
 		{
@@ -385,22 +454,29 @@ fsGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, PR
 					LL_I2L(oneMillion, PR_USEC_PER_SEC);
 					LL_DIV(dateVal, fn.modifyTime, oneMillion);
 					LL_L2I(modifyTime, dateVal);
-					if ((time = localtime((time_t *) &modifyTime)) != NULL)
+					if (type == RDF_STRING_TYPE)
 					{
+						if ((time = localtime((time_t *) &modifyTime)) != NULL)
+						{
 #ifdef	XP_MAC
-						time->tm_year += 4;
-						strftime(buffer, sizeof(buffer), XP_GetString(RDF_HTML_MACDATE), time);
+							time->tm_year += 4;
+							strftime(buffer, sizeof(buffer), XP_GetString(RDF_HTML_MACDATE), time);
 #else
-						strftime(buffer, sizeof(buffer), XP_GetString(RDF_HTML_WINDATE), time);
+							strftime(buffer, sizeof(buffer), XP_GetString(RDF_HTML_WINDATE), time);
 #endif
-						retVal = copyString(buffer);
+							retVal = copyString(buffer);
+						}
+					}
+					else if (type == RDF_INT_TYPE)
+					{
+						retVal = (void *)modifyTime;
 					}
 				}
 				XP_FREE(url);
 			}
 		}
 	}
-	else if ((s == gWebData->RDF_creationDate) && (type == RDF_STRING_TYPE) && (tv))
+	else if ((s == gWebData->RDF_creationDate) && (tv))
 	{
 		if ((pathname = resourceID(u)) != NULL)
 		{
@@ -412,15 +488,22 @@ fsGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, PR
 					LL_I2L(oneMillion, PR_USEC_PER_SEC);
 					LL_DIV(dateVal, fn.creationTime, oneMillion);
 					LL_L2I(creationTime, dateVal);
-					if ((time = localtime((time_t *) &creationTime)) != NULL)
+					if (type == RDF_STRING_TYPE)
 					{
+						if ((time = localtime((time_t *) &creationTime)) != NULL)
+						{
 #ifdef	XP_MAC
-						time->tm_year += 4;
-						strftime(buffer, sizeof(buffer), XP_GetString(RDF_HTML_MACDATE), time);
+							time->tm_year += 4;
+							strftime(buffer, sizeof(buffer), XP_GetString(RDF_HTML_MACDATE), time);
 #else
-						strftime(buffer, sizeof(buffer), XP_GetString(RDF_HTML_WINDATE), time);
+							strftime(buffer, sizeof(buffer), XP_GetString(RDF_HTML_WINDATE), time);
 #endif
-						retVal = copyString(buffer);
+							retVal = copyString(buffer);
+						}
+					}
+					else if (type == RDF_INT_TYPE)
+					{
+						retVal = (void *)creationTime;
 					}
 				}
 				XP_FREE(url);
@@ -517,7 +600,7 @@ fsNextValue (RDFT rdf, RDF_Cursor c)
 	{
 		do
 		{
-			if ((url = getVolume(c->count++)) != NULL)
+			if ((url = getVolume(c->count++, PR_FALSE)) != NULL)
 			{
 				if ((vol = RDF_GetResource(NULL, url, 1)) != NULL)
 				{
