@@ -172,7 +172,7 @@ nsURLFetcher::FireURLRequest(nsIURI *aURL, nsOutputFileStream *fOut,
   rv = service->NewChannelFromURI("load", aURL, nsnull, getter_AddRefs(channel));
   if (NS_FAILED(rv)) return rv;
 
-  rv = channel->AsyncRead(0, -1, nsnull, this);
+  rv = channel->AsyncRead(0, -1, nsnull, this, nsnull /* load group */ );
   if (NS_FAILED(rv)) return rv;
 
   mURL = dont_QueryInterface(aURL);
