@@ -588,11 +588,6 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JSBool implicitWith;
 #endif
 
-    if (!JSVAL_IS_STRING(argv[0])) {
-	*rval = argv[0];
-	return JS_TRUE;
-    }
-
     caller = cx->fp->down;
 
     if ((cx->version == JSVERSION_DEFAULT || cx->version >= JSVERSION_1_4)
@@ -600,6 +595,11 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 	JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
 			     JSMSG_BAD_INDIRECT_CALL, js_eval_str);
         return JS_FALSE;
+    }
+
+    if (!JSVAL_IS_STRING(argv[0])) {
+	*rval = argv[0];
+	return JS_TRUE;
     }
 
 #if JS_HAS_SCRIPT_OBJECT
