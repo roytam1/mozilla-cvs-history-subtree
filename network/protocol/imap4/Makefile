@@ -34,9 +34,10 @@ CPPSRCS		= \
 
 EXPORTS= imap4pvt.h imap4url.h imapbody.h imaphier.h mkimap4.h
 
-REQUIRES	=  network nspr2 security
-#netcache network nspr2 dbm util pref js java fileurl \
-#	security layer img httpurl mimetype htmldlgs
+REQUIRES	=  util network nspr2 security \
+	netcache network nspr2 dbm util pref js java fileurl \
+	security layer img httpurl mimetype htmldlgs
 
 include $(DEPTH)/config/rules.mk
 
+INCLUDES += -I$(DEPTH)/lib/libmsg

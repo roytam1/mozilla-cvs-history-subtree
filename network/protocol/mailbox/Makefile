@@ -26,7 +26,7 @@ CSRCS		= \
 
 EXPORTS= mkmailbx.h
 
-REQUIRES	= netcache network nspr2 dbm util pref js java fileurl \
+REQUIRES	= imap4url netcache network nspr2 dbm util pref js java fileurl \
 	security layer img httpurl mimetype htmldlgs
 
 include $(DEPTH)/config/rules.mk
