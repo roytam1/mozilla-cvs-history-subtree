@@ -182,7 +182,8 @@
 - (void)bookmarkAdded:(nsIContent*)bookmark inContainer:(nsIContent*)container isChangedRoot:(BOOL)isRoot
 {
   if (!container) return;
-
+  if (!isRoot) return;			// this code reconstructs submenus itself
+    
   PRInt32 index = -1;
   container->IndexOf(bookmark, index);
   NSMenu* menu = [self locateMenuForContent:container];
@@ -193,7 +194,8 @@
 - (void)bookmarkRemoved:(nsIContent*)bookmark inContainer:(nsIContent*)container isChangedRoot:(BOOL)isRoot
 {
   if (!bookmark) return;
-  
+  if (!isRoot) return;			// this code reconstructs submenus itself
+
   if (bookmark == mRootContent)
   {
     NS_IF_RELEASE(mRootContent);		// nulls it out
