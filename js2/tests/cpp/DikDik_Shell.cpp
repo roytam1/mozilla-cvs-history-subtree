@@ -63,13 +63,12 @@ static void initConsole(StringPtr consoleName,
 
 #endif
 
+#ifndef _WIN32
+using namespace JavaScript::JS2Runtime;
+#endif
 
 namespace JavaScript {
 namespace Shell {
-    
-#ifndef _WIN32
-    using namespace JS2Runtime;
-#endif    
 
 // Interactively read a line from the input stream in and put it into
 // s. Return false if reached the end of input before reading anything.
