@@ -246,19 +246,19 @@ nsCacheManager::Contains(const char *aUriSpec, const char *aSecondaryKey,
     // Construct the cache key by appending the secondary key to the URI spec
     nsCAutoString cacheKey(aUriSpec);
 
-    // Insert NUL at end of URI spec
+    // Insert NUL between URI spec and secondary key
     cacheKey += '\0';
     cacheKey.Append(aSecondaryKey, aSecondaryKeyLength);
-    
+
+    // Locate the record using (URI + secondary key)
     nsStringKey key(cacheKey);
     cachedData = (nsCachedNetData*)mActiveCacheRecords->Get(&key);
 
-    // There is no existing instance of nsCachedNetData for this URL.
-    // Make one from the corresponding record in the cache module.
     if (cachedData && (cache == cachedData->mCache)) {
         *aResult = PR_TRUE;
         return NS_OK;
     } else {
+        // No active cache entry, see if there is a dormant one
         return cache->Contains(cacheKey.GetBuffer(), cacheKey.Length(), aResult);
     }
 }
