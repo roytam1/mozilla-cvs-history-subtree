@@ -352,6 +352,7 @@ interface nsIInputStreamChannel : nsIChannel
               in nsIInputStream inStr,
               in string contentType, 
               in long contentLength);
+    readonly attribute nsIInputStream inputStream;
 };
 
 %{C++

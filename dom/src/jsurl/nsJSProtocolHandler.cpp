@@ -211,8 +211,6 @@ public:
             NS_ASSERTION(mResult, "Eval didn't set mResult");
         }
         PRUint32 rest = mLength - mReadCursor;
-        if (!rest)
-            return NS_ERROR_FAILURE;
         *result = rest;
         return NS_OK;
     }

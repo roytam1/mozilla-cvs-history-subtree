@@ -47,6 +47,7 @@
 
 #include "nsIDOMWindow.h"
 #include "nsIUnkContentTypeHandler.h"
+#include "nsDOMError.h"
 
 static NS_DEFINE_CID(kURILoaderCID, NS_URI_LOADER_CID);
 static NS_DEFINE_CID(kStreamConverterServiceCID, NS_STREAMCONVERTERSERVICE_CID);
@@ -244,8 +245,23 @@ nsresult nsDocumentOpenInfo::Open(nsIChannel * aChannel,
   mCommand = aCommand;
 
   // now just open the channel!
-  if (aChannel)
+  if (aChannel) {
+    // XXX hack for M15 -- until we can get javascript: urls to evaluate properly
+    nsCOMPtr<nsIInputStreamChannel> inStrCh = do_QueryInterface(aChannel, &rv);
+    if (NS_SUCCEEDED(rv)) {
+        nsCOMPtr<nsIInputStream> inStr;
+        rv = inStrCh->GetInputStream(getter_AddRefs(inStr));
+        if (NS_SUCCEEDED(rv)) {
+            PRUint32 available;
+            rv = inStr->Available(&available);    // js evaluation
+            if (rv == NS_ERROR_DOM_RETVAL_UNDEFINED)
+                return NS_OK;
+        }
+    }
+    // XXX end of hack
+
     rv =  aChannel->AsyncRead(this, nsnull);
+  }
   return rv;
 }
 

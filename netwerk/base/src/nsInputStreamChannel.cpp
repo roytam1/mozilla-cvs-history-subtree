@@ -90,6 +90,13 @@ NS_IMPL_THREADSAFE_ISUPPORTS5(nsInputStreamChannel,
                               nsIRequest,
                               nsIStreamObserver,
                               nsIStreamListener);
+NS_IMETHODIMP
+nsInputStreamChannel::GetInputStream(nsIInputStream* *result)
+{
+    *result = mInputStream;
+    NS_ADDREF(*result);
+    return NS_OK;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // nsIRequest methods:
