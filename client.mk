@@ -66,6 +66,7 @@ MOZ_CO_TAG = SVG_20020806_BRANCH
 # list of modified files
 SVG_BRANCH_MODIFIED_FILES =                               \
 	allmakefiles.sh                                       \
+	client.mk                                             \
 	configure.in                                          \
 	configure                                             \
 	config/autoconf.mk.in                                 \
@@ -110,8 +111,13 @@ SVG_BRANCH_MODIFIED_FILES =                               \
 	content/svg/content/src/nsSVGTransformList.cpp        \
 	content/svg/content/src/nsSVGValue.cpp                \
 	content/svg/content/src/nsSVGValue.h                  \
+	content/svg/document/src/nsSVGDocument.cpp            \
+	content/svg/document/src/nsSVGDocument.h              \
 	dom/public/nsIDOMClassInfo.h                          \
 	dom/src/base/nsDOMClassInfo.cpp                       \
+	htmlparser/src/CParserContext.cpp                     \
+	htmlparser/src/CNavDTD.cpp                            \
+	htmlparser/src/nsExpatDriver.cpp                      \
 	layout/base/public/nsStyleConsts.h                    \
 	layout/build/Makefile.in                              \
 	layout/build/nsLayoutModule.cpp                       \

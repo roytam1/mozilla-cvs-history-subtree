@@ -66,13 +66,15 @@ nsSVGDocument::StartDocumentLoad(const char* aCommand,
                                  nsILoadGroup* aLoadGroup,
                                  nsISupports* aContainer,
                                  nsIStreamListener **aDocListener,
-                                 PRBool aReset) {
+                                 PRBool aReset,
+                                 nsIContentSink* aSink) {
   nsresult rv = nsXMLDocument::StartDocumentLoad(aCommand,
                                                  aChannel,
                                                  aLoadGroup,
                                                  aContainer,
                                                  aDocListener,
-                                                 aReset);
+                                                 aReset,
+                                                 aSink);
   if (NS_FAILED(rv)) return rv;
 
   nsCOMPtr<nsIHttpChannel> httpChannel = do_QueryInterface(aChannel);
@@ -142,6 +144,14 @@ NS_NewSVGDocument(nsIDocument** aInstancePtrResult)
   nsSVGDocument* doc = new nsSVGDocument();
   if (!doc)
     return NS_ERROR_OUT_OF_MEMORY;
-  return doc->QueryInterface(NS_GET_IID(nsIDocument),
-                             (void**) aInstancePtrResult);
+
+  NS_ADDREF(doc);
+  nsresult rv = doc->Init();
+
+  if (NS_FAILED(rv)) {
+    NS_RELEASE(doc);
+    return rv;
+  }
+
+  *aInstancePtrResult = doc;
 }
