@@ -44,5 +44,5 @@ endif
 
 include $(topsrcdir)/config/rules.mk
 
-INCLUDE += $(PUBLIC)\ldap $(PUBLIC)\security
+REQUIRES = ldap security
 
