@@ -416,9 +416,11 @@ XFormsFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
                                     getter_AddRefs(instanceRoot));
               NS_ENSURE_SUCCESS(rv, rv);
    
-              nsAutoPtr<txXPathNode> txNode(txXPathNativeNode::createXPathNode(instanceRoot));
-              if (txNode) {
-                resultSet->add(*txNode);
+              if(instanceRoot) {
+                nsAutoPtr<txXPathNode> txNode(txXPathNativeNode::createXPathNode(instanceRoot));
+                if (txNode) {
+                  resultSet->add(*txNode);
+              }
             }
           }
    
