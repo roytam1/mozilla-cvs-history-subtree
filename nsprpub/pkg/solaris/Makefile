@@ -28,8 +28,6 @@ PROTO = \
 	$(ROOT)/usr/lib \
 	$(ROOT)/usr/lib/mps \
 	$(ROOT)/usr/lib/mps/secv1 \
-	$(ROOT)/usr/lib/mps/secv1/cpu \
-	$(ROOT)/usr/lib/mps/secv1/cpu/sparcv8plus \
 	$(ROOT)/usr/include \
 	$(ROOT)/usr/include/mps 
 
@@ -61,10 +59,7 @@ $(ROOT)/usr/include/mps/sparcv9: $(ROOT)/usr/include
 	$(LN) -sf ../../../../$(DIST)/include $@
 else
 $(ROOT)/usr/lib/mps/secv1: $(ROOT)/usr/lib
-	mkdir -p $@
-	cp $(DIST)/lib/*.so $@ 
-$(ROOT)/usr/lib/mps/secv1/cpu/sparcv8plus: $(ROOT)/usr/lib
-	$(LN) -sf ../../../../../../$(DIST)/lib $@
+	$(LN) -sf ../../../../$(DIST)/lib $@
 $(ROOT)/usr/include/mps: $(ROOT)/usr/include
 	$(LN) -sf ../../../$(DIST)/include $@
 endif
