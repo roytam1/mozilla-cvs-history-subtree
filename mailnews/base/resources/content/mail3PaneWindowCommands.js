@@ -19,7 +19,7 @@
  *
  * Contributors(s):
  *   Jan Varga <varga@utcru.sk>
- *   Hakan Waara <hwaara@chello.se>
+ *   Håkan Waara <hwaara@chello.se>
  */
 
 // Controller object for folder pane

@@ -190,6 +190,10 @@ var folderObserver = {
         return false;
     },
 
+    onToggleOpenState: function()
+    {
+    },
+
     onDrop: function(row, orientation)
     {
         if (orientation != Components.interfaces.nsIOutlinerView.inDropOn)
