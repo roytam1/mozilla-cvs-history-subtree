@@ -1,19 +1,16 @@
 - conflict
   - listing transfer
-    - FTP: downloaded file is empty (fixed?)
-    - save login from listing transfer for main transfer (fixed?)
     - progress feedback and error reporting
   - some files failed (see XXX - update: eh, where was that?)
+  - data in dialog wrong
   - fix dialog
     - column headings
     - width
-    - resize for new listing.xml entry
+- resize progress dialog for new listing.xml entry
 - Bugs
-  - trunk: upload - netlib offline because of dyn. profile change feature
-    - ftp: offline
-    - http: not initialized
   - overwriting local files, if login is incorrect?
   - some files never "finish" (compare feedback below)
+    - ftp upload: ok -> busy [4]
 - error handling
   - files deleted on server / server changed. listing-uploaded no longer true
   - (local profile) files missing
@@ -68,3 +65,12 @@ undefined.lineNumber=225
 undefined.columnNumber=4294967295
 
 WARNING: NS_ENSURE_TRUE(!aQualifiedName.IsEmpty()) failed, file ../../../../mozilla/content/base/src/nsNodeInfoManager.cpp, line 287
+
+[4]
+onStatus:
+  Request: ftp://ben:ie02c@ftp.server.bucksch.org//mnt/save/roaming/ben/listing.xml
+  StatusCode: NET_STATUS_SENDING_TO
+  StatusArg: ftp.server.bucksch.org
+request to change listing.xml from done (NS_OK) to busy (NET_STATUS_SENDING_TO)
+SetProgressStatus(1): listing.xml, busy, NET_STATUS_SENDING_TO
+  Setting listing.xml from done to busy

@@ -300,7 +300,7 @@ Transfer.prototype =
         file.bos = bos; // dito
         channel.asyncOpen(ssl, null);
       }
-      else
+      else // upload
       {
         var uploadChannel = channel.QueryInterface(
                                       Components.interfaces.nsIUploadChannel);
@@ -720,6 +720,34 @@ function TransferProgressListener(transfer, filei)
   this.transfer = transfer;  // this creates a cyclic reference :-(
   this.filei = filei;
   this.file = this.transfer.files[this.filei];
+
+  /*
+
+        var consumer = Components
+                   .classes["@mozilla.org/network/file-output-stream;1"]
+                   .createInstance(Components.interfaces.nsIFileOutputStream);
+        var buffer = Components
+                   .classes["@mozilla.org/network/buffered-output-stream;1"]
+                   .createInstance(Components.interfaces
+                                   .nsIBufferedOutputStream);
+        var lf = GetIOService().newURI("file:///tmp/foo", null, null)
+                       .QueryInterface(Components.interfaces.nsIFileURL)
+                       .file; // readonly
+        consumer.init(lf, -1, -1, 0);
+  */
+        var consumer = Components.classes["@mozilla.org/binaryoutputstream;1"]
+                       .createInstance(Components.interfaces
+                                       .nsIBinaryOutputStream);
+        var buffer = Components
+                       .classes["@mozilla.org/network/buffered-output-stream;1"]
+                       .createInstance(Components.interfaces
+                                       .nsIBufferedOutputStream);
+        this.dummy_ssl = Components
+                   .classes["@mozilla.org/network/simple-stream-listener;1"]
+                   .createInstance(Components.interfaces
+                                   .nsISimpleStreamListener);
+        buffer.init(consumer, 32768);
+        this.dummy_ssl.init(buffer, null);
 }
 TransferProgressListener.prototype =
 {
@@ -914,6 +942,9 @@ TransferProgressListener.prototype =
   {
     /* dummy, because it's only the down stream during an upload
        and during download, we use the tee, which copies to the outstream. */
+
+    this.dummy_ssl.onDataAvailable(aRequest, aContext, anInputStream,
+                                   anOffset, aCount);
   },
 
   // nsIFTPEventSink, nsIHTTPEventSink
