@@ -39,12 +39,13 @@
 
 
 XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
-                               JSContext* cx   /* = nsnull  */,
-                               JSObject* obj   /* = nsnull  */,
-                               jsval name      /* = 0       */,
-                               uintN argc      /* = NO_ARGS */,
-                               jsval *argv     /* = nsnull  */,
-                               jsval *rval     /* = nsnull  */)
+                               JSContext* cx    /* = nsnull  */,
+                               JSObject* obj    /* = nsnull  */,
+                               JSObject* funobj /* = nsnull  */,
+                               jsval name       /* = 0       */,
+                               uintN argc       /* = NO_ARGS */,
+                               jsval *argv      /* = nsnull  */,
+                               jsval *rval      /* = nsnull  */)
     :   mState(INIT_FAILED),
         mXPC(nsXPConnect::GetXPConnect()),
         mThreadData(nsnull),
@@ -123,6 +124,7 @@ XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
 
     mTearOff = nsnull;
     mWrapper = XPCWrappedNative::GetWrappedNativeOfJSObject(mJSContext, obj,
+                                                            funobj,
                                                             &mCurrentJSObject,
                                                             &mTearOff);
     if(!mWrapper)

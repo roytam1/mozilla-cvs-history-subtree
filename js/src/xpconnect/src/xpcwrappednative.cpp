@@ -737,46 +737,101 @@ XPCWrappedNative::ReparentWrapperIfFound(XPCCallContext& ccx,
     return NS_OK;
 }
 
+#define IS_WRAPPER_CLASS(clazz)                                               \
+          ((clazz) == &XPC_WN_NoHelper_JSClass ||                             \
+           (clazz)->getObjectOps == XPC_WN_GetObjectOpsNoCall ||              \
+           (clazz)->getObjectOps == XPC_WN_GetObjectOpsWithCall)
+    
+#define IS_TEAROFF_CLASS(clazz)                                               \
+          ((clazz) == &XPC_WN_Tearoff_JSClass)
+
+#define IS_PROTO_CLASS(clazz)                                                 \
+          ((clazz) == &XPC_WN_NoMods_Proto_JSClass ||                         \
+           (clazz) == &XPC_WN_ModsAllowed_Proto_JSClass)
+
 // static
 XPCWrappedNative*
 XPCWrappedNative::GetWrappedNativeOfJSObject(JSContext* cx,
                                              JSObject* obj,
+                                             JSObject* funobj,
                                              JSObject** pobj2,
                                              XPCWrappedNativeTearOff** pTearOff)
 {
     NS_PRECONDITION(obj, "bad param");
-    JSObject* cur = obj;
+    
+    JSObject* cur;
 
-    while(cur)
+    XPCWrappedNativeProto* proto = nsnull;
+
+    // If we were passed a function object then we need to find the correct
+    // wrapper out of those that might be in the callee's proto chain.
+
+    if(funobj)
     {
-        JSClass* clazz = JS_GET_CLASS(cx, cur);
+        JSObject* funObjParent = JS_GetParent(cx, funobj);
+        NS_ASSERTION(funObjParent, "funobj has no parent");
+        NS_ASSERTION(JS_GetParent(cx, funObjParent), "funobj's parent is global");
+        
+        JSClass* funObjParentClass = JS_GET_CLASS(cx, funObjParent);
 
-        if(clazz == &XPC_WN_NoHelper_JSClass ||
-           clazz->getObjectOps == XPC_WN_GetObjectOpsNoCall ||
-           clazz->getObjectOps == XPC_WN_GetObjectOpsWithCall)
+        if(IS_PROTO_CLASS(funObjParentClass))
         {
+            proto = (XPCWrappedNativeProto*) JS_GetPrivate(cx, funObjParent);
+        }
+        else if(IS_WRAPPER_CLASS(funObjParentClass))
+        {
+            cur = funObjParent;
+            goto return_wrapper;
+        }
+        else if(IS_TEAROFF_CLASS(funObjParentClass))
+        {
+            cur = funObjParent;
+            goto return_tearoff;
+        }
+        else
+        {
+            NS_ERROR("function object has parent of unknown class!");
+            return nsnull;
+        }
+    }
+
+    for(cur = obj; cur; cur = JS_GetPrototype(cx, cur))
+    {
+        // this is on two lines to make the compiler happy given the goto.
+        JSClass* clazz;
+        clazz = JS_GET_CLASS(cx, cur);
+
+        if(IS_WRAPPER_CLASS(clazz))
+        {
+return_wrapper:
+            XPCWrappedNative* wrapper = 
+                (XPCWrappedNative*) JS_GetPrivate(cx, cur);
+            if(proto && proto != wrapper->GetProto())
+                continue;
             if(pobj2)
                 *pobj2 = cur;
-            return (XPCWrappedNative*) JS_GetPrivate(cx, cur);
+            return wrapper;
         }
 
-        if(clazz == &XPC_WN_Tearoff_JSClass)
+        if(IS_TEAROFF_CLASS(clazz))
         {
+return_tearoff:
+            XPCWrappedNative* wrapper = 
+                (XPCWrappedNative*) JS_GetPrivate(cx, JS_GetParent(cx,cur));
+            if(proto && proto != wrapper->GetProto())
+                continue;
             if(pobj2)
                 *pobj2 = cur;
-
             XPCWrappedNativeTearOff* to =
                 (XPCWrappedNativeTearOff*) JS_GetPrivate(cx, cur);
             if(!to)
                 return nsnull;
             if(pTearOff)
                 *pTearOff = to;
-
-            return (XPCWrappedNative*) JS_GetPrivate(cx, JS_GetParent(cx,cur));
+            return wrapper;
         }
-
-        cur = JS_GetPrototype(cx, cur);
     }
+
     return nsnull;
 }
 
@@ -1569,7 +1624,8 @@ done:
 #ifdef DEBUG_stats_jband
     endTime = PR_IntervalNow();
 
-    printf("%s::%s %d ( js->c ) \n", GetInterfaceName(), GetMemberName(desc), PR_IntervalToMilliseconds(endTime-startTime));
+// XXX FIXME
+//    printf("%s::%s %d ( js->c ) \n", GetInterfaceName(), GetMemberName(desc), PR_IntervalToMilliseconds(endTime-startTime));
 
     totalTime += (endTime-startTime);
 #endif

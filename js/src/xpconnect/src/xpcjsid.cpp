@@ -725,7 +725,7 @@ nsJSCID::Construct(nsIXPConnectWrappedNative *wrapper,
         return NS_ERROR_FAILURE;
 
     // 'push' a call context and call on it
-    XPCCallContext ccx(JS_CALLER, cx, obj,
+    XPCCallContext ccx(JS_CALLER, cx, obj, nsnull,
                        rt->GetStringJSVal(XPCJSRuntime::IDX_CREATE_INSTANCE),
                        argc, argv, vp);
 

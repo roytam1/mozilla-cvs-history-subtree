@@ -583,12 +583,13 @@ public:
     enum {NO_ARGS = (uintN) -1};
 
     XPCCallContext(XPCContext::LangType callerLanguage,
-                   JSContext* cx   = nsnull,
-                   JSObject* obj   = nsnull,
-                   jsval id        = 0,
-                   uintN argc      = NO_ARGS,
-                   jsval *argv     = nsnull,
-                   jsval *rval     = nsnull);
+                   JSContext* cx    = nsnull,
+                   JSObject* obj    = nsnull,
+                   JSObject* funobj = nsnull,
+                   jsval id         = 0,
+                   uintN argc       = NO_ARGS,
+                   jsval *argv      = nsnull,
+                   jsval *rval      = nsnull);
 
     virtual ~XPCCallContext();
 
@@ -2220,7 +2221,8 @@ public:
                 XPCWrappedNative** wrapper);
 
     static XPCWrappedNative*
-    GetWrappedNativeOfJSObject(JSContext* cx, JSObject* obj,
+    GetWrappedNativeOfJSObject(JSContext* cx, JSObject* obj, 
+                               JSObject* funobj = nsnull,
                                JSObject** pobj2 = nsnull,
                                XPCWrappedNativeTearOff** pTearOff = nsnull);
 

@@ -409,9 +409,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
     if(!member->GetValue(ccx, iface, &funval))
         return JS_FALSE;
 
-    JSObject* funobj =
-        JS_CloneFunctionObject(ccx, JSVAL_TO_OBJECT(funval),
-                               scope->GetGlobalJSObject());
+    JSObject* funobj = JS_CloneFunctionObject(ccx, JSVAL_TO_OBJECT(funval), obj);
     if(!funobj)
         return JS_FALSE;
 
@@ -450,7 +448,7 @@ XPC_WN_OnlyIWrite_PropertyStub(JSContext *cx, JSObject *obj, jsval idval, jsval 
 {
     CHECK_IDVAL(cx, idval);
 
-    XPCCallContext ccx(JS_CALLER, cx, obj, idval);
+    XPCCallContext ccx(JS_CALLER, cx, obj, nsnull, idval);
     XPCWrappedNative* wrapper = ccx.GetWrapper();
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
 
@@ -606,7 +604,7 @@ XPC_WN_NoHelper_Resolve(JSContext *cx, JSObject *obj, jsval idval)
 {
     CHECK_IDVAL(cx, idval);
 
-    XPCCallContext ccx(JS_CALLER, cx, obj, idval);
+    XPCCallContext ccx(JS_CALLER, cx, obj, nsnull, idval);
     XPCWrappedNative* wrapper = ccx.GetWrapper();
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
 
@@ -1126,17 +1124,16 @@ JSBool JS_DLL_CALLBACK
 XPC_WN_CallMethod(JSContext *cx, JSObject *obj,
                   uintN argc, jsval *argv, jsval *vp)
 {
-    XPCCallContext ccx(JS_CALLER, cx, obj, 0, argc, argv, vp);
+    NS_ASSERTION(JS_TypeOfValue(cx, argv[-2]) == JSTYPE_FUNCTION, "bad function");
+    JSObject* funobj = JSVAL_TO_OBJECT(argv[-2]);
+    XPCCallContext ccx(JS_CALLER, cx, obj, funobj, 0, argc, argv, vp);
     XPCWrappedNative* wrapper = ccx.GetWrapper();
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
-
-    NS_ASSERTION(JS_TypeOfValue(cx, argv[-2]) == JSTYPE_FUNCTION, "bad function");
 
     XPCNativeInterface* iface;
     XPCNativeMember*    member;
 
-    if(!XPCNativeMember::GetCallInfo(ccx, JSVAL_TO_OBJECT(argv[-2]),
-                                     &iface, &member))
+    if(!XPCNativeMember::GetCallInfo(ccx, funobj, &iface, &member))
         return Throw(NS_ERROR_XPC_CANT_GET_METHOD_INFO, cx);
     ccx.SetCallInfo(iface, member, JS_FALSE);
     return XPCWrappedNative::CallMethod(ccx);
@@ -1146,17 +1143,17 @@ JSBool JS_DLL_CALLBACK
 XPC_WN_GetterSetter(JSContext *cx, JSObject *obj,
                     uintN argc, jsval *argv, jsval *vp)
 {
-    XPCCallContext ccx(JS_CALLER, cx, obj);
+    NS_ASSERTION(JS_TypeOfValue(cx, argv[-2]) == JSTYPE_FUNCTION, "bad function");
+    JSObject* funobj = JSVAL_TO_OBJECT(argv[-2]);
+
+    XPCCallContext ccx(JS_CALLER, cx, obj, funobj);
     XPCWrappedNative* wrapper = ccx.GetWrapper();
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
-
-    NS_ASSERTION(JS_TypeOfValue(cx, argv[-2]) == JSTYPE_FUNCTION, "bad function");
 
     XPCNativeInterface* iface;
     XPCNativeMember*    member;
 
-    if(!XPCNativeMember::GetCallInfo(ccx, JSVAL_TO_OBJECT(argv[-2]),
-                                     &iface, &member))
+    if(!XPCNativeMember::GetCallInfo(ccx, funobj, &iface, &member))
         return Throw(NS_ERROR_XPC_CANT_GET_METHOD_INFO, cx);
 
     ccx.SetArgsAndResultPtr(argc, argv, vp);
@@ -1276,8 +1273,7 @@ XPC_WN_ModsAllowed_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
 
 JSClass XPC_WN_ModsAllowed_Proto_JSClass = {
     "XPC_WN_ModsAllowed_Proto_JSClass", // name;
-    JSCLASS_HAS_PRIVATE |
-    JSCLASS_PRIVATE_IS_NSISUPPORTS,     // flags;
+    JSCLASS_HAS_PRIVATE,                // flags;
 
     /* Mandatory non-null function pointer members. */
     JS_PropertyStub,                // addProperty;
@@ -1360,8 +1356,7 @@ XPC_WN_NoMods_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
 
 JSClass XPC_WN_NoMods_Proto_JSClass = {
     "XPC_WN_NoMods_Proto_JSClass",      // name;
-    JSCLASS_HAS_PRIVATE |
-    JSCLASS_PRIVATE_IS_NSISUPPORTS,     // flags;
+    JSCLASS_HAS_PRIVATE,                // flags;
 
     /* Mandatory non-null function pointer members. */
     XPC_WN_OnlyIWrite_Proto_PropertyStub,  // addProperty;
