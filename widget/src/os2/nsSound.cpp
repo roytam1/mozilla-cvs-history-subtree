@@ -117,7 +117,7 @@ NS_IMETHODIMP nsSound::OnStreamComplete(nsIStreamLoader *aLoader,
   (void) soundTmp->GetNativePath(soundFilename);
   FILE *fp = fopen(soundFilename.get(), "wb+");
   if (fp) {
-    fwrite(data, dataLen, 1, fp);
+    fwrite(string, stringLen, 1, fp);
     fclose(fp);
     HOBJECT hobject = WinQueryObject(soundFilename.get());
     WinSetObjectData(hobject, "OPEN=DEFAULT");
