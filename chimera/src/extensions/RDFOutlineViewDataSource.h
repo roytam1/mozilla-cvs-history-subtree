@@ -73,6 +73,7 @@ class nsIRDFService;
 
 // Initialization Methods
 - (void) ensureDataSourceLoaded;
+- (void) cleanupDataSource;
 
 - (nsIRDFDataSource*) dataSource;
 - (nsIRDFResource*) rootResource;
@@ -93,7 +94,7 @@ class nsIRDFService;
 - (void)reloadDataForItem:(id)item reloadChildren: (BOOL)aReloadChildren;
 
 // Implementation Methods
-- (id) MakeWrapperFor: (nsIRDFResource*) aRDFResource;
+- (id) makeWrapperFor: (nsIRDFResource*) aRDFResource;
 
 // override to do something different with the cell data rather than just
 // return a string (add an icon in an attributed string, for example).

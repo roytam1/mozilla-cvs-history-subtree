@@ -65,9 +65,20 @@
 
 @implementation RDFOutlineViewDataSource
 
+- (id)init
+{
+  if ((self = [super init]))
+  {
+    [self registerForShutdownNotification];
+  }
+  return self;
+}
+
 - (void) dealloc
 {
-	[self cleanup];    
+  [[NSNotificationCenter defaultCenter] removeObserver:self];
+
+	[self cleanup];
   [super dealloc];
 }
 
@@ -84,6 +95,10 @@
   mDictionary = nil;
 }
 
+- (void)cleanupDataSource
+{
+  [self cleanup];
+}
 
 //
 // ensureDataSourceLoaded
@@ -119,7 +134,7 @@
 
 - (void)shutdown: (NSNotification*)aNotification
 {
-  [self cleanup];
+  [self cleanupDataSource];
 }
 
 - (nsIRDFDataSource*) dataSource
@@ -200,7 +215,7 @@
         // our object. 
         nsCOMPtr<nsIRDFResource> childResource(do_QueryInterface(childNode));
         if (childResource) 
-            return [self MakeWrapperFor:childResource];
+            return [self makeWrapperFor:childResource];
     }
     else
     {
@@ -225,7 +240,7 @@
 
         nsCOMPtr<nsIRDFResource> childResource(do_QueryInterface(supp));
         if (childResource) {
-            return [self MakeWrapperFor:childResource];
+            return [self makeWrapperFor:childResource];
         }
     }
 
@@ -320,13 +335,13 @@
 
 - (void) reloadDataForItem: (id) aItem reloadChildren: (BOOL) aReloadChildren
 {
-    if (!aItem)
-        [mOutlineView reloadData];
-    else
-        [mOutlineView reloadItem: aItem reloadChildren: aReloadChildren];
+  if (!aItem)
+    [mOutlineView reloadData];
+  else
+    [mOutlineView reloadItem: aItem reloadChildren: aReloadChildren];
 }
 
-- (id) MakeWrapperFor: (nsIRDFResource*) aRDFResource
+- (id) makeWrapperFor: (nsIRDFResource*) aRDFResource
 {
   const char* k;
   aRDFResource->GetValueConst(&k);

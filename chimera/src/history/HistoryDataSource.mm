@@ -134,18 +134,38 @@ HistoryDataSourceObserver::OnChange(nsIRDFDataSource*, nsIRDFResource*,
   return NS_OK;
 }
 
+#pragma mark -
+
+@interface HistoryDataSource(Private)
+
+- (void)cleanup;
+
+@end
 
 @implementation HistoryDataSource
 
 - (void) dealloc
 {
-  if ( mDataSource && mObserver ) {
-    mDataSource->RemoveObserver(mObserver);
-    NS_RELEASE(mObserver);
-  }
+  [self cleanup];
   [super dealloc];
 }
 
+// "non-virtual" cleanup method -- safe to call from dealloc.
+- (void)cleanup
+{
+  if (mDataSource && mObserver)
+  {
+    mDataSource->RemoveObserver(mObserver);
+    NS_RELEASE(mObserver);		// nulls it
+  }
+}
+
+// "virtual" method; called from superclass
+- (void)cleanupDataSource
+{
+ 	[self cleanup];
+  [super cleanupDataSource];
+}
 
 //
 // ensureDataSourceLoaded
