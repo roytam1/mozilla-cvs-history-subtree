@@ -77,6 +77,7 @@ OBJS=                                       \
     .\$(OBJDIR)\jsj_class.obj               \
     .\$(OBJDIR)\jsj_convert.obj             \
     .\$(OBJDIR)\jsj_field.obj               \
+    .\$(OBJDIR)\jsj_hash.obj                \
     .\$(OBJDIR)\jsj_method.obj              \
     .\$(OBJDIR)\jsj_utils.obj               \
 !if "$(MOZ_BITS)" == "16"

@@ -31,7 +31,6 @@
 
 #include "jsj_hash.h"        /* Hash tables */
 #include "plhash.h"          /* NSPR hash-tables      */
-#include "protypes.h"        /* NSPR hash-tables      */
 #include "jni.h"             /* Java Native Interface */
 #include "jsapi.h"           /* JavaScript engine API */
 
