@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 /*
  * setoption.c - ldap_set_option implementation 
@@ -206,20 +210,44 @@ ldap_set_option( LDAP *ld, int option, const void *optdata )
 
 	/* extra thread function pointers */
 	case LDAP_OPT_EXTRA_THREAD_FN_PTRS:
-		ld->ld_thread2 = *((struct ldap_extra_thread_fns *) optdata); 
-		/* 
-		 * In the case where the threadid function is being set, the
-		 * LDAP_OPTION_LOCK was acquired without recording the lock
-		 * owner and updating the reference count.  We set that
-		 * information here. 
-		 */ 
-		if (ld->ld_mutex_lock_fn != NULL
-		    && ld->ld_threadid_fn != NULL) {
-			ld->ld_mutex_threadid[LDAP_OPTION_LOCK] =
-			    ld->ld_threadid_fn();
-			ld->ld_mutex_refcnt[LDAP_OPTION_LOCK] = 1;
-		}
-		break;
+        /*
+         * XXXceb removing the full deal extra thread funcs to only 
+         * pick up the threadid.  Should this assumes that the LD 
+         * was nulled prior to setting the functions.?
+         *
+         *  this is how it previously went.
+         *		ld->ld_thread2 = *((struct ldap_extra_thread_fns *) optdata); 
+        */
+	    
+	    /* structure copy */
+	    ld->ld_thread2  = *((struct ldap_extra_thread_fns *) optdata);
+	    
+            /*
+	     *
+	    ld->ld_threadid_fn = *((struct ldap_extra_thread_fns *) optdata)ltf_threadid_fn;
+	    */	    
+	    
+	    ld->ld_mutex_trylock_fn =  (LDAP_TF_MUTEX_TRYLOCK_CALLBACK *)NULL;
+	    ld->ld_sema_alloc_fn = (LDAP_TF_SEMA_ALLOC_CALLBACK *) NULL;
+	    ld->ld_sema_free_fn = (LDAP_TF_SEMA_FREE_CALLBACK *) NULL;
+	    ld->ld_sema_wait_fn = (LDAP_TF_SEMA_WAIT_CALLBACK *) NULL;
+	    ld->ld_sema_post_fn = (LDAP_TF_SEMA_POST_CALLBACK *) NULL;
+
+		
+	
+	/* 
+	 * In the case where the threadid function is being set, the
+	 * LDAP_OPTION_LOCK was acquired without recording the lock
+	 * owner and updating the reference count.  We set that
+	 * information here. 
+	 */ 
+            if (ld->ld_mutex_lock_fn != NULL
+	        && ld->ld_threadid_fn != NULL) {
+	        ld->ld_mutex_threadid[LDAP_OPTION_LOCK] =
+		ld->ld_threadid_fn();
+	        ld->ld_mutex_refcnt[LDAP_OPTION_LOCK] = 1;
+            }
+	    break;
 
 	/* DNS function pointers */
 	case LDAP_OPT_DNS_FN_PTRS:

@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 /*
  *  Copyright (c) 1993 Regents of the University of Michigan.
@@ -202,12 +206,21 @@ simple_bindifnot_s( LDAP *ld, const char *dn, const char *passwd )
 	/*
 	 * if the default connection has been lost and is now marked dead,
 	 * dispose of the default connection so it will get re-established.
+	 *
+	 * if not, clear the bind DN and status to ensure that we don't
+	 * report the wrong bind DN to a different thread while waiting
+	 * for our bind result to return from the server.
 	 */
 	LDAP_MUTEX_LOCK( ld, LDAP_CONN_LOCK );
-	if ( NULL != ld->ld_defconn 
-		&& LDAP_CONNST_DEAD == ld->ld_defconn->lconn_status ) {
-	    nsldapi_free_connection( ld, ld->ld_defconn, NULL, NULL, 1, 0 );
-	    ld->ld_defconn = NULL;
+	if ( NULL != ld->ld_defconn ) {
+	    if ( LDAP_CONNST_DEAD == ld->ld_defconn->lconn_status ) {
+		nsldapi_free_connection( ld, ld->ld_defconn, NULL, NULL, 1, 0 );
+		ld->ld_defconn = NULL;
+	    } else if ( ld->ld_defconn->lconn_binddn != NULL ) {
+		NSLDAPI_FREE( ld->ld_defconn->lconn_binddn );
+		ld->ld_defconn->lconn_binddn = NULL;
+		ld->ld_defconn->lconn_bound = 0;
+	    }
 	}
 	LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );
 
@@ -219,6 +232,17 @@ simple_bindifnot_s( LDAP *ld, const char *dn, const char *passwd )
 		goto unlock_and_return;
 	}
 
+	/*
+	 * Note that at this point the bind request is on its way to the
+	 * server and at any time now we will either be bound as the new
+	 * DN (if the bind succeeded) or we will be bound as anonymous (if
+	 * the bind failed).
+	 */
+
+	/*
+	 * Wait for the bind result.  Code inside result.c:read1msg()
+	 * takes care of setting the connection's bind DN and status.
+	 */
 	if ( nsldapi_result_nolock( ld, msgid, 1, 0, (struct timeval *) 0,
 	    &result ) == -1 ) {
 		rc = LDAP_GET_LDERRNO( ld, NULL, NULL );

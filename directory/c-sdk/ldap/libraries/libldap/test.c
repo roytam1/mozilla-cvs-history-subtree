@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 /* test.c - a simple test harness. */
 #include <stdio.h>
@@ -53,13 +57,6 @@
 #endif /* _WINDOWS */
 #endif /* DOS */
 #endif /* MACOS */
-
-#undef NET_SSL
-
-#if defined(NET_SSL)
-#include <sec.h>
-static SECCertDBHandle        certdbhandle;
-#endif
 
 #include "ldap.h"
 #include "disptmpl.h"
@@ -1253,31 +1250,6 @@ main(
 					    NULL );
 				}
 			}
-#ifdef NET_SSL
-			getline( line, sizeof(line), stdin,
-				"Use Secure Sockets Layer - SSL (0=no, 1=yes)?" );
-			optval = ( atoi( line ) != 0 );
-			if ( optval ) {
-				getline( line, sizeof(line), stdin,
-				    "security DB path?" ); 
-				if ( ldapssl_client_init( (*line == '\0') ?
-				    NULL : line, &certdbhandle ) < 0 ) {
-					perror( "ldapssl_client_init" );
-					optval = 0;     /* SSL not avail. */
-				} else if ( ldapssl_install_routines( ld )
-				    < 0 ) {
-					ldap_perror( ld,
-					    "ldapssl_install_routines" );
-					optval = 0;     /* SSL not avail. */
-				}
-			}
-
-#ifdef LDAP_SSLIO_HOOKS
-			ldap_set_option( ld, LDAP_OPT_SSL,
-			    optval ? LDAP_OPT_ON : LDAP_OPT_OFF );
-#endif
-#endif
-
 			getline( line, sizeof(line), stdin, "Reconnect?" );
 			ldap_set_option( ld, LDAP_OPT_RECONNECT,
 			    ( atoi( line ) == 0 ) ? LDAP_OPT_OFF :

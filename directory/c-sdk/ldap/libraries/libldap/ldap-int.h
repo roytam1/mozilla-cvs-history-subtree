@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 #ifndef _LDAPINT_H
 #define _LDAPINT_H
@@ -22,19 +26,17 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <time.h>
 #ifdef hpux
 #include <strings.h>
-#include <time.h>
 #endif /* hpux */
 
 #ifdef _WINDOWS
 #  define FD_SETSIZE		256	/* number of connections we support */
 #  define WIN32_LEAN_AND_MEAN
 # include <windows.h>
-# include <time.h>
 #elif defined(macintosh)
 #include "ldap-macos.h"
-# include <time.h>
 #elif defined(XP_OS2)
 #include <os2sock.h>
 #else /* _WINDOWS */
@@ -42,15 +44,12 @@
 # include <sys/types.h>
 # include <sys/socket.h>
 # include <netinet/in.h>
+# include <arpa/inet.h>
 # include <netdb.h>
 #if !defined(hpux) && !defined(SUNOS4) && !defined(LINUX)
 # include <sys/select.h>
 #endif /* !defined(hpux) and others */
 #endif /* _WINDOWS */
-
-#if defined(BSDI) || defined(LINUX) || defined(SNI) || defined(IRIX)
-#include <arpa/inet.h>
-#endif /* BSDI */
 
 #if defined(IRIX)
 #include <bstring.h>
@@ -85,12 +84,7 @@
 #define NSLDAPI_HAVE_POLL	1
 #endif
 
-/* SSL version, or 0 if not built with SSL */
-#if defined(NET_SSL)
-#  define SSL_VERSION 3
-#else
-#  define SSL_VERSION 0
-#endif
+#define SSL_VERSION 0
 
 
 #define LDAP_URL_URLCOLON	"URL:"
@@ -596,7 +590,7 @@ char *nsldapi_strdup( const char *s );	/* if s is NULL, returns NULL */
  * in os-ip.c
  */
 int nsldapi_connect_to_host( LDAP *ld, Sockbuf *sb, char *host,
-	unsigned long address, int port, int async, int secure );
+	nsldapi_in_addr_t address, int port, int async, int secure );
 void nsldapi_close_connection( LDAP *ld, Sockbuf *sb );
 
 int nsldapi_do_ldap_select( LDAP *ld, struct timeval *timeout );

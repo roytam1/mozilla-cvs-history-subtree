@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 /*
  *
@@ -502,7 +506,7 @@ ldap_memcache_destroy( LDAPMemCache *cache )
 {
     int i = 0;
     unsigned long size = sizeof(LDAPMemCache);
-    ldapmemcacheld *pNode = NULL;
+    ldapmemcacheld *pNode = NULL, *pNextNode = NULL;
 
     LDAPDebug( LDAP_DEBUG_TRACE, "ldap_memcache_destroy( 0x%x )\n",
 	    cache, 0, 0 );
@@ -514,11 +518,12 @@ ldap_memcache_destroy( LDAPMemCache *cache )
     /* Dissociate all ldap handes from this cache. */
     LDAP_MEMCACHE_MUTEX_LOCK( cache );
 
-    for (pNode = cache->ldmemc_lds; pNode; pNode = pNode->ldmemcl_next, i++) {
+    for (pNode = cache->ldmemc_lds; pNode; pNode = pNextNode, i++) {
         LDAP_MUTEX_LOCK( pNode->ldmemcl_ld, LDAP_MEMCACHE_LOCK );
 	cache->ldmemc_lds = pNode->ldmemcl_next;
 	pNode->ldmemcl_ld->ld_memcache = NULL;
         LDAP_MUTEX_UNLOCK( pNode->ldmemcl_ld, LDAP_MEMCACHE_LOCK );
+	pNextNode = pNode->ldmemcl_next;
 	NSLDAPI_FREE(pNode);
     }
 
@@ -1599,10 +1604,8 @@ memcache_access(LDAPMemCache *cache, int mode,
 		for (pMsg = pRes->ldmemcr_resHead, bDone = 0; 
 		     !bDone && pMsg; pMsg = pMsg->lm_chain) {
 
-		    if (NSLDAPI_IS_SEARCH_RESULT( pMsg->lm_msgtype ))
+		    if (!NSLDAPI_IS_SEARCH_ENTRY( pMsg->lm_msgtype ))
 			continue;
-
-		    assert( NSLDAPI_IS_SEARCH_ENTRY( pMsg->lm_msgtype ));
 
 		    ber = *(pMsg->lm_ber);
 		    if (ber_scanf(&ber, "{a", &dnTmp) != LBER_ERROR) {
@@ -1674,9 +1677,14 @@ memcache_report_statistics( LDAPMemCache *cache )
     LDAPDebug( LDAP_DEBUG_STATS, "    tries: %ld  hits: %ld  hitrate: %ld%%\n",
 	    cache->ldmemc_stats.ldmemcstat_tries,
 	    cache->ldmemc_stats.ldmemcstat_hits, hitrate );
-    LDAPDebug( LDAP_DEBUG_STATS, "    memory bytes used: %ld free: %ld\n",
-	    cache->ldmemc_size_used,
-	    cache->ldmemc_size - cache->ldmemc_size_used, 0 );
+    if ( cache->ldmemc_size <= 0 ) {	/* no size limit */
+	LDAPDebug( LDAP_DEBUG_STATS, "    memory bytes used: %ld\n",
+		cache->ldmemc_size_used, 0, 0 );
+    } else {
+	LDAPDebug( LDAP_DEBUG_STATS, "    memory bytes used: %ld free: %ld\n",
+		cache->ldmemc_size_used,
+		cache->ldmemc_size - cache->ldmemc_size_used, 0 );
+    }
 }
 #endif /* LDAP_DEBUG */
 
@@ -2170,11 +2178,11 @@ static unsigned long
 crc32_convert(char *buf, int len)
 {
     char *p;
-    unsigned long crc;
+    unsigned long crc;	    /* FIXME: this is not 32-bits on all platforms! */
 
     crc = 0xffffffff;       /* preload shift register, per CRC-32 spec */
     for (p = buf; len > 0; ++p, --len)
-	crc = (crc << 8) ^ crc32_table[(crc >> 24) ^ *p];
+	crc = ((crc << 8) ^ crc32_table[(crc >> 24) ^ *p]) & 0xffffffff;
 
     return ~crc;            /* transmit complement, per CRC-32 spec */
 }

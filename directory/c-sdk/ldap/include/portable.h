@@ -21,6 +21,10 @@
  * edit this file.
  */
 
+#if defined(LINUX) || defined ( linux )
+#define LINUX2_1
+#endif
+
 #ifndef SYSV
 #if defined( hpux ) || defined( sunos5 ) || defined ( sgi ) || defined( SVR4 )
 #define SYSV
@@ -295,10 +299,20 @@ extern char *strdup();
 #define	BSD_TIME	1	/* for servers/slapd/log.h */
 #endif /* sunos4 || osf */
 
-#ifdef SOLARIS
+#if !defined(_WINDOWS) && !defined(macintosh)
 #include <netinet/in.h>
 #include <arpa/inet.h>	/* for inet_addr() */
-#endif /* SOLARIS */
+#endif
+
+/*
+ * Define a portable type for IPv4 style Internet addresses (32 bits):
+ */
+#if ( defined(sunos5) && defined(_IN_ADDR_T)) || \
+    defined(aix) || defined(HPUX11) || defined(OSF1)
+typedef in_addr_t	nsldapi_in_addr_t;
+#else
+typedef unsigned long	nsldapi_in_addr_t;
+#endif
 
 #ifdef SUNOS4
 #include <pcfs/pc_dir.h>	/* for toupper() */

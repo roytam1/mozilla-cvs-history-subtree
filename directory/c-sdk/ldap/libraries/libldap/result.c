@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 /*
  *  Copyright (c) 1990 Regents of the University of Michigan.
@@ -464,6 +468,9 @@ wait4msg( LDAP *ld, int msgid, int all, int unlock_permitted,
 }
 
 
+/*
+ * read1msg() should be called with LDAP_CONN_LOCK and LDAP_REQ_LOCK locked.
+ */
 static int
 read1msg( LDAP *ld, int msgid, int all, Sockbuf *sb, LDAPConn *lc,
     LDAPMessage **result )
@@ -584,23 +591,29 @@ read1msg( LDAP *ld, int msgid, int all, Sockbuf *sb, LDAPConn *lc,
 			}
 
 			/*
-			 * if this was a successful bind request and not a
-			 * child request, set the connection's bind DN to
-			 * match this request's.
+			 * If this is not a child request and it is a bind
+			 * request, reset the connection's bind DN and
+			 * status based on the result of the operation.
 			 */
 			if ( !has_parent &&
 			    LDAP_RES_BIND == lr->lr_res_msgtype &&
-			    lr->lr_conn != NULL && LDAP_SUCCESS ==
-			    nsldapi_parse_result( ld, lr->lr_res_msgtype, ber,
-			    &lderr, NULL, NULL, NULL, NULL ) &&
-			    LDAP_SUCCESS == lderr ) {
+			    lr->lr_conn != NULL ) {
 				if ( lr->lr_conn->lconn_binddn != NULL ) {
 					NSLDAPI_FREE(
 					    lr->lr_conn->lconn_binddn );
 				}
-				lr->lr_conn->lconn_binddn = lr->lr_binddn;
-				lr->lr_conn->lconn_bound = 1;
-				lr->lr_binddn = NULL;
+				if ( LDAP_SUCCESS == nsldapi_parse_result( ld,
+				    lr->lr_res_msgtype, ber, &lderr, NULL,
+				    NULL, NULL, NULL )
+				    && LDAP_SUCCESS == lderr ) {
+					lr->lr_conn->lconn_bound = 1;
+					lr->lr_conn->lconn_binddn =
+					    lr->lr_binddn;
+					lr->lr_binddn = NULL;
+				} else {
+					lr->lr_conn->lconn_bound = 0;
+					lr->lr_conn->lconn_binddn = NULL;
+				}
 			}
 
 			/*

@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 /* control.c - routines to handle ldapv3 controls */
 
@@ -81,7 +85,7 @@ nsldapi_put_controls( LDAP *ld, LDAPControl **ctrls, int closeseq,
 		/* criticality is "BOOLEAN DEFAULT FALSE" */
 		/* therefore, it should only be encoded if it exists AND is TRUE */
 		if ( c->ldctl_iscritical ) {
-			if ( ber_printf( ber, "b", c->ldctl_iscritical )
+			if ( ber_printf( ber, "b", (int)c->ldctl_iscritical )
 			    == -1 ) {
 				goto error_exit;
 			}
@@ -89,7 +93,8 @@ nsldapi_put_controls( LDAP *ld, LDAPControl **ctrls, int closeseq,
 
 		if ( c->ldctl_value.bv_val != NULL ) {
 			if ( ber_printf( ber, "o", c->ldctl_value.bv_val,
-			    c->ldctl_value.bv_len ) == -1 ) {
+			    (int)c->ldctl_value.bv_len /* XXX lossy cast */ )
+			    == -1 ) {
 				goto error_exit;
 			}
 		}
@@ -208,11 +213,13 @@ nsldapi_get_controls( BerElement *ber, LDAPControl ***controlsp )
 
 		/* the criticality is optional */
 		if ( ber_peek_tag( ber, &len ) == LBER_BOOLEAN ) {
-			if ( ber_scanf( ber, "b", &newctrl->ldctl_iscritical )
-			    == LBER_ERROR ) {
+			int		aint;
+
+			if ( ber_scanf( ber, "b", &aint ) == LBER_ERROR ) {
 				rc = LDAP_DECODING_ERROR;
 				goto free_and_return;
 			}
+			newctrl->ldctl_iscritical = (char)aint;	/* XXX lossy cast */
 		} else {
 			/* absent is synonomous with FALSE */
 			newctrl->ldctl_iscritical = 0;

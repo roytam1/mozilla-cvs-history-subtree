@@ -47,7 +47,7 @@ ldap_create_proxyauth_control (
 )
 {
 	BerElement		*ber;
-	int				i, rc;
+	int				rc;
 
 	if ( !NSLDAPI_VALID_LDAP_POINTER( ld )) {
 		return( LDAP_PARAM_ERROR );

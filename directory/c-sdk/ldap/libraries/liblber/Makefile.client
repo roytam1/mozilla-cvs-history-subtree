@@ -1,4 +1,7 @@
 DEPTH		= ../../../../..
+NS_DEPTH	= ../../../..
+MOD_DEPTH       = ../../../../../nsprpub
+NSPR_TREE	= ../../../../../nsprpub
 
 LDAPSRC		= ../..
 
@@ -17,7 +20,7 @@ OBJS		= $(REALOBJS)
 
 HDIR		= $(LDAPSRC)/include
 
-LIBRARY_NAME	= lber
+LIBRARY_NAME	= lber40
 
 #
 # DEFS are included in CFLAGS
@@ -28,7 +31,7 @@ DEFS		= $(PLATFORMCFLAGS) $(LDAP_DEBUG) $(KERBEROS) $(AFSKERBEROS) \
 		  $(LIBLDAP_CHARSETS) $(LIBLDAP_DEF_CHARSET) \
 		  $(SLAPD_BACKENDS) $(LDBMBACKEND) $(LDBMINCLUDE) $(PHONETIC)
 
-include $(DEPTH)/config/rules.mk
+include $(NSPR_TREE)/config/rules.mk
 
 LOCAL_INCLUDES  = -I$(PUBLIC)/nspr
 INCLUDES	+= -I$(HDIR)
@@ -70,10 +73,8 @@ versiont.c:	Makefile.client Version.c
 	-e "s|%VERSION%|$${v}|" \
 	< Version.c > $@)
 
-$(LIBRARY):	$(OBJS)
-
-install::
-	$(INSTALL) -m 444 $(LIBRARY) $(DIST)/ldap/lib
+install::	$(LIBRARY) $(SHARED_LIBRARY)
+	$(INSTALL) -m 444 $(LIBRARY) $(DIST)/lib
 ifdef MKSHLIB
-	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(DIST)/ldap/bin
+	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(DIST)/lib
 endif
