@@ -1222,9 +1222,14 @@ static nsresult LaunchChild(nsINativeAppSupport* aNative)
   // path of this executable. This is copied, with some modifications, from
   // nsGREDirServiceProvider.cpp
 #ifdef XP_WIN
+  // We must shorten the path to a 8.3 path, since that's all _execv can
+  // handle (otherwise segments after any spaces that might exist in the path
+  // will be converted into parameters, and really weird things will happen)
   char exePath[MAXPATHLEN];
-  if ( ! ::GetModuleFileName(0, exePath, MAXPATHLEN) )
+  if (!::GetModuleFileName(0, exePath, MAXPATHLEN) ||
+      !::GetShortPathName(exePath, exePath, sizeof(exePath)))
     return NS_ERROR_FAILURE;
+  gRestartArgv[0] = (char*)exePath;
 
 #elif defined(XP_MACOSX)
   // Works even if we're not bundled.
