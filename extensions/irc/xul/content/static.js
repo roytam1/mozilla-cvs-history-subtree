@@ -36,7 +36,7 @@ const MSG_UNKNOWN   = getMsg ("unknown");
 
 client.defaultNick = getMsg( "defaultNick" );
 
-client.version = "0.8.5-pre10";
+client.version = "0.8.5-pre11";
 
 client.TYPE = "IRCClient";
 client.COMMAND_CHAR = "/";
@@ -1512,8 +1512,11 @@ function setCurrentObject (obj)
     updateTitle ();
 
     if (client.PRINT_DIRECTION == 1)
+    {
         scrollDown();
-
+        setTimeout ("scrollDown()", 2000);
+    }
+    
     onTopicEditEnd();
 
     if (client.currentObject.TYPE == "IRCChannel")
@@ -1630,7 +1633,10 @@ function addHistory (source, obj, mergeData, collapseRow)
 
     if ("currentObject" in client && client.currentObject == source &&
         needScroll)
-        w.scrollTo (w.pageXOffset, w.document.height);
+    {
+        scrollDown();
+        setTimeout ("scrollDown()", 1000);
+    }                    
     
 }
 
