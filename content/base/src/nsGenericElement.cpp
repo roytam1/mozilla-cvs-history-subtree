@@ -2886,8 +2886,10 @@ nsGenericContainerElement::SetAttribute(nsINodeInfo* aNodeInfo,
         mutation.mPrevAttrValue = getter_AddRefs(NS_NewAtom(oldValue));
       if (!aValue.IsEmpty())
         mutation.mNewAttrValue = getter_AddRefs(NS_NewAtom(aValue));
-      mutation.mAttrChange = modification ? nsIDOMMutationEvent::MODIFICATION :
-                                             nsIDOMMutationEvent::ADDITION;
+      if (modification)
+        mutation.mAttrChange = nsIDOMMutationEvent::MODIFICATION;
+      else
+        mutation.mAttrChange = nsIDOMMutationEvent::ADDITION;
       nsEventStatus status = nsEventStatus_eIgnore;
       HandleDOMEvent(nsnull, &mutation, nsnull,
                      NS_EVENT_FLAG_INIT, &status);
