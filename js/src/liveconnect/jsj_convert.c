@@ -309,7 +309,8 @@ static jsint jlong_to_jsint(jlong lvalue)
 static jlong jsint_to_jlong(jsint ivalue)
 {
     SInt64 val = S64Set(ivalue);
-    return SInt64ToWide(val);
+    wide wval =SInt64ToWide(val);
+    return *(jlong*)&wval;
 }
 
 static jdouble jlong_to_jdouble(jlong lvalue)
@@ -321,7 +322,8 @@ static jdouble jlong_to_jdouble(jlong lvalue)
 static jlong jdouble_to_jlong(jdouble dvalue)
 {
     SInt64 val = LongDoubleToSInt64(dvalue);
-    return SInt64ToWide(val);
+    wide wval = SInt64ToWide(val);
+    return *(jlong*)&wval;
 }
 
 /* Mac utility macro for jsj_ConvertJSValueToJavaValue(), below */
