@@ -178,14 +178,13 @@ MBool ProcessorState::addToResultTree(Node* node) {
             if (current->getNodeType() != Node::ELEMENT_NODE) return MB_FALSE;
             Element* element = (Element*)current;
             Attr* attr = (Attr*)node;
-#ifdef MOZ_XSL
             String nameSpaceURI, name;
-            //-- Workaround for BUG 51656 Html rendered as xhtml
             name = attr->getName();
+            getNameSpaceURI(name, nameSpaceURI);
+            // XXX HACK (pvdb) Workaround for BUG 51656 Html rendered as xhtml
             if (getOutputFormat()->isHTMLOutput()) {
                 name.toLowerCase();
             }
-            getNameSpaceURI(name , nameSpaceURI);
             element->setAttributeNS(nameSpaceURI, name, attr->getValue());
 #else
             element->setAttribute(attr->getName(),attr->getValue());
