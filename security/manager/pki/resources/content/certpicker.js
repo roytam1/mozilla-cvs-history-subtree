@@ -12,14 +12,14 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is __________________________________________.
+ * The Original Code is Mozilla Communicator.
  *
  * The Initial Developer of the Original Code is
- * ____________________________________________.
- * Portions created by the Initial Developer are Copyright (C) 2___
+ * Netscape Communications Corp..
+ * Portions created by the Initial Developer are Copyright (C) 2001
  * the Initial Developer. All Rights Reserved.
  *
- * Contributor(s):
+ * Contributor(s): Kai Engert <kaie@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -42,31 +42,31 @@ var itemCount = 0;
 
 function onLoad()
 {
-    dialogParams = window.arguments[0].QueryInterface(nsIDialogParamBlock);
-    
-    var pickerTitle = dialogParams.GetString(1);
-    var mainwin = document.getElementById("certPicker");
-    mainwin.setAttribute("title", pickerTitle);
+  dialogParams = window.arguments[0].QueryInterface(nsIDialogParamBlock);
 
-    var pickerInfo = dialogParams.GetString(2);
-    setText("pickerInfo", pickerInfo);
+  var pickerTitle = dialogParams.GetString(1);
+  var mainwin = document.getElementById("certPicker");
+  mainwin.setAttribute("title", pickerTitle);
 
-    var selectElement = document.getElementById("nicknames");
-    itemCount = dialogParams.GetInt(1);
+  var pickerInfo = dialogParams.GetString(2);
+  setText("pickerInfo", pickerInfo);
 
-    for (var i=0; i < itemCount; i++) {
-        var menuItemNode = document.createElement("menuitem");
-        var nick = dialogParams.GetString(i+3);
-        menuItemNode.setAttribute("value", i);
-        menuItemNode.setAttribute("label", nick); // this is displayed
-        selectElement.firstChild.appendChild(menuItemNode);
-        if (i == 0) {
-            selectElement.selectedItem = menuItemNode;
-        }
-    }
+  var selectElement = document.getElementById("nicknames");
+  itemCount = dialogParams.GetInt(1);
 
-    dialogParams.SetInt(1,0); // set cancel return value
-    setDetails();
+  for (var i=0; i < itemCount; i++) {
+      var menuItemNode = document.createElement("menuitem");
+      var nick = dialogParams.GetString(i+3);
+      menuItemNode.setAttribute("value", i);
+      menuItemNode.setAttribute("label", nick); // this is displayed
+      selectElement.firstChild.appendChild(menuItemNode);
+      if (i == 0) {
+          selectElement.selectedItem = menuItemNode;
+      }
+  }
+
+  dialogParams.SetInt(1,0); // set cancel return value
+  setDetails();
 }
 
 function setDetails()

@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -11,14 +12,14 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is __________________________________________.
+ * The Original Code is Mozilla Communicator.
  *
  * The Initial Developer of the Original Code is
- * ____________________________________________.
- * Portions created by the Initial Developer are Copyright (C) 2___
+ * Netscape Communications Corp..
+ * Portions created by the Initial Developer are Copyright (C) 2001
  * the Initial Developer. All Rights Reserved.
  *
- * Contributor(s):
+ * Contributor(s): Kai Engert <kaie@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
