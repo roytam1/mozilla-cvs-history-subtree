@@ -53,6 +53,7 @@ nsVoidArray *nsTimerXlib::gNormalList  = (nsVoidArray *)nsnull;
 nsVoidArray *nsTimerXlib::gLowList     = (nsVoidArray *)nsnull;
 nsVoidArray *nsTimerXlib::gLowestList  = (nsVoidArray *)nsnull;
 PRPackedBool nsTimerXlib::gTimeoutAdded = PR_FALSE;
+PRPackedBool nsTimerXlib::gInitalized   = PR_FALSE;
 Display *nsTimerXlib::mDisplay = nsnull;
 
 /* Interval how controlls how often we visit the timer queues ...*/
@@ -89,7 +90,7 @@ void nsTimerXlib::Shutdown()
   if (gLowList)     delete gLowList;     gLowList     = nsnull;
   if (gLowestList)  delete gLowestList;  gLowestList  = nsnull;
 
-  gTimeoutAdded = PR_FALSE;
+  gInitalized = PR_FALSE;
 }
 
 NS_IMPL_ISUPPORTS1(nsTimerXlib, nsITimer)
@@ -145,15 +146,8 @@ nsTimerXlib::Init(PRUint32 aDelay, PRUint32 aPriority)
   fprintf(stderr, "fire set to %ld / %ld\n", mFireTime.tv_sec, mFireTime.tv_usec);
 #endif
 
-  if (!gTimeoutAdded)
+  if (!gInitalized)
   {
-    mDisplay = xxlib_rgb_get_display(xxlib_find_handle(XXLIBRGB_DEFAULT_HANDLE));
-    NS_ASSERTION(mDisplay!=nsnull, "xxlib_rgb_get_display() returned nsnull display. BAD.");
-    XtAppContext app_context = XtDisplayToApplicationContext(mDisplay);
-    NS_ASSERTION(app_context!=nsnull, "XtDisplayToApplicationContext() returned nsnull Xt app context. BAD.");
-    if (!app_context)
-      return NS_ERROR_OUT_OF_MEMORY;
-
     gHighestList = new nsVoidArray(64);
     gHighList    = new nsVoidArray(64);
     gNormalList  = new nsVoidArray(64);
@@ -163,15 +157,34 @@ nsTimerXlib::Init(PRUint32 aDelay, PRUint32 aPriority)
     if (!(gHighestList && gHighList && gNormalList && gLowList && gLowestList)) {
       NS_WARNING("nsTimerXlib initalisation failed. DIE!");
       return NS_ERROR_OUT_OF_MEMORY;
-    }  
+    }
     
-    // start timers
-    XtAppAddTimeOut(app_context, 
-                    CALLPROCESSTIMEOUTSVAL,
-                    CallProcessTimeoutsXtProc, 
-                    app_context);
+    gInitalized = PR_TRUE;
+  }
+  
+  if (!gTimeoutAdded)
+  {
+    mDisplay = xxlib_rgb_get_display(xxlib_find_handle(XXLIBRGB_DEFAULT_HANDLE));
+    /* We may only get a display if a XlibRgbHandle was created by nsAppShell
+     * It does not matter if this fails the first time - the timer gets queued
+     * anyway and the next timer initalisation will try it again until we can
+     * register the Xt timer callback ...
+     */
+    if (mDisplay) {
+      XtAppContext app_context = XtDisplayToApplicationContext(mDisplay);
+      NS_ASSERTION(app_context!=nsnull, "XtDisplayToApplicationContext() returned nsnull Xt app context. BAD.");
+      if (!app_context)
+        return NS_ERROR_OUT_OF_MEMORY;
+          
+      // start timers
+      XtAppAddTimeOut(app_context, 
+                      CALLPROCESSTIMEOUTSVAL,
+                      CallProcessTimeoutsXtProc, 
+                      app_context);
 
-    gTimeoutAdded = PR_TRUE;
+
+      gTimeoutAdded = PR_TRUE;
+    }  
   }
 
   switch (aPriority)

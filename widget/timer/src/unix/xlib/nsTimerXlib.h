@@ -108,6 +108,7 @@ private:
                       *gLowList,    
                       *gLowestList; 
     
-  static PRPackedBool  gTimeoutAdded;
+  static PRPackedBool  gInitalized,
+                       gTimeoutAdded;
 };
 #endif /* !__nsTimerXlib_h */
