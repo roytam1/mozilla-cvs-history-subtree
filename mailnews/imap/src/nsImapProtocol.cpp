@@ -6997,6 +6997,7 @@ nsImapMockChannel::OnCacheEntryAvailable(nsICacheEntryDescriptor *entry, nsCache
       if (access & nsICache::ACCESS_WRITE)
         entry->MarkValid();
       if (NS_SUCCEEDED(rv)) return NS_OK; // kick out if reading from the cache succeeded...
+      mailnewsUrl->SetMemCacheEntry(nsnull);
     }
   } // if we got a valid entry back from the cache...
 
