@@ -183,6 +183,7 @@ tier_9_dirs	+= \
 		uriloader \
 		modules/libpref \
 		modules/libimg \
+		modules/oji \
 		caps \
 		rdf \
 		expat \
