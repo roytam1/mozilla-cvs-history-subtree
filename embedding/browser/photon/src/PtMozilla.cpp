@@ -105,6 +105,9 @@ PtWidgetClass_t *PtCreateMozillaClass( void );
 	PtWidgetClassRef_t *PtMozilla = &__PtMozilla; 
 #endif
 
+/* globals */
+char *g_Print_Left_Header_String, *g_Print_Right_Header_String, *g_Print_Left_Footer_String, *g_Print_Right_Footer_String;
+
 void 
 MozSetPreference(PtWidget_t *widget, int type, char *pref, void *data)
 {
@@ -193,6 +196,7 @@ mozilla_defaults( PtWidget_t *widget )
 	moz->disable_exception_dlg = 0;
 	moz->text_zoom = 100;
 	moz->actual_text_zoom = 100;
+	moz->toActivate = 0;
 
 	// widget related
 	basic->flags = Pt_ALL_OUTLINES | Pt_ALL_BEVELS | Pt_FLAT_FILL;
@@ -221,12 +225,38 @@ mozilla_destroy( PtWidget_t *widget )
 static int child_getting_focus( PtWidget_t *widget, PtWidget_t *child, PhEvent_t *ev ) {
 	PtMozillaWidget_t *moz = (PtMozillaWidget_t *) widget;
 	nsCOMPtr<nsPIDOMWindow> piWin;
+
 	moz->EmbedRef->GetPIDOMWindow( getter_AddRefs( piWin ) );
 	if( !piWin ) return Pt_CONTINUE;
 
 	nsCOMPtr<nsIFocusController> focusController;
 	piWin->GetRootFocusController(getter_AddRefs(focusController));
-	if( focusController ) focusController->SetActive( PR_TRUE );
+	if( focusController )
+		focusController->SetActive( PR_TRUE );
+
+	if( moz->toActivate ) {
+		moz->toActivate = 0;
+		piWin->Activate();
+		}
+
+	return Pt_CONTINUE;
+	}
+
+static int child_losing_focus( PtWidget_t *widget, PtWidget_t *child, PhEvent_t *ev ) {
+	PtMozillaWidget_t *moz = (PtMozillaWidget_t *) widget;
+	nsCOMPtr<nsPIDOMWindow> piWin;
+
+	moz->EmbedRef->GetPIDOMWindow( getter_AddRefs( piWin ) );
+	if( !piWin ) return Pt_CONTINUE;
+
+	nsCOMPtr<nsIFocusController> focusController;
+	piWin->GetRootFocusController(getter_AddRefs(focusController));
+	if( focusController )
+		focusController->SetActive( PR_FALSE );
+
+	piWin->Deactivate();
+	moz->toActivate = 1;
+
 	return Pt_CONTINUE;
 	}
 
@@ -725,10 +755,22 @@ mozilla_set_pref( PtWidget_t *widget, char *option, char *value )
 /* Print options */
 	else if( !strcmp( option, "Print_Header_Font" ) ) 		; /* not used */
 	else if( !strcmp( option, "Print_Header_Font_Size" ) ) 		; /* not used */
-	else if( !strcmp( option, "Print_Left_Header_String" ) ) 		; /* not used */
-	else if( !strcmp( option, "Print_Right_Header_String" ) ) 		; /* not used */
-	else if( !strcmp( option, "Print_Left_Footer_String" ) ) 		; /* not used */
-	else if( !strcmp( option, "Print_Right_Footer_String" ) ) 		; /* not used */
+  else if( !strcmp( option, "Print_Left_Header_String" ) ) {
+    if( g_Print_Left_Header_String ) free( g_Print_Left_Header_String );
+    g_Print_Left_Header_String = strdup( value );
+    }
+  else if( !strcmp( option, "Print_Right_Header_String" ) ) {
+    if( g_Print_Right_Header_String ) free( g_Print_Right_Header_String );
+    g_Print_Right_Header_String = strdup( value );
+    }
+  else if( !strcmp( option, "Print_Left_Footer_String" ) ) {
+    if( g_Print_Left_Footer_String ) free( g_Print_Left_Footer_String );
+    g_Print_Left_Footer_String = strdup( value );
+    }
+  else if( !strcmp( option, "Print_Right_Footer_String" ) ) {
+    if( g_Print_Right_Footer_String ) free( g_Print_Right_Footer_String );
+    g_Print_Right_Footer_String = strdup( value );
+    }
 
 
 /* Miscellaneous options */
@@ -1072,6 +1114,7 @@ PtWidgetClass_t *PtCreateMozillaClass( void )
 		{ Pt_SET_FLAGS, Pt_RECTANGULAR, Pt_RECTANGULAR },
 		{ Pt_SET_DESTROY_F, (long) mozilla_destroy },
 		{ Pt_SET_CHILD_GETTING_FOCUS_F, ( long ) child_getting_focus },
+		{ Pt_SET_CHILD_LOSING_FOCUS_F, ( long ) child_losing_focus },
 		{ Pt_SET_RESOURCES, (long) resources },
 		{ Pt_SET_NUM_RESOURCES, sizeof( resources )/sizeof( resources[0] ) },
 		{ Pt_SET_DESCRIPTION, (long) "PtMozilla" },

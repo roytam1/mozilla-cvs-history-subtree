@@ -100,16 +100,8 @@ printf( "\n\n\n!!!!!!!!!!!!!!!!! ~nsDeviceContextPh is unloading the mFontLoadCa
 	}
 
 NS_IMETHODIMP nsDeviceContextPh :: Init( nsNativeWidget aWidget ) {
-  float newscale, origscale;
-  float a2d,t2d;
-    
-  CommonInit(NULL);
- 
-  newscale = TwipsToDevUnits();
-  origscale = AppUnitsToDevUnits();
 
-  t2d = TwipsToDevUnits();
-  a2d = AppUnitsToDevUnits();
+  CommonInit(NULL);
 
   // Call my base class
   return DeviceContextImpl::Init( aWidget );
@@ -118,7 +110,7 @@ NS_IMETHODIMP nsDeviceContextPh :: Init( nsNativeWidget aWidget ) {
 
 /* Called for Printing */
 nsresult nsDeviceContextPh :: Init( nsNativeDeviceContext aContext, nsIDeviceContext *aOrigContext ) {
-  float                  origscale, newscale, t2d, a2d;
+  float origscale, newscale, t2d, a2d;
     
   mDC = aContext;
 
@@ -139,6 +131,9 @@ nsresult nsDeviceContextPh :: Init( nsNativeDeviceContext aContext, nsIDeviceCon
 	GetPrinterRect( &w, &h );
 	mWidthFloat = w;
 	mHeightFloat = h;
+
+	/* Call Base Class */
+	DeviceContextImpl::CommonInit( );
 
 	return NS_OK;
 	}
@@ -217,9 +212,6 @@ void nsDeviceContextPh :: CommonInit( nsNativeDeviceContext aDC ) {
   /* Revisit: the scroll bar sizes is a gross guess based on Phab */
   mScrollbarHeight = 17;
   mScrollbarWidth  = 17;
-  
-  /* Call Base Class */
-  DeviceContextImpl::CommonInit( );
 	}
 
 NS_IMETHODIMP nsDeviceContextPh :: CreateRenderingContext( nsIRenderingContext *&aContext ) {
@@ -349,22 +341,22 @@ int nsDeviceContextPh :: ReadSystemFonts( ) const
 void nsDeviceContextPh :: DefaultSystemFonts( ) const
 {
 	FaceMessageFont = "MessageFont";
-	SizeMessageFont = 9;
+	SizeMessageFont = 8;
 	StyleMessageFont = NS_FONT_STYLE_NORMAL;
 	WeightMessageFont = NS_FONT_WEIGHT_NORMAL;
 
 	FaceMenuFont = "MenuFont";
-	SizeMenuFont = 9;
+	SizeMenuFont = 8;
 	StyleMenuFont = NS_FONT_STYLE_NORMAL;
 	WeightMenuFont = NS_FONT_WEIGHT_NORMAL;
 
 	FaceBalloonFont = "BalloonFont";
-	SizeBalloonFont = 9;
+	SizeBalloonFont = 8;
 	StyleBalloonFont = NS_FONT_STYLE_NORMAL;
 	WeightBalloonFont = NS_FONT_WEIGHT_NORMAL;
 
 	FaceGeneralFont = "TextFont";
-	SizeGeneralFont = 9;
+	SizeGeneralFont = 8;
 	StyleGeneralFont = NS_FONT_STYLE_NORMAL;
 	WeightGeneralFont = NS_FONT_WEIGHT_NORMAL;
 }
@@ -399,25 +391,25 @@ NS_IMETHODIMP nsDeviceContextPh :: GetSystemFont( nsSystemFontID aID, nsFont *aF
 	  	aFont->name.AssignWithConversion( FaceGeneralFont );
 			aFont->style = StyleGeneralFont;
 			aFont->weight = WeightGeneralFont;
-			aFont->size = NSIntPointsToTwips( SizeGeneralFont );
+			aFont->size = SizeGeneralFont / ( mAppUnitsToDevUnits * 0.68 ); /* see nsFontMetricsPh::Init */
 			break;
 		case eSystemFont_MessageBox:
 			aFont->name.AssignWithConversion( FaceMessageFont );
 			aFont->style = StyleMessageFont;
 			aFont->weight = WeightMessageFont;
-			aFont->size = NSIntPointsToTwips( SizeMessageFont );
+			aFont->size = SizeMessageFont / ( mAppUnitsToDevUnits * 0.68 ); /* see nsFontMetricsPh::Init */
 			break;
 		case eSystemFont_Tooltips:     // moz
 			aFont->name.AssignWithConversion( FaceBalloonFont );
 			aFont->style = StyleBalloonFont;
 			aFont->weight = WeightBalloonFont;
-			aFont->size = NSIntPointsToTwips( SizeBalloonFont );
+			aFont->size = SizeBalloonFont / ( mAppUnitsToDevUnits * 0.68 ); /* see nsFontMetricsPh::Init */
 			break;
 		case eSystemFont_Menu:
 			aFont->name.AssignWithConversion( FaceMenuFont );
 			aFont->style = StyleMenuFont;
 			aFont->weight = WeightMenuFont;
-			aFont->size = NSIntPointsToTwips( SizeMenuFont );
+			aFont->size = SizeMenuFont / ( mAppUnitsToDevUnits * 0.68 ); /* see nsFontMetricsPh::Init */
 			break;
   	}
 

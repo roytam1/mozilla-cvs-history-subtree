@@ -41,7 +41,9 @@
 #include "nsBaseWidget.h"
 #include "nsIKBStateControl.h"
 #include "nsIRegion.h"
+#ifdef PHOTON_DND
 #include "nsIDragService.h"
+#endif
 
 class nsILookAndFeel;
 class nsIAppShell;
@@ -95,6 +97,7 @@ public:
   NS_IMETHOD Destroy(void);
   inline nsIWidget* GetParent(void)
 		{
+		if( mIsDestroying ) return nsnull;
 		nsIWidget* result = mParent;
 		if( mParent ) NS_ADDREF( result );
 		return result;
@@ -128,12 +131,6 @@ public:
 		{
 		if(PtWidgetFlags(mWidget) & Pt_BLOCKED) *aState = PR_FALSE;
 		else *aState = PR_TRUE;
-		return NS_OK;
-		}
-
-  inline NS_IMETHOD SetFocus(PRBool aRaise)
-		{
-		if( mWidget ) PtContainerGiveFocus( mWidget, NULL );
 		return NS_OK;
 		}
 
@@ -288,8 +285,10 @@ protected:
 		return ConvertStatus(status);
 		}
 
+#ifdef PHOTON_DND
 	void DispatchDragDropEvent( PRUint32 aEventType, PhPoint_t *pos );
 	void ProcessDrag( PhEvent_t *event, PRUint32 aEventType, PhPoint_t *pos );
+#endif
 
   // this is the "native" destroy code that will destroy any
   // native windows / widgets for this logical widget
@@ -312,7 +311,8 @@ protected:
 		pt.x -= x; pt.y -= y;
 		}
 
-  inline void InitKeyEvent( PhKeyEvent_t *aPhKeyEvent, nsWidget *aWidget, nsKeyEvent &aKeyEvent, PRUint32 aEventType );
+	inline void InitKeyEvent(PhKeyEvent_t *aPhKeyEvent, nsKeyEvent &anEvent );
+	inline void InitKeyPressEvent(PhKeyEvent_t *aPhKeyEvent, nsKeyEvent &anEvent );
   void InitMouseEvent( PhPointerEvent_t * aPhButtonEvent,
                        nsWidget         * aWidget,
                        nsMouseEvent     & anEvent,
@@ -320,7 +320,7 @@ protected:
 
 
   /* Convert Photon key codes to Mozilla key codes */
-  PRUint32 nsConvertKey( unsigned long keysym, unsigned long keymods, PRBool *aIsChar );
+  PRUint32 nsConvertKey( PhKeyEvent_t *aPhKeyEvent );
 
 #if 0
   //Enable/Disable Photon Damage		  
@@ -343,7 +343,9 @@ protected:
   static int  GotFocusCallback( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo );
   static int  LostFocusCallback( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo );
   static int  DestroyedCallback( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo );
+#ifdef PHOTON_DND
   static int  DndCallback( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo );
+#endif
 
   PtWidget_t          *mWidget;
   nsIWidget						*mParent;
@@ -354,11 +356,11 @@ protected:
    
   // Focus used global variable
   static nsWidget* sFocusWidget; //Current Focus Widget
-  static PRBool    sJustGotDeactivated;
-  static PRBool    sJustGotActivated; //For getting rid of the ASSERT ERROR due to reducing suppressing of focus.
   
   static nsILookAndFeel *sLookAndFeel;
+#ifdef PHOTON_DND
 	static nsIDragService *sDragService;
+#endif
   static PRUint32 sWidgetCount;
 };
 
