@@ -206,7 +206,8 @@ public:
                                              const nsAString & aFlavor,
                                              nsIDOMNode *aDestinationNode,
                                              PRInt32 aDestinationOffset,
-                                             PRBool aDeleteSelection);
+                                             PRBool aDeleteSelection,
+                                             PRBool aRemoveExistingStyle);
 
   NS_IMETHOD LoadHTML(const nsAString &aInputString);
   NS_IMETHOD LoadHTMLWithCharset(const nsAString& aInputString,

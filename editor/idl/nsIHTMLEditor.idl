@@ -312,7 +312,7 @@ interface nsIHTMLEditor : nsISupports
    * @param aDestinationNode    location for insertion (such as when dropped)
    * @param aDestinationOffset  used with aDestNode to determine insert location
    * @param aDeleteSelection    used with aDestNode during drag&drop 
-   * @param aCollapseSelection  used with aDestNode during drag&drop
+   * @param aRemoveExistingStyle  should existing style at insertion point be removed?
    */
   void insertHTMLWithCharsetAndContext(in AString aInputString,
                                        in AString aCharset,
@@ -321,7 +321,8 @@ interface nsIHTMLEditor : nsISupports
                                        in AString aFlavor,
                                        in nsIDOMNode aDestinationNode,
                                        in long aDestinationOffset,
-                                       in boolean aDeleteSelection);
+                                       in boolean aDeleteSelection,
+                                       in boolean aRemoveExistingStyle);
 
 
   /** 
