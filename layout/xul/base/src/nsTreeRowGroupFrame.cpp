@@ -233,7 +233,7 @@ nsTreeRowGroupFrame::TreeAppendFrames(nsIFrame* aFrameList)
 PRBool nsTreeRowGroupFrame::ContinueReflow(nscoord y, nscoord height) 
 { 
   //printf("Y is: %d\n", y);
-  printf("Height is: %d\n", height); 
+  //printf("Height is: %d\n", height); 
   if (height <= 0)
     return PR_FALSE;
   else
