@@ -386,7 +386,7 @@ nsJARChannel::EnsureJARFileAvailable(OnJARFileAvailableFun onJARFileAvailable,
     nsXPIDLCString jarURLStr;
     mURI->GetSpec(getter_Copies(jarURLStr));
     PR_LOG(gJarProtocolLog, PR_LOG_DEBUG,
-           ("nsJarProtocol: AsyncRead %s", (const char*)jarURLStr));
+           ("nsJarProtocol: EnsureJARFileAvailable %s", (const char*)jarURLStr));
 #endif
 
     rv = mURI->GetJARFile(getter_AddRefs(mJARBaseURI));
@@ -534,6 +534,12 @@ nsJARChannel::AsyncReadJARElement()
     rv = mJarExtractionTransport->SetNotificationCallbacks(mCallbacks);
     if (NS_FAILED(rv)) return rv;
 
+#ifdef PR_LOGGING
+    nsXPIDLCString jarURLStr;
+    mURI->GetSpec(getter_Copies(jarURLStr));
+    PR_LOG(gJarProtocolLog, PR_LOG_DEBUG,
+           ("nsJarProtocol: AsyncRead jar entry %s", (const char*)jarURLStr));
+#endif
     rv = mJarExtractionTransport->AsyncRead(mStartPosition, mReadCount, nsnull, this);
     return rv;
 }
@@ -783,6 +789,12 @@ nsJARChannel::Close(nsresult status)
 NS_IMETHODIMP
 nsJARChannel::GetInputStream(nsIInputStream* *aInputStream) 
 {
+#ifdef PR_LOGGING
+    nsXPIDLCString jarURLStr;
+    mURI->GetSpec(getter_Copies(jarURLStr));
+    PR_LOG(gJarProtocolLog, PR_LOG_DEBUG,
+           ("nsJarProtocol: GetInputStream jar entry %s", (const char*)jarURLStr));
+#endif
 	return mJAR->GetInputStream(mJAREntry, aInputStream);
 }
  
