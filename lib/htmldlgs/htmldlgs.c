@@ -1946,7 +1946,7 @@ static XPDialogInfo alertDialog = {
     XP_DIALOG_OK_BUTTON,
     NULL,
     600,
-    224
+    300
 };
 
 void
