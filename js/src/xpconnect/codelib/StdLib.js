@@ -43,6 +43,7 @@
  */
 
 MOZ_EXPORTED_SYMBOLS = [ "appendUnique",
+                         "cloneArray",
                          "createDynamicProxy" ];
 
 
@@ -69,6 +70,17 @@ appendUnique._helpstr_ = "append array 'src' to array 'target', \
 ommiting elements that are already present in 'target' and equal under \
 the relation 'equals' (default: '=='). Returns target array";
 
+//----------------------------------------------------------------------
+// cloneArray
+
+function cloneArray(src) {
+  var retval = [];
+  for (var i=0, l=src.length; i<l; ++i)
+    retval.push(src[i]);
+  return retval;
+}
+
+cloneArray._helpstr_ = "returns a copy of the given array.";
 
 //----------------------------------------------------------------------
 // createDynamicProxy
@@ -76,7 +88,13 @@ the relation 'equals' (default: '=='). Returns target array";
 function createDynamicProxy(objGetter) {
   return { __noSuchMethod__: function(id, args) {
                                var obj = objGetter();
-                               return obj[id].apply(obj, args);}
+                               return obj[id].apply(obj, args);
+           },
+           // For QI, we need to ensure that we return ourselves, not the wrapped object:
+           QueryInterface : function(iid) {
+             objGetter().QueryInterface(iid); // throws on failure
+             return this; // impersonate obj
+           }
          };
 }
 
