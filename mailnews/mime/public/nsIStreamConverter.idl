@@ -29,6 +29,16 @@
     { 0x8e, 0xf0, 0x0, 0xa0, 0x24, 0xa7, 0xd1, 0x44 } }
 %}
 
+[scriptable, uuid(7E1C52F7-3594-11d3-988E-001083010E9B)] 
+interface nsMimeOutputType 
+{ 
+    const long nsMimeMessageSplitDisplay = 0;
+    const long nsMimeMessageHeaderDisplay = 1;
+    const long nsMimeMessageBodyDisplay = 2;
+	const long nsMimeMessageQuoting = 3;
+	const long nsMimeMessageRaw = 4;
+	const long nsMimeUnknown = 5;
+}; 
 
 [scriptable, uuid(C9CDF8E5-95FA-11d2-8807-00805F5A1FB8)]
 interface nsIStreamConverter : nsIStreamListener {
