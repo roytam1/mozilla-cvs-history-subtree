@@ -70,6 +70,8 @@
 
 #define PK11_SEARCH_CHUNKSIZE 10
 
+extern const NSSError NSS_ERROR_NOT_FOUND;
+
 CK_OBJECT_HANDLE
 pk11_FindPubKeyByAnyCert(CERTCertificate *cert, PK11SlotInfo **slot, void *wincx);
 
@@ -439,6 +441,8 @@ static CERTCertificate
 	nssPKIObject_Destroy(pkio);
 	return NULL;
     }
+
+    nssTrustDomain_AddCertsToCache(td, &c, 1);
 
     /* Build the old-fashioned nickname */
     if ((nickptr) && (co->label)) {
@@ -1572,6 +1576,8 @@ PK11_MakeIDFromPubKey(SECItem *pubKeyData) {
     return certCKA_ID;
 }
 
+extern const NSSError NSS_ERROR_INVALID_CERTIFICATE;
+
 /*
  * Write the cert into the token.
  */
@@ -1750,7 +1756,10 @@ done:
 
     if (c->object.cryptoContext) {
 	/* Delete the temp instance */
-	nssCertificateStore_Remove(c->object.cryptoContext->certStore, c, PR_TRUE);
+	NSSCryptoContext *cc = c->object.cryptoContext;
+	nssCertificateStore_Lock(cc->certStore);
+	nssCertificateStore_RemoveCertLOCKED(cc->certStore, c);
+	nssCertificateStore_Unlock(cc->certStore);
 	c->object.cryptoContext = NULL;
 	cert->istemp = PR_FALSE;
 	cert->isperm = PR_TRUE;
@@ -1793,6 +1802,11 @@ done:
 					 emailAddr,
                                          PR_TRUE);
     if (!certobj) {
+	if (NSS_GetError() == NSS_ERROR_INVALID_CERTIFICATE) {
+	    PORT_SetError(SEC_ERROR_REUSED_ISSUER_AND_SERIAL);
+	    SECITEM_FreeItem(keyID,PR_TRUE);
+	    return SECFailure;
+	}
 	goto loser;
     }
     /* add the new instance to the cert, force an update of the
@@ -3722,6 +3736,9 @@ loser:
 	crls = nssTrustDomain_FindCRLsBySubject(td, &subject);
     }
     if (!crls) {
+	if (NSS_GetError() == NSS_ERROR_NOT_FOUND) {
+	    PORT_SetError(SEC_ERROR_CRL_NOT_FOUND);
+	}
 	return NULL;
     }
     crl = NULL;
@@ -3734,7 +3751,10 @@ loser:
 	}
     }
     nssCRLArray_Destroy(crls);
-    if (!crl) {
+    if (!crl) { 
+	/* CRL collection was found, but no interesting CRL's were on it.
+	 * Not an error */
+	PORT_SetError(SEC_ERROR_CRL_NOT_FOUND);
 	return NULL;
     }
     *slot = PK11_ReferenceSlot(crl->object.instances[0]->token->pk11slot);

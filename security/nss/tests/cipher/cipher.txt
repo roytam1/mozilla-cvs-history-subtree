@@ -30,4 +30,3 @@
 	0	md2_-H		MD2_Hash
 	0	md5_-H		MD5_Hash
 	0	sha1_-H		SHA1_Hash
-	
