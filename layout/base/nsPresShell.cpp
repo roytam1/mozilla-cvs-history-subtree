@@ -2460,8 +2460,7 @@ PresShell::InitialReflow(nscoord aWidth, nscoord aHeight)
 
     mIsReflowing = PR_TRUE;
 
-    nsHTMLReflowState reflowState(mPresContext, rootFrame,
-                                  eReflowReason_Initial, rcx, maxSize);
+    nsHTMLReflowState reflowState(mPresContext, rootFrame, rcx, maxSize);
     rootFrame->WillReflow(mPresContext);
     nsContainerFrame::PositionFrameView(rootFrame);
     rootFrame->Reflow(mPresContext, desiredSize, reflowState, status);
@@ -2598,8 +2597,7 @@ PresShell::ResizeReflow(nscoord aWidth, nscoord aHeight)
     nsresult rv=CreateRenderingContext(rootFrame, &rcx);
     if (NS_FAILED(rv)) return rv;
 
-    nsHTMLReflowState reflowState(mPresContext, rootFrame,
-                                  eReflowReason_Resize, rcx, maxSize);
+    nsHTMLReflowState reflowState(mPresContext, rootFrame, rcx, maxSize);
 
     rootFrame->WillReflow(mPresContext);
     nsContainerFrame::PositionFrameView(rootFrame);
@@ -3015,6 +3013,9 @@ PresShell::StyleChangeReflow()
 
   nsIFrame* rootFrame = FrameManager()->GetRootFrame();
   if (rootFrame) {
+    // Mark everything dirty
+    FrameNeedsReflow(rootFrame, eStyleChange);
+
     // Kick off a top-down reflow
     NS_FRAME_LOG(NS_FRAME_TRACE_CALLS,
                  ("enter nsPresShell::StyleChangeReflow"));
@@ -3037,8 +3038,7 @@ PresShell::StyleChangeReflow()
     nsresult rv=CreateRenderingContext(rootFrame, &rcx);
     if (NS_FAILED(rv)) return rv;
 
-    nsHTMLReflowState reflowState(mPresContext, rootFrame,
-                                  eReflowReason_StyleChange, rcx, maxSize);
+    nsHTMLReflowState reflowState(mPresContext, rootFrame, rcx, maxSize);
 
     rootFrame->WillReflow(mPresContext);
     nsContainerFrame::PositionFrameView(rootFrame);
