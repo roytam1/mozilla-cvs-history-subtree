@@ -49,6 +49,8 @@
 #include "txNamespaceMap.h"
 #include "nsAutoPtr.h"
 #include "Expr.h"
+#include "txXSLTNumber.h"
+#include "txXSLTPatterns.h"
 
 class txInstruction : public TxObject
 {
@@ -216,6 +218,25 @@ public:
     TX_DECL_TXINSTRUCTION
 
     PRBool mTerminate;
+};
+
+class txNumber : public txInstruction
+{
+public:
+    txNumber(txXSLTNumber::LevelType aLevel, nsAutoPtr<txPattern> aCount,
+             nsAutoPtr<txPattern> aFrom, nsAutoPtr<Expr> aValue,
+             nsAutoPtr<Expr> aFormat, nsAutoPtr<Expr> aGroupingSeparator,
+             nsAutoPtr<Expr> aGroupingSize);
+
+    TX_DECL_TXINSTRUCTION
+
+    txXSLTNumber::LevelType mLevel;
+    nsAutoPtr<txPattern> mCount;
+    nsAutoPtr<txPattern> mFrom;
+    nsAutoPtr<Expr> mValue;
+    nsAutoPtr<Expr> mFormat;
+    nsAutoPtr<Expr> mGroupingSeparator;
+    nsAutoPtr<Expr> mGroupingSize;
 };
 
 class txPopParams : public txInstruction

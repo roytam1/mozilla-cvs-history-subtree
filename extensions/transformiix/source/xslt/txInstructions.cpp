@@ -49,6 +49,7 @@
 #include "txAtoms.h"
 #include "txRtfHandler.h"
 #include "txNodeSorter.h"
+#include "txXSLTNumber.h"
 
 txApplyTemplates::txApplyTemplates(const txExpandedName& aMode)
     : mMode(aMode)
@@ -547,6 +548,31 @@ txMessage::execute(txExecutionState& aEs)
     delete handler;
 
     return mTerminate ? NS_ERROR_XSLT_ABORTED : NS_OK;
+}
+
+txNumber::txNumber(txXSLTNumber::LevelType aLevel, nsAutoPtr<txPattern> aCount,
+                   nsAutoPtr<txPattern> aFrom, nsAutoPtr<Expr> aValue,
+                   nsAutoPtr<Expr> aFormat, nsAutoPtr<Expr> aGroupingSeparator,
+                   nsAutoPtr<Expr> aGroupingSize)
+    : mLevel(aLevel), mCount(aCount), mFrom(aFrom), mValue(aValue),
+      mFormat(aFormat), mGroupingSeparator(aGroupingSeparator),
+      mGroupingSize(aGroupingSize)
+{
+}
+
+nsresult
+txNumber::execute(txExecutionState& aEs)
+{
+    nsAutoString res;
+    nsresult rv =
+        txXSLTNumber::createNumber(mValue, mCount, mFrom, mLevel, mGroupingSize,
+                                   mGroupingSeparator, mFormat,
+                                   aEs.getEvalContext(), res);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    aEs.mResultHandler->characters(res, PR_FALSE);
+
+    return NS_OK;
 }
 
 nsresult

@@ -1520,6 +1520,85 @@ txFnEndMessage(txStylesheetCompilerState& aState)
 }
 
 /*
+  xsl:for-each
+
+  txNumber
+*/
+nsresult
+txFnStartNumber(PRInt32 aNamespaceID,
+                nsIAtom* aLocalName,
+                nsIAtom* aPrefix,
+                txStylesheetAttr* aAttributes,
+                PRInt32 aAttrCount,
+                txStylesheetCompilerState& aState)
+{
+    nsresult rv = NS_OK;
+
+    nsCOMPtr<nsIAtom> levelAtom;
+    rv = getAtomAttr(aAttributes, aAttrCount, txXSLTAtoms::level, PR_FALSE,
+                     aState, getter_AddRefs(levelAtom));
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    txXSLTNumber::LevelType level = txXSLTNumber::eLevelSingle;
+    if (levelAtom == txXSLTAtoms::multiple) {
+        level = txXSLTNumber::eLevelMultiple;
+    }
+    else if (levelAtom == txXSLTAtoms::any) {
+        level = txXSLTNumber::eLevelAny;
+    }
+    else if (levelAtom && levelAtom != txXSLTAtoms::single && !aState.fcp()) {
+        return NS_ERROR_XSLT_PARSE_FAILURE;
+    }
+    
+    txPattern* count = nsnull;
+    rv = getPatternAttr(aAttributes, aAttrCount, txXSLTAtoms::count, PR_FALSE,
+                        aState, count);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    txPattern* from = nsnull;
+    rv = getPatternAttr(aAttributes, aAttrCount, txXSLTAtoms::from, PR_FALSE,
+                        aState, from);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    Expr* value = nsnull;
+    rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::value, PR_FALSE,
+                     aState, value);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    Expr* format = nsnull;
+    rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::format, PR_FALSE,
+                    aState, format);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    Expr* groupingSeparator = nsnull;
+    rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::groupingSeparator,
+                    PR_FALSE, aState, groupingSeparator);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    Expr* groupingSize = nsnull;
+    rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::groupingSize,
+                    PR_FALSE, aState, groupingSize);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    txInstruction* instr = new txNumber(level, count, from, value, format,
+                                        groupingSeparator, groupingSize);
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+    
+    rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return aState.pushHandlerTable(gTxIgnoreHandler);;
+}
+
+nsresult
+txFnEndNumber(txStylesheetCompilerState& aState)
+{
+    aState.popHandlerTable();
+
+    return NS_OK;
+}
+
+/*
     xsl:otherwise
     
     (see xsl:choose)
@@ -2086,6 +2165,7 @@ txHandlerTableData gTxTemplateTableData = {
     { kNameSpaceID_XSLT, "for-each", txFnStartForEach, txFnEndForEach },
     { kNameSpaceID_XSLT, "if", txFnStartIf, txFnEndIf },
     { kNameSpaceID_XSLT, "message", txFnStartMessage, txFnEndMessage },
+    { kNameSpaceID_XSLT, "number", txFnStartNumber, txFnEndNumber },
     { kNameSpaceID_XSLT, "processing-instruction", txFnStartPI, txFnEndPI },
     { kNameSpaceID_XSLT, "text", txFnStartText, txFnEndText },
     { kNameSpaceID_XSLT, "value-of", txFnStartValueOf, txFnEndValueOf },
