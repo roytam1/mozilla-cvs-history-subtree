@@ -102,6 +102,9 @@
 #include "nsRange.h"
 #include "nsIWebBrowserPersist.h"
 #include "nsEscape.h"
+#include "nsIMIMEService.h"
+#include "nsContentUtils.h"
+#include "imgILoader.h"
 
 // private clipboard data flavors for html copy, used by editor when pasting
 #define kHTMLContext   "text/_moz_htmlcontext"
@@ -1543,7 +1546,7 @@ nsTransferableFactory::SerializeNodeOrSelection(serializationMode inMode, PRUint
 }
 
 //
-// GetImage
+// GetImageFromDOMNode
 //
 // Given a dom node that's an image, finds the nsIImage associated with it.
 //
@@ -1564,7 +1567,32 @@ nsTransferableFactory::GetImageFromDOMNode(nsIDOMNode* inNode, nsIImage**outImag
   if (!imgRequest) {
     return NS_ERROR_NOT_AVAILABLE;
   }
-  
+
+  nsCOMPtr<nsIMIMEService> mimeService =
+    do_GetService("@mozilla.org/mime;1");
+
+  imgILoader *imgLoader = nsContentUtils::GetImgLoader();
+
+  if (mimeService) {
+    nsXPIDLCString mimeType;
+    nsCOMPtr<nsIURI> uri;
+
+    imgRequest->GetURI(getter_AddRefs(uri));
+    mimeService->GetTypeFromURI(uri, getter_Copies(mimeType));
+
+    PRBool supportedType;
+    if (NS_FAILED(imgLoader->SupportImageWithMimeType(mimeType.get(),
+                                                      &supportedType)) ||
+        !supportedType) {
+      // The extension of the image we're about to drag doesn't match
+      // an extension that we recognize as an image. Disallow dragging
+      // this image as an image to prevent dropping images with
+      // extensions that the OS won't recognize as images.
+
+      return NS_ERROR_NOT_AVAILABLE;
+    }
+  }
+
   nsCOMPtr<imgIContainer> imgContainer;
   imgRequest->GetImage(getter_AddRefs(imgContainer));
 
