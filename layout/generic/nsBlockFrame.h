@@ -384,8 +384,7 @@ protected:
   PRBool PlaceLine(nsBlockReflowState& aState,
                    nsLineLayout&       aLineLayout,
                    line_iterator       aLine,
-                   PRBool*             aKeepReflowGoing,
-                   PRBool              aUpdateMaximumWidth);
+                   PRBool*             aKeepReflowGoing);
 
   /**
    * Mark |aLine| dirty, and, if necessary because of possible
@@ -417,15 +416,13 @@ protected:
 
   nsresult ReflowInlineFrames(nsBlockReflowState& aState,
                               line_iterator aLine,
-                              PRBool* aKeepLineGoing,
-                              PRBool aUpdateMaximumWidth = PR_FALSE);
+                              PRBool* aKeepLineGoing);
 
   nsresult DoReflowInlineFrames(nsBlockReflowState& aState,
                                 nsLineLayout& aLineLayout,
                                 line_iterator aLine,
                                 PRBool* aKeepReflowGoing,
-                                PRUint8* aLineReflowStatus,
-                                PRBool aUpdateMaximumWidth);
+                                PRUint8* aLineReflowStatus);
 
   nsresult ReflowInlineFrame(nsBlockReflowState& aState,
                              nsLineLayout& aLineLayout,
@@ -462,7 +459,6 @@ protected:
 
   nsresult PullFrame(nsBlockReflowState& aState,
                      line_iterator aLine,
-                     PRBool     aDamageDeletedLine,
                      nsIFrame*& aFrameResult);
 
   nsresult PullFrameFrom(nsBlockReflowState& aState,
@@ -470,7 +466,6 @@ protected:
                          nsBlockFrame* aFromContainer,
                          PRBool aFromOverflowLine,
                          nsLineList::iterator aFromLine,
-                         PRBool aDamageDeletedLines,
                          nsIFrame*& aFrameResult);
 
   void PushLines(nsBlockReflowState& aState,

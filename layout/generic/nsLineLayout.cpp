@@ -2757,20 +2757,20 @@ nsLineLayout::ApplyFrameJustification(PerSpanData* aPSD, FrameJustificationState
   return deltaX;
 }
 
-PRBool
+void
 nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
-                                    PRBool aAllowJustify,
-                                    PRBool aShrinkWrapWidth)
+                                    PRBool aAllowJustify)
 {
   PerSpanData* psd = mRootSpan;
   nscoord availWidth = psd->mRightEdge;
   if (NS_UNCONSTRAINEDSIZE == availWidth) {
+    NS_NOTREACHED("This shouldn't be called anymore");
     // Don't bother horizontal aligning on pass1 table reflow
 #ifdef NOISY_HORIZONTAL_ALIGN
     nsFrame::ListTag(stdout, mBlockReflowState->frame);
     printf(": skipping horizontal alignment in pass1 table reflow\n");
 #endif
-    return PR_TRUE;
+    return;
   }
   availWidth -= psd->mLeftEdge;
   nscoord remainingWidth = availWidth - aLineBounds.width;
@@ -2811,17 +2811,15 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
         // frames in the line. If it is the last line then if the
         // direction is right-to-left then we right-align the frames.
         if (aAllowJustify) {
-          if (!aShrinkWrapWidth) {
-            PRInt32 numSpaces;
-            PRInt32 numLetters;
+          PRInt32 numSpaces;
+          PRInt32 numLetters;
             
-            ComputeJustificationWeights(psd, &numSpaces, &numLetters);
+          ComputeJustificationWeights(psd, &numSpaces, &numLetters);
 
-            if (numSpaces > 0) {
-              FrameJustificationState state = { numSpaces, numLetters, remainingWidth, 0, 0, 0, 0, 0 };
+          if (numSpaces > 0) {
+            FrameJustificationState state = { numSpaces, numLetters, remainingWidth, 0, 0, 0, 0, 0 };
 
-              ApplyFrameJustification(psd, &state);
-            }
+            ApplyFrameJustification(psd, &state);
           }
         }
         else if (NS_STYLE_DIRECTION_RTL == psd->mDirection) {
@@ -2857,11 +2855,6 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
     if (0 != dx)
 #endif
     {
-      // If we need to move the frames but we're shrink wrapping, then
-      // we need to wait until the final width is known
-      if (aShrinkWrapWidth) {
-        return PR_FALSE;
-      }
       for (PerFrameData* pfd = psd->mFirstFrame; pfd
 #ifdef IBMBIDI
            && bulletPfd != pfd
@@ -2884,10 +2877,6 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
         !psd->mChangedFrameDirection) {
       psd->mChangedFrameDirection = PR_TRUE;
   
-      /* Assume that all frames have been right aligned.*/
-      if (aShrinkWrapWidth) {
-        return PR_FALSE;
-      }
       PerFrameData* pfd = psd->mFirstFrame;
       PRUint32 maxX = psd->mRightEdge;
       while (nsnull != pfd) {
@@ -2899,8 +2888,6 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
     }
 #endif // ndef IBMBIDI
   }
-
-  return PR_TRUE;
 }
 
 void

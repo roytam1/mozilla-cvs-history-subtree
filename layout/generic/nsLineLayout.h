@@ -138,9 +138,7 @@ public:
 
   PRBool TrimTrailingWhiteSpace();
 
-  PRBool HorizontalAlignFrames(nsRect& aLineBounds,
-                               PRBool aAllowJustify,
-                               PRBool aShrinkWrapWidth);
+  void HorizontalAlignFrames(nsRect& aLineBounds, PRBool aAllowJustify);
 
   /**
    * Handle all the relative positioning in the line, compute the
