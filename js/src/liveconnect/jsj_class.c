@@ -54,15 +54,13 @@ jsj_GetJavaClassName(JSContext *cx, JNIEnv *jEnv, jclass java_class)
     java_class_name_jstr =
         (*jEnv)->CallObjectMethod(jEnv, java_class, jlClass_getName);
 
-
     if (!java_class_name_jstr)
         goto error;
 
     /* Convert to UTF8 encoding and copy */
     java_class_name = jsj_DupJavaStringUTF(cx, jEnv, java_class_name_jstr);
-    if (!java_class_name)
-        return NULL;
 
+    (*jEnv)->DeleteLocalRef(jEnv, java_class_name_jstr);
     return java_class_name;
 
 error:
@@ -185,8 +183,10 @@ compute_java_class_signature(JSContext *cx, JNIEnv *jEnv, JavaSignature *signatu
 
         signature->array_component_signature =
             jsj_GetJavaClassDescriptor(cx, jEnv, component_class);
-        if (!signature->array_component_signature)
+        if (!signature->array_component_signature) {
+            (*jEnv)->DeleteLocalRef(jEnv, component_class);
             return JS_FALSE;
+        }
     } else {
         signature->type = get_signature_type(cx, signature);
     }
@@ -315,11 +315,8 @@ static void
 destroy_class_descriptor(JSContext *cx, JNIEnv *jEnv, JavaClassDescriptor *class_descriptor)
 {
     JS_FREE_IF(cx, (char *)class_descriptor->name);
-    if (class_descriptor->java_class) {
-        JSJ_HashTableRemove(java_class_reflections,
-                            class_descriptor->java_class, (void*)jEnv);
+    if (class_descriptor->java_class)
         (*jEnv)->DeleteGlobalRef(jEnv, class_descriptor->java_class);
-    }
 
     if (class_descriptor->array_component_signature)
         jsj_ReleaseJavaClassDescriptor(cx, jEnv, class_descriptor->array_component_signature);
@@ -373,15 +370,12 @@ error:
 static JSIntn
 enumerate_remove_java_class(JSJHashEntry *he, JSIntn i, void *arg)
 {
-    JNIEnv *jEnv = (JNIEnv*)arg;
-    jclass java_class;
+    JSJavaThreadState *jsj_env = (JSJavaThreadState *)arg;
     JavaClassDescriptor *class_descriptor;
 
     class_descriptor = (JavaClassDescriptor*)he->value;
 
-    java_class = class_descriptor->java_class;
-    (*jEnv)->DeleteGlobalRef(jEnv, java_class);
-    class_descriptor->java_class = NULL;
+    destroy_class_descriptor(jsj_env->cx, jsj_env->jEnv, class_descriptor);
 
     return HT_ENUMERATE_REMOVE;
 }
@@ -392,10 +386,17 @@ enumerate_remove_java_class(JSJHashEntry *he, JSIntn i, void *arg)
 void
 jsj_DiscardJavaClassReflections(JNIEnv *jEnv)
 {
+    JSJavaThreadState *jsj_env;
+    char *err_msg;
+
+    /* Get the per-thread state corresponding to the current Java thread */
+    jsj_env = jsj_MapJavaThreadToJSJavaThreadState(jEnv, &err_msg);
+    JS_ASSERT(jsj_env);
+
     if (java_class_reflections) {
         JSJ_HashTableEnumerateEntries(java_class_reflections,
                                       enumerate_remove_java_class,
-                                      (void*)jEnv);
+                                      (void*)jsj_env);
         JSJ_HashTableDestroy(java_class_reflections);
         java_class_reflections = NULL;
     }
@@ -419,8 +420,16 @@ jsj_GetJavaClassDescriptor(JSContext *cx, JNIEnv *jEnv, jclass java_class)
 void
 jsj_ReleaseJavaClassDescriptor(JSContext *cx, JNIEnv *jEnv, JavaClassDescriptor *class_descriptor)
 {
-    if (!--class_descriptor->ref_count)
+#if 0
+    /* The ref-counting code doesn't work very well because cycles in the data
+       structures routinely lead to uncollectible JavaClassDescriptor's.  Skip it. */
+    JS_ASSERT(class_descriptor->ref_count >= 1);
+    if (!--class_descriptor->ref_count) {
+        JSJ_HashTableRemove(java_class_reflections,
+                            class_descriptor->java_class, (void*)jEnv);
         destroy_class_descriptor(cx, jEnv, class_descriptor);
+    }
+#endif
 }
 
 static JSBool
@@ -431,6 +440,7 @@ reflect_java_methods_and_fields(JSContext *cx,
 {
     JavaMemberDescriptor *member_descriptor;
 
+    /* THREADSAFETY */
     if (reflect_statics_only)
         class_descriptor->static_members_reflected = JS_TRUE;
     else
