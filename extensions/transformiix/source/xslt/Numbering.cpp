@@ -42,14 +42,20 @@ void Numbering::doNumbering(Element* xslNumber, String& dest,
     int* counts = 0;
     int nbrOfCounts = 0;
 
-    Expr* expr = ps->getExpr(xslNumber, ProcessorState::ValueAttr);
     //-- check for expr
-    if (expr) {
+    if (xslNumber->hasAttr(txXSLTAtoms::value, kNameSpaceID_None)) {
+        Expr* expr = ps->getExpr(xslNumber, ProcessorState::ValueAttr);
+        if (!expr) {
+            // XXX error reporting, parse failed
+            return;
+        }
+        ExprResult* result = expr->evaluate(ps->getEvalContext());
+        double dbl = Double::NaN;
+        if (result)
+            dbl = result->numberValue();
+        delete result;
         nbrOfCounts = 1;
         counts = new int[1];
-        ExprResult* result = expr->evaluate(ps->getEvalContext());
-        double dbl = result->numberValue();
-        delete result;
         counts[0] = (int)dbl;
     }
     else {
