@@ -74,9 +74,17 @@ ifeq ($(MOZ_WIDGET_TOOLKIT),beos)
 PREF_JS_EXPORTS	+= $(srcdir)/beos/beos.js
 else
 ifeq ($(MOZ_WIDGET_TOOLKIT),photon)
+else
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+PREF_JS_EXPORTS	+= $(srcdir)/mac/macprefs.js
+else
+ifeq ($(MOZ_WIDGET_TOOLKIT),photon)
 PREF_JS_EXPORTS += $(srcdir)/unix/photon.js
-endif
+else
 PREF_JS_EXPORTS	+= $(srcdir)/unix/unix.js
+endif
+endif
+endif
 endif
 endif
 endif
