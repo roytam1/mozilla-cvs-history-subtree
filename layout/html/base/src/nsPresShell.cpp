@@ -2548,8 +2548,6 @@ PresShell::InitialReflow(nscoord aWidth, nscoord aHeight)
       mFrameManager->SetRootFrame(rootFrame);
     }
 
-    CheckForFocus(mDocument);
-
     // Have the style sheet processor construct frame for the root
     // content object down
     mStyleSet->ContentInserted(mPresContext, nsnull, root, 0);
@@ -4486,6 +4484,8 @@ PresShell::UnsuppressAndInvalidate()
     rootFrame->GetRect(rect);
     ((nsFrame*)rootFrame)->Invalidate(mPresContext, rect, PR_FALSE);
   }
+
+  CheckForFocus(mDocument);
 }
 
 NS_IMETHODIMP
